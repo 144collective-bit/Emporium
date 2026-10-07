@@ -644,22 +644,9 @@ export const ComicHero: React.FC<ComicHeroProps> = ({
             </div>
           </div>
 
-          {/* Mobile Split Tier: Window 4 & Window 3 */}
+          {/* Mobile Split Tier: Window 3 & Window 4 */}
           <div className="comic-mobile-split-row">
-            {/* Split Panel A: PulseDex.Net */}
-            <div
-              className={`comic-mobile-split-panel m-panel-ticker`}
-            >
-              <div className="m-panel-ambient-glow glow-cyan" />
-              <div className="m-split-header">
-                <span className="m-comic-tag tag-cyan">W.04 &bull; PULSEDEX</span>
-                <span className="m-split-delta">{stats.tokenChange}</span>
-              </div>
-              <div className="m-split-price">{stats.tokenPrice}</div>
-              <div className="m-split-sub">DEMP/PLS VOL: {stats.totalVolume}</div>
-            </div>
-
-            {/* Split Panel B: Socials */}
+            {/* Split Panel A: Socials */}
             <div
               className={`comic-mobile-split-panel m-panel-alpha`}
             >
@@ -674,6 +661,21 @@ export const ComicHero: React.FC<ComicHeroProps> = ({
                 <span>&#127918; DC</span>
               </div>
               <div className="m-split-sub">+5.2K OPERATIVES</div>
+            </div>
+
+            {/* Split Panel B: PulseDex.Net */}
+            <div
+              className={`comic-mobile-split-panel m-panel-ticker`}
+            >
+              <div className="m-panel-ambient-glow glow-cyan" />
+              <div className="m-split-header">
+                <span className="m-comic-tag tag-cyan">W.04 &bull; PULSEDEX</span>
+              </div>
+              <div className="m-split-price-row">
+                <span className="m-split-price">{stats.tokenPrice}</span>
+                <span className="m-split-delta">{stats.tokenChange}</span>
+              </div>
+              <div className="m-split-sub">DEMP/PLS VOL: {stats.totalVolume}</div>
             </div>
           </div>
 

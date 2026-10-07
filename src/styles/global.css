@@ -381,15 +381,6 @@ a:hover {
 /* Backdrop dismisser */
 
 /* Responsive Breakpoints */
-@media (max-width: 860px) {
-  .comic-hero-section.is-fullscreen {
-    min-height: calc(100dvh - 70px);
-    height: auto;
-    max-height: none;
-    overflow: visible;
-  }
-}
-
 @media (max-width: 640px) {
   .nav-in {
     padding: 0 16px;
@@ -411,12 +402,35 @@ a:hover {
 }
 
 @media (max-width: 400px) {
+  .nav-in {
+    padding: 0 12px;
+  }
+  .brand {
+    gap: 8px;
+  }
+  .brand-logo-gem,
+  .social-link-icon {
+    width: 32px;
+    height: 32px;
+  }
   .brand-text {
     font-size: 13.5px;
+  }
+  .nav-actions {
+    gap: 6px;
+  }
+  .nav-social-group {
+    gap: 4px;
   }
   .btn-animated-glow {
     padding: 6px 10px;
     font-size: 11px;
+  }
+}
+
+@media (max-width: 359px) {
+  .nav-social-group {
+    display: none;
   }
 }
 .hero-wrapper {
@@ -767,6 +781,15 @@ a:hover {
   .comic-hero-section {
     padding: 16px 0 28px;
   }
+  /* Mobile stacks the panels, so the hero grows with them and the page
+     scrolls. Must follow the base .is-fullscreen rule to override it. */
+  .comic-hero-section.is-fullscreen {
+    display: block;
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    padding: 16px 12px 28px;
+  }
   .comic-hero-container {
     padding: 0 12px;
   }
@@ -784,6 +807,8 @@ a:hover {
   .comic-mobile-issue-bar {
     justify-content: space-between;
     align-items: center;
+    gap: 8px;
+    white-space: nowrap;
     margin-bottom: 2px;
     padding: 0 2px;
     display: flex;
@@ -792,6 +817,11 @@ a:hover {
     align-items: center;
     gap: 8px;
     display: flex;
+  }
+  @media (width <= 359px) {
+    .comic-issue-tag {
+      display: none;
+    }
   }
   .comic-issue-pill {
     font-family: var(--font-mono);
@@ -811,7 +841,7 @@ a:hover {
     font-family: var(--font-mono);
     color: var(--text-muted);
     letter-spacing: 0.08em;
-    font-size: 9px;
+    font-size: 10px;
   }
   .comic-badge-accent {
     font-family: var(--font-mono);
@@ -821,7 +851,7 @@ a:hover {
     border: 1px solid #000;
     border-radius: 3px;
     padding: 2px 7px;
-    font-size: 9px;
+    font-size: 10px;
     font-weight: 700;
   }
 
@@ -834,15 +864,10 @@ a:hover {
     text-decoration: none;
     transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s, border-color 0.2s;
     display: flex;
+    flex-direction: column;
     overflow: hidden;
-    min-height: 140px;
     background: linear-gradient(145deg, rgba(14, 18, 28, 0.98) 0%, rgba(6, 9, 16, 0.99) 100%);
     box-shadow: 0 6px #000, 0 14px 28px rgba(0, 0, 0, 0.85);
-  }
-
-  .comic-mobile-panel:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px #000, 0 18px 34px rgba(0, 0, 0, 0.95);
   }
 }
 
@@ -1865,9 +1890,11 @@ a:hover {
 
 .m-panel-top-narration {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
-  align-items: center;
-  padding: 10px 14px 6px;
+  align-items: baseline;
+  gap: 2px 12px;
+  padding: 10px 14px 8px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   position: relative;
   z-index: 2;
@@ -1875,7 +1902,7 @@ a:hover {
 
 .m-comic-tag {
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.04em;
 }
@@ -1887,8 +1914,9 @@ a:hover {
 
 .m-comic-sub-tag {
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: 10px;
   color: var(--text-muted);
+  text-transform: uppercase;
 }
 
 .m-w1-body {
@@ -1926,7 +1954,7 @@ a:hover {
 
 .m-w1-title {
   font-family: var(--font-display);
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 900;
   color: #fff;
   letter-spacing: -0.01em;
@@ -1934,9 +1962,9 @@ a:hover {
 }
 
 .m-w1-sub {
-  font-size: 11px;
+  font-size: 12.5px;
   color: var(--text-muted);
-  line-height: 1.3;
+  line-height: 1.4;
   margin: 0;
 }
 
@@ -1949,12 +1977,12 @@ a:hover {
 
 .m-w1-spec-pill {
   font-family: var(--font-mono);
-  font-size: 8.5px;
+  font-size: 10px;
   font-weight: 700;
   color: var(--cyan);
   background: rgba(0, 245, 255, 0.1);
   border: 1px solid rgba(0, 245, 255, 0.3);
-  padding: 1px 6px;
+  padding: 2px 7px;
   border-radius: 3px;
 }
 
@@ -1962,12 +1990,14 @@ a:hover {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 14px 10px;
+  gap: 12px;
+  margin-top: auto;
+  padding: 9px 14px 11px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
   position: relative;
   z-index: 2;
   font-family: var(--font-mono);
-  font-size: 9.5px;
+  font-size: 10.5px;
 }
 
 .m-meta-text {
@@ -1977,6 +2007,7 @@ a:hover {
 .m-action-link {
   color: var(--cyan);
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .m-action-link.link-purple { color: #c084fc; }
@@ -2009,18 +2040,30 @@ a:hover {
 
 .m-w2-dispatches {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--text-secondary);
 }
 
 .m-dispatch-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  display: contents;
   font-family: var(--font-mono);
-  font-size: 9.5px;
+  font-size: 11px;
+  line-height: 1.35;
   color: var(--text-secondary);
+}
+
+.m-dispatch-row .hud-badge {
+  justify-self: start;
+  font-size: 10px;
+  padding: 2px 6px;
+  white-space: nowrap;
 }
 
 /* Mobile Split Row */
@@ -2049,30 +2092,43 @@ a:hover {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
+  white-space: nowrap;
   position: relative;
   z-index: 2;
 }
 
+.m-split-header .pulse-dot {
+  flex-shrink: 0;
+}
+
 .m-split-delta {
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   color: #00ff88;
 }
 
-.m-split-price {
-  font-family: var(--font-display);
-  font-size: 16px;
-  font-weight: 900;
-  color: var(--cyan);
+.m-split-price-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 8px;
   margin: 3px 0;
   position: relative;
   z-index: 2;
 }
 
+.m-split-price {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--cyan);
+}
+
 .m-split-sub {
   font-family: var(--font-mono);
-  font-size: 8px;
+  font-size: 10px;
   color: var(--text-muted);
   position: relative;
   z-index: 2;
@@ -2080,10 +2136,11 @@ a:hover {
 
 .m-split-socials-row {
   display: flex;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 4px 10px;
   margin: 4px 0;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   color: #fff;
   position: relative;
   z-index: 2;
@@ -2102,17 +2159,18 @@ a:hover {
 .m-stat-box {
   display: flex;
   flex-direction: column;
+  gap: 2px;
 }
 
 .m-stat-box .m-lbl {
   font-family: var(--font-mono);
-  font-size: 8px;
+  font-size: 10px;
   color: var(--text-muted);
 }
 
 .m-stat-box .m-val {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
   color: #fff;
 }
@@ -2127,8 +2185,9 @@ a:hover {
 .m-w6-timeline {
   display: flex;
   justify-content: space-between;
+  gap: 8px;
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: 10.5px;
   font-weight: 700;
   color: var(--text-muted);
 }
