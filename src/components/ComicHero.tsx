@@ -1,16 +1,6 @@
 import React, { useState } from 'react';
 
-export type ActivePageType =
-  | 'home'
-  | 'store'
-  | 'blog'
-  | 'alpha'
-  | 'tokenomics'
-  | 'vault'
-  | 'terminal';
-
 interface ComicHeroProps {
-  activePage?: ActivePageType;
   stats?: {
     totalSupply: string;
     totalVolume: string;
@@ -25,7 +15,6 @@ interface ComicHeroProps {
 }
 
 export const ComicHero: React.FC<ComicHeroProps> = ({
-  activePage = 'home',
   stats = {
     totalSupply: '5,555',
     totalVolume: '$18.4M',
@@ -40,16 +29,14 @@ export const ComicHero: React.FC<ComicHeroProps> = ({
 }) => {
   const [hoveredPanel, setHoveredPanel] = useState<number | null>(null);
 
-  const isHomeOrFull = isFullScreen || activePage === 'home';
-
   return (
     <section
-      className={`comic-hero-section ${isHomeOrFull ? 'is-fullscreen' : ''}`}
+      className={`comic-hero-section ${isFullScreen ? 'is-fullscreen' : ''}`}
       aria-label="Hero Cyberpunk HUD Panels"
     >
       <div className="comic-hero-ambient-glow" />
 
-      <div className={`comic-hero-container ${isHomeOrFull ? 'is-fullscreen' : ''}`}>
+      <div className={`comic-hero-container ${isFullScreen ? 'is-fullscreen' : ''}`}>
         {/* Desktop / Tablet Exact 6-Panel Comic Grid */}
         <div className="comic-page-wrapper">
           {/* SVG Frame with precise ink borders matching mockup geometry */}
@@ -82,42 +69,42 @@ export const ComicHero: React.FC<ComicHeroProps> = ({
             {/* Panel 1 SVG border (Top Left - Web Apparel) */}
             <polygon
               points="6,9 389,9 381,117 6,174"
-              className={`comic-svg-panel-border ${hoveredPanel === 1 || activePage === 'store' ? 'is-active' : ''}`}
+              className={`comic-svg-panel-border ${hoveredPanel === 1 ? 'is-active' : ''}`}
               vectorEffect="non-scaling-stroke"
             />
 
             {/* Panel 2 SVG border (Top Right - Community Highlights) */}
             <polygon
               points="401,9 660,9 660,82 393,115"
-              className={`comic-svg-panel-border ${hoveredPanel === 2 || activePage === 'blog' ? 'is-active' : ''}`}
+              className={`comic-svg-panel-border ${hoveredPanel === 2 ? 'is-active' : ''}`}
               vectorEffect="non-scaling-stroke"
             />
 
             {/* Panel 3 SVG border (Mid Right - Socials & Feed) */}
             <polygon
               points="475,116 660,93 660,175 485,200"
-              className={`comic-svg-panel-border ${hoveredPanel === 3 || activePage === 'alpha' ? 'is-active' : ''}`}
+              className={`comic-svg-panel-border ${hoveredPanel === 3 ? 'is-active' : ''}`}
               vectorEffect="non-scaling-stroke"
             />
 
             {/* Panel 4 SVG border (Center Slanted - PulseDex.Net) */}
             <polygon
               points="240,150 464,117 473,201 245,233"
-              className={`comic-svg-panel-border ${hoveredPanel === 4 || activePage === 'tokenomics' ? 'is-active' : ''}`}
+              className={`comic-svg-panel-border ${hoveredPanel === 4 ? 'is-active' : ''}`}
               vectorEffect="non-scaling-stroke"
             />
 
             {/* Panel 5 SVG border (Bottom Left - PulseChain Stats) */}
             <polygon
               points="6,186 229,152 238,306 6,306"
-              className={`comic-svg-panel-border ${hoveredPanel === 5 || activePage === 'vault' ? 'is-active' : ''}`}
+              className={`comic-svg-panel-border ${hoveredPanel === 5 ? 'is-active' : ''}`}
               vectorEffect="non-scaling-stroke"
             />
 
             {/* Panel 6 SVG border (Bottom Right - Roadmap & Vault) */}
             <polygon
               points="246,244 660,187 660,306 250,306"
-              className={`comic-svg-panel-border ${hoveredPanel === 6 || activePage === 'terminal' ? 'is-active' : ''}`}
+              className={`comic-svg-panel-border ${hoveredPanel === 6 ? 'is-active' : ''}`}
               vectorEffect="non-scaling-stroke"
             />
           </svg>
@@ -127,9 +114,8 @@ export const ComicHero: React.FC<ComicHeroProps> = ({
           {/* ============================================================== */}
 
           {/* WINDOW 1: WEB APPAREL (Top Left) - Redesigned Premium Editorial Layout */}
-          <a
-            href="/store"
-            className={`comic-panel panel-1 is-nav-window hud-window ${hoveredPanel === 1 ? 'hovered' : ''} ${activePage === 'store' ? 'page-active' : ''}`}
+          <div
+            className={`comic-panel panel-1 is-nav-window hud-window ${hoveredPanel === 1 ? 'hovered' : ''}`}
             style={{
               left: '0.90%',
               top: '2.87%',
@@ -140,7 +126,6 @@ export const ComicHero: React.FC<ComicHeroProps> = ({
             }}
             onMouseEnter={() => setHoveredPanel(1)}
             onMouseLeave={() => setHoveredPanel(null)}
-            aria-label="Navigate to Web Apparel"
           >
             <div className="hud-ambient-glow glow-cyan" />
             <div className="comic-window-inner w1-inner">
@@ -192,12 +177,11 @@ export const ComicHero: React.FC<ComicHeroProps> = ({
                 </div>
               </div>
             </div>
-          </a>
+          </div>
 
           {/* WINDOW 2: COMMUNITY HIGHLIGHTS (Top Right) */}
-          <a
-            href="/blog"
-            className={`comic-panel panel-2 is-nav-window hud-window ${hoveredPanel === 2 ? 'hovered' : ''} ${activePage === 'blog' ? 'page-active' : ''}`}
+          <div
+            className={`comic-panel panel-2 is-nav-window hud-window ${hoveredPanel === 2 ? 'hovered' : ''}`}
             style={{
               left: '58.83%',
               top: '2.87%',
@@ -208,7 +192,6 @@ export const ComicHero: React.FC<ComicHeroProps> = ({
             }}
             onMouseEnter={() => setHoveredPanel(2)}
             onMouseLeave={() => setHoveredPanel(null)}
-            aria-label="Navigate to Community Highlights"
           >
             <div className="hud-ambient-glow glow-purple" />
             <div className="comic-window-inner w2-inner">
@@ -262,12 +245,11 @@ export const ComicHero: React.FC<ComicHeroProps> = ({
                 </div>
               </div>
             </div>
-          </a>
+          </div>
 
           {/* WINDOW 3: SOCIALS & LIVE FEED (Mid Right) */}
-          <a
-            href="/alpha"
-            className={`comic-panel panel-3 is-nav-window hud-window ${hoveredPanel === 3 ? 'hovered' : ''} ${activePage === 'alpha' ? 'page-active' : ''}`}
+          <div
+            className={`comic-panel panel-3 is-nav-window hud-window ${hoveredPanel === 3 ? 'hovered' : ''}`}
             style={{
               left: '71.11%',
               top: '29.62%',
@@ -278,7 +260,6 @@ export const ComicHero: React.FC<ComicHeroProps> = ({
             }}
             onMouseEnter={() => setHoveredPanel(3)}
             onMouseLeave={() => setHoveredPanel(null)}
-            aria-label="Navigate to Socials and Live Radar"
           >
             <div className="hud-ambient-glow glow-cyan" />
             <div className="comic-window-inner w3-inner">
@@ -323,12 +304,11 @@ export const ComicHero: React.FC<ComicHeroProps> = ({
                 </div>
               </div>
             </div>
-          </a>
+          </div>
 
           {/* WINDOW 4: PULSEDEX.NET / TOKENOMICS (Center Slanted) */}
-          <a
-            href="/tokenomics"
-            className={`comic-panel panel-4 is-nav-window hud-window ${hoveredPanel === 4 ? 'hovered' : ''} ${activePage === 'tokenomics' ? 'page-active' : ''}`}
+          <div
+            className={`comic-panel panel-4 is-nav-window hud-window ${hoveredPanel === 4 ? 'hovered' : ''}`}
             style={{
               left: '35.93%',
               top: '38.22%',
@@ -339,7 +319,6 @@ export const ComicHero: React.FC<ComicHeroProps> = ({
             }}
             onMouseEnter={() => setHoveredPanel(4)}
             onMouseLeave={() => setHoveredPanel(null)}
-            aria-label="Navigate to Tokenomics"
           >
             <div className="hud-ambient-glow glow-cyan" />
             <div className="comic-window-inner w4-inner">
@@ -406,12 +385,11 @@ export const ComicHero: React.FC<ComicHeroProps> = ({
                 </div>
               </div>
             </div>
-          </a>
+          </div>
 
           {/* WINDOW 5: PULSECHAIN STATS (Bottom Left) */}
-          <a
-            href="/vault"
-            className={`comic-panel panel-5 is-nav-window hud-window ${hoveredPanel === 5 ? 'hovered' : ''} ${activePage === 'vault' ? 'page-active' : ''}`}
+          <div
+            className={`comic-panel panel-5 is-nav-window hud-window ${hoveredPanel === 5 ? 'hovered' : ''}`}
             style={{
               left: '0.90%',
               top: '56.37%',
@@ -422,7 +400,6 @@ export const ComicHero: React.FC<ComicHeroProps> = ({
             }}
             onMouseEnter={() => setHoveredPanel(5)}
             onMouseLeave={() => setHoveredPanel(null)}
-            aria-label="Navigate to PulseChain Stats"
           >
             <div className="hud-ambient-glow glow-amber" />
             <div className="comic-window-inner w5-inner">
@@ -484,12 +461,11 @@ export const ComicHero: React.FC<ComicHeroProps> = ({
                 <span className="w5-action-tag">ENTER VAULT &rarr;</span>
               </div>
             </div>
-          </a>
+          </div>
 
           {/* WINDOW 6: ROADMAP & VAULT ACCESS (Bottom Right Wide) */}
-          <a
-            href="/terminal"
-            className={`comic-panel panel-6 is-nav-window hud-window ${hoveredPanel === 6 ? 'hovered' : ''} ${activePage === 'terminal' ? 'page-active' : ''}`}
+          <div
+            className={`comic-panel panel-6 is-nav-window hud-window ${hoveredPanel === 6 ? 'hovered' : ''}`}
             style={{
               left: '36.83%',
               top: '59.55%',
@@ -500,7 +476,6 @@ export const ComicHero: React.FC<ComicHeroProps> = ({
             }}
             onMouseEnter={() => setHoveredPanel(6)}
             onMouseLeave={() => setHoveredPanel(null)}
-            aria-label="Navigate to Terminal & Roadmap"
           >
             <div className="hud-ambient-glow glow-green" />
             <div className="comic-window-inner w6-inner">
@@ -582,7 +557,7 @@ export const ComicHero: React.FC<ComicHeroProps> = ({
                 </div>
               </div>
             </div>
-          </a>
+          </div>
         </div>
 
         {/* ============================================================== */}
@@ -603,15 +578,13 @@ export const ComicHero: React.FC<ComicHeroProps> = ({
           </div>
 
           {/* Mobile Panel 1: Web Apparel */}
-          <a
-            href="/store"
-            className={`comic-mobile-panel m-panel-store ${activePage === 'store' ? 'page-active' : ''}`}
-            aria-label="Enter Store"
+          <div
+            className={`comic-mobile-panel m-panel-store`}
           >
             <div className="m-panel-ambient-glow glow-cyan" />
             <div className="m-panel-top-narration">
               <span className="m-comic-tag tag-cyan">
-                {activePage === 'store' ? '★ ACTIVE' : 'WINDOW 01'} &bull; WEB APPAREL
+                WINDOW 01 &bull; WEB APPAREL
               </span>
               <span className="m-comic-sub-tag">COLLECTION // DROP 01</span>
             </div>
@@ -633,20 +606,18 @@ export const ComicHero: React.FC<ComicHeroProps> = ({
 
             <div className="m-panel-action-bar">
               <span className="m-meta-text">FROM $15.00 / 350 DEMP</span>
-              <span className="m-action-link">{activePage === 'store' ? 'BROWSE PRODUCTS ↓' : 'EXPLORE DROP →'}</span>
+              <span className="m-action-link">EXPLORE DROP →</span>
             </div>
-          </a>
+          </div>
 
           {/* Mobile Panel 2: Community Highlights */}
-          <a
-            href="/blog"
-            className={`comic-mobile-panel m-panel-news ${activePage === 'blog' ? 'page-active' : ''}`}
-            aria-label="Enter News and Blog"
+          <div
+            className={`comic-mobile-panel m-panel-news`}
           >
             <div className="m-panel-ambient-glow glow-purple" />
             <div className="m-panel-top-narration is-news">
               <span className="m-comic-tag tag-purple">
-                {activePage === 'blog' ? '★ ACTIVE' : 'WINDOW 02'} &bull; DISPATCHES
+                WINDOW 02 &bull; DISPATCHES
               </span>
               <span className="m-comic-sub-tag">SPOTLIGHT // LIVE</span>
             </div>
@@ -669,17 +640,15 @@ export const ComicHero: React.FC<ComicHeroProps> = ({
 
             <div className="m-panel-action-bar is-news">
               <span className="m-meta-text">ISSUE #01 LIVE DISPATCHES</span>
-              <span className="m-action-link link-purple">{activePage === 'blog' ? 'READING LORE ↓' : 'READ NEWS →'}</span>
+              <span className="m-action-link link-purple">READ NEWS →</span>
             </div>
-          </a>
+          </div>
 
           {/* Mobile Split Tier: Window 4 & Window 3 */}
           <div className="comic-mobile-split-row">
             {/* Split Panel A: PulseDex.Net */}
-            <a
-              href="/tokenomics"
-              className={`comic-mobile-split-panel m-panel-ticker ${activePage === 'tokenomics' ? 'page-active' : ''}`}
-              aria-label="View Tokenomics"
+            <div
+              className={`comic-mobile-split-panel m-panel-ticker`}
             >
               <div className="m-panel-ambient-glow glow-cyan" />
               <div className="m-split-header">
@@ -688,13 +657,11 @@ export const ComicHero: React.FC<ComicHeroProps> = ({
               </div>
               <div className="m-split-price">{stats.tokenPrice}</div>
               <div className="m-split-sub">DEMP/PLS VOL: {stats.totalVolume}</div>
-            </a>
+            </div>
 
             {/* Split Panel B: Socials */}
-            <a
-              href="/alpha"
-              className={`comic-mobile-split-panel m-panel-alpha ${activePage === 'alpha' ? 'page-active' : ''}`}
-              aria-label="View Socials"
+            <div
+              className={`comic-mobile-split-panel m-panel-alpha`}
             >
               <div className="m-panel-ambient-glow glow-green" />
               <div className="m-split-header">
@@ -707,19 +674,17 @@ export const ComicHero: React.FC<ComicHeroProps> = ({
                 <span>&#127918; DC</span>
               </div>
               <div className="m-split-sub">+5.2K OPERATIVES</div>
-            </a>
+            </div>
           </div>
 
           {/* Mobile Panel 5: PulseChain Stats */}
-          <a
-            href="/vault"
-            className={`comic-mobile-panel m-panel-vault ${activePage === 'vault' ? 'page-active' : ''}`}
-            aria-label="View Stats"
+          <div
+            className={`comic-mobile-panel m-panel-vault`}
           >
             <div className="m-panel-ambient-glow glow-amber" />
             <div className="m-panel-top-narration">
               <span className="m-comic-tag tag-amber">
-                {activePage === 'vault' ? '★ ACTIVE' : 'WINDOW 05'} &bull; STATS
+                WINDOW 05 &bull; STATS
               </span>
               <span className="m-comic-sub-tag">NETWORK TELEMETRY</span>
             </div>
@@ -745,20 +710,18 @@ export const ComicHero: React.FC<ComicHeroProps> = ({
 
             <div className="m-panel-action-bar">
               <span className="m-meta-text">&#10003; SMART CONTRACT PROVENANCE</span>
-              <span className="m-action-link link-amber">{activePage === 'vault' ? 'INSPECTING VAULT ↓' : 'ENTER VAULT →'}</span>
+              <span className="m-action-link link-amber">ENTER VAULT →</span>
             </div>
-          </a>
+          </div>
 
           {/* Mobile Panel 6: Roadmap & Staking */}
-          <a
-            href="/terminal"
-            className={`comic-mobile-panel m-panel-terminal ${activePage === 'terminal' ? 'page-active' : ''}`}
-            aria-label="Launch Terminal"
+          <div
+            className={`comic-mobile-panel m-panel-terminal`}
           >
             <div className="m-panel-ambient-glow glow-green" />
             <div className="m-panel-top-narration">
               <span className="m-comic-tag tag-green">
-                {activePage === 'terminal' ? '★ ACTIVE' : 'WINDOW 06'} &bull; VAULT &amp; ROADMAP
+                WINDOW 06 &bull; VAULT &amp; ROADMAP
               </span>
               <span className="m-comic-sub-tag">Staking APY: {stats.stakingApy}</span>
             </div>
@@ -773,9 +736,9 @@ export const ComicHero: React.FC<ComicHeroProps> = ({
 
             <div className="m-panel-action-bar">
               <span className="m-meta-text">{stats.networkStatus}</span>
-              <span className="m-action-link">{activePage === 'terminal' ? 'CONNECTED ↓' : 'LAUNCH TERMINAL →'}</span>
+              <span className="m-action-link">LAUNCH TERMINAL →</span>
             </div>
-          </a>
+          </div>
         </div>
       </div>
     </section>

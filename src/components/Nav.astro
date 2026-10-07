@@ -1,17 +1,5 @@
 ---
-import { SITE_NAME, X_URL, TELEGRAM_URL, DISCORD_URL } from '../data/site';
-
-const currentPath = Astro.url.pathname.replace(/\/$/, '') || '/';
-
-const navTabs = [
-  { label: 'Comic HQ', href: '/', badge: 'HQ', desc: 'Hero Grid Spread', color: 'var(--cyan)' },
-  { label: 'Store', href: '/store', badge: '01', desc: 'Streetwear & Stickers', color: 'var(--cyan)' },
-  { label: 'News', href: '/blog', badge: '02', desc: 'Dispatches & Lore', color: '#d8b4fe' },
-  { label: 'Alpha', href: '/alpha', badge: '03', desc: 'On-Chain Signals & APY', color: 'var(--green)' },
-  { label: 'Tokenomics', href: '/tokenomics', badge: '04', desc: '$DEMP Supply & DEX Pools', color: 'var(--cyan)' },
-  { label: 'Vault', href: '/vault', badge: '05', desc: 'Autonomous Burn Engine', color: '#fb923c' },
-  { label: 'Terminal', href: '/terminal', badge: '06', desc: 'Degen RPC Gateway v3', color: 'var(--green)' },
-];
+import { X_URL, TELEGRAM_URL } from '../data/site';
 ---
 
 <nav class="nav" id="site-nav">
@@ -34,33 +22,9 @@ const navTabs = [
       </a>
     </div>
 
-    {/* Center: Full Segmented Tabs Bar (Desktop > 1120px) */}
-    <div class="nav-tabs-wrapper">
-      <div class="nav-tabs-bar">
-        {navTabs.map((tab) => {
-          const isActive = tab.href === '/' ? currentPath === '/' : currentPath.startsWith(tab.href);
-          return (
-            <a
-              href={tab.href}
-              class={`nav-tab-item ${isActive ? 'is-active' : ''}`}
-            >
-              <span class="nav-tab-badge">{tab.badge}</span>
-              <span class="nav-tab-label">{tab.label}</span>
-              {isActive && (
-                <span class="nav-tab-beacon">
-                  <span class="nav-tab-active-dot" />
-                  <span class="nav-tab-ping" />
-                </span>
-              )}
-            </a>
-          );
-        })}
-      </div>
-    </div>
-
-    {/* Right: Actions (Wallet + Socials + Mobile Dropdown Trigger) */}
+    {/* Right: Actions (Socials + Wallet) */}
     <div class="nav-actions">
-      {/* Social Links (Desktop > 1120px) */}
+      {/* Social Links */}
       <div class="nav-social-group">
         <a href={X_URL} target="_blank" rel="noopener noreferrer" class="social-link-icon" aria-label="X / Twitter" title="X (Twitter)">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
@@ -83,81 +47,8 @@ const navTabs = [
           <span class="wallet-btn-label">Connect</span>
         </button>
       </div>
-
-      {/* Professional Dropdown Trigger (Tablet & Mobile <= 1120px) */}
-      <button
-        type="button"
-        class="nav-dropdown-trigger"
-        id="nav-dropdown-trigger"
-        aria-label="Toggle Navigation Menu"
-        aria-expanded="false"
-        aria-controls="nav-dropdown-panel"
-      >
-        <span class="dropdown-trigger-icon">
-          <span class="line line-1"></span>
-          <span class="line line-2"></span>
-          <span class="line line-3"></span>
-        </span>
-        <span class="dropdown-trigger-text">Menu</span>
-        <span class="dropdown-trigger-chevron">▾</span>
-      </button>
-    </div>
-
-    {/* Anchored Professional Floating Dropdown Menu */}
-    <div class="nav-dropdown-panel" id="nav-dropdown-panel" aria-hidden="true">
-      <div class="dropdown-panel-header">
-        <div class="dropdown-header-status">
-          <span class="pulse-dot"></span>
-          <span>MAINNET ONLINE &bull; V3.0</span>
-        </div>
-        <button type="button" class="dropdown-panel-close-btn" id="nav-dropdown-close" aria-label="Close Menu">
-          ✕
-        </button>
-      </div>
-
-      <div class="dropdown-items-list">
-        {navTabs.map((tab) => {
-          const isActive = tab.href === '/' ? currentPath === '/' : currentPath.startsWith(tab.href);
-          return (
-            <a
-              href={tab.href}
-              class={`dropdown-nav-row ${isActive ? 'is-active' : ''}`}
-            >
-              <div class="dropdown-row-left">
-                <span class="dropdown-row-badge" style={`color: ${tab.color}; border-color: ${tab.color}44;`}>
-                  {tab.badge}
-                </span>
-                <div class="dropdown-row-text">
-                  <span class="dropdown-row-title">{tab.label}</span>
-                  <span class="dropdown-row-desc">{tab.desc}</span>
-                </div>
-              </div>
-
-              {isActive ? (
-                <span class="dropdown-row-active-tag">ACTIVE</span>
-              ) : (
-                <span class="dropdown-row-arrow">&rarr;</span>
-              )}
-            </a>
-          );
-        })}
-      </div>
-
-      <div class="dropdown-panel-footer">
-        <div class="dropdown-footer-socials">
-          <a href={X_URL} target="_blank" rel="noopener noreferrer" class="dropdown-social-item">
-            <span>𝕏 Twitter</span>
-          </a>
-          <a href={TELEGRAM_URL} target="_blank" rel="noopener noreferrer" class="dropdown-social-item">
-            <span>Telegram Channel</span>
-          </a>
-        </div>
-      </div>
     </div>
   </div>
-
-  {/* Backdrop click dismisser */}
-  <div class="nav-dropdown-backdrop" id="nav-dropdown-backdrop"></div>
 
   {/* Subtle Cyber Neon Underline */}
   <div class="nav-cyber-line"></div>
@@ -190,48 +81,4 @@ const navTabs = [
       }
     });
   }
-
-  // Professional Dropdown Toggle Logic
-  const trigger = document.getElementById('nav-dropdown-trigger');
-  const panel = document.getElementById('nav-dropdown-panel');
-  const backdrop = document.getElementById('nav-dropdown-backdrop');
-  const closeBtn = document.getElementById('nav-dropdown-close');
-
-  function openDropdown() {
-    if (!panel || !trigger) return;
-    panel.classList.add('is-open');
-    trigger.classList.add('is-open');
-    trigger.setAttribute('aria-expanded', 'true');
-    panel.setAttribute('aria-hidden', 'false');
-    if (backdrop) backdrop.classList.add('is-open');
-  }
-
-  function closeDropdown() {
-    if (!panel || !trigger) return;
-    panel.classList.remove('is-open');
-    trigger.classList.remove('is-open');
-    trigger.setAttribute('aria-expanded', 'false');
-    panel.setAttribute('aria-hidden', 'true');
-    if (backdrop) backdrop.classList.remove('is-open');
-  }
-
-  if (trigger) {
-    trigger.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (panel?.classList.contains('is-open')) {
-        closeDropdown();
-      } else {
-        openDropdown();
-      }
-    });
-  }
-
-  if (backdrop) backdrop.addEventListener('click', closeDropdown);
-  if (closeBtn) closeBtn.addEventListener('click', closeDropdown);
-
-  window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && panel?.classList.contains('is-open')) {
-      closeDropdown();
-    }
-  });
 </script>
