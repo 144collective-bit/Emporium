@@ -43,6 +43,17 @@
     left: 40px;
     top: -34px;
     width: 520px;
+    /* same lift as the site header: light edge + acid halo */
+    filter: drop-shadow(0 0 2px #ffffff99) drop-shadow(0 0 22px #a4e01a4d);
+  }
+  .logo-glow {
+    position: absolute;
+    left: 60px;
+    top: 40px;
+    width: 480px;
+    height: 360px;
+    border-radius: 50%;
+    background: radial-gradient(closest-side, #a4e01a26, #a4e01a0c 60%, #0000);
   }
   .tagline {
     position: absolute;
@@ -90,6 +101,7 @@
 <body>
   <div class="card">
     <div class="win left">
+      <div class="logo-glow"></div>
       <img class="logo" src="../brand/logo-source.webp" alt="" />
       <p class="tagline">Goods for the chronically <span>on&#8209;chain.</span></p>
       <p class="url"><b>●</b> degenemporium.com</p>

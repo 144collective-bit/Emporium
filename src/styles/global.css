@@ -180,10 +180,21 @@ a {
   padding: 0 24px;
 }
 .logo {
+  position: relative;
+  isolation: isolate;
   display: flex;
   align-items: center;
   height: 100%;
   padding: 6px 0;
+}
+.logo::before {
+  /* soft backing glow, so the logo's black ink lifts off the near-black */
+  content: "";
+  position: absolute;
+  inset: 4px -16px;
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, #a4e01a2e, #a4e01a0f 60%, #0000);
 }
 .logo picture {
   height: 100%;
@@ -192,6 +203,8 @@ a {
   display: block;
   width: auto;
   height: 100%;
+  /* crisp light edge + acid halo that follows the logo's shape */
+  filter: drop-shadow(0 0 1px #ffffffaa) drop-shadow(0 0 7px #a4e01a59);
   transition: transform 0.3s var(--ease);
 }
 .logo:hover .logo-img {
