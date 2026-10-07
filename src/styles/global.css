@@ -127,38 +127,6 @@ a:hover {
   font-size: 18px;
   font-weight: 800;
 }
-.brand-badge {
-  font-family: var(--font-mono);
-  color: var(--green);
-  background: #00ff8814;
-  border: 1px solid #00ff8840;
-  border-radius: 9999px;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  font-size: 11px;
-  font-weight: 500;
-  display: inline-flex;
-}
-.pulse-dot {
-  background: var(--green);
-  width: 6px;
-  height: 6px;
-  box-shadow: 0 0 8px var(--green);
-  border-radius: 50%;
-  animation: 2s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite pulse-ring;
-}
-@keyframes pulse-ring {
-  0%,
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.4;
-    transform: scale(0.85);
-  }
-}
 .social-link-icon {
   color: var(--text-secondary);
   background: #ffffff08;
@@ -268,20 +236,6 @@ a:hover {
   font-size: 17.5px;
   font-weight: 800;
 }
-.brand-badge {
-  font-family: var(--font-mono);
-  color: var(--green);
-  background: #00ff8814;
-  border: 1px solid #00ff884d;
-  border-radius: 9999px;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 10px;
-  font-size: 10.5px;
-  font-weight: 600;
-  display: inline-flex;
-  box-shadow: 0 0 10px #00ff8826;
-}
 .nav-actions {
   align-items: center;
   gap: 14px;
@@ -292,112 +246,17 @@ a:hover {
   gap: 8px;
   display: flex;
 }
-.nav-glow-btn-wrapper {
-  justify-content: center;
-  align-items: center;
-  display: inline-flex;
-  position: relative;
-}
-.btn-glow-aura {
-  filter: blur(8px);
-  opacity: 0.7;
-  pointer-events: none;
-  background: linear-gradient(135deg, #00f5ff99, #8b5cf699, #0f89, #00f5ff99) 0
-    0/300% 300%;
-  border-radius: 9999px;
-  transition: opacity 0.3s;
-  animation: 4s infinite aura-shift;
-  position: absolute;
-  inset: -3px;
-}
-.nav-glow-btn-wrapper:hover .btn-glow-aura {
-  opacity: 1;
-  filter: blur(12px);
-}
-@keyframes aura-shift {
-  0% {
-    background-position: 0%;
-  }
-  50% {
-    background-position: 100%;
-  }
-  to {
-    background-position: 0%;
-  }
-}
-.btn-animated-glow {
-  z-index: 1;
-  color: #040608;
-  font-family: var(--font-display);
-  cursor: pointer;
-  background: linear-gradient(135deg, #00f5ff 0%, #00b4d8 100%);
-  border: 1px solid #fff9;
-  border-radius: 9999px;
-  align-items: center;
-  gap: 8px;
-  padding: 9px 20px;
-  font-size: 13px;
-  font-weight: 700;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  display: inline-flex;
-  position: relative;
-  overflow: hidden;
-  box-shadow:
-    0 0 20px #00f5ff73,
-    inset 0 1px 1px #fff;
-}
-.btn-animated-glow:hover {
-  color: #000;
-  background: linear-gradient(135deg, #fff 0%, #00f5ff 100%);
-  transform: translateY(-2px);
-  box-shadow:
-    0 0 32px #00f5ffbf,
-    0 6px 20px #00000080;
-}
-.btn-animated-glow.is-connected {
-  color: var(--green);
-  background: #0e161cd9;
-  border: 1px solid #00ff8873;
-  box-shadow:
-    0 0 20px #00ff8840,
-    inset 0 1px #ffffff1a;
-}
-.wallet-status-dot {
-  background: #040608;
-  border-radius: 50%;
-  width: 7px;
-  height: 7px;
-  transition: all 0.25s;
-  box-shadow: 0 0 6px #00000080;
-}
-.btn-animated-glow.is-connected .wallet-status-dot {
-  background: #0f8;
-  box-shadow: 0 0 8px #0f8;
-}
-/* ------------------------------------------------------------- Professional Nav Dropdown & Header */
-
-/* Anchored Professional Floating Dropdown Menu Panel */
-
-/* Backdrop dismisser */
-
 /* Responsive Breakpoints */
 @media (max-width: 640px) {
   .nav-in {
     padding: 0 16px;
     height: 66px;
   }
-  .brand-badge {
-    display: none !important;
-  }
   .brand-text {
     font-size: 15px;
   }
   .nav-actions {
     gap: 8px;
-  }
-  .btn-animated-glow {
-    padding: 7px 14px;
-    font-size: 12px;
   }
 }
 
@@ -422,17 +281,8 @@ a:hover {
   .nav-social-group {
     gap: 4px;
   }
-  .btn-animated-glow {
-    padding: 6px 10px;
-    font-size: 11px;
-  }
 }
 
-@media (max-width: 359px) {
-  .nav-social-group {
-    display: none;
-  }
-}
 .hero-wrapper {
   text-align: center;
   flex-direction: column;
@@ -661,7 +511,7 @@ a:hover {
 .comic-svg-panel-border.is-active {
   stroke: var(--cyan);
   stroke-width: 5px;
-  filter: url(#comic-neon-glow);
+  filter: drop-shadow(0 0 3px var(--cyan));
 }
 .comic-panel {
   z-index: 2;
@@ -703,37 +553,6 @@ a:hover {
 .comic-mobile-panel * {
   pointer-events: none;
 }
-/* ============================================
-   UNIFIED COMIC WINDOW ARCHITECTURE (PANELS 1-6)
-   Allows updating all window designs simultaneously!
-   ============================================ */
-
-/* Theme Colors per Window */
-
-/* Ambient Radial Glow */
-
-/* Inner Layout Frame */
-
-/* Tailored Panel Padding for sloped SVG clip paths */
-
-/* Header Row */
-
-/* Pill Badge */
-
-/* Chip */
-
-/* Body Area */
-
-/* Cutout Column (Panel 1 Store Shirt, Panel 2 News Anchor) */
-
-/* Graffiti Column */
-
-/* Graffiti Image */
-
-/* Panel-Specific Graffiti Sizing Constraints */
-
-/* Footer Bar */
-
 /* ============================================================== */
 /* MOBILE / PORTRAIT COMIC BOOK LAYOUT (< 860px)                 */
 /* ============================================================== */
@@ -787,58 +606,9 @@ a:hover {
   }
 }
 
-
-/* ============================================================== */
-/* WEB3 CYBERPUNK HUD WINDOW STYLES (WINDOWS 1 - 6)              */
-/* ============================================================== */
-
-/* HUD Window Base */
-
-/* Ambient glows */
-
-/* Shared HUD Badges & Pills */
-
-/* ============================================================== */
-/* WINDOW 1: WEB APPAREL (Top-Left) - Refactored Premium Showcase */
-/* ============================================================== */
-
-/* ============================================================== */
-/* WINDOW 2: COMMUNITY HIGHLIGHTS (Top-Right)                     */
-/* ============================================================== */
-
-/* ============================================================== */
-/* WINDOW 3: SOCIALS & LIVE FEED (Mid-Right)                      */
-/* ============================================================== */
-
-/* ============================================================== */
-/* WINDOW 4: PulseDex.Net / Tokenomics (Center Slanted)           */
-/* ============================================================== */
-
-/* ============================================================== */
-/* WINDOW 5: PULSECHAIN STATS (Bottom-Left)                       */
-/* ============================================================== */
-
-/* ============================================================== */
-/* WINDOW 6: ROADMAP & VAULT ACCESS (Bottom-Right Wide)           */
-/* ============================================================== */
-
-/* Roadmap Left Zone */
-
-/* Vault Right Zone */
-
-/* ============================================================== */
-/* MOBILE HUD STYLES (< 860px)                                   */
-/* ============================================================== */
-
-/* Mobile Window 2 */
-
 /* Mobile Split Row */
 .comic-mobile-split-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
-
-/* Mobile Window 5 */
-
-/* Mobile Window 6 */
