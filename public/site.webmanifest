@@ -1,6 +1,10 @@
 {
   "name": "The Degen Emporium",
   "short_name": "Degen Emporium",
-  "theme_color": "#0A090C",
-  "background_color": "#0A090C"
+  "icons": [
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ],
+  "theme_color": "#050605",
+  "background_color": "#050605"
 }

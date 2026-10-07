@@ -1,8 +1,8 @@
 ---
 import Base from '../layouts/Base.astro';
-import ComicHero from '../components/ComicHero';
+import ComicPage from '../components/ComicPage.astro';
 ---
 
-<Base hideFooter={true}>
-  <ComicHero client:load isFullScreen={true} />
+<Base fitViewport>
+  <ComicPage />
 </Base>

@@ -1,0 +1,171 @@
+---
+/*
+ * The homepage comic page: six slanted windows inside one inked frame.
+ *
+ * Each window is defined only by its ink outline in the SVG's 668x314
+ * viewBox. The HTML panel's position and clip-path are derived from that
+ * outline, so the artwork can never drift out of its border.
+ *
+ * Desktop (> 860px): the angled comic page, sized to fit one screen.
+ * Mobile: the same panels reflow into stacked cards (03 + 04 side by side).
+ *
+ * All copy is DRAFT - see the note under the page.
+ */
+import { Picture } from 'astro:assets';
+import degen from '../assets/degen.png';
+import { X_URL, X_HANDLE, TELEGRAM_URL } from '../data/site';
+
+const VIEW_W = 668;
+const VIEW_H = 314;
+
+const OUTLINES: Record<number, string> = {
+  1: '6,9 389,9 381,117 6,174',
+  2: '401,9 660,9 660,82 393,115',
+  3: '475,116 660,93 660,175 485,200',
+  4: '240,150 464,117 473,201 245,233',
+  5: '6,186 229,152 238,306 6,306',
+  6: '246,244 660,187 660,306 250,306',
+};
+
+const pct = (n: number) => `${+n.toFixed(3)}%`;
+
+/** CSS custom properties that place a panel exactly inside its outline. */
+function placement(id: number) {
+  const pts = OUTLINES[id].split(' ').map((p) => p.split(',').map(Number));
+  const xs = pts.map(([x]) => x);
+  const ys = pts.map(([, y]) => y);
+  const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+  const clip = pts
+    .map(([x, y]) => `${pct(((x - x0) / (x1 - x0)) * 100)} ${pct(((y - y0) / (y1 - y0)) * 100)}`)
+    .join(', ');
+  return [
+    `--i:${id - 1}`,
+    `--x:${pct((x0 / VIEW_W) * 100)}`,
+    `--y:${pct((y0 / VIEW_H) * 100)}`,
+    `--w:${pct(((x1 - x0) / VIEW_W) * 100)}`,
+    `--h:${pct(((y1 - y0) / VIEW_H) * 100)}`,
+    `--clip:polygon(${clip})`,
+  ].join(';');
+}
+---
+
+<section class="comic" aria-label="The Degen Emporium">
+  <div class="comic-page">
+    <svg class="comic-ink" viewBox={`0 0 ${VIEW_W} ${VIEW_H}`} preserveAspectRatio="none" aria-hidden="true">
+      <rect x="6" y="9" width="654" height="297" class="ink-frame" vector-effect="non-scaling-stroke" />
+      {Object.entries(OUTLINES).map(([id, points]) => (
+        <polygon class={`ink-border ink-${id}`} points={points} vector-effect="non-scaling-stroke" />
+      ))}
+    </svg>
+
+    {/* 01 - Brand statement */}
+    <article class="panel panel-1" style={placement(1)}>
+      <div class="p1-art">
+        <Picture
+          src={degen}
+          formats={['avif', 'webp']}
+          fallbackFormat="webp"
+          widths={[260, 400, 560, 782]}
+          sizes="(max-width: 860px) 62vw, 24vw"
+          alt="Degen: black balaclava, red cap, green-tinted shades, black suit, holding a bag of Gas Fee Gummy Bears."
+          loading="eager"
+          fetchpriority="high"
+          class="p1-degen"
+        />
+        <span class="p1-caption">Fig. 1 — Degen, snacking</span>
+      </div>
+      <div class="p1-copy">
+        <p class="kicker"><span class="kicker-num">01</span> The Degen Emporium</p>
+        <h1 class="p1-title">Goods for the chronically <span class="hl">on&#8209;chain.</span></h1>
+        <p class="p1-lede">
+          Made by degens who read the whitepaper twice and understood it zero times.
+        </p>
+        <a class="btn-acid" href={X_URL} target="_blank" rel="noopener noreferrer">
+          Follow @{X_HANDLE} <span aria-hidden="true">→</span>
+        </a>
+      </div>
+    </article>
+
+    {/* 02 - Shop */}
+    <article class="panel panel-2" style={placement(2)}>
+      <span class="p2-numeral" aria-hidden="true">001</span>
+      <div class="p2-copy">
+        <p class="kicker"><span class="kicker-num">02</span> The Drop</p>
+        <h2 class="panel-title">Drop 001</h2>
+        <p class="panel-text">Heavyweight goods for lightweight portfolios.</p>
+      </div>
+      <span class="tag p2-tag">Coming soon</span>
+    </article>
+
+    {/* 03 - Socials */}
+    <article class="panel panel-3" style={placement(3)}>
+      <div class="tilt tilt-3">
+        <p class="kicker"><span class="kicker-num">03</span> Signal</p>
+        <h2 class="panel-title">Follow the degen</h2>
+        <div class="p3-links">
+          <a class="chip-link" href={X_URL} target="_blank" rel="noopener noreferrer">
+            <span aria-hidden="true">𝕏</span> @{X_HANDLE}
+          </a>
+          <a class="chip-link" href={TELEGRAM_URL} target="_blank" rel="noopener noreferrer">
+            Telegram
+          </a>
+        </div>
+      </div>
+    </article>
+
+    {/* 04 - Tools */}
+    <article class="panel panel-4" style={placement(4)}>
+      <div class="tilt tilt-4">
+        <p class="kicker"><span class="kicker-num">04</span> The Workshop</p>
+        <h2 class="panel-title">Tools for degens</h2>
+        <ul class="p4-tools" aria-label="Tools in development">
+          <li>Terminal</li>
+          <li>DEX</li>
+          <li>Launcher</li>
+        </ul>
+        <p class="panel-fine">In the workshop. Mind the sparks.</p>
+      </div>
+    </article>
+
+    {/* 05 - Token */}
+    <article class="panel panel-5" style={placement(5)}>
+      <div class="p5-copy">
+        <p class="kicker"><span class="kicker-num">05</span> The Token</p>
+        <h2 class="p5-ticker">$DEMP</h2>
+        <p class="panel-text">No price. No chart. No promises. Just a ticker and a dream.</p>
+        <dl class="p5-meta">
+          <dt>Contract</dt>
+          <dd>TBA</dd>
+        </dl>
+        <p class="panel-fine">Not financial advice. Barely advice at all.</p>
+      </div>
+    </article>
+
+    {/* 06 - Roadmap */}
+    <article class="panel panel-6" style={placement(6)}>
+      <div class="p6-head">
+        <p class="kicker"><span class="kicker-num">06</span> What's next</p>
+        <h2 class="panel-title">The plan, roughly</h2>
+      </div>
+      <ol class="p6-steps">
+        <li>
+          <span class="step-num">01</span>
+          <span class="step-name">Drop 001</span>
+          <span class="step-note">Merch you can actually wear.</span>
+        </li>
+        <li>
+          <span class="step-num">02</span>
+          <span class="step-name">The tools</span>
+          <span class="step-note">Built in public. Broken in private.</span>
+        </li>
+        <li>
+          <span class="step-num">03</span>
+          <span class="step-name">$DEMP</span>
+          <span class="step-note">When it's ready. Not before.</span>
+        </li>
+      </ol>
+    </article>
+  </div>
+
+  <p class="draft-note">Draft copy · v0 · nothing here is final</p>
+</section>

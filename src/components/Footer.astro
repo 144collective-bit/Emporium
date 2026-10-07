@@ -1,18 +1,13 @@
 ---
-import { SITE_NAME, X_URL, X_HANDLE, TELEGRAM_URL, DISCORD_URL, GITHUB_URL } from '../data/site';
+import { SITE_NAME, X_URL, X_HANDLE, TELEGRAM_URL } from '../data/site';
 ---
 
 <footer class="footer">
   <div class="wrap footer-in">
-    <div>
-      <span>&copy; {new Date().getFullYear()} {SITE_NAME}. All rights reserved.</span>
-    </div>
-
-    <div class="footer-socials">
+    <span>&copy; {new Date().getFullYear()} {SITE_NAME}</span>
+    <div class="footer-links">
       <a href={X_URL} target="_blank" rel="noopener noreferrer">@{X_HANDLE}</a>
       <a href={TELEGRAM_URL} target="_blank" rel="noopener noreferrer">Telegram</a>
-      <a href={DISCORD_URL} target="_blank" rel="noopener noreferrer">Discord</a>
-      <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">GitHub</a>
     </div>
   </div>
 </footer>

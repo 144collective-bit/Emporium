@@ -2,21 +2,11 @@
 import Base from '../layouts/Base.astro';
 ---
 
-<Base title="Page Not Found">
-  <div class="hero-wrapper wrap" style="padding: 100px 0;">
-    <div class="hero-content">
-      <div class="hero-pill">
-        <span>ERROR 404 &bull; VECTOR NULL</span>
-      </div>
-      <h1 class="hero-title" style="font-size:clamp(40px, 6vw, 72px);">
-        PAGE NOT <span class="title-gradient">FOUND</span>
-      </h1>
-      <p class="hero-description">
-        The requested endpoint does not exist. Return to the main emporium terminal.
-      </p>
-      <a href="/" class="btn btn-cyan">
-        Return to Home &rarr;
-      </a>
-    </div>
-  </div>
+<Base title="Page not found">
+  <section class="notfound wrap">
+    <p class="kicker"><span class="kicker-num">404</span> Page not found</p>
+    <h1 class="notfound-title">This page got rugged.</h1>
+    <p class="notfound-text">Whatever was here isn't anymore. Happens to the best of us.</p>
+    <a href="/" class="btn-acid">Back to the Emporium <span aria-hidden="true">→</span></a>
+  </section>
 </Base>
