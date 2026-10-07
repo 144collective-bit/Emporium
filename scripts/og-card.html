@@ -11,10 +11,13 @@
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --ink: #050605;
-    --acid: #a4e01a;
-    --text: #f1f3ee;
-    --muted: #858e81;
+    --ink: #05050a;
+    --text: #f3f2f7;
+    --muted: #8b889c;
+    --pulse-stops: #ff0000, #f10e7d 20%, #e219e5 32%, #8000ff 52%, #037dff 72%, #00b0ff 84%, #00eaff;
+    --pulse: linear-gradient(90deg, var(--pulse-stops));
+    --pulse-diag: linear-gradient(45deg, var(--pulse-stops));
+    --pulse-text: linear-gradient(90deg, #ff4040, #ff409f 20%, #ef4ff0 34%, #a36bff 52%, #3f98ff 72%, #2cc4ff 84%, #3df0ff);
     --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   }
   html, body { width: 1200px; height: 630px; background: #000; overflow: hidden; }
@@ -26,16 +29,18 @@
   .left {
     clip-path: polygon(0 0, 61% 0, 55% 100%, 0 100%);
     background:
-      radial-gradient(70% 80% at 30% 40%, #a4e01a14, #0000 70%),
+      radial-gradient(60% 70% at 20% 95%, #ff1a4a24, #0000 70%),
+      radial-gradient(70% 80% at 35% 35%, #8000ff1f, #0000 70%),
       var(--grain),
-      linear-gradient(160deg, #10150e, #060806);
+      linear-gradient(160deg, #100f18, #06060a);
   }
   .right {
     clip-path: polygon(62.4% 0, 100% 0, 100% 100%, 56.4% 100%);
     background:
-      radial-gradient(45% 70% at 80% 80%, #a4e01a40, #0000 70%),
+      radial-gradient(50% 70% at 85% 15%, #00b0ff38, #0000 70%),
+      radial-gradient(50% 70% at 60% 90%, #8000ff40, #0000 70%),
       var(--grain),
-      linear-gradient(200deg, #121810, #060806);
+      linear-gradient(200deg, #0e0f19, #06060b);
   }
 
   .logo {
@@ -43,8 +48,8 @@
     left: 40px;
     top: -34px;
     width: 520px;
-    /* same lift as the site header: light edge + acid halo */
-    filter: drop-shadow(0 0 2px #ffffff99) drop-shadow(0 0 22px #a4e01a4d);
+    /* same lift as the site header: light edge + violet halo */
+    filter: drop-shadow(0 0 2px #ffffff99) drop-shadow(0 0 24px #a855ff73);
   }
   .logo-glow {
     position: absolute;
@@ -53,29 +58,48 @@
     width: 480px;
     height: 360px;
     border-radius: 50%;
-    background: radial-gradient(closest-side, #a4e01a26, #a4e01a0c 60%, #0000);
+    background: radial-gradient(closest-side, #8000ff3d, #e219e514 60%, #0000);
   }
   .tagline {
     position: absolute;
     left: 58px;
-    bottom: 92px;
+    bottom: 104px;
     max-width: 540px;
     font: 900 56px/0.9 "Big Shoulders Display", sans-serif;
     text-transform: uppercase;
     color: var(--text);
     letter-spacing: 0.005em;
   }
-  .tagline span { color: var(--acid); }
-  .url {
+  .tagline span {
+    background: var(--pulse-text);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: #0000;
+  }
+  .chain {
     position: absolute;
     left: 58px;
-    bottom: 48px;
-    font: 500 17px/1 "JetBrains Mono", monospace;
+    bottom: 40px;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    font: 500 16px/1 "JetBrains Mono", monospace;
     letter-spacing: 0.16em;
     text-transform: uppercase;
     color: var(--muted);
   }
-  .url b { color: var(--acid); font-weight: 500; }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    height: 40px;
+    padding: 0 16px 0 12px;
+    border: 1.5px solid #0000;
+    border-radius: 999px;
+    background: linear-gradient(#0b0a12, #0b0a12) padding-box, var(--pulse) border-box;
+    color: #d9d7e3;
+  }
+  .badge img { width: 22px; }
 
   .halftone {
     position: absolute;
@@ -84,10 +108,16 @@
     width: 470px;
     aspect-ratio: 1;
     border-radius: 50%;
-    background: radial-gradient(circle, var(--acid) 1.2px, #0000 1.8px) 0 0 / 8px 8px;
-    -webkit-mask: radial-gradient(circle, #000 25%, #0000 70%);
-    mask: radial-gradient(circle, #000 25%, #0000 70%);
-    opacity: 0.5;
+    background: var(--pulse-diag);
+    -webkit-mask:
+      radial-gradient(circle, #000 1.4px, #0000 2px) 0 0 / 8px 8px,
+      radial-gradient(circle, #000 30%, #0000 72%);
+    -webkit-mask-composite: source-in;
+    mask:
+      radial-gradient(circle, #000 1.4px, #0000 2px) 0 0 / 8px 8px,
+      radial-gradient(circle, #000 30%, #0000 72%);
+    mask-composite: intersect;
+    opacity: 0.85;
   }
   .degen {
     position: absolute;
@@ -104,7 +134,10 @@
       <div class="logo-glow"></div>
       <img class="logo" src="../brand/logo-source.webp" alt="" />
       <p class="tagline">Goods for the chronically <span>on&#8209;chain.</span></p>
-      <p class="url"><b>●</b> degenemporium.com</p>
+      <p class="chain">
+        <span class="badge"><img src="../src/assets/pulsechain.png" alt="" /> PulseChain native</span>
+        degenemporium.com
+      </p>
     </div>
     <div class="win right">
       <div class="halftone"></div>

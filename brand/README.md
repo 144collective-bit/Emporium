@@ -5,17 +5,40 @@ Raw inputs as supplied. The site imports processed versions from `src/assets/`.
 | File | What it is | Used for |
 | --- | --- | --- |
 | `degen-source.webp` | Degen, the mascot, on flat blue | Cut out to `src/assets/degen.png`; favicons in `public/` |
-| `x-banner-source.jpg` | The X (Twitter) banner | Colour palette only |
+| `x-banner-source.jpg` | The X (Twitter) banner | Reference only (earlier palette) |
+| `pulse-gradient-source.webp` | The PulseChain gradient | The site palette |
+| `pulsechain-logo-source.png` | The PulseChain mark, transparent | "PulseChain native" badge (`src/assets/pulsechain.png`) |
 | `logo-source.webp` | The graffiti logo, transparent, full splatter | Header mark via `scripts/logo_mark.py` -> `src/assets/logo.png`; large uses as-is |
 
-## Palette (sampled from the banner)
+## Palette: the PulseChain gradient
 
-| Token | Hex | Role |
+Sampled from `pulse-gradient-source.webp`. Runs red (bottom-left) to cyan
+(top-right), as in the PulseChain mark.
+
+| Token | Hex | Stop |
 | --- | --- | --- |
-| `--acid` | `#a4e01a` | The one accent: CTAs, numbers, highlights |
-| `--volt` | `#e6dd15` | Hover on acid buttons, small details |
-| `--ice` | `#16c2eb` | Rare second accent (window 03 glow) |
-| `--ink` | `#050605` | Page background |
+| `--p-red` | `#ff0000` | 0% |
+| `--p-pink` | `#f10e7d` | 20% |
+| `--p-magenta` | `#e219e5` | 32% |
+| `--p-violet` | `#8000ff` | 52% |
+| `--p-blue` | `#037dff` | 72% |
+| `--p-sky` | `#00b0ff` | 84% |
+| `--p-cyan` | `#00eaff` | 100% |
+| `--ink` | `#05050a` | Page background |
+
+How it's used, so it stays readable:
+
+- **The gradient** carries borders, rules, glows and large type (`--pulse`).
+  Gradient *text* uses `--pulse-text`, the same stops lifted so the violet
+  middle stays readable on near-black.
+- **Small text** accents use `--p-cyan` only: violet is 2.4:1 on black.
+- **Buttons** are a gradient border with white text, never a gradient fill:
+  no single text colour is readable across the whole red-to-cyan range.
+- **Window glows** take the colour of where the window sits on the comic
+  page, so the page sweeps red (bottom-left) to cyan (top-right).
+
+The X banner's acid green is no longer used; `x-banner-source.jpg` is kept
+for reference only.
 
 ## Regenerating the processed art
 
@@ -32,6 +55,13 @@ specks, which read as dirt at header size.
 The script removes a flat background colour, keeps the largest shape (drops
 stray marks such as generator watermarks) and cleans the blue fringe off the
 black ink outline.
+
+## Favicons
+
+    python scripts/favicons.py
+
+Degen's head on the PulseChain gradient -> `public/icon-512.png`,
+`apple-touch-icon.png`, `favicon.ico`.
 
 ## Social share card
 

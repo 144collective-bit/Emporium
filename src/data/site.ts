@@ -2,7 +2,7 @@ export const SITE_NAME = 'The Degen Emporium';
 // Draft copy - replace before launch.
 export const SITE_TAGLINE = 'Goods for the chronically on-chain';
 export const SITE_DESC =
-  'Merch, tools and a token, made by degens who read the whitepaper twice and understood it zero times.';
+  'A PulseChain native store: merch, tools and a token, made by degens who read the whitepaper twice and understood it zero times.';
 export const SITE_URL = 'https://degenemporium.com';
 
 export const X_HANDLE = 'D3G3Ntrades';

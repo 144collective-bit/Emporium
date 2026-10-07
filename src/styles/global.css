@@ -1,18 +1,34 @@
 /* ==========================================================================
    Tokens
-   Palette sampled from the X banner (brand/x-banner-source.jpg): acid green
-   leads, cyan is a rare second, volt yellow and cap red are for details.
+   PulseChain gradient, sampled from brand/pulse-gradient-source.webp:
+   red -> magenta -> violet -> blue -> cyan.
+   The gradient carries borders, rules, glows and large type. Small text uses
+   the cyan end, because the violet stop is too dark to read on near-black.
    ========================================================================== */
 :root {
-  --ink: #050605;
-  --panel: #0c0f0c;
+  --ink: #05050a;
   --line: #ffffff17;
-  --acid: #a4e01a;
-  --volt: #e6dd15;
-  --ice: #16c2eb;
-  --text: #f1f3ee;
-  --text-2: #b6beb2;
-  --muted: #858e81;
+
+  --p-red: #ff0000;
+  --p-pink: #f10e7d;
+  --p-magenta: #e219e5;
+  --p-violet: #8000ff;
+  --p-blue: #037dff;
+  --p-sky: #00b0ff;
+  --p-cyan: #00eaff;
+  --pulse-stops: var(--p-red), var(--p-pink) 20%, var(--p-magenta) 32%, var(--p-violet) 52%,
+    var(--p-blue) 72%, var(--p-sky) 84%, var(--p-cyan);
+  --pulse: linear-gradient(90deg, var(--pulse-stops));
+  --pulse-diag: linear-gradient(45deg, var(--pulse-stops));
+  /* Lifted stops for gradient text, so the violet stays readable */
+  --pulse-text: linear-gradient(90deg, #ff4040, #ff409f 20%, #ef4ff0 34%, #a36bff 52%, #3f98ff 72%, #2cc4ff 84%, #3df0ff);
+  /* Translucent wash for hover fills under white text */
+  --pulse-wash: linear-gradient(90deg, #ff00003d, #e219e53d 32%, #8000ff52 52%, #037dff3d 72%, #00eaff33);
+  --pulse-line: linear-gradient(90deg, #ff000080, #e219e580 32%, #8000ff99 52%, #037dff80 72%, #00eaff80);
+
+  --text: #f3f2f7;
+  --text-2: #bcbacb;
+  --muted: #8b889c;
 
   --font-display: "Big Shoulders Display", "Arial Narrow", Impact, sans-serif;
   --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -51,7 +67,7 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--ink) radial-gradient(70% 45% at 50% -10%, #a4e01a14, #0000 70%) no-repeat;
+  background: var(--ink) radial-gradient(70% 45% at 50% -10%, #8000ff24, #0000 70%) no-repeat;
   color: var(--text);
   font-family: var(--font-body);
   font-size: 16px;
@@ -68,7 +84,7 @@ a {
   text-decoration: none;
 }
 :focus-visible {
-  outline: 2px solid var(--acid);
+  outline: 2px solid var(--p-cyan);
   outline-offset: 3px;
 }
 .wrap {
@@ -96,40 +112,47 @@ a {
   display: inline-flex;
   align-items: center;
   gap: 0.8em;
-  color: var(--acid);
+  color: var(--p-cyan);
 }
 .kicker-num::after {
   content: "";
   width: 1.8em;
   height: 1px;
-  background: currentColor;
-  opacity: 0.6;
+  background: var(--pulse);
 }
 
-.btn-acid {
+.btn-pulse {
   display: inline-flex;
   align-items: center;
   gap: 0.7em;
   padding: 0.95em 1.4em;
-  background: var(--acid);
-  color: var(--ink);
+  border: 1.5px solid #0000;
   border-radius: 2px;
+  background:
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
+  box-shadow: 0 0 26px -8px #8000ffa6;
+  color: #fff;
   font-family: var(--font-mono);
   font-size: var(--fs-btn);
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   white-space: nowrap;
-  transition: background 0.2s;
+  transition: box-shadow 0.25s, background 0.25s;
 }
-.btn-acid span {
+.btn-pulse span {
   display: inline-block;
   transition: transform 0.25s var(--ease);
 }
-.btn-acid:hover {
-  background: var(--volt);
+.btn-pulse:hover {
+  background:
+    var(--pulse-wash) padding-box,
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
+  box-shadow: 0 0 34px -6px #8000ffd9;
 }
-.btn-acid:hover span {
+.btn-pulse:hover span {
   transform: translateX(3px);
 }
 
@@ -139,23 +162,27 @@ a {
   align-items: center;
   gap: 0.6em;
   padding: 0.5em 0.85em;
-  border: 1px solid #a4e01a66;
+  border: 1px solid #0000;
   border-radius: 2px;
+  background:
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
   font-family: var(--font-mono);
   font-size: var(--fs-kicker);
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--acid);
+  color: var(--text);
   white-space: nowrap;
   line-height: 1.2;
 }
 .chip-link {
-  transition: background 0.2s, color 0.2s, border-color 0.2s;
+  transition: background 0.2s;
 }
 .chip-link:hover {
-  background: var(--acid);
-  border-color: var(--acid);
-  color: var(--ink);
+  background:
+    var(--pulse-wash) padding-box,
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
 }
 
 /* ==========================================================================
@@ -169,6 +196,15 @@ a {
   -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--line);
+}
+.nav::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  background: var(--pulse-line);
 }
 .nav-in {
   display: flex;
@@ -194,7 +230,7 @@ a {
   inset: 4px -16px;
   z-index: -1;
   border-radius: 50%;
-  background: radial-gradient(closest-side, #a4e01a2e, #a4e01a0f 60%, #0000);
+  background: radial-gradient(closest-side, #8000ff47, #e219e517 60%, #0000);
 }
 .logo picture {
   height: 100%;
@@ -203,12 +239,40 @@ a {
   display: block;
   width: auto;
   height: 100%;
-  /* crisp light edge + acid halo that follows the logo's shape */
-  filter: drop-shadow(0 0 1px #ffffffaa) drop-shadow(0 0 7px #a4e01a59);
+  /* crisp light edge + violet halo that follows the logo's shape */
+  filter: drop-shadow(0 0 1px #ffffffaa) drop-shadow(0 0 8px #a855ff80);
   transition: transform 0.3s var(--ease);
 }
 .logo:hover .logo-img {
   transform: rotate(-2deg) scale(1.04);
+}
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.chain-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 12px 0 9px;
+  border: 1px solid #0000;
+  border-radius: 999px;
+  background:
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+.chain-badge-mark {
+  display: block;
+  width: 18px;
+  height: auto;
 }
 .nav-social {
   display: flex;
@@ -226,9 +290,9 @@ a {
   transition: color 0.2s, background 0.2s, border-color 0.2s;
 }
 .icon-link:hover {
-  color: var(--ink);
-  background: var(--acid);
-  border-color: var(--acid);
+  color: #fff;
+  background: var(--pulse-diag);
+  border-color: #0000;
 }
 
 /* ==========================================================================
@@ -256,7 +320,7 @@ a {
   box-shadow:
     0 30px 80px -30px #000,
     0 0 0 1px #ffffff0d,
-    0 0 70px -25px #a4e01a33;
+    0 0 80px -25px #8000ff59;
 
   /* Type scales with the page so every window keeps its composition */
   --fs-kicker: max(10px, 0.74cqi);
@@ -303,7 +367,7 @@ a {
 .comic-page:has(.panel-4:hover) .ink-4,
 .comic-page:has(.panel-5:hover) .ink-5,
 .comic-page:has(.panel-6:hover) .ink-6 {
-  stroke: var(--acid);
+  stroke: url(#pulse-ink);
 }
 
 /* Panel shell: placed and clipped from the --x/--y/--w/--h/--clip props */
@@ -315,7 +379,7 @@ a {
   height: var(--h);
   clip-path: var(--clip);
   overflow: hidden;
-  background: var(--grain), linear-gradient(160deg, #10140f, #070907);
+  background: var(--grain), linear-gradient(160deg, #0f0f17, #07070b);
   animation: panel-in 0.8s var(--ease) both;
   animation-delay: calc(var(--i) * 80ms + 120ms);
 }
@@ -365,9 +429,10 @@ a {
 /* 01 - Brand statement */
 .panel-1 {
   background:
-    radial-gradient(55% 70% at 20% 88%, #a4e01a33, #0000 70%),
+    radial-gradient(55% 70% at 20% 88%, #b10cf43d, #0000 70%),
+    radial-gradient(40% 60% at 0% 100%, #e219e526, #0000 70%),
     var(--grain),
-    linear-gradient(160deg, #10150e, #060806);
+    linear-gradient(160deg, #100f18, #06060a);
 }
 .p1-art {
   position: absolute;
@@ -377,7 +442,7 @@ a {
   aspect-ratio: 782 / 939;
 }
 .p1-art::before {
-  /* acid halftone disc behind the head */
+  /* PulseChain-gradient halftone disc behind the head */
   content: "";
   position: absolute;
   top: 2%;
@@ -385,10 +450,16 @@ a {
   width: 96%;
   aspect-ratio: 1;
   border-radius: 50%;
-  background: radial-gradient(circle, var(--acid) 0.9px, #0000 1.4px) 0 0 / 6px 6px;
-  -webkit-mask: radial-gradient(circle, #000 25%, #0000 70%);
-  mask: radial-gradient(circle, #000 25%, #0000 70%);
-  opacity: 0.45;
+  background: var(--pulse-diag);
+  -webkit-mask:
+    radial-gradient(circle, #000 1px, #0000 1.6px) 0 0 / 6px 6px,
+    radial-gradient(circle, #000 30%, #0000 72%);
+  -webkit-mask-composite: source-in;
+  mask:
+    radial-gradient(circle, #000 1px, #0000 1.6px) 0 0 / 6px 6px,
+    radial-gradient(circle, #000 30%, #0000 72%);
+  mask-composite: intersect;
+  opacity: 0.9;
 }
 .p1-art picture {
   display: block;
@@ -439,8 +510,12 @@ a {
   text-transform: uppercase;
   text-wrap: balance;
 }
-.hl {
-  color: var(--acid);
+.hl,
+.p5-ticker {
+  background: var(--pulse-text);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: #0000;
 }
 .p1-lede {
   max-width: 30em;
@@ -452,9 +527,9 @@ a {
 /* 02 - Shop */
 .panel-2 {
   background:
-    radial-gradient(60% 90% at 100% 0%, #e6dd1512, #0000 70%),
+    radial-gradient(60% 90% at 100% 0%, #00eaff1f, #0000 70%),
     var(--grain),
-    linear-gradient(200deg, #121611, #070907);
+    linear-gradient(200deg, #0e1118, #07070b);
 }
 .p2-numeral {
   position: absolute;
@@ -486,9 +561,9 @@ a {
 /* 03 - Socials */
 .panel-3 {
   background:
-    radial-gradient(70% 90% at 90% 20%, #16c2eb24, #0000 70%),
+    radial-gradient(70% 90% at 90% 20%, #00b0ff2e, #0000 70%),
     var(--grain),
-    linear-gradient(170deg, #0d1314, #060808);
+    linear-gradient(170deg, #0c1018, #06070b);
 }
 .p3-links {
   display: flex;
@@ -500,9 +575,9 @@ a {
 /* 04 - Tools */
 .panel-4 {
   background:
-    radial-gradient(60% 80% at 15% 30%, #a4e01a17, #0000 70%),
+    radial-gradient(60% 80% at 30% 40%, #8000ff2e, #0000 70%),
     var(--grain),
-    linear-gradient(160deg, #10130f, #070907);
+    linear-gradient(160deg, #0f0e18, #07070b);
 }
 .p4-tools {
   display: flex;
@@ -518,15 +593,16 @@ a {
 .p4-tools li + li::before {
   content: "/";
   margin: 0 0.45em;
-  color: var(--acid);
+  color: var(--p-magenta);
 }
 
 /* 05 - Token */
 .panel-5 {
   background:
-    radial-gradient(70% 60% at 85% 100%, #a4e01a1f, #0000 70%),
+    radial-gradient(70% 60% at 10% 100%, #ff1a4a29, #0000 70%),
+    radial-gradient(50% 50% at 90% 30%, #e219e51a, #0000 70%),
     var(--grain),
-    linear-gradient(200deg, #0f130e, #060806);
+    linear-gradient(200deg, #110e15, #07060a);
 }
 .p5-copy {
   position: absolute;
@@ -543,8 +619,7 @@ a {
   font-size: calc(var(--fs-h1) * 1.65);
   font-weight: 900;
   line-height: 0.85;
-  color: #0000;
-  -webkit-text-stroke: 1.5px var(--acid);
+  padding-bottom: 0.04em;
 }
 .p5-meta {
   display: flex;
@@ -564,9 +639,10 @@ a {
 /* 06 - Roadmap */
 .panel-6 {
   background:
-    radial-gradient(50% 90% at 100% 0%, #a4e01a1a, #0000 70%),
+    radial-gradient(50% 90% at 100% 0%, #037dff29, #0000 70%),
+    radial-gradient(40% 80% at 0% 100%, #8000ff1f, #0000 70%),
     var(--grain),
-    linear-gradient(180deg, #0f130e, #060806);
+    linear-gradient(180deg, #0e0f18, #06060b);
 }
 .p6-head {
   position: absolute;
@@ -593,13 +669,14 @@ a {
   flex-direction: column;
   gap: 0.25cqi;
   padding-top: 0.8cqi;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid;
+  border-image: var(--pulse-line) 1;
 }
 .step-num {
   font-family: var(--font-mono);
   font-size: var(--fs-kicker);
   letter-spacing: 0.12em;
-  color: var(--acid);
+  color: var(--p-cyan);
 }
 .step-name {
   font-family: var(--font-display);
@@ -829,7 +906,7 @@ a {
   gap: 20px;
 }
 .footer-links a:hover {
-  color: var(--acid);
+  color: var(--p-cyan);
 }
 
 /* ==========================================================================
@@ -842,9 +919,27 @@ a {
   .nav-in {
     padding: 0 16px;
   }
+  .nav-right {
+    gap: 8px;
+  }
+  /* Phones: the badge becomes just the mark; the text stays for screen readers */
+  .chain-badge {
+    width: 36px;
+    padding: 0;
+    justify-content: center;
+  }
+  .chain-badge-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
 }
 @media (max-width: 360px) {
-  .icon-link {
+  .icon-link,
+  .chain-badge {
     width: 32px;
     height: 32px;
   }
@@ -855,7 +950,7 @@ a {
   }
   .p1-degen,
   .logo-img,
-  .btn-acid span {
+  .btn-pulse span {
     transition: none;
   }
   .panel-1:hover .p1-degen,

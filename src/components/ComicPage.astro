@@ -52,6 +52,19 @@ function placement(id: number) {
 <section class="comic" aria-label="The Degen Emporium">
   <div class="comic-page">
     <svg class="comic-ink" viewBox={`0 0 ${VIEW_W} ${VIEW_H}`} preserveAspectRatio="none" aria-hidden="true">
+      <defs>
+        {/* Hover border: one gradient across the whole page, so each window
+            lights up in the part of the PulseChain gradient where it sits */}
+        <linearGradient id="pulse-ink" gradientUnits="userSpaceOnUse" x1="0" y1={VIEW_H} x2={VIEW_W} y2="0">
+          <stop offset="0" stop-color="#ff0000" />
+          <stop offset="0.2" stop-color="#f10e7d" />
+          <stop offset="0.32" stop-color="#e219e5" />
+          <stop offset="0.52" stop-color="#8000ff" />
+          <stop offset="0.72" stop-color="#037dff" />
+          <stop offset="0.84" stop-color="#00b0ff" />
+          <stop offset="1" stop-color="#00eaff" />
+        </linearGradient>
+      </defs>
       <rect x="6" y="9" width="654" height="297" class="ink-frame" vector-effect="non-scaling-stroke" />
       {Object.entries(OUTLINES).map(([id, points]) => (
         <polygon class={`ink-border ink-${id}`} points={points} vector-effect="non-scaling-stroke" />
@@ -75,12 +88,12 @@ function placement(id: number) {
         <span class="p1-caption">Fig. 1 — Degen, snacking</span>
       </div>
       <div class="p1-copy">
-        <p class="kicker"><span class="kicker-num">01</span> The Degen Emporium</p>
+        <p class="kicker"><span class="kicker-num">01</span> A PulseChain native store</p>
         <h1 class="p1-title">Goods for the chronically <span class="hl">on&#8209;chain.</span></h1>
         <p class="p1-lede">
           Made by degens who read the whitepaper twice and understood it zero times.
         </p>
-        <a class="btn-acid" href={X_URL} target="_blank" rel="noopener noreferrer">
+        <a class="btn-pulse" href={X_URL} target="_blank" rel="noopener noreferrer">
           Follow @{X_HANDLE} <span aria-hidden="true">→</span>
         </a>
       </div>
