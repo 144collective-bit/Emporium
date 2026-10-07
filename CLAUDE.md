@@ -28,6 +28,12 @@ it and has been retired completely. Build only on what's here.
 
 ## Content guardrails
 
+- **The token is confidential until launch.** Never put its name, ticker,
+  contract address or launch details in the site's markup, alt text, meta
+  tags, file names or commit messages. Window 05 shows a blurred *decoy*:
+  CSS blur only hides things visually, and the HTML is public. Reveal it
+  only when the owner says launch is live.
+
 - All copy is draft until the owner says otherwise; keep the draft note.
 - No prices, stats, APYs, audits, partnerships or testimonials unless the
   owner supplies them as facts. No financial advice.

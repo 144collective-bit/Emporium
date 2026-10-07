@@ -1,7 +1,7 @@
-"""The logo's diamond: the $DGN token mark and the favicons.
+"""The logo's diamond: the token mark and the favicons.
 
     python scripts/favicons.py
-    # -> src/assets/diamond.png (transparent, the $DGN mark in window 05)
+    # -> src/assets/diamond.png (transparent, the token mark in window 05)
     # -> public/icon-512.png, apple-touch-icon.png, favicon.ico
 
 The full graffiti logo can't be read at 16-32px, so the icon is its most

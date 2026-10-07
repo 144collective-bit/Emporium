@@ -641,7 +641,7 @@ a {
 .p5-ticker::before,
 .p5-ticker::after {
   /* repeat the letters for the upper layers; the empty alternative keeps
-     screen readers to a single "$DGN" */
+     screen readers to a single read-out */
   content: attr(data-text);
   content: attr(data-text) / "";
   position: absolute;
@@ -665,7 +665,7 @@ a {
   -webkit-mask: linear-gradient(180deg, #000 0%, #0000 55%);
   mask: linear-gradient(180deg, #000 0%, #0000 55%);
 }
-/* $DGN lockup: the diamond token mark beside the ticker */
+/* Token lockup: the diamond token mark beside the ticker */
 .p5-token {
   display: flex;
   align-items: center;
@@ -687,6 +687,50 @@ a {
 }
 .panel-5:hover .p5-diamond {
   transform: translateY(-4%) rotate(-6deg);
+}
+/* Under wraps until launch: the blurred block holds decoy content only,
+   with the classified label sitting sharp on top of it */
+.p5-vault {
+  position: relative;
+  align-self: stretch; /* full content width, so the label has room */
+}
+.p5-redacted {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.8cqi;
+  filter: blur(max(6px, 0.55cqi));
+  opacity: 0.85;
+  -webkit-user-select: none;
+  user-select: none;
+  pointer-events: none;
+}
+.p5-classified {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  max-width: 100%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7em;
+  padding: 0.75em 1.1em;
+  border: 1px solid #0000;
+  border-radius: 2px;
+  background:
+    linear-gradient(#0b0a12e6, #0b0a12e6) padding-box,
+    var(--pulse) border-box;
+  box-shadow: 0 0 30px -6px #8000ff99;
+  font-family: var(--font-mono);
+  font-size: calc(var(--fs-kicker) * 1.1);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  line-height: 1.4;
+  text-transform: uppercase;
+  color: var(--text);
+}
+.p5-classified svg {
+  flex-shrink: 0;
 }
 .p5-meta {
   display: flex;
@@ -759,6 +803,56 @@ a {
 }
 
 /* ==========================================================================
+   "Coming soon" preview stamp, inked in red across the comic page
+   ========================================================================== */
+.stamp {
+  --stamp-red: #ff2a2a;
+  /* worn-ink texture: fractal noise thresholded into speckled gaps */
+  --stamp-grunge: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.6' numOctaves='3' seed='11'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 7 -2.6'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+  position: absolute;
+  top: 48%;
+  left: 50%;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.16em 0.42em 0.2em;
+  border: 0.065em solid var(--stamp-red);
+  outline: 0.025em solid var(--stamp-red);
+  outline-offset: -0.13em;
+  border-radius: 0.06em;
+  background: #ff2a2a0f;
+  color: var(--stamp-red);
+  font-family: var(--font-display);
+  font-size: 9cqi;
+  font-weight: 900;
+  line-height: 0.9;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transform: translate(-50%, -50%) rotate(-11deg);
+  -webkit-mask: var(--stamp-grunge) 0 0 / 260px 260px;
+  mask: var(--stamp-grunge) 0 0 / 260px 260px;
+  filter: drop-shadow(0 0 0.12em #ff2a2a59);
+  pointer-events: none;
+  animation: stamp-in 0.55s cubic-bezier(0.2, 1.5, 0.4, 1) 1.05s both;
+}
+.stamp-small {
+  margin: 0.25em 0 0.18em;
+  font-family: var(--font-mono);
+  font-size: 0.18em;
+  font-weight: 700;
+  letter-spacing: 0.6em;
+  text-indent: 0.6em; /* balance the trailing letter-spacing */
+}
+@keyframes stamp-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(-11deg) scale(1.9);
+  }
+}
+
+/* ==========================================================================
    Stacked cards: phones, tablets and short screens, where the comic page
    would get too small to read
    ========================================================================== */
@@ -785,6 +879,10 @@ a {
   }
   .comic-ink {
     display: none;
+  }
+  .stamp {
+    top: 190px;
+    font-size: clamp(46px, 14vw, 84px);
   }
   .panel {
     position: relative;
@@ -823,7 +921,8 @@ a {
   }
   .tilt,
   .p2-copy,
-  .p5-copy {
+  .p5-copy,
+  .p5-redacted {
     gap: 10px;
   }
 
@@ -1013,7 +1112,8 @@ a {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .panel {
+  .panel,
+  .stamp {
     animation: none;
   }
   .p1-degen,

@@ -34,10 +34,11 @@ npm run build    # static site in dist/
 | 02 | Drop 001 (merch), coming soon |
 | 03 | X and Telegram |
 | 04 | The tools: Terminal, DEX, Launcher |
-| 05 | $DGN with its diamond mark: no price, contract TBA, not financial advice |
+| 05 | The token: blurred and marked classified until launch (decoy content only) |
 | 06 | The plan, roughly |
 
-All copy is draft and marked as such on the page.
+All copy is draft and marked as such on the page. A red "Coming soon"
+stamp marks the whole page as a preview.
 
 ## Brand
 

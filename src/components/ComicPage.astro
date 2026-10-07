@@ -141,28 +141,37 @@ function placement(id: number) {
       </div>
     </article>
 
-    {/* 05 - Token */}
+    {/* 05 - Token: under wraps until launch.
+        The blurred block is a DECOY - the real ticker and details must never
+        be in this markup (blur is only visual; the HTML is public). */}
     <article class="panel panel-5" style={placement(5)}>
       <div class="p5-copy">
         <p class="kicker"><span class="kicker-num">05</span> The Token</p>
-        <div class="p5-token">
-          {/* The diamond from the logo is the $DGN token mark */}
-          <Picture
-            src={diamond}
-            formats={['avif', 'webp']}
-            fallbackFormat="webp"
-            widths={[90, 135, 199]}
-            sizes="(max-width: 1000px) 70px, 7vw"
-            alt=""
-            class="p5-diamond"
-          />
-          <h2 class="p5-ticker" data-text="$DGN">$DGN</h2>
+        <div class="p5-vault">
+          <div class="p5-redacted" aria-hidden="true" inert>
+            <div class="p5-token">
+              <Picture
+                src={diamond}
+                formats={['avif', 'webp']}
+                fallbackFormat="webp"
+                widths={[90, 135, 199]}
+                sizes="(max-width: 1000px) 70px, 7vw"
+                alt=""
+                class="p5-diamond"
+              />
+              <p class="p5-ticker" data-text="$XXX">$XXX</p>
+            </div>
+            <p class="panel-text">Nothing to see here. Nice try though.</p>
+            <dl class="p5-meta">
+              <dt>Contract</dt>
+              <dd>0x0000…0000</dd>
+            </dl>
+          </div>
+          <h2 class="p5-classified">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
+            Classified · revealed at launch
+          </h2>
         </div>
-        <p class="panel-text">No price. No chart. No promises. Just a ticker and a dream.</p>
-        <dl class="p5-meta">
-          <dt>Contract</dt>
-          <dd>TBA</dd>
-        </dl>
         <p class="panel-fine">Not financial advice. Barely advice at all.</p>
       </div>
     </article>
@@ -186,11 +195,17 @@ function placement(id: number) {
         </li>
         <li>
           <span class="step-num">03</span>
-          <span class="step-name">$DGN</span>
+          <span class="step-name">The token</span>
           <span class="step-note">When it's ready. Not before.</span>
         </li>
       </ol>
     </article>
+
+    {/* Preview stamp across the whole page */}
+    <p class="stamp">
+      <span class="stamp-small">Preview</span>
+      <span class="stamp-big">Coming soon</span>
+    </p>
   </div>
 
   <p class="draft-note">Draft copy · v0 · nothing here is final</p>

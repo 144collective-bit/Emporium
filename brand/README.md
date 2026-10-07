@@ -7,7 +7,7 @@ Raw inputs as supplied. The site imports processed versions from `src/assets/`.
 | `degen-source.webp` | Degen, the mascot, on flat blue | Cut out to `src/assets/degen.png` |
 | `pulse-gradient-source.webp` | The PulseChain gradient | The site palette |
 | `pulsechain-logo-source.png` | The PulseChain mark, transparent | "PulseChain native" badge (`src/assets/pulsechain.png`) |
-| `logo-source.webp` | The graffiti logo, transparent, full splatter | Header mark via `scripts/logo_mark.py` -> `src/assets/logo.png`; its diamond is the $DGN mark and favicon; large uses as-is |
+| `logo-source.webp` | The graffiti logo, transparent, full splatter | Header mark via `scripts/logo_mark.py` -> `src/assets/logo.png`; its diamond is the token mark and favicon; large uses as-is |
 
 ## Palette: the PulseChain gradient
 
@@ -52,10 +52,9 @@ The script removes a flat background colour, keeps the largest shape (drops
 stray marks such as generator watermarks) and cleans the blue fringe off the
 black ink outline.
 
-## The diamond: $DGN mark and favicons
+## The diamond: token mark and favicons
 
-The diamond from the logo is the **$DGN token mark** (window 05, beside the
-ticker) and the favicon.
+The diamond from the logo is the **token mark** (window 05) and the favicon.
 
     python scripts/favicons.py
     # also writes src/assets/diamond.png, the transparent token mark
