@@ -5,7 +5,6 @@ Raw inputs as supplied. The site imports processed versions from `src/assets/`.
 | File | What it is | Used for |
 | --- | --- | --- |
 | `degen-source.webp` | Degen, the mascot, on flat blue | Cut out to `src/assets/degen.png`; favicons in `public/` |
-| `x-banner-source.jpg` | The X (Twitter) banner | Reference only (earlier palette) |
 | `pulse-gradient-source.webp` | The PulseChain gradient | The site palette |
 | `pulsechain-logo-source.png` | The PulseChain mark, transparent | "PulseChain native" badge (`src/assets/pulsechain.png`) |
 | `logo-source.webp` | The graffiti logo, transparent, full splatter | Header mark via `scripts/logo_mark.py` -> `src/assets/logo.png`; large uses as-is |
@@ -36,9 +35,6 @@ How it's used, so it stays readable:
   no single text colour is readable across the whole red-to-cyan range.
 - **Window glows** take the colour of where the window sits on the comic
   page, so the page sweeps red (bottom-left) to cyan (top-right).
-
-The X banner's acid green is no longer used; `x-banner-source.jpg` is kept
-for reference only.
 
 ## Regenerating the processed art
 
