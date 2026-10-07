@@ -34,7 +34,7 @@ npm run build    # static site in dist/
 | 02 | Drop 001 (merch), coming soon |
 | 03 | X and Telegram |
 | 04 | The tools: Terminal, DEX, Launcher |
-| 05 | $DGN: no price, contract TBA, not financial advice |
+| 05 | $DGN with its diamond mark: no price, contract TBA, not financial advice |
 | 06 | The plan, roughly |
 
 All copy is draft and marked as such on the page.

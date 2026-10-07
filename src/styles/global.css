@@ -621,6 +621,28 @@ a {
   line-height: 0.85;
   padding-bottom: 0.04em;
 }
+/* $DGN lockup: the diamond token mark beside the ticker */
+.p5-token {
+  display: flex;
+  align-items: center;
+  gap: 0.18em;
+  font-size: calc(var(--fs-h1) * 1.65);
+}
+.p5-token picture {
+  display: block;
+  flex-shrink: 0;
+}
+.p5-diamond {
+  display: block;
+  width: auto;
+  height: 0.92em;
+  filter: drop-shadow(0 0 1px #ffffff99) drop-shadow(0 0 0.2em #a855ff99);
+  transform-origin: 50% 60%;
+  transition: transform 0.6s var(--ease);
+}
+.panel-5:hover .p5-diamond {
+  transform: translateY(-4%) rotate(-6deg);
+}
 .p5-meta {
   display: flex;
   gap: 1em;
@@ -803,7 +825,8 @@ a {
     content: none;
   }
 
-  .p5-ticker {
+  .p5-ticker,
+  .p5-token {
     font-size: 64px;
   }
 
@@ -949,11 +972,13 @@ a {
     animation: none;
   }
   .p1-degen,
+  .p5-diamond,
   .logo-img,
   .btn-pulse span {
     transition: none;
   }
   .panel-1:hover .p1-degen,
+  .panel-5:hover .p5-diamond,
   .logo:hover .logo-img {
     transform: none;
   }

@@ -1,6 +1,7 @@
-"""Favicons from the logo's diamond.
+"""The logo's diamond: the $DGN token mark and the favicons.
 
     python scripts/favicons.py
+    # -> src/assets/diamond.png (transparent, the $DGN mark in window 05)
     # -> public/icon-512.png, apple-touch-icon.png, favicon.ico
 
 The full graffiti logo can't be read at 16-32px, so the icon is its most
@@ -72,6 +73,7 @@ def icon(size, gem):
 
 
 gem = diamond()
+gem.save("src/assets/diamond.png", optimize=True)
 for size, name in [(512, "icon-512.png"), (180, "apple-touch-icon.png")]:
     icon(size, gem).save(f"public/{name}", optimize=True)
 
@@ -79,4 +81,4 @@ for size, name in [(512, "icon-512.png"), (180, "apple-touch-icon.png")]:
 # outline stays crisp at 16px.
 small = [icon(s, gem) for s in (16, 32, 48)]
 small[-1].save("public/favicon.ico", sizes=[(16, 16), (32, 32), (48, 48)], append_images=small[:-1])
-print("wrote public/icon-512.png, apple-touch-icon.png, favicon.ico")
+print(f"wrote src/assets/diamond.png {gem.size}, public/icon-512.png, apple-touch-icon.png, favicon.ico")

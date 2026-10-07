@@ -13,6 +13,7 @@
  */
 import { Picture } from 'astro:assets';
 import degen from '../assets/degen.png';
+import diamond from '../assets/diamond.png';
 import { X_URL, X_HANDLE, TELEGRAM_URL } from '../data/site';
 
 const VIEW_W = 668;
@@ -144,7 +145,19 @@ function placement(id: number) {
     <article class="panel panel-5" style={placement(5)}>
       <div class="p5-copy">
         <p class="kicker"><span class="kicker-num">05</span> The Token</p>
-        <h2 class="p5-ticker">$DGN</h2>
+        <div class="p5-token">
+          {/* The diamond from the logo is the $DGN token mark */}
+          <Picture
+            src={diamond}
+            formats={['avif', 'webp']}
+            fallbackFormat="webp"
+            widths={[90, 135, 199]}
+            sizes="(max-width: 1000px) 70px, 7vw"
+            alt=""
+            class="p5-diamond"
+          />
+          <h2 class="p5-ticker">$DGN</h2>
+        </div>
         <p class="panel-text">No price. No chart. No promises. Just a ticker and a dream.</p>
         <dl class="p5-meta">
           <dt>Contract</dt>
