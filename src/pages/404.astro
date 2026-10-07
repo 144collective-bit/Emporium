@@ -1,14 +1,22 @@
 ---
-import { Image } from 'astro:assets';
 import Base from '../layouts/Base.astro';
-import lost from '../assets/team/purple-third-eye.png';
 ---
-<Base title="Not found">
-  <section class="wrap hero">
-    <h1 class="post-title" style="margin-top:40px">404</h1>
-    {/* Widths match TeamGrid's so this reuses variants the build already emits. */}
-  <Image class="lost-shot" src={lost} alt="" width={640} widths={[320, 640]} sizes="260px" />
-    <p class="hero-tag">That page doesn't exist.</p>
-    <div class="cta-row"><a class="cta" href="/">Back to the front</a></div>
-  </section>
+
+<Base title="Page Not Found">
+  <div class="hero-wrapper wrap" style="padding: 100px 0;">
+    <div class="hero-content">
+      <div class="hero-pill">
+        <span>ERROR 404 &bull; VECTOR NULL</span>
+      </div>
+      <h1 class="hero-title" style="font-size:clamp(40px, 6vw, 72px);">
+        PAGE NOT <span class="title-gradient">FOUND</span>
+      </h1>
+      <p class="hero-description">
+        The requested endpoint does not exist. Return to the main emporium terminal.
+      </p>
+      <a href="/" class="btn btn-cyan">
+        Return to Home &rarr;
+      </a>
+    </div>
+  </div>
 </Base>

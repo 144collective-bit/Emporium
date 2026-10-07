@@ -6,6 +6,18 @@
       "runtimeExecutable": "npx",
       "runtimeArgs": ["astro", "dev"],
       "port": 4321
+    },
+    {
+      "name": "cyber-dex",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "../cyber-dex", "run", "dev"],
+      "port": 5273
+    },
+    {
+      "name": "degen-launcher",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "../degen-launcher/web", "run", "dev"],
+      "port": 5274
     }
   ]
 }

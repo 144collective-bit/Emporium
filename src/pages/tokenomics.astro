@@ -1,0 +1,149 @@
+---
+import Base from '../layouts/Base.astro';
+
+const keyMetrics = [
+  { label: 'TOKEN TICKER', val: '$DEMP', highlight: true, note: 'Contract Audited' },
+  { label: 'MARKET PRICE', val: '$0.0428', highlight: false, note: '+14.2% Past 24h' },
+  { label: 'CIRCULATING SUPPLY', val: '85,800,000', highlight: false, note: '85.8% In Circulation' },
+  { label: 'BURN RATE', val: '1.5% PER TX', highlight: true, note: '14.2M Incinerated' },
+  { label: 'MAX TOTAL SUPPLY', val: '100,000,000', highlight: false, note: 'Hardcap Fixed' },
+  { label: 'STAKING APY', val: '34.8%', highlight: true, note: 'Dynamic Auto-Compound' },
+];
+
+const distribution = [
+  { name: 'COMMUNITY LIQUIDITY POOLS', pct: '40%', amount: '40,000,000 DEMP', color: 'var(--cyan)' },
+  { name: 'STAKING & YIELD INCENTIVES', pct: '25%', amount: '25,000,000 DEMP', color: 'var(--green)' },
+  { name: 'GENESIS VAULT ACCUMULATION', pct: '15%', amount: '15,000,000 DEMP', color: '#fb923c' },
+  { name: 'PROTOCOL TREASURY & DEV', pct: '10%', amount: '10,000,000 DEMP', color: '#d8b4fe' },
+  { name: 'PERMANENTLY BURNED (INCINERATED)', pct: '10%', amount: '14,200,000 DEMP', color: '#f43f5e' },
+];
+
+const pools = [
+  { dex: 'Uniswap v3', network: 'Arbitrum One', pair: 'DEMP / ETH', tvl: '$8,240,000', feeTier: '0.30%', apy: '36.2%' },
+  { dex: 'Aerodrome', network: 'Base L2', pair: 'DEMP / USDC', tvl: '$6,150,000', feeTier: '0.05%', apy: '32.5%' },
+  { dex: 'Camelot DEX', network: 'Arbitrum One', pair: 'DEMP / GRAIL', tvl: '$4,120,000', feeTier: '0.25%', apy: '38.0%' },
+];
+---
+
+<Base title="Tokenomics & $DEMP | The Degen Emporium" description="Tokenomics, supply distribution, and DEX liquidity pools for $DEMP.">
+  {/* Page Header Banner */}
+  <header class="page-window-header" style="background: linear-gradient(180deg, rgba(14, 20, 32, 0.95) 0%, rgba(6, 7, 10, 0.98) 100%); border-bottom: 1px solid var(--border); padding: 48px 24px 40px;">
+    <div class="wrap" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 24px;">
+      <div style="max-width: 640px;">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+          <a href="/" style="display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-mono); font-size: 11px; color: var(--cyan); text-decoration: none; background: rgba(0, 245, 255, 0.1); border: 1px solid rgba(0, 245, 255, 0.25); padding: 3px 10px; border-radius: 9999px;">
+            &larr; COMIC HQ
+          </a>
+          <span style="font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);">/</span>
+          <span class="comic-pill" style="border-color: var(--cyan); color: var(--cyan);">
+            WINDOW 04 &bull; TOKENOMICS
+          </span>
+        </div>
+
+        <h1 style="font-family: var(--font-display); font-size: clamp(32px, 4vw, 48px); font-weight: 900; line-height: 1.1; margin-bottom: 14px; letter-spacing: -0.02em;">
+          $DEMP <span class="title-gradient">ARCHITECTURE</span>
+        </h1>
+
+        <p style="font-size: 15px; color: var(--text-secondary); line-height: 1.6; margin: 0;">
+          Deflationary token mechanics designed for high liquidity retention, sustained automated buybacks, and perpetual burn pressure.
+        </p>
+      </div>
+
+      {/* Price Spotlight */}
+      <div style="background: rgba(18, 24, 38, 0.85); border: 1px solid var(--border); border-radius: 18px; padding: 20px 28px; backdrop-filter: blur(12px);">
+        <div style="font-family: var(--font-mono); font-size: 10.5px; color: var(--text-muted); margin-bottom: 4px;">LIVE DEMP / USD</div>
+        <div style="font-family: var(--font-display); font-size: 32px; font-weight: 900; color: var(--cyan); line-height: 1;">
+          $0.0428
+        </div>
+        <div style="font-family: var(--font-mono); font-size: 11px; color: var(--green); margin-top: 6px;">
+          ▲ +14.2% (24H HIGH: $0.0441)
+        </div>
+      </div>
+    </div>
+  </header>
+
+  {/* Tokenomics Main Body */}
+  <main class="wrap" style="padding: 40px 24px 90px; max-width: 1040px;">
+    {/* Key Metrics Grid */}
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 18px; margin-bottom: 42px;">
+      {keyMetrics.map((m) => (
+        <div style="background: rgba(14, 18, 28, 0.75); border: 1px solid var(--border); border-radius: 16px; padding: 22px;">
+          <div style="font-family: var(--font-mono); font-size: 10.5px; color: var(--text-muted); margin-bottom: 6px;">
+            {m.label}
+          </div>
+          <div style={`font-family: var(--font-display); font-size: 24px; font-weight: 800; color: ${m.highlight ? 'var(--cyan)' : '#fff'};`}>
+            {m.val}
+          </div>
+          <div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary); margin-top: 5px;">
+            {m.note}
+          </div>
+        </div>
+      ))}
+    </div>
+
+    {/* Distribution Bars */}
+    <section style="background: rgba(14, 18, 28, 0.7); border: 1px solid var(--border); border-radius: 20px; padding: 32px; margin-bottom: 42px;">
+      <h2 style="font-family: var(--font-display); font-size: 22px; font-weight: 800; color: #fff; margin-bottom: 20px;">
+        Initial Token Distribution
+      </h2>
+
+      {/* Stacked Visual Bar */}
+      <div style="height: 18px; border-radius: 9999px; overflow: hidden; display: flex; margin-bottom: 24px; border: 1px solid var(--border);">
+        <div style="width: 40%; background: var(--cyan);" title="Community Liquidity: 40%"></div>
+        <div style="width: 25%; background: var(--green);" title="Staking & Rewards: 25%"></div>
+        <div style="width: 15%; background: #fb923c;" title="Genesis Vault: 15%"></div>
+        <div style="width: 10%; background: #d8b4fe;" title="Treasury: 10%"></div>
+        <div style="width: 10%; background: #f43f5e;" title="Burned: 10%"></div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        {distribution.map((d) => (
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; border-bottom: 1px solid rgba(255,255,255,0.04); padding-bottom: 10px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style={`width: 10px; height: 10px; border-radius: 50%; background: ${d.color}; display: inline-block;`}></span>
+              <span style="font-family: var(--font-display); font-size: 14px; font-weight: 700; color: #fff;">{d.name}</span>
+            </div>
+            <div style="font-family: var(--font-mono); font-size: 13px;">
+              <strong style={`color: ${d.color};`}>{d.pct}</strong>
+              <span style="color: var(--text-muted); margin-left: 8px;">({d.amount})</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    {/* DEX Liquidity Pools Table */}
+    <section style="background: rgba(14, 18, 28, 0.7); border: 1px solid var(--border); border-radius: 20px; padding: 32px;">
+      <h2 style="font-family: var(--font-display); font-size: 22px; font-weight: 800; color: #fff; margin-bottom: 20px;">
+        Primary Liquidity Pools
+      </h2>
+
+      <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 13px;">
+          <thead>
+            <tr style="border-bottom: 1px solid var(--border); color: var(--text-muted); text-align: left; font-size: 11px;">
+              <th style="padding: 12px 16px;">EXCHANGE</th>
+              <th style="padding: 12px 16px;">NETWORK</th>
+              <th style="padding: 12px 16px;">PAIR</th>
+              <th style="padding: 12px 16px;">TVL</th>
+              <th style="padding: 12px 16px;">FEE</th>
+              <th style="padding: 12px 16px;">EST. APY</th>
+            </tr>
+          </thead>
+          <tbody>
+            {pools.map((p) => (
+              <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <td style="padding: 16px; color: #fff; font-weight: 600;">{p.dex}</td>
+                <td style="padding: 16px; color: var(--cyan);">{p.network}</td>
+                <td style="padding: 16px; color: #fff;">{p.pair}</td>
+                <td style="padding: 16px; color: #fff;">{p.tvl}</td>
+                <td style="padding: 16px; color: var(--text-secondary);">{p.feeTier}</td>
+                <td style="padding: 16px; color: var(--green); font-weight: 700;">{p.apy}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</Base>

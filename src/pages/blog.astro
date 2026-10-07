@@ -1,0 +1,145 @@
+---
+import Base from '../layouts/Base.astro';
+
+const blogPosts = [
+  {
+    slug: 'drawn-on-black',
+    title: 'Drawn On Black: The Aesthetic Manifesto of The Emporium',
+    date: 'Sep 05, 2026',
+    author: 'THE SUIT',
+    tag: 'ART DIRECTION',
+    readTime: '4 min read',
+    accentColor: '#00f5ff',
+    snippet: 'Why we threw away standard white backgrounds and built our sovereign universe directly out of raw vector ink, comic halftone textures, and obsidian void.',
+    fullBody: `When we began sketching the universe of The Degen Emporium, modern web design felt suffocated by sterile white grids, repetitive sans-serif cards, and uninspired corporate minimalism. 
+
+Our ethos demands something that bites. We draw on deep black because darkness gives every stroke of cyan, fluorescent green, and neon ultraviolet room to breathe. The comic book aesthetic isn't just decoration—it is a visual language of rebellion, narrative tension, and street-level sovereignty.
+
+Every window in our hero grid represents a live narrative frame. From the storefront where physical cotton and holographic stickers are forged, to the terminal where on-chain orders are executed, each panel is an open gateway into our world.`,
+  },
+  {
+    slug: 'oracle-called-it',
+    title: 'The Oracle Called It: Liquidity Routing on Layer 2',
+    date: 'Aug 28, 2026',
+    author: 'BLUE BALACLAVA',
+    tag: 'PROTOCOL RESEARCH',
+    readTime: '6 min read',
+    accentColor: '#8b5cf6',
+    snippet: 'Deconstructing cross-rollup arbitrage, sub-second block finality on Arbitrum, and our automated deflationary burn engine.',
+    fullBody: `Decentralized exchanges have solved basic automated market making, but capital efficiency remains heavily fragmented across rollups. Our protocol routing architecture leverages Arbitrum One and Base L2 to execute high-velocity arbitrage with sub-cent gas overhead.
+
+When user transactions flow through our swap routers, 1.5% of the fee is programmatically diverted to the irreversible burn address. This continuous deflationary pressure steadily shrinks the circulating supply of $DEMP, generating permanent on-chain value accretion for long-term vault participants.`,
+  },
+  {
+    slug: 'vocabulary-set',
+    title: 'Vocabulary Set: Cultural Signals in Decentralized Spaces',
+    date: 'Aug 14, 2026',
+    author: 'PINK BALACLAVA',
+    tag: 'CULTURE & LORE',
+    readTime: '3 min read',
+    accentColor: '#ec4899',
+    snippet: 'Memetic resonance, decentralized counter-culture, and why sovereign on-chain artifacts define the future of digital expression.',
+    fullBody: `Language evolves fastest at the edges. The terms born in crypto night-chats and Discord channels aren't merely slang; they are compressed social contracts. Words like 'degen', 'wagmi', and 'burn' encode an entire philosophy of self-custody, risk appetite, and collective ownership.
+
+By fusing streetwear culture with on-chain mechanics, The Degen Emporium translates this intangible culture into physical reality you can wear, collect, and trade.`,
+  },
+  {
+    slug: 'genesis-vault-launch',
+    title: 'Genesis Vault Opening: 5,555 Artifacts Ready for Inspection',
+    date: 'Jul 30, 2026',
+    author: 'THE ORACLE',
+    tag: 'COLLECTION LAUNCH',
+    readTime: '5 min read',
+    accentColor: '#fb923c',
+    snippet: 'The cryptographic provenance, multi-sig timelocks, and physical redemption mechanics backing the genesis artifact series.',
+    fullBody: `The Deflationary Vault is officially live on Ethereum Mainnet and Arbitrum. All 5,555 Genesis artifact pieces are indexed, verified by CertiK and OpenZeppelin audit suites, and protected under a 4-of-7 hardware multi-sig setup.
+
+Participants holding verified genesis pieces gain access to tiered apparel drops, automated protocol fee redistributions, and physical piece redemptions.`,
+  }
+];
+---
+
+<Base title="News & Dispatches | The Degen Emporium" description="Official transmissions, lore, and protocol updates from The Degen Emporium.">
+  {/* Page Header Banner */}
+  <header class="page-window-header" style="background: linear-gradient(180deg, rgba(20, 14, 32, 0.95) 0%, rgba(6, 7, 10, 0.98) 100%); border-bottom: 1px solid rgba(139, 92, 246, 0.3); padding: 48px 24px 40px;">
+    <div class="wrap" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 24px;">
+      <div style="max-width: 640px;">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+          <a href="/" style="display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-mono); font-size: 11px; color: #d8b4fe; text-decoration: none; background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.3); padding: 3px 10px; border-radius: 9999px;">
+            &larr; COMIC HQ
+          </a>
+          <span style="font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);">/</span>
+          <span class="comic-pill" style="border-color: #d8b4fe; color: #d8b4fe;">
+            WINDOW 02 &bull; DISPATCHES
+          </span>
+        </div>
+
+        <h1 style="font-family: var(--font-display); font-size: clamp(32px, 4vw, 48px); font-weight: 900; line-height: 1.1; margin-bottom: 14px; letter-spacing: -0.02em;">
+          NEWS & <span style="background: linear-gradient(135deg, #fff, #d8b4fe); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">DISPATCHES</span>
+        </h1>
+
+        <p style="font-size: 15px; color: var(--text-secondary); line-height: 1.6; margin: 0;">
+          Direct transmissions from the front lines: lore chronicles, protocol engineering deep dives, and studio release notes.
+        </p>
+      </div>
+
+      {/* Anchor Character Avatar Chip */}
+      <div style="background: rgba(24, 18, 38, 0.85); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 18px; padding: 18px 24px; display: flex; align-items: center; gap: 18px; backdrop-filter: blur(12px);">
+        <img
+          src="/images/news-character-cutout.png"
+          alt="News Anchor"
+          style="width: 64px; height: 64px; object-fit: cover; border-radius: 12px; background: rgba(0,0,0,0.4); border: 1px solid rgba(139, 92, 246, 0.4);"
+        />
+        <div>
+          <div style="font-family: var(--font-mono); font-size: 10.5px; color: #d8b4fe; margin-bottom: 2px;">DISPATCH ANCHOR</div>
+          <div style="font-family: var(--font-display); font-size: 16px; font-weight: 800; color: #fff;">LIVE TRANSMISSION</div>
+          <div style="font-family: var(--font-mono); font-size: 11px; color: var(--green);">SYNCED WITH MAINNET</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  {/* Blog Posts Feed */}
+  <main class="wrap" style="padding: 40px 24px 90px; max-width: 960px;">
+    <div class="blog-feed-list" style="display: flex; flex-direction: column; gap: 28px;">
+      {blogPosts.map((post) => (
+        <article
+          class="blog-article-card"
+          style="background: rgba(14, 18, 28, 0.7); border: 1px solid var(--border); border-radius: 20px; padding: 32px 36px; transition: border-color 0.25s ease, transform 0.25s ease; backdrop-filter: blur(14px);"
+        >
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style={`background: rgba(255,255,255,0.05); border: 1px solid ${post.accentColor}55; color: ${post.accentColor}; font-family: var(--font-mono); font-size: 11px; padding: 4px 12px; border-radius: 9999px; font-weight: 700;`}>
+                {post.tag}
+              </span>
+              <span style="font-family: var(--font-mono); font-size: 12px; color: var(--text-muted);">
+                {post.date} &bull; BY <strong>{post.author}</strong>
+              </span>
+            </div>
+            <span style="font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary);">
+              {post.readTime}
+            </span>
+          </div>
+
+          <h2 style="font-family: var(--font-display); font-size: clamp(22px, 2.5vw, 28px); font-weight: 800; color: #fff; margin-bottom: 14px; line-height: 1.25;">
+            {post.title}
+          </h2>
+
+          <p style="font-size: 15px; color: var(--text-secondary); line-height: 1.7; margin-bottom: 24px;">
+            {post.snippet}
+          </p>
+
+          <details style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 18px; margin-top: 16px;">
+            <summary style="font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: var(--cyan); cursor: pointer; display: inline-flex; align-items: center; gap: 8px; user-select: none;">
+              <span>Read Full Transmission</span>
+              <span>&darr;</span>
+            </summary>
+            <div style="margin-top: 18px; padding: 20px; background: rgba(0,0,0,0.3); border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); font-size: 14.5px; color: var(--text); line-height: 1.75; white-space: pre-line;">
+              {post.fullBody}
+            </div>
+          </details>
+        </article>
+      ))}
+    </div>
+  </main>
+</Base>

@@ -1,44 +1,18 @@
 ---
-import { X_URL, X_HANDLE, SITE_NAME } from '../data/site';
-
-const explore = [
-  { href: '/news', label: 'News' },
-  { href: '/projects', label: 'Projects' },
-  { href: '/team', label: 'Team' },
-  { href: '/shop', label: 'Shop' },
-  { href: '/links', label: 'Links' },
-  { href: '/about', label: 'About' },
-  { href: '/contact', label: 'Contact' },
-];
+import { SITE_NAME, X_URL, X_HANDLE, TELEGRAM_URL, DISCORD_URL, GITHUB_URL } from '../data/site';
 ---
+
 <footer class="footer">
-  <div class="wrap footer-grid">
-    <div class="footer-brand">
-      <p class="footer-mark">DEGEN EMPORIUM</p>
-      <p class="footer-blurb">Stickers, a crew, and the projects we keep building.</p>
-      <a class="cta cta-sm" href={X_URL} rel="me noopener" target="_blank">Follow @{X_HANDLE}</a>
+  <div class="wrap footer-in">
+    <div>
+      <span>&copy; {new Date().getFullYear()} {SITE_NAME}. All rights reserved.</span>
     </div>
 
-    <nav class="footer-col" aria-label="Footer">
-      <p class="footer-h">Explore</p>
-      <ul>{explore.map((l) => <li><a href={l.href}>{l.label}</a></li>)}</ul>
-    </nav>
-
-    <div class="footer-col">
-      <p class="footer-h">Elsewhere</p>
-      <ul>
-        <li><a href={X_URL} rel="me noopener" target="_blank">X / @{X_HANDLE}</a></li>
-        <li><a href="/rss.xml">RSS</a></li>
-      </ul>
+    <div class="footer-socials">
+      <a href={X_URL} target="_blank" rel="noopener noreferrer">@{X_HANDLE}</a>
+      <a href={TELEGRAM_URL} target="_blank" rel="noopener noreferrer">Telegram</a>
+      <a href={DISCORD_URL} target="_blank" rel="noopener noreferrer">Discord</a>
+      <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">GitHub</a>
     </div>
-  </div>
-
-  <div class="wrap footer-base">
-    <span>&copy; {new Date().getFullYear()} {SITE_NAME}</span>
-    {/* Decorative separator only -- it is below AA on the ink, and carries no
-        information, so it is hidden from assistive tech rather than recoloured
-        out of the palette. */}
-    <span class="footer-dot" aria-hidden="true">&#9670;</span>
-    <span>Built on black</span>
   </div>
 </footer>
