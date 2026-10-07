@@ -6,14 +6,5 @@ dist/
 .env
 .env.*
 
-# Dev scratch / leftovers
+# Dev scratch
 scratch/
-scripts/*.json
-scripts/*.jpg
-scripts/*.txt
-scripts/*.css
-scripts/*.mjs
-scripts/*.js
-scripts/apply_*
-scripts/replace_hud_with_windows.py
-scripts/update_hero.py

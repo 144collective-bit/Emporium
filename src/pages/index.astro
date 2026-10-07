@@ -1,9 +1,8 @@
 ---
 import Base from '../layouts/Base.astro';
 import ComicHero from '../components/ComicHero';
-import { PROTOCOL_STATS, TELEGRAM_URL } from '../data/site';
 ---
 
 <Base hideFooter={true}>
-  <ComicHero client:load stats={PROTOCOL_STATS} telegramUrl={TELEGRAM_URL} isFullScreen={true} />
+  <ComicHero client:load isFullScreen={true} />
 </Base>

@@ -9,12 +9,3 @@ export const X_URL = `https://x.com/${X_HANDLE}`;
 export const TELEGRAM_URL = 'https://t.me/degenemporium';
 export const DISCORD_URL = 'https://discord.gg/degenemporium';
 export const GITHUB_URL = 'https://github.com/degenemporium';
-
-export const PROTOCOL_STATS = {
-  totalSupply: '5,555',
-  totalVolume: '$18.4M',
-  stakingApy: '34.8%',
-  tokenPrice: '$0.0428',
-  tokenChange: '+14.2%',
-  networkStatus: 'Mainnet Operational',
-};
