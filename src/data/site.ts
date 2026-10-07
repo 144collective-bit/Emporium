@@ -7,4 +7,4 @@ export const SITE_URL = 'https://degenemporium.com';
 
 export const X_HANDLE = 'D3G3Ntrades';
 export const X_URL = `https://x.com/${X_HANDLE}`;
-export const TELEGRAM_URL = 'https://t.me/degenemporium';
+export const TELEGRAM_URL = 'https://t.me/D3G3Nemporium';
