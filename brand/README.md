@@ -4,10 +4,10 @@ Raw inputs as supplied. The site imports processed versions from `src/assets/`.
 
 | File | What it is | Used for |
 | --- | --- | --- |
-| `degen-source.webp` | Degen, the mascot, on flat blue | Cut out to `src/assets/degen.png`; favicons in `public/` |
+| `degen-source.webp` | Degen, the mascot, on flat blue | Cut out to `src/assets/degen.png` |
 | `pulse-gradient-source.webp` | The PulseChain gradient | The site palette |
 | `pulsechain-logo-source.png` | The PulseChain mark, transparent | "PulseChain native" badge (`src/assets/pulsechain.png`) |
-| `logo-source.webp` | The graffiti logo, transparent, full splatter | Header mark via `scripts/logo_mark.py` -> `src/assets/logo.png`; large uses as-is |
+| `logo-source.webp` | The graffiti logo, transparent, full splatter | Header mark via `scripts/logo_mark.py` -> `src/assets/logo.png`; favicons (the diamond); large uses as-is |
 
 ## Palette: the PulseChain gradient
 
@@ -56,8 +56,9 @@ black ink outline.
 
     python scripts/favicons.py
 
-Degen's head on the PulseChain gradient -> `public/icon-512.png`,
-`apple-touch-icon.png`, `favicon.ico`.
+The logo's diamond on near-black with a violet glow -> `public/icon-512.png`,
+`apple-touch-icon.png`, `favicon.ico`. The full logo can't be read at tab
+size; the diamond can.
 
 ## Social share card
 
