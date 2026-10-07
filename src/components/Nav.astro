@@ -1,12 +1,22 @@
 ---
+import { Picture } from 'astro:assets';
+import logo from '../assets/logo.png';
 import { X_URL, X_HANDLE, TELEGRAM_URL } from '../data/site';
 ---
 
 <header class="nav">
   <div class="nav-in">
-    <a href="/" class="wordmark" aria-label="The Degen Emporium, home">
-      <span class="wordmark-the">The</span>
-      <span class="wordmark-name">Degen Emporium</span>
+    <a href="/" class="logo" aria-label="The Degen Emporium, home">
+      <Picture
+        src={logo}
+        formats={['avif', 'webp']}
+        fallbackFormat="webp"
+        widths={[100, 150, 200, 300]}
+        sizes="(max-width: 640px) 74px, 100px"
+        alt=""
+        loading="eager"
+        class="logo-img"
+      />
     </a>
 
     <nav class="nav-social" aria-label="Social">
