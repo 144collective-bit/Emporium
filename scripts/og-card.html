@@ -1,0 +1,103 @@
+<!doctype html>
+<!--
+  Social share card (1200x630). Rendered to public/og-default.jpg by
+  scripts/og-card.mjs; open this file in a browser to preview it.
+  Copy is draft, like the site's.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@900&family=JetBrains+Mono:wght@500&display=block" />
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --ink: #050605;
+    --acid: #a4e01a;
+    --text: #f1f3ee;
+    --muted: #858e81;
+    --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  html, body { width: 1200px; height: 630px; background: #000; overflow: hidden; }
+
+  /* The ink page: black gutters show between the two windows */
+  .card { position: absolute; inset: 14px; background: #000; }
+  .win { position: absolute; inset: 0; }
+
+  .left {
+    clip-path: polygon(0 0, 61% 0, 55% 100%, 0 100%);
+    background:
+      radial-gradient(70% 80% at 30% 40%, #a4e01a14, #0000 70%),
+      var(--grain),
+      linear-gradient(160deg, #10150e, #060806);
+  }
+  .right {
+    clip-path: polygon(62.4% 0, 100% 0, 100% 100%, 56.4% 100%);
+    background:
+      radial-gradient(45% 70% at 80% 80%, #a4e01a40, #0000 70%),
+      var(--grain),
+      linear-gradient(200deg, #121810, #060806);
+  }
+
+  .logo {
+    position: absolute;
+    left: 40px;
+    top: -34px;
+    width: 520px;
+  }
+  .tagline {
+    position: absolute;
+    left: 58px;
+    bottom: 92px;
+    max-width: 540px;
+    font: 900 56px/0.9 "Big Shoulders Display", sans-serif;
+    text-transform: uppercase;
+    color: var(--text);
+    letter-spacing: 0.005em;
+  }
+  .tagline span { color: var(--acid); }
+  .url {
+    position: absolute;
+    left: 58px;
+    bottom: 48px;
+    font: 500 17px/1 "JetBrains Mono", monospace;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .url b { color: var(--acid); font-weight: 500; }
+
+  .halftone {
+    position: absolute;
+    right: 40px;
+    top: 30px;
+    width: 470px;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--acid) 1.2px, #0000 1.8px) 0 0 / 8px 8px;
+    -webkit-mask: radial-gradient(circle, #000 25%, #0000 70%);
+    mask: radial-gradient(circle, #000 25%, #0000 70%);
+    opacity: 0.5;
+  }
+  .degen {
+    position: absolute;
+    right: 30px;
+    bottom: 0;
+    height: 580px;
+    filter: drop-shadow(0 24px 36px #000c);
+  }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="win left">
+      <img class="logo" src="../brand/logo-source.webp" alt="" />
+      <p class="tagline">Goods for the chronically <span>on&#8209;chain.</span></p>
+      <p class="url"><b>●</b> degenemporium.com</p>
+    </div>
+    <div class="win right">
+      <div class="halftone"></div>
+      <img class="degen" src="../src/assets/degen.png" alt="" />
+    </div>
+  </div>
+</body>
+</html>

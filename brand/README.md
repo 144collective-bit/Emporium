@@ -32,3 +32,13 @@ specks, which read as dirt at header size.
 The script removes a flat background colour, keeps the largest shape (drops
 stray marks such as generator watermarks) and cleans the blue fringe off the
 black ink outline.
+
+## Social share card
+
+`public/og-default.jpg` (1200x630) is rendered from `scripts/og-card.html`
+using the site's fonts, the full logo and the Degen cutout:
+
+    node scripts/og-card.mjs
+
+Needs Playwright with Chromium (`npx -y playwright@1 install chromium` once).
+Re-run it after changing the logo, Degen or the tagline.
