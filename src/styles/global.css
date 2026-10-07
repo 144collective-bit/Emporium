@@ -510,8 +510,7 @@ a {
   text-transform: uppercase;
   text-wrap: balance;
 }
-.hl,
-.p5-ticker {
+.hl {
   background: var(--pulse-text);
   -webkit-background-clip: text;
   background-clip: text;
@@ -615,17 +614,63 @@ a {
   gap: 0.8cqi;
 }
 .p5-ticker {
+  /* Layered like the graffiti logo's letters, in the site's typeface.
+     Bottom to top, in plain paint order:
+       the heading's own text  - ink outline + stepped violet extrusion
+       ::before                - glossy PulseChain-gradient face
+       ::after                 - thin light rim on the upper edges
+     The stroke is centred on the glyph edge, so the face covers its inner
+     half and the outer half shows as the outline. */
+  position: relative;
   font-family: var(--font-display);
   font-size: calc(var(--fs-h1) * 1.65);
   font-weight: 900;
   line-height: 0.85;
-  padding-bottom: 0.04em;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  padding: 0 0.07em 0.08em 0.03em;
+  color: #07060d;
+  -webkit-text-stroke: 0.1em #07060d;
+  text-shadow:
+    0.015em 0.02em 0 #5b00c9,
+    0.03em 0.04em 0 #6a00e0,
+    0.045em 0.06em 0 #8a00e6,
+    0.06em 0.08em 0 #b10cd8,
+    0.06em 0.08em 0.4em #8000ff80;
+}
+.p5-ticker::before,
+.p5-ticker::after {
+  /* repeat the letters for the upper layers; the empty alternative keeps
+     screen readers to a single "$DGN" */
+  content: attr(data-text);
+  content: attr(data-text) / "";
+  position: absolute;
+  inset: 0;
+  padding: inherit;
+  -webkit-text-stroke: 0;
+  text-shadow: none;
+  pointer-events: none;
+}
+.p5-ticker::before {
+  background:
+    linear-gradient(180deg, #ffffff66 0%, #ffffff1a 46%, #0000 47%),
+    var(--pulse-text);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: #0000;
+}
+.p5-ticker::after {
+  color: #0000;
+  -webkit-text-stroke: 0.012em #ffffffb3;
+  -webkit-mask: linear-gradient(180deg, #000 0%, #0000 55%);
+  mask: linear-gradient(180deg, #000 0%, #0000 55%);
 }
 /* $DGN lockup: the diamond token mark beside the ticker */
 .p5-token {
   display: flex;
   align-items: center;
   gap: 0.18em;
+  margin-top: 0.12em; /* room for the $'s outlined top above the glyph box */
   font-size: calc(var(--fs-h1) * 1.65);
 }
 .p5-token picture {
