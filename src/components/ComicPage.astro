@@ -14,7 +14,7 @@
 import { Picture } from 'astro:assets';
 import degen from '../assets/degen.png';
 import diamond from '../assets/diamond.png';
-import { X_URL, X_HANDLE, TELEGRAM_URL } from '../data/site';
+import { X_URL, X_HANDLE, TELEGRAM_URL, SHOP_URL } from '../data/site';
 
 const VIEW_W = 668;
 const VIEW_H = 314;
@@ -108,6 +108,9 @@ function placement(id: number) {
         <h2 class="panel-title">Drop 001</h2>
         <p class="panel-text">Heavyweight goods for lightweight portfolios.</p>
       </div>
+      <a class="btn-pulse btn-sm p2-shop" href={SHOP_URL} target="_blank" rel="noopener noreferrer">
+        Enter the store <span aria-hidden="true">→</span>
+      </a>
       <span class="tag p2-tag">Coming soon</span>
     </article>
 

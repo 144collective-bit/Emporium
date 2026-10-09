@@ -155,6 +155,10 @@ a {
 .btn-pulse:hover span {
   transform: translateX(3px);
 }
+.btn-sm {
+  padding: 0.7em 1.05em;
+  font-size: calc(var(--fs-btn) * 0.88);
+}
 
 .tag,
 .chip-link {
@@ -556,6 +560,11 @@ a {
   top: 12%;
   left: 7%;
 }
+.p2-shop {
+  position: absolute;
+  top: 42%;
+  left: 7%;
+}
 
 /* 03 - Socials */
 .panel-3 {
@@ -944,7 +953,8 @@ a {
   .panel-2 {
     min-height: 170px;
   }
-  .p2-tag {
+  .p2-tag,
+  .p2-shop {
     position: static;
     align-self: flex-start;
   }

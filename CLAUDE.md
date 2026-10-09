@@ -39,5 +39,7 @@ it and has been retired completely. Build only on what's here.
   owner supplies them as facts. No financial advice.
 - PulseChain is a real project: say "PulseChain native", never imply an
   official partnership or endorsement.
-- Only link to destinations the owner has confirmed (currently X and
-  Telegram in `src/data/site.ts`).
+- Only link to destinations the owner has confirmed (currently X, Telegram
+  and the Shopify store in `src/data/site.ts`).
+- The Shopify store is public too: anything the site pulls from it (product
+  names, images, descriptions) must not reveal the token either.

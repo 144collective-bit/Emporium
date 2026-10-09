@@ -20,7 +20,7 @@ npm run build    # static site in dist/
 | `src/components/ComicPage.astro` | The six comic windows (desktop page, mobile cards) |
 | `src/components/Nav.astro` | Header: logo, PulseChain badge, X and Telegram |
 | `src/styles/global.css` | All styles and the colour tokens |
-| `src/data/site.ts` | Site name, description, social links |
+| `src/data/site.ts` | Site name, description, social and store links |
 | `src/assets/` | Processed art the site imports |
 | `brand/` | Original art as supplied, palette notes, how to regenerate art |
 | `scripts/` | Art pipeline: cutouts, header logo, favicons, share card |
@@ -31,7 +31,7 @@ npm run build    # static site in dist/
 | Window | Content |
 | --- | --- |
 | 01 | Brand statement: Degen, headline, follow on X |
-| 02 | Drop 001 (merch), coming soon |
+| 02 | Drop 001 (merch), coming soon, with a link to the Shopify store |
 | 03 | X and Telegram |
 | 04 | The tools: Terminal, DEX, Launcher |
 | 05 | The token: blurred and marked classified until launch (decoy content only) |
