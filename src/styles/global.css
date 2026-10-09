@@ -159,6 +159,18 @@ a {
   padding: 0.7em 1.05em;
   font-size: calc(var(--fs-btn) * 0.88);
 }
+/* Disabled: same shape, dimmed, no hover lift */
+.btn-pulse:disabled {
+  opacity: 0.45;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+.btn-pulse:disabled:hover {
+  background:
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
+  box-shadow: none;
+}
 
 .tag,
 .chip-link {

@@ -14,7 +14,7 @@
 import { Picture } from 'astro:assets';
 import degen from '../assets/degen.png';
 import diamond from '../assets/diamond.png';
-import { X_URL, X_HANDLE, TELEGRAM_URL, SHOP_URL } from '../data/site';
+import { X_URL, X_HANDLE, TELEGRAM_URL, SHOP_URL, SHOP_OPEN } from '../data/site';
 
 const VIEW_W = 668;
 const VIEW_H = 314;
@@ -108,9 +108,16 @@ function placement(id: number) {
         <h2 class="panel-title">Drop 001</h2>
         <p class="panel-text">Heavyweight goods for lightweight portfolios.</p>
       </div>
-      <a class="btn-pulse btn-sm p2-shop" href={SHOP_URL} target="_blank" rel="noopener noreferrer">
-        Enter the store <span aria-hidden="true">→</span>
-      </a>
+      {SHOP_OPEN ? (
+        <a class="btn-pulse btn-sm p2-shop" href={SHOP_URL} target="_blank" rel="noopener noreferrer">
+          Enter the store <span aria-hidden="true">→</span>
+        </a>
+      ) : (
+        <button type="button" class="btn-pulse btn-sm p2-shop" disabled>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
+          Enter the store
+        </button>
+      )}
       <span class="tag p2-tag">Coming soon</span>
     </article>
 

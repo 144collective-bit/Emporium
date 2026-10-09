@@ -31,7 +31,7 @@ npm run build    # static site in dist/
 | Window | Content |
 | --- | --- |
 | 01 | Brand statement: Degen, headline, follow on X |
-| 02 | Drop 001 (merch), coming soon, with a link to the Shopify store |
+| 02 | Drop 001 (merch), coming soon. "Enter the store" is disabled until `SHOP_OPEN` in `src/data/site.ts` is true |
 | 03 | X and Telegram |
 | 04 | The tools: Terminal, DEX, Launcher |
 | 05 | The token: blurred and marked classified until launch (decoy content only) |
