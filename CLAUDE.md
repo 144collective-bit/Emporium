@@ -13,6 +13,8 @@ it and has been retired completely. Build only on what's here.
   graffiti headers, sticker sheets, the acid-green palette, the "Connect"
   wallet button, the "MAINNET" badge). Old commits are history, not source.
 - New pages, sections or art only on the owner's explicit request.
+- The `nft-minter` branch is a separate project. Never merge it, or copy
+  anything from it, into `main` or any website branch.
 
 ## Design rules
 
