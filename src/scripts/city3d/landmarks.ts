@@ -29,6 +29,7 @@ import {
   toon,
 } from './kit';
 import { makeDegen } from './degen';
+import { walker } from './life';
 import { SLAB as S, addLamp, addTree, waterMat, type Tick } from './world';
 
 export interface Spot {
@@ -1528,164 +1529,581 @@ function postOffice(scene: THREE.Scene, ctx: LandmarkCtx) {
   return sp;
 }
 
-function construction(scene: THREE.Scene, ctx: LandmarkCtx) {
-  const sp = spot(scene, 'plan', V(26.2, 2.2, 26.0), 9, V(25.0, 6.2, 24.8));
+/* ---------- The Armoury: a stone fortress with a parade ground, for the plan ---------- */
+
+/** Merlons along a wall top from a to c (x, z), `t` deep. */
+function merlons(b: Batch, a: [number, number], c: [number, number], y: number, t: number, mat: THREE.Material) {
+  const dx = c[0] - a[0];
+  const dz = c[1] - a[1];
+  const len = Math.hypot(dx, dz);
+  const n = Math.max(1, Math.floor(len / 0.44));
+  const ry = Math.atan2(-dz, dx);
+  for (let k = 0; k < n; k++) {
+    const f = (k + 0.5) / n;
+    b.add(place(unitBox, a[0] + dx * f, y + 0.13, a[1] + dz * f, 0.22, 0.26, t, 0, ry, 0), mat);
+  }
+}
+
+/** A round tower with a corbelled, crenellated top. */
+function roundTower(b: Batch, x: number, z: number, r: number, h: number, wall: THREE.Material, trim: THREE.Material) {
+  cylAt(b, x, S, z, r, h, wall, 18);
+  cylAt(b, x, S + h - 0.05, z, r + 0.08, 0.16, trim, 18);
+  for (let k = 0; k < 8; k++) {
+    const a = (k / 8) * Math.PI * 2;
+    b.add(place(unitBox, x + Math.sin(a) * (r - 0.02), S + h + 0.24, z + Math.cos(a) * (r - 0.02), 0.2, 0.26, 0.16, 0, a, 0), wall);
+  }
+}
+
+/** Stone blocks with arrow slits; the slits glow a low tactical red after dark. */
+function keepFacade(cols: number) {
+  const W = cols * 96;
+  const H = 384;
+  const draw = (glow: boolean) => (c: CanvasRenderingContext2D) => {
+    c.fillStyle = glow ? '#000' : '#7a7590';
+    c.fillRect(0, 0, W, H);
+    if (!glow) {
+      c.strokeStyle = 'rgba(20,16,40,.45)';
+      c.lineWidth = 3;
+      for (let y = 0, row = 0; y < H; y += 32, row++) {
+        c.beginPath();
+        c.moveTo(0, y);
+        c.lineTo(W, y);
+        c.stroke();
+        for (let x = row % 2 ? 0 : 24; x < W; x += 48) {
+          c.beginPath();
+          c.moveTo(x, y);
+          c.lineTo(x, y + 32);
+          c.stroke();
+        }
+      }
+    }
+    for (let k = 0; k < cols; k++) {
+      const x = k * 96 + 40;
+      for (const y of [70, 230]) {
+        c.fillStyle = glow ? '#b0141a' : PAL.ink;
+        c.fillRect(x, y, 16, 70);
+        c.fillRect(x - 8, y + 26, 32, 10);
+      }
+    }
+  };
+  return lit(new THREE.MeshToonMaterial({ map: canvasTex(W, H, draw(false)), emissiveMap: canvasTex(W, H, draw(true)), emissive: '#ffffff' }), 0, 0.5);
+}
+
+function armoury(scene: THREE.Scene, ctx: LandmarkCtx) {
+  const sp = spot(scene, 'plan', V(26.5, 1.8, 26.6), 9, V(26.6, 6.6, 25.8));
   const g = sp.group;
   const b = new Batch();
-  const concrete = toon('#9a97ad');
-  const col = toon('#b5b2c6');
-  b.box(22.8, S, 22.8, 4.6, 0.2, 4.2, concrete);
-  const xs = [22.9, 25.0, 27.1];
-  const zs = [22.9, 24.8, 26.7];
-  let y = S + 0.2;
-  const levels: { h: number; rows: number[]; slab: [number, number] | null }[] = [
-    { h: 1.6, rows: zs, slab: [22.8, 4.2] },
-    { h: 1.6, rows: zs, slab: [22.8, 2.3] },
-    { h: 1.1, rows: [zs[0]], slab: null },
+  const stone = toon('#7a7590');
+  const stoneDk = toon('#5e5a74');
+  const trim = toon('#4a4660');
+  const olive = toon('#5a6b3a');
+  const oliveDk = toon('#3e4a26');
+  const steel = toon('#2b2a33');
+  const wood = toon('#6b4a2e');
+  const redLamp = neon('#ff2a2a', 0.15, 1.1);
+  const greenLamp = neon('#2aff6a', 0.15, 1.0);
+  const WH = 1.1; // curtain wall height
+  const WT = 0.35;
+  const [X0, X1] = [22.55, 30.45];
+
+  // Curtain walls round the parade ground, with a gap for the gatehouse on the street side
+  const wallRuns: [[number, number], [number, number], 'x' | 'z'][] = [
+    [[X0, X0], [X1, X0 + WT], 'x'],
+    [[X0, X0], [X0 + WT, X1], 'z'],
+    [[X1 - WT, X0], [X1, X1], 'z'],
+    [[X0, X1 - WT], [24.9, X1], 'x'],
+    [[28.3, X1 - WT], [X1, X1], 'x'],
   ];
-  for (const L of levels) {
-    for (const x of xs) for (const z of L.rows) b.box(x, y, z, 0.3, L.h, 0.3, col);
-    y += L.h;
-    if (L.slab) {
-      b.box(22.8, y, L.slab[0], 4.6, 0.18, L.slab[1], concrete);
-      y += 0.18;
-    }
+  for (const [[ax, az], [cx, cz], dir] of wallRuns) {
+    b.box(ax, S, az, cx - ax, WH, cz - az, stone);
+    b.box(ax - 0.03, S + WH - 0.08, az - 0.03, cx - ax + 0.06, 0.1, cz - az + 0.06, trim);
+    const mid = dir === 'x' ? (az + cz) / 2 : (ax + cx) / 2;
+    if (dir === 'x') merlons(b, [ax, mid], [cx, mid], S + WH + 0.02, WT, stone);
+    else merlons(b, [mid, az], [mid, cz], S + WH + 0.02, WT, stone);
   }
-  for (const x of xs) for (const dx of [0.08, 0.22]) b.box(x + dx, y, 23.0, 0.03, 0.5, 0.03, toon('#b07a5a'));
-  // Scaffolding on the front
-  const pipe = toon('#c9c4e6');
-  for (let x = 22.6; x <= 27.6; x += 1.25) b.box(x, S, 27.35, 0.05, 3.6, 0.05, pipe);
-  for (const yy of [S + 1.0, S + 2.0, S + 3.0]) {
-    b.box(22.6, yy, 27.35, 5.05, 0.05, 0.05, pipe);
-    b.box(22.6, yy - 0.04, 27.15, 5.05, 0.04, 0.25, toon('#8a5a2b'));
+  // Corner towers
+  const corners: [number, number][] = [
+    [22.95, 22.95],
+    [30.05, 22.95],
+    [22.95, 30.05],
+    [30.05, 30.05],
+  ];
+  for (const [x, z] of corners) {
+    roundTower(b, x, z, 0.5, 2.3, stoneDk, trim);
+    const lamp = new THREE.SphereGeometry(0.05, 8, 6);
+    lamp.translate(x, S + 2.62, z);
+    b.add(lamp, redLamp);
   }
 
-  // Tower crane: lattice mast, a jib that slews, a beam swinging on the hook
-  const yellow = toon(PAL.craneYellow);
-  const mx = 28.9;
-  const mz = 23.4;
-  const mh = 7.6;
-  const w = 0.5;
-  for (const [dx, dz] of [
-    [0, 0],
-    [w, 0],
-    [w, w],
-    [0, w],
-  ])
-    b.box(mx + dx - 0.03, S, mz + dz - 0.03, 0.06, mh, 0.06, yellow);
-  for (let yy = 0; yy < mh; yy += 0.5) {
-    beam(b, V(mx, S + yy, mz + w), V(mx + w, S + yy + 0.5, mz + w), 0.035, yellow);
-    beam(b, V(mx + w, S + yy, mz), V(mx + w, S + yy + 0.5, mz + w), 0.035, yellow);
-    beam(b, V(mx, S + yy, mz), V(mx + w, S + yy + 0.5, mz), 0.035, yellow);
-    beam(b, V(mx, S + yy, mz), V(mx, S + yy + 0.5, mz + w), 0.035, yellow);
+  // Gatehouse: two towers, a lintel with the name, a raised portcullis, tactical green lights
+  for (const x0 of [24.9, 27.3]) {
+    b.box(x0, S, 29.75, 1.0, 2.5, 0.8, stoneDk);
+    b.box(x0 - 0.04, S + 2.42, 29.71, 1.08, 0.1, 0.88, trim);
+    merlons(b, [x0, 30.47], [x0 + 1.0, 30.47], S + 2.5, 0.16, stoneDk);
+    merlons(b, [x0, 29.83], [x0 + 1.0, 29.83], S + 2.5, 0.16, stoneDk);
+    b.box(x0 + 0.42, S + 1.0, 30.54, 0.16, 0.5, 0.02, toon(PAL.ink));
+  }
+  b.box(25.9, S + 1.7, 29.75, 1.4, 0.8, 0.8, stone);
+  b.box(25.86, S + 1.66, 29.71, 1.48, 0.08, 0.88, trim);
+  for (let k = 0; k < 7; k++) b.box(25.98 + k * 0.2, S + 1.05, 30.12, 0.04, 0.68, 0.04, steel);
+  for (const y of [S + 1.15, S + 1.4, S + 1.62]) b.box(25.92, y, 30.12, 1.36, 0.04, 0.04, steel);
+  for (const x of [25.75, 27.45]) {
+    const l = new THREE.SphereGeometry(0.045, 8, 6);
+    l.translate(x, S + 1.85, 30.58);
+    b.add(l, greenLamp);
+  }
+  {
+    const plaque = canvasTex(1024, 256, (c) => {
+      c.fillStyle = '#3e4a26';
+      c.fillRect(0, 0, 1024, 256);
+      c.lineWidth = 14;
+      c.strokeStyle = PAL.ink;
+      c.strokeRect(7, 7, 1010, 242);
+      c.font = `900 150px ${FONT_DISPLAY}`;
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      (c as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = '14px';
+      c.fillStyle = '#e3dcb0';
+      c.fillText('THE ARMOURY', 512, 138);
+      // Stencil breaks
+      c.fillStyle = '#3e4a26';
+      for (let x = 60; x < 1000; x += 76) c.fillRect(x, 120, 6, 30);
+    });
+    const p = plane(1.36, 0.34, new THREE.MeshToonMaterial({ map: plaque }));
+    p.position.set(26.6, S + 2.12, 30.56);
+    g.add(p);
+  }
+
+  // The keep: stone walls with arrow slits, a parapet, banners, a heavy door, and the flag tower
+  const KX0 = 23.3;
+  const KZ0 = 23.3;
+  const KW = 4.6;
+  const KD = 3.6;
+  const KH = 3.0;
+  g.add(walls(KX0, S, KZ0, KW, KH, KD, keepFacade(5), trim));
+  b.box(KX0 - 0.06, S + KH - 0.08, KZ0 - 0.06, KW + 0.12, 0.12, KD + 0.12, trim);
+  merlons(b, [KX0, KZ0 + KD - 0.08], [KX0 + KW - 1.4, KZ0 + KD - 0.08], S + KH + 0.04, 0.2, stone);
+  merlons(b, [KX0 + 0.08, KZ0], [KX0 + 0.08, KZ0 + KD], S + KH + 0.04, 0.2, stone);
+  merlons(b, [KX0, KZ0 + 0.08], [KX0 + KW, KZ0 + 0.08], S + KH + 0.04, 0.2, stone);
+  merlons(b, [KX0 + KW - 0.08, KZ0], [KX0 + KW - 0.08, KZ0 + KD - 1.4], S + KH + 0.04, 0.2, stone);
+  const TX = KX0 + KW - 1.4;
+  const TZ = KZ0 + KD - 1.4;
+  const TH = 4.5;
+  g.add(walls(TX, S, TZ, 1.4, TH, 1.4, keepFacade(2), trim));
+  b.box(TX - 0.08, S + TH - 0.1, TZ - 0.08, 1.56, 0.16, 1.56, trim);
+  for (const [a, c] of [
+    [
+      [TX, TZ + 1.32],
+      [TX + 1.4, TZ + 1.32],
+    ],
+    [
+      [TX, TZ + 0.08],
+      [TX + 1.4, TZ + 0.08],
+    ],
+    [
+      [TX + 0.08, TZ],
+      [TX + 0.08, TZ + 1.4],
+    ],
+    [
+      [TX + 1.32, TZ],
+      [TX + 1.32, TZ + 1.4],
+    ],
+  ] as [number, number][][])
+    merlons(b, a as [number, number], c as [number, number], S + TH + 0.06, 0.16, stone);
+  {
+    const l = new THREE.SphereGeometry(0.06, 8, 6);
+    l.translate(TX + 0.2, S + TH + 0.5, TZ + 1.2);
+    b.add(l, redLamp);
+  }
+  // Door with iron studs
+  const doorTex = canvasTex(128, 192, (c) => {
+    c.beginPath();
+    c.moveTo(6, 192);
+    c.lineTo(6, 64);
+    c.arc(64, 64, 58, Math.PI, 0);
+    c.lineTo(122, 192);
+    c.closePath();
+    c.fillStyle = '#6b4a2e';
+    c.fill();
+    c.lineWidth = 8;
+    c.strokeStyle = PAL.ink;
+    c.stroke();
+    c.fillStyle = PAL.ink;
+    c.fillRect(62, 40, 4, 152);
+    for (const y of [70, 120, 165]) c.fillRect(6, y, 116, 7);
+    for (let y = 60; y < 190; y += 25) for (const x of [24, 50, 78, 104]) c.fillRect(x, y, 6, 6);
+  });
+  const door = plane(0.95, 1.4, new THREE.MeshToonMaterial({ map: doorTex, transparent: true, alphaTest: 0.5 }));
+  door.position.set(24.6, S + 0.7, KZ0 + KD + 0.012);
+  g.add(door);
+  // Hanging banners: black, PulseChain chevrons
+  const bannerTex = canvasTex(128, 320, (c) => {
+    c.fillStyle = '#14121f';
+    c.beginPath();
+    c.moveTo(0, 0);
+    c.lineTo(128, 0);
+    c.lineTo(128, 290);
+    c.lineTo(64, 320);
+    c.lineTo(0, 290);
+    c.closePath();
+    c.fill();
+    const cols = ['#ff2fb9', '#8f3dff', '#00eaff'];
+    cols.forEach((col, i) => {
+      c.strokeStyle = col;
+      c.lineWidth = 14;
+      c.beginPath();
+      c.moveTo(16, 120 + i * 40);
+      c.lineTo(64, 160 + i * 40);
+      c.lineTo(112, 120 + i * 40);
+      c.stroke();
+    });
+    c.fillStyle = '#e3dcb0';
+    c.beginPath();
+    c.moveTo(64, 30);
+    c.lineTo(90, 60);
+    c.lineTo(64, 92);
+    c.lineTo(38, 60);
+    c.closePath();
+    c.fill();
+  });
+  for (const x of [23.75, 25.65]) {
+    const ban = plane(0.55, 1.4, new THREE.MeshToonMaterial({ map: bannerTex, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide }));
+    ban.position.set(x, S + 2.05, KZ0 + KD + 0.02);
+    g.add(ban);
+    b.box(x - 0.34, S + 2.76, KZ0 + KD, 0.68, 0.04, 0.06, wood);
+  }
+
+  // Flags: Degen's on the keep tower, pennants on the front towers, all flying
+  const flags: { geo: THREE.PlaneGeometry; base: Float32Array; w: number }[] = [];
+  const flag = (x: number, y: number, z: number, w: number, h: number, tex: THREE.Texture, pole: number) => {
+    cylAt(b, x, y, z, 0.025, pole, steel, 6);
+    const geo = new THREE.PlaneGeometry(w, h, 10, 4);
+    geo.translate(w / 2, 0, 0);
+    flags.push({ geo, base: Float32Array.from(geo.attributes.position.array as Float32Array), w });
+    const m = new THREE.Mesh(geo, new THREE.MeshToonMaterial({ map: tex, side: THREE.DoubleSide, transparent: true, alphaTest: 0.5 }));
+    m.position.set(x, y + pole - h / 2 - 0.04, z);
+    m.rotation.y = Math.PI / 4;
+    m.castShadow = true;
+    g.add(m);
+  };
+  const degenFlag = canvasTex(256, 168, (c) => {
+    c.fillStyle = '#14121f';
+    c.fillRect(0, 0, 256, 168);
+    const gr = c.createLinearGradient(0, 168, 256, 0);
+    gr.addColorStop(0, '#ff2fb9');
+    gr.addColorStop(0.5, '#8f3dff');
+    gr.addColorStop(1, '#00eaff');
+    c.fillStyle = gr;
+    c.fillRect(0, 140, 256, 28);
+    if (ctx.degen) {
+      const h = 132;
+      const w = (ctx.degen.width / ctx.degen.height) * h;
+      c.drawImage(ctx.degen, 128 - w / 2, 6, w, h);
+    }
+  });
+  flag(TX + 0.7, S + TH + 0.1, TZ + 0.7, 1.15, 0.75, degenFlag, 1.5);
+  const pennant = canvasTex(128, 64, (c) => {
+    const gr = c.createLinearGradient(0, 0, 128, 0);
+    gr.addColorStop(0, '#ff2fb9');
+    gr.addColorStop(1, '#00eaff');
+    c.fillStyle = gr;
+    c.beginPath();
+    c.moveTo(0, 0);
+    c.lineTo(128, 32);
+    c.lineTo(0, 64);
+    c.closePath();
+    c.fill();
+  });
+  for (const [x, z] of [corners[2], corners[3]]) flag(x, S + 2.55, z, 0.6, 0.3, pennant, 0.9);
+  ctx.tick(({ t }) => {
+    for (const f of flags) {
+      const pos = f.geo.attributes.position as THREE.BufferAttribute;
+      for (let i = 0; i < pos.count; i++) {
+        const x = f.base[i * 3];
+        pos.setZ(i, Math.sin(x * 5 - t * 4) * 0.07 * (x / f.w));
+      }
+      pos.needsUpdate = true;
+    }
+  });
+
+  // Parade ground markings
+  const lineMat = toon('#bdb894');
+  for (const [x, z, w, d] of [
+    [23.95, 27.2, 3.3, 0.05],
+    [23.95, 28.75, 3.3, 0.05],
+    [23.95, 27.2, 0.05, 1.6],
+    [27.2, 27.2, 0.05, 1.6],
+  ]) {
+    const m = new THREE.Mesh(unitPlane, lineMat);
+    m.rotation.x = -Math.PI / 2;
+    m.scale.set(w, d, 1);
+    m.position.set(x + w / 2, S + 0.006, z + d / 2);
+    scene.add(fx(m));
+  }
+
+  // A tank with a slowly turning turret
+  {
+    const tank = new THREE.Group();
+    tank.position.set(29.15, S, 25.4);
+    const tb = new Batch();
+    for (const sx of [-1, 1]) {
+      tb.box(sx * 0.42 - 0.14, 0.02, -0.8, 0.28, 0.3, 1.6, steel);
+      for (let k = 0; k < 5; k++) {
+        const w = new THREE.CylinderGeometry(0.12, 0.12, 0.05, 12);
+        w.rotateZ(Math.PI / 2);
+        w.translate(sx * 0.57, 0.14, -0.6 + k * 0.3);
+        tb.add(w, oliveDk);
+      }
+    }
+    tb.box(-0.48, 0.28, -0.75, 0.96, 0.26, 1.45, olive);
+    tb.add(place(unitBox, 0, 0.44, 0.68, 0.96, 0.16, 0.3, -0.55, 0, 0), olive);
+    tb.box(-0.3, 0.54, -0.72, 0.6, 0.06, 0.3, oliveDk);
+    tb.build(tank);
+    const turret = new THREE.Group();
+    turret.position.set(0, 0.54, -0.05);
+    const ub = new Batch();
+    ub.box(-0.31, 0, -0.38, 0.62, 0.24, 0.7, oliveDk);
+    cylAt(ub, 0.12, 0.24, -0.12, 0.1, 0.06, steel, 10);
+    const barrel = new THREE.CylinderGeometry(0.045, 0.05, 1.05, 10);
+    barrel.rotateX(Math.PI / 2);
+    barrel.translate(0, 0.12, 0.82);
+    ub.add(barrel, steel);
+    ub.box(-0.07, 0.06, 1.3, 0.14, 0.12, 0.14, steel);
+    ub.build(turret);
+    tank.add(turret);
+    g.add(tank);
+    ctx.tick(({ t }) => (turret.rotation.y = Math.sin(t * 0.22) * 0.9));
+  }
+
+  // An armoured jeep by the gate
+  {
+    const jeep = new THREE.Group();
+    jeep.position.set(29.3, S, 28.6);
+    jeep.rotation.y = Math.PI;
+    const jb = new Batch();
+    jb.box(-0.28, 0.14, -0.5, 0.56, 0.26, 1.0, olive);
+    jb.box(-0.27, 0.4, -0.5, 0.54, 0.1, 0.42, oliveDk);
+    jb.box(-0.26, 0.4, -0.05, 0.52, 0.28, 0.04, toon('#8fd6e8'));
+    for (const sx of [-0.25, 0.23]) for (const sz of [-0.05, 0.4]) jb.box(sx, 0.4, sz, 0.02, 0.3, 0.02, steel);
+    jb.box(-0.26, 0.68, -0.05, 0.52, 0.03, 0.47, oliveDk);
+    for (const sx of [-0.3, 0.3])
+      for (const sz of [-0.32, 0.32]) {
+        const w = new THREE.CylinderGeometry(0.13, 0.13, 0.1, 12);
+        w.rotateZ(Math.PI / 2);
+        w.translate(sx, 0.13, sz);
+        jb.add(w, steel);
+      }
+    const spare = new THREE.CylinderGeometry(0.12, 0.12, 0.08, 12);
+    spare.rotateX(Math.PI / 2);
+    spare.translate(0, 0.32, -0.55);
+    jb.add(spare, steel);
+    jb.build(jeep);
+    g.add(jeep);
+  }
+
+  // Supply yard: crates under camo netting, drums, a helmet rack, a forklift moving crates
+  {
+    const sb = new Batch();
+    const crateMat = (label: string) =>
+      new THREE.MeshToonMaterial({
+        map: canvasTex(128, 96, (c) => {
+          c.fillStyle = '#4f5d31';
+          c.fillRect(0, 0, 128, 96);
+          c.strokeStyle = '#2f3a1c';
+          c.lineWidth = 6;
+          c.strokeRect(3, 3, 122, 90);
+          c.font = `700 24px ${FONT_MONO}`;
+          c.textAlign = 'center';
+          c.textBaseline = 'middle';
+          c.fillStyle = '#e3dcb0';
+          c.fillText(label, 64, 50);
+        }),
+      });
+    const crates = ['GEAR', 'RATIONS', 'SUPPLY'].map(crateMat);
+    const stack: [number, number, number, number][] = [
+      [28.3, 23.1, 0, 0],
+      [28.85, 23.1, 0, 1],
+      [29.4, 23.1, 0, 2],
+      [28.3, 23.65, 0, 2],
+      [28.85, 23.65, 0, 0],
+      [28.55, 23.1, 1, 1],
+      [29.1, 23.1, 1, 2],
+      [28.55, 23.65, 1, 0],
+    ];
+    for (const [x, z, lvl, m] of stack) sb.box(x, S + lvl * 0.42, z, 0.5, 0.42, 0.5, crates[m]);
+    for (const [x, z] of [
+      [29.95, 23.25],
+      [29.95, 23.7],
+      [23.25, 29.55],
+      [23.6, 29.65],
+    ]) {
+      cylAt(sb, x, S, z, 0.17, 0.48, oliveDk, 12);
+      cylAt(sb, x, S + 0.46, z, 0.175, 0.03, steel, 12);
+    }
+    sb.box(23.4, S + 0.55, 28.0, 0.05, 0.05, 0.9, steel);
+    for (const zz of [28.0, 28.9]) sb.box(23.405, S, zz - 0.02, 0.04, 0.6, 0.04, steel);
+    for (let k = 0; k < 3; k++) {
+      const h = new THREE.SphereGeometry(0.12, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2);
+      h.translate(23.425, S + 0.6, 28.15 + k * 0.3);
+      sb.add(h, oliveDk);
+    }
+    for (const [x, z] of [
+      [28.15, 22.95],
+      [30.0, 22.95],
+      [28.15, 24.35],
+      [30.0, 24.35],
+    ])
+      sb.box(x - 0.025, S, z - 0.025, 0.05, 1.35, 0.05, steel);
+    sb.build(g);
+    const camo = canvasTex(256, 256, (c) => {
+      c.fillStyle = '#4f5d31';
+      c.fillRect(0, 0, 256, 256);
+      const blobs = ['#3a4622', '#6b7a44', '#2b3418', '#7d6b45'];
+      const rr = rng(7);
+      for (let k = 0; k < 60; k++) {
+        c.fillStyle = blobs[k % blobs.length];
+        c.beginPath();
+        c.ellipse(rr() * 256, rr() * 256, 10 + rr() * 26, 8 + rr() * 18, rr() * 3, 0, Math.PI * 2);
+        c.fill();
+      }
+    });
+    const net = new THREE.Mesh(unitPlane, new THREE.MeshToonMaterial({ map: camo, side: THREE.DoubleSide }));
+    net.rotation.x = -Math.PI / 2;
+    net.scale.set(2.0, 1.55, 1);
+    net.position.set(29.07, S + 1.36, 23.65);
+    net.receiveShadow = true;
+    g.add(net);
+
+    const fork = new THREE.Group();
+    const fb2 = new Batch();
+    fb2.box(-0.2, 0.08, -0.28, 0.4, 0.32, 0.5, olive);
+    fb2.box(-0.16, 0.4, -0.25, 0.32, 0.3, 0.02, steel);
+    fb2.box(-0.16, 0.7, -0.25, 0.32, 0.03, 0.36, oliveDk);
+    for (const sx of [-0.12, 0.12]) fb2.box(sx - 0.02, 0.05, 0.22, 0.04, 0.75, 0.04, steel);
+    for (const sx of [-0.1, 0.1]) fb2.box(sx - 0.02, 0.1, 0.24, 0.04, 0.02, 0.36, steel);
+    fb2.box(-0.2, 0.12, 0.26, 0.4, 0.32, 0.34, crates[1]);
+    for (const sx of [-0.21, 0.21])
+      for (const sz of [-0.18, 0.12]) {
+        const w = new THREE.CylinderGeometry(0.08, 0.08, 0.06, 10);
+        w.rotateZ(Math.PI / 2);
+        w.translate(sx, 0.08, sz);
+        fb2.add(w, steel);
+      }
+    fb2.build(fork);
+    fork.rotation.y = Math.PI / 2;
+    fork.position.set(29.1, S, 27.35);
+    g.add(fork);
+    ctx.tick(({ t }) => (fork.position.x = 29.1 + Math.sin(t * 0.45) * 0.6));
+  }
+
+  // Degen soldiers: a squad marching laps of the parade ground, two guards at the gate who
+  // salute when you walk past. Instanced, so the whole garrison is a handful of draw calls.
+  {
+    const squad = 6;
+    const guards: [number, number][] = [
+      [25.55, 29.45],
+      [27.65, 29.45],
+    ];
+    const count = squad + guards.length;
+    const mk = (geo: THREE.BufferGeometry, mat: THREE.Material) => {
+      const m = new THREE.InstancedMesh(geo, mat, count);
+      m.castShadow = true;
+      m.frustumCulled = false;
+      m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      g.add(m);
+      return m;
+    };
+    const legGeo = new THREE.BoxGeometry(0.11, 0.42, 0.12).translate(0, -0.21, 0);
+    const armGeo = new THREE.BoxGeometry(0.09, 0.38, 0.1).translate(0, -0.19, 0);
+    const rifleGeo = new THREE.BoxGeometry(0.04, 0.56, 0.05).translate(0, 0.12, 0);
+    const helmetGeo = new THREE.SphereGeometry(0.16, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.8, 1.05);
+    const parts = {
+      torso: mk(new THREE.BoxGeometry(0.32, 0.42, 0.2), olive),
+      head: mk(new THREE.SphereGeometry(0.13, 12, 8), toon('#14121f')),
+      helmet: mk(helmetGeo, oliveDk),
+      shades: mk(new THREE.BoxGeometry(0.22, 0.05, 0.03), lit(new THREE.MeshToonMaterial({ color: '#1fbf6b', emissive: '#1fbf6b' }), 0.15, 0.6)),
+      legL: mk(legGeo, toon('#465530')),
+      legR: mk(legGeo, toon('#465530')),
+      armL: mk(armGeo, olive),
+      armR: mk(armGeo, olive),
+      rifle: mk(rifleGeo, steel),
+    };
+    const M = new THREE.Matrix4();
+    const L = new THREE.Matrix4();
+    const q = new THREE.Quaternion();
+    const e = new THREE.Euler();
+    const one = new THREE.Vector3(1, 1, 1);
+    const SC = new THREE.Vector3(0.85, 0.85, 0.85);
+    const put = (m: THREE.InstancedMesh, i: number, x: number, y: number, z: number, rx = 0, rz = 0) => {
+      L.compose(V(x, y, z), q.setFromEuler(e.set(rx, 0, rz)), one);
+      m.setMatrixAt(i, L.premultiply(M));
+    };
+    // The squad's route: a rounded rectangle round the parade ground
+    const route: THREE.Vector2[] = [];
+    const [cx, cz, hx, hz, rr] = [25.58, 27.95, 1.35, 0.5, 0.35];
+    for (let k = 0; k < 4; k++) {
+      const [sx, sz] = [
+        [1, 1],
+        [-1, 1],
+        [-1, -1],
+        [1, -1],
+      ][k];
+      const a0 = [0, Math.PI / 2, Math.PI, Math.PI * 1.5][k];
+      for (let j = 0; j <= 6; j++) {
+        const a = a0 + (j / 6) * (Math.PI / 2);
+        route.push(new THREE.Vector2(cx + sx * (hx - rr) + Math.cos(a) * rr, cz + sz * (hz - rr) + Math.sin(a) * rr));
+      }
+    }
+    const segLen = route.map((p, i) => p.distanceTo(route[(i + 1) % route.length]));
+    const total = segLen.reduce((a, c) => a + c, 0);
+    const along = (s: number) => {
+      s = ((s % total) + total) % total;
+      for (let i = 0; i < route.length; i++) {
+        if (s <= segLen[i]) {
+          const a = route[i];
+          const c = route[(i + 1) % route.length];
+          const f = s / segLen[i];
+          return { x: a.x + (c.x - a.x) * f, z: a.y + (c.y - a.y) * f, yaw: Math.atan2(c.x - a.x, c.y - a.y) };
+        }
+        s -= segLen[i];
+      }
+      return { x: route[0].x, z: route[0].y, yaw: 0 };
+    };
+    const salute = guards.map(() => 0);
+    const pose = (i: number, x: number, z: number, yaw: number, phase: number, march: number, sal: number, rifleLeft: boolean) => {
+      M.compose(V(x, S + Math.abs(Math.sin(phase)) * 0.02 * march, z), q.setFromEuler(e.set(0, yaw, 0)), SC);
+      put(parts.torso, i, 0, 0.66, 0);
+      put(parts.head, i, 0, 1.0, 0);
+      put(parts.helmet, i, 0, 1.04, 0);
+      put(parts.shades, i, 0, 1.01, 0.125);
+      const swing = Math.sin(phase) * 0.5 * march;
+      put(parts.legL, i, -0.07, 0.45, 0, swing);
+      put(parts.legR, i, 0.07, 0.45, 0, -swing);
+      if (rifleLeft) {
+        put(parts.armL, i, -0.2, 0.86, 0, -0.35, 0.15);
+        put(parts.rifle, i, -0.24, 0.86, 0.06, 0.1, 0.1);
+        put(parts.armR, i, 0.2, 0.86, 0, -2.55 * sal, -0.75 * sal);
+      } else {
+        put(parts.armL, i, -0.2, 0.86, 0, -swing * 0.9);
+        put(parts.armR, i, 0.2, 0.86, 0, -0.35, -0.15);
+        put(parts.rifle, i, 0.24, 0.86, 0.06, 0.1, -0.1);
+      }
+    };
+    ctx.tick(({ t, dt }) => {
+      for (let i = 0; i < squad; i++) {
+        const s = t * 0.42 - i * 0.48;
+        const p = along(s);
+        pose(i, p.x, p.z, p.yaw, s * 9, 1, 0, false);
+      }
+      guards.forEach(([x, z], k) => {
+        const near = walker.on && Math.hypot(walker.x - x, walker.z - z) < 1.8;
+        salute[k] += ((near ? 1 : 0) - salute[k]) * Math.min(1, dt * 6);
+        pose(squad + k, x, z, 0, 0, 0, salute[k], true);
+      });
+      for (const m of Object.values(parts)) m.instanceMatrix.needsUpdate = true;
+    });
   }
   b.build(g);
-
-  const slew = new THREE.Group();
-  slew.position.set(mx + w / 2, S + mh, mz + w / 2);
-  g.add(slew);
-  const jb = new Batch();
-  jb.box(-0.45, 0, -0.4, 0.9, 0.7, 0.8, yellow);
-  jb.box(0.05, 0.15, 0.4, 0.4, 0.4, 0.02, toon('#8fe7ff'));
-  const jl = 7.2;
-  for (const zz of [-0.22, 0.22]) jb.box(-jl, 0.7, zz - 0.03, jl + 2.6, 0.06, 0.06, yellow);
-  jb.box(-jl, 1.15, -0.03, jl + 2.6, 0.06, 0.06, yellow);
-  for (let x = -jl; x < 2.6; x += 0.5) {
-    beam(jb, V(x, 0.73, -0.22), V(x + 0.25, 1.15, 0), 0.03, yellow);
-    beam(jb, V(x + 0.25, 1.15, 0), V(x + 0.5, 0.73, 0.22), 0.03, yellow);
-  }
-  jb.box(1.6, 0.2, -0.35, 0.9, 0.6, 0.7, toon('#6f6c80'));
-  beam(jb, V(0, 0.7, 0), V(0, 2.4, 0), 0.08, yellow);
-  beam(jb, V(0, 2.4, 0), V(-jl * 0.8, 1.15, 0), 0.025, toon('#1b1830'));
-  beam(jb, V(0, 2.4, 0), V(2.4, 1.15, 0), 0.025, toon('#1b1830'));
-  jb.build(slew);
-  const hook = new THREE.Group();
-  hook.position.set(-4.6, 0.7, 0);
-  slew.add(hook);
-  const hb = new Batch();
-  hb.box(-0.15, -0.1, -0.15, 0.3, 0.12, 0.3, toon('#1b1830'));
-  hb.box(-0.01, -3.0, -0.01, 0.02, 2.9, 0.02, toon('#1b1830'));
-  hb.box(-0.8, -3.3, -0.1, 1.6, 0.22, 0.2, toon('#e23b3b'));
-  hb.build(hook);
-  ctx.tick(({ t }) => {
-    slew.rotation.y = Math.sin(t * 0.11) * 0.55;
-    hook.rotation.x = Math.sin(t * 0.9) * 0.06;
-    hook.rotation.z = Math.cos(t * 0.7) * 0.05;
-  });
-
-  // Fence, banner, cones, a dirt pile, a site toilet
-  const fb = new Batch();
-  const mesh = canvasTex(128, 128, (c) => {
-    c.strokeStyle = 'rgba(200,196,230,.85)';
-    c.lineWidth = 3;
-    for (let i = -128; i < 256; i += 16) {
-      c.beginPath();
-      c.moveTo(i, 0);
-      c.lineTo(i + 128, 128);
-      c.moveTo(i + 128, 0);
-      c.lineTo(i, 128);
-      c.stroke();
-    }
-  });
-  mesh.wrapS = mesh.wrapT = THREE.RepeatWrapping;
-  mesh.repeat.set(6, 1);
-  const meshMat = new THREE.MeshBasicMaterial({ map: mesh, transparent: true, depthWrite: false, side: THREE.DoubleSide });
-  for (let x = 22.4; x <= 30.75; x += 1.04) fb.box(x, S, 30.7, 0.06, 1.2, 0.06, toon('#8b86b8'));
-  for (let z = 22.4; z <= 30.75; z += 1.04) fb.box(30.7, S, z, 0.06, 1.2, 0.06, toon('#8b86b8'));
-  const f1 = plane(8.35, 1.15, meshMat);
-  f1.position.set(26.57, S + 0.6, 30.73);
-  const f2 = plane(8.35, 1.15, meshMat);
-  f2.position.set(30.73, S + 0.6, 26.57);
-  f2.rotation.y = Math.PI / 2;
-  g.add(fx(f1), fx(f2));
-  const banner = canvasTex(2048, 160, (c) => {
-    c.fillStyle = PAL.craneYellow;
-    c.fillRect(0, 0, 2048, 160);
-    c.lineWidth = 12;
-    c.strokeStyle = PAL.ink;
-    c.strokeRect(6, 6, 2036, 148);
-    c.font = `700 82px ${FONT_MONO}`;
-    c.textAlign = 'center';
-    c.textBaseline = 'middle';
-    c.fillStyle = PAL.ink;
-    (c as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = '6px';
-    c.fillText("WHAT'S NEXT · THE PLAN, ROUGHLY", 1024, 84);
-  });
-  const ban = plane(5.6, 0.44, new THREE.MeshToonMaterial({ map: banner }));
-  ban.position.set(26.4, S + 0.75, 30.77);
-  g.add(ban);
-  for (const [x, z] of [
-    [23.2, 28.8],
-    [24.2, 29.4],
-    [28.8, 27.6],
-  ]) {
-    const c = new THREE.ConeGeometry(0.13, 0.4, 10);
-    c.translate(x, S + 0.2, z);
-    fb.add(c, toon('#ff8a3d'));
-  }
-  const dirt = new THREE.SphereGeometry(1, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2);
-  dirt.scale(1.1, 0.6, 0.9);
-  dirt.translate(27.6, S, 29.2);
-  fb.add(dirt, toon('#7a5240'));
-  fb.box(22.7, S, 29.4, 0.7, 1.3, 0.7, toon('#2a6fd6'));
-  fb.build(g);
-
-  // Floodlights for night shifts
-  const flood = lit(glowMat('#fff2c0', 1), 0, 0.3);
-  for (const [x, z] of [
-    [22.5, 22.5],
-    [30.5, 22.5],
-  ]) {
-    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 3.2, 6), toon('#1b1830'));
-    pole.position.set(x, S + 1.6, z);
-    scene.add(pole);
-    const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.2, 0.15), neon('#fff6d6', 0.6, 3));
-    lamp.position.set(x, S + 3.25, z);
-    const glow = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.6), flood);
-    glow.position.set(x, S + 3.25, z);
-    glow.lookAt(26.5, S + 3.25, 40);
-    scene.add(fx(lamp), fx(glow));
-  }
   return sp;
 }
 
@@ -1868,7 +2286,7 @@ export function buildLandmarks(scene: THREE.Scene, ctx: LandmarkCtx) {
     shop(scene, ctx, crowd),
     workshop(scene, ctx),
     vault(scene, ctx, crowd),
-    construction(scene, ctx),
+    armoury(scene, ctx),
     signal(scene, ctx),
     postOffice(scene, ctx),
   ];

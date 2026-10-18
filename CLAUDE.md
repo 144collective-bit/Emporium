@@ -49,6 +49,11 @@ it and has been retired completely. Build only on what's here.
   them. The rooftop hologram reuses `makeDegen()` from `degen.ts`. Its
   podium, claw machines and prize booth are mirrored in `walk.ts`
   (`SOLIDS`, `CAMERA_ONLY`).
+- The Armoury (`armoury()` in `landmarks.ts` and `city.ts`) links to the
+  plan window. Keep it stealth dark at night (low red and green lights, no
+  floodlights). Its soldiers are instanced; the gate guards salute when the
+  walker (`walker` in `life.ts`) comes near. Its walls, towers, keep and
+  vehicles are mirrored in `walk.ts` `SOLIDS`.
 - Floating cut-out signs (FX layer with a transparent texture, like the roof
   logo) need `occlude()` from `kit.ts`, or the ink outlines of whatever is
   behind them get drawn across them.

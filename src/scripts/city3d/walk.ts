@@ -41,12 +41,24 @@ const SOLIDS: Box[] = [
   [1.1, 23.1, 6.1, 27.1, 3.3], // post office
   [6.4, 27.3, 7.0, 27.85, 0.9], // mailbox
   [5.05, 27.85, 7.75, 30.55, 0], // pond
-  [22.7, 22.7, 27.5, 27.45, 5.6], // building site frame and scaffold
-  [28.8, 23.3, 29.5, 24.0, 8.4], // crane mast
-  [22.3, 30.6, 30.8, 30.85, 1.3], // site fence (front)
-  [30.6, 22.3, 30.85, 30.85, 1.3], // site fence (side)
-  [22.6, 29.3, 23.5, 30.2, 1.4], // site toilet
-  [26.4, 28.3, 28.8, 30.1, 0.7], // dirt pile
+  // The Armoury: curtain walls (open at the gate), towers, keep, vehicles, supplies
+  [22.55, 22.55, 30.45, 22.9, 1.4],
+  [22.55, 22.55, 22.9, 30.45, 1.4],
+  [30.1, 22.55, 30.45, 30.45, 1.4],
+  [22.55, 30.1, 24.9, 30.45, 1.4],
+  [28.3, 30.1, 30.45, 30.45, 1.4],
+  [22.45, 22.45, 23.45, 23.45, 2.6], // corner towers
+  [29.55, 22.45, 30.55, 23.45, 2.6],
+  [22.45, 29.55, 23.45, 30.55, 2.6],
+  [29.55, 29.55, 30.55, 30.55, 2.6],
+  [24.9, 29.75, 25.9, 30.55, 2.8], // gatehouse towers
+  [27.3, 29.75, 28.3, 30.55, 2.8],
+  [23.3, 23.3, 27.9, 26.9, 3.3], // keep
+  [28.62, 24.55, 29.68, 26.25, 1.0], // tank
+  [28.95, 28.05, 29.65, 29.15, 0.9], // jeep
+  [28.1, 22.95, 30.05, 24.35, 1.4], // supply crates under the netting
+  [23.05, 29.35, 23.8, 29.85, 0.6], // drums
+  [23.3, 27.95, 23.55, 28.95, 0.7], // helmet rack
   [22.7, 0.9, 26.1, 4.3, 7.6], // apartments A
   [26.9, 1.5, 30.3, 5.3, 8.4], // apartments B and billboard
   [1.7, 1.7, 3.5, 3.5, 6.6], // water tower
@@ -54,7 +66,10 @@ const SOLIDS: Box[] = [
   [11.95, 18.55, 12.85, 19.45, 1.4],
 ];
 /** Only the camera bumps into these (tall parts above a walkable footprint) */
-const CAMERA_ONLY: Box[] = [[11.9, 11.9, 17.5, 17.5, 12.6]]; // the Emporium's glass tower
+const CAMERA_ONLY: Box[] = [
+  [11.9, 11.9, 17.5, 17.5, 12.6], // the Emporium's glass tower
+  [26.5, 25.5, 27.9, 26.9, 5.9], // the Armoury's flag tower
+];
 
 /** Where you can step in, and what opens there. */
 const DOORS: { id: SpotId; x: number; z: number }[] = [
@@ -64,7 +79,7 @@ const DOORS: { id: SpotId; x: number; z: number }[] = [
   { id: 'vault', x: 4.3, z: 18.6 },
   { id: 'signal', x: 13.7, z: 8.6 },
   { id: 'telegram', x: 3.6, z: 27.6 },
-  { id: 'plan', x: 26.4, z: 31.3 },
+  { id: 'plan', x: 26.6, z: 30.95 },
 ];
 
 /** Facing the Emporium's doors, the tower over his shoulder */

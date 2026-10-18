@@ -66,9 +66,16 @@ cartoon shading and PulseChain neon, built with [three.js](https://threejs.org).
   bounce like an equalizer, and a giant hologram Degen dances on the roof.
   At street level: a glass arcade hall with claw machines, the ARCADE sign
   and logo over the doors, a glowing tile pad, a prize booth and a queue.
+- **The Armoury** (south-east block) is a stone fortress: curtain walls with
+  battlements, round corner towers, a gatehouse with a raised portcullis, and
+  a keep with arrow slits, banners and Degen's flag on its tower. Inside, a
+  squad of Degen soldiers marches laps of the parade ground, guards at the
+  gate salute you in walk mode, a tank turns its turret, and a forklift
+  moves crates in the supply yard under camo netting. At night it goes
+  stealth dark: low red slit light and small red and green tactical lamps.
 - **Alive:** cars and buses stop at traffic lights, Degen-style people walk
   the sidewalks and queue at the shop, boats on the river, drones, a blimp,
-  birds by day, sparks from the workshop, a swinging crane.
+  birds by day, sparks from the workshop, and soldiers drilling at the Armoury.
 - **Sky:** day, sunset and night follow the visitor's clock (or pick one in
   City settings); rain comes and goes, with wet neon streets.
 - **Sound:** a synthesised city hum, rain and a beat near the Emporium, off
@@ -128,7 +135,7 @@ When the real wallet is ready, it plugs into `src/scripts/city3d/store.ts`.
 | Drop 001 (shop, shutters down) | `/emporium#drop`, or the Shopify store once `SHOP_OPEN` is true |
 | The Workshop | `/emporium#workshop` |
 | The Vault | `/emporium#vault` |
-| Building site | `/emporium#plan` |
+| The Armoury | `/emporium#plan` |
 | Signal tower | X |
 | Post office | Telegram |
 

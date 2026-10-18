@@ -78,7 +78,7 @@ export async function bootCity(root: HTMLElement) {
   const ticks: Tick[] = [];
   const tick = (f: Tick) => ticks.push(f);
 
-  buildGround(scene, { '0,11': 'paving', '11,11': 'paving', '22,11': 'concrete', '11,22': 'concrete', '22,22': 'dirt' });
+  buildGround(scene, { '0,11': 'paving', '11,11': 'paving', '22,11': 'concrete', '11,22': 'concrete', '22,22': 'concrete' });
   progress(0.3);
   await nextFrame();
   const { spots, crowd } = buildLandmarks(scene, { degen, logo, tick, low: tier === 'low' });

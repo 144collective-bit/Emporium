@@ -921,77 +921,156 @@ function workshop(s: Spot) {
   add(19.5, 30.4, lamp(19.5, 30.4));
 }
 
-/** Block (2,2): the building site with a crane, for the plan. */
-function construction(s: Spot) {
-  const c = '#8d8aa0';
-  let b = prism(22.8, 22.8, 4.6, 4.2, 0.3, { c, z: Z0 });
-  const xs = [22.9, 25.0, 27.1];
-  const ys = [22.9, 24.8, 26.7];
-  const col = (x: number, y: number, z: number, h: number) => prism(x, y, 0.3, 0.3, h, { c: '#a7a4b8', z });
-  const levels = [
-    { z: Z0 + 0.3, h: 2.3, rows: ys, slab: [22.8, 4.2] },
-    { z: Z0 + 2.85, h: 2.3, rows: ys, slab: [22.8, 2.3] },
-    { z: Z0 + 5.4, h: 1.6, rows: [ys[0]], slab: null },
-  ] as const;
-  for (const L of levels) {
-    const posts = xs.flatMap((x) => L.rows.map((y) => [x, y] as const)).sort((a, b2) => a[0] + a[1] - (b2[0] + b2[1]));
-    for (const [x, y] of posts) b += col(x, y, L.z, L.h);
-    if (L.slab) b += prism(22.8, L.slab[0], 4.6, L.slab[1], 0.25, { c, z: L.z + L.h });
-  }
-  // Rebar sticking out of the top
-  let rebar = '';
-  for (const x of xs) rebar += line(P(x + 0.15, 23.05, Z0 + 7.0), P(x + 0.15, 23.05, Z0 + 7.8));
-  b += `<g class="rebar">${rebar}</g>`;
+/** Block (2,2): the Armoury, a stone fortress with a parade ground, for the plan. */
+function armoury(s: Spot, art: CityInput['art']) {
+  const STONE = '#8a85a0';
+  const STONE_DK = '#6e6a86';
+  const OLIVE = '#5a6b3a';
+  const OLIVE_DK = '#3e4a26';
+  const WH = 1.3;
+  const WT = 0.35;
+  /** Merlons along a wall top from (x0, y0) to (x1, y1). */
+  const merlons = (x0: number, y0: number, x1: number, y1: number, z: number, c = STONE) => {
+    const len = Math.hypot(x1 - x0, y1 - y0);
+    const k = Math.max(1, Math.floor(len / 0.44));
+    const alongX = Math.abs(x1 - x0) > Math.abs(y1 - y0);
+    let out = '';
+    for (let i = 0; i < k; i++) {
+      const f = (i + 0.5) / k;
+      const x = x0 + (x1 - x0) * f;
+      const y = y0 + (y1 - y0) * f;
+      out += alongX ? prism(x - 0.11, y - 0.15, 0.22, 0.3, 0.28, { c, z }) : prism(x - 0.15, y - 0.11, 0.3, 0.22, 0.28, { c, z });
+    }
+    return out;
+  };
+  const tower = (x: number, y: number) => {
+    let t = cyl(x, y, 0.5, 2.7, { c: STONE_DK, z: Z0 }) + cyl(x, y, 0.58, 0.18, { c: '#4a4660', z: Z0 + 2.6 });
+    for (let k = 0; k < 8; k++) {
+      const a = (k / 8) * Math.PI * 2;
+      if (Math.cos(a - Math.PI / 4) < -0.2) continue;
+      t += prism(x + Math.cos(a) * 0.44 - 0.1, y + Math.sin(a) * 0.44 - 0.1, 0.2, 0.2, 0.28, { c: STONE_DK, z: Z0 + 2.78 });
+    }
+    const [lx, ly] = P(x, y, Z0 + 3.15);
+    return t + `<circle cx="${n(lx)}" cy="${n(ly)}" r="3" fill="#ff2a2a"/>`;
+  };
+  const slits = (W: number, H: number, cols: number) => {
+    let o = '';
+    for (let k = 0; k < cols; k++) {
+      const x = ((k + 0.5) / cols) * W;
+      for (const y of [H * 0.22, H * 0.62]) o += `<rect x="${n(x - 2.5)}" y="${n(y)}" width="5" height="16" fill="${INK}"/><rect x="${n(x - 6)}" y="${n(y + 6)}" width="12" height="3" fill="${INK}"/>`;
+    }
+    return o;
+  };
 
-  // Crane
-  const mz = Z0;
-  const mh = 8.5;
-  b += prism(28.9, 23.4, 0.5, 0.5, mh, { c: '#f5c400', z: mz });
-  let lattice = '';
-  for (let z = 0; z < mh; z += 1) {
-    lattice += `<path d="M0,${n(z * ZH)}L${n(0.5 * TL)},${n((z + 1) * ZH)}M${n(0.5 * TL)},${n(z * ZH)}L0,${n((z + 1) * ZH)}"/>`;
-  }
-  b += g(onL(28.9, 23.9, mz + mh), lattice, 'lattice') + g(onR(29.4, 23.9, mz + mh), lattice, 'lattice');
-  const jz = mz + mh;
-  b += prism(28.7, 23.9, 0.9, 0.8, 0.8, { c: '#f5c400', z: jz - 0.9, left: '#8fe7ff' });
-  const [px, py] = P(29.15, 23.65, jz + 0.45);
-  const [, ptop] = P(29.15, 23.65, jz + 2.4);
-  const [ax, ay] = P(24.6, 23.65, jz + 0.45);
-  const [bx, by] = P(31.4, 23.65, jz + 0.45);
-  b += `<g class="ink"><path d="M${n(ax)},${n(ay)}L${n(px)},${n(ptop)}L${n(bx)},${n(by)}" fill="none" stroke-width="2"/><line x1="${n(px)}" y1="${n(py)}" x2="${n(px)}" y2="${n(ptop)}" stroke-width="5"/></g>`;
-  b += prism(24.2, 23.45, 7.8, 0.4, 0.45, { c: '#f5c400', z: jz });
-  b += prism(30.4, 23.35, 1.0, 0.6, 0.9, { c: '#6f6c80', z: jz - 0.9 });
-  // Hook and a swinging beam
-  const [hx, hy] = P(25.4, 23.65, jz);
-  const [, hb] = P(25.4, 23.65, Z0 + 6.6);
-  b +=
-    `<g><animateTransform attributeName="transform" type="rotate" values="-5 ${n(hx)} ${n(hy)};5 ${n(hx)} ${n(hy)};-5 ${n(hx)} ${n(hy)}" dur="5s" repeatCount="indefinite"/>` +
-    `<line x1="${n(hx)}" y1="${n(hy)}" x2="${n(hx)}" y2="${n(hb)}" stroke="${INK}" stroke-width="2.5"/>` +
-    `<g transform="translate(${n(hx)},${n(hb)})">${prism(-0.9, -0.12, 1.8, 0.24, 0.3, { c: '#e23b3b', z: -0.3 })}</g></g>`;
+  // Back and left curtain walls, the back tower
+  add(26.0, 23.0, prism(22.55, 22.55, 7.9, WT, WH, { c: STONE, z: Z0 }) + merlons(22.55, 22.72, 30.45, 22.72, Z0 + WH));
+  add(23.0, 26.1, prism(22.55, 22.55, WT, 7.9, WH, { c: STONE, z: Z0 }) + merlons(22.72, 22.55, 22.72, 30.45, Z0 + WH));
+  add(25.0, 25.0, tower(22.95, 22.95));
 
-  // Fence with the banner along the front
-  const fz = Z0 + 1.3;
-  b += g(
-    onL(22.4, 30.7, fz),
-    `<rect width="${n(8.3 * TL)}" height="31" fill="url(#mesh)" stroke="${INK}" stroke-width="2.5"/>` +
-      `<rect x="${n(8.3 * TL * 0.18)}" y="4" width="${n(8.3 * TL * 0.64)}" height="23" fill="#f5c400" stroke="${INK}" stroke-width="2"/>` +
-      text(8.3 * TL * 0.5, 21, "WHAT'S NEXT · THE PLAN, ROUGHLY", 13, 't-mono', '#05050a', ' font-weight="700" letter-spacing="1"')
+  // The keep, its banners and door, and the flag tower
+  const KH = 3.4;
+  let k = prism(23.3, 23.3, 4.6, 3.6, KH, { c: STONE, z: Z0 });
+  const KW = 4.6 * TL;
+  const banner = (x: number) =>
+    `<path d="M${n(x - 9)},12h18v34l-9,6l-9,-6z" fill="#14121f" stroke="${INK}" stroke-width="1.5"/><path d="M${n(x - 6)},26l6,5l6,-5M${n(x - 6)},33l6,5l6,-5" fill="none" stroke="#ff2fb9" stroke-width="2.5"/><path d="M${n(x - 6)},40l6,5l6,-5" fill="none" stroke="#00eaff" stroke-width="2.5"/>`;
+  k += g(
+    onL(23.3, 26.9, Z0 + KH),
+    slits(KW, KH * ZH, 5) +
+      banner(KW * 0.1) +
+      banner(KW * 0.5) +
+      `<path d="M${n(KW * 0.27)},${n(KH * ZH)}v-22a13,13 0 0 1 26,0v22z" fill="#6b4a2e" stroke="${INK}" stroke-width="2"/>`
   );
-  b += g(onR(30.7, 30.7, fz), `<rect width="${n(8.3 * TL)}" height="31" fill="url(#mesh)" stroke="${INK}" stroke-width="2.5"/><rect width="${n(8.3 * TL)}" height="6" fill="url(#hazard)"/>`);
-  add(26.5, 26.5, spot('plan', s, b));
-  pin('plan', s, P(26.2, 24.6, Z0 + 10.4));
-
-  // Cones and a dirt pile
-  for (const [x, y] of [
-    [23.2, 28.8],
-    [24.2, 29.4],
-    [28.8, 27.6],
-  ]) {
-    const [cx, cy] = P(x, y, Z0);
-    add(x, y, `<g class="ink">${poly('#ff8a3d', [cx - 7, cy], [cx + 7, cy], [cx, cy - 20])}<rect x="${n(cx - 4)}" y="${n(cy - 11)}" width="8" height="3" fill="#fff" stroke="none"/></g>`);
+  k += g(onR(27.9, 26.9, Z0 + KH), slits(3.6 * TL, KH * ZH, 4));
+  k += merlons(23.3, 26.82, 26.5, 26.82, Z0 + KH) + merlons(27.82, 23.3, 27.82, 25.5, Z0 + KH);
+  const TH = 5.2;
+  let t = prism(26.5, 25.5, 1.4, 1.4, TH, { c: STONE, z: Z0 });
+  t += g(onL(26.5, 26.9, Z0 + TH), slits(1.4 * TL, TH * ZH, 2)) + g(onR(27.9, 26.9, Z0 + TH), slits(1.4 * TL, TH * ZH, 2));
+  t += merlons(26.5, 26.82, 27.9, 26.82, Z0 + TH) + merlons(27.82, 25.5, 27.82, 26.9, Z0 + TH);
+  {
+    const [px, py] = P(27.2, 26.2, Z0 + TH);
+    const top = py - 52;
+    t += `<g class="ink"><line x1="${n(px)}" y1="${n(py)}" x2="${n(px)}" y2="${n(top)}" stroke-width="3"/></g>`;
+    t +=
+      `<g><animateTransform attributeName="transform" type="skewY" values="0;-4;0;3;0" dur="2.6s" repeatCount="indefinite"/>` +
+      `<rect x="${n(px)}" y="${n(top)}" width="40" height="27" fill="#14121f" stroke="${INK}" stroke-width="1.5"/>` +
+      `<image href="${esc(art.degen)}" x="${n(px + 8)}" y="${n(top + 1)}" width="24" height="22" preserveAspectRatio="xMidYMid meet"/>` +
+      `<rect x="${n(px)}" y="${n(top + 23)}" width="40" height="4" fill="url(#pulseH)"/></g>`;
+    const [lx, ly] = P(26.7, 26.8, Z0 + TH + 0.5);
+    t += `<circle cx="${n(lx)}" cy="${n(ly)}" r="3" fill="#ff2a2a"/>`;
   }
-  const [dx, dy] = P(27.2, 29.0, Z0);
-  add(27.2, 29.0, `<g class="ink"><path d="M${n(dx - 46)},${n(dy)}q20,-34 46,-30q30,4 46,30z" fill="#6b4a3a"/></g>`);
+  // The keep and its tower are the spot: they lift on hover and lead to the plan
+  add(25.6, 25.1, spot('plan', s, k + t));
+
+  // Supply yard under camo netting, the tank, soldiers on the parade ground, drums and helmets
+  {
+    let y = '';
+    for (const [x, yy, z] of [
+      [28.3, 23.1, 0],
+      [28.85, 23.1, 0],
+      [29.4, 23.1, 0],
+      [28.3, 23.65, 0],
+      [28.85, 23.65, 0],
+      [28.55, 23.1, 1],
+    ])
+      y += prism(x, yy, 0.5, 0.5, 0.42, { c: '#4f5d31', z: Z0 + z * 0.42 });
+    for (const [px, py] of [
+      [28.15, 24.35],
+      [30.0, 24.35],
+    ])
+      y += `<g class="ink">${line(P(px, py, Z0), P(px, py, Z0 + 1.5))}</g>`;
+    y += `<g class="ink">${poly(OLIVE, P(28.15, 22.95, Z0 + 1.5), P(30.0, 22.95, Z0 + 1.5), P(30.0, 24.35, Z0 + 1.5), P(28.15, 24.35, Z0 + 1.5))}</g>`;
+    const [nx, ny] = P(29.07, 23.65, Z0 + 1.5);
+    y += `<ellipse cx="${n(nx - 30)}" cy="${n(ny)}" rx="16" ry="7" fill="${OLIVE_DK}"/><ellipse cx="${n(nx + 22)}" cy="${n(ny - 6)}" rx="18" ry="6" fill="#7d6b45"/><ellipse cx="${n(nx + 4)}" cy="${n(ny + 12)}" rx="14" ry="5" fill="#2b3418"/>`;
+    add(29.1, 24.4, y);
+  }
+  {
+    let tk = prism(28.59, 24.6, 0.28, 1.6, 0.32, { c: '#2b2a33', z: Z0 }) + prism(29.43, 24.6, 0.28, 1.6, 0.32, { c: '#2b2a33', z: Z0 });
+    tk += prism(28.67, 24.65, 0.96, 1.5, 0.28, { c: OLIVE, z: Z0 + 0.28 });
+    tk += prism(28.84, 24.95, 0.62, 0.7, 0.26, { c: OLIVE_DK, z: Z0 + 0.56 });
+    tk += `<g class="ink"><line x1="${n(P(29.15, 25.65, Z0 + 0.7)[0])}" y1="${n(P(29.15, 25.65, Z0 + 0.7)[1])}" x2="${n(P(29.15, 26.7, Z0 + 0.7)[0])}" y2="${n(P(29.15, 26.7, Z0 + 0.7)[1])}" stroke-width="5"/></g>`;
+    add(29.15, 25.4, tk);
+  }
+  {
+    let sq = '';
+    for (let i = 0; i < 5; i++) {
+      const [x, y] = P(24.6 + i * 0.5, 27.45, Z0);
+      sq += `<g class="ink"><rect x="${n(x - 3)}" y="${n(y - 14)}" width="6" height="14" fill="${OLIVE}"/><circle cx="${n(x)}" cy="${n(y - 17)}" r="3.5" fill="#14121f"/><path d="M${n(x - 4.5)},${n(y - 18)}a4.5,4.5 0 0 1 9,0z" fill="${OLIVE_DK}"/></g>`;
+    }
+    for (const [x, y] of [
+      [23.25, 29.55],
+      [23.6, 29.65],
+    ])
+      sq += cyl(x, y, 0.17, 0.48, { c: OLIVE_DK, z: Z0 });
+    add(25.5, 27.9, sq);
+  }
+  add(29.1, 27.35, prism(28.9, 27.15, 0.5, 0.4, 0.4, { c: OLIVE, z: Z0 }) + prism(29.4, 27.17, 0.34, 0.36, 0.34, { c: '#4f5d31', z: Z0 + 0.1 }));
+  add(29.3, 28.6, prism(29.02, 28.1, 0.56, 1.0, 0.3, { c: OLIVE, z: Z0 + 0.12 }) + prism(29.03, 28.3, 0.54, 0.05, 0.3, { c: '#8fd6e8', z: Z0 + 0.42 }));
+
+  // The gatehouse: towers, a lintel with the name, the raised portcullis, green tactical lights
+  {
+    let gh = `<g class="ink">${poly('#14121f', P(25.9, 30.55, Z0), P(27.3, 30.55, Z0), P(27.3, 30.55, Z0 + 1.95), P(25.9, 30.55, Z0 + 1.95))}</g>`;
+    let bars = '';
+    for (let i = 0; i < 7; i++) bars += line(P(26.0 + i * 0.2, 30.55, Z0 + 1.2), P(26.0 + i * 0.2, 30.55, Z0 + 1.95));
+    gh += `<g class="ink">${bars}</g>`;
+    for (const x0 of [24.9, 27.3]) gh += prism(x0, 29.75, 1.0, 0.8, 2.9, { c: STONE_DK, z: Z0 }) + merlons(x0, 30.47, x0 + 1.0, 30.47, Z0 + 2.9, STONE_DK);
+    gh += prism(25.9, 29.75, 1.4, 0.8, 0.95, { c: STONE, z: Z0 + 1.95 });
+    gh += g(onL(25.9, 30.55, Z0 + 2.9), `<rect x="6" y="4" width="${n(1.4 * TL - 12)}" height="15" fill="${OLIVE_DK}" stroke="${INK}" stroke-width="1.5"/>` + text(0.7 * TL, 15, 'THE ARMOURY', 9, 't-display', '#e3dcb0', ' letter-spacing="1"'));
+    for (const x of [25.75, 27.45]) {
+      const [lx, ly] = P(x, 30.6, Z0 + 2.1);
+      gh += `<circle cx="${n(lx)}" cy="${n(ly)}" r="2.5" fill="#2aff6a"/>`;
+    }
+    add(26.6, 30.2, gh);
+  }
+
+  // Front and right curtain walls, the side and front towers
+  add(24.0, 30.4, prism(22.55, 30.1, 2.35, WT, WH, { c: STONE, z: Z0 }) + merlons(22.55, 30.27, 24.9, 30.27, Z0 + WH));
+  add(29.9, 30.4, prism(28.3, 30.1, 2.15, WT, WH, { c: STONE, z: Z0 }) + merlons(28.3, 30.27, 30.45, 30.27, Z0 + WH));
+  add(30.4, 30.0, prism(30.1, 22.55, WT, 7.9, WH, { c: STONE, z: Z0 }) + merlons(30.27, 22.55, 30.27, 30.45, Z0 + WH));
+  add(24.5, 30.5, tower(22.95, 30.05));
+  add(30.5, 30.4, tower(30.05, 22.95));
+  add(31.0, 30.9, tower(30.05, 30.05));
+
+  pin('plan', s, P(26.6, 25.8, Z0 + 8.6));
 }
 
 /** Block (0,2): the post office, linking to Telegram. */
@@ -1098,7 +1177,7 @@ export function renderCity({ spots, art }: CityInput) {
     '22,11': C.concrete,
     '0,22': C.grass,
     '11,22': C.concrete,
-    '22,22': C.dirt,
+    '22,22': C.concrete,
   };
   const base = ground(lots);
 
@@ -1109,7 +1188,7 @@ export function renderCity({ spots, art }: CityInput) {
   emporium(spots.emporium, art);
   shop(spots.shop);
   workshop(spots.workshop);
-  construction(spots.plan);
+  armoury(spots.plan, art);
   postOffice(spots.telegram);
   outskirts();
   traffic();
