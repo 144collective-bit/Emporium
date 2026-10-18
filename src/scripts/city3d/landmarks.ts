@@ -20,6 +20,7 @@ import {
   lit,
   neon,
   neonSign,
+  occlude,
   plane,
   rand,
   roundRect,
@@ -270,6 +271,7 @@ function emporium(scene: THREE.Scene, ctx: LandmarkCtx, crowd: Idle[]) {
   );
   logo.position.set(14.75, ly, 14.75);
   logo.rotation.y = Math.PI / 4;
+  occlude(logo, ctx.logo);
   const halo = new THREE.Mesh(new THREE.PlaneGeometry(lw * 1.45, lh * 1.45), lit(glowMat(PAL.magenta, 1), 0.1, 0.22));
   halo.position.set(14.6, ly, 14.6);
   halo.rotation.y = Math.PI / 4;
@@ -481,7 +483,8 @@ function shop(scene: THREE.Scene, ctx: LandmarkCtx, crowd: Idle[]) {
   pb.build(scene);
 
   // The queue for the drop
-  for (let k = 0; k < 5; k++) crowd.push({ x: 26.1 + (k - 2) * 0.05, z: 17.7 + k * 0.48, ry: Math.PI });
+  // Kept clear of the sidewalk lanes along the kerb
+  for (let k = 0; k < 5; k++) crowd.push({ x: 26.1 + (k - 2) * 0.05, z: 17.6 + k * 0.38, ry: Math.PI });
   addLamp(28.0, 19.6, -Math.PI / 2);
   addLamp(30.6, 18.0, Math.PI);
   for (const [x, z] of [
@@ -651,35 +654,35 @@ function vault(scene: THREE.Scene, ctx: LandmarkCtx, crowd: Idle[]) {
   const sp = spot(scene, 'vault', V(4.3, 1.6, 15.2), 8, V(4.3, 5.0, 15.2));
   const g = sp.group;
   const b = new Batch();
-  const stone = toon('#a39ec4');
-  const stoneDark = toon('#7f7aa0');
+  const stone = toon('#d9cdb0');
+  const stoneDark = toon('#b3a37f');
   const H = 2.6;
   b.box(0.9, S, 11.9, 6.8, 0.3, 4.8, stoneDark);
   b.box(1.0, S, 12.0, 6.6, H, 4.6, stone);
   // Rustication lines
   for (let y = S + 0.6; y < S + H - 0.2; y += 0.45) b.box(0.98, y, 11.98, 6.64, 0.04, 4.64, stoneDark);
   // Steps
-  b.box(0.8, S, 16.6, 7.0, 0.12, 1.8, toon('#b9b4d6'));
-  b.box(0.9, S + 0.12, 16.6, 6.8, 0.12, 1.5, toon('#c4bfe0'));
-  b.box(1.0, S + 0.24, 16.6, 6.6, 0.12, 1.25, toon('#cfcaea'));
+  b.box(0.8, S, 16.6, 7.0, 0.12, 1.8, toon('#e3d9c0'));
+  b.box(0.9, S + 0.12, 16.6, 6.8, 0.12, 1.5, toon('#ebe2cc'));
+  b.box(1.0, S + 0.24, 16.6, 6.6, 0.12, 1.25, toon('#f1ead8'));
   // Columns with bases and capitals
   const colTop = S + H - 0.1;
   for (let k = 0; k < 6; k++) {
     const x = 1.45 + k * 1.14;
     b.box(x - 0.24, S + 0.36, 17.21, 0.48, 0.12, 0.48, stone);
-    cylAt(b, x, S + 0.48, 17.45, 0.17, colTop - S - 0.6, toon('#e2def5'), 14, 0.15);
+    cylAt(b, x, S + 0.48, 17.45, 0.17, colTop - S - 0.6, toon('#f4efe2'), 14, 0.15);
     b.box(x - 0.26, colTop - 0.12, 17.19, 0.52, 0.14, 0.52, stone);
   }
   // Entablature with the name, then the pediment
   b.box(0.85, colTop, 11.85, 6.9, 0.5, 6.05, stoneDark);
   const name = canvasTex(1024, 96, (c) => {
-    c.fillStyle = '#7f7aa0';
+    c.fillStyle = '#b3a37f';
     c.fillRect(0, 0, 1024, 96);
     c.font = `900 70px ${FONT_DISPLAY}`;
     c.textAlign = 'center';
     c.textBaseline = 'middle';
     (c as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = '18px';
-    c.fillStyle = '#2b2558';
+    c.fillStyle = '#3a2c12';
     c.fillText('THE VAULT', 512, 52);
   });
   const nm = plane(5.2, 0.48, new THREE.MeshToonMaterial({ map: name }));
@@ -688,7 +691,7 @@ function vault(scene: THREE.Scene, ctx: LandmarkCtx, crowd: Idle[]) {
   const ped = new THREE.Shape([new THREE.Vector2(-3.5, 0), new THREE.Vector2(3.5, 0), new THREE.Vector2(0, 1.15)]);
   const pedGeo = new THREE.ExtrudeGeometry(ped, { depth: 6.05, bevelEnabled: false });
   pedGeo.translate(4.3, colTop + 0.5, 11.85);
-  b.add(pedGeo, toon('#b9b4d6'));
+  b.add(pedGeo, toon('#e3d9c0'));
 
   // The vault door on the side, taped shut
   const gold = toon(PAL.gold);
@@ -757,9 +760,9 @@ function signal(scene: THREE.Scene, ctx: LandmarkCtx) {
   const sp = spot(scene, 'signal', V(16.0, 3.5, 4.6), 9, V(17.2, 14.6, 3.4));
   const g = sp.group;
   const b = new Batch();
-  const fac = facadeMat({ cols: 5, rows: 3, wall: '#22365e', lit: [PAL.cyan, PAL.warm], litRatio: 0.6, seed: 31 }, 0.15, 1.7);
-  g.add(walls(11.8, S, 4.6, 3.8, 2.0, 3.4, fac, toon('#1c2a4a')));
-  b.box(11.7, S + 2.0, 4.5, 4.0, 0.14, 3.6, toon('#2c4370'));
+  const fac = facadeMat({ cols: 5, rows: 3, wall: '#2b2d3a', lit: [PAL.cyan, PAL.warm], litRatio: 0.6, seed: 31 }, 0.15, 1.7);
+  g.add(walls(11.8, S, 4.6, 3.8, 2.0, 3.4, fac, toon('#22242f')));
+  b.box(11.7, S + 2.0, 4.5, 4.0, 0.14, 3.6, toon('#c23b3b'));
   g.add(sign(signMat(neonSign('SIGNAL', PAL.cyan)), 2.4, 0.6, 13.15, S + 1.6, 8.02));
   const xTex = canvasTex(256, 256, (c) => {
     c.fillStyle = '#0b0a18';
@@ -786,7 +789,7 @@ function signal(scene: THREE.Scene, ctx: LandmarkCtx) {
     dish.translate(x, S + 2.6, z);
     b.add(dish, toon('#e2def5', { side: THREE.DoubleSide }));
   }
-  b.box(14.6, S + 2.14, 4.9, 0.7, 0.4, 0.6, toon('#4a5a80'));
+  b.box(14.6, S + 2.14, 4.9, 0.7, 0.4, 0.6, toon('#4a4d5e'));
 
   // Lattice tower, red and white
   const base = 1.05;
@@ -1235,14 +1238,14 @@ function park(scene: THREE.Scene, crowd: Idle[]) {
 
 function apartments(scene: THREE.Scene, ctx: LandmarkCtx) {
   const b = new Batch();
-  const aMat = facadeMat({ cols: 5, rows: 12, wall: '#2a2350', lit: [PAL.warm, PAL.warm, PAL.pink], litRatio: 0.6, seed: 51, bands: '#3a3070' }, 0.15, 1.7);
-  scene.add(walls(22.8, S, 1.0, 3.2, 7.0, 3.2, aMat, toon('#1c1838')));
+  const aMat = facadeMat({ cols: 5, rows: 12, wall: '#17414a', lit: [PAL.warm, PAL.warm, PAL.pink], litRatio: 0.6, seed: 51, bands: '#22606a' }, 0.15, 1.7);
+  scene.add(walls(22.8, S, 1.0, 3.2, 7.0, 3.2, aMat, toon('#123238')));
   // Balconies with railings on the street side
   for (let y = S + 1.2; y < S + 7; y += 1.17) {
-    b.box(23.0, y, 4.2, 2.8, 0.06, 0.45, toon('#4a4170'));
+    b.box(23.0, y, 4.2, 2.8, 0.06, 0.45, toon('#2f6f78'));
     b.box(23.0, y + 0.06, 4.6, 2.8, 0.32, 0.04, toon('#8b86b8'));
   }
-  b.box(23.3, S + 7.0, 1.4, 0.8, 0.6, 0.8, toon('#4a4170'));
+  b.box(23.3, S + 7.0, 1.4, 0.8, 0.6, 0.8, toon('#2f6f78'));
   cylAt(b, 25.3, S + 7.0, 2.4, 0.38, 0.8, toon('#6b4a8f'), 14);
 
   const bMat = facadeMat({ cols: 5, rows: 7, wall: '#3b2c66', lit: [PAL.warm, PAL.cyan], litRatio: 0.55, seed: 52 }, 0.15, 1.7);

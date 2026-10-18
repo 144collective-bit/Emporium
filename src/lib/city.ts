@@ -482,7 +482,7 @@ function park() {
 
 /** Block (1,0): the signal tower and studio, linking to X. */
 function signal(s: Spot) {
-  let b = prism(11.8, 4.6, 3.8, 3.4, 3.2, { c: '#22365e', z: Z0 });
+  let b = prism(11.8, 4.6, 3.8, 3.4, 3.2, { c: '#2b2d3a', z: Z0 });
   b += winR(11.8, 4.6, 3.8, 3.4, 3.2, Z0, 3, 2, { mt: 10, pal: [C.cyan, C.warm] });
   const W = 3.8 * TL;
   b += g(
@@ -545,7 +545,7 @@ function signal(s: Spot) {
 
 /** Block (2,0): apartments with Degen on the billboard. */
 function apartments(art: CityInput['art']) {
-  let a = prism(22.8, 1.0, 3.2, 3.2, 8.5, { c: '#2a2350', z: Z0 });
+  let a = prism(22.8, 1.0, 3.2, 3.2, 8.5, { c: '#17414a', z: Z0 });
   a += winL(22.8, 1.0, 3.2, 3.2, 8.5, Z0, 4, 9, { pal: [C.warm, C.warm, C.pink] });
   a += winR(22.8, 1.0, 3.2, 3.2, 8.5, Z0, 4, 9, { pal: [C.warm, C.cyan] });
   a += prism(23.3, 1.4, 0.8, 0.8, 0.6, { c: '#4a4170', z: Z0 + 8.5 }) + prism(24.6, 2.6, 0.9, 0.7, 0.5, { c: '#4a4170', z: Z0 + 8.5 });
@@ -586,7 +586,7 @@ function apartments(art: CityInput['art']) {
 /** Block (0,1): the vault, a stone bank with its door taped shut. */
 function vault(s: Spot) {
   const H = 4.35;
-  let b = prism(1.0, 12.0, 6.6, 4.6, H, { c: '#7f7aa0', z: Z0 });
+  let b = prism(1.0, 12.0, 6.6, 4.6, H, { c: '#c9bd9f', z: Z0 });
   // Vault door on the side
   const dw = 4.6 * TL;
   b += g(
@@ -602,20 +602,20 @@ function vault(s: Spot) {
       `</g>`
   );
   // Steps, columns, entablature, pediment
-  b += prism(0.8, 16.6, 7.0, 1.7, 0.25, { c: '#9c97ba', z: Z0 });
-  b += prism(1.0, 16.6, 6.6, 1.3, 0.25, { c: '#a9a4c6', z: Z0 + 0.25 });
+  b += prism(0.8, 16.6, 7.0, 1.7, 0.25, { c: '#d9cdb0', z: Z0 });
+  b += prism(1.0, 16.6, 6.6, 1.3, 0.25, { c: '#e3d9c0', z: Z0 + 0.25 });
   // Columns stand on the steps and carry the entablature, which sits flush with the roofline
-  for (const x of [1.45, 2.75, 4.05, 5.35, 6.65]) b += cyl(x, 17.45, 0.2, H - 1.05, { c: '#d8d3ee', z: Z0 + 0.5 });
-  b += prism(0.9, 16.5, 6.8, 1.4, 0.55, { c: '#9c97ba', z: Z0 + H - 0.55 });
+  for (const x of [1.45, 2.75, 4.05, 5.35, 6.65]) b += cyl(x, 17.45, 0.2, H - 1.05, { c: '#f4efe2', z: Z0 + 0.5 });
+  b += prism(0.9, 16.5, 6.8, 1.4, 0.55, { c: '#b3a37f', z: Z0 + H - 0.55 });
   const ez = Z0 + H;
   const rz = ez + 1.5;
   b +=
     '<g class="ink">' +
-    poly('#b9b4d6', P(0.8, 12.0, ez), P(4.3, 12.0, rz), P(4.3, 17.9, rz), P(0.8, 17.9, ez)) +
-    poly('#6c6790', P(4.3, 12.0, rz), P(7.8, 12.0, ez), P(7.8, 17.9, ez), P(4.3, 17.9, rz)) +
-    poly('#a9a4c6', P(0.8, 17.9, ez), P(7.8, 17.9, ez), P(4.3, 17.9, rz)) +
+    poly('#e3d9c0', P(0.8, 12.0, ez), P(4.3, 12.0, rz), P(4.3, 17.9, rz), P(0.8, 17.9, ez)) +
+    poly('#9c8c66', P(4.3, 12.0, rz), P(7.8, 12.0, ez), P(7.8, 17.9, ez), P(4.3, 17.9, rz)) +
+    poly('#d9cdb0', P(0.8, 17.9, ez), P(7.8, 17.9, ez), P(4.3, 17.9, rz)) +
     '</g>';
-  b += g(onL(0.8, 17.9, rz), text(3.5 * TL, 31, 'THE VAULT', 15, 't-display', '#2b2558', ' letter-spacing="3"'));
+  b += g(onL(0.8, 17.9, rz), text(3.5 * TL, 31, 'THE VAULT', 15, 't-display', '#3a2c12', ' letter-spacing="3"'));
   add(4.3, 15, spot('vault', s, b));
   pin('vault', s, P(4.3, 15, 9.6));
 

@@ -101,10 +101,11 @@ export function createSky(scene: THREE.Scene, opts: { shadows: number; rainDrops
   const clouds: { s: THREE.Sprite; v: number }[] = [];
   const cloudMat = new THREE.SpriteMaterial({ map: cloudTex, transparent: true, depthWrite: false, opacity: 0.6, fog: false });
   for (let i = 0; i < opts.clouds; i++) {
-    const s = new THREE.Sprite(cloudMat);
+    // Each cloud has its own material so it can fade on its own as the camera nears it
+    const s = new THREE.Sprite(cloudMat.clone());
     const sc = 14 + rand() * 16;
     s.scale.set(sc, sc / 2, 1);
-    s.position.set(CENTER.x - 80 + rand() * 160, 20 + rand() * 9, CENTER.z - 70 + rand() * 140);
+    s.position.set(CENTER.x - 80 + rand() * 160, 30 + rand() * 8, CENTER.z - 70 + rand() * 140);
     s.layers.set(FX);
     scene.add(s);
     clouds.push({ s, v: 0.6 + rand() * 0.8 });
@@ -169,7 +170,7 @@ export function createSky(scene: THREE.Scene, opts: { shadows: number; rainDrops
   const tmpTop = new THREE.Color();
   const tmpHor = new THREE.Color();
 
-  function update(t: number, dt: number, focus: THREE.Vector3) {
+  function update(t: number, dt: number, focus: THREE.Vector3, eye: THREE.Vector3) {
     // Time of day: ease towards the target hour so switching modes glides
     const target = timeMode === 'live' ? currentHour() : PRESET[timeMode];
     let diff = target - hourSmooth;
@@ -194,7 +195,8 @@ export function createSky(scene: THREE.Scene, opts: { shadows: number; rainDrops
     domeMat.uniforms.hor.value.copy(tmpHor);
     fog.color.copy(tmpHor);
     (scene.background as THREE.Color).copy(tmpHor);
-    fog.density = 0.0085 + rainAmt * 0.0055 + dusk * 0.002 + night * 0.002;
+    // Thin haze by day so colours stay crisp; thicker at night and in rain
+    fog.density = 0.0105 - day * 0.0068 + rainAmt * 0.0055 + dusk * 0.002;
 
     // Sun by day, moon by night, both from the south-east
     const az = ang * 0.5 + 0.6;
@@ -207,8 +209,9 @@ export function createSky(scene: THREE.Scene, opts: { shadows: number; rainDrops
     domeMat.uniforms.sunCol.value.copy(sunCol);
     sun.color.copy(night > 0.5 ? C('#8fa0ff') : sunCol);
     // Moonlight is a touch stronger than the glow needs, so buildings keep their shape at night
-    sun.intensity = night > 0.5 ? 0.72 : (0.6 + day * 1.9) * (1 - rainAmt * 0.45);
-    hemi.intensity = 0.5 + day * 0.7;
+    // By day the sun does more of the work than the sky light: clearer shadows, more contrast
+    sun.intensity = night > 0.5 ? 0.72 : (0.6 + day * 2.5) * (1 - rainAmt * 0.45);
+    hemi.intensity = 0.5 + day * 0.32;
     hemi.color.copy(C('#5a4a9a').lerp(C('#bcd4ff'), day));
     hemi.groundColor.copy(C('#1a1236').lerp(C('#3a5a3a'), day));
     starMat.opacity = night * (1 - rainAmt);
@@ -227,9 +230,13 @@ export function createSky(scene: THREE.Scene, opts: { shadows: number; rainDrops
     rainMat.uniforms.origin.value.set(focus.x, 0, focus.z);
     rain.visible = rainAmt > 0.01;
 
-    cloudMat.opacity = 0.18 + day * 0.4 + rainAmt * 0.3;
+    // Lighter by day so they never sit over the city like fog
+    const cloudOpacity = 0.18 + day * 0.1 + rainAmt * 0.3;
     cloudMat.color.copy(C('#5a4a8a').lerp(C('#ffffff'), day)).lerp(C('#8a8aa0'), rainAmt * 0.6);
     for (const c of clouds) {
+      const m = c.s.material;
+      m.color.copy(cloudMat.color);
+      m.opacity = cloudOpacity * smooth(14, 34, c.s.position.distanceTo(eye));
       c.s.position.x += c.v * dt * (1 + rainAmt);
       if (c.s.position.x > CENTER.x + 90) c.s.position.x = CENTER.x - 90;
     }

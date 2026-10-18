@@ -47,8 +47,10 @@ cartoon shading and PulseChain neon, built with [three.js](https://threejs.org).
   City settings); rain comes and goes, with wet neon streets.
 - **Sound:** a synthesised city hum, rain and a beat near the Emporium, off
   until the visitor turns it on.
-- **Every device:** phones get a lighter version; slow devices back off
-  automatically. Without WebGL, or after choosing "2D map", the original
+- **Every device:** phones get a lighter version that idles at 30fps and runs
+  at full rate while you touch it; slow devices step quality down
+  automatically. Pin labels shrink with distance and fold to dots when they
+  would overlap. Without WebGL, or after choosing "2D map", the original
   isometric SVG map is shown instead. Reduced motion gives a still city.
 
 | Building | Panel button goes to |

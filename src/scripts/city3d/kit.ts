@@ -12,9 +12,41 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 export const SOLID = 0;
 /** Glows, glass, particles, signs: drawn normally but never inked. */
 export const FX = 1;
+/** Stand-ins that only exist in the ink pre-pass, so a floating sign hides the outlines behind it. */
+export const OCC = 2;
 export function fx<T extends THREE.Object3D>(o: T): T {
-  o.traverse((c) => c.layers.set(FX));
+  o.traverse((c) => {
+    if (c.layers.mask !== 1 << OCC) c.layers.set(FX);
+  });
   return o;
+}
+
+/**
+ * Give a cut-out sign (an FX plane with a transparent texture) a stand-in in
+ * the ink pre-pass. Without one, the outlines of whatever is behind the sign
+ * get drawn across it.
+ */
+export function occlude(mesh: THREE.Mesh, map: THREE.Texture) {
+  const mat = new THREE.ShaderMaterial({
+    side: THREE.DoubleSide,
+    uniforms: { map: { value: map } },
+    vertexShader: /* glsl */ `
+      varying vec2 vUv; varying vec3 vN;
+      void main() { vUv = uv; vN = normalize(normalMatrix * normal); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }
+    `,
+    fragmentShader: /* glsl */ `
+      uniform sampler2D map; varying vec2 vUv; varying vec3 vN;
+      void main() {
+        if (texture2D(map, vUv).a < 0.5) discard;
+        vec3 n = gl_FrontFacing ? vN : -vN;
+        gl_FragColor = vec4(n * 0.5 + 0.5, 1.0);
+      }
+    `,
+  });
+  const stand = new THREE.Mesh(mesh.geometry, mat);
+  stand.layers.set(OCC);
+  mesh.add(stand);
+  return mesh;
 }
 
 /* ---------- Randomness ---------- */

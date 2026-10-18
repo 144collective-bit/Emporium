@@ -37,8 +37,13 @@ it and has been retired completely. Build only on what's here.
   map's SMIL traffic is paused. Sound is always off until the visitor
   turns it on.
 - Keep phones light: `src/scripts/city3d/index.ts` picks a quality tier
-  (fewer cars and people, no shadows, smaller bloom on phones) and backs off
-  further if frames are slow.
+  (fewer cars and people, no shadows, smaller bloom on phones), runs phones
+  at 30fps while nobody is touching the city, and steps quality down
+  (pixels, then shadows, then bloom; never the ink outlines) if frames are
+  slow.
+- Floating cut-out signs (FX layer with a transparent texture, like the roof
+  logo) need `occlude()` from `kit.ts`, or the ink outlines of whatever is
+  behind them get drawn across them.
 - The comic-window layout in `src/components/ComicPage.astro` is the design.
   Each window is defined by its ink outline; keep content inside the slants.
 - Palette is the PulseChain gradient. Follow `brand/README.md`: gradient for

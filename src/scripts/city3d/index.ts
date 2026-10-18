@@ -18,7 +18,7 @@ type Tier = 'high' | 'medium' | 'low';
 const TIERS = {
   high: { dpr: 2, shadows: 2048, msaa: 4, bloomScale: 0.5, cars: 26, buses: 3, walkers: 80, trees: 340, skyline: 70, rain: 6000, clouds: 12 },
   medium: { dpr: 1.5, shadows: 1024, msaa: 0, bloomScale: 0.5, cars: 18, buses: 2, walkers: 50, trees: 230, skyline: 50, rain: 3500, clouds: 9 },
-  low: { dpr: 1.5, shadows: 0, msaa: 0, bloomScale: 0.35, cars: 12, buses: 2, walkers: 30, trees: 150, skyline: 34, rain: 1800, clouds: 6 },
+  low: { dpr: 1.25, shadows: 0, msaa: 0, bloomScale: 0.3, cars: 10, buses: 2, walkers: 24, trees: 120, skyline: 26, rain: 1200, clouds: 4 },
 };
 
 function pickTier(): Tier {
@@ -141,9 +141,14 @@ export async function bootCity(root: HTMLElement) {
     controls.enabled = false;
   }
   function spotView(s: Spot) {
-    const dist = s.size * 1.55 + 5;
+    // Portrait screens are narrow and the panel is a bottom sheet there: pull back
+    // and aim below the building so it sits in the top half of the screen
+    const portrait = camera.aspect < 1;
+    const dist = (s.size * 1.55 + 5) * (portrait ? Math.min(1.7, 0.8 / camera.aspect) : 1);
     const dir = new THREE.Vector3(0.95, 0.85, 1.25).normalize();
-    return { pos: s.focus.clone().addScaledVector(dir, dist), target: s.focus.clone() };
+    const target = s.focus.clone();
+    if (portrait) target.y -= s.size * 0.55;
+    return { pos: s.focus.clone().addScaledVector(dir, dist), target };
   }
 
   /* ---------- Pins, hover and click ---------- */
@@ -293,16 +298,41 @@ export async function bootCity(root: HTMLElement) {
   const env: Env = { t: 0, dt: 0, night: 1, rain: 0, day: 0 };
   let running = true;
   let frames = 0;
-  let slow = 0;
-  let measured = 0;
+  // Phones run the city at a steady 30fps while nobody is touching it, and at
+  // full rate during a drag, a pinch or a fly-in, so moving still feels smooth
+  const idleFps = tier === 'low' ? 30 : 0;
+  let lastT = 0;
+  let lastInput = -10;
+  const touched = () => (lastInput = timer.getElapsed());
+  canvas.addEventListener('pointerdown', touched);
+  canvas.addEventListener('pointermove', touched);
+  canvas.addEventListener('wheel', touched, { passive: true });
+  // Too slow? Step quality down in stages, checking again after each
+  let windowFrames = 0;
+  let windowSlow = 0;
+  let step = 0;
   const pinPos = new THREE.Vector3();
+  const pinState: { id: string; el: HTMLElement; x: number; y: number; scale: number; rank: number }[] = [];
+  const placed: { x: number; y: number; w: number; h: number }[] = [];
+  // Label sizes, measured once fonts are in and again on resize
+  const pinSize = new Map<string, [number, number]>();
+  const measurePins = () =>
+    pins.forEach((el, id) => {
+      const card = el.firstElementChild as HTMLElement;
+      pinSize.set(id, [card.offsetWidth, card.offsetHeight]);
+    });
+  measurePins();
+  new ResizeObserver(measurePins).observe(host);
 
   function frame() {
     if (!running) return;
     requestAnimationFrame(frame);
     timer.update();
-    const dt = Math.min(timer.getDelta(), 0.1);
     const t = timer.getElapsed();
+    const busy = !!flight || t - lastInput < 1;
+    if (idleFps && !busy && t - lastT < 1 / idleFps - 0.004) return;
+    const dt = Math.min(t - lastT, 0.1);
+    lastT = t;
 
     // Camera flight
     if (flight) {
@@ -324,7 +354,7 @@ export async function bootCity(root: HTMLElement) {
     controls.target.x = THREE.MathUtils.clamp(controls.target.x, -8, 39);
     controls.target.z = THREE.MathUtils.clamp(controls.target.z, -8, 39);
 
-    const s = sky.update(reduced ? 0 : t, dt, controls.target);
+    const s = sky.update(reduced ? 0 : t, dt, controls.target, camera.position);
     env.t = reduced ? 0 : t;
     env.dt = reduced ? 0 : dt;
     env.night = s.night;
@@ -352,9 +382,10 @@ export async function bootCity(root: HTMLElement) {
       sp.ring.scale.setScalar(1 + (on ? Math.sin(t * 4) * 0.04 : 0));
     }
 
-    // Pins follow their buildings on screen
+    // Pins follow their buildings on screen; far ones shrink
     const w = host.clientWidth;
     const h = host.clientHeight;
+    pinState.length = 0;
     for (const sp of spots) {
       const el = pins.get(sp.id);
       if (!el) continue;
@@ -363,9 +394,24 @@ export async function bootCity(root: HTMLElement) {
       const dist = pinPos.distanceTo(camera.position);
       pinPos.project(camera);
       const visible = pinPos.z < 1 && Math.abs(pinPos.x) < 1.1 && Math.abs(pinPos.y) < 1.1;
-      el.style.transform = `translate(${((pinPos.x + 1) / 2) * w}px, ${((1 - pinPos.y) / 2) * h}px)`;
-      el.style.opacity = visible ? String(THREE.MathUtils.clamp(2 - dist / 80, 0.6, 1)) : '0';
+      const x = ((pinPos.x + 1) / 2) * w;
+      const y = ((1 - pinPos.y) / 2) * h;
+      const scale = THREE.MathUtils.clamp(1.3 - dist / 85, 0.72, 1);
+      el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
+      el.style.setProperty('--s', scale.toFixed(3));
       el.style.visibility = visible ? 'visible' : 'hidden';
+      if (visible) pinState.push({ id: sp.id, el, x, y, scale, rank: sp === hovered || sp === active ? -1 : dist });
+    }
+    // Declutter: the hovered pin and nearer pins win; a label that would
+    // overlap one already placed folds to a dot (still tappable)
+    pinState.sort((a, b) => a.rank - b.rank);
+    placed.length = 0;
+    for (const p of pinState) {
+      const [pw, ph] = pinSize.get(p.id) ?? [120, 40];
+      const r = { x: p.x - (pw * p.scale) / 2, y: p.y - 12 - ph * p.scale, w: pw * p.scale, h: ph * p.scale };
+      const clash = p.rank >= 0 && placed.some((o) => r.x < o.x + o.w + 6 && r.x + r.w + 6 > o.x && r.y < o.y + o.h + 4 && r.y + r.h + 4 > o.y);
+      p.el.classList.toggle('is-dot', clash);
+      if (!clash) placed.push(r);
     }
 
     const dE = controls.target.distanceTo(spots[0].focus) + camera.position.distanceTo(controls.target) * 0.4;
@@ -376,19 +422,31 @@ export async function bootCity(root: HTMLElement) {
       dirty = false;
     }
 
-    // Too slow? Ease off the pixel ratio and shadows once, after things settle
     frames++;
-    if (t > 3 && measured < 90) {
-      measured++;
-      if (dt > 1 / 32) slow++;
-      if (measured === 90 && slow > 45) {
-        renderer.setPixelRatio(Math.max(1, renderer.getPixelRatio() - 0.5));
-        scene.traverse((o) => {
-          if ((o as THREE.DirectionalLight).isDirectionalLight) (o as THREE.DirectionalLight).castShadow = false;
-        });
-        resize();
+    if (t > 4 && step < 3) {
+      windowFrames++;
+      // "Slow" is relative to the rate we're aiming for (30fps on phones when idle)
+      const budget = idleFps && !busy ? 1 / idleFps : 1 / 60;
+      if (dt > budget * 1.7) windowSlow++;
+      if (windowFrames === 90) {
+        if (windowSlow > 45) degrade();
+        windowFrames = windowSlow = 0;
       }
     }
+  }
+
+  // 1: fewer pixels; 2: no shadows; 3: no bloom. The ink outlines always stay.
+  function degrade() {
+    step++;
+    if (step === 1) {
+      renderer.setPixelRatio(Math.max(1, renderer.getPixelRatio() - 0.5));
+      resize();
+    } else if (step === 2) {
+      renderer.shadowMap.enabled = false;
+      scene.traverse((o) => {
+        if ((o as THREE.DirectionalLight).isDirectionalLight) (o as THREE.DirectionalLight).castShadow = false;
+      });
+    } else post.bloom.enabled = false;
   }
 
   document.addEventListener('visibilitychange', () => {

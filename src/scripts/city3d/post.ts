@@ -9,7 +9,7 @@ import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
-import { SOLID } from './kit';
+import { FX, OCC, SOLID } from './kit';
 
 const InkShader = {
   uniforms: {
@@ -135,11 +135,19 @@ export function createPost(renderer: THREE.WebGLRenderer, scene: THREE.Scene, ca
     renderer.setClearColor(0x8080ff, 1);
     renderer.clear();
     renderer.render(scene, camera);
+    // Cut-out signs: their stand-ins mask the outlines behind them
+    scene.overrideMaterial = null;
+    camera.layers.set(OCC);
+    const autoClear = renderer.autoClear;
+    renderer.autoClear = false;
+    renderer.render(scene, camera);
+    renderer.autoClear = autoClear;
     renderer.setClearColor(clear, alpha);
     scene.overrideMaterial = null;
     scene.background = bg;
     scene.fog = fog;
-    camera.layers.enableAll();
+    camera.layers.set(SOLID);
+    camera.layers.enable(FX);
     renderer.setRenderTarget(null);
 
     composer.render();

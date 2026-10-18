@@ -150,6 +150,7 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
     }
   }
   const base = { r: new THREE.Color(colors.r), y: new THREE.Color(colors.y), g: new THREE.Color(colors.g) };
+  const occupied = new Set<string>();
 
   const M = new THREE.Matrix4();
   const L = new THREE.Matrix4();
@@ -182,6 +183,17 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
     }
 
     // Drive: follow the car ahead, stop for red
+    // Crossings with a vehicle still inside them, by the axis it travels on
+    occupied.clear();
+    for (const v of vehicles) {
+      const s = v.p * v.lane.dir;
+      for (const c of crossings) {
+        const along = v.lane.axis === 'x' ? c.cx : c.cz;
+        const across = v.lane.axis === 'x' ? c.cz : c.cx;
+        if (Math.abs(across - v.lane.coord) < 1.1 && Math.abs(s - along) < 1.1 + v.len / 2) occupied.add(c.ix + v.lane.axis);
+      }
+    }
+
     const byLane = new Map<Lane, Vehicle[]>();
     for (const v of vehicles) {
       if (!byLane.has(v.lane)) byLane.set(v.lane, []);
@@ -205,7 +217,8 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
           const d = stopP - (v.p + v.len / 2);
           if (d < -0.05 || d > 7) continue;
           const s = lightState(c.ix, lane.axis, t);
-          if (s === 'r' || (s === 'y' && d > 1.2)) target = Math.min(target, Math.max(0, d * 1.3));
+          const blocked = occupied.has(c.ix + (lane.axis === 'x' ? 'z' : 'x'));
+          if (s === 'r' || (s === 'y' && d > 1.2) || blocked) target = Math.min(target, Math.max(0, d * 1.3));
         }
         const acc = target > v.v ? 1.8 : 5;
         v.v += Math.max(-acc * dt, Math.min(acc * dt, target - v.v));
@@ -255,6 +268,8 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
 interface Person {
   kind: 'walk' | 'idle';
   block?: [number, number];
+  /** Distance from the kerb: each lane has its own, so walkers never share a line */
+  inset: number;
   u: number;
   dir: 1 | -1;
   speed: number;
@@ -262,15 +277,52 @@ interface Person {
   x: number;
   z: number;
   ry: number;
+  /** Facing actually shown, eased towards ry so corners turn smoothly */
+  face: number;
 }
+
+/** Sidewalk lanes: two each way, each at its own distance from the kerb and its own pace. */
+const WALK_LANES: { inset: number; dir: 1 | -1; speed: number }[] = [
+  { inset: 0.13, dir: 1, speed: 0.6 },
+  { inset: 0.21, dir: 1, speed: 0.52 },
+  { inset: 0.29, dir: -1, speed: 0.56 },
+  { inset: 0.37, dir: -1, speed: 0.48 },
+];
+const PERSON_SCALE = 0.78;
 
 function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f: Tick) => void) {
   const people: Person[] = [];
   const blocks = BLOCKS.flatMap((x) => BLOCKS.map((z) => [x, z] as [number, number]));
+  // Spread walkers evenly round each lane. Everyone in a lane keeps the same
+  // pace, so nobody walks through the person in front.
+  const perLane = new Map<string, number[]>();
   for (let i = 0; i < opts.walkers; i++) {
-    people.push({ kind: 'walk', block: blocks[i % blocks.length], u: rand() * 34.4, dir: rand() < 0.5 ? 1 : -1, speed: 0.45 + rand() * 0.4, phase: rand() * 6, x: 0, z: 0, ry: 0 });
+    const key = `${i % blocks.length}:${Math.floor(i / blocks.length) % WALK_LANES.length}`;
+    if (!perLane.has(key)) perLane.set(key, []);
+    perLane.get(key)!.push(i);
   }
-  for (const c of crowd) people.push({ kind: 'idle', u: 0, dir: 1, speed: 0, phase: rand() * 6, x: c.x, z: c.z, ry: c.ry });
+  for (const [key, members] of perLane) {
+    const [b, l] = key.split(':').map(Number);
+    const lane = WALK_LANES[l];
+    const loop = (BS - lane.inset * 2) * 4;
+    const off = rand() * loop;
+    members.forEach((_, k) => {
+      people.push({
+        kind: 'walk',
+        block: blocks[b],
+        inset: lane.inset,
+        u: (off + (k / members.length) * loop) % loop,
+        dir: lane.dir,
+        speed: lane.speed,
+        phase: rand() * 6,
+        x: 0,
+        z: 0,
+        ry: 0,
+        face: NaN,
+      });
+    });
+  }
+  for (const c of crowd) people.push({ kind: 'idle', inset: 0, u: 0, dir: 1, speed: 0, phase: rand() * 6, x: c.x, z: c.z, ry: c.ry, face: c.ry });
   const n = people.length;
 
   const legGeo = new THREE.BoxGeometry(0.075, 0.3, 0.085).translate(0, -0.15, 0);
@@ -305,21 +357,20 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
   const q = new THREE.Quaternion();
   const up = new THREE.Vector3(0, 1, 0);
   const v = new THREE.Vector3();
-  const one = new THREE.Vector3(1, 1, 1);
-  const inset = 0.2;
-  const side = BS - inset * 2;
+  const scale = new THREE.Vector3(PERSON_SCALE, PERSON_SCALE, PERSON_SCALE);
 
   tick(({ t, dt }) => {
     people.forEach((p, i) => {
       let swing = 0;
       let bob = 0;
       if (p.kind === 'walk') {
+        const side = BS - p.inset * 2;
         p.u = (p.u + p.dir * p.speed * dt + side * 4) % (side * 4);
         const [ox, oz] = p.block!;
-        const seg = Math.floor(p.u / side);
+        const seg = Math.min(3, Math.floor(p.u / side));
         const f = p.u - seg * side;
-        const x0 = ox + inset;
-        const z0 = oz + inset;
+        const x0 = ox + p.inset;
+        const z0 = oz + p.inset;
         const pts: [number, number, number][] = [
           [x0 + f, z0, 0],
           [x0 + side, z0 + f, 1],
@@ -332,15 +383,20 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
         // facing along the edge: +x, +z, -x, -z for seg 0..3 (reversed when walking backwards)
         const yaws = [Math.PI / 2, 0, -Math.PI / 2, Math.PI];
         p.ry = yaws[s] + (p.dir === -1 ? Math.PI : 0);
-        const w = t * p.speed * 9 + p.phase;
-        swing = Math.sin(w) * 0.55;
-        bob = Math.abs(Math.cos(w)) * 0.025;
+        // Stride matched to walking pace, so feet don't slide
+        const w = t * p.speed * 11 + p.phase;
+        swing = Math.sin(w) * 0.5;
+        bob = Math.abs(Math.cos(w)) * 0.02;
       } else {
         swing = Math.sin(t * 0.8 + p.phase) * 0.05;
       }
+      // Turn corners over a few frames instead of snapping
+      if (Number.isNaN(p.face)) p.face = p.ry;
+      const turn = Math.atan2(Math.sin(p.ry - p.face), Math.cos(p.ry - p.face));
+      p.face += turn * Math.min(1, dt * 9);
       const look = p.kind === 'idle' ? Math.sin(t * 0.4 + p.phase) * 0.35 : 0;
-      q.setFromAxisAngle(up, p.ry + look);
-      M.compose(v.set(p.x, SLAB + bob, p.z), q, one);
+      q.setFromAxisAngle(up, p.face + look);
+      M.compose(v.set(p.x, SLAB + bob, p.z), q, scale);
       body.setMatrixAt(i, M);
       headM.setMatrixAt(i, M);
       cap.setMatrixAt(i, M);
