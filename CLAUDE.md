@@ -41,6 +41,12 @@ it and has been retired completely. Build only on what's here.
   at 30fps while nobody is touching the city, and steps quality down
   (pixels, then shadows, then bloom; never the ink outlines) if frames are
   slow.
+- The Emporium palace (`emporium()` in `landmarks.ts`, and in `city.ts` for
+  the 2D map) is the centrepiece: keep it the tallest, most detailed
+  building. Its LED screens, tickers and neon band use the fixed copy in
+  that file (GM, Open 24/7, Drop 001, the Emporium's name, "PulseChain
+  native"); never put token details on them. Its footprint, front steps and
+  pavilions are mirrored in `walk.ts` (`SOLIDS`, `STEPS`, `CAMERA_ONLY`).
 - Floating cut-out signs (FX layer with a transparent texture, like the roof
   logo) need `occlude()` from `kit.ts`, or the ink outlines of whatever is
   behind them get drawn across them.

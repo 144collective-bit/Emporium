@@ -21,8 +21,15 @@ type Box = [number, number, number, number, number];
 
 /** Everything you can't walk through, matching landmarks.ts. Height is for the camera. */
 const SOLIDS: Box[] = [
-  [11.65, 11.65, 17.35, 17.35, 2.9], // Emporium podium
-  [13.5, 17.2, 15.5, 18.1, 1.4], // its entrance canopy posts
+  // Emporium palace: the square body with its street corner cut off (in steps), and the portico columns
+  [11.8, 11.8, 18.0, 16.0, 4.9],
+  [11.8, 16.0, 16.0, 18.0, 4.9],
+  ...[0, 1, 2, 3].map((k): Box => [16.0 + k * 0.5, 16.0, 16.5 + k * 0.5, 34 - (16.25 + k * 0.5), 4.9]),
+  ...[-1.15, -0.38, 0.38, 1.15].map((u): Box => {
+    const x = 17 + (0.72 + u) * Math.SQRT1_2;
+    const z = 17 + (0.72 - u) * Math.SQRT1_2;
+    return [x - 0.17, z - 0.17, x + 0.17, z + 0.17, 4.2];
+  }),
   [0.8, 11.9, 7.8, 17.05, 5.6], // vault body and rear steps
   [1.2, 17.1, 7.4, 17.75, 4.4], // vault columns
   [7.6, 13.3, 8.0, 15.3, 2.4], // vault door
@@ -45,18 +52,40 @@ const SOLIDS: Box[] = [
   [22.7, 0.9, 26.1, 4.3, 7.6], // apartments A
   [26.9, 1.5, 30.3, 5.3, 8.4], // apartments B and billboard
   [1.7, 1.7, 3.5, 3.5, 6.6], // water tower
-  [17.7, 17.7, 19.5, 19.5, 1.2], // fountain
-  [18.75, 11.55, 19.65, 12.45, 1.4], // planters
-  [18.85, 13.95, 19.75, 14.85, 1.4],
-  [11.55, 18.75, 12.45, 19.65, 1.4],
-  [13.95, 18.85, 14.85, 19.75, 1.4],
+  [18.15, 18.15, 19.65, 19.65, 1.3], // forecourt fountain
+  [18.55, 12.15, 19.45, 13.05, 1.4], // planters
+  [18.55, 14.15, 19.45, 15.05, 1.4],
+  [12.15, 18.55, 13.05, 19.45, 1.4],
+  [14.15, 18.55, 15.05, 19.45, 1.4],
 ];
 /** Only the camera bumps into these (tall parts above a walkable footprint) */
-const CAMERA_ONLY: Box[] = [[12.3, 12.3, 16.5, 16.5, 18.5]];
+const CAMERA_ONLY: Box[] = [
+  [13.0, 13.0, 16.8, 16.8, 14.3], // the Emporium's drum, dome and logo
+  [11.8, 11.8, 13.4, 13.4, 5.9], // its corner pavilions
+  [16.4, 11.8, 18.0, 13.4, 6.4],
+  [11.8, 16.4, 13.4, 18.0, 5.9],
+];
+
+/**
+ * The Emporium's front steps on the street corner, as [depth out from the
+ * corner front, half width along it, height] per step, bottom first.
+ */
+const STEPS: [number, number, number][] = [
+  [1.35, 1.8, 0.1],
+  [1.15, 1.7, 0.2],
+  [0.95, 1.6, 0.3],
+];
+function stepAt(x: number, z: number) {
+  const out = (x + z - 34) * Math.SQRT1_2;
+  const across = Math.abs(x - z) * Math.SQRT1_2;
+  let h = 0;
+  for (const [d, w, sh] of STEPS) if (out >= 0 && out <= d && across <= w) h = sh;
+  return h;
+}
 
 /** Where you can step in, and what opens there. */
 const DOORS: { id: SpotId; x: number; z: number }[] = [
-  { id: 'emporium', x: 15.4, z: 18.45 },
+  { id: 'emporium', x: 17.6, z: 17.6 },
   { id: 'shop', x: 26.1, z: 17.5 },
   { id: 'workshop', x: 15.3, z: 28.05 },
   { id: 'vault', x: 4.3, z: 18.6 },
@@ -65,6 +94,8 @@ const DOORS: { id: SpotId; x: number; z: number }[] = [
   { id: 'plan', x: 26.4, z: 31.3 },
 ];
 
+/** Facing the Emporium's steps, with the dome over his shoulder */
+const SPAWN_YAW = 0.45;
 const RADIUS = 0.22;
 const WALK = 2.4;
 const RUN = 5.4;
@@ -198,7 +229,7 @@ export function createWalk(d: WalkDeps) {
   sensInput.value = String(settings.sens);
   invertInput.checked = settings.invert;
 
-  const SPAWN = new THREE.Vector3(16.4, SLAB, 18.45);
+  const SPAWN = new THREE.Vector3(17.3, SLAB, 18.85);
   let active = false;
   const pos = SPAWN.clone();
   const vel = new THREE.Vector2();
@@ -213,7 +244,7 @@ export function createWalk(d: WalkDeps) {
   let runAmt = 0;
   let air = 0;
 
-  let yaw = 0.67;
+  let yaw = SPAWN_YAW;
   let pitch = 0.5;
   let zoom = 5.2;
   let camDist = 5.2;
@@ -228,7 +259,7 @@ export function createWalk(d: WalkDeps) {
   const pad = { x: 0, y: 0, run: false, prev: [] as boolean[] };
   let near: { id: SpotId; label: string } | null = null;
 
-  const groundAt = (x: number, z: number) => (slabs.some((b) => inBox(b, x, z)) ? SLAB : 0.035);
+  const groundAt = (x: number, z: number) => (slabs.some((b) => inBox(b, x, z)) ? SLAB + stepAt(x, z) : 0.035);
   const onBridge = (x: number) => ROADS.some((r) => Math.abs(x - r) < 1.05);
   function blocked(x: number, z: number) {
     if (x < BOUNDS[0] || x > BOUNDS[2] || z < BOUNDS[1] || z > BOUNDS[3]) return true;
@@ -605,7 +636,7 @@ export function createWalk(d: WalkDeps) {
       vy = 0;
       grounded = true;
       face = 0;
-      yaw = 0.67;
+      yaw = SPAWN_YAW;
       pitch = 0.5;
       zoom = camDist = 5.2;
       pivot.set(0, 0, 0);

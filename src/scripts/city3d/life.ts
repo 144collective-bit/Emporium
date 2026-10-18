@@ -289,6 +289,8 @@ interface Person {
   block?: [number, number];
   /** Distance from the kerb: each lane has its own, so walkers never share a line */
   inset: number;
+  /** Standing height, for people up on a roof deck */
+  y?: number;
   u: number;
   dir: 1 | -1;
   speed: number;
@@ -341,7 +343,7 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
       });
     });
   }
-  for (const c of crowd) people.push({ kind: 'idle', inset: 0, u: 0, dir: 1, speed: 0, phase: rand() * 6, x: c.x, z: c.z, ry: c.ry, face: c.ry });
+  for (const c of crowd) people.push({ kind: 'idle', inset: 0, u: 0, dir: 1, speed: 0, phase: rand() * 6, x: c.x, z: c.z, y: c.y, ry: c.ry, face: c.ry });
   const n = people.length;
 
   const legGeo = new THREE.BoxGeometry(0.075, 0.3, 0.085).translate(0, -0.15, 0);
@@ -415,7 +417,7 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
       p.face += turn * Math.min(1, dt * 9);
       const look = p.kind === 'idle' ? Math.sin(t * 0.4 + p.phase) * 0.35 : 0;
       q.setFromAxisAngle(up, p.face + look);
-      M.compose(v.set(p.x, SLAB + bob, p.z), q, scale);
+      M.compose(v.set(p.x, (p.y ?? SLAB) + bob, p.z), q, scale);
       body.setMatrixAt(i, M);
       headM.setMatrixAt(i, M);
       cap.setMatrixAt(i, M);
