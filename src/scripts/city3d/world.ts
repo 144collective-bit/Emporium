@@ -3,14 +3,25 @@
  * its bridges, block slabs, trees, street lamps and a skyline in the haze.
  *
  * World units: 1 = one map tile. x and z match the 2D map's x and y; y is up.
- * Blocks sit at 0-9, 11-20 and 22-31 with two-tile roads between them.
+ * The core city's blocks sit at 0-9, 11-20 and 22-31 with two-tile roads
+ * between them. Ring roads at -1 and 32 frame it, and the plot districts
+ * (see plots.ts) sit beyond them to the north, west and east; the river
+ * closes the south.
  */
 import * as THREE from 'three';
 import { Batch, PAL, canvasTex, facadeMat, fx, glowMat, glowTex, lit, neon, rand, toon } from './kit';
 
 export const BLOCKS = [0, 11, 22];
 export const BS = 9;
-export const ROADS = [10, 21];
+export const ROADS = [-1, 10, 21, 32];
+/** Roads through the core city; only their crossings have traffic lights. */
+export const CORE_ROADS = [10, 21];
+/** District blocks around the core, each split into 3 x 3 plots. */
+export const DISTRICTS: { id: string; name: string; ox: number; oz: number }[] = [
+  ...[-11, 0, 11, 22, 33].map((ox, i) => ({ id: `N${i + 1}`, name: `North ${i + 1}`, ox, oz: -11 })),
+  ...[0, 11, 22].map((oz, i) => ({ id: `W${i + 1}`, name: `West ${i + 1}`, ox: -11, oz })),
+  ...[0, 11, 22].map((oz, i) => ({ id: `E${i + 1}`, name: `East ${i + 1}`, ox: 33, oz })),
+];
 export const EXT: [number, number] = [-70, 101];
 export const RIVER: [number, number] = [34.5, 37.5];
 export const SLAB = 0.15;
@@ -144,14 +155,13 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, keyof typeo
     }
   }
 
-  // Block slabs (the kerb) and their lots
+  // Block slabs (the kerb) and their lots, core and districts
   const kerb = toon('#5a5290');
-  for (const ox of BLOCKS) {
-    for (const oz of BLOCKS) {
-      b.box(ox, 0, oz, BS, SLAB, BS, kerb);
-      const lot = LOTS[lots[`${ox},${oz}`] ?? 'grass'];
-      b.box(ox + 0.4, SLAB, oz + 0.4, BS - 0.8, 0.005, BS - 0.8, lot);
-    }
+  const slabs: [number, number][] = [...BLOCKS.flatMap((ox) => BLOCKS.map((oz) => [ox, oz] as [number, number])), ...DISTRICTS.map((d) => [d.ox, d.oz] as [number, number])];
+  for (const [ox, oz] of slabs) {
+    b.box(ox, 0, oz, BS, SLAB, BS, kerb);
+    const lot = LOTS[lots[`${ox},${oz}`] ?? 'grass'];
+    b.box(ox + 0.4, SLAB, oz + 0.4, BS - 0.8, 0.005, BS - 0.8, lot);
   }
   b.build(scene, { cast: false, receive: true });
 
@@ -159,11 +169,10 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, keyof typeo
   const dashes: THREE.Matrix4[] = [];
   const zebra: THREE.Matrix4[] = [];
   const m = new THREE.Matrix4();
-  const runs: [number, number][] = [
-    [e0, 8.2],
-    [11.8, 19.2],
-    [22.8, e1],
-  ];
+  // Dashes run between crossings
+  const runs: [number, number][] = [];
+  ROADS.forEach((r, i) => runs.push([i === 0 ? e0 : ROADS[i - 1] + 1.8, r - 1.8]));
+  runs.push([ROADS[ROADS.length - 1] + 1.8, e1]);
   for (const r of ROADS) {
     for (const [a, c] of runs) {
       for (let s = a + 0.4; s < c - 0.3; s += 1.1) {
@@ -197,7 +206,7 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, keyof typeo
   const sg = new THREE.PlaneGeometry(0.35, 2.4);
   for (let i = 0; i < 70; i++) {
     const alongX = rand() < 0.5;
-    const r = ROADS[Math.floor(rand() * 2)];
+    const r = CORE_ROADS[Math.floor(rand() * CORE_ROADS.length)];
     const s = 0 + rand() * 31;
     const mesh = new THREE.Mesh(sg, puddleMat);
     mesh.rotation.x = -Math.PI / 2;
@@ -219,7 +228,8 @@ export function scatterOutskirts(count: number) {
   while (placed < count && guard++ < count * 20) {
     const x = -38 + rand() * 107;
     const z = -38 + rand() * 107;
-    if (x > -1.2 && x < 32.2 && z > -1.2 && z < 32.2) continue;
+    // Clear of the core city and the districts round it
+    if (x > -12.4 && x < 43.4 && z > -12.4 && z < 32.2) continue;
     if (ROADS.some((r) => Math.abs(z - r) < 1.8 || Math.abs(x - r) < 1.8)) continue;
     if (z > RIVER[0] - 1 && z < RIVER[1] + 0.8) continue;
     addTree(x, z, 0.8 + rand() * 0.6, rand() < 0.4, 0);

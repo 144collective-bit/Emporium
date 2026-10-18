@@ -5,7 +5,7 @@
  */
 import * as THREE from 'three';
 import { FONT_DISPLAY, PAL, canvasTex, fx, glowTex, lit, neon, rand, toon } from './kit';
-import { BLOCKS, BS, CENTER, EXT, RIVER, ROADS, SLAB, type Tick } from './world';
+import { BLOCKS, BS, CENTER, CORE_ROADS, EXT, RIVER, ROADS, SLAB, type Tick } from './world';
 import type { Idle } from './landmarks';
 
 export interface LifeOpts {
@@ -116,10 +116,16 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
   const housing = toon('#14121f');
   const unit = new THREE.BoxGeometry(1, 1, 1);
   let ix = 0;
-  const crossings: { ix: number; cx: number; cz: number }[] = [];
+  // Every crossing is tracked so cars give way; only the core city's have lights
+  const crossings: { ix: number; cx: number; cz: number; lit: boolean }[] = [];
   for (const cx of ROADS) {
     for (const cz of ROADS) {
-      crossings.push({ ix, cx, cz });
+      const lights = CORE_ROADS.includes(cx) && CORE_ROADS.includes(cz);
+      crossings.push({ ix, cx, cz, lit: lights });
+      if (!lights) {
+        ix++;
+        continue;
+      }
       const approaches: [Axis, number, number, number][] = [
         ['x', cx - 1.3, cz + 1.3, -Math.PI / 2],
         ['x', cx + 1.3, cz - 1.3, Math.PI / 2],
@@ -176,6 +182,7 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
   tick(({ t, dt, night }) => {
     // Lamp states
     for (const c of crossings) {
+      if (!c.lit) continue;
       for (const axis of ['x', 'z'] as const) {
         const s = lightState(c.ix, axis, t);
         for (const k of ['r', 'y', 'g'] as const) lightMats[`${c.ix}${axis}${k}`].color.copy(base[k]).multiplyScalar(s === k ? 1.6 + night * 1.6 : 0.12);
@@ -216,7 +223,7 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
           const stopP = centre * lane.dir - 1.6;
           const d = stopP - (v.p + v.len / 2);
           if (d < -0.05 || d > 7) continue;
-          const s = lightState(c.ix, lane.axis, t);
+          const s = c.lit ? lightState(c.ix, lane.axis, t) : 'g';
           const blocked = occupied.has(c.ix + (lane.axis === 'x' ? 'z' : 'x'));
           if (s === 'r' || (s === 'y' && d > 1.2) || blocked) target = Math.min(target, Math.max(0, d * 1.3));
         }

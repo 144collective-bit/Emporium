@@ -71,6 +71,25 @@ cartoon shading and PulseChain neon, built with [three.js](https://threejs.org).
   would overlap. Without WebGL, or after choosing "2D map", the original
   isometric SVG map is shown instead. Reduced motion gives a still city.
 
+### City builder (demo)
+
+Press **Build** to switch to build mode. The districts around the city
+(North, West and East, past the ring roads) are divided into 99 plots.
+
+- **Pick a plot** (tap, click or use the arrow keys) to see its size, tier and
+  price.
+- **Buy it** with the demo wallet: connect, confirm, and watch the simulated
+  "Approve in wallet" and "Confirming on PulseChain" steps.
+- **Build on it:** choose from eight buildings (house, shopfront, tower, loft,
+  arcade, pocket park, warehouse, billboard lot) and customise walls, neon,
+  floors, sign and rotation with a live preview. Edit, demolish or release
+  the plot (refunds the demo PLS) any time.
+
+Everything is simulated for now: no wallet connects, nothing touches
+PulseChain and no real PLS moves. Progress is saved in the visitor's browser,
+and **Reset demo** clears it. Prices in `src/data/plots.ts` are placeholders.
+When the real wallet is ready, it plugs into `src/scripts/city3d/store.ts`.
+
 | Building | Panel button goes to |
 | --- | --- |
 | The Emporium (centre tower) | `/emporium` |
@@ -96,6 +115,10 @@ button and stays closed on return visits.
 | `src/scripts/city3d/sky.ts` | Time of day, sun and moon, fog, clouds, rain |
 | `src/scripts/city3d/post.ts` | Ink outlines and bloom |
 | `src/scripts/city3d/sound.ts` | Ambient sound |
+| `src/scripts/city3d/plots.ts` | Plot grid, build-mode overlay, the eight buildings |
+| `src/scripts/city3d/store.ts` | Demo wallet, simulated purchases, saved progress |
+| `src/scripts/city3d/builder-ui.ts` | Build mode: wallet chip, plot panel, customiser, purchase dialog |
+| `src/data/plots.ts` | Plot prices (placeholders), building catalogue, colours, sign texts |
 | `src/scripts/city3d/kit.ts` | Toon materials, canvas textures, batching |
 | `src/lib/city.ts` | The 2D isometric map (fallback and loading poster) |
 

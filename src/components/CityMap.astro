@@ -42,7 +42,7 @@ const focusX = +((EMPORIUM_FOCUS[0] - VIEW.x) / VIEW.w).toFixed(4);
 const focusY = +((EMPORIUM_FOCUS[1] - VIEW.y) / VIEW.h).toFixed(4);
 ---
 
-<section class="city" aria-labelledby="city-title" data-city-root data-view="2d" data-degen={degenBig.src} data-logo={logoBig.src}>
+<section class="city" aria-labelledby="city-title" data-city-root data-view="2d" data-mode="explore" data-degen={degenBig.src} data-logo={logoBig.src}>
   <div class="city-viewport" data-city data-focus-x={focusX} data-focus-y={focusY} tabindex="0" role="region" aria-label="City map: scroll or drag to look around">
     <svg class="city-map" viewBox={`${VIEW.x} ${VIEW.y} ${VIEW.w} ${VIEW.h}`} role="group" aria-label="Degen City">
       <g set:html={map} />
@@ -101,6 +101,28 @@ const focusY = +((EMPORIUM_FOCUS[1] - VIEW.y) / VIEW.h).toFixed(4);
   <button type="button" class="city-to3d" data-view-toggle="3d" hidden>
     <span aria-hidden="true">◆</span> Enter 3D city
   </button>
+
+  {/* City builder (3D only). Purchases are simulated: see src/data/plots.ts */}
+  <button type="button" class="city-build-toggle" data-build-toggle aria-pressed="false" hidden>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><path d="M17.5 14v7M14 17.5h7" /></svg>
+    <span data-build-label>Build</span>
+  </button>
+  <div class="builder-bar" data-builder-bar hidden>
+    <div class="builder-wallet" data-wallet></div>
+    <p class="builder-hint">Pick a plot to buy or build on it.<span class="hint-keys"> Arrow keys move between plots.</span></p>
+    <button type="button" class="chip-link" data-builder-reset>Reset demo</button>
+  </div>
+  <aside class="city-panel builder-panel" data-plot-panel hidden role="dialog" aria-labelledby="plot-title">
+    <button type="button" class="city-panel-close" data-plot-close aria-label="Close plot">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
+    </button>
+    <div class="city-panel-body" data-plot-body></div>
+    <p class="city-draft">Demo · purchases are simulated · no real PLS</p>
+  </aside>
+  <div class="builder-modal" data-buy-modal hidden>
+    <div class="builder-modal-card" role="dialog" aria-modal="true" aria-labelledby="buy-title" data-buy-body></div>
+  </div>
+  <p class="builder-toast" data-toast role="status" aria-live="polite"></p>
 
   {/* One glass panel; its content comes from the templates below */}
   <aside class="city-panel" data-panel hidden role="dialog" aria-labelledby="city-panel-title">

@@ -12,13 +12,16 @@ import { buildLandmarks, type Spot } from './landmarks';
 import { buildLife } from './life';
 import { createSky, type TimeMode, type WeatherMode } from './sky';
 import { createSound } from './sound';
+import { createPlots, type Plot } from './plots';
+import { createStore } from './store';
+import { createBuilderUI } from './builder-ui';
 
 type Tier = 'high' | 'medium' | 'low';
 
 const TIERS = {
-  high: { dpr: 2, shadows: 2048, msaa: 4, bloomScale: 0.5, cars: 26, buses: 3, walkers: 80, trees: 340, skyline: 70, rain: 6000, clouds: 12 },
-  medium: { dpr: 1.5, shadows: 1024, msaa: 0, bloomScale: 0.5, cars: 18, buses: 2, walkers: 50, trees: 230, skyline: 50, rain: 3500, clouds: 9 },
-  low: { dpr: 1.25, shadows: 0, msaa: 0, bloomScale: 0.3, cars: 10, buses: 2, walkers: 24, trees: 120, skyline: 26, rain: 1200, clouds: 4 },
+  high: { dpr: 2, shadows: 2048, msaa: 4, bloomScale: 0.5, cars: 34, buses: 3, walkers: 80, trees: 340, skyline: 70, rain: 6000, clouds: 12 },
+  medium: { dpr: 1.5, shadows: 1024, msaa: 0, bloomScale: 0.5, cars: 24, buses: 2, walkers: 50, trees: 230, skyline: 50, rain: 3500, clouds: 9 },
+  low: { dpr: 1.25, shadows: 0, msaa: 0, bloomScale: 0.3, cars: 14, buses: 2, walkers: 24, trees: 120, skyline: 26, rain: 1200, clouds: 4 },
 };
 
 function pickTier(): Tier {
@@ -78,6 +81,7 @@ export async function bootCity(root: HTMLElement) {
   progress(0.3);
   await nextFrame();
   const { spots, crowd } = buildLandmarks(scene, { degen, logo, tick, low: tier === 'low' });
+  const plots = createPlots(scene, { degen, tick, reduced });
   progress(0.55);
   await nextFrame();
   scatterOutskirts(Q.trees);
@@ -216,7 +220,44 @@ export async function bootCity(root: HTMLElement) {
     lastFocus?.focus({ preventScroll: true });
   }
   panelClose.addEventListener('click', close);
-  root.addEventListener('keydown', (e) => {
+  /* ---------- Build mode ---------- */
+  function plotAtPointer(x: number, y: number) {
+    const r = renderer.domElement.getBoundingClientRect();
+    ndc.set(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
+    raycaster.setFromCamera(ndc, camera);
+    return plots.pick(raycaster.ray);
+  }
+  function plotView(p: Plot) {
+    const portrait = camera.aspect < 1;
+    const dir = new THREE.Vector3(0.95, 0.85, 1.25).normalize();
+    const target = new THREE.Vector3(p.cx, portrait ? -0.4 : 1.6, p.cz);
+    return { pos: new THREE.Vector3(p.cx, 1.6, p.cz).addScaledVector(dir, portrait ? 17 : 13), target };
+  }
+  const builder = createBuilderUI(root, {
+    store: createStore(),
+    plots,
+    focus(p) {
+      const v = plotView(p);
+      flyTo(v.pos, v.target, 1.2);
+    },
+    overview() {
+      const k = camera.aspect < 1 ? 1.45 : 1;
+      const target = new THREE.Vector3(15.5, 0, 7);
+      flyTo(target.clone().add(new THREE.Vector3(34, 50, 44).multiplyScalar(k)), target, 1.6);
+    },
+    onMode(on) {
+      close();
+      setHover(null);
+      canvas.style.cursor = '';
+      dirty = true;
+      if (on) root.classList.add('has-moved');
+    },
+  });
+
+  // On the document, not the city: re-rendered panels drop focus back to <body>
+  document.addEventListener('keydown', (e) => {
+    if (root.dataset.view !== '3d') return;
+    if (builder.key(e)) return;
     if (e.key === 'Escape') close();
   });
 
@@ -234,6 +275,10 @@ export async function bootCity(root: HTMLElement) {
     const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y);
     down = null;
     if (moved > 6) return;
+    if (builder.active) {
+      builder.select(plotAtPointer(e.clientX, e.clientY)?.id ?? null);
+      return;
+    }
     const s = pickAt(e.clientX, e.clientY);
     if (s) open(s.id);
     else if (active) close();
@@ -244,10 +289,20 @@ export async function bootCity(root: HTMLElement) {
     hoverQueued = true;
     requestAnimationFrame(() => {
       hoverQueued = false;
+      if (builder.active) {
+        const p = plotAtPointer(e.clientX, e.clientY);
+        plots.setHover(p?.id ?? null);
+        canvas.style.cursor = p ? 'pointer' : '';
+        dirty = true;
+        return;
+      }
       setHover(pickAt(e.clientX, e.clientY));
     });
   });
-  canvas.addEventListener('pointerleave', () => setHover(null));
+  canvas.addEventListener('pointerleave', () => {
+    setHover(null);
+    plots.setHover(null);
+  });
   controls.addEventListener('change', () => (dirty = true));
   controls.addEventListener('start', () => root.classList.add('has-moved'));
 
@@ -351,8 +406,8 @@ export async function bootCity(root: HTMLElement) {
       }
     } else if (controls.update()) dirty = true;
     // Keep the view over the city
-    controls.target.x = THREE.MathUtils.clamp(controls.target.x, -8, 39);
-    controls.target.z = THREE.MathUtils.clamp(controls.target.z, -8, 39);
+    controls.target.x = THREE.MathUtils.clamp(controls.target.x, -16, 47);
+    controls.target.z = THREE.MathUtils.clamp(controls.target.z, -16, 40);
 
     const s = sky.update(reduced ? 0 : t, dt, controls.target, camera.position);
     env.t = reduced ? 0 : t;

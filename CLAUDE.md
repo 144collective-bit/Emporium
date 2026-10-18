@@ -27,8 +27,8 @@ it and has been retired completely. Build only on what's here.
     building flies the camera in and opens a glass panel.
   - **2D** (`src/lib/city.ts`): the isometric SVG map. It's the loading
     poster, the fallback without WebGL, and the "2D map" view.
-  Both layers share the same block layout; keep them in step when buildings
-  change. Spot links, pin copy and panel copy live in
+  Both layers share the core city's block layout; keep them in step when
+  buildings change. The ring roads and plot districts exist in 3D only. Spot links, pin copy and panel copy live in
   `src/components/CityMap.astro`. Buildings link only to `/emporium` (or its
   window anchors: `#drop`, `#workshop`, `#vault`, `#plan`) or to the
   confirmed links in `src/data/site.ts`.
@@ -53,6 +53,22 @@ it and has been retired completely. Build only on what's here.
   (labels).
 - Check every change at 320, 375, 768, 1024 and 1440px wide: no sideways
   scroll, no text clipped by a slanted edge.
+
+## City builder (3D build mode)
+
+- Districts around the core are split into 3 x 3 plots (`DISTRICTS` in
+  `src/scripts/city3d/world.ts`, plot grid and building generators in
+  `plots.ts`, interface in `builder-ui.ts`). The core landmarks are not for
+  sale.
+- **Purchases are simulated.** No wallet connects, nothing is sent to
+  PulseChain, no real PLS moves; state is saved in the visitor's browser
+  (`store.ts`). Keep every builder screen labelled as a demo until the real
+  wallet is wired in, and put the real integration behind `store.ts`'s
+  `connect()` / `buy()` so the interface doesn't change.
+- **Prices in `src/data/plots.ts` are placeholders.** Don't present them as
+  real until the owner supplies pricing.
+- Visitors can't type text onto buildings: sign texts come from the fixed
+  `SIGNS` list, so nothing unexpected (or confidential) appears in public.
 
 ## Hosting
 

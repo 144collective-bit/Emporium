@@ -202,7 +202,9 @@ export function createSky(scene: THREE.Scene, opts: { shadows: number; rainDrops
     const az = ang * 0.5 + 0.6;
     const lightElev = night > 0.5 ? 0.75 : Math.max(0.12, elev);
     const dir = new THREE.Vector3(Math.cos(az) * Math.cos(lightElev), Math.sin(lightElev), Math.sin(az) * Math.cos(lightElev)).normalize();
-    sun.position.copy(CENTER).addScaledVector(dir, 70);
+    // The sun (and its shadow camera) follows the view, so districts get shadows too
+    sun.target.position.set(focus.x, 0, focus.z);
+    sun.position.copy(sun.target.position).addScaledVector(dir, 70);
     domeMat.uniforms.sunDir.value.copy(dir);
     domeMat.uniforms.sunAmt.value = (1 - night) * (1 - rainAmt * 0.8);
     const sunCol = C('#fff3dc').lerp(C('#ff9a5a'), dusk);
