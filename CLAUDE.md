@@ -54,6 +54,14 @@ it and has been retired completely. Build only on what's here.
 - Check every change at 320, 375, 768, 1024 and 1440px wide: no sideways
   scroll, no text clipped by a slanted edge.
 
+## Hosting
+
+- degenemporium.com is a static build hosted on Hostinger (`dist/`
+  extracted into `public_html`). The "Build site" GitHub Action builds
+  every push to `main` into a downloadable zip.
+- Keep the site fully static (no server routes) and keep `public/.htaccess`
+  in the build.
+
 ## Content guardrails
 
 - **The token is confidential until launch.** Never put its name, ticker,

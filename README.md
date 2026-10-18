@@ -12,6 +12,24 @@ npm run dev      # http://localhost:4321
 npm run build    # static site in dist/
 ```
 
+## Put it live (Hostinger)
+
+degenemporium.com is hosted on Hostinger as a static site.
+
+1. **Get the zip.** Every push to `main` builds the site: on GitHub open
+   **Actions -> Build site**, pick the latest green run and download
+   **degenemporium-site** under Artifacts. (Or run `npm run build` locally
+   and use everything inside `dist/`.)
+2. **Upload.** In hPanel open **File Manager -> public_html**, back up or
+   remove the old files, upload the zip and **Extract** it right there, so
+   `index.html` sits directly in `public_html`. Delete the zip afterwards.
+3. **Check** https://degenemporium.com (hard refresh if the old version
+   shows).
+
+`public/.htaccess` ships with every build: it serves the site's 404 page,
+compresses text files and caches the fingerprinted files in `/_astro/` for a
+year. It starts with a dot, so some file managers hide it.
+
 ## What's here
 
 | Path | What it is |
