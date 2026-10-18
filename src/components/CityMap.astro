@@ -42,8 +42,11 @@ const focusY = +((EMPORIUM_FOCUS[1] - VIEW.y) / VIEW.h).toFixed(4);
     </svg>
   </div>
 
-  <div class="city-hud">
-    <div class="city-card">
+  <div class="city-hud" data-city-hud>
+    <div class="city-card" id="city-card">
+      <button type="button" class="city-card-close" data-card-close aria-controls="city-card" aria-label="Hide the welcome card">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
+      </button>
       <p class="kicker"><span class="kicker-num">GM</span> PulseChain native</p>
       <h1 id="city-title" class="city-title">Welcome to <span class="hl">Degen&nbsp;City</span></h1>
       <p class="city-hint">Drag to look around. Pick a lit-up building to go in.</p>
@@ -66,7 +69,18 @@ const focusY = +((EMPORIUM_FOCUS[1] - VIEW.y) / VIEW.h).toFixed(4);
         })}
       </ul>
     </details>
+
+    {/* Stands in for the card's draft note once the card is hidden on a phone */}
+    <p class="city-draft-tag">Draft · v0</p>
   </div>
+  {/* Restore a hidden card before first paint, so it doesn't flash */}
+  <script is:inline>
+    try {
+      if (localStorage.getItem('city-card') === 'hidden') {
+        document.querySelector('[data-city-hud]').dataset.card = 'hidden';
+      }
+    } catch {}
+  </script>
 </section>
 
 <script>
@@ -126,6 +140,16 @@ const focusY = +((EMPORIUM_FOCUS[1] - VIEW.y) / VIEW.h).toFixed(4);
       el.addEventListener('pointerleave', () => hot(id, false));
       el.addEventListener('focus', () => hot(id, true));
       el.addEventListener('blur', () => hot(id, false));
+    });
+
+    // Phones: the welcome card can be hidden, and stays hidden on return
+    document.querySelector('[data-card-close]')?.addEventListener('click', () => {
+      const hud = document.querySelector<HTMLElement>('[data-city-hud]')!;
+      hud.dataset.card = 'hidden';
+      try {
+        localStorage.setItem('city-card', 'hidden');
+      } catch {}
+      vp.focus({ preventScroll: true });
     });
 
     // SMIL animations (cars, rings, the plane) ignore CSS, so pause them here

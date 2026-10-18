@@ -48,7 +48,8 @@ circles the post office. The lit-up buildings are links:
 | Post office | Telegram |
 
 The Directory button lists the same links for anyone who'd rather not
-explore. With reduced motion turned on, the city stands still.
+explore. On phones the welcome card has a close button and stays closed on
+return visits. With reduced motion turned on, the city stands still.
 
 ## The six windows (`/emporium`)
 

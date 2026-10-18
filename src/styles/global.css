@@ -1458,6 +1458,22 @@ body.full-bleed {
   white-space: nowrap;
 }
 
+.city-card-close,
+.city-draft-tag {
+  display: none;
+}
+.city-draft-tag {
+  align-self: flex-start;
+  padding: 0.5em 0.85em;
+  border-radius: 2px;
+  background: #0b0a12e0;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
 @media (max-width: 640px) {
   .city-hud {
     left: 12px;
@@ -1479,6 +1495,39 @@ body.full-bleed {
   .city-dir {
     order: -1;
     align-self: flex-end;
+  }
+  /* The card can be hidden to see more of the city */
+  .city-card {
+    position: relative;
+  }
+  .city-card-close {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    background: none;
+    color: var(--text-2);
+    cursor: pointer;
+  }
+  /* Hidden only visually, so the page keeps its heading for screen readers */
+  .city-hud[data-card="hidden"] .city-card {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .city-hud[data-card="hidden"] .city-draft-tag {
+    display: inline-flex;
   }
 }
 
