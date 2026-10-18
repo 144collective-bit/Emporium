@@ -206,8 +206,9 @@ export function createSky(scene: THREE.Scene, opts: { shadows: number; rainDrops
     const sunCol = C('#fff3dc').lerp(C('#ff9a5a'), dusk);
     domeMat.uniforms.sunCol.value.copy(sunCol);
     sun.color.copy(night > 0.5 ? C('#8fa0ff') : sunCol);
-    sun.intensity = night > 0.5 ? 0.55 : (0.6 + day * 1.9) * (1 - rainAmt * 0.45);
-    hemi.intensity = 0.35 + day * 0.85;
+    // Moonlight is a touch stronger than the glow needs, so buildings keep their shape at night
+    sun.intensity = night > 0.5 ? 0.72 : (0.6 + day * 1.9) * (1 - rainAmt * 0.45);
+    hemi.intensity = 0.5 + day * 0.7;
     hemi.color.copy(C('#5a4a9a').lerp(C('#bcd4ff'), day));
     hemi.groundColor.copy(C('#1a1236').lerp(C('#3a5a3a'), day));
     starMat.opacity = night * (1 - rainAmt);

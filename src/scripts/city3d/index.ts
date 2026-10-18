@@ -337,9 +337,11 @@ export async function bootCity(root: HTMLElement) {
     waterMat.uniforms.rain.value = s.rain;
     (waterMat.uniforms.sky.value as THREE.Color).copy(scene.background as THREE.Color);
     puddleMat.color.setScalar(s.rain * (0.12 + s.night * 0.6));
-    post.bloom.strength = 0.32 + s.night * 0.62 + s.rain * 0.08;
-    post.bloom.threshold = 0.9 - s.night * 0.12;
-    renderer.toneMappingExposure = 1 + s.night * 0.08;
+    // Night glow is kept in proportion to the scene: enough bloom for the neon,
+    // not so much that it washes over the buildings
+    post.bloom.strength = 0.3 + s.night * 0.4 + s.rain * 0.06;
+    post.bloom.threshold = 0.9 - s.night * 0.06;
+    renderer.toneMappingExposure = 1 + s.night * 0.03;
 
     // Hover lift and rings
     for (const sp of spots) {

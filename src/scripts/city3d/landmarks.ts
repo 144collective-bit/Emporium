@@ -270,7 +270,7 @@ function emporium(scene: THREE.Scene, ctx: LandmarkCtx, crowd: Idle[]) {
   );
   logo.position.set(14.75, ly, 14.75);
   logo.rotation.y = Math.PI / 4;
-  const halo = new THREE.Mesh(new THREE.PlaneGeometry(lw * 1.7, lh * 1.7), lit(glowMat(PAL.magenta, 1), 0.15, 0.55));
+  const halo = new THREE.Mesh(new THREE.PlaneGeometry(lw * 1.45, lh * 1.45), lit(glowMat(PAL.magenta, 1), 0.1, 0.22));
   halo.position.set(14.6, ly, 14.6);
   halo.rotation.y = Math.PI / 4;
   g.add(fx(logo), fx(halo));
@@ -594,7 +594,7 @@ function workshop(scene: THREE.Scene, ctx: LandmarkCtx) {
   b.box(16.63, S, 27.58, 0.12, 1.75, 0.12, toon('#22385a'));
   b.box(13.85, S + 1.66, 27.55, 2.9, 0.28, 0.2, toon('#22385a'));
   g.add(sign(new THREE.MeshToonMaterial({ map: hazard(null, 512, 64) }), 2.9, 0.16, 15.3, S + 1.87, 27.66));
-  const spill = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 1.6), lit(glowMat('#ff9a4a', 1), 0.15, 0.6));
+  const spill = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 1.6), lit(glowMat('#ff9a4a', 1), 0.12, 0.4));
   spill.rotation.x = -Math.PI / 2;
   spill.position.set(15.3, S + 0.02, 28.3);
   scene.add(fx(spill));
@@ -722,7 +722,7 @@ function vault(scene: THREE.Scene, ctx: LandmarkCtx, crowd: Idle[]) {
     c.fillStyle = gr;
     c.fillRect(0, 0, 64, 256);
   });
-  const beamMat = lit(glowMat('#d9ccff', 1, beamTex), 0, 0.5);
+  const beamMat = lit(glowMat('#d9ccff', 1, beamTex), 0, 0.13);
   const bases = new Batch();
   for (const [x, z, ph] of [
     [0.6, 19.4, 0],
@@ -731,7 +731,7 @@ function vault(scene: THREE.Scene, ctx: LandmarkCtx, crowd: Idle[]) {
     cylAt(bases, x, S, z, 0.22, 0.3, toon('#3a3466'), 12);
     const pivot = new THREE.Group();
     pivot.position.set(x, S + 0.3, z);
-    const cone = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 0.1, 22, 16, 1, true), beamMat);
+    const cone = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 0.1, 22, 16, 1, true), beamMat);
     cone.position.y = 11;
     pivot.add(cone);
     scene.add(fx(pivot));
@@ -830,7 +830,7 @@ function signal(scene: THREE.Scene, ctx: LandmarkCtx) {
   g.add(fx(beacon));
   const rings: THREE.Mesh[] = [];
   for (let k = 0; k < 3; k++) {
-    const r = new THREE.Mesh(new THREE.TorusGeometry(1, 0.03, 6, 48), glowMat(PAL.cyan, 0.8, null));
+    const r = new THREE.Mesh(new THREE.TorusGeometry(1, 0.018, 6, 48), glowMat(PAL.cyan, 0.8, null));
     r.rotation.x = Math.PI / 2;
     r.position.copy(beacon.position);
     g.add(fx(r));
@@ -841,7 +841,7 @@ function signal(scene: THREE.Scene, ctx: LandmarkCtx) {
     rings.forEach((r, k) => {
       const p = (t * 0.32 + k / 3) % 1;
       r.scale.setScalar(0.2 + p * 5);
-      (r.material as THREE.MeshBasicMaterial).opacity = (1 - p) * 0.85;
+      (r.material as THREE.MeshBasicMaterial).opacity = (1 - p) * 0.38;
     });
   });
 
@@ -1108,7 +1108,7 @@ function construction(scene: THREE.Scene, ctx: LandmarkCtx) {
   fb.build(g);
 
   // Floodlights for night shifts
-  const flood = lit(glowMat('#fff2c0', 1), 0, 0.5);
+  const flood = lit(glowMat('#fff2c0', 1), 0, 0.3);
   for (const [x, z] of [
     [22.5, 22.5],
     [30.5, 22.5],
