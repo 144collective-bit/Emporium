@@ -73,6 +73,15 @@ cartoon shading and PulseChain neon, built with [three.js](https://threejs.org).
   gate salute you in walk mode, a tank turns its turret, and a forklift
   moves crates in the supply yard under camo netting. At night it goes
   stealth dark: low red slit light and small red and green tactical lamps.
+- **Characters:** everyone is the same Degen, built after the brand art:
+  balaclava with the eye opening, red cap with the Emporium diamond, green
+  shades on a gold chain, collar, tie and a lapelled suit. Around the city
+  he wears suits in different colours or hoodies and joggers (some with the
+  hood up), with backpacks, crossbody bags or headphones and a bit of
+  variety in build. People walk with bending knees and elbows, chat in
+  groups, sit on the park bench, queue and look around. You play the
+  original, Gas Fee Gummy Bears in hand; the Armoury soldiers are the same
+  body in fatigues.
 - **Alive:** cars and buses stop at traffic lights, Degen-style people walk
   the sidewalks and queue at the shop, boats on the river, drones, a blimp,
   birds by day, sparks from the workshop, and soldiers drilling at the Armoury.

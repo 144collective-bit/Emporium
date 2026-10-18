@@ -13,7 +13,7 @@
  */
 import * as THREE from 'three';
 import type { SpotId } from '../../lib/city';
-import { makeDegen } from './degen';
+import { PLAYER, airPose, createDegen, walkPose } from './character';
 import { DISTRICTS, BLOCKS, BS, RIVER, ROADS, SLAB } from './world';
 
 /** x0, z0, x1, z1, height */
@@ -129,9 +129,20 @@ export interface WalkDeps {
 
 export function createWalk(d: WalkDeps) {
   const { camera, canvas, root } = d;
-  const hero = makeDegen(SCALE);
+  const hero = {
+    ...createDegen(PLAYER),
+    ring: new THREE.Mesh(
+      new THREE.RingGeometry(0.28, 0.36, 32),
+      new THREE.MeshBasicMaterial({ color: '#00eaff', transparent: true, opacity: 0.55, depthWrite: false, fog: false })
+    ),
+  };
+  hero.ring.rotation.x = -Math.PI / 2;
+  hero.ring.layers.set(1);
+  hero.g.scale.setScalar(SCALE);
   hero.g.visible = hero.ring.visible = false;
   d.scene.add(hero.g, hero.ring);
+  let headYaw = 0;
+  let headPitch = 0;
 
   const $ = <T extends HTMLElement>(s: string) => root.querySelector<T>(s)!;
   // Opening a door panel frees the mouse so its links can be clicked
@@ -478,22 +489,21 @@ export function createWalk(d: WalkDeps) {
     runAmt += (THREE.MathUtils.clamp((speed - WALK) / (RUN - WALK), 0, 1) - runAmt) * damp(8, dt);
     air += ((grounded ? 0 : 1) - air) * damp(12, dt);
     phase += dt * speed * 3.1;
-    const stride = Math.min(1, speed / WALK) * (0.62 + runAmt * 0.38);
-    const swing = Math.sin(phase) * stride;
-    hero.legs[0].rotation.x = swing * (1 - air) + air * 0.5;
-    hero.legs[1].rotation.x = -swing * (1 - air) - air * 0.2;
-    const armBase = -runAmt * 0.35;
-    hero.arms[0].rotation.x = (-swing * 0.9 + armBase) * (1 - air) - air * 2.5;
-    hero.arms[1].rotation.x = (swing * 0.9 + armBase - (speed < 0.2 ? 0.25 : 0)) * (1 - air) - air * 2.5;
-    hero.arms[0].rotation.z = -air * 0.3;
-    hero.arms[1].rotation.z = air * 0.3;
+    const stride = Math.min(1, speed / WALK);
+    const P = hero.pose;
+    walkPose(P, phase, stride, runAmt);
+    if (speed < 0.2) P.bob += Math.sin(t * 1.6) * 0.004;
+    if (aim) Object.assign(P.arms[1], { fwd: 1.45, out: 0.05, bend: 0.15 });
+    airPose(P, air);
     // The head follows the camera: turns towards where you look, tilts up and down
-    const headYaw = THREE.MathUtils.clamp(wrap(lookFace - face), -0.9, 0.9);
-    hero.head.rotation.y += ((speed < 0.25 || aim ? headYaw : 0) - hero.head.rotation.y) * damp(8, dt);
-    hero.head.rotation.x += (THREE.MathUtils.clamp(-(0.35 - pitch) * 0.6, -0.55, 0.45) - hero.head.rotation.x) * damp(8, dt);
-    const bob = Math.abs(Math.cos(phase)) * 0.04 * stride * (1 - air) + (speed < 0.2 ? Math.sin(t * 2) * 0.004 : 0);
-    hero.g.position.set(pos.x, pos.y + bob, pos.z);
-    hero.g.rotation.set(runAmt * 0.2 * (1 - air), face, 0);
+    const lookYaw = THREE.MathUtils.clamp(wrap(lookFace - face), -0.9, 0.9);
+    headYaw += ((speed < 0.25 || aim ? lookYaw : 0) - headYaw) * damp(8, dt);
+    headPitch += (THREE.MathUtils.clamp((0.35 - pitch) * 0.6, -0.45, 0.55) - headPitch) * damp(8, dt);
+    P.headYaw = headYaw;
+    P.headPitch = headPitch;
+    hero.update();
+    hero.g.position.set(pos.x, pos.y, pos.z);
+    hero.g.rotation.set(0, face, 0);
     const squash = land / 0.16;
     hero.g.scale.set(SCALE * (1 + squash * 0.18), SCALE * (1 - squash * 0.22), SCALE * (1 + squash * 0.18));
     hero.ring.position.set(pos.x, ground + 0.02, pos.z);

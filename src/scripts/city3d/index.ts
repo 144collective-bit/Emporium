@@ -91,7 +91,7 @@ export async function bootCity(root: HTMLElement) {
   buildLamps(scene);
   progress(0.7);
   await nextFrame();
-  buildLife(scene, { cars: Q.cars, buses: Q.buses, walkers: Q.walkers }, crowd, tick);
+  buildLife(scene, { cars: Q.cars, buses: Q.buses, walkers: Q.walkers, light: tier === 'low' }, crowd, tick);
   const sky = createSky(scene, { shadows: Q.shadows, rainDrops: Q.rain, clouds: Q.clouds });
   progress(0.85);
   await nextFrame();

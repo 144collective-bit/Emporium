@@ -7,11 +7,14 @@ import * as THREE from 'three';
 import { FONT_DISPLAY, PAL, canvasTex, fx, glowTex, lit, neon, rand, toon } from './kit';
 import { BLOCKS, BS, CENTER, CORE_ROADS, EXT, RIVER, ROADS, SLAB, type Tick } from './world';
 import type { Idle } from './landmarks';
+import { chatPose, cityOutfit, createCrowd, idlePose, lookPose, newPose, sitPose, walkPose } from './character';
 
 export interface LifeOpts {
   cars: number;
   buses: number;
   walkers: number;
+  /** Leave the characters' small details out (phones) */
+  light?: boolean;
 }
 
 /* ======================================================================
@@ -289,8 +292,12 @@ interface Person {
   block?: [number, number];
   /** Distance from the kerb: each lane has its own, so walkers never share a line */
   inset: number;
-  /** Standing height, for people up on a roof deck */
+  /** Standing height (or seat height for someone sitting) */
   y?: number;
+  act?: Idle['act'];
+  /** Posture: a little forward or back, how much the arms swing */
+  lean: number;
+  swing: number;
   u: number;
   dir: 1 | -1;
   speed: number;
@@ -309,7 +316,9 @@ const WALK_LANES: { inset: number; dir: 1 | -1; speed: number }[] = [
   { inset: 0.29, dir: -1, speed: 0.56 },
   { inset: 0.37, dir: -1, speed: 0.48 },
 ];
-const PERSON_SCALE = 0.78;
+const PERSON_SCALE = 0.66;
+/** How far the hips sit above the feet when seated, at PERSON_SCALE */
+const SEAT_DROP = 0.47 * PERSON_SCALE;
 
 function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f: Tick) => void) {
   const people: Person[] = [];
@@ -340,50 +349,24 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
         z: 0,
         ry: 0,
         face: NaN,
+        lean: (rand() - 0.4) * 0.08,
+        swing: 0.8 + rand() * 0.35,
       });
     });
   }
-  for (const c of crowd) people.push({ kind: 'idle', inset: 0, u: 0, dir: 1, speed: 0, phase: rand() * 6, x: c.x, z: c.z, y: c.y, ry: c.ry, face: c.ry });
+  for (const c of crowd) people.push({ kind: 'idle', inset: 0, u: 0, dir: 1, speed: 0, phase: rand() * 6, x: c.x, z: c.z, y: c.y, act: c.act, ry: c.ry, face: c.ry, lean: 0, swing: 1 });
   const n = people.length;
 
-  const legGeo = new THREE.BoxGeometry(0.075, 0.3, 0.085).translate(0, -0.15, 0);
-  const armGeo = new THREE.BoxGeometry(0.06, 0.26, 0.07).translate(0, -0.12, 0);
-  const capGeo = new THREE.CylinderGeometry(0.108, 0.108, 0.065, 12).translate(0, 0.82, 0);
-  const brim = new THREE.BoxGeometry(0.15, 0.02, 0.11).translate(0, 0.795, 0.1);
-  const cap = new THREE.InstancedMesh(mergeTwo(capGeo, brim), toon('#ffffff', { name: 'cap' }), n);
-  const legs = new THREE.InstancedMesh(legGeo, toon('#14121f'), n * 2);
-  const arms = new THREE.InstancedMesh(armGeo, toon('#ffffff', { name: 'sleeve' }), n * 2);
-  const body = new THREE.InstancedMesh(new THREE.BoxGeometry(0.24, 0.32, 0.15).translate(0, 0.47, 0), toon('#ffffff', { name: 'suit' }), n);
-  const headM = new THREE.InstancedMesh(new THREE.SphereGeometry(0.1, 10, 8).translate(0, 0.73, 0), toon('#14121f'), n);
-  const shades = new THREE.InstancedMesh(new THREE.BoxGeometry(0.16, 0.035, 0.02).translate(0, 0.745, 0.095), lit(new THREE.MeshToonMaterial({ color: '#1fbf6b', emissive: '#1fbf6b' }), 0.2, 0.9), n);
-  const suits = ['#14121f', '#14121f', '#14121f', '#2a2350', '#e219e5', '#00c2ff', '#f3f2f7'].map((c) => new THREE.Color(c));
-  const caps = ['#e23b3b', '#e23b3b', '#e23b3b', '#14121f', '#ffd23f'].map((c) => new THREE.Color(c));
-  for (let i = 0; i < n; i++) {
-    const s = suits[i % suits.length];
-    body.setColorAt(i, s);
-    arms.setColorAt(i * 2, s);
-    arms.setColorAt(i * 2 + 1, s);
-    cap.setColorAt(i, caps[(i * 3) % caps.length]);
-  }
-  for (const m of [cap, legs, arms, body, headM, shades]) {
-    m.castShadow = true;
-    m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-    scene.add(m);
-  }
-
-  const M = new THREE.Matrix4();
-  const P = new THREE.Matrix4();
-  const R = new THREE.Matrix4();
-  const O = new THREE.Matrix4();
-  const q = new THREE.Quaternion();
-  const up = new THREE.Vector3(0, 1, 0);
-  const v = new THREE.Vector3();
-  const scale = new THREE.Vector3(PERSON_SCALE, PERSON_SCALE, PERSON_SCALE);
+  // Everyone is the shared Degen body in a city outfit: suits and hoodies, bags, headphones
+  const people3d = createCrowd(
+    scene,
+    people.map(() => cityOutfit(rand)),
+    { light: opts.light }
+  );
+  const pose = newPose();
 
   tick(({ t, dt }) => {
     people.forEach((p, i) => {
-      let swing = 0;
-      let bob = 0;
       if (p.kind === 'walk') {
         const side = BS - p.inset * 2;
         p.u = (p.u + p.dir * p.speed * dt + side * 4) % (side * 4);
@@ -405,49 +388,23 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
         const yaws = [Math.PI / 2, 0, -Math.PI / 2, Math.PI];
         p.ry = yaws[s] + (p.dir === -1 ? Math.PI : 0);
         // Stride matched to walking pace, so feet don't slide
-        const w = t * p.speed * 11 + p.phase;
-        swing = Math.sin(w) * 0.5;
-        bob = Math.abs(Math.cos(w)) * 0.02;
-      } else {
-        swing = Math.sin(t * 0.8 + p.phase) * 0.05;
-      }
+        walkPose(pose, t * p.speed * 11 + p.phase, 1, 0, p.swing);
+        pose.lean += p.lean;
+      } else if (p.act === 'sit') sitPose(pose, t, p.phase);
+      else if (p.act === 'chat') chatPose(pose, t, p.phase);
+      else if (p.act === 'queue') {
+        idlePose(pose, t, p.phase);
+        pose.headYaw = Math.sin(t * 0.23 + p.phase) * 0.25;
+      } else lookPose(pose, t, p.phase);
       // Turn corners over a few frames instead of snapping
       if (Number.isNaN(p.face)) p.face = p.ry;
       const turn = Math.atan2(Math.sin(p.ry - p.face), Math.cos(p.ry - p.face));
       p.face += turn * Math.min(1, dt * 9);
-      const look = p.kind === 'idle' ? Math.sin(t * 0.4 + p.phase) * 0.35 : 0;
-      q.setFromAxisAngle(up, p.face + look);
-      M.compose(v.set(p.x, (p.y ?? SLAB) + bob, p.z), q, scale);
-      body.setMatrixAt(i, M);
-      headM.setMatrixAt(i, M);
-      cap.setMatrixAt(i, M);
-      shades.setMatrixAt(i, M);
-      for (const sd of [-1, 1]) {
-        P.makeTranslation(sd * 0.055, 0.32, 0);
-        R.makeRotationX(swing * sd);
-        legs.setMatrixAt(i * 2 + (sd > 0 ? 1 : 0), O.multiplyMatrices(M, P).multiply(R));
-        P.makeTranslation(sd * 0.155, 0.61, 0);
-        R.makeRotationX(-swing * sd * 0.8);
-        arms.setMatrixAt(i * 2 + (sd > 0 ? 1 : 0), O.multiplyMatrices(M, P).multiply(R));
-      }
+      const y = p.act === 'sit' ? (p.y ?? SLAB) - SEAT_DROP : (p.y ?? SLAB);
+      people3d.set(i, p.x, y, p.z, p.face, PERSON_SCALE, pose);
     });
-    for (const m of [cap, legs, arms, body, headM, shades]) m.instanceMatrix.needsUpdate = true;
+    people3d.commit();
   });
-}
-
-function mergeTwo(a: THREE.BufferGeometry, b: THREE.BufferGeometry) {
-  const ga = a.toNonIndexed();
-  const gb = b.toNonIndexed();
-  const out = new THREE.BufferGeometry();
-  for (const k of ['position', 'normal', 'uv'] as const) {
-    const A = ga.attributes[k].array as Float32Array;
-    const B = gb.attributes[k].array as Float32Array;
-    const arr = new Float32Array(A.length + B.length);
-    arr.set(A);
-    arr.set(B, A.length);
-    out.setAttribute(k, new THREE.BufferAttribute(arr, ga.attributes[k].itemSize));
-  }
-  return out;
 }
 
 /* ======================================================================

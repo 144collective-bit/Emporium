@@ -46,7 +46,7 @@ it and has been retired completely. Build only on what's here.
   detailed building. Its LED wall shows (`drawWall`), pixel font, ticker and
   signs use fixed copy only (Insert coin, Player 1, Game on, Hi score with
   made-up names, GM degens, Arcade, Prizes); never put token details on
-  them. The rooftop hologram reuses `makeDegen()` from `degen.ts`. Its
+  them. The rooftop hologram is `createDegen()` in hologram light. Its
   podium, claw machines and prize booth are mirrored in `walk.ts`
   (`SOLIDS`, `CAMERA_ONLY`).
 - The Armoury (`armoury()` in `landmarks.ts` and `city.ts`) links to the
@@ -54,6 +54,16 @@ it and has been retired completely. Build only on what's here.
   floodlights). Its soldiers are instanced; the gate guards salute when the
   walker (`walker` in `life.ts`) comes near. Its walls, towers, keep and
   vehicles are mirrored in `walk.ts` `SOLIDS`.
+- Every character is one shared Degen body (`src/scripts/city3d/character.ts`):
+  sculpted after the brand art, with knees, elbows and hand sockets (for
+  held items such as guns later). `createDegen()` builds one figure (the
+  player, the hologram); `createCrowd()` builds instanced crowds
+  (pedestrians, soldiers) with a draw call per part, not per person.
+  Outfits (`suit`, `hoodie`, `soldier`) only change clothes and colours;
+  poses come from the helpers there (walk/run, idle, look, chat, sit, march,
+  attention/salute, dance). The cap patch is the Emporium diamond: never put
+  another brand's logo on it. Phones get the `light` crowd without small
+  details.
 - Floating cut-out signs (FX layer with a transparent texture, like the roof
   logo) need `occlude()` from `kit.ts`, or the ink outlines of whatever is
   behind them get drawn across them.

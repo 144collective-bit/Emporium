@@ -28,7 +28,7 @@ import {
   roundRect,
   toon,
 } from './kit';
-import { makeDegen } from './degen';
+import { PLAYER, SOLDIER, attentionPose, createCrowd, createDegen, dancePose, marchPose, newPose, type Outfit } from './character';
 import { walker } from './life';
 import { SLAB as S, addLamp, addTree, waterMat, type Tick } from './world';
 
@@ -47,8 +47,12 @@ export interface Spot {
 export interface Idle {
   x: number;
   z: number;
+  /** Facing: 0 is +z, PI / 2 is +x */
   ry: number;
+  /** Standing height, or for `sit` the seat height */
   y?: number;
+  /** What they're doing: looking around (default), chatting, sitting, queueing */
+  act?: 'look' | 'chat' | 'sit' | 'queue';
 }
 
 export interface LandmarkCtx {
@@ -780,7 +784,8 @@ function emporium(scene: THREE.Scene, ctx: LandmarkCtx, crowd: Idle[]) {
   {
     const holoBase = roofY + 0.32;
     const hs = 2.7;
-    const holo = makeDegen(hs);
+    const holo = createDegen(PLAYER);
+    holo.g.scale.setScalar(hs);
     const mat = holoMaterial(holoBase, 1.25 * hs);
     holo.g.traverse((o) => {
       if ((o as THREE.Mesh).isMesh) {
@@ -798,17 +803,10 @@ function emporium(scene: THREE.Scene, ctx: LandmarkCtx, crowd: Idle[]) {
       mat.uniforms.time.value = t;
       const glitch = Math.sin(t * 0.9) > 0.985 ? 1 : 0;
       mat.uniforms.power.value = (1.7 - night * 0.4) * (glitch ? 0.4 + Math.random() * 0.6 : 1);
-      const beat = Math.pow(1 - ((t * 2) % 1), 3);
       holo.g.rotation.y = t * 0.45;
       holo.g.position.x = CX + glitch * (Math.random() - 0.5) * 0.25;
-      holo.g.position.y = holoBase + beat * 0.08;
-      holo.arms[0].rotation.x = -2.5 + Math.sin(t * Math.PI * 2) * 0.45;
-      holo.arms[1].rotation.x = -2.5 - Math.sin(t * Math.PI * 2) * 0.45;
-      holo.arms[0].rotation.z = -0.3;
-      holo.arms[1].rotation.z = 0.3;
-      holo.legs[0].rotation.x = Math.sin(t * Math.PI * 2) * 0.25;
-      holo.legs[1].rotation.x = -Math.sin(t * Math.PI * 2) * 0.25;
-      holo.head.rotation.x = beat * 0.18;
+      dancePose(holo.pose, t);
+      holo.update();
     });
   }
 
@@ -886,8 +884,8 @@ function emporium(scene: THREE.Scene, ctx: LandmarkCtx, crowd: Idle[]) {
   }
 
   // A queue along the front, people at the claw machines, someone at the booth
-  for (const x of [15.6, 15.05, 14.5, 13.95, 13.4]) crowd.push({ x, z: 18.42, ry: -Math.PI / 2 });
-  crowd.push({ x: 19.0, z: 16.6, ry: 0.52 }, { x: 19.5, z: 14.7, ry: Math.PI / 2 }, { x: 18.2, z: 18.6, ry: 0.64 });
+  for (const x of [15.6, 15.05, 14.5, 13.95, 13.4]) crowd.push({ x, z: 18.42, ry: Math.PI / 2, act: 'queue' });
+  crowd.push({ x: 19.0, z: 16.6, ry: -2.62 }, { x: 19.5, z: 14.7, ry: -Math.PI / 2 }, { x: 18.75, z: 18.2, ry: -2.17 });
   addLamp(11.6, 11.6, Math.PI / 4);
   addLamp(19.5, 11.6, Math.PI * 0.75);
   addLamp(11.6, 19.5, -Math.PI / 4);
@@ -1045,7 +1043,9 @@ function shop(scene: THREE.Scene, ctx: LandmarkCtx, crowd: Idle[]) {
 
   // The queue for the drop
   // Kept clear of the sidewalk lanes along the kerb
-  for (let k = 0; k < 5; k++) crowd.push({ x: 26.1 + (k - 2) * 0.05, z: 17.6 + k * 0.38, ry: Math.PI });
+  for (let k = 0; k < 5; k++) crowd.push({ x: 26.1 + (k - 2) * 0.05, z: 17.6 + k * 0.38, ry: Math.PI, act: 'queue' });
+  // A couple chatting further along the sidewalk
+  crowd.push({ x: 28.6, z: 18.0, ry: 1.07, act: 'chat' }, { x: 29.15, z: 18.28, ry: -2.07, act: 'chat' });
   addLamp(28.0, 19.6, -Math.PI / 2);
   addLamp(30.6, 18.0, Math.PI);
   for (const [x, z] of [
@@ -1305,7 +1305,7 @@ function vault(scene: THREE.Scene, ctx: LandmarkCtx, crowd: Idle[]) {
     });
   }
   bases.build(scene);
-  crowd.push({ x: 4.3, z: 18.7, ry: 0 });
+  crowd.push({ x: 4.3, z: 18.7, ry: Math.PI });
   for (const [x, z] of [
     [1.2, 19.8],
     [8.0, 11.8],
@@ -1997,47 +1997,16 @@ function armoury(scene: THREE.Scene, ctx: LandmarkCtx) {
   }
 
   // Degen soldiers: a squad marching laps of the parade ground, two guards at the gate who
-  // salute when you walk past. Instanced, so the whole garrison is a handful of draw calls.
+  // salute when you walk past. The shared Degen body in fatigues, instanced.
   {
     const squad = 6;
     const guards: [number, number][] = [
       [25.55, 29.45],
       [27.65, 29.45],
     ];
-    const count = squad + guards.length;
-    const mk = (geo: THREE.BufferGeometry, mat: THREE.Material) => {
-      const m = new THREE.InstancedMesh(geo, mat, count);
-      m.castShadow = true;
-      m.frustumCulled = false;
-      m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-      g.add(m);
-      return m;
-    };
-    const legGeo = new THREE.BoxGeometry(0.11, 0.42, 0.12).translate(0, -0.21, 0);
-    const armGeo = new THREE.BoxGeometry(0.09, 0.38, 0.1).translate(0, -0.19, 0);
-    const rifleGeo = new THREE.BoxGeometry(0.04, 0.56, 0.05).translate(0, 0.12, 0);
-    const helmetGeo = new THREE.SphereGeometry(0.16, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.8, 1.05);
-    const parts = {
-      torso: mk(new THREE.BoxGeometry(0.32, 0.42, 0.2), olive),
-      head: mk(new THREE.SphereGeometry(0.13, 12, 8), toon('#14121f')),
-      helmet: mk(helmetGeo, oliveDk),
-      shades: mk(new THREE.BoxGeometry(0.22, 0.05, 0.03), lit(new THREE.MeshToonMaterial({ color: '#1fbf6b', emissive: '#1fbf6b' }), 0.15, 0.6)),
-      legL: mk(legGeo, toon('#465530')),
-      legR: mk(legGeo, toon('#465530')),
-      armL: mk(armGeo, olive),
-      armR: mk(armGeo, olive),
-      rifle: mk(rifleGeo, steel),
-    };
-    const M = new THREE.Matrix4();
-    const L = new THREE.Matrix4();
-    const q = new THREE.Quaternion();
-    const e = new THREE.Euler();
-    const one = new THREE.Vector3(1, 1, 1);
-    const SC = new THREE.Vector3(0.85, 0.85, 0.85);
-    const put = (m: THREE.InstancedMesh, i: number, x: number, y: number, z: number, rx = 0, rz = 0) => {
-      L.compose(V(x, y, z), q.setFromEuler(e.set(rx, 0, rz)), one);
-      m.setMatrixAt(i, L.premultiply(M));
-    };
+    const outfits: Outfit[] = [...Array.from({ length: squad }, () => SOLDIER), ...guards.map((): Outfit => ({ ...SOLDIER, rifle: 'left' }))];
+    const crowd = createCrowd(g, outfits, { light: ctx.low });
+    const pose = newPose();
     // The squad's route: a rounded rectangle round the parade ground
     const route: THREE.Vector2[] = [];
     const [cx, cz, hx, hz, rr] = [25.58, 27.95, 1.35, 0.5, 0.35];
@@ -2070,37 +2039,20 @@ function armoury(scene: THREE.Scene, ctx: LandmarkCtx) {
       return { x: route[0].x, z: route[0].y, yaw: 0 };
     };
     const salute = guards.map(() => 0);
-    const pose = (i: number, x: number, z: number, yaw: number, phase: number, march: number, sal: number, rifleLeft: boolean) => {
-      M.compose(V(x, S + Math.abs(Math.sin(phase)) * 0.02 * march, z), q.setFromEuler(e.set(0, yaw, 0)), SC);
-      put(parts.torso, i, 0, 0.66, 0);
-      put(parts.head, i, 0, 1.0, 0);
-      put(parts.helmet, i, 0, 1.04, 0);
-      put(parts.shades, i, 0, 1.01, 0.125);
-      const swing = Math.sin(phase) * 0.5 * march;
-      put(parts.legL, i, -0.07, 0.45, 0, swing);
-      put(parts.legR, i, 0.07, 0.45, 0, -swing);
-      if (rifleLeft) {
-        put(parts.armL, i, -0.2, 0.86, 0, -0.35, 0.15);
-        put(parts.rifle, i, -0.24, 0.86, 0.06, 0.1, 0.1);
-        put(parts.armR, i, 0.2, 0.86, 0, -2.55 * sal, -0.75 * sal);
-      } else {
-        put(parts.armL, i, -0.2, 0.86, 0, -swing * 0.9);
-        put(parts.armR, i, 0.2, 0.86, 0, -0.35, -0.15);
-        put(parts.rifle, i, 0.24, 0.86, 0.06, 0.1, -0.1);
-      }
-    };
     ctx.tick(({ t, dt }) => {
       for (let i = 0; i < squad; i++) {
         const s = t * 0.42 - i * 0.48;
         const p = along(s);
-        pose(i, p.x, p.z, p.yaw, s * 9, 1, 0, false);
+        marchPose(pose, s * 9, 'right');
+        crowd.set(i, p.x, S, p.z, p.yaw, 0.85, pose);
       }
       guards.forEach(([x, z], k) => {
         const near = walker.on && Math.hypot(walker.x - x, walker.z - z) < 1.8;
         salute[k] += ((near ? 1 : 0) - salute[k]) * Math.min(1, dt * 6);
-        pose(squad + k, x, z, 0, 0, 0, salute[k], true);
+        attentionPose(pose, salute[k], 'left');
+        crowd.set(squad + k, x, S, z, 0, 0.85, pose);
       });
-      for (const m of Object.values(parts)) m.instanceMatrix.needsUpdate = true;
+      crowd.commit();
     });
   }
   b.build(g);
@@ -2209,6 +2161,17 @@ function park(scene: THREE.Scene, crowd: Idle[]) {
   ])
     addTree(x, z);
   b.box(3.6, S, 5.9, 0.3, 0.22, 1.0, toon('#7a4fb0'));
+  // Two on the bench watching the court, a group chatting on the grass
+  crowd.push({ x: 3.74, z: 6.15, y: S + 0.22, ry: Math.PI / 2, act: 'sit' }, { x: 3.74, z: 6.68, y: S + 0.22, ry: Math.PI / 2, act: 'sit' });
+  for (const [x, z] of [
+    [2.35, 5.95],
+    [2.95, 6.2],
+    [2.55, 6.62],
+  ]) {
+    const cx = 2.62;
+    const cz = 6.26;
+    crowd.push({ x, z, ry: Math.atan2(cx - x, cz - z), act: 'chat' });
+  }
   b.build(scene);
   addLamp(4.6, 3.4, 0);
   addLamp(8.4, 8.4, -Math.PI * 0.75);
