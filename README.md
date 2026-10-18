@@ -103,13 +103,14 @@ of Gas Fee Gummy Bears) and explore on foot.
 - **Desktop:** click the city to capture the mouse, then move it to look
   around (up at the towers and the sky too). WASD or arrow keys to move and
   strafe, hold Shift to run (Caps Lock toggles it), Space to jump (hold
-  for a higher jump), right-click to aim in close, V for first person, scroll
-  for camera distance, E to enter a door. Esc frees the mouse; press it again
-  to stop walking.
+  for a higher jump), right-click to aim, E to enter a door. You start in
+  first person; V (or scrolling out) swaps to the over-the-shoulder camera,
+  and scroll sets its distance. Esc frees the mouse; press it again to stop
+  walking.
 - **Phones:** joystick bottom-left (push it to the edge to run), Run and Jump
   buttons bottom-right, drag anywhere else to look.
 - **Gamepads:** left stick moves, right stick looks, A jumps, LB or L3 runs,
-  LT aims, Y enters a door, View switches to first person.
+  LT aims, Y enters a door, View swaps first / third person.
 - **Controls** (top-left while walking) sets look speed, invert up/down and
   first person, and lists the keys. The settings are saved in the browser.
 - The camera sits over his shoulder, slides in front of walls instead of
@@ -125,21 +126,34 @@ Solo shooting practice in walk mode. Only Degen carries a gun; nobody in the
 city is shot at.
 
 - **Gear up** at the weapon rack inside the Armoury's gate (E or tap the
-  prompt). That gives Degen a cartoon assault rifle with a 30-round magazine
-  and 120 spare. Going back to the rack refills the ammo.
-- **Desktop:** click to fire (once the mouse is captured), right-click to aim
-  down the sights, R to reload, G to holster or draw.
-- **Phones:** Fire and Reload buttons appear next to Run and Jump. Fire
-  has a little aim assist towards a target near the crosshair.
+  prompt). That gives Degen a cartoon assault rifle with a holo red-dot
+  sight, a 30-round magazine and 120 spare. Going back to the rack refills
+  the ammo.
+- **First person:** Degen's hands on the rifle (suit sleeves, white cuffs).
+  It sways as you look, bobs as you walk, tips down when you sprint, kicks
+  on every shot with a muzzle flash, and the left hand swaps the magazine on
+  a reload. Aiming brings the red dot up to your eye and zooms in.
+- **Desktop:** click to fire (once the mouse is captured), right-click to aim,
+  R to reload, G to holster or draw.
+- **Phones:** Fire, Aim (tap to toggle the sight) and Reload buttons appear
+  next to Run and Jump. Fire has a little aim assist towards a target near
+  the crosshair.
 - **Gamepads:** RT fires, LT aims, X reloads, D-pad up holsters.
 - **Targets:** cardboard "Jeet Bot" dummies in the park, beside the post
   office and by the apartments, and target drones patrolling above the
   streets. Each has a health bar; dummies flop over and pop back up, and
   drones fall, smoke and pop before they respawn.
-- **HUD:** crosshair that opens up as you fire, hit marker, ammo counter, and
-  a score with a streak bonus for takedowns in quick succession.
-- Sparks and dust where shots land. Shots, reloads and hits have punchy
-  cartoon sounds, only when sound is on.
+- **HUD:** crosshair that opens up as you fire (the red dot replaces it when
+  aiming), hit and takedown markers, floating damage numbers, "Takedown" /
+  "Drone down" and streak call-outs (Double, Triple...), ammo counter and
+  score.
+- **Rifle finishes:** Field Olive to start; Black Ink and Pulse Neon unlock
+  with your lifetime score. Pick one in the Controls panel. Score and finish
+  are saved in your browser; they're cosmetic only.
+- Sparks and dust where shots land. Layered cartoon sound, only when sound
+  is on: each shot has a punch, a crack, a mechanical click and an echo off
+  the buildings; reloads click out and clack in; cardboard thuds and drones
+  ring.
 
 ### City builder (demo)
 
@@ -186,7 +200,10 @@ button and stays closed on return visits.
 | `src/scripts/city3d/post.ts` | Ink outlines and bloom |
 | `src/scripts/city3d/sound.ts` | Ambient sound |
 | `src/scripts/city3d/walk.ts` | Walk mode: Degen, mouse / keyboard / touch / gamepad controls, camera, collisions, door prompts |
-| `src/scripts/city3d/combat.ts` | Target practice: the rifle, dummies and drones, hits, effects, combat HUD |
+| `src/scripts/city3d/combat-sim.ts` | Target practice rules: ammo, hits, health, score; fixed tick, events, no DOM (ready to run on a server) |
+| `src/scripts/city3d/combat.ts` | Target practice view: targets, effects, sound cues, HUD, call-outs, rifle finishes |
+| `src/scripts/city3d/rifle.ts` | The rifle (shared by Degen, his hands and the soldiers), red-dot sight, finishes |
+| `src/scripts/city3d/viewmodel.ts` | First-person hands and rifle: sway, bob, recoil, aiming, reload |
 | `src/scripts/city3d/plots.ts` | Plot grid, build-mode overlay, the eight buildings |
 | `src/scripts/city3d/store.ts` | Demo wallet, simulated purchases, saved progress |
 | `src/scripts/city3d/builder-ui.ts` | Build mode: wallet chip, plot panel, customiser, purchase dialog |

@@ -2436,7 +2436,8 @@ body.full-bleed {
 /* Combat HUD (walk mode, once geared up at the Armoury) */
 .combat-hud,
 .walk-fire,
-.walk-reload {
+.walk-reload,
+.walk-aim {
   display: none;
 }
 .city.is-armed[data-mode="walk"] .combat-hud {
@@ -2502,6 +2503,164 @@ body.full-bleed {
 }
 .combat-hit.is-on {
   opacity: 1;
+}
+.combat-hit.is-kill {
+  width: 30px;
+  height: 30px;
+  filter: drop-shadow(0 0 6px #ff3b3b);
+}
+/* Down the red-dot sight the reticle replaces the crosshair */
+.city.is-ads .combat-cross {
+  opacity: 0;
+}
+.combat-dmg {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  overflow: hidden;
+  pointer-events: none;
+}
+.combat-num {
+  position: absolute;
+  top: 0;
+  left: 0;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+  color: #fff;
+  text-shadow:
+    0 2px 0 #05050a,
+    2px 0 0 #05050a,
+    -2px 0 0 #05050a,
+    0 -2px 0 #05050a;
+  will-change: transform, opacity;
+}
+.combat-num.is-kill {
+  font-size: 28px;
+  color: #ffd36b;
+}
+.combat-pops {
+  position: absolute;
+  top: calc(50% + 44px);
+  left: 50%;
+  z-index: 4;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.combat-pop {
+  display: grid;
+  justify-items: center;
+  animation: pop-stamp 1.3s ease-out forwards;
+}
+.combat-pop b {
+  font-family: var(--font-display);
+  font-size: 34px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  background: var(--pulse-text);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 2px 0 #05050a) drop-shadow(0 0 10px #ff2fb966);
+}
+.combat-pop span {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--p-cyan);
+  text-shadow: 0 1px 0 #05050a;
+}
+.combat-pop.is-streak b,
+.combat-pop.is-unlock b {
+  font-size: 26px;
+}
+@keyframes pop-stamp {
+  0% { opacity: 0; transform: scale(1.7); }
+  12% { opacity: 1; transform: scale(0.94); }
+  20% { transform: scale(1); }
+  78% { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: translateY(-10px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .combat-pop {
+    animation: none;
+  }
+}
+/* Rifle finishes, in the Controls panel */
+.walk-skins {
+  display: grid;
+  gap: 8px;
+}
+.walk-skins-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.walk-skins-head b {
+  color: var(--p-cyan);
+}
+.walk-skins-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.walk-skins-row button {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 8px 4px;
+  border: 1px solid #ffffff24;
+  border-radius: 8px;
+  background: #0b0a12;
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.2;
+  text-align: center;
+  cursor: pointer;
+}
+.walk-skins-row button[aria-pressed="true"] {
+  border-color: #0000;
+  background:
+    linear-gradient(#14102a, #14102a) padding-box,
+    var(--pulse) border-box;
+}
+.walk-skins-row button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.walk-skins-row small {
+  font-size: 9px;
+  color: var(--p-cyan);
+}
+.sw {
+  width: 30px;
+  height: 10px;
+  border: 1px solid #ffffff40;
+  border-radius: 3px;
+}
+.sw-olive {
+  background: linear-gradient(90deg, #5a6b3a 70%, #c9a04a 70%);
+}
+.sw-ink {
+  background: linear-gradient(90deg, #1d1b26 70%, #8f8aa8 70%);
+}
+.sw-neon {
+  background: linear-gradient(90deg, #1a1530 45%, #ff2fb9 45%, #8f3dff 72%, #00eaff);
 }
 .combat-ammo,
 .combat-score {
@@ -2577,7 +2736,8 @@ body.full-bleed {
     display: none;
   }
   .city.is-armed .walk-fire,
-  .city.is-armed .walk-reload {
+  .city.is-armed .walk-reload,
+  .city.is-armed .walk-aim {
     position: absolute;
     z-index: 4;
     display: grid;
@@ -2608,6 +2768,20 @@ body.full-bleed {
     width: 52px;
     height: 52px;
     font-size: 9px;
+  }
+  .city.is-armed .walk-aim {
+    right: 30px;
+    bottom: 194px;
+    width: 56px;
+    height: 56px;
+    font-size: 10px;
+  }
+  .city.is-armed .walk-aim[aria-pressed="true"] {
+    background:
+      var(--pulse-wash) padding-box,
+      linear-gradient(#14102a, #14102a) padding-box,
+      var(--pulse) border-box;
+    box-shadow: 0 0 20px -6px #00eaffaa;
   }
   .city.is-armed .combat-ammo {
     top: 104px;

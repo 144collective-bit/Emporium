@@ -28,7 +28,7 @@ import {
   roundRect,
   toon,
 } from './kit';
-import { rifleGeometry } from './combat';
+import { rifleGeometry } from './rifle';
 import { PLAYER, SOLDIER, attentionPose, createCrowd, createDegen, dancePose, marchPose, newPose, type Outfit } from './character';
 import { walker } from './life';
 import { SLAB as S, addLamp, addTree, waterMat, type Tick } from './world';

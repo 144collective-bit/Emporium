@@ -16,7 +16,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { rifleGeometry } from './combat';
+import { rifleGeometry } from './rifle';
 import { canvasTex, lit, toon } from './kit';
 
 /* ---------- Outfits ---------- */

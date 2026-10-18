@@ -1,104 +1,44 @@
 /*
- * Guns, in walk mode only: Degen's assault rifle, the training targets round
- * the city and the shooting HUD.
+ * Target practice, in walk mode only: what you see and hear. The rules (ammo,
+ * hits, health, score) live in combat-sim.ts; this file feeds it the local
+ * player's input and turns its events into the rifle, the targets, effects,
+ * sound and the HUD.
  *
  * - You start unarmed. The weapon rack inside the Armoury gate gears you up
  *   (and refills ammo); G holsters and draws.
- * - Left mouse fires full auto, right mouse aims, R reloads (30 rounds a
- *   magazine, 120 spare). Phones get Fire and Reload buttons and a little aim
- *   assist; gamepads fire on RT and reload on X.
- * - Shots are hitscan from the crosshair. They hit training dummies and target
- *   drones (health bars, knock down, respawn) and spark off the world.
- *   People and cars are never hit.
+ * - Left mouse fires full auto, right mouse aims (the holo red-dot in first
+ *   person), R reloads. Phones get Fire, Aim and Reload buttons and a little
+ *   aim assist; gamepads fire on RT and reload on X.
+ * - Targets: cardboard dummies and patrol drones. People and cars are never hit.
+ * - Rifle finishes unlock with your lifetime score, saved in this browser.
  */
 import * as THREE from 'three';
 import { FONT_DISPLAY, PAL, canvasTex, fx, glowTex, neon, toon } from './kit';
-import { SLAB, type Tick } from './world';
+import { type Tick } from './world';
+import { DRONES, DUMMIES, WEAPON, createSim, dronePose, type SimEvent } from './combat-sim';
+import { MUZZLE, SKINS, buildRifle, type SkinId } from './rifle';
+import { createViewmodel, type ViewState } from './viewmodel';
 
-/* ---------- The rifle ---------- */
+export { DUMMIES };
 
-const STEEL = '#2b2a33';
-const FURNITURE = '#5a6b3a';
+export type Sfx = 'shot' | 'empty' | 'magout' | 'magin' | 'bolt' | 'hit' | 'hitMetal' | 'down' | 'boom' | 'gear' | 'draw' | 'holster' | 'unlock';
 
-/** The assault rifle's parts, barrel along +z, the grip at the origin. */
-function rifleParts(): [THREE.BufferGeometry, string][] {
-  const box = (w: number, h: number, d: number, x: number, y: number, z: number, rx = 0) => {
-    const g = new THREE.BoxGeometry(w, h, d);
-    g.rotateX(rx);
-    return g.translate(x, y, z);
-  };
-  const barrel = new THREE.CylinderGeometry(0.015, 0.015, 0.22, 8).rotateX(Math.PI / 2).translate(0, 0.045, 0.31);
-  return [
-    [box(0.062, 0.09, 0.3, 0, 0.035, 0.05), STEEL],
-    [barrel, STEEL],
-    [box(0.034, 0.034, 0.055, 0, 0.045, 0.44), STEEL],
-    [box(0.07, 0.072, 0.17, 0, 0.035, 0.27), FURNITURE],
-    [box(0.052, 0.1, 0.2, 0, 0.0, -0.19, 0.12), FURNITURE],
-    [box(0.04, 0.095, 0.045, 0, -0.045, -0.005, 0.32), FURNITURE],
-    [box(0.04, 0.13, 0.062, 0, -0.07, 0.1, -0.22), STEEL],
-    [box(0.03, 0.032, 0.13, 0, 0.096, 0.05), PAL.ink],
-    [box(0.012, 0.04, 0.012, 0, 0.08, 0.35), PAL.ink],
-  ];
-}
-export const MUZZLE = new THREE.Vector3(0, 0.045, 0.47);
-
-/** The rifle as one merged shape (for crowds: the soldiers carry the same gun). */
-export function rifleGeometry() {
-  const geos = rifleParts().map(([g]) => {
-    const n = g.index ? g.toNonIndexed() : g;
-    for (const k of Object.keys(n.attributes)) if (!['position', 'normal', 'uv'].includes(k)) n.deleteAttribute(k);
-    return n;
-  });
-  const out = new THREE.BufferGeometry();
-  for (const k of ['position', 'normal', 'uv'] as const) {
-    const total = geos.reduce((a, g) => a + g.attributes[k].array.length, 0);
-    const arr = new Float32Array(total);
-    let o = 0;
-    for (const g of geos) {
-      arr.set(g.attributes[k].array as Float32Array, o);
-      o += g.attributes[k].array.length;
-    }
-    out.setAttribute(k, new THREE.BufferAttribute(arr, k === 'uv' ? 2 : 3));
-  }
-  return out;
+export interface CombatDeps {
+  scene: THREE.Scene;
+  camera: THREE.PerspectiveCamera;
+  root: HTMLElement;
+  tick: (f: Tick) => void;
+  /** Height of the ground the dummies stand on */
+  ground: number;
+  /** Distance along the ray to the first building or the ground */
+  rayWorld(from: THREE.Vector3, dir: THREE.Vector3, max: number): number;
+  sfx(kind: Sfx): void;
 }
 
-function buildRifle() {
-  const g = new THREE.Group();
-  for (const [geo, color] of rifleParts()) {
-    const m = new THREE.Mesh(geo, toon(color));
-    m.castShadow = true;
-    g.add(m);
-  }
-  return g;
-}
+const ME = 'me';
+const PROFILE_KEY = 'degen-city-combat-v1';
 
-/* ---------- Targets ---------- */
-
-/** Where the training dummies stand: in the park and on a few lots. */
-export const DUMMIES: [number, number, number][] = [
-  [5.15, 3.0, 0],
-  [7.45, 3.0, 0],
-  [2.6, 7.6, Math.PI / 2],
-  [7.7, 24.1, Math.PI / 4],
-  [8.1, 25.6, Math.PI / 4],
-  [28.6, 7.0, 0],
-  [24.4, 6.4, 0],
-];
-
-interface Target {
-  kind: 'dummy' | 'drone';
-  g: THREE.Group;
-  hp: number;
-  max: number;
-  /** Seconds until it's back after a takedown (0 while up) */
-  down: number;
-  flash: number;
-  bar: THREE.Group;
-  fill: THREE.Mesh;
-  barShow: number;
-  hit(ray: THREE.Ray): number | null;
-}
+/* ---------- Target looks ---------- */
 
 const bodyTex = () =>
   canvasTex(256, 384, (c) => {
@@ -156,6 +96,7 @@ function healthBar() {
 
 /* ---------- Effects ---------- */
 
+/** A pool of glowing points with simple physics; skips all work while none are alive */
 function particles(n: number, additive: boolean, size: number) {
   const geo = new THREE.BufferGeometry();
   const pos = new Float32Array(n * 3).fill(-999);
@@ -172,26 +113,38 @@ function particles(n: number, additive: boolean, size: number) {
   });
   const pts = fx(new THREE.Points(geo, mat));
   pts.frustumCulled = false;
+  pts.visible = false;
   const vel = new Float32Array(n * 3);
   const life = new Float32Array(n);
   const drag = new Float32Array(n);
   const base = new Float32Array(n * 3);
   let next = 0;
+  let alive = 0;
   const col = new THREE.Color();
   return {
     pts,
     emit(p: THREE.Vector3, v: THREE.Vector3, color: string, t: number, dragK = 2) {
       const i = next;
       next = (next + 1) % n;
-      pos.set([p.x, p.y, p.z], i * 3);
-      vel.set([v.x, v.y, v.z], i * 3);
+      if (life[i] <= 0) alive++;
+      pos[i * 3] = p.x;
+      pos[i * 3 + 1] = p.y;
+      pos[i * 3 + 2] = p.z;
+      vel[i * 3] = v.x;
+      vel[i * 3 + 1] = v.y;
+      vel[i * 3 + 2] = v.z;
       col.set(color);
-      base.set([col.r, col.g, col.b], i * 3);
+      base[i * 3] = col.r;
+      base[i * 3 + 1] = col.g;
+      base[i * 3 + 2] = col.b;
       life[i] = t;
       drag[i] = dragK;
+      pts.visible = true;
     },
     update(dt: number, gravity: number) {
+      if (!alive) return;
       const c = geo.attributes.color.array as Float32Array;
+      alive = 0;
       for (let i = 0; i < n; i++) {
         if (life[i] <= 0) continue;
         life[i] -= dt;
@@ -199,6 +152,7 @@ function particles(n: number, additive: boolean, size: number) {
           pos[i * 3 + 1] = -999;
           continue;
         }
+        alive++;
         const k = Math.exp(-drag[i] * dt);
         vel[i * 3] *= k;
         vel[i * 3 + 2] *= k;
@@ -213,29 +167,29 @@ function particles(n: number, additive: boolean, size: number) {
       }
       geo.attributes.position.needsUpdate = true;
       geo.attributes.color.needsUpdate = true;
+      pts.visible = alive > 0;
     },
   };
 }
 
-/* ---------- Combat ---------- */
+/* ---------- Saved progress: lifetime score and the chosen finish ---------- */
 
-export type Sfx = 'shot' | 'reload' | 'empty' | 'hit' | 'down' | 'gear';
-
-export interface CombatDeps {
-  scene: THREE.Scene;
-  camera: THREE.PerspectiveCamera;
-  root: HTMLElement;
-  tick: (f: Tick) => void;
-  /** Distance along the ray to the first building or the ground */
-  rayWorld(from: THREE.Vector3, dir: THREE.Vector3, max: number): number;
-  sfx(kind: Sfx): void;
+interface Profile {
+  total: number;
+  skin: SkinId;
+}
+function loadProfile(): Profile {
+  try {
+    const p = JSON.parse(localStorage.getItem(PROFILE_KEY) || '{}');
+    const total = Number.isFinite(p.total) ? Math.max(0, p.total) : 0;
+    const skin = SKINS.some((s) => s.id === p.skin && total >= s.need) ? p.skin : 'olive';
+    return { total, skin };
+  } catch {
+    return { total: 0, skin: 'olive' };
+  }
 }
 
-const MAG = 30;
-const RESERVE = 120;
-const RATE = 9.5;
-const DAMAGE = 25;
-const RELOAD = 1.7;
+/* ---------- Combat ---------- */
 
 export function createCombat(d: CombatDeps) {
   const { scene, camera, root } = d;
@@ -248,44 +202,57 @@ export function createCombat(d: CombatDeps) {
     hint: $('[data-reload-hint]'),
     score: $('[data-score]'),
     streak: $('[data-streak]'),
+    dmg: $('[data-dmg]'),
+    pops: $('[data-pops]'),
+    skins: $('[data-skins]'),
+    lifetime: $('[data-lifetime]'),
+  };
+  const touchUi = matchMedia('(pointer: coarse)');
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const sim = createSim({ ground: d.ground, rayWorld: d.rayWorld });
+  const me = sim.addPlayer(ME);
+
+  const profile = loadProfile();
+  const saveProfile = () => {
+    try {
+      localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+    } catch {
+      /* fine: progress just won't stick */
+    }
   };
 
-  // The rifle, held in a pivot the walk code parents to Degen's chest
+  // Third person: the rifle on Degen's shoulder, in a pivot the walk code parents to his chest
   const pivot = new THREE.Group();
-  const rifle = buildRifle();
-  pivot.add(rifle);
+  const rifle = buildRifle(profile.skin, { shadows: true });
+  pivot.add(rifle.group);
   const flash = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 0.22), new THREE.MeshBasicMaterial({ map: glowTex, color: '#ffd36b', transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false }));
   flash.position.copy(MUZZLE).add(new THREE.Vector3(0, 0, 0.06));
   flash.visible = false;
-  rifle.add(fx(flash));
+  rifle.group.add(fx(flash));
   pivot.visible = false;
 
-  let geared = false;
-  let armed = false;
-  let mag = MAG;
-  let reserve = RESERVE;
+  // First person: Degen's hands on the rifle
+  const vm = createViewmodel(scene, profile.skin);
+
   let trigger = false;
   let touchFire = false;
-  let cooldown = 0;
-  let reloading = 0;
-  const touchUi = matchMedia('(pointer: coarse)');
-  let spread = 0;
+  let aiming = false;
+  let firstPerson = false;
   let kick = 0;
   let flashT = 0;
   let hitT = 0;
-  let score = 0;
-  let streak = 0;
-  let streakT = 0;
-  let aiming = false;
+  let killT = 0;
+  let lastReload = 0;
+  let motion = true;
 
   /* ----- Effects ----- */
   const sparks = particles(160, true, 0.09);
   const puffs = particles(220, false, 0.16);
   scene.add(sparks.pts, puffs.pts);
-  const tracerMat = new THREE.MeshBasicMaterial({ color: '#ffe9a8', transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
   const tracerGeo = new THREE.BoxGeometry(0.018, 0.018, 1).translate(0, 0, 0.5);
   const tracers = Array.from({ length: 6 }, () => {
-    const m = fx(new THREE.Mesh(tracerGeo, tracerMat.clone()));
+    const m = fx(new THREE.Mesh(tracerGeo, new THREE.MeshBasicMaterial({ color: '#ffe9a8', transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending, fog: false })));
     m.visible = false;
     scene.add(m);
     return { m, t: 0 };
@@ -299,86 +266,49 @@ export function createCombat(d: CombatDeps) {
     }
   };
 
-  /* ----- Targets ----- */
-  const targets: Target[] = [];
+  /* ----- Targets: what the sim's targets look like ----- */
+  interface Look {
+    g: THREE.Group;
+    bar: THREE.Group;
+    fill: THREE.Mesh;
+    barShow: number;
+    flash: number;
+    hinge?: THREE.Group;
+    rotors?: THREE.Mesh[];
+    light?: THREE.Mesh;
+    fall?: { vy: number; spin: number } | null;
+  }
+  const looks: Look[] = [];
   const cardboard = new THREE.MeshToonMaterial({ map: bodyTex() });
   const edge = toon('#a87c44');
+  const standGeo = new THREE.CylinderGeometry(0.26, 0.3, 0.06, 16).translate(0, 0.03, 0);
+  const postGeo = new THREE.BoxGeometry(0.06, 0.32, 0.06).translate(0, 0.2, 0);
+  const cardGeo = new THREE.BoxGeometry(0.62, 0.93, 0.03).translate(0, 0.465, 0);
   for (const [x, z, ry] of DUMMIES) {
     const g = new THREE.Group();
-    g.position.set(x, SLAB, z);
+    g.position.set(x, d.ground, z);
     g.rotation.y = ry;
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.3, 0.06, 16), toon('#3a3466'));
-    base.position.y = 0.03;
-    const post = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.32, 0.06), toon('#6b4a2e'));
-    post.position.y = 0.2;
+    const stand = new THREE.Mesh(standGeo, toon('#3a3466'));
+    const post = new THREE.Mesh(postGeo, toon('#6b4a2e'));
     const hinge = new THREE.Group();
     hinge.position.y = 0.34;
-    const card = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.93, 0.03), [edge, edge, edge, edge, cardboard, cardboard]);
-    card.position.y = 0.465;
+    const card = new THREE.Mesh(cardGeo, [edge, edge, edge, edge, cardboard, cardboard]);
     hinge.add(card);
-    for (const m of [base, post, card]) m.castShadow = m.receiveShadow = true;
-    g.add(base, post, hinge);
+    for (const m of [stand, post, card]) m.castShadow = m.receiveShadow = true;
+    g.add(stand, post, hinge);
     const { bar, fill } = healthBar();
-    bar.position.set(x, SLAB + 1.55, z);
+    bar.position.set(x, d.ground + 1.55, z);
     scene.add(g, bar);
-    const inv = new THREE.Matrix4();
-    const local = new THREE.Ray();
-    const lo = new THREE.Vector3(-0.31, 0.34, -0.06);
-    const hi = new THREE.Vector3(0.31, 1.27, 0.06);
-    const box3 = new THREE.Box3(lo, hi);
-    const hitP = new THREE.Vector3();
-    targets.push({
-      kind: 'dummy',
-      g,
-      hp: 100,
-      max: 100,
-      down: 0,
-      flash: 0,
-      bar,
-      fill,
-      barShow: 0,
-      hit(ray) {
-        g.updateMatrixWorld();
-        inv.copy(g.matrixWorld).invert();
-        local.copy(ray).applyMatrix4(inv);
-        const p = local.intersectBox(box3, hitP);
-        return p ? p.applyMatrix4(g.matrixWorld).distanceTo(ray.origin) : null;
-      },
-    });
-    (targets[targets.length - 1] as Target & { hinge?: THREE.Group }).hinge = hinge;
+    looks.push({ g, bar, fill, barShow: 0, flash: 0, hinge });
   }
-
-  // Target drones on patrol above the streets
-  const loops: [number, number, number, number, number][] = [
-    [10, 10, 21, 21, 4.4],
-    [-1, -1, 32, 32, 5.6],
-  ];
-  const along = (L: [number, number, number, number, number], s: number) => {
-    const [x0, z0, x1, z1] = L;
-    const w = x1 - x0;
-    const h = z1 - z0;
-    const per = 2 * (w + h);
-    let u = ((s % per) + per) % per;
-    if (u < w) return [x0 + u, z0, Math.PI / 2];
-    u -= w;
-    if (u < h) return [x1, z0 + u, 0];
-    u -= h;
-    if (u < w) return [x1 - u, z1, -Math.PI / 2];
-    u -= w;
-    return [x0, z1 - u, Math.PI];
-  };
-  const droneOlive = toon('#4f5d31');
-  const droneSpecs: { loop: number; phase: number }[] = [
-    { loop: 0, phase: 0 },
-    { loop: 0, phase: 22 },
-    { loop: 1, phase: 0 },
-    { loop: 1, phase: 66 },
-  ];
-  const drones = droneSpecs.map((spec) => {
+  const droneBody = new THREE.BoxGeometry(0.42, 0.14, 0.42);
+  const dronePod = new THREE.SphereGeometry(0.08, 10, 8).translate(0, -0.09, 0.12);
+  const droneArm = new THREE.BoxGeometry(0.34, 0.04, 0.05);
+  const droneRotor = new THREE.BoxGeometry(0.34, 0.01, 0.04);
+  for (let i = 0; i < DRONES.length; i++) {
     const g = new THREE.Group();
-    const body = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.14, 0.42), droneOlive);
-    const pod = new THREE.Mesh(new THREE.SphereGeometry(0.08, 10, 8), toon(PAL.ink));
-    pod.position.set(0, -0.09, 0.12);
+    const body = new THREE.Mesh(droneBody, toon('#4f5d31'));
+    const pod = new THREE.Mesh(dronePod, toon(PAL.ink));
     g.add(body, pod);
     const rotors: THREE.Mesh[] = [];
     for (const [ax, az] of [
@@ -387,10 +317,10 @@ export function createCombat(d: CombatDeps) {
       [1, -1],
       [-1, -1],
     ]) {
-      const arm = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.04, 0.05), toon(STEEL));
+      const arm = new THREE.Mesh(droneArm, toon('#2b2a33'));
       arm.position.set(ax * 0.22, 0.02, az * 0.22);
-      arm.rotation.y = Math.atan2(az, ax) * -1;
-      const rotor = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.01, 0.04), toon('#14121f'));
+      arm.rotation.y = -Math.atan2(az, ax);
+      const rotor = new THREE.Mesh(droneRotor, toon('#14121f'));
       rotor.position.set(ax * 0.36, 0.07, az * 0.36);
       rotors.push(rotor);
       g.add(arm, rotor);
@@ -398,230 +328,289 @@ export function createCombat(d: CombatDeps) {
     const light = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), neon('#ff2a2a', 0.6, 2.2));
     light.position.set(0, 0.09, -0.18);
     g.add(fx(light));
-    for (const m of [body, pod]) m.castShadow = true;
-    scene.add(g);
+    body.castShadow = pod.castShadow = true;
     const { bar, fill } = healthBar();
-    scene.add(bar);
-    const sphere = new THREE.Sphere(new THREE.Vector3(), 0.42);
-    const hitP = new THREE.Vector3();
-    const t: Target & { spec: typeof spec; rotors: THREE.Mesh[]; light: THREE.Mesh; fall: { vy: number; spin: number } | null } = {
-      kind: 'drone',
-      g,
-      hp: 75,
-      max: 75,
-      down: 0,
-      flash: 0,
-      bar,
-      fill,
-      barShow: 0,
-      spec,
-      rotors,
-      light,
-      fall: null,
-      hit(ray) {
-        if (t.fall) return null;
-        sphere.center.copy(g.position);
-        const p = ray.intersectSphere(sphere, hitP);
-        return p ? p.distanceTo(ray.origin) : null;
-      },
-    };
-    targets.push(t);
-    return t;
-  });
+    scene.add(g, bar);
+    looks.push({ g, bar, fill, barShow: 0, flash: 0, rotors, light, fall: null });
+  }
 
   /* ----- HUD ----- */
+  let shown = { mag: -1, reserve: -1, score: -1, streak: -1, reload: false, hint: '' };
   const paintHud = () => {
-    hud.mag.textContent = String(mag);
-    hud.reserve.textContent = String(reserve);
-    hud.mag.classList.toggle('is-low', mag <= 6);
-    hud.hint.hidden = !(mag <= 6 && reserve > 0 && !reloading);
-    hud.hint.textContent = mag === 0 && reserve === 0 ? 'Out of ammo: gear up at the Armoury' : touchUi.matches ? 'Tap reload' : 'R to reload';
-    if (mag === 0 && reserve === 0) hud.hint.hidden = false;
-    hud.score.textContent = String(score);
-    hud.streak.hidden = streak < 2;
-    hud.streak.textContent = `x${streak} streak`;
+    const reloading = me.reload > 0;
+    if (me.mag !== shown.mag) hud.mag.textContent = String(me.mag);
+    if (me.reserve !== shown.reserve) hud.reserve.textContent = String(me.reserve);
+    hud.mag.classList.toggle('is-low', me.mag <= 6);
+    const out = me.mag === 0 && me.reserve === 0;
+    const hint = out ? 'Out of ammo: gear up at the Armoury' : reloading ? 'Reloading' : me.mag <= 6 && me.reserve > 0 ? (touchUi.matches ? 'Tap reload' : 'R to reload') : '';
+    if (hint !== shown.hint) {
+      hud.hint.textContent = hint;
+      hud.hint.hidden = !hint;
+    }
+    if (me.score !== shown.score) hud.score.textContent = me.score.toLocaleString('en');
+    if (me.streak !== shown.streak) {
+      hud.streak.hidden = me.streak < 2;
+      hud.streak.textContent = `x${me.streak} streak`;
+    }
+    shown = { mag: me.mag, reserve: me.reserve, score: me.score, streak: me.streak, reload: reloading, hint };
   };
-  const setArmed = (on: boolean) => {
-    armed = on && geared;
-    pivot.visible = armed;
-    root.classList.toggle('is-armed', armed);
-    if (!armed) trigger = touchFire = false;
+  let crossShown = '';
+  let hitShown = '';
+
+  // Floating damage numbers (a small pool of spans, placed over the canvas each frame)
+  const nums = Array.from({ length: 14 }, () => {
+    const el = document.createElement('span');
+    el.className = 'combat-num';
+    el.hidden = true;
+    hud.dmg.append(el);
+    return { el, at: new THREE.Vector3(), t: 0, dx: 0 };
+  });
+  let nextNum = 0;
+  const showNumber = (at: THREE.Vector3, n: number, kill: boolean) => {
+    const num = nums[nextNum];
+    nextNum = (nextNum + 1) % nums.length;
+    num.at.copy(at);
+    num.t = 0.8;
+    num.dx = (Math.random() - 0.5) * 24;
+    num.el.textContent = String(n);
+    num.el.classList.toggle('is-kill', kill);
+    num.el.hidden = false;
+  };
+  const P = new THREE.Vector3();
+  const placeNumbers = (dt: number) => {
+    let w = 0;
+    let h = 0;
+    for (const num of nums) {
+      if (num.t <= 0) continue;
+      num.t -= dt;
+      if (num.t <= 0) {
+        num.el.hidden = true;
+        continue;
+      }
+      if (!w) {
+        w = hud.dmg.clientWidth;
+        h = hud.dmg.clientHeight;
+      }
+      P.copy(num.at).project(camera);
+      if (P.z > 1) {
+        num.el.style.opacity = '0';
+        continue;
+      }
+      const age = 0.8 - num.t;
+      const rise = reduced ? 0 : age * 46;
+      const x = (P.x * 0.5 + 0.5) * w + num.dx * Math.min(1, age * 4);
+      const y = (-P.y * 0.5 + 0.5) * h - rise;
+      num.el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -100%)`;
+      num.el.style.opacity = String(Math.min(1, num.t * 3));
+    }
+  };
+
+  // Takedown and streak call-outs near the crosshair
+  const pops: { el: HTMLElement; t: number }[] = [];
+  const STREAKS = ['', '', 'Double', 'Triple', 'Quad', 'Rampage'];
+  const popup = (big: string, label: string, kind = '') => {
+    const el = document.createElement('div');
+    el.className = `combat-pop ${kind}`;
+    el.innerHTML = `<b></b><span></span>`;
+    el.querySelector('b')!.textContent = big;
+    el.querySelector('span')!.textContent = label;
+    hud.pops.prepend(el);
+    pops.push({ el, t: 1.3 });
+    while (pops.length > 3) pops.shift()!.el.remove();
+  };
+
+  // Rifle finishes: buttons in the Controls panel, unlocked by lifetime score
+  const paintSkins = () => {
+    hud.lifetime.textContent = Math.floor(profile.total).toLocaleString('en');
+    for (const b of hud.skins.querySelectorAll<HTMLButtonElement>('[data-skin]')) {
+      const s = SKINS.find((k) => k.id === b.dataset.skin)!;
+      const open = profile.total >= s.need;
+      b.disabled = !open;
+      b.setAttribute('aria-pressed', String(profile.skin === s.id));
+      b.querySelector('small')!.textContent = open ? (profile.skin === s.id ? 'Equipped' : 'Unlocked') : `${s.need.toLocaleString('en')} pts`;
+    }
+  };
+  const setSkin = (id: SkinId) => {
+    profile.skin = id;
+    rifle.setSkin(id);
+    vm.setSkin(id);
+    saveProfile();
+    paintSkins();
+  };
+  hud.skins.addEventListener('click', (e) => {
+    const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-skin]');
+    if (b && !b.disabled) setSkin(b.dataset.skin as SkinId);
+  });
+  paintSkins();
+  const addLifetime = (n: number) => {
+    const before = profile.total;
+    profile.total += n;
+    for (const s of SKINS) {
+      if (s.need > 0 && before < s.need && profile.total >= s.need) {
+        popup('Unlocked', `${s.name} finish`, 'is-unlock');
+        d.sfx('unlock');
+      }
+    }
+  };
+
+  const setArmedLook = (on: boolean) => {
+    pivot.visible = on;
+    root.classList.toggle('is-armed', on);
+    if (!on) trigger = touchFire = false;
     paintHud();
   };
 
-  /* ----- Shooting ----- */
-  const ray = new THREE.Ray();
-  const dir = new THREE.Vector3();
-  const tmp = new THREE.Vector3();
-  const muzzle = new THREE.Vector3();
+  /* ----- Turning sim events into things you see and hear ----- */
   const fwd = new THREE.Vector3();
-
-  function startReload() {
-    if (!armed || reloading || mag === MAG || reserve === 0) return;
-    reloading = RELOAD;
-    d.sfx('reload');
-    paintHud();
-  }
-
-  function damage(t: Target, amount: number, at: THREE.Vector3) {
-    t.hp = Math.max(0, t.hp - amount);
-    t.flash = 0.12;
-    t.barShow = 3;
-    score += 10;
-    hitT = 0.15;
-    d.sfx('hit');
-    burst(at, 6, ['#ffe9a8', '#ffd36b'], 2.5, 1, true, 0.25);
-    if (t.kind === 'dummy') burst(at, 5, ['#c99a5a', '#a87c44'], 1.6, 1.2, false, 0.6);
-    if (t.hp > 0) return;
-    // Takedown
-    score += t.kind === 'drone' ? 150 : 100;
-    streak = streakT > 0 ? streak + 1 : 1;
-    streakT = 6;
-    d.sfx('down');
-    if (t.kind === 'dummy') {
-      t.down = 4;
-      burst(at, 26, ['#ff2fb9', '#00eaff', '#ffd36b', '#8f3dff', '#14121f'], 3.2, 1.6, false, 1.1);
-    } else {
-      const dr = t as (typeof drones)[number];
-      dr.fall = { vy: 0, spin: (Math.random() - 0.5) * 8 };
-      burst(at, 14, ['#ffb347', '#ff6a2f', '#ffe9a8'], 3, 1, true, 0.5);
-    }
-  }
-
-  function fire(touch: boolean) {
-    if (mag === 0) {
-      d.sfx('empty');
-      cooldown = 0.25;
-      if (reserve > 0) startReload();
-      return;
-    }
-    mag--;
-    cooldown = Math.max(cooldown, -1 / RATE) + 1 / RATE;
-    flashT = 0.05;
-    kick += 0.012;
-    spread = Math.min(0.04, spread + 0.005);
-    d.sfx('shot');
-
-    camera.getWorldDirection(fwd);
-    dir.copy(fwd);
-    // Phones: a little aim assist towards a target near the crosshair
-    if (touch) {
-      let best = 0.12;
-      for (const t of targets) {
-        if (t.down > 0 || (t as { fall?: unknown }).fall) continue;
-        tmp.copy(t.g.position);
-        if (t.kind === 'dummy') tmp.y += 0.8;
-        tmp.sub(camera.position);
-        const dist = tmp.length();
-        if (dist > 38) continue;
-        const ang = tmp.normalize().angleTo(fwd);
-        if (ang < best) {
-          best = ang;
-          dir.copy(tmp);
-        }
-      }
-    }
-    const s = spread + (aiming ? 0.003 : 0.012);
-    dir.x += (Math.random() - 0.5) * s * 2;
-    dir.y += (Math.random() - 0.5) * s * 2;
-    dir.z += (Math.random() - 0.5) * s * 2;
-    dir.normalize();
-    ray.set(camera.position, dir);
-
-    let hitT2 = d.rayWorld(camera.position, dir, 70);
-    let hitTarget: Target | null = null;
-    for (const t of targets) {
-      if (t.down > 0) continue;
-      const dt2 = t.hit(ray);
-      if (dt2 !== null && dt2 < hitT2 && dt2 > 0.5) {
-        hitT2 = dt2;
-        hitTarget = t;
-      }
-    }
-    const at = ray.at(hitT2, new THREE.Vector3());
-    if (hitTarget) damage(hitTarget, DAMAGE, at);
-    else if (hitT2 < 70) {
-      burst(at, 5, ['#ffe9a8', '#ffb347'], 2.2, 1, true, 0.22);
-      burst(at, 4, ['#9a96b8', '#7a7590', '#b5b2c6'], 0.9, 1.4, false, 0.7);
-    }
-    // Tracer from the muzzle
-    rifle.localToWorld(muzzle.copy(MUZZLE));
+  const from = new THREE.Vector3();
+  function tracer(to: THREE.Vector3, dist: number) {
+    if (firstPerson && vm.root.visible) {
+      // Start on the line from the eye through the hands' muzzle, nearer than the hands are drawn
+      vm.muzzle(from).sub(camera.position).normalize();
+      from.multiplyScalar(THREE.MathUtils.clamp(dist * 0.5, 0.6, 1.4)).add(camera.position);
+    } else rifle.group.localToWorld(from.copy(MUZZLE));
     const tr = tracers[nextTracer];
     nextTracer = (nextTracer + 1) % tracers.length;
-    tr.m.position.copy(muzzle);
-    tr.m.lookAt(at);
-    tr.m.scale.set(1, 1, Math.max(0.1, muzzle.distanceTo(at)));
+    tr.m.position.copy(from);
+    tr.m.lookAt(to);
+    tr.m.scale.set(1, 1, Math.max(0.1, from.distanceTo(to)));
     tr.m.visible = true;
     tr.t = 0.06;
-    paintHud();
+  }
+
+  function onEvent(e: SimEvent) {
+    switch (e.type) {
+      case 'shot': {
+        if (e.player !== ME) break;
+        d.sfx('shot');
+        kick += aiming ? 0.008 : 0.012;
+        flashT = 0.05;
+        vm.kick();
+        tracer(e.to, e.dist);
+        if (e.target === null && e.dist < WEAPON.range) {
+          burst(e.to, 5, ['#ffe9a8', '#ffb347'], 2.2, 1, true, 0.22);
+          burst(e.to, 4, ['#9a96b8', '#7a7590', '#b5b2c6'], 0.9, 1.4, false, 0.7);
+        }
+        break;
+      }
+      case 'hit': {
+        const L = looks[e.target];
+        const t = sim.targets[e.target];
+        L.flash = 0.12;
+        L.barShow = 3;
+        burst(e.at, 6, ['#ffe9a8', '#ffd36b'], 2.5, 1, true, 0.25);
+        if (t.kind === 'dummy') burst(e.at, 5, ['#c99a5a', '#a87c44'], 1.6, 1.2, false, 0.6);
+        if (e.player === ME) {
+          hitT = 0.15;
+          d.sfx(t.kind === 'drone' ? 'hitMetal' : 'hit');
+          showNumber(e.at, e.damage, e.hp === 0);
+          addLifetime(10);
+        }
+        break;
+      }
+      case 'takedown': {
+        const L = looks[e.target];
+        const t = sim.targets[e.target];
+        if (t.kind === 'dummy') burst(e.at, 26, ['#ff2fb9', '#00eaff', '#ffd36b', '#8f3dff', '#14121f'], 3.2, 1.6, false, 1.1);
+        else {
+          L.fall = { vy: 0, spin: (Math.random() - 0.5) * 8 };
+          burst(e.at, 14, ['#ffb347', '#ff6a2f', '#ffe9a8'], 3, 1, true, 0.5);
+        }
+        if (e.player === ME) {
+          killT = 0.3;
+          d.sfx('down');
+          addLifetime(e.points);
+          saveProfile();
+          popup(`+${e.points}`, t.kind === 'drone' ? 'Drone down' : 'Takedown');
+          if (e.streak >= 2) popup(STREAKS[Math.min(e.streak, 5)] || `x${e.streak}`, `x${e.streak} streak`, 'is-streak');
+          paintSkins();
+        }
+        break;
+      }
+      case 'empty':
+        if (e.player === ME) d.sfx('empty');
+        break;
+      case 'reload':
+        lastReload = 0;
+        break;
+      case 'armed':
+        if (e.player === ME) {
+          setArmedLook(e.on);
+          d.sfx(e.on ? 'draw' : 'holster');
+        }
+        break;
+      case 'gear':
+        if (e.player === ME) d.sfx('gear');
+        break;
+      case 'respawn': {
+        const L = looks[e.target];
+        L.g.visible = true;
+        L.fall = null;
+        L.g.rotation.set(0, sim.targets[e.target].kind === 'dummy' ? sim.targets[e.target].heading : 0, 0);
+        break;
+      }
+      case 'streak-end':
+        break;
+    }
   }
 
   /* ----- Targets and effects: stepped by walk mode while walking, by the scene otherwise ----- */
   const camQ = new THREE.Quaternion();
+  const pose = { x: 0, y: 0, z: 0, heading: 0 };
   let steppedAt = -1e9;
-  d.tick(({ t, dt }) => {
-    if (performance.now() - steppedAt > 100) step(dt, t);
+  d.tick(({ t, dt, night }) => {
+    vm.setNight(night);
+    if (performance.now() - steppedAt > 100) {
+      motion = dt > 0;
+      sim.advance(dt, motion);
+      for (const e of sim.drain()) onEvent(e);
+      step(dt, t);
+    }
   });
   function step(dt: number, t: number) {
     camera.getWorldQuaternion(camQ);
-    for (const tg of targets) {
-      if (tg.kind === 'dummy') {
-        const hinge = (tg as Target & { hinge: THREE.Group }).hinge;
-        if (tg.down > 0) {
-          tg.down -= dt;
-          hinge.rotation.x += (-1.45 - hinge.rotation.x) * Math.min(1, dt * 12);
-          if (tg.down <= 0) {
-            tg.hp = tg.max;
-            tg.down = 0;
-          }
-        } else {
-          // Spring back up, with a wobble after each hit
-          hinge.rotation.x += (Math.sin(t * 30) * tg.flash * 1.2 - hinge.rotation.x) * Math.min(1, dt * 10);
-        }
+    const now = sim.poseNow;
+    for (let i = 0; i < looks.length; i++) {
+      const L = looks[i];
+      const tg = sim.targets[i];
+      if (L.hinge) {
+        if (tg.down > 0) L.hinge.rotation.x += (-1.45 - L.hinge.rotation.x) * Math.min(1, dt * 12);
+        // Spring back up, with a wobble after each hit
+        else L.hinge.rotation.x += (Math.sin(t * 30) * L.flash * 1.2 - L.hinge.rotation.x) * Math.min(1, dt * 10);
       } else {
-        const dr = tg as (typeof drones)[number];
-        if (dr.fall) {
-          dr.fall.vy -= 9 * dt;
-          dr.g.position.y += dr.fall.vy * dt;
-          dr.g.rotation.y += dr.fall.spin * dt;
-          dr.g.rotation.z = Math.sin(t * 9) * 0.4;
-          if (Math.random() < 0.6) puffs.emit(dr.g.position, V.set(0, 0.6, 0), '#3a3a48', 0.9, 1);
-          if (dr.g.position.y < SLAB + 0.1) {
-            burst(dr.g.position, 18, ['#ffb347', '#ff6a2f', '#ffe9a8'], 3, 1.2, true, 0.6);
-            burst(dr.g.position, 10, ['#3a3a48', '#5a5a68'], 1.2, 1.5, false, 1.2);
-            dr.fall = null;
-            dr.g.visible = false;
-            dr.down = 6;
+        const g = L.g;
+        if (L.fall) {
+          L.fall.vy -= 9 * dt;
+          g.position.y += L.fall.vy * dt;
+          g.rotation.y += L.fall.spin * dt;
+          g.rotation.z = Math.sin(t * 9) * 0.4;
+          if (Math.random() < 0.6) puffs.emit(g.position, V.set(0, 0.6, 0), '#3a3a48', 0.9, 1);
+          if (g.position.y < d.ground + 0.1) {
+            burst(g.position, 18, ['#ffb347', '#ff6a2f', '#ffe9a8'], 3, 1.2, true, 0.6);
+            burst(g.position, 10, ['#3a3a48', '#5a5a68'], 1.2, 1.5, false, 1.2);
+            if (camera.position.distanceTo(g.position) < 30) d.sfx('boom');
+            L.fall = null;
+            g.visible = false;
           }
-        } else if (dr.down > 0) {
-          dr.down -= dt;
-          if (dr.down <= 0) {
-            dr.down = 0;
-            dr.hp = dr.max;
-            dr.g.visible = true;
-            dr.g.rotation.set(0, 0, 0);
-          }
+        } else if (tg.down === 0) {
+          dronePose(i - DUMMIES.length, now, pose);
+          g.position.set(pose.x, pose.y, pose.z);
+          g.rotation.set(0, pose.heading, Math.sin(now * 2 + i) * 0.05);
+          if (L.flash > 0) g.position.x += Math.sin(t * 80) * 0.04;
         }
-        if (!dr.fall && dr.down === 0) {
-          const L = loops[dr.spec.loop];
-          const [x, z, heading] = along(L, t * 1.8 + dr.spec.phase);
-          dr.g.position.set(x as number, L[4] + Math.sin(t * 1.3 + dr.spec.phase) * 0.25, z as number);
-          dr.g.rotation.set(0, heading as number, Math.sin(t * 2 + dr.spec.phase) * 0.05);
-          if (tg.flash > 0) dr.g.position.x += Math.sin(t * 80) * 0.04;
-        }
-        for (const r of dr.rotors) r.rotation.y = t * 40;
-        dr.light.visible = Math.sin(t * 6 + dr.spec.phase) > 0;
+        for (const r of L.rotors!) r.rotation.y = t * 40;
+        L.light!.visible = Math.sin(t * 6 + i) > 0;
       }
-      tg.flash = Math.max(0, tg.flash - dt);
+      L.flash = Math.max(0, L.flash - dt);
       // Health bars face the camera, and show for a while after a hit
-      tg.barShow = Math.max(0, tg.barShow - dt);
-      tg.bar.visible = tg.barShow > 0 && tg.down === 0 && tg.hp > 0;
-      if (tg.bar.visible) {
-        if (tg.kind === 'drone') tg.bar.position.copy(tg.g.position).add(V.set(0, 0.45, 0));
-        tg.bar.quaternion.copy(camQ);
+      L.barShow = Math.max(0, L.barShow - dt);
+      L.bar.visible = L.barShow > 0 && tg.down === 0 && tg.hp > 0;
+      if (L.bar.visible) {
+        if (!L.hinge) L.bar.position.copy(L.g.position).add(V.set(0, 0.45, 0));
+        L.bar.quaternion.copy(camQ);
         const f = tg.hp / tg.max;
-        tg.fill.scale.x = Math.max(0.001, f);
-        (tg.fill.material as THREE.MeshBasicMaterial).color.set(f > 0.5 ? '#3ce06a' : f > 0.25 ? '#ffd23f' : '#ff3b3b');
+        L.fill.scale.x = Math.max(0.001, f);
+        (L.fill.material as THREE.MeshBasicMaterial).color.set(f > 0.5 ? '#3ce06a' : f > 0.25 ? '#ffd23f' : '#ff3b3b');
       }
     }
     sparks.update(dt, 4);
@@ -634,83 +623,104 @@ export function createCombat(d: CombatDeps) {
     }
   }
 
-  const hitEl = hud.hit;
-
   return {
-    /** The rifle's pivot: parent it to Degen's chest */
+    /** The third-person rifle's pivot: parent it to Degen's chest */
     gun: pivot,
     get geared() {
-      return geared;
+      return me.geared;
     },
     get armed() {
-      return armed;
+      return me.armed;
     },
+    /** 0..1 through a reload (0 when not reloading) */
     get reloading() {
-      return reloading > 0 ? 1 - reloading / RELOAD : 0;
+      return me.reload > 0 ? 1 - me.reload / WEAPON.reload : 0;
     },
     get firing() {
       return trigger || touchFire;
     },
-    /** Take a rifle from the Armoury rack (and refill ammo) */
-    gearUp() {
-      geared = true;
-      mag = MAG;
-      reserve = RESERVE;
-      reloading = 0;
-      d.sfx('gear');
-      setArmed(true);
+    /** How far the first-person rifle is up at the sight (0..1) */
+    get aimed() {
+      return vm.aimed;
     },
+    gearUp: () => sim.gearUp(ME),
     toggleHolster() {
-      if (geared) setArmed(!armed);
+      if (me.geared) sim.setArmed(ME, !me.armed);
     },
     trigger(on: boolean, touch = false) {
-      if (touch) touchFire = on && armed;
-      else trigger = on && armed;
+      if (touch) touchFire = on && me.armed;
+      else trigger = on && me.armed;
     },
-    reload: startReload,
-    /** Per frame while walking (t is 0 under reduced motion). Returns the recoil to add to the camera pitch. */
+    reload: () => sim.reload(ME),
+    /** Per frame while walking, before the camera moves (t is 0 under reduced motion). Returns the recoil to add to the camera pitch. */
     update(dt: number, t: number, aim: boolean) {
       aiming = aim;
+      motion = t > 0;
       steppedAt = performance.now();
+      camera.getWorldDirection(fwd);
+      sim.setInput(ME, { fire: me.armed && (trigger || touchFire), aim, assist: touchFire && !trigger, origin: camera.position, dir: fwd });
+      sim.advance(dt, motion);
+      for (const e of sim.drain()) onEvent(e);
       step(dt, t);
-      cooldown -= dt;
-      if (reloading > 0) {
-        reloading -= dt;
-        if (reloading <= 0) {
-          const take = Math.min(MAG - mag, reserve);
-          mag += take;
-          reserve -= take;
-          reloading = 0;
-          paintHud();
-        }
+
+      // Reload sounds, in step with the hands
+      const r = me.reload > 0 ? 1 - me.reload / WEAPON.reload : 0;
+      if (r > 0) {
+        if (lastReload < 0.15 && r >= 0.15) d.sfx('magout');
+        if (lastReload < 0.68 && r >= 0.68) d.sfx('magin');
+        if (lastReload < 0.87 && r >= 0.87) d.sfx('bolt');
       }
-      // Up to two shots a frame, so the rate holds on slow devices
-      for (let i = 0; i < 2 && armed && (trigger || touchFire) && cooldown <= 0 && reloading <= 0; i++) fire(touchFire && !trigger);
-      spread = Math.max(0, spread - dt * 0.2);
+      lastReload = r;
+      paintHud();
+
       flashT -= dt;
-      flash.visible = flashT > 0;
+      flash.visible = flashT > 0 && !firstPerson;
       if (flash.visible) flash.rotation.z = Math.random() * Math.PI;
       hitT -= dt;
-      hitEl.classList.toggle('is-on', hitT > 0);
-      streakT -= dt;
-      if (streakT <= 0 && streak) {
-        streak = 0;
-        paintHud();
+      killT -= dt;
+      const hitNow = killT > 0 ? 'kill' : hitT > 0 ? 'hit' : '';
+      if (hitNow !== hitShown) {
+        hud.hit.classList.toggle('is-on', !!hitNow);
+        hud.hit.classList.toggle('is-kill', hitNow === 'kill');
+        hitShown = hitNow;
       }
-      hud.cross.style.setProperty('--spread', `${(spread + (aim ? 0.003 : 0.012)) * 600}px`);
+      const spread = `${Math.round((me.spread + (aim ? WEAPON.spreadAim : WEAPON.spreadHip)) * 600)}px`;
+      if (spread !== crossShown) {
+        hud.cross.style.setProperty('--spread', spread);
+        crossShown = spread;
+      }
+      placeNumbers(dt);
+      for (let i = pops.length - 1; i >= 0; i--) {
+        pops[i].t -= dt;
+        if (pops[i].t <= 0) {
+          pops[i].el.remove();
+          pops.splice(i, 1);
+        }
+      }
       const k = kick;
       kick = 0;
       return k;
     },
-    /** Pose the rifle for this frame: aim 0..1 brings it up to the shoulder */
+    /** Per frame while walking, after the camera has moved: the first-person hands */
+    view(dt: number, t: number, s: Omit<ViewState, 'armed' | 'reload'> & { firstPerson: boolean }) {
+      firstPerson = s.firstPerson;
+      vm.update(camera, dt, t, { ...s, armed: me.armed, reload: me.reload > 0 ? 1 - me.reload / WEAPON.reload : 0 }, s.firstPerson);
+      root.classList.toggle('is-ads', s.firstPerson && vm.aimed > 0.6);
+    },
+    /** Pose the third-person rifle for this frame: aim 0..1 brings it up to the shoulder */
     poseGun(aim: number, pitchDown: number, lean: number, holdRecoil: number) {
-      const rl = reloading > 0 ? Math.sin((1 - reloading / RELOAD) * Math.PI) : 0;
+      const rl = me.reload > 0 ? Math.sin((1 - me.reload / WEAPON.reload) * Math.PI) : 0;
       // On the right shoulder (the rig's -x side)
       pivot.position.set(-0.09 + aim * 0.04, 0.3 + aim * 0.06, 0.13 + aim * 0.03 - holdRecoil * 0.4);
       pivot.rotation.set(THREE.MathUtils.lerp(0.55, pitchDown - lean, aim) + rl * 0.5 - holdRecoil * 2, 0.08 * (1 - aim), -rl * 0.7);
+      rifle.mag.position.y = -Math.sin(Math.min(1, rl * 1.4) * Math.PI) * 0.12;
     },
     exit() {
       trigger = touchFire = false;
+      sim.setInput(ME, { fire: false });
+      vm.root.visible = false;
+      root.classList.remove('is-ads');
+      saveProfile();
     },
   };
 }

@@ -94,24 +94,42 @@ it and has been retired completely. Build only on what's here.
 
 ## Target practice (3D walk mode)
 
-- `src/scripts/city3d/combat.ts`: solo shooting practice. Only the player's
-  Degen carries a gun, picked up at the Armoury's weapon rack (`RACK` in
-  `walk.ts`, the rack itself in `armoury()`). Targets are the cardboard
-  dummies (`DUMMIES`) and the patrol drones; never make pedestrians,
-  soldiers or other characters targets.
-- One rifle shape (`rifleGeometry()`), shared by Degen and the Armoury's
-  soldiers. Keep it cartoon: no real-world gun brands or markings.
+- Solo shooting practice. Only the player's Degen carries a gun, picked up
+  at the Armoury's weapon rack (`RACK` in `walk.ts`, the rack itself in
+  `armoury()`). Targets are the cardboard dummies (`DUMMIES`) and the patrol
+  drones; never make pedestrians, soldiers or other characters targets.
+- **Rules and view are split, ready for multiplayer.** `combat-sim.ts` owns
+  the rules (ammo, fire rate, spread, hits, health, respawns, score, streaks)
+  on a fixed 60 Hz tick, takes per-player inputs and emits events. It must
+  stay free of DOM, scene objects and `Math.random` (seeded generator only)
+  so a server can run it. `combat.ts` is the local view: it feeds the local
+  player's input in and draws / plays the events. New gameplay goes in the
+  sim first; looks and sounds in the view.
+- One rifle (`rifle.ts`: `buildRifle()`, `rifleGeometry()`), shared by
+  Degen in third person, his first-person hands and the Armoury's soldiers.
+  Keep it cartoon: no real-world gun brands or markings. Finishes (`SKINS`)
+  are cosmetic and unlock with lifetime score saved in the browser under
+  `degen-city-combat-v1`.
+- First person is the default when walking starts. The hands
+  (`viewmodel.ts`) are built `K` times bigger and further out (the camera's
+  near plane is 0.5 m) and drawn in the front of the depth buffer, with
+  their own flat shading (city lamps would otherwise light them wrongly).
+  Keep the red dot on the line of sight: scale the whole holder, never only
+  its position.
 - Hits are hitscan from the camera centre. Bullets stop on everything in
   `SOLIDS` except the dummies' own footprints (`SHOT_SOLIDS`), on plot
   buildings and on the ground. When dummies move, their footprints follow
   `DUMMIES` automatically.
 - Keys: click fires, right-click aims, R reloads, G holsters; Caps Lock (not
-  R) toggles run. The combat HUD (`data-cross`, `data-hitmark`, `data-mag`,
-  `data-reserve`, `data-reload-hint`, `data-score`, `data-streak`) and the
-  Fire / Reload buttons live in `CityMap.astro`; `combat.ts` expects them.
+  R) toggles run. The combat HUD (`data-cross`, `data-hitmark`, `data-dmg`,
+  `data-pops`, `data-mag`, `data-reserve`, `data-reload-hint`, `data-score`,
+  `data-streak`), the finish picker (`data-skins`, `data-lifetime`) and the
+  Fire / Aim / Reload buttons live in `CityMap.astro`; `combat.ts` and
+  `walk.ts` expect them.
 - Gun sounds go through `sfx()` in `sound.ts`, so they stay silent until the
   visitor turns sound on. Under reduced motion the drones hover in place.
-- Score and streak are for fun only: no prizes, rewards or token tie-ins.
+- Score, streaks and finishes are for fun only: no prizes, real rewards or
+  token tie-ins.
 
 ## City builder (3D build mode)
 

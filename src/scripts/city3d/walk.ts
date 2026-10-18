@@ -4,11 +4,12 @@
  * - Look: mouse (pointer lock after a click), drag, touch or a gamepad's
  *   right stick. You can look up at the towers and sky as well as down.
  * - Move: WASD / arrows / joystick / left stick, with acceleration, strafing,
- *   run (hold Shift, or R to toggle) and a jump with coyote time, buffering
- *   and variable height.
- * - Camera: over the shoulder, pulled in when a building or the ground is in
- *   the way, first person when zoomed all the way in (or V), wider field of
- *   view when running. Hold the right mouse button to face where you look.
+ *   run (hold Shift, or Caps Lock to toggle) and a jump with coyote time,
+ *   buffering and variable height.
+ * - Camera: first person when you start walking (with Degen's hands on the
+ *   rifle once he's geared up). V, or scrolling out, swaps to over the
+ *   shoulder, pulled in when a building or the ground is in the way. Wider
+ *   field of view when running; hold the right mouse button to aim.
  * - A solid world, kerbs, door prompts that open a building's panel.
  */
 import * as THREE from 'three';
@@ -266,32 +267,34 @@ export function createWalk(d: WalkDeps) {
     if (dir.y < 0) t = Math.min(t, (from.y - 0.1) / -dir.y);
     const o = [from.x, from.y, from.z];
     const v = [dir.x, dir.y, dir.z];
-    for (const b of [...SHOT_SOLIDS, ...CAMERA_ONLY, ...d.plotSolids()]) {
-      if (b[4] < 0.3) continue;
-      const lo = [b[0], 0, b[1]];
-      const hi = [b[2], b[4], b[3]];
-      let t0 = 0;
-      let t1 = t;
-      let hit = true;
-      for (let k = 0; k < 3 && hit; k++) {
-        if (Math.abs(v[k]) < 1e-6) {
-          if (o[k] < lo[k] || o[k] > hi[k]) hit = false;
-          continue;
+    for (const list of [SHOT_SOLIDS, CAMERA_ONLY, d.plotSolids()]) {
+      for (const b of list) {
+        if (b[4] < 0.3) continue;
+        const lo = [b[0], 0, b[1]];
+        const hi = [b[2], b[4], b[3]];
+        let t0 = 0;
+        let t1 = t;
+        let hit = true;
+        for (let k = 0; k < 3 && hit; k++) {
+          if (Math.abs(v[k]) < 1e-6) {
+            if (o[k] < lo[k] || o[k] > hi[k]) hit = false;
+            continue;
+          }
+          let a = (lo[k] - o[k]) / v[k];
+          let c = (hi[k] - o[k]) / v[k];
+          if (a > c) [a, c] = [c, a];
+          t0 = Math.max(t0, a);
+          t1 = Math.min(t1, c);
+          if (t0 > t1) hit = false;
         }
-        let a = (lo[k] - o[k]) / v[k];
-        let c = (hi[k] - o[k]) / v[k];
-        if (a > c) [a, c] = [c, a];
-        t0 = Math.max(t0, a);
-        t1 = Math.min(t1, c);
-        if (t0 > t1) hit = false;
+        // Ignore boxes the camera starts inside (the hero's own surroundings)
+        if (hit && t0 > 0.6) t = Math.min(t, t0);
       }
-      // Ignore boxes the camera starts inside (the hero's own surroundings)
-      if (hit && t0 > 0.6) t = Math.min(t, t0);
     }
     return t;
   }
 
-  const combat = createCombat({ scene: d.scene, camera, root, tick: d.tick, rayWorld, sfx: d.sfx });
+  const combat = createCombat({ scene: d.scene, camera, root, tick: d.tick, ground: SLAB, rayWorld, sfx: d.sfx });
   hero.torso.add(combat.gun);
   let aimAmt = 0;
   let armAmt = 0;
@@ -300,6 +303,8 @@ export function createWalk(d: WalkDeps) {
   /* ---------- Input ---------- */
 
   const look = (dx: number, dy: number, k: number) => {
+    // Finer control down the sight
+    k *= 1 - combat.aimed * 0.4;
     yaw -= dx * k * settings.sens;
     const limit = firstPerson ? 1.35 : 1.3;
     const low = firstPerson ? -1.35 : -0.55;
@@ -458,6 +463,16 @@ export function createWalk(d: WalkDeps) {
   });
   for (const ev of ['pointerup', 'pointercancel'] as const) fireBtn.addEventListener(ev, () => combat.trigger(false, true));
   $('[data-walk-reload]').addEventListener('click', () => combat.reload());
+  // Touch: Aim toggles the sight (one thumb can't hold Aim and Fire)
+  const aimBtn = $<HTMLButtonElement>('[data-walk-aim]');
+  const setAim = (on: boolean) => {
+    aim = on;
+    aimBtn.setAttribute('aria-pressed', String(on));
+  };
+  aimBtn.addEventListener('click', () => {
+    setAim(!aim);
+    d.touched();
+  });
 
   // Gamepad: left stick move, right stick look, A jump, LB / L3 run, Y enter, View first person,
   // RT fire, X reload, D-pad up holster
@@ -623,15 +638,16 @@ export function createWalk(d: WalkDeps) {
     const room = firstPerson ? 0 : cameraRoom(pivot, offset, want);
     camDist = room < camDist ? room : camDist + (room - camDist) * damp(4, dt);
     camera.position.copy(pivot).addScaledVector(offset, camDist);
-    if (firstPerson) camera.position.y += Math.sin(phase * 2) * 0.025 * stride * (1 - air);
+    if (firstPerson) camera.position.y += Math.sin(phase * 2) * 0.025 * stride * (1 - air) * (1 - combat.aimed * 0.8);
     view.set(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
     lookAt.copy(camera.position).sub(view);
     camera.lookAt(lookAt);
     hero.g.visible = !firstPerson && camDist > 0.6;
     hero.ring.visible = !firstPerson;
+    combat.view(dt, t, { firstPerson, aim, move: stride, phase, run: runAmt, air });
 
     // Field of view widens with speed, narrows when aiming
-    const wantFov = (firstPerson ? 70 : 52) + runAmt * 8 - (aim ? 10 : 0);
+    const wantFov = (firstPerson ? 70 : 52) + runAmt * 8 - (aim ? (firstPerson && combat.armed ? 20 : 10) : 0);
     fov += (wantFov - fov) * damp(6, dt);
     if (Math.abs(camera.fov - fov) > 0.05) {
       camera.fov = fov;
@@ -673,16 +689,18 @@ export function createWalk(d: WalkDeps) {
     update,
     enter() {
       active = true;
-      pos.copy(SPAWN);
+      // A few steps back from the doors, so the arcade tower fills the view
+      pos.copy(SPAWN).add(new THREE.Vector3(Math.sin(SPAWN_YAW), 0, Math.cos(SPAWN_YAW)).multiplyScalar(2.6));
       vel.set(0, 0);
       vy = 0;
       grounded = true;
       face = 0;
       yaw = SPAWN_YAW;
-      pitch = 0.5;
+      // First person by default; V (or the Controls panel) swaps to the shoulder camera
+      pitch = -0.16;
       zoom = camDist = 5.2;
       pivot.set(0, 0, 0);
-      setFirstPerson(false);
+      setFirstPerson(true);
       baseFov = camera.fov;
       fov = camera.fov;
       hero.g.visible = hero.ring.visible = true;
@@ -691,7 +709,8 @@ export function createWalk(d: WalkDeps) {
     exit() {
       active = false;
       keys.clear();
-      jumpHeld = aim = false;
+      jumpHeld = false;
+      setAim(false);
       combat.exit();
       joy.id = -1;
       joy.x = joy.y = 0;
