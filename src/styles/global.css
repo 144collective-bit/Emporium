@@ -1864,11 +1864,16 @@ body.full-bleed {
 }
 
 /* City builder (build mode) */
-.city-build-toggle {
+.city-modes {
   position: absolute;
   top: 16px;
   left: 50%;
   z-index: 4;
+  display: flex;
+  gap: 8px;
+  transform: translateX(-50%);
+}
+.city-mode-btn {
   display: none;
   align-items: center;
   gap: 8px;
@@ -1885,21 +1890,23 @@ body.full-bleed {
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+  white-space: nowrap;
   cursor: pointer;
-  transform: translateX(-50%);
 }
-.city[data-view="3d"] .city-build-toggle:not([hidden]) {
+.city[data-view="3d"] .city-mode-btn:not([hidden]) {
   display: inline-flex;
 }
-.city-build-toggle svg {
+.city-mode-btn svg {
   color: var(--p-cyan);
 }
-.city-build-toggle[aria-pressed="true"] {
+.city-mode-btn[aria-pressed="true"] {
   background:
     var(--pulse-wash) padding-box,
     linear-gradient(#14102a, #14102a) padding-box,
     var(--pulse) border-box;
 }
+.city[data-mode="walk"] .city-hud,
+.city[data-mode="walk"] .city-controls,
 .city[data-mode="build"] .city-pins,
 .city[data-mode="build"] .city-hud,
 .city[data-mode="build"] .city-panel:not(.builder-panel) {
@@ -2164,6 +2171,126 @@ body.full-bleed {
   transform: translate(-50%, 0);
 }
 
+/* Walk mode */
+.walk-hud {
+  display: none;
+}
+.city[data-mode="walk"] .walk-hud {
+  display: block;
+}
+.walk-hint {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  z-index: 4;
+  max-width: calc(100% - 32px);
+  padding: 10px 14px;
+  border: 1px solid #0000;
+  border-radius: 8px;
+  background:
+    linear-gradient(#0b0a12e0, #0b0a12e0) padding-box,
+    var(--pulse) border-box;
+  font-size: 13px;
+  color: var(--text-2);
+}
+.walk-hud kbd,
+.walk-prompt kbd {
+  display: inline-block;
+  min-width: 1.6em;
+  padding: 1px 6px;
+  border: 1px solid #ffffff40;
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: #fff;
+  text-align: center;
+}
+.walk-stick,
+.walk-jump {
+  display: none;
+}
+.walk-prompt {
+  position: absolute;
+  left: 50%;
+  bottom: 84px;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 18px;
+  border: 1px solid #0000;
+  border-radius: 999px;
+  background:
+    var(--pulse-wash) padding-box,
+    linear-gradient(#0b0a12f0, #0b0a12f0) padding-box,
+    var(--pulse) border-box;
+  box-shadow: 0 0 30px -8px #00eaffaa;
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transform: translateX(-50%);
+  animation: prompt-in 0.25s var(--ease);
+}
+.walk-prompt[hidden] {
+  display: none;
+}
+@keyframes prompt-in {
+  from { opacity: 0; transform: translate(-50%, 8px); }
+}
+/* Touch: joystick bottom-left, jump bottom-right */
+@media (pointer: coarse) {
+  .walk-hint {
+    display: none;
+  }
+  .walk-stick {
+    position: absolute;
+    left: 22px;
+    bottom: 26px;
+    z-index: 4;
+    display: grid;
+    place-items: center;
+    width: 120px;
+    height: 120px;
+    border: 1px solid #ffffff30;
+    border-radius: 50%;
+    background: radial-gradient(circle, #0b0a1299, #0b0a1255);
+    touch-action: none;
+  }
+  .walk-stick span {
+    width: 52px;
+    height: 52px;
+    border: 2px solid var(--p-cyan);
+    border-radius: 50%;
+    background: #00eaff33;
+    box-shadow: 0 0 18px #00eaff66;
+  }
+  .walk-jump {
+    position: absolute;
+    right: 26px;
+    bottom: 42px;
+    z-index: 4;
+    display: grid;
+    place-items: center;
+    width: 64px;
+    height: 64px;
+    border: 1px solid #0000;
+    border-radius: 50%;
+    background:
+      linear-gradient(#0b0a12e0, #0b0a12e0) padding-box,
+      var(--pulse) border-box;
+    color: #fff;
+    touch-action: manipulation;
+  }
+  .walk-prompt {
+    bottom: 170px;
+  }
+}
+
 .city-card-close,
 .city-draft-tag {
   display: none;
@@ -2261,13 +2388,19 @@ body.full-bleed {
   .city-pin-title {
     font-size: 14px;
   }
-  /* Build mode on phones: toggle top-right, the bar under it */
-  .city-build-toggle {
+  /* Phones: Walk and Build top-right, the build bar under them */
+  .city-modes {
     top: 12px;
     left: auto;
     right: 12px;
-    padding: 9px 14px;
+    gap: 6px;
     transform: none;
+  }
+  .city-mode-btn {
+    padding: 9px 12px;
+  }
+  .city-mode-btn svg {
+    display: none;
   }
   .builder-bar {
     top: 60px;

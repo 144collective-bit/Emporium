@@ -35,6 +35,9 @@ interface Vehicle {
 }
 
 const ROAD_Y = 0.035;
+
+/** The player in walk mode: cars stop rather than drive through them. */
+export const walker = { x: 0, z: 0, on: false };
 const [E0, E1] = EXT;
 
 /** Lights at each crossing cycle x-green, x-yellow, z-green, z-yellow. */
@@ -226,6 +229,15 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
           const s = c.lit ? lightState(c.ix, lane.axis, t) : 'g';
           const blocked = occupied.has(c.ix + (lane.axis === 'x' ? 'z' : 'x'));
           if (s === 'r' || (s === 'y' && d > 1.2) || blocked) target = Math.min(target, Math.max(0, d * 1.3));
+        }
+        // Someone walking in the road ahead: stop short of them
+        if (walker.on) {
+          const s = v.p * lane.dir;
+          const [vx, vz] = lane.axis === 'x' ? [s, lane.coord] : [lane.coord, s];
+          const [fx, fz] = lane.axis === 'x' ? [lane.dir, 0] : [0, lane.dir];
+          const ahead = (walker.x - vx) * fx + (walker.z - vz) * fz - v.len / 2;
+          const side = Math.abs((walker.x - vx) * fz - (walker.z - vz) * fx);
+          if (ahead > -0.2 && ahead < 3 && side < 0.75) target = Math.min(target, Math.max(0, (ahead - 0.6) * 1.8));
         }
         const acc = target > v.v ? 1.8 : 5;
         v.v += Math.max(-acc * dt, Math.min(acc * dt, target - v.v));

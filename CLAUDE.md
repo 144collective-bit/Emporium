@@ -54,6 +54,15 @@ it and has been retired completely. Build only on what's here.
 - Check every change at 320, 375, 768, 1024 and 1440px wide: no sideways
   scroll, no text clipped by a slanted edge.
 
+## Walk mode (3D)
+
+- `src/scripts/city3d/walk.ts`: the playable Degen, third-person camera,
+  keyboard and touch-joystick controls, collisions and door prompts.
+- Collision footprints (`SOLIDS`) and door spots (`DOORS`) mirror
+  `landmarks.ts`. When a landmark moves or changes size, update both.
+  Placed buildings block via `plots.solids()`; parks stay walkable.
+- Cars yield to the walker through `walker` in `life.ts`.
+
 ## City builder (3D build mode)
 
 - Districts around the core are split into 3 x 3 plots (`DISTRICTS` in

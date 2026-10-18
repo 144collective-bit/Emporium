@@ -71,6 +71,20 @@ cartoon shading and PulseChain neon, built with [three.js](https://threejs.org).
   would overlap. Without WebGL, or after choosing "2D map", the original
   isometric SVG map is shown instead. Reduced motion gives a still city.
 
+### Walk mode
+
+Press **Walk** to play as Degen (balaclava, red cap, green shades, suit, a bag
+of Gas Fee Gummy Bears) and explore on foot.
+
+- **Desktop:** WASD or arrow keys to move, Shift to run, Space to jump, drag to
+  look around, scroll to zoom, Esc to stop.
+- **Phones:** joystick bottom-left (push further to run), jump button
+  bottom-right, drag anywhere else to look.
+- The world is solid: landmarks, your buildings, the fountain and the river
+  block you (bridges don't), kerbs step up and down, and cars stop for you.
+- Walk up to a landmark's door and press **E** (or tap the prompt) to open its
+  panel right where you stand.
+
 ### City builder (demo)
 
 Press **Build** to switch to build mode. The districts around the city
@@ -115,6 +129,7 @@ button and stays closed on return visits.
 | `src/scripts/city3d/sky.ts` | Time of day, sun and moon, fog, clouds, rain |
 | `src/scripts/city3d/post.ts` | Ink outlines and bloom |
 | `src/scripts/city3d/sound.ts` | Ambient sound |
+| `src/scripts/city3d/walk.ts` | Walk mode: Degen, controls, camera, collisions, door prompts |
 | `src/scripts/city3d/plots.ts` | Plot grid, build-mode overlay, the eight buildings |
 | `src/scripts/city3d/store.ts` | Demo wallet, simulated purchases, saved progress |
 | `src/scripts/city3d/builder-ui.ts` | Build mode: wallet chip, plot panel, customiser, purchase dialog |

@@ -9,7 +9,8 @@ import { loadImage, loadTex, updateLights } from './kit';
 import { createPost } from './post';
 import { CENTER, buildGround, buildLamps, buildSkyline, buildTrees, puddleMat, scatterOutskirts, waterMat, type Env, type Tick } from './world';
 import { buildLandmarks, type Spot } from './landmarks';
-import { buildLife } from './life';
+import { buildLife, walker } from './life';
+import { createWalk } from './walk';
 import { createSky, type TimeMode, type WeatherMode } from './sky';
 import { createSound } from './sound';
 import { createPlots, type Plot } from './plots';
@@ -191,11 +192,13 @@ export async function bootCity(root: HTMLElement) {
   const panelClose = panel.querySelector<HTMLButtonElement>('[data-panel-close]')!;
   let lastFocus: HTMLElement | null = null;
 
+  let walking = false;
   function open(id: string) {
     const s = spots.find((sp) => sp.id === id);
     const tpl = root.querySelector<HTMLTemplateElement>(`template[data-panel-tpl="${id}"]`);
     if (!s || !tpl) return;
-    if (!active) returnView = { pos: camera.position.clone(), target: controls.target.clone() };
+    // Walking: the panel opens where you stand, the camera stays with Degen
+    if (!active && !walking) returnView = { pos: camera.position.clone(), target: controls.target.clone() };
     active = s;
     lastFocus = document.activeElement as HTMLElement;
     panelBody.replaceChildren(tpl.content.cloneNode(true));
@@ -203,8 +206,10 @@ export async function bootCity(root: HTMLElement) {
     panel.hidden = false;
     requestAnimationFrame(() => panel.classList.add('is-open'));
     root.classList.add('has-panel');
-    const v = spotView(s);
-    flyTo(v.pos, v.target);
+    if (!walking) {
+      const v = spotView(s);
+      flyTo(v.pos, v.target);
+    }
     panelClose.focus({ preventScroll: true });
   }
   function close() {
@@ -246,6 +251,7 @@ export async function bootCity(root: HTMLElement) {
       flyTo(target.clone().add(new THREE.Vector3(34, 50, 44).multiplyScalar(k)), target, 1.6);
     },
     onMode(on) {
+      if (on && walking) stopWalking(false);
       close();
       setHover(null);
       canvas.style.cursor = '';
@@ -254,18 +260,71 @@ export async function bootCity(root: HTMLElement) {
     },
   });
 
+  const canvas = renderer.domElement;
+
+  /* ---------- Walk mode ---------- */
+  const walk = createWalk({
+    scene,
+    camera,
+    canvas,
+    root,
+    plotSolids: () => plots.solids(),
+    openSpot: (id) => open(id),
+    touched: () => touched(),
+  });
+  const walkBtn = root.querySelector<HTMLButtonElement>('[data-walk-toggle]')!;
+  let beforeWalk: { pos: THREE.Vector3; target: THREE.Vector3 } | null = null;
+  function startWalking() {
+    if (walking) return;
+    if (builder.active) builder.setBuild(false);
+    close();
+    setHover(null);
+    beforeWalk = { pos: camera.position.clone(), target: controls.target.clone() };
+    flight = null;
+    controls.enabled = false;
+    walking = true;
+    walker.on = true;
+    walk.enter();
+    walkBtn.setAttribute('aria-pressed', 'true');
+    walkBtn.querySelector('[data-walk-label]')!.textContent = 'Stop walking';
+    root.classList.add('has-moved');
+    canvas.focus({ preventScroll: true });
+  }
+  function stopWalking(flyBack = true) {
+    if (!walking) return;
+    walking = false;
+    walker.on = false;
+    walk.exit();
+    close();
+    controls.enabled = true;
+    walkBtn.setAttribute('aria-pressed', 'false');
+    walkBtn.querySelector('[data-walk-label]')!.textContent = 'Walk';
+    if (beforeWalk && flyBack) {
+      controls.target.copy(walk.position);
+      flyTo(beforeWalk.pos, beforeWalk.target, 1.4);
+    }
+    beforeWalk = null;
+  }
+  walkBtn.addEventListener('click', () => (walking ? stopWalking() : startWalking()));
+  walkBtn.hidden = false;
+  root.querySelector('[data-walk-exit]')?.addEventListener('click', () => stopWalking());
+
   // On the document, not the city: re-rendered panels drop focus back to <body>
   document.addEventListener('keydown', (e) => {
     if (root.dataset.view !== '3d') return;
+    if (walking) {
+      if (e.key === 'Escape') active ? close() : stopWalking();
+      else if (!active) walk.onKey(e, true);
+      return;
+    }
     if (builder.key(e)) return;
     if (e.key === 'Escape') close();
   });
-
-  const canvas = renderer.domElement;
+  document.addEventListener('keyup', (e) => walking && walk.onKey(e, false));
   let down: { x: number; y: number } | null = null;
   canvas.addEventListener('pointerdown', (e) => {
     down = { x: e.clientX, y: e.clientY };
-    if (flight) {
+    if (flight && !walking) {
       flight = null;
       controls.enabled = true;
     }
@@ -342,6 +401,7 @@ export async function bootCity(root: HTMLElement) {
     soundBtn.querySelector('[data-sound-label]')!.textContent = on ? 'Sound on' : 'Sound off';
   });
   root.querySelector('[data-reset]')!.addEventListener('click', () => {
+    stopWalking(false);
     close();
     const hv = home();
     flyTo(hv.pos, hv.target, 1.4);
@@ -384,7 +444,7 @@ export async function bootCity(root: HTMLElement) {
     requestAnimationFrame(frame);
     timer.update();
     const t = timer.getElapsed();
-    const busy = !!flight || t - lastInput < 1;
+    const busy = !!flight || walking || t - lastInput < 1;
     if (idleFps && !busy && t - lastT < 1 / idleFps - 0.004) return;
     const dt = Math.min(t - lastT, 0.1);
     lastT = t;
@@ -404,6 +464,11 @@ export async function bootCity(root: HTMLElement) {
         controls.update();
         done?.();
       }
+    } else if (walking) {
+      walk.update(dt, reduced ? 0 : t);
+      walker.x = walk.position.x;
+      walker.z = walk.position.z;
+      dirty = true;
     } else if (controls.update()) dirty = true;
     // Keep the view over the city
     controls.target.x = THREE.MathUtils.clamp(controls.target.x, -16, 47);
