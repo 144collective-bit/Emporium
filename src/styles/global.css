@@ -324,6 +324,9 @@ a {
   justify-content: center;
   gap: 10px;
   padding: 20px 24px 14px;
+  /* The stamp lands from scale(1.9); don't let that widen the document.
+     Clipped here, not on .comic-page, which the phone stamp overhangs. */
+  overflow-x: clip;
 }
 .comic-page {
   container-type: inline-size;
