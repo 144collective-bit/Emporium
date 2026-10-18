@@ -491,9 +491,13 @@ export async function bootCity(root: HTMLElement) {
     (waterMat.uniforms.sky.value as THREE.Color).copy(scene.background as THREE.Color);
     puddleMat.color.setScalar(s.rain * (0.12 + s.night * 0.6));
     // Night glow is kept in proportion to the scene: enough bloom for the neon,
-    // not so much that it washes over the buildings
-    post.bloom.strength = 0.3 + s.night * 0.4 + s.rain * 0.06;
-    post.bloom.threshold = 0.9 - s.night * 0.06;
+    // not so much that it washes over the buildings. Bloom grows with how much
+    // of the screen is lit, so close up (zoomed in, flown to a building, walking)
+    // it gets tighter, softer and pickier, or the lit facades haze the view over
+    const near = walking ? 1 : 1 - THREE.MathUtils.smoothstep(camera.position.distanceTo(controls.target), 12, 48);
+    post.bloom.strength = (0.3 + s.night * 0.4 + s.rain * 0.06) * (1 - near * 0.4);
+    post.bloom.radius = 0.55 - near * 0.4;
+    post.bloom.threshold = 0.9 - s.night * 0.06 + near * 0.07;
     renderer.toneMappingExposure = 1 + s.night * 0.03;
 
     // Hover lift and rings

@@ -225,7 +225,7 @@ function emporium(scene: THREE.Scene, ctx: LandmarkCtx, crowd: Idle[]) {
   const b = new Batch();
 
   // Podium: shop floor glazing behind a deep cornice
-  const pod = facadeMat({ cols: 5, rows: 1, wall: '#3d1d63', lit: [PAL.warm], litRatio: 1, seed: 21 }, 0.4, 1.9);
+  const pod = facadeMat({ cols: 5, rows: 1, wall: '#3d1d63', lit: [PAL.warm], litRatio: 1, seed: 21 }, 0.4, 1.5);
   g.add(walls(11.8, S, 11.8, 5.4, 2.0, 5.4, pod, toon('#2a1650')));
   b.box(11.7, S + 2.0, 11.7, 5.6, 0.5, 5.6, toon('#5a2a8a'));
   b.box(11.65, S, 11.65, 5.7, 0.12, 5.7, toon('#2a1650'));
@@ -568,7 +568,7 @@ function workshop(scene: THREE.Scene, ctx: LandmarkCtx) {
     t.castShadow = t.receiveShadow = true;
     g.add(t);
     if (k < 2) {
-      const glass = plane(7.0, 0.9, lit(new THREE.MeshBasicMaterial({ color: '#5fd6ff' }), 0.7, 1.7));
+      const glass = plane(7.0, 0.9, lit(new THREE.MeshBasicMaterial({ color: '#5fd6ff' }), 0.7, 1.25));
       glass.position.set(15.3, rz + 0.45, z0 + 1.61);
       g.add(fx(glass));
     }
