@@ -1458,6 +1458,377 @@ body.full-bleed {
   white-space: nowrap;
 }
 
+/* 3D city: canvas, pins, loader, settings, panel */
+.city3d {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.9s var(--ease), visibility 0s 0.9s;
+  touch-action: none;
+}
+.city3d canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  outline: none;
+}
+.city[data-view="3d"] .city3d {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.9s var(--ease);
+}
+.city[data-view="3d"] .city-viewport {
+  visibility: hidden;
+}
+.city-pins {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.city-pin {
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  pointer-events: auto;
+  cursor: pointer;
+  will-change: transform;
+}
+.city-pin-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 12px 7px;
+  border: 1px solid #0000;
+  border-radius: 7px;
+  background:
+    linear-gradient(#0b0a12e6, #0b0a12e6) padding-box,
+    var(--pulse) border-box;
+  box-shadow: 0 8px 24px -10px #000;
+  transform: translate(-50%, calc(-100% - 12px));
+  transition: transform 0.25s var(--ease), background 0.2s;
+  white-space: nowrap;
+}
+.city-pin-card::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -12px;
+  width: 2px;
+  height: 11px;
+  background: #fff;
+  transform: translateX(-50%);
+}
+.city-pin.is-hot .city-pin-card {
+  background:
+    linear-gradient(#2a1d55f0, #2a1d55f0) padding-box,
+    var(--pulse) border-box;
+  transform: translate(-50%, calc(-100% - 18px));
+}
+.city-pin-title {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 900;
+  letter-spacing: 0.03em;
+  line-height: 1.05;
+  text-transform: uppercase;
+}
+.city-pin-sub {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--p-cyan);
+}
+.city.has-panel .city-pin {
+  opacity: 0.35 !important;
+}
+
+.city-loader {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 3;
+  display: grid;
+  gap: 12px;
+  width: min(320px, calc(100% - 32px));
+  padding: 18px 20px;
+  border: 1px solid #0000;
+  border-radius: 8px;
+  background:
+    linear-gradient(#0b0a12eb, #0b0a12eb) padding-box,
+    var(--pulse) border-box;
+  box-shadow: 0 0 60px -20px #8000ffb3;
+  transform: translate(-50%, -50%);
+  transition: opacity 0.5s, transform 0.5s var(--ease);
+}
+.city-loader.is-done {
+  opacity: 0;
+  transform: translate(-50%, -40%);
+}
+.city-loader-bar {
+  --p: 0;
+  height: 3px;
+  border-radius: 2px;
+  background: #ffffff14;
+  overflow: hidden;
+}
+.city-loader-bar span {
+  display: block;
+  height: 100%;
+  background: var(--pulse);
+  transform: scaleX(var(--p));
+  transform-origin: left;
+  transition: transform 0.4s var(--ease);
+}
+
+.city-controls,
+.city-to3d,
+.city-panel {
+  z-index: 4;
+  border: 1px solid #0000;
+  border-radius: 8px;
+  background:
+    linear-gradient(#0b0a12eb, #0b0a12eb) padding-box,
+    var(--pulse) border-box;
+  box-shadow: 0 18px 50px -20px #000, 0 0 40px -18px #8000ffa6;
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+.city-controls {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: none;
+  max-width: calc(100% - 32px);
+}
+.city[data-view="3d"] .city-controls {
+  display: block;
+}
+.city.has-panel .city-controls {
+  visibility: hidden;
+}
+.city-controls summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  list-style: none;
+  cursor: pointer;
+}
+.city-controls summary::-webkit-details-marker {
+  display: none;
+}
+.city-controls summary svg {
+  color: var(--p-cyan);
+}
+.city-controls-body {
+  display: grid;
+  gap: 8px;
+  padding: 0 12px 12px;
+}
+.seg {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+.seg-label {
+  width: 40px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.seg button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #ffffff08;
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.seg button:hover {
+  color: #fff;
+  border-color: #ffffff40;
+}
+.seg button[aria-pressed="true"] {
+  border-color: #0000;
+  background:
+    var(--pulse-wash) padding-box,
+    linear-gradient(#14102a, #14102a) padding-box,
+    var(--pulse) border-box;
+  color: #fff;
+}
+.city-to3d {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.city-to3d span {
+  color: var(--p-cyan);
+}
+.city-to3d[hidden],
+.city-panel[hidden],
+.city-loader[hidden] {
+  display: none;
+}
+
+.city-panel {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  bottom: 16px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: min(400px, calc(100% - 32px));
+  padding: 28px 26px 20px;
+  overflow-y: auto;
+  opacity: 0;
+  transform: translateX(24px);
+  transition: opacity 0.35s var(--ease), transform 0.35s var(--ease);
+}
+.city-panel.is-open {
+  opacity: 1;
+  transform: none;
+}
+.city-panel-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: none;
+  color: var(--text-2);
+  cursor: pointer;
+}
+.city-panel-close:hover {
+  color: #fff;
+  border-color: #ffffff40;
+}
+.city-panel-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+}
+.city-panel-title {
+  font-family: var(--font-display);
+  font-size: clamp(34px, 4vw, 48px);
+  font-weight: 900;
+  line-height: 0.92;
+  text-transform: uppercase;
+}
+.city-panel-text {
+  font-size: 15px;
+  color: var(--text-2);
+}
+.city-panel-fine {
+  font-size: 12px;
+  color: var(--muted);
+}
+.city-panel-list {
+  display: flex;
+  gap: 8px;
+  list-style: none;
+}
+.city-panel-list li {
+  padding: 6px 12px;
+  border: 1px solid #0000;
+  border-radius: 2px;
+  background:
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.city-panel-steps {
+  display: grid;
+  gap: 10px;
+  list-style: none;
+}
+.city-panel-steps li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 12px;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.city-panel-steps span {
+  grid-row: span 2;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--p-cyan);
+  padding-top: 5px;
+}
+.city-panel-steps small {
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 400;
+  text-transform: none;
+  color: var(--text-2);
+}
+.city-panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+.city .hint-3d,
+.city[data-view="3d"] .hint-2d {
+  display: none;
+}
+.city[data-view="3d"] .hint-3d {
+  display: inline;
+}
+.city.has-panel .city-dir {
+  visibility: hidden;
+}
+
 .city-card-close,
 .city-draft-tag {
   display: none;
@@ -1528,6 +1899,35 @@ body.full-bleed {
   }
   .city-hud[data-card="hidden"] .city-draft-tag {
     display: inline-flex;
+  }
+  /* 3D on phones: settings top-left, the panel becomes a bottom sheet */
+  .city-controls,
+  .city-to3d {
+    top: 12px;
+    right: auto;
+    left: 12px;
+  }
+  .city-controls[open] {
+    right: 12px;
+  }
+  .city-panel {
+    top: auto;
+    right: 12px;
+    left: 12px;
+    bottom: 12px;
+    width: auto;
+    max-height: 62%;
+    padding: 22px 18px 16px;
+    transform: translateY(24px);
+  }
+  .city.has-panel .city-hud {
+    visibility: hidden;
+  }
+  .city-pin-title {
+    font-size: 14px;
+  }
+  .city-pin-sub {
+    font-size: 8.5px;
   }
 }
 
@@ -1629,7 +2029,11 @@ body.full-bleed {
   }
   /* A still city: the script pauses the SMIL traffic too */
   .city-map *,
-  .city-map .lift {
+  .city-map .lift,
+  .city3d,
+  .city-panel,
+  .city-pin-card,
+  .city-loader {
     animation: none !important;
     transition: none !important;
   }

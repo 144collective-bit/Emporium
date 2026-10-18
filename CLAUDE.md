@@ -19,14 +19,26 @@ it and has been retired completely. Build only on what's here.
 
 ## Design rules
 
-- The homepage is an isometric night city drawn as one SVG at build time by
-  `src/lib/city.ts`: black ink outlines, flat cartoon shading, PulseChain
-  neon. Each linked building is an `<a class="spot">` with a matching pin;
-  links and pin copy live in `src/components/CityMap.astro`. Buildings link
-  only to `/emporium` (or one of its window anchors: `#drop`, `#workshop`,
-  `#vault`, `#plan`) or to the confirmed links in `src/data/site.ts`.
-- Keep the city's motion optional: CSS animations stop under
-  `prefers-reduced-motion`, and the script pauses the SMIL traffic.
+- The homepage is Degen City in two layers, both in Degen's style (black ink
+  outlines, flat cartoon shading, PulseChain neon):
+  - **3D** (`src/scripts/city3d/`, three.js): toon materials, ink outlines
+    from a normal/depth post-pass, bloom, day/night from the visitor's clock,
+    weather, traffic, people, optional synthesised sound. Clicking a
+    building flies the camera in and opens a glass panel.
+  - **2D** (`src/lib/city.ts`): the isometric SVG map. It's the loading
+    poster, the fallback without WebGL, and the "2D map" view.
+  Both layers share the same block layout; keep them in step when buildings
+  change. Spot links, pin copy and panel copy live in
+  `src/components/CityMap.astro`. Buildings link only to `/emporium` (or its
+  window anchors: `#drop`, `#workshop`, `#vault`, `#plan`) or to the
+  confirmed links in `src/data/site.ts`.
+- Keep the city's motion optional: under `prefers-reduced-motion` the 3D
+  city stands still (no fly-in, no traffic), CSS animations stop and the 2D
+  map's SMIL traffic is paused. Sound is always off until the visitor
+  turns it on.
+- Keep phones light: `src/scripts/city3d/index.ts` picks a quality tier
+  (fewer cars and people, no shadows, smaller bloom on phones) and backs off
+  further if frames are slow.
 - The comic-window layout in `src/components/ComicPage.astro` is the design.
   Each window is defined by its ink outline; keep content inside the slants.
 - Palette is the PulseChain gradient. Follow `brand/README.md`: gradient for
