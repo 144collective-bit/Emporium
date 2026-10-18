@@ -1,0 +1,134 @@
+---
+/*
+ * The homepage: Degen City, an isometric night city you drag around.
+ * Each lit-up building is a link into the Emporium or out to a confirmed
+ * channel. The map itself is drawn in src/lib/city.ts.
+ *
+ * All copy is DRAFT - see the note in the card.
+ */
+import { getImage } from 'astro:assets';
+import degen from '../assets/degen.png';
+import logo from '../assets/logo.png';
+import { renderCity, VIEW, EMPORIUM_FOCUS, type Spot, type SpotId } from '../lib/city';
+import { X_URL, X_HANDLE, TELEGRAM_URL, SHOP_URL, SHOP_OPEN } from '../data/site';
+
+const [degenImg, logoImg] = await Promise.all([
+  getImage({ src: degen, width: 160, format: 'webp' }),
+  getImage({ src: logo, width: 440, format: 'webp' }),
+]);
+
+const spots: Record<SpotId, Spot> = {
+  emporium: { href: '/emporium', title: 'The Emporium', sub: 'Step inside', aria: 'The Emporium: step inside' },
+  shop: SHOP_OPEN
+    ? { href: SHOP_URL, external: true, title: 'Drop 001', sub: 'Open now', aria: 'Drop 001: enter the store' }
+    : { href: '/emporium#drop', title: 'Drop 001', sub: 'Coming soon', aria: 'Drop 001: coming soon' },
+  workshop: { href: '/emporium#workshop', title: 'The Workshop', sub: 'Tools for degens', aria: 'The Workshop: tools for degens' },
+  vault: { href: '/emporium#vault', title: 'The Vault', sub: 'Classified', aria: 'The Vault: classified until launch' },
+  plan: { href: '/emporium#plan', title: 'Building site', sub: 'The plan, roughly', aria: 'Building site: the plan, roughly' },
+  signal: { href: X_URL, external: true, title: 'Signal tower', sub: `@${X_HANDLE} on X`, aria: `Signal tower: @${X_HANDLE} on X` },
+  telegram: { href: TELEGRAM_URL, external: true, title: 'Post office', sub: 'Telegram', aria: 'Post office: join us on Telegram' },
+};
+const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram'];
+
+const map = renderCity({ spots, art: { degen: degenImg.src, logo: logoImg.src } });
+const focusX = +((EMPORIUM_FOCUS[0] - VIEW.x) / VIEW.w).toFixed(4);
+const focusY = +((EMPORIUM_FOCUS[1] - VIEW.y) / VIEW.h).toFixed(4);
+---
+
+<section class="city" aria-labelledby="city-title">
+  <div class="city-viewport" data-city data-focus-x={focusX} data-focus-y={focusY} tabindex="0" role="region" aria-label="City map: scroll or drag to look around">
+    <svg class="city-map" viewBox={`${VIEW.x} ${VIEW.y} ${VIEW.w} ${VIEW.h}`} role="group" aria-label="Degen City">
+      <g set:html={map} />
+    </svg>
+  </div>
+
+  <div class="city-hud">
+    <div class="city-card">
+      <p class="kicker"><span class="kicker-num">GM</span> PulseChain native</p>
+      <h1 id="city-title" class="city-title">Welcome to <span class="hl">Degen&nbsp;City</span></h1>
+      <p class="city-hint">Drag to look around. Pick a lit-up building to go in.</p>
+      <p class="city-draft">Draft · v0 · nothing here is final</p>
+    </div>
+
+    <details class="city-dir">
+      <summary>Directory</summary>
+      <ul>
+        {directory.map((id) => {
+          const s = spots[id];
+          return (
+            <li>
+              <a href={s.href} {...(s.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}>
+                <span>{s.title}</span>
+                <small>{s.sub}</small>
+              </a>
+            </li>
+          );
+        })}
+      </ul>
+    </details>
+  </div>
+</section>
+
+<script>
+  const vp = document.querySelector<HTMLElement>('[data-city]');
+  const svg = vp?.querySelector('svg');
+
+  if (vp && svg) {
+    // Open on the Emporium
+    vp.scrollLeft = svg.clientWidth * Number(vp.dataset.focusX) - vp.clientWidth / 2;
+    vp.scrollTop = svg.clientHeight * Number(vp.dataset.focusY) - vp.clientHeight / 2;
+
+    // Drag to pan with a mouse; touch and trackpads scroll natively
+    let drag: { x: number; y: number; left: number; top: number } | null = null;
+    let moved = false;
+    vp.addEventListener('pointerdown', (e) => {
+      if (e.pointerType !== 'mouse' || e.button !== 0) return;
+      drag = { x: e.clientX, y: e.clientY, left: vp.scrollLeft, top: vp.scrollTop };
+      moved = false;
+    });
+    window.addEventListener('pointermove', (e) => {
+      if (!drag) return;
+      const dx = e.clientX - drag.x;
+      const dy = e.clientY - drag.y;
+      if (!moved && Math.hypot(dx, dy) > 5) {
+        moved = true;
+        vp.classList.add('is-dragging');
+      }
+      if (moved) {
+        vp.scrollLeft = drag.left - dx;
+        vp.scrollTop = drag.top - dy;
+      }
+    });
+    window.addEventListener('pointerup', () => {
+      drag = null;
+      vp.classList.remove('is-dragging');
+    });
+    // A drag that ends on a building is not a click
+    vp.addEventListener(
+      'click',
+      (e) => {
+        if (moved) {
+          e.preventDefault();
+          e.stopPropagation();
+          moved = false;
+        }
+      },
+      true
+    );
+    vp.addEventListener('dragstart', (e) => e.preventDefault());
+
+    // A building and its pin light up together
+    const hot = (id: string, on: boolean) =>
+      vp.querySelectorAll(`[data-spot="${id}"]`).forEach((el) => el.classList.toggle('is-hot', on));
+    vp.querySelectorAll<SVGElement>('[data-spot]').forEach((el) => {
+      const id = el.dataset.spot!;
+      el.addEventListener('pointerenter', () => hot(id, true));
+      el.addEventListener('pointerleave', () => hot(id, false));
+      el.addEventListener('focus', () => hot(id, true));
+      el.addEventListener('blur', () => hot(id, false));
+    });
+
+    // SMIL animations (cars, rings, the plane) ignore CSS, so pause them here
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) svg.pauseAnimations();
+  }
+</script>

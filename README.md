@@ -1,7 +1,8 @@
 # The Degen Emporium
 
 A PulseChain native store: merch, tools and a token. This repo is the
-website, a single comic-book homepage built with [Astro](https://astro.build).
+website, built with [Astro](https://astro.build): an animated isometric city
+on the homepage, whose buildings lead into the comic-book Emporium page.
 
 ## Run it
 
@@ -15,8 +16,11 @@ npm run build    # static site in dist/
 
 | Path | What it is |
 | --- | --- |
-| `src/pages/index.astro` | The homepage |
+| `src/pages/index.astro` | The homepage: Degen City |
+| `src/pages/emporium.astro` | The Emporium: the comic page |
 | `src/pages/404.astro` | Not-found page |
+| `src/components/CityMap.astro` | The city page: map, pins, welcome card, directory, drag-to-pan |
+| `src/lib/city.ts` | Draws the city SVG: blocks, buildings, traffic, animation |
 | `src/components/ComicPage.astro` | The six comic windows (desktop page, mobile cards) |
 | `src/components/Nav.astro` | Header: logo, PulseChain badge, X and Telegram |
 | `src/styles/global.css` | All styles and the colour tokens |
@@ -26,7 +30,27 @@ npm run build    # static site in dist/
 | `scripts/` | Art pipeline: cutouts, header logo, favicons, share card |
 | `public/` | Favicons, share card, web manifest |
 
-## The six windows
+## Degen City
+
+A night city in Degen's style (ink outlines, flat shading, PulseChain neon)
+that you drag around on desktop or swipe on a phone. Cars drive the avenues,
+the signal tower pulses, sparks fly from the workshop and a paper plane
+circles the post office. The lit-up buildings are links:
+
+| Building | Goes to |
+| --- | --- |
+| The Emporium (centre tower) | `/emporium` |
+| Drop 001 (shop, shutters down) | `/emporium#drop`, or the Shopify store once `SHOP_OPEN` is true |
+| The Workshop | `/emporium#workshop` |
+| The Vault | `/emporium#vault` |
+| Building site | `/emporium#plan` |
+| Signal tower | X |
+| Post office | Telegram |
+
+The Directory button lists the same links for anyone who'd rather not
+explore. With reduced motion turned on, the city stands still.
+
+## The six windows (`/emporium`)
 
 | Window | Content |
 | --- | --- |

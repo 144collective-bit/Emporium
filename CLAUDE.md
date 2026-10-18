@@ -5,7 +5,8 @@ it and has been retired completely. Build only on what's here.
 
 ## Never bring back the old site
 
-- The site is one homepage (`src/pages/index.astro`) plus `404.astro`. Do not
+- The site is the Degen City homepage (`src/pages/index.astro`), the Emporium
+  comic page it links into (`src/pages/emporium.astro`) and `404.astro`. Do not
   add or restore pages like `/news`, `/blog`, `/store`, `/shop`, `/alpha`,
   `/tokenomics`, `/vault`, `/terminal`, `/team`, `/projects`, `/about`,
   `/contact` or `/links` unless the owner asks for that page by name.
@@ -18,6 +19,14 @@ it and has been retired completely. Build only on what's here.
 
 ## Design rules
 
+- The homepage is an isometric night city drawn as one SVG at build time by
+  `src/lib/city.ts`: black ink outlines, flat cartoon shading, PulseChain
+  neon. Each linked building is an `<a class="spot">` with a matching pin;
+  links and pin copy live in `src/components/CityMap.astro`. Buildings link
+  only to `/emporium` (or one of its window anchors: `#drop`, `#workshop`,
+  `#vault`, `#plan`) or to the confirmed links in `src/data/site.ts`.
+- Keep the city's motion optional: CSS animations stop under
+  `prefers-reduced-motion`, and the script pauses the SMIL traffic.
 - The comic-window layout in `src/components/ComicPage.astro` is the design.
   Each window is defined by its ink outline; keep content inside the slants.
 - Palette is the PulseChain gradient. Follow `brand/README.md`: gradient for
