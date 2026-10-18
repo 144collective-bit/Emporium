@@ -271,6 +271,9 @@ export async function bootCity(root: HTMLElement) {
     plotSolids: () => plots.solids(),
     openSpot: (id) => open(id),
     touched: () => touched(),
+    tick,
+    // The sound engine is made further down; shots only happen once it exists
+    sfx: (kind) => sound.sfx(kind),
   });
   const walkBtn = root.querySelector<HTMLButtonElement>('[data-walk-toggle]')!;
   let beforeWalk: { pos: THREE.Vector3; target: THREE.Vector3 } | null = null;

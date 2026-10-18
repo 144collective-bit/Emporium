@@ -16,6 +16,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { rifleGeometry } from './combat';
 import { canvasTex, lit, toon } from './kit';
 
 /* ---------- Outfits ---------- */
@@ -293,6 +294,8 @@ interface Part {
   detail?: boolean;
   /** Thicker on hoodies and fatigues than on a suit */
   fat?: boolean;
+  /** Parts a single figure hands back by name */
+  name?: 'gummy';
 }
 
 const FAT = new THREE.Vector3(1.16, 1, 1.16);
@@ -521,11 +524,8 @@ function parts(): Part[] {
     c.fillText('GUMMY BEARS', 64, 112);
   });
   const gummy = rbox(0.1, 0.13, 0.04, 0.012, 0, -0.03, 0.04);
-  const rifle = merge(
-    new THREE.BoxGeometry(0.04, 0.52, 0.05).translate(0, 0.2, -0.03),
-    new THREE.BoxGeometry(0.035, 0.14, 0.08).translate(0, -0.04, -0.045),
-    new THREE.CylinderGeometry(0.012, 0.012, 0.16, 6).translate(0, 0.53, -0.03)
-  );
+  // The same assault rifle the player carries, held upright on parade
+  const rifle = rifleGeometry().rotateX(-Math.PI / 2).translate(0, 0, 0.03);
 
   const lensMat = () => lit(new THREE.MeshToonMaterial({ color: '#0e7a46', emissive: '#22d07a' }), 0.12, 0.7);
   const patchMat = () => new THREE.MeshToonMaterial({ map: patchTex });
@@ -566,7 +566,7 @@ function parts(): Part[] {
       { joint: `shin${s}`, geo: sole, color: '#f3f2f7', when: hoodie, detail: true },
       { joint: `hand${s}`, geo: rifle, color: '#2b2a33', when: (o) => o.rifle === (s === 'L' ? 'left' : 'right') },
     ]),
-    { joint: 'handR', geo: gummy, color: '#ffffff', mat: gummyMat, when: (o) => !!o.gummy },
+    { joint: 'handR', geo: gummy, color: '#ffffff', mat: gummyMat, when: (o) => !!o.gummy, name: 'gummy' },
   ];
   return partsCache;
 }
@@ -586,20 +586,26 @@ export interface Degen {
   /** Apply `pose` to the figure */
   update(): void;
   hands: [THREE.Object3D, THREE.Object3D];
+  /** The chest, for things carried at the shoulder (the rifle) */
+  torso: THREE.Object3D;
+  /** The gummy in his hand, if the outfit has one (put away while he holds the rifle) */
+  gummy?: THREE.Object3D;
 }
 
 export function createDegen(o: Outfit = PLAYER): Degen {
   const rig = makeRig();
+  let gummy: THREE.Object3D | undefined;
   for (const p of parts()) {
     if (!p.when(o)) continue;
     const mesh = new THREE.Mesh(p.geo, p.mat ? p.mat() : toon(colorOf(p, o)));
     if (isFat(p, o)) mesh.scale.copy(FAT);
     mesh.castShadow = true;
     rig.j[p.joint].add(mesh);
+    if (p.name === 'gummy') gummy = mesh;
   }
   const pose = newPose();
   applyPose(rig, pose);
-  return { g: rig.root, pose, update: () => applyPose(rig, pose), hands: [rig.j.handL, rig.j.handR] };
+  return { g: rig.root, pose, update: () => applyPose(rig, pose), hands: [rig.j.handL, rig.j.handR], torso: rig.j.torso, gummy };
 }
 
 /* ---------- A crowd ---------- */

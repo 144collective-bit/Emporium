@@ -14,10 +14,14 @@
 import * as THREE from 'three';
 import type { SpotId } from '../../lib/city';
 import { PLAYER, airPose, createDegen, walkPose } from './character';
-import { DISTRICTS, BLOCKS, BS, RIVER, ROADS, SLAB } from './world';
+import { DUMMIES, createCombat, type Sfx } from './combat';
+import { DISTRICTS, BLOCKS, BS, RIVER, ROADS, SLAB, type Tick } from './world';
 
 /** x0, z0, x1, z1, height */
 type Box = [number, number, number, number, number];
+
+/** Training dummies: Degen walks round them */
+const DUMMY_SOLIDS = DUMMIES.map(([x, z]): Box => [x - 0.3, z - 0.3, x + 0.3, z + 0.3, 1.3]);
 
 /** Everything you can't walk through, matching landmarks.ts. Height is for the camera. */
 const SOLIDS: Box[] = [
@@ -64,7 +68,14 @@ const SOLIDS: Box[] = [
   [1.7, 1.7, 3.5, 3.5, 6.6], // water tower
   [18.55, 11.95, 19.45, 12.85, 1.4], // planters
   [11.95, 18.55, 12.85, 19.45, 1.4],
+  [28.3, 29.8, 29.2, 30.1, 1.2], // the Armoury's weapon rack
+  ...DUMMY_SOLIDS,
 ];
+/** What bullets stop on: everything solid except the dummies' footprints (they test their own shape) */
+const SHOT_SOLIDS = SOLIDS.filter((b) => !DUMMY_SOLIDS.includes(b));
+
+/** Things to do with E besides doors */
+const RACK = { x: 28.75, z: 29.42 };
 /** Only the camera bumps into these (tall parts above a walkable footprint) */
 const CAMERA_ONLY: Box[] = [
   [11.9, 11.9, 17.5, 17.5, 12.6], // the Emporium's glass tower
@@ -125,6 +136,8 @@ export interface WalkDeps {
   openSpot(id: SpotId): void;
   /** Called on any input, so the frame cap knows we're busy */
   touched(): void;
+  tick(f: Tick): void;
+  sfx(kind: Sfx): void;
 }
 
 export function createWalk(d: WalkDeps) {
@@ -197,7 +210,12 @@ export function createWalk(d: WalkDeps) {
   const keys = new Set<string>();
   const joy = { x: 0, y: 0, id: -1 };
   const pad = { x: 0, y: 0, run: false, prev: [] as boolean[] };
-  let near: { id: SpotId; label: string } | null = null;
+  let near: { id: SpotId | 'gear'; label: string } | null = null;
+  const act = () => {
+    if (!near) return;
+    if (near.id === 'gear') combat.gearUp();
+    else openSpot(near.id);
+  };
 
   const groundAt = (x: number, z: number) => (slabs.some((b) => inBox(b, x, z)) ? SLAB : 0.035);
   const onBridge = (x: number) => ROADS.some((r) => Math.abs(x - r) < 1.05);
@@ -242,6 +260,43 @@ export function createWalk(d: WalkDeps) {
     return Math.max(0.35, t - 0.15);
   }
 
+  /** Distance along a ray to the first building or the ground (for shots). */
+  function rayWorld(from: THREE.Vector3, dir: THREE.Vector3, max: number) {
+    let t = max;
+    if (dir.y < 0) t = Math.min(t, (from.y - 0.1) / -dir.y);
+    const o = [from.x, from.y, from.z];
+    const v = [dir.x, dir.y, dir.z];
+    for (const b of [...SHOT_SOLIDS, ...CAMERA_ONLY, ...d.plotSolids()]) {
+      if (b[4] < 0.3) continue;
+      const lo = [b[0], 0, b[1]];
+      const hi = [b[2], b[4], b[3]];
+      let t0 = 0;
+      let t1 = t;
+      let hit = true;
+      for (let k = 0; k < 3 && hit; k++) {
+        if (Math.abs(v[k]) < 1e-6) {
+          if (o[k] < lo[k] || o[k] > hi[k]) hit = false;
+          continue;
+        }
+        let a = (lo[k] - o[k]) / v[k];
+        let c = (hi[k] - o[k]) / v[k];
+        if (a > c) [a, c] = [c, a];
+        t0 = Math.max(t0, a);
+        t1 = Math.min(t1, c);
+        if (t0 > t1) hit = false;
+      }
+      // Ignore boxes the camera starts inside (the hero's own surroundings)
+      if (hit && t0 > 0.6) t = Math.min(t, t0);
+    }
+    return t;
+  }
+
+  const combat = createCombat({ scene: d.scene, camera, root, tick: d.tick, rayWorld, sfx: d.sfx });
+  hero.torso.add(combat.gun);
+  let aimAmt = 0;
+  let armAmt = 0;
+  let recoil = 0;
+
   /* ---------- Input ---------- */
 
   const look = (dx: number, dy: number, k: number) => {
@@ -271,9 +326,11 @@ export function createWalk(d: WalkDeps) {
   function onKey(e: KeyboardEvent, down: boolean) {
     if (!active || (e.target as HTMLElement).matches?.('input, select, textarea')) return false;
     const c = e.code;
-    if (down && c === 'KeyE' && near) openSpot(near.id);
+    if (down && c === 'KeyE' && near) act();
     else if (down && !e.repeat && c === 'KeyV') setFirstPerson(!firstPerson);
-    else if (down && !e.repeat && (c === 'KeyR' || c === 'CapsLock')) setRunLock(!runLock);
+    else if (down && !e.repeat && c === 'CapsLock') setRunLock(!runLock);
+    else if (down && !e.repeat && c === 'KeyR') combat.reload();
+    else if (down && !e.repeat && c === 'KeyG') combat.toggleHolster();
     else if (c === 'Space') {
       if (down && !e.repeat) tryJump();
       jumpHeld = down;
@@ -289,6 +346,8 @@ export function createWalk(d: WalkDeps) {
     keys.clear();
     jumpHeld = false;
     aim = false;
+    combat.trigger(false);
+    combat.trigger(false, true);
   });
 
   // Mouse: click to capture it (pointer lock), then just move to look
@@ -314,7 +373,10 @@ export function createWalk(d: WalkDeps) {
         const req = canvas.requestPointerLock?.() as unknown as Promise<void> | undefined;
         req?.catch?.(() => {});
       }
-      if (locked()) return;
+      if (locked()) {
+        if (e.button === 0) combat.trigger(true);
+        return;
+      }
     }
     if (!drag) drag = { id: e.pointerId, x: e.clientX, y: e.clientY, touch: e.pointerType !== 'mouse' };
   });
@@ -326,6 +388,7 @@ export function createWalk(d: WalkDeps) {
   });
   window.addEventListener('pointerup', (e) => {
     if (e.pointerType === 'mouse' && e.button === 2) aim = false;
+    if (e.pointerType === 'mouse' && e.button === 0) combat.trigger(false);
     if (drag && e.pointerId === drag.id) drag = null;
   });
   canvas.addEventListener(
@@ -385,9 +448,19 @@ export function createWalk(d: WalkDeps) {
     settings.invert = invertInput.checked;
     saveSettings();
   });
-  prompt.addEventListener('click', () => near && openSpot(near.id));
+  prompt.addEventListener('click', act);
+  // Touch: hold Fire, tap Reload
+  const fireBtn = $('[data-walk-fire]');
+  fireBtn.addEventListener('pointerdown', (e) => {
+    fireBtn.setPointerCapture(e.pointerId);
+    combat.trigger(true, true);
+    d.touched();
+  });
+  for (const ev of ['pointerup', 'pointercancel'] as const) fireBtn.addEventListener(ev, () => combat.trigger(false, true));
+  $('[data-walk-reload]').addEventListener('click', () => combat.reload());
 
-  // Gamepad: left stick move, right stick look, A jump, LB / L3 run, Y enter, View first person
+  // Gamepad: left stick move, right stick look, A jump, LB / L3 run, Y enter, View first person,
+  // RT fire, X reload, D-pad up holster
   function pollPad(dt: number) {
     const gp = Array.from(navigator.getGamepads?.() ?? []).find((p) => p && p.connected);
     if (!gp) {
@@ -409,8 +482,11 @@ export function createWalk(d: WalkDeps) {
     pad.run = !!(b[4] || b[10]);
     aim = aim || !!b[6];
     if (!b[6] && pad.prev[6]) aim = false;
-    if (edge(3) && near) openSpot(near.id);
+    if (edge(3)) act();
     if (edge(8)) setFirstPerson(!firstPerson);
+    if (b[7] !== !!pad.prev[7]) combat.trigger(!!b[7]);
+    if (edge(2)) combat.reload();
+    if (edge(12)) combat.toggleHolster();
     if (pad.x || pad.y || b.some(Boolean)) d.touched();
     pad.prev = b;
   }
@@ -445,7 +521,8 @@ export function createWalk(d: WalkDeps) {
     const fz = -Math.cos(yaw);
     const dirX = ((fx * iz - fz * ix) / n) * mag;
     const dirZ = ((fz * iz + fx * ix) / n) * mag;
-    const top = run && !aim ? RUN : aim ? WALK * 0.7 : WALK;
+    const shooting = combat.armed && (aim || combat.firing);
+    const top = run && !shooting ? RUN : shooting ? WALK * 0.7 : WALK;
 
     // Accelerate towards it (less control in the air)
     const k = damp(grounded ? (mag > 0.05 ? 11 : 14) : 2.5, dt);
@@ -462,7 +539,7 @@ export function createWalk(d: WalkDeps) {
 
     // Face where you're going, or where you look when aiming / in first person
     const lookFace = yaw + Math.PI;
-    if (aim || firstPerson) face += wrap(lookFace - face) * damp(16, dt);
+    if (aim || firstPerson || shooting) face += wrap(lookFace - face) * damp(16, dt);
     else if (speed > 0.25) face += wrap(Math.atan2(vel.x, vel.y) - face) * damp(12, dt);
 
     // Jumping: buffered presses, a little coyote time, release early for a short hop
@@ -493,7 +570,27 @@ export function createWalk(d: WalkDeps) {
     const P = hero.pose;
     walkPose(P, phase, stride, runAmt);
     if (speed < 0.2) P.bob += Math.sin(t * 1.6) * 0.004;
-    if (aim) Object.assign(P.arms[1], { fwd: 1.45, out: 0.05, bend: 0.15 });
+    // Recoil kicks the view up a touch; the rifle rides the shoulder
+    const kick = combat.update(dt, t, aim);
+    if (kick) {
+      pitch = Math.max(firstPerson ? -1.35 : -0.55, pitch - kick);
+      recoil = Math.min(0.04, recoil + kick);
+    }
+    recoil = Math.max(0, recoil - dt * 0.35);
+    aimAmt += ((shooting ? 1 : 0) - aimAmt) * damp(14, dt);
+    if (hero.gummy) hero.gummy.visible = !combat.armed;
+    if (combat.armed) {
+      // Both hands on the rifle: low and ready, or up at the shoulder when aiming or firing
+      const up = -pitch * aimAmt;
+      const L = THREE.MathUtils.lerp;
+      // Right hand (arms[0]) on the grip, left hand under the barrel: the rifle rides the right
+      // shoulder, the side the camera looks over
+      Object.assign(P.arms[0], { fwd: L(0.55, 1.2, aimAmt) + up * 0.9, out: L(0.12, 0.28, aimAmt), bend: L(1.05, 1.2, aimAmt) });
+      Object.assign(P.arms[1], { fwd: L(0.95, 1.4, aimAmt) + up * 0.9, out: L(-0.22, -0.12, aimAmt), bend: L(0.95, 0.45, aimAmt) });
+      const rl = combat.reloading ? Math.sin(combat.reloading * Math.PI) : 0;
+      if (rl) Object.assign(P.arms[1], { fwd: L(P.arms[1].fwd, 0.45, rl), bend: L(P.arms[1].bend, 1.55, rl) });
+      combat.poseGun(aimAmt, pitch, P.lean, recoil);
+    } else if (aim) Object.assign(P.arms[1], { fwd: 1.45, out: 0.05, bend: 0.15 });
     airPose(P, air);
     // The head follows the camera: turns towards where you look, tilts up and down
     const lookYaw = THREE.MathUtils.clamp(wrap(lookFace - face), -0.9, 0.9);
@@ -510,7 +607,9 @@ export function createWalk(d: WalkDeps) {
     (hero.ring.material as THREE.MeshBasicMaterial).opacity = 0.55 * (1 - air * 0.6);
 
     // Camera: over the shoulder, pulled in when something's in the way
-    const shoulder = firstPerson ? 0 : THREE.MathUtils.clamp(1 - zoom / 10, 0, 1) * 0.38;
+    // Armed, he steps further left of the crosshair so it never sits on his head
+    armAmt += ((combat.armed ? 1 : 0) - armAmt) * damp(6, dt);
+    const shoulder = firstPerson ? 0 : THREE.MathUtils.clamp(1 - zoom / 10, 0, 1) * 0.38 + armAmt * 0.42;
     pivotWant.set(pos.x + Math.cos(yaw) * shoulder, pos.y + (firstPerson ? 1.12 : 0.95) * SCALE + 0.05, pos.z - Math.sin(yaw) * shoulder);
     if (pivot.lengthSq() === 0) pivot.copy(pivotWant);
     pivot.x += (pivotWant.x - pivot.x) * damp(18, dt);
@@ -539,9 +638,13 @@ export function createWalk(d: WalkDeps) {
       camera.updateProjectionMatrix();
     }
 
-    // Door prompts
-    let best: { id: SpotId; label: string } | null = null;
+    // Door prompts, and the Armoury's weapon rack
+    let best: { id: SpotId | 'gear'; label: string } | null = null;
     let bestD = 1.7;
+    if (Math.hypot(RACK.x - pos.x, RACK.z - pos.z) < 1.1) {
+      best = { id: 'gear', label: combat.geared ? 'Refill ammo' : 'Gear up' };
+      bestD = 0;
+    }
     for (const door of DOORS) {
       const dd = Math.hypot(door.x - pos.x, door.z - pos.z);
       if (dd < bestD) {
@@ -552,7 +655,7 @@ export function createWalk(d: WalkDeps) {
     if (best?.id !== near?.id) {
       near = best;
       prompt.hidden = !near;
-      if (near) prompt.querySelector('[data-walk-label]')!.textContent = `Enter ${near.label}`;
+      if (near) prompt.querySelector('[data-walk-label]')!.textContent = near.id === 'gear' ? near.label : `Enter ${near.label}`;
     }
   }
 
@@ -589,6 +692,7 @@ export function createWalk(d: WalkDeps) {
       active = false;
       keys.clear();
       jumpHeld = aim = false;
+      combat.exit();
       joy.id = -1;
       joy.x = joy.y = 0;
       knob.style.transform = '';

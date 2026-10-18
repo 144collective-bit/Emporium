@@ -28,6 +28,7 @@ import {
   roundRect,
   toon,
 } from './kit';
+import { rifleGeometry } from './combat';
 import { PLAYER, SOLDIER, attentionPose, createCrowd, createDegen, dancePose, marchPose, newPose, type Outfit } from './character';
 import { walker } from './life';
 import { SLAB as S, addLamp, addTree, waterMat, type Tick } from './world';
@@ -1994,6 +1995,42 @@ function armoury(scene: THREE.Scene, ctx: LandmarkCtx) {
     fork.position.set(29.1, S, 27.35);
     g.add(fork);
     ctx.tick(({ t }) => (fork.position.x = 29.1 + Math.sin(t * 0.45) * 0.6));
+  }
+
+  // The weapon rack inside the gate, where visitors gear up in walk mode
+  {
+    const rb = new Batch();
+    for (const x of [28.38, 29.08]) rb.box(x, S, 29.88, 0.06, 0.95, 0.12, wood);
+    rb.box(28.36, S + 0.2, 29.86, 0.8, 0.06, 0.18, wood);
+    rb.box(28.36, S + 0.82, 29.92, 0.8, 0.06, 0.1, wood);
+    const gun = rifleGeometry();
+    for (let k = 0; k < 3; k++) {
+      const gg = gun.clone().rotateX(-Math.PI / 2 + 0.12).translate(28.52 + k * 0.21, S + 0.32, 29.9);
+      rb.add(gg, toon('#2b2a33'));
+    }
+    rb.build(g);
+    const sign = canvasTex(512, 128, (c) => {
+      c.fillStyle = '#3e4a26';
+      c.fillRect(0, 0, 512, 128);
+      c.lineWidth = 10;
+      c.strokeStyle = PAL.ink;
+      c.strokeRect(5, 5, 502, 118);
+      c.font = `900 78px ${FONT_DISPLAY}`;
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      (c as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = '10px';
+      c.fillStyle = '#e3dcb0';
+      c.fillText('GEAR UP', 256, 70);
+    });
+    const p = plane(0.72, 0.18, new THREE.MeshToonMaterial({ map: sign }));
+    p.position.set(28.75, S + 1.02, 29.86);
+    p.rotation.y = Math.PI;
+    g.add(p);
+    const l = new THREE.SphereGeometry(0.04, 8, 6);
+    l.translate(28.32, S + 1.02, 29.86);
+    const lb = new Batch();
+    lb.add(l, greenLamp);
+    lb.build(g);
   }
 
   // Degen soldiers: a squad marching laps of the parade ground, two guards at the gate who

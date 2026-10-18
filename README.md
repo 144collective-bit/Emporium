@@ -102,7 +102,7 @@ of Gas Fee Gummy Bears) and explore on foot.
 
 - **Desktop:** click the city to capture the mouse, then move it to look
   around (up at the towers and the sky too). WASD or arrow keys to move and
-  strafe, hold Shift to run (R or Caps Lock toggles it), Space to jump (hold
+  strafe, hold Shift to run (Caps Lock toggles it), Space to jump (hold
   for a higher jump), right-click to aim in close, V for first person, scroll
   for camera distance, E to enter a door. Esc frees the mouse; press it again
   to stop walking.
@@ -118,6 +118,28 @@ of Gas Fee Gummy Bears) and explore on foot.
   block you (bridges don't), kerbs step up and down, and cars stop for you.
 - Walk up to a landmark's door and press **E** (or tap the prompt) to open its
   panel right where you stand.
+
+### Target practice
+
+Solo shooting practice in walk mode. Only Degen carries a gun; nobody in the
+city is shot at.
+
+- **Gear up** at the weapon rack inside the Armoury's gate (E or tap the
+  prompt). That gives Degen a cartoon assault rifle with a 30-round magazine
+  and 120 spare. Going back to the rack refills the ammo.
+- **Desktop:** click to fire (once the mouse is captured), right-click to aim
+  down the sights, R to reload, G to holster or draw.
+- **Phones:** Fire and Reload buttons appear next to Run and Jump. Fire
+  has a little aim assist towards a target near the crosshair.
+- **Gamepads:** RT fires, LT aims, X reloads, D-pad up holsters.
+- **Targets:** cardboard "Jeet Bot" dummies in the park, beside the post
+  office and by the apartments, and target drones patrolling above the
+  streets. Each has a health bar; dummies flop over and pop back up, and
+  drones fall, smoke and pop before they respawn.
+- **HUD:** crosshair that opens up as you fire, hit marker, ammo counter, and
+  a score with a streak bonus for takedowns in quick succession.
+- Sparks and dust where shots land. Shots, reloads and hits have punchy
+  cartoon sounds, only when sound is on.
 
 ### City builder (demo)
 
@@ -164,6 +186,7 @@ button and stays closed on return visits.
 | `src/scripts/city3d/post.ts` | Ink outlines and bloom |
 | `src/scripts/city3d/sound.ts` | Ambient sound |
 | `src/scripts/city3d/walk.ts` | Walk mode: Degen, mouse / keyboard / touch / gamepad controls, camera, collisions, door prompts |
+| `src/scripts/city3d/combat.ts` | Target practice: the rifle, dummies and drones, hits, effects, combat HUD |
 | `src/scripts/city3d/plots.ts` | Plot grid, build-mode overlay, the eight buildings |
 | `src/scripts/city3d/store.ts` | Demo wallet, simulated purchases, saved progress |
 | `src/scripts/city3d/builder-ui.ts` | Build mode: wallet chip, plot panel, customiser, purchase dialog |

@@ -151,6 +151,59 @@ export function createSound() {
       }
       return on;
     },
+    /** Gun sounds for walk mode: chunky cartoon shots, a reload, hits. Silent unless sound is on. */
+    sfx(kind: 'shot' | 'reload' | 'empty' | 'hit' | 'down' | 'gear') {
+      if (!ctx || !on) return;
+      const t = ctx.currentTime;
+      const out = ctx.createGain();
+      out.connect(master);
+      const env = (g: GainNode, at: number, peak: number, decay: number) => {
+        g.gain.setValueAtTime(0.0001, at);
+        g.gain.exponentialRampToValueAtTime(peak, at + 0.004);
+        g.gain.exponentialRampToValueAtTime(0.0001, at + decay);
+      };
+      const crack = (at: number, freq: number, q: number, peak: number, decay: number) => {
+        const src = noise(decay + 0.05);
+        src.loop = false;
+        const f = ctx!.createBiquadFilter();
+        f.type = 'bandpass';
+        f.frequency.value = freq;
+        f.Q.value = q;
+        const g = ctx!.createGain();
+        env(g, at, peak, decay);
+        src.connect(f).connect(g).connect(out);
+        src.start(at);
+        src.stop(at + decay + 0.05);
+      };
+      const tone = (at: number, type: OscillatorType, f0: number, f1: number, peak: number, decay: number) => {
+        const o = ctx!.createOscillator();
+        o.type = type;
+        o.frequency.setValueAtTime(f0, at);
+        o.frequency.exponentialRampToValueAtTime(f1, at + decay);
+        const g = ctx!.createGain();
+        env(g, at, peak, decay);
+        o.connect(g).connect(out);
+        o.start(at);
+        o.stop(at + decay + 0.02);
+      };
+      if (kind === 'shot') {
+        crack(t, 1600, 0.6, 0.55, 0.11);
+        tone(t, 'sine', 140, 45, 0.6, 0.12);
+      } else if (kind === 'reload') {
+        crack(t + 0.05, 2600, 6, 0.3, 0.04);
+        crack(t + 0.45, 1800, 5, 0.3, 0.05);
+        crack(t + 1.25, 3200, 7, 0.35, 0.04);
+        crack(t + 1.4, 2200, 6, 0.35, 0.05);
+      } else if (kind === 'empty') crack(t, 3800, 9, 0.2, 0.03);
+      else if (kind === 'hit') tone(t, 'triangle', 1500, 1400, 0.18, 0.08);
+      else if (kind === 'down') {
+        tone(t, 'square', 520, 160, 0.12, 0.25);
+        crack(t, 900, 0.8, 0.35, 0.2);
+      } else {
+        crack(t, 2400, 6, 0.3, 0.05);
+        crack(t + 0.18, 1600, 5, 0.35, 0.06);
+      }
+    },
     /** Called every frame with the scene's state. `near` is 0-1 closeness to the Emporium. */
     update(rain: number, night: number, near: number) {
       if (!ctx || !on) return;

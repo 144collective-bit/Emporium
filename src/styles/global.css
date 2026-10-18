@@ -2433,6 +2433,141 @@ body.full-bleed {
   from { opacity: 0; transform: translate(-50%, 8px); }
 }
 /* Touch: joystick bottom-left, jump bottom-right */
+/* Combat HUD (walk mode, once geared up at the Armoury) */
+.combat-hud,
+.walk-fire,
+.walk-reload {
+  display: none;
+}
+.city.is-armed[data-mode="walk"] .combat-hud {
+  display: block;
+}
+.city.is-armed .walk-crosshair {
+  display: none;
+}
+.combat-cross {
+  --spread: 8px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 3;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+.combat-cross i {
+  position: absolute;
+  background: #fff;
+  box-shadow: 0 0 0 1px #05050a, 0 0 6px #00eaff;
+  transition: transform 0.06s linear;
+}
+.combat-cross i:nth-child(1),
+.combat-cross i:nth-child(2) {
+  left: -1px;
+  width: 2px;
+  height: 8px;
+}
+.combat-cross i:nth-child(3),
+.combat-cross i:nth-child(4) {
+  top: -1px;
+  width: 8px;
+  height: 2px;
+}
+.combat-cross i:nth-child(1) {
+  top: calc(-8px - var(--spread));
+}
+.combat-cross i:nth-child(2) {
+  top: var(--spread);
+}
+.combat-cross i:nth-child(3) {
+  left: calc(-8px - var(--spread));
+}
+.combat-cross i:nth-child(4) {
+  left: var(--spread);
+}
+.combat-hit {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 3;
+  width: 22px;
+  height: 22px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%) rotate(45deg);
+  background:
+    linear-gradient(#ff3b3b, #ff3b3b) center / 2px 100% no-repeat,
+    linear-gradient(#ff3b3b, #ff3b3b) center / 100% 2px no-repeat;
+  mask: radial-gradient(circle, transparent 5px, #000 5.5px);
+}
+.combat-hit.is-on {
+  opacity: 1;
+}
+.combat-ammo,
+.combat-score {
+  position: absolute;
+  z-index: 4;
+  padding: 8px 14px;
+  border: 1px solid #0000;
+  border-radius: 8px;
+  background:
+    linear-gradient(#0b0a12e0, #0b0a12e0) padding-box,
+    var(--pulse) border-box;
+  font-family: var(--font-mono);
+  color: #fff;
+  pointer-events: none;
+}
+.combat-ammo {
+  right: 16px;
+  bottom: 16px;
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: baseline;
+  gap: 2px 8px;
+  font-size: 13px;
+}
+.combat-ammo b {
+  font-family: var(--font-display);
+  font-size: 30px;
+  line-height: 1;
+}
+.combat-ammo b.is-low {
+  color: #ff5a5a;
+}
+.combat-ammo small {
+  grid-column: 1 / -1;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--p-cyan);
+}
+.combat-score {
+  top: 16px;
+  right: 16px;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.combat-score b {
+  margin-left: 6px;
+  font-family: var(--font-display);
+  font-size: 18px;
+  letter-spacing: 0.04em;
+}
+.combat-hud [hidden] {
+  display: none !important;
+}
+.combat-score small {
+  display: block;
+  margin-top: 2px;
+  color: #ffd36b;
+}
+@media (max-width: 640px) {
+  .combat-score {
+    top: 104px;
+    right: 12px;
+  }
+}
 @media (pointer: coarse) {
   .walk-hint,
   .walk-look {
@@ -2440,6 +2575,49 @@ body.full-bleed {
   }
   .walk-keys {
     display: none;
+  }
+  .city.is-armed .walk-fire,
+  .city.is-armed .walk-reload {
+    position: absolute;
+    z-index: 4;
+    display: grid;
+    place-items: center;
+    border: 1px solid #0000;
+    border-radius: 50%;
+    background:
+      linear-gradient(#0b0a12e0, #0b0a12e0) padding-box,
+      var(--pulse) border-box;
+    color: #fff;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    touch-action: none;
+  }
+  .city.is-armed .walk-fire {
+    right: 104px;
+    bottom: 34px;
+    width: 76px;
+    height: 76px;
+    font-size: 11px;
+    box-shadow: 0 0 24px -6px #ff2fb9;
+  }
+  .city.is-armed .walk-reload {
+    right: 116px;
+    bottom: 122px;
+    width: 52px;
+    height: 52px;
+    font-size: 9px;
+  }
+  .city.is-armed .combat-ammo {
+    top: 104px;
+    right: auto;
+    bottom: auto;
+    left: 12px;
+    padding: 6px 12px;
+  }
+  .city.is-armed .combat-ammo b {
+    font-size: 22px;
   }
   .walk-run {
     position: absolute;

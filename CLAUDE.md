@@ -92,6 +92,27 @@ it and has been retired completely. Build only on what's here.
   Placed buildings block via `plots.solids()`; parks stay walkable.
 - Cars yield to the walker through `walker` in `life.ts`.
 
+## Target practice (3D walk mode)
+
+- `src/scripts/city3d/combat.ts`: solo shooting practice. Only the player's
+  Degen carries a gun, picked up at the Armoury's weapon rack (`RACK` in
+  `walk.ts`, the rack itself in `armoury()`). Targets are the cardboard
+  dummies (`DUMMIES`) and the patrol drones; never make pedestrians,
+  soldiers or other characters targets.
+- One rifle shape (`rifleGeometry()`), shared by Degen and the Armoury's
+  soldiers. Keep it cartoon: no real-world gun brands or markings.
+- Hits are hitscan from the camera centre. Bullets stop on everything in
+  `SOLIDS` except the dummies' own footprints (`SHOT_SOLIDS`), on plot
+  buildings and on the ground. When dummies move, their footprints follow
+  `DUMMIES` automatically.
+- Keys: click fires, right-click aims, R reloads, G holsters; Caps Lock (not
+  R) toggles run. The combat HUD (`data-cross`, `data-hitmark`, `data-mag`,
+  `data-reserve`, `data-reload-hint`, `data-score`, `data-streak`) and the
+  Fire / Reload buttons live in `CityMap.astro`; `combat.ts` expects them.
+- Gun sounds go through `sfx()` in `sound.ts`, so they stay silent until the
+  visitor turns sound on. Under reduced motion the drones hover in place.
+- Score and streak are for fun only: no prizes, rewards or token tie-ins.
+
 ## City builder (3D build mode)
 
 - Districts around the core are split into 3 x 3 plots (`DISTRICTS` in
