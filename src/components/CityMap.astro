@@ -114,10 +114,43 @@ const focusY = +((EMPORIUM_FOCUS[1] - VIEW.y) / VIEW.h).toFixed(4);
     </button>
   </div>
 
-  {/* Walk mode: hint, touch joystick and jump, door prompt */}
+  {/* Walk mode: controls panel, hints, touch joystick, run and jump, door prompt */}
   <div class="walk-hud">
-    <p class="walk-hint"><kbd>WASD</kbd> move · <kbd>Shift</kbd> run · <kbd>Space</kbd> jump · drag to look · <kbd>Esc</kbd> stop</p>
+    <details class="walk-settings">
+      <summary>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0" /><circle cx="16" cy="6" r="2" /><circle cx="10" cy="12" r="2" /><circle cx="18" cy="18" r="2" /></svg>
+        Controls
+      </summary>
+      <div class="walk-settings-body">
+        <label class="walk-field">
+          <span>Look speed</span>
+          <input type="range" data-walk-sens min="0.3" max="2.5" step="0.1" value="1" />
+        </label>
+        <label class="walk-check">
+          <input type="checkbox" data-walk-invert />
+          <span>Invert look up / down</span>
+        </label>
+        <button type="button" class="walk-fp" data-walk-fp aria-pressed="false">First person</button>
+        <dl class="walk-keys">
+          <dt><kbd>WASD</kbd></dt><dd>Move</dd>
+          <dt><kbd>Mouse</kbd></dt><dd>Look around</dd>
+          <dt><kbd>Shift</kbd></dt><dd>Run (hold)</dd>
+          <dt><kbd>R</kbd></dt><dd>Run (toggle)</dd>
+          <dt><kbd>Space</kbd></dt><dd>Jump (hold for higher)</dd>
+          <dt><kbd>Right&nbsp;click</kbd></dt><dd>Aim / zoom in</dd>
+          <dt><kbd>V</kbd></dt><dd>First person</dd>
+          <dt><kbd>Scroll</kbd></dt><dd>Camera distance</dd>
+          <dt><kbd>E</kbd></dt><dd>Enter a door</dd>
+          <dt><kbd>Esc</kbd></dt><dd>Free the mouse, then stop</dd>
+        </dl>
+        <p class="walk-pad">Gamepads work too: left stick moves, right stick looks, A jumps, LB runs.</p>
+      </div>
+    </details>
+    <p class="walk-look">Click the city to look around</p>
+    <span class="walk-crosshair" aria-hidden="true"></span>
+    <p class="walk-hint"><kbd>WASD</kbd> move · <kbd>Shift</kbd> run · <kbd>Space</kbd> jump · <kbd>V</kbd> first person · <kbd>Esc</kbd> stop</p>
     <div class="walk-stick" data-walk-stick aria-hidden="true"><span></span></div>
+    <button type="button" class="walk-run" data-walk-run aria-pressed="false">Run</button>
     <button type="button" class="walk-jump" data-walk-jump aria-label="Jump">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" /></svg>
     </button>

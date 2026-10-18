@@ -313,7 +313,10 @@ export async function bootCity(root: HTMLElement) {
   document.addEventListener('keydown', (e) => {
     if (root.dataset.view !== '3d') return;
     if (walking) {
-      if (e.key === 'Escape') active ? close() : stopWalking();
+      if (e.key === 'Escape') {
+        if (walk.releaseMouse()) return;
+        active ? close() : stopWalking();
+      }
       else if (!active) walk.onKey(e, true);
       return;
     }
@@ -333,7 +336,7 @@ export async function bootCity(root: HTMLElement) {
     if (!down) return;
     const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y);
     down = null;
-    if (moved > 6) return;
+    if (moved > 6 || walking) return;
     if (builder.active) {
       builder.select(plotAtPointer(e.clientX, e.clientY)?.id ?? null);
       return;

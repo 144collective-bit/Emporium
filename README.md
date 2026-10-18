@@ -76,10 +76,20 @@ cartoon shading and PulseChain neon, built with [three.js](https://threejs.org).
 Press **Walk** to play as Degen (balaclava, red cap, green shades, suit, a bag
 of Gas Fee Gummy Bears) and explore on foot.
 
-- **Desktop:** WASD or arrow keys to move, Shift to run, Space to jump, drag to
-  look around, scroll to zoom, Esc to stop.
-- **Phones:** joystick bottom-left (push further to run), jump button
-  bottom-right, drag anywhere else to look.
+- **Desktop:** click the city to capture the mouse, then move it to look
+  around (up at the towers and the sky too). WASD or arrow keys to move and
+  strafe, hold Shift to run (R or Caps Lock toggles it), Space to jump (hold
+  for a higher jump), right-click to aim in close, V for first person, scroll
+  for camera distance, E to enter a door. Esc frees the mouse; press it again
+  to stop walking.
+- **Phones:** joystick bottom-left (push it to the edge to run), Run and Jump
+  buttons bottom-right, drag anywhere else to look.
+- **Gamepads:** left stick moves, right stick looks, A jumps, LB or L3 runs,
+  LT aims, Y enters a door, View switches to first person.
+- **Controls** (top-left while walking) sets look speed, invert up/down and
+  first person, and lists the keys. The settings are saved in the browser.
+- The camera sits over his shoulder, slides in front of walls instead of
+  going through them, and widens a little when he runs.
 - The world is solid: landmarks, your buildings, the fountain and the river
   block you (bridges don't), kerbs step up and down, and cars stop for you.
 - Walk up to a landmark's door and press **E** (or tap the prompt) to open its
@@ -129,7 +139,7 @@ button and stays closed on return visits.
 | `src/scripts/city3d/sky.ts` | Time of day, sun and moon, fog, clouds, rain |
 | `src/scripts/city3d/post.ts` | Ink outlines and bloom |
 | `src/scripts/city3d/sound.ts` | Ambient sound |
-| `src/scripts/city3d/walk.ts` | Walk mode: Degen, controls, camera, collisions, door prompts |
+| `src/scripts/city3d/walk.ts` | Walk mode: Degen, mouse / keyboard / touch / gamepad controls, camera, collisions, door prompts |
 | `src/scripts/city3d/plots.ts` | Plot grid, build-mode overlay, the eight buildings |
 | `src/scripts/city3d/store.ts` | Demo wallet, simulated purchases, saved progress |
 | `src/scripts/city3d/builder-ui.ts` | Build mode: wallet chip, plot panel, customiser, purchase dialog |

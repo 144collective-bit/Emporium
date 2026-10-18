@@ -1,47 +1,58 @@
 /*
- * Walk mode: play as Degen. Third-person camera, keyboard / joystick
- * movement, a solid world (landmarks, your buildings, the fountain, the
- * river), kerbs, a jump, and door prompts that open a building's panel.
+ * Walk mode: play as Degen.
+ *
+ * - Look: mouse (pointer lock after a click), drag, touch or a gamepad's
+ *   right stick. You can look up at the towers and sky as well as down.
+ * - Move: WASD / arrows / joystick / left stick, with acceleration, strafing,
+ *   run (hold Shift, or R to toggle) and a jump with coyote time, buffering
+ *   and variable height.
+ * - Camera: over the shoulder, pulled in when a building or the ground is in
+ *   the way, first person when zoomed all the way in (or V), wider field of
+ *   view when running. Hold the right mouse button to face where you look.
+ * - A solid world, kerbs, door prompts that open a building's panel.
  */
 import * as THREE from 'three';
 import type { SpotId } from '../../lib/city';
 import { lit, toon } from './kit';
 import { DISTRICTS, BLOCKS, BS, RIVER, ROADS, SLAB } from './world';
 
-type Box = [number, number, number, number];
+/** x0, z0, x1, z1, height */
+type Box = [number, number, number, number, number];
 
-/** Footprints of everything you can't walk through (x0, z0, x1, z1), matching landmarks.ts. */
+/** Everything you can't walk through, matching landmarks.ts. Height is for the camera. */
 const SOLIDS: Box[] = [
-  [11.65, 11.65, 17.35, 17.35], // Emporium podium
-  [13.5, 17.2, 15.5, 18.1], // its entrance canopy posts
-  [0.8, 11.9, 7.8, 17.05], // vault body and rear steps
-  [1.2, 17.1, 7.4, 17.75], // vault columns
-  [7.6, 13.3, 8.0, 15.3], // vault door
-  [22.7, 12.3, 29.5, 16.85], // Drop 001 shop
-  [24.25, 18.15, 24.95, 18.45], // its sidewalk sign
-  [11.8, 22.8, 18.8, 27.6], // workshop
-  [12.3, 28.5, 18.1, 29.4], // tool crates
-  [18.3, 28.1, 19.4, 30.1], // drums and forklift
-  [11.7, 4.5, 15.7, 8.05], // signal studio
-  [16.0, 2.2, 18.4, 4.6], // signal tower
-  [1.1, 23.1, 6.1, 27.1], // post office
-  [6.4, 27.3, 7.0, 27.85], // mailbox
-  [5.05, 27.85, 7.75, 30.55], // pond
-  [22.7, 22.7, 27.5, 27.45], // building site frame and scaffold
-  [28.8, 23.3, 29.5, 24.0], // crane mast
-  [22.3, 30.6, 30.8, 30.85], // site fence (front)
-  [30.6, 22.3, 30.85, 30.85], // site fence (side)
-  [22.6, 29.3, 23.5, 30.2], // site toilet
-  [26.4, 28.3, 28.8, 30.1], // dirt pile
-  [22.7, 0.9, 26.1, 4.3], // apartments A
-  [26.9, 1.5, 30.3, 5.3], // apartments B
-  [1.7, 1.7, 3.5, 3.5], // water tower legs
-  [17.7, 17.7, 19.5, 19.5], // fountain
-  [18.75, 11.55, 19.65, 12.45], // planters
-  [18.85, 13.95, 19.75, 14.85],
-  [11.55, 18.75, 12.45, 19.65],
-  [13.95, 18.85, 14.85, 19.75],
+  [11.65, 11.65, 17.35, 17.35, 2.9], // Emporium podium
+  [13.5, 17.2, 15.5, 18.1, 1.4], // its entrance canopy posts
+  [0.8, 11.9, 7.8, 17.05, 5.6], // vault body and rear steps
+  [1.2, 17.1, 7.4, 17.75, 4.4], // vault columns
+  [7.6, 13.3, 8.0, 15.3, 2.4], // vault door
+  [22.7, 12.3, 29.5, 16.85, 5.6], // Drop 001 shop
+  [24.25, 18.15, 24.95, 18.45, 1], // its sidewalk sign
+  [11.8, 22.8, 18.8, 27.6, 3.7], // workshop
+  [12.3, 28.5, 18.1, 29.4, 1], // tool crates
+  [18.3, 28.1, 19.4, 30.1, 1.2], // drums and forklift
+  [11.7, 4.5, 15.7, 8.05, 2.6], // signal studio
+  [16.0, 2.2, 18.4, 4.6, 13.5], // signal tower
+  [1.1, 23.1, 6.1, 27.1, 3.3], // post office
+  [6.4, 27.3, 7.0, 27.85, 0.9], // mailbox
+  [5.05, 27.85, 7.75, 30.55, 0], // pond
+  [22.7, 22.7, 27.5, 27.45, 5.6], // building site frame and scaffold
+  [28.8, 23.3, 29.5, 24.0, 8.4], // crane mast
+  [22.3, 30.6, 30.8, 30.85, 1.3], // site fence (front)
+  [30.6, 22.3, 30.85, 30.85, 1.3], // site fence (side)
+  [22.6, 29.3, 23.5, 30.2, 1.4], // site toilet
+  [26.4, 28.3, 28.8, 30.1, 0.7], // dirt pile
+  [22.7, 0.9, 26.1, 4.3, 7.6], // apartments A
+  [26.9, 1.5, 30.3, 5.3, 8.4], // apartments B and billboard
+  [1.7, 1.7, 3.5, 3.5, 6.6], // water tower
+  [17.7, 17.7, 19.5, 19.5, 1.2], // fountain
+  [18.75, 11.55, 19.65, 12.45, 1.4], // planters
+  [18.85, 13.95, 19.75, 14.85, 1.4],
+  [11.55, 18.75, 12.45, 19.65, 1.4],
+  [13.95, 18.85, 14.85, 19.75, 1.4],
 ];
+/** Only the camera bumps into these (tall parts above a walkable footprint) */
+const CAMERA_ONLY: Box[] = [[12.3, 12.3, 16.5, 16.5, 18.5]];
 
 /** Where you can step in, and what opens there. */
 const DOORS: { id: SpotId; x: number; z: number }[] = [
@@ -55,16 +66,36 @@ const DOORS: { id: SpotId; x: number; z: number }[] = [
 ];
 
 const RADIUS = 0.22;
-const WALK = 2.3;
-const RUN = 4.8;
-const BOUNDS: Box = [-30, -30, 62, 62];
-const slabs: Box[] = [...BLOCKS.flatMap((x) => BLOCKS.map((z) => [x, z, x + BS, z + BS] as Box)), ...DISTRICTS.map((d) => [d.ox, d.oz, d.ox + BS, d.oz + BS] as Box)];
+const WALK = 2.4;
+const RUN = 5.4;
+const JUMP = 3.9;
+const GRAVITY = 11.5;
+const SCALE = 0.85;
+const BOUNDS = [-30, -30, 62, 62];
+const slabs: Box[] = [...BLOCKS.flatMap((x) => BLOCKS.map((z) => [x, z, x + BS, z + BS, 0] as Box)), ...DISTRICTS.map((d) => [d.ox, d.oz, d.ox + BS, d.oz + BS, 0] as Box)];
 const inBox = (b: Box, x: number, z: number, pad = 0) => x > b[0] - pad && x < b[2] + pad && z > b[1] - pad && z < b[3] + pad;
+const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
+const damp = (k: number, dt: number) => 1 - Math.exp(-k * dt);
+
+const SETTINGS_KEY = 'degen-city-walk-v1';
+interface Settings {
+  sens: number;
+  invert: boolean;
+}
+function loadSettings(): Settings {
+  try {
+    const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '{}');
+    return { sens: typeof s.sens === 'number' ? s.sens : 1, invert: !!s.invert };
+  } catch {
+    return { sens: 1, invert: false };
+  }
+}
 
 /* ---------- The character ---------- */
 
 function makeDegen() {
   const g = new THREE.Group();
+  g.rotation.order = 'YXZ';
   const black = toon('#14121f');
   const skin = toon('#e8c39e');
   const part = (w: number, h: number, d: number, mat: THREE.Material, x: number, y: number, z: number, parent: THREE.Object3D = g) => {
@@ -80,18 +111,15 @@ function makeDegen() {
     g.add(pivot);
     return pivot;
   };
-  // Legs and shoes
   const legs = [-0.07, 0.07].map((x) => {
     const p = limb(x, 0.48);
     part(0.11, 0.44, 0.13, black, 0, -0.22, 0, p);
     part(0.12, 0.06, 0.2, toon('#2a2350'), 0, -0.45, 0.03, p);
     return p;
   });
-  // Suit, shirt and tie
   part(0.34, 0.44, 0.21, black, 0, 0.7, 0);
   part(0.11, 0.2, 0.01, toon('#f3f2f7'), 0, 0.82, 0.106);
   part(0.045, 0.18, 0.012, lit(new THREE.MeshToonMaterial({ color: '#1fbf6b', emissive: '#1fbf6b' }), 0.05, 0.5), 0, 0.8, 0.113);
-  // Arms; the right hand holds the gummy bears
   const arms = [-0.21, 0.21].map((x, i) => {
     const p = limb(x, 0.9);
     part(0.09, 0.4, 0.11, black, 0, -0.2, 0, p);
@@ -99,7 +127,6 @@ function makeDegen() {
     if (i === 1) part(0.13, 0.17, 0.05, toon('#e23b3b'), 0, -0.5, 0.06, p);
     return p;
   });
-  // Head: balaclava, eye slot, shades, red cap
   const head = new THREE.Group();
   head.position.y = 1.05;
   g.add(head);
@@ -114,15 +141,13 @@ function makeDegen() {
   head.add(cap);
   part(0.2, 0.02, 0.15, toon('#e23b3b'), 0, 0.07, 0.15, head);
   part(0.11, 0.045, 0.012, toon('#f3f2f7'), 0, 0.105, 0.153, head);
-  g.scale.setScalar(0.85);
+  g.scale.setScalar(SCALE);
 
-  // A soft ring under the feet so he's easy to find
   const ring = new THREE.Mesh(
     new THREE.RingGeometry(0.28, 0.36, 32),
     new THREE.MeshBasicMaterial({ color: '#00eaff', transparent: true, opacity: 0.55, depthWrite: false, fog: false })
   );
   ring.rotation.x = -Math.PI / 2;
-  ring.position.y = 0.02;
   ring.layers.set(1);
   return { g, legs, arms, head, ring };
 }
@@ -134,7 +159,7 @@ export interface WalkDeps {
   camera: THREE.PerspectiveCamera;
   canvas: HTMLCanvasElement;
   root: HTMLElement;
-  /** Footprints of buildings visitors have placed */
+  /** Footprints and heights of buildings visitors have placed */
   plotSolids(): Box[];
   /** Open a landmark's panel in place */
   openSpot(id: SpotId): void;
@@ -145,29 +170,63 @@ export interface WalkDeps {
 export function createWalk(d: WalkDeps) {
   const { camera, canvas, root } = d;
   const hero = makeDegen();
-  hero.g.visible = false;
-  hero.ring.visible = false;
+  hero.g.visible = hero.ring.visible = false;
   d.scene.add(hero.g, hero.ring);
 
-  const prompt = root.querySelector<HTMLButtonElement>('[data-walk-prompt]')!;
-  const stick = root.querySelector<HTMLElement>('[data-walk-stick]')!;
+  const $ = <T extends HTMLElement>(s: string) => root.querySelector<T>(s)!;
+  // Opening a door panel frees the mouse so its links can be clicked
+  const openSpot = (id: SpotId) => {
+    if (document.pointerLockElement === canvas) document.exitPointerLock();
+    d.openSpot(id);
+  };
+  const prompt = $<HTMLButtonElement>('[data-walk-prompt]');
+  const stick = $('[data-walk-stick]');
   const knob = stick.querySelector<HTMLElement>('span')!;
+  const runBtn = $<HTMLButtonElement>('[data-walk-run]');
+  const sensInput = $<HTMLInputElement>('[data-walk-sens]');
+  const invertInput = $<HTMLInputElement>('[data-walk-invert]');
+  const fpBtn = $<HTMLButtonElement>('[data-walk-fp]');
 
-  let active = false;
+  const settings = loadSettings();
+  const saveSettings = () => {
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    } catch {
+      /* fine: settings just won't stick */
+    }
+  };
+  sensInput.value = String(settings.sens);
+  invertInput.checked = settings.invert;
+
   const SPAWN = new THREE.Vector3(16.4, SLAB, 18.45);
+  let active = false;
   const pos = SPAWN.clone();
-  let face = Math.PI;
+  const vel = new THREE.Vector2();
   let vy = 0;
+  let grounded = true;
+  let coyote = 0;
+  let jumpBuffer = 0;
+  let jumpHeld = false;
+  let land = 0;
+  let face = 0;
   let phase = 0;
-  let moving = 0;
+  let runAmt = 0;
+  let air = 0;
+
   let yaw = 0.67;
-  let pitch = 0.62;
-  let dist = 5.2;
+  let pitch = 0.5;
+  let zoom = 5.2;
+  let camDist = 5.2;
+  let firstPerson = false;
+  let aim = false;
+  let runLock = false;
+  let baseFov = camera.fov;
+  let fov = 52;
+  const pivot = new THREE.Vector3();
   const keys = new Set<string>();
   const joy = { x: 0, y: 0, id: -1 };
+  const pad = { x: 0, y: 0, run: false, prev: [] as boolean[] };
   let near: { id: SpotId; label: string } | null = null;
-  const camPos = new THREE.Vector3();
-  const look = new THREE.Vector3();
 
   const groundAt = (x: number, z: number) => (slabs.some((b) => inBox(b, x, z)) ? SLAB : 0.035);
   const onBridge = (x: number) => ROADS.some((r) => Math.abs(x - r) < 1.05);
@@ -178,53 +237,140 @@ export function createWalk(d: WalkDeps) {
     return d.plotSolids().some((b) => inBox(b, x, z, RADIUS));
   }
 
-  /* Input */
-  const MOVE_KEYS = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight', 'Space'];
+  /** How far the camera can sit from the pivot along `dir` before something's in the way. */
+  function cameraRoom(from: THREE.Vector3, dir: THREE.Vector3, want: number) {
+    let t = want;
+    // Ground (and kerb) below
+    if (dir.y < 0) {
+      const floor = Math.max(groundAt(from.x, from.z), 0.035) + 0.22;
+      t = Math.min(t, (from.y - floor) / -dir.y);
+    }
+    for (const b of [...SOLIDS, ...CAMERA_ONLY, ...d.plotSolids()]) {
+      if (b[4] < 0.5) continue;
+      const lo = [b[0] - 0.18, 0, b[1] - 0.18];
+      const hi = [b[2] + 0.18, b[4] + 0.15, b[3] + 0.18];
+      const o = [from.x, from.y, from.z];
+      const v = [dir.x, dir.y, dir.z];
+      let t0 = 0;
+      let t1 = t;
+      let hit = true;
+      for (let k = 0; k < 3 && hit; k++) {
+        if (Math.abs(v[k]) < 1e-6) {
+          if (o[k] < lo[k] || o[k] > hi[k]) hit = false;
+          continue;
+        }
+        let a = (lo[k] - o[k]) / v[k];
+        let c = (hi[k] - o[k]) / v[k];
+        if (a > c) [a, c] = [c, a];
+        t0 = Math.max(t0, a);
+        t1 = Math.min(t1, c);
+        if (t0 > t1) hit = false;
+      }
+      if (hit && t0 > 0.01) t = Math.min(t, t0);
+    }
+    return Math.max(0.35, t - 0.15);
+  }
+
+  /* ---------- Input ---------- */
+
+  const look = (dx: number, dy: number, k: number) => {
+    yaw -= dx * k * settings.sens;
+    const limit = firstPerson ? 1.35 : 1.3;
+    const low = firstPerson ? -1.35 : -0.55;
+    pitch = THREE.MathUtils.clamp(pitch + dy * k * settings.sens * (settings.invert ? -1 : 1), low, limit);
+    d.touched();
+  };
+  const tryJump = () => {
+    jumpBuffer = 0.14;
+    d.touched();
+  };
+  function setFirstPerson(on: boolean) {
+    firstPerson = on;
+    if (!on && zoom < 1.5) zoom = 4.5;
+    fpBtn.setAttribute('aria-pressed', String(on));
+    if (on) pitch = THREE.MathUtils.clamp(pitch, -1.35, 1.35);
+    else pitch = Math.max(pitch, -0.55);
+  }
+  function setRunLock(on: boolean) {
+    runLock = on;
+    runBtn.setAttribute('aria-pressed', String(on));
+  }
+
+  const MOVE = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight'];
   function onKey(e: KeyboardEvent, down: boolean) {
     if (!active || (e.target as HTMLElement).matches?.('input, select, textarea')) return false;
-    if (down && e.code === 'KeyE' && near) {
-      d.openSpot(near.id);
-      return true;
-    }
-    if (!MOVE_KEYS.includes(e.code)) return false;
-    if (down) {
-      keys.add(e.code);
-      if (e.code === 'Space' && pos.y <= groundAt(pos.x, pos.z) + 0.01) vy = 3.2;
-    } else keys.delete(e.code);
+    const c = e.code;
+    if (down && c === 'KeyE' && near) openSpot(near.id);
+    else if (down && !e.repeat && c === 'KeyV') setFirstPerson(!firstPerson);
+    else if (down && !e.repeat && (c === 'KeyR' || c === 'CapsLock')) setRunLock(!runLock);
+    else if (c === 'Space') {
+      if (down && !e.repeat) tryJump();
+      jumpHeld = down;
+    } else if (MOVE.includes(c)) {
+      if (down) keys.add(c);
+      else keys.delete(c);
+    } else return false;
     d.touched();
     e.preventDefault();
     return true;
   }
-  window.addEventListener('blur', () => keys.clear());
+  window.addEventListener('blur', () => {
+    keys.clear();
+    jumpHeld = false;
+    aim = false;
+  });
 
-  // Drag on the city to look around, scroll to zoom
-  let drag: { id: number; x: number; y: number } | null = null;
+  // Mouse: click to capture it (pointer lock), then just move to look
+  const locked = () => document.pointerLockElement === canvas;
+  // Esc frees the mouse first; browsers may release the lock before the key event arrives
+  let unlockedAt = -1e9;
+  document.addEventListener('pointerlockchange', () => {
+    root.classList.toggle('is-looking', locked());
+    if (!locked()) unlockedAt = performance.now();
+  });
+  document.addEventListener('mousemove', (e) => {
+    if (active && locked()) look(e.movementX, e.movementY, 0.0024);
+  });
+  canvas.addEventListener('contextmenu', (e) => active && e.preventDefault());
+
+  // Drag to look (touch, or a mouse before it's captured); right button to aim
+  let drag: { id: number; x: number; y: number; touch: boolean } | null = null;
   canvas.addEventListener('pointerdown', (e) => {
-    if (!active || drag) return;
-    drag = { id: e.pointerId, x: e.clientX, y: e.clientY };
+    if (!active) return;
+    if (e.pointerType === 'mouse') {
+      if (e.button === 2) aim = true;
+      if (!locked()) {
+        const req = canvas.requestPointerLock?.() as unknown as Promise<void> | undefined;
+        req?.catch?.(() => {});
+      }
+      if (locked()) return;
+    }
+    if (!drag) drag = { id: e.pointerId, x: e.clientX, y: e.clientY, touch: e.pointerType !== 'mouse' };
   });
   window.addEventListener('pointermove', (e) => {
-    if (!active || !drag || e.pointerId !== drag.id) return;
-    yaw -= (e.clientX - drag.x) * 0.006;
-    pitch = THREE.MathUtils.clamp(pitch + (e.clientY - drag.y) * 0.004, 0.12, 1.25);
+    if (!active || !drag || e.pointerId !== drag.id || locked()) return;
+    look(e.clientX - drag.x, e.clientY - drag.y, drag.touch ? 0.0075 : 0.005);
     drag.x = e.clientX;
     drag.y = e.clientY;
-    d.touched();
   });
   window.addEventListener('pointerup', (e) => {
+    if (e.pointerType === 'mouse' && e.button === 2) aim = false;
     if (drag && e.pointerId === drag.id) drag = null;
   });
   canvas.addEventListener(
     'wheel',
     (e) => {
       if (!active) return;
-      dist = THREE.MathUtils.clamp(dist * (1 + Math.sign(e.deltaY) * 0.1), 3.2, 16);
+      zoom = THREE.MathUtils.clamp(zoom * (1 + Math.sign(e.deltaY) * 0.12), 0.8, 16);
+      if (zoom < 1.2 && !firstPerson) setFirstPerson(true);
+      else if (zoom >= 1.2 && firstPerson && e.deltaY > 0) setFirstPerson(false);
+      d.touched();
       e.preventDefault();
     },
     { passive: false }
   );
 
-  // On-screen joystick for touch
+  // Touch joystick
   const setJoy = (e: PointerEvent) => {
     const r = stick.getBoundingClientRect();
     let x = (e.clientX - (r.left + r.width / 2)) / (r.width / 2);
@@ -251,71 +397,177 @@ export function createWalk(d: WalkDeps) {
   };
   stick.addEventListener('pointerup', endJoy);
   stick.addEventListener('pointercancel', endJoy);
-  root.querySelector('[data-walk-jump]')!.addEventListener('click', () => {
-    if (pos.y <= groundAt(pos.x, pos.z) + 0.01) vy = 3.2;
-    d.touched();
+  const jumpBtn = $('[data-walk-jump]');
+  jumpBtn.addEventListener('pointerdown', () => {
+    tryJump();
+    jumpHeld = true;
   });
-  prompt.addEventListener('click', () => near && d.openSpot(near.id));
+  jumpBtn.addEventListener('pointerup', () => (jumpHeld = false));
+  jumpBtn.addEventListener('pointercancel', () => (jumpHeld = false));
+  runBtn.addEventListener('click', () => setRunLock(!runLock));
+  fpBtn.addEventListener('click', () => setFirstPerson(!firstPerson));
+  sensInput.addEventListener('input', () => {
+    settings.sens = Number(sensInput.value);
+    saveSettings();
+  });
+  invertInput.addEventListener('change', () => {
+    settings.invert = invertInput.checked;
+    saveSettings();
+  });
+  prompt.addEventListener('click', () => near && openSpot(near.id));
 
-  /* Per frame */
+  // Gamepad: left stick move, right stick look, A jump, LB / L3 run, Y enter, View first person
+  function pollPad(dt: number) {
+    const gp = Array.from(navigator.getGamepads?.() ?? []).find((p) => p && p.connected);
+    if (!gp) {
+      pad.x = pad.y = 0;
+      pad.run = false;
+      return;
+    }
+    const dz = (v = 0) => (Math.abs(v) < 0.15 ? 0 : (v - Math.sign(v) * 0.15) / 0.85);
+    pad.x = dz(gp.axes[0]);
+    pad.y = dz(gp.axes[1]);
+    const rx = dz(gp.axes[2]);
+    const ry = dz(gp.axes[3]);
+    if (rx || ry) look(rx * 2.8 * dt, ry * 2 * dt, 1);
+    const b = gp.buttons.map((x) => x.pressed);
+    const edge = (i: number) => b[i] && !pad.prev[i];
+    if (edge(0)) tryJump();
+    jumpHeld = jumpHeld || b[0] || false;
+    if (!b[0] && pad.prev[0]) jumpHeld = false;
+    pad.run = !!(b[4] || b[10]);
+    aim = aim || !!b[6];
+    if (!b[6] && pad.prev[6]) aim = false;
+    if (edge(3) && near) openSpot(near.id);
+    if (edge(8)) setFirstPerson(!firstPerson);
+    if (pad.x || pad.y || b.some(Boolean)) d.touched();
+    pad.prev = b;
+  }
+
+  /* ---------- Per frame ---------- */
+
+  const offset = new THREE.Vector3();
+  const pivotWant = new THREE.Vector3();
+  const view = new THREE.Vector3();
+  const lookAt = new THREE.Vector3();
+
   function update(dt: number, t: number) {
     if (!active) return;
-    // Input in camera space
+    pollPad(dt);
+
+    // What the player wants, in camera space
     let ix = (keys.has('KeyD') || keys.has('ArrowRight') ? 1 : 0) - (keys.has('KeyA') || keys.has('ArrowLeft') ? 1 : 0);
     let iz = (keys.has('KeyW') || keys.has('ArrowUp') ? 1 : 0) - (keys.has('KeyS') || keys.has('ArrowDown') ? 1 : 0);
-    let run = keys.has('ShiftLeft') || keys.has('ShiftRight');
+    let run = runLock || keys.has('ShiftLeft') || keys.has('ShiftRight') || pad.run;
     if (joy.id >= 0) {
       ix = joy.x;
       iz = -joy.y;
-      run = Math.hypot(joy.x, joy.y) > 0.85;
+      run ||= Math.hypot(joy.x, joy.y) > 0.9;
+    } else if (pad.x || pad.y) {
+      ix = pad.x;
+      iz = -pad.y;
+      run ||= Math.hypot(pad.x, pad.y) > 0.95;
     }
     const mag = Math.min(1, Math.hypot(ix, iz));
+    const n = Math.hypot(ix, iz) || 1;
     const fx = -Math.sin(yaw);
     const fz = -Math.cos(yaw);
-    let mx = (fx * iz + -fz * ix) / (Math.hypot(ix, iz) || 1);
-    let mz = (fz * iz + fx * ix) / (Math.hypot(ix, iz) || 1);
-    mx *= mag;
-    mz *= mag;
-    const speed = (run ? RUN : WALK) * dt;
-    moving += ((mag > 0.05 ? (run ? 1.6 : 1) : 0) - moving) * Math.min(1, dt * 10);
-    if (mag > 0.05) {
-      const nx = pos.x + mx * speed;
-      const nz = pos.z + mz * speed;
-      // Never trapped: if he's ended up overlapping something, any step is allowed
-      const stuck = blocked(pos.x, pos.z);
-      if (stuck || !blocked(nx, pos.z)) pos.x = nx;
-      if (stuck || !blocked(pos.x, nz)) pos.z = nz;
-      const target = Math.atan2(mx, mz);
-      face += Math.atan2(Math.sin(target - face), Math.cos(target - face)) * Math.min(1, dt * 12);
+    const dirX = ((fx * iz - fz * ix) / n) * mag;
+    const dirZ = ((fz * iz + fx * ix) / n) * mag;
+    const top = run && !aim ? RUN : aim ? WALK * 0.7 : WALK;
+
+    // Accelerate towards it (less control in the air)
+    const k = damp(grounded ? (mag > 0.05 ? 11 : 14) : 2.5, dt);
+    vel.x += (dirX * top - vel.x) * k;
+    vel.y += (dirZ * top - vel.y) * k;
+    const stuck = blocked(pos.x, pos.z);
+    const nx = pos.x + vel.x * dt;
+    if (stuck || !blocked(nx, pos.z)) pos.x = nx;
+    else vel.x = 0;
+    const nz = pos.z + vel.y * dt;
+    if (stuck || !blocked(pos.x, nz)) pos.z = nz;
+    else vel.y = 0;
+    const speed = vel.length();
+
+    // Face where you're going, or where you look when aiming / in first person
+    const lookFace = yaw + Math.PI;
+    if (aim || firstPerson) face += wrap(lookFace - face) * damp(16, dt);
+    else if (speed > 0.25) face += wrap(Math.atan2(vel.x, vel.y) - face) * damp(12, dt);
+
+    // Jumping: buffered presses, a little coyote time, release early for a short hop
+    coyote = grounded ? 0.12 : coyote - dt;
+    jumpBuffer -= dt;
+    if (jumpBuffer > 0 && coyote > 0) {
+      vy = JUMP;
+      grounded = false;
+      coyote = jumpBuffer = 0;
     }
-    // Kerbs and jumping
-    const ground = groundAt(pos.x, pos.z);
-    vy -= 9.5 * dt;
+    vy -= (GRAVITY + (!jumpHeld && vy > 0 ? 16 : 0)) * dt;
     pos.y += vy * dt;
+    const ground = groundAt(pos.x, pos.z);
     if (pos.y <= ground) {
-      pos.y = pos.y < ground - 0.05 ? pos.y + (ground - pos.y) * Math.min(1, dt * 18) : ground;
+      if (!grounded && vy < -3) land = 0.16;
+      // Kerbs: step up smoothly rather than pop
+      pos.y = pos.y < ground - 0.05 ? pos.y + (ground - pos.y) * damp(20, dt) : ground;
       vy = 0;
-    }
+      grounded = true;
+    } else if (pos.y > ground + 0.04) grounded = false;
+    land = Math.max(0, land - dt);
 
-    // Animate: stride with speed, a little bob, idle breathing
-    phase += dt * (4 + moving * 5) * (moving > 0.05 ? 1 : 0);
-    const swing = Math.sin(phase) * 0.7 * Math.min(1, moving);
-    hero.legs[0].rotation.x = swing;
-    hero.legs[1].rotation.x = -swing;
-    hero.arms[0].rotation.x = -swing * 0.8;
-    hero.arms[1].rotation.x = swing * 0.8 - (moving < 0.05 ? 0.25 : 0);
-    hero.head.rotation.y = moving < 0.05 ? Math.sin(t * 0.6) * 0.3 : 0;
-    const bob = Math.abs(Math.cos(phase)) * 0.035 * Math.min(1, moving) + Math.sin(t * 2) * 0.004;
+    // Animation
+    runAmt += (THREE.MathUtils.clamp((speed - WALK) / (RUN - WALK), 0, 1) - runAmt) * damp(8, dt);
+    air += ((grounded ? 0 : 1) - air) * damp(12, dt);
+    phase += dt * speed * 3.1;
+    const stride = Math.min(1, speed / WALK) * (0.62 + runAmt * 0.38);
+    const swing = Math.sin(phase) * stride;
+    hero.legs[0].rotation.x = swing * (1 - air) + air * 0.5;
+    hero.legs[1].rotation.x = -swing * (1 - air) - air * 0.2;
+    const armBase = -runAmt * 0.35;
+    hero.arms[0].rotation.x = (-swing * 0.9 + armBase) * (1 - air) - air * 2.5;
+    hero.arms[1].rotation.x = (swing * 0.9 + armBase - (speed < 0.2 ? 0.25 : 0)) * (1 - air) - air * 2.5;
+    hero.arms[0].rotation.z = -air * 0.3;
+    hero.arms[1].rotation.z = air * 0.3;
+    // The head follows the camera: turns towards where you look, tilts up and down
+    const headYaw = THREE.MathUtils.clamp(wrap(lookFace - face), -0.9, 0.9);
+    hero.head.rotation.y += ((speed < 0.25 || aim ? headYaw : 0) - hero.head.rotation.y) * damp(8, dt);
+    hero.head.rotation.x += (THREE.MathUtils.clamp(-(0.35 - pitch) * 0.6, -0.55, 0.45) - hero.head.rotation.x) * damp(8, dt);
+    const bob = Math.abs(Math.cos(phase)) * 0.04 * stride * (1 - air) + (speed < 0.2 ? Math.sin(t * 2) * 0.004 : 0);
     hero.g.position.set(pos.x, pos.y + bob, pos.z);
-    hero.g.rotation.y = face;
-    hero.ring.position.set(pos.x, groundAt(pos.x, pos.z) + 0.02, pos.z);
+    hero.g.rotation.set(runAmt * 0.2 * (1 - air), face, 0);
+    const squash = land / 0.16;
+    hero.g.scale.set(SCALE * (1 + squash * 0.18), SCALE * (1 - squash * 0.22), SCALE * (1 + squash * 0.18));
+    hero.ring.position.set(pos.x, ground + 0.02, pos.z);
+    (hero.ring.material as THREE.MeshBasicMaterial).opacity = 0.55 * (1 - air * 0.6);
 
-    // Third-person camera, eased
-    look.set(pos.x, pos.y + 0.85, pos.z);
-    const want = new THREE.Vector3(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch)).multiplyScalar(dist).add(look);
-    camPos.lerp(want, 1 - Math.exp(-dt * 9));
-    camera.position.copy(camPos);
-    camera.lookAt(look);
+    // Camera: over the shoulder, pulled in when something's in the way
+    const shoulder = firstPerson ? 0 : THREE.MathUtils.clamp(1 - zoom / 10, 0, 1) * 0.38;
+    pivotWant.set(pos.x + Math.cos(yaw) * shoulder, pos.y + (firstPerson ? 1.12 : 0.95) * SCALE + 0.05, pos.z - Math.sin(yaw) * shoulder);
+    if (pivot.lengthSq() === 0) pivot.copy(pivotWant);
+    pivot.x += (pivotWant.x - pivot.x) * damp(18, dt);
+    pivot.z += (pivotWant.z - pivot.z) * damp(18, dt);
+    pivot.y += (pivotWant.y - pivot.y) * damp(firstPerson ? 25 : 10, dt);
+    // Looking up tilts the view but keeps the camera behind him (not down at his feet),
+    // so he drops to the bottom of the frame and the sky opens up
+    const camPitch = firstPerson ? pitch : Math.max(pitch, -0.12);
+    offset.set(Math.sin(yaw) * Math.cos(camPitch), Math.sin(camPitch), Math.cos(yaw) * Math.cos(camPitch));
+    const want = firstPerson ? 0 : zoom * (aim ? 0.62 : 1);
+    const room = firstPerson ? 0 : cameraRoom(pivot, offset, want);
+    camDist = room < camDist ? room : camDist + (room - camDist) * damp(4, dt);
+    camera.position.copy(pivot).addScaledVector(offset, camDist);
+    if (firstPerson) camera.position.y += Math.sin(phase * 2) * 0.025 * stride * (1 - air);
+    view.set(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
+    lookAt.copy(camera.position).sub(view);
+    camera.lookAt(lookAt);
+    hero.g.visible = !firstPerson && camDist > 0.6;
+    hero.ring.visible = !firstPerson;
+
+    // Field of view widens with speed, narrows when aiming
+    const wantFov = (firstPerson ? 70 : 52) + runAmt * 8 - (aim ? 10 : 0);
+    fov += (wantFov - fov) * damp(6, dt);
+    if (Math.abs(camera.fov - fov) > 0.05) {
+      camera.fov = fov;
+      camera.updateProjectionMatrix();
+    }
 
     // Door prompts
     let best: { id: SpotId; label: string } | null = null;
@@ -341,31 +593,50 @@ export function createWalk(d: WalkDeps) {
     get position() {
       return pos;
     },
+    get looking() {
+      return locked();
+    },
     onKey,
     update,
     enter() {
       active = true;
       pos.copy(SPAWN);
-      face = 0;
+      vel.set(0, 0);
       vy = 0;
+      grounded = true;
+      face = 0;
       yaw = 0.67;
-      pitch = 0.62;
-      dist = 5.2;
-      look.set(pos.x, pos.y + 0.75, pos.z);
-      camPos.copy(camera.position);
+      pitch = 0.5;
+      zoom = camDist = 5.2;
+      pivot.set(0, 0, 0);
+      setFirstPerson(false);
+      baseFov = camera.fov;
+      fov = camera.fov;
       hero.g.visible = hero.ring.visible = true;
       root.dataset.mode = 'walk';
     },
     exit() {
       active = false;
       keys.clear();
+      jumpHeld = aim = false;
       joy.id = -1;
       joy.x = joy.y = 0;
       knob.style.transform = '';
       near = null;
       prompt.hidden = true;
       hero.g.visible = hero.ring.visible = false;
+      if (locked()) document.exitPointerLock();
+      camera.fov = baseFov;
+      camera.updateProjectionMatrix();
       root.dataset.mode = 'explore';
+    },
+    /** True if Esc was used to free the mouse (so it shouldn't also stop walking). */
+    releaseMouse() {
+      if (locked()) {
+        document.exitPointerLock();
+        return true;
+      }
+      return performance.now() - unlockedAt < 250;
     },
   };
 }

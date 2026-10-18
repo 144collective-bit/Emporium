@@ -2207,8 +2207,169 @@ body.full-bleed {
   text-align: center;
 }
 .walk-stick,
-.walk-jump {
+.walk-jump,
+.walk-run {
   display: none;
+}
+.walk-settings {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 5;
+  max-width: calc(100% - 32px);
+}
+.walk-settings summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border: 1px solid #0000;
+  border-radius: 999px;
+  background:
+    linear-gradient(#0b0a12e0, #0b0a12e0) padding-box,
+    var(--pulse) border-box;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #fff;
+  cursor: pointer;
+  list-style: none;
+}
+.walk-settings summary::-webkit-details-marker {
+  display: none;
+}
+.walk-settings summary svg {
+  color: var(--p-cyan);
+}
+.walk-settings-body {
+  display: grid;
+  gap: 12px;
+  width: 280px;
+  max-width: 100%;
+  max-height: calc(100vh - 120px);
+  margin-top: 8px;
+  padding: 14px 16px;
+  overflow-y: auto;
+  border: 1px solid #0000;
+  border-radius: 10px;
+  background:
+    linear-gradient(#0b0a12f0, #0b0a12f0) padding-box,
+    var(--pulse) border-box;
+  font-size: 13px;
+  color: var(--text-2);
+}
+.walk-field {
+  display: grid;
+  gap: 6px;
+}
+.walk-field span,
+.walk-check span {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--p-cyan);
+}
+.walk-field input {
+  width: 100%;
+  accent-color: var(--p-cyan);
+}
+.walk-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.walk-check input {
+  accent-color: var(--p-cyan);
+}
+.walk-fp,
+.walk-run {
+  border: 1px solid #0000;
+  background:
+    linear-gradient(#0b0a12e0, #0b0a12e0) padding-box,
+    var(--pulse) border-box;
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.walk-fp {
+  justify-self: start;
+  padding: 8px 14px;
+  border-radius: 999px;
+}
+.walk-fp[aria-pressed="true"],
+.walk-run[aria-pressed="true"] {
+  background:
+    var(--pulse-wash) padding-box,
+    linear-gradient(#14102a, #14102a) padding-box,
+    var(--pulse) border-box;
+  box-shadow: 0 0 20px -6px #00eaffaa;
+}
+.walk-keys {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 12px;
+  margin: 0;
+  align-items: center;
+}
+.walk-keys dd {
+  margin: 0;
+}
+.walk-pad {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.walk-look {
+  position: absolute;
+  top: 72px;
+  left: 50%;
+  z-index: 3;
+  margin: 0;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: #0b0a12b0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #fff;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translateX(-50%);
+  transition: opacity 0.3s;
+}
+.walk-settings[open] ~ .walk-hint,
+.walk-settings[open] ~ .walk-look {
+  display: none;
+}
+.city.is-looking .walk-look {
+  opacity: 0;
+}
+/* While the mouse is captured, a small crosshair marks the centre */
+.walk-crosshair {
+  display: none;
+}
+.city.is-looking .walk-crosshair {
+  position: absolute;
+  display: block;
+  top: 50%;
+  left: 50%;
+  z-index: 3;
+  width: 6px;
+  height: 6px;
+  border: 1px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 6px #00eaff;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
 }
 .walk-prompt {
   position: absolute;
@@ -2244,8 +2405,25 @@ body.full-bleed {
 }
 /* Touch: joystick bottom-left, jump bottom-right */
 @media (pointer: coarse) {
-  .walk-hint {
+  .walk-hint,
+  .walk-look {
     display: none;
+  }
+  .walk-keys {
+    display: none;
+  }
+  .walk-run {
+    position: absolute;
+    right: 30px;
+    bottom: 122px;
+    z-index: 4;
+    display: grid;
+    place-items: center;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    font-size: 10px;
+    touch-action: manipulation;
   }
   .walk-stick {
     position: absolute;
@@ -2401,6 +2579,11 @@ body.full-bleed {
   }
   .city-mode-btn svg {
     display: none;
+  }
+  .walk-settings {
+    top: 60px;
+    left: 12px;
+    max-width: calc(100% - 24px);
   }
   .builder-bar {
     top: 60px;

@@ -375,8 +375,8 @@ export interface PlotsApi {
   setOwned(ids: Iterable<string>): void;
   /** Put a building on a plot (or clear it with null) */
   show(id: string, design: Design | null, animate?: boolean): void;
-  /** Footprints of placed buildings, for walk mode (parks are walkable) */
-  solids(): [number, number, number, number][];
+  /** Footprints and heights of placed buildings, for walk mode (parks are walkable) */
+  solids(): [number, number, number, number, number][];
 }
 
 export function createPlots(scene: THREE.Scene, opts: { degen: HTMLImageElement | null; tick: (f: Tick) => void; reduced: boolean }): PlotsApi {
@@ -427,7 +427,7 @@ export function createPlots(scene: THREE.Scene, opts: { degen: HTMLImageElement 
 
   // Buildings
   const buildings = new Map<string, THREE.Group>();
-  const types = new Map<string, BuildingType>();
+  const designs = new Map<string, Design>();
   const rising: { g: THREE.Group; t0: number }[] = [];
   const blinkers: THREE.Points[] = [];
   let now = 0;
@@ -490,11 +490,12 @@ export function createPlots(scene: THREE.Scene, opts: { degen: HTMLImageElement 
       paint();
     },
     solids() {
-      const out: [number, number, number, number][] = [];
-      for (const [id, type] of types) {
-        if (type === 'garden') continue;
+      const out: [number, number, number, number, number][] = [];
+      for (const [id, d] of designs) {
+        if (d.type === 'garden') continue;
         const p = PLOT_BY_ID.get(id)!;
-        out.push([p.cx - 1.1, p.cz - 1.1, p.cx + 1.1, p.cz + 1.1]);
+        const h = d.type === 'tower' ? d.floors * 0.34 + 1.4 : d.type === 'loft' ? d.floors * 0.42 + 0.6 : d.type === 'billboard' ? 2.8 : 2;
+        out.push([p.cx - 1.1, p.cz - 1.1, p.cx + 1.1, p.cz + 1.1, h]);
       }
       return out;
     },
@@ -504,7 +505,7 @@ export function createPlots(scene: THREE.Scene, opts: { degen: HTMLImageElement 
       const old = buildings.get(id);
       if (old) disposeGroup(old);
       buildings.delete(id);
-      types.delete(id);
+      designs.delete(id);
       signAt(p, !design && !owned.has(id));
       post.instanceMatrix.needsUpdate = board.instanceMatrix.needsUpdate = true;
       if (!design) return;
@@ -516,7 +517,7 @@ export function createPlots(scene: THREE.Scene, opts: { degen: HTMLImageElement 
       g.rotation.y = (design.rot % 4) * (Math.PI / 2);
       scene.add(g);
       buildings.set(id, g);
-      types.set(id, design.type);
+      designs.set(id, { ...design });
       if (anim && !opts.reduced) animate(g);
     },
   };

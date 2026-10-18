@@ -56,8 +56,14 @@ it and has been retired completely. Build only on what's here.
 
 ## Walk mode (3D)
 
-- `src/scripts/city3d/walk.ts`: the playable Degen, third-person camera,
-  keyboard and touch-joystick controls, collisions and door prompts.
+- `src/scripts/city3d/walk.ts`: the playable Degen, over-the-shoulder and
+  first-person camera, mouse (pointer lock), keyboard, touch and gamepad
+  controls, collisions and door prompts. Look settings are saved under
+  `degen-city-walk-v1` in localStorage. The HUD markup (Controls panel, Run
+  and Jump buttons, joystick) is in `CityMap.astro`; `walk.ts` expects every
+  `data-walk-*` element to exist.
+- Esc frees the mouse first and only then stops walking. Door panels free
+  the mouse so their links can be clicked.
 - Collision footprints (`SOLIDS`) and door spots (`DOORS`) mirror
   `landmarks.ts`. When a landmark moves or changes size, update both.
   Placed buildings block via `plots.solids()`; parks stay walkable.
