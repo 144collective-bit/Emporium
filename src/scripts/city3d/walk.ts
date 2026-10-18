@@ -350,7 +350,7 @@ export function createWalk(d: WalkDeps) {
   window.addEventListener('blur', () => {
     keys.clear();
     jumpHeld = false;
-    aim = false;
+    aim = mouseL = mouseR = false;
     combat.trigger(false);
     combat.trigger(false, true);
   });
@@ -361,27 +361,49 @@ export function createWalk(d: WalkDeps) {
   let unlockedAt = -1e9;
   document.addEventListener('pointerlockchange', () => {
     root.classList.toggle('is-looking', locked());
-    if (!locked()) unlockedAt = performance.now();
+    if (!locked()) {
+      unlockedAt = performance.now();
+      if (mouseL) combat.trigger(false);
+      mouseL = false;
+    }
   });
   document.addEventListener('mousemove', (e) => {
     if (active && locked()) look(e.movementX, e.movementY, 0.0024);
   });
   canvas.addEventListener('contextmenu', (e) => active && e.preventDefault());
 
-  // Drag to look (touch, or a mouse before it's captured); right button to aim
+  // Mouse buttons: mousedown / mouseup fire for every button, even a second one
+  // pressed while another is held (pointerdown doesn't, so fire-while-aiming was
+  // lost). Right aims; left fires once the mouse is captured, so the click that
+  // captures it doesn't fire.
+  let mouseL = false;
+  let mouseR = false;
+  canvas.addEventListener('mousedown', (e) => {
+    if (!active) return;
+    if (e.button === 2) aim = mouseR = true;
+    if (e.button === 0 && locked()) {
+      mouseL = true;
+      combat.trigger(true);
+    }
+  });
+  window.addEventListener('mouseup', (e) => {
+    if (e.button === 2 && mouseR) aim = mouseR = false;
+    if (e.button === 0 && mouseL) {
+      mouseL = false;
+      combat.trigger(false);
+    }
+  });
+
+  // Drag to look (touch, or a mouse before it's captured)
   let drag: { id: number; x: number; y: number; touch: boolean } | null = null;
   canvas.addEventListener('pointerdown', (e) => {
     if (!active) return;
     if (e.pointerType === 'mouse') {
-      if (e.button === 2) aim = true;
       if (!locked()) {
         const req = canvas.requestPointerLock?.() as unknown as Promise<void> | undefined;
         req?.catch?.(() => {});
       }
-      if (locked()) {
-        if (e.button === 0) combat.trigger(true);
-        return;
-      }
+      if (locked()) return;
     }
     if (!drag) drag = { id: e.pointerId, x: e.clientX, y: e.clientY, touch: e.pointerType !== 'mouse' };
   });
@@ -392,8 +414,6 @@ export function createWalk(d: WalkDeps) {
     drag.y = e.clientY;
   });
   window.addEventListener('pointerup', (e) => {
-    if (e.pointerType === 'mouse' && e.button === 2) aim = false;
-    if (e.pointerType === 'mouse' && e.button === 0) combat.trigger(false);
     if (drag && e.pointerId === drag.id) drag = null;
   });
   canvas.addEventListener(
@@ -709,7 +729,7 @@ export function createWalk(d: WalkDeps) {
     exit() {
       active = false;
       keys.clear();
-      jumpHeld = false;
+      jumpHeld = mouseL = mouseR = false;
       setAim(false);
       combat.exit();
       joy.id = -1;
