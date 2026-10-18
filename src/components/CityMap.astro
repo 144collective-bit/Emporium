@@ -1,0 +1,354 @@
+---
+/*
+ * The homepage: Degen City.
+ *
+ * Two layers. The 2D isometric map (src/lib/city.ts) renders on the server:
+ * it's the loading poster, the no-WebGL fallback and the "2D map" view. On
+ * top of it the 3D city (src/scripts/city3d) boots where WebGL is available:
+ * buildings you hover and click, a camera that flies in, glass panels with
+ * each section, day/night, weather and optional sound.
+ *
+ * All copy is DRAFT - see the note in the card and the panels.
+ */
+import { getImage } from 'astro:assets';
+import degen from '../assets/degen.png';
+import logo from '../assets/logo.png';
+import { renderCity, VIEW, EMPORIUM_FOCUS, type Spot, type SpotId } from '../lib/city';
+import { X_URL, X_HANDLE, TELEGRAM_URL, SHOP_URL, SHOP_OPEN } from '../data/site';
+
+const [degenImg, logoImg, degenBig, logoBig] = await Promise.all([
+  getImage({ src: degen, width: 160, format: 'webp' }),
+  getImage({ src: logo, width: 440, format: 'webp' }),
+  getImage({ src: degen, width: 520, format: 'webp' }),
+  getImage({ src: logo, width: 729, format: 'webp' }),
+]);
+
+const spots: Record<SpotId, Spot> = {
+  emporium: { href: '/emporium', title: 'The Emporium', sub: 'Step inside', aria: 'The Emporium: step inside' },
+  shop: SHOP_OPEN
+    ? { href: SHOP_URL, external: true, title: 'Drop 001', sub: 'Open now', aria: 'Drop 001: enter the store' }
+    : { href: '/emporium#drop', title: 'Drop 001', sub: 'Coming soon', aria: 'Drop 001: coming soon' },
+  workshop: { href: '/emporium#workshop', title: 'The Workshop', sub: 'Tools for degens', aria: 'The Workshop: tools for degens' },
+  vault: { href: '/emporium#vault', title: 'The Vault', sub: 'Classified', aria: 'The Vault: classified until launch' },
+  plan: { href: '/emporium#plan', title: 'Building site', sub: 'The plan, roughly', aria: 'Building site: the plan, roughly' },
+  signal: { href: X_URL, external: true, title: 'Signal tower', sub: `@${X_HANDLE} on X`, aria: `Signal tower: @${X_HANDLE} on X` },
+  telegram: { href: TELEGRAM_URL, external: true, title: 'Post office', sub: 'Telegram', aria: 'Post office: join us on Telegram' },
+};
+const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram'];
+const ext = { target: '_blank', rel: 'noopener noreferrer' };
+
+const map = renderCity({ spots, art: { degen: degenImg.src, logo: logoImg.src } });
+const focusX = +((EMPORIUM_FOCUS[0] - VIEW.x) / VIEW.w).toFixed(4);
+const focusY = +((EMPORIUM_FOCUS[1] - VIEW.y) / VIEW.h).toFixed(4);
+---
+
+<section class="city" aria-labelledby="city-title" data-city-root data-view="2d" data-degen={degenBig.src} data-logo={logoBig.src}>
+  <div class="city-viewport" data-city data-focus-x={focusX} data-focus-y={focusY} tabindex="0" role="region" aria-label="City map: scroll or drag to look around">
+    <svg class="city-map" viewBox={`${VIEW.x} ${VIEW.y} ${VIEW.w} ${VIEW.h}`} role="group" aria-label="Degen City">
+      <g set:html={map} />
+    </svg>
+  </div>
+
+  {/* The 3D city: canvas is added by the script; pins float over their buildings */}
+  <div class="city3d" data-city3d>
+    <div class="city-pins">
+      {directory.map((id) => (
+        <button type="button" class="city-pin" data-pin={id} tabindex="-1" aria-hidden="true">
+          <span class="city-pin-card">
+            <span class="city-pin-title">{spots[id].title}</span>
+            <span class="city-pin-sub">{spots[id].sub}</span>
+          </span>
+        </button>
+      ))}
+    </div>
+  </div>
+
+  <div class="city-loader" data-loader hidden>
+    <p class="kicker"><span class="kicker-num">3D</span> Entering Degen City</p>
+    <div class="city-loader-bar" data-loader-bar><span></span></div>
+  </div>
+
+  {/* View settings, only while the 3D city is up */}
+  <details class="city-controls" data-controls>
+    <summary>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" /></svg>
+      <span>City settings</span>
+    </summary>
+    <div class="city-controls-body">
+      <div class="seg" role="group" aria-label="Time of day">
+        <span class="seg-label">Time</span>
+        <button type="button" data-time="live" aria-pressed="true">Live</button>
+        <button type="button" data-time="day" aria-pressed="false">Day</button>
+        <button type="button" data-time="sunset" aria-pressed="false">Sunset</button>
+        <button type="button" data-time="night" aria-pressed="false">Night</button>
+      </div>
+      <div class="seg" role="group" aria-label="Weather">
+        <span class="seg-label">Sky</span>
+        <button type="button" data-weather="auto" aria-pressed="true">Auto</button>
+        <button type="button" data-weather="clear" aria-pressed="false">Clear</button>
+        <button type="button" data-weather="rain" aria-pressed="false">Rain</button>
+      </div>
+      <div class="seg">
+        <button type="button" class="seg-wide" data-sound aria-pressed="false">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4zM15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14" /></svg>
+          <span data-sound-label>Sound off</span>
+        </button>
+        <button type="button" class="seg-wide" data-reset>Reset view</button>
+        <button type="button" class="seg-wide" data-view-toggle="2d">2D map</button>
+      </div>
+    </div>
+  </details>
+  <button type="button" class="city-to3d" data-view-toggle="3d" hidden>
+    <span aria-hidden="true">◆</span> Enter 3D city
+  </button>
+
+  {/* One glass panel; its content comes from the templates below */}
+  <aside class="city-panel" data-panel hidden role="dialog" aria-labelledby="city-panel-title">
+    <button type="button" class="city-panel-close" data-panel-close aria-label="Close and fly back">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
+    </button>
+    <div class="city-panel-body" data-panel-body></div>
+    <p class="city-draft">Draft copy · v0 · nothing here is final</p>
+  </aside>
+
+  <template data-panel-tpl="emporium">
+    <p class="kicker"><span class="kicker-num">01</span> A PulseChain native store</p>
+    <h2 id="city-panel-title" class="city-panel-title">Goods for the chronically <span class="hl">on&#8209;chain.</span></h2>
+    <p class="city-panel-text">Made by degens who read the whitepaper twice and understood it zero times.</p>
+    <div class="city-panel-actions">
+      <a class="btn-pulse" href="/emporium">Enter the Emporium <span aria-hidden="true">→</span></a>
+    </div>
+  </template>
+  <template data-panel-tpl="shop">
+    <p class="kicker"><span class="kicker-num">02</span> The Drop</p>
+    <h2 id="city-panel-title" class="city-panel-title">Drop 001</h2>
+    <p class="city-panel-text">Heavyweight goods for lightweight portfolios.</p>
+    <div class="city-panel-actions">
+      {SHOP_OPEN ? (
+        <a class="btn-pulse" href={SHOP_URL} {...ext}>Enter the store <span aria-hidden="true">→</span></a>
+      ) : (
+        <button type="button" class="btn-pulse" disabled>Enter the store</button>
+      )}
+      <a class="chip-link" href="/emporium#drop">See the drop</a>
+    </div>
+    {!SHOP_OPEN && <span class="tag">Coming soon</span>}
+  </template>
+  <template data-panel-tpl="workshop">
+    <p class="kicker"><span class="kicker-num">04</span> The Workshop</p>
+    <h2 id="city-panel-title" class="city-panel-title">Tools for degens</h2>
+    <ul class="city-panel-list" aria-label="Tools in development">
+      <li>Terminal</li>
+      <li>DEX</li>
+      <li>Launcher</li>
+    </ul>
+    <p class="city-panel-text">In the workshop. Mind the sparks.</p>
+    <div class="city-panel-actions">
+      <a class="btn-pulse" href="/emporium#workshop">Peek inside <span aria-hidden="true">→</span></a>
+    </div>
+  </template>
+  <template data-panel-tpl="vault">
+    <p class="kicker"><span class="kicker-num">05</span> The Vault</p>
+    <h2 id="city-panel-title" class="city-panel-title">Classified</h2>
+    <p class="city-panel-text">Revealed at launch. Nothing to see here. Nice try though.</p>
+    <p class="city-panel-fine">Not financial advice. Barely advice at all.</p>
+    <div class="city-panel-actions">
+      <a class="btn-pulse" href="/emporium#vault">Check the vault <span aria-hidden="true">→</span></a>
+    </div>
+  </template>
+  <template data-panel-tpl="plan">
+    <p class="kicker"><span class="kicker-num">06</span> What's next</p>
+    <h2 id="city-panel-title" class="city-panel-title">The plan, roughly</h2>
+    <ol class="city-panel-steps">
+      <li><span>01</span> Drop 001 <small>Merch you can actually wear.</small></li>
+      <li><span>02</span> The tools <small>Built in public. Broken in private.</small></li>
+      <li><span>03</span> The token <small>When it's ready. Not before.</small></li>
+    </ol>
+    <div class="city-panel-actions">
+      <a class="btn-pulse" href="/emporium#plan">See the plan <span aria-hidden="true">→</span></a>
+    </div>
+  </template>
+  <template data-panel-tpl="signal">
+    <p class="kicker"><span class="kicker-num">03</span> Signal</p>
+    <h2 id="city-panel-title" class="city-panel-title">Follow the degen</h2>
+    <p class="city-panel-text">News from the city goes out on X first.</p>
+    <div class="city-panel-actions">
+      <a class="btn-pulse" href={X_URL} {...ext}>Follow @{X_HANDLE} <span aria-hidden="true">→</span></a>
+    </div>
+  </template>
+  <template data-panel-tpl="telegram">
+    <p class="kicker"><span class="kicker-num">03</span> Signal</p>
+    <h2 id="city-panel-title" class="city-panel-title">The post office</h2>
+    <p class="city-panel-text">Pull up a chair in the Telegram.</p>
+    <div class="city-panel-actions">
+      <a class="btn-pulse" href={TELEGRAM_URL} {...ext}>Open Telegram <span aria-hidden="true">→</span></a>
+    </div>
+  </template>
+
+  <div class="city-hud" data-city-hud>
+    <div class="city-card" id="city-card">
+      <button type="button" class="city-card-close" data-card-close aria-controls="city-card" aria-label="Hide the welcome card">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
+      </button>
+      <p class="kicker"><span class="kicker-num">GM</span> PulseChain native</p>
+      <h1 id="city-title" class="city-title">Welcome to <span class="hl">Degen&nbsp;City</span></h1>
+      <p class="city-hint"><span class="hint-2d">Drag to look around. Pick a lit-up building to go in.</span><span class="hint-3d">Drag to move, two fingers or right-drag to turn, pinch or scroll to zoom. Tap a building to go in.</span></p>
+      <p class="city-draft">Draft · v0 · nothing here is final</p>
+    </div>
+
+    <details class="city-dir">
+      <summary>Directory</summary>
+      <ul>
+        {directory.map((id) => {
+          const s = spots[id];
+          return (
+            <li>
+              <a href={s.href} data-dir-spot={id} {...(s.external ? ext : {})}>
+                <span>{s.title}</span>
+                <small>{s.sub}</small>
+              </a>
+            </li>
+          );
+        })}
+      </ul>
+    </details>
+
+    {/* Stands in for the card's draft note once the card is hidden on a phone */}
+    <p class="city-draft-tag">Draft · v0</p>
+  </div>
+  {/* Restore a hidden card before first paint, so it doesn't flash */}
+  <script is:inline>
+    try {
+      if (localStorage.getItem('city-card') === 'hidden') {
+        document.querySelector('[data-city-hud]').dataset.card = 'hidden';
+      }
+    } catch {}
+  </script>
+</section>
+
+<script>
+  const root = document.querySelector<HTMLElement>('[data-city-root]');
+  const vp = document.querySelector<HTMLElement>('[data-city]');
+  const svg = vp?.querySelector('svg');
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  if (root && vp && svg) {
+    // Open on the Emporium
+    vp.scrollLeft = svg.clientWidth * Number(vp.dataset.focusX) - vp.clientWidth / 2;
+    vp.scrollTop = svg.clientHeight * Number(vp.dataset.focusY) - vp.clientHeight / 2;
+
+    // Drag to pan with a mouse; touch and trackpads scroll natively
+    let drag: { x: number; y: number; left: number; top: number } | null = null;
+    let moved = false;
+    vp.addEventListener('pointerdown', (e) => {
+      if (e.pointerType !== 'mouse' || e.button !== 0) return;
+      drag = { x: e.clientX, y: e.clientY, left: vp.scrollLeft, top: vp.scrollTop };
+      moved = false;
+    });
+    window.addEventListener('pointermove', (e) => {
+      if (!drag) return;
+      const dx = e.clientX - drag.x;
+      const dy = e.clientY - drag.y;
+      if (!moved && Math.hypot(dx, dy) > 5) {
+        moved = true;
+        vp.classList.add('is-dragging');
+      }
+      if (moved) {
+        vp.scrollLeft = drag.left - dx;
+        vp.scrollTop = drag.top - dy;
+      }
+    });
+    window.addEventListener('pointerup', () => {
+      drag = null;
+      vp.classList.remove('is-dragging');
+    });
+    // A drag that ends on a building is not a click
+    vp.addEventListener(
+      'click',
+      (e) => {
+        if (moved) {
+          e.preventDefault();
+          e.stopPropagation();
+          moved = false;
+        }
+      },
+      true
+    );
+    vp.addEventListener('dragstart', (e) => e.preventDefault());
+
+    // A building and its pin light up together
+    const hot = (id: string, on: boolean) =>
+      vp.querySelectorAll(`[data-spot="${id}"]`).forEach((el) => el.classList.toggle('is-hot', on));
+    vp.querySelectorAll<SVGElement>('[data-spot]').forEach((el) => {
+      const id = el.dataset.spot!;
+      el.addEventListener('pointerenter', () => hot(id, true));
+      el.addEventListener('pointerleave', () => hot(id, false));
+      el.addEventListener('focus', () => hot(id, true));
+      el.addEventListener('blur', () => hot(id, false));
+    });
+
+    // Phones: the welcome card can be hidden, and stays hidden on return
+    document.querySelector('[data-card-close]')?.addEventListener('click', () => {
+      const hud = document.querySelector<HTMLElement>('[data-city-hud]')!;
+      hud.dataset.card = 'hidden';
+      try {
+        localStorage.setItem('city-card', 'hidden');
+      } catch {}
+      vp.focus({ preventScroll: true });
+    });
+
+    // SMIL animations (cars, rings, the plane) ignore CSS, so pause them here
+    if (reduced) svg.pauseAnimations();
+
+    /* ---------- The 3D city ---------- */
+    const controls = root.querySelector<HTMLDetailsElement>('[data-controls]')!;
+    const to3d = root.querySelector<HTMLButtonElement>('.city-to3d')!;
+    let city: { stop(): void; start(): void } | null = null;
+    let booting = false;
+    const remember = (v: string) => {
+      try {
+        localStorage.setItem('city-view', v);
+      } catch {}
+    };
+
+    async function go3d() {
+      if (booting) return;
+      if (city) {
+        city.start();
+        root!.dataset.view = '3d';
+      } else {
+        booting = true;
+        const { bootCity } = await import('../scripts/city3d/index');
+        city = await bootCity(root!);
+        booting = false;
+        if (!city) return show2d(false);
+      }
+      svg!.pauseAnimations();
+      to3d.hidden = true;
+      if (innerWidth > 900) controls.open = true;
+    }
+    function show2d(offer: boolean) {
+      city?.stop();
+      root!.dataset.view = '2d';
+      to3d.hidden = !offer;
+      if (!reduced) svg!.unpauseAnimations();
+    }
+    root.querySelectorAll<HTMLButtonElement>('[data-view-toggle]').forEach((b) =>
+      b.addEventListener('click', () => {
+        remember(b.dataset.viewToggle!);
+        if (b.dataset.viewToggle === '3d') go3d();
+        else show2d(true);
+      })
+    );
+
+    // Boot 3D where WebGL2 works, unless the visitor chose the 2D map
+    let saved: string | null = null;
+    try {
+      saved = localStorage.getItem('city-view');
+    } catch {}
+    const gl = document.createElement('canvas').getContext('webgl2');
+    gl?.getExtension('WEBGL_lose_context')?.loseContext();
+    if (!gl) to3d.remove();
+    else if (saved === '2d') to3d.hidden = false;
+    else go3d();
+  }
+</script>

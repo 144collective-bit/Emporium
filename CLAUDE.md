@@ -5,7 +5,8 @@ it and has been retired completely. Build only on what's here.
 
 ## Never bring back the old site
 
-- The site is one homepage (`src/pages/index.astro`) plus `404.astro`. Do not
+- The site is the Degen City homepage (`src/pages/index.astro`), the Emporium
+  comic page it links into (`src/pages/emporium.astro`) and `404.astro`. Do not
   add or restore pages like `/news`, `/blog`, `/store`, `/shop`, `/alpha`,
   `/tokenomics`, `/vault`, `/terminal`, `/team`, `/projects`, `/about`,
   `/contact` or `/links` unless the owner asks for that page by name.
@@ -18,6 +19,31 @@ it and has been retired completely. Build only on what's here.
 
 ## Design rules
 
+- The homepage is Degen City in two layers, both in Degen's style (black ink
+  outlines, flat cartoon shading, PulseChain neon):
+  - **3D** (`src/scripts/city3d/`, three.js): toon materials, ink outlines
+    from a normal/depth post-pass, bloom, day/night from the visitor's clock,
+    weather, traffic, people, optional synthesised sound. Clicking a
+    building flies the camera in and opens a glass panel.
+  - **2D** (`src/lib/city.ts`): the isometric SVG map. It's the loading
+    poster, the fallback without WebGL, and the "2D map" view.
+  Both layers share the same block layout; keep them in step when buildings
+  change. Spot links, pin copy and panel copy live in
+  `src/components/CityMap.astro`. Buildings link only to `/emporium` (or its
+  window anchors: `#drop`, `#workshop`, `#vault`, `#plan`) or to the
+  confirmed links in `src/data/site.ts`.
+- Keep the city's motion optional: under `prefers-reduced-motion` the 3D
+  city stands still (no fly-in, no traffic), CSS animations stop and the 2D
+  map's SMIL traffic is paused. Sound is always off until the visitor
+  turns it on.
+- Keep phones light: `src/scripts/city3d/index.ts` picks a quality tier
+  (fewer cars and people, no shadows, smaller bloom on phones), runs phones
+  at 30fps while nobody is touching the city, and steps quality down
+  (pixels, then shadows, then bloom; never the ink outlines) if frames are
+  slow.
+- Floating cut-out signs (FX layer with a transparent texture, like the roof
+  logo) need `occlude()` from `kit.ts`, or the ink outlines of whatever is
+  behind them get drawn across them.
 - The comic-window layout in `src/components/ComicPage.astro` is the design.
   Each window is defined by its ink outline; keep content inside the slants.
 - Palette is the PulseChain gradient. Follow `brand/README.md`: gradient for
