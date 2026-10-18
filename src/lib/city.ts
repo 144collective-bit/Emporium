@@ -639,197 +639,162 @@ function vault(s: Spot) {
   add(6.2, 19.8, lamp(6.2, 19.8));
 }
 
-/** Block (1,1): the Emporium, a black-and-gold palace under a great dome, its corner on the street. */
+/** Block (1,1): the Emporium, a twisting glass cyber arcade on a street-level arcade hall. */
 function emporium(s: Spot, art: CityInput['art']) {
-  const GOLD = '#e2b04a';
-  const STONE = '#231d33';
   const R2 = Math.SQRT1_2;
-  // Plan helpers: the corner front runs along x + y = 34; `at` steps out from its middle and along it
+  const DARK = '#1d1934';
   const at = (n: number, u: number, z: number) => P(17 + (n + u) * R2, 17 + (n - u) * R2, z);
-  const body = (d: number, z: number, h: number, c: string, top?: string | null) => {
-    const k = (Math.SQRT2 - 1) * d;
-    const [x0, x1, y0, y1] = [11.8 - d, 18 + d, 11.8 - d, 18 + d];
-    const z1 = z + h;
-    const sh = shade(c);
-    return (
-      '<g class="ink">' +
-      poly(sh.left, P(x0, y1, z), P(16 + k, y1, z), P(16 + k, y1, z1), P(x0, y1, z1)) +
-      poly(mix(sh.left, sh.right, 0.45), P(16 + k, y1, z), P(x1, 16 + k, z), P(x1, 16 + k, z1), P(16 + k, y1, z1)) +
-      poly(sh.right, P(x1, 16 + k, z), P(x1, y0, z), P(x1, y0, z1), P(x1, 16 + k, z1)) +
-      (top === null ? '' : poly(top ?? sh.top, P(x0, y0, z1), P(x1, y0, z1), P(x1, 16 + k, z1), P(16 + k, y1, z1), P(x0, y1, z1))) +
-      '</g>'
-    );
-  };
-  const H = 4.8;
-  const zT = Z0 + H;
-  let b = body(0.06, Z0, 0.35, '#2e2742');
-  b += body(0, Z0, H, STONE, '#3a3352');
-  // Shop windows below, tall windows above, an LED screen in the middle of each street front
-  const W = 4.2 * TL;
-  const screen = (msg: string, size: number) =>
-    `<rect x="${n(W / 2 - 66)}" y="12" width="132" height="44" fill="${GOLD}" stroke="${INK}" stroke-width="2"/>` +
-    `<rect x="${n(W / 2 - 61)}" y="16" width="122" height="36" fill="url(#bbGrad)"/>` +
-    text(W / 2, 41, msg, size, 't-display', '#ffffff', ' letter-spacing="2"');
-  b += g(onL(11.8, 18, Z0 + 2.3), windows(W, 2.3 * ZH, 6, 1, { mt: 10, mb: 4, lit: 1, pal: [C.warm] }));
-  b += g(onR(18, 16, Z0 + 2.3), windows(W, 2.3 * ZH, 6, 1, { mt: 10, mb: 4, lit: 1, pal: [C.warm] }));
-  b += g(onL(11.8, 18, zT), windows(W, 2.3 * ZH, 6, 1, { mt: 8, mb: 8, lit: 0.7, pal: [C.warm, C.cyan] }) + screen('GM', 26));
-  b += g(onR(18, 16, zT), windows(W, 2.3 * ZH, 6, 1, { mt: 8, mb: 8, lit: 0.7, pal: [C.warm, C.cyan] }) + screen('OPEN 24/7', 19));
-  // Gold belt and the deep cornice, with marquee lights chasing along it
-  b += body(0.1, Z0 + 2.3, 0.18, GOLD, null);
-  b += body(0.2, zT, 0.3, '#2a2340', '#3a3352');
-  const k2 = (Math.SQRT2 - 1) * 0.2;
-  b += `<polyline points="${pts(P(11.6, 18.2, zT + 0.15), P(16 + k2, 18.2, zT + 0.15), P(18.2, 16 + k2, zT + 0.15), P(18.2, 11.6, zT + 0.15))}" fill="none" stroke="#ff6ad5" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="0.1 11" class="chase"/>`;
-  const zR = zT + 0.3;
+  // The podium's plan: a square with its street corner cut off along x + y = 34
+  const PH = 2.6;
+  const zP = Z0 + PH;
+  const faces: [[number, number], [number, number]][] = [
+    [
+      [11.8, 18],
+      [16, 18],
+    ],
+    [
+      [16, 18],
+      [18, 16],
+    ],
+    [
+      [18, 16],
+      [18, 11.8],
+    ],
+  ];
+  let b = '';
+  // Hall: dark inside, claw machines and cabinets glowing behind the glass, slim mullions
+  faces.forEach(([a, c], fi) => {
+    b += `<g class="ink">${poly(fi === 1 ? '#241d40' : '#1a1530', P(a[0], a[1], Z0), P(c[0], c[1], Z0), P(c[0], c[1], zP), P(a[0], a[1], zP))}</g>`;
+    if (fi === 1) return;
+    const bays = 6;
+    for (let k = 0; k < bays; k++) {
+      const f = (k + 0.5) / bays;
+      const x = a[0] + (c[0] - a[0]) * f;
+      const y = a[1] + (c[1] - a[1]) * f;
+      const [px, py] = P(x, y, Z0);
+      const col = [C.pink, C.cyan, '#a64dff', C.warm][(k + fi) % 4];
+      b += `<rect x="${n(px - 9)}" y="${n(py - 30)}" width="18" height="30" fill="${col}" opacity=".85"/><rect x="${n(px - 9)}" y="${n(py - 46)}" width="18" height="15" fill="#bff6ff" opacity=".5"/>`;
+    }
+    b += `<g>${poly('#9fe8ff', P(a[0], a[1], Z0), P(c[0], c[1], Z0), P(c[0], c[1], zP), P(a[0], a[1], zP)).replace('/>', ' opacity=".22"/>')}</g>`;
+    for (let k = 0; k <= bays; k++) {
+      const f = k / bays;
+      b += `<g class="ink">${line(P(a[0] + (c[0] - a[0]) * f, a[1] + (c[1] - a[1]) * f, Z0), P(a[0] + (c[0] - a[0]) * f, a[1] + (c[1] - a[1]) * f, zP))}</g>`;
+    }
+  });
+  // Podium roof with its neon edge
+  const k2 = (Math.SQRT2 - 1) * 0.1;
+  b += `<g class="ink">${poly(DARK, P(11.7, 11.7, zP), P(18.1, 11.7, zP), P(18.1, 16 + k2, zP), P(16 + k2, 18.1, zP), P(11.7, 18.1, zP))}</g>`;
+  b += `<polyline points="${pts(P(11.7, 18.1, zP), P(16 + k2, 18.1, zP), P(18.1, 16 + k2, zP), P(18.1, 11.7, zP))}" fill="none" stroke="#00eaff" stroke-width="3.5" class="neon-strip"/>`;
 
-  // Corner pavilions; the back one first, the dome, then the two at the sides
-  const pav = (x: number, y: number) => prism(x, y, 1.6, 1.6, 1.5, { c: STONE, z: zR, top: '#3a3352' }) + prism(x - 0.06, y - 0.06, 1.72, 1.72, 0.12, { c: GOLD, z: zR + 1.5 });
-  b += pav(11.8, 11.8);
+  // The tower: twelve glass floors, each turned a little further, one face an LED wall
+  const CX = 14.7;
+  const CY = 14.7;
+  const NF = 12;
+  const FH = 1.3;
+  const HS = 2;
+  const z0 = zP + 0.2;
+  const loc = (th: number, lx: number, lz: number): [number, number] => [CX + lx * Math.cos(th) + lz * Math.sin(th), CY - lx * Math.sin(th) + lz * Math.cos(th)];
+  const eq = ['#ff2fb9', '#d02ff0', '#8f3dff', '#4a6bff', '#00b8ff', '#00eaff'];
+  for (let i = 0; i < NF; i++) {
+    const th = (i / NF) * (Math.PI / 3);
+    const za = z0 + i * FH;
+    const zb = za + FH;
+    for (let k = 0; k < 4; k++) {
+      const phi = (k * Math.PI) / 2;
+      if (Math.sin(phi + th) + Math.cos(phi + th) <= 0.02) continue;
+      const nx = Math.sin(phi);
+      const nz = Math.cos(phi);
+      const tx = Math.cos(phi);
+      const tz = -Math.sin(phi);
+      const p1 = loc(th, (nx + tx) * HS, (nz + tz) * HS);
+      const p2 = loc(th, (nx - tx) * HS, (nz - tz) * HS);
+      const quad = [P(p1[0], p1[1], za), P(p2[0], p2[1], za), P(p2[0], p2[1], zb), P(p1[0], p1[1], zb)] as Pt[];
+      const wall = k === 0 && i >= 1 && i <= NF - 2;
+      if (wall) {
+        b += `<g class="ink">${poly('#07060f', ...quad)}</g>`;
+        // Pixel art on the LED wall
+        for (let u = 0; u < 12; u++) {
+          if (rand() > 0.45) continue;
+          const f0 = (u + 0.15) / 12;
+          const f1 = (u + 0.85) / 12;
+          const lerp = (f: number, h: number): Pt => [quad[0][0] + (quad[1][0] - quad[0][0]) * f, quad[0][1] + (quad[1][1] - quad[0][1]) * f - h * (FH - 0.2) * ZH - 0.1 * ZH];
+          b += poly(pick(['#ff6ad5', '#a64dff', '#00eaff', '#7cff9e', '#ffd36b']), lerp(f0, 0.25), lerp(f1, 0.25), lerp(f1, 0.75), lerp(f0, 0.75));
+        }
+      } else {
+        b += `<g class="ink">${poly('#2a1f5c', ...quad)}</g>`;
+        const [ax, ay] = P(p1[0] + (p2[0] - p1[0]) * 0.3, p1[1] + (p2[1] - p1[1]) * 0.3, za + 0.15);
+        const [bx2, by2] = P(p1[0] + (p2[0] - p1[0]) * 0.7, p1[1] + (p2[1] - p1[1]) * 0.7, za + 0.15);
+        b += `<rect x="${n(ax - 5)}" y="${n(ay - 14)}" width="10" height="12" fill="${pick([C.pink, C.cyan, C.warm])}"/><rect x="${n(bx2 - 5)}" y="${n(by2 - 14)}" width="10" height="12" fill="${pick([C.pink, C.cyan, '#a64dff'])}"/>`;
+        b += poly('#bff3ff', ...quad).replace('/>', ' opacity=".28"/>');
+      }
+      // Equalizer: corner bars and the floor edge, lit in turn
+      const col = eq[Math.min(eq.length - 1, Math.floor((i / NF) * eq.length))];
+      const d = (i * 0.07 + k * 0.23).toFixed(2);
+      b += `<line x1="${n(quad[0][0])}" y1="${n(quad[0][1])}" x2="${n(quad[3][0])}" y2="${n(quad[3][1])}" stroke="${col}" stroke-width="4" stroke-linecap="round" class="eq" style="animation-delay:-${d}s"/>`;
+      b += `<line x1="${n(quad[0][0])}" y1="${n(quad[0][1])}" x2="${n(quad[1][0])}" y2="${n(quad[1][1])}" stroke="${col}" stroke-width="2.5" class="eq" style="animation-delay:-${(i * 0.09).toFixed(2)}s"/>`;
+    }
+  }
+  // Roof, projector and the hologram
+  const roofZ = z0 + NF * FH;
+  const thT = Math.PI / 3;
+  const roof = [
+    [1, 1],
+    [1, -1],
+    [-1, -1],
+    [-1, 1],
+  ].map(([a, c]) => {
+    const [x, y] = loc(thT, a * (HS + 0.1), c * (HS + 0.1));
+    return P(x, y, roofZ);
+  });
+  b += `<g class="ink">${poly(DARK, ...roof)}</g>`;
+  b += `<polygon points="${pts(...roof)}" fill="none" stroke="#00eaff" stroke-width="3" class="neon-strip"/>`;
+  const [rx, ry] = P(CX, CY, roofZ);
+  b += `<ellipse cx="${n(rx)}" cy="${n(ry)}" rx="44" ry="22" fill="#2a2448" stroke="#00eaff" stroke-width="3"/>`;
+  b += `<polygon points="${n(rx - 40)},${n(ry)} ${n(rx + 40)},${n(ry)} ${n(rx + 70)},${n(ry - 150)} ${n(rx - 70)},${n(ry - 150)}" fill="url(#holoBeam)"/>`;
+  b += `<image href="${esc(art.degen)}" x="${n(rx - 55)}" y="${n(ry - 150)}" width="110" height="140" preserveAspectRatio="xMidYMax meet" class="holo"/>`;
 
-  // Drum: arched windows between gold columns, then the attic with the name in neon
-  const R = 1.85;
-  const zD = zR + 0.1;
-  const DH = 2.3;
-  b += cyl(14.9, 14.9, R + 0.15, 0.15, { c: STONE, z: zR });
-  b += cyl(14.9, 14.9, R, DH, { c: STONE, z: zD, top: '#2a2340' });
-  for (let i = 0; i < 16; i++) {
-    const a = ((i + 0.5) / 16) * Math.PI * 2;
-    const face = Math.cos(a - Math.PI / 4);
-    if (face < 0.15) continue;
-    const [wx, wy] = P(14.9 + Math.cos(a) * R, 14.9 + Math.sin(a) * R, zD + 0.3);
-    const ww = 14 * face;
-    b += `<rect x="${n(wx - ww / 2)}" y="${n(wy - 36)}" width="${n(ww)}" height="36" rx="${n(ww / 2)}" fill="${i % 2 ? C.cyan : C.warm}" stroke="${GOLD}" stroke-width="2"/>`;
-  }
-  for (let i = 0; i < 16; i++) {
-    const a = (i / 16) * Math.PI * 2;
-    if (Math.cos(a - Math.PI / 4) < 0.05) continue;
-    const [cx, cy] = P(14.9 + Math.cos(a) * (R + 0.08), 14.9 + Math.sin(a) * (R + 0.08), zD);
-    b += `<line x1="${n(cx)}" y1="${n(cy)}" x2="${n(cx)}" y2="${n(cy - DH * ZH)}" stroke="${GOLD}" stroke-width="4"/>`;
-  }
-  const zA = zD + DH;
-  b += cyl(14.9, 14.9, R + 0.2, 0.1, { c: GOLD, z: zA });
-  b += cyl(14.9, 14.9, R + 0.1, 0.5, { c: '#1a1528', z: zA + 0.1 });
+  // Entrance on the corner: glowing doors, canopy, ARCADE sign, the logo above
   {
-    const [cx, cy] = P(14.9, 14.9, zA + 0.35);
-    const rx = (R + 0.1) * 67.88;
-    const ry = (R + 0.1) * 33.94;
-    b += `<path d="M${n(cx - rx)},${n(cy)}A${n(rx)},${n(ry)} 0 0 0 ${n(cx + rx)},${n(cy)}" fill="none" stroke="url(#pulseH)" stroke-width="5" class="neon-strip"/>`;
-  }
-
-  // The great dome: black glass, gold ribs and rings
-  const zB = zA + 0.6;
-  const HD = 3.4;
-  const [dx, dy] = P(14.9, 14.9, zB);
-  const drx = R * 67.88;
-  const dry = R * 33.94;
-  const vt = Math.hypot(HD * ZH, dry);
-  b += `<g class="ink"><path d="M${n(dx - drx)},${n(dy)}A${n(drx)},${n(vt)} 0 0 1 ${n(dx + drx)},${n(dy)}A${n(drx)},${n(dry)} 0 0 1 ${n(dx - drx)},${n(dy)}Z" fill="#241c40"/></g>`;
-  for (let i = 0; i < 12; i++) {
-    const a = (i / 12) * Math.PI * 2;
-    if (Math.cos(a - Math.PI / 4) < -0.05) continue;
-    const rib = Array.from({ length: 11 }, (_, j) => {
-      const th = (j / 10) * (Math.PI / 2) * 0.94;
-      return P(14.9 + Math.cos(a) * R * Math.cos(th), 14.9 + Math.sin(a) * R * Math.cos(th), zB + HD * Math.sin(th));
-    });
-    b += `<polyline points="${pts(...rib)}" fill="none" stroke="${GOLD}" stroke-width="3.5" stroke-linecap="round"/>`;
-  }
-  for (const th of [0, Math.PI / 6, Math.PI / 3]) {
-    const r = R * Math.cos(th);
-    const [cx, cy] = P(14.9, 14.9, zB + HD * Math.sin(th));
-    b += `<path d="M${n(cx - r * 67.88)},${n(cy)}A${n(r * 67.88)},${n(r * 33.94)} 0 0 0 ${n(cx + r * 67.88)},${n(cy)}" fill="none" stroke="${GOLD}" stroke-width="${th ? 3 : 5}"/>`;
-  }
-  b += `<path d="M${n(dx - drx - 6)},${n(dy + 2)}A${n(drx + 6)},${n(dry + 3)} 0 0 0 ${n(dx + drx + 6)},${n(dy + 2)}" fill="none" stroke="#7cf4ff" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="0.1 10" class="chase"/>`;
-
-  // Lantern, cupola and the logo crowning it all
-  const zL = zB + HD - 0.15;
-  b += cyl(14.9, 14.9, 0.45, 0.8, { c: '#3a2c12', z: zL, top: GOLD });
-  {
-    const [lx, ly] = P(14.9, 14.9, zL + 0.4);
-    b += `<rect x="${n(lx - 18)}" y="${n(ly - 8)}" width="10" height="16" rx="5" fill="${C.warm}"/><rect x="${n(lx + 8)}" y="${n(ly - 8)}" width="10" height="16" rx="5" fill="${C.cyan}"/>`;
-    const [ux, uy] = P(14.9, 14.9, zL + 0.8);
-    b += `<g class="ink"><path d="M${n(ux - 32)},${n(uy)}A32,24 0 0 1 ${n(ux + 32)},${n(uy)}Z" fill="${GOLD}"/></g>`;
-  }
-  const zTop = zL + 0.8 + 0.7;
-  const lw = 3.8 * TL;
-  const lh = lw * (494 / 729);
-  const [gx, gy] = P(14.9, 14.9, zTop);
-  b += `<g class="ink">${line([gx - 14, gy + 26], [gx - 40, gy - 6], 'leg')}${line([gx + 14, gy + 26], [gx + 40, gy - 6], 'leg')}</g>`;
-  b += `<ellipse cx="${n(gx)}" cy="${n(gy - lh / 2)}" rx="${n(lw * 0.75)}" ry="${n(lh * 0.7)}" fill="url(#logoGlow)" class="logo-glow"/>`;
-  b += `<image href="${esc(art.logo)}" x="${n(gx - lw / 2)}" y="${n(gy - lh)}" width="${n(lw)}" height="${n(lh)}" preserveAspectRatio="xMidYMid meet" class="roof-logo"/>`;
-
-  b += pav(16.4, 11.8);
-  b += pav(11.8, 16.4);
-  // Helipad on the right pavilion, glass rail on the left one
-  {
-    const [hx, hy] = P(17.2, 12.6, zR + 1.62);
-    b += `<ellipse cx="${n(hx)}" cy="${n(hy)}" rx="42" ry="21" fill="#1b1729" stroke="${GOLD}" stroke-width="3"/>` + text(hx, hy + 6, 'H', 18, 't-display', '#ffffff');
-    b += `<g class="ink">${poly('#1d1a2c', P(11.85, 16.45, zR + 1.62), P(13.35, 16.45, zR + 1.62), P(13.35, 17.95, zR + 1.62), P(11.85, 17.95, zR + 1.62))}</g>`;
-    b += `<polyline points="${pts(P(11.85, 17.95, zR + 2.0), P(13.35, 17.95, zR + 2.0), P(13.35, 16.45, zR + 2.0))}" fill="none" stroke="#7fe9ff" stroke-width="2.5" opacity=".8"/>`;
-  }
-
-  // The grand corner front: marble steps, four gold columns, entablature with the name, pediment
-  for (let k = 0; k < 3; k++) {
-    const dd = 1.35 - 0.2 * k;
-    const hl = (3.6 - 0.2 * k) / 2;
-    const z0 = Z0 + 0.1 * k;
-    const z1 = z0 + 0.12;
-    b +=
-      '<g class="ink">' +
-      poly('#3a3352', at(dd, -hl, z0), at(dd, hl, z0), at(dd, hl, z1), at(dd, -hl, z1)) +
-      poly('#4a4266', at(0, -hl, z1), at(0, hl, z1), at(dd, hl, z1), at(dd, -hl, z1)) +
-      '</g>';
-  }
-  {
-    const [x0, y0] = at(0.04, -0.5, Z0 + 0.32);
-    b += `<path d="M${n(x0)},${n(y0)}v-40a${n(48 * R2 * 0.7)},${n(48 * R2 * 0.7)} 0 0 1 ${n(96 * R2 * 0.7)},0v40Z" fill="#ffd27a" stroke="${GOLD}" stroke-width="3"/>`;
-  }
-  const zc = Z0 + 0.32;
-  const zE = Z0 + 4.3;
-  for (const u of [-1.15, -0.38, 0.38, 1.15]) {
-    const x = 17 + (0.72 + u) * R2;
-    const y = 17 + (0.72 - u) * R2;
-    b += cyl(x, y, 0.13, zE - zc, { c: GOLD, z: zc });
-  }
-  b +=
-    '<g class="ink">' +
-    poly('#2a2340', at(1.04, -1.55, zE), at(1.04, 1.55, zE), at(1.04, 1.55, zE + 0.5), at(1.04, -1.55, zE + 0.5)) +
-    poly(GOLD, at(1.06, -1.6, zE + 0.5), at(1.06, 1.6, zE + 0.5), at(1.06, 0, zE + 1.35)) +
-    poly('#2a2340', at(1.06, -1.6, zE + 0.5), at(1.06, 0, zE + 1.35), at(-0.02, 0, zE + 1.35), at(-0.02, -1.6, zE + 0.5)) +
-    poly('#1f1a30', at(1.06, 1.6, zE + 0.5), at(1.06, 0, zE + 1.35), at(-0.02, 0, zE + 1.35), at(-0.02, 1.6, zE + 0.5)) +
-    '</g>';
-  {
-    const [tx, ty] = at(1.04, 0, zE + 0.25);
-    b += text(tx, ty + 4, 'THE DEGEN EMPORIUM', 10, 't-mono', '#ffd36b', ' font-weight="700" letter-spacing="1.5"');
+    const [dl, dy] = at(0.02, -0.6, Z0);
+    const [dr] = at(0.02, 0.6, Z0);
+    b += `<rect x="${n(dl)}" y="${n(dy - 40)}" width="${n(dr - dl)}" height="40" fill="url(#pulseV)" opacity=".9" stroke="${INK}" stroke-width="2"/>`;
+    b += `<g class="ink">${poly('#2a2448', at(1.1, -1.5, Z0 + 2.0), at(1.1, 1.5, Z0 + 2.0), at(1.1, 1.5, Z0 + 2.15), at(1.1, -1.5, Z0 + 2.15))}${poly('#3a3366', at(0, -1.5, Z0 + 2.15), at(0, 1.5, Z0 + 2.15), at(1.1, 1.5, Z0 + 2.15), at(1.1, -1.5, Z0 + 2.15))}</g>`;
+    const [ax, ay] = at(1.12, 0, Z0 + 2.45);
+    b += text(ax, ay + 6, 'ARCADE', 20, 't-display neon', '#7cf4ff', ' letter-spacing="4"');
+    const lw = 3.2 * TL;
+    const lh = lw * (494 / 729);
+    const [gx, gy] = at(0.4, 0, zP + 0.25);
+    b += `<ellipse cx="${n(gx)}" cy="${n(gy - lh / 2)}" rx="${n(lw * 0.7)}" ry="${n(lh * 0.65)}" fill="url(#logoGlow)" class="logo-glow"/>`;
+    b += `<image href="${esc(art.logo)}" x="${n(gx - lw / 2)}" y="${n(gy - lh)}" width="${n(lw)}" height="${n(lh)}" preserveAspectRatio="xMidYMid meet" class="roof-logo"/>`;
   }
 
   add(14.9, 14.9, spot('emporium', s, b));
-  pin('emporium', s, P(14.9, 14.9, zTop + lh / ZH + 2.2));
+  pin('emporium', s, P(CX, CY, roofZ + 9));
 
-  // Forecourt fountain at the foot of the steps
-  let f = cyl(18.9, 18.9, 0.8, 0.35, { c: '#2e2742', z: Z0, top: '#2a6fd6' });
-  const [fx0, fy0] = P(18.9, 18.9, Z0 + 0.35);
-  f += `<ellipse cx="${n(fx0)}" cy="${n(fy0)}" rx="${n(0.8 * 67.88)}" ry="${n(0.8 * 33.94)}" fill="none" stroke="${GOLD}" stroke-width="3"/>`;
-  for (let k = 0; k < 2; k++)
-    f +=
-      `<ellipse cx="${n(fx0)}" cy="${n(fy0)}" rx="10" ry="5" fill="none" stroke="#bff6ff" stroke-width="1.5">` +
-      `<animate attributeName="rx" values="8;46" dur="2.4s" begin="-${k * 1.2}s" repeatCount="indefinite"/>` +
-      `<animate attributeName="ry" values="4;23" dur="2.4s" begin="-${k * 1.2}s" repeatCount="indefinite"/>` +
-      `<animate attributeName="opacity" values="1;0" dur="2.4s" begin="-${k * 1.2}s" repeatCount="indefinite"/></ellipse>`;
-  f += `<g class="spray"><path d="M${n(fx0)},${n(fy0)}q-14,-56 -32,-6M${n(fx0)},${n(fy0)}q14,-56 32,-6M${n(fx0)},${n(fy0)}v-50" fill="none" stroke="#9fefff" stroke-width="3" stroke-linecap="round"/></g>`;
-  add(18.9, 18.9, f);
-
+  // Outside: a glowing tile pad at the doors, claw machines, the prize booth
+  let o = '';
+  const tiles = ['#ff2fb9', '#8f3dff', '#00eaff', '#ffd36b'];
+  for (let a = 0; a < 6; a++)
+    for (let c = 0; c < 4; c++) {
+      const u0 = -1.8 + a * 0.6;
+      const n0 = 0.25 + c * 0.6;
+      o += poly(tiles[(a + c) % 4], at(n0 + 0.05, u0 + 0.05, Z0), at(n0 + 0.05, u0 + 0.55, Z0), at(n0 + 0.55, u0 + 0.55, Z0), at(n0 + 0.55, u0 + 0.05, Z0)).replace('/>', ` opacity="${(0.35 + ((a * 7 + c * 3) % 5) * 0.13).toFixed(2)}" class="flick" style="animation-delay:-${(a * 0.7 + c).toFixed(1)}s"/>`);
+    }
+  add(18.3, 18.3, o);
+  for (const [x, y, col] of [
+    [15.8, 18.4, '#ff6ad5'],
+    [18.4, 15.8, '#00b8d8'],
+  ] as const)
+    add(x + 0.25, y + 0.25, prism(x, y, 0.5, 0.5, 0.6, { c: col, z: Z0 }) + prism(x, y, 0.5, 0.5, 0.6, { c: '#9fe8ff', z: Z0 + 0.6, top: '#bff6ff', left: '#7fd8f0', right: '#5fb8d8' }) + prism(x - 0.03, y - 0.03, 0.56, 0.56, 0.12, { c: C.warm, z: Z0 + 1.2 }));
+  add(18.9, 14.7, prism(18.45, 14.2, 0.85, 1.0, 1.4, { c: '#5a2a8a', z: Z0 }) + g(onR(19.3, 15.2, Z0 + 1.4), text(1.0 * TL / 2, 14, 'PRIZES', 13, 't-display neon', '#ffd36b')));
   for (const [x, y] of [
-    [19.0, 12.6],
-    [19.0, 14.6],
-    [12.6, 19.0],
-    [14.6, 19.0],
-  ]) {
-    add(x, y, cyl(x, y, 0.42, 0.35, { c: STONE, z: Z0, top: '#1d3b30' }) + tree(x, y, Z0 + 0.35, 0.85, 'round'));
-  }
+    [19.0, 12.4],
+    [12.4, 19.0],
+  ])
+    add(x, y, cyl(x, y, 0.42, 0.35, { c: DARK, z: Z0, top: '#1d3b30' }) + tree(x, y, Z0 + 0.35, 0.85, 'round'));
   add(11.6, 11.6, lamp(11.6, 11.6));
   add(19.5, 11.6, lamp(19.5, 11.6));
   add(11.6, 19.5, lamp(11.6, 19.5));
-  add(19.35, 16.3, lamp(19.35, 16.3));
-  add(16.3, 19.35, lamp(16.3, 19.35));
 }
 
 /** Block (2,1): Drop 001, shutters down until the store opens. */
@@ -1110,6 +1075,7 @@ const DEFS = `<defs>
 <radialGradient id="cyanGlow"><stop offset="0" stop-color="#7cf4ff" stop-opacity=".95"/><stop offset="1" stop-color="#7cf4ff" stop-opacity="0"/></radialGradient>
 <radialGradient id="logoGlow"><stop offset="0" stop-color="#e219e5" stop-opacity=".45"/><stop offset=".6" stop-color="#8000ff" stop-opacity=".18"/><stop offset="1" stop-color="#8000ff" stop-opacity="0"/></radialGradient>
 <radialGradient id="forge" cx=".5" cy="1" r="1"><stop offset="0" stop-color="#ffd27a"/><stop offset=".5" stop-color="#ff7a2f"/><stop offset="1" stop-color="#5a1f2a"/></radialGradient>
+<linearGradient id="holoBeam" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#00eaff" stop-opacity=".4"/><stop offset="1" stop-color="#00eaff" stop-opacity="0"/></linearGradient>
 <linearGradient id="beam" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#c9b8ff" stop-opacity=".35"/><stop offset="1" stop-color="#c9b8ff" stop-opacity="0"/></linearGradient>
 <pattern id="hazard" width="14" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="14" height="14" fill="#ffd23f"/><rect width="7" height="14" fill="#05050a"/></pattern>
 <pattern id="mesh" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="8" height="8" fill="#0e0c1c" fill-opacity=".55"/><path d="M0,0H8M0,0V8" stroke="#9a96b8" stroke-width="1"/></pattern>
@@ -1161,4 +1127,4 @@ export function renderCity({ spots, art }: CityInput) {
 }
 
 /** Screen position (in viewBox units) of a spot's pin, for centring the view. */
-export const EMPORIUM_FOCUS = P(14.9, 14.9, 7);
+export const EMPORIUM_FOCUS = P(14.7, 14.7, 8);

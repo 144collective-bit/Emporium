@@ -13,7 +13,7 @@
  */
 import * as THREE from 'three';
 import type { SpotId } from '../../lib/city';
-import { lit, toon } from './kit';
+import { makeDegen } from './degen';
 import { DISTRICTS, BLOCKS, BS, RIVER, ROADS, SLAB } from './world';
 
 /** x0, z0, x1, z1, height */
@@ -21,15 +21,13 @@ type Box = [number, number, number, number, number];
 
 /** Everything you can't walk through, matching landmarks.ts. Height is for the camera. */
 const SOLIDS: Box[] = [
-  // Emporium palace: the square body with its street corner cut off (in steps), and the portico columns
-  [11.8, 11.8, 18.0, 16.0, 4.9],
-  [11.8, 16.0, 16.0, 18.0, 4.9],
-  ...[0, 1, 2, 3].map((k): Box => [16.0 + k * 0.5, 16.0, 16.5 + k * 0.5, 34 - (16.25 + k * 0.5), 4.9]),
-  ...[-1.15, -0.38, 0.38, 1.15].map((u): Box => {
-    const x = 17 + (0.72 + u) * Math.SQRT1_2;
-    const z = 17 + (0.72 - u) * Math.SQRT1_2;
-    return [x - 0.17, z - 0.17, x + 0.17, z + 0.17, 4.2];
-  }),
+  // Emporium arcade: the podium with its street corner cut off (in steps); the tower stands on it
+  [11.8, 11.8, 18.0, 16.0, 2.6],
+  [11.8, 16.0, 16.0, 18.0, 2.6],
+  ...[0, 1, 2, 3].map((k): Box => [16.0 + k * 0.5, 16.0, 16.5 + k * 0.5, 34 - (16.25 + k * 0.5), 2.6]),
+  [15.75, 18.35, 16.4, 19.05, 1.4], // claw machines either side of the doors
+  [18.35, 15.75, 19.05, 16.4, 1.4],
+  [18.4, 14.15, 19.35, 15.25, 1.6], // prize booth
   [0.8, 11.9, 7.8, 17.05, 5.6], // vault body and rear steps
   [1.2, 17.1, 7.4, 17.75, 4.4], // vault columns
   [7.6, 13.3, 8.0, 15.3, 2.4], // vault door
@@ -52,40 +50,15 @@ const SOLIDS: Box[] = [
   [22.7, 0.9, 26.1, 4.3, 7.6], // apartments A
   [26.9, 1.5, 30.3, 5.3, 8.4], // apartments B and billboard
   [1.7, 1.7, 3.5, 3.5, 6.6], // water tower
-  [18.15, 18.15, 19.65, 19.65, 1.3], // forecourt fountain
-  [18.55, 12.15, 19.45, 13.05, 1.4], // planters
-  [18.55, 14.15, 19.45, 15.05, 1.4],
-  [12.15, 18.55, 13.05, 19.45, 1.4],
-  [14.15, 18.55, 15.05, 19.45, 1.4],
+  [18.55, 11.95, 19.45, 12.85, 1.4], // planters
+  [11.95, 18.55, 12.85, 19.45, 1.4],
 ];
 /** Only the camera bumps into these (tall parts above a walkable footprint) */
-const CAMERA_ONLY: Box[] = [
-  [13.0, 13.0, 16.8, 16.8, 14.3], // the Emporium's drum, dome and logo
-  [11.8, 11.8, 13.4, 13.4, 5.9], // its corner pavilions
-  [16.4, 11.8, 18.0, 13.4, 6.4],
-  [11.8, 16.4, 13.4, 18.0, 5.9],
-];
-
-/**
- * The Emporium's front steps on the street corner, as [depth out from the
- * corner front, half width along it, height] per step, bottom first.
- */
-const STEPS: [number, number, number][] = [
-  [1.35, 1.8, 0.1],
-  [1.15, 1.7, 0.2],
-  [0.95, 1.6, 0.3],
-];
-function stepAt(x: number, z: number) {
-  const out = (x + z - 34) * Math.SQRT1_2;
-  const across = Math.abs(x - z) * Math.SQRT1_2;
-  let h = 0;
-  for (const [d, w, sh] of STEPS) if (out >= 0 && out <= d && across <= w) h = sh;
-  return h;
-}
+const CAMERA_ONLY: Box[] = [[11.9, 11.9, 17.5, 17.5, 12.6]]; // the Emporium's glass tower
 
 /** Where you can step in, and what opens there. */
 const DOORS: { id: SpotId; x: number; z: number }[] = [
-  { id: 'emporium', x: 17.6, z: 17.6 },
+  { id: 'emporium', x: 17.5, z: 17.5 },
   { id: 'shop', x: 26.1, z: 17.5 },
   { id: 'workshop', x: 15.3, z: 28.05 },
   { id: 'vault', x: 4.3, z: 18.6 },
@@ -94,7 +67,7 @@ const DOORS: { id: SpotId; x: number; z: number }[] = [
   { id: 'plan', x: 26.4, z: 31.3 },
 ];
 
-/** Facing the Emporium's steps, with the dome over his shoulder */
+/** Facing the Emporium's doors, the tower over his shoulder */
 const SPAWN_YAW = 0.45;
 const RADIUS = 0.22;
 const WALK = 2.4;
@@ -124,65 +97,6 @@ function loadSettings(): Settings {
 
 /* ---------- The character ---------- */
 
-function makeDegen() {
-  const g = new THREE.Group();
-  g.rotation.order = 'YXZ';
-  const black = toon('#14121f');
-  const skin = toon('#e8c39e');
-  const part = (w: number, h: number, d: number, mat: THREE.Material, x: number, y: number, z: number, parent: THREE.Object3D = g) => {
-    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
-    m.position.set(x, y, z);
-    m.castShadow = true;
-    parent.add(m);
-    return m;
-  };
-  const limb = (x: number, y: number) => {
-    const pivot = new THREE.Group();
-    pivot.position.set(x, y, 0);
-    g.add(pivot);
-    return pivot;
-  };
-  const legs = [-0.07, 0.07].map((x) => {
-    const p = limb(x, 0.48);
-    part(0.11, 0.44, 0.13, black, 0, -0.22, 0, p);
-    part(0.12, 0.06, 0.2, toon('#2a2350'), 0, -0.45, 0.03, p);
-    return p;
-  });
-  part(0.34, 0.44, 0.21, black, 0, 0.7, 0);
-  part(0.11, 0.2, 0.01, toon('#f3f2f7'), 0, 0.82, 0.106);
-  part(0.045, 0.18, 0.012, lit(new THREE.MeshToonMaterial({ color: '#1fbf6b', emissive: '#1fbf6b' }), 0.05, 0.5), 0, 0.8, 0.113);
-  const arms = [-0.21, 0.21].map((x, i) => {
-    const p = limb(x, 0.9);
-    part(0.09, 0.4, 0.11, black, 0, -0.2, 0, p);
-    part(0.08, 0.07, 0.08, skin, 0, -0.43, 0, p);
-    if (i === 1) part(0.13, 0.17, 0.05, toon('#e23b3b'), 0, -0.5, 0.06, p);
-    return p;
-  });
-  const head = new THREE.Group();
-  head.position.y = 1.05;
-  g.add(head);
-  const skull = new THREE.Mesh(new THREE.SphereGeometry(0.145, 14, 10), black);
-  skull.castShadow = true;
-  head.add(skull);
-  part(0.2, 0.05, 0.02, skin, 0, 0.025, 0.13, head);
-  part(0.24, 0.055, 0.03, lit(new THREE.MeshToonMaterial({ color: '#1fbf6b', emissive: '#1fbf6b' }), 0.15, 0.8), 0, 0.03, 0.145, head);
-  const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.152, 0.152, 0.075, 16), toon('#e23b3b'));
-  cap.position.y = 0.1;
-  cap.castShadow = true;
-  head.add(cap);
-  part(0.2, 0.02, 0.15, toon('#e23b3b'), 0, 0.07, 0.15, head);
-  part(0.11, 0.045, 0.012, toon('#f3f2f7'), 0, 0.105, 0.153, head);
-  g.scale.setScalar(SCALE);
-
-  const ring = new THREE.Mesh(
-    new THREE.RingGeometry(0.28, 0.36, 32),
-    new THREE.MeshBasicMaterial({ color: '#00eaff', transparent: true, opacity: 0.55, depthWrite: false, fog: false })
-  );
-  ring.rotation.x = -Math.PI / 2;
-  ring.layers.set(1);
-  return { g, legs, arms, head, ring };
-}
-
 /* ---------- Walk mode ---------- */
 
 export interface WalkDeps {
@@ -200,7 +114,7 @@ export interface WalkDeps {
 
 export function createWalk(d: WalkDeps) {
   const { camera, canvas, root } = d;
-  const hero = makeDegen();
+  const hero = makeDegen(SCALE);
   hero.g.visible = hero.ring.visible = false;
   d.scene.add(hero.g, hero.ring);
 
@@ -259,7 +173,7 @@ export function createWalk(d: WalkDeps) {
   const pad = { x: 0, y: 0, run: false, prev: [] as boolean[] };
   let near: { id: SpotId; label: string } | null = null;
 
-  const groundAt = (x: number, z: number) => (slabs.some((b) => inBox(b, x, z)) ? SLAB + stepAt(x, z) : 0.035);
+  const groundAt = (x: number, z: number) => (slabs.some((b) => inBox(b, x, z)) ? SLAB : 0.035);
   const onBridge = (x: number) => ROADS.some((r) => Math.abs(x - r) < 1.05);
   function blocked(x: number, z: number) {
     if (x < BOUNDS[0] || x > BOUNDS[2] || z < BOUNDS[1] || z > BOUNDS[3]) return true;

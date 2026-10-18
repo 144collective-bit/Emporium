@@ -58,12 +58,14 @@ cartoon shading and PulseChain neon, built with [three.js](https://threejs.org).
   to zoom. The camera flies in on load.
 - **Buildings are doors:** hover lights a building up; clicking it flies the
   camera in and opens a glass panel with that section and a button onward.
-- **The Emporium** is the centrepiece: a black-and-gold flagship palace that
-  fills its block, under a great gold-ribbed dome with the logo on top. It
-  has a grand columned front on the street corner, LED screens and tickers
-  on both street fronts, a helipad, a viewing deck and searchlights on its
-  corner pavilions, and a forecourt fountain. After dark, marquee lights chase
-  along its cornices, pavilions and dome ribs.
+- **The Emporium** is the centrepiece: a twisting glass cyber arcade. Twelve
+  glass floors turn a little more each storey, with neon game floors behind
+  the glass (arcade cabinets, a dance floor, racing sims) and one face a
+  pixel LED wall that plays its own shows (Insert coin, invaders, an
+  equalizer, a high-score table, a pixel Degen). Its corners and floor edges
+  bounce like an equalizer, and a giant hologram Degen dances on the roof.
+  At street level: a glass arcade hall with claw machines, the ARCADE sign
+  and logo over the doors, a glowing tile pad, a prize booth and a queue.
 - **Alive:** cars and buses stop at traffic lights, Degen-style people walk
   the sidewalks and queue at the shop, boats on the river, drones, a blimp,
   birds by day, sparks from the workshop, a swinging crane.
@@ -122,7 +124,7 @@ When the real wallet is ready, it plugs into `src/scripts/city3d/store.ts`.
 
 | Building | Panel button goes to |
 | --- | --- |
-| The Emporium (centre palace) | `/emporium` |
+| The Emporium (centre arcade tower) | `/emporium` |
 | Drop 001 (shop, shutters down) | `/emporium#drop`, or the Shopify store once `SHOP_OPEN` is true |
 | The Workshop | `/emporium#workshop` |
 | The Vault | `/emporium#vault` |

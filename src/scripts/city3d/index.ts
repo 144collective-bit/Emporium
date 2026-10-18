@@ -111,7 +111,7 @@ export async function bootCity(root: HTMLElement) {
   const home = () => {
     const portrait = host.clientWidth < host.clientHeight;
     const k = portrait ? 1.3 : 1;
-    return { pos: CENTER.clone().add(new THREE.Vector3(27, 31, 34).multiplyScalar(k)), target: CENTER.clone().add(new THREE.Vector3(0, 2.2, 1)) };
+    return { pos: CENTER.clone().add(new THREE.Vector3(27, 31, 34).multiplyScalar(k)), target: CENTER.clone().add(new THREE.Vector3(0, 3.4, 1)) };
   };
 
   const post = createPost(renderer, scene, camera, { msaa: Q.msaa, bloomScale: Q.bloomScale, smaa: devicePixelRatio < 1.5 && tier !== 'low' });

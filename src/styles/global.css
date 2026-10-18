@@ -1207,17 +1207,36 @@ body.full-bleed {
 .city-map .neon-strip {
   filter: drop-shadow(0 0 6px #e219e5);
 }
-/* The Emporium's marquee lights chasing along its cornice and dome */
-.city-map .chase {
-  animation: chase 0.9s linear infinite;
-  filter: drop-shadow(0 0 3px currentColor);
+/* The Emporium arcade: equalizer edges and the rooftop hologram */
+.city-map .eq {
+  animation: eq 1s steps(4) infinite;
 }
-@keyframes chase {
-  to {
-    stroke-dashoffset: -11.1;
+@keyframes eq {
+  0%,
+  100% {
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 1;
   }
 }
-
+.city-map .holo {
+  opacity: 0.8;
+  filter: drop-shadow(0 0 6px #00eaff) drop-shadow(0 0 2px #ff6ad5);
+  animation: holo 3.2s steps(1) infinite;
+}
+@keyframes holo {
+  0%,
+  100% {
+    opacity: 0.8;
+  }
+  93% {
+    opacity: 0.35;
+  }
+  95% {
+    opacity: 0.75;
+  }
+}
 /* Ambient motion */
 .city-map .beacon,
 .city-map .lamp-glow,
