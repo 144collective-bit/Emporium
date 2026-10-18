@@ -2240,14 +2240,28 @@ body.full-bleed {
 .walk-run {
   display: none;
 }
-.walk-settings {
+/* Walk mode's top-left row: Controls, Profile, Online, Emote. Panels drop down under the row. */
+.walk-top {
   position: absolute;
   top: 16px;
   left: 16px;
   z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
   max-width: calc(100% - 32px);
 }
-.walk-settings summary {
+.walk-top > details[hidden] {
+  display: none;
+}
+.walk-top .walk-settings-body {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  margin-top: 0 !important;
+}
+.walk-pop summary {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -2266,11 +2280,17 @@ body.full-bleed {
   cursor: pointer;
   list-style: none;
 }
-.walk-settings summary::-webkit-details-marker {
+.walk-pop summary::-webkit-details-marker {
   display: none;
 }
-.walk-settings summary svg {
+.walk-pop summary svg {
   color: var(--p-cyan);
+}
+.walk-pop[open] summary {
+  background:
+    var(--pulse-wash) padding-box,
+    linear-gradient(#14102a, #14102a) padding-box,
+    var(--pulse) border-box;
 }
 .walk-settings-body {
   display: grid;
@@ -2375,8 +2395,8 @@ body.full-bleed {
   transform: translateX(-50%);
   transition: opacity 0.3s;
 }
-.walk-settings[open] ~ .walk-hint,
-.walk-settings[open] ~ .walk-look {
+.walk-top:has(details[open]) ~ .walk-hint,
+.walk-top:has(details[open]) ~ .walk-look {
   display: none;
 }
 .city.is-looking .walk-look {
@@ -2961,10 +2981,21 @@ body.full-bleed {
   .city-mode-btn svg {
     display: none;
   }
-  .walk-settings {
+  .walk-top {
     top: 60px;
     left: 12px;
+    gap: 6px;
     max-width: calc(100% - 24px);
+  }
+  /* Phones: Profile, Online and Emote as icons */
+  .walk-pill-text {
+    display: none;
+  }
+  .walk-pop summary {
+    padding: 9px 12px;
+  }
+  .walk-online summary {
+    padding: 9px 11px;
   }
   .builder-bar {
     top: 60px;
@@ -3096,5 +3127,275 @@ body.full-bleed {
   .city-loader {
     animation: none !important;
     transition: none !important;
+  }
+}
+
+/* ---------- Player profile and multiplayer (walk mode) ---------- */
+.profile-head {
+  display: grid;
+  gap: 8px;
+}
+.profile-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+.profile-name b {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #fff;
+}
+.mp-rank {
+  padding: 2px 7px;
+  border: 1px solid #ffffff3a;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--p-cyan);
+  background: #0b0a12;
+}
+.mp-rank[data-rank="cadet"] { color: #9be7ff; }
+.mp-rank[data-rank="sharpshooter"] { color: #ffd36b; border-color: #ffd36b66; }
+.mp-rank[data-rank="marksman"] { color: #ff9a5a; border-color: #ff9a5a66; }
+.mp-rank[data-rank="elite"] { color: #ff6ad5; border-color: #ff6ad566; }
+.mp-rank[data-rank="legend"] {
+  border-color: #0000;
+  background:
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
+  color: #fff;
+}
+.wardrobe {
+  display: grid;
+  gap: 8px;
+}
+.wardrobe-seg {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.wardrobe-seg button,
+.emote-btn,
+.phrase-btn,
+.mp-mute {
+  padding: 7px 8px;
+  border: 1px solid #ffffff24;
+  border-radius: 8px;
+  background: #0b0a12;
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  cursor: pointer;
+}
+.wardrobe-seg button[aria-pressed="true"],
+.mp-mute[aria-pressed="true"] {
+  border-color: #0000;
+  background:
+    linear-gradient(#14102a, #14102a) padding-box,
+    var(--pulse) border-box;
+}
+.wardrobe-rows {
+  display: grid;
+  gap: 6px;
+}
+.wardrobe-row {
+  display: grid;
+  grid-template-columns: 74px 1fr;
+  align-items: center;
+  gap: 6px;
+}
+.wardrobe-row[hidden] {
+  display: none;
+}
+.wardrobe-row > span {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.sw-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.sw-btn {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid #ffffff40;
+  border-radius: 50%;
+  background: var(--c, #0b0a12);
+  cursor: pointer;
+}
+.sw-btn[aria-pressed="true"] {
+  outline: 2px solid var(--p-cyan);
+  outline-offset: 2px;
+}
+.sw-none {
+  background: linear-gradient(135deg, transparent 45%, #ff5a5a 45%, #ff5a5a 55%, transparent 55%), #0b0a12;
+}
+.walk-check[hidden] {
+  display: none;
+}
+/* Online pill: a status dot */
+.mp-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #6b6880;
+}
+.mp-dot[data-state="online"] {
+  background: #3ce06a;
+  box-shadow: 0 0 10px #3ce06a;
+}
+.mp-dot[data-state="connecting"],
+.mp-dot[data-state="retrying"] {
+  background: #ffd36b;
+}
+.mp-dot[data-state="full"],
+.mp-dot[data-state="error"] {
+  background: #ff5a5a;
+}
+.mp-status {
+  margin: 0;
+  font-size: 12px;
+}
+.mp-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.mp-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.mp-who {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: #fff;
+  font-size: 12px;
+}
+.mp-mute {
+  flex: none;
+  padding: 4px 8px;
+  font-size: 10px;
+}
+.emote-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+.emote-btn {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 6px 2px;
+  font-size: 10px;
+}
+.emote-btn span {
+  font-size: 20px;
+}
+.phrase-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.phrase-btn {
+  text-align: left;
+}
+/* Name tags and bubbles over other players */
+.mp-tags {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  overflow: hidden;
+  pointer-events: none;
+}
+.mp-tag {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  white-space: nowrap;
+  will-change: transform;
+}
+.mp-tag[hidden] {
+  display: none;
+}
+.mp-tag b {
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: #0b0a12cc;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+}
+.mp-bubble {
+  max-width: 180px;
+  padding: 5px 10px;
+  border: 1px solid #0000;
+  border-radius: 12px;
+  background:
+    linear-gradient(#0b0a12f0, #0b0a12f0) padding-box,
+    var(--pulse) border-box;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-style: normal;
+  color: #fff;
+  white-space: normal;
+  text-align: center;
+}
+.mp-bubble[hidden] {
+  display: none;
+}
+.mp-toast {
+  position: absolute;
+  bottom: 70px;
+  left: 50%;
+  z-index: 4;
+  margin: 0;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: #0b0a12e0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--p-cyan);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.mp-toast[hidden] {
+  display: none;
+}
+@media (max-width: 640px) {
+  .mp-toast {
+    bottom: 176px;
+  }
+}
+/* Mid widths: the centred Walk / Build buttons would sit on the row, so it drops below them */
+@media (min-width: 641px) and (max-width: 1320px) {
+  .walk-top {
+    top: 64px;
+  }
+  .walk-look {
+    top: 120px;
   }
 }

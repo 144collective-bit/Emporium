@@ -14,74 +14,10 @@
  */
 import * as THREE from 'three';
 import type { SpotId } from '../../lib/city';
-import { PLAYER, airPose, createDegen, walkPose } from './character';
-import { DUMMIES, createCombat, type Sfx } from './combat';
+import { PLAYER, airPose, createDegen, emotePose, holdRiflePose, walkPose, type Outfit } from './character';
+import { createCombat, type Sfx } from './combat';
+import { CAMERA_ONLY, RACK, SOLIDS, rayBoxes, type Box } from './solids';
 import { DISTRICTS, BLOCKS, BS, RIVER, ROADS, SLAB, type Tick } from './world';
-
-/** x0, z0, x1, z1, height */
-type Box = [number, number, number, number, number];
-
-/** Training dummies: Degen walks round them */
-const DUMMY_SOLIDS = DUMMIES.map(([x, z]): Box => [x - 0.3, z - 0.3, x + 0.3, z + 0.3, 1.3]);
-
-/** Everything you can't walk through, matching landmarks.ts. Height is for the camera. */
-const SOLIDS: Box[] = [
-  // Emporium arcade: the podium with its street corner cut off (in steps); the tower stands on it
-  [11.8, 11.8, 18.0, 16.0, 2.6],
-  [11.8, 16.0, 16.0, 18.0, 2.6],
-  ...[0, 1, 2, 3].map((k): Box => [16.0 + k * 0.5, 16.0, 16.5 + k * 0.5, 34 - (16.25 + k * 0.5), 2.6]),
-  [15.75, 18.35, 16.4, 19.05, 1.4], // claw machines either side of the doors
-  [18.35, 15.75, 19.05, 16.4, 1.4],
-  [18.4, 14.15, 19.35, 15.25, 1.6], // prize booth
-  [0.8, 11.9, 7.8, 17.05, 5.6], // vault body and rear steps
-  [1.2, 17.1, 7.4, 17.75, 4.4], // vault columns
-  [7.6, 13.3, 8.0, 15.3, 2.4], // vault door
-  [22.7, 12.3, 29.5, 16.85, 5.6], // Drop 001 shop
-  [24.25, 18.15, 24.95, 18.45, 1], // its sidewalk sign
-  [11.8, 22.8, 18.8, 27.6, 3.7], // workshop
-  [12.3, 28.5, 18.1, 29.4, 1], // tool crates
-  [18.3, 28.1, 19.4, 30.1, 1.2], // drums and forklift
-  [11.7, 4.5, 15.7, 8.05, 2.6], // signal studio
-  [16.0, 2.2, 18.4, 4.6, 13.5], // signal tower
-  [1.1, 23.1, 6.1, 27.1, 3.3], // post office
-  [6.4, 27.3, 7.0, 27.85, 0.9], // mailbox
-  [5.05, 27.85, 7.75, 30.55, 0], // pond
-  // The Armoury: curtain walls (open at the gate), towers, keep, vehicles, supplies
-  [22.55, 22.55, 30.45, 22.9, 1.4],
-  [22.55, 22.55, 22.9, 30.45, 1.4],
-  [30.1, 22.55, 30.45, 30.45, 1.4],
-  [22.55, 30.1, 24.9, 30.45, 1.4],
-  [28.3, 30.1, 30.45, 30.45, 1.4],
-  [22.45, 22.45, 23.45, 23.45, 2.6], // corner towers
-  [29.55, 22.45, 30.55, 23.45, 2.6],
-  [22.45, 29.55, 23.45, 30.55, 2.6],
-  [29.55, 29.55, 30.55, 30.55, 2.6],
-  [24.9, 29.75, 25.9, 30.55, 2.8], // gatehouse towers
-  [27.3, 29.75, 28.3, 30.55, 2.8],
-  [23.3, 23.3, 27.9, 26.9, 3.3], // keep
-  [28.62, 24.55, 29.68, 26.25, 1.0], // tank
-  [28.95, 28.05, 29.65, 29.15, 0.9], // jeep
-  [28.1, 22.95, 30.05, 24.35, 1.4], // supply crates under the netting
-  [23.05, 29.35, 23.8, 29.85, 0.6], // drums
-  [23.3, 27.95, 23.55, 28.95, 0.7], // helmet rack
-  [22.7, 0.9, 26.1, 4.3, 7.6], // apartments A
-  [26.9, 1.5, 30.3, 5.3, 8.4], // apartments B and billboard
-  [1.7, 1.7, 3.5, 3.5, 6.6], // water tower
-  [18.55, 11.95, 19.45, 12.85, 1.4], // planters
-  [11.95, 18.55, 12.85, 19.45, 1.4],
-  [28.3, 29.8, 29.2, 30.1, 1.2], // the Armoury's weapon rack
-  ...DUMMY_SOLIDS,
-];
-/** What bullets stop on: everything solid except the dummies' footprints (they test their own shape) */
-const SHOT_SOLIDS = SOLIDS.filter((b) => !DUMMY_SOLIDS.includes(b));
-
-/** Things to do with E besides doors */
-const RACK = { x: 28.75, z: 29.42 };
-/** Only the camera bumps into these (tall parts above a walkable footprint) */
-const CAMERA_ONLY: Box[] = [
-  [11.9, 11.9, 17.5, 17.5, 12.6], // the Emporium's glass tower
-  [26.5, 25.5, 27.9, 26.9, 5.9], // the Armoury's flag tower
-];
 
 /** Where you can step in, and what opens there. */
 const DOORS: { id: SpotId; x: number; z: number }[] = [
@@ -138,7 +74,7 @@ export interface WalkDeps {
   /** Called on any input, so the frame cap knows we're busy */
   touched(): void;
   tick(f: Tick): void;
-  sfx(kind: Sfx): void;
+  sfx(kind: Sfx, gain?: number): void;
 }
 
 export function createWalk(d: WalkDeps) {
@@ -157,6 +93,9 @@ export function createWalk(d: WalkDeps) {
   d.scene.add(hero.g, hero.ring);
   let headYaw = 0;
   let headPitch = 0;
+  /** An emote playing on Degen (seen in third person, and by other players) */
+  let emote: { id: string; t: number } | null = null;
+  let speedNow = 0;
 
   const $ = <T extends HTMLElement>(s: string) => root.querySelector<T>(s)!;
   // Opening a door panel frees the mouse so its links can be clicked
@@ -262,37 +201,7 @@ export function createWalk(d: WalkDeps) {
   }
 
   /** Distance along a ray to the first building or the ground (for shots). */
-  function rayWorld(from: THREE.Vector3, dir: THREE.Vector3, max: number) {
-    let t = max;
-    if (dir.y < 0) t = Math.min(t, (from.y - 0.1) / -dir.y);
-    const o = [from.x, from.y, from.z];
-    const v = [dir.x, dir.y, dir.z];
-    for (const list of [SHOT_SOLIDS, CAMERA_ONLY, d.plotSolids()]) {
-      for (const b of list) {
-        if (b[4] < 0.3) continue;
-        const lo = [b[0], 0, b[1]];
-        const hi = [b[2], b[4], b[3]];
-        let t0 = 0;
-        let t1 = t;
-        let hit = true;
-        for (let k = 0; k < 3 && hit; k++) {
-          if (Math.abs(v[k]) < 1e-6) {
-            if (o[k] < lo[k] || o[k] > hi[k]) hit = false;
-            continue;
-          }
-          let a = (lo[k] - o[k]) / v[k];
-          let c = (hi[k] - o[k]) / v[k];
-          if (a > c) [a, c] = [c, a];
-          t0 = Math.max(t0, a);
-          t1 = Math.min(t1, c);
-          if (t0 > t1) hit = false;
-        }
-        // Ignore boxes the camera starts inside (the hero's own surroundings)
-        if (hit && t0 > 0.6) t = Math.min(t, t0);
-      }
-    }
-    return t;
-  }
+  const rayWorld = (from: THREE.Vector3, dir: THREE.Vector3, max: number) => rayBoxes(from, dir, max, d.plotSolids());
 
   const combat = createCombat({ scene: d.scene, camera, root, tick: d.tick, ground: SLAB, rayWorld, sfx: d.sfx });
   hero.torso.add(combat.gun);
@@ -605,6 +514,12 @@ export function createWalk(d: WalkDeps) {
     const P = hero.pose;
     walkPose(P, phase, stride, runAmt);
     if (speed < 0.2) P.bob += Math.sin(t * 1.6) * 0.004;
+    speedNow = speed;
+    if (emote) {
+      emote.t += dt;
+      if (emote.t > 3 || speed > 0.6) emote = null;
+      else if (!combat.armed) emotePose(P, emote.id, emote.t);
+    }
     // Recoil kicks the view up a touch; the rifle rides the shoulder
     const kick = combat.update(dt, t, aim);
     if (kick) {
@@ -615,15 +530,7 @@ export function createWalk(d: WalkDeps) {
     aimAmt += ((shooting ? 1 : 0) - aimAmt) * damp(14, dt);
     if (hero.gummy) hero.gummy.visible = !combat.armed;
     if (combat.armed) {
-      // Both hands on the rifle: low and ready, or up at the shoulder when aiming or firing
-      const up = -pitch * aimAmt;
-      const L = THREE.MathUtils.lerp;
-      // Right hand (arms[0]) on the grip, left hand under the barrel: the rifle rides the right
-      // shoulder, the side the camera looks over
-      Object.assign(P.arms[0], { fwd: L(0.55, 1.2, aimAmt) + up * 0.9, out: L(0.12, 0.28, aimAmt), bend: L(1.05, 1.2, aimAmt) });
-      Object.assign(P.arms[1], { fwd: L(0.95, 1.4, aimAmt) + up * 0.9, out: L(-0.22, -0.12, aimAmt), bend: L(0.95, 0.45, aimAmt) });
-      const rl = combat.reloading ? Math.sin(combat.reloading * Math.PI) : 0;
-      if (rl) Object.assign(P.arms[1], { fwd: L(P.arms[1].fwd, 0.45, rl), bend: L(P.arms[1].bend, 1.55, rl) });
+      holdRiflePose(P, aimAmt, pitch, combat.reloading);
       combat.poseGun(aimAmt, pitch, P.lean, recoil);
     } else if (aim) Object.assign(P.arms[1], { fwd: 1.45, out: 0.05, bend: 0.15 });
     airPose(P, air);
@@ -707,6 +614,31 @@ export function createWalk(d: WalkDeps) {
     },
     onKey,
     update,
+    /** The rifle and target practice (the Profile panel and multiplayer talk to it) */
+    combat,
+    /** Dress Degen in a new outfit (the wardrobe) */
+    setLook(o: Outfit) {
+      const vis = hero.g.visible;
+      d.scene.remove(hero.g);
+      hero.g.traverse((m) => (m as THREE.Mesh).geometry?.dispose());
+      Object.assign(hero, createDegen(o));
+      hero.g.scale.setScalar(SCALE);
+      hero.g.visible = vis;
+      hero.torso.add(combat.gun);
+      d.scene.add(hero.g);
+    },
+    playEmote(id: string) {
+      emote = { id, t: 0 };
+    },
+    /** What other players need to see of us, for the game server */
+    netState() {
+      return { pos, face, pitch, speed: speedNow, air: !grounded, run: runAmt > 0.5, aim };
+    },
+    /** The server put us back (we moved somewhere impossible) */
+    fix(x: number, y: number, z: number) {
+      pos.set(x, y, z);
+      vel.set(0, 0);
+    },
     enter() {
       active = true;
       // A few steps back from the doors, so the arcade tower fills the view

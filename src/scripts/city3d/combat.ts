@@ -16,7 +16,8 @@ import * as THREE from 'three';
 import { FONT_DISPLAY, PAL, canvasTex, fx, glowTex, neon, toon } from './kit';
 import { type Tick } from './world';
 import { DRONES, DUMMIES, WEAPON, createSim, dronePose, type SimEvent } from './combat-sim';
-import { MUZZLE, SKINS, buildRifle, type SkinId } from './rifle';
+import type { ClientMsg, NetEvent } from '../net/protocol';
+import { MUZZLE, SKINS, buildRifle, placeRifle, type SkinId } from './rifle';
 import { createViewmodel, type ViewState } from './viewmodel';
 
 export { DUMMIES };
@@ -32,7 +33,8 @@ export interface CombatDeps {
   ground: number;
   /** Distance along the ray to the first building or the ground */
   rayWorld(from: THREE.Vector3, dir: THREE.Vector3, max: number): number;
-  sfx(kind: Sfx): void;
+  /** `gain` 0..1 for sounds from further away (other players) */
+  sfx(kind: Sfx, gain?: number): void;
 }
 
 const ME = 'me';
@@ -210,8 +212,14 @@ export function createCombat(d: CombatDeps) {
   const touchUi = matchMedia('(pointer: coarse)');
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  const sim = createSim({ ground: d.ground, rayWorld: d.rayWorld });
-  const me = sim.addPlayer(ME);
+  // Solo, the sim here decides everything; in multiplayer it only predicts our own shots (see setNet)
+  let sim = createSim({ ground: d.ground, rayWorld: d.rayWorld });
+  let me = sim.addPlayer(ME);
+  let net: { send(m: ClientMsg): void } | null = null;
+  /** Multiplayer: the profile on the server (lifetime score and finish) instead of this browser's */
+  let netProfile: { total: number; skin: SkinId } | null = null;
+  let requestSkin: ((id: SkinId) => void) | null = null;
+  const lifetimeFns: ((total: number) => void)[] = [];
 
   const profile = loadProfile();
   const saveProfile = () => {
@@ -421,14 +429,16 @@ export function createCombat(d: CombatDeps) {
 
   // Rifle finishes: buttons in the Controls panel, unlocked by lifetime score
   const paintSkins = () => {
-    hud.lifetime.textContent = Math.floor(profile.total).toLocaleString('en');
+    const src = netProfile ?? profile;
+    hud.lifetime.textContent = Math.floor(src.total).toLocaleString('en');
     for (const b of hud.skins.querySelectorAll<HTMLButtonElement>('[data-skin]')) {
       const s = SKINS.find((k) => k.id === b.dataset.skin)!;
-      const open = profile.total >= s.need;
+      const open = src.total >= s.need;
       b.disabled = !open;
-      b.setAttribute('aria-pressed', String(profile.skin === s.id));
-      b.querySelector('small')!.textContent = open ? (profile.skin === s.id ? 'Equipped' : 'Unlocked') : `${s.need.toLocaleString('en')} pts`;
+      b.setAttribute('aria-pressed', String(src.skin === s.id));
+      b.querySelector('small')!.textContent = open ? (src.skin === s.id ? 'Equipped' : 'Unlocked') : `${s.need.toLocaleString('en')} pts`;
     }
+    for (const f of lifetimeFns) f(src.total);
   };
   const setSkin = (id: SkinId) => {
     profile.skin = id;
@@ -439,9 +449,19 @@ export function createCombat(d: CombatDeps) {
   };
   hud.skins.addEventListener('click', (e) => {
     const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-skin]');
-    if (b && !b.disabled) setSkin(b.dataset.skin as SkinId);
+    if (!b || b.disabled) return;
+    if (netProfile && requestSkin) requestSkin(b.dataset.skin as SkinId);
+    else setSkin(b.dataset.skin as SkinId);
   });
   paintSkins();
+  const unlocked = (before: number, after: number) => {
+    for (const s of SKINS) {
+      if (s.need > 0 && before < s.need && after >= s.need) {
+        popup('Unlocked', `${s.name} finish`, 'is-unlock');
+        d.sfx('unlock');
+      }
+    }
+  };
   const addLifetime = (n: number) => {
     const before = profile.total;
     profile.total += n;
@@ -463,8 +483,9 @@ export function createCombat(d: CombatDeps) {
   /* ----- Turning sim events into things you see and hear ----- */
   const fwd = new THREE.Vector3();
   const from = new THREE.Vector3();
-  function tracer(to: THREE.Vector3, dist: number) {
-    if (firstPerson && vm.root.visible) {
+  function tracer(to: THREE.Vector3, dist: number, start?: THREE.Vector3 | null) {
+    if (start) from.copy(start);
+    else if (firstPerson && vm.root.visible) {
       // Start on the line from the eye through the hands' muzzle, nearer than the hands are drawn
       vm.muzzle(from).sub(camera.position).normalize();
       from.multiplyScalar(THREE.MathUtils.clamp(dist * 0.5, 0.6, 1.4)).add(camera.position);
@@ -504,7 +525,7 @@ export function createCombat(d: CombatDeps) {
           hitT = 0.15;
           d.sfx(t.kind === 'drone' ? 'hitMetal' : 'hit');
           showNumber(e.at, e.damage, e.hp === 0);
-          addLifetime(10);
+          if (!net) addLifetime(10);
         }
         break;
       }
@@ -519,8 +540,10 @@ export function createCombat(d: CombatDeps) {
         if (e.player === ME) {
           killT = 0.3;
           d.sfx('down');
-          addLifetime(e.points);
-          saveProfile();
+          if (!net) {
+            addLifetime(e.points);
+            saveProfile();
+          }
           popup(`+${e.points}`, t.kind === 'drone' ? 'Drone down' : 'Takedown');
           if (e.streak >= 2) popup(STREAKS[Math.min(e.streak, 5)] || `x${e.streak}`, `x${e.streak} streak`, 'is-streak');
           paintSkins();
@@ -639,19 +662,35 @@ export function createCombat(d: CombatDeps) {
     get firing() {
       return trigger || touchFire;
     },
+    /** Firing from a touch screen (aim assist applies) */
+    get assisted() {
+      return touchFire && !trigger;
+    },
+    /** The drone clock as this browser sees it (sent with shots so the server can rewind) */
+    get poseNow() {
+      return sim.poseNow;
+    },
     /** How far the first-person rifle is up at the sight (0..1) */
     get aimed() {
       return vm.aimed;
     },
-    gearUp: () => sim.gearUp(ME),
+    gearUp() {
+      sim.gearUp(ME);
+      net?.send({ t: 'gear' });
+    },
     toggleHolster() {
-      if (me.geared) sim.setArmed(ME, !me.armed);
+      if (!me.geared) return;
+      sim.setArmed(ME, !me.armed);
+      net?.send({ t: 'arm', on: me.armed });
     },
     trigger(on: boolean, touch = false) {
       if (touch) touchFire = on && me.armed;
       else trigger = on && me.armed;
     },
-    reload: () => sim.reload(ME),
+    reload() {
+      sim.reload(ME);
+      net?.send({ t: 'reload' });
+    },
     /** Per frame while walking, before the camera moves (t is 0 under reduced motion). Returns the recoil to add to the camera pitch. */
     update(dt: number, t: number, aim: boolean) {
       aiming = aim;
@@ -709,11 +748,82 @@ export function createCombat(d: CombatDeps) {
     },
     /** Pose the third-person rifle for this frame: aim 0..1 brings it up to the shoulder */
     poseGun(aim: number, pitchDown: number, lean: number, holdRecoil: number) {
-      const rl = me.reload > 0 ? Math.sin((1 - me.reload / WEAPON.reload) * Math.PI) : 0;
-      // On the right shoulder (the rig's -x side)
-      pivot.position.set(-0.09 + aim * 0.04, 0.3 + aim * 0.06, 0.13 + aim * 0.03 - holdRecoil * 0.4);
-      pivot.rotation.set(THREE.MathUtils.lerp(0.55, pitchDown - lean, aim) + rl * 0.5 - holdRecoil * 2, 0.08 * (1 - aim), -rl * 0.7);
-      rifle.mag.position.y = -Math.sin(Math.min(1, rl * 1.4) * Math.PI) * 0.12;
+      placeRifle(pivot, rifle, aim, pitchDown, lean, holdRecoil, me.reload > 0 ? 1 - me.reload / WEAPON.reload : 0);
+    },
+    /** Every rifle finish change and lifetime score update (for the profile panel) */
+    onLifetime(fn: (total: number) => void) {
+      lifetimeFns.push(fn);
+      fn((netProfile ?? profile).total);
+    },
+    get lifetime() {
+      return (netProfile ?? profile).total;
+    },
+    get skin() {
+      return (netProfile ?? profile).skin;
+    },
+    /**
+     * Multiplayer on (a link to the server) or off (null). Online, the server
+     * decides hits, health, ammo and score; this browser predicts its own shots.
+     */
+    setNet(link: { send(m: ClientMsg): void } | null, onSkin: ((id: SkinId) => void) | null = null) {
+      net = link;
+      requestSkin = onSkin;
+      sim = createSim({ ground: d.ground, rayWorld: d.rayWorld, authority: !link });
+      me = sim.addPlayer(ME);
+      for (const L of looks) {
+        L.g.visible = true;
+        L.fall = null;
+        L.barShow = 0;
+      }
+      setArmedLook(false);
+      if (!link) {
+        netProfile = null;
+        rifle.setSkin(profile.skin);
+        vm.setSkin(profile.skin);
+        paintSkins();
+      }
+    },
+    /** Multiplayer: our profile from the server */
+    setNetProfile(p: { total: number; skin: SkinId }) {
+      if (netProfile) unlocked(netProfile.total, p.total);
+      if (p.skin !== (netProfile ?? profile).skin) {
+        rifle.setSkin(p.skin);
+        vm.setSkin(p.skin);
+      }
+      netProfile = { total: p.total, skin: p.skin };
+      paintSkins();
+    },
+    /** Multiplayer: positions of targets and our own ammo and score */
+    netSnap(pt: number, tg: [number, number, number][], mine: [number, number, number, number, number, number]) {
+      if (Math.abs(sim.poseNow - pt) > 0.15) sim.setPoseTime(pt);
+      sim.applyTargets(tg);
+      const [mag, reserve, reloading, score, streak, armed] = mine;
+      sim.syncPlayer(ME, { mag, reserve, reloading: !!reloading, score, streak, armed: !!armed });
+    },
+    /** Multiplayer: combat events from the server; `muzzle` finds another player's rifle */
+    netEvents(events: NetEvent[], myId: number, muzzle: (id: number, out: THREE.Vector3) => THREE.Vector3 | null) {
+      for (const e of events) {
+        const who = e[1] === myId ? ME : `p${e[1]}`;
+        if (e[0] === 's') {
+          // Our own shots were already drawn when we fired
+          if (who === ME) continue;
+          const to = new THREE.Vector3(e[5], e[6], e[7]);
+          const start = muzzle(e[1], new THREE.Vector3()) ?? new THREE.Vector3(e[2], e[3], e[4]);
+          const dist = start.distanceTo(camera.position);
+          tracer(to, 0, start);
+          if (e[8] === -1 && to.distanceTo(camera.position) < 40) burst(to, 4, ['#ffe9a8', '#ffb347'], 2.2, 1, true, 0.22);
+          if (dist < 45) d.sfx('shot', Math.max(0.08, 1 - dist / 45) * 0.7);
+        } else if (e[0] === 'h') {
+          onEvent({ type: 'hit', player: who, target: e[2], damage: e[3], at: new THREE.Vector3(e[4], e[5], e[6]), hp: e[7] });
+        } else if (e[0] === 'k') {
+          sim.applyTargets([[e[2], 0, 1]]);
+          onEvent({ type: 'takedown', player: who, target: e[2], at: new THREE.Vector3(e[3], e[4], e[5]), points: e[6], streak: e[7] });
+        }
+      }
+    },
+    /** Send a command to the server too when online (gear up, holster, reload) */
+    get online() {
+      return !!net;
     },
     exit() {
       trigger = touchFire = false;

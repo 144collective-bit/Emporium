@@ -147,13 +147,41 @@ it and has been retired completely. Build only on what's here.
 - Visitors can't type text onto buildings: sign texts come from the fixed
   `SIGNS` list, so nothing unexpected (or confidential) appears in public.
 
+## Multiplayer (beta)
+
+- The plan and decisions are in `docs/multiplayer-plan.md`; keep it up to
+  date. Phase 1 (hangout, player profiles, shared target practice) is built;
+  leaderboards and south-bank PvP come next.
+- The game server lives in `server/` (Cloudflare Worker + Durable Objects:
+  Lobby, Room per city of 16, Profile per player). See `server/README.md`.
+  The server decides hits, scores and profiles; browsers only predict their
+  own shots. New rules go in `combat-sim.ts` (shared), never only in the view.
+- Shared code the server bundles must stay free of DOM and scene code:
+  `src/scripts/net/*` (except `client.ts`), `combat-sim.ts`, `solids.ts`.
+  `src/scripts/net/protocol.ts` is the wire format; bump `PROTOCOL` when it
+  changes incompatibly.
+- Nothing typed by players ever shows: guest names come from the word lists
+  and emotes / phrases from the fixed lists in `profile-data.ts`. Review any
+  new words or phrases for the content rules below (no token details, no
+  financial talk). The server re-checks every value players send.
+- Player profiles: guest name (reroll), wardrobe look, rifle finish,
+  lifetime score and rank, stored on the server against a hash of the
+  browser's guest token (`degen-city-player-v1`). Offline, the Profile panel
+  keeps the look and finish in the browser.
+- The site only shows the Online pill when built with `PUBLIC_GAME_SERVER`
+  (a GitHub repository variable). Only pages in `ALLOWED_ORIGINS`
+  (`server/wrangler.jsonc`) can connect.
+- PvP will only ever happen across the river (south bank); the city north of
+  the bridges stays a safe hangout.
+
 ## Hosting
 
 - degenemporium.com is a static build hosted on Hostinger (`dist/`
   extracted into `public_html`). The "Build site" GitHub Action builds
   every push to `main` into a downloadable zip.
 - Keep the site fully static (no server routes) and keep `public/.htaccess`
-  in the build.
+  in the build. The only live service is the separate game server
+  (`server/`, Cloudflare), deployed by the "Deploy game server" Action.
 
 ## Content guardrails
 

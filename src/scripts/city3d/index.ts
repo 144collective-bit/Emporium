@@ -11,6 +11,8 @@ import { CENTER, buildGround, buildLamps, buildSkyline, buildTrees, puddleMat, s
 import { buildLandmarks, type Spot } from './landmarks';
 import { buildLife, walker } from './life';
 import { createWalk } from './walk';
+import { createProfileUI } from './profile-ui';
+import { createMultiplayer } from './multiplayer';
 import { createSky, type TimeMode, type WeatherMode } from './sky';
 import { createSound } from './sound';
 import { createPlots, type Plot } from './plots';
@@ -273,8 +275,12 @@ export async function bootCity(root: HTMLElement) {
     touched: () => touched(),
     tick,
     // The sound engine is made further down; shots only happen once it exists
-    sfx: (kind) => sound.sfx(kind),
+    sfx: (kind, gain) => sound.sfx(kind, gain),
   });
+  // The Profile panel (wardrobe, finish, rank) works offline; multiplayer only when the site has a game server
+  const profileUI = createProfileUI(root, { setLook: (o) => walk.setLook(o), onLifetime: (fn) => walk.combat.onLifetime(fn) });
+  const server = import.meta.env.PUBLIC_GAME_SERVER as string | undefined;
+  const mp = server ? createMultiplayer({ url: server, root, scene, camera, walk, combat: walk.combat, profile: profileUI }) : null;
   const walkBtn = root.querySelector<HTMLButtonElement>('[data-walk-toggle]')!;
   let beforeWalk: { pos: THREE.Vector3; target: THREE.Vector3 } | null = null;
   function startWalking() {
@@ -288,6 +294,7 @@ export async function bootCity(root: HTMLElement) {
     walking = true;
     walker.on = true;
     walk.enter();
+    mp?.walkChanged(true);
     walkBtn.setAttribute('aria-pressed', 'true');
     walkBtn.querySelector('[data-walk-label]')!.textContent = 'Stop walking';
     root.classList.add('has-moved');
@@ -298,6 +305,7 @@ export async function bootCity(root: HTMLElement) {
     walking = false;
     walker.on = false;
     walk.exit();
+    mp?.walkChanged(false);
     close();
     controls.enabled = true;
     walkBtn.setAttribute('aria-pressed', 'false');
@@ -474,6 +482,7 @@ export async function bootCity(root: HTMLElement) {
       walk.update(dt, reduced ? 0 : t);
       walker.x = walk.position.x;
       walker.z = walk.position.z;
+      mp?.update(dt, t);
       dirty = true;
     } else if (controls.update()) dirty = true;
     // Keep the view over the city

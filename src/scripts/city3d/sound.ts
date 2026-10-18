@@ -189,9 +189,15 @@ export function createSound() {
      * reloads click out and clack in; cardboard thuds, drones ring. Silent unless
      * sound is on.
      */
-    sfx(kind: Sfx) {
-      if (!ctx || !on) return;
+    sfx(kind: Sfx, gain = 1) {
+      if (!ctx || !on || gain <= 0) return;
       const t = ctx.currentTime;
+      // Quieter for things further away (other players' shots)
+      const bus = gain < 1 ? ctx.createGain() : sfxBus;
+      if (bus !== sfxBus) {
+        bus.gain.value = gain;
+        bus.connect(sfxBus);
+      }
       const env = (g: GainNode, at: number, peak: number, decay: number) => {
         g.gain.setValueAtTime(0.0001, at);
         g.gain.exponentialRampToValueAtTime(peak, at + 0.004);
@@ -206,7 +212,7 @@ export function createSound() {
         f.Q.value = q;
         const g = ctx!.createGain();
         env(g, at, peak, decay);
-        src.connect(f).connect(g).connect(sfxBus);
+        src.connect(f).connect(g).connect(bus);
         if (echo) g.connect(echoIn);
         src.start(at, Math.random() * 1.5);
         src.stop(at + decay + 0.05);
@@ -218,7 +224,7 @@ export function createSound() {
         o.frequency.exponentialRampToValueAtTime(f1, at + decay);
         const g = ctx!.createGain();
         env(g, at, peak, decay);
-        o.connect(g).connect(sfxBus);
+        o.connect(g).connect(bus);
         if (echo) g.connect(echoIn);
         o.start(at);
         o.stop(at + decay + 0.02);

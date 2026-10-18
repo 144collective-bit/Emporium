@@ -17,6 +17,7 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { rifleGeometry } from './rifle';
+import type { Look } from '../net/profile-data';
 import { canvasTex, lit, toon } from './kit';
 
 /* ---------- Outfits ---------- */
@@ -278,6 +279,54 @@ export function dancePose(p: Pose, t: number) {
   set(p.legs[1], 0.1 + Math.max(0, -Math.sin(b)) * 0.4, 0.12, 0.25 + beat * 0.3 + Math.max(0, -Math.sin(b)) * 0.6);
   p.headPitch = -beat * 0.15;
   p.headYaw = Math.sin(b * 0.5) * 0.2;
+}
+
+/**
+ * Both hands on the rifle: low and ready, or up at the shoulder when aiming
+ * (`aim` 0..1). The right hand (arms[0]) holds the grip, the left hand the
+ * handguard; `reload` 0..1 swings the left hand down to the magazine.
+ */
+export function holdRiflePose(p: Pose, aim: number, pitch: number, reload: number) {
+  const up = -pitch * aim;
+  const L = (a: number, b: number) => a + (b - a) * aim;
+  set(p.arms[0], L(0.55, 1.2) + up * 0.9, L(0.12, 0.28), L(1.05, 1.2));
+  set(p.arms[1], L(0.95, 1.4) + up * 0.9, L(-0.22, -0.12), L(0.95, 0.45));
+  const rl = reload ? Math.sin(reload * Math.PI) : 0;
+  if (rl) set(p.arms[1], p.arms[1].fwd + (0.45 - p.arms[1].fwd) * rl, p.arms[1].out, p.arms[1].bend + (1.55 - p.arms[1].bend) * rl);
+}
+
+/** Multiplayer emotes (ids from EMOTES in profile-data.ts); `t` is seconds since it started */
+export function emotePose(p: Pose, id: string, t: number) {
+  if (id === 'dance') return dancePose(p, t);
+  if (id === 'salute') return attentionPose(p, Math.min(1, t * 4), 'right');
+  idlePose(p, t);
+  if (id === 'wave') {
+    set(p.arms[0], 2.55, 0.3 + Math.sin(t * 10) * 0.28, 0.55);
+    p.headPitch = -0.08;
+  } else if (id === 'cheer') {
+    const hop = Math.abs(Math.sin(t * 7));
+    p.bob = hop * 0.04;
+    set(p.arms[0], 2.75, 0.32, 0.25 + hop * 0.3);
+    set(p.arms[1], 2.75, 0.32, 0.25 + hop * 0.3);
+    p.headPitch = -0.15;
+  }
+}
+
+/** A player's wardrobe choices as a Degen outfit */
+export function lookOutfit(l: Look): Outfit {
+  return {
+    kind: l.kind,
+    top: l.top,
+    bottom: l.bottom,
+    shoes: '#1b1830',
+    tie: l.kind === 'suit' ? l.tie : undefined,
+    cap: l.hood ? undefined : (l.cap ?? undefined),
+    hood: l.kind === 'hoodie' && l.hood,
+    headphones: l.headphones ?? undefined,
+    backpack: l.backpack ?? undefined,
+    chain: l.chain,
+    gummy: true,
+  };
 }
 
 /* ---------- Parts ---------- */

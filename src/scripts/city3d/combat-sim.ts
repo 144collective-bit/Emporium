@@ -100,6 +100,8 @@ export interface SimInput {
   assist: boolean;
   origin: THREE.Vector3;
   dir: THREE.Vector3;
+  /** The drone clock the shooter saw (their screen lags the server a little); drones are hit-tested there */
+  view?: number;
 }
 
 export interface SimPlayer {
@@ -135,6 +137,11 @@ export interface SimOptions {
   /** Distance along a ray to the first building or the ground */
   rayWorld(from: THREE.Vector3, dir: THREE.Vector3, max: number): number;
   seed?: number;
+  /**
+   * False in a multiplayer browser: shots are only predicted (for the tracer and
+   * ammo) and the server's events decide hits, health and score.
+   */
+  authority?: boolean;
 }
 
 /** Small seeded random generator (mulberry32) */
@@ -149,7 +156,11 @@ function rng(seed: number) {
   };
 }
 
+/** How far back a shooter's view of the drones is trusted (seconds) */
+const MAX_REWIND = 0.35;
+
 export function createSim(o: SimOptions) {
+  const authority = o.authority ?? true;
   const random = rng(o.seed ?? 1444);
   const events: SimEvent[] = [];
   const players = new Map<string, SimPlayer>();
@@ -181,14 +192,17 @@ export function createSim(o: SimOptions) {
   const dir = new THREE.Vector3();
   const tmp = new THREE.Vector3();
 
-  /** Distance along the ray to a target, or null */
-  function hitTarget(t: SimTarget, r: THREE.Ray) {
+  /** Distance along the ray to a target, or null. Drones are placed where the shooter saw them. */
+  function hitTarget(t: SimTarget, r: THREE.Ray, view?: number) {
     if (t.down > 0) return null;
     if (t.kind === 'dummy') {
       localRay.copy(r).applyMatrix4(dummyInv[t.id]);
       return localRay.intersectBox(box, hitP) ? hitP.distanceTo(localRay.origin) : null;
     }
-    sphere.center.set(t.x, t.y, t.z);
+    if (view !== undefined && view < poseTime) {
+      dronePose(t.id - firstDrone, Math.max(view, poseTime - MAX_REWIND), pose);
+      sphere.center.set(pose.x, pose.y, pose.z);
+    } else sphere.center.set(t.x, t.y, t.z);
     return r.intersectSphere(sphere, hitP) ? hitP.distanceTo(r.origin) : null;
   }
 
@@ -233,7 +247,7 @@ export function createSim(o: SimOptions) {
     let dist = o.rayWorld(inp.origin, dir, WEAPON.range);
     let hit: SimTarget | null = null;
     for (const t of targets) {
-      const d = hitTarget(t, ray);
+      const d = hitTarget(t, ray, inp.view);
       if (d !== null && d < dist && d > 0.5) {
         dist = d;
         hit = t;
@@ -241,7 +255,7 @@ export function createSim(o: SimOptions) {
     }
     const at = ray.at(dist, new THREE.Vector3());
     events.push({ type: 'shot', player: p.id, from: inp.origin.clone(), to: at, target: hit ? hit.id : null, dist });
-    if (hit) damage(p, hit, at);
+    if (hit && authority) damage(p, hit, at);
   }
 
   function damage(p: SimPlayer, t: SimTarget, at: THREE.Vector3) {
@@ -261,7 +275,8 @@ export function createSim(o: SimOptions) {
     time += TICK;
     if (motion) poseTime += TICK;
     for (const t of targets) {
-      if (t.down > 0) {
+      // A browser in multiplayer waits for the server to bring targets back
+      if (t.down > 0 && authority) {
         t.down -= TICK;
         if (t.down <= 0) {
           t.down = 0;
@@ -374,6 +389,41 @@ export function createSim(o: SimOptions) {
       }
       if (n === 15) acc = 0;
       return n;
+    },
+    /** Multiplayer browsers: follow the server's drone clock */
+    setPoseTime(t: number) {
+      poseTime = t;
+      acc = 0;
+    },
+    /** Multiplayer browsers: the server's word on each target (health, knocked down or not) */
+    applyTargets(rows: [number, number, number][]) {
+      for (const [id, hp, down] of rows) {
+        const t = targets[id];
+        if (!t) continue;
+        t.hp = hp;
+        if (down && t.down === 0) t.down = 1;
+        else if (!down && t.down > 0) {
+          t.down = 0;
+          events.push({ type: 'respawn', target: id });
+        }
+      }
+    },
+    /** Multiplayer browsers: the server's word on a player's ammo and score */
+    syncPlayer(id: string, s: { mag: number; reserve: number; reloading: boolean; score: number; streak: number; armed: boolean }) {
+      const p = player(id);
+      p.score = s.score;
+      p.streak = s.streak;
+      p.streakT = s.streak ? STREAK_WINDOW : 0;
+      if (p.armed !== s.armed) {
+        p.armed = s.armed;
+        events.push({ type: 'armed', player: id, on: s.armed });
+      }
+      // Ammo: trust our own prediction mid-burst or mid-reload, otherwise take the server's count
+      if (!p.input.fire && p.reload === 0 && !s.reloading) {
+        p.mag = s.mag;
+        p.reserve = s.reserve;
+      }
+      if (s.armed) p.geared = true;
     },
     /** Hand over (and clear) everything that happened since the last call */
     drain() {

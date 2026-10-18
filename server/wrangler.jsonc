@@ -1,0 +1,21 @@
+// The Degen City game server: one Worker, three kinds of Durable Object.
+// Deployed from GitHub Actions (.github/workflows/deploy-server.yml); see README.md here.
+{
+  "name": "degen-city",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-09-01",
+  "durable_objects": {
+    "bindings": [
+      { "name": "LOBBY", "class_name": "Lobby" },
+      { "name": "ROOMS", "class_name": "Room" },
+      { "name": "PROFILES", "class_name": "Profile" }
+    ]
+  },
+  // SQLite-backed Durable Objects are available on the Workers free plan
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Lobby", "Room", "Profile"] }],
+  "vars": {
+    // Pages allowed to connect (other sites can't embed the game)
+    "ALLOWED_ORIGINS": "https://degenemporium.com,https://www.degenemporium.com,http://localhost:4321"
+  },
+  "observability": { "enabled": true }
+}

@@ -8,3 +8,6 @@ dist/
 
 # Dev scratch
 scratch/
+
+# Cloudflare dev state
+.wrangler/

@@ -155,6 +155,29 @@ city is shot at.
   the buildings; reloads click out and clack in; cardboard thuds and drones
   ring.
 
+### Multiplayer (beta)
+
+Walk the city with other players. Press the **Online** pill in walk mode
+(top-left, next to Controls) and **Go online**.
+
+- Up to 16 players share a city; more cities open as they fill.
+- Everyone gets a generated guest name (reroll it in **Profile**), shown on a
+  name tag with a rank badge from their lifetime score.
+- **Profile**: your name, rank, lifetime score, rifle finish and a wardrobe
+  (suit or hoodie, colours, cap or hood, tie, headphones, backpack, chain).
+  Online it's saved on the server and follows you; offline your look and
+  finish are kept in this browser.
+- **Emote** (or T): wave, dance, salute, cheer and a set of fixed phrases
+  ("GM degens", "Nice shot!"…) shown as a bubble over your head. Nothing
+  typed ever appears. Mute anyone from the Online panel.
+- Target practice is shared: everyone shoots the same dummies and drones and
+  the server keeps score.
+- Stop walking to go offline; you rejoin when you walk again.
+
+The game server is in `server/` (Cloudflare); see `server/README.md` for
+setup. The plan for the next phases (leaderboards, PvP across the river) is
+in `docs/multiplayer-plan.md`.
+
 ### City builder (demo)
 
 Press **Build** to switch to build mode. The districts around the city
@@ -204,6 +227,12 @@ button and stays closed on return visits.
 | `src/scripts/city3d/combat.ts` | Target practice view: targets, effects, sound cues, HUD, call-outs, rifle finishes |
 | `src/scripts/city3d/rifle.ts` | The rifle (shared by Degen, his hands and the soldiers), red-dot sight, finishes |
 | `src/scripts/city3d/viewmodel.ts` | First-person hands and rifle: sway, bob, recoil, aiming, reload |
+| `src/scripts/city3d/solids.ts` | The city's collision boxes (walk mode and the game server) |
+| `src/scripts/city3d/profile-ui.ts` | The Profile panel: name, rank, wardrobe |
+| `src/scripts/city3d/multiplayer.ts` | Online pill, sending controls, emotes and phrases, player list |
+| `src/scripts/city3d/remote.ts` | Other players: smoothed movement, poses, name tags, bubbles |
+| `src/scripts/net/` | Shared with the server: protocol, profile data (names, ranks, wardrobe, emotes, phrases); `client.ts` is the browser connection |
+| `server/` | The multiplayer game server (Cloudflare Worker + Durable Objects) |
 | `src/scripts/city3d/plots.ts` | Plot grid, build-mode overlay, the eight buildings |
 | `src/scripts/city3d/store.ts` | Demo wallet, simulated purchases, saved progress |
 | `src/scripts/city3d/builder-ui.ts` | Build mode: wallet chip, plot panel, customiser, purchase dialog |

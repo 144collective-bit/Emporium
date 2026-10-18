@@ -8,13 +8,10 @@
  */
 import * as THREE from 'three';
 import { PAL, canvasTex, fx, lit, toon } from './kit';
+import type { SkinId } from '../net/profile-data';
 
-export type SkinId = 'olive' | 'ink' | 'neon';
-export const SKINS: { id: SkinId; name: string; need: number }[] = [
-  { id: 'olive', name: 'Field Olive', need: 0 },
-  { id: 'ink', name: 'Black Ink', need: 2500 },
-  { id: 'neon', name: 'Pulse Neon', need: 10000 },
-];
+/** Finishes and their unlock scores live with the profile data (the game server checks them too) */
+export { SKINS, type SkinId } from '../net/profile-data';
 const SKIN_COLORS: Record<SkinId, { furniture: string; accent: string; steel: string }> = {
   olive: { furniture: '#5a6b3a', accent: '#c9a04a', steel: '#34333f' },
   ink: { furniture: '#24212f', accent: '#8f8aa8', steel: '#16141d' },
@@ -229,4 +226,17 @@ export function buildRifle(skin: SkinId, opts: { sight?: boolean; shadows?: bool
       for (const m of Object.values(mats)) m.emissive.setRGB(k * 0.55, k * 0.42, k * 0.2);
     },
   };
+}
+
+/**
+ * Where the third-person rifle sits in its pivot on the chest, for this frame:
+ * `aim` 0..1 brings it up to the right shoulder, `recoil` kicks it back and
+ * `reload` 0..1 tips it and drops the magazine.
+ */
+export function placeRifle(pivot: THREE.Object3D, rifle: Rifle, aim: number, pitchDown: number, lean: number, recoil: number, reload: number) {
+  const rl = reload ? Math.sin(reload * Math.PI) : 0;
+  // On the right shoulder (the rig's -x side)
+  pivot.position.set(-0.09 + aim * 0.04, 0.3 + aim * 0.06, 0.13 + aim * 0.03 - recoil * 0.4);
+  pivot.rotation.set(THREE.MathUtils.lerp(0.55, pitchDown - lean, aim) + rl * 0.5 - recoil * 2, 0.08 * (1 - aim), -rl * 0.7);
+  rifle.mag.position.y = -Math.sin(Math.min(1, rl * 1.4) * Math.PI) * 0.12;
 }
