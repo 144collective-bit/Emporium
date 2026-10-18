@@ -23,7 +23,7 @@ export const SHOT_REACH = 18;
 export const FLAG = { armed: 1, aim: 2, fire: 4, run: 8, air: 16, reload: 32, assist: 64 } as const;
 /** Height of the ground the city stands on (SLAB in world.ts) */
 export const GROUND = 0.15;
-/** How close you must be to the Armoury's weapon rack to gear up */
+/** How close you must be to the Armoury's gun store counter to gear up */
 export const RACK_REACH = 2.5;
 
 export type V3 = [number, number, number];

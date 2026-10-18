@@ -35,19 +35,22 @@ export const SOLIDS: Box[] = [
   [1.1, 23.1, 6.1, 27.1, 3.3], // post office
   [6.4, 27.3, 7.0, 27.85, 0.9], // mailbox
   [5.05, 27.85, 7.75, 30.55, 0], // pond
-  // The Armoury: curtain walls (open at the gate), towers, keep, vehicles, supplies
-  [22.55, 22.55, 30.45, 22.9, 1.4],
-  [22.55, 22.55, 22.9, 30.45, 1.4],
-  [30.1, 22.55, 30.45, 30.45, 1.4],
-  [22.55, 30.1, 24.9, 30.45, 1.4],
-  [28.3, 30.1, 30.45, 30.45, 1.4],
-  [22.45, 22.45, 23.45, 23.45, 2.6], // corner towers
-  [29.55, 22.45, 30.55, 23.45, 2.6],
-  [22.45, 29.55, 23.45, 30.55, 2.6],
-  [29.55, 29.55, 30.55, 30.55, 2.6],
-  [24.9, 29.75, 25.9, 30.55, 2.8], // gatehouse towers
-  [27.3, 29.75, 28.3, 30.55, 2.8],
-  [23.3, 23.3, 27.9, 26.9, 3.3], // keep
+  // The Armoury compound: blast walls (open at the checkpoint), watchtowers, the checkpoint,
+  // the gun store and its counter, vehicles, supplies
+  [22.55, 22.475, 30.45, 22.975, 1.6],
+  [22.475, 22.55, 22.975, 30.45, 1.6],
+  [30.025, 22.55, 30.525, 30.45, 1.6],
+  [22.55, 30.025, 24.9, 30.525, 1.6],
+  [28.3, 30.025, 30.45, 30.525, 1.6],
+  [22.5, 22.5, 23.4, 23.4, 2.6], // watchtowers
+  [29.6, 22.5, 30.5, 23.4, 2.6],
+  [22.5, 29.6, 23.4, 30.5, 2.6],
+  [29.6, 29.6, 30.5, 30.5, 2.6],
+  [24.95, 29.75, 25.85, 30.45, 1.4], // checkpoint booth
+  [25.78, 30.18, 26.14, 30.4, 2.4], // gantry post and barrier post
+  [28.06, 30.18, 28.4, 30.4, 2.4], // gantry post and barrier rest
+  [23.3, 23.3, 27.9, 26.9, 2.8], // the gun store
+  [23.85, 27.1, 25.55, 27.55, 0.7], // its counter
   [28.62, 24.55, 29.68, 26.25, 1.0], // tank
   [28.95, 28.05, 29.65, 29.15, 0.9], // jeep
   [28.1, 22.95, 30.05, 24.35, 1.4], // supply crates under the netting
@@ -58,18 +61,16 @@ export const SOLIDS: Box[] = [
   [1.7, 1.7, 3.5, 3.5, 6.6], // water tower
   [18.55, 11.95, 19.45, 12.85, 1.4], // planters
   [11.95, 18.55, 12.85, 19.45, 1.4],
-  [28.3, 29.8, 29.2, 30.1, 1.2], // the Armoury's weapon rack
   ...DUMMY_SOLIDS,
 ];
 /** What bullets stop on: everything solid except the dummies' footprints (they test their own shape) */
 export const SHOT_SOLIDS = SOLIDS.filter((b) => !DUMMY_SOLIDS.includes(b));
 
-/** Things to do with E besides doors */
-export const RACK = { x: 28.75, z: 29.42 };
+/** Things to do with E besides doors: the gun store counter in the Armoury (stand in front of it to gear up) */
+export const RACK = { x: 24.7, z: 27.95 };
 /** Only the camera bumps into these (tall parts above a walkable footprint) */
 export const CAMERA_ONLY: Box[] = [
   [11.9, 11.9, 17.5, 17.5, 12.6], // the Emporium's glass tower
-  [26.5, 25.5, 27.9, 26.9, 5.9], // the Armoury's flag tower
 ];
 
 /**

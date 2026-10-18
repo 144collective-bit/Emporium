@@ -4,7 +4,7 @@
  * player's input and turns its events into the rifle, the targets, effects,
  * sound and the HUD.
  *
- * - You start unarmed. The weapon rack inside the Armoury gate gears you up
+ * - You start unarmed. The gun store counter in the Armoury gears you up
  *   (and refills ammo); G holsters and draws.
  * - Left mouse fires full auto, right mouse aims (the holo red-dot in first
  *   person), R reloads. Phones get Fire, Aim and Reload buttons and a little

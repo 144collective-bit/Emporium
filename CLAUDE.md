@@ -49,11 +49,16 @@ it and has been retired completely. Build only on what's here.
   them. The rooftop hologram is `createDegen()` in hologram light. Its
   podium, claw machines and prize booth are mirrored in `walk.ts`
   (`SOLIDS`, `CAMERA_ONLY`).
-- The Armoury (`armoury()` in `landmarks.ts` and `city.ts`) links to the
-  plan window. Keep it stealth dark at night (low red and green lights, no
-  floodlights). Its soldiers are instanced; the gate guards salute when the
-  walker (`walker` in `life.ts`) comes near. Its walls, towers, keep and
-  vehicles are mirrored in `walk.ts` `SOLIDS`.
+- The Armoury (`armoury()` in `landmarks.ts` and `city.ts`) is a modern
+  military compound and the players' gun store, not a castle: blast walls
+  with razor wire, steel watchtowers, a checkpoint (booth, boom barrier, sign
+  gantry) and a flat-roofed concrete gun store with a shopfront, canopy sign
+  and a counter where players gear up. It links to the plan window. Keep it
+  stealth dark at night (low red and green lights, no floodlights). Its
+  soldiers are instanced; the checkpoint guards salute and the barrier lifts
+  when the walker (`walker` in `life.ts`) comes near. Its walls, towers,
+  checkpoint, store, counter and vehicles are mirrored in `solids.ts`
+  `SOLIDS` (shared with the game server).
 - Every character is one shared Degen body (`src/scripts/city3d/character.ts`):
   sculpted after the brand art, with knees, elbows and hand sockets (for
   held items such as guns later). `createDegen()` builds one figure (the
@@ -95,8 +100,8 @@ it and has been retired completely. Build only on what's here.
 ## Target practice (3D walk mode)
 
 - Solo shooting practice. Only the player's Degen carries a gun, picked up
-  at the Armoury's weapon rack (`RACK` in `walk.ts`, the rack itself in
-  `armoury()`). Targets are the cardboard dummies (`DUMMIES`) and the patrol
+  at the gun store counter in the Armoury (`RACK` in `solids.ts`, the
+  counter itself in `armoury()`). Targets are the cardboard dummies (`DUMMIES`) and the patrol
   drones; never make pedestrians, soldiers or other characters targets.
 - **Rules and view are split, ready for multiplayer.** `combat-sim.ts` owns
   the rules (ammo, fire rate, spread, hits, health, respawns, score, streaks)

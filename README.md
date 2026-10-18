@@ -66,13 +66,17 @@ cartoon shading and PulseChain neon, built with [three.js](https://threejs.org).
   bounce like an equalizer, and a giant hologram Degen dances on the roof.
   At street level: a glass arcade hall with claw machines, the ARCADE sign
   and logo over the doors, a glowing tile pad, a prize booth and a queue.
-- **The Armoury** (south-east block) is a stone fortress: curtain walls with
-  battlements, round corner towers, a gatehouse with a raised portcullis, and
-  a keep with arrow slits, banners and Degen's flag on its tower. Inside, a
-  squad of Degen soldiers marches laps of the parade ground, guards at the
-  gate salute you in walk mode, a tank turns its turret, and a forklift
-  moves crates in the supply yard under camo netting. At night it goes
-  stealth dark: low red slit light and small red and green tactical lamps.
+- **The Armoury** (south-east block) is a modern military compound and the
+  players' gun store: concrete blast walls topped with razor wire, steel
+  watchtowers on the corners, and a checkpoint with a guard booth, a boom
+  barrier that lifts as you walk up, and a sign gantry. Inside, the gun
+  store is a flat-roofed concrete block with a window ribbon, a glass
+  shopfront showing rifles on the racks, a lit GUN STORE canopy, a helipad,
+  AC units, a dish, a comms mast and Degen's flag on the roof. Players gear
+  up at the counter out front, where a clerk stands. A patrol walks the
+  yard, guards at the checkpoint salute you in walk mode, a tank turns its
+  turret and a forklift moves crates under camo netting. At night it goes
+  stealth dark: a faint green window glow and small red and green lamps.
 - **Characters:** everyone is the same Degen, built after the brand art:
   balaclava with the eye opening, red cap with the Emporium diamond, green
   shades on a gold chain, collar, tie and a lapelled suit. Around the city
@@ -125,7 +129,7 @@ of Gas Fee Gummy Bears) and explore on foot.
 Solo shooting practice in walk mode. Only Degen carries a gun; nobody in the
 city is shot at.
 
-- **Gear up** at the weapon rack inside the Armoury's gate (E or tap the
+- **Gear up** at the gun store counter inside the Armoury (E or tap the
   prompt). That gives Degen a cartoon assault rifle with a holo red-dot
   sight, a 30-round magazine and 120 spare. Going back to the rack refills
   the ammo.

@@ -921,87 +921,112 @@ function workshop(s: Spot) {
   add(19.5, 30.4, lamp(19.5, 30.4));
 }
 
-/** Block (2,2): the Armoury, a stone fortress with a parade ground, for the plan. */
+/** Block (2,2): the Armoury, a modern military compound and the players' gun store, for the plan. */
 function armoury(s: Spot, art: CityInput['art']) {
-  const STONE = '#8a85a0';
-  const STONE_DK = '#6e6a86';
+  const CONC = '#b3ae9e';
   const OLIVE = '#5a6b3a';
   const OLIVE_DK = '#3e4a26';
-  const WH = 1.3;
-  const WT = 0.35;
-  /** Merlons along a wall top from (x0, y0) to (x1, y1). */
-  const merlons = (x0: number, y0: number, x1: number, y1: number, z: number, c = STONE) => {
-    const len = Math.hypot(x1 - x0, y1 - y0);
-    const k = Math.max(1, Math.floor(len / 0.44));
-    const alongX = Math.abs(x1 - x0) > Math.abs(y1 - y0);
-    let out = '';
-    for (let i = 0; i < k; i++) {
-      const f = (i + 0.5) / k;
-      const x = x0 + (x1 - x0) * f;
-      const y = y0 + (y1 - y0) * f;
-      out += alongX ? prism(x - 0.11, y - 0.15, 0.22, 0.3, 0.28, { c, z }) : prism(x - 0.15, y - 0.11, 0.3, 0.22, 0.28, { c, z });
+  const STEEL = '#2b2a33';
+  const WH = 1.35;
+  const WT = 0.3;
+  /** A run of T-wall blast barriers (panel seams) with razor wire on top. */
+  const blast = (x: number, y: number, w: number, d: number) => {
+    let o = prism(x, y, w, d, WH, { c: CONC, z: Z0 });
+    const alongX = w > d;
+    const len = alongX ? w : d;
+    let seams = '';
+    for (let a = 0.9; a < len - 0.05; a += 0.9) {
+      seams += alongX ? line(P(x + a, y + d, Z0), P(x + a, y + d, Z0 + WH)) : line(P(x + w, y + a, Z0), P(x + w, y + a, Z0 + WH));
     }
-    return out;
+    o += `<g class="ink" stroke-width="1.2">${seams}</g>`;
+    // Razor wire: a row of little loops along the top
+    let wire = '';
+    const steps = Math.floor(len / 0.18);
+    for (let k = 0; k <= steps; k++) {
+      const f = k / steps;
+      const [cx, cy] = alongX ? P(x + w * f, y + d / 2, Z0 + WH + 0.28) : P(x + w / 2, y + d * f, Z0 + WH + 0.28);
+      wire += `<circle cx="${n(cx)}" cy="${n(cy)}" r="4.2" fill="none"/>`;
+    }
+    return o + `<g stroke="#c9c6d6" stroke-width="1.4">${wire}</g>`;
   };
+  /** A steel watchtower: legs, a cabin with a dark window band and a flat roof, a red light. */
   const tower = (x: number, y: number) => {
-    let t = cyl(x, y, 0.5, 2.7, { c: STONE_DK, z: Z0 }) + cyl(x, y, 0.58, 0.18, { c: '#4a4660', z: Z0 + 2.6 });
-    for (let k = 0; k < 8; k++) {
-      const a = (k / 8) * Math.PI * 2;
-      if (Math.cos(a - Math.PI / 4) < -0.2) continue;
-      t += prism(x + Math.cos(a) * 0.44 - 0.1, y + Math.sin(a) * 0.44 - 0.1, 0.2, 0.2, 0.28, { c: STONE_DK, z: Z0 + 2.78 });
-    }
-    const [lx, ly] = P(x, y, Z0 + 3.15);
+    let t = '<g class="ink" stroke-width="2.5">';
+    for (const [dx, dy] of [
+      [-0.35, -0.35],
+      [0.35, -0.35],
+      [-0.35, 0.35],
+      [0.35, 0.35],
+    ])
+      t += line(P(x + dx, y + dy, Z0), P(x + dx * 0.75, y + dy * 0.75, Z0 + 2.0));
+    t += line(P(x - 0.3, y + 0.3, Z0 + 0.5), P(x + 0.3, y + 0.3, Z0 + 1.5)) + line(P(x + 0.3, y + 0.3, Z0 + 0.5), P(x - 0.3, y + 0.3, Z0 + 1.5));
+    t += '</g>';
+    t += prism(x - 0.42, y - 0.42, 0.84, 0.84, 0.62, { c: OLIVE_DK, z: Z0 + 2.0 });
+    t += g(onL(x - 0.42, y + 0.42, Z0 + 2.4), `<rect x="0" y="0" width="${n(0.84 * TL)}" height="7" fill="#1d2a33"/>`);
+    t += g(onR(x + 0.42, y + 0.42, Z0 + 2.4), `<rect x="0" y="0" width="${n(0.84 * TL)}" height="7" fill="#1d2a33"/>`);
+    t += prism(x - 0.52, y - 0.52, 1.04, 1.04, 0.07, { c: '#4a4a52', z: Z0 + 2.62 });
+    const [lx, ly] = P(x, y, Z0 + 2.85);
     return t + `<circle cx="${n(lx)}" cy="${n(ly)}" r="3" fill="#ff2a2a"/>`;
   };
-  const slits = (W: number, H: number, cols: number) => {
-    let o = '';
-    for (let k = 0; k < cols; k++) {
-      const x = ((k + 0.5) / cols) * W;
-      for (const y of [H * 0.22, H * 0.62]) o += `<rect x="${n(x - 2.5)}" y="${n(y)}" width="5" height="16" fill="${INK}"/><rect x="${n(x - 6)}" y="${n(y + 6)}" width="12" height="3" fill="${INK}"/>`;
-    }
-    return o;
-  };
 
-  // Back and left curtain walls, the back tower
-  add(26.0, 23.0, prism(22.55, 22.55, 7.9, WT, WH, { c: STONE, z: Z0 }) + merlons(22.55, 22.72, 30.45, 22.72, Z0 + WH));
-  add(23.0, 26.1, prism(22.55, 22.55, WT, 7.9, WH, { c: STONE, z: Z0 }) + merlons(22.72, 22.55, 22.72, 30.45, Z0 + WH));
+  // Back and left blast walls, the back watchtower
+  add(26.0, 23.0, blast(22.55, 22.55, 7.9, WT));
+  add(23.0, 26.1, blast(22.55, 22.55, WT, 7.9));
   add(25.0, 25.0, tower(22.95, 22.95));
 
-  // The keep, its banners and door, and the flag tower
-  const KH = 3.4;
-  let k = prism(23.3, 23.3, 4.6, 3.6, KH, { c: STONE, z: Z0 });
-  const KW = 4.6 * TL;
-  const banner = (x: number) =>
-    `<path d="M${n(x - 9)},12h18v34l-9,6l-9,-6z" fill="#14121f" stroke="${INK}" stroke-width="1.5"/><path d="M${n(x - 6)},26l6,5l6,-5M${n(x - 6)},33l6,5l6,-5" fill="none" stroke="#ff2fb9" stroke-width="2.5"/><path d="M${n(x - 6)},40l6,5l6,-5" fill="none" stroke="#00eaff" stroke-width="2.5"/>`;
+  // The gun store: flat-roofed concrete with a window ribbon, glass shopfront under a canopy
+  // with the GUN STORE sign, rooftop helipad, AC units, a dish and Degen's flag. It's the spot.
+  const HH = 2.8;
+  const HW = 4.6;
+  let k = prism(23.3, 23.3, HW, 3.6, HH, { c: CONC, z: Z0 });
+  const ribbon = (W: number) => {
+    let r = `<rect x="6" y="14" width="${n(W - 12)}" height="13" fill="#1d2a33" stroke="${INK}" stroke-width="1.5"/>`;
+    for (let x = 6; x < W - 6; x += 22) r += `<rect x="${n(x)}" y="14" width="2" height="13" fill="${INK}"/>`;
+    return r;
+  };
+  const FW = HW * TL;
+  const FH = HH * ZH;
+  // Front: window ribbon, shopfront with rifles on the racks, glass doors, the roller shutter, the olive plinth
+  let front = ribbon(FW);
+  front += `<rect x="12" y="${n(FH - 34)}" width="${n(FW * 0.5)}" height="28" fill="#121820" stroke="${INK}" stroke-width="2"/>`;
+  front += `<rect x="12" y="${n(FH - 34)}" width="${n(FW * 0.5)}" height="3" fill="#3cff7a"/>`;
+  for (let i = 0; i < 4; i++) front += `<path d="M${n(20 + i * 28)},${n(FH - 22)}h18v-3h5v3l-12,3l-1,5h-3v-4h-7z" fill="${['#5a6b3a', '#8f3dff', '#24212f', '#00b8d8'][i]}" stroke="${INK}" stroke-width="1"/>`;
+  front += `<rect x="${n(FW * 0.6)}" y="${n(FH - 32)}" width="20" height="30" fill="#16202a" stroke="${INK}" stroke-width="2"/><line x1="${n(FW * 0.6 + 10)}" y1="${n(FH - 32)}" x2="${n(FW * 0.6 + 10)}" y2="${n(FH - 2)}" stroke="${INK}" stroke-width="1.5"/>`;
+  front += `<rect x="${n(FW * 0.8)}" y="${n(FH - 30)}" width="18" height="28" fill="#8f8b98" stroke="${INK}" stroke-width="1.5"/>`;
+  front += `<rect x="0" y="${n(FH - 5)}" width="${n(FW)}" height="5" fill="${OLIVE}"/>`;
+  k += g(onL(23.3, 26.9, Z0 + HH), front);
+  k += g(onR(27.9, 26.9, Z0 + HH), ribbon(3.6 * TL) + `<rect x="0" y="${n(FH - 5)}" width="${n(3.6 * TL)}" height="5" fill="${OLIVE}"/>`);
+  // Canopy and its lit sign
+  k += prism(23.2, 26.9, 4.8, 0.9, 0.07, { c: '#4a4a52', z: Z0 + 1.62 });
   k += g(
-    onL(23.3, 26.9, Z0 + KH),
-    slits(KW, KH * ZH, 5) +
-      banner(KW * 0.1) +
-      banner(KW * 0.5) +
-      `<path d="M${n(KW * 0.27)},${n(KH * ZH)}v-22a13,13 0 0 1 26,0v22z" fill="#6b4a2e" stroke="${INK}" stroke-width="2"/>`
+    onL(23.2, 27.8, Z0 + 1.69),
+    `<rect x="0" y="0" width="${n(4.8 * TL)}" height="11" fill="#14121f" stroke="${INK}" stroke-width="1.5"/>` + text(2.4 * TL, 9, 'GUN STORE', 9, 't-display', '#3cff7a', ' letter-spacing="3"')
   );
-  k += g(onR(27.9, 26.9, Z0 + KH), slits(3.6 * TL, KH * ZH, 4));
-  k += merlons(23.3, 26.82, 26.5, 26.82, Z0 + KH) + merlons(27.82, 23.3, 27.82, 25.5, Z0 + KH);
-  const TH = 5.2;
-  let t = prism(26.5, 25.5, 1.4, 1.4, TH, { c: STONE, z: Z0 });
-  t += g(onL(26.5, 26.9, Z0 + TH), slits(1.4 * TL, TH * ZH, 2)) + g(onR(27.9, 26.9, Z0 + TH), slits(1.4 * TL, TH * ZH, 2));
-  t += merlons(26.5, 26.82, 27.9, 26.82, Z0 + TH) + merlons(27.82, 25.5, 27.82, 26.9, Z0 + TH);
+  // Roof: helipad, AC units, the comms mast with its red light, the flag
   {
-    const [px, py] = P(27.2, 26.2, Z0 + TH);
-    const top = py - 52;
-    t += `<g class="ink"><line x1="${n(px)}" y1="${n(py)}" x2="${n(px)}" y2="${n(top)}" stroke-width="3"/></g>`;
-    t +=
+    const [hx, hy] = P(24.75, 25.15, Z0 + HH);
+    k += `<ellipse cx="${n(hx)}" cy="${n(hy)}" rx="58" ry="29" fill="#3a3a42" stroke="#ffd23f" stroke-width="3"/>`;
+    k += `<text x="${n(hx)}" y="${n(hy + 7)}" text-anchor="middle" class="t-display" font-size="22" fill="#f3f2f7" transform="matrix(1,0,0,0.6,0,${n(hy * 0.4)})">H</text>`;
+    k += prism(26.35, 23.55, 0.85, 0.6, 0.42, { c: '#e2ded2', z: Z0 + HH }) + prism(26.35, 24.3, 0.85, 0.6, 0.42, { c: '#e2ded2', z: Z0 + HH });
+    k += `<g class="ink" stroke-width="2.5">${line(P(27.5, 23.7, Z0 + HH), P(27.5, 23.7, Z0 + HH + 2.1))}</g>`;
+    const [mx, my] = P(27.5, 23.7, Z0 + HH + 2.15);
+    k += `<circle cx="${n(mx)}" cy="${n(my)}" r="3" fill="#ff2a2a"/>`;
+    const [px, py] = P(27.55, 26.55, Z0 + HH);
+    const top = py - 46;
+    k += `<g class="ink"><line x1="${n(px)}" y1="${n(py)}" x2="${n(px)}" y2="${n(top)}" stroke-width="3"/></g>`;
+    k +=
       `<g><animateTransform attributeName="transform" type="skewY" values="0;-4;0;3;0" dur="2.6s" repeatCount="indefinite"/>` +
       `<rect x="${n(px)}" y="${n(top)}" width="40" height="27" fill="#14121f" stroke="${INK}" stroke-width="1.5"/>` +
       `<image href="${esc(art.degen)}" x="${n(px + 8)}" y="${n(top + 1)}" width="24" height="22" preserveAspectRatio="xMidYMid meet"/>` +
       `<rect x="${n(px)}" y="${n(top + 23)}" width="40" height="4" fill="url(#pulseH)"/></g>`;
-    const [lx, ly] = P(26.7, 26.8, Z0 + TH + 0.5);
-    t += `<circle cx="${n(lx)}" cy="${n(ly)}" r="3" fill="#ff2a2a"/>`;
   }
-  // The keep and its tower are the spot: they lift on hover and lead to the plan
-  add(25.6, 25.1, spot('plan', s, k + t));
+  // The store is the spot: it lifts on hover and leads to the plan
+  add(25.6, 25.1, spot('plan', s, k));
 
-  // Supply yard under camo netting, the tank, soldiers on the parade ground, drums and helmets
+  // The counter out front, where players gear up
+  add(24.7, 27.35, prism(23.9, 27.15, 1.6, 0.35, 0.55, { c: OLIVE_DK, z: Z0 }) + prism(23.85, 27.1, 1.7, 0.45, 0.05, { c: STEEL, z: Z0 + 0.55 }));
+
+  // Supply yard under camo netting, the tank, a patrol in the yard, drums and helmets
   {
     let y = '';
     for (const [x, yy, z] of [
@@ -1031,9 +1056,10 @@ function armoury(s: Spot, art: CityInput['art']) {
     add(29.15, 25.4, tk);
   }
   {
+    // A patrol in the yard and drums by the wall
     let sq = '';
-    for (let i = 0; i < 5; i++) {
-      const [x, y] = P(24.6 + i * 0.5, 27.45, Z0);
+    for (let i = 0; i < 3; i++) {
+      const [x, y] = P(26.5 + i * 0.55, 28.4 - i * 0.18, Z0);
       sq += `<g class="ink"><rect x="${n(x - 3)}" y="${n(y - 14)}" width="6" height="14" fill="${OLIVE}"/><circle cx="${n(x)}" cy="${n(y - 17)}" r="3.5" fill="#14121f"/><path d="M${n(x - 4.5)},${n(y - 18)}a4.5,4.5 0 0 1 9,0z" fill="${OLIVE_DK}"/></g>`;
     }
     for (const [x, y] of [
@@ -1041,31 +1067,37 @@ function armoury(s: Spot, art: CityInput['art']) {
       [23.6, 29.65],
     ])
       sq += cyl(x, y, 0.17, 0.48, { c: OLIVE_DK, z: Z0 });
-    add(25.5, 27.9, sq);
+    add(27.0, 28.6, sq);
   }
   add(29.1, 27.35, prism(28.9, 27.15, 0.5, 0.4, 0.4, { c: OLIVE, z: Z0 }) + prism(29.4, 27.17, 0.34, 0.36, 0.34, { c: '#4f5d31', z: Z0 + 0.1 }));
   add(29.3, 28.6, prism(29.02, 28.1, 0.56, 1.0, 0.3, { c: OLIVE, z: Z0 + 0.12 }) + prism(29.03, 28.3, 0.54, 0.05, 0.3, { c: '#8fd6e8', z: Z0 + 0.42 }));
 
-  // The gatehouse: towers, a lintel with the name, the raised portcullis, green tactical lights
+  // The checkpoint: guard booth, a raised boom barrier and the sign gantry with the name
   {
-    let gh = `<g class="ink">${poly('#14121f', P(25.9, 30.55, Z0), P(27.3, 30.55, Z0), P(27.3, 30.55, Z0 + 1.95), P(25.9, 30.55, Z0 + 1.95))}</g>`;
-    let bars = '';
-    for (let i = 0; i < 7; i++) bars += line(P(26.0 + i * 0.2, 30.55, Z0 + 1.2), P(26.0 + i * 0.2, 30.55, Z0 + 1.95));
-    gh += `<g class="ink">${bars}</g>`;
-    for (const x0 of [24.9, 27.3]) gh += prism(x0, 29.75, 1.0, 0.8, 2.9, { c: STONE_DK, z: Z0 }) + merlons(x0, 30.47, x0 + 1.0, 30.47, Z0 + 2.9, STONE_DK);
-    gh += prism(25.9, 29.75, 1.4, 0.8, 0.95, { c: STONE, z: Z0 + 1.95 });
-    gh += g(onL(25.9, 30.55, Z0 + 2.9), `<rect x="6" y="4" width="${n(1.4 * TL - 12)}" height="15" fill="${OLIVE_DK}" stroke="${INK}" stroke-width="1.5"/>` + text(0.7 * TL, 15, 'THE ARMOURY', 9, 't-display', '#e3dcb0', ' letter-spacing="1"'));
-    for (const x of [25.75, 27.45]) {
-      const [lx, ly] = P(x, 30.6, Z0 + 2.1);
-      gh += `<circle cx="${n(lx)}" cy="${n(ly)}" r="2.5" fill="#2aff6a"/>`;
+    let cp = prism(24.98, 29.8, 0.8, 0.62, 1.25, { c: '#e2ded2', z: Z0 });
+    cp += g(onL(24.98, 30.42, Z0 + 1.0), `<rect x="2" y="0" width="${n(0.8 * TL - 4)}" height="9" fill="#1d2a33"/>`);
+    cp += prism(24.9, 29.72, 0.96, 0.78, 0.08, { c: '#4a4a52', z: Z0 + 1.25 });
+    cp += prism(25.98, 30.25, 0.14, 0.14, 0.7, { c: '#ffd23f', z: Z0 });
+    const [bx, by] = P(26.05, 30.32, Z0 + 0.62);
+    cp += `<g class="ink" stroke-width="5"><line x1="${n(bx)}" y1="${n(by)}" x2="${n(bx + 12)}" y2="${n(by - 48)}"/></g><line x1="${n(bx)}" y1="${n(by)}" x2="${n(bx + 12)}" y2="${n(by - 48)}" stroke="#e23b3b" stroke-width="3" stroke-dasharray="6 6"/>`;
+    cp += `<g class="ink" stroke-width="4">${line(P(25.85, 30.27, Z0), P(25.85, 30.27, Z0 + 2.35))}${line(P(28.2, 30.27, Z0), P(28.2, 30.27, Z0 + 2.35))}</g>`;
+    cp += g(
+      onL(25.75, 30.27, Z0 + 2.4),
+      `<rect x="0" y="0" width="${n(2.55 * TL)}" height="22" fill="#2b3418" stroke="${INK}" stroke-width="2"/>` +
+        text(1.275 * TL, 12, 'THE ARMOURY', 10, 't-display', '#f3f2f7', ' letter-spacing="1.5"') +
+        text(1.275 * TL, 20, 'GUN STORE', 5.5, 't-mono', '#3cff7a', ' letter-spacing="1.5" font-weight="700"')
+    );
+    for (const x of [25.95, 28.13]) {
+      const [lx, ly] = P(x, 30.27, Z0 + 2.45);
+      cp += `<circle cx="${n(lx)}" cy="${n(ly)}" r="2.5" fill="#2aff6a"/>`;
     }
-    add(26.6, 30.2, gh);
+    add(26.6, 30.2, cp);
   }
 
-  // Front and right curtain walls, the side and front towers
-  add(24.0, 30.4, prism(22.55, 30.1, 2.35, WT, WH, { c: STONE, z: Z0 }) + merlons(22.55, 30.27, 24.9, 30.27, Z0 + WH));
-  add(29.9, 30.4, prism(28.3, 30.1, 2.15, WT, WH, { c: STONE, z: Z0 }) + merlons(28.3, 30.27, 30.45, 30.27, Z0 + WH));
-  add(30.4, 30.0, prism(30.1, 22.55, WT, 7.9, WH, { c: STONE, z: Z0 }) + merlons(30.27, 22.55, 30.27, 30.45, Z0 + WH));
+  // Front and right blast walls, the side and front watchtowers
+  add(24.0, 30.4, blast(22.55, 30.15, 2.35, WT));
+  add(29.9, 30.4, blast(28.3, 30.15, 2.15, WT));
+  add(30.4, 30.0, blast(30.15, 22.55, WT, 7.9));
   add(24.5, 30.5, tower(22.95, 30.05));
   add(30.5, 30.4, tower(30.05, 22.95));
   add(31.0, 30.9, tower(30.05, 30.05));

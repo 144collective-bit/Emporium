@@ -581,7 +581,7 @@ export function createWalk(d: WalkDeps) {
       camera.updateProjectionMatrix();
     }
 
-    // Door prompts, and the Armoury's weapon rack
+    // Door prompts, and the Armoury's gun store counter
     let best: { id: SpotId | 'gear'; label: string } | null = null;
     let bestD = 1.7;
     if (Math.hypot(RACK.x - pos.x, RACK.z - pos.z) < 1.1) {
