@@ -171,12 +171,18 @@ city is shot at.
   on every shot with a muzzle flash, and the left hand swaps the magazine on
   a reload. Aiming brings the sight up to your eye and zooms in (more with
   the Long Shot's scope).
-- **Desktop:** click to fire (once the mouse is captured), right-click to aim,
-  R to reload, G to holster or draw.
-- **Phones:** Fire, Aim (tap to toggle the sight) and Reload buttons appear
-  next to Run and Jump. Fire has a little aim assist towards a target near
-  the crosshair.
-- **Gamepads:** RT fires, LT aims, X reloads, D-pad up holsters.
+- **Desktop:** click to fire (once the mouse is captured; where a page can't
+  capture it, click fires and dragging looks), right-click to aim, R to
+  reload, G to holster or draw, Q (or 1-4) to swap guns.
+- **Phones:** Fire, Aim (tap to toggle the sight), Reload and Swap buttons
+  appear next to Run and Jump. Drag the Fire button to steer while you shoot
+  (a second finger on the city looks too). Fire has a little aim assist
+  towards a target near the crosshair. Swap shows the gun in hand.
+- **Gamepads:** RT fires, LT aims, X reloads, RB or D-pad left / right swaps
+  guns, D-pad up holsters.
+- **Swapping guns:** once geared up at the counter, swap between every gun
+  your score has unlocked, anywhere. Each gun keeps its own ammo (one you
+  haven't carried yet comes full); the counter refills them all.
 - **Aim when firing** (Controls panel, Shooting): Off, Touch only (the
   on-screen Fire button) or Always. When on, firing brings the gun up to the
   sight and it drops again just after you stop. Saved in the browser.

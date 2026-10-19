@@ -161,7 +161,8 @@ it and has been retired completely. Build only on what's here.
   and Long Shot marksman rifle (scope, full-screen scope view). Guns unlock
   with score and are free to take: never sell them, price them in money or
   tie them to the token. Keep them cartoon: no real-world gun names, brands
-  or markings. A new gun needs a `WEAPONS` entry, a `SPECS` entry (with its
+  or markings. A new gun needs a `WEAPONS` entry (with a `short` name for the Swap
+  button), a `SPECS` entry (with its
   third-person `hold` spot for the front hand), store art (`ART` in
   `gunshop.ts`) and a shot sound (`SHOT_SOUND` in `combat.ts`).
 - In third person (the player and other players), `stance.ts` `holdGun()`
@@ -183,14 +184,26 @@ it and has been retired completely. Build only on what's here.
   `SOLIDS` except the dummies' own footprints (`SHOT_SOLIDS`), on plot
   buildings and on the ground. When dummies move, their footprints follow
   `DUMMIES` automatically.
-- Keys: click fires, right-click aims, R reloads, G holsters; Caps Lock (not
-  R) toggles run. With "Aim when firing" on, firing also aims (`aimNow` in
+- Keys: click fires, right-click aims, R reloads, G holsters, Q / 1-4 swap
+  guns; Caps Lock (not R) toggles run. Where the mouse can't be captured
+  (`noLock` in `walk.ts`), click fires and dragging looks. Only a real mouse
+  fires from the canvas (taps send mouse events too).
+- Swapping (`swap()` in `combat.ts`, `sim.swap()`, the `swap` message): once
+  geared up, any unlocked gun, anywhere; each gun keeps its own ammo
+  (`stash`), a new one comes full, the counter refills all, and the new gun
+  fires after `SWAP_TIME`. On touch the Swap button (`data-walk-swap`, gun's
+  `short` name in `data-swap-name`) sits above Fire; the desktop HUD shows the
+  gun's name (`data-gun`).
+- Touch: dragging the Fire button also looks (one thumb shoots and steers);
+  keep its `touch-action: none` so the browser never cancels a held Fire. The
+  right-hand buttons and the door prompt must not overlap at any phone size,
+  upright or on its side (narrow phones get a smaller stick). With "Aim when firing" on, firing also aims (`aimNow` in
   `walk.ts`, held `AUTO_ADS_HOLD` after the trigger is let go); use `aimNow`,
   not the aim input, for anything that depends on aiming (spread, sight,
   zoom, the aim sent to the server). The combat HUD (`data-cross`, `data-hitmark`, `data-dmg`,
   `data-pops`, `data-mag`, `data-reserve`, `data-reload-hint`, `data-score`,
   `data-streak`), the finish picker (`data-skins`, `data-lifetime`) and the
-  Fire / Aim / Reload buttons live in `CityMap.astro`; `combat.ts` and
+  Fire / Aim / Reload / Swap buttons live in `CityMap.astro`; `combat.ts` and
   `walk.ts` expect them.
 - Gun sounds go through `sfx()` in `sound.ts`, so they stay silent until the
   visitor turns sound on. Under reduced motion the drones hover in place.

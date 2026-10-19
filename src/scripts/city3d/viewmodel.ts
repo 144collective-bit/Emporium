@@ -237,7 +237,10 @@ export function createViewmodel(scene: THREE.Scene, skin: SkinId, weapon: Weapon
     },
     /** Take another gun in hand */
     setWeapon(id: WeaponId) {
-      if (id !== gun.id) mount(id);
+      if (id === gun.id) return;
+      mount(id);
+      // The new gun comes up from below
+      draw = 0;
     },
     /** How dark it is (0 day .. 1 night), for the hands' shading */
     setNight(night: number) {

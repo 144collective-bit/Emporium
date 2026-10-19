@@ -68,7 +68,9 @@ Visitor's browser                         Cloudflare (server/)
      scores counted by the server.
    - The Armoury gun store: four guns unlocked by lifetime score; the server
      checks the player is at the counter and has unlocked the gun, and the
-     profile remembers the last one taken.
+     profile remembers the last one taken. Once geared up, players swap
+     between unlocked guns anywhere (`swap` message, `sim.swap()`); each gun
+     keeps its own ammo and the counter refills them all.
 2. **Leaderboards**: daily and weekly boards (target practice now, PvP
    later) in the Controls panel and on a board in the city.
 3. **South bank PvP**: design and build the neon arena and junkyard / skate

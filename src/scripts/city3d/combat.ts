@@ -215,6 +215,8 @@ export function createCombat(d: CombatDeps) {
     pops: $('[data-pops]'),
     skins: $('[data-skins]'),
     lifetime: $('[data-lifetime]'),
+    gun: $('[data-gun]'),
+    swapName: $('[data-swap-name]'),
   };
   const touchUi = matchMedia('(pointer: coarse)');
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -385,7 +387,7 @@ export function createCombat(d: CombatDeps) {
   }
 
   /* ----- HUD ----- */
-  let shown = { mag: -1, reserve: -1, score: -1, streak: -1, reload: false, hint: '' };
+  let shown = { mag: -1, reserve: -1, score: -1, streak: -1, reload: false, hint: '', gun: '' };
   const paintHud = () => {
     const reloading = me.reload > 0;
     if (me.mag !== shown.mag) hud.mag.textContent = String(me.mag);
@@ -394,7 +396,9 @@ export function createCombat(d: CombatDeps) {
     const low = me.mag < W().mag && me.mag <= Math.max(1, Math.floor(W().mag / 5));
     hud.mag.classList.toggle('is-low', low);
     const out = me.mag === 0 && me.reserve === 0;
-    const hint = out ? 'Out of ammo: refill at the Armoury' : reloading ? 'Reloading' : low && me.reserve > 0 ? (touchUi.matches ? 'Tap reload' : 'R to reload') : '';
+    // Out: another gun with rounds left is a swap away
+    const spare = out && guns().some((id) => id !== me.weapon && (me.stash[id]?.some((n) => n > 0) ?? true));
+    const hint = out ? (spare ? `Out of ammo: ${touchUi.matches ? 'tap Swap' : 'Q to swap'}` : 'Out of ammo: refill at the Armoury') : reloading ? 'Reloading' : low && me.reserve > 0 ? (touchUi.matches ? 'Tap reload' : 'R to reload') : '';
     if (hint !== shown.hint) {
       hud.hint.textContent = hint;
       hud.hint.hidden = !hint;
@@ -404,7 +408,11 @@ export function createCombat(d: CombatDeps) {
       hud.streak.hidden = me.streak < 2;
       hud.streak.textContent = `x${me.streak} streak`;
     }
-    shown = { mag: me.mag, reserve: me.reserve, score: me.score, streak: me.streak, reload: reloading, hint };
+    if (me.weapon !== shown.gun) {
+      hud.gun.textContent = W().name;
+      hud.swapName.textContent = W().short;
+    }
+    shown = { mag: me.mag, reserve: me.reserve, score: me.score, streak: me.streak, reload: reloading, hint, gun: me.weapon };
   };
   let crossShown = '';
   let hitShown = '';
@@ -460,6 +468,8 @@ export function createCombat(d: CombatDeps) {
   // Takedown and streak call-outs near the crosshair
   const pops: { el: HTMLElement; t: number }[] = [];
   const STREAKS = ['', '', 'Double', 'Triple', 'Quad', 'Rampage'];
+  /** The guns this player's lifetime score has unlocked, in store order */
+  const guns = () => WEAPON_IDS.filter((id) => weaponUnlocked(id, (netProfile ?? profile).total));
   const popup = (big: string, label: string, kind = '') => {
     const el = document.createElement('div');
     el.className = `combat-pop ${kind}`;
@@ -611,6 +621,13 @@ export function createCombat(d: CombatDeps) {
           showWeapon(e.weapon);
         }
         break;
+      case 'swap':
+        if (e.player === ME) {
+          d.sfx('draw');
+          showWeapon(e.weapon);
+          paintHud();
+        }
+        break;
       case 'respawn': {
         const L = looks[e.target];
         L.g.visible = true;
@@ -743,6 +760,33 @@ export function createCombat(d: CombatDeps) {
       if (!weaponUnlocked(id, (netProfile ?? profile).total)) return false;
       sim.equip(ME, id);
       net?.send({ t: 'equip', w: id });
+      hold();
+      profile.weapon = id;
+      saveProfile();
+      return true;
+    },
+    /** The guns Degen can swap between (unlocked by lifetime score) */
+    get guns() {
+      return guns();
+    },
+    /**
+     * Swap to another unlocked gun, anywhere once geared up: `to` is a gun, or a step
+     * through the unlocked ones (1 next, -1 previous). Each gun keeps its own ammo.
+     */
+    swap(to: WeaponId | 1 | -1 = 1) {
+      if (!me.geared) return false;
+      const list = guns();
+      let id: WeaponId | undefined;
+      if (typeof to === 'string') id = list.includes(to) ? to : undefined;
+      else if (list.length > 1) id = list[(list.indexOf(me.weapon) + to + list.length) % list.length];
+      if (!id || id === me.weapon) {
+        // Only one gun so far: say what unlocks the next
+        const next = WEAPON_IDS.find((w) => !list.includes(w));
+        if (typeof to !== 'string' && next) popup(WEAPONS[me.weapon].short, `${WEAPONS[next].need.toLocaleString('en')} score unlocks the ${WEAPONS[next].name}`);
+        return false;
+      }
+      sim.swap(ME, id);
+      net?.send({ t: 'swap', w: id });
       hold();
       profile.weapon = id;
       saveProfile();

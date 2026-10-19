@@ -20,6 +20,8 @@ export type WeaponId = 'rifle' | 'smg' | 'shotgun' | 'dmr';
 export interface Weapon {
   id: WeaponId;
   name: string;
+  /** Short name for the swap button */
+  short: string;
   /** One line for the store */
   blurb: string;
   /** Lifetime score that unlocks it in the store (cosmetic progress, never bought) */
@@ -49,14 +51,16 @@ export interface Weapon {
 
 const BASE = { auto: true, pellets: 1, bloomDecay: 0.2 };
 export const WEAPONS: Record<WeaponId, Weapon> = {
-  rifle: { ...BASE, id: 'rifle', name: 'Assault Rifle', blurb: 'All-rounder with a holo red-dot. Full auto.', need: 0, mag: 30, reserve: 120, rate: 9.5, damage: 25, reload: 1.7, range: 70, spreadHip: 0.012, spreadAim: 0.003, bloom: 0.005, bloomMax: 0.04, kick: 0.012, zoom: 20 },
-  smg: { ...BASE, id: 'smg', name: 'Buzz SMG', blurb: 'Tiny, loud and fast. Sprays a big magazine up close.', need: 750, mag: 40, reserve: 160, rate: 15, damage: 14, reload: 1.4, range: 45, spreadHip: 0.02, spreadAim: 0.007, bloom: 0.004, bloomMax: 0.05, bloomDecay: 0.3, kick: 0.007, zoom: 14 },
-  shotgun: { ...BASE, id: 'shotgun', name: 'Street Sweeper', blurb: 'Eight pellets a pull. Flattens anything close.', need: 2500, mag: 6, reserve: 36, rate: 1.4, auto: false, damage: 11, pellets: 8, reload: 2.2, range: 30, spreadHip: 0.065, spreadAim: 0.045, bloom: 0, bloomMax: 0, kick: 0.05, zoom: 10 },
-  dmr: { ...BASE, id: 'dmr', name: 'Long Shot', blurb: 'Marksman rifle with a scope. Slow, precise, hits hard.', need: 6000, mag: 8, reserve: 40, rate: 2.6, auto: false, damage: 80, reload: 2.0, range: 120, spreadHip: 0.03, spreadAim: 0.0004, bloom: 0.02, bloomMax: 0.03, bloomDecay: 0.5, kick: 0.035, zoom: 36 },
+  rifle: { ...BASE, id: 'rifle', name: 'Assault Rifle', short: 'Rifle', blurb: 'All-rounder with a holo red-dot. Full auto.', need: 0, mag: 30, reserve: 120, rate: 9.5, damage: 25, reload: 1.7, range: 70, spreadHip: 0.012, spreadAim: 0.003, bloom: 0.005, bloomMax: 0.04, kick: 0.012, zoom: 20 },
+  smg: { ...BASE, id: 'smg', name: 'Buzz SMG', short: 'SMG', blurb: 'Tiny, loud and fast. Sprays a big magazine up close.', need: 750, mag: 40, reserve: 160, rate: 15, damage: 14, reload: 1.4, range: 45, spreadHip: 0.02, spreadAim: 0.007, bloom: 0.004, bloomMax: 0.05, bloomDecay: 0.3, kick: 0.007, zoom: 14 },
+  shotgun: { ...BASE, id: 'shotgun', name: 'Street Sweeper', short: 'Sweeper', blurb: 'Eight pellets a pull. Flattens anything close.', need: 2500, mag: 6, reserve: 36, rate: 1.4, auto: false, damage: 11, pellets: 8, reload: 2.2, range: 30, spreadHip: 0.065, spreadAim: 0.045, bloom: 0, bloomMax: 0, kick: 0.05, zoom: 10 },
+  dmr: { ...BASE, id: 'dmr', name: 'Long Shot', short: 'Long Shot', blurb: 'Marksman rifle with a scope. Slow, precise, hits hard.', need: 6000, mag: 8, reserve: 40, rate: 2.6, auto: false, damage: 80, reload: 2.0, range: 120, spreadHip: 0.03, spreadAim: 0.0004, bloom: 0.02, bloomMax: 0.03, bloomDecay: 0.5, kick: 0.035, zoom: 36 },
 };
 /** Store order, and each gun's number on the wire */
 export const WEAPON_IDS: WeaponId[] = ['rifle', 'smg', 'shotgun', 'dmr'];
 export const weaponUnlocked = (id: unknown, total: number) => typeof id === 'string' && id in WEAPONS && total >= WEAPONS[id as WeaponId].need;
+/** Seconds after a swap before the new gun can fire (it's being drawn) */
+export const SWAP_TIME = 0.35;
 /** Phones: snap to a target this close to the crosshair (radians), within this range */
 const ASSIST = { cone: 0.12, range: 38 };
 
@@ -138,6 +142,8 @@ export interface SimPlayer {
   armed: boolean;
   mag: number;
   reserve: number;
+  /** Ammo left in the other guns carried (swapped out); a gun not in here is full */
+  stash: Partial<Record<WeaponId, [mag: number, reserve: number]>>;
   cooldown: number;
   /** Seconds of reload left (0 when not reloading) */
   reload: number;
@@ -159,6 +165,8 @@ export type SimEvent =
   | { type: 'reload'; player: string; phase: 'start' | 'done' }
   | { type: 'armed'; player: string; on: boolean }
   | { type: 'gear'; player: string; weapon: WeaponId }
+  /** Swapped to another gun in the field (no refill) */
+  | { type: 'swap'; player: string; weapon: WeaponId }
   | { type: 'respawn'; target: number }
   | { type: 'streak-end'; player: string };
 
@@ -391,6 +399,7 @@ export function createSim(o: SimOptions) {
         armed: false,
         mag: WEAPONS.rifle.mag,
         reserve: WEAPONS.rifle.reserve,
+        stash: {},
         cooldown: 0,
         reload: 0,
         spread: 0,
@@ -407,8 +416,9 @@ export function createSim(o: SimOptions) {
       players.delete(id);
     },
     /**
-     * Take a gun from the Armoury's store counter, full of ammo (the same gun again
-     * just refills it). Whether the player may have it is checked by the caller.
+     * Take a gun from the Armoury's store counter, full of ammo; every other gun is
+     * refilled too (the same gun again just refills). Whether the player may have it
+     * is checked by the caller.
      */
     equip(id: string, weapon: WeaponId) {
       const p = player(id);
@@ -418,11 +428,33 @@ export function createSim(o: SimOptions) {
       p.geared = true;
       p.mag = W.mag;
       p.reserve = W.reserve;
+      p.stash = {};
       p.reload = 0;
       p.cooldown = 0;
       p.spread = 0;
       events.push({ type: 'gear', player: id, weapon });
       setArmed(id, true);
+    },
+    /**
+     * Swap to another gun anywhere once geared up. Each gun keeps its own ammo (a
+     * gun not carried yet comes full), a reload in progress is dropped, and the new
+     * gun fires after SWAP_TIME. Whether the player may have it is checked by the caller.
+     */
+    swap(id: string, weapon: WeaponId) {
+      const p = player(id);
+      if (!p.geared || !(weapon in WEAPONS) || weapon === p.weapon) return false;
+      p.stash[p.weapon] = [p.mag, p.reserve];
+      const W = WEAPONS[weapon];
+      [p.mag, p.reserve] = p.stash[weapon] ?? [W.mag, W.reserve];
+      delete p.stash[weapon];
+      p.weapon = weapon;
+      p.reload = 0;
+      p.cooldown = SWAP_TIME;
+      p.spread = 0;
+      p.held = p.input.fire;
+      events.push({ type: 'swap', player: id, weapon });
+      setArmed(id, true);
+      return true;
     },
     setArmed,
     reload(id: string) {
@@ -471,6 +503,7 @@ export function createSim(o: SimOptions) {
     syncPlayer(id: string, s: { mag: number; reserve: number; reloading: boolean; score: number; streak: number; armed: boolean; weapon: WeaponId }) {
       const p = player(id);
       if (s.weapon !== p.weapon && s.weapon in WEAPONS) {
+        delete p.stash[s.weapon];
         p.weapon = s.weapon;
         p.reload = 0;
       }

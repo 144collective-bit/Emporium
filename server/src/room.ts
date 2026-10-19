@@ -266,6 +266,17 @@ export class Room extends DurableObject<Env> {
           });
         break;
       }
+      case 'swap':
+        // Anywhere, but only between guns this player's lifetime score has unlocked
+        if (!weaponUnlocked(m.w, p.me.total) || !this.allow(p, 'swap', 150)) break;
+        if (this.sim.swap(id, m.w as WeaponId))
+          this.soon(p, 'weapon', 300, () => {
+            const w = this.sim.players.get(id)?.weapon;
+            if (!w) return;
+            this.broadcast({ t: 'info', p: this.info(p) }, p.id);
+            p.profile.setWeapon(w).catch(() => {});
+          });
+        break;
       case 'arm':
         this.sim.setArmed(id, m.on === true);
         break;

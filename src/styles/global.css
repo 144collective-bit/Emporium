@@ -2708,7 +2708,8 @@ body.is-walking .nav {
 .combat-hud,
 .walk-fire,
 .walk-reload,
-.walk-aim {
+.walk-aim,
+.walk-swap {
   display: none;
 }
 .city.is-armed[data-mode="walk"] .combat-hud {
@@ -2960,8 +2961,13 @@ body.is-walking .nav {
 .combat-ammo b.is-low {
   color: #ff5a5a;
 }
+.combat-ammo .combat-gun {
+  margin-top: 1px;
+  color: var(--muted);
+}
 .combat-ammo small {
   grid-column: 1 / -1;
+  white-space: nowrap;
   font-size: 10px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -2996,7 +3002,8 @@ body.is-walking .nav {
   }
   .city.is-armed .walk-fire,
   .city.is-armed .walk-reload,
-  .city.is-armed .walk-aim {
+  .city.is-armed .walk-aim,
+  .city.is-armed .walk-swap {
     position: absolute;
     z-index: 4;
     display: grid;
@@ -3034,6 +3041,39 @@ body.is-walking .nav {
     width: 56px;
     height: 56px;
     font-size: 10px;
+  }
+  /* Swap: above Fire, beside Aim; shows the gun in hand */
+  .city.is-armed .walk-swap {
+    right: 112px;
+    bottom: 190px;
+    align-content: center;
+    gap: 2px;
+    width: 58px;
+    height: 58px;
+    font-size: 8px;
+    letter-spacing: 0.02em;
+  }
+  .walk-swap span {
+    max-width: 52px;
+    overflow: hidden;
+    line-height: 1.1;
+    text-align: center;
+    white-space: nowrap;
+  }
+  .walk-swap svg {
+    color: var(--p-cyan);
+  }
+  .walk-swap:active,
+  .walk-reload:active,
+  .walk-jump:active {
+    transform: scale(0.92);
+  }
+  .walk-fire:active {
+    box-shadow: 0 0 30px -2px #ff2fb9;
+  }
+  /* The swap button carries the gun's name on touch screens */
+  .combat-gun {
+    display: none;
   }
   .city.is-armed .walk-aim[aria-pressed="true"] {
     background:
@@ -3096,6 +3136,37 @@ body.is-walking .nav {
   }
   .walk-prompt {
     bottom: 170px;
+  }
+  /* Geared up, the right-hand buttons stand taller: the door prompt goes above them */
+  .city.is-armed .walk-prompt {
+    bottom: 264px;
+  }
+}
+/* Phones on their side: the buttons sit far right, so the door prompt can stay low */
+@media (pointer: coarse) and (max-height: 500px) {
+  .city.is-armed .walk-prompt {
+    bottom: 150px;
+  }
+}
+/* Narrow phones: a smaller stick and a tighter right-hand cluster, so nothing touches */
+@media (pointer: coarse) and (max-width: 360px) {
+  .walk-stick {
+    left: 14px;
+    width: 108px;
+    height: 108px;
+  }
+  .walk-stick span {
+    width: 46px;
+    height: 46px;
+  }
+  .city.is-armed .walk-fire {
+    right: 96px;
+  }
+  .city.is-armed .walk-reload {
+    right: 108px;
+  }
+  .city.is-armed .walk-swap {
+    right: 102px;
   }
 }
 
@@ -3874,7 +3945,8 @@ body.is-walking .nav {
 .city.is-shopping .combat-cross,
 .city.is-shopping .walk-fire,
 .city.is-shopping .walk-aim,
-.city.is-shopping .walk-reload {
+.city.is-shopping .walk-reload,
+.city.is-shopping .walk-swap {
   display: none;
 }
 .shop-head {

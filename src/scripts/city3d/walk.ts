@@ -16,6 +16,7 @@ import * as THREE from 'three';
 import type { SpotId } from '../../lib/city';
 import { PLAYER, airPose, createDegen, emotePose, walkPose, type Outfit } from './character';
 import { createCombat, type Sfx } from './combat';
+import { WEAPON_IDS } from './combat-sim';
 import { createGunShop } from './gunshop';
 import { CAMERA_ONLY, RACK, SOLIDS, rayBoxes, type Box } from './solids';
 import { DISTRICTS, BLOCKS, BS, RIVER, ROADS, SLAB, type Tick } from './world';
@@ -288,6 +289,9 @@ export function createWalk(d: WalkDeps) {
     else if (down && !e.repeat && c === 'CapsLock') setRunLock(!runLock);
     else if (down && !e.repeat && c === 'KeyR') combat.reload();
     else if (down && !e.repeat && c === 'KeyG') combat.toggleHolster();
+    else if (down && !e.repeat && c === 'KeyQ') combat.swap(1);
+    // 1-4 pick a gun (unless the emote panel has them)
+    else if (down && !e.repeat && /^Digit[1-4]$/.test(c) && !root.querySelector('[data-emotes][open]')) combat.swap(WEAPON_IDS[Number(c.slice(5)) - 1]);
     else if (c === 'Space') {
       if (down && !e.repeat) tryJump();
       jumpHeld = down;
@@ -299,6 +303,7 @@ export function createWalk(d: WalkDeps) {
     e.preventDefault();
     return true;
   }
+  // Switching away lets go of everything (keys, buttons, sticks, a look drag)
   window.addEventListener('blur', () => {
     keys.clear();
     jumpHeld = false;
@@ -306,12 +311,18 @@ export function createWalk(d: WalkDeps) {
     setAim(false);
     combat.trigger(false);
     combat.trigger(false, true);
+    endJoy();
+    drag = null;
   });
 
   // Mouse: click to capture it (pointer lock), then just move to look
   const locked = () => document.pointerLockElement === canvas;
   // Esc frees the mouse first; browsers may release the lock before the key event arrives
   let unlockedAt = -1e9;
+  // Some pages can't capture the mouse (embedded frames, some browsers): then a click
+  // fires straight away and dragging looks around
+  let noLock = !('requestPointerLock' in canvas);
+  document.addEventListener('pointerlockerror', () => (noLock = true));
   document.addEventListener('pointerlockchange', () => {
     root.classList.toggle('is-looking', locked());
     if (!locked()) {
@@ -331,10 +342,13 @@ export function createWalk(d: WalkDeps) {
   // captures it doesn't fire.
   let mouseL = false;
   let mouseR = false;
+  // Taps send mouse events too (after the touch): only a real mouse fires and aims here
+  let lastPointer = 'mouse';
+  canvas.addEventListener('pointerdown', (e) => (lastPointer = e.pointerType), true);
   canvas.addEventListener('mousedown', (e) => {
-    if (!active) return;
+    if (!active || lastPointer !== 'mouse') return;
     if (e.button === 2) aim = mouseR = true;
-    if (e.button === 0 && locked()) {
+    if (e.button === 0 && (locked() || noLock)) {
       mouseL = true;
       combat.trigger(true);
     }
@@ -352,9 +366,9 @@ export function createWalk(d: WalkDeps) {
   canvas.addEventListener('pointerdown', (e) => {
     if (!active) return;
     if (e.pointerType === 'mouse') {
-      if (!locked()) {
+      if (!locked() && !noLock) {
         const req = canvas.requestPointerLock?.() as unknown as Promise<void> | undefined;
-        req?.catch?.(() => {});
+        req?.catch?.(() => (noLock = true));
       }
       if (locked()) return;
     }
@@ -366,9 +380,11 @@ export function createWalk(d: WalkDeps) {
     drag.x = e.clientX;
     drag.y = e.clientY;
   });
-  window.addEventListener('pointerup', (e) => {
-    if (drag && e.pointerId === drag.id) drag = null;
-  });
+  // A cancelled touch (the browser took it over) must not leave the drag stuck
+  for (const ev of ['pointerup', 'pointercancel'] as const)
+    window.addEventListener(ev, (e) => {
+      if (drag && e.pointerId === drag.id) drag = null;
+    });
   canvas.addEventListener(
     'wheel',
     (e) => {
@@ -391,7 +407,7 @@ export function createWalk(d: WalkDeps) {
     if (m > 1) ((x /= m), (y /= m));
     joy.x = x;
     joy.y = y;
-    knob.style.transform = `translate(${x * 32}px, ${y * 32}px)`;
+    knob.style.transform = `translate(${x * r.width * 0.27}px, ${y * r.width * 0.27}px)`;
     d.touched();
   };
   stick.addEventListener('pointerdown', (e) => {
@@ -401,14 +417,14 @@ export function createWalk(d: WalkDeps) {
     e.stopPropagation();
   });
   stick.addEventListener('pointermove', (e) => e.pointerId === joy.id && setJoy(e));
-  const endJoy = (e: PointerEvent) => {
-    if (e.pointerId !== joy.id) return;
+  const endJoy = (e?: PointerEvent) => {
+    if (e && e.pointerId !== joy.id) return;
     joy.id = -1;
     joy.x = joy.y = 0;
     knob.style.transform = '';
   };
-  stick.addEventListener('pointerup', endJoy);
-  stick.addEventListener('pointercancel', endJoy);
+  stick.addEventListener('pointerup', (e) => endJoy(e));
+  stick.addEventListener('pointercancel', (e) => endJoy(e));
   const jumpBtn = $('[data-walk-jump]');
   jumpBtn.addEventListener('pointerdown', () => {
     tryJump();
@@ -427,15 +443,32 @@ export function createWalk(d: WalkDeps) {
     saveSettings();
   });
   prompt.addEventListener('click', act);
-  // Touch: hold Fire, tap Reload
+  // Touch: hold Fire (and drag it to aim, so one thumb shoots and steers), tap Reload, tap Swap
   const fireBtn = $('[data-walk-fire]');
+  let fireAt: { id: number; x: number; y: number } | null = null;
   fireBtn.addEventListener('pointerdown', (e) => {
     fireBtn.setPointerCapture(e.pointerId);
+    fireAt = { id: e.pointerId, x: e.clientX, y: e.clientY };
     combat.trigger(true, true);
     d.touched();
   });
-  for (const ev of ['pointerup', 'pointercancel'] as const) fireBtn.addEventListener(ev, () => combat.trigger(false, true));
+  fireBtn.addEventListener('pointermove', (e) => {
+    if (!fireAt || e.pointerId !== fireAt.id) return;
+    look(e.clientX - fireAt.x, e.clientY - fireAt.y, 0.0075);
+    fireAt.x = e.clientX;
+    fireAt.y = e.clientY;
+  });
+  for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture'] as const)
+    fireBtn.addEventListener(ev, (e) => {
+      if (fireAt && e.pointerId !== fireAt.id) return;
+      fireAt = null;
+      combat.trigger(false, true);
+    });
   $('[data-walk-reload]').addEventListener('click', () => combat.reload());
+  $('[data-walk-swap]').addEventListener('click', () => {
+    combat.swap(1);
+    d.touched();
+  });
   // Touch: Aim toggles the sight (one thumb can't hold Aim and Fire)
   const aimBtn = $<HTMLButtonElement>('[data-walk-aim]');
   const setAim = (on: boolean) => {
@@ -448,7 +481,7 @@ export function createWalk(d: WalkDeps) {
   });
 
   // Gamepad: left stick move, right stick look, A jump, LB / L3 run, Y enter, View first person,
-  // RT fire, X reload, D-pad up holster
+  // RT fire, LT aim, X reload, D-pad up holster, RB / D-pad left-right swap guns
   function pollPad(dt: number) {
     const gp = Array.from(navigator.getGamepads?.() ?? []).find((p) => p && p.connected);
     if (!gp) {
@@ -489,6 +522,9 @@ export function createWalk(d: WalkDeps) {
     if (b[7] !== !!pad.prev[7]) combat.trigger(!!b[7]);
     if (edge(2)) combat.reload();
     if (edge(12)) combat.toggleHolster();
+    // RB or D-pad right: next gun; D-pad left: previous
+    if (edge(5) || edge(15)) combat.swap(1);
+    if (edge(14)) combat.swap(-1);
     if (pad.x || pad.y || b.some(Boolean)) d.touched();
     pad.prev = b;
   }

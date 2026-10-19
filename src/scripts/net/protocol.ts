@@ -38,8 +38,10 @@ export type ClientMsg =
   | { t: 'hello'; v: number; token: string; local?: { total: number; skin: SkinId } }
   /** Controls, ~20 a second: position, facing, camera pitch, speed, flags, and the shot ray */
   | { t: 'in'; p: V3; f: number; k: number; s: number; fl: number; o: V3; d: V3; pt: number }
-  /** Take a gun at the Armoury's store counter (and refill it) */
+  /** Take a gun at the Armoury's store counter (refills every gun) */
   | { t: 'equip'; w: WeaponId }
+  /** Swap to another unlocked gun in the field (once geared up at the counter) */
+  | { t: 'swap'; w: WeaponId }
   | { t: 'arm'; on: boolean }
   | { t: 'reload' }
   | { t: 'emote'; e: EmoteId }
