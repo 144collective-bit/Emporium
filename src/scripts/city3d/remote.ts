@@ -6,8 +6,9 @@
  * shows emote and phrase bubbles.
  */
 import * as THREE from 'three';
-import { airPose, createDegen, emotePose, holdRiflePose, lookOutfit, walkPose, type Degen } from './character';
-import { buildGun, gunSpec, placeGun, type Gun } from './guns';
+import { airPose, createDegen, emotePose, lookOutfit, walkPose, type Degen } from './character';
+import { buildGun, gunSpec, type Gun } from './guns';
+import { holdGun, newStance, type Stance } from './stance';
 import { WEAPONS } from './combat-sim';
 import { EMOTES, PHRASES, RANKS } from '../net/profile-data';
 import { FLAG, INTERP_DELAY, type PlayerInfo, type SnapRow } from '../net/protocol';
@@ -32,6 +33,8 @@ interface Remote {
   fig: Degen;
   pivot: THREE.Group;
   gun: Gun;
+  /** How far they're turned side-on to hold their gun */
+  stance: Stance;
   samples: Sample[];
   /** Last time this player was in a snapshot (local seconds) */
   seenAt: number;
@@ -108,6 +111,7 @@ export function createRemotes(scene: THREE.Scene, camera: THREE.PerspectiveCamer
       const r: Remote = {
         info,
         ...figure(info),
+        stance: newStance(),
         samples: [],
         seenAt: 0,
         phase: Math.random() * 6,
@@ -238,12 +242,10 @@ export function createRemotes(scene: THREE.Scene, camera: THREE.PerspectiveCamer
         r.reload = flags & FLAG.reload ? (r.reload + dt / WEAPONS[r.gun.id].reload) % 1 : 0;
         r.pivot.visible = armed;
         if (r.fig.held) r.fig.held.visible = !armed;
-        if (armed && !r.emote) {
-          holdRiflePose(P, r.aim, pitch, r.reload);
-          placeGun(r.pivot, r.gun, r.aim, pitch, P.lean, 0, r.reload);
-        }
         r.air += (((flags & FLAG.air) !== 0 ? 1 : 0) - r.air) * Math.min(1, dt * 12);
         airPose(P, r.air);
+        // Hands on the gun last, so walking and jumping don't pull them off it
+        if (armed && !r.emote) holdGun(P, r.stance, r.pivot, r.gun, { aim: r.aim, pitch, recoil: 0, reload: r.reload, dt });
         P.headPitch = THREE.MathUtils.clamp((0.35 - pitch) * 0.6, -0.45, 0.55);
         P.headYaw = 0;
         r.fig.update();

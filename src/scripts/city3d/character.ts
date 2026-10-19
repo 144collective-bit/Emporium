@@ -110,6 +110,8 @@ export interface Limb {
   out: number;
   /** Elbow or knee bend */
   bend: number;
+  /** Arms only: the upper arm turned about its own length (set by reachArm) */
+  twist?: number;
 }
 export interface Pose {
   bob: number;
@@ -148,7 +150,7 @@ function applyPose(r: Rig, p: Pose) {
   for (let i = 0; i < 2; i++) {
     const s = i === 0 ? -1 : 1;
     const a = p.arms[i];
-    (i === 0 ? r.j.armL : r.j.armR).rotation.set(-a.fwd, 0, s * a.out);
+    (i === 0 ? r.j.armL : r.j.armR).rotation.set(-a.fwd, a.twist ?? 0, s * a.out);
     (i === 0 ? r.j.foreL : r.j.foreR).rotation.set(-a.bend, 0, 0);
     const l = p.legs[i];
     (i === 0 ? r.j.legL : r.j.legR).rotation.set(-l.fwd, 0, s * l.out - p.side);
@@ -160,6 +162,7 @@ const set = (l: Limb, fwd: number, out: number, bend: number) => {
   l.fwd = fwd;
   l.out = out;
   l.bend = bend;
+  l.twist = 0;
 };
 
 /**
@@ -293,18 +296,68 @@ export function dancePose(p: Pose, t: number) {
   p.headYaw = Math.sin(b * 0.5) * 0.2;
 }
 
+/* ---------- Reaching (hands on a gun) ---------- */
+
+const UPPER_ARM = 0.2;
+/** The middle of the palm in the forearm's space (the hand part's centre) */
+const PALM_Y = 0.215;
+const PALM_Z = 0.006;
+const PALM_R = Math.hypot(PALM_Y, PALM_Z);
+const PALM_TILT = Math.atan2(PALM_Z, PALM_Y);
+/** Shoulders in the chest's space (arms[0] is the rig's -x arm, arms[1] the +x one) */
+const SHOULDERS = [new THREE.Vector3(-0.19, 0.38, 0), new THREE.Vector3(0.19, 0.38, 0)] as const;
+
+/** How far a palm can be from its shoulder */
+export const ARM_REACH = UPPER_ARM + PALM_R;
+
+/** Distance from arm `i`'s shoulder to a point in the chest's space */
+export const shoulderTo = (i: 0 | 1, at: THREE.Vector3) => SHOULDERS[i].distanceTo(at);
+
+const rN = new THREE.Vector3();
+const rM = new THREE.Vector3();
+const rE = new THREE.Vector3();
+const rX = new THREE.Vector3();
+const rY = new THREE.Vector3();
+const rZ = new THREE.Vector3();
+const rMat = new THREE.Matrix4();
+const rEuler = new THREE.Euler();
+
 /**
- * Both hands on the rifle: low and ready, or up at the shoulder when aiming
- * (`aim` 0..1). The right hand (arms[0]) holds the grip, the left hand the
- * handguard; `reload` 0..1 swings the left hand down to the magazine.
+ * Two-bone reach: swing, turn and bend arm `i` so the middle of its palm
+ * lands on `target` (in the chest's space). The elbow hangs down, a little
+ * out and back, like holding a gun. Out of reach, the arm points at it fully
+ * stretched.
  */
-export function holdRiflePose(p: Pose, aim: number, pitch: number, reload: number) {
-  const up = -pitch * aim;
-  const L = (a: number, b: number) => a + (b - a) * aim;
-  set(p.arms[0], L(0.55, 1.2) + up * 0.9, L(0.12, 0.28), L(1.05, 1.2));
-  set(p.arms[1], L(0.95, 1.4) + up * 0.9, L(-0.22, -0.12), L(0.95, 0.45));
-  const rl = reload ? Math.sin(reload * Math.PI) : 0;
-  if (rl) set(p.arms[1], p.arms[1].fwd + (0.45 - p.arms[1].fwd) * rl, p.arms[1].out, p.arms[1].bend + (1.55 - p.arms[1].bend) * rl);
+export function reachArm(p: Pose, i: 0 | 1, target: THREE.Vector3) {
+  const s = i === 0 ? -1 : 1;
+  const S = SHOULDERS[i];
+  rN.subVectors(target, S);
+  const len = rN.length() || 1e-6;
+  rN.divideScalar(len);
+  const d = THREE.MathUtils.clamp(len, Math.abs(UPPER_ARM - PALM_R) + 0.03, ARM_REACH - 0.002);
+  // The triangle shoulder, elbow, palm: the elbow's bend and the angle at the shoulder
+  const cosElbow = THREE.MathUtils.clamp((UPPER_ARM * UPPER_ARM + PALM_R * PALM_R - d * d) / (2 * UPPER_ARM * PALM_R), -1, 1);
+  const bend = Math.max(0, Math.PI - Math.acos(cosElbow) - PALM_TILT);
+  const cosShoulder = THREE.MathUtils.clamp((UPPER_ARM * UPPER_ARM + d * d - PALM_R * PALM_R) / (2 * UPPER_ARM * d), -1, 1);
+  // Where the elbow goes: off the shoulder-to-hand line, towards down, out and back
+  rM.set(s * 0.45, -1, -0.35).normalize();
+  rM.addScaledVector(rN, -rM.dot(rN));
+  if (rM.lengthSq() < 1e-6) rM.set(0, 0, -1).addScaledVector(rN, -rN.z);
+  rM.normalize();
+  rE.copy(S)
+    .addScaledVector(rN, UPPER_ARM * cosShoulder)
+    .addScaledVector(rM, UPPER_ARM * Math.sqrt(1 - cosShoulder * cosShoulder));
+  // The upper arm's frame: +y up the arm, +z the way the forearm bends
+  rY.subVectors(S, rE).normalize();
+  rZ.copy(S).addScaledVector(rN, d).sub(rE);
+  rZ.addScaledVector(rY, -rZ.dot(rY)).normalize();
+  rX.crossVectors(rY, rZ);
+  rEuler.setFromRotationMatrix(rMat.makeBasis(rX, rY, rZ), 'XYZ');
+  const l = p.arms[i];
+  l.fwd = -rEuler.x;
+  l.twist = rEuler.y;
+  l.out = s * rEuler.z;
+  l.bend = bend;
 }
 
 /** Multiplayer emotes (ids from EMOTES in profile-data.ts); `t` is seconds since it started */

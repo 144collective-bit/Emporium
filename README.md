@@ -254,6 +254,7 @@ button and stays closed on return visits.
 | `src/scripts/city3d/combat.ts` | Target practice view: targets, effects, sound cues, HUD, call-outs, gun finishes |
 | `src/scripts/city3d/gunshop.ts` | The gun store menu at the Armoury counter |
 | `src/scripts/city3d/guns.ts` | The four guns (Degen, his hands, other players, the soldiers), sights, finishes |
+| `src/scripts/city3d/stance.ts` | Third person: both hands on the gun (grip and handguard), side-on stance for long guns |
 | `src/scripts/city3d/viewmodel.ts` | First-person hands and rifle: sway, bob, recoil, aiming, reload |
 | `src/scripts/city3d/solids.ts` | The city's collision boxes (walk mode and the game server) |
 | `src/scripts/city3d/profile-ui.ts` | The Profile panel: name, rank; owns the look (saved here and online) |

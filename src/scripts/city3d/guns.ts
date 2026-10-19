@@ -57,6 +57,8 @@ interface Spec {
   /** Where the left hand holds the front, and where it reaches for the magazine (relative to that) */
   fore: THREE.Vector3;
   magAt: THREE.Vector3;
+  /** Third person: the middle of the front hand's palm (under the handguard, round a foregrip or pump), close in for his short arms */
+  hold: THREE.Vector3;
 }
 
 const SPECS: Record<WeaponId, Spec> = {
@@ -98,6 +100,7 @@ const SPECS: Record<WeaponId, Spec> = {
     sight: { kind: 'holo', at: new THREE.Vector3(0, 0.152, 0.075), ads: 0.36 },
     fore: new THREE.Vector3(0.008, 0.016, 0.28),
     magAt: new THREE.Vector3(-0.008, -0.075, -0.15),
+    hold: new THREE.Vector3(0, -0.015, 0.22),
   },
   smg: {
     body: () => [
@@ -128,6 +131,7 @@ const SPECS: Record<WeaponId, Spec> = {
     sight: { kind: 'holo', at: new THREE.Vector3(0, 0.13, 0.03), ads: 0.34 },
     fore: new THREE.Vector3(0.004, -0.01, 0.2),
     magAt: new THREE.Vector3(-0.004, -0.06, -0.11),
+    hold: new THREE.Vector3(0, -0.03, 0.2),
   },
   shotgun: {
     body: () => {
@@ -162,6 +166,7 @@ const SPECS: Record<WeaponId, Spec> = {
     sight: { kind: 'irons', at: new THREE.Vector3(0, 0.1, 0), ads: 0.3 },
     fore: new THREE.Vector3(0.006, 0.0, 0.3),
     magAt: new THREE.Vector3(-0.006, -0.06, -0.19),
+    hold: new THREE.Vector3(0, -0.022, 0.255),
   },
   dmr: {
     body: () => [
@@ -198,6 +203,7 @@ const SPECS: Record<WeaponId, Spec> = {
     sight: { kind: 'scope', at: new THREE.Vector3(0, 0.13, -0.106), ads: 0.26 },
     fore: new THREE.Vector3(0.008, 0.016, 0.36),
     magAt: new THREE.Vector3(-0.008, -0.075, -0.23),
+    hold: new THREE.Vector3(0, -0.013, 0.27),
   },
 };
 
@@ -402,15 +408,3 @@ export function buildGun(id: WeaponId, skin: SkinId, opts: { sight?: boolean; sh
   };
 }
 
-/**
- * Where the third-person gun sits in its pivot on the chest, for this frame:
- * `aim` 0..1 brings it up to the right shoulder, `recoil` kicks it back and
- * `reload` 0..1 tips it and drops the magazine.
- */
-export function placeGun(pivot: THREE.Object3D, gun: Gun, aim: number, pitchDown: number, lean: number, recoil: number, reload: number) {
-  const rl = reload ? Math.sin(reload * Math.PI) : 0;
-  // On the right shoulder (the rig's -x side)
-  pivot.position.set(-0.09 + aim * 0.04, 0.3 + aim * 0.06, 0.13 + aim * 0.03 - recoil * 0.4);
-  pivot.rotation.set(THREE.MathUtils.lerp(0.55, pitchDown - lean, aim) + rl * 0.5 - recoil * 2, 0.08 * (1 - aim), -rl * 0.7);
-  gun.mag.position.y = -Math.sin(Math.min(1, rl * 1.4) * Math.PI) * 0.12;
-}

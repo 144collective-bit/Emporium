@@ -145,8 +145,15 @@ it and has been retired completely. Build only on what's here.
   and Long Shot marksman rifle (scope, full-screen scope view). Guns unlock
   with score and are free to take: never sell them, price them in money or
   tie them to the token. Keep them cartoon: no real-world gun names, brands
-  or markings. A new gun needs a `WEAPONS` entry, a `SPECS` entry, store art
-  (`ART` in `gunshop.ts`) and a shot sound (`SHOT_SOUND` in `combat.ts`).
+  or markings. A new gun needs a `WEAPONS` entry, a `SPECS` entry (with its
+  third-person `hold` spot for the front hand), store art (`ART` in
+  `gunshop.ts`) and a shot sound (`SHOT_SOUND` in `combat.ts`).
+- In third person (the player and other players), `stance.ts` `holdGun()`
+  puts both hands on the gun with `reachArm()` in `character.ts`: the
+  shooting hand on the pistol grip (every gun's origin), the other on its
+  `hold` spot, or on the magazine during a reload. Longer guns turn Degen
+  side-on just enough for the front hand to reach. Call it after the walk
+  and jump poses so they don't pull the hands off.
 - Finishes (`SKINS`) are cosmetic and work on every gun. Lifetime score,
   finish and last gun are saved in the browser under `degen-city-combat-v1`
   (or the player profile online).

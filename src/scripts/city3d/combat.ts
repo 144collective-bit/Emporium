@@ -18,7 +18,9 @@ import { FONT_DISPLAY, PAL, canvasTex, fx, glowTex, neon, toon } from './kit';
 import { type Tick } from './world';
 import { DRONES, DUMMIES, WEAPONS, WEAPON_IDS, createSim, dronePose, weaponUnlocked, type SimEvent, type WeaponId } from './combat-sim';
 import type { ClientMsg, MeRow, NetEvent } from '../net/protocol';
-import { SKINS, buildGun, gunSpec, placeGun, type Gun, type SkinId } from './guns';
+import { SKINS, buildGun, gunSpec, type Gun, type SkinId } from './guns';
+import { holdGun, newStance } from './stance';
+import type { Pose } from './character';
 import { createViewmodel, type ViewState } from './viewmodel';
 
 export { DUMMIES };
@@ -252,6 +254,7 @@ export function createCombat(d: CombatDeps) {
 
   // Third person: the gun on Degen's shoulder, in a pivot the walk code parents to his chest
   const pivot = new THREE.Group();
+  const stance = newStance();
   const flash = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 0.22), new THREE.MeshBasicMaterial({ map: glowTex, color: '#ffd36b', transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false }));
   flash.visible = false;
   fx(flash);
@@ -820,9 +823,9 @@ export function createCombat(d: CombatDeps) {
       // All the way down the Long Shot's scope: a full-screen scope view (global.css)
       root.classList.toggle('is-scoped', s.firstPerson && me.armed && gunSpec(me.weapon).sight.kind === 'scope' && vm.aimed > 0.92);
     },
-    /** Pose the third-person rifle for this frame: aim 0..1 brings it up to the shoulder */
-    poseGun(aim: number, pitchDown: number, lean: number, holdRecoil: number) {
-      placeGun(pivot, gun, aim, pitchDown, lean, holdRecoil, me.reload > 0 ? 1 - me.reload / W().reload : 0);
+    /** Third person, per frame: the gun in Degen's hands (`aim` 0..1 brings it up to aim) */
+    poseGun(pose: Pose, aim: number, pitch: number, holdRecoil: number, dt: number) {
+      holdGun(pose, stance, pivot, gun, { aim, pitch, recoil: holdRecoil, reload: me.reload > 0 ? 1 - me.reload / W().reload : 0, dt });
     },
     /** Every rifle finish change and lifetime score update (for the profile panel) */
     onLifetime(fn: (total: number) => void) {

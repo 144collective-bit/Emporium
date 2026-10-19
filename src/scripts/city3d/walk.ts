@@ -14,7 +14,7 @@
  */
 import * as THREE from 'three';
 import type { SpotId } from '../../lib/city';
-import { PLAYER, airPose, createDegen, emotePose, holdRiflePose, walkPose, type Outfit } from './character';
+import { PLAYER, airPose, createDegen, emotePose, walkPose, type Outfit } from './character';
 import { createCombat, type Sfx } from './combat';
 import { createGunShop } from './gunshop';
 import { CAMERA_ONLY, RACK, SOLIDS, rayBoxes, type Box } from './solids';
@@ -567,11 +567,10 @@ export function createWalk(d: WalkDeps) {
     recoil = Math.max(0, recoil - dt * 0.35);
     aimAmt += ((shooting ? 1 : 0) - aimAmt) * damp(14, dt);
     if (hero.held) hero.held.visible = !combat.armed;
-    if (combat.armed) {
-      holdRiflePose(P, aimAmt, pitch, combat.reloading);
-      combat.poseGun(aimAmt, pitch, P.lean, recoil);
-    } else if (aim) Object.assign(P.arms[1], { fwd: 1.45, out: 0.05, bend: 0.15 });
     airPose(P, air);
+    // Both hands on the gun (after walking and jumping have posed the arms)
+    if (combat.armed) combat.poseGun(P, aimAmt, pitch, recoil, dt);
+    else if (aim) Object.assign(P.arms[1], { fwd: 1.45, out: 0.05, bend: 0.15, twist: 0 });
     // The head follows the camera: turns towards where you look, tilts up and down
     const lookYaw = THREE.MathUtils.clamp(wrap(lookFace - face), -0.9, 0.9);
     headYaw += ((speed < 0.25 || aim ? lookYaw : 0) - headYaw) * damp(8, dt);
