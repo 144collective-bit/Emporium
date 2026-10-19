@@ -252,8 +252,9 @@ When the real wallet is ready, it plugs into `src/scripts/city3d/store.ts`.
 | Signal tower | X |
 | Post office | Telegram |
 
-The Directory lists the same places. On phones the welcome card has a close
-button and stays closed on return visits.
+The Directory lists the same places. Phones (up to 640px wide) don't show
+the welcome card, so the city fills the screen; a small "Draft · v0" tag keeps
+the draft note.
 
 ### Where it lives
 

@@ -3046,7 +3046,6 @@ body.is-walking .nav {
   }
 }
 
-.city-card-close,
 .city-draft-tag {
   display: none;
 }
@@ -3070,41 +3069,13 @@ body.is-walking .nav {
     flex-direction: column;
     align-items: stretch;
   }
-  .city-card {
-    max-width: none;
-    padding: 12px 14px 10px;
-  }
-  .city-title {
-    font-size: 28px;
-  }
-  .city-hint {
-    font-size: 13px;
-  }
   .city-dir {
     order: -1;
     align-self: flex-end;
   }
-  /* The card can be hidden to see more of the city */
+  /* No welcome card on phones, so the city fills the screen. Hidden only
+     visually, so the page keeps its heading for screen readers */
   .city-card {
-    position: relative;
-  }
-  .city-card-close {
-    position: absolute;
-    top: 6px;
-    right: 6px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
-    border: 1px solid var(--line);
-    border-radius: 50%;
-    background: none;
-    color: var(--text-2);
-    cursor: pointer;
-  }
-  /* Hidden only visually, so the page keeps its heading for screen readers */
-  .city-hud[data-card="hidden"] .city-card {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -3114,7 +3085,7 @@ body.is-walking .nav {
     clip-path: inset(50%);
     white-space: nowrap;
   }
-  .city-hud[data-card="hidden"] .city-draft-tag {
+  .city-draft-tag {
     display: inline-flex;
   }
   /* 3D on phones: settings top-left, the panel becomes a bottom sheet */
