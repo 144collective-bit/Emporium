@@ -11,6 +11,7 @@
  *   reloads, respawns) for the view to draw and play, or for a server to send.
  */
 import * as THREE from 'three';
+import { CORE_ROADS, NS_ROADS, design } from './layout';
 
 export const TICK = 1 / 60;
 
@@ -68,22 +69,24 @@ export const POINTS = { hit: 10, dummy: 100, drone: 150 };
 /** Seconds to chain another takedown into a streak */
 export const STREAK_WINDOW = 6;
 
-/** Training dummies: x, z and facing, in the park and on a few lots */
-export const DUMMIES: [number, number, number][] = [
-  [5.15, 3.0, 0],
-  [7.45, 3.0, 0],
-  [2.6, 7.6, Math.PI / 2],
-  [7.7, 24.1, Math.PI / 4],
-  [8.1, 25.6, Math.PI / 4],
-  [28.6, 7.0, 0],
-  [24.4, 6.4, 0],
-];
+/** Training dummies: x, z and facing, in the park and on a few lots (placed on the landmarks' drawing grid, layout.ts) */
+export const DUMMIES: [number, number, number][] = (
+  [
+    [5.15, 3.0, 0],
+    [7.45, 3.0, 0],
+    [2.6, 7.6, Math.PI / 2],
+    [7.7, 24.1, Math.PI / 4],
+    [8.1, 25.6, Math.PI / 4],
+    [28.6, 7.0, 0],
+    [24.4, 6.4, 0],
+  ] as [number, number, number][]
+).map(([x, z, ry]) => [...design(x, z), ry]);
 const DUMMY = { hp: 100, down: 4, lo: new THREE.Vector3(-0.31, 0.34, -0.06), hi: new THREE.Vector3(0.31, 1.27, 0.06), aimY: 0.8 };
 
-/** Patrol loops (x0, z0, x1, z1, height) and the drones flying them */
+/** Patrol loops (x0, z0, x1, z1, height) and the drones flying them: round the Emporium's block over the core streets, and round the ring avenues */
 export const DRONE_LOOPS: [number, number, number, number, number][] = [
-  [10, 10, 21, 21, 4.4],
-  [-1, -1, 32, 32, 5.6],
+  [CORE_ROADS[0], CORE_ROADS[0], CORE_ROADS[1], CORE_ROADS[1], 4.4],
+  [NS_ROADS[0].c, NS_ROADS[0].c, NS_ROADS[3].c, NS_ROADS[3].c, 5.6],
 ];
 export const DRONES: { loop: number; phase: number }[] = [
   { loop: 0, phase: 0 },

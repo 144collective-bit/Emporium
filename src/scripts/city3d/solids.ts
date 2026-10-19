@@ -4,8 +4,11 @@
  * the DOM and of scene code so the server can bundle it.
  *
  * They mirror landmarks.ts: when a landmark moves or changes size, update here.
+ * Like the landmarks they're written on the landmarks' drawing grid and moved
+ * onto today's streets with `designBox()` (layout.ts).
  */
 import { DUMMIES } from './combat-sim';
+import { design, designBox } from './layout';
 
 /** x0, z0, x1, z1, height */
 export type Box = [number, number, number, number, number];
@@ -13,8 +16,8 @@ export type Box = [number, number, number, number, number];
 /** Training dummies: Degen walks round them */
 export const DUMMY_SOLIDS = DUMMIES.map(([x, z]): Box => [x - 0.3, z - 0.3, x + 0.3, z + 0.3, 1.3]);
 
-/** Everything you can't walk through, matching landmarks.ts. Height is for the camera. */
-export const SOLIDS: Box[] = [
+/** Everything you can't walk through, matching landmarks.ts (on its drawing grid). Height is for the camera. */
+const DRAWN: Box[] = [
   // Emporium arcade: the podium with its street corner cut off (in steps); the tower stands on it
   [11.8, 11.8, 18.0, 16.0, 2.6],
   [11.8, 16.0, 16.0, 18.0, 2.6],
@@ -61,17 +64,17 @@ export const SOLIDS: Box[] = [
   [1.7, 1.7, 3.5, 3.5, 6.6], // water tower
   [18.55, 11.95, 19.45, 12.85, 1.4], // planters
   [11.95, 18.55, 12.85, 19.45, 1.4],
-  ...DUMMY_SOLIDS,
 ];
+export const SOLIDS: Box[] = [...DRAWN.map(designBox), ...DUMMY_SOLIDS];
 /** What bullets stop on: everything solid except the dummies' footprints (they test their own shape) */
 export const SHOT_SOLIDS = SOLIDS.filter((b) => !DUMMY_SOLIDS.includes(b));
 
 /** Things to do with E besides doors: the gun store counter in the Armoury (stand in front of it to gear up) */
-export const RACK = { x: 24.7, z: 27.95 };
+export const RACK = (([x, z]) => ({ x, z }))(design(24.7, 27.95));
 /** Only the camera bumps into these (tall parts above a walkable footprint) */
 export const CAMERA_ONLY: Box[] = [
   [11.9, 11.9, 17.5, 17.5, 12.6], // the Emporium's glass tower
-];
+].map((b) => designBox(b as Box));
 
 /**
  * Distance along a ray to the first solid box or the ground (y 0.1), up to

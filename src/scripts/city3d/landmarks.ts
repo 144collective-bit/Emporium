@@ -3,7 +3,11 @@
  * to a confirmed channel. Each spot is its own group so it can lift and glow
  * when hovered, with a ring on the ground and a pin above it.
  *
- * Layout matches the 2D map (src/lib/city.ts): blocks at 0-9, 11-20, 22-31.
+ * Everything here is drawn on the landmarks' original grid (core blocks at
+ * 0-9, 11-20 and 22-31). buildLandmarks() moves each landmark whole onto its
+ * block on today's wider streets (layout.ts `designShift`): its meshes, lamps,
+ * trees, people and spot. Anything a tick places or compares by position
+ * (walker checks, the post office's paper) goes through `design()` too.
  */
 import * as THREE from 'three';
 import type { SpotId } from '../../lib/city';
@@ -31,7 +35,8 @@ import {
 import { rifleGeometry } from './guns';
 import { PLAYER, SOLDIER, attentionPose, createCrowd, createDegen, dancePose, lookPose, marchPose, newPose, type Outfit } from './character';
 import { walker } from './life';
-import { SLAB as S, addLamp, addTree, waterMat, type Tick } from './world';
+import { SLAB as S, addLamp, addTree, placedMark, shiftPlaced, waterMat, type Tick } from './world';
+import { design, designShift } from './layout';
 
 export interface Spot {
   id: SpotId;
@@ -1513,8 +1518,7 @@ function postOffice(scene: THREE.Scene, ctx: LandmarkCtx) {
   scene.add(paper);
   ctx.tick(({ t }) => {
     const a = t * 0.45;
-    const x = 4.0 + Math.cos(a) * 4.2;
-    const z = 25.6 + Math.sin(a) * 2.6;
+    const [x, z] = design(4.0 + Math.cos(a) * 4.2, 25.6 + Math.sin(a) * 2.6);
     paper.position.set(x, 5.4 + Math.sin(a * 2) * 0.6, z);
     paper.rotation.set(0, -a - Math.PI / 2, -0.35);
   });
@@ -1729,8 +1733,9 @@ function armoury(scene: THREE.Scene, ctx: LandmarkCtx) {
     // Starts raised (and stays raised under reduced motion, when ticks don't run)
     pivot.rotation.z = 1.35;
     g.add(pivot);
+    const [gateX, gateZ] = design(27.1, 30.3);
     ctx.tick(({ dt }) => {
-      const near = walker.on && Math.hypot(walker.x - 27.1, walker.z - 30.3) < 4;
+      const near = walker.on && Math.hypot(walker.x - gateX, walker.z - gateZ) < 4;
       pivot.rotation.z += ((near ? 1.35 : 0.02) - pivot.rotation.z) * Math.min(1, dt * 3);
     });
   }
@@ -2285,7 +2290,8 @@ function armoury(scene: THREE.Scene, ctx: LandmarkCtx) {
         crowd.set(i, p.x, S, p.z, p.yaw, 0.85, pose);
       }
       guards.forEach(([x, z], k) => {
-        const near = walker.on && Math.hypot(walker.x - x, walker.z - z) < 1.8;
+        const [wx, wz] = design(x, z);
+        const near = walker.on && Math.hypot(walker.x - wx, walker.z - wz) < 1.8;
         salute[k] += ((near ? 1 : 0) - salute[k]) * Math.min(1, dt * 6);
         attentionPose(pose, salute[k], 'left');
         crowd.set(squad + k, x, S, z, 0, 0.85, pose);
@@ -2483,16 +2489,36 @@ function apartments(scene: THREE.Scene, ctx: LandmarkCtx) {
 
 export function buildLandmarks(scene: THREE.Scene, ctx: LandmarkCtx) {
   const crowd: Idle[] = [];
-  park(scene, crowd);
-  apartments(scene, ctx);
+  /** Build a landmark drawn on the old grid in the block at (bx, bz), then move it onto today's block */
+  const onBlock = <T,>(bx: number, bz: number, build: () => T): T => {
+    const dx = designShift(bx);
+    const dz = designShift(bz);
+    const before = new Set(scene.children);
+    const mark = placedMark();
+    const people = crowd.length;
+    const made = build();
+    for (const o of scene.children) {
+      if (before.has(o)) continue;
+      o.position.x += dx;
+      o.position.z += dz;
+      o.updateMatrix();
+    }
+    shiftPlaced(mark, dx, dz);
+    for (const c of crowd.slice(people)) (c.x += dx), (c.z += dz);
+    const sp = made as Spot | undefined;
+    if (sp?.focus && sp.pin) for (const v of [sp.focus, sp.pin]) (v.x += dx), (v.z += dz);
+    return made;
+  };
+  onBlock(0, 0, () => park(scene, crowd));
+  onBlock(22, 0, () => apartments(scene, ctx));
   const spots = [
-    emporium(scene, ctx, crowd),
-    shop(scene, ctx, crowd),
-    workshop(scene, ctx),
-    vault(scene, ctx, crowd),
-    armoury(scene, ctx),
-    signal(scene, ctx),
-    postOffice(scene, ctx),
+    onBlock(11, 11, () => emporium(scene, ctx, crowd)),
+    onBlock(22, 11, () => shop(scene, ctx, crowd)),
+    onBlock(11, 22, () => workshop(scene, ctx)),
+    onBlock(0, 11, () => vault(scene, ctx, crowd)),
+    onBlock(22, 22, () => armoury(scene, ctx)),
+    onBlock(11, 0, () => signal(scene, ctx)),
+    onBlock(0, 22, () => postOffice(scene, ctx)),
   ];
   return { spots, crowd };
 }

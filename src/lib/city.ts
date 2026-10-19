@@ -3,14 +3,20 @@
  * string at build time.
  *
  * Tile grid: x runs to the lower right of the screen, y to the lower left,
- * z is height. Blocks sit at 0-9, 11-20 and 22-31 on both axes with roads
- * between them; everything outside is parkland, a river and road out of town.
+ * z is height. The street plan is the 3D city's core (layout.ts): blocks at
+ * 0-9, 14-23 and 28-37 on both axes, each with its sidewalk, and two-lane
+ * streets between them; everything outside is parkland, a river and road out
+ * of town. (The ring avenues and plot districts are 3D only.) The buildings
+ * are drawn on the landmarks' old, tighter grid and moved onto their blocks
+ * like the 3D ones (`design()`), so their numbers match landmarks.ts.
  *
  * Draw order is the painter's algorithm by block: everything in a block is
  * drawn by its block's (column + row), and the cars on a road segment are
  * drawn right after the block behind that segment, so nothing on the street
  * ever paints over a building standing in front of it.
  */
+
+import { BLOCKS, BS, CORE_ROADS, LANE, RIVER, STREET_GAP, WALK_W, design, designShift } from '../scripts/city3d/layout';
 
 export type SpotId = 'emporium' | 'shop' | 'workshop' | 'vault' | 'signal' | 'telegram' | 'plan';
 
@@ -38,10 +44,16 @@ const TL = 53.67; // face-local units per tile (one tile's edge length on screen
 const K = 0.8944; // cos/sin of the 2:1 iso edge
 const Q = 0.4472;
 
-export const VIEW = { x: -1600, y: -330, w: 3200, h: 1930 };
+export const VIEW = { x: -1965, y: -330, w: 3930, h: 2256 };
 
 type Pt = [number, number];
-const P = (x: number, y: number, z = 0): Pt => [((x - y) * TW) / 2, ((x + y) * TH) / 2 - z * ZH];
+/** Where the building being drawn moves from its drawing grid onto its block (see `onBlock`) */
+let shift: Pt = [0, 0];
+const P = (x: number, y: number, z = 0): Pt => {
+  const X = x + shift[0];
+  const Y = y + shift[1];
+  return [((X - Y) * TW) / 2, ((X + Y) * TH) / 2 - z * ZH];
+};
 const n = (v: number) => +v.toFixed(1);
 const pts = (...ps: Pt[]) => ps.map(([a, b]) => `${n(a)},${n(b)}`).join(' ');
 const poly = (fill: string, ...ps: Pt[]) => `<polygon points="${pts(...ps)}" fill="${fill}"/>`;
@@ -230,20 +242,35 @@ interface Item {
   svg: string;
 }
 let items: Item[] = [];
-const cellOf = (t: number) => Math.floor((t + 1) / 11);
-const add = (x: number, y: number, svg: string) => items.push({ cell: cellOf(x) + cellOf(y), car: 0, d: x + y, svg });
+/** Which block row / column a coordinate is in (its block and the street past it) */
+const cellOf = (t: number) => Math.floor((t + STREET_GAP / 2) / (BS + STREET_GAP));
+const add = (x: number, y: number, svg: string) => {
+  const [X, Y] = [x + shift[0], y + shift[1]];
+  items.push({ cell: cellOf(X) + cellOf(Y), car: 0, d: X + Y, svg });
+};
+/** Draw one block's building (written on the old grid, block origin `ox, oy` there) onto today's block */
+function onBlock(ox: number, oy: number, draw: () => void) {
+  shift = [designShift(ox + 1), designShift(oy + 1)];
+  draw();
+  shift = [0, 0];
+}
 
 /* ---------- Ground: roads, river, block slabs ---------- */
 
-const BLOCKS = [0, 11, 22];
-const ROADS = [10, 21];
-const EXT: [number, number] = [-24, 56];
-const RIVER: [number, number] = [34.5, 37.5];
+const ROADS = CORE_ROADS;
+/** Half a street's asphalt */
+const RH = LANE;
+const EXT: [number, number] = [-30, 68];
+/** The street runs between crossings (each crossing and its crosswalks left clear) */
+const RUNS: [number, number][] = [EXT[0], ...ROADS.flatMap((r) => [r - RH - 1.1, r + RH + 1.1]), EXT[1]].reduce<[number, number][]>(
+  (out, v, k, all) => (k % 2 ? [...out, [all[k - 1], v]] : out),
+  []
+);
 
 function crosswalk(along: 'x' | 'y', at: number, road: number) {
   let s = '';
-  for (let k = 0; k < 6; k++) {
-    const a = road - 0.9 + k * 0.32;
+  for (let k = 0; k < 10; k++) {
+    const a = road - RH + 0.15 + k * 0.32;
     const b = a + 0.17;
     s +=
       along === 'x'
@@ -267,39 +294,40 @@ function ground(lots: Record<string, string>) {
 
   // Asphalt, then lane dashes between the intersections, then crosswalks
   for (const r of ROADS) {
-    s += `<g class="road">${poly(C.asphalt, P(e0, r - 1), P(e1, r - 1), P(e1, r + 1), P(e0, r + 1))}</g>`;
-    s += `<g class="road">${poly(C.asphalt, P(r - 1, e0), P(r + 1, e0), P(r + 1, e1), P(r - 1, e1))}</g>`;
+    s += `<g class="road">${poly(C.asphalt, P(e0, r - RH), P(e1, r - RH), P(e1, r + RH), P(e0, r + RH))}</g>`;
+    s += `<g class="road">${poly(C.asphalt, P(r - RH, e0), P(r + RH, e0), P(r + RH, e1), P(r - RH, e1))}</g>`;
   }
-  const runs: [number, number][] = [
-    [e0, 8.2],
-    [11.8, 19.2],
-    [22.8, e1],
-  ];
   for (const r of ROADS) {
-    for (const [a, b] of runs) {
+    for (const [a, b] of RUNS) {
       s += line(P(a, r), P(b, r), 'lane') + line(P(r, a), P(r, b), 'lane');
     }
     for (const r2 of ROADS) {
-      s += crosswalk('x', r2 - 1.7, r) + crosswalk('x', r2 + 1.1, r);
-      s += crosswalk('y', r2 - 1.7, r) + crosswalk('y', r2 + 1.1, r);
+      s += crosswalk('x', r2 - RH - 0.95, r) + crosswalk('x', r2 + RH + 0.35, r);
+      s += crosswalk('y', r2 - RH - 0.95, r) + crosswalk('y', r2 + RH + 0.35, r);
     }
   }
 
-  // Bridges where the avenues cross the river
+  // Bridges where the streets cross the river: sidewalks either side, then rails
   for (const r of ROADS) {
-    for (const side of [r - 1, r + 1]) {
-      s += `<g class="ink rail">${line(P(side, r0 - 0.3, 0.45), P(side, r1 + 0.3, 0.45))}</g>`;
-      for (let y = r0 - 0.3; y <= r1 + 0.31; y += 0.75) s += `<g class="ink rail">${line(P(side, y, 0), P(side, y, 0.45))}</g>`;
+    const w = RH + WALK_W;
+    for (const [a, b] of [
+      [r - w, r - RH],
+      [r + RH, r + w],
+    ])
+      s += `<g class="ink">${poly(C.sidewalk, P(a, r0 - 0.6), P(b, r0 - 0.6), P(b, r1 + 0.6), P(a, r1 + 0.6))}</g>`;
+    for (const side of [r - w, r + w]) {
+      s += `<g class="ink rail">${line(P(side, r0 - 0.6, 0.45), P(side, r1 + 0.6, 0.45))}</g>`;
+      for (let y = r0 - 0.6; y <= r1 + 0.61; y += 0.75) s += `<g class="ink rail">${line(P(side, y, 0), P(side, y, 0.45))}</g>`;
     }
   }
 
-  // Block slabs (the curb) and their lots
+  // Block slabs (the curb with its sidewalk) and their lots
   for (const ox of BLOCKS) {
     for (const oy of BLOCKS) {
-      s += prism(ox, oy, 9, 9, Z0, { c: C.sidewalk });
+      s += prism(ox - WALK_W, oy - WALK_W, BS + WALK_W * 2, BS + WALK_W * 2, Z0, { c: C.sidewalk });
       const lot = lots[`${ox},${oy}`];
       const i = 0.4;
-      s += `<polygon points="${pts(P(ox + i, oy + i, Z0), P(ox + 9 - i, oy + i, Z0), P(ox + 9 - i, oy + 9 - i, Z0), P(ox + i, oy + 9 - i, Z0))}" fill="${lot}" class="lot"/>`;
+      s += `<polygon points="${pts(P(ox + i, oy + i, Z0), P(ox + BS - i, oy + i, Z0), P(ox + BS - i, oy + BS - i, Z0), P(ox + i, oy + BS - i, Z0))}" fill="${lot}" class="lot"/>`;
     }
   }
   return s;
@@ -313,8 +341,9 @@ function outskirts() {
       if (rand() > 0.42) continue;
       const x = gx + rand() * step;
       const y = gy + rand() * step;
-      if (x > -1 && x < 32 && y > -1 && y < 32) continue;
-      if (ROADS.some((r) => Math.abs(y - r) < 1.7 || Math.abs(x - r) < 1.7)) continue;
+      const core = [BLOCKS[0] - WALK_W - 0.4, BLOCKS[2] + BS + WALK_W + 0.4];
+      if (x > core[0] && x < core[1] && y > core[0] && y < core[1]) continue;
+      if (ROADS.some((r) => Math.abs(y - r) < RH + 0.9 || Math.abs(x - r) < RH + 0.9)) continue;
       if (y > RIVER[0] - 0.9 && y < RIVER[1] + 0.6) continue;
       const [sx, sy] = P(x, y);
       if (sx < VIEW.x - 30 || sx > VIEW.x + VIEW.w + 30 || sy < VIEW.y + 40 || sy > VIEW.y + VIEW.h + 70) continue;
@@ -326,19 +355,23 @@ function outskirts() {
 /* ---------- Cars ---------- */
 
 const CAR_COLORS = ['#e23b3b', '#ffd23f', '#00c2ff', '#e219e5', '#f3f2f7', '#1fbf6b', '#ff8a3d'];
-const BOUNDS = [-23, -12, -1, 10, 21, 32, 43, 54];
+/** Where a car's road is cut into segments (one copy per segment): the street centres, every block apart */
+const PITCH = BS + STREET_GAP;
+const BOUNDS = [-3, -2, -1, 0, 1, 2, 3, 4].map((k) => ROADS[0] + k * PITCH);
 
 function carSprite(axis: 'x' | 'y', c: string, dir: number) {
-  const [w, d] = axis === 'x' ? [1.05, 0.56] : [0.56, 1.05];
-  let s = prism(-w / 2, -d / 2, w, d, 0.48, { c, z: 0.06 });
+  // Sized like the 3D city's cars: about 2.3 long and 1 wide, in a 1.7-wide lane
+  const [w, d] = axis === 'x' ? [2.3, 0.98] : [0.98, 2.3];
+  let s = prism(-w / 2, -d / 2, w, d, 0.62, { c, z: 0.08 });
   const [cw, cd] = axis === 'x' ? [w * 0.5, d * 0.84] : [w * 0.84, d * 0.5];
-  const cx = axis === 'x' ? (dir > 0 ? -w / 2 + 0.1 : w / 2 - 0.1 - cw) : -cw / 2;
-  const cy = axis === 'y' ? (dir > 0 ? -d / 2 + 0.1 : d / 2 - 0.1 - cd) : -cd / 2;
-  s += prism(cx, cy, cw, cd, 0.34, { c, z: 0.54, left: C.glass, right: mix(C.glass, '#140a33', 0.45) });
+  const cx = axis === 'x' ? (dir > 0 ? -w / 2 + 0.3 : w / 2 - 0.3 - cw) : -cw / 2;
+  const cy = axis === 'y' ? (dir > 0 ? -d / 2 + 0.3 : d / 2 - 0.3 - cd) : -cd / 2;
+  s += prism(cx, cy, cw, cd, 0.45, { c, z: 0.7, left: C.glass, right: mix(C.glass, '#140a33', 0.45) });
   // Head- or tail-lights on whichever end faces the viewer
   const lights = dir > 0 ? '#fff2a8' : '#ff3b3b';
-  const lamps = `<circle cx="7" cy="4" r="2.6" fill="${lights}"/><circle cx="23" cy="4" r="2.6" fill="${lights}"/>`;
-  s += axis === 'x' ? g(onR(w / 2, d / 2, 0.4), lamps) : g(onL(-w / 2, d / 2, 0.4), lamps);
+  const end = 0.98 * TL;
+  const lamps = `<circle cx="${n(end * 0.2)}" cy="5" r="3.4" fill="${lights}"/><circle cx="${n(end * 0.8)}" cy="5" r="3.4" fill="${lights}"/>`;
+  s += axis === 'x' ? g(onR(w / 2, d / 2, 0.52), lamps) : g(onL(-w / 2, d / 2, 0.52), lamps);
   return s;
 }
 
@@ -389,15 +422,15 @@ function traffic() {
   for (const r of ROADS) {
     // Right-hand traffic: heading +x keeps to the +y lane, heading +y to the -x lane
     for (const [lane, dir] of [
-      [r + 0.5, 1],
-      [r - 0.5, -1],
+      [r + LANE / 2, 1],
+      [r - LANE / 2, -1],
     ]) {
       car('x', lane, dir, CAR_COLORS[i++ % CAR_COLORS.length], rand());
       car('x', lane, dir, CAR_COLORS[i++ % CAR_COLORS.length], rand(), 1.3);
     }
     for (const [lane, dir] of [
-      [r - 0.5, 1],
-      [r + 0.5, -1],
+      [r - LANE / 2, 1],
+      [r + LANE / 2, -1],
     ]) {
       car('y', lane, dir, CAR_COLORS[i++ % CAR_COLORS.length], rand());
       car('y', lane, dir, CAR_COLORS[i++ % CAR_COLORS.length], rand(), 1.3);
@@ -1200,28 +1233,26 @@ export function renderCity({ spots, art }: CityInput) {
   pins = '';
   fx = '';
 
-  const lots: Record<string, string> = {
-    '0,0': C.grass,
-    '11,0': C.grass,
-    '22,0': C.grass,
-    '0,11': 'url(#paving)',
-    '11,11': 'url(#paving)',
-    '22,11': C.concrete,
-    '0,22': C.grass,
-    '11,22': C.concrete,
-    '22,22': C.concrete,
-  };
+  // Each block's lot (rows top to bottom, columns left to right)
+  const kinds = [
+    [C.grass, C.grass, C.grass],
+    ['url(#paving)', 'url(#paving)', C.concrete],
+    [C.grass, C.concrete, C.concrete],
+  ];
+  const lots: Record<string, string> = {};
+  BLOCKS.forEach((oy, row) => BLOCKS.forEach((ox, col) => (lots[`${ox},${oy}`] = kinds[row][col])));
   const base = ground(lots);
 
-  park();
-  signal(spots.signal);
-  apartments(art);
-  vault(spots.vault);
-  emporium(spots.emporium, art);
-  shop(spots.shop);
-  workshop(spots.workshop);
-  armoury(spots.plan, art);
-  postOffice(spots.telegram);
+  // Each building on its block (the numbers are their blocks on the old drawing grid)
+  onBlock(0, 0, park);
+  onBlock(11, 0, () => signal(spots.signal));
+  onBlock(22, 0, () => apartments(art));
+  onBlock(0, 11, () => vault(spots.vault));
+  onBlock(11, 11, () => emporium(spots.emporium, art));
+  onBlock(22, 11, () => shop(spots.shop));
+  onBlock(11, 22, () => workshop(spots.workshop));
+  onBlock(22, 22, () => armoury(spots.plan, art));
+  onBlock(0, 22, () => postOffice(spots.telegram));
   outskirts();
   traffic();
 
@@ -1238,4 +1269,4 @@ export function renderCity({ spots, art }: CityInput) {
 }
 
 /** Screen position (in viewBox units) of a spot's pin, for centring the view. */
-export const EMPORIUM_FOCUS = P(14.7, 14.7, 8);
+export const EMPORIUM_FOCUS = P(...design(14.7, 14.7), 8);

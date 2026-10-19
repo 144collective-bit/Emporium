@@ -3,33 +3,24 @@
  * its bridges, block slabs, trees, street lamps and a skyline in the haze.
  *
  * World units: 1 = one map tile. x and z match the 2D map's x and y; y is up.
- * The core city's blocks sit at 0-9, 11-20 and 22-31 with two-tile roads
- * between them. Ring roads at -1 and 32 frame it, and the plot districts
- * (see plots.ts) sit beyond them to the north, west and east. The river
- * runs south of the core; across its four bridges, the south bank road
- * (SOUTH_ROAD) carries the south row of districts, with a lamp-lit
- * riverside walk between the road and the water.
+ * The street plan is in layout.ts: the core city's blocks at 0-9, 14-23 and
+ * 28-37 with core streets (one lane each way) between them, ring avenues
+ * (two lanes each way and a median) round them, and the plot districts
+ * (see plots.ts) beyond to the north, west and east. The river runs south of
+ * the north-bank avenue; across its four bridges the south bank avenue
+ * carries the south row of districts. Every block has a sidewalk, and both
+ * banks a lamp-lit promenade.
  */
 import * as THREE from 'three';
 import { DISTRICTS } from '../../data/plots';
 import { Batch, PAL, canvasTex, facadeMat, fx, glowMat, glowTex, lit, neon, rand, toon } from './kit';
+import { BLOCKS, BS, CENTER_XZ, CORE_ROADS, EW_ROADS, EXT, LANE, MEDIAN, NS_ROADS, RIVER, SOUTH_ROAD, WALK_W, type Road } from './layout';
 
-export const BLOCKS = [0, 11, 22];
-export const BS = 9;
-export const ROADS = [-1, 10, 21, 32];
-/** The east-west road along the south bank, past the river */
-export const SOUTH_ROAD = 40;
-/** Roads running north-south (at these x) and east-west (at these z): the south bank road only runs east-west */
-export const NS_ROADS = ROADS;
-export const EW_ROADS = [...ROADS, SOUTH_ROAD];
-/** Roads through the core city; only their crossings have traffic lights. */
-export const CORE_ROADS = [10, 21];
+export { BLOCKS, BS, CORE_ROADS, EW_ROADS, EXT, NS_ROADS, RIVER, SOUTH_ROAD, WALK_W, type Road };
 /** District blocks around the core: one large plot each (src/data/plots.ts). */
 export { DISTRICTS };
-export const EXT: [number, number] = [-70, 101];
-export const RIVER: [number, number] = [34.5, 37.5];
 export const SLAB = 0.15;
-export const CENTER = new THREE.Vector3(15.5, 0, 15.5);
+export const CENTER = new THREE.Vector3(CENTER_XZ.x, 0, CENTER_XZ.z);
 
 export type Env = { t: number; dt: number; night: number; rain: number; day: number };
 export type Tick = (env: Env) => void;
@@ -42,6 +33,12 @@ export function addTree(x: number, z: number, s = 0.8 + rand() * 0.45, pine = ra
 }
 
 const lamps: { x: number; z: number; ry: number; y: number }[] = [];
+/** How many trees and lamps are placed so far (landmarks.ts moves a landmark's own ones with it) */
+export const placedMark = () => ({ trees: trees.length, lamps: lamps.length });
+export function shiftPlaced(from: { trees: number; lamps: number }, dx: number, dz: number) {
+  for (const t of trees.slice(from.trees)) (t.x += dx), (t.z += dz);
+  for (const l of lamps.slice(from.lamps)) (l.x += dx), (l.z += dz);
+}
 export function addLamp(x: number, z: number, ry = 0, y = SLAB) {
   lamps.push({ x, z, ry, y });
 }
@@ -141,69 +138,109 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, keyof typeo
   b.box(e0, 0, RIVER[0] - 0.25, L, 0.12, 0.25, stone);
   b.box(e0, 0, RIVER[1], L, 0.12, 0.25, stone);
 
-  // Roads
+  // A promenade on each bank: between the north-bank avenue and the water, and the water and the south bank avenue
+  const northBank = EW_ROADS.filter((r) => r.c < RIVER[0]).at(-1)!;
+  const southBank = EW_ROADS.find((r) => r.c === SOUTH_ROAD)!;
+  const promenade = toon('#4a4388');
+  for (const [z0, z1] of [
+    [northBank.c + northBank.half, RIVER[0] - 0.25],
+    [RIVER[1] + 0.25, southBank.c - southBank.half],
+  ])
+    b.box(e0, 0, z0, L, 0.05, z1 - z0, promenade);
+  // Lamps along the water, reaching out over the walk (clear of the bridges)
+  const nearBridge = (x: number) => NS_ROADS.some((r) => Math.abs(x - r.c) < r.half + WALK_W + 0.9);
+  for (let x = -20; x <= 58; x += 6)
+    if (!nearBridge(x)) {
+      addLamp(x, RIVER[0] - 0.4, Math.PI / 2, 0.05);
+      addLamp(x, RIVER[1] + 0.4, -Math.PI / 2, 0.05);
+    }
+
+  // Roads: asphalt, and down each avenue a raised median (broken at crossings and over the river)
   const asphalt = toon('#26243f');
-  for (const r of EW_ROADS) b.box(e0, 0, r - 1, L, 0.03, 2, asphalt);
-  for (const r of NS_ROADS) b.box(r - 1, 0.002, e0, 2, 0.03, L, asphalt);
+  for (const r of EW_ROADS) b.box(e0, 0, r.c - r.half, L, 0.03, r.half * 2, asphalt);
+  for (const r of NS_ROADS) b.box(r.c - r.half, 0.002, e0, r.half * 2, 0.03, L, asphalt);
+  const median = toon('#3f5a4a');
+  const kerbTop = toon('#5a5290');
+  /** Stretches of a road between the roads crossing it (and any other gaps, like the river) */
+  const runsBetween = (cross: Road[], gaps: [number, number][] = []): [number, number][] => {
+    const cuts = [...cross.map((r): [number, number] => [r.c - r.half - 0.2, r.c + r.half + 0.2]), ...gaps].sort((p, q) => p[0] - q[0]);
+    const runs: [number, number][] = [];
+    let at = e0;
+    for (const [c0, c1] of cuts) {
+      if (c0 > at) runs.push([at, c0]);
+      at = Math.max(at, c1);
+    }
+    if (at < e1) runs.push([at, e1]);
+    return runs;
+  };
+  const river: [number, number] = [RIVER[0] - 0.7, RIVER[1] + 0.7];
+  for (const r of EW_ROADS)
+    if (r.lanes === 2)
+      for (const [a0, a1] of runsBetween(NS_ROADS)) {
+        b.box(a0, 0, r.c - MEDIAN / 2, a1 - a0, SLAB, MEDIAN, kerbTop);
+        b.box(a0, SLAB, r.c - MEDIAN / 2 + 0.06, a1 - a0, 0.005, MEDIAN - 0.12, median);
+      }
+  for (const r of NS_ROADS)
+    if (r.lanes === 2)
+      for (const [a0, a1] of runsBetween(EW_ROADS, [river])) {
+        b.box(r.c - MEDIAN / 2, 0, a0, MEDIAN, SLAB, a1 - a0, kerbTop);
+        b.box(r.c - MEDIAN / 2 + 0.06, SLAB, a0, MEDIAN - 0.12, 0.005, a1 - a0, median);
+      }
 
-  // The riverside walk on the south bank, between the water and the south bank road,
-  // lamps along the water reaching out over it (clear of the bridges)
-  const walkZ0 = RIVER[1] + 0.25;
-  b.box(e0, 0, walkZ0, L, 0.05, SOUTH_ROAD - 1 - walkZ0, toon('#4a4388'));
-  for (let x = -12; x <= 44; x += 5.5) if (!NS_ROADS.some((r) => Math.abs(x - r) < 1.7)) addLamp(x, walkZ0 + 0.12, -Math.PI / 2, 0.05);
-
-  // Bridges over the river
+  // Bridges over the river: the road and its sidewalks, with rails
   const rail = toon('#c9c4e6');
+  const span = RIVER[1] - RIVER[0] + 1.2;
   for (const r of NS_ROADS) {
-    b.box(r - 1.1, 0, RIVER[0] - 0.6, 2.2, 0.06, RIVER[1] - RIVER[0] + 1.2, toon('#34314f'));
-    for (const side of [r - 1.15, r + 1.05]) {
-      b.box(side, 0.06, RIVER[0] - 0.6, 0.1, 0.08, RIVER[1] - RIVER[0] + 1.2, rail);
-      for (let z = RIVER[0] - 0.6; z <= RIVER[1] + 0.6; z += 0.75) b.box(side, 0.06, z, 0.1, 0.45, 0.1, rail);
-      b.box(side, 0.45, RIVER[0] - 0.6, 0.1, 0.06, RIVER[1] - RIVER[0] + 1.2, rail);
+    const w = r.half + WALK_W;
+    b.box(r.c - w, 0, RIVER[0] - 0.6, w * 2, 0.06, span, toon('#34314f'));
+    b.box(r.c - w, 0.06, RIVER[0] - 0.6, WALK_W, SLAB - 0.06, span, kerbTop);
+    b.box(r.c + r.half, 0.06, RIVER[0] - 0.6, WALK_W, SLAB - 0.06, span, kerbTop);
+    for (const side of [r.c - w - 0.05, r.c + w - 0.05]) {
+      b.box(side, SLAB, RIVER[0] - 0.6, 0.1, 0.08, span, rail);
+      for (let z = RIVER[0] - 0.6; z <= RIVER[1] + 0.6; z += 0.75) b.box(side, SLAB, z, 0.1, 0.45, 0.1, rail);
+      b.box(side, SLAB + 0.45, RIVER[0] - 0.6, 0.1, 0.06, span, rail);
     }
   }
 
-  // Block slabs (the kerb) and their lots, core and districts
+  // Block slabs: the sidewalk round every block (the kerb) and the lot inside, core and districts
   const kerb = toon('#5a5290');
   const slabs: [number, number][] = [...BLOCKS.flatMap((ox) => BLOCKS.map((oz) => [ox, oz] as [number, number])), ...DISTRICTS.map((d) => [d.ox, d.oz] as [number, number])];
   for (const [ox, oz] of slabs) {
-    b.box(ox, 0, oz, BS, SLAB, BS, kerb);
+    b.box(ox - WALK_W, 0, oz - WALK_W, BS + WALK_W * 2, SLAB, BS + WALK_W * 2, kerb);
     const lot = LOTS[lots[`${ox},${oz}`] ?? 'grass'];
     b.box(ox + 0.4, SLAB, oz + 0.4, BS - 0.8, 0.005, BS - 0.8, lot);
   }
   b.build(scene, { cast: false, receive: true });
 
-  // Lane dashes and crosswalks, instanced
+  // Lane markings and crosswalks, instanced: a dashed yellow centre line on streets,
+  // white dashes between an avenue's lanes, zebra crossings on every arm of every crossing
   const dashes: THREE.Matrix4[] = [];
+  const whites: THREE.Matrix4[] = [];
   const zebra: THREE.Matrix4[] = [];
   const m = new THREE.Matrix4();
-  // Dashes run between crossings: along an east-west road they stop at the north-south roads, and the other way round
-  const runsBetween = (cross: number[]): [number, number][] => {
-    const runs: [number, number][] = [];
-    cross.forEach((r, i) => runs.push([i === 0 ? e0 : cross[i - 1] + 1.8, r - 1.8]));
-    runs.push([cross[cross.length - 1] + 1.8, e1]);
-    return runs;
-  };
-  for (const z of EW_ROADS)
-    for (const [a, c] of runsBetween(NS_ROADS))
-      for (let s = a + 0.4; s < c - 0.3; s += 1.1) dashes.push(m.clone().compose(new THREE.Vector3(s, 0.036, z), new THREE.Quaternion(), new THREE.Vector3(0.55, 0.01, 0.07)));
-  for (const x of NS_ROADS)
-    for (const [a, c] of runsBetween(EW_ROADS))
-      for (let s = a + 0.4; s < c - 0.3; s += 1.1) {
-        // Not across the bridges' decks over the water
-        if (s > RIVER[0] - 0.6 && s < RIVER[1] + 0.6) continue;
-        dashes.push(m.clone().compose(new THREE.Vector3(x, 0.038, s), new THREE.Quaternion(), new THREE.Vector3(0.07, 0.01, 0.55)));
-      }
-  // Zebra crossings on all four sides of every crossing
-  for (const x of NS_ROADS)
-    for (const z of EW_ROADS)
-      for (let k = 0; k < 6; k++) {
-        for (const at of [x - 1.45, x + 1.45]) zebra.push(m.clone().compose(new THREE.Vector3(at, 0.04, z - 0.8 + k * 0.32), new THREE.Quaternion(), new THREE.Vector3(0.55, 0.01, 0.17)));
-        for (const at of [z - 1.45, z + 1.45]) zebra.push(m.clone().compose(new THREE.Vector3(x - 0.8 + k * 0.32, 0.042, at), new THREE.Quaternion(), new THREE.Vector3(0.17, 0.01, 0.55)));
-      }
+  const q0 = new THREE.Quaternion();
+  const lines = (r: Road) => (r.lanes === 1 ? [{ off: 0, yellow: true }] : [-1, 1].map((sd) => ({ off: sd * (MEDIAN / 2 + LANE), yellow: false })));
+  for (const r of EW_ROADS)
+    for (const { off, yellow } of lines(r))
+      for (const [a0, a1] of runsBetween(NS_ROADS))
+        for (let p = a0 + 0.4; p < a1 - 0.3; p += 1.1) (yellow ? dashes : whites).push(m.clone().compose(new THREE.Vector3(p, 0.036, r.c + off), q0, new THREE.Vector3(0.55, 0.01, 0.07)));
+  for (const r of NS_ROADS)
+    for (const { off, yellow } of lines(r))
+      for (const [a0, a1] of runsBetween(EW_ROADS, [river]))
+        for (let p = a0 + 0.4; p < a1 - 0.3; p += 1.1) (yellow ? dashes : whites).push(m.clone().compose(new THREE.Vector3(r.c + off, 0.038, p), q0, new THREE.Vector3(0.07, 0.01, 0.55)));
+  for (const nr of NS_ROADS)
+    for (const er of EW_ROADS) {
+      // Across the east-west road, either side of the crossing
+      for (const at of [nr.c - nr.half - 0.45, nr.c + nr.half + 0.45])
+        for (let k = er.c - er.half + 0.16; k < er.c + er.half - 0.1; k += 0.32) zebra.push(m.clone().compose(new THREE.Vector3(at, 0.04, k), q0, new THREE.Vector3(0.55, 0.01, 0.17)));
+      // Across the north-south road
+      for (const at of [er.c - er.half - 0.45, er.c + er.half + 0.45])
+        for (let k = nr.c - nr.half + 0.16; k < nr.c + nr.half - 0.1; k += 0.32) zebra.push(m.clone().compose(new THREE.Vector3(k, 0.042, at), q0, new THREE.Vector3(0.17, 0.01, 0.55)));
+    }
   const unit = new THREE.BoxGeometry(1, 1, 1);
   for (const [list, mat] of [
     [dashes, neon('#f5d76e', 0.9, 1.1)],
+    [whites, toon('#d9d5ee')],
     [zebra, toon('#e8e4f8')],
   ] as const) {
     const im = new THREE.InstancedMesh(unit, mat, list.length);
@@ -218,13 +255,14 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, keyof typeo
   for (let i = 0; i < 70; i++) {
     const alongX = rand() < 0.5;
     const r = CORE_ROADS[Math.floor(rand() * CORE_ROADS.length)];
-    const s = 0 + rand() * 31;
+    const s = rand() * (BLOCKS[2] + BS);
     const mesh = new THREE.Mesh(sg, puddleMat);
     mesh.rotation.x = -Math.PI / 2;
+    const across = r - LANE + rand() * LANE * 2;
     if (alongX) {
       mesh.rotation.z = Math.PI / 2;
-      mesh.position.set(s, 0.05, r - 0.8 + rand() * 1.6);
-    } else mesh.position.set(r - 0.8 + rand() * 1.6, 0.05, s);
+      mesh.position.set(s, 0.05, across);
+    } else mesh.position.set(across, 0.05, s);
     streaks.add(mesh);
   }
   scene.add(fx(streaks));
@@ -237,12 +275,14 @@ export function scatterOutskirts(count: number) {
   let placed = 0;
   let guard = 0;
   while (placed < count && guard++ < count * 20) {
-    const x = -38 + rand() * 107;
-    const z = -38 + rand() * 107;
+    const x = -44 + rand() * 125;
+    const z = -44 + rand() * 132;
     // Clear of the core city, the districts round it and the south row across the river
-    if (x > -12.4 && x < 43.4 && z > -12.4 && z < 32.2) continue;
-    if (x > -12.4 && x < 43.4 && z > RIVER[1] && z < 51.4) continue;
-    if (EW_ROADS.some((r) => Math.abs(z - r) < 1.8) || NS_ROADS.some((r) => Math.abs(x - r) < 1.8)) continue;
+    const [lo, hi] = [DISTRICTS[0].ox - WALK_W - 0.6, DISTRICTS[4].ox + BS + WALK_W + 0.6];
+    if (x > lo && x < hi && z > lo && z < RIVER[0]) continue;
+    const south = DISTRICTS[DISTRICTS.length - 1];
+    if (x > lo && x < hi && z > RIVER[1] && z < south.oz + BS + WALK_W + 0.6) continue;
+    if (EW_ROADS.some((r) => Math.abs(z - r.c) < r.half + 0.8) || NS_ROADS.some((r) => Math.abs(x - r.c) < r.half + 0.8)) continue;
     if (z > RIVER[0] - 1 && z < RIVER[1] + 0.8) continue;
     addTree(x, z, 0.8 + rand() * 0.6, rand() < 0.4, 0);
     placed++;
@@ -261,9 +301,10 @@ export function buildSkyline(scene: THREE.Scene, count: number, tick: (f: Tick) 
   const beaconMat = neon('#ff3b3b', 0.4, 3);
   for (let i = 0; i < count; i++) {
     const a = (i / count) * Math.PI * 2 + rand() * 0.1;
-    const rr = 62 + rand() * 30;
+    // A ring round all the districts (the south row across the river included), well clear of them
+    const rr = 72 + rand() * 30;
     const x = CENTER.x + Math.cos(a) * rr;
-    const z = CENTER.z + Math.sin(a) * rr;
+    const z = CENTER.z + 8 + Math.sin(a) * rr;
     const w = 3 + rand() * 4;
     const h = 7 + rand() * 22;
     const mat = mats[i % mats.length];

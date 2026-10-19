@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import { FONT_DISPLAY, PAL, canvasTex, fx, glowTex, lit, neon, rand, toon } from './kit';
 import { BLOCKS, BS, CENTER, CORE_ROADS, DISTRICTS, EW_ROADS, EXT, NS_ROADS, RIVER, SLAB, type Tick } from './world';
+import { laneCentres } from './layout';
 import type { Idle } from './landmarks';
 import { chatPose, cityOutfit, createCrowd, idlePose, lookPose, newPose, sitPose, walkPose } from './character';
 
@@ -52,9 +53,11 @@ function lightState(ix: number, axis: Axis, t: number): 'g' | 'y' | 'r' {
 }
 
 const lanes: Lane[] = [];
-// Two lanes each way on every road: east-west roads (the south bank road too) and north-south ones (over the bridges)
-for (const r of EW_ROADS) lanes.push({ axis: 'x', coord: r + 0.5, dir: 1 }, { axis: 'x', coord: r - 0.5, dir: -1 });
-for (const r of NS_ROADS) lanes.push({ axis: 'z', coord: r - 0.5, dir: 1 }, { axis: 'z', coord: r + 0.5, dir: -1 });
+// Every lane of every road: one each way on streets, two each way on avenues (over the bridges too)
+for (const r of EW_ROADS) for (const l of laneCentres(r, 'x')) lanes.push({ axis: 'x', ...l });
+for (const r of NS_ROADS) for (const l of laneCentres(r, 'z')) lanes.push({ axis: 'z', ...l });
+/** Cars are drawn about real size: the models (built at the old toy scale) stretched to fit today's lanes */
+const VEH_SCALE = new THREE.Vector3(2.2, 1.35, 1.75);
 const pRange = (l: Lane): [number, number] => (l.dir === 1 ? [E0 + 4, E1 - 4] : [-(E1 - 4), -(E0 + 4)]);
 
 function vehicleBox(w: number, h: number, d: number, x: number, y: number, z: number) {
@@ -76,8 +79,8 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
       lane,
       p: a + ((i * 37) % 100) / 100 * (b - a),
       v: 0,
-      vmax: bus ? 2.0 : 2.8 + rand() * 1.4,
-      len: bus ? 2.3 : 1.1,
+      vmax: bus ? 3.2 : 4.2 + rand() * 2,
+      len: (bus ? 2.3 : 1.1) * VEH_SCALE.x,
       bus,
       slot: bus ? busSlot++ : carSlot++,
     });
@@ -122,20 +125,25 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
   const unit = new THREE.BoxGeometry(1, 1, 1);
   let ix = 0;
   // Every crossing is tracked so cars give way; only the core city's have lights
-  const crossings: { ix: number; cx: number; cz: number; lit: boolean }[] = [];
-  for (const cx of NS_ROADS) {
-    for (const cz of EW_ROADS) {
+  // hx / hz: half the width of the north-south / east-west road meeting there
+  const crossings: { ix: number; cx: number; cz: number; hx: number; hz: number; lit: boolean }[] = [];
+  for (const nr of NS_ROADS) {
+    for (const er of EW_ROADS) {
+      const [cx, cz] = [nr.c, er.c];
       const lights = CORE_ROADS.includes(cx) && CORE_ROADS.includes(cz);
-      crossings.push({ ix, cx, cz, lit: lights });
+      crossings.push({ ix, cx, cz, hx: nr.half, hz: er.half, lit: lights });
       if (!lights) {
         ix++;
         continue;
       }
+      // On the sidewalk corners, facing the traffic they hold
+      const ax = nr.half + 0.35;
+      const az = er.half + 0.35;
       const approaches: [Axis, number, number, number][] = [
-        ['x', cx - 1.3, cz + 1.3, -Math.PI / 2],
-        ['x', cx + 1.3, cz - 1.3, Math.PI / 2],
-        ['z', cx - 1.3, cz - 1.3, Math.PI],
-        ['z', cx + 1.3, cz + 1.3, 0],
+        ['x', cx - ax, cz + az, -Math.PI / 2],
+        ['x', cx + ax, cz - az, Math.PI / 2],
+        ['z', cx - ax, cz - az, Math.PI],
+        ['z', cx + ax, cz + az, 0],
       ];
       for (const [axis, x, z, ry] of approaches) {
         const pole = new THREE.Mesh(unit, poleMat);
@@ -170,7 +178,6 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
   const q = new THREE.Quaternion();
   const up = new THREE.Vector3(0, 1, 0);
   const pos = new THREE.Vector3();
-  const one = new THREE.Vector3(1, 1, 1);
   const carWheels: [number, number][] = [
     [-0.32, 0.29],
     [0.32, 0.29],
@@ -200,9 +207,9 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
     for (const v of vehicles) {
       const s = v.p * v.lane.dir;
       for (const c of crossings) {
-        const along = v.lane.axis === 'x' ? c.cx : c.cz;
-        const across = v.lane.axis === 'x' ? c.cz : c.cx;
-        if (Math.abs(across - v.lane.coord) < 1.1 && Math.abs(s - along) < 1.1 + v.len / 2) occupied.add(c.ix + v.lane.axis);
+        const [along, halfAlong] = v.lane.axis === 'x' ? [c.cx, c.hx] : [c.cz, c.hz];
+        const [across, halfAcross] = v.lane.axis === 'x' ? [c.cz, c.hz] : [c.cx, c.hx];
+        if (Math.abs(across - v.lane.coord) < halfAcross && Math.abs(s - along) < halfAlong + 0.1 + v.len / 2) occupied.add(c.ix + v.lane.axis);
       }
     }
 
@@ -219,15 +226,16 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
         const ahead = list[i + 1];
         if (ahead) {
           const gap = ahead.p - ahead.len / 2 - (v.p + v.len / 2);
-          target = Math.min(target, Math.max(0, (gap - 0.5) * 1.6));
+          target = Math.min(target, Math.max(0, (gap - 0.9) * 1.6));
         }
         for (const c of crossings) {
-          const centre = lane.axis === 'x' ? c.cx : c.cz;
-          const other = lane.axis === 'x' ? c.cz : c.cx;
-          if (Math.abs(other - lane.coord) > 1.2) continue;
-          const stopP = centre * lane.dir - 1.6;
+          const [centre, halfAlong] = lane.axis === 'x' ? [c.cx, c.hx] : [c.cz, c.hz];
+          const [other, halfAcross] = lane.axis === 'x' ? [c.cz, c.hz] : [c.cx, c.hx];
+          if (Math.abs(other - lane.coord) > halfAcross) continue;
+          // Stop line: just before the zebra crossing
+          const stopP = centre * lane.dir - halfAlong - 1.0;
           const d = stopP - (v.p + v.len / 2);
-          if (d < -0.05 || d > 7) continue;
+          if (d < -0.05 || d > 10) continue;
           const s = c.lit ? lightState(c.ix, lane.axis, t) : 'g';
           const blocked = occupied.has(c.ix + (lane.axis === 'x' ? 'z' : 'x'));
           if (s === 'r' || (s === 'y' && d > 1.2) || blocked) target = Math.min(target, Math.max(0, d * 1.3));
@@ -239,7 +247,7 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
           const [fx, fz] = lane.axis === 'x' ? [lane.dir, 0] : [0, lane.dir];
           const ahead = (walker.x - vx) * fx + (walker.z - vz) * fz - v.len / 2;
           const side = Math.abs((walker.x - vx) * fz - (walker.z - vz) * fx);
-          if (ahead > -0.2 && ahead < 3 && side < 0.75) target = Math.min(target, Math.max(0, (ahead - 0.6) * 1.8));
+          if (ahead > -0.2 && ahead < 4 && side < 1.0) target = Math.min(target, Math.max(0, (ahead - 0.8) * 1.8));
         }
         const acc = target > v.v ? 1.8 : 5;
         v.v += Math.max(-acc * dt, Math.min(acc * dt, target - v.v));
@@ -257,8 +265,8 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
       if (v.lane.axis === 'x') pos.set(s, ROAD_Y, v.lane.coord);
       else pos.set(v.lane.coord, ROAD_Y, s);
       q.setFromAxisAngle(up, yaw);
-      M.compose(pos, q, one);
-      const half = v.len / 2;
+      M.compose(pos, q, VEH_SCALE);
+      const half = v.len / VEH_SCALE.x / 2;
       if (v.bus) {
         busBody.setMatrixAt(v.slot, M);
         busGlass.setMatrixAt(v.slot, M);
@@ -275,7 +283,7 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
         hi++;
       }
       const fwd = F.set(1, 0, 0).applyQuaternion(q);
-      beamPos.set([pos.x + fwd.x * (half + 0.9), 0.06, pos.z + fwd.z * (half + 0.9)], idx * 3);
+      beamPos.set([pos.x + fwd.x * (v.len / 2 + 1.4), 0.06, pos.z + fwd.z * (v.len / 2 + 1.4)], idx * 3);
     });
     for (const m of [carBody, carCab, wheels, busBody, busGlass, head, tail]) m.instanceMatrix.needsUpdate = true;
     beamGeo.attributes.position.needsUpdate = true;
@@ -308,12 +316,12 @@ interface Person {
   face: number;
 }
 
-/** Sidewalk lanes: two each way, each at its own distance from the kerb and its own pace. */
+/** Sidewalk lanes round the outside of a block: two each way, each at its own distance from the lot and its own pace */
 const WALK_LANES: { inset: number; dir: 1 | -1; speed: number }[] = [
-  { inset: 0.13, dir: 1, speed: 0.6 },
-  { inset: 0.21, dir: 1, speed: 0.52 },
-  { inset: 0.29, dir: -1, speed: 0.56 },
-  { inset: 0.37, dir: -1, speed: 0.48 },
+  { inset: -0.16, dir: 1, speed: 0.6 },
+  { inset: -0.31, dir: 1, speed: 0.52 },
+  { inset: -0.47, dir: -1, speed: 0.56 },
+  { inset: -0.62, dir: -1, speed: 0.48 },
 ];
 const PERSON_SCALE = 0.66;
 /** How far the hips sit above the feet when seated, at PERSON_SCALE */

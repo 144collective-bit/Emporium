@@ -10,6 +10,8 @@
  * the builder runs as a labelled demo with play money (store.ts).
  */
 
+import { BLOCKS, OUTER_HI, OUTER_LO, SOUTH_ROW } from '../scripts/city3d/layout';
+
 /** Price of one large plot, in PLS (set by the owner) */
 export const PLOT_PRICE = 20_000_000;
 
@@ -21,11 +23,12 @@ export const DEMO_WALLET_START = 100_000_000;
  * North, west and east frame the core; the south row sits across the river, on the
  * south bank road (SOUTH_ROAD in src/scripts/city3d/world.ts).
  */
+const COLUMNS = [OUTER_LO, ...BLOCKS, OUTER_HI];
 export const DISTRICTS: { id: string; name: string; ox: number; oz: number }[] = [
-  ...[-11, 0, 11, 22, 33].map((ox, i) => ({ id: `N${i + 1}`, name: `North ${i + 1}`, ox, oz: -11 })),
-  ...[0, 11, 22].map((oz, i) => ({ id: `W${i + 1}`, name: `West ${i + 1}`, ox: -11, oz })),
-  ...[0, 11, 22].map((oz, i) => ({ id: `E${i + 1}`, name: `East ${i + 1}`, ox: 33, oz })),
-  ...[-11, 0, 11, 22, 33].map((ox, i) => ({ id: `S${i + 1}`, name: `South ${i + 1}`, ox, oz: 41 })),
+  ...COLUMNS.map((ox, i) => ({ id: `N${i + 1}`, name: `North ${i + 1}`, ox, oz: OUTER_LO })),
+  ...BLOCKS.map((oz, i) => ({ id: `W${i + 1}`, name: `West ${i + 1}`, ox: OUTER_LO, oz })),
+  ...BLOCKS.map((oz, i) => ({ id: `E${i + 1}`, name: `East ${i + 1}`, ox: OUTER_HI, oz })),
+  ...COLUMNS.map((ox, i) => ({ id: `S${i + 1}`, name: `South ${i + 1}`, ox, oz: SOUTH_ROW })),
 ];
 export const PLOT_IDS = DISTRICTS.map((d) => d.id);
 

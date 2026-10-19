@@ -32,6 +32,19 @@ it and has been retired completely. Build only on what's here.
   `src/components/CityMap.astro`. Buildings link only to `/emporium` (or its
   window anchors: `#drop`, `#workshop`, `#vault`, `#plan`) or to the
   confirmed links in `src/data/site.ts`.
+- **The street plan** is `src/scripts/city3d/layout.ts` (DOM-free; the 3D
+  city, the 2D map, the plots and the server all read it). 1 tile is about
+  1.8 m and Degen is about one tile tall. Roads are sized for real-proportion
+  cars: lanes 1.7 wide, a 0.8 sidewalk round every block and district.
+  Core streets (`CORE_ROADS`, between the 9 x 9 core blocks at 0, 14 and 28)
+  are 5 wide with one lane each way; the ring and the south bank road are
+  9-wide avenues, two lanes each way with a median (`NS_ROADS`, `EW_ROADS`,
+  `laneCentres()`). The landmarks, their collision boxes, doors, dummies and
+  the 2D buildings are still written on the old, tighter drawing grid
+  (blocks at 0, 11, 22) and moved onto today's blocks with `design()` /
+  `designBox()` (in `landmarks.ts`, `onBlock()` does it for each block's
+  scene objects). Keep writing landmark numbers on that grid, and change
+  street sizes only in `layout.ts`.
 - Keep the city's motion optional: under `prefers-reduced-motion` the 3D
   city stands still (no fly-in, no traffic), CSS animations stop and the 2D
   map's SMIL traffic is paused. Sound is always off until the visitor

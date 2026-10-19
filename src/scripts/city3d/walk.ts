@@ -19,18 +19,24 @@ import { createCombat, type Sfx } from './combat';
 import { WEAPON_IDS } from './combat-sim';
 import { createGunShop } from './gunshop';
 import { CAMERA_ONLY, RACK, SOLIDS, rayBoxes, type Box } from './solids';
-import { DISTRICTS, BLOCKS, BS, RIVER, ROADS, SLAB, type Tick } from './world';
+import { DISTRICTS, BLOCKS, BS, NS_ROADS, RIVER, SLAB, WALK_W, type Tick } from './world';
+import { design } from './layout';
 
-/** Where you can step in, and what opens there. */
-const DOORS: { id: SpotId; x: number; z: number }[] = [
-  { id: 'emporium', x: 17.5, z: 17.5 },
-  { id: 'shop', x: 26.1, z: 17.5 },
-  { id: 'workshop', x: 15.3, z: 28.05 },
-  { id: 'vault', x: 4.3, z: 18.6 },
-  { id: 'signal', x: 13.7, z: 8.6 },
-  { id: 'telegram', x: 3.6, z: 27.6 },
-  { id: 'plan', x: 26.6, z: 30.95 },
-];
+/** Where you can step in, and what opens there (drawn on the landmarks' grid, moved onto today's streets) */
+const DOORS: { id: SpotId; x: number; z: number }[] = (
+  [
+    { id: 'emporium', x: 17.5, z: 17.5 },
+    { id: 'shop', x: 26.1, z: 17.5 },
+    { id: 'workshop', x: 15.3, z: 28.05 },
+    { id: 'vault', x: 4.3, z: 18.6 },
+    { id: 'signal', x: 13.7, z: 8.6 },
+    { id: 'telegram', x: 3.6, z: 27.6 },
+    { id: 'plan', x: 26.6, z: 30.95 },
+  ] as { id: SpotId; x: number; z: number }[]
+).map((d) => {
+  const [x, z] = design(d.x, d.z);
+  return { ...d, x, z };
+});
 
 /** Facing the Emporium's doors, the tower over his shoulder */
 const SPAWN_YAW = 0.45;
@@ -40,8 +46,9 @@ const RUN = 5.4;
 const JUMP = 3.9;
 const GRAVITY = 11.5;
 const SCALE = 0.85;
-const BOUNDS = [-30, -30, 62, 62];
-const slabs: Box[] = [...BLOCKS.flatMap((x) => BLOCKS.map((z) => [x, z, x + BS, z + BS, 0] as Box)), ...DISTRICTS.map((d) => [d.ox, d.oz, d.ox + BS, d.oz + BS, 0] as Box)];
+const BOUNDS = [-34, -34, 74, 82];
+/** Blocks and districts with their sidewalks: the raised ground */
+const slabs: Box[] = [...BLOCKS.flatMap((x) => BLOCKS.map((z) => [x, z] as const)), ...DISTRICTS.map((d) => [d.ox, d.oz] as const)].map(([x, z]): Box => [x - WALK_W, z - WALK_W, x + BS + WALK_W, z + BS + WALK_W, 0]);
 const inBox = (b: Box, x: number, z: number, pad = 0) => x > b[0] - pad && x < b[2] + pad && z > b[1] - pad && z < b[3] + pad;
 const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
 const damp = (k: number, dt: number) => 1 - Math.exp(-k * dt);
@@ -140,7 +147,8 @@ export function createWalk(d: WalkDeps) {
     });
   paintAutoAds();
 
-  const SPAWN = new THREE.Vector3(17.3, SLAB, 18.85);
+  const [spawnX, spawnZ] = design(17.3, 18.85);
+  const SPAWN = new THREE.Vector3(spawnX, SLAB, spawnZ);
   let active = false;
   const pos = SPAWN.clone();
   const vel = new THREE.Vector2();
@@ -179,7 +187,7 @@ export function createWalk(d: WalkDeps) {
   };
 
   const groundAt = (x: number, z: number) => (slabs.some((b) => inBox(b, x, z)) ? SLAB : 0.035);
-  const onBridge = (x: number) => ROADS.some((r) => Math.abs(x - r) < 1.05);
+  const onBridge = (x: number) => NS_ROADS.some((r) => Math.abs(x - r.c) < r.half + WALK_W - 0.15);
   function blocked(x: number, z: number) {
     if (x < BOUNDS[0] || x > BOUNDS[2] || z < BOUNDS[1] || z > BOUNDS[3]) return true;
     if (z > RIVER[0] - 0.3 && z < RIVER[1] + 0.3 && !onBridge(x)) return true;

@@ -87,7 +87,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const ticks: Tick[] = [];
   const tick = (f: Tick) => ticks.push(f);
 
-  buildGround(scene, { '0,11': 'paving', '11,11': 'paving', '22,11': 'concrete', '11,22': 'concrete', '22,22': 'concrete' });
+  buildGround(scene, { '0,14': 'paving', '14,14': 'paving', '28,14': 'concrete', '14,28': 'concrete', '28,28': 'concrete' });
   progress(0.3);
   await nextFrame();
   const { spots, crowd } = buildLandmarks(scene, { degen, logo, tick, low: tier === 'low' });
@@ -112,7 +112,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   controls.dampingFactor = 0.08;
   controls.screenSpacePanning = false;
   controls.minDistance = 7;
-  controls.maxDistance = 100;
+  controls.maxDistance = 125;
   controls.minPolarAngle = 0.32;
   controls.maxPolarAngle = 1.18;
   controls.zoomToCursor = true;
@@ -270,8 +270,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     },
     overview() {
       // Every district, the south row across the river included
-      const k = camera.aspect < 1 ? 1.22 : 1.32;
-      const target = new THREE.Vector3(16, 0, 27);
+      const k = camera.aspect < 1 ? 1.5 : 1.62;
+      const target = new THREE.Vector3(20, 0, 34);
       flyTo(target.clone().add(new THREE.Vector3(34, 50, 44).multiplyScalar(k)), target, 1.6);
     },
     onMode(on) {
@@ -616,8 +616,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       dirty = true;
     } else if (controls.update()) dirty = true;
     // Keep the view over the city
-    controls.target.x = THREE.MathUtils.clamp(controls.target.x, -16, 47);
-    controls.target.z = THREE.MathUtils.clamp(controls.target.z, -16, 54);
+    controls.target.x = THREE.MathUtils.clamp(controls.target.x, -22, 60);
+    controls.target.z = THREE.MathUtils.clamp(controls.target.z, -22, 72);
 
     const s = sky.update(reduced ? 0 : t, dt, controls.target, camera.position);
     env.t = reduced ? 0 : t;

@@ -1140,7 +1140,7 @@ body.is-walking .nav {
 }
 .city-map {
   display: block;
-  width: clamp(1700px, 165vw, 3200px);
+  width: clamp(2080px, 200vw, 3930px);
   height: auto;
   -webkit-user-select: none;
   user-select: none;
