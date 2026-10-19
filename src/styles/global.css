@@ -3301,19 +3301,25 @@ body.is-walking :is(.city-modes, .walk-top, .walk-look, .combat-score) {
 }
 .fit-tabs {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(7, 1fr);
   gap: 4px;
+}
+/* Narrow panels: the tabs take two rows */
+@media (max-width: 520px) {
+  .fit-tabs {
+    grid-template-columns: repeat(4, 1fr);
+  }
 }
 .fit-tabs button {
   min-width: 0;
-  padding: 8px 2px;
+  padding: 8px 0;
   border: 1px solid #ffffff24;
   border-radius: 8px;
   background: #0b0a12;
   color: var(--text-2);
   font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.06em;
+  font-size: 9.5px;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   cursor: pointer;
 }

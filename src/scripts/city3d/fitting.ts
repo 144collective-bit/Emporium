@@ -12,12 +12,12 @@
  * still (drag still turns him).
  */
 import * as THREE from 'three';
-import { DEFAULT_LOOK, PALETTE, type Look } from '../net/profile-data';
+import { DEFAULT_LOOK, PALETTE, type Bag, type Hat, type Held, type Look } from '../net/profile-data';
 import { createDegen, emotePose, idlePose, lookOutfit, type Degen } from './character';
 import { canvasTex, lit, toon } from './kit';
 import { createPost } from './post';
 
-type ColorKey = 'top' | 'bottom' | 'tie' | 'cap' | 'beanie' | 'shoes' | 'headphones' | 'backpack' | 'crossbody';
+type ColorKey = 'top' | 'bottom' | 'tie' | 'shoes' | 'hatColor' | 'bagColor' | 'lens' | 'headphones';
 interface Colors {
   key: ColorKey;
   label: string;
@@ -43,13 +43,40 @@ interface Tab {
   items: Item[];
   /** Items here switch on and off independently (otherwise it's one of them) */
   toggles?: boolean;
-  /** Colours that belong to the tab rather than an item (kicks) */
+  /** Colours that belong to the tab rather than an item (lenses, kicks) */
   colors?: Colors[];
 }
 
-/** The last colour picked for each optional piece, so taking it off and on again keeps it */
-const memory: Partial<Record<ColorKey, string>> = {};
-const remember = (k: ColorKey, l: Look, fallback: string) => (l[k] as string | null) ?? memory[k] ?? fallback;
+/** The last headphones colour, so taking them off and on again keeps it */
+let lastHeadphones = PALETTE.extra[1];
+
+const NONE = 'M12 3a9 9 0 1 0 0.01 0z M6 6l12 12';
+const hatColors: Colors[] = [{ key: 'hatColor', label: 'Colour', list: PALETTE.cap }];
+const bagColors: Colors[] = [{ key: 'bagColor', label: 'Colour', list: PALETTE.extra }];
+const hood = (l: Look) => l.kind === 'hoodie' && l.hood;
+const hat = (id: Hat, name: string, icon: string, colors = true): Item => ({
+  id,
+  name,
+  icon,
+  on: (l) => l.hat === id && !hood(l),
+  wear: (l) => ({ ...l, hat: id, hood: false }),
+  colors: colors ? hatColors : undefined,
+});
+const bag = (id: Bag, name: string, icon: string): Item => ({
+  id,
+  name,
+  icon,
+  on: (l) => l.bag === id,
+  wear: (l) => ({ ...l, bag: id }),
+  colors: bagColors,
+});
+const held = (id: Held | null, name: string, icon: string): Item => ({
+  id: id ?? 'nothing',
+  name,
+  icon,
+  on: (l) => l.held === id,
+  wear: (l) => ({ ...l, held: id }),
+});
 
 const TABS: Tab[] = [
   {
@@ -79,72 +106,69 @@ const TABS: Tab[] = [
           { key: 'bottom', label: 'Joggers', list: PALETTE.bottom },
         ],
       },
+      {
+        id: 'track',
+        name: 'Track Suit',
+        icon: 'M9 4h6l5 3-2 5h-2v9H8v-9H6L4 7z M12 4v17 M6 8l1.5 3 M18 8l-1.5 3',
+        on: (l) => l.kind === 'track',
+        wear: (l) => ({ ...l, kind: 'track', hood: false }),
+        colors: [
+          { key: 'top', label: 'Jacket', list: PALETTE.top },
+          { key: 'bottom', label: 'Pants', list: PALETTE.bottom },
+        ],
+      },
     ],
   },
   {
     id: 'head',
     label: 'Head',
     items: [
-      {
-        id: 'cap',
-        name: 'Diamond Cap',
-        icon: 'M5 15a7 7 0 0 1 14 0z M12 15h9 M10 11l2-2 2 2-2 2z',
-        on: (l) => !!l.cap && !l.beanie && !l.hood,
-        wear: (l) => ({ ...l, cap: remember('cap', l, DEFAULT_LOOK.cap!), beanie: null, hood: false }),
-        colors: [{ key: 'cap', label: 'Cap', list: PALETTE.cap }],
-      },
-      {
-        id: 'beanie',
-        name: 'Street Beanie',
-        icon: 'M6 15a6 7 0 0 1 12 0z M5 15h14v3H5z M12 6.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z',
-        on: (l) => !!l.beanie && !l.hood,
-        wear: (l) => ({ ...l, beanie: remember('beanie', l, PALETTE.cap[1]), cap: null, hood: false }),
-        colors: [{ key: 'beanie', label: 'Beanie', list: PALETTE.cap }],
-      },
+      hat('cap', 'Diamond Cap', 'M5 15a7 7 0 0 1 14 0z M12 15h9 M10 11l2-2 2 2-2 2z'),
+      hat('backcap', 'Backwards Cap', 'M5 15a7 7 0 0 1 14 0z M3 15h9 M10 11h4'),
+      hat('beanie', 'Street Beanie', 'M6 15a6 7 0 0 1 12 0z M5 15h14v3H5z M12 6.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z'),
+      hat('bucket', 'Bucket Hat', 'M8 7h8l1 7H7z M3 17l4-3h10l4 3z'),
+      hat('crown', 'Gold Crown', 'M4 18l1-10 4 4 3-6 3 6 4-4 1 10z M4 18h16', false),
       {
         id: 'hood',
         name: 'Hood Up',
         icon: 'M5 20c0-8 3-14 7-14s7 6 7 14 M9 20c0-5 1.3-8 3-8s3 3 3 8',
         only: (l) => l.kind === 'hoodie',
-        on: (l) => l.hood,
-        wear: (l) => ({ ...l, hood: true, cap: null, beanie: null }),
+        on: hood,
+        wear: (l) => ({ ...l, hood: true }),
       },
       {
         id: 'bare',
         name: 'Nothing',
-        icon: 'M12 3a9 9 0 1 0 0.01 0z M6 6l12 12',
-        on: (l) => !l.cap && !l.beanie && !l.hood,
-        wear: (l) => ({ ...l, cap: null, beanie: null, hood: false }),
+        icon: NONE,
+        on: (l) => !l.hat && !hood(l),
+        wear: (l) => ({ ...l, hat: null, hood: false }),
       },
     ],
+  },
+  {
+    id: 'shades',
+    label: 'Shades',
+    items: [],
+    colors: [{ key: 'lens', label: 'Lenses', list: PALETTE.lens }],
   },
   {
     id: 'bag',
     label: 'Bags',
     items: [
-      {
-        id: 'backpack',
-        name: 'Backpack',
-        icon: 'M7 9a5 5 0 0 1 10 0v11H7z M9 15h6 M10 4.5a2 2 0 0 1 4 0',
-        on: (l) => !!l.backpack,
-        wear: (l) => ({ ...l, backpack: remember('backpack', l, PALETTE.extra[3]), crossbody: null }),
-        colors: [{ key: 'backpack', label: 'Backpack', list: PALETTE.extra }],
-      },
-      {
-        id: 'crossbody',
-        name: 'Crossbody',
-        icon: 'M5 3l12 11 M13 13h7v7h-7z',
-        on: (l) => !!l.crossbody && !l.backpack,
-        wear: (l) => ({ ...l, crossbody: remember('crossbody', l, PALETTE.extra[2]), backpack: null }),
-        colors: [{ key: 'crossbody', label: 'Crossbody', list: PALETTE.extra }],
-      },
-      {
-        id: 'nobag',
-        name: 'No bag',
-        icon: 'M12 3a9 9 0 1 0 0.01 0z M6 6l12 12',
-        on: (l) => !l.backpack && !l.crossbody,
-        wear: (l) => ({ ...l, backpack: null, crossbody: null }),
-      },
+      bag('backpack', 'Backpack', 'M7 9a5 5 0 0 1 10 0v11H7z M9 15h6 M10 4.5a2 2 0 0 1 4 0'),
+      bag('crossbody', 'Crossbody', 'M5 3l12 11 M13 13h7v7h-7z'),
+      bag('board', 'Skate Deck', 'M9 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z M5 7h2 M17 7h2 M5 17h2 M17 17h2'),
+      { id: 'nobag', name: 'No bag', icon: NONE, on: (l) => !l.bag, wear: (l) => ({ ...l, bag: null }) },
+    ],
+  },
+  {
+    id: 'hand',
+    label: 'Hand',
+    items: [
+      held('gummy', 'Gummy Bag', 'M7 7h10l-1 13H8z M9.5 7V4.5h5V7 M10 12h4'),
+      held('coffee', 'Iced Coffee', 'M7 8h10l-1.5 13h-7z M6.5 8a5.5 3 0 0 1 11 0 M13 5l2-3 M8 13h8'),
+      held('boombox', 'Boombox', 'M3 9h18v10H3z M8 9V6h8v3 M8 14m-2.5 0a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0 M16 14m-2.5 0a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0'),
+      held(null, 'Empty hand', NONE),
     ],
   },
   {
@@ -157,8 +181,15 @@ const TABS: Tab[] = [
         name: 'Headphones',
         icon: 'M4 15v-3a8 8 0 0 1 16 0v3 M4 14h3v6H4z M17 14h3v6h-3z',
         on: (l) => !!l.headphones,
-        wear: (l) => ({ ...l, headphones: l.headphones ? null : remember('headphones', l, PALETTE.extra[1]) }),
+        wear: (l) => ({ ...l, headphones: l.headphones ? null : lastHeadphones }),
         colors: [{ key: 'headphones', label: 'Headphones', list: PALETTE.extra }],
+      },
+      {
+        id: 'necklace',
+        name: 'Diamond Chain',
+        icon: 'M5 4c0 7 3 11 7 11s7-4 7-11 M12 15l-2.5 2.5L12 21l2.5-3.5z',
+        on: (l) => l.necklace,
+        wear: (l) => ({ ...l, necklace: !l.necklace }),
       },
       {
         id: 'chain',
@@ -166,13 +197,6 @@ const TABS: Tab[] = [
         icon: 'M3 7h7v4H3z M14 7h7v4h-7z M10 9h4 M4 11c0 6 4 9 8 9s8-3 8-9',
         on: (l) => l.chain,
         wear: (l) => ({ ...l, chain: !l.chain }),
-      },
-      {
-        id: 'gummy',
-        name: 'Gummy Bag',
-        icon: 'M7 7h10l-1 13H8z M9.5 7V4.5h5V7 M10 12h4',
-        on: (l) => l.gummy,
-        wear: (l) => ({ ...l, gummy: !l.gummy }),
       },
     ],
   },
@@ -251,7 +275,7 @@ export function createFitting(d: FittingDeps) {
   }
 
   function wear(next: Look, showOff = true) {
-    for (const k of ['cap', 'beanie', 'headphones', 'backpack', 'crossbody'] as const) if (next[k]) memory[k] = next[k]!;
+    if (next.headphones) lastHeadphones = next.headphones;
     d.apply(next);
     if (showOff) preview?.showOff();
   }

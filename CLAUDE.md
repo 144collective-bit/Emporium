@@ -88,8 +88,8 @@ it and has been retired completely. Build only on what's here.
 ## Drop 001's fitting room
 
 - Drop 001's panel (`data-panel-tpl="shop"` in `CityMap.astro`) has the
-  fitting room (`fitting.ts`): item cards by tab (Fit, Head, Bags, Extras,
-  Kicks), colours, and a turning preview of the player's Degen drawn by a
+  fitting room (`fitting.ts`): item cards by tab (Fit, Head, Shades, Bags,
+  Hand, Extras, Kicks), colours, and a turning preview of the player's Degen drawn by a
   small second renderer with the same ink outlines, only while the panel is
   open (still under reduced motion; drag turns him).
 - The look belongs to `profile-ui.ts` (browser and player profile); the
@@ -99,7 +99,10 @@ it and has been retired completely. Build only on what's here.
 - A new item needs a `Look` field with its palette and rules in
   `profile-data.ts` `cleanLook()` (the server checks it too), the mapping in
   `lookOutfit()`, the part in `character.ts` and an entry in `fitting.ts`
-  `TABS`. One thing on the head and one bag at a time.
+  `TABS`. One hat (`hat`), one bag (`bag`) and one thing in the hand
+  (`held`) at a time; `cleanLook()` also upgrades looks saved in older
+  formats, so keep its migration when fields change. Held items are put
+  away while Degen carries a gun (`Degen.held`).
 
 ## Walk mode (3D)
 

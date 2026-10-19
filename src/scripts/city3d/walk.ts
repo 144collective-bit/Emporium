@@ -566,7 +566,7 @@ export function createWalk(d: WalkDeps) {
     }
     recoil = Math.max(0, recoil - dt * 0.35);
     aimAmt += ((shooting ? 1 : 0) - aimAmt) * damp(14, dt);
-    if (hero.gummy) hero.gummy.visible = !combat.armed;
+    if (hero.held) hero.held.visible = !combat.armed;
     if (combat.armed) {
       holdRiflePose(P, aimAmt, pitch, combat.reloading);
       combat.poseGun(aimAmt, pitch, P.lean, recoil);

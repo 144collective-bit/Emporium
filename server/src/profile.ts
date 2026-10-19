@@ -35,7 +35,8 @@ export class Profile extends DurableObject<Env> {
   }
   private view(p: Stored): OwnProfile {
     const weapon = weaponUnlocked(p.weapon, p.total) ? p.weapon! : 'rifle';
-    return { name: p.name, look: p.look, skin: p.skin, total: Math.floor(p.total), rank: rankFor(p.total).id, weapon };
+    // Cleaned on the way out too: looks saved by an older version get today's fields
+    return { name: p.name, look: cleanLook(p.look), skin: p.skin, total: Math.floor(p.total), rank: rankFor(p.total).id, weapon };
   }
 
   /** Load the profile, making it on first visit (bringing the browser's own score along, up to a cap) */

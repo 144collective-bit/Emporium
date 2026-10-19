@@ -104,10 +104,12 @@ cartoon shading and PulseChain neon, built with [three.js](https://threejs.org).
 
 Click Drop 001 (or walk in) and its panel has a **fitting room**: pick what
 your Degen wears and watch it on him, turning on a neon podium (drag to turn
-him). Fit (Classic Suit or Drop Hoodie, with jacket, trousers and tie
-colours), headwear (Diamond Cap, Street Beanie, Hood Up or nothing), a bag
-(backpack or crossbody), extras (headphones, shades chain, the gummy bag)
-and kicks. It's free and only for your Degen in the city: nothing is sold
+him). Seven tabs: **Fit** (Classic Suit, Drop Hoodie or Track Suit, with
+their colours), **Head** (Diamond Cap, Backwards Cap, Street Beanie, Bucket
+Hat, Gold Crown, Hood Up or nothing), **Shades** (lens colours), **Bags**
+(Backpack, Crossbody, Skate Deck or none), **Hand** (Gummy Bag, Iced Coffee,
+Boombox or empty), **Extras** (Headphones, Diamond Chain, Shades Chain) and
+**Kicks**. It's free and only for your Degen in the city: nothing is sold
 and it isn't tied to the real store. He wears it in walk mode, and other
 players see it online. The **Open the fitting room** button in Profile goes
 straight there.

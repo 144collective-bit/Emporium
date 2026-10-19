@@ -58,7 +58,7 @@ export function createRemotes(scene: THREE.Scene, camera: THREE.PerspectiveCamer
     const fig = createDegen(lookOutfit(info.look));
     fig.g.scale.setScalar(SCALE);
     fig.g.visible = false;
-    if (fig.gummy) fig.gummy.visible = true;
+    if (fig.held) fig.held.visible = true;
     const pivot = new THREE.Group();
     const gun = buildGun(info.weapon, info.skin, { shadows: true });
     pivot.add(gun.group);
@@ -237,7 +237,7 @@ export function createRemotes(scene: THREE.Scene, camera: THREE.PerspectiveCamer
         r.aim += (((flags & (FLAG.aim | FLAG.fire)) !== 0 ? 1 : 0) - r.aim) * Math.min(1, dt * 14);
         r.reload = flags & FLAG.reload ? (r.reload + dt / WEAPONS[r.gun.id].reload) % 1 : 0;
         r.pivot.visible = armed;
-        if (r.fig.gummy) r.fig.gummy.visible = !armed;
+        if (r.fig.held) r.fig.held.visible = !armed;
         if (armed && !r.emote) {
           holdRiflePose(P, r.aim, pitch, r.reload);
           placeGun(r.pivot, r.gun, r.aim, pitch, P.lean, 0, r.reload);
