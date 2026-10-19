@@ -239,9 +239,12 @@ around the core city (North 1-5, West 1-3, East 1-3, past the ring roads) is
   few confirmations, usually within a minute.
 - **Build on it:** choose from eight buildings (house, shopfront, tower, loft,
   arcade, pocket park, warehouse, billboard lot) and customise walls, neon,
-  floors, sign and rotation with a live preview. On a large plot everything
-  goes up three times the size (towers stop at 6 floors so the Emporium stays
-  the tallest). The first change in a visit asks your wallet to sign a short
+  floors, sign and rotation with a live preview. Each design fills the whole
+  plot with its grounds: a house with a porch, garage and pool; a shop with a
+  café terrace; a tower over a fountain plaza (up to 8 floors, so the Emporium
+  stays the tallest); a loft with balconies and a roof garden; a neon arcade;
+  a park with a fountain and gazebo; a warehouse with a loading dock; a
+  billboard lot with a food truck. The first change in a visit asks your wallet to sign a short
   message (free, no gas) to prove it's yours. Everyone in the city sees your
   building.
 

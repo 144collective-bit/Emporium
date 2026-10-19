@@ -37,18 +37,20 @@ export interface BuildingDef {
 }
 
 /**
- * Buildings are drawn PLOT_SCALE times their base size to fill a large plot.
- * Floors are capped so nothing outgrows the Emporium (its roof is ~12.5 tiles up).
+ * The eight designs. Each fills a large plot with its building and a dressed
+ * site (paving, trees, lamps, benches). Floors are capped so nothing outgrows
+ * the Emporium (its roof is ~12.5 tiles up; a top-height tower's mast stops
+ * just under it).
  */
 export const BUILDINGS: BuildingDef[] = [
-  { type: 'house', name: 'Degen House', blurb: 'Pitched roof, warm windows, a chimney for the gas fees.' },
-  { type: 'shop', name: 'Shopfront', blurb: 'Two floors, striped awning and a neon sign.', sign: true },
-  { type: 'tower', name: 'Tower', blurb: 'Glass and neon. Pick how tall.', floors: [3, 6, 5] },
-  { type: 'loft', name: 'Loft', blurb: 'Balconies on every floor and a garden on the roof.', floors: [2, 5, 3] },
-  { type: 'arcade', name: 'Arcade', blurb: 'Big sign, marquee lights, open all night.', sign: true },
-  { type: 'garden', name: 'Pocket Park', blurb: 'Trees, flower beds, a bench and a fountain.' },
-  { type: 'warehouse', name: 'Warehouse', blurb: 'Sawtooth roof with glowing glazing.' },
-  { type: 'billboard', name: 'Billboard Lot', blurb: 'A kiosk under a big Degen billboard.' },
+  { type: 'house', name: 'Degen House', blurb: 'Two floors, a porch, a dormer, a garage, a pool out back and a picket fence.' },
+  { type: 'shop', name: 'Shopfront', blurb: 'Lit display windows, a striped awning, a café terrace and a neon roof sign.', sign: true },
+  { type: 'tower', name: 'Tower', blurb: 'Glass lobby, LED crown and a mast, over a plaza with fountains. Pick how tall.', floors: [4, 8, 6] },
+  { type: 'loft', name: 'Loft', blurb: 'Balconies, a fire escape and a rooftop garden with string lights.', floors: [2, 5, 3] },
+  { type: 'arcade', name: 'Arcade', blurb: 'Bulb marquee, game-screen windows, a giant joystick on the roof.', sign: true },
+  { type: 'garden', name: 'Pocket Park', blurb: 'Fountain, gazebo, pond, flower beds and benches. Open to everyone.' },
+  { type: 'warehouse', name: 'Warehouse', blurb: 'Sawtooth roof, loading dock, office, container and a forklift.' },
+  { type: 'billboard', name: 'Billboard Lot', blurb: 'A giant Degen billboard over a food truck and picnic tables.' },
 ];
 
 /** Wall colours the owner can pick */

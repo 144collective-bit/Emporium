@@ -196,7 +196,7 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
 
     body.innerHTML = `${head}
       <span class="tag tag-mine">Yours</span>
-      <p class="city-panel-text">Nine squares in one: whatever you build here goes up three times the size. You can change it any time.</p>
+      <p class="city-panel-text">Nine squares in one: each design fills the whole plot, grounds and all. You can change it any time.</p>
       <div class="builder-catalog">
         ${BUILDINGS.map((b) => `<button type="button" class="builder-card" data-pick="${b.type}"><span class="builder-card-name">${esc(b.name)}</span><span class="builder-card-blurb">${esc(b.blurb)}</span></button>`).join('')}
       </div>

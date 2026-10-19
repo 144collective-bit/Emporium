@@ -226,9 +226,15 @@ it and has been retired completely. Build only on what's here.
   landmarks are not for sale.
 - **Price: 20,000,000 PLS per plot** (the owner's price, `PLOT_PRICE` and the
   server's `LAND_PRICE_PLS`). The server's value is the one that counts.
-- Buildings are drawn `PLOT_SCALE` (3) times their base size; tower and loft
-  floors are capped in `BUILDINGS` so nothing outgrows the Emporium (its roof
-  is ~12.5 tiles up). Keep it that way when adding buildings.
+- The eight designs (`GEN` in `plots.ts`) are drawn at the large plot's own
+  scale (8.2 x 8.2 tiles, front facing +z before the owner's turn), each with
+  its site dressed around it from the shared helpers (paving, `tree`, `pine`,
+  `lamp`, `bench`, `planter`, `fence`, `bollards`, `lightString`). People-scale:
+  doors ~1.2-1.7 tall, floors ~0.95-1.0. Each design pushes its walk-mode
+  footprints to `ctx.solids` (turned with the building; parks stay walkable).
+  Tower and loft floors are capped in `BUILDINGS` so nothing outgrows the
+  Emporium (its roof is ~12.5 tiles up; an 8-floor tower's mast tops out at
+  ~11.9). Keep it that way when adding designs.
 - **Real sales (live mode)**, when the site is built with `PUBLIC_GAME_SERVER`:
   - `wallet.ts` talks to the visitor's own wallet (EIP-1193, found through
     EIP-6963 or `window.ethereum`). It switches to the sales network or adds
