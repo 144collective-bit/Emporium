@@ -175,9 +175,37 @@ export function buildGarage(scene: THREE.Scene, opts: { tick: (f: Tick) => void;
     spin.rotation.y += dt * 0.45;
   });
 
+  /** Empty the turntable (your car is out on the streets) */
+  function clear() {
+    car?.dispose();
+    car = null;
+    showing = '';
+  }
+
   return {
     /** Put a car on the turntable (picking in the menu shows each one here) */
     show,
+    clear,
+    /** Is a car on the turntable? */
+    get hasCar() {
+      return !!car;
+    },
+    /** Where the turntable is (getting in at home) */
+    turntable: TT,
+    /**
+     * Drive it off: the turntable's car moves into the city (facing the avenue) and is the
+     * caller's to look after from now on. The turntable stays empty until a car comes home.
+     */
+    takeOut() {
+      if (!car) return null;
+      const out = car;
+      car = null;
+      showing = '';
+      spin.rotation.y = REST;
+      scene.add(out.group);
+      out.group.position.set(TT.x, S + 0.07, TT.z);
+      return { car: out, x: TT.x, z: TT.z, yaw: Math.PI / 2 };
+    },
     /** Turn slowly while the menu is open (it stands still under reduced motion); back to rest after */
     spin(on: boolean) {
       spinning = on;

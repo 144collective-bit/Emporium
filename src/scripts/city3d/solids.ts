@@ -79,9 +79,11 @@ export const GARAGE_SITE = {
   tyres: { x: GARAGE.ox + 5.5, z: GARAGE.oz + 3.25 },
 };
 const T = GARAGE_SITE.turntable;
+/** The turntable with your car on it (your own car ignores it: it drives off from there) */
+export const TURNTABLE_BOX: Box = [T.x - 1.45, T.z - 1.45, T.x + 1.45, T.z + 1.45, 1.1];
 const GARAGE_SOLIDS: Box[] = [
   GARAGE_SITE.building,
-  [T.x - 1.45, T.z - 1.45, T.x + 1.45, T.z + 1.45, 1.1], // your car on the turntable
+  TURNTABLE_BOX,
   [GARAGE_SITE.tyres.x - 0.3, GARAGE_SITE.tyres.z - 0.3, GARAGE_SITE.tyres.x + 0.3, GARAGE_SITE.tyres.z + 0.3, 0.8],
 ];
 export const SOLIDS: Box[] = [...DRAWN.map(designBox), ...GARAGE_SOLIDS, ...DUMMY_SOLIDS];

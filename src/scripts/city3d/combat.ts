@@ -25,7 +25,7 @@ import { createViewmodel, type ViewState } from './viewmodel';
 
 export { DUMMIES };
 
-export type Sfx = 'shot' | 'shotSmg' | 'shotShotgun' | 'shotDmr' | 'empty' | 'magout' | 'magin' | 'bolt' | 'hit' | 'hitMetal' | 'down' | 'boom' | 'gear' | 'draw' | 'holster' | 'unlock';
+export type Sfx = 'shot' | 'shotSmg' | 'shotShotgun' | 'shotDmr' | 'empty' | 'magout' | 'magin' | 'bolt' | 'hit' | 'hitMetal' | 'down' | 'boom' | 'gear' | 'draw' | 'holster' | 'unlock' | 'bump' | 'door';
 
 export interface CombatDeps {
   scene: THREE.Scene;

@@ -17,6 +17,7 @@ export function createSound() {
   let buzzGain: GainNode;
   let beatGain: GainNode;
   let on = false;
+  let engine: { g: GainNode; lp: BiquadFilterNode; a: OscillatorNode; b: OscillatorNode } | null = null;
   let nextBeat = 0;
   let step = 0;
   let timer = 0;
@@ -315,7 +316,48 @@ export function createSound() {
         case 'unlock':
           [660, 880, 1320].forEach((f, i) => tone(t + i * 0.08, 'triangle', f, f, 0.15, 0.18));
           break;
+        // Your car: a soft rubbery bump, and its door
+        case 'bump':
+          tone(t, 'sine', 95, 38, 0.6, 0.2);
+          crack(t, 'lowpass', 420, 0.8, 0.35, 0.12);
+          break;
+        case 'door':
+          crack(t, 'bandpass', 900, 1.2, 0.25, 0.05);
+          tone(t + 0.03, 'square', 140, 90, 0.18, 0.08);
+          break;
       }
+    },
+    /**
+     * Your car's engine, a soft cartoon hum: `revs` 0..1 sets its pitch, a negative value
+     * switches it off. Made the first time it's needed; silent unless sound is on.
+     */
+    engine(revs: number) {
+      if (!ctx || !on) return;
+      const t = ctx.currentTime;
+      if (!engine) {
+        if (revs < 0) return;
+        const g = ctx.createGain();
+        g.gain.value = 0;
+        const lp = ctx.createBiquadFilter();
+        lp.type = 'lowpass';
+        lp.Q.value = 2;
+        const a = ctx.createOscillator();
+        const b = ctx.createOscillator();
+        a.type = 'sawtooth';
+        b.type = 'square';
+        a.connect(lp);
+        b.connect(lp);
+        lp.connect(g).connect(sfxBus);
+        a.start();
+        b.start();
+        engine = { g, lp, a, b };
+      }
+      const on2 = revs >= 0;
+      const r = Math.max(0, Math.min(1, revs));
+      engine.a.frequency.setTargetAtTime(42 + r * 120, t, 0.08);
+      engine.b.frequency.setTargetAtTime(21 + r * 60, t, 0.08);
+      engine.lp.frequency.setTargetAtTime(380 + r * 1300, t, 0.1);
+      engine.g.gain.setTargetAtTime(on2 ? 0.05 + r * 0.06 : 0, t, on2 ? 0.15 : 0.25);
     },
     /** Called every frame with the scene's state. `near` is 0-1 closeness to the Emporium. */
     update(rain: number, night: number, near: number) {

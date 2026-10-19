@@ -303,6 +303,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     // The sound engine is made further down; shots only happen once it exists
     sfx: (kind, gain) => sound.sfx(kind, gain),
     garage,
+    // Made further down too, like sfx
+    engine: (revs) => sound.engine(revs),
   });
   // The Profile panel (wardrobe, finish, rank) works offline; multiplayer only when the site has a game server
   const profileUI = createProfileUI(root, {
@@ -617,6 +619,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       walk.update(dt, reduced ? 0 : t);
       walker.x = walk.position.x;
       walker.z = walk.position.z;
+      // A car reaches further than someone on foot
+      walker.r = walk.driving ? 0.8 : 0;
       mp?.update(dt, t);
       dirty = true;
     } else if (controls.update()) dirty = true;

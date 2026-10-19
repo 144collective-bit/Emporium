@@ -2,7 +2,7 @@
  * The city's mode header: says which view you're in (City view, Walk mode,
  * Build mode, or the 2D map) with a line on what you can do there, and
  * keeps the City / Walk / Build switch in step. It watches the city root
- * (data-view, data-mode, data-sales, is-fp, is-online) so every mode change updates it.
+ * (data-view, data-mode, data-sales, is-fp, is-online, is-driving) so every mode change updates it.
  */
 const COPY = {
   map: { title: 'City map', sub: () => (narrow() ? '2D view' : '2D view · pick a lit-up building') },
@@ -45,8 +45,11 @@ export function createCityHead(root: HTMLElement) {
     const mode = root.dataset.view !== '3d' ? 'map' : ((root.dataset.mode as 'explore' | 'walk' | 'build') ?? 'explore');
     const c = COPY[mode] ?? COPY.explore;
     head.dataset.mode = mode;
-    if (title.textContent !== c.title) title.textContent = c.title;
-    const s = c.sub(root);
+    // In your car: "Driving" and which car (drive.ts sets is-driving and data-car)
+    const driving = mode === 'walk' && root.classList.contains('is-driving');
+    const t = driving ? 'Driving' : c.title;
+    if (title.textContent !== t) title.textContent = t;
+    const s = driving ? `${root.dataset.car ?? 'Your car'}${root.classList.contains('is-online') ? ' · online' : ''}` : c.sub(root);
     if (sub.textContent !== s) sub.textContent = s;
     city.setAttribute('aria-pressed', String(mode === 'explore'));
   }

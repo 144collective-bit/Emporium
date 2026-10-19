@@ -37,12 +37,21 @@ interface Vehicle {
   len: number;
   model: CarId;
   slot: number;
+  /** Where it is this frame (for your own car to bump into) */
+  x: number;
+  z: number;
+  yaw: number;
 }
 
 const ROAD_Y = 0.035;
 
-/** The player in walk mode: cars stop rather than drive through them. */
-export const walker = { x: 0, z: 0, on: false };
+/** The player in walk mode: cars stop rather than drive through them. `r` is how far they reach (more in a car). */
+export const walker = { x: 0, z: 0, on: false, r: 0 };
+/** Where the traffic and the people on the sidewalks are, so your car can bump them softly (drive.ts) */
+export const bodies = {
+  cars: [] as { x: number; z: number; yaw: number; len: number; model: CarId }[],
+  people: [] as { x: number; z: number }[],
+};
 const [E0, E1] = EXT;
 
 /** Lights at each crossing cycle x-green, x-yellow, z-green, z-yellow. */
@@ -83,8 +92,13 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
       len: CARS[model].L,
       model,
       slot,
+      x: 0,
+      z: 0,
+      yaw: 0,
     });
   }
+
+  bodies.cars = vehicles;
 
   // One fleet per model: its paint (each car its own colour) and its details; the bus's windows glow at night
   const mats = carMaterials();
@@ -239,9 +253,9 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
           const s = v.p * lane.dir;
           const [vx, vz] = lane.axis === 'x' ? [s, lane.coord] : [lane.coord, s];
           const [fx, fz] = lane.axis === 'x' ? [lane.dir, 0] : [0, lane.dir];
-          const ahead = (walker.x - vx) * fx + (walker.z - vz) * fz - v.len / 2;
+          const ahead = (walker.x - vx) * fx + (walker.z - vz) * fz - v.len / 2 - walker.r;
           const side = Math.abs((walker.x - vx) * fz - (walker.z - vz) * fx);
-          if (ahead > -0.2 && ahead < 4 && side < 1.0) target = Math.min(target, Math.max(0, (ahead - 0.8) * 1.8));
+          if (ahead > -0.2 - walker.r && ahead < 4 && side < 1.0 + walker.r * 0.6) target = Math.min(target, Math.max(0, (ahead - 0.8) * 1.8));
         }
         const acc = target > v.v ? 1.8 : 5;
         v.v += Math.max(-acc * dt, Math.min(acc * dt, target - v.v));
@@ -259,6 +273,9 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
       if (v.lane.axis === 'x') pos.set(s, ROAD_Y, v.lane.coord);
       else pos.set(v.lane.coord, ROAD_Y, s);
       q.setFromAxisAngle(up, yaw);
+      v.x = pos.x;
+      v.z = pos.z;
+      v.yaw = yaw;
       M.makeRotationFromQuaternion(q).setPosition(pos);
       for (const m of fleets.get(v.model)!) m.setMatrixAt(v.slot, M);
       const g = carGeometry(v.model);
@@ -349,6 +366,7 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
   }
   for (const c of crowd) people.push({ kind: 'idle', inset: 0, u: 0, dir: 1, speed: 0, phase: rand() * 6, x: c.x, z: c.z, y: c.y, act: c.act, ry: c.ry, face: c.ry, lean: 0, swing: 1 });
   const n = people.length;
+  bodies.people = people;
 
   // Everyone is the shared Degen body in a city outfit: suits and hoodies, bags, headphones
   const people3d = createCrowd(

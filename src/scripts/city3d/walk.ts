@@ -13,6 +13,8 @@
  * - A solid world, kerbs, door prompts that open a building's panel.
  * - The garage office door opens the garage menu: the camera swings round to
  *   the showroom turntable while you pick your car.
+ * - Get in your car (at the turntable, or wherever you left it) and drive
+ *   (drive.ts); get out anywhere.
  */
 import * as THREE from 'three';
 import type { SpotId } from '../../lib/city';
@@ -20,9 +22,10 @@ import { PLAYER, airPose, createDegen, emotePose, walkPose, type Outfit } from '
 import { createCombat, type Sfx } from './combat';
 import { WEAPON_IDS } from './combat-sim';
 import { createGunShop } from './gunshop';
-import { createGarageUI } from './garage-ui';
+import { createGarageUI, loadCar } from './garage-ui';
 import type { Garage } from './garage';
-import { CAMERA_ONLY, GARAGE_SITE, RACK, SOLIDS, rayBoxes, type Box } from './solids';
+import { createDrive } from './drive';
+import { CAMERA_ONLY, GARAGE_SITE, RACK, SOLIDS, TURNTABLE_BOX, rayBoxes, type Box } from './solids';
 import { DISTRICTS, BLOCKS, BS, NS_ROADS, RIVER, SLAB, WALK_W, type Tick } from './world';
 import { GARAGE, design } from './layout';
 
@@ -53,6 +56,8 @@ const SCALE = 0.85;
 const BOUNDS = [-34, -34, 74, 82];
 /** Blocks, districts and the garage's lot with their sidewalks: the raised ground */
 const slabs: Box[] = [...BLOCKS.flatMap((x) => BLOCKS.map((z) => [x, z] as const)), ...DISTRICTS.map((d) => [d.ox, d.oz] as const), [GARAGE.ox, GARAGE.oz] as const].map(([x, z]): Box => [x - WALK_W, z - WALK_W, x + BS + WALK_W, z + BS + WALK_W, 0]);
+/** What your own car bumps into: everything solid but the turntable it starts on */
+const CAR_SOLIDS = SOLIDS.filter((b) => b !== TURNTABLE_BOX);
 const inBox = (b: Box, x: number, z: number, pad = 0) => x > b[0] - pad && x < b[2] + pad && z > b[1] - pad && z < b[3] + pad;
 const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
 const damp = (k: number, dt: number) => 1 - Math.exp(-k * dt);
@@ -96,6 +101,8 @@ export interface WalkDeps {
   sfx(kind: Sfx, gain?: number): void;
   /** The garage on the south bank (its turntable shows the car being picked) */
   garage: Garage;
+  /** Your car's engine sound: revs 0..1, or negative for off */
+  engine(revs: number): void;
 }
 
 export function createWalk(d: WalkDeps) {
@@ -185,11 +192,12 @@ export function createWalk(d: WalkDeps) {
   const keys = new Set<string>();
   const joy = { x: 0, y: 0, id: -1 };
   const pad = { x: 0, y: 0, run: false, prev: [] as boolean[] };
-  let near: { id: SpotId | 'gear' | 'garage'; label: string } | null = null;
+  let near: { id: SpotId | 'gear' | 'garage' | 'car'; label: string } | null = null;
   const act = () => {
     if (!near) return;
     if (near.id === 'gear') shop.show();
     else if (near.id === 'garage') garageUI.show();
+    else if (near.id === 'car') (drive.active ? getOut() : getIn());
     else openSpot(near.id);
   };
 
@@ -199,6 +207,7 @@ export function createWalk(d: WalkDeps) {
     if (x < BOUNDS[0] || x > BOUNDS[2] || z < BOUNDS[1] || z > BOUNDS[3]) return true;
     if (z > RIVER[0] - 0.3 && z < RIVER[1] + 0.3 && !onBridge(x)) return true;
     if (SOLIDS.some((b) => inBox(b, x, z, RADIUS))) return true;
+    if (drive.blocks(x, z, RADIUS)) return true;
     return d.plotSolids().some((b) => inBox(b, x, z, RADIUS));
   }
 
@@ -262,7 +271,16 @@ export function createWalk(d: WalkDeps) {
   let fpBeforeGarage = false;
   const garageUI = createGarageUI(root, {
     preview: (c) => d.garage.show(c),
-    keep: (c) => d.garage.show(c),
+    // Kept: if your car is out on the streets, it comes home
+    keep(c) {
+      drive.recall();
+      d.garage.show(c);
+    },
+    cancel(saved) {
+      if (drive.away) d.garage.clear();
+      else d.garage.show(saved);
+    },
+    away: () => drive.away,
     onOpen() {
       keys.clear();
       jumpHeld = false;
@@ -281,6 +299,55 @@ export function createWalk(d: WalkDeps) {
       canvas.focus({ preventScroll: true });
     },
   });
+  // Your car: get in where it is, drive, get out anywhere
+  const drive = createDrive({
+    scene: d.scene,
+    camera,
+    root,
+    garage: d.garage,
+    myCar: loadCar,
+    solids: () => (d.plotSolids().length ? [...CAR_SOLIDS, ...d.plotSolids()] : CAR_SOLIDS),
+    groundAt,
+    cameraRoom,
+    free: (x, z) => !blocked(x, z),
+    sfx: d.sfx,
+    engine: d.engine,
+    bounds: [BOUNDS[0], BOUNDS[1], BOUNDS[2], BOUNDS[3], 0],
+  });
+  /** Driving input from the gamepad and the touch pedals */
+  const padDrive = { steer: 0, throttle: 0, handbrake: false };
+  const pedals = { gas: false, brake: false };
+  function getIn() {
+    if (combat.armed) combat.toggleHolster();
+    if (!drive.enter()) return;
+    keys.clear();
+    vel.set(0, 0);
+    jumpHeld = false;
+    setAim(false);
+    combat.trigger(false);
+    combat.trigger(false, true);
+    hero.g.visible = hero.ring.visible = false;
+    near = null;
+    d.touched();
+  }
+  function getOut() {
+    const out = drive.exit();
+    if (!out) return;
+    pos.set(out.x, groundAt(out.x, out.z), out.z);
+    vel.set(0, 0);
+    vy = 0;
+    // Looking the way the car was facing
+    const carYaw = out.yaw - Math.PI / 2;
+    yaw = Math.atan2(-Math.cos(carYaw), Math.sin(carYaw));
+    face = yaw + Math.PI;
+    pitch = firstPerson ? -0.05 : 0.35;
+    pivot.set(0, 0, 0);
+    camDist = zoom;
+    keys.clear();
+    pedals.gas = pedals.brake = false;
+    near = null;
+    d.touched();
+  }
   /** How far the camera has swung over to the showroom (0..1) */
   let showroom = 0;
   const showEye = new THREE.Vector3();
@@ -293,6 +360,11 @@ export function createWalk(d: WalkDeps) {
   /* ---------- Input ---------- */
 
   const look = (dx: number, dy: number, k: number) => {
+    if (drive.active) {
+      drive.look(dx * k * settings.sens, dy * k * settings.sens * (settings.invert ? -1 : 1));
+      d.touched();
+      return;
+    }
     // Finer control down the sight
     k *= 1 - combat.aimed * 0.4;
     yaw -= dx * k * settings.sens;
@@ -326,6 +398,19 @@ export function createWalk(d: WalkDeps) {
     if (shop.open || garageUI.open) {
       if (down && !e.repeat && c === 'KeyE') (shop.open ? shop.close() : garageUI.close());
       return false;
+    }
+    // Driving: steer and pedal with the move keys, Space for the handbrake, V swaps camera, E gets out
+    if (drive.active) {
+      if (down && !e.repeat && c === 'KeyE') act();
+      else if (down && !e.repeat && c === 'KeyV') drive.toggleView();
+      else if (c === 'Space') jumpHeld = down;
+      else if (MOVE.includes(c)) {
+        if (down) keys.add(c);
+        else keys.delete(c);
+      } else return false;
+      d.touched();
+      e.preventDefault();
+      return true;
     }
     if (down && c === 'KeyE' && near) act();
     else if (down && !e.repeat && c === 'KeyV') setFirstPerson(!firstPerson);
@@ -431,7 +516,7 @@ export function createWalk(d: WalkDeps) {
   canvas.addEventListener(
     'wheel',
     (e) => {
-      if (!active) return;
+      if (!active || drive.active) return;
       zoom = THREE.MathUtils.clamp(zoom * (1 + Math.sign(e.deltaY) * 0.12), 0.8, 16);
       if (zoom < 1.2 && !firstPerson) setFirstPerson(true);
       else if (zoom >= 1.2 && firstPerson && e.deltaY > 0) setFirstPerson(false);
@@ -476,6 +561,23 @@ export function createWalk(d: WalkDeps) {
   jumpBtn.addEventListener('pointerup', () => (jumpHeld = false));
   jumpBtn.addEventListener('pointercancel', () => (jumpHeld = false));
   runBtn.addEventListener('click', () => setRunLock(!runLock));
+  // Touch pedals while driving (the stick steers)
+  for (const [sel, key] of [
+    ['[data-drive-gas]', 'gas'],
+    ['[data-drive-brake]', 'brake'],
+  ] as const) {
+    const b = $(sel);
+    b.addEventListener('pointerdown', (e) => {
+      try {
+        b.setPointerCapture(e.pointerId);
+      } catch {
+        /* still pressed, just not captured */
+      }
+      pedals[key] = true;
+      d.touched();
+    });
+    for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) b.addEventListener(ev, () => (pedals[key] = false));
+  }
   fpBtn.addEventListener('click', () => setFirstPerson(!firstPerson));
   sensInput.addEventListener('input', () => {
     settings.sens = Number(sensInput.value);
@@ -530,6 +632,8 @@ export function createWalk(d: WalkDeps) {
     if (!gp) {
       pad.x = pad.y = 0;
       pad.run = false;
+      padDrive.steer = padDrive.throttle = 0;
+      padDrive.handbrake = false;
       // Unplugged with a trigger down: let go of it
       if (pad.prev[6]) setAim(false);
       if (pad.prev[7]) combat.trigger(false);
@@ -563,6 +667,17 @@ export function createWalk(d: WalkDeps) {
       if (edge(0)) garageUI.keep();
       if (edge(1) || edge(3)) garageUI.close();
       pad.x = pad.y = 0;
+      pad.prev = b;
+      return;
+    }
+    // Driving: left stick steers, RT gas, LT brake / reverse, A handbrake, Y gets out, View swaps camera
+    if (drive.active) {
+      padDrive.steer = pad.x;
+      padDrive.throttle = (gp.buttons[7]?.value ?? 0) - (gp.buttons[6]?.value ?? 0);
+      padDrive.handbrake = !!b[0];
+      if (edge(3)) act();
+      if (edge(8)) drive.toggleView();
+      if (pad.x || padDrive.throttle || b.some(Boolean)) d.touched();
       pad.prev = b;
       return;
     }
@@ -631,9 +746,37 @@ export function createWalk(d: WalkDeps) {
     viewShifted = true;
   }
 
+  function driveFrame(dt: number, t: number) {
+    const k = (a: string, b: string) => (keys.has(a) || keys.has(b) ? 1 : 0);
+    let steer = k('KeyD', 'ArrowRight') - k('KeyA', 'ArrowLeft');
+    let throttle = k('KeyW', 'ArrowUp') - k('KeyS', 'ArrowDown');
+    if (joy.id >= 0) {
+      steer = joy.x;
+      // The stick pedals too, unless a pedal button is held
+      if (!pedals.gas && !pedals.brake) throttle = -joy.y;
+    }
+    if (pedals.gas || pedals.brake) throttle = (pedals.gas ? 1 : 0) - (pedals.brake ? 1 : 0);
+    if (padDrive.steer) steer = padDrive.steer;
+    if (padDrive.throttle) throttle = padDrive.throttle;
+    drive.update(dt, { throttle, steer, handbrake: jumpHeld || padDrive.handbrake });
+    const s = drive.state!;
+    pos.set(s.x, groundAt(s.x, s.z), s.z);
+    speedNow = Math.hypot(s.vx, s.vz);
+    hero.g.visible = hero.ring.visible = false;
+    // The rest of the city carries on (drones, dummies)
+    combat.update(dt, t, false);
+    combat.view(dt, t, { firstPerson: false, aim: false, move: 0, phase: 0, run: 0, air: 0 });
+    if (near?.id !== 'car') {
+      near = { id: 'car', label: 'Get out' };
+      prompt.hidden = false;
+      prompt.querySelector('[data-walk-label]')!.textContent = near.label;
+    }
+  }
+
   function update(dt: number, t: number) {
     if (!active) return;
     pollPad(dt);
+    if (drive.active) return driveFrame(dt, t);
 
     // What the player wants, in camera space
     let ix = (keys.has('KeyD') || keys.has('ArrowRight') ? 1 : 0) - (keys.has('KeyA') || keys.has('ArrowLeft') ? 1 : 0);
@@ -775,7 +918,7 @@ export function createWalk(d: WalkDeps) {
     }
 
     // Door prompts, and the Armoury's gun store counter
-    let best: { id: SpotId | 'gear' | 'garage'; label: string } | null = null;
+    let best: { id: SpotId | 'gear' | 'garage' | 'car'; label: string } | null = null;
     let bestD = 1.7;
     const atCounter = Math.hypot(RACK.x - pos.x, RACK.z - pos.z);
     if (atCounter < 1.1) {
@@ -785,6 +928,10 @@ export function createWalk(d: WalkDeps) {
     if (shop.open && atCounter > 2) shop.close();
     if (Math.hypot(GARAGE_SITE.door.x - pos.x, GARAGE_SITE.door.z - pos.z) < 1.3) {
       best = { id: 'garage', label: 'Garage' };
+      bestD = 0;
+    }
+    if (!garageUI.open && drive.nearCar(pos.x, pos.z) < 0.75) {
+      best = { id: 'car', label: 'Get in' };
       bestD = 0;
     }
     for (const door of DOORS) {
@@ -797,7 +944,7 @@ export function createWalk(d: WalkDeps) {
     if (best?.id !== near?.id) {
       near = best;
       prompt.hidden = !near;
-      if (near) prompt.querySelector('[data-walk-label]')!.textContent = near.id === 'gear' || near.id === 'garage' ? near.label : `Enter ${near.label}`;
+      if (near) prompt.querySelector('[data-walk-label]')!.textContent = near.id === 'gear' || near.id === 'garage' || near.id === 'car' ? near.label : `Enter ${near.label}`;
     }
   }
 
@@ -810,6 +957,10 @@ export function createWalk(d: WalkDeps) {
     },
     get looking() {
       return locked();
+    },
+    /** Driving your car? */
+    get driving() {
+      return drive.active;
     },
     onKey,
     update,
@@ -860,6 +1011,8 @@ export function createWalk(d: WalkDeps) {
       root.dataset.mode = 'walk';
     },
     exit() {
+      // Leaving walk mode in the car: it stays parked where it is
+      if (drive.active) getOut();
       active = false;
       root.classList.remove('is-fp');
       keys.clear();

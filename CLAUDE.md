@@ -219,7 +219,30 @@ it and has been retired completely. Build only on what's here.
   handling). Cars are free and only for the city: never sell them, price
   them or tie them to the store or the token.
 - `createCar()` in `cars.ts` builds one car with its own paint, steerable
-  rolling wheels (`drive()`) and lights.
+  rolling wheels (`drive()`) and lights. The turntable's car is the one you
+  drive (`takeOut()` in `garage.ts` hands it to `drive.ts`).
+
+## Driving your car (3D walk mode)
+
+- `drive-sim.ts` holds the rules, DOM-free like `combat-sim.ts`:
+  - **Handling:** arcade. Speed tapers to the model's top speed; brake, then reverse. Steering uses a bicycle model that eases off with speed. Grip sets how quickly the slide follows the nose; the handbrake lets it go.
+  - **Collisions:** soft and safe. The car is three circles along its length. It slides along `SOLIDS` (minus the turntable), placed buildings and the river walls (`RIVER_WALLS`, open at the bridges). It bumps softly off traffic and people, never through them.
+  - **Tuning:** `tune()` turns `DRIVE`'s 0-1 numbers into speeds. New handling goes in the sim first.
+- `drive.ts` is the view:
+  - **Getting in:** "Get in" at your car, on the turntable (it drives off facing the avenue) or wherever it was left.
+  - **The car on screen:** it climbs kerbs smoothly, leans into turns and squats under gas or brakes. The wheels roll and steer.
+  - **Cameras:** a chase camera that swings in behind, where you can look around and it settles back; it's pulled in by buildings like the walk camera. V swaps to the roof camera.
+  - **Readout:** speed in km/h and the gear (`data-drive-hud`).
+  - **Sound:** a synthesised engine (`engine()` in `sound.ts`) plus bump and door sounds, all through the sound switch.
+  - **Getting out:** "Get out" anywhere. Degen steps out of the left door, or wherever there's room, and the car stays parked and solid to walk round. Leaving walk mode parks it too.
+  - **Sending it home:** the garage menu's Keep calls it back to the turntable ("Bring my car home"). A reload puts it back there too.
+- Traffic stops for your car (`walker.r` in `life.ts` reaches further while driving). `bodies` in `life.ts` shares where the traffic and the pedestrians are, for the soft bumps.
+- **Controls:**
+  - Keyboard: W / S (or arrows) gas and brake / reverse, A / D steer, Space handbrake, V camera, E get out.
+  - Touch: the stick steers (and pedals when no pedal is held), with Gas and Brake buttons (`data-drive-gas`, `data-drive-brake`).
+  - Gamepad: left stick steers, RT gas, LT brake, A handbrake, Y get out, View camera; the right stick or the mouse looks.
+- While driving, `.city.is-driving` hides the walk and combat HUD, and the header says "Driving · <car>" (`head.ts`). A gun is holstered on getting in.
+- Check the pedals, stick, prompt and readout at phone widths, upright and on their side: nothing may overlap.
 
 ## Target practice (3D walk mode)
 

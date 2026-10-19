@@ -126,7 +126,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
             <dt><kbd>Right&nbsp;click</kbd></dt><dd>Aim (red dot sight)</dd>
             <dt><kbd>V</kbd></dt><dd>First / third person</dd>
             <dt><kbd>Scroll</kbd></dt><dd>Camera distance</dd>
-            <dt><kbd>E</kbd></dt><dd>Enter a door, open the gun store</dd>
+            <dt><kbd>E</kbd></dt><dd>Enter a door, open the gun store or the garage, get in / out of your car</dd>
             <dt><kbd>Click</kbd></dt><dd>Fire (once geared up)</dd>
             <dt><kbd>R</kbd></dt><dd>Reload</dd>
             <dt><kbd>Q</kbd> <kbd>1</kbd>–<kbd>4</kbd></dt><dd>Swap gun (next, or by number)</dd>
@@ -134,6 +134,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
             <dt><kbd>T</kbd></dt><dd>Emotes and phrases (online)</dd>
             <dt><kbd>Esc</kbd></dt><dd>Free the mouse, then stop</dd>
           </dl>
+          <p class="walk-pad">Driving: <kbd>W</kbd> / <kbd>S</kbd> gas and brake (hold to reverse), <kbd>A</kbd> / <kbd>D</kbd> steer, <kbd>Space</kbd> handbrake, <kbd>V</kbd> chase or roof camera. Your car waits on the turntable at the garage on the south bank. Gamepad: RT gas, LT brake, A handbrake, Y get out. Touch: the stick steers, with Gas and Brake buttons.</p>
           <p class="walk-pad">Gear up at the gun store counter inside the Armoury. Gamepads work too: left stick moves, right stick looks, A jumps, LB runs, LT aims, RT fires, X reloads, RB swaps guns. On a touch screen, drag the Fire button to aim while you shoot. Your look and rifle finish are in Profile.</p>
         </div>
       </details>
@@ -406,6 +407,13 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       <p class="shop-foot">For fun only: cars are free and just for the city, nothing is sold.</p>
     </section>
     <p class="walk-hint"><kbd>WASD</kbd> move · <kbd>Shift</kbd> run · <kbd>Space</kbd> jump · <kbd>V</kbd> camera · <kbd>Esc</kbd> stop</p>
+    {/* Driving your car (drive.ts): speed readout, key hint, touch pedals (the stick steers) */}
+    <p class="walk-hint drive-hint"><kbd>W</kbd><kbd>S</kbd> gas / brake · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>Space</kbd> handbrake · <kbd>V</kbd> camera · <kbd>E</kbd> get out</p>
+    <div class="drive-hud" data-drive-hud hidden aria-hidden="true">
+      <b data-drive-speed>0</b><small>km/h</small><span class="drive-gear" data-drive-gear>N</span>
+    </div>
+    <button type="button" class="drive-pedal drive-brake" data-drive-brake aria-label="Brake and reverse">Brake</button>
+    <button type="button" class="drive-pedal drive-gas" data-drive-gas aria-label="Gas">Gas</button>
     <div class="walk-stick" data-walk-stick aria-hidden="true"><span></span></div>
     <button type="button" class="walk-run" data-walk-run aria-pressed="false">Run</button>
     <button type="button" class="walk-fire" data-walk-fire>Fire</button>

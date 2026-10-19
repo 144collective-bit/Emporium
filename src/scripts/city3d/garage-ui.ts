@@ -2,8 +2,9 @@
  * The garage menu, opened at the garage office's door in walk mode: pick
  * your car (five models) and its paint. Each pick shows on the showroom
  * turntable out front while the camera looks on; Keep saves it (in the
- * browser), closing without keeping puts your saved car back. Cars are free
- * and only for the city: nothing is sold.
+ * browser), closing without keeping puts your saved car back. If your car is
+ * out on the streets, Keep also calls it home. Cars are free and only for the
+ * city: nothing is sold.
  *
  * Arrow keys or the D-pad pick a model (up / down on the pad: the paint),
  * Enter / A keeps it, Esc / B / E closes.
@@ -48,8 +49,12 @@ const STATS: { key: 'speed' | 'accel' | 'grip'; label: string }[] = [
 export interface GarageDeps {
   /** Show a car on the turntable (each pick, and the saved car again on close) */
   preview(c: MyCar): void;
-  /** A new car was kept */
+  /** A new car was kept (or your car, out on the streets, was called home) */
   keep(c: MyCar): void;
+  /** Closed without keeping: the saved car goes back on the turntable (or it empties, if your car is out) */
+  cancel(saved: MyCar): void;
+  /** Is your car out on the streets? */
+  away(): boolean;
   /** Opening frees the mouse and turns the camera to the turntable; closing hands control back */
   onOpen(): void;
   onClose(): void;
@@ -106,7 +111,7 @@ export function createGarageUI(root: HTMLElement, d: GarageDeps) {
     el.querySelector('[data-garage-blurb]')!.textContent = dr.blurb;
     el.querySelector('[data-garage-paint-name]')!.textContent = CAR_PAINTS.find((p) => p.id === pick.paint)!.name;
     for (const st of STATS) el.querySelector<HTMLElement>(`[data-car-stat="${st.key}"] i`)!.style.setProperty('--v', String(dr[st.key]));
-    keepBtn.textContent = same(pick, saved) ? 'Your car · done' : 'Keep this one';
+    keepBtn.textContent = !same(pick, saved) ? 'Keep this one' : d.away() ? 'Bring my car home' : 'Your car · done';
   }
 
   function select(c: MyCar) {
@@ -114,12 +119,14 @@ export function createGarageUI(root: HTMLElement, d: GarageDeps) {
     d.preview(pick);
     paint();
   }
+  let kept = false;
   function keep() {
-    if (!same(pick, saved)) {
+    if (!same(pick, saved) || d.away()) {
       saved = { ...pick };
       saveCar(saved);
       d.keep(saved);
     }
+    kept = true;
     close();
   }
   function show() {
@@ -127,6 +134,9 @@ export function createGarageUI(root: HTMLElement, d: GarageDeps) {
     open = true;
     saved = loadCar();
     pick = { ...saved };
+    kept = false;
+    // Your car is out: show it on the turntable while you look
+    if (d.away()) d.preview(saved);
     paint();
     el.hidden = false;
     root.classList.add('is-shopping', 'is-garage');
@@ -138,8 +148,7 @@ export function createGarageUI(root: HTMLElement, d: GarageDeps) {
     open = false;
     el.hidden = true;
     root.classList.remove('is-shopping', 'is-garage');
-    // Not kept: the saved car goes back on the turntable
-    if (!same(pick, saved)) d.preview(saved);
+    if (!kept) d.cancel(saved);
     d.onClose();
     return true;
   }
