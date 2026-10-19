@@ -92,6 +92,10 @@ it and has been retired completely. Build only on what's here.
   `data-walk-*` element to exist.
 - Esc frees the mouse first and only then stops walking. Door panels free
   the mouse so their links can be clicked.
+- While walking, `body.is-walking` (set in `index.ts`) makes the site header
+  see-through and float over the city, so the 3D view fills the whole screen.
+  Overlays pinned to the top of the city are shifted down by `--nav-h` in
+  `global.css`; add any new top-anchored walk overlay to that list.
 - Collision footprints (`SOLIDS`) and door spots (`DOORS`) mirror
   `landmarks.ts`. When a landmark moves or changes size, update both.
   Placed buildings block via `plots.solids()`; parks stay walkable.

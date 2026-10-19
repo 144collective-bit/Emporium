@@ -1066,6 +1066,41 @@ body.full-bleed {
   height: 100dvh;
   overflow: hidden;
 }
+/* Walking: the header floats over the city, see-through, so the 3D view runs up behind it.
+   The city fills the whole screen and its top overlays move down by the header's height,
+   so they stay where they were and clear of the logo and links. */
+body.is-walking .nav {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  background: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  border-bottom-color: transparent;
+  pointer-events: none;
+}
+body.is-walking .nav::after {
+  opacity: 0;
+}
+body.is-walking .nav-in > * {
+  pointer-events: auto;
+}
+body.is-walking .icon-link:not(:hover) {
+  background: #0b0a12b8;
+  color: #fff;
+}
+body.is-walking .logo::before {
+  background: radial-gradient(closest-side, #05060599, #0000);
+}
+body.is-walking :is(.city-modes, .walk-top, .walk-look, .combat-score) {
+  translate: 0 var(--nav-h);
+}
+@media (min-width: 641px) {
+  body.is-walking .city-panel {
+    top: calc(var(--nav-h) + 16px);
+  }
+}
 .city {
   position: relative;
   flex: 1;
@@ -2802,6 +2837,9 @@ body.full-bleed {
       linear-gradient(#14102a, #14102a) padding-box,
       var(--pulse) border-box;
     box-shadow: 0 0 20px -6px #00eaffaa;
+  }
+  body.is-walking .city.is-armed .combat-ammo {
+    translate: 0 var(--nav-h);
   }
   .city.is-armed .combat-ammo {
     top: 104px;

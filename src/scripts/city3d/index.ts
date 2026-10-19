@@ -295,6 +295,8 @@ export async function bootCity(root: HTMLElement) {
     walker.on = true;
     walk.enter();
     mp?.walkChanged(true);
+    // The header turns see-through and floats over the city (global.css)
+    document.body.classList.add('is-walking');
     walkBtn.setAttribute('aria-pressed', 'true');
     walkBtn.querySelector('[data-walk-label]')!.textContent = 'Stop walking';
     root.classList.add('has-moved');
@@ -306,6 +308,7 @@ export async function bootCity(root: HTMLElement) {
     walker.on = false;
     walk.exit();
     mp?.walkChanged(false);
+    document.body.classList.remove('is-walking');
     close();
     controls.enabled = true;
     walkBtn.setAttribute('aria-pressed', 'false');
