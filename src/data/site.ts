@@ -16,4 +16,4 @@ export const SHOP_OPEN = false;
 // WalletConnect (phone wallets by QR code / app switch): the project ID from
 // cloud.reown.com. It's public by design (every visitor's browser gets it).
 // Empty: the wallet picker only offers installed wallets.
-export const WALLETCONNECT_PROJECT_ID = '';
+export const WALLETCONNECT_PROJECT_ID = '54cd57a663a01e449d94f83c610f8488';
