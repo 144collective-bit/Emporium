@@ -7,7 +7,9 @@
  * Offline, your look is saved in this browser (`degen-city-look-v1`) and the
  * rank comes from this browser's lifetime score. Online, the profile on the
  * game server takes over: it gives you a guest name (reroll with New name)
- * and follows you across visits.
+ * and follows you across visits. Logged in with a wallet (account.ts), it's
+ * that wallet's own profile: it starts fresh, and its look isn't saved over
+ * the one this browser keeps for playing as a guest.
  */
 import { DEFAULT_LOOK, RANKS, cleanLook, rankFor, type Look } from '../net/profile-data';
 import type { OwnProfile } from '../net/protocol';
@@ -32,6 +34,8 @@ export function createProfileUI(root: HTMLElement, d: { setLook(o: Outfit): void
     }
   })();
   let online: OwnProfile | null = null;
+  /** The look this browser keeps (for offline and guest play) */
+  let localLook = look;
   let localTotal = 0;
   /** Told about every new look, from the server or this browser (the fitting room repaints) */
   const changeFns: ((l: Look) => void)[] = [];
@@ -46,19 +50,25 @@ export function createProfileUI(root: HTMLElement, d: { setLook(o: Outfit): void
     rankEl.textContent = rank.name;
     rankEl.dataset.rank = rank.id;
     renameBtn.hidden = !online;
-    note.textContent = online
-      ? 'Your player profile is saved online and follows you on this browser.'
-      : 'Go online to get your player name. Your look and rifle finish are saved in this browser.';
+    note.textContent = online?.wallet
+      ? 'Logged in with your wallet: this profile follows it to any browser.'
+      : online
+        ? 'Your guest profile is saved online and follows you on this browser. Log in with a wallet to take a profile to any browser.'
+        : 'Go online to get your player name. Your look and rifle finish are saved in this browser.';
   }
 
   /** Apply a look: dress Degen, save it here, and tell the server when online */
   function apply(next: Look, share = true) {
     const before = look;
     look = cleanLook(next);
-    try {
-      localStorage.setItem(LOOK_KEY, JSON.stringify(look));
-    } catch {
-      /* fine */
+    // A wallet profile's look lives on the server; this browser keeps its own for guest play
+    if (!online?.wallet) {
+      localLook = look;
+      try {
+        localStorage.setItem(LOOK_KEY, JSON.stringify(look));
+      } catch {
+        /* fine */
+      }
     }
     const changed = !same(before, look);
     if (changed || !share) d.setLook(lookOutfit(look));
@@ -100,11 +110,16 @@ export function createProfileUI(root: HTMLElement, d: { setLook(o: Outfit): void
     /** Signed in (the server's profile) or back offline (null) */
     setOnline(p: OwnProfile | null) {
       const first = !online && !!p;
+      const wasWallet = !!online?.wallet;
       online = p;
       if (p && first) {
-        // A brand-new server profile still wears the default: bring this browser's look along
-        if (same(p.look, DEFAULT_LOOK) && !same(look, DEFAULT_LOOK)) lookFns.forEach((f) => f(look));
+        // A brand-new guest profile still wears the default: bring this browser's look along
+        // (a wallet's profile starts fresh, so it keeps its own)
+        if (!p.wallet && same(p.look, DEFAULT_LOOK) && !same(look, DEFAULT_LOOK)) lookFns.forEach((f) => f(look));
         else if (!same(p.look, look)) apply(p.look, false);
+      } else if (wasWallet && !p?.wallet && !same(look, localLook)) {
+        // Off the wallet's profile: back in this browser's own look
+        apply(localLook, false);
       }
       paintName();
     },

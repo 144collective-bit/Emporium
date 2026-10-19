@@ -3,6 +3,7 @@
  * networks, the shape of the server's land API, and small helpers.
  * No DOM or scene code (the server bundles this).
  */
+import type { OwnProfile } from './protocol';
 import type { Design } from '../../data/plots';
 
 export interface Chain {
@@ -60,16 +61,25 @@ export const isAddress = (s: unknown): s is string => typeof s === 'string' && /
 export const isTxHash = (s: unknown): s is string => typeof s === 'string' && /^0x[0-9a-fA-F]{64}$/.test(s);
 /** Whole PLS to wei (18 decimals) */
 export const plsToWei = (pls: string | number) => BigInt(pls) * 10n ** 18n;
+/** A logged-in wallet's basic profile (GET /auth/me) */
+export interface AccountMe {
+  address: string;
+  chain: number;
+  profile: OwnProfile;
+  /** Plot ids this wallet owns on `chain` */
+  plots: string[];
+}
+
 /** "0x1234…abcd" */
 export const shortAddr = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
 
-/** The message an owner signs to prove they hold their wallet (no transaction, no gas) */
+/** The message a visitor signs to log in with their wallet (no transaction, no gas) */
 export function signInMessage(o: { origin: string; address: string; chain: number; nonce: string; issued: string }) {
   return [
-    'Degen City wants you to sign in with your PulseChain wallet:',
+    'Degen City wants you to log in with your PulseChain wallet:',
     o.address,
     '',
-    'This only proves you hold this wallet so you can build on your plot. It does not send a transaction or cost gas.',
+    'This only proves you hold this wallet: it logs you in to your player profile and lets you build on plots you own. It does not send a transaction or cost gas.',
     '',
     `URI: ${o.origin}`,
     `Chain ID: ${o.chain}`,

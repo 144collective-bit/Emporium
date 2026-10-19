@@ -47,7 +47,8 @@ export interface NetClient {
   onState(fn: (state: NetState, detail?: string) => void): void;
 }
 
-export function createNetClient(base: string): NetClient {
+/** `auth`: the wallet login's session token, if logged in (account.ts): the room then opens that wallet's profile */
+export function createNetClient(base: string, auth?: () => string | null): NetClient {
   // https:// or wss:// both work; a page on https can only open wss://
   const url = base.replace(/\/$/, '').replace(/^http/, 'ws') + '/play';
   let ws: WebSocket | null = null;
@@ -76,7 +77,7 @@ export function createNetClient(base: string): NetClient {
     }
     ws = sock;
     sock.onopen = () => {
-      sock.send(JSON.stringify({ t: 'hello', v: PROTOCOL, token: guestToken(), local } satisfies ClientMsg));
+      sock.send(JSON.stringify({ t: 'hello', v: PROTOCOL, token: guestToken(), auth: auth?.() ?? undefined, local } satisfies ClientMsg));
     };
     sock.onmessage = (ev) => {
       let m: ServerMsg;

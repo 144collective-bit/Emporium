@@ -9,19 +9,16 @@
  * used before. The sender becomes the owner. A payment for a plot someone else
  * got first (or a short one) is recorded and logged for a manual refund.
  *
- * Building: an owner proves they hold their wallet once per session by signing
- * a short message (no transaction, no gas), then can change their building.
+ * Building: an owner logs in with their wallet (accounts.ts: they sign a short
+ * message, no transaction, no gas), then can change their building.
  * Designs are checked against the fixed lists in src/data/plots.ts.
  *
  * Everything is kept per network (LAND_CHAIN_ID), so testnet sales never mix
  * with mainnet ones.
  */
 import { DurableObject } from 'cloudflare:workers';
-import { secp256k1 } from '@noble/curves/secp256k1.js';
-import { keccak_256 } from '@noble/hashes/sha3.js';
-import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
 import { PLOT_IDS, PLOT_PRICE, cleanDesign } from '../../src/data/plots';
-import { CHAINS, isAddress, isTxHash, plsToWei, signInMessage, type ClaimStatus, type LandPlot, type LandState } from '../../src/scripts/net/land';
+import { CHAINS, isAddress, isTxHash, plsToWei, type ClaimStatus, type LandPlot, type LandState } from '../../src/scripts/net/land';
 import type { Env } from './index';
 
 /** How long a payment is looked for before giving up */
@@ -29,8 +26,6 @@ const CLAIM_WINDOW = 20 * 60_000;
 const POLL = 6_000;
 /** A payment made more than this long before it's claimed (seconds) doesn't count */
 const MAX_AGE = 24 * 3600;
-const NONCE_TTL = 10 * 60_000;
-const SESSION_TTL = 7 * 24 * 3600_000;
 
 interface Claim {
   plot: string;
@@ -52,32 +47,6 @@ interface Refund {
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 const fail = (status: number, message: string) => json({ error: message }, status);
-const randomHex = (n: number) => bytesToHex(crypto.getRandomValues(new Uint8Array(n)));
-
-/** The wallet that signed `message` with personal_sign (EIP-191), or null */
-export function recoverSigner(message: string, signature: string): string | null {
-  try {
-    if (!/^0x[0-9a-fA-F]{130}$/.test(signature)) return null;
-    const msg = new TextEncoder().encode(message);
-    const prefix = new TextEncoder().encode(`\x19Ethereum Signed Message:\n${msg.length}`);
-    const both = new Uint8Array(prefix.length + msg.length);
-    both.set(prefix);
-    both.set(msg, prefix.length);
-    const hash = keccak_256(both);
-    const sig = hexToBytes(signature.slice(2));
-    let v = sig[64];
-    if (v >= 27) v -= 27;
-    if (v > 1) return null;
-    // noble's "recovered" layout is the recovery bit first, then r and s
-    const rec = new Uint8Array(65);
-    rec[0] = v;
-    rec.set(sig.subarray(0, 64), 1);
-    const pub = secp256k1.Point.fromBytes(secp256k1.recoverPublicKey(rec, hash, { prehash: false })).toBytes(false);
-    return `0x${bytesToHex(keccak_256(pub.subarray(1)).subarray(12))}`;
-  } catch {
-    return null;
-  }
-}
 
 export class Land extends DurableObject<Env> {
   private plots: Map<string, LandPlot> | null = null;
@@ -132,14 +101,19 @@ export class Land extends DurableObject<Env> {
       const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
       if (!body) return fail(400, 'Expected JSON');
       if (path === '/land/claim') return this.limited(req, 'claim', 12) ? fail(429, 'Slow down') : this.claim(body);
-      if (path === '/land/nonce') return this.limited(req, 'nonce', 20) ? fail(429, 'Slow down') : this.nonce(body, req.headers.get('Origin') ?? '');
-      if (path === '/land/session') return this.limited(req, 'session', 20) ? fail(429, 'Slow down') : this.session(body);
       if (path === '/land/design') return this.limited(req, 'design', 40) ? fail(429, 'Slow down') : this.design(body, req.headers.get('Authorization') ?? '');
       return fail(404, 'Not found');
     } catch (e) {
       console.error('land', e);
       return fail(500, 'Something went wrong');
     }
+  }
+
+  /** The plots a wallet owns on this network (the account's profile, accounts.ts) */
+  async ownedBy(address: string): Promise<string[]> {
+    const { plots } = await this.load();
+    const a = address.toLowerCase();
+    return [...plots].filter(([, p]) => p.owner === a).map(([id]) => id);
   }
 
   private async state(): Promise<LandState> {
@@ -255,46 +229,11 @@ export class Land extends DurableObject<Env> {
     await this.settle(c, 'owned', { owner: from });
   }
 
-  /** Step 1 of signing in: the exact message for the wallet to sign */
-  private async nonce(body: Record<string, unknown>, origin: string) {
-    if (!isAddress(body.address)) return fail(400, 'Not a wallet address');
-    const { chain } = this.cfg();
-    const nonce = randomHex(12);
-    const message = signInMessage({ origin, address: body.address, chain, nonce, issued: new Date().toISOString() });
-    await this.ctx.storage.put(`nonce:${nonce}`, { address: body.address.toLowerCase(), message, exp: Date.now() + NONCE_TTL });
-    return json({ nonce, message });
-  }
-
-  /** Step 2: the signed message, for a session token */
-  private async session(body: Record<string, unknown>) {
-    const nonce = String(body.nonce ?? '');
-    if (!/^[0-9a-f]{24}$/.test(nonce)) return fail(400, 'Bad sign-in');
-    const n = await this.ctx.storage.get<{ address: string; message: string; exp: number }>(`nonce:${nonce}`);
-    await this.ctx.storage.delete(`nonce:${nonce}`);
-    if (!n || n.exp < Date.now()) return fail(401, 'Sign-in expired, try again');
-    const signer = recoverSigner(n.message, String(body.signature ?? ''));
-    if (signer !== n.address) return fail(401, "That signature isn't from this wallet");
-    const token = randomHex(32);
-    await this.ctx.storage.put(`session:${token}`, { address: n.address, exp: Date.now() + SESSION_TTL });
-    return json({ token, address: n.address });
-  }
-
-  private async who(auth: string) {
-    const token = /^Bearer ([0-9a-f]{64})$/.exec(auth)?.[1];
-    if (!token) return null;
-    const s = await this.ctx.storage.get<{ address: string; exp: number }>(`session:${token}`);
-    if (!s) return null;
-    if (s.exp < Date.now()) {
-      await this.ctx.storage.delete(`session:${token}`);
-      return null;
-    }
-    return s.address;
-  }
-
   /** An owner changes (or clears, with design: null) the building on their plot */
   private async design(body: Record<string, unknown>, auth: string) {
-    const address = await this.who(auth);
-    if (!address) return fail(401, 'Sign in with your wallet first');
+    const token = /^Bearer ([0-9a-f]{64})$/.exec(auth)?.[1];
+    const address = token ? ((await this.env.ACCOUNTS.get(this.env.ACCOUNTS.idFromName('main')).check(token)) as string | null) : null;
+    if (!address) return fail(401, 'Log in with your wallet first');
     const plot = String(body.plot ?? '');
     const { plots } = await this.load();
     const p = plots.get(plot);

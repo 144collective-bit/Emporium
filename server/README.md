@@ -9,7 +9,8 @@ with four kinds of Durable Object. The same Worker also serves the website
 | `src/index.ts` | The Worker: `/health`, and `/play` (WebSocket) which asks the Lobby for a city and hands the connection to it. Only pages in `ALLOWED_ORIGINS` (wrangler.jsonc) can connect. |
 | `src/lobby.ts` | One for the whole game: picks a city with a free spot (16 players each; "City 2" opens when "City 1" is full). |
 | `src/room.ts` | One per city: runs the shared combat rules (`src/scripts/city3d/combat-sim.ts`) at 60 Hz, checks movement and shots, sends positions 15 times a second, relays emotes and fixed phrases, banks points in profiles. |
-| `src/profile.ts` | One per player: guest name, wardrobe look, rifle finish, lifetime score (rank comes from the score). Addressed by a hash of the browser's secret guest token. |
+| `src/profile.ts` | One per player: player name, wardrobe look, rifle finish, lifetime score (rank comes from the score). Addressed by a hash of the browser's secret guest token, or of the wallet address once logged in (`src/keys.ts`). |
+| `src/accounts.ts` | One for the game: logging in with a wallet (`/auth/nonce`, `/auth/session`, `/auth/me`, `/auth/rename`, `/auth/logout`). The wallet signs a one-time message (no gas); the session token (30 days, only its hash stored) opens the wallet's profile in the rooms and lets owners build. |
 | `src/land.ts` | One for the city: plot sales and buildings (`/land`). Checks each payment on PulseChain, records owners, refunds due and every owner's building. |
 
 Shared with the site (bundled in): `src/scripts/net/` (protocol, names, ranks,

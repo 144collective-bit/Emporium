@@ -40,6 +40,7 @@ import {
 } from '../../src/scripts/net/protocol';
 import type { Env } from './index';
 import type { Profile } from './profile';
+import { guestKey, walletKey } from './keys';
 
 const LOOP_HZ = 30;
 /** Silent this long: left out of snapshots, and free to reappear anywhere */
@@ -80,10 +81,6 @@ const send = (ws: WebSocket, msg: ServerMsg) => {
   }
 };
 
-async function sha256(s: string) {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
-  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
-}
 
 const clamp = (n: number, a: number, b: number) => Math.min(b, Math.max(a, n));
 const finite = (...n: unknown[]) => n.every((x) => typeof x === 'number' && Number.isFinite(x));
@@ -146,10 +143,12 @@ export class Room extends DurableObject<Env> {
       ws.close(4004, 'Bad token');
       return null;
     }
-    const key = await sha256(msg.token);
+    // Logged in with a wallet: that wallet's profile; otherwise this browser's guest profile
+    const wallet = msg.auth ? ((await this.env.ACCOUNTS.get(this.env.ACCOUNTS.idFromName('main')).check(msg.auth)) as string | null) : null;
+    const key = wallet ? await walletKey(wallet) : await guestKey(msg.token);
     if (!this.makeRoom(ws, key)) return null;
     const profile = this.env.PROFILES.get(this.env.PROFILES.idFromName(key));
-    const me = (await profile.open(msg.local)) as OwnProfile;
+    const me = (await (wallet ? profile.open(undefined, wallet) : profile.open(msg.local))) as OwnProfile;
     if (ws.readyState !== 1) return null;
     // Checked again: someone (or this same person in another tab) may have joined while the profile loaded
     if (!this.makeRoom(ws, key)) return null;

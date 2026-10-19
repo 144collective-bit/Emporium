@@ -252,8 +252,9 @@ it and has been retired completely. Build only on what's here.
     the price, success, `LAND_CONFIRMATIONS` deep, under a day old, used once.
     The sender becomes the owner. A late or short payment is stored and logged
     as `LAND REFUND DUE` for a manual refund.
-  - Owners sign a short message (no gas) once per session to change their
-    building; the server checks every design with `cleanDesign()`.
+  - Owners log in with their wallet (below: one signed message, no gas) to
+    change their building; the server checks every design with
+    `cleanDesign()`.
   - Everyone sees every owner's building.
   - No private keys anywhere; only the owner's public receiving address
     (`LAND_PAYEE`) is configured.
@@ -291,10 +292,27 @@ it and has been retired completely. Build only on what's here.
   and emotes / phrases from the fixed lists in `profile-data.ts`. Review any
   new words or phrases for the content rules below (no token details, no
   financial talk). The server re-checks every value players send.
-- Player profiles: guest name (reroll), wardrobe look, rifle finish,
-  lifetime score and rank, stored on the server against a hash of the
-  browser's guest token (`degen-city-player-v1`). Offline, the Profile panel
+- Player profiles: player name (from the word lists, reroll), wardrobe look,
+  rifle finish, lifetime score and rank, stored on the server against a hash
+  of the browser's guest token (`degen-city-player-v1`), or of the wallet
+  address once logged in (`server/src/keys.ts`). Offline, the Profile panel
   keeps the look and finish in the browser.
+- **Log in with a wallet** (`account.ts`, `account-ui.ts`; server
+  `server/src/accounts.ts`, the `Accounts` Durable Object, `/auth/*`): the
+  wallet signs `signInMessage()` with a one-time nonce (personal_sign, no
+  transaction, no gas); the server recovers the signer and issues a 30-day
+  session token (only its hash is stored; the browser keeps it as
+  `degen-city-account-v1`). One login covers everything: the room opens the
+  wallet's own profile (the token rides in `hello`), and `/land/design`
+  checks it. A wallet's first login starts a fresh profile (no guest score,
+  name or look carried over), and its look never overwrites the browser's
+  own guest look. The **Log in** button sits in the site header (`.nav-account`,
+  only on the city page with a game server) and in the walk Profile tab
+  (`[data-account-open]`); both open the profile card (`[data-account]`):
+  player name, rank, lifetime score, the wallet (short) and network, and the
+  plots it owns (each jumps to Build mode), with New name and Log out. Only
+  the visitor sees their own address; other players only see the player
+  name. Logging in needs the city Online.
 - The site only shows the Online pill and the Online / Offline switch when
   built with `PUBLIC_GAME_SERVER` (set by the Worker's build). Only pages in
   `ALLOWED_ORIGINS`

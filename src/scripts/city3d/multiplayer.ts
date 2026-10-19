@@ -18,7 +18,7 @@
 import * as THREE from 'three';
 import { createNetClient, type NetState } from '../net/client';
 import { EMOTES, PHRASES, RANKS } from '../net/profile-data';
-import { FLAG, INPUT_HZ, v3, type ServerMsg } from '../net/protocol';
+import { FLAG, INPUT_HZ, v3, type OwnProfile, type ServerMsg } from '../net/protocol';
 import type { Combat } from './combat';
 import type { ProfileUI } from './profile-ui';
 import { createRemotes } from './remote';
@@ -46,6 +46,8 @@ export interface MultiplayerDeps {
   setSwitch(online: boolean): void;
   /** Connection, room or player count changed (the switch's status) */
   changed(s: { state: NetState; room: string; players: number }): void;
+  /** Logged in with a wallet (account.ts): its session token, sent when joining so the wallet's profile opens */
+  account: { readonly token: string | null; subscribe(f: () => void): void; profileChanged(p: OwnProfile): void };
 }
 
 export function createMultiplayer(d: MultiplayerDeps) {
@@ -62,7 +64,7 @@ export function createMultiplayer(d: MultiplayerDeps) {
   const toastEl = $('[data-mp-toast]');
   panel.hidden = false;
 
-  const net = createNetClient(d.url);
+  const net = createNetClient(d.url, () => d.account.token);
   const remotes = createRemotes(d.scene, camera, $('[data-mp-tags]'));
   let myId = 0;
   let room = '';
@@ -153,6 +155,7 @@ export function createMultiplayer(d: MultiplayerDeps) {
         combat.setNet({ send: (msg) => net.send(msg) }, (skin) => net.send({ t: 'skin', skin }));
         combat.setNetProfile(m.profile);
         profile.setOnline(m.profile);
+        d.account.profileChanged(m.profile);
         paintState('online');
         toast(`Welcome, ${m.profile.name}`);
         break;
@@ -175,6 +178,7 @@ export function createMultiplayer(d: MultiplayerDeps) {
       case 'you':
         combat.setNetProfile(m.profile);
         profile.setOnline(m.profile);
+        d.account.profileChanged(m.profile);
         break;
       case 'snap':
         remotes.snapshot(m.pt, m.p.filter((r) => r[0] !== myId));
@@ -200,6 +204,15 @@ export function createMultiplayer(d: MultiplayerDeps) {
   /* ----- Buttons ----- */
   const connect = () => net.connect({ total: Math.floor(combat.lifetime), skin: combat.skin });
   const idle = () => net.state === 'off' || net.state === 'full' || net.state === 'error';
+  // Logged in or out while in a city: rejoin, so the right profile (wallet or guest) opens
+  let token = d.account.token;
+  d.account.subscribe(() => {
+    if (d.account.token === token) return;
+    token = d.account.token;
+    if (idle()) return;
+    net.disconnect();
+    if (enabled && walk.active) connect();
+  });
   joinBtn.addEventListener('click', () => {
     if (!idle()) d.setSwitch(false);
     else if (!enabled) d.setSwitch(true);
@@ -259,6 +272,12 @@ export function createMultiplayer(d: MultiplayerDeps) {
     walkChanged(walking: boolean) {
       if (walking && enabled && idle()) connect();
       else if (!walking && net.state !== 'off') net.disconnect();
+    },
+    /** A new player name through the room (everyone sees it); false when not in a city */
+    rename() {
+      if (!online()) return false;
+      net.send({ t: 'rename' });
+      return true;
     },
     /** The Online / Offline switch moved */
     setEnabled(on: boolean) {

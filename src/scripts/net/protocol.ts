@@ -34,8 +34,8 @@ export const v3 = (v: { x: number; y: number; z: number }): V3 => [r2(v.x), r2(v
 /* ---------- Browser to server ---------- */
 
 export type ClientMsg =
-  /** First message: the browser's secret guest token (only its hash is stored) */
-  | { t: 'hello'; v: number; token: string; local?: { total: number; skin: SkinId } }
+  /** First message: the browser's secret guest token (only its hash is stored), and the wallet login's session token if logged in */
+  | { t: 'hello'; v: number; token: string; auth?: string; local?: { total: number; skin: SkinId } }
   /** Controls, ~20 a second: position, facing, camera pitch, speed, flags, and the shot ray */
   | { t: 'in'; p: V3; f: number; k: number; s: number; fl: number; o: V3; d: V3; pt: number }
   /** Take a gun at the Armoury's store counter (refills every gun) */
@@ -64,7 +64,8 @@ export interface PlayerInfo {
   /** The gun they carry (or last took from the store) */
   weapon: WeaponId;
 }
-export type OwnProfile = PublicProfile & { rank: string };
+/** `wallet`: logged in with this wallet (wallet profiles only); `since`: when the profile was made (ms) */
+export type OwnProfile = PublicProfile & { rank: string; wallet?: string; since?: number };
 
 /** id, x, y, z, facing, camera pitch, speed, flags */
 export type SnapRow = [number, number, number, number, number, number, number, number];

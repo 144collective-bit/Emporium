@@ -1,6 +1,7 @@
 /*
  * A player's profile: one Durable Object per player, addressed by the hash of
- * their browser's secret guest token. Holds the guest name, wardrobe look,
+ * their browser's secret guest token, or of their wallet address once they
+ * log in with a wallet (keys.ts). Holds the player name, wardrobe look,
  * rifle finish and lifetime score; the rank comes from the score.
  *
  * Everything that comes in is checked against the shared lists in
@@ -18,6 +19,8 @@ interface Stored {
   skin: SkinId;
   total: number;
   weapon?: WeaponId;
+  /** The wallet this profile belongs to (wallet profiles only) */
+  wallet?: string;
   created: number;
   seen: number;
 }
@@ -36,18 +39,21 @@ export class Profile extends DurableObject<Env> {
   private view(p: Stored): OwnProfile {
     const weapon = weaponUnlocked(p.weapon, p.total) ? p.weapon! : 'rifle';
     // Cleaned on the way out too: looks saved by an older version get today's fields
-    return { name: p.name, look: cleanLook(p.look), skin: p.skin, total: Math.floor(p.total), rank: rankFor(p.total).id, weapon };
+    return { name: p.name, look: cleanLook(p.look), skin: p.skin, total: Math.floor(p.total), rank: rankFor(p.total).id, weapon, wallet: p.wallet, since: p.created };
   }
 
-  /** Load the profile, making it on first visit (bringing the browser's own score along, up to a cap) */
-  async open(local?: { total?: unknown; skin?: unknown }): Promise<OwnProfile> {
+  /**
+   * Load the profile, making it on first visit. A guest profile brings the
+   * browser's own score along (up to a cap); a wallet's profile starts fresh.
+   */
+  async open(local?: { total?: unknown; skin?: unknown }, wallet?: string): Promise<OwnProfile> {
     let p = await this.load();
     const now = Date.now();
     if (!p) {
       const t = Number(local?.total);
       const total = Number.isFinite(t) ? Math.min(IMPORT_CAP, Math.max(0, Math.floor(t))) : 0;
       const skin = typeof local?.skin === 'string' && skinUnlocked(local.skin as SkinId, total) ? (local.skin as SkinId) : 'olive';
-      p = { name: guestName(Math.random), look: { ...DEFAULT_LOOK }, skin, total, created: now, seen: now };
+      p = wallet ? { name: guestName(Math.random), look: { ...DEFAULT_LOOK }, skin: 'olive', total: 0, wallet, created: now, seen: now } : { name: guestName(Math.random), look: { ...DEFAULT_LOOK }, skin, total, created: now, seen: now };
     }
     p.seen = now;
     await this.save(p);

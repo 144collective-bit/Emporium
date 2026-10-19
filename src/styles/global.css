@@ -310,6 +310,49 @@ a {
   background: var(--pulse-diag);
   border-color: #0000;
 }
+/* Log in with a wallet / your profile (account-ui.ts; city page with a game server only) */
+.nav-account {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 190px;
+  height: 36px;
+  padding: 0 14px 0 11px;
+  border: 1px solid #0000;
+  border-radius: 999px;
+  background:
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.nav-account[hidden] {
+  display: none;
+}
+.nav-account svg {
+  flex: none;
+  color: var(--p-cyan);
+}
+.nav-account-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nav-account.is-in {
+  background:
+    var(--pulse-wash) padding-box,
+    linear-gradient(#14102a, #14102a) padding-box,
+    var(--pulse) border-box;
+}
+.nav-account:focus-visible {
+  outline: 2px solid var(--p-cyan);
+  outline-offset: 2px;
+}
 
 /* ==========================================================================
    Comic page (desktop)
@@ -2404,6 +2447,51 @@ body.is-walking .nav {
 .builder-modal-body {
   display: contents;
 }
+/* The profile card (account-ui.ts) */
+.account-modal {
+  z-index: 9;
+}
+.account-name {
+  overflow-wrap: anywhere;
+}
+.account-facts dd small {
+  white-space: nowrap;
+}
+.account-addr {
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+.account-plots-head {
+  width: 100%;
+}
+.account-plots {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.account-plots li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+}
+.account-plots .chip-link {
+  cursor: pointer;
+}
+.account-error {
+  margin: 0;
+  font-size: 13px;
+  color: #ff8a8a;
+}
+.account-modal .builder-modal-card {
+  max-height: calc(100% - 32px);
+  overflow-y: auto;
+}
 .builder-modal-card .city-panel-close[hidden] {
   display: none;
 }
@@ -3545,11 +3633,32 @@ body.is-walking .nav {
     white-space: nowrap;
   }
 }
+@media (max-width: 640px) {
+  .nav-account {
+    max-width: 132px;
+    padding: 0 12px 0 10px;
+  }
+}
 @media (max-width: 360px) {
   .icon-link,
   .chain-badge {
     width: 32px;
     height: 32px;
+  }
+  /* The narrowest phones: the profile button is just its icon (the label stays for screen readers) */
+  .nav-account {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    justify-content: center;
+  }
+  .nav-account-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 }
 @media (prefers-reduced-motion: reduce) {

@@ -8,18 +8,19 @@
  * localStorage so a closed tab doesn't lose it: the claim is sent again on
  * the next visit.
  *
- * Building: the owner signs a short message once (no gas) for a session,
- * then each change is saved on the server for every visitor to see.
+ * Building: the owner logs in with their wallet (account.ts: one signed
+ * message, no gas), then each change is saved on the server for every
+ * visitor to see.
  */
 import { PLOT_PRICE, type Design } from '../../data/plots';
 import { CHAINS, plsToWei, type ClaimStatus, type LandState } from '../net/land';
 import type { PlotState } from './plots';
+import type { Account } from './account';
 import type { Network, PlotRecord, Store, Wallet } from './store';
-import { balanceOf, ensureChain, findWallets, knownAccount, onWalletChange, pay, requestAccount, signMessage, walletError, type WalletInfo } from './wallet';
+import { balanceOf, ensureChain, findWallets, knownAccount, onWalletChange, pay, requestAccount, walletError, type WalletInfo } from './wallet';
 
 const PENDING_KEY = 'degen-city-land-pending';
 const WALLET_KEY = 'degen-city-land-wallet';
-const SESSION_KEY = 'degen-city-land-session';
 const REFRESH = 30_000;
 const POLL = 4_000;
 
@@ -40,7 +41,7 @@ const write = (store: Storage, key: string, v: unknown) => {
 };
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-export function createLandStore(server: string): Store {
+export function createLandStore(server: string, account: Account): Store {
   const base = server.replace(/\/$/, '').replace(/^ws/, 'http');
   let land: LandState | null = null;
   let wallet: Wallet | null = null;
@@ -88,7 +89,6 @@ export function createLandStore(server: string): Store {
           changed();
         } else if (accounts?.[0] && wallet && accounts[0].toLowerCase() !== wallet.address) {
           wallet = { address: accounts[0].toLowerCase(), balance: 0 };
-          write(sessionStorage, SESSION_KEY, null);
           updateBalance();
         } else updateBalance();
       });
@@ -144,20 +144,10 @@ export function createLandStore(server: string): Store {
   refresh();
   setInterval(() => active && document.visibilityState === 'visible' && refresh(), REFRESH);
 
+  /** Logged in with the connected wallet (account.ts), asking it to sign only if it isn't yet */
   async function session(): Promise<string> {
     if (!wallet || !current) throw new Error('Connect your wallet first.');
-    const saved = read<{ token: string; address: string } | null>(sessionStorage, SESSION_KEY, null);
-    if (saved?.address === wallet.address) return saved.token;
-    const { nonce, message } = await api<{ nonce: string; message: string }>('/land/nonce', { method: 'POST', body: JSON.stringify({ address: wallet.address }) });
-    let signature: string;
-    try {
-      signature = await signMessage(current, wallet.address, message);
-    } catch (e) {
-      throw new Error(walletError(e));
-    }
-    const { token } = await api<{ token: string }>('/land/session', { method: 'POST', body: JSON.stringify({ nonce, signature }) });
-    write(sessionStorage, SESSION_KEY, { token, address: wallet.address });
-    return token;
+    return account.tokenFor(current, wallet.address);
   }
 
   async function saveDesign(id: string, design: Design | null) {
@@ -169,9 +159,9 @@ export function createLandStore(server: string): Store {
         changed();
         return;
       } catch (e) {
-        // An expired session: sign in again once
+        // An expired login: log in again once
         if ((e as { status?: number }).status !== 401 || attempt) throw e;
-        write(sessionStorage, SESSION_KEY, null);
+        account.expired();
       }
     }
   }
@@ -238,7 +228,6 @@ export function createLandStore(server: string): Store {
       wallet = null;
       current = null;
       write(localStorage, WALLET_KEY, null);
-      write(sessionStorage, SESSION_KEY, null);
       changed();
     },
     async buy(plot, onStep) {

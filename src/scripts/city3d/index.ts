@@ -18,6 +18,8 @@ import { createSound } from './sound';
 import { createPlots, type Plot } from './plots';
 import { createDemoStore, createSwitchStore } from './store';
 import { createOnlineSwitch } from './online';
+import { createAccount } from './account';
+import { createAccountUI, type AccountUI } from './account-ui';
 import { createLandStore } from './land';
 import { createBuilderUI } from './builder-ui';
 import { createFitting, type Fitting } from './fitting';
@@ -255,7 +257,10 @@ export async function bootCity(root: HTMLElement) {
   // A game server adds the Online / Offline switch: online, real sales (land.ts); offline or without one, the labelled demo
   const server = import.meta.env.PUBLIC_GAME_SERVER as string | undefined;
   const onlineSwitch = server ? createOnlineSwitch(root) : null;
-  const sales = server && onlineSwitch ? createSwitchStore(() => createLandStore(server), onlineSwitch.on) : null;
+  // Logging in with a wallet (account.ts): the player's profile, and building on their plots
+  const account = server ? createAccount(server) : null;
+  if (account && onlineSwitch?.on) account.refresh();
+  const sales = server && onlineSwitch && account ? createSwitchStore(() => createLandStore(server, account), onlineSwitch.on) : null;
   const builder = createBuilderUI(root, {
     store: sales?.store ?? createDemoStore(),
     plots,
@@ -319,11 +324,27 @@ export async function bootCity(root: HTMLElement) {
           enabled: onlineSwitch.on,
           setSwitch: (on) => onlineSwitch.set(on),
           changed: (s) => onlineSwitch.status(s),
+          account: account!,
+        })
+      : null;
+  const accountUI: AccountUI | null =
+    account && onlineSwitch
+      ? createAccountUI(root, {
+          account,
+          online: () => onlineSwitch.on,
+          goOnline: () => onlineSwitch.set(true),
+          rename: () => (mp?.rename() ? undefined : account.rename()),
+          showPlot(id) {
+            builder.setBuild(true);
+            builder.select(id);
+          },
+          opened: () => walking && walk.releaseMouse(),
         })
       : null;
   onlineSwitch?.onChange((on) => {
     sales?.setOnline(on);
     mp?.setEnabled(on);
+    accountUI?.refresh();
   });
   const walkBtn = root.querySelector<HTMLButtonElement>('[data-walk-toggle]')!;
   let beforeWalk: { pos: THREE.Vector3; target: THREE.Vector3 } | null = null;
@@ -383,7 +404,9 @@ export async function bootCity(root: HTMLElement) {
   };
   // On the document, not the city: re-rendered panels drop focus back to <body>
   document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && accountUI?.close()) return;
     if (root.dataset.view !== '3d') return;
+    if (accountUI?.isOpen) return;
     if (walking) {
       if (e.key === 'Escape') {
         if (walk.closeShop() || walk.releaseMouse() || closePop()) return;

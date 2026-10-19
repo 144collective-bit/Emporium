@@ -208,8 +208,14 @@ The choice is remembered in the browser. **Go online** / **Leave** in the
 Online pill while walking flip the same switch.
 
 - Up to 16 players share a city; more cities open as they fill.
-- Everyone gets a generated guest name (reroll it in **Profile**), shown on a
-  name tag with a rank badge from their lifetime score.
+- Everyone gets a generated player name (reroll it in **Profile**), shown on
+  a name tag with a rank badge from their lifetime score.
+- **Log in** (top of the page, or **Profile** while walking): sign a short
+  message with your PulseChain wallet (no transaction, no gas) and your
+  player profile belongs to that wallet, so it follows you to any browser or
+  phone. A wallet's first login starts a fresh profile. The profile card
+  shows your name, rank, lifetime score, wallet and the plots you own (tap
+  one to see it in Build mode).
 - **Profile**: your name, rank, lifetime score and rifle finish, and a way
   into the fitting room. Online it's saved on the server and follows you;
   offline your look and finish are kept in this browser.
@@ -311,7 +317,9 @@ the draft note whenever the card is hidden. Every menu and card closes with its
 | `server/` | The multiplayer game server (Cloudflare Worker + Durable Objects) |
 | `src/scripts/city3d/plots.ts` | The large plots, build-mode overlay, the eight buildings |
 | `src/scripts/city3d/store.ts` | The builder's `Store` interface, and the demo (simulated wallet, play money) |
-| `src/scripts/city3d/land.ts` | Real sales: wallet payments, the server's list of owners, signing in to build |
+| `src/scripts/city3d/land.ts` | Real sales: wallet payments, the server's list of owners, building (with the wallet login) |
+| `src/scripts/city3d/account.ts` | Log in with a wallet: the signed message, the session, the basic profile |
+| `src/scripts/city3d/account-ui.ts` | The Log in button and the profile card (name, rank, score, wallet, plots) |
 | `src/scripts/city3d/wallet.ts` | The visitor's PulseChain wallet (EIP-1193 / EIP-6963) |
 | `src/scripts/net/land.ts` | Shared with the server: networks, land API shapes, sign-in message |
 | `src/scripts/city3d/builder-ui.ts` | Build mode: wallet chip, plot panel, customiser, purchase dialog |

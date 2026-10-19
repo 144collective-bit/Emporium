@@ -178,7 +178,7 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
           <button type="button" class="btn-pulse" data-place ${saving ? 'disabled' : ''}>${saving ? 'Saving…' : rec.design ? 'Save changes' : 'Place building'}</button>
           <button type="button" class="chip-link" data-back>Back</button>
         </div>
-        ${live ? '<p class="city-panel-fine">The first change in a visit asks your wallet to sign in: free, no gas, no transaction.</p>' : ''}`;
+        ${live ? '<p class="city-panel-fine">Not logged in with this wallet yet? The first change asks it to sign a short message to log in: free, no gas, no transaction.</p>' : ''}`;
       return;
     }
 
@@ -364,7 +364,7 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
     if (saving) return;
     saving = true;
     renderPanel();
-    if (live && design) toast('Saving… your wallet may ask you to sign in (free, no gas).');
+    if (live && design) toast('Saving… your wallet may ask you to log in (free, no gas).');
     try {
       const isNew = !store.get(id)?.design;
       if (design) await store.build(id, design);

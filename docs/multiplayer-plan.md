@@ -12,7 +12,7 @@ clearly labelled. This file is the reference; update it as decisions change.
 | Border | The bridges. Crossing the middle shows a "PvP zone" banner and a red edge glow; the north side is always safe. Respawn at the south bridgeheads. |
 | PvP rules | 100 health, regen after a few seconds without damage, cartoon knock-out (no gore), respawn after 3 s with brief spawn protection, kill feed ("tagged"). |
 | Room size | Up to 16 players per city; more cities ("City 1", "City 2"…) open automatically. |
-| Identity | Generated guest name now (vetted word lists, rerollable), wallet sign-in once the real wallet exists. |
+| Identity | Generated player names (vetted word lists, rerollable). Guests keep a profile per browser; logging in with a wallet (one signed message, no gas) gives a profile per wallet that follows the player to any browser. A wallet's first login starts fresh. |
 | Chat | Emote wheel and fixed phrases only. Nothing typed ever appears in public. Players can mute others. |
 | What others see | Outfit and colours, the gun they carry and its finish, name tag, rank badge. |
 | Saved | Server-side player profiles (name, outfit, finish, lifetime score, rank); daily and weekly leaderboards (no prizes). |
@@ -76,7 +76,10 @@ Visitor's browser                         Cloudflare (server/)
      for 20,000,000 PLS. A buyer's wallet pays the owner's wallet directly;
      the server checks the payment on PulseChain (testnet first, mainnet when
      the owner switches) and records the owner and their building for
-     everyone. Owners sign in with their wallet (no gas) to build.
+     everyone. Owners log in with their wallet (no gas) to build.
+   - Log in with a wallet (the `Accounts` Durable Object): a basic profile
+     per wallet (name, rank, score, wallet, plots owned), used by the game
+     rooms and plot building alike.
 2. **Leaderboards**: daily and weekly boards (target practice now, PvP
    later) in the Controls panel and on a board in the city.
 3. **South bank PvP**: design and build the neon arena and junkyard / skate
