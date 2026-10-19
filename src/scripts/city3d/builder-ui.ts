@@ -30,7 +30,10 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
   let live = store.mode === 'live';
   const $ = <T extends HTMLElement>(sel: string) => root.querySelector<T>(sel)!;
   const toggle = $<HTMLButtonElement>('[data-build-toggle]');
-  const bar = $('[data-builder-bar]');
+  // The Wallet button in the city header (a drop-down while building)
+  const bar = $<HTMLDetailsElement>('[data-builder-bar]');
+  const walletLabel = $('[data-wallet-label]');
+  const walletDot = $('[data-wallet-dot]');
   const walletEl = $('[data-wallet]');
   const panel = $('[data-plot-panel]');
   const body = $('[data-plot-body]');
@@ -69,6 +72,10 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
     walletEl.innerHTML = w
       ? `<span class="wallet-dot" aria-hidden="true"></span><span class="wallet-addr">${shortAddr(w.address)}</span><span class="wallet-bal">${pls(w.balance)}</span>${net}<button type="button" class="wallet-off" data-disconnect aria-label="Disconnect wallet">×</button>`
       : `<button type="button" class="btn-pulse btn-sm" data-connect ${connecting ? 'disabled' : ''}>${connecting ? 'Connecting…' : live ? 'Connect wallet' : 'Connect demo wallet'}</button>${net}`;
+    // The header button: the address once connected
+    walletLabel.textContent = w ? shortAddr(w.address) : 'Wallet';
+    walletDot.hidden = !w;
+    bar.querySelector('summary')!.setAttribute('aria-label', w ? `Wallet ${shortAddr(w.address)}` : 'Wallet');
     panelNote.textContent = tagline();
     root.dataset.sales = !live ? 'demo' : store.network?.testnet ? 'testnet' : 'live';
     $('[data-builder-reset]').hidden = live;
@@ -460,6 +467,7 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
     root.dataset.mode = on ? 'build' : 'explore';
     toggle.setAttribute('aria-pressed', String(on));
     bar.hidden = !on;
+    if (!on) bar.open = false;
     plots.setOverlay(on);
     if (!on) {
       if (draft) cancelDraft();

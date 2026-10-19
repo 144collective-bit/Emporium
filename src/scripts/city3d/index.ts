@@ -395,7 +395,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // Esc closes an open drop-open menu (walk panels, City settings, Directory) before it closes
   // a panel or leaves a mode
   const closePop = () => {
-    const open = root.querySelector<HTMLDetailsElement>('[data-pop][open], .city-controls[open], .city-dir[open]');
+    const open = root.querySelector<HTMLDetailsElement>('[data-pop][open], .head-pop[open]');
     if (!open) return false;
     open.open = false;
     open.querySelector('summary')?.focus({ preventScroll: true });

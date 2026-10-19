@@ -1432,16 +1432,17 @@ body.is-walking .nav {
   50% { transform: translateY(-8px); }
 }
 
-/* Overlay: welcome card and directory */
+/* Overlay: the first-visit tip under the header, and the draft tag in the corner */
 .city-hud {
   position: absolute;
-  left: 20px;
-  right: 20px;
-  bottom: 20px;
+  top: calc(var(--head-h) + 12px);
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
   z-index: 2;
   display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
+  flex-direction: column;
+  align-items: flex-start;
   gap: 12px;
   pointer-events: none;
 }
@@ -1458,24 +1459,35 @@ body.is-walking .nav {
   backdrop-filter: blur(10px);
 }
 .city-card {
-  max-width: 360px;
-  padding: 16px 18px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 780px;
+  padding: 7px 7px 7px 12px;
+  border-radius: 14px;
+}
+.city-card .kicker {
+  flex: none;
+  margin: 0;
 }
 .city-title {
-  margin: 8px 0 6px;
+  flex: none;
+  margin: 0;
   font-family: var(--font-display);
-  font-size: clamp(30px, 3vw, 42px);
+  font-size: 18px;
   font-weight: 900;
-  line-height: 0.92;
+  line-height: 1;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 .city-hint {
-  font-size: 14px;
-  line-height: 1.45;
+  font-size: 13px;
+  line-height: 1.35;
   color: var(--text-2);
 }
 .city-draft {
-  margin-top: 10px;
+  flex: none;
+  white-space: nowrap;
   font-family: var(--font-mono);
   font-size: 10.5px;
   letter-spacing: 0.14em;
@@ -2164,6 +2176,42 @@ body.is-walking .nav {
   font-size: 11px;
   box-shadow: none;
 }
+/* The mode you're in: lit up with a glow and an underline; the others step back */
+.city-head .city-mode-btn {
+  position: relative;
+  color: #ffffffa8;
+  transition: color 0.2s, opacity 0.2s, box-shadow 0.2s;
+}
+.city-head .city-mode-btn:not([aria-pressed="true"]) {
+  opacity: 0.72;
+}
+.city-head .city-mode-btn:not([aria-pressed="true"]):hover {
+  opacity: 1;
+  color: #fff;
+}
+.city-head .city-mode-btn[aria-pressed="true"] {
+  color: #fff;
+  background:
+    var(--pulse-wash) padding-box,
+    linear-gradient(#1d1340, #1d1340) padding-box,
+    var(--pulse) border-box;
+  box-shadow: 0 0 20px -4px #e219e5bb, inset 0 0 14px -6px #00eaffaa;
+}
+.city-head .city-mode-btn[aria-pressed="true"] svg {
+  color: #fff;
+  filter: drop-shadow(0 0 4px #00eaff);
+}
+.city-head .city-mode-btn[aria-pressed="true"]::after {
+  content: "";
+  position: absolute;
+  right: 22%;
+  bottom: -6px;
+  left: 22%;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--pulse);
+  box-shadow: 0 0 8px #e219e5;
+}
 /* Settings (the city's time, weather, sound, view) and the menu (directory and links) */
 .city-head-tools {
   order: 6;
@@ -2314,34 +2362,26 @@ body.is-walking .nav {
 .city[data-mode="build"] .city-panel:not(.builder-panel) {
   display: none;
 }
-.builder-bar {
-  position: absolute;
-  top: calc(var(--head-h) + 12px);
-  left: 16px;
-  z-index: 4;
-  display: grid;
-  gap: 8px;
-  max-width: min(330px, calc(100% - 32px));
-  padding: 12px 14px;
-  border: 1px solid #0000;
-  border-radius: 8px;
-  background:
-    linear-gradient(#0b0a12eb, #0b0a12eb) padding-box,
-    var(--pulse) border-box;
-  box-shadow: 0 18px 50px -20px #000;
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
-}
-.builder-bar[hidden],
+.builder-pop[hidden],
 .builder-modal[hidden] {
   display: none;
 }
-.builder-bar .chip-link {
+.builder-pop .chip-link {
   justify-self: start;
   cursor: pointer;
 }
-.builder-bar .chip-link[hidden] {
+.builder-pop .chip-link[hidden] {
   display: none;
+}
+/* The header's Wallet button: a green dot once connected */
+.city-head .builder-pop > summary .wallet-dot {
+  flex: none;
+}
+.city-head .builder-pop > summary .wallet-dot[hidden] {
+  display: none;
+}
+.builder-wallet-panel {
+  min-width: 300px;
 }
 .builder-wallet {
   display: flex;
@@ -3502,21 +3542,13 @@ body.is-walking .nav {
   display: none;
 }
 /* The welcome card closes (tablets and desktops; phones never show it) */
-.city-card {
-  position: relative;
-}
-.city-card .kicker {
-  padding-right: 40px;
-}
 .city-card-close {
-  position: absolute;
-  top: 8px;
-  right: 8px;
+  flex: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   border: 1px solid var(--line);
   border-radius: 50%;
   background: none;
@@ -3545,7 +3577,8 @@ body.is-walking .nav {
   display: inline-flex;
 }
 .city-draft-tag {
-  align-self: flex-start;
+  align-self: flex-end;
+  margin-top: auto;
   padding: 0.5em 0.85em;
   border-radius: 2px;
   background: #0b0a12e0;
@@ -3561,12 +3594,6 @@ body.is-walking .nav {
     left: 12px;
     right: 12px;
     bottom: 12px;
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .city-dir {
-    order: -1;
-    align-self: flex-end;
   }
   /* No welcome card on phones, so the city fills the screen. Hidden only
      visually, so the page keeps its heading for screen readers */
@@ -3709,19 +3736,8 @@ body.is-walking .nav {
   .walk-online summary {
     padding: 9px 11px;
   }
-  .builder-bar {
-    top: calc(var(--head-h) + 8px);
-    left: 12px;
-    right: 12px;
-    max-width: none;
-    padding: 10px 12px;
-  }
   .builder-catalog {
     grid-template-columns: 1fr;
-  }
-  /* While a plot is open the sheet takes the bottom; keep the top clear to see the building */
-  .city.has-plot .builder-bar {
-    display: none;
   }
   .builder-panel {
     max-height: 56%;

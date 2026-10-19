@@ -86,9 +86,12 @@ it and has been retired completely. Build only on what's here.
 - Every card and menu can be closed: panels, the gun store and the buy
   dialog have an × (`.city-panel-close` / `.shop-close`); drop-open menus
   (City settings, Directory, walk panels with their `.pop-head` ×) also
-  close on a tap outside and on Esc. The welcome card has an × on tablets
-  and desktops (remembered as `city-card` in localStorage) and isn't shown
-  on phones; when it's hidden the "Draft · v0" tag keeps the draft note.
+  close on a tap outside and on Esc. The welcome card is a one-line
+  first-visit tip under the header (`.city-card` in `.city-hud`: GM, "Welcome
+  to Degen City" (the page's h1), how to move, the draft note, an ×). It's
+  closed for good with its × (remembered as `city-card` in localStorage) and
+  isn't shown on phones; when it's hidden the "Draft · v0" tag in the
+  bottom-right corner keeps the draft note.
 - 3D pin labels stay on screen and fold to dots where they'd sit under the
   city's own buttons and cards (`chrome` in `index.ts`); add any new
   always-visible city overlay to that list.
@@ -98,7 +101,11 @@ it and has been retired completely. Build only on what's here.
   other pages. Left to right: the logo (home link), the mode title and
   subtitle (City view, Walk mode, Build mode, City map (2D)), then on the
   right (walk tabs, ammo and score while walking), the City / Walk / Build
-  switch, and the tools: a ⚙ Settings button (time, weather, sound, reset
+  switch (the current mode lit with a glow and a gradient underline, the
+  others dimmed), and the tools: in Build mode a Wallet button
+  (`[data-builder-bar]`, painted by `builder-ui.ts`: the short address and a
+  green dot once connected; its card has the wallet chip, the hint and
+  Reset demo), a ⚙ Settings button (time, weather, sound, reset
   view, 2D map; 3D only, not while walking; never open by default) and a
   ☰ Menu (the directory, then PulseChain native, X and Telegram; not while
   walking). Their cards drop down under them (`.head-panel`, one open at a
