@@ -392,7 +392,8 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
     root.querySelector('[data-floors-out]')!.textContent = t.value;
     preview();
   });
-  toggle.addEventListener('click', () => setBuild(!building));
+  // Build in the mode header's switch (City in the header leaves it)
+  toggle.addEventListener('click', () => setBuild(true));
 
   /** Arrow keys walk between plots; Escape steps back. Returns true if handled. */
   function key(e: KeyboardEvent) {
@@ -420,7 +421,6 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
     building = on;
     root.dataset.mode = on ? 'build' : 'explore';
     toggle.setAttribute('aria-pressed', String(on));
-    toggle.querySelector('[data-build-label]')!.textContent = on ? 'Exit build mode' : 'Build';
     bar.hidden = !on;
     plots.setOverlay(on);
     if (!on) {

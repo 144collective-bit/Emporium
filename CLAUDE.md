@@ -75,6 +75,11 @@ it and has been retired completely. Build only on what's here.
 - 3D pin labels stay on screen and fold to dots where they'd sit under the
   city's own buttons and cards (`chrome` in `index.ts`); add any new
   always-visible city overlay to that list.
+- Every view mode has the mode header across the top of the city
+  (`.city-head` in `CityMap.astro`, copy in `head.ts`): City view, Walk
+  mode, Build mode, City map (2D), with the City / Walk / Build switch.
+  Its live height is `--head-h`; anything pinned to the top of the city
+  sits below it (`top: calc(var(--head-h) + 12px)`).
 - The comic-window layout in `src/components/ComicPage.astro` is the design.
   Each window is defined by its ink outline; keep content inside the slants.
 - Palette is the PulseChain gradient. Follow `brand/README.md`: gradient for
@@ -114,10 +119,13 @@ it and has been retired completely. Build only on what's here.
   `data-walk-*` element to exist.
 - Esc frees the mouse first and only then stops walking. Door panels free
   the mouse so their links can be clicked.
-- While walking, `body.is-walking` (set in `index.ts`) makes the site header
-  see-through and float over the city, so the 3D view fills the whole screen.
-  Overlays pinned to the top of the city are shifted down by `--nav-h` in
-  `global.css`; add any new top-anchored walk overlay to that list.
+- While walking, `body.is-walking` (set in `index.ts`) hides the site header
+  so the city fills the screen, and the mode header carries the walk tabs
+  (Controls, Profile, Online, Emote), ammo and score at the top (two rows on
+  phones). The touch buttons stay at the bottom.
+- The gun store is compact: a 2 x 2 grid of guns beside the picked gun's
+  details; on upright phones a short bottom sheet with the guns in one row.
+  Check it at phone widths upright and on its side (no scrolling needed).
 - Collision footprints (`SOLIDS`) and door spots (`DOORS`) mirror
   `landmarks.ts`. When a landmark moves or changes size, update both.
   Placed buildings block via `plots.solids()`; parks stay walkable.

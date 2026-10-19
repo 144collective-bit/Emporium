@@ -244,6 +244,7 @@ export function createWalk(d: WalkDeps) {
   };
   function setFirstPerson(on: boolean) {
     firstPerson = on;
+    root.classList.toggle('is-fp', on);
     if (!on && zoom < 1.5) zoom = 4.5;
     fpBtn.setAttribute('aria-pressed', String(on));
     if (on) pitch = THREE.MathUtils.clamp(pitch, -1.35, 1.35);
@@ -701,6 +702,7 @@ export function createWalk(d: WalkDeps) {
     },
     exit() {
       active = false;
+      root.classList.remove('is-fp');
       keys.clear();
       jumpHeld = mouseL = mouseR = false;
       setAim(false);

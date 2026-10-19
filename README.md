@@ -114,6 +114,16 @@ and it isn't tied to the real store. He wears it in walk mode, and other
 players see it online. The **Open the fitting room** button in Profile goes
 straight there.
 
+### The mode header
+
+Across the top of the city a header always says which view you're in, with
+a line on what to do there: **City view**, **Walk mode** (first or third
+person, online), **Build mode** (demo) or the **City map** (2D). Its
+**City / Walk / Build** switch moves between them. While walking, the site
+header steps aside and this header carries the walk tabs (Controls,
+Profile, Online, Emote) and, with a gun, the ammo and score, so the rest of
+the screen is the city. On phones it's two rows while walking.
+
 ### Walk mode
 
 Press **Walk** to play as Degen (balaclava, red cap, green shades, suit, a bag
@@ -199,7 +209,7 @@ Walk the city with other players. Press the **Online** pill in walk mode
   typed ever appears. Mute anyone from the Online panel.
 - Target practice is shared: everyone shoots the same dummies and drones and
   the server keeps score.
-- Stop walking to go offline; you rejoin when you walk again.
+- Leave walk mode (City in the header) to go offline; you rejoin when you walk again.
 
 The game server is in `server/` (Cloudflare); see `server/README.md` for
 setup. The plan for the next phases (leaderboards, PvP across the river) is
@@ -207,7 +217,7 @@ in `docs/multiplayer-plan.md`.
 
 ### City builder (demo)
 
-Press **Build** to switch to build mode. The districts around the city
+Press **Build** in the header to switch to build mode. The districts around the city
 (North, West and East, past the ring roads) are divided into 99 plots.
 
 - **Pick a plot** (tap, click or use the arrow keys) to see its size, tier and
@@ -263,6 +273,7 @@ button and stays closed on return visits.
 | `src/scripts/city3d/viewmodel.ts` | First-person hands and rifle: sway, bob, recoil, aiming, reload |
 | `src/scripts/city3d/solids.ts` | The city's collision boxes (walk mode and the game server) |
 | `src/scripts/city3d/profile-ui.ts` | The Profile panel: name, rank; owns the look (saved here and online) |
+| `src/scripts/city3d/head.ts` | The mode header's title and subtitle, and its height (`--head-h`) |
 | `src/scripts/city3d/fitting.ts` | Drop 001's fitting room: wardrobe items and the turning preview |
 | `src/scripts/city3d/multiplayer.ts` | Online pill, sending controls, emotes and phrases, player list |
 | `src/scripts/city3d/remote.ts` | Other players: smoothed movement, poses, name tags, bubbles |

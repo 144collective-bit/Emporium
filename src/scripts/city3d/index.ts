@@ -19,6 +19,7 @@ import { createPlots, type Plot } from './plots';
 import { createStore } from './store';
 import { createBuilderUI } from './builder-ui';
 import { createFitting, type Fitting } from './fitting';
+import { createCityHead } from './head';
 
 type Tier = 'high' | 'medium' | 'low';
 
@@ -315,10 +316,9 @@ export async function bootCity(root: HTMLElement) {
     walker.on = true;
     walk.enter();
     mp?.walkChanged(true);
-    // The header turns see-through and floats over the city (global.css)
+    // The site header steps aside so the city and its mode header fill the screen (global.css)
     document.body.classList.add('is-walking');
     walkBtn.setAttribute('aria-pressed', 'true');
-    walkBtn.querySelector('[data-walk-label]')!.textContent = 'Stop walking';
     root.classList.add('has-moved');
     canvas.focus({ preventScroll: true });
   }
@@ -332,15 +332,21 @@ export async function bootCity(root: HTMLElement) {
     close();
     controls.enabled = true;
     walkBtn.setAttribute('aria-pressed', 'false');
-    walkBtn.querySelector('[data-walk-label]')!.textContent = 'Walk';
     if (beforeWalk && flyBack) {
       controls.target.copy(walk.position);
       flyTo(beforeWalk.pos, beforeWalk.target, 1.4);
     }
     beforeWalk = null;
   }
-  walkBtn.addEventListener('click', () => (walking ? stopWalking() : startWalking()));
+  walkBtn.addEventListener('click', () => startWalking());
   walkBtn.hidden = false;
+  // The mode header's City button: back to the city view from walking or building
+  const head = createCityHead(root);
+  head.city.addEventListener('click', () => {
+    if (walking) stopWalking();
+    if (builder.active) builder.setBuild(false);
+  });
+  head.city.hidden = false;
   root.querySelector('[data-walk-exit]')?.addEventListener('click', () => stopWalking());
 
   // Esc closes an open walk panel (Controls, Profile, Online, Emotes) before it stops the walk
@@ -486,7 +492,7 @@ export async function bootCity(root: HTMLElement) {
   // The city's own buttons and cards: a label under one folds to a dot, so the
   // Walk / Build pills never sit on top of a building's name. Re-read a few
   // times a second (they open, close and move with the layout)
-  const chrome = [...root.querySelectorAll<HTMLElement>('.city-modes, .city-controls, .city-card, .city-dir')];
+  const chrome = [...root.querySelectorAll<HTMLElement>('.city-head, .city-controls, .city-card, .city-dir')];
   const chromeRects: { x: number; y: number; w: number; h: number }[] = [];
   const readChrome = () => {
     const o = host.getBoundingClientRect();

@@ -1066,40 +1066,10 @@ body.full-bleed {
   height: 100dvh;
   overflow: hidden;
 }
-/* Walking: the header floats over the city, see-through, so the 3D view runs up behind it.
-   The city fills the whole screen and its top overlays move down by the header's height,
-   so they stay where they were and clear of the logo and links. */
+/* Walking: the site header steps aside so the city fills the screen; the city's own
+   mode header (.city-head) takes the top edge with the walk tabs, ammo and score */
 body.is-walking .nav {
-  position: fixed;
-  top: 0;
-  right: 0;
-  left: 0;
-  background: transparent;
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
-  border-bottom-color: transparent;
-  pointer-events: none;
-}
-body.is-walking .nav::after {
-  opacity: 0;
-}
-body.is-walking .nav-in > * {
-  pointer-events: auto;
-}
-body.is-walking .icon-link:not(:hover) {
-  background: #0b0a12b8;
-  color: #fff;
-}
-body.is-walking .logo::before {
-  background: radial-gradient(closest-side, #05060599, #0000);
-}
-body.is-walking :is(.city-modes, .walk-top, .walk-look, .combat-score) {
-  translate: 0 var(--nav-h);
-}
-@media (min-width: 641px) {
-  body.is-walking .city-panel {
-    top: calc(var(--nav-h) + 16px);
-  }
+  display: none;
 }
 .city {
   position: relative;
@@ -1701,7 +1671,7 @@ body.is-walking :is(.city-modes, .walk-top, .walk-look, .combat-score) {
 }
 .city-controls {
   position: absolute;
-  top: 16px;
+  top: calc(var(--head-h) + 12px);
   right: 16px;
   display: none;
   max-width: calc(100% - 32px);
@@ -1779,9 +1749,6 @@ body.is-walking :is(.city-modes, .walk-top, .walk-look, .combat-score) {
   color: #fff;
 }
 .city-to3d {
-  position: absolute;
-  top: 16px;
-  right: 16px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -1805,15 +1772,15 @@ body.is-walking :is(.city-modes, .walk-top, .walk-look, .combat-score) {
 
 .city-panel {
   position: absolute;
-  top: 16px;
+  top: calc(var(--head-h) + 12px);
   right: 16px;
   z-index: 5;
   display: flex;
   flex-direction: column;
   gap: 14px;
   width: min(400px, calc(100% - 32px));
-  /* As tall as its copy, never taller than the city */
-  max-height: calc(100% - 32px);
+  /* As tall as its copy, never taller than the city under its header */
+  max-height: calc(100% - var(--head-h) - 28px);
   padding: 28px 26px 20px;
   overflow-y: auto;
   opacity: 0;
@@ -1929,14 +1896,105 @@ body.is-walking :is(.city-modes, .walk-top, .walk-look, .combat-score) {
 }
 
 /* City builder (build mode) */
-.city-modes {
+/* The mode header across the top of the city (head.ts): which view you're in, the walk
+   tabs, ammo and score while walking, and the City / Walk / Build switch. Its height is
+   kept in --head-h so everything pinned to the top sits under it. */
+.city {
+  --head-h: 52px;
+}
+.city-head {
   position: absolute;
-  top: 16px;
-  left: 50%;
-  z-index: 4;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 6;
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+  grid-template-areas: "id tabs . stats modes";
+  align-items: center;
+  column-gap: 14px;
+  min-height: 52px;
+  padding: 8px 16px;
+  background: linear-gradient(180deg, #07060ef2, #07060ec7);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+.city-head::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 1px;
+  background: var(--pulse);
+  opacity: 0.75;
+}
+.city-head-id {
+  grid-area: id;
   display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.city-head-mark {
+  flex: none;
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+  background: var(--pulse);
+  box-shadow: 0 0 12px #e219e5aa;
+  transform: rotate(45deg);
+}
+.city-head-text {
+  display: grid;
+  min-width: 0;
+  margin: 0;
+  line-height: 1.1;
+}
+.city-head-text b {
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 900;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #fff;
+  white-space: nowrap;
+}
+.city-head-text small {
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--p-cyan);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.city-head .walk-top {
+  grid-area: tabs;
+}
+.city-head-stats {
+  grid-area: stats;
+  display: none;
+  align-items: center;
   gap: 8px;
-  transform: translateX(-50%);
+}
+.city.is-armed[data-mode="walk"] .city-head-stats {
+  display: flex;
+}
+.city-head-stats [hidden] {
+  display: none !important;
+}
+.city-head-modes {
+  grid-area: modes;
+  display: flex;
+  gap: 6px;
+  justify-self: end;
+}
+.city-head .city-mode-btn {
+  padding: 8px 14px;
+  font-size: 11px;
+  box-shadow: none;
 }
 .city-mode-btn {
   display: none;
@@ -1979,7 +2037,7 @@ body.is-walking :is(.city-modes, .walk-top, .walk-look, .combat-score) {
 }
 .builder-bar {
   position: absolute;
-  top: 16px;
+  top: calc(var(--head-h) + 12px);
   left: 16px;
   z-index: 4;
   display: grid;
@@ -2339,17 +2397,16 @@ body.is-walking :is(.city-modes, .walk-top, .walk-look, .combat-score) {
 .walk-run {
   display: none;
 }
-/* Walk mode's top-left row: Controls, Profile, Online, Emote. Panels drop down under the row. */
+/* Walk mode's tabs in the mode header: Controls, Profile, Online, Emote. Panels drop down under them. */
 .walk-top {
-  position: absolute;
-  top: 16px;
-  left: 16px;
-  z-index: 5;
-  display: flex;
+  position: relative;
+  display: none;
   flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: center;
   gap: 8px;
-  max-width: calc(100% - 32px);
+}
+.city[data-view="3d"][data-mode="walk"] .walk-top {
+  display: flex;
 }
 .walk-top > details[hidden] {
   display: none;
@@ -2477,7 +2534,7 @@ body.is-walking :is(.city-modes, .walk-top, .walk-look, .combat-score) {
 }
 .walk-look {
   position: absolute;
-  top: 72px;
+  top: calc(var(--head-h) + 14px);
   left: 50%;
   z-index: 3;
   margin: 0;
@@ -2494,8 +2551,7 @@ body.is-walking :is(.city-modes, .walk-top, .walk-look, .combat-score) {
   transform: translateX(-50%);
   transition: opacity 0.3s;
 }
-.walk-top:has(details[open]) ~ .walk-hint,
-.walk-top:has(details[open]) ~ .walk-look {
+.city:has(.walk-top details[open]) :is(.walk-hint, .walk-look) {
   display: none;
 }
 .city.is-looking .walk-look {
@@ -2783,9 +2839,7 @@ body.is-walking :is(.city-modes, .walk-top, .walk-look, .combat-score) {
 }
 .combat-ammo,
 .combat-score {
-  position: absolute;
-  z-index: 4;
-  padding: 8px 14px;
+  padding: 6px 12px;
   border: 1px solid #0000;
   border-radius: 8px;
   background:
@@ -2796,17 +2850,15 @@ body.is-walking :is(.city-modes, .walk-top, .walk-look, .combat-score) {
   pointer-events: none;
 }
 .combat-ammo {
-  right: 16px;
-  bottom: 16px;
   display: grid;
   grid-template-columns: auto auto;
   align-items: baseline;
-  gap: 2px 8px;
-  font-size: 13px;
+  gap: 0 6px;
+  font-size: 12px;
 }
 .combat-ammo b {
   font-family: var(--font-display);
-  font-size: 30px;
+  font-size: 22px;
   line-height: 1;
 }
 .combat-ammo b.is-low {
@@ -2820,8 +2872,6 @@ body.is-walking :is(.city-modes, .walk-top, .walk-look, .combat-score) {
   color: var(--p-cyan);
 }
 .combat-score {
-  top: 16px;
-  right: 16px;
   font-size: 11px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -2839,12 +2889,6 @@ body.is-walking :is(.city-modes, .walk-top, .walk-look, .combat-score) {
   display: block;
   margin-top: 2px;
   color: #ffd36b;
-}
-@media (max-width: 640px) {
-  .combat-score {
-    top: 104px;
-    right: 12px;
-  }
 }
 @media (pointer: coarse) {
   .walk-hint,
@@ -2901,19 +2945,6 @@ body.is-walking :is(.city-modes, .walk-top, .walk-look, .combat-score) {
       linear-gradient(#14102a, #14102a) padding-box,
       var(--pulse) border-box;
     box-shadow: 0 0 20px -6px #00eaffaa;
-  }
-  body.is-walking .city.is-armed .combat-ammo {
-    translate: 0 var(--nav-h);
-  }
-  .city.is-armed .combat-ammo {
-    top: 104px;
-    right: auto;
-    bottom: auto;
-    left: 12px;
-    padding: 6px 12px;
-  }
-  .city.is-armed .combat-ammo b {
-    font-size: 22px;
   }
   .walk-run {
     position: absolute;
@@ -3044,9 +3075,8 @@ body.is-walking :is(.city-modes, .walk-top, .walk-look, .combat-score) {
     display: inline-flex;
   }
   /* 3D on phones: settings top-left, the panel becomes a bottom sheet */
-  .city-controls,
-  .city-to3d {
-    top: 12px;
+  .city-controls {
+    top: calc(var(--head-h) + 8px);
     right: auto;
     left: 12px;
   }
@@ -3069,25 +3099,35 @@ body.is-walking :is(.city-modes, .walk-top, .walk-look, .combat-score) {
   .city-pin-title {
     font-size: 14px;
   }
-  /* Phones: Walk and Build top-right, the build bar under them */
-  .city-modes {
-    top: 12px;
-    left: auto;
-    right: 12px;
-    gap: 6px;
-    transform: none;
+  /* Phones: the mode header is two rows while walking (mode and switch; tabs, ammo and score) */
+  .city {
+    --head-h: 48px;
   }
-  .city-mode-btn {
-    padding: 9px 12px;
+  .city-head {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "id modes"
+      "tabs stats";
+    column-gap: 10px;
+    min-height: 48px;
+    padding: 6px 12px;
   }
-  .city-mode-btn svg {
-    display: none;
+  .city[data-view="3d"][data-mode="walk"] .city-head {
+    row-gap: 6px;
+    padding-bottom: 8px;
+  }
+  .city-head-text b {
+    font-size: 16px;
+  }
+  .city-head-text small {
+    font-size: 9px;
+    letter-spacing: 0.08em;
+  }
+  .city-head .city-mode-btn {
+    padding: 8px 10px;
   }
   .walk-top {
-    top: 60px;
-    left: 12px;
     gap: 6px;
-    max-width: calc(100% - 24px);
   }
   /* Phones: Profile, Online and Emote as icons */
   .walk-pill-text {
@@ -3100,7 +3140,7 @@ body.is-walking :is(.city-modes, .walk-top, .walk-look, .combat-score) {
     padding: 9px 11px;
   }
   .builder-bar {
-    top: 60px;
+    top: calc(var(--head-h) + 8px);
     left: 12px;
     right: 12px;
     max-width: none;
@@ -3657,28 +3697,46 @@ body.is-walking :is(.city-modes, .walk-top, .walk-look, .combat-score) {
     bottom: 176px;
   }
 }
-/* Mid widths: the centred Walk / Build buttons would sit on the row, so it drops below them */
-@media (min-width: 641px) and (max-width: 1320px) {
-  .walk-top {
-    top: 64px;
+/* Narrower screens (tablets, phones on their side): icons for the walk tabs, and only the
+   current mode's name in the switch, so the mode header stays one row */
+@media (max-width: 1100px) {
+  .walk-pill-text {
+    display: none;
   }
-  .walk-look {
-    top: 120px;
+  .walk-pop summary {
+    padding: 9px 11px;
+  }
+  .city-head .city-mode-btn:not([aria-pressed="true"]) .city-mode-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 }
 
-/* ---------- The gun store at the Armoury's counter (walk mode, gunshop.ts) ---------- */
+/* ---------- The gun store at the Armoury's counter (walk mode, gunshop.ts) ----------
+   Compact: the guns as a 2 x 2 grid beside the picked gun's details. Phones stack it as a
+   short bottom sheet with the four guns in one row; phones on their side keep the two columns. */
 .shop {
   position: absolute;
-  top: 50%;
+  top: calc(50% + var(--head-h) / 2);
   left: 50%;
   z-index: 7;
   display: grid;
-  gap: 14px;
-  width: min(760px, calc(100% - 32px));
-  max-height: calc(100% - var(--nav-h) * 2 - 24px);
-  padding: 20px 22px 16px;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  grid-template-areas:
+    "head head"
+    "list detail"
+    "foot foot";
+  align-items: start;
+  gap: 12px 18px;
+  width: min(720px, calc(100% - 32px));
+  max-height: calc(100% - var(--head-h) - 24px);
+  padding: 14px 16px 12px;
   overflow-y: auto;
+  overscroll-behavior: contain;
   border: 1px solid #0000;
   border-radius: 14px;
   background:
@@ -3707,19 +3765,15 @@ body.is-walking :is(.city-modes, .walk-top, .walk-look, .combat-score) {
   display: none;
 }
 .shop-head {
+  grid-area: head;
   display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 8px 16px;
-  padding-right: 40px;
-}
-.shop-head > div {
-  flex: 1 1 auto;
+  align-items: center;
+  gap: 12px;
 }
 .shop-title {
-  margin: 4px 0 0;
+  margin: 0;
   font-family: var(--font-display);
-  font-size: clamp(30px, 5vw, 44px);
+  font-size: 26px;
   font-weight: 900;
   line-height: 1;
   text-transform: uppercase;
@@ -3729,28 +3783,30 @@ body.is-walking :is(.city-modes, .walk-top, .walk-look, .combat-score) {
   color: transparent;
 }
 .shop-score {
-  margin: 0;
+  margin: 0 0 0 auto;
+  padding: 5px 10px;
+  border: 1px solid #ffffff1f;
+  border-radius: 999px;
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: 9.5px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--muted);
+  white-space: nowrap;
 }
 .shop-score b {
-  margin-left: 6px;
+  margin-left: 4px;
   font-family: var(--font-display);
-  font-size: 18px;
+  font-size: 15px;
   letter-spacing: 0.02em;
   color: var(--p-cyan);
 }
 .shop-close {
-  position: absolute;
-  top: 14px;
-  right: 14px;
   display: grid;
+  flex: none;
   place-items: center;
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   border: 1px solid #0000;
   border-radius: 50%;
   background:
@@ -3760,30 +3816,31 @@ body.is-walking :is(.city-modes, .walk-top, .walk-look, .combat-score) {
   cursor: pointer;
 }
 .shop-list {
+  grid-area: list;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
 }
 .shop-card {
   display: grid;
   justify-items: center;
-  gap: 4px;
-  padding: 10px 6px 8px;
+  align-content: center;
+  gap: 3px;
+  min-width: 0;
+  padding: 8px 6px 7px;
   border: 1px solid #ffffff24;
   border-radius: 10px;
   background: #0b0a12;
   color: #fff;
   font-family: var(--font-mono);
-  font-size: 11px;
   text-align: center;
   cursor: pointer;
   transition: border-color 0.2s, transform 0.2s;
 }
 .shop-card svg {
   width: 100%;
-  max-width: 120px;
-  height: auto;
-  aspect-ratio: 3;
+  max-width: 96px;
+  height: 28px;
   fill: #c9c6d6;
   stroke: #05050a;
   stroke-width: 1.5;
@@ -3791,16 +3848,18 @@ body.is-walking :is(.city-modes, .walk-top, .walk-look, .combat-score) {
 }
 .shop-card b {
   font-family: var(--font-display);
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 800;
   letter-spacing: 0.02em;
+  line-height: 1.05;
   text-transform: uppercase;
 }
 .shop-card small {
-  font-size: 9.5px;
-  letter-spacing: 0.1em;
+  font-size: 9px;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--p-cyan);
+  white-space: nowrap;
 }
 .shop-card:hover {
   transform: translateY(-2px);
@@ -3811,7 +3870,7 @@ body.is-walking :is(.city-modes, .walk-top, .walk-look, .combat-score) {
     var(--pulse-wash) padding-box,
     linear-gradient(#14102a, #14102a) padding-box,
     var(--pulse) border-box;
-  box-shadow: 0 0 24px -8px #00eaffaa;
+  box-shadow: 0 0 20px -8px #00eaffaa;
 }
 .shop-card[aria-selected="true"] svg {
   fill: #fff;
@@ -3829,56 +3888,58 @@ body.is-walking :is(.city-modes, .walk-top, .walk-look, .combat-score) {
   content: "🔒 ";
 }
 .shop-detail {
+  grid-area: detail;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px 22px;
-  align-items: start;
+  gap: 8px;
+  min-width: 0;
+}
+.shop-name-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
 }
 .shop-name {
-  grid-column: 1;
   margin: 0;
   font-family: var(--font-display);
-  font-size: 26px;
+  font-size: 22px;
   font-weight: 900;
   line-height: 1;
   text-transform: uppercase;
   color: #fff;
 }
-.shop-blurb,
 .shop-mode {
-  grid-column: 1;
   margin: 0;
-  font-size: 13px;
-}
-.shop-mode {
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: 9.5px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--p-cyan);
 }
+.shop-blurb {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.4;
+}
 .shop-stats {
-  grid-column: 2;
-  grid-row: 1 / span 4;
   display: grid;
-  gap: 7px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px 14px;
   margin: 0;
 }
 .shop-stats > div {
   display: grid;
-  grid-template-columns: 84px 1fr;
-  align-items: center;
-  gap: 10px;
+  gap: 3px;
 }
 .shop-stats dt {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 9px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--muted);
 }
 .shop-stats dd {
-  height: 8px;
+  height: 6px;
   margin: 0;
   overflow: hidden;
   border-radius: 999px;
@@ -3893,10 +3954,8 @@ body.is-walking :is(.city-modes, .walk-top, .walk-look, .combat-score) {
   transition: width 0.3s var(--ease);
 }
 .shop-take {
-  grid-column: 1;
-  justify-self: start;
-  margin-top: 8px;
-  padding: 12px 20px;
+  margin-top: 2px;
+  padding: 11px 16px;
   border: 1px solid #0000;
   border-radius: 999px;
   background:
@@ -3904,12 +3963,12 @@ body.is-walking :is(.city-modes, .walk-top, .walk-look, .combat-score) {
     var(--pulse) border-box;
   color: #fff;
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   cursor: pointer;
-  box-shadow: 0 0 24px -8px #ff2fb9;
+  box-shadow: 0 0 22px -8px #ff2fb9;
 }
 .shop-take:disabled {
   opacity: 0.55;
@@ -3917,45 +3976,95 @@ body.is-walking :is(.city-modes, .walk-top, .walk-look, .combat-score) {
   cursor: not-allowed;
 }
 .shop-note {
-  grid-column: 1;
   margin: 0;
-  font-size: 12px;
+  font-size: 11.5px;
+  line-height: 1.4;
   color: var(--muted);
 }
+.shop-note[hidden] {
+  display: none;
+}
 .shop-foot {
+  grid-area: foot;
   margin: 0;
-  padding-top: 10px;
+  padding-top: 8px;
   border-top: 1px solid #ffffff14;
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 9px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--muted);
 }
+/* Phones upright: a short bottom sheet, the four guns in one row above the details */
 @media (max-width: 640px) {
   .shop {
     top: auto;
-    right: 12px;
-    bottom: 12px;
-    left: 12px;
+    right: 8px;
+    bottom: 8px;
+    left: 8px;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "head"
+      "list"
+      "detail"
+      "foot";
+    gap: 10px;
     width: auto;
-    max-height: calc(100% - var(--nav-h) - 72px);
-    padding: 16px 14px 12px;
+    max-height: calc(100% - var(--head-h) - 16px);
+    padding: 12px 12px 10px;
     transform: none;
     animation-name: shop-up;
   }
-  .shop-list {
-    grid-template-columns: repeat(2, 1fr);
+  .shop-title {
+    font-size: 22px;
   }
-  .shop-detail {
-    grid-template-columns: 1fr;
+  .shop-list {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 5px;
+  }
+  .shop-card {
+    padding: 7px 3px 6px;
+    border-radius: 8px;
+  }
+  .shop-card svg {
+    height: 18px;
+  }
+  .shop-card b {
+    font-size: 11.5px;
+  }
+  .shop-card small {
+    font-size: 8px;
+    letter-spacing: 0.04em;
+  }
+  .shop-name {
+    font-size: 20px;
   }
   .shop-stats {
-    grid-column: 1;
-    grid-row: auto;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px 10px;
   }
-  .shop-take {
-    justify-self: stretch;
+}
+/* Short screens (phones on their side): tighter, and the footnote goes */
+@media (max-height: 500px) {
+  .shop {
+    gap: 8px 14px;
+    max-height: calc(100% - var(--head-h) - 12px);
+    padding: 10px 12px 10px;
+  }
+  .shop-title {
+    font-size: 20px;
+  }
+  .shop-card svg {
+    height: 18px;
+  }
+  .shop-card b {
+    font-size: 12px;
+  }
+  .shop-blurb {
+    display: none;
+  }
+  .shop-foot {
+    display: none;
   }
 }
 @keyframes shop-up {

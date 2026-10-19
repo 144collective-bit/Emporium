@@ -90,9 +90,9 @@ export function createGunShop(root: HTMLElement, d: ShopDeps) {
     }
     takeBtn.disabled = locked;
     takeBtn.textContent = locked ? `Unlocks at ${fmt(w.need)} pts` : carrying === pick ? 'Refill ammo' : 'Take it & gear up';
-    note.textContent = locked
-      ? `${fmt(w.need - total)} more points to unlock. Score by knocking down dummies and drones.`
-      : 'Guns unlock with your lifetime score. Free to take, swap any time.';
+    // Only when it's locked: how far to go (the footnote already says they're free)
+    note.textContent = locked ? `${fmt(w.need - total)} more points to unlock. Score by knocking down dummies and drones.` : '';
+    note.hidden = !locked;
   }
 
   function select(id: WeaponId) {

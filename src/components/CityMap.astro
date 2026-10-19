@@ -98,29 +98,19 @@ const focusY = +((EMPORIUM_FOCUS[1] - VIEW.y) / VIEW.h).toFixed(4);
       </div>
     </div>
   </details>
-  <button type="button" class="city-to3d" data-view-toggle="3d" hidden>
-    <span aria-hidden="true">◆</span> Enter 3D city
-  </button>
 
-  {/* City builder (3D only). Purchases are simulated: see src/data/plots.ts */}
-  <div class="city-modes">
-    <button type="button" class="city-mode-btn" data-walk-toggle aria-pressed="false" hidden>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="13" cy="4" r="2" /><path d="M9 20l2-6 3 3v4M7 12l3-4 4 1 2 4M11 14l-2-2" /></svg>
-      <span data-walk-label>Walk</span>
-    </button>
-    <button type="button" class="city-mode-btn" data-build-toggle aria-pressed="false" hidden>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><path d="M17.5 14v7M14 17.5h7" /></svg>
-      <span data-build-label>Build</span>
-    </button>
-  </div>
-
-  {/* Walk mode: controls panel, hints, touch joystick, run and jump, door prompt */}
-  <div class="walk-hud">
+  {/* The mode header: which view you are in, the walk tabs while walking, and the City / Walk / Build switch.
+       Its title and subtitle are painted by head.ts. */}
+  <header class="city-head" data-city-head>
+    <div class="city-head-id">
+      <span class="city-head-mark" aria-hidden="true"></span>
+      <p class="city-head-text"><b data-head-title>City map</b><small data-head-sub>2D view</small></p>
+    </div>
     <div class="walk-top">
       <details class="walk-settings walk-pop" data-pop>
         <summary>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0" /><circle cx="16" cy="6" r="2" /><circle cx="10" cy="12" r="2" /><circle cx="18" cy="18" r="2" /></svg>
-          Controls
+          <span class="walk-pill-text">Controls</span>
         </summary>
         <div class="walk-settings-body">
           <label class="walk-field">
@@ -201,6 +191,32 @@ const focusY = +((EMPORIUM_FOCUS[1] - VIEW.y) / VIEW.h).toFixed(4);
         </div>
       </details>
     </div>
+    {/* Walking with a gun: ammo and score (combat.ts paints them) */}
+    <div class="city-head-stats" aria-live="off">
+      <div class="combat-ammo"><b data-mag>30</b><span>/ <span data-reserve>120</span></span><small data-reload-hint hidden>R to reload</small></div>
+      <div class="combat-score">Score <b data-score>0</b><small data-streak hidden></small></div>
+    </div>
+    <div class="city-head-modes" role="group" aria-label="View mode">
+      <button type="button" class="city-to3d" data-view-toggle="3d" hidden>
+        <span aria-hidden="true">◆</span> Enter 3D city
+      </button>
+      <button type="button" class="city-mode-btn" data-mode-city aria-pressed="true" hidden>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18M5 21V9l5-3v15M10 21V4l9 4v13M14 10h2M14 14h2M7 12h1M7 16h1" /></svg>
+        <span class="city-mode-label">City</span>
+      </button>
+      <button type="button" class="city-mode-btn" data-walk-toggle aria-pressed="false" hidden>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="13" cy="4" r="2" /><path d="M9 20l2-6 3 3v4M7 12l3-4 4 1 2 4M11 14l-2-2" /></svg>
+        <span class="city-mode-label" data-walk-label>Walk</span>
+      </button>
+      <button type="button" class="city-mode-btn" data-build-toggle aria-pressed="false" hidden>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><path d="M17.5 14v7M14 17.5h7" /></svg>
+        <span class="city-mode-label" data-build-label>Build</span>
+      </button>
+    </div>
+  </header>
+
+  {/* Walk mode: controls panel, hints, touch joystick, run and jump, door prompt */}
+  <div class="walk-hud">
     <div class="mp-tags" data-mp-tags aria-hidden="true"></div>
     <p class="mp-toast" data-mp-toast hidden></p>
     <p class="walk-look">Click the city to look around</p>
@@ -211,26 +227,23 @@ const focusY = +((EMPORIUM_FOCUS[1] - VIEW.y) / VIEW.h).toFixed(4);
       <div class="combat-dmg" data-dmg aria-hidden="true"></div>
       <div class="combat-pops" data-pops aria-live="polite"></div>
       <div class="combat-scope" aria-hidden="true"><i></i></div>
-      <div class="combat-ammo"><b data-mag>30</b><span>/ <span data-reserve>120</span></span><small data-reload-hint hidden>R to reload</small></div>
-      <div class="combat-score">Score <b data-score>0</b><small data-streak hidden></small></div>
     </div>
     {/* The gun store at the Armoury's counter (gunshop.ts). Guns unlock with lifetime score; nothing is sold. */}
     <section class="shop" data-shop hidden aria-labelledby="shop-title">
       <header class="shop-head">
-        <div>
-          <p class="kicker"><span class="kicker-num">GUNS</span> The Armoury</p>
-          <h2 id="shop-title" class="shop-title">Gun store</h2>
-        </div>
-        <p class="shop-score">Lifetime score <b data-shop-score>0</b></p>
+        <h2 id="shop-title" class="shop-title">Gun store</h2>
+        <p class="shop-score">Score <b data-shop-score>0</b></p>
         <button type="button" class="shop-close" data-shop-close aria-label="Close the gun store">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
         </button>
       </header>
       <div class="shop-list" data-shop-list role="listbox" aria-label="Guns"></div>
       <div class="shop-detail" data-shop-detail>
-        <h3 class="shop-name" data-shop-name>Assault Rifle</h3>
+        <div class="shop-name-row">
+          <h3 class="shop-name" data-shop-name>Assault Rifle</h3>
+          <p class="shop-mode" data-shop-mode></p>
+        </div>
         <p class="shop-blurb" data-shop-blurb></p>
-        <p class="shop-mode" data-shop-mode></p>
         <dl class="shop-stats">
           <div data-stat="dmg"><dt>Damage</dt><dd><i></i></dd></div>
           <div data-stat="rate"><dt>Fire rate</dt><dd><i></i></dd></div>
