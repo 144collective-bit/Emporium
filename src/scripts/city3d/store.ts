@@ -39,6 +39,8 @@ export interface WalletChoice {
   id: string;
   name: string;
   icon: string;
+  /** A line under the name (WalletConnect: how it works) */
+  note?: string;
 }
 
 export interface Store {

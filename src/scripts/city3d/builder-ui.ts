@@ -97,13 +97,13 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
   }
 
   /** Several wallets in this browser: which one? None: how to get one. */
-  function pickWallet(list: { id: string; name: string; icon: string }[]) {
+  function pickWallet(list: { id: string; name: string; icon: string; note?: string }[]) {
     openModal(
       list.length
         ? `<p class="kicker"><span class="kicker-num">Wallet</span> Connect</p>
            <h2 class="city-panel-title" id="buy-title">Pick your wallet</h2>
            <div class="wallet-picks">${list
-             .map((w) => `<button type="button" class="wallet-pick" data-wallet-id="${esc(w.id)}">${w.icon ? `<img src="${esc(w.icon)}" alt="" width="24" height="24">` : ''}<b>${esc(w.name)}</b></button>`)
+             .map((w) => `<button type="button" class="wallet-pick" data-wallet-id="${esc(w.id)}">${w.icon ? `<img src="${esc(w.icon)}" alt="" width="24" height="24">` : ''}<span><b>${esc(w.name)}</b>${w.note ? `<small>${esc(w.note)}</small>` : ''}</span></button>`)
              .join('')}</div>
            <p class="city-panel-fine">Your wallet asks before it shares your address or sends anything.</p>`
         : `<p class="kicker"><span class="kicker-num">Wallet</span> Connect</p>

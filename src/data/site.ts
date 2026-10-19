@@ -12,3 +12,8 @@ export const SHOP_URL = 'https://degenemporium.myshopify.com';
 // The "Enter the store" button in window 02 stays disabled (and the store
 // URL stays out of the page) until this is true.
 export const SHOP_OPEN = false;
+
+// WalletConnect (phone wallets by QR code / app switch): the project ID from
+// cloud.reown.com. It's public by design (every visitor's browser gets it).
+// Empty: the wallet picker only offers installed wallets.
+export const WALLETCONNECT_PROJECT_ID = '';

@@ -78,7 +78,7 @@ export function createAccountUI(root: HTMLElement, d: Deps) {
       body.innerHTML = list.length
         ? `${head('Wallet', 'Log in')}
            <p class="city-panel-text">Log in with your PulseChain wallet to keep a player profile that follows you to any browser, and to build on plots you own.</p>
-           <div class="wallet-picks">${list.map((w) => `<button type="button" class="wallet-pick" data-account-wallet="${esc(w.id)}">${w.icon ? `<img src="${esc(w.icon)}" alt="" width="24" height="24">` : ''}<b>${esc(w.name)}</b></button>`).join('')}</div>
+           <div class="wallet-picks">${list.map((w) => `<button type="button" class="wallet-pick" data-account-wallet="${esc(w.id)}">${w.icon ? `<img src="${esc(w.icon)}" alt="" width="24" height="24">` : ''}<span><b>${esc(w.name)}</b>${w.note ? `<small>${esc(w.note)}</small>` : ''}</span></button>`).join('')}</div>
            ${err}
            <p class="city-panel-fine">Your wallet asks you to sign a short message: no transaction, no gas. A wallet's first login starts a fresh profile.</p>`
         : `${head('Wallet', 'No wallet found')}

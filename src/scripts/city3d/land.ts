@@ -17,7 +17,7 @@ import { CHAINS, plsToWei, type ClaimStatus, type LandState } from '../net/land'
 import type { PlotState } from './plots';
 import type { Account } from './account';
 import type { Network, PlotRecord, Store, Wallet } from './store';
-import { balanceOf, ensureChain, findWallets, knownAccount, onWalletChange, pay, requestAccount, walletError, type WalletInfo } from './wallet';
+import { balanceOf, ensureChain, findWallets, forgetWallet, knownAccount, onWalletChange, pay, requestAccount, walletError, type WalletInfo } from './wallet';
 
 const PENDING_KEY = 'degen-city-land-pending';
 const WALLET_KEY = 'degen-city-land-wallet';
@@ -208,7 +208,7 @@ export function createLandStore(server: string, account: Account): Store {
       return out;
     },
     async wallets() {
-      return (await findWallets()).map(({ id, name, icon }) => ({ id, name, icon }));
+      return (await findWallets()).map(({ id, name, icon, note }) => ({ id, name, icon, note }));
     },
     async connect(walletId) {
       const list = await findWallets();
@@ -225,6 +225,7 @@ export function createLandStore(server: string, account: Account): Store {
       return wallet!;
     },
     disconnect() {
+      if (current) forgetWallet(current);
       wallet = null;
       current = null;
       write(localStorage, WALLET_KEY, null);

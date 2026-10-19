@@ -242,9 +242,18 @@ it and has been retired completely. Build only on what's here.
   Emporium (its roof is ~12.5 tiles up; an 8-floor tower's mast tops out at
   ~11.9). Keep it that way when adding designs.
 - **Real sales (live mode)**, when the site is built with `PUBLIC_GAME_SERVER`:
-  - `wallet.ts` talks to the visitor's own wallet (EIP-1193, found through
-    EIP-6963 or `window.ethereum`). It switches to the sales network or adds
-    it.
+  - `wallet.ts` talks to the visitor's own wallet (EIP-1193). Installed
+    wallets (MetaMask, Rabby, OKX and others, as extensions or in a wallet
+    app's browser) are found through EIP-6963 (or `window.ethereum`) and
+    listed under the name and icon they announce; there are no fixed
+    wallet-brand buttons. WalletConnect is always offered after them, for
+    phones and computers without an extension (QR code / app switch). Its
+    SDK (`@walletconnect/ethereum-provider`, pinned) is only loaded when
+    picked or when a saved WalletConnect session reconnects; keep it out of
+    the main bundle. It needs `WALLETCONNECT_PROJECT_ID` in `src/data/site.ts`
+    (or `PUBLIC_WALLETCONNECT_PROJECT_ID`); empty hides it. WalletConnect
+    answers `eth_chainId` with a number, installed wallets in hex (`chainOf`).
+    It switches to the sales network or adds it.
   - `land.ts` (the client) sends the plot price straight to the owner's wallet
     and hands the transaction hash to the game server.
   - `server/src/land.ts` (the `Land` Durable Object) checks the payment on

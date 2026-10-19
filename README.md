@@ -262,6 +262,21 @@ around the core city (North 1-5, West 1-3, East 1-3, past the ring roads) is
   message (free, no gas) to prove it's yours. Everyone in the city sees your
   building.
 
+**Wallets:** installed wallets (MetaMask, Rabby, OKX and others: browser
+extensions, or the wallet app's own browser on a phone) show up by name.
+**WalletConnect** covers everyone else: a QR code on a computer, or a jump
+to the wallet app on a phone. It needs a free project ID:
+
+1. Sign in at https://cloud.reown.com and create a project (type: *AppKit*
+   or *WalletKit* → choose **AppKit**, platform **JavaScript**).
+2. Copy its **Project ID** into `WALLETCONNECT_PROJECT_ID` in
+   `src/data/site.ts` (it's public by design: every visitor's browser
+   gets it).
+3. In the project's settings, add `emporium.144collective.workers.dev`
+   (and `localhost` for testing) to the allowed domains.
+
+Without a project ID the WalletConnect option simply doesn't appear.
+
 Sales run on **PulseChain Testnet v4** (test PLS, no real value) until the
 owner switches the game server to mainnet, and stay "opening soon" until the
 owner's receiving wallet is set. See `server/README.md` → *Plot sales*.
@@ -320,7 +335,7 @@ the draft note whenever the card is hidden. Every menu and card closes with its
 | `src/scripts/city3d/land.ts` | Real sales: wallet payments, the server's list of owners, building (with the wallet login) |
 | `src/scripts/city3d/account.ts` | Log in with a wallet: the signed message, the session, the basic profile |
 | `src/scripts/city3d/account-ui.ts` | The Log in button and the profile card (name, rank, score, wallet, plots) |
-| `src/scripts/city3d/wallet.ts` | The visitor's PulseChain wallet (EIP-1193 / EIP-6963) |
+| `src/scripts/city3d/wallet.ts` | The visitor's PulseChain wallet: installed ones (EIP-1193 / EIP-6963) and WalletConnect for phones |
 | `src/scripts/net/land.ts` | Shared with the server: networks, land API shapes, sign-in message |
 | `src/scripts/city3d/builder-ui.ts` | Build mode: wallet chip, plot panel, customiser, purchase dialog |
 | `src/data/plots.ts` | Districts, plot price, building catalogue, colours, sign texts (shared with the server) |
