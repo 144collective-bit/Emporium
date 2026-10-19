@@ -177,6 +177,9 @@ city is shot at.
   next to Run and Jump. Fire has a little aim assist towards a target near
   the crosshair.
 - **Gamepads:** RT fires, LT aims, X reloads, D-pad up holsters.
+- **Aim when firing** (Controls panel, Shooting): Off, Touch only (the
+  on-screen Fire button) or Always. When on, firing brings the gun up to the
+  sight and it drops again just after you stop. Saved in the browser.
 - **Targets:** cardboard "Jeet Bot" dummies in the park, beside the post
   office and by the apartments, and target drones patrolling above the
   streets. Each has a health bar; dummies flop over and pop back up, and

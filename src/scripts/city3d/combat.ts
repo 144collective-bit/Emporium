@@ -720,6 +720,10 @@ export function createCombat(d: CombatDeps) {
     get firing() {
       return trigger || touchFire;
     },
+    /** The on-screen Fire button is held */
+    get touchFiring() {
+      return touchFire;
+    },
     /** Firing from a touch screen (aim assist applies) */
     get assisted() {
       return touchFire && !trigger;

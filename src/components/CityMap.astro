@@ -113,6 +113,7 @@ const focusY = +((EMPORIUM_FOCUS[1] - VIEW.y) / VIEW.h).toFixed(4);
           <span class="walk-pill-text">Controls</span>
         </summary>
         <div class="walk-settings-body">
+          <p class="walk-section">Look</p>
           <label class="walk-field">
             <span>Look speed</span>
             <input type="range" data-walk-sens min="0.3" max="2.5" step="0.1" value="1" />
@@ -122,6 +123,16 @@ const focusY = +((EMPORIUM_FOCUS[1] - VIEW.y) / VIEW.h).toFixed(4);
             <span>Invert look up / down</span>
           </label>
           <button type="button" class="walk-fp" data-walk-fp aria-pressed="true">First person</button>
+          <p class="walk-section">Shooting</p>
+          <div class="walk-field" role="group" aria-labelledby="auto-ads-label">
+            <span id="auto-ads-label">Aim when firing</span>
+            <div class="walk-seg">
+              <button type="button" data-auto-ads="off" aria-pressed="true">Off</button>
+              <button type="button" data-auto-ads="touch" aria-pressed="false">Touch only</button>
+              <button type="button" data-auto-ads="always" aria-pressed="false">Always</button>
+            </div>
+            <p class="walk-pad">Firing brings the gun up to the sight (steadier shots), and it drops again when you stop. Touch only: the on-screen Fire button.</p>
+          </div>
           <dl class="walk-keys">
             <dt><kbd>WASD</kbd></dt><dd>Move</dd>
             <dt><kbd>Mouse</kbd></dt><dd>Look around</dd>

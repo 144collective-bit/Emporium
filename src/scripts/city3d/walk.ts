@@ -46,18 +46,24 @@ const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
 const damp = (k: number, dt: number) => 1 - Math.exp(-k * dt);
 
 const SETTINGS_KEY = 'degen-city-walk-v1';
+/** Aim when firing: never, only with the on-screen Fire button, or with any fire (mouse, keys, gamepad, touch) */
+type AutoAds = 'off' | 'touch' | 'always';
+const AUTO_ADS: AutoAds[] = ['off', 'touch', 'always'];
 interface Settings {
   sens: number;
   invert: boolean;
+  autoAds: AutoAds;
 }
 function loadSettings(): Settings {
   try {
     const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '{}');
-    return { sens: typeof s.sens === 'number' ? s.sens : 1, invert: !!s.invert };
+    return { sens: typeof s.sens === 'number' ? s.sens : 1, invert: !!s.invert, autoAds: AUTO_ADS.includes(s.autoAds) ? s.autoAds : 'off' };
   } catch {
-    return { sens: 1, invert: false };
+    return { sens: 1, invert: false, autoAds: 'off' };
   }
 }
+/** How long the sight stays up after the trigger is let go (so single shots don't flicker in and out) */
+const AUTO_ADS_HOLD = 0.35;
 
 /* ---------- The character ---------- */
 
@@ -122,6 +128,16 @@ export function createWalk(d: WalkDeps) {
   };
   sensInput.value = String(settings.sens);
   invertInput.checked = settings.invert;
+  // Controls > Shooting: aim when firing
+  const autoAdsBtns = [...root.querySelectorAll<HTMLButtonElement>('[data-auto-ads]')];
+  const paintAutoAds = () => autoAdsBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.autoAds === settings.autoAds)));
+  for (const b of autoAdsBtns)
+    b.addEventListener('click', () => {
+      settings.autoAds = b.dataset.autoAds as AutoAds;
+      paintAutoAds();
+      saveSettings();
+    });
+  paintAutoAds();
 
   const SPAWN = new THREE.Vector3(17.3, SLAB, 18.85);
   let active = false;
@@ -144,6 +160,9 @@ export function createWalk(d: WalkDeps) {
   let camDist = 5.2;
   let firstPerson = false;
   let aim = false;
+  /** Aiming right now: held aim, or the sight brought up by firing (Aim when firing) */
+  let aimNow = false;
+  let autoAdsT = 0;
   let runLock = false;
   let baseFov = camera.fov;
   let fov = 52;
@@ -504,7 +523,11 @@ export function createWalk(d: WalkDeps) {
     const fz = -Math.cos(yaw);
     const dirX = ((fx * iz - fz * ix) / n) * mag;
     const dirZ = ((fz * iz + fx * ix) / n) * mag;
-    const shooting = combat.armed && (aim || combat.firing);
+    // Aim when firing: the sight comes up while the trigger is held, and stays a moment after
+    const autoFire = settings.autoAds === 'always' ? combat.firing : settings.autoAds === 'touch' ? combat.touchFiring : false;
+    autoAdsT = combat.armed && autoFire ? AUTO_ADS_HOLD : Math.max(0, autoAdsT - dt);
+    aimNow = aim || autoAdsT > 0;
+    const shooting = combat.armed && (aimNow || combat.firing);
     const top = run && !shooting ? RUN : shooting ? WALK * 0.7 : WALK;
 
     // Accelerate towards it (less control in the air)
@@ -560,7 +583,7 @@ export function createWalk(d: WalkDeps) {
       else if (!combat.armed) emotePose(P, emote.id, emote.t);
     }
     // Recoil kicks the view up a touch; the rifle rides the shoulder
-    const kick = combat.update(dt, t, aim);
+    const kick = combat.update(dt, t, aimNow);
     if (kick) {
       pitch = Math.max(firstPerson ? -1.35 : -0.55, pitch - kick);
       recoil = Math.min(0.04, recoil + kick);
@@ -599,7 +622,7 @@ export function createWalk(d: WalkDeps) {
     // so he drops to the bottom of the frame and the sky opens up
     const camPitch = firstPerson ? pitch : Math.max(pitch, -0.12);
     offset.set(Math.sin(yaw) * Math.cos(camPitch), Math.sin(camPitch), Math.cos(yaw) * Math.cos(camPitch));
-    const want = firstPerson ? 0 : zoom * (aim ? 0.62 : 1);
+    const want = firstPerson ? 0 : zoom * (aimNow ? 0.62 : 1);
     const room = firstPerson ? 0 : cameraRoom(pivot, offset, want);
     camDist = room < camDist ? room : camDist + (room - camDist) * damp(4, dt);
     camera.position.copy(pivot).addScaledVector(offset, camDist);
@@ -609,10 +632,10 @@ export function createWalk(d: WalkDeps) {
     camera.lookAt(lookAt);
     hero.g.visible = !firstPerson && camDist > 0.6;
     hero.ring.visible = !firstPerson;
-    combat.view(dt, t, { firstPerson, aim, move: stride, phase, run: runAmt, air });
+    combat.view(dt, t, { firstPerson, aim: aimNow, move: stride, phase, run: runAmt, air });
 
     // Field of view widens with speed, narrows when aiming
-    const wantFov = (firstPerson ? 70 : 52) + runAmt * 8 - (aim ? (firstPerson && combat.armed ? combat.adsZoom : 10) : 0);
+    const wantFov = (firstPerson ? 70 : 52) + runAmt * 8 - (aimNow ? (firstPerson && combat.armed ? combat.adsZoom : 10) : 0);
     fov += (wantFov - fov) * damp(6, dt);
     if (Math.abs(camera.fov - fov) > 0.05) {
       camera.fov = fov;
@@ -674,7 +697,7 @@ export function createWalk(d: WalkDeps) {
     },
     /** What other players need to see of us, for the game server */
     netState() {
-      return { pos, face, pitch, speed: speedNow, air: !grounded, run: runAmt > 0.5, aim };
+      return { pos, face, pitch, speed: speedNow, air: !grounded, run: runAmt > 0.5, aim: aimNow };
     },
     /** The server put us back (we moved somewhere impossible) */
     fix(x: number, y: number, z: number) {

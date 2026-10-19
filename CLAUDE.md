@@ -113,7 +113,9 @@ it and has been retired completely. Build only on what's here.
 
 - `src/scripts/city3d/walk.ts`: the playable Degen, over-the-shoulder and
   first-person camera, mouse (pointer lock), keyboard, touch and gamepad
-  controls, collisions and door prompts. Look settings are saved under
+  controls, collisions and door prompts. The Controls panel's settings
+  (Look: speed, invert, first person; Shooting: "Aim when firing"
+  `settings.autoAds` = off / touch / always) are saved under
   `degen-city-walk-v1` in localStorage. The HUD markup (Controls panel, Run
   and Jump buttons, joystick) is in `CityMap.astro`; `walk.ts` expects every
   `data-walk-*` element to exist.
@@ -176,7 +178,10 @@ it and has been retired completely. Build only on what's here.
   buildings and on the ground. When dummies move, their footprints follow
   `DUMMIES` automatically.
 - Keys: click fires, right-click aims, R reloads, G holsters; Caps Lock (not
-  R) toggles run. The combat HUD (`data-cross`, `data-hitmark`, `data-dmg`,
+  R) toggles run. With "Aim when firing" on, firing also aims (`aimNow` in
+  `walk.ts`, held `AUTO_ADS_HOLD` after the trigger is let go); use `aimNow`,
+  not the aim input, for anything that depends on aiming (spread, sight,
+  zoom, the aim sent to the server). The combat HUD (`data-cross`, `data-hitmark`, `data-dmg`,
   `data-pops`, `data-mag`, `data-reserve`, `data-reload-hint`, `data-score`,
   `data-streak`), the finish picker (`data-skins`, `data-lifetime`) and the
   Fire / Aim / Reload buttons live in `CityMap.astro`; `combat.ts` and

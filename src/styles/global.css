@@ -2452,7 +2452,8 @@ body.is-walking .nav {
   display: grid;
   gap: 12px;
   width: 280px;
-  max-width: 100%;
+  /* Measured against the screen: it hangs from the narrow tab row */
+  max-width: calc(100vw - 24px);
   max-height: calc(100vh - 120px);
   margin-top: 8px;
   padding: 14px 16px;
@@ -2503,6 +2504,48 @@ body.is-walking .nav {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   cursor: pointer;
+}
+/* Controls panel sections (Look, Shooting) */
+.walk-section {
+  margin: 4px 0 -4px;
+  padding-top: 10px;
+  border-top: 1px solid #ffffff14;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.walk-section:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+.walk-seg {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+.walk-seg button {
+  min-width: 0;
+  padding: 8px 4px;
+  border: 1px solid #ffffff24;
+  border-radius: 8px;
+  background: #0b0a12;
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.walk-seg button[aria-pressed="true"] {
+  border-color: #0000;
+  background:
+    var(--pulse-wash) padding-box,
+    linear-gradient(#14102a, #14102a) padding-box,
+    var(--pulse) border-box;
+  color: #fff;
 }
 .walk-fp {
   justify-self: start;
