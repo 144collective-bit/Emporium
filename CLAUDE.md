@@ -92,11 +92,22 @@ it and has been retired completely. Build only on what's here.
 - 3D pin labels stay on screen and fold to dots where they'd sit under the
   city's own buttons and cards (`chrome` in `index.ts`); add any new
   always-visible city overlay to that list.
-- Every view mode has the mode header across the top of the city
-  (`.city-head` in `CityMap.astro`, copy in `head.ts`): City view, Walk
-  mode, Build mode, City map (2D), with the City / Walk / Build switch.
-  Its live height is `--head-h`; anything pinned to the top of the city
-  sits below it (`top: calc(var(--head-h) + 12px)`).
+- The city page has **one header**: the city's own bar (`.city-head` in
+  `CityMap.astro`, copy in `head.ts`), slim dark glass. The site bar
+  (`Nav.astro`) is left out there (`<Base nav={false}>`) and stays on the
+  other pages. Left to right: the logo (home link), the mode title and
+  subtitle (City view, Walk mode, Build mode, City map (2D)), then on the
+  right (walk tabs, ammo and score while walking), the City / Walk / Build
+  switch, and the tools: a ⚙ Settings button (time, weather, sound, reset
+  view, 2D map; 3D only, not while walking; never open by default) and a
+  ☰ Menu (the directory, then PulseChain native, X and Telegram; not while
+  walking). Their cards drop down under them (`.head-panel`, one open at a
+  time, with a `.pop-head` ×), spanning the width on phones. Tablets show
+  Settings and Menu as icons; phones put logo, title, ⚙ and ☰ on the first
+  row and the switch, with names, across the second (walking: title and
+  switch, then the walk tabs, ammo and score). Its live height is
+  `--head-h`; anything pinned to the top of the city sits below it
+  (`top: calc(var(--head-h) + 12px)`).
 - The comic-window layout in `src/components/ComicPage.astro` is the design.
   Each window is defined by its ink outline; keep content inside the slants.
 - Palette is the PulseChain gradient. Follow `brand/README.md`: gradient for
@@ -140,8 +151,8 @@ it and has been retired completely. Build only on what's here.
   is hovered and nothing lifts (Degen stands on the same ground).
 - Esc frees the mouse first and only then stops walking. Door panels free
   the mouse so their links can be clicked.
-- While walking, `body.is-walking` (set in `index.ts`) hides the site header
-  so the city fills the screen, and the mode header carries the walk tabs
+- While walking (`body.is-walking`, set in `index.ts`) the header drops the
+  logo on tablets and phones and the Settings and Menu buttons, and carries the walk tabs
   (Controls, Profile, Online, Emote), ammo and score at the top (two rows on
   phones). The touch buttons stay at the bottom.
 - The gun store is compact: a 2 x 2 grid of guns beside the picked gun's
@@ -321,8 +332,8 @@ it and has been retired completely. Build only on what's here.
   wallet's own profile (the token rides in `hello`), and `/land/design`
   checks it. A wallet's first login starts a fresh profile (no guest score,
   name or look carried over), and its look never overwrites the browser's
-  own guest look. The **Connect wallet** button sits in the site header (`.nav-account`,
-  rendered by `Nav.astro` on the city page when there's a game server,
+  own guest look. The **Connect wallet** button sits in the header's tools (`.nav-account`,
+  rendered by `CityMap.astro` when there's a game server,
   "Connect" on phones) and in the walk Profile tab (`[data-account-open]`);
   both open the profile card (`[data-account]`). The account and card are
   made with the page (`CityMap.astro`), not with the 3D city, so they work

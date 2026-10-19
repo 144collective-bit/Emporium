@@ -565,7 +565,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // The city's own buttons and cards: a label under one folds to a dot, so the
   // Walk / Build pills never sit on top of a building's name. Re-read a few
   // times a second (they open, close and move with the layout)
-  const chrome = [...root.querySelectorAll<HTMLElement>('.city-head, .city-controls, .city-card, .city-dir')];
+  // The header, its open drop-downs (settings, menu) and the welcome card
+  const chrome = [...root.querySelectorAll<HTMLElement>('.city-head, .head-panel, .city-card')];
   const chromeRects: { x: number; y: number; w: number; h: number }[] = [];
   const readChrome = () => {
     const o = host.getBoundingClientRect();

@@ -3,6 +3,7 @@ import Base from '../layouts/Base.astro';
 import CityMap from '../components/CityMap.astro';
 ---
 
-<Base fullBleed>
+{/* The city's own header carries the logo, settings and menu, so no site bar here */}
+<Base fullBleed nav={false}>
   <CityMap />
 </Base>

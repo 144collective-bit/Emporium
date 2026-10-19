@@ -11,9 +11,11 @@ interface Props {
   fitViewport?: boolean;
   /** Fill the screen below the nav at every size (the city homepage). */
   fullBleed?: boolean;
+  /** Show the site bar (the city page has its own header with the logo instead) */
+  nav?: boolean;
 }
 
-const { title, description = SITE_DESC, fitViewport = false, fullBleed = false } = Astro.props;
+const { title, description = SITE_DESC, fitViewport = false, fullBleed = false, nav = true } = Astro.props;
 const fullTitle = title ? `${title} | ${SITE_NAME}` : `${SITE_NAME} - ${SITE_TAGLINE}`;
 const base = Astro.site ?? new URL('https://degenemporium.com');
 const canonical = new URL(Astro.url.pathname, base);
@@ -56,7 +58,7 @@ const ogImage = new URL('/og-default.jpg', base);
     />
   </head>
   <body class={fullBleed ? 'full-bleed' : fitViewport ? 'fit-viewport' : undefined}>
-    <Nav />
+    {nav && <Nav />}
     <main>
       <slot />
     </main>

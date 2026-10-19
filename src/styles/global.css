@@ -1962,16 +1962,15 @@ body.is-walking .nav {
   right: 0;
   left: 0;
   z-index: 6;
-  display: grid;
-  grid-template-columns: auto auto minmax(0, 1fr) auto auto auto;
-  grid-template-areas: "id tabs . stats online modes";
+  display: flex;
   align-items: center;
-  column-gap: 14px;
-  min-height: 52px;
-  padding: 8px 16px;
-  background: linear-gradient(180deg, #07060ef2, #07060ec7);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
+  column-gap: 12px;
+  min-height: 56px;
+  padding: 6px 16px;
+  /* Slim dark glass over the city */
+  background: linear-gradient(180deg, #07060ed9, #07060e9e);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  backdrop-filter: blur(14px) saturate(1.2);
 }
 .city-head::after {
   content: "";
@@ -1983,21 +1982,36 @@ body.is-walking .nav {
   background: var(--pulse);
   opacity: 0.75;
 }
+/* Left to right: logo, mode title, (walk tabs), (ammo and score), (Online), City / Walk / Build, settings and menu */
+.city-head-logo {
+  order: 0;
+  flex: none;
+  display: flex;
+  align-items: center;
+  height: 44px;
+  padding-right: 14px;
+  border-right: 1px solid var(--line);
+}
+.city-head-logo picture {
+  height: 100%;
+}
+.city-head-logo-img {
+  display: block;
+  width: auto;
+  height: 100%;
+  filter: drop-shadow(0 0 1px #ffffffaa) drop-shadow(0 0 6px #a855ff80);
+  transition: transform 0.3s var(--ease);
+}
+.city-head-logo:hover .city-head-logo-img {
+  transform: rotate(-2deg) scale(1.04);
+}
 .city-head-id {
-  grid-area: id;
+  order: 1;
   display: flex;
   align-items: center;
   gap: 10px;
   min-width: 0;
-}
-.city-head-mark {
-  flex: none;
-  width: 11px;
-  height: 11px;
-  border-radius: 2px;
-  background: var(--pulse);
-  box-shadow: 0 0 12px #e219e5aa;
-  transform: rotate(45deg);
+  margin-right: auto;
 }
 .city-head-text {
   display: grid;
@@ -2025,10 +2039,17 @@ body.is-walking .nav {
   text-overflow: ellipsis;
 }
 .city-head .walk-top {
-  grid-area: tabs;
+  order: 2;
+}
+/* Walking: the tabs sit by the title, everything else on the right */
+.city[data-mode="walk"] .city-head-id {
+  margin-right: 0;
+}
+.city[data-mode="walk"] .city-head .walk-top {
+  margin-right: auto;
 }
 .city-head-stats {
-  grid-area: stats;
+  order: 3;
   display: none;
   align-items: center;
   gap: 8px;
@@ -2041,7 +2062,7 @@ body.is-walking .nav {
 }
 /* Online / Offline (online.ts): one switch for multiplayer and real plot sales */
 .city-online {
-  grid-area: online;
+  order: 4;
   display: none;
   align-items: center;
   gap: 2px;
@@ -2133,7 +2154,7 @@ body.is-walking .nav {
   }
 }
 .city-head-modes {
-  grid-area: modes;
+  order: 5;
   display: flex;
   gap: 6px;
   justify-self: end;
@@ -2142,6 +2163,117 @@ body.is-walking .nav {
   padding: 8px 14px;
   font-size: 11px;
   box-shadow: none;
+}
+/* Settings (the city's time, weather, sound, view) and the menu (directory and links) */
+.city-head-tools {
+  order: 6;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.city-head .head-pop {
+  position: relative;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  visibility: visible;
+}
+.city-head .city-controls {
+  top: auto;
+  right: auto;
+  display: none;
+  max-width: none;
+}
+.city[data-view="3d"]:not([data-mode="walk"]) .city-head .city-controls {
+  display: block;
+}
+.city[data-mode="walk"] .city-head .city-dir {
+  display: none;
+}
+/* Still there while a building's panel is open (the old floating versions hid then) */
+.city.has-panel .city-head .head-pop {
+  visibility: visible;
+}
+.city-head .head-pop > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid #0000;
+  border-radius: 999px;
+  background:
+    linear-gradient(#0b0a12eb, #0b0a12eb) padding-box,
+    var(--pulse) border-box;
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  list-style: none;
+  cursor: pointer;
+}
+.city-head .head-pop > summary::-webkit-details-marker {
+  display: none;
+}
+.city-head .head-pop > summary::after {
+  content: none;
+}
+.city-head .head-pop > summary svg {
+  flex: none;
+  color: var(--p-cyan);
+}
+.city-head .head-pop[open] > summary {
+  background:
+    var(--pulse-wash) padding-box,
+    linear-gradient(#14102a, #14102a) padding-box,
+    var(--pulse) border-box;
+}
+.city-head .head-pop > summary:focus-visible {
+  outline: 2px solid var(--p-cyan);
+  outline-offset: 2px;
+}
+/* The drop-down card under its button */
+.city-head .head-panel {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  display: grid;
+  gap: 8px;
+  width: max-content;
+  min-width: 260px;
+  max-width: min(400px, calc(100vw - 24px));
+  padding: 12px;
+  border: 1px solid #0000;
+  border-radius: 8px;
+  background:
+    linear-gradient(#0b0a12f2, #0b0a12f2) padding-box,
+    var(--pulse) border-box;
+  box-shadow: 0 18px 50px -20px #000, 0 0 40px -18px #8000ffa6;
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+.city-head .head-panel .pop-head {
+  margin-bottom: 2px;
+}
+.city-head .city-dir ul {
+  min-width: 0;
+  padding: 0;
+}
+.head-menu-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.head-menu-foot .chain-badge {
+  margin-right: auto;
 }
 .city-mode-btn {
   display: none;
@@ -3483,42 +3615,76 @@ body.is-walking .nav {
   .city {
     --head-h: 48px;
   }
-  /* Two independent rows: mode, Online / Offline and the switch; then the walk tabs, ammo and score */
+  /* Two rows. City, Build and the 2D map: logo, title, settings and menu, then City / Walk / Build
+     across the width with their names. Walking: the title and the switch, then the walk tabs,
+     ammo and score. */
   .city-head {
-    display: flex;
     flex-wrap: wrap;
-    align-items: center;
-    column-gap: 10px;
+    column-gap: 8px;
+    row-gap: 6px;
     min-height: 48px;
-    padding: 6px 12px;
+    padding: 6px 12px 8px;
   }
   .city-head::before {
     content: "";
     order: 3;
     flex-basis: 100%;
   }
+  .city-head-logo {
+    height: 36px;
+    padding-right: 10px;
+  }
   .city-head-id {
-    order: 0;
     flex: 1 1 0;
   }
-  .city-online {
-    order: 1;
-  }
-  .city-head-modes {
+  .city-head-tools {
     order: 2;
   }
-  .city-head .walk-top {
+  .city-online {
     order: 4;
+  }
+  .city-head-modes {
+    flex: 1 1 auto;
+  }
+  .city:not([data-mode="walk"]) .city-head-modes .city-mode-btn {
+    flex: 1;
+    justify-content: center;
+  }
+  .city:not([data-mode="walk"]) .city-head .city-mode-btn .city-mode-label {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
+  }
+  .city-head .walk-top {
+    order: 6;
     flex: 1 1 auto;
     min-width: 0;
   }
   .city-head-stats {
-    order: 5;
+    order: 7;
     margin-left: auto;
   }
-  .city[data-view="3d"][data-mode="walk"] .city-head {
-    row-gap: 6px;
-    padding-bottom: 8px;
+  .city[data-mode="walk"] .city-head-modes {
+    order: 2;
+    flex: none;
+  }
+  /* Settings and menu: the menu last, and their cards span the width under the header */
+  .city-head .city-dir {
+    order: 1;
+    align-self: auto;
+  }
+  .city-head .head-pop {
+    position: static;
+  }
+  .city-head .head-panel {
+    top: calc(100% + 8px);
+    right: 12px;
+    left: 12px;
+    width: auto;
+    min-width: 0;
+    max-width: none;
   }
   .city-head-text b {
     font-size: 16px;
@@ -3549,9 +3715,6 @@ body.is-walking .nav {
     right: 12px;
     max-width: none;
     padding: 10px 12px;
-  }
-  .city[data-mode="build"] .city-controls {
-    display: none;
   }
   .builder-catalog {
     grid-template-columns: 1fr;
@@ -4131,6 +4294,29 @@ body.is-walking .nav {
 @media (max-width: 1100px) {
   .walk-pill-text {
     display: none;
+  }
+  /* Settings and Menu as icons (their names stay for screen readers), and no logo while walking */
+  .head-btn-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .city-head .head-pop > summary {
+    padding: 0 11px;
+  }
+  .city[data-mode="walk"] .city-head-logo {
+    display: none;
+  }
+  /* Out of walk mode there's room for all three mode names */
+  .city:not([data-mode="walk"]) .city-head .city-mode-btn .city-mode-label {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
   }
   .walk-pop summary {
     padding: 9px 11px;

@@ -10,9 +10,10 @@
  *
  * All copy is DRAFT - see the note in the card and the panels.
  */
-import { getImage } from 'astro:assets';
+import { Image, Picture, getImage } from 'astro:assets';
 import degen from '../assets/degen.png';
 import logo from '../assets/logo.png';
+import pulsechain from '../assets/pulsechain.png';
 import { renderCity, VIEW, EMPORIUM_FOCUS, type Spot, type SpotId } from '../lib/city';
 import { X_URL, X_HANDLE, TELEGRAM_URL, SHOP_URL, SHOP_OPEN } from '../data/site';
 
@@ -41,6 +42,8 @@ const map = renderCity({ spots, art: { degen: degenImg.src, logo: logoImg.src } 
 const focusX = +((EMPORIUM_FOCUS[0] - VIEW.x) / VIEW.w).toFixed(4);
 const focusY = +((EMPORIUM_FOCUS[1] - VIEW.y) / VIEW.h).toFixed(4);
 // The commit this was built from (set by the Worker's build in server/wrangler.jsonc)
+// Connect wallet (account-ui.ts): only when the site has a game server
+const server = !!import.meta.env.PUBLIC_GAME_SERVER;
 const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) ?? '';
 ---
 
@@ -71,41 +74,14 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
   </div>
 
   {/* View settings, only while the 3D city is up */}
-  <details class="city-controls" data-controls>
-    <summary>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" /></svg>
-      <span>City settings</span>
-    </summary>
-    <div class="city-controls-body">
-      <div class="seg" role="group" aria-label="Time of day">
-        <span class="seg-label">Time</span>
-        <button type="button" data-time="live" aria-pressed="true">Live</button>
-        <button type="button" data-time="day" aria-pressed="false">Day</button>
-        <button type="button" data-time="sunset" aria-pressed="false">Sunset</button>
-        <button type="button" data-time="night" aria-pressed="false">Night</button>
-      </div>
-      <div class="seg" role="group" aria-label="Weather">
-        <span class="seg-label">Sky</span>
-        <button type="button" data-weather="auto" aria-pressed="true">Auto</button>
-        <button type="button" data-weather="clear" aria-pressed="false">Clear</button>
-        <button type="button" data-weather="rain" aria-pressed="false">Rain</button>
-      </div>
-      <div class="seg">
-        <button type="button" class="seg-wide" data-sound aria-pressed="false">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4zM15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14" /></svg>
-          <span data-sound-label>Sound off</span>
-        </button>
-        <button type="button" class="seg-wide" data-reset>Reset view</button>
-        <button type="button" class="seg-wide" data-view-toggle="2d">2D map</button>
-      </div>
-    </div>
-  </details>
 
   {/* The mode header: which view you are in, the walk tabs while walking, and the City / Walk / Build switch.
        Its title and subtitle are painted by head.ts. */}
   <header class="city-head" data-city-head>
+    <a href="/" class="city-head-logo" aria-label="The Degen Emporium, home">
+      <Picture src={logo} formats={['avif', 'webp']} fallbackFormat="webp" widths={[72, 144, 216]} sizes="72px" alt="" loading="eager" class="city-head-logo-img" />
+    </a>
     <div class="city-head-id">
-      <span class="city-head-mark" aria-hidden="true"></span>
       <p class="city-head-text"><b data-head-title>City map</b><small data-head-sub>2D view</small></p>
     </div>
     <div class="walk-top">
@@ -257,6 +233,89 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><path d="M17.5 14v7M14 17.5h7" /></svg>
         <span class="city-mode-label" data-build-label>Build</span>
       </button>
+    </div>
+    {/* Settings and the menu (directory, PulseChain native, X, Telegram), and Connect wallet when there's a game server */}
+    <div class="city-head-tools">
+      {server && (
+        <button type="button" class="nav-account" data-account-nav aria-label="Connect your wallet" onclick="this.dataset.wanted='1'">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H18v4" /><path d="M3 7.5v10A2.5 2.5 0 0 0 5.5 20H20V9H5.5A2.5 2.5 0 0 1 3 7.5z" /><circle cx="16" cy="14.5" r="1.2" /></svg>
+          <span class="nav-account-label" data-account-label>Connect<span class="nav-account-more"> wallet</span></span>
+        </button>
+      )}
+      <details class="city-controls head-pop" data-controls>
+        <summary aria-label="City settings">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" /></svg>
+          <span class="head-btn-text">Settings</span>
+        </summary>
+        <div class="city-controls-body head-panel">
+          <div class="pop-head">
+            <p class="pop-title">City settings</p>
+            <button type="button" class="pop-close" data-pop-close aria-label="Close city settings">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
+            </button>
+          </div>
+          <div class="seg" role="group" aria-label="Time of day">
+            <span class="seg-label">Time</span>
+            <button type="button" data-time="live" aria-pressed="true">Live</button>
+            <button type="button" data-time="day" aria-pressed="false">Day</button>
+            <button type="button" data-time="sunset" aria-pressed="false">Sunset</button>
+            <button type="button" data-time="night" aria-pressed="false">Night</button>
+          </div>
+          <div class="seg" role="group" aria-label="Weather">
+            <span class="seg-label">Sky</span>
+            <button type="button" data-weather="auto" aria-pressed="true">Auto</button>
+            <button type="button" data-weather="clear" aria-pressed="false">Clear</button>
+            <button type="button" data-weather="rain" aria-pressed="false">Rain</button>
+          </div>
+          <div class="seg">
+            <button type="button" class="seg-wide" data-sound aria-pressed="false">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4zM15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14" /></svg>
+              <span data-sound-label>Sound off</span>
+            </button>
+            <button type="button" class="seg-wide" data-reset>Reset view</button>
+            <button type="button" class="seg-wide" data-view-toggle="2d">2D map</button>
+          </div>
+        </div>
+      </details>
+      <details class="city-dir head-pop" data-menu>
+        <summary aria-label="Menu">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+          <span class="head-btn-text">Menu</span>
+        </summary>
+        <div class="head-panel">
+          <div class="pop-head">
+            <p class="pop-title">Directory</p>
+            <button type="button" class="pop-close" data-pop-close aria-label="Close menu">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
+            </button>
+          </div>
+          <ul>
+            {directory.map((id) => {
+              const s = spots[id];
+              return (
+                <li>
+                  <a href={s.href} data-dir-spot={id} {...(s.external ? ext : {})}>
+                    <span>{s.title}</span>
+                    <small>{s.sub}</small>
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+          <div class="head-menu-foot">
+            <span class="chain-badge">
+              <Image src={pulsechain} alt="" width={18} densities={[1, 2, 3]} class="chain-badge-mark" />
+              <span>PulseChain native</span>
+            </span>
+            <a href={X_URL} target="_blank" rel="noopener noreferrer" class="icon-link" aria-label={`@${X_HANDLE} on X`}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+            </a>
+            <a href={TELEGRAM_URL} target="_blank" rel="noopener noreferrer" class="icon-link" aria-label="Telegram">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/></svg>
+            </a>
+          </div>
+        </div>
+      </details>
     </div>
   </header>
 
@@ -459,22 +518,6 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       <p class="city-draft">Draft · v0 · nothing here is final</p>
     </div>
 
-    <details class="city-dir">
-      <summary>Directory</summary>
-      <ul>
-        {directory.map((id) => {
-          const s = spots[id];
-          return (
-            <li>
-              <a href={s.href} data-dir-spot={id} {...(s.external ? ext : {})}>
-                <span>{s.title}</span>
-                <small>{s.sub}</small>
-              </a>
-            </li>
-          );
-        })}
-      </ul>
-    </details>
 
     {/* Stands in for the card's draft note when the card is hidden (always on phones); with the build's commit, to tell which version is live */}
     <p class="city-draft-tag">Draft · v0{build && ` · ${build}`}</p>
@@ -563,6 +606,13 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     // Drop-open menus (City settings, Directory, walk mode's panels) close with their ×, a tap
     // outside or Esc (in 3D, index.ts handles Esc so it can come before leaving a mode)
     const openMenus = () => root.querySelectorAll<HTMLDetailsElement>('.city-controls[open], .city-dir[open], [data-pop][open]');
+    // One drop-down at a time (the header's settings and menu, walk mode's panels)
+    const pops = root.querySelectorAll<HTMLDetailsElement>('.head-pop, [data-pop]');
+    pops.forEach((d) =>
+      d.addEventListener('toggle', () => {
+        if (d.open) pops.forEach((o) => o !== d && (o.open = false));
+      })
+    );
     root.addEventListener('click', (e) => {
       const menu = (e.target as HTMLElement).closest('[data-pop-close]')?.closest('details');
       if (!menu) return;
@@ -643,7 +693,6 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       }
       svg!.pauseAnimations();
       to3d.hidden = true;
-      if (innerWidth > 900) controls.open = true;
     }
     function show2d(offer: boolean) {
       city?.stop();

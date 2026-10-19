@@ -4,8 +4,6 @@ import logo from '../assets/logo.png';
 import pulsechain from '../assets/pulsechain.png';
 import { X_URL, X_HANDLE, TELEGRAM_URL } from '../data/site';
 
-// Connect wallet: on the city page, when the site has a game server (account-ui.ts runs it)
-const wallet = !!import.meta.env.PUBLIC_GAME_SERVER && Astro.url.pathname === '/';
 ---
 
 <header class="nav">
@@ -24,13 +22,6 @@ const wallet = !!import.meta.env.PUBLIC_GAME_SERVER && Astro.url.pathname === '/
     </a>
 
     <div class="nav-right">
-      {/* Connect wallet / your profile (account-ui.ts). A tap before its script is ready is remembered. */}
-      {wallet && (
-        <button type="button" class="nav-account" data-account-nav aria-label="Connect your wallet" onclick="this.dataset.wanted='1'">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H18v4" /><path d="M3 7.5v10A2.5 2.5 0 0 0 5.5 20H20V9H5.5A2.5 2.5 0 0 1 3 7.5z" /><circle cx="16" cy="14.5" r="1.2" /></svg>
-          <span class="nav-account-label" data-account-label>Connect<span class="nav-account-more"> wallet</span></span>
-        </button>
-      )}
       <span class="chain-badge">
         <Image src={pulsechain} alt="" width={18} densities={[1, 2, 3]} class="chain-badge-mark" />
         <span class="chain-badge-text">PulseChain native</span>
