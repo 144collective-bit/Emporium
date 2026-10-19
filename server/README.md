@@ -21,7 +21,10 @@ and scene code.
 
 The Worker is called **emporium** (it must match `"name"` in `wrangler.jsonc`)
 and is connected to this GitHub repository in Cloudflare, so Cloudflare builds
-and deploys it on every push to `main`. Its build settings (*Workers & Pages* →
+and deploys it on every push to `main`. It serves the game server **and, while
+we build, the whole website** at https://emporium.144collective.workers.dev:
+`wrangler deploy` runs the site build first (`build` in `wrangler.jsonc`) and
+publishes `../dist` as static assets. Its build settings (*Workers & Pages* →
 **emporium** → *Settings* → *Build*):
 
 | Setting | Value |
@@ -30,7 +33,7 @@ and deploys it on every push to `main`. Its build settings (*Workers & Pages* �
 | Root directory | `server` |
 | Build command | `cd .. && npm ci && cd server && npm ci` (the server bundles shared code from `src/`, which needs the site's three.js) |
 | Deploy command | `npx wrangler deploy` |
-| Build watch paths (optional) | `server/*`, `src/scripts/net/*`, `src/data/plots.ts`, `src/scripts/city3d/combat-sim.ts`, `src/scripts/city3d/solids.ts` |
+| Build watch paths | leave empty (the Worker carries the website now, so every change should redeploy it) |
 
 The server lives at `https://emporium.144collective.workers.dev`. The "Build
 site" Action builds the site against that address (a `PUBLIC_GAME_SERVER`
@@ -117,7 +120,9 @@ npm install
 npm run dev            # http://localhost:8787 (uses ../node_modules for three.js: run npm install at the repo root first)
 ```
 
-Plot sales locally: `npx wrangler dev --var LAND_PAYEE:0x… --var LAND_RPC:<a testnet RPC>`.
+`npm run dev` here also builds the website (with `PUBLIC_GAME_SERVER` pointing at
+workers.dev) and serves it at http://localhost:8787. Plot sales locally:
+`npx wrangler dev --var LAND_PAYEE:0x… --var LAND_RPC:<a testnet RPC>`.
 
 Then build the site against it from the repo root:
 

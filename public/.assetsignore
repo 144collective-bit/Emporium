@@ -1,0 +1,3 @@
+# Files in the site build that Cloudflare should not publish (Apache settings for Hostinger)
+.htaccess
+.assetsignore

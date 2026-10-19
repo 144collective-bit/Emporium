@@ -303,7 +303,16 @@ it and has been retired completely. Build only on what's here.
   every push to `main` into a downloadable zip.
 - Keep the site fully static (no server routes) and keep `public/.htaccess`
   in the build. The only live service is the separate game server
-  (`server/`, Cloudflare), deployed by the "Deploy game server" Action.
+  (`server/`, the Cloudflare Worker **emporium**), which Cloudflare builds and
+  deploys from GitHub on every push to `main`.
+- **While we build**, the same Worker also serves the website at
+  https://emporium.144collective.workers.dev: `wrangler deploy` builds the site
+  first (`build` in `server/wrangler.jsonc`, with `PUBLIC_GAME_SERVER` set to
+  that address) and publishes `dist/` as its static assets. `/play`, `/health`
+  and `/land` always reach the Worker code (`run_worker_first`); everything
+  else is a page or file. `public/.assetsignore` keeps `.htaccess` private
+  there. degenemporium.com on Hostinger stays the release copy, updated by
+  uploading the "Build site" zip.
 
 ## Content guardrails
 
