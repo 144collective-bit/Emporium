@@ -26,7 +26,8 @@ interface Deps {
 
 export function createBuilderUI(root: HTMLElement, deps: Deps) {
   const { store, plots } = deps;
-  const live = store.mode === 'live';
+  // The Online / Offline switch can change the store from live to the demo and back
+  let live = store.mode === 'live';
   const $ = <T extends HTMLElement>(sel: string) => root.querySelector<T>(sel)!;
   const toggle = $<HTMLButtonElement>('[data-build-toggle]');
   const bar = $('[data-builder-bar]');
@@ -472,7 +473,16 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
     deps.onMode(on);
   }
 
-  store.subscribe(() => sync());
+  store.subscribe(() => {
+    if (live !== (store.mode === 'live')) {
+      // Switched online / offline: the other store's plots, wallet and dialogs
+      live = store.mode === 'live';
+      // (a payment already in flight keeps its dialog: it finishes on its own)
+      if (draft) cancelDraft();
+      closeModal();
+    }
+    sync();
+  });
   sync(true);
   toggle.hidden = false;
 

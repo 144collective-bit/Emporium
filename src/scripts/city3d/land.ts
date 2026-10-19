@@ -139,8 +139,10 @@ export function createLandStore(server: string): Store {
     );
   for (const p of pending) settle(p.plot, p.tx).then(() => forget(p.tx), () => {});
 
+  // Paused while the city is switched offline (a payment in flight still settles)
+  let active = true;
   refresh();
-  setInterval(() => document.visibilityState === 'visible' && refresh(), REFRESH);
+  setInterval(() => active && document.visibilityState === 'visible' && refresh(), REFRESH);
 
   async function session(): Promise<string> {
     if (!wallet || !current) throw new Error('Connect your wallet first.');
@@ -273,6 +275,10 @@ export function createLandStore(server: string): Store {
     build: (id, design) => saveDesign(id, design),
     demolish: (id) => saveDesign(id, null),
     refresh,
+    setActive(on) {
+      if (on && !active) refresh();
+      active = on;
+    },
     subscribe(f) {
       listeners.add(f);
       return () => listeners.delete(f);

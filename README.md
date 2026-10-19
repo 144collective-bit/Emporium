@@ -204,8 +204,19 @@ city is shot at.
 
 ### Multiplayer (beta)
 
-Walk the city with other players. Press the **Online** pill in walk mode
-(top-left, next to Controls) and **Go online**.
+Walk the city with other players. The **Online / Offline** switch in the
+mode header (next to City / Walk / Build; "On / Off" on phones and small tablets) picks one
+for the whole city:
+
+- **Online**: walking joins a shared city, and Build mode sells real plots
+  with your wallet. The dot is cyan when ready, yellow while joining, green
+  once you're in a city (hover it for the city and player count), red if a
+  city is full or the server can't be reached.
+- **Offline**: solo walking, and Build mode is the demo with play money.
+  Nothing talks to the game server.
+
+The choice is remembered in the browser. **Go online** / **Leave** in the
+Online pill while walking flip the same switch.
 
 - Up to 16 players share a city; more cities open as they fill.
 - Everyone gets a generated guest name (reroll it in **Profile**), shown on a
@@ -218,7 +229,8 @@ Walk the city with other players. Press the **Online** pill in walk mode
   typed ever appears. Mute anyone from the Online panel.
 - Target practice is shared: everyone shoots the same dummies and drones and
   the server keeps score.
-- Leave walk mode (City in the header) to go offline; you rejoin when you walk again.
+- Leave walk mode (City in the header) to leave the shared city; with the
+  switch on Online you rejoin when you walk again.
 
 The game server is in `server/` (Cloudflare); see `server/README.md` for
 setup. The plan for the next phases (leaderboards, PvP across the river) is
@@ -259,9 +271,10 @@ Sales run on **PulseChain Testnet v4** (test PLS, no real value) until the
 owner switches the game server to mainnet, and stay "opening soon" until the
 owner's receiving wallet is set. See `server/README.md` → *Plot sales*.
 
-Without a game server (a local build) the builder runs as a **demo**: a
-simulated wallet with play money, nothing touches PulseChain, progress is
-saved in the browser and **Reset demo** clears it.
+Offline (the switch in the mode header), or without a game server (a local
+build), the builder runs as a **demo**: a simulated wallet with play money,
+nothing touches PulseChain, progress is saved in the browser and **Reset
+demo** clears it.
 
 | Building | Panel button goes to |
 | --- | --- |
@@ -302,6 +315,7 @@ the draft note whenever the card is hidden. Every menu and card closes with its
 | `src/scripts/city3d/profile-ui.ts` | The Profile panel: name, rank; owns the look (saved here and online) |
 | `src/scripts/city3d/head.ts` | The mode header's title and subtitle, and its height (`--head-h`) |
 | `src/scripts/city3d/fitting.ts` | Drop 001's fitting room: wardrobe items and the turning preview |
+| `src/scripts/city3d/online.ts` | The Online / Offline switch in the mode header (multiplayer and real sales, or solo and the demo) |
 | `src/scripts/city3d/multiplayer.ts` | Online pill, sending controls, emotes and phrases, player list |
 | `src/scripts/city3d/remote.ts` | Other players: smoothed movement, poses, name tags, bubbles |
 | `src/scripts/net/` | Shared with the server: protocol, profile data (names, ranks, wardrobe, emotes, phrases); `client.ts` is the browser connection |

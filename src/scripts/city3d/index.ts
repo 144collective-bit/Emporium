@@ -16,7 +16,8 @@ import { createMultiplayer } from './multiplayer';
 import { createSky, type TimeMode, type WeatherMode } from './sky';
 import { createSound } from './sound';
 import { createPlots, type Plot } from './plots';
-import { createDemoStore } from './store';
+import { createDemoStore, createSwitchStore } from './store';
+import { createOnlineSwitch } from './online';
 import { createLandStore } from './land';
 import { createBuilderUI } from './builder-ui';
 import { createFitting, type Fitting } from './fitting';
@@ -251,9 +252,12 @@ export async function bootCity(root: HTMLElement) {
     const target = new THREE.Vector3(p.cx, portrait ? -0.4 * k : 1.6 * k, p.cz);
     return { pos: new THREE.Vector3(p.cx, 1.6 * k, p.cz).addScaledVector(dir, (portrait ? 17 : 13) * k), target };
   }
+  // A game server adds the Online / Offline switch: online, real sales (land.ts); offline or without one, the labelled demo
+  const server = import.meta.env.PUBLIC_GAME_SERVER as string | undefined;
+  const onlineSwitch = server ? createOnlineSwitch(root) : null;
+  const sales = server && onlineSwitch ? createSwitchStore(() => createLandStore(server), onlineSwitch.on) : null;
   const builder = createBuilderUI(root, {
-    // A game server means real sales (land.ts); without one, the labelled demo
-    store: import.meta.env.PUBLIC_GAME_SERVER ? createLandStore(import.meta.env.PUBLIC_GAME_SERVER as string) : createDemoStore(),
+    store: sales?.store ?? createDemoStore(),
     plots,
     focus(p) {
       const v = plotView(p);
@@ -302,8 +306,25 @@ export async function bootCity(root: HTMLElement) {
     reduced,
     low: tier === 'low',
   });
-  const server = import.meta.env.PUBLIC_GAME_SERVER as string | undefined;
-  const mp = server ? createMultiplayer({ url: server, root, scene, camera, walk, combat: walk.combat, profile: profileUI }) : null;
+  const mp =
+    server && onlineSwitch
+      ? createMultiplayer({
+          url: server,
+          root,
+          scene,
+          camera,
+          walk,
+          combat: walk.combat,
+          profile: profileUI,
+          enabled: onlineSwitch.on,
+          setSwitch: (on) => onlineSwitch.set(on),
+          changed: (s) => onlineSwitch.status(s),
+        })
+      : null;
+  onlineSwitch?.onChange((on) => {
+    sales?.setOnline(on);
+    mp?.setEnabled(on);
+  });
   const walkBtn = root.querySelector<HTMLButtonElement>('[data-walk-toggle]')!;
   let beforeWalk: { pos: THREE.Vector3; target: THREE.Vector3 } | null = null;
   function startWalking() {

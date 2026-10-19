@@ -259,9 +259,12 @@ it and has been retired completely. Build only on what's here.
   Testnet v4 (test PLS, the current setting), 369 = mainnet. The site reads the
   network from the server. Testnet screens say "test PLS only". Sales show as
   "opening soon" until `LAND_PAYEE` is set. Owners are kept per network.
-- **Demo mode** (no game server): `store.ts` simulates everything with play
-  money in the browser and must stay labelled as a demo. Both modes sit behind
-  the same `Store` interface, so the UI doesn't change.
+- **Demo mode** (offline, or no game server): `store.ts` simulates everything
+  with play money in the browser and must stay labelled as a demo. Both modes
+  sit behind the same `Store` interface, so the UI doesn't change; the Online
+  / Offline switch swaps them through `createSwitchStore()` (the live store
+  is only made the first time the city goes online), and `builder-ui.ts`
+  follows `store.mode` on every change.
 - Visitors can't type text onto buildings: sign texts come from the fixed
   `SIGNS` list, so nothing unexpected (or confidential) appears in public.
 - No explorer or wallet-brand links: show transaction hashes as text. Only
@@ -290,9 +293,20 @@ it and has been retired completely. Build only on what's here.
   lifetime score and rank, stored on the server against a hash of the
   browser's guest token (`degen-city-player-v1`). Offline, the Profile panel
   keeps the look and finish in the browser.
-- The site only shows the Online pill when built with `PUBLIC_GAME_SERVER`
-  (a GitHub repository variable). Only pages in `ALLOWED_ORIGINS`
+- The site only shows the Online pill and the Online / Offline switch when
+  built with `PUBLIC_GAME_SERVER` (a GitHub repository variable, defaulting
+  to the emporium Worker). Only pages in `ALLOWED_ORIGINS`
   (`server/wrangler.jsonc`) can connect.
+- **The Online / Offline switch** (`online.ts`, `[data-online-switch]` in the
+  mode header, remembered as `degen-city-online-v1`, online by default) is
+  one choice for the whole city. Online: walking joins the shared city
+  (`multiplayer.ts` connects only while walking) and Build mode sells real
+  plots. Offline: solo walking and the demo builder, and nothing calls the
+  game server. Go online / Leave in the Online pill flip the same switch. Its
+  dot: grey off, cyan ready, yellow joining, green in a city, red full or
+  unreachable. It reads "On / Off" up to 900px wide; up to 420px only the
+  current side shows (a tap flips it) and City / Walk / Build are icons, so
+  the mode header keeps the title.
 - PvP will only ever happen across the river (south bank); the city north of
   the bridges stays a safe hangout.
 

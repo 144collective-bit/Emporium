@@ -8,8 +8,10 @@
  *   (combat.setNet) and shows your server profile in the Profile panel.
  * - Emote wheel and fixed phrases (T, or the Emote pill), player list with
  *   mute, a short toast when people join or leave.
- * - Going offline: stop walking (you rejoin when you walk again) or press
- *   Leave in the Online panel.
+ * - The city's Online / Offline switch (online.ts) decides: while it's on
+ *   Online you're connected whenever you walk (stop walking and you leave;
+ *   walk again and you rejoin). Go online / Leave in the Online panel flip
+ *   the same switch.
  *
  * Only built when the site has a server address (PUBLIC_GAME_SERVER).
  */
@@ -38,6 +40,12 @@ export interface MultiplayerDeps {
   walk: Walker;
   combat: Combat;
   profile: ProfileUI;
+  /** The Online / Offline switch is on Online */
+  enabled: boolean;
+  /** Go online / Leave pressed: flip the city's switch (online.ts) */
+  setSwitch(online: boolean): void;
+  /** Connection, room or player count changed (the switch's status) */
+  changed(s: { state: NetState; room: string; players: number }): void;
 }
 
 export function createMultiplayer(d: MultiplayerDeps) {
@@ -59,10 +67,11 @@ export function createMultiplayer(d: MultiplayerDeps) {
   let myId = 0;
   let room = '';
   let sendAcc = 0;
-  /** Walking stopped while online: rejoin when walking starts again */
-  let resume = false;
+  /** The city's switch is on Online: connected whenever walking */
+  let enabled = d.enabled;
   const dir = new THREE.Vector3();
   const online = () => net.state === 'online' && myId > 0;
+  const changed = () => d.changed({ state: net.state, room: online() ? room : '', players: online() ? remotes.list().length + 1 : 0 });
 
   /* ----- Little UI helpers ----- */
   let toastTimer = 0;
@@ -98,6 +107,7 @@ export function createMultiplayer(d: MultiplayerDeps) {
       label.textContent = `${room} · ${people.length + 1}`;
       status.textContent = people.length ? `You're in ${room} with ${people.length} other ${people.length === 1 ? 'Degen' : 'Degens'}.` : `You're in ${room}. Nobody else here yet.`;
     }
+    changed();
   }
 
   function paintState(s: NetState, detail?: string) {
@@ -118,6 +128,7 @@ export function createMultiplayer(d: MultiplayerDeps) {
             : s === 'error'
               ? (detail ?? 'Something went wrong.')
               : 'Walk the city with other Degens. Emotes and set phrases only, nothing typed.';
+    changed();
   }
 
   function goOffline() {
@@ -188,12 +199,12 @@ export function createMultiplayer(d: MultiplayerDeps) {
 
   /* ----- Buttons ----- */
   const connect = () => net.connect({ total: Math.floor(combat.lifetime), skin: combat.skin });
+  const idle = () => net.state === 'off' || net.state === 'full' || net.state === 'error';
   joinBtn.addEventListener('click', () => {
-    if (net.state === 'off' || net.state === 'full' || net.state === 'error') connect();
-    else {
-      resume = false;
-      net.disconnect();
-    }
+    if (!idle()) d.setSwitch(false);
+    else if (!enabled) d.setSwitch(true);
+    // Already Online but the last try failed (a full city, an error): try again
+    else connect();
   });
   // Emotes and phrases
   const emoteGrid = $('[data-emote-grid]');
@@ -244,15 +255,16 @@ export function createMultiplayer(d: MultiplayerDeps) {
 
   /* ----- Every frame ----- */
   return {
-    /** Walking started or stopped (going offline while not walking, rejoining after) */
+    /** Walking started or stopped: connected only while walking with the switch on Online */
     walkChanged(walking: boolean) {
-      if (walking && resume) {
-        resume = false;
-        connect();
-      } else if (!walking && net.state !== 'off') {
-        resume = net.state === 'online' || net.state === 'connecting' || net.state === 'retrying';
-        net.disconnect();
-      }
+      if (walking && enabled && idle()) connect();
+      else if (!walking && net.state !== 'off') net.disconnect();
+    },
+    /** The Online / Offline switch moved */
+    setEnabled(on: boolean) {
+      enabled = on;
+      if (on && walk.active && idle()) connect();
+      else if (!on && net.state !== 'off') net.disconnect();
     },
     update(dt: number, t: number) {
       remotes.update(dt, t);

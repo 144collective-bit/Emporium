@@ -232,6 +232,12 @@ const focusY = +((EMPORIUM_FOCUS[1] - VIEW.y) / VIEW.h).toFixed(4);
       <div class="combat-ammo"><b data-mag>30</b><span>/ <span data-reserve>120</span></span><small class="combat-gun" data-gun>Assault Rifle</small><small data-reload-hint hidden>R to reload</small></div>
       <div class="combat-score">Score <b data-score>0</b><small data-streak hidden></small></div>
     </div>
+    {/* Online / Offline (online.ts): only when the site is built with a game server */}
+    <div class="city-online" data-online-switch role="group" aria-label="Online or offline" hidden>
+      <i class="mp-dot" data-online-dot data-state="off" aria-hidden="true"></i>
+      <button type="button" data-online-set="on" aria-pressed="true">On<span class="city-online-long">line</span></button>
+      <button type="button" data-online-set="off" aria-pressed="false">Off<span class="city-online-long">line</span></button>
+    </div>
     <div class="city-head-modes" role="group" aria-label="View mode">
       <button type="button" class="city-to3d" data-view-toggle="3d" hidden>
         <span aria-hidden="true">◆</span> Enter 3D city

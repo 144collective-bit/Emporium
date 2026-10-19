@@ -1920,8 +1920,8 @@ body.is-walking .nav {
   left: 0;
   z-index: 6;
   display: grid;
-  grid-template-columns: auto auto minmax(0, 1fr) auto auto;
-  grid-template-areas: "id tabs . stats modes";
+  grid-template-columns: auto auto minmax(0, 1fr) auto auto auto;
+  grid-template-areas: "id tabs . stats online modes";
   align-items: center;
   column-gap: 14px;
   min-height: 52px;
@@ -1995,6 +1995,99 @@ body.is-walking .nav {
 }
 .city-head-stats [hidden] {
   display: none !important;
+}
+/* Online / Offline (online.ts): one switch for multiplayer and real plot sales */
+.city-online {
+  grid-area: online;
+  display: none;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 3px 3px 10px;
+  border: 1px solid #0000;
+  border-radius: 999px;
+  background:
+    linear-gradient(#0b0a12eb, #0b0a12eb) padding-box,
+    var(--pulse) border-box;
+}
+.city[data-view="3d"] .city-online:not([hidden]) {
+  display: flex;
+}
+.city-online .mp-dot {
+  flex: none;
+  margin-right: 4px;
+}
+.mp-dot[data-state="ready"] {
+  background: var(--p-cyan);
+  box-shadow: 0 0 8px var(--p-cyan);
+}
+.city-online button {
+  padding: 5px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: #ffffffa6;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.city-online button[aria-pressed="true"] {
+  background: var(--pulse-wash), #14102a;
+  color: #fff;
+}
+.city-online button:focus-visible {
+  outline: 2px solid var(--p-cyan);
+  outline-offset: 1px;
+}
+/* Phones (upright or on their side) and small tablets: On / Off; the narrowest show only
+   the current one (a tap flips it, online.ts) */
+@media (max-width: 900px) {
+  .city-online {
+    padding-left: 8px;
+  }
+  .city-online .mp-dot {
+    margin-right: 2px;
+  }
+  .city-online button {
+    padding: 5px 8px;
+  }
+  .city-online-long {
+    display: none;
+  }
+}
+@media (max-width: 420px) {
+  .city-online button[aria-pressed="false"] {
+    display: none;
+  }
+  /* Walk tabs, ammo and score a little tighter so they share the second row */
+  .city-head .walk-pop summary {
+    padding: 8px 9px;
+  }
+  .city-head .combat-ammo,
+  .city-head .combat-score {
+    padding: 4px 8px;
+  }
+  .city-head .combat-ammo b {
+    font-size: 18px;
+  }
+  .city-head .combat-score {
+    font-size: 9.5px;
+  }
+  .city-head .combat-score b {
+    font-size: 16px;
+  }
+  /* and the City / Walk / Build switch as icons (the title says which) */
+  .city-head .city-mode-btn .city-mode-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
 }
 .city-head-modes {
   grid-area: modes;
@@ -3294,14 +3387,38 @@ body.is-walking .nav {
   .city {
     --head-h: 48px;
   }
+  /* Two independent rows: mode, Online / Offline and the switch; then the walk tabs, ammo and score */
   .city-head {
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas:
-      "id modes"
-      "tabs stats";
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
     column-gap: 10px;
     min-height: 48px;
     padding: 6px 12px;
+  }
+  .city-head::before {
+    content: "";
+    order: 3;
+    flex-basis: 100%;
+  }
+  .city-head-id {
+    order: 0;
+    flex: 1 1 0;
+  }
+  .city-online {
+    order: 1;
+  }
+  .city-head-modes {
+    order: 2;
+  }
+  .city-head .walk-top {
+    order: 4;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .city-head-stats {
+    order: 5;
+    margin-left: auto;
   }
   .city[data-view="3d"][data-mode="walk"] .city-head {
     row-gap: 6px;

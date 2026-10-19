@@ -16,7 +16,8 @@ clearly labelled. This file is the reference; update it as decisions change.
 | Chat | Emote wheel and fixed phrases only. Nothing typed ever appears in public. Players can mute others. |
 | What others see | Outfit and colours, the gun they carry and its finish, name tag, rank badge. |
 | Saved | Server-side player profiles (name, outfit, finish, lifetime score, rank); daily and weekly leaderboards (no prizes). |
-| Builder | Stays a personal demo in the visitor's browser until the real wallet and pricing exist. |
+| Builder | Real plot sales (20,000,000 PLS a plot, PulseChain Testnet first) through the visitor's wallet and the game server's `Land`; the demo with play money stays for offline visits and local builds. |
+| Online / Offline | One switch in the mode header for the whole city: Online joins the shared city while walking and sells real plots; Offline is solo with the demo builder. Remembered per browser, online by default. |
 | Fairness | The server decides hits (it runs `combat-sim.ts`), checks movement and fire rate, and rewinds drones to what the shooter saw. |
 | Server | Cloudflare Workers + Durable Objects (one per room, one per profile). The site stays static on Hostinger. |
 | Account | The owner creates the Cloudflare account (guided); deploys run from GitHub Actions with a repo secret. |

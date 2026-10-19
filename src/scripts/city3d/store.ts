@@ -70,6 +70,8 @@ export interface Store {
   /** Load the latest owners (live) */
   refresh(): Promise<void>;
   subscribe(f: () => void): () => void;
+  /** Live: stop or restart checking the server for new owners (the Online / Offline switch) */
+  setActive?(on: boolean): void;
   /** Demo only: give a plot back for its demo PLS, and clear the whole demo */
   release?(id: string): void;
   reset?(): void;
@@ -190,4 +192,76 @@ export function createDemoStore(): Store {
       save();
     },
   };
+}
+
+/**
+ * The Online / Offline switch's store (online.ts): the live store while
+ * online, the demo while offline. The live one is only made the first time
+ * the city goes online, so an offline visit never calls the game server.
+ */
+export function createSwitchStore(makeLive: () => Store, online: boolean) {
+  const demo = createDemoStore();
+  let liveStore: Store | null = null;
+  let cur = demo;
+  const listeners = new Set<() => void>();
+  const changed = () => listeners.forEach((f) => f());
+  demo.subscribe(() => cur === demo && changed());
+  function setOnline(on: boolean) {
+    if (on && !liveStore) {
+      liveStore = makeLive();
+      liveStore.subscribe(() => cur === liveStore && changed());
+    }
+    const next = on ? liveStore! : demo;
+    liveStore?.setActive?.(on);
+    if (next === cur) return;
+    cur = next;
+    changed();
+  }
+  setOnline(online);
+  const store: Store = {
+    get mode() {
+      return cur.mode;
+    },
+    get network() {
+      return cur.network;
+    },
+    get open() {
+      return cur.open;
+    },
+    get payee() {
+      return cur.payee;
+    },
+    get price() {
+      return cur.price;
+    },
+    get confirmations() {
+      return cur.confirmations;
+    },
+    get wallet() {
+      return cur.wallet;
+    },
+    get: (id) => cur.get(id),
+    mine: (id) => cur.mine(id),
+    pending: (id) => cur.pending(id),
+    states: () => cur.states(),
+    wallets: () => cur.wallets(),
+    connect: (id) => cur.connect(id),
+    disconnect: () => cur.disconnect(),
+    buy: (plot, onStep) => cur.buy(plot, onStep),
+    build: (id, design) => cur.build(id, design),
+    demolish: (id) => cur.demolish(id),
+    refresh: () => cur.refresh(),
+    subscribe(f) {
+      listeners.add(f);
+      return () => listeners.delete(f);
+    },
+    // Demo only (builder-ui.ts checks they exist before using them)
+    get release() {
+      return cur.release;
+    },
+    get reset() {
+      return cur.reset;
+    },
+  };
+  return { store, setOnline };
 }
