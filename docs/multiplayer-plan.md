@@ -71,6 +71,11 @@ Visitor's browser                         Cloudflare (server/)
      profile remembers the last one taken. Once geared up, players swap
      between unlocked guns anywhere (`swap` message, `sim.swap()`); each gun
      keeps its own ammo and the counter refills them all.
+   - Plot sales (the `Land` Durable Object): each district is one large plot
+     for 20,000,000 PLS. A buyer's wallet pays the owner's wallet directly;
+     the server checks the payment on PulseChain (testnet first, mainnet when
+     the owner switches) and records the owner and their building for
+     everyone. Owners sign in with their wallet (no gas) to build.
 2. **Leaderboards**: daily and weekly boards (target practice now, PvP
    later) in the Controls panel and on a board in the city.
 3. **South bank PvP**: design and build the neon arena and junkyard / skate

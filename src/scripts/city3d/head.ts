@@ -2,7 +2,7 @@
  * The city's mode header: says which view you're in (City view, Walk mode,
  * Build mode, or the 2D map) with a line on what you can do there, and
  * keeps the City / Walk / Build switch in step. It watches the city root
- * (data-view, data-mode, is-fp, is-online) so every mode change updates it.
+ * (data-view, data-mode, data-sales, is-fp, is-online) so every mode change updates it.
  */
 const COPY = {
   map: { title: 'City map', sub: () => (narrow() ? '2D view' : '2D view · pick a lit-up building') },
@@ -14,7 +14,22 @@ const COPY = {
     title: 'Walk mode',
     sub: (root: HTMLElement) => `${root.classList.contains('is-fp') ? 'First person' : 'Third person'}${root.classList.contains('is-online') ? ' · online' : ''}`,
   },
-  build: { title: 'Build mode', sub: () => (narrow() ? 'Demo · simulated' : 'Demo · purchases are simulated') },
+  build: {
+    title: 'Build mode',
+    // data-sales (builder-ui.ts): the demo, real sales on the testnet, or real sales on mainnet
+    sub: (root: HTMLElement) =>
+      root.dataset.sales === 'testnet'
+        ? narrow()
+          ? 'Testnet · test PLS'
+          : 'PulseChain Testnet · test PLS only'
+        : root.dataset.sales === 'live'
+          ? narrow()
+            ? 'Buy a plot · build on it'
+            : 'Buy a district plot with your wallet · build on it'
+          : narrow()
+            ? 'Demo · simulated'
+            : 'Demo · purchases are simulated',
+  },
 } as const;
 
 const touch = () => matchMedia('(pointer: coarse)').matches;
@@ -36,7 +51,7 @@ export function createCityHead(root: HTMLElement) {
     city.setAttribute('aria-pressed', String(mode === 'explore'));
   }
 
-  new MutationObserver(paint).observe(root, { attributes: true, attributeFilter: ['data-view', 'data-mode', 'class'] });
+  new MutationObserver(paint).observe(root, { attributes: true, attributeFilter: ['data-view', 'data-mode', 'data-sales', 'class'] });
   // Its real height (two rows on phones while walking) for everything pinned under it (--head-h in global.css)
   new ResizeObserver(() => {
     root.style.setProperty('--head-h', `${head.offsetHeight}px`);

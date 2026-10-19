@@ -1,129 +1,47 @@
 /*
- * The city builder in 3D: the plot grid across the districts, the overlay
- * shown in build mode, picking plots under the pointer, and the buildings
- * visitors put on their plots (eight types, each customisable).
- *
- * Four plots that make a 2 x 2 square can be merged into one big plot
- * (id like "N3-01+05": its top-left and bottom-right plots). Its building is
- * the same design drawn twice the size.
+ * The city builder in 3D: the large plots (one per district, its 3 x 3
+ * squares merged into one), the overlay shown in build mode, picking plots
+ * under the pointer, and the buildings owners put on them (eight types, each
+ * customisable, drawn PLOT_SCALE times their base size).
  */
 import * as THREE from 'three';
-import { PLOT_PRICES, type BuildingType, type Tier } from '../../data/plots';
+import { DISTRICTS, PLOT_PRICE, type BuildingType, type Design } from '../../data/plots';
 import { Batch, FONT_MONO, PAL, canvasTex, facadeMat, fx, glowTex, lit, neon, neonSign, roundRect, shadeHex, toon } from './kit';
-import { BS, DISTRICTS, SLAB, type Tick } from './world';
+import { BS, SLAB, type Tick } from './world';
+
+export type { Design };
 
 export interface Plot {
+  /** The district's id, e.g. "N3" */
   id: string;
   district: string;
   districtName: string;
-  /** 1-9, row by row */
-  index: number;
   x0: number;
   z0: number;
   size: number;
   cx: number;
   cz: number;
-  tier: Tier;
+  /** PLS */
   price: number;
-  /** A big plot: the four plots it's made of */
-  parts?: string[];
 }
 
-export interface Design {
-  type: BuildingType;
-  color: string;
-  neon: string;
-  floors: number;
-  sign: string;
-  /** Quarter turns, 0-3 */
-  rot: number;
-}
+/** Who has a plot: you, someone else, or a payment for it is being checked */
+export type PlotState = 'mine' | 'taken' | 'pending';
 
-/* ---------- The grid ---------- */
+/* ---------- The plots ---------- */
 
 const KERB = 0.4;
-const PER_SIDE = 3;
-export const PLOT_SIZE = (BS - KERB * 2) / PER_SIDE;
-const CORE: [number, number] = [0, 31];
+export const PLOT_SIZE = BS - KERB * 2;
+/** Buildings fill a large plot at this many times their base size */
+export const PLOT_SCALE = 3;
 
-export const PLOTS: Plot[] = DISTRICTS.flatMap((d) => {
-  const corner = d.id === 'N1' || d.id === 'N5';
-  const out: Plot[] = [];
-  for (let row = 0; row < PER_SIDE; row++) {
-    for (let col = 0; col < PER_SIDE; col++) {
-      const x0 = d.ox + KERB + col * PLOT_SIZE;
-      const z0 = d.oz + KERB + row * PLOT_SIZE;
-      const cx = x0 + PLOT_SIZE / 2;
-      const cz = z0 + PLOT_SIZE / 2;
-      // How far the plot is from the core city's edge: the row facing it is prime
-      const gap = Math.max(CORE[0] - cx, 0, cx - CORE[1], CORE[0] - cz, cz - CORE[1]);
-      const tier: Tier = corner ? 'outer' : gap < 4.5 ? 'prime' : 'standard';
-      const index = row * PER_SIDE + col + 1;
-      out.push({ id: `${d.id}-${String(index).padStart(2, '0')}`, district: d.id, districtName: d.name, index, x0, z0, size: PLOT_SIZE, cx, cz, tier, price: PLOT_PRICES[tier] });
-    }
-  }
-  return out;
+export const PLOTS: Plot[] = DISTRICTS.map((d) => {
+  const x0 = d.ox + KERB;
+  const z0 = d.oz + KERB;
+  return { id: d.id, district: d.id, districtName: d.name, x0, z0, size: PLOT_SIZE, cx: x0 + PLOT_SIZE / 2, cz: z0 + PLOT_SIZE / 2, price: PLOT_PRICE };
 });
 export const PLOT_BY_ID = new Map(PLOTS.map((p) => [p.id, p]));
-
-/* ---------- Big plots (2 x 2) ---------- */
-
-/** How much bigger a big plot's building is drawn */
-export const BIG_SCALE = 2;
-/** Towers on big plots stop at this many floors, so the Emporium stays the tallest building */
-export const BIG_MAX_FLOORS = 10;
-const pad = (n: number) => String(n).padStart(2, '0');
-const bigCache = new Map<string, Plot>();
-
-/** The big plot whose top-left plot is `anchor` (null if a 2 x 2 square doesn't fit there) */
-export function bigPlotAt(anchor: Plot): Plot | null {
-  const row = Math.floor((anchor.index - 1) / PER_SIDE);
-  const col = (anchor.index - 1) % PER_SIDE;
-  if (row > PER_SIDE - 2 || col > PER_SIDE - 2) return null;
-  const id = `${anchor.district}-${pad(anchor.index)}+${pad(anchor.index + PER_SIDE + 1)}`;
-  let big = bigCache.get(id);
-  if (!big) {
-    const parts = [0, 1, PER_SIDE, PER_SIDE + 1].map((k) => PLOT_BY_ID.get(`${anchor.district}-${pad(anchor.index + k)}`)!);
-    const size = PLOT_SIZE * 2;
-    // The best tier of the four (a big plot facing the core city is prime)
-    const tier = (['prime', 'standard', 'outer'] as Tier[]).find((t) => parts.some((q) => q.tier === t))!;
-    big = {
-      ...anchor,
-      id,
-      size,
-      cx: anchor.x0 + size / 2,
-      cz: anchor.z0 + size / 2,
-      tier,
-      price: parts.reduce((n, q) => n + q.price, 0),
-      parts: parts.map((q) => q.id),
-    };
-    bigCache.set(id, big);
-  }
-  return big;
-}
-
-/** A plot or a big plot by id */
-export function plotById(id: string): Plot | null {
-  const small = PLOT_BY_ID.get(id);
-  if (small) return small;
-  const m = /^(\w+)-(\d{2})\+\d{2}$/.exec(id);
-  const anchor = m ? PLOT_BY_ID.get(`${m[1]}-${m[2]}`) : undefined;
-  const big = anchor ? bigPlotAt(anchor) : null;
-  return big?.id === id ? big : null;
-}
-
-/** Every 2 x 2 square in its district that includes this plot */
-export function squaresWith(p: Plot): Plot[] {
-  const row = Math.floor((p.index - 1) / PER_SIDE);
-  const col = (p.index - 1) % PER_SIDE;
-  const out: Plot[] = [];
-  for (const r of [row - 1, row])
-    for (const c of [col - 1, col]) {
-      if (r < 0 || c < 0 || r > PER_SIDE - 2 || c > PER_SIDE - 2) continue;
-      out.push(bigPlotAt(PLOT_BY_ID.get(`${p.district}-${pad(r * PER_SIDE + c + 1)}`)!)!);
-    }
-  return out;
-}
+export const plotById = (id: string) => PLOT_BY_ID.get(id) ?? null;
 
 export function plotAt(x: number, z: number) {
   return PLOTS.find((p) => x >= p.x0 && x < p.x0 + p.size && z >= p.z0 && z < p.z0 + p.size) ?? null;
@@ -428,22 +346,20 @@ const saleTex = canvasTex(256, 128, (c) => {
 const COLORS = {
   free: new THREE.Color('#00eaff').multiplyScalar(0.55),
   mine: new THREE.Color('#ff6ad5'),
+  taken: new THREE.Color('#8000ff').multiplyScalar(0.7),
+  pending: new THREE.Color('#ffd36b'),
   hover: new THREE.Color('#7cf4ff'),
   selected: new THREE.Color('#ffffff'),
 };
 
 export interface PlotsApi {
-  /** The plot under a ray (always one of the small plots) */
+  /** The plot under a ray */
   pick(ray: THREE.Ray): Plot | null;
   setOverlay(on: boolean): void;
-  /** A plot or big plot; a small plot that's part of a big one lights up the big one */
   setHover(id: string | null): void;
   setSelected(id: string | null): void;
-  /** Plots lit up as a suggestion (the square a merge button would join) */
-  setMarked(ids: string[]): void;
-  setOwned(ids: Iterable<string>): void;
-  /** Which big plots exist: their frames replace their four plots' frames */
-  setMerged(bigIds: Iterable<string>): void;
+  /** Plots that aren't for sale (anything missing is free) */
+  setStates(states: Map<string, PlotState>): void;
   /** Put a building on a plot (or clear it with null) */
   show(id: string, design: Design | null, animate?: boolean): void;
   /** Footprints and heights of placed buildings, for walk mode (parks are walkable) */
@@ -462,56 +378,47 @@ export function createPlots(scene: THREE.Scene, opts: { degen: HTMLImageElement 
     n
   );
   PLOTS.forEach((p, i) => {
-    overlay.setMatrixAt(i, m.compose(new THREE.Vector3(p.cx, SLAB + 0.03, p.cz), flat, new THREE.Vector3(p.size * 0.94, p.size * 0.94, 1)));
+    overlay.setMatrixAt(i, m.compose(new THREE.Vector3(p.cx, SLAB + 0.03, p.cz), flat, new THREE.Vector3(p.size * 0.97, p.size * 0.97, 1)));
     overlay.setColorAt(i, COLORS.free);
   });
   overlay.visible = false;
   overlay.renderOrder = 2;
   scene.add(fx(overlay));
-  // Big plots get one frame of their own, shown in place of their four
-  const bigSlots = PLOTS.map((p) => bigPlotAt(p)).filter((b): b is Plot => !!b);
-  const bigOverlay = new THREE.InstancedMesh(overlay.geometry, overlay.material, bigSlots.length);
-  const zero = new THREE.Matrix4().makeScale(0, 0, 0);
-  bigSlots.forEach((b, i) => {
-    bigOverlay.setMatrixAt(i, zero);
-    bigOverlay.setColorAt(i, COLORS.free);
-  });
-  bigOverlay.visible = false;
-  bigOverlay.renderOrder = 2;
-  scene.add(fx(bigOverlay));
 
-  // A little sign on every plot still for sale
+  // A for-sale sign on every plot still for sale, at its corner
   const post = new THREE.InstancedMesh(new THREE.BoxGeometry(0.05, 0.5, 0.05), toon('#1b1830'), n);
   const board = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.5, 0.25), new THREE.MeshToonMaterial({ map: saleTex, side: THREE.DoubleSide }), n);
   const ry = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 4);
+  const SIGN = 2;
   const signAt = (p: Plot, show: boolean) => {
     const i = PLOTS.indexOf(p);
-    const s = show ? 1 : 0;
-    const x = p.x0 + p.size - 0.35;
-    const z = p.z0 + p.size - 0.35;
-    post.setMatrixAt(i, m.compose(new THREE.Vector3(x, SLAB + 0.25, z), ry, new THREE.Vector3(s, s, s)));
-    board.setMatrixAt(i, m.compose(new THREE.Vector3(x, SLAB + 0.55, z), ry, new THREE.Vector3(s, s, s)));
+    const s = show ? SIGN : 0;
+    const x = p.x0 + p.size - 0.7;
+    const z = p.z0 + p.size - 0.7;
+    post.setMatrixAt(i, m.compose(new THREE.Vector3(x, SLAB + 0.25 * SIGN, z), ry, new THREE.Vector3(s, s, s)));
+    board.setMatrixAt(i, m.compose(new THREE.Vector3(x, SLAB + 0.55 * SIGN, z), ry, new THREE.Vector3(s, s, s)));
   };
   PLOTS.forEach((p) => signAt(p, true));
   post.castShadow = true;
   scene.add(post, board);
 
-  const owned = new Set<string>();
-  /** Small plot id -> the big plot it's part of */
-  const partOf = new Map<string, string>();
-  const merged = new Set<string>();
+  let states = new Map<string, PlotState>();
   let hover: string | null = null;
   let selected: string | null = null;
-  let marked = new Set<string>();
-  const colorOf = (id: string, mine: boolean) => (id === selected ? COLORS.selected : id === hover || marked.has(id) ? COLORS.hover : mine ? COLORS.mine : COLORS.free);
-  const paint = () => {
-    PLOTS.forEach((p, i) => overlay.setColorAt(i, colorOf(p.id, owned.has(p.id))));
-    bigSlots.forEach((b, i) => bigOverlay.setColorAt(i, colorOf(b.id, true)));
-    overlay.instanceColor!.needsUpdate = true;
-    bigOverlay.instanceColor!.needsUpdate = true;
+  const colorOf = (id: string) => {
+    if (id === selected) return COLORS.selected;
+    if (id === hover) return COLORS.hover;
+    const st = states.get(id);
+    return st ? COLORS[st] : COLORS.free;
   };
-  const frameAt = (p: Plot, show: boolean) =>
-    m.compose(new THREE.Vector3(p.cx, SLAB + 0.03, p.cz), flat, new THREE.Vector3(show ? p.size * 0.94 : 0, show ? p.size * 0.94 : 0, 1));
+  const paint = () => {
+    PLOTS.forEach((p, i) => overlay.setColorAt(i, colorOf(p.id)));
+    overlay.instanceColor!.needsUpdate = true;
+  };
+  const resign = () => {
+    for (const p of PLOTS) signAt(p, !buildings.has(p.id) && !states.has(p.id));
+    post.instanceMatrix.needsUpdate = board.instanceMatrix.needsUpdate = true;
+  };
 
   // Buildings
   const buildings = new Map<string, THREE.Group>();
@@ -536,7 +443,7 @@ export function createPlots(scene: THREE.Scene, opts: { degen: HTMLImageElement 
   const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -SLAB);
   const hit = new THREE.Vector3();
   const animate = (g: THREE.Group) => {
-    // Grows up from the ground to its full height (twice as tall on a big plot)
+    // Grows up from the ground to its full height
     rising.push({ g, t0: now, s: g.scale.x });
     g.scale.y = 0.01 * g.scale.x;
   };
@@ -550,7 +457,7 @@ export function createPlots(scene: THREE.Scene, opts: { degen: HTMLImageElement 
       if (k >= 1) rising.splice(i, 1);
     }
     const on = Math.floor(t * 4) % 2 === 0;
-    for (const b of blinkers) (b.material as THREE.PointsMaterial).size = on ? 0.17 : 0.1;
+    for (const b of blinkers) (b.material as THREE.PointsMaterial).size = (on ? 0.17 : 0.1) * PLOT_SCALE;
     if (overlay.visible) (overlay.material as THREE.MeshBasicMaterial).opacity = 0.75 + Math.sin(t * 3) * 0.2;
   });
 
@@ -559,10 +466,9 @@ export function createPlots(scene: THREE.Scene, opts: { degen: HTMLImageElement 
       return ray.intersectPlane(plane, hit) ? plotAt(hit.x, hit.z) : null;
     },
     setOverlay(on) {
-      overlay.visible = bigOverlay.visible = on;
+      overlay.visible = on;
     },
     setHover(id) {
-      id = id ? (partOf.get(id) ?? id) : null;
       if (hover === id) return;
       hover = id;
       paint();
@@ -571,67 +477,43 @@ export function createPlots(scene: THREE.Scene, opts: { degen: HTMLImageElement 
       selected = id;
       paint();
     },
-    setMarked(ids) {
-      marked = new Set(ids);
-      paint();
-    },
-    setOwned(ids) {
-      owned.clear();
-      for (const id of ids) owned.add(id);
-      // For-sale signs come down as soon as a plot is bought
-      for (const p of PLOTS) if (!buildings.has(p.id)) signAt(p, !owned.has(p.id));
-      post.instanceMatrix.needsUpdate = board.instanceMatrix.needsUpdate = true;
-      paint();
-    },
-    setMerged(bigIds) {
-      merged.clear();
-      partOf.clear();
-      for (const id of bigIds) {
-        const big = plotById(id);
-        if (!big?.parts) continue;
-        merged.add(id);
-        for (const q of big.parts) partOf.set(q, id);
-      }
-      PLOTS.forEach((p, i) => overlay.setMatrixAt(i, frameAt(p, !partOf.has(p.id))));
-      bigSlots.forEach((b, i) => bigOverlay.setMatrixAt(i, frameAt(b, merged.has(b.id))));
-      overlay.instanceMatrix.needsUpdate = bigOverlay.instanceMatrix.needsUpdate = true;
-      if (hover && partOf.has(hover)) hover = partOf.get(hover)!;
+    setStates(next) {
+      states = new Map(next);
+      resign();
       paint();
     },
     solids() {
       const out: [number, number, number, number, number][] = [];
+      const k = PLOT_SCALE;
       for (const [id, d] of designs) {
         if (d.type === 'garden') continue;
-        const p = plotById(id)!;
-        const k = p.parts ? BIG_SCALE : 1;
+        const p = PLOT_BY_ID.get(id)!;
         const h = (d.type === 'tower' ? d.floors * 0.34 + 1.4 : d.type === 'loft' ? d.floors * 0.42 + 0.6 : d.type === 'billboard' ? 2.8 : 2) * k;
         out.push([p.cx - 1.1 * k, p.cz - 1.1 * k, p.cx + 1.1 * k, p.cz + 1.1 * k, h]);
       }
       return out;
     },
     show(id, design, anim = true) {
-      const p = plotById(id);
+      const p = PLOT_BY_ID.get(id);
       if (!p) return;
       const old = buildings.get(id);
       if (old) disposeGroup(old);
       buildings.delete(id);
       designs.delete(id);
-      if (!p.parts) {
-        signAt(p, !design && !owned.has(id));
-        post.instanceMatrix.needsUpdate = board.instanceMatrix.needsUpdate = true;
+      if (design) {
+        const g = new THREE.Group();
+        const b = new Batch();
+        GEN[design.type](design, g, b, { degen: opts.degen, blinkers });
+        b.build(g);
+        g.position.set(p.cx, SLAB, p.cz);
+        g.rotation.y = (design.rot % 4) * (Math.PI / 2);
+        g.scale.setScalar(PLOT_SCALE);
+        scene.add(g);
+        buildings.set(id, g);
+        designs.set(id, { ...design });
+        if (anim && !opts.reduced) animate(g);
       }
-      if (!design) return;
-      const g = new THREE.Group();
-      const b = new Batch();
-      GEN[design.type](design, g, b, { degen: opts.degen, blinkers });
-      b.build(g);
-      g.position.set(p.cx, SLAB, p.cz);
-      g.rotation.y = (design.rot % 4) * (Math.PI / 2);
-      if (p.parts) g.scale.setScalar(BIG_SCALE);
-      scene.add(g);
-      buildings.set(id, g);
-      designs.set(id, { ...design });
-      if (anim && !opts.reduced) animate(g);
+      resign();
     },
   };
 }

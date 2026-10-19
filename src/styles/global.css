@@ -2072,6 +2072,9 @@ body.is-walking .nav {
   justify-self: start;
   cursor: pointer;
 }
+.builder-bar .chip-link[hidden] {
+  display: none;
+}
 .builder-wallet {
   display: flex;
   flex-wrap: wrap;
@@ -2180,31 +2183,17 @@ body.is-walking .nav {
   gap: 6px;
   width: 100%;
 }
-/* Merging four plots in a 2 x 2 square into a big plot */
-.builder-merge {
+/* Picking a wallet when the browser has several */
+.wallet-picks {
   display: grid;
-  gap: 8px;
-  width: 100%;
-  padding-top: 12px;
-  border-top: 1px solid var(--line);
-}
-.builder-merge-head {
-  margin: 0;
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-.builder-merge-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
   gap: 6px;
+  width: 100%;
 }
-.builder-merge-opt {
-  display: grid;
-  gap: 2px;
-  padding: 9px 10px;
+.wallet-pick {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: 6px;
   background: #ffffff08;
@@ -2213,28 +2202,46 @@ body.is-walking .nav {
   cursor: pointer;
   transition: border-color 0.2s, background 0.2s;
 }
-.builder-merge-opt b {
+.wallet-pick img {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+}
+.wallet-pick b {
   font-family: var(--font-display);
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 800;
   text-transform: uppercase;
 }
-.builder-merge-opt small {
-  font-family: var(--font-mono);
-  font-size: 9.5px;
-  letter-spacing: 0.06em;
-  color: var(--p-cyan);
-}
-.builder-merge-opt:hover,
-.builder-merge-opt:focus-visible {
+.wallet-pick:hover,
+.wallet-pick:focus-visible {
   border-color: var(--p-cyan);
   background: #00eaff14;
 }
-.builder-merge-opt[aria-disabled="true"] small {
-  color: var(--muted);
+.wallet-off {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: none;
+  color: var(--text-2);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
 }
-.builder-merge-opt[aria-disabled="true"] {
-  cursor: default;
+.wallet-off:hover {
+  color: #fff;
+  border-color: #ffffff40;
+}
+.tag-taken {
+  border: 1px solid #a36bff;
+  background: #8000ff26;
+}
+.tag-pending {
+  border: 1px solid #ffd36b;
+  background: #ffd36b1f;
 }
 .city-panel-actions [aria-disabled="true"] {
   opacity: 0.55;

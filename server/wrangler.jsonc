@@ -1,4 +1,4 @@
-// The Degen City game server: one Worker, three kinds of Durable Object.
+// The Degen City game server: one Worker, four kinds of Durable Object.
 // Deployed from GitHub Actions (.github/workflows/deploy-server.yml); see README.md here.
 {
   "name": "degen-city",
@@ -8,14 +8,26 @@
     "bindings": [
       { "name": "LOBBY", "class_name": "Lobby" },
       { "name": "ROOMS", "class_name": "Room" },
-      { "name": "PROFILES", "class_name": "Profile" }
+      { "name": "PROFILES", "class_name": "Profile" },
+      { "name": "LAND", "class_name": "Land" }
     ]
   },
   // SQLite-backed Durable Objects are available on the Workers free plan
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Lobby", "Room", "Profile"] }],
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["Lobby", "Room", "Profile"] },
+    { "tag": "v2", "new_sqlite_classes": ["Land"] }
+  ],
   "vars": {
     // Pages allowed to connect (other sites can't embed the game)
-    "ALLOWED_ORIGINS": "https://degenemporium.com,https://www.degenemporium.com,http://localhost:4321"
+    "ALLOWED_ORIGINS": "https://degenemporium.com,https://www.degenemporium.com,http://localhost:4321",
+    // Plot sales (see src/land.ts). 943 = PulseChain Testnet v4 (test PLS), 369 = PulseChain mainnet.
+    // Switching network starts a fresh list of owners; testnet sales never carry over.
+    "LAND_CHAIN_ID": "943",
+    // The owner's PulseChain wallet that plot payments go to (public address only).
+    // Sales stay closed ("opening soon") while this is empty.
+    "LAND_PAYEE": "",
+    "LAND_PRICE_PLS": "20000000",
+    "LAND_CONFIRMATIONS": "3"
   },
   "observability": { "enabled": true }
 }

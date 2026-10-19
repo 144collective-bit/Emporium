@@ -1,21 +1,17 @@
 /*
- * Build mode's interface: the demo wallet, the plot panel (buy, choose a
- * building, customise it with a live preview, edit, demolish, release,
- * merge four plots in a 2 x 2 square into a big plot and split it again),
- * the simulated purchase dialog and toasts. The 3D side lives in plots.ts
- * and the state in store.ts.
+ * Build mode's interface: the wallet chip, the plot panel (buy a large plot,
+ * choose a building, customise it with a live preview, edit, demolish), the
+ * purchase dialog and toasts. The 3D side lives in plots.ts; ownership in a
+ * Store: live (real wallet + game server, land.ts) or the demo (store.ts).
  */
-import { BUILDINGS, NEON_COLORS, SIGNS, TIER_INFO, WALL_COLORS, type BuildingDef } from '../../data/plots';
-import { BIG_MAX_FLOORS, PLOT_BY_ID, plotById, plotToward, squaresWith, type Design, type Plot, type PlotsApi } from './plots';
+import { BUILDINGS, NEON_COLORS, SIGNS, WALL_COLORS, type BuildingDef } from '../../data/plots';
+import { shortAddr } from '../net/land';
+import { PLOTS, PLOT_BY_ID, plotById, plotToward, type Design, type Plot, type PlotsApi } from './plots';
 import type { BuyStep, Store } from './store';
 
 const fmt = new Intl.NumberFormat('en-US');
-const pls = (n: number) => `${fmt.format(n)} PLS`;
-const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 const defOf = (t: Design['type']) => BUILDINGS.find((b) => b.type === t)!;
-/** "N3-05" -> "05" */
-const num = (id: string) => id.slice(-2);
 
 interface Deps {
   store: Store;
@@ -30,6 +26,7 @@ interface Deps {
 
 export function createBuilderUI(root: HTMLElement, deps: Deps) {
   const { store, plots } = deps;
+  const live = store.mode === 'live';
   const $ = <T extends HTMLElement>(sel: string) => root.querySelector<T>(sel)!;
   const toggle = $<HTMLButtonElement>('[data-build-toggle]');
   const bar = $('[data-builder-bar]');
@@ -40,6 +37,7 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
   const modalBody = $('[data-buy-body]');
   const modalClose = $('[data-buy-close]');
   const toastEl = $('[data-toast]');
+  const panelNote = $('[data-plot-note]');
 
   let building = false;
   let selected: Plot | null = null;
@@ -47,34 +45,72 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
   let draft: Design | null = null;
   let connecting = false;
   let buying = false;
+  let saving = false;
   let toastTimer = 0;
+
+  const symbol = () => store.network?.symbol ?? 'PLS';
+  const pls = (n: number) => `${fmt.format(n)} ${symbol()}`;
+  // Live on the testnet: test PLS only; the demo: play money; mainnet: real sales
+  const tagline = () => (!live ? 'Demo · purchases are simulated · no real PLS' : store.network?.testnet ? `${store.network.name} · test PLS only, no real value` : `${store.network?.name ?? 'PulseChain'} · real PLS`);
 
   function toast(msg: string) {
     toastEl.textContent = msg;
     toastEl.classList.add('is-on');
     clearTimeout(toastTimer);
-    toastTimer = window.setTimeout(() => toastEl.classList.remove('is-on'), 3200);
+    toastTimer = window.setTimeout(() => toastEl.classList.remove('is-on'), 4200);
   }
 
   /* ---------- Wallet chip ---------- */
 
   function renderWallet() {
     const w = store.wallet;
+    const net = live && store.network ? `<span class="tag tag-demo">${esc(store.network.short)}</span>` : live ? '' : '<span class="tag tag-demo">Demo</span>';
     walletEl.innerHTML = w
-      ? `<span class="wallet-dot" aria-hidden="true"></span><span class="wallet-addr">${short(w.address)}</span><span class="wallet-bal">${pls(w.balance)}</span><span class="tag tag-demo">Demo</span>`
-      : `<button type="button" class="btn-pulse btn-sm" data-connect ${connecting ? 'disabled' : ''}>${connecting ? 'Connecting…' : 'Connect demo wallet'}</button>`;
+      ? `<span class="wallet-dot" aria-hidden="true"></span><span class="wallet-addr">${shortAddr(w.address)}</span><span class="wallet-bal">${pls(w.balance)}</span>${net}<button type="button" class="wallet-off" data-disconnect aria-label="Disconnect wallet">×</button>`
+      : `<button type="button" class="btn-pulse btn-sm" data-connect ${connecting ? 'disabled' : ''}>${connecting ? 'Connecting…' : live ? 'Connect wallet' : 'Connect demo wallet'}</button>${net}`;
+    panelNote.textContent = tagline();
+    root.dataset.sales = !live ? 'demo' : store.network?.testnet ? 'testnet' : 'live';
+    $('[data-builder-reset]').hidden = live;
   }
 
-  async function connect() {
+  async function connect(walletId?: string) {
     if (connecting || store.wallet) return;
+    if (live && !walletId) {
+      const list = await store.wallets();
+      if (list.length !== 1) return pickWallet(list);
+      walletId = list[0].id;
+    }
     connecting = true;
+    closeModal();
     renderWallet();
     renderPanel();
-    await store.connect();
+    try {
+      await store.connect(walletId);
+      toast(live ? `Wallet connected on ${store.network?.name ?? 'PulseChain'}.` : 'Demo wallet connected with simulated PLS.');
+    } catch (e) {
+      toast((e as Error).message);
+    }
     connecting = false;
     renderWallet();
     renderPanel();
-    toast('Demo wallet connected with simulated PLS.');
+  }
+
+  /** Several wallets in this browser: which one? None: how to get one. */
+  function pickWallet(list: { id: string; name: string; icon: string }[]) {
+    openModal(
+      list.length
+        ? `<p class="kicker"><span class="kicker-num">Wallet</span> Connect</p>
+           <h2 class="city-panel-title" id="buy-title">Pick your wallet</h2>
+           <div class="wallet-picks">${list
+             .map((w) => `<button type="button" class="wallet-pick" data-wallet-id="${esc(w.id)}">${w.icon ? `<img src="${esc(w.icon)}" alt="" width="24" height="24">` : ''}<b>${esc(w.name)}</b></button>`)
+             .join('')}</div>
+           <p class="city-panel-fine">Your wallet asks before it shares your address or sends anything.</p>`
+        : `<p class="kicker"><span class="kicker-num">Wallet</span> Connect</p>
+           <h2 class="city-panel-title" id="buy-title">No wallet found</h2>
+           <p class="city-panel-text">Buying a plot needs a crypto wallet that works with PulseChain.</p>
+           <p class="city-panel-fine">On a phone, open this page in your wallet app's own browser. On a computer, add a wallet extension to your browser, then reload this page.</p>
+           <div class="city-panel-actions"><button type="button" class="chip-link" data-cancel>Close</button></div>`
+    );
   }
 
   /* ---------- Plot panel ---------- */
@@ -82,126 +118,96 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
   function renderPanel() {
     if (!selected) return;
     const p = selected;
-    const owned = store.owned(p.id);
-    const tier = TIER_INFO[p.tier];
+    const rec = store.get(p.id);
+    const mine = store.mine(p.id);
     const head = `
       <p class="kicker"><span class="kicker-num">${esc(p.district)}</span> ${esc(p.districtName)}</p>
-      <h2 id="plot-title" class="city-panel-title">${p.parts ? 'Big plot' : 'Plot'} <span class="nowrap">${esc(p.id)}</span></h2>`;
-    const mine = p.parts ? `<span class="tag tag-mine">Yours · big plot of 4</span>` : `<span class="tag tag-mine">Yours</span>`;
+      <h2 id="plot-title" class="city-panel-title">Plot <span class="nowrap">${esc(p.id)}</span></h2>`;
 
-    if (!owned) {
+    if (!rec && store.pending(p.id)) {
+      body.innerHTML = `${head}
+        <span class="tag tag-pending">Sale pending</span>
+        <p class="city-panel-text">A payment for this plot is being checked on PulseChain. If it goes through, the plot is taken; if not, it's back on sale in a few minutes.</p>`;
+      return;
+    }
+
+    if (!rec) {
       const w = store.wallet;
-      const short_ = w && w.balance < p.price;
+      const short = w && w.balance < p.price;
+      const action = !store.open
+        ? `<button type="button" class="btn-pulse" disabled>Sales open soon</button>`
+        : w
+          ? `<button type="button" class="btn-pulse" data-buy ${short ? 'disabled' : ''}>Buy for ${pls(p.price)}</button>`
+          : `<button type="button" class="btn-pulse" data-connect ${connecting ? 'disabled' : ''}>${connecting ? 'Connecting…' : live ? 'Connect wallet to buy' : 'Connect demo wallet to buy'}</button>`;
       body.innerHTML = `${head}
         <span class="tag">For sale</span>
         <dl class="plot-facts">
-          <div><dt>Size</dt><dd>3 × 3 tiles</dd></div>
-          <div><dt>Tier</dt><dd>${tier.label}<small>${esc(tier.note)}</small></dd></div>
-          <div><dt>Price</dt><dd>${pls(p.price)}<small>Demo price</small></dd></div>
+          <div><dt>Size</dt><dd>One large plot<small>All 9 squares of ${esc(p.districtName)} in one</small></dd></div>
+          <div><dt>Price</dt><dd>${pls(p.price)}${live ? '' : '<small>Demo: play money</small>'}</dd></div>
+          ${live && store.network ? `<div><dt>Network</dt><dd>${esc(store.network.name)}${store.network.testnet ? '<small>Test PLS, no real value</small>' : ''}</dd></div>` : ''}
         </dl>
-        <div class="city-panel-actions">
-          ${
-            w
-              ? `<button type="button" class="btn-pulse" data-buy ${short_ ? 'disabled' : ''}>Buy for ${pls(p.price)}</button>`
-              : `<button type="button" class="btn-pulse" data-connect ${connecting ? 'disabled' : ''}>${connecting ? 'Connecting…' : 'Connect demo wallet to buy'}</button>`
-          }
-        </div>
-        ${short_ ? `<p class="city-panel-fine">Not enough demo PLS. Release a plot or reset the demo to get it back.</p>` : ''}
-        <p class="city-panel-fine">Simulated purchase: nothing is charged and nothing touches PulseChain yet.</p>`;
+        <div class="city-panel-actions">${action}</div>
+        ${short ? `<p class="city-panel-fine">Not enough ${symbol()} in this wallet for this plot.${live ? '' : ' Release a plot or reset the demo to get it back.'}</p>` : ''}
+        <p class="city-panel-fine">${live ? 'Whoever owns a plot decides what stands on it, and everyone in the city sees it.' : 'Simulated purchase: nothing is charged and nothing touches PulseChain.'}</p>`;
+      return;
+    }
+
+    if (!mine) {
+      const def = rec.design ? defOf(rec.design.type) : null;
+      body.innerHTML = `${head}
+        <span class="tag tag-taken">Owned</span>
+        <dl class="plot-facts">
+          <div><dt>Owner</dt><dd>${shortAddr(rec.owner)}</dd></div>
+          <div><dt>Building</dt><dd>${def ? esc(def.name) : 'Nothing yet'}</dd></div>
+        </dl>
+        <p class="city-panel-fine">This plot isn't for sale.</p>`;
       return;
     }
 
     if (draft) {
       const def = defOf(draft.type);
-      const floors = floorRange(def);
       body.innerHTML = `${head}
         <p class="city-panel-text"><strong>${esc(def.name)}</strong> · ${esc(def.blurb)}</p>
         ${swatches('Walls', 'color', WALL_COLORS, draft.color)}
         ${swatches('Neon', 'neon', NEON_COLORS, draft.neon)}
-        ${floors ? `<label class="builder-field"><span>Floors <output data-floors-out>${draft.floors}</output></span><input type="range" data-floors min="${floors[0]}" max="${floors[1]}" value="${draft.floors}"></label>` : ''}
+        ${def.floors ? `<label class="builder-field"><span>Floors <output data-floors-out>${draft.floors}</output></span><input type="range" data-floors min="${def.floors[0]}" max="${def.floors[1]}" value="${draft.floors}"></label>` : ''}
         ${def.sign ? `<div class="builder-field"><span>Sign</span><div class="seg">${SIGNS.map((s) => `<button type="button" data-sign="${esc(s)}" aria-pressed="${s === draft!.sign}">${esc(s)}</button>`).join('')}</div></div>` : ''}
         <div class="city-panel-actions">
           <button type="button" class="chip-link" data-rotate>↻ Turn</button>
-          <button type="button" class="btn-pulse" data-place>${owned.design ? 'Save changes' : 'Place building'}</button>
+          <button type="button" class="btn-pulse" data-place ${saving ? 'disabled' : ''}>${saving ? 'Saving…' : rec.design ? 'Save changes' : 'Place building'}</button>
           <button type="button" class="chip-link" data-back>Back</button>
-        </div>`;
+        </div>
+        ${live ? '<p class="city-panel-fine">The first change in a visit asks your wallet to sign in: free, no gas, no transaction.</p>' : ''}`;
       return;
     }
 
-    if (owned.design) {
-      const def = defOf(owned.design.type);
+    if (rec.design) {
+      const def = defOf(rec.design.type);
       body.innerHTML = `${head}
-        ${mine}
-        <p class="city-panel-text"><strong>${esc(def.name)}</strong>${owned.design.floors && def.floors ? ` · ${owned.design.floors} floors` : ''}${def.sign ? ` · “${esc(owned.design.sign)}” sign` : ''}</p>
+        <span class="tag tag-mine">Yours</span>
+        <p class="city-panel-text"><strong>${esc(def.name)}</strong>${rec.design.floors && def.floors ? ` · ${rec.design.floors} floors` : ''}${def.sign ? ` · “${esc(rec.design.sign)}” sign` : ''}</p>
         <div class="city-panel-actions">
           <button type="button" class="btn-pulse" data-edit>Edit building</button>
-          <button type="button" class="chip-link" data-demolish>Demolish</button>
+          <button type="button" class="chip-link" data-demolish ${saving ? 'disabled' : ''}>Demolish</button>
         </div>
-        ${mergeBlock(p)}
-        ${ownedFoot(p, owned)}`;
+        ${ownedFoot(rec.tx)}`;
       return;
     }
 
     body.innerHTML = `${head}
-      ${mine}
-      <p class="city-panel-text">${p.parts ? 'Four plots in one: whatever you build here goes up twice the size.' : 'Pick something to build. You can change it any time.'}</p>
+      <span class="tag tag-mine">Yours</span>
+      <p class="city-panel-text">Nine squares in one: whatever you build here goes up three times the size. You can change it any time.</p>
       <div class="builder-catalog">
         ${BUILDINGS.map((b) => `<button type="button" class="builder-card" data-pick="${b.type}"><span class="builder-card-name">${esc(b.name)}</span><span class="builder-card-blurb">${esc(b.blurb)}</span></button>`).join('')}
       </div>
-      ${mergeBlock(p)}
-      ${ownedFoot(p, owned)}`;
+      ${ownedFoot(rec.tx)}`;
   }
 
-  const ownedFoot = (p: Plot, o: { tx: string; design?: Design }) =>
-    p.parts
-      ? `
-    <p class="city-panel-fine">Simulated transaction ${short(o.tx)}</p>
-    <div class="city-panel-actions">
-      <button type="button" class="chip-link" data-split ${o.design ? 'aria-disabled="true"' : ''}>Split into 4 plots</button>
-      <button type="button" class="chip-link" data-release>Release all 4 plots (refund demo PLS)</button>
-    </div>
-    ${o.design ? `<p class="city-panel-fine">Demolish the building to split the plot again.</p>` : ''}`
-      : `
-    <p class="city-panel-fine">Simulated transaction ${short(o.tx)}</p>
-    <div class="city-panel-actions"><button type="button" class="chip-link" data-release>Release plot (refund demo PLS)</button></div>`;
-
-  /** What stops a 2 x 2 square from being merged (empty when it can be) */
-  function mergeBlocker(big: Plot) {
-    const parts = big.parts!;
-    const missing = parts.filter((q) => !store.owned(q));
-    if (missing.length) return `Buy ${missing.map(num).join(', ')} first`;
-    const taken = parts.filter((q) => store.bigOf(q));
-    if (taken.length) return `${taken.map(num).join(', ')} already in a big plot`;
-    if (parts.some((q) => store.owned(q)?.design)) return 'Clear the buildings first';
-    return '';
-  }
-
-  /** On a plot you own: the 2 x 2 squares it could be merged into */
-  function mergeBlock(p: Plot) {
-    if (p.parts) return '';
-    const squares = squaresWith(p);
-    return `
-      <div class="builder-merge">
-        <p class="builder-merge-head">Merge into a big plot</p>
-        <p class="city-panel-fine">Four plots you own in a 2 × 2 square become one big plot, for a building twice the size.</p>
-        <div class="builder-merge-list">
-          ${squares
-            .map((b) => {
-              const why = mergeBlocker(b);
-              const others = b.parts!.filter((q) => q !== p.id).map(num);
-              return `<button type="button" class="builder-merge-opt" data-merge="${esc(b.id)}" ${why ? 'aria-disabled="true"' : ''}><b>With ${others.join(', ')}</b><small>${why ? esc(why) : 'Ready to merge'}</small></button>`;
-            })
-            .join('')}
-        </div>
-      </div>`;
-  }
-
-  /** Floors on offer: towers on big plots stop short of the Emporium */
-  function floorRange(def: BuildingDef): [number, number] | null {
-    if (!def.floors) return null;
-    const max = selected?.parts && def.type === 'tower' ? Math.min(def.floors[1], BIG_MAX_FLOORS) : def.floors[1];
-    return [def.floors[0], max];
-  }
+  const ownedFoot = (tx: string) =>
+    live
+      ? `<p class="city-panel-fine">Bought with transaction ${shortAddr(tx)}</p>`
+      : `<p class="city-panel-fine">Simulated transaction ${shortAddr(tx)}</p>
+         <div class="city-panel-actions"><button type="button" class="chip-link" data-release>Release plot (refund demo PLS)</button></div>`;
 
   const swatches = (label: string, key: string, list: string[], value: string) => `
     <div class="builder-field"><span>${label}</span><div class="swatches" role="radiogroup" aria-label="${label}">
@@ -212,8 +218,7 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
     draft = from
       ? { ...from }
       : { type: def.type, color: WALL_COLORS[Math.floor(Math.random() * 7)], neon: NEON_COLORS[0], floors: def.floors?.[2] ?? 1, sign: SIGNS[0], rot: 0 };
-    const range = floorRange(def);
-    if (range) draft.floors = Math.min(range[1], Math.max(range[0], draft.floors));
+    if (def.floors) draft.floors = Math.min(def.floors[1], Math.max(def.floors[0], draft.floors));
     preview();
     renderPanel();
   }
@@ -221,18 +226,33 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
   function cancelDraft() {
     if (!selected) return;
     draft = null;
-    plots.show(selected.id, store.owned(selected.id)?.design ?? null, false);
+    plots.show(selected.id, store.get(selected.id)?.design ?? null, false);
+    shown.set(selected.id, JSON.stringify(store.get(selected.id)?.design ?? null));
     renderPanel();
+  }
+
+  /* ---------- Buildings and plot colours follow the store (everyone's plots, live) ---------- */
+
+  const shown = new Map<string, string>();
+  function sync(first = false) {
+    plots.setStates(store.states());
+    for (const p of PLOTS) {
+      if (draft && selected?.id === p.id) continue;
+      const design = store.get(p.id)?.design ?? null;
+      const key = JSON.stringify(design);
+      if ((shown.get(p.id) ?? 'null') === key) continue;
+      plots.show(p.id, design, !first && !!design);
+      shown.set(p.id, key);
+    }
+    if (!draft && !buying) renderPanel();
+    renderWallet();
   }
 
   /* ---------- Selecting plots ---------- */
 
   function select(id: string | null) {
-    // A plot that's part of a big plot selects the big plot
-    if (id) id = store.bigOf(id) ?? id;
     if (draft && selected && selected.id !== id) cancelDraft();
     selected = id ? plotById(id) : null;
-    plots.setMarked([]);
     draft = null;
     plots.setSelected(selected?.id ?? null);
     root.classList.toggle('has-plot', !!selected);
@@ -249,58 +269,79 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
     deps.focus(selected);
   }
 
-  /* ---------- Simulated purchase dialog ---------- */
+  /* ---------- Purchase dialog ---------- */
+
+  function openModal(html: string) {
+    modal.hidden = false;
+    modalBody.innerHTML = html;
+    modalBody.querySelector<HTMLButtonElement>('button')?.focus();
+  }
 
   function openBuy() {
     if (!selected || !store.wallet) return;
     const p = selected;
     const w = store.wallet;
-    modal.hidden = false;
-    modalBody.innerHTML = `
-      <p class="kicker"><span class="kicker-num">Demo</span> Simulated purchase</p>
+    if (!live) {
+      openModal(`
+        <p class="kicker"><span class="kicker-num">Demo</span> Simulated purchase</p>
+        <h2 class="city-panel-title" id="buy-title">Buy plot ${esc(p.id)}?</h2>
+        <dl class="plot-facts">
+          <div><dt>Price</dt><dd>${pls(p.price)}</dd></div>
+          <div><dt>Demo wallet</dt><dd>${pls(w.balance)}</dd></div>
+          <div><dt>After</dt><dd>${pls(w.balance - p.price)}</dd></div>
+        </dl>
+        <p class="city-panel-fine">Nothing is charged and nothing touches PulseChain.</p>
+        <div class="city-panel-actions">
+          <button type="button" class="btn-pulse" data-confirm>Confirm purchase</button>
+          <button type="button" class="chip-link" data-cancel>Cancel</button>
+        </div>`);
+      return;
+    }
+    const net = store.network!;
+    openModal(`
+      <p class="kicker"><span class="kicker-num">${esc(net.short)}</span> Buy a plot</p>
       <h2 class="city-panel-title" id="buy-title">Buy plot ${esc(p.id)}?</h2>
       <dl class="plot-facts">
-        <div><dt>Price</dt><dd>${pls(p.price)}</dd></div>
-        <div><dt>Demo wallet</dt><dd>${pls(w.balance)}</dd></div>
-        <div><dt>After</dt><dd>${pls(w.balance - p.price)}</dd></div>
+        <div><dt>Price</dt><dd>${pls(p.price)}<small>plus a little gas</small></dd></div>
+        <div><dt>Pays to</dt><dd>${shortAddr(store.payee ?? '')}<small>The Degen City wallet</small></dd></div>
+        <div><dt>Network</dt><dd>${esc(net.name)}${net.testnet ? '<small>Test PLS, no real value</small>' : ''}</dd></div>
+        <div><dt>Your wallet</dt><dd>${pls(w.balance)}</dd></div>
       </dl>
-      <p class="city-panel-fine">Nothing is charged and nothing touches PulseChain. This shows how buying will work once wallets are connected.</p>
+      <p class="city-panel-fine">Your wallet will ask you to approve the payment. The plot is yours once it has ${store.confirmations} confirmations on PulseChain, usually within a minute. If someone else's payment for this plot lands first, yours is recorded for a refund.</p>
       <div class="city-panel-actions">
-        <button type="button" class="btn-pulse" data-confirm>Confirm purchase</button>
+        <button type="button" class="btn-pulse" data-confirm>Continue in wallet</button>
         <button type="button" class="chip-link" data-cancel>Cancel</button>
-      </div>`;
-    modalBody.querySelector<HTMLButtonElement>('[data-confirm]')!.focus();
+      </div>`);
   }
 
-  const STEPS: [BuyStep, string][] = [
-    ['wallet', 'Approve in wallet'],
-    ['chain', 'Confirming on PulseChain'],
+  const STEPS: [BuyStep, string, string][] = [
+    ['wallet', 'Approve in your wallet', 'Check the amount and the address'],
+    ['chain', 'Confirming on PulseChain', 'The game server checks the payment'],
   ];
   async function confirmBuy() {
     if (!selected || buying) return;
     const p = selected;
     buying = true;
-    // No way out mid-purchase: it settles in a moment either way
+    // No way out mid-purchase: it settles either way, and closing would hide the result
     modalClose.hidden = true;
+    const kicker = live ? `<span class="kicker-num">${esc(store.network?.short ?? 'PulseChain')}</span> Buying` : '<span class="kicker-num">Demo</span> Simulated purchase';
     const render = (step: BuyStep) => {
       const at = STEPS.findIndex(([s]) => s === step);
       modalBody.innerHTML = `
-        <p class="kicker"><span class="kicker-num">Demo</span> Simulated purchase</p>
+        <p class="kicker">${kicker}</p>
         <h2 class="city-panel-title" id="buy-title">Buying plot ${esc(p.id)}</h2>
-        <ol class="buy-steps">${STEPS.map(([, label], i) => `<li class="${i < at || step === 'done' ? 'is-done' : i === at ? 'is-now' : ''}">${label}<small>simulated</small></li>`).join('')}</ol>`;
+        <ol class="buy-steps">${STEPS.map(([, label, note], i) => `<li class="${i < at || step === 'done' ? 'is-done' : i === at ? 'is-now' : ''}">${label}<small>${live ? note : 'simulated'}</small></li>`).join('')}</ol>
+        ${live && step === 'chain' ? '<p class="city-panel-fine">You can keep exploring: this finishes on its own, even if you close the page.</p>' : ''}`;
     };
     try {
       render('wallet');
       const owned = await store.buy(p, render);
-      plots.setOwned(store.ownedIds());
-      renderWallet();
       modalBody.innerHTML = `
-        <p class="kicker"><span class="kicker-num">Demo</span> Simulated purchase</p>
+        <p class="kicker">${kicker}</p>
         <h2 class="city-panel-title" id="buy-title">Plot ${esc(p.id)} is <span class="hl">yours</span></h2>
-        <p class="city-panel-fine">Simulated transaction ${short(owned.tx)}</p>
+        <p class="city-panel-fine">${live ? 'Transaction' : 'Simulated transaction'} ${shortAddr(owned.tx)}</p>
         <div class="city-panel-actions"><button type="button" class="btn-pulse" data-start>Start building</button></div>`;
       modalBody.querySelector<HTMLButtonElement>('[data-start]')!.focus();
-      renderPanel();
     } catch (e) {
       modalBody.innerHTML = `
         <h2 class="city-panel-title" id="buy-title">Couldn't buy plot ${esc(p.id)}</h2>
@@ -309,6 +350,7 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
     } finally {
       buying = false;
       modalClose.hidden = false;
+      sync();
     }
   }
   const closeModal = () => {
@@ -316,6 +358,27 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
     modal.hidden = true;
     panel.querySelector<HTMLElement>('button')?.focus();
   };
+
+  async function save(id: string, design: Design | null) {
+    if (saving) return;
+    saving = true;
+    renderPanel();
+    if (live && design) toast('Saving… your wallet may ask you to sign in (free, no gas).');
+    try {
+      const isNew = !store.get(id)?.design;
+      if (design) await store.build(id, design);
+      else await store.demolish(id);
+      if (draft && selected?.id === id) draft = null;
+      shown.delete(id);
+      sync();
+      toast(design ? (isNew ? `Built on plot ${id}.` : `Plot ${id} updated.`) : `Plot ${id} cleared.`);
+    } catch (e) {
+      toast(`Couldn't save: ${(e as Error).message}`);
+    } finally {
+      saving = false;
+      renderPanel();
+    }
+  }
 
   /* ---------- Events ---------- */
 
@@ -327,7 +390,12 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
     if (!t || !root.contains(t)) return;
     const d = t.dataset;
     if ('connect' in d) connect();
-    else if ('buy' in d) openBuy();
+    else if (d.walletId) connect(d.walletId);
+    else if ('disconnect' in d) {
+      store.disconnect();
+      sync();
+      toast('Wallet disconnected.');
+    } else if ('buy' in d) openBuy();
     else if ('confirm' in d) confirmBuy();
     else if ('cancel' in d) closeModal();
     else if ('start' in d) closeModal();
@@ -337,58 +405,22 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
     else if (draft && d.sign) ((draft.sign = d.sign), preview(), renderPanel());
     else if (draft && 'rotate' in d) ((draft.rot = (draft.rot + 1) % 4), preview());
     else if ('back' in d) cancelDraft();
-    else if ('place' in d && draft && selected) {
-      const isNew = !store.owned(selected.id)?.design;
-      store.build(selected.id, draft);
-      plots.show(selected.id, draft, isNew);
-      draft = null;
-      renderPanel();
-      toast(isNew ? `Built on plot ${selected.id}.` : `Plot ${selected.id} updated.`);
-    } else if ('edit' in d && selected) {
-      const o = store.owned(selected.id);
+    else if ('place' in d && draft && selected) save(selected.id, { ...draft });
+    else if ('edit' in d && selected) {
+      const o = store.get(selected.id);
       if (o?.design) startDraft(defOf(o.design.type), o.design);
-    } else if ('demolish' in d && selected) {
-      store.demolish(selected.id);
-      plots.show(selected.id, null);
-      renderPanel();
-      toast(`Plot ${selected.id} cleared.`);
-    } else if ('release' in d && selected) {
-      const id = selected.id;
-      const big = !!selected.parts;
-      store.release(id);
-      plots.show(id, null);
-      plots.setMerged(store.bigIds());
-      plots.setOwned(store.ownedIds());
-      renderWallet();
-      if (big) select(selected.parts![0]);
-      else renderPanel();
-      toast(big ? `Big plot ${id} released: all four plots. Demo PLS refunded.` : `Plot ${id} released. Demo PLS refunded.`);
-    } else if (d.merge && selected) {
-      const big = plotById(d.merge);
-      const why = big ? mergeBlocker(big) : 'Not a 2 × 2 square';
-      if (why || !big) return toast(`Can't merge yet: ${why}.`);
-      store.merge(big);
-      plots.setMarked([]);
-      plots.setMerged(store.bigIds());
-      select(big.id);
-      toast(`Plots ${big.parts!.map(num).join(', ')} merged into big plot ${big.id}.`);
-    } else if ('split' in d && selected?.parts) {
-      if (store.owned(selected.id)?.design) return toast('Demolish the building first, then split the plot.');
-      const big = selected;
-      store.split(big.id);
-      plots.setMerged(store.bigIds());
-      select(big.parts![0]);
-      toast(`Big plot ${big.id} split back into four plots.`);
+    } else if ('demolish' in d && selected) save(selected.id, null);
+    else if ('release' in d && selected && store.release) {
+      store.release(selected.id);
+      sync();
+      toast(`Plot ${selected.id} released. Demo PLS refunded.`);
     } else if ('plotClose' in d) select(null);
     else if ('builderExit' in d) setBuild(false);
-    else if ('builderReset' in d) {
+    else if ('builderReset' in d && store.reset) {
       if (!confirm('Reset the demo? This clears your demo wallet, plots and buildings in this browser.')) return;
-      for (const id of [...store.ownedIds(), ...store.bigIds()]) plots.show(id, null, false);
       store.reset();
-      plots.setMerged([]);
-      plots.setOwned([]);
       select(null);
-      renderWallet();
+      sync();
       toast('Demo reset.');
     }
   });
@@ -415,9 +447,7 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
     const dirs: Record<string, [number, number]> = { ArrowRight: [1, 0], ArrowLeft: [-1, 0], ArrowDown: [0, 1], ArrowUp: [0, -1] };
     const dir = dirs[e.key];
     if (!dir || !modal.hidden || (e.target as HTMLElement).matches('input, select, textarea')) return false;
-    // Step past the other plots of the same big plot
-    let next = selected ? plotToward(selected, dir[0], dir[1]) : PLOT_BY_ID.get('N3-08');
-    while (next && selected && store.bigOf(next.id) === selected.id) next = plotToward(next, dir[0], dir[1]);
+    const next = selected ? plotToward(selected, dir[0], dir[1]) : PLOT_BY_ID.get('N3');
     if (next) select(next.id);
     e.preventDefault();
     return true;
@@ -435,26 +465,15 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
       select(null);
       plots.setHover(null);
     } else {
+      store.refresh();
       renderWallet();
       deps.overview();
     }
     deps.onMode(on);
   }
 
-  plots.setOwned(store.ownedIds());
-  plots.setMerged(store.bigIds());
-  for (const id of [...store.ownedIds(), ...store.bigIds()]) {
-    const d = store.owned(id)?.design;
-    if (d) plots.show(id, d, false);
-  }
-  // Pointing at a merge option lights up its square
-  body.addEventListener('pointerover', (e) => markFrom(e.target));
-  body.addEventListener('focusin', (e) => markFrom(e.target));
-  body.addEventListener('pointerout', () => plots.setMarked([]));
-  function markFrom(t: EventTarget | null) {
-    const id = (t as HTMLElement | null)?.closest<HTMLElement>('[data-merge]')?.dataset.merge;
-    plots.setMarked(id ? (plotById(id)?.parts ?? []) : []);
-  }
+  store.subscribe(() => sync());
+  sync(true);
   toggle.hidden = false;
 
   return {

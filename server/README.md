@@ -1,7 +1,7 @@
 # Degen City game server
 
-The multiplayer server for Degen City: a Cloudflare Worker with three kinds of
-Durable Object. The website itself stays a static build on Hostinger; only
+The multiplayer and plot-sales server for Degen City: a Cloudflare Worker
+with four kinds of Durable Object. The website itself stays a static build on Hostinger; only
 the live game connection goes to Cloudflare.
 
 | File | What it does |
@@ -10,10 +10,12 @@ the live game connection goes to Cloudflare.
 | `src/lobby.ts` | One for the whole game: picks a city with a free spot (16 players each; "City 2" opens when "City 1" is full). |
 | `src/room.ts` | One per city: runs the shared combat rules (`src/scripts/city3d/combat-sim.ts`) at 60 Hz, checks movement and shots, sends positions 15 times a second, relays emotes and fixed phrases, banks points in profiles. |
 | `src/profile.ts` | One per player: guest name, wardrobe look, rifle finish, lifetime score (rank comes from the score). Addressed by a hash of the browser's secret guest token. |
+| `src/land.ts` | One for the city: plot sales and buildings (`/land`). Checks each payment on PulseChain, records owners, refunds due and every owner's building. |
 
 Shared with the site (bundled in): `src/scripts/net/` (protocol, names, ranks,
-wardrobe, emotes, phrases), `src/scripts/city3d/combat-sim.ts` and
-`src/scripts/city3d/solids.ts`. Keep those free of DOM and scene code.
+wardrobe, emotes, phrases, land API), `src/scripts/city3d/combat-sim.ts`,
+`src/scripts/city3d/solids.ts` and `src/data/plots.ts`. Keep those free of DOM
+and scene code.
 
 ## One-time setup (the owner)
 
@@ -45,6 +47,39 @@ wardrobe, emotes, phrases), `src/scripts/city3d/combat-sim.ts` and
 After that, every push to `main` that touches the server redeploys it
 automatically.
 
+## Plot sales
+
+Each of the 11 districts is one large plot for 20,000,000 PLS. Buyers pay
+from their own wallet straight to **your** wallet. The server checks every
+payment on PulseChain before anyone gets a plot: right address, full price,
+succeeded, enough confirmations, under a day old, never used twice. The
+settings are the `LAND_*` vars in `wrangler.jsonc`:
+
+| Setting | What it does |
+| --- | --- |
+| `LAND_PAYEE` | **Your** PulseChain wallet address that payments go to. Public address only: never a private key or seed phrase. While it's empty, plots show "Sales open soon". |
+| `LAND_CHAIN_ID` | `943` = PulseChain Testnet v4 (test PLS, no real value). `369` = PulseChain mainnet. Starts on the testnet. |
+| `LAND_PRICE_PLS` | Price per plot in whole PLS (`20000000`). This is the price that counts; keep `PLOT_PRICE` in `src/data/plots.ts` the same for the demo. |
+| `LAND_CONFIRMATIONS` | Blocks a payment needs before the plot is the buyer's (`3`). |
+| `LAND_RPC` | Optional: a PulseChain RPC to check payments on. Defaults to the network's public RPC. |
+
+**Opening sales on the testnet:**
+1. Put your wallet address in `LAND_PAYEE` in `wrangler.jsonc` and push to
+   `main`. The server redeploys itself.
+2. Get some free test PLS from the PulseChain testnet faucet and buy a plot
+   from another wallet to try the whole flow.
+
+**Going live on mainnet:** set `LAND_CHAIN_ID` to `369` and push. Owners are
+kept per network, so the testnet's plots don't carry over: mainnet starts
+with every plot for sale.
+
+**Refunds:** if two people pay for the same plot at the same moment, the
+second payment (or any short payment) is recorded for a refund. Each one is
+written to the Worker's logs as `LAND REFUND DUE` with the buyer's address,
+the amount and the transaction hash. Find them in the Cloudflare dashboard:
+*Workers & Pages* → **degen-city** → *Logs*. Send those back by hand from
+your wallet.
+
 ## Cost
 
 Durable Objects with SQLite storage are available on Cloudflare's free
@@ -60,6 +95,8 @@ cd server
 npm install
 npm run dev            # http://localhost:8787 (uses ../node_modules for three.js: run npm install at the repo root first)
 ```
+
+Plot sales locally: `npx wrangler dev --var LAND_PAYEE:0x… --var LAND_RPC:<a testnet RPC>`.
 
 Then build the site against it from the repo root:
 

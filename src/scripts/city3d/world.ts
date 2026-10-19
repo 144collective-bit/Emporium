@@ -9,6 +9,7 @@
  * closes the south.
  */
 import * as THREE from 'three';
+import { DISTRICTS } from '../../data/plots';
 import { Batch, PAL, canvasTex, facadeMat, fx, glowMat, glowTex, lit, neon, rand, toon } from './kit';
 
 export const BLOCKS = [0, 11, 22];
@@ -16,12 +17,8 @@ export const BS = 9;
 export const ROADS = [-1, 10, 21, 32];
 /** Roads through the core city; only their crossings have traffic lights. */
 export const CORE_ROADS = [10, 21];
-/** District blocks around the core, each split into 3 x 3 plots. */
-export const DISTRICTS: { id: string; name: string; ox: number; oz: number }[] = [
-  ...[-11, 0, 11, 22, 33].map((ox, i) => ({ id: `N${i + 1}`, name: `North ${i + 1}`, ox, oz: -11 })),
-  ...[0, 11, 22].map((oz, i) => ({ id: `W${i + 1}`, name: `West ${i + 1}`, ox: -11, oz })),
-  ...[0, 11, 22].map((oz, i) => ({ id: `E${i + 1}`, name: `East ${i + 1}`, ox: 33, oz })),
-];
+/** District blocks around the core: one large plot each (src/data/plots.ts). */
+export { DISTRICTS };
 export const EXT: [number, number] = [-70, 101];
 export const RIVER: [number, number] = [34.5, 37.5];
 export const SLAB = 0.15;

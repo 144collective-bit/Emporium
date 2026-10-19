@@ -16,7 +16,8 @@ import { createMultiplayer } from './multiplayer';
 import { createSky, type TimeMode, type WeatherMode } from './sky';
 import { createSound } from './sound';
 import { createPlots, type Plot } from './plots';
-import { createStore } from './store';
+import { createDemoStore } from './store';
+import { createLandStore } from './land';
 import { createBuilderUI } from './builder-ui';
 import { createFitting, type Fitting } from './fitting';
 import { createCityHead } from './head';
@@ -244,14 +245,15 @@ export async function bootCity(root: HTMLElement) {
   }
   function plotView(p: Plot) {
     const portrait = camera.aspect < 1;
-    // Big plots (2 x 2) carry buildings twice the size: stand further back
-    const k = p.parts ? 1.65 : 1;
+    // Large plots carry buildings three times the size: stand well back
+    const k = 2.3;
     const dir = new THREE.Vector3(0.95, 0.85, 1.25).normalize();
     const target = new THREE.Vector3(p.cx, portrait ? -0.4 * k : 1.6 * k, p.cz);
     return { pos: new THREE.Vector3(p.cx, 1.6 * k, p.cz).addScaledVector(dir, (portrait ? 17 : 13) * k), target };
   }
   const builder = createBuilderUI(root, {
-    store: createStore(),
+    // A game server means real sales (land.ts); without one, the labelled demo
+    store: import.meta.env.PUBLIC_GAME_SERVER ? createLandStore(import.meta.env.PUBLIC_GAME_SERVER as string) : createDemoStore(),
     plots,
     focus(p) {
       const v = plotView(p);

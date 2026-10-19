@@ -219,25 +219,43 @@ it and has been retired completely. Build only on what's here.
 
 ## City builder (3D build mode)
 
-- Districts around the core are split into 3 x 3 plots (`DISTRICTS` in
-  `src/scripts/city3d/world.ts`, plot grid and building generators in
-  `plots.ts`, interface in `builder-ui.ts`). The core landmarks are not for
-  sale.
-- **Purchases are simulated.** No wallet connects, nothing is sent to
-  PulseChain, no real PLS moves; state is saved in the visitor's browser
-  (`store.ts`). Keep every builder screen labelled as a demo until the real
-  wallet is wired in, and put the real integration behind `store.ts`'s
-  `connect()` / `buy()` so the interface doesn't change.
-- **Prices in `src/data/plots.ts` are placeholders.** Don't present them as
-  real until the owner supplies pricing.
+- Each district around the core is **one large plot** (its 3 x 3 squares
+  merged into one; `DISTRICTS`, `PLOT_PRICE`, `BUILDINGS`, `cleanDesign()` in
+  `src/data/plots.ts`, shared with the server). Plot grid, overlay and building
+  generators are in `plots.ts`, the interface in `builder-ui.ts`. The core
+  landmarks are not for sale.
+- **Price: 20,000,000 PLS per plot** (the owner's price, `PLOT_PRICE` and the
+  server's `LAND_PRICE_PLS`). The server's value is the one that counts.
+- Buildings are drawn `PLOT_SCALE` (3) times their base size; tower and loft
+  floors are capped in `BUILDINGS` so nothing outgrows the Emporium (its roof
+  is ~12.5 tiles up). Keep it that way when adding buildings.
+- **Real sales (live mode)**, when the site is built with `PUBLIC_GAME_SERVER`:
+  - `wallet.ts` talks to the visitor's own wallet (EIP-1193, found through
+    EIP-6963 or `window.ethereum`). It switches to the sales network or adds
+    it.
+  - `land.ts` (the client) sends the plot price straight to the owner's wallet
+    and hands the transaction hash to the game server.
+  - `server/src/land.ts` (the `Land` Durable Object) checks the payment on
+    PulseChain itself and never trusts the browser: the right payee, at least
+    the price, success, `LAND_CONFIRMATIONS` deep, under a day old, used once.
+    The sender becomes the owner. A late or short payment is stored and logged
+    as `LAND REFUND DUE` for a manual refund.
+  - Owners sign a short message (no gas) once per session to change their
+    building; the server checks every design with `cleanDesign()`.
+  - Everyone sees every owner's building.
+  - No private keys anywhere; only the owner's public receiving address
+    (`LAND_PAYEE`) is configured.
+- **Network:** `LAND_CHAIN_ID` in `server/wrangler.jsonc`: 943 = PulseChain
+  Testnet v4 (test PLS, the current setting), 369 = mainnet. The site reads the
+  network from the server. Testnet screens say "test PLS only". Sales show as
+  "opening soon" until `LAND_PAYEE` is set. Owners are kept per network.
+- **Demo mode** (no game server): `store.ts` simulates everything with play
+  money in the browser and must stay labelled as a demo. Both modes sit behind
+  the same `Store` interface, so the UI doesn't change.
 - Visitors can't type text onto buildings: sign texts come from the fixed
   `SIGNS` list, so nothing unexpected (or confidential) appears in public.
-- **Big plots:** four owned, empty plots in a 2 x 2 square merge into one
-  big plot (id `N3-04+08`: its top-left and bottom-right plots;
-  `bigPlotAt()`, `plotById()`, `squaresWith()` in `plots.ts`, `merge()` /
-  `split()` in `store.ts`). Its building is the same design at
-  `BIG_SCALE`, and towers on it stop at `BIG_MAX_FLOORS` so nothing outgrows
-  the Emporium. Picking any of its four plots selects the big plot.
+- No explorer or wallet-brand links: show transaction hashes as text. Only
+  the confirmed links in `src/data/site.ts` are linked.
 
 ## Multiplayer (beta)
 
@@ -245,11 +263,13 @@ it and has been retired completely. Build only on what's here.
   date. Phase 1 (hangout, player profiles, shared target practice) is built;
   leaderboards and south-bank PvP come next.
 - The game server lives in `server/` (Cloudflare Worker + Durable Objects:
-  Lobby, Room per city of 16, Profile per player). See `server/README.md`.
+  Lobby, Room per city of 16, Profile per player, Land for plot sales). See
+  `server/README.md`.
   The server decides hits, scores and profiles; browsers only predict their
   own shots. New rules go in `combat-sim.ts` (shared), never only in the view.
 - Shared code the server bundles must stay free of DOM and scene code:
-  `src/scripts/net/*` (except `client.ts`), `combat-sim.ts`, `solids.ts`.
+  `src/scripts/net/*` (except `client.ts`), `combat-sim.ts`, `solids.ts`,
+  `src/data/plots.ts`.
   `src/scripts/net/protocol.ts` is the wire format; bump `PROTOCOL` when it
   changes incompatibly.
 - Nothing typed by players ever shows: guest names come from the word lists
@@ -285,7 +305,9 @@ it and has been retired completely. Build only on what's here.
 
 - All copy is draft until the owner says otherwise; keep the draft note.
 - No prices, stats, APYs, audits, partnerships or testimonials unless the
-  owner supplies them as facts. No financial advice.
+  owner supplies them as facts (the owner set plots at 20,000,000 PLS). No
+  financial advice: plots are city land for building on, never pitched as an
+  investment.
 - PulseChain is a real project: say "PulseChain native", never imply an
   official partnership or endorsement.
 - Only link to destinations the owner has confirmed (currently X, Telegram

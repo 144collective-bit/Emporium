@@ -15,6 +15,7 @@ on:
       - src/scripts/net/**
       - src/scripts/city3d/combat-sim.ts
       - src/scripts/city3d/solids.ts
+      - src/data/plots.ts
       - .github/workflows/deploy-server.yml
   workflow_dispatch:
 

@@ -311,7 +311,7 @@ const focusY = +((EMPORIUM_FOCUS[1] - VIEW.y) / VIEW.h).toFixed(4);
   </button>
   <div class="builder-bar" data-builder-bar hidden>
     <div class="builder-wallet" data-wallet></div>
-    <p class="builder-hint">Pick a plot to buy or build on it.<span class="hint-keys"> Arrow keys move between plots.</span></p>
+    <p class="builder-hint">Pick a district plot to buy or build on it.<span class="hint-keys"> Arrow keys move between plots.</span></p>
     <button type="button" class="chip-link" data-builder-reset>Reset demo</button>
   </div>
   <aside class="city-panel builder-panel" data-plot-panel hidden role="dialog" aria-labelledby="plot-title">
@@ -319,7 +319,8 @@ const focusY = +((EMPORIUM_FOCUS[1] - VIEW.y) / VIEW.h).toFixed(4);
       <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
     </button>
     <div class="city-panel-body" data-plot-body></div>
-    <p class="city-draft">Demo · purchases are simulated · no real PLS</p>
+    {/* Demo, testnet or mainnet: painted by builder-ui.ts */}
+    <p class="city-draft" data-plot-note>Demo · purchases are simulated · no real PLS</p>
   </aside>
   <div class="builder-modal" data-buy-modal hidden>
     <div class="builder-modal-card" role="dialog" aria-modal="true" aria-labelledby="buy-title">

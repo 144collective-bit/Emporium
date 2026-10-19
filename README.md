@@ -118,7 +118,7 @@ straight there.
 
 Across the top of the city a header always says which view you're in, with
 a line on what to do there: **City view**, **Walk mode** (first or third
-person, online), **Build mode** (demo) or the **City map** (2D). Its
+person, online), **Build mode** or the **City map** (2D). Its
 **City / Walk / Build** switch moves between them. While walking, the site
 header steps aside and this header carries the walk tabs (Controls,
 Profile, Online, Emote) and, with a gun, the ammo and score, so the rest of
@@ -224,29 +224,34 @@ The game server is in `server/` (Cloudflare); see `server/README.md` for
 setup. The plan for the next phases (leaderboards, PvP across the river) is
 in `docs/multiplayer-plan.md`.
 
-### City builder (demo)
+### City builder: buy a plot, build on it
 
-Press **Build** in the header to switch to build mode. The districts around the city
-(North, West and East, past the ring roads) are divided into 99 plots.
+Press **Build** in the header to switch to build mode. Each of the 11 districts
+around the core city (North 1-5, West 1-3, East 1-3, past the ring roads) is
+**one large plot**: its 3 × 3 squares merged into one, for **20,000,000 PLS**.
 
-- **Pick a plot** (tap, click or use the arrow keys) to see its size, tier and
-  price.
-- **Buy it** with the demo wallet: connect, confirm, and watch the simulated
-  "Approve in wallet" and "Confirming on PulseChain" steps.
+- **Pick a plot** (tap, click or use the arrow keys) to see who owns it and
+  what's built there.
+- **Buy it with your wallet:** connect a PulseChain wallet (the site switches
+  it to the right network or adds it), confirm, and approve the payment in
+  your wallet. The PLS goes straight to the Degen City wallet. The game
+  server checks the payment on PulseChain and the plot is yours once it has a
+  few confirmations, usually within a minute.
 - **Build on it:** choose from eight buildings (house, shopfront, tower, loft,
   arcade, pocket park, warehouse, billboard lot) and customise walls, neon,
-  floors, sign and rotation with a live preview. Edit, demolish or release
-  the plot (refunds the demo PLS) any time.
-- **Merge four plots into a big plot:** own four plots in a 2 × 2 square
-  (with nothing built on them) and merge them from any of their panels.
-  The big plot takes one building, drawn twice the size (towers stop at 10
-  floors so the Emporium stays the tallest). Split it back into four plots
-  once it's empty, or release all four at once.
+  floors, sign and rotation with a live preview. On a large plot everything
+  goes up three times the size (towers stop at 6 floors so the Emporium stays
+  the tallest). The first change in a visit asks your wallet to sign a short
+  message (free, no gas) to prove it's yours. Everyone in the city sees your
+  building.
 
-Everything is simulated for now: no wallet connects, nothing touches
-PulseChain and no real PLS moves. Progress is saved in the visitor's browser,
-and **Reset demo** clears it. Prices in `src/data/plots.ts` are placeholders.
-When the real wallet is ready, it plugs into `src/scripts/city3d/store.ts`.
+Sales run on **PulseChain Testnet v4** (test PLS, no real value) until the
+owner switches the game server to mainnet, and stay "opening soon" until the
+owner's receiving wallet is set. See `server/README.md` → *Plot sales*.
+
+Without a game server (a local build) the builder runs as a **demo**: a
+simulated wallet with play money, nothing touches PulseChain, progress is
+saved in the browser and **Reset demo** clears it.
 
 | Building | Panel button goes to |
 | --- | --- |
@@ -291,10 +296,13 @@ the draft note whenever the card is hidden. Every menu and card closes with its
 | `src/scripts/city3d/remote.ts` | Other players: smoothed movement, poses, name tags, bubbles |
 | `src/scripts/net/` | Shared with the server: protocol, profile data (names, ranks, wardrobe, emotes, phrases); `client.ts` is the browser connection |
 | `server/` | The multiplayer game server (Cloudflare Worker + Durable Objects) |
-| `src/scripts/city3d/plots.ts` | Plot grid, build-mode overlay, the eight buildings |
-| `src/scripts/city3d/store.ts` | Demo wallet, simulated purchases, saved progress |
+| `src/scripts/city3d/plots.ts` | The large plots, build-mode overlay, the eight buildings |
+| `src/scripts/city3d/store.ts` | The builder's `Store` interface, and the demo (simulated wallet, play money) |
+| `src/scripts/city3d/land.ts` | Real sales: wallet payments, the server's list of owners, signing in to build |
+| `src/scripts/city3d/wallet.ts` | The visitor's PulseChain wallet (EIP-1193 / EIP-6963) |
+| `src/scripts/net/land.ts` | Shared with the server: networks, land API shapes, sign-in message |
 | `src/scripts/city3d/builder-ui.ts` | Build mode: wallet chip, plot panel, customiser, purchase dialog |
-| `src/data/plots.ts` | Plot prices (placeholders), building catalogue, colours, sign texts |
+| `src/data/plots.ts` | Districts, plot price, building catalogue, colours, sign texts (shared with the server) |
 | `src/scripts/city3d/kit.ts` | Toon materials, canvas textures, batching |
 | `src/lib/city.ts` | The 2D isometric map (fallback and loading poster) |
 
