@@ -40,6 +40,8 @@ const ext = { target: '_blank', rel: 'noopener noreferrer' };
 const map = renderCity({ spots, art: { degen: degenImg.src, logo: logoImg.src } });
 const focusX = +((EMPORIUM_FOCUS[0] - VIEW.x) / VIEW.w).toFixed(4);
 const focusY = +((EMPORIUM_FOCUS[1] - VIEW.y) / VIEW.h).toFixed(4);
+// The commit this was built from (set by the Worker's build in server/wrangler.jsonc)
+const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) ?? '';
 ---
 
 <section class="city" aria-labelledby="city-title" data-city-root data-view="2d" data-mode="explore" data-degen={degenBig.src} data-logo={logoBig.src}>
@@ -474,8 +476,8 @@ const focusY = +((EMPORIUM_FOCUS[1] - VIEW.y) / VIEW.h).toFixed(4);
       </ul>
     </details>
 
-    {/* Stands in for the card's draft note when the card is hidden (always on phones) */}
-    <p class="city-draft-tag">Draft · v0</p>
+    {/* Stands in for the card's draft note when the card is hidden (always on phones); with the build's commit, to tell which version is live */}
+    <p class="city-draft-tag">Draft · v0{build && ` · ${build}`}</p>
   </div>
   {/* Keep a closed welcome card closed on return, before first paint so it doesn't flash */}
   <script is:inline>

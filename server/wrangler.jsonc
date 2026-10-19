@@ -15,7 +15,7 @@
   },
   "build": {
     // Installs the website's packages first if the build machine hasn't (Cloudflare's build may only install server/'s)
-    "command": "cd .. && (test -d node_modules/astro || npm ci) && PUBLIC_GAME_SERVER=https://emporium.144collective.workers.dev npm run build"
+    "command": "cd .. && (test -d node_modules/astro || npm ci) && PUBLIC_GAME_SERVER=https://emporium.144collective.workers.dev PUBLIC_BUILD=$(git rev-parse --short HEAD 2>/dev/null || echo dev) npm run build"
   },
   "durable_objects": {
     "bindings": [
