@@ -1,7 +1,10 @@
 /*
- * Log in with a wallet, and the basic profile card (account.ts does the
- * talking). Opened from the Log in button in the site header and from the
- * Profile tab while walking; closes with its ×, a tap outside or Esc.
+ * Connect (log in with) a wallet, and the basic profile card (account.ts
+ * does the talking). Opened from the Connect wallet button in the site
+ * header and from the Profile tab while walking; closes with its ×, a tap
+ * outside or Esc. It's made with the page (CityMap.astro), not with the 3D
+ * city, so it works on the 2D map too and before the 3D city has loaded;
+ * the 3D city plugs its parts in through `hooks` once it's up (index.ts).
  *
  * The card shows the player name (from the word lists, never typed), rank
  * badge, lifetime score, the wallet (short, with its network) and the plots
@@ -16,8 +19,8 @@ import { walletError } from './wallet';
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 const fmt = new Intl.NumberFormat('en-US');
 
-interface Deps {
-  account: Account;
+/** What the card needs from the rest of the city. Defaults work without the 3D city; index.ts replaces them. */
+export interface AccountHooks {
   /** The city's Online / Offline switch */
   online(): boolean;
   goOnline(): void;
@@ -29,8 +32,7 @@ interface Deps {
   opened(): void;
 }
 
-export function createAccountUI(root: HTMLElement, d: Deps) {
-  const { account } = d;
+export function createAccountUI(root: HTMLElement, account: Account, d: AccountHooks) {
   const card = root.querySelector<HTMLElement>('[data-account]')!;
   const body = card.querySelector<HTMLElement>('[data-account-body]')!;
   const navBtn = document.querySelector<HTMLButtonElement>('[data-account-nav]');
@@ -43,14 +45,15 @@ export function createAccountUI(root: HTMLElement, d: Deps) {
     const me = account.me;
     const who = me ? me.profile.name : account.address ? shortAddr(account.address) : '';
     if (navBtn) {
-      navBtn.hidden = false;
-      navBtn.querySelector('[data-account-label]')!.textContent = who || 'Log in';
+      const label = navBtn.querySelector('[data-account-label]')!;
+      if (who) label.textContent = who;
+      else label.innerHTML = 'Connect<span class="nav-account-more"> wallet</span>';
       navBtn.classList.toggle('is-in', !!account.address);
-      navBtn.setAttribute('aria-label', account.address ? `Your profile: ${who}` : 'Log in with your wallet');
+      navBtn.setAttribute('aria-label', account.address ? `Your profile: ${who}` : 'Connect your wallet');
     }
     for (const b of root.querySelectorAll<HTMLButtonElement>('[data-account-open]')) {
       b.hidden = false;
-      b.textContent = account.address ? `Wallet profile · ${shortAddr(account.address)}` : 'Log in with wallet';
+      b.textContent = account.address ? `Wallet profile · ${shortAddr(account.address)}` : 'Connect wallet';
     }
   }
 
@@ -61,8 +64,8 @@ export function createAccountUI(root: HTMLElement, d: Deps) {
     const err = error ? `<p class="account-error" role="alert">${esc(error)}</p>` : '';
 
     if (!d.online()) {
-      body.innerHTML = `${head('Offline', 'Log in')}
-        <p class="city-panel-text">Logging in and your profile need the city online. Switch to Online at the top of the city, or here.</p>
+      body.innerHTML = `${head('Offline', 'Connect wallet')}
+        <p class="city-panel-text">Connecting your wallet and your profile need the city online. Switch to Online at the top of the city, or here.</p>
         <div class="city-panel-actions"><button type="button" class="btn-pulse" data-account-online>Go online</button>${account.address ? '<button type="button" class="chip-link" data-account-logout>Log out</button>' : ''}</div>`;
       return;
     }
@@ -76,13 +79,13 @@ export function createAccountUI(root: HTMLElement, d: Deps) {
       const list = await account.wallets();
       if (card.hidden || account.address || busy) return;
       body.innerHTML = list.length
-        ? `${head('Wallet', 'Log in')}
-           <p class="city-panel-text">Log in with your PulseChain wallet to keep a player profile that follows you to any browser, and to build on plots you own.</p>
+        ? `${head('Wallet', 'Connect wallet')}
+           <p class="city-panel-text">Connect your PulseChain wallet to log in: keep a player profile that follows you to any browser, and to build on plots you own.</p>
            <div class="wallet-picks">${list.map((w) => `<button type="button" class="wallet-pick" data-account-wallet="${esc(w.id)}">${w.icon ? `<img src="${esc(w.icon)}" alt="" width="24" height="24">` : ''}<span><b>${esc(w.name)}</b>${w.note ? `<small>${esc(w.note)}</small>` : ''}</span></button>`).join('')}</div>
            ${err}
            <p class="city-panel-fine">Your wallet asks you to sign a short message: no transaction, no gas. A wallet's first login starts a fresh profile.</p>`
         : `${head('Wallet', 'No wallet found')}
-           <p class="city-panel-text">Logging in needs a crypto wallet that works with PulseChain.</p>
+           <p class="city-panel-text">Connecting needs a crypto wallet that works with PulseChain.</p>
            <p class="city-panel-fine">On a phone, open this page in your wallet app's own browser. On a computer, add a wallet extension to your browser, then reload this page.</p>`;
       return;
     }
@@ -142,6 +145,10 @@ export function createAccountUI(root: HTMLElement, d: Deps) {
   }
 
   for (const b of openers) b.addEventListener('click', open);
+  // Esc closes the card first (before it can leave walk or build mode: nothing after this sees it)
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && close()) e.stopImmediatePropagation();
+  });
   card.addEventListener('click', (e) => {
     const t = e.target as HTMLElement;
     if (t === card) return void close();
@@ -167,6 +174,11 @@ export function createAccountUI(root: HTMLElement, d: Deps) {
   });
   account.subscribe(() => render());
   paintButtons();
+  // Tapped before this script was ready (Nav.astro remembers it)
+  if (navBtn?.dataset.wanted) {
+    delete navBtn.dataset.wanted;
+    open();
+  }
 
   return {
     get isOpen() {

@@ -582,6 +582,40 @@ const focusY = +((EMPORIUM_FOCUS[1] - VIEW.y) / VIEW.h).toFixed(4);
     // SMIL animations (cars, rings, the plane) ignore CSS, so pause them here
     if (reduced) svg.pauseAnimations();
 
+    /* ---------- Connect wallet (works on the 2D map too; the 3D city plugs in when it starts) ---------- */
+    const server = import.meta.env.PUBLIC_GAME_SERVER as string | undefined;
+    const wallet = server
+      ? Promise.all([import('../scripts/city3d/account'), import('../scripts/city3d/account-ui')]).then(([{ createAccount }, { createAccountUI }]) => {
+          const account = createAccount(server);
+          const online = () => {
+            try {
+              return localStorage.getItem('degen-city-online-v1') !== 'off';
+            } catch {
+              return true;
+            }
+          };
+          const hooks = {
+            online,
+            goOnline() {
+              try {
+                localStorage.setItem('degen-city-online-v1', 'on');
+              } catch {}
+            },
+            rename: () => account.rename(),
+            async showPlot(id: string) {
+              // On the 2D map: into the 3D city first (it swaps in its own showPlot)
+              const before = hooks.showPlot;
+              remember('3d');
+              await go3d();
+              if (hooks.showPlot !== before) hooks.showPlot(id);
+            },
+            opened() {},
+          };
+          if (account.address && online()) account.refresh();
+          return { account, hooks, ui: createAccountUI(root, account, hooks) };
+        })
+      : Promise.resolve(null);
+
     /* ---------- The 3D city ---------- */
     const controls = root.querySelector<HTMLDetailsElement>('[data-controls]')!;
     const to3d = root.querySelector<HTMLButtonElement>('.city-to3d')!;
@@ -601,7 +635,7 @@ const focusY = +((EMPORIUM_FOCUS[1] - VIEW.y) / VIEW.h).toFixed(4);
       } else {
         booting = true;
         const { bootCity } = await import('../scripts/city3d/index');
-        city = await bootCity(root!);
+        city = await bootCity(root!, await wallet);
         booting = false;
         if (!city) return show2d(false);
       }

@@ -315,9 +315,13 @@ it and has been retired completely. Build only on what's here.
   wallet's own profile (the token rides in `hello`), and `/land/design`
   checks it. A wallet's first login starts a fresh profile (no guest score,
   name or look carried over), and its look never overwrites the browser's
-  own guest look. The **Log in** button sits in the site header (`.nav-account`,
-  only on the city page with a game server) and in the walk Profile tab
-  (`[data-account-open]`); both open the profile card (`[data-account]`):
+  own guest look. The **Connect wallet** button sits in the site header (`.nav-account`,
+  rendered by `Nav.astro` on the city page when there's a game server,
+  "Connect" on phones) and in the walk Profile tab (`[data-account-open]`);
+  both open the profile card (`[data-account]`). The account and card are
+  made with the page (`CityMap.astro`), not with the 3D city, so they work
+  on the 2D map and before 3D has loaded; `bootCity()` gets them and fills
+  in their `hooks` (Online switch, rename, Build mode). The card shows:
   player name, rank, lifetime score, the wallet (short) and network, and the
   plots it owns (each jumps to Build mode), with New name and Log out. Only
   the visitor sees their own address; other players only see the player

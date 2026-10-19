@@ -3646,6 +3646,10 @@ body.is-walking .nav {
     max-width: 132px;
     padding: 0 12px 0 10px;
   }
+  /* "Connect" on phones */
+  .nav-account-more {
+    display: none;
+  }
 }
 @media (max-width: 360px) {
   .icon-link,

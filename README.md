@@ -210,7 +210,7 @@ Online pill while walking flip the same switch.
 - Up to 16 players share a city; more cities open as they fill.
 - Everyone gets a generated player name (reroll it in **Profile**), shown on
   a name tag with a rank badge from their lifetime score.
-- **Log in** (top of the page, or **Profile** while walking): sign a short
+- **Connect wallet** (top of the page, or **Profile** while walking): sign a short
   message with your PulseChain wallet (no transaction, no gas) and your
   player profile belongs to that wallet, so it follows you to any browser or
   phone. A wallet's first login starts a fresh profile. The profile card

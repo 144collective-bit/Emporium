@@ -18,8 +18,8 @@ import { createSound } from './sound';
 import { createPlots, type Plot } from './plots';
 import { createDemoStore, createSwitchStore } from './store';
 import { createOnlineSwitch } from './online';
-import { createAccount } from './account';
-import { createAccountUI, type AccountUI } from './account-ui';
+import type { Account } from './account';
+import type { AccountHooks, AccountUI } from './account-ui';
 import { createLandStore } from './land';
 import { createBuilderUI } from './builder-ui';
 import { createFitting, type Fitting } from './fitting';
@@ -45,7 +45,8 @@ function pickTier(): Tier {
 const nextFrame = () => new Promise((r) => requestAnimationFrame(() => r(null)));
 const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
-export async function bootCity(root: HTMLElement) {
+/** `wallet`: Connect wallet and the profile card, made with the page (CityMap.astro); the city plugs its parts into `hooks` */
+export async function bootCity(root: HTMLElement, wallet?: { account: Account; hooks: AccountHooks; ui: AccountUI } | null) {
   const host = root.querySelector<HTMLElement>('[data-city3d]')!;
   const loader = root.querySelector<HTMLElement>('[data-loader]')!;
   const bar = loader.querySelector<HTMLElement>('[data-loader-bar]')!;
@@ -258,8 +259,7 @@ export async function bootCity(root: HTMLElement) {
   const server = import.meta.env.PUBLIC_GAME_SERVER as string | undefined;
   const onlineSwitch = server ? createOnlineSwitch(root) : null;
   // Logging in with a wallet (account.ts): the player's profile, and building on their plots
-  const account = server ? createAccount(server) : null;
-  if (account && onlineSwitch?.on) account.refresh();
+  const account = wallet?.account ?? null;
   const sales = server && onlineSwitch && account ? createSwitchStore(() => createLandStore(server, account), onlineSwitch.on) : null;
   const builder = createBuilderUI(root, {
     store: sales?.store ?? createDemoStore(),
@@ -327,20 +327,18 @@ export async function bootCity(root: HTMLElement) {
           account: account!,
         })
       : null;
-  const accountUI: AccountUI | null =
-    account && onlineSwitch
-      ? createAccountUI(root, {
-          account,
-          online: () => onlineSwitch.on,
-          goOnline: () => onlineSwitch.set(true),
-          rename: () => (mp?.rename() ? undefined : account.rename()),
-          showPlot(id) {
-            builder.setBuild(true);
-            builder.select(id);
-          },
-          opened: () => walking && walk.releaseMouse(),
-        })
-      : null;
+  const accountUI = wallet && onlineSwitch ? wallet.ui : null;
+  if (wallet && onlineSwitch && account)
+    Object.assign(wallet.hooks, {
+      online: () => onlineSwitch.on,
+      goOnline: () => onlineSwitch.set(true),
+      rename: () => (mp?.rename() ? undefined : account.rename()),
+      showPlot(id: string) {
+        builder.setBuild(true);
+        builder.select(id);
+      },
+      opened: () => walking && walk.releaseMouse(),
+    } satisfies AccountHooks);
   onlineSwitch?.onChange((on) => {
     sales?.setOnline(on);
     mp?.setEnabled(on);
