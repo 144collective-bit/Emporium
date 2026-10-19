@@ -16,6 +16,7 @@ import * as THREE from 'three';
 import type { SpotId } from '../../lib/city';
 import { PLAYER, airPose, createDegen, emotePose, holdRiflePose, walkPose, type Outfit } from './character';
 import { createCombat, type Sfx } from './combat';
+import { createGunShop } from './gunshop';
 import { CAMERA_ONLY, RACK, SOLIDS, rayBoxes, type Box } from './solids';
 import { DISTRICTS, BLOCKS, BS, RIVER, ROADS, SLAB, type Tick } from './world';
 
@@ -153,7 +154,7 @@ export function createWalk(d: WalkDeps) {
   let near: { id: SpotId | 'gear'; label: string } | null = null;
   const act = () => {
     if (!near) return;
-    if (near.id === 'gear') combat.gearUp();
+    if (near.id === 'gear') shop.show();
     else openSpot(near.id);
   };
 
@@ -204,6 +205,22 @@ export function createWalk(d: WalkDeps) {
   const rayWorld = (from: THREE.Vector3, dir: THREE.Vector3, max: number) => rayBoxes(from, dir, max, d.plotSolids());
 
   const combat = createCombat({ scene: d.scene, camera, root, tick: d.tick, ground: SLAB, rayWorld, sfx: d.sfx });
+  // The gun store at the Armoury's counter: frees the mouse and pauses walking while it's open
+  const shop = createGunShop(root, {
+    lifetime: () => combat.lifetime,
+    weapon: () => combat.weapon,
+    geared: () => combat.geared,
+    equip: (id) => combat.equip(id),
+    onOpen() {
+      keys.clear();
+      jumpHeld = aim = false;
+      combat.trigger(false);
+      combat.trigger(false, true);
+      if (document.pointerLockElement === canvas) document.exitPointerLock();
+    },
+    onClose: () => canvas.focus({ preventScroll: true }),
+  });
+  combat.onLifetime(() => shop.refresh());
   hero.torso.add(combat.gun);
   let aimAmt = 0;
   let armAmt = 0;
@@ -240,6 +257,11 @@ export function createWalk(d: WalkDeps) {
   function onKey(e: KeyboardEvent, down: boolean) {
     if (!active || (e.target as HTMLElement).matches?.('input, select, textarea')) return false;
     const c = e.code;
+    // While the store is open, E closes it and walking keys wait
+    if (shop.open) {
+      if (down && !e.repeat && c === 'KeyE') shop.close();
+      return false;
+    }
     if (down && c === 'KeyE' && near) act();
     else if (down && !e.repeat && c === 'KeyV') setFirstPerson(!firstPerson);
     else if (down && !e.repeat && c === 'CapsLock') setRunLock(!runLock);
@@ -420,6 +442,16 @@ export function createWalk(d: WalkDeps) {
     if (rx || ry) look(rx * 2.8 * dt, ry * 2 * dt, 1);
     const b = gp.buttons.map((x) => x.pressed);
     const edge = (i: number) => b[i] && !pad.prev[i];
+    // The store: D-pad picks, A takes, B (or Y again) closes
+    if (shop.open) {
+      if (edge(14) || edge(12)) shop.step(-1);
+      if (edge(15) || edge(13)) shop.step(1);
+      if (edge(0)) shop.take();
+      if (edge(1) || edge(3)) shop.close();
+      pad.x = pad.y = 0;
+      pad.prev = b;
+      return;
+    }
     if (edge(0)) tryJump();
     jumpHeld = jumpHeld || b[0] || false;
     if (!b[0] && pad.prev[0]) jumpHeld = false;
@@ -574,7 +606,7 @@ export function createWalk(d: WalkDeps) {
     combat.view(dt, t, { firstPerson, aim, move: stride, phase, run: runAmt, air });
 
     // Field of view widens with speed, narrows when aiming
-    const wantFov = (firstPerson ? 70 : 52) + runAmt * 8 - (aim ? (firstPerson && combat.armed ? 20 : 10) : 0);
+    const wantFov = (firstPerson ? 70 : 52) + runAmt * 8 - (aim ? (firstPerson && combat.armed ? combat.adsZoom : 10) : 0);
     fov += (wantFov - fov) * damp(6, dt);
     if (Math.abs(camera.fov - fov) > 0.05) {
       camera.fov = fov;
@@ -584,10 +616,12 @@ export function createWalk(d: WalkDeps) {
     // Door prompts, and the Armoury's gun store counter
     let best: { id: SpotId | 'gear'; label: string } | null = null;
     let bestD = 1.7;
-    if (Math.hypot(RACK.x - pos.x, RACK.z - pos.z) < 1.1) {
-      best = { id: 'gear', label: combat.geared ? 'Refill ammo' : 'Gear up' };
+    const atCounter = Math.hypot(RACK.x - pos.x, RACK.z - pos.z);
+    if (atCounter < 1.1) {
+      best = { id: 'gear', label: 'Gun store' };
       bestD = 0;
     }
+    if (shop.open && atCounter > 2) shop.close();
     for (const door of DOORS) {
       const dd = Math.hypot(door.x - pos.x, door.z - pos.z);
       if (dd < bestD) {
@@ -663,6 +697,7 @@ export function createWalk(d: WalkDeps) {
       keys.clear();
       jumpHeld = mouseL = mouseR = false;
       setAim(false);
+      shop.close();
       combat.exit();
       joy.id = -1;
       joy.x = joy.y = 0;
@@ -674,6 +709,10 @@ export function createWalk(d: WalkDeps) {
       camera.fov = baseFov;
       camera.updateProjectionMatrix();
       root.dataset.mode = 'explore';
+    },
+    /** Esc: close the gun store if it's open (true if it was) */
+    closeShop() {
+      return shop.close();
     },
     /** True if Esc was used to free the mouse (so it shouldn't also stop walking). */
     releaseMouse() {

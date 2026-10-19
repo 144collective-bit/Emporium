@@ -114,11 +114,20 @@ it and has been retired completely. Build only on what's here.
   so a server can run it. `combat.ts` is the local view: it feeds the local
   player's input in and draws / plays the events. New gameplay goes in the
   sim first; looks and sounds in the view.
-- One rifle (`rifle.ts`: `buildRifle()`, `rifleGeometry()`), shared by
-  Degen in third person, his first-person hands and the Armoury's soldiers.
-  Keep it cartoon: no real-world gun brands or markings. Finishes (`SKINS`)
-  are cosmetic and unlock with lifetime score saved in the browser under
-  `degen-city-combat-v1`.
+- **The gun store** (`gunshop.ts`, markup `data-shop` in `CityMap.astro`)
+  opens at the Armoury counter. Four guns, each defined once in
+  `combat-sim.ts` `WEAPONS` (stats, `need` = lifetime score that unlocks it)
+  and modelled in `guns.ts` `SPECS` (parts, muzzle, sight, hand spots): the
+  Assault Rifle (holo red-dot, also carried by the soldiers via
+  `rifleGeometry()`), Buzz SMG, Street Sweeper shotgun (pellets, iron sights)
+  and Long Shot marksman rifle (scope, full-screen scope view). Guns unlock
+  with score and are free to take: never sell them, price them in money or
+  tie them to the token. Keep them cartoon: no real-world gun names, brands
+  or markings. A new gun needs a `WEAPONS` entry, a `SPECS` entry, store art
+  (`ART` in `gunshop.ts`) and a shot sound (`SHOT_SOUND` in `combat.ts`).
+- Finishes (`SKINS`) are cosmetic and work on every gun. Lifetime score,
+  finish and last gun are saved in the browser under `degen-city-combat-v1`
+  (or the player profile online).
 - First person is the default when walking starts. The hands
   (`viewmodel.ts`) are built `K` times bigger and further out (the camera's
   near plane is 0.5 m) and drawn in the front of the depth buffer, with

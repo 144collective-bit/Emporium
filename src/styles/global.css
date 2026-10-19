@@ -3437,3 +3437,344 @@ body.is-walking :is(.city-modes, .walk-top, .walk-look, .combat-score) {
     top: 120px;
   }
 }
+
+/* ---------- The gun store at the Armoury's counter (walk mode, gunshop.ts) ---------- */
+.shop {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 7;
+  display: grid;
+  gap: 14px;
+  width: min(760px, calc(100% - 32px));
+  max-height: calc(100% - var(--nav-h) * 2 - 24px);
+  padding: 20px 22px 16px;
+  overflow-y: auto;
+  border: 1px solid #0000;
+  border-radius: 14px;
+  background:
+    linear-gradient(#0b0a12f2, #0b0a12f2) padding-box,
+    var(--pulse) border-box;
+  box-shadow: 0 24px 60px -20px #000c, 0 0 40px -18px #8f3dff;
+  color: var(--text-2);
+  transform: translate(-50%, -50%);
+  animation: shop-in 0.25s var(--ease);
+}
+.shop[hidden] {
+  display: none;
+}
+@keyframes shop-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 12px));
+  }
+}
+.city.is-shopping .walk-prompt,
+.city.is-shopping .walk-look,
+.city.is-shopping .combat-cross {
+  display: none;
+}
+.shop-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px 16px;
+  padding-right: 40px;
+}
+.shop-head > div {
+  flex: 1 1 auto;
+}
+.shop-title {
+  margin: 4px 0 0;
+  font-family: var(--font-display);
+  font-size: clamp(30px, 5vw, 44px);
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+  background: var(--pulse-text);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.shop-score {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.shop-score b {
+  margin-left: 6px;
+  font-family: var(--font-display);
+  font-size: 18px;
+  letter-spacing: 0.02em;
+  color: var(--p-cyan);
+}
+.shop-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid #0000;
+  border-radius: 50%;
+  background:
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
+  color: #fff;
+  cursor: pointer;
+}
+.shop-list {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.shop-card {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 10px 6px 8px;
+  border: 1px solid #ffffff24;
+  border-radius: 10px;
+  background: #0b0a12;
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, transform 0.2s;
+}
+.shop-card svg {
+  width: 100%;
+  max-width: 120px;
+  height: auto;
+  aspect-ratio: 3;
+  fill: #c9c6d6;
+  stroke: #05050a;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+.shop-card b {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.shop-card small {
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--p-cyan);
+}
+.shop-card:hover {
+  transform: translateY(-2px);
+}
+.shop-card[aria-selected="true"] {
+  border-color: #0000;
+  background:
+    var(--pulse-wash) padding-box,
+    linear-gradient(#14102a, #14102a) padding-box,
+    var(--pulse) border-box;
+  box-shadow: 0 0 24px -8px #00eaffaa;
+}
+.shop-card[aria-selected="true"] svg {
+  fill: #fff;
+}
+.shop-card.is-locked svg {
+  fill: #3a3846;
+}
+.shop-card.is-locked b {
+  color: var(--muted);
+}
+.shop-card.is-locked small {
+  color: #ffd36b;
+}
+.shop-card.is-locked small::before {
+  content: "🔒 ";
+}
+.shop-detail {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 22px;
+  align-items: start;
+}
+.shop-name {
+  grid-column: 1;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+  color: #fff;
+}
+.shop-blurb,
+.shop-mode {
+  grid-column: 1;
+  margin: 0;
+  font-size: 13px;
+}
+.shop-mode {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--p-cyan);
+}
+.shop-stats {
+  grid-column: 2;
+  grid-row: 1 / span 4;
+  display: grid;
+  gap: 7px;
+  margin: 0;
+}
+.shop-stats > div {
+  display: grid;
+  grid-template-columns: 84px 1fr;
+  align-items: center;
+  gap: 10px;
+}
+.shop-stats dt {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.shop-stats dd {
+  height: 8px;
+  margin: 0;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #ffffff14;
+}
+.shop-stats i {
+  display: block;
+  width: calc(var(--v, 0) * 100%);
+  height: 100%;
+  border-radius: inherit;
+  background: var(--pulse);
+  transition: width 0.3s var(--ease);
+}
+.shop-take {
+  grid-column: 1;
+  justify-self: start;
+  margin-top: 8px;
+  padding: 12px 20px;
+  border: 1px solid #0000;
+  border-radius: 999px;
+  background:
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 0 24px -8px #ff2fb9;
+}
+.shop-take:disabled {
+  opacity: 0.55;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+.shop-note {
+  grid-column: 1;
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.shop-foot {
+  margin: 0;
+  padding-top: 10px;
+  border-top: 1px solid #ffffff14;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+@media (max-width: 640px) {
+  .shop {
+    top: auto;
+    right: 12px;
+    bottom: 12px;
+    left: 12px;
+    width: auto;
+    max-height: calc(100% - var(--nav-h) - 72px);
+    padding: 16px 14px 12px;
+    transform: none;
+    animation-name: shop-up;
+  }
+  .shop-list {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .shop-detail {
+    grid-template-columns: 1fr;
+  }
+  .shop-stats {
+    grid-column: 1;
+    grid-row: auto;
+  }
+  .shop-take {
+    justify-self: stretch;
+  }
+}
+@keyframes shop-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .shop {
+    animation: none;
+  }
+}
+
+/* All the way down the Long Shot's scope: a full-screen scope view */
+.combat-scope {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: none;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 50%, transparent 0 min(34vh, 34vw), #05050a calc(min(34vh, 34vw) + 2px));
+}
+.combat-scope::before,
+.combat-scope::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  background: #05050a;
+  transform: translate(-50%, -50%);
+}
+.combat-scope::before {
+  width: min(68vh, 68vw);
+  height: 2px;
+}
+.combat-scope::after {
+  width: 2px;
+  height: min(68vh, 68vw);
+}
+.combat-scope i {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ff3b5c;
+  box-shadow: 0 0 10px #ff3b5c;
+  transform: translate(-50%, -50%);
+}
+.city.is-scoped .combat-scope {
+  display: block;
+}

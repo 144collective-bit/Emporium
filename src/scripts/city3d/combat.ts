@@ -4,25 +4,26 @@
  * player's input and turns its events into the rifle, the targets, effects,
  * sound and the HUD.
  *
- * - You start unarmed. The gun store counter in the Armoury gears you up
- *   (and refills ammo); G holsters and draws.
+ * - You start unarmed. The store at the Armoury's counter hands out the guns
+ *   (unlocked by lifetime score) and refills ammo; G holsters and draws.
  * - Left mouse fires full auto, right mouse aims (the holo red-dot in first
  *   person), R reloads. Phones get Fire, Aim and Reload buttons and a little
  *   aim assist; gamepads fire on RT and reload on X.
  * - Targets: cardboard dummies and patrol drones. People and cars are never hit.
- * - Rifle finishes unlock with your lifetime score, saved in this browser.
+ * - Guns and finishes unlock with your lifetime score, saved in this browser
+ *   (or in your player profile when online).
  */
 import * as THREE from 'three';
 import { FONT_DISPLAY, PAL, canvasTex, fx, glowTex, neon, toon } from './kit';
 import { type Tick } from './world';
-import { DRONES, DUMMIES, WEAPON, createSim, dronePose, type SimEvent } from './combat-sim';
-import type { ClientMsg, NetEvent } from '../net/protocol';
-import { MUZZLE, SKINS, buildRifle, placeRifle, type SkinId } from './rifle';
+import { DRONES, DUMMIES, WEAPONS, WEAPON_IDS, createSim, dronePose, weaponUnlocked, type SimEvent, type WeaponId } from './combat-sim';
+import type { ClientMsg, MeRow, NetEvent } from '../net/protocol';
+import { SKINS, buildGun, gunSpec, placeGun, type Gun, type SkinId } from './guns';
 import { createViewmodel, type ViewState } from './viewmodel';
 
 export { DUMMIES };
 
-export type Sfx = 'shot' | 'empty' | 'magout' | 'magin' | 'bolt' | 'hit' | 'hitMetal' | 'down' | 'boom' | 'gear' | 'draw' | 'holster' | 'unlock';
+export type Sfx = 'shot' | 'shotSmg' | 'shotShotgun' | 'shotDmr' | 'empty' | 'magout' | 'magin' | 'bolt' | 'hit' | 'hitMetal' | 'down' | 'boom' | 'gear' | 'draw' | 'holster' | 'unlock';
 
 export interface CombatDeps {
   scene: THREE.Scene;
@@ -38,6 +39,7 @@ export interface CombatDeps {
 }
 
 const ME = 'me';
+const SHOT_SOUND: Record<WeaponId, Sfx> = { rifle: 'shot', smg: 'shotSmg', shotgun: 'shotShotgun', dmr: 'shotDmr' };
 const PROFILE_KEY = 'degen-city-combat-v1';
 
 /* ---------- Target looks ---------- */
@@ -179,15 +181,18 @@ function particles(n: number, additive: boolean, size: number) {
 interface Profile {
   total: number;
   skin: SkinId;
+  /** The gun taken last time at the store */
+  weapon: WeaponId;
 }
 function loadProfile(): Profile {
   try {
     const p = JSON.parse(localStorage.getItem(PROFILE_KEY) || '{}');
     const total = Number.isFinite(p.total) ? Math.max(0, p.total) : 0;
     const skin = SKINS.some((s) => s.id === p.skin && total >= s.need) ? p.skin : 'olive';
-    return { total, skin };
+    const weapon = weaponUnlocked(p.weapon, total) ? p.weapon : 'rifle';
+    return { total, skin, weapon };
   } catch {
-    return { total: 0, skin: 'olive' };
+    return { total: 0, skin: 'olive', weapon: 'rifle' };
   }
 }
 
@@ -217,7 +222,7 @@ export function createCombat(d: CombatDeps) {
   let me = sim.addPlayer(ME);
   let net: { send(m: ClientMsg): void } | null = null;
   /** Multiplayer: the profile on the server (lifetime score and finish) instead of this browser's */
-  let netProfile: { total: number; skin: SkinId } | null = null;
+  let netProfile: { total: number; skin: SkinId; weapon: WeaponId } | null = null;
   let requestSkin: ((id: SkinId) => void) | null = null;
   const lifetimeFns: ((total: number) => void)[] = [];
 
@@ -230,18 +235,39 @@ export function createCombat(d: CombatDeps) {
     }
   };
 
-  // Third person: the rifle on Degen's shoulder, in a pivot the walk code parents to his chest
+  me.weapon = profile.weapon;
+  /** The gun's rules (rate, spread, kick...) for whatever Degen is carrying */
+  const W = () => WEAPONS[me.weapon];
+
+  // Third person: the gun on Degen's shoulder, in a pivot the walk code parents to his chest
   const pivot = new THREE.Group();
-  const rifle = buildRifle(profile.skin, { shadows: true });
-  pivot.add(rifle.group);
   const flash = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 0.22), new THREE.MeshBasicMaterial({ map: glowTex, color: '#ffd36b', transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false }));
-  flash.position.copy(MUZZLE).add(new THREE.Vector3(0, 0, 0.06));
   flash.visible = false;
-  rifle.group.add(fx(flash));
+  fx(flash);
+  let gun: Gun = null!;
+  /** The gun shown in Degen's hands (follows the sim, which the server can change too) */
+  let shownWeapon: WeaponId = me.weapon;
+  const mountGun = (id: WeaponId) => {
+    if (gun) {
+      pivot.remove(gun.group);
+      gun.dispose();
+    }
+    gun = buildGun(id, (netProfile ?? profile).skin, { shadows: true });
+    flash.position.copy(gunSpec(id).muzzle).add(new THREE.Vector3(0, 0, 0.06));
+    gun.group.add(flash);
+    pivot.add(gun.group);
+    shownWeapon = id;
+  };
+  mountGun(me.weapon);
   pivot.visible = false;
 
-  // First person: Degen's hands on the rifle
-  const vm = createViewmodel(scene, profile.skin);
+  // First person: Degen's hands on the gun
+  const vm = createViewmodel(scene, profile.skin, me.weapon);
+  const showWeapon = (id: WeaponId) => {
+    if (id === shownWeapon) return;
+    mountGun(id);
+    vm.setWeapon(id);
+  };
 
   let trigger = false;
   let touchFire = false;
@@ -259,7 +285,7 @@ export function createCombat(d: CombatDeps) {
   const puffs = particles(220, false, 0.16);
   scene.add(sparks.pts, puffs.pts);
   const tracerGeo = new THREE.BoxGeometry(0.018, 0.018, 1).translate(0, 0, 0.5);
-  const tracers = Array.from({ length: 6 }, () => {
+  const tracers = Array.from({ length: 12 }, () => {
     const m = fx(new THREE.Mesh(tracerGeo, new THREE.MeshBasicMaterial({ color: '#ffe9a8', transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending, fog: false })));
     m.visible = false;
     scene.add(m);
@@ -348,9 +374,11 @@ export function createCombat(d: CombatDeps) {
     const reloading = me.reload > 0;
     if (me.mag !== shown.mag) hud.mag.textContent = String(me.mag);
     if (me.reserve !== shown.reserve) hud.reserve.textContent = String(me.reserve);
-    hud.mag.classList.toggle('is-low', me.mag <= 6);
+    // Low means the last fifth of this gun's magazine
+    const low = me.mag < W().mag && me.mag <= Math.max(1, Math.floor(W().mag / 5));
+    hud.mag.classList.toggle('is-low', low);
     const out = me.mag === 0 && me.reserve === 0;
-    const hint = out ? 'Out of ammo: gear up at the Armoury' : reloading ? 'Reloading' : me.mag <= 6 && me.reserve > 0 ? (touchUi.matches ? 'Tap reload' : 'R to reload') : '';
+    const hint = out ? 'Out of ammo: refill at the Armoury' : reloading ? 'Reloading' : low && me.reserve > 0 ? (touchUi.matches ? 'Tap reload' : 'R to reload') : '';
     if (hint !== shown.hint) {
       hud.hint.textContent = hint;
       hud.hint.hidden = !hint;
@@ -442,7 +470,7 @@ export function createCombat(d: CombatDeps) {
   };
   const setSkin = (id: SkinId) => {
     profile.skin = id;
-    rifle.setSkin(id);
+    gun.setSkin(id);
     vm.setSkin(id);
     saveProfile();
     paintSkins();
@@ -454,23 +482,17 @@ export function createCombat(d: CombatDeps) {
     else setSkin(b.dataset.skin as SkinId);
   });
   paintSkins();
+  /** Pop-ups for finishes and guns the score just unlocked */
   const unlocked = (before: number, after: number) => {
-    for (const s of SKINS) {
-      if (s.need > 0 && before < s.need && after >= s.need) {
-        popup('Unlocked', `${s.name} finish`, 'is-unlock');
-        d.sfx('unlock');
-      }
-    }
+    const crossed = (need: number) => need > 0 && before < need && after >= need;
+    for (const s of SKINS) if (crossed(s.need)) popup('Unlocked', `${s.name} finish`, 'is-unlock');
+    for (const id of WEAPON_IDS) if (crossed(WEAPONS[id].need)) popup('Unlocked', `${WEAPONS[id].name} at the store`, 'is-unlock');
+    if (SKINS.some((s) => crossed(s.need)) || WEAPON_IDS.some((id) => crossed(WEAPONS[id].need))) d.sfx('unlock');
   };
   const addLifetime = (n: number) => {
     const before = profile.total;
     profile.total += n;
-    for (const s of SKINS) {
-      if (s.need > 0 && before < s.need && profile.total >= s.need) {
-        popup('Unlocked', `${s.name} finish`, 'is-unlock');
-        d.sfx('unlock');
-      }
-    }
+    unlocked(before, profile.total);
   };
 
   const setArmedLook = (on: boolean) => {
@@ -489,7 +511,7 @@ export function createCombat(d: CombatDeps) {
       // Start on the line from the eye through the hands' muzzle, nearer than the hands are drawn
       vm.muzzle(from).sub(camera.position).normalize();
       from.multiplyScalar(THREE.MathUtils.clamp(dist * 0.5, 0.6, 1.4)).add(camera.position);
-    } else rifle.group.localToWorld(from.copy(MUZZLE));
+    } else gun.group.localToWorld(from.copy(gunSpec(gun.id).muzzle));
     const tr = tracers[nextTracer];
     nextTracer = (nextTracer + 1) % tracers.length;
     tr.m.position.copy(from);
@@ -503,14 +525,19 @@ export function createCombat(d: CombatDeps) {
     switch (e.type) {
       case 'shot': {
         if (e.player !== ME) break;
-        d.sfx('shot');
-        kick += aiming ? 0.008 : 0.012;
-        flashT = 0.05;
-        vm.kick();
+        const w = WEAPONS[e.weapon];
+        // One bang and one kick per pull; every pellet gets its tracer and its puff
+        if (e.pellet === 0) {
+          d.sfx(SHOT_SOUND[e.weapon]);
+          kick += aiming ? w.kick * 0.7 : w.kick;
+          flashT = 0.05;
+          vm.kick(Math.min(2.4, 0.7 + w.kick * 30));
+        }
         tracer(e.to, e.dist);
-        if (e.target === null && e.dist < WEAPON.range) {
-          burst(e.to, 5, ['#ffe9a8', '#ffb347'], 2.2, 1, true, 0.22);
-          burst(e.to, 4, ['#9a96b8', '#7a7590', '#b5b2c6'], 0.9, 1.4, false, 0.7);
+        if (e.target === null && e.dist < w.range) {
+          const few = w.pellets > 1;
+          burst(e.to, few ? 2 : 5, ['#ffe9a8', '#ffb347'], 2.2, 1, true, 0.22);
+          burst(e.to, few ? 1 : 4, ['#9a96b8', '#7a7590', '#b5b2c6'], 0.9, 1.4, false, 0.7);
         }
         break;
       }
@@ -563,7 +590,10 @@ export function createCombat(d: CombatDeps) {
         }
         break;
       case 'gear':
-        if (e.player === ME) d.sfx('gear');
+        if (e.player === ME) {
+          d.sfx('gear');
+          showWeapon(e.weapon);
+        }
         break;
       case 'respawn': {
         const L = looks[e.target];
@@ -657,7 +687,19 @@ export function createCombat(d: CombatDeps) {
     },
     /** 0..1 through a reload (0 when not reloading) */
     get reloading() {
-      return me.reload > 0 ? 1 - me.reload / WEAPON.reload : 0;
+      return me.reload > 0 ? 1 - me.reload / W().reload : 0;
+    },
+    /** The gun Degen carries (or will get at the store) */
+    get weapon() {
+      return me.weapon;
+    },
+    /** First person: degrees the view narrows when aiming with this gun */
+    get adsZoom() {
+      return W().zoom;
+    },
+    /** May Degen take this gun yet (lifetime score)? */
+    canTake(id: WeaponId) {
+      return weaponUnlocked(id, (netProfile ?? profile).total);
     },
     get firing() {
       return trigger || touchFire;
@@ -674,9 +716,14 @@ export function createCombat(d: CombatDeps) {
     get aimed() {
       return vm.aimed;
     },
-    gearUp() {
-      sim.gearUp(ME);
-      net?.send({ t: 'gear' });
+    /** Take a gun at the store counter (the same one again refills its ammo) */
+    equip(id: WeaponId) {
+      if (!weaponUnlocked(id, (netProfile ?? profile).total)) return false;
+      sim.equip(ME, id);
+      net?.send({ t: 'equip', w: id });
+      profile.weapon = id;
+      saveProfile();
+      return true;
     },
     toggleHolster() {
       if (!me.geared) return;
@@ -702,8 +749,9 @@ export function createCombat(d: CombatDeps) {
       for (const e of sim.drain()) onEvent(e);
       step(dt, t);
 
+      showWeapon(me.weapon);
       // Reload sounds, in step with the hands
-      const r = me.reload > 0 ? 1 - me.reload / WEAPON.reload : 0;
+      const r = me.reload > 0 ? 1 - me.reload / W().reload : 0;
       if (r > 0) {
         if (lastReload < 0.15 && r >= 0.15) d.sfx('magout');
         if (lastReload < 0.68 && r >= 0.68) d.sfx('magin');
@@ -723,7 +771,7 @@ export function createCombat(d: CombatDeps) {
         hud.hit.classList.toggle('is-kill', hitNow === 'kill');
         hitShown = hitNow;
       }
-      const spread = `${Math.round((me.spread + (aim ? WEAPON.spreadAim : WEAPON.spreadHip)) * 600)}px`;
+      const spread = `${Math.round(Math.min(0.08, me.spread + (aim ? W().spreadAim : W().spreadHip)) * 600)}px`;
       if (spread !== crossShown) {
         hud.cross.style.setProperty('--spread', spread);
         crossShown = spread;
@@ -743,12 +791,14 @@ export function createCombat(d: CombatDeps) {
     /** Per frame while walking, after the camera has moved: the first-person hands */
     view(dt: number, t: number, s: Omit<ViewState, 'armed' | 'reload'> & { firstPerson: boolean }) {
       firstPerson = s.firstPerson;
-      vm.update(camera, dt, t, { ...s, armed: me.armed, reload: me.reload > 0 ? 1 - me.reload / WEAPON.reload : 0 }, s.firstPerson);
+      vm.update(camera, dt, t, { ...s, armed: me.armed, reload: me.reload > 0 ? 1 - me.reload / W().reload : 0 }, s.firstPerson);
       root.classList.toggle('is-ads', s.firstPerson && vm.aimed > 0.6);
+      // All the way down the Long Shot's scope: a full-screen scope view (global.css)
+      root.classList.toggle('is-scoped', s.firstPerson && me.armed && gunSpec(me.weapon).sight.kind === 'scope' && vm.aimed > 0.92);
     },
     /** Pose the third-person rifle for this frame: aim 0..1 brings it up to the shoulder */
     poseGun(aim: number, pitchDown: number, lean: number, holdRecoil: number) {
-      placeRifle(pivot, rifle, aim, pitchDown, lean, holdRecoil, me.reload > 0 ? 1 - me.reload / WEAPON.reload : 0);
+      placeGun(pivot, gun, aim, pitchDown, lean, holdRecoil, me.reload > 0 ? 1 - me.reload / W().reload : 0);
     },
     /** Every rifle finish change and lifetime score update (for the profile panel) */
     onLifetime(fn: (total: number) => void) {
@@ -770,6 +820,7 @@ export function createCombat(d: CombatDeps) {
       requestSkin = onSkin;
       sim = createSim({ ground: d.ground, rayWorld: d.rayWorld, authority: !link });
       me = sim.addPlayer(ME);
+      me.weapon = profile.weapon;
       for (const L of looks) {
         L.g.visible = true;
         L.fall = null;
@@ -778,27 +829,30 @@ export function createCombat(d: CombatDeps) {
       setArmedLook(false);
       if (!link) {
         netProfile = null;
-        rifle.setSkin(profile.skin);
+        gun.setSkin(profile.skin);
         vm.setSkin(profile.skin);
         paintSkins();
       }
     },
     /** Multiplayer: our profile from the server */
-    setNetProfile(p: { total: number; skin: SkinId }) {
+    setNetProfile(p: { total: number; skin: SkinId; weapon: WeaponId }) {
+      const first = !netProfile;
       if (netProfile) unlocked(netProfile.total, p.total);
       if (p.skin !== (netProfile ?? profile).skin) {
-        rifle.setSkin(p.skin);
+        gun.setSkin(p.skin);
         vm.setSkin(p.skin);
       }
-      netProfile = { total: p.total, skin: p.skin };
+      netProfile = { total: p.total, skin: p.skin, weapon: p.weapon };
+      // Joining: carry the gun the profile picked last time (once geared up at the store)
+      if (first && !me.geared) me.weapon = p.weapon;
       paintSkins();
     },
     /** Multiplayer: positions of targets and our own ammo and score */
-    netSnap(pt: number, tg: [number, number, number][], mine: [number, number, number, number, number, number]) {
+    netSnap(pt: number, tg: [number, number, number][], mine: MeRow) {
       if (Math.abs(sim.poseNow - pt) > 0.15) sim.setPoseTime(pt);
       sim.applyTargets(tg);
-      const [mag, reserve, reloading, score, streak, armed] = mine;
-      sim.syncPlayer(ME, { mag, reserve, reloading: !!reloading, score, streak, armed: !!armed });
+      const [mag, reserve, reloading, score, streak, armed, w] = mine;
+      sim.syncPlayer(ME, { mag, reserve, reloading: !!reloading, score, streak, armed: !!armed, weapon: WEAPON_IDS[w] ?? me.weapon });
     },
     /** Multiplayer: combat events from the server; `muzzle` finds another player's rifle */
     netEvents(events: NetEvent[], myId: number, muzzle: (id: number, out: THREE.Vector3) => THREE.Vector3 | null) {
@@ -810,9 +864,10 @@ export function createCombat(d: CombatDeps) {
           const to = new THREE.Vector3(e[5], e[6], e[7]);
           const start = muzzle(e[1], new THREE.Vector3()) ?? new THREE.Vector3(e[2], e[3], e[4]);
           const dist = start.distanceTo(camera.position);
+          const weapon = WEAPON_IDS[e[9]] ?? 'rifle';
           tracer(to, 0, start);
-          if (e[8] === -1 && to.distanceTo(camera.position) < 40) burst(to, 4, ['#ffe9a8', '#ffb347'], 2.2, 1, true, 0.22);
-          if (dist < 45) d.sfx('shot', Math.max(0.08, 1 - dist / 45) * 0.7);
+          if (e[8] === -1 && to.distanceTo(camera.position) < 40) burst(to, e[10] ? 1 : 4, ['#ffe9a8', '#ffb347'], 2.2, 1, true, 0.22);
+          if (e[10] === 0 && dist < 45) d.sfx(SHOT_SOUND[weapon], Math.max(0.08, 1 - dist / 45) * 0.7);
         } else if (e[0] === 'h') {
           onEvent({ type: 'hit', player: who, target: e[2], damage: e[3], at: new THREE.Vector3(e[4], e[5], e[6]), hp: e[7] });
         } else if (e[0] === 'k') {
@@ -829,7 +884,7 @@ export function createCombat(d: CombatDeps) {
       trigger = touchFire = false;
       sim.setInput(ME, { fire: false });
       vm.root.visible = false;
-      root.classList.remove('is-ads');
+      root.classList.remove('is-ads', 'is-scoped');
       saveProfile();
     },
   };

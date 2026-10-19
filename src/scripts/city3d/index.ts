@@ -328,7 +328,7 @@ export async function bootCity(root: HTMLElement) {
     if (root.dataset.view !== '3d') return;
     if (walking) {
       if (e.key === 'Escape') {
-        if (walk.releaseMouse()) return;
+        if (walk.closeShop() || walk.releaseMouse()) return;
         active ? close() : stopWalking();
       }
       else if (!active) walk.onKey(e, true);

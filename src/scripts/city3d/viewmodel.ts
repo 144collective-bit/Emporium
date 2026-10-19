@@ -1,6 +1,7 @@
 /*
- * First person: Degen's hands on the rifle (black suit sleeves, white cuffs),
- * bottom-right from the hip and up to the holo red-dot when aiming.
+ * First person: Degen's hands on his gun (black suit sleeves, white cuffs),
+ * bottom-right from the hip and up to the sight when aiming (red-dot, iron
+ * sights, or the scope, which then hands over to a full-screen scope view).
  *
  * It moves like it has weight: it lags behind the mouse (sway), bobs with
  * each step, tips down to sprint, kicks back on every shot, drops away when
@@ -14,19 +15,22 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { canvasTex, fx } from './kit';
-import { MUZZLE, SIGHT, buildRifle, type SkinId, type Tintable } from './rifle';
+import { buildGun, gunSpec, type Gun, type SkinId, type Tintable } from './guns';
+import type { WeaponId } from './combat-sim';
 
 const K = 8;
-/** The rifle and hands are drawn a little smaller than life, so they don't swamp the screen */
+/** The gun and hands are drawn a little smaller than life, so they don't swamp the screen */
 const S = 0.78;
 const SKIN = '#e8c39e';
 const SLEEVE = '#16141f';
 
-/** Where the rifle sits, in metres from the eye (x right, y up, -z ahead) */
+/** Where the gun sits, in metres from the eye (x right, y up, -z ahead) */
 const HIP = { x: 0.1, y: -0.112, z: -0.27, ry: 0.05, rz: -0.04 };
-/** Aimed: the red-dot sits on the line of sight, this far ahead */
-const ADS_DIST = 0.36;
-const ADS = { x: 0, y: -SIGHT.y * S, z: -(ADS_DIST - SIGHT.z * S), ry: 0, rz: 0 };
+/** Aimed: the gun's sight sits on the line of sight, `ads` metres ahead */
+const adsPose = (id: WeaponId) => {
+  const { at, ads } = gunSpec(id).sight;
+  return { x: 0, y: -at.y * S, z: -(ads - at.z * S), ry: 0, rz: 0 };
+};
 
 const rbox = (w: number, h: number, d: number, r: number) => new RoundedBoxGeometry(w, h, d, 2, r);
 
@@ -114,7 +118,7 @@ export interface ViewState {
   reload: number;
 }
 
-export function createViewmodel(scene: THREE.Scene, skin: SkinId) {
+export function createViewmodel(scene: THREE.Scene, skin: SkinId, weapon: WeaponId = 'rifle') {
   const root = new THREE.Group();
   const scaler = new THREE.Group();
   scaler.scale.setScalar(K);
@@ -122,12 +126,7 @@ export function createViewmodel(scene: THREE.Scene, skin: SkinId) {
   root.add(scaler);
   scaler.add(holder);
 
-  const rifle = buildRifle(skin, { sight: true, mat: flat });
-  rifle.group.rotation.y = Math.PI;
-  rifle.group.scale.setScalar(S);
-  holder.add(rifle.group);
-
-  // Hands, in the rifle's own frame (barrel along +z, the rifle's +x is the camera's left)
+  // Hands, in the gun's own frame (barrel along +z, the gun's +x is the camera's left)
   const rightHand = rbox(0.05, 0.088, 0.072, 0.02).rotateX(0.3).translate(-0.006, -0.05, -0.02);
   const right = arm(new THREE.Vector3(-0.36, -0.72, -0.58), rightHand);
   const thumb = new THREE.Mesh(rbox(0.016, 0.016, 0.05, 0.007).rotateY(0.2).translate(-0.024, 0.012, 0.0), shared(SKIN));
@@ -136,9 +135,6 @@ export function createViewmodel(scene: THREE.Scene, skin: SkinId) {
   const left = arm(new THREE.Vector3(0.6, -0.68, -0.42), leftPalm);
   const fingers = new THREE.Mesh(rbox(0.014, 0.05, 0.08, 0.006).translate(-0.038, -0.006, 0), shared(SKIN));
   left.add(fingers);
-  const LEFT_REST = new THREE.Vector3(0.008, 0.016, 0.28);
-  left.position.copy(LEFT_REST);
-  rifle.group.add(right, left);
 
   // Muzzle flash: two crossed cut-outs and a soft glow
   const flashMat = new THREE.MeshBasicMaterial({ map: flashTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false });
@@ -150,21 +146,45 @@ export function createViewmodel(scene: THREE.Scene, skin: SkinId) {
   }
   const front = new THREE.Mesh(new THREE.PlaneGeometry(0.11, 0.11), flashMat);
   flash.add(front);
-  flash.position.copy(MUZZLE).add(new THREE.Vector3(0, 0, 0.07));
   flash.visible = false;
-  rifle.group.add(fx(flash));
+  fx(flash);
 
   // Draw in front of everything (see the note at the top), never cast shadows
   const front0 = (r: THREE.WebGLRenderer) => r.getContext().depthRange(0, 0.06);
   const back = (r: THREE.WebGLRenderer) => r.getContext().depthRange(0, 1);
-  root.traverse((o) => {
-    o.frustumCulled = false;
-    if ((o as THREE.Mesh).isMesh) {
-      o.castShadow = o.receiveShadow = false;
-      o.onBeforeRender = front0;
-      o.onAfterRender = back;
+  const upFront = (o: THREE.Object3D) =>
+    o.traverse((c) => {
+      c.frustumCulled = false;
+      if ((c as THREE.Mesh).isMesh) {
+        c.castShadow = c.receiveShadow = false;
+        c.onBeforeRender = front0;
+        c.onAfterRender = back;
+      }
+    });
+
+  // The gun in hand: swapped when Degen takes another from the store
+  let gun: Gun = null!;
+  let spec = gunSpec(weapon);
+  let ADS = adsPose(weapon);
+  let skinNow = skin;
+  function mount(id: WeaponId) {
+    if (gun) {
+      holder.remove(gun.group);
+      gun.dispose();
     }
-  });
+    spec = gunSpec(id);
+    ADS = adsPose(id);
+    gun = buildGun(id, skinNow, { sight: true, mat: flat });
+    gun.group.rotation.y = Math.PI;
+    gun.group.scale.setScalar(S);
+    left.position.copy(spec.fore);
+    flash.position.copy(spec.muzzle).add(new THREE.Vector3(0, 0, 0.07));
+    gun.group.add(right, left, flash);
+    upFront(gun.group);
+    holder.add(gun.group);
+  }
+  mount(weapon);
+  upFront(root);
   root.visible = false;
   scene.add(root);
 
@@ -186,41 +206,47 @@ export function createViewmodel(scene: THREE.Scene, skin: SkinId) {
   const ease = (x: number) => x * x * (3 - 2 * x);
   const seg = (r: number, a: number, b: number) => ease(THREE.MathUtils.clamp((r - a) / (b - a), 0, 1));
 
-  // Reload: where the left hand goes (offsets from its rest on the handguard), and the magazine with it
-  const MAG_AT = new THREE.Vector3(-0.008, -0.075, -0.15);
+  // Reload: where the left hand goes (offsets from where it holds the front), and the magazine with it
   const handOff = new THREE.Vector3();
   const magOff = new THREE.Vector3();
   const tmp = new THREE.Vector3();
   function reloadPose(r: number) {
     handOff.set(0, 0, 0);
     magOff.set(0, 0, 0);
-    rifle.mag.visible = true;
+    gun.mag.visible = true;
     if (r <= 0) return;
     // To the magazine, pull it out and away, come back with a fresh one, seat it, back to the handguard
     const toMag = seg(r, 0.04, 0.14) * (1 - seg(r, 0.72, 0.86));
     const out = seg(r, 0.14, 0.24) * (1 - seg(r, 0.6, 0.7));
     const away = seg(r, 0.24, 0.4) * (1 - seg(r, 0.44, 0.6));
-    handOff.copy(MAG_AT).multiplyScalar(toMag);
+    handOff.copy(spec.magAt).multiplyScalar(toMag);
     tmp.set(0.03, -0.11, 0.02).multiplyScalar(out);
     handOff.add(tmp);
     magOff.copy(tmp);
     tmp.set(0.18, -0.34, 0.05).multiplyScalar(away);
     handOff.add(tmp);
     magOff.add(tmp);
-    rifle.mag.visible = !(r > 0.38 && r < 0.46);
+    gun.mag.visible = !(r > 0.38 && r < 0.46);
   }
 
   return {
     root,
-    setSkin: (id: SkinId) => rifle.setSkin(id),
+    setSkin(id: SkinId) {
+      skinNow = id;
+      gun.setSkin(id);
+    },
+    /** Take another gun in hand */
+    setWeapon(id: WeaponId) {
+      if (id !== gun.id) mount(id);
+    },
     /** How dark it is (0 day .. 1 night), for the hands' shading */
     setNight(night: number) {
       level.value = 1.28 - night * 0.55;
     },
-    /** A shot: kick back and flash */
-    kick() {
-      kickZ += 0.028;
-      kickX += 0.055;
+    /** A shot: kick back (harder for bigger guns) and flash */
+    kick(power = 1) {
+      kickZ += 0.028 * power;
+      kickX += 0.055 * power;
       kickRoll += (Math.random() - 0.5) * 0.05;
       flashT = 0.045;
       flash.rotation.z = Math.random() * Math.PI;
@@ -228,7 +254,7 @@ export function createViewmodel(scene: THREE.Scene, skin: SkinId) {
     },
     /** Where shots leave the barrel, in world space (K times out along the line of sight) */
     muzzle(out: THREE.Vector3) {
-      return rifle.group.localToWorld(out.copy(MUZZLE));
+      return gun.group.localToWorld(out.copy(spec.muzzle));
     },
     scale: K,
     get aimed() {
@@ -237,7 +263,9 @@ export function createViewmodel(scene: THREE.Scene, skin: SkinId) {
     /** Each frame after the camera has moved */
     update(camera: THREE.Camera, dt: number, t: number, s: ViewState, firstPerson: boolean) {
       draw += ((s.armed && firstPerson ? 1 : 0) - draw) * Math.min(1, dt * (s.armed ? 9 : 12));
-      root.visible = firstPerson && draw > 0.02;
+      ads += ((s.aim && !s.reload && s.armed ? 1 : 0) - ads) * Math.min(1, dt * 14);
+      // Fully down a scope the full-screen scope view takes over (see combat.ts)
+      root.visible = firstPerson && draw > 0.02 && !(spec.sight.kind === 'scope' && ads > 0.92);
       if (!root.visible) {
         haveDir = false;
         flash.visible = false;
@@ -246,7 +274,6 @@ export function createViewmodel(scene: THREE.Scene, skin: SkinId) {
       root.position.copy(camera.position);
       root.quaternion.copy(camera.quaternion);
 
-      ads += ((s.aim && !s.reload ? 1 : 0) - ads) * Math.min(1, dt * 14);
       const sprint = s.run * (1 - ads);
 
       // Sway: lag behind the look direction, then settle
@@ -255,7 +282,7 @@ export function createViewmodel(scene: THREE.Scene, skin: SkinId) {
         const dyaw = Math.atan2(dirNow.x, dirNow.z) - Math.atan2(lastDir.x, lastDir.z);
         const yawStep = Math.atan2(Math.sin(dyaw), Math.cos(dyaw));
         const pitchStep = dirNow.y - lastDir.y;
-        // Positive swayX: the rifle trails to the left (you turned right); positive swayY: it trails low
+        // Positive swayX: the gun trails to the left (you turned right); positive swayY: it trails low
         swayX = THREE.MathUtils.clamp(swayX - yawStep * 0.9, -0.12, 0.12);
         swayY = THREE.MathUtils.clamp(swayY - pitchStep * 0.9, -0.1, 0.1);
       }
@@ -276,7 +303,7 @@ export function createViewmodel(scene: THREE.Scene, skin: SkinId) {
       idle += dt;
       const breathe = Math.sin(idle * 1.5) * 0.0025 * (1 - ads * 0.7);
 
-      // Narrow (portrait) screens see less to the side: tuck the rifle in and hold it further off
+      // Narrow (portrait) screens see less to the side: tuck the gun in and hold it further off
       const aspect = (camera as THREE.PerspectiveCamera).aspect || 1.6;
       const wide = Math.min(1, aspect / 1.6);
       const off = Math.pow(THREE.MathUtils.clamp(aspect, 0.45, 1), -0.7);
@@ -292,7 +319,7 @@ export function createViewmodel(scene: THREE.Scene, skin: SkinId) {
         P.y + by + breathe - swayY * 0.04 * swayK - down * 0.22 - sprint * 0.035 - s.air * 0.015 + tilt * 0.02,
         P.z + kickZ * (1 - ads * 0.4) + sprint * 0.02 + bolt * 0.012
       );
-      // Scaling the whole rifle about the eye keeps the red dot on the line of sight
+      // Scaling the whole gun about the eye keeps the sight on the line of sight
       holder.position.multiplyScalar(m);
       holder.scale.setScalar(m);
       holder.rotation.set(
@@ -303,13 +330,13 @@ export function createViewmodel(scene: THREE.Scene, skin: SkinId) {
       );
 
       reloadPose(r);
-      left.position.copy(LEFT_REST).add(handOff);
-      rifle.mag.position.copy(magOff);
+      left.position.copy(spec.fore).add(handOff);
+      gun.mag.position.copy(magOff);
 
       flashT -= dt;
       flash.visible = flashT > 0;
       if (flash.visible !== glowing) {
-        rifle.setGlow(flash.visible ? 0.6 : 0);
+        gun.setGlow(flash.visible ? 0.6 : 0);
         glowing = flash.visible;
       }
       // `t` keeps the flash flicker in step with the scene's clock

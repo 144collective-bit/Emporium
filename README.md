@@ -129,14 +129,23 @@ of Gas Fee Gummy Bears) and explore on foot.
 Solo shooting practice in walk mode. Only Degen carries a gun; nobody in the
 city is shot at.
 
-- **Gear up** at the gun store counter inside the Armoury (E or tap the
-  prompt). That gives Degen a cartoon assault rifle with a holo red-dot
-  sight, a 30-round magazine and 120 spare. Going back to the rack refills
-  the ammo.
-- **First person:** Degen's hands on the rifle (suit sleeves, white cuffs).
+- **Gun store:** walk up to the counter inside the Armoury and press E (tap
+  the prompt on phones, Y on a gamepad). Pick a gun, compare its damage,
+  fire rate, range, accuracy and magazine, and take it, full of ammo. Going
+  back refills it. Arrow keys / the D-pad pick, Enter / A takes, Esc / B
+  closes.
+  - **Assault Rifle** (from the start): full auto, holo red-dot.
+  - **Buzz SMG** (750 lifetime points): fast, big magazine, short range.
+  - **Street Sweeper** (2,500): a shotgun, eight pellets a pull, iron sights.
+  - **Long Shot** (6,000): a marksman rifle, one heavy shot per pull, and a
+    scope that fills the screen when you aim.
+  Guns unlock with your lifetime score (a pop-up says when one does). Nothing
+  is sold: they're free to take and swap.
+- **First person:** Degen's hands on his gun (suit sleeves, white cuffs).
   It sways as you look, bobs as you walk, tips down when you sprint, kicks
   on every shot with a muzzle flash, and the left hand swaps the magazine on
-  a reload. Aiming brings the red dot up to your eye and zooms in.
+  a reload. Aiming brings the sight up to your eye and zooms in (more with
+  the Long Shot's scope).
 - **Desktop:** click to fire (once the mouse is captured), right-click to aim,
   R to reload, G to holster or draw.
 - **Phones:** Fire, Aim (tap to toggle the sight) and Reload buttons appear
@@ -228,8 +237,9 @@ button and stays closed on return visits.
 | `src/scripts/city3d/sound.ts` | Ambient sound |
 | `src/scripts/city3d/walk.ts` | Walk mode: Degen, mouse / keyboard / touch / gamepad controls, camera, collisions, door prompts |
 | `src/scripts/city3d/combat-sim.ts` | Target practice rules: ammo, hits, health, score; fixed tick, events, no DOM (ready to run on a server) |
-| `src/scripts/city3d/combat.ts` | Target practice view: targets, effects, sound cues, HUD, call-outs, rifle finishes |
-| `src/scripts/city3d/rifle.ts` | The rifle (shared by Degen, his hands and the soldiers), red-dot sight, finishes |
+| `src/scripts/city3d/combat.ts` | Target practice view: targets, effects, sound cues, HUD, call-outs, gun finishes |
+| `src/scripts/city3d/gunshop.ts` | The gun store menu at the Armoury counter |
+| `src/scripts/city3d/guns.ts` | The four guns (Degen, his hands, other players, the soldiers), sights, finishes |
 | `src/scripts/city3d/viewmodel.ts` | First-person hands and rifle: sway, bob, recoil, aiming, reload |
 | `src/scripts/city3d/solids.ts` | The city's collision boxes (walk mode and the game server) |
 | `src/scripts/city3d/profile-ui.ts` | The Profile panel: name, rank, wardrobe |

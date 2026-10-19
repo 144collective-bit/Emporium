@@ -9,6 +9,7 @@
 import { DurableObject } from 'cloudflare:workers';
 import { DEFAULT_LOOK, IMPORT_CAP, cleanLook, guestName, rankFor, skinUnlocked, type Look, type SkinId } from '../../src/scripts/net/profile-data';
 import type { OwnProfile } from '../../src/scripts/net/protocol';
+import { weaponUnlocked, type WeaponId } from '../../src/scripts/city3d/combat-sim';
 import type { Env } from './index';
 
 interface Stored {
@@ -16,6 +17,7 @@ interface Stored {
   look: Look;
   skin: SkinId;
   total: number;
+  weapon?: WeaponId;
   created: number;
   seen: number;
 }
@@ -32,7 +34,8 @@ export class Profile extends DurableObject<Env> {
     await this.ctx.storage.put('profile', p);
   }
   private view(p: Stored): OwnProfile {
-    return { name: p.name, look: p.look, skin: p.skin, total: Math.floor(p.total), rank: rankFor(p.total).id };
+    const weapon = weaponUnlocked(p.weapon, p.total) ? p.weapon! : 'rifle';
+    return { name: p.name, look: p.look, skin: p.skin, total: Math.floor(p.total), rank: rankFor(p.total).id, weapon };
   }
 
   /** Load the profile, making it on first visit (bringing the browser's own score along, up to a cap) */
@@ -60,6 +63,14 @@ export class Profile extends DurableObject<Env> {
   async setSkin(skin: unknown) {
     const p = (await this.load())!;
     if (typeof skin === 'string' && skinUnlocked(skin as SkinId, p.total)) p.skin = skin as SkinId;
+    await this.save(p);
+    return this.view(p);
+  }
+
+  /** Remember the gun last taken at the store (only one the score has unlocked) */
+  async setWeapon(w: unknown) {
+    const p = (await this.load())!;
+    if (weaponUnlocked(w, p.total)) p.weapon = w as WeaponId;
     await this.save(p);
     return this.view(p);
   }

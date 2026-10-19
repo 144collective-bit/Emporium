@@ -238,6 +238,30 @@ export function createSound() {
           tick(t + 0.012, 2400, 0.05);
           if (Math.random() < 0.55) tone(t + 0.26 + Math.random() * 0.08, 'sine', 5000 + Math.random() * 800, 4400, 0.04, 0.08);
           break;
+        case 'shotSmg':
+          // Higher, snappier, quieter: it fires fifteen times a second
+          tone(t, 'sine', 210, 70, 0.45, 0.08, true);
+          crack(t, 'bandpass', 2600, 0.8, 0.38, 0.06, true);
+          crack(t, 'highpass', 6200, 0.7, 0.16, 0.025);
+          if (Math.random() < 0.35) tone(t + 0.2 + Math.random() * 0.08, 'sine', 5600, 5000, 0.03, 0.06);
+          break;
+        case 'shotShotgun':
+          // A deep boom, a long street echo, then the pump racking back
+          tone(t, 'sine', 110, 30, 0.95, 0.3, true);
+          crack(t, 'lowpass', 900, 0.7, 0.75, 0.22, true);
+          crack(t, 'bandpass', 1500, 0.6, 0.4, 0.12);
+          crack(t + 0.34, 'bandpass', 1300, 4, 0.32, 0.06);
+          crack(t + 0.46, 'bandpass', 2100, 5, 0.38, 0.05);
+          tone(t + 0.62, 'sine', 4800, 4300, 0.04, 0.08);
+          break;
+        case 'shotDmr':
+          // A sharp, heavy crack that rolls down the street, and the bolt cycling
+          tone(t, 'sine', 130, 34, 0.9, 0.24, true);
+          crack(t, 'bandpass', 1900, 0.5, 0.65, 0.16, true);
+          crack(t, 'highpass', 5800, 0.7, 0.3, 0.04);
+          crack(t + 0.28, 'bandpass', 3000, 6, 0.26, 0.04);
+          tone(t + 0.4, 'sine', 5200, 4600, 0.035, 0.08);
+          break;
         case 'empty':
           crack(t, 'bandpass', 3800, 9, 0.2, 0.03);
           tick(t, 3000, 0.04);

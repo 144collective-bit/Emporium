@@ -14,24 +14,51 @@ import * as THREE from 'three';
 
 export const TICK = 1 / 60;
 
-export const WEAPON = {
-  mag: 30,
-  reserve: 120,
-  /** Rounds a second, full auto */
-  rate: 9.5,
-  damage: 25,
-  reload: 1.7,
-  range: 70,
+/* ---------- The guns in the Armoury's store ---------- */
+
+export type WeaponId = 'rifle' | 'smg' | 'shotgun' | 'dmr';
+export interface Weapon {
+  id: WeaponId;
+  name: string;
+  /** One line for the store */
+  blurb: string;
+  /** Lifetime score that unlocks it in the store (cosmetic progress, never bought) */
+  need: number;
+  mag: number;
+  reserve: number;
+  /** Rounds a second */
+  rate: number;
+  /** Holding the trigger keeps firing; otherwise one shot per pull */
+  auto: boolean;
+  /** Damage per pellet, and pellets per shot */
+  damage: number;
+  pellets: number;
+  reload: number;
+  range: number;
   /** Shot cone (radians) from the hip and aimed, and how much each shot opens it */
-  spreadHip: 0.012,
-  spreadAim: 0.003,
-  bloom: 0.005,
-  bloomMax: 0.04,
-  bloomDecay: 0.2,
-  /** Phones: snap to a target this close to the crosshair (radians), within this range */
-  assistCone: 0.12,
-  assistRange: 38,
+  spreadHip: number;
+  spreadAim: number;
+  bloom: number;
+  bloomMax: number;
+  bloomDecay: number;
+  /** How hard each shot kicks the view (radians) */
+  kick: number;
+  /** First person: how many degrees the view narrows when aiming */
+  zoom: number;
+}
+
+const BASE = { auto: true, pellets: 1, bloomDecay: 0.2 };
+export const WEAPONS: Record<WeaponId, Weapon> = {
+  rifle: { ...BASE, id: 'rifle', name: 'Assault Rifle', blurb: 'All-rounder with a holo red-dot. Full auto.', need: 0, mag: 30, reserve: 120, rate: 9.5, damage: 25, reload: 1.7, range: 70, spreadHip: 0.012, spreadAim: 0.003, bloom: 0.005, bloomMax: 0.04, kick: 0.012, zoom: 20 },
+  smg: { ...BASE, id: 'smg', name: 'Buzz SMG', blurb: 'Tiny, loud and fast. Sprays a big magazine up close.', need: 750, mag: 40, reserve: 160, rate: 15, damage: 14, reload: 1.4, range: 45, spreadHip: 0.02, spreadAim: 0.007, bloom: 0.004, bloomMax: 0.05, bloomDecay: 0.3, kick: 0.007, zoom: 14 },
+  shotgun: { ...BASE, id: 'shotgun', name: 'Street Sweeper', blurb: 'Eight pellets a pull. Flattens anything close.', need: 2500, mag: 6, reserve: 36, rate: 1.4, auto: false, damage: 11, pellets: 8, reload: 2.2, range: 30, spreadHip: 0.065, spreadAim: 0.045, bloom: 0, bloomMax: 0, kick: 0.05, zoom: 10 },
+  dmr: { ...BASE, id: 'dmr', name: 'Long Shot', blurb: 'Marksman rifle with a scope. Slow, precise, hits hard.', need: 6000, mag: 8, reserve: 40, rate: 2.6, auto: false, damage: 80, reload: 2.0, range: 120, spreadHip: 0.03, spreadAim: 0.0004, bloom: 0.02, bloomMax: 0.03, bloomDecay: 0.5, kick: 0.035, zoom: 36 },
 };
+/** Store order, and each gun's number on the wire */
+export const WEAPON_IDS: WeaponId[] = ['rifle', 'smg', 'shotgun', 'dmr'];
+export const weaponUnlocked = (id: unknown, total: number) => typeof id === 'string' && id in WEAPONS && total >= WEAPONS[id as WeaponId].need;
+/** Phones: snap to a target this close to the crosshair (radians), within this range */
+const ASSIST = { cone: 0.12, range: 38 };
 
 export const POINTS = { hit: 10, dummy: 100, drone: 150 };
 /** Seconds to chain another takedown into a streak */
@@ -106,6 +133,7 @@ export interface SimInput {
 
 export interface SimPlayer {
   id: string;
+  weapon: WeaponId;
   geared: boolean;
   armed: boolean;
   mag: number;
@@ -117,17 +145,20 @@ export interface SimPlayer {
   score: number;
   streak: number;
   streakT: number;
+  /** The trigger was down last tick (semi-auto guns fire once per pull) */
+  held: boolean;
   input: SimInput;
 }
 
 export type SimEvent =
-  | { type: 'shot'; player: string; from: THREE.Vector3; to: THREE.Vector3; target: number | null; dist: number }
+  /** One per pellet; `pellet` 0 is the one that makes the noise */
+  | { type: 'shot'; player: string; weapon: WeaponId; pellet: number; from: THREE.Vector3; to: THREE.Vector3; target: number | null; dist: number }
   | { type: 'hit'; player: string; target: number; damage: number; at: THREE.Vector3; hp: number }
   | { type: 'takedown'; player: string; target: number; at: THREE.Vector3; points: number; streak: number }
   | { type: 'empty'; player: string }
   | { type: 'reload'; player: string; phase: 'start' | 'done' }
   | { type: 'armed'; player: string; on: boolean }
-  | { type: 'gear'; player: string }
+  | { type: 'gear'; player: string; weapon: WeaponId }
   | { type: 'respawn'; target: number }
   | { type: 'streak-end'; player: string };
 
@@ -190,6 +221,7 @@ export function createSim(o: SimOptions) {
   const hitP = new THREE.Vector3();
   const ray = new THREE.Ray();
   const dir = new THREE.Vector3();
+  const aim = new THREE.Vector3();
   const tmp = new THREE.Vector3();
 
   /** Distance along the ray to a target, or null. Drones are placed where the shooter saw them. */
@@ -207,13 +239,16 @@ export function createSim(o: SimOptions) {
   }
 
   function startReload(p: SimPlayer) {
-    if (!p.armed || p.reload > 0 || p.mag === WEAPON.mag || p.reserve === 0) return;
-    p.reload = WEAPON.reload;
+    const W = WEAPONS[p.weapon];
+    if (!p.armed || p.reload > 0 || p.mag === W.mag || p.reserve === 0) return;
+    p.reload = W.reload;
     events.push({ type: 'reload', player: p.id, phase: 'start' });
   }
 
+  const hitsOn = new Map<SimTarget, { damage: number; at: THREE.Vector3 }>();
   function fire(p: SimPlayer) {
     const inp = p.input;
+    const W = WEAPONS[p.weapon];
     if (p.mag === 0) {
       events.push({ type: 'empty', player: p.id });
       p.cooldown = 0.25;
@@ -221,47 +256,57 @@ export function createSim(o: SimOptions) {
       return;
     }
     p.mag--;
-    p.cooldown += 1 / WEAPON.rate;
-    dir.copy(inp.dir).normalize();
+    p.cooldown += 1 / W.rate;
+    aim.copy(inp.dir).normalize();
     if (inp.assist) {
-      let best = WEAPON.assistCone;
+      let best = ASSIST.cone;
       for (const t of targets) {
         if (t.down > 0) continue;
         tmp.set(t.x, t.y + (t.kind === 'dummy' ? DUMMY.aimY : 0), t.z).sub(inp.origin);
-        if (tmp.length() > WEAPON.assistRange) continue;
+        if (tmp.length() > Math.min(ASSIST.range, W.range)) continue;
         const ang = tmp.normalize().angleTo(inp.dir);
         if (ang < best) {
           best = ang;
-          dir.copy(tmp);
+          aim.copy(tmp);
         }
       }
     }
-    const s = p.spread + (inp.aim ? WEAPON.spreadAim : WEAPON.spreadHip);
-    dir.x += (random() - 0.5) * s * 2;
-    dir.y += (random() - 0.5) * s * 2;
-    dir.z += (random() - 0.5) * s * 2;
-    dir.normalize();
-    p.spread = Math.min(WEAPON.bloomMax, p.spread + WEAPON.bloom);
-    ray.set(inp.origin, dir);
-
-    let dist = o.rayWorld(inp.origin, dir, WEAPON.range);
-    let hit: SimTarget | null = null;
-    for (const t of targets) {
-      const d = hitTarget(t, ray, inp.view);
-      if (d !== null && d < dist && d > 0.5) {
-        dist = d;
-        hit = t;
+    const s = p.spread + (inp.aim ? W.spreadAim : W.spreadHip);
+    hitsOn.clear();
+    // Each pellet flies on its own; damage on a target adds up into one hit
+    for (let k = 0; k < W.pellets; k++) {
+      dir.copy(aim);
+      dir.x += (random() - 0.5) * s * 2;
+      dir.y += (random() - 0.5) * s * 2;
+      dir.z += (random() - 0.5) * s * 2;
+      dir.normalize();
+      ray.set(inp.origin, dir);
+      let dist = o.rayWorld(inp.origin, dir, W.range);
+      let hit: SimTarget | null = null;
+      for (const t of targets) {
+        const d = hitTarget(t, ray, inp.view);
+        if (d !== null && d < dist && d > 0.5) {
+          dist = d;
+          hit = t;
+        }
+      }
+      const at = ray.at(dist, new THREE.Vector3());
+      events.push({ type: 'shot', player: p.id, weapon: W.id, pellet: k, from: inp.origin.clone(), to: at, target: hit ? hit.id : null, dist });
+      if (hit) {
+        const h = hitsOn.get(hit);
+        if (h) h.damage += W.damage;
+        else hitsOn.set(hit, { damage: W.damage, at });
       }
     }
-    const at = ray.at(dist, new THREE.Vector3());
-    events.push({ type: 'shot', player: p.id, from: inp.origin.clone(), to: at, target: hit ? hit.id : null, dist });
-    if (hit && authority) damage(p, hit, at);
+    p.spread = Math.min(W.bloomMax, p.spread + W.bloom);
+    if (authority) for (const [t, h] of hitsOn) damage(p, t, h.damage, h.at);
   }
 
-  function damage(p: SimPlayer, t: SimTarget, at: THREE.Vector3) {
-    t.hp = Math.max(0, t.hp - WEAPON.damage);
+  function damage(p: SimPlayer, t: SimTarget, amount: number, at: THREE.Vector3) {
+    if (t.down > 0) return;
+    t.hp = Math.max(0, t.hp - amount);
     p.score += POINTS.hit;
-    events.push({ type: 'hit', player: p.id, target: t.id, damage: WEAPON.damage, at: at.clone(), hp: t.hp });
+    events.push({ type: 'hit', player: p.id, target: t.id, damage: amount, at: at.clone(), hp: t.hp });
     if (t.hp > 0) return;
     const points = t.kind === 'drone' ? POINTS.drone : POINTS.dummy;
     p.score += points;
@@ -287,13 +332,14 @@ export function createSim(o: SimOptions) {
       if (t.kind === 'drone' && t.down === 0) dronePose(t.id - firstDrone, poseTime, t);
     }
     for (const p of players.values()) {
-      p.cooldown = Math.max(p.cooldown - TICK, -1 / WEAPON.rate);
-      p.spread = Math.max(0, p.spread - WEAPON.bloomDecay * TICK);
+      const W = WEAPONS[p.weapon];
+      p.cooldown = Math.max(p.cooldown - TICK, -1 / W.rate);
+      p.spread = Math.max(0, p.spread - W.bloomDecay * TICK);
       if (p.reload > 0) {
         p.reload -= TICK;
         if (p.reload <= 0) {
           p.reload = 0;
-          const take = Math.min(WEAPON.mag - p.mag, p.reserve);
+          const take = Math.min(W.mag - p.mag, p.reserve);
           p.mag += take;
           p.reserve -= take;
           events.push({ type: 'reload', player: p.id, phase: 'done' });
@@ -307,7 +353,10 @@ export function createSim(o: SimOptions) {
         }
       }
       if (!p.input.fire) p.cooldown = Math.max(p.cooldown, 0);
-      if (p.armed && p.input.fire && p.cooldown <= 0 && p.reload <= 0) fire(p);
+      // Semi-auto guns need the trigger let go between shots
+      const pull = p.input.fire && (W.auto || !p.held);
+      if (p.armed && pull && p.cooldown <= 0 && p.reload <= 0) fire(p);
+      p.held = p.input.fire;
     }
   }
 
@@ -337,16 +386,18 @@ export function createSim(o: SimOptions) {
     addPlayer(id: string) {
       const p: SimPlayer = {
         id,
+        weapon: 'rifle',
         geared: false,
         armed: false,
-        mag: WEAPON.mag,
-        reserve: WEAPON.reserve,
+        mag: WEAPONS.rifle.mag,
+        reserve: WEAPONS.rifle.reserve,
         cooldown: 0,
         reload: 0,
         spread: 0,
         score: 0,
         streak: 0,
         streakT: 0,
+        held: false,
         input: { fire: false, aim: false, assist: false, origin: new THREE.Vector3(), dir: new THREE.Vector3(0, 0, -1) },
       };
       players.set(id, p);
@@ -355,14 +406,22 @@ export function createSim(o: SimOptions) {
     removePlayer(id: string) {
       players.delete(id);
     },
-    /** Take a rifle from the Armoury rack (and refill ammo) */
-    gearUp(id: string) {
+    /**
+     * Take a gun from the Armoury's store counter, full of ammo (the same gun again
+     * just refills it). Whether the player may have it is checked by the caller.
+     */
+    equip(id: string, weapon: WeaponId) {
       const p = player(id);
+      if (!(weapon in WEAPONS)) return;
+      const W = WEAPONS[weapon];
+      p.weapon = weapon;
       p.geared = true;
-      p.mag = WEAPON.mag;
-      p.reserve = WEAPON.reserve;
+      p.mag = W.mag;
+      p.reserve = W.reserve;
       p.reload = 0;
-      events.push({ type: 'gear', player: id });
+      p.cooldown = 0;
+      p.spread = 0;
+      events.push({ type: 'gear', player: id, weapon });
       setArmed(id, true);
     },
     setArmed,
@@ -409,8 +468,12 @@ export function createSim(o: SimOptions) {
       }
     },
     /** Multiplayer browsers: the server's word on a player's ammo and score */
-    syncPlayer(id: string, s: { mag: number; reserve: number; reloading: boolean; score: number; streak: number; armed: boolean }) {
+    syncPlayer(id: string, s: { mag: number; reserve: number; reloading: boolean; score: number; streak: number; armed: boolean; weapon: WeaponId }) {
       const p = player(id);
+      if (s.weapon !== p.weapon && s.weapon in WEAPONS) {
+        p.weapon = s.weapon;
+        p.reload = 0;
+      }
       p.score = s.score;
       p.streak = s.streak;
       p.streakT = s.streak ? STREAK_WINDOW : 0;

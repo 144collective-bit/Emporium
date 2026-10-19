@@ -15,7 +15,7 @@
  */
 import { DurableObject } from 'cloudflare:workers';
 import * as THREE from 'three';
-import { POINTS, createSim, type SimEvent } from '../../src/scripts/city3d/combat-sim';
+import { POINTS, WEAPON_IDS, createSim, weaponUnlocked, type SimEvent, type WeaponId } from '../../src/scripts/city3d/combat-sim';
 import { RACK, rayBoxes } from '../../src/scripts/city3d/solids';
 import { EMOTES, PHRASES } from '../../src/scripts/net/profile-data';
 import {
@@ -128,7 +128,8 @@ export class Room extends DurableObject<Env> {
   /* ---------- Joining and leaving ---------- */
 
   private info(p: Player): PlayerInfo {
-    return { id: p.id, name: p.me.name, look: p.me.look, skin: p.me.skin, rank: p.me.rank };
+    const weapon = this.sim.players.get(String(p.id))?.weapon ?? p.me.weapon;
+    return { id: p.id, name: p.me.name, look: p.me.look, skin: p.me.skin, rank: p.me.rank, weapon };
   }
 
   private async join(ws: WebSocket, msg: Extract<ClientMsg, { t: 'hello' }>): Promise<Player | null> {
@@ -179,7 +180,8 @@ export class Room extends DurableObject<Env> {
       fixAt: 0,
     };
     this.players.set(id, p);
-    this.sim.addPlayer(String(id));
+    // They carry the gun they picked last time once they gear up again
+    this.sim.addPlayer(String(id)).weapon = me.weapon;
     send(ws, { t: 'welcome', you: id, room: this.name, profile: me, players: [...this.players.values()].filter((o) => o !== p).map((o) => this.info(o)), pt: this.sim.poseNow });
     this.broadcast({ t: 'join', p: this.info(p) }, id);
     this.report();
@@ -231,9 +233,17 @@ export class Room extends DurableObject<Env> {
       case 'in':
         this.input(p, m, now);
         break;
-      case 'gear':
-        if (Math.hypot(p.pos.x - RACK.x, p.pos.z - RACK.z) <= RACK_REACH) this.sim.gearUp(id);
+      case 'equip': {
+        // Only at the store counter, and only guns this player's lifetime score has unlocked
+        if (Math.hypot(p.pos.x - RACK.x, p.pos.z - RACK.z) > RACK_REACH || !weaponUnlocked(m.w, p.me.total)) break;
+        const changed = this.sim.players.get(id)?.weapon !== m.w;
+        this.sim.equip(id, m.w as WeaponId);
+        if (changed && this.allow(p, 'weapon', 300)) {
+          this.broadcast({ t: 'info', p: this.info(p) }, p.id);
+          p.profile.setWeapon(m.w).catch(() => {});
+        }
         break;
+      }
       case 'arm':
         this.sim.setArmed(id, m.on === true);
         break;
@@ -343,7 +353,7 @@ export class Room extends DurableObject<Env> {
     const p = this.players.get(pid);
     switch (e.type) {
       case 'shot':
-        return ['s', pid, ...v3(e.from), ...v3(e.to), e.target ?? -1];
+        return ['s', pid, ...v3(e.from), ...v3(e.to), e.target ?? -1, WEAPON_IDS.indexOf(e.weapon), e.pellet];
       case 'hit':
         if (p) p.owed += POINTS.hit;
         return ['h', pid, e.target, e.damage, ...v3(e.at), e.hp];
@@ -378,7 +388,7 @@ export class Room extends DurableObject<Env> {
       const s = this.sim.players.get(String(p.id));
       if (!s) continue;
       try {
-        p.ws.send(`${head}${JSON.stringify([s.mag, s.reserve, s.reload > 0 ? 1 : 0, s.score, s.streak, s.armed ? 1 : 0])}}`);
+        p.ws.send(`${head}${JSON.stringify([s.mag, s.reserve, s.reload > 0 ? 1 : 0, s.score, s.streak, s.armed ? 1 : 0, WEAPON_IDS.indexOf(s.weapon)])}}`);
       } catch {
         /* closing */
       }

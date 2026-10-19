@@ -14,7 +14,7 @@ clearly labelled. This file is the reference; update it as decisions change.
 | Room size | Up to 16 players per city; more cities ("City 1", "City 2"…) open automatically. |
 | Identity | Generated guest name now (vetted word lists, rerollable), wallet sign-in once the real wallet exists. |
 | Chat | Emote wheel and fixed phrases only. Nothing typed ever appears in public. Players can mute others. |
-| What others see | Outfit and colours, rifle finish, name tag, rank badge. |
+| What others see | Outfit and colours, the gun they carry and its finish, name tag, rank badge. |
 | Saved | Server-side player profiles (name, outfit, finish, lifetime score, rank); daily and weekly leaderboards (no prizes). |
 | Builder | Stays a personal demo in the visitor's browser until the real wallet and pricing exist. |
 | Fairness | The server decides hits (it runs `combat-sim.ts`), checks movement and fire rate, and rewinds drones to what the shooter saw. |
@@ -58,6 +58,9 @@ Visitor's browser                         Cloudflare (server/)
    - Name tags, emote wheel, fixed phrases, mute.
    - Shared target practice: everyone shoots the same dummies and drones,
      scores counted by the server.
+   - The Armoury gun store: four guns unlocked by lifetime score; the server
+     checks the player is at the counter and has unlocked the gun, and the
+     profile remembers the last one taken.
 2. **Leaderboards**: daily and weekly boards (target practice now, PvP
    later) in the Controls panel and on a board in the city.
 3. **South bank PvP**: design and build the neon arena and junkyard / skate

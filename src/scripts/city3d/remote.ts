@@ -1,13 +1,14 @@
 /*
  * Other players in multiplayer: each one a full Degen in their own outfit
- * and rifle finish, smoothed between the server's snapshots (drawn a little
+ * and gun (with its finish), smoothed between the server's snapshots (drawn a little
  * in the past so there's always a snapshot either side), with walk, run,
- * jump, rifle and emote poses, and a name tag with their rank badge that
+ * jump, gun and emote poses, and a name tag with their rank badge that
  * shows emote and phrase bubbles.
  */
 import * as THREE from 'three';
 import { airPose, createDegen, emotePose, holdRiflePose, lookOutfit, walkPose, type Degen } from './character';
-import { MUZZLE, buildRifle, placeRifle, type Rifle } from './rifle';
+import { buildGun, gunSpec, placeGun, type Gun } from './guns';
+import { WEAPONS } from './combat-sim';
 import { EMOTES, PHRASES, RANKS } from '../net/profile-data';
 import { FLAG, INTERP_DELAY, type PlayerInfo, type SnapRow } from '../net/protocol';
 
@@ -30,7 +31,7 @@ interface Remote {
   info: PlayerInfo;
   fig: Degen;
   pivot: THREE.Group;
-  rifle: Rifle;
+  gun: Gun;
   samples: Sample[];
   /** Last time this player was in a snapshot (local seconds) */
   seenAt: number;
@@ -59,12 +60,12 @@ export function createRemotes(scene: THREE.Scene, camera: THREE.PerspectiveCamer
     fig.g.visible = false;
     if (fig.gummy) fig.gummy.visible = true;
     const pivot = new THREE.Group();
-    const rifle = buildRifle(info.skin, { shadows: true });
-    pivot.add(rifle.group);
+    const gun = buildGun(info.weapon, info.skin, { shadows: true });
+    pivot.add(gun.group);
     pivot.visible = false;
     fig.torso.add(pivot);
     scene.add(fig.g);
-    return { fig, pivot, rifle };
+    return { fig, pivot, gun };
   }
   function dropFigure(r: Pick<Remote, 'fig'>) {
     scene.remove(r.fig.g);
@@ -138,9 +139,16 @@ export function createRemotes(scene: THREE.Scene, camera: THREE.PerspectiveCamer
       const r = players.get(info.id);
       if (!r) return this.add(info);
       if (JSON.stringify(info.look) !== JSON.stringify(r.info.look)) {
+        r.gun.dispose();
         dropFigure(r);
         Object.assign(r, figure(info));
-      } else if (info.skin !== r.info.skin) r.rifle.setSkin(info.skin);
+      } else if (info.weapon !== r.info.weapon) {
+        // They took another gun at the store
+        r.pivot.remove(r.gun.group);
+        r.gun.dispose();
+        r.gun = buildGun(info.weapon, info.skin, { shadows: true });
+        r.pivot.add(r.gun.group);
+      } else if (info.skin !== r.info.skin) r.gun.setSkin(info.skin);
       r.info = info;
       paintTag(r);
     },
@@ -178,7 +186,7 @@ export function createRemotes(scene: THREE.Scene, camera: THREE.PerspectiveCamer
     muzzle(id: number, out: THREE.Vector3) {
       const r = players.get(id);
       if (!r?.fig.g.visible) return null;
-      if (r.pivot.visible) return r.rifle.group.localToWorld(out.copy(MUZZLE));
+      if (r.pivot.visible) return r.gun.group.localToWorld(out.copy(gunSpec(r.gun.id).muzzle));
       return out.copy(r.fig.g.position).setY(r.fig.g.position.y + 1.1 * SCALE);
     },
     update(dt: number, t: number) {
@@ -214,7 +222,7 @@ export function createRemotes(scene: THREE.Scene, camera: THREE.PerspectiveCamer
         const flags = k < 0.5 ? a.flags : b.flags;
         const armed = (flags & FLAG.armed) !== 0;
 
-        // Pose: walk / run, air, rifle, emote
+        // Pose: walk / run, air, gun, emote
         const P = r.fig.pose;
         r.phase += dt * speed * 3.1;
         const run = THREE.MathUtils.clamp((speed - 2.4) / 3, 0, 1);
@@ -226,12 +234,12 @@ export function createRemotes(scene: THREE.Scene, camera: THREE.PerspectiveCamer
           else emotePose(P, r.emote.id, r.emote.t);
         }
         r.aim += (((flags & (FLAG.aim | FLAG.fire)) !== 0 ? 1 : 0) - r.aim) * Math.min(1, dt * 14);
-        r.reload = flags & FLAG.reload ? (r.reload + dt / 1.7) % 1 : 0;
+        r.reload = flags & FLAG.reload ? (r.reload + dt / WEAPONS[r.gun.id].reload) % 1 : 0;
         r.pivot.visible = armed;
         if (r.fig.gummy) r.fig.gummy.visible = !armed;
         if (armed && !r.emote) {
           holdRiflePose(P, r.aim, pitch, r.reload);
-          placeRifle(r.pivot, r.rifle, r.aim, pitch, P.lean, 0, r.reload);
+          placeGun(r.pivot, r.gun, r.aim, pitch, P.lean, 0, r.reload);
         }
         r.air += (((flags & FLAG.air) !== 0 ? 1 : 0) - r.air) * Math.min(1, dt * 12);
         airPose(P, r.air);

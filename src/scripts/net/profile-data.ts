@@ -7,6 +7,7 @@
  * phrases are a fixed list, so nothing offensive or confidential appears in
  * public.
  */
+import type { WeaponId } from '../city3d/combat-sim';
 
 /* ---------- Guest names ---------- */
 
@@ -134,6 +135,8 @@ export interface PublicProfile {
   look: Look;
   skin: SkinId;
   total: number;
+  /** The gun picked last time at the store (unlocked by lifetime score) */
+  weapon: WeaponId;
 }
 
 /** A browser's own lifetime score counts once, up to this, when its first profile is made */

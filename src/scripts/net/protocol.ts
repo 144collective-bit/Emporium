@@ -3,9 +3,10 @@
  * the site and the game server. Positions travel as small arrays rounded to
  * centimetres to keep snapshots light. No DOM, no scene code.
  */
+import type { WeaponId } from '../city3d/combat-sim';
 import type { EmoteId, Look, PublicProfile, SkinId } from './profile-data';
 
-export const PROTOCOL = 1;
+export const PROTOCOL = 2;
 export const ROOM_SIZE = 16;
 /** How often a browser sends its controls, and how often the room sends positions */
 export const INPUT_HZ = 20;
@@ -37,7 +38,8 @@ export type ClientMsg =
   | { t: 'hello'; v: number; token: string; local?: { total: number; skin: SkinId } }
   /** Controls, ~20 a second: position, facing, camera pitch, speed, flags, and the shot ray */
   | { t: 'in'; p: V3; f: number; k: number; s: number; fl: number; o: V3; d: V3; pt: number }
-  | { t: 'gear' }
+  /** Take a gun at the Armoury's store counter (and refill it) */
+  | { t: 'equip'; w: WeaponId }
   | { t: 'arm'; on: boolean }
   | { t: 'reload' }
   | { t: 'emote'; e: EmoteId }
@@ -57,17 +59,21 @@ export interface PlayerInfo {
   look: Look;
   skin: SkinId;
   rank: string;
+  /** The gun they carry (or last took from the store) */
+  weapon: WeaponId;
 }
 export type OwnProfile = PublicProfile & { rank: string };
 
 /** id, x, y, z, facing, camera pitch, speed, flags */
 export type SnapRow = [number, number, number, number, number, number, number, number];
+/** Your own state in each snapshot: mag, reserve, reloading (0/1), score, streak, armed (0/1), weapon */
+export type MeRow = [number, number, number, number, number, number, number];
 /** target id, health, 1 while knocked down */
 export type TargetRow = [number, number, number];
 
 /**
  * Combat events, compact:
- * shot     ['s', player, from xyz, to xyz, target or -1]
+ * shot     ['s', player, from xyz, to xyz, target or -1, weapon (WEAPON_IDS index), pellet]
  * hit      ['h', player, target, damage, at xyz, health left]
  * takedown ['k', player, target, at xyz, points, streak]
  * respawn  ['r', target]
@@ -76,7 +82,7 @@ export type TargetRow = [number, number, number];
  * armed    ['a', player, 0 / 1]
  */
 export type NetEvent =
-  | ['s', number, number, number, number, number, number, number, number]
+  | ['s', number, number, number, number, number, number, number, number, number, number]
   | ['h', number, number, number, number, number, number, number]
   | ['k', number, number, number, number, number, number, number]
   | ['r', number]
@@ -92,8 +98,8 @@ export type ServerMsg =
   | { t: 'info'; p: PlayerInfo }
   /** Your own profile changed (score, rank, unlocks) */
   | { t: 'you'; profile: OwnProfile }
-  /** Positions ~15 a second; `me` is your own ammo and score: mag, reserve, reloading (0/1), score, streak, armed */
-  | { t: 'snap'; pt: number; p: SnapRow[]; tg: TargetRow[]; me: [number, number, number, number, number, number] }
+  /** Positions ~15 a second; `me` is your own state: mag, reserve, reloading (0/1), score, streak, armed, weapon (WEAPON_IDS index) */
+  | { t: 'snap'; pt: number; p: SnapRow[]; tg: TargetRow[]; me: MeRow }
   | { t: 'ev'; e: NetEvent[] }
   | { t: 'emote'; id: number; e: EmoteId }
   | { t: 'say'; id: number; i: number }
