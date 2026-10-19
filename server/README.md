@@ -17,13 +17,33 @@ wardrobe, emotes, phrases, land API), `src/scripts/city3d/combat-sim.ts`,
 `src/scripts/city3d/solids.ts` and `src/data/plots.ts`. Keep those free of DOM
 and scene code.
 
-## One-time setup (the owner)
+## Deploying from GitHub through Cloudflare (Workers Builds)
+
+The Worker is called **emporium** (it must match `"name"` in `wrangler.jsonc`)
+and is connected to this GitHub repository in Cloudflare, so Cloudflare builds
+and deploys it on every push to `main`. Its build settings (*Workers & Pages* →
+**emporium** → *Settings* → *Build*):
+
+| Setting | Value |
+| --- | --- |
+| Git branch | `main` |
+| Root directory | `server` |
+| Build command | `cd .. && npm ci && cd server && npm ci` (the server bundles shared code from `src/`, which needs the site's three.js) |
+| Deploy command | `npx wrangler deploy` |
+| Build watch paths (optional) | `server/*`, `src/scripts/net/*`, `src/data/plots.ts`, `src/scripts/city3d/combat-sim.ts`, `src/scripts/city3d/solids.ts` |
+
+The server lives at `https://emporium.<your-subdomain>.workers.dev`; set that
+as the `PUBLIC_GAME_SERVER` repository variable and rebuild the site. With this
+in place, the GitHub Action route below isn't needed (leave its secrets unset
+so only one system deploys).
+
+## One-time setup with GitHub Actions instead (the owner)
 
 1. **Create a Cloudflare account** (free) at https://dash.cloudflare.com/sign-up.
 2. **Pick your workers.dev subdomain**: in the dashboard open *Workers & Pages*.
    The first time, it asks you to choose a subdomain (for example
    `degenemporium`). The game server will live at
-   `https://degen-city.<your-subdomain>.workers.dev`.
+   `https://emporium.<your-subdomain>.workers.dev`.
 3. **Make an API token**: profile icon (top right) → *My Profile* → *API
    Tokens* → *Create Token* → use the **Edit Cloudflare Workers** template →
    choose your account → *Continue to summary* → *Create Token*. Copy it (it's
@@ -35,11 +55,11 @@ and scene code.
    - `CLOUDFLARE_API_TOKEN` = the token from step 3
    - `CLOUDFLARE_ACCOUNT_ID` = the ID from step 4
 6. **Deploy**: *Actions* → **Deploy game server** → *Run workflow*. When it
-   finishes, open `https://degen-city.<your-subdomain>.workers.dev/health`;
+   finishes, open `https://emporium.<your-subdomain>.workers.dev/health`;
    it should say `ok`.
 7. **Point the site at it**: *Settings* → *Secrets and variables* → *Actions*
    → *Variables* tab → *New repository variable*:
-   - `PUBLIC_GAME_SERVER` = `https://degen-city.<your-subdomain>.workers.dev`
+   - `PUBLIC_GAME_SERVER` = `https://emporium.<your-subdomain>.workers.dev`
 8. **Rebuild the site**: *Actions* → **Build site** → *Run workflow*, download
    the zip and upload it to Hostinger as usual. The **Online** pill now
    appears in walk mode.

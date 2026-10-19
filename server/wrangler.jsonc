@@ -1,7 +1,7 @@
 // The Degen City game server: one Worker, four kinds of Durable Object.
 // Deployed from GitHub Actions (.github/workflows/deploy-server.yml); see README.md here.
 {
-  "name": "degen-city",
+  "name": "emporium",
   "main": "src/index.ts",
   "compatibility_date": "2025-09-01",
   "durable_objects": {
