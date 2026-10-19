@@ -1,0 +1,39 @@
+# Builds the site on every push to main (or on demand) and attaches it as a
+# downloadable zip, ready to extract into public_html on Hostinger.
+#
+# To get it: GitHub -> Actions -> "Build site" -> the latest run ->
+# Artifacts -> degenemporium-site.
+name: Build site
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      # Multiplayer is paused: built without a game server, so the city runs on its
+      # own (solo walking and target practice, the builder as a play-money demo).
+      # To bring it back, set PUBLIC_GAME_SERVER here (see server/README.md).
+      - run: npm run build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: degenemporium-site
+          path: dist/
+          # .htaccess starts with a dot, and hidden files are left out unless asked for
+          include-hidden-files: true
+          retention-days: 30

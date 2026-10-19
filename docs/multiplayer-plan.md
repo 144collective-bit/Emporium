@@ -3,6 +3,10 @@
 Agreed with the owner. Multiplayer ships in phases, each as a public beta,
 clearly labelled. This file is the reference; update it as decisions change.
 
+**Status: paused** (owner's call). The site is built without the game
+server and runs single-player; the server code stays in `server/` for when
+it resumes.
+
 ## Decisions
 
 | Topic | Decision |

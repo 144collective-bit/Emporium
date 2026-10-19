@@ -12,12 +12,26 @@ npm run dev      # http://localhost:4321
 npm run build    # static site in dist/
 ```
 
-## Put it live
+## Put it live (Hostinger)
 
-The site lives at https://emporium.144collective.workers.dev, served by the
-Cloudflare Worker **emporium** together with the game server. Every push to
-`main` goes live by itself: Cloudflare builds the site and the server and
-deploys both (see `server/README.md`). Nothing to upload.
+degenemporium.com is hosted on Hostinger as a static site.
+
+1. **Get the zip.** Every push to `main` builds the site: on GitHub open
+   **Actions -> Build site**, pick the latest green run and download
+   **degenemporium-site** under Artifacts. (Or run `npm run build` locally
+   and use everything inside `dist/`.)
+2. **Upload.** In hPanel open **File Manager -> public_html**, back up or
+   remove the old files, upload the zip and **Extract** it right there, so
+   `index.html` sits directly in `public_html`. Delete the zip afterwards.
+3. **Check** https://degenemporium.com (hard refresh if the old version
+   shows).
+
+Multiplayer is paused: this build runs without the game server (solo play,
+the builder as a play-money demo). See `server/README.md` to bring it back.
+
+`public/.htaccess` ships with every build: it serves the site's 404 page,
+compresses text files and caches the fingerprinted files in `/_astro/` for a
+year. It starts with a dot, so some file managers hide it.
 
 ## What's here
 
@@ -233,7 +247,7 @@ in `docs/multiplayer-plan.md`.
 
 ### Checking performance
 
-Add `?fps` to the address (for example `https://emporium.144collective.workers.dev/?fps`) to
+Add `?fps` to the address (for example `https://degenemporium.com/?fps`) to
 show a small readout in the corner of the city: frames a second, the slowest
 frame, draw calls and triangles per frame, the quality tier and anything
 stepped down. Nobody sees it without `?fps`.

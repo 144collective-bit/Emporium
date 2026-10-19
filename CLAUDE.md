@@ -282,8 +282,10 @@ it and has been retired completely. Build only on what's here.
 - No explorer or wallet-brand links: show transaction hashes as text. Only
   the confirmed links in `src/data/site.ts` are linked.
 
-## Multiplayer (beta)
+## Multiplayer (beta, paused)
 
+- **Paused by the owner**: the live site is built without a game server
+  (see Hosting). The notes below describe the parked code.
 - The plan and decisions are in `docs/multiplayer-plan.md`; keep it up to
   date. Phase 1 (hangout, player profiles, shared target practice) is built;
   leaderboards and south-bank PvP come next.
@@ -345,19 +347,21 @@ it and has been retired completely. Build only on what's here.
 
 ## Hosting
 
-- The site lives at https://emporium.144collective.workers.dev (the
-  Cloudflare Worker **emporium**, which also runs the game server). It is no
-  longer connected to degenemporium.com or Hostinger: don't add that domain
-  back to `site` (`astro.config.mjs`), `SITE_URL`, `ALLOWED_ORIGINS` or the
-  share card, and don't bring back the Hostinger zip build or `.htaccess`,
-  unless the owner asks.
-- Keep the site fully static (no server routes). Its pages and files are the
-  Worker's static assets; the only live code is the game server (`server/`),
-  which Cloudflare builds and deploys from GitHub on every push to `main`.
-  `wrangler deploy` builds the site first (`build` in `server/wrangler.jsonc`,
-  with `PUBLIC_GAME_SERVER` set to the Worker's address) and publishes `dist/`.
-  `/play`, `/health` and `/land` always reach the Worker code
-  (`run_worker_first`); everything else is a page or file.
+- degenemporium.com is a static build hosted on Hostinger (`dist/`
+  extracted into `public_html`). The "Build site" GitHub Action builds
+  every push to `main` into a downloadable zip (artifact
+  `degenemporium-site`).
+- Keep the site fully static (no server routes) and keep `public/.htaccess`
+  in the build.
+- **Multiplayer is paused** (the owner's call): the "Build site" Action
+  builds without `PUBLIC_GAME_SERVER`, so the city runs on its own: solo
+  walking and target practice, the builder as the labelled play-money demo,
+  no Online switch, multiplayer or Connect wallet. Keep that code working
+  (it's all behind `PUBLIC_GAME_SERVER`), but don't develop it further
+  until the owner resumes it.
+- **Ignore Cloudflare** for now: the `server/` Worker (emporium on
+  workers.dev, which also builds a copy of the site) is parked. Don't spend
+  time on its deploys unless the owner brings it back.
 
 ## Content guardrails
 

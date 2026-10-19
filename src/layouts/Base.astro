@@ -15,7 +15,7 @@ interface Props {
 
 const { title, description = SITE_DESC, fitViewport = false, fullBleed = false } = Astro.props;
 const fullTitle = title ? `${title} | ${SITE_NAME}` : `${SITE_NAME} - ${SITE_TAGLINE}`;
-const base = Astro.site ?? new URL('https://emporium.144collective.workers.dev');
+const base = Astro.site ?? new URL('https://degenemporium.com');
 const canonical = new URL(Astro.url.pathname, base);
 const ogImage = new URL('/og-default.jpg', base);
 ---
