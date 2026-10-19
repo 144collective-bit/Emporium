@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { FONT_DISPLAY, PAL, canvasTex, fx, glowTex, lit, neon, rand, toon } from './kit';
 import { BLOCKS, BS, CENTER, CORE_ROADS, DISTRICTS, EW_ROADS, EXT, NS_ROADS, RIVER, SLAB, type Tick } from './world';
 import { laneCentres } from './layout';
+import { CARS, PAINTS, carGeometry, carMaterials, type CarId } from './cars';
 import type { Idle } from './landmarks';
 import { chatPose, cityOutfit, createCrowd, idlePose, lookPose, newPose, sitPose, walkPose } from './character';
 
@@ -34,7 +35,7 @@ interface Vehicle {
   v: number;
   vmax: number;
   len: number;
-  bus: boolean;
+  model: CarId;
   slot: number;
 }
 
@@ -56,62 +57,67 @@ const lanes: Lane[] = [];
 // Every lane of every road: one each way on streets, two each way on avenues (over the bridges too)
 for (const r of EW_ROADS) for (const l of laneCentres(r, 'x')) lanes.push({ axis: 'x', ...l });
 for (const r of NS_ROADS) for (const l of laneCentres(r, 'z')) lanes.push({ axis: 'z', ...l });
-/** Cars are drawn about real size: the models (built at the old toy scale) stretched to fit today's lanes */
-const VEH_SCALE = new THREE.Vector3(2.2, 1.35, 1.75);
+/** The traffic's mix of cars, repeated (buses come first, as many as the quality tier allows) */
+const MIX: CarId[] = ['hatch', 'sedan', 'van', 'hatch', 'pickup', 'sedan', 'coupe', 'hatch', 'sedan', 'van', 'pickup'];
 const pRange = (l: Lane): [number, number] => (l.dir === 1 ? [E0 + 4, E1 - 4] : [-(E1 - 4), -(E0 + 4)]);
 
-function vehicleBox(w: number, h: number, d: number, x: number, y: number, z: number) {
-  const g = new THREE.BoxGeometry(w, h, d);
-  g.translate(x, y, z);
-  return g;
+function lightBox(w: number, h: number, d: number) {
+  return new THREE.BoxGeometry(w, h, d);
 }
 
 function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => void) {
   const vehicles: Vehicle[] = [];
-  let carSlot = 0;
-  let busSlot = 0;
+  const counts = new Map<CarId, number>();
   const total = opts.cars + opts.buses;
   for (let i = 0; i < total; i++) {
-    const bus = i < opts.buses;
+    const model: CarId = i < opts.buses ? 'bus' : MIX[(i - opts.buses) % MIX.length];
     const lane = lanes[i % lanes.length];
     const [a, b] = pRange(lane);
+    const slot = counts.get(model) ?? 0;
+    counts.set(model, slot + 1);
     vehicles.push({
       lane,
       p: a + ((i * 37) % 100) / 100 * (b - a),
       v: 0,
-      vmax: bus ? 3.2 : 4.2 + rand() * 2,
-      len: (bus ? 2.3 : 1.1) * VEH_SCALE.x,
-      bus,
-      slot: bus ? busSlot++ : carSlot++,
+      vmax: model === 'bus' ? 3.2 : model === 'van' || model === 'pickup' ? 3.8 + rand() * 1.5 : 4.2 + rand() * 2,
+      len: CARS[model].L,
+      model,
+      slot,
     });
   }
 
-  // Car parts (model points along +x, origin at road level)
-  const nCars = carSlot;
-  const nBus = busSlot;
-  const carBody = new THREE.InstancedMesh(vehicleBox(1.05, 0.3, 0.56, 0, 0.23, 0), toon('#ffffff', { name: 'car' }), nCars);
-  const carCab = new THREE.InstancedMesh(vehicleBox(0.55, 0.25, 0.5, -0.08, 0.5, 0), toon('#8fe7ff'), nCars);
-  const wheelGeo = new THREE.CylinderGeometry(0.11, 0.11, 0.08, 10).rotateX(Math.PI / 2);
-  const wheels = new THREE.InstancedMesh(wheelGeo, toon('#14121f'), nCars * 4 + nBus * 4);
-  const head = new THREE.InstancedMesh(vehicleBox(0.02, 0.07, 0.12, 0, 0, 0), neon('#fff6c8', 0.8, 3), (nCars + nBus) * 2);
-  const tail = new THREE.InstancedMesh(vehicleBox(0.02, 0.07, 0.12, 0, 0, 0), neon('#ff2b2b', 0.8, 3), (nCars + nBus) * 2);
-  const busBody = new THREE.InstancedMesh(vehicleBox(2.3, 0.62, 0.66, 0, 0.42, 0), toon('#ffffff', { name: 'bus' }), Math.max(nBus, 1));
-  const busGlass = new THREE.InstancedMesh(vehicleBox(2.1, 0.2, 0.67, 0, 0.56, 0), lit(new THREE.MeshToonMaterial({ color: '#2a3b66', emissive: '#ffd36b' }), 0.05, 1.6), Math.max(nBus, 1));
-  const carColors = ['#e23b3b', '#ffd23f', '#00c2ff', '#e219e5', '#f3f2f7', '#1fbf6b', '#ff8a3d', '#8000ff'].map((c) => new THREE.Color(c));
-  for (let i = 0; i < nCars; i++) carBody.setColorAt(i, carColors[i % carColors.length]);
-  for (let i = 0; i < nBus; i++) busBody.setColorAt(i, new THREE.Color(i % 2 ? PAL.telegram : PAL.magenta));
-  if (!nBus) busBody.count = busGlass.count = 0;
-  for (const m of [carBody, carCab, wheels, busBody, busGlass]) {
-    m.castShadow = true;
-    m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-    scene.add(m);
+  // One fleet per model: its paint (each car its own colour) and its details; the bus's windows glow at night
+  const mats = carMaterials();
+  const busGlow = lit(new THREE.MeshToonMaterial({ color: '#2a3b66', emissive: '#ffd36b' }), 0.05, 1.6);
+  const fleets = new Map<CarId, THREE.InstancedMesh[]>();
+  const moving: THREE.InstancedMesh[] = [];
+  for (const [model, n] of counts) {
+    const g = carGeometry(model);
+    const list = [new THREE.InstancedMesh(g.paint, mats.paint, n), new THREE.InstancedMesh(g.detail, mats.detail, n)];
+    if (g.glow) list.push(new THREE.InstancedMesh(g.glow, busGlow, n));
+    const paints = PAINTS[model];
+    for (let i = 0; i < n; i++) list[0].setColorAt(i, new THREE.Color(paints[(i * 5 + 2) % paints.length]));
+    for (const m of list) {
+      m.castShadow = true;
+      m.frustumCulled = false;
+      m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      scene.add(m);
+    }
+    fleets.set(model, list);
+    moving.push(...list);
   }
-  head.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-  tail.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  const nVeh = vehicles.length;
+  const head = new THREE.InstancedMesh(lightBox(0.03, 0.08, 0.17), neon('#fff6c8', 0.8, 3), nVeh * 2);
+  const tail = new THREE.InstancedMesh(lightBox(0.03, 0.07, 0.15), neon('#ff2b2b', 0.8, 3), nVeh * 2);
+  for (const m of [head, tail]) {
+    m.frustumCulled = false;
+    m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    moving.push(m);
+  }
   scene.add(fx(head), fx(tail));
 
   // Headlight beams on the road
-  const beamPos = new Float32Array((nCars + nBus) * 3);
+  const beamPos = new Float32Array(nVeh * 3);
   const beamGeo = new THREE.BufferGeometry();
   beamGeo.setAttribute('position', new THREE.BufferAttribute(beamPos, 3));
   const beamMat = lit(new THREE.PointsMaterial({ color: '#fff0c0', map: glowTex, size: 1.6, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }), 0, 0.28);
@@ -178,18 +184,6 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
   const q = new THREE.Quaternion();
   const up = new THREE.Vector3(0, 1, 0);
   const pos = new THREE.Vector3();
-  const carWheels: [number, number][] = [
-    [-0.32, 0.29],
-    [0.32, 0.29],
-    [-0.32, -0.29],
-    [0.32, -0.29],
-  ];
-  const busWheels: [number, number][] = [
-    [-0.75, 0.32],
-    [0.75, 0.32],
-    [-0.75, -0.32],
-    [0.75, -0.32],
-  ];
 
   tick(({ t, dt, night }) => {
     // Lamp states
@@ -265,27 +259,18 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
       if (v.lane.axis === 'x') pos.set(s, ROAD_Y, v.lane.coord);
       else pos.set(v.lane.coord, ROAD_Y, s);
       q.setFromAxisAngle(up, yaw);
-      M.compose(pos, q, VEH_SCALE);
-      const half = v.len / VEH_SCALE.x / 2;
-      if (v.bus) {
-        busBody.setMatrixAt(v.slot, M);
-        busGlass.setMatrixAt(v.slot, M);
-      } else {
-        carBody.setMatrixAt(v.slot, M);
-        carCab.setMatrixAt(v.slot, M);
-      }
-      const wl = v.bus ? busWheels : carWheels;
-      const wbase = v.bus ? nCars * 4 + v.slot * 4 : v.slot * 4;
-      wl.forEach(([x, z], k) => wheels.setMatrixAt(wbase + k, L.multiplyMatrices(M, T.makeTranslation(x, 0.11, z))));
-      for (const side of [-1, 1]) {
-        head.setMatrixAt(hi, L.multiplyMatrices(M, T.makeTranslation(half + 0.005, 0.27, side * 0.18)));
-        tail.setMatrixAt(hi, L.multiplyMatrices(M, T.makeTranslation(-half - 0.005, 0.27, side * 0.18)));
+      M.makeRotationFromQuaternion(q).setPosition(pos);
+      for (const m of fleets.get(v.model)!) m.setMatrixAt(v.slot, M);
+      const g = carGeometry(v.model);
+      for (let k = 0; k < 2; k++) {
+        head.setMatrixAt(hi, L.multiplyMatrices(M, T.makeTranslation(...g.head[k])));
+        tail.setMatrixAt(hi, L.multiplyMatrices(M, T.makeTranslation(...g.tail[k])));
         hi++;
       }
       const fwd = F.set(1, 0, 0).applyQuaternion(q);
       beamPos.set([pos.x + fwd.x * (v.len / 2 + 1.4), 0.06, pos.z + fwd.z * (v.len / 2 + 1.4)], idx * 3);
     });
-    for (const m of [carBody, carCab, wheels, busBody, busGlass, head, tail]) m.instanceMatrix.needsUpdate = true;
+    for (const m of moving) m.instanceMatrix.needsUpdate = true;
     beamGeo.attributes.position.needsUpdate = true;
   });
 }

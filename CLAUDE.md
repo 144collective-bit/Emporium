@@ -45,6 +45,15 @@ it and has been retired completely. Build only on what's here.
   `designBox()` (in `landmarks.ts`, `onBlock()` does it for each block's
   scene objects). Keep writing landmark numbers on that grid, and change
   street sizes only in `layout.ts`.
+- **Cars** are `src/scripts/city3d/cars.ts`: real-proportion cartoon models
+  (City Hatch, Cruiser, Street GT coupe, Hauler pickup, Box Van, City Bus;
+  made-up names, never a real make or badge), each an extruded body and
+  cabin with glass, bumpers, plates and fat tyres. A model is two
+  geometries, `paint` (each car its own colour, `PAINTS`) and `detail`
+  (vertex colours), plus the bus's lit windows, so the traffic in `life.ts`
+  costs two draw calls a model. Parked cars use `parkedCars()`; give them a
+  footprint in `solids.ts`. Keep a new model inside a 1.7-wide lane and in
+  scale with Degen (a hatch's roof is about 0.95 tiles up).
 - Keep the city's motion optional: under `prefers-reduced-motion` the 3D
   city stands still (no fly-in, no traffic), CSS animations stop and the 2D
   map's SMIL traffic is paused. Sound is always off until the visitor

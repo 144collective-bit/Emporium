@@ -33,6 +33,7 @@ import {
   toon,
 } from './kit';
 import { rifleGeometry } from './guns';
+import { parkedCars } from './cars';
 import { PLAYER, SOLDIER, attentionPose, createCrowd, createDegen, dancePose, lookPose, marchPose, newPose, type Outfit } from './character';
 import { walker } from './life';
 import { SLAB as S, addLamp, addTree, placedMark, shiftPlaced, waterMat, type Tick } from './world';
@@ -1040,12 +1041,14 @@ function shop(scene: THREE.Scene, ctx: LandmarkCtx, crowd: Idle[]) {
   g.add(aframe);
   b.build(g);
 
-  // Parking at the back with two cars
+  // Parking at the back: two bays along the kerb, a hatch in each
   const pb = new Batch();
-  for (let k = 0; k <= 4; k++) pb.box(23.4 + k * 1.3, S + 0.006, 11.0, 0.06, 0.005, 1.2, toon('#d9d4ef'));
-  parkedCar(pb, 24.1, 11.6, Math.PI / 2, '#00c2ff');
-  parkedCar(pb, 26.7, 11.6, Math.PI / 2, '#ffd23f');
+  for (const x of [23.3, 25.9, 28.5]) pb.box(x - 0.03, S + 0.006, 11.05, 0.06, 0.005, 1.2, toon('#d9d4ef'));
   pb.build(scene);
+  parkedCars(scene, S, [
+    ['hatch', 24.6, 11.65, 0, '#00c2ff'],
+    ['hatch', 27.2, 11.65, Math.PI, '#ffd23f'],
+  ]);
 
   // The queue for the drop
   // Kept clear of the sidewalk lanes along the kerb
@@ -1063,33 +1066,6 @@ function shop(scene: THREE.Scene, ctx: LandmarkCtx, crowd: Idle[]) {
   ])
     addTree(x, z);
   return sp;
-}
-
-export function parkedCar(b: Batch, x: number, z: number, ry: number, color: string) {
-  const body = toon(color);
-  const add = (geo: THREE.BufferGeometry, mat: THREE.Material) => {
-    geo.applyMatrix4(new THREE.Matrix4().makeRotationY(ry));
-    geo.translate(x, S, z);
-    b.add(geo, mat);
-  };
-  const box = (w: number, h: number, d: number, px: number, py: number, pz: number) => {
-    const geo = new THREE.BoxGeometry(w, h, d);
-    geo.translate(px, py, pz);
-    return geo;
-  };
-  add(box(1.05, 0.32, 0.56, 0, 0.22, 0), body);
-  add(box(0.56, 0.26, 0.5, -0.08, 0.51, 0), toon('#8fe7ff'));
-  for (const [px, pz] of [
-    [-0.32, 0.29],
-    [0.32, 0.29],
-    [-0.32, -0.29],
-    [0.32, -0.29],
-  ]) {
-    const w = new THREE.CylinderGeometry(0.11, 0.11, 0.08, 10);
-    w.rotateX(Math.PI / 2);
-    w.translate(px, 0.11, pz);
-    add(w, toon('#14121f'));
-  }
 }
 
 function workshop(scene: THREE.Scene, ctx: LandmarkCtx) {
