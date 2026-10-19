@@ -470,6 +470,23 @@ export async function bootCity(root: HTMLElement) {
   // full rate during a drag, a pinch or a fly-in, so moving still feels smooth
   const idleFps = tier === 'low' ? 30 : 0;
   let lastT = 0;
+  // Exactly one loop. A hidden tab holds back the frame that was already asked
+  // for; without cancelling it, coming back would start a second loop beside it
+  // (and each trip away another), each drawing the whole city.
+  let raf = 0;
+  const loop = () => {
+    cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(frame);
+  };
+  // Fast screens (120 / 144 Hz) draw every other refresh: a steady 60-72fps
+  // rather than an uneven, hotter 120. The refresh rate is read from the
+  // browser's own frame timing, which doesn't depend on how long we take.
+  let refresh = 1 / 60;
+  let lastRaf = 0;
+  let tickN = 0;
+  // Nothing to draw while the city is scrolled out of view
+  let onScreen = true;
+  new IntersectionObserver(([e]) => (onScreen = e.isIntersecting)).observe(host);
   let lastInput = -10;
   const touched = () => (lastInput = timer.getElapsed());
   canvas.addEventListener('pointerdown', touched);
@@ -478,7 +495,6 @@ export async function bootCity(root: HTMLElement) {
   // Too slow? Step quality down in stages, checking again after each
   let windowFrames = 0;
   let windowSlow = 0;
-  let step = 0;
   const pinPos = new THREE.Vector3();
   const pinState: { id: string; el: HTMLElement; x: number; y: number; scale: number; rank: number }[] = [];
   const placed: { x: number; y: number; w: number; h: number }[] = [];
@@ -505,9 +521,15 @@ export async function bootCity(root: HTMLElement) {
     }
   };
 
-  function frame() {
+  function frame(now: number) {
     if (!running) return;
-    requestAnimationFrame(frame);
+    raf = requestAnimationFrame(frame);
+    const gap = (now - lastRaf) / 1000;
+    lastRaf = now;
+    if (gap > 0.002 && gap < 0.05) refresh += (gap - refresh) * 0.05;
+    const skip = refresh < 1 / 100 ? Math.round(1 / 60 / refresh) : 1;
+    if (++tickN % skip) return;
+    if (!onScreen && !walking) return;
     timer.update();
     const t = timer.getElapsed();
     const busy = !!flight || walking || t - lastInput < 1;
@@ -621,30 +643,61 @@ export async function bootCity(root: HTMLElement) {
     }
 
     frames++;
-    if (t > 4 && step < 3) {
+    if (t > 4) {
       windowFrames++;
       // "Slow" is relative to the rate we're aiming for (30fps on phones when idle)
       const budget = idleFps && !busy ? 1 / idleFps : 1 / 60;
       if (dt > budget * 1.7) windowSlow++;
       if (windowFrames === 90) {
-        if (windowSlow > 45) degrade();
+        if (windowSlow > 45 && canDegrade()) {
+          degrade();
+          fastWindows = 0;
+        } else if (windowSlow < 4) {
+          // Fast again for a while (a busy moment has passed): win quality back
+          if (++fastWindows >= 4) {
+            restore();
+            fastWindows = 0;
+          }
+        } else fastWindows = 0;
         windowFrames = windowSlow = 0;
       }
     }
   }
 
-  // 1: fewer pixels; 2: no shadows; 3: no bloom. The ink outlines always stay.
+  // Too slow: fewer pixels, then no shadows, then no bloom. The ink outlines always stay.
+  const fullPixels = renderer.getPixelRatio();
+  const lowered = { pixels: false, shadows: false, bloom: false };
+  let fastWindows = 0;
+  // A stage put back and then lost again stays off (no see-sawing)
+  const settled = new Set<keyof typeof lowered>();
+  const canDegrade = () => !lowered.pixels || !lowered.shadows || !lowered.bloom;
   function degrade() {
-    step++;
-    if (step === 1) {
-      renderer.setPixelRatio(Math.max(1, renderer.getPixelRatio() - 0.5));
+    if (!lowered.pixels) {
+      lowered.pixels = true;
+      renderer.setPixelRatio(Math.max(1, fullPixels - 0.5));
       resize();
-    } else if (step === 2) {
+    } else if (!lowered.shadows) {
+      lowered.shadows = true;
       renderer.shadowMap.enabled = false;
       scene.traverse((o) => {
         if ((o as THREE.DirectionalLight).isDirectionalLight) (o as THREE.DirectionalLight).castShadow = false;
       });
-    } else post.bloom.enabled = false;
+    } else lowered.bloom = true;
+    post.bloom.enabled = !lowered.bloom;
+  }
+  // Fast again for a while: bloom, then pixels, come back. Shadows don't
+  // (turning them back on recompiles every material, a visible hitch).
+  function restore() {
+    if (lowered.bloom && !settled.has('bloom')) {
+      lowered.bloom = false;
+      settled.add('bloom');
+      post.bloom.enabled = true;
+    } else if (lowered.pixels && !settled.has('pixels')) {
+      lowered.pixels = false;
+      settled.add('pixels');
+      renderer.setPixelRatio(fullPixels);
+      resize();
+    }
   }
 
   document.addEventListener('visibilitychange', () => {
@@ -654,7 +707,7 @@ export async function bootCity(root: HTMLElement) {
     } else if (root.dataset.view === '3d') {
       running = true;
       sound.resume();
-      requestAnimationFrame(frame);
+      loop();
     }
   });
 
@@ -667,18 +720,19 @@ export async function bootCity(root: HTMLElement) {
   controls.target.copy(start.target);
   camera.lookAt(controls.target);
   flyTo(start.pos, start.target, 2.8);
-  requestAnimationFrame(frame);
+  loop();
 
   return {
     stop() {
       running = false;
+      cancelAnimationFrame(raf);
       close();
       if (sound.on) sound.toggle();
     },
     start() {
       if (running) return;
       running = true;
-      requestAnimationFrame(frame);
+      loop();
     },
   };
 }

@@ -174,6 +174,9 @@ export function createSound() {
       on = !on;
       if (on) {
         await ctx!.resume();
+        // Turned off again while waking up: no beat timer left running
+        if (!on) return on;
+        window.clearInterval(timer);
         nextBeat = ctx!.currentTime + 0.1;
         timer = window.setInterval(schedule, 50);
         master.gain.setTargetAtTime(0.55, ctx!.currentTime, 0.4);

@@ -40,7 +40,14 @@ it and has been retired completely. Build only on what's here.
   (fewer cars and people, no shadows, smaller bloom on phones), runs phones
   at 30fps while nobody is touching the city, and steps quality down
   (pixels, then shadows, then bloom; never the ink outlines) if frames are
-  slow.
+  slow. When frames stay fast again, bloom and then pixels come back (once
+  each; shadows stay off, re-enabling them recompiles every material).
+- One render loop only: always (re)start it with `loop()` in `index.ts`,
+  which cancels any frame already queued. A hidden tab holds its queued frame
+  back, so a bare `requestAnimationFrame(frame)` on return stacks a second
+  loop (each tab switch another) and the frame rate sinks. 120/144 Hz screens
+  draw every other refresh (steady 60-72fps), and nothing is drawn while the
+  city is scrolled out of view.
 - The Emporium arcade tower (`emporium()` in `landmarks.ts`, and in
   `city.ts` for the 2D map) is the centrepiece: keep it the tallest, most
   detailed building. Its LED wall shows (`drawWall`), pixel font, ticker and
