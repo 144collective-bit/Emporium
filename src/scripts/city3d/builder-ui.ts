@@ -38,6 +38,7 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
   const body = $('[data-plot-body]');
   const modal = $('[data-buy-modal]');
   const modalBody = $('[data-buy-body]');
+  const modalClose = $('[data-buy-close]');
   const toastEl = $('[data-toast]');
 
   let building = false;
@@ -279,6 +280,8 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
     if (!selected || buying) return;
     const p = selected;
     buying = true;
+    // No way out mid-purchase: it settles in a moment either way
+    modalClose.hidden = true;
     const render = (step: BuyStep) => {
       const at = STEPS.findIndex(([s]) => s === step);
       modalBody.innerHTML = `
@@ -305,6 +308,7 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
         <div class="city-panel-actions"><button type="button" class="chip-link" data-cancel>Close</button></div>`;
     } finally {
       buying = false;
+      modalClose.hidden = false;
     }
   }
   const closeModal = () => {
@@ -314,6 +318,9 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
   };
 
   /* ---------- Events ---------- */
+
+  // A tap on the dimmed backdrop closes the purchase dialog
+  modal.addEventListener('click', (e) => e.target === modal && closeModal());
 
   root.addEventListener('click', (e) => {
     const t = (e.target as HTMLElement).closest<HTMLElement>('button');

@@ -253,8 +253,10 @@ When the real wallet is ready, it plugs into `src/scripts/city3d/store.ts`.
 | Post office | Telegram |
 
 The Directory lists the same places. Phones (up to 640px wide) don't show
-the welcome card, so the city fills the screen; a small "Draft · v0" tag keeps
-the draft note.
+the welcome card, so the city fills the screen; on bigger screens it has a
+close button and stays closed on return visits. A small "Draft · v0" tag keeps
+the draft note whenever the card is hidden. Every menu and card closes with its
+×, Esc, or (for drop-down menus) a tap outside.
 
 ### Where it lives
 

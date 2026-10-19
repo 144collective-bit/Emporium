@@ -113,6 +113,12 @@ const focusY = +((EMPORIUM_FOCUS[1] - VIEW.y) / VIEW.h).toFixed(4);
           <span class="walk-pill-text">Controls</span>
         </summary>
         <div class="walk-settings-body">
+          <div class="pop-head">
+            <p class="pop-title">Controls</p>
+            <button type="button" class="pop-close" data-pop-close aria-label="Close controls">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
+            </button>
+          </div>
           <p class="walk-section">Look</p>
           <label class="walk-field">
             <span>Look speed</span>
@@ -158,6 +164,12 @@ const focusY = +((EMPORIUM_FOCUS[1] - VIEW.y) / VIEW.h).toFixed(4);
           <span class="walk-pill-text">Profile</span>
         </summary>
         <div class="walk-settings-body">
+          <div class="pop-head">
+            <p class="pop-title">Profile</p>
+            <button type="button" class="pop-close" data-pop-close aria-label="Close profile">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
+            </button>
+          </div>
           <div class="profile-head">
             <p class="profile-name"><b data-profile-name>Degen</b> <span class="mp-rank" data-profile-rank data-rank="rookie">Rookie</span></p>
             <button type="button" class="walk-fp" data-profile-rename hidden>New name</button>
@@ -184,6 +196,12 @@ const focusY = +((EMPORIUM_FOCUS[1] - VIEW.y) / VIEW.h).toFixed(4);
           <span class="walk-pill-text" data-mp-label>Go online</span>
         </summary>
         <div class="walk-settings-body">
+          <div class="pop-head">
+            <p class="pop-title">Online</p>
+            <button type="button" class="pop-close" data-pop-close aria-label="Close multiplayer">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
+            </button>
+          </div>
           <p class="walk-skins-head"><span>Multiplayer (beta)</span><span data-mp-ping></span></p>
           <p class="mp-status" data-mp-status>Walk the city with other Degens. Emotes and set phrases only, nothing typed.</p>
           <button type="button" class="walk-fp" data-mp-join>Go online</button>
@@ -196,6 +214,12 @@ const focusY = +((EMPORIUM_FOCUS[1] - VIEW.y) / VIEW.h).toFixed(4);
           <span class="walk-pill-text">Emote</span>
         </summary>
         <div class="walk-settings-body">
+          <div class="pop-head">
+            <p class="pop-title">Emotes</p>
+            <button type="button" class="pop-close" data-pop-close aria-label="Close emotes">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
+            </button>
+          </div>
           <div class="emote-grid" data-emote-grid></div>
           <div class="phrase-grid" data-phrase-grid></div>
           <p class="walk-pad">Press T to open this. Others see a bubble over your head.</p>
@@ -293,7 +317,12 @@ const focusY = +((EMPORIUM_FOCUS[1] - VIEW.y) / VIEW.h).toFixed(4);
     <p class="city-draft">Demo · purchases are simulated · no real PLS</p>
   </aside>
   <div class="builder-modal" data-buy-modal hidden>
-    <div class="builder-modal-card" role="dialog" aria-modal="true" aria-labelledby="buy-title" data-buy-body></div>
+    <div class="builder-modal-card" role="dialog" aria-modal="true" aria-labelledby="buy-title">
+      <button type="button" class="city-panel-close" data-cancel data-buy-close aria-label="Close">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
+      </button>
+      <div class="builder-modal-body" data-buy-body></div>
+    </div>
   </div>
   <p class="builder-toast" data-toast role="status" aria-live="polite"></p>
 
@@ -397,6 +426,9 @@ const focusY = +((EMPORIUM_FOCUS[1] - VIEW.y) / VIEW.h).toFixed(4);
 
   <div class="city-hud" data-city-hud>
     <div class="city-card" id="city-card">
+      <button type="button" class="city-card-close" data-card-close aria-controls="city-card" aria-label="Hide the welcome card">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
+      </button>
       <p class="kicker"><span class="kicker-num">GM</span> PulseChain native</p>
       <h1 id="city-title" class="city-title">Welcome to <span class="hl">Degen&nbsp;City</span></h1>
       <p class="city-hint"><span class="hint-2d">Drag to look around. Pick a lit-up building to go in.</span><span class="hint-3d">Drag to move, two fingers or right-drag to turn, pinch or scroll to zoom. Tap a building to go in.</span></p>
@@ -420,9 +452,17 @@ const focusY = +((EMPORIUM_FOCUS[1] - VIEW.y) / VIEW.h).toFixed(4);
       </ul>
     </details>
 
-    {/* Stands in for the card's draft note on phones, where the card is hidden */}
+    {/* Stands in for the card's draft note when the card is hidden (always on phones) */}
     <p class="city-draft-tag">Draft · v0</p>
   </div>
+  {/* Keep a closed welcome card closed on return, before first paint so it doesn't flash */}
+  <script is:inline>
+    try {
+      if (localStorage.getItem('city-card') === 'hidden') {
+        document.querySelector('[data-city-hud]').dataset.card = 'hidden';
+      }
+    } catch {}
+  </script>
 </section>
 
 <script>
@@ -484,6 +524,37 @@ const focusY = +((EMPORIUM_FOCUS[1] - VIEW.y) / VIEW.h).toFixed(4);
       el.addEventListener('pointerleave', () => hot(id, false));
       el.addEventListener('focus', () => hot(id, true));
       el.addEventListener('blur', () => hot(id, false));
+    });
+
+    // Tablets and desktops: the welcome card can be closed, and stays closed on return
+    document.querySelector('[data-card-close]')?.addEventListener('click', () => {
+      const hud = document.querySelector<HTMLElement>('[data-city-hud]')!;
+      hud.dataset.card = 'hidden';
+      try {
+        localStorage.setItem('city-card', 'hidden');
+      } catch {}
+      vp.focus({ preventScroll: true });
+    });
+
+    // Drop-open menus (City settings, Directory, walk mode's panels) close with their ×, a tap
+    // outside or Esc (in 3D, index.ts handles Esc so it can come before leaving a mode)
+    const openMenus = () => root.querySelectorAll<HTMLDetailsElement>('.city-controls[open], .city-dir[open], [data-pop][open]');
+    root.addEventListener('click', (e) => {
+      const menu = (e.target as HTMLElement).closest('[data-pop-close]')?.closest('details');
+      if (!menu) return;
+      menu.open = false;
+      menu.querySelector('summary')?.focus({ preventScroll: true });
+    });
+    document.addEventListener(
+      'pointerdown',
+      (e) => {
+        for (const menu of openMenus()) if (!menu.contains(e.target as Node)) menu.open = false;
+      },
+      true,
+    );
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || root.dataset.view === '3d') return;
+      openMenus().forEach((menu) => (menu.open = false));
     });
 
     // SMIL animations (cars, rings, the plane) ignore CSS, so pause them here

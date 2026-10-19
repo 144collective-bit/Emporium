@@ -1461,7 +1461,9 @@ body.is-walking .nav {
   color: var(--p-cyan);
 }
 .city-dir[open] summary::after {
-  content: "–";
+  content: "×";
+  font-size: 18px;
+  line-height: 0.6;
 }
 .city-dir ul {
   display: grid;
@@ -1699,6 +1701,15 @@ body.is-walking .nav {
   display: none;
 }
 .city-controls summary svg {
+  color: var(--p-cyan);
+}
+/* Open, the toggle shows an × to close it again */
+.city-controls[open] summary::after {
+  content: "×";
+  margin-left: auto;
+  padding-left: 12px;
+  font-size: 18px;
+  line-height: 0.6;
   color: var(--p-cyan);
 }
 .city-controls-body {
@@ -2275,6 +2286,7 @@ body.is-walking .nav {
   backdrop-filter: blur(4px);
 }
 .builder-modal-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -2287,6 +2299,13 @@ body.is-walking .nav {
     linear-gradient(#0b0a12f2, #0b0a12f2) padding-box,
     var(--pulse) border-box;
   box-shadow: 0 0 60px -20px #8000ffb3;
+}
+/* The body is re-rendered at each step; its children lay out in the card */
+.builder-modal-body {
+  display: contents;
+}
+.builder-modal-card .city-panel-close[hidden] {
+  display: none;
 }
 .buy-steps {
   display: grid;
@@ -2504,6 +2523,40 @@ body.is-walking .nav {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   cursor: pointer;
+}
+/* Walk panels' header: title and × */
+.pop-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: -4px -6px -2px 0;
+}
+.pop-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: uppercase;
+  color: #fff;
+}
+.pop-close {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: none;
+  color: var(--text-2);
+  cursor: pointer;
+}
+.pop-close:hover {
+  color: #fff;
+  border-color: #ffffff40;
 }
 /* Controls panel sections (Look, Shooting) */
 .walk-section {
@@ -3049,6 +3102,49 @@ body.is-walking .nav {
 .city-draft-tag {
   display: none;
 }
+/* The welcome card closes (tablets and desktops; phones never show it) */
+.city-card {
+  position: relative;
+}
+.city-card .kicker {
+  padding-right: 40px;
+}
+.city-card-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: none;
+  color: var(--text-2);
+  cursor: pointer;
+}
+.city-card-close:hover {
+  color: #fff;
+  border-color: #ffffff40;
+}
+/* Hidden only visually, so the page keeps its heading for screen readers */
+.city-hud[data-card="hidden"] .city-card {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.city-hud[data-card="hidden"] .city-card-close {
+  display: none;
+}
+.city-hud[data-card="hidden"] .city-draft-tag {
+  display: inline-flex;
+}
 .city-draft-tag {
   align-self: flex-start;
   padding: 0.5em 0.85em;
@@ -3084,6 +3180,9 @@ body.is-walking .nav {
     overflow: hidden;
     clip-path: inset(50%);
     white-space: nowrap;
+  }
+  .city-card-close {
+    display: none;
   }
   .city-draft-tag {
     display: inline-flex;

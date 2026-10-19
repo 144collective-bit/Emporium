@@ -72,6 +72,12 @@ it and has been retired completely. Build only on what's here.
 - Floating cut-out signs (FX layer with a transparent texture, like the roof
   logo) need `occlude()` from `kit.ts`, or the ink outlines of whatever is
   behind them get drawn across them.
+- Every card and menu can be closed: panels, the gun store and the buy
+  dialog have an × (`.city-panel-close` / `.shop-close`); drop-open menus
+  (City settings, Directory, walk panels with their `.pop-head` ×) also
+  close on a tap outside and on Esc. The welcome card has an × on tablets
+  and desktops (remembered as `city-card` in localStorage) and isn't shown
+  on phones; when it's hidden the "Draft · v0" tag keeps the draft note.
 - 3D pin labels stay on screen and fold to dots where they'd sit under the
   city's own buttons and cards (`chrome` in `index.ts`); add any new
   always-visible city overlay to that list.

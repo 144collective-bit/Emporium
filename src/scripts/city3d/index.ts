@@ -349,9 +349,10 @@ export async function bootCity(root: HTMLElement) {
   head.city.hidden = false;
   root.querySelector('[data-walk-exit]')?.addEventListener('click', () => stopWalking());
 
-  // Esc closes an open walk panel (Controls, Profile, Online, Emotes) before it stops the walk
+  // Esc closes an open drop-open menu (walk panels, City settings, Directory) before it closes
+  // a panel or leaves a mode
   const closePop = () => {
-    const open = root.querySelector<HTMLDetailsElement>('[data-pop][open]');
+    const open = root.querySelector<HTMLDetailsElement>('[data-pop][open], .city-controls[open], .city-dir[open]');
     if (!open) return false;
     open.open = false;
     open.querySelector('summary')?.focus({ preventScroll: true });
@@ -368,6 +369,7 @@ export async function bootCity(root: HTMLElement) {
       else if (!active) walk.onKey(e, true);
       return;
     }
+    if (e.key === 'Escape' && closePop()) return;
     if (builder.key(e)) return;
     if (e.key === 'Escape') close();
   });
