@@ -100,6 +100,18 @@ cartoon shading and PulseChain neon, built with [three.js](https://threejs.org).
   city's own buttons and cards. Without WebGL, or after choosing "2D map", the original
   isometric SVG map is shown instead. Reduced motion gives a still city.
 
+### Drop 001's fitting room
+
+Click Drop 001 (or walk in) and its panel has a **fitting room**: pick what
+your Degen wears and watch it on him, turning on a neon podium (drag to turn
+him). Fit (Classic Suit or Drop Hoodie, with jacket, trousers and tie
+colours), headwear (Diamond Cap, Street Beanie, Hood Up or nothing), a bag
+(backpack or crossbody), extras (headphones, shades chain, the gummy bag)
+and kicks. It's free and only for your Degen in the city: nothing is sold
+and it isn't tied to the real store. He wears it in walk mode, and other
+players see it online. The **Open the fitting room** button in Profile goes
+straight there.
+
 ### Walk mode
 
 Press **Walk** to play as Degen (balaclava, red cap, green shades, suit, a bag
@@ -177,10 +189,9 @@ Walk the city with other players. Press the **Online** pill in walk mode
 - Up to 16 players share a city; more cities open as they fill.
 - Everyone gets a generated guest name (reroll it in **Profile**), shown on a
   name tag with a rank badge from their lifetime score.
-- **Profile**: your name, rank, lifetime score, rifle finish and a wardrobe
-  (suit or hoodie, colours, cap or hood, tie, headphones, backpack, chain).
-  Online it's saved on the server and follows you; offline your look and
-  finish are kept in this browser.
+- **Profile**: your name, rank, lifetime score and rifle finish, and a way
+  into the fitting room. Online it's saved on the server and follows you;
+  offline your look and finish are kept in this browser.
 - **Emote** (or T): wave, dance, salute, cheer and a set of fixed phrases
   ("GM degens", "Nice shot!"…) shown as a bubble over your head. Nothing
   typed ever appears. Mute anyone from the Online panel.
@@ -243,7 +254,8 @@ button and stays closed on return visits.
 | `src/scripts/city3d/guns.ts` | The four guns (Degen, his hands, other players, the soldiers), sights, finishes |
 | `src/scripts/city3d/viewmodel.ts` | First-person hands and rifle: sway, bob, recoil, aiming, reload |
 | `src/scripts/city3d/solids.ts` | The city's collision boxes (walk mode and the game server) |
-| `src/scripts/city3d/profile-ui.ts` | The Profile panel: name, rank, wardrobe |
+| `src/scripts/city3d/profile-ui.ts` | The Profile panel: name, rank; owns the look (saved here and online) |
+| `src/scripts/city3d/fitting.ts` | Drop 001's fitting room: wardrobe items and the turning preview |
 | `src/scripts/city3d/multiplayer.ts` | Online pill, sending controls, emotes and phrases, player list |
 | `src/scripts/city3d/remote.ts` | Other players: smoothed movement, poses, name tags, bubbles |
 | `src/scripts/net/` | Shared with the server: protocol, profile data (names, ranks, wardrobe, emotes, phrases); `client.ts` is the browser connection |

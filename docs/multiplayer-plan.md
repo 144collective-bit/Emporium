@@ -59,7 +59,8 @@ Visitor's browser                         Cloudflare (server/)
 1. **Hangout and player profiles** *(built; goes live once the Cloudflare account is set up, see server/README.md)*
    - Cloudflare account, server deploy from GitHub Actions.
    - See other players walk, run and jump; rooms of 16 with auto-sharding.
-   - Player profiles on the server: guest name (reroll), outfit wardrobe,
+   - Player profiles on the server: guest name (reroll), outfit wardrobe
+     (picked in Drop 001's fitting room),
      rifle finish, lifetime score and rank badge, following you across
      visits.
    - Name tags, emote wheel, fixed phrases, mute.

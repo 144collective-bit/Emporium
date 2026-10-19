@@ -172,13 +172,8 @@ const focusY = +((EMPORIUM_FOCUS[1] - VIEW.y) / VIEW.h).toFixed(4);
           </div>
           <div class="wardrobe" data-wardrobe>
             <p class="walk-skins-head"><span>Wardrobe</span></p>
-            <div class="wardrobe-seg" role="group" aria-label="Style">
-              <button type="button" data-kind="suit" aria-pressed="true">Suit</button>
-              <button type="button" data-kind="hoodie" aria-pressed="false">Hoodie</button>
-            </div>
-            <div class="wardrobe-rows" data-wardrobe-rows></div>
-            <label class="walk-check" data-hood-row hidden><input type="checkbox" data-hood /><span>Hood up</span></label>
-            <label class="walk-check"><input type="checkbox" data-chain checked /><span>Gold chain</span></label>
+            <p class="walk-pad">Pick your fit, headwear, bag and kicks in the fitting room at Drop 001.</p>
+            <button type="button" class="walk-fp" data-open-fitting>Open the fitting room</button>
           </div>
         </div>
       </details>
@@ -308,6 +303,22 @@ const focusY = +((EMPORIUM_FOCUS[1] - VIEW.y) / VIEW.h).toFixed(4);
       <a class="chip-link" href="/emporium#drop">See the drop</a>
     </div>
     {!SHOP_OPEN && <span class="tag">Coming soon</span>}
+    {/* Dress your Degen (fitting.ts): free, cosmetic, only for the city. Nothing here is sold. */}
+    <section class="fit" data-fit aria-labelledby="fit-title">
+      <div class="fit-head">
+        <h3 id="fit-title" class="fit-title">Fitting room</h3>
+        <span class="fit-free">Free · for your Degen</span>
+      </div>
+      <div class="fit-stage">
+        <canvas class="fit-canvas" data-fit-canvas aria-hidden="true"></canvas>
+        <span class="fit-hint" aria-hidden="true">Drag to turn</span>
+      </div>
+      <div class="fit-tabs" data-fit-tabs role="tablist" aria-label="Wardrobe"></div>
+      <div class="fit-items" data-fit-items></div>
+      <div class="fit-colors" data-fit-colors></div>
+      <p class="fit-note">He wears it when you walk the city, and online. Nothing to buy here.</p>
+      <button type="button" class="chip-link fit-reset" data-fit-reset>Back to the classic look</button>
+    </section>
   </template>
   <template data-panel-tpl="workshop">
     <p class="kicker"><span class="kicker-num">04</span> The Workshop</p>

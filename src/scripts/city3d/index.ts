@@ -18,6 +18,7 @@ import { createSound } from './sound';
 import { createPlots, type Plot } from './plots';
 import { createStore } from './store';
 import { createBuilderUI } from './builder-ui';
+import { createFitting, type Fitting } from './fitting';
 
 type Tier = 'high' | 'medium' | 'low';
 
@@ -193,9 +194,12 @@ export async function bootCity(root: HTMLElement) {
   const panelBody = panel.querySelector<HTMLElement>('[data-panel-body]')!;
   const panelClose = panel.querySelector<HTMLButtonElement>('[data-panel-close]')!;
   let lastFocus: HTMLElement | null = null;
+  // Drop 001's panel has the fitting room (made once the profile exists, further down)
+  let fitting: Fitting | null = null;
 
   let walking = false;
-  function open(id: string) {
+  /** `toFitting`: scroll Drop 001's panel to its fitting room (from the Profile panel) */
+  function open(id: string, toFitting = false) {
     const s = spots.find((sp) => sp.id === id);
     const tpl = root.querySelector<HTMLTemplateElement>(`template[data-panel-tpl="${id}"]`);
     if (!s || !tpl) return;
@@ -204,6 +208,8 @@ export async function bootCity(root: HTMLElement) {
     active = s;
     lastFocus = document.activeElement as HTMLElement;
     panelBody.replaceChildren(tpl.content.cloneNode(true));
+    if (id === 'shop') fitting?.mount(panelBody, toFitting);
+    else fitting?.unmount();
     panel.dataset.spot = id;
     panel.hidden = false;
     requestAnimationFrame(() => panel.classList.add('is-open'));
@@ -217,6 +223,7 @@ export async function bootCity(root: HTMLElement) {
   function close() {
     if (!active) return;
     active = null;
+    fitting?.unmount();
     panel.classList.remove('is-open');
     root.classList.remove('has-panel');
     setTimeout(() => {
@@ -278,7 +285,18 @@ export async function bootCity(root: HTMLElement) {
     sfx: (kind, gain) => sound.sfx(kind, gain),
   });
   // The Profile panel (wardrobe, finish, rank) works offline; multiplayer only when the site has a game server
-  const profileUI = createProfileUI(root, { setLook: (o) => walk.setLook(o), onLifetime: (fn) => walk.combat.onLifetime(fn) });
+  const profileUI = createProfileUI(root, {
+    setLook: (o) => walk.setLook(o),
+    onLifetime: (fn) => walk.combat.onLifetime(fn),
+    openFitting: () => open('shop', true),
+  });
+  fitting = createFitting({
+    look: () => profileUI.look,
+    apply: (l) => profileUI.wear(l),
+    onChange: (fn) => profileUI.onChange(fn),
+    reduced,
+    low: tier === 'low',
+  });
   const server = import.meta.env.PUBLIC_GAME_SERVER as string | undefined;
   const mp = server ? createMultiplayer({ url: server, root, scene, camera, walk, combat: walk.combat, profile: profileUI }) : null;
   const walkBtn = root.querySelector<HTMLButtonElement>('[data-walk-toggle]')!;

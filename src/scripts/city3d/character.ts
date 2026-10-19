@@ -33,6 +33,8 @@ export interface Outfit {
   tie?: string;
   /** Cap colour; leave out for no cap */
   cap?: string;
+  /** Beanie colour (instead of a cap) */
+  beanie?: string;
   /** Hoodie with the hood up (no cap) */
   hood?: boolean;
   backpack?: string;
@@ -318,20 +320,22 @@ export function lookOutfit(l: Look): Outfit {
     kind: l.kind,
     top: l.top,
     bottom: l.bottom,
-    shoes: '#1b1830',
+    shoes: l.shoes,
     tie: l.kind === 'suit' ? l.tie : undefined,
-    cap: l.hood ? undefined : (l.cap ?? undefined),
+    cap: l.hood || l.beanie ? undefined : (l.cap ?? undefined),
+    beanie: l.hood ? undefined : (l.beanie ?? undefined),
     hood: l.kind === 'hoodie' && l.hood,
     headphones: l.headphones ?? undefined,
     backpack: l.backpack ?? undefined,
+    crossbody: l.backpack ? undefined : (l.crossbody ?? undefined),
     chain: l.chain,
-    gummy: true,
+    gummy: l.gummy,
   };
 }
 
 /* ---------- Parts ---------- */
 
-type ColorKey = 'top' | 'bottom' | 'shoes' | 'tie' | 'cap' | 'lapel' | 'backpack' | 'crossbody' | 'headphones';
+type ColorKey = 'top' | 'bottom' | 'shoes' | 'tie' | 'cap' | 'beanie' | 'lapel' | 'backpack' | 'crossbody' | 'headphones';
 interface Part {
   joint: Joint;
   geo: THREE.BufferGeometry;
@@ -388,7 +392,8 @@ function parts(): Part[] {
   const hoodie = (o: Outfit) => o.kind === 'hoodie';
   const soldier = (o: Outfit) => o.kind === 'soldier';
   const notSoldier = (o: Outfit) => o.kind !== 'soldier';
-  const hasCap = (o: Outfit) => !!o.cap && !o.hood && o.kind !== 'soldier';
+  const hasCap = (o: Outfit) => !!o.cap && !o.beanie && !o.hood && o.kind !== 'soldier';
+  const hasBeanie = (o: Outfit) => !!o.beanie && !o.hood && o.kind !== 'soldier';
 
   // Head: balaclava with a nose under it, the neck tube, the shades' frame
   const head = merge(
@@ -437,6 +442,13 @@ function parts(): Part[] {
     new THREE.SphereGeometry(0.018, 8, 6).translate(0, 0.318, 0)
   );
   const patch = new THREE.PlaneGeometry(0.085, 0.056).rotateX(-0.45).translate(0, 0.245, 0.142);
+  // Beanie: a tall knit dome over a turned-up cuff, with a bobble on top
+  const beanie = merge(
+    new THREE.SphereGeometry(0.157, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 1.02, 1.05).translate(0, 0.19, -0.004),
+    new THREE.CylinderGeometry(0.162, 0.158, 0.06, 18).scale(1, 1, 1.05).translate(0, 0.198, -0.004),
+    new THREE.SphereGeometry(0.034, 8, 6).translate(0, 0.35, -0.004)
+  );
+  const beaniePatch = new THREE.PlaneGeometry(0.062, 0.04).rotateX(-0.06).translate(0, 0.2, 0.168);
   const hoodUp = new THREE.SphereGeometry(0.18, 16, 12, Math.PI / 2 + 1.05, Math.PI * 2 - 2.1, 0, Math.PI * 0.72).scale(1, 1.12, 1.15).translate(0, 0.12, -0.025);
   const helmet = merge(
     new THREE.SphereGeometry(0.168, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.8, 1.08).translate(0, 0.17, 0),
@@ -589,6 +601,8 @@ function parts(): Part[] {
     { joint: 'head', geo: chain, color: '#e2b04a', when: (o) => !!o.chain, detail: true },
     { joint: 'head', geo: capCrown, color: 'cap', when: hasCap },
     { joint: 'head', geo: patch, color: '#ffffff', mat: patchMat, when: hasCap, detail: true },
+    { joint: 'head', geo: beanie, color: 'beanie', when: hasBeanie },
+    { joint: 'head', geo: beaniePatch, color: '#ffffff', mat: patchMat, when: hasBeanie, detail: true },
     { joint: 'head', geo: hoodUp, color: 'top', mat: hoodMat, when: (o) => hoodie(o) && !!o.hood },
     { joint: 'head', geo: helmet, color: '#3e4a26', when: soldier },
     { joint: 'torso', geo: jacket, color: 'top', when: suit },
@@ -646,7 +660,13 @@ export function createDegen(o: Outfit = PLAYER): Degen {
   let gummy: THREE.Object3D | undefined;
   for (const p of parts()) {
     if (!p.when(o)) continue;
-    const mesh = new THREE.Mesh(p.geo, p.mat ? p.mat() : toon(colorOf(p, o)));
+    let mat: THREE.Material;
+    if (p.mat) {
+      mat = p.mat();
+      // Special materials coloured by the outfit (the raised hood takes the hoodie's colour)
+      if (!p.color.startsWith('#')) (mat as THREE.MeshToonMaterial).color.set(colorOf(p, o));
+    } else mat = toon(colorOf(p, o));
+    const mesh = new THREE.Mesh(p.geo, mat);
     if (isFat(p, o)) mesh.scale.copy(FAT);
     mesh.castShadow = true;
     rig.j[p.joint].add(mesh);

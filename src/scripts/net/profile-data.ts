@@ -65,11 +65,18 @@ export interface Look {
   bottom: string;
   /** Cap colour, or null for none (hoodies can wear the hood up instead) */
   cap: string | null;
+  /** Beanie colour instead of the cap, or null */
+  beanie: string | null;
   hood: boolean;
   tie: string;
+  shoes: string;
   headphones: string | null;
+  /** One bag at a time: a backpack or a crossbody */
   backpack: string | null;
+  crossbody: string | null;
   chain: boolean;
+  /** The Gas Fee Gummy Bears bag in his hand */
+  gummy: boolean;
 }
 
 export const PALETTE = {
@@ -78,10 +85,25 @@ export const PALETTE = {
   cap: ['#d8312f', '#16141f', '#f3f2f7', '#00a8d8', '#e219e5', '#1f9d6a', '#ffd23f'],
   tie: ['#1f9d55', '#e219e5', '#00b8d8', '#d8312f', '#c99a4a', '#16141f'],
   extra: ['#14121f', '#f3f2f7', '#ff6ad5', '#00b8d8', '#d8312f', '#1f9d6a', '#8f3dff'],
+  shoes: ['#1b1830', '#f3f2f7', '#d8312f', '#00a8d8', '#e219e5', '#ffd23f', '#1f9d6a'],
 };
 
 /** Degen as he is in the art */
-export const DEFAULT_LOOK: Look = { kind: 'suit', top: '#16141f', bottom: '#16141f', cap: '#d8312f', hood: false, tie: '#1f9d55', headphones: null, backpack: null, chain: true };
+export const DEFAULT_LOOK: Look = {
+  kind: 'suit',
+  top: '#16141f',
+  bottom: '#16141f',
+  cap: '#d8312f',
+  beanie: null,
+  hood: false,
+  tie: '#1f9d55',
+  shoes: '#1b1830',
+  headphones: null,
+  backpack: null,
+  crossbody: null,
+  chain: true,
+  gummy: true,
+};
 
 /** Anything from a player, made safe: unknown values fall back to Degen's own look */
 export function cleanLook(raw: unknown): Look {
@@ -89,17 +111,24 @@ export function cleanLook(raw: unknown): Look {
   const from = <T extends string>(v: unknown, list: T[], fallback: T) => (list.includes(v as T) ? (v as T) : fallback);
   const orNull = (v: unknown, list: string[], fallback: string | null) => (v === null ? null : list.includes(v as string) ? (v as string) : fallback);
   const kind = from(o.kind, ['suit', 'hoodie'], DEFAULT_LOOK.kind);
+  // One thing on the head (hood, beanie or cap) and one bag
   const hood = kind === 'hoodie' && o.hood === true;
+  const beanie = hood ? null : orNull(o.beanie, PALETTE.cap, null);
+  const backpack = orNull(o.backpack, PALETTE.extra, null);
   return {
     kind,
     top: from(o.top as string, PALETTE.top, DEFAULT_LOOK.top),
     bottom: from(o.bottom as string, PALETTE.bottom, DEFAULT_LOOK.bottom),
-    cap: hood ? null : orNull(o.cap, PALETTE.cap, DEFAULT_LOOK.cap),
+    cap: hood || beanie ? null : orNull(o.cap, PALETTE.cap, DEFAULT_LOOK.cap),
+    beanie,
     hood,
     tie: from(o.tie as string, PALETTE.tie, DEFAULT_LOOK.tie),
+    shoes: from(o.shoes as string, PALETTE.shoes, DEFAULT_LOOK.shoes),
     headphones: orNull(o.headphones, PALETTE.extra, null),
-    backpack: orNull(o.backpack, PALETTE.extra, null),
+    backpack,
+    crossbody: backpack ? null : orNull(o.crossbody, PALETTE.extra, null),
     chain: o.chain === undefined ? DEFAULT_LOOK.chain : o.chain === true,
+    gummy: o.gummy === undefined ? DEFAULT_LOOK.gummy : o.gummy === true,
   };
 }
 

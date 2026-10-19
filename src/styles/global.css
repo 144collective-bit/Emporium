@@ -3215,12 +3215,6 @@ body.is-walking :is(.city-modes, .walk-top, .walk-look, .combat-score) {
   display: grid;
   gap: 8px;
 }
-.wardrobe-seg {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-}
-.wardrobe-seg button,
 .emote-btn,
 .phrase-btn,
 .mp-mute {
@@ -3233,27 +3227,195 @@ body.is-walking :is(.city-modes, .walk-top, .walk-look, .combat-score) {
   font-size: 11px;
   cursor: pointer;
 }
-.wardrobe-seg button[aria-pressed="true"],
 .mp-mute[aria-pressed="true"] {
   border-color: #0000;
   background:
     linear-gradient(#14102a, #14102a) padding-box,
     var(--pulse) border-box;
 }
-.wardrobe-rows {
+/* Drop 001's fitting room (fitting.ts): the turning preview, item cards and colours */
+.fit {
   display: grid;
+  align-self: stretch;
+  gap: 12px;
+  margin-top: 4px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  scroll-margin-top: 12px;
+}
+.fit-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+}
+.fit-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+.fit-free {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--p-cyan);
+}
+.fit-stage {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 16 / 10;
+  max-height: 250px;
+  border: 1px solid #0000;
+  border-radius: 8px;
+  background:
+    linear-gradient(#120f22, #120f22) padding-box,
+    var(--pulse) border-box;
+}
+.fit-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  /* Sideways drags turn him; up and down still scroll the panel */
+  touch-action: pan-y;
+}
+.fit-canvas:active {
+  cursor: grabbing;
+}
+.fit-hint {
+  position: absolute;
+  right: 10px;
+  bottom: 8px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  pointer-events: none;
+}
+.fit-tabs {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+}
+.fit-tabs button {
+  min-width: 0;
+  padding: 8px 2px;
+  border: 1px solid #ffffff24;
+  border-radius: 8px;
+  background: #0b0a12;
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.fit-tabs button[aria-selected="true"] {
+  border-color: #0000;
+  background:
+    linear-gradient(#14102a, #14102a) padding-box,
+    var(--pulse) border-box;
+  color: #fff;
+}
+.fit-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(86px, 1fr));
   gap: 6px;
 }
-.wardrobe-row {
+.fit-items[hidden] {
+  display: none;
+}
+.fit-item {
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  padding: 10px 4px 8px;
+  border: 1px solid #ffffff24;
+  border-radius: 10px;
+  background: #0b0a12;
+  color: #fff;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, transform 0.2s;
+}
+.fit-item svg {
+  color: var(--text-2);
+}
+.fit-item b {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1.05;
+  text-transform: uppercase;
+}
+.fit-item small {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.fit-item:hover {
+  transform: translateY(-2px);
+}
+.fit-item[aria-pressed="true"] {
+  border-color: #0000;
+  background:
+    var(--pulse-wash) padding-box,
+    linear-gradient(#14102a, #14102a) padding-box,
+    var(--pulse) border-box;
+  box-shadow: 0 0 22px -10px #00eaffaa;
+}
+.fit-item[aria-pressed="true"] svg,
+.fit-item[aria-pressed="true"] small {
+  color: var(--p-cyan);
+}
+.fit-colors {
+  display: grid;
+  gap: 8px;
+}
+.fit-colors:empty {
+  display: none;
+}
+.fit-row {
   display: grid;
   grid-template-columns: 74px 1fr;
   align-items: center;
   gap: 6px;
 }
-.wardrobe-row[hidden] {
-  display: none;
+.fit-note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
 }
-.wardrobe-row > span {
+.fit-reset {
+  justify-self: start;
+  cursor: pointer;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fit-item {
+    transition: none;
+  }
+  .fit-item:hover {
+    transform: none;
+  }
+}
+.fit .sw-row {
+  gap: 6px;
+}
+.fit .sw-btn {
+  width: 26px;
+  height: 26px;
+}
+.fit-row > span {
   font-family: var(--font-mono);
   font-size: 10px;
   letter-spacing: 0.08em;
@@ -3277,9 +3439,6 @@ body.is-walking :is(.city-modes, .walk-top, .walk-look, .combat-score) {
 .sw-btn[aria-pressed="true"] {
   outline: 2px solid var(--p-cyan);
   outline-offset: 2px;
-}
-.sw-none {
-  background: linear-gradient(135deg, transparent 45%, #ff5a5a 45%, #ff5a5a 55%, transparent 55%), #0b0a12;
 }
 .walk-check[hidden] {
   display: none;
