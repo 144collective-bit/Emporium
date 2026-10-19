@@ -28,9 +28,9 @@ import { createCityHead } from './head';
 type Tier = 'high' | 'medium' | 'low';
 
 const TIERS = {
-  high: { dpr: 2, shadows: 2048, msaa: 4, bloomScale: 0.5, cars: 34, buses: 3, walkers: 80, trees: 340, skyline: 70, rain: 6000, clouds: 12 },
-  medium: { dpr: 1.5, shadows: 1024, msaa: 0, bloomScale: 0.5, cars: 24, buses: 2, walkers: 50, trees: 230, skyline: 50, rain: 3500, clouds: 9 },
-  low: { dpr: 1.25, shadows: 0, msaa: 0, bloomScale: 0.3, cars: 14, buses: 2, walkers: 24, trees: 120, skyline: 26, rain: 1200, clouds: 4 },
+  high: { dpr: 2, shadows: 2048, msaa: 4, bloomScale: 0.5, cars: 38, buses: 3, walkers: 100, trees: 340, skyline: 70, rain: 6000, clouds: 12 },
+  medium: { dpr: 1.5, shadows: 1024, msaa: 0, bloomScale: 0.5, cars: 27, buses: 2, walkers: 62, trees: 230, skyline: 50, rain: 3500, clouds: 9 },
+  low: { dpr: 1.25, shadows: 0, msaa: 0, bloomScale: 0.3, cars: 16, buses: 2, walkers: 30, trees: 120, skyline: 26, rain: 1200, clouds: 4 },
 };
 
 function pickTier(): Tier {
@@ -112,7 +112,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   controls.dampingFactor = 0.08;
   controls.screenSpacePanning = false;
   controls.minDistance = 7;
-  controls.maxDistance = 80;
+  controls.maxDistance = 100;
   controls.minPolarAngle = 0.32;
   controls.maxPolarAngle = 1.18;
   controls.zoomToCursor = true;
@@ -269,8 +269,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       flyTo(v.pos, v.target, 1.2);
     },
     overview() {
-      const k = camera.aspect < 1 ? 1.45 : 1;
-      const target = new THREE.Vector3(15.5, 0, 7);
+      // Every district, the south row across the river included
+      const k = camera.aspect < 1 ? 1.22 : 1.32;
+      const target = new THREE.Vector3(16, 0, 27);
       flyTo(target.clone().add(new THREE.Vector3(34, 50, 44).multiplyScalar(k)), target, 1.6);
     },
     onMode(on) {
@@ -615,7 +616,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     } else if (controls.update()) dirty = true;
     // Keep the view over the city
     controls.target.x = THREE.MathUtils.clamp(controls.target.x, -16, 47);
-    controls.target.z = THREE.MathUtils.clamp(controls.target.z, -16, 40);
+    controls.target.z = THREE.MathUtils.clamp(controls.target.z, -16, 54);
 
     const s = sky.update(reduced ? 0 : t, dt, controls.target, camera.position);
     env.t = reduced ? 0 : t;

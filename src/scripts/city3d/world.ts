@@ -5,8 +5,10 @@
  * World units: 1 = one map tile. x and z match the 2D map's x and y; y is up.
  * The core city's blocks sit at 0-9, 11-20 and 22-31 with two-tile roads
  * between them. Ring roads at -1 and 32 frame it, and the plot districts
- * (see plots.ts) sit beyond them to the north, west and east; the river
- * closes the south.
+ * (see plots.ts) sit beyond them to the north, west and east. The river
+ * runs south of the core; across its four bridges, the south bank road
+ * (SOUTH_ROAD) carries the south row of districts, with a lamp-lit
+ * riverside walk between the road and the water.
  */
 import * as THREE from 'three';
 import { DISTRICTS } from '../../data/plots';
@@ -15,6 +17,11 @@ import { Batch, PAL, canvasTex, facadeMat, fx, glowMat, glowTex, lit, neon, rand
 export const BLOCKS = [0, 11, 22];
 export const BS = 9;
 export const ROADS = [-1, 10, 21, 32];
+/** The east-west road along the south bank, past the river */
+export const SOUTH_ROAD = 40;
+/** Roads running north-south (at these x) and east-west (at these z): the south bank road only runs east-west */
+export const NS_ROADS = ROADS;
+export const EW_ROADS = [...ROADS, SOUTH_ROAD];
 /** Roads through the core city; only their crossings have traffic lights. */
 export const CORE_ROADS = [10, 21];
 /** District blocks around the core: one large plot each (src/data/plots.ts). */
@@ -136,14 +143,18 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, keyof typeo
 
   // Roads
   const asphalt = toon('#26243f');
-  for (const r of ROADS) {
-    b.box(e0, 0, r - 1, L, 0.03, 2, asphalt);
-    b.box(r - 1, 0.002, e0, 2, 0.03, L, asphalt);
-  }
+  for (const r of EW_ROADS) b.box(e0, 0, r - 1, L, 0.03, 2, asphalt);
+  for (const r of NS_ROADS) b.box(r - 1, 0.002, e0, 2, 0.03, L, asphalt);
+
+  // The riverside walk on the south bank, between the water and the south bank road,
+  // lamps along the water reaching out over it (clear of the bridges)
+  const walkZ0 = RIVER[1] + 0.25;
+  b.box(e0, 0, walkZ0, L, 0.05, SOUTH_ROAD - 1 - walkZ0, toon('#4a4388'));
+  for (let x = -12; x <= 44; x += 5.5) if (!NS_ROADS.some((r) => Math.abs(x - r) < 1.7)) addLamp(x, walkZ0 + 0.12, -Math.PI / 2, 0.05);
 
   // Bridges over the river
   const rail = toon('#c9c4e6');
-  for (const r of ROADS) {
+  for (const r of NS_ROADS) {
     b.box(r - 1.1, 0, RIVER[0] - 0.6, 2.2, 0.06, RIVER[1] - RIVER[0] + 1.2, toon('#34314f'));
     for (const side of [r - 1.15, r + 1.05]) {
       b.box(side, 0.06, RIVER[0] - 0.6, 0.1, 0.08, RIVER[1] - RIVER[0] + 1.2, rail);
@@ -166,27 +177,30 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, keyof typeo
   const dashes: THREE.Matrix4[] = [];
   const zebra: THREE.Matrix4[] = [];
   const m = new THREE.Matrix4();
-  // Dashes run between crossings
-  const runs: [number, number][] = [];
-  ROADS.forEach((r, i) => runs.push([i === 0 ? e0 : ROADS[i - 1] + 1.8, r - 1.8]));
-  runs.push([ROADS[ROADS.length - 1] + 1.8, e1]);
-  for (const r of ROADS) {
-    for (const [a, c] of runs) {
+  // Dashes run between crossings: along an east-west road they stop at the north-south roads, and the other way round
+  const runsBetween = (cross: number[]): [number, number][] => {
+    const runs: [number, number][] = [];
+    cross.forEach((r, i) => runs.push([i === 0 ? e0 : cross[i - 1] + 1.8, r - 1.8]));
+    runs.push([cross[cross.length - 1] + 1.8, e1]);
+    return runs;
+  };
+  for (const z of EW_ROADS)
+    for (const [a, c] of runsBetween(NS_ROADS))
+      for (let s = a + 0.4; s < c - 0.3; s += 1.1) dashes.push(m.clone().compose(new THREE.Vector3(s, 0.036, z), new THREE.Quaternion(), new THREE.Vector3(0.55, 0.01, 0.07)));
+  for (const x of NS_ROADS)
+    for (const [a, c] of runsBetween(EW_ROADS))
       for (let s = a + 0.4; s < c - 0.3; s += 1.1) {
-        dashes.push(m.clone().compose(new THREE.Vector3(s, 0.036, r), new THREE.Quaternion(), new THREE.Vector3(0.55, 0.01, 0.07)));
-        dashes.push(m.clone().compose(new THREE.Vector3(r, 0.038, s), new THREE.Quaternion(), new THREE.Vector3(0.07, 0.01, 0.55)));
+        // Not across the bridges' decks over the water
+        if (s > RIVER[0] - 0.6 && s < RIVER[1] + 0.6) continue;
+        dashes.push(m.clone().compose(new THREE.Vector3(x, 0.038, s), new THREE.Quaternion(), new THREE.Vector3(0.07, 0.01, 0.55)));
       }
-    }
-    for (const r2 of ROADS) {
-      for (const at of [r2 - 1.45, r2 + 1.45]) {
-        for (let k = 0; k < 6; k++) {
-          const off = r - 0.8 + k * 0.32;
-          zebra.push(m.clone().compose(new THREE.Vector3(at, 0.04, off), new THREE.Quaternion(), new THREE.Vector3(0.55, 0.01, 0.17)));
-          zebra.push(m.clone().compose(new THREE.Vector3(off, 0.042, at), new THREE.Quaternion(), new THREE.Vector3(0.17, 0.01, 0.55)));
-        }
+  // Zebra crossings on all four sides of every crossing
+  for (const x of NS_ROADS)
+    for (const z of EW_ROADS)
+      for (let k = 0; k < 6; k++) {
+        for (const at of [x - 1.45, x + 1.45]) zebra.push(m.clone().compose(new THREE.Vector3(at, 0.04, z - 0.8 + k * 0.32), new THREE.Quaternion(), new THREE.Vector3(0.55, 0.01, 0.17)));
+        for (const at of [z - 1.45, z + 1.45]) zebra.push(m.clone().compose(new THREE.Vector3(x - 0.8 + k * 0.32, 0.042, at), new THREE.Quaternion(), new THREE.Vector3(0.17, 0.01, 0.55)));
       }
-    }
-  }
   const unit = new THREE.BoxGeometry(1, 1, 1);
   for (const [list, mat] of [
     [dashes, neon('#f5d76e', 0.9, 1.1)],
@@ -225,9 +239,10 @@ export function scatterOutskirts(count: number) {
   while (placed < count && guard++ < count * 20) {
     const x = -38 + rand() * 107;
     const z = -38 + rand() * 107;
-    // Clear of the core city and the districts round it
+    // Clear of the core city, the districts round it and the south row across the river
     if (x > -12.4 && x < 43.4 && z > -12.4 && z < 32.2) continue;
-    if (ROADS.some((r) => Math.abs(z - r) < 1.8 || Math.abs(x - r) < 1.8)) continue;
+    if (x > -12.4 && x < 43.4 && z > RIVER[1] && z < 51.4) continue;
+    if (EW_ROADS.some((r) => Math.abs(z - r) < 1.8) || NS_ROADS.some((r) => Math.abs(x - r) < 1.8)) continue;
     if (z > RIVER[0] - 1 && z < RIVER[1] + 0.8) continue;
     addTree(x, z, 0.8 + rand() * 0.6, rand() < 0.4, 0);
     placed++;

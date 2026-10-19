@@ -5,7 +5,7 @@
  */
 import * as THREE from 'three';
 import { FONT_DISPLAY, PAL, canvasTex, fx, glowTex, lit, neon, rand, toon } from './kit';
-import { BLOCKS, BS, CENTER, CORE_ROADS, EXT, RIVER, ROADS, SLAB, type Tick } from './world';
+import { BLOCKS, BS, CENTER, CORE_ROADS, DISTRICTS, EW_ROADS, EXT, NS_ROADS, RIVER, SLAB, type Tick } from './world';
 import type { Idle } from './landmarks';
 import { chatPose, cityOutfit, createCrowd, idlePose, lookPose, newPose, sitPose, walkPose } from './character';
 
@@ -52,10 +52,9 @@ function lightState(ix: number, axis: Axis, t: number): 'g' | 'y' | 'r' {
 }
 
 const lanes: Lane[] = [];
-for (const r of ROADS) {
-  lanes.push({ axis: 'x', coord: r + 0.5, dir: 1 }, { axis: 'x', coord: r - 0.5, dir: -1 });
-  lanes.push({ axis: 'z', coord: r - 0.5, dir: 1 }, { axis: 'z', coord: r + 0.5, dir: -1 });
-}
+// Two lanes each way on every road: east-west roads (the south bank road too) and north-south ones (over the bridges)
+for (const r of EW_ROADS) lanes.push({ axis: 'x', coord: r + 0.5, dir: 1 }, { axis: 'x', coord: r - 0.5, dir: -1 });
+for (const r of NS_ROADS) lanes.push({ axis: 'z', coord: r - 0.5, dir: 1 }, { axis: 'z', coord: r + 0.5, dir: -1 });
 const pRange = (l: Lane): [number, number] => (l.dir === 1 ? [E0 + 4, E1 - 4] : [-(E1 - 4), -(E0 + 4)]);
 
 function vehicleBox(w: number, h: number, d: number, x: number, y: number, z: number) {
@@ -124,8 +123,8 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
   let ix = 0;
   // Every crossing is tracked so cars give way; only the core city's have lights
   const crossings: { ix: number; cx: number; cz: number; lit: boolean }[] = [];
-  for (const cx of ROADS) {
-    for (const cz of ROADS) {
+  for (const cx of NS_ROADS) {
+    for (const cz of EW_ROADS) {
       const lights = CORE_ROADS.includes(cx) && CORE_ROADS.includes(cz);
       crossings.push({ ix, cx, cz, lit: lights });
       if (!lights) {
@@ -322,7 +321,8 @@ const SEAT_DROP = 0.47 * PERSON_SCALE;
 
 function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f: Tick) => void) {
   const people: Person[] = [];
-  const blocks = BLOCKS.flatMap((x) => BLOCKS.map((z) => [x, z] as [number, number]));
+  // Round the core city's blocks, and the south row's (the street life across the river)
+  const blocks = [...BLOCKS.flatMap((x) => BLOCKS.map((z) => [x, z] as [number, number])), ...DISTRICTS.filter((d) => d.id.startsWith('S')).map((d) => [d.ox, d.oz] as [number, number])];
   // Spread walkers evenly round each lane. Everyone in a lane keeps the same
   // pace, so nobody walks through the person in front.
   const perLane = new Map<string, number[]>();

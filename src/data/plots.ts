@@ -16,11 +16,16 @@ export const PLOT_PRICE = 20_000_000;
 /** Simulated PLS a demo wallet starts with (demo mode only) */
 export const DEMO_WALLET_START = 100_000_000;
 
-/** The districts around the core city: one large plot each (x, z of the block's corner) */
+/**
+ * The districts around the core city: one large plot each (x, z of the block's corner).
+ * North, west and east frame the core; the south row sits across the river, on the
+ * south bank road (SOUTH_ROAD in src/scripts/city3d/world.ts).
+ */
 export const DISTRICTS: { id: string; name: string; ox: number; oz: number }[] = [
   ...[-11, 0, 11, 22, 33].map((ox, i) => ({ id: `N${i + 1}`, name: `North ${i + 1}`, ox, oz: -11 })),
   ...[0, 11, 22].map((oz, i) => ({ id: `W${i + 1}`, name: `West ${i + 1}`, ox: -11, oz })),
   ...[0, 11, 22].map((oz, i) => ({ id: `E${i + 1}`, name: `East ${i + 1}`, ox: 33, oz })),
+  ...[-11, 0, 11, 22, 33].map((ox, i) => ({ id: `S${i + 1}`, name: `South ${i + 1}`, ox, oz: 41 })),
 ];
 export const PLOT_IDS = DISTRICTS.map((d) => d.id);
 

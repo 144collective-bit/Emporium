@@ -254,8 +254,9 @@ stepped down. Nobody sees it without `?fps`.
 
 ### City builder: buy a plot, build on it
 
-Press **Build** in the header to switch to build mode. Each of the 11 districts
-around the core city (North 1-5, West 1-3, East 1-3, past the ring roads) is
+Press **Build** in the header to switch to build mode. Each of the 16 districts
+around the core city (North 1-5, West 1-3, East 1-3 past the ring roads, and
+South 1-5 across the river on the south bank road) is
 **one large plot**: its 3 × 3 squares merged into one, for **20,000,000 PLS**.
 
 - **Pick a plot** (tap, click or use the arrow keys) to see who owns it and

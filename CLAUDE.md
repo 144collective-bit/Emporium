@@ -226,7 +226,11 @@ it and has been retired completely. Build only on what's here.
 ## City builder (3D build mode)
 
 - Each district around the core is **one large plot** (its 3 x 3 squares
-  merged into one; `DISTRICTS`, `PLOT_PRICE`, `BUILDINGS`, `cleanDesign()` in
+  merged into one): North 1-5, West 1-3, East 1-3, and the South row (S1-5)
+  across the river. The south bank has its own east-west road
+  (`SOUTH_ROAD`, so roads are split into `NS_ROADS` / `EW_ROADS` in
+  `world.ts`), a lamp-lit riverside walk, traffic over the four bridges and
+  pedestrians round the south row (`DISTRICTS`, `PLOT_PRICE`, `BUILDINGS`, `cleanDesign()` in
   `src/data/plots.ts`, shared with the server). Plot grid, overlay and building
   generators are in `plots.ts`, the interface in `builder-ui.ts`. The core
   landmarks are not for sale.
