@@ -32,8 +32,9 @@ and deploys it on every push to `main`. Its build settings (*Workers & Pages* â†
 | Deploy command | `npx wrangler deploy` |
 | Build watch paths (optional) | `server/*`, `src/scripts/net/*`, `src/data/plots.ts`, `src/scripts/city3d/combat-sim.ts`, `src/scripts/city3d/solids.ts` |
 
-The server lives at `https://emporium.<your-subdomain>.workers.dev`; set that
-as the `PUBLIC_GAME_SERVER` repository variable and rebuild the site. With this
+The server lives at `https://emporium.144collective.workers.dev`. The "Build
+site" Action builds the site against that address (a `PUBLIC_GAME_SERVER`
+repository variable overrides it). With this
 in place, the GitHub Action route below isn't needed (leave its secrets unset
 so only one system deploys).
 
