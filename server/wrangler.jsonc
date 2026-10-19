@@ -14,7 +14,8 @@
     "run_worker_first": ["/play", "/health", "/land", "/land/*"]
   },
   "build": {
-    "command": "cd .. && PUBLIC_GAME_SERVER=https://emporium.144collective.workers.dev npm run build"
+    // Installs the website's packages first if the build machine hasn't (Cloudflare's build may only install server/'s)
+    "command": "cd .. && (test -d node_modules/astro || npm ci) && PUBLIC_GAME_SERVER=https://emporium.144collective.workers.dev npm run build"
   },
   "durable_objects": {
     "bindings": [
