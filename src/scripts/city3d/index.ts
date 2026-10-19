@@ -431,7 +431,7 @@ export async function bootCity(root: HTMLElement) {
         dirty = true;
         return;
       }
-      setHover(pickAt(e.clientX, e.clientY));
+      setHover(walking ? null : pickAt(e.clientX, e.clientY));
     });
   });
   canvas.addEventListener('pointerleave', () => {
@@ -619,10 +619,10 @@ export async function bootCity(root: HTMLElement) {
     post.bloom.threshold = 0.9 - s.night * 0.06 + near * 0.07;
     renderer.toneMappingExposure = 1 + s.night * 0.03;
 
-    // Hover lift and rings
+    // Hover lift and rings (never lifted while walking: Degen walks on the same ground as the building)
     for (const sp of spots) {
       const on = sp === hovered || sp === active;
-      sp.group.position.y += ((on ? 0.22 : 0) - sp.group.position.y) * Math.min(1, dt * 10);
+      sp.group.position.y += ((on && !walking ? 0.22 : 0) - sp.group.position.y) * Math.min(1, dt * 10);
       const m = sp.ring.material as THREE.MeshBasicMaterial;
       m.opacity += ((on ? 0.85 : 0) - m.opacity) * Math.min(1, dt * 8);
       sp.ring.scale.setScalar(1 + (on ? Math.sin(t * 4) * 0.04 : 0));

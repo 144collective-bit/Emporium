@@ -19,14 +19,14 @@ clearly labelled. This file is the reference; update it as decisions change.
 | Builder | Real plot sales (20,000,000 PLS a plot, PulseChain Testnet first) through the visitor's wallet and the game server's `Land`; the demo with play money stays for offline visits and local builds. |
 | Online / Offline | One switch in the mode header for the whole city: Online joins the shared city while walking and sells real plots; Offline is solo with the demo builder. Remembered per browser, online by default. |
 | Fairness | The server decides hits (it runs `combat-sim.ts`), checks movement and fire rate, and rewinds drones to what the shooter saw. |
-| Server | Cloudflare Workers + Durable Objects (one per room, one per profile). The site stays static on Hostinger. |
+| Server | Cloudflare Workers + Durable Objects (one per room, one per profile). The same Worker serves the static site at emporium.144collective.workers.dev. |
 | Account | The owner creates the Cloudflare account (guided); deploys run from GitHub Actions with a repo secret. |
 
 ## How it fits together
 
 ```
 Visitor's browser                         Cloudflare (server/)
-  degenemporium.com (static, Hostinger)     Worker: /play  ──> Lobby DO (which city has room)
+  emporium…workers.dev (static assets)      Worker: /play  ──> Lobby DO (which city has room)
   Walk ─ Multiplayer (beta) ── WebSocket ──>  Room DO "City N" (≤16 players, 60 Hz rules,
                                               15 Hz snapshots, movement checks, emotes)
                                                 └─> Profile DO per player (name, outfit,

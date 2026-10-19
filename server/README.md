@@ -1,8 +1,8 @@
 # Degen City game server
 
 The multiplayer and plot-sales server for Degen City: a Cloudflare Worker
-with four kinds of Durable Object. The website itself stays a static build on Hostinger; only
-the live game connection goes to Cloudflare.
+with four kinds of Durable Object. The same Worker also serves the website
+(a static build) at https://emporium.144collective.workers.dev.
 
 | File | What it does |
 | --- | --- |
@@ -21,8 +21,8 @@ and scene code.
 
 The Worker is called **emporium** (it must match `"name"` in `wrangler.jsonc`)
 and is connected to this GitHub repository in Cloudflare, so Cloudflare builds
-and deploys it on every push to `main`. It serves the game server **and, while
-we build, the whole website** at https://emporium.144collective.workers.dev:
+and deploys it on every push to `main`. It serves the game server **and the
+whole website** at https://emporium.144collective.workers.dev:
 `wrangler deploy` runs the site build first (`build` in `wrangler.jsonc`) and
 publishes `../dist` as static assets. Its build settings (*Workers & Pages* →
 **emporium** → *Settings* → *Build*):
@@ -35,9 +35,8 @@ publishes `../dist` as static assets. Its build settings (*Workers & Pages* →
 | Deploy command | `npx wrangler deploy` |
 | Build watch paths | leave empty (the Worker carries the website now, so every change should redeploy it) |
 
-The server lives at `https://emporium.144collective.workers.dev`. The "Build
-site" Action builds the site against that address (a `PUBLIC_GAME_SERVER`
-repository variable overrides it). With this
+The server and the site live at `https://emporium.144collective.workers.dev`;
+the site is built against that address. With this
 in place, the GitHub Action route below isn't needed (leave its secrets unset
 so only one system deploys).
 
@@ -46,7 +45,7 @@ so only one system deploys).
 1. **Create a Cloudflare account** (free) at https://dash.cloudflare.com/sign-up.
 2. **Pick your workers.dev subdomain**: in the dashboard open *Workers & Pages*.
    The first time, it asks you to choose a subdomain (for example
-   `degenemporium`). The game server will live at
+   `144collective`). The game server and the site will live at
    `https://emporium.<your-subdomain>.workers.dev`.
 3. **Make an API token**: profile icon (top right) → *My Profile* → *API
    Tokens* → *Create Token* → use the **Edit Cloudflare Workers** template →
@@ -61,12 +60,10 @@ so only one system deploys).
 6. **Deploy**: *Actions* → **Deploy game server** → *Run workflow*. When it
    finishes, open `https://emporium.<your-subdomain>.workers.dev/health`;
    it should say `ok`.
-7. **Point the site at it**: *Settings* → *Secrets and variables* → *Actions*
-   → *Variables* tab → *New repository variable*:
-   - `PUBLIC_GAME_SERVER` = `https://emporium.<your-subdomain>.workers.dev`
-8. **Rebuild the site**: *Actions* → **Build site** → *Run workflow*, download
-   the zip and upload it to Hostinger as usual. The **Online** pill now
-   appears in walk mode.
+7. **Check the address**: the site is built against the address in `build`
+   in `wrangler.jsonc` (`PUBLIC_GAME_SERVER`) and listed in `ALLOWED_ORIGINS`;
+   change both if your subdomain differs. The site is published with the
+   Worker, so the **Online** pill appears in walk mode straight away.
 
 After that, every push to `main` that touches the server redeploys it
 automatically.

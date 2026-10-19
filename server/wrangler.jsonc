@@ -1,5 +1,5 @@
 // The Degen City game server: one Worker, four kinds of Durable Object.
-// It also serves the built website while we build (the release copy is degenemporium.com on Hostinger).
+// It also serves the built website (the site's only home).
 // Cloudflare deploys it from GitHub on every push to main (Workers Builds); see README.md here.
 {
   "name": "emporium",
@@ -32,7 +32,7 @@
   ],
   "vars": {
     // Pages allowed to connect (other sites can't embed the game)
-    "ALLOWED_ORIGINS": "https://degenemporium.com,https://www.degenemporium.com,https://emporium.144collective.workers.dev,http://localhost:4321",
+    "ALLOWED_ORIGINS": "https://emporium.144collective.workers.dev,http://localhost:4321",
     // Plot sales (see src/land.ts). 943 = PulseChain Testnet v4 (test PLS), 369 = PulseChain mainnet.
     // Switching network starts a fresh list of owners; testnet sales never carry over.
     "LAND_CHAIN_ID": "943",

@@ -136,6 +136,8 @@ it and has been retired completely. Build only on what's here.
   `degen-city-walk-v1` in localStorage. The HUD markup (Controls panel, Run
   and Jump buttons, joystick) is in `CityMap.astro`; `walk.ts` expects every
   `data-walk-*` element to exist.
+- Buildings only lift and glow on hover in City view; while walking nothing
+  is hovered and nothing lifts (Degen stands on the same ground).
 - Esc frees the mouse first and only then stops walking. Door panels free
   the mouse so their links can be clicked.
 - While walking, `body.is-walking` (set in `index.ts`) hides the site header
@@ -294,8 +296,8 @@ it and has been retired completely. Build only on what's here.
   browser's guest token (`degen-city-player-v1`). Offline, the Profile panel
   keeps the look and finish in the browser.
 - The site only shows the Online pill and the Online / Offline switch when
-  built with `PUBLIC_GAME_SERVER` (a GitHub repository variable, defaulting
-  to the emporium Worker). Only pages in `ALLOWED_ORIGINS`
+  built with `PUBLIC_GAME_SERVER` (set by the Worker's build). Only pages in
+  `ALLOWED_ORIGINS`
   (`server/wrangler.jsonc`) can connect.
 - **The Online / Offline switch** (`online.ts`, `[data-online-switch]` in the
   mode header, remembered as `degen-city-online-v1`, online by default) is
@@ -312,21 +314,19 @@ it and has been retired completely. Build only on what's here.
 
 ## Hosting
 
-- degenemporium.com is a static build hosted on Hostinger (`dist/`
-  extracted into `public_html`). The "Build site" GitHub Action builds
-  every push to `main` into a downloadable zip.
-- Keep the site fully static (no server routes) and keep `public/.htaccess`
-  in the build. The only live service is the separate game server
-  (`server/`, the Cloudflare Worker **emporium**), which Cloudflare builds and
-  deploys from GitHub on every push to `main`.
-- **While we build**, the same Worker also serves the website at
-  https://emporium.144collective.workers.dev: `wrangler deploy` builds the site
-  first (`build` in `server/wrangler.jsonc`, with `PUBLIC_GAME_SERVER` set to
-  that address) and publishes `dist/` as its static assets. `/play`, `/health`
-  and `/land` always reach the Worker code (`run_worker_first`); everything
-  else is a page or file. `public/.assetsignore` keeps `.htaccess` private
-  there. degenemporium.com on Hostinger stays the release copy, updated by
-  uploading the "Build site" zip.
+- The site lives at https://emporium.144collective.workers.dev (the
+  Cloudflare Worker **emporium**, which also runs the game server). It is no
+  longer connected to degenemporium.com or Hostinger: don't add that domain
+  back to `site` (`astro.config.mjs`), `SITE_URL`, `ALLOWED_ORIGINS` or the
+  share card, and don't bring back the Hostinger zip build or `.htaccess`,
+  unless the owner asks.
+- Keep the site fully static (no server routes). Its pages and files are the
+  Worker's static assets; the only live code is the game server (`server/`),
+  which Cloudflare builds and deploys from GitHub on every push to `main`.
+  `wrangler deploy` builds the site first (`build` in `server/wrangler.jsonc`,
+  with `PUBLIC_GAME_SERVER` set to the Worker's address) and publishes `dist/`.
+  `/play`, `/health` and `/land` always reach the Worker code
+  (`run_worker_first`); everything else is a page or file.
 
 ## Content guardrails
 
