@@ -192,6 +192,35 @@ it and has been retired completely. Build only on what's here.
   Placed buildings block via `plots.solids()`; parks stay walkable.
 - Cars yield to the walker through `walker` in `life.ts`.
 
+## The garage and your car (3D walk mode)
+
+- The garage is on the south bank, east of S5, facing the south bank
+  avenue (`GARAGE` in `layout.ts`; drawn by `garage.ts` in world numbers,
+  not the landmarks' drawing grid). A flat-roofed workshop with an open bay
+  and a car lift, a roller door, an office, a neon GARAGE roof sign, and a
+  showroom turntable on the forecourt with the player's own car on it. It
+  has no pin and links nowhere; it's walk-mode only. Its footprints, the
+  turntable and the office door are `GARAGE_SITE` in `solids.ts`.
+- The office door's prompt opens the garage menu (`garage-ui.ts`, markup
+  `data-garage` in `CityMap.astro`, built on the gun store's `.shop`
+  panel): five models (`PLAYER_CARS`: the bus is city-only) with card
+  silhouettes drawn from each model's outline at one scale, three stat bars
+  and twelve paints. Each pick shows on the turntable; Keep saves it,
+  closing without keeping puts the saved car back. While it's open the
+  camera eases to the turntable (`frameShowroom()` in `walk.ts`, over the
+  shoulder so the first-person hands stay out of shot) and the picture
+  slides with `setViewOffset` so the car sits beside the panel (wide
+  screens, panel on the right) or above it (phones, bottom sheet). The
+  turntable turns only while the menu is open, and never under reduced
+  motion. Check it upright and on its side at phone widths (no scrolling).
+- Your car (`mycar.ts`, DOM-free): `{ model, paint }`, cleaned by
+  `cleanCar()`, saved in the browser as `degen-city-car-v1`. `DRIVE` holds
+  each model's garage copy and its 0-1 speed / pick-up / grip (for the
+  handling). Cars are free and only for the city: never sell them, price
+  them or tie them to the store or the token.
+- `createCar()` in `cars.ts` builds one car with its own paint, steerable
+  rolling wheels (`drive()`) and lights.
+
 ## Target practice (3D walk mode)
 
 - Solo shooting practice. Only the player's Degen carries a gun, picked up

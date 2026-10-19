@@ -8,7 +8,7 @@
  * onto today's streets with `designBox()` (layout.ts).
  */
 import { DUMMIES } from './combat-sim';
-import { design, designBox } from './layout';
+import { GARAGE, design, designBox } from './layout';
 
 /** x0, z0, x1, z1, height */
 export type Box = [number, number, number, number, number];
@@ -67,7 +67,24 @@ const DRAWN: Box[] = [
   [18.55, 11.95, 19.45, 12.85, 1.4], // planters
   [11.95, 18.55, 12.85, 19.45, 1.4],
 ];
-export const SOLIDS: Box[] = [...DRAWN.map(designBox), ...DUMMY_SOLIDS];
+/**
+ * The garage on the south bank (garage.ts draws it; it's outside the core, so no drawing grid):
+ * the workshop building, the showroom turntable on the forecourt with your car on it, and the
+ * office door where its menu opens.
+ */
+export const GARAGE_SITE = {
+  building: [GARAGE.ox + 0.4, GARAGE.oz + 3.7, GARAGE.ox + 8.6, GARAGE.oz + 8.6, 2.9] as Box,
+  turntable: { x: GARAGE.ox + 2.9, z: GARAGE.oz + 1.85, r: 1.55 },
+  door: { x: GARAGE.ox + 7.4, z: GARAGE.oz + 3.1 },
+  tyres: { x: GARAGE.ox + 5.5, z: GARAGE.oz + 3.25 },
+};
+const T = GARAGE_SITE.turntable;
+const GARAGE_SOLIDS: Box[] = [
+  GARAGE_SITE.building,
+  [T.x - 1.45, T.z - 1.45, T.x + 1.45, T.z + 1.45, 1.1], // your car on the turntable
+  [GARAGE_SITE.tyres.x - 0.3, GARAGE_SITE.tyres.z - 0.3, GARAGE_SITE.tyres.x + 0.3, GARAGE_SITE.tyres.z + 0.3, 0.8],
+];
+export const SOLIDS: Box[] = [...DRAWN.map(designBox), ...GARAGE_SOLIDS, ...DUMMY_SOLIDS];
 /** What bullets stop on: everything solid except the dummies' footprints (they test their own shape) */
 export const SHOT_SOLIDS = SOLIDS.filter((b) => !DUMMY_SOLIDS.includes(b));
 

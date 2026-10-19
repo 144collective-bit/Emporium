@@ -19,7 +19,7 @@
  */
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { toon } from './kit';
+import { fx, toon } from './kit';
 
 export type CarId = 'hatch' | 'sedan' | 'coupe' | 'pickup' | 'van' | 'bus';
 type V2 = [number, number];
@@ -275,9 +275,6 @@ export const CARS: Record<CarId, CarSpec> = {
     },
   },
 };
-
-/** The cars a player can pick (the bus is for the city only) */
-export const PLAYER_CARS: CarId[] = ['hatch', 'sedan', 'coupe', 'pickup', 'van'];
 
 /* ---------- Building ---------- */
 
@@ -538,3 +535,67 @@ export function parkedCars(parent: THREE.Object3D, y: number, list: [CarId, numb
     }
   }
 }
+
+/**
+ * One car of your own (the garage's turntable, and the car you'll drive):
+ * its own paint, wheels that can turn and steer, and lights. Built facing +x
+ * with the origin on the ground under its middle, like the models.
+ */
+export function createCar(id: CarId, paint: string) {
+  const g = carGeometry(id, { wheels: false });
+  const s = g.spec;
+  const { detail } = carMaterials();
+  const group = new THREE.Group();
+  const paintMat = toon(paint);
+  const body = new THREE.Mesh(g.paint, paintMat);
+  const trim = new THREE.Mesh(g.detail, detail);
+  const wheelGeo = wheelGeometry(s);
+  const wheels = wheelSpots(s).map(([x, y, z]) => {
+    // A pivot per wheel: it steers (y) and rolls (z); the rim faces out
+    const pivot = new THREE.Group();
+    pivot.position.set(x, y, z);
+    const w = new THREE.Mesh(wheelGeo, detail);
+    if (z < 0) w.rotation.y = Math.PI;
+    pivot.add(w);
+    group.add(pivot);
+    return { pivot, mesh: w, front: x > 0 };
+  });
+  group.add(body, trim);
+  for (const m of [body, trim, ...wheels.map((w) => w.mesh)]) {
+    m.castShadow = true;
+    m.receiveShadow = true;
+  }
+  const lightGeo = new THREE.BoxGeometry(0.03, 0.08, 0.17);
+  const headMat = new THREE.MeshBasicMaterial({ color: '#fff6c8' });
+  const tailMat = new THREE.MeshBasicMaterial({ color: '#ff2b2b' });
+  for (const [list, mat] of [
+    [g.head, headMat],
+    [g.tail, tailMat],
+  ] as const)
+    for (const [x, y, z] of list) {
+      const l = new THREE.Mesh(lightGeo, mat);
+      l.position.set(x, y, z);
+      group.add(fx(l));
+    }
+  let roll = 0;
+  return {
+    group,
+    spec: s,
+    /** Roll the wheels by a distance travelled, and steer the front ones (radians) */
+    drive(dist: number, steer = 0) {
+      roll -= dist / s.r;
+      for (const w of wheels) {
+        w.mesh.rotation.z = w.mesh.rotation.y ? -roll : roll;
+        w.pivot.rotation.y = w.front ? steer : 0;
+      }
+    },
+    dispose() {
+      group.removeFromParent();
+      wheelGeo.dispose();
+      lightGeo.dispose();
+      headMat.dispose();
+      tailMat.dispose();
+    },
+  };
+}
+export type Car = ReturnType<typeof createCar>;

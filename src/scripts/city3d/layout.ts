@@ -58,6 +58,9 @@ export const SOUTH_ROAD = RIVER[1] + 2.3 + AVENUE_GAP / 2 - WALK_W; // 57
 /** Where the south row of districts starts */
 export const SOUTH_ROW = SOUTH_ROAD + AVENUE_GAP / 2; // 61.5
 
+/** The garage's lot on the south bank, east of the south row (S5), facing the south bank avenue */
+export const GARAGE = { ox: OUTER_HI + BS + 4, oz: SOUTH_ROW }; // 59-68 x 61.5-70.5
+
 /** Core streets between the core city's blocks (they get traffic lights where they cross) */
 export const CORE_ROADS = [BLOCKS[0] + BS + STREET_GAP / 2, BLOCKS[1] + BS + STREET_GAP / 2]; // 11.5, 25.5
 

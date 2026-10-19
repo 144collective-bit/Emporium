@@ -11,6 +11,8 @@ import { CENTER, buildGround, buildLamps, buildSkyline, buildTrees, puddleMat, s
 import { buildLandmarks, type Spot } from './landmarks';
 import { buildLife, walker } from './life';
 import { createWalk } from './walk';
+import { buildGarage } from './garage';
+import { loadCar } from './garage-ui';
 import { createProfileUI } from './profile-ui';
 import { createMultiplayer } from './multiplayer';
 import { createSky, type TimeMode, type WeatherMode } from './sky';
@@ -91,6 +93,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   progress(0.3);
   await nextFrame();
   const { spots, crowd } = buildLandmarks(scene, { degen, logo, tick, low: tier === 'low' });
+  // The garage on the south bank, your saved car on its turntable
+  const garage = buildGarage(scene, { tick, reduced, car: loadCar() });
   const plots = createPlots(scene, { degen, tick, reduced });
   progress(0.55);
   await nextFrame();
@@ -298,6 +302,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     tick,
     // The sound engine is made further down; shots only happen once it exists
     sfx: (kind, gain) => sound.sfx(kind, gain),
+    garage,
   });
   // The Profile panel (wardrobe, finish, rank) works offline; multiplayer only when the site has a game server
   const profileUI = createProfileUI(root, {

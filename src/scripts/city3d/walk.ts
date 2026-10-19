@@ -11,6 +11,8 @@
  *   shoulder, pulled in when a building or the ground is in the way. Wider
  *   field of view when running; hold the right mouse button to aim.
  * - A solid world, kerbs, door prompts that open a building's panel.
+ * - The garage office door opens the garage menu: the camera swings round to
+ *   the showroom turntable while you pick your car.
  */
 import * as THREE from 'three';
 import type { SpotId } from '../../lib/city';
@@ -18,9 +20,11 @@ import { PLAYER, airPose, createDegen, emotePose, walkPose, type Outfit } from '
 import { createCombat, type Sfx } from './combat';
 import { WEAPON_IDS } from './combat-sim';
 import { createGunShop } from './gunshop';
-import { CAMERA_ONLY, RACK, SOLIDS, rayBoxes, type Box } from './solids';
+import { createGarageUI } from './garage-ui';
+import type { Garage } from './garage';
+import { CAMERA_ONLY, GARAGE_SITE, RACK, SOLIDS, rayBoxes, type Box } from './solids';
 import { DISTRICTS, BLOCKS, BS, NS_ROADS, RIVER, SLAB, WALK_W, type Tick } from './world';
-import { design } from './layout';
+import { GARAGE, design } from './layout';
 
 /** Where you can step in, and what opens there (drawn on the landmarks' grid, moved onto today's streets) */
 const DOORS: { id: SpotId; x: number; z: number }[] = (
@@ -47,8 +51,8 @@ const JUMP = 3.9;
 const GRAVITY = 11.5;
 const SCALE = 0.85;
 const BOUNDS = [-34, -34, 74, 82];
-/** Blocks and districts with their sidewalks: the raised ground */
-const slabs: Box[] = [...BLOCKS.flatMap((x) => BLOCKS.map((z) => [x, z] as const)), ...DISTRICTS.map((d) => [d.ox, d.oz] as const)].map(([x, z]): Box => [x - WALK_W, z - WALK_W, x + BS + WALK_W, z + BS + WALK_W, 0]);
+/** Blocks, districts and the garage's lot with their sidewalks: the raised ground */
+const slabs: Box[] = [...BLOCKS.flatMap((x) => BLOCKS.map((z) => [x, z] as const)), ...DISTRICTS.map((d) => [d.ox, d.oz] as const), [GARAGE.ox, GARAGE.oz] as const].map(([x, z]): Box => [x - WALK_W, z - WALK_W, x + BS + WALK_W, z + BS + WALK_W, 0]);
 const inBox = (b: Box, x: number, z: number, pad = 0) => x > b[0] - pad && x < b[2] + pad && z > b[1] - pad && z < b[3] + pad;
 const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
 const damp = (k: number, dt: number) => 1 - Math.exp(-k * dt);
@@ -90,6 +94,8 @@ export interface WalkDeps {
   touched(): void;
   tick(f: Tick): void;
   sfx(kind: Sfx, gain?: number): void;
+  /** The garage on the south bank (its turntable shows the car being picked) */
+  garage: Garage;
 }
 
 export function createWalk(d: WalkDeps) {
@@ -179,10 +185,11 @@ export function createWalk(d: WalkDeps) {
   const keys = new Set<string>();
   const joy = { x: 0, y: 0, id: -1 };
   const pad = { x: 0, y: 0, run: false, prev: [] as boolean[] };
-  let near: { id: SpotId | 'gear'; label: string } | null = null;
+  let near: { id: SpotId | 'gear' | 'garage'; label: string } | null = null;
   const act = () => {
     if (!near) return;
     if (near.id === 'gear') shop.show();
+    else if (near.id === 'garage') garageUI.show();
     else openSpot(near.id);
   };
 
@@ -250,6 +257,34 @@ export function createWalk(d: WalkDeps) {
     onClose: () => canvas.focus({ preventScroll: true }),
   });
   combat.onLifetime(() => shop.refresh());
+  // The garage menu: like the store it frees the mouse and pauses walking; the camera goes to the
+  // turntable (from over the shoulder, so the first-person hands stay out of the shot)
+  let fpBeforeGarage = false;
+  const garageUI = createGarageUI(root, {
+    preview: (c) => d.garage.show(c),
+    keep: (c) => d.garage.show(c),
+    onOpen() {
+      keys.clear();
+      jumpHeld = false;
+      vel.set(0, 0);
+      setAim(false);
+      combat.trigger(false);
+      combat.trigger(false, true);
+      if (document.pointerLockElement === canvas) document.exitPointerLock();
+      fpBeforeGarage = firstPerson;
+      if (firstPerson) setFirstPerson(false);
+      d.garage.spin(true);
+    },
+    onClose() {
+      d.garage.spin(false);
+      if (fpBeforeGarage) setFirstPerson(true);
+      canvas.focus({ preventScroll: true });
+    },
+  });
+  /** How far the camera has swung over to the showroom (0..1) */
+  let showroom = 0;
+  const showEye = new THREE.Vector3();
+  let viewShifted = false;
   hero.torso.add(combat.gun);
   let aimAmt = 0;
   let armAmt = 0;
@@ -287,9 +322,9 @@ export function createWalk(d: WalkDeps) {
   function onKey(e: KeyboardEvent, down: boolean) {
     if (!active || (e.target as HTMLElement).matches?.('input, select, textarea')) return false;
     const c = e.code;
-    // While the store is open, E closes it and walking keys wait
-    if (shop.open) {
-      if (down && !e.repeat && c === 'KeyE') shop.close();
+    // While the store or the garage is open, E closes it and walking keys wait
+    if (shop.open || garageUI.open) {
+      if (down && !e.repeat && c === 'KeyE') (shop.open ? shop.close() : garageUI.close());
       return false;
     }
     if (down && c === 'KeyE' && near) act();
@@ -519,6 +554,18 @@ export function createWalk(d: WalkDeps) {
       pad.prev = b;
       return;
     }
+    // The garage: D-pad left / right picks the model, up / down the paint, A keeps it
+    if (garageUI.open) {
+      if (edge(14)) garageUI.step(-1);
+      if (edge(15)) garageUI.step(1);
+      if (edge(12)) garageUI.stepPaint(-1);
+      if (edge(13)) garageUI.stepPaint(1);
+      if (edge(0)) garageUI.keep();
+      if (edge(1) || edge(3)) garageUI.close();
+      pad.x = pad.y = 0;
+      pad.prev = b;
+      return;
+    }
     if (edge(0)) tryJump();
     jumpHeld = jumpHeld || b[0] || false;
     if (!b[0] && pad.prev[0]) jumpHeld = false;
@@ -543,6 +590,46 @@ export function createWalk(d: WalkDeps) {
   const pivotWant = new THREE.Vector3();
   const view = new THREE.Vector3();
   const lookAt = new THREE.Vector3();
+
+  /**
+   * The garage's showroom shot: while its menu is open the camera eases over to look at the
+   * turntable, and the picture slides so the car sits in the space the panel leaves free (left of
+   * it on wide screens, above the bottom sheet on phones).
+   */
+  function frameShowroom(dt: number) {
+    showroom += ((garageUI.open ? 1 : 0) - showroom) * damp(garageUI.open ? 3.5 : 6, dt);
+    if (showroom < 0.003) {
+      showroom = 0;
+      if (viewShifted) {
+        camera.clearViewOffset();
+        viewShifted = false;
+      }
+      return;
+    }
+    const s = showroom * showroom * (3 - 2 * showroom);
+    const v = d.garage.view;
+    // Upright screens see less across: step back so the whole car fits
+    const back = THREE.MathUtils.clamp(1.15 / camera.aspect, 1, 1.9);
+    camera.position.lerp(showEye.copy(v.eye).sub(v.at).multiplyScalar(back).add(v.at), s);
+    lookAt.lerp(v.at, s);
+    camera.lookAt(lookAt);
+    hero.g.visible = true;
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    const c = canvas.getBoundingClientRect();
+    const r = garageUI.panel.getBoundingClientRect();
+    let ox = 0;
+    let oy = 0;
+    if (r.width && r.height && w && h) {
+      if (r.top - c.top > h * 0.3) {
+        // Bottom sheet: centre the car between the header and the sheet
+        const head = root.querySelector('.city-head')?.getBoundingClientRect().bottom ?? c.top;
+        oy = h / 2 - (Math.max(0, head - c.top) + (r.top - c.top)) / 2;
+      } else ox = w / 2 - Math.max(0, r.left - c.left) / 2;
+    }
+    camera.setViewOffset(w, h, ox * s, oy * s, w, h);
+    viewShifted = true;
+  }
 
   function update(dt: number, t: number) {
     if (!active) return;
@@ -675,6 +762,7 @@ export function createWalk(d: WalkDeps) {
     lookAt.copy(camera.position).sub(view);
     camera.lookAt(lookAt);
     hero.g.visible = !firstPerson && camDist > 0.6;
+    frameShowroom(dt);
     hero.ring.visible = !firstPerson;
     combat.view(dt, t, { firstPerson, aim: aimNow, move: stride, phase, run: runAmt, air });
 
@@ -687,7 +775,7 @@ export function createWalk(d: WalkDeps) {
     }
 
     // Door prompts, and the Armoury's gun store counter
-    let best: { id: SpotId | 'gear'; label: string } | null = null;
+    let best: { id: SpotId | 'gear' | 'garage'; label: string } | null = null;
     let bestD = 1.7;
     const atCounter = Math.hypot(RACK.x - pos.x, RACK.z - pos.z);
     if (atCounter < 1.1) {
@@ -695,6 +783,10 @@ export function createWalk(d: WalkDeps) {
       bestD = 0;
     }
     if (shop.open && atCounter > 2) shop.close();
+    if (Math.hypot(GARAGE_SITE.door.x - pos.x, GARAGE_SITE.door.z - pos.z) < 1.3) {
+      best = { id: 'garage', label: 'Garage' };
+      bestD = 0;
+    }
     for (const door of DOORS) {
       const dd = Math.hypot(door.x - pos.x, door.z - pos.z);
       if (dd < bestD) {
@@ -705,7 +797,7 @@ export function createWalk(d: WalkDeps) {
     if (best?.id !== near?.id) {
       near = best;
       prompt.hidden = !near;
-      if (near) prompt.querySelector('[data-walk-label]')!.textContent = near.id === 'gear' ? near.label : `Enter ${near.label}`;
+      if (near) prompt.querySelector('[data-walk-label]')!.textContent = near.id === 'gear' || near.id === 'garage' ? near.label : `Enter ${near.label}`;
     }
   }
 
@@ -774,6 +866,7 @@ export function createWalk(d: WalkDeps) {
       jumpHeld = mouseL = mouseR = false;
       setAim(false);
       shop.close();
+      garageUI.close();
       combat.exit();
       joy.id = -1;
       joy.x = joy.y = 0;
@@ -786,9 +879,9 @@ export function createWalk(d: WalkDeps) {
       camera.updateProjectionMatrix();
       root.dataset.mode = 'explore';
     },
-    /** Esc: close the gun store if it's open (true if it was) */
+    /** Esc: close the gun store or the garage if one is open (true if it was) */
     closeShop() {
-      return shop.close();
+      return shop.close() || garageUI.close();
     },
     /** True if Esc was used to free the mouse (so it shouldn't also stop walking). */
     releaseMouse() {

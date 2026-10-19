@@ -379,6 +379,32 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       </div>
       <p class="shop-foot">For fun only: guns unlock with your score, nothing is sold. Finishes are in Profile.</p>
     </section>
+    {/* The garage on the south bank (garage-ui.ts): pick your car and its paint. Cars are free; nothing is sold. */}
+    <section class="shop garage" data-garage hidden aria-labelledby="garage-title">
+      <header class="shop-head">
+        <h2 id="garage-title" class="shop-title">Garage</h2>
+        <button type="button" class="shop-close" data-garage-close aria-label="Close the garage">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+        </button>
+      </header>
+      <div class="shop-list garage-list" data-garage-list role="listbox" aria-label="Cars"></div>
+      <div class="shop-detail">
+        <div class="shop-name-row">
+          <h3 class="shop-name" data-garage-name>City Hatch</h3>
+          <p class="shop-mode" data-garage-kind></p>
+        </div>
+        <p class="shop-blurb" data-garage-blurb></p>
+        <dl class="shop-stats garage-stats">
+          <div data-car-stat="speed"><dt>Top speed</dt><dd><i></i></dd></div>
+          <div data-car-stat="accel"><dt>Pick-up</dt><dd><i></i></dd></div>
+          <div data-car-stat="grip"><dt>Grip</dt><dd><i></i></dd></div>
+        </dl>
+        <p class="garage-paint-head">Paint <span data-garage-paint-name></span></p>
+        <div class="garage-paints" data-garage-paints role="radiogroup" aria-label="Paint"></div>
+        <button type="button" class="shop-take" data-garage-keep>Keep this one</button>
+      </div>
+      <p class="shop-foot">For fun only: cars are free and just for the city, nothing is sold.</p>
+    </section>
     <p class="walk-hint"><kbd>WASD</kbd> move · <kbd>Shift</kbd> run · <kbd>Space</kbd> jump · <kbd>V</kbd> camera · <kbd>Esc</kbd> stop</p>
     <div class="walk-stick" data-walk-stick aria-hidden="true"><span></span></div>
     <button type="button" class="walk-run" data-walk-run aria-pressed="false">Run</button>
