@@ -133,17 +133,17 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
 
     if (!rec) {
       const w = store.wallet;
-      const short = w && w.balance < p.price;
+      const short = w && w.balance < store.price;
       const action = !store.open
         ? `<button type="button" class="btn-pulse" disabled>Sales open soon</button>`
         : w
-          ? `<button type="button" class="btn-pulse" data-buy ${short ? 'disabled' : ''}>Buy for ${pls(p.price)}</button>`
+          ? `<button type="button" class="btn-pulse" data-buy ${short ? 'disabled' : ''}>Buy for ${pls(store.price)}</button>`
           : `<button type="button" class="btn-pulse" data-connect ${connecting ? 'disabled' : ''}>${connecting ? 'Connecting…' : live ? 'Connect wallet to buy' : 'Connect demo wallet to buy'}</button>`;
       body.innerHTML = `${head}
         <span class="tag">For sale</span>
         <dl class="plot-facts">
           <div><dt>Size</dt><dd>One large plot<small>All 9 squares of ${esc(p.districtName)} in one</small></dd></div>
-          <div><dt>Price</dt><dd>${pls(p.price)}${live ? '' : '<small>Demo: play money</small>'}</dd></div>
+          <div><dt>Price</dt><dd>${pls(store.price)}${live ? '' : '<small>Demo: play money</small>'}</dd></div>
           ${live && store.network ? `<div><dt>Network</dt><dd>${esc(store.network.name)}${store.network.testnet ? '<small>Test PLS, no real value</small>' : ''}</dd></div>` : ''}
         </dl>
         <div class="city-panel-actions">${action}</div>
@@ -286,9 +286,9 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
         <p class="kicker"><span class="kicker-num">Demo</span> Simulated purchase</p>
         <h2 class="city-panel-title" id="buy-title">Buy plot ${esc(p.id)}?</h2>
         <dl class="plot-facts">
-          <div><dt>Price</dt><dd>${pls(p.price)}</dd></div>
+          <div><dt>Price</dt><dd>${pls(store.price)}</dd></div>
           <div><dt>Demo wallet</dt><dd>${pls(w.balance)}</dd></div>
-          <div><dt>After</dt><dd>${pls(w.balance - p.price)}</dd></div>
+          <div><dt>After</dt><dd>${pls(w.balance - store.price)}</dd></div>
         </dl>
         <p class="city-panel-fine">Nothing is charged and nothing touches PulseChain.</p>
         <div class="city-panel-actions">
@@ -302,7 +302,7 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
       <p class="kicker"><span class="kicker-num">${esc(net.short)}</span> Buy a plot</p>
       <h2 class="city-panel-title" id="buy-title">Buy plot ${esc(p.id)}?</h2>
       <dl class="plot-facts">
-        <div><dt>Price</dt><dd>${pls(p.price)}<small>plus a little gas</small></dd></div>
+        <div><dt>Price</dt><dd>${pls(store.price)}<small>plus a little gas</small></dd></div>
         <div><dt>Pays to</dt><dd>${shortAddr(store.payee ?? '')}<small>The Degen City wallet</small></dd></div>
         <div><dt>Network</dt><dd>${esc(net.name)}${net.testnet ? '<small>Test PLS, no real value</small>' : ''}</dd></div>
         <div><dt>Your wallet</dt><dd>${pls(w.balance)}</dd></div>

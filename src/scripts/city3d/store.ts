@@ -9,7 +9,7 @@
  *   transaction hash, the balance is play money, and it all lives in this
  *   browser's localStorage. Keep it labelled as a demo.
  */
-import { DEMO_WALLET_START } from '../../data/plots';
+import { DEMO_WALLET_START, PLOT_PRICE } from '../../data/plots';
 import type { Design, Plot, PlotState } from './plots';
 
 export interface Wallet {
@@ -49,6 +49,8 @@ export interface Store {
   readonly open: boolean;
   /** The owner's wallet that payments go to (live) */
   readonly payee: string | null;
+  /** Price of a plot in whole PLS (live: the game server's price, the one that's charged) */
+  readonly price: number;
   /** Confirmations a payment needs (live) */
   readonly confirmations: number;
   readonly wallet: Wallet | null;
@@ -115,6 +117,7 @@ export function createDemoStore(): Store {
     network: null,
     open: true,
     payee: null,
+    price: PLOT_PRICE,
     confirmations: 0,
     get wallet() {
       return state.wallet;

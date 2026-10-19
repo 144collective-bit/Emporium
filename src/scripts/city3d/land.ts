@@ -190,6 +190,9 @@ export function createLandStore(server: string): Store {
     get payee() {
       return land?.payee ?? null;
     },
+    get price() {
+      return Number(land?.price ?? PLOT_PRICE);
+    },
     get confirmations() {
       return land?.confirmations ?? 3;
     },
