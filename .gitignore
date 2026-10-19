@@ -11,3 +11,6 @@ scratch/
 
 # Cloudflare dev state
 .wrangler/
+
+# Built site zips (download from the "Build site" Action instead)
+*.zip
