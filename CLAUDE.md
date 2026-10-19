@@ -48,6 +48,10 @@ it and has been retired completely. Build only on what's here.
   loop (each tab switch another) and the frame rate sinks. 120/144 Hz screens
   draw every other refresh (steady 60-72fps), and nothing is drawn while the
   city is scrolled out of view.
+- `?fps` in the address shows a performance readout (`.city-stats`, built in
+  `index.ts`): fps, slowest frame, draw calls and triangles per frame, quality
+  tier, pixel ratio and any quality stepped down. Use it on real devices
+  before and after changes; it's invisible without the parameter.
 - The Emporium arcade tower (`emporium()` in `landmarks.ts`, and in
   `city.ts` for the 2D map) is the centrepiece: keep it the tallest, most
   detailed building. Its LED wall shows (`drawWall`), pixel font, ticker and

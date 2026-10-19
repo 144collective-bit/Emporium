@@ -224,6 +224,13 @@ The game server is in `server/` (Cloudflare); see `server/README.md` for
 setup. The plan for the next phases (leaderboards, PvP across the river) is
 in `docs/multiplayer-plan.md`.
 
+### Checking performance
+
+Add `?fps` to the address (for example `https://degenemporium.com/?fps`) to
+show a small readout in the corner of the city: frames a second, the slowest
+frame, draw calls and triangles per frame, the quality tier and anything
+stepped down. Nobody sees it without `?fps`.
+
 ### City builder: buy a plot, build on it
 
 Press **Build** in the header to switch to build mode. Each of the 11 districts

@@ -486,6 +486,16 @@ export async function bootCity(root: HTMLElement) {
   let refresh = 1 / 60;
   let lastRaf = 0;
   let tickN = 0;
+  // ?fps in the address: a small readout for checking performance on real devices
+  // (frames a second, the slowest frame, draw calls and triangles per frame)
+  const statsEl = new URLSearchParams(location.search).has('fps') ? document.createElement('pre') : null;
+  const stat = { frames: 0, draws: 0, tris: 0, worst: 0, last: 0, since: performance.now() };
+  if (statsEl) {
+    statsEl.className = 'city-stats';
+    statsEl.setAttribute('aria-hidden', 'true');
+    host.append(statsEl);
+    renderer.info.autoReset = false;
+  }
   // Nothing to draw while the city is scrolled out of view
   let onScreen = true;
   new IntersectionObserver(([e]) => (onScreen = e.isIntersecting)).observe(host);
@@ -640,8 +650,29 @@ export async function bootCity(root: HTMLElement) {
     sound.update(s.rain, s.night, 1 - THREE.MathUtils.smoothstep(dE, 8, 36));
 
     if (!reduced || dirty || flight) {
+      if (statsEl) renderer.info.reset();
       post.render();
       dirty = false;
+      if (statsEl) {
+        stat.draws += renderer.info.render.calls;
+        stat.tris += renderer.info.render.triangles;
+      }
+    }
+    if (statsEl) {
+      const now = performance.now();
+      if (stat.last) stat.worst = Math.max(stat.worst, now - stat.last);
+      stat.last = now;
+      stat.frames++;
+      if (now - stat.since >= 1000) {
+        const n = Math.max(1, stat.frames);
+        const lost = Object.entries(lowered).filter(([, v]) => v).map(([k]) => k);
+        statsEl.textContent = [
+          `${Math.round((stat.frames * 1000) / (now - stat.since))} fps · slowest ${Math.round(stat.worst)} ms`,
+          `${Math.round(stat.draws / n)} draws · ${(stat.tris / n / 1e6).toFixed(2)}M tris`,
+          `${tier} · px ${renderer.getPixelRatio().toFixed(2)}${lost.length ? ` · lowered: ${lost.join(', ')}` : ''}`,
+        ].join('\n');
+        Object.assign(stat, { frames: 0, draws: 0, tris: 0, worst: 0, since: now });
+      }
     }
 
     frames++;
