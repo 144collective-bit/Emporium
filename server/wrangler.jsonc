@@ -24,8 +24,8 @@
     // Switching network starts a fresh list of owners; testnet sales never carry over.
     "LAND_CHAIN_ID": "943",
     // The owner's PulseChain wallet that plot payments go to (public address only).
-    // Sales stay closed ("opening soon") while this is empty.
-    "LAND_PAYEE": "",
+    // Sales stay closed ("opening soon") while this is empty. Set by the owner: the dev wallet.
+    "LAND_PAYEE": "0x952d534E0bD812084668B841b7DEcA87FEF63dcA",
     "LAND_PRICE_PLS": "20000000",
     "LAND_CONFIRMATIONS": "3"
   },
