@@ -323,12 +323,20 @@ export async function bootCity(root: HTMLElement) {
   walkBtn.hidden = false;
   root.querySelector('[data-walk-exit]')?.addEventListener('click', () => stopWalking());
 
+  // Esc closes an open walk panel (Controls, Profile, Online, Emotes) before it stops the walk
+  const closePop = () => {
+    const open = root.querySelector<HTMLDetailsElement>('[data-pop][open]');
+    if (!open) return false;
+    open.open = false;
+    open.querySelector('summary')?.focus({ preventScroll: true });
+    return true;
+  };
   // On the document, not the city: re-rendered panels drop focus back to <body>
   document.addEventListener('keydown', (e) => {
     if (root.dataset.view !== '3d') return;
     if (walking) {
       if (e.key === 'Escape') {
-        if (walk.closeShop() || walk.releaseMouse()) return;
+        if (walk.closeShop() || walk.releaseMouse() || closePop()) return;
         active ? close() : stopWalking();
       }
       else if (!active) walk.onKey(e, true);
@@ -455,6 +463,19 @@ export async function bootCity(root: HTMLElement) {
     });
   measurePins();
   new ResizeObserver(measurePins).observe(host);
+  // The city's own buttons and cards: a label under one folds to a dot, so the
+  // Walk / Build pills never sit on top of a building's name. Re-read a few
+  // times a second (they open, close and move with the layout)
+  const chrome = [...root.querySelectorAll<HTMLElement>('.city-modes, .city-controls, .city-card, .city-dir')];
+  const chromeRects: { x: number; y: number; w: number; h: number }[] = [];
+  const readChrome = () => {
+    const o = host.getBoundingClientRect();
+    chromeRects.length = 0;
+    for (const el of chrome) {
+      const r = el.getBoundingClientRect();
+      if (r.width && r.height && el.offsetParent) chromeRects.push({ x: r.left - o.left, y: r.top - o.top, w: r.width, h: r.height });
+    }
+  };
 
   function frame() {
     if (!running) return;
@@ -547,11 +568,18 @@ export async function bootCity(root: HTMLElement) {
     // Declutter: the hovered pin and nearer pins win; a label that would
     // overlap one already placed folds to a dot (still tappable)
     pinState.sort((a, b) => a.rank - b.rank);
+    if (frames % 20 === 0) readChrome();
     placed.length = 0;
     for (const p of pinState) {
       const [pw, ph] = pinSize.get(p.id) ?? [120, 40];
       const r = { x: p.x - (pw * p.scale) / 2, y: p.y - 12 - ph * p.scale, w: pw * p.scale, h: ph * p.scale };
-      const clash = p.rank >= 0 && placed.some((o) => r.x < o.x + o.w + 6 && r.x + r.w + 6 > o.x && r.y < o.y + o.h + 4 && r.y + r.h + 4 > o.y);
+      // Labels near the edge slide back on screen; the stem still points at the building
+      const room = Math.max(0, r.w / 2 - 12);
+      const dx = THREE.MathUtils.clamp(Math.max(0, 8 - r.x) - Math.max(0, r.x + r.w - (w - 8)), -room, room);
+      r.x += dx;
+      p.el.style.setProperty('--dx', `${dx.toFixed(1)}px`);
+      const hit = (o: { x: number; y: number; w: number; h: number }) => r.x < o.x + o.w + 6 && r.x + r.w + 6 > o.x && r.y < o.y + o.h + 4 && r.y + r.h + 4 > o.y;
+      const clash = p.rank >= 0 && (placed.some(hit) || chromeRects.some(hit));
       p.el.classList.toggle('is-dot', clash);
       if (!clash) placed.push(r);
     }

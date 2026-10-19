@@ -8,7 +8,7 @@
  * at the origin. No real-world makes or markings.
  */
 import * as THREE from 'three';
-import { PAL, canvasTex, fx, lit, toon } from './kit';
+import { PAL, canvasTex, fx, lit, toon, unlit } from './kit';
 import type { SkinId } from '../net/profile-data';
 import type { WeaponId } from './combat-sim';
 
@@ -390,8 +390,14 @@ export function buildGun(id: WeaponId, skin: SkinId, opts: { sight?: boolean; sh
       for (const m of Object.values(mats)) m.emissive.setRGB(k * 0.55, k * 0.42, k * 0.2);
     },
     dispose() {
-      for (const m of meshes) m.geometry.dispose();
-      for (const m of Object.values(mats)) m.dispose();
+      // Its own materials: the finish set, the neon accent, and the sight's glass, reticle or lens
+      const own = new Set<THREE.Material>([...Object.values(mats), neonAccent]);
+      for (const m of meshes) {
+        m.geometry.dispose();
+        own.add(m.material as THREE.Material);
+      }
+      unlit(neonAccent);
+      for (const m of own) m.dispose();
     },
   };
 }

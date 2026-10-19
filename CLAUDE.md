@@ -72,6 +72,9 @@ it and has been retired completely. Build only on what's here.
 - Floating cut-out signs (FX layer with a transparent texture, like the roof
   logo) need `occlude()` from `kit.ts`, or the ink outlines of whatever is
   behind them get drawn across them.
+- 3D pin labels stay on screen and fold to dots where they'd sit under the
+  city's own buttons and cards (`chrome` in `index.ts`); add any new
+  always-visible city overlay to that list.
 - The comic-window layout in `src/components/ComicPage.astro` is the design.
   Each window is defined by its ink outline; keep content inside the slants.
 - Palette is the PulseChain gradient. Follow `brand/README.md`: gradient for

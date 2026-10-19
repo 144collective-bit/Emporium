@@ -126,6 +126,7 @@ export function createRemotes(scene: THREE.Scene, camera: THREE.PerspectiveCamer
     remove(id: number) {
       const r = players.get(id);
       if (!r) return;
+      r.gun.dispose();
       dropFigure(r);
       r.tag.remove();
       players.delete(id);

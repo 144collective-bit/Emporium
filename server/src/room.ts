@@ -44,6 +44,8 @@ import type { Profile } from './profile';
 const LOOP_HZ = 30;
 /** Silent this long: left out of snapshots, and free to reappear anywhere */
 const AWAY = 3000;
+/** No controls for this long (hidden tab, rejected move): the trigger is let go */
+const INPUT_STALE = 250;
 const IDLE_KICK = 90_000;
 
 interface Player {
@@ -63,6 +65,8 @@ interface Player {
   /** Points earned but not saved yet */
   owed: number;
   next: Record<string, number>;
+  /** The latest request that came in too soon, applied when its window ends */
+  later: Record<string, () => void>;
   msgs: number;
   msgWindow: number;
   fixAt: number;
@@ -143,20 +147,12 @@ export class Room extends DurableObject<Env> {
       return null;
     }
     const key = await sha256(msg.token);
-    // The same person joining again (a second tab, a reconnect): the old connection goes
-    for (const p of this.players.values()) {
-      if (p.key !== key) continue;
-      p.ws.close(4001, 'Joined again');
-      this.leave(p);
-    }
-    if (this.players.size >= ROOM_SIZE) {
-      send(ws, { t: 'full' });
-      ws.close(4005, 'Full');
-      return null;
-    }
+    if (!this.makeRoom(ws, key)) return null;
     const profile = this.env.PROFILES.get(this.env.PROFILES.idFromName(key));
     const me = (await profile.open(msg.local)) as OwnProfile;
     if (ws.readyState !== 1) return null;
+    // Checked again: someone (or this same person in another tab) may have joined while the profile loaded
+    if (!this.makeRoom(ws, key)) return null;
     let id = 1;
     while (this.players.has(id)) id++;
     const now = Date.now();
@@ -175,6 +171,7 @@ export class Room extends DurableObject<Env> {
       joinedAt: now,
       owed: 0,
       next: {},
+      later: {},
       msgs: 0,
       msgWindow: now,
       fixAt: 0,
@@ -187,6 +184,19 @@ export class Room extends DurableObject<Env> {
     this.report();
     this.start();
     return p;
+  }
+
+  /** The same person joining again (a second tab, a reconnect): the old connection goes. False if the room is full. */
+  private makeRoom(ws: WebSocket, key: string) {
+    for (const p of this.players.values()) {
+      if (p.key !== key) continue;
+      p.ws.close(4001, 'Joined again');
+      this.leave(p);
+    }
+    if (this.players.size < ROOM_SIZE) return true;
+    send(ws, { t: 'full' });
+    ws.close(4005, 'Full');
+    return false;
   }
 
   private leave(p: Player) {
@@ -217,8 +227,17 @@ export class Room extends DurableObject<Env> {
     p.next[kind] = now + ms;
     return true;
   }
+  /** Like allow(), but a request that comes too soon isn't lost: the latest one runs when the window ends */
+  private soon(p: Player, kind: string, ms: number, run: () => void) {
+    if (this.allow(p, kind, ms)) {
+      delete p.later[kind];
+      run();
+    } else p.later[kind] = () => this.soon(p, kind, ms, run);
+  }
 
   private onMessage(p: Player, m: ClientMsg) {
+    // A late message from a connection that has already left (idle, joined again)
+    if (this.players.get(p.id) !== p) return;
     const now = Date.now();
     if (now - p.msgWindow > 1000) {
       p.msgWindow = now;
@@ -238,10 +257,13 @@ export class Room extends DurableObject<Env> {
         if (Math.hypot(p.pos.x - RACK.x, p.pos.z - RACK.z) > RACK_REACH || !weaponUnlocked(m.w, p.me.total)) break;
         const changed = this.sim.players.get(id)?.weapon !== m.w;
         this.sim.equip(id, m.w as WeaponId);
-        if (changed && this.allow(p, 'weapon', 300)) {
-          this.broadcast({ t: 'info', p: this.info(p) }, p.id);
-          p.profile.setWeapon(m.w).catch(() => {});
-        }
+        if (changed)
+          this.soon(p, 'weapon', 300, () => {
+            const w = this.sim.players.get(id)?.weapon;
+            if (!w) return;
+            this.broadcast({ t: 'info', p: this.info(p) }, p.id);
+            p.profile.setWeapon(w).catch(() => {});
+          });
         break;
       }
       case 'arm':
@@ -257,10 +279,10 @@ export class Room extends DurableObject<Env> {
         if (Number.isInteger(m.i) && m.i >= 0 && m.i < PHRASES.length && this.allow(p, 'chat', 1200)) this.broadcast({ t: 'say', id: p.id, i: m.i }, p.id);
         break;
       case 'look':
-        if (this.allow(p, 'look', 400)) this.changed(p, p.profile.setLook(m.look) as Promise<OwnProfile>);
+        this.soon(p, 'look', 400, () => this.changed(p, p.profile.setLook(m.look) as Promise<OwnProfile>));
         break;
       case 'skin':
-        if (this.allow(p, 'look', 400)) this.changed(p, p.profile.setSkin(m.skin) as Promise<OwnProfile>);
+        this.soon(p, 'skin', 400, () => this.changed(p, p.profile.setSkin(m.skin) as Promise<OwnProfile>));
         break;
       case 'rename':
         if (this.allow(p, 'rename', 2500)) this.changed(p, p.profile.rename() as Promise<OwnProfile>);
@@ -327,6 +349,13 @@ export class Room extends DurableObject<Env> {
 
   private step() {
     const now = Date.now();
+    for (const p of this.players.values()) {
+      if (now - p.posAt > INPUT_STALE) {
+        const s = this.sim.players.get(String(p.id));
+        if (s) s.input.fire = false;
+      }
+      for (const kind in p.later) if ((p.next[kind] ?? 0) <= now) p.later[kind]();
+    }
     this.sim.advance((now - this.last) / 1000);
     this.last = now;
     const out: NetEvent[] = [];

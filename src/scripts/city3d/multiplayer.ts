@@ -21,6 +21,8 @@ import type { Combat } from './combat';
 import type { ProfileUI } from './profile-ui';
 import { createRemotes } from './remote';
 
+const r4 = (n: number) => Math.round(n * 10000) / 10000;
+
 interface Walker {
   readonly active: boolean;
   netState(): { pos: THREE.Vector3; face: number; pitch: number; speed: number; air: boolean; run: boolean; aim: boolean };
@@ -265,7 +267,7 @@ export function createMultiplayer(d: MultiplayerDeps) {
       const fl =
         (combat.armed ? FLAG.armed : 0) |
         (s.aim ? FLAG.aim : 0) |
-        (combat.armed && combat.firing ? FLAG.fire : 0) |
+        (combat.takePull() && combat.armed ? FLAG.fire : 0) |
         (s.run ? FLAG.run : 0) |
         (s.air ? FLAG.air : 0) |
         (combat.reloading > 0 ? FLAG.reload : 0) |
@@ -278,7 +280,8 @@ export function createMultiplayer(d: MultiplayerDeps) {
         s: Math.round(s.speed * 100) / 100,
         fl,
         o: v3(camera.position),
-        d: v3(dir),
+        // Finer than positions: 0.01 off would turn a scoped hit at 40 m into a miss
+        d: [r4(dir.x), r4(dir.y), r4(dir.z)],
         pt: Math.round(combat.poseNow * 1000) / 1000,
       });
     },

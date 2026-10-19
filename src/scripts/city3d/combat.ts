@@ -221,6 +221,17 @@ export function createCombat(d: CombatDeps) {
   let sim = createSim({ ground: d.ground, rayWorld: d.rayWorld });
   let me = sim.addPlayer(ME);
   let net: { send(m: ClientMsg): void } | null = null;
+  /**
+   * Online: after we gear up, swap or holster, snapshots the server sent
+   * before it heard us still show the old gun. Keep our own state until a
+   * snapshot agrees (or a second passes and the server's word wins).
+   */
+  let held: { until: number; weapon: WeaponId; armed: boolean } | null = null;
+  /** Online: the server's drone clock at the last snapshot */
+  let serverPose: { pt: number; at: number } | null = null;
+  const hold = () => {
+    if (net) held = { until: performance.now() + 1000, weapon: me.weapon, armed: me.armed };
+  };
   /** Multiplayer: the profile on the server (lifetime score and finish) instead of this browser's */
   let netProfile: { total: number; skin: SkinId; weapon: WeaponId } | null = null;
   let requestSkin: ((id: SkinId) => void) | null = null;
@@ -271,6 +282,8 @@ export function createCombat(d: CombatDeps) {
 
   let trigger = false;
   let touchFire = false;
+  /** Online: a trigger pull since the last controls message (a quick tap can fit between two) */
+  let pulled = false;
   let aiming = false;
   let firstPerson = false;
   let kick = 0;
@@ -650,7 +663,7 @@ export function createCombat(d: CombatDeps) {
           g.position.set(pose.x, pose.y, pose.z);
           g.rotation.set(0, pose.heading, Math.sin(now * 2 + i) * 0.05);
           if (L.flash > 0) g.position.x += Math.sin(t * 80) * 0.04;
-        }
+        } else g.visible = false; // already down when we joined (no fall to show)
         for (const r of L.rotors!) r.rotation.y = t * 40;
         L.light!.visible = Math.sin(t * 6 + i) > 0;
       }
@@ -710,6 +723,8 @@ export function createCombat(d: CombatDeps) {
     },
     /** The drone clock as this browser sees it (sent with shots so the server can rewind) */
     get poseNow() {
+      // Reduced motion online: our drones stand still, so tell the server its own clock
+      if (net && !motion && serverPose) return serverPose.pt + (performance.now() - serverPose.at) / 1000;
       return sim.poseNow;
     },
     /** How far the first-person rifle is up at the sight (0..1) */
@@ -721,6 +736,7 @@ export function createCombat(d: CombatDeps) {
       if (!weaponUnlocked(id, (netProfile ?? profile).total)) return false;
       sim.equip(ME, id);
       net?.send({ t: 'equip', w: id });
+      hold();
       profile.weapon = id;
       saveProfile();
       return true;
@@ -729,10 +745,18 @@ export function createCombat(d: CombatDeps) {
       if (!me.geared) return;
       sim.setArmed(ME, !me.armed);
       net?.send({ t: 'arm', on: me.armed });
+      hold();
     },
     trigger(on: boolean, touch = false) {
       if (touch) touchFire = on && me.armed;
       else trigger = on && me.armed;
+      if (on && me.armed) pulled = true;
+    },
+    /** Online: was the trigger down at any point since the last call? */
+    takePull() {
+      const was = pulled || trigger || touchFire;
+      pulled = false;
+      return was;
     },
     reload() {
       sim.reload(ME);
@@ -817,6 +841,8 @@ export function createCombat(d: CombatDeps) {
      */
     setNet(link: { send(m: ClientMsg): void } | null, onSkin: ((id: SkinId) => void) | null = null) {
       net = link;
+      held = null;
+      serverPose = null;
       requestSkin = onSkin;
       sim = createSim({ ground: d.ground, rayWorld: d.rayWorld, authority: !link });
       me = sim.addPlayer(ME);
@@ -849,10 +875,16 @@ export function createCombat(d: CombatDeps) {
     },
     /** Multiplayer: positions of targets and our own ammo and score */
     netSnap(pt: number, tg: [number, number, number][], mine: MeRow) {
-      if (Math.abs(sim.poseNow - pt) > 0.15) sim.setPoseTime(pt);
+      serverPose = { pt, at: performance.now() };
+      // Under reduced motion the drones hover where they are instead of jumping to the server's clock
+      if (motion && Math.abs(sim.poseNow - pt) > 0.15) sim.setPoseTime(pt);
       sim.applyTargets(tg);
       const [mag, reserve, reloading, score, streak, armed, w] = mine;
-      sim.syncPlayer(ME, { mag, reserve, reloading: !!reloading, score, streak, armed: !!armed, weapon: WEAPON_IDS[w] ?? me.weapon });
+      const weapon = WEAPON_IDS[w] ?? me.weapon;
+      if (held && (performance.now() > held.until || (weapon === held.weapon && !!armed === held.armed))) held = null;
+      // Still waiting for the server to catch up: take its score, keep our gun and ammo
+      if (held) sim.syncPlayer(ME, { mag: me.mag, reserve: me.reserve, reloading: false, score, streak, armed: me.armed, weapon: me.weapon });
+      else sim.syncPlayer(ME, { mag, reserve, reloading: !!reloading, score, streak, armed: !!armed, weapon });
     },
     /** Multiplayer: combat events from the server; `muzzle` finds another player's rifle */
     netEvents(events: NetEvent[], myId: number, muzzle: (id: number, out: THREE.Vector3) => THREE.Vector3 | null) {

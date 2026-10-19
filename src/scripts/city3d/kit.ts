@@ -124,6 +124,12 @@ export function lit<M extends THREE.Material>(mat: M, day: number, night: number
   return mat;
 }
 
+/** Stop driving a material that's being thrown away (guns that come and go) */
+export function unlit(mat: THREE.Material) {
+  const i = lits.findIndex((l) => l.mat === mat);
+  if (i >= 0) lits.splice(i, 1);
+}
+
 export function updateLights(night: number, t: number) {
   for (const l of lits) {
     let v = l.day + (l.night - l.day) * night;

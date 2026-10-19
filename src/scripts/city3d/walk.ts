@@ -213,7 +213,8 @@ export function createWalk(d: WalkDeps) {
     equip: (id) => combat.equip(id),
     onOpen() {
       keys.clear();
-      jumpHeld = aim = false;
+      jumpHeld = false;
+      setAim(false);
       combat.trigger(false);
       combat.trigger(false, true);
       if (document.pointerLockElement === canvas) document.exitPointerLock();
@@ -281,7 +282,8 @@ export function createWalk(d: WalkDeps) {
   window.addEventListener('blur', () => {
     keys.clear();
     jumpHeld = false;
-    aim = mouseL = mouseR = false;
+    mouseL = mouseR = false;
+    setAim(false);
     combat.trigger(false);
     combat.trigger(false, true);
   });
@@ -432,6 +434,10 @@ export function createWalk(d: WalkDeps) {
     if (!gp) {
       pad.x = pad.y = 0;
       pad.run = false;
+      // Unplugged with a trigger down: let go of it
+      if (pad.prev[6]) setAim(false);
+      if (pad.prev[7]) combat.trigger(false);
+      if (pad.prev.length) pad.prev = [];
       return;
     }
     const dz = (v = 0) => (Math.abs(v) < 0.15 ? 0 : (v - Math.sign(v) * 0.15) / 0.85);
@@ -457,7 +463,7 @@ export function createWalk(d: WalkDeps) {
     if (!b[0] && pad.prev[0]) jumpHeld = false;
     pad.run = !!(b[4] || b[10]);
     aim = aim || !!b[6];
-    if (!b[6] && pad.prev[6]) aim = false;
+    if (!b[6] && pad.prev[6]) setAim(false);
     if (edge(3)) act();
     if (edge(8)) setFirstPerson(!firstPerson);
     if (b[7] !== !!pad.prev[7]) combat.trigger(!!b[7]);
@@ -654,6 +660,8 @@ export function createWalk(d: WalkDeps) {
     setLook(o: Outfit) {
       const vis = hero.g.visible;
       d.scene.remove(hero.g);
+      // The gun moves to the new body; only the old body's geometry goes
+      combat.gun.removeFromParent();
       hero.g.traverse((m) => (m as THREE.Mesh).geometry?.dispose());
       Object.assign(hero, createDegen(o));
       hero.g.scale.setScalar(SCALE);

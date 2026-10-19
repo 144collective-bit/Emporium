@@ -95,8 +95,9 @@ cartoon shading and PulseChain neon, built with [three.js](https://threejs.org).
   until the visitor turns it on.
 - **Every device:** phones get a lighter version that idles at 30fps and runs
   at full rate while you touch it; slow devices step quality down
-  automatically. Pin labels shrink with distance and fold to dots when they
-  would overlap. Without WebGL, or after choosing "2D map", the original
+  automatically. Pin labels shrink with distance, slide back on screen at
+  the edges, and fold to dots when they would overlap each other or the
+  city's own buttons and cards. Without WebGL, or after choosing "2D map", the original
   isometric SVG map is shown instead. Reduced motion gives a still city.
 
 ### Walk mode

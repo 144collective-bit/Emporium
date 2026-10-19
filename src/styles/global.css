@@ -1575,7 +1575,7 @@ body.is-walking :is(.city-modes, .walk-top, .walk-look, .combat-score) {
     linear-gradient(#0b0a12e6, #0b0a12e6) padding-box,
     var(--pulse) border-box;
   box-shadow: 0 8px 24px -10px #000;
-  transform: translate(-50%, calc(-100% - 12px)) scale(var(--s, 1));
+  transform: translate(calc(-50% + var(--dx, 0px)), calc(-100% - 12px)) scale(var(--s, 1));
   transform-origin: 50% 100%;
   transition: transform 0.25s var(--ease), background 0.2s, opacity 0.2s;
   white-space: nowrap;
@@ -1583,7 +1583,7 @@ body.is-walking :is(.city-modes, .walk-top, .walk-look, .combat-score) {
 .city-pin-card::after {
   content: "";
   position: absolute;
-  left: 50%;
+  left: calc(50% - var(--dx, 0px) / var(--s, 1));
   bottom: -12px;
   width: 2px;
   height: 11px;
@@ -1594,7 +1594,7 @@ body.is-walking :is(.city-modes, .walk-top, .walk-look, .combat-score) {
   background:
     linear-gradient(#2a1d55f0, #2a1d55f0) padding-box,
     var(--pulse) border-box;
-  transform: translate(-50%, calc(-100% - 18px)) scale(var(--s, 1));
+  transform: translate(calc(-50% + var(--dx, 0px)), calc(-100% - 18px)) scale(var(--s, 1));
 }
 /* Folded pin: a dot where the label would overlap a nearer one */
 .city-pin::before {
@@ -1617,7 +1617,7 @@ body.is-walking :is(.city-modes, .walk-top, .walk-look, .combat-score) {
 .city-pin.is-dot .city-pin-card {
   opacity: 0;
   pointer-events: none;
-  transform: translate(-50%, calc(-100% - 12px)) scale(calc(var(--s, 1) * 0.6));
+  transform: translate(calc(-50% + var(--dx, 0px)), calc(-100% - 12px)) scale(calc(var(--s, 1) * 0.6));
 }
 /* Touch screens: titles only until a pin is tapped, and a bigger dot to hit */
 @media (pointer: coarse) {
@@ -1807,12 +1807,13 @@ body.is-walking :is(.city-modes, .walk-top, .walk-look, .combat-score) {
   position: absolute;
   top: 16px;
   right: 16px;
-  bottom: 16px;
   z-index: 5;
   display: flex;
   flex-direction: column;
   gap: 14px;
   width: min(400px, calc(100% - 32px));
+  /* As tall as its copy, never taller than the city */
+  max-height: calc(100% - 32px);
   padding: 28px 26px 20px;
   overflow-y: auto;
   opacity: 0;
@@ -3471,7 +3472,10 @@ body.is-walking :is(.city-modes, .walk-top, .walk-look, .combat-score) {
 }
 .city.is-shopping .walk-prompt,
 .city.is-shopping .walk-look,
-.city.is-shopping .combat-cross {
+.city.is-shopping .combat-cross,
+.city.is-shopping .walk-fire,
+.city.is-shopping .walk-aim,
+.city.is-shopping .walk-reload {
   display: none;
 }
 .shop-head {

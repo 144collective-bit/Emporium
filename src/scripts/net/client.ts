@@ -27,6 +27,13 @@ function guestToken() {
   return token;
 }
 
+/** Server close codes that mean "don't come straight back" (see server/src/room.ts) */
+const STOP: Record<number, string> = {
+  4001: 'You went online in another tab or window. Go online here to play in this one instead.',
+  4002: 'Disconnected for sending too many messages.',
+  4004: 'Something went wrong with your guest pass. Reload the page and try again.',
+};
+
 export type NetState = 'off' | 'connecting' | 'online' | 'retrying' | 'full' | 'error';
 
 export interface NetClient {
@@ -93,11 +100,17 @@ export function createNetClient(base: string): NetClient {
       }
       for (const f of onMsg) f(m);
     };
-    sock.onclose = () => {
-      window.clearInterval(pinger);
+    sock.onclose = (e) => {
       if (ws !== sock) return;
+      window.clearInterval(pinger);
       ws = null;
-      if (want) later();
+      // Closed on purpose by the server: retrying would only make things worse
+      // (two tabs would keep knocking each other off)
+      const why = STOP[e.code];
+      if (want && why) {
+        want = false;
+        set('error', why);
+      } else if (want) later();
       else if (state === 'online' || state === 'connecting' || state === 'retrying') set('off');
     };
   }

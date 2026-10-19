@@ -42,6 +42,13 @@ Visitor's browser                         Cloudflare (server/)
 - Shared code lives in DOM-free modules the server bundles too:
   `src/scripts/net/` (protocol, names, ranks, wardrobe, emotes, phrases) and
   `src/scripts/city3d/solids.ts` (collision boxes).
+- One connection per player: going online in a second tab takes over and
+  the first tab stops (it doesn't retry, or the two would keep knocking each
+  other off).
+- Controls carry every trigger pull since the last message, so a quick tap
+  between two messages still fires; the server lets go of the trigger when
+  controls stop arriving (hidden tab). After gearing up or swapping guns the
+  browser keeps its own gun state until a snapshot agrees.
 - Guest identity is a random secret kept in the browser
   (`degen-city-player-v1`); the server only stores its hash.
 - The site build reads the server address from `PUBLIC_GAME_SERVER` (a
