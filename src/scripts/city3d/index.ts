@@ -243,9 +243,11 @@ export async function bootCity(root: HTMLElement) {
   }
   function plotView(p: Plot) {
     const portrait = camera.aspect < 1;
+    // Big plots (2 x 2) carry buildings twice the size: stand further back
+    const k = p.parts ? 1.65 : 1;
     const dir = new THREE.Vector3(0.95, 0.85, 1.25).normalize();
-    const target = new THREE.Vector3(p.cx, portrait ? -0.4 : 1.6, p.cz);
-    return { pos: new THREE.Vector3(p.cx, 1.6, p.cz).addScaledVector(dir, portrait ? 17 : 13), target };
+    const target = new THREE.Vector3(p.cx, portrait ? -0.4 * k : 1.6 * k, p.cz);
+    return { pos: new THREE.Vector3(p.cx, 1.6 * k, p.cz).addScaledVector(dir, (portrait ? 17 : 13) * k), target };
   }
   const builder = createBuilderUI(root, {
     store: createStore(),

@@ -2111,6 +2111,65 @@ body.is-walking :is(.city-modes, .walk-top, .walk-look, .combat-score) {
   gap: 6px;
   width: 100%;
 }
+/* Merging four plots in a 2 x 2 square into a big plot */
+.builder-merge {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.builder-merge-head {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.builder-merge-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 6px;
+}
+.builder-merge-opt {
+  display: grid;
+  gap: 2px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #ffffff08;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+.builder-merge-opt b {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.builder-merge-opt small {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  color: var(--p-cyan);
+}
+.builder-merge-opt:hover,
+.builder-merge-opt:focus-visible {
+  border-color: var(--p-cyan);
+  background: #00eaff14;
+}
+.builder-merge-opt[aria-disabled="true"] small {
+  color: var(--muted);
+}
+.builder-merge-opt[aria-disabled="true"] {
+  cursor: default;
+}
+.city-panel-actions [aria-disabled="true"] {
+  opacity: 0.55;
+}
 .builder-field > span {
   font-family: var(--font-mono);
   font-size: 10.5px;
@@ -2141,6 +2200,10 @@ body.is-walking :is(.city-modes, .walk-top, .walk-look, .combat-score) {
 }
 .builder-panel .chip-link {
   cursor: pointer;
+  /* Long labels (release all four plots) wrap on narrow phones instead of running off the panel */
+  max-width: 100%;
+  white-space: normal;
+  text-align: left;
 }
 .builder-modal {
   position: absolute;
@@ -3946,4 +4009,9 @@ body.is-walking :is(.city-modes, .walk-top, .walk-look, .combat-score) {
 }
 .city.is-scoped .combat-scope {
   display: block;
+}
+
+/* Keeps a name like a plot id on one line */
+.nowrap {
+  white-space: nowrap;
 }

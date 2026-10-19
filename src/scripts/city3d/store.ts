@@ -1,5 +1,6 @@
 /*
- * Builder state: the demo wallet, the plots you own and what stands on them.
+ * Builder state: the demo wallet, the plots you own, the big plots you've
+ * merged them into (four in a 2 x 2 square) and what stands on them.
  *
  * EVERYTHING HERE IS SIMULATED. connect() invents an address, buy() waits a
  * moment and invents a transaction hash, and the balance is play money. The
@@ -26,16 +27,24 @@ export interface Owned {
   design?: Design;
 }
 
+/** Four owned plots merged into one big plot (keyed by the big plot's id) */
+interface Big {
+  parts: string[];
+  at: number;
+  design?: Design;
+}
+
 interface State {
   v: 1;
   wallet: Wallet | null;
   plots: Record<string, Owned>;
+  big: Record<string, Big>;
 }
 
 export type BuyStep = 'wallet' | 'chain' | 'done';
 
 const KEY = 'degen-city-builder-v1';
-const empty = (): State => ({ v: 1, wallet: null, plots: {} });
+const empty = (): State => ({ v: 1, wallet: null, plots: {}, big: {} });
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const hex = (n: number) => Array.from(crypto.getRandomValues(new Uint8Array(n)), (b) => b.toString(16).padStart(2, '0')).join('');
 
@@ -44,7 +53,11 @@ function load(): State {
     const raw = localStorage.getItem(KEY);
     if (!raw) return empty();
     const s = JSON.parse(raw) as State;
-    return s && s.v === 1 && typeof s.plots === 'object' ? s : empty();
+    if (!s || s.v !== 1 || typeof s.plots !== 'object') return empty();
+    // Saved before big plots existed, or a big plot whose plots aren't all still owned
+    s.big = s.big && typeof s.big === 'object' ? s.big : {};
+    for (const [id, b] of Object.entries(s.big)) if (!Array.isArray(b.parts) || !b.parts.every((q) => s.plots[q])) delete s.big[id];
+    return s;
   } catch {
     return empty();
   }
@@ -66,11 +79,45 @@ export function createStore() {
     get wallet() {
       return state.wallet;
     },
-    owned(id: string) {
+    /** A plot you own (or a big plot you've merged: its first plot's transaction, the four prices added up) */
+    owned(id: string): Owned | null {
+      const b = state.big[id];
+      if (b) {
+        const first = state.plots[b.parts[0]];
+        return { tx: first.tx, at: b.at, price: b.parts.reduce((n, q) => n + state.plots[q].price, 0), design: b.design };
+      }
       return state.plots[id] ?? null;
     },
     ownedIds() {
       return Object.keys(state.plots);
+    },
+    bigIds() {
+      return Object.keys(state.big);
+    },
+    /** The big plot a plot has been merged into, if any */
+    bigOf(id: string) {
+      for (const [bid, b] of Object.entries(state.big)) if (b.parts.includes(id)) return bid;
+      return null;
+    },
+
+    /** Merge four plots you own (a 2 x 2 square, nothing built on them) into one big plot */
+    merge(big: Plot) {
+      const parts = big.parts ?? [];
+      if (parts.length !== 4) throw new Error('A big plot is four plots in a 2 × 2 square.');
+      if (!parts.every((q) => state.plots[q])) throw new Error('You need to own all four plots first.');
+      if (parts.some((q) => this.bigOf(q))) throw new Error('One of these plots is already part of a big plot.');
+      if (parts.some((q) => state.plots[q].design)) throw new Error('Clear the buildings on these plots first.');
+      state.big[big.id] = { parts: [...parts], at: Date.now() };
+      save();
+    },
+
+    /** Split a big plot (with nothing built on it) back into its four plots */
+    split(id: string) {
+      const b = state.big[id];
+      if (!b) return;
+      if (b.design) throw new Error('Demolish the building first.');
+      delete state.big[id];
+      save();
     },
     subscribe(f: () => void) {
       listeners.add(f);
@@ -111,25 +158,30 @@ export function createStore() {
     },
 
     build(id: string, design: Design) {
-      const o = state.plots[id];
+      const o = state.big[id] ?? state.plots[id];
       if (!o) return;
       o.design = { ...design };
       save();
     },
 
     demolish(id: string) {
-      const o = state.plots[id];
+      const o = state.big[id] ?? state.plots[id];
       if (!o) return;
       delete o.design;
       save();
     },
 
-    /** Simulated: gives the plot back and refunds the demo PLS paid. */
+    /** Simulated: gives the plot back (a big plot: all four) and refunds the demo PLS paid. */
     release(id: string) {
-      const o = state.plots[id];
-      if (!o) return;
-      if (state.wallet) state.wallet.balance += o.price;
-      delete state.plots[id];
+      const b = state.big[id];
+      const ids = b ? b.parts : [id];
+      if (b) delete state.big[id];
+      for (const q of ids) {
+        const o = state.plots[q];
+        if (!o) continue;
+        if (state.wallet) state.wallet.balance += o.price;
+        delete state.plots[q];
+      }
       save();
     },
 

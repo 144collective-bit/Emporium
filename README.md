@@ -218,6 +218,11 @@ Press **Build** to switch to build mode. The districts around the city
   arcade, pocket park, warehouse, billboard lot) and customise walls, neon,
   floors, sign and rotation with a live preview. Edit, demolish or release
   the plot (refunds the demo PLS) any time.
+- **Merge four plots into a big plot:** own four plots in a 2 × 2 square
+  (with nothing built on them) and merge them from any of their panels.
+  The big plot takes one building, drawn twice the size (towers stop at 10
+  floors so the Emporium stays the tallest). Split it back into four plots
+  once it's empty, or release all four at once.
 
 Everything is simulated for now: no wallet connects, nothing touches
 PulseChain and no real PLS moves. Progress is saved in the visitor's browser,

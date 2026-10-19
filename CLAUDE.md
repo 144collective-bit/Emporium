@@ -193,6 +193,12 @@ it and has been retired completely. Build only on what's here.
   real until the owner supplies pricing.
 - Visitors can't type text onto buildings: sign texts come from the fixed
   `SIGNS` list, so nothing unexpected (or confidential) appears in public.
+- **Big plots:** four owned, empty plots in a 2 x 2 square merge into one
+  big plot (id `N3-04+08`: its top-left and bottom-right plots;
+  `bigPlotAt()`, `plotById()`, `squaresWith()` in `plots.ts`, `merge()` /
+  `split()` in `store.ts`). Its building is the same design at
+  `BIG_SCALE`, and towers on it stop at `BIG_MAX_FLOORS` so nothing outgrows
+  the Emporium. Picking any of its four plots selects the big plot.
 
 ## Multiplayer (beta)
 

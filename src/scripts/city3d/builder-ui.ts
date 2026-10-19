@@ -1,11 +1,12 @@
 /*
  * Build mode's interface: the demo wallet, the plot panel (buy, choose a
- * building, customise it with a live preview, edit, demolish, release), the
- * simulated purchase dialog and toasts. The 3D side lives in plots.ts and
- * the state in store.ts.
+ * building, customise it with a live preview, edit, demolish, release,
+ * merge four plots in a 2 x 2 square into a big plot and split it again),
+ * the simulated purchase dialog and toasts. The 3D side lives in plots.ts
+ * and the state in store.ts.
  */
 import { BUILDINGS, NEON_COLORS, SIGNS, TIER_INFO, WALL_COLORS, type BuildingDef } from '../../data/plots';
-import { PLOT_BY_ID, plotToward, type Design, type Plot, type PlotsApi } from './plots';
+import { BIG_MAX_FLOORS, PLOT_BY_ID, plotById, plotToward, squaresWith, type Design, type Plot, type PlotsApi } from './plots';
 import type { BuyStep, Store } from './store';
 
 const fmt = new Intl.NumberFormat('en-US');
@@ -13,6 +14,8 @@ const pls = (n: number) => `${fmt.format(n)} PLS`;
 const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 const defOf = (t: Design['type']) => BUILDINGS.find((b) => b.type === t)!;
+/** "N3-05" -> "05" */
+const num = (id: string) => id.slice(-2);
 
 interface Deps {
   store: Store;
@@ -82,7 +85,8 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
     const tier = TIER_INFO[p.tier];
     const head = `
       <p class="kicker"><span class="kicker-num">${esc(p.district)}</span> ${esc(p.districtName)}</p>
-      <h2 id="plot-title" class="city-panel-title">Plot ${esc(p.id)}</h2>`;
+      <h2 id="plot-title" class="city-panel-title">${p.parts ? 'Big plot' : 'Plot'} <span class="nowrap">${esc(p.id)}</span></h2>`;
+    const mine = p.parts ? `<span class="tag tag-mine">Yours · big plot of 4</span>` : `<span class="tag tag-mine">Yours</span>`;
 
     if (!owned) {
       const w = store.wallet;
@@ -108,11 +112,12 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
 
     if (draft) {
       const def = defOf(draft.type);
+      const floors = floorRange(def);
       body.innerHTML = `${head}
         <p class="city-panel-text"><strong>${esc(def.name)}</strong> · ${esc(def.blurb)}</p>
         ${swatches('Walls', 'color', WALL_COLORS, draft.color)}
         ${swatches('Neon', 'neon', NEON_COLORS, draft.neon)}
-        ${def.floors ? `<label class="builder-field"><span>Floors <output data-floors-out>${draft.floors}</output></span><input type="range" data-floors min="${def.floors[0]}" max="${def.floors[1]}" value="${draft.floors}"></label>` : ''}
+        ${floors ? `<label class="builder-field"><span>Floors <output data-floors-out>${draft.floors}</output></span><input type="range" data-floors min="${floors[0]}" max="${floors[1]}" value="${draft.floors}"></label>` : ''}
         ${def.sign ? `<div class="builder-field"><span>Sign</span><div class="seg">${SIGNS.map((s) => `<button type="button" data-sign="${esc(s)}" aria-pressed="${s === draft!.sign}">${esc(s)}</button>`).join('')}</div></div>` : ''}
         <div class="city-panel-actions">
           <button type="button" class="chip-link" data-rotate>↻ Turn</button>
@@ -125,28 +130,77 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
     if (owned.design) {
       const def = defOf(owned.design.type);
       body.innerHTML = `${head}
-        <span class="tag tag-mine">Yours</span>
+        ${mine}
         <p class="city-panel-text"><strong>${esc(def.name)}</strong>${owned.design.floors && def.floors ? ` · ${owned.design.floors} floors` : ''}${def.sign ? ` · “${esc(owned.design.sign)}” sign` : ''}</p>
         <div class="city-panel-actions">
           <button type="button" class="btn-pulse" data-edit>Edit building</button>
           <button type="button" class="chip-link" data-demolish>Demolish</button>
         </div>
-        ${ownedFoot(owned.tx)}`;
+        ${mergeBlock(p)}
+        ${ownedFoot(p, owned)}`;
       return;
     }
 
     body.innerHTML = `${head}
-      <span class="tag tag-mine">Yours</span>
-      <p class="city-panel-text">Pick something to build. You can change it any time.</p>
+      ${mine}
+      <p class="city-panel-text">${p.parts ? 'Four plots in one: whatever you build here goes up twice the size.' : 'Pick something to build. You can change it any time.'}</p>
       <div class="builder-catalog">
         ${BUILDINGS.map((b) => `<button type="button" class="builder-card" data-pick="${b.type}"><span class="builder-card-name">${esc(b.name)}</span><span class="builder-card-blurb">${esc(b.blurb)}</span></button>`).join('')}
       </div>
-      ${ownedFoot(owned.tx)}`;
+      ${mergeBlock(p)}
+      ${ownedFoot(p, owned)}`;
   }
 
-  const ownedFoot = (tx: string) => `
-    <p class="city-panel-fine">Simulated transaction ${short(tx)}</p>
+  const ownedFoot = (p: Plot, o: { tx: string; design?: Design }) =>
+    p.parts
+      ? `
+    <p class="city-panel-fine">Simulated transaction ${short(o.tx)}</p>
+    <div class="city-panel-actions">
+      <button type="button" class="chip-link" data-split ${o.design ? 'aria-disabled="true"' : ''}>Split into 4 plots</button>
+      <button type="button" class="chip-link" data-release>Release all 4 plots (refund demo PLS)</button>
+    </div>
+    ${o.design ? `<p class="city-panel-fine">Demolish the building to split the plot again.</p>` : ''}`
+      : `
+    <p class="city-panel-fine">Simulated transaction ${short(o.tx)}</p>
     <div class="city-panel-actions"><button type="button" class="chip-link" data-release>Release plot (refund demo PLS)</button></div>`;
+
+  /** What stops a 2 x 2 square from being merged (empty when it can be) */
+  function mergeBlocker(big: Plot) {
+    const parts = big.parts!;
+    const missing = parts.filter((q) => !store.owned(q));
+    if (missing.length) return `Buy ${missing.map(num).join(', ')} first`;
+    const taken = parts.filter((q) => store.bigOf(q));
+    if (taken.length) return `${taken.map(num).join(', ')} already in a big plot`;
+    if (parts.some((q) => store.owned(q)?.design)) return 'Clear the buildings first';
+    return '';
+  }
+
+  /** On a plot you own: the 2 x 2 squares it could be merged into */
+  function mergeBlock(p: Plot) {
+    if (p.parts) return '';
+    const squares = squaresWith(p);
+    return `
+      <div class="builder-merge">
+        <p class="builder-merge-head">Merge into a big plot</p>
+        <p class="city-panel-fine">Four plots you own in a 2 × 2 square become one big plot, for a building twice the size.</p>
+        <div class="builder-merge-list">
+          ${squares
+            .map((b) => {
+              const why = mergeBlocker(b);
+              const others = b.parts!.filter((q) => q !== p.id).map(num);
+              return `<button type="button" class="builder-merge-opt" data-merge="${esc(b.id)}" ${why ? 'aria-disabled="true"' : ''}><b>With ${others.join(', ')}</b><small>${why ? esc(why) : 'Ready to merge'}</small></button>`;
+            })
+            .join('')}
+        </div>
+      </div>`;
+  }
+
+  /** Floors on offer: towers on big plots stop short of the Emporium */
+  function floorRange(def: BuildingDef): [number, number] | null {
+    if (!def.floors) return null;
+    const max = selected?.parts && def.type === 'tower' ? Math.min(def.floors[1], BIG_MAX_FLOORS) : def.floors[1];
+    return [def.floors[0], max];
+  }
 
   const swatches = (label: string, key: string, list: string[], value: string) => `
     <div class="builder-field"><span>${label}</span><div class="swatches" role="radiogroup" aria-label="${label}">
@@ -157,6 +211,8 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
     draft = from
       ? { ...from }
       : { type: def.type, color: WALL_COLORS[Math.floor(Math.random() * 7)], neon: NEON_COLORS[0], floors: def.floors?.[2] ?? 1, sign: SIGNS[0], rot: 0 };
+    const range = floorRange(def);
+    if (range) draft.floors = Math.min(range[1], Math.max(range[0], draft.floors));
     preview();
     renderPanel();
   }
@@ -171,8 +227,11 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
   /* ---------- Selecting plots ---------- */
 
   function select(id: string | null) {
+    // A plot that's part of a big plot selects the big plot
+    if (id) id = store.bigOf(id) ?? id;
     if (draft && selected && selected.id !== id) cancelDraft();
-    selected = id ? (PLOT_BY_ID.get(id) ?? null) : null;
+    selected = id ? plotById(id) : null;
+    plots.setMarked([]);
     draft = null;
     plots.setSelected(selected?.id ?? null);
     root.classList.toggle('has-plot', !!selected);
@@ -288,18 +347,38 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
       toast(`Plot ${selected.id} cleared.`);
     } else if ('release' in d && selected) {
       const id = selected.id;
+      const big = !!selected.parts;
       store.release(id);
       plots.show(id, null);
+      plots.setMerged(store.bigIds());
       plots.setOwned(store.ownedIds());
       renderWallet();
-      renderPanel();
-      toast(`Plot ${id} released. Demo PLS refunded.`);
+      if (big) select(selected.parts![0]);
+      else renderPanel();
+      toast(big ? `Big plot ${id} released: all four plots. Demo PLS refunded.` : `Plot ${id} released. Demo PLS refunded.`);
+    } else if (d.merge && selected) {
+      const big = plotById(d.merge);
+      const why = big ? mergeBlocker(big) : 'Not a 2 × 2 square';
+      if (why || !big) return toast(`Can't merge yet: ${why}.`);
+      store.merge(big);
+      plots.setMarked([]);
+      plots.setMerged(store.bigIds());
+      select(big.id);
+      toast(`Plots ${big.parts!.map(num).join(', ')} merged into big plot ${big.id}.`);
+    } else if ('split' in d && selected?.parts) {
+      if (store.owned(selected.id)?.design) return toast('Demolish the building first, then split the plot.');
+      const big = selected;
+      store.split(big.id);
+      plots.setMerged(store.bigIds());
+      select(big.parts![0]);
+      toast(`Big plot ${big.id} split back into four plots.`);
     } else if ('plotClose' in d) select(null);
     else if ('builderExit' in d) setBuild(false);
     else if ('builderReset' in d) {
       if (!confirm('Reset the demo? This clears your demo wallet, plots and buildings in this browser.')) return;
-      for (const id of store.ownedIds()) plots.show(id, null, false);
+      for (const id of [...store.ownedIds(), ...store.bigIds()]) plots.show(id, null, false);
       store.reset();
+      plots.setMerged([]);
       plots.setOwned([]);
       select(null);
       renderWallet();
@@ -328,7 +407,9 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
     const dirs: Record<string, [number, number]> = { ArrowRight: [1, 0], ArrowLeft: [-1, 0], ArrowDown: [0, 1], ArrowUp: [0, -1] };
     const dir = dirs[e.key];
     if (!dir || !modal.hidden || (e.target as HTMLElement).matches('input, select, textarea')) return false;
-    const next = selected ? plotToward(selected, dir[0], dir[1]) : PLOT_BY_ID.get('N3-08');
+    // Step past the other plots of the same big plot
+    let next = selected ? plotToward(selected, dir[0], dir[1]) : PLOT_BY_ID.get('N3-08');
+    while (next && selected && store.bigOf(next.id) === selected.id) next = plotToward(next, dir[0], dir[1]);
     if (next) select(next.id);
     e.preventDefault();
     return true;
@@ -354,9 +435,18 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
   }
 
   plots.setOwned(store.ownedIds());
-  for (const id of store.ownedIds()) {
+  plots.setMerged(store.bigIds());
+  for (const id of [...store.ownedIds(), ...store.bigIds()]) {
     const d = store.owned(id)?.design;
     if (d) plots.show(id, d, false);
+  }
+  // Pointing at a merge option lights up its square
+  body.addEventListener('pointerover', (e) => markFrom(e.target));
+  body.addEventListener('focusin', (e) => markFrom(e.target));
+  body.addEventListener('pointerout', () => plots.setMarked([]));
+  function markFrom(t: EventTarget | null) {
+    const id = (t as HTMLElement | null)?.closest<HTMLElement>('[data-merge]')?.dataset.merge;
+    plots.setMarked(id ? (plotById(id)?.parts ?? []) : []);
   }
   toggle.hidden = false;
 
