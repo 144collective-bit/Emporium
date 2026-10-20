@@ -5811,3 +5811,18 @@ body.is-walking .nav {
 .biz-units {
   row-gap: 4px;
 }
+
+/* ---------- The city's game (ui.ts LV()): a level tag on things that need a level ---------- */
+.lv-tag {
+  display: inline-block;
+  padding: 0.15em 0.5em;
+  border: 1px solid #ffffff2b;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--p-cyan);
+  white-space: nowrap;
+  vertical-align: middle;
+}

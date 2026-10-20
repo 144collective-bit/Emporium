@@ -16,19 +16,7 @@ const COPY = {
   },
   build: {
     title: 'Build mode',
-    // data-sales (builder-ui.ts): the demo, real sales on the testnet, or real sales on mainnet
-    sub: (root: HTMLElement) =>
-      root.dataset.sales === 'testnet'
-        ? narrow()
-          ? 'Testnet · test PLS'
-          : 'PulseChain Testnet · test PLS only'
-        : root.dataset.sales === 'live'
-          ? narrow()
-            ? 'Buy a plot · build on it'
-            : 'Buy a district plot with your wallet · build on it'
-          : narrow()
-            ? 'Demo · simulated'
-            : 'Demo · purchases are simulated',
+    sub: () => (narrow() ? 'Buy a plot · build on it' : 'Buy a district plot with Dorras · build on it'),
   },
 } as const;
 
@@ -54,7 +42,7 @@ export function createCityHead(root: HTMLElement) {
     city.setAttribute('aria-pressed', String(mode === 'explore'));
   }
 
-  new MutationObserver(paint).observe(root, { attributes: true, attributeFilter: ['data-view', 'data-mode', 'data-sales', 'class'] });
+  new MutationObserver(paint).observe(root, { attributes: true, attributeFilter: ['data-view', 'data-mode', 'class'] });
   // Its real height (two rows on phones while walking) for everything pinned under it (--head-h in global.css)
   new ResizeObserver(() => {
     root.style.setProperty('--head-h', `${head.offsetHeight}px`);

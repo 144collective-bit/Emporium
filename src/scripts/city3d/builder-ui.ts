@@ -1,16 +1,17 @@
 /*
- * Build mode's interface: the wallet chip, the plot panel (buy a large plot,
- * choose a building, customise it with a live preview, edit, demolish), the
- * purchase dialog and toasts. The 3D side lives in plots.ts; ownership in a
- * Store: live (real wallet + game server, land.ts) or the demo (store.ts).
+ * Build mode's interface: the Plots button in the mode header (what you
+ * own, your Dorras, the price of the next plot), the plot panel (buy a
+ * district plot, choose a building, customise it with a live preview, edit,
+ * demolish, sell it back), the confirmation dialog and toasts. The 3D side
+ * lives in plots.ts; ownership in the Store (store.ts), over the city's own
+ * game: plots cost Dorras and need a level (catalog.ts), never real money.
  */
 import { BUILDINGS, NEON_COLORS, SIGNS, WALL_COLORS, type BuildingDef } from '../../data/plots';
-import { shortAddr } from '../net/land';
+import { BUILD_COSTS } from './catalog';
 import { PLOTS, PLOT_BY_ID, plotById, plotToward, type Design, type Plot, type PlotsApi } from './plots';
-import type { BuyStep, Store } from './store';
+import type { Store } from './store';
+import { D, esc, fmt, whyNot } from './ui';
 
-const fmt = new Intl.NumberFormat('en-US');
-const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 const defOf = (t: Design['type']) => BUILDINGS.find((b) => b.type === t)!;
 
 interface Deps {
@@ -22,19 +23,18 @@ interface Deps {
   overview(): void;
   /** Mode changed (index.ts hides pins, swaps click handling) */
   onMode(build: boolean): void;
+  /** A sound through the sound switch */
+  sfx(kind: 'buy' | 'denied' | 'upgrade'): void;
 }
 
 export function createBuilderUI(root: HTMLElement, deps: Deps) {
   const { store, plots } = deps;
-  // The Online / Offline switch can change the store from live to the demo and back
-  let live = store.mode === 'live';
   const $ = <T extends HTMLElement>(sel: string) => root.querySelector<T>(sel)!;
   const toggle = $<HTMLButtonElement>('[data-build-toggle]');
-  // The Wallet button in the city header (a drop-down while building)
+  // The Plots button in the city header (a drop-down while building)
   const bar = $<HTMLDetailsElement>('[data-builder-bar]');
-  const walletLabel = $('[data-wallet-label]');
-  const walletDot = $('[data-wallet-dot]');
-  const walletEl = $('[data-wallet]');
+  const barLabel = $('[data-plots-label]');
+  const barBody = $('[data-plots-summary]');
   const panel = $('[data-plot-panel]');
   const body = $('[data-plot-body]');
   const modal = $('[data-buy-modal]');
@@ -47,15 +47,7 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
   let selected: Plot | null = null;
   /** Unsaved design being previewed on the selected plot */
   let draft: Design | null = null;
-  let connecting = false;
-  let buying = false;
-  let saving = false;
   let toastTimer = 0;
-
-  const symbol = () => store.network?.symbol ?? 'PLS';
-  const pls = (n: number) => `${fmt.format(n)} ${symbol()}`;
-  // Live on the testnet: test PLS only; the demo: play money; mainnet: real sales
-  const tagline = () => (!live ? 'Demo · purchases are simulated · no real PLS' : store.network?.testnet ? `${store.network.name} · test PLS only, no real value` : `${store.network?.name ?? 'PulseChain'} · real PLS`);
 
   function toast(msg: string) {
     toastEl.textContent = msg;
@@ -64,61 +56,22 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
     toastTimer = window.setTimeout(() => toastEl.classList.remove('is-on'), 4200);
   }
 
-  /* ---------- Wallet chip ---------- */
+  /* ---------- The Plots button ---------- */
 
-  function renderWallet() {
-    const w = store.wallet;
-    const net = live && store.network ? `<span class="tag tag-demo">${esc(store.network.short)}</span>` : live ? '' : '<span class="tag tag-demo">Demo</span>';
-    walletEl.innerHTML = w
-      ? `<span class="wallet-dot" aria-hidden="true"></span><span class="wallet-addr">${shortAddr(w.address)}</span><span class="wallet-bal">${pls(w.balance)}</span>${net}<button type="button" class="wallet-off" data-disconnect aria-label="Disconnect wallet">×</button>`
-      : `<button type="button" class="btn-pulse btn-sm" data-connect ${connecting ? 'disabled' : ''}>${connecting ? 'Connecting…' : live ? 'Connect wallet' : 'Connect demo wallet'}</button>${net}`;
-    // The header button: the address once connected
-    walletLabel.textContent = w ? shortAddr(w.address) : 'Wallet';
-    walletDot.hidden = !w;
-    bar.querySelector('summary')!.setAttribute('aria-label', w ? `Wallet ${shortAddr(w.address)}` : 'Wallet');
-    panelNote.textContent = tagline();
-    root.dataset.sales = !live ? 'demo' : store.network?.testnet ? 'testnet' : 'live';
-    $('[data-builder-reset]').hidden = live;
-  }
-
-  async function connect(walletId?: string) {
-    if (connecting || store.wallet) return;
-    if (live && !walletId) {
-      const list = await store.wallets();
-      if (list.length !== 1) return pickWallet(list);
-      walletId = list[0].id;
-    }
-    connecting = true;
-    closeModal();
-    renderWallet();
-    renderPanel();
-    try {
-      await store.connect(walletId);
-      toast(live ? `Wallet connected on ${store.network?.name ?? 'PulseChain'}.` : 'Demo wallet connected with simulated PLS.');
-    } catch (e) {
-      toast((e as Error).message);
-    }
-    connecting = false;
-    renderWallet();
-    renderPanel();
-  }
-
-  /** Several wallets in this browser: which one? None: how to get one. */
-  function pickWallet(list: { id: string; name: string; icon: string; note?: string }[]) {
-    openModal(
-      list.length
-        ? `<p class="kicker"><span class="kicker-num">Wallet</span> Connect</p>
-           <h2 class="city-panel-title" id="buy-title">Pick your wallet</h2>
-           <div class="wallet-picks">${list
-             .map((w) => `<button type="button" class="wallet-pick" data-wallet-id="${esc(w.id)}">${w.icon ? `<img src="${esc(w.icon)}" alt="" width="24" height="24">` : ''}<span><b>${esc(w.name)}</b>${w.note ? `<small>${esc(w.note)}</small>` : ''}</span></button>`)
-             .join('')}</div>
-           <p class="city-panel-fine">Your wallet asks before it shares your address or sends anything.</p>`
-        : `<p class="kicker"><span class="kicker-num">Wallet</span> Connect</p>
-           <h2 class="city-panel-title" id="buy-title">No wallet found</h2>
-           <p class="city-panel-text">Buying a plot needs a crypto wallet that works with PulseChain.</p>
-           <p class="city-panel-fine">On a phone, open this page in your wallet app's own browser. On a computer, add a wallet extension to your browser, then reload this page.</p>
-           <div class="city-panel-actions"><button type="button" class="chip-link" data-cancel>Close</button></div>`
-    );
+  function renderBar() {
+    const owned = PLOTS.filter((p) => store.mine(p.id));
+    barLabel.textContent = owned.length ? `${owned.length} plot${owned.length === 1 ? '' : 's'}` : 'Plots';
+    const level = store.level();
+    const need = store.needLevel();
+    barBody.innerHTML = `
+      <ul class="plots-facts">
+        <li><span>Your Dorras</span><b>${D(store.dorras())}</b></li>
+        <li><span>Next plot</span><b>${D(store.price())}</b></li>
+        <li><span>Level needed</span><b>${need}${level < need ? ` <small>(you're ${level})</small>` : ''}</b></li>
+        <li><span>Yours</span><b>${owned.length ? owned.map((p) => esc(p.id)).join(', ') : 'none yet'}</b></li>
+      </ul>`;
+    bar.querySelector('summary')!.setAttribute('aria-label', owned.length ? `Your plots: ${owned.map((p) => p.id).join(', ')}` : 'Plots');
+    panelNote.textContent = 'Plots are game property: Dorras only, never real money';
   }
 
   /* ---------- Plot panel ---------- */
@@ -127,53 +80,32 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
     if (!selected) return;
     const p = selected;
     const rec = store.get(p.id);
-    const mine = store.mine(p.id);
     const head = `
       <p class="kicker"><span class="kicker-num">${esc(p.district)}</span> ${esc(p.districtName)}</p>
       <h2 id="plot-title" class="city-panel-title">Plot <span class="nowrap">${esc(p.id)}</span></h2>`;
 
-    if (!rec && store.pending(p.id)) {
-      body.innerHTML = `${head}
-        <span class="tag tag-pending">Sale pending</span>
-        <p class="city-panel-text">A payment for this plot is being checked on PulseChain. If it goes through, the plot is taken; if not, it's back on sale in a few minutes.</p>`;
-      return;
-    }
-
     if (!rec) {
-      const w = store.wallet;
-      const short = w && w.balance < store.price;
-      const action = !store.open
-        ? `<button type="button" class="btn-pulse" disabled>Sales open soon</button>`
-        : w
-          ? `<button type="button" class="btn-pulse" data-buy ${short ? 'disabled' : ''}>Buy for ${pls(store.price)}</button>`
-          : `<button type="button" class="btn-pulse" data-connect ${connecting ? 'disabled' : ''}>${connecting ? 'Connecting…' : live ? 'Connect wallet to buy' : 'Connect demo wallet to buy'}</button>`;
+      const price = store.price();
+      const level = store.level();
+      const need = store.needLevel();
+      const short = store.dorras() < price;
+      const locked = level < need;
       body.innerHTML = `${head}
         <span class="tag">For sale</span>
         <dl class="plot-facts">
           <div><dt>Size</dt><dd>One large plot<small>All 9 squares of ${esc(p.districtName)} in one</small></dd></div>
-          <div><dt>Price</dt><dd>${pls(store.price)}${live ? '' : '<small>Demo: play money</small>'}</dd></div>
-          ${live && store.network ? `<div><dt>Network</dt><dd>${esc(store.network.name)}${store.network.testnet ? '<small>Test PLS, no real value</small>' : ''}</dd></div>` : ''}
+          <div><dt>Price</dt><dd>${D(price)}<small>Dorras, the city's own money</small></dd></div>
+          <div><dt>Level</dt><dd>${need}${locked ? `<small>You're level ${level}: keep playing</small>` : '<small>Reached</small>'}</dd></div>
         </dl>
-        <div class="city-panel-actions">${action}</div>
-        ${short ? `<p class="city-panel-fine">Not enough ${symbol()} in this wallet for this plot.${live ? '' : ' Release a plot or reset the demo to get it back.'}</p>` : ''}
-        <p class="city-panel-fine">${live ? 'Whoever owns a plot decides what stands on it, and everyone in the city sees it.' : 'Simulated purchase: nothing is charged and nothing touches PulseChain.'}</p>`;
-      return;
-    }
-
-    if (!mine) {
-      const def = rec.design ? defOf(rec.design.type) : null;
-      body.innerHTML = `${head}
-        <span class="tag tag-taken">Owned</span>
-        <dl class="plot-facts">
-          <div><dt>Owner</dt><dd>${shortAddr(rec.owner)}</dd></div>
-          <div><dt>Building</dt><dd>${def ? esc(def.name) : 'Nothing yet'}</dd></div>
-        </dl>
-        <p class="city-panel-fine">This plot isn't for sale.</p>`;
+        <div class="city-panel-actions"><button type="button" class="btn-pulse" data-buy ${short || locked ? 'disabled' : ''}>Buy for ${fmt.format(price)} Dorras</button></div>
+        ${short && !locked ? `<p class="city-panel-fine">Not enough Dorras yet. Sell, deliver, race and run missions to earn more.</p>` : ''}
+        <p class="city-panel-fine">Whoever owns a plot decides what stands on it. Each plot you own makes the next a little dearer; selling one back pays 60% of what you paid for it and its building.</p>`;
       return;
     }
 
     if (draft) {
       const def = defOf(draft.type);
+      const cost = store.buildCost(p.id, draft);
       body.innerHTML = `${head}
         <p class="city-panel-text"><strong>${esc(def.name)}</strong> · ${esc(def.blurb)}</p>
         ${swatches('Walls', 'color', WALL_COLORS, draft.color)}
@@ -182,10 +114,10 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
         ${def.sign ? `<div class="builder-field"><span>Sign</span><div class="seg">${SIGNS.map((s) => `<button type="button" data-sign="${esc(s)}" aria-pressed="${s === draft!.sign}">${esc(s)}</button>`).join('')}</div></div>` : ''}
         <div class="city-panel-actions">
           <button type="button" class="chip-link" data-rotate>↻ Turn</button>
-          <button type="button" class="btn-pulse" data-place ${saving ? 'disabled' : ''}>${saving ? 'Saving…' : rec.design ? 'Save changes' : 'Place building'}</button>
+          <button type="button" class="btn-pulse" data-place ${store.dorras() < cost ? 'disabled' : ''}>${rec.design ? 'Save changes' : 'Place building'}${cost ? ` · ${fmt.format(cost)}` : ''}</button>
           <button type="button" class="chip-link" data-back>Back</button>
         </div>
-        ${live ? '<p class="city-panel-fine">Not logged in with this wallet yet? The first change asks it to sign a short message to log in: free, no gas, no transaction.</p>' : ''}`;
+        <p class="city-panel-fine">${cost ? `Building costs ${fmt.format(cost)} Dorras${rec.design ? ' (the difference from what stands there now)' : ''}.` : 'No charge: a cheaper design, a new look or a turn is free.'}</p>`;
       return;
     }
 
@@ -196,9 +128,9 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
         <p class="city-panel-text"><strong>${esc(def.name)}</strong>${rec.design.floors && def.floors ? ` · ${rec.design.floors} floors` : ''}${def.sign ? ` · “${esc(rec.design.sign)}” sign` : ''}</p>
         <div class="city-panel-actions">
           <button type="button" class="btn-pulse" data-edit>Edit building</button>
-          <button type="button" class="chip-link" data-demolish ${saving ? 'disabled' : ''}>Demolish</button>
+          <button type="button" class="chip-link" data-demolish>Demolish</button>
         </div>
-        ${ownedFoot(rec.tx)}`;
+        ${ownedFoot(p.id)}`;
       return;
     }
 
@@ -206,16 +138,14 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
       <span class="tag tag-mine">Yours</span>
       <p class="city-panel-text">Nine squares in one: each design fills the whole plot, grounds and all. You can change it any time.</p>
       <div class="builder-catalog">
-        ${BUILDINGS.map((b) => `<button type="button" class="builder-card" data-pick="${b.type}"><span class="builder-card-name">${esc(b.name)}</span><span class="builder-card-blurb">${esc(b.blurb)}</span></button>`).join('')}
+        ${BUILDINGS.map((b) => `<button type="button" class="builder-card" data-pick="${b.type}"><span class="builder-card-name">${esc(b.name)}<em class="builder-card-cost">${fmt.format(BUILD_COSTS[b.type])}</em></span><span class="builder-card-blurb">${esc(b.blurb)}</span></button>`).join('')}
       </div>
-      ${ownedFoot(rec.tx)}`;
+      ${ownedFoot(p.id)}`;
   }
 
-  const ownedFoot = (tx: string) =>
-    live
-      ? `<p class="city-panel-fine">Bought with transaction ${shortAddr(tx)}</p>`
-      : `<p class="city-panel-fine">Simulated transaction ${shortAddr(tx)}</p>
-         <div class="city-panel-actions"><button type="button" class="chip-link" data-release>Release plot (refund demo PLS)</button></div>`;
+  const ownedFoot = (id: string) =>
+    `<p class="city-panel-fine">Paid ${fmt.format(store.get(id)?.paid ?? 0)} Dorras so far. Selling it back pays ${fmt.format(store.refund(id))}.</p>
+     <div class="city-panel-actions"><button type="button" class="chip-link" data-sell>Sell plot back</button></div>`;
 
   const swatches = (label: string, key: string, list: string[], value: string) => `
     <div class="builder-field"><span>${label}</span><div class="swatches" role="radiogroup" aria-label="${label}">
@@ -239,7 +169,7 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
     renderPanel();
   }
 
-  /* ---------- Buildings and plot colours follow the store (everyone's plots, live) ---------- */
+  /* ---------- Buildings and plot colours follow the store ---------- */
 
   const shown = new Map<string, string>();
   function sync(first = false) {
@@ -252,8 +182,8 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
       plots.show(p.id, design, !first && !!design);
       shown.set(p.id, key);
     }
-    if (!draft && !buying) renderPanel();
-    renderWallet();
+    if (!draft) renderPanel();
+    renderBar();
   }
 
   /* ---------- Selecting plots ---------- */
@@ -277,136 +207,111 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
     deps.focus(selected);
   }
 
-  /* ---------- Purchase dialog ---------- */
+  /* ---------- Confirmation dialog ---------- */
 
   function openModal(html: string) {
     modal.hidden = false;
     modalBody.innerHTML = html;
     modalBody.querySelector<HTMLButtonElement>('button')?.focus();
   }
-
   function openBuy() {
-    if (!selected || !store.wallet) return;
+    if (!selected) return;
     const p = selected;
-    const w = store.wallet;
-    if (!live) {
-      openModal(`
-        <p class="kicker"><span class="kicker-num">Demo</span> Simulated purchase</p>
-        <h2 class="city-panel-title" id="buy-title">Buy plot ${esc(p.id)}?</h2>
-        <dl class="plot-facts">
-          <div><dt>Price</dt><dd>${pls(store.price)}</dd></div>
-          <div><dt>Demo wallet</dt><dd>${pls(w.balance)}</dd></div>
-          <div><dt>After</dt><dd>${pls(w.balance - store.price)}</dd></div>
-        </dl>
-        <p class="city-panel-fine">Nothing is charged and nothing touches PulseChain.</p>
-        <div class="city-panel-actions">
-          <button type="button" class="btn-pulse" data-confirm>Confirm purchase</button>
-          <button type="button" class="chip-link" data-cancel>Cancel</button>
-        </div>`);
-      return;
-    }
-    const net = store.network!;
+    const price = store.price();
     openModal(`
-      <p class="kicker"><span class="kicker-num">${esc(net.short)}</span> Buy a plot</p>
+      <p class="kicker"><span class="kicker-num">Plot</span> Buy a district plot</p>
       <h2 class="city-panel-title" id="buy-title">Buy plot ${esc(p.id)}?</h2>
       <dl class="plot-facts">
-        <div><dt>Price</dt><dd>${pls(store.price)}<small>plus a little gas</small></dd></div>
-        <div><dt>Pays to</dt><dd>${shortAddr(store.payee ?? '')}<small>The Degen City wallet</small></dd></div>
-        <div><dt>Network</dt><dd>${esc(net.name)}${net.testnet ? '<small>Test PLS, no real value</small>' : ''}</dd></div>
-        <div><dt>Your wallet</dt><dd>${pls(w.balance)}</dd></div>
+        <div><dt>Price</dt><dd>${D(price)}</dd></div>
+        <div><dt>Your Dorras</dt><dd>${D(store.dorras())}</dd></div>
+        <div><dt>After</dt><dd>${D(store.dorras() - price)}</dd></div>
       </dl>
-      <p class="city-panel-fine">Your wallet will ask you to approve the payment. The plot is yours once it has ${store.confirmations} confirmations on PulseChain, usually within a minute. If someone else's payment for this plot lands first, yours is recorded for a refund.</p>
+      <p class="city-panel-fine">Dorras are the city's own money, earned by playing. Nothing real changes hands.</p>
       <div class="city-panel-actions">
-        <button type="button" class="btn-pulse" data-confirm>Continue in wallet</button>
+        <button type="button" class="btn-pulse" data-confirm>Buy the plot</button>
         <button type="button" class="chip-link" data-cancel>Cancel</button>
       </div>`);
   }
-
-  const STEPS: [BuyStep, string, string][] = [
-    ['wallet', 'Approve in your wallet', 'Check the amount and the address'],
-    ['chain', 'Confirming on PulseChain', 'The game server checks the payment'],
-  ];
-  async function confirmBuy() {
-    if (!selected || buying) return;
+  function openSell() {
+    if (!selected || !store.mine(selected.id)) return;
     const p = selected;
-    buying = true;
-    // No way out mid-purchase: it settles either way, and closing would hide the result
-    modalClose.hidden = true;
-    const kicker = live ? `<span class="kicker-num">${esc(store.network?.short ?? 'PulseChain')}</span> Buying` : '<span class="kicker-num">Demo</span> Simulated purchase';
-    const render = (step: BuyStep) => {
-      const at = STEPS.findIndex(([s]) => s === step);
-      modalBody.innerHTML = `
-        <p class="kicker">${kicker}</p>
-        <h2 class="city-panel-title" id="buy-title">Buying plot ${esc(p.id)}</h2>
-        <ol class="buy-steps">${STEPS.map(([, label, note], i) => `<li class="${i < at || step === 'done' ? 'is-done' : i === at ? 'is-now' : ''}">${label}<small>${live ? note : 'simulated'}</small></li>`).join('')}</ol>
-        ${live && step === 'chain' ? '<p class="city-panel-fine">You can keep exploring: this finishes on its own, even if you close the page.</p>' : ''}`;
-    };
-    try {
-      render('wallet');
-      const owned = await store.buy(p, render);
-      modalBody.innerHTML = `
-        <p class="kicker">${kicker}</p>
-        <h2 class="city-panel-title" id="buy-title">Plot ${esc(p.id)} is <span class="hl">yours</span></h2>
-        <p class="city-panel-fine">${live ? 'Transaction' : 'Simulated transaction'} ${shortAddr(owned.tx)}</p>
-        <div class="city-panel-actions"><button type="button" class="btn-pulse" data-start>Start building</button></div>`;
-      modalBody.querySelector<HTMLButtonElement>('[data-start]')!.focus();
-    } catch (e) {
-      modalBody.innerHTML = `
-        <h2 class="city-panel-title" id="buy-title">Couldn't buy plot ${esc(p.id)}</h2>
-        <p class="city-panel-text">${esc((e as Error).message)}</p>
-        <div class="city-panel-actions"><button type="button" class="chip-link" data-cancel>Close</button></div>`;
-    } finally {
-      buying = false;
-      modalClose.hidden = false;
-      sync();
+    openModal(`
+      <p class="kicker"><span class="kicker-num">Plot</span> Sell it back</p>
+      <h2 class="city-panel-title" id="buy-title">Sell plot ${esc(p.id)}?</h2>
+      <dl class="plot-facts">
+        <div><dt>You paid</dt><dd>${D(store.get(p.id)?.paid ?? 0)}</dd></div>
+        <div><dt>You get back</dt><dd>${D(store.refund(p.id))}</dd></div>
+      </dl>
+      <p class="city-panel-fine">The building goes with it, and the plot is back on the market.</p>
+      <div class="city-panel-actions">
+        <button type="button" class="btn-pulse" data-confirm-sell>Sell it back</button>
+        <button type="button" class="chip-link" data-cancel>Cancel</button>
+      </div>`);
+  }
+  function confirmBuy() {
+    if (!selected) return;
+    const p = selected;
+    const r = store.buy(p);
+    closeModal();
+    if (!r.ok) {
+      deps.sfx('denied');
+      toast(whyNot(r.why, store.needLevel()));
+      return;
     }
+    deps.sfx('buy');
+    toast(`Plot ${p.id} is yours. Pick a building for it.`);
+    sync();
+  }
+  function confirmSell() {
+    if (!selected) return;
+    const p = selected;
+    const r = store.sell(p.id);
+    closeModal();
+    if (!r.ok) {
+      deps.sfx('denied');
+      toast(whyNot(r.why));
+      return;
+    }
+    deps.sfx('buy');
+    shown.delete(p.id);
+    toast(`Plot ${p.id} sold back for ${fmt.format(r.dorras)} Dorras.`);
+    sync();
   }
   const closeModal = () => {
-    if (buying) return;
     modal.hidden = true;
     panel.querySelector<HTMLElement>('button')?.focus();
   };
 
-  async function save(id: string, design: Design | null) {
-    if (saving) return;
-    saving = true;
-    renderPanel();
-    if (live && design) toast('Saving… your wallet may ask you to log in (free, no gas).');
-    try {
-      const isNew = !store.get(id)?.design;
-      if (design) await store.build(id, design);
-      else await store.demolish(id);
-      if (draft && selected?.id === id) draft = null;
-      shown.delete(id);
-      sync();
-      toast(design ? (isNew ? `Built on plot ${id}.` : `Plot ${id} updated.`) : `Plot ${id} cleared.`);
-    } catch (e) {
-      toast(`Couldn't save: ${(e as Error).message}`);
-    } finally {
-      saving = false;
+  function save(id: string, design: Design | null) {
+    const isNew = !store.get(id)?.design;
+    const r = design ? store.build(id, design) : store.demolish(id);
+    if (!r.ok) {
+      deps.sfx('denied');
+      toast(whyNot(r.why));
       renderPanel();
+      return;
     }
+    if (draft && selected?.id === id) draft = null;
+    shown.delete(id);
+    sync();
+    if (design) deps.sfx(r.dorras ? 'buy' : 'upgrade');
+    toast(design ? (isNew ? `Built on plot ${id}${r.dorras ? ` for ${fmt.format(r.dorras)} Dorras` : ''}.` : `Plot ${id} updated${r.dorras ? ` for ${fmt.format(r.dorras)} Dorras` : ''}.`) : `Plot ${id} cleared.`);
   }
 
   /* ---------- Events ---------- */
 
-  // A tap on the dimmed backdrop closes the purchase dialog
+  // A tap on the dimmed backdrop closes the dialog
   modal.addEventListener('click', (e) => e.target === modal && closeModal());
 
   root.addEventListener('click', (e) => {
     const t = (e.target as HTMLElement).closest<HTMLElement>('button');
     if (!t || !root.contains(t)) return;
     const d = t.dataset;
-    if ('connect' in d) connect();
-    else if (d.walletId) connect(d.walletId);
-    else if ('disconnect' in d) {
-      store.disconnect();
-      sync();
-      toast('Wallet disconnected.');
-    } else if ('buy' in d) openBuy();
+    if ('buy' in d && building) openBuy();
     else if ('confirm' in d) confirmBuy();
+    else if ('confirmSell' in d) confirmSell();
+    else if ('sell' in d) openSell();
     else if ('cancel' in d) closeModal();
-    else if ('start' in d) closeModal();
     else if (d.pick) startDraft(defOf(d.pick as Design['type']));
     else if (draft && d.color) ((draft.color = d.color), preview(), renderPanel());
     else if (draft && d.neon) ((draft.neon = d.neon), preview(), renderPanel());
@@ -418,19 +323,8 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
       const o = store.get(selected.id);
       if (o?.design) startDraft(defOf(o.design.type), o.design);
     } else if ('demolish' in d && selected) save(selected.id, null);
-    else if ('release' in d && selected && store.release) {
-      store.release(selected.id);
-      sync();
-      toast(`Plot ${selected.id} released. Demo PLS refunded.`);
-    } else if ('plotClose' in d) select(null);
+    else if ('plotClose' in d) select(null);
     else if ('builderExit' in d) setBuild(false);
-    else if ('builderReset' in d && store.reset) {
-      if (!confirm('Reset the demo? This clears your demo wallet, plots and buildings in this browser.')) return;
-      store.reset();
-      select(null);
-      sync();
-      toast('Demo reset.');
-    }
   });
   root.addEventListener('input', (e) => {
     const t = e.target as HTMLInputElement;
@@ -474,23 +368,13 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
       select(null);
       plots.setHover(null);
     } else {
-      store.refresh();
-      renderWallet();
+      renderBar();
       deps.overview();
     }
     deps.onMode(on);
   }
 
-  store.subscribe(() => {
-    if (live !== (store.mode === 'live')) {
-      // Switched online / offline: the other store's plots, wallet and dialogs
-      live = store.mode === 'live';
-      // (a payment already in flight keeps its dialog: it finishes on its own)
-      if (draft) cancelDraft();
-      closeModal();
-    }
-    sync();
-  });
+  store.subscribe(() => sync());
   sync(true);
   toggle.hidden = false;
 
@@ -501,5 +385,7 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
     select,
     key,
     setBuild,
+    /** The save changed elsewhere (the Vault's estate agent, a sale): repaint */
+    refresh: () => sync(),
   };
 }

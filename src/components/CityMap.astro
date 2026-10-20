@@ -250,23 +250,21 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
           <span class="nav-account-label" data-account-label>Connect<span class="nav-account-more"> wallet</span></span>
         </button>
       )}
-      {/* Build mode: the wallet (connect, balance, demo reset), painted by builder-ui.ts */}
+      {/* Build mode: your plots (what you own, your Dorras, the next plot's price), painted by builder-ui.ts */}
       <details class="head-pop builder-pop" data-builder-bar hidden>
-        <summary aria-label="Wallet">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H18v4" /><path d="M3 7.5v10A2.5 2.5 0 0 0 5.5 20H20V9H5.5A2.5 2.5 0 0 1 3 7.5z" /><circle cx="16" cy="14.5" r="1.2" /></svg>
-          <i class="wallet-dot" data-wallet-dot hidden aria-hidden="true"></i>
-          <span class="head-btn-text" data-wallet-label>Wallet</span>
+        <summary aria-label="Plots">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10l9-6 9 6v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z" /><path d="M9 21v-7h6v7" /></svg>
+          <span class="head-btn-text" data-plots-label>Plots</span>
         </summary>
         <div class="head-panel builder-wallet-panel">
           <div class="pop-head">
-            <p class="pop-title">Wallet</p>
-            <button type="button" class="pop-close" data-pop-close aria-label="Close wallet">
+            <p class="pop-title">Your plots</p>
+            <button type="button" class="pop-close" data-pop-close aria-label="Close plots">
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
             </button>
           </div>
-          <div class="builder-wallet" data-wallet></div>
-          <p class="builder-hint">Pick a district plot to buy or build on it.<span class="hint-keys"> Arrow keys move between plots.</span></p>
-          <button type="button" class="chip-link" data-builder-reset>Reset demo</button>
+          <div class="builder-wallet" data-plots-summary></div>
+          <p class="builder-hint">Pick a district plot to buy or build on it.<span class="hint-keys"> Arrow keys move between plots.</span> The estate agent in the Vault lists them too.</p>
         </div>
       </details>
       <details class="city-controls head-pop" data-controls>
@@ -459,8 +457,8 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
     </button>
     <div class="city-panel-body" data-plot-body></div>
-    {/* Demo, testnet or mainnet: painted by builder-ui.ts */}
-    <p class="city-draft" data-plot-note>Demo · purchases are simulated · no real PLS</p>
+    {/* Painted by builder-ui.ts */}
+    <p class="city-draft" data-plot-note>Plots are game property: Dorras only, never real money</p>
   </aside>
   {/* Log in with a wallet and the basic profile (account-ui.ts) */}
   <div class="builder-modal account-modal" data-account hidden>
@@ -717,13 +715,6 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
               } catch {}
             },
             rename: () => account.rename(),
-            async showPlot(id: string) {
-              // On the 2D map: into the 3D city first (it swaps in its own showPlot)
-              const before = hooks.showPlot;
-              remember('3d');
-              await go3d();
-              if (hooks.showPlot !== before) hooks.showPlot(id);
-            },
             opened() {},
           };
           if (account.address && online()) account.refresh();

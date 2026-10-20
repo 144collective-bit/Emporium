@@ -7,12 +7,12 @@
  * the 3D city plugs its parts in through `hooks` once it's up (index.ts).
  *
  * The card shows the player name (from the word lists, never typed), rank
- * badge, lifetime score, the wallet (short, with its network) and the plots
- * it owns, each a jump into Build mode. Only the visitor sees their own
- * wallet address; other players only ever see the player name.
+ * badge, lifetime score and the wallet (short, with its network). Only the
+ * visitor sees their own wallet address; other players only ever see the
+ * player name.
  */
 import { RANKS } from '../net/profile-data';
-import { CHAINS, shortAddr } from '../net/land';
+import { CHAINS, shortAddr } from '../net/auth';
 import type { Account } from './account';
 import { walletError } from './wallet';
 
@@ -26,8 +26,6 @@ export interface AccountHooks {
   goOnline(): void;
   /** A new player name (through the room while walking online, so everyone sees it) */
   rename(): Promise<void> | void;
-  /** Fly to a plot in Build mode */
-  showPlot(id: string): void;
   /** The card opened (walk mode frees the mouse) */
   opened(): void;
 }
@@ -80,7 +78,7 @@ export function createAccountUI(root: HTMLElement, account: Account, d: AccountH
       if (card.hidden || account.address || busy) return;
       body.innerHTML = list.length
         ? `${head('Wallet', 'Connect wallet')}
-           <p class="city-panel-text">Connect your PulseChain wallet to log in: keep a player profile that follows you to any browser, and to build on plots you own.</p>
+           <p class="city-panel-text">Connect your PulseChain wallet to log in: keep a player profile that follows you to any browser.</p>
            <div class="wallet-picks">${list.map((w) => `<button type="button" class="wallet-pick" data-account-wallet="${esc(w.id)}">${w.icon ? `<img src="${esc(w.icon)}" alt="" width="24" height="24">` : ''}<span><b>${esc(w.name)}</b>${w.note ? `<small>${esc(w.note)}</small>` : ''}</span></button>`).join('')}</div>
            ${err}
            <p class="city-panel-fine">Your wallet asks you to sign a short message: no transaction, no gas. A wallet's first login starts a fresh profile.</p>`
@@ -99,17 +97,12 @@ export function createAccountUI(root: HTMLElement, account: Account, d: AccountH
     const p = me.profile;
     const rank = RANKS.find((k) => k.id === p.rank) ?? RANKS[0];
     const chain = CHAINS[me.chain];
-    const plots = me.plots.length
-      ? `<ul class="account-plots">${me.plots.map((id) => `<li><span>Plot <b>${esc(id)}</b></span><button type="button" class="chip-link" data-account-plot="${esc(id)}">Show in Build mode</button></li>`).join('')}</ul>`
-      : '<p class="city-panel-fine">No plots yet. Pick a district plot in Build mode to buy one.</p>';
     body.innerHTML = `${head('Logged in', `<span class="account-name">${esc(p.name)}</span>`)}
       <span class="mp-rank" data-rank="${esc(rank.id)}">${esc(rank.name)}</span>
       <dl class="plot-facts account-facts">
         <div><dt>Lifetime score</dt><dd>${fmt.format(p.total)}</dd></div>
         <div><dt>Wallet</dt><dd><span class="account-addr">${esc(shortAddr(me.address))}</span>${chain ? `<small>${esc(chain.name)}</small>` : ''}</dd></div>
       </dl>
-      <p class="walk-skins-head account-plots-head"><span>Plots owned</span><span>${me.plots.length}</span></p>
-      ${plots}
       ${err}
       <div class="city-panel-actions">
         <button type="button" class="chip-link" data-account-rename>New name</button>
@@ -167,9 +160,6 @@ export function createAccountUI(root: HTMLElement, account: Account, d: AccountH
     else if ('accountRename' in ds) {
       btn.disabled = true;
       act(async () => d.rename());
-    } else if (ds.accountPlot) {
-      close();
-      d.showPlot(ds.accountPlot);
     }
   });
   account.subscribe(() => render());

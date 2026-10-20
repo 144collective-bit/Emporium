@@ -1,43 +1,34 @@
 /*
- * Degen City game server (Cloudflare Worker).
+ * Degen City game server (Cloudflare Worker). Plot sales for PLS were
+ * retired: the city's plots are game property now (src/scripts/city3d/tycoon.ts).
  *
  * - GET /health: a quick "ok".
  * - GET /play (WebSocket): the Lobby picks a city with room (16 players each,
  *   more cities open as they fill) and the connection is handed to that city's
  *   Room, which runs the game and talks to each player's Profile.
  *
- * - /land (HTTP, JSON): plot sales and buildings, see land.ts.
  * - /auth (HTTP, JSON): logging in with a wallet and its basic profile, see accounts.ts.
  * - Everything else: the website itself (static files built into ../dist).
  *
  * Only pages listed in ALLOWED_ORIGINS can connect.
  */
 import { Accounts } from './accounts';
-import { Land } from './land';
 import { Lobby } from './lobby';
 import { Profile } from './profile';
 import { Room } from './room';
 
-export { Accounts, Land, Lobby, Profile, Room };
+export { Accounts, Lobby, Profile, Room };
 
 export interface Env {
   LOBBY: DurableObjectNamespace<Lobby>;
   ROOMS: DurableObjectNamespace<Room>;
   PROFILES: DurableObjectNamespace<Profile>;
-  LAND: DurableObjectNamespace<Land>;
   ACCOUNTS: DurableObjectNamespace<Accounts>;
   /** The built website (wrangler.jsonc "assets") */
   ASSETS?: Fetcher;
   ALLOWED_ORIGINS: string;
-  /** Land sales: 943 (PulseChain Testnet v4) or 369 (PulseChain) */
-  LAND_CHAIN_ID?: string;
-  /** The owner's wallet that plot payments go to; sales stay closed while it's empty */
-  LAND_PAYEE?: string;
-  /** Plot price in whole PLS */
-  LAND_PRICE_PLS?: string;
-  LAND_CONFIRMATIONS?: string;
-  /** PulseChain RPC to check payments on (defaults to the network's public one) */
-  LAND_RPC?: string;
+  /** The network wallets log in on: 943 (PulseChain Testnet v4) or 369 (PulseChain) */
+  AUTH_CHAIN_ID?: string;
 }
 
 const allowed = (origin: string | null, env: Env) => !!origin && env.ALLOWED_ORIGINS.split(',').map((s) => s.trim()).includes(origin);
@@ -54,11 +45,10 @@ export default {
       headers.set('X-Room', room);
       return env.ROOMS.get(env.ROOMS.idFromName(room)).fetch(new Request(req, { headers }));
     }
-    const api = url.pathname === '/land' || url.pathname.startsWith('/land/') ? 'land' : url.pathname.startsWith('/auth/') ? 'auth' : null;
-    if (api) {
+    if (url.pathname.startsWith('/auth/')) {
       const origin = req.headers.get('Origin');
-      // A page served from this Worker itself sends no Origin on a plain GET (the land list is public;
-      // /auth/me needs the visitor's own session token); anything that changes something always comes with one
+      // A page served from this Worker itself sends no Origin on a plain GET (/auth/me needs the visitor's
+      // own session token); anything that changes something always comes with one
       const sameSite = !origin && req.method === 'GET';
       if (!sameSite && !allowed(origin, env)) return new Response('Forbidden', { status: 403 });
       const cors: Record<string, string> = origin
@@ -71,7 +61,7 @@ export default {
           }
         : {};
       if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
-      const res = api === 'land' ? await env.LAND.get(env.LAND.idFromName('city')).fetch(req) : await env.ACCOUNTS.get(env.ACCOUNTS.idFromName('main')).fetch(req);
+      const res = await env.ACCOUNTS.get(env.ACCOUNTS.idFromName('main')).fetch(req);
       const out = new Response(res.body, res);
       for (const [k, v] of Object.entries(cors)) out.headers.set(k, v);
       out.headers.set('Cache-Control', 'no-store');

@@ -8,7 +8,7 @@
  * picked. No keys ever touch the site: the wallet asks the visitor to
  * approve each request.
  */
-import { CHAINS, type Chain } from '../net/land';
+import { CHAINS, type Chain } from '../net/auth';
 import { WALLETCONNECT_PROJECT_ID } from '../../data/site';
 
 interface Eip1193 {
