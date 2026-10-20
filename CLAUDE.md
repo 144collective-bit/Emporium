@@ -395,6 +395,23 @@ it and has been retired completely. Build only on what's here.
   the tycoon save (`plots`), behind `createPlotStore()` in `store.ts`.
 - **Loans and the ledger** are game mechanics with Dorras only: a flat fee,
   no interest rates, savings returns or APY-style wording anywhere.
+- **Missions, levels and badges** (Phase 5): the rules are `missions.ts`
+  (`MISSIONS` in tiers by level, up to `MISSIONS_MAX` at once, counted from
+  the save's `counters` as they stood when taken; `BADGES` are lifetime
+  milestones awarded by `checkBadges()`) and `catalog.ts` (`xpForLevel`,
+  `levelFor`, `levelProgress`, `titleFor`, `XP` per deed), on the save in
+  `tycoon.ts`. The screens are `missions-ui.ts` (styles in `missions.css`):
+  the level pill in the header tools next to the Dorras readout
+  (`[data-level]`, a `.head-pop` card in the city; while walking it opens
+  the Profile tab's badges `[data-badges]`), the mission board at the end
+  of the Signal tower's panel (appended by `tycoon-ui.ts` after the
+  contracts; its Take / Claim / Give up go through `missions.act()` before
+  the economy's buttons), the mission tracker in the walk HUD
+  (`[data-missions-tracker]`; a pill with the count on phones) and the
+  badge / level-up pops under the header (`[data-mission-pops]`).
+  `tycoon.commit()` runs `missions.onCommit()` first, so any screen that
+  changes the save and commits gets badges and level-ups checked. Rewards
+  are Dorras and XP only: no prizes, nothing real.
 - **The Apartments** (the tower in the north block, east of the Signal tower, `apartments()` in
   `landmarks.ts` and `city.ts`) are a place since Phase 3: spot
   `apartments`, its pin, door (`DOORS`) and panel. The Emporium stays first
