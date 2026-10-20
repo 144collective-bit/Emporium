@@ -34,6 +34,7 @@ import { buildBigLots } from './biglots';
 import { buildBeacons } from './beacons';
 import { destAt } from './tycoon';
 import { CARS } from './cars';
+import { CROWD_VIEW } from './character';
 
 type Tier = 'high' | 'medium' | 'low';
 
@@ -635,6 +636,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     }
   };
 
+  const viewProj = new THREE.Matrix4();
   function frame(now: number) {
     if (!running) return;
     raf = requestAnimationFrame(frame);
@@ -685,6 +687,11 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     env.night = s.night;
     env.rain = s.rain;
     env.day = s.day;
+    // Crowds draw only the people in view, in detail near the camera (character.ts); a still city draws everyone once
+    CROWD_VIEW.on = !reduced;
+    camera.updateMatrixWorld();
+    CROWD_VIEW.eye.setFromMatrixPosition(camera.matrixWorld);
+    CROWD_VIEW.frustum.setFromProjectionMatrix(viewProj.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
     if (!reduced || frames === 0) for (const f of ticks) f(env);
     updateLights(s.night, env.t);
     waterMat.uniforms.time.value = env.t;

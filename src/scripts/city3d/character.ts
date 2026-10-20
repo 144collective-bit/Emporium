@@ -707,9 +707,13 @@ const texCache: { patch?: THREE.Texture; gummy?: THREE.Texture } = {};
 function items(q: Detail): Item[] {
   if (itemsCache[q]) return itemsCache[q]!;
   /** Ring segments at this detail level */
-  const R = (n: number) => Math.max(6, Math.round(n * [0.5, 0.7, 1][q]));
+  const R = (n: number) => Math.max(5, Math.round(n * [0.36, 0.7, 1][q]));
   const L = (s: number) => (q === 2 ? s : Math.max(2, Math.round(s * 0.6)));
   bend = q === 2 ? 0.03 : 0;
+  /** People far from the camera: plain boxes for rounded ones, shoes without rounded edges */
+  const far = q === 0;
+  const rb = (w: number, h: number, d: number, r: number, x = 0, y = 0, z = 0) => (far ? new THREE.BoxGeometry(w, h, d).translate(x, y, z) : rbox(w, h, d, r, x, y, z));
+  const prof = (pts: [number, number][], w: number, round: number, curve = 6) => (far ? profile(pts, w, 0, 1) : profile(pts, w, round, curve));
   const P = (joint: Joint, geo: THREE.BufferGeometry, color: string | ColorKey, extra: Partial<Piece> = {}): Piece => ({ joint, geo, color, ...extra });
   /** The same piece on both sides (one geometry, or one per side for things that sit on the outside) */
   const both = (
@@ -1100,7 +1104,7 @@ function items(q: Detail): Item[] {
   ];
   const vestFront = surface(VEST, 3);
   const vest = loft(VEST, R(22), 3);
-  const pouches = [-0.09, -0.03, 0.03, 0.09].map((x) => rbox(0.05, 0.06, 0.03, 0.008, x, 0.13, vestFront(x, 0.13) + 0.01));
+  const pouches = [-0.09, -0.03, 0.03, 0.09].map((x) => rb(0.05, 0.06, 0.03, 0.008, x, 0.13, vestFront(x, 0.13) + 0.01));
   const collarFat = new THREE.CylinderGeometry(0.06, 0.066, 0.04, R(16), 1, true).translate(0, 0.415, -0.004);
 
   /* ----- Neck and back: necklace, headphones, backpack, crossbody, board ----- */
@@ -1128,8 +1132,8 @@ function items(q: Detail): Item[] {
   ];
   const BACK = surface(HOODIE, HN2, -1);
   const backpack = [
-    rbox(0.21, 0.25, 0.09, 0.03, 0, 0.24, BACK(0, 0.24) - 0.04),
-    rbox(0.15, 0.08, 0.03, 0.012, 0, 0.17, BACK(0, 0.17) - 0.09),
+    rb(0.21, 0.25, 0.09, 0.03, 0, 0.24, BACK(0, 0.24) - 0.04),
+    rb(0.15, 0.08, 0.03, 0.012, 0, 0.17, BACK(0, 0.17) - 0.09),
     ...[-1, 1].map((s) =>
       tube(
         [
@@ -1146,7 +1150,7 @@ function items(q: Detail): Item[] {
     ),
   ];
   const crossbody = [
-    rbox(0.12, 0.09, 0.045, 0.016, 0.105, 0.03, hoodieFront(0.105, 0.03) + 0.022),
+    rb(0.12, 0.09, 0.045, 0.016, 0.105, 0.03, hoodieFront(0.105, 0.03) + 0.022),
     tube(
       [
         [0.1, 0.07, hoodieFront(0.1, 0.07) + 0.01],
@@ -1240,8 +1244,8 @@ function items(q: Detail): Item[] {
     R(16)
   );
   // Cargo pockets on the outside of each thigh
-  const cargoPockets = [-1, 1].map((s) => rbox(0.02, 0.07, 0.06, 0.008, s * 0.07, -0.16, 0.004));
-  const kneePads = q === 0 ? [] : [rbox(0.06, 0.06, 0.025, 0.01, 0, -0.01, 0.054)];
+  const cargoPockets = [-1, 1].map((s) => rb(0.02, 0.07, 0.06, 0.008, s * 0.07, -0.16, 0.004));
+  const kneePads = q === 0 ? [] : [rb(0.06, 0.06, 0.025, 0.01, 0, -0.01, 0.054)];
 
   /* ----- Arms and hands ----- */
   const UPPER_S: Sec[] = [
@@ -1312,16 +1316,18 @@ function items(q: Detail): Item[] {
       )!
   );
   // A hand at rest: palm towards the leg, fingers curled, the thumb along the front
-  const hand = [
-    new THREE.CylinderGeometry(0.026, 0.028, 0.03, R(10)).translate(0, -0.2, 0.004),
-    rbox(0.044, 0.072, 0.07, 0.019, 0, -0.236, 0.004),
-    rbox(0.046, 0.046, 0.062, 0.019, 0, -0.28, 0.012),
-    new THREE.CapsuleGeometry(0.013, 0.03, 2, R(8)).rotateX(-0.45).translate(0, -0.238, 0.045),
-  ];
+  const hand = far
+    ? [new THREE.BoxGeometry(0.044, 0.11, 0.07).translate(0, -0.25, 0.008)]
+    : [
+        new THREE.CylinderGeometry(0.026, 0.028, 0.03, R(10)).translate(0, -0.2, 0.004),
+        rb(0.044, 0.072, 0.07, 0.019, 0, -0.236, 0.004),
+        rb(0.046, 0.046, 0.062, 0.019, 0, -0.28, 0.012),
+        new THREE.CapsuleGeometry(0.013, 0.03, 2, R(8)).rotateX(-0.45).translate(0, -0.238, 0.045),
+      ];
 
   /* ----- Shoes (in the shin's space: the sole is on the ground at -0.33) ----- */
   const G = -(HIP_Y - THIGH);
-  const sneaker = profile(
+  const sneaker = prof(
     [
       [-0.062, G + 0.012],
       [0.15, G + 0.012],
@@ -1336,7 +1342,7 @@ function items(q: Detail): Item[] {
     0.014,
     L(6)
   );
-  const sneakerSole = profile(
+  const sneakerSole = prof(
     [
       [-0.064, G],
       [0.146, G],
@@ -1350,7 +1356,7 @@ function items(q: Detail): Item[] {
   );
   const laces = q === 0 ? [] : [0.03, 0.06, 0.09].map((u) => new THREE.BoxGeometry(0.05, 0.005, 0.008).rotateX(0.5).translate(0, G + 0.098 - u * 0.33, 0.035 + u * 0.55));
   const swoop = [-1, 1].map((s) => new THREE.BoxGeometry(0.004, 0.012, 0.11).rotateX(-0.2).translate(s * 0.046, G + 0.05, 0.05));
-  const dress = profile(
+  const dress = prof(
     [
       [-0.058, G + 0.01],
       [0.15, G + 0.01],
@@ -1364,7 +1370,7 @@ function items(q: Detail): Item[] {
     0.012,
     L(6)
   );
-  const dressSole = profile(
+  const dressSole = prof(
     [
       [-0.062, G],
       [0.152, G],
@@ -1376,7 +1382,7 @@ function items(q: Detail): Item[] {
     0.004,
     L(4)
   );
-  const boot = profile(
+  const boot = prof(
     [
       [-0.064, G + 0.02],
       [0.15, G + 0.02],
@@ -1391,7 +1397,7 @@ function items(q: Detail): Item[] {
     0.014,
     L(6)
   );
-  const bootSole = profile(
+  const bootSole = prof(
     [
       [-0.072, G],
       [0.168, G],
@@ -1406,14 +1412,14 @@ function items(q: Detail): Item[] {
 
   /* ----- Held things ----- */
   // In the hand's own space (the socket in the palm)
-  const gummy = rbox(0.1, 0.13, 0.04, 0.012, 0, -0.03, 0.04);
+  const gummy = rb(0.1, 0.13, 0.04, 0.012, 0, -0.03, 0.04);
   const cup = new THREE.CylinderGeometry(0.034, 0.027, 0.11, R(14)).translate(0, -0.03, 0.05);
   const cupSleeve = new THREE.CylinderGeometry(0.0335, 0.0305, 0.04, R(14)).translate(0, -0.035, 0.05);
   const cupTop = [
     new THREE.SphereGeometry(0.035, R(12), R(6), 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.45, 1).translate(0, 0.025, 0.05),
     new THREE.CylinderGeometry(0.004, 0.004, 0.07, 6).rotateZ(0.2).translate(0.006, 0.06, 0.05),
   ];
-  const boombox = [rbox(0.085, 0.15, 0.27, 0.018, 0, -0.11, 0.03), new THREE.TorusGeometry(0.06, 0.009, 6, R(12), Math.PI).rotateY(Math.PI / 2).translate(0, -0.035, 0.03)];
+  const boombox = [rb(0.085, 0.15, 0.27, 0.018, 0, -0.11, 0.03), new THREE.TorusGeometry(0.06, 0.009, 6, R(12), Math.PI).rotateY(Math.PI / 2).translate(0, -0.035, 0.03)];
   const speakers = [-0.045, 0.045].flatMap((x) => [-0.045, 0.105].map((z) => new THREE.CylinderGeometry(0.046, 0.046, 0.012, R(16)).rotateZ(Math.PI / 2).translate(x, -0.115, z)));
   // The same assault rifle the player carries, held upright on parade
   const rifle = rifleGeometry()
@@ -1426,10 +1432,10 @@ function items(q: Detail): Item[] {
       id: 'head',
       when: () => true,
       pieces: [
-        P('head', one([skull, nose, ...ears]), BLACK),
+        P('head', far ? skull : one([skull, nose, ...ears]), BLACK),
         ...(q > 0 ? [P('head', one(folds), BLACK, { detail: true })] : []),
         P('head', eyesSkin, SKIN),
-        P('head', one(frames), '#0d0c14'),
+        P('head', far ? new THREE.BoxGeometry(0.17, 0.05, 0.008).translate(0, EYE_Y, lensZ - 0.002) : one(frames), '#0d0c14'),
         P('head', one(lenses), '#ffffff', { mat: 'lens' }),
       ],
     },
@@ -1779,97 +1785,144 @@ export interface Crowd {
   meshes: THREE.InstancedMesh[];
 }
 
+/**
+ * Where the camera is and what it sees, for every crowd: the city sets it
+ * each frame (`view()` in index.ts). Until it's set, everyone is near.
+ */
+export const CROWD_VIEW = { eye: new THREE.Vector3(), frustum: new THREE.Frustum(), on: false };
+/** People nearer the camera than this get the crowd's detail, the rest the far one (and past `CROWD_FAR` nobody is drawn) */
+const CROWD_NEAR = 12;
+const CROWD_NEAR_LIGHT = 8;
+const CROWD_FAR = 170;
+
 /** Merged pieces shared between crowds (and between left and right limbs) */
 const crowdGeo = new Map<string, THREE.BufferGeometry>();
 
+interface Group {
+  geo: THREE.BufferGeometry;
+  key: string;
+  mat?: Mat;
+  uses: { joint: Joint; item: Item }[];
+  mesh?: THREE.InstancedMesh;
+  /** Instances used so far this frame, and who has each one (to repaint only when it changes hands) */
+  n: number;
+  owner: Int32Array;
+  painted: boolean;
+}
+
 /**
- * Many figures as instanced pieces. An item's pieces on one joint merge into
- * one geometry per outfit colour (lapels are the jacket's colour, shaded per
- * vertex), left and right limbs share it, and each figure only takes
- * instances of what it wears, so a crowd costs a draw call per kind of
- * piece and nothing for clothes nobody has on.
+ * Many figures as instanced pieces, at two detail levels: near the camera
+ * the crowd's own (`Detail` 1, without the small details on phones), further
+ * away the far one (0). An item's pieces on one joint merge into one
+ * geometry per outfit colour (lapels are the jacket's colour, shaded per
+ * vertex) and left and right limbs share it. Each frame every figure in view
+ * takes instances of only what it wears, at its level, so a crowd costs a
+ * draw call per kind of piece and nothing for clothes nobody has on, people
+ * out of view or the level they're not at.
  */
 export function createCrowd(parent: THREE.Object3D, outfits: Outfit[], opts: { light?: boolean } = {}): Crowd {
-  const q: Detail = opts.light ? 0 : 1;
   const rig = makeRig();
-  // Groups: one instanced mesh per merged geometry, colour key and material
-  const groups = new Map<
-    string,
-    {
-      geo: THREE.BufferGeometry;
-      key: string;
-      mat?: Mat;
-      uses: { joint: Joint; item: Item }[];
-    }
-  >();
-  for (const it of items(q)) {
-    if (!outfits.some(it.when)) continue;
-    const sub = new Map<string, Piece[]>();
-    for (const p of it.pieces) {
-      if (q === 0 && p.detail) continue;
-      const k = `${p.joint}|${p.color.startsWith('#') ? '#' : p.color}|${p.mat ?? ''}`;
-      if (!sub.has(k)) sub.set(k, []);
-      sub.get(k)!.push(p);
-    }
-    for (const list of sub.values()) {
-      const fixed = list[0].color.startsWith('#');
-      const id = `${q}|` + list.map((p) => `${p.geo.uuid}:${fixed ? p.color : (p.shade ?? 1)}`).join(',');
-      let geo = crowdGeo.get(id);
-      if (!geo) {
-        geo = paintMerge(
-          list.map((p) => ({
-            geo: p.geo,
-            color: fixed ? new THREE.Color(p.color) : new THREE.Color().setScalar(p.shade ?? 1),
-          }))
-        );
-        crowdGeo.set(id, geo);
-      }
-      const gk = `${geo.uuid}|${fixed ? '#' : list[0].color}|${list[0].mat ?? ''}`;
-      if (!groups.has(gk))
-        groups.set(gk, {
-          geo,
-          key: fixed ? '#' : list[0].color,
-          mat: list[0].mat,
-          uses: [],
-        });
-      groups.get(gk)!.uses.push({ joint: list[0].joint, item: it });
-    }
-  }
-  // Each figure's instances: [mesh, instance, joint]
-  const slots: [THREE.InstancedMesh, number, Joint][][] = outfits.map(() => []);
+  const near = opts.light ? CROWD_NEAR_LIGHT : CROWD_NEAR;
   const meshes: THREE.InstancedMesh[] = [];
-  for (const g of groups.values()) {
-    let count = 0;
-    outfits.forEach((o) => g.uses.forEach((u) => (count += u.item.when(o) ? 1 : 0)));
-    if (!count) continue;
-    const m = new THREE.InstancedMesh(g.geo, material(g.mat), count);
-    m.castShadow = true;
-    m.frustumCulled = false;
-    m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-    let k = 0;
-    outfits.forEach((o, i) =>
-      g.uses.forEach((u) => {
-        if (!u.item.when(o)) return;
-        m.setColorAt(k, g.key === '#' || g.mat === 'lens' ? tmp.set('#ffffff') : tmp.set((o[g.key as ColorKey] as string | undefined) ?? '#ff00ff'));
-        slots[i].push([m, k++, u.joint]);
-      })
-    );
-    parent.add(m);
-    meshes.push(m);
-  }
+  // Per level, each figure's pieces: [group, joint]
+  const levels = ([1, 0] as Detail[]).map((q) => {
+    const details = q === 1 && !opts.light;
+    const groups = new Map<string, Group>();
+    for (const it of items(q)) {
+      if (!outfits.some(it.when)) continue;
+      const sub = new Map<string, Piece[]>();
+      for (const p of it.pieces) {
+        if (!details && p.detail) continue;
+        const k = `${p.joint}|${p.color.startsWith('#') ? '#' : p.color}|${p.mat ?? ''}`;
+        if (!sub.has(k)) sub.set(k, []);
+        sub.get(k)!.push(p);
+      }
+      for (const list of sub.values()) {
+        const fixed = list[0].color.startsWith('#');
+        const id = `${q}|` + list.map((p) => `${p.geo.uuid}:${fixed ? p.color : (p.shade ?? 1)}`).join(',');
+        let geo = crowdGeo.get(id);
+        if (!geo) {
+          geo = paintMerge(list.map((p) => ({ geo: p.geo, color: fixed ? new THREE.Color(p.color) : new THREE.Color().setScalar(p.shade ?? 1) })));
+          crowdGeo.set(id, geo);
+        }
+        const gk = `${geo.uuid}|${fixed ? '#' : list[0].color}|${list[0].mat ?? ''}`;
+        if (!groups.has(gk)) groups.set(gk, { geo, key: fixed ? '#' : list[0].color, mat: list[0].mat, uses: [], n: 0, owner: new Int32Array(0), painted: false });
+        groups.get(gk)!.uses.push({ joint: list[0].joint, item: it });
+      }
+    }
+    const wear: [Group, Joint][][] = outfits.map(() => []);
+    for (const g of groups.values()) {
+      let count = 0;
+      outfits.forEach((o, i) =>
+        g.uses.forEach((u) => {
+          if (!u.item.when(o)) return;
+          wear[i].push([g, u.joint]);
+          count++;
+        })
+      );
+      if (!count) continue;
+      const m = new THREE.InstancedMesh(g.geo, material(g.mat), count);
+      m.castShadow = true;
+      m.frustumCulled = false;
+      m.count = 0;
+      m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      m.setColorAt(0, tmp.set('#ffffff'));
+      m.instanceColor!.setUsage(THREE.DynamicDrawUsage);
+      g.mesh = m;
+      g.owner = new Int32Array(count).fill(-1);
+      parent.add(m);
+      meshes.push(m);
+    }
+    return { groups: [...groups.values()].filter((g) => g.mesh), wear };
+  });
+  // Each figure's colour per outfit key, worked out once
+  const colors = outfits.map((o) => {
+    const c: Record<string, THREE.Color> = { '#': new THREE.Color('#ffffff') };
+    for (const k of ['top', 'bottom', 'shoes', 'tie', 'cap', 'beanie', 'bucket', 'backpack', 'crossbody', 'board', 'headphones'] as ColorKey[])
+      c[k] = new THREE.Color((o[k] as string | undefined) ?? '#ff00ff');
+    return c;
+  });
+  const at = new THREE.Vector3();
+  const ball = new THREE.Sphere(at, 0);
   return {
     meshes,
     set(i, x, y, z, yaw, scale, pose) {
       const o = outfits[i];
+      // Which level, if any: out of view or very far, nothing is drawn
+      let level = levels[0];
+      if (CROWD_VIEW.on) {
+        at.set(x, y + 0.6 * scale, z).applyMatrix4(parent.matrixWorld);
+        ball.radius = 1.6 * scale;
+        const d = at.distanceTo(CROWD_VIEW.eye);
+        if (d > CROWD_FAR || !CROWD_VIEW.frustum.intersectsSphere(ball)) return;
+        if (d > near) level = levels[1];
+      }
       rig.root.position.set(x, y, z);
       rig.root.rotation.set(0, yaw, 0);
       rig.root.scale.set(scale * (o.build ?? 1), scale * (o.height ?? 1), scale * (o.build ?? 1));
       applyPose(rig, pose);
       rig.root.updateMatrixWorld(true);
-      for (const [m, k, j] of slots[i]) m.setMatrixAt(k, rig.j[j].matrixWorld);
+      for (const [g, j] of level.wear[i]) {
+        const k = g.n++;
+        g.mesh!.setMatrixAt(k, rig.j[j].matrixWorld);
+        if (g.owner[k] !== i) {
+          g.owner[k] = i;
+          g.mesh!.setColorAt(k, g.mat === 'lens' ? colors[i]['#'] : colors[i][g.key]);
+          g.painted = true;
+        }
+      }
     },
     commit() {
-      for (const m of meshes) m.instanceMatrix.needsUpdate = true;
+      for (const l of levels)
+        for (const g of l.groups) {
+          const m = g.mesh!;
+          m.count = g.n;
+          m.visible = g.n > 0;
+          m.instanceMatrix.needsUpdate = true;
+          if (g.painted) m.instanceColor!.needsUpdate = true;
+          g.painted = false;
+          g.n = 0;
+        }
     },
   };
 }

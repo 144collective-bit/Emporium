@@ -124,13 +124,20 @@ it and has been retired completely. Build only on what's here.
     pieces on joints, each a fixed colour or an outfit colour (`shade`
     darkens or lightens it: lapels, ribbing). New clothes are new items.
   - Three detail levels (`Detail`): 2 for single figures (`createDegen()`:
-    the player, other players, the fitting room, the hologram), 1 for
-    crowds, 0 for the phones' `light` crowd (no `detail` pieces).
+    the player, other players, the fitting room, the hologram; about 12k
+    triangles), 1 for crowd people near the camera (about 6k; the phones'
+    `light` crowd leaves out the `detail` pieces), 0 for crowd people
+    further away (`far`: plain boxes for rounded ones, no ears or nose, the
+    shades as one bar; about 1.5k).
   - `createDegen()` merges everything on a joint into one mesh coloured per
-    vertex (about 15 draw calls a figure, about 12k triangles).
+    vertex (about 15 draw calls a figure).
     `createCrowd()` (pedestrians, soldiers) merges an item's pieces per
-    joint and colour, shares them left and right, and gives each person
-    instances only of what they wear (nothing is drawn hidden).
+    joint and colour and shares them left and right. Every frame each person
+    in view takes instances of only what they wear, at their level: near
+    within `CROWD_NEAR` (12, 8 on phones) of the camera, far beyond, and not
+    at all out of the view or past `CROWD_FAR`. The city fills `CROWD_VIEW`
+    (camera position and view) each frame in `index.ts`; under reduced
+    motion it's off and everyone is drawn near.
   - Outfits (`suit`, `hoodie`, `track`, `soldier`) only change clothes and
     colours; poses come from the helpers there (walk/run, idle, look, chat,
     sit, march, attention/salute, dance). The cap patch is the Emporium
