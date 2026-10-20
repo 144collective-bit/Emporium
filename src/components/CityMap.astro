@@ -376,33 +376,20 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       <div class="combat-pops" data-pops aria-live="polite"></div>
       <div class="combat-scope" aria-hidden="true"><i></i></div>
     </div>
-    {/* The gun store at the Armoury's counter (gunshop.ts). Guns unlock with lifetime score; nothing is sold. */}
-    <section class="shop" data-shop hidden aria-labelledby="shop-title">
+    {/* The Armoury's store and workbench at its counter (gunshop.ts). The starters unlock with lifetime score; the rest cost Dorras earned in the city, never real money. */}
+    <section class="shop armoury" data-shop hidden aria-labelledby="shop-title">
       <header class="shop-head">
-        <h2 id="shop-title" class="shop-title">Gun store</h2>
-        <p class="shop-score">Score <b data-shop-score>0</b></p>
-        <button type="button" class="shop-close" data-shop-close aria-label="Close the gun store">
+        <h2 id="shop-title" class="shop-title">Armoury</h2>
+        <p class="shop-score shop-dorras"><span class="shop-score-label">Dorras</span> <span data-shop-dorras></span></p>
+        <p class="shop-score"><span class="shop-score-label">Score</span> <b data-shop-score>0</b></p>
+        <button type="button" class="shop-close" data-shop-close aria-label="Close the Armoury">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
         </button>
       </header>
       <div class="shop-list" data-shop-list role="listbox" aria-label="Guns"></div>
-      <div class="shop-detail" data-shop-detail>
-        <div class="shop-name-row">
-          <h3 class="shop-name" data-shop-name>Assault Rifle</h3>
-          <p class="shop-mode" data-shop-mode></p>
-        </div>
-        <p class="shop-blurb" data-shop-blurb></p>
-        <dl class="shop-stats">
-          <div data-stat="dmg"><dt>Damage</dt><dd><i></i></dd></div>
-          <div data-stat="rate"><dt>Fire rate</dt><dd><i></i></dd></div>
-          <div data-stat="range"><dt>Range</dt><dd><i></i></dd></div>
-          <div data-stat="acc"><dt>Accuracy</dt><dd><i></i></dd></div>
-          <div data-stat="mag"><dt>Magazine</dt><dd><i></i></dd></div>
-        </dl>
-        <button type="button" class="shop-take" data-shop-take>Take it &amp; gear up</button>
-        <p class="shop-note" data-shop-note></p>
-      </div>
-      <p class="shop-foot">For fun only: guns unlock with your score, nothing is sold. Finishes are in Profile.</p>
+      <div class="shop-detail" data-shop-detail></div>
+      <section class="bench" data-shop-bench aria-label="Workbench" hidden></section>
+      <p class="shop-foot">The starters are free and unlock with your score; the rest cost Dorras you earn in the city. Nothing here is real money.</p>
     </section>
     {/* The garage on the south bank (garage-ui.ts): pick your car and its paint. Cars are free; nothing is sold. */}
     <section class="shop garage" data-garage hidden aria-labelledby="garage-title">

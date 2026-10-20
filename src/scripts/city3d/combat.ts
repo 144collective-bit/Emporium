@@ -4,14 +4,23 @@
  * player's input and turns its events into the rifle, the targets, effects,
  * sound and the HUD.
  *
- * - You start unarmed. The store at the Armoury's counter hands out the guns
- *   (unlocked by lifetime score) and refills ammo; G holsters and draws.
- * - Left mouse fires full auto, right mouse aims (the holo red-dot in first
- *   person), R reloads. Phones get Fire, Aim and Reload buttons and a little
- *   aim assist; gamepads fire on RT and reload on X.
- * - Targets: cardboard dummies and patrol drones. People and cars are never hit.
- * - Guns and finishes unlock with your lifetime score, saved in this browser
- *   (or in your player profile when online).
+ * - You start unarmed. The Armoury's store hands out the guns at its counter
+ *   and refills ammo; G holsters and draws. The starters unlock with lifetime
+ *   score; the rest are bought there with Dorras (the save, through `game`),
+ *   and a gun you don't own can't be taken or swapped to.
+ * - The Armoury's mods on your guns (the save again) are handed to the rules
+ *   (`sim.setMods`) whenever they're stale: on the first frame, after going
+ *   online or offline, and when the workbench calls `setMods()`. The HUD's
+ *   magazine numbers follow the modded gun.
+ * - Left mouse fires full auto, one shot a pull or a burst a pull (the gun
+ *   decides), right mouse aims (the holo red-dot in first person), R reloads.
+ *   Phones get Fire, Aim and Reload buttons and a little aim assist; gamepads
+ *   fire on RT and reload on X.
+ * - Targets: cardboard dummies and patrol drones. People and cars are never
+ *   hit. Each of your takedowns is handed to the city's game (`onTakedown`:
+ *   XP and counters).
+ * - Finishes unlock with your lifetime score, saved in this browser (or in
+ *   your player profile when online).
  */
 import * as THREE from 'three';
 import { FONT_DISPLAY, PAL, canvasTex, fx, glowTex, mergeMeshes, neon, sidesBox, toon } from './kit';
@@ -22,6 +31,8 @@ import { SKINS, buildGun, gunSpec, type Gun, type SkinId } from './guns';
 import { holdGun, newStance } from './stance';
 import type { Outfit, Pose } from './character';
 import { createViewmodel, type ViewState } from './viewmodel';
+import { gunMods, ownsGun } from './tycoon';
+import type { GameDeps } from './ui';
 
 export { DUMMIES };
 
@@ -42,6 +53,10 @@ export interface CombatDeps {
   rayWorld(from: THREE.Vector3, dir: THREE.Vector3, max: number): number;
   /** `gain` 0..1 for sounds from further away (other players) */
   sfx(kind: Sfx, gain?: number): void;
+  /** The city's game: the save says which guns are bought and what mods they carry (made after walk mode; only read once walking) */
+  game: GameDeps;
+  /** One of your takedowns (XP and counters for the city's game) */
+  onTakedown(kind: 'dummy' | 'drone'): void;
 }
 
 const ME = 'me';
@@ -255,8 +270,20 @@ export function createCombat(d: CombatDeps) {
   };
 
   me.weapon = profile.weapon;
-  /** The gun's rules (rate, spread, kick...) for whatever Degen is carrying */
-  const W = () => WEAPONS[me.weapon];
+  /** The gun's rules (rate, spread, kick...) for whatever Degen is carrying, with its mods on */
+  const W = () => sim.weaponOf(ME);
+  /** May Degen have this gun: a starter his score unlocked, or a gun he bought at the Armoury */
+  const owns = (id: WeaponId) => weaponUnlocked(id, (netProfile ?? profile).total) && ownsGun(d.game.save(), id);
+  /** The save's mods are handed to the sim lazily: the economy is made after walk mode */
+  let modsFresh = false;
+  const applyMods = () => {
+    if (modsFresh) return;
+    modsFresh = true;
+    const save = d.game.save();
+    for (const id of WEAPON_IDS) sim.setMods(ME, id, gunMods(save, id));
+    // The gun remembered from last time may have been bought on another save
+    if (!me.geared && !owns(me.weapon)) me.weapon = 'rifle';
+  };
 
   // Third person: the gun on Degen's shoulder, in a pivot the walk code parents to his chest
   const pivot = new THREE.Group();
@@ -441,7 +468,7 @@ export function createCombat(d: CombatDeps) {
     num.at.copy(at);
     num.t = 0.8;
     num.dx = (Math.random() - 0.5) * 24;
-    num.el.textContent = String(n);
+    num.el.textContent = String(Math.round(n));
     num.el.classList.toggle('is-kill', kill);
     num.el.hidden = false;
   };
@@ -477,8 +504,8 @@ export function createCombat(d: CombatDeps) {
   // Takedown and streak call-outs near the crosshair
   const pops: { el: HTMLElement; t: number }[] = [];
   const STREAKS = ['', '', 'Double', 'Triple', 'Quad', 'Rampage'];
-  /** The guns this player's lifetime score has unlocked, in store order */
-  const guns = () => WEAPON_IDS.filter((id) => weaponUnlocked(id, (netProfile ?? profile).total));
+  /** The guns this player may carry (score-unlocked starters and bought guns), in store order */
+  const guns = () => WEAPON_IDS.filter(owns);
   const popup = (big: string, label: string, kind = '') => {
     const el = document.createElement('div');
     el.className = `combat-pop ${kind}`;
@@ -606,6 +633,7 @@ export function createCombat(d: CombatDeps) {
             addLifetime(e.points);
             saveProfile();
           }
+          d.onTakedown(t.kind);
           popup(`+${e.points}`, t.kind === 'drone' ? 'Drone down' : 'Takedown');
           if (e.streak >= 2) popup(STREAKS[Math.min(e.streak, 5)] || `x${e.streak}`, `x${e.streak} streak`, 'is-streak');
           paintSkins();
@@ -742,9 +770,17 @@ export function createCombat(d: CombatDeps) {
     get adsZoom() {
       return W().zoom;
     },
-    /** May Degen take this gun yet (lifetime score)? */
+    /** May Degen take this gun yet (a starter his score unlocked, or one he bought)? */
     canTake(id: WeaponId) {
-      return weaponUnlocked(id, (netProfile ?? profile).total);
+      return owns(id);
+    },
+    /**
+     * The Armoury's mods changed in the save (the workbench): the rules read them again.
+     * Without `id`, every gun's are read on the next frame.
+     */
+    setMods(id?: WeaponId) {
+      if (id && modsFresh) sim.setMods(ME, id, gunMods(d.game.save(), id));
+      else modsFresh = false;
     },
     get firing() {
       return trigger || touchFire;
@@ -769,7 +805,8 @@ export function createCombat(d: CombatDeps) {
     },
     /** Take a gun at the store counter (the same one again refills its ammo) */
     equip(id: WeaponId) {
-      if (!weaponUnlocked(id, (netProfile ?? profile).total)) return false;
+      if (!owns(id)) return false;
+      applyMods();
       sim.equip(ME, id);
       net?.send({ t: 'equip', w: id });
       hold();
@@ -777,13 +814,13 @@ export function createCombat(d: CombatDeps) {
       saveProfile();
       return true;
     },
-    /** The guns Degen can swap between (unlocked by lifetime score) */
+    /** The guns Degen can swap between (score-unlocked starters and bought guns) */
     get guns() {
       return guns();
     },
     /**
-     * Swap to another unlocked gun, anywhere once geared up: `to` is a gun, or a step
-     * through the unlocked ones (1 next, -1 previous). Each gun keeps its own ammo.
+     * Swap to another of his guns, anywhere once geared up: `to` is a gun, or a step
+     * through them (1 next, -1 previous). Each gun keeps its own ammo.
      */
     swap(to: WeaponId | 1 | -1 = 1) {
       if (!me.geared) return false;
@@ -792,11 +829,12 @@ export function createCombat(d: CombatDeps) {
       if (typeof to === 'string') id = list.includes(to) ? to : undefined;
       else if (list.length > 1) id = list[(list.indexOf(me.weapon) + to + list.length) % list.length];
       if (!id || id === me.weapon) {
-        // Only one gun so far: say what unlocks the next
-        const next = WEAPON_IDS.find((w) => !list.includes(w));
-        if (typeof to !== 'string' && next) popup(WEAPONS[me.weapon].short, `${WEAPONS[next].need.toLocaleString('en')} score unlocks the ${WEAPONS[next].name}`);
+        // Only one gun so far: say what unlocks the next starter, or where the rest are sold
+        const next = WEAPON_IDS.find((w) => !list.includes(w) && WEAPONS[w].need > 0);
+        if (typeof to !== 'string') popup(WEAPONS[me.weapon].short, next ? `${WEAPONS[next].need.toLocaleString('en')} score unlocks the ${WEAPONS[next].name}` : 'More guns are for sale at the Armoury');
         return false;
       }
+      applyMods();
       sim.swap(ME, id);
       net?.send({ t: 'swap', w: id });
       hold();
@@ -830,6 +868,7 @@ export function createCombat(d: CombatDeps) {
       aiming = aim;
       motion = t > 0;
       steppedAt = performance.now();
+      applyMods();
       camera.getWorldDirection(fwd);
       sim.setInput(ME, { fire: me.armed && (trigger || touchFire), aim, assist: touchFire && !trigger, origin: camera.position, dir: fwd });
       sim.advance(dt, motion);
@@ -910,6 +949,8 @@ export function createCombat(d: CombatDeps) {
       sim = createSim({ ground: d.ground, rayWorld: d.rayWorld, authority: !link });
       me = sim.addPlayer(ME);
       me.weapon = profile.weapon;
+      // A fresh sim knows no mods: the save's are read again on the next frame
+      modsFresh = false;
       for (const L of looks) {
         L.g.visible = true;
         L.fall = null;

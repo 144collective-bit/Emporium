@@ -22,6 +22,7 @@ import { PLAYER, airPose, createDegen, emotePose, walkPose, type Outfit } from '
 import { createCombat, type Sfx } from './combat';
 import { WEAPON_IDS } from './combat-sim';
 import { createGunShop } from './gunshop';
+import { takedown } from './tycoon';
 import { createGarageUI, loadCar } from './garage-ui';
 import type { Garage } from './garage';
 import { createDrive } from './drive';
@@ -243,13 +244,29 @@ export function createWalk(d: WalkDeps) {
   /** Distance along a ray to the first building or the ground (for shots). */
   const rayWorld = (from: THREE.Vector3, dir: THREE.Vector3, max: number) => rayBoxes(from, dir, max, d.plotSolids());
 
-  const combat = createCombat({ scene: d.scene, camera, root, tick: d.tick, ground: SLAB, rayWorld, sfx: d.sfx });
-  // The gun store at the Armoury's counter: frees the mouse and pauses walking while it's open
+  const combat = createCombat({
+    scene: d.scene,
+    camera,
+    root,
+    tick: d.tick,
+    ground: SLAB,
+    rayWorld,
+    sfx: d.sfx,
+    game: d.game,
+    // Each takedown counts for the city's game (XP, missions)
+    onTakedown(kind) {
+      takedown(d.game.save(), kind);
+      d.game.commit();
+    },
+  });
+  // The Armoury's store and workbench at its counter: frees the mouse and pauses walking while it's open
   const shop = createGunShop(root, {
     lifetime: () => combat.lifetime,
     weapon: () => combat.weapon,
     geared: () => combat.geared,
     equip: (id) => combat.equip(id),
+    game: d.game,
+    setMods: (id) => combat.setMods(id),
     onOpen() {
       keys.clear();
       jumpHeld = false;

@@ -8,7 +8,8 @@
  * - The starter tier is free: the five original cars, the four original
  *   guns (still unlocked by score) and the whole original wardrobe.
  * - Everything new costs Dorras and needs a level. Upgrades ("mods") come
- *   in three levels each and cost more on dearer things.
+ *   in three levels each and cost more on dearer things; `applyGunMods()`
+ *   turns a gun's mods into its rules for the combat sim.
  * - XP comes from playing: sales, contracts, races, missions, takedowns.
  *   Nothing here is bought with real money or tied to the token.
  */
