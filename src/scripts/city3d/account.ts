@@ -10,7 +10,7 @@
  * - the profile card (account-ui.ts) shows the basic profile: name, rank,
  *   score, wallet and plots owned.
  */
-import type { AccountMe } from '../net/land';
+import type { AccountMe } from '../net/auth';
 import type { OwnProfile } from '../net/protocol';
 import { findWallets, requestAccount, signMessage, walletError, type WalletInfo } from './wallet';
 

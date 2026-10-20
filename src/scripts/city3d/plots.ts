@@ -6,7 +6,7 @@
  * dressed around them (paving, trees, lamps, benches, fences).
  */
 import * as THREE from 'three';
-import { DISTRICTS, PLOT_PRICE, type BuildingType, type Design } from '../../data/plots';
+import { DISTRICTS, type BuildingType, type Design } from '../../data/plots';
 import { Batch, FONT_MONO, PAL, canvasTex, facadeMat, fx, glowTex, lit, neon, neonSign, roundRect, shadeHex, toon } from './kit';
 import { BS, SLAB, type Tick } from './world';
 
@@ -22,8 +22,6 @@ export interface Plot {
   size: number;
   cx: number;
   cz: number;
-  /** PLS */
-  price: number;
 }
 
 /** Who has a plot: you, someone else, or a payment for it is being checked */
@@ -37,7 +35,7 @@ export const PLOT_SIZE = BS - KERB * 2;
 export const PLOTS: Plot[] = DISTRICTS.map((d) => {
   const x0 = d.ox + KERB;
   const z0 = d.oz + KERB;
-  return { id: d.id, district: d.id, districtName: d.name, x0, z0, size: PLOT_SIZE, cx: x0 + PLOT_SIZE / 2, cz: z0 + PLOT_SIZE / 2, price: PLOT_PRICE };
+  return { id: d.id, district: d.id, districtName: d.name, x0, z0, size: PLOT_SIZE, cx: x0 + PLOT_SIZE / 2, cz: z0 + PLOT_SIZE / 2 };
 });
 export const PLOT_BY_ID = new Map(PLOTS.map((p) => [p.id, p]));
 export const plotById = (id: string) => PLOT_BY_ID.get(id) ?? null;

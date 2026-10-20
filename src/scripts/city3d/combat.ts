@@ -4,28 +4,46 @@
  * player's input and turns its events into the rifle, the targets, effects,
  * sound and the HUD.
  *
- * - You start unarmed. The store at the Armoury's counter hands out the guns
- *   (unlocked by lifetime score) and refills ammo; G holsters and draws.
- * - Left mouse fires full auto, right mouse aims (the holo red-dot in first
- *   person), R reloads. Phones get Fire, Aim and Reload buttons and a little
- *   aim assist; gamepads fire on RT and reload on X.
- * - Targets: cardboard dummies and patrol drones. People and cars are never hit.
- * - Guns and finishes unlock with your lifetime score, saved in this browser
- *   (or in your player profile when online).
+ * - You start unarmed. The Armoury's store hands out the guns at its counter
+ *   and refills ammo; G holsters and draws. The starters unlock with lifetime
+ *   score; the rest are bought there with Dorras (the save, through `game`),
+ *   and a gun you don't own can't be taken or swapped to.
+ * - The Armoury's mods on your guns (the save again) are handed to the rules
+ *   (`sim.setMods`) whenever they're stale: on the first frame, after going
+ *   online or offline, and when the workbench calls `setMods()`. The HUD's
+ *   magazine numbers follow the modded gun.
+ * - Left mouse fires full auto, one shot a pull or a burst a pull (the gun
+ *   decides), right mouse aims (the holo red-dot in first person), R reloads.
+ *   Phones get Fire, Aim and Reload buttons and a little aim assist; gamepads
+ *   fire on RT and reload on X.
+ * - Targets: cardboard dummies, patrol drones and the rival crew on the south
+ *   bank (drawn by crew.ts). People and cars are never hit. Each of your
+ *   takedowns is handed to the city's game (`onTakedown`: XP and counters).
+ * - The crew shoves you when it gets close: a sound, a flash round the screen
+ *   (`is-shoved` on the city root) and a push walk mode reads from `shove`.
+ * - Finishes unlock with your lifetime score, saved in this browser (or in
+ *   your player profile when online).
  */
 import * as THREE from 'three';
 import { FONT_DISPLAY, PAL, canvasTex, fx, glowTex, mergeMeshes, neon, sidesBox, toon } from './kit';
 import { type Tick } from './world';
-import { DRONES, DUMMIES, WEAPONS, WEAPON_IDS, createSim, dronePose, weaponUnlocked, type SimEvent, type WeaponId } from './combat-sim';
+import { CREW_SPOTS, DRONES, DUMMIES, WEAPONS, WEAPON_IDS, createSim, dronePose, weaponUnlocked, type SimEvent, type TargetKind, type WeaponId } from './combat-sim';
+import { createCrew } from './crew';
 import type { ClientMsg, MeRow, NetEvent } from '../net/protocol';
 import { SKINS, buildGun, gunSpec, type Gun, type SkinId } from './guns';
 import { holdGun, newStance } from './stance';
 import type { Outfit, Pose } from './character';
 import { createViewmodel, type ViewState } from './viewmodel';
+import { gunMods, ownsGun } from './tycoon';
+import type { GameDeps } from './ui';
 
 export { DUMMIES };
 
-export type Sfx = 'shot' | 'shotSmg' | 'shotShotgun' | 'shotDmr' | 'empty' | 'magout' | 'magin' | 'bolt' | 'hit' | 'hitMetal' | 'down' | 'boom' | 'gear' | 'draw' | 'holster' | 'unlock' | 'bump' | 'door';
+export type Sfx =
+  | 'shot' | 'shotSmg' | 'shotShotgun' | 'shotDmr' | 'shotRevolver' | 'shotBurst' | 'shotLmg'
+  | 'empty' | 'magout' | 'magin' | 'bolt' | 'hit' | 'hitMetal' | 'down' | 'boom' | 'gear' | 'draw' | 'holster' | 'unlock' | 'bump' | 'door'
+  /** The city's game: buying, upgrading, levelling up, missions, races, the crew */
+  | 'buy' | 'denied' | 'upgrade' | 'levelup' | 'mission' | 'countdown' | 'go' | 'checkpoint' | 'finish' | 'shove' | 'goonDown';
 
 export interface CombatDeps {
   scene: THREE.Scene;
@@ -38,10 +56,17 @@ export interface CombatDeps {
   rayWorld(from: THREE.Vector3, dir: THREE.Vector3, max: number): number;
   /** `gain` 0..1 for sounds from further away (other players) */
   sfx(kind: Sfx, gain?: number): void;
+  /** The city's game: the save says which guns are bought and what mods they carry (made after walk mode; only read once walking) */
+  game: GameDeps;
+  /** One of your takedowns (XP and counters for the city's game) */
+  onTakedown(kind: TargetKind): void;
 }
 
 const ME = 'me';
-const SHOT_SOUND: Record<WeaponId, Sfx> = { rifle: 'shot', smg: 'shotSmg', shotgun: 'shotShotgun', dmr: 'shotDmr' };
+/** Seconds a goon's shove pushes you, and how long the screen flashes */
+const SHOVE_TIME = 0.45;
+const SHOVE_FLASH = 0.3;
+const SHOT_SOUND: Record<WeaponId, Sfx> = { rifle: 'shot', smg: 'shotSmg', shotgun: 'shotShotgun', dmr: 'shotDmr', revolver: 'shotRevolver', burst: 'shotBurst', lmg: 'shotLmg' };
 const PROFILE_KEY = 'degen-city-combat-v1';
 
 /* ---------- Target looks ---------- */
@@ -251,8 +276,20 @@ export function createCombat(d: CombatDeps) {
   };
 
   me.weapon = profile.weapon;
-  /** The gun's rules (rate, spread, kick...) for whatever Degen is carrying */
-  const W = () => WEAPONS[me.weapon];
+  /** The gun's rules (rate, spread, kick...) for whatever Degen is carrying, with its mods on */
+  const W = () => sim.weaponOf(ME);
+  /** May Degen have this gun: a starter his score unlocked, or a gun he bought at the Armoury */
+  const owns = (id: WeaponId) => weaponUnlocked(id, (netProfile ?? profile).total) && ownsGun(d.game.save(), id);
+  /** The save's mods are handed to the sim lazily: the economy is made after walk mode */
+  let modsFresh = false;
+  const applyMods = () => {
+    if (modsFresh) return;
+    modsFresh = true;
+    const save = d.game.save();
+    for (const id of WEAPON_IDS) sim.setMods(ME, id, gunMods(save, id));
+    // The gun remembered from last time may have been bought on another save
+    if (!me.geared && !owns(me.weapon)) me.weapon = 'rifle';
+  };
 
   // Third person: the gun on Degen's shoulder, in a pivot the walk code parents to his chest
   const pivot = new THREE.Group();
@@ -320,6 +357,7 @@ export function createCombat(d: CombatDeps) {
 
   /* ----- Targets: what the sim's targets look like ----- */
   interface Look {
+    /** The target's scene group (for a goon, an empty anchor: the crew draws him) */
     g: THREE.Group;
     bar: THREE.Group;
     fill: THREE.Mesh;
@@ -328,6 +366,8 @@ export function createCombat(d: CombatDeps) {
     hinge?: THREE.Group;
     light?: THREE.Mesh;
     fall?: { vy: number; spin: number } | null;
+    /** A goon's number in the crew */
+    goon?: number;
   }
   const looks: Look[] = [];
   const cardboard = new THREE.MeshToonMaterial({ map: bodyTex() });
@@ -390,6 +430,16 @@ export function createCombat(d: CombatDeps) {
     scene.add(g, bar);
     looks.push({ g, bar, fill, barShow: 0, flash: 0, light, fall: null });
   }
+  // The crew: one instanced crowd (crew.ts); each goon's look here is only his health bar
+  const crew = createCrew(scene, CREW_SPOTS.length);
+  for (let i = 0; i < CREW_SPOTS.length; i++) {
+    const { bar, fill } = healthBar();
+    scene.add(bar);
+    looks.push({ g: new THREE.Group(), bar, fill, barShow: 0, flash: 0, goon: i });
+  }
+  /** A goon's shove on you, while it pushes: the direction and how much is left (1 down to 0) */
+  let shove: { dx: number; dz: number; t: number } | null = null;
+  let shoveFlash = 0;
 
   /* ----- HUD ----- */
   let shown = { mag: -1, reserve: -1, score: -1, streak: -1, reload: false, hint: '', gun: '' };
@@ -437,7 +487,7 @@ export function createCombat(d: CombatDeps) {
     num.at.copy(at);
     num.t = 0.8;
     num.dx = (Math.random() - 0.5) * 24;
-    num.el.textContent = String(n);
+    num.el.textContent = String(Math.round(n));
     num.el.classList.toggle('is-kill', kill);
     num.el.hidden = false;
   };
@@ -473,8 +523,8 @@ export function createCombat(d: CombatDeps) {
   // Takedown and streak call-outs near the crosshair
   const pops: { el: HTMLElement; t: number }[] = [];
   const STREAKS = ['', '', 'Double', 'Triple', 'Quad', 'Rampage'];
-  /** The guns this player's lifetime score has unlocked, in store order */
-  const guns = () => WEAPON_IDS.filter((id) => weaponUnlocked(id, (netProfile ?? profile).total));
+  /** The guns this player may carry (score-unlocked starters and bought guns), in store order */
+  const guns = () => WEAPON_IDS.filter(owns);
   const popup = (big: string, label: string, kind = '') => {
     const el = document.createElement('div');
     el.className = `combat-pop ${kind}`;
@@ -579,6 +629,7 @@ export function createCombat(d: CombatDeps) {
         L.barShow = 3;
         burst(e.at, 6, ['#ffe9a8', '#ffd36b'], 2.5, 1, true, 0.25);
         if (t.kind === 'dummy') burst(e.at, 5, ['#c99a5a', '#a87c44'], 1.6, 1.2, false, 0.6);
+        else if (t.kind === 'goon') burst(e.at, 5, ['#8f3dff', '#00eaff', '#f3f2f7'], 1.6, 1.2, false, 0.5);
         if (e.player === ME) {
           hitT = 0.15;
           d.sfx(t.kind === 'drone' ? 'hitMetal' : 'hit');
@@ -591,18 +642,20 @@ export function createCombat(d: CombatDeps) {
         const L = looks[e.target];
         const t = sim.targets[e.target];
         if (t.kind === 'dummy') burst(e.at, 26, ['#ff2fb9', '#00eaff', '#ffd36b', '#8f3dff', '#14121f'], 3.2, 1.6, false, 1.1);
+        else if (t.kind === 'goon') burst(e.at, 18, ['#8f3dff', '#00eaff', '#ff2fb9', '#f3f2f7'], 2.6, 1.4, false, 0.9);
         else {
           L.fall = { vy: 0, spin: (Math.random() - 0.5) * 8 };
           burst(e.at, 14, ['#ffb347', '#ff6a2f', '#ffe9a8'], 3, 1, true, 0.5);
         }
         if (e.player === ME) {
           killT = 0.3;
-          d.sfx('down');
+          d.sfx(t.kind === 'goon' ? 'goonDown' : 'down');
           if (!net) {
             addLifetime(e.points);
             saveProfile();
           }
-          popup(`+${e.points}`, t.kind === 'drone' ? 'Drone down' : 'Takedown');
+          d.onTakedown(t.kind);
+          popup(`+${e.points}`, t.kind === 'drone' ? 'Drone down' : t.kind === 'goon' ? 'Goon down' : 'Takedown');
           if (e.streak >= 2) popup(STREAKS[Math.min(e.streak, 5)] || `x${e.streak}`, `x${e.streak} streak`, 'is-streak');
           paintSkins();
         }
@@ -642,6 +695,15 @@ export function createCombat(d: CombatDeps) {
       }
       case 'streak-end':
         break;
+      case 'shove':
+        // One of the crew got you: a thump, a flash round the edges, and walk mode pushes you back
+        if (e.player === ME) {
+          d.sfx('shove');
+          shove = { dx: e.dx, dz: e.dz, t: 1 };
+          shoveFlash = SHOVE_FLASH;
+          root.classList.add('is-shoved');
+        }
+        break;
     }
   }
 
@@ -668,6 +730,9 @@ export function createCombat(d: CombatDeps) {
         if (tg.down > 0) L.hinge.rotation.x += (-1.45 - L.hinge.rotation.x) * Math.min(1, dt * 12);
         // Spring back up, with a wobble after each hit
         else L.hinge.rotation.x += (Math.sin(t * 30) * L.flash * 1.2 - L.hinge.rotation.x) * Math.min(1, dt * 10);
+      } else if (L.goon !== undefined) {
+        // The crew is drawn below; the anchor only carries the health bar
+        L.g.position.set(tg.x, tg.y, tg.z);
       } else {
         const g = L.g;
         if (L.fall) {
@@ -696,12 +761,21 @@ export function createCombat(d: CombatDeps) {
       L.barShow = Math.max(0, L.barShow - dt);
       L.bar.visible = L.barShow > 0 && tg.down === 0 && tg.hp > 0;
       if (L.bar.visible) {
-        if (!L.hinge) L.bar.position.copy(L.g.position).add(V.set(0, 0.45, 0));
+        if (!L.hinge) L.bar.position.copy(L.g.position).add(V.set(0, L.goon !== undefined ? crew.height + 0.2 : 0.45, 0));
         L.bar.quaternion.copy(camQ);
         const f = tg.hp / tg.max;
         L.fill.scale.x = Math.max(0.001, f);
         (L.fill.material as THREE.MeshBasicMaterial).color.set(f > 0.5 ? '#3ce06a' : f > 0.25 ? '#ffd23f' : '#ff3b3b');
       }
+    }
+    crew.update(dt, t, sim.targets, sim.goons, sim.firstGoon);
+    if (shove) {
+      shove.t -= dt / SHOVE_TIME;
+      if (shove.t <= 0) shove = null;
+    }
+    if (shoveFlash > 0) {
+      shoveFlash -= dt;
+      if (shoveFlash <= 0) root.classList.remove('is-shoved');
     }
     sparks.update(dt, 4);
     puffs.update(dt, 1.2);
@@ -719,6 +793,18 @@ export function createCombat(d: CombatDeps) {
     /** Dress the first-person hands in the outfit's sleeves */
     setOutfit(o: Outfit) {
       vm.setOutfit(o);
+    },
+    /** Where Degen stands, each frame while walking (the crew comes for him there); anything not finite means away (in a car) */
+    setPlayerPos(x: number, z: number) {
+      sim.setPlayerPos(ME, x, z);
+    },
+    /**
+     * A goon's shove on you while it lasts: the direction to push (unit length)
+     * and how much of the push is left, 1 down to 0 over SHOVE_TIME; null otherwise.
+     * Walk mode reads it each frame and pushes Degen's velocity that way.
+     */
+    get shove() {
+      return shove;
     },
     get geared() {
       return me.geared;
@@ -738,9 +824,17 @@ export function createCombat(d: CombatDeps) {
     get adsZoom() {
       return W().zoom;
     },
-    /** May Degen take this gun yet (lifetime score)? */
+    /** May Degen take this gun yet (a starter his score unlocked, or one he bought)? */
     canTake(id: WeaponId) {
-      return weaponUnlocked(id, (netProfile ?? profile).total);
+      return owns(id);
+    },
+    /**
+     * The Armoury's mods changed in the save (the workbench): the rules read them again.
+     * Without `id`, every gun's are read on the next frame.
+     */
+    setMods(id?: WeaponId) {
+      if (id && modsFresh) sim.setMods(ME, id, gunMods(d.game.save(), id));
+      else modsFresh = false;
     },
     get firing() {
       return trigger || touchFire;
@@ -765,7 +859,8 @@ export function createCombat(d: CombatDeps) {
     },
     /** Take a gun at the store counter (the same one again refills its ammo) */
     equip(id: WeaponId) {
-      if (!weaponUnlocked(id, (netProfile ?? profile).total)) return false;
+      if (!owns(id)) return false;
+      applyMods();
       sim.equip(ME, id);
       net?.send({ t: 'equip', w: id });
       hold();
@@ -773,13 +868,13 @@ export function createCombat(d: CombatDeps) {
       saveProfile();
       return true;
     },
-    /** The guns Degen can swap between (unlocked by lifetime score) */
+    /** The guns Degen can swap between (score-unlocked starters and bought guns) */
     get guns() {
       return guns();
     },
     /**
-     * Swap to another unlocked gun, anywhere once geared up: `to` is a gun, or a step
-     * through the unlocked ones (1 next, -1 previous). Each gun keeps its own ammo.
+     * Swap to another of his guns, anywhere once geared up: `to` is a gun, or a step
+     * through them (1 next, -1 previous). Each gun keeps its own ammo.
      */
     swap(to: WeaponId | 1 | -1 = 1) {
       if (!me.geared) return false;
@@ -788,11 +883,12 @@ export function createCombat(d: CombatDeps) {
       if (typeof to === 'string') id = list.includes(to) ? to : undefined;
       else if (list.length > 1) id = list[(list.indexOf(me.weapon) + to + list.length) % list.length];
       if (!id || id === me.weapon) {
-        // Only one gun so far: say what unlocks the next
-        const next = WEAPON_IDS.find((w) => !list.includes(w));
-        if (typeof to !== 'string' && next) popup(WEAPONS[me.weapon].short, `${WEAPONS[next].need.toLocaleString('en')} score unlocks the ${WEAPONS[next].name}`);
+        // Only one gun so far: say what unlocks the next starter, or where the rest are sold
+        const next = WEAPON_IDS.find((w) => !list.includes(w) && WEAPONS[w].need > 0);
+        if (typeof to !== 'string') popup(WEAPONS[me.weapon].short, next ? `${WEAPONS[next].need.toLocaleString('en')} score unlocks the ${WEAPONS[next].name}` : 'More guns are for sale at the Armoury');
         return false;
       }
+      applyMods();
       sim.swap(ME, id);
       net?.send({ t: 'swap', w: id });
       hold();
@@ -826,6 +922,7 @@ export function createCombat(d: CombatDeps) {
       aiming = aim;
       motion = t > 0;
       steppedAt = performance.now();
+      applyMods();
       camera.getWorldDirection(fwd);
       sim.setInput(ME, { fire: me.armed && (trigger || touchFire), aim, assist: touchFire && !trigger, origin: camera.position, dir: fwd });
       sim.advance(dt, motion);
@@ -906,6 +1003,8 @@ export function createCombat(d: CombatDeps) {
       sim = createSim({ ground: d.ground, rayWorld: d.rayWorld, authority: !link });
       me = sim.addPlayer(ME);
       me.weapon = profile.weapon;
+      // A fresh sim knows no mods: the save's are read again on the next frame
+      modsFresh = false;
       for (const L of looks) {
         L.g.visible = true;
         L.fall = null;
@@ -974,8 +1073,11 @@ export function createCombat(d: CombatDeps) {
     exit() {
       trigger = touchFire = false;
       sim.setInput(ME, { fire: false });
+      sim.setPlayerPos(ME, NaN, NaN);
+      shove = null;
+      shoveFlash = 0;
       vm.root.visible = false;
-      root.classList.remove('is-ads', 'is-scoped');
+      root.classList.remove('is-ads', 'is-scoped', 'is-shoved');
       saveProfile();
     },
   };

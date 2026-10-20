@@ -1,0 +1,260 @@
+/*
+ * Drop 001's fitting room, the city's game (fitting.ts): the premium rail on
+ * top of the free wardrobe. The shared fitting styles (.fit, .fit-item,
+ * .sw-btn, the stage and the tabs) stay in global.css; here are the price
+ * tags and level tags, the locks on cards and pack swatches, the Premium
+ * header, the confirm row and the Dorras balance in the head. Checked at
+ * 320, 375, 768, 1024 and 1440 wide; nothing here moves under reduced motion.
+ */
+
+/* ---------- The head: your Dorras and level ---------- */
+.fit-balance {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--p-cyan);
+  white-space: nowrap;
+}
+.fit-balance b {
+  font-weight: 700;
+  color: #fff;
+}
+.fit-balance:empty {
+  display: none;
+}
+.fit .lv-tag {
+  display: inline-block;
+  padding: 1px 5px;
+  border: 1px solid #ffffff2e;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+/* ---------- The Premium header between the free cards and the rail ---------- */
+.fit-section {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin: 6px 0 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+.fit-section span {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+  background: var(--pulse);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: #0000;
+}
+.fit-section small {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ---------- Premium cards: price and level tags, the lock ---------- */
+.fit-item.is-premium {
+  padding-bottom: 7px;
+}
+.fit-tag {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 3px 6px;
+  margin-top: 2px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--p-cyan);
+}
+.fit-tag b {
+  font-weight: 700;
+  color: #fff;
+}
+.fit-tag i {
+  font-style: normal;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.fit-item[aria-pressed="true"] .fit-tag i {
+  color: var(--p-cyan);
+}
+.fit-item .fit-lock {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--muted);
+}
+.fit-item .fit-lock svg {
+  color: var(--muted);
+  opacity: 0.8;
+}
+/* Locked (level too low): muted, still a button so a tap can say why */
+.fit-item.is-locked {
+  border-style: dashed;
+  background: #0b0a12;
+  color: var(--text-2);
+  cursor: not-allowed;
+}
+.fit-item.is-locked svg {
+  opacity: 0.5;
+}
+.fit-item.is-locked b {
+  opacity: 0.65;
+}
+.fit-item.is-locked .fit-tag,
+.fit-item.is-locked .fit-tag b {
+  color: var(--muted);
+}
+.fit-item.is-locked:hover {
+  transform: none;
+}
+.fit-item[data-state="buy"] small {
+  color: #fff;
+}
+
+/* ---------- The confirm row ("Buy the Varsity Jacket for 4,000 Dorras?") ---------- */
+.fit-confirm {
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid #0000;
+  border-radius: 10px;
+  background:
+    linear-gradient(#14102a, #14102a) padding-box,
+    var(--pulse) border-box;
+}
+.fit-confirm[hidden] {
+  display: none;
+}
+.fit-confirm-text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--text);
+}
+.fit-confirm-text b {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--p-cyan);
+}
+.fit-confirm-text small {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.fit-confirm-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.fit-confirm-row .chip-link {
+  cursor: pointer;
+}
+.fit-confirm-no {
+  background:
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    linear-gradient(#ffffff2e, #ffffff2e) border-box;
+  color: var(--text-2);
+}
+.fit-confirm-no:hover {
+  color: #fff;
+}
+
+/* ---------- Pack colours in the Jacket / Trousers rows ---------- */
+.sw-pack {
+  align-self: center;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid #ffffff2e;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--p-cyan);
+  white-space: nowrap;
+}
+.sw-pack.is-locked {
+  color: var(--muted);
+  border-style: dashed;
+}
+.fit .sw-btn {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  color: #fff;
+}
+/* A locked pack swatch: the colour shows through, a small lock sits on top */
+.fit .sw-btn.is-locked {
+  border-style: dashed;
+  border-color: #ffffff66;
+  background:
+    radial-gradient(circle at 50% 50%, #0b0a12d0 0 46%, #0000 54%) padding-box,
+    var(--c, #0b0a12) padding-box;
+  cursor: pointer;
+}
+.fit .sw-btn.is-locked svg {
+  display: block;
+  color: #fff;
+  opacity: 0.9;
+  pointer-events: none;
+}
+.fit .sw-btn:not(.is-locked) svg {
+  display: none;
+}
+
+/* ---------- Narrow panels ---------- */
+@media (max-width: 420px) {
+  .fit-head {
+    align-items: center;
+  }
+  .fit-balance {
+    font-size: 11px;
+  }
+  .fit-section small {
+    display: none;
+  }
+  .fit-confirm {
+    padding: 10px 12px;
+  }
+  .fit-confirm-row .chip-link {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+}
+@media (max-width: 340px) {
+  .fit-tag {
+    font-size: 9px;
+  }
+}
+
+/* ---------- Reduced motion: nothing lifts or fades ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .fit-item.is-locked,
+  .fit-confirm-row .chip-link,
+  .fit-confirm-no {
+    transition: none;
+  }
+}

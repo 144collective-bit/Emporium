@@ -2378,42 +2378,7 @@ body.is-walking .nav {
   display: none;
 }
 /* The header's Wallet button: a green dot once connected */
-.city-head .builder-pop > summary .wallet-dot {
-  flex: none;
-}
-.city-head .builder-pop > summary .wallet-dot[hidden] {
-  display: none;
-}
-.builder-wallet-panel {
-  min-width: 300px;
-}
-.builder-wallet {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  font-family: var(--font-mono);
-  font-size: 12px;
-}
-.wallet-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #2bff88;
-  box-shadow: 0 0 8px #2bff88;
-}
-.wallet-addr {
-  color: var(--text);
-}
-.wallet-bal {
-  color: var(--p-cyan);
-  font-weight: 700;
-}
-.tag-demo {
-  padding: 0.25em 0.6em;
-  font-size: 9.5px;
-}
-.tag-mine {
+.city-head .builder-pop > summary .tag-mine {
   border: 1px solid #ff6ad5;
   background: #ff6ad51f;
 }
@@ -2538,31 +2503,6 @@ body.is-walking .nav {
   border-color: var(--p-cyan);
   background: #00eaff14;
 }
-.wallet-off {
-  display: inline-grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  border: 1px solid var(--line);
-  border-radius: 50%;
-  background: none;
-  color: var(--text-2);
-  font-size: 15px;
-  line-height: 1;
-  cursor: pointer;
-}
-.wallet-off:hover {
-  color: #fff;
-  border-color: #ffffff40;
-}
-.tag-taken {
-  border: 1px solid #a36bff;
-  background: #8000ff26;
-}
-.tag-pending {
-  border: 1px solid #ffd36b;
-  background: #ffd36b1f;
-}
 .city-panel-actions [aria-disabled="true"] {
   opacity: 0.55;
 }
@@ -2678,49 +2618,6 @@ body.is-walking .nav {
 }
 .builder-modal-card .city-panel-close[hidden] {
   display: none;
-}
-.buy-steps {
-  display: grid;
-  gap: 12px;
-  list-style: none;
-}
-.buy-steps li {
-  position: relative;
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  padding-left: 28px;
-  color: var(--muted);
-}
-.buy-steps li small {
-  font-family: var(--font-mono);
-  font-size: 9.5px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-.buy-steps li::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 2px;
-  width: 16px;
-  height: 16px;
-  border: 2px solid var(--line);
-  border-radius: 50%;
-}
-.buy-steps li.is-now {
-  color: #fff;
-}
-.buy-steps li.is-now::before {
-  border-color: var(--p-cyan) transparent var(--p-cyan) var(--p-cyan);
-  animation: spin 0.8s linear infinite;
-}
-.buy-steps li.is-done {
-  color: var(--text-2);
-}
-.buy-steps li.is-done::before {
-  border-color: #2bff88;
-  background: #2bff88;
 }
 @keyframes spin {
   to { transform: rotate(360deg); }
@@ -4905,167 +4802,6 @@ body.is-walking .nav {
   }
 }
 
-/* ---------- The garage on the south bank (walk mode, garage-ui.ts) ----------
-   Built on the gun store's panel. Wide screens put it on the right so the showroom turntable
-   stays in view on the left; phones keep the shop's bottom sheet with the car above it. */
-.garage {
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-areas:
-    "head"
-    "list"
-    "detail"
-    "foot";
-}
-@media (min-width: 641px) {
-  .garage {
-    top: calc(var(--head-h) + 12px);
-    right: 16px;
-    left: auto;
-    width: min(400px, 44%);
-    transform: none;
-    animation-name: garage-in;
-  }
-}
-@keyframes garage-in {
-  from {
-    opacity: 0;
-    transform: translateX(16px);
-  }
-}
-.city.is-garage .walk-hint,
-.city.is-garage .walk-stick,
-.city.is-garage .walk-run,
-.city.is-garage .walk-jump,
-.city.is-garage .walk-crosshair,
-.city.is-garage .combat-hud,
-.city.is-garage .city-pins {
-  display: none;
-}
-.garage-list {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 5px;
-}
-.garage-card {
-  padding: 7px 3px 6px;
-}
-.garage-card svg {
-  height: 26px;
-  max-width: 64px;
-}
-.garage-card svg .wheel {
-  fill: #14121f;
-}
-.garage-card b {
-  font-size: 12px;
-}
-.garage-card small {
-  font-size: 8.5px;
-}
-.garage-stats {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-.garage-paint-head {
-  display: flex;
-  justify-content: space-between;
-  margin: 2px 0 0;
-  font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-.garage-paint-head span {
-  color: var(--p-cyan);
-}
-.garage-paints {
-  display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: 5px;
-}
-.garage-paint {
-  aspect-ratio: 1;
-  min-width: 0;
-  padding: 0;
-  border: 2px solid #ffffff2e;
-  border-radius: 50%;
-  background: var(--paint);
-  box-shadow: inset 0 -3px 0 #0005;
-  cursor: pointer;
-  transition: transform 0.15s;
-}
-.garage-paint:hover {
-  transform: scale(1.1);
-}
-.garage-paint[aria-checked="true"] {
-  border-color: #fff;
-  box-shadow: inset 0 -3px 0 #0005, 0 0 0 2px #0b0a12, 0 0 0 4px var(--p-cyan);
-}
-@media (max-width: 640px) {
-  .garage .shop-blurb {
-    display: none;
-  }
-  .garage-card svg {
-    height: 18px;
-  }
-  .garage-card b {
-    font-size: 10.5px;
-  }
-  .garage-card small {
-    display: none;
-  }
-  .garage-paints {
-    grid-template-columns: repeat(6, 28px);
-    gap: 6px 8px;
-  }
-}
-@media (max-width: 640px) and (max-height: 700px) {
-  .garage .shop-foot {
-    display: none;
-  }
-}
-/* Phones on their side: everything on one short card, no scrolling */
-@media (max-height: 500px) {
-  .garage {
-    gap: 7px;
-    width: min(380px, 52%);
-  }
-  .garage .shop-title {
-    font-size: 19px;
-  }
-  .garage .shop-close {
-    width: 28px;
-    height: 28px;
-  }
-  .garage-card {
-    padding: 5px 2px 4px;
-    gap: 1px;
-  }
-  .garage-card svg {
-    height: 15px;
-  }
-  .garage-card b {
-    font-size: 10px;
-    white-space: nowrap;
-  }
-  .garage-card small {
-    display: none;
-  }
-  .garage .shop-name {
-    font-size: 17px;
-  }
-  .garage-stats {
-    gap: 4px 10px;
-  }
-  .garage .shop-take {
-    padding: 8px 14px;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .garage {
-    animation: none;
-  }
-}
-
 /* All the way down the Long Shot's scope: a full-screen scope view */
 .combat-scope {
   position: absolute;
@@ -5813,4 +5549,19 @@ body.is-walking .nav {
 }
 .biz-units {
   row-gap: 4px;
+}
+
+/* ---------- The city's game (ui.ts LV()): a level tag on things that need a level ---------- */
+.lv-tag {
+  display: inline-block;
+  padding: 0.15em 0.5em;
+  border: 1px solid #ffffff2b;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--p-cyan);
+  white-space: nowrap;
+  vertical-align: middle;
 }

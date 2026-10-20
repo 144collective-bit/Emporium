@@ -1,22 +1,15 @@
 /*
- * The city builder: the large plots, their price and the buildings you can
- * put on them. Plain data, shared with the game server (no DOM, no three.js).
+ * The city builder: the large district plots and the buildings you can put
+ * on them. Plain data, free of the DOM and of three.js.
  *
  * Each district around the core city is one large plot: its 3 x 3 squares
- * merged into one, sold for PLOT_PRICE PLS (the owner's price).
- *
- * Real sales go through a PulseChain wallet and the game server (see
- * src/scripts/city3d/land.ts and server/src/land.ts). Without a game server
- * the builder runs as a labelled demo with play money (store.ts).
+ * merged into one. Plots are property in the city's own game, bought with
+ * Dorras at the Vault's estate agent (src/scripts/city3d/tycoon.ts:
+ * buyPlot / buildPlot / sellPlot; prices in catalog.ts). Sales for PLS
+ * were retired.
  */
 
 import { BLOCKS, OUTER_HI, OUTER_LO, SOUTH_ROW } from '../scripts/city3d/layout';
-
-/** Price of one large plot, in PLS (set by the owner) */
-export const PLOT_PRICE = 20_000_000;
-
-/** Simulated PLS a demo wallet starts with (demo mode only) */
-export const DEMO_WALLET_START = 100_000_000;
 
 /**
  * The districts around the core city: one large plot each (x, z of the block's corner).

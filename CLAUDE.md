@@ -289,17 +289,17 @@ it and has been retired completely. Build only on what's here.
   subtitle (City view, Walk mode, Build mode, City map (2D)), then on the
   right (walk tabs, ammo and score while walking), the City / Walk / Build
   switch (the current mode lit with a glow and a gradient underline, the
-  others dimmed), and the tools: in Build mode a Wallet button
-  (`[data-builder-bar]`, painted by `builder-ui.ts`: the short address and a
-  green dot once connected; its card has the wallet chip, the hint and
-  Reset demo), a ⚙ Settings button (time, weather, sound, reset
+  others dimmed), and the tools: in Build mode a Plots button
+  (`[data-builder-bar]`, painted by `builder-ui.ts`: what you own, your
+  Dorras and the next plot's price), a ⚙ Settings button (time, weather, sound, reset
   view, 2D map; 3D only, not while walking; never open by default) and a
   ☰ Menu (the city's places, 3D only (`.dir-places`); then under "More" the
   Emporium comic page and the merch store (`.dir-links`); then PulseChain
   native, X and Telegram; not while walking). Left of them, in the 3D city
   (not in Build mode, and not while walking on phones), the Dorras readout
   (`[data-dorras]`, painted by `tycoon-ui.ts`, a green dot when the stall's
-  till has takings); it opens your business card. Their cards drop down under them (`.head-panel`, one open at a
+  till has takings); it opens your business card. Beside it the level pill
+  (`[data-level]`, `missions-ui.ts`: level, XP bar, title). Their cards drop down under them (`.head-panel`, one open at a
   time, with a `.pop-head` ×), spanning the width on phones. Tablets show
   Settings and Menu as icons; phones put logo, title, ⚙ and ☰ on the first
   row and the switch, with names, across the second (walking: title and
@@ -324,9 +324,27 @@ it and has been retired completely. Build only on what's here.
   small second renderer with the same ink outlines, only while the panel is
   open (still under reduced motion; drag turns him).
 - The look belongs to `profile-ui.ts` (browser and player profile); the
-  fitting room only calls `wear()`. Items are free and cosmetic, only for
-  the city: no prices, never sold, never tied to the Shopify store or the
-  token.
+  fitting room only calls `wear()`. The original wardrobe is free; the
+  premium wardrobe (`WARDROBE_CATALOG` in `catalog.ts`) costs Dorras and
+  needs a level (`buyWardrobe()` in `tycoon.ts`). Everything is cosmetic
+  and only for the city: never tied to the Shopify store or the token, never
+  real money.
+- **The premium wardrobe** (the city's game): Drop 001 also sells
+  `WARDROBE_CATALOG` (catalog.ts) for Dorras earned in the city, each piece
+  with a price and a level: the varsity and puffer fits, the cowboy hat, top
+  hat and neon halo, the duffel bag and neon wings, the phone and briefcase,
+  the gold watch, and the Gold and Holo colour packs for tops and bottoms
+  (`PALETTE.gold` / `PALETTE.holo`, `PACKS`, `packOf()`). The look carries
+  them as ordinary values (`cleanLook()` validates, it never checks
+  ownership); owning them is `wardrobe` in the save (`buyWardrobe()` /
+  `ownsWardrobe()`), and the fitting room (`fitting.ts`, with
+  `game: GameDeps`) is what enforces it: cards show the price and `Lv n`,
+  "Buy · 4,000" opens an inline confirm, locked pieces say the level, pack
+  colours sit under a lock in the colour rows, and the head shows your
+  Dorras and level. Styles in `src/styles/fitting.css`. In `character.ts`
+  the pieces are items like any other; neon pieces (the halo, the wings'
+  edges, the phone's screen) share one `neon()` material coloured per
+  vertex in the lens colour, dim by day so they never bloom out of control.
 - A new item needs a `Look` field with its palette and rules in
   `profile-data.ts` `cleanLook()` (the server checks it too), the mapping in
   `lookOutfit()`, an item in `items()` in `character.ts` and an entry in `fitting.ts`
@@ -339,10 +357,10 @@ it and has been retired completely. Build only on what's here.
 
 - The plan and its phases are in `docs/tycoon-plan.md`; keep it up to date.
   Build one phase at a time, each with the owner's sign-off.
-- **Dorras** are the city's money: earned by playing, never bought (yet) and
+- **Dorras** are the city's money: earned by playing, never bought and
   never cashed out. Never give them a real-money value, call them an
-  investment, or tie them to the token or the Shopify store. PLS top-ups come
-  later and only through the game server, never a browser balance.
+  investment, or tie them to the token or the Shopify store. Nothing in the
+  city costs real money (plot sales for PLS were retired).
 - **Rules:** `tycoon.ts`, DOM-free and tested (`tests/tycoon.test.ts`):
   goods (`GOODS`, made-up city goods, nothing about the token; raw goods
   last, since a good's place in the list sets its price rhythm), the market
@@ -361,9 +379,24 @@ it and has been retired completely. Build only on what's here.
   `line()` for the Workshop and factories), the ledger (`book()`, called by
   every rule that moves Dorras) and loans (`borrow()`, `repay()`, a share
   of takings in `advance()`).
-  `cleanSave()` cleans anything loaded and upgrades older saves (now v4);
+  `cleanSave()` cleans anything loaded and upgrades older saves (now v5);
   keep that migration when the save changes. New economy rules go here
   first.
+- **The city's game (Phase 5)** sits on the same save: XP and levels
+  (`xp`, `level()`, `addXp()`), owned cars, guns and clothes with their mods
+  (`buyCar()` / `modCar()` / `carStatsOf()`, `buyGun()` / `modGun()`,
+  `buyWardrobe()`), district plots (`buyPlot()` / `buildPlot()` /
+  `sellPlot()`), levels for the places you run (`upgradePlace()`,
+  `capOf()`, `capacityMul()`), race records, missions, badges and the
+  `counters` everything watches (`count()`, `takedown()`). Prices, the
+  level each thing needs, the XP curve and what each mod does are
+  `catalog.ts`; the courses are `races.ts`; the board and badges
+  `missions.ts`. All DOM-free, tested in `tests/game.test.ts`. The starter
+  tier (the five original cars, the four original guns, the original
+  wardrobe) stays free; everything new costs Dorras and needs a level.
+  Screens reach the save through `GameDeps` in `ui.ts` (`save()`, then
+  `commit()` once the rules have changed it; `toast()`, `sfx()`), never
+  by writing the save themselves.
 - Goods only move between your places in your car (or by buying them
   straight there at the market hall). Stock on sale (stall, shops) can't be
   loaded back; that keeps the delivery bonus from being farmed.
@@ -405,15 +438,36 @@ it and has been retired completely. Build only on what's here.
   the Car tab load and unload there; the garage menu says how much each car
   carries. Your contracts' drop-offs get a "Deliver" prompt at the door and
   a beam of light (`beacons.ts`, up to three).
-- **Big lots** (Phase 4, the owner's call): three Dorras-only 9 x 9 lots
-  east of Makers' Row (`BIG_LOTS` in `layout.ts`, in `EXTRA_LOTS`; `LOT_SITE`,
+- **Big lots** (Phase 4, the owner's call): three 9 x 9 lots east of
+  Makers' Row (`BIG_LOTS` in `layout.ts`, in `EXTRA_LOTS`; `LOT_SITE`,
   `LOT_SHAPES`, `lotSolids()` in `solids.ts`), drawn from the save by
   `biglots.ts` (FOR SALE board, empty, superstore, factory, depot, offices),
   rebuilt only when what they show changes; offices stay well under the
-  Emporium's height. The 16 district plots are PLS land only and never part
-  of the Dorras game; keep real money and game money apart.
+  Emporium's height. Units, lots and the Workshop have levels 1-3 (the
+  business card's Upgrade row); `units.ts` and `biglots.ts` show the level.
+- **The district plots** (Phase 5, the owner's call) are Dorras property
+  too: bought at the Vault's estate agent (`[data-bank]`, the list in
+  `bankView()`) or from a plot's panel in Build mode. Ownership lives in
+  the tycoon save (`plots`), behind `createPlotStore()` in `store.ts`.
 - **Loans and the ledger** are game mechanics with Dorras only: a flat fee,
   no interest rates, savings returns or APY-style wording anywhere.
+- **Missions, levels and badges** (Phase 5): the rules are `missions.ts`
+  (`MISSIONS` in tiers by level, up to `MISSIONS_MAX` at once, counted from
+  the save's `counters` as they stood when taken; `BADGES` are lifetime
+  milestones awarded by `checkBadges()`) and `catalog.ts` (`xpForLevel`,
+  `levelFor`, `levelProgress`, `titleFor`, `XP` per deed), on the save in
+  `tycoon.ts`. The screens are `missions-ui.ts` (styles in `missions.css`):
+  the level pill in the header tools next to the Dorras readout
+  (`[data-level]`, a `.head-pop` card in the city; while walking it opens
+  the Profile tab's badges `[data-badges]`), the mission board at the end
+  of the Signal tower's panel (appended by `tycoon-ui.ts` after the
+  contracts; its Take / Claim / Give up go through `missions.act()` before
+  the economy's buttons), the mission tracker in the walk HUD
+  (`[data-missions-tracker]`; a pill with the count on phones) and the
+  badge / level-up pops under the header (`[data-mission-pops]`).
+  `tycoon.commit()` runs `missions.onCommit()` first, so any screen that
+  changes the save and commits gets badges and level-ups checked. Rewards
+  are Dorras and XP only: no prizes, nothing real.
 - **The Apartments** (the tower in the north block, east of the Signal tower, `apartments()` in
   `landmarks.ts` and `city.ts`) are a place since Phase 3: spot
   `apartments`, its pin, door (`DOORS`) and panel. The Emporium stays first
@@ -470,8 +524,12 @@ it and has been retired completely. Build only on what's here.
 - Your car (`mycar.ts`, DOM-free): `{ model, paint }`, cleaned by
   `cleanCar()`, saved in the browser as `degen-city-car-v1`. `DRIVE` holds
   each model's garage copy and its 0-1 speed / pick-up / grip (for the
-  handling). Cars are free and only for the city: never sell them, price
-  them or tie them to the store or the token.
+  handling), `CARGO` its boot. Eight models: the five starters are free,
+  the Street Thunder, Big Rover and Hyper Comet are bought with Dorras at
+  the garage (`CAR_CATALOG`), and every car is tuned there (`CAR_MODS`:
+  engine, turbo, tyres, roof rack, three levels each; `carStatsOf()` feeds
+  the handling and the boot). Only for the city: never tied to the store or
+  the token, never real money.
 - `createCar()` in `cars.ts` builds one car with its own paint, steerable
   rolling wheels (`drive()`) and lights. The turntable's car is the one you
   drive (`takeOut()` in `garage.ts` hands it to `drive.ts`).
@@ -498,6 +556,31 @@ it and has been retired completely. Build only on what's here.
 - While driving, `.city.is-driving` hides the walk and combat HUD, and the header says "Driving · <car>" (`head.ts`). A gun is holstered on getting in.
 - Check the pedals, stick, prompt and readout at phone widths, upright and on their side: nothing may overlap.
 
+## Street races (3D walk mode)
+
+- The rules are `races.ts` (DOM-free, tested): four courses of checkpoints
+  on the roads from the start line on the south bank avenue in front of
+  South 4 (`RACES`, `START_LINE`, `RACE_SITE`, `CHECK_R`, `START_R`,
+  `COUNTDOWN`, `startRun` / `stepRun` / `finishRun`, `prizeFor`,
+  `clockOf`). `racesite.ts` draws the gantry, the banner (fixed copy only:
+  START / FINISH, DEGEN CITY RACES), the chequered line, the race board and
+  the checkpoint markers (beacons style; `show(next, after)`); its
+  footprints are `RACE_SOLIDS` in `solids.ts`.
+- `race-ui.ts` (markup `data-races`, `data-race-hud`, `data-race-result` in
+  `CityMap.astro`, styles in `src/styles/races.css`) is the menu on the gun
+  store's `.shop` panel, the countdown, the HUD and the results card. It
+  opens at the board on foot or from your car when it's stopped at the
+  line, needs your car within `START_R`, freezes the car (`drive.frozen`)
+  during the countdown, steps the run from the car every frame and pays
+  through `finishRun()` + `commit()`. Getting out, leaving walk mode, Esc
+  or Quit abandons a run. While a run is on, `data-race` on the city root
+  makes the header read "Racing · <race>". Prizes are Dorras only; best
+  times are kept per race in the save.
+- `drive.update()` returns the tiles moved; walk mode counts them on the
+  save every ten tiles (`counters.driven`, for missions and badges).
+- `?spawn=x,z[,yaw]` in the address starts walk mode at a spot, and `?fps`
+  shows where Degen stands: use them to check a place on a real device.
+
 ## Target practice (3D walk mode)
 
 - Solo shooting practice. Only the player's Degen carries a gun, picked up
@@ -517,10 +600,13 @@ it and has been retired completely. Build only on what's here.
   and modelled in `guns.ts` `SPECS` (parts, muzzle, sight, hand spots): the
   Assault Rifle (holo red-dot, also carried by the soldiers via
   `rifleGeometry()`), Buzz SMG, Street Sweeper shotgun (pellets, iron sights)
-  and Long Shot marksman rifle (scope, full-screen scope view). Guns unlock
-  with score and are free to take: never sell them, price them in money or
-  tie them to the token. Keep them cartoon: no real-world gun names, brands
-  or markings. A new gun needs a `WEAPONS` entry (with a `short` name for the Swap
+  and Long Shot marksman rifle (scope, full-screen scope view) unlock with
+  score and are free; the Hand Cannon revolver, Tri-Tap burst carbine and
+  Belt Feeder are bought with Dorras (`GUN_CATALOG`), and every gun's mods
+  (`GUN_MODS`: barrel, extended mag, grip and stock; `applyGunMods()`, per
+  player in the sim) are bought at the Armoury's workbench. Never real
+  money, never tied to the token. Keep them cartoon: no real-world gun
+  names, brands or markings. A new gun needs a `WEAPONS` entry (with a `short` name for the Swap
   button), a `SPECS` entry (with its
   third-person `hold` spot for the front hand), store art (`ART` in
   `gunshop.ts`) and a shot sound (`SHOT_SOUND` in `combat.ts`).
@@ -570,7 +656,26 @@ it and has been retired completely. Build only on what's here.
 - Gun sounds go through `sfx()` in `sound.ts`, so they stay silent until the
   visitor turns sound on. Under reduced motion the drones hover in place.
 - Score, streaks and finishes are for fun only: no prizes, real rewards or
-  token tie-ins.
+  token tie-ins. Takedowns do count for the city's game (`takedown()` in
+  `tycoon.ts`: XP, missions, badges), through the `onTakedown` dep.
+- **The crew** (the owner's call): a cartoon rival crew of ten goons on the
+  south bank, the only characters that are targets; the city north of the
+  river stays a safe hangout. Rules in `combat-sim.ts`: `CREW_ZONE` (the
+  bank between the river wall and the south row, from the west bridge to
+  past South 5) and `CREW_SPOTS` (patrol routes along the riverside walk
+  between the bridges and the avenue's south sidewalk, never on asphalt or
+  in `SOLIDS`). A goon walks its route on the sim clock (`goonPatrol()`,
+  pure), jogs at a player within 7 tiles in the zone (`setPlayerPos()`
+  feeds Degen's position each frame), shoves (a `shove` event;
+  `combat.shove` knocks Degen back in `walk.ts`, `is-shoved` flashes the
+  screen edge, `'shove'` sounds) and backs off for 2 s; shot like a
+  standing figure it goes down for `POINTS.goon`, lies 8 s and gets up at
+  its spawn; it never leaves the zone and stands still under reduced
+  motion. The look is `crew.ts`: one `createCrowd` in violet track suits
+  and cyan beanies and shades, `downPose` flat on the back with stars round
+  the head; `combat.ts` adds health bars, bursts, `'goonDown'` and
+  `onTakedown('goon')`. Goons shove, never shoot, and nothing in the city
+  ever hurts: there is no player health. Tested in `tests/combat.test.ts`.
 
 ## City builder (3D build mode)
 
@@ -579,12 +684,18 @@ it and has been retired completely. Build only on what's here.
   across the river. The south bank has its own east-west road
   (`SOUTH_ROAD`, so roads are split into `NS_ROADS` / `EW_ROADS` in
   `world.ts`), a lamp-lit riverside walk, traffic over the four bridges and
-  pedestrians round the south row (`DISTRICTS`, `PLOT_PRICE`, `BUILDINGS`, `cleanDesign()` in
-  `src/data/plots.ts`, shared with the server). Plot grid, overlay and building
+  pedestrians round the south row (`DISTRICTS`, `BUILDINGS`, `cleanDesign()` in
+  `src/data/plots.ts`, DOM-free). Plot grid, overlay and building
   generators are in `plots.ts`, the interface in `builder-ui.ts`. The core
   landmarks are not for sale.
-- **Price: 20,000,000 PLS per plot** (the owner's price, `PLOT_PRICE` and the
-  server's `LAND_PRICE_PLS`). The server's value is the one that counts.
+- **Plots cost Dorras** (the owner's call, Phase 5): `PLOT_DORRAS` in
+  `catalog.ts`, dearer with each plot you own, from level `PLOT_LEVEL`;
+  designs cost `BUILD_COSTS`; selling back pays `PLOT_REFUND`. The rules
+  are `buyPlot()` / `buildPlot()` / `sellPlot()` in `tycoon.ts`, behind
+  `createPlotStore()` (`store.ts`) for `builder-ui.ts`. There is no wallet
+  in Build mode and no live or demo mode any more: one game, in this
+  browser's save. Sales for PLS were retired; don't bring them back without
+  the owner.
 - The eight designs (`GEN` in `plots.ts`) are drawn at the large plot's own
   scale (8.2 x 8.2 tiles, front facing +z before the owner's turn), each with
   its site dressed around it from the shared helpers (paving, `tree`, `pine`,
@@ -594,46 +705,13 @@ it and has been retired completely. Build only on what's here.
   Tower and loft floors are capped in `BUILDINGS` so nothing outgrows the
   Emporium (its roof is ~12.5 tiles up; an 8-floor tower's mast tops out at
   ~11.9). Keep it that way when adding designs.
-- **Real sales (live mode)**, when the site is built with `PUBLIC_GAME_SERVER`:
-  - `wallet.ts` talks to the visitor's own wallet (EIP-1193). Installed
-    wallets (MetaMask, Rabby, OKX and others, as extensions or in a wallet
-    app's browser) are found through EIP-6963 (or `window.ethereum`) and
-    listed under the name and icon they announce; there are no fixed
-    wallet-brand buttons. WalletConnect is always offered after them, for
-    phones and computers without an extension (QR code / app switch). Its
-    SDK (`@walletconnect/ethereum-provider`, pinned) is only loaded when
-    picked or when a saved WalletConnect session reconnects; keep it out of
-    the main bundle. It needs `WALLETCONNECT_PROJECT_ID` in `src/data/site.ts`
-    (or `PUBLIC_WALLETCONNECT_PROJECT_ID`); empty hides it. WalletConnect
-    answers `eth_chainId` with a number, installed wallets in hex (`chainOf`).
-    It switches to the sales network or adds it.
-  - `land.ts` (the client) sends the plot price straight to the owner's wallet
-    and hands the transaction hash to the game server.
-  - `server/src/land.ts` (the `Land` Durable Object) checks the payment on
-    PulseChain itself and never trusts the browser: the right payee, at least
-    the price, success, `LAND_CONFIRMATIONS` deep, under a day old, used once.
-    The sender becomes the owner. A late or short payment is stored and logged
-    as `LAND REFUND DUE` for a manual refund.
-  - Owners log in with their wallet (below: one signed message, no gas) to
-    change their building; the server checks every design with
-    `cleanDesign()`.
-  - Everyone sees every owner's building.
-  - No private keys anywhere; only the owner's public receiving address
-    (`LAND_PAYEE`) is configured.
-- **Network:** `LAND_CHAIN_ID` in `server/wrangler.jsonc`: 943 = PulseChain
-  Testnet v4 (test PLS, the current setting), 369 = mainnet. The site reads the
-  network from the server. Testnet screens say "test PLS only". Sales show as
-  "opening soon" until `LAND_PAYEE` is set. Owners are kept per network.
-- **Demo mode** (offline, or no game server): `store.ts` simulates everything
-  with play money in the browser and must stay labelled as a demo. Both modes
-  sit behind the same `Store` interface, so the UI doesn't change; the Online
-  / Offline switch swaps them through `createSwitchStore()` (the live store
-  is only made the first time the city goes online), and `builder-ui.ts`
-  follows `store.mode` on every change.
 - Visitors can't type text onto buildings: sign texts come from the fixed
   `SIGNS` list, so nothing unexpected (or confidential) appears in public.
-- No explorer or wallet-brand links: show transaction hashes as text. Only
-  the confirmed links in `src/data/site.ts` are linked.
+- **Logging in with a wallet** (`wallet.ts`, `account.ts`, `account-ui.ts`;
+  the server's `accounts.ts`, the sign-in message in `src/scripts/net/auth.ts`)
+  is part of the paused multiplayer: a player profile that follows the
+  wallet. It never sends a transaction. No explorer or wallet-brand links;
+  only the confirmed links in `src/data/site.ts` are linked.
 
 ## Multiplayer (beta, paused)
 
@@ -643,13 +721,12 @@ it and has been retired completely. Build only on what's here.
   date. Phase 1 (hangout, player profiles, shared target practice) is built;
   leaderboards and south-bank PvP come next.
 - The game server lives in `server/` (Cloudflare Worker + Durable Objects:
-  Lobby, Room per city of 16, Profile per player, Land for plot sales). See
-  `server/README.md`.
+  Lobby, Room per city of 16, Profile per player, Accounts for wallet
+  logins). See `server/README.md`.
   The server decides hits, scores and profiles; browsers only predict their
   own shots. New rules go in `combat-sim.ts` (shared), never only in the view.
 - Shared code the server bundles must stay free of DOM and scene code:
-  `src/scripts/net/*` (except `client.ts`), `combat-sim.ts`, `solids.ts`,
-  `src/data/plots.ts`.
+  `src/scripts/net/*` (except `client.ts`), `combat-sim.ts`, `solids.ts`.
   `src/scripts/net/protocol.ts` is the wire format; bump `PROTOCOL` when it
   changes incompatibly.
 - Nothing typed by players ever shows: guest names come from the word lists
@@ -667,8 +744,7 @@ it and has been retired completely. Build only on what's here.
   transaction, no gas); the server recovers the signer and issues a 30-day
   session token (only its hash is stored; the browser keeps it as
   `degen-city-account-v1`). One login covers everything: the room opens the
-  wallet's own profile (the token rides in `hello`), and `/land/design`
-  checks it. A wallet's first login starts a fresh profile (no guest score,
+  wallet's own profile (the token rides in `hello`). A wallet's first login starts a fresh profile (no guest score,
   name or look carried over), and its look never overwrites the browser's
   own guest look. The **Connect wallet** button sits in the header's tools (`.nav-account`,
   rendered by `CityMap.astro` when there's a game server,
@@ -678,9 +754,8 @@ it and has been retired completely. Build only on what's here.
   on the 2D map and before 3D has loaded; `bootCity()` gets them and fills
   in their `hooks` (Online switch, rename, Build mode). The card shows:
   player name, rank, lifetime score, the wallet (short) and network, and the
-  plots it owns (each jumps to Build mode), with New name and Log out. Only
-  the visitor sees their own address; other players only see the player
-  name. Logging in needs the city Online.
+  with New name and Log out. Only the visitor sees their own address; other
+  players only see the player name. Logging in needs the city Online.
 - The site only shows the Online pill and the Online / Offline switch when
   built with `PUBLIC_GAME_SERVER` (set by the Worker's build). Only pages in
   `ALLOWED_ORIGINS`
@@ -688,9 +763,8 @@ it and has been retired completely. Build only on what's here.
 - **The Online / Offline switch** (`online.ts`, `[data-online-switch]` in the
   mode header, remembered as `degen-city-online-v1`, online by default) is
   one choice for the whole city. Online: walking joins the shared city
-  (`multiplayer.ts` connects only while walking) and Build mode sells real
-  plots. Offline: solo walking and the demo builder, and nothing calls the
-  game server. Go online / Leave in the Online pill flip the same switch. Its
+  (`multiplayer.ts` connects only while walking). Offline: solo walking, and
+  nothing calls the game server. Build mode is the same game either way. Go online / Leave in the Online pill flip the same switch. Its
   dot: grey off, cyan ready, yellow joining, green in a city, red full or
   unreachable. It reads "On / Off" up to 900px wide; up to 420px only the
   current side shows (a tap flips it) and City / Walk / Build are icons, so
@@ -706,11 +780,12 @@ it and has been retired completely. Build only on what's here.
   build: a failing test means no zip.
 - They cover the code that's free of the DOM and scene code: the street plan
   (`layout.ts`, `streetplan.ts`), downtown (`downtown.ts`), the traffic's
-  routes and lights (`routes.ts`), collision data, doors, the gun counter, the garage and the
-  spawn (`solids.ts`), the plots (`src/data/plots.ts`), your car
+  routes and lights (`routes.ts`), collision data, doors, the gun counter, the garage, the
+  race start line and the spawn (`solids.ts`), the plots (`src/data/plots.ts`), your car
   (`mycar.ts`), the driving rules (`drive-sim.ts`), target practice
-  (`combat-sim.ts`) and the economy (`tycoon.ts`, the market square in
-  `solids.ts`). Modules that touch the DOM or `kit.ts` (canvas
+  (`combat-sim.ts`), the economy (`tycoon.ts`, the market square in
+  `solids.ts`) and the city's game (`catalog.ts`, `races.ts`, `missions.ts`
+  in `tests/game.test.ts`). Modules that touch the DOM or `kit.ts` (canvas
   textures) can't load in Node; keep data a test needs in the DOM-free
   files.
 - When you change a rule or move something in the city, run the tests and
@@ -728,9 +803,9 @@ it and has been retired completely. Build only on what's here.
 - Keep the site fully static (no server routes) and keep `public/.htaccess`
   in the build.
 - **Multiplayer is paused** (the owner's call): the "Build site" Action
-  builds without `PUBLIC_GAME_SERVER`, so the city runs on its own: solo
-  walking and target practice, the builder as the labelled play-money demo,
-  no Online switch, multiplayer or Connect wallet. Keep that code working
+  builds without `PUBLIC_GAME_SERVER`, so the city runs on its own: the
+  whole city game in the browser's save, no Online switch, multiplayer or
+  Connect wallet. Keep that code working
   (it's all behind `PUBLIC_GAME_SERVER`), but don't develop it further
   until the owner resumes it.
 - **Ignore Cloudflare** for now: the `server/` Worker (emporium on
@@ -747,9 +822,9 @@ it and has been retired completely. Build only on what's here.
 
 - All copy is draft until the owner says otherwise; keep the draft note.
 - No prices, stats, APYs, audits, partnerships or testimonials unless the
-  owner supplies them as facts (the owner set plots at 20,000,000 PLS). No
-  financial advice: plots are city land for building on, never pitched as an
-  investment.
+  owner supplies them as facts. Dorras prices in the game (plots, cars,
+  guns, clothes) are game numbers, not real prices. No financial advice:
+  plots are city land for building on, never pitched as an investment.
 - PulseChain is a real project: say "PulseChain native", never imply an
   official partnership or endorsement.
 - Only link to destinations the owner has confirmed (currently X, Telegram

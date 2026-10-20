@@ -1,16 +1,18 @@
 /*
  * Your own car: which model, what paint, and how each model drives. Picked
  * at the garage on the south bank (garage-ui.ts) and kept in the browser.
- * Cars are free and only for the city: nothing is sold, nothing is tied to
- * the store or the token.
+ * The five starters are free; the other three are bought there for Dorras
+ * (catalog.ts has the prices and levels, tycoon.ts the purchase and the
+ * mods that raise these numbers). Cars are only for the city: never real
+ * money, never tied to the store or the token.
  *
  * Kept free of the DOM and of scene code, like the other shared data, so a
  * game server can check a car the same way later.
  */
 import type { CarId } from './cars';
 
-/** The cars a player can pick (the bus is for the city only) */
-export const PLAYER_CARS = ['hatch', 'sedan', 'coupe', 'pickup', 'van'] as const satisfies readonly CarId[];
+/** The cars a player can pick (the bus is for the city only): the five starters, then the ones the garage sells (catalog.ts) */
+export const PLAYER_CARS = ['hatch', 'sedan', 'coupe', 'pickup', 'van', 'muscle', 'suv', 'super'] as const satisfies readonly CarId[];
 export type PlayerCar = (typeof PLAYER_CARS)[number];
 
 /** What the garage says about each one, and how it drives (0..1, for the stat bars and the handling) */
@@ -20,7 +22,13 @@ export const DRIVE: Record<PlayerCar, { kind: string; blurb: string; speed: numb
   coupe: { kind: 'Sports', blurb: 'Low, loud and fast. Sticks to the road through every corner.', speed: 0.95, accel: 0.9, grip: 0.9 },
   pickup: { kind: 'Pickup', blurb: 'Big wheels, high seat and a bed for hauling. Slow to turn.', speed: 0.6, accel: 0.5, grip: 0.5 },
   van: { kind: 'Van', blurb: 'Room for the whole crew and all their gear. Takes its time.', speed: 0.45, accel: 0.4, grip: 0.45 },
+  muscle: { kind: 'Muscle', blurb: 'A big block up front and fat tyres at the back. Fast in a straight line, lively in the corners.', speed: 0.85, accel: 0.95, grip: 0.6 },
+  suv: { kind: 'SUV', blurb: 'Tall and tough with a huge boot. Shrugs off kerbs, leans in the bends.', speed: 0.65, accel: 0.55, grip: 0.75 },
+  super: { kind: 'Supercar', blurb: 'Low, wide and savage. The fastest thing on the city\'s streets, and it sticks like glue.', speed: 1, accel: 1, grip: 0.95 },
 };
+
+/** How many goods each model carries in its boot or bed (more with the garage's roof rack) */
+export const CARGO: Record<PlayerCar, number> = { hatch: 16, sedan: 20, coupe: 8, pickup: 40, van: 80, muscle: 12, suv: 60, super: 6 };
 
 /** Paint colours on offer */
 export const CAR_PAINTS = [

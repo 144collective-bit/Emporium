@@ -1,16 +1,29 @@
-// Your car (mycar.ts): five models with handling numbers, twelve paints, and cars
-// from the browser (or a server, later) made safe.
+// Your car (mycar.ts): eight models with handling numbers and cargo (five free
+// starters and three the garage sells), twelve paints, and cars from the browser
+// (or a server, later) made safe.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { CAR_PAINTS, DEFAULT_CAR, DRIVE, PLAYER_CARS, cleanCar, paintHex } from '../src/scripts/city3d/mycar';
+import { CARGO, CAR_PAINTS, DEFAULT_CAR, DRIVE, PLAYER_CARS, cleanCar, paintHex } from '../src/scripts/city3d/mycar';
+import { CAR_CATALOG, STARTER_CARS } from '../src/scripts/city3d/catalog';
 
-test('five player cars, the bus left out, each with 0-1 handling and copy', () => {
-  assert.deepEqual([...PLAYER_CARS], ['hatch', 'sedan', 'coupe', 'pickup', 'van']);
+test('eight player cars, the bus left out, each with 0-1 handling, cargo and copy', () => {
+  assert.deepEqual([...PLAYER_CARS], ['hatch', 'sedan', 'coupe', 'pickup', 'van', 'muscle', 'suv', 'super']);
   for (const id of PLAYER_CARS) {
     const d = DRIVE[id];
     for (const k of ['speed', 'accel', 'grip'] as const) assert.ok(d[k] >= 0 && d[k] <= 1, `${id} ${k}`);
     assert.ok(d.kind && d.blurb);
+    assert.ok(Number.isInteger(CARGO[id]) && CARGO[id] > 0, `${id} cargo`);
   }
+});
+
+test('the five starters are free and come first; the three for sale cost Dorras and need a level', () => {
+  assert.deepEqual(STARTER_CARS, ['hatch', 'sedan', 'coupe', 'pickup', 'van']);
+  for (const id of ['muscle', 'suv', 'super'] as const) {
+    assert.ok(CAR_CATALOG[id].price > 0 && CAR_CATALOG[id].level > 1, id);
+    assert.ok(CAR_CATALOG[id].pitch);
+  }
+  // Dearer cars are faster, so there's something to save for
+  assert.ok(DRIVE.super.speed > DRIVE.muscle.speed && CAR_CATALOG.super.price > CAR_CATALOG.muscle.price);
 });
 
 test('twelve paints, each its own id and colour', () => {

@@ -1,9 +1,12 @@
-// Driving rules (drive-sim.ts): arcade handling and soft, safe collisions.
+// Driving rules (drive-sim.ts): arcade handling and soft, safe collisions, and
+// the garage's mods (catalog.ts, tycoon.ts) making a car faster through tune().
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { RIVER_WALLS, circles, newCar, stepCar, tune, type CarState, type DriveInput, type DriveWorld } from '../src/scripts/city3d/drive-sim';
 import { NS_ROADS, RIVER, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
-import { DRIVE } from '../src/scripts/city3d/mycar';
+import { CARGO, DRIVE } from '../src/scripts/city3d/mycar';
+import { NO_CAR_MODS, carStats } from '../src/scripts/city3d/catalog';
+import { carStatsOf, cleanSave, modCar } from '../src/scripts/city3d/tycoon';
 import type { Box } from '../src/scripts/city3d/solids';
 
 const HATCH = { L: 2.2, W: 0.98, wheelbase: 1.38 };
@@ -25,6 +28,31 @@ test('better numbers make a faster, quicker, grippier car', () => {
   assert.ok(fast.top > slow.top && fast.accel > slow.accel && fast.grip > slow.grip);
   // Top speeds stay city-sized: about 45-115 km/h (a tile is 1.8 m)
   for (const t of [slow, fast]) assert.ok(t.top * 6.48 > 40 && t.top * 6.48 < 120);
+});
+
+test('mods raise the top speed, pick-up and grip through tune(), within the city-sized range', () => {
+  const stock = tune(DRIVE.hatch, HATCH);
+  const engine = tune(carStats(DRIVE.hatch, CARGO.hatch, { ...NO_CAR_MODS, engine: 3 }), HATCH);
+  assert.ok(engine.top > stock.top, 'the engine mod raises the top speed');
+  assert.equal(engine.accel, stock.accel);
+  assert.equal(engine.grip, stock.grip);
+  const all = tune(carStats(DRIVE.hatch, CARGO.hatch, { engine: 3, turbo: 3, tyres: 3, rack: 0 }), HATCH);
+  assert.ok(all.accel > stock.accel && all.grip > stock.grip);
+  // A maxed-out car is still city-sized (the stats cap a little over 1)
+  const maxed = tune(carStats(DRIVE.super, CARGO.super, { engine: 3, turbo: 3, tyres: 3, rack: 3 }), HATCH);
+  assert.ok(maxed.top * 6.48 < 120);
+  // ...and the same numbers come from a save with the mods bought in it
+  const save = cleanSave({ dorras: 1e6 }, 0);
+  for (let k = 0; k < 3; k++) assert.ok(modCar(save, 'hatch', 'engine').ok);
+  assert.deepEqual(tune(carStatsOf(save, 'hatch'), HATCH), engine);
+  // A modded car actually goes faster
+  const slow = newCar(0, 0, 0);
+  const fast = newCar(0, 0, 0);
+  for (let i = 0; i < 20 / DT; i++) {
+    stepCar(slow, GAS, stock, DT, OPEN, HUGE);
+    stepCar(fast, GAS, engine, DT, OPEN, HUGE);
+  }
+  assert.ok(fast.speed > slow.speed + 1, `${fast.speed} vs ${slow.speed}`);
 });
 
 test('full gas builds speed up to the top speed, never past it', () => {

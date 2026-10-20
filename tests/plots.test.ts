@@ -2,11 +2,12 @@
 // plots at the owner's price, and designs from anywhere cleaned against the lists.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BUILDINGS, DISTRICTS, NEON_COLORS, PLOT_IDS, PLOT_PRICE, SIGNS, WALL_COLORS, cleanDesign } from '../src/data/plots';
+import { BUILDINGS, DISTRICTS, NEON_COLORS, PLOT_IDS, SIGNS, WALL_COLORS, cleanDesign } from '../src/data/plots';
+import { PLOT_DORRAS, PLOT_LEVEL } from '../src/scripts/city3d/catalog';
 import { RIVER } from '../src/scripts/city3d/layout';
 
-test('the owner\'s price: 20,000,000 PLS a plot', () => {
-  assert.equal(PLOT_PRICE, 20_000_000);
+test('plots are Dorras property: a six-figure price and a level to reach first', () => {
+  assert.ok(PLOT_DORRAS >= 100_000 && PLOT_LEVEL >= 5);
 });
 
 test('sixteen districts: North 1-5, West 1-3, East 1-3, South 1-5', () => {

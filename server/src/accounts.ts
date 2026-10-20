@@ -6,8 +6,7 @@
  * address, and they get a session token (30 days). That one login covers
  * everything a wallet does in the city:
  * - their player profile (name, rank, score, look), kept per wallet so it
- *   follows them to any browser (a wallet's first login starts a fresh one),
- * - changing the building on plots they own (land.ts checks the token here).
+ *   follows them to any browser (a wallet's first login starts a fresh one).
  *
  * Only a hash of each session token is stored.
  */
@@ -15,7 +14,7 @@ import { DurableObject } from 'cloudflare:workers';
 import { secp256k1 } from '@noble/curves/secp256k1.js';
 import { keccak_256 } from '@noble/hashes/sha3.js';
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
-import { isAddress, signInMessage, type AccountMe } from '../../src/scripts/net/land';
+import { isAddress, signInMessage, type AccountMe } from '../../src/scripts/net/auth';
 import type { OwnProfile } from '../../src/scripts/net/protocol';
 import type { Env } from './index';
 import { sha256, walletKey } from './keys';
@@ -75,7 +74,7 @@ export class Accounts extends DurableObject<Env> {
     return ++h.n > n;
   }
 
-  /** The wallet a session token belongs to, or null (also used by land.ts and the rooms) */
+  /** The wallet a session token belongs to, or null (also used by the rooms) */
   async check(token: unknown): Promise<string | null> {
     if (typeof token !== 'string' || !/^[0-9a-f]{64}$/.test(token)) return null;
     const key = `session:${await sha256(token)}`;
@@ -109,7 +108,7 @@ export class Accounts extends DurableObject<Env> {
   /** Step 1 of logging in: the exact message for the wallet to sign */
   private async nonce(body: Record<string, unknown>, origin: string) {
     if (!isAddress(body.address)) return fail(400, 'Not a wallet address');
-    const chain = Number(this.env.LAND_CHAIN_ID) || 943;
+    const chain = Number(this.env.AUTH_CHAIN_ID) || 943;
     const nonce = randomHex(12);
     const message = signInMessage({ origin, address: body.address, chain, nonce, issued: new Date().toISOString() });
     await this.ctx.storage.put(`nonce:${nonce}`, { address: body.address.toLowerCase(), message, exp: Date.now() + NONCE_TTL });
@@ -140,16 +139,13 @@ export class Accounts extends DurableObject<Env> {
     return walletKey(address).then((k) => this.env.PROFILES.get(this.env.PROFILES.idFromName(k)));
   }
 
-  /** The logged-in wallet's basic profile: player profile and the plots it owns */
+  /** The logged-in wallet's basic profile: its player profile */
   private async me(token: string | null) {
     const address = await this.check(token);
     if (!address) return fail(401, 'Log in with your wallet');
-    const [profile, plots] = await Promise.all([
-      this.profile(address).then((p) => p.open(undefined, address) as Promise<OwnProfile>),
-      this.env.LAND.get(this.env.LAND.idFromName('city')).ownedBy(address) as Promise<string[]>,
-    ]);
-    const chain = Number(this.env.LAND_CHAIN_ID) || 943;
-    return json({ address, chain, profile, plots } satisfies AccountMe);
+    const profile = (await this.profile(address).then((p) => p.open(undefined, address))) as OwnProfile;
+    const chain = Number(this.env.AUTH_CHAIN_ID) || 943;
+    return json({ address, chain, profile } satisfies AccountMe);
   }
 
   private async rename(token: string | null) {

@@ -127,10 +127,10 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
             <dt><kbd>Right&nbsp;click</kbd></dt><dd>Aim (red dot sight)</dd>
             <dt><kbd>V</kbd></dt><dd>First / third person</dd>
             <dt><kbd>Scroll</kbd></dt><dd>Camera distance</dd>
-            <dt><kbd>E</kbd></dt><dd>Enter a door, open the gun store or the garage, get in / out of your car</dd>
+            <dt><kbd>E</kbd></dt><dd>Enter a door, open the gun store, the garage or the race board, get in / out of your car</dd>
             <dt><kbd>Click</kbd></dt><dd>Fire (once geared up)</dd>
             <dt><kbd>R</kbd></dt><dd>Reload</dd>
-            <dt><kbd>Q</kbd> <kbd>1</kbd>–<kbd>4</kbd></dt><dd>Swap gun (next, or by number)</dd>
+            <dt><kbd>Q</kbd> <kbd>1</kbd>–<kbd>7</kbd></dt><dd>Swap gun (next, or by number)</dd>
             <dt><kbd>G</kbd></dt><dd>Holster / draw</dd>
             <dt><kbd>T</kbd></dt><dd>Emotes and phrases (online)</dd>
             <dt><kbd>Esc</kbd></dt><dd>Free the mouse, then stop</dd>
@@ -170,6 +170,8 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
             <p class="walk-pad">Pick your fit, headwear, bag and kicks in the fitting room at Drop 001.</p>
             <button type="button" class="walk-fp" data-open-fitting>Open the fitting room</button>
           </div>
+          {/* Level, XP and badges (missions-ui.ts) */}
+          <div class="walk-badges" data-badges></div>
         </div>
       </details>
       <details class="walk-pop walk-online" data-pop data-mp hidden>
@@ -244,29 +246,43 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
         <span class="dorras-amount" data-dorras-amount>0</span>
         <i class="dorras-dot" aria-hidden="true"></i>
       </button>
+      {/* Your level (missions-ui.ts): "Lv 7" over its XP bar. Drops a card in the city; while walking it opens the Profile tab's badges. */}
+      <details class="head-pop level-pop" data-level>
+        <summary aria-label="Level 1, Newcomer" title="Newcomer">
+          <span class="level-tag" data-level-tag>Lv 1</span>
+          <i class="level-bar" data-level-bar style="--v:0" aria-hidden="true"></i>
+        </summary>
+        <div class="head-panel level-panel">
+          <div class="pop-head">
+            <p class="pop-title">Your level</p>
+            <button type="button" class="pop-close" data-pop-close aria-label="Close your level">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
+            </button>
+          </div>
+          <div class="level-body" data-level-body></div>
+        </div>
+      </details>
       {server && (
         <button type="button" class="nav-account" data-account-nav aria-label="Connect your wallet" onclick="this.dataset.wanted='1'">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H18v4" /><path d="M3 7.5v10A2.5 2.5 0 0 0 5.5 20H20V9H5.5A2.5 2.5 0 0 1 3 7.5z" /><circle cx="16" cy="14.5" r="1.2" /></svg>
           <span class="nav-account-label" data-account-label>Connect<span class="nav-account-more"> wallet</span></span>
         </button>
       )}
-      {/* Build mode: the wallet (connect, balance, demo reset), painted by builder-ui.ts */}
+      {/* Build mode: your plots (what you own, your Dorras, the next plot's price), painted by builder-ui.ts */}
       <details class="head-pop builder-pop" data-builder-bar hidden>
-        <summary aria-label="Wallet">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H18v4" /><path d="M3 7.5v10A2.5 2.5 0 0 0 5.5 20H20V9H5.5A2.5 2.5 0 0 1 3 7.5z" /><circle cx="16" cy="14.5" r="1.2" /></svg>
-          <i class="wallet-dot" data-wallet-dot hidden aria-hidden="true"></i>
-          <span class="head-btn-text" data-wallet-label>Wallet</span>
+        <summary aria-label="Plots">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10l9-6 9 6v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z" /><path d="M9 21v-7h6v7" /></svg>
+          <span class="head-btn-text" data-plots-label>Plots</span>
         </summary>
         <div class="head-panel builder-wallet-panel">
           <div class="pop-head">
-            <p class="pop-title">Wallet</p>
-            <button type="button" class="pop-close" data-pop-close aria-label="Close wallet">
+            <p class="pop-title">Your plots</p>
+            <button type="button" class="pop-close" data-pop-close aria-label="Close plots">
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
             </button>
           </div>
-          <div class="builder-wallet" data-wallet></div>
-          <p class="builder-hint">Pick a district plot to buy or build on it.<span class="hint-keys"> Arrow keys move between plots.</span></p>
-          <button type="button" class="chip-link" data-builder-reset>Reset demo</button>
+          <div class="builder-wallet" data-plots-summary></div>
+          <p class="builder-hint">Pick a district plot to buy or build on it.<span class="hint-keys"> Arrow keys move between plots.</span> The estate agent in the Vault lists them too.</p>
         </div>
       </details>
       <details class="city-controls head-pop" data-controls>
@@ -376,59 +392,90 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       <div class="combat-pops" data-pops aria-live="polite"></div>
       <div class="combat-scope" aria-hidden="true"><i></i></div>
     </div>
-    {/* The gun store at the Armoury's counter (gunshop.ts). Guns unlock with lifetime score; nothing is sold. */}
-    <section class="shop" data-shop hidden aria-labelledby="shop-title">
+    {/* Your missions on the go (missions-ui.ts): a line and a bar each; on phones a pill that opens on a tap */}
+    <div class="mission-tracker" data-missions-tracker hidden>
+      <button type="button" class="mission-tracker-pill" data-tracker-toggle aria-expanded="false" aria-controls="mission-tracker-list">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l4 4L19 6" /></svg>
+        <span data-tracker-count>0</span>
+      </button>
+      <ul class="mission-tracker-list" id="mission-tracker-list" data-tracker-list></ul>
+    </div>
+    {/* The Armoury's store and workbench at its counter (gunshop.ts). The starters unlock with lifetime score; the rest cost Dorras earned in the city, never real money. */}
+    <section class="shop armoury" data-shop hidden aria-labelledby="shop-title">
       <header class="shop-head">
-        <h2 id="shop-title" class="shop-title">Gun store</h2>
-        <p class="shop-score">Score <b data-shop-score>0</b></p>
-        <button type="button" class="shop-close" data-shop-close aria-label="Close the gun store">
+        <h2 id="shop-title" class="shop-title">Armoury</h2>
+        <p class="shop-score shop-dorras"><span class="shop-score-label">Dorras</span> <span data-shop-dorras></span></p>
+        <p class="shop-score"><span class="shop-score-label">Score</span> <b data-shop-score>0</b></p>
+        <button type="button" class="shop-close" data-shop-close aria-label="Close the Armoury">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
         </button>
       </header>
       <div class="shop-list" data-shop-list role="listbox" aria-label="Guns"></div>
-      <div class="shop-detail" data-shop-detail>
-        <div class="shop-name-row">
-          <h3 class="shop-name" data-shop-name>Assault Rifle</h3>
-          <p class="shop-mode" data-shop-mode></p>
-        </div>
-        <p class="shop-blurb" data-shop-blurb></p>
-        <dl class="shop-stats">
-          <div data-stat="dmg"><dt>Damage</dt><dd><i></i></dd></div>
-          <div data-stat="rate"><dt>Fire rate</dt><dd><i></i></dd></div>
-          <div data-stat="range"><dt>Range</dt><dd><i></i></dd></div>
-          <div data-stat="acc"><dt>Accuracy</dt><dd><i></i></dd></div>
-          <div data-stat="mag"><dt>Magazine</dt><dd><i></i></dd></div>
-        </dl>
-        <button type="button" class="shop-take" data-shop-take>Take it &amp; gear up</button>
-        <p class="shop-note" data-shop-note></p>
-      </div>
-      <p class="shop-foot">For fun only: guns unlock with your score, nothing is sold. Finishes are in Profile.</p>
+      <div class="shop-detail" data-shop-detail></div>
+      <section class="bench" data-shop-bench aria-label="Workbench" hidden></section>
+      <p class="shop-foot">The starters are free and unlock with your score; the rest cost Dorras you earn in the city. Nothing here is real money.</p>
     </section>
-    {/* The garage on the south bank (garage-ui.ts): pick your car and its paint. Cars are free; nothing is sold. */}
+    {/* The garage on the south bank (garage-ui.ts): the dealership and tuning shop. The five starters are free, the rest
+        cost Dorras earned in the city (catalog.ts); the stat bars, the deal (Buy, or the Tune section) and the balance
+        are painted from the save. Nothing here is real money. */}
     <section class="shop garage" data-garage hidden aria-labelledby="garage-title">
       <header class="shop-head">
         <h2 id="garage-title" class="shop-title">Garage</h2>
+        <p class="shop-score">Dorras <span data-garage-dorras></span></p>
         <button type="button" class="shop-close" data-garage-close aria-label="Close the garage">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
         </button>
       </header>
       <div class="shop-list garage-list" data-garage-list role="listbox" aria-label="Cars"></div>
-      <div class="shop-detail">
+      <div class="shop-detail" data-garage-detail>
         <div class="shop-name-row">
           <h3 class="shop-name" data-garage-name>City Hatch</h3>
           <p class="shop-mode" data-garage-kind></p>
         </div>
         <p class="shop-blurb" data-garage-blurb></p>
-        <dl class="shop-stats garage-stats">
-          <div data-car-stat="speed"><dt>Top speed</dt><dd><i></i></dd></div>
-          <div data-car-stat="accel"><dt>Pick-up</dt><dd><i></i></dd></div>
-          <div data-car-stat="grip"><dt>Grip</dt><dd><i></i></dd></div>
-        </dl>
+        <p class="garage-pitch" data-garage-pitch></p>
+        <dl class="shop-stats garage-stats" data-garage-stats></dl>
+        <div class="garage-deal" data-garage-deal></div>
         <p class="garage-paint-head">Paint <span data-garage-paint-name></span></p>
         <div class="garage-paints" data-garage-paints role="radiogroup" aria-label="Paint"></div>
         <button type="button" class="shop-take" data-garage-keep>Keep this one</button>
       </div>
-      <p class="shop-foot">For fun only: cars are free and just for the city, nothing is sold.</p>
+      <p class="shop-foot">The five starters are free; the rest cost Dorras you earn in the city. Nothing here is real money.</p>
+    </section>
+    {/* Street races (race-ui.ts), opened at the race board on the south bank avenue or from your car at the start line.
+        data-races: the menu (built on the gun store's .shop panel); data-races-level your level; data-races-list the four
+        races (painted); data-races-note why you can't start yet (or how to race); data-races-close its ×.
+        data-race-count: the countdown digits. data-race-hud: the race HUD, with the clock (data-race-clock), the
+        checkpoint count (data-race-cp), the distance to the next (data-race-dist) and Quit race (data-race-quit).
+        data-race-result: the results card; data-result-title, data-result-body (painted), data-result-ok and data-result-close. */}
+    <section class="shop races" data-races hidden aria-labelledby="races-title">
+      <header class="shop-head">
+        <h2 id="races-title" class="shop-title">Street races</h2>
+        <p class="shop-score" data-races-level>Level <b>1</b></p>
+        <button type="button" class="shop-close" data-races-close aria-label="Close the races">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+        </button>
+      </header>
+      <div class="race-list" data-races-list role="list" aria-label="Races"></div>
+      <p class="race-note" data-races-note></p>
+      <p class="shop-foot">Prizes are Dorras, earned in the city. Best times are kept per race.</p>
+    </section>
+    <div class="race-count" data-race-count hidden aria-live="assertive"></div>
+    <div class="race-hud" data-race-hud hidden>
+      <b class="race-clock" data-race-clock>0:00.00</b>
+      <span class="race-cp"><b data-race-cp>1 / 9</b><small>checkpoint</small></span>
+      <span class="race-dist"><b data-race-dist>0 m</b><small>to next</small></span>
+      <button type="button" class="race-quit" data-race-quit>Quit race</button>
+    </div>
+    <section class="shop race-result" data-race-result hidden aria-labelledby="race-result-title">
+      <header class="shop-head">
+        <h2 id="race-result-title" class="shop-title" data-result-title>Finished</h2>
+        <button type="button" class="shop-close" data-result-close aria-label="Close the results">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+        </button>
+      </header>
+      <div class="race-result-body" data-result-body></div>
+      <button type="button" class="shop-take" data-result-ok>Done</button>
     </section>
     <p class="walk-hint"><kbd>WASD</kbd> move · <kbd>Shift</kbd> run · <kbd>Space</kbd> jump · <kbd>V</kbd> camera · <kbd>Esc</kbd> stop</p>
     {/* Driving your car (drive.ts): speed readout, key hint, touch pedals (the stick steers) */}
@@ -459,8 +506,8 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
     </button>
     <div class="city-panel-body" data-plot-body></div>
-    {/* Demo, testnet or mainnet: painted by builder-ui.ts */}
-    <p class="city-draft" data-plot-note>Demo · purchases are simulated · no real PLS</p>
+    {/* Painted by builder-ui.ts */}
+    <p class="city-draft" data-plot-note>Plots are game property: Dorras only, never real money</p>
   </aside>
   {/* Log in with a wallet and the basic profile (account-ui.ts) */}
   <div class="builder-modal account-modal" data-account hidden>
@@ -495,6 +542,8 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     <p class="shop-foot">Dorras are earned in the city. They can't be cashed out.</p>
   </section>
   <p class="builder-toast econ-toast" data-econ-toast role="status" aria-live="polite"></p>
+  {/* Level-ups and badges (missions-ui.ts): pops under the header, gone after a moment */}
+  <div class="mission-pops" data-mission-pops aria-live="polite"></div>
 
   {/* One glass panel; its content comes from the templates below */}
   <aside class="city-panel" data-panel hidden role="dialog" aria-labelledby="city-panel-title">
@@ -515,12 +564,12 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
   <template data-panel-tpl="shop">
     <p class="kicker"><span class="kicker-num">02</span> Clothes</p>
     <h2 id="city-panel-title" class="city-panel-title">Drop 001</h2>
-    <p class="city-panel-text">The city's clothes shop. Try fits on your Degen in the fitting room.</p>
-    {/* Dress your Degen (fitting.ts): free, cosmetic, only for the city. Nothing here is sold. */}
+    <p class="city-panel-text">The city's clothes shop. Try fits on your Degen in the fitting room, and spend your Dorras on the premium rail.</p>
+    {/* Dress your Degen (fitting.ts): the originals are free, the premium wardrobe costs Dorras earned in the city (never real money, nothing to do with the merch store). */}
     <section class="fit" data-fit aria-labelledby="fit-title">
       <div class="fit-head">
         <h3 id="fit-title" class="fit-title">Fitting room</h3>
-        <span class="fit-free">Free · for your Degen</span>
+        <span class="fit-balance" data-fit-balance aria-label="Your Dorras and level"></span>
       </div>
       <div class="fit-stage">
         <canvas class="fit-canvas" data-fit-canvas aria-hidden="true"></canvas>
@@ -528,8 +577,9 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       </div>
       <div class="fit-tabs" data-fit-tabs role="tablist" aria-label="Wardrobe"></div>
       <div class="fit-items" data-fit-items></div>
+      <div class="fit-confirm" data-fit-confirm role="group" aria-label="Confirm the purchase" hidden></div>
       <div class="fit-colors" data-fit-colors></div>
-      <p class="fit-note">He wears it when you walk the city, and online. Nothing to buy here.</p>
+      <p class="fit-note">The originals are free. The premium pieces cost Dorras you earn in the city: never real money, and nothing to do with the merch store. He wears it when you walk the city, and online.</p>
       <button type="button" class="chip-link fit-reset" data-fit-reset>Back to the classic look</button>
     </section>
   </template>
@@ -553,7 +603,8 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
   <template data-panel-tpl="signal">
     <p class="kicker"><span class="kicker-num">06</span> Signal tower</p>
     <h2 id="city-panel-title" class="city-panel-title">News &amp; contracts</h2>
-    <p class="city-panel-text">The city's news, and orders from around town. Take one on, load the goods into your car and drive them to the door.</p>
+    <p class="city-panel-text">The city's news, orders from around town, and the mission board. Take a contract on, load the goods into your car and drive them to the door; take a mission on and do it anywhere in the city.</p>
+    {/* Contracts, then the mission board (tycoon-ui.ts appends missions-ui.ts's board here) */}
     <div class="market" data-contracts></div>
   </template>
   <template data-panel-tpl="telegram">
@@ -717,13 +768,6 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
               } catch {}
             },
             rename: () => account.rename(),
-            async showPlot(id: string) {
-              // On the 2D map: into the 3D city first (it swaps in its own showPlot)
-              const before = hooks.showPlot;
-              remember('3d');
-              await go3d();
-              if (hooks.showPlot !== before) hooks.showPlot(id);
-            },
             opened() {},
           };
           if (account.address && online()) account.refresh();

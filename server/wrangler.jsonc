@@ -1,4 +1,5 @@
 // The Degen City game server: one Worker, four kinds of Durable Object.
+// (Plot sales for PLS were retired: the Land object is gone and plots are game property.)
 // It also serves the built website (the site's only home).
 // Cloudflare deploys it from GitHub on every push to main (Workers Builds); see README.md here.
 {
@@ -11,7 +12,7 @@
     "directory": "../dist",
     "binding": "ASSETS",
     "not_found_handling": "404-page",
-    "run_worker_first": ["/play", "/health", "/land", "/land/*", "/auth/*"]
+    "run_worker_first": ["/play", "/health", "/auth/*"]
   },
   "build": {
     // Installs the website's packages first if the build machine hasn't (Cloudflare's build may only install server/'s)
@@ -22,7 +23,6 @@
       { "name": "LOBBY", "class_name": "Lobby" },
       { "name": "ROOMS", "class_name": "Room" },
       { "name": "PROFILES", "class_name": "Profile" },
-      { "name": "LAND", "class_name": "Land" },
       { "name": "ACCOUNTS", "class_name": "Accounts" }
     ]
   },
@@ -30,19 +30,14 @@
   "migrations": [
     { "tag": "v1", "new_sqlite_classes": ["Lobby", "Room", "Profile"] },
     { "tag": "v2", "new_sqlite_classes": ["Land"] },
-    { "tag": "v3", "new_sqlite_classes": ["Accounts"] }
+    { "tag": "v3", "new_sqlite_classes": ["Accounts"] },
+    { "tag": "v4", "deleted_classes": ["Land"] }
   ],
   "vars": {
     // Pages allowed to connect (other sites can't embed the game)
     "ALLOWED_ORIGINS": "https://emporium.144collective.workers.dev,http://localhost:4321",
-    // Plot sales (see src/land.ts). 943 = PulseChain Testnet v4 (test PLS), 369 = PulseChain mainnet.
-    // Switching network starts a fresh list of owners; testnet sales never carry over.
-    "LAND_CHAIN_ID": "943",
-    // The owner's PulseChain wallet that plot payments go to (public address only).
-    // Sales stay closed ("opening soon") while this is empty. Set by the owner: the dev wallet.
-    "LAND_PAYEE": "0x952d534E0bD812084668B841b7DEcA87FEF63dcA",
-    "LAND_PRICE_PLS": "20000000",
-    "LAND_CONFIRMATIONS": "3"
+    // The network wallets log in on. 943 = PulseChain Testnet v4, 369 = PulseChain mainnet.
+    "AUTH_CHAIN_ID": "943"
   },
   "observability": { "enabled": true }
 }

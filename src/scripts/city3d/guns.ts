@@ -1,11 +1,15 @@
 /*
- * The guns in the Armoury's store, as cartoon shapes: the assault rifle (also
- * carried by the Armoury's soldiers), the Buzz SMG, the Street Sweeper
- * shotgun and the Long Shot marksman rifle. Each comes in the finishes
- * ("skins") Degen unlocks with his score.
+ * The guns in the Armoury's store, as cartoon shapes: the free starters (the
+ * assault rifle, also carried by the Armoury's soldiers, the Buzz SMG, the
+ * Street Sweeper shotgun and the Long Shot marksman rifle) and the ones it
+ * sells for Dorras (the Hand Cannon revolver, the Tri-Tap bullpup carbine and
+ * the Belt Feeder machine gun). Each comes in the finishes ("skins") Degen
+ * unlocks with his score.
  *
  * Units are metres at the character's scale: barrel along +z, the pistol grip
- * at the origin. No real-world makes or markings.
+ * at the origin. Each gun's `mag` is what comes out on a reload (a magazine,
+ * the revolver's cylinder, the Belt Feeder's belt box). No real-world makes
+ * or markings.
  */
 import * as THREE from 'three';
 import { PAL, canvasTex, fx, lit, toon, unlit } from './kit';
@@ -204,6 +208,143 @@ const SPECS: Record<WeaponId, Spec> = {
     fore: new THREE.Vector3(0.008, 0.016, 0.36),
     magAt: new THREE.Vector3(-0.008, -0.075, -0.23),
     hold: new THREE.Vector3(0, -0.013, 0.27),
+  },
+  revolver: {
+    // The Hand Cannon: a big fluted cylinder, a long heavy barrel with a vent rib,
+    // wooden grip panels, iron sights and a lanyard ring. Both hands on the grip.
+    body: () => {
+      const p: Part[] = [
+        // Frame: the standing breech behind the cylinder, the top strap over it, the yoke in front, the block the grip hangs from
+        [box(0.034, 0.056, 0.05, 0, 0.045, -0.025), 'steel'],
+        [box(0.03, 0.012, 0.14, 0, 0.082, 0.03), 'steel'],
+        [box(0.03, 0.03, 0.03, 0, 0.028, 0.095), 'steel'],
+        [box(0.036, 0.03, 0.05, 0, 0.012, -0.015), 'steel'],
+        // Long heavy barrel with a vent rib on top, a full-length lug under it and a crown at the muzzle
+        [box(0.028, 0.034, 0.25, 0, 0.055, 0.225), 'steel'],
+        [box(0.016, 0.012, 0.24, 0, 0.078, 0.22), 'ink'],
+        [box(0.022, 0.024, 0.2, 0, 0.03, 0.2), 'steel'],
+        [box(0.034, 0.04, 0.016, 0, 0.052, 0.342), 'ink'],
+        ...grip(),
+        // Wooden grip panels with checkering, the backstrap, the hammer spur
+        [box(0.05, 0.072, 0.03, 0, -0.058, -0.028, 0.3), 'accent'],
+        [box(0.012, 0.09, 0.012, 0, -0.045, -0.048, 0.3), 'ink'],
+        [box(0.01, 0.022, 0.016, 0, 0.09, -0.054, -0.6), 'ink'],
+        // Iron sights: a ramp blade at the front, a notch at the back
+        [box(0.006, 0.014, 0.014, 0, 0.09, 0.33), 'ink'],
+        [box(0.008, 0.014, 0.008, 0.009, 0.094, -0.04), 'ink'],
+        [box(0.008, 0.014, 0.008, -0.009, 0.094, -0.04), 'ink'],
+        // The lanyard ring under the butt
+        [new THREE.TorusGeometry(0.009, 0.0025, 6, 14).rotateY(Math.PI / 2).translate(0, -0.108, -0.06), 'steel'],
+      ];
+      for (let i = 0; i < 5; i++) p.push([box(0.018, 0.004, 0.014, 0, 0.0845, 0.14 + i * 0.04), 'steel']);
+      for (let i = 0; i < 3; i++) p.push([box(0.052, 0.003, 0.003, 0, -0.04 - i * 0.016, -0.02 - i * 0.005), 'ink']);
+      return p;
+    },
+    // The cylinder on its crane: it swings out and drops on a reload
+    mag: () => {
+      const p: Part[] = [
+        [tube(0.03, 0.068, 0, 0.05, 0.045, 12), 'steel'],
+        [box(0.012, 0.02, 0.05, 0.022, 0.028, 0.045), 'steel'],
+      ];
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2;
+        p.push([box(0.008, 0.008, 0.05, Math.cos(a) * 0.03, 0.05 + Math.sin(a) * 0.03, 0.045), 'ink']);
+      }
+      return p;
+    },
+    muzzle: new THREE.Vector3(0, 0.055, 0.35),
+    sight: { kind: 'irons', at: new THREE.Vector3(0, 0.094, -0.04), ads: 0.3 },
+    fore: new THREE.Vector3(0.034, -0.035, 0.035),
+    magAt: new THREE.Vector3(-0.03, 0.08, 0.01),
+    hold: new THREE.Vector3(0.03, -0.045, 0.02),
+  },
+  burst: {
+    // The Tri-Tap: a compact bullpup carbine (the magazine behind the grip), a carry
+    // handle with the holo sight on it, a short barrel with a flash hider, accent stripes.
+    body: () => [
+      // One long polymer body (stock, receiver and all) with the butt pad, and the handguard ahead of it
+      [box(0.054, 0.072, 0.34, 0, 0.046, -0.04), 'furniture'],
+      [box(0.058, 0.09, 0.016, 0, 0.04, -0.215), 'ink'],
+      [box(0.05, 0.05, 0.1, 0, 0.045, 0.17), 'furniture'],
+      // Accent stripes down each side, the cheek rest
+      [box(0.0565, 0.008, 0.3, 0, 0.028, -0.03), 'accent'],
+      [box(0.0565, 0.006, 0.18, 0, 0.066, 0.02), 'accent'],
+      [box(0.03, 0.014, 0.12, 0, 0.088, -0.13), 'furniture'],
+      // Ejection port, charging handle
+      [box(0.0545, 0.018, 0.045, 0, 0.056, -0.06), 'ink'],
+      [box(0.014, 0.01, 0.028, 0.03, 0.092, 0.02), 'ink'],
+      // Short barrel and the slotted flash hider
+      [tube(0.012, 0.08, 0, 0.05, 0.25), 'steel'],
+      [tube(0.017, 0.04, 0, 0.05, 0.3, 8), 'steel'],
+      [box(0.005, 0.038, 0.03, 0, 0.05, 0.3), 'ink'],
+      [box(0.038, 0.005, 0.03, 0, 0.05, 0.3), 'ink'],
+      // Carry handle: two posts and the bar, with the holo sight on top
+      [box(0.024, 0.024, 0.024, 0, 0.094, -0.1), 'steel'],
+      [box(0.024, 0.024, 0.024, 0, 0.094, 0.1), 'steel'],
+      [box(0.028, 0.012, 0.25, 0, 0.112, 0.0), 'steel'],
+      ...grip(),
+      ...holo(0.172, 0.0, 0.118),
+    ],
+    mag: () => [
+      [box(0.034, 0.1, 0.055, 0, -0.03, -0.13, -0.1), 'steel'],
+      [box(0.04, 0.012, 0.06, 0, -0.08, -0.136, -0.1), 'accent'],
+    ],
+    muzzle: new THREE.Vector3(0, 0.05, 0.32),
+    sight: { kind: 'holo', at: new THREE.Vector3(0, 0.172, 0.0), ads: 0.34 },
+    fore: new THREE.Vector3(0.008, 0.012, 0.17),
+    magAt: new THREE.Vector3(-0.01, -0.08, -0.3),
+    hold: new THREE.Vector3(0, -0.012, 0.15),
+  },
+  lmg: {
+    // The Belt Feeder: a long receiver under a top cover, the belt box hanging under it,
+    // a heavy finned barrel with the bipod folded back under it, a stock.
+    body: () => {
+      const p: Part[] = [
+        // Receiver and its lower, the top cover with its latch, the feed tray's lip on the left
+        [box(0.058, 0.062, 0.36, 0, 0.058, 0.02), 'steel'],
+        [box(0.05, 0.04, 0.2, 0, 0.012, 0.0), 'steel'],
+        [box(0.064, 0.016, 0.3, 0, 0.097, 0.03), 'ink'],
+        [box(0.024, 0.008, 0.03, 0, 0.108, 0.15), 'accent'],
+        [box(0.018, 0.026, 0.1, -0.036, 0.075, 0.06), 'steel'],
+        // Handguard with a stripe, the carry handle folded along its left side, the gas tube under the barrel
+        [box(0.06, 0.05, 0.12, 0, 0.045, 0.26), 'furniture'],
+        [box(0.062, 0.01, 0.1, 0, 0.03, 0.26), 'accent'],
+        [box(0.012, 0.028, 0.1, -0.036, 0.072, 0.26), 'furniture'],
+        [tube(0.009, 0.22, 0, 0.03, 0.42), 'steel'],
+        // Heavy finned barrel and the muzzle booster
+        [tube(0.015, 0.28, 0, 0.058, 0.46), 'steel'],
+        [box(0.038, 0.038, 0.05, 0, 0.058, 0.6), 'steel'],
+        [box(0.04, 0.008, 0.012, 0, 0.058, 0.618), 'ink'],
+        // Bipod folded back under the barrel: the hinge block, two legs and their feet
+        [box(0.034, 0.018, 0.03, 0, 0.03, 0.5), 'steel'],
+        [box(0.007, 0.007, 0.2, 0.019, 0.02, 0.4), 'steel'],
+        [box(0.007, 0.007, 0.2, -0.019, 0.02, 0.4), 'steel'],
+        [box(0.012, 0.01, 0.016, 0.019, 0.02, 0.305), 'ink'],
+        [box(0.012, 0.01, 0.016, -0.019, 0.02, 0.305), 'ink'],
+        ...grip(),
+        // Buffer, stock with a cheek riser, butt pad
+        [box(0.04, 0.046, 0.05, 0, 0.05, -0.185), 'steel'],
+        [box(0.05, 0.088, 0.15, 0, 0.032, -0.28), 'furniture'],
+        [box(0.03, 0.02, 0.1, 0, 0.086, -0.26), 'furniture'],
+        [box(0.054, 0.1, 0.02, 0, 0.028, -0.36), 'ink'],
+        // Iron sights: a notch block at the back of the cover, a post at the muzzle
+        [box(0.03, 0.014, 0.014, 0, 0.112, -0.12), 'ink'],
+        [box(0.006, 0.03, 0.008, 0, 0.1, 0.56), 'ink'],
+      ];
+      for (let i = 0; i < 7; i++) p.push([tube(0.021, 0.01, 0, 0.058, 0.34 + i * 0.03, 10), 'ink']);
+      return p;
+    },
+    // The belt box under the receiver, with a band and the belt's links climbing into the feed tray
+    mag: () => [
+      [box(0.05, 0.08, 0.11, 0, 0.0, 0.14), 'steel'],
+      [box(0.054, 0.012, 0.114, 0, -0.03, 0.14), 'accent'],
+      [box(0.012, 0.04, 0.03, -0.031, 0.055, 0.12), 'accent'],
+    ],
+    muzzle: new THREE.Vector3(0, 0.058, 0.63),
+    sight: { kind: 'irons', at: new THREE.Vector3(0, 0.115, -0.12), ads: 0.3 },
+    fore: new THREE.Vector3(0.008, 0.014, 0.26),
+    magAt: new THREE.Vector3(-0.008, -0.05, -0.12),
+    hold: new THREE.Vector3(0, -0.014, 0.23),
   },
 };
 

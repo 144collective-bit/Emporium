@@ -1,0 +1,473 @@
+/* ---------- Street races (walk mode, race-ui.ts) ----------
+   The race menu is built on the gun store's .shop panel (global.css): one column of race rows.
+   The countdown is big centred digits; the race HUD sits top centre under the header, clear of
+   the drive readout (top left on touch screens) and Get out (top right). The results card is a
+   .shop card too. Phones upright keep the shop's bottom sheet; on their side the HUD stays clear
+   of the stick and the pedals. Nothing moves under reduced motion. */
+
+/* The menu: name, blurb, par / prize / best, Start */
+.races {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "head"
+    "list"
+    "note"
+    "foot";
+  width: min(560px, calc(100% - 32px));
+}
+.race-list {
+  grid-area: list;
+  display: grid;
+  gap: 8px;
+}
+.race-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "head start"
+    "blurb start"
+    "meta start";
+  gap: 4px 14px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid #ffffff14;
+  border-radius: 10px;
+  background: #ffffff08;
+}
+.race-row.is-locked {
+  opacity: 0.6;
+}
+.race-row-head {
+  grid-area: head;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+.race-name {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+  color: #fff;
+}
+.race-row .lv-tag {
+  padding: 2px 7px;
+  border: 1px solid #ffffff33;
+  border-radius: 5px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--p-cyan);
+}
+.race-row.is-locked .lv-tag {
+  color: #ff6ad5;
+  border-color: #ff6ad566;
+}
+.race-cps {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.race-blurb {
+  grid-area: blurb;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-2);
+}
+.race-meta {
+  grid-area: meta;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  margin: 2px 0 0;
+}
+.race-meta > div {
+  display: grid;
+  gap: 1px;
+}
+.race-meta dt {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.race-meta dd {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #fff;
+}
+.race-meta dd b {
+  font-weight: 700;
+}
+.race-none {
+  font-weight: 400;
+  color: var(--muted);
+}
+.race-start {
+  grid-area: start;
+  align-self: center;
+  min-width: 78px;
+  padding: 10px 16px;
+  border: 1px solid #0000;
+  border-radius: 999px;
+  background:
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 0 22px -8px #ff2fb9;
+}
+.race-start:disabled {
+  opacity: 0.55;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+.race-note {
+  grid-area: note;
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+.race-note.is-warn {
+  color: #ffd36b;
+}
+
+/* The countdown: huge digits in the middle of the screen, PulseChain gradient, a glow */
+.race-count {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 6;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(120px, 28vmin, 220px);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: var(--pulse-text);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 18px #ff2fb9aa) drop-shadow(0 0 40px #00eaff66);
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+.race-count[hidden] {
+  display: none;
+}
+.race-count.is-pop {
+  animation: race-pop 0.6s var(--ease);
+}
+@keyframes race-pop {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.5);
+  }
+  30% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+/* The race HUD: top centre under the header */
+.race-hud {
+  position: absolute;
+  top: calc(var(--head-h) + 12px);
+  left: 50%;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: calc(100% - 32px);
+  padding: 8px 10px 8px 16px;
+  border: 1px solid #0000;
+  border-radius: 999px;
+  background:
+    linear-gradient(#0b0a12e6, #0b0a12e6) padding-box,
+    var(--pulse) border-box;
+  box-shadow: 0 0 30px -10px #00eaffaa;
+  color: #fff;
+  transform: translateX(-50%);
+  animation: race-hud-in 0.3s var(--ease);
+}
+.race-hud[hidden] {
+  display: none;
+}
+@keyframes race-hud-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -8px);
+  }
+}
+.race-clock {
+  min-width: 6.2ch;
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+}
+.race-hud.is-counting .race-clock {
+  color: var(--muted);
+}
+.race-cp,
+.race-dist {
+  display: grid;
+  gap: 2px;
+  white-space: nowrap;
+}
+.race-cp b,
+.race-dist b {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--p-cyan);
+}
+.race-cp small,
+.race-dist small {
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.race-quit {
+  padding: 7px 12px;
+  border: 1px solid #ffffff33;
+  border-radius: 999px;
+  background: #0000;
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.race-quit:hover {
+  border-color: #fff;
+  color: #fff;
+}
+/* Mid-race the key hint at the bottom left goes (the road matters more) */
+.city.is-racing .drive-hint {
+  display: none;
+}
+
+/* The results card: a short centred card */
+.race-result {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "head"
+    "body"
+    "take";
+  width: min(420px, calc(100% - 32px));
+  text-align: center;
+}
+.race-result .shop-head {
+  justify-content: space-between;
+}
+.race-result-body {
+  grid-area: body;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+}
+.race-result .shop-take {
+  grid-area: take;
+}
+.race-result-name {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--p-cyan);
+}
+.race-result-time {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 64px;
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  background: var(--pulse-text);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 14px #ff2fb966);
+}
+.race-result-tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin: 0;
+}
+.race-tag {
+  padding: 4px 10px;
+  border: 1px solid #2bff8866;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #2bff88;
+}
+.race-tag.is-best {
+  border-color: #0000;
+  background:
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
+  color: #fff;
+}
+.race-tag.is-over {
+  border-color: #ff6ad566;
+  color: #ff6ad5;
+}
+.race-result-meta {
+  justify-content: center;
+  gap: 4px 24px;
+}
+.race-result-meta > div {
+  justify-items: center;
+}
+.race-levelup {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 2px 0 0;
+  white-space: nowrap;
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 900;
+  text-transform: uppercase;
+  color: #fff;
+}
+.race-levelup .lv-tag {
+  padding: 2px 8px;
+  border: 1px solid #0000;
+  border-radius: 5px;
+  background:
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--p-cyan);
+}
+
+/* Touch screens: the drive readout sits top left and Get out top right, so the HUD drops a
+   row below them (still well above the stick and the pedals) and loses its padding */
+@media (pointer: coarse) {
+  .race-hud {
+    top: calc(var(--head-h) + 58px);
+    gap: 10px;
+    padding: 6px 8px 6px 12px;
+  }
+  .race-clock {
+    font-size: 24px;
+  }
+  .race-quit {
+    padding: 6px 9px;
+    font-size: 9px;
+  }
+}
+/* Phones upright: the menu is the shop's bottom sheet; rows put Start under the details */
+@media (max-width: 640px) {
+  .races {
+    width: auto;
+  }
+  .race-row {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "head"
+      "blurb"
+      "meta"
+      "start";
+    gap: 4px 0;
+    padding: 9px 10px;
+  }
+  .race-start {
+    justify-self: end;
+    margin-top: 4px;
+    padding: 8px 14px;
+  }
+  .race-result {
+    width: auto;
+  }
+  .race-result-time {
+    font-size: 52px;
+  }
+}
+/* Narrow phones: the HUD's labels go so it fits between the edges */
+@media (max-width: 400px) {
+  .race-hud {
+    gap: 8px;
+    max-width: calc(100% - 16px);
+  }
+  .race-cp small,
+  .race-dist small {
+    display: none;
+  }
+  .race-clock {
+    font-size: 22px;
+  }
+}
+/* Phones on their side: shorter rows (no blurb), the HUD a touch tighter */
+@media (max-height: 500px) {
+  .race-blurb {
+    display: none;
+  }
+  .race-row {
+    padding: 7px 10px;
+  }
+  .race-count {
+    font-size: clamp(80px, 30vmin, 140px);
+  }
+  .race-result-body {
+    gap: 4px;
+  }
+  .race-result-name {
+    display: none;
+  }
+  .race-result-time {
+    font-size: 44px;
+  }
+  .race-levelup {
+    font-size: 15px;
+  }
+}
+@media (pointer: coarse) and (max-height: 500px) {
+  .race-hud {
+    top: calc(var(--head-h) + 50px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .race-count.is-pop,
+  .race-hud {
+    animation: none;
+  }
+}

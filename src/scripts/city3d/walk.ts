@@ -15,6 +15,8 @@
  *   the showroom turntable while you pick your car.
  * - Get in your car (at the turntable, or wherever you left it) and drive
  *   (drive.ts); get out anywhere.
+ * - The race board on the south bank avenue (and your car, stopped at the
+ *   start line) opens the street races (race-ui.ts); the run reads the car.
  */
 import * as THREE from 'three';
 import type { SpotId } from '../../lib/city';
@@ -22,13 +24,20 @@ import { PLAYER, airPose, createDegen, emotePose, walkPose, type Outfit } from '
 import { createCombat, type Sfx } from './combat';
 import { WEAPON_IDS } from './combat-sim';
 import { createGunShop } from './gunshop';
+import { carStatsOf, ownsCar, takedown } from './tycoon';
 import { createGarageUI, loadCar } from './garage-ui';
+import { DEFAULT_CAR } from './mycar';
 import type { Garage } from './garage';
 import { createDrive } from './drive';
+import { createRaceUI } from './race-ui';
+import type { RaceSite } from './racesite';
+import { RACE_SITE, START_LINE, START_R } from './races';
 import { CAMERA_ONLY, DOORS, GARAGE_SITE, RACK, SOLIDS, TURNTABLE_BOX, WALK_SPAWN, rayBoxes, type Box } from './solids';
+import { count } from './tycoon';
 import { NS_ROADS, RIVER, SLAB, WALK_W, type Tick } from './world';
 import { WORLD_BOUNDS } from './layout';
 import { PLAN, inPoly } from './streetplan';
+import type { GameDeps } from './ui';
 
 /** Facing the Emporium's doors, the tower over his shoulder */
 const SPAWN_YAW = WALK_SPAWN.yaw;
@@ -37,6 +46,8 @@ const WALK = 2.4;
 const RUN = 5.4;
 const JUMP = 3.9;
 const GRAVITY = 11.5;
+/** How hard the crew's shove pushes (tiles a second, easing off as it lasts) */
+const SHOVE = 4;
 const SCALE = 0.85;
 /** How far you can go: the world's edge */
 const BOUNDS = WORLD_BOUNDS;
@@ -93,6 +104,10 @@ export interface WalkDeps {
   places(): { id: string; x: number; z: number; label: string }[];
   /** Open one of them (tycoon-ui.ts) */
   openPlace(id: string): void;
+  /** The economy, for the shops in walk mode (buying, mods) */
+  game: GameDeps;
+  /** The street races' start line (its checkpoint markers light up during a run) */
+  raceSite: RaceSite;
 }
 
 export function createWalk(d: WalkDeps) {
@@ -181,11 +196,12 @@ export function createWalk(d: WalkDeps) {
   const keys = new Set<string>();
   const joy = { x: 0, y: 0, id: -1 };
   const pad = { x: 0, y: 0, run: false, prev: [] as boolean[] };
-  let near: { id: SpotId | 'gear' | 'garage' | 'car' | `place:${string}`; label: string } | null = null;
+  let near: { id: SpotId | 'gear' | 'garage' | 'car' | 'races' | `place:${string}`; label: string } | null = null;
   const act = () => {
     if (!near) return;
     if (near.id === 'gear') shop.show();
     else if (near.id === 'garage') garageUI.show();
+    else if (near.id === 'races') races.show();
     else if (near.id === 'car') (drive.active ? getOut() : getIn());
     else if (near.id.startsWith('place:')) {
       if (document.pointerLockElement === canvas) document.exitPointerLock();
@@ -240,13 +256,29 @@ export function createWalk(d: WalkDeps) {
   /** Distance along a ray to the first building or the ground (for shots). */
   const rayWorld = (from: THREE.Vector3, dir: THREE.Vector3, max: number) => rayBoxes(from, dir, max, d.plotSolids());
 
-  const combat = createCombat({ scene: d.scene, camera, root, tick: d.tick, ground: SLAB, rayWorld, sfx: d.sfx });
-  // The gun store at the Armoury's counter: frees the mouse and pauses walking while it's open
+  const combat = createCombat({
+    scene: d.scene,
+    camera,
+    root,
+    tick: d.tick,
+    ground: SLAB,
+    rayWorld,
+    sfx: d.sfx,
+    game: d.game,
+    // Each takedown counts for the city's game (XP, missions)
+    onTakedown(kind) {
+      takedown(d.game.save(), kind);
+      d.game.commit();
+    },
+  });
+  // The Armoury's store and workbench at its counter: frees the mouse and pauses walking while it's open
   const shop = createGunShop(root, {
     lifetime: () => combat.lifetime,
     weapon: () => combat.weapon,
     geared: () => combat.geared,
     equip: (id) => combat.equip(id),
+    game: d.game,
+    setMods: (id) => combat.setMods(id),
     onOpen() {
       keys.clear();
       jumpHeld = false;
@@ -273,6 +305,7 @@ export function createWalk(d: WalkDeps) {
       else d.garage.show(saved);
     },
     away: () => drive.away,
+    game: d.game,
     onOpen() {
       keys.clear();
       jumpHeld = false;
@@ -297,7 +330,12 @@ export function createWalk(d: WalkDeps) {
     camera,
     root,
     garage: d.garage,
-    myCar: loadCar,
+    // (a premium car saved in the browser only counts while the save owns it)
+    myCar: () => {
+      const c = loadCar();
+      return ownsCar(d.game.save(), c.model) ? c : { ...DEFAULT_CAR };
+    },
+    stats: (model) => carStatsOf(d.game.save(), model),
     solids: () => (d.plotSolids().length ? [...CAR_SOLIDS, ...d.plotSolids()] : CAR_SOLIDS),
     groundAt,
     cameraRoom,
@@ -310,6 +348,30 @@ export function createWalk(d: WalkDeps) {
   /** Driving input from the gamepad and the touch pedals */
   const padDrive = { steer: 0, throttle: 0, handbrake: false };
   const pedals = { gas: false, brake: false };
+  // Street races: the board's menu, the countdown and the HUD (race-ui.ts). Like the other
+  // shops it frees the mouse and lets go of the controls while it's open; the run reads the car.
+  const races = createRaceUI(root, {
+    game: d.game,
+    car: () => {
+      const st = drive.state;
+      return st ? { x: st.x, z: st.z, speed: st.speed, driving: drive.active } : null;
+    },
+    onFreeze: (on) => (drive.frozen = on),
+    site: d.raceSite,
+    onOpen() {
+      keys.clear();
+      jumpHeld = false;
+      pedals.gas = pedals.brake = false;
+      vel.set(0, 0);
+      setAim(false);
+      combat.trigger(false);
+      combat.trigger(false, true);
+      if (document.pointerLockElement === canvas) document.exitPointerLock();
+    },
+    onClose: () => canvas.focus({ preventScroll: true }),
+  });
+  /** Tiles driven since the last time they were counted (counted every ten, not every frame) */
+  let driven = 0;
   function getIn() {
     if (combat.armed) combat.toggleHolster();
     if (!drive.enter()) return;
@@ -324,6 +386,8 @@ export function createWalk(d: WalkDeps) {
     d.touched();
   }
   function getOut() {
+    // Getting out mid-race abandons it
+    races.abort();
     const out = drive.exit();
     if (!out) return;
     pos.set(out.x, groundAt(out.x, out.z), out.z);
@@ -387,9 +451,9 @@ export function createWalk(d: WalkDeps) {
   function onKey(e: KeyboardEvent, down: boolean) {
     if (!active || (e.target as HTMLElement).matches?.('input, select, textarea')) return false;
     const c = e.code;
-    // While the store or the garage is open, E closes it and walking keys wait
-    if (shop.open || garageUI.open) {
-      if (down && !e.repeat && c === 'KeyE') (shop.open ? shop.close() : garageUI.close());
+    // While the store, the garage or the race menu is open, E closes it and walking keys wait
+    if (shop.open || garageUI.open || races.open) {
+      if (down && !e.repeat && c === 'KeyE') (shop.open ? shop.close() : garageUI.open ? garageUI.close() : races.close());
       return false;
     }
     // Driving: steer and pedal with the move keys, Space for the handbrake, V swaps camera, E gets out
@@ -412,7 +476,7 @@ export function createWalk(d: WalkDeps) {
     else if (down && !e.repeat && c === 'KeyG') combat.toggleHolster();
     else if (down && !e.repeat && c === 'KeyQ') combat.swap(1);
     // 1-4 pick a gun (unless the emote panel has them)
-    else if (down && !e.repeat && /^Digit[1-4]$/.test(c) && !root.querySelector('[data-emotes][open]')) combat.swap(WEAPON_IDS[Number(c.slice(5)) - 1]);
+    else if (down && !e.repeat && /^Digit[1-7]$/.test(c) && !root.querySelector('[data-emotes][open]')) combat.swap(WEAPON_IDS[Number(c.slice(5)) - 1]);
     else if (c === 'Space') {
       if (down && !e.repeat) tryJump();
       jumpHeld = down;
@@ -663,6 +727,16 @@ export function createWalk(d: WalkDeps) {
       pad.prev = b;
       return;
     }
+    // The race menu: D-pad picks a race, A starts it, B (or Y again) closes
+    if (races.open) {
+      if (edge(12) || edge(14)) races.step(-1);
+      if (edge(13) || edge(15)) races.step(1);
+      if (edge(0)) races.take();
+      if (edge(1) || edge(3)) races.close();
+      pad.x = pad.y = 0;
+      pad.prev = b;
+      return;
+    }
     // Driving: left stick steers, RT gas, LT brake / reverse, A handbrake, Y gets out, View swaps camera
     if (drive.active) {
       padDrive.steer = pad.x;
@@ -751,16 +825,26 @@ export function createWalk(d: WalkDeps) {
     if (pedals.gas || pedals.brake) throttle = (pedals.gas ? 1 : 0) - (pedals.brake ? 1 : 0);
     if (padDrive.steer) steer = padDrive.steer;
     if (padDrive.throttle) throttle = padDrive.throttle;
-    drive.update(dt, { throttle, steer, handbrake: jumpHeld || padDrive.handbrake });
+    driven += drive.update(dt, { throttle, steer, handbrake: jumpHeld || padDrive.handbrake });
+    // Every ten tiles the distance goes on the save's counters (missions watch them)
+    if (driven >= 10) {
+      count(d.game.save(), 'driven', Math.floor(driven));
+      driven -= Math.floor(driven);
+      d.game.commit();
+    }
     const s = drive.state!;
     pos.set(s.x, groundAt(s.x, s.z), s.z);
     speedNow = Math.hypot(s.vx, s.vz);
     hero.g.visible = hero.ring.visible = false;
-    // The rest of the city carries on (drones, dummies)
+    // The rest of the city carries on (drones, dummies, the crew: it leaves a car alone)
+    combat.setPlayerPos(NaN, NaN);
     combat.update(dt, t, false);
     combat.view(dt, t, { firstPerson: false, aim: false, move: 0, phase: 0, run: 0, air: 0 });
-    if (near?.id !== 'car') {
-      near = { id: 'car', label: 'Get out' };
+    // The prompt: the race menu when nearly stopped at the start line (not mid-race), else Get out
+    const atLine = !races.racing && Math.abs(s.speed) < 0.4 && Math.hypot(s.x - START_LINE.x, s.z - START_LINE.z) <= START_R;
+    const want = atLine ? { id: 'races' as const, label: 'Street races' } : { id: 'car' as const, label: 'Get out' };
+    if (near?.id !== want.id) {
+      near = want;
       prompt.hidden = false;
       prompt.querySelector('[data-walk-label]')!.textContent = near.label;
     }
@@ -769,6 +853,8 @@ export function createWalk(d: WalkDeps) {
   function update(dt: number, t: number) {
     if (!active) return;
     pollPad(dt);
+    // A race on: the countdown, the clock and the checkpoints (it reads the car)
+    races.update(dt);
     if (drive.active) return driveFrame(dt, t);
 
     // What the player wants, in camera space
@@ -801,6 +887,13 @@ export function createWalk(d: WalkDeps) {
     const k = damp(grounded ? (mag > 0.05 ? 11 : 14) : 2.5, dt);
     vel.x += (dirX * top - vel.x) * k;
     vel.y += (dirZ * top - vel.y) * k;
+    // Shoved by one of the crew (combat.ts): knocked back for a moment, whatever you're pressing
+    const sh = combat.shove;
+    if (sh) {
+      const push = damp(30, dt);
+      vel.x += (sh.dx * SHOVE * sh.t - vel.x) * push;
+      vel.y += (sh.dz * SHOVE * sh.t - vel.y) * push;
+    }
     const stuck = blocked(pos.x, pos.z);
     const nx = pos.x + vel.x * dt;
     if (stuck || !blocked(nx, pos.z)) pos.x = nx;
@@ -850,6 +943,7 @@ export function createWalk(d: WalkDeps) {
       else if (!combat.armed) emotePose(P, emote.id, emote.t);
     }
     // Recoil kicks the view up a touch; the rifle rides the shoulder
+    combat.setPlayerPos(pos.x, pos.z);
     const kick = combat.update(dt, t, aimNow);
     if (kick) {
       pitch = Math.max(firstPerson ? -1.35 : -0.55, pitch - kick);
@@ -911,7 +1005,7 @@ export function createWalk(d: WalkDeps) {
     }
 
     // Door prompts, and the Armoury's gun store counter
-    let best: { id: SpotId | 'gear' | 'garage' | 'car' | `place:${string}`; label: string } | null = null;
+    let best: { id: SpotId | 'gear' | 'garage' | 'car' | 'races' | `place:${string}`; label: string } | null = null;
     let bestD = 1.7;
     const atCounter = Math.hypot(RACK.x - pos.x, RACK.z - pos.z);
     if (atCounter < 1.1) {
@@ -921,6 +1015,11 @@ export function createWalk(d: WalkDeps) {
     if (shop.open && atCounter > 2) shop.close();
     if (Math.hypot(GARAGE_SITE.door.x - pos.x, GARAGE_SITE.door.z - pos.z) < 1.3) {
       best = { id: 'garage', label: 'Garage' };
+      bestD = 0;
+    }
+    // The race board on the south bank avenue
+    if (Math.hypot(RACE_SITE.spot.x - pos.x, RACE_SITE.spot.z - pos.z) < 1.2) {
+      best = { id: 'races', label: 'Street races' };
       bestD = 0;
     }
     if (!drive.active)
@@ -943,7 +1042,7 @@ export function createWalk(d: WalkDeps) {
     if (best?.id !== near?.id || best?.label !== near?.label) {
       near = best;
       prompt.hidden = !near;
-      if (near) prompt.querySelector('[data-walk-label]')!.textContent = near.id === 'gear' || near.id === 'garage' || near.id === 'car' || near.id.startsWith('place:') ? near.label : `Enter ${near.label}`;
+      if (near) prompt.querySelector('[data-walk-label]')!.textContent = near.id === 'gear' || near.id === 'garage' || near.id === 'car' || near.id === 'races' || near.id.startsWith('place:') ? near.label : `Enter ${near.label}`;
     }
   }
 
@@ -1005,6 +1104,12 @@ export function createWalk(d: WalkDeps) {
       grounded = true;
       face = 0;
       yaw = SPAWN_YAW;
+      // ?spawn=x,z[,yaw] in the address: start walking somewhere else (for checking a place on real devices)
+      const at = new URLSearchParams(location.search).get('spawn')?.split(',').map(Number);
+      if (at && at.length >= 2 && at.every(Number.isFinite)) {
+        pos.set(at[0], groundAt(at[0], at[1]), at[1]);
+        if (at.length > 2) yaw = at[2];
+      }
       // First person by default; V (or the Controls panel) swaps to the shoulder camera
       pitch = -0.16;
       zoom = camDist = 5.2;
@@ -1016,8 +1121,9 @@ export function createWalk(d: WalkDeps) {
       root.dataset.mode = 'walk';
     },
     exit() {
-      // Leaving walk mode in the car: it stays parked where it is
+      // Leaving walk mode in the car: it stays parked where it is (and a race is abandoned)
       if (drive.active) getOut();
+      races.abort();
       active = false;
       root.classList.remove('is-fp');
       keys.clear();
@@ -1025,6 +1131,7 @@ export function createWalk(d: WalkDeps) {
       setAim(false);
       shop.close();
       garageUI.close();
+      races.close();
       combat.exit();
       joy.id = -1;
       joy.x = joy.y = 0;
@@ -1037,9 +1144,9 @@ export function createWalk(d: WalkDeps) {
       camera.updateProjectionMatrix();
       root.dataset.mode = 'explore';
     },
-    /** Esc: close the gun store or the garage if one is open (true if it was) */
+    /** Esc: close the gun store, the garage or the race menu if one is open, or abandon a race (true if it did) */
     closeShop() {
-      return shop.close() || garageUI.close();
+      return shop.close() || garageUI.close() || races.close() || races.abort();
     },
     /** True if Esc was used to free the mouse (so it shouldn't also stop walking). */
     releaseMouse() {

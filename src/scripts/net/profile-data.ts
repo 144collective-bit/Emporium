@@ -59,25 +59,36 @@ export const skinUnlocked = (id: SkinId, total: number) => total >= (SKINS.find(
 
 /* ---------- Wardrobe ---------- */
 
-export type Hat = 'cap' | 'backcap' | 'beanie' | 'bucket' | 'crown';
-export type Bag = 'backpack' | 'crossbody' | 'board';
-export type Held = 'gummy' | 'coffee' | 'boombox';
-export const HATS: Hat[] = ['cap', 'backcap', 'beanie', 'bucket', 'crown'];
-export const BAGS: Bag[] = ['backpack', 'crossbody', 'board'];
-export const HELD: Held[] = ['gummy', 'coffee', 'boombox'];
+/*
+ * The original wardrobe is free. Drop 001 also sells a premium wardrobe for
+ * Dorras (catalog.ts: the varsity and puffer jackets, the cowboy hat, top hat
+ * and neon halo, the duffel bag and neon wings, the phone and briefcase, the
+ * gold watch, and the gold and holo colour packs). Those are ordinary Look
+ * values here: whether a player owns them is the fitting room's business
+ * (tycoon.ts), not the validator's, so a look that wears them is a valid
+ * look.
+ */
+export type Hat = 'cap' | 'backcap' | 'beanie' | 'bucket' | 'crown' | 'cowboy' | 'tophat' | 'halo';
+export type Bag = 'backpack' | 'crossbody' | 'board' | 'duffel' | 'wings';
+export type Held = 'gummy' | 'coffee' | 'boombox' | 'phone' | 'briefcase';
+export type LookKind = 'suit' | 'hoodie' | 'track' | 'varsity' | 'puffer';
+export const KINDS: LookKind[] = ['suit', 'hoodie', 'track', 'varsity', 'puffer'];
+export const HATS: Hat[] = ['cap', 'backcap', 'beanie', 'bucket', 'crown', 'cowboy', 'tophat', 'halo'];
+export const BAGS: Bag[] = ['backpack', 'crossbody', 'board', 'duffel', 'wings'];
+export const HELD: Held[] = ['gummy', 'coffee', 'boombox', 'phone', 'briefcase'];
 
 export interface Look {
-  kind: 'suit' | 'hoodie' | 'track';
+  kind: LookKind;
   top: string;
   bottom: string;
   tie: string;
   shoes: string;
   /** One thing on the head: a hat (or null), unless a hoodie's hood is up */
   hat: Hat | null;
-  /** The hat's colour (the crown is always gold) */
+  /** The hat's colour (the crown is always gold; the halo glows in the lens colour) */
   hatColor: string;
   hood: boolean;
-  /** The shades' lens colour */
+  /** The shades' lens colour (and the colour of any neon he wears: the halo, the wings' edges) */
   lens: string;
   /** One bag at a time */
   bag: Bag | null;
@@ -89,17 +100,35 @@ export interface Look {
   chain: boolean;
   /** Gold chain with a diamond round the neck */
   necklace: boolean;
+  /** Gold watch on the left wrist (premium) */
+  watch: boolean;
 }
 
 export const PALETTE = {
   top: ['#16141f', '#2a2350', '#1d2550', '#3b2a6a', '#e219e5', '#00a8d8', '#f3f2f7', '#ff6a3d', '#1f9d6a', '#8f3dff', '#4a4a5a', '#d8312f'],
   bottom: ['#16141f', '#2a2350', '#1d2550', '#4a4a5a', '#f3f2f7', '#3a2418'],
-  cap: ['#d8312f', '#16141f', '#f3f2f7', '#00a8d8', '#e219e5', '#1f9d6a', '#ffd23f'],
+  cap: ['#d8312f', '#16141f', '#f3f2f7', '#00a8d8', '#e219e5', '#1f9d6a', '#ffd23f', '#a0652f', '#3a2418'],
   tie: ['#1f9d55', '#e219e5', '#00b8d8', '#d8312f', '#c99a4a', '#16141f'],
   extra: ['#14121f', '#f3f2f7', '#ff6ad5', '#00b8d8', '#d8312f', '#1f9d6a', '#8f3dff'],
   shoes: ['#1b1830', '#f3f2f7', '#d8312f', '#00a8d8', '#e219e5', '#ffd23f', '#1f9d6a'],
   lens: ['#22d07a', '#ff3dbb', '#00d8ff', '#ffc23a', '#9b5cff', '#ff4a3a'],
+  /** The Gold Pack: metallic golds and bronzes for tops and bottoms */
+  gold: ['#e2b04a', '#c9922e', '#a9741f', '#b8732f', '#8c5a2b', '#d9c27a'],
+  /** The Holo Pack: holographic pastels for tops and bottoms */
+  holo: ['#b9f3ff', '#ffc6f2', '#d9c6ff', '#c6ffe4', '#fff3b0', '#ffd3c2'],
 };
+/** The colour packs sold at Drop 001 (ids are the catalog's), each a list of top and bottom colours */
+export const PACKS = { gold: PALETTE.gold, holo: PALETTE.holo } as const;
+export type PackId = keyof typeof PACKS;
+export const PACK_IDS = Object.keys(PACKS) as PackId[];
+/** Which pack a colour comes from, or null for a free colour */
+export function packOf(color: string): PackId | null {
+  for (const id of PACK_IDS) if ((PACKS[id] as readonly string[]).includes(color)) return id;
+  return null;
+}
+/** Every colour a top or bottom can be: the free list and the packs */
+const TOPS = [...PALETTE.top, ...PALETTE.gold, ...PALETTE.holo];
+const BOTTOMS = [...PALETTE.bottom, ...PALETTE.gold, ...PALETTE.holo];
 
 /** Degen as he is in the art */
 export const DEFAULT_LOOK: Look = {
@@ -118,6 +147,7 @@ export const DEFAULT_LOOK: Look = {
   headphones: null,
   chain: true,
   necklace: false,
+  watch: false,
 };
 
 /** Anything from a player, made safe: unknown values fall back to Degen's own look */
@@ -135,11 +165,11 @@ export function cleanLook(raw: unknown): Look {
     o.bagColor = o.backpack ?? o.crossbody;
   }
   if (o.held === undefined && o.gummy === false) o.held = null;
-  const kind = from(o.kind, ['suit', 'hoodie', 'track'] as const, DEFAULT_LOOK.kind);
+  const kind = from(o.kind, KINDS, DEFAULT_LOOK.kind);
   return {
     kind,
-    top: from(o.top, PALETTE.top, DEFAULT_LOOK.top),
-    bottom: from(o.bottom, PALETTE.bottom, DEFAULT_LOOK.bottom),
+    top: from(o.top, TOPS, DEFAULT_LOOK.top),
+    bottom: from(o.bottom, BOTTOMS, DEFAULT_LOOK.bottom),
     tie: from(o.tie, PALETTE.tie, DEFAULT_LOOK.tie),
     shoes: from(o.shoes, PALETTE.shoes, DEFAULT_LOOK.shoes),
     hat: orNull(o.hat, HATS, DEFAULT_LOOK.hat),
@@ -152,6 +182,7 @@ export function cleanLook(raw: unknown): Look {
     headphones: orNull(o.headphones, PALETTE.extra, null),
     chain: o.chain === undefined ? DEFAULT_LOOK.chain : o.chain === true,
     necklace: o.necklace === true,
+    watch: o.watch === true,
   };
 }
 

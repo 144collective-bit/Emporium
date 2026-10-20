@@ -21,11 +21,10 @@ import { createMultiplayer } from './multiplayer';
 import { createSky, type TimeMode, type WeatherMode } from './sky';
 import { createSound } from './sound';
 import { createPlots, type Plot } from './plots';
-import { createDemoStore, createSwitchStore } from './store';
+import { createPlotStore } from './store';
 import { createOnlineSwitch } from './online';
 import type { Account } from './account';
 import type { AccountHooks, AccountUI } from './account-ui';
-import { createLandStore } from './land';
 import { createBuilderUI } from './builder-ui';
 import { createFitting, type Fitting } from './fitting';
 import { createCityHead } from './head';
@@ -34,9 +33,11 @@ import { createTycoonUI, type TycoonUI } from './tycoon-ui';
 import { buildUnits } from './units';
 import { buildBigLots } from './biglots';
 import { buildBeacons } from './beacons';
+import { buildRaceSite } from './racesite';
 import { destAt } from './tycoon';
 import { CARS } from './cars';
 import { CROWD_VIEW } from './character';
+import type { GameDeps } from './ui';
 
 type Tier = 'high' | 'medium' | 'low';
 
@@ -120,6 +121,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const bigLots = buildBigLots(scene);
   // Beams of light over your contracts' drop-offs
   const beacons = buildBeacons(scene, tick, reduced);
+  // The street races' start line on the south bank avenue, and the checkpoint markers
+  const raceSite = buildRaceSite(scene, tick, reduced);
   progress(0.55);
   await nextFrame();
   scatterOutskirts(Q.trees);
@@ -292,35 +295,18 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     const target = new THREE.Vector3(p.cx, portrait ? -0.4 * k : 1.6 * k, p.cz);
     return { pos: new THREE.Vector3(p.cx, 1.6 * k, p.cz).addScaledVector(dir, (portrait ? 17 : 13) * k), target };
   }
-  // A game server adds the Online / Offline switch: online, real sales (land.ts); offline or without one, the labelled demo
+  // The economy is made after walk mode (it needs Degen's position); the shops only use it once it exists
+  const game: GameDeps = {
+    save: () => tycoon!.save,
+    commit: () => tycoon!.commit(),
+    toast: (text, ms) => tycoon!.toast(text, ms),
+    sfx: (kind, gain) => sound.sfx(kind, gain),
+  };
+  // A game server adds the Online / Offline switch (multiplayer); plots are the city's own game either way
   const server = import.meta.env.PUBLIC_GAME_SERVER as string | undefined;
   const onlineSwitch = server ? createOnlineSwitch(root) : null;
-  // Logging in with a wallet (account.ts): the player's profile, and building on their plots
+  // Logging in with a wallet (account.ts): the player's online profile
   const account = wallet?.account ?? null;
-  const sales = server && onlineSwitch && account ? createSwitchStore(() => createLandStore(server, account), onlineSwitch.on) : null;
-  const builder = createBuilderUI(root, {
-    store: sales?.store ?? createDemoStore(),
-    plots,
-    focus(p) {
-      const v = plotView(p);
-      flyTo(v.pos, v.target, 1.2);
-    },
-    overview() {
-      // Every district, the south row across the river included
-      const k = camera.aspect < 1 ? 1.5 : 1.62;
-      const target = new THREE.Vector3(20, 0, 34);
-      flyTo(target.clone().add(new THREE.Vector3(34, 50, 44).multiplyScalar(k)), target, 1.6);
-    },
-    onMode(on) {
-      if (on && walking) stopWalking(false);
-      close();
-      setHover(null);
-      canvas.style.cursor = '';
-      dirty = true;
-      if (on) root.classList.add('has-moved');
-    },
-  });
-
   const canvas = renderer.domElement;
 
   /* ---------- Walk mode ---------- */
@@ -345,6 +331,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     engine: (revs) => sound.engine(revs),
     places: () => tycoon?.places() ?? [],
     openPlace: (id) => tycoon?.openCard(id as 'stall'),
+    game,
+    raceSite,
   });
   /* ---------- The economy: Dorras, your stall and units, the Workshop, the market hall ---------- */
   tycoon = createTycoonUI(root, {
@@ -366,7 +354,39 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       // One card at a time: the stall's card and a building's panel
       close();
     },
+    showPlot(id) {
+      close();
+      builder.setBuild(true);
+      builder.select(id);
+    },
+    plotsChanged: () => builder?.refresh(),
+    sfx: (kind, gain) => sound.sfx(kind, gain),
   });
+  // Build mode: the plots, over the economy's save
+  const builder = createBuilderUI(root, {
+    store: createPlotStore(game),
+    plots,
+    focus(p) {
+      const v = plotView(p);
+      flyTo(v.pos, v.target, 1.2);
+    },
+    overview() {
+      // Every district, the south row across the river included
+      const k = camera.aspect < 1 ? 1.5 : 1.62;
+      const target = new THREE.Vector3(20, 0, 34);
+      flyTo(target.clone().add(new THREE.Vector3(34, 50, 44).multiplyScalar(k)), target, 1.6);
+    },
+    onMode(on) {
+      if (on && walking) stopWalking(false);
+      close();
+      setHover(null);
+      canvas.style.cursor = '';
+      dirty = true;
+      if (on) root.classList.add('has-moved');
+    },
+    sfx: (kind) => sound.sfx(kind),
+  });
+
   // The Profile panel (wardrobe, finish, rank) works offline; multiplayer only when the site has a game server
   const profileUI = createProfileUI(root, {
     setLook: (o) => walk.setLook(o),
@@ -377,6 +397,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     look: () => profileUI.look,
     apply: (l) => profileUI.wear(l),
     onChange: (fn) => profileUI.onChange(fn),
+    game,
     reduced,
     low: tier === 'low',
   });
@@ -402,14 +423,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       online: () => onlineSwitch.on,
       goOnline: () => onlineSwitch.set(true),
       rename: () => (mp?.rename() ? undefined : account.rename()),
-      showPlot(id: string) {
-        builder.setBuild(true);
-        builder.select(id);
-      },
       opened: () => walking && walk.releaseMouse(),
     } satisfies AccountHooks);
   onlineSwitch?.onChange((on) => {
-    sales?.setOnline(on);
     mp?.setEnabled(on);
     accountUI?.refresh();
   });
@@ -633,8 +649,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // The city's own buttons and cards: a label under one folds to a dot, so the
   // Walk / Build pills never sit on top of a building's name. Re-read a few
   // times a second (they open, close and move with the layout)
-  // The header, its open drop-downs (settings, menu) and the welcome card
-  const chrome = [...root.querySelectorAll<HTMLElement>('.city-head, .head-panel, .city-card')];
+  // The header, its open drop-downs (settings, menu), the welcome card and the race HUD (while a race is on)
+  const chrome = [...root.querySelectorAll<HTMLElement>('.city-head, .head-panel, .city-card, .race-hud')];
   const chromeRects: { x: number; y: number; w: number; h: number }[] = [];
   const readChrome = () => {
     const o = host.getBoundingClientRect();
@@ -791,6 +807,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           `${Math.round((stat.frames * 1000) / (now - stat.since))} fps · slowest ${Math.round(stat.worst)} ms`,
           `${Math.round(stat.draws / n)} draws · ${(stat.tris / n / 1e6).toFixed(2)}M tris`,
           `${tier} · px ${renderer.getPixelRatio().toFixed(2)}${lost.length ? ` · lowered: ${lost.join(', ')}` : ''}`,
+          // Where Degen stands while walking (for placing things: ?spawn=x,z puts him back there)
+          ...(walking ? [`at ${walk.position.x.toFixed(1)}, ${walk.position.z.toFixed(1)}`] : []),
         ].join('\n');
         Object.assign(stat, { frames: 0, draws: 0, tris: 0, worst: 0, since: now });
       }

@@ -136,8 +136,23 @@ import {
   shipFeeFrom,
   worth,
   type LotKind,
+  buyPlot,
+  capOf,
+  capacityMul,
+  gearValue,
+  level,
+  placeLevel,
+  placeLevelCost,
+  plotPrice,
+  sellPlot,
+  upgradePlace,
 } from './tycoon';
 import { DOORS, LOT_SITE, STALL_SPOT, UNIT_SITE } from './solids';
+import { BUILDINGS, DISTRICTS, PLOT_IDS } from '../../data/plots';
+import { PLACE_LEVELS, PLOT_LEVEL, PLOT_REFUND } from './catalog';
+import { LV, whyNot } from './ui';
+import type { Sfx } from './combat';
+import { createMissionsUI } from './missions-ui';
 
 const KEY = 'degen-city-tycoon-v1';
 const fmt = new Intl.NumberFormat('en-US');
@@ -205,6 +220,12 @@ export interface TycoonHooks {
   stock(s: TycoonSave): void;
   /** The card opened (walk mode frees the mouse) */
   opened(): void;
+  /** The estate agent: fly to a plot in Build mode */
+  showPlot(id: string): void;
+  /** The plots you own changed (bought, built on or sold at the Vault): the builder redraws them */
+  plotsChanged(): void;
+  /** The sound switch (purchases, upgrades, missions claimed, level-ups) */
+  sfx(kind: Sfx, gain?: number): void;
 }
 
 /** Make `to` match `from` in place: same elements kept, only what differs is changed */
@@ -290,6 +311,8 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     clearTimeout(toastTimer);
     toastTimer = window.setTimeout(() => toastEl.classList.remove('is-on'), ms);
   }
+  // Missions, the level pill and badges (missions-ui.ts) run on the same save; `changed()` is hoisted
+  const missions = createMissionsUI(root, { save: () => save, commit: () => changed(), toast, sfx: (kind, gain) => h.sfx(kind, gain) });
 
   /* ---------- Places ---------- */
   function placeName(p: PlaceId) {
@@ -387,7 +410,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     const big = kindAt(save, p) === 'superstore';
     const slots = p === 'stall' ? save.stall.slots : (unitAt(save, p) ?? lotAt(save, p))!.slots;
     const max = p === 'stall' ? stallLevel(save.stall.level).slots : big ? SUPERSTORE.slots : SHOP.slots;
-    const capacity = p === 'stall' ? stallLevel(save.stall.level).capacity : big ? SUPERSTORE.capacity : SHOP.capacity;
+    const capacity = p === 'stall' ? stallLevel(save.stall.level).capacity : Math.round((big ? SUPERSTORE.capacity : SHOP.capacity) * capacityMul(save, p));
     const free = max - slots.length;
     return `${slots.length ? `<ul class="stall-slots">${slots.map((s) => slotRow(s, p, now, capacity)).join('')}</ul>` : ''}
       ${free > 0 ? `<p class="stall-empty">${free === max ? 'The shelves are empty.' : `${free} empty shel${free > 1 ? 'ves' : 'f'}.`} Buy stock at the Emporium's market hall, or bring it from the Workshop or a warehouse in your car. Low sells fast, High earns more each.</p>` : ''}`;
@@ -403,6 +426,18 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
   };
   /** "Your car is here": a way to the Car tab, on a place's view */
   const carHere = (p: PlaceId) => (carAt() === p ? `<p class="biz-carhere"><span>Your car is parked here.</span><button type="button" class="chip-link" data-tab="car">Load / unload</button></p>` : '');
+  /** "Level 2" on a place's status line, and the Upgrade button for the next level */
+  const levelNote = (p: PlaceId) => (placeLevel(save, p) > 1 ? ` · <b class="stall-serving">Level ${placeLevel(save, p)}</b>` : '');
+  const upgradeRow = (p: PlaceId) => {
+    const cost = placeLevelCost(save, p);
+    const l = placeLevel(save, p);
+    if (cost === null && l < PLACE_LEVELS) return '';
+    return `<div class="stall-actions biz-level">${
+      cost === null
+        ? `<span class="stall-max">Top level (${PLACE_LEVELS})</span>`
+        : `<button type="button" class="chip-link" data-upgrade-place="${p}" ${save.dorras >= cost ? '' : 'disabled'}>Upgrade to level ${l + 1} · ${fmt.format(cost)} Dorras</button><small class="biz-level-note">Level ${l + 1}: ${p === 'workshop' || makes(save, p) ? 'a bigger bay and faster jobs' : sells(save, p) ? 'more of each kind on the shelves, more customers' : unitAt(save, p)?.kind === 'garden' ? 'bigger bins and faster growth' : 'more room'}.</small>`
+    }</div>`;
+  };
   const serveNote = (p: PlaceId) =>
     (serving() === p ? ' · <b class="stall-serving">You\'re serving: customers come twice as fast</b>' : '') +
     (save.staff.includes(p) ? ` · <b class="stall-serving">${ROLES[roleAt(save, p)!].name} at work</b>` : '');
@@ -447,17 +482,17 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
         <div class="stall-actions"><button type="button" class="shop-take" data-buy-lot="${i}" ${price !== null && save.dorras >= price ? '' : 'disabled'}>Buy lot ${LETTER[i]} · ${fmt.format(price ?? 0)} Dorras</button></div>`;
     } else if (!l.kind) body = `<p class="stall-empty">Your lot is ready. What should it be?</p>${lotOptions(i)}`;
     else if (l.kind === 'superstore')
-      body = `<p class="stall-status">Superstore · ${SUPERSTORE.slots} kinds of goods, ${SUPERSTORE.capacity} of each${serveNote(p)}</p>
+      body = `<p class="stall-status">Superstore · ${SUPERSTORE.slots} kinds of goods, ${Math.round(SUPERSTORE.capacity * capacityMul(save, p))} of each${levelNote(p)}${serveNote(p)}</p>
         ${shelvesView(p, now)}${carHere(p)}
         <div class="stall-actions"><button type="button" class="shop-take" data-to-market data-at="${p}">Market hall</button></div>`;
     else if (l.kind === 'factory') body = lineView(p);
     else if (l.kind === 'depot')
-      body = `<p class="stall-status">Depot · ${total(l.stock)} / ${DEPOT_CAP} · couriers from here cost half</p>
-        <i class="stall-bar" style="--v:${total(l.stock) / DEPOT_CAP}"></i>
+      body = `<p class="stall-status">Depot · ${total(l.stock)} / ${capOf(save, p)} · couriers from here cost half${levelNote(p)}</p>
+        <i class="stall-bar" style="--v:${total(l.stock) / capOf(save, p)}"></i>
         ${stockList(l.stock, 'Empty. Buy stock into it at the market hall, or unload your car here.')}${carHere(p)}`;
-    else body = `<p class="stall-status">Offices · your HQ</p><p class="stall-empty">Every stall, shop and superstore you own sells ${Math.round((HQ_BOOST - 1) * 100)}% faster while you have offices.</p>`;
+    else body = `<p class="stall-status">Offices · your HQ${levelNote(p)}</p><p class="stall-empty">Every stall, shop and superstore you own sells ${Math.round((HQ_BOOST - 1) * 100)}% faster while you have offices.</p>`;
     const rebuild = l?.kind && total(stockAt(save, p)) === 0 && !l.job ? `<details class="biz-rebuild"><summary>Rebuild lot ${LETTER[i]}</summary>${lotOptions(i)}</details>` : '';
-    return `${body}${rebuild}`;
+    return `${body}${l?.kind ? upgradeRow(p) : ''}${rebuild}`;
   }
 
   function unitView(now: number) {
@@ -482,23 +517,25 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     } else if (u.kind === 'garden') {
       const have = u.stock[u.crop] ?? 0;
       const crops = RAW_IDS.map((c) => `<button type="button" data-crop="${c}" aria-pressed="${u.crop === c}" ${have > 0 && u.crop !== c ? 'disabled' : ''}>${esc(good(c).name)}</button>`).join('');
-      body = `<p class="stall-status">Garden · ${perMin(CROPS[u.crop])} ${esc(good(u.crop).name.toLowerCase())} a minute, also while you're away${serveNote(p)}</p>
+      const cap = capOf(save, p);
+      body = `<p class="stall-status">Garden · ${perMin(CROPS[u.crop] * [1, 1.3, 1.6][placeLevel(save, p) - 1])} ${esc(good(u.crop).name.toLowerCase())} a minute, also while you're away${levelNote(p)}${serveNote(p)}</p>
         <div class="seg stall-seg" role="group" aria-label="Crop">${crops}</div>
-        <div class="stall-slot"><div class="stall-slot-top">${dot(u.crop)}<b>${esc(good(u.crop).name)} in the bins</b><span class="stall-qty">${have} / ${GARDEN_CAP}</span></div><i class="stall-bar" style="--v:${have / GARDEN_CAP}"></i>
-        <small class="stall-pace">${have >= GARDEN_CAP ? 'Full: it stops growing until you load it into your car or sell it.' : have > 0 ? 'Load it into your car for the Workshop, or sell it at the market hall.' : 'Growing. Pick another crop while the bins are empty.'}</small></div>
+        <div class="stall-slot"><div class="stall-slot-top">${dot(u.crop)}<b>${esc(good(u.crop).name)} in the bins</b><span class="stall-qty">${have} / ${cap}</span></div><i class="stall-bar" style="--v:${have / cap}"></i>
+        <small class="stall-pace">${have >= cap ? 'Full: it stops growing until you load it into your car or sell it.' : have > 0 ? 'Load it into your car for the Workshop, or sell it at the market hall.' : 'Growing. Pick another crop while the bins are empty.'}</small></div>
         ${carHere(p)}`;
     } else if (u.kind === 'shop') {
-      body = `<p class="stall-status">Shop · ${SHOP.slots} kinds of goods, ${SHOP.capacity} of each${serveNote(p)}</p>
+      body = `<p class="stall-status">Shop · ${SHOP.slots} kinds of goods, ${Math.round(SHOP.capacity * capacityMul(save, p))} of each${levelNote(p)}${serveNote(p)}</p>
         ${shelvesView(p, now)}${carHere(p)}
         <div class="stall-actions"><button type="button" class="shop-take" data-to-market data-at="${p}">Market hall</button></div>`;
     } else {
-      body = `<p class="stall-status">Warehouse · ${total(u.stock)} / ${WAREHOUSE_CAP}</p>
-        <i class="stall-bar" style="--v:${total(u.stock) / WAREHOUSE_CAP}"></i>
+      const cap = capOf(save, p);
+      body = `<p class="stall-status">Warehouse · ${total(u.stock)} / ${cap}${levelNote(p)}</p>
+        <i class="stall-bar" style="--v:${total(u.stock) / cap}"></i>
         ${stockList(u.stock, 'Empty. Buy stock into it at the market hall, or unload your car here.')}${carHere(p)}`;
     }
     // Rebuilding: only once it's empty of goods
     const rebuild = u?.kind && total(stockAt(save, p)) === 0 ? `<details class="biz-rebuild"><summary>Rebuild unit ${i + 1}</summary>${buildOptions(i)}</details>` : '';
-    return `${tabs}${body}${rebuild}`;
+    return `${tabs}${body}${u?.kind ? upgradeRow(p) : ''}${rebuild}`;
   }
 
   const workshopView = () => lineView('workshop');
@@ -508,7 +545,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     const j = ln.job;
     const each = (id: ProductId) => RECIPES[id]!.minutes / ln.speed;
     const bay = total(ln.stock);
-    const cap = p === 'workshop' ? WORKSHOP_CAP : FACTORY.cap;
+    const cap = capOf(save, p);
     const job = j
       ? `<div class="stall-slot biz-job"><div class="stall-slot-top">${dot(j.make)}<b>Making ${esc(good(j.make).name)}</b><span class="stall-qty">${j.left} to go</span></div>
           <i class="stall-bar" style="--v:${j.t / RECIPES[j.make]!.minutes}"></i>
@@ -526,11 +563,12 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
           <span class="market-btns"><button type="button" data-make="${id}" data-at="${p}" data-n="10" ${n && !j ? '' : 'disabled'}>Make ${Math.min(10, n) || 10}</button><button type="button" data-make="${id}" data-at="${p}" data-n="${n}" ${n && !j ? '' : 'disabled'}>Make all</button></span></div>
       </li>`;
     }).join('');
-    return `<p class="stall-status">${p === 'workshop' ? "The Workshop's bay" : 'Factory bay'} · ${bay} / ${cap}${serveNote(p)}</p>
+    return `<p class="stall-status">${p === 'workshop' ? "The Workshop's bay" : 'Factory bay'} · ${bay} / ${cap}${levelNote(p)}${serveNote(p)}</p>
       ${stockList(ln.stock, `Empty. Bring raw goods from your gardens in your car, or buy them into ${p === 'workshop' ? 'the Workshop' : 'the factory'} at the market hall.`)}
       ${job}
       <ul class="market-list">${recipes}</ul>
       ${carHere(p)}
+      ${upgradeRow(p)}
       <p class="city-panel-fine">Raw goods leave the bay when a job starts; products land in it as they're made, also while you're away. Load them into your car for your stall and shops, or sell them at the market hall.</p>`;
   }
 
@@ -538,7 +576,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     const c = h.car();
     const at = carAt();
     if (!c) return `<p class="stall-empty">Your car is at the garage on the south bank. Walk there, get in, and drive it to your places to load and unload goods.</p>${stockList(save.cargo, '')}${contractsDue(now)}`;
-    const cap = cargoCap(c.model);
+    const cap = cargoCap(c.model, save);
     const used = total(save.cargo);
     const ids = GOODS.map((g) => g.id);
     const row = (id: GoodId, qty: string, info: string, verb: 'load' | 'unload', n: number, ok: boolean) =>
@@ -563,7 +601,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     const loadNote = !at ? '' : inn ? '' : loadsFrom(save, at) ? '<p class="stall-empty">Nothing here to load.</p>' : '<p class="stall-empty">Goods on sale stay on the shelves: load at a garden, a warehouse or the Workshop.</p>';
     return `<p class="stall-status">${esc(c.name)} · ${used} / ${cap} in the car${at ? ` · parked at ${esc(placeName(at))}` : ''}</p>
       <i class="stall-bar" style="--v:${used / cap}"></i>
-      ${at ? '' : `${stockList(save.cargo, 'Empty.')}<p class="stall-empty">Park within a few steps of your stall, a unit or the Workshop to load and unload. Bigger cars carry more: the Box Van most, the Street GT least.</p>`}
+      ${at ? '' : `${stockList(save.cargo, 'Empty.')}<p class="stall-empty">Park within a few steps of your stall, a unit or the Workshop to load and unload. Bigger cars carry more: the Box Van most, the Hyper Comet least; a roof rack from the garage adds a quarter a level.</p>`}
       ${out ? `<p class="biz-label">Unload here</p><ul class="market-list">${out}</ul>` : ''}
       ${inn ? `<p class="biz-label">Load from ${esc(placeName(at!))}</p><ul class="market-list">${inn}</ul>` : loadNote}
       ${contractsDue(now)}
@@ -698,13 +736,38 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
         <li><span>In the till</span><b>${D(save.till)}</b></li>
         <li><span>Goods</span><b>${D(goods)}</b></li>
         <li><span>Property</span><b>${D(prop)}</b></li>
+        <li><span>Cars, guns and clothes</span><b>${D(gearValue(save))}</b></li>
         ${save.loan ? `<li><span>Owed</span><b>-${fmt.format(save.loan.owed)}</b></li>` : ''}
-        <li class="is-total"><span>Your business is worth</span><b>${D(worth(save, now))}</b></li>
+        <li class="is-total"><span>You're worth</span><b>${D(worth(save, now))}</b></li>
       </ul>
+      <p class="biz-label">Estate agent · district plots</p>${estateView()}
       <p class="biz-label">Loans</p>${loan}
       <div class="biz-ledger"><div><p class="biz-label">In, all time</p><ul>${rows(true)}</ul></div><div><p class="biz-label">Out, all time</p><ul>${rows(false)}</ul></div></div>
       ${recent ? `<p class="biz-label">Latest</p><ul class="biz-recent">${recent}</ul>` : ''}
       <p class="city-panel-fine">Dorras are the city's own money, earned by playing. They can't be bought or cashed out.</p>`;
+  }
+
+  /* ---------- The estate agent (in the Vault): the sixteen district plots ---------- */
+  /** The plot a Buy or Sell button is waiting on a yes for */
+  let plotAsk: { id: string; sell: boolean } | null = null;
+  function estateView() {
+    const lv = level(save);
+    const price = plotPrice(save);
+    const mine = PLOT_IDS.filter((id) => id in save.plots);
+    const rows = DISTRICTS.map((d) => {
+      const o = save.plots[d.id];
+      const def = o?.design ? BUILDINGS.find((b) => b.type === o.design!.type) : null;
+      const ask = plotAsk?.id === d.id ? plotAsk : null;
+      const acts = ask
+        ? `<span class="market-btns"><small class="biz-ask">${ask.sell ? `Sell it back for ${fmt.format(Math.round(o!.paid * PLOT_REFUND))}?` : `Buy it for ${fmt.format(price)}?`}</small><button type="button" data-plot-yes="${d.id}">Yes</button><button type="button" data-plot-no="${d.id}">No</button></span>`
+        : o
+          ? `<span class="market-btns"><button type="button" data-show-plot="${d.id}">Build</button><button type="button" data-sell-plot="${d.id}">Sell back</button></span>`
+          : `<span class="market-btns"><button type="button" data-buy-plot="${d.id}" ${lv >= PLOT_LEVEL && save.dorras >= price ? '' : 'disabled'}>Buy</button></span>`;
+      return `<li class="market-row"><div class="market-top"><b>Plot ${esc(d.id)}</b><span class="stall-qty">${esc(d.name)}</span><span class="market-price">${o ? `<span class="tag tag-mine">Yours</span>` : D(price)}</span></div>
+        <div class="market-acts"><small>${o ? (def ? `${esc(def.name)} · paid ${fmt.format(o.paid)}` : 'Nothing built yet · pick a design in Build mode') : lv < PLOT_LEVEL ? `Needs level ${PLOT_LEVEL} (you're ${lv})` : 'One large plot: all nine squares of the district'}</small>${acts}</div></li>`;
+    }).join('');
+    return `<p class="stall-empty">${mine.length ? `You own ${mine.length} of the 16 district plots.` : 'The city\'s sixteen district plots, the top of the property ladder.'} Each plot you own makes the next a little dearer; selling one back pays ${Math.round(PLOT_REFUND * 100)}% of what you paid for it and its building. Build on yours in Build mode. ${LV(PLOT_LEVEL)} to buy.</p>
+      <ul class="market-list biz-estate">${rows}</ul>`;
   }
 
   function paintCard() {
@@ -760,7 +823,25 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
       h.openMarket();
       return;
     }
-    if (ds.unit) unitSel = Number(ds.unit);
+    if (ds.upgradePlace) {
+      const p = ds.upgradePlace as PlaceId;
+      const r = upgradePlace(save, p);
+      note = r.ok ? `${placeName(p)} is now level ${placeLevel(save, p)}.` : whyNot(r.why);
+      h.sfx(r.ok ? 'upgrade' : 'denied');
+    } else if (ds.buyPlot) plotAsk = { id: ds.buyPlot, sell: false };
+    else if (ds.sellPlot) plotAsk = { id: ds.sellPlot, sell: true };
+    else if (ds.plotNo) plotAsk = null;
+    else if (ds.plotYes && plotAsk) {
+      const { id, sell } = plotAsk;
+      plotAsk = null;
+      const r = sell ? sellPlot(save, id) : buyPlot(save, id, now, (x) => PLOT_IDS.includes(x));
+      note = r.ok ? (sell ? `Plot ${id} sold back for ${fmt.format(r.dorras)} Dorras.` : `Plot ${id} is yours. Build on it in Build mode.`) : whyNot(r.why, PLOT_LEVEL);
+      h.sfx(r.ok ? 'buy' : 'denied');
+    } else if (ds.showPlot) {
+      closeCard();
+      h.showPlot(ds.showPlot);
+      return;
+    } else if (ds.unit) unitSel = Number(ds.unit);
     else if ('collect' in ds) {
       const n = collect(save);
       if (n) note = `Collected ${fmt.format(n)} Dorras.`;
@@ -849,7 +930,8 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
   }
   const onClick = (e: Event) => {
     const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('button');
-    if (btn && !btn.disabled) act(btn, Date.now());
+    // The mission board's buttons first (on the Signal tower's panel), then the economy's
+    if (btn && !btn.disabled && !missions.act(btn)) act(btn, Date.now());
   };
   card.addEventListener('click', onClick);
   pill.addEventListener('click', () => (card.hidden ? openCard() : closeCard()));
@@ -915,7 +997,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
         : panel.id === 'workshop'
           ? `${workshopView()}${noteHtml}${toCard('workshop')}`
           : panel.id === 'signal'
-            ? `${contractsView(now)}${noteHtml}${toCard('car')}`
+            ? `${contractsView(now)}${noteHtml}${missions.boardHtml(now)}${toCard('car')}`
             : panel.id === 'telegram'
               ? `${couriersView(now)}${noteHtml}${toCard('units')}`
               : panel.id === 'vault'
@@ -927,17 +1009,26 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
   /* ---------- Ticking ---------- */
   let lastShown = '';
   function changed() {
+    // Badges and level-ups first, so their XP is in the save that's stored
+    missions.onCommit();
     store();
     paintPill();
     paintCard();
     paintPanel();
     // The city only redraws what changed (crate stacks, units, the contracts' beams)
-    const shown = JSON.stringify([save.stall, save.units, save.lots, save.contracts.map((c) => c.to)]);
+    const shown = JSON.stringify([save.stall, save.units, save.lots, save.contracts.map((c) => c.to), save.levels]);
     if (shown !== lastShown) {
       lastShown = shown;
       h.stock(save);
     }
+    const plots = JSON.stringify(save.plots);
+    if (plots !== lastPlots) {
+      lastPlots = plots;
+      h.plotsChanged();
+    }
   }
+  // (as they are now: the builder draws them itself when it starts)
+  let lastPlots = JSON.stringify(save.plots);
   function awayNote(s: Sales) {
     const n = (m: Partial<Record<GoodId, number>>) => Object.values(m).reduce<number>((a, b) => a + (b ?? 0), 0);
     const parts = [
@@ -978,6 +1069,13 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     get save() {
       return save;
     },
+    /** A game screen changed the save with the rules: keep it, repaint everything */
+    commit() {
+      changed();
+    },
+    toast,
+    /** The mission board, level pill and badges (missions-ui.ts) */
+    missions,
     /** Your places on foot (walk-mode prompts): your stall, the four units, and your contracts' drop-offs */
     places() {
       return [
