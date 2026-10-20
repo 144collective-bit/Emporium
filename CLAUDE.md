@@ -240,7 +240,7 @@ it and has been retired completely. Build only on what's here.
 - Traffic stops for your car (`walker.r` in `life.ts` reaches further while driving). `bodies` in `life.ts` shares where the traffic and the pedestrians are, for the soft bumps.
 - **Controls:**
   - Keyboard: W / S (or arrows) gas and brake / reverse, A / D steer, Space handbrake, V camera, E get out.
-  - Touch: the stick steers (and pedals when no pedal is held), with Gas and Brake buttons (`data-drive-gas`, `data-drive-brake`).
+  - Touch: the stick steers (and pedals when no pedal is held), with Gas and Brake buttons (`data-drive-gas`, `data-drive-brake`). Layout while driving: a bigger stick bottom-left, Gas and Brake as tall pedals side by side bottom-right (Gas taller, on the outside), Get out at the top right and the speed at the top left, all clear of the phone's safe areas. Getting out brings the walk layout back.
   - Gamepad: left stick steers, RT gas, LT brake, A handbrake, Y get out, View camera; the right stick or the mouse looks.
 - While driving, `.city.is-driving` hides the walk and combat HUD, and the header says "Driving · <car>" (`head.ts`). A gun is holstered on getting in.
 - Check the pedals, stick, prompt and readout at phone widths, upright and on their side: nothing may overlap.
