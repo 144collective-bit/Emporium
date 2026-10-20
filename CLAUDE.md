@@ -3,6 +3,14 @@
 This is **the** Degen Emporium site. An older multi-page site existed before
 it and has been retired completely. Build only on what's here.
 
+## This is the `experimental` branch
+
+- `experimental` is a sandbox for trying things out on the Emporium site.
+- **Never merge this branch** into `main` or any other branch, and never open
+  a pull request to merge it, unless the owner explicitly asks for that merge
+  and confirms it. Work that proves itself gets re-done on a proper branch.
+- Everything else in this file still applies here.
+
 ## Never bring back the old site
 
 - The site is the Degen City homepage (`src/pages/index.astro`), the Emporium
