@@ -9,8 +9,8 @@
  */
 import type { SpotId } from '../../lib/city';
 import { DUMMIES } from './combat-sim';
-import { GARAGE, MARKET, UNITS, design, designBox } from './layout';
-import type { UnitKind } from './tycoon';
+import { BIG_LOTS, BS, GARAGE, MARKET, UNITS, design, designBox } from './layout';
+import type { LotKind, UnitKind } from './tycoon';
 
 /** x0, z0, x1, z1, height */
 export type Box = [number, number, number, number, number];
@@ -148,6 +148,39 @@ export const UNIT_SHAPES: Record<UnitKind, Box[]> = {
   garden: [[2.8, 2.9, 3.85, 3.85, 1.5]],
 };
 export const unitSolids = (i: number, kind: UnitKind | null): Box[] => (kind ? UNIT_SHAPES[kind].map((b) => unitBox(i, b)) : []);
+
+/**
+ * The big lots (biglots.ts draws them), drawn like a unit in their own numbers: u across the
+ * front (0-9), v back from it. Lot A faces south onto the street between it and Lot B; Lots B
+ * and C face north onto the streets in front of them. `door` is where you stand to run one;
+ * what's built on it sets its footprints (lotSolids()).
+ */
+export const LOT_SITE = BIG_LOTS.map((l, i) => {
+  /** -1: the front faces -z (north); +1: +z (south) */
+  const facing = i === 0 ? 1 : -1;
+  const at = (u: number, v: number): [number, number] => [l.ox + u, facing < 0 ? l.oz + v : l.oz + BS - v];
+  const [dx, dz] = at(BS / 2, 0.35);
+  return { i, ox: l.ox, oz: l.oz, facing, at, door: { x: dx, z: dz } };
+});
+export function lotBox(i: number, b: Box): Box {
+  const [x0, za] = LOT_SITE[i].at(b[0], b[1]);
+  const [x1, zb] = LOT_SITE[i].at(b[2], b[3]);
+  return [x0, Math.min(za, zb), x1, Math.max(za, zb), b[4]];
+}
+/** What each kind of big building puts in the way, in a lot's own numbers (forecourts stay open) */
+export const LOT_SHAPES: Record<LotKind, Box[]> = {
+  superstore: [[0.8, 3.0, 8.2, 8.4, 3.0]],
+  factory: [
+    [0.6, 2.6, 6.6, 8.5, 3.2],
+    [7.1, 6.3, 8.3, 7.5, 7.0],
+  ],
+  depot: [[0.5, 3.6, 8.5, 8.6, 3.4]],
+  offices: [
+    [2.4, 3.6, 6.6, 7.8, 8.8],
+    [1.6, 2.6, 7.4, 3.6, 1.6],
+  ],
+};
+export const lotSolids = (i: number, kind: LotKind | null): Box[] => (kind ? LOT_SHAPES[kind].map((b) => lotBox(i, b)) : []);
 
 export const SOLIDS: Box[] = [...DRAWN.map(designBox), ...GARAGE_SOLIDS, ...MARKET_SOLIDS, ...DUMMY_SOLIDS];
 /** What bullets stop on: everything solid except the dummies' footprints (they test their own shape) */

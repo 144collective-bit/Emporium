@@ -23,9 +23,11 @@ plan the owner agreed, and where each phase stands. Keep it up to date.
    buy from you.
 2. **Shop units.** Small lots of your own: a shop, studio, garden or
    warehouse.
-3. **District plots.** The big plots are the top tier, for chains and towers.
-   Plots keep their real PLS sale for when the server returns; the demo
-   builder stays as it is in the meantime.
+3. **Big lots** (the owner's call in Phase 4): three Dorras-only lots east of
+   Makers' Row are the top tier, for a superstore, a factory, a depot or
+   your offices. The 16 district plots stay purely PLS land (the labelled
+   play-money demo while the server is paused) and are never part of the
+   Dorras game: real money and game money stay apart.
 
 ## Supply chain (from phase 2)
 
@@ -49,7 +51,7 @@ store, X and Telegram are in the ☰ Menu.
 | Signal tower | **News and contracts**: "deliver 19 Iced Coffee to the Armoury" | 3 (built) |
 | Post office | **Couriers**: send goods between your places when you'd rather not drive | 3 (built) |
 | Apartments | **Staff**: hire workers who raise a business's output | 3 (built) |
-| The Vault | **Bank**: your balance, history, savings for expansion | 4 |
+| The Vault | **Bank**: what you're worth, the ledger, loans | 4 (built) |
 | Garage | Cars and cargo space | 2 (built) |
 
 ## Build order
@@ -63,7 +65,8 @@ store, X and Telegram are in the ☰ Menu.
    runs in your car.
 3. **Contracts and staff** (built). Signal tower contracts, Post office
    couriers, staff hired at the Apartments.
-4. **District plots as the top tier.** The Vault and the bigger buildings.
+4. **The top tier** (built). Big lots bought with Dorras, and the Vault as
+   the bank (ledger and loans).
 5. **Later, with the server.** PLS top-ups, a shared market between players,
    south-bank security and raids.
 
@@ -158,3 +161,29 @@ before the next one starts.
   so they only cost anything while there's work. Paid from the till, then
   your balance; if they can't be paid they leave.
 - Saves carry on from Phases 1 and 2 (`cleanSave()`, v3).
+
+## Phase 4: how it works
+
+- **Big lots** (`BIG_LOTS` in `layout.ts`, drawn by `biglots.ts`; rules
+  `buyLot()`, `buildLot()` in `tycoon.ts`): Lots A, B and C, 9 x 9, east of
+  Makers' Row and the market, on the streets there. 25,000, then 50,000 and
+  90,000 Dorras, never PLS. Built as:
+  - **Superstore** (8,000): six aisles of 100, 2.5x the customers; takes a
+    clerk.
+  - **Factory** (10,000): its own bay (400) and production line, twice the
+    Workshop's speed, jobs of up to 100; takes a hand.
+  - **Depot** (6,000): holds 1,000 of anything; couriers from it cost half.
+  - **Offices** (15,000, one only): your HQ; every stall, shop and
+    superstore sells 20% faster.
+  They're on the Units tab (chips A, B, C after Makers' Row's 1-4), on the
+  market hall's and couriers' lists, and have walk-mode prompts at their
+  street fronts. A lot has to be empty (and its factory idle) to rebuild.
+- **The Vault** (the bank, its panel `[data-bank]`): what your business is
+  worth (balance, till, goods at market price, property paid for, less
+  any loan), the ledger (totals in and out by kind, and the latest
+  movements; `book()` writes it from every money-changing rule), and loans:
+  1,000-50,000 Dorras, limited by your property (1,000 plus half of it), a
+  flat 10% fee, and 25% of your takings go to it until it's paid off (or
+  pay any time). Only one at a time. No interest rates or savings returns
+  anywhere: Dorras are game money.
+- Saves carry on from Phases 1-3 (`cleanSave()`, v4).

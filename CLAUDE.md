@@ -181,7 +181,7 @@ it and has been retired completely. Build only on what's here.
   formats, so keep its migration when fields change. Held items are put
   away while Degen carries a gun (`Degen.held`).
 
-## The economy: Dorras, the market, your units, contracts and staff (Tycoon phases 1-3)
+## The economy: Dorras, the market, your units, contracts, staff, big lots and the Vault (Tycoon phases 1-4)
 
 - The plan and its phases are in `docs/tycoon-plan.md`; keep it up to date.
   Build one phase at a time, each with the owner's sign-off.
@@ -202,8 +202,12 @@ it and has been retired completely. Build only on what's here.
   gardens growing and the Workshop working; staff (`hire()`, `roleAt()`,
   paid a share of what they handle, `STAFF_CUT`), couriers (`ship()`) and
   contracts (`board()`, seeded from the time so it's the same for everyone;
-  `accept()`, `deliver()`, drop-offs at building doors via `destAt()`).
-  `cleanSave()` cleans anything loaded and upgrades older saves (now v3);
+  `accept()`, `deliver()`, drop-offs at building doors via `destAt()`); big
+  lots (`buyLot()`, `buildLot()`, places `l0`-`l2`, production lines via
+  `line()` for the Workshop and factories), the ledger (`book()`, called by
+  every rule that moves Dorras) and loans (`borrow()`, `repay()`, a share
+  of takings in `advance()`).
+  `cleanSave()` cleans anything loaded and upgrades older saves (now v4);
   keep that migration when the save changes. New economy rules go here
   first.
 - Goods only move between your places in your car (or by buying them
@@ -217,7 +221,8 @@ it and has been retired completely. Build only on what's here.
   deliver-to / sell-from picker, your car included when it's parked outside),
   and the Workshop's (`[data-workshop]`), Signal tower's (`[data-contracts]`:
   news and the contract board), Post office's (`[data-couriers]`) and
-  Apartments' (`[data-staff]`) panels: `PANELS` in `tycoon-ui.ts`, mounted
+  Apartments' (`[data-staff]`) and the Vault's (`[data-bank]`: worth,
+  ledger, loans) panels: `PANELS` in `tycoon-ui.ts`, mounted
   with `mountPanel()` from `open()` in `index.ts`. One card at a time: opening a
   panel closes the business card and the other way round. Esc closes the card
   first. The views tick every second and are patched in place (`repaint()`
@@ -246,6 +251,15 @@ it and has been retired completely. Build only on what's here.
   the Car tab load and unload there; the garage menu says how much each car
   carries. Your contracts' drop-offs get a "Deliver" prompt at the door and
   a beam of light (`beacons.ts`, up to three).
+- **Big lots** (Phase 4, the owner's call): three Dorras-only 9 x 9 lots
+  east of Makers' Row (`BIG_LOTS` in `layout.ts`, in `EXTRA_LOTS`; `LOT_SITE`,
+  `LOT_SHAPES`, `lotSolids()` in `solids.ts`), drawn from the save by
+  `biglots.ts` (FOR SALE board, empty, superstore, factory, depot, offices),
+  rebuilt only when what they show changes; offices stay well under the
+  Emporium's height. The 16 district plots are PLS land only and never part
+  of the Dorras game; keep real money and game money apart.
+- **Loans and the ledger** are game mechanics with Dorras only: a flat fee,
+  no interest rates, savings returns or APY-style wording anywhere.
 - **The Apartments** (the tower on the north-east block, `apartments()` in
   `landmarks.ts` and `city.ts`) are a place since Phase 3: spot
   `apartments`, its pin, door (`DOORS`) and panel. The Emporium stays first

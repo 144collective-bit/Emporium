@@ -3,9 +3,9 @@
 // counter, the garage door and the walk-mode spawn can be reached.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { CAMERA_ONLY, DOORS, GARAGE_SITE, MARKET_SITE, RACK, SHOT_SOLIDS, SOLIDS, STALL_SPOT, TURNTABLE_BOX, UNIT_SITE, UNIT_SIZE, WALK_SPAWN, rayBoxes, unitSolids } from '../src/scripts/city3d/solids';
-import { EW_ROADS, GARAGE, BS, MARKET, NS_ROADS, UNITS } from '../src/scripts/city3d/layout';
-import { UNIT_KIND_IDS } from '../src/scripts/city3d/tycoon';
+import { CAMERA_ONLY, DOORS, GARAGE_SITE, MARKET_SITE, RACK, SHOT_SOLIDS, SOLIDS, STALL_SPOT, TURNTABLE_BOX, UNIT_SITE, UNIT_SIZE, WALK_SPAWN, LOT_SITE, lotSolids, rayBoxes, unitSolids } from '../src/scripts/city3d/solids';
+import { BIG_LOTS, EW_ROADS, GARAGE, BS, MARKET, NS_ROADS, UNITS } from '../src/scripts/city3d/layout';
+import { LOT_KIND_IDS, UNIT_KIND_IDS } from '../src/scripts/city3d/tycoon';
 import { SLABS, inside, pointIn, type Rect } from './world';
 
 /** Degen's radius in walk mode (walk.ts RADIUS) */
@@ -94,6 +94,25 @@ test('Makers\' Row: four units on their lot, apart, each with a door free to sta
   }
   // The units are off the market square (and its stalls)
   assert.ok(UNITS.oz + BS < MARKET.oz);
+});
+
+test('the big lots: on their own lots, off the roads, each with a door at its street free whatever is built', () => {
+  for (const site of LOT_SITE) {
+    const lot: Rect = [site.ox, site.oz, site.ox + BS, site.oz + BS];
+    assert.ok(pointIn(site.door.x, site.door.z, lot), `lot ${site.i}'s door is off the lot`);
+    for (const kind of [null, ...LOT_KIND_IDS]) {
+      const boxes = lotSolids(site.i, kind);
+      for (const b of boxes) {
+        assert.ok(inside(b, lot), `lot ${site.i}'s ${kind} reaches out of the lot`);
+        for (const r of EW_ROADS) assert.ok(b[3] <= r.c - r.half || b[1] >= r.c + r.half, `lot ${site.i}'s ${kind} is on a road`);
+      }
+      assert.ok(!boxes.some((b) => pointIn(site.door.x, site.door.z, b, R)) && !blocked(site.door.x, site.door.z), `lot ${site.i}'s door is blocked when it's a ${kind}`);
+    }
+    // The door faces a street: within a few steps of one
+    assert.ok(EW_ROADS.some((r) => Math.abs(site.door.z - r.c) < r.half + 2), `lot ${site.i}'s door isn't on a street`);
+  }
+  // Clear of Makers' Row and the market
+  for (const l of BIG_LOTS) assert.ok(l.ox > UNITS.ox + BS + 1 && l.ox > MARKET.ox + BS + 1);
 });
 
 test('bullets stop at walls but not at the dummies\' own footprints', () => {

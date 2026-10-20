@@ -30,7 +30,7 @@ const spots: Record<SpotId, Spot> = {
   emporium: { href: '#city-title', title: 'The Emporium', sub: 'Market hall', aria: 'The Emporium: the market hall' },
   shop: { href: '#city-title', title: 'Drop 001', sub: 'Clothes · fitting room', aria: 'Drop 001: clothes and the fitting room' },
   workshop: { href: '#city-title', title: 'The Workshop', sub: 'Factory', aria: 'The Workshop: the factory' },
-  vault: { href: '#city-title', title: 'The Vault', sub: 'Bank · soon', aria: 'The Vault: the bank, coming soon' },
+  vault: { href: '#city-title', title: 'The Vault', sub: 'Bank', aria: 'The Vault: the bank' },
   plan: { href: '#city-title', title: 'The Armoury', sub: 'Guns & gear', aria: 'The Armoury: guns and gear' },
   signal: { href: '#city-title', title: 'Signal tower', sub: 'News & contracts', aria: 'Signal tower: news and contracts' },
   telegram: { href: '#city-title', title: 'Post office', sub: 'Couriers', aria: 'Post office: couriers' },
@@ -540,10 +540,10 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     <div class="market" data-workshop></div>
   </template>
   <template data-panel-tpl="vault">
-    <p class="kicker"><span class="kicker-num">04</span> Coming soon</p>
+    <p class="kicker"><span class="kicker-num">04</span> The Vault</p>
     <h2 id="city-panel-title" class="city-panel-title">The Bank</h2>
-    <p class="city-panel-text">Keep your Dorras safe, and see where they come from and where they go.</p>
-    <span class="tag">Opens in a later update</span>
+    <p class="city-panel-text">What your business is worth, where your Dorras come from and where they go, and loans to grow faster.</p>
+    <div class="market" data-bank></div>
   </template>
   <template data-panel-tpl="plan">
     <p class="kicker"><span class="kicker-num">05</span> The Armoury</p>

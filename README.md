@@ -180,8 +180,16 @@ Yours has the cyan canopy and the YOUR STALL board, and shows your stock.
 - **Staff** (the Apartments): a clerk sells more at your stall or a shop, and
   keeps it selling at full pace while you're away; a gardener and a Workshop
   hand speed things up. They keep 10% of what they handle.
-- It's saved in the browser for now. The plan for the next phases (plots as
-  the top tier, then the server) is in `docs/tycoon-plan.md`.
+- **Big lots** (east of Makers' Row): the top tier, bought with Dorras only:
+  a **superstore**, a **factory** (its own, faster production line), a
+  **depot** (holds 1,000; cheaper couriers) or your **offices** (every
+  stall, shop and superstore sells faster). The district plots stay PLS land
+  and aren't part of the game's economy.
+- **The Vault** (the bank): what your business is worth, where your Dorras
+  came from and went, and loans to grow faster (a flat fee, paid back from a
+  share of your takings).
+- It's saved in the browser for now. The plan (with the server phase still
+  to come) is in `docs/tycoon-plan.md`.
 
 ### The mode header
 
@@ -409,7 +417,7 @@ demo** clears it.
 | Drop 001 | Clothes: the fitting room |
 | The Armoury | Guns and gear (target practice) |
 | The Workshop | The factory: turn raw goods into products |
-| The Vault | The bank (coming soon) |
+| The Vault | The bank: worth, ledger, loans |
 | Signal tower | News and contracts |
 | Post office | Couriers |
 | The Apartments | Staff |
@@ -453,6 +461,7 @@ the draft note whenever the card is hidden. Every menu and card closes with its
 | `src/scripts/city3d/tycoon-ui.ts` | The Dorras readout, your business card, the market hall, the Workshop's panel, the save |
 | `src/scripts/city3d/units.ts` | Makers' Row: your four units, drawn from the save |
 | `src/scripts/city3d/beacons.ts` | Beams of light over your contracts' drop-offs |
+| `src/scripts/city3d/biglots.ts` | The big lots: superstore, factory, depot, offices, drawn from the save |
 | `src/scripts/city3d/market.ts` | The market square: stalls, traders, gantry, your stall's stock |
 | `src/scripts/city3d/profile-ui.ts` | The Profile panel: name, rank; owns the look (saved here and online) |
 | `src/scripts/city3d/head.ts` | The mode header's title and subtitle, and its height (`--head-h`) |

@@ -24,7 +24,7 @@
  *   warehouse or the Workshop, unload anywhere that takes them. Delivering
  *   to a stall or shop yourself pays a small bonus.
  */
-import { DOORS, GARAGE_SITE, STALL_SPOT, UNIT_SITE } from './solids';
+import { DOORS, GARAGE_SITE, LOT_SITE, STALL_SPOT, UNIT_SITE } from './solids';
 
 export type ProductId = 'gummies' | 'coffee' | 'glow' | 'tees' | 'sneakers' | 'neon';
 export type RawId = 'sugar' | 'beans' | 'cotton';
@@ -127,6 +127,27 @@ export const cargoCap = (model: string) => CARGO[model] ?? CARGO.hatch;
 /** Delivering to a stall or shop yourself: this share of the goods' market price, as a bonus */
 export const DELIVERY_BONUS = 0.1;
 
+/* Phase 4: the big lots, east of Makers' Row: Dorras only (never the PLS district plots) */
+export const LOT_COUNT = 3;
+/** The 1st, 2nd and 3rd big lot you buy */
+export const LOT_PRICES = [25000, 50000, 90000];
+export const LOT_KINDS = {
+  superstore: { name: 'Superstore', cost: 8000 },
+  factory: { name: 'Factory', cost: 10000 },
+  depot: { name: 'Depot', cost: 6000 },
+  offices: { name: 'Offices', cost: 15000 },
+} as const;
+export type LotKind = keyof typeof LOT_KINDS;
+export const LOT_KIND_IDS = Object.keys(LOT_KINDS) as LotKind[];
+/** A superstore: six long aisles and crowds of customers */
+export const SUPERSTORE = { slots: 6, capacity: 100, pace: 2.5 } as const;
+/** A factory: its own bay, twice the Workshop's speed, bigger jobs */
+export const FACTORY = { cap: 400, speed: 2, jobMax: 100 } as const;
+/** A depot holds a lot, and couriers from it cost half */
+export const DEPOT_CAP = 1000;
+/** Your offices (one HQ is enough): every stall, shop and superstore sells this much faster */
+export const HQ_BOOST = 1.2;
+
 export type Stock = Partial<Record<GoodId, number>>;
 export interface Slot {
   good: ProductId;
@@ -147,9 +168,43 @@ export interface Unit {
   /** Part-grown crop, carried to the next tick */
   carry: number;
 }
-export type PlaceId = 'stall' | 'workshop' | 'u0' | 'u1' | 'u2' | 'u3';
+/** A big lot: a superstore's shelves, a factory's bay and job, or a depot's stock */
+export interface Lot {
+  /** null: bought, nothing built yet */
+  kind: LotKind | null;
+  stock: Stock;
+  slots: Slot[];
+  job: Job | null;
+}
+export type PlaceId = 'stall' | 'workshop' | 'u0' | 'u1' | 'u2' | 'u3' | 'l0' | 'l1' | 'l2';
 export const UNIT_PLACES = ['u0', 'u1', 'u2', 'u3'] as const;
-export const PLACE_IDS: PlaceId[] = ['stall', 'u0', 'u1', 'u2', 'u3', 'workshop'];
+export const LOT_PLACES = ['l0', 'l1', 'l2'] as const;
+export const PLACE_IDS: PlaceId[] = ['stall', 'u0', 'u1', 'u2', 'u3', 'l0', 'l1', 'l2', 'workshop'];
+/** The Vault's ledger: where Dorras came from and went */
+export const ENTRIES = {
+  sales: { name: 'Sales', in: true },
+  bonus: { name: 'Delivery bonuses', in: true },
+  contracts: { name: 'Contracts', in: true },
+  soldBack: { name: 'Sold to the market', in: true },
+  borrowed: { name: 'Loans', in: true },
+  bought: { name: 'Stock bought', in: false },
+  property: { name: 'Property and building', in: false },
+  staff: { name: 'Staff', in: false },
+  couriers: { name: 'Couriers', in: false },
+  repaid: { name: 'Loans repaid', in: false },
+} as const;
+export type Entry = keyof typeof ENTRIES;
+export const ENTRY_IDS = Object.keys(ENTRIES) as Entry[];
+export interface Ledger {
+  totals: Partial<Record<Entry, number>>;
+  /** The latest movements, newest last (a run of the same kind within a minute is one line) */
+  recent: { t: number; e: Entry; n: number }[];
+}
+/** A loan from the Vault: what's still owed (the amount plus its flat fee) */
+export interface Loan {
+  owed: number;
+  borrowed: number;
+}
 export interface Job {
   make: ProductId;
   /** Items still to make */
@@ -158,7 +213,7 @@ export interface Job {
   t: number;
 }
 export interface TycoonSave {
-  v: 3;
+  v: 4;
   dorras: number;
   till: number;
   /** When it was last brought up to date (ms since 1970) */
@@ -176,12 +231,16 @@ export interface TycoonSave {
   /** Contracts you've taken on, and the ids of every contract taken lately (so one can't be taken twice) */
   contracts: Contract[];
   taken: number[];
+  /** The big lots (Phase 4): null where you don't own the lot */
+  lots: (Lot | null)[];
+  ledger: Ledger;
+  loan: Loan | null;
   stats: { earned: number; sold: number; made: number; grown: number; bonus: number; wages: number; contracts: number };
 }
 
 export function newSave(now: number): TycoonSave {
   return {
-    v: 3,
+    v: 4,
     dorras: START_DORRAS,
     till: 0,
     at: now,
@@ -193,9 +252,13 @@ export function newSave(now: number): TycoonSave {
     shipments: [],
     contracts: [],
     taken: [],
+    lots: Array.from({ length: LOT_COUNT }, () => null),
+    ledger: { totals: {}, recent: [] },
+    loan: null,
     stats: { earned: 0, sold: 0, made: 0, grown: 0, bonus: 0, wages: 0, contracts: 0 },
   };
 }
+const emptyLot = (): Lot => ({ kind: null, stock: {}, slots: [], job: null });
 const emptyUnit = (): Unit => ({ kind: null, crop: 'sugar', stock: {}, slots: [], carry: 0 });
 
 const num = (v: unknown, lo: number, hi: number, d: number) => (typeof v === 'number' && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d);
@@ -247,7 +310,7 @@ function cleanUnit(raw: unknown): Unit | null {
   };
 }
 
-/** A save from the browser (or anywhere) made safe: unknown goods dropped, numbers clamped; a fresh save if it isn't one. Phase 1 and 2 saves carry on. */
+/** A save from the browser (or anywhere) made safe: unknown goods dropped, numbers clamped; a fresh save if it isn't one. Saves from Phases 1-3 carry on. */
 export function cleanSave(raw: unknown, now: number): TycoonSave {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return newSave(now);
   const o = raw as Record<string, unknown>;
@@ -257,11 +320,8 @@ export function cleanSave(raw: unknown, now: number): TycoonSave {
   const stats = obj(o.stats);
   const units = Array.isArray(o.units) ? o.units : [];
   const ws = obj(o.workshop);
-  const job = obj(ws.job);
-  const left = Math.floor(num(job.left, 0, JOB_MAX, 0));
-  const make = left > 0 ? RECIPE_IDS.find((id) => id === job.make) : undefined;
   const s: TycoonSave = {
-    v: 3,
+    v: 4,
     dorras: Math.floor(num(o.dorras, 0, 1e12, START_DORRAS)),
     till: Math.floor(num(o.till, 0, 1e12, 0)),
     at: num(o.at, 0, now, now),
@@ -269,13 +329,16 @@ export function cleanSave(raw: unknown, now: number): TycoonSave {
     units: Array.from({ length: UNIT_COUNT }, (_, i) => cleanUnit(units[i])),
     workshop: {
       stock: cleanStock(ws.stock, WORKSHOP_CAP),
-      job: make ? { make, left, t: num(job.t, 0, RECIPES[make]!.minutes, 0) } : null,
+      job: cleanJob(ws.job, JOB_MAX),
     },
     cargo: cleanStock(o.cargo, Math.max(...Object.values(CARGO))),
     staff: [],
     shipments: [],
     contracts: [],
     taken: [],
+    lots: Array.from({ length: LOT_COUNT }, (_, i) => cleanLot((Array.isArray(o.lots) ? o.lots : [])[i])),
+    ledger: cleanLedger(o.ledger, now),
+    loan: null,
     stats: {
       earned: Math.floor(num(stats.earned, 0, 1e15, 0)),
       sold: Math.floor(num(stats.sold, 0, 1e15, 0)),
@@ -308,7 +371,42 @@ export function cleanSave(raw: unknown, now: number): TycoonSave {
       s.contracts.push({ id, good, qty, to, reward: Math.floor(num(r.reward, 0, good ? qty * good_(good).base * REWARD_MAX : 0, 0)), expires: num(r.expires, 0, now + CONTRACT_TIME * 60000, 0) });
   }
   s.taken = (Array.isArray(o.taken) ? o.taken : []).filter((n): n is number => Number.isInteger(n) && n >= 0).slice(-40);
+  // Phase 4: a loan can't be more than the most the Vault ever lends, plus its fee
+  const loan = obj(o.loan);
+  const owed = Math.ceil(num(loan.owed, 0, Math.round(LOAN_MAX * (1 + LOAN_FEE)), 0));
+  if (owed > 0) s.loan = { owed, borrowed: Math.floor(num(loan.borrowed, 0, LOAN_MAX, 0)) };
   return s;
+}
+function cleanJob(raw: unknown, max: number): Job | null {
+  const job = obj(raw);
+  const left = Math.floor(num(job.left, 0, max, 0));
+  const make = left > 0 ? RECIPE_IDS.find((id) => id === job.make) : undefined;
+  return make ? { make, left, t: num(job.t, 0, RECIPES[make]!.minutes, 0) } : null;
+}
+function cleanLot(raw: unknown): Lot | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const r = obj(raw);
+  const kind = LOT_KIND_IDS.find((k) => k === r.kind) ?? null;
+  return {
+    kind,
+    stock: kind === 'depot' ? cleanStock(r.stock, DEPOT_CAP) : kind === 'factory' ? cleanStock(r.stock, FACTORY.cap) : {},
+    slots: kind === 'superstore' ? cleanSlots(r.slots, SUPERSTORE.slots, SUPERSTORE.capacity) : [],
+    job: kind === 'factory' ? cleanJob(r.job, FACTORY.jobMax) : null,
+  };
+}
+function cleanLedger(raw: unknown, now: number): Ledger {
+  const l = obj(raw);
+  const totals: Partial<Record<Entry, number>> = {};
+  for (const e of ENTRY_IDS) {
+    const n = Math.floor(num(obj(l.totals)[e], 0, 1e15, 0));
+    if (n > 0) totals[e] = n;
+  }
+  const recent = (Array.isArray(l.recent) ? l.recent : [])
+    .map((x) => obj(x))
+    .filter((x) => ENTRY_IDS.includes(x.e as Entry))
+    .map((x) => ({ t: num(x.t, 0, now, now), e: x.e as Entry, n: Math.floor(num(x.n, 0, 1e15, 0)) }))
+    .slice(-LEDGER_LINES);
+  return { totals, recent };
 }
 
 /* ---------- The market ---------- */
@@ -342,26 +440,33 @@ export const retailPrice = (id: GoodId, level: PriceLevel, now: number) => Math.
 
 export const unitIndex = (p: PlaceId) => (p.startsWith('u') ? Number(p.slice(1)) : -1);
 export const unitAt = (s: TycoonSave, p: PlaceId) => s.units[unitIndex(p)] ?? null;
-/** Places that sell to the public: the stall and your shops */
-export const sells = (s: TycoonSave, p: PlaceId) => p === 'stall' || unitAt(s, p)?.kind === 'shop';
+export const lotIndex = (p: PlaceId) => (p.startsWith('l') ? Number(p.slice(1)) : -1);
+export const lotAt = (s: TycoonSave, p: PlaceId) => s.lots[lotIndex(p)] ?? null;
+/** What's built at a place you own (a unit's or a big lot's kind), if anything */
+export const kindAt = (s: TycoonSave, p: PlaceId): UnitKind | LotKind | null => unitAt(s, p)?.kind ?? lotAt(s, p)?.kind ?? null;
+/** Places that sell to the public: the stall, your shops and superstores */
+export const sells = (s: TycoonSave, p: PlaceId) => p === 'stall' || kindAt(s, p) === 'shop' || kindAt(s, p) === 'superstore';
 /** Places you can load your car from (stock on sale stays on the shelves) */
-export const loadsFrom = (s: TycoonSave, p: PlaceId) => p === 'workshop' || unitAt(s, p)?.kind === 'garden' || unitAt(s, p)?.kind === 'warehouse';
+export const loadsFrom = (s: TycoonSave, p: PlaceId) => p === 'workshop' || ['garden', 'warehouse', 'depot', 'factory'].includes(kindAt(s, p) ?? '');
+/** Places that make things: the Workshop and your factories */
+export const makes = (s: TycoonSave, p: PlaceId) => p === 'workshop' || kindAt(s, p) === 'factory';
 /** A sales point's shelves, how many kinds and how many of each, and how fast customers come */
 function shelves(s: TycoonSave, p: PlaceId) {
   if (p === 'stall') {
     const L = stallLevel(s.stall.level);
     return { slots: s.stall.slots, max: L.slots, capacity: L.capacity, pace: L.pace, set: (v: Slot[]) => (s.stall.slots = v) };
   }
-  const u = unitAt(s, p);
-  if (u?.kind !== 'shop') return null;
-  return { slots: u.slots, max: SHOP.slots, capacity: SHOP.capacity, pace: SHOP.pace, set: (v: Slot[]) => (u.slots = v) };
+  const u = unitAt(s, p) ?? lotAt(s, p);
+  const spec = u?.kind === 'shop' ? SHOP : u?.kind === 'superstore' ? SUPERSTORE : null;
+  if (!u || !spec) return null;
+  return { slots: u.slots, max: spec.slots, capacity: spec.capacity, pace: spec.pace, set: (v: Slot[]) => (u.slots = v) };
 }
 /** Everything at a place, as a stock list */
 export function stockAt(s: TycoonSave, p: PlaceId): Stock {
   const sh = shelves(s, p);
   if (sh) return Object.fromEntries(sh.slots.map((x) => [x.good, x.qty]));
   if (p === 'workshop') return s.workshop.stock;
-  return unitAt(s, p)?.stock ?? {};
+  return unitAt(s, p)?.stock ?? lotAt(s, p)?.stock ?? {};
 }
 export const holds = (s: TycoonSave, p: PlaceId, id: GoodId) => stockAt(s, p)[id] ?? 0;
 
@@ -376,9 +481,9 @@ export function room(s: TycoonSave, id: GoodId, p: PlaceId = 'stall') {
     return sh.slots.length < sh.max ? sh.capacity : 0;
   }
   if (p === 'workshop') return Math.max(0, WORKSHOP_CAP - total(s.workshop.stock));
-  const u = unitAt(s, p);
-  if (u?.kind === 'warehouse') return Math.max(0, WAREHOUSE_CAP - total(u.stock));
-  return 0;
+  const k = kindAt(s, p);
+  const cap = k === 'warehouse' ? WAREHOUSE_CAP : k === 'depot' ? DEPOT_CAP : k === 'factory' ? FACTORY.cap : 0;
+  return Math.max(0, cap - total(stockAt(s, p)));
 }
 /** Put goods in a place (call room() first) */
 function put(s: TycoonSave, p: PlaceId, id: GoodId, n: number) {
@@ -425,6 +530,7 @@ export function buy(s: TycoonSave, id: GoodId, qty: number, now: number, to: Pla
   if (n <= 0) return { ok: false, why: 'money' };
   put(s, to, id, n);
   s.dorras -= n * each;
+  book(s, 'bought', n * each);
   return { ok: true, qty: n, dorras: n * each };
 }
 
@@ -434,6 +540,7 @@ export function sellBack(s: TycoonSave, id: GoodId, qty: number, now: number, fr
   if (n <= 0) return { ok: false, why: 'stock' };
   const each = bidPrice(id, now);
   s.dorras += n * each;
+  book(s, 'soldBack', n * each);
   return { ok: true, qty: n, dorras: n * each };
 }
 
@@ -468,6 +575,7 @@ export function upgrade(s: TycoonSave): Result {
   if (cost === null) return { ok: false, why: 'max' };
   if (s.dorras < cost) return { ok: false, why: 'money' };
   s.dorras -= cost;
+  book(s, 'property', cost);
   s.stall.level += 1;
   return { ok: true, qty: 1, dorras: cost };
 }
@@ -485,6 +593,7 @@ export function buyUnit(s: TycoonSave, i: number): Result {
   const price = unitPrice(s)!;
   if (s.dorras < price) return { ok: false, why: 'money' };
   s.dorras -= price;
+  book(s, 'property', price);
   s.units[i] = emptyUnit();
   return { ok: true, qty: 1, dorras: price };
 }
@@ -497,6 +606,7 @@ export function buildUnit(s: TycoonSave, i: number, kind: UnitKind, crop?: RawId
   const cost = UNIT_KINDS[kind].cost;
   if (s.dorras < cost) return { ok: false, why: 'money' };
   s.dorras -= cost;
+  book(s, 'property', cost);
   Object.assign(u, emptyUnit(), { kind, crop: crop ?? u.crop });
   // Whoever worked there had a different job: they go
   s.staff = s.staff.filter((p) => p !== `u${i}`);
@@ -514,29 +624,39 @@ export function setCrop(s: TycoonSave, i: number, crop: RawId): Result {
 
 /* ---------- The Workshop ---------- */
 
-/** How many of a product the Workshop's bay has the raw goods for */
-export function canMake(s: TycoonSave, make: ProductId) {
+/** A place that makes things (the Workshop or a factory): its bay, its job, how fast and how big */
+export function line(s: TycoonSave, p: PlaceId = 'workshop') {
+  if (p === 'workshop') return { stock: s.workshop.stock, job: s.workshop.job, set: (j: Job | null) => (s.workshop.job = j), speed: 1, max: JOB_MAX };
+  const l = lotAt(s, p);
+  if (l?.kind !== 'factory') return null;
+  return { stock: l.stock, job: l.job, set: (j: Job | null) => (l.job = j), speed: FACTORY.speed, max: FACTORY.jobMax };
+}
+/** How many of a product a bay has the raw goods for */
+export function canMake(s: TycoonSave, make: ProductId, p: PlaceId = 'workshop') {
   const r = RECIPES[make];
-  if (!r) return 0;
-  return Math.min(JOB_MAX, ...Object.entries(r.needs).map(([raw, n]) => Math.floor((s.workshop.stock[raw as RawId] ?? 0) / n!)));
+  const ln = line(s, p);
+  if (!r || !ln) return 0;
+  return Math.min(ln.max, ...Object.entries(r.needs).map(([raw, n]) => Math.floor((ln.stock[raw as RawId] ?? 0) / n!)));
 }
 /** Start a job: its raw goods leave the bay now, the products arrive one by one */
-export function startJob(s: TycoonSave, make: ProductId, qty: number): Result {
+export function startJob(s: TycoonSave, make: ProductId, qty: number, p: PlaceId = 'workshop'): Result {
   const r = RECIPES[make];
-  if (!r) return { ok: false, why: 'place' };
-  if (s.workshop.job) return { ok: false, why: 'busy' };
-  const n = Math.min(Math.floor(qty), canMake(s, make));
+  const ln = line(s, p);
+  if (!r || !ln) return { ok: false, why: 'place' };
+  if (ln.job) return { ok: false, why: 'busy' };
+  const n = Math.min(Math.floor(qty), canMake(s, make, p));
   if (n <= 0) return { ok: false, why: 'stock' };
-  for (const [raw, k] of Object.entries(r.needs)) take(s, 'workshop', raw as RawId, k! * n);
-  s.workshop.job = { make, left: n, t: 0 };
+  for (const [raw, k] of Object.entries(r.needs)) take(s, p, raw as RawId, k! * n);
+  ln.set({ make, left: n, t: 0 });
   return { ok: true, qty: n, dorras: 0 };
 }
 /** Stop the job: the raw goods for what wasn't made go back in the bay */
-export function cancelJob(s: TycoonSave) {
-  const j = s.workshop.job;
-  if (!j) return false;
-  for (const [raw, k] of Object.entries(RECIPES[j.make]!.needs)) put(s, 'workshop', raw as RawId, k! * j.left);
-  s.workshop.job = null;
+export function cancelJob(s: TycoonSave, p: PlaceId = 'workshop') {
+  const ln = line(s, p);
+  const j = ln?.job;
+  if (!ln || !j) return false;
+  for (const [raw, k] of Object.entries(RECIPES[j.make]!.needs)) put(s, p, raw as RawId, k! * j.left);
+  ln.set(null);
   return true;
 }
 
@@ -564,6 +684,7 @@ export function unload(s: TycoonSave, to: PlaceId, id: GoodId, qty: number, now:
   const bonus = sells(s, to) ? Math.floor(n * marketPrice(id, now) * DELIVERY_BONUS) : 0;
   s.dorras += bonus;
   s.stats.bonus += bonus;
+  if (bonus) book(s, 'bonus', bonus);
   return { ok: true, qty: n, dorras: bonus };
 }
 
@@ -571,8 +692,10 @@ export function unload(s: TycoonSave, to: PlaceId, id: GoodId, qty: number, now:
 
 /** Customers a minute for one shelf right now (before serving or being away) */
 export function pace(s: TycoonSave, slot: Slot, p: PlaceId = 'stall') {
-  return good(slot.good).demand * PRICE_LEVELS[slot.price].pace * (shelves(s, p)?.pace ?? 1);
+  return good(slot.good).demand * PRICE_LEVELS[slot.price].pace * (shelves(s, p)?.pace ?? 1) * (hasHQ(s) ? HQ_BOOST : 1);
 }
+/** Do you have offices (an HQ) on a big lot? */
+export const hasHQ = (s: TycoonSave) => s.lots.some((l) => l?.kind === 'offices');
 
 export interface Sales {
   /** Minutes covered, and how many of them you were away */
@@ -586,6 +709,8 @@ export interface Sales {
   /** Paid to staff; staff who left because they couldn't be paid */
   wages: number;
   quit: PlaceId[];
+  /** Taken from the takings towards a loan */
+  repaid: number;
   /** Couriers that arrived (what they brought), contracts that ran out */
   arrived: Shipment[];
   expired: Contract[];
@@ -598,7 +723,7 @@ const add = (m: Partial<Record<GoodId, number>>, id: GoodId, n: number) => (m[id
  * `serving`: the place you're standing at (true: the stall).
  */
 export function advance(s: TycoonSave, now: number, serving: PlaceId | boolean = false): Sales {
-  const out: Sales = { minutes: 0, away: 0, sold: {}, earned: 0, grown: {}, made: {}, wages: 0, quit: [], arrived: [], expired: [] };
+  const out: Sales = { minutes: 0, away: 0, sold: {}, earned: 0, grown: {}, made: {}, wages: 0, quit: [], repaid: 0, arrived: [], expired: [] };
   const gap = (now - s.at) / 60000;
   s.at = Math.max(s.at, now);
   if (!(gap > 0)) return out;
@@ -620,7 +745,7 @@ export function advance(s: TycoonSave, now: number, serving: PlaceId | boolean =
   const at = serving === true ? 'stall' : serving || null;
   out.minutes = minutes;
   out.away = away ? minutes : 0;
-  for (const p of ['stall', ...UNIT_PLACES] as PlaceId[]) {
+  for (const p of PLACE_IDS) {
     const sh = shelves(s, p);
     if (!sh) continue;
     // A clerk sells half as fast again, and at full pace while you're away
@@ -635,10 +760,16 @@ export function advance(s: TycoonSave, now: number, serving: PlaceId | boolean =
       slot.qty -= n;
       const pay = n * retailPrice(slot.good, slot.price, now);
       const cut = clerk ? Math.floor(pay * STAFF_CUT) : 0;
-      s.till += pay - cut;
+      // A loan takes its share of the takings until it's paid off
+      const repay = s.loan ? Math.min(s.loan.owed, Math.floor((pay - cut) * LOAN_SHARE)) : 0;
+      if (repay) payLoan(s, repay);
+      s.till += pay - cut - repay;
       s.stats.wages += cut;
+      if (cut) book(s, 'staff', cut);
+      book(s, 'sales', pay - cut);
       out.wages += cut;
-      out.earned += pay - cut;
+      out.repaid += repay;
+      out.earned += pay - cut - repay;
       add(out.sold, slot.good, n);
       s.stats.sold += n;
       s.stats.earned += pay;
@@ -659,33 +790,35 @@ export function advance(s: TycoonSave, now: number, serving: PlaceId | boolean =
     s.stats.grown += n;
     if (hand) payStaff(s, p, n * marketPrice(u.crop, now) * STAFF_CUT, out);
   });
-  // The Workshop works through its job
-  const j = s.workshop.job;
-  if (j) {
+  // The Workshop and your factories work through their jobs
+  for (const p of PLACE_IDS) {
+    const ln = makes(s, p) ? line(s, p) : null;
+    const j = ln?.job;
+    if (!ln || !j) continue;
     const each = RECIPES[j.make]!.minutes;
-    const hand = s.staff.includes('workshop');
-    const t = j.t + minutes * (hand ? STAFF_BOOST : 1);
+    const hand = s.staff.includes(p);
+    const t = j.t + minutes * ln.speed * (hand ? STAFF_BOOST : 1);
     const n = Math.min(j.left, Math.floor(t / each));
     if (n > 0) {
-      put(s, 'workshop', j.make, n);
+      put(s, p, j.make, n);
       add(out.made, j.make, n);
       s.stats.made += n;
-      if (hand) payStaff(s, 'workshop', n * marketPrice(j.make, now) * STAFF_CUT, out);
+      if (hand) payStaff(s, p, n * marketPrice(j.make, now) * STAFF_CUT, out);
     }
     j.left -= n;
     j.t = j.left > 0 ? t - n * each : 0;
-    if (j.left <= 0) s.workshop.job = null;
+    if (j.left <= 0) ln.set(null);
   }
   return out;
 }
 
 /* ---------- Phase 3: staff, couriers, contracts ---------- */
 
-/** Who works where: a clerk at a stall or shop, a gardener in a garden, a hand at the Workshop */
+/** Who works where: a clerk at a stall, shop or superstore, a gardener in a garden, a hand at the Workshop or a factory */
 export const ROLES = {
   clerk: { name: 'Clerk', blurb: 'Serves customers: half as many sales again, and full pace while you\'re away.' },
   gardener: { name: 'Gardener', blurb: 'The garden grows half as fast again.' },
-  hand: { name: 'Workshop hand', blurb: 'Jobs run half as fast again.' },
+  hand: { name: 'Hand', blurb: 'Jobs run half as fast again.' },
 } as const;
 export type Role = keyof typeof ROLES;
 /** What hiring costs up front; then staff keep this share of the value of what they sell, grow or make */
@@ -693,7 +826,7 @@ export const STAFF_HIRE = 250;
 export const STAFF_CUT = 0.1;
 export const STAFF_BOOST = 1.5;
 export function roleAt(s: TycoonSave, p: PlaceId): Role | null {
-  if (p === 'workshop') return 'hand';
+  if (makes(s, p)) return 'hand';
   if (sells(s, p)) return 'clerk';
   return unitAt(s, p)?.kind === 'garden' ? 'gardener' : null;
 }
@@ -702,6 +835,7 @@ export function hire(s: TycoonSave, p: PlaceId): Result {
   if (s.staff.includes(p)) return { ok: false, why: 'owned' };
   if (s.dorras < STAFF_HIRE) return { ok: false, why: 'money' };
   s.dorras -= STAFF_HIRE;
+  book(s, 'staff', STAFF_HIRE);
   s.staff.push(p);
   return { ok: true, qty: 1, dorras: STAFF_HIRE };
 }
@@ -718,6 +852,7 @@ function payStaff(s: TycoonSave, p: PlaceId, amount: number, out: Sales) {
   s.till -= fromTill;
   s.dorras -= fromBalance;
   s.stats.wages += fromTill + fromBalance;
+  if (fromTill + fromBalance) book(s, 'staff', fromTill + fromBalance);
   out.wages += fromTill + fromBalance;
   if (fromTill + fromBalance < due) {
     letGo(s, p);
@@ -738,7 +873,8 @@ export interface Shipment {
 export const SHIP_MAX = 3;
 export const SHIP_QTY = 50;
 /** Where each of your places is (for the couriers' journeys) */
-const placeAt = (p: PlaceId) => (p === 'stall' ? STALL_SPOT : p === 'workshop' ? DOORS.find((d) => d.id === 'workshop')! : UNIT_SITE[unitIndex(p)].door);
+export const placeAt = (p: PlaceId) =>
+  p === 'stall' ? STALL_SPOT : p === 'workshop' ? DOORS.find((d) => d.id === 'workshop')! : p.startsWith('l') ? LOT_SITE[lotIndex(p)].door : UNIT_SITE[unitIndex(p)].door;
 /** A courier's journey in minutes: a minute to load, then about 40 tiles a minute */
 export const shipMinutes = (from: PlaceId, to: PlaceId) => {
   const a = placeAt(from);
@@ -747,6 +883,8 @@ export const shipMinutes = (from: PlaceId, to: PlaceId) => {
 };
 /** What a courier charges: a call-out and a share of the goods' price */
 export const shipFee = (id: GoodId, qty: number, now: number) => Math.ceil(5 + qty * marketPrice(id, now) * 0.06);
+/** From a depot, couriers cost half */
+export const shipFeeFrom = (s: TycoonSave, from: PlaceId, id: GoodId, qty: number, now: number) => (kindAt(s, from) === 'depot' ? Math.ceil(shipFee(id, qty, now) / 2) : shipFee(id, qty, now));
 /** Send goods by courier from a garden, warehouse or the Workshop to another of your places */
 export function ship(s: TycoonSave, from: PlaceId, to: PlaceId, id: GoodId, qty: number, now: number): Result {
   if (!loadsFrom(s, from) || from === to) return { ok: false, why: 'place' };
@@ -754,9 +892,10 @@ export function ship(s: TycoonSave, from: PlaceId, to: PlaceId, id: GoodId, qty:
   const n = Math.min(Math.floor(qty), SHIP_QTY, holds(s, from, id), room(s, id, to));
   if (holds(s, from, id) <= 0) return { ok: false, why: 'stock' };
   if (n <= 0) return { ok: false, why: 'room' };
-  const fee = shipFee(id, n, now);
+  const fee = shipFeeFrom(s, from, id, n, now);
   if (s.dorras < fee) return { ok: false, why: 'money' };
   s.dorras -= fee;
+  book(s, 'couriers', fee);
   take(s, from, id, n);
   s.shipments.push({ from, to, good: id, qty: n, arrives: now + shipMinutes(from, to) * 60000 });
   return { ok: true, qty: n, dorras: fee };
@@ -849,6 +988,7 @@ export function deliver(s: TycoonSave, id: number, at: DestId, now: number): Res
   s.cargo[c.good]! -= c.qty;
   if (!s.cargo[c.good]) delete s.cargo[c.good];
   s.dorras += c.reward;
+  book(s, 'contracts', c.reward);
   s.stats.contracts += 1;
   s.contracts = s.contracts.filter((x) => x !== c);
   return { ok: true, qty: c.qty, dorras: c.reward };
@@ -863,6 +1003,7 @@ export function buyToCar(s: TycoonSave, id: GoodId, qty: number, now: number, ca
   if (n <= 0) return { ok: false, why: 'money' };
   s.cargo[id] = (s.cargo[id] ?? 0) + n;
   s.dorras -= n * each;
+  book(s, 'bought', n * each);
   return { ok: true, qty: n, dorras: n * each };
 }
 export function sellFromCar(s: TycoonSave, id: GoodId, qty: number, now: number): Result {
@@ -872,5 +1013,108 @@ export function sellFromCar(s: TycoonSave, id: GoodId, qty: number, now: number)
   if (!s.cargo[id]) delete s.cargo[id];
   const each = bidPrice(id, now);
   s.dorras += n * each;
+  book(s, 'soldBack', n * each);
   return { ok: true, qty: n, dorras: n * each };
+}
+
+/* ---------- Phase 4: the big lots and the Vault ---------- */
+
+/** What the next big lot costs (null once you own all three) */
+export function lotPrice(s: TycoonSave) {
+  const owned = s.lots.filter(Boolean).length;
+  return owned < LOT_PRICES.length ? LOT_PRICES[owned] : null;
+}
+export function buyLot(s: TycoonSave, i: number): Result {
+  if (i < 0 || i >= LOT_COUNT) return { ok: false, why: 'place' };
+  if (s.lots[i]) return { ok: false, why: 'owned' };
+  const price = lotPrice(s)!;
+  if (s.dorras < price) return { ok: false, why: 'money' };
+  s.dorras -= price;
+  book(s, 'property', price);
+  s.lots[i] = emptyLot();
+  return { ok: true, qty: 1, dorras: price };
+}
+/** Build (or rebuild) a big lot; it has to be empty of goods (and its factory idle) first. One set of offices is all you need. */
+export function buildLot(s: TycoonSave, i: number, kind: LotKind): Result {
+  const l = s.lots[i];
+  const p = `l${i}` as PlaceId;
+  if (!l) return { ok: false, why: 'place' };
+  if (total(stockAt(s, p)) > 0 || l.job) return { ok: false, why: 'stock' };
+  if (l.kind === kind || (kind === 'offices' && hasHQ(s))) return { ok: false, why: 'owned' };
+  const cost = LOT_KINDS[kind].cost;
+  if (s.dorras < cost) return { ok: false, why: 'money' };
+  s.dorras -= cost;
+  book(s, 'property', cost);
+  Object.assign(l, emptyLot(), { kind });
+  s.staff = s.staff.filter((x) => x !== p);
+  return { ok: true, qty: 1, dorras: cost };
+}
+
+/* The ledger */
+export const LEDGER_LINES = 30;
+/** Write a movement of Dorras in the Vault's ledger (a run of the same kind within a minute is one line) */
+function book(s: TycoonSave, e: Entry, n: number) {
+  if (!(n > 0)) return;
+  s.ledger.totals[e] = (s.ledger.totals[e] ?? 0) + n;
+  const last = s.ledger.recent[s.ledger.recent.length - 1];
+  if (last && last.e === e && s.at - last.t < 60000) last.n += n;
+  else {
+    s.ledger.recent.push({ t: s.at, e, n });
+    if (s.ledger.recent.length > LEDGER_LINES) s.ledger.recent.shift();
+  }
+}
+/** What you've paid for property: the stall's upgrades, units and big lots, and what's built on them */
+export function propertyValue(s: TycoonSave) {
+  let v = STALL_LEVELS.slice(1, s.stall.level).reduce((a, l) => a + l.cost, 0);
+  const units = s.units.filter(Boolean) as Unit[];
+  v += UNIT_PRICES.slice(0, units.length).reduce((a, b) => a + b, 0) + units.reduce((a, u) => a + (u.kind ? UNIT_KINDS[u.kind].cost : 0), 0);
+  const lots = s.lots.filter(Boolean) as Lot[];
+  v += LOT_PRICES.slice(0, lots.length).reduce((a, b) => a + b, 0) + lots.reduce((a, l) => a + (l.kind ? LOT_KINDS[l.kind].cost : 0), 0);
+  return v;
+}
+/** All your goods (every place, your car and the couriers' loads) at today's market price */
+export function goodsValue(s: TycoonSave, now: number) {
+  let v = 0;
+  const count = (st: Stock) => {
+    for (const [id, n] of Object.entries(st)) v += (n ?? 0) * marketPrice(id as GoodId, now);
+  };
+  for (const p of PLACE_IDS) count(stockAt(s, p));
+  count(s.cargo);
+  for (const sh of s.shipments) v += sh.qty * marketPrice(sh.good, now);
+  return v;
+}
+/** What your business is worth: your Dorras, the till, your goods and your property, less what you owe */
+export function worth(s: TycoonSave, now: number) {
+  return s.dorras + s.till + goodsValue(s, now) + propertyValue(s) - (s.loan?.owed ?? 0);
+}
+
+/* Loans: a flat fee, paid back from a share of the takings (and whenever you like) */
+export const LOAN_FEE = 0.1;
+export const LOAN_SHARE = 0.25;
+export const LOAN_MAX = 50000;
+/** What the Vault will lend you: more the more property you hold */
+export const loanLimit = (s: TycoonSave) => Math.min(LOAN_MAX, Math.floor((1000 + propertyValue(s) * 0.5) / 500) * 500);
+export function borrow(s: TycoonSave, amount: number): Result {
+  if (s.loan) return { ok: false, why: 'busy' };
+  const n = Math.floor(amount);
+  if (n <= 0 || n > loanLimit(s)) return { ok: false, why: 'max' };
+  s.loan = { borrowed: n, owed: Math.ceil(n * (1 + LOAN_FEE)) };
+  s.dorras += n;
+  book(s, 'borrowed', n);
+  return { ok: true, qty: 1, dorras: n };
+}
+function payLoan(s: TycoonSave, n: number) {
+  if (!s.loan || n <= 0) return;
+  s.loan.owed -= n;
+  book(s, 'repaid', n);
+  if (s.loan.owed <= 0) s.loan = null;
+}
+/** Pay some of a loan off from your balance */
+export function repay(s: TycoonSave, amount: number): Result {
+  if (!s.loan) return { ok: false, why: 'place' };
+  const n = Math.min(Math.floor(amount), s.loan.owed, s.dorras);
+  if (n <= 0) return { ok: false, why: 'money' };
+  s.dorras -= n;
+  payLoan(s, n);
+  return { ok: true, qty: 1, dorras: n };
 }

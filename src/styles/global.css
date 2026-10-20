@@ -5735,3 +5735,78 @@ body.is-walking .nav {
     var(--pulse) border-box;
   color: #fff;
 }
+
+/* ---------- Phase 4: the Vault (tycoon-ui.ts) ---------- */
+.biz-worth,
+.biz-ledger ul,
+.biz-recent {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.biz-worth {
+  padding: 10px 12px;
+  border: 1px solid #ffffff14;
+  border-radius: 10px;
+  background: #ffffff06;
+}
+.biz-worth li,
+.biz-ledger li,
+.biz-recent li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+.biz-worth b,
+.biz-ledger b,
+.biz-recent b {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: #fff;
+  white-space: nowrap;
+}
+.biz-worth .is-total {
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid #ffffff1a;
+  color: #fff;
+}
+.biz-worth .is-total b {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 900;
+}
+.biz-ledger {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 6px 16px;
+}
+.biz-recent .is-in {
+  color: #2bff88;
+}
+.biz-recent .is-out {
+  color: #ff8aa8;
+}
+.biz-loans {
+  display: flex;
+  flex-wrap: wrap;
+}
+.market-btns [data-borrow],
+.market-btns [data-repay] {
+  border-color: #0000;
+  background:
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
+  color: #fff;
+}
+.biz-units {
+  row-gap: 4px;
+}

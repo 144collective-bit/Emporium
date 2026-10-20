@@ -30,6 +30,7 @@ import { createCityHead } from './head';
 import { buildMarket } from './market';
 import { createTycoonUI, type TycoonUI } from './tycoon-ui';
 import { buildUnits } from './units';
+import { buildBigLots } from './biglots';
 import { buildBeacons } from './beacons';
 import { destAt } from './tycoon';
 import { CARS } from './cars';
@@ -107,6 +108,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const market = buildMarket(scene, crowd);
   // Makers' Row: your units, drawn from your save once the economy starts (further down)
   const units = buildUnits(scene);
+  // The big lots east of Makers' Row (Dorras only), drawn from your save too
+  const bigLots = buildBigLots(scene);
   // Beams of light over your contracts' drop-offs
   const beacons = buildBeacons(scene, tick, reduced);
   progress(0.55);
@@ -319,7 +322,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     // Placed buildings, and what's built on your units
     plotSolids: () => {
       const u = units.solids();
-      return u.length ? [...plots.solids(), ...u] : plots.solids();
+      const l = bigLots.solids();
+      return u.length || l.length ? [...plots.solids(), ...u, ...l] : plots.solids();
     },
     openSpot: (id) => open(id),
     touched: () => touched(),
@@ -343,6 +347,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     stock: (s) => {
       market.show(s.stall.slots, s.stall.level);
       units.show(s);
+      bigLots.show(s);
       beacons.show(s.contracts.map((c) => destAt(c.to)));
       dirty = true;
     },

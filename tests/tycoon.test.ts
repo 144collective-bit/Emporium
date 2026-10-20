@@ -2,6 +2,24 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  DEPOT_CAP,
+  FACTORY,
+  HQ_BOOST,
+  LOAN_FEE,
+  LOAN_SHARE,
+  LOT_KINDS,
+  LOT_PRICES,
+  SUPERSTORE,
+  borrow,
+  buildLot,
+  buyLot,
+  goodsValue,
+  lotPrice,
+  loanLimit,
+  propertyValue,
+  repay,
+  shipFeeFrom,
+  worth,
   BOARD_MINUTES,
   BOARD_SIZE,
   CONTRACTS_MAX,
@@ -251,7 +269,7 @@ function rich() {
 
 test('a Phase 1 save carries on: stall kept, no units, an empty Workshop and car', () => {
   const s = cleanSave({ v: 1, dorras: 900, till: 12, at: T0, stall: { level: 2, slots: [{ good: 'tees', qty: 7, price: 'high', carry: 0 }] } }, T0);
-  assert.equal(s.v, 3);
+  assert.equal(s.v, 4);
   assert.equal(s.dorras, 900);
   assert.equal(s.stall.slots[0].qty, 7);
   assert.equal(s.units.length, UNIT_COUNT);
@@ -431,7 +449,7 @@ test('cleanSave keeps units, the Workshop and the car within their limits', () =
 
 test('a Phase 2 save carries on into Phase 3: no staff, couriers or contracts yet', () => {
   const s = cleanSave({ v: 2, dorras: 100, units: [{ kind: 'shop', slots: [] }], workshop: { stock: { sugar: 4 }, job: null }, cargo: { tees: 2 } }, T0);
-  assert.equal(s.v, 3);
+  assert.equal(s.v, 4);
   assert.equal(s.units[0]!.kind, 'shop');
   assert.deepEqual(s.cargo, { tees: 2 });
   assert.deepEqual([s.staff, s.shipments, s.contracts, s.taken], [[], [], [], []]);
@@ -612,4 +630,153 @@ test('cleanSave keeps Phase 3 within the rules', () => {
   assert.equal(s.contracts.length, 1, 'contracts are for products');
   assert.ok(s.contracts[0].reward <= 3 * 260 * 1.8 && s.contracts[0].expires <= T0 + CONTRACT_TIME * MIN);
   assert.deepEqual(s.taken, [1, 7]);
+});
+
+/* ---------- Phase 4: the big lots and the Vault ---------- */
+
+/** All three big lots bought */
+function tycoon() {
+  const s = rich();
+  for (let i = 0; i < 3; i++) assert.ok(buyLot(s, i).ok);
+  return s;
+}
+
+test('a Phase 3 save carries on into Phase 4: no big lots, an empty ledger, no loan', () => {
+  const s = cleanSave({ v: 3, dorras: 100, staff: ['stall'] }, T0);
+  assert.equal(s.v, 4);
+  assert.deepEqual(s.lots, [null, null, null]);
+  assert.deepEqual(s.ledger, { totals: {}, recent: [] });
+  assert.equal(s.loan, null);
+  assert.deepEqual(s.staff, ['stall']);
+});
+
+test('big lots cost Dorras (more each time) and are built as a superstore, factory, depot or offices', () => {
+  const s = newSave(T0);
+  s.dorras = LOT_PRICES[0] - 1;
+  assert.deepEqual(buyLot(s, 0), { ok: false, why: 'money' });
+  s.dorras = 1e6;
+  assert.ok(buyLot(s, 1).ok);
+  assert.equal(s.dorras, 1e6 - LOT_PRICES[0]);
+  assert.equal(lotPrice(s), LOT_PRICES[1]);
+  assert.deepEqual(buyLot(s, 1), { ok: false, why: 'owned' });
+  assert.ok(buildLot(s, 1, 'offices').ok);
+  assert.equal(s.dorras, 1e6 - LOT_PRICES[0] - LOT_KINDS.offices.cost);
+  assert.ok(buyLot(s, 0).ok);
+  assert.deepEqual(buildLot(s, 0, 'offices'), { ok: false, why: 'owned' }, 'one set of offices is enough');
+});
+
+test('a superstore sells like a big shop and takes a clerk', () => {
+  const s = tycoon();
+  buildLot(s, 0, 'superstore');
+  assert.equal(room(s, 'neon', 'l0'), SUPERSTORE.capacity);
+  assert.equal(room(s, 'sugar', 'l0'), 0);
+  buy(s, 'glow', SUPERSTORE.capacity, T0, 'l0');
+  buy(s, 'glow', 20, T0, 'stall');
+  const sales = advance(s, T0 + 2 * MIN);
+  assert.ok((sales.sold.glow ?? 0) > 0);
+  assert.ok(SUPERSTORE.capacity - holds(s, 'l0', 'glow') > 20 - holds(s, 'stall', 'glow'), 'the superstore sells faster than the stall');
+  assert.equal(roleAt(s, 'l0'), 'clerk');
+});
+
+test('a factory runs jobs faster than the Workshop, from its own bay', () => {
+  const s = tycoon();
+  buildLot(s, 1, 'factory');
+  buy(s, 'cotton', 300, T0, 'l1');
+  buy(s, 'cotton', 200, T0, 'workshop');
+  assert.equal(canMake(s, 'tees', 'l1'), FACTORY.jobMax);
+  assert.ok(startJob(s, 'tees', 20, 'l1').ok);
+  assert.ok(startJob(s, 'tees', 20).ok);
+  advance(s, T0 + 3 * MIN);
+  assert.ok(holds(s, 'l1', 'tees') > holds(s, 'workshop', 'tees'));
+  assert.equal(roleAt(s, 'l1'), 'hand');
+  assert.deepEqual(buildLot(s, 1, 'depot'), { ok: false, why: 'stock' }, 'a busy factory can\'t be rebuilt');
+  assert.ok(cancelJob(s, 'l1'));
+});
+
+test('a depot holds a lot, loads into your car, and its couriers cost half', () => {
+  const s = tycoon();
+  buildLot(s, 2, 'depot');
+  buildUnit(s, 0, 'shop');
+  assert.equal(room(s, 'tees', 'l2'), DEPOT_CAP);
+  buy(s, 'tees', 100, T0, 'l2');
+  assert.equal(shipFeeFrom(s, 'l2', 'tees', 40, T0), Math.ceil(shipFee('tees', 40, T0) / 2));
+  assert.ok(ship(s, 'l2', 'u0', 'tees', 40, T0).ok);
+  assert.ok(load(s, 'l2', 'tees', 10, 80).ok);
+  assert.equal(roleAt(s, 'l2'), null);
+});
+
+test('offices make every stall, shop and superstore sell faster', () => {
+  const run = (hq: boolean) => {
+    const s = tycoon();
+    if (hq) buildLot(s, 0, 'offices');
+    buy(s, 'glow', 20, T0);
+    return advance(s, T0 + 2 * MIN).sold.glow ?? 0;
+  };
+  assert.ok(run(true) > run(false));
+  assert.ok(HQ_BOOST > 1);
+});
+
+test('the ledger keeps where Dorras came from and went, a minute\'s run of one kind on one line', () => {
+  const s = newSave(T0);
+  s.dorras = 10000;
+  buy(s, 'glow', 10, T0);
+  buy(s, 'gummies', 10, T0);
+  assert.equal(s.ledger.totals.bought, 10 * askPrice('glow', T0) + 10 * askPrice('gummies', T0));
+  assert.equal(s.ledger.recent.length, 1);
+  buyUnit(s, 0);
+  assert.equal(s.ledger.totals.property, UNIT_PRICES[0]);
+  advance(s, T0 + 2 * MIN);
+  assert.ok((s.ledger.totals.sales ?? 0) > 0);
+  assert.ok(s.ledger.recent.length <= 30);
+});
+
+test('property, goods and worth add up', () => {
+  const s = rich();
+  buildUnit(s, 0, 'warehouse');
+  assert.equal(propertyValue(s), UNIT_PRICES.reduce((a, b) => a + b, 0) + UNIT_KINDS.warehouse.cost);
+  buy(s, 'tees', 10, T0, 'u0');
+  assert.equal(goodsValue(s, T0), 10 * marketPrice('tees', T0));
+  assert.equal(worth(s, T0), s.dorras + s.till + goodsValue(s, T0) + propertyValue(s));
+});
+
+test('loans: a flat fee, limited by your property, paid back from takings and by hand', () => {
+  const s = newSave(T0);
+  assert.equal(loanLimit(s), 1000);
+  assert.deepEqual(borrow(s, 5000), { ok: false, why: 'max' });
+  assert.ok(borrow(s, 1000).ok);
+  assert.equal(s.dorras, 600 + 1000);
+  assert.equal(s.loan!.owed, Math.ceil(1000 * (1 + LOAN_FEE)));
+  assert.deepEqual(borrow(s, 100), { ok: false, why: 'busy' });
+  // A share of the takings goes to the loan
+  buy(s, 'glow', 20, T0);
+  const owed = s.loan!.owed;
+  const sales = advance(s, T0 + 3 * MIN);
+  assert.ok(sales.repaid > 0 && s.loan!.owed === owed - sales.repaid);
+  assert.ok(sales.repaid <= Math.ceil(sales.earned * LOAN_SHARE / (1 - LOAN_SHARE)) + 1);
+  // Paid off by hand
+  s.dorras = 5000;
+  assert.ok(repay(s, 99999).ok);
+  assert.equal(s.loan, null);
+  assert.deepEqual(repay(s, 1), { ok: false, why: 'place' });
+  // More property, more credit
+  const big = tycoon();
+  assert.ok(loanLimit(big) > 10000 && loanLimit(big) <= 50000);
+});
+
+test('cleanSave keeps Phase 4 within the rules', () => {
+  const s = cleanSave(
+    {
+      lots: [{ kind: 'superstore', slots: [{ good: 'tees', qty: 9999 }] }, { kind: 'casino' }, { kind: 'factory', stock: { cotton: 1e9 }, job: { make: 'tees', left: 9999 } }],
+      ledger: { totals: { sales: 50, bogus: 9, staff: -4 }, recent: [{ t: T0 + 1e9, e: 'sales', n: 5 }, { e: 'nope' }] },
+      loan: { owed: 1e12, borrowed: 1e12 },
+    },
+    T0
+  );
+  assert.equal(s.lots[0]!.slots[0].qty, SUPERSTORE.capacity);
+  assert.equal(s.lots[1]!.kind, null);
+  assert.ok(total(s.lots[2]!.stock) <= FACTORY.cap && s.lots[2]!.job!.left <= FACTORY.jobMax);
+  assert.deepEqual(s.ledger.totals, { sales: 50 });
+  assert.equal(s.ledger.recent.length, 1);
+  assert.ok(s.ledger.recent[0].t <= T0);
+  assert.ok(s.loan!.owed <= 50000 * 1.1 && s.loan!.borrowed <= 50000);
 });
