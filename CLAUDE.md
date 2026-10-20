@@ -500,6 +500,31 @@ it and has been retired completely. Build only on what's here.
 - While driving, `.city.is-driving` hides the walk and combat HUD, and the header says "Driving · <car>" (`head.ts`). A gun is holstered on getting in.
 - Check the pedals, stick, prompt and readout at phone widths, upright and on their side: nothing may overlap.
 
+## Street races (3D walk mode)
+
+- The rules are `races.ts` (DOM-free, tested): four courses of checkpoints
+  on the roads from the start line on the south bank avenue in front of
+  South 4 (`RACES`, `START_LINE`, `RACE_SITE`, `CHECK_R`, `START_R`,
+  `COUNTDOWN`, `startRun` / `stepRun` / `finishRun`, `prizeFor`,
+  `clockOf`). `racesite.ts` draws the gantry, the banner (fixed copy only:
+  START / FINISH, DEGEN CITY RACES), the chequered line, the race board and
+  the checkpoint markers (beacons style; `show(next, after)`); its
+  footprints are `RACE_SOLIDS` in `solids.ts`.
+- `race-ui.ts` (markup `data-races`, `data-race-hud`, `data-race-result` in
+  `CityMap.astro`, styles in `src/styles/races.css`) is the menu on the gun
+  store's `.shop` panel, the countdown, the HUD and the results card. It
+  opens at the board on foot or from your car when it's stopped at the
+  line, needs your car within `START_R`, freezes the car (`drive.frozen`)
+  during the countdown, steps the run from the car every frame and pays
+  through `finishRun()` + `commit()`. Getting out, leaving walk mode, Esc
+  or Quit abandons a run. While a run is on, `data-race` on the city root
+  makes the header read "Racing · <race>". Prizes are Dorras only; best
+  times are kept per race in the save.
+- `drive.update()` returns the tiles moved; walk mode counts them on the
+  save every ten tiles (`counters.driven`, for missions and badges).
+- `?spawn=x,z[,yaw]` in the address starts walk mode at a spot, and `?fps`
+  shows where Degen stands: use them to check a place on a real device.
+
 ## Target practice (3D walk mode)
 
 - Solo shooting practice. Only the player's Degen carries a gun, picked up
