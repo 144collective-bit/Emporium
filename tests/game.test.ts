@@ -112,7 +112,7 @@ test('the catalog: starters are free and level 1, everything else costs Dorras a
 
 test('a fresh save starts at level 1 with the starters and nothing bought', () => {
   const s = fresh();
-  assert.equal(s.v, 5);
+  assert.equal(s.v, 6);
   assert.equal(level(s), 1);
   for (const id of STARTER_CARS) assert.ok(ownsCar(s, id));
   assert.ok(!ownsCar(s, 'super'));
@@ -254,7 +254,7 @@ test('cleanSave carries a Phase 4 save into Phase 5 and keeps everything within 
   delete old.garage;
   delete old.plots;
   const s = cleanSave(old, T0);
-  assert.equal(s.v, 5);
+  assert.equal(s.v, 6);
   assert.equal(s.xp, 0);
   assert.deepEqual(s.garage, { owned: [], mods: {} });
   assert.deepEqual(s.plots, {});

@@ -32,13 +32,17 @@
 import { cleanDesign, type Design } from '../../data/plots';
 import { DOORS, GARAGE_SITE, LOT_SITE, STALL_SPOT, UNIT_SITE } from './solids';
 import type { WeaponId } from './combat-sim';
-import { CARGO as BASE_CARGO, DRIVE, PLAYER_CARS, type PlayerCar } from './mycar';
+import { CARGO as BASE_CARGO, DRIVE, PLAYER_CARS, type PaintId, type PlayerCar } from './mycar';
+import { DEFAULT_KART, KART_SPECS, PLAYER_KARTS, cleanKart, type KartId } from './mykart';
+import { CUPS, type CupId } from './kart-sim';
 import {
   BUILD_COSTS,
   CAR_CATALOG,
   CAR_MOD_IDS,
   GUN_CATALOG,
   GUN_MOD_IDS,
+  KART_CATALOG,
+  KART_MOD_IDS,
   LEVEL_CAPACITY,
   LEVEL_PACE,
   LEVEL_SPEED,
@@ -46,17 +50,20 @@ import {
   MOD_LEVELS,
   NO_CAR_MODS,
   NO_GUN_MODS,
+  NO_KART_MODS,
   PLACE_LEVELS,
   PLOT_DORRAS,
   PLOT_LEVEL,
   PLOT_REFUND,
   STARTER_CARS,
   STARTER_GUNS,
+  STARTER_KARTS,
   UNIT_LEVEL_COSTS,
   WARDROBE_CATALOG,
   WORKSHOP_LEVEL_COSTS,
   XP,
   carStats,
+  kartStats,
   levelFor,
   modCost,
   wardrobeEntry,
@@ -64,6 +71,8 @@ import {
   type CarMods,
   type GunModId,
   type GunMods,
+  type KartModId,
+  type KartMods,
 } from './catalog';
 
 export type ProductId = 'gummies' | 'coffee' | 'glow' | 'tees' | 'sneakers' | 'neon';
@@ -232,6 +241,7 @@ export const ENTRIES = {
   soldBack: { name: 'Sold to the market', in: true },
   borrowed: { name: 'Loans', in: true },
   races: { name: 'Race prizes', in: true },
+  karting: { name: 'Kart prizes', in: true },
   missions: { name: 'Missions', in: true },
   soldLand: { name: 'Plots sold', in: true },
   bought: { name: 'Stock bought', in: false },
@@ -239,6 +249,7 @@ export const ENTRIES = {
   land: { name: 'District plots', in: false },
   upgrades: { name: 'Upgrades', in: false },
   vehicles: { name: 'Cars', in: false },
+  karts: { name: 'Karts', in: false },
   gear: { name: 'Guns', in: false },
   clothes: { name: 'Clothes', in: false },
   staff: { name: 'Staff', in: false },
@@ -286,9 +297,14 @@ export interface Counters {
   built: number;
   upgrades: number;
   missions: number;
+  /** Kart races finished, podiums, wins, and item hits landed on rivals */
+  kartRaces: number;
+  podiums: number;
+  kartWins: number;
+  kartHits: number;
 }
 export type CounterId = keyof Counters;
-export const COUNTER_IDS: CounterId[] = ['sold', 'earned', 'contracts', 'dummies', 'drones', 'goons', 'races', 'pars', 'records', 'driven', 'bought', 'land', 'built', 'upgrades', 'missions'];
+export const COUNTER_IDS: CounterId[] = ['sold', 'earned', 'contracts', 'dummies', 'drones', 'goons', 'races', 'pars', 'records', 'driven', 'bought', 'land', 'built', 'upgrades', 'missions', 'kartRaces', 'podiums', 'kartWins', 'kartHits'];
 export const newCounters = (): Counters => Object.fromEntries(COUNTER_IDS.map((k) => [k, 0])) as unknown as Counters;
 /** A district plot you own, bought with Dorras */
 export interface OwnedPlot {
@@ -304,7 +320,7 @@ export interface ActiveMission {
   at: number;
 }
 export interface TycoonSave {
-  v: 5;
+  v: 6;
   dorras: number;
   till: number;
   /** When it was last brought up to date (ms since 1970) */
@@ -339,6 +355,8 @@ export interface TycoonSave {
   levels: Partial<Record<PlaceId, number>>;
   /** Best time (seconds) for each race you've finished */
   races: Record<string, number>;
+  /** The kart park: your pick, the karts you've bought and their mods, and your time-trial bests per course */
+  karts: { model: KartId; paint: PaintId; owned: KartId[]; mods: Partial<Record<KartId, KartMods>>; records: Record<string, number> };
   missions: { active: ActiveMission[]; done: string[] };
   /** Badges (achievements) earned */
   badges: string[];
@@ -347,7 +365,7 @@ export interface TycoonSave {
 
 export function newSave(now: number): TycoonSave {
   return {
-    v: 5,
+    v: 6,
     dorras: START_DORRAS,
     till: 0,
     at: now,
@@ -370,6 +388,7 @@ export function newSave(now: number): TycoonSave {
     plots: {},
     levels: {},
     races: {},
+    karts: { model: DEFAULT_KART.model, paint: DEFAULT_KART.paint, owned: [], mods: {}, records: {} },
     missions: { active: [], done: [] },
     badges: [],
     counters: newCounters(),
@@ -445,7 +464,7 @@ export function cleanSave(raw: unknown, now: number): TycoonSave {
   }
   const mul = (p: PlaceId) => LEVEL_CAPACITY[(levels[p] ?? 1) - 1];
   const s: TycoonSave = {
-    v: 5,
+    v: 6,
     dorras: Math.floor(num(o.dorras, 0, 1e12, START_DORRAS)),
     till: Math.floor(num(o.till, 0, 1e12, 0)),
     at: num(o.at, 0, now, now),
@@ -479,6 +498,7 @@ export function cleanSave(raw: unknown, now: number): TycoonSave {
     plots: {},
     levels,
     races: {},
+    karts: { model: DEFAULT_KART.model, paint: DEFAULT_KART.paint, owned: [], mods: {}, records: {} },
     missions: { active: [], done: [] },
     badges: [],
     counters: newCounters(),
@@ -1242,6 +1262,11 @@ export function propertyValue(s: TycoonSave) {
 export function gearValue(s: TycoonSave) {
   let v = 0;
   for (const id of s.garage.owned) v += CAR_CATALOG[id]?.price ?? 0;
+  for (const id of s.karts.owned) v += KART_CATALOG[id]?.price ?? 0;
+  for (const id of PLAYER_KARTS) {
+    const m = s.karts.mods[id];
+    if (m) for (const k of KART_MOD_IDS) for (let l = 1; l <= m[k]; l++) v += kartModCost(id, k, { ...m, [k]: l - 1 }) ?? 0;
+  }
   for (const id of PLAYER_CARS) {
     const m = carMods(s, id);
     for (const k of CAR_MOD_IDS) for (let l = 1; l <= m[k]; l++) v += modCost(CAR_CATALOG[id].price, l) ?? 0;
@@ -1369,6 +1394,86 @@ export function modCar(s: TycoonSave, id: PlayerCar, mod: CarModId): BuyResult {
 }
 /** A car's handling and cargo with its mods on */
 export const carStatsOf = (s: TycoonSave, id: PlayerCar) => carStats(DRIVE[id], CARGO[id] ?? CARGO.hatch, carMods(s, id));
+
+/* ---------- The kart park: karts, their mods, and the races' prizes ---------- */
+
+export const ownsKart = (s: TycoonSave, id: KartId) => STARTER_KARTS.includes(id) || s.karts.owned.includes(id);
+export const ownedKarts = (s: TycoonSave) => PLAYER_KARTS.filter((id) => ownsKart(s, id));
+export function buyKart(s: TycoonSave, id: KartId): BuyResult {
+  const k = KART_CATALOG[id];
+  if (!k) return { ok: false, why: 'place' };
+  if (ownsKart(s, id)) return { ok: false, why: 'owned' };
+  const r = pay(s, k.price, k.level, 'karts');
+  if (!r.ok) return r;
+  s.karts.owned.push(id);
+  count(s, 'bought', 1);
+  return r;
+}
+export const kartMods = (s: TycoonSave, id: KartId): KartMods => ({ ...NO_KART_MODS, ...(s.karts.mods[id] ?? {}) });
+/** What the next level of a kart mod costs (null at the top) */
+export const kartModCost = (id: KartId, mod: KartModId, mods: KartMods) => modCost(Math.max(KART_CATALOG[id].price, 6000), mods[mod] + 1);
+export function modKart(s: TycoonSave, id: KartId, mod: KartModId): BuyResult {
+  if (!ownsKart(s, id) || !KART_MOD_IDS.includes(mod)) return { ok: false, why: 'place' };
+  const mods = kartMods(s, id);
+  const cost = kartModCost(id, mod, mods);
+  if (cost === null) return { ok: false, why: 'max' };
+  const r = pay(s, cost, 1, 'upgrades');
+  if (!r.ok) return r;
+  mods[mod] += 1;
+  s.karts.mods[id] = mods;
+  count(s, 'upgrades', 1);
+  addXp(s, XP.upgrade);
+  return r;
+}
+/** A kart's handling with its mods on (0..1 numbers; kart-sim.ts tune() turns them into speeds) */
+export const kartStatsOf = (s: TycoonSave, id: KartId) => kartStats(KART_SPECS[id], kartMods(s, id));
+/** Pick the kart (and paint) you race in; only one you own */
+export function pickKart(s: TycoonSave, model: KartId, paint: PaintId) {
+  const k = cleanKart({ model, paint });
+  if (!ownsKart(s, k.model)) return false;
+  s.karts.model = k.model;
+  s.karts.paint = k.paint;
+  return true;
+}
+export interface KartResult {
+  place: number;
+  prize: number;
+  xp: number;
+  seconds: number;
+  /** A time trial's new best */
+  record: boolean;
+  /** Levels gained */
+  levels: number;
+}
+/**
+ * A finished kart race or time trial: pay the place (a cup's prizes), count it, keep a
+ * time trial's best; `hits` are the item hits landed this race (counted for missions).
+ */
+export function finishKartRace(s: TycoonSave, r: { course: string; cup: string; place: number; seconds: number; hits?: number }): KartResult {
+  const seconds = Math.round(r.seconds * 100) / 100;
+  const time = r.cup === 'time';
+  const c = time ? null : CUPS[r.cup as CupId];
+  const place = Math.max(1, Math.min(8, Math.round(r.place)));
+  const prize = c ? (c.prizes[place - 1] ?? 0) : 0;
+  let record = false;
+  if (time) {
+    const best = s.karts.records[r.course];
+    record = best === undefined || seconds < best;
+    if (record) s.karts.records[r.course] = seconds;
+  }
+  if (prize > 0) {
+    s.dorras += prize;
+    book(s, 'karting', prize);
+    count(s, 'earned', prize);
+  }
+  count(s, 'kartRaces', 1);
+  if (c && place <= 3) count(s, 'podiums', 1);
+  if (c && place === 1) count(s, 'kartWins', 1);
+  if (r.hits) count(s, 'kartHits', r.hits);
+  const xp = XP.kartFinish + (c && place <= 3 ? XP.kartPodium : 0) + (c && place === 1 ? XP.kartWin : 0) + (record ? XP.kartRecord : 0);
+  const levels = addXp(s, xp);
+  return { place, prize, xp, seconds, record, levels };
+}
 
 /* ---------- The Armoury: guns and their mods ---------- */
 
@@ -1510,6 +1615,19 @@ function cleanGame(s: TycoonSave, o: Record<string, unknown>, now: number) {
     s.plots[id] = { design, paid: Math.round(num(r.paid, 0, 1e9, PLOT_DORRAS)), at: num(r.at, 0, now, now) };
   }
   for (const [id, t] of Object.entries(obj(o.races))) if (/^[a-z0-9-]{1,32}$/.test(id) && typeof t === 'number' && Number.isFinite(t) && t > 0) s.races[id] = Math.round(t * 100) / 100;
+  // The kart park (v6)
+  const kt = obj(o.karts);
+  s.karts.owned = [...new Set((Array.isArray(kt.owned) ? kt.owned : []).filter((id): id is KartId => PLAYER_KARTS.includes(id as KartId) && !STARTER_KARTS.includes(id as KartId)))];
+  for (const id of PLAYER_KARTS) {
+    const m = obj(obj(kt.mods)[id]);
+    const mods = { ...NO_KART_MODS };
+    for (const k of KART_MOD_IDS) mods[k] = Math.round(num(m[k], 0, MOD_LEVELS, 0));
+    if (KART_MOD_IDS.some((k) => mods[k] > 0) && (STARTER_KARTS.includes(id) || s.karts.owned.includes(id))) s.karts.mods[id] = mods;
+  }
+  const pick = cleanKart({ model: kt.model, paint: kt.paint });
+  s.karts.model = STARTER_KARTS.includes(pick.model) || s.karts.owned.includes(pick.model) ? pick.model : DEFAULT_KART.model;
+  s.karts.paint = pick.paint;
+  for (const [id, t] of Object.entries(obj(kt.records))) if (/^[a-z0-9-]{1,32}$/.test(id) && typeof t === 'number' && Number.isFinite(t) && t > 0) s.karts.records[id] = Math.round(t * 100) / 100;
   const m = obj(o.missions);
   const slug = (v: unknown): v is string => typeof v === 'string' && /^[a-z0-9-]{1,40}$/.test(v);
   s.missions.done = [...new Set((Array.isArray(m.done) ? m.done : []).filter(slug))];
