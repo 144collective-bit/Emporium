@@ -8,12 +8,13 @@
  * - The starter tier is free: the five original cars, the four original
  *   guns (still unlocked by score) and the whole original wardrobe.
  * - Everything new costs Dorras and needs a level. Upgrades ("mods") come
- *   in three levels each and cost more on dearer things.
+ *   in three levels each and cost more on dearer things; `applyGunMods()`
+ *   turns a gun's mods into its rules for the combat sim.
  * - XP comes from playing: sales, contracts, races, missions, takedowns.
  *   Nothing here is bought with real money or tied to the token.
  */
 import type { BuildingType } from '../../data/plots';
-import type { WeaponId } from './combat-sim';
+import type { Weapon, WeaponId } from './combat-sim';
 import type { PlayerCar } from './mycar';
 
 /* ---------- XP, levels and titles ---------- */
@@ -168,6 +169,29 @@ export const GUN_MOD_IDS = Object.keys(GUN_MODS) as GunModId[];
 export const NO_GUN_MODS: GunMods = { barrel: 0, mag: 0, grip: 0 };
 /** How much each mod level changes a gun */
 export const GUN_MOD_EFFECT = { damage: 0.1, range: 0.08, mag: 0.25, reserve: 0.25, spread: 0.15, kick: 0.12, reload: 0.1 } as const;
+/** Tidy a modded number (25 x 1.2 is 30, not 30.000000000000004) */
+const tidy = (v: number) => Math.round(v * 1e6) / 1e6;
+/**
+ * A gun's rules with its mods on: the barrel hits harder and reaches further,
+ * the extended mag holds more (rounded to whole rounds), the grip tightens the
+ * spread, softens the kick and speeds the reload. Pure, so the sim (and a
+ * server) can apply it per player; a gun without mods comes back as it is.
+ */
+export function applyGunMods(w: Weapon, mods: GunMods): Weapon {
+  if (!mods.barrel && !mods.mag && !mods.grip) return w;
+  const E = GUN_MOD_EFFECT;
+  return {
+    ...w,
+    damage: tidy(w.damage * (1 + E.damage * mods.barrel)),
+    range: tidy(w.range * (1 + E.range * mods.barrel)),
+    mag: Math.round(w.mag * (1 + E.mag * mods.mag)),
+    reserve: Math.round(w.reserve * (1 + E.reserve * mods.mag)),
+    spreadHip: tidy(w.spreadHip * (1 - E.spread * mods.grip)),
+    spreadAim: tidy(w.spreadAim * (1 - E.spread * mods.grip)),
+    kick: tidy(w.kick * (1 - E.kick * mods.grip)),
+    reload: tidy(w.reload * (1 - E.reload * mods.grip)),
+  };
+}
 
 /* ---------- Clothes (Drop 001) ---------- */
 

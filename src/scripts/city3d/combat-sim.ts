@@ -9,10 +9,16 @@
  *   score and streaks.
  * - Everything that happens comes out as events (shots, hits, takedowns,
  *   reloads, respawns) for the view to draw and play, or for a server to send.
+ * - Guns fire full auto, one shot a pull, or a burst a pull (the Tri-Tap: three
+ *   rounds at its rate, then a short pause before the next pull can fire).
+ * - Each player's guns can carry the Armoury's mods (catalog.ts): `setMods()`
+ *   stores them and every rule reads the modded gun through `weaponOf()`. The
+ *   server never sets any, so there everything runs on the stock numbers.
  */
 import * as THREE from 'three';
 import { CORE_ROADS, NS_ROADS, design } from './layout';
 import { PRACTICE } from './downtown';
+import { applyGunMods, type GunMods } from './catalog';
 
 export const TICK = 1 / 60;
 
@@ -69,6 +75,8 @@ export const WEAPON_IDS: WeaponId[] = ['rifle', 'smg', 'shotgun', 'dmr', 'revolv
 export const weaponUnlocked = (id: unknown, total: number) => typeof id === 'string' && id in WEAPONS && total >= WEAPONS[id as WeaponId].need;
 /** Seconds after a swap before the new gun can fire (it's being drawn) */
 export const SWAP_TIME = 0.35;
+/** Seconds after a burst's last round before the next pull can fire */
+export const BURST_PAUSE = 0.28;
 /** Phones: snap to a target this close to the crosshair (radians), within this range */
 const ASSIST = { cone: 0.12, range: 38 };
 
@@ -166,6 +174,10 @@ export interface SimPlayer {
   streakT: number;
   /** The trigger was down last tick (semi-auto guns fire once per pull) */
   held: boolean;
+  /** Rounds still to fire in the burst under way (0 between bursts) */
+  burst: number;
+  /** The Armoury's mods on each of this player's guns (none set: the stock gun) */
+  mods: Partial<Record<WeaponId, GunMods>>;
   input: SimInput;
 }
 
@@ -259,22 +271,41 @@ export function createSim(o: SimOptions) {
     return r.intersectSphere(sphere, hitP) ? hitP.distanceTo(r.origin) : null;
   }
 
+  /** Modded guns, worked out once per player and gun and kept until the mods change */
+  const modded = new Map<string, Partial<Record<WeaponId, Weapon>>>();
+  /** The rules of the gun a player carries, with their mods on */
+  function weaponOf(p: SimPlayer): Weapon {
+    const m = p.mods[p.weapon];
+    if (!m || (!m.barrel && !m.mag && !m.grip)) return WEAPONS[p.weapon];
+    let c = modded.get(p.id);
+    if (!c) modded.set(p.id, (c = {}));
+    return c[p.weapon] ?? (c[p.weapon] = applyGunMods(WEAPONS[p.weapon], m));
+  }
+  /** The modded rules of any gun a player owns (equipping and swapping fill its magazine) */
+  function weaponFor(p: SimPlayer, weapon: WeaponId): Weapon {
+    const m = p.mods[weapon];
+    return m ? applyGunMods(WEAPONS[weapon], m) : WEAPONS[weapon];
+  }
+
   function startReload(p: SimPlayer) {
-    const W = WEAPONS[p.weapon];
+    const W = weaponOf(p);
     if (!p.armed || p.reload > 0 || p.mag === W.mag || p.reserve === 0) return;
     p.reload = W.reload;
+    p.burst = 0;
     events.push({ type: 'reload', player: p.id, phase: 'start' });
   }
 
   const hitsOn = new Map<SimTarget, { damage: number; at: THREE.Vector3 }>();
+  /** One shot (every pellet of it); false when the magazine was empty */
   function fire(p: SimPlayer) {
     const inp = p.input;
-    const W = WEAPONS[p.weapon];
+    const W = weaponOf(p);
     if (p.mag === 0) {
       events.push({ type: 'empty', player: p.id });
       p.cooldown = 0.25;
+      p.burst = 0;
       if (p.reserve > 0) startReload(p);
-      return;
+      return false;
     }
     p.mag--;
     p.cooldown += 1 / W.rate;
@@ -321,6 +352,7 @@ export function createSim(o: SimOptions) {
     }
     p.spread = Math.min(W.bloomMax, p.spread + W.bloom);
     if (authority) for (const [t, h] of hitsOn) damage(p, t, h.damage, h.at);
+    return true;
   }
 
   function damage(p: SimPlayer, t: SimTarget, amount: number, at: THREE.Vector3) {
@@ -353,7 +385,7 @@ export function createSim(o: SimOptions) {
       if (t.kind === 'drone' && t.down === 0) dronePose(t.id - firstDrone, poseTime, t);
     }
     for (const p of players.values()) {
-      const W = WEAPONS[p.weapon];
+      const W = weaponOf(p);
       p.cooldown = Math.max(p.cooldown - TICK, -1 / W.rate);
       p.spread = Math.max(0, p.spread - W.bloomDecay * TICK);
       if (p.reload > 0) {
@@ -373,10 +405,17 @@ export function createSim(o: SimOptions) {
           events.push({ type: 'streak-end', player: p.id });
         }
       }
-      if (!p.input.fire) p.cooldown = Math.max(p.cooldown, 0);
-      // Semi-auto guns need the trigger let go between shots
+      // (a burst under way carries on at the gun's rate, trigger or not)
+      if (!p.input.fire && p.burst === 0) p.cooldown = Math.max(p.cooldown, 0);
+      // Semi-auto guns need the trigger let go between shots (and between bursts)
       const pull = p.input.fire && (W.auto || !p.held);
-      if (p.armed && pull && p.cooldown <= 0 && p.reload <= 0) fire(p);
+      if (p.armed && p.cooldown <= 0 && p.reload <= 0) {
+        if (p.burst > 0) {
+          // The rest of the burst; it ends early on an empty magazine, then the pause
+          p.burst = fire(p) && p.mag > 0 ? p.burst - 1 : 0;
+          if (p.burst === 0) p.cooldown = Math.max(p.cooldown, BURST_PAUSE);
+        } else if (pull && fire(p) && (W.burst ?? 1) > 1 && p.mag > 0) p.burst = W.burst! - 1;
+      }
       p.held = p.input.fire;
     }
   }
@@ -390,6 +429,7 @@ export function createSim(o: SimOptions) {
     if (!next) {
       p.input.fire = false;
       p.reload = 0;
+      p.burst = 0;
     }
     events.push({ type: 'armed', player: id, on: next });
   }
@@ -420,6 +460,8 @@ export function createSim(o: SimOptions) {
         streak: 0,
         streakT: 0,
         held: false,
+        burst: 0,
+        mods: {},
         input: { fire: false, aim: false, assist: false, origin: new THREE.Vector3(), dir: new THREE.Vector3(0, 0, -1) },
       };
       players.set(id, p);
@@ -427,6 +469,22 @@ export function createSim(o: SimOptions) {
     },
     removePlayer(id: string) {
       players.delete(id);
+      modded.delete(id);
+    },
+    /**
+     * The Armoury's mods on one of a player's guns (catalog.ts). They change the gun's
+     * rules from the next tick; a magazine already carried keeps its rounds and fills to
+     * the new size on the next reload or at the counter.
+     */
+    setMods(id: string, weapon: WeaponId, mods: GunMods) {
+      const p = player(id);
+      if (!(weapon in WEAPONS)) return;
+      p.mods[weapon] = { ...mods };
+      delete modded.get(id)?.[weapon];
+    },
+    /** The rules of the gun a player carries, with their mods on (what the HUD shows) */
+    weaponOf(id: string) {
+      return weaponOf(player(id));
     },
     /**
      * Take a gun from the Armoury's store counter, full of ammo; every other gun is
@@ -436,7 +494,7 @@ export function createSim(o: SimOptions) {
     equip(id: string, weapon: WeaponId) {
       const p = player(id);
       if (!(weapon in WEAPONS)) return;
-      const W = WEAPONS[weapon];
+      const W = weaponFor(p, weapon);
       p.weapon = weapon;
       p.geared = true;
       p.mag = W.mag;
@@ -445,6 +503,7 @@ export function createSim(o: SimOptions) {
       p.reload = 0;
       p.cooldown = 0;
       p.spread = 0;
+      p.burst = 0;
       events.push({ type: 'gear', player: id, weapon });
       setArmed(id, true);
     },
@@ -457,13 +516,14 @@ export function createSim(o: SimOptions) {
       const p = player(id);
       if (!p.geared || !(weapon in WEAPONS) || weapon === p.weapon) return false;
       p.stash[p.weapon] = [p.mag, p.reserve];
-      const W = WEAPONS[weapon];
+      const W = weaponFor(p, weapon);
       [p.mag, p.reserve] = p.stash[weapon] ?? [W.mag, W.reserve];
       delete p.stash[weapon];
       p.weapon = weapon;
       p.reload = 0;
       p.cooldown = SWAP_TIME;
       p.spread = 0;
+      p.burst = 0;
       p.held = p.input.fire;
       events.push({ type: 'swap', player: id, weapon });
       setArmed(id, true);
@@ -519,6 +579,7 @@ export function createSim(o: SimOptions) {
         delete p.stash[s.weapon];
         p.weapon = s.weapon;
         p.reload = 0;
+        p.burst = 0;
       }
       p.score = s.score;
       p.streak = s.streak;
