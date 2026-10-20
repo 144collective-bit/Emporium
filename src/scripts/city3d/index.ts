@@ -5,7 +5,7 @@
  */
 import * as THREE from 'three';
 import { MapControls } from 'three/addons/controls/MapControls.js';
-import { loadImage, loadTex, updateLights } from './kit';
+import { consolidate, loadImage, loadTex, updateLights } from './kit';
 import { createPost } from './post';
 import { CENTER, buildGround, buildLamps, buildSkyline, buildTrees, puddleMat, scatterOutskirts, waterMat, type Env, type Tick } from './world';
 import { buildLandmarks, type Spot } from './landmarks';
@@ -98,7 +98,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const ticks: Tick[] = [];
   const tick = (f: Tick) => ticks.push(f);
 
-  buildGround(scene, { '0,14': 'paving', '14,14': 'paving', '28,14': 'concrete', '14,28': 'concrete', '28,28': 'concrete' });
+  const { streaks } = buildGround(scene, { '0,14': 'paving', '14,14': 'paving', '28,14': 'concrete', '14,28': 'concrete', '28,28': 'concrete' });
   progress(0.3);
   await nextFrame();
   const { spots, crowd } = buildLandmarks(scene, { degen, logo, tick, low: tier === 'low' });
@@ -165,6 +165,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   camera.position.copy(h0.pos);
   controls.target.copy(h0.target);
   controls.update();
+  // One mesh per material for each landmark and for the city's ground, not one per Batch
+  consolidate([scene, ...spots.map((sp) => sp.group)]);
   renderer.compile(scene, camera);
   progress(1);
 
@@ -699,6 +701,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     waterMat.uniforms.rain.value = s.rain;
     (waterMat.uniforms.sky.value as THREE.Color).copy(scene.background as THREE.Color);
     puddleMat.color.setScalar(s.rain * (0.12 + s.night * 0.6));
+    streaks.visible = s.rain > 0.01;
     // Night glow is kept in proportion to the scene: enough bloom for the neon,
     // not so much that it washes over the buildings. Bloom grows with how much
     // of the screen is lit, so close up (zoomed in, flown to a building, walking)

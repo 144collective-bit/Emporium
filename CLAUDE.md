@@ -36,6 +36,15 @@ it and has been retired completely. Build only on what's here.
   (`city.open()`). The comic page (`/emporium`), the merch store and X /
   Telegram live in the ☰ Menu only. Places not built yet say "coming soon"
   (the plan is `docs/tycoon-plan.md`).
+- **The redesign** (the owner's call): the city is moving from a grid to an
+  organic layout, planned downtown and looser further out (diagonals, varied
+  blocks, walk-only alleys, one big hangout square a block from the
+  Emporium, smaller squares further out). The plan and its phases are
+  `docs/city-plan.md`; keep it up to date, one phase at a time with the
+  owner's sign-off. The street plan as data is `streetplan.ts` (DOM-free:
+  streets as centre lines with a kind and width, crossings, block outlines,
+  plazas; `PLAN`, today `gridPlan()`, tested in `tests/streetplan.test.ts`).
+  Prices of plots and lots don't change in the redesign.
 - **The street plan** is `src/scripts/city3d/layout.ts` (DOM-free; the 3D
   city, the 2D map, the plots and the server all read it). 1 tile is about
   1.8 m and Degen is about one tile tall. Roads are sized for real-proportion
@@ -87,6 +96,19 @@ it and has been retired completely. Build only on what's here.
   loop (each tab switch another) and the frame rate sinks. 120/144 Hz screens
   draw every other refresh (steady 60-72fps), and nothing is drawn while the
   city is scrolled out of view.
+- **Draw calls are the budget.** Build static geometry through a `Batch`
+  (`kit.ts`): plain `toon()` colours (no options) and `neon()` fold into
+  shared materials with the colour per vertex (`sharedFor()`), so a Batch's
+  plain colours are one draw and its neon one per brightness. Never change a
+  plain `toon()` or `neon()` material's colour at runtime (give anything that
+  changes colour its own material, or instance it with `setColorAt`). Many
+  copies of one thing are instanced (trees, lamps, traffic lights, birds,
+  crowds, cars). A moving thing merges its fixed parts (`mergeMeshes()`).
+  A box with side and top materials is `sidesBox()` (two draws, not six).
+  `consolidate()` merges each landmark's Batch meshes per material after the
+  city is built (not for the units, lots and plots, which rebuild theirs).
+  The shadow map is drawn once a frame (`post.ts`), however many passes
+  render the scene. Measure with `?fps` before and after.
 - `?fps` in the address shows a performance readout (`.city-stats`, built in
   `index.ts`): fps, slowest frame, draw calls and triangles per frame, quality
   tier, pixel ratio and any quality stepped down. Use it on real devices

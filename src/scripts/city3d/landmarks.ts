@@ -30,6 +30,7 @@ import {
   rand,
   rng,
   roundRect,
+  sidesBox,
   toon,
 } from './kit';
 import { rifleGeometry } from './guns';
@@ -98,7 +99,7 @@ function cylAt(b: Batch, x: number, y: number, z: number, r: number, h: number, 
 
 /** A box whose four sides share one material and top/bottom another. */
 function walls(x: number, y: number, z: number, w: number, h: number, d: number, side: THREE.Material, top: THREE.Material) {
-  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), [side, side, top, top, side, side]);
+  const m = new THREE.Mesh(sidesBox(w, h, d), [side, top]);
   m.position.set(x + w / 2, y + h / 2, z + d / 2);
   m.castShadow = m.receiveShadow = true;
   return m;

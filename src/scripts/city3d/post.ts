@@ -119,7 +119,11 @@ export function createPost(renderer: THREE.WebGLRenderer, scene: THREE.Scene, ca
   }
 
   const clear = new THREE.Color();
+  // The frame draws the scene more than once (the ink pre-pass, then colour): the shadow map
+  // is drawn once a frame, by the first of them, not again by each
+  renderer.shadowMap.autoUpdate = false;
   function render() {
+    renderer.shadowMap.needsUpdate = renderer.shadowMap.enabled;
     ink.uniforms.cameraNear.value = camera.near;
     ink.uniforms.cameraFar.value = camera.far;
 

@@ -90,13 +90,61 @@ const gradient = (() => {
 })();
 
 const toonCache = new Map<string, THREE.MeshToonMaterial>();
-/** A flat cartoon material; same colour returns the same material. */
+/**
+ * A flat cartoon material; same colour returns the same material. Plain ones
+ * (no options) are marked `paint`: a Batch folds them all into one shared
+ * material, the colour carried per vertex, so a building's colours cost one
+ * draw call, not one each. Never change a plain one's colour at runtime.
+ */
 export function toon(color: THREE.ColorRepresentation, opts: THREE.MeshToonMaterialParameters = {}) {
   const key = Object.keys(opts).length ? '' : new THREE.Color(color).getHexString();
   if (key && toonCache.has(key)) return toonCache.get(key)!;
   const m = new THREE.MeshToonMaterial({ color, gradientMap: gradient, ...opts });
-  if (key) toonCache.set(key, m);
+  if (key) {
+    m.userData.paint = true;
+    toonCache.set(key, m);
+  }
   return m;
+}
+
+/* ---------- Shared materials (colours per vertex) ---------- */
+
+let paintShared: THREE.MeshToonMaterial | null = null;
+/** The one toon material every Batch's plain colours share */
+export function paintMat() {
+  return (paintShared ??= new THREE.MeshToonMaterial({ color: '#ffffff', gradientMap: gradient, vertexColors: true }));
+}
+const neonShared = new Map<string, THREE.MeshBasicMaterial>();
+/** Neon with the same brightness by day and night (and flicker) shares one material; its colour is per vertex */
+function neonMat(day: number, night: number, flicker: number) {
+  const key = `${day}|${night}|${flicker}`;
+  let m = neonShared.get(key);
+  if (!m) neonShared.set(key, (m = lit(new THREE.MeshBasicMaterial({ color: '#ffffff', vertexColors: true, toneMapped: true }), day, night, flicker)));
+  return m;
+}
+
+/** Paint every vertex of a geometry one colour (for the shared materials) */
+export function paintVertices(g: THREE.BufferGeometry, c: THREE.Color) {
+  const n = g.attributes.position.count;
+  const a = new Float32Array(n * 3);
+  for (let i = 0; i < a.length; i += 3) {
+    a[i] = c.r;
+    a[i + 1] = c.g;
+    a[i + 2] = c.b;
+  }
+  g.setAttribute('color', new THREE.BufferAttribute(a, 3));
+  return g;
+}
+
+/**
+ * The shared material a material folds into in a Batch, and the colour its
+ * vertices take (null if it keeps its own: textures, glass, special shaders).
+ */
+export function sharedFor(mat: THREE.Material): { mat: THREE.Material; color: THREE.Color } | null {
+  const u = mat.userData as { paint?: boolean; neon?: { color: THREE.Color; day: number; night: number; flicker: number } };
+  if (u.paint) return { mat: paintMat(), color: (mat as THREE.MeshToonMaterial).color };
+  if (u.neon) return { mat: neonMat(u.neon.day, u.neon.night, u.neon.flicker), color: u.neon.color };
+  return null;
 }
 
 /* ---------- Lights that follow the time of day ---------- */
@@ -144,7 +192,10 @@ export function updateLights(night: number, t: number) {
 
 /** Unlit glowing colour (neon, bulbs). */
 export function neon(color: THREE.ColorRepresentation, day = 1, night = 2.4, flicker = 0) {
-  return lit(new THREE.MeshBasicMaterial({ color, toneMapped: true }), day, night, flicker);
+  const m = lit(new THREE.MeshBasicMaterial({ color, toneMapped: true }), day, night, flicker);
+  // Its colour before the time of day scales it, for a Batch's shared neon (sharedFor)
+  m.userData.neon = { color: new THREE.Color(color), day, night, flicker };
+  return m;
 }
 
 /* ---------- Canvas textures ---------- */
@@ -321,7 +372,12 @@ function ensureUv(g: THREE.BufferGeometry) {
   return g;
 }
 
-/** Collects static geometry per material and merges it into one mesh each. */
+/**
+ * Collects static geometry per material and merges it into one mesh each.
+ * Plain colours (`toon()` without options) and `neon()` fold into shared
+ * materials with the colour per vertex (`sharedFor()`), so all of a Batch's
+ * plain colours are one draw call, and its neon one per brightness.
+ */
 export class Batch {
   private parts = new Map<THREE.Material, THREE.BufferGeometry[]>();
 
@@ -329,8 +385,29 @@ export class Batch {
     const g = ensureIndexed(ensureUv(geo));
     g.clearGroups();
     for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'uv'].includes(k)) g.deleteAttribute(k);
+    const shared = sharedFor(mat);
+    if (shared) {
+      paintVertices(g, shared.color);
+      mat = shared.mat;
+    }
     if (!this.parts.has(mat)) this.parts.set(mat, []);
     this.parts.get(mat)!.push(g);
+    return this;
+  }
+
+  /** A mesh as it stands (its own transform), split by its material groups */
+  mesh(m: THREE.Mesh) {
+    m.updateMatrix();
+    const mats = Array.isArray(m.material) ? m.material : [m.material];
+    const src = m.geometry.index ? m.geometry : ensureIndexed(m.geometry.clone());
+    // One material covers the whole geometry, whatever groups it has (a BoxGeometry has six)
+    const groups = Array.isArray(m.material) && src.groups.length ? src.groups : [{ start: 0, count: src.index!.count, materialIndex: 0 }];
+    for (const gr of groups) {
+      const g = src.clone();
+      g.setIndex(Array.from(src.index!.array.slice(gr.start, gr.start + gr.count)));
+      g.applyMatrix4(m.matrix);
+      this.add(g, mats[gr.materialIndex ?? 0]);
+    }
     return this;
   }
 
@@ -347,11 +424,85 @@ export class Batch {
       mesh.receiveShadow = receive;
       mesh.matrixAutoUpdate = false;
       mesh.updateMatrix();
+      mesh.userData.batched = true;
       parent.add(mesh);
     }
     this.parts.clear();
     return parent;
   }
+}
+
+/**
+ * Merge the meshes Batches built (`userData.batched`) that share a parent, a
+ * material, a layer and shadow flags: a landmark made from several Batches
+ * ends up with one mesh per material, not one per Batch. Only for parts of
+ * the city that are never rebuilt (the units, lots and plots rebuild theirs).
+ */
+export function consolidate(parents: THREE.Object3D[]) {
+  for (const parent of parents) {
+    const sets = new Map<string, THREE.Mesh[]>();
+    for (const c of parent.children) {
+      const m = c as THREE.Mesh;
+      if (!m.isMesh || !m.userData.batched || Array.isArray(m.material)) continue;
+      const key = `${m.material.uuid}|${m.layers.mask}|${m.castShadow}|${m.receiveShadow}|${m.visible}`;
+      if (!sets.has(key)) sets.set(key, []);
+      sets.get(key)!.push(m);
+    }
+    for (const list of sets.values()) {
+      if (list.length < 2) continue;
+      const geos = list.map((m) => {
+        m.updateMatrix();
+        return m.geometry.clone().applyMatrix4(m.matrix);
+      });
+      const merged = mergeGeometries(geos, false);
+      if (!merged) continue;
+      const first = list[0];
+      const mesh = new THREE.Mesh(merged, first.material);
+      mesh.castShadow = first.castShadow;
+      mesh.receiveShadow = first.receiveShadow;
+      mesh.layers.mask = first.layers.mask;
+      mesh.matrixAutoUpdate = false;
+      mesh.userData.batched = true;
+      for (const m of list) {
+        parent.remove(m);
+        m.geometry.dispose();
+      }
+      for (const g of geos) g.dispose();
+      parent.add(mesh);
+    }
+  }
+}
+
+/**
+ * A box in two material groups: the faces in `first` (BoxGeometry's order:
+ * 0 +x, 1 -x, 2 +y, 3 -y, 4 +z, 5 -z) in group 0, the rest in group 1. Two
+ * draw calls instead of BoxGeometry's six. By default the four sides, then
+ * the top and bottom.
+ */
+export function sidesBox(w: number, h: number, d: number, first = [0, 1, 4, 5]) {
+  const g = new THREE.BoxGeometry(w, h, d);
+  const idx = g.index!.array;
+  const face = (k: number) => Array.from(idx.slice(k * 6, k * 6 + 6));
+  const rest = [0, 1, 2, 3, 4, 5].filter((k) => !first.includes(k));
+  g.setIndex([...first.flatMap(face), ...rest.flatMap(face)]);
+  g.clearGroups();
+  g.addGroup(0, first.length * 6, 0);
+  g.addGroup(first.length * 6, rest.length * 6, 1);
+  return g;
+}
+
+/**
+ * Merge meshes (each with its own transform) into a group of as few meshes as
+ * a Batch makes: one for all plain colours, one per other material. For the
+ * parts of something that moves as one (a boat, a drone's body).
+ */
+export function mergeMeshes(meshes: THREE.Mesh[], opts: { cast?: boolean; receive?: boolean } = {}) {
+  const b = new Batch();
+  for (const m of meshes) b.mesh(m);
+  const g = new THREE.Group();
+  b.build(g, opts);
+  for (const c of g.children) c.matrixAutoUpdate = true;
+  return g;
 }
 
 /** A flat plane facing +z (or rotated), for signs and decals. */

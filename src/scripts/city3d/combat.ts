@@ -14,7 +14,7 @@
  *   (or in your player profile when online).
  */
 import * as THREE from 'three';
-import { FONT_DISPLAY, PAL, canvasTex, fx, glowTex, neon, toon } from './kit';
+import { FONT_DISPLAY, PAL, canvasTex, fx, glowTex, mergeMeshes, neon, sidesBox, toon } from './kit';
 import { type Tick } from './world';
 import { DRONES, DUMMIES, WEAPONS, WEAPON_IDS, createSim, dronePose, weaponUnlocked, type SimEvent, type WeaponId } from './combat-sim';
 import type { ClientMsg, MeRow, NetEvent } from '../net/protocol';
@@ -326,7 +326,6 @@ export function createCombat(d: CombatDeps) {
     barShow: number;
     flash: number;
     hinge?: THREE.Group;
-    rotors?: THREE.Mesh[];
     light?: THREE.Mesh;
     fall?: { vy: number; spin: number } | null;
   }
@@ -335,19 +334,20 @@ export function createCombat(d: CombatDeps) {
   const edge = toon('#a87c44');
   const standGeo = new THREE.CylinderGeometry(0.26, 0.3, 0.06, 16).translate(0, 0.03, 0);
   const postGeo = new THREE.BoxGeometry(0.06, 0.32, 0.06).translate(0, 0.2, 0);
-  const cardGeo = new THREE.BoxGeometry(0.62, 0.93, 0.03).translate(0, 0.465, 0);
+  // The card's printed faces (front and back) in one group, its edges in the other: two draw calls
+  const cardGeo = sidesBox(0.62, 0.93, 0.03, [4, 5]).translate(0, 0.465, 0);
   for (const [x, z, ry] of DUMMIES) {
     const g = new THREE.Group();
     g.position.set(x, d.ground, z);
     g.rotation.y = ry;
-    const stand = new THREE.Mesh(standGeo, toon('#3a3466'));
-    const post = new THREE.Mesh(postGeo, toon('#6b4a2e'));
+    // The stand and post are one mesh; the card swings on its hinge
+    const base = mergeMeshes([new THREE.Mesh(standGeo, toon('#3a3466')), new THREE.Mesh(postGeo, toon('#6b4a2e'))], { cast: true, receive: true });
     const hinge = new THREE.Group();
     hinge.position.y = 0.34;
-    const card = new THREE.Mesh(cardGeo, [edge, edge, edge, edge, cardboard, cardboard]);
+    const card = new THREE.Mesh(cardGeo, [cardboard, edge]);
     hinge.add(card);
-    for (const m of [stand, post, card]) m.castShadow = m.receiveShadow = true;
-    g.add(stand, post, hinge);
+    card.castShadow = card.receiveShadow = true;
+    g.add(base, hinge);
     const { bar, fill } = healthBar();
     bar.position.set(x, d.ground + 1.55, z);
     scene.add(g, bar);
@@ -357,12 +357,14 @@ export function createCombat(d: CombatDeps) {
   const dronePod = new THREE.SphereGeometry(0.08, 10, 8).translate(0, -0.09, 0.12);
   const droneArm = new THREE.BoxGeometry(0.34, 0.04, 0.05);
   const droneRotor = new THREE.BoxGeometry(0.34, 0.01, 0.04);
+  const droneDisc = new THREE.CircleGeometry(0.17, 16).rotateX(-Math.PI / 2);
+  // Spinning rotors read as blurred discs, all four one see-through mesh
+  const blur = new THREE.MeshBasicMaterial({ color: '#14121f', transparent: true, opacity: 0.5, depthWrite: false });
   for (let i = 0; i < DRONES.length; i++) {
     const g = new THREE.Group();
-    const body = new THREE.Mesh(droneBody, toon('#4f5d31'));
-    const pod = new THREE.Mesh(dronePod, toon(PAL.ink));
-    g.add(body, pod);
-    const rotors: THREE.Mesh[] = [];
+    // The body, pod, arms and rotor hubs are one mesh
+    const parts = [new THREE.Mesh(droneBody, toon('#4f5d31')), new THREE.Mesh(dronePod, toon(PAL.ink))];
+    const discs: THREE.Mesh[] = [];
     for (const [ax, az] of [
       [1, 1],
       [-1, 1],
@@ -372,18 +374,21 @@ export function createCombat(d: CombatDeps) {
       const arm = new THREE.Mesh(droneArm, toon('#2b2a33'));
       arm.position.set(ax * 0.22, 0.02, az * 0.22);
       arm.rotation.y = -Math.atan2(az, ax);
-      const rotor = new THREE.Mesh(droneRotor, toon('#14121f'));
-      rotor.position.set(ax * 0.36, 0.07, az * 0.36);
-      rotors.push(rotor);
-      g.add(arm, rotor);
+      const hub = new THREE.Mesh(droneRotor, toon('#14121f'));
+      hub.position.set(ax * 0.36, 0.07, az * 0.36);
+      hub.scale.set(0.2, 1, 1);
+      const disc = new THREE.Mesh(droneDisc, blur);
+      disc.position.set(ax * 0.36, 0.075, az * 0.36);
+      parts.push(arm, hub);
+      discs.push(disc);
     }
+    g.add(mergeMeshes(parts, { cast: true, receive: false }), fx(mergeMeshes(discs, { cast: false, receive: false })));
     const light = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), neon('#ff2a2a', 0.6, 2.2));
     light.position.set(0, 0.09, -0.18);
     g.add(fx(light));
-    body.castShadow = pod.castShadow = true;
     const { bar, fill } = healthBar();
     scene.add(g, bar);
-    looks.push({ g, bar, fill, barShow: 0, flash: 0, rotors, light, fall: null });
+    looks.push({ g, bar, fill, barShow: 0, flash: 0, light, fall: null });
   }
 
   /* ----- HUD ----- */
@@ -684,7 +689,6 @@ export function createCombat(d: CombatDeps) {
           g.rotation.set(0, pose.heading, Math.sin(now * 2 + i) * 0.05);
           if (L.flash > 0) g.position.x += Math.sin(t * 80) * 0.04;
         } else g.visible = false; // already down when we joined (no fall to show)
-        for (const r of L.rotors!) r.rotation.y = t * 40;
         L.light!.visible = Math.sin(t * 6 + i) > 0;
       }
       L.flash = Math.max(0, L.flash - dt);

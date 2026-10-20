@@ -13,7 +13,7 @@
  */
 import * as THREE from 'three';
 import { DISTRICTS } from '../../data/plots';
-import { Batch, PAL, canvasTex, facadeMat, fx, glowMat, glowTex, lit, neon, rand, toon } from './kit';
+import { Batch, PAL, canvasTex, facadeMat, fx, glowMat, glowTex, lit, neon, rand, sidesBox, toon } from './kit';
 import { BLOCKS, BS, CENTER_XZ, CITY_EXT, CORE_ROADS, EW_ROADS, EXT, EXTRA_LOTS, GARAGE, LANE, MARKET, UNITS, MEDIAN, NS_ROADS, RIVER, SOUTH_ROAD, WALK_W, type Road } from './layout';
 
 export { BLOCKS, BS, CORE_ROADS, EW_ROADS, EXT, NS_ROADS, RIVER, SOUTH_ROAD, WALK_W, type Road };
@@ -253,23 +253,24 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, keyof typeo
     scene.add(im);
   }
 
-  // Neon streaks on wet asphalt (only visible in the rain, at dusk and night)
-  const streaks = new THREE.Group();
-  const sg = new THREE.PlaneGeometry(0.35, 2.4);
+  // Neon streaks on wet asphalt (only visible in the rain, at dusk and night): one mesh,
+  // shown only while it's raining (index.ts hides it when the sheen is off)
+  const sb = new Batch();
   for (let i = 0; i < 70; i++) {
     const alongX = rand() < 0.5;
     const r = CORE_ROADS[Math.floor(rand() * CORE_ROADS.length)];
     const s = rand() * (BLOCKS[2] + BS);
-    const mesh = new THREE.Mesh(sg, puddleMat);
-    mesh.rotation.x = -Math.PI / 2;
     const across = r - LANE + rand() * LANE * 2;
-    if (alongX) {
-      mesh.rotation.z = Math.PI / 2;
-      mesh.position.set(s, 0.05, across);
-    } else mesh.position.set(across, 0.05, s);
-    streaks.add(mesh);
+    const g = new THREE.PlaneGeometry(0.35, 2.4).rotateX(-Math.PI / 2);
+    if (alongX) g.rotateY(Math.PI / 2).translate(s, 0.05, across);
+    else g.translate(across, 0.05, s);
+    sb.add(g, puddleMat);
   }
+  const streaks = new THREE.Group();
+  sb.build(streaks, { cast: false, receive: false });
+  streaks.name = 'streaks';
   scene.add(fx(streaks));
+  return { streaks };
 }
 
 /* ---------- Outskirts ---------- */
@@ -314,7 +315,9 @@ export function buildSkyline(scene: THREE.Scene, count: number, tick: (f: Tick) 
   const roof = toon('#1a1636', { fog: false });
   // Out past the world's edge, the haze would swallow them whole: they stand clear of it, a skyline on the horizon
   for (const m of mats) m.fog = false;
-  const beacons: THREE.Mesh[] = [];
+  // Merged: one mesh per facade, one for the roofs and masts, one for the beacons
+  const b = new Batch();
+  const lights = new Batch();
   const beaconMat = neon('#ff3b3b', 0.4, 3);
   for (let i = 0; i < count; i++) {
     const a = (i / count) * Math.PI * 2 + rand() * 0.1;
@@ -326,22 +329,21 @@ export function buildSkyline(scene: THREE.Scene, count: number, tick: (f: Tick) 
     const w = 7 + rand() * 9;
     const h = 22 + rand() * 50;
     const mat = mats[i % mats.length];
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, w), [mat, mat, roof, roof, mat, mat]);
+    const mesh = new THREE.Mesh(sidesBox(w, h, w), [mat, roof]);
     mesh.position.set(x, h / 2, z);
     mesh.rotation.y = rand() * Math.PI;
-    scene.add(mesh);
+    b.mesh(mesh);
     if (h > 45) {
-      const b = new THREE.Mesh(new THREE.SphereGeometry(0.6, 8, 6), beaconMat);
-      b.position.set(x, h + 2.6, z);
-      const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 2.6), roof);
-      mast.position.set(x, h + 1.3, z);
-      scene.add(mast, fx(b));
-      beacons.push(b);
+      lights.add(new THREE.SphereGeometry(0.6, 8, 6).translate(x, h + 2.6, z), beaconMat);
+      b.add(new THREE.CylinderGeometry(0.14, 0.14, 2.6).translate(x, h + 1.3, z), roof);
     }
   }
+  b.build(scene, { cast: false, receive: false });
+  const beacons = new THREE.Group();
+  lights.build(beacons, { cast: false, receive: false });
+  scene.add(fx(beacons));
   tick(({ t }) => {
-    const on = Math.sin(t * 3) > 0.3;
-    for (const b of beacons) b.visible = on;
+    beacons.visible = Math.sin(t * 3) > 0.3;
   });
 }
 

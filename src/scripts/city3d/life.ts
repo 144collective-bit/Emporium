@@ -4,7 +4,7 @@
  * Vehicles and people are instanced, so a crowd costs a handful of draw calls.
  */
 import * as THREE from 'three';
-import { FONT_DISPLAY, PAL, canvasTex, fx, glowTex, lit, neon, rand, toon } from './kit';
+import { FONT_DISPLAY, PAL, canvasTex, fx, glowTex, lit, mergeMeshes, neon, rand, toon } from './kit';
 import { BLOCKS, BS, CENTER, CORE_ROADS, DISTRICTS, EW_ROADS, NS_ROADS, RIVER, SLAB, type Tick } from './world';
 import { CITY_EXT, laneCentres } from './layout';
 import { CARS, PAINTS, carGeometry, carMaterials, type CarId } from './cars';
@@ -138,12 +138,14 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
   const beamMat = lit(new THREE.PointsMaterial({ color: '#fff0c0', map: glowTex, size: 1.6, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }), 0, 0.28);
   scene.add(fx(new THREE.Points(beamGeo, beamMat)));
 
-  // Traffic lights
-  const lightMats: Record<string, THREE.MeshBasicMaterial> = {};
+  // Traffic lights: poles, housings and lamps are three instanced meshes, the lamps lit per instance
   const colors = { r: '#ff2b2b', y: '#ffc23d', g: '#2bff88' };
-  const poleMat = toon('#1b1830');
-  const housing = toon('#14121f');
   const unit = new THREE.BoxGeometry(1, 1, 1);
+  const poleMats: THREE.Matrix4[] = [];
+  const boxMats: THREE.Matrix4[] = [];
+  const lamps: { m: THREE.Matrix4; ix: number; axis: Axis; c: 'r' | 'y' | 'g' }[] = [];
+  const tq = new THREE.Quaternion();
+  const yAxis = new THREE.Vector3(0, 1, 0);
   let ix = 0;
   // Every crossing is tracked so cars give way; only the core city's have lights
   // hx / hz: half the width of the north-south / east-west road meeting there
@@ -167,28 +169,33 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
         ['z', cx + ax, cz + az, 0],
       ];
       for (const [axis, x, z, ry] of approaches) {
-        const pole = new THREE.Mesh(unit, poleMat);
-        pole.scale.set(0.07, 1.9, 0.07);
-        pole.position.set(x, SLAB + 0.95, z);
-        pole.castShadow = true;
-        const box = new THREE.Mesh(unit, housing);
-        box.scale.set(0.2, 0.55, 0.16);
-        box.position.set(x, SLAB + 1.75, z);
-        box.rotation.y = ry;
-        scene.add(pole, box);
+        tq.setFromAxisAngle(yAxis, ry);
+        poleMats.push(new THREE.Matrix4().compose(new THREE.Vector3(x, SLAB + 0.95, z), tq, new THREE.Vector3(0.07, 1.9, 0.07)));
+        boxMats.push(new THREE.Matrix4().compose(new THREE.Vector3(x, SLAB + 1.75, z), tq, new THREE.Vector3(0.2, 0.55, 0.16)));
         (['r', 'y', 'g'] as const).forEach((c, k) => {
-          const key = `${ix}${axis}${c}`;
-          lightMats[key] ??= new THREE.MeshBasicMaterial({ color: colors[c] });
-          const lamp = new THREE.Mesh(new THREE.CircleGeometry(0.06, 12), lightMats[key]);
-          const off = new THREE.Vector3(0, 0, 0.085).applyAxisAngle(new THREE.Vector3(0, 1, 0), ry);
-          lamp.position.set(x + off.x, SLAB + 1.92 - k * 0.17, z + off.z);
-          lamp.rotation.y = ry;
-          scene.add(fx(lamp));
+          const off = new THREE.Vector3(0, 0, 0.085).applyAxisAngle(yAxis, ry);
+          lamps.push({ m: new THREE.Matrix4().compose(new THREE.Vector3(x + off.x, SLAB + 1.92 - k * 0.17, z + off.z), tq, new THREE.Vector3(1, 1, 1)), ix, axis, c });
         });
       }
       ix++;
     }
   }
+  const instanced = (geo: THREE.BufferGeometry, mat: THREE.Material, list: THREE.Matrix4[]) => {
+    const im = new THREE.InstancedMesh(geo, mat, list.length);
+    list.forEach((m, i) => im.setMatrixAt(i, m));
+    return im;
+  };
+  const poles = instanced(unit, toon('#1b1830'), poleMats);
+  poles.castShadow = true;
+  const boxes = instanced(unit, toon('#14121f'), boxMats);
+  const lampMesh = instanced(
+    new THREE.CircleGeometry(0.06, 12),
+    new THREE.MeshBasicMaterial({ color: '#ffffff' }),
+    lamps.map((l) => l.m)
+  );
+  lamps.forEach((_, i) => lampMesh.setColorAt(i, new THREE.Color(1, 1, 1)));
+  scene.add(poles, boxes, fx(lampMesh));
+  const lampCol = new THREE.Color();
   const base = { r: new THREE.Color(colors.r), y: new THREE.Color(colors.y), g: new THREE.Color(colors.g) };
   const occupied = new Set<string>();
 
@@ -202,13 +209,11 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
 
   tick(({ t, dt, night }) => {
     // Lamp states
-    for (const c of crossings) {
-      if (!c.lit) continue;
-      for (const axis of ['x', 'z'] as const) {
-        const s = lightState(c.ix, axis, t);
-        for (const k of ['r', 'y', 'g'] as const) lightMats[`${c.ix}${axis}${k}`].color.copy(base[k]).multiplyScalar(s === k ? 1.6 + night * 1.6 : 0.12);
-      }
-    }
+    lamps.forEach((l, i) => {
+      const s = lightState(l.ix, l.axis, t);
+      lampMesh.setColorAt(i, lampCol.copy(base[l.c]).multiplyScalar(s === l.c ? 1.6 + night * 1.6 : 0.12));
+    });
+    lampMesh.instanceColor!.needsUpdate = true;
 
     // Drive: follow the car ahead, stop for red
     // Crossings with a vehicle still inside them, by the axis it travels on
@@ -445,8 +450,8 @@ function buildBoats(scene: THREE.Scene, tick: (f: Tick) => void) {
     const wake = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 0.9), wakeMat);
     wake.rotation.x = -Math.PI / 2;
     wake.position.set(-1.4, 0.03, 0);
-    g.add(hull, bow, cabin, fx(lamp), fx(wake));
-    hull.castShadow = cabin.castShadow = true;
+    // The hull, bow and cabin are one mesh
+    g.add(mergeMeshes([hull, bow, cabin], { cast: true, receive: true }), fx(lamp), fx(wake));
     if (v < 0) g.rotation.y = Math.PI;
     scene.add(g);
     boats.push({ g, x: CENTER.x + (i - 1) * 25, z, v, ph: rand() * 6 });
@@ -463,12 +468,13 @@ function buildBoats(scene: THREE.Scene, tick: (f: Tick) => void) {
 }
 
 function buildDrones(scene: THREE.Scene, tick: (f: Tick) => void) {
-  const drones: { g: THREE.Group; rotors: THREE.Mesh[]; ph: number; r: number; h: number; blink: THREE.Mesh }[] = [];
+  const drones: { g: THREE.Group; ph: number; r: number; h: number; blink: THREE.Mesh }[] = [];
+  // Spinning rotors read as blurred discs: one see-through mesh for all four
+  const blur = new THREE.MeshBasicMaterial({ color: '#c9c4e6', transparent: true, opacity: 0.45, depthWrite: false });
   for (let i = 0; i < 4; i++) {
     const g = new THREE.Group();
-    const body = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.08, 0.34), toon('#1b1830'));
-    g.add(body);
-    const rotors: THREE.Mesh[] = [];
+    const parts = [new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.08, 0.34), toon('#1b1830'))];
+    const discs: THREE.Mesh[] = [];
     for (const [x, z] of [
       [0.22, 0.22],
       [-0.22, 0.22],
@@ -477,16 +483,17 @@ function buildDrones(scene: THREE.Scene, tick: (f: Tick) => void) {
     ]) {
       const arm = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.03, 0.04), toon('#1b1830'));
       arm.position.set(x, 0.04, z);
-      const rotor = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.01, 0.03), toon('#c9c4e6'));
-      rotor.position.set(x, 0.07, z);
-      g.add(arm, rotor);
-      rotors.push(rotor);
+      parts.push(arm);
+      const disc = new THREE.Mesh(new THREE.CircleGeometry(0.12, 14).rotateX(-Math.PI / 2), blur);
+      disc.position.set(x, 0.07, z);
+      discs.push(disc);
     }
+    g.add(mergeMeshes(parts), fx(mergeMeshes(discs, { cast: false, receive: false })));
     const blink = new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 6), neon(i % 2 ? '#2bff88' : '#ff2b2b', 1.5, 4));
     blink.position.y = -0.06;
     g.add(fx(blink));
     scene.add(g);
-    drones.push({ g, rotors, ph: i * 1.7, r: 6 + i * 3.2, h: 6 + (i % 3) * 1.6, blink });
+    drones.push({ g, ph: i * 1.7, r: 6 + i * 3.2, h: 6 + (i % 3) * 1.6, blink });
   }
   tick(({ t }) => {
     for (const d of drones) {
@@ -494,7 +501,6 @@ function buildDrones(scene: THREE.Scene, tick: (f: Tick) => void) {
       d.g.position.set(CENTER.x + Math.sin(a) * d.r * 1.4, d.h + Math.sin(t * 0.9 + d.ph) * 0.4, CENTER.z + Math.sin(a * 2) * d.r * 0.7);
       d.g.rotation.y = -a;
       d.g.rotation.z = Math.cos(a) * 0.12;
-      for (const r of d.rotors) r.rotation.y += 0.9;
       d.blink.visible = Math.sin(t * 6 + d.ph) > 0.2;
     }
   });
@@ -550,36 +556,38 @@ function buildBirds(scene: THREE.Scene, tick: (f: Tick) => void) {
   wing.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 0.32, 0, -0.08, 0, 0, -0.16], 3));
   wing.computeVertexNormals();
   const mat = toon('#14121f', { side: THREE.DoubleSide });
-  const flocks: { g: THREE.Group; wings: THREE.Mesh[][]; ph: number }[] = [];
-  for (let f = 0; f < 2; f++) {
-    const g = new THREE.Group();
-    const wings: THREE.Mesh[][] = [];
-    for (let i = 0; i < 7; i++) {
-      const bird = new THREE.Group();
-      const k = Math.ceil(i / 2) * (i % 2 ? 1 : -1);
-      bird.position.set(-Math.abs(k) * 0.7, 0, k * 0.6);
-      const l = new THREE.Mesh(wing, mat);
-      const r = new THREE.Mesh(wing, mat);
-      r.scale.x = -1;
-      bird.add(l, r);
-      bird.rotation.y = Math.PI / 2;
-      g.add(bird);
-      wings.push([l, r]);
-    }
-    scene.add(g);
-    flocks.push({ g, wings, ph: f * 40 });
-  }
+  // Two flocks of seven, every wing one instance of a single mesh
+  const FLOCKS = 2;
+  const BIRDS = 7;
+  const wings = new THREE.InstancedMesh(wing, mat, FLOCKS * BIRDS * 2);
+  wings.frustumCulled = false;
+  wings.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  scene.add(wings);
+  const bird = new THREE.Object3D();
+  const w = new THREE.Object3D();
+  bird.add(w);
   tick(({ t, day }) => {
-    for (const fl of flocks) {
-      fl.g.visible = day > 0.35;
-      const k = ((t * 1.4 + fl.ph) % 120) - 60;
-      fl.g.position.set(CENTER.x + k, 12 + fl.ph * 0.05, CENTER.z - 18 + fl.ph * 0.6 + Math.sin(t * 0.2) * 3);
-      fl.wings.forEach(([l, r], i) => {
+    wings.visible = day > 0.35;
+    if (!wings.visible) return;
+    let n = 0;
+    for (let f = 0; f < FLOCKS; f++) {
+      const ph = f * 40;
+      const k0 = ((t * 1.4 + ph) % 120) - 60;
+      const [fx0, fy, fz] = [CENTER.x + k0, 12 + ph * 0.05, CENTER.z - 18 + ph * 0.6 + Math.sin(t * 0.2) * 3];
+      for (let i = 0; i < BIRDS; i++) {
+        const k = Math.ceil(i / 2) * (i % 2 ? 1 : -1);
+        bird.position.set(fx0 - Math.abs(k) * 0.7, fy, fz + k * 0.6);
+        bird.rotation.set(0, Math.PI / 2, 0);
         const a = Math.sin(t * 9 + i) * 0.7;
-        l.rotation.z = a;
-        r.rotation.z = -a;
-      });
+        for (const side of [1, -1]) {
+          w.scale.x = side;
+          w.rotation.z = a * side;
+          bird.updateMatrixWorld(true);
+          wings.setMatrixAt(n++, w.matrixWorld);
+        }
+      }
     }
+    wings.instanceMatrix.needsUpdate = true;
   });
 }
 
