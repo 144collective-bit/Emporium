@@ -1,1 +1,477 @@
-/* missions: the city's game (see global.css for the shared panel styles) */
+/* ==========================================================================
+   Missions, levels and badges (missions-ui.ts): the level pill in the mode
+   header, the Signal tower's mission board, the walk HUD's mission tracker,
+   the level-up and badge pops, and the Profile tab's badges. The shared looks
+   (.head-pop, .market-row, .stall-bar, .biz-label) are in global.css.
+   ========================================================================== */
+
+/* ---------- The level pill: "Lv 7" over its XP bar, by the Dorras readout ---------- */
+.city-head .level-pop {
+  display: none;
+}
+.city[data-view="3d"]:not([data-mode="build"]) .city-head .level-pop {
+  display: block;
+}
+.city-head .level-pop > summary {
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 11px;
+}
+.level-tag {
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: 0.08em;
+}
+.level-bar {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-width: 30px;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: #ffffff1f;
+}
+.level-bar::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(var(--v) * 100%);
+  border-radius: 2px;
+  background: var(--pulse);
+}
+/* Its card: level, title, XP to go, badges (the Settings and Menu cards' look) */
+.city-head .level-panel {
+  min-width: 240px;
+}
+.level-body {
+  display: grid;
+  gap: 8px;
+}
+.level-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+}
+.level-title {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+  background: var(--pulse-text);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.level-xp,
+.level-togo {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--p-cyan);
+}
+.level-togo {
+  display: block;
+}
+.level-badges {
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.level-badges b {
+  color: #fff;
+}
+.level-fine {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+@media (max-width: 640px) {
+  .city-head .level-pop > summary {
+    height: 32px;
+    padding: 0 9px;
+    gap: 3px;
+  }
+  /* Phones walking: the first row is the title and the switch; the Profile tab has your level */
+  .city[data-view="3d"][data-mode="walk"] .city-head .level-pop {
+    display: none;
+  }
+  .level-tag {
+    font-size: 10.5px;
+  }
+  .level-bar {
+    min-width: 26px;
+  }
+}
+/* The narrowest phones: tighter, like the Dorras readout, so the mode title keeps its room */
+@media (max-width: 380px) {
+  .city-head .level-pop > summary {
+    padding: 0 7px;
+  }
+  .level-tag {
+    letter-spacing: 0.02em;
+  }
+}
+
+/* ---------- The mission board, at the end of the Signal tower's panel ---------- */
+.mission-board {
+  display: grid;
+  gap: 8px;
+  padding-top: 10px;
+  margin-top: 4px;
+  border-top: 1px solid var(--line);
+}
+.mission-row .market-top b {
+  white-space: normal;
+}
+.mission-reward {
+  flex: none;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 15px;
+}
+.mission-xp {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--p-cyan);
+}
+/* Ready to claim */
+.mission-row.is-done {
+  border-color: #2bff8855;
+  box-shadow: 0 0 18px -10px #2bff88;
+}
+.mission-row.is-locked {
+  opacity: 0.6;
+}
+.mission-why {
+  color: var(--text-2);
+}
+.market-btns [data-claim] {
+  border-color: #0000;
+  background:
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
+  color: #fff;
+}
+.market-btns [data-claim]:not(:disabled) {
+  box-shadow: 0 0 16px -6px #2bff88;
+}
+/* Tiers above your level and the missions done fold up */
+.mission-fold summary {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  cursor: pointer;
+}
+.mission-fold summary:hover {
+  color: var(--text-2);
+}
+.mission-fold[open] summary {
+  margin-bottom: 6px;
+}
+.mission-done-list {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.mission-done-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+.mission-done-list .mission-reward {
+  font-size: 13px;
+}
+
+/* ---------- The walk HUD's tracker: your missions on the go, under the header on the left ---------- */
+.mission-tracker {
+  position: absolute;
+  top: calc(var(--head-h) + 12px);
+  left: 16px;
+  z-index: 4;
+  width: 236px;
+  max-width: calc(100% - 32px);
+}
+.mission-tracker[hidden] {
+  display: none;
+}
+.mission-tracker-pill {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 11px 0 9px;
+  border: 1px solid #0000;
+  border-radius: 999px;
+  background:
+    linear-gradient(#0b0a12e0, #0b0a12e0) padding-box,
+    var(--pulse) border-box;
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.mission-tracker-pill svg {
+  color: var(--p-cyan);
+}
+.mission-tracker.is-open .mission-tracker-pill {
+  background:
+    var(--pulse-wash) padding-box,
+    linear-gradient(#14102a, #14102a) padding-box,
+    var(--pulse) border-box;
+}
+.mission-tracker-list {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.mission-tracker-list li {
+  display: grid;
+  gap: 5px;
+  padding: 6px 10px 7px;
+  border: 1px solid #0000;
+  border-radius: 8px;
+  background:
+    linear-gradient(#0b0a12d9, #0b0a12d9) padding-box,
+    var(--pulse-line) border-box;
+}
+.mt-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  line-height: 1.2;
+}
+.mt-top b {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 700;
+  color: #fff;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mt-top small {
+  flex: none;
+  font-size: 9.5px;
+  color: var(--muted);
+}
+.mission-tracker-list li.is-done .mt-top small {
+  color: #2bff88;
+}
+.mission-tracker-list li.is-done .stall-bar::before {
+  background: #2bff88;
+}
+/* Phones, upright or on their side: a pill with the count; a tap opens the list under it.
+   Out of the way while a panel or card is open, and while driving (the speed and Get out
+   take the top corners on touch screens). */
+@media (max-width: 640px), (pointer: coarse) and (max-height: 500px) {
+  .mission-tracker {
+    top: calc(var(--head-h) + 8px);
+    left: 12px;
+    width: auto;
+  }
+  .mission-tracker-pill {
+    display: inline-flex;
+  }
+  .mission-tracker-list {
+    display: none;
+    width: 220px;
+    max-width: calc(100vw - 24px);
+    margin-top: 6px;
+  }
+  .mission-tracker.is-open .mission-tracker-list {
+    display: grid;
+  }
+  .city.has-panel .mission-tracker,
+  .city.is-shopping .mission-tracker {
+    display: none;
+  }
+}
+/* On its side the screen is short: the list opens beside the pill, clear of the stick below */
+@media (pointer: coarse) and (max-height: 500px) {
+  .mission-tracker {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .mission-tracker[hidden] {
+    display: none;
+  }
+  .mission-tracker-list {
+    margin-top: 0;
+  }
+}
+@media (pointer: coarse) {
+  .city.is-driving .mission-tracker {
+    display: none;
+  }
+}
+
+/* ---------- Pops: a level-up, a badge (the combat call-outs' look, under the header) ---------- */
+.mission-pops {
+  position: absolute;
+  top: calc(var(--head-h) + 14px);
+  left: 50%;
+  z-index: 8;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  max-width: calc(100% - 32px);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+/* Walking, the economy's toast sits under the header too: the pops go under it */
+.city[data-mode="walk"] .mission-pops {
+  top: calc(var(--head-h) + 64px);
+}
+.mission-pop {
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  padding: 9px 20px 10px;
+  border: 1px solid #0000;
+  border-radius: 14px;
+  background:
+    linear-gradient(#0b0a12e6, #0b0a12e6) padding-box,
+    var(--pulse) border-box;
+  box-shadow: 0 18px 50px -20px #000, 0 0 40px -14px #8000ffa6;
+  text-align: center;
+  animation: mission-pop 2.5s ease-out forwards;
+}
+.mission-pop b {
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  background: var(--pulse-text);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 2px 0 #05050a) drop-shadow(0 0 10px #ff2fb966);
+}
+.mission-pop.is-badge b {
+  font-size: 24px;
+}
+.mission-pop span {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--p-cyan);
+}
+@keyframes mission-pop {
+  0% { opacity: 0; transform: scale(1.4); }
+  10% { opacity: 1; transform: scale(0.96); }
+  18% { transform: scale(1); }
+  82% { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: translateY(-10px); }
+}
+@media (max-width: 640px) {
+  .mission-pop b {
+    font-size: 24px;
+  }
+  .mission-pop.is-badge b {
+    font-size: 20px;
+  }
+  .mission-pop span {
+    font-size: 9.5px;
+  }
+}
+
+/* ---------- The Profile tab: level, XP and badges ---------- */
+.walk-badges {
+  display: grid;
+  gap: 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.walk-badges .walk-skins-head b {
+  color: #fff;
+}
+.badge-list {
+  display: grid;
+  gap: 4px;
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.badge-list li {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 1px 8px;
+  align-items: center;
+  padding: 6px 8px;
+  border: 1px solid #ffffff14;
+  border-radius: 8px;
+  background: #ffffff06;
+}
+.badge-list li b {
+  font-size: 12.5px;
+  color: #fff;
+}
+.badge-list li small {
+  grid-column: 2;
+  font-size: 10.5px;
+  line-height: 1.35;
+  color: var(--muted);
+}
+/* The badge mark: a little medal, lit once it's earned */
+.badge-mark {
+  grid-row: 1 / 3;
+  width: 20px;
+  height: 20px;
+  border: 1px solid #0000;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 45%, #fff 0 2.5px, #0000 3px),
+    linear-gradient(#14102a, #14102a) padding-box,
+    var(--pulse) border-box;
+  box-shadow: 0 0 10px -3px #00eaff;
+}
+.badge-list li.is-locked {
+  opacity: 0.45;
+}
+.badge-list li.is-locked .badge-mark {
+  background:
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    linear-gradient(#ffffff3a, #ffffff3a) border-box;
+  box-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mission-pop {
+    animation: none;
+  }
+}
