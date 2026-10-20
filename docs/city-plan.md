@@ -28,9 +28,10 @@ and where each phase stands. Keep it up to date.
   DOM-free): streets as centre lines with a kind (`street`, `avenue`,
   `alley`) and a width, the crossings where they meet (with or without
   lights), blocks as outlines with what stands on them, and plazas.
-  `PLAN` is what the city is built from; `gridPlan()` is today's grid.
-  Traffic, pedestrians, collisions, the 2D map, the plots and the server
-  move over to reading it.
+  `PLAN` (`cityPlan()`) is what the city is built from; `gridPlan()` is the
+  plain grid. Downtown's layout is `downtown.ts`; traffic follows
+  `routes.ts`; pedestrians, walking, driving, the 2D map and collisions read
+  the plan's block outlines.
 - **Merged as it's built.** Plain colours share one material with the colour
   per vertex, neon shares one per brightness, and a building's parts merge
   into as few meshes as possible (`Batch`, `mergeMeshes()`, `consolidate()`
@@ -63,10 +64,30 @@ Checked with `?fps` at every step (and on a real phone):
    - Result (desktop / phone tier, the `?fps` readout): draw calls per frame
      about 1,830 / 1,030 before, about 725 / 575 after; triangles about
      1.2M / 0.54M before, about 1.0M / 0.54M after. No visible change.
-2. **Downtown.** The diagonals, varied blocks, tight buildings and walk-only
-   alleys; the hangout square a block from the Emporium; the landmarks
-   re-seated on the new blocks; traffic, pedestrians and collisions on the
-   new streets; the 2D map in step.
+2. **Downtown** (built).
+   - Downtown grows to 0-60 inside the ring, with cross streets at 17 and 43
+     and three diagonals from the ring's corners (north-west, north-east,
+     south-west), cutting those corner blocks into triangles: three pocket
+     parks and three of infill.
+   - The landmarks re-seated on 9 x 9 lots (`SEATS`), two to a block in the
+     north, west and east blocks, the Emporium on the centre block fronting
+     the square, the Armoury in the south-east. The Post office and Drop 001
+     front courtyard lanes.
+   - Tight infill round them: 40 buildings with shopfronts, awnings and neon,
+     whole floors, roofs with plant; walk-only alleys with bollards; the GM
+     water tower on a roof. Built from six facade and three shopfront
+     materials (UVs in world units), merged into a handful of draws.
+   - The hangout square on the south block: stage and screen facing south,
+     dance floor, benches, kiosks, fountain, planters, string lights, a crowd.
+   - Traffic on routes with turns, down the diagonals and back, three-phase
+     lights where a diagonal comes in; pedestrians round the block outlines;
+     walking, driving and collisions on the new slabs.
+   - The 2D map in step (a wider view of the bigger downtown).
+   - Result (desktop / phone tier, the `?fps` readout at the home view): draw
+     calls about 725 / 575 before, about 620 / 570 after (infill walls share
+     one atlas material, one neon, one set of string-light points; phones get
+     a smaller crowd on the square); triangles about 1.0M / 0.54M before,
+     about 0.95M / 0.54M after.
 3. **The outer districts.** Gently bending streets, irregular and more
    spacious blocks, the smaller squares and pocket parks, the waterfront
    promenade; the plots and the Dorras lots re-cut to their blocks (same

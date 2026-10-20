@@ -1140,7 +1140,8 @@ body.is-walking .nav {
 }
 .city-map {
   display: block;
-  width: clamp(2080px, 200vw, 3930px);
+  /* The map's viewBox is 6480 wide (city.ts VIEW): 1:1 at most, about half that on phones */
+  width: clamp(3430px, 330vw, 6480px);
   height: auto;
   -webkit-user-select: none;
   user-select: none;

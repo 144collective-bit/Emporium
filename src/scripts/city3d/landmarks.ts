@@ -5,9 +5,9 @@
  *
  * Everything here is drawn on the landmarks' original grid (core blocks at
  * 0-9, 11-20 and 22-31). buildLandmarks() moves each landmark whole onto its
- * block on today's wider streets (layout.ts `designShift`): its meshes, lamps,
- * trees, people and spot. Anything a tick places or compares by position
- * (walker checks, the post office's paper) goes through `design()` too.
+ * lot downtown (layout.ts `SEATS` / `seat()`): its meshes, lamps, trees,
+ * people and spot. Anything a tick places or compares by position (walker
+ * checks, the post office's paper) goes through `design()` too.
  */
 import * as THREE from 'three';
 import type { SpotId } from '../../lib/city';
@@ -38,7 +38,7 @@ import { parkedCars } from './cars';
 import { PLAYER, SOLDIER, attentionPose, createCrowd, createDegen, dancePose, lookPose, marchPose, newPose, type Outfit } from './character';
 import { walker } from './life';
 import { SLAB as S, addLamp, addTree, placedMark, shiftPlaced, waterMat, type Tick } from './world';
-import { design, designShift } from './layout';
+import { design, seat } from './layout';
 
 export interface Spot {
   id: SpotId;
@@ -2283,124 +2283,6 @@ function armoury(scene: THREE.Scene, ctx: LandmarkCtx) {
   return sp;
 }
 
-/* ---------- Decoration blocks ---------- */
-
-function park(scene: THREE.Scene, crowd: Idle[]) {
-  const b = new Batch();
-  // Water tower
-  const legTop = S + 4.2;
-  const v = toon('#3a3466');
-  const legs: [number, number][] = [
-    [1.8, 1.8],
-    [3.4, 1.8],
-    [3.4, 3.4],
-    [1.8, 3.4],
-  ];
-  for (const [x, z] of legs) beam(b, V(x, S, z), V(2.6 + (x - 2.6) * 0.6, legTop, 2.6 + (z - 2.6) * 0.6), 0.1, v);
-  for (const yy of [1.5, 3.0]) {
-    for (let k = 0; k < 4; k++) {
-      const [ax, az] = legs[k];
-      const [bx, bz] = legs[(k + 1) % 4];
-      const f = 1 - (yy / 4.2) * 0.4;
-      beam(b, V(2.6 + (ax - 2.6) * f, S + yy, 2.6 + (az - 2.6) * f), V(2.6 + (bx - 2.6) * f, S + yy, 2.6 + (bz - 2.6) * f), 0.05, v);
-    }
-  }
-  const gm = canvasTex(1024, 256, (c) => {
-    c.fillStyle = '#5d4f9a';
-    c.fillRect(0, 0, 1024, 256);
-    c.strokeStyle = 'rgba(0,0,0,.25)';
-    c.lineWidth = 4;
-    for (let x = 0; x < 1024; x += 64) {
-      c.beginPath();
-      c.moveTo(x, 0);
-      c.lineTo(x, 256);
-      c.stroke();
-    }
-    c.font = `900 170px ${FONT_DISPLAY}`;
-    c.textAlign = 'center';
-    c.textBaseline = 'middle';
-    c.lineWidth = 16;
-    c.strokeStyle = PAL.ink;
-    for (const x of [128, 640]) {
-      c.strokeText('GM', x, 136);
-      c.fillStyle = PAL.pink;
-      c.fillText('GM', x, 136);
-    }
-  });
-  const tank = new THREE.Mesh(new THREE.CylinderGeometry(1.05, 1.05, 1.7, 28), [new THREE.MeshToonMaterial({ map: gm }), toon('#41377a'), toon('#41377a')]);
-  tank.position.set(2.6, legTop + 0.85, 2.6);
-  tank.rotation.y = -Math.PI / 4;
-  tank.castShadow = true;
-  scene.add(tank);
-  const cone = new THREE.ConeGeometry(1.15, 0.8, 28);
-  cone.translate(2.6, legTop + 1.7 + 0.4, 2.6);
-  b.add(cone, toon('#41377a'));
-
-  // Basketball court with hoops
-  const court = canvasTex(512, 768, (c) => {
-    c.fillStyle = '#b4513a';
-    c.fillRect(0, 0, 512, 768);
-    c.strokeStyle = '#f3e9dc';
-    c.lineWidth = 8;
-    c.strokeRect(20, 20, 472, 728);
-    c.beginPath();
-    c.moveTo(20, 384);
-    c.lineTo(492, 384);
-    c.stroke();
-    c.beginPath();
-    c.arc(256, 384, 60, 0, Math.PI * 2);
-    c.stroke();
-    c.strokeRect(176, 20, 160, 150);
-    c.strokeRect(176, 598, 160, 150);
-  });
-  const ct = plane(2.8, 4.0, new THREE.MeshToonMaterial({ map: court }));
-  ct.rotation.x = -Math.PI / 2;
-  ct.position.set(6.6, S + 0.01, 6.5);
-  ct.receiveShadow = true;
-  scene.add(ct);
-  for (const [z, d] of [
-    [4.4, 1],
-    [8.6, -1],
-  ]) {
-    b.box(6.55, S, z - 0.05, 0.1, 1.5, 0.1, toon('#1b1830'));
-    b.box(6.2, S + 1.4, z + d * 0.1 - 0.03, 0.8, 0.5, 0.06, toon('#f3f2f7'));
-    const rim = new THREE.TorusGeometry(0.16, 0.025, 6, 16);
-    rim.rotateX(Math.PI / 2);
-    rim.translate(6.6, S + 1.45, z + d * 0.32);
-    b.add(rim, toon('#ff6a2f'));
-  }
-  crowd.push({ x: 6.2, z: 6.0, ry: 0.4 }, { x: 7.0, z: 7.1, ry: Math.PI + 0.3 });
-  for (const [x, z] of [
-    [1.0, 5.4],
-    [1.2, 6.9],
-    [1.6, 8.2],
-    [3.2, 8.3],
-    [4.4, 1.0],
-    [5.8, 1.1],
-    [7.3, 1.0],
-    [8.2, 2.4],
-    [8.3, 3.7],
-    [3.9, 4.6],
-    [4.4, 7.0],
-  ])
-    addTree(x, z);
-  b.box(3.6, S, 5.9, 0.3, 0.22, 1.0, toon('#7a4fb0'));
-  // Two on the bench watching the court, a group chatting on the grass
-  crowd.push({ x: 3.74, z: 6.15, y: S + 0.22, ry: Math.PI / 2, act: 'sit' }, { x: 3.74, z: 6.68, y: S + 0.22, ry: Math.PI / 2, act: 'sit' });
-  for (const [x, z] of [
-    [2.35, 5.95],
-    [2.95, 6.2],
-    [2.55, 6.62],
-  ]) {
-    const cx = 2.62;
-    const cz = 6.26;
-    crowd.push({ x, z, ry: Math.atan2(cx - x, cz - z), act: 'chat' });
-  }
-  b.build(scene);
-  addLamp(4.6, 3.4, 0);
-  addLamp(8.4, 8.4, -Math.PI * 0.75);
-}
-
 /** The apartments: a tower and a lower block with Degen on the billboard. The tower is a place (staff to hire). */
 function apartments(scene: THREE.Scene, ctx: LandmarkCtx) {
   const sp = spot(scene, 'apartments', V(24.4, 3.5, 2.6), 5.5, V(24.4, 8.6, 2.6));
@@ -2477,8 +2359,7 @@ export function buildLandmarks(scene: THREE.Scene, ctx: LandmarkCtx) {
   const crowd: Idle[] = [];
   /** Build a landmark drawn on the old grid in the block at (bx, bz), then move it onto today's block */
   const onBlock = <T,>(bx: number, bz: number, build: () => T): T => {
-    const dx = designShift(bx);
-    const dz = designShift(bz);
+    const [dx, dz] = seat(bx, bz);
     const before = new Set(scene.children);
     const mark = placedMark();
     const people = crowd.length;
@@ -2495,7 +2376,6 @@ export function buildLandmarks(scene: THREE.Scene, ctx: LandmarkCtx) {
     if (sp?.focus && sp.pin) for (const v of [sp.focus, sp.pin]) (v.x += dx), (v.z += dz);
     return made;
   };
-  onBlock(0, 0, () => park(scene, crowd));
   // The Emporium first (the city's sound centres on it)
   const spots = [
     onBlock(11, 11, () => emporium(scene, ctx, crowd)),

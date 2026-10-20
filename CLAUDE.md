@@ -27,8 +27,9 @@ it and has been retired completely. Build only on what's here.
     building flies the camera in and opens a glass panel.
   - **2D** (`src/lib/city.ts`): the isometric SVG map. It's the loading
     poster, the fallback without WebGL, and the "2D map" view.
-  Both layers share the core city's block layout; keep them in step when
-  buildings change. The ring roads and plot districts exist in 3D only. Pin
+  Both layers share downtown's layout (`streetplan.ts`, `downtown.ts`); keep
+  them in step when buildings change. The ring roads and plot districts exist
+  in 3D only (on the 2D map the diagonals simply run on out of town). Pin
   copy and panel copy live in `src/components/CityMap.astro`.
 - **Buildings are places in the city's game** (the owner's call): each opens
   its own panel (a game menu), never the comic page or an outside link. On
@@ -42,22 +43,59 @@ it and has been retired completely. Build only on what's here.
   Emporium, smaller squares further out). The plan and its phases are
   `docs/city-plan.md`; keep it up to date, one phase at a time with the
   owner's sign-off. The street plan as data is `streetplan.ts` (DOM-free:
-  streets as centre lines with a kind and width, crossings, block outlines,
-  plazas; `PLAN`, today `gridPlan()`, tested in `tests/streetplan.test.ts`).
-  Prices of plots and lots don't change in the redesign.
+  streets as centre lines with a kind and width, crossings, block outlines
+  and their slabs (`outset()`, `onSlab()`), plazas; `PLAN` is `cityPlan()`,
+  tested in `tests/streetplan.test.ts`). Phase 2 (downtown) is built; the
+  outer districts are Phase 3. Prices of plots and lots don't change in the
+  redesign.
+- **Downtown** is `downtown.ts` (DOM-free; the 3D city, the 2D map, the plan,
+  collisions and the server read it), drawn by `infill.ts` in 3D and by
+  `downtown()` in `city.ts` on the 2D map:
+  - 0-60 on both axes inside the ring, cut in thirds by the cross streets at
+    17 and 43 (`CORE_ROADS`, lit junctions). Three diagonals (`DIAGONALS`)
+    run in from the ring's north-west, north-east and south-west corners to
+    the cross streets, cutting those corner blocks into triangles
+    (`BLOCKS_DT`): three pocket parks (`PARKS`) and three of infill.
+  - The landmarks keep their 9 x 9 lots (`SEATS` in `layout.ts`): the
+    Emporium on the centre block fronting the south cross street, the Signal
+    tower and the Apartments in the north block, the Post office and the
+    Vault in the west, Drop 001 and the Workshop in the east, the Armoury in
+    the south-east. Every landmark fronts south (+z); the Post office and
+    Drop 001 front walk-only courtyard lanes (`LANES`).
+  - Round them, tight rows of infill (`INFILL`: a shop floor `SHOP_H`, whole
+    floors above, never more than 6.6 up) with walk-only alleys between
+    (`ALLEYS`, two bollards at the mouth: Degen gets through, no car does).
+    Infill walls share six facade and three shopfront materials with UVs in
+    world units; keep new infill going through them.
+  - The hangout square (`SQUARE`) is the whole south block, a block from the
+    Emporium: the stage and big screen at the north end facing south (fixed
+    copy only: DEGEN CITY, GM DEGENS, GAME ON), dance floor, benches, kiosks,
+    a fountain, planters, string lights and a crowd.
+  - The GM water tower stands on an infill roof (`WATER_TOWER`). The
+    target-practice dummies in the old park now stand in the north-west
+    pocket park (`PRACTICE`).
+  - Footprints are `DOWNTOWN_SOLIDS` in `solids.ts`; tested in
+    `tests/downtown.test.ts`.
+- **Traffic** follows `routes.ts` (DOM-free): a route for every lane of the
+  straight roads, and two down each diagonal (in off the ring, out along a
+  cross street, turns rounded off). Junctions where a diagonal comes in run
+  three light phases (x, z, diagonal). Cars follow whoever is ahead going
+  the same way on any route. Pedestrians walk loops round downtown's block
+  outlines and the south row. Tested in `tests/routes.test.ts`.
 - **The street plan** is `src/scripts/city3d/layout.ts` (DOM-free; the 3D
   city, the 2D map, the plots and the server all read it). 1 tile is about
   1.8 m and Degen is about one tile tall. Roads are sized for real-proportion
   cars: lanes 1.7 wide, a 0.8 sidewalk round every block and district.
-  Core streets (`CORE_ROADS`, between the 9 x 9 core blocks at 0, 14 and 28)
-  are 5 wide with one lane each way; the ring and the south bank road are
+  Downtown's cross streets (`CORE_ROADS`, at 17 and 43) and the diagonals
+  are 3.4 wide with one lane each way; the ring and the south bank road are
   9-wide avenues, two lanes each way with a median (`NS_ROADS`, `EW_ROADS`,
-  `laneCentres()`). The landmarks, their collision boxes, doors, dummies and
-  the 2D buildings are still written on the old, tighter drawing grid
-  (blocks at 0, 11, 22) and moved onto today's blocks with `design()` /
-  `designBox()` (in `landmarks.ts`, `onBlock()` does it for each block's
-  scene objects). Keep writing landmark numbers on that grid, and change
-  street sizes only in `layout.ts`.
+  `laneCentres()`). Districts and the extra lots sit on lines centred on
+  downtown's thirds (`BLOCKS`). The landmarks, their collision boxes, doors,
+  dummies and the 2D buildings are still written on the old drawing grid
+  (blocks at 0, 11, 22) and moved onto their lots with `design()` /
+  `designBox()` / `seat()` (`SEATS`; in `landmarks.ts`, `onBlock()` does it
+  for each block's scene objects). Keep writing landmark numbers on that
+  grid, and change street sizes only in `layout.ts`.
 - **The world's size** is in `layout.ts` too:
   - `EXT` (-200 to 240, about 790 m across) is the ground, the river and every road, edge to edge. It's mostly open land, room to grow the city into. Build there only when the owner asks.
   - `WORLD_BOUNDS` is how far you can walk or drive.
@@ -312,7 +350,7 @@ it and has been retired completely. Build only on what's here.
   of the Dorras game; keep real money and game money apart.
 - **Loans and the ledger** are game mechanics with Dorras only: a flat fee,
   no interest rates, savings returns or APY-style wording anywhere.
-- **The Apartments** (the tower on the north-east block, `apartments()` in
+- **The Apartments** (the tower in the north block, east of the Signal tower, `apartments()` in
   `landmarks.ts` and `city.ts`) are a place since Phase 3: spot
   `apartments`, its pin, door (`DOORS`) and panel. The Emporium stays first
   in the 3D `spots` list (the city's sound centres on `spots[0]`).
@@ -603,7 +641,8 @@ it and has been retired completely. Build only on what's here.
   runs only matching files). The "Build site" Action runs them before the
   build: a failing test means no zip.
 - They cover the code that's free of the DOM and scene code: the street plan
-  (`layout.ts`), collision data, doors, the gun counter, the garage and the
+  (`layout.ts`, `streetplan.ts`), downtown (`downtown.ts`), the traffic's
+  routes and lights (`routes.ts`), collision data, doors, the gun counter, the garage and the
   spawn (`solids.ts`), the plots (`src/data/plots.ts`), your car
   (`mycar.ts`), the driving rules (`drive-sim.ts`), target practice
   (`combat-sim.ts`) and the economy (`tycoon.ts`, the market square in

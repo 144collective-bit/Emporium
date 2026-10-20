@@ -99,13 +99,19 @@ cartoon shading and PulseChain neon, built with [three.js](https://threejs.org).
   he wears suits in different colours or hoodies and joggers (some with the
   hood up), with backpacks, crossbody bags or headphones and a bit of
   variety in build. People walk with bending knees and elbows, chat in
-  groups, sit on the park bench, queue and look around. You play the
+  groups, sit on park benches, watch the stage, queue and look around. You play the
   original, Gas Fee Gummy Bears in hand; the Armoury soldiers are the same
   body in fatigues.
-- **Streets for real cars:** two-lane streets between the core blocks, four-lane
-  avenues with a median round the core and along the south bank, a sidewalk
-  round every block, zebra crossings and four bridges over the river. A tile
-  is about 1.8 m, Degen about one tile tall.
+- **Downtown that feels like it grew:** two cross streets each way and three
+  diagonals cutting in from the ring's corners, blocks of different shapes,
+  tight rows of shops and flats with walk-only alleys between, three pocket
+  parks, and a hangout square a block from the Emporium with a stage, a big
+  screen, a fountain, kiosks and string lights.
+- **Streets for real cars:** two-lane cross streets and diagonals, four-lane
+  avenues with a median round downtown and along the south bank, a sidewalk
+  round every block, zebra crossings, lights with a third phase where a
+  diagonal comes in, and four bridges over the river. A tile is about 1.8 m,
+  Degen about one tile tall.
 - **Room to grow:** the land, the river and the roads run on well past the
   districts (about 790 m across), open ground with a few trees, ready for
   more city. A skyline of towers stands on the horizon past the edge. You
@@ -117,7 +123,7 @@ cartoon shading and PulseChain neon, built with [three.js](https://threejs.org).
   touches: a roof spoiler, chrome trim, racing stripes and a rear wing, a
   light bar and flares, a ladder rack, the bus's doors (made-up names, no
   real makes).
-- **Alive:** cars and buses stop at traffic lights, Degen-style people walk
+- **Alive:** cars and buses stop at traffic lights and turn down the diagonals, Degen-style people walk
   the sidewalks and queue at the shop, boats on the river, drones, a blimp,
   birds by day, sparks from the workshop, and soldiers drilling at the Armoury.
 - **Sky:** day, sunset and night follow the visitor's clock (or pick one in

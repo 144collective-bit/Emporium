@@ -12,6 +12,7 @@
  */
 import * as THREE from 'three';
 import { CORE_ROADS, NS_ROADS, design } from './layout';
+import { PRACTICE } from './downtown';
 
 export const TICK = 1 / 60;
 
@@ -69,18 +70,21 @@ export const POINTS = { hit: 10, dummy: 100, drone: 150 };
 /** Seconds to chain another takedown into a streak */
 export const STREAK_WINDOW = 6;
 
-/** Training dummies: x, z and facing, in the park and on a few lots (placed on the landmarks' drawing grid, layout.ts) */
-export const DUMMIES: [number, number, number][] = (
-  [
-    [5.15, 3.0, 0],
-    [7.45, 3.0, 0],
-    [2.6, 7.6, Math.PI / 2],
-    [7.7, 24.1, Math.PI / 4],
-    [8.1, 25.6, Math.PI / 4],
-    [28.6, 7.0, 0],
-    [24.4, 6.4, 0],
-  ] as [number, number, number][]
-).map(([x, z, ry]) => [...design(x, z), ry]);
+/**
+ * Training dummies: x, z and facing. Three in the north-west pocket park (downtown.ts PRACTICE),
+ * the rest on a few landmarks' lots (placed on the landmarks' drawing grid, layout.ts).
+ */
+export const DUMMIES: [number, number, number][] = [
+  ...PRACTICE.map(([x, z], i): [number, number, number] => [x, z, i === 0 ? Math.PI / 2 : 0]),
+  ...(
+    [
+      [7.7, 24.1, Math.PI / 4],
+      [8.1, 25.6, Math.PI / 4],
+      [28.6, 7.0, 0],
+      [24.4, 6.4, 0],
+    ] as [number, number, number][]
+  ).map(([x, z, ry]): [number, number, number] => [...design(x, z), ry]),
+];
 const DUMMY = { hp: 100, down: 4, lo: new THREE.Vector3(-0.31, 0.34, -0.06), hi: new THREE.Vector3(0.31, 1.27, 0.06), aimY: 0.8 };
 
 /** Patrol loops (x0, z0, x1, z1, height) and the drones flying them: round the Emporium's block over the core streets, and round the ring avenues */

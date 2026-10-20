@@ -10,6 +10,7 @@
 import type { SpotId } from '../../lib/city';
 import { DUMMIES } from './combat-sim';
 import { BIG_LOTS, BS, GARAGE, MARKET, UNITS, design, designBox } from './layout';
+import { ALLEYS, BOLLARD_R, INFILL, SQUARE } from './downtown';
 import type { LotKind, UnitKind } from './tycoon';
 
 /** x0, z0, x1, z1, height */
@@ -65,7 +66,6 @@ const DRAWN: Box[] = [
   [23.3, 27.95, 23.55, 28.95, 0.7], // helmet rack
   [22.7, 0.9, 26.1, 4.3, 7.6], // apartments A
   [26.9, 1.5, 30.3, 5.3, 8.4], // apartments B and billboard
-  [1.7, 1.7, 3.5, 3.5, 6.6], // water tower
   [18.55, 11.95, 19.45, 12.85, 1.4], // planters
   [11.95, 18.55, 12.85, 19.45, 1.4],
 ];
@@ -182,7 +182,23 @@ export const LOT_SHAPES: Record<LotKind, Box[]> = {
 };
 export const lotSolids = (i: number, kind: LotKind | null): Box[] => (kind ? LOT_SHAPES[kind].map((b) => lotBox(i, b)) : []);
 
-export const SOLIDS: Box[] = [...DRAWN.map(designBox), ...GARAGE_SOLIDS, ...MARKET_SOLIDS, ...DUMMY_SOLIDS];
+/**
+ * Downtown round the landmarks (downtown.ts, drawn by infill.ts): the infill buildings, the
+ * bollards at the alleys' mouths, and the hangout square's stage, fountain, kiosks, planters and
+ * light poles. Benches and the pocket parks stay walkable.
+ */
+const sq = SQUARE;
+export const DOWNTOWN_SOLIDS: Box[] = [
+  ...INFILL.map((b): Box => [...b.box, b.h]),
+  ...ALLEYS.flatMap((a) => a.bollards.map(([x, z]): Box => [x - BOLLARD_R, z - BOLLARD_R, x + BOLLARD_R, z + BOLLARD_R, 0.6])),
+  [...sq.stage, sq.stageH],
+  [sq.fountain.at[0] - sq.fountain.r * 0.9, sq.fountain.at[1] - sq.fountain.r * 0.9, sq.fountain.at[0] + sq.fountain.r * 0.9, sq.fountain.at[1] + sq.fountain.r * 0.9, 0.55],
+  ...sq.kiosks.map((k): Box => [...k, 2.2]),
+  ...sq.trees.map(([x, z]): Box => [x - 0.45, z - 0.45, x + 0.45, z + 0.45, 0.5]),
+  ...sq.poles.map(([x, z]): Box => [x - 0.08, z - 0.08, x + 0.08, z + 0.08, 3]),
+];
+
+export const SOLIDS: Box[] = [...DRAWN.map(designBox), ...DOWNTOWN_SOLIDS, ...GARAGE_SOLIDS, ...MARKET_SOLIDS, ...DUMMY_SOLIDS];
 /** What bullets stop on: everything solid except the dummies' footprints (they test their own shape) */
 export const SHOT_SOLIDS = SOLIDS.filter((b) => !DUMMY_SOLIDS.includes(b));
 

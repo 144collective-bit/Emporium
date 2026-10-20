@@ -3,20 +3,25 @@
  * string at build time.
  *
  * Tile grid: x runs to the lower right of the screen, y to the lower left,
- * z is height. The street plan is the 3D city's core (layout.ts): blocks at
- * 0-9, 14-23 and 28-37 on both axes, each with its sidewalk, and two-lane
- * streets between them; everything outside is parkland, a river and road out
- * of town. (The ring avenues and plot districts are 3D only.) The buildings
- * are drawn on the landmarks' old, tighter grid and moved onto their blocks
- * like the 3D ones (`design()`), so their numbers match landmarks.ts.
+ * z is height. The street plan is the 3D city's downtown (layout.ts,
+ * streetplan.ts, downtown.ts): 0-60 on both axes, two cross streets each way
+ * and three diagonals, the blocks between them with their sidewalks, the
+ * infill and its alleys, the pocket parks and the hangout square; everything
+ * outside is parkland, a river and roads out of town. (The ring avenues and
+ * plot districts are 3D only, so the diagonals simply run on out of town.)
+ * The landmarks are drawn on their old drawing grid and moved onto their lots
+ * like the 3D ones (`seat()`), so their numbers match landmarks.ts.
  *
  * Draw order is the painter's algorithm by block: everything in a block is
- * drawn by its block's (column + row), and the cars on a road segment are
+ * drawn by its block's (column + row, the cells between the cross streets),
+ * and the cars on a road segment are
  * drawn right after the block behind that segment, so nothing on the street
  * ever paints over a building standing in front of it.
  */
 
-import { BLOCKS, BS, CORE_ROADS, LANE, RIVER, STREET_GAP, WALK_W, design, designShift } from '../scripts/city3d/layout';
+import { CORE_ROADS, DOWNTOWN, LANE, RIVER, WALK_W, design, seat } from '../scripts/city3d/layout';
+import { PLAN } from '../scripts/city3d/streetplan';
+import { ALLEYS, DIAGONALS, INFILL, LANES, PARKS, SQUARE, WATER_TOWER, type Infill } from '../scripts/city3d/downtown';
 
 export type SpotId = 'emporium' | 'shop' | 'workshop' | 'vault' | 'signal' | 'telegram' | 'plan' | 'apartments';
 
@@ -44,7 +49,8 @@ const TL = 53.67; // face-local units per tile (one tile's edge length on screen
 const K = 0.8944; // cos/sin of the 2:1 iso edge
 const Q = 0.4472;
 
-export const VIEW = { x: -1965, y: -330, w: 3930, h: 2256 };
+/** The map's viewBox: downtown (0-60) with a margin of parkland and the river along the bottom left */
+export const VIEW = { x: -3240, y: -420, w: 6480, h: 3560 };
 
 type Pt = [number, number];
 /** Where the building being drawn moves from its drawing grid onto its block (see `onBlock`) */
@@ -242,15 +248,16 @@ interface Item {
   svg: string;
 }
 let items: Item[] = [];
-/** Which block row / column a coordinate is in (its block and the street past it) */
-const cellOf = (t: number) => Math.floor((t + STREET_GAP / 2) / (BS + STREET_GAP));
+/** Which block row / column a coordinate is in: the cells between the cross streets (17, 43), one cross street apart on out */
+const PITCH = CORE_ROADS[1] - CORE_ROADS[0];
+const cellOf = (t: number) => Math.floor((t - CORE_ROADS[0] + PITCH) / PITCH);
 const add = (x: number, y: number, svg: string) => {
   const [X, Y] = [x + shift[0], y + shift[1]];
   items.push({ cell: cellOf(X) + cellOf(Y), car: 0, d: X + Y, svg });
 };
-/** Draw one block's building (written on the old grid, block origin `ox, oy` there) onto today's block */
+/** Draw one landmark (written on the old grid, block origin `ox, oy` there) onto its lot today */
 function onBlock(ox: number, oy: number, draw: () => void) {
-  shift = [designShift(ox + 1), designShift(oy + 1)];
+  shift = seat(ox + 1, oy + 1);
   draw();
   shift = [0, 0];
 }
@@ -260,7 +267,7 @@ function onBlock(ox: number, oy: number, draw: () => void) {
 const ROADS = CORE_ROADS;
 /** Half a street's asphalt */
 const RH = LANE;
-const EXT: [number, number] = [-30, 68];
+const EXT: [number, number] = [-50, 130];
 /** The street runs between crossings (each crossing and its crosswalks left clear) */
 const RUNS: [number, number][] = [EXT[0], ...ROADS.flatMap((r) => [r - RH - 1.1, r + RH + 1.1]), EXT[1]].reduce<[number, number][]>(
   (out, v, k, all) => (k % 2 ? [...out, [all[k - 1], v]] : out),
@@ -280,6 +287,45 @@ function crosswalk(along: 'x' | 'y', at: number, road: number) {
   return s;
 }
 
+/** Where each landmark's lot is, by its old block (layout.ts SEATS) */
+const SEAT_LOTS: Record<string, Pt> = Object.fromEntries(['11,0', '22,0', '0,11', '11,11', '22,11', '11,22', '22,22', '0,22'].map((k) => {
+  const [bx, by] = k.split(',').map(Number);
+  const [dx, dy] = seat(bx + 1, by + 1);
+  return [k, [bx + dx, by + dy] as Pt];
+}));
+
+/** A raised outline (a block with its sidewalk): the sides that face the viewer, then its top */
+function slab(outline: Pt[]) {
+  let s = '<g class="ink">';
+  const m = outline.length;
+  for (let i = 0; i < m; i++) {
+    const a = outline[i];
+    const b = outline[(i + 1) % m];
+    // The outward side of a counter-clockwise outline is to the right of travel
+    const nx = -(b[1] - a[1]);
+    const ny = b[0] - a[0];
+    if (nx + ny <= 0) continue;
+    s += poly(nx > ny ? mix(C.sidewalk, '#140a33', 0.4) : C.sidewalk, P(a[0], a[1], 0), P(b[0], b[1], 0), P(b[0], b[1], Z0), P(a[0], a[1], Z0));
+  }
+  s += poly(mix(C.sidewalk, '#ffffff', 0.16), ...outline.map(([x, y]) => P(x, y, Z0))) + '</g>';
+  return s;
+}
+/** An outline pulled in by d (counter-clockwise, corners mitred) */
+function inset(outline: Pt[], d: number): Pt[] {
+  const m = outline.length;
+  return outline.map((p, i) => {
+    const a = outline[(i + m - 1) % m];
+    const b = outline[(i + 1) % m];
+    const l0 = Math.hypot(p[0] - a[0], p[1] - a[1]);
+    const l1 = Math.hypot(b[0] - p[0], b[1] - p[1]);
+    // Inward normals: to the left of travel
+    const n0 = [(p[1] - a[1]) / l0, -(p[0] - a[0]) / l0];
+    const n1 = [(b[1] - p[1]) / l1, -(b[0] - p[0]) / l1];
+    const k = d / (1 + n0[0] * n1[0] + n0[1] * n1[1]);
+    return [p[0] + (n0[0] + n1[0]) * k, p[1] + (n0[1] + n1[1]) * k] as Pt;
+  });
+}
+
 function ground(lots: Record<string, string>) {
   const [e0, e1] = EXT;
   let s = `<rect x="${VIEW.x}" y="${VIEW.y}" width="${VIEW.w}" height="${VIEW.h}" fill="${C.grassOut}"/>`;
@@ -292,18 +338,36 @@ function ground(lots: Record<string, string>) {
     s += line(P(e0, y), P(e1, y), `shimmer shimmer-${k % 2}`);
   }
 
-  // Asphalt, then lane dashes between the intersections, then crosswalks
+  // Asphalt (the diagonals run on out of town past downtown's corners), then lane dashes between the intersections, then crosswalks
   for (const r of ROADS) {
     s += `<g class="road">${poly(C.asphalt, P(e0, r - RH), P(e1, r - RH), P(e1, r + RH), P(e0, r + RH))}</g>`;
     s += `<g class="road">${poly(C.asphalt, P(r - RH, e0), P(r + RH, e0), P(r + RH, e1), P(r - RH, e1))}</g>`;
+  }
+  for (const d of DIAGONALS) {
+    const [jx, jy] = d.to;
+    const l = Math.hypot(d.from[0] - jx, d.from[1] - jy);
+    const [ux, uy] = [(d.from[0] - jx) / l, (d.from[1] - jy) / l];
+    const far: Pt = [jx + ux * (l + 40), jy + uy * (l + 40)];
+    // Wide enough to fill the corners where its sidewalks meet the cross streets' (the slabs cover the rest)
+    const w = RH + WALK_W + 0.6;
+    const [nx, ny] = [-uy * w, ux * w];
+    s += `<g class="road">${poly(C.asphalt, P(jx + nx, jy + ny), P(far[0] + nx, far[1] + ny), P(far[0] - nx, far[1] - ny), P(jx - nx, jy - ny))}</g>`;
+    s += line(P(jx + ux * 3.6, jy + uy * 3.6), P(far[0], far[1]), 'lane');
   }
   for (const r of ROADS) {
     for (const [a, b] of RUNS) {
       s += line(P(a, r), P(b, r), 'lane') + line(P(r, a), P(r, b), 'lane');
     }
     for (const r2 of ROADS) {
-      s += crosswalk('x', r2 - RH - 0.95, r) + crosswalk('x', r2 + RH + 0.35, r);
-      s += crosswalk('y', r2 - RH - 0.95, r) + crosswalk('y', r2 + RH + 0.35, r);
+      // Crosswalks on every arm of the crossing (r2, r) across the road at y = r, and of (r, r2)
+      // across the road at x = r; none on the two arms a diagonal comes in between
+      const from = (x: number, y: number) => DIAGONALS.find((d) => d.to[0] === x && d.to[1] === y)?.from;
+      const dx = Math.sign((from(r2, r)?.[0] ?? r2) - r2);
+      const dy = Math.sign((from(r, r2)?.[1] ?? r2) - r2);
+      if (dx !== -1) s += crosswalk('x', r2 - RH - 0.95, r);
+      if (dx !== 1) s += crosswalk('x', r2 + RH + 0.35, r);
+      if (dy !== -1) s += crosswalk('y', r2 - RH - 0.95, r);
+      if (dy !== 1) s += crosswalk('y', r2 + RH + 0.35, r);
     }
   }
 
@@ -321,14 +385,20 @@ function ground(lots: Record<string, string>) {
     }
   }
 
-  // Block slabs (the curb with its sidewalk) and their lots
-  for (const ox of BLOCKS) {
-    for (const oy of BLOCKS) {
-      s += prism(ox - WALK_W, oy - WALK_W, BS + WALK_W * 2, BS + WALK_W * 2, Z0, { c: C.sidewalk });
-      const lot = lots[`${ox},${oy}`];
-      const i = 0.4;
-      s += `<polygon points="${pts(P(ox + i, oy + i, Z0), P(ox + BS - i, oy + i, Z0), P(ox + BS - i, oy + BS - i, Z0), P(ox + i, oy + BS - i, Z0))}" fill="${lot}" class="lot"/>`;
-    }
+  // Downtown's block slabs (the curb with its sidewalk) and their lots
+  PLAN.blocks.forEach((blk, i) => {
+    if (!blk.id.startsWith('dt-')) return;
+    s += slab(PLAN.slabs[i]);
+    const lot = inset(blk.poly, 0.4).map(([x, y]) => P(x, y, Z0));
+    s += `<polygon points="${pts(...lot)}" fill="${lots[blk.id] ?? (blk.use === 'park' ? C.grass : 'url(#paving)')}" class="lot"/>`;
+  });
+  // The landmarks' own lots inside their blocks
+  for (const [k, fill] of Object.entries(lots)) {
+    const at = SEAT_LOTS[k];
+    if (!at) continue;
+    const [ox, oy] = at;
+    const i = 0.2;
+    s += `<polygon points="${pts(P(ox + i, oy + i, Z0), P(ox + 9 - i, oy + i, Z0), P(ox + 9 - i, oy + 9 - i, Z0), P(ox + i, oy + 9 - i, Z0))}" fill="${fill}" class="lot"/>`;
   }
   return s;
 }
@@ -338,12 +408,14 @@ function outskirts() {
   const step = 1.7;
   for (let gx = EXT[0]; gx < EXT[1]; gx += step) {
     for (let gy = EXT[0]; gy < EXT[1]; gy += step) {
-      if (rand() > 0.42) continue;
+      if (rand() > 0.32) continue;
       const x = gx + rand() * step;
       const y = gy + rand() * step;
-      const core = [BLOCKS[0] - WALK_W - 0.4, BLOCKS[2] + BS + WALK_W + 0.4];
+      const core = [-WALK_W - 0.4, DOWNTOWN + WALK_W + 0.4];
       if (x > core[0] && x < core[1] && y > core[0] && y < core[1]) continue;
       if (ROADS.some((r) => Math.abs(y - r) < RH + 0.9 || Math.abs(x - r) < RH + 0.9)) continue;
+      // Off the diagonals running out of town
+      if (DIAGONALS.some((d) => (x - d.to[0]) * (d.from[0] - d.to[0]) + (y - d.to[1]) * (d.from[1] - d.to[1]) > 0 && Math.abs((x - d.to[0]) * (d.from[1] - d.to[1]) - (y - d.to[1]) * (d.from[0] - d.to[0])) / Math.hypot(d.from[0] - d.to[0], d.from[1] - d.to[1]) < RH + WALK_W + 1.2)) continue;
       if (y > RIVER[0] - 0.9 && y < RIVER[1] + 0.6) continue;
       const [sx, sy] = P(x, y);
       if (sx < VIEW.x - 30 || sx > VIEW.x + VIEW.w + 30 || sy < VIEW.y + 40 || sy > VIEW.y + VIEW.h + 70) continue;
@@ -355,9 +427,8 @@ function outskirts() {
 /* ---------- Cars ---------- */
 
 const CAR_COLORS = ['#e23b3b', '#ffd23f', '#00c2ff', '#e219e5', '#f3f2f7', '#1fbf6b', '#ff8a3d'];
-/** Where a car's road is cut into segments (one copy per segment): the street centres, every block apart */
-const PITCH = BS + STREET_GAP;
-const BOUNDS = [-3, -2, -1, 0, 1, 2, 3, 4].map((k) => ROADS[0] + k * PITCH);
+/** Where a car's road is cut into segments (one copy per segment): the cross streets, and on out a cell apart */
+const BOUNDS = [-2, -1, 0, 1, 2, 3, 4].map((k) => ROADS[0] + k * PITCH);
 
 function carSprite(axis: 'x' | 'y', c: string, dir: number) {
   // Sized like the 3D city's cars: about 2.3 long and 1 wide, in a 1.7-wide lane
@@ -462,55 +533,92 @@ function pin(id: SpotId, s: Spot, [x, y]: Pt) {
     `</g></g></a>`;
 }
 
-/** Block (0,0): the park, with a water tower and a court. */
-function park() {
-  // Water tower
-  let wt = '<g class="ink">';
-  for (const [x, y] of [
-    [2.0, 2.0],
-    [3.2, 2.0],
-    [2.0, 3.2],
-  ])
-    wt += line(P(x, y, Z0), P(2.6 + (x - 2.6) * 0.55, 2.6 + (y - 2.6) * 0.55, 5.1), 'leg');
-  wt += line(P(2.0, 3.2, 2.4), P(3.2, 3.2, 2.4)) + line(P(3.2, 2.0, 2.4), P(3.2, 3.2, 2.4));
-  wt += line(P(3.2, 3.2, Z0), P(2.93, 2.93, 5.1), 'leg') + '</g>';
-  wt += cyl(2.6, 2.6, 1.0, 2.6, { c: '#5d4f9a', z: 5 });
-  const [cx, ct] = P(2.6, 2.6, 7.6);
-  const [, apex] = P(2.6, 2.6, 9.2);
-  wt += `<g class="ink"><path d="M${n(cx - 72)},${n(ct)}A72,36 0 0 0 ${n(cx + 72)},${n(ct)}L${n(cx)},${n(apex)}Z" fill="#41377a"/></g>`;
-  wt += text(cx, ct + 44, 'GM', 34, 't-display outlined', '#ff6ad5');
-  add(2.6, 2.6, wt);
+/* ---------- Downtown round the landmarks (downtown.ts) ---------- */
 
-  // Basketball court
-  const cw = 2.8 * TL;
-  const ch = 3.6 * TL;
-  const court =
-    `<rect width="${n(cw)}" height="${n(ch)}" fill="#b4513a" stroke="${INK}" stroke-width="3"/>` +
-    `<g fill="none" stroke="#f3e9dc" stroke-width="2"><rect x="6" y="6" width="${n(cw - 12)}" height="${n(ch - 12)}"/>` +
-    `<line x1="6" y1="${n(ch / 2)}" x2="${n(cw - 6)}" y2="${n(ch / 2)}"/><circle cx="${n(cw / 2)}" cy="${n(ch / 2)}" r="16"/>` +
-    `<rect x="${n(cw / 2 - 20)}" y="6" width="40" height="34"/><rect x="${n(cw / 2 - 20)}" y="${n(ch - 40)}" width="40" height="34"/></g>`;
-  let ct2 = g(onT(5.3, 4.6, Z0), court);
-  for (const y of [4.8, 8.0]) {
-    ct2 += `<g class="ink">${line(P(6.7, y, Z0), P(6.7, y, 2.2), 'leg')}${prism(6.35, y - 0.05, 0.7, 0.1, 0.5, { c: '#f3f2f7', z: 2.0 })}</g>`;
+const WALLS = ['#3d2f6e', '#5a2c5e', '#26456b', '#6b3a3f', '#2f5550', '#4a3a82'];
+const AWNINGS = ['#e23b3b', '#ffd23f', '#00c2ff', '#e219e5', '#1fbf6b', '#ff8a3d'];
+
+/** An infill building: a box with windows on the faces the viewer sees, a shopfront and awning if its front is one of them */
+function infill(f: Infill) {
+  const [x0, y0, x1, y1] = f.box;
+  const w = x1 - x0;
+  const d = y1 - y0;
+  const c = WALLS[f.seed % WALLS.length];
+  const floors = Math.max(1, Math.round(f.h - 1.6));
+  let b = prism(x0, y0, w, d, f.h, { c, z: Z0 });
+  const pal = [C.warm, C.cyan, C.pink];
+  b += winL(x0, y0, w, d, f.h - 1.3, Z0 + 1.3, Math.max(2, Math.round(w / 0.8)), floors, { lit: 0.45, pal });
+  b += winR(x0, y0, w, d, f.h - 1.3, Z0 + 1.3, Math.max(2, Math.round(d / 0.8)), floors, { lit: 0.45, pal });
+  // The shop floor: lit glass on the front, if the viewer sees it
+  const awning = AWNINGS[f.seed % AWNINGS.length];
+  if (f.face === 's') {
+    b += winL(x0, y0, w, d, 1.1, Z0, Math.max(1, Math.round(w / 1.6)), 1, { lit: 1, pal: [C.warm], mt: 6, mb: 4 });
+    b += prism(x0 + 0.15, y1, w - 0.3, 0.4, 0.12, { c: awning, z: Z0 + 1.05 });
+  } else if (f.face === 'e') {
+    b += winR(x0, y0, w, d, 1.1, Z0, Math.max(1, Math.round(d / 1.6)), 1, { lit: 1, pal: [C.warm], mt: 6, mb: 4 });
+    b += prism(x1, y0 + 0.15, 0.4, d - 0.3, 0.12, { c: awning, z: Z0 + 1.05 });
   }
-  add(6.7, 6.4, ct2);
+  add((x0 + x1) / 2, (y0 + y1) / 2, b);
+}
 
-  for (const [x, y] of [
-    [1.0, 5.4],
-    [1.2, 6.9],
-    [1.6, 8.2],
-    [3.2, 8.3],
-    [4.4, 1.0],
-    [5.8, 1.1],
-    [7.3, 1.0],
-    [8.2, 2.4],
-    [8.3, 3.7],
-    [3.9, 4.6],
+/** The GM water tower on its rooftop */
+function waterTower(f: Infill) {
+  const [x0, y0, x1, y1] = f.box;
+  const cx = (x0 + x1) / 2;
+  const cy = (y0 + y1) / 2;
+  const z = Z0 + f.h;
+  const k = 0.72;
+  let wt = '<g class="ink">';
+  for (const [sx, sy] of [
+    [-1, -1],
+    [1, -1],
+    [-1, 1],
+    [1, 1],
   ])
-    add(x, y, tree(x, y));
-  add(4.0, 6.2, bench(3.6, 6.1, 'y'));
-  add(4.6, 3.4, lamp(4.6, 3.4));
-  add(8.4, 8.4, lamp(8.4, 8.4));
+    wt += line(P(cx + sx * 0.6 * k, cy + sy * 0.6 * k, z), P(cx + sx * 0.33 * k, cy + sy * 0.33 * k, z + 3 * k), 'leg');
+  wt += '</g>' + cyl(cx, cy, 1.0 * k, 2.6 * k, { c: '#5d4f9a', z: z + 3 * k });
+  const [tx, tt] = P(cx, cy, z + 5.6 * k);
+  const [, apex] = P(cx, cy, z + 7.2 * k);
+  wt += `<g class="ink"><path d="M${n(tx - 72 * k)},${n(tt)}A${n(72 * k)},${n(36 * k)} 0 0 0 ${n(tx + 72 * k)},${n(tt)}L${n(tx)},${n(apex)}Z" fill="#41377a"/></g>`;
+  wt += text(tx, tt + 40 * k, 'GM', 30 * k, 't-display outlined', '#ff6ad5');
+  // Drawn just after its building
+  items.push({ cell: cellOf(cx) + cellOf(cy), car: 0, d: cx + cy + 0.01, svg: wt });
+}
+
+function downtown() {
+  for (const f of INFILL) infill(f);
+  waterTower(WATER_TOWER);
+  // Bollards at the alleys' mouths
+  for (const a of ALLEYS) for (const [x, y] of a.bollards) add(x, y, cyl(x, y, 0.09, 0.6, { c: '#1b1830', z: Z0 }));
+  // Pocket parks: trees, benches and a lamp
+  for (const p of PARKS) {
+    for (const [x, y] of p.trees) add(x, y, tree(x, y));
+    for (const q of p.benches) add(q.at[0], q.at[1], bench(q.at[0] - 0.45, q.at[1] - 0.15));
+    for (const [x, y] of p.lamps) add(x, y, lamp(x, y));
+  }
+  // The courtyard lanes: a planted tree or two
+  for (const [x0, y0, x1, y1] of LANES) if (x1 - x0 > y1 - y0) for (const x of [x0 + 1.2, x1 - 1.2]) add(x, y0 + 0.35, tree(x, y0 + 0.35, Z0, 0.6, 'round'));
+
+  // The hangout square: the stage and its screen at the north end, the fountain, kiosks, trees and benches
+  const sq = SQUARE;
+  const [s0, sy0, s1, sy1] = sq.stage;
+  let st = prism(s0, sy0, s1 - s0, sy1 - sy0, sq.stageH, { c: '#1f1b38', z: Z0 });
+  const sc = sq.screen;
+  st += prism(sc.x0, sc.z - 0.15, sc.x1 - sc.x0, 0.2, sc.y1, { c: '#14112a', z: Z0 });
+  const SW = (sc.x1 - sc.x0) * TL;
+  const SH = (sc.y1 - sc.y0) * ZH;
+  st += g(
+    onL(sc.x0, sc.z + 0.05, Z0 + sc.y1),
+    `<rect x="4" y="4" width="${n(SW - 8)}" height="${n(SH - 8)}" fill="#2a0b52" stroke="url(#pulseH)" stroke-width="6"/>` +
+      text(SW / 2, SH * 0.52, 'DEGEN CITY', 46, 't-display outlined', '#ffffff') +
+      text(SW / 2, SH * 0.8, 'GM DEGENS · GAME ON', 16, 't-display', C.cyan)
+  );
+  add((s0 + s1) / 2, sy0, st);
+  const f = sq.fountain;
+  add(f.at[0], f.at[1], cyl(f.at[0], f.at[1], f.r, 0.45, { c: '#8f8ab0', z: Z0 }) + cyl(f.at[0], f.at[1], 0.16, 1.2, { c: '#a9a4c9', z: Z0 + 0.45 }));
+  sq.kiosks.forEach(([x0, y0, x1, y1], i) => add((x0 + x1) / 2, (y0 + y1) / 2, prism(x0, y0, x1 - x0, y1 - y0, 1.6, { c: '#2b2550', z: Z0 }) + prism(x0 - 0.2, y0 - 0.2, x1 - x0 + 0.4, y1 - y0 + 0.4, 0.15, { c: ['#e219e5', '#00c2ff'][i], z: Z0 + 1.6 })));
+  for (const [x, y] of sq.trees) add(x, y, prism(x - 0.45, y - 0.45, 0.9, 0.9, 0.5, { c: '#6e6a8c', z: Z0 }) + tree(x, y, Z0 + 0.5, 0.95, 'round'));
+  for (const q of sq.benches) add(q.at[0], q.at[1], bench(q.at[0] - 0.45, q.at[1] - 0.15));
 }
 
 /** Block (1,0): the signal tower and studio, linking to X. */
@@ -1234,18 +1342,10 @@ export function renderCity({ spots, art }: CityInput) {
   pins = '';
   fx = '';
 
-  // Each block's lot (rows top to bottom, columns left to right)
-  const kinds = [
-    [C.grass, C.grass, C.grass],
-    ['url(#paving)', 'url(#paving)', C.concrete],
-    [C.grass, C.concrete, C.concrete],
-  ];
-  const lots: Record<string, string> = {};
-  BLOCKS.forEach((oy, row) => BLOCKS.forEach((ox, col) => (lots[`${ox},${oy}`] = kinds[row][col])));
-  const base = ground(lots);
+  // Downtown's blocks are paved (parks grassed); the landmarks' own lots, by their old block, get their own ground (as in the 3D city)
+  const base = ground({ 'dt-se': C.concrete, '22,22': C.concrete, '22,11': C.concrete, '11,22': C.concrete, '11,0': C.grass, '22,0': C.grass, '0,22': C.grass });
 
-  // Each building on its block (the numbers are their blocks on the old drawing grid)
-  onBlock(0, 0, park);
+  // Each landmark on its lot (the numbers are their blocks on the old drawing grid), then downtown round them
   onBlock(11, 0, () => signal(spots.signal));
   onBlock(22, 0, () => apartments(spots.apartments, art));
   onBlock(0, 11, () => vault(spots.vault));
@@ -1254,6 +1354,7 @@ export function renderCity({ spots, art }: CityInput) {
   onBlock(11, 22, () => workshop(spots.workshop));
   onBlock(22, 22, () => armoury(spots.plan, art));
   onBlock(0, 22, () => postOffice(spots.telegram));
+  downtown();
   outskirts();
   traffic();
 

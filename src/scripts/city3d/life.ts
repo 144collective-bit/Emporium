@@ -5,8 +5,11 @@
  */
 import * as THREE from 'three';
 import { FONT_DISPLAY, PAL, canvasTex, fx, glowTex, lit, mergeMeshes, neon, rand, toon } from './kit';
-import { BLOCKS, BS, CENTER, CORE_ROADS, DISTRICTS, EW_ROADS, NS_ROADS, RIVER, SLAB, type Tick } from './world';
-import { CITY_EXT, laneCentres } from './layout';
+import { CENTER, EW_ROADS, NS_ROADS, RIVER, SLAB, type Tick } from './world';
+
+import { PLAN, distToStreet, outset } from './streetplan';
+import { CITY_EXT } from './layout';
+import { JUNCTIONS, ROUTES, lightState, phaseOf, pointOn, rightOf, type Junction, type Phase, type Pt, type Route } from './routes';
 import { CARS, PAINTS, carGeometry, carMaterials, type CarId } from './cars';
 import type { Idle } from './landmarks';
 import { HIP_HEIGHT, chatPose, cityOutfit, createCrowd, idlePose, lookPose, newPose, sitPose, walkPose } from './character';
@@ -23,24 +26,22 @@ export interface LifeOpts {
    Traffic
    ====================================================================== */
 
-type Axis = 'x' | 'z';
-interface Lane {
-  axis: Axis;
-  coord: number;
-  dir: 1 | -1;
-}
 interface Vehicle {
-  lane: Lane;
+  route: Route;
+  /** Distance along the route, and the segment it's on */
   p: number;
+  seg: number;
   v: number;
   vmax: number;
   len: number;
   model: CarId;
   slot: number;
-  /** Where it is this frame (for your own car to bump into) */
+  /** Where it is this frame (for following, for your own car to bump into), and which way it faces */
   x: number;
   z: number;
   yaw: number;
+  fx: number;
+  fz: number;
 }
 
 const ROAD_Y = 0.035;
@@ -55,21 +56,8 @@ export const bodies = {
 /** Traffic and boats loop round the built-up part of the world */
 const [E0, E1] = CITY_EXT;
 
-/** Lights at each crossing cycle x-green, x-yellow, z-green, z-yellow. */
-const CYCLE = 22;
-function lightState(ix: number, axis: Axis, t: number): 'g' | 'y' | 'r' {
-  const k = (t + ix * 5.5) % CYCLE;
-  if (axis === 'x') return k < 9 ? 'g' : k < 11 ? 'y' : 'r';
-  return k < 11 ? 'r' : k < 20 ? 'g' : k < 22 ? 'y' : 'r';
-}
-
-const lanes: Lane[] = [];
-// Every lane of every road: one each way on streets, two each way on avenues (over the bridges too)
-for (const r of EW_ROADS) for (const l of laneCentres(r, 'x')) lanes.push({ axis: 'x', ...l });
-for (const r of NS_ROADS) for (const l of laneCentres(r, 'z')) lanes.push({ axis: 'z', ...l });
 /** The traffic's mix of cars, repeated (buses come first, as many as the quality tier allows) */
 const MIX: CarId[] = ['hatch', 'sedan', 'van', 'hatch', 'pickup', 'sedan', 'coupe', 'hatch', 'sedan', 'van', 'pickup'];
-const pRange = (l: Lane): [number, number] => (l.dir === 1 ? [E0 + 4, E1 - 4] : [-(E1 - 4), -(E0 + 4)]);
 
 function lightBox(w: number, h: number, d: number) {
   return new THREE.BoxGeometry(w, h, d);
@@ -81,13 +69,13 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
   const total = opts.cars + opts.buses;
   for (let i = 0; i < total; i++) {
     const model: CarId = i < opts.buses ? 'bus' : MIX[(i - opts.buses) % MIX.length];
-    const lane = lanes[i % lanes.length];
-    const [a, b] = pRange(lane);
+    const route = ROUTES[i % ROUTES.length];
     const slot = counts.get(model) ?? 0;
     counts.set(model, slot + 1);
     vehicles.push({
-      lane,
-      p: a + ((i * 37) % 100) / 100 * (b - a),
+      route,
+      p: (((i * 37) % 100) / 100) * route.len,
+      seg: 0,
       v: 0,
       vmax: model === 'bus' ? 3.2 : model === 'van' || model === 'pickup' ? 3.8 + rand() * 1.5 : 4.2 + rand() * 2,
       len: CARS[model].L,
@@ -96,11 +84,20 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
       x: 0,
       z: 0,
       yaw: 0,
+      fx: 1,
+      fz: 0,
     });
   }
+  const place = (v: Vehicle) => {
+    const o = pointOn(v.route, v.p, v.seg);
+    v.seg = o.seg;
+    [v.x, v.z] = o.at;
+    [v.fx, v.fz] = o.dir;
+    v.yaw = Math.atan2(-v.fz, v.fx);
+  };
+  vehicles.forEach(place);
 
   bodies.cars = vehicles;
-
   // One fleet per model: its paint (each car its own colour) and its details; the bus's windows glow at night
   const mats = carMaterials();
   const busGlow = lit(new THREE.MeshToonMaterial({ color: '#2a3b66', emissive: '#ffd36b' }), 0.05, 1.6);
@@ -138,46 +135,46 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
   const beamMat = lit(new THREE.PointsMaterial({ color: '#fff0c0', map: glowTex, size: 1.6, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }), 0, 0.28);
   scene.add(fx(new THREE.Points(beamGeo, beamMat)));
 
-  // Traffic lights: poles, housings and lamps are three instanced meshes, the lamps lit per instance
+
+  // Traffic lights at the lit junctions: one pole on the right of each way in, facing the traffic it holds.
+  // Poles, housings and lamps are three instanced meshes, the lamps lit per instance.
   const colors = { r: '#ff2b2b', y: '#ffc23d', g: '#2bff88' };
   const unit = new THREE.BoxGeometry(1, 1, 1);
   const poleMats: THREE.Matrix4[] = [];
   const boxMats: THREE.Matrix4[] = [];
-  const lamps: { m: THREE.Matrix4; ix: number; axis: Axis; c: 'r' | 'y' | 'g' }[] = [];
+  const lamps: { m: THREE.Matrix4; j: Junction; phase: Phase; c: 'r' | 'y' | 'g' }[] = [];
   const tq = new THREE.Quaternion();
   const yAxis = new THREE.Vector3(0, 1, 0);
-  let ix = 0;
-  // Every crossing is tracked so cars give way; only the core city's have lights
-  // hx / hz: half the width of the north-south / east-west road meeting there
-  const crossings: { ix: number; cx: number; cz: number; hx: number; hz: number; lit: boolean }[] = [];
-  for (const nr of NS_ROADS) {
-    for (const er of EW_ROADS) {
-      const [cx, cz] = [nr.c, er.c];
-      const lights = CORE_ROADS.includes(cx) && CORE_ROADS.includes(cz);
-      crossings.push({ ix, cx, cz, hx: nr.half, hz: er.half, lit: lights });
-      if (!lights) {
-        ix++;
-        continue;
-      }
-      // On the sidewalk corners, facing the traffic they hold
-      const ax = nr.half + 0.35;
-      const az = er.half + 0.35;
-      const approaches: [Axis, number, number, number][] = [
-        ['x', cx - ax, cz + az, -Math.PI / 2],
-        ['x', cx + ax, cz - az, Math.PI / 2],
-        ['z', cx - ax, cz - az, Math.PI],
-        ['z', cx + ax, cz + az, 0],
-      ];
-      for (const [axis, x, z, ry] of approaches) {
+  for (const j of JUNCTIONS) {
+    if (!j.lit) continue;
+    for (const s of j.streets) {
+      // Each end of the street that comes into the junction (a diagonal only comes in from its far end)
+      const [a, b] = [s.pts[0], s.pts.at(-1)!];
+      const ins: Pt[] = [];
+      if (Math.hypot(a[0] - j.at[0], a[1] - j.at[1]) > 1) ins.push(a);
+      if (Math.hypot(b[0] - j.at[0], b[1] - j.at[1]) > 1) ins.push(b);
+      for (const from of ins) {
+        const l = Math.hypot(j.at[0] - from[0], j.at[1] - from[1]);
+        const u: Pt = [(j.at[0] - from[0]) / l, (j.at[1] - from[1]) / l];
+        const r = rightOf(...u);
+        // Back from the junction along the kerb until clear of the other streets' asphalt
+        let x = 0;
+        let z = 0;
+        for (let back = 0; back < 12; back += 0.1) {
+          x = j.at[0] - u[0] * back + r[0] * (s.half + 0.35);
+          z = j.at[1] - u[1] * back + r[1] * (s.half + 0.35);
+          if (j.streets.every((o) => o === s || distToStreet(o, [x, z]) > o.half + 0.3)) break;
+        }
+        const ry = Math.atan2(-u[0], -u[1]);
+        const phase = phaseOf(u[0], u[1]);
         tq.setFromAxisAngle(yAxis, ry);
         poleMats.push(new THREE.Matrix4().compose(new THREE.Vector3(x, SLAB + 0.95, z), tq, new THREE.Vector3(0.07, 1.9, 0.07)));
         boxMats.push(new THREE.Matrix4().compose(new THREE.Vector3(x, SLAB + 1.75, z), tq, new THREE.Vector3(0.2, 0.55, 0.16)));
         (['r', 'y', 'g'] as const).forEach((c, k) => {
           const off = new THREE.Vector3(0, 0, 0.085).applyAxisAngle(yAxis, ry);
-          lamps.push({ m: new THREE.Matrix4().compose(new THREE.Vector3(x + off.x, SLAB + 1.92 - k * 0.17, z + off.z), tq, new THREE.Vector3(1, 1, 1)), ix, axis, c });
+          lamps.push({ m: new THREE.Matrix4().compose(new THREE.Vector3(x + off.x, SLAB + 1.92 - k * 0.17, z + off.z), tq, new THREE.Vector3(1, 1, 1)), j, phase, c });
         });
       }
-      ix++;
     }
   }
   const instanced = (geo: THREE.BufferGeometry, mat: THREE.Material, list: THREE.Matrix4[]) => {
@@ -197,92 +194,70 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
   scene.add(poles, boxes, fx(lampMesh));
   const lampCol = new THREE.Color();
   const base = { r: new THREE.Color(colors.r), y: new THREE.Color(colors.y), g: new THREE.Color(colors.g) };
-  const occupied = new Set<string>();
+  /** The phases with a car inside each junction */
+  const occupied = JUNCTIONS.map(() => new Set<Phase>());
 
   const M = new THREE.Matrix4();
   const L = new THREE.Matrix4();
   const T = new THREE.Matrix4();
-  const F = new THREE.Vector3();
   const q = new THREE.Quaternion();
   const up = new THREE.Vector3(0, 1, 0);
-  const pos = new THREE.Vector3();
 
   tick(({ t, dt, night }) => {
     // Lamp states
     lamps.forEach((l, i) => {
-      const s = lightState(l.ix, l.axis, t);
+      const s = lightState(l.j, l.phase, t);
       lampMesh.setColorAt(i, lampCol.copy(base[l.c]).multiplyScalar(s === l.c ? 1.6 + night * 1.6 : 0.12));
     });
     lampMesh.instanceColor!.needsUpdate = true;
 
-    // Drive: follow the car ahead, stop for red
-    // Crossings with a vehicle still inside them, by the axis it travels on
-    occupied.clear();
-    for (const v of vehicles) {
-      const s = v.p * v.lane.dir;
-      for (const c of crossings) {
-        const [along, halfAlong] = v.lane.axis === 'x' ? [c.cx, c.hx] : [c.cz, c.hz];
-        const [across, halfAcross] = v.lane.axis === 'x' ? [c.cz, c.hz] : [c.cx, c.hx];
-        if (Math.abs(across - v.lane.coord) < halfAcross && Math.abs(s - along) < halfAlong + 0.1 + v.len / 2) occupied.add(c.ix + v.lane.axis);
-      }
-    }
+    // Junctions with a vehicle still inside them, by the phase it came in on
+    for (const o of occupied) o.clear();
+    for (const v of vehicles) for (const s of v.route.stops) if (v.p + v.len / 2 > s.enter && v.p - v.len / 2 < s.exit) occupied[s.j.ix].add(s.phase);
 
-    const byLane = new Map<Lane, Vehicle[]>();
     for (const v of vehicles) {
-      if (!byLane.has(v.lane)) byLane.set(v.lane, []);
-      byLane.get(v.lane)!.push(v);
-    }
-    for (const [lane, list] of byLane) {
-      list.sort((a, b) => a.p - b.p);
-      for (let i = 0; i < list.length; i++) {
-        const v = list[i];
-        let target = v.vmax;
-        const ahead = list[i + 1];
-        if (ahead) {
-          const gap = ahead.p - ahead.len / 2 - (v.p + v.len / 2);
-          target = Math.min(target, Math.max(0, (gap - 0.9) * 1.6));
-        }
-        for (const c of crossings) {
-          const [centre, halfAlong] = lane.axis === 'x' ? [c.cx, c.hx] : [c.cz, c.hz];
-          const [other, halfAcross] = lane.axis === 'x' ? [c.cz, c.hz] : [c.cx, c.hx];
-          if (Math.abs(other - lane.coord) > halfAcross) continue;
-          // Stop line: just before the zebra crossing
-          const stopP = centre * lane.dir - halfAlong - 1.0;
-          const d = stopP - (v.p + v.len / 2);
-          if (d < -0.05 || d > 10) continue;
-          const s = c.lit ? lightState(c.ix, lane.axis, t) : 'g';
-          const blocked = occupied.has(c.ix + (lane.axis === 'x' ? 'z' : 'x'));
-          if (s === 'r' || (s === 'y' && d > 1.2) || blocked) target = Math.min(target, Math.max(0, d * 1.3));
-        }
-        // Someone walking in the road ahead: stop short of them
-        if (walker.on) {
-          const s = v.p * lane.dir;
-          const [vx, vz] = lane.axis === 'x' ? [s, lane.coord] : [lane.coord, s];
-          const [fx, fz] = lane.axis === 'x' ? [lane.dir, 0] : [0, lane.dir];
-          const ahead = (walker.x - vx) * fx + (walker.z - vz) * fz - v.len / 2 - walker.r;
-          const side = Math.abs((walker.x - vx) * fz - (walker.z - vz) * fx);
-          if (ahead > -0.2 - walker.r && ahead < 4 && side < 1.0 + walker.r * 0.6) target = Math.min(target, Math.max(0, (ahead - 0.8) * 1.8));
-        }
-        const acc = target > v.v ? 1.8 : 5;
-        v.v += Math.max(-acc * dt, Math.min(acc * dt, target - v.v));
-        v.p += v.v * dt;
-        const [a, b] = pRange(lane);
-        if (v.p > b) v.p = a;
+      let target = v.vmax;
+      // Follow whoever is ahead going the same way (any route: routes share lanes)
+      for (const o of vehicles) {
+        if (o === v || o.fx * v.fx + o.fz * v.fz < 0.5) continue;
+        const rx = o.x - v.x;
+        const rz = o.z - v.z;
+        const along = rx * v.fx + rz * v.fz;
+        if (along <= 0 || along > 12) continue;
+        if (Math.abs(rx * v.fz - rz * v.fx) > 0.9) continue;
+        const gap = along - (o.len + v.len) / 2;
+        target = Math.min(target, Math.max(0, (gap - 0.9) * 1.6));
+      }
+      // Stop lines: just before each junction, for red, late yellow or traffic still crossing the other way
+      for (const s of v.route.stops) {
+        const d = s.enter - 1.0 - (v.p + v.len / 2);
+        if (d < -0.05 || d > 10) continue;
+        const light = s.j.lit ? lightState(s.j, s.phase, t) : 'g';
+        let blocked = false;
+        for (const ph of occupied[s.j.ix]) if (ph !== s.phase) blocked = true;
+        if (light === 'r' || (light === 'y' && d > 1.2) || blocked) target = Math.min(target, Math.max(0, d * 1.3));
+      }
+      // Someone walking in the road ahead: stop short of them
+      if (walker.on) {
+        const ahead = (walker.x - v.x) * v.fx + (walker.z - v.z) * v.fz - v.len / 2 - walker.r;
+        const side = Math.abs((walker.x - v.x) * v.fz - (walker.z - v.z) * v.fx);
+        if (ahead > -0.2 - walker.r && ahead < 4 && side < 1.0 + walker.r * 0.6) target = Math.min(target, Math.max(0, (ahead - 0.8) * 1.8));
+      }
+      const acc = target > v.v ? 1.8 : 5;
+      v.v += Math.max(-acc * dt, Math.min(acc * dt, target - v.v));
+      v.p += v.v * dt;
+      if (v.p > v.route.len) {
+        v.p = 0;
+        v.seg = 0;
       }
     }
 
     // Instances
     let hi = 0;
     vehicles.forEach((v, idx) => {
-      const s = v.p * v.lane.dir;
-      const yaw = v.lane.axis === 'x' ? (v.lane.dir === 1 ? 0 : Math.PI) : v.lane.dir === 1 ? -Math.PI / 2 : Math.PI / 2;
-      if (v.lane.axis === 'x') pos.set(s, ROAD_Y, v.lane.coord);
-      else pos.set(v.lane.coord, ROAD_Y, s);
-      q.setFromAxisAngle(up, yaw);
-      v.x = pos.x;
-      v.z = pos.z;
-      v.yaw = yaw;
-      M.makeRotationFromQuaternion(q).setPosition(pos);
+      place(v);
+      q.setFromAxisAngle(up, v.yaw);
+      M.makeRotationFromQuaternion(q).setPosition(v.x, ROAD_Y, v.z);
       for (const m of fleets.get(v.model)!) m.setMatrixAt(v.slot, M);
       const g = carGeometry(v.model);
       for (let k = 0; k < 2; k++) {
@@ -290,8 +265,7 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
         tail.setMatrixAt(hi, L.multiplyMatrices(M, T.makeTranslation(...g.tail[k])));
         hi++;
       }
-      const fwd = F.set(1, 0, 0).applyQuaternion(q);
-      beamPos.set([pos.x + fwd.x * (v.len / 2 + 1.4), 0.06, pos.z + fwd.z * (v.len / 2 + 1.4)], idx * 3);
+      beamPos.set([v.x + v.fx * (v.len / 2 + 1.4), 0.06, v.z + v.fz * (v.len / 2 + 1.4)], idx * 3);
     });
     for (const m of moving) m.instanceMatrix.needsUpdate = true;
     beamGeo.attributes.position.needsUpdate = true;
@@ -302,9 +276,17 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
    People
    ====================================================================== */
 
+/** A closed walk round a block on its sidewalk: corners, and the distance along it at each */
+interface Loop {
+  pts: Pt[];
+  cum: number[];
+  len: number;
+}
 interface Person {
   kind: 'walk' | 'idle';
-  block?: [number, number];
+  loop?: Loop;
+  /** The corner the walker last passed */
+  seg: number;
   /** Distance from the kerb: each lane has its own, so walkers never share a line */
   inset: number;
   /** Standing height (or seat height for someone sitting) */
@@ -337,8 +319,20 @@ const SEAT_DROP = (HIP_HEIGHT - 0.03) * PERSON_SCALE;
 
 function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f: Tick) => void) {
   const people: Person[] = [];
-  // Round the core city's blocks, and the south row's (the street life across the river)
-  const blocks = [...BLOCKS.flatMap((x) => BLOCKS.map((z) => [x, z] as [number, number])), ...DISTRICTS.filter((d) => d.id.startsWith('S')).map((d) => [d.ox, d.oz] as [number, number])];
+  // Round downtown's blocks (the square and the pocket parks too), and the south row's (the street life across the river)
+  const blocks = PLAN.blocks.filter((b) => b.id.startsWith('dt-') || (b.use === 'district' && b.ref!.startsWith('S'))).map((b) => b.poly);
+  const loops = new Map<string, Loop>();
+  const loopOf = (b: number, inset: number) => {
+    const key = `${b}:${inset}`;
+    let l = loops.get(key);
+    if (!l) {
+      const pts = outset(blocks[b], -inset);
+      const cum = [0];
+      for (let i = 1; i <= pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i % pts.length][0] - pts[i - 1][0], pts[i % pts.length][1] - pts[i - 1][1]));
+      loops.set(key, (l = { pts, cum, len: cum.at(-1)! }));
+    }
+    return l;
+  };
   // Spread walkers evenly round each lane. Everyone in a lane keeps the same
   // pace, so nobody walks through the person in front.
   const perLane = new Map<string, number[]>();
@@ -350,14 +344,15 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
   for (const [key, members] of perLane) {
     const [b, l] = key.split(':').map(Number);
     const lane = WALK_LANES[l];
-    const loop = (BS - lane.inset * 2) * 4;
-    const off = rand() * loop;
+    const loop = loopOf(b, lane.inset);
+    const off = rand() * loop.len;
     members.forEach((_, k) => {
       people.push({
         kind: 'walk',
-        block: blocks[b],
+        loop,
+        seg: 0,
         inset: lane.inset,
-        u: (off + (k / members.length) * loop) % loop,
+        u: (off + (k / members.length) * loop.len) % loop.len,
         dir: lane.dir,
         speed: lane.speed,
         phase: rand() * 6,
@@ -370,7 +365,7 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
       });
     });
   }
-  for (const c of crowd) people.push({ kind: 'idle', inset: 0, u: 0, dir: 1, speed: 0, phase: rand() * 6, x: c.x, z: c.z, y: c.y, act: c.act, ry: c.ry, face: c.ry, lean: 0, swing: 1 });
+  for (const c of crowd) people.push({ kind: 'idle', seg: 0, inset: 0, u: 0, dir: 1, speed: 0, phase: rand() * 6, x: c.x, z: c.z, y: c.y, act: c.act, ry: c.ry, face: c.ry, lean: 0, swing: 1 });
   const n = people.length;
   bodies.people = people;
 
@@ -385,25 +380,20 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
   tick(({ t, dt }) => {
     people.forEach((p, i) => {
       if (p.kind === 'walk') {
-        const side = BS - p.inset * 2;
-        p.u = (p.u + p.dir * p.speed * dt + side * 4) % (side * 4);
-        const [ox, oz] = p.block!;
-        const seg = Math.min(3, Math.floor(p.u / side));
-        const f = p.u - seg * side;
-        const x0 = ox + p.inset;
-        const z0 = oz + p.inset;
-        const pts: [number, number, number][] = [
-          [x0 + f, z0, 0],
-          [x0 + side, z0 + f, 1],
-          [x0 + side - f, z0 + side, 2],
-          [x0, z0 + side - f, 3],
-        ];
-        const [x, z, s] = pts[seg];
-        p.x = x;
-        p.z = z;
-        // facing along the edge: +x, +z, -x, -z for seg 0..3 (reversed when walking backwards)
-        const yaws = [Math.PI / 2, 0, -Math.PI / 2, Math.PI];
-        p.ry = yaws[s] + (p.dir === -1 ? Math.PI : 0);
+        const lp = p.loop!;
+        p.u = (p.u + p.dir * p.speed * dt + lp.len) % lp.len;
+        // The side of the block they're on
+        let k = p.seg;
+        while (lp.cum[k + 1] < p.u) k++;
+        while (lp.cum[k] > p.u) k--;
+        p.seg = k;
+        const a = lp.pts[k];
+        const c = lp.pts[(k + 1) % lp.pts.length];
+        const f = (p.u - lp.cum[k]) / (lp.cum[k + 1] - lp.cum[k] || 1);
+        p.x = a[0] + (c[0] - a[0]) * f;
+        p.z = a[1] + (c[1] - a[1]) * f;
+        // Facing along the side (reversed when walking the other way round)
+        p.ry = Math.atan2(c[0] - a[0], c[1] - a[1]) + (p.dir === -1 ? Math.PI : 0);
         // Stride matched to walking pace, so feet don't slide
         walkPose(pose, t * p.speed * 11 + p.phase, 1, 0, p.swing);
         pose.lean += p.lean;

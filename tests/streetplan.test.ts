@@ -1,10 +1,11 @@
-// The street plan as data (streetplan.ts): today's grid described as streets,
-// crossings and blocks, matching layout.ts, and the geometry helpers the
-// organic redesign will build on.
+// The street plan as data (streetplan.ts): the straight grid of layout.ts, the
+// city as built (downtown's diagonals, blocks, alleys and squares on top), and
+// the geometry helpers they're made with.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { PLAN, blockAt, distToStreet, gridPlan, inPoly, lanePaths, offsetLine, pointAt, polyArea, polyCentre, streetLength, type Pt, type Street } from '../src/scripts/city3d/streetplan';
-import { BLOCKS, BS, CORE_ROADS, EW_ROADS, EXT, EXTRA_LOTS, NS_ROADS, WALK_W, laneCentres } from '../src/scripts/city3d/layout';
+import { PLAN, blockAt, cityPlan, distToStreet, gridPlan, inPoly, lanePaths, offsetLine, onSlab, outset, pointAt, polyArea, polyCentre, streetLength, type Pt, type Street } from '../src/scripts/city3d/streetplan';
+import { BLOCKS, BS, CORE_ROADS, EW_ROADS, EXT, EXTRA_LOTS, NS_ROADS, RING_HI, RING_LO, WALK_W, laneCentres } from '../src/scripts/city3d/layout';
+import { BLOCKS_DT, DIAGONALS } from '../src/scripts/city3d/downtown';
 import { DISTRICTS } from '../src/data/plots';
 
 const near = (a: number, b: number, eps = 1e-6) => Math.abs(a - b) < eps;
@@ -29,25 +30,81 @@ test('a crossing wherever two roads meet, lights only on the core streets', () =
   for (const c of p.crossings) for (const id of c.streets) assert.ok(distToStreet(byId.get(id)!, c.at) < 1e-6, `${id} at ${c.id}`);
 });
 
-test('blocks: the core, every district and every extra lot, off the roads', () => {
+test('grid blocks: the core, every district and every extra lot, off the roads', () => {
   const p = gridPlan();
   assert.equal(p.blocks.length, BLOCKS.length * BLOCKS.length + DISTRICTS.length + EXTRA_LOTS.length);
   assert.equal(new Set(p.blocks.map((b) => b.id)).size, p.blocks.length, 'ids are unique');
   for (const d of DISTRICTS) assert.ok(p.blocks.some((b) => b.use === 'district' && b.ref === d.id), `district ${d.id}`);
   for (const b of p.blocks) {
     assert.ok(near(polyArea(b.poly), BS * BS), `${b.id} is a ${BS} x ${BS} block, counter-clockwise`);
-    // Every corner, with its sidewalk round it, stays off every road's asphalt
     for (const s of p.streets) for (const q of b.poly) assert.ok(distToStreet(s, q) >= s.half + b.walk - 1e-6, `${b.id} corner ${q} on ${s.id}`);
   }
-  // The landmarks' blocks are where landmarks.ts puts them
-  assert.equal(blockAt(p, [18.5, 18.5])?.ref, 'emporium');
-  assert.equal(blockAt(p, [32.5, 32.5])?.ref, 'plan');
-  assert.equal(blockAt(p, [4.5, 4.5])?.use, 'park');
-  assert.equal(blockAt(p, [11.5, 4.5]), undefined, 'a street is on no block');
 });
 
-test('the city is built from the grid plan for now', () => {
-  assert.deepEqual(PLAN, gridPlan());
+test('the city as built: the grid\'s roads, three diagonals from the ring\'s corners, and walk-only alleys', () => {
+  const p = cityPlan();
+  const g = gridPlan();
+  for (const s of g.streets) assert.deepEqual(p.streets.find((t) => t.id === s.id), s, `${s.id} is kept`);
+  const diags = p.streets.filter((s) => s.id.startsWith('diag'));
+  assert.equal(diags.length, DIAGONALS.length);
+  const corners = [RING_LO, RING_HI];
+  for (const d of diags) {
+    assert.equal(d.kind, 'street');
+    assert.equal(d.lanes, 1);
+    // From a ring corner to a crossing of the cross streets, at 45 degrees
+    assert.ok(corners.includes(d.pts[0][0]) && corners.includes(d.pts[0][1]), `${d.id} starts at a ring corner`);
+    assert.ok(CORE_ROADS.includes(d.pts[1][0]) && CORE_ROADS.includes(d.pts[1][1]), `${d.id} ends where the cross streets meet`);
+    assert.ok(near(Math.abs(d.pts[1][0] - d.pts[0][0]), Math.abs(d.pts[1][1] - d.pts[0][1])));
+    // Both ends are crossings that know it
+    for (const end of d.pts) assert.ok(p.crossings.some((c) => c.at[0] === end[0] && c.at[1] === end[1] && c.streets.includes(d.id)), `${d.id} end ${end}`);
+  }
+  const alleys = p.streets.filter((s) => s.kind === 'alley');
+  assert.ok(alleys.length >= 5, 'downtown has its alleys and lanes');
+  for (const a of alleys) assert.deepEqual(lanePaths(a), [], 'no cars down an alley');
+  // Lights where downtown's cross streets meet, and nowhere else
+  for (const c of p.crossings) assert.equal(c.lights, CORE_ROADS.includes(c.at[0]) && CORE_ROADS.includes(c.at[1]));
+});
+
+test('the city\'s blocks: downtown\'s outlines, every district and lot, off the asphalt, the landmarks on theirs', () => {
+  const p = cityPlan();
+  assert.equal(p.blocks.length, BLOCKS_DT.length + DISTRICTS.length + EXTRA_LOTS.length);
+  assert.equal(new Set(p.blocks.map((b) => b.id)).size, p.blocks.length, 'ids are unique');
+  assert.equal(p.slabs.length, p.blocks.length);
+  const roads = p.streets.filter((s) => s.kind !== 'alley');
+  for (const b of p.blocks) {
+    assert.ok(polyArea(b.poly) > 0, `${b.id} runs counter-clockwise`);
+    // Every corner, with its sidewalk round it, stays off every road's asphalt
+    for (const s of roads) for (const q of b.poly) assert.ok(distToStreet(s, q) >= s.half + b.walk - 1e-6, `${b.id} corner ${q} on ${s.id}`);
+  }
+  // Every landmark has its block
+  const places = p.blocks.flatMap((b) => b.places ?? []);
+  assert.deepEqual([...places].sort(), ['apartments', 'emporium', 'plan', 'shop', 'signal', 'telegram', 'vault', 'workshop']);
+  assert.ok(blockAt(p, [30, 36])?.places?.includes('emporium'));
+  // The hangout square is the block south of the Emporium's, and there are pocket parks
+  assert.ok(p.plazas.some((q) => q.kind === 'hangout' && inPoly(q.poly, [30, 52])));
+  assert.equal(p.plazas.filter((q) => q.kind === 'park').length, 3);
+  // A street, or a diagonal, is on no slab
+  assert.ok(!onSlab(p, [17, 30]) && !onSlab(p, [8, 8]) && !onSlab(p, [52, 8]));
+  assert.ok(onSlab(p, [30, 36]) && onSlab(p, [19, 30]), 'a lot, and its sidewalk');
+});
+
+test('the city is built from the city plan', () => {
+  assert.deepEqual(PLAN, cityPlan());
+});
+
+test('sidewalks round a triangle are cut square at its sharp tips', () => {
+  const tri: Pt[] = [
+    [0, 0],
+    [0, 10],
+    [10, 10],
+  ];
+  const o = outset(tri, 1);
+  // The right-angle corner is mitred (one point), the two 45-degree tips cut (two each)
+  assert.equal(o.length, 5);
+  for (const q of o) assert.ok(q.every(Number.isFinite));
+  assert.ok(o.some((q) => near(q[0], -1) && near(q[1], 11)), 'the square corner');
+  // Nothing reaches more than the sidewalk past the outline's own bounds
+  for (const q of o) assert.ok(q[0] >= -1 - 1e-9 && q[0] <= 11 + 1e-9 && q[1] >= -1 - 1e-9 && q[1] <= 11 + 1e-9);
 });
 
 test('lane paths match layout.ts laneCentres on the grid', () => {

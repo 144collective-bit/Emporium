@@ -5,15 +5,17 @@
  * 2D map, traffic, pedestrians, collisions, the plots and the game server
  * can all read one plan.
  *
- * `gridPlan()` describes today's city exactly (the grid in layout.ts). The
- * organic redesign (docs/city-plan.md) replaces it with curved and diagonal
- * streets, uneven blocks, walk-only alleys and plazas, and everything moves
- * over to reading the plan instead of the grid.
+ * `gridPlan()` describes the straight grid of layout.ts (edge-to-edge
+ * streets, square blocks). `PLAN` is the city as built: the grid outside
+ * downtown, and downtown (downtown.ts) with its diagonals, triangle blocks,
+ * walk-only alleys, pocket parks and the hangout square
+ * (docs/city-plan.md).
  *
  * Coordinates are world units on the ground: [x, z].
  */
 import { DISTRICTS } from '../../data/plots';
-import { BLOCKS, BS, CENTER_XZ, CORE_ROADS, EW_ROADS, EXT, EXTRA_LOTS, GARAGE, LANE, MARKET, MEDIAN, NS_ROADS, UNITS, WALK_W, type Road } from './layout';
+import { BLOCKS, BS, CENTER_XZ, CORE_ROADS, EW_ROADS, EXT, EXTRA_LOTS, GARAGE, LANE, MARKET, MEDIAN, NS_ROADS, SEATS, UNITS, WALK_W, type Road } from './layout';
+import { ALLEYS, BLOCKS_DT, DIAGONALS, LANES } from './downtown';
 
 export type Pt = [number, number];
 
@@ -53,6 +55,8 @@ export interface Block {
   use: BlockUse;
   /** What stands on it: a landmark's spot id, a district plot id, a lot's name */
   ref?: string;
+  /** The landmarks on a downtown block (their spot ids) */
+  places?: string[];
   /** Sidewalk width round it */
   walk: number;
 }
@@ -70,6 +74,8 @@ export interface StreetPlan {
   crossings: Crossing[];
   blocks: Block[];
   plazas: Plaza[];
+  /** Every block's raised slab (`slabOf()`), in the same order */
+  slabs: Pt[][];
 }
 
 /* ---------- Geometry helpers ---------- */
@@ -180,7 +186,40 @@ export const polyCentre = (poly: Pt[]): Pt => [poly.reduce((a, p) => a + p[0], 0
 /** The block a point is on (inside its outline, sidewalk not included), if any */
 export const blockAt = (plan: StreetPlan, p: Pt) => plan.blocks.find((b) => inPoly(b.poly, p));
 
-/* ---------- Today's grid as a plan ---------- */
+/**
+ * A convex outline grown by `d` on every side (its sidewalk round it). Corners
+ * of 90 degrees or more are mitred; sharper ones (a triangle's 45-degree tips)
+ * are cut square across, so the sidewalk doesn't spike out into the crossing.
+ */
+export function outset(poly: Pt[], d: number): Pt[] {
+  const n = poly.length;
+  // Outward normal of edge i -> i+1 (counter-clockwise from above: outward is to the right of travel, sideOf)
+  const nrm = poly.map((p, i) => sideOf(p, poly[(i + 1) % n]));
+  const out: Pt[] = [];
+  for (let i = 0; i < n; i++) {
+    const p = poly[i];
+    const a = nrm[(i + n - 1) % n];
+    const b = nrm[i];
+    const cos = a[0] * b[0] + a[1] * b[1];
+    if (cos >= -1e-9) {
+      // 90 degrees or wider: one mitred corner
+      const m: Pt = [a[0] + b[0], a[1] + b[1]];
+      const k = d / (1 + cos);
+      out.push([p[0] + m[0] * k, p[1] + m[1] * k]);
+    } else {
+      // A sharp tip: two corners, each straight out from its own edge
+      out.push([p[0] + a[0] * d, p[1] + a[1] * d], [p[0] + b[0] * d, p[1] + b[1] * d]);
+    }
+  }
+  return out;
+}
+
+/** A block's raised slab: its lot and the sidewalk round it */
+export const slabOf = (b: Block): Pt[] => outset(b.poly, b.walk);
+/** Is a point on a raised slab (a lot or its sidewalk) */
+export const onSlab = (plan: StreetPlan, p: Pt) => plan.slabs.some((s) => inPoly(s, p));
+
+/* ---------- The grid, and the city as built ---------- */
 
 /** A square outline from its min corner, counter-clockwise seen from above */
 const square = (ox: number, oz: number, w: number, d = w): Pt[] => [
@@ -192,50 +231,89 @@ const square = (ox: number, oz: number, w: number, d = w): Pt[] => [
 
 const kindOf = (r: Road): StreetKind => (r.lanes === 2 ? 'avenue' : 'street');
 
-/** Landmark spots on the core blocks, by block origin (as landmarks.ts places them) */
-const CORE_USE: Record<string, { use: BlockUse; ref?: string }> = {
-  '0,0': { use: 'park' },
-  '14,14': { use: 'landmark', ref: 'emporium' },
-  '28,14': { use: 'landmark', ref: 'shop' },
-  '14,28': { use: 'landmark', ref: 'workshop' },
-  '0,14': { use: 'landmark', ref: 'vault' },
-  '28,28': { use: 'landmark', ref: 'plan' },
-  '14,0': { use: 'landmark', ref: 'signal' },
-  '0,28': { use: 'landmark', ref: 'telegram' },
-  '28,0': { use: 'landmark', ref: 'apartments' },
-};
-
-/** Today's city: the straight grid of layout.ts, every road edge to edge */
-export function gridPlan(): StreetPlan {
+/** The straight streets of layout.ts, every one edge to edge */
+function gridStreets(): Street[] {
   const [e0, e1] = EXT;
-  const streets: Street[] = [
+  return [
     ...NS_ROADS.map((r, i): Street => ({ id: `ns${i}`, kind: kindOf(r), pts: [[r.c, e0], [r.c, e1]], half: r.half, lanes: r.lanes })),
     ...EW_ROADS.map((r, i): Street => ({ id: `ew${i}`, kind: kindOf(r), pts: [[e0, r.c], [e1, r.c]], half: r.half, lanes: r.lanes })),
   ];
-  const crossings: Crossing[] = [];
+}
+
+/** A crossing wherever a north-south and an east-west road meet; lights where downtown's cross streets meet */
+function gridCrossings(): Crossing[] {
+  const out: Crossing[] = [];
   NS_ROADS.forEach((nr, i) =>
-    EW_ROADS.forEach((er, j) =>
-      crossings.push({ id: `x${i}-${j}`, at: [nr.c, er.c], streets: [`ns${i}`, `ew${j}`], lights: CORE_ROADS.includes(nr.c) && CORE_ROADS.includes(er.c) })
-    )
+    EW_ROADS.forEach((er, j) => out.push({ id: `x${i}-${j}`, at: [nr.c, er.c], streets: [`ns${i}`, `ew${j}`], lights: CORE_ROADS.includes(nr.c) && CORE_ROADS.includes(er.c) }))
   );
+  return out;
+}
+
+const outerBlocks = (): Block[] => [
+  ...DISTRICTS.map((d): Block => ({ id: `district-${d.id}`, poly: square(d.ox, d.oz, BS), use: 'district', ref: d.id, walk: WALK_W })),
+  ...EXTRA_LOTS.map((l, i): Block => {
+    const ref = l === GARAGE ? 'garage' : l === MARKET ? 'market' : l === UNITS ? 'units' : `lot-${i - 3}`;
+    return { id: `lot-${ref}`, poly: square(l.ox, l.oz, BS), use: 'lot', ref, walk: WALK_W };
+  }),
+];
+
+const withSlabs = (p: Omit<StreetPlan, 'slabs'>): StreetPlan => ({ ...p, slabs: p.blocks.map(slabOf) });
+
+/** The straight grid: 3 x 3 square blocks between the streets of layout.ts */
+export function gridPlan(): StreetPlan {
+  return withSlabs({
+    streets: gridStreets(),
+    crossings: gridCrossings(),
+    blocks: [...BLOCKS.flatMap((ox) => BLOCKS.map((oz): Block => ({ id: `core-${ox}-${oz}`, poly: square(ox, oz, BS), use: 'plain', walk: WALK_W }))), ...outerBlocks()],
+    plazas: [],
+  });
+}
+
+/** Landmark spot ids by their old block on the drawing grid (layout.ts SEATS) */
+const SPOT_OF: Record<string, string> = {
+  '11,11': 'emporium',
+  '11,0': 'signal',
+  '22,0': 'apartments',
+  '0,22': 'telegram',
+  '0,11': 'vault',
+  '22,11': 'shop',
+  '11,22': 'workshop',
+  '22,22': 'plan',
+};
+
+/** The city as built: the grid's streets and districts, downtown's diagonals, blocks, alleys and squares */
+export function cityPlan(): StreetPlan {
+  const streets = gridStreets();
+  const crossings = gridCrossings();
+  for (const d of DIAGONALS) {
+    streets.push({ id: d.id, kind: 'street', pts: [d.from, d.to], half: LANE, lanes: 1 });
+    // Each end is a crossing of the grid already (a ring corner, a cross-street junction)
+    for (const end of [d.from, d.to]) crossings.find((c) => c.at[0] === end[0] && c.at[1] === end[1])!.streets.push(d.id);
+  }
+  // Alleys and lanes: walk-only, from the street front through to the back
+  [...ALLEYS.map((a) => a.box), ...LANES].forEach((b, i) => {
+    const [x0, z0, x1, z1] = b;
+    const alongX = x1 - x0 > z1 - z0;
+    const pts: Pt[] = alongX ? [[x0, (z0 + z1) / 2], [x1, (z0 + z1) / 2]] : [[(x0 + x1) / 2, z0], [(x0 + x1) / 2, z1]];
+    streets.push({ id: `alley${i}`, kind: 'alley', pts, half: (alongX ? z1 - z0 : x1 - x0) / 2, lanes: 0 });
+  });
+  const inside = (b: { poly: Pt[] }, [x, z]: [number, number]) => inPoly(b.poly, [x + BS / 2, z + BS / 2]);
   const blocks: Block[] = [
-    ...BLOCKS.flatMap((ox) =>
-      BLOCKS.map((oz): Block => {
-        const u = CORE_USE[`${ox},${oz}`] ?? { use: 'plain' as BlockUse };
-        return { id: `core-${ox}-${oz}`, poly: square(ox, oz, BS), use: u.use, ref: u.ref, walk: WALK_W };
-      })
-    ),
-    ...DISTRICTS.map((d): Block => ({ id: `district-${d.id}`, poly: square(d.ox, d.oz, BS), use: 'district', ref: d.id, walk: WALK_W })),
-    ...EXTRA_LOTS.map((l, i): Block => {
-      const ref = l === GARAGE ? 'garage' : l === MARKET ? 'market' : l === UNITS ? 'units' : `lot-${i - 3}`;
-      return { id: `lot-${ref}`, poly: square(l.ox, l.oz, BS), use: 'lot', ref, walk: WALK_W };
+    ...BLOCKS_DT.map((b): Block => {
+      const places = Object.entries(SPOT_OF)
+        .filter(([k]) => inside(b, SEATS[k]))
+        .map(([, id]) => id);
+      const use: BlockUse = b.use === 'infill' ? 'plain' : b.use;
+      return { id: `dt-${b.id}`, poly: b.poly, use, places: places.length ? places : undefined, walk: WALK_W };
     }),
+    ...outerBlocks(),
   ];
-  return { streets, crossings, blocks, plazas: [] };
+  const plazas: Plaza[] = BLOCKS_DT.filter((b) => b.use === 'plaza' || b.use === 'park').map((b) => ({ id: b.id, kind: b.use === 'plaza' ? 'hangout' : 'park', poly: b.poly }));
+  return withSlabs({ streets, crossings, blocks, plazas });
 }
 
 /** The plan the city is built from */
-export const PLAN: StreetPlan = gridPlan();
+export const PLAN: StreetPlan = cityPlan();
 
 /** The middle of the city */
 export const PLAN_CENTRE: Pt = [CENTER_XZ.x, CENTER_XZ.z];

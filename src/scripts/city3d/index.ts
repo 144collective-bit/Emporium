@@ -9,6 +9,7 @@ import { consolidate, loadImage, loadTex, updateLights } from './kit';
 import { createPost } from './post';
 import { CENTER, buildGround, buildLamps, buildSkyline, buildTrees, puddleMat, scatterOutskirts, waterMat, type Env, type Tick } from './world';
 import { buildLandmarks, type Spot } from './landmarks';
+import { buildInfill } from './infill';
 import { buildLife, walker } from './life';
 import { createWalk } from './walk';
 import { buildGarage } from './garage';
@@ -98,10 +99,13 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const ticks: Tick[] = [];
   const tick = (f: Tick) => ticks.push(f);
 
-  const { streaks } = buildGround(scene, { '0,14': 'paving', '14,14': 'paving', '28,14': 'concrete', '14,28': 'concrete', '28,28': 'concrete' });
+  // Downtown's blocks are paved; the landmarks' own lots (by their old block, layout.ts SEATS) get their own ground
+  const { streaks } = buildGround(scene, { 'dt-se': 'concrete', '22,22': 'concrete', '22,11': 'concrete', '11,22': 'concrete', '11,0': 'grass', '22,0': 'grass', '0,22': 'grass' });
   progress(0.3);
   await nextFrame();
   const { spots, crowd } = buildLandmarks(scene, { degen, logo, tick, low: tier === 'low' });
+  // Downtown round the landmarks: infill, alleys, pocket parks and the hangout square (its crowd joins the landmarks')
+  buildInfill(scene, crowd, tick, tier === 'low');
   // The garage on the south bank, your saved car on its turntable
   const garage = buildGarage(scene, { tick, reduced, car: loadCar() });
   const plots = createPlots(scene, { degen, tick, reduced });

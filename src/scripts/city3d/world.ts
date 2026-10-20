@@ -3,18 +3,21 @@
  * its bridges, block slabs, trees, street lamps and a skyline in the haze.
  *
  * World units: 1 = one map tile. x and z match the 2D map's x and y; y is up.
- * The street plan is in layout.ts: the core city's blocks at 0-9, 14-23 and
- * 28-37 with core streets (one lane each way) between them, ring avenues
- * (two lanes each way and a median) round them, and the plot districts
- * (see plots.ts) beyond to the north, west and east. The river runs south of
- * the north-bank avenue; across its four bridges the south bank avenue
- * carries the south row of districts. Every block has a sidewalk, and both
- * banks a lamp-lit promenade.
+ * The street plan is layout.ts and streetplan.ts (`PLAN`): downtown (0-60)
+ * crossed by two cross streets each way and three diagonals, its blocks cut
+ * into lots, triangles, pocket parks and the hangout square (downtown.ts);
+ * ring avenues (two lanes each way and a median) round it, and the plot
+ * districts (see plots.ts) beyond to the north, west and east. The river runs
+ * south of the north-bank avenue; across its four bridges the south bank
+ * avenue carries the south row of districts. Every block has a sidewalk, and
+ * both banks a lamp-lit promenade.
  */
 import * as THREE from 'three';
 import { DISTRICTS } from '../../data/plots';
 import { Batch, PAL, canvasTex, facadeMat, fx, glowMat, glowTex, lit, neon, rand, sidesBox, toon } from './kit';
-import { BLOCKS, BS, CENTER_XZ, CITY_EXT, CORE_ROADS, EW_ROADS, EXT, EXTRA_LOTS, GARAGE, LANE, MARKET, UNITS, MEDIAN, NS_ROADS, RIVER, SOUTH_ROAD, WALK_W, type Road } from './layout';
+import { BLOCKS, BS, CENTER_XZ, CITY_EXT, CORE_ROADS, DOWNTOWN, EW_ROADS, EXT, EXTRA_LOTS, LANE, MEDIAN, NS_ROADS, OUTER_HI, OUTER_LO, RIVER, SEATS, SOUTH_ROAD, WALK_W, type Road } from './layout';
+import { PLAN, type Pt } from './streetplan';
+import { DIAGONALS, DIAGONAL_LAMPS } from './downtown';
 
 export { BLOCKS, BS, CORE_ROADS, EW_ROADS, EXT, NS_ROADS, RIVER, SOUTH_ROAD, WALK_W, type Road };
 /** District blocks around the core: one large plot each (src/data/plots.ts). */
@@ -68,6 +71,40 @@ const LOTS: Record<string, THREE.Material> = {
   concrete: toon('#4b4766'),
   dirt: toon('#6a4a3c'),
 };
+export type LotKind = keyof typeof LOTS;
+
+/** A flat outline at height y, facing up (UVs one texture repeat per lot, like a block's) */
+export function flatPoly(poly: Pt[], y: number) {
+  const shape = new THREE.Shape(poly.map(([x, z]) => new THREE.Vector2(x, -z)));
+  const g = new THREE.ShapeGeometry(shape).rotateX(-Math.PI / 2).translate(0, y, 0);
+  const uv = g.attributes.uv;
+  for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) / (BS - 0.8), uv.getY(i) / (BS - 0.8));
+  return g;
+}
+/** An outline raised from the ground to height h (a kerbed slab) */
+export function slabPoly(poly: Pt[], h: number) {
+  const shape = new THREE.Shape(poly.map(([x, z]) => new THREE.Vector2(x, -z)));
+  return new THREE.ExtrudeGeometry(shape, { depth: h, bevelEnabled: false }).rotateX(-Math.PI / 2);
+}
+/** An outline pulled in by d, corners mitred */
+export function insetPoly(poly: Pt[], d: number): Pt[] {
+  const n = poly.length;
+  return poly.map((p, i) => {
+    const a = poly[(i + n - 1) % n];
+    const b = poly[(i + 1) % n];
+    const e0 = [p[0] - a[0], p[1] - a[1]];
+    const e1 = [b[0] - p[0], b[1] - p[1]];
+    const l0 = Math.hypot(e0[0], e0[1]);
+    const l1 = Math.hypot(e1[0], e1[1]);
+    // Inward normals of a counter-clockwise outline (from above): to the left of travel
+    const n0 = [e0[1] / l0, -e0[0] / l0];
+    const n1 = [e1[1] / l1, -e1[0] / l1];
+    const m = [n0[0] + n1[0], n0[1] + n1[1]];
+    const k = d / (1 + n0[0] * n1[0] + n0[1] * n1[1]);
+    return [p[0] + m[0] * k, p[1] + m[1] * k] as Pt;
+  });
+}
+const isRect = (poly: Pt[]) => poly.length === 4 && poly.every((p, i) => { const q = poly[(i + 1) % 4]; return p[0] === q[0] || p[1] === q[1]; });
 
 /** Water: deep colour with drifting highlights and, at night, neon streaks. */
 export const waterMat = new THREE.ShaderMaterial({
@@ -122,7 +159,11 @@ export const puddleMat = new THREE.MeshBasicMaterial({
     depthWrite: false,
 });
 
-export function buildGround(scene: THREE.Scene, lots: Record<string, keyof typeof LOTS>) {
+/**
+ * The ground. `lots` picks a surface for a block (by its plan id, like 'dt-c' or
+ * 'district-N1') or for a landmark's own lot inside its block (by its old block, layout.ts SEATS).
+ */
+export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
   const [e0, e1] = EXT;
   const L = e1 - e0;
   const mid = (e0 + e1) / 2;
@@ -149,7 +190,7 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, keyof typeo
     b.box(e0, 0, z0, L, 0.05, z1 - z0, promenade);
   // Lamps along the water, reaching out over the walk (clear of the bridges)
   const nearBridge = (x: number) => NS_ROADS.some((r) => Math.abs(x - r.c) < r.half + WALK_W + 0.9);
-  for (let x = -20; x <= 58; x += 6)
+  for (let x = OUTER_LO - 2; x <= OUTER_HI + BS + 2; x += 6)
     if (!nearBridge(x)) {
       addLamp(x, RIVER[0] - 0.4, Math.PI / 2, 0.05);
       addLamp(x, RIVER[1] + 0.4, -Math.PI / 2, 0.05);
@@ -202,18 +243,40 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, keyof typeo
     }
   }
 
-  // Block slabs: the sidewalk round every block (the kerb) and the lot inside, core, districts and the garage
-  const kerb = toon('#5a5290');
-  const slabs: [number, number][] = [
-    ...BLOCKS.flatMap((ox) => BLOCKS.map((oz) => [ox, oz] as [number, number])),
-    ...DISTRICTS.map((d) => [d.ox, d.oz] as [number, number]),
-    ...EXTRA_LOTS.map((l) => [l.ox, l.oz] as [number, number]),
-  ];
-  for (const [ox, oz] of slabs) {
-    b.box(ox - WALK_W, 0, oz - WALK_W, BS + WALK_W * 2, SLAB, BS + WALK_W * 2, kerb);
-    const lot = LOTS[lots[`${ox},${oz}`] ?? (ox === GARAGE.ox && oz === GARAGE.oz ? 'concrete' : (ox === MARKET.ox && oz === MARKET.oz) || (ox === UNITS.ox && oz === UNITS.oz) ? 'paving' : 'grass')];
-    b.box(ox + 0.4, SLAB, oz + 0.4, BS - 0.8, 0.005, BS - 0.8, lot);
+  // Diagonals: asphalt wide enough to fill the corners where their sidewalks meet the cross streets' (the kerbs cover the rest)
+  for (const d of DIAGONALS) {
+    const [ax, az] = d.from;
+    const [bx, bz] = d.to;
+    const len = Math.hypot(bx - ax, bz - az);
+    const g = new THREE.BoxGeometry(len, 0.03, (LANE + WALK_W + 0.6) * 2).rotateY(Math.atan2(-(bz - az), bx - ax)).translate((ax + bx) / 2, 0.019, (az + bz) / 2);
+    b.add(g, asphalt);
   }
+
+  // Block slabs: the sidewalk round every block (the kerb) and the lot inside: downtown's blocks, the districts and the extra lots
+  const kerb = toon('#5a5290');
+  PLAN.blocks.forEach((blk, i) => {
+    const slab = PLAN.slabs[i];
+    const kind: LotKind =
+      lots[blk.id] ??
+      (blk.ref === 'garage' ? 'concrete' : blk.ref === 'market' || blk.ref === 'units' ? 'paving' : blk.use === 'park' ? 'grass' : blk.id.startsWith('dt-') ? 'paving' : 'grass');
+    if (isRect(slab)) {
+      const [x0, z0] = [Math.min(...slab.map((p) => p[0])), Math.min(...slab.map((p) => p[1]))];
+      const [x1, z1] = [Math.max(...slab.map((p) => p[0])), Math.max(...slab.map((p) => p[1]))];
+      b.box(x0, 0, z0, x1 - x0, SLAB, z1 - z0, kerb);
+      b.box(x0 + WALK_W + 0.4, SLAB, z0 + WALK_W + 0.4, x1 - x0 - (WALK_W + 0.4) * 2, 0.005, z1 - z0 - (WALK_W + 0.4) * 2, LOTS[kind]);
+    } else {
+      b.add(slabPoly(slab, SLAB), kerb);
+      b.add(flatPoly(insetPoly(blk.poly, 0.4), SLAB + 0.003), LOTS[kind]);
+    }
+  });
+  // The landmarks' own lots inside their blocks (grass round the Signal tower, concrete in the compound...)
+  for (const [k, kind] of Object.entries(lots))
+    if (SEATS[k]) {
+      const [ox, oz] = SEATS[k];
+      b.box(ox + 0.2, SLAB, oz + 0.2, BS - 0.4, 0.008, BS - 0.4, LOTS[kind]);
+    }
+  // Lamps along the diagonals
+  for (const l of DIAGONAL_LAMPS) addLamp(l.at[0], l.at[1], l.ry);
   b.build(scene, { cast: false, receive: true });
 
   // Lane markings and crosswalks, instanced: a dashed yellow centre line on streets,
@@ -234,13 +297,28 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, keyof typeo
         for (let p = a0 + 0.4; p < a1 - 0.3; p += 1.1) (yellow ? dashes : whites).push(m.clone().compose(new THREE.Vector3(r.c + off, 0.038, p), q0, new THREE.Vector3(0.07, 0.01, 0.55)));
   for (const nr of NS_ROADS)
     for (const er of EW_ROADS) {
+      // A diagonal coming in from one corner: no zebras on the two arms it crosses
+      const diag = DIAGONALS.map((d) => (d.from[0] === nr.c && d.from[1] === er.c ? d.to : d.to[0] === nr.c && d.to[1] === er.c ? d.from : null)).find(Boolean);
+      const sx = diag ? Math.sign(diag[0] - nr.c) : 0;
+      const sz = diag ? Math.sign(diag[1] - er.c) : 0;
       // Across the east-west road, either side of the crossing
-      for (const at of [nr.c - nr.half - 0.45, nr.c + nr.half + 0.45])
-        for (let k = er.c - er.half + 0.16; k < er.c + er.half - 0.1; k += 0.32) zebra.push(m.clone().compose(new THREE.Vector3(at, 0.04, k), q0, new THREE.Vector3(0.55, 0.01, 0.17)));
+      for (const side of [-1, 1])
+        if (side !== sx)
+          for (let k = er.c - er.half + 0.16; k < er.c + er.half - 0.1; k += 0.32) zebra.push(m.clone().compose(new THREE.Vector3(nr.c + side * (nr.half + 0.45), 0.04, k), q0, new THREE.Vector3(0.55, 0.01, 0.17)));
       // Across the north-south road
-      for (const at of [er.c - er.half - 0.45, er.c + er.half + 0.45])
-        for (let k = nr.c - nr.half + 0.16; k < nr.c + nr.half - 0.1; k += 0.32) zebra.push(m.clone().compose(new THREE.Vector3(k, 0.042, at), q0, new THREE.Vector3(0.17, 0.01, 0.55)));
+      for (const side of [-1, 1])
+        if (side !== sz)
+          for (let k = nr.c - nr.half + 0.16; k < nr.c + nr.half - 0.1; k += 0.32) zebra.push(m.clone().compose(new THREE.Vector3(k, 0.042, er.c + side * (er.half + 0.45)), q0, new THREE.Vector3(0.17, 0.01, 0.55)));
     }
+  // A dashed centre line down each diagonal, clear of the crossings at its ends
+  for (const d of DIAGONALS) {
+    const [ax, az] = d.from;
+    const [bx, bz] = d.to;
+    const len = Math.hypot(bx - ax, bz - az);
+    const [ux, uz] = [(bx - ax) / len, (bz - az) / len];
+    const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.atan2(-uz, ux));
+    for (let p = 6; p < len - 3.6; p += 1.1) dashes.push(m.clone().compose(new THREE.Vector3(ax + ux * p, 0.037, az + uz * p), q, new THREE.Vector3(0.55, 0.01, 0.07)));
+  }
   const unit = new THREE.BoxGeometry(1, 1, 1);
   for (const [list, mat] of [
     [dashes, neon('#f5d76e', 0.9, 1.1)],
@@ -259,7 +337,7 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, keyof typeo
   for (let i = 0; i < 70; i++) {
     const alongX = rand() < 0.5;
     const r = CORE_ROADS[Math.floor(rand() * CORE_ROADS.length)];
-    const s = rand() * (BLOCKS[2] + BS);
+    const s = rand() * DOWNTOWN;
     const across = r - LANE + rand() * LANE * 2;
     const g = new THREE.PlaneGeometry(0.35, 2.4).rotateX(-Math.PI / 2);
     if (alongX) g.rotateY(Math.PI / 2).translate(s, 0.05, across);

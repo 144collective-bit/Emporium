@@ -26,8 +26,9 @@ import { createGarageUI, loadCar } from './garage-ui';
 import type { Garage } from './garage';
 import { createDrive } from './drive';
 import { CAMERA_ONLY, DOORS, GARAGE_SITE, RACK, SOLIDS, TURNTABLE_BOX, WALK_SPAWN, rayBoxes, type Box } from './solids';
-import { DISTRICTS, BLOCKS, BS, NS_ROADS, RIVER, SLAB, WALK_W, type Tick } from './world';
-import { EXTRA_LOTS, WORLD_BOUNDS } from './layout';
+import { NS_ROADS, RIVER, SLAB, WALK_W, type Tick } from './world';
+import { WORLD_BOUNDS } from './layout';
+import { PLAN, inPoly } from './streetplan';
 
 /** Facing the Emporium's doors, the tower over his shoulder */
 const SPAWN_YAW = WALK_SPAWN.yaw;
@@ -39,8 +40,8 @@ const GRAVITY = 11.5;
 const SCALE = 0.85;
 /** How far you can go: the world's edge */
 const BOUNDS = WORLD_BOUNDS;
-/** Blocks, districts and the extra lots (garage, market) with their sidewalks: the raised ground */
-const slabs: Box[] = [...BLOCKS.flatMap((x) => BLOCKS.map((z) => [x, z] as const)), ...DISTRICTS.map((d) => [d.ox, d.oz] as const), ...EXTRA_LOTS.map((l) => [l.ox, l.oz] as const)].map(([x, z]): Box => [x - WALK_W, z - WALK_W, x + BS + WALK_W, z + BS + WALK_W, 0]);
+/** Downtown's blocks, the districts and the extra lots (garage, market...) with their sidewalks: the raised ground (with bounding boxes for a quick test first) */
+const slabs = PLAN.slabs.map((poly) => ({ poly, box: [Math.min(...poly.map((p) => p[0])), Math.min(...poly.map((p) => p[1])), Math.max(...poly.map((p) => p[0])), Math.max(...poly.map((p) => p[1])), 0] as Box }));
 /** What your own car bumps into: everything solid but the turntable it starts on */
 const CAR_SOLIDS = SOLIDS.filter((b) => b !== TURNTABLE_BOX);
 const inBox = (b: Box, x: number, z: number, pad = 0) => x > b[0] - pad && x < b[2] + pad && z > b[1] - pad && z < b[3] + pad;
@@ -192,7 +193,7 @@ export function createWalk(d: WalkDeps) {
     } else openSpot(near.id as SpotId);
   };
 
-  const groundAt = (x: number, z: number) => (slabs.some((b) => inBox(b, x, z)) ? SLAB : 0.035);
+  const groundAt = (x: number, z: number) => (slabs.some((s) => inBox(s.box, x, z) && inPoly(s.poly, [x, z])) ? SLAB : 0.035);
   const onBridge = (x: number) => NS_ROADS.some((r) => Math.abs(x - r.c) < r.half + WALK_W - 0.15);
   function blocked(x: number, z: number) {
     if (x < BOUNDS[0] || x > BOUNDS[2] || z < BOUNDS[1] || z > BOUNDS[3]) return true;

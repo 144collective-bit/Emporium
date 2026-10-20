@@ -4,16 +4,16 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { CAMERA_ONLY, DOORS, GARAGE_SITE, MARKET_SITE, RACK, SHOT_SOLIDS, SOLIDS, STALL_SPOT, TURNTABLE_BOX, UNIT_SITE, UNIT_SIZE, WALK_SPAWN, LOT_SITE, lotSolids, rayBoxes, unitSolids } from '../src/scripts/city3d/solids';
-import { BIG_LOTS, EW_ROADS, GARAGE, BS, MARKET, NS_ROADS, UNITS } from '../src/scripts/city3d/layout';
+import { BIG_LOTS, EW_ROADS, GARAGE, BS, LANE, MARKET, NS_ROADS, UNITS } from '../src/scripts/city3d/layout';
 import { LOT_KIND_IDS, UNIT_KIND_IDS } from '../src/scripts/city3d/tycoon';
-import { SLABS, inside, pointIn, type Rect } from './world';
+import { inside, onSlab, pointIn, pointOnSlab, type Rect } from './world';
 
 /** Degen's radius in walk mode (walk.ts RADIUS) */
 const R = 0.22;
 const blocked = (x: number, z: number) => SOLIDS.some((b) => pointIn(x, z, b, R));
 
 test('every solid box stands on a block, district or the garage lot', () => {
-  for (const b of [...SOLIDS, ...CAMERA_ONLY]) assert.ok(SLABS.some((s) => inside(b, s)), `box ${b.join(', ')} is off the slabs`);
+  for (const b of [...SOLIDS, ...CAMERA_ONLY]) assert.ok(onSlab(b), `box ${b.join(', ')} is off the slabs`);
 });
 
 test('no solid box sits on a road', () => {
@@ -30,7 +30,7 @@ test('boxes are well formed', () => {
 test('every door can be stood at (and is on a block)', () => {
   assert.equal(new Set(DOORS.map((d) => d.id)).size, DOORS.length, 'a door is listed twice');
   for (const d of DOORS) {
-    assert.ok(SLABS.some((s) => pointIn(d.x, d.z, s)), `${d.id} door is off the slabs`);
+    assert.ok(pointOnSlab(d.x, d.z), `${d.id} door is off the slabs`);
     // Somewhere within reach of the prompt (1.7) is free to stand on
     const spots = Array.from({ length: 48 }, (_, k) => [d.x + Math.cos(k) * (0.3 + (k % 6) * 0.25), d.z + Math.sin(k) * (0.3 + (k % 6) * 0.25)]);
     assert.ok(spots.some(([x, z]) => !blocked(x, z)), `nowhere free to stand at the ${d.id} door`);
@@ -108,8 +108,8 @@ test('the big lots: on their own lots, off the roads, each with a door at its st
       }
       assert.ok(!boxes.some((b) => pointIn(site.door.x, site.door.z, b, R)) && !blocked(site.door.x, site.door.z), `lot ${site.i}'s door is blocked when it's a ${kind}`);
     }
-    // The door faces a street: within a few steps of one
-    assert.ok(EW_ROADS.some((r) => Math.abs(site.door.z - r.c) < r.half + 2), `lot ${site.i}'s door isn't on a street`);
+    // The door faces a street: across its sidewalk and the verge, near enough for a car parked there to unload (tycoon-ui CAR_R, 9)
+    assert.ok(EW_ROADS.some((r) => Math.abs(site.door.z - r.c) - LANE / 2 < 9), `lot ${site.i}'s door isn't on a street`);
   }
   // Clear of Makers' Row and the market
   for (const l of BIG_LOTS) assert.ok(l.ox > UNITS.ox + BS + 1 && l.ox > MARKET.ox + BS + 1);
