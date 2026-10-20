@@ -12,6 +12,9 @@
  *   roof camera.
  * - Traffic stops for you (`walker` in life.ts reaches further in a car);
  *   you bump softly off other cars and people, never through them.
+ * - The handling comes from the model's numbers with the garage's mods on
+ *   (`stats()`, carStatsOf in tycoon.ts), tuned again every time you get
+ *   in, so an upgrade bought while the car was parked counts at once.
  */
 import * as THREE from 'three';
 import type { Sfx } from './combat';
@@ -20,7 +23,7 @@ import { CARS } from './cars';
 import { circles, newCar, stepCar, tune, type CarState, type DriveInput, type DriveTune } from './drive-sim';
 import type { Garage } from './garage';
 import { bodies } from './life';
-import { DRIVE, type MyCar, type PlayerCar } from './mycar';
+import type { MyCar, PlayerCar } from './mycar';
 import type { Box } from './solids';
 
 export interface DriveDeps {
@@ -30,6 +33,8 @@ export interface DriveDeps {
   garage: Garage;
   /** Your saved car (model and paint) */
   myCar(): MyCar;
+  /** A model's 0..1 handling with its mods on (carStatsOf in tycoon.ts) */
+  stats(model: PlayerCar): { speed: number; accel: number; grip: number };
   /** Every solid box in the city (landmarks, placed buildings) */
   solids(): Box[];
   /** The ground's height (the raised blocks and sidewalks) */
@@ -76,7 +81,7 @@ export function createDrive(d: DriveDeps) {
 
   function tuneOf(model: PlayerCar): DriveTune {
     const s = CARS[model];
-    return tune(DRIVE[model], { L: s.L, W: s.W, wheelbase: s.axles[1] - s.axles[0] });
+    return tune(d.stats(model), { L: s.L, W: s.W, wheelbase: s.axles[1] - s.axles[0] });
   }
 
   /** The car's footprint as circles (for walking round a parked car) */
@@ -146,6 +151,8 @@ export function createDrive(d: DriveDeps) {
         taken.car.group.position.set(0, 0, 0);
         out = { car: taken.car, model, state: newCar(taken.x, taken.z, taken.yaw), tune: tuneOf(model), holder };
       }
+      // Mods may have been bought since it was parked
+      out.tune = tuneOf(out.model);
       active = true;
       camYaw = out.state.yaw;
       lookYaw = lookPitch = 0;

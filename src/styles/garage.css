@@ -1,1 +1,382 @@
-/* garage: the city's game (see global.css for the shared panel styles) */
+/* ---------- The garage on the south bank (walk mode, garage-ui.ts) ----------
+   The dealership and tuning shop, built on the gun store's panel (.shop in global.css). Wide
+   screens put it on the right so the showroom turntable stays in view on the left; phones keep
+   the shop's bottom sheet with the car above it. Eight car cards in two rows of four, the stat
+   bars with a bright bonus segment for the mods fitted, the deal (Buy, then Confirm / Cancel,
+   or the Tune rows for a car you own) and the paints; the sheet scrolls once it all doesn't fit. */
+.garage {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "head"
+    "list"
+    "detail"
+    "foot";
+}
+@media (min-width: 641px) {
+  .garage {
+    top: calc(var(--head-h) + 12px);
+    right: 16px;
+    left: auto;
+    width: min(400px, 44%);
+    transform: none;
+    animation-name: garage-in;
+  }
+}
+@keyframes garage-in {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+}
+.city.is-garage .walk-hint,
+.city.is-garage .walk-stick,
+.city.is-garage .walk-run,
+.city.is-garage .walk-jump,
+.city.is-garage .walk-crosshair,
+.city.is-garage .combat-hud,
+.city.is-garage .city-pins {
+  display: none;
+}
+.garage .shop-score {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.garage .shop-score .dorra {
+  margin: 0 0 0 2px;
+}
+.garage .shop-score b {
+  margin: 0;
+}
+.garage-list {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 5px;
+}
+.garage-card {
+  padding: 7px 3px 6px;
+}
+.garage-card svg {
+  height: 26px;
+  max-width: 64px;
+}
+.garage-card svg .wheel {
+  fill: #14121f;
+}
+.garage-card b {
+  font-size: 12px;
+}
+.garage-card small {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  max-width: 100%;
+  font-size: 8.5px;
+  line-height: 1.1;
+}
+.garage-price {
+  display: inline-flex;
+  align-items: center;
+}
+.garage-card small .dorra {
+  width: 9px;
+  height: 9px;
+  margin-right: 1px;
+}
+.garage-card.is-locked small {
+  color: var(--muted);
+}
+.garage-card.is-locked small::before {
+  content: none;
+}
+.garage .lv-tag {
+  display: inline-block;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: #ffd36b22;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #ffd36b;
+}
+.garage-pitch {
+  margin: 0;
+  font-size: 11.5px;
+  font-style: italic;
+  line-height: 1.35;
+  color: var(--p-cyan);
+}
+.garage-stats {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.garage-stats dd {
+  position: relative;
+}
+.garage-bonus {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--v, 0) * 100%);
+  width: calc(var(--b, 0) * 100%);
+  background: #2bff88;
+  box-shadow: 0 0 6px #2bff88aa;
+}
+.garage-plus {
+  margin-left: 5px;
+  color: #2bff88;
+}
+/* The deal: Buy, the question, or the Tune rows */
+.garage-deal {
+  display: grid;
+  min-width: 0;
+}
+.garage-sale {
+  display: grid;
+  gap: 6px;
+}
+.garage-sale .shop-take {
+  margin: 0;
+}
+.garage-ask {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: #fff;
+}
+.garage-confirm {
+  display: flex;
+  gap: 8px;
+}
+.garage-confirm .shop-take {
+  flex: 1;
+}
+.garage-cancel {
+  padding: 10px 14px;
+  border: 1px solid #ffffff24;
+  border-radius: 999px;
+  background: #0b0a12;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.garage-cancel:hover {
+  color: #fff;
+}
+.garage-tune {
+  display: grid;
+  gap: 5px;
+}
+.garage-tune-head {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.garage-mods {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.garage-mod {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px 5px 9px;
+  border: 1px solid #ffffff14;
+  border-radius: 9px;
+  background: #ffffff08;
+}
+.garage-mod-info {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+.garage-mod-info b {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  line-height: 1;
+  text-transform: uppercase;
+  color: #fff;
+}
+.garage-mod-info small {
+  font-size: 10px;
+  line-height: 1.3;
+  color: var(--muted);
+}
+.garage-pips {
+  display: flex;
+  gap: 3px;
+}
+.garage-pips i {
+  width: 8px;
+  height: 8px;
+  border: 1px solid #ffffff2a;
+  border-radius: 50%;
+  background: #ffffff1a;
+}
+.garage-pips i.on {
+  border-color: var(--p-cyan);
+  background: var(--p-cyan);
+  box-shadow: 0 0 6px var(--p-cyan);
+}
+.garage-up {
+  display: grid;
+  justify-items: center;
+  gap: 1px;
+  min-width: 78px;
+  padding: 5px 9px;
+  border: 1px solid #0000;
+  border-radius: 999px;
+  background:
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.garage-up small {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--p-cyan);
+}
+.garage-up small .dorra {
+  width: 10px;
+  height: 10px;
+  margin-right: 2px;
+}
+.garage-up:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.garage-paint-head {
+  display: flex;
+  justify-content: space-between;
+  margin: 2px 0 0;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.garage-paint-head span {
+  color: var(--p-cyan);
+}
+.garage-paints {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 5px;
+}
+.garage-paint {
+  aspect-ratio: 1;
+  min-width: 0;
+  padding: 0;
+  border: 2px solid #ffffff2e;
+  border-radius: 50%;
+  background: var(--paint);
+  box-shadow: inset 0 -3px 0 #0005;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+.garage-paint:hover {
+  transform: scale(1.1);
+}
+.garage-paint[aria-checked="true"] {
+  border-color: #fff;
+  box-shadow: inset 0 -3px 0 #0005, 0 0 0 2px #0b0a12, 0 0 0 4px var(--p-cyan);
+}
+/* Phones upright: the bottom sheet stops short so the car stays in view above it, and scrolls */
+@media (max-width: 640px) {
+  .garage {
+    max-height: min(60vh, calc(100% - var(--head-h) - 16px));
+  }
+  .garage .shop-blurb,
+  .garage-sale-tag,
+  .garage-mod-info small {
+    display: none;
+  }
+  .garage-card svg {
+    height: 18px;
+  }
+  .garage-card b {
+    font-size: 10.5px;
+  }
+  .garage-card small {
+    font-size: 8px;
+  }
+  .garage-paints {
+    grid-template-columns: repeat(6, 28px);
+    gap: 6px 8px;
+  }
+}
+@media (max-width: 640px) and (max-height: 700px) {
+  .garage .shop-foot {
+    display: none;
+  }
+}
+/* Phones on their side: a tight column on the right that scrolls */
+@media (max-height: 500px) {
+  .garage {
+    gap: 7px;
+    width: min(380px, 52%);
+  }
+  .garage .shop-title {
+    font-size: 19px;
+  }
+  .garage .shop-close {
+    width: 28px;
+    height: 28px;
+  }
+  .garage-card {
+    padding: 5px 2px 4px;
+    gap: 1px;
+  }
+  .garage-card svg {
+    height: 15px;
+  }
+  .garage-card b {
+    font-size: 10px;
+    white-space: nowrap;
+  }
+  .garage-card small {
+    font-size: 8px;
+  }
+  .garage-sale-tag,
+  .garage-mod-info small {
+    display: none;
+  }
+  .garage .shop-name {
+    font-size: 17px;
+  }
+  .garage-stats {
+    gap: 4px 10px;
+  }
+  .garage-mod {
+    padding: 3px 5px 3px 8px;
+  }
+  .garage .shop-take {
+    padding: 8px 14px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .garage {
+    animation: none;
+  }
+}

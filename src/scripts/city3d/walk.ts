@@ -31,6 +31,7 @@ import { NS_ROADS, RIVER, SLAB, WALK_W, type Tick } from './world';
 import { WORLD_BOUNDS } from './layout';
 import { PLAN, inPoly } from './streetplan';
 import type { GameDeps } from './ui';
+import { carStatsOf } from './tycoon';
 
 /** Facing the Emporium's doors, the tower over his shoulder */
 const SPAWN_YAW = WALK_SPAWN.yaw;
@@ -293,6 +294,7 @@ export function createWalk(d: WalkDeps) {
       else d.garage.show(saved);
     },
     away: () => drive.away,
+    game: d.game,
     onOpen() {
       keys.clear();
       jumpHeld = false;
@@ -318,6 +320,7 @@ export function createWalk(d: WalkDeps) {
     root,
     garage: d.garage,
     myCar: loadCar,
+    stats: (model) => carStatsOf(d.game.save(), model),
     solids: () => (d.plotSolids().length ? [...CAR_SOLIDS, ...d.plotSolids()] : CAR_SOLIDS),
     groundAt,
     cameraRoom,
