@@ -6,7 +6,8 @@
  * Units are tiles (about 1.8 m) and seconds. The car faces +x at yaw 0;
  * turning left raises the yaw (three.js's rotation about y).
  *
- * - Speed builds and tapers to the model's top speed; brake, then reverse.
+ * - Speed builds and tapers to the car's top speed (its model's number plus
+ *   the garage's engine mods); brake, then reverse.
  * - Steering is a bicycle model: tighter at low speed, gentler when fast.
  * - Grip decides how quickly the car's slide follows its nose (the
  *   handbrake lets it go, for a cartoon drift).
@@ -32,7 +33,10 @@ export interface DriveTune {
   wheelbase: number;
 }
 
-/** A model's 0..1 handling (mycar.ts DRIVE) and size, as numbers the sim uses */
+/**
+ * A car's 0..1 handling (mycar.ts DRIVE, with the garage's mods on: carStatsOf in
+ * tycoon.ts can go past 1 a little) and size, as numbers the sim uses
+ */
 export function tune(d: { speed: number; accel: number; grip: number }, size: { L: number; W: number; wheelbase: number }): DriveTune {
   return {
     top: 7 + d.speed * 9,
