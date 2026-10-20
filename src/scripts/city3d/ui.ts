@@ -4,6 +4,23 @@
  * Dorras coin, and `repaint()`, which patches markup in place so a button
  * under a finger never changes while a view ticks.
  */
+import type { Sfx } from './combat';
+import type { TycoonSave } from './tycoon';
+
+/**
+ * What a game screen (the garage, the Armoury, Drop 001, the race menu, the
+ * mission board) needs from the economy: the save to read and change with
+ * the rules in tycoon.ts / races.ts / missions.ts, `commit()` once it has
+ * (saves, repaints every screen, checks badges and level-ups), a toast and
+ * the sound switch.
+ */
+export interface GameDeps {
+  save(): TycoonSave;
+  commit(): void;
+  toast(text: string, ms?: number): void;
+  sfx(kind: Sfx, gain?: number): void;
+}
+
 export const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 export const fmt = new Intl.NumberFormat('en-US');
 export const compact = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 });

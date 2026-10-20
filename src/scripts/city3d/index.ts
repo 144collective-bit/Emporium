@@ -36,6 +36,7 @@ import { buildBeacons } from './beacons';
 import { destAt } from './tycoon';
 import { CARS } from './cars';
 import { CROWD_VIEW } from './character';
+import type { GameDeps } from './ui';
 
 type Tier = 'high' | 'medium' | 'low';
 
@@ -321,6 +322,13 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const canvas = renderer.domElement;
 
   /* ---------- Walk mode ---------- */
+  // The economy is made after walk mode (it needs Degen's position); the shops only use it once it exists
+  const game: GameDeps = {
+    save: () => tycoon!.save,
+    commit: () => tycoon!.commit(),
+    toast: (text, ms) => tycoon!.toast(text, ms),
+    sfx: (kind, gain) => sound.sfx(kind, gain),
+  };
   const walk = createWalk({
     scene,
     camera,
@@ -342,6 +350,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     engine: (revs) => sound.engine(revs),
     places: () => tycoon?.places() ?? [],
     openPlace: (id) => tycoon?.openCard(id as 'stall'),
+    game,
   });
   /* ---------- The economy: Dorras, your stall and units, the Workshop, the market hall ---------- */
   tycoon = createTycoonUI(root, {

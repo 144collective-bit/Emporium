@@ -978,6 +978,11 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     get save() {
       return save;
     },
+    /** A game screen changed the save with the rules: keep it, repaint everything */
+    commit() {
+      changed();
+    },
+    toast,
     /** Your places on foot (walk-mode prompts): your stall, the four units, and your contracts' drop-offs */
     places() {
       return [
