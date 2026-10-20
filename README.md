@@ -99,13 +99,13 @@ cartoon shading and PulseChain neon, built with [three.js](https://threejs.org).
   he wears suits in different colours or hoodies and joggers (some with the
   hood up), with backpacks, crossbody bags or headphones and a bit of
   variety in build. People walk with bending knees and elbows, chat in
-  groups, sit on park benches, watch the stage, queue and look around. You play the
+  groups, sit on park benches, queue and look around. You play the
   original, Gas Fee Gummy Bears in hand; the Armoury soldiers are the same
   body in fatigues.
 - **Downtown that feels like it grew:** two cross streets each way and three
   diagonals cutting in from the ring's corners, blocks of different shapes,
   tight rows of shops and flats with walk-only alleys between, three pocket
-  parks, and a hangout square a block from the Emporium with a stage, a
+  parks, and a hangout square a block from the Emporium: an open plaza with a
   fountain, kiosks and string lights.
 - **Streets for real cars:** two-lane cross streets and diagonals, four-lane
   avenues with a median round downtown and along the south bank, a sidewalk

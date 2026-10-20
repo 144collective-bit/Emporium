@@ -89,9 +89,9 @@ it and has been retired completely. Build only on what's here.
     boxes in the shared paint: keep new infill going through them. Phones
     (`LOW` in `infill.ts`) leave out the finest details.
   - The hangout square (`SQUARE`) is the whole south block, a block from the
-    Emporium: the stage at the north end facing south (no screen or
-    billboard: the owner had it taken out), dance floor, benches, kiosks,
-    a fountain, planters, string lights and a crowd.
+    Emporium: an open plaza (the owner had the stage and its screen taken
+    out; don't put them back), with the fountain, benches facing it, kiosks,
+    planters, string lights criss-crossing over it and a crowd.
   - The GM water tower stands on an infill roof (`WATER_TOWER`). The
     target-practice dummies in the old park now stand in the north-west
     pocket park (`PRACTICE`).

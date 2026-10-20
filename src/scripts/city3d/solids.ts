@@ -185,7 +185,7 @@ export const lotSolids = (i: number, kind: LotKind | null): Box[] => (kind ? LOT
 
 /**
  * Downtown round the landmarks (downtown.ts, drawn by infill.ts): the infill buildings, the
- * bollards at the alleys' mouths, the bins, crates and pallets in them, and the hangout square's stage, fountain, kiosks, planters and
+ * bollards at the alleys' mouths, the bins, crates and pallets in them, and the hangout square's fountain, kiosks, planters and
  * light poles. Benches and the pocket parks stay walkable.
  */
 const sq = SQUARE;
@@ -193,7 +193,6 @@ export const DOWNTOWN_SOLIDS: Box[] = [
   ...INFILL.flatMap((f) => f.solids),
   ...ALLEYS.flatMap((a) => a.bollards.map(([x, z]): Box => [x - BOLLARD_R, z - BOLLARD_R, x + BOLLARD_R, z + BOLLARD_R, 0.6])),
   ...ALLEY_PROPS.map((p): Box => [...p.box, p.h]),
-  [...sq.stage, sq.stageH],
   [sq.fountain.at[0] - sq.fountain.r * 0.9, sq.fountain.at[1] - sq.fountain.r * 0.9, sq.fountain.at[0] + sq.fountain.r * 0.9, sq.fountain.at[1] + sq.fountain.r * 0.9, 0.55],
   ...sq.kiosks.map((k): Box => [...k, 2.2]),
   ...sq.trees.map(([x, z]): Box => [x - 0.45, z - 0.45, x + 0.45, z + 0.45, 0.5]),

@@ -1,7 +1,7 @@
 /*
  * Downtown round the landmarks (downtown.ts): tight rows of infill buildings
  * with shopfronts, walk-only alleys with bollards at their mouths, the
- * courtyard lanes, three pocket parks and the hangout square (stage,
+ * courtyard lanes, three pocket parks and the hangout square (an open plaza:
  * fountain, kiosks, benches, string lights and a crowd), lamps along
  * the cross streets, and the GM water tower up on a rooftop.
  *
@@ -1286,36 +1286,12 @@ export function buildInfill(scene: THREE.Scene, crowd: Idle[], tick: (f: Tick) =
   scene.add(fx(new THREE.Points(geo, mat)));
 }
 
-/** The hangout square: the stage at the north end facing the square, the fountain, kiosks, planters, benches, poles with string lights, and its crowd */
+/** The hangout square: an open plaza with the fountain, kiosks, planters, benches, poles with string lights, and its crowd */
 function square(scene: THREE.Scene, b: Batch, crowd: Idle[], tick: (f: Tick) => void, low: boolean) {
   const sq = SQUARE;
   const [x0, z0, x1, z1] = sq.box;
-  // A stone ring round the fountain and a dance floor in front of the stage
+  // A stone ring round the fountain; the rest is open paving
   b.add(new THREE.RingGeometry(sq.fountain.r + 0.1, sq.fountain.r + 1.1, 32).rotateX(-Math.PI / 2).translate(sq.fountain.at[0], S + 0.008, sq.fountain.at[1]), toon('#6f6a9a'));
-  // The stage's back is sz0 (north), its front sz1 faces the square
-  const [s0, sz0, s1, sz1] = sq.stage;
-  box(b, s0 + 0.5, S, sz1 + 0.4, s1 - 0.5, S + 0.012, sz1 + 4.2, toon('#2c2650'));
-  box(b, s0 + 0.5, S, sz1 + 4.1, s1 - 0.5, S + 0.016, sz1 + 4.2, glow(PAL.pink));
-  box(b, s0 + 0.5, S, sz1 + 0.4, s1 - 0.5, S + 0.016, sz1 + 0.5, glow(PAL.pink));
-
-  // The stage: a deck with a neon edge, steps either side, a truss over it, speakers at the front
-  const H = sq.stageH;
-  box(b, s0, S, sz0, s1, S + H, sz1, toon('#1f1b38'));
-  box(b, s0, S + H, sz0, s1, S + H + 0.03, sz1, toon('#3a335f'));
-  box(b, s0, S + H - 0.08, sz1, s1, S + H - 0.02, sz1 + 0.02, glow(PAL.cyan));
-  for (const x of [s0 - 0.5, s1]) box(b, x, S, sz0 + 0.2, x + 0.5, S + H * 0.5, sz1 - 0.6, toon('#3a335f'));
-  const truss = toon('#2b2848');
-  for (const x of [s0 + 0.15, s1 - 0.35]) box(b, x, S + H, sz0 + 0.15, x + 0.2, S + 5.4, sz0 + 0.35, truss);
-  box(b, s0 + 0.15, S + 5.2, sz0 + 0.15, s1 - 0.15, S + 5.4, sz0 + 0.35, truss);
-  for (const x of [s0 + 0.2, s1 - 0.8]) {
-    box(b, x, S + H, sz1 - 0.65, x + 0.6, S + H + 1.0, sz1 - 0.15, INK);
-    cyl(b, 0.16, 0.02, x + 0.3, S + H + 0.55, sz1 - 0.15, toon('#4b4766'), 12);
-  }
-  // Stage lights hanging off the truss
-  for (let k = 0; k < 6; k++) {
-    const x = s0 + 1 + k * ((s1 - s0 - 2) / 5);
-    box(b, x - 0.1, S + 4.95, sz0 + 0.4, x + 0.1, S + 5.2, sz0 + 0.6, glow([PAL.pink, PAL.cyan, PAL.warm][k % 3]));
-  }
 
   // The fountain: a stone basin, water, a column with a bowl and a jet
   const f = sq.fountain;
@@ -1357,24 +1333,21 @@ function square(scene: THREE.Scene, b: Batch, crowd: Idle[], tick: (f: Tick) => 
     box(b, x - 0.38, S + 0.5, z - 0.38, x + 0.38, S + 0.52, z + 0.38, toon('#3b2a22'));
     addTree(x, z, 0.95, false, S + 0.52);
   }
-  // Benches facing the stage, with people watching
+  // Benches facing the fountain, with people sitting out
   sq.benches.forEach((q, k) => {
     bench(b, q.at, q.ry);
     if (!low || k % 2) crowd.push({ x: q.at[0] + (k % 2 ? 0.2 : -0.2), z: q.at[1], y: SEAT, ry: q.ry, act: 'sit' });
   });
-  // A crowd on the dance floor, facing the stage, and a couple of groups talking
-  const r = rng(77);
-  for (let i = 0; i < (low ? 4 : 9); i++) {
-    const x = s0 + 1.4 + r() * (s1 - s0 - 2.8);
-    const z = sz1 + 1.0 + r() * 2.6;
-    crowd.push({ x, z, ry: Math.PI + (r() - 0.5) * 0.5, act: 'look' });
-  }
+  // Groups talking round the open plaza
+  const cx = (x0 + x1) / 2;
   for (const [gx, gz] of (
     [
       [x0 + 3.2, z1 - 6.6],
       [x1 - 3.4, z1 - 6.2],
+      [cx - 2.2, z0 + 3.4],
+      [cx + 2.6, z0 + 4.2],
     ] as Pt[]
-  ).slice(0, low ? 1 : 2)) {
+  ).slice(0, low ? 2 : 4)) {
     for (let k = 0; k < 3; k++) {
       const a = (k / 3) * Math.PI * 2 + gx;
       const px = gx + Math.cos(a) * 0.5;
@@ -1383,17 +1356,15 @@ function square(scene: THREE.Scene, b: Batch, crowd: Idle[], tick: (f: Tick) => 
     }
   }
 
-  // Poles at the corners, strings of lights round the edge and across to the stage truss
+  // Poles at the corners, strings of lights round the edge and criss-crossing over the plaza
   const top = S + 3;
   const poles = sq.poles.map(([x, z]) => {
     cyl(b, 0.06, 3, x, S, z, INK, 6);
     return new THREE.Vector3(x, top, z);
   });
   for (let i = 0; i < 4; i++) string(poles[i], poles[(i + 1) % 4], 16, 0.35);
-  const truss0 = new THREE.Vector3(s0 + 0.25, S + 5.2, sz0 + 0.25);
-  const truss1 = new THREE.Vector3(s1 - 0.25, S + 5.2, sz0 + 0.25);
-  string(poles[3], truss1, 18, 0.6);
-  string(poles[2], truss0, 18, 0.6);
+  string(poles[0], poles[2], 26, 0.7);
+  string(poles[1], poles[3], 26, 0.7);
 }
 
 /** Lamps along downtown's cross streets, both sides, kept off the crossings and the diagonals' mouths */

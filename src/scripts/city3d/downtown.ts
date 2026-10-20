@@ -540,9 +540,8 @@ export const PARKS: Park[] = BLOCKS_DT.filter((b) => b.use === 'park').map((b, i
 });
 
 /**
- * The hangout square: the whole south block (lot outline), with a stage and room for a crowd. The
- * stage is at the north end facing south, so it faces the city's camera and the people on the
- * square look back across to the Emporium.
+ * The hangout square: the whole south block (lot outline), an open plaza with a fountain, kiosks,
+ * benches and room for a crowd, a block from the Emporium.
  */
 export const SQUARE = (() => {
   const [x0, x1] = T1;
@@ -550,9 +549,6 @@ export const SQUARE = (() => {
   const cx = (x0 + x1) / 2;
   return {
     box: [x0, z0, x1, z1] as Rect,
-    /** The stage at the north end, its front (+z) to the square */
-    stage: [cx - 5, z0 + 0.6, cx + 5, z0 + 3.2] as Rect,
-    stageH: 0.55,
     /** A round fountain towards the south end */
     fountain: { at: [cx, z1 - 3.4] as Pt, r: 1.6 },
     /** Kiosks either side */
@@ -569,8 +565,8 @@ export const SQUARE = (() => {
       [x0 + 1.6, z1 - 4.4],
       [x1 - 1.6, z1 - 4.4],
     ] as Pt[],
-    /** Benches facing the stage (the sitter looks -z) */
-    benches: [-6, -2.5, 2.5, 6].map((dx) => ({ at: [cx + dx, z0 + 8.4] as Pt, ry: Math.PI })),
+    /** Benches facing the fountain (the sitter looks +z) */
+    benches: [-6, -2.5, 2.5, 6].map((dx) => ({ at: [cx + dx, z0 + 8.4] as Pt, ry: 0 })),
     /** Poles for the string lights, round the square */
     poles: [
       [x0 + 0.5, z0 + 0.5],

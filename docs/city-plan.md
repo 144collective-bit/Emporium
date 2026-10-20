@@ -77,9 +77,9 @@ Checked with `?fps` at every step (and on a real phone):
      whole floors, roofs with plant; walk-only alleys with bollards; the GM
      water tower on a roof. Built from six facade and three shopfront
      materials (UVs in world units), merged into a handful of draws.
-   - The hangout square on the south block: stage facing south (its big
-     screen later taken out at the owner's request),
-     dance floor, benches, kiosks, fountain, planters, string lights, a crowd.
+   - The hangout square on the south block: an open plaza (its stage and
+     screen later taken out at the owner's request), with benches, kiosks,
+     a fountain, planters, string lights and a crowd.
    - Traffic on routes with turns, down the diagonals and back, three-phase
      lights where a diagonal comes in; pedestrians round the block outlines;
      walking, driving and collisions on the new slabs.
@@ -119,7 +119,7 @@ Checked with `?fps` at every step (and on a real phone):
    - The outer squares: light bollards in pairs at the north and south ways
      in (solid), flush uplights in a ring round each centrepiece.
    - Night lighting balanced, at the owner's request: big lit surfaces
-     (infill windows and shopfronts, landmark windows, the stage screen,
+     (infill windows and shopfronts, landmark windows, the square's screen,
      shop and site signs) toned down so they keep their colour instead of
      flaring white close up; kiosk roofs carry a neon trim instead of a
      whole glowing roof; lit panels bigger than a tube (kiosk hatches,
