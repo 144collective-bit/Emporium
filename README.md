@@ -108,7 +108,10 @@ cartoon shading and PulseChain neon, built with [three.js](https://threejs.org).
   can walk, drive or pan out to it.
 - **Cars at real proportions,** in the same cartoon style: a City Hatch, the
   Cruiser saloon, the Street GT coupe, the Hauler pickup, a Box Van and the
-  City Bus, with glass, bumpers, plates and fat tyres (made-up names, no
+  City Bus, with rounded panels, framed glass, light clusters, grilles,
+  door seams and handles, fat tyres on spoked rims and each model's own
+  touches: a roof spoiler, chrome trim, racing stripes and a rear wing, a
+  light bar and flares, a ladder rack, the bus's doors (made-up names, no
   real makes).
 - **Alive:** cars and buses stop at traffic lights, Degen-style people walk
   the sidewalks and queue at the shop, boats on the river, drones, a blimp,

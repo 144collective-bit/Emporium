@@ -1,7 +1,12 @@
 /*
  * The city's cars, at real proportions in Degen's cartoon style: chunky
- * extruded bodies, a painted cabin with dark glass stuck on, fat tyres and
- * black bumpers, so the ink outlines pick out every panel.
+ * extruded bodies with rounded edges, a painted cabin with blacked-out
+ * window frames and glass, light clusters with bezels, grilles, door seams
+ * and handles, fat tyres on spoked rims and black bumpers, so the ink
+ * outlines pick out every panel. Each model has its own touches (the hatch's
+ * roof spoiler, the Cruiser's chrome, the Street GT's stripes, scoop and
+ * wing, the Hauler's flares and light bar, the van's ladder and stripe, the
+ * bus's doors and roof pods).
  *
  * 1 tile is about 1.8 m (Degen is about one tile tall): a hatch is about
  * 4 m long, 1.8 m wide and 1.7 m tall, a bus about 10 m long and 3 m tall.
@@ -49,8 +54,17 @@ export interface CarSpec {
   sill?: number;
   /** Rear window (vans and buses have none: a blank back) */
   rearGlass?: boolean;
-  /** Height of the lights */
+  /** Height of the lights, and their shape */
   lightY: number;
+  lamp?: 'round' | 'wide' | 'slim';
+  /** Door seams (x) and handles (x) along the body's sides */
+  seams?: number[];
+  handles?: number[];
+  /** Rim colour (chrome unless set) and spokes */
+  rim?: string;
+  spokes?: number;
+  /** Exhaust pipes at the back: their z offsets */
+  exhaust?: number[];
   /** Extras drawn per model */
   extra?: (p: Parts, s: CarSpec) => void;
 }
@@ -62,6 +76,12 @@ const RIM = '#c9c4e6';
 const TRIM = '#2a2838';
 const GLASS = '#5cc8e8';
 const PLATE = '#f3f2f7';
+const CHROME = '#dcdaf0';
+const SEAM = '#1b1830';
+const HEAD = '#fff4c2';
+const TAIL = '#e8233a';
+const AMBER = '#ffad33';
+const BLACKOUT = '#1d1b2b';
 
 /** Paint colours that suit each model (the traffic picks from these) */
 export const PAINTS: Record<CarId, string[]> = {
@@ -105,6 +125,16 @@ export const CARS: Record<CarId, CarSpec> = {
     ],
     rearGlass: true,
     lightY: 0.44,
+    lamp: 'round',
+    seams: [-0.3, 0.52],
+    handles: [-0.18],
+    exhaust: [0.28],
+    extra(p, s) {
+      // Roof spoiler over the hatch, a rear wiper, roof bars
+      p.paint(box(0.16, 0.04, s.W * 0.8, -0.96, 0.95, 0));
+      p.detail(box(0.02, 0.02, 0.18, -0.985, 0.72, 0.05), TRIM);
+      for (const z of [-1, 1]) p.detail(box(0.75, 0.03, 0.03, -0.4, 0.98, z * s.W * 0.3), TRIM);
+    },
   },
   sedan: {
     id: 'sedan',
@@ -136,6 +166,17 @@ export const CARS: Record<CarId, CarSpec> = {
     ],
     rearGlass: true,
     lightY: 0.43,
+    lamp: 'wide',
+    seams: [-0.92, -0.12, 0.6],
+    handles: [-0.8, 0.0],
+    exhaust: [0.26, -0.26],
+    extra(p, s) {
+      // Chrome along the window line and the boot lid, a roof aerial, a boot lip
+      for (const z of [-1, 1]) p.detail(box(1.38, 0.022, 0.012, -0.15, 0.58, z * (s.W * 0.43 + 0.006)), CHROME);
+      p.detail(box(0.02, 0.03, s.W * 0.5, -1.31, 0.5, 0), CHROME);
+      p.paint(box(0.12, 0.03, s.W * 0.86, -1.22, 0.59, 0));
+      p.detail(box(0.012, 0.22, 0.012, -0.42, 0.98, 0.15), TRIM);
+    },
   },
   coupe: {
     id: 'coupe',
@@ -163,12 +204,25 @@ export const CARS: Record<CarId, CarSpec> = {
     panes: [[-0.85, 0.36]],
     rearGlass: true,
     lightY: 0.35,
+    lamp: 'slim',
+    seams: [-0.5, 0.44],
+    handles: [-0.4],
+    rim: '#ffd23f',
+    spokes: 6,
+    exhaust: [0.3, 0.2, -0.2, -0.3],
     extra(p, s) {
-      // Rear wing on two posts
-      p.paint(box(0.2, 0.035, s.W * 0.86, -1.1, 0.64, 0));
-      for (const z of [-0.3, 0.3]) p.detail(box(0.05, 0.13, 0.04, -1.08, 0.56, z), TRIM);
-      // Side intakes
-      for (const z of [-1, 1]) p.detail(box(0.3, 0.08, 0.02, -0.45, 0.36, z * (s.W / 2 + 0.005)), TRIM);
+      // Rear wing on two posts, with end plates
+      p.paint(box(0.22, 0.035, s.W * 0.9, -1.1, 0.68, 0));
+      for (const z of [-1, 1]) p.detail(box(0.24, 0.1, 0.02, -1.1, 0.66, z * s.W * 0.45), TRIM);
+      for (const z of [-0.3, 0.3]) p.detail(box(0.05, 0.15, 0.04, -1.08, 0.59, z), TRIM);
+      // Side intakes behind the doors, a bonnet scoop, a front splitter and a rear diffuser
+      for (const z of [-1, 1]) p.detail(box(0.3, 0.09, 0.02, -0.68, 0.36, z * (s.W / 2 + 0.006)), BLACKOUT);
+      p.paint(box(0.3, 0.06, 0.26, 0.72, 0.52, 0));
+      p.detail(box(0.02, 0.04, 0.2, 0.88, 0.53, 0), BLACKOUT);
+      p.detail(box(0.12, 0.025, s.W * 0.96, 1.22, 0.085, 0), BLACKOUT);
+      for (const z of [-0.3, -0.1, 0.1, 0.3]) p.detail(box(0.18, 0.06, 0.015, -1.18, 0.13, z * s.W * 0.9), BLACKOUT);
+      // Twin racing stripes, nose to tail over the cabin
+      for (const z of [-0.09, 0.09]) stripe(p, s, z, 0.09, PLATE);
     },
   },
   pickup: {
@@ -196,13 +250,26 @@ export const CARS: Record<CarId, CarSpec> = {
     panes: [[-0.16, 0.58]],
     rearGlass: true,
     lightY: 0.62,
+    lamp: 'wide',
+    seams: [-0.22, 0.64],
+    handles: [-0.1],
+    rim: '#3a3550',
+    spokes: 6,
+    exhaust: [-0.3],
     extra(p, s) {
-      // The open bed: a dark liner inside raised rails
+      // The open bed: a dark liner inside raised rails, a toolbox across the front of it
       p.detail(box(1.12, 0.012, s.W - 0.16, -0.86, 0.752, 0), '#3a3550');
       for (const z of [-1, 1]) p.paint(box(1.18, 0.07, 0.07, -0.86, 0.785, z * (s.W / 2 - 0.035)));
       p.paint(box(0.07, 0.07, s.W, -1.44, 0.785, 0));
-      // Push bar on the nose
-      p.detail(box(0.08, 0.2, s.W * 0.7, 1.5, 0.42, 0), TRIM);
+      p.detail(box(0.22, 0.16, s.W - 0.12, -0.42, 0.83, 0), CHROME);
+      for (const z of [-0.2, 0.2]) p.detail(box(0.04, 0.02, 0.1, -0.31, 0.9, z), TRIM);
+      // Push bar on the nose, fender flares over every wheel, mud flaps, a light bar on the cab
+      p.detail(box(0.08, 0.22, s.W * 0.74, 1.52, 0.42, 0), TRIM);
+      for (const x of [-0.18, 0.18]) p.detail(box(0.06, 0.3, 0.05, 1.5, 0.52, x * s.W), TRIM);
+      for (const ax of s.axles) for (const z of [-1, 1]) p.detail(flare(s, ax, z), TRIM);
+      for (const z of [-1, 1]) p.detail(box(0.02, 0.2, 0.2, s.axles[0] - s.r - 0.08, 0.16, z * (s.W / 2 - 0.1)), TRIM);
+      p.detail(box(0.08, 0.06, s.W * 0.7, 0.05, 1.17, 0), TRIM);
+      for (const z of [-0.27, -0.09, 0.09, 0.27]) p.detail(box(0.02, 0.045, 0.1, 0.1, 1.17, z * s.W), HEAD);
     },
   },
   van: {
@@ -230,12 +297,28 @@ export const CARS: Record<CarId, CarSpec> = {
     panes: [[0.24, 0.84]],
     sill: 0.78,
     lightY: 0.5,
+    lamp: 'wide',
+    seams: [0.2, 0.98],
+    handles: [0.32, -0.88],
+    exhaust: [-0.32],
     extra(p, s) {
-      // Sliding-door rail and a roof rack
-      for (const z of [-1, 1]) p.detail(box(1.1, 0.025, 0.02, -0.45, 1.02, z * (s.W * 0.49 + 0.01)), TRIM);
+      // Sliding-door rail and its seams, a roof rack with a ladder, a cargo stripe, rear doors
+      for (const z of [-1, 1]) {
+        const zz = z * (s.W * 0.49 + 0.012);
+        p.detail(box(1.1, 0.025, 0.02, -0.45, 1.02, zz), TRIM);
+        for (const x of [-1.0, 0.1]) p.detail(box(0.012, 0.6, 0.012, x, 0.7, zz), SEAM);
+        p.detail(box(1.45, 0.09, 0.012, -0.575, 0.86, z * (s.W * 0.49 + 0.016)), '#ff2fb9');
+        p.detail(box(1.45, 0.04, 0.012, -0.575, 0.78, z * (s.W * 0.49 + 0.016)), '#00c2ff');
+      }
       for (const x of [-1.0, -0.4, 0.2]) p.detail(box(0.05, 0.05, s.W * 0.9, x, 1.3, 0), TRIM);
-      p.detail(box(1.3, 0.04, 0.04, -0.4, 1.33, s.W * 0.42), TRIM);
-      p.detail(box(1.3, 0.04, 0.04, -0.4, 1.33, -s.W * 0.42), TRIM);
+      for (const z of [-1, 1]) p.detail(box(1.3, 0.04, 0.04, -0.4, 1.33, z * s.W * 0.42), TRIM);
+      // The ladder on the rack
+      for (const z of [-0.12, 0.12]) p.detail(box(1.2, 0.025, 0.025, -0.4, 1.37, z), CHROME);
+      for (let k = 0; k < 6; k++) p.detail(box(0.02, 0.02, 0.24, -0.95 + k * 0.22, 1.37, 0), CHROME);
+      // Rear: a split in the doors, two handles, a step
+      p.detail(box(0.012, 0.55, 0.012, -s.L / 2 - 0.006, 0.95, 0), SEAM);
+      for (const z of [-0.06, 0.06]) p.detail(box(0.03, 0.03, 0.08, -s.L / 2 - 0.015, 0.95, z), CHROME);
+      p.detail(box(0.16, 0.05, s.W * 0.5, -s.L / 2 - 0.05, 0.16, 0), TRIM);
     },
   },
   bus: {
@@ -268,10 +351,31 @@ export const CARS: Record<CarId, CarSpec> = {
     ],
     sill: 0.92,
     lightY: 0.5,
+    lamp: 'wide',
+    rim: '#f3f2f7',
+    spokes: 0,
+    exhaust: [-0.5],
     extra(p, s) {
-      // Destination sign over the windscreen, a stripe along the side
+      // Destination sign over the windscreen, stripes along the sides
       p.glow(box(0.02, 0.14, s.W * 0.6, s.L / 2 + 0.012, 1.5, 0));
-      for (const z of [-1, 1]) p.detail(box(s.L - 0.4, 0.06, 0.012, 0, 0.8, z * (s.W * 0.495 + 0.008)), '#f3f2f7');
+      for (const z of [-1, 1]) {
+        p.detail(box(s.L - 0.4, 0.06, 0.012, 0, 0.8, z * (s.W * 0.495 + 0.008)), '#f3f2f7');
+        p.detail(box(s.L - 0.4, 0.03, 0.012, 0, 0.74, z * (s.W * 0.495 + 0.008)), '#ffd23f');
+      }
+      // Two doors on the kerb side (+z): glass panels in dark frames
+      for (const x of [2.2, -0.2]) {
+        p.detail(box(0.62, 1.0, 0.014, x, 0.68, s.W / 2 + 0.01), BLACKOUT);
+        for (const dx of [-0.15, 0.15]) p.detail(box(0.25, 0.85, 0.012, x + dx, 0.7, s.W / 2 + 0.018), GLASS);
+      }
+      // Roof pods (air conditioning), a ladder at the back, mirrors on long arms
+      for (const x of [-1.3, 0.9]) {
+        p.paint(box(0.9, 0.14, s.W * 0.6, x, 1.73, 0));
+        p.detail(box(0.6, 0.02, s.W * 0.4, x, 1.81, 0), TRIM);
+      }
+      for (const z of [-1, 1]) {
+        p.detail(box(0.25, 0.03, 0.03, s.L / 2 + 0.1, 1.45, z * (s.W / 2 - 0.02)), TRIM);
+        p.detail(box(0.05, 0.22, 0.08, s.L / 2 + 0.22, 1.32, z * (s.W / 2 + 0.02)), TRIM);
+      }
     },
   },
 };
@@ -282,10 +386,60 @@ function box(w: number, h: number, d: number, x: number, y: number, z: number) {
   return new THREE.BoxGeometry(w, h, d).translate(x, y, z);
 }
 
-/** An outline in the side view (x, y), pushed out `depth` across the car, centred */
-function extrude(shape: THREE.Shape, depth: number) {
-  const g = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false, curveSegments: 8 });
-  return g.translate(0, 0, -depth / 2);
+/**
+ * An outline in the side view (x, y), pushed out `depth` across the car, centred. `round`
+ * rounds its long edges off (the outline stays the same size seen from the side).
+ */
+function extrude(shape: THREE.Shape, depth: number, round = 0) {
+  const core = depth - round * 2;
+  const g = new THREE.ExtrudeGeometry(shape, {
+    depth: core,
+    bevelEnabled: round > 0,
+    bevelThickness: round,
+    bevelSize: round,
+    bevelOffset: -round,
+    bevelSegments: 1,
+    curveSegments: 8,
+  });
+  return g.translate(0, 0, -core / 2);
+}
+/** The height of the lower body's top line at x */
+function topAt(s: CarSpec, x: number) {
+  const t = s.top;
+  if (x >= t[0][0]) return t[0][1];
+  for (let i = 1; i < t.length; i++) {
+    const [x0, y0] = t[i - 1];
+    const [x1, y1] = t[i];
+    if (x <= x0 && x >= x1) return y0 + ((y1 - y0) * (x - x0)) / (x1 - x0 || 1);
+  }
+  return t[t.length - 1][1];
+}
+/** A thin plate lying along a side-view polyline (on top of the body and cabin), at z across, `w` wide */
+function lay(p: Parts, pts: V2[], z: number, w: number, color: string, lift = 0.006) {
+  for (let i = 1; i < pts.length; i++) {
+    const [ax, ay] = pts[i - 1];
+    const [bx, by] = pts[i];
+    const len = Math.hypot(bx - ax, by - ay);
+    if (len < 0.02) continue;
+    p.detail(new THREE.BoxGeometry(len + 0.01, 0.012, w).rotateZ(Math.atan2(by - ay, bx - ax)).translate((ax + bx) / 2, (ay + by) / 2 + lift, z), color);
+  }
+}
+/** A racing stripe from the nose over the cabin to the tail */
+function stripe(p: Parts, s: CarSpec, z: number, w: number, color: string) {
+  const [rb, rr, fr, fb] = s.cabin;
+  const nose = s.top.filter(([x]) => x > fb[0]);
+  const tail = s.top.filter(([x]) => x < rb[0]);
+  lay(p, [...nose, fb, fr, rr, rb, ...tail], z, w, color);
+}
+/** A fender flare: a dark band round a wheel arch, on one side */
+function flare(s: CarSpec, ax: number, side: number) {
+  const a = s.r + 0.04;
+  const sh = new THREE.Shape();
+  sh.absarc(ax, s.r, a + 0.07, Math.PI, 0, true);
+  sh.lineTo(ax + a, s.r);
+  sh.absarc(ax, s.r, a, 0, Math.PI, false);
+  sh.lineTo(ax - a - 0.07, s.r);
+  return new THREE.ExtrudeGeometry(sh, { depth: 0.06, bevelEnabled: false, curveSegments: 10 }).translate(0, 0, side > 0 ? s.W / 2 - 0.03 : -s.W / 2 - 0.03);
 }
 
 /** The lower body: its top line, then underneath with an arch over each wheel */
@@ -408,9 +562,35 @@ export function wheelSpots(s: CarSpec): [number, number, number][] {
 /** One wheel (tyre and rim), axle along z, centred; the rim faces +z */
 export function wheelGeometry(s: CarSpec) {
   const p = new Parts();
-  p.detail(new THREE.CylinderGeometry(s.r, s.r, s.tw, 16).rotateX(Math.PI / 2), TYRE);
-  p.detail(new THREE.CylinderGeometry(s.r * 0.58, s.r * 0.58, 0.02, 12).rotateX(Math.PI / 2).translate(0, 0, s.tw / 2 + 0.005), RIM);
-  p.detail(new THREE.CylinderGeometry(s.r * 0.2, s.r * 0.2, 0.03, 8).rotateX(Math.PI / 2).translate(0, 0, s.tw / 2 + 0.01), TRIM);
+  const r = s.r;
+  const h = s.tw / 2;
+  // The tyre: a rounded shoulder and a deep sidewall, turned round its axle
+  const prof: THREE.Vector2[] = [
+    [r * 0.62, -h],
+    [r * 0.86, -h],
+    [r * 0.97, -h * 0.8],
+    [r, -h * 0.45],
+    [r, h * 0.45],
+    [r * 0.97, h * 0.8],
+    [r * 0.86, h],
+    [r * 0.62, h],
+  ].map(([x, y]) => new THREE.Vector2(x, y));
+  p.detail(new THREE.LatheGeometry(prof, 14).rotateX(Math.PI / 2), TYRE);
+  // The rim: a lip, a dished face, spokes and a hub with a cap
+  const rim = s.rim ?? RIM;
+  p.detail(new THREE.CylinderGeometry(r * 0.64, r * 0.64, 0.012, 14, 1, true).rotateX(Math.PI / 2).translate(0, 0, h - 0.004), rim);
+  p.detail(new THREE.CircleGeometry(r * 0.6, 14).translate(0, 0, h - 0.015), s.spokes === 0 ? rim : TRIM);
+  const n = s.spokes ?? 5;
+  for (let k = 0; k < n; k++)
+    p.detail(
+      new THREE.BoxGeometry(r * 0.5, r * 0.13, 0.016)
+        .translate(r * 0.3, 0, 0)
+        .rotateZ((k / n) * Math.PI * 2)
+        .translate(0, 0, h - 0.008),
+      rim
+    );
+  p.detail(new THREE.CylinderGeometry(r * 0.2, r * 0.2, 0.03, 8).rotateX(Math.PI / 2).translate(0, 0, h), rim);
+  p.detail(new THREE.CylinderGeometry(r * 0.09, r * 0.09, 0.03, 6).rotateX(Math.PI / 2).translate(0, 0, h + 0.012), TRIM);
   return merge(p.details, true)!;
 }
 
@@ -438,36 +618,101 @@ export function carGeometry(id: CarId, { wheels = true } = {}): CarGeometry {
   const lit = s.id === 'bus';
   const addGlass = (g: THREE.BufferGeometry) => (lit ? p.glow(g) : p.detail(g, GLASS));
 
-  // Body and cabin
-  p.paint(extrude(bodyShape(s), s.W));
-  p.paint(extrude(new THREE.Shape(s.cabin.map(([x, y]) => new THREE.Vector2(x, y))), cw));
+  // Body and cabin, their long edges rounded off
+  const bus = s.id === 'bus';
+  p.paint(extrude(bodyShape(s), s.W, bus ? 0.05 : 0.04));
+  const cabinRound = bus ? 0.05 : 0.055;
+  p.paint(extrude(new THREE.Shape(s.cabin.map(([x, y]) => new THREE.Vector2(x, y))), cw, cabinRound));
 
-  // Glass: the side panes (inset from the cabin's outline), the windscreen and the rear window
+  // Glass: the side panes on a blacked-out frame (dark pillars between them), the windscreen and
+  // the rear window, each on a slightly bigger dark surround
   const [rb, rr, fr, fb] = s.cabin;
-  const inner = inset(s.cabin, 0.06);
+  const sideFace = (poly: V2[], z: number, out: number, color: string | null) => {
+    if (poly.length < 3) return;
+    const g = extrude(new THREE.Shape(poly.map(([x, y]) => new THREE.Vector2(x, y))), 0.012).translate(0, 0, z * (cw / 2 + out));
+    if (color) p.detail(g, color);
+    else addGlass(g);
+  };
+  const frame = inset(s.cabin, cabinRound + 0.012);
+  const inner = inset(s.cabin, cabinRound + 0.035);
+  const x0s = Math.min(...s.panes.map(([a]) => a)) - 0.03;
+  const x1s = Math.max(...s.panes.map(([, b]) => b)) + 0.03;
+  let band = clip(clip(frame, ([x]) => x - x0s), ([x]) => x1s - x);
+  if (s.sill !== undefined) band = clip(band, ([, y]) => y - (s.sill! - 0.03));
+  for (const side of [-1, 1]) sideFace(band, side, 0.006, BLACKOUT);
   for (const [x0, x1] of s.panes) {
     let poly = clip(inner, ([x]) => x - x0);
     poly = clip(poly, ([x]) => x1 - x);
     if (s.sill !== undefined) poly = clip(poly, ([, y]) => y - s.sill!);
-    if (poly.length < 3) continue;
-    const shape = new THREE.Shape(poly.map(([x, y]) => new THREE.Vector2(x, y)));
-    for (const side of [-1, 1]) addGlass(extrude(shape, 0.012).translate(0, 0, side * (cw / 2 + 0.012)));
+    for (const side of [-1, 1]) sideFace(poly, side, 0.014, null);
   }
   const mid: V2 = [(rb[0] + fb[0] + rr[0] + fr[0]) / 4, (rb[1] + fb[1] + rr[1] + fr[1]) / 4];
   const screenFrom: V2 = s.sill !== undefined && lit ? [fb[0] + (fr[0] - fb[0]) * 0.15, fb[1] + (fr[1] - fb[1]) * 0.15] : fb;
-  addGlass(pane(fr, screenFrom, cw - 0.12, mid, 0.06));
-  if (s.rearGlass) addGlass(pane(rb, rr, cw - 0.12, mid, 0.06));
+  p.detail(pane(fr, screenFrom, cw - cabinRound * 2 + 0.02, mid, 0.03), BLACKOUT);
+  addGlass(pane(fr, screenFrom, cw - cabinRound * 2 - 0.06, mid, 0.07).translate(0, 0, 0));
+  if (s.rearGlass) {
+    p.detail(pane(rb, rr, cw - cabinRound * 2 + 0.02, mid, 0.03), BLACKOUT);
+    addGlass(pane(rb, rr, cw - cabinRound * 2 - 0.06, mid, 0.07));
+  }
 
-  // Bumpers, grille, plates
+  // Bumpers (with a lower lip), plates, the grille with chrome slats
   const bumperY = s.clr + 0.08;
   for (const end of [-1, 1]) {
     p.detail(box(0.1, 0.14, s.W + 0.02, end * (half + 0.01), bumperY, 0), TRIM);
+    p.detail(box(0.06, 0.03, s.W * 0.9, end * (half + 0.03), bumperY - 0.08, 0), BLACKOUT);
     p.detail(box(0.02, 0.08, 0.26, end * (half + 0.065), bumperY + 0.01, 0), PLATE);
+    p.detail(box(0.022, 0.012, 0.2, end * (half + 0.066), bumperY + 0.02, 0), SEAM);
   }
   const noseTop = s.top[0][1];
-  p.detail(box(0.02, Math.max(0.06, noseTop - bumperY - 0.14), s.W * 0.42, half + 0.008, (noseTop + bumperY + 0.07) / 2, 0), TRIM);
-  // Wing mirrors
-  for (const side of [-1, 1]) p.paint(box(0.08, 0.07, 0.1, fb[0] - 0.08, fb[1] + 0.09, side * (cw / 2 + 0.06)));
+  const grilleH = Math.max(0.06, noseTop - bumperY - 0.12);
+  const grilleY = (noseTop + bumperY + 0.07) / 2 - 0.01;
+  const grilleW = s.W * (bus ? 0.5 : 0.42);
+  p.detail(box(0.02, grilleH, grilleW, half + 0.008, grilleY, 0), BLACKOUT);
+  for (let k = 0; k < 3; k++) p.detail(box(0.025, 0.012, grilleW - 0.04, half + 0.012, grilleY - grilleH / 2 + (grilleH * (k + 1)) / 4, 0), CHROME);
+  p.detail(box(0.03, grilleH + 0.03, 0.02, half + 0.01, grilleY, grilleW / 2), CHROME);
+  p.detail(box(0.03, grilleH + 0.03, 0.02, half + 0.01, grilleY, -grilleW / 2), CHROME);
+
+  // Lights: a bezel and a lens at each corner, front and back, with indicators beside them
+  const lz = s.W / 2 - Math.min(0.17, s.W * 0.16);
+  const lamp = s.lamp ?? 'wide';
+  const lh = lamp === 'slim' ? 0.055 : 0.1;
+  const lw = lamp === 'slim' ? 0.24 : 0.2;
+  for (const z of [lz, -lz]) {
+    if (lamp === 'round') {
+      p.detail(new THREE.CylinderGeometry(0.075, 0.075, 0.02, 14).rotateZ(Math.PI / 2).translate(half + 0.004, s.lightY, z), TRIM);
+      p.detail(new THREE.CylinderGeometry(0.06, 0.06, 0.02, 14).rotateZ(Math.PI / 2).translate(half + 0.008, s.lightY, z), HEAD);
+    } else {
+      p.detail(box(0.02, lh + 0.03, lw + 0.03, half + 0.003, s.lightY, z), TRIM);
+      p.detail(box(0.02, lh, lw, half + 0.007, s.lightY, z), HEAD);
+    }
+    p.detail(box(0.02, 0.035, 0.06, half + 0.006, s.lightY - lh / 2 - 0.04, z + Math.sign(z) * 0.06), AMBER);
+    p.detail(box(0.02, lh + 0.04, lw + 0.03, -half - 0.003, s.lightY, z), TRIM);
+    p.detail(box(0.02, lh + 0.01, lw, -half - 0.007, s.lightY, z), TAIL);
+    p.detail(box(0.02, 0.03, lw * 0.4, -half - 0.009, s.lightY + 0.01, z - Math.sign(z) * lw * 0.25), AMBER);
+  }
+
+  // Door seams and handles down the sides, a dark sill between the wheels
+  for (const side of [-1, 1]) {
+    const z = side * (s.W / 2 + 0.002);
+    for (const x of s.seams ?? []) {
+      const top = topAt(s, x) - 0.03;
+      const bottom = s.clr + 0.04;
+      if (top - bottom > 0.05) p.detail(box(0.012, top - bottom, 0.012, x, (top + bottom) / 2, z), SEAM);
+    }
+    for (const x of s.handles ?? []) p.detail(box(0.08, 0.022, 0.016, x, topAt(s, x) - 0.08, z + side * 0.004), CHROME);
+    const [ra, fa] = s.axles;
+    const span = fa - ra - (s.r + 0.08) * 2;
+    if (span > 0.1 && !bus) p.detail(box(span, 0.05, 0.02, (ra + fa) / 2, s.clr + 0.025, side * (s.W / 2 + 0.004)), BLACKOUT);
+  }
+  // Exhausts under the back
+  for (const z of s.exhaust ?? []) p.detail(new THREE.CylinderGeometry(0.03, 0.03, 0.1, 10).rotateZ(Math.PI / 2).translate(-half - 0.02, s.clr + 0.02, z * s.W), CHROME);
+  // Wing mirrors on short arms
+  for (const side of [-1, 1]) {
+    if (bus) continue;
+    p.detail(box(0.05, 0.02, 0.06, fb[0] - 0.06, fb[1] + 0.06, side * (cw / 2 + 0.03)), TRIM);
+    p.paint(box(0.08, 0.07, 0.1, fb[0] - 0.08, fb[1] + 0.09, side * (cw / 2 + 0.08)));
+    p.detail(box(0.012, 0.05, 0.075, fb[0] - 0.122, fb[1] + 0.09, side * (cw / 2 + 0.08)), GLASS);
+  }
 
   // Wheels
   if (wheels) {
@@ -480,7 +725,6 @@ export function carGeometry(id: CarId, { wheels = true } = {}): CarGeometry {
   }
   s.extra?.(p, s);
 
-  const lz = s.W / 2 - Math.min(0.17, s.W * 0.16);
   const out: CarGeometry = {
     spec: s,
     paint: merge(p.paints, false)!,

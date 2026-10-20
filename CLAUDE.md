@@ -58,8 +58,14 @@ it and has been retired completely. Build only on what's here.
   - City view can pan anywhere inside the bounds.
 - **Cars** are `src/scripts/city3d/cars.ts`: real-proportion cartoon models
   (City Hatch, Cruiser, Street GT coupe, Hauler pickup, Box Van, City Bus;
-  made-up names, never a real make or badge), each an extruded body and
-  cabin with glass, bumpers, plates and fat tyres. A model is two
+  made-up names, never a real make or badge), each a bevelled extruded
+  body and cabin with blacked-out window frames and glass, light clusters
+  (lamp shape `lamp`) with bezels and indicators, a grille, door seams and
+  handles (`seams`, `handles`), sills, exhausts, mirrors, bumpers, plates
+  and fat lathe-turned tyres on spoked rims (`rim`, `spokes`), plus each
+  model's own touches in `extra()` (spoilers, stripes, flares, a light bar,
+  a ladder, roof pods). Keep `top` and `cabin` as the side outline: the
+  garage cards draw their silhouettes from them. A model is two
   geometries, `paint` (each car its own colour, `PAINTS`) and `detail`
   (vertex colours), plus the bus's lit windows, so the traffic in `life.ts`
   costs two draw calls a model. Parked cars use `parkedCars()`; give them a
