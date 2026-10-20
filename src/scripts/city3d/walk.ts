@@ -1025,6 +1025,12 @@ export function createWalk(d: WalkDeps) {
       grounded = true;
       face = 0;
       yaw = SPAWN_YAW;
+      // ?spawn=x,z[,yaw] in the address: start walking somewhere else (for checking a place on real devices)
+      const at = new URLSearchParams(location.search).get('spawn')?.split(',').map(Number);
+      if (at && at.length >= 2 && at.every(Number.isFinite)) {
+        pos.set(at[0], groundAt(at[0], at[1]), at[1]);
+        if (at.length > 2) yaw = at[2];
+      }
       // First person by default; V (or the Controls panel) swaps to the shoulder camera
       pitch = -0.16;
       zoom = camDist = 5.2;
