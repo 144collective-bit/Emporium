@@ -45,6 +45,13 @@ it and has been retired completely. Build only on what's here.
   `designBox()` (in `landmarks.ts`, `onBlock()` does it for each block's
   scene objects). Keep writing landmark numbers on that grid, and change
   street sizes only in `layout.ts`.
+- **The world's size** is in `layout.ts` too:
+  - `EXT` (-200 to 240, about 790 m across) is the ground, the river and every road, edge to edge. It's mostly open land, room to grow the city into. Build there only when the owner asks.
+  - `WORLD_BOUNDS` is how far you can walk or drive.
+  - `CITY_EXT` is the built-up part: traffic and boats loop there, and the outskirts' tree belt fills round it (a lighter sprinkle covers the rest).
+  - The skyline ring stands just past `EXT`, kept out of the haze (`fog = false`) so it reads as a far metropolis.
+  - The sky dome and stars travel with the camera at 400, inside its far plane (440), so everything in the world stays in front of the sky.
+  - City view can pan anywhere inside the bounds.
 - **Cars** are `src/scripts/city3d/cars.ts`: real-proportion cartoon models
   (City Hatch, Cruiser, Street GT coupe, Hauler pickup, Box Van, City Bus;
   made-up names, never a real make or badge), each an extruded body and

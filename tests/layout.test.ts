@@ -2,8 +2,8 @@
 // landmarks' old drawing grid.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BLOCKS, BS, CORE_ROADS, EW_ROADS, GARAGE, LANE, MEDIAN, NS_ROADS, RIVER, SOUTH_ROAD, STREET_GAP, design, designBox, designShift, laneCentres } from '../src/scripts/city3d/layout';
-import { SLABS, overlaps } from './world';
+import { BLOCKS, BS, CITY_EXT, CORE_ROADS, EW_ROADS, EXT, GARAGE, LANE, MEDIAN, NS_ROADS, RIVER, SOUTH_ROAD, STREET_GAP, WORLD_BOUNDS, design, designBox, designShift, laneCentres } from '../src/scripts/city3d/layout';
+import { SLABS, inside, overlaps } from './world';
 
 test('core blocks are 9 wide with a street between each', () => {
   assert.equal(BS, 9);
@@ -61,4 +61,14 @@ test('the drawing grid maps the old blocks (0, 11, 22) onto today\'s', () => {
   });
   // A box moves whole, by the block its centre is in
   assert.deepEqual(designBox([11.8, 11.8, 18, 16, 2.6]), [14.8, 14.8, 21, 19, 2.6]);
+});
+
+test('the world reaches well past the city, with room to build', () => {
+  const world = [EXT[0], EXT[0], EXT[1], EXT[1]] as [number, number, number, number];
+  assert.ok(inside(WORLD_BOUNDS, world), 'you can walk or drive off the edge');
+  assert.ok(CITY_EXT[0] >= EXT[0] && CITY_EXT[1] <= EXT[1]);
+  for (const s of SLABS) assert.ok(inside(s, WORLD_BOUNDS), 'a block or district is out of reach');
+  // At least a hundred tiles of open land on every side of what's built
+  const built = SLABS.reduce((b, s) => [Math.min(b[0], s[0]), Math.min(b[1], s[1]), Math.max(b[2], s[2]), Math.max(b[3], s[3])], [Infinity, Infinity, -Infinity, -Infinity]);
+  assert.ok(built[0] - WORLD_BOUNDS[0] >= 100 && built[1] - WORLD_BOUNDS[1] >= 100 && WORLD_BOUNDS[2] - built[2] >= 100 && WORLD_BOUNDS[3] - built[3] >= 100);
 });

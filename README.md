@@ -99,6 +99,10 @@ cartoon shading and PulseChain neon, built with [three.js](https://threejs.org).
   avenues with a median round the core and along the south bank, a sidewalk
   round every block, zebra crossings and four bridges over the river. A tile
   is about 1.8 m, Degen about one tile tall.
+- **Room to grow:** the land, the river and the roads run on well past the
+  districts (about 790 m across), open ground with a few trees, ready for
+  more city. A skyline of towers stands on the horizon past the edge. You
+  can walk, drive or pan out to it.
 - **Cars at real proportions,** in the same cartoon style: a City Hatch, the
   Cruiser saloon, the Street GT coupe, the Hauler pickup, a Box Van and the
   City Bus, with glass, bumpers, plates and fat tyres (made-up names, no

@@ -12,6 +12,7 @@ import { buildLandmarks, type Spot } from './landmarks';
 import { buildLife, walker } from './life';
 import { createWalk } from './walk';
 import { buildGarage } from './garage';
+import { WORLD_BOUNDS } from './layout';
 import { loadCar } from './garage-ui';
 import { createProfileUI } from './profile-ui';
 import { createMultiplayer } from './multiplayer';
@@ -116,7 +117,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   controls.dampingFactor = 0.08;
   controls.screenSpacePanning = false;
   controls.minDistance = 7;
-  controls.maxDistance = 125;
+  controls.maxDistance = 150;
   controls.minPolarAngle = 0.32;
   controls.maxPolarAngle = 1.18;
   controls.zoomToCursor = true;
@@ -624,9 +625,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       mp?.update(dt, t);
       dirty = true;
     } else if (controls.update()) dirty = true;
-    // Keep the view over the city
-    controls.target.x = THREE.MathUtils.clamp(controls.target.x, -22, 60);
-    controls.target.z = THREE.MathUtils.clamp(controls.target.z, -22, 72);
+    // Keep the view over the world (it reaches past the city, room to build)
+    controls.target.x = THREE.MathUtils.clamp(controls.target.x, WORLD_BOUNDS[0] + 10, WORLD_BOUNDS[2] - 10);
+    controls.target.z = THREE.MathUtils.clamp(controls.target.z, WORLD_BOUNDS[1] + 10, WORLD_BOUNDS[3] - 10);
 
     const s = sky.update(reduced ? 0 : t, dt, controls.target, camera.position);
     env.t = reduced ? 0 : t;

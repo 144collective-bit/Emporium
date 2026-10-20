@@ -69,8 +69,15 @@ export const NS_ROADS: Road[] = [avenue(RING_LO), ...CORE_ROADS.map(street), ave
 /** Roads running east-west, at these z (the south bank avenue only runs east-west) */
 export const EW_ROADS: Road[] = [avenue(RING_LO), ...CORE_ROADS.map(street), avenue(RING_HI), avenue(SOUTH_ROAD)];
 
-/** The playable world, edge to edge */
-export const EXT: [number, number] = [-70, 101];
+/**
+ * The world, edge to edge: grass, the river and every road run all the way. Room
+ * to grow the city into; nothing is built past the districts and the garage yet.
+ */
+export const EXT: [number, number] = [-200, 240];
+/** The built-up part: traffic loops here and the outskirts' trees fill round it */
+export const CITY_EXT: [number, number] = [-70, 101];
+/** How far you can walk or drive: x0, z0, x1, z1 (a little inside the edge) */
+export const WORLD_BOUNDS: [number, number, number, number] = [EXT[0] + 6, EXT[0] + 6, EXT[1] - 6, EXT[1] - 6];
 
 /** Lane centres of a road, with the direction traffic runs (+1 / -1 along the road's axis) */
 export function laneCentres(r: Road, axis: 'x' | 'z'): { coord: number; dir: 1 | -1 }[] {

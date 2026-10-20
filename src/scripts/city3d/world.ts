@@ -14,7 +14,7 @@
 import * as THREE from 'three';
 import { DISTRICTS } from '../../data/plots';
 import { Batch, PAL, canvasTex, facadeMat, fx, glowMat, glowTex, lit, neon, rand, toon } from './kit';
-import { BLOCKS, BS, CENTER_XZ, CORE_ROADS, EW_ROADS, EXT, GARAGE, LANE, MEDIAN, NS_ROADS, RIVER, SOUTH_ROAD, WALK_W, type Road } from './layout';
+import { BLOCKS, BS, CENTER_XZ, CITY_EXT, CORE_ROADS, EW_ROADS, EXT, GARAGE, LANE, MEDIAN, NS_ROADS, RIVER, SOUTH_ROAD, WALK_W, type Road } from './layout';
 
 export { BLOCKS, BS, CORE_ROADS, EW_ROADS, EXT, NS_ROADS, RIVER, SOUTH_ROAD, WALK_W, type Road };
 /** District blocks around the core: one large plot each (src/data/plots.ts). */
@@ -274,13 +274,23 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, keyof typeo
 
 /* ---------- Outskirts ---------- */
 
-/** Scatter trees outside town, off the roads and the river. */
-export function scatterOutskirts(count: number) {
+/**
+ * Scatter trees outside town, off the roads and the river: `count` in the belt round the
+ * city, and a lighter sprinkle (`count` * `sparse`) across the open land out to the world's edge.
+ */
+export function scatterOutskirts(count: number, sparse = 0.6) {
+  scatterIn(count, [CITY_EXT[0] + 26, CITY_EXT[1] - 20], [CITY_EXT[0] + 26, CITY_EXT[1] - 13]);
+  scatterIn(Math.round(count * sparse), [EXT[0] + 4, EXT[1] - 4], [EXT[0] + 4, EXT[1] - 4], [CITY_EXT[0] + 26, CITY_EXT[1] - 20, CITY_EXT[0] + 26, CITY_EXT[1] - 13]);
+}
+
+/** Trees across x / z ranges, kept off the town, the roads and the river (and out of `skip`, a box already planted) */
+function scatterIn(count: number, xr: [number, number], zr: [number, number], skip?: [number, number, number, number]) {
   let placed = 0;
   let guard = 0;
   while (placed < count && guard++ < count * 20) {
-    const x = -44 + rand() * 125;
-    const z = -44 + rand() * 132;
+    const x = xr[0] + rand() * (xr[1] - xr[0]);
+    const z = zr[0] + rand() * (zr[1] - zr[0]);
+    if (skip && x > skip[0] && x < skip[1] && z > skip[2] && z < skip[3]) continue;
     // Clear of the core city, the districts round it and the south row across the river
     const [lo, hi] = [DISTRICTS[0].ox - WALK_W - 0.6, DISTRICTS[4].ox + BS + WALK_W + 0.6];
     if (x > lo && x < hi && z > lo && z < RIVER[0]) continue;
@@ -294,34 +304,37 @@ export function scatterOutskirts(count: number) {
   }
 }
 
-/** A ring of towers in the haze, so the city reads as part of a metropolis. */
+/** A ring of towers on the horizon, past the world's edge, so the city reads as part of a metropolis. */
 export function buildSkyline(scene: THREE.Scene, count: number, tick: (f: Tick) => void) {
   const mats = [
-    facadeMat({ cols: 4, rows: 12, wall: '#241d4a', lit: [PAL.warm, PAL.cyan], litRatio: 0.45, seed: 11 }, 0.1, 1.4),
-    facadeMat({ cols: 4, rows: 12, wall: '#2c1f55', lit: [PAL.pink, PAL.warm], litRatio: 0.4, seed: 12 }, 0.1, 1.4),
-    facadeMat({ cols: 4, rows: 12, wall: '#1b2550', lit: [PAL.cyan], litRatio: 0.5, seed: 13 }, 0.1, 1.4),
+    facadeMat({ cols: 6, rows: 26, wall: '#241d4a', lit: [PAL.warm, PAL.cyan], litRatio: 0.45, seed: 11 }, 0.1, 1.4),
+    facadeMat({ cols: 6, rows: 26, wall: '#2c1f55', lit: [PAL.pink, PAL.warm], litRatio: 0.4, seed: 12 }, 0.1, 1.4),
+    facadeMat({ cols: 6, rows: 26, wall: '#1b2550', lit: [PAL.cyan], litRatio: 0.5, seed: 13 }, 0.1, 1.4),
   ];
-  const roof = toon('#1a1636');
+  const roof = toon('#1a1636', { fog: false });
+  // Out past the world's edge, the haze would swallow them whole: they stand clear of it, a skyline on the horizon
+  for (const m of mats) m.fog = false;
   const beacons: THREE.Mesh[] = [];
   const beaconMat = neon('#ff3b3b', 0.4, 3);
   for (let i = 0; i < count; i++) {
     const a = (i / count) * Math.PI * 2 + rand() * 0.1;
-    // A ring round all the districts (the south row across the river included), well clear of them
-    const rr = 72 + rand() * 30;
-    const x = CENTER.x + Math.cos(a) * rr;
-    const z = CENTER.z + 8 + Math.sin(a) * rr;
-    const w = 3 + rand() * 4;
-    const h = 7 + rand() * 22;
+    // A ring just past the world's edge, so the metropolis carries on beyond the land you can build on
+    const reach = (EXT[1] - EXT[0]) / 2;
+    const rr = reach + 18 + rand() * 40;
+    const x = (EXT[0] + EXT[1]) / 2 + Math.cos(a) * rr;
+    const z = (EXT[0] + EXT[1]) / 2 + Math.sin(a) * rr;
+    const w = 7 + rand() * 9;
+    const h = 22 + rand() * 50;
     const mat = mats[i % mats.length];
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, w), [mat, mat, roof, roof, mat, mat]);
     mesh.position.set(x, h / 2, z);
     mesh.rotation.y = rand() * Math.PI;
     scene.add(mesh);
-    if (h > 20) {
-      const b = new THREE.Mesh(new THREE.SphereGeometry(0.25, 8, 6), beaconMat);
-      b.position.set(x, h + 1.2, z);
-      const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 1.2), roof);
-      mast.position.set(x, h + 0.6, z);
+    if (h > 45) {
+      const b = new THREE.Mesh(new THREE.SphereGeometry(0.6, 8, 6), beaconMat);
+      b.position.set(x, h + 2.6, z);
+      const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 2.6), roof);
+      mast.position.set(x, h + 1.3, z);
       scene.add(mast, fx(b));
       beacons.push(b);
     }

@@ -2,14 +2,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { RIVER_WALLS, circles, newCar, stepCar, tune, type CarState, type DriveInput, type DriveWorld } from '../src/scripts/city3d/drive-sim';
-import { NS_ROADS, RIVER } from '../src/scripts/city3d/layout';
+import { NS_ROADS, RIVER, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
 import { DRIVE } from '../src/scripts/city3d/mycar';
 import type { Box } from '../src/scripts/city3d/solids';
 
 const HATCH = { L: 2.2, W: 0.98, wheelbase: 1.38 };
 const T = tune(DRIVE.hatch, HATCH);
 const OPEN: DriveWorld = { boxes: [], soft: [] };
-const BOUNDS: Box = [-34, -34, 74, 82, 0];
+const BOUNDS: Box = [...WORLD_BOUNDS, 0];
 const DT = 1 / 60;
 const GAS: DriveInput = { throttle: 1, steer: 0, handbrake: false };
 const HUGE: Box = [-1e5, -1e5, 1e5, 1e5, 0];
@@ -119,7 +119,7 @@ test('people and other cars are soft: a bump, never driving through', () => {
 });
 
 test('the edge of the world holds it in', () => {
-  const c = newCar(70, 0, 0);
+  const c = newCar(BOUNDS[2] - 4, 0, 0);
   run(c, GAS, 5, OPEN, BOUNDS);
   assert.ok(c.x <= BOUNDS[2]);
 });

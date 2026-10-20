@@ -46,7 +46,9 @@ export function createSky(scene: THREE.Scene, opts: { shadows: number; rainDrops
       }
     `,
   });
-  const dome = new THREE.Mesh(new THREE.SphereGeometry(190, 32, 16), domeMat);
+  // The dome (and the stars on it) travels with the camera, just inside its far plane (440),
+  // so the whole world and the skyline past its edge always stand in front of the sky
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(400, 32, 16), domeMat);
   dome.position.copy(CENTER);
   scene.add(fx(dome));
 
@@ -57,12 +59,14 @@ export function createSky(scene: THREE.Scene, opts: { shadows: number; rainDrops
     const a = rand() * Math.PI * 2;
     const y = 0.08 + rand() * 0.92;
     const r = Math.sqrt(1 - y * y);
-    sp.set([CENTER.x + Math.cos(a) * r * 180, y * 180, CENTER.z + Math.sin(a) * r * 180], i * 3);
+    sp.set([Math.cos(a) * r * 380, y * 380, Math.sin(a) * r * 380], i * 3);
   }
   const starGeo = new THREE.BufferGeometry();
   starGeo.setAttribute('position', new THREE.BufferAttribute(sp, 3));
   const starMat = new THREE.PointsMaterial({ color: '#ffffff', size: 1.4, sizeAttenuation: false, transparent: true, depthWrite: false, fog: false });
-  scene.add(fx(new THREE.Points(starGeo, starMat)));
+  const stars = new THREE.Points(starGeo, starMat);
+  stars.frustumCulled = false;
+  scene.add(fx(stars));
 
   /* Lights */
   const hemi = new THREE.HemisphereLight('#bcd4ff', '#2a2050', 1);
@@ -171,6 +175,8 @@ export function createSky(scene: THREE.Scene, opts: { shadows: number; rainDrops
   const tmpHor = new THREE.Color();
 
   function update(t: number, dt: number, focus: THREE.Vector3, eye: THREE.Vector3) {
+    dome.position.copy(eye);
+    stars.position.copy(eye);
     // Time of day: ease towards the target hour so switching modes glides
     const target = timeMode === 'live' ? currentHour() : PRESET[timeMode];
     let diff = target - hourSmooth;

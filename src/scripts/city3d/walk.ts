@@ -27,7 +27,7 @@ import type { Garage } from './garage';
 import { createDrive } from './drive';
 import { CAMERA_ONLY, DOORS, GARAGE_SITE, RACK, SOLIDS, TURNTABLE_BOX, WALK_SPAWN, rayBoxes, type Box } from './solids';
 import { DISTRICTS, BLOCKS, BS, NS_ROADS, RIVER, SLAB, WALK_W, type Tick } from './world';
-import { GARAGE } from './layout';
+import { GARAGE, WORLD_BOUNDS } from './layout';
 
 /** Facing the Emporium's doors, the tower over his shoulder */
 const SPAWN_YAW = WALK_SPAWN.yaw;
@@ -37,7 +37,8 @@ const RUN = 5.4;
 const JUMP = 3.9;
 const GRAVITY = 11.5;
 const SCALE = 0.85;
-const BOUNDS = [-34, -34, 74, 82];
+/** How far you can go: the world's edge */
+const BOUNDS = WORLD_BOUNDS;
 /** Blocks, districts and the garage's lot with their sidewalks: the raised ground */
 const slabs: Box[] = [...BLOCKS.flatMap((x) => BLOCKS.map((z) => [x, z] as const)), ...DISTRICTS.map((d) => [d.ox, d.oz] as const), [GARAGE.ox, GARAGE.oz] as const].map(([x, z]): Box => [x - WALK_W, z - WALK_W, x + BS + WALK_W, z + BS + WALK_W, 0]);
 /** What your own car bumps into: everything solid but the turntable it starts on */

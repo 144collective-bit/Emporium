@@ -5,8 +5,8 @@
  */
 import * as THREE from 'three';
 import { FONT_DISPLAY, PAL, canvasTex, fx, glowTex, lit, neon, rand, toon } from './kit';
-import { BLOCKS, BS, CENTER, CORE_ROADS, DISTRICTS, EW_ROADS, EXT, NS_ROADS, RIVER, SLAB, type Tick } from './world';
-import { laneCentres } from './layout';
+import { BLOCKS, BS, CENTER, CORE_ROADS, DISTRICTS, EW_ROADS, NS_ROADS, RIVER, SLAB, type Tick } from './world';
+import { CITY_EXT, laneCentres } from './layout';
 import { CARS, PAINTS, carGeometry, carMaterials, type CarId } from './cars';
 import type { Idle } from './landmarks';
 import { chatPose, cityOutfit, createCrowd, idlePose, lookPose, newPose, sitPose, walkPose } from './character';
@@ -52,7 +52,8 @@ export const bodies = {
   cars: [] as { x: number; z: number; yaw: number; len: number; model: CarId }[],
   people: [] as { x: number; z: number }[],
 };
-const [E0, E1] = EXT;
+/** Traffic and boats loop round the built-up part of the world */
+const [E0, E1] = CITY_EXT;
 
 /** Lights at each crossing cycle x-green, x-yellow, z-green, z-yellow. */
 const CYCLE = 22;
