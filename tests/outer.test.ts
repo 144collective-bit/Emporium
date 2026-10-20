@@ -23,7 +23,8 @@ import {
   type Pt,
   type Rect,
 } from '../src/scripts/city3d/outer';
-import { DISTRICTS, PLOT_PRICE } from '../src/data/plots';
+import { DISTRICTS } from '../src/data/plots';
+import { PLOT_DORRAS } from '../src/scripts/city3d/catalog';
 import { EW_ROADS, LANE, NS_ROADS, RIVER, RING_HI, SOUTH_ROAD } from '../src/scripts/city3d/layout';
 import { distToStreet, type Street } from '../src/scripts/city3d/streetplan';
 
@@ -75,7 +76,7 @@ test('every plot and lot keeps its pad, on exactly one landscaped block, clear o
     DISTRICTS.find((d) => d.id === 'N1'),
     { id: 'N1', name: 'North 1', ox: -18, oz: -18 }
   );
-  assert.equal(PLOT_PRICE, 20_000_000);
+  assert.equal(PLOT_DORRAS, 120_000);
   for (const p of PADS) assert.equal(OUTER_BLOCKS.filter((b) => b.pads.includes(p.id)).length, 1, `${p.id} is on one block`);
   const bends = BENDS.map(street);
   for (const b of OUTER_BLOCKS) {
