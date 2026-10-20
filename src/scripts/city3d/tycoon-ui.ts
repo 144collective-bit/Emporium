@@ -85,6 +85,30 @@ import {
   type Stock,
   type TycoonSave,
   type UnitKind,
+  BOARD_SIZE,
+  CONTRACTS_MAX,
+  DESTS,
+  DEST_IDS,
+  ROLES,
+  SHIP_MAX,
+  SHIP_QTY,
+  STAFF_CUT,
+  STAFF_HIRE,
+  accept,
+  board,
+  boardEnds,
+  buyToCar,
+  deliver,
+  destAt,
+  dropContract,
+  hire,
+  letGo,
+  roleAt,
+  sellFromCar,
+  ship,
+  shipFee,
+  shipMinutes,
+  type DestId,
 } from './tycoon';
 import { DOORS, STALL_SPOT, UNIT_SITE } from './solids';
 
@@ -112,6 +136,8 @@ const STAND: Record<PlaceId, { x: number; z: number }> = {
 const SERVE_R = 2.2;
 const CAR_R = 9;
 const UNIT_IDS = ['u0', 'u1', 'u2', 'u3'] as const;
+const PLACE_LIST: PlaceId[] = ['stall', ...UNIT_IDS, 'workshop'];
+const PRODUCT_LIST = GOODS.filter((g) => !g.raw).map((g) => g.id);
 type Tab = 'stall' | 'units' | 'workshop' | 'car';
 const TABS: { id: Tab; label: string }[] = [
   { id: 'stall', label: 'Stall' },
@@ -125,6 +151,20 @@ const KIND_BLURB: Record<UnitKind, string> = {
   warehouse: `Holds ${WAREHOUSE_CAP} of anything, ready to load into your car.`,
 };
 
+/** The building panels the economy fills in, by spot (the Emporium's market hall, the Workshop, the Signal tower's contracts, the Post office's couriers, the Apartments' staff) */
+const PANELS = {
+  emporium: '[data-market]',
+  workshop: '[data-workshop]',
+  signal: '[data-contracts]',
+  telegram: '[data-couriers]',
+  apartments: '[data-staff]',
+} as const;
+type PanelId = keyof typeof PANELS;
+const clock = (ms: number) => {
+  const t = Math.max(0, Math.round(ms / 1000));
+  return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
+};
+
 export interface TycoonHooks {
   /** Where Degen is standing in walk mode, on foot (null otherwise) */
   walker(): { x: number; z: number } | null;
@@ -132,7 +172,7 @@ export interface TycoonHooks {
   car(): { x: number; z: number; model: string; name: string; speed: number } | null;
   /** Open the Emporium's market hall */
   openMarket(): void;
-  /** Something the city shows changed (the stall's crates, the units) */
+  /** Something the city shows changed (the stall's crates, the units, where contracts go) */
   stock(s: TycoonSave): void;
   /** The card opened (walk mode frees the mouse) */
   opened(): void;
@@ -196,14 +236,17 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
   const tabsEl = card.querySelector<HTMLElement>('[data-biz-tabs]')!;
   const toastEl = root.querySelector<HTMLElement>('[data-econ-toast]')!;
   const { save, fresh } = loadSave(Date.now());
-  let market: HTMLElement | null = null;
-  let workshopPanel: HTMLElement | null = null;
+  /** The building panel the economy is showing in, if any */
+  let panel: { id: PanelId; el: HTMLElement } | null = null;
   let note = '';
   let toastTimer = 0;
   let tab: Tab = 'stall';
   let unitSel = 0;
-  /** The market hall's place: where Buy delivers and Sell takes from */
-  let marketAt: PlaceId = 'stall';
+  /** The market hall's place: where Buy delivers and Sell takes from (or your car, parked at the Emporium) */
+  let marketAt: PlaceId | 'car' = 'stall';
+  /** The Post office's form: from where, to where */
+  let sendFrom: PlaceId | null = null;
+  let sendTo: PlaceId | null = null;
 
   const store = () => {
     try {
@@ -256,6 +299,13 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     }
     return best;
   }
+  /** The car parked (or stopped) near a building's door: the Emporium (buying into it) or a contract's drop-off */
+  function carNear(at: { x: number; z: number }) {
+    const c = h.car();
+    return !!c && Math.abs(c.speed) <= 0.5 && Math.hypot(at.x - c.x, at.z - c.z) < CAR_R;
+  }
+  const carAtEmporium = () => carNear(DOORS.find((d) => d.id === 'emporium')!);
+  const carAtDest = (): DestId | null => DEST_IDS.find((d) => carNear(destAt(d))) ?? null;
   const why = (r: Result, id?: GoodId, p: PlaceId = 'stall') => {
     if (r.ok) return '';
     if (r.why === 'money') return 'Not enough Dorras.';
@@ -268,6 +318,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     if (r.why === 'busy') return 'The Workshop is already on a job.';
     if (r.why === 'place') return "That can't be done there.";
     if (r.why === 'owned') return 'Already done.';
+    if (r.why === 'time') return 'Too late: that contract has gone.';
     return 'Your stall is as big as it gets.';
   };
 
@@ -318,7 +369,9 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
   };
   /** "Your car is here": a way to the Car tab, on a place's view */
   const carHere = (p: PlaceId) => (carAt() === p ? `<p class="biz-carhere"><span>Your car is parked here.</span><button type="button" class="chip-link" data-tab="car">Load / unload</button></p>` : '');
-  const serveNote = (p: PlaceId) => (serving() === p ? ' · <b class="stall-serving">You\'re serving: customers come twice as fast</b>' : '');
+  const serveNote = (p: PlaceId) =>
+    (serving() === p ? ' · <b class="stall-serving">You\'re serving: customers come twice as fast</b>' : '') +
+    (save.staff.includes(p) ? ` · <b class="stall-serving">${ROLES[roleAt(save, p)!].name} at work</b>` : '');
 
   function stallView(now: number) {
     const L = stallLevel(save.stall.level);
@@ -358,7 +411,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     } else if (u.kind === 'garden') {
       const have = u.stock[u.crop] ?? 0;
       const crops = RAW_IDS.map((c) => `<button type="button" data-crop="${c}" aria-pressed="${u.crop === c}" ${have > 0 && u.crop !== c ? 'disabled' : ''}>${esc(good(c).name)}</button>`).join('');
-      body = `<p class="stall-status">Garden · ${perMin(CROPS[u.crop])} ${esc(good(u.crop).name.toLowerCase())} a minute, also while you're away</p>
+      body = `<p class="stall-status">Garden · ${perMin(CROPS[u.crop])} ${esc(good(u.crop).name.toLowerCase())} a minute, also while you're away${serveNote(p)}</p>
         <div class="seg stall-seg" role="group" aria-label="Crop">${crops}</div>
         <div class="stall-slot"><div class="stall-slot-top">${dot(u.crop)}<b>${esc(good(u.crop).name)} in the bins</b><span class="stall-qty">${have} / ${GARDEN_CAP}</span></div><i class="stall-bar" style="--v:${have / GARDEN_CAP}"></i>
         <small class="stall-pace">${have >= GARDEN_CAP ? 'Full: it stops growing until you load it into your car or sell it.' : have > 0 ? 'Load it into your car for the Workshop, or sell it at the market hall.' : 'Growing. Pick another crop while the bins are empty.'}</small></div>
@@ -397,7 +450,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
           <span class="market-btns"><button type="button" data-make="${id}" data-n="10" ${n && !j ? '' : 'disabled'}>Make ${Math.min(10, n) || 10}</button><button type="button" data-make="${id}" data-n="${n}" ${n && !j ? '' : 'disabled'}>Make all</button></span></div>
       </li>`;
     }).join('');
-    return `<p class="stall-status">The Workshop's bay · ${bay} / ${WORKSHOP_CAP}</p>
+    return `<p class="stall-status">The Workshop's bay · ${bay} / ${WORKSHOP_CAP}${serveNote('workshop')}</p>
       ${stockList(save.workshop.stock, 'Empty. Bring raw goods from your gardens in your car, or buy them into the Workshop at the market hall.')}
       ${job}
       <ul class="market-list">${recipes}</ul>
@@ -408,7 +461,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
   function carView(now: number) {
     const c = h.car();
     const at = carAt();
-    if (!c) return `<p class="stall-empty">Your car is at the garage on the south bank. Walk there, get in, and drive it to your places to load and unload goods.</p>${stockList(save.cargo, '')}`;
+    if (!c) return `<p class="stall-empty">Your car is at the garage on the south bank. Walk there, get in, and drive it to your places to load and unload goods.</p>${stockList(save.cargo, '')}${contractsDue(now)}`;
     const cap = cargoCap(c.model);
     const used = total(save.cargo);
     const ids = GOODS.map((g) => g.id);
@@ -437,7 +490,109 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
       ${at ? '' : `${stockList(save.cargo, 'Empty.')}<p class="stall-empty">Park within a few steps of your stall, a unit or the Workshop to load and unload. Bigger cars carry more: the Box Van most, the Street GT least.</p>`}
       ${out ? `<p class="biz-label">Unload here</p><ul class="market-list">${out}</ul>` : ''}
       ${inn ? `<p class="biz-label">Load from ${esc(placeName(at!))}</p><ul class="market-list">${inn}</ul>` : loadNote}
+      ${contractsDue(now)}
       <p class="city-panel-fine">Delivering to your stall or a shop yourself pays a bonus of ${Math.round(DELIVERY_BONUS * 100)}% of the goods' price.</p>`;
+  }
+
+  /** Your contracts, with Deliver where the car is parked at the drop-off */
+  function contractsDue(now: number) {
+    if (!save.contracts.length) return '';
+    const here = carAtDest();
+    const rows = save.contracts
+      .map((k) => {
+        const have = save.cargo[k.good] ?? 0;
+        const ready = here === k.to && have >= k.qty;
+        return `<li class="market-row"><div class="market-top">${dot(k.good)}<b>${k.qty} ${esc(good(k.good).name)} → ${esc(DESTS[k.to])}</b><span class="market-price">${D(k.reward)}</span></div>
+          <div class="market-acts"><small>${have >= k.qty ? 'In the car' : `${have} / ${k.qty} in the car`} · ${clock(k.expires - now)} left${here === k.to ? ' · you\'re here' : ''}</small>
+          <span class="market-btns"><button type="button" data-deliver="${k.id}" ${ready ? '' : 'disabled'}>Deliver</button></span></div></li>`;
+      })
+      .join('');
+    return `<p class="biz-label">Your contracts</p><ul class="market-list">${rows}</ul>`;
+  }
+
+  /* ---------- The Signal tower: news and contracts ---------- */
+  function contractsView(now: number) {
+    // News: what's moving at the market hall
+    const moves = PRODUCT_LIST.map((id) => ({ id, d: (marketPrice(id, now + 10 * 60000) - marketPrice(id, now)) / good(id).base })).sort((a, b) => b.d - a.d);
+    const up = moves[0];
+    const down = moves[moves.length - 1];
+    const offers = board(now);
+    const news = [
+      up.d > 0.02 ? `${good(up.id).name}: prices climbing at the market hall.` : `Market hall prices are holding steady.`,
+      down.d < -0.02 ? `${good(down.id).name}: prices falling, a good time to stock up.` : '',
+      `${DESTS[offers[0].to]} is after ${good(offers[0].good).name.toLowerCase()}.`,
+    ].filter(Boolean);
+    const taken = (id: number) => save.taken.includes(id);
+    const full = save.contracts.length >= CONTRACTS_MAX;
+    const offerRows = offers
+      .map(
+        (k) => `<li class="market-row"><div class="market-top">${dot(k.good)}<b>${k.qty} ${esc(good(k.good).name)} → ${esc(DESTS[k.to])}</b><span class="market-price">${D(k.reward)}</span></div>
+        <div class="market-acts"><small>Goods worth about ${fmt.format(k.qty * marketPrice(k.good, now))} · 30 minutes to deliver</small>
+        <span class="market-btns"><button type="button" data-take="${k.id}" ${taken(k.id) || full ? 'disabled' : ''}>${taken(k.id) ? 'Taken' : 'Take it'}</button></span></div></li>`
+      )
+      .join('');
+    const mine = save.contracts
+      .map(
+        (k) => `<li class="market-row"><div class="market-top">${dot(k.good)}<b>${k.qty} ${esc(good(k.good).name)} → ${esc(DESTS[k.to])}</b><span class="market-price">${D(k.reward)}</span></div>
+        <div class="market-acts"><small>${Math.min(save.cargo[k.good] ?? 0, k.qty)} / ${k.qty} in your car · ${clock(k.expires - now)} left</small>
+        <span class="market-btns"><button type="button" data-drop="${k.id}">Give up</button></span></div></li>`
+      )
+      .join('');
+    return `<ul class="biz-news">${news.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>
+      ${mine ? `<p class="biz-label">Your contracts · ${save.contracts.length} / ${CONTRACTS_MAX}</p><ul class="market-list">${mine}</ul>` : ''}
+      <p class="biz-label">On the board · new in ${clock(boardEnds(now) - now)}</p>
+      <ul class="market-list">${offerRows}</ul>
+      <p class="city-panel-fine">Get the goods into your car (a warehouse, the Workshop, or buy them into it at the market hall with your car parked outside), drive to the building and park by its door: Deliver is on your business card's Car tab. A beam of light marks each drop-off. Up to ${CONTRACTS_MAX} at once; giving one up costs nothing. ${BOARD_SIZE} new contracts every 20 minutes.</p>`;
+  }
+
+  /* ---------- The Post office: couriers ---------- */
+  function couriersView(now: number) {
+    const sources = PLACE_LIST.filter((p) => loadsFrom(save, p) && total(stockAt(save, p)) > 0);
+    if (!sources.includes(sendFrom!)) sendFrom = sources[0] ?? null;
+    const dests = PLACE_LIST.filter((p) => p !== sendFrom && (p === 'stall' || p === 'workshop' || unitAt(save, p)?.kind === 'shop' || unitAt(save, p)?.kind === 'warehouse'));
+    if (!dests.includes(sendTo!)) sendTo = dests[0] ?? null;
+    const transit = save.shipments
+      .map(
+        (sh) => `<li class="market-row"><div class="market-top">${dot(sh.good)}<b>${sh.qty} ${esc(good(sh.good).name)}</b><span class="stall-qty">${sh.arrives > now ? `${clock(sh.arrives - now)}` : 'waiting for room'}</span></div>
+        <div class="market-acts"><small>${esc(shortName(sh.from))} → ${esc(shortName(sh.to))}</small></div></li>`
+      )
+      .join('');
+    const busy = save.shipments.length >= SHIP_MAX;
+    let form = '';
+    if (!sendFrom) form = '<p class="stall-empty">Couriers pick up from a garden, a warehouse or the Workshop. Nothing to send yet.</p>';
+    else {
+      const here = stockAt(save, sendFrom);
+      const rows = GOODS.map((g) => g.id)
+        .filter((id) => (here[id] ?? 0) > 0)
+        .map((id) => {
+          const n = Math.min(here[id]!, SHIP_QTY, sendTo ? room(save, id, sendTo) : 0);
+          return `<li class="market-row"><div class="market-top">${dot(id)}<b>${esc(good(id).name)}</b><span class="stall-qty">${here[id]} here</span></div>
+            <div class="market-acts"><small>${n > 0 ? `${n} for ${fmt.format(shipFee(id, n, now))} Dorras · ${shipMinutes(sendFrom!, sendTo!)} min` : 'No room for it there'}</small>
+            <span class="market-btns"><button type="button" data-send="${id}" data-n="${Math.min(10, n)}" ${n > 0 && !busy ? '' : 'disabled'}>Send ${Math.min(10, n) || 10}</button><button type="button" data-send="${id}" data-n="${n}" ${n > 0 && !busy ? '' : 'disabled'}>Send ${n || 'all'}</button></span></div></li>`;
+        })
+        .join('');
+      form = `<div class="market-at"><small>From</small><div class="seg stall-seg" role="group" aria-label="Send from">${sources.map((p) => `<button type="button" data-send-from="${p}" aria-pressed="${p === sendFrom}">${esc(shortName(p))}</button>`).join('')}</div></div>
+        <div class="market-at"><small>To</small><div class="seg stall-seg" role="group" aria-label="Send to">${dests.map((p) => `<button type="button" data-send-to="${p}" aria-pressed="${p === sendTo}">${esc(shortName(p))}</button>`).join('')}</div></div>
+        <ul class="market-list">${rows}</ul>`;
+    }
+    return `${transit ? `<p class="biz-label">On the way · ${save.shipments.length} / ${SHIP_MAX}</p><ul class="market-list">${transit}</ul>` : ''}
+      <p class="biz-label">Send goods</p>${form}
+      <p class="city-panel-fine">Couriers carry up to ${SHIP_QTY} at a time, ${SHIP_MAX} out at once, and arrive while you're away too. No delivery bonus: that's for driving it yourself. Contracts need your own car.</p>`;
+  }
+
+  /* ---------- The Apartments: staff ---------- */
+  function staffView() {
+    const rows = PLACE_LIST.filter((p) => roleAt(save, p))
+      .map((p) => {
+        const role = ROLES[roleAt(save, p)!];
+        const on = save.staff.includes(p);
+        return `<li class="market-row"><div class="market-top"><b>${esc(placeName(p))}</b><span class="stall-qty">${role.name}</span></div>
+          <div class="market-acts"><small>${on ? '<b class="stall-serving">At work</b> · ' : ''}${esc(role.blurb)}</small>
+          <span class="market-btns">${on ? `<button type="button" data-let-go="${p}">Let go</button>` : `<button type="button" data-hire="${p}" ${save.dorras >= STAFF_HIRE ? '' : 'disabled'}>Hire · ${fmt.format(STAFF_HIRE)}</button>`}</span></div></li>`;
+      })
+      .join('');
+    return `<ul class="market-list">${rows}</ul>
+      <p class="city-panel-fine">Hiring costs ${fmt.format(STAFF_HIRE)} Dorras. Then each keeps ${Math.round(STAFF_CUT * 100)}% of the value of what they sell, grow or make, paid from the till (or your balance), so they only cost anything while there's work. If they can't be paid, they leave. Build a garden or shop on a unit to hire for it.</p>`;
   }
 
   function paintCard() {
@@ -486,7 +641,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     note = '';
     if ('bizClose' in ds) return void closeCard();
     if (ds.tab) return void openCard(ds.tab as Tab);
-    if ('openStall' in ds) return void openCard(marketAt);
+    if ('openStall' in ds) return void openCard(marketAt === 'car' ? 'car' : marketAt);
     if ('toMarket' in ds) {
       marketAt = at;
       closeCard();
@@ -534,13 +689,36 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
         note = r.ok ? `Unloaded ${r.qty} ${good(ds.unload as GoodId).name}${r.dorras ? `: ${fmt.format(r.dorras)} Dorras delivery bonus` : ''}.` : why(r, ds.unload as GoodId, p);
       }
     } else if (ds.buy) {
-      const r = buy(save, ds.buy as GoodId, Number(ds.n), now, marketAt);
-      note = r.ok ? `Bought ${r.qty} ${good(ds.buy as GoodId).name} for ${fmt.format(r.dorras)} Dorras, delivered to ${placeName(marketAt)}.` : why(r, ds.buy as GoodId, marketAt);
+      const c = h.car();
+      const r = marketAt === 'car' ? (c ? buyToCar(save, ds.buy as GoodId, Number(ds.n), now, cargoCap(c.model)) : ({ ok: false, why: 'place' } as Result)) : buy(save, ds.buy as GoodId, Number(ds.n), now, marketAt);
+      const to = marketAt === 'car' ? 'your car' : placeName(marketAt);
+      note = r.ok ? `Bought ${r.qty} ${good(ds.buy as GoodId).name} for ${fmt.format(r.dorras)} Dorras, delivered to ${to}.` : r.why === 'room' && marketAt === 'car' ? 'Your car is full.' : why(r, ds.buy as GoodId, marketAt === 'car' ? 'stall' : marketAt);
     } else if (ds.sell) {
-      const r = sellBack(save, ds.sell as GoodId, Number(ds.n), now, marketAt);
-      note = r.ok ? `Sold ${r.qty} ${good(ds.sell as GoodId).name} for ${fmt.format(r.dorras)} Dorras.` : why(r, ds.sell as GoodId, marketAt);
-    } else if (ds.marketAt) marketAt = ds.marketAt as PlaceId;
-    else return;
+      const r = marketAt === 'car' ? sellFromCar(save, ds.sell as GoodId, Number(ds.n), now) : sellBack(save, ds.sell as GoodId, Number(ds.n), now, marketAt);
+      note = r.ok ? `Sold ${r.qty} ${good(ds.sell as GoodId).name} for ${fmt.format(r.dorras)} Dorras.` : why(r);
+    } else if (ds.marketAt) marketAt = ds.marketAt as PlaceId | 'car';
+    else if (ds.take) {
+      const r = accept(save, Number(ds.take), now);
+      note = r.ok ? 'Contract taken: a beam of light marks the drop-off.' : r.why === 'max' ? `You have ${CONTRACTS_MAX} contracts on the go already.` : why(r);
+    } else if (ds.drop) {
+      dropContract(save, Number(ds.drop));
+      note = 'Contract given up.';
+    } else if (ds.deliver) {
+      const d = carAtDest();
+      const r = d ? deliver(save, Number(ds.deliver), d, now) : ({ ok: false, why: 'place' } as Result);
+      note = r.ok ? `Delivered! ${fmt.format(r.dorras)} Dorras paid.` : r.why === 'stock' ? "The goods aren't all in your car." : r.why === 'place' ? 'Park by the drop-off first.' : why(r);
+    } else if (ds.sendFrom) sendFrom = ds.sendFrom as PlaceId;
+    else if (ds.sendTo) sendTo = ds.sendTo as PlaceId;
+    else if (ds.send && sendFrom && sendTo) {
+      const r = ship(save, sendFrom, sendTo, ds.send as GoodId, Number(ds.n), now);
+      note = r.ok ? `A courier is on the way with ${r.qty} ${good(ds.send as GoodId).name} (${fmt.format(r.dorras)} Dorras).` : r.why === 'busy' ? `All ${SHIP_MAX} couriers are out.` : why(r, ds.send as GoodId, sendTo);
+    } else if (ds.hire) {
+      const r = hire(save, ds.hire as PlaceId);
+      note = r.ok ? `Hired a ${ROLES[roleAt(save, ds.hire as PlaceId)!].name.toLowerCase()} for ${placeName(ds.hire as PlaceId).replace('Your', 'your').replace('The', 'the')}.` : why(r);
+    } else if (ds.letGo) {
+      letGo(save, ds.letGo as PlaceId);
+      note = 'Let go.';
+    } else return;
     changed();
   }
   const onClick = (e: Event) => {
@@ -560,16 +738,15 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
   tabsEl.innerHTML = TABS.map((t) => `<button type="button" data-tab="${t.id}" aria-pressed="false">${t.label}</button>`).join('');
 
   /* ---------- The market hall ---------- */
-  function paintMarket() {
-    if (!market) return;
-    const now = Date.now();
+  function marketView(now: number) {
     // Where Buy can deliver to and Sell can take from
-    const at: PlaceId[] = ['stall', ...UNIT_IDS.filter((p) => unitAt(save, p)?.kind), 'workshop'];
+    const car = h.car();
+    const at: (PlaceId | 'car')[] = ['stall', ...UNIT_IDS.filter((p) => unitAt(save, p)?.kind), 'workshop', ...(car && carAtEmporium() ? (['car'] as const) : [])];
     if (!at.includes(marketAt)) marketAt = 'stall';
     const row = (id: GoodId) => {
       const t = trend(id, now);
-      const held = holds(save, marketAt, id);
-      const fits = room(save, id, marketAt);
+      const held = marketAt === 'car' ? (save.cargo[id] ?? 0) : holds(save, marketAt, id);
+      const fits = marketAt === 'car' ? Math.max(0, cargoCap(car!.model) - total(save.cargo)) : room(save, id, marketAt);
       return `<li class="market-row">
         <div class="market-top">
           ${dot(id)}<b>${esc(good(id).name)}</b>
@@ -586,12 +763,10 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
         </div>
       </li>`;
     };
-    repaint(
-      market,
-      `
+    return `
       <div class="market-head"><span>Your Dorras</span><span class="market-balance">${D(save.dorras)}</span></div>
       <div class="market-at"><small>Deliver to and sell from</small>
-        <div class="seg stall-seg" role="group" aria-label="Deliver to and sell from">${at.map((p) => `<button type="button" data-market-at="${p}" aria-pressed="${p === marketAt}">${esc(shortName(p))}</button>`).join('')}</div>
+        <div class="seg stall-seg" role="group" aria-label="Deliver to and sell from">${at.map((p) => `<button type="button" data-market-at="${p}" aria-pressed="${p === marketAt}">${p === 'car' ? 'Your car' : esc(shortName(p))}</button>`).join('')}</div>
       </div>
       <ul class="market-list">${GOODS.filter((g) => !g.raw)
         .map((g) => row(g.id))
@@ -600,12 +775,25 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
       <ul class="market-list">${RAW_IDS.map(row).join('')}</ul>
       ${note ? `<p class="shop-note" role="status">${esc(note)}</p>` : ''}
       <div class="city-panel-actions"><button type="button" class="chip-link" data-open-stall>Your business</button></div>
-      <p class="city-panel-fine">Prices move through the day, the same for everyone. Raw goods only go to the Workshop or a warehouse; customers buy products from your stall and shops.</p>`
-    );
+      <p class="city-panel-fine">Prices move through the day, the same for everyone. Raw goods only go to the Workshop, a warehouse or your car; customers buy products from your stall and shops. Park your car outside to buy straight into it.</p>`;
   }
-  function paintWorkshop() {
-    if (workshopPanel)
-      repaint(workshopPanel, `${workshopView()}${note ? `<p class="shop-note" role="status">${esc(note)}</p>` : ''}<div class="city-panel-actions"><button type="button" class="chip-link" data-tab="workshop">Your business</button></div>`);
+  /** Fill the building panel that's open */
+  function paintPanel() {
+    if (!panel) return;
+    const now = Date.now();
+    const noteHtml = note ? `<p class="shop-note" role="status">${esc(note)}</p>` : '';
+    const toCard = (tabId: Tab) => `<div class="city-panel-actions"><button type="button" class="chip-link" data-tab="${tabId}">Your business</button></div>`;
+    const html =
+      panel.id === 'emporium'
+        ? marketView(now)
+        : panel.id === 'workshop'
+          ? `${workshopView()}${noteHtml}${toCard('workshop')}`
+          : panel.id === 'signal'
+            ? `${contractsView(now)}${noteHtml}${toCard('car')}`
+            : panel.id === 'telegram'
+              ? `${couriersView(now)}${noteHtml}${toCard('units')}`
+              : `${staffView()}${noteHtml}${toCard('units')}`;
+    repaint(panel.el, html);
   }
 
   /* ---------- Ticking ---------- */
@@ -614,10 +802,9 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     store();
     paintPill();
     paintCard();
-    paintMarket();
-    paintWorkshop();
-    // The city only redraws what changed (crate stacks, units)
-    const shown = JSON.stringify([save.stall, save.units]);
+    paintPanel();
+    // The city only redraws what changed (crate stacks, units, the contracts' beams)
+    const shown = JSON.stringify([save.stall, save.units, save.contracts.map((c) => c.to)]);
     if (shown !== lastShown) {
       lastShown = shown;
       h.stock(save);
@@ -629,8 +816,13 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
       s.earned > 0 ? `sold ${n(s.sold)} item${n(s.sold) === 1 ? '' : 's'} (${fmt.format(s.earned)} Dorras in the till)` : '',
       n(s.grown) ? `grew ${n(s.grown)} raw goods` : '',
       n(s.made) ? `made ${n(s.made)} at the Workshop` : '',
+      s.arrived.length ? `took in ${s.arrived.length} courier${s.arrived.length > 1 ? 's' : ''}` : '',
+      s.wages ? `paid ${fmt.format(s.wages)} Dorras to staff` : '',
     ].filter(Boolean);
-    return parts.length ? `While you were away your business ${parts.join(', ')}.` : '';
+    const extra = [s.quit.length ? `${s.quit.length > 1 ? 'Some staff' : 'A member of staff'} left: there wasn't enough to pay them.` : '', s.expired.length ? `${s.expired.length} contract${s.expired.length > 1 ? 's' : ''} ran out.` : '']
+      .filter(Boolean)
+      .join(' ');
+    return `${parts.length ? `While you were away your business ${parts.join(', ')}.` : ''} ${extra}`.trim();
   }
   function tick() {
     const sales = advance(save, Date.now(), serving() ?? false);
@@ -638,7 +830,9 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     if (sales.away > 0) {
       const msg = awayNote(sales);
       if (msg) toast(msg, 7000);
-    }
+    } else if (sales.quit.length) toast(`Your ${sales.quit.map((p) => ROLES[roleAt(save, p) ?? 'hand'].name.toLowerCase()).join(' and ')} left: there wasn't enough to pay them.`);
+    else if (sales.expired.length) toast(`A contract ran out: ${sales.expired[0].qty} ${good(sales.expired[0].good).name} for ${DESTS[sales.expired[0].to]}.`);
+    else if (sales.arrived.length) toast(`A courier delivered ${sales.arrived[0].qty} ${good(sales.arrived[0].good).name} to ${placeName(sales.arrived[0].to)}.`, 4000);
     changed();
   }
   tick();
@@ -655,35 +849,30 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     get save() {
       return save;
     },
-    /** Your places on foot (walk-mode prompts): your stall and the four units */
+    /** Your places on foot (walk-mode prompts): your stall, the four units, and your contracts' drop-offs */
     places() {
       return [
         { id: 'stall', ...STALL_SPOT, label: 'Your stall' },
         ...UNIT_IDS.map((p, i) => ({ id: p as string, ...UNIT_SITE[i].door, label: save.units[i] ? placeName(p) : `Unit ${i + 1} · To let` })),
+        ...save.contracts.map((c) => ({ id: 'car', ...destAt(c.to), label: `Deliver · ${DESTS[c.to]}` })),
       ];
     },
-    /** The Emporium's panel opened: fill its market hall */
-    mountMarket(panelBody: HTMLElement) {
-      market = panelBody.querySelector<HTMLElement>('[data-market]');
-      market?.addEventListener('click', onClick);
+    /** A building's panel opened: fill in its part of the economy, if it has one */
+    mountPanel(id: string, panelBody: HTMLElement) {
+      this.unmountPanel();
+      if (!(id in PANELS)) return;
+      const el = panelBody.querySelector<HTMLElement>(PANELS[id as PanelId]);
+      if (!el) return;
+      el.addEventListener('click', onClick);
+      panel = { id: id as PanelId, el };
       note = '';
-      paintMarket();
+      paintPanel();
     },
-    unmountMarket() {
-      market?.removeEventListener('click', onClick);
-      market = null;
+    unmountPanel() {
+      panel?.el.removeEventListener('click', onClick);
+      panel = null;
     },
-    /** The Workshop's panel opened: its bay, job and recipes */
-    mountWorkshop(panelBody: HTMLElement) {
-      workshopPanel = panelBody.querySelector<HTMLElement>('[data-workshop]');
-      workshopPanel?.addEventListener('click', onClick);
-      note = '';
-      paintWorkshop();
-    },
-    unmountWorkshop() {
-      workshopPanel?.removeEventListener('click', onClick);
-      workshopPanel = null;
-    },
+
   };
 }
 

@@ -170,8 +170,18 @@ Yours has the cyan canopy and the YOUR STALL board, and shows your stock.
   up to your stall or a unit): the till, then Stall, Units, Workshop and Car
   tabs. The market hall delivers to (and sells from) whichever of your
   places you pick.
-- It's saved in the browser for now. The plan for the next phases
-  (contracts, staff, plots as the top tier) is in `docs/tycoon-plan.md`.
+- **Contracts** (the Signal tower): orders from around town, a new board
+  every 20 minutes. Take one, get the goods into your car (you can buy
+  straight into it at the market hall with the car parked outside), drive to
+  the building marked by a beam of light, and deliver at the door for more
+  than the goods are worth.
+- **Couriers** (the Post office) move goods between your places for a fee
+  when you'd rather not drive.
+- **Staff** (the Apartments): a clerk sells more at your stall or a shop, and
+  keeps it selling at full pace while you're away; a gardener and a Workshop
+  hand speed things up. They keep 10% of what they handle.
+- It's saved in the browser for now. The plan for the next phases (plots as
+  the top tier, then the server) is in `docs/tycoon-plan.md`.
 
 ### The mode header
 
@@ -400,8 +410,9 @@ demo** clears it.
 | The Armoury | Guns and gear (target practice) |
 | The Workshop | The factory: turn raw goods into products |
 | The Vault | The bank (coming soon) |
-| Signal tower | News and contracts (coming soon) |
-| Post office | Logistics (coming soon) |
+| Signal tower | News and contracts |
+| Post office | Couriers |
+| The Apartments | Staff |
 
 The ☰ Menu lists the same places (in 3D), then the Emporium comic page and,
 once `SHOP_OPEN` is true, the merch store; X and Telegram sit at its foot.
@@ -441,6 +452,7 @@ the draft note whenever the card is hidden. Every menu and card closes with its
 | `src/scripts/city3d/tycoon.ts` | The economy's rules: goods, market prices, your stall, units, the Workshop, your car's load, sales, time away (no DOM) |
 | `src/scripts/city3d/tycoon-ui.ts` | The Dorras readout, your business card, the market hall, the Workshop's panel, the save |
 | `src/scripts/city3d/units.ts` | Makers' Row: your four units, drawn from the save |
+| `src/scripts/city3d/beacons.ts` | Beams of light over your contracts' drop-offs |
 | `src/scripts/city3d/market.ts` | The market square: stalls, traders, gantry, your stall's stock |
 | `src/scripts/city3d/profile-ui.ts` | The Profile panel: name, rank; owns the look (saved here and online) |
 | `src/scripts/city3d/head.ts` | The mode header's title and subtitle, and its height (`--head-h`) |

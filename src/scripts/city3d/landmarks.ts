@@ -2400,17 +2400,25 @@ function park(scene: THREE.Scene, crowd: Idle[]) {
   addLamp(8.4, 8.4, -Math.PI * 0.75);
 }
 
+/** The apartments: a tower and a lower block with Degen on the billboard. The tower is a place (staff to hire). */
 function apartments(scene: THREE.Scene, ctx: LandmarkCtx) {
+  const sp = spot(scene, 'apartments', V(24.4, 3.5, 2.6), 5.5, V(24.4, 8.6, 2.6));
+  const g = sp.group;
   const b = new Batch();
+  const tb = new Batch();
   const aMat = facadeMat({ cols: 5, rows: 12, wall: '#17414a', lit: [PAL.warm, PAL.warm, PAL.pink], litRatio: 0.6, seed: 51, bands: '#22606a' }, 0.15, 1.7);
-  scene.add(walls(22.8, S, 1.0, 3.2, 7.0, 3.2, aMat, toon('#123238')));
+  g.add(walls(22.8, S, 1.0, 3.2, 7.0, 3.2, aMat, toon('#123238')));
   // Balconies with railings on the street side
   for (let y = S + 1.2; y < S + 7; y += 1.17) {
-    b.box(23.0, y, 4.2, 2.8, 0.06, 0.45, toon('#2f6f78'));
-    b.box(23.0, y + 0.06, 4.6, 2.8, 0.32, 0.04, toon('#8b86b8'));
+    tb.box(23.0, y, 4.2, 2.8, 0.06, 0.45, toon('#2f6f78'));
+    tb.box(23.0, y + 0.06, 4.6, 2.8, 0.32, 0.04, toon('#8b86b8'));
   }
-  b.box(23.3, S + 7.0, 1.4, 0.8, 0.6, 0.8, toon('#2f6f78'));
-  cylAt(b, 25.3, S + 7.0, 2.4, 0.38, 0.8, toon('#6b4a8f'), 14);
+  // The front door, under the balconies
+  tb.box(23.95, S, 4.18, 0.9, 1.25, 0.06, toon('#14304a'));
+  tb.box(23.85, S + 1.25, 4.16, 1.1, 0.08, 0.1, toon('#1b1830'));
+  tb.box(23.3, S + 7.0, 1.4, 0.8, 0.6, 0.8, toon('#2f6f78'));
+  cylAt(tb, 25.3, S + 7.0, 2.4, 0.38, 0.8, toon('#6b4a8f'), 14);
+  tb.build(g);
 
   const bMat = facadeMat({ cols: 5, rows: 7, wall: '#3b2c66', lit: [PAL.warm, PAL.cyan], litRatio: 0.55, seed: 52 }, 0.15, 1.7);
   scene.add(walls(27.0, S, 1.6, 3.2, 4.2, 3.6, bMat, toon('#251c45')));
@@ -2459,6 +2467,7 @@ function apartments(scene: THREE.Scene, ctx: LandmarkCtx) {
   ])
     addTree(x, z);
   addLamp(25.6, 6.0, 0);
+  return sp;
 }
 
 /* ---------- Everything ---------- */
@@ -2486,7 +2495,7 @@ export function buildLandmarks(scene: THREE.Scene, ctx: LandmarkCtx) {
     return made;
   };
   onBlock(0, 0, () => park(scene, crowd));
-  onBlock(22, 0, () => apartments(scene, ctx));
+  // The Emporium first (the city's sound centres on it)
   const spots = [
     onBlock(11, 11, () => emporium(scene, ctx, crowd)),
     onBlock(22, 11, () => shop(scene, ctx, crowd)),
@@ -2495,6 +2504,7 @@ export function buildLandmarks(scene: THREE.Scene, ctx: LandmarkCtx) {
     onBlock(22, 22, () => armoury(scene, ctx)),
     onBlock(11, 0, () => signal(scene, ctx)),
     onBlock(0, 22, () => postOffice(scene, ctx)),
+    onBlock(22, 0, () => apartments(scene, ctx)),
   ];
   return { spots, crowd };
 }

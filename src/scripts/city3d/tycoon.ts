@@ -24,6 +24,8 @@
  *   warehouse or the Workshop, unload anywhere that takes them. Delivering
  *   to a stall or shop yourself pays a small bonus.
  */
+import { DOORS, GARAGE_SITE, STALL_SPOT, UNIT_SITE } from './solids';
+
 export type ProductId = 'gummies' | 'coffee' | 'glow' | 'tees' | 'sneakers' | 'neon';
 export type RawId = 'sugar' | 'beans' | 'cotton';
 export type GoodId = ProductId | RawId;
@@ -147,6 +149,7 @@ export interface Unit {
 }
 export type PlaceId = 'stall' | 'workshop' | 'u0' | 'u1' | 'u2' | 'u3';
 export const UNIT_PLACES = ['u0', 'u1', 'u2', 'u3'] as const;
+export const PLACE_IDS: PlaceId[] = ['stall', 'u0', 'u1', 'u2', 'u3', 'workshop'];
 export interface Job {
   make: ProductId;
   /** Items still to make */
@@ -155,7 +158,7 @@ export interface Job {
   t: number;
 }
 export interface TycoonSave {
-  v: 2;
+  v: 3;
   dorras: number;
   till: number;
   /** When it was last brought up to date (ms since 1970) */
@@ -166,12 +169,19 @@ export interface TycoonSave {
   workshop: { stock: Stock; job: Job | null };
   /** What's in your car */
   cargo: Stock;
-  stats: { earned: number; sold: number; made: number; grown: number; bonus: number };
+  /** Places with someone working there (Phase 3) */
+  staff: PlaceId[];
+  /** Couriers on their way */
+  shipments: Shipment[];
+  /** Contracts you've taken on, and the ids of every contract taken lately (so one can't be taken twice) */
+  contracts: Contract[];
+  taken: number[];
+  stats: { earned: number; sold: number; made: number; grown: number; bonus: number; wages: number; contracts: number };
 }
 
 export function newSave(now: number): TycoonSave {
   return {
-    v: 2,
+    v: 3,
     dorras: START_DORRAS,
     till: 0,
     at: now,
@@ -179,7 +189,11 @@ export function newSave(now: number): TycoonSave {
     units: Array.from({ length: UNIT_COUNT }, () => null),
     workshop: { stock: {}, job: null },
     cargo: {},
-    stats: { earned: 0, sold: 0, made: 0, grown: 0, bonus: 0 },
+    staff: [],
+    shipments: [],
+    contracts: [],
+    taken: [],
+    stats: { earned: 0, sold: 0, made: 0, grown: 0, bonus: 0, wages: 0, contracts: 0 },
   };
 }
 const emptyUnit = (): Unit => ({ kind: null, crop: 'sugar', stock: {}, slots: [], carry: 0 });
@@ -233,7 +247,7 @@ function cleanUnit(raw: unknown): Unit | null {
   };
 }
 
-/** A save from the browser (or anywhere) made safe: unknown goods dropped, numbers clamped; a fresh save if it isn't one. Phase 1 saves carry on. */
+/** A save from the browser (or anywhere) made safe: unknown goods dropped, numbers clamped; a fresh save if it isn't one. Phase 1 and 2 saves carry on. */
 export function cleanSave(raw: unknown, now: number): TycoonSave {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return newSave(now);
   const o = raw as Record<string, unknown>;
@@ -246,8 +260,8 @@ export function cleanSave(raw: unknown, now: number): TycoonSave {
   const job = obj(ws.job);
   const left = Math.floor(num(job.left, 0, JOB_MAX, 0));
   const make = left > 0 ? RECIPE_IDS.find((id) => id === job.make) : undefined;
-  return {
-    v: 2,
+  const s: TycoonSave = {
+    v: 3,
     dorras: Math.floor(num(o.dorras, 0, 1e12, START_DORRAS)),
     till: Math.floor(num(o.till, 0, 1e12, 0)),
     at: num(o.at, 0, now, now),
@@ -258,14 +272,43 @@ export function cleanSave(raw: unknown, now: number): TycoonSave {
       job: make ? { make, left, t: num(job.t, 0, RECIPES[make]!.minutes, 0) } : null,
     },
     cargo: cleanStock(o.cargo, Math.max(...Object.values(CARGO))),
+    staff: [],
+    shipments: [],
+    contracts: [],
+    taken: [],
     stats: {
       earned: Math.floor(num(stats.earned, 0, 1e15, 0)),
       sold: Math.floor(num(stats.sold, 0, 1e15, 0)),
       made: Math.floor(num(stats.made, 0, 1e15, 0)),
       grown: Math.floor(num(stats.grown, 0, 1e15, 0)),
       bonus: Math.floor(num(stats.bonus, 0, 1e15, 0)),
+      wages: Math.floor(num(stats.wages, 0, 1e15, 0)),
+      contracts: Math.floor(num(stats.contracts, 0, 1e9, 0)),
     },
   };
+  // Phase 3: staff only where there's a job for them; couriers and contracts checked against the rules
+  const places = (v: unknown) => PLACE_IDS.find((p) => p === v);
+  s.staff = [...new Set((Array.isArray(o.staff) ? o.staff : []).map(places).filter((p): p is PlaceId => !!p && !!roleAt(s, p)))];
+  for (const raw of (Array.isArray(o.shipments) ? o.shipments : []).slice(0, SHIP_MAX)) {
+    const r = obj(raw);
+    const from = places(r.from);
+    const to = places(r.to);
+    const good = GOOD_IDS.find((g) => g === r.good);
+    const qty = Math.floor(num(r.qty, 0, SHIP_QTY, 0));
+    if (from && to && good && qty > 0) s.shipments.push({ from, to, good, qty, arrives: num(r.arrives, 0, now + 60 * 60000, now) });
+  }
+  for (const raw of (Array.isArray(o.contracts) ? o.contracts : []).slice(0, CONTRACTS_MAX)) {
+    const r = obj(raw);
+    const good = PRODUCT_IDS.find((g) => g === r.good);
+    const to = DEST_IDS.find((d) => d === r.to);
+    const qty = Math.floor(num(r.qty, 1, CONTRACT_QTY, 0));
+    const id = Math.floor(num(r.id, 0, 1e12, -1));
+    // A contract's reward can't be more than the most the board ever offers for it
+    if (good && to && qty > 0 && id >= 0)
+      s.contracts.push({ id, good, qty, to, reward: Math.floor(num(r.reward, 0, good ? qty * good_(good).base * REWARD_MAX : 0, 0)), expires: num(r.expires, 0, now + CONTRACT_TIME * 60000, 0) });
+  }
+  s.taken = (Array.isArray(o.taken) ? o.taken : []).filter((n): n is number => Number.isInteger(n) && n >= 0).slice(-40);
+  return s;
 }
 
 /* ---------- The market ---------- */
@@ -371,7 +414,7 @@ function take(s: TycoonSave, p: PlaceId, id: GoodId, n: number) {
 
 export type Result =
   | { ok: true; qty: number; dorras: number }
-  | { ok: false; why: 'money' | 'room' | 'stock' | 'max' | 'busy' | 'owned' | 'place' };
+  | { ok: false; why: 'money' | 'room' | 'stock' | 'max' | 'busy' | 'owned' | 'place' | 'time' };
 
 /** Buy at the market hall, delivered straight to one of your places (as many as you can, up to `qty`) */
 export function buy(s: TycoonSave, id: GoodId, qty: number, now: number, to: PlaceId = 'stall'): Result {
@@ -455,6 +498,8 @@ export function buildUnit(s: TycoonSave, i: number, kind: UnitKind, crop?: RawId
   if (s.dorras < cost) return { ok: false, why: 'money' };
   s.dorras -= cost;
   Object.assign(u, emptyUnit(), { kind, crop: crop ?? u.crop });
+  // Whoever worked there had a different job: they go
+  s.staff = s.staff.filter((p) => p !== `u${i}`);
   return { ok: true, qty: 1, dorras: cost };
 }
 /** Change what a garden grows (its bins have to be empty) */
@@ -538,6 +583,12 @@ export interface Sales {
   /** Grown in gardens, made at the Workshop */
   grown: Partial<Record<GoodId, number>>;
   made: Partial<Record<GoodId, number>>;
+  /** Paid to staff; staff who left because they couldn't be paid */
+  wages: number;
+  quit: PlaceId[];
+  /** Couriers that arrived (what they brought), contracts that ran out */
+  arrived: Shipment[];
+  expired: Contract[];
 }
 const add = (m: Partial<Record<GoodId, number>>, id: GoodId, n: number) => (m[id] = (m[id] ?? 0) + n);
 
@@ -547,10 +598,22 @@ const add = (m: Partial<Record<GoodId, number>>, id: GoodId, n: number) => (m[id
  * `serving`: the place you're standing at (true: the stall).
  */
 export function advance(s: TycoonSave, now: number, serving: PlaceId | boolean = false): Sales {
-  const out: Sales = { minutes: 0, away: 0, sold: {}, earned: 0, grown: {}, made: {} };
+  const out: Sales = { minutes: 0, away: 0, sold: {}, earned: 0, grown: {}, made: {}, wages: 0, quit: [], arrived: [], expired: [] };
   const gap = (now - s.at) / 60000;
   s.at = Math.max(s.at, now);
   if (!(gap > 0)) return out;
+  // Couriers arrive (as much as there's room for; the rest waits), contracts run out
+  for (const sh of s.shipments) {
+    if (sh.arrives > now) continue;
+    const n = Math.min(sh.qty, room(s, sh.good, sh.to));
+    if (n <= 0) continue;
+    put(s, sh.to, sh.good, n);
+    sh.qty -= n;
+    out.arrived.push({ ...sh, qty: n });
+  }
+  s.shipments = s.shipments.filter((sh) => sh.qty > 0);
+  out.expired = s.contracts.filter((c) => c.expires < now);
+  s.contracts = s.contracts.filter((c) => c.expires >= now);
   // A long gap was time away: slower, and only so much of it counts
   const away = gap > AWAY_AFTER;
   const minutes = away ? Math.min(gap, OFFLINE_CAP) : gap;
@@ -560,7 +623,9 @@ export function advance(s: TycoonSave, now: number, serving: PlaceId | boolean =
   for (const p of ['stall', ...UNIT_PLACES] as PlaceId[]) {
     const sh = shelves(s, p);
     if (!sh) continue;
-    const rate = away ? OFFLINE_PACE : at === p ? SERVING : 1;
+    // A clerk sells half as fast again, and at full pace while you're away
+    const clerk = s.staff.includes(p);
+    const rate = (away ? (clerk ? 1 : OFFLINE_PACE) : at === p ? SERVING : 1) * (clerk ? STAFF_BOOST : 1);
     for (const slot of sh.slots) {
       if (slot.qty <= 0) continue;
       const want = pace(s, slot, p) * rate * minutes + slot.carry;
@@ -569,39 +634,243 @@ export function advance(s: TycoonSave, now: number, serving: PlaceId | boolean =
       if (n <= 0) continue;
       slot.qty -= n;
       const pay = n * retailPrice(slot.good, slot.price, now);
-      s.till += pay;
-      out.earned += pay;
+      const cut = clerk ? Math.floor(pay * STAFF_CUT) : 0;
+      s.till += pay - cut;
+      s.stats.wages += cut;
+      out.wages += cut;
+      out.earned += pay - cut;
       add(out.sold, slot.good, n);
       s.stats.sold += n;
       s.stats.earned += pay;
     }
   }
   // Gardens grow until their bins are full (as fast while you're away)
-  for (const u of s.units) {
-    if (u?.kind !== 'garden') continue;
+  s.units.forEach((u, i) => {
+    if (u?.kind !== 'garden') return;
+    const p = `u${i}` as PlaceId;
+    const hand = s.staff.includes(p);
     const have = u.stock[u.crop] ?? 0;
-    const want = CROPS[u.crop] * minutes + u.carry;
+    const want = CROPS[u.crop] * (hand ? STAFF_BOOST : 1) * minutes + u.carry;
     const n = Math.min(GARDEN_CAP - have, Math.floor(want));
     u.carry = have + n < GARDEN_CAP ? want - Math.floor(want) : 0;
-    if (n <= 0) continue;
+    if (n <= 0) return;
     u.stock[u.crop] = have + n;
     add(out.grown, u.crop, n);
     s.stats.grown += n;
-  }
+    if (hand) payStaff(s, p, n * marketPrice(u.crop, now) * STAFF_CUT, out);
+  });
   // The Workshop works through its job
   const j = s.workshop.job;
   if (j) {
     const each = RECIPES[j.make]!.minutes;
-    const t = j.t + minutes;
+    const hand = s.staff.includes('workshop');
+    const t = j.t + minutes * (hand ? STAFF_BOOST : 1);
     const n = Math.min(j.left, Math.floor(t / each));
     if (n > 0) {
       put(s, 'workshop', j.make, n);
       add(out.made, j.make, n);
       s.stats.made += n;
+      if (hand) payStaff(s, 'workshop', n * marketPrice(j.make, now) * STAFF_CUT, out);
     }
     j.left -= n;
     j.t = j.left > 0 ? t - n * each : 0;
     if (j.left <= 0) s.workshop.job = null;
   }
   return out;
+}
+
+/* ---------- Phase 3: staff, couriers, contracts ---------- */
+
+/** Who works where: a clerk at a stall or shop, a gardener in a garden, a hand at the Workshop */
+export const ROLES = {
+  clerk: { name: 'Clerk', blurb: 'Serves customers: half as many sales again, and full pace while you\'re away.' },
+  gardener: { name: 'Gardener', blurb: 'The garden grows half as fast again.' },
+  hand: { name: 'Workshop hand', blurb: 'Jobs run half as fast again.' },
+} as const;
+export type Role = keyof typeof ROLES;
+/** What hiring costs up front; then staff keep this share of the value of what they sell, grow or make */
+export const STAFF_HIRE = 250;
+export const STAFF_CUT = 0.1;
+export const STAFF_BOOST = 1.5;
+export function roleAt(s: TycoonSave, p: PlaceId): Role | null {
+  if (p === 'workshop') return 'hand';
+  if (sells(s, p)) return 'clerk';
+  return unitAt(s, p)?.kind === 'garden' ? 'gardener' : null;
+}
+export function hire(s: TycoonSave, p: PlaceId): Result {
+  if (!roleAt(s, p)) return { ok: false, why: 'place' };
+  if (s.staff.includes(p)) return { ok: false, why: 'owned' };
+  if (s.dorras < STAFF_HIRE) return { ok: false, why: 'money' };
+  s.dorras -= STAFF_HIRE;
+  s.staff.push(p);
+  return { ok: true, qty: 1, dorras: STAFF_HIRE };
+}
+export function letGo(s: TycoonSave, p: PlaceId) {
+  const had = s.staff.includes(p);
+  s.staff = s.staff.filter((x) => x !== p);
+  return had;
+}
+/** Pay a gardener's or hand's share (from the till, then your balance); if it can't be paid, they leave */
+function payStaff(s: TycoonSave, p: PlaceId, amount: number, out: Sales) {
+  const due = Math.ceil(amount);
+  const fromTill = Math.min(s.till, due);
+  const fromBalance = Math.min(s.dorras, due - fromTill);
+  s.till -= fromTill;
+  s.dorras -= fromBalance;
+  s.stats.wages += fromTill + fromBalance;
+  out.wages += fromTill + fromBalance;
+  if (fromTill + fromBalance < due) {
+    letGo(s, p);
+    out.quit.push(p);
+  }
+}
+
+/* Couriers (the Post office): goods between your places without driving */
+export interface Shipment {
+  from: PlaceId;
+  to: PlaceId;
+  good: GoodId;
+  qty: number;
+  /** When it arrives (ms since 1970) */
+  arrives: number;
+}
+/** Couriers out at once, and the most one carries */
+export const SHIP_MAX = 3;
+export const SHIP_QTY = 50;
+/** Where each of your places is (for the couriers' journeys) */
+const placeAt = (p: PlaceId) => (p === 'stall' ? STALL_SPOT : p === 'workshop' ? DOORS.find((d) => d.id === 'workshop')! : UNIT_SITE[unitIndex(p)].door);
+/** A courier's journey in minutes: a minute to load, then about 40 tiles a minute */
+export const shipMinutes = (from: PlaceId, to: PlaceId) => {
+  const a = placeAt(from);
+  const b = placeAt(to);
+  return Math.round((1 + Math.hypot(a.x - b.x, a.z - b.z) / 40) * 2) / 2;
+};
+/** What a courier charges: a call-out and a share of the goods' price */
+export const shipFee = (id: GoodId, qty: number, now: number) => Math.ceil(5 + qty * marketPrice(id, now) * 0.06);
+/** Send goods by courier from a garden, warehouse or the Workshop to another of your places */
+export function ship(s: TycoonSave, from: PlaceId, to: PlaceId, id: GoodId, qty: number, now: number): Result {
+  if (!loadsFrom(s, from) || from === to) return { ok: false, why: 'place' };
+  if (s.shipments.length >= SHIP_MAX) return { ok: false, why: 'busy' };
+  const n = Math.min(Math.floor(qty), SHIP_QTY, holds(s, from, id), room(s, id, to));
+  if (holds(s, from, id) <= 0) return { ok: false, why: 'stock' };
+  if (n <= 0) return { ok: false, why: 'room' };
+  const fee = shipFee(id, n, now);
+  if (s.dorras < fee) return { ok: false, why: 'money' };
+  s.dorras -= fee;
+  take(s, from, id, n);
+  s.shipments.push({ from, to, good: id, qty: n, arrives: now + shipMinutes(from, to) * 60000 });
+  return { ok: true, qty: n, dorras: fee };
+}
+
+/* Contracts (the Signal tower): deliver goods across the city in your car */
+export const DESTS = {
+  shop: 'Drop 001',
+  vault: 'The Vault',
+  plan: 'The Armoury',
+  signal: 'Signal tower',
+  telegram: 'Post office',
+  apartments: 'The Apartments',
+  garage: 'The garage',
+} as const;
+export type DestId = keyof typeof DESTS;
+export const DEST_IDS = Object.keys(DESTS) as DestId[];
+/** Where a contract's goods are dropped off: the building's door */
+export const destAt = (d: DestId) => (d === 'garage' ? GARAGE_SITE.door : DOORS.find((x) => x.id === d)!);
+export interface Contract {
+  id: number;
+  good: ProductId;
+  qty: number;
+  to: DestId;
+  reward: number;
+  /** Taken: when it runs out (ms since 1970) */
+  expires: number;
+}
+/** A new board every 20 minutes, four contracts on it; up to three taken at once, each with 30 minutes to deliver */
+export const BOARD_MINUTES = 20;
+export const BOARD_SIZE = 4;
+export const CONTRACTS_MAX = 3;
+export const CONTRACT_TIME = 30;
+export const CONTRACT_QTY = 60;
+/** Rewards: between these times the goods' base price */
+const REWARD_MIN = 1.45;
+const REWARD_MAX = 1.8;
+const good_ = good;
+/** A little seeded generator (the same board for everyone) */
+function seeded(seed: number) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+export const boardIndex = (now: number) => Math.floor(now / (BOARD_MINUTES * 60000));
+/** When the board on show now is replaced */
+export const boardEnds = (now: number) => (boardIndex(now) + 1) * BOARD_MINUTES * 60000;
+/** The contracts on the board at a moment: the same for everyone, new every BOARD_MINUTES */
+export function board(now: number): Omit<Contract, 'expires'>[] {
+  const w = boardIndex(now);
+  const r = seeded(w * 7919 + 17);
+  const out: Omit<Contract, 'expires'>[] = [];
+  for (let k = 0; k < BOARD_SIZE; k++) {
+    const g = good_(PRODUCT_IDS[Math.floor(r() * PRODUCT_IDS.length)]);
+    // Worth roughly 150-650 Dorras of goods, so cheap goods come by the crate and neon signs a few at a time
+    const qty = Math.max(2, Math.min(CONTRACT_QTY, Math.round((150 + r() * 500) / g.base)));
+    const to = DEST_IDS[Math.floor(r() * DEST_IDS.length)];
+    out.push({ id: w * 10 + k, good: g.id as ProductId, qty, to, reward: Math.round(g.base * qty * (REWARD_MIN + r() * (REWARD_MAX - REWARD_MIN))) });
+  }
+  return out;
+}
+/** Take on a contract from the board */
+export function accept(s: TycoonSave, id: number, now: number): Result {
+  const c = board(now).find((x) => x.id === id);
+  if (!c) return { ok: false, why: 'time' };
+  if (s.taken.includes(id)) return { ok: false, why: 'owned' };
+  if (s.contracts.length >= CONTRACTS_MAX) return { ok: false, why: 'max' };
+  s.contracts.push({ ...c, expires: now + CONTRACT_TIME * 60000 });
+  s.taken = [...s.taken, id].slice(-40);
+  return { ok: true, qty: c.qty, dorras: 0 };
+}
+/** Give up a contract (no penalty; it can't be taken again) */
+export function dropContract(s: TycoonSave, id: number) {
+  const had = s.contracts.some((c) => c.id === id);
+  s.contracts = s.contracts.filter((c) => c.id !== id);
+  return had;
+}
+/** Hand over a contract's goods from your car at its drop-off: the reward goes straight to your balance */
+export function deliver(s: TycoonSave, id: number, at: DestId, now: number): Result {
+  const c = s.contracts.find((x) => x.id === id);
+  if (!c) return { ok: false, why: 'place' };
+  if (c.expires < now) return { ok: false, why: 'time' };
+  if (c.to !== at) return { ok: false, why: 'place' };
+  if ((s.cargo[c.good] ?? 0) < c.qty) return { ok: false, why: 'stock' };
+  s.cargo[c.good]! -= c.qty;
+  if (!s.cargo[c.good]) delete s.cargo[c.good];
+  s.dorras += c.reward;
+  s.stats.contracts += 1;
+  s.contracts = s.contracts.filter((x) => x !== c);
+  return { ok: true, qty: c.qty, dorras: c.reward };
+}
+
+/* Buying straight into your car (parked at the Emporium) and selling from it */
+export function buyToCar(s: TycoonSave, id: GoodId, qty: number, now: number, cap: number): Result {
+  const each = askPrice(id, now);
+  const space = cap - total(s.cargo);
+  if (space <= 0) return { ok: false, why: 'room' };
+  const n = Math.min(Math.floor(qty), space, Math.floor(s.dorras / each));
+  if (n <= 0) return { ok: false, why: 'money' };
+  s.cargo[id] = (s.cargo[id] ?? 0) + n;
+  s.dorras -= n * each;
+  return { ok: true, qty: n, dorras: n * each };
+}
+export function sellFromCar(s: TycoonSave, id: GoodId, qty: number, now: number): Result {
+  const n = Math.min(Math.floor(qty), s.cargo[id] ?? 0);
+  if (n <= 0) return { ok: false, why: 'stock' };
+  s.cargo[id]! -= n;
+  if (!s.cargo[id]) delete s.cargo[id];
+  const each = bidPrice(id, now);
+  s.dorras += n * each;
+  return { ok: true, qty: n, dorras: n * each };
 }

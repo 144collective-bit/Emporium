@@ -32,10 +32,11 @@ const spots: Record<SpotId, Spot> = {
   workshop: { href: '#city-title', title: 'The Workshop', sub: 'Factory', aria: 'The Workshop: the factory' },
   vault: { href: '#city-title', title: 'The Vault', sub: 'Bank · soon', aria: 'The Vault: the bank, coming soon' },
   plan: { href: '#city-title', title: 'The Armoury', sub: 'Guns & gear', aria: 'The Armoury: guns and gear' },
-  signal: { href: '#city-title', title: 'Signal tower', sub: 'News & contracts · soon', aria: 'Signal tower: news and contracts, coming soon' },
-  telegram: { href: '#city-title', title: 'Post office', sub: 'Logistics · soon', aria: 'Post office: logistics, coming soon' },
+  signal: { href: '#city-title', title: 'Signal tower', sub: 'News & contracts', aria: 'Signal tower: news and contracts' },
+  telegram: { href: '#city-title', title: 'Post office', sub: 'Couriers', aria: 'Post office: couriers' },
+  apartments: { href: '#city-title', title: 'Apartments', sub: 'Staff', aria: 'The Apartments: hire staff' },
 };
-const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram'];
+const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments'];
 const ext = { target: '_blank', rel: 'noopener noreferrer' };
 
 const map = renderCity({ spots, art: { degen: degenImg.src, logo: logoImg.src } });
@@ -550,16 +551,22 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     <p class="city-panel-text">Walk in and gear up at the gun store counter for target practice. Better guns unlock with your score.</p>
   </template>
   <template data-panel-tpl="signal">
-    <p class="kicker"><span class="kicker-num">06</span> Coming soon</p>
+    <p class="kicker"><span class="kicker-num">06</span> Signal tower</p>
     <h2 id="city-panel-title" class="city-panel-title">News &amp; contracts</h2>
-    <p class="city-panel-text">The city's news, and the contracts businesses post: orders, deliveries, rush jobs.</p>
-    <span class="tag">Opens in a later update</span>
+    <p class="city-panel-text">The city's news, and orders from around town. Take one on, load the goods into your car and drive them to the door.</p>
+    <div class="market" data-contracts></div>
   </template>
   <template data-panel-tpl="telegram">
-    <p class="kicker"><span class="kicker-num">07</span> Coming soon</p>
-    <h2 id="city-panel-title" class="city-panel-title">Logistics</h2>
-    <p class="city-panel-text">Hire deliveries between your businesses when you'd rather not drive them yourself.</p>
-    <span class="tag">Opens in a later update</span>
+    <p class="kicker"><span class="kicker-num">07</span> Post office</p>
+    <h2 id="city-panel-title" class="city-panel-title">Couriers</h2>
+    <p class="city-panel-text">Send goods between your places when you'd rather not drive them yourself. Couriers charge a fee and take a few minutes.</p>
+    <div class="market" data-couriers></div>
+  </template>
+  <template data-panel-tpl="apartments">
+    <p class="kicker"><span class="kicker-num">08</span> The Apartments</p>
+    <h2 id="city-panel-title" class="city-panel-title">Staff</h2>
+    <p class="city-panel-text">Degens looking for work. Hire one for your stall, a shop, a garden or the Workshop: they work while you're away too, and keep a share of what they handle.</p>
+    <div class="market" data-staff></div>
   </template>
 
   <div class="city-hud" data-city-hud>

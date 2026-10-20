@@ -46,9 +46,9 @@ store, X and Telegram are in the ☰ Menu.
 | Drop 001 | Clothes (the fitting room, free for now) | built |
 | The Armoury | Guns and gear for target practice | built |
 | The Workshop | **Factory**: turn raw goods into products | 2 (built) |
-| Signal tower | **News and contracts**: "deliver 20 crates to East 2" | 3 |
-| Post office | **Logistics**: hire deliveries when you'd rather not drive | 3 |
-| Apartments | **Staff**: hire workers who raise a business's output | 3 |
+| Signal tower | **News and contracts**: "deliver 19 Iced Coffee to the Armoury" | 3 (built) |
+| Post office | **Couriers**: send goods between your places when you'd rather not drive | 3 (built) |
+| Apartments | **Staff**: hire workers who raise a business's output | 3 (built) |
 | The Vault | **Bank**: your balance, history, savings for expansion | 4 |
 | Garage | Cars and cargo space | 2 (built) |
 
@@ -61,8 +61,8 @@ store, X and Telegram are in the ☰ Menu.
 2. **Making and moving goods** (built). Makers' Row's four units (garden,
    shop or warehouse), raw goods, the Workshop's factory line, and delivery
    runs in your car.
-3. **Contracts and staff.** Signal tower jobs, Post office logistics,
-   Apartment hires.
+3. **Contracts and staff** (built). Signal tower contracts, Post office
+   couriers, staff hired at the Apartments.
 4. **District plots as the top tier.** The Vault and the bigger buildings.
 5. **Later, with the server.** PLS top-ups, a shared market between players,
    south-bank security and raids.
@@ -128,4 +128,33 @@ before the next one starts.
   delivery bonus (`DELIVERY_BONUS`).
 - **The market hall** delivers what you buy to, and sells from, the place
   picked at its top (stall, a built unit or the Workshop).
-- Hiring deliveries (no driving) comes with the Post office in Phase 3.
+- Sending goods without driving: the Post office's couriers (Phase 3).
+
+## Phase 3: how it works
+
+- **Contracts** (the Signal tower's panel; rules `board()`, `accept()`,
+  `deliver()` in `tycoon.ts`): a board of four orders that changes every 20
+  minutes, the same for everyone (seeded from the time, like market prices).
+  Each asks for a number of one product at a building's door (Drop 001, the
+  Vault, the Armoury, the Signal tower, the Post office, the Apartments, the
+  garage) and pays 1.45-1.8x the goods' base price. Up to three at once, 30
+  minutes each, no penalty for giving one up or letting it run out. The
+  goods have to come in your car: park by the door, and Deliver is on the
+  card's Car tab (on foot at the door the prompt says "Deliver"). A beam of
+  light marks each drop-off (`beacons.ts`). The panel also shows the news:
+  what's climbing and falling at the market hall, and who wants what.
+- **Your car at the market hall:** parked outside the Emporium, the market
+  hall can buy straight into it and sell from it (`buyToCar()`,
+  `sellFromCar()`), so contracts work before you own a warehouse.
+- **Couriers** (the Post office's panel; `ship()`): send up to 50 goods from
+  a garden, warehouse or the Workshop to another of your places. A call-out
+  fee plus 6% of the goods' price, about a minute plus the distance. Three out
+  at once; they arrive while you're away too, and wait if there's no room.
+  No delivery bonus, and no contracts: those are for driving.
+- **Staff** (the Apartments' panel, a new place in the city; `hire()`): a
+  clerk for your stall or a shop (1.5x sales, and full pace while you're
+  away), a gardener (1.5x growth) or a Workshop hand (1.5x speed). 250 Dorras
+  to hire, then they keep 10% of the value of what they sell, grow or make,
+  so they only cost anything while there's work. Paid from the till, then
+  your balance; if they can't be paid they leave.
+- Saves carry on from Phases 1 and 2 (`cleanSave()`, v3).

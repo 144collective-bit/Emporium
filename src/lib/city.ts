@@ -18,7 +18,7 @@
 
 import { BLOCKS, BS, CORE_ROADS, LANE, RIVER, STREET_GAP, WALK_W, design, designShift } from '../scripts/city3d/layout';
 
-export type SpotId = 'emporium' | 'shop' | 'workshop' | 'vault' | 'signal' | 'telegram' | 'plan';
+export type SpotId = 'emporium' | 'shop' | 'workshop' | 'vault' | 'signal' | 'telegram' | 'plan' | 'apartments';
 
 export interface Spot {
   href: string;
@@ -576,13 +576,14 @@ function signal(s: Spot) {
   add(15.8, 8.6, lamp(15.8, 8.6));
 }
 
-/** Block (2,0): apartments with Degen on the billboard. */
-function apartments(art: CityInput['art']) {
+/** Block (2,0): apartments with Degen on the billboard (the tower is a place: staff to hire). */
+function apartments(s: Spot, art: CityInput['art']) {
   let a = prism(22.8, 1.0, 3.2, 3.2, 8.5, { c: '#17414a', z: Z0 });
   a += winL(22.8, 1.0, 3.2, 3.2, 8.5, Z0, 4, 9, { pal: [C.warm, C.warm, C.pink] });
   a += winR(22.8, 1.0, 3.2, 3.2, 8.5, Z0, 4, 9, { pal: [C.warm, C.cyan] });
   a += prism(23.3, 1.4, 0.8, 0.8, 0.6, { c: '#4a4170', z: Z0 + 8.5 }) + prism(24.6, 2.6, 0.9, 0.7, 0.5, { c: '#4a4170', z: Z0 + 8.5 });
-  add(24.4, 2.6, a);
+  add(24.4, 2.6, spot('apartments', s, a));
+  pin('apartments', s, P(24.4, 2.6, Z0 + 9.6));
 
   let b = prism(27.0, 1.6, 3.2, 3.6, 5.0, { c: '#3b2c66', z: Z0 });
   b += winL(27.0, 1.6, 3.2, 3.6, 5.0, Z0, 4, 5, { pal: [C.warm, C.pink] });
@@ -1246,7 +1247,7 @@ export function renderCity({ spots, art }: CityInput) {
   // Each building on its block (the numbers are their blocks on the old drawing grid)
   onBlock(0, 0, park);
   onBlock(11, 0, () => signal(spots.signal));
-  onBlock(22, 0, () => apartments(art));
+  onBlock(22, 0, () => apartments(spots.apartments, art));
   onBlock(0, 11, () => vault(spots.vault));
   onBlock(11, 11, () => emporium(spots.emporium, art));
   onBlock(22, 11, () => shop(spots.shop));

@@ -163,6 +163,7 @@ export const DOORS: { id: SpotId; x: number; z: number }[] = (
     { id: 'signal', x: 13.7, z: 8.6 },
     { id: 'telegram', x: 3.6, z: 27.6 },
     { id: 'plan', x: 26.6, z: 30.95 },
+    { id: 'apartments', x: 24.4, z: 4.55 },
   ] as { id: SpotId; x: number; z: number }[]
 ).map((d) => {
   const [x, z] = design(d.x, d.z);

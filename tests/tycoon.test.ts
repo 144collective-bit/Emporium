@@ -2,6 +2,28 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  BOARD_MINUTES,
+  BOARD_SIZE,
+  CONTRACTS_MAX,
+  CONTRACT_TIME,
+  SHIP_MAX,
+  STAFF_BOOST,
+  STAFF_CUT,
+  STAFF_HIRE,
+  DEST_IDS,
+  accept,
+  board,
+  buyToCar,
+  deliver,
+  destAt,
+  dropContract,
+  hire,
+  letGo,
+  roleAt,
+  sellFromCar,
+  ship,
+  shipFee,
+  shipMinutes,
   ASK,
   BID,
   GOODS,
@@ -229,7 +251,7 @@ function rich() {
 
 test('a Phase 1 save carries on: stall kept, no units, an empty Workshop and car', () => {
   const s = cleanSave({ v: 1, dorras: 900, till: 12, at: T0, stall: { level: 2, slots: [{ good: 'tees', qty: 7, price: 'high', carry: 0 }] } }, T0);
-  assert.equal(s.v, 2);
+  assert.equal(s.v, 3);
   assert.equal(s.dorras, 900);
   assert.equal(s.stall.slots[0].qty, 7);
   assert.equal(s.units.length, UNIT_COUNT);
@@ -403,4 +425,191 @@ test('cleanSave keeps units, the Workshop and the car within their limits', () =
   assert.equal(s.workshop.job, null, 'neon has no recipe');
   assert.ok(total(s.cargo) <= Math.max(...Object.values(CARGO)));
   assert.equal(Object.keys(s.cargo).length, 1);
+});
+
+/* ---------- Phase 3: staff, couriers, contracts ---------- */
+
+test('a Phase 2 save carries on into Phase 3: no staff, couriers or contracts yet', () => {
+  const s = cleanSave({ v: 2, dorras: 100, units: [{ kind: 'shop', slots: [] }], workshop: { stock: { sugar: 4 }, job: null }, cargo: { tees: 2 } }, T0);
+  assert.equal(s.v, 3);
+  assert.equal(s.units[0]!.kind, 'shop');
+  assert.deepEqual(s.cargo, { tees: 2 });
+  assert.deepEqual([s.staff, s.shipments, s.contracts, s.taken], [[], [], [], []]);
+});
+
+test('staff: one per place, the right role, hired up front', () => {
+  const s = rich();
+  buildUnit(s, 0, 'garden');
+  buildUnit(s, 1, 'warehouse');
+  assert.equal(roleAt(s, 'stall'), 'clerk');
+  assert.equal(roleAt(s, 'u0'), 'gardener');
+  assert.equal(roleAt(s, 'u1'), null);
+  assert.equal(roleAt(s, 'workshop'), 'hand');
+  const before = s.dorras;
+  assert.ok(hire(s, 'stall').ok);
+  assert.equal(s.dorras, before - STAFF_HIRE);
+  assert.deepEqual(hire(s, 'stall'), { ok: false, why: 'owned' });
+  assert.deepEqual(hire(s, 'u1'), { ok: false, why: 'place' });
+  const poor = newSave(T0);
+  poor.dorras = STAFF_HIRE - 1;
+  assert.deepEqual(hire(poor, 'stall'), { ok: false, why: 'money' });
+  // Rebuilding a unit lets its staff go
+  hire(s, 'u0');
+  buildUnit(s, 0, 'shop');
+  assert.ok(!s.staff.includes('u0'));
+  assert.ok(letGo(s, 'stall') && !s.staff.includes('stall'));
+});
+
+test('a clerk sells more (full pace while you\'re away) and keeps a share of the takings', () => {
+  const run = (clerk: boolean, minutes: number) => {
+    const s = newSave(T0);
+    s.dorras = 1e6;
+    s.stall.level = 3;
+    buy(s, 'glow', 80, T0);
+    if (clerk) hire(s, 'stall');
+    const sales = advance(s, T0 + minutes * MIN);
+    return { s, sales };
+  };
+  const here = [run(false, 2), run(true, 2)];
+  assert.ok((here[1].sales.sold.glow ?? 0) > (here[0].sales.sold.glow ?? 0));
+  const n = here[1].sales.sold.glow!;
+  const pay = n * retailPrice('glow', 'fair', T0 + 2 * MIN);
+  assert.equal(here[1].sales.wages, Math.floor(pay * STAFF_CUT));
+  assert.equal(here[1].s.till, pay - here[1].sales.wages);
+  // Away for 30 minutes: a clerk keeps selling at full pace
+  const away = [run(false, 30), run(true, 30)];
+  assert.ok((away[1].sales.sold.glow ?? 0) >= (away[0].sales.sold.glow ?? 0) * 3);
+  assert.ok(STAFF_BOOST > 1);
+});
+
+test('a gardener and a workshop hand speed things up and are paid from the till, then your balance', () => {
+  const s = rich();
+  buildUnit(s, 0, 'garden');
+  buildUnit(s, 1, 'garden');
+  hire(s, 'u1');
+  buy(s, 'sugar', 40, T0, 'workshop');
+  startJob(s, 'gummies', 20);
+  const plain = newSave(T0);
+  plain.dorras = 1e6;
+  buy(plain, 'sugar', 40, T0, 'workshop');
+  startJob(plain, 'gummies', 20);
+  hire(s, 'workshop');
+  s.till = 0;
+  const d0 = s.dorras;
+  const sales = advance(s, T0 + 2 * MIN);
+  advance(plain, T0 + 2 * MIN);
+  assert.ok(holds(s, 'u1', 'sugar') > holds(s, 'u0', 'sugar'), 'the gardener made no difference');
+  assert.ok(holds(s, 'workshop', 'gummies') > holds(plain, 'workshop', 'gummies'), 'the hand made no difference');
+  assert.ok(sales.wages > 0 && s.dorras === d0 - sales.wages);
+});
+
+test('staff who can\'t be paid leave', () => {
+  const s = rich();
+  buildUnit(s, 0, 'garden');
+  hire(s, 'u0');
+  s.dorras = 0;
+  s.till = 0;
+  const sales = advance(s, T0 + 3 * MIN);
+  assert.deepEqual(sales.quit, ['u0']);
+  assert.ok(!s.staff.includes('u0'));
+});
+
+test('couriers carry goods between your places for a fee, arriving later', () => {
+  const s = rich();
+  buildUnit(s, 0, 'warehouse');
+  buildUnit(s, 1, 'shop');
+  buy(s, 'tees', 30, T0, 'u0');
+  const d0 = s.dorras;
+  const r = ship(s, 'u0', 'u1', 'tees', 30, T0);
+  assert.ok(r.ok && r.qty === 30 && r.dorras === shipFee('tees', 30, T0));
+  assert.equal(s.dorras, d0 - r.dorras);
+  assert.equal(holds(s, 'u0', 'tees'), 0, 'the goods leave straight away');
+  const mins = shipMinutes('u0', 'u1');
+  assert.ok(mins >= 1);
+  advance(s, T0 + (mins - 0.5) * MIN);
+  assert.equal(holds(s, 'u1', 'tees'), 0, 'arrived early');
+  const sales = advance(s, T0 + (mins + 0.1) * MIN);
+  assert.equal(sales.arrived[0].qty, 30);
+  assert.ok(holds(s, 'u1', 'tees') > 0);
+  assert.deepEqual(s.shipments, []);
+  // Not from a stall or shop, never to the same place, and only so many at once
+  assert.deepEqual(ship(s, 'u1', 'u0', 'tees', 1, T0), { ok: false, why: 'place' });
+  assert.deepEqual(ship(s, 'u0', 'u0', 'tees', 1, T0), { ok: false, why: 'place' });
+  buy(s, 'glow', 100, T0, 'u0');
+  for (let k = 0; k < SHIP_MAX; k++) assert.ok(ship(s, 'u0', 'workshop', 'glow', 5, T0).ok);
+  assert.deepEqual(ship(s, 'u0', 'workshop', 'glow', 5, T0), { ok: false, why: 'busy' });
+});
+
+test('the contract board is the same for everyone, changes every few minutes, and pays more than the goods are worth', () => {
+  const a = board(T0);
+  assert.equal(a.length, BOARD_SIZE);
+  assert.deepEqual(board(T0 + 1000), a);
+  assert.notDeepEqual(board(T0 + BOARD_MINUTES * MIN), a);
+  for (let k = 0; k < 50; k++)
+    for (const c of board(T0 + k * BOARD_MINUTES * MIN)) {
+      const g = GOODS.find((x) => x.id === c.good)!;
+      assert.ok(!g.raw, 'contracts are for products');
+      assert.ok(c.qty >= 2 && c.qty <= 60);
+      assert.ok(c.reward > c.qty * askPrice(c.good, T0 + k * BOARD_MINUTES * MIN), `contract ${c.id} pays less than buying the goods`);
+      assert.ok(destAt(c.to), `no drop-off for ${c.to}`);
+    }
+});
+
+test('take a contract, deliver it from your car at the drop-off, get paid', () => {
+  const s = rich();
+  const c = board(T0)[0];
+  assert.ok(accept(s, c.id, T0).ok);
+  assert.deepEqual(accept(s, c.id, T0), { ok: false, why: 'owned' });
+  const other = DEST_IDS.find((d) => d !== c.to)!;
+  assert.deepEqual(deliver(s, c.id, c.to, T0), { ok: false, why: 'stock' });
+  s.cargo[c.good] = c.qty;
+  assert.deepEqual(deliver(s, c.id, other, T0), { ok: false, why: 'place' });
+  const d0 = s.dorras;
+  const r = deliver(s, c.id, c.to, T0 + MIN);
+  assert.ok(r.ok && r.dorras === c.reward);
+  assert.equal(s.dorras, d0 + c.reward);
+  assert.deepEqual(s.cargo, {});
+  assert.equal(s.stats.contracts, 1);
+  assert.deepEqual(accept(s, c.id, T0), { ok: false, why: 'owned' }, 'a delivered contract can\'t be taken again');
+});
+
+test('contracts run out, only so many at once, and only from the board on show', () => {
+  const s = rich();
+  const b = board(T0);
+  for (let k = 0; k < CONTRACTS_MAX; k++) assert.ok(accept(s, b[k].id, T0).ok);
+  assert.deepEqual(accept(s, b[CONTRACTS_MAX].id, T0), { ok: false, why: 'max' });
+  assert.ok(dropContract(s, b[0].id));
+  assert.deepEqual(accept(s, b[CONTRACTS_MAX].id, T0 + BOARD_MINUTES * MIN), { ok: false, why: 'time' }, 'yesterday\'s board');
+  const sales = advance(s, T0 + (CONTRACT_TIME + 1) * MIN);
+  assert.equal(sales.expired.length, CONTRACTS_MAX - 1);
+  assert.deepEqual(s.contracts, []);
+});
+
+test('your car can be filled at the market hall and sold from', () => {
+  const s = newSave(T0);
+  const r = buyToCar(s, 'coffee', 99, T0, 16);
+  assert.ok(r.ok && r.qty === 16 && s.cargo.coffee === 16);
+  assert.deepEqual(buyToCar(s, 'coffee', 1, T0, 16), { ok: false, why: 'room' });
+  const back = sellFromCar(s, 'coffee', 16, T0);
+  assert.ok(back.ok && back.dorras === 16 * bidPrice('coffee', T0));
+  assert.deepEqual(s.cargo, {});
+});
+
+test('cleanSave keeps Phase 3 within the rules', () => {
+  const s = cleanSave(
+    {
+      units: [{ kind: 'warehouse' }],
+      staff: ['stall', 'stall', 'u0', 'u3', 'moon'],
+      shipments: [{ from: 'u0', to: 'stall', good: 'tees', qty: 9999, arrives: T0 + 1e12 }, { from: 'x' }],
+      contracts: [{ id: 5, good: 'neon', qty: 3, to: 'vault', reward: 1e12, expires: T0 + 1e12 }, { id: 6, good: 'sugar', qty: 3, to: 'vault' }],
+      taken: [1, 'two', -3, 4.5, 7],
+    },
+    T0
+  );
+  assert.deepEqual(s.staff, ['stall'], 'staff only where there\'s a job for them, once');
+  assert.equal(s.shipments.length, 1);
+  assert.ok(s.shipments[0].qty <= 50 && s.shipments[0].arrives <= T0 + 60 * MIN);
+  assert.equal(s.contracts.length, 1, 'contracts are for products');
+  assert.ok(s.contracts[0].reward <= 3 * 260 * 1.8 && s.contracts[0].expires <= T0 + CONTRACT_TIME * MIN);
+  assert.deepEqual(s.taken, [1, 7]);
 });

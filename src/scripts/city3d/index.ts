@@ -30,6 +30,8 @@ import { createCityHead } from './head';
 import { buildMarket } from './market';
 import { createTycoonUI, type TycoonUI } from './tycoon-ui';
 import { buildUnits } from './units';
+import { buildBeacons } from './beacons';
+import { destAt } from './tycoon';
 import { CARS } from './cars';
 
 type Tier = 'high' | 'medium' | 'low';
@@ -105,6 +107,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const market = buildMarket(scene, crowd);
   // Makers' Row: your units, drawn from your save once the economy starts (further down)
   const units = buildUnits(scene);
+  // Beams of light over your contracts' drop-offs
+  const beacons = buildBeacons(scene, tick, reduced);
   progress(0.55);
   await nextFrame();
   scatterOutskirts(Q.trees);
@@ -231,12 +235,10 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     panelBody.replaceChildren(tpl.content.cloneNode(true));
     // One card at a time: a panel closes your stall's card
     tycoon?.closeCard();
-    tycoon?.unmountMarket();
-    tycoon?.unmountWorkshop();
     if (id === 'shop') fitting?.mount(panelBody, toFitting);
     else fitting?.unmount();
-    if (id === 'emporium') tycoon?.mountMarket(panelBody);
-    if (id === 'workshop') tycoon?.mountWorkshop(panelBody);
+    // The economy's panels: the market hall, the Workshop, contracts, couriers, staff
+    tycoon?.mountPanel(id, panelBody);
     panel.dataset.spot = id;
     panel.hidden = false;
     requestAnimationFrame(() => panel.classList.add('is-open'));
@@ -251,8 +253,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     if (!active) return;
     active = null;
     fitting?.unmount();
-    tycoon?.unmountMarket();
-    tycoon?.unmountWorkshop();
+    tycoon?.unmountPanel();
     panel.classList.remove('is-open');
     root.classList.remove('has-panel');
     setTimeout(() => {
@@ -342,6 +343,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     stock: (s) => {
       market.show(s.stall.slots, s.stall.level);
       units.show(s);
+      beacons.show(s.contracts.map((c) => destAt(c.to)));
       dirty = true;
     },
     opened() {

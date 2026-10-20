@@ -181,7 +181,7 @@ it and has been retired completely. Build only on what's here.
   formats, so keep its migration when fields change. Held items are put
   away while Degen carries a gun (`Degen.held`).
 
-## The economy: Dorras, the market, your units (Tycoon phases 1-2)
+## The economy: Dorras, the market, your units, contracts and staff (Tycoon phases 1-3)
 
 - The plan and its phases are in `docs/tycoon-plan.md`; keep it up to date.
   Build one phase at a time, each with the owner's sign-off.
@@ -199,9 +199,13 @@ it and has been retired completely. Build only on what's here.
   Workshop's jobs (`startJob()`, `cancelJob()`), your car's load
   (`load()` / `unload()`, `CARGO` per model), and `advance()`: sales
   (faster at the place you're serving, slower and capped while away),
-  gardens growing and the Workshop working. `cleanSave()` cleans anything
-  loaded and upgrades Phase 1 saves (v1 to v2); keep that migration when the
-  save changes. New economy rules go here first.
+  gardens growing and the Workshop working; staff (`hire()`, `roleAt()`,
+  paid a share of what they handle, `STAFF_CUT`), couriers (`ship()`) and
+  contracts (`board()`, seeded from the time so it's the same for everyone;
+  `accept()`, `deliver()`, drop-offs at building doors via `destAt()`).
+  `cleanSave()` cleans anything loaded and upgrades older saves (now v3);
+  keep that migration when the save changes. New economy rules go here
+  first.
 - Goods only move between your places in your car (or by buying them
   straight there at the market hall). Stock on sale (stall, shops) can't be
   loaded back; that keeps the delivery bonus from being farmed.
@@ -210,8 +214,11 @@ it and has been retired completely. Build only on what's here.
   panel: right side under the header on wide screens, the bottom sheet on
   phones; the till on top, then the Stall / Units / Workshop / Car tabs), the
   market hall, filled into the Emporium's panel (`[data-market]`, with its
-  deliver-to / sell-from picker), and the Workshop's panel (`[data-workshop]`;
-  both mounted from `open()` in `index.ts`). One card at a time: opening a
+  deliver-to / sell-from picker, your car included when it's parked outside),
+  and the Workshop's (`[data-workshop]`), Signal tower's (`[data-contracts]`:
+  news and the contract board), Post office's (`[data-couriers]`) and
+  Apartments' (`[data-staff]`) panels: `PANELS` in `tycoon-ui.ts`, mounted
+  with `mountPanel()` from `open()` in `index.ts`. One card at a time: opening a
   panel closes the business card and the other way round. Esc closes the card
   first. The views tick every second and are patched in place (`repaint()`
   / `morph()`), so a button never changes under a finger; keep new views
@@ -237,7 +244,12 @@ it and has been retired completely. Build only on what's here.
   doubles its customers. The Workshop's door opens its panel. Your car
   parked near one of your places (stall, a built unit or the Workshop) lets
   the Car tab load and unload there; the garage menu says how much each car
-  carries.
+  carries. Your contracts' drop-offs get a "Deliver" prompt at the door and
+  a beam of light (`beacons.ts`, up to three).
+- **The Apartments** (the tower on the north-east block, `apartments()` in
+  `landmarks.ts` and `city.ts`) are a place since Phase 3: spot
+  `apartments`, its pin, door (`DOORS`) and panel. The Emporium stays first
+  in the 3D `spots` list (the city's sound centres on `spots[0]`).
 
 ## Walk mode (3D)
 

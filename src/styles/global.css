@@ -5702,3 +5702,36 @@ body.is-walking .nav {
 .market .biz-label {
   margin: 2px 0 -2px;
 }
+
+/* ---------- Phase 3: the Signal tower's news, contracts, couriers, staff (tycoon-ui.ts) ---------- */
+.biz-news {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #ffffff14;
+  border-left: 3px solid var(--p-cyan);
+  border-radius: 10px;
+  background: #00eaff0a;
+  list-style: none;
+}
+.biz-news li {
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--text);
+}
+.biz-news li::before {
+  content: "›";
+  margin-right: 6px;
+  color: var(--p-cyan);
+}
+.market-btns [data-take],
+.market-btns [data-deliver],
+.market-btns [data-hire],
+.market-btns [data-send] {
+  border-color: #0000;
+  background:
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
+  color: #fff;
+}
