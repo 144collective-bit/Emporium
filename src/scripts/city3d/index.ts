@@ -353,7 +353,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       builder.select(id);
     },
     plotsChanged: () => builder?.refresh(),
-    sfx: (kind) => sound.sfx(kind),
+    sfx: (kind, gain) => sound.sfx(kind, gain),
   });
   // Build mode: the plots, over the economy's save
   const builder = createBuilderUI(root, {
