@@ -65,8 +65,11 @@ cartoon shading and PulseChain neon, built with [three.js](https://threejs.org).
 
 - **Explore:** drag to move, right-drag or two fingers to turn, scroll or pinch
   to zoom. The camera flies in on load.
-- **Buildings are doors:** hover lights a building up; clicking it flies the
-  camera in and opens a glass panel with that section and a button onward.
+- **Buildings are places in the game:** hover lights a building up; clicking
+  it flies the camera in and opens its glass panel: the Emporium's market
+  hall, Drop 001's fitting room, the Armoury's guns, and "coming soon" for
+  the places later phases open (see *The market* below and
+  `docs/tycoon-plan.md`).
 - **The Emporium** is the centrepiece: a twisting glass cyber arcade. Twelve
   glass floors turn a little more each storey, with neon game floors behind
   the glass (arcade cabinets, a dance floor, racing sims) and one face a
@@ -134,6 +137,29 @@ Boombox or empty), **Extras** (Headphones, Diamond Chain, Shades Chain) and
 and it isn't tied to the real store. He wears it in walk mode, and other
 players see it online. The **Open the fitting room** button in Profile goes
 straight there.
+
+### The market: Dorras and your stall
+
+The city has its own money, **Dorras**, earned by playing (they can't be
+bought or cashed out). Everyone starts with 600 and a **market stall** in the
+**market square**, east of the East districts: two rows of stalls under
+striped canopies, a MARKET gantry and string lights, traders and shoppers.
+Yours has the cyan canopy and the YOUR STALL board, and shows your stock.
+
+- **The market hall** (click the Emporium): six goods (Glow Sticks, Gummy
+  Bears, Iced Coffee, Street Tees, Sneakers, Neon Signs) at prices that drift
+  through the day, the same for everyone. Buy puts stock straight on your
+  stall; Sell gives a little under the price.
+- **Your stall's card** (the Dorras readout in the header, or walk up to the
+  stall and press E): the till and Collect, each good with its price (Low
+  sells fast, High earns more each) and how fast it's going, and the upgrade
+  (more kinds of goods, more room, more customers).
+- Customers buy while you play, twice as fast while you stand at your stall,
+  and a little while you're away (up to 4 hours). Coming back, a note says
+  what sold.
+- It's saved in the browser for now. The plan for the next phases (making
+  and moving goods, contracts, staff, plots as the top tier) is in
+  `docs/tycoon-plan.md`.
 
 ### The mode header
 
@@ -355,17 +381,19 @@ build), the builder runs as a **demo**: a simulated wallet with play money,
 nothing touches PulseChain, progress is saved in the browser and **Reset
 demo** clears it.
 
-| Building | Panel button goes to |
+| Building | Its panel |
 | --- | --- |
-| The Emporium (centre arcade tower) | `/emporium` |
-| Drop 001 (shop, shutters down) | `/emporium#drop`, or the Shopify store once `SHOP_OPEN` is true |
-| The Workshop | `/emporium#workshop` |
-| The Vault | `/emporium#vault` |
-| The Armoury | `/emporium#plan` |
-| Signal tower | X |
-| Post office | Telegram |
+| The Emporium (centre arcade tower) | The market hall |
+| Drop 001 | Clothes: the fitting room |
+| The Armoury | Guns and gear (target practice) |
+| The Workshop | The factory (coming soon) |
+| The Vault | The bank (coming soon) |
+| Signal tower | News and contracts (coming soon) |
+| Post office | Logistics (coming soon) |
 
-The Directory lists the same places. Phones (up to 640px wide) don't show
+The ☰ Menu lists the same places (in 3D), then the Emporium comic page and,
+once `SHOP_OPEN` is true, the merch store; X and Telegram sit at its foot.
+On the 2D map a building takes you into the 3D city and opens its panel. Phones (up to 640px wide) don't show
 the welcome card, so the city fills the screen; on bigger screens it has a
 close button and stays closed on return visits. A small "Draft · v0" tag keeps
 the draft note whenever the card is hidden. Every menu and card closes with its
@@ -398,6 +426,9 @@ the draft note whenever the card is hidden. Every menu and card closes with its
 | `src/scripts/city3d/mycar.ts` | Your car: models, paints, handling numbers (no DOM) |
 | `src/scripts/city3d/drive-sim.ts` | Driving rules: arcade handling, soft collisions (no DOM) |
 | `src/scripts/city3d/drive.ts` | Driving: getting in and out, cameras, the speed readout, engine sound |
+| `src/scripts/city3d/tycoon.ts` | The economy's rules: goods, market prices, your stall, sales, time away (no DOM) |
+| `src/scripts/city3d/tycoon-ui.ts` | The Dorras readout, your stall's card, the market hall, the save |
+| `src/scripts/city3d/market.ts` | The market square: stalls, traders, gantry, your stall's stock |
 | `src/scripts/city3d/profile-ui.ts` | The Profile panel: name, rank; owns the look (saved here and online) |
 | `src/scripts/city3d/head.ts` | The mode header's title and subtitle, and its height (`--head-h`) |
 | `src/scripts/city3d/fitting.ts` | Drop 001's fitting room: wardrobe items and the turning preview |

@@ -9,7 +9,7 @@
  */
 import type { SpotId } from '../../lib/city';
 import { DUMMIES } from './combat-sim';
-import { GARAGE, design, designBox } from './layout';
+import { GARAGE, MARKET, design, designBox } from './layout';
 
 /** x0, z0, x1, z1, height */
 export type Box = [number, number, number, number, number];
@@ -87,7 +87,35 @@ const GARAGE_SOLIDS: Box[] = [
   TURNTABLE_BOX,
   [GARAGE_SITE.tyres.x - 0.3, GARAGE_SITE.tyres.z - 0.3, GARAGE_SITE.tyres.x + 0.3, GARAGE_SITE.tyres.z + 0.3, 0.8],
 ];
-export const SOLIDS: Box[] = [...DRAWN.map(designBox), ...GARAGE_SOLIDS, ...DUMMY_SOLIDS];
+/**
+ * The market square (market.ts draws it): two rows of four stalls either side of an east-west
+ * aisle, under a MARKET gantry at the west end. Stall 0 (north row, nearest the city) is yours;
+ * STALL_SPOT is where you stand, in front of its counter, to run it.
+ */
+const STALL_W = 1.8;
+const STALL_D = 1.5;
+export const MARKET_SITE = {
+  stalls: [0, 1].flatMap((row) =>
+    [0, 1, 2, 3].map((k) => {
+      const x = MARKET.ox + 0.45 + k * (STALL_W + 0.3) + STALL_W / 2;
+      // North row faces south (+z) into the aisle; south row faces north
+      const z0 = row === 0 ? MARKET.oz + 0.6 : MARKET.oz + 8.4 - STALL_D;
+      return { x, z: z0 + STALL_D / 2, w: STALL_W, d: STALL_D, facing: row === 0 ? 1 : -1 };
+    })
+  ),
+  gantry: { x: MARKET.ox + 0.2, z0: MARKET.oz + 2.4, z1: MARKET.oz + 6.6 },
+  /** The pole at the aisle's east end that holds up the string lights */
+  pole: { x: MARKET.ox + 8.8, z: MARKET.oz + 4.5 },
+};
+/** Your stall, and where you stand to run it */
+export const MY_STALL = MARKET_SITE.stalls[0];
+export const STALL_SPOT = { x: MY_STALL.x, z: MY_STALL.z + MY_STALL.d / 2 + 0.55 };
+const MARKET_SOLIDS: Box[] = [
+  ...MARKET_SITE.stalls.map((t): Box => [t.x - t.w / 2, t.z - t.d / 2, t.x + t.w / 2, t.z + t.d / 2, 2.1]),
+  ...[MARKET_SITE.gantry.z0, MARKET_SITE.gantry.z1].map((z): Box => [MARKET_SITE.gantry.x - 0.1, z - 0.1, MARKET_SITE.gantry.x + 0.1, z + 0.1, 2.9]),
+  [MARKET_SITE.pole.x - 0.08, MARKET_SITE.pole.z - 0.08, MARKET_SITE.pole.x + 0.08, MARKET_SITE.pole.z + 0.08, 2.6],
+];
+export const SOLIDS: Box[] = [...DRAWN.map(designBox), ...GARAGE_SOLIDS, ...MARKET_SOLIDS, ...DUMMY_SOLIDS];
 /** What bullets stop on: everything solid except the dummies' footprints (they test their own shape) */
 export const SHOT_SOLIDS = SOLIDS.filter((b) => !DUMMY_SOLIDS.includes(b));
 

@@ -28,10 +28,14 @@ it and has been retired completely. Build only on what's here.
   - **2D** (`src/lib/city.ts`): the isometric SVG map. It's the loading
     poster, the fallback without WebGL, and the "2D map" view.
   Both layers share the core city's block layout; keep them in step when
-  buildings change. The ring roads and plot districts exist in 3D only. Spot links, pin copy and panel copy live in
-  `src/components/CityMap.astro`. Buildings link only to `/emporium` (or its
-  window anchors: `#drop`, `#workshop`, `#vault`, `#plan`) or to the
-  confirmed links in `src/data/site.ts`.
+  buildings change. The ring roads and plot districts exist in 3D only. Pin
+  copy and panel copy live in `src/components/CityMap.astro`.
+- **Buildings are places in the city's game** (the owner's call): each opens
+  its own panel (a game menu), never the comic page or an outside link. On
+  the 2D map a building takes you into the 3D city and opens its panel
+  (`city.open()`). The comic page (`/emporium`), the merch store and X /
+  Telegram live in the ☰ Menu only. Places not built yet say "coming soon"
+  (the plan is `docs/tycoon-plan.md`).
 - **The street plan** is `src/scripts/city3d/layout.ts` (DOM-free; the 3D
   city, the 2D map, the plots and the server all read it). 1 tile is about
   1.8 m and Degen is about one tile tall. Roads are sized for real-proportion
@@ -136,8 +140,12 @@ it and has been retired completely. Build only on what's here.
   green dot once connected; its card has the wallet chip, the hint and
   Reset demo), a ⚙ Settings button (time, weather, sound, reset
   view, 2D map; 3D only, not while walking; never open by default) and a
-  ☰ Menu (the directory, then PulseChain native, X and Telegram; not while
-  walking). Their cards drop down under them (`.head-panel`, one open at a
+  ☰ Menu (the city's places, 3D only (`.dir-places`); then under "More" the
+  Emporium comic page and the merch store (`.dir-links`); then PulseChain
+  native, X and Telegram; not while walking). Left of them, in the 3D city
+  (not in Build mode, and not while walking on phones), the Dorras readout
+  (`[data-dorras]`, painted by `tycoon-ui.ts`, a green dot when the stall's
+  till has takings); it opens your stall's card. Their cards drop down under them (`.head-panel`, one open at a
   time, with a `.pop-head` ×), spanning the width on phones. Tablets show
   Settings and Menu as icons; phones put logo, title, ⚙ and ☰ on the first
   row and the switch, with names, across the second (walking: title and
@@ -172,6 +180,38 @@ it and has been retired completely. Build only on what's here.
   (`held`) at a time; `cleanLook()` also upgrades looks saved in older
   formats, so keep its migration when fields change. Held items are put
   away while Degen carries a gun (`Degen.held`).
+
+## The economy: Dorras and the market (Tycoon phase 1)
+
+- The plan and its phases are in `docs/tycoon-plan.md`; keep it up to date.
+  Build one phase at a time, each with the owner's sign-off.
+- **Dorras** are the city's money: earned by playing, never bought (yet) and
+  never cashed out. Never give them a real-money value, call them an
+  investment, or tie them to the token or the Shopify store. PLS top-ups come
+  later and only through the game server, never a browser balance.
+- **Rules:** `tycoon.ts`, DOM-free and tested (`tests/tycoon.test.ts`):
+  goods (`GOODS`, made-up city goods, nothing about the token), the market
+  price (a function of the time only, the same for everyone and ready for a
+  server), buy / sell back, your stall's levels, price levels, sales by
+  `advance()` (faster while serving, slower and capped while away), and
+  `cleanSave()` for anything loaded. New economy rules go here first.
+- **Screens:** `tycoon-ui.ts` (save `degen-city-tycoon-v1`): the Dorras
+  readout, your stall's card (`[data-stall]`, on the gun store's `.shop`
+  panel: right side under the header on wide screens, the bottom sheet on
+  phones) and the market hall, filled into the Emporium's panel
+  (`[data-market]`, `mountMarket()` from `open()` in `index.ts`). One card at
+  a time: opening a panel closes the stall's card and the other way round. Esc
+  closes the card first.
+- **The market square:** `market.ts`, on the `MARKET` lot (`layout.ts`,
+  in `EXTRA_LOTS` with the garage), drawn in world numbers. Two rows of four
+  stalls, the MARKET gantry (its cut-out sign uses `occlude()`), the
+  string-light pole, traders and shoppers from the shared crowd (so it's built
+  before `buildLamps` and `buildLife`). Stall 0 is yours and shows your
+  stock (`show()`). Counters are at a Degen's waist (0.5). Footprints,
+  the gantry, the pole and your spot are `MARKET_SITE` / `STALL_SPOT` in
+  `solids.ts` (tested in `tests/solids.test.ts`).
+- In walk mode, standing at `STALL_SPOT` shows a "Your stall" prompt (E or a
+  tap) that opens the card, and doubles the customers while you stay.
 
 ## Walk mode (3D)
 
@@ -458,8 +498,9 @@ it and has been retired completely. Build only on what's here.
 - They cover the code that's free of the DOM and scene code: the street plan
   (`layout.ts`), collision data, doors, the gun counter, the garage and the
   spawn (`solids.ts`), the plots (`src/data/plots.ts`), your car
-  (`mycar.ts`), the driving rules (`drive-sim.ts`) and target practice
-  (`combat-sim.ts`). Modules that touch the DOM or `kit.ts` (canvas
+  (`mycar.ts`), the driving rules (`drive-sim.ts`), target practice
+  (`combat-sim.ts`) and the economy (`tycoon.ts`, the market square in
+  `solids.ts`). Modules that touch the DOM or `kit.ts` (canvas
   textures) can't load in Node; keep data a test needs in the DOM-free
   files.
 - When you change a rule or move something in the city, run the tests and

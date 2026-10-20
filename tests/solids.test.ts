@@ -3,8 +3,8 @@
 // counter, the garage door and the walk-mode spawn can be reached.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { CAMERA_ONLY, DOORS, GARAGE_SITE, RACK, SHOT_SOLIDS, SOLIDS, TURNTABLE_BOX, WALK_SPAWN, rayBoxes } from '../src/scripts/city3d/solids';
-import { EW_ROADS, GARAGE, BS, NS_ROADS } from '../src/scripts/city3d/layout';
+import { CAMERA_ONLY, DOORS, GARAGE_SITE, MARKET_SITE, RACK, SHOT_SOLIDS, SOLIDS, STALL_SPOT, TURNTABLE_BOX, WALK_SPAWN, rayBoxes } from '../src/scripts/city3d/solids';
+import { EW_ROADS, GARAGE, BS, MARKET, NS_ROADS } from '../src/scripts/city3d/layout';
 import { SLABS, inside, pointIn, type Rect } from './world';
 
 /** Degen's radius in walk mode (walk.ts RADIUS) */
@@ -55,6 +55,23 @@ test('the garage, its turntable and its door are on the garage lot', () => {
   // Your car (on the turntable) fits it, whatever the model
   const t = GARAGE_SITE.turntable;
   assert.ok(Math.hypot(2.95 / 2, 1.06 / 2) <= t.r, 'the longest player car hangs off the turntable');
+});
+
+test('the market square: stalls, gantry and pole on its lot, your stall\'s spot free, the aisle walkable', () => {
+  const lot: Rect = [MARKET.ox, MARKET.oz, MARKET.ox + BS, MARKET.oz + BS];
+  for (const t of MARKET_SITE.stalls) assert.ok(inside([t.x - t.w / 2, t.z - t.d / 2, t.x + t.w / 2, t.z + t.d / 2], lot), `stall at ${t.x}, ${t.z} is off the lot`);
+  assert.ok(pointIn(MARKET_SITE.pole.x, MARKET_SITE.pole.z, lot));
+  assert.ok(pointIn(MARKET_SITE.gantry.x, MARKET_SITE.gantry.z0, lot) && pointIn(MARKET_SITE.gantry.x, MARKET_SITE.gantry.z1, lot));
+  // You stand on the spot (the prompt reaches 1.0), and it's in front of your stall's counter
+  assert.ok(pointIn(STALL_SPOT.x, STALL_SPOT.z, lot));
+  assert.ok(!blocked(STALL_SPOT.x, STALL_SPOT.z), 'your stall\'s spot is inside something');
+  const mine = MARKET_SITE.stalls[0];
+  assert.ok(STALL_SPOT.z > mine.z + mine.d / 2 && STALL_SPOT.z - (mine.z + mine.d / 2) < 1, 'the spot is not at the counter');
+  // Down the aisle from the gantry to the far end, nothing in the way
+  const az = (MARKET_SITE.stalls[0].z + MARKET_SITE.stalls[4].z) / 2;
+  for (let x = MARKET.ox + 0.6; x < MARKET_SITE.pole.x - 0.4; x += 0.2) assert.ok(!blocked(x, az), `the aisle is blocked at x ${x.toFixed(1)}`);
+  // and in through the gantry
+  assert.ok(MARKET_SITE.gantry.z1 - MARKET_SITE.gantry.z0 > 3, 'the gantry is too narrow to walk through');
 });
 
 test('bullets stop at walls but not at the dummies\' own footprints', () => {

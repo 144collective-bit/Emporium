@@ -27,6 +27,9 @@ import { createLandStore } from './land';
 import { createBuilderUI } from './builder-ui';
 import { createFitting, type Fitting } from './fitting';
 import { createCityHead } from './head';
+import { buildMarket } from './market';
+import { createTycoonUI, type TycoonUI } from './tycoon-ui';
+import { STALL_SPOT } from './solids';
 
 type Tier = 'high' | 'medium' | 'low';
 
@@ -97,6 +100,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // The garage on the south bank, your saved car on its turntable
   const garage = buildGarage(scene, { tick, reduced, car: loadCar() });
   const plots = createPlots(scene, { degen, tick, reduced });
+  // The market square (your stall and the traders'): before the lamps and the crowd are made
+  const market = buildMarket(scene, crowd);
   progress(0.55);
   await nextFrame();
   scatterOutskirts(Q.trees);
@@ -207,6 +212,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   let lastFocus: HTMLElement | null = null;
   // Drop 001's panel has the fitting room (made once the profile exists, further down)
   let fitting: Fitting | null = null;
+  // The Emporium's panel has the market hall (the economy is made further down)
+  let tycoon: TycoonUI | null = null;
 
   let walking = false;
   /** `toFitting`: scroll Drop 001's panel to its fitting room (from the Profile panel) */
@@ -219,8 +226,12 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     active = s;
     lastFocus = document.activeElement as HTMLElement;
     panelBody.replaceChildren(tpl.content.cloneNode(true));
+    // One card at a time: a panel closes your stall's card
+    tycoon?.closeCard();
+    tycoon?.unmountMarket();
     if (id === 'shop') fitting?.mount(panelBody, toFitting);
     else fitting?.unmount();
+    if (id === 'emporium') tycoon?.mountMarket(panelBody);
     panel.dataset.spot = id;
     panel.hidden = false;
     requestAnimationFrame(() => panel.classList.add('is-open'));
@@ -235,6 +246,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     if (!active) return;
     active = null;
     fitting?.unmount();
+    tycoon?.unmountMarket();
     panel.classList.remove('is-open');
     root.classList.remove('has-panel');
     setTimeout(() => {
@@ -306,6 +318,21 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     garage,
     // Made further down too, like sfx
     engine: (revs) => sound.engine(revs),
+    openStall: () => tycoon?.openCard(),
+  });
+  /* ---------- The economy: Dorras, your stall, the market hall ---------- */
+  tycoon = createTycoonUI(root, {
+    serving: () => walking && !walk.driving && Math.hypot(walk.position.x - STALL_SPOT.x, walk.position.z - STALL_SPOT.z) < 2.2,
+    openMarket: () => open('emporium'),
+    stock: (slots, level) => {
+      market.show(slots, level);
+      dirty = true;
+    },
+    opened() {
+      if (walking) walk.releaseMouse();
+      // One card at a time: the stall's card and a building's panel
+      close();
+    },
   });
   // The Profile panel (wardrobe, finish, rank) works offline; multiplayer only when the site has a game server
   const profileUI = createProfileUI(root, {
@@ -810,6 +837,10 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   loop();
 
   return {
+    /** Open a building's panel (the 2D map's buildings come here) */
+    open(id: string) {
+      open(id);
+    },
     stop() {
       running = false;
       cancelAnimationFrame(raf);

@@ -14,7 +14,7 @@
 import * as THREE from 'three';
 import { DISTRICTS } from '../../data/plots';
 import { Batch, PAL, canvasTex, facadeMat, fx, glowMat, glowTex, lit, neon, rand, toon } from './kit';
-import { BLOCKS, BS, CENTER_XZ, CITY_EXT, CORE_ROADS, EW_ROADS, EXT, GARAGE, LANE, MEDIAN, NS_ROADS, RIVER, SOUTH_ROAD, WALK_W, type Road } from './layout';
+import { BLOCKS, BS, CENTER_XZ, CITY_EXT, CORE_ROADS, EW_ROADS, EXT, EXTRA_LOTS, GARAGE, LANE, MARKET, MEDIAN, NS_ROADS, RIVER, SOUTH_ROAD, WALK_W, type Road } from './layout';
 
 export { BLOCKS, BS, CORE_ROADS, EW_ROADS, EXT, NS_ROADS, RIVER, SOUTH_ROAD, WALK_W, type Road };
 /** District blocks around the core: one large plot each (src/data/plots.ts). */
@@ -207,11 +207,11 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, keyof typeo
   const slabs: [number, number][] = [
     ...BLOCKS.flatMap((ox) => BLOCKS.map((oz) => [ox, oz] as [number, number])),
     ...DISTRICTS.map((d) => [d.ox, d.oz] as [number, number]),
-    [GARAGE.ox, GARAGE.oz],
+    ...EXTRA_LOTS.map((l) => [l.ox, l.oz] as [number, number]),
   ];
   for (const [ox, oz] of slabs) {
     b.box(ox - WALK_W, 0, oz - WALK_W, BS + WALK_W * 2, SLAB, BS + WALK_W * 2, kerb);
-    const lot = LOTS[lots[`${ox},${oz}`] ?? (ox === GARAGE.ox && oz === GARAGE.oz ? 'concrete' : 'grass')];
+    const lot = LOTS[lots[`${ox},${oz}`] ?? (ox === GARAGE.ox && oz === GARAGE.oz ? 'concrete' : ox === MARKET.ox && oz === MARKET.oz ? 'paving' : 'grass')];
     b.box(ox + 0.4, SLAB, oz + 0.4, BS - 0.8, 0.005, BS - 0.8, lot);
   }
   b.build(scene, { cast: false, receive: true });
@@ -296,7 +296,7 @@ function scatterIn(count: number, xr: [number, number], zr: [number, number], sk
     if (x > lo && x < hi && z > lo && z < RIVER[0]) continue;
     const south = DISTRICTS[DISTRICTS.length - 1];
     if (x > lo && x < hi && z > RIVER[1] && z < south.oz + BS + WALK_W + 0.6) continue;
-    if (x > GARAGE.ox - WALK_W - 0.6 && x < GARAGE.ox + BS + WALK_W + 0.6 && z > GARAGE.oz - WALK_W - 0.6 && z < GARAGE.oz + BS + WALK_W + 0.6) continue;
+    if (EXTRA_LOTS.some((l) => x > l.ox - WALK_W - 0.6 && x < l.ox + BS + WALK_W + 0.6 && z > l.oz - WALK_W - 0.6 && z < l.oz + BS + WALK_W + 0.6)) continue;
     if (EW_ROADS.some((r) => Math.abs(z - r.c) < r.half + 0.8) || NS_ROADS.some((r) => Math.abs(x - r.c) < r.half + 0.8)) continue;
     if (z > RIVER[0] - 1 && z < RIVER[1] + 0.8) continue;
     addTree(x, z, 0.8 + rand() * 0.6, rand() < 0.4, 0);

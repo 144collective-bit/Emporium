@@ -60,6 +60,10 @@ export const SOUTH_ROW = SOUTH_ROAD + AVENUE_GAP / 2; // 61.5
 
 /** The garage's lot on the south bank, east of the south row (S5), facing the south bank avenue */
 export const GARAGE = { ox: OUTER_HI + BS + 4, oz: SOUTH_ROW }; // 59-68 x 61.5-70.5
+/** The market square, east of the East districts, facing the north bank avenue (across the river from the garage) */
+export const MARKET = { ox: OUTER_HI + BS + 4, oz: BLOCKS[2] }; // 59-68 x 28-37
+/** Lots outside the core and the districts (raised and paved like a block, with a sidewalk round) */
+export const EXTRA_LOTS = [GARAGE, MARKET];
 
 /** Core streets between the core city's blocks (they get traffic lights where they cross) */
 export const CORE_ROADS = [BLOCKS[0] + BS + STREET_GAP / 2, BLOCKS[1] + BS + STREET_GAP / 2]; // 11.5, 25.5

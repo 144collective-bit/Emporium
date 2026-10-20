@@ -5125,3 +5125,428 @@ body.is-walking .nav {
   white-space: pre;
   pointer-events: none;
 }
+
+/* ---------- The economy (tycoon-ui.ts): Dorras, your stall, the market hall ----------
+   The Dorras readout sits in the header's tools in the 3D city (not in Build mode or on the
+   2D map); it opens your stall's card, built on the gun store's panel. */
+.dorras-pill {
+  position: relative;
+  display: none;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 12px 0 9px;
+  border: 1px solid #0000;
+  border-radius: 999px;
+  background:
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.city[data-view="3d"]:not([data-mode="build"]) .dorras-pill {
+  display: inline-flex;
+}
+.dorras-pill svg {
+  flex: none;
+  color: var(--p-cyan);
+}
+.dorras-pill:hover {
+  background:
+    var(--pulse-wash) padding-box,
+    linear-gradient(#14102a, #14102a) padding-box,
+    var(--pulse) border-box;
+}
+.dorras-pill:focus-visible {
+  outline: 2px solid var(--p-cyan);
+  outline-offset: 2px;
+}
+.city.is-stall .dorras-pill {
+  background:
+    var(--pulse-wash) padding-box,
+    linear-gradient(#14102a, #14102a) padding-box,
+    var(--pulse) border-box;
+}
+/* Takings waiting in the till */
+.dorras-dot {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  display: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #2bff88;
+  box-shadow: 0 0 0 2px #0b0a12, 0 0 8px #2bff88;
+}
+.dorras-pill.has-till .dorras-dot {
+  display: block;
+}
+.dorra {
+  flex: none;
+  margin-right: 4px;
+  color: var(--p-cyan);
+  vertical-align: -2px;
+}
+
+/* Your stall's card: on the right under the header on wide screens (the city stays in view),
+   the gun store's bottom sheet on phones */
+.stall-card {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "head"
+    "body"
+    "foot";
+  gap: 10px;
+}
+@media (min-width: 641px) {
+  .stall-card {
+    top: calc(var(--head-h) + 12px);
+    right: 16px;
+    left: auto;
+    width: min(420px, calc(100% - 32px));
+    transform: none;
+    animation-name: garage-in;
+  }
+}
+.stall-card .shop-score b {
+  font-size: 14px;
+}
+.stall-card .shop-score .dorra {
+  margin-right: 0;
+}
+.stall-body {
+  grid-area: body;
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+.stall-till {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid #ffffff1a;
+  border-radius: 10px;
+  background: #ffffff08;
+}
+.stall-till small {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.stall-till-amount {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1.1;
+  color: #fff;
+}
+.stall-till-amount .dorra {
+  width: 18px;
+  height: 18px;
+}
+.stall-collect {
+  margin: 0;
+  padding: 9px 16px;
+}
+.stall-status {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.5;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.stall-serving {
+  color: #2bff88;
+  font-weight: 700;
+}
+.stall-slots,
+.market-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.stall-slot,
+.market-row {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid #ffffff14;
+  border-radius: 10px;
+  background: #ffffff06;
+}
+.stall-slot-top,
+.market-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.stall-slot-top b,
+.market-top b {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 14px;
+  color: #fff;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.good-dot {
+  flex: none;
+  width: 11px;
+  height: 11px;
+  border: 1.5px solid #000;
+  border-radius: 50%;
+  background: var(--c);
+  box-shadow: 0 0 8px -1px var(--c);
+}
+.stall-qty {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--muted);
+}
+.stall-bar {
+  position: relative;
+  display: block;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: #ffffff14;
+}
+.stall-bar::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(var(--v) * 100%);
+  border-radius: 2px;
+  background: var(--pulse);
+}
+.stall-slot-row,
+.market-acts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 10px;
+}
+.stall-seg button,
+.market-btns button {
+  padding: 5px 9px;
+  font-size: 10px;
+}
+.stall-each {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-2);
+}
+.stall-each b {
+  margin-right: 4px;
+  color: #fff;
+}
+.stall-pace {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--muted);
+}
+.stall-clear {
+  padding: 3px 7px;
+  font-size: 9.5px;
+  cursor: pointer;
+}
+.stall-empty {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--text-2);
+}
+.stall-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.stall-actions .shop-take {
+  margin: 0;
+  padding: 9px 16px;
+}
+.stall-actions .chip-link {
+  cursor: pointer;
+}
+.stall-actions .chip-link:disabled,
+.market-btns button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.stall-max {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* The market hall, in the Emporium's panel */
+.market {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+.market-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.market-balance {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  color: #fff;
+}
+.market-price {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 900;
+  color: #fff;
+}
+.market-price .dorra {
+  width: 13px;
+  height: 13px;
+}
+.trend {
+  margin-left: 6px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-style: normal;
+  color: var(--muted);
+}
+.trend[data-t="1"] {
+  color: #2bff88;
+}
+.trend[data-t="-1"] {
+  color: #ff5a7a;
+}
+.market-acts small {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--muted);
+}
+.market-acts small b {
+  color: #fff;
+}
+.market-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.market-btns button {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #ffffff08;
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.market-btns button:not(:disabled):hover {
+  color: #fff;
+  border-color: #ffffff40;
+}
+.market-btns [data-buy] {
+  border-color: #0000;
+  background:
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
+  color: #fff;
+}
+.market .shop-note {
+  color: var(--p-cyan);
+}
+.market .city-panel-actions,
+.market .city-panel-fine {
+  margin: 0;
+}
+.market .chip-link {
+  cursor: pointer;
+}
+
+/* News from your stall: at the bottom in the city view; under the header while walking,
+   clear of the walk and drive controls */
+.econ-toast {
+  z-index: 8;
+  width: max-content;
+  border-radius: 14px;
+  text-align: center;
+}
+.city[data-mode="walk"] .econ-toast {
+  top: calc(var(--head-h) + 12px);
+  bottom: auto;
+  transform: translate(-50%, -12px);
+}
+
+/* The menu: the city's places (3D only), then under "More" the comic page and the merch store */
+.city-dir .dir-label {
+  margin: 4px 0 0;
+  padding: 8px 10px 2px;
+  border-top: 1px solid var(--line);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.city:not([data-view="3d"]) .city-dir .dir-places,
+.city:not([data-view="3d"]) .city-dir .dir-label {
+  display: none;
+}
+@media (max-width: 640px) {
+  .dorras-pill {
+    height: 32px;
+    padding: 0 9px 0 7px;
+    font-size: 11px;
+  }
+}
+/* The narrowest phones: tighter, so the mode title keeps its room */
+@media (max-width: 380px) {
+  .dorras-pill {
+    gap: 4px;
+    padding: 0 8px 0 6px;
+    letter-spacing: 0;
+  }
+}

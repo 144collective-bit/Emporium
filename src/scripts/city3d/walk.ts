@@ -25,9 +25,9 @@ import { createGunShop } from './gunshop';
 import { createGarageUI, loadCar } from './garage-ui';
 import type { Garage } from './garage';
 import { createDrive } from './drive';
-import { CAMERA_ONLY, DOORS, GARAGE_SITE, RACK, SOLIDS, TURNTABLE_BOX, WALK_SPAWN, rayBoxes, type Box } from './solids';
+import { CAMERA_ONLY, DOORS, GARAGE_SITE, RACK, SOLIDS, STALL_SPOT, TURNTABLE_BOX, WALK_SPAWN, rayBoxes, type Box } from './solids';
 import { DISTRICTS, BLOCKS, BS, NS_ROADS, RIVER, SLAB, WALK_W, type Tick } from './world';
-import { GARAGE, WORLD_BOUNDS } from './layout';
+import { EXTRA_LOTS, WORLD_BOUNDS } from './layout';
 
 /** Facing the Emporium's doors, the tower over his shoulder */
 const SPAWN_YAW = WALK_SPAWN.yaw;
@@ -39,8 +39,8 @@ const GRAVITY = 11.5;
 const SCALE = 0.85;
 /** How far you can go: the world's edge */
 const BOUNDS = WORLD_BOUNDS;
-/** Blocks, districts and the garage's lot with their sidewalks: the raised ground */
-const slabs: Box[] = [...BLOCKS.flatMap((x) => BLOCKS.map((z) => [x, z] as const)), ...DISTRICTS.map((d) => [d.ox, d.oz] as const), [GARAGE.ox, GARAGE.oz] as const].map(([x, z]): Box => [x - WALK_W, z - WALK_W, x + BS + WALK_W, z + BS + WALK_W, 0]);
+/** Blocks, districts and the extra lots (garage, market) with their sidewalks: the raised ground */
+const slabs: Box[] = [...BLOCKS.flatMap((x) => BLOCKS.map((z) => [x, z] as const)), ...DISTRICTS.map((d) => [d.ox, d.oz] as const), ...EXTRA_LOTS.map((l) => [l.ox, l.oz] as const)].map(([x, z]): Box => [x - WALK_W, z - WALK_W, x + BS + WALK_W, z + BS + WALK_W, 0]);
 /** What your own car bumps into: everything solid but the turntable it starts on */
 const CAR_SOLIDS = SOLIDS.filter((b) => b !== TURNTABLE_BOX);
 const inBox = (b: Box, x: number, z: number, pad = 0) => x > b[0] - pad && x < b[2] + pad && z > b[1] - pad && z < b[3] + pad;
@@ -88,6 +88,8 @@ export interface WalkDeps {
   garage: Garage;
   /** Your car's engine sound: revs 0..1, or negative for off */
   engine(revs: number): void;
+  /** Open your market stall's card (tycoon-ui.ts) */
+  openStall(): void;
 }
 
 export function createWalk(d: WalkDeps) {
@@ -176,13 +178,16 @@ export function createWalk(d: WalkDeps) {
   const keys = new Set<string>();
   const joy = { x: 0, y: 0, id: -1 };
   const pad = { x: 0, y: 0, run: false, prev: [] as boolean[] };
-  let near: { id: SpotId | 'gear' | 'garage' | 'car'; label: string } | null = null;
+  let near: { id: SpotId | 'gear' | 'garage' | 'car' | 'stall'; label: string } | null = null;
   const act = () => {
     if (!near) return;
     if (near.id === 'gear') shop.show();
     else if (near.id === 'garage') garageUI.show();
     else if (near.id === 'car') (drive.active ? getOut() : getIn());
-    else openSpot(near.id);
+    else if (near.id === 'stall') {
+      if (document.pointerLockElement === canvas) document.exitPointerLock();
+      d.openStall();
+    } else openSpot(near.id);
   };
 
   const groundAt = (x: number, z: number) => (slabs.some((b) => inBox(b, x, z)) ? SLAB : 0.035);
@@ -902,7 +907,7 @@ export function createWalk(d: WalkDeps) {
     }
 
     // Door prompts, and the Armoury's gun store counter
-    let best: { id: SpotId | 'gear' | 'garage' | 'car'; label: string } | null = null;
+    let best: { id: SpotId | 'gear' | 'garage' | 'car' | 'stall'; label: string } | null = null;
     let bestD = 1.7;
     const atCounter = Math.hypot(RACK.x - pos.x, RACK.z - pos.z);
     if (atCounter < 1.1) {
@@ -912,6 +917,10 @@ export function createWalk(d: WalkDeps) {
     if (shop.open && atCounter > 2) shop.close();
     if (Math.hypot(GARAGE_SITE.door.x - pos.x, GARAGE_SITE.door.z - pos.z) < 1.3) {
       best = { id: 'garage', label: 'Garage' };
+      bestD = 0;
+    }
+    if (!drive.active && Math.hypot(STALL_SPOT.x - pos.x, STALL_SPOT.z - pos.z) < 1) {
+      best = { id: 'stall', label: 'Your stall' };
       bestD = 0;
     }
     if (!garageUI.open && drive.nearCar(pos.x, pos.z) < 0.75) {
@@ -928,7 +937,7 @@ export function createWalk(d: WalkDeps) {
     if (best?.id !== near?.id) {
       near = best;
       prompt.hidden = !near;
-      if (near) prompt.querySelector('[data-walk-label]')!.textContent = near.id === 'gear' || near.id === 'garage' || near.id === 'car' ? near.label : `Enter ${near.label}`;
+      if (near) prompt.querySelector('[data-walk-label]')!.textContent = near.id === 'gear' || near.id === 'garage' || near.id === 'car' || near.id === 'stall' ? near.label : `Enter ${near.label}`;
     }
   }
 
