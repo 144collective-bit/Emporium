@@ -544,6 +544,24 @@ it and has been retired completely. Build only on what's here.
 - Score, streaks and finishes are for fun only: no prizes, real rewards or
   token tie-ins. Takedowns do count for the city's game (`takedown()` in
   `tycoon.ts`: XP, missions, badges), through the `onTakedown` dep.
+- **The crew** (the owner's call): a cartoon rival crew of ten goons on the
+  south bank, the only characters that are targets; the city north of the
+  river stays a safe hangout. Rules in `combat-sim.ts`: `CREW_ZONE` (the
+  bank between the river wall and the south row, from the west bridge to
+  past South 5) and `CREW_SPOTS` (patrol routes along the riverside walk
+  between the bridges and the avenue's south sidewalk, never on asphalt or
+  in `SOLIDS`). A goon walks its route on the sim clock (`goonPatrol()`,
+  pure), jogs at a player within 7 tiles in the zone (`setPlayerPos()`
+  feeds Degen's position each frame), shoves (a `shove` event;
+  `combat.shove` knocks Degen back in `walk.ts`, `is-shoved` flashes the
+  screen edge, `'shove'` sounds) and backs off for 2 s; shot like a
+  standing figure it goes down for `POINTS.goon`, lies 8 s and gets up at
+  its spawn; it never leaves the zone and stands still under reduced
+  motion. The look is `crew.ts`: one `createCrowd` in violet track suits
+  and cyan beanies and shades, `downPose` flat on the back with stars round
+  the head; `combat.ts` adds health bars, bursts, `'goonDown'` and
+  `onTakedown('goon')`. Goons shove, never shoot, and nothing in the city
+  ever hurts: there is no player health. Tested in `tests/combat.test.ts`.
 
 ## City builder (3D build mode)
 
