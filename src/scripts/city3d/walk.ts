@@ -432,7 +432,7 @@ export function createWalk(d: WalkDeps) {
     else if (down && !e.repeat && c === 'KeyG') combat.toggleHolster();
     else if (down && !e.repeat && c === 'KeyQ') combat.swap(1);
     // 1-4 pick a gun (unless the emote panel has them)
-    else if (down && !e.repeat && /^Digit[1-4]$/.test(c) && !root.querySelector('[data-emotes][open]')) combat.swap(WEAPON_IDS[Number(c.slice(5)) - 1]);
+    else if (down && !e.repeat && /^Digit[1-7]$/.test(c) && !root.querySelector('[data-emotes][open]')) combat.swap(WEAPON_IDS[Number(c.slice(5)) - 1]);
     else if (c === 'Space') {
       if (down && !e.repeat) tryJump();
       jumpHeld = down;
