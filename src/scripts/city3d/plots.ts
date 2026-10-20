@@ -75,7 +75,7 @@ function cached<M extends THREE.Material>(key: string, make: () => M): M {
 }
 const facadeOf = (key: string, o: Parameters<typeof facadeMat>[0]) => cached(`facade:${key}`, () => facadeMat(o, 0.15, 1.7));
 const signOf = (text: string, color: string) =>
-  cached(`sign:${text}:${color}`, () => lit(new THREE.MeshBasicMaterial({ map: neonSign(text, color, { board: null }), transparent: true, depthWrite: false }), 1, 2.4));
+  cached(`sign:${text}:${color}`, () => lit(new THREE.MeshBasicMaterial({ map: neonSign(text, color, { board: null }), transparent: true, depthWrite: false }), 1, 1.8));
 const glowOf = (color: string, day = 0.8, night = 2) => cached(`glow:${color}:${day}:${night}`, () => lit(new THREE.MeshBasicMaterial({ color }), day, night));
 
 const degenBoard = (img: HTMLImageElement | null) =>
@@ -818,7 +818,7 @@ const GEN: Record<BuildingType, (o: Design, g: THREE.Group, b: Batch, ctx: GenCt
       t.translate(x0 + W / 2, H, z0 - D / 2 + k * step);
       b.add(t, toon(darker(o.color, 0.35)));
       // Tinted glazing by day, lit from inside at night
-      b.add(geoBox(W - 0.06, 0.82, 0.03, x0, H + 0.03, z0 - D / 2 + (k + 1) * step + 0.005), glowOf(darker(o.neon, 0.5), 0.35, 2.2));
+      b.add(geoBox(W - 0.06, 0.82, 0.03, x0, H + 0.03, z0 - D / 2 + (k + 1) * step + 0.005), glowOf(darker(o.neon, 0.5), 0.35, 1.5));
     }
     // Loading dock: platform, bumpers, two roller doors with lamps
     b.add(geoBox(4.6, 0.6, 1.0, x0 - 0.4, 0, front + 0.5), toon('#8f8ab0'));

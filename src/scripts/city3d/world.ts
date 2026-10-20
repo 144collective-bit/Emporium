@@ -46,6 +46,11 @@ export function shiftPlaced(from: { trees: number; lamps: number }, dx: number, 
 export function addLamp(x: number, z: number, ry = 0, y = SLAB) {
   lamps.push({ x, z, ry, y });
 }
+/** A pool of lamplight on the ground with no street lamp over it (alley wall lamps): drawn with the street lamps' pools */
+const pools: { x: number; z: number; y: number; size: number }[] = [];
+export function addPool(x: number, z: number, size: number, y = SLAB) {
+  pools.push({ x, z, y, size });
+}
 
 /* ---------- Ground ---------- */
 
@@ -551,15 +556,15 @@ export function buildLamps(scene: THREE.Scene) {
   const n = lamps.length;
   const pole = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.035, 0.05, 1.6, 6), toon('#1b1830'), n);
   const arm = new THREE.InstancedMesh(new THREE.BoxGeometry(0.4, 0.05, 0.05), toon('#1b1830'), n);
-  const bulb = new THREE.InstancedMesh(new THREE.BoxGeometry(0.2, 0.07, 0.12), neon('#fff1c2', 0.6, 3.2), n);
+  const bulb = new THREE.InstancedMesh(new THREE.BoxGeometry(0.2, 0.07, 0.12), neon('#fff1c2', 0.6, 2.4), n);
   // Halos are points, so they always face the camera
   const haloPos = new Float32Array(n * 3);
   const haloMat = lit(
     new THREE.PointsMaterial({ color: '#ffe2a0', map: glowTex, size: 1.1, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }),
     0,
-    0.38
+    0.3
   );
-  const pool = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), lit(glowMat('#ffd98a', 1), 0, 0.26), n);
+  const pool = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), lit(glowMat('#ffd98a', 1), 0, 0.26), n + pools.length);
   const m = new THREE.Matrix4();
   const q = new THREE.Quaternion();
   const up = new THREE.Vector3(0, 1, 0);
@@ -573,6 +578,7 @@ export function buildLamps(scene: THREE.Scene) {
     haloPos.set([l.x + dir.x * 2, l.y + 1.5, l.z + dir.z * 2], i * 3);
     pool.setMatrixAt(i, m.compose(new THREE.Vector3(l.x + dir.x * 2, l.y + 0.02, l.z + dir.z * 2), flat, new THREE.Vector3(2.6, 2.6, 2.6)));
   });
+  pools.forEach((p, i) => pool.setMatrixAt(n + i, m.compose(new THREE.Vector3(p.x, p.y + 0.02, p.z), flat, new THREE.Vector3(p.size, p.size, p.size))));
   pole.castShadow = arm.castShadow = true;
   const haloGeo = new THREE.BufferGeometry();
   haloGeo.setAttribute('position', new THREE.BufferAttribute(haloPos, 3));

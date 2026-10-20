@@ -103,7 +103,7 @@ export function buildMarket(scene: THREE.Scene, crowd: Idle[]) {
     canopy.castShadow = true;
     g.add(canopy);
     // A name board on top of the back board
-    const sign = plane(1.3, 0.32, lit(new THREE.MeshBasicMaterial({ map: board(mine ? 'YOUR STALL' : GOODSNAME(TRADERS[i - 1].goods[0]), mine ? PAL.cyan : TRADERS[i - 1].canopy) }), 0.9, 1.6));
+    const sign = plane(1.3, 0.32, lit(new THREE.MeshBasicMaterial({ map: board(mine ? 'YOUR STALL' : GOODSNAME(TRADERS[i - 1].goods[0]), mine ? PAL.cyan : TRADERS[i - 1].canopy) }), 0.9, 1.35));
     sign.position.set(t.x, S + 1.86, back + f * 0.08);
     if (f < 0) sign.rotation.y = Math.PI;
     g.add(fx(sign));
@@ -128,7 +128,7 @@ export function buildMarket(scene: THREE.Scene, crowd: Idle[]) {
   for (const z of [G.z0, G.z1]) b.box(G.x - 0.08, S, z - 0.08, 0.16, 2.9, 0.16, post);
   b.box(G.x - 0.1, S + 2.55, G.z0, 0.2, 0.55, G.z1 - G.z0, toon('#0b0a18'));
   const gtex = neonSign('MARKET', PAL.pink, { board: null, size: 190, tracking: 14 });
-  const gsign = plane(G.z1 - G.z0 - 0.3, 0.5, lit(new THREE.MeshBasicMaterial({ map: gtex, transparent: true, depthWrite: false }), 1, 2.2));
+  const gsign = plane(G.z1 - G.z0 - 0.3, 0.5, lit(new THREE.MeshBasicMaterial({ map: gtex, transparent: true, depthWrite: false }), 1, 1.7));
   gsign.position.set(G.x - 0.11, S + 2.82, (G.z0 + G.z1) / 2);
   gsign.rotation.y = -Math.PI / 2;
   // A cut-out sign: keep the ink outlines behind it from drawing across it

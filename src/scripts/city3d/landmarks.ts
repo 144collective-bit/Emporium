@@ -219,7 +219,7 @@ function brick(cols: number, wall: string) {
       ctx.fillRect(c * 64 + 14, 25, 36, 60);
     }
   });
-  return lit(new THREE.MeshToonMaterial({ map, emissiveMap, emissive: '#ffffff' }), 0.1, 1.6);
+  return lit(new THREE.MeshToonMaterial({ map, emissiveMap, emissive: '#ffffff' }), 0.1, 1.3);
 }
 
 /* ---------- Animated bits ---------- */
@@ -1097,7 +1097,7 @@ function workshop(scene: THREE.Scene, ctx: LandmarkCtx) {
   });
   ribGlow.wrapS = THREE.RepeatWrapping;
   ribGlow.repeat.set(1.4, 1);
-  const wall = lit(new THREE.MeshToonMaterial({ map: ribs, emissiveMap: ribGlow, emissive: '#ffffff' }), 0.1, 1.5);
+  const wall = lit(new THREE.MeshToonMaterial({ map: ribs, emissiveMap: ribGlow, emissive: '#ffffff' }), 0.1, 1.25);
   g.add(walls(11.8, S, 22.8, 7.0, 2.2, 4.8, wall, toon('#22385a')));
 
   // Sawtooth roof: three runs, glazing facing the street; the front one is the sign

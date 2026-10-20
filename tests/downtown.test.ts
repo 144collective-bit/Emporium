@@ -6,6 +6,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   ALLEYS,
+  ALLEY_LAMPS,
+  ALLEY_PROPS,
   BLOCKS_DT,
   BOLLARD_R,
   DIAGONAL_LAMPS,
@@ -109,6 +111,16 @@ test('alleys run between buildings, walkable, with bollards that stop a car', ()
     assert.ok(Math.max(...gaps) < narrowest, `a car fits past the bollards at ${a.box}`);
     assert.ok(Math.max(...gaps) > 0.44, `Degen can't get past the bollards at ${a.box}`);
   }
+  // The dressing: every bin, crate stack and pallet stands in an alley, against its walls, and is solid
+  assert.equal(ALLEY_PROPS.length, ALLEYS.length * 3);
+  for (const p of ALLEY_PROPS) {
+    assert.ok(
+      ALLEYS.some((a) => p.box[0] >= a.box[0] - 1e-9 && p.box[1] >= a.box[1] - 1e-9 && p.box[2] <= a.box[2] + 1e-9 && p.box[3] <= a.box[3] + 1e-9),
+      `${p.kind} at ${p.box} is out of its alley`
+    );
+    assert.ok(SOLIDS.some((s) => s[0] === p.box[0] && s[1] === p.box[1] && s[2] === p.box[2] && s[3] === p.box[3]));
+  }
+  assert.equal(ALLEY_LAMPS.length, ALLEYS.length);
 });
 
 test('pocket parks: trees, benches and a lamp inside, the practice dummies among them', () => {

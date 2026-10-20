@@ -102,7 +102,7 @@ export function buildGarage(scene: THREE.Scene, opts: { tick: (f: Tick) => void;
   b.box(x0 + 1.2, S + H + 0.16, z0 + 0.15, 5.8, 0.95, 0.12, toon('#0b0a18'));
   for (const x of [x0 + 1.6, x0 + 6.6]) b.box(x, S + H + 0.16, z0 + 0.27, 0.08, 0.6, 0.3, trim);
   const signTex = neonSign('GARAGE', PAL.cyan, { board: null, size: 200, tracking: 18 });
-  const sign = plane(5.6, 1.1, lit(new THREE.MeshBasicMaterial({ map: signTex, transparent: true, depthWrite: false }), 1, 2.2));
+  const sign = plane(5.6, 1.1, lit(new THREE.MeshBasicMaterial({ map: signTex, transparent: true, depthWrite: false }), 1, 1.7));
   sign.position.set(x0 + 4.1, S + H + 0.63, z0 + 0.13);
   sign.rotation.y = Math.PI;
   g.add(fx(sign));

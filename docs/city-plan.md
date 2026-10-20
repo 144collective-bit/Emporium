@@ -110,8 +110,29 @@ Checked with `?fps` at every step (and on a real phone):
    - Result: draw calls unchanged (about 620 / 570); triangles about 1.04M /
      0.50M (from 1.04M / 0.56M), after the lane markings became flat planes
      and the outskirts' tree belt was thinned to match the trees now in town.
-4. **Polish and measure.** Alley and square details, night lighting, every
-   width upright and on its side, before and after `?fps` numbers.
+4. **Polish and measure** (built).
+   - Alleys dressed from the bollards back: a caged wall lamp with a pool of
+     light under it, a drainpipe, pallets leaning on the other wall, stacked
+     crates and a bin at the back (`ALLEY_PROPS`, solid when walking; the
+     middle stays clear end to end).
+   - The outer squares: light bollards in pairs at the north and south ways
+     in (solid), flush uplights in a ring round each centrepiece.
+   - Night lighting balanced, at the owner's request: big lit surfaces
+     (infill windows and shopfronts, landmark windows, the stage screen,
+     shop and site signs) toned down so they keep their colour instead of
+     flaring white close up; kiosk roofs carry a neon trim instead of a
+     whole glowing roof; lit panels bigger than a tube (kiosk hatches,
+     bollard caps) glow softer; street-lamp bulbs and halos a touch lower.
+     Thin neon tubes keep their glow.
+   - Checked at 320, 375, 768, 1024 and 1440 wide, phones and tablets
+     upright and on their side, in City view and walking: no sideways
+     scroll, no walk controls overlapping.
+   - Result (desktop / phone tier, the `?fps` readout at the home view):
+     draw calls about 620 / 565 before, about 624 / 570 after (the alley
+     pools share the street lamps' pools; one softer neon per batch);
+     triangles unchanged (about 1.05M / 0.50M). Day and night read the
+     same within the traffic's jitter (about 630-640 / 330-345 once the
+     phone tier settles).
 
 Each phase gets the owner's sign-off before the next one starts.
 

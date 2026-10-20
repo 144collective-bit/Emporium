@@ -23,6 +23,7 @@ const WOOD = toon('#8a5a3c');
 const METAL = toon('#2a2b38');
 const HEDGE = toon('#2a8a55');
 const glow = (c: string) => neon(c, 0.6, 2.4);
+const soft = (c: string) => neon(c, 0.5, 1.3);
 const SEAT = S + 0.3;
 
 const box = (b: Batch, x0: number, y0: number, z0: number, x1: number, y1: number, z1: number, mat: THREE.Material) => b.box(x0, y0, z0, x1 - x0, y1 - y0, z1 - z0, mat);
@@ -138,13 +139,20 @@ function square(b: Batch, scene: THREE.Scene, l: SquareLayout, crowd: Idle[], ti
     const [kx0, kz0, kx1, kz1] = l.kiosk;
     const col = l.square.feature === 'fountain' ? PAL.cyan : PAL.pink;
     box(b, kx0, S, kz0, kx1, S + 1.55, kz1, toon('#2b2550'));
-    box(b, kx1, S + 0.7, kz0 + 0.35, kx1 + 0.02, S + 1.25, kz1 - 0.35, glow(PAL.warm));
+    box(b, kx1, S + 0.7, kz0 + 0.35, kx1 + 0.02, S + 1.25, kz1 - 0.35, soft(PAL.warm));
     box(b, kx1, S + 0.66, kz0 + 0.3, kx1 + 0.28, S + 0.72, kz1 - 0.3, toon('#c9c4e6'));
     box(b, kx0 - 0.18, S + 1.55, kz0 - 0.18, kx1 + 0.18, S + 1.7, kz1 + 0.18, toon(col));
-    box(b, kx0 - 0.18, S + 1.7, kz0 - 0.18, kx1 + 0.18, S + 1.75, kz1 + 0.18, glow(col));
+    // A neon trim round the canopy's edge, not a glowing roof
+    box(b, kx0 - 0.19, S + 1.6, kz0 - 0.19, kx1 + 0.19, S + 1.66, kz1 + 0.19, glow(col));
     crowd.push({ x: kx1 + 0.85, z: (kz0 + kz1) / 2, ry: -Math.PI / 2, act: 'queue' });
   }
   for (const [x, z] of l.lamps) addLamp(x, z, x < (x0 + x1) / 2 ? 0 : Math.PI);
+  // Light bollards at the ways in, uplights round the centrepiece
+  for (const [x, z] of l.bollards) {
+    cyl(b, 0.08, 0.45, x, S, z, METAL, 8, 0.09);
+    cyl(b, 0.085, 0.1, x, S + 0.45, z, soft(PAL.warm), 8);
+  }
+  for (const [x, z] of l.uplights) cyl(b, 0.09, 0.02, x, S + 0.012, z, soft(PAL.warm), 8);
   // A pair chatting by the centrepiece
   if (!low) {
     const [cx, cz] = l.centre;

@@ -10,7 +10,7 @@
 import type { SpotId } from '../../lib/city';
 import { DUMMIES } from './combat-sim';
 import { BIG_LOTS, BS, GARAGE, MARKET, UNITS, design, designBox } from './layout';
-import { ALLEYS, BOLLARD_R, INFILL, SQUARE } from './downtown';
+import { ALLEYS, ALLEY_PROPS, BOLLARD_R, INFILL, SQUARE } from './downtown';
 import { SQUARE_SOLIDS } from './outer';
 import type { LotKind, UnitKind } from './tycoon';
 
@@ -185,13 +185,14 @@ export const lotSolids = (i: number, kind: LotKind | null): Box[] => (kind ? LOT
 
 /**
  * Downtown round the landmarks (downtown.ts, drawn by infill.ts): the infill buildings, the
- * bollards at the alleys' mouths, and the hangout square's stage, fountain, kiosks, planters and
+ * bollards at the alleys' mouths, the bins, crates and pallets in them, and the hangout square's stage, fountain, kiosks, planters and
  * light poles. Benches and the pocket parks stay walkable.
  */
 const sq = SQUARE;
 export const DOWNTOWN_SOLIDS: Box[] = [
   ...INFILL.flatMap((f) => f.solids),
   ...ALLEYS.flatMap((a) => a.bollards.map(([x, z]): Box => [x - BOLLARD_R, z - BOLLARD_R, x + BOLLARD_R, z + BOLLARD_R, 0.6])),
+  ...ALLEY_PROPS.map((p): Box => [...p.box, p.h]),
   [...sq.stage, sq.stageH],
   [sq.fountain.at[0] - sq.fountain.r * 0.9, sq.fountain.at[1] - sq.fountain.r * 0.9, sq.fountain.at[0] + sq.fountain.r * 0.9, sq.fountain.at[1] + sq.fountain.r * 0.9, 0.55],
   ...sq.kiosks.map((k): Box => [...k, 2.2]),

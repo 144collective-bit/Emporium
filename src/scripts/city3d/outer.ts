@@ -368,6 +368,10 @@ export interface SquareLayout {
   /** A kiosk on one side (x0, z0, x1, z1) */
   kiosk: Rect | null;
   lamps: Pt[];
+  /** Light bollards in pairs marking the north and south ways in */
+  bollards: Pt[];
+  /** Flush uplights in a ring round the centrepiece, lit at night */
+  uplights: Pt[];
 }
 const FEATURE: Record<SquareFeature, { half: number; h: number }> = {
   fountain: { half: 1.4, h: 0.55 },
@@ -393,13 +397,17 @@ export const SQUARE_LAYOUTS: SquareLayout[] = OUTER_SQUARES.map((sq) => {
     [x0 + 0.4, centre[1] + (kiosk ? 2.2 : 0)],
     [x1 - 0.4, centre[1]],
   ];
-  return { square: sq, centre, feature, planters, benches, kiosk, lamps };
+  const bollards: Pt[] = [z0 + 0.35, z1 - 0.35].flatMap((z) => [-0.9, 0.9].map((dx): Pt => [centre[0] + dx, z]));
+  const up = feature.half + 0.45;
+  const uplights = Array.from({ length: 8 }, (_, i): Pt => [centre[0] + Math.sin((i * Math.PI) / 4 + Math.PI / 8) * up, centre[1] + Math.cos((i * Math.PI) / 4 + Math.PI / 8) * up]);
+  return { square: sq, centre, feature, planters, benches, kiosk, lamps, bollards, uplights };
 });
-/** What's solid on the outer squares: each centrepiece, the corner planters and the kiosks */
+/** What's solid on the outer squares: each centrepiece, the corner planters, the kiosks and the light bollards */
 export const SQUARE_SOLIDS: Footprint[] = SQUARE_LAYOUTS.flatMap((l) => [
   [l.centre[0] - l.feature.half, l.centre[1] - l.feature.half, l.centre[0] + l.feature.half, l.centre[1] + l.feature.half, l.feature.h] as Footprint,
   ...l.planters.map(([x, z]): Footprint => [x - 0.45, z - 0.45, x + 0.45, z + 0.45, 0.5]),
   ...(l.kiosk ? [[...l.kiosk, 2.1] as Footprint] : []),
+  ...l.bollards.map(([x, z]): Footprint => [x - 0.09, z - 0.09, x + 0.09, z + 0.09, 0.55]),
 ]);
 /** x0, z0, x1, z1, height (solids.ts `Box`) */
 export type Footprint = [number, number, number, number, number];

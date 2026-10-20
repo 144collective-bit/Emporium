@@ -22,9 +22,9 @@
  */
 import * as THREE from 'three';
 import { Batch, FONT_DISPLAY, PAL, canvasTex, fx, glowTex, lit, neon, rng, shadeHex, toon } from './kit';
-import { ALLEYS, DIAGONALS, FLOOR, INFILL, LANES, NAMED_SHOPS, PARKS, SHOP_H, SIGNS, SQUARE, WATER_TOWER, bodyOf, stoopOf, type Infill, type Pt, type SignId } from './downtown';
+import { ALLEYS, ALLEY_LAMPS, ALLEY_PIPES, ALLEY_PROPS, DIAGONALS, FLOOR, INFILL, LANES, NAMED_SHOPS, PARKS, SHOP_H, SIGNS, SQUARE, WATER_TOWER, bodyOf, stoopOf, type Infill, type Pt, type SignId } from './downtown';
 import { CORE_ROADS, DOWNTOWN, LANE } from './layout';
-import { SLAB as S, addLamp, addTree, waterMat, type Tick } from './world';
+import { SLAB as S, addLamp, addPool, addTree, waterMat, type Tick } from './world';
 import type { Idle } from './landmarks';
 
 /* ---------- The wall atlas ---------- */
@@ -278,7 +278,7 @@ function groundBand(c: CanvasRenderingContext2D, kind: GroundKind, lit: boolean)
       c.fillRect(0, 0, 256, 100);
     }
     for (let x = 6; x < 256; x += 64) {
-      c.fillStyle = lit ? '#cfe8ff' : '#6f8fc4';
+      c.fillStyle = lit ? '#9dbbe0' : '#6f8fc4';
       c.fillRect(x, 10, 52, 86);
       if (!lit) {
         c.fillStyle = '#3e5a8f';
@@ -344,7 +344,7 @@ const ATLAS = (() => {
   // Canvas textures are flipped: the canvas's top row is v = 1. Ground bands keep a pixel off each edge.
   const band = (top: number, h: number, tw: number, th: number): Band => ({ v0: 1 - (top + h) / H, vh: h / H, tw, th });
   return {
-    mat: lit(toon('#ffffff', { map, emissiveMap, emissive: '#ffffff' }), 0.15, 1.5),
+    mat: lit(toon('#ffffff', { map, emissiveMap, emissive: '#ffffff' }), 0.15, 1.15),
     wall: Object.fromEntries(WALL_KINDS.map((k, i) => [k, band(i * WALL_PX, WALL_PX, CELL_W * COLS, FLOOR * ROWS)])) as Record<WallKind, Band>,
     ground: Object.fromEntries(GROUND_KINDS.map((k, i) => [k, band(WALL_KINDS.length * WALL_PX + i * GROUND_PX + 1, GROUND_PX - 2, SHOP_W, SHOP_H)])) as Record<GroundKind, Band>,
   };
@@ -469,7 +469,7 @@ const SIGN_ATLAS = (() => {
       });
     });
   });
-  const mat = lit(new THREE.MeshBasicMaterial({ map: tex }), 0.95, 1.6);
+  const mat = lit(new THREE.MeshBasicMaterial({ map: tex }), 0.95, 1.3);
   const uv = (x: number, y: number, w: number, h: number) => [x / SIGN_W, 1 - (y + h) / SIGN_H, (x + w) / SIGN_W, 1 - y / SIGN_H];
   return {
     mat,
@@ -486,6 +486,8 @@ const AWNINGS = ['#e23b3b', '#ffd23f', '#00c2ff', '#e219e5', '#1fbf6b', '#ff8a3d
 const NEONS = [PAL.cyan, PAL.pink, PAL.warm, PAL.magenta, '#2bff88'];
 /** Every neon downtown glows the same (one shared material, its colour per vertex) */
 const glow = (color: string) => neon(color, 0.6, 2.4);
+/** Lit panels bigger than a neon tube (hatches, counters) glow softer, so they don't flare */
+const soft = (color: string) => neon(color, 0.5, 1.3);
 const INK = toon('#1b1830');
 const STONE = toon('#8f8ab0');
 const METAL = toon('#2a2b38');
@@ -1163,24 +1165,63 @@ export function buildInfill(scene: THREE.Scene, crowd: Idle[], tick: (f: Tick) =
   for (const f of INFILL) building(b, f, crowd, low);
   waterTower(b, WATER_TOWER);
 
-  // Alleys: bollards at the mouth, bins and crates at the back, string lights overhead
+  // Alleys: bollards at the mouth, string lights overhead, a caged lamp and a drainpipe on one wall,
+  // pallets on the other, a bin and stacked crates at the back (ALLEY_PROPS, solid when walking)
   const bin = toon('#2f6b4f');
   const crate = toon('#8a6a3c');
+  const crateDark = toon('#6b4f2c');
+  const pipeMat = toon('#5a5670');
+  const lampGlow = glow(PAL.warm);
   for (const a of ALLEYS) {
     for (const [x, z] of a.bollards) {
       cyl(b, 0.08, 0.6, x, S, z, INK, 8, 0.09);
       cyl(b, 0.085, 0.06, x, S + 0.46, z, glow(PAL.warm), 8);
     }
-    const [x0, z0, x1, z1] = a.box;
-    const alongX = x1 - x0 > z1 - z0;
-    // The far end from the bollards (the back of the block)
-    const [bx, bz] = a.bollards[0];
-    const back: Pt = alongX ? [Math.abs(bx - x0) < Math.abs(bx - x1) ? x1 - 0.7 : x0 + 0.7, z0 + 0.45] : [x0 + 0.45, Math.abs(bz - z0) < Math.abs(bz - z1) ? z1 - 0.7 : z0 + 0.7];
-    box(b, back[0] - 0.3, S, back[1] - 0.25, back[0] + 0.3, S + 0.55, back[1] + 0.25, bin);
-    box(b, back[0] - 0.32, S + 0.55, back[1] - 0.27, back[0] + 0.32, S + 0.6, back[1] + 0.27, INK);
-    const c2: Pt = alongX ? [back[0], z1 - 0.35] : [x1 - 0.35, back[1]];
-    box(b, c2[0] - 0.22, S, c2[1] - 0.22, c2[0] + 0.22, S + 0.42, c2[1] + 0.22, crate);
     zigzag(a.box, S + 2.2);
+  }
+  for (const p of ALLEY_PROPS) {
+    const [x0, z0, x1, z1] = p.box;
+    if (p.kind === 'bin') {
+      box(b, x0, S, z0, x1, S + p.h - 0.05, z1, bin);
+      box(b, x0 - 0.02, S + p.h - 0.05, z0 - 0.02, x1 + 0.02, S + p.h, z1 + 0.02, INK);
+    } else if (p.kind === 'crates') {
+      box(b, x0, S, z0, x1, S + 0.42, z1, crate);
+      box(b, x0 - 0.01, S + 0.19, z0 - 0.01, x1 + 0.01, S + 0.23, z1 + 0.01, crateDark);
+      box(b, x0 + 0.05, S + 0.42, z0 + 0.06, x1 - 0.07, S + p.h, z1 - 0.04, crateDark);
+    } else {
+      // Pallets on their edge against the wall: three boards across, blocks between them
+      const alongX = x1 - x0 > z1 - z0;
+      for (const y of [0.04, 0.33, 0.62]) box(b, x0, S + y, z0, x1, S + y + 0.12, z1, crate);
+      for (const t of [0, 0.5, 1]) {
+        if (alongX) {
+          const x = x0 + 0.05 + (x1 - x0 - 0.1) * t;
+          box(b, x - 0.05, S, z0 + 0.015, x + 0.05, S + p.h, z1 - 0.015, crateDark);
+        } else {
+          const z = z0 + 0.05 + (z1 - z0 - 0.1) * t;
+          box(b, x0 + 0.015, S, z - 0.05, x1 - 0.015, S + p.h, z + 0.05, crateDark);
+        }
+      }
+    }
+  }
+  // The wall lamps: a backplate, a hood and a warm lamp, its light pooled on the ground below
+  for (const l of ALLEY_LAMPS) {
+    const [x, z] = l.at;
+    const [ox, oz] = l.out;
+    const span = (u: number, w: number) => (ox ? [x + ox * u, x + ox * (u + w)] : [x - w / 2, x + w / 2]);
+    const spanZ = (u: number, w: number) => (oz ? [z + oz * u, z + oz * (u + w)] : [z - w / 2, z + w / 2]);
+    const part = (u: number, du: number, w: number, y0: number, y1: number, mat: THREE.Material) => {
+      const [ax, bx] = ox ? span(u, du) : span(0, w);
+      const [az, bz] = oz ? spanZ(u, du) : spanZ(0, w);
+      box(b, Math.min(ax, bx), S + y0, Math.min(az, bz), Math.max(ax, bx), S + y1, Math.max(az, bz), mat);
+    };
+    part(0, 0.04, 0.2, l.y - 0.12, l.y + 0.12, INK);
+    part(0.04, 0.16, 0.16, l.y + 0.02, l.y + 0.07, INK);
+    part(0.06, 0.12, 0.12, l.y - 0.07, l.y + 0.02, lampGlow);
+    addPool(x + ox * 0.7, z + oz * 0.7, 1.7);
+  }
+  for (const [x, z] of ALLEY_PIPES) {
+    cyl(b, 0.04, 2.5, x, S, z, pipeMat, 6);
+    cyl(b, 0.055, 0.06, x, S + 1.2, z, pipeMat, 6);
   }
   // The courtyard lanes: string lights, planters and a pair chatting
   for (const [i, l] of LANES.entries()) {
@@ -1297,13 +1338,13 @@ function square(scene: THREE.Scene, b: Batch, crowd: Idle[], tick: (f: Tick) => 
     c.lineWidth = 14;
     c.strokeStyle = PAL.ink;
     c.strokeText('DEGEN CITY', 512, 190);
-    c.fillStyle = '#ffffff';
+    c.fillStyle = '#f3f2f7';
     c.fillText('DEGEN CITY', 512, 190);
     c.font = `800 64px ${FONT_DISPLAY}`;
     c.fillStyle = PAL.cyan;
     c.fillText('GM DEGENS  ·  GAME ON', 512, 340);
   });
-  const screen = new THREE.Mesh(new THREE.PlaneGeometry(sc.x1 - sc.x0, sc.y1 - sc.y0), lit(new THREE.MeshBasicMaterial({ map: tex }), 0.95, 1.5));
+  const screen = new THREE.Mesh(new THREE.PlaneGeometry(sc.x1 - sc.x0, sc.y1 - sc.y0), lit(new THREE.MeshBasicMaterial({ map: tex }), 0.95, 1));
   screen.position.set((sc.x0 + sc.x1) / 2, S + (sc.y0 + sc.y1) / 2, sc.z + 0.06);
   scene.add(screen);
   box(b, sc.x0 - 0.12, S + sc.y0 - 0.12, sc.z - 0.12, sc.x1 + 0.12, S + sc.y1 + 0.12, sc.z + 0.05, INK);
@@ -1335,10 +1376,11 @@ function square(scene: THREE.Scene, b: Batch, crowd: Idle[], tick: (f: Tick) => 
     // The hatch faces the middle of the square
     const inward = i === 0 ? 1 : -1;
     const hx = inward > 0 ? kx1 : kx0;
-    box(b, Math.min(hx, hx + inward * 0.02), S + 0.7, kz0 + 0.4, Math.max(hx, hx + inward * 0.02), S + 1.3, kz1 - 0.4, glow(PAL.warm));
+    box(b, Math.min(hx, hx + inward * 0.02), S + 0.7, kz0 + 0.4, Math.max(hx, hx + inward * 0.02), S + 1.3, kz1 - 0.4, soft(PAL.warm));
     box(b, Math.min(hx, hx + inward * 0.3), S + 0.68, kz0 + 0.35, Math.max(hx, hx + inward * 0.3), S + 0.74, kz1 - 0.35, toon('#c9c4e6'));
     box(b, kx0 - 0.2, S + 1.6, kz0 - 0.2, kx1 + 0.2, S + 1.75, kz1 + 0.2, toon(col));
-    box(b, kx0 - 0.2, S + 1.75, kz0 - 0.2, kx1 + 0.2, S + 1.8, kz1 + 0.2, glow(col));
+    // A neon trim round the canopy's edge (a whole glowing roof flares from above)
+    box(b, kx0 - 0.21, S + 1.64, kz0 - 0.21, kx1 + 0.21, S + 1.7, kz1 + 0.21, glow(col));
     crowd.push({ x: hx + inward * 0.9, z: (kz0 + kz1) / 2, ry: inward > 0 ? -Math.PI / 2 : Math.PI / 2, act: 'queue' });
   });
 

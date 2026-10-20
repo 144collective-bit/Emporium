@@ -64,7 +64,9 @@ it and has been retired completely. Build only on what's here.
     Drop 001 front walk-only courtyard lanes (`LANES`).
   - Round them, tight rows of infill (`INFILL`) with walk-only alleys
     between (`ALLEYS`, two bollards at the mouth: Degen gets through, no car
-    does). Each building has a type (`InfillType`, drawn by `building()` in
+    does; dressed with a wall lamp and its pool of light (`ALLEY_LAMPS`,
+    `addPool()` in `world.ts`), a drainpipe, and pallets, crates and a bin
+    (`ALLEY_PROPS`, solid, against the walls so the middle stays clear)). Each building has a type (`InfillType`, drawn by `building()` in
     `infill.ts` and `infill()` in `city.ts`): brownstone walk-ups (stoop,
     bay window, bracketed cornice), shops (fascia sign, striped awning, blade
     sign, fire escapes), diners (rooftop sign, tables out front), lofts
@@ -114,7 +116,8 @@ it and has been retired completely. Build only on what's here.
   - Four small squares (`OUTER_SQUARES`, `SQUARE_LAYOUTS`): North Square
     (fountain, kiosk), West Green (a plinth with the Emporium diamond
     turning in neon), East Square (a bandstand) and South Square (a clock
-    tower, kiosk); benches, corner planters, lamps and a few people.
+    tower, kiosk); benches, corner planters, lamps, light bollards at the
+    ways in, uplights round the centrepiece and a few people.
     Footprints are `SQUARE_SOLIDS`. Four pocket parks (`OUTER_PARKS`).
   - The waterfront promenade (`PROMENADE`) along both banks: railings at
     the water (open at the bridges), trees in planters and benches between
@@ -253,6 +256,15 @@ it and has been retired completely. Build only on what's here.
     sit, march, attention/salute, dance). The cap patch is the Emporium
     diamond: never put another brand's logo on it. Whites on clothes are
     `SHIRT`, a shade under white, so they don't bloom.
+- **Night glow stays balanced** (the owner's call: a balanced finish, no
+  light flaring). Bloom and tone mapping turn anything lit well past 1 into
+  a white haze close up, so keep big lit surfaces modest at night: window
+  and shopfront light maps about 1.15-1.3, screens about 1, sign textures
+  1.3-1.8. Only thin neon tubes, bulbs and small caps go to 2.4 (`glow()`);
+  lit panels bigger than a tube (hatches, bollard caps, uplights) use the
+  softer `soft()` (1.3), and never light a whole roof or slab: give it a
+  neon trim instead. Check new lights close up at night, not just from
+  the home view.
 - Floating cut-out signs (FX layer with a transparent texture, like the roof
   logo) need `occlude()` from `kit.ts`, or the ink outlines of whatever is
   behind them get drawn across them.

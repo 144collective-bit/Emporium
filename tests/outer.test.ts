@@ -106,7 +106,10 @@ test('squares and pocket parks sit inside their blocks, clear of the pads', () =
   for (const l of SQUARE_LAYOUTS) {
     const r = l.square.rect;
     const on = (p: Pt, m = 0) => p[0] > r[0] + m && p[0] < r[2] - m && p[1] > r[1] + m && p[1] < r[3] - m;
-    for (const p of [...l.planters, ...l.lamps, ...l.benches.map((q) => q.at)]) assert.ok(on(p, 0.3), `${l.square.id}: ${p} is off the square`);
+    for (const p of [...l.planters, ...l.lamps, ...l.bollards, ...l.uplights, ...l.benches.map((q) => q.at)]) assert.ok(on(p, 0.3), `${l.square.id}: ${p} is off the square`);
+    // Uplights between the centrepiece and the benches, bollards clear of everything else
+    for (const u of l.uplights) for (const q of l.benches) assert.ok(Math.hypot(u[0] - q.at[0], u[1] - q.at[1]) > 0.6);
+    for (const p of l.bollards) for (const q of [...l.planters, ...l.lamps, ...l.benches.map((q) => q.at)]) assert.ok(Math.hypot(p[0] - q[0], p[1] - q[1]) > 0.8, `${l.square.id}: bollard at ${p} crowds ${q}`);
     for (const q of l.benches) {
       assert.ok(Math.hypot(q.at[0] - l.centre[0], q.at[1] - l.centre[1]) > l.feature.half + 0.8);
       for (const p of l.planters) assert.ok(Math.hypot(q.at[0] - p[0], q.at[1] - p[1]) > 1.1);

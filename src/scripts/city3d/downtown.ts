@@ -412,6 +412,55 @@ export const WATER_TOWER: Infill =
 /** A bollard's footprint: half its width */
 export const BOLLARD_R = 0.1;
 
+/** Clutter at the back of an alley and along its walls: footprint and height (solid when walking) */
+export interface AlleyProp {
+  kind: 'bin' | 'crates' | 'pallets';
+  box: Rect;
+  h: number;
+}
+/** A caged lamp on an alley wall: where it's fixed, which way it faces (into the alley) and how high */
+export interface WallLamp {
+  at: Pt;
+  out: Pt;
+  y: number;
+}
+
+/**
+ * Each alley's dressing, from the bollards back: a drainpipe and a wall lamp on one wall with
+ * stacked crates and a bin past them at the back, pallets leaning on the other wall. The middle
+ * stays clear, so the alley can be walked end to end.
+ */
+function dressAlley(a: Alley) {
+  const [x0, z0, x1, z1] = a.box;
+  const alongX = x1 - x0 > z1 - z0;
+  const len = alongX ? x1 - x0 : z1 - z0;
+  const W = alongX ? z1 - z0 : x1 - x0;
+  // Distance along from the mouth (t) and across from the first wall (s), to the world
+  const [bx, bz] = a.bollards[0];
+  const fromLow = alongX ? Math.abs(bx - x0) < Math.abs(bx - x1) : Math.abs(bz - z0) < Math.abs(bz - z1);
+  const at = (t: number, s: number): Pt => {
+    const along = fromLow ? (alongX ? x0 : z0) + t : (alongX ? x1 : z1) - t;
+    return alongX ? [along, z0 + s] : [x0 + s, along];
+  };
+  const rect = (t0: number, t1: number, s0: number, s1: number): Rect => {
+    const [p, q] = [at(t0, s0), at(t1, s1)];
+    return [Math.min(p[0], q[0]), Math.min(p[1], q[1]), Math.max(p[0], q[0]), Math.max(p[1], q[1])];
+  };
+  const props: AlleyProp[] = [
+    { kind: 'bin', box: rect(len - 0.95, len - 0.45, 0.08, 0.55), h: 0.6 },
+    { kind: 'crates', box: rect(len - 1.55, len - 1.11, 0.08, 0.52), h: 0.72 },
+    { kind: 'pallets', box: rect(len * 0.45 - 0.45, len * 0.45 + 0.45, W - 0.17, W - 0.02), h: 0.78 },
+  ];
+  const lamp: WallLamp = { at: at(len * 0.5, 0), out: alongX ? [0, 1] : [1, 0], y: 2.0 };
+  const pipe = at(len * 0.5 - 0.7, 0.06);
+  return { props, lamp, pipe };
+}
+const DRESSED = ALLEYS.map(dressAlley);
+export const ALLEY_PROPS: AlleyProp[] = DRESSED.flatMap((d) => d.props);
+export const ALLEY_LAMPS: WallLamp[] = DRESSED.map((d) => d.lamp);
+/** Drainpipes, one per alley, hugging the lamp's wall (too thin to bump into) */
+export const ALLEY_PIPES: Pt[] = DRESSED.map((d) => d.pipe);
+
 /**
  * Walk-only lanes between two landmarks on one block: the alley between the
  * Signal tower and the Apartments, and the courtyard lanes the Post office and
