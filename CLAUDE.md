@@ -387,7 +387,7 @@ it and has been retired completely. Build only on what's here.
   `line()` for the Workshop and factories), the ledger (`book()`, called by
   every rule that moves Dorras) and loans (`borrow()`, `repay()`, a share
   of takings in `advance()`).
-  `cleanSave()` cleans anything loaded and upgrades older saves (now v5);
+  `cleanSave()` cleans anything loaded and upgrades older saves (now v6);
   keep that migration when the save changes. New economy rules go here
   first.
 - **The city's game (Phase 5)** sits on the same save: XP and levels
@@ -588,6 +588,84 @@ it and has been retired completely. Build only on what's here.
   save every ten tiles (`counters.driven`, for missions and badges).
 - `?spawn=x,z[,yaw]` in the address starts walk mode at a spot, and `?fps`
   shows where Degen stands: use them to check a place on a real device.
+
+## The kart park (3D walk mode)
+
+- **The place** (the owner's call): a Mario-Kart-style go-kart track on open
+  land outside the Parkway in the north-east, fenced, with a slip road
+  down to the Parkway and a gate; the kart hut (door prompt "Kart hut"),
+  a grandstand along the start straight, pits, a big screen. It's a place
+  like the landmarks (spot `karts`, pin, directory entry, a City-view panel
+  with your records and **Walk in**, which starts walk mode at the gate,
+  `KART_SPAWN`). Karts stay on the track: they're never driven in the city.
+- **The layout** is `kartpark.ts` (DOM-free, tested in `tests/kart.test.ts`):
+  `KART_PARK` (world x 92-140, z -94 to -48), local numbers via
+  `toWorld()`, `SITE` (hut, gate, stand, screen, pits), `GATE`, `SLIP_ROAD`,
+  `HUT_DOOR`, `GANTRY`, `PILLARS`. One physical track, two courses
+  (`COURSES`): the Neon Loop (a figure of eight: the start straight down
+  the west side, the west lobe's bottom, a diagonal across the middle at
+  ground level, the east lobe's hairpin, back over the middle on a flyover
+  `FLYOVER_H` high, the west lobe's top with a hump `HUMP_H` that throws
+  karts into the air) and its reverse. A course is a closed centre line
+  sampled every half tile (`frame()`, `at()`, `locate()` which keeps to the
+  layer its hint is on, `along()`, `wrapS()`), `TRACK_HALF` either side,
+  `gridSlots()`, item box rows (`boxes`) and boost pads (`pads`) per course.
+  Footprints for walking are `KART_SOLIDS` (in `SOLIDS`: the fence with the
+  gate's gap, the hut, the stand, the posts and pillars, walls every two
+  tiles along the ground-level edges); the site is flat ground, not a slab,
+  and the outskirts' trees keep off it (`scatterIn()` in `world.ts`). Keep
+  every corner's radius above about 3 (the test checks the inner edge never
+  folds) and the two passes apart by the track's width.
+- **The rules** are `kart-sim.ts` (DOM-free, seeded, a fixed 60 Hz tick,
+  tested): `createKartSim(setup)` → `step(dt, input)` returning events.
+  Arcade karts (`tune()` from the 0..1 stats), a hop into a drift
+  (`T.drift` stages, `T.driftBoost`), boost pads, the walls, bumps weighted
+  by `weight`, air over the hump, seven rivals on the racing line
+  (`think()`: look-ahead, braking for curvature, drifting, items) with a
+  rubber band (`rubber()`), three cups (`CUPS`: `ai` pace, `skill`, prizes
+  by place) and time trials (`cup: 'time'`, alone, no boxes), six items
+  (`ITEMS`, dealt by place in `DEALS`: rocket, oil, gummy, pigeon, shield,
+  trail; hazards and missiles), places by progress (`standings()`), the
+  player's finish (`done`) and everyone's (`over`). New gameplay goes here
+  first; looks and sounds in the view.
+- **The karts** are `mykart.ts` (`PLAYER_KARTS`, `KART_SPECS`: Pocket
+  Rocket, Big Wheel, Zip, Tank Kart; `cleanKart()`), priced in `catalog.ts`
+  (`KART_CATALOG`, the Rocket free; `KART_MODS`: motor, soft tyres, nitro
+  kit, three levels; `kartStats()`), drawn by `karts.ts` (`createKart()`:
+  Degen's style, origin on the ground under the middle, +x forward, wheels
+  that steer and roll, a seated Degen driver via `seat()`). Only for the
+  kart park: never real money, never tied to the store or the token.
+- **The save** (`tycoon.ts`, v6): `karts` { model, paint, owned, mods,
+  records } with `buyKart()` / `modKart()` / `kartStatsOf()` / `pickKart()`
+  and `finishKartRace()` (prizes by place, time-trial bests, counters
+  `kartRaces` / `podiums` / `kartWins` / `kartHits`, XP `kartFinish` /
+  `kartPodium` / `kartWin` / `kartRecord`); ledger entries `karting` (in) and
+  `karts` (out); six missions and five badges in `missions.ts`.
+- **On screen:** `kart-types.ts` holds the interfaces the three parts agree
+  on. `kartpark3d.ts` draws the site (`buildKartPark()`: the track ribbon
+  from the samples with kerbs and neon-topped walls, the flyover and its
+  pillars, the gantry, the stand, the hut, the screen (fixed copy only),
+  boost pad decals and item boxes per course (`setCourse()`,
+  `showBoxes()`), the `showSpot` in the pits). `kart.ts`
+  (`createKartRace()`) runs a race: builds the sim from the save, seats
+  Degen, places the karts from the sim every frame, the chase camera,
+  sparks, flames, shields, oil, trails, gummies and pigeons, the sounds
+  (`kart*` kinds in `sound.ts`), pays through `finishKartRace()` +
+  `commit()` and shows the results. `kart-ui.ts` (`createKartUI()`, markup
+  `data-karts`, `data-kart-hud`, `data-kart-count`, `data-kart-pops`,
+  `data-kart-result`, the Drift / Item touch buttons `data-kart-drift` /
+  `data-kart-item` in `CityMap.astro`, styles in `src/styles/karts.css`) is
+  the hut's menu (Race, Karts, Records), the HUD (place, lap, clock, item
+  slot and roulette, drift meter), the countdown, pops and the results
+  card. `walk.ts` wires them: the hut door's prompt opens the menu, a race
+  hides Degen and feeds the kart (`kartFrame()`: W/S gas and brake, A/D
+  steer, Space hop and drift, E (or a click) uses the item, S held sends it
+  behind; touch: the stick, the pedals, Drift and Item; gamepad: stick, RT
+  / LT, A drift, X / RB item, Y quits), Esc or Quit abandons (no prize),
+  closing the results stands Degen up by the hut. While racing
+  `.city.is-karting` is on the root and `data-kart` makes the header read
+  "Karting · <course>". Under reduced motion the race still runs (it's the
+  game) with no camera shake or sparks.
 
 ## Target practice (3D walk mode)
 

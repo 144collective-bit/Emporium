@@ -238,3 +238,37 @@ before the next one starts.
   bank; knocking them down counts for missions and badges. They shove, never
   shoot; the city north of the river stays a safe hangout.
 - Saves carry on from Phases 1-4 (`cleanSave()`, v5).
+
+## Phase 6: the kart park (the owner's call)
+
+A Mario-Kart-style place of its own, outside the Parkway in the
+north-east: `kartpark.ts` (the site and the courses as data), `kart-sim.ts`
+(the rules), `kartpark3d.ts` (the site in 3D), `karts.ts` / `kart.ts` (the
+karts and the race on screen) and `kart-ui.ts` (the hut's menu, the HUD,
+the results). Karts stay on the track: they're racing machines, not city
+cars.
+
+- **The site:** a fenced 48 x 46 of open land north of the Parkway's top,
+  a slip road and a gate on its south side, the kart hut (its door opens
+  the menu), a grandstand along the start straight, a big screen, pits.
+- **The Neon Loop:** a figure of eight, about 124 tiles a lap: the start
+  straight down the west side, round the bottom of the west lobe, a diagonal
+  across the middle at ground level, the east lobe with its hairpin, back
+  over the middle on a flyover, the west lobe's top with a hump that throws
+  karts into the air. The reverse course is the same loop the other way.
+  Walls along both edges; scrape them and you lose speed.
+- **The racing:** arcade karts, a hop into a drift that builds a boost in
+  three stages, boost pads, bumps weighted by kart, three laps, seven rivals
+  on the racing line with a rubber band. Three cups (Rookie Lv 1, Pro Lv 4,
+  Neon Lv 9: faster rivals, bigger prizes by place) and time trials (alone,
+  no items, bests kept per course).
+- **Items** from item boxes, dealt by place: Rocket, Oil Slick, Gummy Bomb,
+  Homing Pigeon, Shield, Glow Trail. A hit spins a kart for a second;
+  nothing ever hurts.
+- **The karts:** the Pocket Rocket is free; Zip (Lv 3), Tank Kart (Lv 5)
+  and Big Wheel (Lv 8) cost Dorras at the hut, where every kart gets a
+  motor, soft tyres and a nitro kit (three levels each) and a paint.
+- **The economy:** prizes by place (`CUPS`), XP for finishing, podiums,
+  wins and records (`XP.kart*`), counters `kartRaces` / `podiums` /
+  `kartWins` / `kartHits`, six missions and five badges. Saves carry on
+  (`cleanSave()`, v6).
