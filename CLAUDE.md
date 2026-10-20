@@ -273,6 +273,22 @@ it and has been retired completely. Build only on what's here.
   needs a level (`buyWardrobe()` in `tycoon.ts`). Everything is cosmetic
   and only for the city: never tied to the Shopify store or the token, never
   real money.
+- **The premium wardrobe** (the city's game): Drop 001 also sells
+  `WARDROBE_CATALOG` (catalog.ts) for Dorras earned in the city, each piece
+  with a price and a level: the varsity and puffer fits, the cowboy hat, top
+  hat and neon halo, the duffel bag and neon wings, the phone and briefcase,
+  the gold watch, and the Gold and Holo colour packs for tops and bottoms
+  (`PALETTE.gold` / `PALETTE.holo`, `PACKS`, `packOf()`). The look carries
+  them as ordinary values (`cleanLook()` validates, it never checks
+  ownership); owning them is `wardrobe` in the save (`buyWardrobe()` /
+  `ownsWardrobe()`), and the fitting room (`fitting.ts`, with
+  `game: GameDeps`) is what enforces it: cards show the price and `Lv n`,
+  "Buy · 4,000" opens an inline confirm, locked pieces say the level, pack
+  colours sit under a lock in the colour rows, and the head shows your
+  Dorras and level. Styles in `src/styles/fitting.css`. In `character.ts`
+  the pieces are items like any other; neon pieces (the halo, the wings'
+  edges, the phone's screen) share one `neon()` material coloured per
+  vertex in the lens colour, dim by day so they never bloom out of control.
 - A new item needs a `Look` field with its palette and rules in
   `profile-data.ts` `cleanLook()` (the server checks it too), the mapping in
   `lookOutfit()`, an item in `items()` in `character.ts` and an entry in `fitting.ts`
