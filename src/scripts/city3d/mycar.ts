@@ -1,8 +1,10 @@
 /*
  * Your own car: which model, what paint, and how each model drives. Picked
  * at the garage on the south bank (garage-ui.ts) and kept in the browser.
- * Cars are free and only for the city: nothing is sold, nothing is tied to
- * the store or the token.
+ * The five starters are free; the other three are bought there for Dorras
+ * (catalog.ts has the prices and levels, tycoon.ts the purchase and the
+ * mods that raise these numbers). Cars are only for the city: never real
+ * money, never tied to the store or the token.
  *
  * Kept free of the DOM and of scene code, like the other shared data, so a
  * game server can check a car the same way later.

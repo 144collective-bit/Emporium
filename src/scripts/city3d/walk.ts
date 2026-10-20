@@ -276,6 +276,7 @@ export function createWalk(d: WalkDeps) {
       else d.garage.show(saved);
     },
     away: () => drive.away,
+    game: d.game,
     onOpen() {
       keys.clear();
       jumpHeld = false;
