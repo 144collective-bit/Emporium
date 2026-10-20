@@ -62,6 +62,8 @@ export function createDrive(d: DriveDeps) {
   /** The car out in the city (null while it's on the turntable) */
   let out: { car: Car; model: PlayerCar; state: CarState; tune: DriveTune; holder: THREE.Group } | null = null;
   let active = false;
+  /** Locked (a race's countdown): no throttle or steering, handbrake on */
+  let frozen = false;
   let roofCam = false;
   let camYaw = 0;
   let lookYaw = 0;
@@ -215,12 +217,24 @@ export function createDrive(d: DriveDeps) {
       lookPitch = THREE.MathUtils.clamp(lookPitch + dy, -0.25, 0.7);
       lookIdle = 0;
     },
+    /** Is the car locked (a race's countdown)? */
+    get frozen() {
+      return frozen;
+    },
+    set frozen(on: boolean) {
+      frozen = on;
+    },
+    /** One frame of driving; returns how far the car moved (tiles) */
     update(dt: number, inp: DriveInput) {
-      if (!active || !out) return;
+      if (!active || !out) return 0;
       const s = out.state;
       const T = out.tune;
       const boxes = d.solids();
+      if (frozen) inp = { throttle: 0, steer: 0, handbrake: true };
+      const px = s.x;
+      const pz = s.z;
       const hit = stepCar(s, inp, T, Math.min(dt, 1 / 20), { boxes, soft: gatherSoft(s) }, d.bounds);
+      const moved = Math.hypot(s.x - px, s.z - pz);
       if (hit > 1.2) {
         d.sfx('bump', Math.min(1, hit / 7));
         shake = Math.min(0.25, hit * 0.03);
@@ -284,6 +298,7 @@ export function createDrive(d: DriveDeps) {
         camera.fov = fov;
         camera.updateProjectionMatrix();
       }
+      return moved;
     },
   };
 }

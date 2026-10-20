@@ -32,6 +32,7 @@ import { createTycoonUI, type TycoonUI } from './tycoon-ui';
 import { buildUnits } from './units';
 import { buildBigLots } from './biglots';
 import { buildBeacons } from './beacons';
+import { buildRaceSite } from './racesite';
 import { destAt } from './tycoon';
 import { CARS } from './cars';
 import { CROWD_VIEW } from './character';
@@ -117,6 +118,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const bigLots = buildBigLots(scene);
   // Beams of light over your contracts' drop-offs
   const beacons = buildBeacons(scene, tick, reduced);
+  // The street races' start line on the south bank avenue, and the checkpoint markers
+  const raceSite = buildRaceSite(scene, tick, reduced);
   progress(0.55);
   await nextFrame();
   scatterOutskirts(Q.trees);
@@ -326,6 +329,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     places: () => tycoon?.places() ?? [],
     openPlace: (id) => tycoon?.openCard(id as 'stall'),
     game,
+    raceSite,
   });
   /* ---------- The economy: Dorras, your stall and units, the Workshop, the market hall ---------- */
   tycoon = createTycoonUI(root, {
@@ -642,8 +646,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // The city's own buttons and cards: a label under one folds to a dot, so the
   // Walk / Build pills never sit on top of a building's name. Re-read a few
   // times a second (they open, close and move with the layout)
-  // The header, its open drop-downs (settings, menu) and the welcome card
-  const chrome = [...root.querySelectorAll<HTMLElement>('.city-head, .head-panel, .city-card')];
+  // The header, its open drop-downs (settings, menu), the welcome card and the race HUD (while a race is on)
+  const chrome = [...root.querySelectorAll<HTMLElement>('.city-head, .head-panel, .city-card, .race-hud')];
   const chromeRects: { x: number; y: number; w: number; h: number }[] = [];
   const readChrome = () => {
     const o = host.getBoundingClientRect();
