@@ -2375,42 +2375,7 @@ body.is-walking .nav {
   display: none;
 }
 /* The header's Wallet button: a green dot once connected */
-.city-head .builder-pop > summary .wallet-dot {
-  flex: none;
-}
-.city-head .builder-pop > summary .wallet-dot[hidden] {
-  display: none;
-}
-.builder-wallet-panel {
-  min-width: 300px;
-}
-.builder-wallet {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  font-family: var(--font-mono);
-  font-size: 12px;
-}
-.wallet-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #2bff88;
-  box-shadow: 0 0 8px #2bff88;
-}
-.wallet-addr {
-  color: var(--text);
-}
-.wallet-bal {
-  color: var(--p-cyan);
-  font-weight: 700;
-}
-.tag-demo {
-  padding: 0.25em 0.6em;
-  font-size: 9.5px;
-}
-.tag-mine {
+.city-head .builder-pop > summary .tag-mine {
   border: 1px solid #ff6ad5;
   background: #ff6ad51f;
 }
@@ -2535,31 +2500,6 @@ body.is-walking .nav {
   border-color: var(--p-cyan);
   background: #00eaff14;
 }
-.wallet-off {
-  display: inline-grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  border: 1px solid var(--line);
-  border-radius: 50%;
-  background: none;
-  color: var(--text-2);
-  font-size: 15px;
-  line-height: 1;
-  cursor: pointer;
-}
-.wallet-off:hover {
-  color: #fff;
-  border-color: #ffffff40;
-}
-.tag-taken {
-  border: 1px solid #a36bff;
-  background: #8000ff26;
-}
-.tag-pending {
-  border: 1px solid #ffd36b;
-  background: #ffd36b1f;
-}
 .city-panel-actions [aria-disabled="true"] {
   opacity: 0.55;
 }
@@ -2675,49 +2615,6 @@ body.is-walking .nav {
 }
 .builder-modal-card .city-panel-close[hidden] {
   display: none;
-}
-.buy-steps {
-  display: grid;
-  gap: 12px;
-  list-style: none;
-}
-.buy-steps li {
-  position: relative;
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  padding-left: 28px;
-  color: var(--muted);
-}
-.buy-steps li small {
-  font-family: var(--font-mono);
-  font-size: 9.5px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-.buy-steps li::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 2px;
-  width: 16px;
-  height: 16px;
-  border: 2px solid var(--line);
-  border-radius: 50%;
-}
-.buy-steps li.is-now {
-  color: #fff;
-}
-.buy-steps li.is-now::before {
-  border-color: var(--p-cyan) transparent var(--p-cyan) var(--p-cyan);
-  animation: spin 0.8s linear infinite;
-}
-.buy-steps li.is-done {
-  color: var(--text-2);
-}
-.buy-steps li.is-done::before {
-  border-color: #2bff88;
-  background: #2bff88;
 }
 @keyframes spin {
   to { transform: rotate(360deg); }
