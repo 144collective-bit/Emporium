@@ -515,12 +515,12 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
   <template data-panel-tpl="shop">
     <p class="kicker"><span class="kicker-num">02</span> Clothes</p>
     <h2 id="city-panel-title" class="city-panel-title">Drop 001</h2>
-    <p class="city-panel-text">The city's clothes shop. Try fits on your Degen in the fitting room.</p>
-    {/* Dress your Degen (fitting.ts): free, cosmetic, only for the city. Nothing here is sold. */}
+    <p class="city-panel-text">The city's clothes shop. Try fits on your Degen in the fitting room, and spend your Dorras on the premium rail.</p>
+    {/* Dress your Degen (fitting.ts): the originals are free, the premium wardrobe costs Dorras earned in the city (never real money, nothing to do with the merch store). */}
     <section class="fit" data-fit aria-labelledby="fit-title">
       <div class="fit-head">
         <h3 id="fit-title" class="fit-title">Fitting room</h3>
-        <span class="fit-free">Free · for your Degen</span>
+        <span class="fit-balance" data-fit-balance aria-label="Your Dorras and level"></span>
       </div>
       <div class="fit-stage">
         <canvas class="fit-canvas" data-fit-canvas aria-hidden="true"></canvas>
@@ -528,8 +528,9 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       </div>
       <div class="fit-tabs" data-fit-tabs role="tablist" aria-label="Wardrobe"></div>
       <div class="fit-items" data-fit-items></div>
+      <div class="fit-confirm" data-fit-confirm role="group" aria-label="Confirm the purchase" hidden></div>
       <div class="fit-colors" data-fit-colors></div>
-      <p class="fit-note">He wears it when you walk the city, and online. Nothing to buy here.</p>
+      <p class="fit-note">The originals are free. The premium pieces cost Dorras you earn in the city: never real money, and nothing to do with the merch store. He wears it when you walk the city, and online.</p>
       <button type="button" class="chip-link fit-reset" data-fit-reset>Back to the classic look</button>
     </section>
   </template>

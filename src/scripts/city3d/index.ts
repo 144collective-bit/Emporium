@@ -383,6 +383,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     look: () => profileUI.look,
     apply: (l) => profileUI.wear(l),
     onChange: (fn) => profileUI.onChange(fn),
+    game,
     reduced,
     low: tier === 'low',
   });
