@@ -372,6 +372,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       // One card at a time: the stall's card and a building's panel
       close();
     },
+    sfx: (kind, gain) => sound.sfx(kind, gain),
   });
   // The Profile panel (wardrobe, finish, rank) works offline; multiplayer only when the site has a game server
   const profileUI = createProfileUI(root, {

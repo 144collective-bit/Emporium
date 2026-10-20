@@ -138,6 +138,8 @@ import {
   type LotKind,
 } from './tycoon';
 import { DOORS, LOT_SITE, STALL_SPOT, UNIT_SITE } from './solids';
+import type { Sfx } from './combat';
+import { createMissionsUI } from './missions-ui';
 
 const KEY = 'degen-city-tycoon-v1';
 const fmt = new Intl.NumberFormat('en-US');
@@ -205,6 +207,8 @@ export interface TycoonHooks {
   stock(s: TycoonSave): void;
   /** The card opened (walk mode frees the mouse) */
   opened(): void;
+  /** The sound switch (missions claimed, level-ups) */
+  sfx(kind: Sfx, gain?: number): void;
 }
 
 /** Make `to` match `from` in place: same elements kept, only what differs is changed */
@@ -290,6 +294,8 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     clearTimeout(toastTimer);
     toastTimer = window.setTimeout(() => toastEl.classList.remove('is-on'), ms);
   }
+  // Missions, the level pill and badges (missions-ui.ts) run on the same save; `changed()` is hoisted
+  const missions = createMissionsUI(root, { save: () => save, commit: () => changed(), toast, sfx: (kind, gain) => h.sfx(kind, gain) });
 
   /* ---------- Places ---------- */
   function placeName(p: PlaceId) {
@@ -849,7 +855,8 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
   }
   const onClick = (e: Event) => {
     const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('button');
-    if (btn && !btn.disabled) act(btn, Date.now());
+    // The mission board's buttons first (on the Signal tower's panel), then the economy's
+    if (btn && !btn.disabled && !missions.act(btn)) act(btn, Date.now());
   };
   card.addEventListener('click', onClick);
   pill.addEventListener('click', () => (card.hidden ? openCard() : closeCard()));
@@ -915,7 +922,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
         : panel.id === 'workshop'
           ? `${workshopView()}${noteHtml}${toCard('workshop')}`
           : panel.id === 'signal'
-            ? `${contractsView(now)}${noteHtml}${toCard('car')}`
+            ? `${contractsView(now)}${noteHtml}${missions.boardHtml(now)}${toCard('car')}`
             : panel.id === 'telegram'
               ? `${couriersView(now)}${noteHtml}${toCard('units')}`
               : panel.id === 'vault'
@@ -927,6 +934,8 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
   /* ---------- Ticking ---------- */
   let lastShown = '';
   function changed() {
+    // Badges and level-ups first, so their XP is in the save that's stored
+    missions.onCommit();
     store();
     paintPill();
     paintCard();
@@ -983,6 +992,8 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
       changed();
     },
     toast,
+    /** The mission board, level pill and badges (missions-ui.ts) */
+    missions,
     /** Your places on foot (walk-mode prompts): your stall, the four units, and your contracts' drop-offs */
     places() {
       return [
