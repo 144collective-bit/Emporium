@@ -692,7 +692,8 @@ export function createKartRace(d: KartRaceDeps): KartRace {
       d.park.showBoxes(null);
       d.park.setCourse('neon-loop');
       // Out of the hut's door, a tile south of it, facing the track (walk.ts: forward is (sin yaw, cos yaw))
-      return { x: HUT_DOOR.x, z: HUT_DOOR.z + 1, yaw: Math.PI };
+      // (walk.ts looks along -z at yaw 0: at the track)
+      return { x: HUT_DOOR.x, z: HUT_DOOR.z + 1, yaw: 0 };
     },
     preview(k) {
       picked = k;

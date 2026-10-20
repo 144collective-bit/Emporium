@@ -377,8 +377,8 @@ export const HUT_DOOR = (() => {
   const [x, z] = toWorld(SITE.hut.door);
   return { x, z, yaw: -Math.PI / 2 };
 })();
-/** Where you spawn when you walk in from the city panel: inside the gate, facing the track */
-export const KART_SPAWN = { x: GATE.inside[0], z: GATE.inside[1], yaw: Math.PI };
+/** Where you spawn when you walk in from the city panel: inside the gate, looking north at the track (walk.ts looks along -z at yaw 0) */
+export const KART_SPAWN = { x: GATE.inside[0], z: GATE.inside[1], yaw: 0 };
 
 /** x0, z0, x1, z1, height (solids.ts Box) */
 type Box = [number, number, number, number, number];
