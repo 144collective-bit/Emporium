@@ -12,9 +12,9 @@ plan the owner agreed, and where each phase stands. Keep it up to date.
   plain data so it can move to the game server later.
 - **Pace:** businesses earn a little while you're away (capped) and much more
   while you play.
-- **PLS:** earn-only for now. Topping up with PLS comes later, through the
-  game server (a browser balance can be edited and lost, so real money never
-  goes through it).
+- **No real money anywhere.** Dorras are only earned. Plot sales for PLS
+  were retired in Phase 5; if top-ups ever come, they go through the game
+  server (a browser balance can be edited and lost), never a browser balance.
 
 ## How you grow
 
@@ -24,10 +24,11 @@ plan the owner agreed, and where each phase stands. Keep it up to date.
 2. **Shop units.** Small lots of your own: a shop, studio, garden or
    warehouse.
 3. **Big lots** (the owner's call in Phase 4): three Dorras-only lots east of
-   Makers' Row are the top tier, for a superstore, a factory, a depot or
-   your offices. The 16 district plots stay purely PLS land (the labelled
-   play-money demo while the server is paused) and are never part of the
-   Dorras game: real money and game money stay apart.
+   Makers' Row, for a superstore, a factory, a depot or your offices.
+4. **District plots** (Phase 5, the owner's call): the 16 district plots are
+   the top of the property ladder, bought with Dorras at the Vault's estate
+   agent and built on in Build mode. Sales for PLS were retired: nothing in
+   the city costs real money.
 
 ## Supply chain (from phase 2)
 
@@ -45,14 +46,15 @@ store, X and Telegram are in the ☰ Menu.
 | Landmark | Role | Phase |
 | --- | --- | --- |
 | The Emporium | **Market hall**: buy and sell goods at prices that move | 1 (built) |
-| Drop 001 | Clothes (the fitting room, free for now) | built |
-| The Armoury | Guns and gear for target practice | built |
-| The Workshop | **Factory**: turn raw goods into products | 2 (built) |
-| Signal tower | **News and contracts**: "deliver 19 Iced Coffee to the Armoury" | 3 (built) |
+| Drop 001 | **Clothes**: the fitting room; the original wardrobe is free, the premium wardrobe costs Dorras | built, 5 |
+| The Armoury | **Guns**: the starters unlock with score; premium guns and every gun's mods cost Dorras | built, 5 |
+| The Workshop | **Factory**: turn raw goods into products; levels 1-3 | 2 (built), 5 |
+| Signal tower | **News, contracts and the mission board** | 3 (built), 5 |
 | Post office | **Couriers**: send goods between your places when you'd rather not drive | 3 (built) |
 | Apartments | **Staff**: hire workers who raise a business's output | 3 (built) |
-| The Vault | **Bank**: what you're worth, the ledger, loans | 4 (built) |
-| Garage | Cars and cargo space | 2 (built) |
+| The Vault | **Bank and estate agent**: what you're worth, the ledger, loans, the district plots | 4 (built), 5 |
+| Garage | **Dealership and tuning**: the starter cars are free, premium cars and mods cost Dorras | 2 (built), 5 |
+| Start line (south bank) | **Street races** against the clock | 5 |
 
 ## Build order
 
@@ -67,8 +69,14 @@ store, X and Telegram are in the ☰ Menu.
    couriers, staff hired at the Apartments.
 4. **The top tier** (built). Big lots bought with Dorras, and the Vault as
    the bank (ledger and loans).
-5. **Later, with the server.** PLS top-ups, a shared market between players,
-   south-bank security and raids.
+5. **The city's game** (built, one batch, the owner's call): XP, levels and
+   titles; the garage sells and tunes cars; the Armoury sells and upgrades
+   guns; Drop 001 sells a premium wardrobe; the Vault's estate agent sells
+   the district plots; the places you run gain levels; street races on the
+   south bank; a mission board at the Signal tower; badges; a cartoon rival
+   crew on the south bank. See "Phase 5" below.
+6. **Later, with the server.** A shared market between players, south-bank
+   security and raids.
 
 Each phase comes with its own tests and docs, and gets the owner's sign-off
 before the next one starts.
@@ -167,7 +175,7 @@ before the next one starts.
 - **Big lots** (`BIG_LOTS` in `layout.ts`, drawn by `biglots.ts`; rules
   `buyLot()`, `buildLot()` in `tycoon.ts`): Lots A, B and C, 9 x 9, east of
   Makers' Row and the market, on the streets there. 25,000, then 50,000 and
-  90,000 Dorras, never PLS. Built as:
+  90,000 Dorras. Built as:
   - **Superstore** (8,000): six aisles of 100, 2.5x the customers; takes a
     clerk.
   - **Factory** (10,000): its own bay (400) and production line, twice the
@@ -187,3 +195,46 @@ before the next one starts.
   pay any time). Only one at a time. No interest rates or savings returns
   anywhere: Dorras are game money.
 - Saves carry on from Phases 1-3 (`cleanSave()`, v4).
+
+## Phase 5: the city's game
+
+- **Rules:** `catalog.ts` (prices, levels, the XP curve, mods), `tycoon.ts`
+  (the save, v5, and every function that spends or earns), `races.ts`,
+  `missions.ts`; all DOM-free and tested (`tests/game.test.ts`). Screens
+  get at the save through `GameDeps` in `ui.ts` (`save()`, `commit()`,
+  `toast()`, `sfx()`).
+- **XP and levels** (`xpForLevel`, `levelFor`, `titleFor`, 40 levels): XP
+  for every sale, contract, upgrade, purchase of property, takedown, race and
+  mission; badges (lifetime milestones) add more. The level pill in the mode
+  header shows it; levels gate the premium catalog and the district plots.
+- **The starter tier is free** (the owner's call): the five original cars,
+  the four original guns (still unlocked by score) and the original
+  wardrobe. Everything new costs Dorras and needs a level.
+- **The garage** sells three premium cars (Street Thunder, Big Rover, Hyper
+  Comet) and tunes every car: engine, turbo, tyres and a roof rack, three
+  levels each (`CAR_MODS`, `carStats`); mods change the handling and the
+  boot.
+- **The Armoury** sells three premium guns (Hand Cannon, Tri-Tap, Belt
+  Feeder) and upgrades any gun at its workbench: barrel, extended mag, grip
+  and stock, three levels each (`GUN_MODS`, `applyGunMods`).
+- **Drop 001** sells the premium wardrobe (`WARDROBE_CATALOG`): new fits,
+  hats, bags, things to hold, a watch and two colour packs.
+- **The estate agent** (in the Vault): the sixteen district plots at
+  `PLOT_DORRAS`, dearer with each one you own, level `PLOT_LEVEL` to buy;
+  building on one costs `BUILD_COSTS` per design (the difference when
+  changing); selling back pays `PLOT_REFUND`. Build mode's Plots button
+  sums it up.
+- **Levels for your places:** units, big lots and the Workshop go up to
+  level 3 (`upgradePlace`): more room, more customers, faster work. The
+  buildings show it.
+- **Street races** (`races.ts`): four courses of checkpoints on the roads
+  from the start line on the south bank avenue (in front of South 4), a
+  countdown, a prize scaled by par, best times kept, extra XP for par and
+  records.
+- **Missions** (`missions.ts`): a board in tiers by level, up to three at
+  once, progress counted from when you took one (the save's `counters`),
+  claim for Dorras and XP. Badges land on their own.
+- **The crew** (`combat-sim.ts`): a cartoon rival crew patrols the south
+  bank; knocking them down counts for missions and badges. They shove, never
+  shoot; the city north of the river stays a safe hangout.
+- Saves carry on from Phases 1-4 (`cleanSave()`, v5).
