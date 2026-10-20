@@ -9,7 +9,7 @@ import { BLOCKS, BS, CENTER, CORE_ROADS, DISTRICTS, EW_ROADS, NS_ROADS, RIVER, S
 import { CITY_EXT, laneCentres } from './layout';
 import { CARS, PAINTS, carGeometry, carMaterials, type CarId } from './cars';
 import type { Idle } from './landmarks';
-import { chatPose, cityOutfit, createCrowd, idlePose, lookPose, newPose, sitPose, walkPose } from './character';
+import { HIP_HEIGHT, chatPose, cityOutfit, createCrowd, idlePose, lookPose, newPose, sitPose, walkPose } from './character';
 
 export interface LifeOpts {
   cars: number;
@@ -328,7 +328,7 @@ const WALK_LANES: { inset: number; dir: 1 | -1; speed: number }[] = [
 ];
 const PERSON_SCALE = 0.66;
 /** How far the hips sit above the feet when seated, at PERSON_SCALE */
-const SEAT_DROP = 0.47 * PERSON_SCALE;
+const SEAT_DROP = (HIP_HEIGHT - 0.03) * PERSON_SCALE;
 
 function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f: Tick) => void) {
   const people: Person[] = [];

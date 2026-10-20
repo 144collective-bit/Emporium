@@ -62,12 +62,27 @@ export interface Outfit {
 }
 
 /** Degen as he is in the art. */
-export const PLAYER: Outfit = { kind: 'suit', top: '#16141f', bottom: '#16141f', shoes: '#1b1830', tie: '#1f9d55', cap: '#d8312f', chain: true, held: 'gummy' };
-export const SOLDIER: Outfit = { kind: 'soldier', top: '#5a6b3a', bottom: '#465530', shoes: '#2b2a33', rifle: 'right' };
+export const PLAYER: Outfit = {
+  kind: 'suit',
+  top: '#16141f',
+  bottom: '#16141f',
+  shoes: '#1b1830',
+  tie: '#1f9d55',
+  cap: '#d8312f',
+  chain: true,
+  held: 'gummy',
+};
+export const SOLDIER: Outfit = {
+  kind: 'soldier',
+  top: '#5a6b3a',
+  bottom: '#465530',
+  shoes: '#2b2a33',
+  rifle: 'right',
+};
 
 /* ---------- The rig ---------- */
 
-type Joint = 'torso' | 'head' | 'armL' | 'armR' | 'foreL' | 'foreR' | 'legL' | 'legR' | 'shinL' | 'shinR' | 'handL' | 'handR';
+type Joint = 'pelvis' | 'torso' | 'head' | 'armL' | 'armR' | 'foreL' | 'foreR' | 'legL' | 'legR' | 'shinL' | 'shinR' | 'handL' | 'handR';
 
 export interface Rig {
   root: THREE.Object3D;
@@ -75,7 +90,25 @@ export interface Rig {
   j: Record<Joint, THREE.Object3D>;
 }
 
-const HIP_Y = 0.5;
+/*
+ * Proportions: about 1.25 tall to the crown at scale 1 (Degen's height in
+ * the city comes from each caller's scale), about six and a half heads, a
+ * touch more head than real life so the balaclava, shades and cap still
+ * read from the street. Hips at 0.62, knees at 0.33, shoulders at 0.98.
+ */
+const HIP_Y = 0.62;
+/** Hip height (for seating figures on benches) */
+export const HIP_HEIGHT = HIP_Y;
+/** Bones: the neck and shoulders in the chest's space, then the limbs */
+const NECK = 0.41;
+const SHOULDER_X = 0.158;
+const SHOULDER_Y = 0.36;
+const UPPER_ARM = 0.215;
+/** The middle of the palm in the forearm's space (the hand's centre) */
+const PALM_Y = 0.24;
+const PALM_Z = 0.006;
+const LEG_X = 0.08;
+const THIGH = 0.29;
 
 function makeRig(): Rig {
   const node = (parent: THREE.Object3D, x: number, y: number, z = 0) => {
@@ -87,18 +120,36 @@ function makeRig(): Rig {
   const root = new THREE.Object3D();
   const hips = node(root, 0, HIP_Y);
   const torso = node(hips, 0, 0);
-  const head = node(torso, 0, 0.43);
-  const armL = node(torso, -0.19, 0.38);
-  const armR = node(torso, 0.19, 0.38);
-  const foreL = node(armL, 0, -0.2);
-  const foreR = node(armR, 0, -0.2);
-  const handL = node(foreL, 0, -0.225, 0.015);
-  const handR = node(foreR, 0, -0.225, 0.015);
-  const legL = node(hips, -0.075, 0);
-  const legR = node(hips, 0.075, 0);
-  const shinL = node(legL, 0, -0.24);
-  const shinR = node(legR, 0, -0.24);
-  return { root, hips, j: { torso, head, armL, armR, foreL, foreR, legL, legR, shinL, shinR, handL, handR } };
+  const head = node(torso, 0, NECK);
+  const armL = node(torso, -SHOULDER_X, SHOULDER_Y);
+  const armR = node(torso, SHOULDER_X, SHOULDER_Y);
+  const foreL = node(armL, 0, -UPPER_ARM);
+  const foreR = node(armR, 0, -UPPER_ARM);
+  const handL = node(foreL, 0, -PALM_Y - 0.01, 0.015);
+  const handR = node(foreR, 0, -PALM_Y - 0.01, 0.015);
+  const legL = node(hips, -LEG_X, 0);
+  const legR = node(hips, LEG_X, 0);
+  const shinL = node(legL, 0, -THIGH);
+  const shinR = node(legR, 0, -THIGH);
+  return {
+    root,
+    hips,
+    j: {
+      pelvis: hips,
+      torso,
+      head,
+      armL,
+      armR,
+      foreL,
+      foreR,
+      legL,
+      legR,
+      shinL,
+      shinR,
+      handL,
+      handR,
+    },
+  };
 }
 
 /* ---------- Poses ---------- */
@@ -227,7 +278,7 @@ export function chatPose(p: Pose, t: number, seed = 0) {
   p.headYaw = Math.sin(t * 0.3 + seed) * 0.25;
 }
 
-/** Sitting on a bench: thighs level, hands on the knees. Hips sit 0.47 above the feet's root. */
+/** Sitting on a bench: thighs level, hands on the knees. Hips sit HIP_HEIGHT - 0.03 above the feet's root. */
 export function sitPose(p: Pose, t: number, seed = 0) {
   p.bob = -0.03;
   p.lean = -0.08 + Math.sin(t * 0.3 + seed) * 0.03;
@@ -298,14 +349,10 @@ export function dancePose(p: Pose, t: number) {
 
 /* ---------- Reaching (hands on a gun) ---------- */
 
-const UPPER_ARM = 0.2;
-/** The middle of the palm in the forearm's space (the hand part's centre) */
-const PALM_Y = 0.215;
-const PALM_Z = 0.006;
 const PALM_R = Math.hypot(PALM_Y, PALM_Z);
 const PALM_TILT = Math.atan2(PALM_Z, PALM_Y);
 /** Shoulders in the chest's space (arms[0] is the rig's -x arm, arms[1] the +x one) */
-const SHOULDERS = [new THREE.Vector3(-0.19, 0.38, 0), new THREE.Vector3(0.19, 0.38, 0)] as const;
+const SHOULDERS = [new THREE.Vector3(-SHOULDER_X, SHOULDER_Y, 0), new THREE.Vector3(SHOULDER_X, SHOULDER_Y, 0)] as const;
 
 /** How far a palm can be from its shoulder */
 export const ARM_REACH = UPPER_ARM + PALM_R;
@@ -404,283 +451,1201 @@ export function lookOutfit(l: Look): Outfit {
   };
 }
 
-/* ---------- Parts ---------- */
+/* ---------- Shapes ---------- */
 
-type ColorKey = 'top' | 'bottom' | 'shoes' | 'tie' | 'cap' | 'beanie' | 'bucket' | 'lapel' | 'backpack' | 'crossbody' | 'board' | 'headphones';
-interface Part {
-  joint: Joint;
-  geo: THREE.BufferGeometry;
-  /** A fixed colour, or which outfit colour to use */
-  color: string | ColorKey;
-  /** A material of its own (made per figure; `o` is left out for crowds) */
-  mat?: (o?: Outfit) => THREE.Material;
-  when: (o: Outfit) => boolean;
-  /** Small details left out of the light (phone) crowd */
-  detail?: boolean;
-  /** Thicker on hoodies and fatigues than on a suit */
-  fat?: boolean;
-  /** Parts a single figure hands back by name */
-  name?: 'held';
-}
+/** Detail level: 0 the light (phone) crowd, 1 the crowd, 2 a single figure (the player, the hologram) */
+export type Detail = 0 | 1 | 2;
 
-const FAT = new THREE.Vector3(1.16, 1, 1.16);
-const isFat = (p: Part, o: Outfit) => !!p.fat && o.kind !== 'suit';
+/** A cross-section: height, half-width, half-depth and how far forward its middle sits */
+type Sec = [y: number, hw: number, hd: number, z?: number];
 
-const SKIN = '#e8c39e';
-const BLACK = '#16141f';
-const rbox = (w: number, h: number, d: number, r: number, x = 0, y = 0, z = 0) => new RoundedBoxGeometry(w, h, d, 2, r).translate(x, y, z);
-const caps = (r: number, len: number, y: number) => new THREE.CapsuleGeometry(r, len, 3, 10).translate(0, y, 0);
-const merge = (...g: THREE.BufferGeometry[]) =>
-  mergeGeometries(
-    g.map((x) => {
-      const n = x.index ? x.toNonIndexed() : x;
-      for (const k of Object.keys(n.attributes)) if (!['position', 'normal', 'uv'].includes(k)) n.deleteAttribute(k);
-      return n;
-    })
-  )!;
-/** Narrow a geometry towards its bottom: `waist` is the width kept at the bottom edge. */
-const taper = (g: THREE.BufferGeometry, waist: number) => {
-  g.computeBoundingBox();
-  const { min, max } = g.boundingBox!;
-  const pos = g.attributes.position as THREE.BufferAttribute;
-  for (let i = 0; i < pos.count; i++) {
-    const f = (pos.getY(i) - min.y) / (max.y - min.y);
-    pos.setX(i, pos.getX(i) * (waist + (1 - waist) * Math.min(1, f * 1.25)));
+const sorted = (secs: Sec[]) => [...secs].sort((a, b) => a[0] - b[0]);
+
+/**
+ * A smooth closed body through cross-sections up y: superellipse rings
+ * (`n` 2 is an ellipse, higher is boxier), each end closed on its middle.
+ * Ending on a tiny section makes a dome.
+ */
+function loft(secs: Sec[], seg: number, n = 2) {
+  const ss = sorted(secs);
+  const R = ss.length;
+  const pos: number[] = [];
+  const idx: number[] = [];
+  const e = 2 / n;
+  for (const [y, hw, hd, z = 0] of ss)
+    for (let k = 0; k < seg; k++) {
+      const a = (k / seg) * Math.PI * 2;
+      const c = Math.cos(a);
+      const s = Math.sin(a);
+      pos.push(Math.sign(c) * Math.abs(c) ** e * hw, y, z + Math.sign(s) * Math.abs(s) ** e * hd);
+    }
+  for (let i = 0; i < R - 1; i++)
+    for (let k = 0; k < seg; k++) {
+      const a = i * seg + k;
+      const b = i * seg + ((k + 1) % seg);
+      idx.push(a, a + seg, b, b, a + seg, b + seg);
+    }
+  const lo = R * seg;
+  pos.push(0, ss[0][0], ss[0][3] ?? 0, 0, ss[R - 1][0], ss[R - 1][3] ?? 0);
+  for (let k = 0; k < seg; k++) {
+    const k1 = (k + 1) % seg;
+    idx.push(lo, k, k1, lo + 1, (R - 1) * seg + k1, (R - 1) * seg + k);
   }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array((pos.length / 3) * 2), 2));
+  g.setIndex(idx);
   g.computeVertexNormals();
   return g;
-};
+}
+
+/** Where a loft's surface is at (x, y): its front (side 1) or back (side -1) */
+function surface(secs: Sec[], n = 2, side = 1) {
+  const ss = sorted(secs);
+  return (x: number, y: number) => {
+    let i = 0;
+    while (i < ss.length - 2 && y > ss[i + 1][0]) i++;
+    const [y0, w0, d0, z0 = 0] = ss[i];
+    const [y1, w1, d1, z1 = 0] = ss[i + 1];
+    const f = THREE.MathUtils.clamp((y - y0) / (y1 - y0 || 1), 0, 1);
+    const hw = w0 + (w1 - w0) * f;
+    const hd = d0 + (d1 - d0) * f;
+    const u = Math.min(0.995, Math.abs(x) / hw);
+    return z0 + (z1 - z0) * f + side * hd * (1 - u ** n) ** (1 / n);
+  };
+}
+
+/** How finely flat pieces are split to follow a curved body: single figures only (a crowd's are lifted a touch instead) */
+let bend = 0;
+/** A flat shape (x, y) with a little thickness, lying on a surface `lift` above it */
+function onBody(pts: [number, number][] | THREE.Shape, depth: number, surf: (x: number, y: number) => number, lift: number, side = 1) {
+  const shape = Array.isArray(pts) ? new THREE.Shape(pts.map(([x, y]) => new THREE.Vector2(x, y))) : pts;
+  const flatG = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false, curveSegments: 6 });
+  const g = bend ? tessellate(flatG, bend) : flatG;
+  if (!bend) lift += 0.003;
+  const p = g.attributes.position as THREE.BufferAttribute;
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i);
+    const y = p.getY(i);
+    p.setZ(i, surf(x, y) + side * (lift + p.getZ(i)));
+  }
+  if (side < 0) flipFaces(g);
+  g.computeVertexNormals();
+  return g;
+}
+/** Split a geometry's triangles across their longest edges until none is longer than `max` (so a flat piece can bend over a body) */
+function tessellate(g: THREE.BufferGeometry, max: number) {
+  const src = (g.index ? g.toNonIndexed() : g).attributes.position.array as ArrayLike<number>;
+  const out: number[] = [];
+  const v = (i: number) => [src[i], src[i + 1], src[i + 2]];
+  const mid = (a: number[], b: number[]) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2];
+  const len = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+  const split = (a: number[], b: number[], c: number[]): void => {
+    const ab = len(a, b);
+    const bc = len(b, c);
+    const ca = len(c, a);
+    const top = Math.max(ab, bc, ca);
+    if (top <= max) {
+      out.push(...a, ...b, ...c);
+      return;
+    }
+    if (top === ab) {
+      const m = mid(a, b);
+      split(a, m, c);
+      split(m, b, c);
+    } else if (top === bc) {
+      const m = mid(b, c);
+      split(a, b, m);
+      split(a, m, c);
+    } else {
+      const m = mid(c, a);
+      split(a, b, m);
+      split(m, b, c);
+    }
+  };
+  for (let i = 0; i < src.length; i += 9) split(v(i), v(i + 3), v(i + 6));
+  g.dispose();
+  const t = new THREE.BufferGeometry();
+  t.setAttribute('position', new THREE.Float32BufferAttribute(out, 3));
+  t.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array((out.length / 3) * 2), 2));
+  return t;
+}
+/** Turn a non-indexed geometry's faces inside out (after mirroring it front to back) */
+function flipFaces(g: THREE.BufferGeometry) {
+  const p = g.attributes.position as THREE.BufferAttribute;
+  for (let i = 0; i < p.count; i += 3) {
+    for (let k = 0; k < 3; k++) {
+      const t = p.getComponent(i + 1, k);
+      p.setComponent(i + 1, k, p.getComponent(i + 2, k));
+      p.setComponent(i + 2, k, t);
+    }
+  }
+}
+
+/** A rounded rectangle (or superellipse, `n` higher is squarer) centred on the origin */
+function roundRect(w: number, h: number, n = 4, pts = 24, squeeze = 0, cy = 0) {
+  const s = new THREE.Shape();
+  for (let k = 0; k < pts; k++) {
+    const a = (k / pts) * Math.PI * 2;
+    const c = Math.cos(a);
+    const si = Math.sin(a);
+    const y = Math.sign(si) * Math.abs(si) ** (2 / n) * (h / 2);
+    // `squeeze` narrows the bottom (the shades' lenses)
+    const x = Math.sign(c) * Math.abs(c) ** (2 / n) * (w / 2) * (1 - squeeze * Math.max(0, -y / (h / 2)));
+    if (k === 0) s.moveTo(x, y + cy);
+    else s.lineTo(x, y + cy);
+  }
+  s.closePath();
+  return s;
+}
+
+/**
+ * A side profile (forward, up) turned into a solid `w` wide, rounded at the
+ * edges (shoes). The first two points are the flat bottom; the rest is a
+ * smooth curve over the toe, the top and the heel.
+ */
+function profile(pts: [number, number][], w: number, round: number, curve = 6) {
+  const v = pts.map(([u, y]) => new THREE.Vector2(u, y));
+  const s = new THREE.Shape().moveTo(v[0].x, v[0].y).lineTo(v[1].x, v[1].y);
+  s.splineThru(v.slice(2).concat([v[0]]));
+  const g = new THREE.ExtrudeGeometry(s, {
+    depth: w - round * 2,
+    bevelEnabled: round > 0,
+    bevelThickness: round,
+    bevelSize: round,
+    bevelOffset: -round,
+    bevelSegments: 2,
+    curveSegments: curve,
+  });
+  g.translate(0, 0, -(w - round * 2) / 2);
+  return g.rotateY(-Math.PI / 2);
+}
+
+const tube = (pts: [number, number, number][], r: number, seg: number, rad = 5) =>
+  new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts.map(([x, y, z]) => new THREE.Vector3(x, y, z))), seg, r, rad);
+
+/** A seam line over a loft's surface at angle `a` (0 is +x, PI/2 the front) */
+function meridian(secs: Sec[], n: number, a: number, from: number, r: number, lift = 1.012) {
+  const e = 2 / n;
+  const c = Math.cos(a);
+  const s = Math.sin(a);
+  const pts = sorted(secs)
+    .filter(([y]) => y >= from)
+    .map(([y, hw, hd, z = 0]): [number, number, number] => [Math.sign(c) * Math.abs(c) ** e * hw * lift, y, z + Math.sign(s) * Math.abs(s) ** e * hd * lift]);
+  return tube(pts, r, pts.length * 3, 4);
+}
+
+const rbox = (w: number, h: number, d: number, r: number, x = 0, y = 0, z = 0) => new RoundedBoxGeometry(w, h, d, 2, r).translate(x, y, z);
 const flat = (pts: [number, number][], z: number, depth: number) => {
   const g = new THREE.ExtrudeGeometry(new THREE.Shape(pts.map(([x, y]) => new THREE.Vector2(x, y))), { depth, bevelEnabled: false });
   g.translate(0, 0, z);
   return g;
 };
 const mirror = (pts: [number, number][]) => pts.map(([x, y]) => [-x, y] as [number, number]).reverse();
+/** Wider or narrower everywhere, for looser clothes on the same body */
+const grow = (secs: Sec[], k: number, dz = 0): Sec[] => secs.map(([y, hw, hd, z = 0]) => [y, hw * k, hd * k, z + dz]);
 
-let partsCache: Part[] | null = null;
-function parts(): Part[] {
-  if (partsCache) return partsCache;
+/** Strip a geometry to what merging needs: no index, position, normal, uv */
+function plain(g: THREE.BufferGeometry) {
+  const n = g.index ? g.toNonIndexed() : g.clone();
+  for (const k of Object.keys(n.attributes)) if (!['position', 'normal', 'uv'].includes(k)) n.deleteAttribute(k);
+  if (!n.attributes.uv) n.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(n.attributes.position.count * 2), 2));
+  if (!n.attributes.normal) n.computeVertexNormals();
+  return n;
+}
+/** Merge geometries, each painted one colour per vertex */
+function paintMerge(list: { geo: THREE.BufferGeometry; color: THREE.Color }[]) {
+  return mergeGeometries(
+    list.map(({ geo, color }) => {
+      const n = plain(geo);
+      const c = new Float32Array(n.attributes.position.count * 3);
+      for (let i = 0; i < c.length; i += 3) {
+        c[i] = color.r;
+        c[i + 1] = color.g;
+        c[i + 2] = color.b;
+      }
+      n.setAttribute('color', new THREE.BufferAttribute(c, 3));
+      return n;
+    })
+  )!;
+}
+
+/* ---------- The wardrobe: items, each a set of pieces on the rig's joints ---------- */
+
+type ColorKey = 'top' | 'bottom' | 'shoes' | 'tie' | 'cap' | 'beanie' | 'bucket' | 'backpack' | 'crossbody' | 'board' | 'headphones';
+/** Pieces with a material of their own: the shades' lenses, the cap patch, the gummy bag, the raised hood (both sides drawn) */
+type Mat = 'lens' | 'patch' | 'gummy' | 'double';
+interface Piece {
+  joint: Joint;
+  geo: THREE.BufferGeometry;
+  /** A fixed colour, or the outfit colour it takes */
+  color: string | ColorKey;
+  /** Darker or lighter than the outfit colour (lapels, ribbing) */
+  shade?: number;
+  mat?: Mat;
+  /** Small details left out of the light (phone) crowd */
+  detail?: boolean;
+}
+interface Item {
+  id: string;
+  when: (o: Outfit) => boolean;
+  pieces: Piece[];
+  /** Carried in the right hand (put away while Degen holds a gun) */
+  held?: boolean;
+}
+
+const SKIN = '#e8c39e';
+const BLACK = '#16141f';
+const WHITE = '#f3f2f7';
+/** Shirts a shade under white, so the key light doesn't bloom them */
+const SHIRT = '#cfcedb';
+const GOLD = '#e2b04a';
+
+const itemsCache: Partial<Record<Detail, Item[]>> = {};
+const texCache: { patch?: THREE.Texture; gummy?: THREE.Texture } = {};
+
+function items(q: Detail): Item[] {
+  if (itemsCache[q]) return itemsCache[q]!;
+  /** Ring segments at this detail level */
+  const R = (n: number) => Math.max(6, Math.round(n * [0.5, 0.7, 1][q]));
+  const L = (s: number) => (q === 2 ? s : Math.max(2, Math.round(s * 0.6)));
+  bend = q === 2 ? 0.03 : 0;
+  const P = (joint: Joint, geo: THREE.BufferGeometry, color: string | ColorKey, extra: Partial<Piece> = {}): Piece => ({ joint, geo, color, ...extra });
+  /** The same piece on both sides (one geometry, or one per side for things that sit on the outside) */
+  const both = (
+    kind: 'arm' | 'fore' | 'leg' | 'shin' | 'hand',
+    geo: THREE.BufferGeometry | THREE.BufferGeometry[],
+    color: string | ColorKey,
+    extra: Partial<Piece> = {}
+  ): Piece[] => (['L', 'R'] as const).map((s, i) => P(`${kind}${s}`, Array.isArray(geo) ? geo[i] : geo, color, extra));
+
   const suit = (o: Outfit) => o.kind === 'suit';
   const hoodie = (o: Outfit) => o.kind === 'hoodie';
-  const soldier = (o: Outfit) => o.kind === 'soldier';
-  const notSoldier = (o: Outfit) => o.kind !== 'soldier';
   const track = (o: Outfit) => o.kind === 'track';
-  const hasCap = (o: Outfit) => !!o.cap && !o.beanie && !o.hood && o.kind !== 'soldier';
-  const capFront = (o: Outfit) => hasCap(o) && !o.capBack;
-  const capBack = (o: Outfit) => hasCap(o) && !!o.capBack;
-  const hasBeanie = (o: Outfit) => !!o.beanie && !o.hood && o.kind !== 'soldier';
-  const hasBucket = (o: Outfit) => !!o.bucket && !o.hood && o.kind !== 'soldier';
-  const hasCrown = (o: Outfit) => !!o.crown && !o.hood && o.kind !== 'soldier';
+  const soldier = (o: Outfit) => o.kind === 'soldier';
+  const casual = (o: Outfit) => o.kind === 'hoodie' || o.kind === 'track';
+  const bare = (o: Outfit) => !o.hood && o.kind !== 'soldier';
+  const hasCap = (o: Outfit) => !!o.cap && !o.beanie && !o.bucket && !o.crown && bare(o);
 
-  // Head: balaclava with a nose under it, the neck tube, the shades' frame
-  const head = merge(
-    new THREE.SphereGeometry(0.14, 16, 12).scale(0.96, 1.08, 1).translate(0, 0.13, 0),
-    new THREE.CylinderGeometry(0.075, 0.088, 0.08, 14).translate(0, 0.01, 0),
-    new THREE.SphereGeometry(0.03, 8, 6).scale(1, 1.1, 1.2).translate(0, 0.095, 0.128),
-    new THREE.BoxGeometry(0.22, 0.016, 0.016).translate(0, 0.165, 0.144),
-    new THREE.BoxGeometry(0.02, 0.012, 0.014).translate(0, 0.152, 0.151),
-    new THREE.BoxGeometry(0.012, 0.012, 0.13).translate(-0.108, 0.158, 0.08),
-    new THREE.BoxGeometry(0.012, 0.012, 0.13).translate(0.108, 0.158, 0.08)
+  /* ----- Head: the balaclava over a real head shape, the eye opening, the shades ----- */
+  const HEAD: Sec[] = [
+    [-0.045, 0.045, 0.048, -0.008],
+    [0.028, 0.047, 0.05, -0.006],
+    [0.048, 0.062, 0.074, 0.008],
+    [0.07, 0.076, 0.09, 0.008],
+    [0.1, 0.086, 0.098, 0.004],
+    [0.138, 0.09, 0.1, 0],
+    [0.178, 0.085, 0.095, -0.004],
+    [0.204, 0.069, 0.079, -0.007],
+    [0.221, 0.044, 0.052, -0.008],
+    [0.23, 0.012, 0.015, -0.008],
+  ];
+  const HN = 2.5;
+  const face = surface(HEAD, HN);
+  const EYE_Y = 0.126;
+  const skull = loft(HEAD, R(20), HN);
+  const nose = new THREE.SphereGeometry(0.016, R(10), R(8)).scale(0.75, 1.25, 0.9).translate(0, 0.094, face(0, 0.094) - 0.009);
+  const ears = [-1, 1].map((s) => new THREE.SphereGeometry(0.022, R(10), R(8)).scale(0.45, 1, 0.75).translate(s * 0.086, 0.125, 0.004));
+  // The balaclava bunches where it meets the collar
+  const folds = [0.014, 0.034].map((y, k) =>
+    new THREE.TorusGeometry(0.048 + k * 0.002, 0.006, 5, R(18))
+      .rotateX(Math.PI / 2)
+      .scale(1, 1, 1.06)
+      .translate(0, y, -0.006)
   );
-  const eyes = rbox(0.2, 0.078, 0.06, 0.026, 0, 0.146, 0.104);
-  const lenses = merge(rbox(0.08, 0.048, 0.014, 0.012, -0.05, 0.145, 0.15), rbox(0.08, 0.048, 0.014, 0.012, 0.05, 0.145, 0.15));
-  const chain = new THREE.TubeGeometry(
-    new THREE.CatmullRomCurve3(
-      [
-        [-0.11, 0.15, 0.02],
-        [-0.125, 0.04, 0.03],
-        [-0.1, -0.08, 0.09],
-        [-0.04, -0.14, 0.125],
-        [0.04, -0.14, 0.125],
-        [0.1, -0.08, 0.09],
-        [0.125, 0.04, 0.03],
-        [0.11, 0.15, 0.02],
-      ].map(([x, y, z]) => new THREE.Vector3(x, y, z))
+  const eyesSkin = onBody(roundRect(0.15, 0.058, 5, R(28), 0, EYE_Y + 0.003), 0.004, face, 0.0005);
+  // Shades: two rounded lenses in thick black frames, a bridge and arms back to the ears
+  const lensShape = () => roundRect(0.064, 0.038, 4, R(24), 0.18);
+  const frameShape = () => {
+    const s = roundRect(0.078, 0.05, 4, R(24), 0.16);
+    s.holes.push(new THREE.Path(lensShape().getPoints().reverse()));
+    return s;
+  };
+  const lensZ = face(0, EYE_Y) + 0.012;
+  const atEye = (g: THREE.BufferGeometry, s: number, dz: number) => g.rotateY(s * 0.24).translate(s * 0.043, EYE_Y, lensZ + dz - Math.abs(s) * 0.004);
+  const frames = [
+    ...[-1, 1].map((s) =>
+      atEye(
+        new THREE.ExtrudeGeometry(frameShape(), {
+          depth: 0.011,
+          bevelEnabled: false,
+          curveSegments: 4,
+        }),
+        s,
+        0
+      )
     ),
-    28,
-    0.005,
-    4
-  );
-  const capCrown = merge(
-    new THREE.SphereGeometry(0.154, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.88, 1.06).translate(0, 0.18, 0),
-    new THREE.CylinderGeometry(0.155, 0.155, 0.03, 16).scale(1, 1, 1.06).translate(0, 0.185, 0),
-    (() => {
-      const pts: THREE.Vector2[] = [];
-      for (let k = 0; k <= 14; k++) {
-        const a = (k / 14) * Math.PI;
-        pts.push(new THREE.Vector2(Math.cos(a) * 0.135, Math.sin(a) * 0.15));
-      }
-      const g = new THREE.ExtrudeGeometry(new THREE.Shape(pts), { depth: 0.018, bevelEnabled: false });
-      g.rotateX(Math.PI / 2);
-      g.rotateX(0.16);
-      g.translate(0, 0.192, 0.105);
-      return g;
-    })(),
-    new THREE.SphereGeometry(0.018, 8, 6).translate(0, 0.318, 0)
-  );
-  const patch = new THREE.PlaneGeometry(0.085, 0.056).rotateX(-0.45).translate(0, 0.245, 0.142);
-  // Beanie: a tall knit dome over a turned-up cuff, with a bobble on top
-  const beanie = merge(
-    new THREE.SphereGeometry(0.157, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 1.02, 1.05).translate(0, 0.19, -0.004),
-    new THREE.CylinderGeometry(0.162, 0.158, 0.06, 18).scale(1, 1, 1.05).translate(0, 0.198, -0.004),
-    new THREE.SphereGeometry(0.034, 8, 6).translate(0, 0.35, -0.004)
-  );
-  const beaniePatch = new THREE.PlaneGeometry(0.062, 0.04).rotateX(-0.06).translate(0, 0.2, 0.168);
-  // The same cap turned round, the patch at the back
-  const capCrownBack = capCrown.clone().rotateY(Math.PI);
-  const patchBack = patch.clone().rotateY(Math.PI);
-  // Bucket hat: a soft crown and a brim that dips all the way round
-  const bucket = merge(
-    new THREE.CylinderGeometry(0.128, 0.153, 0.12, 18).translate(0, 0.252, -0.004),
-    new THREE.LatheGeometry(
-      [
-        [0.15, 0.2],
-        [0.238, 0.163],
-        [0.238, 0.151],
-        [0.15, 0.188],
-      ].map(([x, y]) => new THREE.Vector2(x, y)),
-      24
-    ).translate(0, 0, -0.004)
-  );
-  const bucketBand = new THREE.CylinderGeometry(0.149, 0.153, 0.026, 18).translate(0, 0.21, -0.004);
-  // Gold crown: a band with five points, a ball on each, and a red stone at the front
-  const crown = merge(
-    new THREE.CylinderGeometry(0.118, 0.104, 0.07, 18).translate(0, 0.29, 0),
-    ...[0, 1, 2, 3, 4].flatMap((k) => {
-      const a = (k / 5) * Math.PI * 2;
-      const x = Math.sin(a) * 0.108;
-      const z = Math.cos(a) * 0.108;
-      return [new THREE.ConeGeometry(0.032, 0.07, 6).translate(x, 0.358, z), new THREE.SphereGeometry(0.02, 8, 6).translate(x, 0.398, z)];
-    })
-  );
-  const crownGem = new THREE.SphereGeometry(0.018, 8, 6).scale(1, 1.2, 0.6).translate(0, 0.29, 0.116);
-  const hoodUp = new THREE.SphereGeometry(0.18, 16, 12, Math.PI / 2 + 1.05, Math.PI * 2 - 2.1, 0, Math.PI * 0.72).scale(1, 1.12, 1.15).translate(0, 0.12, -0.025);
-  const helmet = merge(
-    new THREE.SphereGeometry(0.168, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.8, 1.08).translate(0, 0.17, 0),
-    new THREE.TorusGeometry(0.17, 0.018, 6, 24).rotateX(Math.PI / 2).scale(1, 1, 1.08).translate(0, 0.17, 0)
-  );
-
-  // Torso: suit jacket with lapels, shirt front and collar, tie; hoodie; fatigues and vest
-  const jacket = taper(rbox(0.35, 0.45, 0.21, 0.05, 0, 0.215, 0), 0.84);
-  const lapels = merge(
-    flat(
-      [
-        [-0.012, 0.25],
-        [-0.05, 0.25],
-        [-0.112, 0.4],
-        [-0.075, 0.44],
-      ],
-      0.103,
-      0.012
-    ),
-    flat(
-      mirror([
-        [-0.012, 0.25],
-        [-0.05, 0.25],
-        [-0.112, 0.4],
-        [-0.075, 0.44],
-      ]),
-      0.103,
-      0.012
+    new THREE.BoxGeometry(0.018, 0.009, 0.01).translate(0, EYE_Y + 0.008, lensZ + 0.006),
+    ...[-1, 1].map((s) => new THREE.BoxGeometry(0.008, 0.009, 0.115).rotateY(s * 0.08).translate(s * 0.088, EYE_Y + 0.01, 0.04)),
+  ];
+  const lenses = [-1, 1].map((s) =>
+    atEye(
+      new THREE.ExtrudeGeometry(lensShape(), {
+        depth: 0.006,
+        bevelEnabled: false,
+        curveSegments: 4,
+      }),
+      s,
+      0.003
     )
   );
-  const shirt = merge(
-    flat(
-      [
-        [-0.068, 0.445],
-        [0, 0.25],
-        [0.068, 0.445],
-      ],
-      0.1,
-      0.01
-    ),
-    flat(
-      [
-        [-0.075, 0.45],
-        [-0.012, 0.42],
-        [-0.055, 0.385],
-      ],
-      0.109,
-      0.008
-    ),
-    flat(
-      mirror([
-        [-0.075, 0.45],
-        [-0.012, 0.42],
-        [-0.055, 0.385],
-      ]),
-      0.109,
-      0.008
-    ),
-    new THREE.CylinderGeometry(0.083, 0.088, 0.035, 14).translate(0, 0.448, 0)
-  );
-  const tie = flat(
+  // The gold chain from the shades' arms, under the chin and round the neck
+  const chain = tube(
     [
-      [-0.016, 0.418],
-      [0.016, 0.418],
-      [0.012, 0.395],
-      [0.027, 0.3],
-      [0, 0.265],
-      [-0.027, 0.3],
-      [-0.012, 0.395],
+      [-0.094, EYE_Y + 0.006, 0.03],
+      [-0.1, 0.06, 0.04],
+      [-0.085, -0.02, 0.07],
+      [-0.045, -0.07, 0.1],
+      [0, -0.085, 0.112],
+      [0.045, -0.07, 0.1],
+      [0.085, -0.02, 0.07],
+      [0.1, 0.06, 0.04],
+      [0.094, EYE_Y + 0.006, 0.03],
     ],
-    0.111,
-    0.008
+    0.0035,
+    R(36),
+    4
   );
-  const hoodieBody = merge(taper(rbox(0.37, 0.45, 0.235, 0.075, 0, 0.215, 0), 0.92), rbox(0.2, 0.09, 0.03, 0.012, 0, 0.12, 0.112));
-  const hoodDown = new THREE.TorusGeometry(0.1, 0.04, 6, 14, Math.PI).rotateX(Math.PI / 2 + 0.5).rotateZ(Math.PI).translate(0, 0.44, -0.04);
-  const strings = merge(new THREE.BoxGeometry(0.008, 0.11, 0.008).translate(-0.035, 0.37, 0.12), new THREE.BoxGeometry(0.008, 0.11, 0.008).translate(0.035, 0.37, 0.12));
-  const trackBody = taper(rbox(0.36, 0.45, 0.225, 0.06, 0, 0.215, 0), 0.9);
-  const trackCollar = new THREE.CylinderGeometry(0.088, 0.095, 0.055, 14).translate(0, 0.448, 0);
-  const trackZip = merge(new THREE.BoxGeometry(0.012, 0.4, 0.008).translate(0, 0.235, 0.114), new THREE.BoxGeometry(0.026, 0.035, 0.01).translate(0, 0.4, 0.116));
-  const necklace = new THREE.TubeGeometry(
-    new THREE.CatmullRomCurve3(
+
+  /* ----- Hats ----- */
+  const CAP: Sec[] = [
+    [0.168, 0.095, 0.105, -0.004],
+    [0.198, 0.094, 0.103, -0.005],
+    [0.228, 0.083, 0.091, -0.007],
+    [0.25, 0.06, 0.066, -0.008],
+    [0.262, 0.03, 0.033, -0.008],
+    [0.266, 0.004, 0.004, -0.008],
+  ];
+  const capFront = surface(CAP);
+  const brim = (() => {
+    const s = new THREE.Shape();
+    const n = R(20);
+    for (let k = 0; k <= n; k++) {
+      const a = (k / n) * Math.PI;
+      const x = Math.cos(a) * 0.1;
+      const z = Math.sin(a) * 0.18;
+      if (k === 0) s.moveTo(x, z);
+      else s.lineTo(x, z);
+    }
+    s.closePath();
+    const g = new THREE.ExtrudeGeometry(s, {
+      depth: 0.008,
+      bevelEnabled: true,
+      bevelThickness: 0.003,
+      bevelSize: 0.003,
+      bevelSegments: 1,
+      curveSegments: 4,
+    });
+    g.rotateX(Math.PI / 2);
+    // Curved down at the sides, pitched down at the front
+    const p = g.attributes.position as THREE.BufferAttribute;
+    for (let i = 0; i < p.count; i++) p.setY(i, p.getY(i) - p.getX(i) ** 2 * 2.0);
+    g.computeVertexNormals();
+    return g.rotateX(0.07).translate(0, 0.177, -0.006);
+  })();
+  const capParts = (flip: boolean) => {
+    const turn = (g: THREE.BufferGeometry) => (flip ? g.rotateY(Math.PI) : g);
+    return {
+      crown: [loft(CAP, R(20)), brim.clone(), new THREE.SphereGeometry(0.011, R(8), R(6)).translate(0, 0.267, -0.008)].map(turn),
+      // Six panels: seams over the crown, darker than the cap
+      seams: [Math.PI / 6, (Math.PI * 5) / 6, (Math.PI * 7) / 6, (Math.PI * 11) / 6, (Math.PI * 3) / 2].map((a) => turn(meridian(CAP, 2, a, 0.18, 0.0022))),
+      patch: turn(new THREE.PlaneGeometry(0.044, 0.03).rotateX(-0.5).translate(0, 0.214, capFront(0, 0.214) + 0.004)),
+    };
+  };
+  const cap = capParts(false);
+  const capBack = capParts(true);
+  const BEANIE: Sec[] = [
+    [0.19, 0.094, 0.103, -0.005],
+    [0.215, 0.087, 0.096, -0.006],
+    [0.245, 0.068, 0.075, -0.007],
+    [0.266, 0.038, 0.042, -0.008],
+    [0.273, 0.004, 0.004, -0.008],
+  ];
+  const beanie = [loft(BEANIE, R(20)), new THREE.SphereGeometry(0.022, R(10), R(8)).translate(0, 0.285, -0.008)];
+  // The turned-up cuff, a shade darker
+  const beanieCuff = loft(
+    [
+      [0.158, 0.097, 0.107, -0.004],
+      [0.198, 0.098, 0.108, -0.004],
+    ],
+    R(20)
+  );
+  const beaniePatch = new THREE.PlaneGeometry(0.042, 0.026).translate(0, 0.178, 0.107);
+  const bucket = [
+    loft(
       [
-        [-0.08, 0.455, 0.035],
-        [-0.078, 0.39, 0.108],
-        [-0.035, 0.32, 0.133],
-        [0, 0.305, 0.136],
-        [0.035, 0.32, 0.133],
-        [0.078, 0.39, 0.108],
-        [0.08, 0.455, 0.035],
-      ].map(([x, y, z]) => new THREE.Vector3(x, y, z))
+        [0.158, 0.097, 0.107, -0.004],
+        [0.235, 0.085, 0.094, -0.006],
+        [0.245, 0.06, 0.066, -0.006],
+        [0.248, 0.001, 0.001, -0.006],
+      ],
+      R(20)
     ),
-    24,
-    0.012,
+    new THREE.LatheGeometry(
+      [
+        [0.098, 0.17],
+        [0.16, 0.134],
+        [0.16, 0.126],
+        [0.098, 0.16],
+      ].map(([x, y]) => new THREE.Vector2(x, y)),
+      R(24)
+    )
+      .scale(1, 1, 1.07)
+      .translate(0, 0, -0.005),
+  ];
+  const bucketBand = loft(
+    [
+      [0.165, 0.099, 0.109, -0.004],
+      [0.185, 0.097, 0.107, -0.004],
+    ],
+    R(20)
+  );
+  const crown = [
+    new THREE.CylinderGeometry(0.074, 0.068, 0.05, R(18), 1, true).translate(0, 0.225, -0.006),
+    new THREE.CylinderGeometry(0.068, 0.068, 0.006, R(18)).translate(0, 0.203, -0.006),
+    ...[0, 1, 2, 3, 4].flatMap((k) => {
+      const a = (k / 5) * Math.PI * 2;
+      const x = Math.sin(a) * 0.07;
+      const z = Math.cos(a) * 0.07 - 0.006;
+      return [new THREE.ConeGeometry(0.022, 0.05, R(6)).translate(x, 0.272, z), new THREE.SphereGeometry(0.013, R(8), R(6)).translate(x, 0.3, z)];
+    }),
+  ];
+  const crownGem = new THREE.SphereGeometry(0.013, R(8), R(6)).scale(1, 1.2, 0.6).translate(0, 0.225, 0.07);
+  const hoodUp = new THREE.SphereGeometry(0.112, R(18), R(12), Math.PI / 2 + 1.0, Math.PI * 2 - 2.0, 0, Math.PI * 0.74).scale(1, 1.16, 1.12).translate(0, 0.12, -0.012);
+  const HELMET: Sec[] = [
+    [0.152, 0.101, 0.112, -0.004],
+    [0.2, 0.096, 0.106, -0.005],
+    [0.238, 0.074, 0.082, -0.007],
+    [0.26, 0.036, 0.04, -0.008],
+    [0.265, 0.004, 0.004, -0.008],
+  ];
+  const helmet = [
+    loft(HELMET, R(20)),
+    new THREE.TorusGeometry(0.104, 0.01, 5, R(24))
+      .rotateX(Math.PI / 2)
+      .scale(1, 1, 1.1)
+      .translate(0, 0.153, -0.004),
+  ];
+
+  /* ----- Torsos ----- */
+  const SUIT: Sec[] = [
+    [-0.085, 0.142, 0.094, 0],
+    [-0.02, 0.138, 0.092, 0],
+    [0.1, 0.127, 0.088, 0.002],
+    [0.2, 0.148, 0.1, 0.006],
+    [0.29, 0.165, 0.1, 0.004],
+    [0.345, 0.172, 0.09, 0],
+    [0.38, 0.152, 0.076, -0.004],
+    [0.405, 0.098, 0.066, -0.006],
+    [0.418, 0.058, 0.054, -0.006],
+  ];
+  const SN = 2.6;
+  const suitFront = surface(SUIT, SN);
+  const lapelPts: [number, number][] = [
+    [-0.062, 0.41],
+    [-0.002, 0.198],
+    [-0.012, 0.168],
+    [-0.088, 0.25],
+    [-0.106, 0.318],
+    [-0.128, 0.326],
+    [-0.12, 0.372],
+  ];
+  const jacket = loft(SUIT, R(22), SN);
+  const lapels = [onBody(lapelPts, 0.009, suitFront, 0.003), onBody(mirror(lapelPts), 0.009, suitFront, 0.003)];
+  const flaps = [-1, 1].map((s) =>
+    onBody(
+      [
+        [s * 0.042, 0.052],
+        [s * 0.112, 0.05],
+        [s * 0.112, 0.03],
+        [s * 0.042, 0.032],
+      ] as [number, number][],
+      0.005,
+      suitFront,
+      0.001
+    )
+  );
+  const shirtFront = onBody(
+    [
+      [-0.064, 0.412],
+      [0, 0.19],
+      [0.064, 0.412],
+    ],
+    0.004,
+    suitFront,
+    0.001
+  );
+  const collarBand = new THREE.CylinderGeometry(0.056, 0.06, 0.034, R(16), 1, true).translate(0, 0.414, -0.004);
+  const collarPts: [number, number][] = [
+    [-0.054, 0.428],
+    [-0.01, 0.396],
+    [-0.046, 0.382],
+  ];
+  const collars = [onBody(collarPts, 0.004, suitFront, 0.008), onBody(mirror(collarPts), 0.004, suitFront, 0.008)];
+  const pocketSquare = onBody(
+    [
+      [0.084, 0.272],
+      [0.118, 0.272],
+      [0.108, 0.292],
+      [0.096, 0.284],
+      [0.09, 0.294],
+    ],
+    0.004,
+    suitFront,
+    0.002
+  );
+  const button = new THREE.CylinderGeometry(0.008, 0.008, 0.005, R(10)).rotateX(Math.PI / 2).translate(0, 0.15, suitFront(0, 0.15) + 0.003);
+  const tieKnot = onBody(
+    [
+      [-0.016, 0.398],
+      [0.016, 0.398],
+      [0.011, 0.372],
+      [-0.011, 0.372],
+    ],
+    0.01,
+    suitFront,
+    0.004
+  );
+  const tieBlade = onBody(
+    [
+      [-0.01, 0.374],
+      [0.01, 0.374],
+      [0.024, 0.236],
+      [0, 0.21],
+      [-0.024, 0.236],
+    ],
+    0.006,
+    suitFront,
+    0.005
+  );
+
+  const HOODIE: Sec[] = [
+    [-0.085, 0.148, 0.1, 0],
+    [0.0, 0.15, 0.102, 0],
+    [0.12, 0.148, 0.1, 0.002],
+    [0.23, 0.162, 0.108, 0.006],
+    [0.31, 0.177, 0.104, 0.004],
+    [0.355, 0.18, 0.094, 0],
+    [0.385, 0.155, 0.08, -0.004],
+    [0.41, 0.085, 0.068, -0.006],
+    [0.42, 0.06, 0.056, -0.006],
+  ];
+  const HN2 = 2.2;
+  const hoodieFront = surface(HOODIE, HN2);
+  const hoodieBody = loft(HOODIE, R(22), HN2);
+  const hem = loft(
+    [
+      [-0.095, 0.152, 0.104, 0],
+      [-0.05, 0.155, 0.106, 0],
+    ],
+    R(22),
+    HN2
+  );
+  const pouch = onBody(
+    [
+      [-0.088, -0.03],
+      [0.088, -0.03],
+      [0.068, 0.1],
+      [-0.068, 0.1],
+    ],
+    0.008,
+    hoodieFront,
+    0.001
+  );
+  const hoodDown = new THREE.TorusGeometry(0.08, 0.03, R(8), R(16), Math.PI * 1.2)
+    .rotateZ(-Math.PI * 0.1)
+    .rotateX(Math.PI / 2 + 0.45)
+    .rotateZ(Math.PI)
+    .translate(0, 0.405, -0.035);
+  const strings = [-1, 1].map((s) =>
+    tube(
+      [
+        [s * 0.03, 0.4, hoodieFront(s * 0.03, 0.4) - 0.01],
+        [s * 0.032, 0.36, hoodieFront(s * 0.032, 0.36) + 0.006],
+        [s * 0.034, 0.3, hoodieFront(s * 0.034, 0.3) + 0.006],
+      ],
+      0.004,
+      R(8),
+      4
+    )
+  );
+  const TRACK = grow(HOODIE, 0.96);
+  const trackFront = surface(TRACK, HN2);
+  const trackBody = loft(TRACK, R(22), HN2);
+  const trackCollar = new THREE.CylinderGeometry(0.06, 0.066, 0.05, R(16), 1, true).translate(0, 0.42, -0.004);
+  const zip = [
+    onBody(
+      [
+        [-0.005, -0.08],
+        [0.005, -0.08],
+        [0.005, 0.41],
+        [-0.005, 0.41],
+      ],
+      0.004,
+      trackFront,
+      0.001
+    ),
+    new THREE.BoxGeometry(0.018, 0.026, 0.008).translate(0, 0.37, trackFront(0, 0.37) + 0.006),
+  ];
+
+  const FATIGUES = grow(SUIT, 1.03);
+  const fatiguesFront = surface(FATIGUES, 2.8);
+  const fatigues = loft(FATIGUES, R(22), 2.8);
+  const VEST: Sec[] = [
+    [0.05, 0.155, 0.11, 0],
+    [0.2, 0.168, 0.118, 0.006],
+    [0.33, 0.184, 0.11, 0.004],
+    [0.37, 0.165, 0.094, 0],
+    [0.38, 0.12, 0.08, 0],
+  ];
+  const vestFront = surface(VEST, 3);
+  const vest = loft(VEST, R(22), 3);
+  const pouches = [-0.09, -0.03, 0.03, 0.09].map((x) => rbox(0.05, 0.06, 0.03, 0.008, x, 0.13, vestFront(x, 0.13) + 0.01));
+  const collarFat = new THREE.CylinderGeometry(0.06, 0.066, 0.04, R(16), 1, true).translate(0, 0.415, -0.004);
+
+  /* ----- Neck and back: necklace, headphones, backpack, crossbody, board ----- */
+  const necklace = tube(
+    [
+      [-0.058, 0.415, -0.01],
+      [-0.06, 0.38, suitFront(-0.06, 0.38) + 0.01],
+      [-0.03, 0.31, suitFront(-0.03, 0.31) + 0.012],
+      [0, 0.29, suitFront(0, 0.29) + 0.014],
+      [0.03, 0.31, suitFront(0.03, 0.31) + 0.012],
+      [0.06, 0.38, suitFront(0.06, 0.38) + 0.01],
+      [0.058, 0.415, -0.01],
+    ],
+    0.007,
+    R(24),
     5
   );
-  const pendant = new THREE.OctahedronGeometry(0.034).scale(0.9, 1.25, 0.5).translate(0, 0.27, 0.14);
-  const deck = new THREE.CapsuleGeometry(0.095, 0.44, 4, 12).scale(1, 1, 0.13).translate(0, 0.27, -0.142);
-  const trucks = merge(new THREE.BoxGeometry(0.15, 0.02, 0.02).translate(0, 0.49, -0.168), new THREE.BoxGeometry(0.15, 0.02, 0.02).translate(0, 0.05, -0.168));
-  const wheels = merge(
-    ...[0.49, 0.05].flatMap((y) => [-0.075, 0.075].map((x) => new THREE.CylinderGeometry(0.024, 0.024, 0.026, 10).rotateZ(Math.PI / 2).translate(x, y, -0.182)))
-  );
-  const fatigues = taper(rbox(0.35, 0.45, 0.22, 0.05, 0, 0.215, 0), 0.86);
-  const vest = merge(rbox(0.37, 0.27, 0.25, 0.04, 0, 0.26, 0), rbox(0.36, 0.04, 0.24, 0.015, 0, 0.03, 0));
-  const backpack = merge(
-    rbox(0.25, 0.28, 0.1, 0.035, 0, 0.25, -0.16),
-    new THREE.BoxGeometry(0.03, 0.32, 0.012).translate(-0.085, 0.26, 0.11),
-    new THREE.BoxGeometry(0.03, 0.32, 0.012).translate(0.085, 0.26, 0.11)
-  );
-  const crossbody = merge(rbox(0.15, 0.12, 0.05, 0.02, 0.13, 0.06, 0.11), new THREE.BoxGeometry(0.026, 0.52, 0.01).rotateZ(0.72).translate(0, 0.26, 0.112));
-  const headphones = merge(
-    new THREE.TorusGeometry(0.095, 0.016, 6, 16, Math.PI * 1.15).rotateX(Math.PI / 2).rotateY(Math.PI * 0.43).translate(0, 0.455, 0.0),
-    new THREE.CylinderGeometry(0.038, 0.038, 0.03, 12).rotateZ(Math.PI / 2).translate(-0.095, 0.44, 0.05),
-    new THREE.CylinderGeometry(0.038, 0.038, 0.03, 12).rotateZ(Math.PI / 2).translate(0.095, 0.44, 0.05)
+  const pendant = new THREE.OctahedronGeometry(0.024).scale(0.9, 1.25, 0.5).translate(0, 0.265, suitFront(0, 0.265) + 0.018);
+  const headphones = [
+    new THREE.TorusGeometry(0.07, 0.012, R(6), R(16), Math.PI * 1.1)
+      .rotateX(Math.PI / 2)
+      .rotateY(Math.PI * 0.45)
+      .translate(0, 0.43, -0.01),
+    ...[-1, 1].map((s) => new THREE.CylinderGeometry(0.03, 0.03, 0.024, R(12)).rotateZ(Math.PI / 2).translate(s * 0.074, 0.425, 0.03)),
+  ];
+  const BACK = surface(HOODIE, HN2, -1);
+  const backpack = [
+    rbox(0.21, 0.25, 0.09, 0.03, 0, 0.24, BACK(0, 0.24) - 0.04),
+    rbox(0.15, 0.08, 0.03, 0.012, 0, 0.17, BACK(0, 0.17) - 0.09),
+    ...[-1, 1].map((s) =>
+      tube(
+        [
+          [s * 0.08, 0.36, BACK(s * 0.08, 0.36) - 0.01],
+          [s * 0.085, 0.395, 0],
+          [s * 0.085, 0.36, hoodieFront(s * 0.085, 0.36) + 0.005],
+          [s * 0.09, 0.22, hoodieFront(s * 0.09, 0.22) + 0.005],
+          [s * 0.1, 0.12, hoodieFront(s * 0.1, 0.12)],
+        ],
+        0.009,
+        R(12),
+        4
+      )
+    ),
+  ];
+  const crossbody = [
+    rbox(0.12, 0.09, 0.045, 0.016, 0.105, 0.03, hoodieFront(0.105, 0.03) + 0.022),
+    tube(
+      [
+        [0.1, 0.07, hoodieFront(0.1, 0.07) + 0.01],
+        [0.0, 0.2, hoodieFront(0, 0.2) + 0.008],
+        [-0.12, 0.36, hoodieFront(-0.12, 0.36) + 0.006],
+        [-0.13, 0.4, 0],
+        [-0.1, 0.33, BACK(-0.1, 0.33) - 0.006],
+        [0.06, 0.12, BACK(0.06, 0.12) - 0.008],
+      ],
+      0.008,
+      R(24),
+      4
+    ),
+  ];
+  const deck = new THREE.CapsuleGeometry(0.08, 0.4, 4, R(12)).scale(1, 1, 0.13).translate(0, 0.2, BACK(0, 0.2) - 0.04);
+  const trucks = [0.42, 0.0].map((y) => new THREE.BoxGeometry(0.13, 0.018, 0.018).translate(0, y, BACK(0, 0.2) - 0.064));
+  const wheels = [0.42, 0.0].flatMap((y) =>
+    [-0.065, 0.065].map((x) => new THREE.CylinderGeometry(0.02, 0.02, 0.022, R(10)).rotateZ(Math.PI / 2).translate(x, y, BACK(0, 0.2) - 0.078))
   );
 
-  // Limbs
-  const upper = merge(caps(0.048, 0.12, -0.1), new THREE.SphereGeometry(0.058, 10, 8).translate(0.004, -0.01, 0));
-  const fore = caps(0.044, 0.11, -0.09);
-  const cuff = new THREE.CylinderGeometry(0.047, 0.047, 0.025, 12).translate(0, -0.172, 0);
-  const hand = rbox(0.07, 0.08, 0.072, 0.025, 0, -0.215, 0.006);
-  const thigh = caps(0.058, 0.14, -0.12);
-  const shin = caps(0.052, 0.13, -0.1);
-  const shoe = rbox(0.1, 0.07, 0.18, 0.03, 0, -0.205, 0.035);
-  const sole = rbox(0.12, 0.025, 0.2, 0.01, 0, -0.232, 0.035);
+  /* ----- Hips and legs ----- */
+  const PELVIS: Sec[] = [
+    [-0.1, 0.085, 0.07, 0],
+    [-0.07, 0.122, 0.086, 0],
+    [0.0, 0.134, 0.09, 0],
+    [0.1, 0.126, 0.086, 0],
+    [0.15, 0.11, 0.075, 0],
+  ];
+  const pelvis = loft(PELVIS, R(20), 2.2);
+  const THIGH_S: Sec[] = [
+    [0.04, 0.066, 0.07, 0],
+    [-0.03, 0.066, 0.07, 0],
+    [-0.15, 0.058, 0.062, 0.002],
+    [-0.26, 0.05, 0.054, 0],
+    [-0.3, 0.042, 0.046, 0],
+    [-0.318, 0.02, 0.024, 0],
+  ];
+  const SHIN_S: Sec[] = [
+    [0.03, 0.024, 0.026, 0],
+    [0.012, 0.046, 0.05, 0],
+    [-0.02, 0.049, 0.053, 0],
+    [-0.11, 0.05, 0.055, -0.004],
+    [-0.21, 0.046, 0.05, 0],
+    [-0.27, 0.051, 0.057, 0.004],
+    [-0.285, 0.051, 0.057, 0.004],
+  ];
+  const trouserThigh = loft(THIGH_S, R(16));
+  const trouserShin = loft(SHIN_S, R(16));
+  const crease =
+    q === 2
+      ? onBody(
+          [
+            [-0.002, -0.27],
+            [0.002, -0.27],
+            [0.002, 0.0],
+            [-0.002, 0.0],
+          ],
+          0.002,
+          surface(SHIN_S),
+          0.0005
+        )
+      : null;
+  const joggerThigh = loft(grow(THIGH_S, 1.1), R(16));
+  const joggerShin = loft(
+    [
+      [0.03, 0.026, 0.028, 0],
+      [0.012, 0.05, 0.054, 0],
+      [-0.02, 0.053, 0.057, 0],
+      [-0.11, 0.052, 0.056, -0.004],
+      [-0.2, 0.043, 0.046, 0],
+      [-0.235, 0.039, 0.042, 0],
+    ],
+    R(16)
+  );
+  const joggerCuff = loft(
+    [
+      [-0.258, 0.042, 0.045, 0.002],
+      [-0.224, 0.043, 0.046, 0.002],
+    ],
+    R(16)
+  );
+  const cargoThigh = loft(grow(THIGH_S, 1.14), R(16));
+  const cargoShin = loft(
+    [
+      [0.03, 0.027, 0.03, 0],
+      [0.012, 0.052, 0.056, 0],
+      [-0.02, 0.056, 0.06, 0],
+      [-0.12, 0.054, 0.058, -0.004],
+      [-0.2, 0.05, 0.054, 0],
+    ],
+    R(16)
+  );
+  // Cargo pockets on the outside of each thigh
+  const cargoPockets = [-1, 1].map((s) => rbox(0.02, 0.07, 0.06, 0.008, s * 0.07, -0.16, 0.004));
+  const kneePads = q === 0 ? [] : [rbox(0.06, 0.06, 0.025, 0.01, 0, -0.01, 0.054)];
 
-  const patchTex = canvasTex(128, 84, (c) => {
-    c.fillStyle = '#ffffff';
+  /* ----- Arms and hands ----- */
+  const UPPER_S: Sec[] = [
+    [0.036, 0.02, 0.022, 0],
+    [0.024, 0.045, 0.048, 0],
+    [0.0, 0.054, 0.056, 0],
+    [-0.07, 0.05, 0.052, 0],
+    [-0.16, 0.044, 0.046, 0],
+    [-0.215, 0.04, 0.042, 0],
+    [-0.236, 0.024, 0.026, 0],
+  ];
+  const FORE_S: Sec[] = [
+    [0.03, 0.02, 0.022, 0],
+    [0.015, 0.04, 0.042, 0],
+    [-0.04, 0.043, 0.045, 0.002],
+    [-0.12, 0.039, 0.041, 0],
+    [-0.185, 0.036, 0.038, 0],
+    [-0.192, 0.034, 0.036, 0],
+  ];
+  const suitUpper = loft(UPPER_S, R(14));
+  const suitFore = loft(FORE_S, R(14));
+  const shirtCuff = loft(
+    [
+      [-0.202, 0.031, 0.033, 0.001],
+      [-0.184, 0.033, 0.035, 0.001],
+    ],
+    R(14)
+  );
+  const looseUpper = loft(grow(UPPER_S, 1.14), R(14));
+  const looseFore = loft(grow(FORE_S, 1.14), R(14));
+  const ribCuff = loft(
+    [
+      [-0.208, 0.033, 0.035, 0.001],
+      [-0.18, 0.037, 0.039, 0.001],
+    ],
+    R(14)
+  );
+  // Two stripes down the outside of each sleeve and trouser leg (track suits)
+  const stripe = (secs: Sec[], s: number, from: number, to: number) => {
+    const w = 0.009;
+    const pts = sorted(secs).filter(([y]) => y <= from + 1e-6 && y >= to - 1e-6);
+    return [-w, w].map((dz) =>
+      tube(
+        pts.map(([y, hw]): [number, number, number] => [s * (hw + 0.002), y, dz]),
+        0.0045,
+        pts.length * 2,
+        4
+      )
+    );
+  };
+  const sleeveStripes = (secs: Sec[]) => [-1, 1].map((s) => mergeGeometries(stripe(grow(secs, 1.14), s, 0.0, -0.2).map(plain))!);
+  const upperStripes = sleeveStripes(UPPER_S);
+  const foreStripes = sleeveStripes(FORE_S);
+  const thighStripes = [-1, 1].map((s) => mergeGeometries(stripe(grow(THIGH_S, 1.1), s, -0.03, -0.3).map(plain))!);
+  const shinStripes = [-1, 1].map(
+    (s) =>
+      mergeGeometries(
+        stripe(
+          [
+            [0.012, 0.05, 0.054, 0],
+            [-0.11, 0.052, 0.056, 0],
+            [-0.2, 0.043, 0.046, 0],
+          ],
+          s,
+          0.012,
+          -0.2
+        ).map(plain)
+      )!
+  );
+  // A hand at rest: palm towards the leg, fingers curled, the thumb along the front
+  const hand = [
+    new THREE.CylinderGeometry(0.026, 0.028, 0.03, R(10)).translate(0, -0.2, 0.004),
+    rbox(0.044, 0.072, 0.07, 0.019, 0, -0.236, 0.004),
+    rbox(0.046, 0.046, 0.062, 0.019, 0, -0.28, 0.012),
+    new THREE.CapsuleGeometry(0.013, 0.03, 2, R(8)).rotateX(-0.45).translate(0, -0.238, 0.045),
+  ];
+
+  /* ----- Shoes (in the shin's space: the sole is on the ground at -0.33) ----- */
+  const G = -(HIP_Y - THIGH);
+  const sneaker = profile(
+    [
+      [-0.062, G + 0.012],
+      [0.15, G + 0.012],
+      [0.172, G + 0.03],
+      [0.15, G + 0.052],
+      [0.08, G + 0.068],
+      [0.03, G + 0.098],
+      [-0.03, G + 0.1],
+      [-0.066, G + 0.06],
+    ],
+    0.088,
+    0.014,
+    L(6)
+  );
+  const sneakerSole = profile(
+    [
+      [-0.064, G],
+      [0.146, G],
+      [0.166, G + 0.012],
+      [0.158, G + 0.022],
+      [-0.066, G + 0.022],
+    ],
+    0.09,
+    0.008,
+    L(4)
+  );
+  const laces = q === 0 ? [] : [0.03, 0.06, 0.09].map((u) => new THREE.BoxGeometry(0.05, 0.005, 0.008).rotateX(0.5).translate(0, G + 0.098 - u * 0.33, 0.035 + u * 0.55));
+  const swoop = [-1, 1].map((s) => new THREE.BoxGeometry(0.004, 0.012, 0.11).rotateX(-0.2).translate(s * 0.046, G + 0.05, 0.05));
+  const dress = profile(
+    [
+      [-0.058, G + 0.01],
+      [0.15, G + 0.01],
+      [0.172, G + 0.03],
+      [0.13, G + 0.058],
+      [0.05, G + 0.075],
+      [-0.035, G + 0.078],
+      [-0.062, G + 0.045],
+    ],
+    0.078,
+    0.012,
+    L(6)
+  );
+  const dressSole = profile(
+    [
+      [-0.062, G],
+      [0.152, G],
+      [0.176, G + 0.012],
+      [0.12, G + 0.013],
+      [-0.064, G + 0.012],
+    ],
+    0.08,
+    0.004,
+    L(4)
+  );
+  const boot = profile(
+    [
+      [-0.064, G + 0.02],
+      [0.15, G + 0.02],
+      [0.168, G + 0.045],
+      [0.11, G + 0.07],
+      [0.055, G + 0.1],
+      [0.05, G + 0.15],
+      [-0.06, G + 0.15],
+      [-0.068, G + 0.06],
+    ],
+    0.094,
+    0.014,
+    L(6)
+  );
+  const bootSole = profile(
+    [
+      [-0.072, G],
+      [0.168, G],
+      [0.18, G + 0.016],
+      [0.175, G + 0.026],
+      [-0.074, G + 0.026],
+    ],
+    0.1,
+    0.006,
+    L(4)
+  );
+
+  /* ----- Held things ----- */
+  // In the hand's own space (the socket in the palm)
+  const gummy = rbox(0.1, 0.13, 0.04, 0.012, 0, -0.03, 0.04);
+  const cup = new THREE.CylinderGeometry(0.034, 0.027, 0.11, R(14)).translate(0, -0.03, 0.05);
+  const cupSleeve = new THREE.CylinderGeometry(0.0335, 0.0305, 0.04, R(14)).translate(0, -0.035, 0.05);
+  const cupTop = [
+    new THREE.SphereGeometry(0.035, R(12), R(6), 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.45, 1).translate(0, 0.025, 0.05),
+    new THREE.CylinderGeometry(0.004, 0.004, 0.07, 6).rotateZ(0.2).translate(0.006, 0.06, 0.05),
+  ];
+  const boombox = [rbox(0.085, 0.15, 0.27, 0.018, 0, -0.11, 0.03), new THREE.TorusGeometry(0.06, 0.009, 6, R(12), Math.PI).rotateY(Math.PI / 2).translate(0, -0.035, 0.03)];
+  const speakers = [-0.045, 0.045].flatMap((x) => [-0.045, 0.105].map((z) => new THREE.CylinderGeometry(0.046, 0.046, 0.012, R(16)).rotateZ(Math.PI / 2).translate(x, -0.115, z)));
+  // The same assault rifle the player carries, held upright on parade
+  const rifle = rifleGeometry()
+    .rotateX(-Math.PI / 2)
+    .translate(0, 0, 0.03);
+
+  const one = (geos: THREE.BufferGeometry[]) => (geos.length === 1 ? geos[0] : mergeGeometries(geos.map(plain))!);
+  const all: Item[] = [
+    {
+      id: 'head',
+      when: () => true,
+      pieces: [
+        P('head', one([skull, nose, ...ears]), BLACK),
+        ...(q > 0 ? [P('head', one(folds), BLACK, { detail: true })] : []),
+        P('head', eyesSkin, SKIN),
+        P('head', one(frames), '#0d0c14'),
+        P('head', one(lenses), '#ffffff', { mat: 'lens' }),
+      ],
+    },
+    {
+      id: 'chain',
+      when: (o) => !!o.chain,
+      pieces: [P('head', chain, GOLD, { detail: true })],
+    },
+    {
+      id: 'cap',
+      when: (o) => hasCap(o) && !o.capBack,
+      pieces: [P('head', one(cap.crown), 'cap'), P('head', one(cap.seams), 'cap', { shade: 0.62, detail: true }), P('head', cap.patch, '#ffffff', { mat: 'patch', detail: true })],
+    },
+    {
+      id: 'capBack',
+      when: (o) => hasCap(o) && !!o.capBack,
+      pieces: [
+        P('head', one(capBack.crown), 'cap'),
+        P('head', one(capBack.seams), 'cap', { shade: 0.62, detail: true }),
+        P('head', capBack.patch, '#ffffff', { mat: 'patch', detail: true }),
+      ],
+    },
+    {
+      id: 'bucket',
+      when: (o) => !!o.bucket && bare(o),
+      pieces: [P('head', one(bucket), 'bucket'), P('head', bucketBand, BLACK, { detail: true })],
+    },
+    {
+      id: 'crown',
+      when: (o) => !!o.crown && bare(o),
+      pieces: [P('head', one(crown), GOLD), P('head', crownGem, '#d8312f', { detail: true })],
+    },
+    {
+      id: 'beanie',
+      when: (o) => !!o.beanie && bare(o),
+      pieces: [P('head', one(beanie), 'beanie'), P('head', beanieCuff, 'beanie', { shade: 0.82 }), P('head', beaniePatch, '#ffffff', { mat: 'patch', detail: true })],
+    },
+    {
+      id: 'hoodUp',
+      when: (o) => hoodie(o) && !!o.hood,
+      pieces: [P('head', hoodUp, 'top', { mat: 'double' })],
+    },
+    {
+      id: 'helmet',
+      when: soldier,
+      pieces: [P('head', one(helmet), '#3e4a26')],
+    },
+    {
+      id: 'suit',
+      when: suit,
+      pieces: [
+        P('torso', jacket, 'top'),
+        P('torso', one([...lapels, ...flaps]), 'top', { shade: 1.45 }),
+        P('torso', one([shirtFront, collarBand, ...collars, pocketSquare]), SHIRT),
+        P('torso', button, BLACK, { detail: true }),
+        P('torso', one([tieKnot, tieBlade]), 'tie'),
+        ...both('arm', suitUpper, 'top'),
+        ...both('fore', suitFore, 'top'),
+        ...both('fore', shirtCuff, SHIRT, { detail: true }),
+      ],
+    },
+    {
+      id: 'hoodie',
+      when: hoodie,
+      pieces: [
+        P('torso', hoodieBody, 'top'),
+        P('torso', one([hem, pouch]), 'top', { shade: 0.8 }),
+        P('torso', one(strings), SHIRT, { detail: true }),
+        ...both('arm', looseUpper, 'top'),
+        ...both('fore', looseFore, 'top'),
+        ...both('fore', ribCuff, 'top', { shade: 0.8 }),
+      ],
+    },
+    {
+      id: 'hoodDown',
+      when: (o) => hoodie(o) && !o.hood,
+      pieces: [P('torso', hoodDown, 'top')],
+    },
+    {
+      id: 'track',
+      when: track,
+      pieces: [
+        P('torso', one([trackBody, trackCollar]), 'top'),
+        P('torso', one(zip), SHIRT, { detail: true }),
+        ...both('arm', looseUpper, 'top'),
+        ...both('fore', looseFore, 'top'),
+        ...both('fore', ribCuff, 'top', { shade: 0.8 }),
+        ...both('arm', upperStripes, SHIRT, { detail: true }),
+        ...both('fore', foreStripes, SHIRT, { detail: true }),
+        ...both('leg', thighStripes, SHIRT, { detail: true }),
+        ...both('shin', shinStripes, SHIRT, { detail: true }),
+      ],
+    },
+    {
+      id: 'soldier',
+      when: soldier,
+      pieces: [
+        P('torso', one([fatigues, collarFat]), 'top'),
+        P('torso', one([vest, ...pouches]), '#3a4422'),
+        ...both('arm', looseUpper, 'top'),
+        ...both('fore', looseFore, 'top'),
+        ...both('fore', one(hand), '#2b2a33'),
+        P('pelvis', pelvis, 'bottom'),
+        ...both('leg', cargoThigh, 'bottom'),
+        ...both('leg', cargoPockets, 'bottom', { shade: 0.82, detail: true }),
+        ...both('shin', cargoShin, 'bottom'),
+        ...(kneePads.length ? both('shin', one(kneePads), '#3a4422', { detail: true }) : []),
+        ...both('shin', boot, 'shoes'),
+        ...both('shin', bootSole, '#14121a'),
+      ],
+    },
+    // Hands, trousers and shoes for everyone but soldiers
+    {
+      id: 'hands',
+      when: (o) => !soldier(o),
+      pieces: both('fore', one(hand), SKIN),
+    },
+    {
+      id: 'trousers',
+      when: suit,
+      pieces: [
+        P('pelvis', pelvis, 'bottom'),
+        ...both('leg', trouserThigh, 'bottom'),
+        ...both('shin', trouserShin, 'bottom'),
+        ...(crease ? both('shin', crease, 'bottom', { shade: 0.75, detail: true }) : []),
+        ...both('shin', dress, 'shoes'),
+        ...both('shin', dressSole, '#14121a'),
+      ],
+    },
+    {
+      id: 'joggers',
+      when: casual,
+      pieces: [
+        P('pelvis', pelvis, 'bottom'),
+        ...both('leg', joggerThigh, 'bottom'),
+        ...both('shin', joggerShin, 'bottom'),
+        ...both('shin', joggerCuff, 'bottom', { shade: 0.8 }),
+        ...both('shin', sneaker, 'shoes'),
+        ...both('shin', sneakerSole, SHIRT),
+        ...(laces.length ? both('shin', one(laces), SHIRT, { detail: true }) : []),
+        ...both('shin', one(swoop), 'shoes', { shade: 0.6, detail: true }),
+      ],
+    },
+    {
+      id: 'necklace',
+      when: (o) => !!o.necklace,
+      pieces: [P('torso', necklace, GOLD), P('torso', pendant, '#9ff8ff')],
+    },
+    {
+      id: 'headphones',
+      when: (o) => !!o.headphones,
+      pieces: [P('torso', one(headphones), 'headphones', { detail: true })],
+    },
+    {
+      id: 'backpack',
+      when: (o) => !!o.backpack,
+      pieces: [P('torso', one(backpack), 'backpack')],
+    },
+    {
+      id: 'crossbody',
+      when: (o) => !!o.crossbody,
+      pieces: [P('torso', one(crossbody), 'crossbody')],
+    },
+    {
+      id: 'board',
+      when: (o) => !!o.board,
+      pieces: [P('torso', deck, 'board'), P('torso', one(trucks), '#8b889c', { detail: true }), P('torso', one(wheels), WHITE, { detail: true })],
+    },
+    {
+      id: 'rifleL',
+      when: (o) => o.rifle === 'left',
+      pieces: [P('handL', rifle, '#2b2a33')],
+    },
+    {
+      id: 'rifleR',
+      when: (o) => o.rifle === 'right',
+      pieces: [P('handR', rifle, '#2b2a33')],
+    },
+    {
+      id: 'gummy',
+      held: true,
+      when: (o) => o.held === 'gummy',
+      pieces: [P('handR', gummy, '#ffffff', { mat: 'gummy' })],
+    },
+    {
+      id: 'coffee',
+      held: true,
+      when: (o) => o.held === 'coffee',
+      pieces: [P('handR', cup, WHITE), P('handR', cupSleeve, '#ff6ad5'), P('handR', one(cupTop), WHITE)],
+    },
+    {
+      id: 'boombox',
+      held: true,
+      when: (o) => o.held === 'boombox',
+      pieces: [P('handR', one(boombox), '#2b2a33'), P('handR', one(speakers), '#00d8ff')],
+    },
+  ];
+  itemsCache[q] = all;
+  return all;
+}
+
+const tmp = new THREE.Color();
+/** A piece's colour on an outfit */
+function colorOf(p: Piece, o: Outfit, out = new THREE.Color()) {
+  if (p.color.startsWith('#')) return out.set(p.color);
+  out.set((o[p.color as ColorKey] as string | undefined) ?? '#ff00ff');
+  return p.shade ? out.multiplyScalar(p.shade) : out;
+}
+
+/* ---------- Materials ---------- */
+
+let plainMat: THREE.Material | null = null;
+let doubleMat: THREE.Material | null = null;
+function textures() {
+  texCache.patch ??= canvasTex(128, 84, (c) => {
+    c.fillStyle = '#dedce8';
     c.fillRect(0, 0, 128, 84);
     c.fillStyle = '#16c7b5';
     c.beginPath();
@@ -702,7 +1667,7 @@ function parts(): Part[] {
     c.lineTo(76, 22);
     c.stroke();
   });
-  const gummyTex = canvasTex(128, 160, (c) => {
+  texCache.gummy ??= canvasTex(128, 160, (c) => {
     c.fillStyle = '#d8312f';
     c.fillRect(0, 0, 128, 160);
     c.fillStyle = '#c99a4a';
@@ -714,104 +1679,29 @@ function parts(): Part[] {
     c.font = '900 22px Impact, "Arial Narrow", sans-serif';
     c.fillText('GUMMY BEARS', 64, 112);
   });
-  const gummy = rbox(0.1, 0.13, 0.04, 0.012, 0, -0.03, 0.04);
-  // Iced coffee: a cup with a sleeve, a domed lid and a straw
-  const cup = new THREE.CylinderGeometry(0.034, 0.027, 0.11, 12).translate(0, -0.03, 0.05);
-  const cupSleeve = new THREE.CylinderGeometry(0.0335, 0.0305, 0.04, 12).translate(0, -0.035, 0.05);
-  const cupTop = merge(new THREE.SphereGeometry(0.035, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.45, 1).translate(0, 0.025, 0.05), new THREE.CylinderGeometry(0.004, 0.004, 0.07, 6).rotateZ(0.2).translate(0.006, 0.06, 0.05));
-  // Boombox hanging from its handle, speakers facing out both sides
-  const boombox = merge(rbox(0.085, 0.15, 0.27, 0.018, 0, -0.11, 0.03), new THREE.TorusGeometry(0.06, 0.009, 6, 12, Math.PI).rotateY(Math.PI / 2).translate(0, -0.035, 0.03));
-  const speakers = merge(
-    ...[-0.045, 0.045].flatMap((x) => [-0.045, 0.105].map((z) => new THREE.CylinderGeometry(0.046, 0.046, 0.012, 16).rotateZ(Math.PI / 2).translate(x, -0.115, z)))
-  );
-  // The same assault rifle the player carries, held upright on parade
-  const rifle = rifleGeometry().rotateX(-Math.PI / 2).translate(0, 0, 0.03);
-
-  const lensMat = (o?: Outfit) => {
-    const c = new THREE.Color(o?.lens ?? '#22d07a');
-    return lit(new THREE.MeshToonMaterial({ color: c.clone().multiplyScalar(0.42), emissive: c }), 0.12, 0.7);
-  };
-  const patchMat = () => new THREE.MeshToonMaterial({ map: patchTex });
-  const hoodMat = () => toon('#ffffff', { side: THREE.DoubleSide });
-  const gummyMat = () => new THREE.MeshToonMaterial({ map: gummyTex });
-  const always = () => true;
-  // Thin stripes on the outside of the upper arm, forearm, thigh and shin (the left limbs are at -x)
-  const stripes = (side: 'L' | 'R') => {
-    const x = side === 'L' ? -1 : 1;
-    return [
-      [0.049, 0.2, -0.1],
-      [0.045, 0.17, -0.09],
-      [0.059, 0.22, -0.12],
-      [0.053, 0.17, -0.1],
-    ].map(([r, len, y]) => new THREE.BoxGeometry(0.01, len, 0.034).translate(x * (r + 0.002), y, 0));
-  };
-
-  partsCache = [
-    { joint: 'head', geo: head, color: BLACK, when: always },
-    { joint: 'head', geo: eyes, color: SKIN, when: always },
-    { joint: 'head', geo: lenses, color: '#ffffff', mat: lensMat, when: always },
-    { joint: 'head', geo: chain, color: '#e2b04a', when: (o) => !!o.chain, detail: true },
-    { joint: 'head', geo: capCrown, color: 'cap', when: capFront },
-    { joint: 'head', geo: patch, color: '#ffffff', mat: patchMat, when: capFront, detail: true },
-    { joint: 'head', geo: capCrownBack, color: 'cap', when: capBack },
-    { joint: 'head', geo: patchBack, color: '#ffffff', mat: patchMat, when: capBack, detail: true },
-    { joint: 'head', geo: bucket, color: 'bucket', when: hasBucket },
-    { joint: 'head', geo: bucketBand, color: BLACK, when: hasBucket, detail: true },
-    { joint: 'head', geo: crown, color: '#e2b04a', when: hasCrown },
-    { joint: 'head', geo: crownGem, color: '#d8312f', when: hasCrown, detail: true },
-    { joint: 'head', geo: beanie, color: 'beanie', when: hasBeanie },
-    { joint: 'head', geo: beaniePatch, color: '#ffffff', mat: patchMat, when: hasBeanie, detail: true },
-    { joint: 'head', geo: hoodUp, color: 'top', mat: hoodMat, when: (o) => hoodie(o) && !!o.hood },
-    { joint: 'head', geo: helmet, color: '#3e4a26', when: soldier },
-    { joint: 'torso', geo: jacket, color: 'top', when: suit },
-    { joint: 'torso', geo: lapels, color: 'lapel', when: suit, detail: true },
-    { joint: 'torso', geo: shirt, color: '#f3f2f7', when: suit },
-    { joint: 'torso', geo: tie, color: 'tie', when: suit },
-    { joint: 'torso', geo: hoodieBody, color: 'top', when: hoodie },
-    { joint: 'torso', geo: hoodDown, color: 'top', when: (o) => hoodie(o) && !o.hood },
-    { joint: 'torso', geo: strings, color: '#f3f2f7', when: hoodie, detail: true },
-    { joint: 'torso', geo: trackBody, color: 'top', when: track },
-    { joint: 'torso', geo: trackCollar, color: 'top', when: track },
-    { joint: 'torso', geo: trackZip, color: '#f3f2f7', when: track, detail: true },
-    { joint: 'torso', geo: necklace, color: '#e2b04a', when: (o) => !!o.necklace },
-    { joint: 'torso', geo: pendant, color: '#9ff8ff', when: (o) => !!o.necklace },
-    { joint: 'torso', geo: deck, color: 'board', when: (o) => !!o.board },
-    { joint: 'torso', geo: trucks, color: '#8b889c', when: (o) => !!o.board, detail: true },
-    { joint: 'torso', geo: wheels, color: '#f3f2f7', when: (o) => !!o.board, detail: true },
-    { joint: 'torso', geo: fatigues, color: 'top', when: soldier },
-    { joint: 'torso', geo: vest, color: '#3a4422', when: soldier },
-    { joint: 'torso', geo: backpack, color: 'backpack', when: (o) => !!o.backpack },
-    { joint: 'torso', geo: crossbody, color: 'crossbody', when: (o) => !!o.crossbody },
-    { joint: 'torso', geo: headphones, color: 'headphones', when: (o) => !!o.headphones, detail: true },
-    ...(['L', 'R'] as const).flatMap((s): Part[] => [
-      { joint: `arm${s}`, geo: upper, color: 'top', when: always, fat: true },
-      { joint: `fore${s}`, geo: fore, color: 'top', when: always, fat: true },
-      { joint: `fore${s}`, geo: cuff, color: '#f3f2f7', when: suit, detail: true },
-      { joint: `fore${s}`, geo: hand, color: SKIN, when: notSoldier },
-      { joint: `fore${s}`, geo: hand, color: '#2b2a33', when: soldier },
-      { joint: `leg${s}`, geo: thigh, color: 'bottom', when: always, fat: true },
-      { joint: `shin${s}`, geo: shin, color: 'bottom', when: always, fat: true },
-      { joint: `shin${s}`, geo: shoe, color: 'shoes', when: always, fat: true },
-      { joint: `shin${s}`, geo: sole, color: '#f3f2f7', when: (o) => hoodie(o) || track(o), detail: true },
-      // Track suit stripes down the outside of each arm and leg
-      ...stripes(s).map((geo, k): Part => ({ joint: `${(['arm', 'fore', 'leg', 'shin'] as const)[k]}${s}`, geo, color: '#f3f2f7', when: track, fat: true, detail: true })),
-      { joint: `hand${s}`, geo: rifle, color: '#2b2a33', when: (o) => o.rifle === (s === 'L' ? 'left' : 'right') },
-    ]),
-    { joint: 'handR', geo: gummy, color: '#ffffff', mat: gummyMat, when: (o) => o.held === 'gummy', name: 'held' },
-    { joint: 'handR', geo: cup, color: '#f3f2f7', when: (o) => o.held === 'coffee', name: 'held' },
-    { joint: 'handR', geo: cupSleeve, color: '#ff6ad5', when: (o) => o.held === 'coffee', name: 'held' },
-    { joint: 'handR', geo: cupTop, color: '#f3f2f7', when: (o) => o.held === 'coffee', name: 'held' },
-    { joint: 'handR', geo: boombox, color: '#2b2a33', when: (o) => o.held === 'boombox', name: 'held' },
-    { joint: 'handR', geo: speakers, color: '#00d8ff', when: (o) => o.held === 'boombox', name: 'held' },
-  ];
-  return partsCache;
+  return texCache as Required<typeof texCache>;
 }
-
-const tmp = new THREE.Color();
-function colorOf(p: Part, o: Outfit): string {
-  if (p.color.startsWith('#')) return p.color;
-  if (p.color === 'lapel') return '#' + tmp.set(o.top).multiplyScalar(0.62).getHexString();
-  return (o[p.color as keyof Outfit] as string | undefined) ?? '#ff00ff';
+/** The material for a piece: plain pieces are coloured per vertex (and per instance in a crowd) */
+function material(m: Mat | undefined, o?: Outfit): THREE.Material {
+  if (m === 'lens') {
+    const c = new THREE.Color(o?.lens ?? '#22d07a');
+    return lit(
+      new THREE.MeshToonMaterial({
+        color: c.clone().multiplyScalar(0.42),
+        emissive: c,
+      }),
+      0.12,
+      0.7
+    );
+  }
+  if (m === 'patch') return new THREE.MeshToonMaterial({ map: textures().patch });
+  if (m === 'gummy') return new THREE.MeshToonMaterial({ map: textures().gummy });
+  if (m === 'double')
+    return (doubleMat ??= toon('#ffffff', {
+      side: THREE.DoubleSide,
+      vertexColors: true,
+    }));
+  return (plainMat ??= toon('#ffffff', { vertexColors: true }));
 }
 
 /* ---------- One figure ---------- */
@@ -828,28 +1718,55 @@ export interface Degen {
   held?: THREE.Object3D;
 }
 
-export function createDegen(o: Outfit = PLAYER): Degen {
+/**
+ * One figure, in full detail: everything worn on a joint is one mesh
+ * coloured per vertex, plus the lenses, patches and printed bag, so a
+ * figure is about 15 draw calls whatever he wears.
+ */
+export function createDegen(o: Outfit = PLAYER, q: Detail = 2): Degen {
   const rig = makeRig();
   let held: THREE.Group | undefined;
-  for (const p of parts()) {
-    if (!p.when(o)) continue;
-    let mat: THREE.Material;
-    if (p.mat) {
-      mat = p.mat(o);
-      // Special materials coloured by the outfit (the raised hood takes the hoodie's colour)
-      if (!p.color.startsWith('#')) (mat as THREE.MeshToonMaterial).color.set(colorOf(p, o));
-    } else mat = toon(colorOf(p, o));
-    const mesh = new THREE.Mesh(p.geo, mat);
-    if (isFat(p, o)) mesh.scale.copy(FAT);
+  const buckets = new Map<
+    string,
+    {
+      joint: Joint;
+      held: boolean;
+      mat?: Mat;
+      list: { geo: THREE.BufferGeometry; color: THREE.Color }[];
+    }
+  >();
+  for (const it of items(q)) {
+    if (!it.when(o)) continue;
+    for (const p of it.pieces) {
+      const key = `${p.joint}|${it.held ? 1 : 0}|${p.mat ?? ''}`;
+      if (!buckets.has(key))
+        buckets.set(key, {
+          joint: p.joint,
+          held: !!it.held,
+          mat: p.mat,
+          list: [],
+        });
+      buckets.get(key)!.list.push({ geo: p.geo, color: colorOf(p, o) });
+    }
+  }
+  for (const b of buckets.values()) {
+    const mesh = new THREE.Mesh(paintMerge(b.list), material(b.mat, o));
     mesh.castShadow = true;
-    if (p.name === 'held') {
-      if (!held) rig.j[p.joint].add((held = new THREE.Group()));
+    if (b.held) {
+      if (!held) rig.j[b.joint].add((held = new THREE.Group()));
       held.add(mesh);
-    } else rig.j[p.joint].add(mesh);
+    } else rig.j[b.joint].add(mesh);
   }
   const pose = newPose();
   applyPose(rig, pose);
-  return { g: rig.root, pose, update: () => applyPose(rig, pose), hands: [rig.j.handL, rig.j.handR], torso: rig.j.torso, held };
+  return {
+    g: rig.root,
+    pose,
+    update: () => applyPose(rig, pose),
+    hands: [rig.j.handL, rig.j.handR],
+    torso: rig.j.torso,
+    held,
+  };
 }
 
 /* ---------- A crowd ---------- */
@@ -862,36 +1779,84 @@ export interface Crowd {
   meshes: THREE.InstancedMesh[];
 }
 
+/** Merged pieces shared between crowds (and between left and right limbs) */
+const crowdGeo = new Map<string, THREE.BufferGeometry>();
+
+/**
+ * Many figures as instanced pieces. An item's pieces on one joint merge into
+ * one geometry per outfit colour (lapels are the jacket's colour, shaded per
+ * vertex), left and right limbs share it, and each figure only takes
+ * instances of what it wears, so a crowd costs a draw call per kind of
+ * piece and nothing for clothes nobody has on.
+ */
 export function createCrowd(parent: THREE.Object3D, outfits: Outfit[], opts: { light?: boolean } = {}): Crowd {
-  const n = outfits.length;
+  const q: Detail = opts.light ? 0 : 1;
   const rig = makeRig();
-  const zero = new THREE.Matrix4().makeScale(0, 0, 0);
-  const fat = new THREE.Matrix4().makeScale(FAT.x, FAT.y, FAT.z);
-  const m4 = new THREE.Matrix4();
-  // Parts that share a shape and a colour rule (left and right limbs) share one instanced mesh
-  const groups = new Map<string, Part[]>();
-  for (const p of parts()) {
-    if ((opts.light && p.detail) || !outfits.some((o) => p.when(o))) continue;
-    const key = `${p.geo.uuid}|${p.color}|${p.mat ? "mat" : ""}`;
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key)!.push(p);
+  // Groups: one instanced mesh per merged geometry, colour key and material
+  const groups = new Map<
+    string,
+    {
+      geo: THREE.BufferGeometry;
+      key: string;
+      mat?: Mat;
+      uses: { joint: Joint; item: Item }[];
+    }
+  >();
+  for (const it of items(q)) {
+    if (!outfits.some(it.when)) continue;
+    const sub = new Map<string, Piece[]>();
+    for (const p of it.pieces) {
+      if (q === 0 && p.detail) continue;
+      const k = `${p.joint}|${p.color.startsWith('#') ? '#' : p.color}|${p.mat ?? ''}`;
+      if (!sub.has(k)) sub.set(k, []);
+      sub.get(k)!.push(p);
+    }
+    for (const list of sub.values()) {
+      const fixed = list[0].color.startsWith('#');
+      const id = `${q}|` + list.map((p) => `${p.geo.uuid}:${fixed ? p.color : (p.shade ?? 1)}`).join(',');
+      let geo = crowdGeo.get(id);
+      if (!geo) {
+        geo = paintMerge(
+          list.map((p) => ({
+            geo: p.geo,
+            color: fixed ? new THREE.Color(p.color) : new THREE.Color().setScalar(p.shade ?? 1),
+          }))
+        );
+        crowdGeo.set(id, geo);
+      }
+      const gk = `${geo.uuid}|${fixed ? '#' : list[0].color}|${list[0].mat ?? ''}`;
+      if (!groups.has(gk))
+        groups.set(gk, {
+          geo,
+          key: fixed ? '#' : list[0].color,
+          mat: list[0].mat,
+          uses: [],
+        });
+      groups.get(gk)!.uses.push({ joint: list[0].joint, item: it });
+    }
   }
-  const used = [...groups.values()];
-  const meshes = used.map((g) => {
-    const p = g[0];
-    const m = new THREE.InstancedMesh(p.geo, p.mat ? p.mat() : toon('#ffffff'), n * g.length);
+  // Each figure's instances: [mesh, instance, joint]
+  const slots: [THREE.InstancedMesh, number, Joint][][] = outfits.map(() => []);
+  const meshes: THREE.InstancedMesh[] = [];
+  for (const g of groups.values()) {
+    let count = 0;
+    outfits.forEach((o) => g.uses.forEach((u) => (count += u.item.when(o) ? 1 : 0)));
+    if (!count) continue;
+    const m = new THREE.InstancedMesh(g.geo, material(g.mat), count);
     m.castShadow = true;
     m.frustumCulled = false;
     m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    let k = 0;
     outfits.forEach((o, i) =>
-      g.forEach((q, k) => {
-        m.setColorAt(i * g.length + k, tmp.set(q.mat && q.color.startsWith('#') ? '#ffffff' : colorOf(q, o)));
-        if (!q.when(o)) m.setMatrixAt(i * g.length + k, zero);
+      g.uses.forEach((u) => {
+        if (!u.item.when(o)) return;
+        m.setColorAt(k, g.key === '#' || g.mat === 'lens' ? tmp.set('#ffffff') : tmp.set((o[g.key as ColorKey] as string | undefined) ?? '#ff00ff'));
+        slots[i].push([m, k++, u.joint]);
       })
     );
     parent.add(m);
-    return m;
-  });
+    meshes.push(m);
+  }
   return {
     meshes,
     set(i, x, y, z, yaw, scale, pose) {
@@ -901,15 +1866,7 @@ export function createCrowd(parent: THREE.Object3D, outfits: Outfit[], opts: { l
       rig.root.scale.set(scale * (o.build ?? 1), scale * (o.height ?? 1), scale * (o.build ?? 1));
       applyPose(rig, pose);
       rig.root.updateMatrixWorld(true);
-      for (let gi = 0; gi < used.length; gi++) {
-        const g = used[gi];
-        for (let k = 0; k < g.length; k++) {
-          const q = g[k];
-          if (!q.when(o)) continue;
-          const w = rig.j[q.joint].matrixWorld;
-          meshes[gi].setMatrixAt(i * g.length + k, isFat(q, o) ? m4.multiplyMatrices(w, fat) : w);
-        }
-      }
+      for (const [m, k, j] of slots[i]) m.setMatrixAt(k, rig.j[j].matrixWorld);
     },
     commit() {
       for (const m of meshes) m.instanceMatrix.needsUpdate = true;
@@ -921,7 +1878,7 @@ export function createCrowd(parent: THREE.Object3D, outfits: Outfit[], opts: { l
 
 /** Suits and hoodies in a spread of colours, some with bags or headphones. */
 export function cityOutfit(r: () => number): Outfit {
-  const pick = <T,>(a: T[]) => a[Math.floor(r() * a.length)];
+  const pick = <T>(a: T[]) => a[Math.floor(r() * a.length)];
   const extras = {
     backpack: r() < 0.2 ? pick(['#14121f', '#2a2350', '#d8312f', '#1f9d6a', '#f3f2f7']) : undefined,
     crossbody: r() < 0.15 ? pick(['#14121f', '#8f3dff', '#c99a4a']) : undefined,

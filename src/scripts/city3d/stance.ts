@@ -54,7 +54,7 @@ export function holdGun(p: Pose, st: Stance, pivot: THREE.Object3D, gun: Gun, s:
   const pitch = THREE.MathUtils.lerp(0.45, s.pitch, s.aim) - p.lean + rl * 0.35 - s.recoil * 2;
   const roll = -rl * 0.5;
   // Grip just right of the middle of his chest, far enough out that the hand clears his jacket
-  pivot.position.set(-0.02, 0.34 + s.aim * 0.02, 0.155 + s.aim * 0.01 - s.recoil * 0.4);
+  pivot.position.set(-0.02, 0.32 + s.aim * 0.08, 0.16 + s.aim * 0.02 - s.recoil * 0.4);
 
   // Side-on just enough for the front hand to reach (the gun turns back the
   // other way inside the chest, so it still points where he faces)

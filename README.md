@@ -89,9 +89,13 @@ cartoon shading and PulseChain neon, built with [three.js](https://threejs.org).
   yard, guards at the checkpoint salute you in walk mode, a tank turns its
   turret and a forklift moves crates under camo netting. At night it goes
   stealth dark: a faint green window glow and small red and green lamps.
-- **Characters:** everyone is the same Degen, built after the brand art:
-  balaclava with the eye opening, red cap with the Emporium diamond, green
-  shades on a gold chain, collar, tie and a lapelled suit. Around the city
+- **Characters:** everyone is the same Degen, built after the brand art and
+  shaped like a person (about six and a half heads tall, long legs, real
+  shoulders, hands with a thumb): balaclava over a real head shape with the
+  eye opening, a six-panel red cap with the Emporium diamond, framed green
+  shades on a gold chain, a shirt collar, tie, notched lapels, pocket flaps
+  and cuffs, trousers that break over the shoes, sneakers with soles and
+  laces. Around the city
   he wears suits in different colours or hoodies and joggers (some with the
   hood up), with backpacks, crossbody bags or headphones and a bit of
   variety in build. People walk with bending knees and elbows, chat in

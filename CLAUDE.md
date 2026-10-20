@@ -109,16 +109,33 @@ it and has been retired completely. Build only on what's here.
   when the walker (`walker` in `life.ts`) comes near. Its walls, towers,
   checkpoint, store, counter and vehicles are mirrored in `solids.ts`
   `SOLIDS` (shared with the game server).
-- Every character is one shared Degen body (`src/scripts/city3d/character.ts`):
-  sculpted after the brand art, with knees, elbows and hand sockets (for
-  held items such as guns later). `createDegen()` builds one figure (the
-  player, the hologram); `createCrowd()` builds instanced crowds
-  (pedestrians, soldiers) with a draw call per part, not per person.
-  Outfits (`suit`, `hoodie`, `soldier`) only change clothes and colours;
-  poses come from the helpers there (walk/run, idle, look, chat, sit, march,
-  attention/salute, dance). The cap patch is the Emporium diamond: never put
-  another brand's logo on it. Phones get the `light` crowd without small
-  details.
+- Every character is one shared Degen body (`src/scripts/city3d/character.ts`),
+  sculpted after the brand art at human proportions (about 1.25 tall at
+  scale 1, six and a half heads, hips `HIP_HEIGHT` 0.62), with knees,
+  elbows and hand sockets. The bones (`NECK`, `SHOULDER_X/Y`, `UPPER_ARM`,
+  `PALM_Y`, `THIGH`) feed `reachArm()`, so gun holds follow them; the walk
+  camera's eye height (`walk.ts`) and the bench seat (`SEAT_DROP` in
+  `life.ts`) follow the body too.
+  - Shapes are built from cross-sections (`loft()`, superellipse rings) and
+    flat details laid onto them (`onBody()` with `surface()`: lapels, the
+    shirt V, the tie, zips, pockets). Shoes are side profiles (`profile()`).
+  - The wardrobe is `items()`: each item (`head`, `cap`, `suit`, `hoodie`,
+    `joggers`, `backpack`, `gummy`...) has a `when` rule on the `Outfit` and
+    pieces on joints, each a fixed colour or an outfit colour (`shade`
+    darkens or lightens it: lapels, ribbing). New clothes are new items.
+  - Three detail levels (`Detail`): 2 for single figures (`createDegen()`:
+    the player, other players, the fitting room, the hologram), 1 for
+    crowds, 0 for the phones' `light` crowd (no `detail` pieces).
+  - `createDegen()` merges everything on a joint into one mesh coloured per
+    vertex (about 15 draw calls a figure, about 12k triangles).
+    `createCrowd()` (pedestrians, soldiers) merges an item's pieces per
+    joint and colour, shares them left and right, and gives each person
+    instances only of what they wear (nothing is drawn hidden).
+  - Outfits (`suit`, `hoodie`, `track`, `soldier`) only change clothes and
+    colours; poses come from the helpers there (walk/run, idle, look, chat,
+    sit, march, attention/salute, dance). The cap patch is the Emporium
+    diamond: never put another brand's logo on it. Whites on clothes are
+    `SHIRT`, a shade under white, so they don't bloom.
 - Floating cut-out signs (FX layer with a transparent texture, like the roof
   logo) need `occlude()` from `kit.ts`, or the ink outlines of whatever is
   behind them get drawn across them.
@@ -181,7 +198,7 @@ it and has been retired completely. Build only on what's here.
   token.
 - A new item needs a `Look` field with its palette and rules in
   `profile-data.ts` `cleanLook()` (the server checks it too), the mapping in
-  `lookOutfit()`, the part in `character.ts` and an entry in `fitting.ts`
+  `lookOutfit()`, an item in `items()` in `character.ts` and an entry in `fitting.ts`
   `TABS`. One hat (`hat`), one bag (`bag`) and one thing in the hand
   (`held`) at a time; `cleanLook()` also upgrades looks saved in older
   formats, so keep its migration when fields change. Held items are put

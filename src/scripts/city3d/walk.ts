@@ -879,7 +879,7 @@ export function createWalk(d: WalkDeps) {
     // Armed, he steps further left of the crosshair so it never sits on his head
     armAmt += ((combat.armed ? 1 : 0) - armAmt) * damp(6, dt);
     const shoulder = firstPerson ? 0 : THREE.MathUtils.clamp(1 - zoom / 10, 0, 1) * 0.38 + armAmt * 0.42;
-    pivotWant.set(pos.x + Math.cos(yaw) * shoulder, pos.y + (firstPerson ? 1.12 : 0.95) * SCALE + 0.05, pos.z - Math.sin(yaw) * shoulder);
+    pivotWant.set(pos.x + Math.cos(yaw) * shoulder, pos.y + (firstPerson ? 1.2 : 1.0) * SCALE + 0.05, pos.z - Math.sin(yaw) * shoulder);
     if (pivot.lengthSq() === 0) pivot.copy(pivotWant);
     pivot.x += (pivotWant.x - pivot.x) * damp(18, dt);
     pivot.z += (pivotWant.z - pivot.z) * damp(18, dt);
