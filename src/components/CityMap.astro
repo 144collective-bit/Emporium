@@ -35,8 +35,9 @@ const spots: Record<SpotId, Spot> = {
   signal: { href: '#city-title', title: 'Signal tower', sub: 'News & contracts', aria: 'Signal tower: news and contracts' },
   telegram: { href: '#city-title', title: 'Post office', sub: 'Couriers', aria: 'Post office: couriers' },
   apartments: { href: '#city-title', title: 'Apartments', sub: 'Staff', aria: 'The Apartments: hire staff' },
+  karts: { href: '#city-title', title: 'Kart park', sub: 'Go-karts · races', aria: 'The kart park: go-kart races' },
 };
-const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments'];
+const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts'];
 const ext = { target: '_blank', rel: 'noopener noreferrer' };
 
 const map = renderCity({ spots, art: { degen: degenImg.src, logo: logoImg.src } });
@@ -477,6 +478,70 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       <div class="race-result-body" data-result-body></div>
       <button type="button" class="shop-take" data-result-ok>Done</button>
     </section>
+    {/* The kart park (kart-ui.ts), opened at the hut's door or the City-view panel's Walk in.
+        data-karts: the hut menu (built on the gun store's .shop panel); data-karts-dorras and data-karts-level in its
+        head; data-karts-tabs the Race / Karts / Records tabs (data-karts-tab); data-karts-body (painted);
+        data-karts-close its ×.
+        data-kart-count: the countdown digits. data-kart-hud: the race HUD: the place (data-kart-place, data-kart-ord,
+        data-kart-of), the drift meter (data-kart-meter) with the Boost / Shield tags (data-kart-boost, data-kart-shield),
+        the lap (data-kart-lap) and the clock (data-kart-clock), the item slot (data-kart-slot: data-kart-slot-icon,
+        data-kart-slot-strip while the roulette spins, data-kart-slot-name) and Quit (data-kart-quit).
+        data-kart-pops: short lines over the HUD. data-kart-result: the results card; data-kart-result-title,
+        data-kart-result-body (painted), data-kart-result-ok and data-kart-result-close.
+        Touch, while .city.is-karting (set by kart.ts): data-kart-drift above the Brake pedal and data-kart-item (the
+        held item's icon in data-kart-item-icon) above the Gas pedal; walk.ts wires them. .kart-hint is the key line. */}
+    <section class="shop karts" data-karts hidden aria-labelledby="karts-title">
+      <header class="shop-head">
+        <h2 id="karts-title" class="shop-title">Kart hut</h2>
+        <p class="shop-score karts-dorras"><span class="shop-score-label">Dorras</span> <span data-karts-dorras></span></p>
+        <p class="shop-score" data-karts-level>Level <b>1</b></p>
+        <button type="button" class="shop-close" data-karts-close aria-label="Close the kart hut">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+        </button>
+      </header>
+      <div class="seg karts-tabs" data-karts-tabs role="group" aria-label="Kart hut">
+        <button type="button" data-karts-tab="race" aria-pressed="true">Race</button>
+        <button type="button" data-karts-tab="karts" aria-pressed="false">Karts</button>
+        <button type="button" data-karts-tab="records" aria-pressed="false">Records</button>
+      </div>
+      <div class="karts-body" data-karts-body></div>
+      <p class="shop-foot">Prizes and prices are Dorras, earned in the city. Nothing here is real money.</p>
+    </section>
+    <div class="race-count kart-count" data-kart-count hidden aria-live="assertive"></div>
+    <div class="kart-hud" data-kart-hud hidden>
+      <div class="kart-hud-left">
+        <p class="kart-place"><b data-kart-place>1</b><small data-kart-ord>st</small><span class="kart-of" data-kart-of>of 8</span></p>
+        <div class="kart-meter" data-kart-meter data-tier="0" role="img" aria-label="Drift"><i></i><i></i><i></i></div>
+        <p class="kart-tags"><span class="kart-tag is-boost" data-kart-boost hidden>Boost</span><span class="kart-tag is-shield" data-kart-shield hidden>Shield</span></p>
+      </div>
+      <div class="kart-hud-mid">
+        <b class="kart-lap" data-kart-lap>Lap 1/3</b>
+        <b class="kart-clock" data-kart-clock>0:00.00</b>
+      </div>
+      <div class="kart-hud-right">
+        <div class="kart-slot is-empty" data-kart-slot data-item="none">
+          <span class="kart-slot-icon" data-kart-slot-icon></span>
+          <span class="kart-slot-strip" data-kart-slot-strip aria-hidden="true"></span>
+          <span class="kart-slot-q" aria-hidden="true">?</span>
+          <small class="kart-slot-name" data-kart-slot-name>No item</small>
+        </div>
+        <button type="button" class="race-quit kart-quit" data-kart-quit>Quit</button>
+      </div>
+    </div>
+    <div class="kart-pops" data-kart-pops aria-live="polite"></div>
+    <section class="shop race-result kart-result" data-kart-result hidden aria-labelledby="kart-result-title">
+      <header class="shop-head">
+        <h2 id="kart-result-title" class="shop-title" data-kart-result-title>Finished</h2>
+        <button type="button" class="shop-close" data-kart-result-close aria-label="Close the results">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+        </button>
+      </header>
+      <div class="race-result-body" data-kart-result-body></div>
+      <button type="button" class="shop-take" data-kart-result-ok>Done</button>
+    </section>
+    <p class="walk-hint kart-hint"><kbd>W</kbd><kbd>S</kbd> gas / brake · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>Space</kbd> drift · <kbd>E</kbd> item (<kbd>S</kbd> + <kbd>E</kbd> throws behind) · <kbd>Esc</kbd> quit</p>
+    <button type="button" class="kart-btn kart-drift" data-kart-drift aria-label="Drift">Drift</button>
+    <button type="button" class="kart-btn kart-item" data-kart-item aria-label="Use item"><span class="kart-item-icon" data-kart-item-icon></span><small>Item</small></button>
     <p class="walk-hint"><kbd>WASD</kbd> move · <kbd>Shift</kbd> run · <kbd>Space</kbd> jump · <kbd>V</kbd> camera · <kbd>Esc</kbd> stop</p>
     {/* Driving your car (drive.ts): speed readout, key hint, touch pedals (the stick steers) */}
     <p class="walk-hint drive-hint"><kbd>W</kbd><kbd>S</kbd> gas / brake · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>Space</kbd> handbrake · <kbd>V</kbd> camera · <kbd>E</kbd> get out</p>
@@ -618,6 +683,14 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     <h2 id="city-panel-title" class="city-panel-title">Staff</h2>
     <p class="city-panel-text">Degens looking for work. Hire one for your stall, a shop, a garden or the Workshop: they work while you're away too, and keep a share of what they handle.</p>
     <div class="market" data-staff></div>
+  </template>
+  <template data-panel-tpl="karts">
+    <p class="kicker"><span class="kicker-num">09</span> The kart park</p>
+    <h2 id="city-panel-title" class="city-panel-title">Go-karts</h2>
+    <p class="city-panel-text">The Neon Loop: three laps against seven rivals, with items from the boxes on the track. Three cups, dearer as you level up, and time trials on your own. Karts are bought and tuned at the hut for Dorras earned in the city.</p>
+    <button type="button" class="chip-link kart-walkin" data-kart-walkin>Walk in</button>
+    {/* Your time-trial bests and race counts (index.ts fills it with kartRecordsHtml() from kart-ui.ts) */}
+    <div class="kart-panel-records" data-kart-panel-records></div>
   </template>
 
   <div class="city-hud" data-city-hud>
