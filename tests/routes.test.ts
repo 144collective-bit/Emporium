@@ -6,13 +6,14 @@ import assert from 'node:assert/strict';
 import { JUNCTIONS, ROUTES, lightState, pointOn, type Phase } from '../src/scripts/city3d/routes';
 import { PLAN, distToStreet, onSlab } from '../src/scripts/city3d/streetplan';
 import { DIAGONALS } from '../src/scripts/city3d/downtown';
+import { BENDS } from '../src/scripts/city3d/outer';
 import { EW_ROADS, NS_ROADS } from '../src/scripts/city3d/layout';
 
 const roads = PLAN.streets.filter((s) => s.lanes > 0);
 
 test('a route for every lane of every straight road, and two down each diagonal', () => {
   const lanes = [...EW_ROADS, ...NS_ROADS].reduce((n, r) => n + r.lanes * 2, 0);
-  assert.equal(ROUTES.length, lanes + DIAGONALS.length * 2);
+  assert.equal(ROUTES.length, lanes + DIAGONALS.length * 2 + BENDS.length * 2);
 });
 
 test("every route stays on the asphalt, a car's width in from the kerb, and off every slab", () => {
@@ -28,7 +29,7 @@ test("every route stays on the asphalt, a car's width in from the kerb, and off 
 });
 
 test("the diagonals' routes stop at both ends: the ring corner and the lit junction, which runs three phases", () => {
-  const diag = ROUTES.filter((r) => r.stops.some((s) => s.phase === 'd'));
+  const diag = ROUTES.filter((r) => r.stops.some((s) => s.j.streets.some((st) => st.id.startsWith('diag')) && s.phase === 'd'));
   assert.equal(diag.length, DIAGONALS.length * 2);
   for (const d of DIAGONALS) {
     const ends = JUNCTIONS.filter((j) => j.streets.some((s) => s.id === d.id));

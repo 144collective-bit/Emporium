@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import { PLAN, blockAt, cityPlan, distToStreet, gridPlan, inPoly, lanePaths, offsetLine, onSlab, outset, pointAt, polyArea, polyCentre, streetLength, type Pt, type Street } from '../src/scripts/city3d/streetplan';
 import { BLOCKS, BS, CORE_ROADS, EW_ROADS, EXT, EXTRA_LOTS, NS_ROADS, RING_HI, RING_LO, WALK_W, laneCentres } from '../src/scripts/city3d/layout';
 import { BLOCKS_DT, DIAGONALS } from '../src/scripts/city3d/downtown';
+import { BEND_KERBS, OUTER_BLOCKS } from '../src/scripts/city3d/outer';
 import { DISTRICTS } from '../src/data/plots';
 
 const near = (a: number, b: number, eps = 1e-6) => Math.abs(a - b) < eps;
@@ -67,7 +68,10 @@ test('the city as built: the grid\'s roads, three diagonals from the ring\'s cor
 
 test('the city\'s blocks: downtown\'s outlines, every district and lot, off the asphalt, the landmarks on theirs', () => {
   const p = cityPlan();
-  assert.equal(p.blocks.length, BLOCKS_DT.length + DISTRICTS.length + EXTRA_LOTS.length);
+  assert.equal(p.blocks.length, BLOCKS_DT.length + OUTER_BLOCKS.length + BEND_KERBS.length);
+  // Every plot and every lot sits on an outer block
+  for (const d of DISTRICTS) assert.equal(p.blocks.filter((b) => b.pads?.includes(d.id)).length, 1, `plot ${d.id}`);
+  assert.equal(p.blocks.flatMap((b) => b.pads ?? []).length, DISTRICTS.length + EXTRA_LOTS.length);
   assert.equal(new Set(p.blocks.map((b) => b.id)).size, p.blocks.length, 'ids are unique');
   assert.equal(p.slabs.length, p.blocks.length);
   const roads = p.streets.filter((s) => s.kind !== 'alley');
@@ -82,7 +86,8 @@ test('the city\'s blocks: downtown\'s outlines, every district and lot, off the 
   assert.ok(blockAt(p, [30, 36])?.places?.includes('emporium'));
   // The hangout square is the block south of the Emporium's, and there are pocket parks
   assert.ok(p.plazas.some((q) => q.kind === 'hangout' && inPoly(q.poly, [30, 52])));
-  assert.equal(p.plazas.filter((q) => q.kind === 'park').length, 3);
+  assert.equal(p.plazas.filter((q) => q.kind === 'park').length, 3 + 4, 'three pocket parks downtown, four further out');
+  assert.equal(p.plazas.filter((q) => q.kind === 'square').length, 4, 'a small square on each side of town');
   // A street, or a diagonal, is on no slab
   assert.ok(!onSlab(p, [17, 30]) && !onSlab(p, [8, 8]) && !onSlab(p, [52, 8]));
   assert.ok(onSlab(p, [30, 36]) && onSlab(p, [19, 30]), 'a lot, and its sidewalk');

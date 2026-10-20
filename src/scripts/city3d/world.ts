@@ -16,8 +16,9 @@ import * as THREE from 'three';
 import { DISTRICTS } from '../../data/plots';
 import { Batch, PAL, canvasTex, facadeMat, fx, glowMat, glowTex, lit, neon, rand, sidesBox, toon } from './kit';
 import { BLOCKS, BS, CENTER_XZ, CITY_EXT, CORE_ROADS, DOWNTOWN, EW_ROADS, EXT, EXTRA_LOTS, LANE, MEDIAN, NS_ROADS, OUTER_HI, OUTER_LO, RIVER, SEATS, SOUTH_ROAD, WALK_W, type Road } from './layout';
-import { PLAN, type Pt } from './streetplan';
+import { PLAN, offsetLine, type Pt } from './streetplan';
 import { DIAGONALS, DIAGONAL_LAMPS } from './downtown';
+import { BENDS, BEND_REACH, KERB_RUNS, OUTSIDE, PADS, PARKWAY, PROMENADE, SOUTHSIDE, inTown } from './outer';
 
 export { BLOCKS, BS, CORE_ROADS, EW_ROADS, EXT, NS_ROADS, RIVER, SOUTH_ROAD, WALK_W, type Road };
 /** District blocks around the core: one large plot each (src/data/plots.ts). */
@@ -72,6 +73,8 @@ const LOTS: Record<string, THREE.Material> = {
   dirt: toon('#6a4a3c'),
 };
 export type LotKind = keyof typeof LOTS;
+/** The lot surfaces (grass, paving, concrete, dirt), for squares and pads drawn elsewhere */
+export const lotMat = (k: LotKind) => LOTS[k];
 
 /** A flat outline at height y, facing up (UVs one texture repeat per lot, like a block's) */
 export function flatPoly(poly: Pt[], y: number) {
@@ -104,6 +107,8 @@ export function insetPoly(poly: Pt[], d: number): Pt[] {
     return [p[0] + m[0] * k, p[1] + m[1] * k] as Pt;
   });
 }
+const PARKWAY_TOP = Math.min(...PARKWAY.map((p) => p[1]));
+const SOUTHSIDE_BOTTOM = Math.max(...SOUTHSIDE.map((p) => p[1]));
 const isRect = (poly: Pt[]) => poly.length === 4 && poly.every((p, i) => { const q = poly[(i + 1) % 4]; return p[0] === q[0] || p[1] === q[1]; });
 
 /** Water: deep colour with drifting highlights and, at night, neon streaks. */
@@ -190,7 +195,7 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
     b.box(e0, 0, z0, L, 0.05, z1 - z0, promenade);
   // Lamps along the water, reaching out over the walk (clear of the bridges)
   const nearBridge = (x: number) => NS_ROADS.some((r) => Math.abs(x - r.c) < r.half + WALK_W + 0.9);
-  for (let x = OUTER_LO - 2; x <= OUTER_HI + BS + 2; x += 6)
+  for (let x = PROMENADE.x[0]; x <= PROMENADE.x[1]; x += 6)
     if (!nearBridge(x)) {
       addLamp(x, RIVER[0] - 0.4, Math.PI / 2, 0.05);
       addLamp(x, RIVER[1] + 0.4, -Math.PI / 2, 0.05);
@@ -255,6 +260,8 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
   // Block slabs: the sidewalk round every block (the kerb) and the lot inside: downtown's blocks, the districts and the extra lots
   const kerb = toon('#5a5290');
   PLAN.blocks.forEach((blk, i) => {
+    // (The bends' outer sidewalks are drawn as one kerb each, below)
+    if (blk.id.startsWith('kerb-')) return;
     const slab = PLAN.slabs[i];
     const kind: LotKind =
       lots[blk.id] ??
@@ -266,7 +273,8 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
       b.box(x0 + WALK_W + 0.4, SLAB, z0 + WALK_W + 0.4, x1 - x0 - (WALK_W + 0.4) * 2, 0.005, z1 - z0 - (WALK_W + 0.4) * 2, LOTS[kind]);
     } else {
       b.add(slabPoly(slab, SLAB), kerb);
-      b.add(flatPoly(insetPoly(blk.poly, 0.4), SLAB + 0.003), LOTS[kind]);
+      // (A bend's outer sidewalk is all sidewalk: no lot)
+      if (blk.walk) b.add(flatPoly(insetPoly(blk.poly, 0.4), SLAB + 0.003), LOTS[kind]);
     }
   });
   // The landmarks' own lots inside their blocks (grass round the Signal tower, concrete in the compound...)
@@ -275,6 +283,69 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
       const [ox, oz] = SEATS[k];
       b.box(ox + 0.2, SLAB, oz + 0.2, BS - 0.4, 0.008, BS - 0.4, LOTS[kind]);
     }
+  // The plots' and lots' pads on their blocks' lawns: a paved rim round each (the lots their own ground)
+  const rim = toon('#4b4766');
+  const padGround: Record<string, LotKind> = { garage: 'concrete', market: 'paving', units: 'paving' };
+  for (const p of PADS) {
+    const [x0, z0, x1, z1] = p.rect;
+    b.box(x0, SLAB, z0, x1 - x0, 0.007, z1 - z0, rim);
+    b.box(x0 + 0.3, SLAB, z0 + 0.3, x1 - x0 - 0.6, 0.01, z1 - z0 - 0.6, padGround[p.id] ? LOTS[padGround[p.id]] : toon('#367f5a'));
+  }
+  // The bending streets: asphalt wide enough to fill their corners at the avenues (the kerbs cover the rest)
+  for (const bend of BENDS) {
+    const hw = BEND_REACH + 0.4;
+    const l = offsetLine(bend.pts, -hw);
+    const r = offsetLine(bend.pts, hw);
+    const pos: number[] = [];
+    // Each triangle wound to face up (seen from above, whichever way the curve runs)
+    const tri = (p: Pt, q: Pt, t: Pt) => {
+      const up = (q[1] - p[1]) * (t[0] - p[0]) - (q[0] - p[0]) * (t[1] - p[1]) > 0;
+      for (const v of up ? [p, q, t] : [p, t, q]) pos.push(v[0], 0.033, v[1]);
+    };
+    for (let i = 1; i < bend.pts.length; i++) {
+      tri(l[i - 1], r[i - 1], r[i]);
+      tri(l[i - 1], r[i], l[i]);
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute('normal', new THREE.Float32BufferAttribute(pos.map((_, i) => (i % 3 === 1 ? 1 : 0)), 3));
+    g.setIndex(Array.from({ length: pos.length / 3 }, (_, i) => i));
+    b.add(g, asphalt);
+  }
+
+  // The bends' outer sidewalks: one continuous raised kerb, broken where a road crosses
+  BENDS.forEach((bend, bi) => {
+    const out = OUTSIDE[bi];
+    const near = offsetLine(bend.pts, out * LANE);
+    const far = offsetLine(bend.pts, out * BEND_REACH);
+    const top: number[] = [];
+    const wall: number[] = [];
+    // A quad from four corners, wound to face `up` (the top) or away from the road / out of town (the walls)
+    const quad = (list: number[], a: number[], c: number[], d: number[], e: number[], face: [number, number, number]) => {
+      const cr = [(c[1] - a[1]) * (d[2] - a[2]) - (c[2] - a[2]) * (d[1] - a[1]), (c[2] - a[2]) * (d[0] - a[0]) - (c[0] - a[0]) * (d[2] - a[2]), (c[0] - a[0]) * (d[1] - a[1]) - (c[1] - a[1]) * (d[0] - a[0])];
+      const ok = cr[0] * face[0] + cr[1] * face[1] + cr[2] * face[2] > 0;
+      for (const v of ok ? [a, c, d, a, d, e] : [a, d, c, a, e, d]) list.push(...v);
+    };
+    const runs = KERB_RUNS[bi];
+    for (let i = 1; i < bend.pts.length; i++) {
+      if (!runs[i - 1]) continue;
+      const [n0, n1, f0, f1] = [near[i - 1], near[i], far[i - 1], far[i]];
+      quad(top, [n0[0], SLAB, n0[1]], [n1[0], SLAB, n1[1]], [f1[0], SLAB, f1[1]], [f0[0], SLAB, f0[1]], [0, 1, 0]);
+      const towards = (from: Pt, to: Pt): [number, number, number] => [to[0] - from[0], 0, to[1] - from[1]];
+      quad(wall, [n0[0], 0, n0[1]], [n1[0], 0, n1[1]], [n1[0], SLAB, n1[1]], [n0[0], SLAB, n0[1]], towards(f0, n0));
+      quad(wall, [f0[0], 0, f0[1]], [f1[0], 0, f1[1]], [f1[0], SLAB, f1[1]], [f0[0], SLAB, f0[1]], towards(n0, f0));
+      // Ends of a run
+      if (i === 1 || !runs[i - 2]) quad(wall, [n0[0], 0, n0[1]], [f0[0], 0, f0[1]], [f0[0], SLAB, f0[1]], [n0[0], SLAB, n0[1]], towards(n1, n0));
+      if (i === bend.pts.length - 1 || !runs[i]) quad(wall, [n1[0], 0, n1[1]], [f1[0], 0, f1[1]], [f1[0], SLAB, f1[1]], [n1[0], SLAB, n1[1]], towards(n0, n1));
+    }
+    for (const list of [top, wall]) {
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(list, 3));
+      g.computeVertexNormals();
+      b.add(g, kerb);
+    }
+  });
+
   // Lamps along the diagonals
   for (const l of DIAGONAL_LAMPS) addLamp(l.at[0], l.at[1], l.ry);
   b.build(scene, { cast: false, receive: true });
@@ -310,6 +381,23 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
         if (side !== sz)
           for (let k = nr.c - nr.half + 0.16; k < nr.c + nr.half - 0.1; k += 0.32) zebra.push(m.clone().compose(new THREE.Vector3(k, 0.042, er.c + side * (er.half + 0.45)), q0, new THREE.Vector3(0.17, 0.01, 0.55)));
     }
+  // A dashed centre line round each bend, clear of the roads it crosses
+  for (const bend of BENDS) {
+    let carry = 0;
+    for (let i = 1; i < bend.pts.length; i++) {
+      const [a, c] = [bend.pts[i - 1], bend.pts[i]];
+      const len = Math.hypot(c[0] - a[0], c[1] - a[1]);
+      const [ux, uz] = [(c[0] - a[0]) / len, (c[1] - a[1]) / len];
+      const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.atan2(-uz, ux));
+      for (let p = carry; p < len; p += 1.1) {
+        const [x, z] = [a[0] + ux * p, a[1] + uz * p];
+        if (NS_ROADS.some((r) => Math.abs(x - r.c) < r.half + 1.4) || EW_ROADS.some((r) => Math.abs(z - r.c) < r.half + 1.4)) continue;
+        dashes.push(m.clone().compose(new THREE.Vector3(x, 0.037, z), q, new THREE.Vector3(0.55, 0.01, 0.07)));
+      }
+      carry = (carry - len) % 1.1;
+      if (carry < 0) carry += 1.1;
+    }
+  }
   // A dashed centre line down each diagonal, clear of the crossings at its ends
   for (const d of DIAGONALS) {
     const [ax, az] = d.from;
@@ -319,7 +407,8 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
     const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.atan2(-uz, ux));
     for (let p = 6; p < len - 3.6; p += 1.1) dashes.push(m.clone().compose(new THREE.Vector3(ax + ux * p, 0.037, az + uz * p), q, new THREE.Vector3(0.55, 0.01, 0.07)));
   }
-  const unit = new THREE.BoxGeometry(1, 1, 1);
+  // Flat: two triangles a marking (thousands of them), lying on the asphalt
+  const unit = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
   for (const [list, mat] of [
     [dashes, neon('#f5d76e', 0.9, 1.1)],
     [whites, toon('#d9d5ee')],
@@ -358,8 +447,10 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
  * city, and a lighter sprinkle (`count` * `sparse`) across the open land out to the world's edge.
  */
 export function scatterOutskirts(count: number, sparse = 0.6) {
-  scatterIn(count, [CITY_EXT[0] + 26, CITY_EXT[1] - 20], [CITY_EXT[0] + 26, CITY_EXT[1] - 13]);
-  scatterIn(Math.round(count * sparse), [EXT[0] + 4, EXT[1] - 4], [EXT[0] + 4, EXT[1] - 4], [CITY_EXT[0] + 26, CITY_EXT[1] - 20, CITY_EXT[0] + 26, CITY_EXT[1] - 13]);
+  // The belt: a band round the town (inside the Parkway and the Southside Loop), out to about 20 past them
+  const belt: [number, number, number, number] = [PROMENADE.x[0] - 24, PROMENADE.x[1] + 24, PARKWAY_TOP - 24, SOUTHSIDE_BOTTOM + 24];
+  scatterIn(count, [belt[0], belt[1]], [belt[2], belt[3]]);
+  scatterIn(Math.round(count * sparse), [EXT[0] + 4, EXT[1] - 4], [EXT[0] + 4, EXT[1] - 4], belt);
 }
 
 /** Trees across x / z ranges, kept off the town, the roads and the river (and out of `skip`, a box already planted) */
@@ -370,12 +461,8 @@ function scatterIn(count: number, xr: [number, number], zr: [number, number], sk
     const x = xr[0] + rand() * (xr[1] - xr[0]);
     const z = zr[0] + rand() * (zr[1] - zr[0]);
     if (skip && x > skip[0] && x < skip[1] && z > skip[2] && z < skip[3]) continue;
-    // Clear of the core city, the districts round it and the south row across the river
-    const [lo, hi] = [DISTRICTS[0].ox - WALK_W - 0.6, DISTRICTS[4].ox + BS + WALK_W + 0.6];
-    if (x > lo && x < hi && z > lo && z < RIVER[0]) continue;
-    const south = DISTRICTS[DISTRICTS.length - 1];
-    if (x > lo && x < hi && z > RIVER[1] && z < south.oz + BS + WALK_W + 0.6) continue;
-    if (EXTRA_LOTS.some((l) => x > l.ox - WALK_W - 0.6 && x < l.ox + BS + WALK_W + 0.6 && z > l.oz - WALK_W - 0.6 && z < l.oz + BS + WALK_W + 0.6)) continue;
+    // Clear of the town (inside the bends, the river and its banks) and of the bends themselves
+    if (inTown([x, z], 1.2)) continue;
     if (EW_ROADS.some((r) => Math.abs(z - r.c) < r.half + 0.8) || NS_ROADS.some((r) => Math.abs(x - r.c) < r.half + 0.8)) continue;
     if (z > RIVER[0] - 1 && z < RIVER[1] + 0.8) continue;
     addTree(x, z, 0.8 + rand() * 0.6, rand() < 0.4, 0);
@@ -430,7 +517,8 @@ export function buildSkyline(scene: THREE.Scene, count: number, tick: (f: Tick) 
 export function buildTrees(scene: THREE.Scene) {
   const round = trees.filter((t) => !t.pine);
   const pines = trees.filter((t) => t.pine);
-  const trunkGeo = new THREE.CylinderGeometry(0.07, 0.09, 1, 6);
+  // Open-ended: the canopy hides the top, the ground the bottom
+  const trunkGeo = new THREE.CylinderGeometry(0.07, 0.09, 1, 6, 1, true);
   const canopyGeo = new THREE.IcosahedronGeometry(0.42, 1);
   const coneGeo = new THREE.ConeGeometry(0.42, 0.9, 7);
   const trunk = new THREE.InstancedMesh(trunkGeo, toon('#6b4630'), trees.length);

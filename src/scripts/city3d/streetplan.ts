@@ -16,6 +16,7 @@
 import { DISTRICTS } from '../../data/plots';
 import { BLOCKS, BS, CENTER_XZ, CORE_ROADS, EW_ROADS, EXT, EXTRA_LOTS, GARAGE, LANE, MARKET, MEDIAN, NS_ROADS, SEATS, UNITS, WALK_W, type Road } from './layout';
 import { ALLEYS, BLOCKS_DT, DIAGONALS, LANES } from './downtown';
+import { BENDS, BEND_KERBS, OUTER_BLOCKS, OUTER_PARKS, OUTER_SQUARES, PADS } from './outer';
 
 export type Pt = [number, number];
 
@@ -57,6 +58,8 @@ export interface Block {
   ref?: string;
   /** The landmarks on a downtown block (their spot ids) */
   places?: string[];
+  /** The plots and lots on an outer block (outer.ts PADS) */
+  pads?: string[];
   /** Sidewalk width round it */
   walk: number;
 }
@@ -281,7 +284,28 @@ const SPOT_OF: Record<string, string> = {
   '22,22': 'plan',
 };
 
-/** The city as built: the grid's streets and districts, downtown's diagonals, blocks, alleys and squares */
+/** Where a polyline crosses the line x = c (axis 0) or z = c (axis 1) */
+function crossingsOf(pts: Pt[], axis: 0 | 1, c: number): Pt[] {
+  const out: Pt[] = [];
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1][axis] - c;
+    const b = pts[i][axis] - c;
+    if (a === 0 || (a < 0) !== (b < 0)) {
+      const t = a === b ? 0 : a / (a - b);
+      const p: Pt = [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * t, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * t];
+      if (!out.some((q) => Math.hypot(q[0] - p[0], q[1] - p[1]) < 0.5)) out.push(p);
+    }
+  }
+  if (pts.at(-1)![axis] === c && !out.some((q) => Math.hypot(q[0] - pts.at(-1)![0], q[1] - pts.at(-1)![1]) < 0.5)) out.push(pts.at(-1)!);
+  return out;
+}
+
+/**
+ * The city as built: the grid's streets, downtown's diagonals, blocks,
+ * alleys and squares, and the outer districts (outer.ts): the Parkway and
+ * the Southside Loop, the landscaped blocks round the plots and lots, their
+ * squares and pocket parks.
+ */
 export function cityPlan(): StreetPlan {
   const streets = gridStreets();
   const crossings = gridCrossings();
@@ -290,11 +314,25 @@ export function cityPlan(): StreetPlan {
     // Each end is a crossing of the grid already (a ring corner, a cross-street junction)
     for (const end of [d.from, d.to]) crossings.find((c) => c.at[0] === end[0] && c.at[1] === end[1])!.streets.push(d.id);
   }
+  // The bending streets: a crossing (no lights) wherever one meets a straight road, ends included
+  for (const b of BENDS) {
+    streets.push({ id: b.id, kind: 'street', pts: b.pts, half: LANE, lanes: 1 });
+    NS_ROADS.forEach((r, i) => crossingsOf(b.pts, 0, r.c).forEach((at, k) => crossings.push({ id: `${b.id}-ns${i}-${k}`, at, streets: [`ns${i}`, b.id], lights: false })));
+    EW_ROADS.forEach((r, i) => crossingsOf(b.pts, 1, r.c).forEach((at, k) => crossings.push({ id: `${b.id}-ew${i}-${k}`, at, streets: [`ew${i}`, b.id], lights: false })));
+  }
   // Alleys and lanes: walk-only, from the street front through to the back
   [...ALLEYS.map((a) => a.box), ...LANES].forEach((b, i) => {
     const [x0, z0, x1, z1] = b;
     const alongX = x1 - x0 > z1 - z0;
-    const pts: Pt[] = alongX ? [[x0, (z0 + z1) / 2], [x1, (z0 + z1) / 2]] : [[(x0 + x1) / 2, z0], [(x0 + x1) / 2, z1]];
+    const pts: Pt[] = alongX
+      ? [
+          [x0, (z0 + z1) / 2],
+          [x1, (z0 + z1) / 2],
+        ]
+      : [
+          [(x0 + x1) / 2, z0],
+          [(x0 + x1) / 2, z1],
+        ];
     streets.push({ id: `alley${i}`, kind: 'alley', pts, half: (alongX ? z1 - z0 : x1 - x0) / 2, lanes: 0 });
   });
   const inside = (b: { poly: Pt[] }, [x, z]: [number, number]) => inPoly(b.poly, [x + BS / 2, z + BS / 2]);
@@ -306,9 +344,19 @@ export function cityPlan(): StreetPlan {
       const use: BlockUse = b.use === 'infill' ? 'plain' : b.use;
       return { id: `dt-${b.id}`, poly: b.poly, use, places: places.length ? places : undefined, walk: WALK_W };
     }),
-    ...outerBlocks(),
+    // The outer blocks, named after their first plot (or lot), every pad on them listed
+    ...OUTER_BLOCKS.map((b): Block => {
+      const plot = b.pads.find((id) => PADS.find((p) => p.id === id)!.kind === 'plot');
+      return { id: b.id, poly: b.poly, use: plot ? 'district' : 'lot', ref: plot ?? b.pads[0], pads: b.pads, walk: WALK_W };
+    }),
+    // The bends' outer sidewalks (their own outline is the sidewalk)
+    ...BEND_KERBS.map((poly, i): Block => ({ id: `kerb-${i}`, poly, use: 'plain', walk: 0 })),
   ];
-  const plazas: Plaza[] = BLOCKS_DT.filter((b) => b.use === 'plaza' || b.use === 'park').map((b) => ({ id: b.id, kind: b.use === 'plaza' ? 'hangout' : 'park', poly: b.poly }));
+  const plazas: Plaza[] = [
+    ...BLOCKS_DT.filter((b) => b.use === 'plaza' || b.use === 'park').map((b): Plaza => ({ id: b.id, kind: b.use === 'plaza' ? 'hangout' : 'park', poly: b.poly })),
+    ...OUTER_SQUARES.map((q): Plaza => ({ id: `square-${q.id}`, kind: 'square', poly: square(q.rect[0], q.rect[1], q.rect[2] - q.rect[0], q.rect[3] - q.rect[1]) })),
+    ...OUTER_PARKS.map((q): Plaza => ({ id: `park-${q.id}`, kind: 'park', poly: square(q.rect[0], q.rect[1], q.rect[2] - q.rect[0], q.rect[3] - q.rect[1]) })),
+  ];
   return withSlabs({ streets, crossings, blocks, plazas });
 }
 

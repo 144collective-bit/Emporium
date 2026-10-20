@@ -7,7 +7,8 @@
  * where a diagonal comes in). life.ts drives the cars along them.
  */
 import { CITY_EXT, EW_ROADS, LANE, MEDIAN, NS_ROADS, laneCentres } from './layout';
-import { PLAN, distToStreet, type Street } from './streetplan';
+import { PLAN, distToStreet, offsetLine, type Street } from './streetplan';
+import { BENDS } from './outer';
 import { DIAGONALS } from './downtown';
 
 export type Pt = [number, number];
@@ -63,32 +64,44 @@ export const JUNCTIONS: Junction[] = PLAN.crossings.map((c, ix) => ({
 /** The right-hand side of travel along (dx, dz) */
 export const rightOf = (dx: number, dz: number): Pt => [-dz, dx];
 
-/** A route from straight legs (each a street's centre line, a -> b, and how far right of it the lane runs), corners rounded */
-function legs(list: { a: Pt; b: Pt; off: number }[]): Pt[] {
-  const lines = list.map(({ a, b, off }) => {
-    const l = Math.hypot(b[0] - a[0], b[1] - a[1]);
-    const u: Pt = [(b[0] - a[0]) / l, (b[1] - a[1]) / l];
-    const r = rightOf(...u);
-    return { p: [a[0] + r[0] * off, a[1] + r[1] * off] as Pt, q: [b[0] + r[0] * off, b[1] + r[1] * off] as Pt, u };
-  });
-  const out: Pt[] = [lines[0].p];
-  for (let i = 1; i < lines.length; i++) {
-    const A = lines[i - 1];
-    const B = lines[i];
+/**
+ * A route from legs, each a street's centre line (a -> b, or a polyline
+ * `pts`) and how far right of it the lane runs; where two legs meet, the
+ * corner is rounded off.
+ */
+type Leg = { a: Pt; b: Pt; off: number } | { pts: Pt[]; off: number };
+function legs(list: Leg[]): Pt[] {
+  const lanes = list.map((l) => offsetLine('pts' in l ? l.pts : [l.a, l.b], l.off));
+  const dir = (a: Pt, b: Pt): Pt => {
+    const l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+    return [(b[0] - a[0]) / l, (b[1] - a[1]) / l];
+  };
+  let out: Pt[] = [...lanes[0]];
+  for (let i = 1; i < lanes.length; i++) {
+    const A = out;
+    const B = lanes[i];
+    const a0 = A[A.length - 2];
+    const uA = dir(a0, A[A.length - 1]);
+    const uB = dir(B[0], B[1]);
     // Where the two lanes' lines meet
-    const den = A.u[0] * B.u[1] - A.u[1] * B.u[0];
-    const t = ((B.p[0] - A.p[0]) * B.u[1] - (B.p[1] - A.p[1]) * B.u[0]) / den;
-    const P: Pt = [A.p[0] + A.u[0] * t, A.p[1] + A.u[1] * t];
-    // Round the corner: a curve from a little before it to a little after
-    const cut = 2.6;
-    const s: Pt = [P[0] - A.u[0] * cut, P[1] - A.u[1] * cut];
-    const e: Pt = [P[0] + B.u[0] * cut, P[1] + B.u[1] * cut];
+    const den = uA[0] * uB[1] - uA[1] * uB[0];
+    const t = ((B[0][0] - a0[0]) * uB[1] - (B[0][1] - a0[1]) * uB[0]) / den;
+    const P: Pt = [a0[0] + uA[0] * t, a0[1] + uA[1] * t];
+    // Right turns (from the kerb-side lane) turn tight round the corner; left turns sweep wider
+    const cut = den > 0 ? 1.4 : 2.6;
+    const near = (q: Pt) => Math.hypot(q[0] - P[0], q[1] - P[1]) < cut;
+    // Round the corner: drop what's within `cut` of it either side, and curve from a little before it to a little after
+    while (A.length > 1 && near(A[A.length - 1])) A.pop();
+    let k0 = 0;
+    while (k0 < B.length - 1 && near(B[k0])) k0++;
+    const s: Pt = [P[0] - uA[0] * cut, P[1] - uA[1] * cut];
+    const e: Pt = [P[0] + uB[0] * cut, P[1] + uB[1] * cut];
     for (let k = 0; k <= 6; k++) {
       const f = k / 6;
-      out.push([(1 - f) * (1 - f) * s[0] + 2 * (1 - f) * f * P[0] + f * f * e[0], (1 - f) * (1 - f) * s[1] + 2 * (1 - f) * f * P[1] + f * f * e[1]]);
+      A.push([(1 - f) * (1 - f) * s[0] + 2 * (1 - f) * f * P[0] + f * f * e[0], (1 - f) * (1 - f) * s[1] + 2 * (1 - f) * f * P[1] + f * f * e[1]]);
     }
+    out = [...A, ...B.slice(k0)];
   }
-  out.push(lines.at(-1)!.q);
   return out;
 }
 
@@ -203,8 +216,19 @@ export const ROUTES: Route[] = (() => {
       { a: SW.from, b: [SW.from[0], hi], off: IN },
     ]),
   ].map(makeRoute);
-  // Spread the diagonal routes through the list, so every quality tier sends cars down them
+  // Round each bend and back: in off its avenue at one end, all the way round, out along the avenue at the other
+  const bends: Route[] = BENDS.flatMap((b) => {
+    const [w, e] = [b.pts[0], b.pts.at(-1)!];
+    const back = [...b.pts].reverse();
+    // The Parkway leaves its avenue northwards (a left turn heading east), the Southside Loop southwards (a right turn)
+    const north = b.pts[1][1] < w[1];
+    return [
+      legs([{ a: [lo, w[1]], b: w, off: north ? IN : OUT }, { pts: b.pts, off: ST }, { a: e, b: [hi, e[1]], off: north ? IN : OUT }]),
+      legs([{ a: [hi, e[1]], b: e, off: north ? OUT : IN }, { pts: back, off: ST }, { a: w, b: [lo, w[1]], off: north ? OUT : IN }]),
+    ].map(makeRoute);
+  });
+  // Spread the diagonal and bend routes through the list, so every quality tier sends cars down them
   const out = [...straight];
-  diag.forEach((r, k) => out.splice(k * 6 + 1, 0, r));
+  [...diag, ...bends].forEach((r, k) => out.splice(k * 5 + 1, 0, r));
   return out;
 })();

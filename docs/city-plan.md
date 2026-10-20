@@ -94,10 +94,22 @@ Checked with `?fps` at every step (and on a real phone):
      rooftops and street life, a few towers to break the skyline. Draw calls
      unchanged (about 620 / 570); triangles about 1.04M / 0.56M (from
      0.95M / 0.54M), the finest details left out on phones.
-3. **The outer districts.** Gently bending streets, irregular and more
-   spacious blocks, the smaller squares and pocket parks, the waterfront
-   promenade; the plots and the Dorras lots re-cut to their blocks (same
-   prices).
+3. **The outer districts** (built).
+   - The Parkway: a gently bending street round the north half of the city
+     (a soft-cornered U from the north bank avenue round to the north bank
+     avenue, about 40 north of the ring); the Southside Loop round the south
+     row. Both with sidewalks, lamps, centre lines and traffic.
+   - 16 landscaped blocks between the ring and the bends, cut by the
+     arterials. The plots and the Dorras lots keep their 9 x 9 pads in the
+     same places (owners' buildings and prices unchanged), now with lawns
+     and trees round them.
+   - Four small squares further out (a fountain, a statue with the
+     Emporium diamond, a bandstand, a clock tower) and four pocket parks.
+   - The waterfront promenade: railings, trees, benches and viewing decks on
+     both banks.
+   - Result: draw calls unchanged (about 620 / 570); triangles about 1.04M /
+     0.50M (from 1.04M / 0.56M), after the lane markings became flat planes
+     and the outskirts' tree belt was thinned to match the trees now in town.
 4. **Polish and measure.** Alley and square details, night lighting, every
    width upright and on its side, before and after `?fps` numbers.
 

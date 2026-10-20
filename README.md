@@ -112,6 +112,12 @@ cartoon shading and PulseChain neon, built with [three.js](https://threejs.org).
   round every block, zebra crossings, lights with a third phase where a
   diagonal comes in, and four bridges over the river. A tile is about 1.8 m,
   Degen about one tile tall.
+- **Looser further out:** the Parkway sweeps in a gentle curve round the
+  north half of town and the Southside Loop round the south row. The plots
+  and lots sit in spacious landscaped blocks with lawns and trees, four small
+  squares (a fountain, a statue with the Emporium diamond, a bandstand, a
+  clock tower), pocket parks, and a waterfront promenade with benches and
+  viewing decks along both banks of the river.
 - **Room to grow:** the land, the river and the roads run on well past the
   districts (about 790 m across), open ground with a few trees, ready for
   more city. A skyline of towers stands on the horizon past the edge. You

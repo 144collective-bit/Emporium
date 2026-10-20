@@ -97,7 +97,7 @@ export const EW_ROADS: Road[] = [avenue(RING_LO), ...CORE_ROADS.map(street), ave
  */
 export const EXT: [number, number] = [-200, 240];
 /** The built-up part: traffic loops here and the outskirts' trees fill round it */
-export const CITY_EXT: [number, number] = [-70, 124];
+export const CITY_EXT: [number, number] = [-80, 140];
 /** How far you can walk or drive: x0, z0, x1, z1 (a little inside the edge) */
 export const WORLD_BOUNDS: [number, number, number, number] = [EXT[0] + 6, EXT[0] + 6, EXT[1] - 6, EXT[1] - 6];
 

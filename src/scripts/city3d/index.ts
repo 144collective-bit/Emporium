@@ -10,6 +10,7 @@ import { createPost } from './post';
 import { CENTER, buildGround, buildLamps, buildSkyline, buildTrees, puddleMat, scatterOutskirts, waterMat, type Env, type Tick } from './world';
 import { buildLandmarks, type Spot } from './landmarks';
 import { buildInfill } from './infill';
+import { buildNeighbourhoods } from './neighbourhoods';
 import { buildLife, walker } from './life';
 import { createWalk } from './walk';
 import { buildGarage } from './garage';
@@ -40,9 +41,9 @@ import { CROWD_VIEW } from './character';
 type Tier = 'high' | 'medium' | 'low';
 
 const TIERS = {
-  high: { dpr: 2, shadows: 2048, msaa: 4, bloomScale: 0.5, cars: 38, buses: 3, walkers: 100, trees: 340, skyline: 70, rain: 6000, clouds: 12 },
-  medium: { dpr: 1.5, shadows: 1024, msaa: 0, bloomScale: 0.5, cars: 27, buses: 2, walkers: 62, trees: 230, skyline: 50, rain: 3500, clouds: 9 },
-  low: { dpr: 1.25, shadows: 0, msaa: 0, bloomScale: 0.3, cars: 16, buses: 2, walkers: 30, trees: 120, skyline: 26, rain: 1200, clouds: 4 },
+  high: { dpr: 2, shadows: 2048, msaa: 4, bloomScale: 0.5, cars: 38, buses: 3, walkers: 100, trees: 250, skyline: 70, rain: 6000, clouds: 12 },
+  medium: { dpr: 1.5, shadows: 1024, msaa: 0, bloomScale: 0.5, cars: 27, buses: 2, walkers: 62, trees: 150, skyline: 50, rain: 3500, clouds: 9 },
+  low: { dpr: 1.25, shadows: 0, msaa: 0, bloomScale: 0.3, cars: 16, buses: 2, walkers: 30, trees: 90, skyline: 26, rain: 1200, clouds: 4 },
 };
 
 function pickTier(): Tier {
@@ -106,6 +107,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const { spots, crowd } = buildLandmarks(scene, { degen, logo, tick, low: tier === 'low' });
   // Downtown round the landmarks: infill, alleys, pocket parks and the hangout square (its crowd joins the landmarks')
   buildInfill(scene, crowd, tick, tier === 'low');
+  // The outer districts: squares, pocket parks, lawns, the promenade
+  buildNeighbourhoods(scene, crowd, tick, { low: tier === 'low', reduced });
   // The garage on the south bank, your saved car on its turntable
   const garage = buildGarage(scene, { tick, reduced, car: loadCar() });
   const plots = createPlots(scene, { degen, tick, reduced });

@@ -45,9 +45,9 @@ it and has been retired completely. Build only on what's here.
   owner's sign-off. The street plan as data is `streetplan.ts` (DOM-free:
   streets as centre lines with a kind and width, crossings, block outlines
   and their slabs (`outset()`, `onSlab()`), plazas; `PLAN` is `cityPlan()`,
-  tested in `tests/streetplan.test.ts`). Phase 2 (downtown) is built; the
-  outer districts are Phase 3. Prices of plots and lots don't change in the
-  redesign.
+  tested in `tests/streetplan.test.ts`). Phases 2 (downtown) and 3 (the
+  outer districts) are built; Phase 4 is polish. Prices of plots and lots
+  don't change in the redesign.
 - **Downtown** is `downtown.ts` (DOM-free; the 3D city, the 2D map, the plan,
   collisions and the server read it), drawn by `infill.ts` in 3D and by
   `downtown()` in `city.ts` on the 2D map:
@@ -95,9 +95,38 @@ it and has been retired completely. Build only on what's here.
     pocket park (`PRACTICE`).
   - Footprints are `DOWNTOWN_SOLIDS` in `solids.ts`; tested in
     `tests/downtown.test.ts`.
+- **The outer districts** are `outer.ts` (DOM-free; the plan, collisions,
+  traffic and the server read it), drawn by `neighbourhoods.ts` and the
+  ground in `world.ts`:
+  - The Parkway (`PARKWAY`) is a gently bending two-lane street, a
+    soft-cornered U (half a superellipse) round the north half of the city
+    from the north bank avenue west of W3 to the north bank avenue east of
+    the big lots, about 40 north of the ring. The Southside Loop
+    (`SOUTHSIDE`) does the same round the south row. Both meet their
+    avenues square, cross the arterials at unlit crossings and keep a
+    sidewalk on the outside (`BEND_KERBS` / `KERB_RUNS`, drawn as one
+    kerb). Keep them convex: the blocks are clipped by their segments.
+  - Between the ring and the bends, the arterials cut the land into 16
+    landscaped blocks (`OUTER_BLOCKS`). The plots and the Dorras lots keep
+    their 9 x 9 pads where they were (`PADS`, drawn with a paved rim), so
+    owners' buildings and prices don't change; the lawns round them carry
+    trees (`LAWN_TREES`, half on phones).
+  - Four small squares (`OUTER_SQUARES`, `SQUARE_LAYOUTS`): North Square
+    (fountain, kiosk), West Green (a plinth with the Emporium diamond
+    turning in neon), East Square (a bandstand) and South Square (a clock
+    tower, kiosk); benches, corner planters, lamps and a few people.
+    Footprints are `SQUARE_SOLIDS`. Four pocket parks (`OUTER_PARKS`).
+  - The waterfront promenade (`PROMENADE`) along both banks: railings at
+    the water (open at the bridges), trees in planters and benches between
+    the lamps, and viewing decks over the water (`JETTIES`). It's at
+    ground level, not a slab: nothing on it is solid.
+  - `inTown()` keeps the outskirts' trees out of all this. Tested in
+    `tests/outer.test.ts`.
 - **Traffic** follows `routes.ts` (DOM-free): a route for every lane of the
-  straight roads, and two down each diagonal (in off the ring, out along a
-  cross street, turns rounded off). Junctions where a diagonal comes in run
+  straight roads, two down each diagonal (in off the ring, out along a
+  cross street) and two round each bend (in off its avenue, all the way
+  round, out the other end); turns are rounded off (tighter for right
+  turns). Junctions where a diagonal comes in run
   three light phases (x, z, diagonal). Cars follow whoever is ahead going
   the same way on any route. Pedestrians walk loops round downtown's block
   outlines and the south row. Tested in `tests/routes.test.ts`.
@@ -118,7 +147,7 @@ it and has been retired completely. Build only on what's here.
 - **The world's size** is in `layout.ts` too:
   - `EXT` (-200 to 240, about 790 m across) is the ground, the river and every road, edge to edge. It's mostly open land, room to grow the city into. Build there only when the owner asks.
   - `WORLD_BOUNDS` is how far you can walk or drive.
-  - `CITY_EXT` is the built-up part: traffic and boats loop there, and the outskirts' tree belt fills round it (a lighter sprinkle covers the rest).
+  - `CITY_EXT` (-80 to 140) is where traffic and boats loop, past the Parkway; the outskirts' tree belt fills a band round the town (outside the bends) and a lighter sprinkle covers the rest.
   - The skyline ring stands just past `EXT`, kept out of the haze (`fog = false`) so it reads as a far metropolis.
   - The sky dome and stars travel with the camera at 400, inside its far plane (440), so everything in the world stays in front of the sky.
   - City view can pan anywhere inside the bounds.
@@ -162,6 +191,8 @@ it and has been retired completely. Build only on what's here.
   copies of one thing are instanced (trees, lamps, traffic lights, birds,
   crowds, cars). A moving thing merges its fixed parts (`mergeMeshes()`).
   A box with side and top materials is `sidesBox()` (two draws, not six).
+  Flat things are flat: the lane markings are two-triangle planes, tree
+  trunks open-ended (triangles count too).
   `consolidate()` merges each landmark's Batch meshes per material after the
   city is built (not for the units, lots and plots, which rebuild theirs).
   The shadow map is drawn once a frame (`post.ts`), however many passes
