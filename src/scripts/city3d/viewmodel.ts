@@ -1,5 +1,7 @@
 /*
- * First person: Degen's hands on his gun (black suit sleeves, white cuffs),
+ * First person: Degen's hands on his gun, in the sleeves of what he's wearing
+ * (a suit with shirt cuffs, a hoodie or track top with ribbed cuffs, the
+ * track top's stripes),
  * bottom-right from the hip and up to the sight when aiming (red-dot, iron
  * sights, or the scope, which then hands over to a full-screen scope view).
  *
@@ -17,12 +19,14 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { canvasTex, fx } from './kit';
 import { buildGun, gunSpec, type Gun, type SkinId, type Tintable } from './guns';
 import type { WeaponId } from './combat-sim';
+import { PLAYER, type Outfit } from './character';
 
 const K = 8;
 /** The gun and hands are drawn a little smaller than life, so they don't swamp the screen */
 const S = 0.78;
 const SKIN = '#e8c39e';
-const SLEEVE = '#16141f';
+/** The shirt cuff and the track top's stripes (a shade under white, like the body's) */
+const SHIRT = '#d4d1de';
 
 /** Where the gun sits, in metres from the eye (x right, y up, -z ahead) */
 const HIP = { x: 0.1, y: -0.112, z: -0.27, ry: 0.05, rz: -0.04 };
@@ -69,7 +73,9 @@ const flats = new Map<string, Tintable>();
 const shared = (c: string) => flats.get(c) ?? flats.set(c, flat(c)).get(c)!;
 const UP = new THREE.Vector3(0, 1, 0);
 
-/** A forearm in a suit sleeve, ending in a hand at the origin, reaching off along `dir` */
+const shade = (c: string, k: number) => '#' + new THREE.Color(c).multiplyScalar(k).getHexString();
+
+/** A forearm ending in a hand at the origin, reaching off along `dir`; `dress()` puts it in the outfit's sleeve */
 function arm(dir: THREE.Vector3, hand: THREE.BufferGeometry) {
   const g = new THREE.Group();
   const q = new THREE.Quaternion().setFromUnitVectors(UP, dir.clone().normalize());
@@ -78,11 +84,28 @@ function arm(dir: THREE.Vector3, hand: THREE.BufferGeometry) {
     geo.applyQuaternion(q);
     return geo;
   };
-  const sleeve = new THREE.Mesh(along(new THREE.CapsuleGeometry(0.036, 0.42, 3, 12), 0.27), shared(SLEEVE));
-  const cuff = new THREE.Mesh(along(new THREE.CylinderGeometry(0.039, 0.039, 0.02, 14), 0.05), shared('#d4d1de'));
-  const palm = new THREE.Mesh(hand, shared(SKIN));
-  g.add(sleeve, cuff, palm);
-  return g;
+  const clothes = new THREE.Group();
+  g.add(clothes, new THREE.Mesh(hand, shared(SKIN)));
+  return {
+    g,
+    dress(o: Outfit) {
+      clothes.traverse((m) => (m as THREE.Mesh).geometry?.dispose());
+      clothes.clear();
+      const top = o.top;
+      if (o.kind === 'suit') {
+        // A tailored sleeve and a shirt cuff showing past it
+        clothes.add(new THREE.Mesh(along(new THREE.CapsuleGeometry(0.036, 0.42, 3, 12), 0.27), shared(top)));
+        clothes.add(new THREE.Mesh(along(new THREE.CylinderGeometry(0.035, 0.037, 0.03, 14), 0.045), shared(SHIRT)));
+      } else {
+        // A looser sleeve gathered into a ribbed cuff
+        clothes.add(new THREE.Mesh(along(new THREE.CapsuleGeometry(0.042, 0.4, 3, 12), 0.29), shared(top)));
+        clothes.add(new THREE.Mesh(along(new THREE.CylinderGeometry(0.038, 0.04, 0.05, 14), 0.06), shared(shade(top, 0.8))));
+        if (o.kind === 'track')
+          for (const x of [-0.042, 0.042])
+            for (const z of [-0.008, 0.008]) clothes.add(new THREE.Mesh(along(new THREE.BoxGeometry(0.006, 0.36, 0.005).translate(x, 0, z), 0.3), shared(SHIRT)));
+      }
+    },
+  };
 }
 
 const flashTex = canvasTex(128, 128, (c) => {
@@ -128,13 +151,17 @@ export function createViewmodel(scene: THREE.Scene, skin: SkinId, weapon: Weapon
 
   // Hands, in the gun's own frame (barrel along +z, the gun's +x is the camera's left)
   const rightHand = rbox(0.05, 0.088, 0.072, 0.02).rotateX(0.3).translate(-0.006, -0.05, -0.02);
-  const right = arm(new THREE.Vector3(-0.36, -0.72, -0.58), rightHand);
+  const rightArm = arm(new THREE.Vector3(-0.36, -0.72, -0.58), rightHand);
+  const right = rightArm.g;
   const thumb = new THREE.Mesh(rbox(0.016, 0.016, 0.05, 0.007).rotateY(0.2).translate(-0.024, 0.012, 0.0), shared(SKIN));
   right.add(thumb);
   const leftPalm = rbox(0.07, 0.036, 0.09, 0.016).translate(0, -0.03, 0);
-  const left = arm(new THREE.Vector3(0.6, -0.68, -0.42), leftPalm);
+  const leftArm = arm(new THREE.Vector3(0.6, -0.68, -0.42), leftPalm);
+  const left = leftArm.g;
   const fingers = new THREE.Mesh(rbox(0.014, 0.05, 0.08, 0.006).translate(-0.038, -0.006, 0), shared(SKIN));
   left.add(fingers);
+  rightArm.dress(PLAYER);
+  leftArm.dress(PLAYER);
 
   // Muzzle flash: two crossed cut-outs and a soft glow
   const flashMat = new THREE.MeshBasicMaterial({ map: flashTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false });
@@ -231,6 +258,13 @@ export function createViewmodel(scene: THREE.Scene, skin: SkinId, weapon: Weapon
 
   return {
     root,
+    /** Put the hands in the sleeves of Degen's outfit (the wardrobe) */
+    setOutfit(o: Outfit) {
+      rightArm.dress(o);
+      leftArm.dress(o);
+      upFront(right);
+      upFront(left);
+    },
     setSkin(id: SkinId) {
       skinNow = id;
       gun.setSkin(id);

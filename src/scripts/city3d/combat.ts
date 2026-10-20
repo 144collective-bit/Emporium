@@ -20,7 +20,7 @@ import { DRONES, DUMMIES, WEAPONS, WEAPON_IDS, createSim, dronePose, weaponUnloc
 import type { ClientMsg, MeRow, NetEvent } from '../net/protocol';
 import { SKINS, buildGun, gunSpec, type Gun, type SkinId } from './guns';
 import { holdGun, newStance } from './stance';
-import type { Pose } from './character';
+import type { Outfit, Pose } from './character';
 import { createViewmodel, type ViewState } from './viewmodel';
 
 export { DUMMIES };
@@ -712,6 +712,10 @@ export function createCombat(d: CombatDeps) {
   return {
     /** The third-person rifle's pivot: parent it to Degen's chest */
     gun: pivot,
+    /** Dress the first-person hands in the outfit's sleeves */
+    setOutfit(o: Outfit) {
+      vm.setOutfit(o);
+    },
     get geared() {
       return me.geared;
     },

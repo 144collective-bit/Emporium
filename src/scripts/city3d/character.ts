@@ -923,6 +923,23 @@ function items(q: Detail): Item[] {
     [0.26, 0.036, 0.04, -0.008],
     [0.265, 0.004, 0.004, -0.008],
   ];
+  // A chin strap from the rim, down past the ears and under the jaw
+  const strap = tube(
+    [
+      [-0.098, 0.152, 0.0],
+      [-0.09, 0.1, 0.012],
+      [-0.07, 0.05, 0.04],
+      [-0.035, 0.035, 0.07],
+      [0, 0.032, 0.078],
+      [0.035, 0.035, 0.07],
+      [0.07, 0.05, 0.04],
+      [0.09, 0.1, 0.012],
+      [0.098, 0.152, 0.0],
+    ],
+    0.005,
+    R(24),
+    4
+  );
   const helmet = [
     loft(HELMET, R(20)),
     new THREE.TorusGeometry(0.104, 0.01, 5, R(24))
@@ -1399,13 +1416,13 @@ function items(q: Detail): Item[] {
   );
   const bootSole = prof(
     [
-      [-0.072, G],
-      [0.168, G],
-      [0.18, G + 0.016],
-      [0.175, G + 0.026],
-      [-0.074, G + 0.026],
+      [-0.07, G],
+      [0.152, G],
+      [0.168, G + 0.014],
+      [0.16, G + 0.026],
+      [-0.072, G + 0.026],
     ],
-    0.1,
+    0.098,
     0.006,
     L(4)
   );
@@ -1481,7 +1498,7 @@ function items(q: Detail): Item[] {
     {
       id: 'helmet',
       when: soldier,
-      pieces: [P('head', one(helmet), '#3e4a26')],
+      pieces: [P('head', one(helmet), '#3e4a26'), P('head', strap, '#2b2a33', { detail: true })],
     },
     {
       id: 'suit',

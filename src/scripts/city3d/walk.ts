@@ -981,6 +981,7 @@ export function createWalk(d: WalkDeps) {
       hero.g.visible = vis;
       hero.torso.add(combat.gun);
       d.scene.add(hero.g);
+      combat.setOutfit(o);
     },
     playEmote(id: string) {
       emote = { id, t: 0 };

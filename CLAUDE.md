@@ -410,7 +410,10 @@ it and has been retired completely. Build only on what's here.
   finish and last gun are saved in the browser under `degen-city-combat-v1`
   (or the player profile online).
 - First person is the default when walking starts. The hands
-  (`viewmodel.ts`) are built `K` times bigger and further out (the camera's
+  (`viewmodel.ts`) wear the sleeves of Degen's outfit (`setOutfit()`, called
+  from `walk.setLook()` through `combat.setOutfit()`: a suit sleeve with a
+  shirt cuff, or a looser hoodie / track sleeve with a ribbed cuff and the
+  track top's stripes). They're built `K` times bigger and further out (the camera's
   near plane is 0.5 m) and drawn in the front of the depth buffer, with
   their own flat shading (city lamps would otherwise light them wrongly).
   Keep the red dot on the line of sight: scale the whole holder, never only
