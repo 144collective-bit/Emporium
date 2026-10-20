@@ -22,8 +22,9 @@ import { PLAYER, airPose, createDegen, emotePose, walkPose, type Outfit } from '
 import { createCombat, type Sfx } from './combat';
 import { WEAPON_IDS } from './combat-sim';
 import { createGunShop } from './gunshop';
-import { takedown } from './tycoon';
+import { carStatsOf, ownsCar, takedown } from './tycoon';
 import { createGarageUI, loadCar } from './garage-ui';
+import { DEFAULT_CAR } from './mycar';
 import type { Garage } from './garage';
 import { createDrive } from './drive';
 import { CAMERA_ONLY, DOORS, GARAGE_SITE, RACK, SOLIDS, TURNTABLE_BOX, WALK_SPAWN, rayBoxes, type Box } from './solids';
@@ -31,7 +32,6 @@ import { NS_ROADS, RIVER, SLAB, WALK_W, type Tick } from './world';
 import { WORLD_BOUNDS } from './layout';
 import { PLAN, inPoly } from './streetplan';
 import type { GameDeps } from './ui';
-import { carStatsOf } from './tycoon';
 
 /** Facing the Emporium's doors, the tower over his shoulder */
 const SPAWN_YAW = WALK_SPAWN.yaw;
@@ -319,7 +319,11 @@ export function createWalk(d: WalkDeps) {
     camera,
     root,
     garage: d.garage,
-    myCar: loadCar,
+    // (a premium car saved in the browser only counts while the save owns it)
+    myCar: () => {
+      const c = loadCar();
+      return ownsCar(d.game.save(), c.model) ? c : { ...DEFAULT_CAR };
+    },
     stats: (model) => carStatsOf(d.game.save(), model),
     solids: () => (d.plotSolids().length ? [...CAR_SOLIDS, ...d.plotSolids()] : CAR_SOLIDS),
     groundAt,
