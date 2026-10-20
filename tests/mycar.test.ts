@@ -4,8 +4,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { CAR_PAINTS, DEFAULT_CAR, DRIVE, PLAYER_CARS, cleanCar, paintHex } from '../src/scripts/city3d/mycar';
 
-test('five player cars, the bus left out, each with 0-1 handling and copy', () => {
-  assert.deepEqual([...PLAYER_CARS], ['hatch', 'sedan', 'coupe', 'pickup', 'van']);
+test('eight player cars, the bus left out, each with 0-1 handling and copy', () => {
+  assert.deepEqual([...PLAYER_CARS], ['hatch', 'sedan', 'coupe', 'pickup', 'van', 'muscle', 'suv', 'super']);
   for (const id of PLAYER_CARS) {
     const d = DRIVE[id];
     for (const k of ['speed', 'accel', 'grip'] as const) assert.ok(d[k] >= 0 && d[k] <= 1, `${id} ${k}`);

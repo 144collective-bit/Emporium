@@ -25,7 +25,11 @@ import { createViewmodel, type ViewState } from './viewmodel';
 
 export { DUMMIES };
 
-export type Sfx = 'shot' | 'shotSmg' | 'shotShotgun' | 'shotDmr' | 'empty' | 'magout' | 'magin' | 'bolt' | 'hit' | 'hitMetal' | 'down' | 'boom' | 'gear' | 'draw' | 'holster' | 'unlock' | 'bump' | 'door';
+export type Sfx =
+  | 'shot' | 'shotSmg' | 'shotShotgun' | 'shotDmr' | 'shotRevolver' | 'shotBurst' | 'shotLmg'
+  | 'empty' | 'magout' | 'magin' | 'bolt' | 'hit' | 'hitMetal' | 'down' | 'boom' | 'gear' | 'draw' | 'holster' | 'unlock' | 'bump' | 'door'
+  /** The city's game: buying, upgrading, levelling up, missions, races, the crew */
+  | 'buy' | 'denied' | 'upgrade' | 'levelup' | 'mission' | 'countdown' | 'go' | 'checkpoint' | 'finish' | 'shove' | 'goonDown';
 
 export interface CombatDeps {
   scene: THREE.Scene;
@@ -41,7 +45,7 @@ export interface CombatDeps {
 }
 
 const ME = 'me';
-const SHOT_SOUND: Record<WeaponId, Sfx> = { rifle: 'shot', smg: 'shotSmg', shotgun: 'shotShotgun', dmr: 'shotDmr' };
+const SHOT_SOUND: Record<WeaponId, Sfx> = { rifle: 'shot', smg: 'shotSmg', shotgun: 'shotShotgun', dmr: 'shotDmr', revolver: 'shotRevolver', burst: 'shotBurst', lmg: 'shotLmg' };
 const PROFILE_KEY = 'degen-city-combat-v1';
 
 /* ---------- Target looks ---------- */

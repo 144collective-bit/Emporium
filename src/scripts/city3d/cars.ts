@@ -26,7 +26,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { fx, toon } from './kit';
 
-export type CarId = 'hatch' | 'sedan' | 'coupe' | 'pickup' | 'van' | 'bus';
+export type CarId = 'hatch' | 'sedan' | 'coupe' | 'pickup' | 'van' | 'bus' | 'muscle' | 'suv' | 'super';
 type V2 = [number, number];
 
 export interface CarSpec {
@@ -91,6 +91,9 @@ export const PAINTS: Record<CarId, string[]> = {
   pickup: ['#ff8a3d', '#1f6b4a', '#e23b3b', '#f3f2f7', '#2a3b66'],
   van: ['#f3f2f7', '#f3f2f7', '#ffd23f', '#00c2ff', '#9a96b8'],
   bus: ['#e219e5', '#2aabee'],
+  muscle: ['#e23b3b', '#14121f', '#ff8a3d', '#8000ff'],
+  suv: ['#2a3b66', '#1f6b4a', '#14121f', '#f3f2f7'],
+  super: ['#00eaff', '#e219e5', '#ffd23f', '#f3f2f7'],
 };
 
 /* ---------- Models ---------- */
@@ -378,7 +381,14 @@ export const CARS: Record<CarId, CarSpec> = {
       }
     },
   },
+  // PLACEHOLDERS: the garage's premium models (drawn properly in their own specs; until then they borrow a starter's shape)
+  muscle: null!,
+  suv: null!,
+  super: null!,
 };
+CARS.muscle = { ...CARS.coupe, id: 'muscle', name: 'Street Thunder' };
+CARS.suv = { ...CARS.pickup, id: 'suv', name: 'Big Rover' };
+CARS.super = { ...CARS.coupe, id: 'super', name: 'Hyper Comet' };
 
 /* ---------- Building ---------- */
 

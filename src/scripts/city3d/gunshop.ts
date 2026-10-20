@@ -15,6 +15,10 @@ const ART: Record<WeaponId, string> = {
   smg: 'M20 16h12v-4h16v4h30v3h12v5H80v3H62v12h-7V27h-6l-3 10h-7l2-11h-6v4h-8v-4H20z M48 9h10v-3H48z',
   shotgun: 'M4 20h14l10-6h20v3h66v4H48v4h36v4H48l-6 3-2 7h-8l1-9H26l-8 4H4z M50 13h3v-2h-3z',
   dmr: 'M2 18h20l4-4h28v-5h30v5h6v5h28v4H84v4H64l-4 2-2 9h-8l1-10h-6l-5 6h-6v-6H22l-4 3H2z M58 7h22v-4H58z',
+  // PLACEHOLDERS until the premium guns get their own art
+  revolver: 'M40 16h58v5H60v3h-8l-4 2-2 9h-8l1-10h-5v-6h6z M48 10h8v6h-8z',
+  burst: 'M6 18h18v-3h4v-3h22v3h44v4h20v5H90v4H62l-4 2-2 9h-8l1-10h-8l-6 6h-6v-6H24v3H6z M44 10h12v-4h-12z',
+  lmg: 'M4 18h20v-3h6v-3h26v3h40v4h22v5H92v4H62l-4 2-2 9h-8l1-10h-8l-6 6h-6v-6H24v3H4z M30 24h10v10h-10z',
 };
 
 /** How each gun compares (0..1) for the stat bars */

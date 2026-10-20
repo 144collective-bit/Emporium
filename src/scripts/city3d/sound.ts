@@ -325,6 +325,72 @@ export function createSound() {
           crack(t, 'bandpass', 900, 1.2, 0.25, 0.05);
           tone(t + 0.03, 'square', 140, 90, 0.18, 0.08);
           break;
+        // The premium guns: a heavy revolver boom and its hammer, the carbine's crisp burst, the belt-fed thump
+        case 'shotRevolver':
+          tone(t, 'sine', 120, 32, 0.95, 0.26, true);
+          crack(t, 'bandpass', 1500, 0.5, 0.7, 0.18, true);
+          crack(t, 'highpass', 5200, 0.7, 0.3, 0.04);
+          crack(t + 0.3, 'bandpass', 3400, 7, 0.22, 0.03);
+          break;
+        case 'shotBurst':
+          tone(t, 'sine', 180, 52, 0.55, 0.1, true);
+          crack(t, 'bandpass', 2200, 0.8, 0.45, 0.07, true);
+          crack(t, 'highpass', 6000, 0.7, 0.2, 0.025);
+          break;
+        case 'shotLmg':
+          tone(t, 'sine', 135, 40, 0.65, 0.13, true);
+          crack(t, 'lowpass', 1200, 0.6, 0.5, 0.1, true);
+          crack(t, 'bandpass', 2000, 0.8, 0.3, 0.07);
+          if (Math.random() < 0.5) tone(t + 0.22 + Math.random() * 0.1, 'sine', 4600 + Math.random() * 900, 4100, 0.035, 0.07);
+          break;
+        // The city's game: a till for a purchase, a buzz when it can't be afforded, an upgrade's wrench, a level-up fanfare
+        case 'buy':
+          tick(t, 2400, 0.08);
+          [1046, 1318, 1568].forEach((f, i) => tone(t + 0.04 + i * 0.06, 'triangle', f, f, 0.16, 0.16));
+          crack(t + 0.02, 'bandpass', 3000, 6, 0.2, 0.04);
+          break;
+        case 'denied':
+          tone(t, 'square', 220, 180, 0.12, 0.12);
+          tone(t + 0.14, 'square', 180, 150, 0.12, 0.16);
+          break;
+        case 'upgrade':
+          crack(t, 'bandpass', 2800, 7, 0.3, 0.04);
+          crack(t + 0.1, 'bandpass', 2300, 6, 0.3, 0.05);
+          [784, 988, 1175].forEach((f, i) => tone(t + 0.2 + i * 0.07, 'triangle', f, f, 0.14, 0.18));
+          break;
+        case 'levelup':
+          [523, 659, 784, 1046, 1318].forEach((f, i) => tone(t + i * 0.09, 'triangle', f, f, 0.2, 0.3));
+          tone(t + 0.45, 'sine', 1568, 1568, 0.18, 0.6);
+          break;
+        case 'mission':
+          [660, 990].forEach((f, i) => tone(t + i * 0.12, 'triangle', f, f, 0.18, 0.22));
+          tone(t + 0.26, 'triangle', 1320, 1320, 0.2, 0.4);
+          break;
+        // Races: the countdown beeps, the GO, each checkpoint, the finish
+        case 'countdown':
+          tone(t, 'square', 440, 440, 0.18, 0.18);
+          break;
+        case 'go':
+          tone(t, 'square', 880, 880, 0.22, 0.42);
+          break;
+        case 'checkpoint':
+          tone(t, 'triangle', 1174, 1174, 0.16, 0.1);
+          tone(t + 0.07, 'triangle', 1760, 1760, 0.16, 0.16);
+          break;
+        case 'finish':
+          [784, 1046, 1318, 1568, 2093].forEach((f, i) => tone(t + i * 0.08, 'triangle', f, f, 0.18, 0.28));
+          crack(t, 'bandpass', 1200, 0.6, 0.3, 0.3, true);
+          break;
+        // The crew on the south bank: a shove, and one going down
+        case 'shove':
+          tone(t, 'sine', 160, 60, 0.5, 0.15);
+          crack(t, 'lowpass', 600, 0.8, 0.4, 0.12);
+          break;
+        case 'goonDown':
+          tone(t, 'square', 420, 90, 0.14, 0.35);
+          crack(t, 'bandpass', 700, 0.8, 0.3, 0.2);
+          [880, 660, 440].forEach((f, i) => tone(t + 0.1 + i * 0.07, 'triangle', f, f, 0.08, 0.12));
+          break;
       }
     },
     /**

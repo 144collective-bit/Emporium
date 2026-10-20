@@ -62,6 +62,9 @@ interface Spec {
 }
 
 const SPECS: Record<WeaponId, Spec> = {
+  revolver: null!,
+  burst: null!,
+  lmg: null!,
   rifle: {
     body: () => {
       const p: Part[] = [
@@ -208,6 +211,10 @@ const SPECS: Record<WeaponId, Spec> = {
 };
 
 /** Where shots leave each gun, its sight, and where the hands go */
+// PLACEHOLDERS: the Armoury's premium guns borrow a starter's shape until they get their own
+SPECS.revolver = SPECS.dmr;
+SPECS.burst = SPECS.rifle;
+SPECS.lmg = SPECS.rifle;
 export const gunSpec = (id: WeaponId) => SPECS[id];
 
 const clean = (g: THREE.BufferGeometry) => {

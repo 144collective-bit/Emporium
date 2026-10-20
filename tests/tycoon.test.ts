@@ -269,7 +269,7 @@ function rich() {
 
 test('a Phase 1 save carries on: stall kept, no units, an empty Workshop and car', () => {
   const s = cleanSave({ v: 1, dorras: 900, till: 12, at: T0, stall: { level: 2, slots: [{ good: 'tees', qty: 7, price: 'high', carry: 0 }] } }, T0);
-  assert.equal(s.v, 4);
+  assert.equal(s.v, 5);
   assert.equal(s.dorras, 900);
   assert.equal(s.stall.slots[0].qty, 7);
   assert.equal(s.units.length, UNIT_COUNT);
@@ -441,7 +441,7 @@ test('cleanSave keeps units, the Workshop and the car within their limits', () =
   assert.equal(s.units[3]!.slots[0].qty, SHOP.capacity);
   assert.ok(total(s.workshop.stock) <= 200);
   assert.equal(s.workshop.job, null, 'neon has no recipe');
-  assert.ok(total(s.cargo) <= Math.max(...Object.values(CARGO)));
+  assert.ok(total(s.cargo) <= Math.max(...Object.values(CARGO)) * 2, 'the biggest boot, with a full roof rack');
   assert.equal(Object.keys(s.cargo).length, 1);
 });
 
@@ -449,7 +449,7 @@ test('cleanSave keeps units, the Workshop and the car within their limits', () =
 
 test('a Phase 2 save carries on into Phase 3: no staff, couriers or contracts yet', () => {
   const s = cleanSave({ v: 2, dorras: 100, units: [{ kind: 'shop', slots: [] }], workshop: { stock: { sugar: 4 }, job: null }, cargo: { tees: 2 } }, T0);
-  assert.equal(s.v, 4);
+  assert.equal(s.v, 5);
   assert.equal(s.units[0]!.kind, 'shop');
   assert.deepEqual(s.cargo, { tees: 2 });
   assert.deepEqual([s.staff, s.shipments, s.contracts, s.taken], [[], [], [], []]);
@@ -643,7 +643,7 @@ function tycoon() {
 
 test('a Phase 3 save carries on into Phase 4: no big lots, an empty ledger, no loan', () => {
   const s = cleanSave({ v: 3, dorras: 100, staff: ['stall'] }, T0);
-  assert.equal(s.v, 4);
+  assert.equal(s.v, 5);
   assert.deepEqual(s.lots, [null, null, null]);
   assert.deepEqual(s.ledger, { totals: {}, recent: [] });
   assert.equal(s.loan, null);
