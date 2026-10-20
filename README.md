@@ -10,7 +10,12 @@ homepage, whose buildings lead into the comic-book Emporium page.
 npm install
 npm run dev      # http://localhost:4321
 npm run build    # static site in dist/
+npm test         # the city's rules and data (tests/), in a second or so
 ```
+
+`npm test -- drive` runs only the test files whose name contains "drive".
+The "Build site" Action runs the tests before every build; if one fails, no
+zip is made.
 
 ## Put it live (Hostinger)
 
@@ -49,7 +54,8 @@ year. It starts with a dot, so some file managers hide it.
 | `src/data/site.ts` | Site name, description, social and store links |
 | `src/assets/` | Processed art the site imports |
 | `brand/` | Original art as supplied, palette notes, how to regenerate art |
-| `scripts/` | Art pipeline: cutouts, header logo, favicons, share card |
+| `scripts/` | Art pipeline: cutouts, header logo, favicons, share card; `test.mjs` runs the tests |
+| `tests/` | Tests for the street plan, collisions, plots, driving, your car and target practice |
 | `public/` | Favicons, share card, web manifest |
 
 ## Degen City
@@ -89,6 +95,14 @@ cartoon shading and PulseChain neon, built with [three.js](https://threejs.org).
   groups, sit on the park bench, queue and look around. You play the
   original, Gas Fee Gummy Bears in hand; the Armoury soldiers are the same
   body in fatigues.
+- **Streets for real cars:** two-lane streets between the core blocks, four-lane
+  avenues with a median round the core and along the south bank, a sidewalk
+  round every block, zebra crossings and four bridges over the river. A tile
+  is about 1.8 m, Degen about one tile tall.
+- **Cars at real proportions,** in the same cartoon style: a City Hatch, the
+  Cruiser saloon, the Street GT coupe, the Hauler pickup, a Box Van and the
+  City Bus, with glass, bumpers, plates and fat tyres (made-up names, no
+  real makes).
 - **Alive:** cars and buses stop at traffic lights, Degen-style people walk
   the sidewalks and queue at the shop, boats on the river, drones, a blimp,
   birds by day, sparks from the workshop, and soldiers drilling at the Armoury.
@@ -135,7 +149,7 @@ of Gas Fee Gummy Bears) and explore on foot.
 - **Desktop:** click the city to capture the mouse, then move it to look
   around (up at the towers and the sky too). WASD or arrow keys to move and
   strafe, hold Shift to run (Caps Lock toggles it), Space to jump (hold
-  for a higher jump), right-click to aim, E to enter a door. You start in
+  for a higher jump), right-click to aim, E to enter a door or get in your car. You start in
   first person; V (or scrolling out) swaps to the over-the-shoulder camera,
   and scroll sets its distance. Esc frees the mouse; press it again to stop
   walking.
@@ -151,6 +165,42 @@ of Gas Fee Gummy Bears) and explore on foot.
   block you (bridges don't), kerbs step up and down, and cars stop for you.
 - Walk up to a landmark's door and press **E** (or tap the prompt) to open its
   panel right where you stand.
+
+### The garage and your own car
+
+On the south bank, east of plot South 5, stands the **garage**: a workshop
+with an open bay and a car lift, a roller door, a little office, a neon
+GARAGE sign on the roof, and a showroom turntable on the forecourt with
+**your car** on it.
+
+- **Pick your car:** walk up to the office door and press E (tap the prompt,
+  Y on a gamepad). Choose from five models (City Hatch, Cruiser, Street GT,
+  Hauler, Box Van), each with a short description and bars for top speed,
+  pick-up and grip, and one of twelve paints. The camera swings round to
+  the turntable, which turns while you look, and every pick shows on it.
+  **Keep this one** saves it in your browser; closing without keeping puts
+  your saved car back. Cars are free and only for the city: nothing is sold.
+
+### Driving
+
+- **Get in:** walk up to your car and press E (or tap **Get in**). The first
+  time it drives off the turntable facing the avenue.
+- **Drive:** W / S (or the arrows) for gas and brake (hold to reverse), A / D
+  to steer, Space for the handbrake (slide the back out), V for the chase
+  or roof camera. The mouse (or a drag) looks around; the camera settles
+  back behind the car.
+- **Phones:** the stick steers; Gas and Brake buttons on the right.
+- **Gamepads:** left stick steers, RT gas, LT brake, A handbrake, Y gets out,
+  View swaps camera.
+- **Arcade handling:** each model drives differently (the Street GT is
+  quick and grippy, the Box Van takes its time). Bumps are soft and safe:
+  you slide along buildings and the river bank, nudge off other cars and
+  people (never through them), and traffic stops for you.
+- **Get out anywhere** (E, or tap **Get out**): the car stays parked where
+  you left it until you come back. To send it home, open the garage menu:
+  **Bring my car home**. A reload also puts it back on the turntable.
+- The header says **Driving** and which car; a readout shows your speed in
+  km/h and the gear. The engine hums when sound is on.
 
 ### Target practice
 
@@ -336,7 +386,14 @@ the draft note whenever the card is hidden. Every menu and card closes with its
 | `src/scripts/city3d/guns.ts` | The four guns (Degen, his hands, other players, the soldiers), sights, finishes |
 | `src/scripts/city3d/stance.ts` | Third person: both hands on the gun (grip and handguard), side-on stance for long guns |
 | `src/scripts/city3d/viewmodel.ts` | First-person hands and rifle: sway, bob, recoil, aiming, reload |
-| `src/scripts/city3d/solids.ts` | The city's collision boxes (walk mode and the game server) |
+| `src/scripts/city3d/solids.ts` | The city's collision boxes, doors, the gun counter, the garage and the walk-mode spawn (walk mode, your car and the game server) |
+| `src/scripts/city3d/layout.ts` | The street plan: blocks, streets, avenues, lanes, the river, the garage lot, and the landmarks' old drawing grid (`design()`) |
+| `src/scripts/city3d/cars.ts` | The car models (traffic, parked cars, your car) |
+| `src/scripts/city3d/garage.ts` | The garage on the south bank and its turntable |
+| `src/scripts/city3d/garage-ui.ts` | The garage menu: pick a model and a paint |
+| `src/scripts/city3d/mycar.ts` | Your car: models, paints, handling numbers (no DOM) |
+| `src/scripts/city3d/drive-sim.ts` | Driving rules: arcade handling, soft collisions (no DOM) |
+| `src/scripts/city3d/drive.ts` | Driving: getting in and out, cameras, the speed readout, engine sound |
 | `src/scripts/city3d/profile-ui.ts` | The Profile panel: name, rank; owns the look (saved here and online) |
 | `src/scripts/city3d/head.ts` | The mode header's title and subtitle, and its height (`--head-h`) |
 | `src/scripts/city3d/fitting.ts` | Drop 001's fitting room: wardrobe items and the turning preview |

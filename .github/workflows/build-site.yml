@@ -25,6 +25,9 @@ jobs:
           cache: npm
 
       - run: npm ci
+      # The street plan, collisions, plots, driving and target practice rules (tests/).
+      # A failing test stops the build, so a broken city never reaches the zip.
+      - run: npm test
       # Multiplayer is paused: built without a game server, so the city runs on its
       # own (solo walking and target practice, the builder as a play-money demo).
       # To bring it back, set PUBLIC_GAME_SERVER here (see server/README.md).

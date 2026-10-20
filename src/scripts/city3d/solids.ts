@@ -7,6 +7,7 @@
  * Like the landmarks they're written on the landmarks' drawing grid and moved
  * onto today's streets with `designBox()` (layout.ts).
  */
+import type { SpotId } from '../../lib/city';
 import { DUMMIES } from './combat-sim';
 import { GARAGE, design, designBox } from './layout';
 
@@ -74,13 +75,13 @@ const DRAWN: Box[] = [
  */
 export const GARAGE_SITE = {
   building: [GARAGE.ox + 0.4, GARAGE.oz + 3.7, GARAGE.ox + 8.6, GARAGE.oz + 8.6, 2.9] as Box,
-  turntable: { x: GARAGE.ox + 2.9, z: GARAGE.oz + 1.85, r: 1.55 },
+  turntable: { x: GARAGE.ox + 2.9, z: GARAGE.oz + 1.85, r: 1.6 },
   door: { x: GARAGE.ox + 7.4, z: GARAGE.oz + 3.1 },
   tyres: { x: GARAGE.ox + 5.5, z: GARAGE.oz + 3.25 },
 };
 const T = GARAGE_SITE.turntable;
 /** The turntable with your car on it (your own car ignores it: it drives off from there) */
-export const TURNTABLE_BOX: Box = [T.x - 1.45, T.z - 1.45, T.x + 1.45, T.z + 1.45, 1.1];
+export const TURNTABLE_BOX: Box = [T.x - 1.5, T.z - 1.5, T.x + 1.5, T.z + 1.5, 1.1];
 const GARAGE_SOLIDS: Box[] = [
   GARAGE_SITE.building,
   TURNTABLE_BOX,
@@ -89,6 +90,25 @@ const GARAGE_SOLIDS: Box[] = [
 export const SOLIDS: Box[] = [...DRAWN.map(designBox), ...GARAGE_SOLIDS, ...DUMMY_SOLIDS];
 /** What bullets stop on: everything solid except the dummies' footprints (they test their own shape) */
 export const SHOT_SOLIDS = SOLIDS.filter((b) => !DUMMY_SOLIDS.includes(b));
+
+/** Where you can step in, and what opens there (drawn on the landmarks' grid, moved onto today's streets) */
+export const DOORS: { id: SpotId; x: number; z: number }[] = (
+  [
+    { id: 'emporium', x: 17.5, z: 17.5 },
+    { id: 'shop', x: 26.1, z: 17.5 },
+    { id: 'workshop', x: 15.3, z: 28.05 },
+    { id: 'vault', x: 4.3, z: 18.6 },
+    { id: 'signal', x: 13.7, z: 8.6 },
+    { id: 'telegram', x: 3.6, z: 27.6 },
+    { id: 'plan', x: 26.6, z: 30.95 },
+  ] as { id: SpotId; x: number; z: number }[]
+).map((d) => {
+  const [x, z] = design(d.x, d.z);
+  return { ...d, x, z };
+});
+
+/** Where walk mode starts: by the Emporium's doors, then `back` steps back along `yaw` so the tower fills the view */
+export const WALK_SPAWN = (([x, z]) => ({ x, z, yaw: 0.45, back: 2.6 }))(design(17.3, 18.85));
 
 /** Things to do with E besides doors: the gun store counter in the Armoury (stand in front of it to gear up) */
 export const RACK = (([x, z]) => ({ x, z }))(design(24.7, 27.95));

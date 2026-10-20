@@ -14,3 +14,4 @@ scratch/
 
 # Built site zips (download from the "Build site" Action instead)
 *.zip
+.test-build/

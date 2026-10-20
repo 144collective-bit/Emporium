@@ -25,28 +25,12 @@ import { createGunShop } from './gunshop';
 import { createGarageUI, loadCar } from './garage-ui';
 import type { Garage } from './garage';
 import { createDrive } from './drive';
-import { CAMERA_ONLY, GARAGE_SITE, RACK, SOLIDS, TURNTABLE_BOX, rayBoxes, type Box } from './solids';
+import { CAMERA_ONLY, DOORS, GARAGE_SITE, RACK, SOLIDS, TURNTABLE_BOX, WALK_SPAWN, rayBoxes, type Box } from './solids';
 import { DISTRICTS, BLOCKS, BS, NS_ROADS, RIVER, SLAB, WALK_W, type Tick } from './world';
-import { GARAGE, design } from './layout';
-
-/** Where you can step in, and what opens there (drawn on the landmarks' grid, moved onto today's streets) */
-const DOORS: { id: SpotId; x: number; z: number }[] = (
-  [
-    { id: 'emporium', x: 17.5, z: 17.5 },
-    { id: 'shop', x: 26.1, z: 17.5 },
-    { id: 'workshop', x: 15.3, z: 28.05 },
-    { id: 'vault', x: 4.3, z: 18.6 },
-    { id: 'signal', x: 13.7, z: 8.6 },
-    { id: 'telegram', x: 3.6, z: 27.6 },
-    { id: 'plan', x: 26.6, z: 30.95 },
-  ] as { id: SpotId; x: number; z: number }[]
-).map((d) => {
-  const [x, z] = design(d.x, d.z);
-  return { ...d, x, z };
-});
+import { GARAGE } from './layout';
 
 /** Facing the Emporium's doors, the tower over his shoulder */
-const SPAWN_YAW = 0.45;
+const SPAWN_YAW = WALK_SPAWN.yaw;
 const RADIUS = 0.22;
 const WALK = 2.4;
 const RUN = 5.4;
@@ -160,8 +144,7 @@ export function createWalk(d: WalkDeps) {
     });
   paintAutoAds();
 
-  const [spawnX, spawnZ] = design(17.3, 18.85);
-  const SPAWN = new THREE.Vector3(spawnX, SLAB, spawnZ);
+  const SPAWN = new THREE.Vector3(WALK_SPAWN.x, SLAB, WALK_SPAWN.z);
   let active = false;
   const pos = SPAWN.clone();
   const vel = new THREE.Vector2();
@@ -994,7 +977,7 @@ export function createWalk(d: WalkDeps) {
     enter() {
       active = true;
       // A few steps back from the doors, so the arcade tower fills the view
-      pos.copy(SPAWN).add(new THREE.Vector3(Math.sin(SPAWN_YAW), 0, Math.cos(SPAWN_YAW)).multiplyScalar(2.6));
+      pos.copy(SPAWN).add(new THREE.Vector3(Math.sin(SPAWN_YAW), 0, Math.cos(SPAWN_YAW)).multiplyScalar(WALK_SPAWN.back));
       vel.set(0, 0);
       vy = 0;
       grounded = true;

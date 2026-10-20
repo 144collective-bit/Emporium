@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "preview": "astro preview"
+    "preview": "astro preview",
+    "test": "node scripts/test.mjs"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.4",
@@ -16,6 +17,7 @@
     "three": "^0.186.1"
   },
   "devDependencies": {
-    "@types/three": "^0.186.0"
+    "@types/three": "^0.186.0",
+    "esbuild": "^0.28.2"
   }
 }

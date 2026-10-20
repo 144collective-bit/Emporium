@@ -187,7 +187,8 @@ it and has been retired completely. Build only on what's here.
 - The gun store is compact: a 2 x 2 grid of guns beside the picked gun's
   details; on upright phones a short bottom sheet with the guns in one row.
   Check it at phone widths upright and on its side (no scrolling needed).
-- Collision footprints (`SOLIDS`) and door spots (`DOORS`) mirror
+- Collision footprints (`SOLIDS`) and door spots (`DOORS`), both in
+  `solids.ts` with the walk-mode start (`WALK_SPAWN`), mirror
   `landmarks.ts`. When a landmark moves or changes size, update both.
   Placed buildings block via `plots.solids()`; parks stay walkable.
 - Cars yield to the walker through `walker` in `life.ts`.
@@ -440,6 +441,25 @@ it and has been retired completely. Build only on what's here.
   the mode header keeps the title.
 - PvP will only ever happen across the river (south bank); the city north of
   the bridges stays a safe hangout.
+
+## Tests
+
+- `npm test` runs `tests/*.test.ts` with Node's own test runner
+  (`scripts/test.mjs` bundles each with esbuild first; `npm test -- drive`
+  runs only matching files). The "Build site" Action runs them before the
+  build: a failing test means no zip.
+- They cover the code that's free of the DOM and scene code: the street plan
+  (`layout.ts`), collision data, doors, the gun counter, the garage and the
+  spawn (`solids.ts`), the plots (`src/data/plots.ts`), your car
+  (`mycar.ts`), the driving rules (`drive-sim.ts`) and target practice
+  (`combat-sim.ts`). Modules that touch the DOM or `kit.ts` (canvas
+  textures) can't load in Node; keep data a test needs in the DOM-free
+  files.
+- When you change a rule or move something in the city, run the tests and
+  extend them: a new landmark's boxes and door, a new model's handling, a
+  new road. Fix the code, not the test, unless the test was wrong.
+- Browser checks (the widths above, walk and drive flows) are still done by
+  hand with Playwright against `npm run preview`.
 
 ## Hosting
 
