@@ -4,7 +4,24 @@
 // street a car can use.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ALLEYS, BLOCKS_DT, BOLLARD_R, DIAGONAL_LAMPS, INFILL, LANDMARK_LOTS, LANES, PARKS, PRACTICE, SQUARE, insideBy, type Rect } from '../src/scripts/city3d/downtown';
+import {
+  ALLEYS,
+  BLOCKS_DT,
+  BOLLARD_R,
+  DIAGONAL_LAMPS,
+  INFILL,
+  LANDMARK_LOTS,
+  LANES,
+  NAMED_SHOPS,
+  PARKS,
+  PRACTICE,
+  SIGNS,
+  SQUARE,
+  bodyOf,
+  insideBy,
+  stoopOf,
+  type Rect,
+} from '../src/scripts/city3d/downtown';
 import { DOORS, SOLIDS } from '../src/scripts/city3d/solids';
 import { PLAN, distToStreet, inPoly, onSlab } from '../src/scripts/city3d/streetplan';
 import { DUMMIES } from '../src/scripts/city3d/combat-sim';
@@ -24,11 +41,46 @@ test("infill: on its blocks, off the landmarks' lots, the lanes and each other, 
     assert.ok(f.box[0] < f.box[2] && f.box[1] < f.box[3], 'well formed');
     assert.ok(onBlock(f.box), `infill at ${f.box} is off its block`);
     for (const l of [...LANDMARK_LOTS, ...LANES]) assert.ok(!overlaps(f.box, l), `infill at ${f.box} is on a landmark's lot or a lane`);
-    assert.ok(f.h >= 2.4 && f.h <= 7.5, `infill at ${f.box} is ${f.h} tall`);
+    // Under the Emporium's roof (12.5 up) with room for a mast or a sign on top
+    assert.ok(f.h >= 1.8 && f.h <= 10.6, `infill at ${f.box} is ${f.h} tall`);
     // A shop front wide and deep enough for a door
-    assert.ok(f.box[2] - f.box[0] >= 2.3 && f.box[3] - f.box[1] >= 2.3, `infill at ${f.box} is too small`);
+    const body = bodyOf(f);
+    assert.ok(body[2] - body[0] >= 2.3 && body[3] - body[1] >= 2.3, `infill at ${f.box} is too small`);
+    // What's solid is the building (and a walk-up's stoop), inside its plot
+    for (const s of f.solids)
+      assert.ok(s[0] >= f.box[0] - 1e-9 && s[2] <= f.box[2] + 1e-9 && s[1] >= f.box[1] - 1e-9 && s[3] <= f.box[3] + 1e-9, `a footprint of ${f.box} leaves its plot`);
+    assert.ok(
+      SOLIDS.some((s) => s[0] === body[0] && s[1] === body[1] && s[2] === body[2] && s[3] === body[3]),
+      `${f.box} isn't solid`
+    );
+    if (f.type === 'brownstone') assert.ok(f.solids.length === 2 && stoopOf(f).every(Number.isFinite));
+    // Shops, diners and hotels have signs, from the fixed list
+    if (f.type === 'shop' || f.type === 'diner' || f.type === 'hotel') assert.ok(f.sign && f.sign in SIGNS, `${f.type} at ${f.box} has no sign`);
   }
   for (let i = 0; i < INFILL.length; i++) for (let j = i + 1; j < INFILL.length; j++) assert.ok(!overlaps(INFILL[i].box, INFILL[j].box), `infill ${i} and ${j} overlap`);
+  // A few towers break the skyline, not a wall of them
+  const towers = INFILL.filter((f) => f.h > 7);
+  assert.ok(towers.length >= 3 && towers.length <= 6, `${towers.length} towers`);
+  assert.ok(towers.every((f) => f.type === 'office' || f.type === 'hotel'));
+});
+
+test("your three shops: Crypto Coffee, Dave's Validator and the Golden Crumpet, once each, spread across downtown", () => {
+  assert.deepEqual(SIGNS.coffee.name, 'CRYPTO COFFEE');
+  assert.deepEqual(SIGNS.validator.name, "DAVE'S VALIDATOR");
+  assert.deepEqual(SIGNS.crumpet.name, 'GOLDEN CRUMPET');
+  const at = NAMED_SHOPS.map((id) => {
+    const found = INFILL.filter((f) => f.sign === id);
+    assert.equal(found.length, 1, id);
+    assert.equal(found[0].type, 'shop');
+    const [x0, z0, x1, z1] = found[0].box;
+    return [(x0 + x1) / 2, (z0 + z1) / 2];
+  });
+  for (let i = 0; i < at.length; i++)
+    for (let j = i + 1; j < at.length; j++) assert.ok(Math.hypot(at[i][0] - at[j][0], at[i][1] - at[j][1]) > 20, 'two of your shops are side by side');
+  // The other shops take turns with the made-up names, and nothing else goes on a sign
+  const used = new Set(INFILL.map((f) => f.sign).filter(Boolean));
+  assert.ok(used.size >= 10, `only ${used.size} different signs`);
+  for (const sg of Object.values(SIGNS)) assert.match(sg.name, /^[A-Z0-9 '/]+$/);
 });
 
 test('alleys run between buildings, walkable, with bollards that stop a car', () => {

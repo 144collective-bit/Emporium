@@ -88,6 +88,12 @@ Checked with `?fps` at every step (and on a real phone):
      one atlas material, one neon, one set of string-light points; phones get
      a smaller crowd on the square); triangles about 1.0M / 0.54M before,
      about 0.95M / 0.54M after.
+   - Then, at the owner's request, the infill made as good as the landmarks:
+     six building types, the owner's three named shops (Crypto Coffee,
+     Dave's Validator, Golden Crumpet) and made-up shop signs, facade depth,
+     rooftops and street life, a few towers to break the skyline. Draw calls
+     unchanged (about 620 / 570); triangles about 1.04M / 0.56M (from
+     0.95M / 0.54M), the finest details left out on phones.
 3. **The outer districts.** Gently bending streets, irregular and more
    spacious blocks, the smaller squares and pocket parks, the waterfront
    promenade; the plots and the Dorras lots re-cut to their blocks (same

@@ -62,11 +62,30 @@ it and has been retired completely. Build only on what's here.
     Vault in the west, Drop 001 and the Workshop in the east, the Armoury in
     the south-east. Every landmark fronts south (+z); the Post office and
     Drop 001 front walk-only courtyard lanes (`LANES`).
-  - Round them, tight rows of infill (`INFILL`: a shop floor `SHOP_H`, whole
-    floors above, never more than 6.6 up) with walk-only alleys between
-    (`ALLEYS`, two bollards at the mouth: Degen gets through, no car does).
-    Infill walls share six facade and three shopfront materials with UVs in
-    world units; keep new infill going through them.
+  - Round them, tight rows of infill (`INFILL`) with walk-only alleys
+    between (`ALLEYS`, two bollards at the mouth: Degen gets through, no car
+    does). Each building has a type (`InfillType`, drawn by `building()` in
+    `infill.ts` and `infill()` in `city.ts`): brownstone walk-ups (stoop,
+    bay window, bracketed cornice), shops (fascia sign, striped awning, blade
+    sign, fire escapes), diners (rooftop sign, tables out front), lofts
+    (roll-up doors, sawtooth roofs), offices (glass tower set back on a
+    podium, lit crown, mast) and hotels (balconies, canopy, vertical sign).
+    Rooftops carry tanks, gardens, huts, masts and billboards; fronts carry
+    café tables, chalk boards, planters and bikes in the plot's front strip
+    (`front`; the building itself is `bodyOf()`, its footprints `solids`).
+    A few offices and hotels (`TOWER_FLOORS`, up to about 10.6) break the
+    skyline, all well under the Emporium.
+  - Shop signs are fixed copy from `SIGNS` (made-up names, never the token).
+    The owner's three shops, `NAMED_SHOPS`, are spread out: Crypto Coffee
+    (west of the Emporium, café tables), Dave's Validator (north-east
+    triangle, a tech store with a dish) and the Golden Crumpet (south-west
+    triangle, a bakery), each with a neon icon. They're signs only, not
+    places, for now.
+  - Every wall and ground floor comes from one atlas material (bands with
+    UVs in world units, taller walls stacked from quads so a band never
+    wraps), every sign from one sign atlas, and details are bottomless
+    boxes in the shared paint: keep new infill going through them. Phones
+    (`LOW` in `infill.ts`) leave out the finest details.
   - The hangout square (`SQUARE`) is the whole south block, a block from the
     Emporium: the stage and big screen at the north end facing south (fixed
     copy only: DEGEN CITY, GM DEGENS, GAME ON), dance floor, benches, kiosks,

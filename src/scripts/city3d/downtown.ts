@@ -140,14 +140,58 @@ export const LANDMARK_LOTS: Rect[] = Object.entries(SEATS)
 
 /* ---------- Infill: tight rows of buildings with alleys between ---------- */
 
+/**
+ * What an infill building is (infill.ts draws each its own way):
+ * - brownstone: a walk-up with a stoop, a bay window and a bracketed cornice
+ * - shop: a shopfront with a fascia sign, an awning and a blade sign, flats above (fire escapes)
+ * - diner: one storey, chrome and long windows, a rooftop sign, tables out front
+ * - loft: an old warehouse, big windows, roll-up doors, a sawtooth roof
+ * - office: a glass tower over a podium, set back, a lit crown and a mast
+ * - hotel: tall and narrow, balconies, an entrance canopy and a vertical sign
+ */
+export type InfillType = 'brownstone' | 'shop' | 'diner' | 'loft' | 'office' | 'hotel';
+/** Shop signs: fixed copy only (made-up names, nothing about the token) */
+export const SIGNS = {
+  coffee: { name: 'CRYPTO COFFEE', blade: 'CAFE', color: '#ffd36b', icon: 'cup' },
+  validator: { name: "DAVE'S VALIDATOR", blade: 'TECH', color: '#00eaff', icon: 'chip' },
+  crumpet: { name: 'GOLDEN CRUMPET', blade: 'BAKERY', color: '#f2c94c', icon: 'crumpet' },
+  noodles: { name: 'NEON NOODLES', blade: 'RAMEN', color: '#ff6ad5' },
+  records: { name: 'SPIN RECORDS', blade: 'VINYL', color: '#8f7bff' },
+  laundry: { name: 'SUDS LAUNDRY', blade: 'WASH', color: '#7cf4ff' },
+  pizza: { name: 'SLICE PIZZA', blade: 'PIZZA', color: '#ff8a3d' },
+  mart: { name: '24/7 MART', blade: '24/7', color: '#2bff88' },
+  books: { name: 'PIXEL BOOKS', blade: 'BOOKS', color: '#ffd36b' },
+  barber: { name: 'FRESH CUTS', blade: 'CUTS', color: '#e219e5' },
+  tacos: { name: 'TACO RIOT', blade: 'TACOS', color: '#ff6a2f' },
+  diner: { name: 'STARLITE DINER', blade: 'EAT', color: '#ff3b8a' },
+  hotel: { name: 'HOTEL NOVA', blade: 'HOTEL', color: '#ff6ad5' },
+  gm: { name: 'GM DEGENS', blade: 'GM', color: '#00eaff' },
+} as const satisfies Record<string, { name: string; blade: string; color: string; icon?: string }>;
+export type SignId = keyof typeof SIGNS;
+/** Your three shops (the owner's names), spread across downtown */
+export const NAMED_SHOPS: SignId[] = ['coffee', 'validator', 'crumpet'];
+/** Signs the other shops take turns with */
+const SHOP_SIGNS: SignId[] = ['noodles', 'records', 'laundry', 'pizza', 'mart', 'books', 'barber', 'tacos'];
+
+/** x0, z0, x1, z1, height (solids.ts `Box`) */
+export type Footprint = [number, number, number, number, number];
+
 export interface Infill {
-  /** Footprint */
+  /** Its plot along the street (the building, and anything out front: a stoop, café tables) */
   box: Rect;
   /** Roof height */
   h: number;
   face: Face;
   /** Picks the facade, colours and details (stable from build to build) */
   seed: number;
+  type: InfillType;
+  /** Whole floors above the ground floor */
+  floors: number;
+  sign?: SignId;
+  /** How far the building stands back from the front of its plot (room for a stoop or café tables) */
+  front: number;
+  /** What's solid: the building, and a stoop */
+  solids: Footprint[];
 }
 export interface Alley {
   /** The walk-only gap between two buildings, from the street front to the back */
@@ -163,6 +207,10 @@ interface Zone {
   /** Tallest a building here may be (the Emporium stays the tallest by far) */
   tall: number;
   seed: number;
+  /** Offices and hotels here may rise to TOWER_FLOORS, breaking the skyline */
+  tower?: boolean;
+  /** Faces a back lane, not a street (no diners) */
+  back?: boolean;
 }
 
 /** A small, stable random generator (the same city on every load, in the browser and on the server) */
@@ -181,20 +229,22 @@ const ALLEY_W = 1.6;
 export const SHOP_H = 1.25;
 export const FLOOR = 1;
 export const PARAPET = 0.35;
+/** The tallest an office or hotel gets (its roof about 10.6 up, well under the Emporium's 12.5) */
+export const TOWER_FLOORS = 9;
 /** Bollards stand this far in from the front (the sidewalk stays clear for the people walking it) */
 const BOLLARD_IN = 0.3;
 
 const [X0, X1] = T1;
 const ZONES: Zone[] = [
   // The centre block: a row along the north cross street, a row behind it facing the Emporium's back lane, and rows either side of the Emporium
-  { box: [X0, T1[0], X1, T1[0] + 4.6], face: 'n', tall: 7.5, seed: 11 },
-  { box: [X0, T1[0] + 5.7, X1, SEATS['11,11'][1] - 1.7], face: 's', tall: 6.5, seed: 12 },
+  { box: [X0, T1[0], X1, T1[0] + 4.6], face: 'n', tall: 7.5, seed: 11, tower: true },
+  { box: [X0, T1[0] + 5.7, X1, SEATS['11,11'][1] - 1.7], face: 's', tall: 6.5, seed: 12, back: true },
   { box: [X0, SEATS['11,11'][1], SEATS['11,11'][0] - 1.7, T1[1]], face: 'w', tall: 6.5, seed: 13 },
   { box: [SEATS['11,11'][0] + BS + 1.7, SEATS['11,11'][1], X1, T1[1]], face: 'e', tall: 6.5, seed: 14 },
   // Backs of the north, west and east blocks, facing the ring
-  { box: [X0, T0[0], X1, SEATS['11,0'][1] - 1.3], face: 'n', tall: 5.5, seed: 21 },
-  { box: [T0[0], T1[0], SEATS['0,11'][0] - 1.3, T1[1]], face: 'w', tall: 5.5, seed: 22 },
-  { box: [SEATS['22,11'][0] + BS + 1.3, T1[0], T2[1], T1[1]], face: 'e', tall: 5.5, seed: 23 },
+  { box: [X0, T0[0], X1, SEATS['11,0'][1] - 1.3], face: 'n', tall: 5.5, seed: 21, tower: true },
+  { box: [T0[0], T1[0], SEATS['0,11'][0] - 1.3, T1[1]], face: 'w', tall: 5.5, seed: 22, tower: true },
+  { box: [SEATS['22,11'][0] + BS + 1.3, T1[0], T2[1], T1[1]], face: 'e', tall: 5.5, seed: 23, tower: true },
   // The triangles with infill: a row along each straight side from the right-angle corner, kept
   // clear of the diagonal (its side keeps a planted strip). Rows are ROW deep.
   ...triangleRows(),
@@ -259,33 +309,106 @@ function fill(z: Zone, out: { infill: Infill[]; alleys: Alley[] }) {
     }
     let w = 2.6 + r() * 2;
     if (a1 - (a + w) < 2.6) w = a1 - a;
-    const depthCut = r() < 0.35 ? 0.4 + r() * 0.5 : 0;
-    // Some sit back a little from the street, so the street wall isn't a ruler line
+    // What it is: wide plots take the big types, narrow ones walk-ups and shops; towers only where the zone allows
+    const pick = r();
+    const wide = w >= 3.5;
+    let type: InfillType;
+    if (z.tower && mix.towers < 6 && pick < 0.32) {
+      type = wide ? 'office' : 'hotel';
+      mix.towers++;
+    } else if (wide && !z.back && mix.diners < 2 && pick < 0.48) {
+      type = 'diner';
+      mix.diners++;
+    } else if (wide && pick < 0.62) type = 'loft';
+    else if (pick < 0.8) type = 'shop';
+    else type = 'brownstone';
+    // Some sit back a little from the street, so the street wall isn't a ruler line (not the ones with a stoop or tables out front)
+    const front = FRONTS[type];
+    const depthCut = !front && r() < 0.35 ? 0.4 + r() * 0.5 : 0;
     let box: Rect = along === 'x' ? [a, z0, a + w, z1] : [x0, a, x1, a + w];
-    if (depthCut) {
-      if (z.face === 'n') box = [box[0], box[1] + depthCut, box[2], box[3]];
-      if (z.face === 's') box = [box[0], box[1], box[2], box[3] - depthCut];
-      if (z.face === 'w') box = [box[0] + depthCut, box[1], box[2], box[3]];
-      if (z.face === 'e') box = [box[0], box[1], box[2] - depthCut, box[3]];
-    }
-    // A shop on the ground floor, whole floors above it, and the parapet
-    const floors = 1 + Math.floor(r() * Math.max(1, Math.floor(z.tall - SHOP_H - PARAPET)));
-    const h = Math.round((SHOP_H + floors * FLOOR + PARAPET) * 100) / 100;
-    out.infill.push({ box, h, face: z.face, seed: z.seed * 100 + k++ });
+    if (depthCut) box = pull(box, z.face, depthCut);
+    // A ground floor, whole floors above it, and the parapet
+    const most = Math.max(1, Math.floor(z.tall - SHOP_H - PARAPET));
+    const floors =
+      type === 'diner'
+        ? 0
+        : type === 'office'
+          ? 5 + Math.floor(r() * (TOWER_FLOORS - 4))
+          : type === 'hotel'
+            ? 5 + Math.floor(r() * (TOWER_FLOORS - 5))
+            : type === 'brownstone'
+              ? Math.min(most, 2 + Math.floor(r() * 3))
+              : 1 + Math.floor(r() * most);
+    const h = Math.round((SHOP_H + floors * FLOOR + PARAPET + (type === 'diner' ? 0.3 : 0)) * 100) / 100;
+    const sign: SignId | undefined = type === 'diner' ? 'diner' : type === 'hotel' ? 'hotel' : type === 'shop' ? SHOP_SIGNS[mix.signs++ % SHOP_SIGNS.length] : undefined;
+    out.infill.push(withSolids({ box, h, face: z.face, seed: z.seed * 100 + k++, type, floors, sign, front, solids: [] }));
     a += w;
     since++;
   }
 }
 
+/** A plot pulled back from its front by d */
+function pull(b: Rect, face: Face, d: number): Rect {
+  if (face === 'n') return [b[0], b[1] + d, b[2], b[3]];
+  if (face === 's') return [b[0], b[1], b[2], b[3] - d];
+  if (face === 'w') return [b[0] + d, b[1], b[2], b[3]];
+  return [b[0], b[1], b[2] - d, b[3]];
+}
+/** The building's own footprint (its plot without the strip out front) */
+export const bodyOf = (f: Infill): Rect => (f.front ? pull(f.box, f.face, f.front) : f.box);
+
+/** The stoop: steps up to a walk-up's door, from its plot's front strip (where along the front, and how wide) */
+export function stoopOf(f: Infill): Rect {
+  const [x0, z0, x1, z1] = f.box;
+  const alongX = f.face === 'n' || f.face === 's';
+  const len = alongX ? x1 - x0 : z1 - z0;
+  const c = (alongX ? x0 : z0) + len * 0.3;
+  const half = 0.42;
+  const depth = f.front - 0.05;
+  if (f.face === 'n') return [c - half, z0 + f.front - depth, c + half, z0 + f.front];
+  if (f.face === 's') return [c - half, z1 - f.front, c + half, z1 - f.front + depth];
+  if (f.face === 'w') return [x0 + f.front - depth, c - half, x0 + f.front, c + half];
+  return [x1 - f.front, c - half, x1 - f.front + depth, c + half];
+}
+
+function withSolids(f: Infill): Infill {
+  f.solids = [[...bodyOf(f), f.h]];
+  if (f.type === 'brownstone') f.solids.push([...stoopOf(f), 0.45]);
+  return f;
+}
+
+/** How far each type stands back from its plot's front: a stoop, café tables, planters and bikes, an entrance canopy (lofts load straight off the street) */
+const FRONTS: Record<InfillType, number> = { brownstone: 0.8, shop: 0.5, diner: 0.9, loft: 0, office: 0.6, hotel: 0.7 };
+
+/** Running counts while downtown is filled: a few towers and diners, and the shop signs taking turns */
+const mix = { towers: 0, diners: 0, signs: 0 };
 const built = { infill: [] as Infill[], alleys: [] as Alley[] };
 for (const z of ZONES) fill(z, built);
+
+// Your three shops, one in each part of downtown: Crypto Coffee beside the Emporium on the west cross street,
+// Dave's Validator in the north-east triangle, the Golden Crumpet in the south-west triangle by the square
+for (const [sign, seed] of [
+  ['coffee', 13],
+  ['validator', 34],
+  ['crumpet', 36],
+] as [SignId, number][]) {
+  const f = built.infill.find((b) => Math.floor(b.seed / 100) === seed && Math.min(b.box[2] - b.box[0], b.box[3] - b.box[1]) >= 2.6 && b.type !== 'office')!;
+  f.type = 'shop';
+  f.sign = sign;
+  f.floors = Math.max(1, Math.min(f.floors, 3));
+  // The café has tables out front
+  f.front = sign === 'coffee' ? 0.9 : FRONTS.shop;
+  f.h = Math.round((SHOP_H + f.floors * FLOOR + PARAPET) * 100) / 100;
+  withSolids(f);
+}
 
 /** Every infill building downtown */
 export const INFILL: Infill[] = built.infill;
 /** Every walk-only alley downtown */
 export const ALLEYS: Alley[] = built.alleys;
 /** The rooftop the GM water tower stands on: a mid-height one on the west side of the Emporium's block, over the cross street */
-export const WATER_TOWER: Infill = [...INFILL].filter((f) => f.h <= 5.7 && f.face === 'w' && f.box[0] < 25).sort((p, q) => q.h - p.h)[0] ?? INFILL[0];
+export const WATER_TOWER: Infill =
+  [...INFILL].filter((f) => f.h <= 5.7 && f.face === 'w' && f.box[0] < 25 && !NAMED_SHOPS.includes(f.sign!)).sort((p, q) => q.h - p.h)[0] ?? INFILL[0];
 /** A bollard's footprint: half its width */
 export const BOLLARD_R = 0.1;
 

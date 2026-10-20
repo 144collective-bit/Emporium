@@ -21,7 +21,7 @@
 
 import { CORE_ROADS, DOWNTOWN, LANE, RIVER, WALK_W, design, seat } from '../scripts/city3d/layout';
 import { PLAN } from '../scripts/city3d/streetplan';
-import { ALLEYS, DIAGONALS, INFILL, LANES, PARKS, SQUARE, WATER_TOWER, type Infill } from '../scripts/city3d/downtown';
+import { ALLEYS, DIAGONALS, INFILL, LANES, NAMED_SHOPS, PARKS, SHOP_H, SIGNS, SQUARE, WATER_TOWER, bodyOf, stoopOf, type Infill, type InfillType, type SignId } from '../scripts/city3d/downtown';
 
 export type SpotId = 'emporium' | 'shop' | 'workshop' | 'vault' | 'signal' | 'telegram' | 'plan' | 'apartments';
 
@@ -535,28 +535,107 @@ function pin(id: SpotId, s: Spot, [x, y]: Pt) {
 
 /* ---------- Downtown round the landmarks (downtown.ts) ---------- */
 
-const WALLS = ['#3d2f6e', '#5a2c5e', '#26456b', '#6b3a3f', '#2f5550', '#4a3a82'];
 const AWNINGS = ['#e23b3b', '#ffd23f', '#00c2ff', '#e219e5', '#1fbf6b', '#ff8a3d'];
 
-/** An infill building: a box with windows on the faces the viewer sees, a shopfront and awning if its front is one of them */
+/** Each type's wall colours (as in the 3D city's atlas) */
+const TYPE_WALLS: Record<InfillType, string[]> = {
+  brownstone: ['#6b4636', '#7a3b38'],
+  shop: ['#2f6b6b', '#8c4466', '#4f3d8a', '#7a3b38'],
+  diner: ['#c9c4e6'],
+  loft: ['#4a2f35'],
+  office: ['#1d5a5f'],
+  hotel: ['#8a5a4a'],
+};
+
+/** A sign board on a face the viewer sees: on the +y face (left on screen) or the +x face (right), `u` along it from its left end */
+function board(face: 'y' | 'x', x: number, y: number, z: number, len: number, h: number, id: SignId) {
+  const sg = SIGNS[id];
+  const W = len * TL;
+  const H = h * ZH;
+  const body =
+    `<rect width="${n(W)}" height="${n(H)}" rx="3" fill="#0d0b1c" stroke="${sg.color}" stroke-width="2.5"/>` +
+    text(W / 2, H * 0.72, sg.name, Math.min(H * 0.62, (W * 1.5) / sg.name.length), 't-display', sg.color);
+  return face === 'y' ? g(onL(x, y, z), body) : g(onR(x, y, z), body);
+}
+
+/** An infill building, by its type: the body with windows on the faces the viewer sees, its signs, its front and roof details */
 function infill(f: Infill) {
-  const [x0, y0, x1, y1] = f.box;
+  const [x0, y0, x1, y1] = bodyOf(f);
   const w = x1 - x0;
   const d = y1 - y0;
-  const c = WALLS[f.seed % WALLS.length];
-  const floors = Math.max(1, Math.round(f.h - 1.6));
-  let b = prism(x0, y0, w, d, f.h, { c, z: Z0 });
+  const r = (k: number) => ((f.seed * 9301 + k * 49297) % 233280) / 233280;
+  const walls = TYPE_WALLS[f.type];
+  const c = walls[Math.floor(r(1) * walls.length)];
+  const top = Z0 + f.h;
   const pal = [C.warm, C.cyan, C.pink];
-  b += winL(x0, y0, w, d, f.h - 1.3, Z0 + 1.3, Math.max(2, Math.round(w / 0.8)), floors, { lit: 0.45, pal });
-  b += winR(x0, y0, w, d, f.h - 1.3, Z0 + 1.3, Math.max(2, Math.round(d / 0.8)), floors, { lit: 0.45, pal });
-  // The shop floor: lit glass on the front, if the viewer sees it
+  const up = f.type === 'shop' ? 1.7 : 1.3;
+  const rows = Math.max(1, f.floors);
+  let b = '';
+  if (f.type === 'office') {
+    // A podium, the glass tower set back on it, a lit crown and a mast
+    const pod = SHOP_H + 1;
+    b += prism(x0, y0, w, d, pod, { c, z: Z0 });
+    b += winL(x0, y0, w, d, pod, Z0, Math.max(2, Math.round(w / 0.6)), 2, { lit: 0.6, pal: ['#cfe8ff', C.cyan] });
+    b += winR(x0, y0, w, d, pod, Z0, Math.max(2, Math.round(d / 0.6)), 2, { lit: 0.6, pal: ['#cfe8ff', C.cyan] });
+    const [tx0, ty0, tx1, ty1] = [x0 + 0.35, y0 + 0.35, x1 - 0.35, y1 - 0.35];
+    const th = f.h - pod;
+    b += prism(tx0, ty0, tx1 - tx0, ty1 - ty0, th, { c: '#1d3a6b', z: Z0 + pod });
+    b += winL(tx0, ty0, tx1 - tx0, ty1 - ty0, th, Z0 + pod, Math.max(3, Math.round((tx1 - tx0) / 0.4)), rows, { lit: 0.4, pal, gx: 2, gy: 3, mx: 4 });
+    b += winR(tx0, ty0, tx1 - tx0, ty1 - ty0, th, Z0 + pod, Math.max(3, Math.round((ty1 - ty0) / 0.4)), rows, { lit: 0.4, pal, gx: 2, gy: 3, mx: 4 });
+    b += `<polyline points="${pts(P(tx0, ty1, top + 0.15), P(tx1, ty1, top + 0.15), P(tx1, ty0, top + 0.15))}" fill="none" stroke="${C.cyan}" stroke-width="4" class="flick"/>`;
+    const [mx, my] = P((tx0 + tx1) / 2, (ty0 + ty1) / 2, top);
+    b += `<g class="ink">${line([mx, my], [mx, my - 1.2 * ZH], 'leg')}</g><circle cx="${n(mx)}" cy="${n(my - 1.2 * ZH)}" r="4" fill="#ff3b3b"/>`;
+    add((x0 + x1) / 2, (y0 + y1) / 2, b);
+    return;
+  }
+  b += prism(x0, y0, w, d, f.h, { c, z: Z0 });
+  if (f.type === 'diner') {
+    // Chrome above long lit windows, a pink neon line, the sign on the roof
+    b += winL(x0, y0, w, d, 1.0, Z0 + 0.15, 1, 1, { lit: 1, pal: [C.warm], mt: 4, mb: 4, mx: 4 });
+    b += winR(x0, y0, w, d, 1.0, Z0 + 0.15, 1, 1, { lit: 1, pal: [C.warm], mt: 4, mb: 4, mx: 4 });
+    b += `<polyline points="${pts(P(x0, y1, Z0 + 1.35), P(x1, y1, Z0 + 1.35), P(x1, y0, Z0 + 1.35))}" fill="none" stroke="#ff3b8a" stroke-width="4"/>`;
+    b += prism(x0 + 0.2, (y0 + y1) / 2, w - 0.4, 0.08, 0.7, { c: '#0d0b1c', z: top });
+    b += board('y', x0 + 0.2, (y0 + y1) / 2 + 0.08, top + 0.7, w - 0.4, 0.6, 'diner');
+    add((x0 + x1) / 2, (y0 + y1) / 2, b);
+    return;
+  }
+  // Windows on the floors above the ground floor (tight margins on a one-floor building)
+  const wallH = f.h - up - 0.3;
+  const m = wallH < 1.2 ? { mt: 3, mb: 3, gy: 3 } : {};
+  b += winL(x0, y0, w, d, wallH, Z0 + up, Math.max(2, Math.round(w / 0.75)), rows, { lit: 0.42, pal, ...m });
+  b += winR(x0, y0, w, d, wallH, Z0 + up, Math.max(2, Math.round(d / 0.75)), rows, { lit: 0.42, pal, ...m });
+  // A cornice on the faces the viewer sees
+  b += `<polyline points="${pts(P(x0, y1, top - 0.25), P(x1, y1, top - 0.25), P(x1, y0, top - 0.25))}" fill="none" stroke="#d4bf9c" stroke-width="5" stroke-linecap="square"/>`;
+  // The ground floor and the sign, on the front if the viewer sees it
+  const sg = f.sign ? SIGNS[f.sign] : null;
   const awning = AWNINGS[f.seed % AWNINGS.length];
-  if (f.face === 's') {
-    b += winL(x0, y0, w, d, 1.1, Z0, Math.max(1, Math.round(w / 1.6)), 1, { lit: 1, pal: [C.warm], mt: 6, mb: 4 });
-    b += prism(x0 + 0.15, y1, w - 0.3, 0.4, 0.12, { c: awning, z: Z0 + 1.05 });
-  } else if (f.face === 'e') {
-    b += winR(x0, y0, w, d, 1.1, Z0, Math.max(1, Math.round(d / 1.6)), 1, { lit: 1, pal: [C.warm], mt: 6, mb: 4 });
-    b += prism(x1, y0 + 0.15, 0.4, d - 0.3, 0.12, { c: awning, z: Z0 + 1.05 });
+  if (f.face === 's' || f.face === 'e') {
+    const glass = f.type === 'loft' ? '#8f8ab0' : f.type === 'hotel' ? '#cfe8ff' : C.warm;
+    if (f.face === 's') {
+      b += winL(x0, y0, w, d, 1.1, Z0, Math.max(1, Math.round(w / 1.4)), 1, { lit: 1, pal: [glass], mt: 6, mb: 4 });
+      if (sg) b += board('y', x0 + 0.15, y1 + 0.02, Z0 + 1.7, w - 0.3, 0.42, f.sign!);
+      if (f.type === 'shop') b += prism(x0 + 0.15, y1, w - 0.3, 0.45, 0.1, { c: awning, z: Z0 + 1.0 });
+    } else {
+      b += winR(x0, y0, w, d, 1.1, Z0, Math.max(1, Math.round(d / 1.4)), 1, { lit: 1, pal: [glass], mt: 6, mb: 4 });
+      if (sg) b += board('x', x1 + 0.02, y1 - 0.15, Z0 + 1.7, d - 0.3, 0.42, f.sign!);
+      if (f.type === 'shop') b += prism(x1, y0 + 0.15, 0.45, d - 0.3, 0.1, { c: awning, z: Z0 + 1.0 });
+    }
+    if (f.type === 'brownstone') {
+      // The stoop
+      const [sx0, sy0, sx1, sy1] = stoopOf(f);
+      b += prism(sx0, sy0, sx1 - sx0, sy1 - sy0, 0.45, { c: '#8f7a8a', z: Z0 });
+    }
+  } else if (f.sign && NAMED_SHOPS.includes(f.sign)) {
+    // Your shops face away from the map's view: their name stands on the roof too
+    b += prism(x0 + 0.2, (y0 + y1) / 2, w - 0.4, 0.08, 0.55, { c: '#0d0b1c', z: top });
+    b += board('y', x0 + 0.2, (y0 + y1) / 2 + 0.08, top + 0.55, w - 0.4, 0.5, f.sign);
+  }
+  // Something on the roof: a water tank, a garden's trees, or plant
+  const pick = r(2);
+  if (f !== WATER_TOWER) {
+    if (pick < 0.3) b += cyl(x0 + w * 0.6, y0 + d * 0.45, 0.4, 0.8, { c: '#7a5a3c', z: top + 0.7 }) + `<g class="ink">${line(P(x0 + w * 0.6, y0 + d * 0.45, top), P(x0 + w * 0.6, y0 + d * 0.45, top + 0.7), 'leg')}</g>`;
+    else if (pick < 0.55) b += tree(x0 + w * 0.3, y0 + d * 0.5, top, 0.5, 'round') + tree(x0 + w * 0.7, y0 + d * 0.5, top, 0.45, 'round');
+    else b += prism(x0 + w * 0.3, y0 + d * 0.35, 0.6, 0.45, 0.36, { c: '#c9c4e6', z: top });
   }
   add((x0 + x1) / 2, (y0 + y1) / 2, b);
 }

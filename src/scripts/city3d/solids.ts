@@ -189,7 +189,7 @@ export const lotSolids = (i: number, kind: LotKind | null): Box[] => (kind ? LOT
  */
 const sq = SQUARE;
 export const DOWNTOWN_SOLIDS: Box[] = [
-  ...INFILL.map((b): Box => [...b.box, b.h]),
+  ...INFILL.flatMap((f) => f.solids),
   ...ALLEYS.flatMap((a) => a.bollards.map(([x, z]): Box => [x - BOLLARD_R, z - BOLLARD_R, x + BOLLARD_R, z + BOLLARD_R, 0.6])),
   [...sq.stage, sq.stageH],
   [sq.fountain.at[0] - sq.fountain.r * 0.9, sq.fountain.at[1] - sq.fountain.r * 0.9, sq.fountain.at[0] + sq.fountain.r * 0.9, sq.fountain.at[1] + sq.fountain.r * 0.9, 0.55],
