@@ -25,7 +25,7 @@ import { createGunShop } from './gunshop';
 import { createGarageUI, loadCar } from './garage-ui';
 import type { Garage } from './garage';
 import { createDrive } from './drive';
-import { CAMERA_ONLY, DOORS, GARAGE_SITE, RACK, SOLIDS, STALL_SPOT, TURNTABLE_BOX, WALK_SPAWN, rayBoxes, type Box } from './solids';
+import { CAMERA_ONLY, DOORS, GARAGE_SITE, RACK, SOLIDS, TURNTABLE_BOX, WALK_SPAWN, rayBoxes, type Box } from './solids';
 import { DISTRICTS, BLOCKS, BS, NS_ROADS, RIVER, SLAB, WALK_W, type Tick } from './world';
 import { EXTRA_LOTS, WORLD_BOUNDS } from './layout';
 
@@ -88,8 +88,10 @@ export interface WalkDeps {
   garage: Garage;
   /** Your car's engine sound: revs 0..1, or negative for off */
   engine(revs: number): void;
-  /** Open your market stall's card (tycoon-ui.ts) */
-  openStall(): void;
+  /** Your business's places on foot (your stall, your units): where to stand, and the prompt's label */
+  places(): { id: string; x: number; z: number; label: string }[];
+  /** Open one of them (tycoon-ui.ts) */
+  openPlace(id: string): void;
 }
 
 export function createWalk(d: WalkDeps) {
@@ -178,16 +180,16 @@ export function createWalk(d: WalkDeps) {
   const keys = new Set<string>();
   const joy = { x: 0, y: 0, id: -1 };
   const pad = { x: 0, y: 0, run: false, prev: [] as boolean[] };
-  let near: { id: SpotId | 'gear' | 'garage' | 'car' | 'stall'; label: string } | null = null;
+  let near: { id: SpotId | 'gear' | 'garage' | 'car' | `place:${string}`; label: string } | null = null;
   const act = () => {
     if (!near) return;
     if (near.id === 'gear') shop.show();
     else if (near.id === 'garage') garageUI.show();
     else if (near.id === 'car') (drive.active ? getOut() : getIn());
-    else if (near.id === 'stall') {
+    else if (near.id.startsWith('place:')) {
       if (document.pointerLockElement === canvas) document.exitPointerLock();
-      d.openStall();
-    } else openSpot(near.id);
+      d.openPlace(near.id.slice(6));
+    } else openSpot(near.id as SpotId);
   };
 
   const groundAt = (x: number, z: number) => (slabs.some((b) => inBox(b, x, z)) ? SLAB : 0.035);
@@ -303,6 +305,7 @@ export function createWalk(d: WalkDeps) {
     engine: d.engine,
     bounds: [BOUNDS[0], BOUNDS[1], BOUNDS[2], BOUNDS[3], 0],
   });
+
   /** Driving input from the gamepad and the touch pedals */
   const padDrive = { steer: 0, throttle: 0, handbrake: false };
   const pedals = { gas: false, brake: false };
@@ -907,7 +910,7 @@ export function createWalk(d: WalkDeps) {
     }
 
     // Door prompts, and the Armoury's gun store counter
-    let best: { id: SpotId | 'gear' | 'garage' | 'car' | 'stall'; label: string } | null = null;
+    let best: { id: SpotId | 'gear' | 'garage' | 'car' | `place:${string}`; label: string } | null = null;
     let bestD = 1.7;
     const atCounter = Math.hypot(RACK.x - pos.x, RACK.z - pos.z);
     if (atCounter < 1.1) {
@@ -919,10 +922,12 @@ export function createWalk(d: WalkDeps) {
       best = { id: 'garage', label: 'Garage' };
       bestD = 0;
     }
-    if (!drive.active && Math.hypot(STALL_SPOT.x - pos.x, STALL_SPOT.z - pos.z) < 1) {
-      best = { id: 'stall', label: 'Your stall' };
-      bestD = 0;
-    }
+    if (!drive.active)
+      for (const p of d.places())
+        if (Math.hypot(p.x - pos.x, p.z - pos.z) < 1) {
+          best = { id: `place:${p.id}`, label: p.label };
+          bestD = 0;
+        }
     if (!garageUI.open && drive.nearCar(pos.x, pos.z) < 0.75) {
       best = { id: 'car', label: 'Get in' };
       bestD = 0;
@@ -934,10 +939,10 @@ export function createWalk(d: WalkDeps) {
         best = { id: door.id, label: root.querySelector(`[data-pin="${door.id}"] .city-pin-title`)?.textContent ?? door.id };
       }
     }
-    if (best?.id !== near?.id) {
+    if (best?.id !== near?.id || best?.label !== near?.label) {
       near = best;
       prompt.hidden = !near;
-      if (near) prompt.querySelector('[data-walk-label]')!.textContent = near.id === 'gear' || near.id === 'garage' || near.id === 'car' || near.id === 'stall' ? near.label : `Enter ${near.label}`;
+      if (near) prompt.querySelector('[data-walk-label]')!.textContent = near.id === 'gear' || near.id === 'garage' || near.id === 'car' || near.id.startsWith('place:') ? near.label : `Enter ${near.label}`;
     }
   }
 
@@ -954,6 +959,11 @@ export function createWalk(d: WalkDeps) {
     /** Driving your car? */
     get driving() {
       return drive.active;
+    },
+    /** Your car, if it's out of the garage: where it is, its model, and whether you're in it */
+    get car() {
+      const st = drive.state;
+      return st ? { x: st.x, z: st.z, model: drive.model, driving: drive.active, speed: st.speed } : null;
     },
     onKey,
     update,

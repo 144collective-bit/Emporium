@@ -29,7 +29,8 @@ import { createFitting, type Fitting } from './fitting';
 import { createCityHead } from './head';
 import { buildMarket } from './market';
 import { createTycoonUI, type TycoonUI } from './tycoon-ui';
-import { STALL_SPOT } from './solids';
+import { buildUnits } from './units';
+import { CARS } from './cars';
 
 type Tier = 'high' | 'medium' | 'low';
 
@@ -102,6 +103,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const plots = createPlots(scene, { degen, tick, reduced });
   // The market square (your stall and the traders'): before the lamps and the crowd are made
   const market = buildMarket(scene, crowd);
+  // Makers' Row: your units, drawn from your save once the economy starts (further down)
+  const units = buildUnits(scene);
   progress(0.55);
   await nextFrame();
   scatterOutskirts(Q.trees);
@@ -229,9 +232,11 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     // One card at a time: a panel closes your stall's card
     tycoon?.closeCard();
     tycoon?.unmountMarket();
+    tycoon?.unmountWorkshop();
     if (id === 'shop') fitting?.mount(panelBody, toFitting);
     else fitting?.unmount();
     if (id === 'emporium') tycoon?.mountMarket(panelBody);
+    if (id === 'workshop') tycoon?.mountWorkshop(panelBody);
     panel.dataset.spot = id;
     panel.hidden = false;
     requestAnimationFrame(() => panel.classList.add('is-open'));
@@ -247,6 +252,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     active = null;
     fitting?.unmount();
     tycoon?.unmountMarket();
+    tycoon?.unmountWorkshop();
     panel.classList.remove('is-open');
     root.classList.remove('has-panel');
     setTimeout(() => {
@@ -309,7 +315,11 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     camera,
     canvas,
     root,
-    plotSolids: () => plots.solids(),
+    // Placed buildings, and what's built on your units
+    plotSolids: () => {
+      const u = units.solids();
+      return u.length ? [...plots.solids(), ...u] : plots.solids();
+    },
     openSpot: (id) => open(id),
     touched: () => touched(),
     tick,
@@ -318,14 +328,20 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     garage,
     // Made further down too, like sfx
     engine: (revs) => sound.engine(revs),
-    openStall: () => tycoon?.openCard(),
+    places: () => tycoon?.places() ?? [],
+    openPlace: (id) => tycoon?.openCard(id as 'stall'),
   });
-  /* ---------- The economy: Dorras, your stall, the market hall ---------- */
+  /* ---------- The economy: Dorras, your stall and units, the Workshop, the market hall ---------- */
   tycoon = createTycoonUI(root, {
-    serving: () => walking && !walk.driving && Math.hypot(walk.position.x - STALL_SPOT.x, walk.position.z - STALL_SPOT.z) < 2.2,
+    walker: () => (walking && !walk.driving ? { x: walk.position.x, z: walk.position.z } : null),
+    car: () => {
+      const c = walk.car;
+      return c ? { ...c, name: CARS[c.model as keyof typeof CARS]?.name ?? 'Your car' } : null;
+    },
     openMarket: () => open('emporium'),
-    stock: (slots, level) => {
-      market.show(slots, level);
+    stock: (s) => {
+      market.show(s.stall.slots, s.stall.level);
+      units.show(s);
       dirty = true;
     },
     opened() {

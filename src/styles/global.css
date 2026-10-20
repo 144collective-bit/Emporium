@@ -5200,9 +5200,20 @@ body.is-walking .nav {
   grid-template-columns: minmax(0, 1fr);
   grid-template-areas:
     "head"
+    "tabs"
     "body"
     "foot";
   gap: 10px;
+}
+/* Your business's tabs: Stall, Units, Workshop, Car */
+.biz-tabs {
+  grid-area: tabs;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.biz-tabs button {
+  justify-content: center;
+  padding: 7px 4px;
 }
 @media (min-width: 641px) {
   .stall-card {
@@ -5549,4 +5560,145 @@ body.is-walking .nav {
     padding: 0 8px 0 6px;
     letter-spacing: 0;
   }
+}
+
+/* ---------- Your business, Phase 2: units, the Workshop, your car (tycoon-ui.ts) ---------- */
+.biz-units {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.biz-units button {
+  flex-direction: column;
+  gap: 1px;
+  padding: 6px 4px;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 1;
+}
+.biz-units small {
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.biz-units [aria-pressed="true"] small {
+  color: var(--p-cyan);
+}
+.biz-stock {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 4px 12px;
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid #ffffff14;
+  border-radius: 10px;
+  list-style: none;
+}
+.biz-stock li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 12.5px;
+}
+.biz-stock span:not(.good-dot) {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.biz-stock b {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: #fff;
+}
+.biz-label {
+  margin: 4px 0 0;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.biz-carhere {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid #2bff8855;
+  border-radius: 10px;
+  background: #2bff880d;
+  font-size: 12.5px;
+  color: #fff;
+}
+.biz-carhere .chip-link,
+.biz-build .chip-link,
+.biz-tabs + .stall-body .chip-link {
+  cursor: pointer;
+}
+.biz-build {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.biz-build li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid #ffffff14;
+  border-radius: 10px;
+  background: #ffffff06;
+}
+.biz-build li > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.biz-build b {
+  font-size: 14px;
+  color: #fff;
+}
+.biz-build small {
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: var(--text-2);
+}
+.biz-build .chip-link:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.biz-rebuild summary {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  cursor: pointer;
+}
+.biz-rebuild[open] summary {
+  margin-bottom: 6px;
+}
+.market-at {
+  display: grid;
+  gap: 5px;
+}
+.market-at small {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.market .biz-label {
+  margin: 2px 0 -2px;
 }

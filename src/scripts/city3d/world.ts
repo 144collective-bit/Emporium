@@ -14,7 +14,7 @@
 import * as THREE from 'three';
 import { DISTRICTS } from '../../data/plots';
 import { Batch, PAL, canvasTex, facadeMat, fx, glowMat, glowTex, lit, neon, rand, toon } from './kit';
-import { BLOCKS, BS, CENTER_XZ, CITY_EXT, CORE_ROADS, EW_ROADS, EXT, EXTRA_LOTS, GARAGE, LANE, MARKET, MEDIAN, NS_ROADS, RIVER, SOUTH_ROAD, WALK_W, type Road } from './layout';
+import { BLOCKS, BS, CENTER_XZ, CITY_EXT, CORE_ROADS, EW_ROADS, EXT, EXTRA_LOTS, GARAGE, LANE, MARKET, UNITS, MEDIAN, NS_ROADS, RIVER, SOUTH_ROAD, WALK_W, type Road } from './layout';
 
 export { BLOCKS, BS, CORE_ROADS, EW_ROADS, EXT, NS_ROADS, RIVER, SOUTH_ROAD, WALK_W, type Road };
 /** District blocks around the core: one large plot each (src/data/plots.ts). */
@@ -211,7 +211,7 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, keyof typeo
   ];
   for (const [ox, oz] of slabs) {
     b.box(ox - WALK_W, 0, oz - WALK_W, BS + WALK_W * 2, SLAB, BS + WALK_W * 2, kerb);
-    const lot = LOTS[lots[`${ox},${oz}`] ?? (ox === GARAGE.ox && oz === GARAGE.oz ? 'concrete' : ox === MARKET.ox && oz === MARKET.oz ? 'paving' : 'grass')];
+    const lot = LOTS[lots[`${ox},${oz}`] ?? (ox === GARAGE.ox && oz === GARAGE.oz ? 'concrete' : (ox === MARKET.ox && oz === MARKET.oz) || (ox === UNITS.ox && oz === UNITS.oz) ? 'paving' : 'grass')];
     b.box(ox + 0.4, SLAB, oz + 0.4, BS - 0.8, 0.005, BS - 0.8, lot);
   }
   b.build(scene, { cast: false, receive: true });

@@ -45,12 +45,12 @@ store, X and Telegram are in the ☰ Menu.
 | The Emporium | **Market hall**: buy and sell goods at prices that move | 1 (built) |
 | Drop 001 | Clothes (the fitting room, free for now) | built |
 | The Armoury | Guns and gear for target practice | built |
-| The Workshop | **Factory**: turn raw goods into products | 2 |
+| The Workshop | **Factory**: turn raw goods into products | 2 (built) |
 | Signal tower | **News and contracts**: "deliver 20 crates to East 2" | 3 |
 | Post office | **Logistics**: hire deliveries when you'd rather not drive | 3 |
 | Apartments | **Staff**: hire workers who raise a business's output | 3 |
 | The Vault | **Bank**: your balance, history, savings for expansion | 4 |
-| Garage | Cars and cargo space | 2 |
+| Garage | Cars and cargo space | 2 (built) |
 
 ## Build order
 
@@ -58,8 +58,9 @@ store, X and Telegram are in the ☰ Menu.
    your stall in the market square, six goods with moving prices, earning
    while you're away, the Dorras readout in the header, buildings as game
    places.
-2. **Making and moving goods.** Shop units, the Workshop and gardens as
-   producers, warehouses, delivery runs with your car.
+2. **Making and moving goods** (built). Makers' Row's four units (garden,
+   shop or warehouse), raw goods, the Workshop's factory line, and delivery
+   runs in your car.
 3. **Contracts and staff.** Signal tower jobs, Post office logistics,
    Apartment hires.
 4. **District plots as the top tier.** The Vault and the bigger buildings.
@@ -98,3 +99,33 @@ before the next one starts.
   gantry, string lights, traders and shoppers. Stall 0 (cyan canopy, YOUR
   STALL) is yours and shows your stock. Its footprints and your spot are
   `MARKET_SITE` / `STALL_SPOT` in `solids.ts`.
+
+## Phase 2: how it works
+
+- **Raw goods** (`RAW_IDS`): Sugar, Coffee Beans, Cotton. They have market
+  prices like everything else, but never go on a stall or shop: they go to
+  the Workshop or a warehouse.
+- **Makers' Row:** four units on their own lot (`UNITS` in `layout.ts`),
+  across the street north of the market square. Buying one costs 2,000, then
+  4,000, 8,000 and 14,000 Dorras (`UNIT_PRICES`); building on it costs
+  500-900 (`UNIT_KINDS`). A unit has to be empty of goods to be rebuilt.
+  - **Garden:** grows one crop (`CROPS`: sugar 3, beans 2, cotton 1.5 a
+    minute) into its bins (60), also while you're away; it stops when full.
+    The crop can change while the bins are empty.
+  - **Shop:** a bigger stall: 4 shelves of 50, 1.5x the customers.
+  - **Warehouse:** holds 300 of anything.
+- **The Workshop** (the landmark's panel, or the card's Workshop tab): one
+  job at a time, up to 50 items (`RECIPES`): Gummy Bears (2 sugar), Iced
+  Coffee (2 beans), Street Tees (3 cotton), Sneakers (8 cotton). Raw goods
+  leave its bay when the job starts; products land in the bay as they're
+  made, also while you're away. Making your own is always cheaper than
+  buying the product.
+- **Your car** moves goods between your places (`CARGO`: Box Van 80,
+  Hauler 40, Cruiser 20, City Hatch 16, Street GT 8). Park within a few steps
+  of a place (`CAR_R` in `tycoon-ui.ts`) and Load / Unload on the card's Car
+  tab. You load at a garden, a warehouse or the Workshop; stock on sale
+  stays on the shelves. Unloading at your stall or a shop pays a 10%
+  delivery bonus (`DELIVERY_BONUS`).
+- **The market hall** delivers what you buy to, and sells from, the place
+  picked at its top (stall, a built unit or the Workshop).
+- Hiring deliveries (no driving) comes with the Post office in Phase 3.

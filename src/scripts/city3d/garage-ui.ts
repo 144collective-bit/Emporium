@@ -9,6 +9,7 @@
  * Arrow keys or the D-pad pick a model (up / down on the pad: the paint),
  * Enter / A keeps it, Esc / B / E closes.
  */
+import { cargoCap } from './tycoon';
 import { CARS } from './cars';
 import { CAR_PAINTS, DEFAULT_CAR, DRIVE, PLAYER_CARS, cleanCar, type MyCar, type PaintId, type PlayerCar } from './mycar';
 
@@ -107,7 +108,7 @@ export function createGarageUI(root: HTMLElement, d: GarageDeps) {
     const s = CARS[pick.model];
     const dr = DRIVE[pick.model];
     el.querySelector('[data-garage-name]')!.textContent = s.name;
-    el.querySelector('[data-garage-kind]')!.textContent = `${dr.kind} · about ${Math.round(s.L * 1.8 * 10) / 10} m long`;
+    el.querySelector('[data-garage-kind]')!.textContent = `${dr.kind} · carries ${cargoCap(pick.model)} goods`;
     el.querySelector('[data-garage-blurb]')!.textContent = dr.blurb;
     el.querySelector('[data-garage-paint-name]')!.textContent = CAR_PAINTS.find((p) => p.id === pick.paint)!.name;
     for (const st of STATS) el.querySelector<HTMLElement>(`[data-car-stat="${st.key}"] i`)!.style.setProperty('--v', String(dr[st.key]));

@@ -145,7 +145,7 @@ it and has been retired completely. Build only on what's here.
   native, X and Telegram; not while walking). Left of them, in the 3D city
   (not in Build mode, and not while walking on phones), the Dorras readout
   (`[data-dorras]`, painted by `tycoon-ui.ts`, a green dot when the stall's
-  till has takings); it opens your stall's card. Their cards drop down under them (`.head-panel`, one open at a
+  till has takings); it opens your business card. Their cards drop down under them (`.head-panel`, one open at a
   time, with a `.pop-head` ×), spanning the width on phones. Tablets show
   Settings and Menu as icons; phones put logo, title, ⚙ and ☰ on the first
   row and the switch, with names, across the second (walking: title and
@@ -181,7 +181,7 @@ it and has been retired completely. Build only on what's here.
   formats, so keep its migration when fields change. Held items are put
   away while Degen carries a gun (`Degen.held`).
 
-## The economy: Dorras and the market (Tycoon phase 1)
+## The economy: Dorras, the market, your units (Tycoon phases 1-2)
 
 - The plan and its phases are in `docs/tycoon-plan.md`; keep it up to date.
   Build one phase at a time, each with the owner's sign-off.
@@ -190,18 +190,32 @@ it and has been retired completely. Build only on what's here.
   investment, or tie them to the token or the Shopify store. PLS top-ups come
   later and only through the game server, never a browser balance.
 - **Rules:** `tycoon.ts`, DOM-free and tested (`tests/tycoon.test.ts`):
-  goods (`GOODS`, made-up city goods, nothing about the token), the market
+  goods (`GOODS`, made-up city goods, nothing about the token; raw goods
+  last, since a good's place in the list sets its price rhythm), the market
   price (a function of the time only, the same for everyone and ready for a
-  server), buy / sell back, your stall's levels, price levels, sales by
-  `advance()` (faster while serving, slower and capped while away), and
-  `cleanSave()` for anything loaded. New economy rules go here first.
+  server), places (`PlaceId`: the stall, the four units, the Workshop) with
+  `room()` / `holds()`, buy / sell back to or from any place, your stall's
+  levels, price levels, units (`buyUnit()`, `buildUnit()`, `setCrop()`), the
+  Workshop's jobs (`startJob()`, `cancelJob()`), your car's load
+  (`load()` / `unload()`, `CARGO` per model), and `advance()`: sales
+  (faster at the place you're serving, slower and capped while away),
+  gardens growing and the Workshop working. `cleanSave()` cleans anything
+  loaded and upgrades Phase 1 saves (v1 to v2); keep that migration when the
+  save changes. New economy rules go here first.
+- Goods only move between your places in your car (or by buying them
+  straight there at the market hall). Stock on sale (stall, shops) can't be
+  loaded back; that keeps the delivery bonus from being farmed.
 - **Screens:** `tycoon-ui.ts` (save `degen-city-tycoon-v1`): the Dorras
-  readout, your stall's card (`[data-stall]`, on the gun store's `.shop`
+  readout, your business card (`[data-biz]`, on the gun store's `.shop`
   panel: right side under the header on wide screens, the bottom sheet on
-  phones) and the market hall, filled into the Emporium's panel
-  (`[data-market]`, `mountMarket()` from `open()` in `index.ts`). One card at
-  a time: opening a panel closes the stall's card and the other way round. Esc
-  closes the card first.
+  phones; the till on top, then the Stall / Units / Workshop / Car tabs), the
+  market hall, filled into the Emporium's panel (`[data-market]`, with its
+  deliver-to / sell-from picker), and the Workshop's panel (`[data-workshop]`;
+  both mounted from `open()` in `index.ts`). One card at a time: opening a
+  panel closes the business card and the other way round. Esc closes the card
+  first. The views tick every second and are patched in place (`repaint()`
+  / `morph()`), so a button never changes under a finger; keep new views
+  going through `repaint()`.
 - **The market square:** `market.ts`, on the `MARKET` lot (`layout.ts`,
   in `EXTRA_LOTS` with the garage), drawn in world numbers. Two rows of four
   stalls, the MARKET gantry (its cut-out sign uses `occlude()`), the
@@ -210,8 +224,20 @@ it and has been retired completely. Build only on what's here.
   stock (`show()`). Counters are at a Degen's waist (0.5). Footprints,
   the gantry, the pole and your spot are `MARKET_SITE` / `STALL_SPOT` in
   `solids.ts` (tested in `tests/solids.test.ts`).
-- In walk mode, standing at `STALL_SPOT` shows a "Your stall" prompt (E or a
-  tap) that opens the card, and doubles the customers while you stay.
+- **Makers' Row:** `units.ts`, on the `UNITS` lot (in `EXTRA_LOTS`) north
+  of the market square: four units of 4.1 x 4.1 (`UNIT_SITE` in
+  `solids.ts`, drawn in each unit's own numbers: u across the front, v back
+  from it), each drawn from the save (to let, empty, garden, shop,
+  warehouse) and rebuilt only when what it shows changes. Their footprints
+  are `unitSolids()` (per kind, `UNIT_SHAPES`), fed to walking and driving
+  with the plots' (`plotSolids` in `index.ts`). Signs use `occlude()`.
+- In walk mode, standing at your stall or a unit's door (`places()` in
+  `tycoon-ui.ts`, the walk deps `places` / `openPlace`) shows a prompt (E or
+  a tap) that opens the card on that place, and standing at a stall or shop
+  doubles its customers. The Workshop's door opens its panel. Your car
+  parked near one of your places (stall, a built unit or the Workshop) lets
+  the Car tab load and unload there; the garage menu says how much each car
+  carries.
 
 ## Walk mode (3D)
 

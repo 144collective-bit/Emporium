@@ -149,17 +149,29 @@ Yours has the cyan canopy and the YOUR STALL board, and shows your stock.
 - **The market hall** (click the Emporium): six goods (Glow Sticks, Gummy
   Bears, Iced Coffee, Street Tees, Sneakers, Neon Signs) at prices that drift
   through the day, the same for everyone. Buy puts stock straight on your
-  stall; Sell gives a little under the price.
-- **Your stall's card** (the Dorras readout in the header, or walk up to the
-  stall and press E): the till and Collect, each good with its price (Low
+  stall (or another of your places); Sell gives a little under the price.
+- **Your stall** (the Stall tab of the business card below, or walk up to
+  the stall and press E): each good with its price (Low
   sells fast, High earns more each) and how fast it's going, and the upgrade
   (more kinds of goods, more room, more customers).
-- Customers buy while you play, twice as fast while you stand at your stall,
+- Customers buy while you play, twice as fast while you stand at your stall (or shop),
   and a little while you're away (up to 4 hours). Coming back, a note says
   what sold.
-- It's saved in the browser for now. The plan for the next phases (making
-  and moving goods, contracts, staff, plots as the top tier) is in
-  `docs/tycoon-plan.md`.
+- **Makers' Row** (across the street north of the market): four units to
+  buy and build as a **garden** (grows sugar, coffee beans or cotton), a
+  **shop** (a bigger stall) or a **warehouse** (holds 300 of anything).
+- **The Workshop** turns raw goods into products (gummy bears from sugar,
+  iced coffee from beans, tees and sneakers from cotton), cheaper than
+  buying them. Gardens and the Workshop keep going while you're away.
+- **Your car moves the goods:** park at a garden, the warehouse or the
+  Workshop, load up (the Box Van carries most, the Street GT least), drive to
+  your stall or shop and unload for a 10% delivery bonus.
+- Everything is on the **Your business** card (the Dorras readout, or walk
+  up to your stall or a unit): the till, then Stall, Units, Workshop and Car
+  tabs. The market hall delivers to (and sells from) whichever of your
+  places you pick.
+- It's saved in the browser for now. The plan for the next phases
+  (contracts, staff, plots as the top tier) is in `docs/tycoon-plan.md`.
 
 ### The mode header
 
@@ -386,7 +398,7 @@ demo** clears it.
 | The Emporium (centre arcade tower) | The market hall |
 | Drop 001 | Clothes: the fitting room |
 | The Armoury | Guns and gear (target practice) |
-| The Workshop | The factory (coming soon) |
+| The Workshop | The factory: turn raw goods into products |
 | The Vault | The bank (coming soon) |
 | Signal tower | News and contracts (coming soon) |
 | Post office | Logistics (coming soon) |
@@ -426,8 +438,9 @@ the draft note whenever the card is hidden. Every menu and card closes with its
 | `src/scripts/city3d/mycar.ts` | Your car: models, paints, handling numbers (no DOM) |
 | `src/scripts/city3d/drive-sim.ts` | Driving rules: arcade handling, soft collisions (no DOM) |
 | `src/scripts/city3d/drive.ts` | Driving: getting in and out, cameras, the speed readout, engine sound |
-| `src/scripts/city3d/tycoon.ts` | The economy's rules: goods, market prices, your stall, sales, time away (no DOM) |
-| `src/scripts/city3d/tycoon-ui.ts` | The Dorras readout, your stall's card, the market hall, the save |
+| `src/scripts/city3d/tycoon.ts` | The economy's rules: goods, market prices, your stall, units, the Workshop, your car's load, sales, time away (no DOM) |
+| `src/scripts/city3d/tycoon-ui.ts` | The Dorras readout, your business card, the market hall, the Workshop's panel, the save |
+| `src/scripts/city3d/units.ts` | Makers' Row: your four units, drawn from the save |
 | `src/scripts/city3d/market.ts` | The market square: stalls, traders, gantry, your stall's stock |
 | `src/scripts/city3d/profile-ui.ts` | The Profile panel: name, rank; owns the look (saved here and online) |
 | `src/scripts/city3d/head.ts` | The mode header's title and subtitle, and its height (`--head-h`) |

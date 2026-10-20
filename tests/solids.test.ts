@@ -3,8 +3,9 @@
 // counter, the garage door and the walk-mode spawn can be reached.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { CAMERA_ONLY, DOORS, GARAGE_SITE, MARKET_SITE, RACK, SHOT_SOLIDS, SOLIDS, STALL_SPOT, TURNTABLE_BOX, WALK_SPAWN, rayBoxes } from '../src/scripts/city3d/solids';
-import { EW_ROADS, GARAGE, BS, MARKET, NS_ROADS } from '../src/scripts/city3d/layout';
+import { CAMERA_ONLY, DOORS, GARAGE_SITE, MARKET_SITE, RACK, SHOT_SOLIDS, SOLIDS, STALL_SPOT, TURNTABLE_BOX, UNIT_SITE, UNIT_SIZE, WALK_SPAWN, rayBoxes, unitSolids } from '../src/scripts/city3d/solids';
+import { EW_ROADS, GARAGE, BS, MARKET, NS_ROADS, UNITS } from '../src/scripts/city3d/layout';
+import { UNIT_KIND_IDS } from '../src/scripts/city3d/tycoon';
 import { SLABS, inside, pointIn, type Rect } from './world';
 
 /** Degen's radius in walk mode (walk.ts RADIUS) */
@@ -72,6 +73,27 @@ test('the market square: stalls, gantry and pole on its lot, your stall\'s spot 
   for (let x = MARKET.ox + 0.6; x < MARKET_SITE.pole.x - 0.4; x += 0.2) assert.ok(!blocked(x, az), `the aisle is blocked at x ${x.toFixed(1)}`);
   // and in through the gantry
   assert.ok(MARKET_SITE.gantry.z1 - MARKET_SITE.gantry.z0 > 3, 'the gantry is too narrow to walk through');
+});
+
+test('Makers\' Row: four units on their lot, apart, each with a door free to stand at whatever is built', () => {
+  const lot: Rect = [UNITS.ox, UNITS.oz, UNITS.ox + BS, UNITS.oz + BS];
+  const rects = UNIT_SITE.map((u): Rect => [u.x0, u.z0, u.x0 + UNIT_SIZE, u.z0 + UNIT_SIZE]);
+  rects.forEach((r, i) => {
+    assert.ok(inside(r, lot), `unit ${i + 1} is off its lot`);
+    for (let j = i + 1; j < rects.length; j++) assert.ok(!(r[0] < rects[j][2] && r[2] > rects[j][0] && r[1] < rects[j][3] && r[3] > rects[j][1]), `units ${i + 1} and ${j + 1} overlap`);
+  });
+  for (const u of UNIT_SITE) {
+    // The door is at the unit's street side, on the lot
+    assert.ok(pointIn(u.door.x, u.door.z, lot), `unit ${u.i + 1}'s door is off the lot`);
+    assert.ok(u.facing < 0 ? u.door.z < u.z0 + 1 : u.door.z > u.z0 + UNIT_SIZE - 1, `unit ${u.i + 1}'s door isn't at its front`);
+    for (const kind of [null, ...UNIT_KIND_IDS]) {
+      const boxes = unitSolids(u.i, kind);
+      for (const b of boxes) assert.ok(inside(b, rects[u.i]), `unit ${u.i + 1}'s ${kind} reaches out of the unit`);
+      assert.ok(!boxes.some((b) => pointIn(u.door.x, u.door.z, b, R)) && !blocked(u.door.x, u.door.z), `unit ${u.i + 1}'s door is blocked when it's a ${kind}`);
+    }
+  }
+  // The units are off the market square (and its stalls)
+  assert.ok(UNITS.oz + BS < MARKET.oz);
 });
 
 test('bullets stop at walls but not at the dummies\' own footprints', () => {

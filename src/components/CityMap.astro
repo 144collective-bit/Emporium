@@ -29,7 +29,7 @@ const [degenImg, logoImg, degenBig, logoBig] = await Promise.all([
 const spots: Record<SpotId, Spot> = {
   emporium: { href: '#city-title', title: 'The Emporium', sub: 'Market hall', aria: 'The Emporium: the market hall' },
   shop: { href: '#city-title', title: 'Drop 001', sub: 'Clothes · fitting room', aria: 'Drop 001: clothes and the fitting room' },
-  workshop: { href: '#city-title', title: 'The Workshop', sub: 'Factory · soon', aria: 'The Workshop: the factory, coming soon' },
+  workshop: { href: '#city-title', title: 'The Workshop', sub: 'Factory', aria: 'The Workshop: the factory' },
   vault: { href: '#city-title', title: 'The Vault', sub: 'Bank · soon', aria: 'The Vault: the bank, coming soon' },
   plan: { href: '#city-title', title: 'The Armoury', sub: 'Guns & gear', aria: 'The Armoury: guns and gear' },
   signal: { href: '#city-title', title: 'Signal tower', sub: 'News & contracts · soon', aria: 'Signal tower: news and contracts, coming soon' },
@@ -480,16 +480,17 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
   </div>
   <p class="builder-toast" data-toast role="status" aria-live="polite"></p>
 
-  {/* Your market stall (tycoon-ui.ts): till, stock, prices, upgrade. Opens from the Dorras readout, or at the stall. */}
-  <section class="shop stall-card" data-stall hidden aria-labelledby="stall-title">
+  {/* Your business (tycoon-ui.ts): the till, then Stall, Units, Workshop and Car tabs. Opens from the Dorras readout, or at your stall or a unit. */}
+  <section class="shop stall-card" data-biz hidden aria-labelledby="biz-title">
     <header class="shop-head">
-      <h2 id="stall-title" class="shop-title">Your stall</h2>
-      <p class="shop-score stall-balance" data-stall-balance></p>
-      <button type="button" class="shop-close" data-stall-close aria-label="Close your stall">
+      <h2 id="biz-title" class="shop-title">Your business</h2>
+      <p class="shop-score stall-balance" data-biz-balance></p>
+      <button type="button" class="shop-close" data-biz-close aria-label="Close your business">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
       </button>
     </header>
-    <div class="stall-body" data-stall-body></div>
+    <div class="seg biz-tabs" data-biz-tabs role="group" aria-label="Your business"></div>
+    <div class="stall-body" data-biz-body></div>
     <p class="shop-foot">Dorras are earned in the city. They can't be cashed out.</p>
   </section>
   <p class="builder-toast econ-toast" data-econ-toast role="status" aria-live="polite"></p>
@@ -507,7 +508,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
   <template data-panel-tpl="emporium">
     <p class="kicker"><span class="kicker-num">01</span> The Emporium</p>
     <h2 id="city-panel-title" class="city-panel-title">Market hall</h2>
-    <p class="city-panel-text">Stock up for your stall at today's prices, or sell back a little under. Prices move through the day.</p>
+    <p class="city-panel-text">Stock up your stall, shops, warehouse or the Workshop at today's prices, or sell back a little under. Prices move through the day.</p>
     <div class="market" data-market></div>
   </template>
   <template data-panel-tpl="shop">
@@ -532,10 +533,10 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     </section>
   </template>
   <template data-panel-tpl="workshop">
-    <p class="kicker"><span class="kicker-num">03</span> Coming soon</p>
+    <p class="kicker"><span class="kicker-num">03</span> The Workshop</p>
     <h2 id="city-panel-title" class="city-panel-title">The Factory</h2>
-    <p class="city-panel-text">Turn raw goods into products worth more, and supply the city's shops.</p>
-    <span class="tag">Opens in a later update</span>
+    <p class="city-panel-text">Turn raw goods from your gardens into products worth more, for your stall and shops.</p>
+    <div class="market" data-workshop></div>
   </template>
   <template data-panel-tpl="vault">
     <p class="kicker"><span class="kicker-num">04</span> Coming soon</p>

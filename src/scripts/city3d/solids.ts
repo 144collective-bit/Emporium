@@ -9,7 +9,8 @@
  */
 import type { SpotId } from '../../lib/city';
 import { DUMMIES } from './combat-sim';
-import { GARAGE, MARKET, design, designBox } from './layout';
+import { GARAGE, MARKET, UNITS, design, designBox } from './layout';
+import type { UnitKind } from './tycoon';
 
 /** x0, z0, x1, z1, height */
 export type Box = [number, number, number, number, number];
@@ -115,6 +116,39 @@ const MARKET_SOLIDS: Box[] = [
   ...[MARKET_SITE.gantry.z0, MARKET_SITE.gantry.z1].map((z): Box => [MARKET_SITE.gantry.x - 0.1, z - 0.1, MARKET_SITE.gantry.x + 0.1, z + 0.1, 2.9]),
   [MARKET_SITE.pole.x - 0.08, MARKET_SITE.pole.z - 0.08, MARKET_SITE.pole.x + 0.08, MARKET_SITE.pole.z + 0.08, 2.6],
 ];
+/**
+ * Makers' Row (units.ts draws it): four units, 4.1 x 4.1, two either side of a cross path. The
+ * north row faces the street to the north, the south row the street to the south (toward the
+ * market). A unit is drawn in its own numbers: u across its front, v back from it. What stands on
+ * it depends on what it's built as, so its footprints come from unitSolids(); `door` is where you
+ * stand to run it.
+ */
+export const UNIT_SIZE = 4.1;
+export const UNIT_SITE = [0, 1, 2, 3].map((i) => {
+  const col = i % 2;
+  const row = Math.floor(i / 2);
+  const x0 = UNITS.ox + col * (UNIT_SIZE + 0.8);
+  const z0 = UNITS.oz + row * (UNIT_SIZE + 0.8);
+  /** -1: the front faces -z (north); +1: +z (south) */
+  const facing = row === 0 ? -1 : 1;
+  const at = (u: number, v: number): [number, number] => [x0 + u, facing < 0 ? z0 + v : z0 + UNIT_SIZE - v];
+  const [dx, dz] = at(UNIT_SIZE / 2, 0.3);
+  return { i, x0, z0, facing, at, door: { x: dx, z: dz } };
+});
+/** A box drawn in a unit's own numbers (u0, v0, u1, v1, height), in the world */
+export function unitBox(i: number, b: Box): Box {
+  const [x0, za] = UNIT_SITE[i].at(b[0], b[1]);
+  const [x1, zb] = UNIT_SITE[i].at(b[2], b[3]);
+  return [x0, Math.min(za, zb), x1, Math.max(za, zb), b[4]];
+}
+/** What each kind of unit puts in the way (in its own numbers): the shop, the shed, the garden's tool shed */
+export const UNIT_SHAPES: Record<UnitKind, Box[]> = {
+  shop: [[0.4, 0.6, 3.7, 3.3, 2.25]],
+  warehouse: [[0.3, 0.7, 3.8, 3.8, 2.4]],
+  garden: [[2.8, 2.9, 3.85, 3.85, 1.5]],
+};
+export const unitSolids = (i: number, kind: UnitKind | null): Box[] => (kind ? UNIT_SHAPES[kind].map((b) => unitBox(i, b)) : []);
+
 export const SOLIDS: Box[] = [...DRAWN.map(designBox), ...GARAGE_SOLIDS, ...MARKET_SOLIDS, ...DUMMY_SOLIDS];
 /** What bullets stop on: everything solid except the dummies' footprints (they test their own shape) */
 export const SHOT_SOLIDS = SOLIDS.filter((b) => !DUMMY_SOLIDS.includes(b));
