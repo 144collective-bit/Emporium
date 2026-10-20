@@ -20,6 +20,7 @@
  */
 import { DISTRICTS } from '../../data/plots';
 import { BIG_LOTS, BS, EW_ROADS, GARAGE, LANE, MARKET, NS_ROADS, RIVER, RING_HI, SOUTH_ROAD, UNITS, WALK_W, type Road } from './layout';
+import { SLIP_ROAD } from './kartpark';
 
 export type Pt = [number, number];
 /** x0, z0, x1, z1 */
@@ -283,7 +284,11 @@ export const LAWN_TREES: Pt[] = OUTER_BLOCKS.flatMap((b, i) => {
 /* ---------- The outer sidewalks of the bends ---------- */
 
 /** Is a point on (or by) a straight road's asphalt and sidewalk */
-const onRoad = ([x, z]: Pt) => NS_ROADS.some((r) => Math.abs(x - r.c) < r.half + WALK_W) || EW_ROADS.some((r) => Math.abs(z - r.c) < r.half + WALK_W);
+const onRoad = ([x, z]: Pt) =>
+  NS_ROADS.some((r) => Math.abs(x - r.c) < r.half + WALK_W) ||
+  EW_ROADS.some((r) => Math.abs(z - r.c) < r.half + WALK_W) ||
+  // The kart park's slip road comes in off the Parkway's north side (kartpark.ts)
+  (Math.abs(x - SLIP_ROAD.x) < SLIP_ROAD.half + WALK_W && z > SLIP_ROAD.z0 - 1 && z < SLIP_ROAD.z1 + 1);
 /** Which segments of each bend have their outer sidewalk (the rest cross a road): one flag per segment */
 export const KERB_RUNS: boolean[][] = BENDS.map((b) =>
   inward(b).map(({ p, q, n }) => {
