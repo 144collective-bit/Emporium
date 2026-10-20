@@ -123,7 +123,9 @@ Checked with `?fps` at every step (and on a real phone):
      flaring white close up; kiosk roofs carry a neon trim instead of a
      whole glowing roof; lit panels bigger than a tube (kiosk hatches,
      bollard caps) glow softer; street-lamp bulbs and halos a touch lower.
-     Thin neon tubes keep their glow.
+     Thin neon tubes keep their glow. Then, after a check on a real phone,
+     bloom cut to a minimum (faint, tight, a threshold only bulbs and neon
+     tubes pass), so walking up to a lit shopfront never washes out.
    - Checked at 320, 375, 768, 1024 and 1440 wide, phones and tablets
      upright and on their side, in City view and walking: no sideways
      scroll, no walk controls overlapping.

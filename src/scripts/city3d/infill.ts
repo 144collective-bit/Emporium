@@ -344,7 +344,7 @@ const ATLAS = (() => {
   // Canvas textures are flipped: the canvas's top row is v = 1. Ground bands keep a pixel off each edge.
   const band = (top: number, h: number, tw: number, th: number): Band => ({ v0: 1 - (top + h) / H, vh: h / H, tw, th });
   return {
-    mat: lit(toon('#ffffff', { map, emissiveMap, emissive: '#ffffff' }), 0.15, 1.15),
+    mat: lit(toon('#ffffff', { map, emissiveMap, emissive: '#ffffff' }), 0.15, 1),
     wall: Object.fromEntries(WALL_KINDS.map((k, i) => [k, band(i * WALL_PX, WALL_PX, CELL_W * COLS, FLOOR * ROWS)])) as Record<WallKind, Band>,
     ground: Object.fromEntries(GROUND_KINDS.map((k, i) => [k, band(WALL_KINDS.length * WALL_PX + i * GROUND_PX + 1, GROUND_PX - 2, SHOP_W, SHOP_H)])) as Record<GroundKind, Band>,
   };
@@ -469,7 +469,7 @@ const SIGN_ATLAS = (() => {
       });
     });
   });
-  const mat = lit(new THREE.MeshBasicMaterial({ map: tex }), 0.95, 1.3);
+  const mat = lit(new THREE.MeshBasicMaterial({ map: tex }), 0.95, 1.1);
   const uv = (x: number, y: number, w: number, h: number) => [x / SIGN_W, 1 - (y + h) / SIGN_H, (x + w) / SIGN_W, 1 - y / SIGN_H];
   return {
     mat,

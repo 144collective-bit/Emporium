@@ -256,15 +256,17 @@ it and has been retired completely. Build only on what's here.
     sit, march, attention/salute, dance). The cap patch is the Emporium
     diamond: never put another brand's logo on it. Whites on clothes are
     `SHIRT`, a shade under white, so they don't bloom.
-- **Night glow stays balanced** (the owner's call: a balanced finish, no
-  light flaring). Bloom and tone mapping turn anything lit well past 1 into
-  a white haze close up, so keep big lit surfaces modest at night: window
-  and shopfront light maps about 1.15-1.3, screens about 1, sign textures
-  1.3-1.8. Only thin neon tubes, bulbs and small caps go to 2.4 (`glow()`);
-  lit panels bigger than a tube (hatches, bollard caps, uplights) use the
-  softer `soft()` (1.3), and never light a whole roof or slab: give it a
-  neon trim instead. Check new lights close up at night, not just from
-  the home view.
+- **Minimal bloom, nothing washes out** (the owner's call). Bloom is faint
+  and tight (`post.bloom` in `index.ts`: threshold 1.05, 1.2 close up and
+  walking; strength at most about 0.3, less close up and on phones, whose
+  low-resolution bloom spreads further). Only small, very bright things
+  (bulbs, thin neon tubes and caps at 2.4, `glow()`) pass the threshold;
+  big lit surfaces stay under it and keep their colour: window and
+  shopfront light maps about 1-1.3, screens about 1, sign textures
+  1.1-1.8. Lit panels bigger than a tube (hatches, bollard caps, uplights)
+  use the softer `soft()` (1.3), and never light a whole roof or slab:
+  give it a neon trim instead. Check new lights close up at night on the
+  phone tier, not just from the home view.
 - Floating cut-out signs (FX layer with a transparent texture, like the roof
   logo) need `occlude()` from `kit.ts`, or the ink outlines of whatever is
   behind them get drawn across them.

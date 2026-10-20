@@ -709,14 +709,14 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     (waterMat.uniforms.sky.value as THREE.Color).copy(scene.background as THREE.Color);
     puddleMat.color.setScalar(s.rain * (0.12 + s.night * 0.6));
     streaks.visible = s.rain > 0.01;
-    // Night glow is kept in proportion to the scene: enough bloom for the neon,
-    // not so much that it washes over the buildings. Bloom grows with how much
-    // of the screen is lit, so close up (zoomed in, flown to a building, walking)
-    // it gets tighter, softer and pickier, or the lit facades haze the view over
+    // Minimal bloom (the owner's call: nothing may wash out). Only small, very bright
+    // things (bulbs, neon tubes) pass the threshold; lit windows, shopfronts, screens and
+    // signs stay under it. Faint and tight, fainter and tighter close up (zoomed in, flown
+    // to a building, walking) and on phones, whose low-resolution bloom spreads further
     const near = walking ? 1 : 1 - THREE.MathUtils.smoothstep(camera.position.distanceTo(controls.target), 12, 48);
-    post.bloom.strength = (0.3 + s.night * 0.4 + s.rain * 0.06) * (1 - near * 0.4);
-    post.bloom.radius = 0.55 - near * 0.4;
-    post.bloom.threshold = 0.9 - s.night * 0.06 + near * 0.07;
+    post.bloom.strength = (0.12 + s.night * 0.18 + s.rain * 0.03) * (1 - near * 0.5) * (tier === 'low' ? 0.7 : 1);
+    post.bloom.radius = 0.2 - near * 0.15;
+    post.bloom.threshold = 1.05 + near * 0.15;
     renderer.toneMappingExposure = 1 + s.night * 0.03;
 
     // Hover lift and rings (never lifted while walking: Degen walks on the same ground as the building)
