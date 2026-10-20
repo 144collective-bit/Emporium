@@ -6,7 +6,12 @@
  * outlines pick out every panel. Each model has its own touches (the hatch's
  * roof spoiler, the Cruiser's chrome, the Street GT's stripes, scoop and
  * wing, the Hauler's flares and light bar, the van's ladder and stripe, the
- * bus's doors and roof pods).
+ * bus's doors and roof pods), and so do the three the garage sells: the
+ * Street Thunder muscle car (hood scoop, fastback, flared arches, a black
+ * stripe), the Big Rover SUV (roof rails and light bar, bull bar, running
+ * boards, a spare wheel on the back door) and the Hyper Comet supercar (a
+ * wedge with a tall wing on end plates, side intakes, a splitter and four
+ * exhausts).
  *
  * 1 tile is about 1.8 m (Degen is about one tile tall): a hatch is about
  * 4 m long, 1.8 m wide and 1.7 m tall, a bus about 10 m long and 3 m tall.
@@ -381,14 +386,172 @@ export const CARS: Record<CarId, CarSpec> = {
       }
     },
   },
-  // PLACEHOLDERS: the garage's premium models (drawn properly in their own specs; until then they borrow a starter's shape)
-  muscle: null!,
-  suv: null!,
-  super: null!,
+  muscle: {
+    id: 'muscle',
+    name: 'Street Thunder',
+    L: 2.75,
+    W: 1.08,
+    r: 0.22,
+    tw: 0.28,
+    axles: [-0.92, 0.9],
+    clr: 0.09,
+    top: [
+      [1.375, 0.42],
+      [1.26, 0.54],
+      [0.45, 0.58],
+      [-0.7, 0.62],
+      [-1.3, 0.62],
+      [-1.375, 0.52],
+    ],
+    // A fastback: the roof runs down in one long slope to the tail
+    cabin: [
+      [-1.28, 0.61],
+      [-0.5, 0.88],
+      [0.0, 0.89],
+      [0.45, 0.57],
+    ],
+    cabinW: 0.84,
+    panes: [
+      [-1.0, -0.35],
+      [-0.27, 0.36],
+    ],
+    rearGlass: true,
+    lightY: 0.4,
+    lamp: 'slim',
+    seams: [-0.4, 0.46],
+    handles: [-0.28],
+    rim: '#3a3550',
+    spokes: 5,
+    exhaust: [0.3, -0.3],
+    extra(p, s) {
+      // A hood scoop on the long bonnet, with a dark mouth facing forward
+      p.paint(box(0.36, 0.075, 0.3, 0.92, topAt(s, 0.92) + 0.02, 0));
+      p.detail(box(0.02, 0.05, 0.24, 1.105, topAt(s, 0.92) + 0.025, 0), BLACKOUT);
+      // Flared arches over the fat tyres, a lip on the boot, a wide black stripe nose to tail
+      for (const ax of s.axles) for (const z of [-1, 1]) p.detail(flare(s, ax, z), TRIM);
+      p.paint(box(0.1, 0.05, s.W * 0.8, -1.32, 0.64, 0));
+      stripe(p, s, 0, 0.2, BLACKOUT);
+      // Side pipes' heat shields under the doors
+      for (const z of [-1, 1]) p.detail(box(0.9, 0.05, 0.05, -0.05, s.clr + 0.03, z * (s.W / 2 + 0.03)), CHROME);
+    },
+  },
+  suv: {
+    id: 'suv',
+    name: 'Big Rover',
+    L: 2.8,
+    W: 1.12,
+    r: 0.28,
+    tw: 0.27,
+    axles: [-0.92, 0.92],
+    clr: 0.24,
+    top: [
+      [1.4, 0.66],
+      [1.33, 0.8],
+      [0.9, 0.84],
+      [-1.4, 0.84],
+    ],
+    cabin: [
+      [-1.38, 0.83],
+      [-1.34, 1.32],
+      [0.5, 1.32],
+      [0.92, 0.83],
+    ],
+    cabinW: 0.95,
+    panes: [
+      [-1.28, -0.5],
+      [-0.42, 0.22],
+      [0.3, 0.82],
+    ],
+    rearGlass: true,
+    lightY: 0.58,
+    lamp: 'round',
+    seams: [-0.46, 0.26, 0.98],
+    handles: [-0.34, 0.38],
+    rim: '#3a3550',
+    spokes: 6,
+    exhaust: [-0.34],
+    extra(p, s) {
+      const half = s.L / 2;
+      // Roof rails on short feet, and a light bar across the front of the roof
+      for (const z of [-1, 1]) {
+        const zz = z * s.W * 0.33;
+        p.detail(box(1.5, 0.035, 0.035, -0.45, 1.365, zz), TRIM);
+        for (const x of [-1.1, 0.2]) p.detail(box(0.06, 0.04, 0.045, x, 1.335, zz), TRIM);
+      }
+      p.detail(box(0.08, 0.07, s.W * 0.72, 0.42, 1.36, 0), TRIM);
+      for (let k = -2; k <= 2; k++) p.detail(box(0.02, 0.045, 0.1, 0.465, 1.36, k * 0.16), HEAD);
+      // A bull bar on the nose: two uprights, two rails, mounts to the bumper
+      for (const z of [-0.27, 0.27]) {
+        p.detail(box(0.05, 0.42, 0.05, half + 0.12, 0.5, z), TRIM);
+        p.detail(box(0.1, 0.04, 0.04, half + 0.06, 0.34, z), TRIM);
+      }
+      for (const y of [0.4, 0.66]) p.detail(box(0.05, 0.05, s.W * 0.74, half + 0.12, y, 0), TRIM);
+      // Running boards, mud flaps behind the back wheels
+      for (const z of [-1, 1]) {
+        p.detail(box(1.1, 0.04, 0.1, 0, s.clr - 0.03, z * (s.W / 2 + 0.03)), TRIM);
+        p.detail(box(0.02, 0.2, 0.2, s.axles[0] - s.r - 0.08, 0.2, z * (s.W / 2 - 0.1)), TRIM);
+      }
+      // The spare wheel on the back door, on a bracket, its rim facing out
+      p.detail(box(0.06, 0.3, 0.1, -half - 0.03, 0.95, -0.22), TRIM);
+      p.details.push(
+        wheelGeometry(s)
+          .rotateY(-Math.PI / 2)
+          .translate(-half - s.tw / 2 - 0.03, 0.98, -0.22)
+      );
+    },
+  },
+  super: {
+    id: 'super',
+    name: 'Hyper Comet',
+    L: 2.65,
+    W: 1.14,
+    r: 0.2,
+    tw: 0.28,
+    axles: [-0.85, 0.88],
+    clr: 0.08,
+    // A wedge: the nose low, the deck high over the engine
+    top: [
+      [1.325, 0.34],
+      [1.1, 0.45],
+      [0.2, 0.5],
+      [-0.85, 0.53],
+      [-1.325, 0.47],
+    ],
+    cabin: [
+      [-0.95, 0.52],
+      [-0.42, 0.75],
+      [0.02, 0.75],
+      [0.55, 0.48],
+    ],
+    cabinW: 0.8,
+    panes: [[-0.8, 0.42]],
+    rearGlass: true,
+    lightY: 0.27,
+    lamp: 'slim',
+    seams: [-0.6, 0.5],
+    rim: '#ffd23f',
+    spokes: 6,
+    exhaust: [0.34, 0.24, -0.24, -0.34],
+    extra(p, s) {
+      const half = s.L / 2;
+      // A tall rear wing on two posts, with end plates
+      p.paint(box(0.26, 0.035, s.W * 0.98, -1.12, 0.8, 0));
+      for (const z of [-1, 1]) p.detail(box(0.3, 0.14, 0.02, -1.12, 0.78, z * s.W * 0.49), TRIM);
+      for (const z of [-0.28, 0.28]) p.detail(box(0.05, 0.32, 0.04, -1.1, 0.63, z), TRIM);
+      // Louvres over the engine, side intakes behind the doors, scoops on the haunches
+      for (const x of [-0.78, -0.86, -0.94, -1.02]) p.detail(box(0.03, 0.012, 0.5, x, topAt(s, x) + 0.006, 0), BLACKOUT);
+      for (const z of [-1, 1]) {
+        p.detail(box(0.34, 0.14, 0.03, -0.72, 0.34, z * (s.W / 2 + 0.01)), BLACKOUT);
+        p.paint(box(0.3, 0.05, 0.14, -0.6, topAt(s, -0.6) + 0.01, z * 0.42));
+        p.detail(box(0.02, 0.035, 0.1, -0.44, topAt(s, -0.6) + 0.015, z * 0.42), BLACKOUT);
+      }
+      // A front splitter wider than the nose, canards, a rear diffuser
+      p.detail(box(0.16, 0.025, s.W + 0.08, half + 0.04, s.clr + 0.02, 0), BLACKOUT);
+      for (const z of [-1, 1]) p.detail(box(0.12, 0.015, 0.1, half - 0.05, 0.22, z * (s.W / 2 + 0.04)), BLACKOUT);
+      for (const z of [-0.3, -0.1, 0.1, 0.3]) p.detail(box(0.2, 0.08, 0.015, -half, 0.13, z * s.W * 0.9), BLACKOUT);
+    },
+  },
 };
-CARS.muscle = { ...CARS.coupe, id: 'muscle', name: 'Street Thunder' };
-CARS.suv = { ...CARS.pickup, id: 'suv', name: 'Big Rover' };
-CARS.super = { ...CARS.coupe, id: 'super', name: 'Hyper Comet' };
 
 /* ---------- Building ---------- */
 
