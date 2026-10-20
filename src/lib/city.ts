@@ -678,20 +678,10 @@ function downtown() {
   // The courtyard lanes: a planted tree or two
   for (const [x0, y0, x1, y1] of LANES) if (x1 - x0 > y1 - y0) for (const x of [x0 + 1.2, x1 - 1.2]) add(x, y0 + 0.35, tree(x, y0 + 0.35, Z0, 0.6, 'round'));
 
-  // The hangout square: the stage and its screen at the north end, the fountain, kiosks, trees and benches
+  // The hangout square: the stage at the north end, the fountain, kiosks, trees and benches
   const sq = SQUARE;
   const [s0, sy0, s1, sy1] = sq.stage;
-  let st = prism(s0, sy0, s1 - s0, sy1 - sy0, sq.stageH, { c: '#1f1b38', z: Z0 });
-  const sc = sq.screen;
-  st += prism(sc.x0, sc.z - 0.15, sc.x1 - sc.x0, 0.2, sc.y1, { c: '#14112a', z: Z0 });
-  const SW = (sc.x1 - sc.x0) * TL;
-  const SH = (sc.y1 - sc.y0) * ZH;
-  st += g(
-    onL(sc.x0, sc.z + 0.05, Z0 + sc.y1),
-    `<rect x="4" y="4" width="${n(SW - 8)}" height="${n(SH - 8)}" fill="#2a0b52" stroke="url(#pulseH)" stroke-width="6"/>` +
-      text(SW / 2, SH * 0.52, 'DEGEN CITY', 46, 't-display outlined', '#ffffff') +
-      text(SW / 2, SH * 0.8, 'GM DEGENS · GAME ON', 16, 't-display', C.cyan)
-  );
+  const st = prism(s0, sy0, s1 - s0, sy1 - sy0, sq.stageH, { c: '#1f1b38', z: Z0 });
   add((s0 + s1) / 2, sy0, st);
   const f = sq.fountain;
   add(f.at[0], f.at[1], cyl(f.at[0], f.at[1], f.r, 0.45, { c: '#8f8ab0', z: Z0 }) + cyl(f.at[0], f.at[1], 0.16, 1.2, { c: '#a9a4c9', z: Z0 + 0.45 }));

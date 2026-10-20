@@ -140,7 +140,7 @@ test('pocket parks: trees, benches and a lamp inside, the practice dummies among
   }
 });
 
-test('the hangout square: stage, screen, fountain, kiosks and benches inside it, a clear way up to the stage', () => {
+test('the hangout square: stage, fountain, kiosks and benches inside it, a clear way up to the stage', () => {
   const sq = SQUARE.box;
   const inSq = (b: Rect) => b[0] >= sq[0] && b[2] <= sq[2] && b[1] >= sq[1] && b[3] <= sq[3];
   assert.ok(inSq(SQUARE.stage));
@@ -148,7 +148,6 @@ test('the hangout square: stage, screen, fountain, kiosks and benches inside it,
   const f = SQUARE.fountain;
   assert.ok(inSq([f.at[0] - f.r, f.at[1] - f.r, f.at[0] + f.r, f.at[1] + f.r]));
   for (const b of SQUARE.benches) assert.ok(pointIn(b.at[0], b.at[1], sq));
-  assert.ok(SQUARE.screen.x0 >= SQUARE.stage[0] && SQUARE.screen.x1 <= SQUARE.stage[2]);
   // From the south edge up to the front of the stage, beside the fountain, nothing solid
   const x = f.at[0] + f.r + 0.8;
   for (let z = sq[3] - 0.3; z > SQUARE.stage[3] + 0.3; z -= 0.1) assert.ok(!SOLIDS.some((b) => pointIn(x, z, b, 0.22)), `the way to the stage is blocked at z ${z.toFixed(1)}`);

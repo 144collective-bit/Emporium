@@ -89,8 +89,8 @@ it and has been retired completely. Build only on what's here.
     boxes in the shared paint: keep new infill going through them. Phones
     (`LOW` in `infill.ts`) leave out the finest details.
   - The hangout square (`SQUARE`) is the whole south block, a block from the
-    Emporium: the stage and big screen at the north end facing south (fixed
-    copy only: DEGEN CITY, GM DEGENS, GAME ON), dance floor, benches, kiosks,
+    Emporium: the stage at the north end facing south (no screen or
+    billboard: the owner had it taken out), dance floor, benches, kiosks,
     a fountain, planters, string lights and a crowd.
   - The GM water tower stands on an infill roof (`WATER_TOWER`). The
     target-practice dummies in the old park now stand in the north-west

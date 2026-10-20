@@ -77,7 +77,8 @@ Checked with `?fps` at every step (and on a real phone):
      whole floors, roofs with plant; walk-only alleys with bollards; the GM
      water tower on a roof. Built from six facade and three shopfront
      materials (UVs in world units), merged into a handful of draws.
-   - The hangout square on the south block: stage and screen facing south,
+   - The hangout square on the south block: stage facing south (its big
+     screen later taken out at the owner's request),
      dance floor, benches, kiosks, fountain, planters, string lights, a crowd.
    - Traffic on routes with turns, down the diagonals and back, three-phase
      lights where a diagonal comes in; pedestrians round the block outlines;

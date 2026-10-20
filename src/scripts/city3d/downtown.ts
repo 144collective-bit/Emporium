@@ -540,9 +540,9 @@ export const PARKS: Park[] = BLOCKS_DT.filter((b) => b.use === 'park').map((b, i
 });
 
 /**
- * The hangout square: the whole south block (lot outline), with a stage, a screen and room for a
- * crowd. The stage is at the north end facing south, so the screen faces the city's camera and the
- * people on the square look back across to the Emporium.
+ * The hangout square: the whole south block (lot outline), with a stage and room for a crowd. The
+ * stage is at the north end facing south, so it faces the city's camera and the people on the
+ * square look back across to the Emporium.
  */
 export const SQUARE = (() => {
   const [x0, x1] = T1;
@@ -553,8 +553,6 @@ export const SQUARE = (() => {
     /** The stage at the north end, its front (+z) to the square */
     stage: [cx - 5, z0 + 0.6, cx + 5, z0 + 3.2] as Rect,
     stageH: 0.55,
-    /** The big screen at the back of the stage, facing +z */
-    screen: { x0: cx - 4.2, x1: cx + 4.2, z: z0 + 0.45, y0: 1.2, y1: 4.9 },
     /** A round fountain towards the south end */
     fountain: { at: [cx, z1 - 3.4] as Pt, r: 1.6 },
     /** Kiosks either side */

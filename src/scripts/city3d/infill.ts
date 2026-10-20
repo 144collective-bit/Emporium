@@ -1,8 +1,8 @@
 /*
  * Downtown round the landmarks (downtown.ts): tight rows of infill buildings
  * with shopfronts, walk-only alleys with bollards at their mouths, the
- * courtyard lanes, three pocket parks and the hangout square (stage, big
- * screen, fountain, kiosks, benches, string lights and a crowd), lamps along
+ * courtyard lanes, three pocket parks and the hangout square (stage,
+ * fountain, kiosks, benches, string lights and a crowd), lamps along
  * the cross streets, and the GM water tower up on a rooftop.
  *
  * The infill comes in six types (downtown.ts `InfillType`): brownstone
@@ -1286,7 +1286,7 @@ export function buildInfill(scene: THREE.Scene, crowd: Idle[], tick: (f: Tick) =
   scene.add(fx(new THREE.Points(geo, mat)));
 }
 
-/** The hangout square: the stage and screen at the north end facing the square, the fountain, kiosks, planters, benches, poles with string lights, and its crowd */
+/** The hangout square: the stage at the north end facing the square, the fountain, kiosks, planters, benches, poles with string lights, and its crowd */
 function square(scene: THREE.Scene, b: Batch, crowd: Idle[], tick: (f: Tick) => void, low: boolean) {
   const sq = SQUARE;
   const [x0, z0, x1, z1] = sq.box;
@@ -1316,39 +1316,6 @@ function square(scene: THREE.Scene, b: Batch, crowd: Idle[], tick: (f: Tick) => 
     const x = s0 + 1 + k * ((s1 - s0 - 2) / 5);
     box(b, x - 0.1, S + 4.95, sz0 + 0.4, x + 0.1, S + 5.2, sz0 + 0.6, glow([PAL.pink, PAL.cyan, PAL.warm][k % 3]));
   }
-
-  // The big screen at the back of the stage, facing the square: fixed copy only
-  const sc = sq.screen;
-  const tex = canvasTex(1024, 448, (c) => {
-    const g = c.createLinearGradient(0, 0, 1024, 448);
-    g.addColorStop(0, '#2a0b52');
-    g.addColorStop(1, '#0b1f4a');
-    c.fillStyle = g;
-    c.fillRect(0, 0, 1024, 448);
-    const border = c.createLinearGradient(0, 0, 1024, 0);
-    border.addColorStop(0, PAL.violet);
-    border.addColorStop(0.5, PAL.magenta);
-    border.addColorStop(1, PAL.cyan);
-    c.strokeStyle = border;
-    c.lineWidth = 18;
-    c.strokeRect(9, 9, 1006, 430);
-    c.textAlign = 'center';
-    c.textBaseline = 'middle';
-    c.font = `900 168px ${FONT_DISPLAY}`;
-    c.lineWidth = 14;
-    c.strokeStyle = PAL.ink;
-    c.strokeText('DEGEN CITY', 512, 190);
-    c.fillStyle = '#f3f2f7';
-    c.fillText('DEGEN CITY', 512, 190);
-    c.font = `800 64px ${FONT_DISPLAY}`;
-    c.fillStyle = PAL.cyan;
-    c.fillText('GM DEGENS  ·  GAME ON', 512, 340);
-  });
-  const screen = new THREE.Mesh(new THREE.PlaneGeometry(sc.x1 - sc.x0, sc.y1 - sc.y0), lit(new THREE.MeshBasicMaterial({ map: tex }), 0.95, 1));
-  screen.position.set((sc.x0 + sc.x1) / 2, S + (sc.y0 + sc.y1) / 2, sc.z + 0.06);
-  scene.add(screen);
-  box(b, sc.x0 - 0.12, S + sc.y0 - 0.12, sc.z - 0.12, sc.x1 + 0.12, S + sc.y1 + 0.12, sc.z + 0.05, INK);
-  for (const x of [sc.x0 + 0.6, sc.x1 - 0.8]) box(b, x, S + H, sc.z - 0.12, x + 0.2, S + sc.y0, sc.z + 0.02, INK);
 
   // The fountain: a stone basin, water, a column with a bowl and a jet
   const f = sq.fountain;
