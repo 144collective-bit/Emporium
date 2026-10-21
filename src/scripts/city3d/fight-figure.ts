@@ -11,13 +11,15 @@
  *   hold loops). Walking: the guard with the legs from `walkPose`. Else
  *   the `guard` loop.
  * - A change of clip crossfades over a few frames (`blendPose`).
- * - `root` (the lying pose's lift and back-rotation) goes on the figure's
- *   group with the sim's x, z and yaw.
+ * - `root` (the lying pose's lift, back-rotation and the height it turns
+ *   about, `rootShift()`) goes on the figure's group with the sim's x, z and
+ *   yaw: the group is moved so the pitch turns about `(0, pivot, 0)` in the
+ *   figure's space (the hips for the fall and the get-up, the feet otherwise).
  * - `manual` plays a clip by hand (the demo's clip picker) over the sim.
  */
 import * as THREE from 'three';
-import { createDegen, walkPose, type Degen, type Outfit } from './character';
-import { CLIPS, blendPose, hurtClip, moveClip, newFightPose, sampleClip, type ClipId, type FightPose } from './fight-anim';
+import { createDegen, walkPose, type Degen, type Limb, type Outfit } from './character';
+import { CLIPS, blendPose, hurtClip, moveClip, newFightPose, rootShift, sampleClip, type ClipId, type FightPose } from './fight-anim';
 import { T, type Fighter } from './fight-sim';
 
 /** Figures stand at the walker's scale */
@@ -58,11 +60,25 @@ const copyPose = (from: FightPose, to: FightPose) => {
   to.headYaw = from.headYaw;
   to.headPitch = from.headPitch;
   for (let i = 0; i < 2; i++) {
-    Object.assign(to.arms[i], from.arms[i]);
-    Object.assign(to.legs[i], from.legs[i]);
+    copyLimb(to.arms[i], from.arms[i]);
+    copyLimb(to.legs[i], from.legs[i]);
   }
   to.root.y = from.root.y;
   to.root.pitch = from.root.pitch;
+  to.root.pivot = from.root.pivot;
+};
+/** A limb by value: the wrist is its own object, never shared between poses */
+const copyLimb = (to: Limb, from: Limb) => {
+  to.fwd = from.fwd;
+  to.out = from.out;
+  to.bend = from.bend;
+  to.twist = from.twist ?? 0;
+  if (from.wrist) {
+    if (to.wrist) {
+      to.wrist.roll = from.wrist.roll;
+      to.wrist.bend = from.wrist.bend;
+    } else to.wrist = { roll: from.wrist.roll, bend: from.wrist.bend };
+  } else if (to.wrist) to.wrist = undefined;
 };
 
 /** Which clip and frame a fighter's state calls for */
@@ -97,7 +113,7 @@ export function drawFighter(fg: FighterFigure, f: Fighter, dt: number, ticks: nu
   if (id === 'guard' && f.moving > 0.05) {
     fg.walk += dt * 7 * f.moving;
     walkPose(walkTmp, fg.walk, Math.min(1, f.moving), 0, 0);
-    for (let i = 0; i < 2; i++) Object.assign(fg.pose.legs[i], walkTmp.legs[i]);
+    for (let i = 0; i < 2; i++) copyLimb(fg.pose.legs[i], walkTmp.legs[i]);
     fg.pose.bob += walkTmp.bob;
   }
   if (fg.fade > 0) {
@@ -114,10 +130,12 @@ export function drawFighter(fg: FighterFigure, f: Fighter, dt: number, ticks: nu
   deg.pose.headYaw = fg.pose.headYaw;
   deg.pose.headPitch = fg.pose.headPitch;
   for (let i = 0; i < 2; i++) {
-    Object.assign(deg.pose.arms[i], fg.pose.arms[i]);
-    Object.assign(deg.pose.legs[i], fg.pose.legs[i]);
+    copyLimb(deg.pose.arms[i], fg.pose.arms[i]);
+    copyLimb(deg.pose.legs[i], fg.pose.legs[i]);
   }
   deg.update();
-  deg.g.position.set(f.x, fg.pose.root.y * FIGHTER_SCALE, f.z);
+  // The group turns about its origin (the feet); move it so the pitch turns about the root's pivot instead
+  const { dy, dz } = rootShift(fg.pose.root);
+  deg.g.position.set(f.x + Math.sin(f.yaw) * dz * FIGHTER_SCALE, dy * FIGHTER_SCALE, f.z + Math.cos(f.yaw) * dz * FIGHTER_SCALE);
   deg.g.rotation.set(fg.pose.root.pitch, f.yaw, 0, 'YXZ');
 }
