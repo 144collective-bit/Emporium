@@ -148,14 +148,9 @@ fight HUD; stepping out puts the gun back.
 
 ## The goons
 
-The crew (`crew.ts`, `CREW_SPOTS`) are fighters too: in `CREW_ZONE` a goon
-that reaches a player throws a jab or a front kick (the shove becomes a
-real hit on the zone's health rules, cartoon, no gore), blocks about a
-third of the player's moves at Brawler skill, and goes down on a knockout
-as it does when shot. The north side never has health, so nothing changes
-there. The goons use the same clips at crowd detail (they're `createCrowd`
-instances; the pose is sampled per goon each frame as the march and
-salute poses are now).
+Dropped (the owner's call, after Phase 2): the crew that patrolled the
+south bank was retired altogether, so nothing in the city attacks you. The
+crew's look stays as the gym's opponents (`crewOutfit()` in `crew.ts`).
 
 ## Controls
 
@@ -203,7 +198,7 @@ Phase 1 is built (`fight-sim.ts`, `fight-anim.ts`, `fight-demo.ts` on
 built: the Fight Club on the south bank (`fightsite.ts`, `fightclub.ts`),
 the trainer's menu, HUD and bout card (`fight-ui.ts`), the fight itself
 (`fight.ts`, `fight-figure.ts`), the save (v8) and `finishFight()`.
-Styles, the goons and the record's missions and badges are Phase 3.
+Styles and the record's missions and badges are Phase 3 (the goons were dropped).
 
 1. **The sim and the clips.** `fight-sim.ts` with the Brawler's moves,
    block, dodge, stamina, knockdowns, bots, bouts; `fight-anim.ts` with
@@ -215,9 +210,9 @@ Styles, the goons and the record's missions and badges are Phase 3.
    its footprints, the trainer's menu with Spar and the sparring bots, the
    HUD, the fight camera, the sounds and effects, the bout card, the save
    (v8), prizes and XP. Playable offline on experimental.
-3. **Styles, the goons and the record.** The Kickboxer and Street styles
+3. **Styles and the record.** The Kickboxer and Street styles
    and their moves (the roundhouse, uppercut, parry), the trainer's Styles
-   tab, the goons fighting back in the zone, missions, badges, the profile's
+   tab, missions, badges, the profile's
    fight record, phones checked at every width.
 4. **Online** (when the owner resumes multiplayer): the Room runs the sim,
    the protocol carries the inputs and events, challenges in the ring,

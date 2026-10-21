@@ -129,12 +129,10 @@ test('addXp levels you up and reports it; takedowns count and pay XP', () => {
   assert.equal(addXp(s, 1), 0);
   assert.equal(addXp(s, -5), 0);
   takedown(s, 'drone');
-  takedown(s, 'goon');
   takedown(s, 'dummy');
   assert.equal(s.counters.drones, 1);
-  assert.equal(s.counters.goons, 1);
   assert.equal(s.counters.dummies, 1);
-  assert.equal(s.xp, xpForLevel(3) + 1 + XP.drone + XP.goon + XP.dummy);
+  assert.equal(s.xp, xpForLevel(3) + 1 + XP.drone + XP.dummy);
 });
 
 test('cars: level first, then money; owned once; mods stop at the top and change the handling and the boot', () => {
@@ -269,7 +267,7 @@ test('cleanSave carries a Phase 4 save into Phase 5 and keeps everything within 
       races: { 'river-loop': 31.123456, bad: -1, 'x y': 4 },
       missions: { active: [{ id: 'drone-patrol', from: { drones: 2 } }, { id: 'drone-patrol' }, { id: 'nope!' }], done: ['warm-up', 'warm-up'] },
       badges: ['seller-100', 'Bad Badge'],
-      counters: { drones: 7.9, goons: -3, made_up: 4 },
+      counters: { drones: 7.9, dummies: -3, made_up: 4 },
     },
     T0
   );
@@ -290,7 +288,7 @@ test('cleanSave carries a Phase 4 save into Phase 5 and keeps everything within 
   assert.deepEqual(dirty.missions.done, ['warm-up']);
   assert.deepEqual(dirty.badges, ['seller-100']);
   assert.equal(dirty.counters.drones, 7);
-  assert.equal(dirty.counters.goons, 0);
+  assert.equal(dirty.counters.dummies, 0);
   assert.ok(!('made_up' in dirty.counters));
 });
 
@@ -366,9 +364,9 @@ test('a run counts down, takes checkpoints in order, finishes and pays by par', 
 test('missions: level-gated, three at once, progress from when you took them, claimed when done', () => {
   const s = fresh();
   assert.equal(missionState(s, 'drone-patrol'), 'open');
-  assert.equal(missionState(s, 'crew-cut'), 'locked');
+  assert.equal(missionState(s, 'kart-winner'), 'locked');
   assert.equal(missionState(s, 'nope'), 'locked');
-  assert.deepEqual(acceptMission(s, 'crew-cut', T0), { ok: false, why: 'level' });
+  assert.deepEqual(acceptMission(s, 'kart-winner', T0), { ok: false, why: 'level' });
   takedown(s, 'drone');
   assert.ok(acceptMission(s, 'drone-patrol', T0).ok);
   assert.equal(missionState(s, 'drone-patrol'), 'active');

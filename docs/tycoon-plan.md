@@ -73,8 +73,9 @@ store, X and Telegram are in the ☰ Menu.
    titles; the garage sells and tunes cars; the Armoury sells and upgrades
    guns; Drop 001 sells a premium wardrobe; the Vault's estate agent sells
    the district plots; the places you run gain levels; street races on the
-   south bank; a mission board at the Signal tower; badges; a cartoon rival
-   crew on the south bank. See "Phase 5" below.
+   south bank (since retired); a mission board at the Signal tower; badges;
+   a cartoon rival crew on the south bank (since retired: nothing in the
+   city attacks you). See "Phase 5" below.
 6. **Later, with the server.** A shared market between players, south-bank
    security and raids.
 
@@ -234,9 +235,8 @@ before the next one starts.
 - **Missions** (`missions.ts`): a board in tiers by level, up to three at
   once, progress counted from when you took one (the save's `counters`),
   claim for Dorras and XP. Badges land on their own.
-- **The crew** (`combat-sim.ts`): a cartoon rival crew patrols the south
-  bank; knocking them down counts for missions and badges. They shove, never
-  shoot; the city north of the river stays a safe hangout.
+- **The crew** was retired (the owner's call): nothing in the city attacks
+  you; its look stayed on as the Fight Club's opponents.
 - Saves carry on from Phases 1-4 (`cleanSave()`, v5).
 
 ## Phase 6: the kart park (the owner's call)

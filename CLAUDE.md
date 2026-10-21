@@ -887,24 +887,11 @@ it and has been retired completely. Build only on what's here.
   each opponent's record), the ledger entry `fighting` and the counters
   `bouts` / `fightWins` / `kos` / `chains`. New gameplay goes in the sim
   first; looks in the clips and the view.
-- **The crew** (the owner's call): a cartoon rival crew of ten goons on the
-  south bank, the only characters that are targets; the city north of the
-  river stays a safe hangout. Rules in `combat-sim.ts`: `CREW_ZONE` (the
-  bank between the river wall and the south row, from the west bridge to
-  past South 5) and `CREW_SPOTS` (patrol routes along the riverside walk
-  between the bridges and the avenue's south sidewalk, never on asphalt or
-  in `SOLIDS`). A goon walks its route on the sim clock (`goonPatrol()`,
-  pure), jogs at a player within 7 tiles in the zone (`setPlayerPos()`
-  feeds Degen's position each frame), shoves (a `shove` event;
-  `combat.shove` knocks Degen back in `walk.ts`, `is-shoved` flashes the
-  screen edge, `'shove'` sounds) and backs off for 2 s; shot like a
-  standing figure it goes down for `POINTS.goon`, lies 8 s and gets up at
-  its spawn; it never leaves the zone and stands still under reduced
-  motion. The look is `crew.ts`: one `createCrowd` in violet track suits
-  and cyan beanies and shades, `downPose` flat on the back with stars round
-  the head; `combat.ts` adds health bars, bursts, `'goonDown'` and
-  `onTakedown('goon')`. Goons shove, never shoot, and nothing in the city
-  ever hurts: there is no player health. Tested in `tests/combat.test.ts`.
+- **Nothing in the city attacks you** (the owner's call): the rival crew
+  that patrolled the south bank was retired; only its look (`crewOutfit()`
+  in `crew.ts`) remains, worn by the Fight Club's opponents. Targets are
+  the dummies and the drones only, and there is no player health outside
+  the Fight Club's ring. Don't bring the crew back without the owner.
 
 ## City builder (3D build mode)
 
@@ -998,8 +985,8 @@ it and has been retired completely. Build only on what's here.
   unreachable. It reads "On / Off" up to 900px wide; up to 420px only the
   current side shows (a tap flips it) and City / Walk / Build are icons, so
   the mode header keeps the title.
-- PvP will only ever happen across the river (south bank); the city north of
-  the bridges stays a safe hangout.
+- PvP will only ever happen across the river (south bank), in the Fight
+  Club's ring; the city north of the bridges stays a safe hangout.
 
 ## Tests
 

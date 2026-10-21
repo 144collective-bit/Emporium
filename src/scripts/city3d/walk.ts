@@ -59,8 +59,6 @@ const WALK = 2.4;
 const RUN = 5.4;
 const JUMP = 3.9;
 const GRAVITY = 11.5;
-/** How hard the crew's shove pushes (tiles a second, easing off as it lasts) */
-const SHOVE = 4;
 const SCALE = 0.85;
 /** How far you can go: the world's edge */
 const BOUNDS = WORLD_BOUNDS;
@@ -1195,8 +1193,7 @@ export function createWalk(d: WalkDeps) {
     pos.set(s.x, groundAt(s.x, s.z), s.z);
     speedNow = Math.hypot(s.vx, s.vz);
     hero.g.visible = hero.ring.visible = false;
-    // The rest of the city carries on (drones, dummies, the crew: it leaves a car alone)
-    combat.setPlayerPos(NaN, NaN);
+    // The rest of the city carries on (drones, dummies)
     combat.update(dt, t, false);
     combat.view(dt, t, { firstPerson: false, aim: false, move: 0, phase: 0, run: 0, air: 0 });
     // The prompt: the race menu when nearly stopped at the start line (not mid-race), else Get out
@@ -1230,8 +1227,7 @@ export function createWalk(d: WalkDeps) {
       speedNow = you.moving * 3;
     }
     hero.g.visible = hero.ring.visible = false;
-    // The rest of the city carries on (the crew leaves a fighter in the ring alone)
-    combat.setPlayerPos(NaN, NaN);
+    // The rest of the city carries on (drones, dummies)
     combat.update(dt, t, false);
     combat.view(dt, t, { firstPerson: false, aim: false, move: 0, phase: 0, run: 0, air: 0 });
     if (near) {
@@ -1262,7 +1258,6 @@ export function createWalk(d: WalkDeps) {
     }
     hero.g.visible = hero.ring.visible = false;
     // The rest of the city carries on
-    combat.setPlayerPos(NaN, NaN);
     combat.update(dt, t, false);
     combat.view(dt, t, { firstPerson: false, aim: false, move: 0, phase: 0, run: 0, air: 0 });
     if (near) {
@@ -1313,13 +1308,6 @@ export function createWalk(d: WalkDeps) {
     const k = damp(grounded ? (mag > 0.05 ? 11 : 14) : 2.5, dt);
     vel.x += (dirX * top - vel.x) * k;
     vel.y += (dirZ * top - vel.y) * k;
-    // Shoved by one of the crew (combat.ts): knocked back for a moment, whatever you're pressing
-    const sh = combat.shove;
-    if (sh) {
-      const push = damp(30, dt);
-      vel.x += (sh.dx * SHOVE * sh.t - vel.x) * push;
-      vel.y += (sh.dz * SHOVE * sh.t - vel.y) * push;
-    }
     const stuck = blocked(pos.x, pos.z);
     const nx = pos.x + vel.x * dt;
     if (stuck || !blocked(nx, pos.z)) pos.x = nx;
@@ -1369,7 +1357,6 @@ export function createWalk(d: WalkDeps) {
       else if (!combat.armed) emotePose(P, emote.id, emote.t);
     }
     // Recoil kicks the view up a touch; the rifle rides the shoulder
-    combat.setPlayerPos(pos.x, pos.z);
     const kick = combat.update(dt, t, aimNow);
     if (kick) {
       pitch = Math.max(firstPerson ? -1.35 : -0.55, pitch - kick);

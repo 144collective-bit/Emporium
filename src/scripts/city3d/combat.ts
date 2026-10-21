@@ -16,19 +16,16 @@
  *   decides), right mouse aims (the holo red-dot in first person), R reloads.
  *   Phones get Fire, Aim and Reload buttons and a little aim assist; gamepads
  *   fire on RT and reload on X.
- * - Targets: cardboard dummies, patrol drones and the rival crew on the south
- *   bank (drawn by crew.ts). People and cars are never hit. Each of your
+ * - Targets: cardboard dummies and patrol drones. People and cars are never
+ *   hit, and nothing in the city attacks you. Each of your
  *   takedowns is handed to the city's game (`onTakedown`: XP and counters).
- * - The crew shoves you when it gets close: a sound, a flash round the screen
- *   (`is-shoved` on the city root) and a push walk mode reads from `shove`.
  * - Finishes unlock with your lifetime score, saved in this browser (or in
  *   your player profile when online).
  */
 import * as THREE from 'three';
 import { FONT_DISPLAY, PAL, canvasTex, fx, glowTex, mergeMeshes, neon, sidesBox, toon } from './kit';
 import { type Tick } from './world';
-import { CREW_SPOTS, DRONES, DUMMIES, WEAPONS, WEAPON_IDS, createSim, dronePose, weaponUnlocked, type SimEvent, type TargetKind, type WeaponId } from './combat-sim';
-import { createCrew } from './crew';
+import { DRONES, DUMMIES, WEAPONS, WEAPON_IDS, createSim, dronePose, weaponUnlocked, type SimEvent, type TargetKind, type WeaponId } from './combat-sim';
 import type { ClientMsg, MeRow, NetEvent } from '../net/protocol';
 import { SKINS, buildGun, gunSpec, type Gun, type SkinId } from './guns';
 import { holdGun, newStance } from './stance';
@@ -42,8 +39,8 @@ export { DUMMIES };
 export type Sfx =
   | 'shot' | 'shotSmg' | 'shotShotgun' | 'shotDmr' | 'shotRevolver' | 'shotBurst' | 'shotLmg'
   | 'empty' | 'magout' | 'magin' | 'bolt' | 'hit' | 'hitMetal' | 'down' | 'boom' | 'gear' | 'draw' | 'holster' | 'unlock' | 'bump' | 'door'
-  /** The city's game: buying, upgrading, levelling up, missions, races, the crew */
-  | 'buy' | 'denied' | 'upgrade' | 'levelup' | 'mission' | 'countdown' | 'go' | 'checkpoint' | 'finish' | 'shove' | 'goonDown'
+  /** The city's game: buying, upgrading, levelling up, missions, the kart park's countdown */
+  | 'buy' | 'denied' | 'upgrade' | 'levelup' | 'mission' | 'countdown' | 'go' | 'checkpoint' | 'finish'
   /** The kart park: boosts, hits taken and landed, the shield, the item roulette and a throw, drifts and their sparks, the jump, the shortcut's gravel, beating your ghost */
   | 'kartBoost' | 'kartHit' | 'kartHitLanded' | 'kartShield' | 'kartItem' | 'kartUse' | 'kartDrift' | 'kartSpark' | 'kartJump' | 'kartLand' | 'kartShortcut' | 'kartGhost'
   /** The Fight Club: a swing's whoosh, a punch and a kick landing, a block, a parry, a knockdown's thud, the knock-out, the bell and the count */
@@ -67,9 +64,6 @@ export interface CombatDeps {
 }
 
 const ME = 'me';
-/** Seconds a goon's shove pushes you, and how long the screen flashes */
-const SHOVE_TIME = 0.45;
-const SHOVE_FLASH = 0.3;
 const SHOT_SOUND: Record<WeaponId, Sfx> = { rifle: 'shot', smg: 'shotSmg', shotgun: 'shotShotgun', dmr: 'shotDmr', revolver: 'shotRevolver', burst: 'shotBurst', lmg: 'shotLmg' };
 const PROFILE_KEY = 'degen-city-combat-v1';
 
@@ -361,7 +355,7 @@ export function createCombat(d: CombatDeps) {
 
   /* ----- Targets: what the sim's targets look like ----- */
   interface Look {
-    /** The target's scene group (for a goon, an empty anchor: the crew draws him) */
+    /** The target's scene group */
     g: THREE.Group;
     bar: THREE.Group;
     fill: THREE.Mesh;
@@ -370,8 +364,6 @@ export function createCombat(d: CombatDeps) {
     hinge?: THREE.Group;
     light?: THREE.Mesh;
     fall?: { vy: number; spin: number } | null;
-    /** A goon's number in the crew */
-    goon?: number;
   }
   const looks: Look[] = [];
   const cardboard = new THREE.MeshToonMaterial({ map: bodyTex() });
@@ -434,16 +426,6 @@ export function createCombat(d: CombatDeps) {
     scene.add(g, bar);
     looks.push({ g, bar, fill, barShow: 0, flash: 0, light, fall: null });
   }
-  // The crew: one instanced crowd (crew.ts); each goon's look here is only his health bar
-  const crew = createCrew(scene, CREW_SPOTS.length);
-  for (let i = 0; i < CREW_SPOTS.length; i++) {
-    const { bar, fill } = healthBar();
-    scene.add(bar);
-    looks.push({ g: new THREE.Group(), bar, fill, barShow: 0, flash: 0, goon: i });
-  }
-  /** A goon's shove on you, while it pushes: the direction and how much is left (1 down to 0) */
-  let shove: { dx: number; dz: number; t: number } | null = null;
-  let shoveFlash = 0;
 
   /* ----- HUD ----- */
   let shown = { mag: -1, reserve: -1, score: -1, streak: -1, reload: false, hint: '', gun: '' };
@@ -633,7 +615,6 @@ export function createCombat(d: CombatDeps) {
         L.barShow = 3;
         burst(e.at, 6, ['#ffe9a8', '#ffd36b'], 2.5, 1, true, 0.25);
         if (t.kind === 'dummy') burst(e.at, 5, ['#c99a5a', '#a87c44'], 1.6, 1.2, false, 0.6);
-        else if (t.kind === 'goon') burst(e.at, 5, ['#8f3dff', '#00eaff', '#f3f2f7'], 1.6, 1.2, false, 0.5);
         if (e.player === ME) {
           hitT = 0.15;
           d.sfx(t.kind === 'drone' ? 'hitMetal' : 'hit');
@@ -646,20 +627,19 @@ export function createCombat(d: CombatDeps) {
         const L = looks[e.target];
         const t = sim.targets[e.target];
         if (t.kind === 'dummy') burst(e.at, 26, ['#ff2fb9', '#00eaff', '#ffd36b', '#8f3dff', '#14121f'], 3.2, 1.6, false, 1.1);
-        else if (t.kind === 'goon') burst(e.at, 18, ['#8f3dff', '#00eaff', '#ff2fb9', '#f3f2f7'], 2.6, 1.4, false, 0.9);
         else {
           L.fall = { vy: 0, spin: (Math.random() - 0.5) * 8 };
           burst(e.at, 14, ['#ffb347', '#ff6a2f', '#ffe9a8'], 3, 1, true, 0.5);
         }
         if (e.player === ME) {
           killT = 0.3;
-          d.sfx(t.kind === 'goon' ? 'goonDown' : 'down');
+          d.sfx('down');
           if (!net) {
             addLifetime(e.points);
             saveProfile();
           }
           d.onTakedown(t.kind);
-          popup(`+${e.points}`, t.kind === 'drone' ? 'Drone down' : t.kind === 'goon' ? 'Goon down' : 'Takedown');
+          popup(`+${e.points}`, t.kind === 'drone' ? 'Drone down' : 'Takedown');
           if (e.streak >= 2) popup(STREAKS[Math.min(e.streak, 5)] || `x${e.streak}`, `x${e.streak} streak`, 'is-streak');
           paintSkins();
         }
@@ -699,15 +679,6 @@ export function createCombat(d: CombatDeps) {
       }
       case 'streak-end':
         break;
-      case 'shove':
-        // One of the crew got you: a thump, a flash round the edges, and walk mode pushes you back
-        if (e.player === ME) {
-          d.sfx('shove');
-          shove = { dx: e.dx, dz: e.dz, t: 1 };
-          shoveFlash = SHOVE_FLASH;
-          root.classList.add('is-shoved');
-        }
-        break;
     }
   }
 
@@ -734,9 +705,6 @@ export function createCombat(d: CombatDeps) {
         if (tg.down > 0) L.hinge.rotation.x += (-1.45 - L.hinge.rotation.x) * Math.min(1, dt * 12);
         // Spring back up, with a wobble after each hit
         else L.hinge.rotation.x += (Math.sin(t * 30) * L.flash * 1.2 - L.hinge.rotation.x) * Math.min(1, dt * 10);
-      } else if (L.goon !== undefined) {
-        // The crew is drawn below; the anchor only carries the health bar
-        L.g.position.set(tg.x, tg.y, tg.z);
       } else {
         const g = L.g;
         if (L.fall) {
@@ -765,21 +733,12 @@ export function createCombat(d: CombatDeps) {
       L.barShow = Math.max(0, L.barShow - dt);
       L.bar.visible = L.barShow > 0 && tg.down === 0 && tg.hp > 0;
       if (L.bar.visible) {
-        if (!L.hinge) L.bar.position.copy(L.g.position).add(V.set(0, L.goon !== undefined ? crew.height + 0.2 : 0.45, 0));
+        if (!L.hinge) L.bar.position.copy(L.g.position).add(V.set(0, 0.45, 0));
         L.bar.quaternion.copy(camQ);
         const f = tg.hp / tg.max;
         L.fill.scale.x = Math.max(0.001, f);
         (L.fill.material as THREE.MeshBasicMaterial).color.set(f > 0.5 ? '#3ce06a' : f > 0.25 ? '#ffd23f' : '#ff3b3b');
       }
-    }
-    crew.update(dt, t, sim.targets, sim.goons, sim.firstGoon);
-    if (shove) {
-      shove.t -= dt / SHOVE_TIME;
-      if (shove.t <= 0) shove = null;
-    }
-    if (shoveFlash > 0) {
-      shoveFlash -= dt;
-      if (shoveFlash <= 0) root.classList.remove('is-shoved');
     }
     sparks.update(dt, 4);
     puffs.update(dt, 1.2);
@@ -797,18 +756,6 @@ export function createCombat(d: CombatDeps) {
     /** Dress the first-person hands in the outfit's sleeves */
     setOutfit(o: Outfit) {
       vm.setOutfit(o);
-    },
-    /** Where Degen stands, each frame while walking (the crew comes for him there); anything not finite means away (in a car) */
-    setPlayerPos(x: number, z: number) {
-      sim.setPlayerPos(ME, x, z);
-    },
-    /**
-     * A goon's shove on you while it lasts: the direction to push (unit length)
-     * and how much of the push is left, 1 down to 0 over SHOVE_TIME; null otherwise.
-     * Walk mode reads it each frame and pushes Degen's velocity that way.
-     */
-    get shove() {
-      return shove;
     },
     get geared() {
       return me.geared;
@@ -1077,11 +1024,8 @@ export function createCombat(d: CombatDeps) {
     exit() {
       trigger = touchFire = false;
       sim.setInput(ME, { fire: false });
-      sim.setPlayerPos(ME, NaN, NaN);
-      shove = null;
-      shoveFlash = 0;
       vm.root.visible = false;
-      root.classList.remove('is-ads', 'is-scoped', 'is-shoved');
+      root.classList.remove('is-ads', 'is-scoped');
       saveProfile();
     },
   };

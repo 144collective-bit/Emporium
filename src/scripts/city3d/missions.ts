@@ -46,7 +46,6 @@ export const MISSIONS: Mission[] = [
   { id: 'podium', name: 'Podium', blurb: 'Finish a kart race in the top three.', level: 3, goal: counter('podiums', 1), reward: 1200, xp: 160 },
   { id: 'pigeon-post', name: 'Pigeon post', blurb: 'Land 10 item hits on rivals at the kart park.', level: 3, goal: counter('kartHits', 10), reward: 900, xp: 140 },
   // Tier 3
-  { id: 'crew-cut', name: 'Crew cut', blurb: 'Knock down 10 of the crew on the south bank.', level: 5, goal: counter('goons', 10), reward: 1800, xp: 240 },
   { id: 'dash', name: 'Dash', blurb: 'Finish the Downtown Dash.', level: 5, goal: { race: 'downtown-dash' }, reward: 2000, xp: 240 },
   { id: 'under-par', name: 'Under par', blurb: 'Finish the River Loop under par.', level: 5, goal: { race: 'river-loop', par: true }, reward: 1500, xp: 200 },
   { id: 'in-training', name: 'Tycoon in training', blurb: 'Take 25,000 Dorras in sales, contracts and prizes.', level: 5, goal: counter('earned', 25000), reward: 2000, xp: 250 },
@@ -54,7 +53,6 @@ export const MISSIONS: Mission[] = [
   { id: 'retail-chain', name: 'Retail chain', blurb: 'Sell 600 things.', level: 5, goal: counter('sold', 600), reward: 2500, xp: 300 },
   { id: 'kart-winner', name: 'Chequered flag', blurb: 'Win a kart race.', level: 5, goal: counter('kartWins', 1), reward: 2500, xp: 300 },
   // Tier 4
-  { id: 'south-bank-sweep', name: 'South bank sweep', blurb: 'Knock down 40 of the crew.', level: 8, goal: counter('goons', 40), reward: 5000, xp: 500 },
   { id: 'ring-master', name: 'Ring master', blurb: 'Finish the Ring Circuit under par.', level: 8, goal: { race: 'ring-circuit', par: true }, reward: 4000, xp: 400 },
   { id: 'fleet', name: 'Fleet', blurb: 'Buy 3 things at the garage, the Armoury or Drop 001.', level: 8, goal: counter('bought', 3), reward: 3000, xp: 300 },
   { id: 'haulage', name: 'Haulage', blurb: 'Deliver 20 contracts.', level: 8, goal: counter('contracts', 20), reward: 6000, xp: 600 },
@@ -64,11 +62,9 @@ export const MISSIONS: Mission[] = [
   // Tier 5
   { id: 'grand-tourist', name: 'Grand tourist', blurb: 'Finish the Grand Tour.', level: 12, goal: { race: 'grand-tour' }, reward: 8000, xp: 800 },
   { id: 'ace', name: 'Ace', blurb: 'Finish 3 races under par.', level: 12, goal: counter('pars', 3), reward: 6000, xp: 600 },
-  { id: 'crew-boss', name: 'Crew boss', blurb: 'Knock down 120 of the crew.', level: 12, goal: counter('goons', 120), reward: 12000, xp: 1200 },
   { id: 'magnate', name: 'Magnate', blurb: 'Take 250,000 Dorras.', level: 12, goal: counter('earned', 250000), reward: 15000, xp: 1500 },
   { id: 'kart-champion', name: 'Kart champion', blurb: 'Win 10 kart races.', level: 12, goal: counter('kartWins', 10), reward: 12000, xp: 1200 },
   // Tier 6
-  { id: 'legend-of-the-bank', name: 'Legend of the bank', blurb: 'Knock down 300 of the crew.', level: 18, goal: counter('goons', 300), reward: 30000, xp: 3000 },
   { id: 'speed-demon', name: 'Speed demon', blurb: 'Finish the Grand Tour under par.', level: 18, goal: { race: 'grand-tour', par: true }, reward: 20000, xp: 2000 },
   { id: 'empire', name: 'Empire', blurb: 'Take 1,000,000 Dorras.', level: 18, goal: counter('earned', 1000000), reward: 50000, xp: 5000 },
   { id: 'master-tuner', name: 'Master tuner', blurb: 'Buy 24 upgrades.', level: 18, goal: counter('upgrades', 24), reward: 20000, xp: 2000 },
@@ -157,8 +153,6 @@ export const BADGES: Badge[] = [
   b('drones-10', 'Buzz off', 'Knocked down 10 drones.', 'drones', 10, 100),
   b('drones-100', 'Air defence', 'Knocked down 100 drones.', 'drones', 100, 800),
   b('dummies-50', 'Range day', 'Knocked down 50 dummies.', 'dummies', 50, 150),
-  b('goons-25', 'Bouncer', 'Knocked down 25 of the crew.', 'goons', 25, 300),
-  b('goons-250', 'South bank legend', 'Knocked down 250 of the crew.', 'goons', 250, 2500),
   b('races-5', 'Racer', 'Finished 5 races.', 'races', 5, 200),
   b('races-25', 'Road warrior', 'Finished 25 races.', 'races', 25, 1000),
   b('karts-1', 'Karter', 'Finished a kart race.', 'kartRaces', 1, 100),
@@ -200,7 +194,6 @@ export const COUNTER_NAMES: Record<CounterId, string> = {
   contracts: 'contracts delivered',
   dummies: 'dummies down',
   drones: 'drones down',
-  goons: 'crew down',
   races: 'races finished',
   pars: 'races under par',
   records: 'best times',

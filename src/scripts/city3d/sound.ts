@@ -382,15 +382,6 @@ export function createSound() {
           crack(t, 'bandpass', 1200, 0.6, 0.3, 0.3, true);
           break;
         // The crew on the south bank: a shove, and one going down
-        case 'shove':
-          tone(t, 'sine', 160, 60, 0.5, 0.15);
-          crack(t, 'lowpass', 600, 0.8, 0.4, 0.12);
-          break;
-        case 'goonDown':
-          tone(t, 'square', 420, 90, 0.14, 0.35);
-          crack(t, 'bandpass', 700, 0.8, 0.3, 0.2);
-          [880, 660, 440].forEach((f, i) => tone(t + 0.1 + i * 0.07, 'triangle', f, f, 0.08, 0.12));
-          break;
         // The kart park: a boost's whoosh, a cartoon boing when you're spun, a ding when you land one
         case 'kartBoost':
           tone(t, 'sawtooth', 180, 720, 0.16, 0.3);

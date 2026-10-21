@@ -69,7 +69,6 @@ export const XP = {
   /** Per dummy, drone and crew member knocked down */
   dummy: 4,
   drone: 8,
-  goon: 12,
   /** Finishing a race, and beating its par (on top) */
   raceFinish: 120,
   racePar: 180,
