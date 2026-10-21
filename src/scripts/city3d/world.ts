@@ -20,6 +20,7 @@ import { PLAN, offsetLine, type Pt } from './streetplan';
 import { DIAGONALS, DIAGONAL_LAMPS } from './downtown';
 import { BENDS, BEND_REACH, KERB_RUNS, OUTSIDE, PADS, PARKWAY, PROMENADE, SOUTHSIDE, inTown } from './outer';
 import { KART_PARK, SLIP_ROAD } from './kartpark';
+import { RUNWAY, SITE } from './airfield';
 
 export { BLOCKS, BS, CORE_ROADS, EW_ROADS, EXT, NS_ROADS, RIVER, SOUTH_ROAD, WALK_W, type Road };
 /** District blocks around the core: one large plot each (src/data/plots.ts). */
@@ -472,6 +473,9 @@ function scatterIn(count: number, xr: [number, number], zr: [number, number], sk
     if (Math.abs(x - SLIP_ROAD.x) < SLIP_ROAD.half + 2 && z > SLIP_ROAD.z0 - 1 && z < SLIP_ROAD.z1 + 1) continue;
     // Clear of the town (inside the bends, the river and its banks) and of the bends themselves
     if (inTown([x, z], 1.2)) continue;
+    // Clear of the airport and of the low end of its approach
+    if (x > SITE[0] - 1 && x < SITE[2] + 1 && z > SITE[1] - 1 && z < SITE[3] + 1) continue;
+    if (x > -40 && x < SITE[0] && Math.abs(z - RUNWAY.z) < 12) continue;
     if (EW_ROADS.some((r) => Math.abs(z - r.c) < r.half + 0.8) || NS_ROADS.some((r) => Math.abs(x - r.c) < r.half + 0.8)) continue;
     if (z > RIVER[0] - 1 && z < RIVER[1] + 0.8) continue;
     addTree(x, z, 0.8 + rand() * 0.6, rand() < 0.4, 0);
@@ -502,8 +506,10 @@ export function buildSkyline(scene: THREE.Scene, count: number, tick: (f: Tick) 
     const rr = reach / Math.max(Math.abs(Math.cos(a)), Math.abs(Math.sin(a))) + 18 + rand() * 40;
     const x = (EXT[0] + EXT[1]) / 2 + Math.cos(a) * rr;
     const z = (EXT[0] + EXT[1]) / 2 + Math.sin(a) * rr;
+    // None by the airport (it reaches nearly to the world's edge in the south-east): they'd loom over the runway
     const w = 7 + rand() * 9;
     const h = 22 + rand() * 50;
+    if (Math.hypot(x - (SITE[0] + SITE[2]) / 2, z - (SITE[1] + SITE[3]) / 2) < 150) continue;
     const mat = mats[i % mats.length];
     const mesh = new THREE.Mesh(sidesBox(w, h, w), [mat, roof]);
     mesh.position.set(x, h / 2, z);

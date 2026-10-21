@@ -17,6 +17,7 @@ import { DISTRICTS } from '../../data/plots';
 import { BLOCKS, BS, CENTER_XZ, CORE_ROADS, EW_ROADS, EXT, EXTRA_LOTS, GARAGE, LANE, MARKET, MEDIAN, NS_ROADS, SEATS, UNITS, WALK_W, type Road } from './layout';
 import { ALLEYS, BLOCKS_DT, DIAGONALS, LANES } from './downtown';
 import { BENDS, BEND_KERBS, OUTER_BLOCKS, OUTER_PARKS, OUTER_SQUARES, PADS } from './outer';
+import { AIRPORT_STREETS, ROAD } from './airfield';
 
 export type Pt = [number, number];
 
@@ -320,6 +321,14 @@ export function cityPlan(): StreetPlan {
     NS_ROADS.forEach((r, i) => crossingsOf(b.pts, 0, r.c).forEach((at, k) => crossings.push({ id: `${b.id}-ns${i}-${k}`, at, streets: [`ns${i}`, b.id], lights: false })));
     EW_ROADS.forEach((r, i) => crossingsOf(b.pts, 1, r.c).forEach((at, k) => crossings.push({ id: `${b.id}-ew${i}-${k}`, at, streets: [`ew${i}`, b.id], lights: false })));
   }
+  // The airport's access road off the east ring avenue, and the one-way loop round its car park
+  for (const a of AIRPORT_STREETS) streets.push({ id: a.id, kind: 'street', pts: a.pts, half: ROAD.half, lanes: 1 });
+  const avenue = `ns${NS_ROADS.length - 1}`;
+  crossings.push(
+    { id: 'airport-in', at: [ROAD.x0, ROAD.z], streets: [avenue, 'airport-road'], lights: false },
+    { id: 'airport-loop-w', at: [ROAD.loopX, ROAD.z], streets: ['airport-road', 'airport-loop'], lights: false },
+    { id: 'airport-loop-e', at: [ROAD.x1, ROAD.z], streets: ['airport-road', 'airport-loop'], lights: false }
+  );
   // Alleys and lanes: walk-only, from the street front through to the back
   [...ALLEYS.map((a) => a.box), ...LANES].forEach((b, i) => {
     const [x0, z0, x1, z1] = b;

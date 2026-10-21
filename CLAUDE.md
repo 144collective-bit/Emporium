@@ -136,8 +136,9 @@ it and has been retired completely. Build only on what's here.
 - **Traffic** follows `routes.ts` (DOM-free): a route for every lane of the
   straight roads, two down each diagonal (in off the ring, out along a
   cross street) and two round each bend (in off its avenue, all the way
-  round, out the other end); turns are rounded off (tighter for right
-  turns). Junctions where a diagonal comes in run
+  round, out the other end) and one out to the airport and back (down the
+  east ring avenue, round the car park loop); turns are rounded off
+  (tighter for right turns). Junctions where a diagonal comes in run
   three light phases (x, z, diagonal). Cars follow whoever is ahead going
   the same way on any route. Pedestrians walk loops round downtown's block
   outlines and the south row. Tested in `tests/routes.test.ts`.
@@ -333,6 +334,49 @@ it and has been retired completely. Build only on what's here.
   (labels).
 - Check every change at 320, 375, 768, 1024 and 1440px wide: no sideways
   scroll, no text clipped by a slanted edge.
+
+## Sector 7 Airport (Phase 1 of `docs/airport-plan.md`)
+
+- The plan and its phases are `docs/airport-plan.md`; keep it up to date,
+  one phase at a time with the owner's sign-off. Phase 1 (the airport and
+  its flying traffic) is built; Phase 2 (fly it yourself, from the hangar)
+  comes next.
+- **Where:** south-east of the Southside Loop, east of the x = 64.5 avenue,
+  where no road runs (the north-south roads carry on south past the loop).
+  `airfield.ts` (DOM-free, tested in `tests/airfield.test.ts`) holds it all:
+  `SITE`, the runway (east-west, take-offs and landings eastwards), taxiway
+  and connectors, apron, `TERMINAL`, `STANDS` (nose-in, facing north),
+  `TOWER` (under the Emporium's height), `HANGAR` (its east office is where
+  Phase 2's hangar menu will open), `PROP_STAND`, `HELIPAD`, masts, the
+  windsock, apron vehicles, airbridges, the parked cars, and
+  `AIRPORT_SOLIDS` (in `SOLIDS`; the ground itself is open, at ground
+  level, not a slab). The access road and the one-way loop round the car
+  park are `AIRPORT_STREETS` in the street plan.
+- **The flying traffic:** three airliners, a prop plane and a helicopter on
+  one timetable (`PERIOD`, four minutes; `timetable()`, `FLIGHTS`). A flight
+  is a loop of acts (fly along waypoints with rounded corners, eased
+  altitude and speed; hold; turn on the spot; lift); `poseAt()` turns the
+  time into a pose, the same for everyone (the clock is `Date.now()`).
+  Airliners push back, taxi out, take off east, climb round to the north,
+  cross the city high over downtown (above 38), come round the west and
+  land, the prop plane flies a lower loop along the river, the helicopter
+  circles the Emporium (above the hologram and the blimp). The tests check
+  they stay in the world, high over the town, on the ground only at the
+  airport, never near each other (`REACH`) and clear of the solids. Change a
+  route or a take-off time only with the tests passing.
+- **Drawn by** `airport.ts` (runway markings and lights, approach lights,
+  PAPI, terminal with its glass front, wave roof, the SECTOR 7 AIRPORT
+  sign and airbridges, tower, hangar, helipad, masts, windsock, vehicles,
+  road, car park) and `aircraft.ts` (the models: a cartoon airliner in
+  DEGEN AIR colours, a made-up airline, never a real one, maker or badge;
+  a high-wing prop plane; a helicopter). Each model is a few parts by role
+  (body, accent livery colour, neon nav lights, blinking strobe, gear that
+  folds away, decal, spinning props and rotors with blur discs);
+  `createFleet()` makes one instanced mesh per part for each kind, culled
+  as a fleet. Under reduced motion every aircraft stands parked.
+- The skyline ring leaves out the towers within 150 of the airport (they'd
+  loom over the runway); trees keep off the airport and the low end of the
+  approach.
 
 ## Drop 001's fitting room
 
@@ -942,8 +986,9 @@ it and has been retired completely. Build only on what's here.
   race start line and the spawn (`solids.ts`), the plots (`src/data/plots.ts`), your car
   (`mycar.ts`), the driving rules (`drive-sim.ts`), target practice
   (`combat-sim.ts`), the economy (`tycoon.ts`, the market square in
-  `solids.ts`) and the city's game (`catalog.ts`, `races.ts`, `missions.ts`
-  in `tests/game.test.ts`). Modules that touch the DOM or `kit.ts` (canvas
+  `solids.ts`), the city's game (`catalog.ts`, `races.ts`, `missions.ts`
+  in `tests/game.test.ts`) and the airport and its timetable (`airfield.ts`).
+  Modules that touch the DOM or `kit.ts` (canvas
   textures) can't load in Node; keep data a test needs in the DOM-free
   files.
 - When you change a rule or move something in the city, run the tests and

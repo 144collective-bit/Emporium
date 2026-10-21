@@ -14,6 +14,7 @@ import { buildNeighbourhoods } from './neighbourhoods';
 import { buildLife, walker } from './life';
 import { createWalk } from './walk';
 import { buildGarage } from './garage';
+import { buildAirport } from './airport';
 import { WORLD_BOUNDS } from './layout';
 import { loadCar } from './garage-ui';
 import { createProfileUI } from './profile-ui';
@@ -115,6 +116,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   buildNeighbourhoods(scene, crowd, tick, { low: tier === 'low', reduced });
   // The garage on the south bank, your saved car on its turntable
   const garage = buildGarage(scene, { tick, reduced, car: loadCar() });
+  // The airport south-east of the Southside Loop, and the aircraft flying its timetable
+  buildAirport(scene, crowd, tick, { reduced, low: tier === 'low' });
   const plots = createPlots(scene, { degen, tick, reduced });
   // The market square (your stall and the traders'): before the lamps and the crowd are made
   const market = buildMarket(scene, crowd);

@@ -245,6 +245,21 @@ of Gas Fee Gummy Bears) and explore on foot.
 - Walk up to a landmark's door and press **E** (or tap the prompt) to open its
   panel right where you stand.
 
+### Sector 7 Airport
+
+South-east of the Southside Loop, off the east ring avenue, is the
+**airport**: a runway with its markings, edge and approach lights, a taxiway
+and apron, a terminal with a glass front, a wave roof and a big SECTOR 7
+AIRPORT sign, airbridges, a control tower, a hangar, a helipad, floodlight
+masts and a car park. Traffic drives out to it and back.
+
+Three cartoon airliners in DEGEN AIR colours (a made-up airline), a prop
+plane and a helicopter fly a timetable that's the same for every visitor:
+the airliners push back, taxi out, take off, cross the city high over
+downtown and come back round to land; the prop plane loops along the river;
+the helicopter circles the Emporium. Under reduced motion they stand parked.
+Flying one yourself is the next phase (`docs/airport-plan.md`).
+
 ### The garage and your own car
 
 On the south bank, east of plot South 5, stands the **garage**: a workshop

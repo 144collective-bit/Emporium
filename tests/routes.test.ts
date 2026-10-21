@@ -11,9 +11,9 @@ import { EW_ROADS, NS_ROADS } from '../src/scripts/city3d/layout';
 
 const roads = PLAN.streets.filter((s) => s.lanes > 0);
 
-test('a route for every lane of every straight road, and two down each diagonal', () => {
+test('a route for every lane of every straight road, two down each diagonal, two round each bend, one to the airport', () => {
   const lanes = [...EW_ROADS, ...NS_ROADS].reduce((n, r) => n + r.lanes * 2, 0);
-  assert.equal(ROUTES.length, lanes + DIAGONALS.length * 2 + BENDS.length * 2);
+  assert.equal(ROUTES.length, lanes + DIAGONALS.length * 2 + BENDS.length * 2 + 1);
 });
 
 test("every route stays on the asphalt, a car's width in from the kerb, and off every slab", () => {

@@ -14,6 +14,7 @@ import { ALLEYS, ALLEY_PROPS, BOLLARD_R, INFILL, SQUARE } from './downtown';
 import { SQUARE_SOLIDS } from './outer';
 import { RACE_SITE } from './races';
 import { KART_SOLIDS } from './kartpark';
+import { AIRPORT_SOLIDS } from './airfield';
 import type { LotKind, UnitKind } from './tycoon';
 
 /** x0, z0, x1, z1, height */
@@ -208,8 +209,8 @@ const RACE_SOLIDS: Box[] = [
 ];
 
 /** The outer squares' centrepieces, planters and kiosks (outer.ts); the pocket parks and lawns stay walkable */
-/** ...and the kart park's fence, hut, stand, gantry, flyover pillars and track walls (kartpark.ts) */
-export const SOLIDS: Box[] = [...DRAWN.map(designBox), ...DOWNTOWN_SOLIDS, ...SQUARE_SOLIDS, ...GARAGE_SOLIDS, ...MARKET_SOLIDS, ...DUMMY_SOLIDS, ...RACE_SOLIDS, ...KART_SOLIDS];
+/** ...and the kart park's fence, hut, stand, gantry, flyover pillars and track walls (kartpark.ts), and the airport's buildings, masts and parked vehicles (airfield.ts) */
+export const SOLIDS: Box[] = [...DRAWN.map(designBox), ...DOWNTOWN_SOLIDS, ...SQUARE_SOLIDS, ...GARAGE_SOLIDS, ...MARKET_SOLIDS, ...DUMMY_SOLIDS, ...RACE_SOLIDS, ...KART_SOLIDS, ...AIRPORT_SOLIDS];
 /** What bullets stop on: everything solid except the dummies' footprints (they test their own shape) */
 export const SHOT_SOLIDS = SOLIDS.filter((b) => !DUMMY_SOLIDS.includes(b));
 
