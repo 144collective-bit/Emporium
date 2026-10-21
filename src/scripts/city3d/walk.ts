@@ -35,8 +35,12 @@ import { RACE_SITE, START_LINE, START_R } from './races';
 import { createKartUI } from './kart-ui';
 import { createKartRace } from './kart';
 import { HUT_DOOR } from './kartpark';
+import type { CourseId } from './kartpark';
 import type { KartPark } from './kart-types';
-import type { KartInput } from './kart-sim';
+import { CUPS } from './kart-sim';
+import type { KartInput, CupId } from './kart-sim';
+import type { ClassId } from './catalog';
+import { abandonSeries, seriesNext } from './tycoon';
 import { CAMERA_ONLY, DOORS, GARAGE_SITE, RACK, SOLIDS, TURNTABLE_BOX, WALK_SPAWN, rayBoxes, type Box } from './solids';
 import { count } from './tycoon';
 import { NS_ROADS, RIVER, SLAB, WALK_W, type Tick } from './world';
@@ -387,6 +391,21 @@ export function createWalk(d: WalkDeps) {
   const kartUI = createKartUI(root, {
     game: d.game,
     start: (setup) => startKart(setup),
+    // A series: the results card's Next race starts the cup's next course; Drop ends the series
+    nextRace() {
+      if (karts.active) leaveKart();
+      const s = d.game.save();
+      const sr = s.karts.series;
+      const course = seriesNext(s);
+      if (!sr || !course) return;
+      startKart({ course, cup: sr.cup, cls: CUPS[sr.cup].cls });
+    },
+    quitSeries() {
+      const s = d.game.save();
+      if (!s.karts.series) return;
+      abandonSeries(s);
+      d.game.commit();
+    },
     preview: (k) => karts.preview(k),
     onOpen() {
       keys.clear();
@@ -422,7 +441,7 @@ export function createWalk(d: WalkDeps) {
   /** The touch buttons while racing: Drift held, Item pressed */
   const kartBtns = { drift: false, item: false };
   const padKart = { steer: 0, throttle: 0, drift: false };
-  function startKart(setup: { course: import('./kartpark').CourseId; cup: import('./kart-sim').CupId | 'time' }) {
+  function startKart(setup: { course: CourseId; cup: CupId | 'time'; cls: ClassId }) {
     if (karts.active) return;
     kartUI.close();
     if (combat.armed) combat.toggleHolster();

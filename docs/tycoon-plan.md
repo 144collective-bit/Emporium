@@ -242,34 +242,48 @@ before the next one starts.
 ## Phase 6: the kart park (the owner's call)
 
 A Mario-Kart-style place of its own, outside the Parkway in the
-north-east: `kartpark.ts` (the site and the courses as data), `kart-sim.ts`
-(the rules), `kartpark3d.ts` (the site in 3D), `karts.ts` / `kart.ts` (the
-karts and the race on screen) and `kart-ui.ts` (the hut's menu, the HUD,
-the results). Karts stay on the track: they're racing machines, not city
-cars.
+north-east: `kartpark.ts` (the site, the track network and the courses as
+data), `kart-sim.ts` (the rules), `kartpark3d.ts` (the site in 3D),
+`karts.ts` / `kart.ts` (the karts and the race on screen) and `kart-ui.ts`
+(the hut's menu, the HUD, the results). Karts stay on the track: they're
+racing machines, not city cars.
 
-- **The site:** a fenced 138 x 112 of open land north of the Parkway's top
-  (the owner wanted it big: the north-east's main feature),
-  a slip road and a gate on its south side, the kart hut (its door opens
-  the menu), a grandstand along the start straight, a big screen, pits.
-- **The Neon Loop:** a figure of eight, about 370 tiles a lap and 10 wide: the start
-  straight down the west side, round the bottom of the west lobe, a diagonal
-  across the middle at ground level, the east lobe with its hairpin, back
-  over the middle on a flyover, the west lobe's top with a hump that throws
-  karts into the air. The reverse course is the same loop the other way.
-  Walls along both edges; scrape them and you lose speed.
+- **The site:** the whole north-east quadrant outside the Parkway, to the
+  world's edge (140 x 144 tiles, about 250 x 260 m: the owner wanted it big,
+  the map's main feature), fenced, a slip road and a gate on its south
+  side, the kart hut (its door opens the menu), a grandstand along the start
+  straight, a big screen, pits.
+- **One track network, many courses** (the owner's call): open sectors
+  joined at nodes. The Neon Loop (about 370 tiles a lap, 10 wide): the
+  start straight down the west side, the west lobe, a diagonal across the
+  middle, the east hairpin, back over the middle on a flyover, the hump
+  that throws karts into the air. The Summit (about 390): the start
+  straight, then north into a banked bowl, a tunnel and a wet patch, and a
+  descent back into the west lobe. The Grand Prix (about 685, two laps):
+  the north detour, a bridge back over the north sector, down the east
+  edge into the hairpin. Each has a reverse course. A dirt shortcut cuts
+  the hairpin: slow unless you hit it boosting.
 - **The racing:** arcade karts, a hop into a drift that builds a boost in
-  three stages, boost pads, bumps weighted by kart, three laps, seven rivals
-  on the racing line with a rubber band. Three cups (Rookie Lv 1, Pro Lv 4,
-  Neon Lv 9: faster rivals, bigger prizes by place) and time trials (alone,
-  no items, bests kept per course).
+  three stages, boost pads, bumps weighted by kart, seven rivals on the
+  racing line with a rubber band. **Engine classes** set everyone's pace:
+  Street (Lv 1), Sport (Lv 3), Neon (Lv 8). **Cups are series** of four
+  races with points (15-12-10-8-6-4-2-1), standings between races, a trophy
+  and a prize for the series: Rookie (Street), Pro (Sport), Neon (Neon).
+  Single races and time trials (alone, no items, pick the class) stay.
+- **Leaderboards and ghosts:** fastest lap and best run per course per
+  class, local boards of your best runs (built so the game server can hold
+  everyone's later), your best-lap ghost and a par ghost in time trials,
+  a daily challenge (a course and class, beat the target once a day).
 - **Items** from item boxes, dealt by place: Rocket, Oil Slick, Gummy Bomb,
   Homing Pigeon, Shield, Glow Trail. A hit spins a kart for a second;
   nothing ever hurts.
 - **The karts:** the Pocket Rocket is free; Zip (Lv 3), Tank Kart (Lv 5)
   and Big Wheel (Lv 8) cost Dorras at the hut, where every kart gets a
   motor, soft tyres and a nitro kit (three levels each) and a paint.
-- **The economy:** prizes by place (`CUPS`), XP for finishing, podiums,
-  wins and records (`XP.kart*`), counters `kartRaces` / `podiums` /
-  `kartWins` / `kartHits`, six missions and five badges. Saves carry on
-  (`cleanSave()`, v6).
+- **The economy:** prizes by place (`CUPS`) and by series (`SERIES_PRIZES`),
+  the daily challenge's prize, XP for finishing, podiums, wins, records,
+  beating par, series podiums and wins (`XP.kart*`, `XP.series*`), counters
+  `kartRaces` / `podiums` / `kartWins` / `kartHits`, six missions and five
+  badges. Saves carry on (`cleanSave()`, v7).
+- **Later (not built):** global leaderboards on the game server when
+  multiplayer resumes; presentation (crowd, fireworks, replays).
