@@ -7,7 +7,7 @@
    time trial's gap to the ghost, over the drift meter and the tags left; the lap with the class
    and the series' race, the clock and the last / best lap centre; the minimap and Quit right),
    clear of the stick, the pedals and the Drift button at the bottom. The countdown
-   reuses the street races' digits (.race-count) and the results card the races' card
+   reuses the shared big digits (.race-count, cards.css) and the results card the shared card
    (.race-result) with the laps, the standings and a series' points table under it. Nothing
    moves under reduced motion. */
 
@@ -83,7 +83,7 @@
   overscroll-behavior: contain;
   scrollbar-width: thin;
 }
-/* The shop's and the races' pieces are reused inside the body: their areas belong to the outer grids */
+/* The shop's and the shared cards' pieces (cards.css) are reused inside the body: their areas belong to the outer grids */
 .karts-body .shop-list,
 .karts-body .shop-detail,
 .karts-body .race-blurb,
@@ -1145,7 +1145,7 @@
   100% { opacity: 0; transform: translateY(-10px); }
 }
 
-/* ---------- The results card: the races' card with the laps, the standings and the series under it ----------
+/* ---------- The results card: the shared card (cards.css) with the laps, the standings and the series under it ----------
    A column whose body scrolls, so Done (and Next race) stay in reach however long the standings run */
 .kart-result {
   display: flex;
@@ -1166,7 +1166,7 @@
   overscroll-behavior: contain;
   scrollbar-width: thin;
 }
-/* One centred column (the races' meta row names an area the body doesn't have) */
+/* One centred column (the shared meta row names an area the body doesn't have) */
 .kart-result .race-result-body {
   grid-template-columns: minmax(0, 1fr);
   align-items: start;

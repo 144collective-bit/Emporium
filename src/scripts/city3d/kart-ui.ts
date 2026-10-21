@@ -68,8 +68,7 @@ import {
   type TycoonSave,
 } from './tycoon';
 import { CAR_PAINTS, paintHex, type PaintId } from './mycar';
-import { clockOf } from './races';
-import { D, LV, esc, fmt, repaint, whyNot } from './ui';
+import { D, LV, clockOf, esc, fmt, repaint, whyNot } from './ui';
 import type { KartHud, KartResultView, KartUI, KartUIDeps } from './kart-types';
 
 /** How many karts race a cup (you and seven rivals) */

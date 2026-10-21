@@ -197,12 +197,19 @@ it and has been retired completely. Build only on what's here.
 - **Draw calls are the budget.** Build static geometry through a `Batch`
   (`kit.ts`): plain `toon()` colours (no options) and `neon()` fold into
   shared materials with the colour per vertex (`sharedFor()`), so a Batch's
-  plain colours are one draw and its neon one per brightness. Never change a
+  plain colours are one draw and its steady neon another (each vertex
+  carries its day and night brightness in a `lit` attribute the shared
+  neon's shader mixes by the time of day; only flickering neon is a draw
+  per brightness). Never change a
   plain `toon()` or `neon()` material's colour at runtime (give anything that
   changes colour its own material, or instance it with `setColorAt`). Many
   copies of one thing are instanced (trees, lamps, traffic lights, birds,
   crowds, cars). A moving thing merges its fixed parts (`mergeMeshes()`).
   A box with side and top materials is `sidesBox()` (two draws, not six).
+  Signs that come in sets share one canvas atlas, a row each, and merge
+  into one mesh (the market's canopies and boards, `atlas()` /
+  `rowPlane()` in `market.ts`; the Emporium's LED wall is one mesh with one
+  occluder).
   Flat things are flat: the lane markings are two-triangle planes, tree
   trunks open-ended (triangles count too).
   `consolidate()` merges each landmark's Batch meshes per material after the
@@ -234,7 +241,8 @@ it and has been retired completely. Build only on what's here.
 - Every character is one shared Degen body (`src/scripts/city3d/character.ts`),
   sculpted after the brand art at human proportions (about 1.25 tall at
   scale 1, six and a half heads, hips `HIP_HEIGHT` 0.62), with knees,
-  elbows and hand sockets. The bones (`NECK`, `SHOULDER_X/Y`, `UPPER_ARM`,
+  elbows, wrists (`Limb.wrist` { roll, bend }, zero by default so nothing
+  moves unless a pose asks; fighting turns the fist) and hand sockets. The bones (`NECK`, `SHOULDER_X/Y`, `UPPER_ARM`,
   `PALM_Y`, `THIGH`) feed `reachArm()`, so gun holds follow them; the walk
   camera's eye height (`walk.ts`) and the bench seat (`SEAT_DROP` in
   `life.ts`) follow the body too.
@@ -483,11 +491,10 @@ it and has been retired completely. Build only on what's here.
   (`buyCar()` / `modCar()` / `carStatsOf()`, `buyGun()` / `modGun()`,
   `buyWardrobe()`), district plots (`buyPlot()` / `buildPlot()` /
   `sellPlot()`), levels for the places you run (`upgradePlace()`,
-  `capOf()`, `capacityMul()`), race records, missions, badges and the
+  `capOf()`, `capacityMul()`), missions, badges and the
   `counters` everything watches (`count()`, `takedown()`). Prices, the
   level each thing needs, the XP curve and what each mod does are
-  `catalog.ts`; the courses are `races.ts`; the board and badges
-  `missions.ts`. All DOM-free, tested in `tests/game.test.ts`. The starter
+  `catalog.ts`; the board and badges `missions.ts`. All DOM-free, tested in `tests/game.test.ts`. The starter
   tier (the five original cars, the four original guns, the original
   wardrobe) stays free; everything new costs Dorras and needs a level.
   Screens reach the save through `GameDeps` in `ui.ts` (`save()`, then
@@ -629,7 +636,7 @@ it and has been retired completely. Build only on what's here.
 
 - `drive.ts` drives one vehicle at a time, your car or your kart (both can
   be out: "Get in" takes the nearest; `carState` / `inCar` are the car's
-  own, for the street races; `recallKart()` sends the kart to the pits).
+  own; `recallKart()` sends the kart to the pits).
 - The garage is on the south bank, east of S5, facing the south bank
   avenue (`GARAGE` in `layout.ts`; drawn by `garage.ts` in world numbers,
   not the landmarks' drawing grid). A flat-roofed workshop with an open bay
@@ -684,30 +691,17 @@ it and has been retired completely. Build only on what's here.
 - While driving, `.city.is-driving` hides the walk and combat HUD, and the header says "Driving · <car>" (`head.ts`). A gun is holstered on getting in.
 - Check the pedals, stick, prompt and readout at phone widths, upright and on their side: nothing may overlap.
 
-## Street races (3D walk mode)
-
-- The rules are `races.ts` (DOM-free, tested): four courses of checkpoints
-  on the roads from the start line on the south bank avenue in front of
-  South 4 (`RACES`, `START_LINE`, `RACE_SITE`, `CHECK_R`, `START_R`,
-  `COUNTDOWN`, `startRun` / `stepRun` / `finishRun`, `prizeFor`,
-  `clockOf`). `racesite.ts` draws the gantry, the banner (fixed copy only:
-  START / FINISH, SECTOR 7 RACES), the chequered line, the race board and
-  the checkpoint markers (beacons style; `show(next, after)`); its
-  footprints are `RACE_SOLIDS` in `solids.ts`.
-- `race-ui.ts` (markup `data-races`, `data-race-hud`, `data-race-result` in
-  `CityMap.astro`, styles in `src/styles/races.css`) is the menu on the gun
-  store's `.shop` panel, the countdown, the HUD and the results card. It
-  opens at the board on foot or from your car when it's stopped at the
-  line, needs your car within `START_R`, freezes the car (`drive.frozen`)
-  during the countdown, steps the run from the car every frame and pays
-  through `finishRun()` + `commit()`. Getting out, leaving walk mode, Esc
-  or Quit abandons a run. While a run is on, `data-race` on the city root
-  makes the header read "Racing · <race>". Prizes are Dorras only; best
-  times are kept per race in the save.
 - `drive.update()` returns the tiles moved; walk mode counts them on the
   save every ten tiles (`counters.driven`, for missions and badges).
 - `?spawn=x,z[,yaw]` in the address starts walk mode at a spot, and `?fps`
   shows where Degen stands: use them to check a place on a real device.
+- **The street races were retired** (the owner's call): no start line,
+  gantry or board on the south bank avenue, no race menu, HUD or results,
+  no race missions or badges, and no race times in the save. Racing lives
+  at the kart park only. Don't bring them back without the owner. The
+  pieces their screens left behind (the big countdown digits, the results
+  card, the list rows and tags) are shared by the kart and fight menus in
+  `src/styles/cards.css`, still under their `.race-*` class names.
 
 ## The kart park (3D walk mode)
 
@@ -970,25 +964,74 @@ it and has been retired completely. Build only on what's here.
 - **Fighting** (punches and kicks, the Fight Club on the south bank, styles
   bought with Dorras, player-versus-player when the server is live) is
   planned in `docs/fight-plan.md`; build it one phase at a time with the
-  owner's sign-off, the rules in `fight-sim.ts` first.
-- **The crew** (the owner's call): a cartoon rival crew of ten goons on the
-  south bank, the only characters that are targets; the city north of the
-  river stays a safe hangout. Rules in `combat-sim.ts`: `CREW_ZONE` (the
-  bank between the river wall and the south row, from the west bridge to
-  past South 5) and `CREW_SPOTS` (patrol routes along the riverside walk
-  between the bridges and the avenue's south sidewalk, never on asphalt or
-  in `SOLIDS`). A goon walks its route on the sim clock (`goonPatrol()`,
-  pure), jogs at a player within 7 tiles in the zone (`setPlayerPos()`
-  feeds Degen's position each frame), shoves (a `shove` event;
-  `combat.shove` knocks Degen back in `walk.ts`, `is-shoved` flashes the
-  screen edge, `'shove'` sounds) and backs off for 2 s; shot like a
-  standing figure it goes down for `POINTS.goon`, lies 8 s and gets up at
-  its spawn; it never leaves the zone and stands still under reduced
-  motion. The look is `crew.ts`: one `createCrowd` in violet track suits
-  and cyan beanies and shades, `downPose` flat on the back with stars round
-  the head; `combat.ts` adds health bars, bursts, `'goonDown'` and
-  `onTakedown('goon')`. Goons shove, never shoot, and nothing in the city
-  ever hurts: there is no player health. Tested in `tests/combat.test.ts`.
+  owner's sign-off. Phase 1 is built: the rules are `fight-sim.ts`
+  (DOM-free, seeded, 60 Hz, tested in `tests/fight.test.ts`: `MOVES` with
+  start-up / active / recovery frames, reach and arc, the jab-cross-hook-
+  uppercut chain and the kicks, block and the parry window, dodge, stamina,
+  stagger and knockdowns, `STYLES`, bots via `think()`, spars and bouts;
+  a fighter faces along (sin yaw, cos yaw); a press is kept `T.buffer`
+  frames so it fires when it can, a strike from just out of reach steps in
+  (`T.stepIn`), the facing turns at `T.turn` and a move's lock-on snaps at
+  most `T.lockSnap`; bots are `BotTraits` (`botTraits()`: block, dodge,
+  parry, telegraph (extra wind-up on heavy moves, a tell), kicks, finisher,
+  backOff, pace), the gym's three in `FIGHT_BOTS.traits`); the animations are
+  `fight-anim.ts` (DOM-free, tested in `tests/fight-anim.test.ts`: every
+  clip is keyframed on the `Pose` rig, a move's clip is exactly its sim
+  frames long with the strike on the first active frame; `sampleClip()`,
+  `blendPose()`, `moveClip()`, `hurtClip()`, `root` { y, pitch, pivot } for
+  the lying poses (the fall and the get-up pivot at the hips, `rootShift()`
+  in `fight-figure.ts` moves the group so); `fists: true` on an `Outfit`
+  closes the hands); `?fight` in the address
+  runs the sparring demo (`fight-demo.ts`: two bots on the hangout square,
+  an overlay with health, stamina, the clip each plays and a clip picker).
+  Phase 2 is built, **the Fight Club**: the site is `fightsite.ts`
+  (DOM-free: the lot on the south bank east of the garage, `RING` and
+  `RING_HALF`, `POSTS`, `ROPES`, `SHED`, `COUNTER` and `TRAINER` (the
+  "Trainer" prompt), `CORNERS`, `OUT`, `FIGHT_SPAWN`; the lawns' trees keep
+  off it in `outer.ts`), drawn by `fightclub.ts` (`buildFightClub()`: the
+  paved yard, the ring with the diamond canvas, posts and neon ropes (not
+  solid: you step through), the open-sided shed with its rig, the counter
+  kiosk, bags, lockers, bleachers and the FIGHT CLUB cut-out; `setLive()`
+  brightens the lights for a fight; its footprints are `FIGHTCLUB_SITE` in
+  `solids.ts`, and it's a place: spot `fightclub`, pin, directory entry
+  and a City-view panel with your record and **Walk in**). `fight-types.ts`
+  holds the parts' interfaces. `fight-ui.ts` (markup `data-fight`,
+  `data-fight-hud`, `data-fight-count`, `data-fight-pops`,
+  `data-fight-result`, the Punch / Kick / Block / Dodge touch buttons
+  `data-fight-punch` / `-kick` / `-block` / `-dodge` and Quit
+  `data-fight-quit` in `CityMap.astro`, styles in `fight.css`) is the
+  trainer's menu (Spar, Bout, Record, Styles (coming)), the HUD (health,
+  stamina, round and clock, score pips, chain, the knockdown count), the
+  bell text, pops and the bout card. `fight.ts` (`createFight()`) runs a
+  fight: your Degen with fists against one of `FIGHT_BOTS` (`catalog.ts`:
+  Rookie Ray, Knuckles, The Mayor; skill, style, purse, level) in the
+  ring, a soft lock-on (forward is towards the opponent), hit-stop and a
+  camera punch on heavy hits, the hit figure's white flash, impact lines
+  and sparks at the contact, floating damage numbers (`.fight-dmg`), stars
+  on a knockdown, health bars that chip with a pale ghost draining behind
+  (`.fight-ghost`), the sounds
+  (`whoosh`, `punch`, `kick`, `fightBlock`, `parry`, `thud`, `fightKo`,
+  `bell`, `count` in `sound.ts`), the over-the-shoulder camera kept inside
+  the ropes, and it pays through `finishFight()` + `commit()` (a spar: XP
+  with a capped bonus per hit; a bout of three 90 s rounds, first to two:
+  the purse on a win, XP either way, a quit is a loss; knock-outs and
+  chains of three add XP). `walk.ts` wires it: the counter's prompt opens
+  the menu, a fight hides Degen and feeds `fightFrame()` (W/A/S/D move
+  relative to the opponent, click or F punch, right-click or G kick, Shift
+  block, Space dodge; touch: the stick and the four buttons; gamepad:
+  stick, X / Y, LB held, A, Start quits), Esc or Quit ends it with the
+  card, closing the card stands Degen up outside the ropes (`OUT`);
+  `.city.is-fighting` hides the walk HUD and `data-fight` makes the header
+  read "Fighting · <opponent>". The save (`tycoon.ts`, v8) keeps `fight`
+  (style, owned styles, wins, losses, knock-outs, best chain, bouts, spars,
+  each opponent's record), the ledger entry `fighting` and the counters
+  `bouts` / `fightWins` / `kos` / `chains`. New gameplay goes in the sim
+  first; looks in the clips and the view.
+- **Nothing in the city attacks you** (the owner's call): the rival crew
+  that patrolled the south bank was retired; only its look (`crewOutfit()`
+  in `crew.ts`) remains, worn by the Fight Club's opponents. Targets are
+  the dummies and the drones only, and there is no player health outside
+  the Fight Club's ring. Don't bring the crew back without the owner.
 
 ## City builder (3D build mode)
 
@@ -1082,8 +1125,8 @@ it and has been retired completely. Build only on what's here.
   unreachable. It reads "On / Off" up to 900px wide; up to 420px only the
   current side shows (a tap flips it) and City / Walk / Build are icons, so
   the mode header keeps the title.
-- PvP will only ever happen across the river (south bank); the city north of
-  the bridges stays a safe hangout.
+- PvP will only ever happen across the river (south bank), in the Fight
+  Club's ring; the city north of the bridges stays a safe hangout.
 
 ## Tests
 
@@ -1093,15 +1136,15 @@ it and has been retired completely. Build only on what's here.
   build: a failing test means no zip.
 - They cover the code that's free of the DOM and scene code: the street plan
   (`layout.ts`, `streetplan.ts`), downtown (`downtown.ts`), the traffic's
-  routes and lights (`routes.ts`), collision data, doors, the gun counter, the garage, the
-  race start line and the spawn (`solids.ts`), the plots (`src/data/plots.ts`), your car
+  routes and lights (`routes.ts`), collision data, doors, the gun counter, the garage
+  and the spawn (`solids.ts`), the plots (`src/data/plots.ts`), your car
   (`mycar.ts`), the driving rules (`drive-sim.ts`), target practice
   (`combat-sim.ts`), the economy (`tycoon.ts`, the market square in
-  `solids.ts`), the city's game (`catalog.ts`, `races.ts`, `missions.ts`
-  in `tests/game.test.ts`), Getting started and the save backup (`guide.ts`,
-  `backup.ts`), the airport and its timetable (`airfield.ts`) and
-  flying your own aircraft (`flight-sim.ts`, `myplane.ts`).
-  Modules that touch the DOM or `kit.ts` (canvas
+  `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
+  clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
+  the save backup (`guide.ts`, `backup.ts`), the airport and its timetable
+  (`airfield.ts`) and flying your own aircraft (`flight-sim.ts`,
+  `myplane.ts`). Modules that touch the DOM or `kit.ts` (canvas
   textures) can't load in Node; keep data a test needs in the DOM-free
   files.
 - When you change a rule or move something in the city, run the tests and

@@ -34,6 +34,7 @@ import {
   toon,
 } from './kit';
 import { rifleGeometry } from './guns';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { parkedCars } from './cars';
 import { PLAYER, SOLDIER, attentionPose, createCrowd, createDegen, dancePose, lookPose, marchPose, newPose, type Outfit } from './character';
 import { walker } from './life';
@@ -704,18 +705,19 @@ function emporium(scene: THREE.Scene, ctx: LandmarkCtx, crowd: Idle[]) {
     tex.generateMipmaps = false;
     const c = (tex.image as HTMLCanvasElement).getContext('2d')!;
     const mat = lit(new THREE.MeshBasicMaterial({ map: tex }), 1, 1.1);
-    wallFloors.forEach((i, j) => {
+    // Every floor's panel in one mesh (one draw, one occluder), each with its band of the texture
+    const panels = wallFloors.map((i, j) => {
       const geo = new THREE.PlaneGeometry(HS * 2, FH - 0.1);
       const uv = geo.attributes.uv as THREE.BufferAttribute;
       for (let v = 0; v < uv.count; v++) uv.setY(v, (j + uv.getY(v)) / wallFloors.length);
-      const m = new THREE.Mesh(geo, mat);
       const th = rot(i);
       const [x, z] = loc(th, 0, HS + 0.01);
-      m.position.set(x, y0 + i * FH + 0.1 + (FH - 0.1) / 2, z);
-      m.rotation.y = th;
-      occlude(m, tex);
-      g.add(fx(m));
+      return geo.rotateY(th).translate(x, y0 + i * FH + 0.1 + (FH - 0.1) / 2, z);
     });
+    const wall = new THREE.Mesh(mergeGeometries(panels, false)!, mat);
+    for (const p of panels) p.dispose();
+    occlude(wall, tex);
+    g.add(fx(wall));
     let show = 0;
     let frameN = 0;
     let next = 0;
@@ -968,7 +970,7 @@ function shop(scene: THREE.Scene, ctx: LandmarkCtx, crowd: Idle[]) {
       c.fillRect(i * 32, 0, 32, 64);
     }
   });
-  const awning = new THREE.Mesh(new THREE.BoxGeometry(6.3, 0.05, 0.95), [toon('#c22'), toon('#c22'), new THREE.MeshToonMaterial({ map: stripes }), toon('#c22'), new THREE.MeshToonMaterial({ map: stripes }), toon('#c22')]);
+  const awning = new THREE.Mesh(sidesBox(6.3, 0.05, 0.95, [2, 4]), [new THREE.MeshToonMaterial({ map: stripes }), toon('#c22')]);
   awning.position.set(26.1, S + 1.72, 17.2);
   awning.rotation.x = 0.42;
   awning.castShadow = true;
@@ -987,7 +989,7 @@ function shop(scene: THREE.Scene, ctx: LandmarkCtx, crowd: Idle[]) {
     c.fillText('001', 128, 140);
   });
   const bagMat = new THREE.MeshToonMaterial({ map: bagTex });
-  const bag = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.7, 1.0), [bagMat, bagMat, toon('#e8e4f8'), toon('#e8e4f8'), bagMat, bagMat]);
+  const bag = new THREE.Mesh(sidesBox(1.4, 1.7, 1.0), [bagMat, toon('#e8e4f8')]);
   bag.position.set(28.3, S + 3.85, 13.9);
   bag.rotation.y = -0.25;
   bag.castShadow = true;
@@ -1035,7 +1037,7 @@ function shop(scene: THREE.Scene, ctx: LandmarkCtx, crowd: Idle[]) {
     c.fillText('SOON', 128, 176);
   });
   const aMat = new THREE.MeshToonMaterial({ map: aTex });
-  const aframe = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.85, 0.05), [toon('#14102a'), toon('#14102a'), toon('#14102a'), toon('#14102a'), aMat, aMat]);
+  const aframe = new THREE.Mesh(sidesBox(0.7, 0.85, 0.05, [4, 5]), [aMat, toon('#14102a')]);
   aframe.position.set(24.6, S + 0.42, 18.3);
   aframe.rotation.x = -0.15;
   aframe.castShadow = true;
@@ -1154,7 +1156,7 @@ function workshop(scene: THREE.Scene, ctx: LandmarkCtx) {
   ] as const) {
     const tex = new THREE.MeshToonMaterial({ map: stencil(label) });
     const plain = toon('#8a5a2b');
-    const crate = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.8, 0.9), [tex, tex, plain, plain, tex, tex]);
+    const crate = new THREE.Mesh(sidesBox(1.4, 0.8, 0.9), [tex, plain]);
     crate.position.set(x + 0.7, S + 0.4, 28.95);
     crate.castShadow = crate.receiveShadow = true;
     g.add(crate);

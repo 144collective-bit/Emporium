@@ -57,7 +57,7 @@ test('steps finish in order, pay once, and the beam follows the step', () => {
   );
   hideGuide(s, false);
   s.counters.drones = 3;
-  s.counters.races = 1;
+  s.counters.kartRaces = 1;
   s.backup = NOW;
   advanceGuide(s);
   assert.ok(guideDone(s));

@@ -16,7 +16,7 @@
  */
 import { DOORS, GARAGE_SITE, RACK, STALL_SPOT } from './solids';
 import { design } from './layout';
-import { RACE_SITE } from './races';
+import { HUT_DOOR } from './kartcircuit';
 import { GUIDE_STEPS, addXp, book, type TycoonSave } from './tycoon';
 
 type At = { x: number; z: number };
@@ -99,11 +99,11 @@ export const GUIDE: GuideStep[] = [
   },
   {
     id: 'race',
-    name: 'Run a street race',
-    hint: 'Drive your car to the start line on the south bank avenue and finish a race from the board.',
-    at: RACE_SITE.spot,
-    go: { walk: facing(RACE_SITE.spot, RACE_SITE.board) },
-    met: (s) => s.counters.races >= 1,
+    name: 'Race at the kart park',
+    hint: "Walk in at the kart park's gate, north-east past the Parkway, and finish a race from the kart hut.",
+    at: HUT_DOOR,
+    go: { walk: facing({ x: HUT_DOOR.x, z: HUT_DOOR.z + 1.5 }, HUT_DOOR) },
+    met: (s) => s.counters.kartRaces >= 1,
     reward: 400,
     xp: 80,
   },
