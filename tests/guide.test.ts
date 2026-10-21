@@ -132,7 +132,7 @@ test('a backup reads back as it was', () => {
   s.dorras = 4321;
   addXp(s, 900);
   s.backup = NOW;
-  const text = JSON.stringify(packBackup(store({ [TYCOON_KEY]: JSON.stringify(s), 'degen-city-ghosts-v1': '{"a":{"lap":30}}' }), NOW));
+  const text = JSON.stringify(packBackup(store({ [TYCOON_KEY]: JSON.stringify(s), 'degen-city-ghosts-v2': '{"a":{"lap":30}}' }), NOW));
   const r = readBackup(text, NOW + 5000);
   assert.ok(r.ok);
   if (!r.ok) return;
@@ -140,12 +140,12 @@ test('a backup reads back as it was', () => {
   assert.equal(r.level, level(s));
   assert.equal(r.at, NOW);
   const writes = Object.fromEntries(r.writes);
-  assert.deepEqual(Object.keys(writes).sort(), [TYCOON_KEY, 'degen-city-ghosts-v1'].sort());
+  assert.deepEqual(Object.keys(writes).sort(), [TYCOON_KEY, 'degen-city-ghosts-v2'].sort());
   const back = cleanSave(JSON.parse(writes[TYCOON_KEY]), NOW + 5000);
   assert.equal(back.dorras, 4321);
   assert.equal(back.xp, s.xp);
   assert.equal(back.backup, NOW);
-  assert.deepEqual(JSON.parse(writes['degen-city-ghosts-v1']), { a: { lap: 30 } });
+  assert.deepEqual(JSON.parse(writes['degen-city-ghosts-v2']), { a: { lap: 30 } });
 });
 
 test('anything that is not a backup is turned away, and a bad save is cleaned', () => {

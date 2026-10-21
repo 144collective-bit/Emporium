@@ -26,7 +26,7 @@ export const BACKUP_KEYS = [
   'degen-city-look-v1',
   'degen-city-combat-v1',
   'degen-city-walk-v1',
-  'degen-city-ghosts-v1',
+  'degen-city-ghosts-v2',
 ] as const;
 export type BackupKey = (typeof BACKUP_KEYS)[number];
 export const BACKUP_KIND = 'sector7-save';

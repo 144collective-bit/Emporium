@@ -1,15 +1,16 @@
 /*
- * The kart park rebuild, Phase 1 (docs/kart-plan.md): the new circuit as
- * data. One closed loop with no junctions, raced forward and in reverse,
- * narrower than the old network (TRACK_W 5.6, six karts abreast), with
- * kerbs and grass-and-gravel run-off either side and nothing solid on or
- * near it. Free of the DOM and of scene code, tested in
+ * The kart park's circuit as data (docs/kart-plan.md): one closed loop with
+ * no junctions, raced forward and in reverse, 4.4 wide (four or five karts
+ * abreast), with kerbs and grass-and-gravel run-off either side and nothing
+ * solid on or near it. Free of the DOM and of scene code, tested in
  * tests/kartcircuit.test.ts.
  *
- * It's built beside the old track network (kartpark.ts) so the park keeps
- * running until the racing rules (Phase 2) and the drawing (Phase 3) move
- * onto it; it shares the park's site, its local numbers (u east, v south)
- * and its sampling (`sampleLine()`, `frame()`, `locate()`).
+ * Built in Phase 1 at 589 tiles a lap and 5.6 wide; scaled down to 60%
+ * afterwards (the owner's call: faster paced and more lifelike), so a lap is
+ * about 350 tiles (some 630 m), the corners come quicker and the park's
+ * fence pulled in round it. It uses the park's site, its local numbers (u
+ * east, v south) and its sampling (`sampleLine()`, `frame()`, `locate()`)
+ * from kartpark.ts.
  *
  * Raced forward, the loop goes clockwise, twelve corners, lefts and rights:
  * - the start/finish straight west along the south, the grandstand on its
@@ -29,12 +30,12 @@
  */
 import { F, GATE, KART_PARK, KART_W, STEP, at, frame, heightAt, locate, sampleLine, toLocal, toWorld, type CPt, type Frame, type Line, type Pt } from './kartpark';
 
-/** The track's width and half width (six karts abreast) */
-export const TRACK_W = 5.6;
+/** The track's width and half width (four or five karts abreast) */
+export const TRACK_W = 4.4;
 export const TRACK_HALF = TRACK_W / 2;
 /** The red-and-white kerbs either side, and the grass and gravel run-off beyond them */
-export const KERB = 0.6;
-export const RUNOFF = 4.6;
+export const KERB = 0.5;
+export const RUNOFF = 3;
 /** From the centre line to the run-off's outer edge: nothing solid stands closer */
 export const CLEAR = TRACK_HALF + KERB + RUNOFF;
 /** The flyover's deck over the diagonal it crosses */
@@ -43,12 +44,12 @@ export const FLY_H = 2.6;
 export const BANK = 0.28;
 export const BANK_H = BANK * TRACK_HALF;
 /** The hill's crest, and the jump's lip */
-export const HILL_H = 3;
-export const JUMP_H = 0.9;
+export const HILL_H = 2;
+export const JUMP_H = 0.7;
 /** The steepest a ramp may climb (height per tile) */
 export const MAX_SLOPE = 0.3;
 /** The tightest a corner may be (radius in tiles) */
-export const MIN_RADIUS = 6;
+export const MIN_RADIUS = 4;
 
 export type Tag = 'line' | 'jump' | 'pit-in' | 'pit-out' | `turn-${number}`;
 type Opt = Omit<CPt, 'u' | 'v'> & { tag?: Tag; pad?: boolean };
@@ -61,6 +62,9 @@ const P = (u: number, v: number, o: Opt = {}): CirPt => ({ u, v, ...o });
 /** Banked: right-handers forward, so the outside (left) edge is up (roll negative: the right side down) */
 const banked = (u: number, v: number, o: Opt = {}): CirPt => P(u, v, { roll: -BANK, h: BANK_H, f: F.bank, ...o });
 
+/** The start/finish straight's line (local v) */
+export const STRAIGHT_V = 67;
+
 /**
  * The centre line raced forward (clockwise on the map), starting on the start/finish straight.
  * Corners are numbered in the forward direction (`turn-n` tags at their apexes), for the boards
@@ -68,86 +72,87 @@ const banked = (u: number, v: number, o: Opt = {}): CirPt => P(u, v, { roll: -BA
  */
 const PTS: CirPt[] = [
   // The start/finish straight, heading west (the line is at START_U)
-  P(100, 115, { tag: 'line' }),
-  P(60, 115),
-  P(32, 115),
+  P(61.5, STRAIGHT_V, { tag: 'line' }),
+  P(30, STRAIGHT_V, { pad: true }),
+  P(20.7, STRAIGHT_V),
   // Turn 1: right, up the west side
-  P(20, 112.5),
-  P(15.5, 104, { tag: 'turn-1' }),
+  P(13.5, 65.5),
+  P(10.8, 60.4, { tag: 'turn-1' }),
   // Turns 2 and 3: the west esses, out towards the fence and back
-  P(15, 94, { pad: true }),
-  P(13, 85.5),
-  P(9.5, 77, { tag: 'turn-2' }),
-  P(9.5, 67),
-  P(13, 59, { tag: 'turn-3' }),
-  P(15, 50),
-  P(15.5, 43),
+  P(10.5, 54.4, { pad: true }),
+  P(9.3, 49.3),
+  P(7.2, 44.2, { tag: 'turn-2' }),
+  P(7.2, 38.2),
+  P(9.3, 33.4, { tag: 'turn-3' }),
+  P(10.5, 28),
+  P(10.8, 23.8),
   // Turn 4: the banked north-west sweeper
-  banked(16.5, 34),
-  banked(21.5, 23, { tag: 'turn-4' }),
-  banked(31, 17),
-  // Turns 5 and 6: the hill, dipping south over its crest and back, down into the tunnel, over the jump
-  P(40, 16, { pad: true }),
-  P(48, 17.5, { h: 0.8 }),
-  P(56, 22.5, { h: 2, tag: 'turn-5' }),
-  P(64, 24.5, { h: HILL_H }),
-  P(72, 22, { h: 2 }),
-  P(79, 17.5, { h: 0.8, tag: 'turn-6' }),
-  P(86, 16, { f: F.tunnel }),
-  P(93, 16.2, { pad: true, f: F.tunnel }),
-  P(100, 16.6, { h: JUMP_H, tag: 'jump' }),
-  P(107, 17.6),
+  banked(11.4, 18.4),
+  banked(14.4, 11.8, { tag: 'turn-4' }),
+  banked(20.1, 8.2),
+  // Turns 5 and 6: the hill, dipping south over its crest and back (one long climb and one long drop, the tunnel on its
+  // lower slope), then the jump, far enough on that a kart flying off it either way lands clear of the tunnel
+  P(25.5, 7.6, { pad: true }),
+  P(30.3, 8.5, { glide: true }),
+  P(35.1, 10.8, { glide: true, tag: 'turn-5' }),
+  P(39.9, 11.8, { h: HILL_H }),
+  P(44.7, 10.5, { glide: true, f: F.tunnel }),
+  P(48.9, 8.5, { glide: true, tag: 'turn-6', f: F.tunnel }),
+  P(53.1, 7.2),
+  P(57.3, 7.1),
+  P(61.5, 7.4, { h: JUMP_H, tag: 'jump' }),
+  P(65.7, 8.2),
   // Turn 7: the banked north-east sweeper, round to the south
-  banked(116, 21),
-  banked(123, 30, { tag: 'turn-7' }),
-  banked(125, 41),
-  // Turn 8: the hairpin, right round and back north (an arc of radius 8.5 round (116.5, 50))
-  P(125, 50),
-  P(123.9, 54.3),
-  P(120.8, 57.4),
-  P(116.5, 58.5, { tag: 'turn-8' }),
-  P(112.2, 57.4),
-  P(109.1, 54.3),
-  P(108, 50),
-  // Turns 9 and 10: a long left-hander (radius 11 round (97, 44.5)), back south into the infield
-  P(108, 44.5),
-  P(104.8, 36.7, { tag: 'turn-9' }),
-  P(97, 33.5),
-  P(89.2, 36.7, { tag: 'turn-10' }),
-  P(86, 44.5),
+  banked(71.1, 10.6),
+  banked(75.3, 16, { tag: 'turn-7' }),
+  banked(76.5, 22.6),
+  // Turn 8: the hairpin, right round and back north (an arc of radius 5.1 round (71.4, 28))
+  P(76.5, 28),
+  P(75.8, 30.6),
+  P(74, 32.4),
+  P(71.4, 33.1, { tag: 'turn-8' }),
+  P(68.8, 32.4),
+  P(67, 30.6),
+  P(66.3, 28),
+  // Turns 9 and 10: a long left-hander (radius 6.6 round (59.7, 24.7)), back south into the infield
+  P(66.3, 24.7),
+  P(64.4, 20.7, { tag: 'turn-9' }),
+  P(59.7, 18.9),
+  P(55, 20.7, { tag: 'turn-10' }),
+  P(53.1, 24.7),
   // Down the middle at ground level, under the flyover
-  P(84, 55, { pad: true }),
-  P(79.6, 65),
-  P(76.3, 75.3),
-  P(73, 84.5),
+  P(51.9, 31, { pad: true }),
+  P(49.3, 37),
+  P(47.3, 43.2),
+  P(45.3, 48.7),
   // Turn 11: the west loop, a long right-hander in the infield
-  P(64, 90),
-  P(54, 90),
-  P(44.5, 88.5),
-  P(37.5, 82),
-  P(36.5, 72, { tag: 'turn-11' }),
-  P(40.5, 62.5),
-  P(48.5, 57),
-  // The flyover: up off the loop, over the run below, down to the south-east
-  P(57, 58.3, { pad: true }),
-  P(63.5, 63.6, { h: FLY_H / 2, f: F.deck }),
-  P(69.5, 68.8, { h: FLY_H, f: F.deck }),
-  P(76.3, 75.3, { h: FLY_H, f: F.deck }),
-  P(83, 82, { h: FLY_H, f: F.deck }),
-  P(89.5, 87.5, { h: FLY_H / 2, f: F.deck }),
-  P(97, 92.3),
-  // Turn 12: the tight south-east right-hander onto the straight (an arc of radius 9 round (104, 106))
-  P(103, 95.5),
-  P(108.6, 98.3),
-  P(111.8, 101.5),
-  P(113, 106, { tag: 'turn-12' }),
-  P(111.8, 110.5),
-  P(108.5, 113.8),
-  P(104, 115),
+  P(39.9, 52),
+  P(33.9, 52),
+  P(28.2, 51.1),
+  P(24, 47.2),
+  P(23.4, 41.2, { tag: 'turn-11' }),
+  P(25.8, 35.5),
+  P(30.6, 32.2),
+  // The flyover: one climb off the loop to the deck, over the run below, one drop into Turn 12
+  P(35.7, 33, { glide: true, f: F.deck }),
+  P(39.6, 36.2, { glide: true, f: F.deck }),
+  P(43.2, 39.3, { h: FLY_H, f: F.deck }),
+  P(47.3, 43.2, { h: FLY_H, f: F.deck }),
+  P(51.3, 47.2, { h: FLY_H, f: F.deck }),
+  P(55.2, 50.5, { glide: true, f: F.deck }),
+  P(59.7, 53.4, { glide: true }),
+  // Turn 12: the tight south-east right-hander onto the straight (an arc of radius 5.4 round (63.9, 61.6))
+  P(63.3, 55.3),
+  P(66.7, 57),
+  P(68.6, 58.9),
+  P(69.3, 61.6, { tag: 'turn-12' }),
+  P(68.6, 64.3),
+  P(66.6, 66.3),
+  P(63.9, STRAIGHT_V),
 ];
 
 /** The start / finish line crosses the straight here (local u) */
-export const START_U = 84;
+export const START_U = 48;
 
 /* ---------- The two courses: the circuit forward and in reverse ---------- */
 
@@ -190,7 +195,7 @@ function makeCourse(id: CourseId): Course {
   for (let i = 0; i < n; i++) {
     const [u0, v0] = toLocal([line.x[i], line.z[i]]);
     const [u1] = toLocal([line.x[(i + 1) % n], line.z[(i + 1) % n]]);
-    if (v0 > 105 && ((u0 >= START_U && u1 < START_U) || (u0 <= START_U && u1 > START_U))) {
+    if (v0 > STRAIGHT_V - 2 && ((u0 >= START_U && u1 < START_U) || (u0 <= START_U && u1 > START_U))) {
       start = (i + (START_U - u0) / (u1 - u0)) * line.step;
       break;
     }
@@ -213,37 +218,37 @@ export const CIRCUIT = COURSES.circuit;
 export { KART_W, GATE };
 /** How many race in a grid, and the grid's two columns either side of the centre line */
 export const GRID = 8;
-export const GRID_LATERAL = 1.3;
+export const GRID_LATERAL = 1;
 /** The grid: on the straight behind the line, two abreast and staggered; slot 0 is pole */
 export function gridSlots(c: Course): { s: number; lateral: number }[] {
-  return Array.from({ length: GRID }, (_, i) => ({ s: c.start - 2.6 - Math.floor(i / 2) * 3.2 - (i % 2) * 1.4, lateral: (i % 2 ? -1 : 1) * GRID_LATERAL }));
+  return Array.from({ length: GRID }, (_, i) => ({ s: c.start - 2 - Math.floor(i / 2) * 2.6 - (i % 2) * 1.2, lateral: (i % 2 ? -1 : 1) * GRID_LATERAL }));
 }
 
 /* ---------- The pits, the hut, the garages, the grandstand, the gate path ---------- */
 
 /** The pit lane's half width */
-export const PIT_HALF = 1.5;
+export const PIT_HALF = 1.2;
 /**
  * The pit lane, forward: off the straight before the line (the east end), west along the garages
  * beyond the run-off, back on after Turn 1's approach (the west end). Coned off during a race.
  */
-const PIT_PTS: CirPt[] = [P(101, 116.4, { tag: 'pit-in' }), P(97, 119.5), P(92.5, 124.4), P(86, 125), P(66, 125), P(46, 125), P(40.5, 124.4), P(36, 119.5), P(31, 116.2, { tag: 'pit-out' })];
+const PIT_PTS: CirPt[] = [P(61, 67.7, { tag: 'pit-in' }), P(58.6, 69.6), P(56.2, 73.6), P(52.5, 74.5), P(40, 74.5), P(28, 74.5), P(24.6, 73.6), P(22.2, 69.6), P(19.6, 67.6, { tag: 'pit-out' })];
 export const PIT_LANE: Line = sampleLine(PIT_PTS, STEP, false);
 /** Where the pit lane runs straight along the garages (local u), clear of the run-off */
-export const PIT_STRAIGHT = { u0: 43, u1: 90, v: 125 } as const;
+export const PIT_STRAIGHT = { u0: 27, u1: 54, v: 74.5 } as const;
 
 /** Where things stand on the site (local u, v; boxes u0, v0, u1, v1) */
 export const SITE = {
   /** The garages along the pit lane's south side, a bay for each kart; the big screen stands on their roof */
-  garages: { u0: 44, v0: 127.2, u1: 90, v1: 133.5, h: 3.4 },
+  garages: { u0: 27.5, v0: 76.4, u1: 54, v1: 81, h: 3 },
   /** The kart hut at the pit lane's west end, its door on the south side towards the gate path */
-  hut: { u0: 30, v0: 127.2, u1: 42, v1: 134, h: 3.2, door: [36, 134.7] as Pt },
+  hut: { u0: 17, v0: 76.4, u1: 25.5, v1: 81.5, h: 3, door: [21.2, 82.2] as Pt },
   /** The grandstand in the infield, facing south over the straight */
-  stand: { u0: 50, v0: 100, u1: 92, v1: 106, h: 4.5 },
+  stand: { u0: 30.5, v0: 58.1, u1: 53.5, v1: 61, h: 3 },
   /** The big screen on the garages' roof, facing north over the straight */
-  screen: { u: 67, v: 130, w: 14, h: 4.5 },
+  screen: { u: 41, v: 78.7, w: 9, h: 3 },
   /** The path from the gate (kartpark.ts GATE, where it's always been, at the slip road) to the hut's door */
-  path: { v: 137.2, u0: 6, u1: 36, half: 1.2 },
+  path: { v: 84, u0: 6, u1: 21.2, half: 1.1 },
 } as const;
 /** The bays: where each kart waits in front of its garage, on the pit lane's south edge */
 export const BAYS: Pt[] = Array.from({ length: GRID }, (_, i) => {
@@ -287,7 +292,7 @@ export const CIRCUIT_SOLIDS: Box[] = (() => {
 export const GANTRY = (() => {
   const f = frame(CIRCUIT, CIRCUIT.start);
   const reach = CLEAR + 0.5;
-  return { x: f.x, z: f.z, posts: [1, -1].map((side) => ({ x: f.x + f.nx * reach * side, z: f.z + f.nz * reach * side })), h: 5.5, half: reach };
+  return { x: f.x, z: f.z, posts: [1, -1].map((side) => ({ x: f.x + f.nx * reach * side, z: f.z + f.nz * reach * side })), h: 4.4, half: reach };
 })();
 
 /**
@@ -301,7 +306,7 @@ export const SUPPORTS: { x: number; z: number; h: number }[] = (() => {
     for (let i = 0; i < c.x.length; i++) if (c.y[i] < 0.5 && Math.hypot(c.x[i] - x, c.z[i] - z) < CLEAR + 0.3) return true;
     return false;
   };
-  for (let s = 0; s < c.L; s += 6) {
+  for (let s = 0; s < c.L; s += 4) {
     const f = frame(c, s);
     if (!(f.flags & F.deck) || f.y < 0.8) continue;
     for (const side of [1, -1]) {

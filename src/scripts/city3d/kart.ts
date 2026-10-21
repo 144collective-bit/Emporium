@@ -87,7 +87,9 @@ const placeText = (p: number) => (p === 1 ? '1st!' : p === 2 ? '2nd' : p === 3 ?
 /* ---------- Ghosts (time trials) ---------- */
 
 /** Your best laps' ghosts, in the browser: `{ [recordKey(course, cls)]: Ghost }` */
-const GHOST_KEY = 'degen-city-ghosts-v1';
+const GHOST_KEY = 'degen-city-ghosts-v2';
+/** The ghosts recorded on the full-size circuit (before it was scaled down): their paths don't fit the track now */
+const OLD_GHOST_KEY = 'degen-city-ghosts-v1';
 /** Numbers per sample: x, y, z, yaw, roll (the banking), steer, s (along the main line) */
 const G_N = 7;
 /** Seconds between samples: every third sim tick */
@@ -119,6 +121,7 @@ function cleanGhost(v: unknown): Ghost | null {
 }
 function loadGhosts(): Record<string, unknown> {
   try {
+    if (localStorage.getItem(OLD_GHOST_KEY) !== null) localStorage.removeItem(OLD_GHOST_KEY);
     const raw = localStorage.getItem(GHOST_KEY);
     const o = raw ? JSON.parse(raw) : null;
     return o && typeof o === 'object' && !Array.isArray(o) ? o : {};

@@ -222,8 +222,8 @@ export const SERIES_PRIZES: Record<'rookie' | 'pro' | 'neon', number[]> = { rook
 export const CHALLENGE_PRIZE = 2500;
 /** The par lap per course and class (seconds): the sim's own driver (kart-sim.ts `auto`) in the Pocket Rocket, rounded up (tested) */
 export const PAR_LAPS: Record<string, Record<ClassId, number>> = {
-  circuit: { street: 44, sport: 38, neon: 35 },
-  'circuit-reverse': { street: 45, sport: 38, neon: 35 },
+  circuit: { street: 34, sport: 29.5, neon: 27 },
+  'circuit-reverse': { street: 34, sport: 29, neon: 26.5 },
 };
 
 /* ---------- Guns (the Armoury) ---------- */
