@@ -10,7 +10,7 @@
  * - Everything new costs Dorras and needs a level. Upgrades ("mods") come
  *   in three levels each and cost more on dearer things; `applyGunMods()`
  *   turns a gun's mods into its rules for the combat sim.
- * - XP comes from playing: sales, contracts, races, missions, takedowns.
+ * - XP comes from playing: sales, contracts, kart races, missions, takedowns.
  *   Nothing here is bought with real money or tied to the token.
  */
 import type { BuildingType } from '../../data/plots';
@@ -69,11 +69,6 @@ export const XP = {
   /** Per dummy, drone and crew member knocked down */
   dummy: 4,
   drone: 8,
-  /** Finishing a race, and beating its par (on top) */
-  raceFinish: 120,
-  racePar: 180,
-  /** A new best time (on top) */
-  raceRecord: 60,
   /** Finishing a kart race; a podium and a win (on top); a time trial's new best */
   kartFinish: 100,
   kartPodium: 80,

@@ -118,7 +118,8 @@ fists' finishes (like gun skins) can come later.
 
 ## The Fight Club (the place)
 
-On the south bank, in the PvP zone, east of the garage and the race board
+On the south bank, in the PvP zone, east of the garage (the street races'
+board that once stood there was retired)
 (the exact lot is designed with the owner in Phase 1; the plan's junkyard
 / skate park is a separate place for later). A cartoon boxing gym in
 Degen's style: a boxing ring (ropes, corner posts, a canvas with the

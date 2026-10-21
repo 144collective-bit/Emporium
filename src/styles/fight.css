@@ -139,7 +139,7 @@
    bars facing each other with the names, your stamina under yours, the round and its clock in the
    middle (a spar says "Spar") with the rounds won as pips, a chain pill and a Blocking tag under
    your bars, the knockdown count low in the middle and Quit top right. The bell's text reuses the
-   races' big digits (.race-count), the bout card the races' card (.race-result). On touch screens
+   shared big digits (.race-count, cards.css), the bout card the shared card (.race-result). On touch screens
    the Punch / Kick / Block / Dodge buttons take the Fire, Aim and Jump spots bottom right, clear
    of the stick and the door prompt. Nothing moves under reduced motion. */
 
@@ -213,7 +213,7 @@
   overscroll-behavior: contain;
   scrollbar-width: thin;
 }
-/* The races' pieces are reused inside: their areas belong to the races' own grid */
+/* The shared cards' pieces (cards.css) are reused inside: their areas belong to their own grid */
 .fight-menu .race-blurb,
 .fight-menu .race-meta,
 .fight-menu .race-note {
@@ -754,7 +754,7 @@
   color: #fff;
   text-shadow: 0 1px 0 #05050a, 0 0 10px #000;
 }
-/* The bell's text: the races' big digits in the stack (so sized by the width too: "Round 1" fits a
+/* The bell's text: the shared big digits (cards.css) in the stack (so sized by the width too: "Round 1" fits a
    narrow phone), K.O. in the hot end of the gradient */
 .fight-count {
   position: static;
@@ -825,7 +825,7 @@
   100% { opacity: 0; transform: translateY(-10px); }
 }
 
-/* ---------- The bout card: the races' card, a column whose body scrolls so Done stays in reach ---------- */
+/* ---------- The bout card: the shared card (cards.css), a column whose body scrolls so Done stays in reach ---------- */
 .fight-result {
   display: flex;
   flex-direction: column;

@@ -366,16 +366,12 @@ export function createSound() {
           [660, 990].forEach((f, i) => tone(t + i * 0.12, 'triangle', f, f, 0.18, 0.22));
           tone(t + 0.26, 'triangle', 1320, 1320, 0.2, 0.4);
           break;
-        // Races: the countdown beeps, the GO, each checkpoint, the finish
+        // Kart races: the countdown beeps, the GO, the finish
         case 'countdown':
           tone(t, 'square', 440, 440, 0.18, 0.18);
           break;
         case 'go':
           tone(t, 'square', 880, 880, 0.22, 0.42);
-          break;
-        case 'checkpoint':
-          tone(t, 'triangle', 1174, 1174, 0.16, 0.1);
-          tone(t + 0.07, 'triangle', 1760, 1760, 0.16, 0.16);
           break;
         case 'finish':
           [784, 1046, 1318, 1568, 2093].forEach((f, i) => tone(t + i * 0.08, 'triangle', f, f, 0.18, 0.28));

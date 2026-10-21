@@ -25,9 +25,8 @@
  *   to a stall or shop yourself pays a small bonus.
  * - Phase 5 (the city's game): XP and levels, cars, guns and clothes bought
  *   and upgraded with Dorras, district plots as Dorras property, levels for
- *   the places you run, race records, missions and the counters behind
- *   them (catalog.ts has the prices and curves; races.ts and missions.ts
- *   the courses and the board).
+ *   the places you run, missions and the counters behind them (catalog.ts
+ *   has the prices and curves; missions.ts the board).
  */
 import { cleanDesign, type Design } from '../../data/plots';
 import { DOORS, GARAGE_SITE, LOT_SITE, STALL_SPOT, UNIT_SITE } from './solids';
@@ -253,7 +252,6 @@ export const ENTRIES = {
   contracts: { name: 'Contracts', in: true },
   soldBack: { name: 'Sold to the market', in: true },
   borrowed: { name: 'Loans', in: true },
-  races: { name: 'Race prizes', in: true },
   karting: { name: 'Kart prizes', in: true },
   missions: { name: 'Missions', in: true },
   soldLand: { name: 'Plots sold', in: true },
@@ -410,8 +408,6 @@ export interface TycoonSave {
   plots: Record<string, OwnedPlot>;
   /** The level of each place you run (1 where unset) */
   levels: Partial<Record<PlaceId, number>>;
-  /** Best time (seconds) for each race you've finished */
-  races: Record<string, number>;
   /** The kart park: your pick, the karts you've bought and their mods, your records and boards per course and class, a series on the go, trophies */
   karts: KartSave;
   fight: FightSave;
@@ -445,7 +441,6 @@ export function newSave(now: number): TycoonSave {
     wardrobe: [],
     plots: {},
     levels: {},
-    races: {},
     karts: emptyKarts(),
     fight: emptyFight(),
     missions: { active: [], done: [] },
@@ -556,7 +551,6 @@ export function cleanSave(raw: unknown, now: number): TycoonSave {
     wardrobe: [],
     plots: {},
     levels,
-    races: {},
     karts: emptyKarts(),
     fight: emptyFight(),
     missions: { active: [], done: [] },
@@ -1861,7 +1855,6 @@ function cleanGame(s: TycoonSave, o: Record<string, unknown>, now: number) {
     const design = r.design ? cleanDesign(r.design) : null;
     s.plots[id] = { design, paid: Math.round(num(r.paid, 0, 1e9, PLOT_DORRAS)), at: num(r.at, 0, now, now) };
   }
-  for (const [id, t] of Object.entries(obj(o.races))) if (/^[a-z0-9-]{1,32}$/.test(id) && typeof t === 'number' && Number.isFinite(t) && t > 0) s.races[id] = Math.round(t * 100) / 100;
   // The kart park (v6)
   const kt = obj(o.karts);
   s.karts.owned = [...new Set((Array.isArray(kt.owned) ? kt.owned : []).filter((id): id is KartId => PLAYER_KARTS.includes(id as KartId) && !STARTER_KARTS.includes(id as KartId)))];

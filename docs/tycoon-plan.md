@@ -54,7 +54,7 @@ store, X and Telegram are in the ☰ Menu.
 | Apartments | **Staff**: hire workers who raise a business's output | 3 (built) |
 | The Vault | **Bank and estate agent**: what you're worth, the ledger, loans, the district plots | 4 (built), 5 |
 | Garage | **Dealership and tuning**: the starter cars are free, premium cars and mods cost Dorras | 2 (built), 5 |
-| Start line (south bank) | **Street races** against the clock | 5 |
+| Start line (south bank) | ~~Street races against the clock~~ (built in 5, then retired: racing lives at the kart park only) | — |
 
 ## Build order
 
@@ -72,10 +72,10 @@ store, X and Telegram are in the ☰ Menu.
 5. **The city's game** (built, one batch, the owner's call): XP, levels and
    titles; the garage sells and tunes cars; the Armoury sells and upgrades
    guns; Drop 001 sells a premium wardrobe; the Vault's estate agent sells
-   the district plots; the places you run gain levels; street races on the
-   south bank (since retired); a mission board at the Signal tower; badges;
-   a cartoon rival crew on the south bank (since retired: nothing in the
-   city attacks you). See "Phase 5" below.
+   the district plots; the places you run gain levels; a mission board at
+   the Signal tower; badges. (Street races on the south bank and a cartoon
+   rival crew were built here and later retired: nothing in the city
+   attacks you.) See "Phase 5" below.
 6. **Later, with the server.** A shared market between players, south-bank
    security and raids.
 
@@ -200,13 +200,13 @@ before the next one starts.
 ## Phase 5: the city's game
 
 - **Rules:** `catalog.ts` (prices, levels, the XP curve, mods), `tycoon.ts`
-  (the save, v5, and every function that spends or earns), `races.ts`,
+  (the save, v5, and every function that spends or earns),
   `missions.ts`; all DOM-free and tested (`tests/game.test.ts`). Screens
   get at the save through `GameDeps` in `ui.ts` (`save()`, `commit()`,
   `toast()`, `sfx()`).
 - **XP and levels** (`xpForLevel`, `levelFor`, `titleFor`, 40 levels): XP
-  for every sale, contract, upgrade, purchase of property, takedown, race and
-  mission; badges (lifetime milestones) add more. The level pill in the mode
+  for every sale, contract, upgrade, purchase of property, takedown, kart
+  race and mission; badges (lifetime milestones) add more. The level pill in the mode
   header shows it; levels gate the premium catalog and the district plots.
 - **The starter tier is free** (the owner's call): the five original cars,
   the four original guns (still unlocked by score) and the original
@@ -228,10 +228,10 @@ before the next one starts.
 - **Levels for your places:** units, big lots and the Workshop go up to
   level 3 (`upgradePlace`): more room, more customers, faster work. The
   buildings show it.
-- **Street races** (`races.ts`): four courses of checkpoints on the roads
-  from the start line on the south bank avenue (in front of South 4), a
-  countdown, a prize scaled by par, best times kept, extra XP for par and
-  records.
+- **Street races: retired** (the owner's call). Four courses on the roads
+  from a start line on the south bank avenue were built here and later
+  taken out (the gantry, the board, the menu, the race missions and badges,
+  the saved times). Racing lives at the kart park only.
 - **Missions** (`missions.ts`): a board in tiers by level, up to three at
   once, progress counted from when you took one (the save's `counters`),
   claim for Dorras and XP. Badges land on their own.
