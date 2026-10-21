@@ -16,6 +16,8 @@ import { gunSpec, type Gun } from './guns';
 const GRIP = new THREE.Vector3(-0.012, -0.05, -0.025);
 /** The front hand doesn't stretch all the way: a slight bend at the elbow */
 const FRONT_REACH = ARM_REACH - 0.045;
+/** Both hands closed round the gun (the front one a little looser on the handguard) */
+const GUN_GRIP: [number, number] = [0.86, 0.72];
 /** Most he turns side-on (radians) */
 const MAX_TURN = 1.1;
 
@@ -77,4 +79,5 @@ export function holdGun(p: Pose, st: Stance, pivot: THREE.Object3D, gun: Gun, s:
   front.applyMatrix4(pivot.matrix);
   reachArm(p, 0, grip);
   reachArm(p, 1, front);
+  p.grip = GUN_GRIP;
 }

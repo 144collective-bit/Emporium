@@ -99,7 +99,32 @@ off by the owner before the next starts.
 
 ## Build order
 
-### Phase 1: the new body and head
+### Phase 1: the new body and head (built)
+
+What's in (for the owner's sign-off):
+
+- `skeleton.ts`: 34 bones (a three-bone spine, neck, collarbones, ankles,
+  toes, and per hand the index, the other three fingers together and the
+  thumb, two joints each), the old rig's frames kept so every caller works
+  unchanged, `poseSkeleton()` (spine and neck share the turns, collarbone
+  shrug over the shoulder, feet easing level, toes bending, `grip` closing
+  the hands) and `weigh()` (smooth weights across every joint).
+- `body.ts`: the brand-art balaclava (taller, flatter in front, nose ridge,
+  brow over the eye sockets, cheekbones, jaw and chin, the neck tube into
+  the collar, a knit rim round the eye opening; the head now sits on a
+  longer neck, the crown about 3% higher) and the hands with fingers.
+- `createDegen()` is one skinned body on those bones for you, other
+  players, the fitting room, drivers, fighters and the hologram: 3-5 draw
+  calls a figure instead of 15-17, about 13-15k triangles instead of
+  11-13k. The whole wardrobe rides it (same items, names, colours and save
+  values); the shoes ride the feet; bags and wings stay unbent on the
+  chest. Fists are the same hands closed; gun holds close both hands.
+- The first-person hands are the body's own, posed round the grip.
+- Not yet: the walk is still the old formula (Phase 2); the crowds keep
+  the rigid rig (Phase 5); two bone influences on phones wasn't needed
+  (few vertices take more than two).
+
+The plan as it was:
 
 - The skeleton and the skinned body, the brand-art head and neck tube,
   hands with fingers, feet with ankles and toes.

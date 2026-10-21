@@ -647,7 +647,7 @@ function createPreview(d: { reduced: boolean; low: boolean }): Preview {
   function dress(l: Look) {
     if (fig) {
       turn.remove(fig.g);
-      fig.g.traverse((m) => (m as THREE.Mesh).geometry?.dispose());
+      fig.dispose();
     }
     fig = createDegen(lookOutfit(l));
     fig.g.traverse((m) => ((m as THREE.Mesh).castShadow = false));

@@ -12,10 +12,15 @@
  * not to bloom.
  *
  * Two ways to build it:
- * - createDegen(): one figure as a hierarchy of meshes (the player, the
- *   rooftop hologram). Hands carry sockets for things to hold later.
- * - createCrowd(): many figures as instanced parts, a draw call per part
- *   whatever the head count (pedestrians, soldiers).
+ * - createDegen(): one figure, the skinned body on real bones
+ *   (skeleton.ts: a spine, neck, collarbones, ankles, toes and fingers),
+ *   with the brand-art head and hands with fingers (body.ts), everything
+ *   worn weighted to the bones so knees, elbows, shoulders, waist and neck
+ *   bend without seams (you, other players, the fitting room, drivers,
+ *   fighters and the rooftop hologram). Hands carry sockets for things held.
+ * - createCrowd(): many figures as instanced rigid parts on the simple rig,
+ *   a draw call per part whatever the head count (pedestrians, soldiers;
+ *   they move to the skinned body in the character plan's Phase 5).
  * Both are posed with the same Pose, from the pose helpers below.
  */
 import * as THREE from 'three';
@@ -24,6 +29,30 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { rifleGeometry } from './guns';
 import type { Look } from '../net/profile-data';
 import { canvasTex, lit, neon, toon } from './kit';
+import { EYE_Y as HERO_EYE_Y, handParts, headFront, headGeometry } from './body';
+import {
+  HIP_Y,
+  LEG_X,
+  SHOULDER_X,
+  SHOULDER_Y,
+  THIGH,
+  UPPER_ARM,
+  WRIST_Y,
+  WRIST_Z,
+  makeSkeleton,
+  newPose,
+  poseSkeleton,
+  weigh,
+  BONE_INDEX,
+  type BoneName,
+  type Influence,
+  type Joint,
+  type Limb,
+  type Pose,
+  type Region,
+} from './skeleton';
+
+export { ARM_REACH, HIP_HEIGHT, newPose, reachArm, shoulderTo, torsoFrame, type Limb, type Pose, type Wrist } from './skeleton';
 
 /* ---------- Outfits ---------- */
 
@@ -98,42 +127,21 @@ export const SOLDIER: Outfit = {
   rifle: 'right',
 };
 
-/* ---------- The rig ---------- */
+/* ---------- The crowd's rig ---------- */
 
-type Joint = 'pelvis' | 'torso' | 'head' | 'armL' | 'armR' | 'foreL' | 'foreR' | 'legL' | 'legR' | 'shinL' | 'shinR' | 'wristL' | 'wristR' | 'handL' | 'handR';
-
+/*
+ * Crowds (pedestrians, soldiers, the Fight Club's opponents' stand-ins) are
+ * still the rigid figure: 15 parts on this simple rig, each an instanced
+ * part. Single figures (createDegen) are the skinned body on skeleton.ts.
+ */
 export interface Rig {
   root: THREE.Object3D;
   hips: THREE.Object3D;
   j: Record<Joint, THREE.Object3D>;
 }
 
-/*
- * Proportions: about 1.25 tall to the crown at scale 1 (Degen's height in
- * the city comes from each caller's scale), about six and a half heads, a
- * touch more head than real life so the balaclava, shades and cap still
- * read from the street. Hips at 0.62, knees at 0.33, shoulders at 0.98.
- */
-const HIP_Y = 0.62;
-/** Hip height (for seating figures on benches) */
-export const HIP_HEIGHT = HIP_Y;
-/** Bones: the neck and shoulders in the chest's space, then the limbs */
+/** The crowd's head on the old, shorter neck (the skinned body's is `HEAD_Y`) */
 const NECK = 0.41;
-const SHOULDER_X = 0.158;
-const SHOULDER_Y = 0.36;
-const UPPER_ARM = 0.215;
-/** The middle of the palm in the forearm's space (the hand's centre) */
-const PALM_Y = 0.24;
-const PALM_Z = 0.006;
-/**
- * The wrist joint, in the forearm's space: at the palm, where the hand socket
- * was. The hand, the fist and the socket hang under it, so a wrist roll turns
- * the fist over and a bend tips it, and at zero nothing has moved.
- */
-const WRIST_Y = -PALM_Y - 0.01;
-const WRIST_Z = 0.015;
-const LEG_X = 0.08;
-const THIGH = 0.29;
 
 function makeRig(): Rig {
   const node = (parent: THREE.Object3D, x: number, y: number, z = 0) => {
@@ -185,52 +193,6 @@ function makeRig(): Rig {
 }
 
 /* ---------- Poses ---------- */
-
-export interface Limb {
-  /** Swing forward (radians); negative swings back */
-  fwd: number;
-  /** Away from the body, to the side */
-  out: number;
-  /** Elbow or knee bend */
-  bend: number;
-  /** Arms only: the upper arm turned about its own length (set by reachArm) */
-  twist?: number;
-  /** Arms only: the wrist, absent or zero for the hand straight on the forearm (fighting turns the fist) */
-  wrist?: Wrist;
-}
-/** A wrist: `roll` turns the hand about the forearm's length (positive brings the thumb inward on a forward arm, so the palm faces down), `bend` tips it forward at the wrist (negative back) */
-export interface Wrist {
-  roll: number;
-  bend: number;
-}
-export interface Pose {
-  bob: number;
-  lean: number;
-  twist: number;
-  /** Weight shift, a sideways tilt of the hips */
-  side: number;
-  headYaw: number;
-  headPitch: number;
-  arms: [Limb, Limb];
-  legs: [Limb, Limb];
-}
-
-export const newPose = (): Pose => ({
-  bob: 0,
-  lean: 0,
-  twist: 0,
-  side: 0,
-  headYaw: 0,
-  headPitch: 0,
-  arms: [
-    { fwd: 0, out: 0.08, bend: 0.15 },
-    { fwd: 0, out: 0.08, bend: 0.15 },
-  ],
-  legs: [
-    { fwd: 0, out: 0.02, bend: 0.04 },
-    { fwd: 0, out: 0.02, bend: 0.04 },
-  ],
-});
 
 function applyPose(r: Rig, p: Pose) {
   r.hips.position.y = HIP_Y + p.bob;
@@ -387,66 +349,6 @@ export function dancePose(p: Pose, t: number) {
   set(p.legs[1], 0.1 + Math.max(0, -Math.sin(b)) * 0.4, 0.12, 0.25 + beat * 0.3 + Math.max(0, -Math.sin(b)) * 0.6);
   p.headPitch = -beat * 0.15;
   p.headYaw = Math.sin(b * 0.5) * 0.2;
-}
-
-/* ---------- Reaching (hands on a gun) ---------- */
-
-const PALM_R = Math.hypot(PALM_Y, PALM_Z);
-const PALM_TILT = Math.atan2(PALM_Z, PALM_Y);
-/** Shoulders in the chest's space (arms[0] is the rig's -x arm, arms[1] the +x one) */
-const SHOULDERS = [new THREE.Vector3(-SHOULDER_X, SHOULDER_Y, 0), new THREE.Vector3(SHOULDER_X, SHOULDER_Y, 0)] as const;
-
-/** How far a palm can be from its shoulder */
-export const ARM_REACH = UPPER_ARM + PALM_R;
-
-/** Distance from arm `i`'s shoulder to a point in the chest's space */
-export const shoulderTo = (i: 0 | 1, at: THREE.Vector3) => SHOULDERS[i].distanceTo(at);
-
-const rN = new THREE.Vector3();
-const rM = new THREE.Vector3();
-const rE = new THREE.Vector3();
-const rX = new THREE.Vector3();
-const rY = new THREE.Vector3();
-const rZ = new THREE.Vector3();
-const rMat = new THREE.Matrix4();
-const rEuler = new THREE.Euler();
-
-/**
- * Two-bone reach: swing, turn and bend arm `i` so the middle of its palm
- * lands on `target` (in the chest's space). The elbow hangs down, a little
- * out and back, like holding a gun. Out of reach, the arm points at it fully
- * stretched.
- */
-export function reachArm(p: Pose, i: 0 | 1, target: THREE.Vector3) {
-  const s = i === 0 ? -1 : 1;
-  const S = SHOULDERS[i];
-  rN.subVectors(target, S);
-  const len = rN.length() || 1e-6;
-  rN.divideScalar(len);
-  const d = THREE.MathUtils.clamp(len, Math.abs(UPPER_ARM - PALM_R) + 0.03, ARM_REACH - 0.002);
-  // The triangle shoulder, elbow, palm: the elbow's bend and the angle at the shoulder
-  const cosElbow = THREE.MathUtils.clamp((UPPER_ARM * UPPER_ARM + PALM_R * PALM_R - d * d) / (2 * UPPER_ARM * PALM_R), -1, 1);
-  const bend = Math.max(0, Math.PI - Math.acos(cosElbow) - PALM_TILT);
-  const cosShoulder = THREE.MathUtils.clamp((UPPER_ARM * UPPER_ARM + d * d - PALM_R * PALM_R) / (2 * UPPER_ARM * d), -1, 1);
-  // Where the elbow goes: off the shoulder-to-hand line, towards down, out and back
-  rM.set(s * 0.45, -1, -0.35).normalize();
-  rM.addScaledVector(rN, -rM.dot(rN));
-  if (rM.lengthSq() < 1e-6) rM.set(0, 0, -1).addScaledVector(rN, -rN.z);
-  rM.normalize();
-  rE.copy(S)
-    .addScaledVector(rN, UPPER_ARM * cosShoulder)
-    .addScaledVector(rM, UPPER_ARM * Math.sqrt(1 - cosShoulder * cosShoulder));
-  // The upper arm's frame: +y up the arm, +z the way the forearm bends
-  rY.subVectors(S, rE).normalize();
-  rZ.copy(S).addScaledVector(rN, d).sub(rE);
-  rZ.addScaledVector(rY, -rZ.dot(rY)).normalize();
-  rX.crossVectors(rY, rZ);
-  rEuler.setFromRotationMatrix(rMat.makeBasis(rX, rY, rZ), 'XYZ');
-  const l = p.arms[i];
-  l.fwd = -rEuler.x;
-  l.twist = rEuler.y;
-  l.out = s * rEuler.z;
-  l.bend = bend;
 }
 
 /** Multiplayer emotes (ids from EMOTES in profile-data.ts); `t` is seconds since it started */
@@ -739,6 +641,12 @@ interface Piece {
   mat?: Mat;
   /** Small details left out of the light (phone) crowd */
   detail?: boolean;
+  /** Skinned body only: weighted as this part instead of by its joint (the shoes ride the feet) */
+  region?: Region;
+  /** Skinned body only: on this one bone, unbending (a backpack on the chest) */
+  bone?: BoneName;
+  /** Skinned body only: each vertex's own weights (the fingers), for a non-indexed geometry */
+  skin?: Influence[];
 }
 interface Item {
   id: string;
@@ -755,11 +663,17 @@ const WHITE = '#f3f2f7';
 const SHIRT = '#cfcedb';
 const GOLD = '#e2b04a';
 
-const itemsCache: Partial<Record<Detail, Item[]>> = {};
+const itemsCache: Partial<Record<string, Item[]>> = {};
 const texCache: { patch?: THREE.Texture; gummy?: THREE.Texture } = {};
 
-function items(q: Detail): Item[] {
-  if (itemsCache[q]) return itemsCache[q]!;
+/**
+ * The wardrobe at a detail level. `hero` is the skinned body's (createDegen):
+ * the brand-art head on the longer neck, hands with fingers, the shoes on
+ * the feet; the crowd's (`hero` false) keeps the round head and solid hands.
+ */
+function items(q: Detail, hero = false): Item[] {
+  const key = `${q}${hero ? 'h' : ''}`;
+  if (itemsCache[key]) return itemsCache[key]!;
   /** Ring segments at this detail level */
   const R = (n: number) => Math.max(5, Math.round(n * [0.36, 0.7, 1][q]));
   const L = (s: number) => (q === 2 ? s : Math.max(2, Math.round(s * 0.6)));
@@ -776,6 +690,13 @@ function items(q: Detail): Item[] {
     color: string | ColorKey,
     extra: Partial<Piece> = {}
   ): Piece[] => (['L', 'R'] as const).map((s, i) => P(`${kind}${s}`, Array.isArray(geo) ? geo[i] : geo, color, extra));
+
+  /** Shoes ride the feet; bags and boards sit unbending on the chest (both on the skinned body only) */
+  const SHOE: Partial<Piece> = { region: 'shoe' };
+  const CHEST: Partial<Piece> = { bone: 'chest' };
+  /** The skinned body's hands, fingers and all, each vertex weighted to its bones */
+  const fingers = (color: string): Piece[] =>
+    ([-1, 1] as const).flatMap((s) => handParts(s, R(9)).map(({ geo, skin }) => P(s < 0 ? 'handL' : 'handR', geo, color, { skin })));
 
   const suit = (o: Outfit) => o.kind === 'suit';
   const hoodie = (o: Outfit) => o.kind === 'hoodie';
@@ -802,11 +723,19 @@ function items(q: Detail): Item[] {
     [0.23, 0.012, 0.015, -0.008],
   ];
   const HN = 2.5;
-  const face = surface(HEAD, HN);
-  const EYE_Y = 0.126;
-  const skull = loft(HEAD, R(20), HN);
+  const face = hero ? headFront : surface(HEAD, HN);
+  const EYE_Y = HERO_EYE_Y;
+  const skull = hero ? headGeometry(R(30), q) : loft(HEAD, R(20), HN);
   const nose = new THREE.SphereGeometry(0.016, R(10), R(8)).scale(0.75, 1.25, 0.9).translate(0, 0.094, face(0, 0.094) - 0.009);
-  const ears = [-1, 1].map((s) => new THREE.SphereGeometry(0.022, R(10), R(8)).scale(0.45, 1, 0.75).translate(s * 0.086, 0.125, 0.004));
+  const ears = [-1, 1].map((s) => new THREE.SphereGeometry(0.022, R(10), R(8)).scale(0.45, 1, 0.75).translate(s * (hero ? 0.081 : 0.086), 0.125, hero ? -0.004 : 0.004));
+  // The skinned head: the balaclava bunched round the neck under the jaw, and the knit edge round the eye opening
+  const neckFold = new THREE.TorusGeometry(0.048, 0.0055, 5, R(20)).rotateX(Math.PI / 2).scale(1, 1, 1.05).translate(0, -0.002, -0.008);
+  const eyeRim = (() => {
+    const pts = roundRect(0.158, 0.066, 5, R(32), 0, EYE_Y + 0.003)
+      .getPoints()
+      .map((v) => new THREE.Vector3(v.x, v.y, face(v.x, v.y) + 0.0015));
+    return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, true), R(64), 0.0042, 4, true);
+  })();
   // The balaclava bunches where it meets the collar
   const folds = [0.014, 0.034].map((y, k) =>
     new THREE.TorusGeometry(0.048 + k * 0.002, 0.006, 5, R(18))
@@ -1254,9 +1183,11 @@ function items(q: Detail): Item[] {
     [0.15, 0.11, 0.075, 0],
   ];
   const pelvis = loft(PELVIS, R(20), 2.2);
+  // (the top tapers in under the jacket's and the hoodie's hips)
   const THIGH_S: Sec[] = [
-    [0.04, 0.066, 0.07, 0],
-    [-0.03, 0.066, 0.07, 0],
+    [0.04, 0.05, 0.058, 0],
+    [-0.03, 0.058, 0.064, 0],
+    [-0.08, 0.062, 0.066, 0.001],
     [-0.15, 0.058, 0.062, 0.002],
     [-0.26, 0.05, 0.054, 0],
     [-0.3, 0.042, 0.046, 0],
@@ -1808,8 +1739,8 @@ function items(q: Detail): Item[] {
       id: 'head',
       when: () => true,
       pieces: [
-        P('head', far ? skull : one([skull, nose, ...ears]), BLACK),
-        ...(q > 0 ? [P('head', one(folds), BLACK, { detail: true })] : []),
+        P('head', far ? skull : one(hero ? [skull, ...ears] : [skull, nose, ...ears]), BLACK),
+        ...(hero ? [P('head', one([neckFold, eyeRim]), BLACK, { detail: true })] : q > 0 ? [P('head', one(folds), BLACK, { detail: true })] : []),
         P('head', eyesSkin, SKIN),
         P('head', far ? new THREE.BoxGeometry(0.17, 0.05, 0.008).translate(0, EYE_Y, lensZ - 0.002) : one(frames), '#0d0c14'),
         P('head', one(lenses), '#ffffff', { mat: 'lens' }),
@@ -1913,27 +1844,34 @@ function items(q: Detail): Item[] {
         P('torso', one([vest, ...pouches]), '#3a4422'),
         ...both('arm', looseUpper, 'top'),
         ...both('fore', looseFore, 'top'),
-        ...both('wrist', one(hand), '#2b2a33'),
+        ...(hero ? fingers('#2b2a33') : both('wrist', one(hand), '#2b2a33')),
         P('pelvis', pelvis, 'bottom'),
         ...both('leg', cargoThigh, 'bottom'),
         ...both('leg', cargoPockets, 'bottom', { shade: 0.82, detail: true }),
         ...both('shin', cargoShin, 'bottom'),
         ...(kneePads.length ? both('shin', one(kneePads), '#3a4422', { detail: true }) : []),
-        ...both('shin', boot, 'shoes'),
-        ...both('shin', bootSole, '#14121a'),
+        ...both('shin', boot, 'shoes', SHOE),
+        ...both('shin', bootSole, '#14121a', SHOE),
       ],
     },
     // Hands (open, or fists while fighting), trousers and shoes for everyone but soldiers
-    {
-      id: 'hands',
-      when: (o) => !soldier(o) && !o.fists,
-      pieces: both('wrist', one(hand), SKIN),
-    },
-    {
-      id: 'fists',
-      when: (o) => !soldier(o) && !!o.fists,
-      pieces: both('wrist', one(fist), SKIN),
-    },
+    ...(hero
+      ? [
+          // The skinned body's hands have fingers: a fist is the same hand, closed (`grip`)
+          { id: 'fingers', when: (o: Outfit) => !soldier(o), pieces: fingers(SKIN) },
+        ]
+      : [
+          {
+            id: 'hands',
+            when: (o: Outfit) => !soldier(o) && !o.fists,
+            pieces: both('wrist', one(hand), SKIN),
+          },
+          {
+            id: 'fists',
+            when: (o: Outfit) => !soldier(o) && !!o.fists,
+            pieces: both('wrist', one(fist), SKIN),
+          },
+        ]),
     {
       id: 'trousers',
       when: suit,
@@ -1942,8 +1880,8 @@ function items(q: Detail): Item[] {
         ...both('leg', trouserThigh, 'bottom'),
         ...both('shin', trouserShin, 'bottom'),
         ...(crease ? both('shin', crease, 'bottom', { shade: 0.75, detail: true }) : []),
-        ...both('shin', dress, 'shoes'),
-        ...both('shin', dressSole, '#14121a'),
+        ...both('shin', dress, 'shoes', SHOE),
+        ...both('shin', dressSole, '#14121a', SHOE),
       ],
     },
     {
@@ -1954,10 +1892,10 @@ function items(q: Detail): Item[] {
         ...both('leg', joggerThigh, 'bottom'),
         ...both('shin', joggerShin, 'bottom'),
         ...both('shin', joggerCuff, 'bottom', { shade: 0.8 }),
-        ...both('shin', sneaker, 'shoes'),
-        ...both('shin', sneakerSole, SHIRT),
-        ...(laces.length ? both('shin', one(laces), SHIRT, { detail: true }) : []),
-        ...both('shin', one(swoop), 'shoes', { shade: 0.6, detail: true }),
+        ...both('shin', sneaker, 'shoes', SHOE),
+        ...both('shin', sneakerSole, SHIRT, SHOE),
+        ...(laces.length ? both('shin', one(laces), SHIRT, { detail: true, ...SHOE }) : []),
+        ...both('shin', one(swoop), 'shoes', { shade: 0.6, detail: true, ...SHOE }),
       ],
     },
     // (the puffer's high collar covers the necklace and headphones)
@@ -1974,7 +1912,7 @@ function items(q: Detail): Item[] {
     {
       id: 'backpack',
       when: (o) => !!o.backpack,
-      pieces: [P('torso', one(backpack), 'backpack')],
+      pieces: [P('torso', one(backpack), 'backpack', CHEST)],
     },
     {
       id: 'crossbody',
@@ -1984,7 +1922,7 @@ function items(q: Detail): Item[] {
     {
       id: 'board',
       when: (o) => !!o.board,
-      pieces: [P('torso', deck, 'board'), P('torso', one(trucks), '#8b889c', { detail: true }), P('torso', one(wheels), WHITE, { detail: true })],
+      pieces: [P('torso', deck, 'board', CHEST), P('torso', one(trucks), '#8b889c', { detail: true, ...CHEST }), P('torso', one(wheels), WHITE, { detail: true, ...CHEST })],
     },
     {
       id: 'rifleL',
@@ -2059,12 +1997,12 @@ function items(q: Detail): Item[] {
     {
       id: 'duffel',
       when: (o) => !!o.duffel,
-      pieces: [P('torso', one([duffelBody, duffelHandle]), 'duffel'), P('torso', one([...duffelEnds, duffelStrap]), 'duffel', { shade: 0.6 })],
+      pieces: [P('torso', one([duffelBody, duffelHandle]), 'duffel', CHEST), P('torso', one(duffelEnds), 'duffel', { shade: 0.6, ...CHEST }), P('torso', duffelStrap, 'duffel', { shade: 0.6 })],
     },
     {
       id: 'wings',
       when: (o) => !!o.wings,
-      pieces: [P('torso', one(wings.map((w) => w.plane)), 'wings'), P('torso', one(wings.map((w) => w.edge)), 'lens', { mat: 'neon' })],
+      pieces: [P('torso', one(wings.map((w) => w.plane)), 'wings', CHEST), P('torso', one(wings.map((w) => w.edge)), 'lens', { mat: 'neon', ...CHEST })],
     },
     {
       id: 'watch',
@@ -2084,7 +2022,7 @@ function items(q: Detail): Item[] {
       pieces: [P('handR', briefcaseBody, '#4a2e1a'), P('handR', briefcaseHandle, '#2b1a10'), P('handR', one(clasps), GOLD, { detail: true })],
     },
   ];
-  itemsCache[q] = all;
+  itemsCache[key] = all;
   return all;
 }
 
@@ -2181,60 +2119,118 @@ export interface Degen {
   /** Apply `pose` to the figure */
   update(): void;
   hands: [THREE.Object3D, THREE.Object3D];
-  /** The chest, for things carried at the shoulder (the rifle) */
+  /** The torso frame on the chest, for things carried at the shoulder (the gun): `reachArm()`'s space */
   torso: THREE.Object3D;
   /** What he holds in his right hand, if anything (put away while he holds the rifle) */
   held?: THREE.Object3D;
+  /** Free the figure's geometry and bones (when it's rebuilt or leaves) */
+  dispose(): void;
+}
+
+/** Each hand's grip when the pose doesn't set one: relaxed, closed on what's held, or fists for fighting */
+const RELAXED = 0.2;
+const HOLDING = 0.62;
+
+/** A piece in the figure's own space, with each vertex's bones */
+function skinPiece(p: Piece, rest: THREE.Matrix4, color: THREE.Color) {
+  const g = plain(p.geo).applyMatrix4(rest);
+  const pos = g.attributes.position as THREE.BufferAttribute;
+  const n = pos.count;
+  const idx = new Uint16Array(n * 4);
+  const wt = new Float32Array(n * 4);
+  const col = new Float32Array(n * 3);
+  const one: Influence | null = p.bone ? [[p.bone, 1]] : null;
+  for (let i = 0; i < n; i++) {
+    const inf = one ?? p.skin?.[i] ?? weigh(p.region ?? p.joint, pos.getX(i), pos.getY(i), pos.getZ(i));
+    for (let k = 0; k < inf.length; k++) {
+      idx[i * 4 + k] = BONE_INDEX[inf[k][0]];
+      wt[i * 4 + k] = inf[k][1];
+    }
+    col[i * 3] = color.r;
+    col[i * 3 + 1] = color.g;
+    col[i * 3 + 2] = color.b;
+  }
+  g.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(idx, 4));
+  g.setAttribute('skinWeight', new THREE.Float32BufferAttribute(wt, 4));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  return g;
 }
 
 /**
- * One figure, in full detail: everything worn on a joint is one mesh
- * coloured per vertex, plus the lenses, patches and printed bag, so a
- * figure is about 15 draw calls whatever he wears.
+ * One figure: the skinned body (skeleton.ts) with everything it wears as
+ * one mesh coloured per vertex, plus one each for the lenses, the cap
+ * patch, the raised hood (both sides drawn) and any neon, so a figure is
+ * about four draw calls whatever he wears. Things in the hand (the gummy
+ * bag, a rifle) ride the hand bone unbent.
  */
 export function createDegen(o: Outfit = PLAYER, q: Detail = 2): Degen {
-  const rig = makeRig();
-  let held: THREE.Group | undefined;
-  const buckets = new Map<
-    string,
-    {
-      joint: Joint;
-      held: boolean;
-      mat?: Mat;
-      list: { geo: THREE.BufferGeometry; color: THREE.Color }[];
-    }
-  >();
-  for (const it of items(q)) {
+  const sk = makeSkeleton();
+  sk.root.updateMatrixWorld(true);
+  const skeleton = new THREE.Skeleton(sk.list);
+  const skinned = new Map<string, { mat?: Mat; list: THREE.BufferGeometry[] }>();
+  const rigid = new Map<string, { joint: Joint; held: boolean; mat?: Mat; list: { geo: THREE.BufferGeometry; color: THREE.Color }[] }>();
+  for (const it of items(q, true)) {
     if (!it.when(o)) continue;
     for (const p of it.pieces) {
-      const key = `${p.joint}|${it.held ? 1 : 0}|${p.mat ?? ''}`;
-      if (!buckets.has(key))
-        buckets.set(key, {
-          joint: p.joint,
-          held: !!it.held,
-          mat: p.mat,
-          list: [],
-        });
-      buckets.get(key)!.list.push({ geo: p.geo, color: colorOf(p, o) });
+      const color = colorOf(p, o);
+      // Held things and anything else on a hand without weights of its own stay solid on the hand
+      if (it.held || ((p.joint === 'handL' || p.joint === 'handR') && !p.skin)) {
+        const key = `${p.joint}|${it.held ? 1 : 0}|${p.mat ?? ''}`;
+        if (!rigid.has(key)) rigid.set(key, { joint: p.joint, held: !!it.held, mat: p.mat, list: [] });
+        rigid.get(key)!.list.push({ geo: p.geo, color });
+        continue;
+      }
+      const key = p.mat ?? '';
+      if (!skinned.has(key)) skinned.set(key, { mat: p.mat, list: [] });
+      skinned.get(key)!.list.push(skinPiece(p, sk.j[p.joint].matrixWorld, color));
     }
   }
-  for (const b of buckets.values()) {
+  const bind = new THREE.Matrix4();
+  for (const b of skinned.values()) {
+    const geo = mergeGeometries(b.list)!;
+    for (const g of b.list) g.dispose();
+    const mesh = new THREE.SkinnedMesh(geo, material(b.mat, o));
+    mesh.castShadow = true;
+    // Its bounds move with the bones: never culled (a figure is small)
+    mesh.frustumCulled = false;
+    sk.root.add(mesh);
+    mesh.bind(skeleton, bind);
+  }
+  let held: THREE.Group | undefined;
+  for (const b of rigid.values()) {
     const mesh = new THREE.Mesh(paintMerge(b.list), material(b.mat, o));
     mesh.castShadow = true;
     if (b.held) {
-      if (!held) rig.j[b.joint].add((held = new THREE.Group()));
+      if (!held) sk.j[b.joint].add((held = new THREE.Group()));
       held.add(mesh);
-    } else rig.j[b.joint].add(mesh);
+    } else sk.j[b.joint].add(mesh);
   }
   const pose = newPose();
-  applyPose(rig, pose);
+  const base = o.fists ? 1 : RELAXED;
+  const grip: [number, number] = [base, base];
+  const update = () => {
+    if (pose.grip) {
+      grip[0] = pose.grip[0];
+      grip[1] = pose.grip[1];
+      pose.grip = undefined;
+    } else {
+      grip[0] = base;
+      grip[1] = held?.visible ? Math.max(base, HOLDING) : base;
+    }
+    poseSkeleton(sk, pose, grip);
+  };
+  update();
   return {
-    g: rig.root,
+    g: sk.root,
     pose,
-    update: () => applyPose(rig, pose),
-    hands: [rig.j.handL, rig.j.handR],
-    torso: rig.j.torso,
+    update,
+    hands: [sk.bones.handL, sk.bones.handR],
+    torso: sk.torso,
     held,
+    dispose() {
+      sk.root.traverse((m) => (m as THREE.Mesh).geometry?.dispose());
+      skeleton.dispose();
+    },
   };
 }
 

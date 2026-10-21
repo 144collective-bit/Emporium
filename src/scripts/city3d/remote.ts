@@ -72,8 +72,8 @@ export function createRemotes(scene: THREE.Scene, camera: THREE.PerspectiveCamer
   }
   function dropFigure(r: Pick<Remote, 'fig'>) {
     scene.remove(r.fig.g);
-    // Geometry is built per figure; materials are shared (cached), so only geometry goes
-    r.fig.g.traverse((o) => (o as THREE.Mesh).geometry?.dispose());
+    // Geometry and bones are built per figure; materials are shared (cached), so only those go
+    r.fig.dispose();
   }
 
   function paintTag(r: Remote) {
