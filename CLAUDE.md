@@ -284,6 +284,15 @@ it and has been retired completely. Build only on what's here.
   use the softer `soft()` (1.3), and never light a whole roof or slab:
   give it a neon trim instead. Check new lights close up at night on the
   phone tier, not just from the home view.
+- **Nothing flush** (z-fighting): two faces in the same plane, facing the
+  same way, in different colours flicker against each other, even with the
+  camera still (a door's side level with the wall it's in, a roof slab's
+  edge level with its walls, glass level with its surround, a decal at the
+  very height of the paving it lies on). Keep such faces at least about
+  5 mm apart, or tuck one just inside the other (a roof slab 6 mm in from
+  its walls, hidden by the parapet). Faces pointing into a building, or
+  down under something resting on the ground, don't matter (nobody sees
+  them).
 - Floating cut-out signs (FX layer with a transparent texture, like the roof
   logo) need `occlude()` from `kit.ts`, or the ink outlines of whatever is
   behind them get drawn across them.

@@ -295,7 +295,8 @@ function glazing(w: number, h: number) {
 function terminal(b: Batch, group: THREE.Group, crowd: Idle[], low: boolean) {
   const [x0, z0, x1, z1, H] = TERMINAL;
   // The body: concrete ends, a dark band at the floor between, glass both long sides
-  box(b, x0, 0, z0 + 0.2, x1, H - 0.4, z1 - 0.2, toon('#2b2848'));
+  // (tucked just inside the pale ends: flush with their outer faces, the two flicker)
+  box(b, x0 + 0.05, 0, z0 + 0.2, x1 - 0.05, H - 0.4, z1 - 0.2, toon('#2b2848'));
   for (const x of [x0, x1 - 1.2]) box(b, x, 0, z0, x + 1.2, H - 0.3, z1, PALE);
   for (let x = x0 + 9; x < x1 - 4; x += 12) box(b, x, 0, z0 - 0.05, x + 0.5, H - 0.3, z1 + 0.05, PALE);
   const glassMeshes: THREE.Mesh[] = [];
@@ -362,7 +363,7 @@ function terminal(b: Batch, group: THREE.Group, crowd: Idle[], low: boolean) {
     const y0 = 2.1;
     box(b, a.x - 0.8, y0, a.z0 - 0.1, a.x + 0.8, y0 + 1.9, a.z1 - 0.7, toon('#9a95bb'));
     box(b, a.x - 0.82, y0 + 0.9, a.z0, a.x + 0.82, y0 + 1.5, a.z1 - 0.8, toon('#26315f'));
-    box(b, a.x - 0.9, y0, a.z1 - 1.5, a.x + 1.85, y0 + 2.0, a.z1, toon('#7a7598'));
+    box(b, a.x - 0.9, y0 - 0.05, a.z1 - 1.5, a.x + 1.85, y0 + 2.0, a.z1, toon('#7a7598'));
     box(b, a.x + 1.85, y0 + 0.1, a.z1 - 1.3, a.x + 1.95, y0 + 1.9, a.z1 - 0.2, INK);
     box(b, a.x - 0.25, 0, a.z1 - 1.1, a.x + 0.25, y0, a.z1 - 0.5, STEEL);
     for (const s of [-1, 1]) cyl(b, 0.28, 0.2, a.x + s * 0.35, 0.28, a.z1 - 0.8, toon('#17151f'), 12);
@@ -384,7 +385,7 @@ function tower(b: Batch, group: THREE.Group, tick: (f: Tick) => void) {
   const { x, z, r, cab, top } = TOWER;
   box(b, x - 2.6, 0, z - 2.4, x + 2.6, 2.6, z + 2.4, PALE);
   box(b, x - 2.65, 2.6, z - 2.45, x + 2.65, 2.75, z + 2.45, STEEL);
-  cyl(b, r, cab, x, 0, z, toon('#d6d2ea'), 16);
+  cyl(b, r, cab - 0.02, x, 0, z, toon('#d6d2ea'), 16);
   // The cab: a wider deck, sloping glass all round, a roof and a mast
   cyl(b, 2.3, 0.3, x, cab - 0.3, z, STEEL, 10, 1.6);
   const glass = new THREE.CylinderGeometry(2.55, 2.2, 1.7, 10, 1, true).translate(x, cab + 0.85, z);
@@ -443,14 +444,15 @@ function hangar(b: Batch, group: THREE.Group) {
   b.add(new THREE.ShapeGeometry(gable).rotateY(Math.PI).translate((x0 + x1) / 2, wallH, z1 - 0.02), wall);
   b.add(new THREE.ShapeGeometry(gable).translate((x0 + x1) / 2, wallH, z0 + 0.42), wall);
   b.add(new THREE.ShapeGeometry(gable).rotateY(Math.PI).translate((x0 + x1) / 2, wallH, z0 - 0.02), wall);
-  box(b, x0 + 0.4, 0, z0 + 0.5, x1 - 0.4, wallH - 0.4, z0 + 0.6, toon('#0e0c1a'));
+  box(b, x0 + 0.42, 0, z0 + 0.5, x1 - 0.42, wallH - 0.4, z0 + 0.6, toon('#0e0c1a'));
   box(b, x0 + 0.4, 0, z0 + 0.4, x1 - 0.4, 0.01, z1, toon('#4b4766'));
+  // The doors' outer sides just inside the walls' faces, the yellow strip's ends just past them (flush, they flicker)
   for (const [a, c] of [
-    [x0, x0 + 4.2],
-    [x1 - 4.2, x1],
+    [x0 + 0.03, x0 + 4.2],
+    [x1 - 4.2, x1 - 0.03],
   ])
     box(b, a, 0, z1 - 0.3, c, wallH - 0.4, z1 + 0.1, toon('#8a86a8'));
-  box(b, x0, wallH - 0.45, z1 - 0.1, x1, wallH - 0.35, z1 + 0.2, YELLOW);
+  box(b, x0 - 0.03, wallH - 0.45, z1 - 0.1, x1 + 0.03, wallH - 0.35, z1 + 0.2, YELLOW);
   // A sign over the doorway
   const sign = canvasTex(512, 96, (c) => {
     c.fillStyle = '#0b0a18';

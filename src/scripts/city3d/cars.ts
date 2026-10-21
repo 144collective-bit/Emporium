@@ -676,8 +676,8 @@ function clip(poly: V2[], f: (p: V2) => number): V2[] {
   return out;
 }
 
-/** A thin pane along a side-view segment a-b (glass on a sloped face), pushed out from the cabin */
-function pane(a: V2, b: V2, width: number, centre: V2, ends: number) {
+/** A thin pane along a side-view segment a-b (glass on a sloped face), pushed `lift` out from the cabin */
+function pane(a: V2, b: V2, width: number, centre: V2, ends: number, lift = 0.012) {
   const dx = b[0] - a[0];
   const dy = b[1] - a[1];
   const len = Math.hypot(dx, dy);
@@ -688,7 +688,7 @@ function pane(a: V2, b: V2, width: number, centre: V2, ends: number) {
   if ((mx - centre[0]) * nx + (my - centre[1]) * ny < 0) [nx, ny] = [-nx, -ny];
   return new THREE.BoxGeometry(len - ends * 2, 0.014, width)
     .rotateZ(Math.atan2(dy, dx))
-    .translate(mx + nx * 0.012, my + ny * 0.012, 0);
+    .translate(mx + nx * lift, my + ny * lift, 0);
 }
 
 export class Parts {
@@ -822,17 +822,19 @@ export function carGeometry(id: CarId, { wheels = true } = {}): CarGeometry {
   const mid: V2 = [(rb[0] + fb[0] + rr[0] + fr[0]) / 4, (rb[1] + fb[1] + rr[1] + fr[1]) / 4];
   const screenFrom: V2 = s.sill !== undefined && lit ? [fb[0] + (fr[0] - fb[0]) * 0.15, fb[1] + (fr[1] - fb[1]) * 0.15] : fb;
   p.detail(pane(fr, screenFrom, cw - cabinRound * 2 + 0.02, mid, 0.03), BLACKOUT);
-  addGlass(pane(fr, screenFrom, cw - cabinRound * 2 - 0.06, mid, 0.07).translate(0, 0, 0));
+  // The glass sits a little proud of its surround: level with it, the two flicker against each other
+  addGlass(pane(fr, screenFrom, cw - cabinRound * 2 - 0.06, mid, 0.07, 0.02));
   if (s.rearGlass) {
     p.detail(pane(rb, rr, cw - cabinRound * 2 + 0.02, mid, 0.03), BLACKOUT);
-    addGlass(pane(rb, rr, cw - cabinRound * 2 - 0.06, mid, 0.07));
+    addGlass(pane(rb, rr, cw - cabinRound * 2 - 0.06, mid, 0.07, 0.02));
   }
 
   // Bumpers (with a lower lip), plates, the grille with chrome slats
   const bumperY = s.clr + 0.08;
   for (const end of [-1, 1]) {
     p.detail(box(0.1, 0.14, s.W + 0.02, end * (half + 0.01), bumperY, 0), TRIM);
-    p.detail(box(0.06, 0.03, s.W * 0.9, end * (half + 0.03), bumperY - 0.08, 0), BLACKOUT);
+    // The lip set back a touch from the bumper's face (flush, they flicker)
+    p.detail(box(0.06, 0.03, s.W * 0.9, end * (half + 0.025), bumperY - 0.08, 0), BLACKOUT);
     p.detail(box(0.02, 0.08, 0.26, end * (half + 0.065), bumperY + 0.01, 0), PLATE);
     p.detail(box(0.022, 0.012, 0.2, end * (half + 0.066), bumperY + 0.02, 0), SEAM);
   }
@@ -982,7 +984,8 @@ export function createCar(id: CarId, paint: string) {
     m.castShadow = true;
     m.receiveShadow = true;
   }
-  const lightGeo = new THREE.BoxGeometry(0.03, 0.08, 0.17);
+  // A touch deeper than the lamps they light up (level with them, the two flicker)
+  const lightGeo = new THREE.BoxGeometry(0.04, 0.08, 0.17);
   const headMat = new THREE.MeshBasicMaterial({ color: '#fff6c8' });
   const tailMat = new THREE.MeshBasicMaterial({ color: '#ff2b2b' });
   for (const [list, mat] of [
