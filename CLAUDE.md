@@ -574,7 +574,7 @@ it and has been retired completely. Build only on what's here.
 - **Getting started** (the new player's first steps): the rules are
   `guide.ts` (DOM-free, tested in `tests/guide.test.ts`): `GUIDE`, seven
   steps in order (stock your stall at the market hall, make 5 sales, take
-  your car out, deliver a contract, target practice, a street race, back up
+  your car out, deliver a contract, target practice, a race at the kart park, back up
   your save at the Vault), each with a beam spot (`at`), a way in from the
   City view (`go`: open a panel, or start walking at a free spot facing
   it) and a check on the save (`met()`, lifetime counters, so a step
@@ -801,7 +801,7 @@ it and has been retired completely. Build only on what's here.
   Degen's style, origin on the ground under the middle, +x forward, wheels
   that steer and roll, a seated Degen driver via `seat()`). Only for the
   kart park: never real money, never tied to the store or the token.
-- **The save** (`tycoon.ts`, v8): `karts` { model, paint, owned, mods,
+- **The save** (`tycoon.ts`, v9): `karts` { model, paint, owned, mods,
   `records` (fastest lap and best run per course and class, `KartTime`),
   `boards` (the local leaderboards, `LEADERBOARD_SIZE` runs per key: your
   own runs for now, built so a server can hold everyone's later),
@@ -1022,7 +1022,7 @@ it and has been retired completely. Build only on what's here.
   stick, X / Y, LB held, A, Start quits), Esc or Quit ends it with the
   card, closing the card stands Degen up outside the ropes (`OUT`);
   `.city.is-fighting` hides the walk HUD and `data-fight` makes the header
-  read "Fighting · <opponent>". The save (`tycoon.ts`, v8) keeps `fight`
+  read "Fighting · <opponent>". The save (`tycoon.ts`, v9) keeps `fight`
   (style, owned styles, wins, losses, knock-outs, best chain, bouts, spars,
   each opponent's record), the ledger entry `fighting` and the counters
   `bouts` / `fightWins` / `kos` / `chains`. New gameplay goes in the sim
