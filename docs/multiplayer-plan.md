@@ -86,7 +86,8 @@ Visitor's browser                         Cloudflare (server/)
      rooms and plot building alike.
 2. **Leaderboards**: daily and weekly boards (target practice now, PvP
    later) in the Controls panel and on a board in the city.
-3. **South bank PvP**: design and build the neon arena and junkyard / skate
+3. **South bank PvP** (hand-to-hand first: the Fight Club and the fight
+   rules are planned in `fight-plan.md`): design and build the neon arena and junkyard / skate
    park; bridge border, health and regen, knock-outs, respawns, kill feed,
    server-checked hits on players with lag compensation.
 

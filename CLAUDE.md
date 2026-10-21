@@ -793,6 +793,10 @@ it and has been retired completely. Build only on what's here.
 - Score, streaks and finishes are for fun only: no prizes, real rewards or
   token tie-ins. Takedowns do count for the city's game (`takedown()` in
   `tycoon.ts`: XP, missions, badges), through the `onTakedown` dep.
+- **Fighting** (punches and kicks, the Fight Club on the south bank, styles
+  bought with Dorras, player-versus-player when the server is live) is
+  planned in `docs/fight-plan.md`; build it one phase at a time with the
+  owner's sign-off, the rules in `fight-sim.ts` first.
 - **The crew** (the owner's call): a cartoon rival crew of ten goons on the
   south bank, the only characters that are targets; the city north of the
   river stays a safe hangout. Rules in `combat-sim.ts`: `CREW_ZONE` (the
