@@ -714,50 +714,28 @@ it and has been retired completely. Build only on what's here.
 - **The place** (the owner's call): a Mario-Kart-style go-kart park on the
   open land outside the Parkway in the north-east, filling the quadrant to
   the world's edge, fenced, with a slip road down to the Parkway and a gate;
-  the kart hut (door prompt "Kart hut"), a grandstand along the start
-  straight, pits, a big screen. It's a place like the landmarks (spot
+  one circuit raced both ways (the rebuild, `docs/kart-plan.md`), the kart
+  hut (door prompt "Kart hut"), a grandstand facing the start straight, the
+  pit lane with eight garages and the big screen on their roof. It's a place like the landmarks (spot
   `karts`, pin, directory entry, a City-view panel with your records and
   **Walk in**, which starts walk mode at the gate, `KART_SPAWN`). Race karts
   stay on the track, but your own kart can be taken out of the pits and
   driven anywhere on the map (the owner's call: "Get in" at the show kart,
-  `drive.ts` drives it like the car, with Degen seated; it rides the track's
-  decks and banking through `trackSurfaceAt()`, and goes back to the pits
-  when a race starts).
-- **The layout** is `kartpark.ts` (DOM-free, tested in `tests/kart.test.ts`):
-  `KART_PARK` (world x 92-232, z -192 to -48), local numbers via
-  `toWorld()` (u east, v south from the site's corner; the core loop is
-  drawn in a small frame and blown up `LOOP_SCALE` times by `C()`, the rest
-  in the big frame with `P()`). **One track network, many courses:** the
-  track is `PIECES`, open sectors (`SECTORS`: west, link, hairpin, north,
-  return, descent) meeting at nodes (`NODE` W, E, H, N; `NODES`,
-  `nearNode()`, `NODE_REACH`), plus the dirt `SHORTCUT`. Each control
-  point (`CPt`) can carry a height `h`, a banking `roll`, a `grip` and
-  flags `F` (deck, tunnel, wet, dirt, bank), a `Tag` (line, box, pad, hump,
-  sc-out, sc-in). `sampleLine()` (centripetal Catmull-Rom, heights
-  cosine-eased) makes a `Line` sampled every half tile. The courses
-  (`COURSE_IDS`, `COURSE_DEFS`, `courses()`) chain sectors into closed
-  lines: the Neon Loop (west, link, hairpin; a figure of eight with the
-  flyover `BRIDGE_H` high and the hump), the Summit (west, north, descent:
-  the banked north bowl, the tunnel, the wet patch) and the Grand Prix
-  (west, north, return (a bridge over the north sector), hairpin; two
-  laps), each with its reverse. A `Course` is a `Line` with `start`,
-  `hump`, `boxes` (five abreast at `BOX_LATERALS`), `pads`, `laps`,
-  `sectors` and its `shortcut` (a `Line` with `out` / `in` on the main
-  line). `frame()`, `at()`, `locate()` (keeps to the layer its hint is on),
-  `along()`, `wrapS()`, `heightAt()` (banking), `gridSlots()`,
-  `TRACK_HALF` (5.2; `SHORTCUT_HALF` 3.2). Fixtures: `SITE` (hut, gate,
-  stand, screen, pits), `GATE`, `SLIP_ROAD`, `HUT_DOOR`, `GANTRY`,
-  `PILLARS` (under the decks, never in another piece's lane). Footprints
-  for walking and driving are `KART_SOLIDS` (in `SOLIDS`: the fence with
-  the gate's gap, the hut, the stand, the posts and pillars; **nothing on
-  or beside the track is solid** (the owner's call): the kerbs are low and
-  open, so Degen, the kart and the car cross the track anywhere, and only
-  a race's karts are kept in by the sim's own walls); the site is flat
-  ground, not a slab, and the outskirts' trees
-  keep off it and the slip road (`scatterIn()` in `world.ts`, `onRoad()` in
-  `outer.ts`). Keep every corner's radius above about 5.5 (the test checks
-  the inner edge never folds), ramps under slope 0.3, decks `BRIDGE_H` over
-  what they cross, and pieces apart by the track's width.
+  `drive.ts` drives it like the car, with Degen seated; it rides the
+  circuit's ground (the deck, the banking, the grass banks) through
+  `circuitSurfaceAt()`, and goes back to the pits when a race starts).
+  Walking follows the same ground inside the park (`groundAt()` in
+  `walk.ts`).
+- **The site** is `kartpark.ts` (DOM-free): `KART_PARK` (world x 92-232,
+  z -192 to -48), local numbers via `toWorld()` / `toLocal()` (u east, v
+  south from the site's corner), the fence's `GATE`, the `SLIP_ROAD` and
+  `KART_SPAWN`, and the line maths every track part uses: `sampleLine()`
+  (centripetal Catmull-Rom through control points `CPt`, heights
+  cosine-eased, sampled every half tile), `Line`, `frame()`, `at()`,
+  `locate()` (keeps to the layer its hint is on), `along()`, `wrapS()`,
+  `heightAt()` (banking), flags `F` (deck, tunnel, bank). The site is flat
+  ground, not a slab, and the outskirts' trees keep off it and the slip
+  road (`scatterIn()` in `world.ts`, `onRoad()` in `outer.ts`).
 - **The rules** are `kart-sim.ts` (DOM-free, seeded, a fixed 60 Hz tick,
   tested), racing on the rebuild's circuit (`kartcircuit.ts`) since
   Phase 2: `createKartSim(setup)` → `step(dt, input)` returning events.
@@ -796,11 +774,15 @@ it and has been retired completely. Build only on what's here.
   stand, screen, gate path), `CIRCUIT_SOLIDS`, `GANTRY`, `SUPPORTS`,
   `onCircuit()`, `circuitSurfaceAt()`; the races are `COURSES` /
   `COURSE_IDS` (`circuit`, `circuit-reverse`: name, laps, `pads`) and
-  `Cond` / `CONDS`. It shares the site, local numbers and sampling
-  (`sampleLine()`, `frame()`, `locate()`) with `kartpark.ts`. Phase 2 is
-  built (the rules race on it, the save is v8); the park's 3D (Phase 3)
-  and the HUD and hut (Phase 4) still show the old network and its items
-  until then, so the branch isn't for `main` before Phase 3.
+  `Cond` / `CONDS`; `groundAt()` (the ground across it: the asphalt's
+  plane, the run-off easing down to the lawn at `CLEAR`, the sim's and the
+  drawing's both), `enclosed()` (the deck and the tunnel: no run-off, off
+  their kerbs a kart is put back). Footprints for walking and driving are
+  `CIRCUIT_SOLIDS` (in `SOLIDS`: the fence with the gate's gap, the hut,
+  the garages, the stand; **nothing on or beside the track is solid**,
+  the owner's call). Phases 2 (the rules race on it, the save is v8) and 3
+  (the park drawn round it) are built; Phase 4 (the HUD's minimap, the
+  hut's menu, the item slot and buttons out of the markup) is next.
 - **Classes** (`catalog.ts` `KART_CLASSES`, `ClassId`, `CLASS_IDS`): Street
   (Lv 1, 0.82), Sport (Lv 3, 1) and Neon (Lv 8, 1.18) set everyone's pace
   in a race; a cup fixes its class, a time trial picks one. Records and
@@ -835,16 +817,29 @@ it and has been retired completely. Build only on what's here.
   missions and five badges in `missions.ts`. Global boards wait for the
   game server (keep the boards' shape server-ready).
 - **On screen:** `kart-types.ts` holds the interfaces the three parts agree
-  on. `kartpark3d.ts` draws the site (`buildKartPark()`: every piece's
-  ribbon from its samples with kerbs and neon-topped walls, banked where
-  it rolls, decks on pillars with embankment ramps, the tunnel, the wet
-  patch, the dirt shortcut, the gantry, the stand, the hut, the screen
-  (fixed copy only), boost pad decals and item boxes per course
-  (`setCourse()`, `showBoxes()`), the `showSpot` in the pits). `kart.ts`
+  on. `kartpark3d.ts` draws the site round the circuit (`buildKartPark()`:
+  asphalt, edge lines and red-and-white kerbs swept along the centre
+  line, banked where it rolls; grass run-off with gravel on the outside
+  of the bends where it lies flat, easing down as grass banks where the
+  track is raised; the tunnel tube; the jump's striped lip; the flyover's
+  railed deck on columns just past its edges, open underneath, with
+  abutments at the ramps; the chequered line, both ways' grids and the
+  gantry; the pit lane, its bays and the cones that close it in a race
+  (`racing()`); eight garages with their numbers and the screen on their
+  roof (fixed copy only); the hut; the grandstand facing south with its
+  fans; tyre stacks, marshal posts, light poles and trees past the
+  run-off), and per course (`setCourse()`, the way round being raced) the
+  guidance: pad chevrons, chevron boards on the outside of the bends,
+  arrows painted before the turns, numbered corner boards and 3-2-1
+  braking markers before the hard corners (one sign atlas, `atlasTex()`).
+  The show kart waits in the middle bay (`showSpot`). A race's conditions
+  go on the sky through `conditions()` (night: night, rain: rain, day:
+  day and dry), and the visitor's own time and weather come back after
+  (`raceConditions` in `index.ts`). `kart.ts`
   (`createKartRace()`) runs a race: builds the sim from the save at the
   class's pace, seats Degen, places the karts from the sim every frame
-  (tilted with the banking), the chase camera, sparks, flames, shields,
-  oil, trails, gummies and pigeons, the sounds (`kart*` kinds in
+  (tilted with the banking), the chase camera, sparks, flames, dust off
+  the run-off and spray in the rain, the sounds (`kart*` kinds in
   `sound.ts`), pays through `finishKartRace()` (and `seriesRace()` in a
   series) + `commit()` and shows the results. **Ghosts** in time trials:
   your best lap on the course and class is recorded as it's set and

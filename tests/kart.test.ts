@@ -3,39 +3,9 @@
 // (catalog.ts, tycoon.ts, missions.ts).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import {
-  BOX_LATERALS,
-  BRIDGE_H,
-  COURSES,
-  COURSE_IDS,
-  F,
-  GANTRY,
-  GATE,
-  GRID,
-  HUT_DOOR,
-  KART_PARK,
-  KART_SOLIDS,
-  trackSurfaceAt,
-  KART_SPAWN,
-  NODE_REACH,
-  PIECES,
-  PILLARS,
-  SECTOR_IDS,
-  SHORTCUT_HALF,
-  SITE,
-  SLIP_ROAD,
-  TRACK_HALF,
-  along,
-  at,
-  frame,
-  gridSlots,
-  locate,
-  nearNode,
-  toWorld,
-  wrapS,
-} from '../src/scripts/city3d/kartpark';
+import { BRIDGE_H, F, KART_PARK, KART_SPAWN, SLIP_ROAD, GATE, along, at, frame, locate, wrapS } from '../src/scripts/city3d/kartpark';
 import { CUPS, CUP_IDS, NO_INPUT, RAIN_GRIP, RESET_AT, RESET_T, RUNOFF_CAP, createKartSim, flight, tune, type KartInput } from '../src/scripts/city3d/kart-sim';
-import { COURSES as RACES, COURSE_IDS as RACE_IDS, KERB, TRACK_HALF as RACE_HALF, type CourseId as RaceId } from '../src/scripts/city3d/kartcircuit';
+import { CIRCUIT_SOLIDS, COURSES as RACES, COURSE_IDS as RACE_IDS, HUT_DOOR, KERB, TRACK_HALF as RACE_HALF, circuitSurfaceAt, type CourseId as RaceId } from '../src/scripts/city3d/kartcircuit';
 import { DEFAULT_KART, KART_SPECS, PLAYER_KARTS, cleanKart } from '../src/scripts/city3d/mykart';
 import { CHALLENGE_PRIZE, CLASS_IDS, KART_CATALOG, KART_CLASSES, KART_MOD_IDS, MOD_LEVELS, PAR_LAPS, SERIES_POINTS, SERIES_PRIZES, STARTER_KARTS, XP, kartStats } from '../src/scripts/city3d/catalog';
 import {
@@ -81,128 +51,22 @@ test('the kart park fills the north-east beyond the Parkway, out to the world\'s
   assert.ok(inSite(KART_SPAWN.x, KART_SPAWN.z, 1) && inSite(HUT_DOOR.x, HUT_DOOR.z, 1));
 });
 
-test('six courses from the network, each a closed loop on the site, the line on the west straight by the stand', () => {
-  assert.deepEqual(COURSE_IDS, ['neon-loop', 'neon-reverse', 'summit', 'summit-reverse', 'grand', 'grand-reverse']);
-  assert.equal(SECTOR_IDS.length, 6);
-  const L = (id: string) => COURSES[id as keyof typeof COURSES].L;
-  assert.ok(Math.abs(L('neon-loop') - L('neon-reverse')) < 0.01 && Math.abs(L('grand') - L('grand-reverse')) < 0.01);
-  assert.ok(L('neon-loop') > 340 && L('neon-loop') < 420, `a lap is ${L('neon-loop').toFixed(1)}`);
-  assert.ok(L('grand') > 620 && L('grand') < 760, `the Grand Circuit is ${L('grand').toFixed(1)}`);
-  assert.ok(L('summit') > L('neon-loop') - 40 && L('summit') < L('grand'));
-  assert.ok(TRACK_HALF >= 5, 'a wide track');
-  for (const c of Object.values(COURSES)) {
-    assert.ok(c.closed && c.x.length === c.y.length && c.x.length === c.flags.length);
-    const n = c.x.length;
-    for (let i = 0; i < n; i++) {
-      assert.ok(inSite(c.x[i], c.z[i], TRACK_HALF + 0.4), `${c.id} sample ${i} inside the fence with room for the wall`);
-      // No corner tighter than the track's half width: the inner edge never folds
-      assert.ok(Math.abs(c.k[i]) < 1 / (TRACK_HALF + 0.2), `${c.id} curvature at ${i}: r ${(1 / Math.abs(c.k[i])).toFixed(1)}`);
-      const j = (i + 1) % n;
-      assert.ok(Math.abs(Math.hypot(c.x[j] - c.x[i], c.z[j] - c.z[i]) - c.step) < 0.05);
-    }
-    // The start line on the west straight, beside the stand, running north-south
-    const s = at(c, c.start);
-    const [sx] = toWorld([SITE.stand.u1, 0]);
-    assert.ok(s.x > sx && s.x < sx + 8, 'beside the stand');
-    assert.ok(Math.abs(Math.sin(s.yaw)) > 0.95);
-    assert.ok(c.reverse ? Math.sin(s.yaw) > 0 : Math.sin(s.yaw) < 0);
-    // The track's edge keeps clear of the stand all along it
-    const [, sz0] = toWorld([0, SITE.stand.v0]);
-    const [, sz1] = toWorld([0, SITE.stand.v1]);
-    for (let i = 0; i < n; i++) if (c.z[i] > sz0 && c.z[i] < sz1 && c.x[i] < sx + 20) assert.ok(c.x[i] - TRACK_HALF > sx + 0.4, `the stand is on the track at ${c.z[i].toFixed(1)}`);
-    assert.equal(c.laps, c.id.startsWith('grand') ? 2 : 3);
-    for (const s of c.boxes) assert.ok(s >= 0 && s < c.L);
-    for (const p of c.pads) assert.ok(p.s >= 0 && p.s < c.L && p.len > 0);
-  }
-});
-
-test('the sectors, bridges and surfaces: decks with headroom, ramps no steeper than 1 in 3.5, banking in the bowls, the wet bend, the tunnel', () => {
-  for (const c of Object.values(COURSES)) {
-    let deck = 0;
-    let bank = 0;
-    let maxRoll = 0;
-    let wet = 0;
-    let tunnel = 0;
-    for (let i = 0; i < c.x.length; i++) {
-      if (c.flags[i] & F.deck && c.y[i] > BRIDGE_H - 0.05) deck++;
-      if (c.flags[i] & F.bank) {
-        bank++;
-        maxRoll = Math.max(maxRoll, Math.abs(c.roll[i]));
+test('frame, at and locate agree; locate keeps to its layer at the flyover; banking lifts the outside', () => {
+  const c = RACES.circuit;
+  // The crossing: the deck's sample nearest the road under it
+  let top = 0;
+  let near = Infinity;
+  for (let i = 0; i < c.x.length; i++) {
+    if (!(c.flags[i] & F.deck) || c.y[i] < 2) continue;
+    for (let j = 0; j < c.x.length; j++) {
+      const d = c.y[j] < 0.1 ? Math.hypot(c.x[i] - c.x[j], c.z[i] - c.z[j]) : Infinity;
+      if (d < near) {
+        near = d;
+        top = i;
       }
-      assert.ok(Math.abs(c.roll[i]) <= 0.3);
-      if (c.flags[i] & F.wet) {
-        wet++;
-        assert.ok(c.grip[i] < 0.8);
-      }
-      if (c.flags[i] & F.tunnel) tunnel++;
-      // Height never below the ground; never a step
-      assert.ok(c.y[i] >= -0.01);
     }
-    const hasFlyover = c.sectors.includes('hairpin');
-    const hasNorth = c.sectors.includes('north');
-    if (hasFlyover) assert.ok(deck > 0 && wet > 0, `${c.id} has the flyover and the wet bend`);
-    if (hasNorth) assert.ok(bank > 20 && maxRoll > 0.2 && tunnel > 10, `${c.id} has the bowls and the tunnel`);
-    // Ramps
-    for (let s = 0; s < c.L; s += 0.5) if (c.hump < 0 || Math.abs(along(c, s, c.hump)) > 12) assert.ok(Math.abs(frame(c, s).slope) < 0.3, `${c.id} slope at ${s}`);
-    if (c.hump >= 0) assert.ok(frame(c, c.hump).y > 1.2 && frame(c, c.hump).y > frame(c, c.hump + 4).y && frame(c, c.hump).y > frame(c, c.hump - 4).y);
-    // Wherever two passes of the line come within the track's width, one is a bridge well over the other
-    const n = c.x.length;
-    for (let i = 0; i < n; i += 2)
-      for (let j = i + 30; j < n; j += 2) {
-        if (n - j + i < 30) continue;
-        const d = Math.hypot(c.x[i] - c.x[j], c.z[i] - c.z[j]);
-        if (d > TRACK_HALF * 2 + 0.4) continue;
-        if (nearNode(c.x[i], c.z[i]) || nearNode(c.x[j], c.z[j])) continue;
-        assert.ok(Math.abs(c.y[i] - c.y[j]) > 1.9, `${c.id}: ${(i * c.step).toFixed(0)} and ${(j * c.step).toFixed(0)} are ${d.toFixed(1)} apart with ${Math.abs(c.y[i] - c.y[j]).toFixed(2)} headroom`);
-      }
   }
-  // The physical pieces keep apart too, except where they meet at the nodes
-  for (let a = 0; a < PIECES.length; a++)
-    for (let b = a + 1; b < PIECES.length; b++) {
-      const A = PIECES[a];
-      const B = PIECES[b];
-      for (let i = 0; i < A.x.length; i += 2)
-        for (let j = 0; j < B.x.length; j += 2) {
-          const d = Math.hypot(A.x[i] - B.x[j], A.z[i] - B.z[j]);
-          if (d > A.half + B.half + 0.4) continue;
-          if (Math.abs(A.y[i] - B.y[j]) > 1.9) continue;
-          if (nearNode(A.x[i], A.z[i]) || nearNode(B.x[j], B.z[j])) continue;
-          const sA = i * A.step;
-          const sB = j * B.step;
-          if ((A.id === 'shortcut' && (sA < 14 || sA > A.L - 14)) || (B.id === 'shortcut' && (sB < 14 || sB > B.L - 14))) continue;
-          assert.fail(`${A.id} at ${sA.toFixed(0)} and ${B.id} at ${sB.toFixed(0)} are ${d.toFixed(1)} apart`);
-        }
-    }
-  assert.ok(NODE_REACH >= 9);
-});
-
-test('the shortcut: dirt, narrower, shorter than the main line between its ends, only on the courses that pass both', () => {
-  for (const c of Object.values(COURSES)) {
-    if (!c.sectors.includes('north') || !c.sectors.includes('return')) {
-      assert.equal(c.shortcut, null, c.id);
-      continue;
-    }
-    const sc = c.shortcut!;
-    assert.ok(sc && sc.L > 30 && sc.L < along(c, sc.out, sc.in), `${c.id}: ${sc.L.toFixed(0)} vs ${along(c, sc.out, sc.in).toFixed(0)}`);
-    assert.equal(sc.half, SHORTCUT_HALF);
-    assert.ok(along(c, sc.out, sc.in) > 0 && along(c, sc.out, sc.in) < 120);
-    let dirt = 0;
-    for (let i = 0; i < sc.x.length; i++) if (sc.flags[i] & F.dirt) dirt++;
-    assert.ok(dirt > sc.x.length * 0.5);
-    // Its ends sit on the main line
-    const a = at(sc, 0);
-    const b = at(sc, sc.L);
-    assert.ok(Math.abs(locate(c, a.x, a.z, sc.out).lateral) < 1.5 && Math.abs(locate(c, b.x, b.z, sc.in).lateral) < 1.5);
-  }
-});
-
-test('frame, at and locate agree; locate keeps to its layer at a crossing; banking lifts one side', () => {
-  const c = COURSES['neon-loop'];
-  const cross = c.sectors.includes('hairpin') ? (() => {
-    let best = 0;
-    for (let i = 0; i < c.x.length; i++) if (c.y[i] > c.y[best]) best = i;
-    return best * c.step;
-  })() : 0;
+  const cross = top * c.step;
   for (const s of [0, 10, 33.3, cross, c.L - 0.2])
     for (const lat of [-2, 0, 1.5]) {
       const p = at(c, s, lat);
@@ -211,84 +75,37 @@ test('frame, at and locate agree; locate keeps to its layer at a crossing; banki
       assert.ok(Math.abs(l.lateral - lat) < 0.08, `lateral at ${s}`);
       assert.ok(Math.abs(l.y - p.y) < 0.01);
     }
+  // Over the crossing: from up on the deck locate stays up, from the road below it stays down
   const f = at(c, cross, 0.3);
   const up = locate(c, f.x, f.z, cross - 3);
-  assert.ok(Math.abs(up.y - BRIDGE_H) < 0.1);
-  const down = locate(c, f.x, f.z, null);
-  const other = locate(c, f.x, f.z, wrapS(c, down.s + (Math.abs(along(c, down.s, cross)) < 1 ? c.L / 2 : 0)));
-  assert.ok(Math.abs(up.y - down.y) < 0.1 || Math.abs(other.y) < 0.1);
+  assert.ok(up.y >= BRIDGE_H, 'on the deck');
+  let below = -1;
+  for (let i = 0; i < c.x.length; i++) if (c.y[i] < 0.1 && Math.hypot(c.x[i] - f.x, c.z[i] - f.z) < 2) below = i;
+  assert.ok(below >= 0, 'a road under the deck');
+  const down = locate(c, f.x, f.z, below * c.step);
+  assert.ok(down.y < 0.2, 'under it');
   assert.equal(wrapS(c, c.L + 3), 3);
   assert.ok(Math.abs(along(c, c.L - 1, 1) - 2) < 1e-9);
-  // Banking: in the bowls the right side (lateral < 0) is up
-  const g = COURSES.summit;
-  const bankAt = [...g.flags].findIndex((v) => v & F.bank) * g.step + 2;
-  assert.ok(at(g, bankAt, -3).y > at(g, bankAt, 3).y + 0.5);
+  // Banking: the sweepers are right-handers forward, so their left edge (lateral > 0) is up
+  const bankAt = [...c.flags].findIndex((v) => v & F.bank) * c.step + 4;
+  assert.ok(at(c, bankAt, 2.5).y > at(c, bankAt, -2.5).y + 0.5);
 });
 
-test('the grid is eight slots behind the line, on the track; the gantry stands either side of it', () => {
-  for (const c of Object.values(COURSES)) {
-    const g = gridSlots(c);
-    assert.equal(g.length, GRID);
-    for (const slot of g) {
-      assert.ok(along(c, slot.s, c.start) > 1.5, 'behind the line');
-      assert.ok(Math.abs(slot.lateral) < TRACK_HALF - 0.8);
-      const p = at(c, slot.s, slot.lateral);
-      assert.ok(Math.abs(locate(c, p.x, p.z, slot.s).lateral) < TRACK_HALF - 0.6);
-    }
-    assert.ok(along(c, g[0].s, c.start) < along(c, g[7].s, c.start));
-  }
-  assert.equal(GANTRY.posts.length, 2);
-  assert.ok(GANTRY.h > 3);
-  assert.ok(PILLARS.length >= 8 && PILLARS.every((p) => p.h > 0.5 && p.h <= BRIDGE_H + 0.01));
+test('the park\'s footprints: the fence with a gap at the gate, the hut, the garages, the stand; the hut door free to stand at', () => {
+  assert.ok(SOLIDS.some((b) => CIRCUIT_SOLIDS.includes(b)), 'in the city\'s solids');
+  const blocked = (x: number, z: number) => SOLIDS.some((b) => x > b[0] - 0.22 && x < b[2] + 0.22 && z > b[1] - 0.22 && z < b[3] + 0.22);
+  assert.ok(!blocked(HUT_DOOR.x, HUT_DOOR.z), 'room at the hut door');
+  assert.ok(!blocked(KART_SPAWN.x, KART_SPAWN.z), 'room at the gate');
+  assert.ok(!blocked((GATE.x0 + GATE.x1) / 2, GATE.z), 'the gate is open');
+  assert.ok(blocked(GATE.x0 - 3, GATE.z) && blocked(GATE.x1 + 3, GATE.z), 'the fence either side');
+  // Driving your own kart off a race: on the run-off it's on the grass bank, off it nothing
+  const c = RACES.circuit;
+  const bankAt = [...c.flags].findIndex((v) => v & F.bank) * c.step + 4;
+  const p = at(c, bankAt, 2.8 + KERB + 1);
+  const g = circuitSurfaceAt(p.x, p.z, 1);
+  assert.ok(g && g.y > 0.1, 'the bank under the high side');
+  assert.equal(circuitSurfaceAt(HUT_DOOR.x, HUT_DOOR.z, 0), null);
 });
-
-test('the footprints: the fence with a gap at the gate, the hut, the stand, the posts and pillars; nothing solid on or beside the track', () => {
-  assert.ok(KART_SOLIDS.length > 10);
-  for (const b of KART_SOLIDS) {
-    assert.ok(b[0] < b[2] && b[1] < b[3] && b[4] > 0);
-    assert.ok(b[0] >= KART_PARK.x0 - 0.5 && b[2] <= KART_PARK.x1 + 0.5 && b[1] >= KART_PARK.z0 - 0.5 && b[3] <= KART_PARK.z1 + 0.5, 'on the site');
-  }
-  for (const b of KART_SOLIDS) assert.ok(SOLIDS.includes(b));
-  const gateMid = [(GATE.x0 + GATE.x1) / 2, GATE.z] as const;
-  assert.ok(!KART_SOLIDS.some((b) => gateMid[0] > b[0] && gateMid[0] < b[2] && gateMid[1] >= b[1] - 0.01 && gateMid[1] <= b[3] + 0.01));
-  const clear = (x: number, z: number) => !KART_SOLIDS.some((b) => x > b[0] - 0.3 && x < b[2] + 0.3 && z > b[1] - 0.3 && z < b[3] + 0.3);
-  assert.ok(clear(HUT_DOOR.x, HUT_DOOR.z) && clear(KART_SPAWN.x, KART_SPAWN.z));
-  // Nothing solid on any course's lane, its kerbs included (the owner's call: a kart drives on and off the
-  // track anywhere; a bridge's pillars stand beside the ground pass)
-  for (const c of Object.values(COURSES))
-    for (let s = 0; s < c.L; s += 1)
-      for (const lat of [-TRACK_HALF - 0.4, -TRACK_HALF + 0.7, 0, TRACK_HALF - 0.7, TRACK_HALF + 0.4]) {
-        const p = at(c, s, lat);
-        const hit = KART_SOLIDS.find((b) => p.x > b[0] && p.x < b[2] && p.z > b[1] && p.z < b[3] && !(p.y > 1 && b[4] <= BRIDGE_H + 0.01));
-        assert.equal(hit, undefined, `${c.id}: solid on the track at s ${s} lateral ${lat}: ${hit}`);
-      }
-});
-
-test('the track surface for driving off a race: the deck over the ground pass, the banking, nothing off the track', () => {
-  const c = COURSES['neon-loop'];
-  // On the flyover's deck and under it: the same spot, two heights, each found from its own layer
-  let deckS = -1;
-  for (let s = 0; s < c.L; s += 0.5) if (frame(c, s).y > BRIDGE_H - 0.05) { deckS = s; break; }
-  assert.ok(deckS >= 0);
-  const f = frame(c, deckS + 4);
-  const up = trackSurfaceAt(f.x, f.z, f.y);
-  assert.ok(up && Math.abs(up.y - f.y) < 0.05, 'the deck from the deck');
-  const down = trackSurfaceAt(f.x, f.z, 0);
-  assert.ok(down && down.y < 0.3, 'the ground pass from the ground');
-  // The bowls tilt the kart
-  const sum = COURSES['summit'];
-  let bankS = -1;
-  for (let s = 0; s < sum.L; s += 0.5) if (Math.abs(frame(sum, s).roll) > 0.27) { bankS = s; break; }
-  assert.ok(bankS >= 0);
-  const b = frame(sum, bankS);
-  const onBank = trackSurfaceAt(b.x, b.z, b.y);
-  assert.ok(onBank && Math.abs(onBank.roll) > 0.2);
-  // Off the track: the lawn and the city
-  assert.equal(trackSurfaceAt(KART_PARK.x0 + 1, KART_PARK.z0 + 1, 0), null);
-  assert.equal(trackSurfaceAt(0, 0, 0), null);
-});
-
-/* ---------- The karts, classes and the economy ---------- */
 
 test('four karts, three classes, the Pocket Rocket free; mods and classes raise the numbers', () => {
   assert.deepEqual(STARTER_KARTS, ['rocket']);

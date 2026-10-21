@@ -40,8 +40,10 @@ import type { RaceSite } from './racesite';
 import { RACE_SITE, START_LINE, START_R } from './races';
 import { createKartUI } from './kart-ui';
 import { createKartRace } from './kart';
-import { HUT_DOOR, trackSurfaceAt } from './kartpark';
+import { HUT_DOOR, circuitSurfaceAt as trackSurfaceAt } from './kartcircuit';
+import { KART_PARK } from './kartpark';
 import type { RaceStart } from './kart-types';
+import type { Cond } from './kartcircuit';
 import type { KartPark } from './kart-types';
 import { CUPS } from './kart-sim';
 import type { KartInput, CupId } from './kart-sim';
@@ -132,6 +134,8 @@ export interface WalkDeps {
   raceSite: RaceSite;
   /** The kart park in the north-east (its hut door opens the kart menu; races run on its track) */
   kartPark: KartPark;
+  /** A kart race's conditions on the sky; null puts the visitor's own back */
+  raceConditions(cond: Cond | null): void;
   /** The airport's own aircraft, where they are now (yours bumps softly off them) */
   airTraffic(): { kind: AircraftKind; pose: Pose }[];
   /** Your aircraft's engine: its voice and revs 0..1, negative for off */
@@ -242,7 +246,13 @@ export function createWalk(d: WalkDeps) {
     } else openSpot(near.id as SpotId);
   };
 
-  const groundAt = (x: number, z: number) => (slabs.some((s) => inBox(s.box, x, z) && inPoly(s.poly, [x, z])) ? SLAB : 0.035);
+  /** The ground under a point: a slab, or the street; at the kart park the circuit's own (its banks, the hill, the flyover's deck when `yNow` is up there) */
+  const groundAt = (x: number, z: number, yNow = 0) => {
+    const base = slabs.some((s) => inBox(s.box, x, z) && inPoly(s.poly, [x, z])) ? SLAB : 0.035;
+    if (x < KART_PARK.x0 || x > KART_PARK.x1 || z < KART_PARK.z0 || z > KART_PARK.z1) return base;
+    const t = trackSurfaceAt(x, z, yNow);
+    return t ? Math.max(base, t.y + 0.035) : base;
+  };
   const onBridge = (x: number) => NS_ROADS.some((r) => Math.abs(x - r.c) < r.half + WALK_W - 0.15);
   function blocked(x: number, z: number) {
     if (x < BOUNDS[0] || x > BOUNDS[2] || z < BOUNDS[1] || z > BOUNDS[3]) return true;
@@ -507,6 +517,7 @@ export function createWalk(d: WalkDeps) {
     outfit: () => outfit,
     sfx: d.sfx,
     engine: d.engine,
+    conditions: d.raceConditions,
     reduced: d.reduced,
     low: d.low,
   });
@@ -1311,7 +1322,7 @@ export function createWalk(d: WalkDeps) {
     }
     vy -= (GRAVITY + (!jumpHeld && vy > 0 ? 16 : 0)) * dt;
     pos.y += vy * dt;
-    const ground = groundAt(pos.x, pos.z);
+    const ground = groundAt(pos.x, pos.z, pos.y + 0.3);
     if (pos.y <= ground) {
       if (!grounded && vy < -3) land = 0.16;
       // Kerbs: step up smoothly rather than pop

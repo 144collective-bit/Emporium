@@ -6,7 +6,6 @@
  * kartpark.ts; neither depends on anything here.
  */
 import type * as THREE from 'three';
-import type { CourseId as ParkCourseId } from './kartpark';
 import type { Cond, CourseId } from './kartcircuit';
 import type { CupId, KartSim } from './kart-sim';
 import type { KartResult, SeriesResult } from './tycoon';
@@ -32,11 +31,11 @@ export interface KartPark {
   group: THREE.Group;
   /** The place (`karts`): its pin floats over the hut, the camera flies to the track */
   spot: Spot;
-  /** Draw the boost pads and item boxes of the course being raced (idle: the Neon Loop's; the old network until Phase 3 redraws the park) */
-  setCourse(id: ParkCourseId): void;
-  /** Which item boxes are gone (taken, respawning): one number per box in the sim's order, 0 = there; null shows them all */
-  showBoxes(gone: number[] | null): void;
-  /** Where the picked kart stands on show between races (in the pits), and which way it faces */
+  /** Show the guidance for the way round being raced (boost pad chevrons, chevron boards, arrows, numbered corners, braking markers); idle: forward */
+  setCourse(id: CourseId): void;
+  /** A race is on: cones close the pit lane's mouths */
+  racing(on: boolean): void;
+  /** Where the picked kart stands on show between races (its bay in front of the garages), and which way it faces */
   showSpot: { x: number; y: number; z: number; yaw: number };
 }
 
@@ -143,6 +142,8 @@ export interface KartRaceDeps {
   sfx(kind: import('./combat').Sfx, gain?: number): void;
   /** The kart's engine (sound.ts engine()): revs 0..1, negative for off */
   engine(revs: number): void;
+  /** A race's conditions on the sky (night, rain; a day race is day and dry); null puts the visitor's own time and weather back */
+  conditions(cond: Cond | null): void;
   reduced: boolean;
   low: boolean;
 }

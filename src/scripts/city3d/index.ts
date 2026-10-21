@@ -360,6 +360,22 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     game,
     raceSite,
     kartPark,
+    raceConditions: (() => {
+      // The visitor's own time and weather, kept while a race's conditions are on the sky
+      let own: { time: TimeMode; weather: WeatherMode } | null = null;
+      return (cond: 'day' | 'night' | 'rain' | null) => {
+        if (cond) {
+          own ??= { time: sky.time, weather: sky.weather };
+          sky.setTime(cond === 'night' ? 'night' : 'day');
+          sky.setWeather(cond === 'rain' ? 'rain' : 'clear');
+        } else if (own) {
+          sky.setTime(own.time);
+          sky.setWeather(own.weather);
+          own = null;
+        }
+        dirty = true;
+      };
+    })(),
     airTraffic: airport.traffic,
     aero: (kind, revs) => sound.aero(kind, revs),
     reduced,
