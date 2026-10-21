@@ -16,8 +16,13 @@
  *   them (beaten n times, your best time), and Fight.
  *   Record: wins, losses, knock-outs, best chain, bouts, spars, and each
  *   opponent's line.
- *   Styles: the three styles from `STYLES` with their moves by name. The
- *   Brawler is yours; the others say "Coming soon" (Phase 3 sells them).
+ *   Styles: the three styles from `STYLES` with their moves by name and
+ *   what they add. The Brawler is everyone's; the Kickboxer and Street
+ *   (`FIGHT_STYLES` in catalog.ts: a price and a level) are bought with an
+ *   inline confirm (Buy, then Confirm / Cancel) and picked with a tap;
+ *   locked below their level the button says the level and a tap says why.
+ *   The style you fight in is `fight.style` on the save (tycoon.ts
+ *   `buyStyle()` / `pickStyle()`).
  * - The HUD (`data-fight-hud`): the two health bars facing each other
  *   under the header with the names (yours left, the opponent's right,
  *   filling from the right), your stamina under yours (red when you're
@@ -39,10 +44,10 @@
  * the one picked, Esc / B / E closes (walk.ts calls close()). Prizes are
  * Dorras and XP only: never real money, nothing to do with the token.
  */
-import { BOT_LEVELS, FIGHT_BOTS, SPAR_HIT_CAP, XP, type BotLevel } from './catalog';
+import { BOT_LEVELS, FIGHT_BOTS, FIGHT_STYLES, SPAR_HIT_CAP, XP, type BotLevel } from './catalog';
 import { MOVES, STYLES, type StyleId } from './fight-sim';
-import { level, type TycoonSave } from './tycoon';
-import { D, LV, esc, fmt, repaint } from './ui';
+import { buyStyle, level, pickStyle, type TycoonSave } from './tycoon';
+import { D, LV, esc, fmt, repaint, whyNot } from './ui';
 import type { FightHud, FightResultView, FightUI, FightUIDeps } from './fight-types';
 
 /** A bout, as the trainer describes it (fight.ts sets the sim up to match) */
@@ -101,7 +106,8 @@ function botLine(f: FightSave, b: BotLevel) {
 }
 /** The lifetime counts, as rows of a `race-meta` list */
 function countsHtml(f: FightSave) {
-  return `  <div><dt>Wins</dt><dd>${fmt.format(f.wins)}</dd></div>
+  return `  <div><dt>Style</dt><dd>${esc(STYLES[f.style]?.name ?? 'Brawler')}</dd></div>
+  <div><dt>Wins</dt><dd>${fmt.format(f.wins)}</dd></div>
   <div><dt>Losses</dt><dd>${fmt.format(f.losses)}</dd></div>
   <div><dt>Knock-outs</dt><dd>${fmt.format(f.kos)}</dd></div>
   <div><dt>Best chain</dt><dd>${f.bestChain > 0 ? `${f.bestChain} hits` : '<span class="race-none">—</span>'}</dd></div>`;
@@ -152,6 +158,8 @@ export function createFightUI(root: HTMLElement, d: FightUIDeps): FightUI {
   let menuOpen = false;
   let resultOpen = false;
   let tab: Tab = 'spar';
+  /** The style a Buy is asking to confirm */
+  let asking: StyleId | null = null;
   let sinceRepaint = 0;
   let fightTimer = 0;
   /** What the HUD showed last, so only changes touch the DOM */
@@ -211,27 +219,74 @@ ${countsHtml(f)}
 <dl class="race-meta fight-records fight-records-bots">
 ${botsHtml(f)}
 </dl>
-<p class="race-note">Styles and moves bought here come in a later phase.</p>`;
+<p class="race-note">Styles bought at the trainer's counter (the Styles tab) show here as your record grows.</p>`;
   }
 
   function stylesTab(s: TycoonSave) {
     const f = fightOf(s);
+    const lv = level(s);
     const cards = STYLE_IDS.map((id) => {
       const st = STYLES[id];
+      const cat = FIGHT_STYLES[id];
       const yours = f.style === id;
       const owned = yours || f.styles.includes(id);
+      const locked = !owned && lv < cat.level;
       const moves = st.moves.map((m) => `<li>${esc(MOVES[m].name)}</li>`).join('') + (st.parry ? '<li>Parry</li>' : '');
-      const state = yours ? 'Your style' : owned ? 'Yours' : 'Coming soon';
-      return `<div class="fight-card fight-style${yours ? ' is-picked' : ''}${owned ? '' : ' is-soon'}" role="listitem">
-  <div class="fight-card-head"><b class="race-name">${esc(st.name)}</b><span class="fight-state">${state}</span></div>
+      let act: string;
+      if (yours) act = '<span class="fight-state">Your style</span>';
+      else if (owned) act = `<button type="button" class="fight-go" data-fight-pick="${id}"><span>Fight as the ${esc(st.name)}</span></button>`;
+      else if (asking === id)
+        act = `<div class="garage-sale is-asking"><p class="garage-ask">Buy the ${esc(st.name)} style for ${fmt.format(cat.price)} Dorras?</p><div class="garage-confirm"><button type="button" class="shop-take" data-fight-confirm="${id}">Confirm</button><button type="button" class="shop-take is-quiet" data-fight-cancel>Cancel</button></div></div>`;
+      else {
+        const note = locked ? `Needs level ${cat.level} (you're level ${lv}).` : s.dorras < cat.price ? `You're ${fmt.format(cat.price - s.dorras)} Dorras short.` : '';
+        act = `<button type="button" class="fight-go" data-fight-buy="${id}"${locked ? ' aria-disabled="true"' : ''}><span>${locked ? `Lv ${cat.level}` : `Buy · ${D(cat.price)}`}</span></button>${note ? `<p class="shop-note">${note}</p>` : ''}`;
+      }
+      return `<div class="fight-card fight-style${yours ? ' is-picked' : ''}${locked ? ' is-locked' : ''}" role="listitem">
+  <div class="fight-card-head"><b class="race-name">${esc(st.name)}</b>${cat.price > 0 ? LV(cat.level) : ''}<span class="fight-style-price">${cat.price > 0 ? D(cat.price) : 'Free'}</span></div>
+  <p class="race-blurb">${esc(cat.blurb)}</p>
   <ul class="fight-moves" aria-label="Moves">${moves}</ul>
+  <div class="fight-card-act fight-style-act">${act}</div>
 </div>`;
     }).join('');
     return `<section class="fight-sect" aria-label="Styles">
-  <div class="fight-sect-head"><b class="race-name">Styles</b><span class="race-cps">a complete fighter each</span></div>
+  <div class="fight-sect-head"><b class="race-name">Styles</b><span class="race-cps">a complete fighter each · bought with Dorras</span></div>
   <div class="fight-cards" role="list">${cards}</div>
 </section>
-<p class="race-note">The Brawler is everyone's. The Kickboxer and Street styles, with the roundhouse, the uppercut and the parry, come to the trainer in a later phase.</p>`;
+<p class="race-note">A style is its moves, its wraps and the way it fights. You fight in the one picked; a new style is picked as it's bought.</p>`;
+  }
+
+  /* ---------- Buying and picking a style ---------- */
+
+  function askBuy(id: StyleId) {
+    const s = d.game.save();
+    const cat = FIGHT_STYLES[id];
+    // No point asking when the rules will say no: say why instead
+    if (level(s) < cat.level || s.dorras < cat.price) return buy(id);
+    asking = id;
+    paint();
+    body.querySelector<HTMLButtonElement>('[data-fight-confirm]')?.focus({ preventScroll: true });
+  }
+  function buy(id: StyleId) {
+    asking = null;
+    const r = buyStyle(d.game.save(), id);
+    if (r.ok) {
+      d.game.commit();
+      d.game.sfx('buy');
+      d.game.toast(`The ${STYLES[id].name} style is yours. You fight as the ${STYLES[id].name} now.`);
+    } else {
+      d.game.sfx('denied');
+      d.game.toast(whyNot(r.why, FIGHT_STYLES[id].level));
+    }
+    paint();
+    body.querySelector<HTMLButtonElement>(`[data-fight-pick], [data-fight-buy]`)?.focus({ preventScroll: true });
+  }
+  function pick(id: StyleId) {
+    if (pickStyle(d.game.save(), id)) {
+      d.game.commit();
+      d.game.sfx('upgrade');
+      d.game.toast(`You fight as the ${STYLES[id].name} now.`);
+    }
+    paint();
   }
 
   function paint() {
@@ -245,6 +300,7 @@ ${botsHtml(f)}
   function setTab(t: Tab) {
     if (tab === t) return;
     tab = t;
+    asking = null;
     paint();
     body.scrollTop = 0;
     focusFirst();
@@ -279,6 +335,7 @@ ${botsHtml(f)}
     resultOpen = false;
     result.hidden = true;
     tab = 'spar';
+    asking = null;
     paint();
     el.hidden = false;
     el.scrollTop = 0;
@@ -325,6 +382,13 @@ ${botsHtml(f)}
     if (!b || b.disabled) return;
     if (b.dataset.fightSpar) startSpar(b.dataset.fightSpar as BotLevel);
     else if (b.dataset.fightBout) startBout(b.dataset.fightBout as BotLevel);
+    else if (b.dataset.fightBuy) askBuy(b.dataset.fightBuy as StyleId);
+    else if (b.dataset.fightConfirm) buy(b.dataset.fightConfirm as StyleId);
+    else if (b.hasAttribute('data-fight-cancel')) {
+      asking = null;
+      paint();
+      body.querySelector<HTMLButtonElement>('[data-fight-buy]')?.focus({ preventScroll: true });
+    } else if (b.dataset.fightPick) pick(b.dataset.fightPick as StyleId);
   });
   const arrows = (e: KeyboardEvent) => {
     if (e.key === 'ArrowDown' || e.key === 'ArrowRight') step(1);
@@ -483,6 +547,7 @@ ${bout ? `<p class="fight-result-rounds" aria-label="Rounds won, you and ${esc(r
 <dl class="race-meta race-result-meta fight-result-meta">
   <div><dt>Hits landed</dt><dd>${fmt.format(r.hits)}</dd></div>
   <div><dt>Hits taken</dt><dd>${fmt.format(r.taken)}</dd></div>
+  <div><dt>Blocked</dt><dd>${fmt.format(r.blocks)}</dd></div>
   <div><dt>Best chain</dt><dd>${r.bestChain}</dd></div>
   <div><dt>Knock-outs</dt><dd>${r.kos}</dd></div>
   <div><dt>Knockdowns</dt><dd>${r.knockdowns}</dd></div>

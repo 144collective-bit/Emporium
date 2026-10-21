@@ -1041,9 +1041,21 @@ it and has been retired completely. Build only on what's here.
   `.city.is-fighting` hides the walk HUD and `data-fight` makes the header
   read "Fighting · <opponent>". The save (`tycoon.ts`, v9) keeps `fight`
   (style, owned styles, wins, losses, knock-outs, best chain, bouts, spars,
-  each opponent's record), the ledger entry `fighting` and the counters
-  `bouts` / `fightWins` / `kos` / `chains`. New gameplay goes in the sim
-  first; looks in the clips and the view.
+  each opponent's record), the ledger entries `fighting` (purses) and
+  `fightclub` (styles) and the counters `spars` / `bouts` / `fightWins` /
+  `bossWins` / `kos` / `chains` / `bigChains` / `blocks` / `ironRounds` /
+  `cleanRounds` (`finishFight()` takes the fight's blocks and its rounds
+  won standing or untouched). Phase 3 is built, **styles and the record**:
+  the trainer's Styles tab sells the Kickboxer and Street (`FIGHT_STYLES`
+  in `catalog.ts`: price, level, the colour of the wraps; `buyStyle()` /
+  `pickStyle()` / `ownsStyle()` in `tycoon.ts`; Buy with an inline
+  confirm, a bought style is picked) and picks between the ones you own;
+  the Kickboxer's kicks hit harder (`StyleSpec.kick`, `damageOf()` in
+  `fight-sim.ts`); each fighter's fists wear their style's wraps
+  (`gloves` on the `Outfit`, the `wraps` item in `character.ts`); the
+  Profile tab carries your fight record (`fightRecordHtml()` under the
+  level bar); the Fight Club's missions and badges are in `missions.ts`.
+  New gameplay goes in the sim first; looks in the clips and the view.
 - **Nothing in the city attacks you** (the owner's call): the rival crew
   that patrolled the south bank was retired; only its look (`crewOutfit()`
   in `crew.ts`) remains, worn by the Fight Club's opponents. Targets are

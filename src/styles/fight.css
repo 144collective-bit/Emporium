@@ -410,12 +410,33 @@
     linear-gradient(#14102a, #14102a) padding-box,
     var(--pulse) border-box;
 }
-.fight-style.is-soon {
-  opacity: 0.65;
+.fight-style-price {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--p-cyan);
 }
-.fight-style.is-soon .fight-state {
-  border-color: #ffd36b66;
-  color: #ffd36b;
+.fight-style-price b {
+  font-weight: 800;
+}
+.fight-style-act .garage-sale {
+  width: 100%;
+}
+.fight-style-act .shop-note {
+  margin: 4px 0 0;
+}
+/* Your record on the Profile tab (the same list as the gym's Record tab) */
+.profile-fight {
+  margin: 10px 0 4px;
+}
+.profile-fight .fight-records-head {
+  margin: 0 0 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--p-cyan);
 }
 .fight-moves {
   display: flex;

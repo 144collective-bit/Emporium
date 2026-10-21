@@ -33,6 +33,7 @@ export const MISSIONS: Mission[] = [
   { id: 'drone-patrol', name: 'Drone patrol', blurb: 'Knock down 3 patrol drones.', level: 1, goal: counter('drones', 3), reward: 400, xp: 80 },
   { id: 'paper-run', name: 'Paper run', blurb: 'Deliver 1 contract from the Signal tower.', level: 1, goal: counter('contracts', 1), reward: 400, xp: 80 },
   { id: 'joyride', name: 'Joyride', blurb: 'Drive 300 tiles in your own car.', level: 1, goal: counter('driven', 300), reward: 300, xp: 60 },
+  { id: 'first-spar', name: 'First spar', blurb: "Spar a round at the Fight Club, on the south bank past the garage.", level: 1, goal: counter('spars', 1), reward: 500, xp: 60 },
   { id: 'first-lap', name: 'First lap', blurb: 'Finish a race at the kart park, north-east past the Parkway.', level: 1, goal: counter('kartRaces', 1), reward: 500, xp: 100 },
   // Tier 2
   { id: 'shopkeeper', name: 'Shopkeeper', blurb: 'Sell 150 things.', level: 3, goal: counter('sold', 150), reward: 900, xp: 150 },
@@ -42,6 +43,8 @@ export const MISSIONS: Mission[] = [
   { id: 'landlord', name: 'Landlord', blurb: 'Buy 2 units, lots or plots.', level: 3, goal: counter('land', 2), reward: 800, xp: 100 },
   { id: 'podium', name: 'Podium', blurb: 'Finish a kart race in the top three.', level: 3, goal: counter('podiums', 1), reward: 1200, xp: 160 },
   { id: 'clean-sheet', name: 'Clean sheet', blurb: 'Drive 5 clean laps at the kart park: not a wheel in the run-off.', level: 3, goal: counter('cleanLaps', 5), reward: 900, xp: 140 },
+  { id: 'chain-reaction', name: 'Chain reaction', blurb: 'Land a chain of three hits in the ring.', level: 3, goal: counter('chains', 1), reward: 800, xp: 120 },
+  { id: 'guard-up', name: 'Guard up', blurb: 'Block 10 hits at the Fight Club.', level: 3, goal: counter('blocks', 10), reward: 800, xp: 120 },
   // Tier 3
   { id: 'in-training', name: 'Tycoon in training', blurb: 'Take 25,000 Dorras in sales, contracts and prizes.', level: 5, goal: counter('earned', 25000), reward: 2000, xp: 250 },
   { id: 'tuner', name: 'Tuner', blurb: 'Buy 3 upgrades: mods at the garage or the Armoury, or levels for your places.', level: 5, goal: counter('upgrades', 3), reward: 1200, xp: 150 },
@@ -55,6 +58,7 @@ export const MISSIONS: Mission[] = [
   { id: 'property-mogul', name: 'Property mogul', blurb: 'Own a district plot (the estate agent is in the Vault).', level: 8, goal: { plots: 1 }, reward: 10000, xp: 1000 },
   { id: 'kart-hat-trick', name: 'Hat-trick', blurb: 'Win 3 kart races.', level: 8, goal: counter('kartWins', 3), reward: 5000, xp: 500 },
   { id: 'contender', name: 'Contender', blurb: 'Win 3 bouts at the Fight Club.', level: 8, goal: counter('fightWins', 3), reward: 4000, xp: 400 },
+  { id: 'top-dog', name: 'Top dog', blurb: "Beat the gym's top fighter in a bout.", level: 8, goal: counter('bossWins', 1), reward: 6000, xp: 600 },
   // Tier 5
   { id: 'magnate', name: 'Magnate', blurb: 'Take 250,000 Dorras.', level: 12, goal: counter('earned', 250000), reward: 15000, xp: 1500 },
   { id: 'kart-champion', name: 'Kart champion', blurb: 'Win 10 kart races.', level: 12, goal: counter('kartWins', 10), reward: 12000, xp: 1200 },
@@ -155,7 +159,12 @@ export const BADGES: Badge[] = [
   b('land-10', 'Developer', 'Bought 10 units, lots or plots.', 'land', 10, 1200),
   b('upgrades-10', 'Modder', 'Bought 10 upgrades.', 'upgrades', 10, 300),
   b('missions-10', 'Go-getter', 'Finished 10 missions.', 'missions', 10, 400),
+  b('fighter', 'Fighter', 'Fought a bout at the Fight Club.', 'bouts', 1, 100),
   b('bouts-10', 'Prize fighter', 'Fought 10 bouts.', 'bouts', 10, 300),
+  b('chain-gang', 'Chain gang', 'Landed a chain of four hits.', 'bigChains', 1, 300),
+  b('iron-chin', 'Iron chin', 'Won a round without going down.', 'ironRounds', 1, 300),
+  b('untouchable', 'Untouchable', 'Fought a round without taking a hit.', 'cleanRounds', 1, 500),
+  b('champion-10', 'Champion', 'Won 10 bouts.', 'fightWins', 10, 1000),
   b('kos-25', 'Knockout king', 'Knocked out 25 opponents.', 'kos', 25, 1500),
   { id: 'level-5', name: 'Level 5', blurb: 'Reached level 5.', xp: 0, on: { level: 5 } },
   { id: 'level-10', name: 'Level 10', blurb: 'Reached level 10.', xp: 0, on: { level: 10 } },
@@ -195,9 +204,15 @@ export const COUNTER_NAMES: Record<CounterId, string> = {
   kartWins: 'kart races won',
   cleanLaps: 'clean laps',
   overtakes: 'karts passed',
+  spars: 'spars',
   bouts: 'bouts fought',
   fightWins: 'bouts won',
+  bossWins: 'top fighter beaten',
   kos: 'knock-outs',
   chains: 'chains of three',
+  bigChains: 'chains of four',
+  blocks: 'hits blocked',
+  ironRounds: 'rounds won standing',
+  cleanRounds: 'rounds untouched',
 };
 export type { Counters };

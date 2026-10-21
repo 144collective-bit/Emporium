@@ -510,3 +510,75 @@ test("the Mayor's tells: a telegraphed hook winds up longer, he parries, and he 
   const d1 = Math.hypot(B.x - A.x, B.z - A.z);
   assert.ok(d1 > d0 + 0.3, `backed off from ${d0.toFixed(2)} to ${d1.toFixed(2)}`);
 });
+
+/* ---------- Phase 3: styles bought at the trainer's, harder kicks, the record's new counts ---------- */
+import { buyStyle, ownsStyle, pickStyle } from '../src/scripts/city3d/tycoon';
+import { FIGHT_STYLES } from '../src/scripts/city3d/catalog';
+import { damageOf } from '../src/scripts/city3d/fight-sim';
+
+test("a Kickboxer's kicks land harder; punches don't", () => {
+  assert.equal(damageOf('brawler', 'frontKick'), MOVES.frontKick.damage);
+  assert.equal(damageOf('kickboxer', 'frontKick'), Math.round(MOVES.frontKick.damage * STYLES.kickboxer.kick));
+  assert.ok(STYLES.kickboxer.kick > 1 && STYLES.brawler.kick === 1 && STYLES.street.kick === 1);
+  assert.equal(damageOf('kickboxer', 'jab'), MOVES.jab.damage);
+  // On the sim: a front kick from a Kickboxer takes more health than a Brawler's
+  const taken = (style: 'brawler' | 'kickboxer') => {
+    const sim = pair(1.2, {}, [style, 'brawler']);
+    run(sim, 1, { a: press({ kick: true }) });
+    run(sim, moveFrames('frontKick'));
+    return T.health - sim.fighter('b')!.health;
+  };
+  assert.ok(taken('kickboxer') > taken('brawler'));
+});
+
+test('styles: the Brawler is everyone\'s, the others need Dorras and a level, a bought style is picked, only owned styles can be picked, cleaning keeps them', () => {
+  const s = newSave(1000);
+  assert.ok(ownsStyle(s, 'brawler') && !ownsStyle(s, 'kickboxer'));
+  assert.equal(buyStyle(s, 'brawler').ok, false, 'already yours');
+  s.dorras = 100_000;
+  s.xp = 0;
+  assert.deepEqual(buyStyle(s, 'kickboxer'), { ok: false, why: 'level' });
+  s.xp = 1e9;
+  s.dorras = 10;
+  assert.deepEqual(buyStyle(s, 'street'), { ok: false, why: 'money' });
+  s.dorras = 100_000;
+  const r = buyStyle(s, 'kickboxer');
+  assert.ok(r.ok);
+  assert.equal(s.dorras, 100_000 - FIGHT_STYLES.kickboxer.price);
+  assert.equal(s.fight.style, 'kickboxer', 'picked as bought');
+  assert.deepEqual(s.fight.styles, ['brawler', 'kickboxer']);
+  assert.equal(s.counters.bought, 1);
+  assert.deepEqual(buyStyle(s, 'kickboxer'), { ok: false, why: 'owned' });
+  assert.equal(pickStyle(s, 'street'), false, 'not owned');
+  assert.equal(s.fight.style, 'kickboxer');
+  assert.equal(pickStyle(s, 'brawler'), true);
+  assert.equal(s.fight.style, 'brawler');
+  assert.equal(pickStyle(s, 'brawler'), false, 'already picked');
+  const c = cleanSave(JSON.parse(JSON.stringify({ ...s, fight: { ...s.fight, style: 'kickboxer' } })), 2000);
+  assert.deepEqual(c.fight.styles, ['brawler', 'kickboxer']);
+  assert.equal(c.fight.style, 'kickboxer');
+});
+
+test('a fight counts its spars, blocks, big chains, the top fighter beaten and the rounds won standing or untouched', () => {
+  const s = newSave(1000);
+  s.xp = 1e9;
+  finishFight(s, { kind: 'spar', bot: 'easy', won: null, hits: 3, kos: 0, bestChain: 4, seconds: 20, blocks: 7, ironRounds: 0, cleanRounds: 0 });
+  assert.equal(s.counters.spars, 1);
+  assert.equal(s.counters.blocks, 7);
+  assert.equal(s.counters.chains, 1);
+  assert.equal(s.counters.bigChains, 1);
+  finishFight(s, { kind: 'bout', bot: 'hard', won: true, hits: 30, kos: 1, bestChain: 3, seconds: 100, blocks: 2, ironRounds: 2, cleanRounds: 1 });
+  assert.equal(s.counters.bossWins, 1);
+  assert.equal(s.counters.fightWins, 1);
+  assert.equal(s.counters.ironRounds, 2);
+  assert.equal(s.counters.cleanRounds, 1);
+  assert.equal(s.counters.bigChains, 1, 'a chain of three is not a big one');
+  finishFight(s, { kind: 'bout', bot: 'medium', won: true, hits: 30, kos: 0, bestChain: 1, seconds: 100 });
+  assert.equal(s.counters.bossWins, 1, 'only the top fighter counts');
+  assert.equal(s.counters.blocks, 9, 'left out means none');
+  // Junk is clamped: never more rounds than a bout has, never a negative count
+  finishFight(s, { kind: 'bout', bot: 'easy', won: false, hits: 0, kos: 0, bestChain: 0, seconds: 10, blocks: -4, ironRounds: 99, cleanRounds: 2.6 });
+  assert.equal(s.counters.blocks, 9);
+  assert.equal(s.counters.ironRounds, 5);
+  assert.equal(s.counters.cleanRounds, 4);
+});

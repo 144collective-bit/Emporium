@@ -38,7 +38,7 @@ import { STYLES, type StyleId } from './fight-sim';
 import { COURSE_IDS, type CourseId } from './kartcircuit';
 import {
   BOT_LEVELS,
-  FIGHT_BOTS,
+  FIGHT_BOTS, FIGHT_STYLES,
   SPAR_HIT_CAP,
   type BotLevel,
   BUILD_COSTS,
@@ -262,6 +262,7 @@ export const ENTRIES = {
   vehicles: { name: 'Cars', in: false },
   karts: { name: 'Karts', in: false },
   fighting: { name: 'Fight purses', in: true },
+  fightclub: { name: 'Fight styles', in: false },
   gear: { name: 'Guns', in: false },
   clothes: { name: 'Clothes', in: false },
   staff: { name: 'Staff', in: false },
@@ -310,14 +311,23 @@ export interface Counters {
   kartWins: number;
   cleanLaps: number;
   overtakes: number;
-  /** Fights: bouts fought and won, knock-outs landed, chains of three or more */
+  /**
+   * Fights: spars and bouts fought, bouts won (and won against the top opponent), knock-outs landed, chains of three
+   * or more (and of four or more), hits blocked, rounds won without going down and rounds with no hit taken
+   */
+  spars: number;
   bouts: number;
   fightWins: number;
+  bossWins: number;
   kos: number;
   chains: number;
+  bigChains: number;
+  blocks: number;
+  ironRounds: number;
+  cleanRounds: number;
 }
 export type CounterId = keyof Counters;
-export const COUNTER_IDS: CounterId[] = ['sold', 'earned', 'contracts', 'dummies', 'drones', 'driven', 'bought', 'land', 'built', 'upgrades', 'missions', 'kartRaces', 'podiums', 'kartWins', 'cleanLaps', 'overtakes', 'bouts', 'fightWins', 'kos', 'chains'];
+export const COUNTER_IDS: CounterId[] = ['sold', 'earned', 'contracts', 'dummies', 'drones', 'driven', 'bought', 'land', 'built', 'upgrades', 'missions', 'kartRaces', 'podiums', 'kartWins', 'cleanLaps', 'overtakes', 'spars', 'bouts', 'fightWins', 'bossWins', 'kos', 'chains', 'bigChains', 'blocks', 'ironRounds', 'cleanRounds'];
 export const newCounters = (): Counters => Object.fromEntries(COUNTER_IDS.map((k) => [k, 0])) as unknown as Counters;
 /** A district plot you own, bought with Dorras */
 export interface OwnedPlot {
@@ -1517,16 +1527,25 @@ export interface FightResult {
  * (a purse by opponent for a win, XP either way), knock-outs and chains counted, the record kept.
  * A quit bout is a loss; a quit spar still counts its hits.
  */
-export function finishFight(s: TycoonSave, r: { kind: 'spar' | 'bout'; bot: BotLevel; won: boolean | null; hits: number; kos: number; bestChain: number; seconds: number; quit?: boolean }): FightResult {
+export function finishFight(
+  s: TycoonSave,
+  r: { kind: 'spar' | 'bout'; bot: BotLevel; won: boolean | null; hits: number; kos: number; bestChain: number; seconds: number; quit?: boolean; blocks?: number; ironRounds?: number; cleanRounds?: number }
+): FightResult {
   const bot = FIGHT_BOTS[r.bot] ?? FIGHT_BOTS.easy;
   const hits = Math.max(0, Math.round(r.hits));
   const kos = Math.max(0, Math.round(r.kos));
   const chain = Math.max(0, Math.round(r.bestChain));
+  const n = (v: number | undefined, cap: number) => Math.max(0, Math.min(cap, Math.round(v ?? 0)));
   let xp = 0;
   let prize = 0;
   const F = s.fight;
+  // Hits blocked, rounds won without going down and rounds with no hit taken (badges and missions)
+  count(s, 'blocks', n(r.blocks, 500));
+  count(s, 'ironRounds', n(r.ironRounds, 3));
+  count(s, 'cleanRounds', n(r.cleanRounds, 3));
   if (r.kind === 'spar') {
     F.spars++;
+    count(s, 'spars', 1);
     xp += XP.spar + Math.min(SPAR_HIT_CAP, hits * XP.sparHit);
   } else {
     F.bouts++;
@@ -1534,6 +1553,7 @@ export function finishFight(s: TycoonSave, r: { kind: 'spar' | 'bout'; bot: BotL
     if (r.won) {
       F.wins++;
       count(s, 'fightWins', 1);
+      if (r.bot === 'hard') count(s, 'bossWins', 1);
       xp += XP.boutWin;
       prize = bot.prize;
       const b = F.bots[r.bot] ?? { beaten: 0, bestSeconds: null };
@@ -1556,12 +1576,35 @@ export function finishFight(s: TycoonSave, r: { kind: 'spar' | 'bout'; bot: BotL
     count(s, 'chains', 1);
     xp += XP.chain;
   }
+  if (chain >= 4) count(s, 'bigChains', 1);
   if (prize > 0) {
     s.dorras += prize;
     book(s, 'fighting', prize);
   }
   const levels = addXp(s, xp);
   return { prize, xp, levels, won: r.kind === 'bout' ? !!r.won : null };
+}
+
+/* ---------- The trainer's styles ---------- */
+
+export const ownsStyle = (s: TycoonSave, id: StyleId) => id === 'brawler' || s.fight.styles.includes(id);
+/** Buy a fight style at the trainer's counter (catalog.ts FIGHT_STYLES: Dorras and a level); it becomes your style */
+export function buyStyle(s: TycoonSave, id: StyleId): BuyResult {
+  const st = FIGHT_STYLES[id];
+  if (!st) return { ok: false, why: 'place' };
+  if (ownsStyle(s, id)) return { ok: false, why: 'owned' };
+  const r = pay(s, st.price, st.level, 'fightclub');
+  if (!r.ok) return r;
+  s.fight.styles.push(id);
+  s.fight.style = id;
+  count(s, 'bought', 1);
+  return r;
+}
+/** Fight in a style you own (true if it changed) */
+export function pickStyle(s: TycoonSave, id: StyleId) {
+  if (!ownsStyle(s, id) || s.fight.style === id) return false;
+  s.fight.style = id;
+  return true;
 }
 
 export interface KartResult {

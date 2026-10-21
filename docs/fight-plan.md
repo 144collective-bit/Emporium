@@ -108,13 +108,14 @@ and a quarter of the health back (a bout ends on a knock-out instead).
 Numbers live in `fight-sim.ts` `MOVES` and are the first thing to tune on
 real devices; the table is the starting point, not a promise.
 
-**Styles** (`catalog.ts`): the Brawler (free: the jab, cross, hook, front
-kick, block, dodge), the Kickboxer (Lv 4, 15,000: the roundhouse, kicks
-hit harder) and Street (Lv 7, 30,000: the uppercut, the parry, the dodge
-steps further). Moves are bought with the style, not one by one, so a
-style is a complete, readable fighter. Each style has its own guard idle
-and taunt, and its gloves or wraps (cosmetic, shown on the fists). The
-fists' finishes (like gun skins) can come later.
+**Styles** (`catalog.ts` `FIGHT_STYLES`, built in Phase 3): the Brawler
+(free: the jab, cross, hook, front kick, block, dodge), the Kickboxer (Lv 4,
+15,000: the roundhouse, kicks hit 20% harder) and Street (Lv 7, 30,000: the
+uppercut, the parry, the dodge steps further). Moves are bought with the
+style, not one by one, so a style is a complete, readable fighter. Each
+style has its wraps on the fists (`gloves` on the `Outfit`: off-white,
+pink, cyan); a guard idle and taunt per style, and the fists' finishes
+(like gun skins), can come later.
 
 ## The Fight Club (the place)
 
@@ -168,17 +169,19 @@ crew's look stays as the gym's opponents (`crewOutfit()` in `crew.ts`).
 
 ## The save and the economy
 
-`tycoon.ts` (`cleanSave()` to v8): `fight` { style, owned styles, record
-{ wins, losses, kos, bestChain, bouts }, bot bests }; `buyStyle()`,
-`pickStyle()`, `finishBout()` (Dorras by bot level and rounds won, XP
-`boutWin` / `boutKo` / `chain` / `boutLoss` for taking part); counters
-`bouts`, `fightWins`, `kos`, `chains`; ledger entries `fighting` (in) and
-`fightclub` (out). Six missions (first spar, a 3 hit chain, a block, a
-knockout, win a bout, beat the top bot) and five badges (Fighter, Chain
-Gang (a 4 hit chain), Iron Chin (win a round without being knocked
-down), Champion (ten bout wins), Untouchable (a round with no hit
-taken)). Online, the fight record also goes on the server profile and the
-weekly boards.
+`tycoon.ts` (`cleanSave()`, v8 brought `fight` in): `fight` { style, owned
+styles, wins, losses, kos, bestChain, bouts, spars, each opponent's record };
+`buyStyle()`, `pickStyle()`, `finishFight()` (a spar's XP capped per hit, a
+bout's purse by opponent on a win, XP `spar` / `boutWin` / `boutLoss` /
+`fightKo` / `chain`); counters `spars`, `bouts`, `fightWins`, `bossWins`,
+`kos`, `chains`, `bigChains`, `blocks`, `ironRounds`, `cleanRounds`; ledger
+entries `fighting` (in) and `fightclub` (out). Missions: first spar, a
+chain of three, ten blocks, a first bout, three wins, the top fighter
+beaten, five knock-outs, fifteen wins. Badges: Fighter (a first bout),
+Prize fighter (ten), Chain gang (a chain of four), Iron chin (a round won
+without going down), Untouchable (a round with no hit taken), Champion (ten
+wins), Knockout king (25). Online, the fight record also goes on the
+server profile and the weekly boards.
 
 ## Tests
 
@@ -199,7 +202,17 @@ Phase 1 is built (`fight-sim.ts`, `fight-anim.ts`, `fight-demo.ts` on
 built: the Fight Club on the south bank (`fightsite.ts`, `fightclub.ts`),
 the trainer's menu, HUD and bout card (`fight-ui.ts`), the fight itself
 (`fight.ts`, `fight-figure.ts`), the save (v8) and `finishFight()`.
-Styles and the record's missions and badges are Phase 3 (the goons were dropped).
+Phase 3 is built: the trainer sells the Kickboxer and Street styles
+(`FIGHT_STYLES` in `catalog.ts`: a price, a level and the colour of the
+wraps on the fists; `buyStyle()` / `pickStyle()` in `tycoon.ts`, ledger
+entry `fightclub`), the Kickboxer's kicks hit harder (`StyleSpec.kick`,
+`damageOf()` in `fight-sim.ts`), the Styles tab buys with an inline
+confirm and picks, the fight record is on the walk Profile tab, and the
+record's missions (first spar, a chain of three, ten blocks, the top
+fighter beaten) and badges (Fighter, Chain gang, Iron chin, Untouchable,
+Champion) count on the save's `spars` / `blocks` / `bigChains` /
+`bossWins` / `ironRounds` / `cleanRounds` counters (the goons were
+dropped). Phase 4 waits for multiplayer.
 
 1. **The sim and the clips.** `fight-sim.ts` with the Brawler's moves,
    block, dodge, stamina, knockdowns, bots, bouts; `fight-anim.ts` with

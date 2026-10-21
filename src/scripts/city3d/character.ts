@@ -74,6 +74,8 @@ export interface Outfit {
   rifle?: 'left' | 'right';
   /** Both hands closed into fists (fighting; the open hands are left off) */
   fists?: boolean;
+  /** The wraps over the fists (a fight style's colour, catalog.ts FIGHT_STYLES); bare fists without */
+  gloves?: string;
   /** Width and height multipliers, for a bit of variety in build */
   build?: number;
   height?: number;
@@ -720,9 +722,9 @@ function paintMerge(list: { geo: THREE.BufferGeometry; color: THREE.Color }[]) {
 
 /* ---------- The wardrobe: items, each a set of pieces on the rig's joints ---------- */
 
-type ColorKey = 'top' | 'bottom' | 'shoes' | 'tie' | 'cap' | 'beanie' | 'bucket' | 'cowboy' | 'tophat' | 'backpack' | 'crossbody' | 'board' | 'duffel' | 'wings' | 'headphones' | 'lens';
+type ColorKey = 'top' | 'bottom' | 'shoes' | 'tie' | 'cap' | 'beanie' | 'bucket' | 'cowboy' | 'tophat' | 'backpack' | 'crossbody' | 'board' | 'duffel' | 'wings' | 'headphones' | 'lens' | 'gloves';
 /** Every outfit colour a piece can take (the crowd works each figure's out once) */
-const COLOR_KEYS: ColorKey[] = ['top', 'bottom', 'shoes', 'tie', 'cap', 'beanie', 'bucket', 'cowboy', 'tophat', 'backpack', 'crossbody', 'board', 'duffel', 'wings', 'headphones', 'lens'];
+const COLOR_KEYS: ColorKey[] = ['top', 'bottom', 'shoes', 'tie', 'cap', 'beanie', 'bucket', 'cowboy', 'tophat', 'backpack', 'crossbody', 'board', 'duffel', 'wings', 'headphones', 'lens', 'gloves'];
 /**
  * Pieces with a material of their own: the shades' lenses, the cap patch, the
  * gummy bag, the raised hood (both sides drawn) and neon (unlit, coloured per
@@ -1931,8 +1933,14 @@ function items(q: Detail): Item[] {
     },
     {
       id: 'fists',
-      when: (o) => !soldier(o) && !!o.fists,
+      when: (o) => !soldier(o) && !!o.fists && !o.gloves,
       pieces: both('wrist', one(fist), SKIN),
+    },
+    // Fists in a fight style's wraps (gloves: its colour)
+    {
+      id: 'wraps',
+      when: (o) => !soldier(o) && !!o.fists && !!o.gloves,
+      pieces: both('wrist', one(fist), 'gloves'),
     },
     {
       id: 'trousers',

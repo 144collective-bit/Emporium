@@ -21,7 +21,7 @@
  */
 import * as THREE from 'three';
 import { crewOutfit } from './crew';
-import { BOT_LEVELS, FIGHT_BOTS, type BotLevel } from './catalog';
+import { BOT_LEVELS, FIGHT_BOTS, FIGHT_STYLES, type BotLevel } from './catalog';
 import { createFighterFigure, disposeFigure, drawFighter, type FighterFigure } from './fight-figure';
 import { T, createFightSim, forward, yawTo, type FightEvent, type FightSim, type Fighter, type FighterInput } from './fight-sim';
 import type { Fight, FightDeps, FightHud, FightInput, FightKind, FightResultView } from './fight-types';
@@ -55,6 +55,12 @@ export function createFight(d: FightDeps): Fight {
   let shake = 0;
   let elapsed = 0;
   let tiredAt = -10;
+  /** Your hits blocked this fight, rounds won without going down and rounds with no hit taken, and the round's start marks */
+  let blocks = 0;
+  let ironRounds = 0;
+  let cleanRounds = 0;
+  let roundTaken = 0;
+  let roundDowns = 0;
   const camPos = new THREE.Vector3();
   const camAt = new THREE.Vector3();
   let camReady = false;
@@ -230,8 +236,11 @@ export function createFight(d: FightDeps): Fight {
       bout: kind === 'bout' ? BOUT : null,
       arena: { x: RING.x, z: RING.z, r: RING.r },
     });
-    you = createFighterFigure(group, d.outfit(), d.low, 0);
-    them = createFighterFigure(group, crewOutfit(bot === 'hard' ? 2 : bot === 'medium' ? 1 : 0), d.low, 41);
+    // Each fighter's fists in the wraps of their style
+    you = createFighterFigure(group, { ...d.outfit(), gloves: FIGHT_STYLES[save.fight.style].gloves }, d.low, 0);
+    them = createFighterFigure(group, { ...crewOutfit(bot === 'hard' ? 2 : bot === 'medium' ? 1 : 0), gloves: FIGHT_STYLES[B.style].gloves }, d.low, 41);
+    blocks = ironRounds = cleanRounds = 0;
+    roundTaken = roundDowns = 0;
     active = true;
     done = false;
     stop = 0;
@@ -284,7 +293,7 @@ export function createFight(d: FightDeps): Fight {
     const b = themF()!;
     const won: boolean | null = kind === 'bout' ? (quit ? false : sim.winner === YOU) : null;
     const save = d.game.save();
-    const result = finishFight(save, { kind, bot, won, hits: a.hits, kos: a.kos, bestChain: a.bestChain, seconds: elapsed, quit });
+    const result = finishFight(save, { kind, bot, won, hits: a.hits, kos: a.kos, bestChain: a.bestChain, seconds: elapsed, quit, blocks, ironRounds, cleanRounds });
     d.game.commit();
     if (result.levels > 0) d.sfx('levelup');
     const view: FightResultView = {
@@ -296,6 +305,7 @@ export function createFight(d: FightDeps): Fight {
       rounds: [a.rounds, b.rounds],
       hits: a.hits,
       taken: a.taken,
+      blocks,
       bestChain: a.bestChain,
       kos: a.kos,
       knockdowns: a.knockdowns,
@@ -336,7 +346,10 @@ export function createFight(d: FightDeps): Fight {
           burst(e.x, e.y, e.z, 'block');
           impact(e.x, e.y, e.z, 'block');
           dmgPop(e.x, e.y, e.z, 'Blocked', 'is-block');
-          if (e.who === YOU) d.ui.pop('Blocked', 'good');
+          if (e.who === YOU) {
+            blocks++;
+            d.ui.pop('Blocked', 'good');
+          }
           break;
         case 'parry':
           d.sfx('parry');
@@ -369,10 +382,19 @@ export function createFight(d: FightDeps): Fight {
           d.sfx('bell');
           showCount('FIGHT', 0.8);
           break;
-        case 'round':
+        case 'round': {
+          // The round's stats: won without going down, or fought untouched (badges)
+          const me = youF();
+          if (me) {
+            if (e.winner === YOU && me.knockdowns === roundDowns) ironRounds++;
+            if (me.taken === roundTaken) cleanRounds++;
+            roundTaken = me.taken;
+            roundDowns = me.knockdowns;
+          }
           d.sfx('bell', 0.8);
           d.ui.pop(e.winner === YOU ? 'Round to you' : e.winner === THEM ? `Round to ${FIGHT_BOTS[bot].name}` : 'Round even', e.winner === YOU ? 'good' : e.winner === THEM ? 'bad' : 'plain');
           break;
+        }
         case 'bout':
           finish(false);
           break;
@@ -524,7 +546,7 @@ export function createFight(d: FightDeps): Fight {
       if (sim && !done) {
         const a = youF()!;
         const save = d.game.save();
-        finishFight(save, { kind, bot, won: kind === 'bout' ? false : null, hits: a.hits, kos: a.kos, bestChain: a.bestChain, seconds: elapsed, quit: true });
+        finishFight(save, { kind, bot, won: kind === 'bout' ? false : null, hits: a.hits, kos: a.kos, bestChain: a.bestChain, seconds: elapsed, quit: true, blocks, ironRounds, cleanRounds });
         d.game.commit();
       }
       clear();

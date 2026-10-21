@@ -92,12 +92,16 @@ export interface StyleSpec {
   parry: boolean;
   /** How far a dodge steps */
   dodge: number;
+  /** What a kick's damage is multiplied by (the Kickboxer's land harder) */
+  kick: number;
 }
 export const STYLES: Record<StyleId, StyleSpec> = {
-  brawler: { id: 'brawler', name: 'Brawler', moves: ['jab', 'cross', 'hook', 'frontKick', 'dodge'], parry: false, dodge: 1.2 },
-  kickboxer: { id: 'kickboxer', name: 'Kickboxer', moves: ['jab', 'cross', 'hook', 'frontKick', 'roundhouse', 'dodge'], parry: false, dodge: 1.2 },
-  street: { id: 'street', name: 'Street', moves: ['jab', 'cross', 'hook', 'uppercut', 'frontKick', 'roundhouse', 'dodge'], parry: true, dodge: 1.6 },
+  brawler: { id: 'brawler', name: 'Brawler', moves: ['jab', 'cross', 'hook', 'frontKick', 'dodge'], parry: false, dodge: 1.2, kick: 1 },
+  kickboxer: { id: 'kickboxer', name: 'Kickboxer', moves: ['jab', 'cross', 'hook', 'frontKick', 'roundhouse', 'dodge'], parry: false, dodge: 1.2, kick: 1.2 },
+  street: { id: 'street', name: 'Street', moves: ['jab', 'cross', 'hook', 'uppercut', 'frontKick', 'roundhouse', 'dodge'], parry: true, dodge: 1.6, kick: 1 },
 };
+/** A move's damage from this fighter: kicks scaled by the style */
+export const damageOf = (style: StyleId, m: MoveId) => Math.round(MOVES[m].damage * (MOVES[m].kind === 'kick' ? STYLES[style].kick : 1));
 
 export const T = {
   tick: 1 / 60,
@@ -502,7 +506,7 @@ export function createFightSim(setup: FightSetup) {
           events.push({ kind: 'stagger', who: f.id });
           return;
         }
-        o.health = Math.max(0, o.health - m.damage * T.blockCut);
+        o.health = Math.max(0, o.health - damageOf(f.style, m.id) * T.blockCut);
         o.vx += fx * m.knockback * 2;
         o.vz += fz * m.knockback * 2;
         f.extraRecovery = T.blockedRecovery;
@@ -513,7 +517,7 @@ export function createFightSim(setup: FightSetup) {
       }
       // A clean hit
       const staggered = o.hurt === 'stagger' && o.stun > 0 && !o.parried;
-      o.health = Math.max(0, o.health - m.damage);
+      o.health = Math.max(0, o.health - damageOf(f.style, m.id));
       o.taken++;
       o.sinceHit = 0;
       o.blocking = false;
@@ -525,7 +529,7 @@ export function createFightSim(setup: FightSetup) {
       f.hits++;
       f.chain++;
       if (f.chain > f.bestChain) f.bestChain = f.chain;
-      events.push({ kind: 'hit', who: f.id, target: o.id, move: m.id, damage: m.damage, heavy: m.heavy, x: px, y: py, z: pz });
+      events.push({ kind: 'hit', who: f.id, target: o.id, move: m.id, damage: damageOf(f.style, m.id), heavy: m.heavy, x: px, y: py, z: pz });
       if (f.chain >= 2) events.push({ kind: 'chain', who: f.id, n: f.chain });
       if (o.health <= 0) fall(o, f, true);
       else if (m.knockdown || staggered) fall(o, f, false);

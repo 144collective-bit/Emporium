@@ -17,7 +17,7 @@ import type { BuildingType } from '../../data/plots';
 import type { Weapon, WeaponId } from './combat-sim';
 import type { PlayerCar } from './mycar';
 import type { KartId } from './mykart';
-import type { BotTraits } from './fight-sim';
+import type { BotTraits, StyleId } from './fight-sim';
 
 /* ---------- XP, levels and titles ---------- */
 
@@ -102,6 +102,15 @@ export const FIGHT_BOTS: Record<BotLevel, { name: string; blurb: string; skill: 
 };
 /** XP for taking part is capped per spar so hits can't be farmed */
 export const SPAR_HIT_CAP = 30;
+/**
+ * The styles the trainer sells (fight-sim.ts STYLES holds each one's moves): the Brawler is everyone's, the
+ * Kickboxer and Street cost Dorras and need a level. `gloves` is the colour of the wraps on the fists (cosmetic).
+ */
+export const FIGHT_STYLES: Record<StyleId, { price: number; level: number; blurb: string; gloves: string }> = {
+  brawler: { price: 0, level: 1, blurb: 'The jab, cross and hook, a front kick, block and dodge. Everyone starts here.', gloves: '#d9d4e4' },
+  kickboxer: { price: 15_000, level: 4, blurb: 'Adds the roundhouse, and every kick hits harder.', gloves: '#ff2fb9' },
+  street: { price: 30_000, level: 7, blurb: 'Adds the uppercut finisher and the parry, and the dodge steps further.', gloves: '#00eaff' },
+};
 
 /* ---------- Mods (upgrades): three levels each ---------- */
 

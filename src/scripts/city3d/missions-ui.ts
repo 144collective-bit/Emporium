@@ -29,6 +29,7 @@ import { BADGES, COUNTER_NAMES, MISSIONS, MISSIONS_MAX, abandonMission, acceptMi
 import { MAX_LEVEL, levelProgress, titleFor } from './catalog';
 import { GUIDE_STEPS, level, type ActiveMission, type TycoonSave } from './tycoon';
 import { GUIDE, advanceGuide, guideDone, guideStep, hideGuide, type GuideStep } from './guide';
+import { fightRecordHtml } from './fight-ui';
 import { D, esc, fmt, repaint, whyNot, type GameDeps } from './ui';
 
 /** A pop stays this long */
@@ -220,6 +221,7 @@ export function createMissionsUI(root: HTMLElement, game: GameDeps, hooks: Missi
     return `<p class="walk-skins-head"><span>Level ${lp.level} · ${esc(titleFor(lp.level))}</span><span>${fmt.format(s.xp)} XP</span></p>
       <i class="stall-bar" style="--v:${lp.into}"></i>
       <small class="level-togo">${lp.level >= MAX_LEVEL ? 'Top level' : `${fmt.format(lp.toGo)} XP to level ${lp.level + 1}`}</small>
+      <div class="profile-fight">${fightRecordHtml(s)}</div>
       <p class="walk-skins-head"><span>Badges</span><span><b>${earned.length}</b> / ${BADGES.length}</span></p>
       <ul class="badge-list">${earned.map((b) => row(b, true)).join('')}${locked.map((b) => row(b, false)).join('')}</ul>`;
   }

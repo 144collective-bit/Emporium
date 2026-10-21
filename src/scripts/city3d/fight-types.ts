@@ -64,6 +64,7 @@ export interface FightResultView {
   rounds: [number, number];
   hits: number;
   taken: number;
+  blocks: number;
   bestChain: number;
   kos: number;
   knockdowns: number;
@@ -85,7 +86,7 @@ export interface FightUIDeps {
 export interface FightUI {
   /** The trainer's menu or the bout card is showing */
   readonly open: boolean;
-  /** The trainer's menu: Spar (a partner at three levels), Bout (three rounds against a named opponent), Record; Styles says "coming soon" until Phase 3 */
+  /** The trainer's menu: Spar (a partner at three levels), Bout (three rounds against a named opponent), Record, Styles (buy and pick) */
   show(): void;
   /** Close whatever's open (true if something was) */
   close(): boolean;
