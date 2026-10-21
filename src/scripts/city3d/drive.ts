@@ -103,7 +103,7 @@ export function createDrive(d: DriveDeps) {
   const active = () => !!out;
   /** The seated Degen for the kart, made once */
   let driver: Degen | null = null;
-  /** Locked (a race's countdown): no throttle or steering, handbrake on */
+  /** Locked (a countdown): no throttle or steering, handbrake on */
   let frozen = false;
   let roofCam = false;
   let camYaw = 0;
@@ -358,7 +358,7 @@ export function createDrive(d: DriveDeps) {
       lookPitch = THREE.MathUtils.clamp(lookPitch + dy, -0.25, 0.7);
       lookIdle = 0;
     },
-    /** Is the car locked (a race's countdown)? */
+    /** Is the car locked (a countdown)? */
     get frozen() {
       return frozen;
     },

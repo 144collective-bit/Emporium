@@ -1,16 +1,16 @@
 /*
  * Small helpers shared by the city's game screens (the business card, the
- * shops, the mission board, the race menu): escaping, number formats, the
- * Dorras coin, and `repaint()`, which patches markup in place so a button
- * under a finger never changes while a view ticks.
+ * shops, the mission board, the kart hut's menu): escaping, number formats, the
+ * Dorras coin, the race clock, and `repaint()`, which patches markup in place
+ * so a button under a finger never changes while a view ticks.
  */
 import type { Sfx } from './combat';
 import type { TycoonSave } from './tycoon';
 
 /**
- * What a game screen (the garage, the Armoury, Drop 001, the race menu, the
- * mission board) needs from the economy: the save to read and change with
- * the rules in tycoon.ts / races.ts / missions.ts, `commit()` once it has
+ * What a game screen (the garage, the Armoury, Drop 001, the kart hut's menu,
+ * the mission board) needs from the economy: the save to read and change with
+ * the rules in tycoon.ts / missions.ts, `commit()` once it has
  * (saves, repaints every screen, checks badges and level-ups), a toast and
  * the sound switch.
  */
@@ -31,6 +31,12 @@ export const COIN =
 export const D = (n: number) => `${COIN}<b>${fmt.format(Math.floor(n))}</b>`;
 /** "Lv 7" tag */
 export const LV = (n: number) => `<span class="lv-tag">Lv ${n}</span>`;
+/** A lap or run time as m:ss.hh (the kart park's clocks, records and boards) */
+export function clockOf(seconds: number) {
+  const m = Math.floor(seconds / 60);
+  const s = seconds - m * 60;
+  return `${m}:${s.toFixed(2).padStart(5, '0')}`;
+}
 
 /** Make `to` match `from` in place: same elements kept, only what differs is changed */
 export function morph(to: Node, from: Node) {

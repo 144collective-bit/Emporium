@@ -12,9 +12,9 @@ import { DUMMIES } from './combat-sim';
 import { BIG_LOTS, BS, GARAGE, MARKET, UNITS, design, designBox } from './layout';
 import { ALLEYS, ALLEY_PROPS, BOLLARD_R, INFILL, SQUARE } from './downtown';
 import { SQUARE_SOLIDS } from './outer';
-import { RACE_SITE } from './races';
 import { CIRCUIT_SOLIDS as KART_SOLIDS } from './kartcircuit';
 import { AIRPORT_SOLIDS } from './airfield';
+import { BAGS, BLEACHERS, COUNTER, LOCKERS, POSTS, POST_R, SHED, SIGN } from './fightsite';
 import type { LotKind, UnitKind } from './tycoon';
 
 /** x0, z0, x1, z1, height */
@@ -202,15 +202,57 @@ export const DOWNTOWN_SOLIDS: Box[] = [
   ...sq.poles.map(([x, z]): Box => [x - 0.08, z - 0.08, x + 0.08, z + 0.08, 3]),
 ];
 
-/** The race start line (racesite.ts draws it): the gantry's post on South 4's sidewalk and the race board beside it */
-const RACE_SOLIDS: Box[] = [
-  [RACE_SITE.gantry.x - 0.2, RACE_SITE.gantry.post - 0.2, RACE_SITE.gantry.x + 0.2, RACE_SITE.gantry.post + 0.2, RACE_SITE.gantry.h],
-  [RACE_SITE.board.x - 0.55, RACE_SITE.board.z - 0.12, RACE_SITE.board.x + 0.55, RACE_SITE.board.z + 0.12, 1.6],
+/**
+ * The Fight Club on the south bank, east of the garage (fightsite.ts has the numbers, fightclub.ts
+ * draws it): where the shed's posts, the sign's posts and the yard's small things stand, shared by
+ * the drawing and the footprints so they never drift apart.
+ */
+const SHED_IN = 0.3;
+export const FIGHTCLUB_FIX = {
+  /** The shed's four posts, inset from its roof's corners (the north-west one stays clear of the trainer's spot) */
+  shedPosts: [
+    [SHED.x0 + SHED_IN, SHED.z0 + SHED_IN],
+    [SHED.x1 - SHED_IN, SHED.z0 + SHED_IN],
+    [SHED.x0 + SHED_IN, SHED.z1 - SHED_IN],
+    [SHED.x1 - SHED_IN, SHED.z1 - SHED_IN],
+  ] as [number, number][],
+  /** The sign gantry's posts, either end of its beam */
+  signPosts: [SIGN.x - SIGN.w / 2, SIGN.x + SIGN.w / 2] as [number, number],
+  /** The heavy bag's frame: half its span (its uprights stand north and south of the bag) */
+  bagSpan: 0.65,
+  /** Which locker doors stand open, and how far (hinged on the north edge, swung out east) */
+  ajar: [3, 9],
+  ajarAngle: 1.0,
+  /** The bench by the lockers (not solid) and the water cooler at the row's south end */
+  bench: { x: 96.9, z: 94.3 },
+  cooler: { x: 95.75, z: 96.3 },
+};
+/**
+ * What's solid at the Fight Club: the ring's corner posts (the canvas and the ropes stay open: you
+ * step through them), the shed's posts and its two closed walls, the counter, the lockers and
+ * their open doors, the bags' frames, the bleachers, the sign's posts and the water cooler.
+ */
+export const FIGHTCLUB_SITE: Box[] = [
+  ...POSTS.map(([x, z]): Box => [x - POST_R - 0.02, z - POST_R - 0.02, x + POST_R + 0.02, z + POST_R + 0.02, 1.6]),
+  ...FIGHTCLUB_FIX.shedPosts.map(([x, z]): Box => [x - 0.1, z - 0.1, x + 0.1, z + 0.1, SHED.h]),
+  [SHED.x1 - 0.2, SHED.z0, SHED.x1, SHED.z1, SHED.h], // the east wall
+  [SHED.x0, SHED.z1 - 0.2, SHED.x1, SHED.z1, SHED.h], // the south wall
+  [COUNTER.x0, COUNTER.z0, COUNTER.x1, COUNTER.z1, 2.0],
+  [LOCKERS.x0, LOCKERS.z0, LOCKERS.x1, LOCKERS.z1, 1.9],
+  ...FIGHTCLUB_FIX.ajar.map((k): Box => {
+    const z = LOCKERS.z0 + k * 0.5 + 0.03;
+    return [LOCKERS.x1, z, LOCKERS.x1 + Math.sin(FIGHTCLUB_FIX.ajarAngle) * 0.44 + 0.03, z + Math.cos(FIGHTCLUB_FIX.ajarAngle) * 0.44 + 0.03, 1.9];
+  }),
+  [BAGS.heavy.x - 0.15, BAGS.heavy.z - FIGHTCLUB_FIX.bagSpan - 0.06, BAGS.heavy.x + 0.15, BAGS.heavy.z + FIGHTCLUB_FIX.bagSpan + 0.06, 2.3],
+  [BAGS.speed.x - 0.2, BAGS.speed.z - 0.4, BAGS.speed.x + 0.2, BAGS.speed.z + 0.2, 1.8],
+  [BLEACHERS.x0, BLEACHERS.z0, BLEACHERS.x1, BLEACHERS.z1, 1.5],
+  ...FIGHTCLUB_FIX.signPosts.map((x): Box => [x - 0.1, SIGN.z - 0.1, x + 0.1, SIGN.z + 0.1, SIGN.h + 0.3]),
+  [FIGHTCLUB_FIX.cooler.x - 0.2, FIGHTCLUB_FIX.cooler.z - 0.2, FIGHTCLUB_FIX.cooler.x + 0.2, FIGHTCLUB_FIX.cooler.z + 0.2, 1.4],
 ];
 
 /** The outer squares' centrepieces, planters and kiosks (outer.ts); the pocket parks and lawns stay walkable */
-/** ...and the kart park's fence, hut, stand, gantry, flyover pillars and track walls (kartpark.ts), and the airport's buildings, masts and parked vehicles (airfield.ts) */
-export const SOLIDS: Box[] = [...DRAWN.map(designBox), ...DOWNTOWN_SOLIDS, ...SQUARE_SOLIDS, ...GARAGE_SOLIDS, ...MARKET_SOLIDS, ...DUMMY_SOLIDS, ...RACE_SOLIDS, ...KART_SOLIDS, ...AIRPORT_SOLIDS];
+/** ...and the kart park's fence, hut, garages and stand (kartcircuit.ts), the airport's buildings, masts and parked vehicles (airfield.ts), and the Fight Club (fightsite.ts) */
+export const SOLIDS: Box[] = [...DRAWN.map(designBox), ...DOWNTOWN_SOLIDS, ...SQUARE_SOLIDS, ...GARAGE_SOLIDS, ...MARKET_SOLIDS, ...DUMMY_SOLIDS, ...KART_SOLIDS, ...AIRPORT_SOLIDS, ...FIGHTCLUB_SITE];
 /** What bullets stop on: everything solid except the dummies' footprints (they test their own shape) */
 export const SHOT_SOLIDS = SOLIDS.filter((b) => !DUMMY_SOLIDS.includes(b));
 

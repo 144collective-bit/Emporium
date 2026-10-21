@@ -11,6 +11,7 @@
  */
 import * as THREE from 'three';
 import { Batch, FONT_DISPLAY, PAL, canvasTex, fx, lit, neon, neonSign, occlude, plane, toon } from './kit';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { MARKET } from './layout';
 import { MARKET_SITE, STALL_SPOT } from './solids';
 import { SLAB as S, addLamp } from './world';
@@ -32,37 +33,57 @@ const GOODSNAME = (id: string) => good(id as never).name.toUpperCase();
 /** Counter height: about a Degen's waist */
 const COUNTER = 0.5;
 
-/** A striped canopy texture */
-const stripes = (color: string) =>
-  canvasTex(128, 64, (c) => {
-    for (let x = 0; x < 128; x += 32) {
-      c.fillStyle = color;
-      c.fillRect(x, 0, 16, 64);
-      c.fillStyle = '#f3f2f7';
-      c.fillRect(x + 16, 0, 16, 64);
-    }
-    // A scalloped edge along the bottom
+/** A striped canopy, drawn into its row of the canopy atlas */
+const stripes = (c: CanvasRenderingContext2D, color: string) => {
+  for (let x = 0; x < 128; x += 32) {
     c.fillStyle = color;
-    for (let x = 0; x < 128; x += 16) {
-      c.beginPath();
-      c.arc(x + 8, 60, 8, 0, Math.PI);
-      c.fill();
-    }
-  });
+    c.fillRect(x, 0, 16, 64);
+    c.fillStyle = '#f3f2f7';
+    c.fillRect(x + 16, 0, 16, 64);
+  }
+  // A scalloped edge along the bottom
+  c.fillStyle = color;
+  for (let x = 0; x < 128; x += 16) {
+    c.beginPath();
+    c.arc(x + 8, 60, 8, 0, Math.PI);
+    c.fill();
+  }
+};
 
-const board = (text: string, color: string) =>
-  canvasTex(256, 64, (c) => {
-    c.fillStyle = '#0b0a18';
-    c.fillRect(0, 0, 256, 64);
-    c.strokeStyle = color;
-    c.lineWidth = 6;
-    c.strokeRect(3, 3, 250, 58);
-    c.font = `900 38px ${FONT_DISPLAY}`;
-    c.textAlign = 'center';
-    c.textBaseline = 'middle';
-    c.fillStyle = color;
-    c.fillText(text, 128, 35);
+/** A stall's name board, drawn into its row of the board atlas */
+const board = (c: CanvasRenderingContext2D, text: string, color: string) => {
+  c.fillStyle = '#0b0a18';
+  c.fillRect(0, 0, 256, 64);
+  c.strokeStyle = color;
+  c.lineWidth = 6;
+  c.strokeRect(3, 3, 250, 58);
+  c.font = `900 38px ${FONT_DISPLAY}`;
+  c.textAlign = 'center';
+  c.textBaseline = 'middle';
+  c.fillStyle = color;
+  c.fillText(text, 128, 35);
+};
+
+/**
+ * One texture for all the stalls, a row each (row 0 at the top), and a plane
+ * whose UVs pick row `i` of `n`: every canopy is one mesh and every board
+ * another, two draws for the lot instead of one per stall.
+ */
+const atlas = (w: number, rowH: number, n: number, draw: (c: CanvasRenderingContext2D, i: number) => void) =>
+  canvasTex(w, rowH * n, (c) => {
+    for (let i = 0; i < n; i++) {
+      c.save();
+      c.translate(0, rowH * i);
+      draw(c, i);
+      c.restore();
+    }
   });
+const rowPlane = (w: number, h: number, i: number, n: number) => {
+  const geo = new THREE.PlaneGeometry(w, h);
+  const uv = geo.attributes.uv as THREE.BufferAttribute;
+  for (let v = 0; v < uv.count; v++) uv.setY(v, 1 - (i + 1 - uv.getY(v)) / n);
+  return geo;
+};
 
 export function buildMarket(scene: THREE.Scene, crowd: Idle[]) {
   const g = new THREE.Group();
@@ -74,6 +95,12 @@ export function buildMarket(scene: THREE.Scene, crowd: Idle[]) {
   const post = toon('#2b2a40');
   const crate = toon('#a8743f');
 
+  const STALLS = MARKET_SITE.stalls.length;
+  const colorOf = (i: number) => (i === 0 ? PAL.cyan : TRADERS[i - 1].canopy);
+  const canopyTex = atlas(128, 64, STALLS, (c, i) => stripes(c, colorOf(i)));
+  const boardTex = atlas(256, 64, STALLS, (c, i) => board(c, i === 0 ? 'YOUR STALL' : GOODSNAME(TRADERS[i - 1].goods[0]), colorOf(i)));
+  const canopies: THREE.BufferGeometry[] = [];
+  const boards: THREE.BufferGeometry[] = [];
   MARKET_SITE.stalls.forEach((t, i) => {
     const mine = i === 0;
     const f = t.facing; // +1: front faces +z
@@ -95,24 +122,25 @@ export function buildMarket(scene: THREE.Scene, crowd: Idle[]) {
       // Crates stacked behind the counter
       b.box(x0 + 0.2, S, back + f * 0.2 - (f < 0 ? 0.45 : 0), 0.45, 0.4, 0.45, crate);
     }
-    // Striped canopy, sloping down to the front
-    const canopy = new THREE.Mesh(new THREE.PlaneGeometry(t.w + 0.3, t.d + 0.35), new THREE.MeshToonMaterial({ map: stripes(mine ? PAL.cyan : TRADERS[i - 1].canopy), side: THREE.DoubleSide }));
-    canopy.position.set(t.x, S + 1.6, t.z + f * 0.1);
-    canopy.rotation.set(-Math.PI / 2 + f * 0.22, 0, 0);
-    if (f < 0) canopy.rotation.z = Math.PI;
-    canopy.castShadow = true;
-    g.add(canopy);
+    // Striped canopy, sloping down to the front (its row of the atlas; turned, tilted, then placed)
+    const canopy = rowPlane(t.w + 0.3, t.d + 0.35, i, STALLS);
+    if (f < 0) canopy.rotateZ(Math.PI);
+    canopies.push(canopy.rotateX(-Math.PI / 2 + f * 0.22).translate(t.x, S + 1.6, t.z + f * 0.1));
     // A name board on top of the back board
-    const sign = plane(1.3, 0.32, lit(new THREE.MeshBasicMaterial({ map: board(mine ? 'YOUR STALL' : GOODSNAME(TRADERS[i - 1].goods[0]), mine ? PAL.cyan : TRADERS[i - 1].canopy) }), 0.9, 1.35));
-    sign.position.set(t.x, S + 1.86, back + f * 0.08);
-    if (f < 0) sign.rotation.y = Math.PI;
-    g.add(fx(sign));
+    const sign = rowPlane(1.3, 0.32, i, STALLS);
+    if (f < 0) sign.rotateY(Math.PI);
+    boards.push(sign.translate(t.x, S + 1.86, back + f * 0.08));
     // A trader behind every other stall's counter; shoppers browsing
     if (!mine) {
       crowd.push({ x: t.x + 0.2, z: back + f * 0.55, ry: f > 0 ? 0 : Math.PI, act: 'look' });
       if (i % 2 === 0) crowd.push({ x: t.x - 0.3, z: front + f * 0.55, ry: f > 0 ? Math.PI : 0, act: 'look' });
     }
   });
+  const canopyMesh = new THREE.Mesh(mergeGeometries(canopies, false)!, new THREE.MeshToonMaterial({ map: canopyTex, side: THREE.DoubleSide }));
+  canopyMesh.castShadow = true;
+  g.add(canopyMesh);
+  g.add(fx(new THREE.Mesh(mergeGeometries(boards, false)!, lit(new THREE.MeshBasicMaterial({ map: boardTex }), 0.9, 1.35))));
+  for (const geo of [...canopies, ...boards]) geo.dispose();
   // Shoppers chatting in the aisle
   const az = (MARKET_SITE.stalls[0].z + MARKET_SITE.stalls[4].z) / 2;
   crowd.push({ x: MARKET.ox + 5.9, z: az - 0.25, ry: 2.4, act: 'chat' }, { x: MARKET.ox + 6.4, z: az + 0.15, ry: -0.8, act: 'chat' });

@@ -10,13 +10,14 @@
  * - Everything new costs Dorras and needs a level. Upgrades ("mods") come
  *   in three levels each and cost more on dearer things; `applyGunMods()`
  *   turns a gun's mods into its rules for the combat sim.
- * - XP comes from playing: sales, contracts, races, missions, takedowns.
+ * - XP comes from playing: sales, contracts, kart races, missions, takedowns.
  *   Nothing here is bought with real money or tied to the token.
  */
 import type { BuildingType } from '../../data/plots';
 import type { Weapon, WeaponId } from './combat-sim';
 import type { PlayerCar } from './mycar';
 import type { KartId } from './mykart';
+import type { BotTraits } from './fight-sim';
 
 /* ---------- XP, levels and titles ---------- */
 
@@ -68,12 +69,6 @@ export const XP = {
   /** Per dummy, drone and crew member knocked down */
   dummy: 4,
   drone: 8,
-  goon: 12,
-  /** Finishing a race, and beating its par (on top) */
-  raceFinish: 120,
-  racePar: 180,
-  /** A new best time (on top) */
-  raceRecord: 60,
   /** Finishing a kart race; a podium and a win (on top); a time trial's new best */
   kartFinish: 100,
   kartPodium: 80,
@@ -84,7 +79,29 @@ export const XP = {
   seriesPodium: 250,
   parBeaten: 150,
   challenge: 200,
+  /** Fighting (the Fight Club): a spar (plus a little per hit landed), a bout won or lost, a knock-out, a chain of three or more */
+  spar: 40,
+  sparHit: 2,
+  boutWin: 200,
+  boutLoss: 60,
+  fightKo: 50,
+  chain: 30,
 } as const;
+
+/* ---------- The Fight Club's opponents (docs/fight-plan.md) ---------- */
+
+export type BotLevel = 'easy' | 'medium' | 'hard';
+export const BOT_LEVELS: BotLevel[] = ['easy', 'medium', 'hard'];
+/** The sparring partners and bout opponents: a cartoon fighter per level (fixed names, never real people), its skill, its style and a bout's prize */
+export const FIGHT_BOTS: Record<BotLevel, { name: string; blurb: string; skill: number; style: 'brawler' | 'kickboxer' | 'street'; prize: number; level: number; traits: Partial<BotTraits> }> = {
+  // A clear curve (the owner's call): Ray rarely blocks and never parries; Knuckles blocks and kicks; the Mayor parries and
+  // finishes, but telegraphs his heavy moves with a longer wind-up and backs off after a chain, so patience beats him
+  easy: { name: 'Rookie Ray', blurb: 'Slow hands, big heart. Learn the chain on him.', skill: 0.3, style: 'brawler', prize: 1_500, level: 1, traits: { block: 0.15, dodge: 0.03, kicks: 0.15, pace: 75 } },
+  medium: { name: 'Knuckles', blurb: 'Blocks when he sees it coming. Mix the kicks in.', skill: 0.55, style: 'kickboxer', prize: 3_000, level: 1, traits: { block: 0.5, dodge: 0.1, kicks: 0.45, pace: 50, backOff: 20 } },
+  hard: { name: 'The Mayor', blurb: 'Reads you, parries you, finishes you. Watch for the wind-up.', skill: 0.8, style: 'street', prize: 6_000, level: 3, traits: { block: 0.6, dodge: 0.15, parry: 0.4, kicks: 0.3, finisher: true, telegraph: 8, backOff: 45, pace: 44 } },
+};
+/** XP for taking part is capped per spar so hits can't be farmed */
+export const SPAR_HIT_CAP = 30;
 
 /* ---------- Mods (upgrades): three levels each ---------- */
 
