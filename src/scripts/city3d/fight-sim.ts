@@ -113,7 +113,7 @@ export const T = {
   blockCut: 0.2,
   blockCost: 6,
   /** A block begun within this many frames before the hit parries it; the attacker's stagger */
-  parryWindow: 6,
+  parryWindow: 4,
   parryStun: 30,
   /** The stun of a heavy hit's stagger (replaces the move's own) */
   staggerStun: 36,
@@ -655,7 +655,8 @@ export function createFightSim(setup: FightSetup) {
       const [fx, fz] = forward(f.yaw);
       const dirx = len > 0.1 ? inp.x / len : -fx;
       const dirz = len > 0.1 ? inp.z / len : -fz;
-      const speed = (STYLES[f.style].dodge / MOVES.dodge.active) * 60;
+      // A push that eases out (T.slide) over the step's length
+      const speed = (STYLES[f.style].dodge * (1 - Math.exp(-T.slide * T.tick))) / T.tick;
       f.vx = dirx * speed;
       f.vz = dirz * speed;
       return;
