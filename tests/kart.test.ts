@@ -251,6 +251,20 @@ test('a cup is a series of four races with points; the overall winner takes the 
   assert.equal(s.karts.series, null);
 });
 
+test('a single race pays like a cup\'s race and leaves a series on the go alone', () => {
+  const s = newSave(0);
+  startSeries(s, 'rookie');
+  seriesRace(s, [2, 3, 4, 5, 6, 7, 8, 1]);
+  const going = JSON.stringify(s.karts.series);
+  const before = s.dorras;
+  // A single race at the Rookie rivals' class, in the rain: finishKartRace pays the place, the series isn't touched (kart.ts skips seriesRace)
+  const r = finishKartRace(s, { course: 'circuit-reverse', cup: 'rookie', cls: CUPS.rookie.cls, place: 2, seconds: 140, laps: [47, 46.5, 46.5] });
+  assert.equal(r.prize, CUPS.rookie.prizes[1]);
+  assert.equal(s.dorras, before + CUPS.rookie.prizes[1]);
+  assert.equal(JSON.stringify(s.karts.series), going);
+  assert.deepEqual(seriesNext(s), CUPS.rookie.races[1]);
+});
+
 test('the save is v8: the old track\'s records are kept aside, its boards and series put away; karts, trophies and Dorras stay', () => {
   const old = newSave(0) as unknown as Record<string, unknown>;
   old.v = 7;

@@ -573,15 +573,15 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
         data-karts-close its ×.
         data-kart-count: the countdown digits. data-kart-hud: the race HUD: the place (data-kart-place, data-kart-ord,
         data-kart-of; a time trial shows the gap to the ghost, data-kart-gap, instead), the drift meter (data-kart-meter)
-        with the tags (data-kart-boost, data-kart-shield, the surface when it's not dry data-kart-surface, data-kart-shortcut),
-        the lap (data-kart-lap) with the class (data-kart-cls) and the series' race (data-kart-series), the clock
-        (data-kart-clock) with the last and best lap under it (data-kart-laps), the item slot (data-kart-slot:
-        data-kart-slot-icon, data-kart-slot-strip while the roulette spins, data-kart-slot-name) and Quit (data-kart-quit).
+        with the tags (data-kart-boost, the surface when it's not plain asphalt data-kart-surface, the conditions
+        data-kart-cond), the lap (data-kart-lap) with the class (data-kart-cls) and the series' race (data-kart-series),
+        the clock (data-kart-clock) with the last and best lap under it (data-kart-laps), the minimap (data-kart-map: the
+        circuit's outline with every kart's dot, yours lit; kart-ui.ts draws it) and Quit (data-kart-quit).
         data-kart-pops: short lines over the HUD. data-kart-result: the results card; data-kart-result-title,
         data-kart-result-body (painted), data-kart-next (a series' next race, hidden otherwise), data-kart-result-ok and
         data-kart-result-close.
-        Touch, while .city.is-karting (set by kart.ts): data-kart-drift above the Brake pedal and data-kart-item (the
-        held item's icon in data-kart-item-icon) above the Gas pedal; walk.ts wires them. .kart-hint is the key line. */}
+        Touch, while .city.is-karting (set by kart.ts): data-kart-drift above the Brake pedal; walk.ts wires it.
+        .kart-hint is the key line. */}
     <section class="shop karts" data-karts hidden aria-labelledby="karts-title">
       <header class="shop-head">
         <h2 id="karts-title" class="shop-title">Kart hut</h2>
@@ -605,7 +605,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
         <p class="kart-place"><b data-kart-place>1</b><small data-kart-ord>st</small><span class="kart-of" data-kart-of>of 8</span></p>
         <p class="kart-gap" data-kart-gap hidden aria-label="Gap to the ghost">+0.00</p>
         <div class="kart-meter" data-kart-meter data-tier="0" role="img" aria-label="Drift"><i></i><i></i><i></i></div>
-        <p class="kart-tags"><span class="kart-tag is-boost" data-kart-boost hidden>Boost</span><span class="kart-tag is-shield" data-kart-shield hidden>Shield</span><span class="kart-tag is-surface" data-kart-surface data-surface="wet" hidden>Wet</span><span class="kart-tag is-shortcut" data-kart-shortcut hidden>Shortcut</span></p>
+        <p class="kart-tags"><span class="kart-tag is-boost" data-kart-boost hidden>Boost</span><span class="kart-tag is-surface" data-kart-surface data-surface="kerb" hidden>Kerb</span><span class="kart-tag is-cond" data-kart-cond data-cond="night" hidden>Night</span></p>
       </div>
       <div class="kart-hud-mid">
         <p class="kart-lap-row"><b class="kart-lap" data-kart-lap>Lap 1/3</b><span class="kart-cls" data-kart-cls data-cls="sport">Sport</span><span class="kart-series-tag" data-kart-series hidden>Race 1/4</span></p>
@@ -613,12 +613,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
         <small class="kart-laps" data-kart-laps hidden><span data-kart-last>Last —</span><span data-kart-best>Best —</span></small>
       </div>
       <div class="kart-hud-right">
-        <div class="kart-slot is-empty" data-kart-slot data-item="none">
-          <span class="kart-slot-icon" data-kart-slot-icon></span>
-          <span class="kart-slot-strip" data-kart-slot-strip aria-hidden="true"></span>
-          <span class="kart-slot-q" aria-hidden="true">?</span>
-          <small class="kart-slot-name" data-kart-slot-name>No item</small>
-        </div>
+        <div class="kart-map" data-kart-map role="img" aria-label="Map of the circuit"></div>
         <button type="button" class="race-quit kart-quit" data-kart-quit>Quit</button>
       </div>
     </div>
@@ -636,9 +631,8 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
         <button type="button" class="shop-take" data-kart-result-ok>Done</button>
       </div>
     </section>
-    <p class="walk-hint kart-hint"><kbd>W</kbd><kbd>S</kbd> gas / brake · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>Space</kbd> drift · <kbd>E</kbd> item (<kbd>S</kbd> + <kbd>E</kbd> throws behind) · <kbd>Esc</kbd> quit</p>
+    <p class="walk-hint kart-hint"><kbd>W</kbd><kbd>S</kbd> gas / brake · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>Space</kbd> hop and drift (let go for the boost) · <kbd>Esc</kbd> quit</p>
     <button type="button" class="kart-btn kart-drift" data-kart-drift aria-label="Drift">Drift</button>
-    <button type="button" class="kart-btn kart-item" data-kart-item aria-label="Use item"><span class="kart-item-icon" data-kart-item-icon></span><small>Item</small></button>
     <p class="walk-hint"><kbd>WASD</kbd> move · <kbd>Shift</kbd> run · <kbd>Space</kbd> jump · <kbd>V</kbd> camera · <kbd>Esc</kbd> stop</p>
     {/* Driving your car (drive.ts): speed readout, key hint, touch pedals (the stick steers) */}
     <p class="walk-hint drive-hint"><kbd>W</kbd><kbd>S</kbd> gas / brake · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>Space</kbd> handbrake · <kbd>V</kbd> camera · <kbd>E</kbd> get out</p>
@@ -792,7 +786,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
   <template data-panel-tpl="karts">
     <p class="kicker"><span class="kicker-num">09</span> The kart park</p>
     <h2 id="city-panel-title" class="city-panel-title">Go-karts</h2>
-    <p class="city-panel-text">A track network on the open land north-east of the Parkway: the Neon Loop, the Summit Run and the Grand Circuit, each run both ways, with banked bowls, a hill, a tunnel, a flyover, a jump and a shortcut for the brave. Race seven rivals with items from the boxes on the track, in three classes from Street to Neon. Three cups run as a series of four races with points by place and a trophy for the podium; time trials race the par ghost and go on your boards, and there's a new challenge every day. Karts are bought and tuned at the hut for Dorras earned in the city.</p>
+    <p class="city-panel-text">The Sector 7 Circuit on the open land north-east of the Parkway: twelve corners, two banked sweepers, a hill with a tunnel and a jump, a hairpin and a flyover, raced both ways round. Pure racing against seven rivals in three classes from Street to Neon: drift for boosts, keep it off the grass, and some races run at night or in the rain. Three cups run as a series of four races with points by place and a trophy for the podium; single races and time trials (against the par ghost) any time, and a new challenge every day. Karts are bought and tuned at the hut for Dorras earned in the city.</p>
     <button type="button" class="chip-link kart-walkin" data-kart-walkin>Walk in</button>
     {/* Your best laps, trophies and race counts (index.ts fills it with kartRecordsHtml() from kart-ui.ts) */}
     <div class="kart-panel-records" data-kart-panel-records></div>
