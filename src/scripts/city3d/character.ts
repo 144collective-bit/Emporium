@@ -72,6 +72,8 @@ export interface Outfit {
   held?: 'gummy' | 'coffee' | 'boombox' | 'phone' | 'briefcase';
   /** Which hand carries a rifle (soldiers) */
   rifle?: 'left' | 'right';
+  /** Both hands closed into fists (fighting; the open hands are left off) */
+  fists?: boolean;
   /** Width and height multipliers, for a bit of variety in build */
   build?: number;
   height?: number;
@@ -1372,6 +1374,14 @@ function items(q: Detail): Item[] {
         rb(0.046, 0.046, 0.062, 0.019, 0, -0.28, 0.012),
         new THREE.CapsuleGeometry(0.013, 0.03, 2, R(8)).rotateX(-0.45).translate(0, -0.238, 0.045),
       ];
+  // A closed fist: the same wrist, the fingers folded under into one rounded lump, the thumb across the front
+  const fist = far
+    ? [new THREE.BoxGeometry(0.05, 0.08, 0.072).translate(0, -0.242, 0.01)]
+    : [
+        new THREE.CylinderGeometry(0.026, 0.028, 0.03, R(10)).translate(0, -0.2, 0.004),
+        rb(0.052, 0.072, 0.074, 0.024, 0, -0.246, 0.012),
+        new THREE.CapsuleGeometry(0.012, 0.024, 2, R(8)).rotateZ(Math.PI / 2).translate(0, -0.228, 0.05),
+      ];
 
   /* ----- Shoes (in the shin's space: the sole is on the ground at -0.33) ----- */
   const G = -(HIP_Y - THIGH);
@@ -1883,11 +1893,16 @@ function items(q: Detail): Item[] {
         ...both('shin', bootSole, '#14121a'),
       ],
     },
-    // Hands, trousers and shoes for everyone but soldiers
+    // Hands (open, or fists while fighting), trousers and shoes for everyone but soldiers
     {
       id: 'hands',
-      when: (o) => !soldier(o),
+      when: (o) => !soldier(o) && !o.fists,
       pieces: both('fore', one(hand), SKIN),
+    },
+    {
+      id: 'fists',
+      when: (o) => !soldier(o) && !!o.fists,
+      pieces: both('fore', one(fist), SKIN),
     },
     {
       id: 'trousers',
