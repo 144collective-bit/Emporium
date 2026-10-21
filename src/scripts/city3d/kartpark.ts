@@ -59,6 +59,9 @@ export const SHORTCUT_HALF = 3.2;
 export const KART_R = 0.5;
 /** A bridge deck's height over what it crosses */
 export const BRIDGE_H = 2.4;
+/** The bowls' banking (the roll, radians-ish: the surface's slope across the track) and the centre line's lift so the low edge rests on the ground */
+export const BANK = 0.28;
+export const BANK_H = BANK * TRACK_HALF;
 /** Samples every half tile along the centre line */
 const STEP = 0.5;
 
@@ -97,7 +100,7 @@ const NODE = {
   /** The hairpin's exit, where the return comes in down the east edge */
   H: C(40.8, 24.5),
   /** The north-west bowl's west side, where the descent peels off */
-  N: P(13, 24, { roll: 0.28, f: F.bank }),
+  N: P(13, 24, { roll: BANK, h: BANK_H, f: F.bank }),
 } as const;
 export type SectorId = 'west' | 'link' | 'hairpin' | 'north' | 'return' | 'descent';
 export interface Sector {
@@ -133,9 +136,9 @@ const SECTOR_PTS: Record<SectorId, CPt[]> = {
     NODE.E,
     P(121, 58),
     P(127, 53.5),
-    P(130.5, 45, { roll: 0.28, f: F.bank }),
-    P(131, 34, { roll: 0.28, f: F.bank }),
-    P(128, 22, { roll: 0.28, f: F.bank, tags: ['box'] }),
+    P(130.5, 45, { roll: BANK / 2, h: BANK_H / 2, f: F.bank }),
+    P(131, 34, { roll: BANK, h: BANK_H, f: F.bank }),
+    P(128, 22, { roll: BANK, h: BANK_H, f: F.bank, tags: ['box'] }),
     P(120, 11),
     P(110, 6, { tags: ['pad'] }),
     P(98, 5, { h: 1.6 }),
@@ -145,14 +148,14 @@ const SECTOR_PTS: Record<SectorId, CPt[]> = {
     P(54, 7, { f: F.tunnel }),
     P(40, 10),
     P(26, 11),
-    P(16.8, 14.8, { roll: 0.28, f: F.bank }),
+    P(16.8, 14.8, { roll: BANK, h: BANK_H, f: F.bank }),
     NODE.N,
   ],
   // The return: out of the bowl, east along the middle, over the bridge, down the east edge into the hairpin's exit
   return: [
     NODE.N,
-    P(16.8, 33.2, { roll: 0.28, f: F.bank }),
-    P(22, 37),
+    P(16.8, 33.2, { roll: BANK, h: BANK_H, f: F.bank }),
+    P(22, 37, { h: 0.7 }),
     P(33, 38, { tags: ['sc-in', 'pad'] }),
     P(50, 38, { tags: ['box'] }),
     P(76, 38),
@@ -161,8 +164,8 @@ const SECTOR_PTS: Record<SectorId, CPt[]> = {
     P(113, 46, { h: BRIDGE_H, f: F.deck }),
     P(121, 51, { h: BRIDGE_H, f: F.deck }),
     P(128.5, 58, { h: BRIDGE_H, f: F.deck }),
-    P(131.5, 70, { h: 1.2, f: F.deck }),
-    P(131.5, 82, { tags: ['box'] }),
+    P(131.5, 70, { h: 1.9, f: F.deck }),
+    P(131.5, 82, { h: 0.5, tags: ['box'] }),
     P(130, 94),
     P(125, 103),
     NODE.H,
