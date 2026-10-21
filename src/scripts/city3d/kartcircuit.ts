@@ -11,17 +11,19 @@
  * onto it; it shares the park's site, its local numbers (u east, v south)
  * and its sampling (`sampleLine()`, `frame()`, `locate()`).
  *
- * Raced forward, the loop goes clockwise, every corner a right-hander:
+ * Raced forward, the loop goes clockwise, twelve corners, lefts and rights:
  * - the start/finish straight west along the south, the grandstand on its
  *   infield side, the pit lane and the garages beyond its run-off;
- * - Turn 1 up the west straight, a banked sweeper in the north-west corner;
- * - the hill along the north: up to a crest, down into the tunnel, over the
- *   jump;
- * - a banked sweeper in the north-east corner, then the diagonal across the
- *   middle at ground level, round the west loop (a long right-hander in the
- *   infield);
+ * - Turn 1 up the west side, the west esses (2, 3) out towards the fence
+ *   and back, a banked sweeper in the north-west corner (4);
+ * - the hill along the north, dipping south over its crest and back (5, 6),
+ *   down into the tunnel, over the jump;
+ * - a banked sweeper in the north-east corner (7), a tight right hairpin
+ *   (8), a long double-apex left-hander (9, 10) back south into the infield,
+ *   down the middle at ground level, round the west loop (11, a long
+ *   right-hander);
  * - back across the middle on the flyover (open underneath, FLY_H over the
- *   diagonal), and the tight south-east turn onto the straight.
+ *   run below), and the tight south-east turn onto the straight (12).
  * Reverse runs the same surface the other way: every corner flipped, the
  * flyover before the west loop.
  */
@@ -67,43 +69,64 @@ const PTS: CirPt[] = [
   P(100, 115, { tag: 'line' }),
   P(60, 115),
   P(32, 115),
-  // Turn 1: right, up the west straight
+  // Turn 1: right, up the west side
   P(20, 112.5),
   P(15.5, 104, { tag: 'turn-1' }),
-  P(14.5, 82),
-  P(14.5, 52),
-  // Turn 2: the banked north-west sweeper
+  // Turns 2 and 3: the west esses, out towards the fence and back
+  P(15, 94),
+  P(13, 85.5),
+  P(9.5, 77, { tag: 'turn-2' }),
+  P(9.5, 67),
+  P(13, 59, { tag: 'turn-3' }),
+  P(15, 50),
+  P(15.5, 43),
+  // Turn 4: the banked north-west sweeper
   banked(16.5, 34),
-  banked(21.5, 23, { tag: 'turn-2' }),
+  banked(21.5, 23, { tag: 'turn-4' }),
   banked(31, 17),
-  // The hill along the north: up to the crest, down into the tunnel, over the jump
-  P(42, 16),
-  P(51, 15.5, { h: HILL_H / 2 }),
-  P(60, 15.5, { h: HILL_H }),
-  P(70, 15.5, { h: HILL_H / 2 }),
-  P(81, 16, { f: F.tunnel }),
-  P(90, 16.1),
-  P(96, 16.3),
-  P(102, 16.8, { h: JUMP_H, tag: 'jump' }),
-  P(108.5, 17.8),
-  // Turn 3: the banked north-east sweeper, round to the south-west
-  banked(116.5, 21.5),
-  banked(122, 30, { tag: 'turn-3' }),
-  banked(122, 40),
-  P(117, 48.5),
-  // The diagonal across the middle, at ground level, under the flyover
-  P(106, 57),
-  P(90, 67.5),
-  P(76, 76.5),
-  P(64, 84),
-  // Turn 4: the west loop, a long right-hander in the infield
-  P(54, 89),
-  P(42.5, 89),
-  P(34, 82),
-  P(33, 71, { tag: 'turn-4' }),
-  P(38, 61),
-  P(48, 56),
-  // The flyover: up off the loop, over the diagonal, down to the south-east
+  // Turns 5 and 6: the hill, dipping south over its crest and back, down into the tunnel, over the jump
+  P(40, 16),
+  P(48, 17.5, { h: 0.8 }),
+  P(56, 22.5, { h: 2, tag: 'turn-5' }),
+  P(64, 24.5, { h: HILL_H }),
+  P(72, 22, { h: 2 }),
+  P(79, 17.5, { h: 0.8, tag: 'turn-6' }),
+  P(86, 16, { f: F.tunnel }),
+  P(93, 16.2),
+  P(100, 16.6, { h: JUMP_H, tag: 'jump' }),
+  P(107, 17.6),
+  // Turn 7: the banked north-east sweeper, round to the south
+  banked(116, 21),
+  banked(123, 30, { tag: 'turn-7' }),
+  banked(125, 41),
+  // Turn 8: the hairpin, right round and back north (an arc of radius 8.5 round (116.5, 50))
+  P(125, 50),
+  P(123.9, 54.3),
+  P(120.8, 57.4),
+  P(116.5, 58.5, { tag: 'turn-8' }),
+  P(112.2, 57.4),
+  P(109.1, 54.3),
+  P(108, 50),
+  // Turns 9 and 10: a long left-hander (radius 11 round (97, 44.5)), back south into the infield
+  P(108, 44.5),
+  P(104.8, 36.7, { tag: 'turn-9' }),
+  P(97, 33.5),
+  P(89.2, 36.7, { tag: 'turn-10' }),
+  P(86, 44.5),
+  // Down the middle at ground level, under the flyover
+  P(84, 55),
+  P(79.6, 65),
+  P(76.3, 75.3),
+  P(73, 84.5),
+  // Turn 11: the west loop, a long right-hander in the infield
+  P(64, 90),
+  P(54, 90),
+  P(44.5, 88.5),
+  P(37.5, 82),
+  P(36.5, 72, { tag: 'turn-11' }),
+  P(40.5, 62.5),
+  P(48.5, 57),
+  // The flyover: up off the loop, over the run below, down to the south-east
   P(57, 58.3),
   P(63.5, 63.6, { h: FLY_H / 2, f: F.deck }),
   P(69.5, 68.8, { h: FLY_H, f: F.deck }),
@@ -111,11 +134,11 @@ const PTS: CirPt[] = [
   P(83, 82, { h: FLY_H, f: F.deck }),
   P(89.5, 87.5, { h: FLY_H / 2, f: F.deck }),
   P(97, 92.3),
-  // Turn 5: the tight south-east right-hander onto the straight (an arc of radius 9 round (104, 106))
+  // Turn 12: the tight south-east right-hander onto the straight (an arc of radius 9 round (104, 106))
   P(103, 95.5),
   P(108.6, 98.3),
   P(111.8, 101.5),
-  P(113, 106, { tag: 'turn-5' }),
+  P(113, 106, { tag: 'turn-12' }),
   P(111.8, 110.5),
   P(108.5, 113.8),
   P(104, 115),

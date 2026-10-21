@@ -70,7 +70,7 @@ test('one narrow track: six karts abreast, kerbs and run-off', () => {
 });
 
 test('the lap is medium length, the same both ways', () => {
-  assert.ok(c.L > 500 && c.L < 580, `lap ${c.L.toFixed(0)} tiles`);
+  assert.ok(c.L > 520 && c.L < 600, `lap ${c.L.toFixed(0)} tiles`);
   assert.ok(Math.abs(CIRCUITS['circuit-reverse'].L - c.L) < 0.5);
 });
 
@@ -238,9 +238,10 @@ test('reverse is the same surface the other way, its corners numbered from its o
   }
   for (const id of CIRCUIT_IDS) {
     const cc = CIRCUITS[id];
+    assert.ok(cc.turns.length >= 10, `${id}: plenty of corners`);
     assert.deepEqual(
       cc.turns.map((t) => t.n),
-      [1, 2, 3, 4, 5]
+      cc.turns.map((_, i) => i + 1)
     );
     const after = cc.turns.map((t) => (t.s - cc.start + cc.L) % cc.L);
     assert.deepEqual(after, [...after].sort((a, b) => a - b), `${id}: numbered in the order they come`);

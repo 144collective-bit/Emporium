@@ -749,7 +749,9 @@ it and has been retired completely. Build only on what's here.
   circuit (5.6 wide, kerbs, grass and gravel run-off), raced both ways,
   with a pit lane and nothing solid near it, replaces the network in four
   phases. Phase 1 is built: the circuit as data in `kartcircuit.ts`
-  (DOM-free, tested in `tests/kartcircuit.test.ts`): `CIRCUIT` /
+  (DOM-free, tested in `tests/kartcircuit.test.ts`; twelve corners, lefts
+  and rights, the owner's call: no long runs of straight road besides the
+  start straight): `CIRCUIT` /
   `CIRCUITS` (forward and reverse; `start`, `jump`, numbered `turns`),
   `TRACK_HALF`, `KERB`, `RUNOFF`, `CLEAR`, `FLY_H`, `BANK`, `MIN_RADIUS`,
   `MAX_SLOPE`, `gridSlots()`, `PIT_LANE`, `BAYS`, `SITE` (garages, hut,
