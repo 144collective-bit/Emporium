@@ -23,7 +23,9 @@
  * - A cup runs at its own class (`CUPS[cup].cls`), a time trial at the one
  *   picked; the class tunes everyone. A cup is a series: starting one begins
  *   it in the save (`startSeries`) unless that cup's is on the go, and each
- *   finish adds its points (`seriesRace`), handed to the results card.
+ *   finish adds its points (`seriesRace`), handed to the results card. A
+ *   single race races a cup's rivals at its class, paid like a cup's race,
+ *   outside any series.
  * - Time trials have ghosts: your best lap on the course and class (kept in
  *   the browser, `GHOST_KEY`) and the par ghost (the rivals' brain driving
  *   the Pocket Rocket, made on demand with a headless sim and cached), two
@@ -247,10 +249,14 @@ export function createKartRace(d: KartRaceDeps): KartRace {
   let course: CourseId = 'circuit';
   let cond: Cond = 'day';
   let cup: CupId | 'time' = 'time';
+  /** A single race: a cup's rivals at its class, outside any series */
+  let single = false;
   let cls: ClassId = 'sport';
   /** The series this race is part of (a cup): which race of how many */
   let seriesInfo: { race: number; of: number } | null = null;
   let views: View[] = [];
+  /** The karts' dots for the minimap, reused frame to frame */
+  const dots: KartHud['dots'] = [];
   let active = false;
   /** This race's laps as they're driven (a time trial): the recorder for the lap on the go, the laps done */
   const rec = recorder();
@@ -717,7 +723,7 @@ export function createKartRace(d: KartRaceDeps): KartRace {
     const result = finishKartRace(save, { course, cup, cls, place: p.place, seconds: p.finishT, laps, clean: p.cleanLaps, overtakes: p.overtakes, now: Date.now() });
     // A cup's race counts for its series: everyone's place by grid index (the rivals, then you)
     let series: KartResultView['series'] = null;
-    if (cup !== 'time') {
+    if (cup !== 'time' && !single) {
       const byKart = s.racers.map(() => s.racers.length);
       s.standings().forEach((i, idx) => (byKart[i] = idx + 1));
       const sr = seriesRace(save, byKart);
@@ -734,7 +740,7 @@ export function createKartRace(d: KartRaceDeps): KartRace {
       const samples = lapSamples[best];
       if (samples && samples.length >= G_N * 2) writeGhost(recordKey(course, cls), { lap: Math.round(laps[best] * 100) / 100, kart: save.karts.model, paint: save.karts.paint, step: G_STEP, samples });
     }
-    d.ui.showResult({ cup, cls, course, of: s.racers.length, result, standings: standings(), laps, par: parLap(course, cls), series });
+    d.ui.showResult({ cup, single, cond, cls, course, of: s.racers.length, result, standings: standings(), laps, par: parLap(course, cls), series });
   }
 
   /* ---------- The kart on show in the pits ---------- */
@@ -774,13 +780,14 @@ export function createKartRace(d: KartRaceDeps): KartRace {
       if (active) clearRace();
       course = setup.course;
       cup = setup.cup;
+      single = cup !== 'time' && !!setup.single;
       cond = setup.cond ?? 'day';
       const save = d.game.save();
       const model = save.karts.model;
       // A cup runs at its own class and is a series: begin one unless that cup's is on the go
       cls = cup === 'time' ? setup.cls : CUPS[cup].cls;
       seriesInfo = null;
-      if (cup !== 'time') {
+      if (cup !== 'time' && !single) {
         if (!save.karts.series || save.karts.series.cup !== cup) {
           startSeries(save, cup);
           d.game.commit();
@@ -874,6 +881,14 @@ export function createKartRace(d: KartRaceDeps): KartRace {
       // The engine, the camera, the HUD
       d.engine(0.15 + Math.min(1, Math.abs(p.speed) / p.tune.top) * 0.7 + (p.boostT > 0 ? 0.15 : 0));
       placeCamera(p, dt);
+      for (let i = 0; i < s.racers.length; i++) {
+        const k = s.racers[i];
+        const dot = (dots[i] ??= { x: 0, z: 0, you: false });
+        dot.x = k.x;
+        dot.z = k.z;
+        dot.you = i === p.i;
+      }
+      dots.length = s.racers.length;
       const hud: KartHud = {
         place: p.place,
         of: s.racers.length,
@@ -891,6 +906,7 @@ export function createKartRace(d: KartRaceDeps): KartRace {
         surface: p.off ? 'runoff' : p.kerb ? 'kerb' : p.flags & F.tunnel ? 'tunnel' : p.flags & F.bank ? 'bank' : 'dry',
         cond,
         series: seriesInfo,
+        dots,
       };
       d.ui.paintHud(hud);
     },

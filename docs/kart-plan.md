@@ -159,7 +159,19 @@ flyover's deck is 2.6 over the diagonal below.
    - Guidance: chevron boards on the outside of bends, arrows painted
      before turns, numbered corner boards and 3-2-1 braking markers.
    - Draw calls at or under today's at the park (measure with `?fps`).
-4. **The HUD and the hut** (`kart.ts`, `kart-ui.ts`, `karts.css`).
+4. **The HUD and the hut** (built: `kart.ts`, `kart-ui.ts`, `karts.css`).
+   As built: the minimap sits top right over Quit (the circuit's outline
+   from its samples, the flyover's deck drawn over the run below, the start
+   line, a dot per kart with yours cyan and on top); a Night or Rain tag
+   joins the surface tag; the item slot, the Shield and Shortcut tags and
+   the touch Item button are gone from the markup, the styles and the
+   controls (E, a click and X / RB do nothing in a race). The hut's Race
+   tab adds a single race (a cup's rivals at its class and level, forward
+   or reverse, day, night or rain, three laps, paid like a cup's race,
+   outside any series); the Boards tab ends with your best laps from the
+   old track, kept for the memory. Checked at 320, 375, 768, 1024 and 1440
+   wide and 812 on its side, phones on the touch layout: no overlaps
+   between the HUD, the stick, the pedals and Drift, no sideways scroll.
    - The minimap (the circuit's outline, every kart's dot, yours lit); the
      item slot and the touch Item button go.
    - The hut's menu: the cups, single races (forward / reverse, night,

@@ -780,9 +780,9 @@ it and has been retired completely. Build only on what's here.
   their kerbs a kart is put back). Footprints for walking and driving are
   `CIRCUIT_SOLIDS` (in `SOLIDS`: the fence with the gate's gap, the hut,
   the garages, the stand; **nothing on or beside the track is solid**,
-  the owner's call). Phases 2 (the rules race on it, the save is v8) and 3
-  (the park drawn round it) are built; Phase 4 (the HUD's minimap, the
-  hut's menu, the item slot and buttons out of the markup) is next.
+  the owner's call). Phases 2 (the rules race on it, the save is v8), 3
+  (the park drawn round it) and 4 (the HUD's minimap, single races in the
+  hut, the item slot and button gone) are built.
 - **Classes** (`catalog.ts` `KART_CLASSES`, `ClassId`, `CLASS_IDS`): Street
   (Lv 1, 0.82), Sport (Lv 3, 1) and Neon (Lv 8, 1.18) set everyone's pace
   in a race; a cup fixes its class, a time trial picks one. Records and
@@ -847,21 +847,27 @@ it and has been retired completely. Build only on what's here.
   ghost is driven by the sim's `auto` at the class's pace; `setGhosts()`
   shows or hides each, the HUD shows the gap. `kart-ui.ts`
   (`createKartUI()`, markup `data-karts`, `data-kart-hud`,
-  `data-kart-count`, `data-kart-pops`, `data-kart-result`, the Drift /
-  Item touch buttons `data-kart-drift` / `data-kart-item` in
-  `CityMap.astro`, styles in `src/styles/karts.css`) is the hut's menu
-  (Race: the cups as series (start, continue, drop), single races, time
-  trials with their class and ghosts, the daily challenge; Karts: buy,
-  pick, mods, paints; Boards: the leaderboards per course and class, your
-  records, par and trophies), the HUD (place, lap, clock, last and best
-  lap, the ghost gap, surface, item slot and roulette, drift meter, the
-  series race), the countdown, pops and the results card (laps, par, the
-  series table with Next race / Drop). `walk.ts` wires them: the hut
-  door's prompt opens the menu, a race hides Degen and feeds the kart
-  (`kartFrame()`: W/S gas and brake, A/D steer, Space hop and drift, E (or
-  a click) uses the item, S held sends it behind; touch: the stick, the
-  pedals, Drift and Item; gamepad: stick, RT / LT, A drift, X / RB item, Y
-  quits), `nextRace()` / `quitSeries()` carry a series on, Esc or Quit
+  `data-kart-count`, `data-kart-pops`, `data-kart-result`, the Drift
+  touch button `data-kart-drift` in `CityMap.astro`, styles in
+  `src/styles/karts.css`) is the hut's menu (Race: the cups as series
+  (start, continue, drop); a single race (a cup's rivals at its class and
+  level, forward or reverse, day, night or rain, three laps, paid like a
+  cup's race, outside any series: `RaceStart.single`, kart.ts skips
+  `startSeries()` / `seriesRace()`); time trials with their class and
+  ghosts; the daily challenge. Karts: buy, pick, mods, paints. Boards: the
+  leaderboards per course and class, your records, par, trophies,
+  counters and your laps from the old track (`karts.old`)), the HUD
+  (place, lap, clock, last and best lap, the ghost gap, the surface and
+  Night / Rain tags, drift meter, the series race, and the minimap
+  `data-kart-map`: the circuit's outline drawn once from `CIRCUIT`'s
+  samples in world numbers, the flyover's deck over the run below, the
+  start line, a dot per kart from `KartHud.dots` with yours lit and on
+  top), the countdown, pops and the results card (laps, par, the series
+  table with Next race / Drop). `walk.ts` wires them: the hut door's
+  prompt opens the menu, a race hides Degen and feeds the kart
+  (`kartFrame()`: W/S gas and brake, A/D steer, Space hop and drift;
+  touch: the stick, the pedals and Drift over Brake; gamepad: stick, RT /
+  LT, A drift, Y quits), `nextRace()` / `quitSeries()` carry a series on, Esc or Quit
   abandons (no prize), closing the results stands Degen up by the hut.
   While racing `.city.is-karting` is on the root and `data-kart` makes the
   header read "Karting · <course>". Under reduced motion the race still

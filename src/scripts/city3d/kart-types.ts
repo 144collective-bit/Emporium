@@ -15,13 +15,14 @@ import type { Kart } from './karts';
 import type { Spot } from './landmarks';
 import type { GameDeps } from './ui';
 
-/** What starts a race: which way round, a cup or a time trial, the class; a cup's race also sets its laps and conditions */
+/** What starts a race: which way round, a cup or a time trial, the class; a cup's race also sets its laps and conditions. A single race races a cup's rivals at its class, on its own (no series) */
 export interface RaceStart {
   course: CourseId;
   cup: CupId | 'time';
   cls: ClassId;
   laps?: number;
   cond?: Cond;
+  single?: boolean;
 }
 
 /* ---------- The site (kartpark3d.ts) ---------- */
@@ -65,6 +66,8 @@ export interface KartHud {
   surface: 'dry' | 'kerb' | 'runoff' | 'bank' | 'tunnel';
   /** The race's conditions */
   cond: Cond;
+  /** Every kart on the minimap (world x, z), yours lit */
+  dots: { x: number; z: number; you: boolean }[];
   /** A series: which race this is (1-based) of how many; null for a single race */
   series: { race: number; of: number } | null;
 }
@@ -79,6 +82,9 @@ export interface KartStanding {
 }
 export interface KartResultView {
   cup: CupId | 'time';
+  /** A single race (a cup's rivals, no series) */
+  single: boolean;
+  cond: Cond;
   cls: ClassId;
   course: CourseId;
   of: number;
