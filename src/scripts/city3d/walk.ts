@@ -53,6 +53,7 @@ import { abandonSeries, seriesNext } from './tycoon';
 import { CAMERA_ONLY, DOORS, GARAGE_SITE, RACK, SOLIDS, TURNTABLE_BOX, WALK_SPAWN, rayBoxes, type Box } from './solids';
 import { count } from './tycoon';
 import { NS_ROADS, RIVER, SLAB, WALK_W, type Tick } from './world';
+import { DECK_HALF, LX, onDeckWalk } from './liberty';
 import { WORLD_BOUNDS } from './layout';
 import { PLAN, inPoly } from './streetplan';
 import type { GameDeps } from './ui';
@@ -247,12 +248,12 @@ export function createWalk(d: WalkDeps) {
 
   /** The ground under a point: a slab, or the street; at the kart park the circuit's own (its banks, the hill, the flyover's deck when `yNow` is up there) */
   const groundAt = (x: number, z: number, yNow = 0) => {
-    const base = slabs.some((s) => inBox(s.box, x, z) && inPoly(s.poly, [x, z])) ? SLAB : 0.035;
+    const base = slabs.some((s) => inBox(s.box, x, z) && inPoly(s.poly, [x, z])) || onDeckWalk(x, z) ? SLAB : 0.035;
     if (x < KART_PARK.x0 || x > KART_PARK.x1 || z < KART_PARK.z0 || z > KART_PARK.z1) return base;
     const t = trackSurfaceAt(x, z, yNow);
     return t ? Math.max(base, t.y + 0.035) : base;
   };
-  const onBridge = (x: number) => NS_ROADS.some((r) => Math.abs(x - r.c) < r.half + WALK_W - 0.15);
+  const onBridge = (x: number) => NS_ROADS.some((r) => Math.abs(x - r.c) < r.half + WALK_W - 0.15) || Math.abs(x - LX) < DECK_HALF - 0.15;
   function blocked(x: number, z: number) {
     if (x < BOUNDS[0] || x > BOUNDS[2] || z < BOUNDS[1] || z > BOUNDS[3]) return true;
     if (z > RIVER[0] - 0.3 && z < RIVER[1] + 0.3 && !onBridge(x)) return true;

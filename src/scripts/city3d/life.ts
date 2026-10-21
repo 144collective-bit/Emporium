@@ -9,6 +9,7 @@ import { CENTER, EW_ROADS, NS_ROADS, RIVER, SLAB, type Tick } from './world';
 
 import { PLAN, distToStreet, outset } from './streetplan';
 import { CITY_EXT } from './layout';
+import { DECK_STROLLS } from './liberty';
 import { JUNCTIONS, ROUTES, lightState, phaseOf, pointOn, rightOf, type Junction, type Phase, type Pt, type Route } from './routes';
 import { CARS, PAINTS, carGeometry, carMaterials, type CarId } from './cars';
 import type { Idle } from './landmarks';
@@ -319,8 +320,9 @@ const SEAT_DROP = (HIP_HEIGHT - 0.03) * PERSON_SCALE;
 
 function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f: Tick) => void) {
   const people: Person[] = [];
-  // Round downtown's blocks (the square and the pocket parks too), and the south row's (the street life across the river)
-  const blocks = PLAN.blocks.filter((b) => b.id.startsWith('dt-') || (b.use === 'district' && b.ref!.startsWith('S'))).map((b) => b.poly);
+  // Round downtown's blocks (the square and the pocket parks too), and the south row's (the street life across the river),
+  // and up and down Liberty Bridge's deck walks
+  const blocks = [...PLAN.blocks.filter((b) => b.id.startsWith('dt-') || (b.use === 'district' && b.ref!.startsWith('S'))).map((b) => b.poly), ...DECK_STROLLS];
   const loops = new Map<string, Loop>();
   const loopOf = (b: number, inset: number) => {
     const key = `${b}:${inset}`;

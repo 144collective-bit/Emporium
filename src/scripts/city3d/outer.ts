@@ -19,7 +19,7 @@
  * Coordinates are world units on the ground: [x, z].
  */
 import { DISTRICTS } from '../../data/plots';
-import { BIG_LOTS, BS, EW_ROADS, GARAGE, LANE, MARKET, NS_ROADS, RIVER, RING_HI, SOUTH_ROAD, UNITS, WALK_W, type Road } from './layout';
+import { BIG_LOTS, BLOCKS, BS, DECK_WALK, EW_ROADS, GARAGE, LANE, LIBERTY_ROAD, MARKET, NS_ROADS, OUTER_LO, RIVER, RING_HI, SOUTH_ROAD, SOUTH_ROW, UNITS, WALK_W, type Road } from './layout';
 import { SLIP_ROAD } from './kartpark';
 import { FIGHT_CLUB } from './fightsite';
 
@@ -86,6 +86,23 @@ export const BENDS: { id: string; name: string; pts: Pt[]; centre: Pt }[] = [
 ];
 /** How far a bending street's asphalt and sidewalk reach from its centre line */
 export const BEND_REACH = LANE + WALK_W;
+
+/** Liberty Road's south end (layout.ts `LIBERTY_ROAD`): where it meets the Southside Loop's centre line */
+export const LIBERTY_END: Pt = (() => {
+  const c = LIBERTY_ROAD.c;
+  for (let i = 1; i < SOUTHSIDE.length; i++) {
+    const [a, b] = [SOUTHSIDE[i - 1], SOUTHSIDE[i]];
+    if ((a[0] - c) * (b[0] - c) <= 0 && a[0] !== b[0]) return [c, a[1] + ((b[1] - a[1]) * (c - a[0])) / (b[0] - a[0])];
+  }
+  throw new Error('Liberty Road never meets the Southside Loop');
+})();
+/** Is a point on (or by) Liberty Road's asphalt and sidewalks */
+export const onLiberty = ([x, z]: Pt, m = 0) => Math.abs(x - LIBERTY_ROAD.c) < LIBERTY_ROAD.half + WALK_W + m && z > LIBERTY_ROAD.z0 - m && z < LIBERTY_END[1] + m;
+/** Liberty Bridge's grounds: the old W3 and S1 plots, Liberty Road down the middle of each (liberty.ts builds on them) */
+export const LIBERTY_GROUNDS: Rect[] = [
+  [OUTER_LO, BLOCKS[2], OUTER_LO + BS, BLOCKS[2] + BS],
+  [OUTER_LO, SOUTH_ROW, OUTER_LO + BS, SOUTH_ROW + BS],
+];
 
 /* ---------- Polygon helpers ---------- */
 
@@ -206,7 +223,17 @@ const rawBlocks: { id: string; rect: Rect; bend: (typeof BENDS)[number] }[] = [
   // The south bank, between the arterials
   ...COLS.map((c, i) => ({ id: `o-s${names[i]}`, rect: [c[0], southEdge, c[1], FAR] as Rect, bend: BENDS[1] })),
 ];
-export const OUTER_BLOCKS: OuterBlock[] = rawBlocks.map(({ id, rect, bend }) => {
+/** Liberty Road cuts the west blocks it runs through in two: the part east of it is named after them with an `l` */
+const [libW, libE] = [LIBERTY_ROAD.c - LIBERTY_ROAD.half - WALK_W, LIBERTY_ROAD.c + LIBERTY_ROAD.half + WALK_W];
+const cutBlocks = rawBlocks.flatMap((b) =>
+  b.rect[0] < libW && b.rect[2] > libE && b.rect[1] < LIBERTY_END[1] && b.rect[3] > LIBERTY_ROAD.z0
+    ? [
+        { ...b, rect: [b.rect[0], b.rect[1], libW, b.rect[3]] as Rect },
+        { ...b, id: `${b.id}l`, rect: [libE, b.rect[1], b.rect[2], b.rect[3]] as Rect },
+      ]
+    : [b]
+);
+export const OUTER_BLOCKS: OuterBlock[] = cutBlocks.map(({ id, rect, bend }) => {
   const poly = ccw(insideBend(rect, bend));
   const pads = PADS.filter((p) => [p.rect[0] + 0.01, p.rect[2] - 0.01].every((x) => [p.rect[1] + 0.01, p.rect[3] - 0.01].every((z) => inside(poly, [x, z])))).map((p) => p.id);
   return { id, poly, pads };
@@ -276,6 +303,8 @@ export const LAWN_TREES: Pt[] = OUTER_BLOCKS.flatMap((b, i) => {
     ...OUTER_SQUARES.filter((s) => s.block === b.id).map((s) => s.rect),
     ...parkRects.filter((s) => s.block === b.id).map((s) => s.rect),
     ...(inside(b.poly, [FIGHT_LOT[0] + 0.1, FIGHT_LOT[1] + 0.1]) ? [FIGHT_LOT] : []),
+    // Liberty Bridge's grounds, and its anchorages just past them
+    ...LIBERTY_GROUNDS.map((g): Rect => [g[0], g[1] - 2, g[2], g[3] + 2]),
   ];
   for (let x = Math.min(...xs) + 1.5; x < Math.max(...xs) - 1.5; x += 2.9)
     for (let z = Math.min(...zs) + 1.5; z < Math.max(...zs) - 1.5; z += 2.9) {
@@ -292,6 +321,7 @@ export const LAWN_TREES: Pt[] = OUTER_BLOCKS.flatMap((b, i) => {
 const onRoad = ([x, z]: Pt) =>
   NS_ROADS.some((r) => Math.abs(x - r.c) < r.half + WALK_W) ||
   EW_ROADS.some((r) => Math.abs(z - r.c) < r.half + WALK_W) ||
+  onLiberty([x, z]) ||
   // The kart park's slip road comes in off the Parkway's north side (kartpark.ts)
   (Math.abs(x - SLIP_ROAD.x) < SLIP_ROAD.half + WALK_W && z > SLIP_ROAD.z0 - 1 && z < SLIP_ROAD.z1 + 1);
 /** Which segments of each bend have their outer sidewalk (the rest cross a road): one flag per segment */
@@ -345,7 +375,7 @@ export const JETTIES: { x: number; bank: 'north' | 'south' }[] = [
   { x: 55, bank: 'south' },
 ];
 /** Off the bridges: a promenade feature at x is clear of every road crossing the river */
-export const offBridges = (x: number, m = 0.8) => NS_ROADS.every((r) => Math.abs(x - r.c) > r.half + WALK_W + m);
+export const offBridges = (x: number, m = 0.8) => NS_ROADS.every((r) => Math.abs(x - r.c) > r.half + WALK_W + m) && Math.abs(x - LIBERTY_ROAD.c) > LIBERTY_ROAD.half + DECK_WALK + m;
 
 /* ---------- The built-up town ---------- */
 

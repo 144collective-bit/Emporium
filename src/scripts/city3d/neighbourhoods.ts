@@ -12,7 +12,7 @@
  */
 import * as THREE from 'three';
 import { Batch, PAL, neon, toon } from './kit';
-import { BENDS, BEND_REACH, JETTIES, LAWN_TREES, OUTER_PARKS, PROMENADE, SQUARE_LAYOUTS, offBridges, type Pt, type SquareLayout } from './outer';
+import { BENDS, BEND_REACH, JETTIES, LAWN_TREES, OUTER_PARKS, PROMENADE, SQUARE_LAYOUTS, offBridges, onLiberty, type Pt, type SquareLayout } from './outer';
 import { EW_ROADS, LANE, NS_ROADS, RIVER } from './layout';
 import { SLAB as S, addLamp, addTree, lotMat, waterMat, type Tick } from './world';
 import type { Idle } from './landmarks';
@@ -200,7 +200,7 @@ function bendLamps() {
       let n: Pt = [-(c[1] - a[1]) / l, (c[0] - a[0]) / l];
       if ((bend.centre[0] - c[0]) * n[0] + (bend.centre[1] - c[1]) * n[1] < 0) n = [-n[0], -n[1]];
       const [x, z] = [c[0] + n[0] * (LANE + 0.15), c[1] + n[1] * (LANE + 0.15)];
-      if (NS_ROADS.some((r) => Math.abs(x - r.c) < r.half + BEND_REACH + 1) || EW_ROADS.some((r) => Math.abs(z - r.c) < r.half + BEND_REACH + 1)) continue;
+      if (NS_ROADS.some((r) => Math.abs(x - r.c) < r.half + BEND_REACH + 1) || EW_ROADS.some((r) => Math.abs(z - r.c) < r.half + BEND_REACH + 1) || onLiberty([x, z], BEND_REACH + 1)) continue;
       // The arm reaches back over the road
       addLamp(x, z, Math.atan2(n[1], -n[0]));
     }

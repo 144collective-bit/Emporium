@@ -2,7 +2,7 @@
 // plots at the owner's price, and designs from anywhere cleaned against the lists.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BUILDINGS, DISTRICTS, NEON_COLORS, PLOT_IDS, SIGNS, WALL_COLORS, cleanDesign } from '../src/data/plots';
+import { BRIDGE_PLOTS, BUILDINGS, DISTRICTS, NEON_COLORS, PLOT_IDS, SIGNS, WALL_COLORS, cleanDesign } from '../src/data/plots';
 import { PLOT_DORRAS, PLOT_LEVEL } from '../src/scripts/city3d/catalog';
 import { RIVER } from '../src/scripts/city3d/layout';
 
@@ -10,9 +10,10 @@ test('plots are Dorras property: a six-figure price and a level to reach first',
   assert.ok(PLOT_DORRAS >= 100_000 && PLOT_LEVEL >= 5);
 });
 
-test('sixteen districts: North 1-5, West 1-3, East 1-3, South 1-5', () => {
-  assert.equal(DISTRICTS.length, 16);
-  assert.equal(new Set(PLOT_IDS).size, 16);
+test('fourteen districts: North 1-5, West 1-2, East 1-3, South 2-5 (West 3 and South 1 are Liberty Bridge\'s grounds)', () => {
+  assert.equal(DISTRICTS.length, 14);
+  assert.equal(new Set(PLOT_IDS).size, 14);
+  for (const id of BRIDGE_PLOTS) assert.ok(!PLOT_IDS.includes(id), `${id} is off the market`);
   for (const p of ['N', 'W', 'E', 'S']) assert.ok(PLOT_IDS.some((id) => id.startsWith(p)));
   // The south row is across the river
   for (const d of DISTRICTS.filter((d) => d.id.startsWith('S'))) assert.ok(d.oz > RIVER[1]);

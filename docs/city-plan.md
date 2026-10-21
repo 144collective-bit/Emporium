@@ -139,6 +139,23 @@ Checked with `?fps` at every step (and on a real phone):
 
 Each phase gets the owner's sign-off before the next one starts.
 
+## Liberty Bridge (after the redesign)
+
+The owner asked for a one-of-a-kind landmark bridge from West 3 to South 1,
+called Liberty Bridge, with the Liberty flame on it: road and walks, twin
+towers. Built in one go:
+
+- Liberty Road (`LIBERTY_ROAD`, layout.ts) runs south off the west cross
+  street down the middle of the old West 3 and South 1 plots, over the
+  river to the Southside Loop: lights where it crosses the cross street and
+  both river avenues, real traffic both ways, walkers on the deck.
+- West 3 and South 1 left the plot market (`BRIDGE_PLOTS`); owners got
+  everything they paid back. Their outer blocks are cut in two along the
+  road.
+- The bridge itself is liberty.ts (numbers) and libertybridge.ts (scene):
+  a suspension bridge whose towers stand on the two old plots, the cables
+  leaping both river avenues and dipping over the water.
+
 ## Still to do for performance
 
 - **Signs on one texture sheet.** Each sign has its own canvas texture, so

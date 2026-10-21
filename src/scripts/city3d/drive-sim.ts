@@ -16,7 +16,7 @@
  *   never hurting anyone.
  */
 import type { Box } from './solids';
-import { EXT, NS_ROADS, RIVER, WALK_W } from './layout';
+import { DECK_WALK, EXT, LIBERTY_ROAD, NS_ROADS, RIVER, WALK_W } from './layout';
 
 export interface DriveTune {
   /** Top speed and reverse top speed (tiles/s) */
@@ -82,7 +82,11 @@ export const newCar = (x: number, z: number, yaw: number): CarState => ({ x, z, 
 
 /** The river is a wall except where the bridges cross it */
 export const RIVER_WALLS: Box[] = (() => {
-  const gaps = NS_ROADS.map((r) => [r.c - r.half - WALK_W + 0.1, r.c + r.half + WALK_W - 0.1]).sort((a, b) => a[0] - b[0]);
+  const gaps = [
+    ...NS_ROADS.map((r) => [r.c - r.half - WALK_W + 0.1, r.c + r.half + WALK_W - 0.1]),
+    // Liberty Bridge's deck (liberty.ts)
+    [LIBERTY_ROAD.c - LIBERTY_ROAD.half - DECK_WALK + 0.1, LIBERTY_ROAD.c + LIBERTY_ROAD.half + DECK_WALK - 0.1],
+  ].sort((a, b) => a[0] - b[0]);
   const out: Box[] = [];
   let at = EXT[0];
   for (const [g0, g1] of gaps) {

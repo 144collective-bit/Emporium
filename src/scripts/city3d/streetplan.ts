@@ -14,9 +14,9 @@
  * Coordinates are world units on the ground: [x, z].
  */
 import { DISTRICTS } from '../../data/plots';
-import { BLOCKS, BS, CENTER_XZ, CORE_ROADS, EW_ROADS, EXT, EXTRA_LOTS, GARAGE, LANE, MARKET, MEDIAN, NS_ROADS, SEATS, UNITS, WALK_W, type Road } from './layout';
+import { BLOCKS, BS, CENTER_XZ, CORE_ROADS, EW_ROADS, EXT, EXTRA_LOTS, GARAGE, LANE, LIBERTY_ROAD, MARKET, MEDIAN, NS_ROADS, SEATS, UNITS, WALK_W, type Road } from './layout';
 import { ALLEYS, BLOCKS_DT, DIAGONALS, LANES } from './downtown';
-import { BENDS, BEND_KERBS, OUTER_BLOCKS, OUTER_PARKS, OUTER_SQUARES, PADS } from './outer';
+import { BENDS, BEND_KERBS, LIBERTY_END, LIBERTY_GROUNDS, OUTER_BLOCKS, OUTER_PARKS, OUTER_SQUARES, PADS } from './outer';
 import { AIRPORT_STREETS, ROAD } from './airfield';
 
 export type Pt = [number, number];
@@ -329,6 +329,14 @@ export function cityPlan(): StreetPlan {
     { id: 'airport-loop-w', at: [ROAD.loopX, ROAD.z], streets: ['airport-road', 'airport-loop'], lights: false },
     { id: 'airport-loop-e', at: [ROAD.x1, ROAD.z], streets: ['airport-road', 'airport-loop'], lights: false }
   );
+  // Liberty Road (layout.ts LIBERTY_ROAD): south off the west cross street, over Liberty Bridge, to the Southside Loop.
+  // Lights where it crosses the cross street and the two river avenues; it gives way at the loop
+  const lib = LIBERTY_ROAD;
+  streets.push({ id: 'liberty', kind: 'street', pts: [[lib.c, lib.z0], LIBERTY_END], half: lib.half, lanes: lib.lanes });
+  EW_ROADS.forEach((r, i) => {
+    if (r.c >= lib.z0 && r.c < LIBERTY_END[1]) crossings.push({ id: `liberty-ew${i}`, at: [lib.c, r.c], streets: [`ew${i}`, 'liberty'], lights: true });
+  });
+  crossings.push({ id: 'liberty-southside', at: LIBERTY_END, streets: ['southside', 'liberty'], lights: false });
   // Alleys and lanes: walk-only, from the street front through to the back
   [...ALLEYS.map((a) => a.box), ...LANES].forEach((b, i) => {
     const [x0, z0, x1, z1] = b;
@@ -354,8 +362,11 @@ export function cityPlan(): StreetPlan {
       return { id: `dt-${b.id}`, poly: b.poly, use, places: places.length ? places : undefined, walk: WALK_W };
     }),
     // The outer blocks, named after their first plot (or lot), every pad on them listed
+    // (Liberty Bridge's towers stand on the two either side of Liberty Road, at each end: a landmark's blocks)
     ...OUTER_BLOCKS.map((b): Block => {
       const plot = b.pads.find((id) => PADS.find((p) => p.id === id)!.kind === 'plot');
+      if (LIBERTY_GROUNDS.some(([x0, z0, x1, z1]) => inPoly(b.poly, [x0 + 0.5, (z0 + z1) / 2]) || inPoly(b.poly, [x1 - 0.5, (z0 + z1) / 2])))
+        return { id: b.id, poly: b.poly, use: plot ? 'district' : 'landmark', ref: plot ?? 'liberty', places: ['liberty'], pads: b.pads, walk: WALK_W };
       return { id: b.id, poly: b.poly, use: plot ? 'district' : 'lot', ref: plot ?? b.pads[0], pads: b.pads, walk: WALK_W };
     }),
     // The bends' outer sidewalks (their own outline is the sidewalk)

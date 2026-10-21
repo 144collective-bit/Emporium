@@ -219,8 +219,8 @@ test('plots: dearer each time, built on for the difference, sold back for a shar
   const low = fresh();
   low.dorras = 1e9;
   low.xp = xpForLevel(PLOT_LEVEL) - 1;
-  assert.deepEqual(buyPlot(low, 'S1', T0), { ok: false, why: 'level' });
-  assert.deepEqual(buildPlot(low, 'S1', null), { ok: false, why: 'place' });
+  assert.deepEqual(buyPlot(low, 'S2', T0), { ok: false, why: 'level' });
+  assert.deepEqual(buildPlot(low, 'S2', null), { ok: false, why: 'place' });
 });
 
 test('place levels: more room and faster work; the stall and empty places have no levels', () => {
@@ -261,7 +261,7 @@ test('cleanSave carries a Phase 4 save into Phase 5 and keeps everything within 
       garage: { owned: ['super', 'hatch', 'bus', 'super'], mods: { super: { engine: 9, rack: -1 }, muscle: { engine: 2 } } },
       armoury: { owned: ['lmg', 'rifle', 'bazooka'], mods: { lmg: { mag: 2.4 }, rifle: { grip: 1 }, revolver: { barrel: 3 } } },
       wardrobe: ['halo', 'halo', 'cape'],
-      plots: { N3: { design: { type: 'castle' }, paid: 5 }, ZZ: {}, S1: { design: { type: 'house', color: 'bad' }, paid: 1e12 } },
+      plots: { N3: { design: { type: 'castle' }, paid: 5 }, ZZ: {}, S2: { design: { type: 'house', color: 'bad' }, paid: 1e12 } },
       levels: { u0: 9, stall: 3, workshop: 2, l1: 0 },
       missions: { active: [{ id: 'drone-patrol', from: { drones: 2 } }, { id: 'drone-patrol' }, { id: 'nope!' }], done: ['first-lap', 'first-lap'] },
       badges: ['seller-100', 'Bad Badge'],
@@ -275,10 +275,10 @@ test('cleanSave carries a Phase 4 save into Phase 5 and keeps everything within 
   assert.deepEqual(dirty.armoury.owned, ['lmg']);
   assert.deepEqual(dirty.armoury.mods, { lmg: { barrel: 0, mag: 2, grip: 0 }, rifle: { barrel: 0, mag: 0, grip: 1 } });
   assert.deepEqual(dirty.wardrobe, ['halo']);
-  assert.deepEqual(Object.keys(dirty.plots), ['N3', 'S1']);
+  assert.deepEqual(Object.keys(dirty.plots), ['N3', 'S2']);
   assert.equal(dirty.plots.N3.design, null);
-  assert.equal(dirty.plots.S1.design?.type, 'house');
-  assert.equal(dirty.plots.S1.paid, 1e9);
+  assert.equal(dirty.plots.S2.design?.type, 'house');
+  assert.equal(dirty.plots.S2.paid, 1e9);
   assert.deepEqual(dirty.levels, { u0: 3, workshop: 2 });
   assert.equal(dirty.missions.active.length, 1);
   assert.equal(dirty.missions.active[0].from.drones, 2);
@@ -287,6 +287,18 @@ test('cleanSave carries a Phase 4 save into Phase 5 and keeps everything within 
   assert.equal(dirty.counters.drones, 7);
   assert.equal(dirty.counters.dummies, 0);
   assert.ok(!('made_up' in dirty.counters));
+});
+
+test('West 3 and South 1 became Liberty Bridge: a save that owned one gets everything paid back, once', () => {
+  const raw = { dorras: 1000, plots: { W3: { design: { type: 'tower', floors: 6 }, paid: 150000 }, S1: { design: null, paid: 120000 }, N1: { design: null, paid: 120000 } } };
+  const s = cleanSave(raw, T0);
+  assert.deepEqual(Object.keys(s.plots), ['N1']);
+  assert.equal(s.dorras, 1000 + 150000 + 120000);
+  assert.equal(s.ledger.totals.soldLand, 270000);
+  // Loaded again (as the city stores it), nothing more is paid
+  const again = cleanSave(JSON.parse(JSON.stringify(s)), T0);
+  assert.equal(again.dorras, s.dorras);
+  assert.deepEqual(Object.keys(again.plots), ['N1']);
 });
 
 /* ---------- The clock ---------- */

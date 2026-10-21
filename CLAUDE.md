@@ -136,12 +136,15 @@ it and has been retired completely. Build only on what's here.
 - **Traffic** follows `routes.ts` (DOM-free): a route for every lane of the
   straight roads, two down each diagonal (in off the ring, out along a
   cross street) and two round each bend (in off its avenue, all the way
-  round, out the other end) and one out to the airport and back (down the
+  round, out the other end), four over Liberty Bridge (in off the west
+  cross street and out round the Southside Loop, and from one river avenue
+  to the other, both ways) and one out to the airport and back (down the
   east ring avenue, round the car park loop); turns are rounded off
   (tighter for right turns). Junctions where a diagonal comes in run
   three light phases (x, z, diagonal). Cars follow whoever is ahead going
   the same way on any route. Pedestrians walk loops round downtown's block
-  outlines and the south row. Tested in `tests/routes.test.ts`.
+  outlines and the south row, and up and down Liberty Bridge's deck walks.
+  Tested in `tests/routes.test.ts`.
 - **The street plan** is `src/scripts/city3d/layout.ts` (DOM-free; the 3D
   city, the 2D map, the plots and the server all read it). 1 tile is about
   1.8 m and Degen is about one tile tall. Roads are sized for real-proportion
@@ -351,6 +354,50 @@ it and has been retired completely. Build only on what's here.
   (labels).
 - Check every change at 320, 375, 768, 1024 and 1440px wide: no sideways
   scroll, no text clipped by a slanted edge.
+
+## Liberty Bridge (the owner's call)
+
+- A one-of-a-kind landmark: a suspension bridge carrying **Liberty Road**
+  over the river, with the Liberty flame (the owner's permission, the flame
+  mark only, `src/assets/liberty-flame.png`) on its towers' crowns. Name it
+  "Liberty Bridge"; never link it anywhere, and keep the flame the only
+  outside mark on it.
+- **The road** is `LIBERTY_ROAD` in `layout.ts` (x -13.5, one lane each
+  way): south off the west cross street (z 43), down the middle of the old
+  West 3 plot, over the river, down the middle of the old South 1 plot to
+  the Southside Loop (`LIBERTY_END` in `outer.ts`). It's the only straight
+  road that doesn't run edge to edge, so it isn't in `NS_ROADS`: whatever
+  reads those (the street plan's `liberty` street and its crossings, lit at
+  the cross street and both river avenues; the routes; the outer blocks,
+  cut in two along it (`o-wcl`, `o-swl`); `onLiberty()`, `offBridges()`;
+  the river walls in `drive-sim.ts`; `onBridge` in `walk.ts`; the medians,
+  lane markings and river walls in `world.ts`; the bend lamps) reads it too.
+- **The plots:** West 3 and South 1 are its grounds (`BRIDGE_PLOTS` in
+  `src/data/plots.ts`, `LIBERTY_GROUNDS` in `outer.ts`), off the market. A
+  save that owned one gets everything paid for it (land and building) back
+  in `cleanSave()`, booked as Plots sold.
+- **The numbers** are `liberty.ts` (DOM-free, tested in
+  `tests/liberty.test.ts`): the deck (`DECK`, wide raised walks
+  `DECK_WALK`, `onDeckWalk()`), the towers (`TOWERS` on each bank's
+  grounds, legs `LEG_X` either side of the road, `TOWER_H` well under the
+  Emporium, portal `BEAMS`, the `CROWN`), the main cables (`cableY()`: a
+  parabola saddle to saddle, lowest `LOW` over the water, high over both
+  avenues; backstays to the `ANCHORS`), `HANGERS` (on the deck and over the
+  grounds, never over an avenue), `LIBERTY_SOLIDS` (legs on their plinths,
+  anchorages; in `SOLIDS`), `DECK_STROLLS` (life.ts's walkers) and
+  `LIBERTY_SPAWN`.
+- **Drawn by** `libertybridge.ts`: the road with its centre line, zebras
+  and lamps, the paved grounds, the deck (walks, edge beams with a cyan
+  neon line, railings), the towers (stone plinths, tapering violet legs
+  with neon up the outer corners in the flame's colours, the LIBERTY BRIDGE
+  sign on the low beam, the flame on both faces of each crown, blinking
+  red lights on top), the cables, hangers, stringers and anchorages, and
+  bulbs along the cables with halos at night. The superstructure is the
+  spot's group (it lifts on hover); the road and deck stay down.
+- **The place:** spot `liberty` (after the Emporium in `spots`), its pin
+  over the north crown, directory entry and an info-only panel
+  (`data-panel-tpl="liberty"`) with **Walk in** (`LIBERTY_SPAWN`, the north
+  end of the deck's west walk). No outside links.
 
 ## Sector 7 Airport (`docs/airport-plan.md`)
 
@@ -1045,8 +1092,9 @@ it and has been retired completely. Build only on what's here.
 ## City builder (3D build mode)
 
 - Each district around the core is **one large plot** (its 3 x 3 squares
-  merged into one): North 1-5, West 1-3, East 1-3, and the South row (S1-5)
-  across the river. The south bank has its own east-west road
+  merged into one): North 1-5, West 1-2, East 1-3, and the South row (S2-5)
+  across the river (West 3 and South 1 are Liberty Bridge's grounds,
+  `BRIDGE_PLOTS`; never put them back on the market). The south bank has its own east-west road
   (`SOUTH_ROAD`, so roads are split into `NS_ROADS` / `EW_ROADS` in
   `world.ts`), a lamp-lit riverside walk, traffic over the four bridges and
   pedestrians round the south row (`DISTRICTS`, `BUILDINGS`, `cleanDesign()` in
@@ -1151,7 +1199,8 @@ it and has been retired completely. Build only on what's here.
   (`combat-sim.ts`), the economy (`tycoon.ts`, the market square in
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
-  the save backup (`guide.ts`, `backup.ts`), the airport and its timetable
+  the save backup (`guide.ts`, `backup.ts`), Liberty Bridge (`liberty.ts`),
+  the airport and its timetable
   (`airfield.ts`) and flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`). Modules that touch the DOM or `kit.ts` (canvas
   textures) can't load in Node; keep data a test needs in the DOM-free

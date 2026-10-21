@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { RIVER_WALLS, circles, newCar, stepCar, tune, type CarState, type DriveInput, type DriveWorld } from '../src/scripts/city3d/drive-sim';
-import { NS_ROADS, RIVER, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
+import { LIBERTY_ROAD, NS_ROADS, RIVER, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
 import { CARGO, DRIVE } from '../src/scripts/city3d/mycar';
 import { NO_CAR_MODS, carStats } from '../src/scripts/city3d/catalog';
 import { carStatsOf, cleanSave, modCar } from '../src/scripts/city3d/tycoon';
@@ -123,15 +123,17 @@ test('the river stops it except over the bridges', () => {
   const into = newCar(5, RIVER[0] - 5, -Math.PI / 2);
   run(into, GAS, 5);
   assert.ok(into.z < RIVER[0], 'drove into the river');
-  for (const r of NS_ROADS) {
+  // Liberty Bridge (liberty.ts) is a bridge like the rest
+  const bridges = [...NS_ROADS, LIBERTY_ROAD];
+  for (const r of bridges) {
     // Down each lane of every bridge
     const c = newCar(r.c + 0.85, RIVER[0] - 6, -Math.PI / 2);
     run(c, GAS, 5);
     assert.ok(c.z > RIVER[1] + 1, `blocked on the bridge at x ${r.c}`);
   }
   // The gaps in the river walls are the bridges' width
-  assert.equal(RIVER_WALLS.length, NS_ROADS.length + 1);
-  for (const r of NS_ROADS) assert.ok(!RIVER_WALLS.some((w) => w[0] < r.c + r.half && w[2] > r.c - r.half), `no gap at x ${r.c}`);
+  assert.equal(RIVER_WALLS.length, bridges.length + 1);
+  for (const r of bridges) assert.ok(!RIVER_WALLS.some((w) => w[0] < r.c + r.half && w[2] > r.c - r.half), `no gap at x ${r.c}`);
 });
 
 test('people and other cars are soft: a bump, never driving through', () => {

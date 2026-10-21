@@ -86,6 +86,18 @@ export const BIG_LOTS = [0, 1, 2].map((k) => ({ ox: UNITS.ox + BS + 5, oz: BLOCK
 /** Lots outside the core and the districts (raised and paved like a block, with a sidewalk round) */
 export const EXTRA_LOTS = [GARAGE, MARKET, UNITS, ...BIG_LOTS];
 
+/**
+ * Liberty Road (liberty.ts): a street, one lane each way, from the west cross
+ * street (z 43) south down the middle of the old W3 plot, over the river on
+ * Liberty Bridge and down the middle of the old S1 plot to the Southside
+ * Loop (outer.ts `LIBERTY_END`). The only straight road that doesn't run
+ * edge to edge, so it isn't in `NS_ROADS`: whatever reads those reads this
+ * too.
+ */
+export const LIBERTY_ROAD = { c: OUTER_LO + BS / 2, z0: CORE_ROADS[1], half: LANE, lanes: 1 as const }; // x -13.5
+/** The sidewalks on Liberty Bridge's deck (wider than a block's) */
+export const DECK_WALK = 1.5;
+
 /** Roads running north-south, at these x */
 export const NS_ROADS: Road[] = [avenue(RING_LO), ...CORE_ROADS.map(street), avenue(RING_HI)];
 /** Roads running east-west, at these z (the south bank avenue only runs east-west) */

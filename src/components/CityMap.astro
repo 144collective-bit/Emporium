@@ -15,14 +15,17 @@ import { Image, Picture, getImage } from 'astro:assets';
 import degen from '../assets/degen.png';
 import logo from '../assets/logo.png';
 import pulsechain from '../assets/pulsechain.png';
+import flame from '../assets/liberty-flame.png';
 import { renderCity, VIEW, EMPORIUM_FOCUS, type Spot, type SpotId } from '../lib/city';
 import { X_URL, X_HANDLE, TELEGRAM_URL, SHOP_URL, SHOP_OPEN } from '../data/site';
 
-const [degenImg, logoImg, degenBig, logoBig] = await Promise.all([
+const [degenImg, logoImg, degenBig, logoBig, flameImg] = await Promise.all([
   getImage({ src: degen, width: 160, format: 'webp' }),
   getImage({ src: logo, width: 440, format: 'webp' }),
   getImage({ src: degen, width: 520, format: 'webp' }),
   getImage({ src: logo, width: 729, format: 'webp' }),
+  // The Liberty flame on Liberty Bridge's crowns (libertybridge.ts)
+  getImage({ src: flame, width: 248, format: 'webp' }),
 ]);
 
 // The buildings are places in the city's game (each opens its own panel in 3D); none of them
@@ -39,8 +42,9 @@ const spots: Record<SpotId, Spot> = {
   karts: { href: '#city-title', title: 'Kart park', sub: 'Go-karts · races', aria: 'The kart park: go-kart races' },
   airport: { href: '#city-title', title: 'Airport', sub: 'Hangar · fly', aria: 'Sector 7 Airport: fly your own aircraft' },
   fightclub: { href: '#city-title', title: 'Fight Club', sub: 'Spar · bouts', aria: 'The Fight Club: spar and bouts' },
+  liberty: { href: '#city-title', title: 'Liberty Bridge', sub: 'Over the river', aria: 'Liberty Bridge: Liberty Road over the river' },
 };
-const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub'];
+const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty'];
 const ext = { target: '_blank', rel: 'noopener noreferrer' };
 
 const map = renderCity({ spots, art: { degen: degenImg.src, logo: logoImg.src } });
@@ -52,7 +56,7 @@ const server = !!import.meta.env.PUBLIC_GAME_SERVER;
 const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) ?? '';
 ---
 
-<section class="city has-start" aria-labelledby="city-title" data-city-root data-view="2d" data-mode="explore" data-degen={degenBig.src} data-logo={logoBig.src}>
+<section class="city has-start" aria-labelledby="city-title" data-city-root data-view="2d" data-mode="explore" data-degen={degenBig.src} data-logo={logoBig.src} data-flame={flameImg.src}>
   <div class="city-viewport" data-city data-focus-x={focusX} data-focus-y={focusY} tabindex="0" role="region" aria-label="City map: scroll or drag to look around">
     <svg class="city-map" viewBox={`${VIEW.x} ${VIEW.y} ${VIEW.w} ${VIEW.h}`} role="group" aria-label="Sector 7">
       <g set:html={map} />
@@ -843,6 +847,12 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     <button type="button" class="chip-link fight-walkin" data-fight-walkin>Walk in</button>
     {/* Your record: wins, losses, knock-outs, best chain and each opponent (index.ts fills it with fightRecordHtml() from fight-ui.ts) */}
     <div class="fight-panel-record" data-fight-panel-record></div>
+  </template>
+  <template data-panel-tpl="liberty">
+    <p class="kicker"><span class="kicker-num">12</span> The river</p>
+    <h2 id="city-panel-title" class="city-panel-title">Liberty Bridge</h2>
+    <p class="city-panel-text">Sector 7's suspension bridge, one of a kind. Liberty Road runs south off the west cross street, over the river on it and on to the Southside Loop. Twin towers stand on either bank with the Liberty flame on their crowns; the main cables sweep high over both river avenues and dip over the water, and at night the bulbs along them light up. Cars, buses and people cross it all day: walk it or drive it yourself.</p>
+    <button type="button" class="chip-link kart-walkin" data-liberty-walkin>Walk in</button>
   </template>
 
   <div class="city-hud" data-city-hud>

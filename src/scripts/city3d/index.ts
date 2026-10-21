@@ -36,6 +36,8 @@ import { buildKartPark } from './kartpark3d';
 import { KART_SPAWN } from './kartpark';
 import { AIR_SPAWN } from './airfield';
 import { FIGHT_SPAWN } from './fightsite';
+import { LIBERTY_SPAWN } from './liberty';
+import { buildLibertyBridge } from './libertybridge';
 import { buildFightClub } from './fightclub';
 import { fightRecordHtml } from './fight-ui';
 import { kartRecordsHtml } from './kart-ui';
@@ -98,7 +100,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     Promise.all([document.fonts.load('900 64px "Big Shoulders Display"'), document.fonts.load('700 32px "JetBrains Mono"')]),
     new Promise((r) => setTimeout(r, 2500)),
   ]);
-  const [logo, degen] = await Promise.all([loadTex(root.dataset.logo!), loadImage(root.dataset.degen!)]);
+  const [logo, degen, flame] = await Promise.all([loadTex(root.dataset.logo!), loadImage(root.dataset.degen!), loadImage(root.dataset.flame!)]);
   progress(0.2);
   await nextFrame();
 
@@ -135,6 +137,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // The Fight Club on the south bank: a place too (its pin and panel)
   const fightClub = buildFightClub(scene, { tick, reduced, low: tier === 'low' });
   spots.push(fightClub.spot);
+  // Liberty Bridge: Liberty Road over the river on its twin towers (a place too: its pin and panel)
+  const liberty = buildLibertyBridge(scene, { flame, tick, reduced, low: tier === 'low' });
+  spots.push(liberty.spot);
   // ?fight: the sparring demo on the hangout square (the fight clips, before the Fight Club exists)
   const fightDemo = new URLSearchParams(location.search).has('fight') ? (await import('./fight-demo')).buildFightDemo({ scene, root, reduced, low: tier === 'low', tick }) : null;
   progress(0.55);
@@ -297,6 +302,12 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         startWalking(FIGHT_SPAWN);
       });
     }
+    // Liberty Bridge's panel: Walk in starts walk mode on the deck, looking along it to the south tower
+    if (id === 'liberty')
+      panelBody.querySelector('[data-liberty-walkin]')?.addEventListener('click', () => {
+        close();
+        startWalking(LIBERTY_SPAWN);
+      });
     panel.dataset.spot = id;
     panel.hidden = false;
     requestAnimationFrame(() => panel.classList.add('is-open'));

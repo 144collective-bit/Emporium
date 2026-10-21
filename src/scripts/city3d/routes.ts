@@ -2,14 +2,14 @@
  * Where the traffic drives, DOM-free like the street plan: a route for every
  * lane of every straight road, edge of town to edge of town, and routes down
  * each of downtown's diagonals and back (in off the ring, out along a cross
- * street), round the bends, and out to the airport and back, with the turns
- * rounded off; where along each route it crosses a
+ * street), round the bends, over Liberty Bridge, and out to the airport and
+ * back, with the turns rounded off; where along each route it crosses a
  * junction and on which phase; and the lights' timing (two phases, or three
  * where a diagonal comes in). life.ts drives the cars along them.
  */
-import { CITY_EXT, EW_ROADS, LANE, MEDIAN, NS_ROADS, laneCentres } from './layout';
+import { CITY_EXT, EW_ROADS, LANE, LIBERTY_ROAD, MEDIAN, NS_ROADS, RING_HI, SOUTH_ROAD, laneCentres } from './layout';
 import { PLAN, distToStreet, offsetLine, type Street } from './streetplan';
-import { BENDS } from './outer';
+import { BENDS, LIBERTY_END } from './outer';
 import { DIAGONALS } from './downtown';
 import { ROAD } from './airfield';
 
@@ -244,9 +244,42 @@ export const ROUTES: Route[] = (() => {
       { a: [AV, RZ], b: [AV, lo], off: OUT },
     ])
   );
-  // Spread the diagonal and bend routes through the list, and the airport's near the front, so every quality tier sends cars down them
+  // Over Liberty Bridge: in off the west cross street, down Liberty Road and west round the Southside Loop to its avenue,
+  // and the other way; and off one river avenue, over the bridge, onto the other (right turn on, left turn off)
+  const LX = LIBERTY_ROAD.c;
+  const [CZ, EZ] = [LIBERTY_ROAD.z0, LIBERTY_END[1]];
+  const loop = BENDS.find((b) => b.id === 'southside')!;
+  // The loop's points from its west end to where Liberty Road meets it
+  const k = loop.pts.findIndex((p) => p[0] > LX);
+  const westPart: Pt[] = [...loop.pts.slice(0, k), LIBERTY_END];
+  const lw = loop.pts[0];
+  const liberty: Route[] = [
+    legs([
+      { a: [hi, CZ], b: [LX, CZ], off: ST },
+      { a: [LX, CZ], b: [LX, EZ], off: ST },
+      { pts: [...westPart].reverse(), off: ST },
+      { a: lw, b: [lo, lw[1]], off: IN },
+    ]),
+    legs([
+      { a: [lo, lw[1]], b: lw, off: OUT },
+      { pts: westPart, off: ST },
+      { a: [LX, EZ], b: [LX, CZ], off: ST },
+      { a: [LX, CZ], b: [hi, CZ], off: ST },
+    ]),
+    legs([
+      { a: [lo, RING_HI], b: [LX, RING_HI], off: OUT },
+      { a: [LX, RING_HI], b: [LX, SOUTH_ROAD], off: ST },
+      { a: [LX, SOUTH_ROAD], b: [hi, SOUTH_ROAD], off: IN },
+    ]),
+    legs([
+      { a: [hi, SOUTH_ROAD], b: [LX, SOUTH_ROAD], off: OUT },
+      { a: [LX, SOUTH_ROAD], b: [LX, RING_HI], off: ST },
+      { a: [LX, RING_HI], b: [lo, RING_HI], off: IN },
+    ]),
+  ].map(makeRoute);
+  // Spread the diagonal, bend and Liberty Bridge routes through the list, and the airport's near the front, so every quality tier sends cars down them
   const out = [...straight];
-  [...diag, ...bends].forEach((r, k) => out.splice(k * 5 + 1, 0, r));
+  [...diag, ...bends, ...liberty].forEach((r, k) => out.splice(k * 5 + 1, 0, r));
   out.splice(4, 0, airport);
   return out;
 })();
