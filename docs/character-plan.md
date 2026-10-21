@@ -20,7 +20,9 @@ off by the owner before the next starts.
   important: **walking and running**, then **guns and fighting**.
 - **Clothing with logos:** the designs from the owner's real **merch
   store**, taken from the store's product images and from cleaner files the
-  owner sends. Players **pick from that set** (no uploads, nothing typed);
+  owner sends. **Placeholder designs for now** (made-up marks in the city's
+  style, standing in until the real merch art goes in). Players **pick from
+  that set** (no uploads, nothing typed);
   the logos are bought with **Dorras and levels**, like the premium
   wardrobe. Never another company's logo, and nothing that reveals the
   token (the store is public, and so is the site).
@@ -159,11 +161,13 @@ off by the owner before the next starts.
 
 ### Phase 4: merch clothing, logos and the character screen
 
-- **The designs:** the merch store's designs taken from its product
-  images through the Shopify connection, the owner picking which go in,
-  cleaned into transparent logo textures (with cleaner files from the
-  owner where they matter most) in `src/assets/merch/`. Each checked
-  against the content rules: no token, no other company's mark.
+- **The designs:** placeholders for now: a set of made-up marks drawn in
+  the city's style (no real brand, no token), built so each one is a
+  single swap for the real thing. Later the merch store's designs go in,
+  taken from its product images through the Shopify connection, the owner
+  picking which, cleaned into transparent logo textures (with cleaner files
+  from the owner where they matter most) in `src/assets/merch/`, each
+  checked against the content rules: no token, no other company's mark.
 - **On the clothes:** the garments get places for a logo (chest left and
   centre, back, sleeve, cap front and side, beanie, shoe side), a shared
   logo atlas, and logo colourways; all-over patterns (camo, checks,
@@ -176,8 +180,8 @@ off by the owner before the next starts.
 - **The character screen:** a full-body turntable from the Profile tab:
   drag to turn, zoom to the face, poses and emotes to preview, lighting
   that shows the clothes off, the outfit list.
-- Body options, if the owner wants them (left open): build and height,
-  balaclava styles and colours, skin tone, chains and rings.
+- No body options for now (the owner's call): every Degen wears the
+  balaclava, and build and height stay as they are. Maybe later.
 
 ### Phase 5: crowds, soldiers and the Fight Club's opponents
 
@@ -190,7 +194,6 @@ Each phase gets the owner's sign-off before the next one starts.
 
 ## Open questions for the owner
 
-- Body options (build, height, mask styles, skin tone, jewellery): which,
-  if any, and when (they're listed under Phase 4, left open).
-- Which merch designs go in first, and whether any are kept for special
-  pieces.
+- When the real merch art goes in: which designs first, and whether any
+  are kept for special pieces.
+- Body options (build, height): maybe later.
