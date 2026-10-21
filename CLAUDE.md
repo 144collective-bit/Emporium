@@ -245,15 +245,48 @@ it and has been retired completely. Build only on what's here.
   brand-art head, every wardrobe piece rebuilt, grounded hand-keyed
   animation, merch-store logos on the clothes (Dorras and levels), a
   character screen, phones first. Build it one phase at a time with the
-  owner's sign-off; until then the notes below describe today's body.
+  owner's sign-off. Phase 1 (the skinned body, head, hands and feet) is
+  built; the walk is still the old formula until Phase 2, and crowds stay
+  on the rigid rig until Phase 5.
 - Every character is one shared Degen body (`src/scripts/city3d/character.ts`),
-  sculpted after the brand art at human proportions (about 1.25 tall at
+  sculpted after the brand art at human proportions (about 1.3 tall at
   scale 1, six and a half heads, hips `HIP_HEIGHT` 0.62), with knees,
   elbows, wrists (`Limb.wrist` { roll, bend }, zero by default so nothing
-  moves unless a pose asks; fighting turns the fist) and hand sockets. The bones (`NECK`, `SHOULDER_X/Y`, `UPPER_ARM`,
-  `PALM_Y`, `THIGH`) feed `reachArm()`, so gun holds follow them; the walk
-  camera's eye height (`walk.ts`) and the bench seat (`SEAT_DROP` in
-  `life.ts`) follow the body too.
+  moves unless a pose asks; fighting turns the fist) and hand sockets.
+  - **The skeleton** is `skeleton.ts` (DOM-free, tested in
+    `tests/skeleton.test.ts`): 34 bones (`BONES`: hips, `spine1`, `spine2`,
+    `chest`, neck, head; per side collarbone, arm, forearm, hand, index
+    (`idx1`/`idx2`), the other three fingers (`fin1`/`fin2`), thumb
+    (`thb1`/`thb2`), thigh, shin, foot, toes; L is the rig's -x side).
+    The proportions (`HIP_Y`, `SHOULDER_X/Y`, `UPPER_ARM`, `PALM_Y`,
+    `THIGH`, `NECK_Y`, `HEAD_Y`) feed `reachArm()`, so gun holds and the
+    kart's wheel follow them; the walk camera's eye height (`walk.ts`) and
+    the bench seat (`SEAT_DROP` in `life.ts`) follow the body too. The old
+    rig's frames live on (`Joint`: `torso` is a frame on the chest where
+    the one-piece torso was, the hands are the old sockets), so callers
+    attach guns and held things as before; `torsoFrame()` gives the torso
+    frame for a pose before posing (the kart's wheel grips).
+  - `poseSkeleton()` maps a `Pose` onto the bones: the spine shares the
+    lean and twist, the neck a share of the head's turn, the collarbone
+    shrugs when an arm goes over the shoulder (never for a gun or a wheel),
+    the feet ease towards level and the toes bend when a foot tips onto
+    them, and `grip` closes each hand (0 open, 1 a fist; read once per
+    `update()`: fighters default to fists, a held thing to a hold, and
+    `holdGun()` sets it every frame).
+  - `weigh()` weights every vertex by what it's part of (its old joint, or
+    `region: 'shoe'`) and where it is at rest, passing smoothly across each
+    joint (shoulders take a collarbone share, the jacket's and hoodie's
+    hems go some of the way with the thighs); `bone` pins a piece to one
+    bone unbent (bags, boards, wings on the chest); `skin` gives a piece
+    its own weights per vertex (the fingers).
+  - **The head and hands** are `body.ts` (DOM-free, tested): the balaclava
+    after the brand art (`HEAD_ROWS`, `headGeometry()`: a tall oval with a
+    flatter front, nose ridge, cheekbones, brow over the eye sockets, jaw,
+    chin and the neck tube down into the collar; `headFront()` lays the eye
+    opening, its knit rim and the shades onto it) and the hands
+    (`handParts()`: wrist, palm, thumb pad, four fingers and a thumb, each
+    vertex weighted; `bakedHand()` sets one solid at a grip, for the
+    first-person hands in `viewmodel.ts`).
   - Shapes are built from cross-sections (`loft()`, superellipse rings) and
     flat details laid onto them (`onBody()` with `surface()`: lapels, the
     shirt V, the tie, zips, pockets). Shoes are side profiles (`profile()`).
@@ -262,13 +295,19 @@ it and has been retired completely. Build only on what's here.
     pieces on joints, each a fixed colour or an outfit colour (`shade`
     darkens or lightens it: lapels, ribbing). New clothes are new items.
   - Three detail levels (`Detail`): 2 for single figures (`createDegen()`:
-    the player, other players, the fitting room, the hologram; about 12k
+    the player, other players, the fitting room, the hologram; about 13-15k
     triangles), 1 for crowd people near the camera (about 6k; the phones'
     `light` crowd leaves out the `detail` pieces), 0 for crowd people
     further away (`far`: plain boxes for rounded ones, no ears or nose, the
     shades as one bar; about 1.5k).
-  - `createDegen()` merges everything on a joint into one mesh coloured per
-    vertex (about 15 draw calls a figure).
+  - `createDegen()` builds the skinned body (`items(q, true)`: the hero
+    wardrobe, with the new head, fingers and shoes on the feet) as one
+    `SkinnedMesh` coloured per vertex, plus one each for the lenses, the
+    patches, the raised hood and neon, all on one `Skeleton` (3-5 draw
+    calls a figure, never frustum-culled); things in the hand stay solid on
+    the hand bone. `dispose()` frees a figure's geometry and bones. A
+    material swapped onto a figure (the hologram's `ShaderMaterial`, a
+    fighter's hit flash) must handle skinning (three's skinning chunks).
     `createCrowd()` (pedestrians, soldiers) merges an item's pieces per
     joint and colour and shares them left and right. Every frame each person
     in view takes instances of only what they wear, at their level: near
@@ -978,16 +1017,18 @@ it and has been retired completely. Build only on what's here.
   third-person `hold` spot for the front hand), store art (`ART` in
   `gunshop.ts`) and a shot sound (`SHOT_SOUND` in `combat.ts`).
 - In third person (the player and other players), `stance.ts` `holdGun()`
-  puts both hands on the gun with `reachArm()` in `character.ts`: the
+  puts both hands on the gun with `reachArm()` (`skeleton.ts`): the
   shooting hand on the pistol grip (every gun's origin), the other on its
-  `hold` spot, or on the magazine during a reload. Longer guns turn Degen
-  side-on just enough for the front hand to reach. Call it after the walk
-  and jump poses so they don't pull the hands off.
+  `hold` spot, or on the magazine during a reload, both closed round it
+  (`grip`). Longer guns turn Degen side-on just enough for the front hand
+  to reach. Call it after the walk and jump poses so they don't pull the
+  hands off.
 - Finishes (`SKINS`) are cosmetic and work on every gun. Lifetime score,
   finish and last gun are saved in the browser under `degen-city-combat-v1`
   (or the player profile online).
 - First person is the default when walking starts. The hands
-  (`viewmodel.ts`) wear the sleeves of Degen's outfit (`setOutfit()`, called
+  (`viewmodel.ts`, Degen's own from `bakedHand()` in `body.ts`: the right
+  closed round the pistol grip, the left under the front) wear the sleeves of Degen's outfit (`setOutfit()`, called
   from `walk.setLook()` through `combat.setOutfit()`: a suit sleeve with a
   shirt cuff, or a looser hoodie / track sleeve with a ribbed cuff and the
   track top's stripes). They're built `K` times bigger and further out (the camera's
@@ -1208,8 +1249,9 @@ it and has been retired completely. Build only on what's here.
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), Liberty Bridge (`liberty.ts`),
   the airport and its timetable
-  (`airfield.ts`) and flying your own aircraft (`flight-sim.ts`,
-  `myplane.ts`). Modules that touch the DOM or `kit.ts` (canvas
+  (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
+  `myplane.ts`) and Degen's skeleton, weights, head and hands
+  (`skeleton.ts`, `body.ts`). Modules that touch the DOM or `kit.ts` (canvas
   textures) can't load in Node; keep data a test needs in the DOM-free
   files.
 - When you change a rule or move something in the city, run the tests and

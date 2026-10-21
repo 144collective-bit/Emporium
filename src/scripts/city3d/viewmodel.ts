@@ -15,16 +15,18 @@
  * the depth buffer so walls never cut through them. They still get ink lines.
  */
 import * as THREE from 'three';
-import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { canvasTex, fx } from './kit';
 import { buildGun, gunSpec, type Gun, type SkinId, type Tintable } from './guns';
 import type { WeaponId } from './combat-sim';
 import { PLAYER, type Outfit } from './character';
+import { bakedHand } from './body';
 
 const K = 8;
 /** The gun and hands are drawn a little smaller than life, so they don't swamp the screen */
 const S = 0.78;
 const SKIN = '#e8c39e';
+/** The hands' size against the body's (they're held up close, so a touch bigger reads better) */
+const FP_HAND = 1.15;
 /** The shirt cuff and the track top's stripes (a shade under white, like the body's) */
 const SHIRT = '#d4d1de';
 
@@ -35,8 +37,6 @@ const adsPose = (id: WeaponId) => {
   const { at, ads } = gunSpec(id).sight;
   return { x: 0, y: -at.y * S, z: -(ads - at.z * S), ry: 0, rz: 0 };
 };
-
-const rbox = (w: number, h: number, d: number, r: number) => new RoundedBoxGeometry(w, h, d, 2, r);
 
 /**
  * Flat cartoon shading lit from a fixed key light over the left shoulder. The
@@ -74,6 +74,19 @@ const shared = (c: string) => flats.get(c) ?? flats.set(c, flat(c)).get(c)!;
 const UP = new THREE.Vector3(0, 1, 0);
 
 const shade = (c: string, k: number) => '#' + new THREE.Color(c).multiplyScalar(k).getHexString();
+
+/**
+ * One of Degen's own hands (body.ts: palm, fingers and thumb), closed to
+ * `grip` and turned so its wrist runs back up the forearm `dir` into the
+ * sleeve and its knuckles lie along `along` (the pistol grip, the
+ * handguard). `side` is the rig's: -1 his right hand, 1 his left.
+ */
+function fpHand(side: -1 | 1, grip: number, dir: THREE.Vector3, along: THREE.Vector3, size: number, at: THREE.Vector3) {
+  const z = along.clone().normalize();
+  const y = dir.clone().addScaledVector(z, -dir.dot(z)).normalize();
+  const x = new THREE.Vector3().crossVectors(y, z);
+  return bakedHand(side, grip).applyMatrix4(new THREE.Matrix4().makeBasis(x, y, z).scale(new THREE.Vector3(size, size, size)).setPosition(at));
+}
 
 /** A forearm ending in a hand at the origin, reaching off along `dir`; `dress()` puts it in the outfit's sleeve */
 function arm(dir: THREE.Vector3, hand: THREE.BufferGeometry) {
@@ -149,17 +162,16 @@ export function createViewmodel(scene: THREE.Scene, skin: SkinId, weapon: Weapon
   root.add(scaler);
   scaler.add(holder);
 
-  // Hands, in the gun's own frame (barrel along +z, the gun's +x is the camera's left)
-  const rightHand = rbox(0.05, 0.088, 0.072, 0.02).rotateX(0.3).translate(-0.006, -0.05, -0.02);
-  const rightArm = arm(new THREE.Vector3(-0.36, -0.72, -0.58), rightHand);
+  // Hands, in the gun's own frame (barrel along +z, the gun's +x is the camera's left): his
+  // right closed round the pistol grip (raked back), his left under the front, fingers up its side
+  const rightDir = new THREE.Vector3(-0.36, -0.72, -0.58);
+  const rightHand = fpHand(-1, 0.9, rightDir, new THREE.Vector3(0, Math.cos(0.3), Math.sin(0.3)), FP_HAND, new THREE.Vector3(-0.016, -0.045, -0.024));
+  const rightArm = arm(rightDir, rightHand);
   const right = rightArm.g;
-  const thumb = new THREE.Mesh(rbox(0.016, 0.016, 0.05, 0.007).rotateY(0.2).translate(-0.024, 0.012, 0.0), shared(SKIN));
-  right.add(thumb);
-  const leftPalm = rbox(0.07, 0.036, 0.09, 0.016).translate(0, -0.03, 0);
-  const leftArm = arm(new THREE.Vector3(0.6, -0.68, -0.42), leftPalm);
+  const leftDir = new THREE.Vector3(0.6, -0.68, -0.42);
+  const leftHand = fpHand(1, 0.55, leftDir, new THREE.Vector3(0, 0, 1), FP_HAND, new THREE.Vector3(0.014, -0.036, 0));
+  const leftArm = arm(leftDir, leftHand);
   const left = leftArm.g;
-  const fingers = new THREE.Mesh(rbox(0.014, 0.05, 0.08, 0.006).translate(-0.038, -0.006, 0), shared(SKIN));
-  left.add(fingers);
   rightArm.dress(PLAYER);
   leftArm.dress(PLAYER);
 

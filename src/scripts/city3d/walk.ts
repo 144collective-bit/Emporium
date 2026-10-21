@@ -1652,9 +1652,9 @@ export function createWalk(d: WalkDeps) {
       outfit = o;
       const vis = hero.g.visible;
       d.scene.remove(hero.g);
-      // The gun moves to the new body; only the old body's geometry goes
+      // The gun moves to the new body; only the old body's geometry and bones go
       combat.gun.removeFromParent();
-      hero.g.traverse((m) => (m as THREE.Mesh).geometry?.dispose());
+      hero.dispose();
       Object.assign(hero, createDegen(o));
       hero.g.scale.setScalar(SCALE);
       hero.g.visible = vis;

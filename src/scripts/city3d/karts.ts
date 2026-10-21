@@ -20,7 +20,7 @@
  */
 import * as THREE from 'three';
 import { carMaterials, wheelGeometry, type CarSpec } from './cars';
-import { HIP_HEIGHT, reachArm, type Degen } from './character';
+import { HIP_HEIGHT, reachArm, torsoFrame, type Degen } from './character';
 import { FONT_DISPLAY, PAL, canvasTex, fx, mergeMeshes, neon, toon } from './kit';
 import { KART_L, KART_W } from './kartpark';
 import type { KartId } from './mykart';
@@ -277,12 +277,8 @@ export function createKart(id: KartId, paint: string, opts: { detail?: 0 | 1 | 2
   const M = new THREE.Matrix4();
   const inv = new THREE.Matrix4();
   const q = new THREE.Quaternion();
-  const v = new THREE.Vector3();
   const grip = new THREE.Vector3();
   const chest = new THREE.Matrix4();
-  const one = new THREE.Vector3(1, 1, 1);
-  const Z = new THREE.Vector3(0, 0, 1);
-  const euler = new THREE.Euler();
 
   /** Pose the driver: seated, leaning, hands on the wheel's grips */
   function poseDriver() {
@@ -301,13 +297,10 @@ export function createKart(id: KartId, paint: string, opts: { detail?: 0 | 1 | 2
       l.bend = 0.5;
       l.twist = 0;
     }
-    // The chest's frame in kart space: root (seat, facing +x, scaled) > hips (HIP_HEIGHT, rolled) > torso (leaned)
+    // The torso frame in kart space: root (seat, facing +x, scaled) > the body's own (hips rolled, spine leaned)
     const g = driver.g;
     chest.compose(g.position, g.quaternion, g.scale);
-    M.compose(v.set(0, HIP_HEIGHT + p.bob, 0), q.setFromAxisAngle(Z, p.side), one);
-    chest.multiply(M);
-    M.makeRotationFromEuler(euler.set(p.lean, p.twist, -p.side * 0.6));
-    chest.multiply(M);
+    chest.multiply(torsoFrame(p, M));
     inv.copy(chest).invert();
     // The grips: 3 and 9 o'clock on the wheel, turned with it; arm 0 (the rig's -x) is on the kart's +z side
     for (const i of [0, 1] as const) {

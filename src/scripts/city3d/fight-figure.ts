@@ -49,6 +49,7 @@ export function createFighterFigure(parent: THREE.Object3D, outfit: Outfit, low:
 }
 export function disposeFigure(fg: FighterFigure) {
   fg.degen.g.removeFromParent();
+  fg.degen.dispose();
 }
 
 const walkTmp = newFightPose();

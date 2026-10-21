@@ -369,13 +369,21 @@ function drawWall(c: CanvasRenderingContext2D, H: number, show: (typeof SHOWS)[n
 function holoMaterial(base: number, height: number) {
   return new THREE.ShaderMaterial({
     uniforms: { time: { value: 0 }, power: { value: 1 }, base: { value: base }, height: { value: height } },
+    // (Skinned: Degen's body bends on its bones; the chunks do nothing on a plain mesh)
     vertexShader: /* glsl */ `
+      #include <common>
+      #include <skinning_pars_vertex>
       varying vec3 vN; varying vec3 vV; varying float vY;
       void main() {
-        vec4 wp = modelMatrix * vec4(position, 1.0);
+        #include <skinbase_vertex>
+        #include <beginnormal_vertex>
+        #include <skinnormal_vertex>
+        #include <begin_vertex>
+        #include <skinning_vertex>
+        vec4 wp = modelMatrix * vec4(transformed, 1.0);
         vY = wp.y;
         vec4 mv = viewMatrix * wp;
-        vN = normalize(normalMatrix * normal);
+        vN = normalize(normalMatrix * objectNormal);
         vV = normalize(-mv.xyz);
         gl_Position = projectionMatrix * mv;
       }
