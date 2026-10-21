@@ -239,6 +239,24 @@ before the next one starts.
   shoot; the city north of the river stays a safe hangout.
 - Saves carry on from Phases 1-4 (`cleanSave()`, v5).
 
+## Getting started and save backups
+
+- **Getting started** (`guide.ts`): seven first steps for a new player, one
+  at a time, each with a beam of light over where to go and, from the City
+  view, a button that opens the place or starts walking there: stock your
+  stall, make 5 sales, take your car out, deliver a contract, target
+  practice, a street race, and back up your save at the Vault. Each pays a
+  small reward (200-400 Dorras and 40-80 XP; 1,900 Dorras and 380 XP in
+  all). Steps check lifetime counters, so anything already done moves on;
+  saves from before the guide that are past level 1 start with it done. It
+  can be hidden and shown again at the Signal tower.
+- **Save backups** (`backup.ts`): the save lives in the browser, so the
+  Vault downloads every city save as one file and loads one back (checked
+  and cleaned first, with a confirm). The game server can hold saves when
+  multiplayer resumes.
+- The save stays v7: `guide` and `backup` are new fields, filled in by
+  `cleanSave()` when a save doesn't have them.
+
 ## Phase 6: the kart park (the owner's call)
 
 A Mario-Kart-style place of its own, outside the Parkway in the

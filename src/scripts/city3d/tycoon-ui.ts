@@ -21,7 +21,9 @@
  * - The Workshop's panel (`[data-workshop]`) shows the Workshop tab's view.
  *
  * The save lives in the browser (`degen-city-tycoon-v1`) and is brought up to
- * date every second (and on return, counting the time away).
+ * date every second (and on return, counting the time away). The Vault's
+ * panel downloads every city save as one backup file and loads one back
+ * (backup.ts checks it; a yes writes it and starts the city again).
  */
 import {
   CROPS,
@@ -153,8 +155,9 @@ import { PLACE_LEVELS, PLOT_LEVEL, PLOT_REFUND } from './catalog';
 import { LV, whyNot } from './ui';
 import type { Sfx } from './combat';
 import { createMissionsUI } from './missions-ui';
+import { guideAt, type GuideStep } from './guide';
+import { BACKUP_KEYS, TYCOON_KEY as KEY, backupName, packBackup, readBackup, type ReadBackup } from './backup';
 
-const KEY = 'degen-city-tycoon-v1';
 const fmt = new Intl.NumberFormat('en-US');
 const compact = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 });
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -226,6 +229,8 @@ export interface TycoonHooks {
   plotsChanged(): void;
   /** The sound switch (purchases, upgrades, missions claimed, level-ups) */
   sfx(kind: Sfx, gain?: number): void;
+  /** Getting started's way in from the City view: open a building's panel or start walking there */
+  guideGo(g: GuideStep): void;
 }
 
 /** Make `to` match `from` in place: same elements kept, only what differs is changed */
@@ -297,8 +302,13 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
   /** The Post office's form: from where, to where */
   let sendFrom: PlaceId | null = null;
   let sendTo: PlaceId | null = null;
+  /** A backup file read and waiting on a yes (the Vault) */
+  let restoreAsk: Extract<ReadBackup, { ok: true }> | null = null;
+  /** Set while a backup is being put back: nothing more is stored before the city starts again */
+  let frozen = false;
 
   const store = () => {
+    if (frozen) return;
     try {
       localStorage.setItem(KEY, JSON.stringify(save));
     } catch {
@@ -312,7 +322,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     toastTimer = window.setTimeout(() => toastEl.classList.remove('is-on'), ms);
   }
   // Missions, the level pill and badges (missions-ui.ts) run on the same save; `changed()` is hoisted
-  const missions = createMissionsUI(root, { save: () => save, commit: () => changed(), toast, sfx: (kind, gain) => h.sfx(kind, gain) });
+  const missions = createMissionsUI(root, { save: () => save, commit: () => changed(), toast, sfx: (kind, gain) => h.sfx(kind, gain) }, { go: (g) => h.guideGo(g) });
 
   /* ---------- Places ---------- */
   function placeName(p: PlaceId) {
@@ -744,7 +754,81 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
       <p class="biz-label">Loans</p>${loan}
       <div class="biz-ledger"><div><p class="biz-label">In, all time</p><ul>${rows(true)}</ul></div><div><p class="biz-label">Out, all time</p><ul>${rows(false)}</ul></div></div>
       ${recent ? `<p class="biz-label">Latest</p><ul class="biz-recent">${recent}</ul>` : ''}
+      <p class="biz-label">Your save</p>${backupView(now)}
       <p class="city-panel-fine">Dorras are the city's own money, earned by playing. They can't be bought or cashed out.</p>`;
+  }
+
+  /* ---------- Your save (in the Vault): a backup file to download, and one to load ---------- */
+  const day = (t: number) => new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  function ago(t: number, now: number) {
+    const d = Math.floor((now - t) / 86400e3);
+    return d < 1 ? 'today' : d === 1 ? 'yesterday' : `${d} days ago`;
+  }
+  function backupView(now: number) {
+    const ask = restoreAsk
+      ? `<div class="stall-slot backup-ask"><p class="biz-ask">Load this backup? Level ${restoreAsk.level}, ${fmt.format(restoreAsk.dorras)} Dorras${restoreAsk.at ? `, saved ${day(restoreAsk.at)}` : ''}. It replaces everything in this browser, and the city starts again.</p>
+          <span class="market-btns"><button type="button" data-restore-yes>Load it</button><button type="button" data-restore-no>Cancel</button></span></div>`
+      : '';
+    return `<p class="stall-empty">Everything you do in Sector 7 is kept in this browser only: clearing its data or changing device starts you over. Download a backup file to keep it safe, and load it here on any device. Last backup: <b>${save.backup ? ago(save.backup, now) : 'never'}</b>.</p>
+      ${ask}
+      <span class="market-btns backup-btns"><button type="button" data-backup-save>Download backup</button><label class="backup-load"><input type="file" accept=".json,application/json" data-backup-file /><span>Load a backup</span></label></span>`;
+  }
+  function downloadBackup(now: number) {
+    // The file carries the time it was made, so the guide's last step and "Last backup" see it
+    save.backup = now;
+    store();
+    const ls = (k: string) => {
+      try {
+        return localStorage.getItem(k);
+      } catch {
+        return null;
+      }
+    };
+    const b = packBackup((k) => (k === KEY ? JSON.stringify(save) : ls(k)), now);
+    const url = URL.createObjectURL(new Blob([JSON.stringify(b)], { type: 'application/json' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = backupName(now);
+    document.body.append(a);
+    a.click();
+    a.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 30000);
+    return backupName(now);
+  }
+  async function readFile(input: HTMLInputElement) {
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    const r = readBackup(await file.text(), Date.now());
+    restoreAsk = r.ok ? r : null;
+    note = r.ok
+      ? ''
+      : r.why === 'newer'
+        ? 'That backup comes from a newer version of the city. Reload the page and try again.'
+        : r.why === 'size'
+          ? "That file is too big to be a Sector 7 backup."
+          : "That file isn't a Sector 7 backup.";
+    if (!r.ok) h.sfx('denied');
+    paintPanel();
+  }
+  /** Put a backup back: every city save replaced, then the city starts again on it */
+  function restore() {
+    const r = restoreAsk;
+    restoreAsk = null;
+    if (!r) return;
+    frozen = true;
+    try {
+      const keep = new Set(r.writes.map(([k]) => k));
+      for (const k of BACKUP_KEYS) if (!keep.has(k)) localStorage.removeItem(k);
+      for (const [k, v] of r.writes) localStorage.setItem(k, v);
+    } catch {
+      frozen = false;
+      store();
+      note = "This browser won't keep saves (private browsing, or storage turned off), so the backup can't be loaded here.";
+      h.sfx('denied');
+      return;
+    }
+    location.reload();
   }
 
   /* ---------- The estate agent (in the Vault): the sixteen district plots ---------- */
@@ -823,7 +907,13 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
       h.openMarket();
       return;
     }
-    if (ds.upgradePlace) {
+    if ('backupSave' in ds) {
+      const name = downloadBackup(now);
+      note = `Backup downloaded: ${name}. Keep it somewhere safe; load it here, on any device, to carry on.`;
+      h.sfx('buy', 0.6);
+    } else if ('restoreNo' in ds) restoreAsk = null;
+    else if ('restoreYes' in ds) return void restore();
+    else if (ds.upgradePlace) {
       const p = ds.upgradePlace as PlaceId;
       const r = upgradePlace(save, p);
       note = r.ok ? `${placeName(p)} is now level ${placeLevel(save, p)}.` : whyNot(r.why);
@@ -934,6 +1024,11 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     if (btn && !btn.disabled && !missions.act(btn)) act(btn, Date.now());
   };
   card.addEventListener('click', onClick);
+  // The Vault's Load a backup: a file picked
+  const onChange = (e: Event) => {
+    const input = (e.target as HTMLElement).closest<HTMLInputElement>('input[data-backup-file]');
+    if (input) void readFile(input);
+  };
   pill.addEventListener('click', () => (card.hidden ? openCard() : closeCard()));
   // Esc closes the card first (before it can close a panel or leave walk mode)
   document.addEventListener(
@@ -1016,7 +1111,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     paintCard();
     paintPanel();
     // The city only redraws what changed (crate stacks, units, the contracts' beams)
-    const shown = JSON.stringify([save.stall, save.units, save.lots, save.contracts.map((c) => c.to), save.levels]);
+    const shown = JSON.stringify([save.stall, save.units, save.lots, save.contracts.map((c) => c.to), save.levels, guideAt(save)]);
     if (shown !== lastShown) {
       lastShown = shown;
       h.stock(save);
@@ -1092,12 +1187,15 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
       const el = panelBody.querySelector<HTMLElement>(PANELS[id as PanelId]);
       if (!el) return;
       el.addEventListener('click', onClick);
+      el.addEventListener('change', onChange);
       panel = { id: id as PanelId, el };
       note = '';
+      restoreAsk = null;
       paintPanel();
     },
     unmountPanel() {
       panel?.el.removeEventListener('click', onClick);
+      panel?.el.removeEventListener('change', onChange);
       panel = null;
     },
 

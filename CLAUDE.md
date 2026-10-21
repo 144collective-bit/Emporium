@@ -564,6 +564,35 @@ it and has been retired completely. Build only on what's here.
   `tycoon.commit()` runs `missions.onCommit()` first, so any screen that
   changes the save and commits gets badges and level-ups checked. Rewards
   are Dorras and XP only: no prizes, nothing real.
+- **Getting started** (the new player's first steps): the rules are
+  `guide.ts` (DOM-free, tested in `tests/guide.test.ts`): `GUIDE`, seven
+  steps in order (stock your stall at the market hall, make 5 sales, take
+  your car out, deliver a contract, target practice, a street race, back up
+  your save at the Vault), each with a beam spot (`at`), a way in from the
+  City view (`go`: open a panel, or start walking at a free spot facing
+  it) and a check on the save (`met()`, lifetime counters, so a step
+  already done moves straight on). `advanceGuide()` (run first in
+  `missions.onCommit()`) pays each step's small reward (Dorras and XP, the
+  ledger's Missions line) once. The save carries `guide` { step, hidden }
+  (`GUIDE_STEPS` in `tycoon.ts`; a save from before it that's past level 1
+  has it done) and `backup` (when it was last downloaded). On screen
+  (`missions-ui.ts`, styles `src/styles/guide.css`): the City view's card
+  under the welcome tip (`[data-guide]` in `.city-hud`, 3D only, with the
+  way in and an ×; in `chrome`), the top row of the walk tracker (with its
+  own ×), the steps at the top of the Signal tower's board (Show / Hide the
+  guide) and a cyan beam (`beacons.guide()`). Hiding only hides it; the
+  steps still count.
+- **Your save as a file:** everything the city keeps in this browser goes
+  in one backup (`backup.ts`, DOM-free, tested: `BACKUP_KEYS`,
+  `packBackup()`, `readBackup()`; never the guest or wallet login tokens or
+  screen preferences). The Vault's panel ("Your save" in `bankView()`)
+  downloads it (`sector-7-save-<date>.json`) and loads one: the file is
+  checked and the city's game cleaned with `cleanSave()` first, a confirm
+  shows its level and Dorras, then every save is replaced and the page
+  reloads (`frozen` stops the tycoon storing over it). A level-up from 3 on
+  reminds you when the last backup is over a week old. A new save in
+  localStorage needs its key in `BACKUP_KEYS` and a loader that cleans what
+  it reads.
 - **The Apartments** (the tower in the north block, east of the Signal tower, `apartments()` in
   `landmarks.ts` and `city.ts`) are a place since Phase 3: spot
   `apartments`, its pin, door (`DOORS`) and panel. The Emporium stays first
@@ -1021,7 +1050,8 @@ it and has been retired completely. Build only on what's here.
   (`mycar.ts`), the driving rules (`drive-sim.ts`), target practice
   (`combat-sim.ts`), the economy (`tycoon.ts`, the market square in
   `solids.ts`), the city's game (`catalog.ts`, `races.ts`, `missions.ts`
-  in `tests/game.test.ts`), the airport and its timetable (`airfield.ts`) and
+  in `tests/game.test.ts`), Getting started and the save backup (`guide.ts`,
+  `backup.ts`), the airport and its timetable (`airfield.ts`) and
   flying your own aircraft (`flight-sim.ts`, `myplane.ts`).
   Modules that touch the DOM or `kit.ts` (canvas
   textures) can't load in Node; keep data a test needs in the DOM-free
