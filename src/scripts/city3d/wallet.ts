@@ -45,7 +45,7 @@ function walletConnect(): Promise<WcProvider> {
       rpcMap: Object.fromEntries(ids.map((id) => [id, CHAINS[id].rpc])),
       showQrModal: true,
       qrModalOptions: { themeMode: 'dark' },
-      metadata: { name: 'Degen City', description: 'Degen City: PulseChain native', url: location.origin, icons: [`${location.origin}/icon-512.png`] },
+      metadata: { name: 'Sector 7', description: 'Sector 7: PulseChain native', url: location.origin, icons: [`${location.origin}/icon-512.png`] },
     })) as unknown as WcProvider;
   })();
   wc.catch(() => (wc = null));

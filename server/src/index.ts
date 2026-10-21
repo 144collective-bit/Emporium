@@ -1,5 +1,5 @@
 /*
- * Degen City game server (Cloudflare Worker). Plot sales for PLS were
+ * Sector 7 game server (Cloudflare Worker). Plot sales for PLS were
  * retired: the city's plots are game property now (src/scripts/city3d/tycoon.ts).
  *
  * - GET /health: a quick "ok".
@@ -67,6 +67,6 @@ export default {
       out.headers.set('Cache-Control', 'no-store');
       return out;
     }
-    return env.ASSETS ? env.ASSETS.fetch(req) : new Response('Degen City game server', { status: 404 });
+    return env.ASSETS ? env.ASSETS.fetch(req) : new Response('Sector 7 game server', { status: 404 });
   },
 } satisfies ExportedHandler<Env>;

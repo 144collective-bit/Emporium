@@ -3,9 +3,20 @@
 This is **the** Degen Emporium site. An older multi-page site existed before
 it and has been retired completely. Build only on what's here.
 
+<<<<<<< HEAD
+=======
+## The city's name
+
+- The city is **Sector 7** (the owner's call; it was "Degen City" before).
+  Use "Sector 7" in every bit of copy, banner and sign that names the
+  city. The localStorage keys and save names keep their `degen-city-`
+  prefixes (`degen-city-tycoon-v1` and the rest): renaming them would lose
+  every visitor's save.
+
+>>>>>>> origin/experimental
 ## Never bring back the old site
 
-- The site is the Degen City homepage (`src/pages/index.astro`), the Emporium
+- The site is the Sector 7 homepage (`src/pages/index.astro`), the Emporium
   comic page it links into (`src/pages/emporium.astro`) and `404.astro`. Do not
   add or restore pages like `/news`, `/blog`, `/store`, `/shop`, `/alpha`,
   `/tokenomics`, `/vault`, `/terminal`, `/team`, `/projects`, `/about`,
@@ -19,7 +30,7 @@ it and has been retired completely. Build only on what's here.
 
 ## Design rules
 
-- The homepage is Degen City in two layers, both in Degen's style (black ink
+- The homepage is Sector 7 in two layers, both in Degen's style (black ink
   outlines, flat cartoon shading, PulseChain neon):
   - **3D** (`src/scripts/city3d/`, three.js): toon materials, ink outlines
     from a normal/depth post-pass, bloom, day/night from the visitor's clock,
@@ -275,13 +286,23 @@ it and has been retired completely. Build only on what's here.
   (City settings, Directory, walk panels with their `.pop-head` ×) also
   close on a tap outside and on Esc. The welcome card is a one-line
   first-visit tip under the header (`.city-card` in `.city-hud`: GM, "Welcome
-  to Degen City" (the page's h1), how to move, the draft note, an ×). It's
+  to Sector 7" (the page's h1), how to move, the draft note, an ×). It's
   closed for good with its × (remembered as `city-card` in localStorage) and
   isn't shown on phones; when it's hidden the "Draft · v0" tag in the
   bottom-right corner keeps the draft note.
 - 3D pin labels stay on screen and fold to dots where they'd sit under the
   city's own buttons and cards (`chrome` in `index.ts`); add any new
   always-visible city overlay to that list.
+- **The start menu** (the owner's call): on every open, `[data-start]` in
+  `CityMap.astro` (styles `src/styles/start.css`) covers the whole page
+  while the 3D city boots behind it, so the 2D map is never seen loading.
+  Single player enters the city (the fly-in runs again, `city.intro()` in
+  `index.ts`); Multiplayer says "Coming soon" without `PUBLIC_GAME_SERVER`
+  and flips the Online switch on and enters with one; Options holds Time,
+  Weather, Sound and the view (3D city / 2D map), driving the header's own
+  settings controls (pressed when the city is up, queued until then). The
+  root carries `has-start` until a choice is made; the loader and the
+  welcome tip wait behind it. Gradient-bordered buttons, white text.
 - The city page has **one header**: the city's own bar (`.city-head` in
   `CityMap.astro`, copy in `head.ts`), slim dark glass. The site bar
   (`Nav.astro`) is left out there (`<Base nav={false}>`) and stays on the
@@ -566,7 +587,7 @@ it and has been retired completely. Build only on what's here.
   South 4 (`RACES`, `START_LINE`, `RACE_SITE`, `CHECK_R`, `START_R`,
   `COUNTDOWN`, `startRun` / `stepRun` / `finishRun`, `prizeFor`,
   `clockOf`). `racesite.ts` draws the gantry, the banner (fixed copy only:
-  START / FINISH, DEGEN CITY RACES), the chequered line, the race board and
+  START / FINISH, SECTOR 7 RACES), the chequered line, the race board and
   the checkpoint markers (beacons style; `show(next, after)`); its
   footprints are `RACE_SOLIDS` in `solids.ts`.
 - `race-ui.ts` (markup `data-races`, `data-race-hud`, `data-race-result` in

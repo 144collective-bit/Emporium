@@ -42,10 +42,10 @@ year. It starts with a dot, so some file managers hide it.
 
 | Path | What it is |
 | --- | --- |
-| `src/pages/index.astro` | The homepage: Degen City |
+| `src/pages/index.astro` | The homepage: Sector 7 |
 | `src/pages/emporium.astro` | The Emporium: the comic page |
 | `src/pages/404.astro` | Not-found page |
-| `src/components/CityMap.astro` | The city page (see Degen City below) |
+| `src/components/CityMap.astro` | The city page (see Sector 7 below) |
 | `src/scripts/city3d/` | The 3D city |
 | `src/lib/city.ts` | The 2D city map |
 | `src/components/ComicPage.astro` | The six comic windows (desktop page, mobile cards) |
@@ -58,7 +58,7 @@ year. It starts with a dot, so some file managers hide it.
 | `tests/` | Tests for the street plan, collisions, plots, driving, your car and target practice |
 | `public/` | Favicons, share card, web manifest |
 
-## Degen City
+## Sector 7
 
 The homepage is a living 3D city in Degen's style: ink outlines, flat
 cartoon shading and PulseChain neon, built with [three.js](https://threejs.org).
@@ -392,7 +392,7 @@ South 1-5 across the river on the south bank road) is
   what's built there.
 - **Buy it with your wallet:** connect a PulseChain wallet (the site switches
   it to the right network or adds it), confirm, and approve the payment in
-  your wallet. The PLS goes straight to the Degen City wallet. The game
+  your wallet. The PLS goes straight to the Sector 7 wallet. The game
   server checks the payment on PulseChain and the plot is yours once it has a
   few confirmations, usually within a minute.
 - **Build on it:** choose from eight buildings (house, shopfront, tower, loft,

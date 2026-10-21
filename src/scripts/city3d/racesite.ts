@@ -2,7 +2,7 @@
  * The street races' start line on the south bank avenue (races.ts holds the
  * rules; race-ui.ts the menu and the HUD): a gantry cantilevered over the
  * avenue from one post on South 4's sidewalk, a START / FINISH banner hanging
- * from its arm with a row of bulbs under it and a neon DEGEN CITY RACES
+ * from its arm with a row of bulbs under it and a neon SECTOR 7 RACES
  * cut-out on top, a chequered line painted across both carriageways, and the
  * race board beside the post where you pick a race (a ring on the ground
  * marks where to stand).
@@ -27,7 +27,7 @@ const POST = 0.4;
 const ARM = 0.3;
 /** Fixed copy only */
 const BANNER_TOP = 'START / FINISH';
-const BANNER_SUB = 'DEGEN CITY RACES';
+const BANNER_SUB = 'SECTOR 7 RACES';
 const BOARD_TITLE = 'STREET RACES';
 const BOARD_SUB = 'PICK A RACE · BEAT PAR';
 
@@ -169,7 +169,7 @@ export function buildRaceSite(scene: THREE.Scene, tick: (f: Tick) => void, reduc
   b.box(x - 0.05, by + BH / 2 - 0.02, bz - BW / 2, 0.1, 0.1, BW, trim);
   for (const z of [bz - BW / 2 + 0.3, bz + BW / 2 - 0.3]) b.box(x - 0.02, by + BH / 2, z - 0.02, 0.04, lower - by - BH / 2, 0.04, steel);
 
-  // DEGEN CITY RACES: a neon cut-out standing on the arm (a stand-in keeps the outlines behind it off it)
+  // SECTOR 7 RACES: a neon cut-out standing on the arm (a stand-in keeps the outlines behind it off it)
   const ntex = neonSign(BANNER_SUB, PAL.pink, { board: null, w: 2048, h: 256, size: 170, tracking: 14 });
   const nmat = lit(new THREE.MeshBasicMaterial({ map: ntex, transparent: true, depthWrite: false }), 1, 2.2);
   for (const [dx, ry] of [

@@ -1,4 +1,4 @@
-# Degen City multiplayer: the plan
+# Sector 7 multiplayer: the plan
 
 Agreed with the owner. Multiplayer ships in phases, each as a public beta,
 clearly labelled. This file is the reference; update it as decisions change.

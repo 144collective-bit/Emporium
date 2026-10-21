@@ -1,9 +1,10 @@
 ---
 /*
- * The homepage: Degen City.
+ * The homepage: Sector 7.
  *
  * Two layers. The 2D isometric map (src/lib/city.ts) renders on the server:
- * it's the loading poster, the no-WebGL fallback and the "2D map" view. On
+ * it's the no-WebGL fallback and the "2D map" view (the start menu covers
+ * it while the 3D city loads: the owner wants no map on loading). On
  * top of it the 3D city (src/scripts/city3d) boots where WebGL is available:
  * buildings you hover and click, a camera that flies in, glass panels with
  * each section, day/night, weather and optional sound.
@@ -49,9 +50,9 @@ const server = !!import.meta.env.PUBLIC_GAME_SERVER;
 const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) ?? '';
 ---
 
-<section class="city" aria-labelledby="city-title" data-city-root data-view="2d" data-mode="explore" data-degen={degenBig.src} data-logo={logoBig.src}>
+<section class="city has-start" aria-labelledby="city-title" data-city-root data-view="2d" data-mode="explore" data-degen={degenBig.src} data-logo={logoBig.src}>
   <div class="city-viewport" data-city data-focus-x={focusX} data-focus-y={focusY} tabindex="0" role="region" aria-label="City map: scroll or drag to look around">
-    <svg class="city-map" viewBox={`${VIEW.x} ${VIEW.y} ${VIEW.w} ${VIEW.h}`} role="group" aria-label="Degen City">
+    <svg class="city-map" viewBox={`${VIEW.x} ${VIEW.y} ${VIEW.w} ${VIEW.h}`} role="group" aria-label="Sector 7">
       <g set:html={map} />
     </svg>
   </div>
@@ -71,8 +72,70 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
   </div>
 
   <div class="city-loader" data-loader hidden>
-    <p class="kicker"><span class="kicker-num">3D</span> Entering Degen City</p>
+    <p class="kicker"><span class="kicker-num">3D</span> Entering Sector 7</p>
     <div class="city-loader-bar" data-loader-bar><span></span></div>
+  </div>
+
+  {/* The start menu (the owner's call): over everything on every open, while the 3D city loads behind it.
+      Single player enters the city; Multiplayer joins other Degens when there's a game server (coming soon
+      without one); Options holds time, weather, sound and the 2D map. Nothing of the map shows until you pick. */}
+  <div class="city-start" data-start role="dialog" aria-modal="true" aria-label="Sector 7">
+    <div class="city-start-card">
+      <Picture src={logo} formats={['avif', 'webp']} fallbackFormat="webp" widths={[132, 264, 396]} sizes="132px" alt="" loading="eager" class="city-start-logo" />
+      <p class="city-start-kicker">Welcome to</p>
+      <p class="city-start-title">Sector <span class="hl">7</span></p>
+      <div class="city-start-main" data-start-main>
+        <button type="button" class="city-start-btn" data-start-single>
+          <span class="city-start-btn-name">Single player</span>
+          <span class="city-start-btn-sub">The whole city, in this browser</span>
+        </button>
+        <button type="button" class="city-start-btn" data-start-multi aria-disabled={server ? 'false' : 'true'}>
+          <span class="city-start-btn-name">Multiplayer</span>
+          <span class="city-start-btn-sub">{server ? 'Walk the city with other Degens' : 'Coming soon'}</span>
+        </button>
+        <button type="button" class="city-start-btn" data-start-options aria-expanded="false">
+          <span class="city-start-btn-name">Options</span>
+          <span class="city-start-btn-sub">Time, weather, sound, 2D map</span>
+        </button>
+      </div>
+      <div class="city-start-options" data-start-pane hidden>
+        <div class="city-start-row">
+          <span class="city-start-label">Time</span>
+          <div class="city-start-seg" role="group" aria-label="Time of day">
+            <button type="button" data-opt="time" data-val="live" aria-pressed="true">Live</button>
+            <button type="button" data-opt="time" data-val="day" aria-pressed="false">Day</button>
+            <button type="button" data-opt="time" data-val="sunset" aria-pressed="false">Sunset</button>
+            <button type="button" data-opt="time" data-val="night" aria-pressed="false">Night</button>
+          </div>
+        </div>
+        <div class="city-start-row">
+          <span class="city-start-label">Weather</span>
+          <div class="city-start-seg" role="group" aria-label="Weather">
+            <button type="button" data-opt="weather" data-val="auto" aria-pressed="true">Auto</button>
+            <button type="button" data-opt="weather" data-val="clear" aria-pressed="false">Clear</button>
+            <button type="button" data-opt="weather" data-val="rain" aria-pressed="false">Rain</button>
+          </div>
+        </div>
+        <div class="city-start-row">
+          <span class="city-start-label">Sound</span>
+          <div class="city-start-seg" role="group" aria-label="Sound">
+            <button type="button" data-opt="sound" data-val="off" aria-pressed="true">Off</button>
+            <button type="button" data-opt="sound" data-val="on" aria-pressed="false">On</button>
+          </div>
+        </div>
+        <div class="city-start-row">
+          <span class="city-start-label">View</span>
+          <div class="city-start-seg" role="group" aria-label="View">
+            <button type="button" data-opt="view" data-val="3d" aria-pressed="true">3D city</button>
+            <button type="button" data-opt="view" data-val="2d" aria-pressed="false">2D map</button>
+          </div>
+        </div>
+        <button type="button" class="city-start-back" data-start-back>Back</button>
+      </div>
+      <p class="city-start-status" aria-live="polite"><span data-start-status>Loading the city…</span></p>
+      <div class="city-start-bar" data-start-bar><span></span></div>
+      <p class="city-start-note">Draft · v0{build && ` · ${build}`} · Everything in the city is its own game: Dorras, never real money.</p>
+    </div>
   </div>
 
   {/* View settings, only while the 3D city is up */}
@@ -705,7 +768,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     {/* First-visit tip under the header (closes for good with its ×; never on phones) */}
     <div class="city-card" id="city-card">
       <p class="kicker"><span class="kicker-num">GM</span></p>
-      <h1 id="city-title" class="city-title">Welcome to <span class="hl">Degen&nbsp;City</span></h1>
+      <h1 id="city-title" class="city-title">Welcome to <span class="hl">Sector&nbsp;7</span></h1>
       <p class="city-hint"><span class="hint-2d">Drag to look around. Pick a lit-up building to go in.</span><span class="hint-3d">Drag to move, right-drag to turn, scroll to zoom. Click a building to go in.</span></p>
       <p class="city-draft">Draft · v0</p>
       <button type="button" class="city-card-close" data-card-close aria-controls="city-card" aria-label="Hide the welcome tip">
@@ -859,7 +922,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     /* ---------- The 3D city ---------- */
     const controls = root.querySelector<HTMLDetailsElement>('[data-controls]')!;
     const to3d = root.querySelector<HTMLButtonElement>('.city-to3d')!;
-    let city: { stop(): void; start(): void; open(id: string): void } | null = null;
+    let city: { stop(): void; start(): void; open(id: string): void; intro(): void } | null = null;
     let booting = false;
     const remember = (v: string) => {
       try {
@@ -878,6 +941,8 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
         city = await bootCity(root!, await wallet);
         booting = false;
         if (!city) return show2d(false);
+        // Options picked in the start menu before the city was up
+        for (const apply of pendingOpts.splice(0)) apply();
       }
       svg!.pauseAnimations();
       to3d.hidden = true;
@@ -913,8 +978,133 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
           if (root!.dataset.view === '3d') city?.open(el.dataset.spot!);
         })
       );
+    /** Resolves once the first boot has settled (the 3D city is up, or it fell back to the map) */
+    let booted: Promise<unknown> = Promise.resolve();
+    let bootStarted = false;
     if (!gl) to3d.remove();
     else if (saved === '2d') to3d.hidden = false;
-    else go3d();
+    else {
+      bootStarted = true;
+      booted = go3d();
+    }
+
+    /* ---------- The start menu ---------- */
+    const start = root.querySelector<HTMLElement>('[data-start]')!;
+    const startMain = start.querySelector<HTMLElement>('[data-start-main]')!;
+    const startPane = start.querySelector<HTMLElement>('[data-start-pane]')!;
+    const optionsBtn = start.querySelector<HTMLButtonElement>('[data-start-options]')!;
+    const status = start.querySelector<HTMLElement>('[data-start-status]')!;
+    const startBar = start.querySelector<HTMLElement>('[data-start-bar]')!;
+    const loaderBar = root.querySelector<HTMLElement>('[data-loader-bar]')!;
+    const loaderEl = root.querySelector<HTMLElement>('[data-loader]')!;
+    /** Option choices made before the 3D city was up, applied when it is (its header controls do the work) */
+    const pendingOpts: (() => void)[] = [];
+    let view = gl ? (saved === '2d' ? '2d' : '3d') : '2d';
+    let entering = false;
+    let closed = false;
+
+    // The loader's progress, mirrored under the menu
+    new MutationObserver(() => startBar.style.setProperty('--p', loaderBar.style.getPropertyValue('--p') || '0')).observe(loaderBar, { attributes: true, attributeFilter: ['style'] });
+    new MutationObserver(() => {
+      if (loaderEl.classList.contains('is-done')) {
+        startBar.style.setProperty('--p', '1');
+        if (!entering) status.textContent = 'The city is ready.';
+      }
+    }).observe(loaderEl, { attributes: true, attributeFilter: ['class'] });
+    if (!gl) status.textContent = '3D isn\'t available here: the 2D map it is.';
+    else if (saved === '2d') status.textContent = 'The 2D map is picked (Options to change it).';
+
+    function paintOpt(opt: string, val: string) {
+      start.querySelectorAll<HTMLButtonElement>(`[data-opt="${opt}"]`).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.val === val)));
+    }
+    /** An option is the header's own control, pressed now or once the city is up */
+    function applyOpt(opt: string, val: string) {
+      const run = () => {
+        if (opt === 'sound') {
+          const b = root!.querySelector<HTMLButtonElement>('[data-controls] [data-sound]');
+          if (b && b.getAttribute('aria-pressed') !== String(val === 'on')) b.click();
+        } else root!.querySelector<HTMLButtonElement>(`[data-controls] [data-${opt}="${val}"]`)?.click();
+      };
+      if (city) run();
+      else pendingOpts.push(run);
+    }
+    start.querySelectorAll<HTMLButtonElement>('[data-opt]').forEach((b) =>
+      b.addEventListener('click', () => {
+        const opt = b.dataset.opt!;
+        const val = b.dataset.val!;
+        paintOpt(opt, val);
+        if (opt === 'view') {
+          if (!gl && val === '3d') {
+            paintOpt('view', '2d');
+            status.textContent = '3D isn\'t available here: the 2D map it is.';
+            return;
+          }
+          view = val;
+          remember(val);
+          return;
+        }
+        applyOpt(opt, val);
+      })
+    );
+    if (!gl) paintOpt('view', '2d');
+    else if (saved === '2d') paintOpt('view', '2d');
+    // The header's sound button is the one that knows (it needs a tap to start): mirror it
+    const headSound = root.querySelector<HTMLButtonElement>('[data-controls] [data-sound]');
+    if (headSound) new MutationObserver(() => paintOpt('sound', headSound.getAttribute('aria-pressed') === 'true' ? 'on' : 'off')).observe(headSound, { attributes: true, attributeFilter: ['aria-pressed'] });
+
+    function showPane(on: boolean) {
+      startPane.hidden = !on;
+      startMain.hidden = on;
+      optionsBtn.setAttribute('aria-expanded', String(on));
+      (on ? startPane.querySelector<HTMLButtonElement>('button') : optionsBtn)?.focus({ preventScroll: true });
+    }
+    optionsBtn.addEventListener('click', () => showPane(true));
+    start.querySelector('[data-start-back]')!.addEventListener('click', () => showPane(false));
+    start.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !startPane.hidden) {
+        e.stopPropagation();
+        showPane(false);
+      }
+    });
+
+    function closeStart() {
+      if (closed) return;
+      closed = true;
+      root!.classList.remove('has-start');
+      start.classList.add('is-done');
+      start.setAttribute('aria-hidden', 'true');
+      setTimeout(() => (start.hidden = true), 450);
+    }
+    /** Into the city: the 3D one with its fly-in once it's up, or the 2D map */
+    async function enter(multi: boolean) {
+      if (entering) return;
+      entering = true;
+      status.textContent = 'Entering…';
+      if (view === '3d') {
+        if (!bootStarted) {
+          bootStarted = true;
+          booted = go3d();
+        }
+        await booted;
+      } else {
+        await booted;
+        show2d(gl !== null);
+      }
+      if (multi && server && city) root!.querySelector<HTMLButtonElement>('[data-online-set="on"]')?.click();
+      closeStart();
+      if (root!.dataset.view === '3d' && city) city.intro();
+      else vp!.focus({ preventScroll: true });
+      entering = false;
+    }
+    start.querySelector('[data-start-single]')!.addEventListener('click', () => enter(false));
+    start.querySelector<HTMLButtonElement>('[data-start-multi]')!.addEventListener('click', (e) => {
+      if (!server) {
+        status.textContent = 'Multiplayer is coming soon. Single player has the whole city for now.';
+        (e.currentTarget as HTMLElement).classList.add('is-nudged');
+        return;
+      }
+      enter(true);
+    });
+    start.querySelector<HTMLButtonElement>('[data-start-single]')!.focus({ preventScroll: true });
   }
 </script>

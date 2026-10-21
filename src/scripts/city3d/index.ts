@@ -1,5 +1,5 @@
 /*
- * Degen City in 3D. Boots on top of the 2D map (which stays as the loading
+ * Sector 7 in 3D. Boots on top of the 2D map (which stays as the loading
  * poster and the fallback), then takes over: camera fly-in, buildings you can
  * hover and click, glass panels, time of day, weather and sound.
  */
@@ -916,6 +916,16 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     /** Open a building's panel (the 2D map's buildings come here) */
     open(id: string) {
       open(id);
+    },
+    /** The fly-in again, from far out to the home view (the start menu closing: the first one ran behind it) */
+    intro() {
+      if (root.dataset.mode !== 'explore') return;
+      close();
+      const s = home();
+      camera.position.copy(s.pos.clone().add(new THREE.Vector3(40, 46, 40)));
+      controls.target.copy(s.target);
+      camera.lookAt(controls.target);
+      flyTo(s.pos, s.target, 2.8);
     },
     stop() {
       running = false;

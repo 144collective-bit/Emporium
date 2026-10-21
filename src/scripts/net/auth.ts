@@ -39,7 +39,7 @@ export const shortAddr = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
 /** The message a visitor signs to log in with their wallet (no transaction, no gas) */
 export function signInMessage(o: { origin: string; address: string; chain: number; nonce: string; issued: string }) {
   return [
-    'Degen City wants you to log in with your PulseChain wallet:',
+    'Sector 7 wants you to log in with your PulseChain wallet:',
     o.address,
     '',
     'This only proves you hold this wallet: it logs you in to your player profile. It does not send a transaction or cost gas.',
