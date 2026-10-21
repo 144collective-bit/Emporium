@@ -13,10 +13,10 @@
  *   kerbs on the inside of the bends, the chequered start line and the start
  *   gantry (posts, a beam, five red lights, a banner). Every cross-section
  *   follows the banking (`heightAt`), so the bowls tilt with their kerbs,
- *   walls and stripes. Walls: a continuous low kerb along both edges with a
+ *   walls and stripes. Edges: a continuous low kerb along both edges with a
  *   neon strip on top (cyan on the piece's left, pink on its right) and
- *   red / white barrier blocks every WALL_EVERY tiles (what KART_SOLIDS makes
- *   solid). At the nodes the walls stop and a flat apron widens the junction
+ *   no barrier blocks: the edges are open to walk and drive over (nothing on
+ *   the track is in KART_SOLIDS). At the nodes the kerbs stop and a flat apron widens the junction
  *   into a Y. Raised stretches get a deck (a slab on the PILLARS, railed)
  *   where the data flags one, an embankment where it doesn't (the hill, the
  *   hump). The tunnel is a half-cylinder tube with ribs, portal frames and
@@ -97,7 +97,6 @@ const WALL_OUT = 0.45;
 const KERB_H = 0.16;
 /** The bowls' outer walls */
 const BANK_WALL_H = 0.9;
-const BLOCK_H = 0.55;
 /** A deck under a raised ribbon */
 const DECK = 0.3;
 /** How far an embankment's foot reaches past the walls (steep: the hill runs close to the fence) */
@@ -615,7 +614,7 @@ export function buildKartPark(scene: THREE.Scene, opts: { tick: (f: Tick) => voi
         b.add(sweep(p, run, strip(lo * 2.2, lo * 2.4, rel(ribbonY + LINE))), RED);
         b.add(sweep(p, run, strip(-lo * 1.8, -lo * 1.6, rel(ribbonY + LINE))), toon(PAL.blue));
       }
-      // The walls: a low kerb both sides with a neon strip on top (taller on a bowl's high side), then the barrier blocks
+      // The edges: a low kerb both sides with a neon strip on top (taller on a bowl's high side); nothing solid, a kart drives over it
       for (const run of runs(p, (i) => !open(i))) {
         for (const s of [1, -1]) {
           const top: H = (ys, i) => ys + (fl(i) & F.bank && (p.roll[i] > 0 ? -1 : 1) === s ? BANK_WALL_H : KERB_H);
@@ -623,20 +622,6 @@ export function buildKartPark(scene: THREE.Scene, opts: { tick: (f: Tick) => voi
           b.add(sweep(p, run, [[i0, rel(-0.06)], [i0, top], [i1, top], [i1, rel(-0.06)]]), STEEL);
           const mid = s * (half + 0.3);
           b.add(sweep(p, run, [[mid - 0.045, (ys, i) => top(ys, i) + 0.012], [mid + 0.045, (ys, i) => top(ys, i) + 0.012]]), soft(s > 0 ? PAL.cyan : PAL.pink));
-        }
-      }
-      for (let s = 1.5; s < p.L - 1; s += WALL_EVERY) {
-        const f = frame(p, s);
-        if (nearNode(f.x, f.z) || nearScEnd(f.x, f.z)) continue;
-        const yaw = Math.atan2(-f.tz, f.tx);
-        for (const side of [1, -1]) {
-          // No blocks against a bowl's tall wall
-          if (f.flags & F.bank && (f.roll > 0 ? -1 : 1) === side) continue;
-          const lat = (half + 0.3) * side;
-          const x = f.x + f.nx * lat;
-          const z = f.z + f.nz * lat;
-          if (x < P.x0 + 0.6 || x > P.x1 - 0.6 || z < P.z0 + 0.6 || z > P.z1 - 0.6) continue;
-          b.add(place(unitBox, x, f.y - f.roll * lat + 0.08 + (BLOCK_H - 0.08) / 2, z, 1, BLOCK_H - 0.08, 0.3, 0, yaw), Math.round(s / WALL_EVERY) % 2 ? WHITE : RED);
         }
       }
       // The decks: a slab under a raised ribbon, railed; the embankments: a wedge of earth up to it

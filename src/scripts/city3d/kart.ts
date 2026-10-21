@@ -910,10 +910,13 @@ export function createKartRace(d: KartRaceDeps): KartRace {
     holder.add(kart.group);
     holder.position.set(spot.x, spot.y, spot.z);
     holder.rotation.y = show?.yaw ?? spot.yaw;
+    holder.visible = !away;
     group.add(holder);
     kart.setNumber(1);
     show = { kart, holder, model: want.model, paint: want.paint, yaw: holder.rotation.y };
   }
+  /** The kart's out of the pits, being driven round the map (drive.ts); the show kart waits hidden */
+  let away = false;
 
   /* ---------- The interface ---------- */
 
@@ -1084,10 +1087,30 @@ export function createKartRace(d: KartRaceDeps): KartRace {
     },
     idle(dt) {
       ensureShow(picked ?? d.game.save().karts);
-      if (show && !d.reduced) {
+      if (show && !d.reduced && !away) {
         show.yaw += dt * 0.5;
         show.holder.rotation.y = show.yaw;
       }
+    },
+    home() {
+      if (away || !show) return null;
+      const spot = d.park.showSpot;
+      return { x: spot.x, z: spot.z, yaw: show.yaw };
+    },
+    takeOut() {
+      if (away) return null;
+      ensureShow(picked ?? d.game.save().karts);
+      if (!show) return null;
+      away = true;
+      show.holder.visible = false;
+      const spot = d.park.showSpot;
+      const kart = createKart(show.model, paintHex(show.paint), { detail: d.low ? 1 : 2 });
+      kart.setNumber(1);
+      return { kart, model: show.model, name: KART_SPECS[show.model].name, x: spot.x, z: spot.z, yaw: show.yaw };
+    },
+    bringBack() {
+      away = false;
+      if (show) show.holder.visible = true;
     },
   };
 }

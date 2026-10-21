@@ -11,6 +11,7 @@ import type { CupId, ItemId, KartSim } from './kart-sim';
 import type { KartResult, SeriesResult } from './tycoon';
 import type { ClassId } from './catalog';
 import type { KartId, MyKart } from './mykart';
+import type { Kart } from './karts';
 import type { Spot } from './landmarks';
 import type { GameDeps } from './ui';
 
@@ -155,4 +156,10 @@ export interface KartRace {
   preview(k: MyKart | null): void;
   /** Every frame while not racing (the show kart turns, under reduced motion it stands) */
   idle(dt: number): void;
+  /** The show kart's spot while it's home (null while it's out being driven) */
+  home(): { x: number; z: number; yaw: number } | null;
+  /** Take the kart out of the pits to drive it round the map (drive.ts): a fresh kart to drive, where it stands; the show kart hides */
+  takeOut(): { kart: Kart; model: KartId; name: string; x: number; z: number; yaw: number } | null;
+  /** The kart is back in the pits (the show kart is shown again) */
+  bringBack(): void;
 }

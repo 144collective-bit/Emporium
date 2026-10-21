@@ -510,6 +510,9 @@ it and has been retired completely. Build only on what's here.
 
 ## The garage and your car (3D walk mode)
 
+- `drive.ts` drives one vehicle at a time, your car or your kart (both can
+  be out: "Get in" takes the nearest; `carState` / `inCar` are the car's
+  own, for the street races; `recallKart()` sends the kart to the pits).
 - The garage is on the south bank, east of S5, facing the south bank
   avenue (`GARAGE` in `layout.ts`; drawn by `garage.ts` in world numbers,
   not the landmarks' drawing grid). A flat-roofed workshop with an open bay
@@ -597,8 +600,12 @@ it and has been retired completely. Build only on what's here.
   the kart hut (door prompt "Kart hut"), a grandstand along the start
   straight, pits, a big screen. It's a place like the landmarks (spot
   `karts`, pin, directory entry, a City-view panel with your records and
-  **Walk in**, which starts walk mode at the gate, `KART_SPAWN`). Karts
-  stay on the track: they're never driven in the city.
+  **Walk in**, which starts walk mode at the gate, `KART_SPAWN`). Race karts
+  stay on the track, but your own kart can be taken out of the pits and
+  driven anywhere on the map (the owner's call: "Get in" at the show kart,
+  `drive.ts` drives it like the car, with Degen seated; it rides the track's
+  decks and banking through `trackSurfaceAt()`, and goes back to the pits
+  when a race starts).
 - **The layout** is `kartpark.ts` (DOM-free, tested in `tests/kart.test.ts`):
   `KART_PARK` (world x 92-232, z -192 to -48), local numbers via
   `toWorld()` (u east, v south from the site's corner; the core loop is
@@ -624,10 +631,12 @@ it and has been retired completely. Build only on what's here.
   `TRACK_HALF` (5.2; `SHORTCUT_HALF` 3.2). Fixtures: `SITE` (hut, gate,
   stand, screen, pits), `GATE`, `SLIP_ROAD`, `HUT_DOOR`, `GANTRY`,
   `PILLARS` (under the decks, never in another piece's lane). Footprints
-  for walking are `KART_SOLIDS` (in `SOLIDS`: the fence with the gate's
-  gap, the hut, the stand, the posts and pillars, walls every `WALL_EVERY`
-  tiles along the ground-level edges, none at the nodes or the shortcut's
-  mouths); the site is flat ground, not a slab, and the outskirts' trees
+  for walking and driving are `KART_SOLIDS` (in `SOLIDS`: the fence with
+  the gate's gap, the hut, the stand, the posts and pillars; **nothing on
+  or beside the track is solid** (the owner's call): the kerbs are low and
+  open, so Degen, the kart and the car cross the track anywhere, and only
+  a race's karts are kept in by the sim's own walls); the site is flat
+  ground, not a slab, and the outskirts' trees
   keep off it and the slip road (`scatterIn()` in `world.ts`, `onRoad()` in
   `outer.ts`). Keep every corner's radius above about 5.5 (the test checks
   the inner edge never folds), ramps under slope 0.3, decks `BRIDGE_H` over
