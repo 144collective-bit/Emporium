@@ -823,7 +823,21 @@ it and has been retired completely. Build only on what's here.
 - **Fighting** (punches and kicks, the Fight Club on the south bank, styles
   bought with Dorras, player-versus-player when the server is live) is
   planned in `docs/fight-plan.md`; build it one phase at a time with the
-  owner's sign-off, the rules in `fight-sim.ts` first.
+  owner's sign-off. Phase 1 is built: the rules are `fight-sim.ts`
+  (DOM-free, seeded, 60 Hz, tested in `tests/fight.test.ts`: `MOVES` with
+  start-up / active / recovery frames, reach and arc, the jab-cross-hook-
+  uppercut chain and the kicks, block and the parry window, dodge, stamina,
+  stagger and knockdowns, `STYLES`, bots via `think()`, spars and bouts;
+  a fighter faces along (sin yaw, cos yaw)); the animations are
+  `fight-anim.ts` (DOM-free, tested in `tests/fight-anim.test.ts`: every
+  clip is keyframed on the `Pose` rig, a move's clip is exactly its sim
+  frames long with the strike on the first active frame; `sampleClip()`,
+  `blendPose()`, `moveClip()`, `hurtClip()`, `root` for the lying poses;
+  `fists: true` on an `Outfit` closes the hands); `?fight` in the address
+  runs the sparring demo (`fight-demo.ts`: two bots on the hangout square,
+  an overlay with health, stamina, the clip each plays and a clip picker;
+  styles in `src/styles/fight.css`). New gameplay goes in the sim first;
+  looks in the clips and the view.
 - **The crew** (the owner's call): a cartoon rival crew of ten goons on the
   south bank, the only characters that are targets; the city north of the
   river stays a safe hangout. Rules in `combat-sim.ts`: `CREW_ZONE` (the

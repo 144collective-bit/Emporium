@@ -198,6 +198,10 @@ the Fight Club's footprints and door.
 
 ## Phases (each with the owner's sign-off)
 
+Phase 1 is built (`fight-sim.ts`, `fight-anim.ts`, `fight-demo.ts` on
+`?fight`, `tests/fight.test.ts`, `tests/fight-anim.test.ts`); the owner
+judges the animations on the demo before Phase 2 starts.
+
 1. **The sim and the clips.** `fight-sim.ts` with the Brawler's moves,
    block, dodge, stamina, knockdowns, bots, bouts; `fight-anim.ts` with
    every clip; tests. A headless harness plays them on a test figure

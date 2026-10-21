@@ -161,7 +161,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     const k = portrait ? 1.3 : 1;
     if (fightDemo) {
       const s = fightDemo.spot;
-      return { pos: new THREE.Vector3(s.x + 1.5 * k, 4.6 * k, s.z + 7 * k), target: new THREE.Vector3(s.x, 0.9, s.z) };
+      return { pos: new THREE.Vector3(s.x + 1.2 * k, 2.6 * k, s.z + 4.8 * k), target: new THREE.Vector3(s.x, 0.8, s.z) };
     }
     return { pos: CENTER.clone().add(new THREE.Vector3(27, 31, 34).multiplyScalar(k)), target: CENTER.clone().add(new THREE.Vector3(0, 3.4, 1)) };
   };
