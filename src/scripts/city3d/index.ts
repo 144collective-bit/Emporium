@@ -129,6 +129,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // The kart park outside the Parkway in the north-east: a place like the landmarks (its pin and panel)
   const kartPark = buildKartPark(scene, { tick, reduced, low: tier === 'low' });
   spots.push(kartPark.spot);
+  // ?fight: the sparring demo on the hangout square (the fight clips, before the Fight Club exists)
+  const fightDemo = new URLSearchParams(location.search).has('fight') ? (await import('./fight-demo')).buildFightDemo({ scene, root, reduced, low: tier === 'low', tick }) : null;
   progress(0.55);
   await nextFrame();
   scatterOutskirts(Q.trees);
@@ -157,6 +159,10 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const home = () => {
     const portrait = host.clientWidth < host.clientHeight;
     const k = portrait ? 1.3 : 1;
+    if (fightDemo) {
+      const s = fightDemo.spot;
+      return { pos: new THREE.Vector3(s.x + 1.5 * k, 4.6 * k, s.z + 7 * k), target: new THREE.Vector3(s.x, 0.9, s.z) };
+    }
     return { pos: CENTER.clone().add(new THREE.Vector3(27, 31, 34).multiplyScalar(k)), target: CENTER.clone().add(new THREE.Vector3(0, 3.4, 1)) };
   };
 
@@ -668,7 +674,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // Walk / Build pills never sit on top of a building's name. Re-read a few
   // times a second (they open, close and move with the layout)
   // The header, its open drop-downs (settings, menu), the welcome card and the race HUD (while a race is on)
-  const chrome = [...root.querySelectorAll<HTMLElement>('.city-head, .head-panel, .city-card, .race-hud, .kart-hud')];
+  const chrome = [...root.querySelectorAll<HTMLElement>('.city-head, .head-panel, .city-card, .race-hud, .kart-hud, .fight-demo')];
   const chromeRects: { x: number; y: number; w: number; h: number }[] = [];
   const readChrome = () => {
     const o = host.getBoundingClientRect();

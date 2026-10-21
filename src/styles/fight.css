@@ -1,0 +1,133 @@
+/*
+ * Fighting (docs/fight-plan.md). Phase 1: the sparring demo's overlay
+ * (`.fight-demo`, fight-demo.ts, on `?fight`): the two fighters' health and
+ * stamina, the clip each plays, the bots / pause / step / reset row and the
+ * clip picker. The Fight Club's own screens come in Phase 2.
+ */
+.fight-demo {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  z-index: 5;
+  display: grid;
+  gap: 8px;
+  width: min(360px, calc(100% - 24px));
+  padding: 12px 14px;
+  border: 1px solid #0000;
+  border-radius: 8px;
+  background:
+    linear-gradient(#0b0a12e6, #0b0a12e6) padding-box,
+    var(--pulse) border-box;
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+.fight-demo-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+.fight-demo-title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.fight-demo-note {
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--p-cyan);
+}
+.fight-demo-fighter {
+  display: grid;
+  grid-template-columns: 56px 1fr 1fr;
+  align-items: center;
+  gap: 4px 8px;
+}
+.fight-demo-name {
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.fight-demo-bar {
+  display: block;
+  height: 6px;
+  border-radius: 3px;
+  background: #ffffff14;
+  overflow: hidden;
+}
+.fight-demo-bar span {
+  display: block;
+  height: 100%;
+  transform-origin: left;
+  transition: transform 0.12s linear;
+}
+.fight-demo-health span {
+  background: var(--pulse);
+}
+.fight-demo-stamina span {
+  background: #00eaff;
+}
+.fight-demo-clip {
+  grid-column: 2 / -1;
+  color: #ffffffb8;
+}
+.fight-demo-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.fight-demo button {
+  padding: 6px 10px;
+  border: 1px solid #ffffff2b;
+  border-radius: 3px;
+  background: #ffffff0a;
+  color: #ffffffcc;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.fight-demo button:hover {
+  color: #fff;
+  border-color: #ffffff59;
+}
+.fight-demo button[aria-pressed="true"] {
+  border-color: #0000;
+  background:
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
+  color: #fff;
+}
+.fight-demo-hint {
+  margin: 0;
+  font-size: 10px;
+  color: #ffffff8c;
+}
+.fight-demo-clips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.fight-demo-clips button {
+  padding: 4px 7px;
+  font-size: 10px;
+  text-transform: none;
+}
+@media (max-width: 640px) {
+  .fight-demo {
+    left: 8px;
+    bottom: 8px;
+    width: calc(100% - 16px);
+    padding: 10px;
+  }
+  .fight-demo-clips {
+    max-height: 70px;
+    overflow: auto;
+  }
+}

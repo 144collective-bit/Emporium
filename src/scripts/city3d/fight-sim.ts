@@ -353,6 +353,8 @@ export function createFightSim(setup: FightSetup) {
   let boutPhase: BoutPhase = bout ? 'bell' : 'fight';
   let boutT = bout ? T.bell : 0;
   let winner: string | null = null;
+  /** Brains on (off: bot fighters take inputs like anyone, standing still without any) */
+  let botsOn = true;
 
   const other = (f: Fighter) => {
     let best: Fighter | null = null;
@@ -752,7 +754,7 @@ export function createFightSim(setup: FightSetup) {
       f.stamina = Math.min(T.stamina, f.stamina + rate * T.tick);
       if (f.empty && f.stamina >= T.emptyUntil) f.empty = false;
       if (!bout && f.sinceHit > T.healDelay && f.down <= 0) f.health = Math.min(T.health, f.health + T.heal * T.tick);
-      const inp = frozen ? NO_INPUT : f.bot ? think(f) : (inputs[f.id] ?? NO_INPUT);
+      const inp = frozen ? NO_INPUT : f.bot && botsOn ? think(f) : (inputs[f.id] ?? NO_INPUT);
       if (frozen && f.bot && inp.face === undefined) {
         const o = other(f);
         if (o) f.yaw = yawTo(f.x, f.z, o.x, o.z);
@@ -821,6 +823,12 @@ export function createFightSim(setup: FightSetup) {
     },
     get winner() {
       return winner;
+    },
+    get bots() {
+      return botsOn;
+    },
+    set bots(on: boolean) {
+      botsOn = on;
     },
     /** Advance by `dt` seconds (whole ticks; the rest is carried); returns the events of those ticks */
     step(dt: number, inputs: Record<string, FighterInput> = {}): FightEvent[] {
