@@ -1,4 +1,4 @@
-# Degen City redesign: the plan
+# Sector 7 redesign: the plan
 
 The city is moving from a perfect grid to a city that feels like it grew:
 planned in the middle, looser further out. This is the plan the owner agreed,

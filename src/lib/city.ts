@@ -1,5 +1,5 @@
 /*
- * Degen City: the isometric night city on the homepage, drawn as one SVG
+ * Sector 7: the isometric night city on the homepage, drawn as one SVG
  * string at build time.
  *
  * Tile grid: x runs to the lower right of the screen, y to the lower left,

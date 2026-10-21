@@ -1,6 +1,6 @@
 ---
 /*
- * The homepage: Degen City.
+ * The homepage: Sector 7.
  *
  * Two layers. The 2D isometric map (src/lib/city.ts) renders on the server:
  * it's the no-WebGL fallback and the "2D map" view (the start menu covers
@@ -52,7 +52,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
 
 <section class="city has-start" aria-labelledby="city-title" data-city-root data-view="2d" data-mode="explore" data-degen={degenBig.src} data-logo={logoBig.src}>
   <div class="city-viewport" data-city data-focus-x={focusX} data-focus-y={focusY} tabindex="0" role="region" aria-label="City map: scroll or drag to look around">
-    <svg class="city-map" viewBox={`${VIEW.x} ${VIEW.y} ${VIEW.w} ${VIEW.h}`} role="group" aria-label="Degen City">
+    <svg class="city-map" viewBox={`${VIEW.x} ${VIEW.y} ${VIEW.w} ${VIEW.h}`} role="group" aria-label="Sector 7">
       <g set:html={map} />
     </svg>
   </div>
@@ -72,18 +72,18 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
   </div>
 
   <div class="city-loader" data-loader hidden>
-    <p class="kicker"><span class="kicker-num">3D</span> Entering Degen City</p>
+    <p class="kicker"><span class="kicker-num">3D</span> Entering Sector 7</p>
     <div class="city-loader-bar" data-loader-bar><span></span></div>
   </div>
 
   {/* The start menu (the owner's call): over everything on every open, while the 3D city loads behind it.
       Single player enters the city; Multiplayer joins other Degens when there's a game server (coming soon
       without one); Options holds time, weather, sound and the 2D map. Nothing of the map shows until you pick. */}
-  <div class="city-start" data-start role="dialog" aria-modal="true" aria-label="Degen City">
+  <div class="city-start" data-start role="dialog" aria-modal="true" aria-label="Sector 7">
     <div class="city-start-card">
       <Picture src={logo} formats={['avif', 'webp']} fallbackFormat="webp" widths={[132, 264, 396]} sizes="132px" alt="" loading="eager" class="city-start-logo" />
       <p class="city-start-kicker">Welcome to</p>
-      <p class="city-start-title">Degen <span class="hl">City</span></p>
+      <p class="city-start-title">Sector <span class="hl">7</span></p>
       <div class="city-start-main" data-start-main>
         <button type="button" class="city-start-btn" data-start-single>
           <span class="city-start-btn-name">Single player</span>
@@ -768,7 +768,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     {/* First-visit tip under the header (closes for good with its ×; never on phones) */}
     <div class="city-card" id="city-card">
       <p class="kicker"><span class="kicker-num">GM</span></p>
-      <h1 id="city-title" class="city-title">Welcome to <span class="hl">Degen&nbsp;City</span></h1>
+      <h1 id="city-title" class="city-title">Welcome to <span class="hl">Sector&nbsp;7</span></h1>
       <p class="city-hint"><span class="hint-2d">Drag to look around. Pick a lit-up building to go in.</span><span class="hint-3d">Drag to move, right-drag to turn, scroll to zoom. Click a building to go in.</span></p>
       <p class="city-draft">Draft · v0</p>
       <button type="button" class="city-card-close" data-card-close aria-controls="city-card" aria-label="Hide the welcome tip">

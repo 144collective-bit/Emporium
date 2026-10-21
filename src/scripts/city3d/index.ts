@@ -1,5 +1,5 @@
 /*
- * Degen City in 3D. Boots on top of the 2D map (which stays as the loading
+ * Sector 7 in 3D. Boots on top of the 2D map (which stays as the loading
  * poster and the fallback), then takes over: camera fly-in, buildings you can
  * hover and click, glass panels, time of day, weather and sound.
  */

@@ -1,4 +1,4 @@
-# Degen City tycoon: the plan
+# Sector 7 tycoon: the plan
 
 The city is turning into a business game with its own money. This is the
 plan the owner agreed, and where each phase stands. Keep it up to date.
