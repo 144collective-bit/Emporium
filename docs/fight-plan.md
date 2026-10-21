@@ -199,8 +199,11 @@ the Fight Club's footprints and door.
 ## Phases (each with the owner's sign-off)
 
 Phase 1 is built (`fight-sim.ts`, `fight-anim.ts`, `fight-demo.ts` on
-`?fight`, `tests/fight.test.ts`, `tests/fight-anim.test.ts`); the owner
-judges the animations on the demo before Phase 2 starts.
+`?fight`, `tests/fight.test.ts`, `tests/fight-anim.test.ts`). Phase 2 is
+built: the Fight Club on the south bank (`fightsite.ts`, `fightclub.ts`),
+the trainer's menu, HUD and bout card (`fight-ui.ts`), the fight itself
+(`fight.ts`, `fight-figure.ts`), the save (v8) and `finishFight()`.
+Styles, the goons and the record's missions and badges are Phase 3.
 
 1. **The sim and the clips.** `fight-sim.ts` with the Brawler's moves,
    block, dodge, stamina, knockdowns, bots, bouts; `fight-anim.ts` with

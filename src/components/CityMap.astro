@@ -37,8 +37,9 @@ const spots: Record<SpotId, Spot> = {
   telegram: { href: '#city-title', title: 'Post office', sub: 'Couriers', aria: 'Post office: couriers' },
   apartments: { href: '#city-title', title: 'Apartments', sub: 'Staff', aria: 'The Apartments: hire staff' },
   karts: { href: '#city-title', title: 'Kart park', sub: 'Go-karts · races', aria: 'The kart park: go-kart races' },
+  fightclub: { href: '#city-title', title: 'Fight Club', sub: 'Spar · bouts', aria: 'The Fight Club: spar and bouts' },
 };
-const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts'];
+const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'fightclub'];
 const ext = { target: '_blank', rel: 'noopener noreferrer' };
 
 const map = renderCity({ spots, art: { degen: degenImg.src, logo: logoImg.src } });

@@ -405,7 +405,7 @@ it and has been retired completely. Build only on what's here.
   `line()` for the Workshop and factories), the ledger (`book()`, called by
   every rule that moves Dorras) and loans (`borrow()`, `repay()`, a share
   of takings in `advance()`).
-  `cleanSave()` cleans anything loaded and upgrades older saves (now v7);
+  `cleanSave()` cleans anything loaded and upgrades older saves (now v8);
   keep that migration when the save changes. New economy rules go here
   first.
 - **The city's game (Phase 5)** sits on the same save: XP and levels
@@ -686,7 +686,7 @@ it and has been retired completely. Build only on what's here.
   Degen's style, origin on the ground under the middle, +x forward, wheels
   that steer and roll, a seated Degen driver via `seat()`). Only for the
   kart park: never real money, never tied to the store or the token.
-- **The save** (`tycoon.ts`, v7): `karts` { model, paint, owned, mods,
+- **The save** (`tycoon.ts`, v8): `karts` { model, paint, owned, mods,
   `records` (fastest lap and best run per course and class, `KartTime`),
   `boards` (the local leaderboards, `LEADERBOARD_SIZE` runs per key: your
   own runs for now, built so a server can hold everyone's later),
@@ -835,9 +835,47 @@ it and has been retired completely. Build only on what's here.
   `blendPose()`, `moveClip()`, `hurtClip()`, `root` for the lying poses;
   `fists: true` on an `Outfit` closes the hands); `?fight` in the address
   runs the sparring demo (`fight-demo.ts`: two bots on the hangout square,
-  an overlay with health, stamina, the clip each plays and a clip picker;
-  styles in `src/styles/fight.css`). New gameplay goes in the sim first;
-  looks in the clips and the view.
+  an overlay with health, stamina, the clip each plays and a clip picker).
+  Phase 2 is built, **the Fight Club**: the site is `fightsite.ts`
+  (DOM-free: the lot on the south bank east of the garage, `RING` and
+  `RING_HALF`, `POSTS`, `ROPES`, `SHED`, `COUNTER` and `TRAINER` (the
+  "Trainer" prompt), `CORNERS`, `OUT`, `FIGHT_SPAWN`; the lawns' trees keep
+  off it in `outer.ts`), drawn by `fightclub.ts` (`buildFightClub()`: the
+  paved yard, the ring with the diamond canvas, posts and neon ropes (not
+  solid: you step through), the open-sided shed with its rig, the counter
+  kiosk, bags, lockers, bleachers and the FIGHT CLUB cut-out; `setLive()`
+  brightens the lights for a fight; its footprints are `FIGHTCLUB_SITE` in
+  `solids.ts`, and it's a place: spot `fightclub`, pin, directory entry
+  and a City-view panel with your record and **Walk in**). `fight-types.ts`
+  holds the parts' interfaces. `fight-ui.ts` (markup `data-fight`,
+  `data-fight-hud`, `data-fight-count`, `data-fight-pops`,
+  `data-fight-result`, the Punch / Kick / Block / Dodge touch buttons
+  `data-fight-punch` / `-kick` / `-block` / `-dodge` and Quit
+  `data-fight-quit` in `CityMap.astro`, styles in `fight.css`) is the
+  trainer's menu (Spar, Bout, Record, Styles (coming)), the HUD (health,
+  stamina, round and clock, score pips, chain, the knockdown count), the
+  bell text, pops and the bout card. `fight.ts` (`createFight()`) runs a
+  fight: your Degen with fists against one of `FIGHT_BOTS` (`catalog.ts`:
+  Rookie Ray, Knuckles, The Mayor; skill, style, purse, level) in the
+  ring, a soft lock-on (forward is towards the opponent), hit-stop and a
+  camera punch on heavy hits, sparks, stars on a knockdown, the sounds
+  (`whoosh`, `punch`, `kick`, `fightBlock`, `parry`, `thud`, `fightKo`,
+  `bell`, `count` in `sound.ts`), the over-the-shoulder camera kept inside
+  the ropes, and it pays through `finishFight()` + `commit()` (a spar: XP
+  with a capped bonus per hit; a bout of three 90 s rounds, first to two:
+  the purse on a win, XP either way, a quit is a loss; knock-outs and
+  chains of three add XP). `walk.ts` wires it: the counter's prompt opens
+  the menu, a fight hides Degen and feeds `fightFrame()` (W/A/S/D move
+  relative to the opponent, click or F punch, right-click or G kick, Shift
+  block, Space dodge; touch: the stick and the four buttons; gamepad:
+  stick, X / Y, LB held, A, Start quits), Esc or Quit ends it with the
+  card, closing the card stands Degen up outside the ropes (`OUT`);
+  `.city.is-fighting` hides the walk HUD and `data-fight` makes the header
+  read "Fighting · <opponent>". The save (`tycoon.ts`, v8) keeps `fight`
+  (style, owned styles, wins, losses, knock-outs, best chain, bouts, spars,
+  each opponent's record), the ledger entry `fighting` and the counters
+  `bouts` / `fightWins` / `kos` / `chains`. New gameplay goes in the sim
+  first; looks in the clips and the view.
 - **The crew** (the owner's call): a cartoon rival crew of ten goons on the
   south bank, the only characters that are targets; the city north of the
   river stays a safe hangout. Rules in `combat-sim.ts`: `CREW_ZONE` (the

@@ -25,7 +25,7 @@ import { BOT_LEVELS, FIGHT_BOTS, type BotLevel } from './catalog';
 import { createFighterFigure, disposeFigure, drawFighter, type FighterFigure } from './fight-figure';
 import { T, createFightSim, forward, yawTo, type FightEvent, type FightSim, type Fighter, type FighterInput } from './fight-sim';
 import type { Fight, FightDeps, FightHud, FightInput, FightKind, FightResultView } from './fight-types';
-import { CORNERS, OUT, RING } from './fightsite';
+import { CORNERS, OUT, RING, RING_HALF } from './fightsite';
 import { fx, glowTex } from './kit';
 import { finishFight } from './tycoon';
 
@@ -279,7 +279,7 @@ export function createFight(d: FightDeps): Fight {
       chain: a.chain,
       round: sim.round,
       rounds: BOUT.rounds,
-      clock: sim.clock,
+      clock: sim.boutPhase === 'bell' && kind === 'bout' ? BOUT.seconds : sim.clock,
       phase: sim.boutPhase,
       count: down ? Math.ceil((a.down > 0 ? a.down : b.down) * T.tick) : 0,
       down,
@@ -300,8 +300,12 @@ export function createFight(d: FightDeps): Fight {
     const [fx_, fz] = forward(a.yaw);
     const rx = fz;
     const rz = -fx_;
-    const back = 3.1 + Math.min(1.2, Math.hypot(b.x - a.x, b.z - a.z) * 0.25);
-    const want = new THREE.Vector3(a.x - fx_ * back + rx * 0.7, 1.55, a.z - fz * back + rz * 0.7);
+    const back = 2.3 + Math.min(0.9, Math.hypot(b.x - a.x, b.z - a.z) * 0.2);
+    const want = new THREE.Vector3(a.x - fx_ * back + rx * 0.6, 1.5, a.z - fz * back + rz * 0.6);
+    // Inside the ropes, so they never cross the picture
+    const lim = RING_HALF - 0.3;
+    want.x = THREE.MathUtils.clamp(want.x, RING.x - lim, RING.x + lim);
+    want.z = THREE.MathUtils.clamp(want.z, RING.z - lim, RING.z + lim);
     const at = new THREE.Vector3(mx, 0.85, mz);
     if (!camReady || d.reduced) {
       camPos.copy(want);
