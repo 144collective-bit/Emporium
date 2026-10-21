@@ -3,8 +3,6 @@
 This is **the** Degen Emporium site. An older multi-page site existed before
 it and has been retired completely. Build only on what's here.
 
-<<<<<<< HEAD
-=======
 ## The city's name
 
 - The city is **Sector 7** (the owner's call; it was "Degen City" before).
@@ -13,7 +11,6 @@ it and has been retired completely. Build only on what's here.
   prefixes (`degen-city-tycoon-v1` and the rest): renaming them would lose
   every visitor's save.
 
->>>>>>> origin/experimental
 ## Never bring back the old site
 
 - The site is the Sector 7 homepage (`src/pages/index.astro`), the Emporium
