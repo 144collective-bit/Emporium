@@ -72,7 +72,17 @@ flyover's deck is 2.6 over the diagonal below.
 
 ## Build order
 
-1. **The circuit as data** (`kartpark.ts`, DOM-free, tested).
+1. **The circuit as data** (built: `kartcircuit.ts`, DOM-free, tested in
+   `tests/kartcircuit.test.ts`; the drawing from its data is
+   `kart-circuit.png`). It sits beside the old network in `kartpark.ts`
+   (sharing the site, the local numbers and the sampling) so the park
+   keeps running until Phases 2 and 3 move onto it; the old network goes
+   then. As built: 535 tiles a lap, the tightest corner radius 6.6 (Turn 5),
+   the flyover 2.6 over the diagonal, the hill's crest 3, the banked
+   sweepers at 0.28, the run-off 8 from the centre line, the start line at
+   u 84 with the grid behind it on the straight, the pit lane in before
+   the line and out before Turn 1, the hut at its west end, the grandstand
+   in the infield; corners numbered 1-5 in each direction.
    - One closed line (centripetal Catmull-Rom like today) with heights,
      banking and flags (deck, tunnel, bank), the track 5.6 wide, kerbs and
      run-off widths, the start line, the grid on the straight, the pit lane
