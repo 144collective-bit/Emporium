@@ -138,7 +138,9 @@ export interface Fight {
   start(setup: { kind: FightKind; bot: BotLevel }): void;
   /** One frame in the ring: step the sim with your input, draw both fighters, the camera, the HUD, the sounds */
   update(dt: number, inp: FightInput): void;
-  /** Leave the ring (after the card, or quitting): where Degen stands, facing which way */
+  /** Quit from the HUD or Esc: a spar ends and shows its card; a bout in progress is forfeited (a loss) and shows its card */
+  quit(): void;
+  /** Leave the ring (after the card, or walk mode ending; an unfinished bout is forfeited quietly): where Degen stands, facing which way */
   exit(): { x: number; z: number; yaw: number };
   /** Every frame while not fighting (the sign and the ring lights idle) */
   idle(dt: number): void;

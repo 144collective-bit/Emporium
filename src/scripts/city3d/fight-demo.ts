@@ -6,43 +6,18 @@
  * both fighters' health and stamina, the clip each is playing, and lets
  * you pause the bots and play any clip on the first fighter.
  *
- * How a fighter is drawn each frame (fight.ts will do the same):
- * - On the ground: the `knockdown` fall, then the `down` loop; getting up:
- *   `getup`. Stunned: the hit reaction for `hurt` (`hurtClip`), timed by
- *   `hurtFrame`. In a move: the move's clip at the sim's own `frame`, so
- *   the strike lands on the frame the rules say. Blocking: `block` (its
- *   hold loops). Walking: the guard with the legs from `walkPose`. Else
- *   the `guard` loop.
- * - A change of clip crossfades over a few frames (`blendPose`).
- * - `root` (the lying pose's drop and back-rotation) goes on the figure's
- *   group; the sim's x, z and yaw too.
+ * The figures are drawn by fight-figure.ts (shared with fight.ts).
  */
 import * as THREE from 'three';
-import { createDegen, walkPose, PLAYER, type Degen, type Outfit } from './character';
+import { PLAYER, type Outfit } from './character';
 import { crewOutfit } from './crew';
-import { CLIPS, CLIP_IDS, blendPose, hurtClip, moveClip, newFightPose, sampleClip, type ClipId, type FightPose } from './fight-anim';
-import { T, createFightSim, type FightEvent, type FightSim, type Fighter } from './fight-sim';
+import { CLIPS, CLIP_IDS, type ClipId } from './fight-anim';
+import { createFighterFigure, drawFighter, type FighterFigure } from './fight-figure';
+import { T, createFightSim, type FightEvent, type FightSim } from './fight-sim';
 import { fx, glowTex } from './kit';
 
 /** Where the sparring happens: the open north half of the hangout square, and the ring's radius */
 export const SPAR_SPOT = { x: 30, z: 49, r: 2.6 };
-const SCALE = 0.85;
-const FADE = 6;
-
-interface Figure {
-  id: string;
-  degen: Degen;
-  pose: FightPose;
-  prev: FightPose;
-  tmp: FightPose;
-  clip: ClipId | null;
-  fade: number;
-  walk: number;
-  /** A clip being played by hand (the overlay), with its frame */
-  manual: { id: ClipId; frame: number } | null;
-  /** The guard loop's own phase so the two don't bounce in step */
-  seed: number;
-}
 
 export interface FightDemoDeps {
   scene: THREE.Scene;
@@ -56,10 +31,7 @@ export interface FightDemoDeps {
 export function buildFightDemo(d: FightDemoDeps) {
   const group = new THREE.Group();
   d.scene.add(group);
-  const outfits: Outfit[] = [
-    { ...PLAYER, fists: true },
-    { ...crewOutfit(1), fists: true },
-  ];
+  const outfits: Outfit[] = [PLAYER, crewOutfit(1)];
   const spot = SPAR_SPOT;
   let sim = makeSim(1);
   let bots = true;
@@ -78,12 +50,7 @@ export function buildFightDemo(d: FightDemoDeps) {
     });
   }
 
-  const figures: Figure[] = sim.fighters.map((f, i) => {
-    const degen = createDegen(outfits[i], d.low ? 1 : 2);
-    degen.g.scale.setScalar(SCALE);
-    group.add(degen.g);
-    return { id: f.id, degen, pose: newFightPose(), prev: newFightPose(), tmp: newFightPose(), clip: null, fade: 0, walk: 0, manual: null, seed: i * 37 };
-  });
+  const figures: (FighterFigure & { id: string })[] = sim.fighters.map((f, i) => ({ id: f.id, ...createFighterFigure(group, outfits[i], d.low, i * 37) }));
 
   // The ring on the ground: a neon circle, and the hit bursts
   const ring = new THREE.Mesh(new THREE.RingGeometry(spot.r - 0.06, spot.r, 64), new THREE.MeshBasicMaterial({ color: '#00eaff', transparent: true, opacity: 0.6, depthWrite: false }));
@@ -189,61 +156,13 @@ export function buildFightDemo(d: FightDemoDeps) {
 
   /* ---------- Drawing a fighter ---------- */
 
-  const walkTmp = newFightPose();
-  /** Which clip and frame a fighter's state calls for */
-  function pick(f: Fighter, fg: Figure): { id: ClipId; frame: number } {
-    if (fg.manual) return fg.manual;
-    if (f.down > 0) {
-      const since = f.downTotal - f.down;
-      return since < CLIPS.knockdown.frames ? { id: 'knockdown', frame: since } : { id: 'down', frame: since - CLIPS.knockdown.frames };
-    }
-    if (f.getup > 0) return { id: 'getup', frame: T.getupFrames - f.getup };
-    if (f.stun > 0 && f.hurt) return { id: hurtClip(f.hurt), frame: f.hurtFrame };
-    if (f.move) return { id: moveClip(f.move), frame: f.frame };
-    if (f.blocking) return { id: 'block', frame: f.blockFrames };
-    return { id: 'guard', frame: fg.seed + sim.ticks };
-  }
-
-  function draw(f: Fighter, fg: Figure, dt: number) {
-    const { id, frame } = pick(f, fg);
-    if (fg.manual) {
-      fg.manual.frame += dt * 60;
-      if (!CLIPS[id].loop && fg.manual.frame >= CLIPS[id].frames + 20) fg.manual = null;
-    }
-    if (id !== fg.clip) {
-      // Crossfade from the pose we were showing
-      Object.assign(fg.prev, structuredClone(fg.pose));
-      fg.fade = fg.clip ? FADE : 0;
-      fg.clip = id;
-    }
-    sampleClip(id, frame, fg.pose);
-    // Walking: the legs from the walk cycle under the guard
-    if (id === 'guard' && f.moving > 0.05) {
-      fg.walk += dt * 7 * f.moving;
-      walkPose(walkTmp, fg.walk, Math.min(1, f.moving), 0, 0);
-      for (let i = 0; i < 2; i++) Object.assign(fg.pose.legs[i], walkTmp.legs[i]);
-      fg.pose.bob += walkTmp.bob;
-    }
-    if (fg.fade > 0) {
-      fg.fade -= dt * 60;
-      const k = 1 - Math.max(0, fg.fade) / FADE;
-      blendPose(fg.prev, fg.pose, k, fg.tmp);
-      Object.assign(fg.pose, structuredClone(fg.tmp));
-    }
-    const deg = fg.degen;
-    Object.assign(deg.pose, { bob: fg.pose.bob, lean: fg.pose.lean, twist: fg.pose.twist, side: fg.pose.side, headYaw: fg.pose.headYaw, headPitch: fg.pose.headPitch });
-    for (let i = 0; i < 2; i++) {
-      Object.assign(deg.pose.arms[i], fg.pose.arms[i]);
-      Object.assign(deg.pose.legs[i], fg.pose.legs[i]);
-    }
-    deg.update();
-    deg.g.position.set(f.x, fg.pose.root.y * SCALE, f.z);
-    deg.g.rotation.set(fg.pose.root.pitch, f.yaw, 0, 'YXZ');
+  function draw(f: (typeof sim.fighters)[number], fg: FighterFigure, dt: number) {
+    drawFighter(fg, f, dt, sim.ticks);
     const row = bars.querySelector<HTMLElement>(`[data-fighter="${f.id}"]`)!;
     row.querySelector<HTMLElement>('.fight-demo-health span')!.style.transform = `scaleX(${f.health / T.health})`;
     row.querySelector<HTMLElement>('.fight-demo-stamina span')!.style.transform = `scaleX(${f.stamina / T.stamina})`;
     const name = row.querySelector<HTMLElement>('[data-clip-name]')!;
-    const label = `${id} ${Math.floor(frame)}${f.chain > 1 ? ` · ${f.chain} hit chain` : ''}${f.empty ? ' · tired' : ''}`;
+    const label = `${fg.clip ?? 'guard'} ${Math.floor(fg.frame)}${f.chain > 1 ? ` · ${f.chain} hit chain` : ''}${f.empty ? ' · tired' : ''}`;
     if (name.textContent !== label) name.textContent = label;
   }
 

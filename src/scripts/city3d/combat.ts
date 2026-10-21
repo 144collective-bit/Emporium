@@ -45,7 +45,9 @@ export type Sfx =
   /** The city's game: buying, upgrading, levelling up, missions, races, the crew */
   | 'buy' | 'denied' | 'upgrade' | 'levelup' | 'mission' | 'countdown' | 'go' | 'checkpoint' | 'finish' | 'shove' | 'goonDown'
   /** The kart park: boosts, hits taken and landed, the shield, the item roulette and a throw, drifts and their sparks, the jump, the shortcut's gravel, beating your ghost */
-  | 'kartBoost' | 'kartHit' | 'kartHitLanded' | 'kartShield' | 'kartItem' | 'kartUse' | 'kartDrift' | 'kartSpark' | 'kartJump' | 'kartLand' | 'kartShortcut' | 'kartGhost';
+  | 'kartBoost' | 'kartHit' | 'kartHitLanded' | 'kartShield' | 'kartItem' | 'kartUse' | 'kartDrift' | 'kartSpark' | 'kartJump' | 'kartLand' | 'kartShortcut' | 'kartGhost'
+  /** The Fight Club: a swing's whoosh, a punch and a kick landing, a block, a parry, a knockdown's thud, the knock-out, the bell and the count */
+  | 'whoosh' | 'punch' | 'kick' | 'fightBlock' | 'parry' | 'thud' | 'fightKo' | 'bell' | 'count';
 
 export interface CombatDeps {
   scene: THREE.Scene;

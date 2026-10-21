@@ -453,6 +453,43 @@ export function createSound() {
           tone(t + 0.12, 'sine', 1760, 1760, 0.12, 0.5);
           tone(t + 0.24, 'sine', 2093, 2093, 0.1, 0.65);
           break;
+        // The Fight Club: cartoon fisticuffs
+        case 'whoosh':
+          crack(t, 'bandpass', 1400, 0.7, 0.16, 0.1);
+          break;
+        case 'punch':
+          tone(t, 'sine', 140, 50, 0.6, 0.14);
+          crack(t, 'lowpass', 900, 0.9, 0.5, 0.09);
+          break;
+        case 'kick':
+          tone(t, 'sine', 110, 40, 0.7, 0.18);
+          crack(t, 'lowpass', 600, 0.9, 0.55, 0.12);
+          break;
+        case 'fightBlock':
+          crack(t, 'bandpass', 2200, 3, 0.35, 0.06);
+          tone(t, 'triangle', 520, 420, 0.18, 0.08);
+          break;
+        case 'parry':
+          tone(t, 'square', 880, 1320, 0.16, 0.08);
+          crack(t, 'bandpass', 3000, 4, 0.3, 0.05);
+          break;
+        case 'thud':
+          tone(t, 'sine', 70, 30, 0.8, 0.3);
+          crack(t, 'lowpass', 300, 0.7, 0.5, 0.2);
+          break;
+        case 'fightKo':
+          tone(t, 'sine', 80, 30, 0.9, 0.5, true);
+          crack(t, 'lowpass', 400, 0.6, 0.6, 0.3, true);
+          [660, 550, 440, 330].forEach((f, i) => tone(t + 0.2 + i * 0.12, 'triangle', f, f * 0.9, 0.12, 0.16));
+          break;
+        case 'bell':
+          tone(t, 'triangle', 1760, 1700, 0.3, 0.6, true);
+          tone(t, 'sine', 2640, 2600, 0.18, 0.5);
+          tone(t + 0.35, 'triangle', 1760, 1700, 0.26, 0.6, true);
+          break;
+        case 'count':
+          tone(t, 'square', 330, 330, 0.14, 0.1);
+          break;
       }
     },
     /**

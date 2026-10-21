@@ -39,9 +39,11 @@ export function createCityHead(root: HTMLElement) {
     const racing = mode === 'walk' && !!root.dataset.race;
     // In a kart: "Karting" and which course (kart.ts sets data-kart while a race is on)
     const karting = mode === 'walk' && !!root.dataset.kart;
-    const t = karting ? 'Karting' : racing ? 'Racing' : driving ? 'Driving' : c.title;
+    // In the ring: "Fighting" and who (fight.ts sets data-fight while a fight is on)
+    const fighting = mode === 'walk' && !!root.dataset.fight;
+    const t = fighting ? 'Fighting' : karting ? 'Karting' : racing ? 'Racing' : driving ? 'Driving' : c.title;
     if (title.textContent !== t) title.textContent = t;
-    const s = karting ? root.dataset.kart! : racing ? root.dataset.race! : driving ? `${root.dataset.car ?? 'Your car'}${root.classList.contains('is-online') ? ' · online' : ''}` : c.sub(root);
+    const s = fighting ? root.dataset.fight! : karting ? root.dataset.kart! : racing ? root.dataset.race! : driving ? `${root.dataset.car ?? 'Your car'}${root.classList.contains('is-online') ? ' · online' : ''}` : c.sub(root);
     if (sub.textContent !== s) sub.textContent = s;
     city.setAttribute('aria-pressed', String(mode === 'explore'));
   }

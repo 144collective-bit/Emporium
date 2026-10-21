@@ -36,6 +36,9 @@ import { buildBeacons } from './beacons';
 import { buildRaceSite } from './racesite';
 import { buildKartPark } from './kartpark3d';
 import { KART_SPAWN } from './kartpark';
+import { FIGHT_SPAWN } from './fightsite';
+import { buildFightClub } from './fightclub';
+import { fightRecordHtml } from './fight-ui';
 import { kartRecordsHtml } from './kart-ui';
 import { destAt } from './tycoon';
 import { CARS } from './cars';
@@ -129,6 +132,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // The kart park outside the Parkway in the north-east: a place like the landmarks (its pin and panel)
   const kartPark = buildKartPark(scene, { tick, reduced, low: tier === 'low' });
   spots.push(kartPark.spot);
+  // The Fight Club on the south bank: a place too (its pin and panel)
+  const fightClub = buildFightClub(scene, { tick, reduced, low: tier === 'low' });
+  spots.push(fightClub.spot);
   // ?fight: the sparring demo on the hangout square (the fight clips, before the Fight Club exists)
   const fightDemo = new URLSearchParams(location.search).has('fight') ? (await import('./fight-demo')).buildFightDemo({ scene, root, reduced, low: tier === 'low', tick }) : null;
   progress(0.55);
@@ -276,6 +282,15 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         startWalking(KART_SPAWN);
       });
     }
+    // The Fight Club's panel: your record, and Walk in (walk mode starts on its lot)
+    if (id === 'fightclub') {
+      const rec = panelBody.querySelector<HTMLElement>('[data-fight-panel-record]');
+      if (rec && tycoon) rec.innerHTML = fightRecordHtml(tycoon.save);
+      panelBody.querySelector('[data-fight-walkin]')?.addEventListener('click', () => {
+        close();
+        startWalking(FIGHT_SPAWN);
+      });
+    }
     panel.dataset.spot = id;
     panel.hidden = false;
     requestAnimationFrame(() => panel.classList.add('is-open'));
@@ -355,6 +370,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     game,
     raceSite,
     kartPark,
+    fightClub,
     reduced,
     low: tier === 'low',
   });
@@ -674,7 +690,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // Walk / Build pills never sit on top of a building's name. Re-read a few
   // times a second (they open, close and move with the layout)
   // The header, its open drop-downs (settings, menu), the welcome card and the race HUD (while a race is on)
-  const chrome = [...root.querySelectorAll<HTMLElement>('.city-head, .head-panel, .city-card, .race-hud, .kart-hud, .fight-demo')];
+  const chrome = [...root.querySelectorAll<HTMLElement>('.city-head, .head-panel, .city-card, .race-hud, .kart-hud, .fight-demo, [data-fight-hud]')];
   const chromeRects: { x: number; y: number; w: number; h: number }[] = [];
   const readChrome = () => {
     const o = host.getBoundingClientRect();
