@@ -149,7 +149,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   controls.dampingFactor = 0.08;
   controls.screenSpacePanning = false;
   controls.minDistance = 7;
-  controls.maxDistance = 150;
+  controls.maxDistance = 220;
   controls.minPolarAngle = 0.32;
   controls.maxPolarAngle = 1.18;
   controls.zoomToCursor = true;

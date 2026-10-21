@@ -3,6 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  BOX_LATERALS,
   COURSES,
   COURSE_IDS,
   FLYOVER_H,
@@ -44,7 +45,8 @@ test('the kart park sits outside the Parkway in the north-east, inside the world
   const top = Math.min(...PARKWAY.map((p) => p[1]));
   assert.ok(KART_PARK.z1 < top - 5, 'clear of the Parkway');
   assert.ok(KART_PARK.x0 > 64.5, 'east of the ring');
-  assert.ok(KART_PARK.x1 <= CITY_EXT[1] && KART_PARK.x0 >= WORLD_BOUNDS[0] && KART_PARK.z0 >= WORLD_BOUNDS[1]);
+  assert.ok(KART_PARK.x1 <= WORLD_BOUNDS[2] && KART_PARK.x0 >= WORLD_BOUNDS[0] && KART_PARK.z0 >= WORLD_BOUNDS[1]);
+  assert.ok(KART_PARK.x0 > CITY_EXT[1] - 60, 'the park is the north-east\'s main feature');
   // The slip road runs from the gate down to the Parkway's asphalt
   assert.equal(SLIP_ROAD.z0, KART_PARK.z1);
   const onParkway = PARKWAY.some((p) => Math.abs(p[0] - SLIP_ROAD.x) < 3 && Math.abs(p[1] - SLIP_ROAD.z1) < 3);
@@ -58,13 +60,14 @@ test('both courses are closed loops of the same length, on the site, with the li
   const a = COURSES['neon-loop'];
   const b = COURSES['neon-reverse'];
   assert.ok(Math.abs(a.L - b.L) < 0.01);
-  assert.ok(a.L > 110 && a.L < 140, `a lap is ${a.L.toFixed(1)}`);
+  assert.ok(a.L > 340 && a.L < 420, `a lap is ${a.L.toFixed(1)}`);
+  assert.ok(TRACK_HALF >= 5, 'a wide track');
   for (const c of [a, b]) {
     assert.equal(c.x.length, c.y.length);
     for (let i = 0; i < c.x.length; i++) {
       assert.ok(inSite(c.x[i], c.z[i], TRACK_HALF + 0.6), `${c.id} sample ${i} inside the fence with room for the wall`);
       // No corner tighter than a kart can take (the inner edge never folds)
-      assert.ok(Math.abs(c.k[i]) < 1 / (TRACK_HALF + 0.3), `${c.id} curvature at ${i}`);
+      assert.ok(Math.abs(c.k[i]) < 1 / (TRACK_HALF + 1), `${c.id} curvature at ${i}`);
     }
     // Consecutive samples a step apart, the last joining the first
     const n = c.x.length;
@@ -75,7 +78,11 @@ test('both courses are closed loops of the same length, on the site, with the li
     // The start line on the west straight, beside the stand
     const s = at(c, c.start);
     const [sx] = toWorld([SITE.stand.u1, 0]);
-    assert.ok(s.x > sx && s.x < sx + 5, 'beside the stand');
+    assert.ok(s.x > sx && s.x < sx + 8, 'beside the stand');
+    // ...and the track's edge keeps clear of the stand all along it
+    const [, sz0] = toWorld([0, SITE.stand.v0]);
+    const [, sz1] = toWorld([0, SITE.stand.v1]);
+    for (let i = 0; i < c.x.length; i++) if (c.z[i] > sz0 && c.z[i] < sz1 && c.x[i] < sx + 20) assert.ok(c.x[i] - TRACK_HALF > sx + 0.4, `the stand is on the track at ${c.z[i].toFixed(1)}`);
     assert.ok(Math.abs(Math.sin(s.yaw)) > 0.95, 'running north-south');
     // The reverse course runs the other way
     if (c.reverse) assert.ok(Math.sin(s.yaw) > 0);
@@ -90,7 +97,7 @@ test('the flyover crosses the ground pass at a right angle with headroom, and th
     // The other pass of the same spot, at ground level, square to it
     let ground: number | null = null;
     for (let s = 0; s < c.L; s += 0.5) {
-      if (Math.abs(along(c, s, c.crossing)) < 20) continue;
+      if (Math.abs(along(c, s, c.crossing)) < 40) continue;
       const p = frame(c, s);
       if (Math.hypot(p.x - f.x, p.z - f.z) < 0.6) ground = s;
     }
@@ -99,11 +106,11 @@ test('the flyover crosses the ground pass at a right angle with headroom, and th
     assert.ok(g.y < 0.01);
     assert.ok(Math.abs(g.tx * f.tx + g.tz * f.tz) < 0.08, 'square');
     // Ramps no steeper than about 1 in 3.5, except the hump
-    for (let s = 0; s < c.L; s += 0.5) if (Math.abs(along(c, s, c.hump)) > 6) assert.ok(Math.abs(frame(c, s).slope) < 0.3);
+    for (let s = 0; s < c.L; s += 0.5) if (Math.abs(along(c, s, c.hump)) > 10) assert.ok(Math.abs(frame(c, s).slope) < 0.3);
     assert.ok(Math.abs(frame(c, c.hump).y - HUMP_H) < 0.02);
     // ...and back on the ground past it (the flyover's long tail runs out on the crossing's side)
     const away = Math.sign(along(c, c.crossing, c.hump));
-    assert.ok(frame(c, c.hump + away * 6).y < 0.05 && frame(c, c.hump - away * 6).y < 1);
+    assert.ok(frame(c, c.hump + away * 10).y < 0.05 && frame(c, c.hump - away * 10).y < 1.5);
     assert.ok(frame(c, c.hump).y > frame(c, c.hump + 2).y && frame(c, c.hump).y > frame(c, c.hump - 2).y);
     // Two passes never come closer than the track's width (walls apart), away from the crossing
     const n = c.x.length;
@@ -112,7 +119,7 @@ test('the flyover crosses the ground pass at a right angle with headroom, and th
         if (n - j + i < 30) continue;
         const si = i * c.step;
         const sj = j * c.step;
-        const atCross = (Math.abs(along(c, si, c.crossing)) < 8 && Math.abs(along(c, sj, ground!)) < 8) || (Math.abs(along(c, sj, c.crossing)) < 8 && Math.abs(along(c, si, ground!)) < 8);
+        const atCross = (Math.abs(along(c, si, c.crossing)) < 20 && Math.abs(along(c, sj, ground!)) < 20) || (Math.abs(along(c, sj, c.crossing)) < 20 && Math.abs(along(c, si, ground!)) < 20);
         if (atCross) continue;
         assert.ok(Math.hypot(c.x[i] - c.x[j], c.z[i] - c.z[j]) > TRACK_HALF * 2 + 0.6, `${c.id}: ${si.toFixed(0)} and ${sj.toFixed(0)} too close`);
       }
@@ -308,7 +315,7 @@ const rivals = () => PLAYER_KARTS.flatMap((k) => [k, k]).slice(0, 7).map((k) => 
 test('a cup race: the countdown, eight karts round three laps, everyone inside the walls, items landing, places in order', () => {
   const sim = createKartSim({ course: 'neon-loop', cup: 'rookie', player: { kart: 'rocket', tune: tune(KART_SPECS.rocket) }, rivals: rivals(), seed: 3 });
   assert.equal(sim.racers.length, 8);
-  assert.equal(sim.boxes.length, COURSES['neon-loop'].boxes.length * 3);
+  assert.equal(sim.boxes.length, COURSES['neon-loop'].boxes.length * BOX_LATERALS.length);
   // Nothing moves during the countdown
   const ev0: string[] = [];
   for (let i = 0; i < 70; i++) for (const e of sim.step(1 / 60, { ...NO_INPUT, throttle: 1 })) ev0.push(e.kind);
@@ -316,7 +323,7 @@ test('a cup race: the countdown, eight karts round three laps, everyone inside t
   assert.ok(!sim.started && sim.player.speed === 0);
   const counts: Record<string, number> = {};
   let t = 1;
-  while (!sim.over && t < 300) {
+  while (!sim.over && t < 600) {
     for (const e of sim.step(1 / 60, brain(sim, t))) counts[e.kind] = (counts[e.kind] ?? 0) + 1;
     t += 1 / 60;
     for (const k of sim.racers) {
@@ -335,7 +342,7 @@ test('a cup race: the countdown, eight karts round three laps, everyone inside t
   const order = sim.standings();
   assert.deepEqual(order.map((i) => sim.racers[i].place), [1, 2, 3, 4, 5, 6, 7, 8]);
   for (let i = 1; i < order.length; i++) assert.ok(sim.racers[order[i - 1]].finishT <= sim.racers[order[i]].finishT);
-  assert.ok(sim.time > 30 && sim.time < 200);
+  assert.ok(sim.time > 60 && sim.time < 400);
   assert.ok(sim.racers.some((k) => k.hits > 0), 'someone landed an item');
 });
 
@@ -346,7 +353,7 @@ test('a time trial is you alone with no items; the reverse course works too', ()
   assert.equal(sim.cup, null);
   let t = 0;
   let items = 0;
-  while (!sim.done && t < 200) {
+  while (!sim.done && t < 400) {
     for (const e of sim.step(1 / 60, brain(sim, t))) if (e.kind === 'item' || e.kind === 'use') items++;
     t += 1 / 60;
   }
@@ -371,6 +378,8 @@ test('a hit spins a kart, a shield soaks one up, a rival that lags gets a faster
   const rival = sim.racers[0];
   rival.item = 'pigeon';
   rival.rouletteT = 0;
+  rival.spinT = 0;
+  rival.ai!.cool = 0.2;
   // Everyone else well behind, so the player is the kart ahead of this rival
   for (const k of sim.racers) if (k !== rival && k !== p) k.progress -= 50;
   // Put the rival just behind the player on its line
@@ -379,7 +388,7 @@ test('a hit spins a kart, a shield soaks one up, a rival that lags gets a faster
   // (the sim's rivals use items on their own clock; fire this one now)
   let shielded = false;
   let spun = false;
-  for (let i = 0; i < 60 * 6 && !spun && !shielded; i++) {
+  for (let i = 0; i < 60 * 10 && !spun && !shielded; i++) {
     for (const e of sim.step(1 / 60, { ...NO_INPUT, throttle: 0.4 })) {
       if (e.kind === 'shield' && e.kart === p.i) shielded = true;
       if (e.kind === 'hit' && e.kart === p.i && e.item !== 'bump') spun = true;

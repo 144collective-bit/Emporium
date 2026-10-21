@@ -27,7 +27,7 @@
  *   placed by where they are. Prizes and records are paid by tycoon.ts
  *   (`finishKartRace`), not here.
  */
-import { COURSES, GRID, KART_R, TRACK_HALF, along, at, frame, gridSlots, locate, wrapS, type Course, type CourseId } from './kartpark';
+import { BOX_LATERALS, COURSES, GRID, KART_R, TRACK_HALF, along, at, frame, gridSlots, locate, wrapS, type Course, type CourseId } from './kartpark';
 import { KART_SPECS, type KartId } from './mykart';
 
 /** The sim's tick (seconds) */
@@ -110,7 +110,7 @@ export interface KartTune {
 }
 /** A kart's 0..1 numbers (KART_SPECS with the hut's mods on, kartStats in catalog.ts) as what the sim uses */
 export function tune(d: { speed: number; accel: number; handling: number; weight: number; boost?: number }): KartTune {
-  return { top: 9 + d.speed * 5, accel: 5 + d.accel * 6, handling: d.handling, weight: d.weight, boost: d.boost ?? 1 };
+  return { top: 11 + d.speed * 7, accel: 6 + d.accel * 7, handling: d.handling, weight: d.weight, boost: d.boost ?? 1 };
 }
 
 export interface KartInput {
@@ -317,14 +317,14 @@ export function createKartSim(setup: RaceSetup) {
   const rivals = timeTrial ? [] : setup.rivals.slice(0, GRID - 1);
   const playerSlot = timeTrial ? 0 : rivals.length;
   rivals.forEach((v, i) =>
-    racers.push(mk(i, v.kart, v.tune, { skill: clamp((cupOf?.skill ?? 0.5) * (0.85 + r() * 0.3), 0.2, 1), offset: (r() - 0.5) * 2.4, itemAt: 0, cool: 1 + r() * 2 }))
+    racers.push(mk(i, v.kart, v.tune, { skill: clamp((cupOf?.skill ?? 0.5) * (0.85 + r() * 0.3), 0.2, 1), offset: (r() - 0.5) * TRACK_HALF * 1.2, itemAt: 0, cool: 1 + r() * 2 }))
   );
   const player = mk(playerSlot, setup.player.kart, setup.player.tune, null);
   racers.push(player);
   const boxes: ItemBox[] = timeTrial
     ? []
     : c.boxes.flatMap((s) =>
-        [-1.6, 0, 1.6].map((lateral) => {
+        BOX_LATERALS.map((lateral) => {
           const p = at(c, s, lateral);
           return { s, lateral, x: p.x, z: p.z, y: p.y + 0.9, gone: 0 };
         })
@@ -387,14 +387,14 @@ export function createKartSim(setup: RaceSetup) {
         k.trailT = T.trail;
         break;
       case 'oil': {
-        const s = k.s - 1.6;
+        const s = k.s - 2;
         const p = at(c, s, clamp(k.lateral, -WALL, WALL));
         hazards.push({ kind: 'oil', x: p.x, z: p.z, y: p.y, s: wrapS(c, s), owner: k.i, t: T.oilLife });
         break;
       }
       case 'gummy': {
         const dir = back ? -1 : 1;
-        const v = Math.max(0, k.speed) * dir + 11 * dir;
+        const v = Math.max(0, k.speed) * dir + 14 * dir;
         const ahead = 1.1 * dir;
         missiles.push({
           kind: 'gummy',
@@ -708,7 +708,7 @@ export function createKartSim(setup: RaceSetup) {
         p.yaw = Math.atan2(-p.vz, p.vx);
       } else {
         const tgt = racers[p.target];
-        const speed = 15;
+        const speed = 22;
         if (!tgt || tgt.finished) {
           p.t = 0;
           missiles.splice(m, 1);

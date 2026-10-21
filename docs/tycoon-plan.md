@@ -248,10 +248,11 @@ karts and the race on screen) and `kart-ui.ts` (the hut's menu, the HUD,
 the results). Karts stay on the track: they're racing machines, not city
 cars.
 
-- **The site:** a fenced 48 x 46 of open land north of the Parkway's top,
+- **The site:** a fenced 138 x 112 of open land north of the Parkway's top
+  (the owner wanted it big: the north-east's main feature),
   a slip road and a gate on its south side, the kart hut (its door opens
   the menu), a grandstand along the start straight, a big screen, pits.
-- **The Neon Loop:** a figure of eight, about 124 tiles a lap: the start
+- **The Neon Loop:** a figure of eight, about 370 tiles a lap and 10 wide: the start
   straight down the west side, round the bottom of the west lobe, a diagonal
   across the middle at ground level, the east lobe with its hairpin, back
   over the middle on a flyover, the west lobe's top with a hump that throws

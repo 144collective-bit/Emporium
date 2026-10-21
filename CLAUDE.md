@@ -599,8 +599,10 @@ it and has been retired completely. Build only on what's here.
   with your records and **Walk in**, which starts walk mode at the gate,
   `KART_SPAWN`). Karts stay on the track: they're never driven in the city.
 - **The layout** is `kartpark.ts` (DOM-free, tested in `tests/kart.test.ts`):
-  `KART_PARK` (world x 92-140, z -94 to -48), local numbers via
-  `toWorld()`, `SITE` (hut, gate, stand, screen, pits), `GATE`, `SLIP_ROAD`,
+  `KART_PARK` (world x 92-230, z -160 to -48: the north-east's main
+  feature, about 250 x 200 m), local numbers via `toWorld()` (the loop is
+  drawn in a small frame and blown up `LOOP_SCALE` times; the fixtures are
+  placed in the big frame), `SITE` (hut, gate, stand, screen, pits), `GATE`, `SLIP_ROAD`,
   `HUT_DOOR`, `GANTRY`, `PILLARS`. One physical track, two courses
   (`COURSES`): the Neon Loop (a figure of eight: the start straight down
   the west side, the west lobe's bottom, a diagonal across the middle at
@@ -608,14 +610,15 @@ it and has been retired completely. Build only on what's here.
   `FLYOVER_H` high, the west lobe's top with a hump `HUMP_H` that throws
   karts into the air) and its reverse. A course is a closed centre line
   sampled every half tile (`frame()`, `at()`, `locate()` which keeps to the
-  layer its hint is on, `along()`, `wrapS()`), `TRACK_HALF` either side,
-  `gridSlots()`, item box rows (`boxes`) and boost pads (`pads`) per course.
+  layer its hint is on, `along()`, `wrapS()`), about 370 tiles a lap,
+  `TRACK_HALF` (5.2) either side, `gridSlots()`, item box rows (`boxes`,
+  five abreast at `BOX_LATERALS`) and boost pads (`pads`) per course.
   Footprints for walking are `KART_SOLIDS` (in `SOLIDS`: the fence with the
-  gate's gap, the hut, the stand, the posts and pillars, walls every two
-  tiles along the ground-level edges); the site is flat ground, not a slab,
+  gate's gap, the hut, the stand, the posts and pillars, walls every
+  `WALL_EVERY` tiles along the ground-level edges); the site is flat ground, not a slab,
   and the outskirts' trees keep off it (`scatterIn()` in `world.ts`). Keep
-  every corner's radius above about 3 (the test checks the inner edge never
-  folds) and the two passes apart by the track's width.
+  every corner's radius above about 6.5 (the test checks the inner edge
+  never folds) and the two passes apart by the track's width.
 - **The rules** are `kart-sim.ts` (DOM-free, seeded, a fixed 60 Hz tick,
   tested): `createKartSim(setup)` → `step(dt, input)` returning events.
   Arcade karts (`tune()` from the 0..1 stats), a hop into a drift

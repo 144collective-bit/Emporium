@@ -6,7 +6,7 @@
  * kart-sim.ts races on it, kart.ts is the view), so the rules can be tested
  * and a server could run them.
  *
- * - The site is a 48 x 46 rectangle of open land north of the Parkway's top,
+ * - The site is a 138 x 112 rectangle of open land north of the Parkway's top,
  *   fenced, with a gate on its south side and a slip road down to the
  *   Parkway. Everything inside is drawn in local numbers: u east from the
  *   site's west edge, v south from its north edge (world x = X0 + u,
@@ -30,27 +30,29 @@
 export type Pt = [number, number];
 
 /** The site, in world units: x0, z0, x1, z1 */
-export const KART_PARK = { x0: 92, z0: -94, x1: 140, z1: -48 } as const;
+export const KART_PARK = { x0: 92, z0: -160, x1: 230, z1: -48 } as const;
 const X0 = KART_PARK.x0 + 2;
 const Z0 = KART_PARK.z0 + 2;
 /** Local numbers: u east, v south, inside a 2-wide margin */
 export const toWorld = ([u, v]: Pt): Pt => [X0 + u, Z0 + v];
 /** The local frame's width (the site inside its margins) */
-export const SITE_U = 44;
+export const SITE_U = 134;
+/** The loop was drawn in a 44 x 46 frame; it's blown up this much (the fixtures round it are placed in the big frame) */
+export const LOOP_SCALE = 3;
 
 /** The track's half width (the walls stand just outside), and a kart's radius for the walls */
-export const TRACK_HALF = 2.6;
+export const TRACK_HALF = 5.2;
 export const KART_R = 0.5;
 /** The flyover's height at the crossing and the half length of its ramps; the hump's height, its steep side and its long side */
 export const FLYOVER_H = 2.4;
-export const FLYOVER_W = 14;
-export const HUMP_H = 0.9;
-export const HUMP_UP = 2.5;
-export const HUMP_DOWN = 4;
+export const FLYOVER_W = 30;
+export const HUMP_H = 1.3;
+export const HUMP_UP = 5;
+export const HUMP_DOWN = 8;
 /** Samples every half tile along the centre line */
 const STEP = 0.5;
 
-/** The Neon Loop's control points (local u, v), from the west straight heading south */
+/** The Neon Loop's control points (in the small frame, times LOOP_SCALE), from the west straight heading south */
 const LOOP: Pt[] = [
   [5.8, 16],
   [6.3, 21],
@@ -82,7 +84,9 @@ const LOOP: Pt[] = [
 const CROSSING_AT = 18;
 const HUMP_AT = 20;
 /** The start line: on the west straight, at this v (the same line both ways round) */
-const START_V = 19;
+const START_V = 19 * LOOP_SCALE;
+/** Where the item boxes sit across the track (five abreast) */
+export const BOX_LATERALS = [-3.6, -1.8, 0, 1.8, 3.6];
 
 export type CourseId = 'neon-loop' | 'neon-reverse';
 export const COURSE_IDS: CourseId[] = ['neon-loop', 'neon-reverse'];
@@ -162,7 +166,8 @@ function sampleLoop(pts: Pt[], step: number) {
 }
 
 function makeCourse(id: CourseId, name: string, blurb: string, reverse: boolean): Course {
-  const ctrl = reverse ? [LOOP[0], ...LOOP.slice(1).reverse()] : LOOP;
+  const big = LOOP.map(([u, v]): Pt => [u * LOOP_SCALE, v * LOOP_SCALE]);
+  const ctrl = reverse ? [big[0], ...big.slice(1).reverse()] : big;
   const { pts, L, at, step } = sampleLoop(ctrl, STEP);
   const n = pts.length;
   const x = new Float64Array(n);
@@ -217,16 +222,16 @@ function makeCourse(id: CourseId, name: string, blurb: string, reverse: boolean)
   for (let i = 0; i < n; i++) {
     const [u0, v0] = pts[i];
     const v1 = pts[(i + 1) % n][1];
-    if (u0 < 8 && ((v0 <= START_V && v1 > START_V) || (v0 >= START_V && v1 < START_V))) {
+    if (u0 < 8 * LOOP_SCALE && ((v0 <= START_V && v1 > START_V) || (v0 >= START_V && v1 < START_V))) {
       start = (i + (START_V - v0) / (v1 - v0)) * step;
       break;
     }
   }
   const w = (v: number) => ((v % L) + L) % L;
   // Item boxes: on the west lobe's bottom, the east lobe's top, before the flyover's ramp and the west lobe's top
-  const boxes = (reverse ? [atF(22) + 1, atF(13) + 1, atF(10) + 1, atF(4) + 1] : [atF(3) + 1, atF(9) + 1, atF(14) + 1, atF(21) + 1]).map(w);
+  const boxes = (reverse ? [atF(22) + 3, atF(13) + 3, atF(10) + 3, atF(4) + 3] : [atF(3) + 3, atF(9) + 3, atF(14) + 3, atF(21) + 3]).map(w);
   // Boost pads: out of the hairpin, down the flyover, and after the line
-  const pads = [reverse ? atF(11) + 1 : atF(13) + 1, crossing + 7, start + 4].map((s) => ({ s: w(s), len: 3 }));
+  const pads = [reverse ? atF(11) + 3 : atF(13) + 3, crossing + 16, start + 10].map((s) => ({ s: w(s), len: 5 }));
   return { id, name, blurb, reverse, x, z, y, tx, tz, k, L, step, start, crossing, hump, boxes, pads };
 }
 
@@ -247,7 +252,7 @@ export function gridSlots(c: Course): { s: number; lateral: number }[] {
   for (let i = 0; i < GRID; i++) {
     const row = Math.floor(i / 2);
     const side = i % 2 ? -1 : 1;
-    out.push({ s: c.start - 2.2 - row * 2.6 - (i % 2) * 1.1, lateral: side * 1.2 });
+    out.push({ s: c.start - 2.6 - row * 3.2 - (i % 2) * 1.4, lateral: side * 2.2 });
   }
   return out;
 }
@@ -353,15 +358,15 @@ export function locate(c: Course, x: number, z: number, hint: number | null = nu
 /** Where things stand on the site (local u, v); `yaw` is which way a door faces (0: +x, left raises it) */
 export const SITE = {
   /** The kart hut: its box, its door (where you stand for the menu) and its neon sign */
-  hut: { u0: 24, v0: 34.5, u1: 32, v1: 39.5, door: [28, 40.1] as Pt },
+  hut: { u0: 60, v0: 96, u1: 70, v1: 104, door: [65, 104.6] as Pt },
   /** The gate in the south fence, and the slip road down to the Parkway */
-  gate: { u: 6, w: 4 },
+  gate: { u: 6, w: 5 },
   /** The grandstand along the west straight, facing east over the track */
-  stand: { u0: 0.3, v0: 12.5, u1: 2.6, v1: 25 },
+  stand: { u0: 4, v0: 44, u1: 11.3, v1: 78 },
   /** The big screen, facing north over the east lobe's bottom bend */
-  screen: { u: 36, v: 34, w: 6 },
+  screen: { u: 95, v: 103, w: 10 },
   /** The pit lane: where the karts wait between races (parked, behind the west lobe's bottom) */
-  pits: { u0: 10, v0: 33.5, u1: 20, v1: 36.5 },
+  pits: { u0: 25, v0: 97, u1: 45, v1: 104 },
 } as const;
 /** The site's edges in world numbers */
 export const SITE_WORLD = { x0: KART_PARK.x0, z0: KART_PARK.z0, x1: KART_PARK.x1, z1: KART_PARK.z1 };
@@ -380,6 +385,8 @@ export const HUT_DOOR = (() => {
 /** Where you spawn when you walk in from the city panel: inside the gate, looking north at the track (walk.ts looks along -z at yaw 0) */
 export const KART_SPAWN = { x: GATE.inside[0], z: GATE.inside[1], yaw: 0 };
 
+/** The track walls are solid this often along the loop (kartpark3d.ts draws a block at each) */
+export const WALL_EVERY = 3;
 /** x0, z0, x1, z1, height (solids.ts Box) */
 type Box = [number, number, number, number, number];
 const box = (u0: number, v0: number, u1: number, v1: number, h: number): Box => {
@@ -392,12 +399,12 @@ export const GANTRY = (() => {
   const c = COURSES['neon-loop'];
   const f = frame(c, c.start);
   const reach = TRACK_HALF + 0.7;
-  return { x: f.x, z: f.z, tx: f.tx, tz: f.tz, posts: [1, -1].map((side) => ({ x: f.x + f.nx * reach * side, z: f.z + f.nz * reach * side })), h: 4.2, half: reach };
+  return { x: f.x, z: f.z, tx: f.tx, tz: f.tz, posts: [1, -1].map((side) => ({ x: f.x + f.nx * reach * side, z: f.z + f.nz * reach * side })), h: 5.5, half: reach };
 })();
 export const PILLARS: Pt[] = (() => {
   const c = COURSES['neon-loop'];
   const out: Pt[] = [];
-  for (const ds of [-7, -3.5, 3.5, 7]) {
+  for (const ds of [-20, -10, 10, 20]) {
     const f = frame(c, c.crossing + ds);
     for (const side of [1, -1]) out.push([f.x + f.nx * (TRACK_HALF + 0.2) * side, f.z + f.nz * (TRACK_HALF + 0.2) * side]);
   }
@@ -421,14 +428,14 @@ export const KART_SOLIDS: Box[] = (() => {
     [P.x0 - F, P.z1 - F, GATE.x0, P.z1 + F, 1.2],
     [GATE.x1, P.z1 - F, P.x1 + F, P.z1 + F, 1.2],
     box(SITE.hut.u0, SITE.hut.v0, SITE.hut.u1, SITE.hut.v1, 3.2),
-    box(SITE.stand.u0, SITE.stand.v0, SITE.stand.u1, SITE.stand.v1, 3.6),
+    box(SITE.stand.u0, SITE.stand.v0, SITE.stand.u1, SITE.stand.v1, 4.5),
     box(SITE.screen.u - SITE.screen.w / 2, SITE.screen.v - 0.3, SITE.screen.u + SITE.screen.w / 2, SITE.screen.v + 0.3, 5),
   ];
   for (const p of GANTRY.posts) out.push([p.x - 0.22, p.z - 0.22, p.x + 0.22, p.z + 0.22, GANTRY.h]);
   for (const [x, z] of PILLARS) out.push([x - 0.2, z - 0.2, x + 0.2, z + 0.2, FLYOVER_H]);
   // The walls along the loop, at ground level (the flyover's own walls are above head height)
   const c = COURSES['neon-loop'];
-  for (let s = 0; s < c.L; s += 2) {
+  for (let s = 0; s < c.L; s += WALL_EVERY) {
     const f = frame(c, s);
     if (f.y > 1.0) continue;
     for (const side of [1, -1]) {

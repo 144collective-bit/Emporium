@@ -35,7 +35,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { SpotId } from '../../lib/city';
 import { Batch, FONT_DISPLAY, FONT_MONO, PAL, canvasTex, fx, glowMat, lit, neon, neonSign, occlude, place, plane, rng, toon } from './kit';
-import { COURSES, FLYOVER_W, GANTRY, GATE, HUT_DOOR, KART_PARK, PILLARS, SITE, SLIP_ROAD, TRACK_HALF, along, at, frame, locate, toWorld, type Course, type CourseId } from './kartpark';
+import { BOX_LATERALS, COURSES, FLYOVER_W, GANTRY, GATE, HUT_DOOR, KART_PARK, LOOP_SCALE, PILLARS, SITE, SLIP_ROAD, TRACK_HALF, WALL_EVERY, along, at, frame, locate, toWorld, type Course, type CourseId } from './kartpark';
 import type { KartPark } from './kart-types';
 import type { Spot } from './landmarks';
 import { SLAB, addLamp, addTree, type Tick } from './world';
@@ -370,7 +370,7 @@ export function buildKartPark(scene: THREE.Scene, opts: { tick: (f: Tick) => voi
     const mid = s * (TRACK_HALF + 0.3);
     b.add(sweep(c, loop, [[mid - 0.045, rel(KERB_H + 0.012)], [mid + 0.045, rel(KERB_H + 0.012)]]), soft(s > 0 ? PAL.cyan : PAL.pink));
   }
-  for (let s = 0; s < c.L; s += 2) {
+  for (let s = 0; s < c.L; s += WALL_EVERY) {
     const f = frame(c, s);
     const yaw = Math.atan2(-f.tz, f.tx);
     for (const side of [1, -1]) {
@@ -640,7 +640,7 @@ export function buildKartPark(scene: THREE.Scene, opts: { tick: (f: Tick) => voi
   /* ----- Dressing: tyre walls at the hairpin, trees in the corners ----- */
 
   {
-    const [hairpinX] = W(40.3, 0);
+    const [hairpinX] = W(40.3 * LOOP_SCALE, 0);
     const stacks: { x: number; z: number; h: number }[] = [];
     const step = low ? 1.5 : 0.75;
     for (let s = 0; s < c.L; s += step) {
@@ -695,15 +695,15 @@ export function buildKartPark(scene: THREE.Scene, opts: { tick: (f: Tick) => voi
 
   /* ----- The spot ----- */
 
-  const [fx0, fz0] = W(4.9, 6.1);
-  const [fx1, fz1] = W(41.7, 29.6);
+  const [fx0, fz0] = W(4.9 * LOOP_SCALE, 6.1 * LOOP_SCALE);
+  const [fx1, fz1] = W(41.7 * LOOP_SCALE, 29.6 * LOOP_SCALE);
   const focus = V((fx0 + fx1) / 2, 0, (fz0 + fz1) / 2);
   const pin = V((hx0 + hx1) / 2, HUT_H + 1.3, (hz0 + hz1) / 2);
   const ring = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.64, 48), glowMat(PAL.cyan, 0, null));
   ring.rotation.x = -Math.PI / 2;
   ring.position.set(HUT_DOOR.x, PAVING + 0.014, HUT_DOOR.z);
   group.add(fx(ring));
-  const spot: Spot = { id: ID, group: places, focus, size: 40, pin, ring };
+  const spot: Spot = { id: ID, group: places, focus, size: 40 * LOOP_SCALE, pin, ring };
 
   /* ----- Per course: boost pads and item boxes ----- */
 
@@ -733,7 +733,7 @@ export function buildKartPark(scene: THREE.Scene, opts: { tick: (f: Tick) => voi
   }
   // The item boxes: a translucent cube in a neon frame, instanced, repositioned per course
   const BOX = 0.55;
-  const maxBoxes = Math.max(...Object.values(COURSES).map((k) => k.boxes.length)) * 3;
+  const maxBoxes = Math.max(...Object.values(COURSES).map((k) => k.boxes.length)) * BOX_LATERALS.length;
   const cube = new THREE.InstancedMesh(new THREE.BoxGeometry(BOX, BOX, BOX), lit(new THREE.MeshBasicMaterial({ color: PAL.cyan, transparent: true, opacity: 0.35, depthWrite: false }), 0.8, 1.1), maxBoxes);
   const edgeGeo = (() => {
     const t = 0.04;
@@ -786,7 +786,7 @@ export function buildKartPark(scene: THREE.Scene, opts: { tick: (f: Tick) => voi
     current = id;
     for (const [k, cg] of courses) cg.visible = k === id;
     const course = COURSES[id];
-    boxSpots = course.boxes.flatMap((s) => [-1.6, 0, 1.6].map((lateral) => at(course, s, lateral))).map((p) => ({ x: p.x, y: p.y + 0.9, z: p.z }));
+    boxSpots = course.boxes.flatMap((s) => BOX_LATERALS.map((lateral) => at(course, s, lateral))).map((p) => ({ x: p.x, y: p.y + 0.9, z: p.z }));
     gone = null;
     cube.count = edges.count = boxSpots.length;
     paintBoxes(0);
