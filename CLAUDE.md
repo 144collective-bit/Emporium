@@ -241,7 +241,8 @@ it and has been retired completely. Build only on what's here.
 - Every character is one shared Degen body (`src/scripts/city3d/character.ts`),
   sculpted after the brand art at human proportions (about 1.25 tall at
   scale 1, six and a half heads, hips `HIP_HEIGHT` 0.62), with knees,
-  elbows and hand sockets. The bones (`NECK`, `SHOULDER_X/Y`, `UPPER_ARM`,
+  elbows, wrists (`Limb.wrist` { roll, bend }, zero by default so nothing
+  moves unless a pose asks; fighting turns the fist) and hand sockets. The bones (`NECK`, `SHOULDER_X/Y`, `UPPER_ARM`,
   `PALM_Y`, `THIGH`) feed `reachArm()`, so gun holds follow them; the walk
   camera's eye height (`walk.ts`) and the bench seat (`SEAT_DROP` in
   `life.ts`) follow the body too.
@@ -828,12 +829,19 @@ it and has been retired completely. Build only on what's here.
   start-up / active / recovery frames, reach and arc, the jab-cross-hook-
   uppercut chain and the kicks, block and the parry window, dodge, stamina,
   stagger and knockdowns, `STYLES`, bots via `think()`, spars and bouts;
-  a fighter faces along (sin yaw, cos yaw)); the animations are
+  a fighter faces along (sin yaw, cos yaw); a press is kept `T.buffer`
+  frames so it fires when it can, a strike from just out of reach steps in
+  (`T.stepIn`), the facing turns at `T.turn` and a move's lock-on snaps at
+  most `T.lockSnap`; bots are `BotTraits` (`botTraits()`: block, dodge,
+  parry, telegraph (extra wind-up on heavy moves, a tell), kicks, finisher,
+  backOff, pace), the gym's three in `FIGHT_BOTS.traits`); the animations are
   `fight-anim.ts` (DOM-free, tested in `tests/fight-anim.test.ts`: every
   clip is keyframed on the `Pose` rig, a move's clip is exactly its sim
   frames long with the strike on the first active frame; `sampleClip()`,
-  `blendPose()`, `moveClip()`, `hurtClip()`, `root` for the lying poses;
-  `fists: true` on an `Outfit` closes the hands); `?fight` in the address
+  `blendPose()`, `moveClip()`, `hurtClip()`, `root` { y, pitch, pivot } for
+  the lying poses (the fall and the get-up pivot at the hips, `rootShift()`
+  in `fight-figure.ts` moves the group so); `fists: true` on an `Outfit`
+  closes the hands); `?fight` in the address
   runs the sparring demo (`fight-demo.ts`: two bots on the hangout square,
   an overlay with health, stamina, the clip each plays and a clip picker).
   Phase 2 is built, **the Fight Club**: the site is `fightsite.ts`
@@ -858,7 +866,10 @@ it and has been retired completely. Build only on what's here.
   fight: your Degen with fists against one of `FIGHT_BOTS` (`catalog.ts`:
   Rookie Ray, Knuckles, The Mayor; skill, style, purse, level) in the
   ring, a soft lock-on (forward is towards the opponent), hit-stop and a
-  camera punch on heavy hits, sparks, stars on a knockdown, the sounds
+  camera punch on heavy hits, the hit figure's white flash, impact lines
+  and sparks at the contact, floating damage numbers (`.fight-dmg`), stars
+  on a knockdown, health bars that chip with a pale ghost draining behind
+  (`.fight-ghost`), the sounds
   (`whoosh`, `punch`, `kick`, `fightBlock`, `parry`, `thud`, `fightKo`,
   `bell`, `count` in `sound.ts`), the over-the-shoulder camera kept inside
   the ropes, and it pays through `finishFight()` + `commit()` (a spar: XP
