@@ -240,6 +240,12 @@ it and has been retired completely. Build only on what's here.
   when the walker (`walker` in `life.ts`) comes near. Its walls, towers,
   checkpoint, store, counter and vehicles are mirrored in `solids.ts`
   `SOLIDS` (shared with the game server).
+- **The character rebuild** (the owner's call, critical) is planned in
+  `docs/character-plan.md`: a skinned body on real bones built in code, the
+  brand-art head, every wardrobe piece rebuilt, grounded hand-keyed
+  animation, merch-store logos on the clothes (Dorras and levels), a
+  character screen, phones first. Build it one phase at a time with the
+  owner's sign-off; until then the notes below describe today's body.
 - Every character is one shared Degen body (`src/scripts/city3d/character.ts`),
   sculpted after the brand art at human proportions (about 1.25 tall at
   scale 1, six and a half heads, hips `HIP_HEIGHT` 0.62), with knees,
