@@ -2,7 +2,7 @@
  * Fighting (docs/fight-plan.md). Phase 1: the sparring demo's overlay
  * (`.fight-demo`, fight-demo.ts, on `?fight`): the two fighters' health and
  * stamina, the clip each plays, the bots / pause / step / reset row and the
- * clip picker. The Fight Club's own screens come in Phase 2.
+ * clip picker. Phase 2: the Fight Club's own screens (fight-ui.ts), after it.
  */
 .fight-demo {
   position: absolute;
@@ -129,5 +129,1184 @@
   .fight-demo-clips {
     max-height: 70px;
     overflow: auto;
+  }
+}
+
+/* ---------- The Fight Club (walk mode, fight-ui.ts) ----------
+   The trainer's menu is built on the gun store's .shop panel (global.css) like the kart hut: wide
+   screens put it on the right so the ring stays in view, phones keep the shop's bottom sheet. Its
+   head and tabs stay put and the body scrolls. The fight HUD sits under the header: the two health
+   bars facing each other with the names, your stamina under yours, the round and its clock in the
+   middle (a spar says "Spar") with the rounds won as pips, a chain pill and a Blocking tag under
+   your bars, the knockdown count low in the middle and Quit top right. The bell's text reuses the
+   races' big digits (.race-count), the bout card the races' card (.race-result). On touch screens
+   the Punch / Kick / Block / Dodge buttons take the Fire, Aim and Jump spots bottom right, clear
+   of the stick and the door prompt. Nothing moves under reduced motion. */
+
+/* ---------- The trainer's menu ---------- */
+/* A column (head, tabs, body, foot) so the body can shrink to the panel's max-height and scroll */
+.fight-menu {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px 0;
+  overflow: hidden;
+}
+.fight-menu .shop-head,
+.fight-tabs,
+.fight-menu .shop-foot {
+  flex: none;
+}
+@media (min-width: 641px) {
+  .fight-menu {
+    top: calc(var(--head-h) + 12px);
+    right: 16px;
+    left: auto;
+    width: min(460px, 48%);
+    transform: none;
+    animation-name: garage-in;
+  }
+}
+.city.is-fightclub .walk-hint,
+.city.is-fightclub .walk-stick,
+.city.is-fightclub .walk-run,
+.city.is-fightclub .walk-jump,
+.city.is-fightclub .walk-crosshair,
+.city.is-fightclub .combat-hud,
+.city.is-fightclub .city-pins {
+  display: none;
+}
+.fight-menu .shop-score {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.fight-menu .shop-score .dorra {
+  margin: 0 0 0 2px;
+}
+.fight-menu .shop-score b {
+  margin: 0;
+}
+.fight-dorras {
+  margin-left: auto;
+}
+.fight-dorras + .shop-score {
+  margin-left: 0;
+}
+.fight-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.fight-tabs button {
+  justify-content: center;
+  padding: 7px 4px;
+}
+.fight-body {
+  flex: 1 1 auto;
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-width: 0;
+  min-height: 0;
+  padding-right: 2px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+/* The races' pieces are reused inside: their areas belong to the races' own grid */
+.fight-menu .race-blurb,
+.fight-menu .race-meta,
+.fight-menu .race-note {
+  grid-area: auto;
+}
+.fight-sect {
+  display: grid;
+  gap: 8px;
+}
+.fight-sect-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+.fight-sub {
+  margin: 4px 0 -4px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--p-cyan);
+}
+/* A fighter (or a style) as a card: the name with its tags, the blurb, the numbers, the button */
+.fight-cards {
+  display: grid;
+  gap: 8px;
+}
+.fight-card {
+  display: grid;
+  gap: 5px;
+  padding: 10px 12px;
+  border: 1px solid #ffffff14;
+  border-radius: 10px;
+  background: #ffffff08;
+}
+.fight-card.is-locked {
+  opacity: 0.6;
+}
+.fight-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+.fight-card-head .race-name {
+  margin-right: 2px;
+}
+.fight-menu .lv-tag {
+  display: inline-block;
+  padding: 2px 7px;
+  border: 1px solid #ffffff33;
+  border-radius: 5px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--p-cyan);
+}
+.fight-card.is-locked .lv-tag {
+  color: #ff6ad5;
+  border-color: #ff6ad566;
+}
+/* The style: a small tag in the style's colour (Brawler white, Kickboxer cyan, Street pink) */
+.fight-style-tag {
+  display: inline-block;
+  padding: 2px 7px;
+  border: 1px solid #ffffff33;
+  border-radius: 5px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #fff;
+}
+.fight-style-tag.is-kickboxer {
+  border-color: #00eaff66;
+  color: var(--p-cyan);
+}
+.fight-style-tag.is-street {
+  border-color: #ff6ad566;
+  color: #ff6ad5;
+}
+/* The difficulty: five pips, the lit ones running white to pink */
+.fight-pips {
+  display: inline-flex;
+  gap: 3px;
+  margin-left: auto;
+}
+.fight-pips i {
+  width: 9px;
+  height: 9px;
+  border: 1px solid #ffffff2a;
+  border-radius: 50%;
+  background: #ffffff14;
+}
+.fight-pips i.on {
+  border-color: #fff;
+  background: #fff;
+  box-shadow: 0 0 6px #fffa;
+}
+.fight-pips i:nth-child(4).on,
+.fight-pips i:nth-child(5).on {
+  border-color: #ff6ad5;
+  background: #ff6ad5;
+  box-shadow: 0 0 6px #ff6ad5;
+}
+.fight-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 12px;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: #fff;
+}
+.fight-card-meta em {
+  margin-right: 4px;
+  font-style: normal;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.fight-card-meta .dorra {
+  margin-right: 2px;
+  width: 11px;
+  height: 11px;
+}
+.fight-prize {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+.fight-card-rec {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--text-2);
+}
+.fight-card-act {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin-top: 2px;
+}
+.fight-go {
+  display: grid;
+  justify-items: center;
+  min-width: 92px;
+  padding: 8px 16px;
+  border: 1px solid #0000;
+  border-radius: 999px;
+  background:
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 0 22px -8px #ff2fb9;
+}
+.fight-go:disabled,
+.fight-go[aria-disabled="true"] {
+  opacity: 0.55;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+/* Styles: yours lit, the ones to come dimmed, the moves as chips */
+.fight-state {
+  padding: 2px 8px;
+  border: 1px solid #2bff8866;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #2bff88;
+}
+.fight-style.is-picked {
+  border-color: #0000;
+  background:
+    var(--pulse-wash) padding-box,
+    linear-gradient(#14102a, #14102a) padding-box,
+    var(--pulse) border-box;
+}
+.fight-style.is-soon {
+  opacity: 0.65;
+}
+.fight-style.is-soon .fight-state {
+  border-color: #ffd36b66;
+  color: #ffd36b;
+}
+.fight-moves {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.fight-moves li {
+  padding: 3px 8px;
+  border: 1px solid #ffffff1a;
+  border-radius: 999px;
+  background: #ffffff08;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+/* The record: a grid of little boxes (the Record tab and the City-view panel) */
+.fight-records {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 10px;
+  margin: 2px 0;
+}
+.fight-records > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid #ffffff14;
+  border-radius: 9px;
+  background: #ffffff08;
+}
+.fight-records dd {
+  display: block;
+  overflow: hidden;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fight-records .race-none {
+  font-size: 11px;
+}
+/* Each opponent's line runs the full width: the name left, your record against them right */
+.fight-records .fight-record-bot {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 10px;
+}
+.fight-records .fight-record-bot dt {
+  flex: none;
+}
+.fight-records .fight-record-bot dd {
+  min-width: 0;
+  font-size: 11px;
+  text-align: right;
+}
+.fight-records-head {
+  margin: 10px 0 6px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--p-cyan);
+}
+
+/* ---------- The fight HUD: the bars face each other under the header ---------- */
+.fight-hud {
+  position: absolute;
+  top: calc(var(--head-h) + 12px);
+  right: 16px;
+  left: 16px;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  color: #fff;
+  pointer-events: none;
+  animation: fight-hud-in 0.3s var(--ease);
+}
+.fight-hud[hidden] {
+  display: none;
+}
+@keyframes fight-hud-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+.fight-side,
+.fight-mid {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 7px 12px 8px;
+  border: 1px solid #0000;
+  border-radius: 14px;
+  background:
+    linear-gradient(#0b0a12e6, #0b0a12e6) padding-box,
+    var(--pulse) border-box;
+  box-shadow: 0 0 30px -10px #00eaffaa;
+}
+.fight-them {
+  justify-items: end;
+  text-align: right;
+}
+.fight-mid {
+  justify-items: center;
+  min-width: 96px;
+}
+.fight-name {
+  max-width: 100%;
+  margin: 0;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: #fff;
+}
+/* The bars: health in the gradient, stamina cyan; the opponent's health fills from the right */
+.fight-bar {
+  width: 100%;
+  height: 8px;
+  overflow: hidden;
+  border: 1px solid #ffffff2a;
+  border-radius: 999px;
+  background: #ffffff10;
+}
+.fight-bar i {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  transform: scaleX(var(--v, 1));
+  transform-origin: left;
+  transition: transform 0.12s linear;
+}
+.fight-bar.is-rev i {
+  transform-origin: right;
+}
+.fight-health i {
+  background: var(--pulse);
+  box-shadow: 0 0 8px #ff2fb966;
+}
+.fight-hud.is-low .fight-you .fight-health {
+  border-color: #ff3b3b88;
+}
+.fight-hud.is-low .fight-you .fight-health i {
+  background: #ff3b3b;
+  box-shadow: 0 0 10px #ff3b3b;
+}
+.fight-stamina {
+  height: 5px;
+  background: #ffffff0c;
+}
+.fight-stamina i {
+  background: var(--p-cyan);
+  box-shadow: 0 0 6px #00eaff88;
+}
+.fight-hud.is-empty .fight-stamina {
+  border-color: #ff3b3b66;
+}
+.fight-hud.is-empty .fight-stamina i {
+  background: #ff3b3b;
+  box-shadow: none;
+  opacity: 0.7;
+}
+/* The round and its clock (a spar shows "Spar" alone), the rounds won as pips */
+.fight-round {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--p-cyan);
+}
+.fight-clock {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: #fff;
+}
+.fight-hud.is-rest .fight-clock,
+.fight-hud.is-over .fight-clock {
+  color: var(--muted);
+}
+.fight-score {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+}
+.fight-score-pips {
+  display: inline-flex;
+  gap: 3px;
+}
+.fight-score-pips.is-them {
+  flex-direction: row-reverse;
+}
+.fight-score-pips i {
+  width: 8px;
+  height: 8px;
+  border: 1px solid #ffffff2a;
+  border-radius: 50%;
+  background: #ffffff14;
+}
+.fight-score-pips i.on {
+  border-color: var(--p-cyan);
+  background: var(--p-cyan);
+  box-shadow: 0 0 6px var(--p-cyan);
+}
+.fight-score-pips.is-them i.on {
+  border-color: #ff6ad5;
+  background: #ff6ad5;
+  box-shadow: 0 0 6px #ff6ad5;
+}
+.fight-hud.is-spar .fight-clock,
+.fight-hud.is-spar .fight-score {
+  display: none;
+}
+.fight-hud.is-spar .fight-round {
+  font-family: var(--font-display);
+  font-size: 20px;
+  letter-spacing: 0.04em;
+  color: #fff;
+}
+/* The chain pill and the Blocking tag under your bars */
+.fight-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-height: 18px;
+  margin: 0;
+}
+.fight-chain,
+.fight-blocking {
+  padding: 2px 8px;
+  border: 1px solid #0000;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.fight-chain[hidden],
+.fight-blocking[hidden] {
+  display: none;
+}
+.fight-chain {
+  background:
+    linear-gradient(#14102a, #14102a) padding-box,
+    var(--pulse) border-box;
+  color: #fff;
+  box-shadow: 0 0 14px -4px #ff2fb9;
+}
+.fight-chain.is-pop {
+  animation: fight-chain-pop 0.3s var(--ease);
+}
+@keyframes fight-chain-pop {
+  from {
+    transform: scale(1.3);
+  }
+}
+.fight-blocking {
+  border-color: #00eaff66;
+  color: var(--p-cyan);
+}
+.fight-quit {
+  padding: 6px 12px;
+  pointer-events: auto;
+}
+/* The centre stack: the bell's text over the count while someone's down. One block in the middle
+   of the screen so the two never land on each other, sized to clear the HUD above and the touch
+   buttons and the door prompt below on a phone. */
+.fight-centre {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 6;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  max-width: calc(100% - 24px);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+/* The count while someone's down: a big number, whose under it */
+.fight-knockdown {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+}
+.fight-knockdown[hidden] {
+  display: none;
+}
+.fight-knockdown b {
+  font-family: var(--font-display);
+  font-size: clamp(56px, 12vmin, 96px);
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+  filter: drop-shadow(0 2px 0 #05050a) drop-shadow(0 0 18px #00eaff88);
+}
+.fight-knockdown.is-you b {
+  color: #ff6ad5;
+  filter: drop-shadow(0 2px 0 #05050a) drop-shadow(0 0 18px #ff2fb988);
+}
+.fight-knockdown small {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: #fff;
+  text-shadow: 0 1px 0 #05050a, 0 0 10px #000;
+}
+/* The bell's text: the races' big digits in the stack (so sized by the width too: "Round 1" fits a
+   narrow phone), K.O. in the hot end of the gradient */
+.fight-count {
+  position: static;
+  font-size: clamp(56px, min(20vmin, 17vw), 180px);
+  max-width: 100%;
+  white-space: nowrap;
+  transform: none;
+}
+.fight-count.is-pop {
+  animation: fight-count-pop 0.6s var(--ease);
+}
+@keyframes fight-count-pop {
+  from {
+    opacity: 0;
+    transform: scale(1.5);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.fight-count.is-ko {
+  filter: drop-shadow(0 0 18px #ff2fb9cc) drop-shadow(0 0 40px #ff000066);
+}
+/* The pops: a short line under the HUD for a moment */
+.fight-pops {
+  position: absolute;
+  top: calc(var(--head-h) + 104px);
+  left: 50%;
+  z-index: 6;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  max-width: calc(100% - 32px);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.fight-pop {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: center;
+  white-space: nowrap;
+  color: #fff;
+  filter: drop-shadow(0 2px 0 #05050a) drop-shadow(0 0 12px #00eaff88);
+  animation: fight-pop 1.4s ease-out forwards;
+}
+.fight-pop.is-good {
+  background: var(--pulse-text);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 2px 0 #05050a) drop-shadow(0 0 12px #ff2fb988);
+}
+.fight-pop.is-bad {
+  color: #ff6ad5;
+  filter: drop-shadow(0 2px 0 #05050a) drop-shadow(0 0 12px #ff2fb988);
+}
+@keyframes fight-pop {
+  0% { opacity: 0; transform: scale(1.4); }
+  12% { opacity: 1; transform: scale(0.96); }
+  22% { transform: scale(1); }
+  78% { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: translateY(-10px); }
+}
+
+/* ---------- The bout card: the races' card, a column whose body scrolls so Done stays in reach ---------- */
+.fight-result {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: min(440px, calc(100% - 32px));
+  overflow: hidden;
+}
+.fight-result .shop-head,
+.fight-result-actions {
+  flex: none;
+}
+.fight-result .race-result-body {
+  flex: 1 1 auto;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  min-height: 0;
+  padding-right: 2px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+.fight-result .race-result-name,
+.fight-result .race-result-tags,
+.fight-result .race-meta {
+  grid-area: auto;
+}
+.fight-result.is-won .shop-title {
+  filter: drop-shadow(0 0 12px #00eaff66);
+}
+.fight-result.is-lost .shop-title {
+  background: linear-gradient(90deg, #ff4040, #ff409f 50%, #ef4ff0);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+/* A bout's rounds, you and them, big in the gradient; a spar shows its time instead */
+.fight-result-rounds {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 64px;
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  background: var(--pulse-text);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 14px #ff2fb966);
+}
+.fight-result-rounds span {
+  font-size: 40px;
+  color: var(--muted);
+  -webkit-text-fill-color: var(--muted);
+}
+.fight-result-time {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 56px;
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  background: var(--pulse-text);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 14px #ff2fb966);
+}
+.fight-result-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px 10px;
+  width: 100%;
+  margin: 2px 0 0;
+}
+.fight-result-meta > div {
+  justify-items: center;
+  padding: 6px 8px;
+  border: 1px solid #ffffff14;
+  border-radius: 9px;
+  background: #ffffff08;
+}
+.fight-paid {
+  margin-top: 2px;
+  padding-top: 10px;
+  border-top: 1px solid #ffffff14;
+  width: 100%;
+}
+.fight-paid dd {
+  font-size: 15px;
+}
+.fight-result .shop-note {
+  margin-top: 2px;
+}
+.fight-result-actions {
+  display: flex;
+  justify-content: center;
+}
+.fight-result-actions .shop-take {
+  grid-area: auto;
+  flex: 1 1 140px;
+  max-width: 240px;
+}
+
+/* ---------- The City-view panel ---------- */
+.fight-walkin {
+  cursor: pointer;
+}
+.fight-panel-record {
+  margin-top: 14px;
+}
+.fight-panel-record:empty {
+  display: none;
+}
+
+/* ---------- In the ring: the walk and combat HUD step aside ---------- */
+.fight-hint,
+.fight-btn {
+  display: none;
+}
+.city.is-fighting .walk-hint:not(.fight-hint),
+.city.is-fighting .walk-look,
+.city.is-fighting .walk-run,
+.city.is-fighting .walk-jump,
+.city.is-fighting .walk-fire,
+.city.is-fighting .walk-aim,
+.city.is-fighting .walk-reload,
+.city.is-fighting .walk-swap,
+.city.is-fighting .walk-crosshair,
+.city.is-fighting .combat-hud,
+.city.is-fighting .combat-cross,
+.city.is-fighting .drive-hint,
+.city.is-fighting .drive-hud,
+.city.is-fighting .city-pins,
+.city.is-fighting .mission-tracker {
+  display: none;
+}
+@media (pointer: fine) {
+  .city.is-fighting .fight-hint {
+    display: block;
+  }
+}
+/* Touch screens: the stick moves bottom-left as always; bottom-right Punch takes Fire's spot and
+   Dodge Jump's, with Block above Punch and Kick above Dodge, all clear of the phone's safe areas.
+   The door prompt goes above the cluster. */
+@media (pointer: coarse) {
+  .city.is-fighting .fight-btn {
+    position: absolute;
+    z-index: 4;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 1px solid #0000;
+    border-radius: 50%;
+    background:
+      linear-gradient(#0b0a12e6, #0b0a12e6) padding-box,
+      var(--pulse) border-box;
+    color: #fff;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    touch-action: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  .city.is-fighting .fight-punch {
+    right: max(100px, calc(env(safe-area-inset-right) + 94px));
+    bottom: max(34px, calc(env(safe-area-inset-bottom) + 22px));
+    width: 76px;
+    height: 76px;
+    font-size: 11px;
+    box-shadow: 0 0 24px -6px #ff2fb9;
+  }
+  .city.is-fighting .fight-dodge {
+    right: max(26px, calc(env(safe-area-inset-right) + 20px));
+    bottom: max(42px, calc(env(safe-area-inset-bottom) + 30px));
+    width: 60px;
+    height: 60px;
+  }
+  .city.is-fighting .fight-kick {
+    right: max(22px, calc(env(safe-area-inset-right) + 16px));
+    bottom: max(116px, calc(env(safe-area-inset-bottom) + 104px));
+    width: 68px;
+    height: 68px;
+    box-shadow: 0 0 24px -6px #00eaff;
+  }
+  .city.is-fighting .fight-block {
+    right: max(108px, calc(env(safe-area-inset-right) + 102px));
+    bottom: max(124px, calc(env(safe-area-inset-bottom) + 112px));
+    width: 62px;
+    height: 62px;
+  }
+  .fight-btn:active,
+  .fight-block[aria-pressed="true"] {
+    background:
+      var(--pulse-wash) padding-box,
+      linear-gradient(#14102a, #14102a) padding-box,
+      var(--pulse) border-box;
+  }
+  .fight-punch:active,
+  .fight-kick:active,
+  .fight-dodge:active {
+    transform: scale(0.94);
+  }
+  .fight-block[aria-pressed="true"] {
+    box-shadow: 0 0 20px -6px #00eaffaa;
+  }
+  .city.is-fighting .walk-prompt {
+    bottom: 204px;
+  }
+  .city.is-fighting .walk-stick {
+    display: grid;
+  }
+}
+/* Phones on their side: a smaller cluster lower down, the prompt just above it */
+@media (pointer: coarse) and (max-height: 500px) {
+  .city.is-fighting .fight-punch {
+    right: max(96px, calc(env(safe-area-inset-right) + 90px));
+    bottom: max(22px, calc(env(safe-area-inset-bottom) + 12px));
+    width: 64px;
+    height: 64px;
+    font-size: 10px;
+  }
+  .city.is-fighting .fight-dodge {
+    right: max(24px, calc(env(safe-area-inset-right) + 18px));
+    bottom: max(28px, calc(env(safe-area-inset-bottom) + 18px));
+    width: 52px;
+    height: 52px;
+    font-size: 9px;
+  }
+  .city.is-fighting .fight-kick {
+    right: max(18px, calc(env(safe-area-inset-right) + 12px));
+    bottom: max(92px, calc(env(safe-area-inset-bottom) + 82px));
+    width: 58px;
+    height: 58px;
+  }
+  .city.is-fighting .fight-block {
+    right: max(102px, calc(env(safe-area-inset-right) + 96px));
+    bottom: max(98px, calc(env(safe-area-inset-bottom) + 88px));
+    width: 54px;
+    height: 54px;
+    font-size: 9px;
+  }
+  /* The prompt sits at the bottom between the stick and the cluster, under the centre stack */
+  .city.is-fighting .walk-prompt {
+    bottom: max(22px, calc(env(safe-area-inset-bottom) + 12px));
+  }
+}
+/* Narrow phones: the cluster a touch tighter to the edge so the stick never touches it */
+@media (pointer: coarse) and (max-width: 360px) {
+  .city.is-fighting .fight-punch {
+    right: 92px;
+  }
+  .city.is-fighting .fight-block {
+    right: 100px;
+  }
+}
+
+/* ---------- Phones upright: the menu is the shop's bottom sheet ---------- */
+@media (max-width: 640px) {
+  .fight-menu {
+    max-height: min(64vh, calc(100% - var(--head-h) - 16px));
+  }
+  .fight-result {
+    width: auto;
+  }
+  .fight-result-rounds {
+    font-size: 52px;
+  }
+  .fight-result-rounds span {
+    font-size: 32px;
+  }
+  .fight-result-time {
+    font-size: 46px;
+  }
+  .fight-hud {
+    gap: 6px;
+  }
+  .fight-side,
+  .fight-mid {
+    padding: 6px 9px 7px;
+    border-radius: 12px;
+  }
+  .fight-clock {
+    font-size: 24px;
+  }
+  .fight-mid {
+    min-width: 80px;
+  }
+  .fight-pop {
+    font-size: 24px;
+  }
+  .fight-pops {
+    top: calc(var(--head-h) + 100px);
+  }
+}
+@media (max-width: 640px) and (max-height: 700px) {
+  .fight-menu .shop-foot {
+    display: none;
+  }
+}
+/* Where the menu is narrow (phones, and tablets where it takes half the screen), its head puts the
+   Dorras and level pills on a second row under the title; phones on their side keep one row */
+@media (max-width: 400px), (max-width: 900px) and (min-height: 501px) {
+  .fight-menu .shop-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "title close"
+      "pills pills";
+    gap: 8px 12px;
+  }
+  .fight-menu .shop-title {
+    grid-area: title;
+    white-space: nowrap;
+  }
+  .fight-menu .shop-close {
+    grid-area: close;
+  }
+  .fight-dorras {
+    grid-area: pills;
+    margin: 0;
+  }
+  .fight-dorras + .shop-score {
+    grid-area: pills;
+    justify-self: end;
+  }
+}
+/* Narrow phones: smaller type so the three blocks fit between the edges */
+@media (max-width: 400px) {
+  .fight-hud {
+    right: 10px;
+    left: 10px;
+    gap: 4px;
+  }
+  .fight-side,
+  .fight-mid {
+    gap: 4px;
+    padding: 5px 8px 6px;
+  }
+  .fight-name {
+    font-size: 9.5px;
+    letter-spacing: 0.06em;
+  }
+  .fight-mid {
+    min-width: 0;
+  }
+  .fight-round {
+    font-size: 8.5px;
+    letter-spacing: 0.08em;
+  }
+  .fight-hud.is-spar .fight-round {
+    font-size: 16px;
+  }
+  .fight-clock {
+    font-size: 20px;
+  }
+  .fight-tags {
+    min-height: 16px;
+  }
+  .fight-chain,
+  .fight-blocking {
+    padding: 1px 6px;
+    font-size: 8px;
+  }
+  .fight-quit {
+    padding: 5px 8px;
+    font-size: 8.5px;
+  }
+  .fight-tabs button {
+    padding: 7px 2px;
+    font-size: 9.5px;
+    letter-spacing: 0.04em;
+  }
+  .fight-result-meta {
+    gap: 6px;
+  }
+}
+/* Phones on their side: a tight column on the right that scrolls, the HUD a touch lower-key */
+@media (max-height: 500px) {
+  .fight-menu {
+    gap: 7px 0;
+    width: min(420px, 54%);
+  }
+  .fight-menu .shop-title {
+    font-size: 19px;
+  }
+  .fight-menu .shop-close {
+    width: 28px;
+    height: 28px;
+  }
+  .fight-card {
+    gap: 4px;
+    padding: 7px 10px;
+  }
+  .fight-menu .race-blurb {
+    display: none;
+  }
+  .fight-records > div {
+    padding: 5px 8px;
+  }
+  .fight-result .race-result-body {
+    gap: 4px;
+  }
+  .fight-result-rounds {
+    font-size: 44px;
+  }
+  .fight-result-rounds span {
+    font-size: 28px;
+  }
+  .fight-result-time {
+    font-size: 40px;
+  }
+  .fight-result-meta > div {
+    padding: 4px 6px;
+  }
+  /* What it paid on one line, so the card fits a phone on its side without scrolling */
+  .fight-paid {
+    padding-top: 6px;
+  }
+  .fight-paid > div {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+  }
+  .fight-paid dd {
+    font-size: 13px;
+  }
+  .fight-side,
+  .fight-mid {
+    gap: 4px;
+    padding: 5px 9px 6px;
+  }
+  .fight-clock {
+    font-size: 22px;
+  }
+  .fight-tags {
+    min-height: 0;
+  }
+  /* The pops go under your bars on the left, out of the centre stack's way */
+  .fight-pops {
+    top: calc(var(--head-h) + 86px);
+    left: 16px;
+    justify-items: start;
+    max-width: 44%;
+    transform: none;
+  }
+  .fight-pop {
+    font-size: 22px;
+    text-align: left;
+  }
+  .fight-centre {
+    top: 53%;
+    gap: 4px;
+  }
+  .fight-count {
+    font-size: clamp(48px, 16vmin, 72px);
+  }
+  .fight-knockdown b {
+    font-size: 48px;
+  }
+  .fight-knockdown small {
+    font-size: 9.5px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fight-menu,
+  .fight-hud,
+  .fight-chain.is-pop,
+  .fight-count.is-pop,
+  .fight-pop {
+    animation: none;
+  }
+  .fight-pop {
+    opacity: 1;
+  }
+  .fight-bar i {
+    transition: none;
   }
 }

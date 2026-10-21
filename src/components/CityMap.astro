@@ -613,6 +613,79 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     <p class="walk-hint kart-hint"><kbd>W</kbd><kbd>S</kbd> gas / brake · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>Space</kbd> drift · <kbd>E</kbd> item (<kbd>S</kbd> + <kbd>E</kbd> throws behind) · <kbd>Esc</kbd> quit</p>
     <button type="button" class="kart-btn kart-drift" data-kart-drift aria-label="Drift">Drift</button>
     <button type="button" class="kart-btn kart-item" data-kart-item aria-label="Use item"><span class="kart-item-icon" data-kart-item-icon></span><small>Item</small></button>
+    {/* The Fight Club (fight-ui.ts), opened at the trainer's counter or the City-view panel's Walk in.
+        data-fight: the trainer's menu (built on the gun store's .shop panel); data-fight-dorras and data-fight-level in
+        its head; data-fight-tabs the Spar / Bout / Record / Styles tabs (data-fight-tab); data-fight-body (painted);
+        data-fight-close its ×.
+        data-fight-hud: the fight HUD: your name (data-fight-you), health (data-fight-health) and stamina
+        (data-fight-stamina) left, the round (data-fight-round), the clock (data-fight-clock) and the rounds won
+        (data-fight-pips-you, data-fight-pips-them) in the middle, the opponent's name (data-fight-opponent) and health
+        (data-fight-opp-health) right, the chain pill (data-fight-chain) and the Blocking tag (data-fight-blocking) under
+        your bars and Quit (data-fight-quit) top right. The centre stack: the bell's big text (data-fight-count: Round 1,
+        FIGHT, K.O.) over the knockdown count (data-fight-knockdown: data-fight-count-n, data-fight-count-who).
+        data-fight-pops: short lines under the HUD. data-fight-result: the bout card; data-fight-result-title,
+        data-fight-result-body (painted), data-fight-result-ok (Done) and data-fight-result-close.
+        Touch, while .city.is-fighting (fight-ui.ts sets it with the HUD): data-fight-punch and data-fight-kick where
+        Fire and Aim sit, data-fight-block (held) above them and data-fight-dodge in Jump's spot; walk.ts wires them.
+        .fight-hint is the key line. */}
+    <section class="shop fight-menu" data-fight hidden aria-labelledby="fight-title">
+      <header class="shop-head">
+        <h2 id="fight-title" class="shop-title">Fight Club</h2>
+        <p class="shop-score fight-dorras"><span class="shop-score-label">Dorras</span> <span data-fight-dorras></span></p>
+        <p class="shop-score" data-fight-level>Level <b>1</b></p>
+        <button type="button" class="shop-close" data-fight-close aria-label="Close the Fight Club">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+        </button>
+      </header>
+      <div class="seg fight-tabs" data-fight-tabs role="group" aria-label="Fight Club">
+        <button type="button" data-fight-tab="spar" aria-pressed="true">Spar</button>
+        <button type="button" data-fight-tab="bout" aria-pressed="false">Bout</button>
+        <button type="button" data-fight-tab="record" aria-pressed="false">Record</button>
+        <button type="button" data-fight-tab="styles" aria-pressed="false">Styles</button>
+      </div>
+      <div class="fight-body" data-fight-body></div>
+      <p class="shop-foot">Prizes are Dorras and XP, earned in the ring. Nothing here is real money.</p>
+    </section>
+    <div class="fight-centre">
+      <div class="race-count fight-count" data-fight-count hidden aria-live="assertive"></div>
+      <div class="fight-knockdown" data-fight-knockdown hidden aria-live="polite"><b data-fight-count-n>3</b><small data-fight-count-who>Get up!</small></div>
+    </div>
+    <div class="fight-hud" data-fight-hud hidden>
+      <div class="fight-side fight-you">
+        <p class="fight-name" data-fight-you>You</p>
+        <div class="fight-bar fight-health" role="img" aria-label="Your health"><i data-fight-health></i></div>
+        <div class="fight-bar fight-stamina" role="img" aria-label="Your stamina"><i data-fight-stamina></i></div>
+        <p class="fight-tags"><span class="fight-chain" data-fight-chain hidden>2 hit chain</span><span class="fight-blocking" data-fight-blocking hidden>Blocking</span></p>
+      </div>
+      <div class="fight-mid">
+        <p class="fight-round" data-fight-round>Round 1/3</p>
+        <b class="fight-clock" data-fight-clock>1:30</b>
+        <p class="fight-score" aria-label="Rounds won"><span class="fight-score-pips" data-fight-pips-you></span><span class="fight-score-pips is-them" data-fight-pips-them></span></p>
+      </div>
+      <div class="fight-side fight-them">
+        <p class="fight-name" data-fight-opponent>Opponent</p>
+        <div class="fight-bar fight-health is-rev" role="img" aria-label="The opponent's health"><i data-fight-opp-health></i></div>
+        <button type="button" class="race-quit fight-quit" data-fight-quit>Quit</button>
+      </div>
+    </div>
+    <div class="fight-pops" data-fight-pops aria-live="polite"></div>
+    <section class="shop race-result fight-result" data-fight-result hidden aria-labelledby="fight-result-title">
+      <header class="shop-head">
+        <h2 id="fight-result-title" class="shop-title" data-fight-result-title>You win</h2>
+        <button type="button" class="shop-close" data-fight-result-close aria-label="Close the bout card">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+        </button>
+      </header>
+      <div class="race-result-body" data-fight-result-body></div>
+      <div class="fight-result-actions">
+        <button type="button" class="shop-take" data-fight-result-ok>Done</button>
+      </div>
+    </section>
+    <p class="walk-hint fight-hint"><kbd>Click</kbd> punch · <kbd>Right-click</kbd> kick · <kbd>Shift</kbd> block · <kbd>Space</kbd> dodge · <kbd>Esc</kbd> quit</p>
+    <button type="button" class="fight-btn fight-punch" data-fight-punch aria-label="Punch">Punch</button>
+    <button type="button" class="fight-btn fight-kick" data-fight-kick aria-label="Kick">Kick</button>
+    <button type="button" class="fight-btn fight-block" data-fight-block aria-label="Block (hold)">Block</button>
+    <button type="button" class="fight-btn fight-dodge" data-fight-dodge aria-label="Dodge">Dodge</button>
     <p class="walk-hint"><kbd>WASD</kbd> move · <kbd>Shift</kbd> run · <kbd>Space</kbd> jump · <kbd>V</kbd> camera · <kbd>Esc</kbd> stop</p>
     {/* Driving your car (drive.ts): speed readout, key hint, touch pedals (the stick steers) */}
     <p class="walk-hint drive-hint"><kbd>W</kbd><kbd>S</kbd> gas / brake · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>Space</kbd> handbrake · <kbd>V</kbd> camera · <kbd>E</kbd> get out</p>
@@ -762,6 +835,14 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     <button type="button" class="chip-link kart-walkin" data-kart-walkin>Walk in</button>
     {/* Your best laps, trophies and race counts (index.ts fills it with kartRecordsHtml() from kart-ui.ts) */}
     <div class="kart-panel-records" data-kart-panel-records></div>
+  </template>
+  <template data-panel-tpl="fightclub">
+    <p class="kicker"><span class="kicker-num">10</span> The south bank</p>
+    <h2 id="city-panel-title" class="city-panel-title">Fight Club</h2>
+    <p class="city-panel-text">A boxing gym on the south bank: a ring under a shed roof, bags, bleachers and the trainer's counter. Fight hand to hand in the ring: spar with the gym's own fighters for as long as you like, or take one on in a bout of three rounds, first to two. Bouts pay a prize and XP, in Dorras earned in the city, never real money. New fighting styles come to the trainer later.</p>
+    <button type="button" class="chip-link fight-walkin" data-fight-walkin>Walk in</button>
+    {/* Your record: wins, losses, knock-outs, best chain and each opponent (index.ts fills it with fightRecordHtml() from fight-ui.ts) */}
+    <div class="fight-panel-record" data-fight-panel-record></div>
   </template>
 
   <div class="city-hud" data-city-hud>
