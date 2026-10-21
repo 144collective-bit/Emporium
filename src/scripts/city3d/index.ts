@@ -18,12 +18,10 @@ import { buildAirport } from './airport';
 import { WORLD_BOUNDS } from './layout';
 import { loadCar } from './garage-ui';
 import { createProfileUI } from './profile-ui';
-import { createMultiplayer } from './multiplayer';
 import { createSky, type TimeMode, type WeatherMode } from './sky';
 import { createSound } from './sound';
 import { createPlots, type Plot } from './plots';
 import { createPlotStore } from './store';
-import { createOnlineSwitch } from './online';
 import type { Account } from './account';
 import type { AccountHooks, AccountUI } from './account-ui';
 import { createBuilderUI } from './builder-ui';
@@ -34,10 +32,12 @@ import { createTycoonUI, type TycoonUI } from './tycoon-ui';
 import { buildUnits } from './units';
 import { buildBigLots } from './biglots';
 import { buildBeacons } from './beacons';
-import { buildRaceSite } from './racesite';
 import { buildKartPark } from './kartpark3d';
 import { KART_SPAWN } from './kartpark';
 import { AIR_SPAWN } from './airfield';
+import { FIGHT_SPAWN } from './fightsite';
+import { buildFightClub } from './fightclub';
+import { fightRecordHtml } from './fight-ui';
 import { kartRecordsHtml } from './kart-ui';
 import { destAt } from './tycoon';
 import { guideAt } from './guide';
@@ -129,11 +129,14 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const bigLots = buildBigLots(scene);
   // Beams of light over your contracts' drop-offs
   const beacons = buildBeacons(scene, tick, reduced);
-  // The street races' start line on the south bank avenue, and the checkpoint markers
-  const raceSite = buildRaceSite(scene, tick, reduced);
   // The kart park outside the Parkway in the north-east: a place like the landmarks (its pin and panel)
   const kartPark = buildKartPark(scene, { tick, reduced, low: tier === 'low' });
   spots.push(kartPark.spot, airport.spot);
+  // The Fight Club on the south bank: a place too (its pin and panel)
+  const fightClub = buildFightClub(scene, { tick, reduced, low: tier === 'low' });
+  spots.push(fightClub.spot);
+  // ?fight: the sparring demo on the hangout square (the fight clips, before the Fight Club exists)
+  const fightDemo = new URLSearchParams(location.search).has('fight') ? (await import('./fight-demo')).buildFightDemo({ scene, root, reduced, low: tier === 'low', tick }) : null;
   progress(0.55);
   await nextFrame();
   scatterOutskirts(Q.trees);
@@ -162,6 +165,10 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const home = () => {
     const portrait = host.clientWidth < host.clientHeight;
     const k = portrait ? 1.3 : 1;
+    if (fightDemo) {
+      const s = fightDemo.spot;
+      return { pos: new THREE.Vector3(s.x + 1.2 * k, 2.6 * k, s.z + 4.8 * k), target: new THREE.Vector3(s.x, 0.8, s.z) };
+    }
     return { pos: CENTER.clone().add(new THREE.Vector3(27, 31, 34).multiplyScalar(k)), target: CENTER.clone().add(new THREE.Vector3(0, 3.4, 1)) };
   };
 
@@ -281,6 +288,15 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         close();
         startWalking(AIR_SPAWN);
       });
+    // The Fight Club's panel: your record, and Walk in (walk mode starts on its lot)
+    if (id === 'fightclub') {
+      const rec = panelBody.querySelector<HTMLElement>('[data-fight-panel-record]');
+      if (rec && tycoon) rec.innerHTML = fightRecordHtml(tycoon.save);
+      panelBody.querySelector('[data-fight-walkin]')?.addEventListener('click', () => {
+        close();
+        startWalking(FIGHT_SPAWN);
+      });
+    }
     panel.dataset.spot = id;
     panel.hidden = false;
     requestAnimationFrame(() => panel.classList.add('is-open'));
@@ -328,9 +344,12 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     toast: (text, ms) => tycoon!.toast(text, ms),
     sfx: (kind, gain) => sound.sfx(kind, gain),
   };
-  // A game server adds the Online / Offline switch (multiplayer); plots are the city's own game either way
+  // A game server adds the Online / Offline switch (multiplayer); plots are the city's own game either way.
+  // Without one (the live site, multiplayer paused) none of the net code is loaded or even bundled:
+  // the flag is fixed at build time, so these imports fall out of the production bundle
   const server = import.meta.env.PUBLIC_GAME_SERVER as string | undefined;
-  const onlineSwitch = server ? createOnlineSwitch(root) : null;
+  const net = server ? await Promise.all([import('./multiplayer'), import('./online')]) : null;
+  const onlineSwitch = net ? net[1].createOnlineSwitch(root) : null;
   // Logging in with a wallet (account.ts): the player's online profile
   const account = wallet?.account ?? null;
   const canvas = renderer.domElement;
@@ -358,7 +377,6 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     places: () => tycoon?.places() ?? [],
     openPlace: (id) => tycoon?.openCard(id as 'stall'),
     game,
-    raceSite,
     kartPark,
     raceConditions: (() => {
       // The visitor's own time and weather, kept while a race's conditions are on the sky
@@ -378,6 +396,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     })(),
     airTraffic: airport.traffic,
     aero: (kind, revs) => sound.aero(kind, revs),
+    fightClub,
     reduced,
     low: tier === 'low',
   });
@@ -451,8 +470,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     low: tier === 'low',
   });
   const mp =
-    server && onlineSwitch
-      ? createMultiplayer({
+    server && onlineSwitch && net
+      ? net[0].createMultiplayer({
           url: server,
           root,
           scene,
@@ -667,6 +686,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const statsEl = new URLSearchParams(location.search).has('fps') ? document.createElement('pre') : null;
   const stat = { frames: 0, draws: 0, tris: 0, worst: 0, last: 0, since: performance.now() };
   if (statsEl) {
+    // For the headless draw-call breakdown (scratch scripts): the scene, renderer and camera on the page
+    (window as unknown as { __city?: unknown }).__city = { scene, renderer, camera };
     statsEl.className = 'city-stats';
     statsEl.setAttribute('aria-hidden', 'true');
     host.append(statsEl);
@@ -698,8 +719,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // The city's own buttons and cards: a label under one folds to a dot, so the
   // Walk / Build pills never sit on top of a building's name. Re-read a few
   // times a second (they open, close and move with the layout)
-  // The header, its open drop-downs (settings, menu), the welcome card and the race HUD (while a race is on)
-  const chrome = [...root.querySelectorAll<HTMLElement>('.city-head, .head-panel, .city-card, .city-guide, .race-hud, .kart-hud, .fly-hud, .drive-hud')];
+  // The header, its open drop-downs (settings, menu), the welcome card, the guide and the kart, flight, drive and fight HUDs
+  const chrome = [...root.querySelectorAll<HTMLElement>('.city-head, .head-panel, .city-card, .city-guide, .kart-hud, .fly-hud, .drive-hud, .fight-demo, [data-fight-hud]')];
   const chromeRects: { x: number; y: number; w: number; h: number }[] = [];
   const readChrome = () => {
     const o = host.getBoundingClientRect();

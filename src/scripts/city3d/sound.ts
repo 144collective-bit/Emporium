@@ -368,31 +368,18 @@ export function createSound() {
           [660, 990].forEach((f, i) => tone(t + i * 0.12, 'triangle', f, f, 0.18, 0.22));
           tone(t + 0.26, 'triangle', 1320, 1320, 0.2, 0.4);
           break;
-        // Races: the countdown beeps, the GO, each checkpoint, the finish
+        // Kart races: the countdown beeps, the GO, the finish
         case 'countdown':
           tone(t, 'square', 440, 440, 0.18, 0.18);
           break;
         case 'go':
           tone(t, 'square', 880, 880, 0.22, 0.42);
           break;
-        case 'checkpoint':
-          tone(t, 'triangle', 1174, 1174, 0.16, 0.1);
-          tone(t + 0.07, 'triangle', 1760, 1760, 0.16, 0.16);
-          break;
         case 'finish':
           [784, 1046, 1318, 1568, 2093].forEach((f, i) => tone(t + i * 0.08, 'triangle', f, f, 0.18, 0.28));
           crack(t, 'bandpass', 1200, 0.6, 0.3, 0.3, true);
           break;
         // The crew on the south bank: a shove, and one going down
-        case 'shove':
-          tone(t, 'sine', 160, 60, 0.5, 0.15);
-          crack(t, 'lowpass', 600, 0.8, 0.4, 0.12);
-          break;
-        case 'goonDown':
-          tone(t, 'square', 420, 90, 0.14, 0.35);
-          crack(t, 'bandpass', 700, 0.8, 0.3, 0.2);
-          [880, 660, 440].forEach((f, i) => tone(t + 0.1 + i * 0.07, 'triangle', f, f, 0.08, 0.12));
-          break;
         // The kart park: a boost's whoosh, a cartoon boing when you're spun, a ding when you land one
         case 'kartBoost':
           tone(t, 'sawtooth', 180, 720, 0.16, 0.3);
@@ -454,6 +441,43 @@ export function createSound() {
           tone(t, 'sine', 1318, 1318, 0.14, 0.4);
           tone(t + 0.12, 'sine', 1760, 1760, 0.12, 0.5);
           tone(t + 0.24, 'sine', 2093, 2093, 0.1, 0.65);
+          break;
+        // The Fight Club: cartoon fisticuffs
+        case 'whoosh':
+          crack(t, 'bandpass', 1400, 0.7, 0.16, 0.1);
+          break;
+        case 'punch':
+          tone(t, 'sine', 140, 50, 0.6, 0.14);
+          crack(t, 'lowpass', 900, 0.9, 0.5, 0.09);
+          break;
+        case 'kick':
+          tone(t, 'sine', 110, 40, 0.7, 0.18);
+          crack(t, 'lowpass', 600, 0.9, 0.55, 0.12);
+          break;
+        case 'fightBlock':
+          crack(t, 'bandpass', 2200, 3, 0.35, 0.06);
+          tone(t, 'triangle', 520, 420, 0.18, 0.08);
+          break;
+        case 'parry':
+          tone(t, 'square', 880, 1320, 0.16, 0.08);
+          crack(t, 'bandpass', 3000, 4, 0.3, 0.05);
+          break;
+        case 'thud':
+          tone(t, 'sine', 70, 30, 0.8, 0.3);
+          crack(t, 'lowpass', 300, 0.7, 0.5, 0.2);
+          break;
+        case 'fightKo':
+          tone(t, 'sine', 80, 30, 0.9, 0.5, true);
+          crack(t, 'lowpass', 400, 0.6, 0.6, 0.3, true);
+          [660, 550, 440, 330].forEach((f, i) => tone(t + 0.2 + i * 0.12, 'triangle', f, f * 0.9, 0.12, 0.16));
+          break;
+        case 'bell':
+          tone(t, 'triangle', 1760, 1700, 0.3, 0.6, true);
+          tone(t, 'sine', 2640, 2600, 0.18, 0.5);
+          tone(t + 0.35, 'triangle', 1760, 1700, 0.26, 0.6, true);
+          break;
+        case 'count':
+          tone(t, 'square', 330, 330, 0.14, 0.1);
           break;
       }
     },

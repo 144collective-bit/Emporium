@@ -72,6 +72,8 @@ export interface Outfit {
   held?: 'gummy' | 'coffee' | 'boombox' | 'phone' | 'briefcase';
   /** Which hand carries a rifle (soldiers) */
   rifle?: 'left' | 'right';
+  /** Both hands closed into fists (fighting; the open hands are left off) */
+  fists?: boolean;
   /** Width and height multipliers, for a bit of variety in build */
   build?: number;
   height?: number;
@@ -98,7 +100,7 @@ export const SOLDIER: Outfit = {
 
 /* ---------- The rig ---------- */
 
-type Joint = 'pelvis' | 'torso' | 'head' | 'armL' | 'armR' | 'foreL' | 'foreR' | 'legL' | 'legR' | 'shinL' | 'shinR' | 'handL' | 'handR';
+type Joint = 'pelvis' | 'torso' | 'head' | 'armL' | 'armR' | 'foreL' | 'foreR' | 'legL' | 'legR' | 'shinL' | 'shinR' | 'wristL' | 'wristR' | 'handL' | 'handR';
 
 export interface Rig {
   root: THREE.Object3D;
@@ -123,6 +125,13 @@ const UPPER_ARM = 0.215;
 /** The middle of the palm in the forearm's space (the hand's centre) */
 const PALM_Y = 0.24;
 const PALM_Z = 0.006;
+/**
+ * The wrist joint, in the forearm's space: at the palm, where the hand socket
+ * was. The hand, the fist and the socket hang under it, so a wrist roll turns
+ * the fist over and a bend tips it, and at zero nothing has moved.
+ */
+const WRIST_Y = -PALM_Y - 0.01;
+const WRIST_Z = 0.015;
 const LEG_X = 0.08;
 const THIGH = 0.29;
 
@@ -141,8 +150,13 @@ function makeRig(): Rig {
   const armR = node(torso, SHOULDER_X, SHOULDER_Y);
   const foreL = node(armL, 0, -UPPER_ARM);
   const foreR = node(armR, 0, -UPPER_ARM);
-  const handL = node(foreL, 0, -PALM_Y - 0.01, 0.015);
-  const handR = node(foreR, 0, -PALM_Y - 0.01, 0.015);
+  const wristL = node(foreL, 0, WRIST_Y, WRIST_Z);
+  const wristR = node(foreR, 0, WRIST_Y, WRIST_Z);
+  // The roll is about the forearm's length, then the bend about the rolled wrist
+  wristL.rotation.order = 'YXZ';
+  wristR.rotation.order = 'YXZ';
+  const handL = node(wristL, 0, 0);
+  const handR = node(wristR, 0, 0);
   const legL = node(hips, -LEG_X, 0);
   const legR = node(hips, LEG_X, 0);
   const shinL = node(legL, 0, -THIGH);
@@ -162,6 +176,8 @@ function makeRig(): Rig {
       legR,
       shinL,
       shinR,
+      wristL,
+      wristR,
       handL,
       handR,
     },
@@ -179,6 +195,13 @@ export interface Limb {
   bend: number;
   /** Arms only: the upper arm turned about its own length (set by reachArm) */
   twist?: number;
+  /** Arms only: the wrist, absent or zero for the hand straight on the forearm (fighting turns the fist) */
+  wrist?: Wrist;
+}
+/** A wrist: `roll` turns the hand about the forearm's length (positive brings the thumb inward on a forward arm, so the palm faces down), `bend` tips it forward at the wrist (negative back) */
+export interface Wrist {
+  roll: number;
+  bend: number;
 }
 export interface Pose {
   bob: number;
@@ -219,6 +242,8 @@ function applyPose(r: Rig, p: Pose) {
     const a = p.arms[i];
     (i === 0 ? r.j.armL : r.j.armR).rotation.set(-a.fwd, a.twist ?? 0, s * a.out);
     (i === 0 ? r.j.foreL : r.j.foreR).rotation.set(-a.bend, 0, 0);
+    const w = a.wrist;
+    (i === 0 ? r.j.wristL : r.j.wristR).rotation.set(w ? -w.bend : 0, w ? w.roll : 0, 0, 'YXZ');
     const l = p.legs[i];
     (i === 0 ? r.j.legL : r.j.legR).rotation.set(-l.fwd, 0, s * l.out - p.side);
     (i === 0 ? r.j.shinL : r.j.shinR).rotation.set(l.bend, 0, 0);
@@ -230,6 +255,7 @@ const set = (l: Limb, fwd: number, out: number, bend: number) => {
   l.out = out;
   l.bend = bend;
   l.twist = 0;
+  if (l.wrist) l.wrist = undefined;
 };
 
 /**
@@ -745,7 +771,7 @@ function items(q: Detail): Item[] {
   const P = (joint: Joint, geo: THREE.BufferGeometry, color: string | ColorKey, extra: Partial<Piece> = {}): Piece => ({ joint, geo, color, ...extra });
   /** The same piece on both sides (one geometry, or one per side for things that sit on the outside) */
   const both = (
-    kind: 'arm' | 'fore' | 'leg' | 'shin' | 'hand',
+    kind: 'arm' | 'fore' | 'leg' | 'shin' | 'wrist' | 'hand',
     geo: THREE.BufferGeometry | THREE.BufferGeometry[],
     color: string | ColorKey,
     extra: Partial<Piece> = {}
@@ -1363,15 +1389,29 @@ function items(q: Detail): Item[] {
         ).map(plain)
       )!
   );
-  // A hand at rest: palm towards the leg, fingers curled, the thumb along the front
-  const hand = far
-    ? [new THREE.BoxGeometry(0.044, 0.11, 0.07).translate(0, -0.25, 0.008)]
-    : [
-        new THREE.CylinderGeometry(0.026, 0.028, 0.03, R(10)).translate(0, -0.2, 0.004),
-        rb(0.044, 0.072, 0.07, 0.019, 0, -0.236, 0.004),
-        rb(0.046, 0.046, 0.062, 0.019, 0, -0.28, 0.012),
-        new THREE.CapsuleGeometry(0.013, 0.03, 2, R(8)).rotateX(-0.45).translate(0, -0.238, 0.045),
-      ];
+  // A hand at rest: palm towards the leg, fingers curled, the thumb along the front.
+  // Drawn in the forearm's numbers and moved into the wrist's space (`onWrist`), so the wrist turns it
+  const onWrist = (list: THREE.BufferGeometry[]) => list.map((g) => g.translate(0, -WRIST_Y, -WRIST_Z));
+  const hand = onWrist(
+    far
+      ? [new THREE.BoxGeometry(0.044, 0.11, 0.07).translate(0, -0.25, 0.008)]
+      : [
+          new THREE.CylinderGeometry(0.026, 0.028, 0.03, R(10)).translate(0, -0.2, 0.004),
+          rb(0.044, 0.072, 0.07, 0.019, 0, -0.236, 0.004),
+          rb(0.046, 0.046, 0.062, 0.019, 0, -0.28, 0.012),
+          new THREE.CapsuleGeometry(0.013, 0.03, 2, R(8)).rotateX(-0.45).translate(0, -0.238, 0.045),
+        ]
+  );
+  // A closed fist: the same wrist, the fingers folded under into one rounded lump, the thumb across the front
+  const fist = onWrist(
+    far
+      ? [new THREE.BoxGeometry(0.05, 0.08, 0.072).translate(0, -0.242, 0.01)]
+      : [
+          new THREE.CylinderGeometry(0.026, 0.028, 0.03, R(10)).translate(0, -0.2, 0.004),
+          rb(0.052, 0.072, 0.074, 0.024, 0, -0.246, 0.012),
+          new THREE.CapsuleGeometry(0.012, 0.024, 2, R(8)).rotateZ(Math.PI / 2).translate(0, -0.228, 0.05),
+        ]
+  );
 
   /* ----- Shoes (in the shin's space: the sole is on the ground at -0.33) ----- */
   const G = -(HIP_Y - THIGH);
@@ -1873,7 +1913,7 @@ function items(q: Detail): Item[] {
         P('torso', one([vest, ...pouches]), '#3a4422'),
         ...both('arm', looseUpper, 'top'),
         ...both('fore', looseFore, 'top'),
-        ...both('fore', one(hand), '#2b2a33'),
+        ...both('wrist', one(hand), '#2b2a33'),
         P('pelvis', pelvis, 'bottom'),
         ...both('leg', cargoThigh, 'bottom'),
         ...both('leg', cargoPockets, 'bottom', { shade: 0.82, detail: true }),
@@ -1883,11 +1923,16 @@ function items(q: Detail): Item[] {
         ...both('shin', bootSole, '#14121a'),
       ],
     },
-    // Hands, trousers and shoes for everyone but soldiers
+    // Hands (open, or fists while fighting), trousers and shoes for everyone but soldiers
     {
       id: 'hands',
-      when: (o) => !soldier(o),
-      pieces: both('fore', one(hand), SKIN),
+      when: (o) => !soldier(o) && !o.fists,
+      pieces: both('wrist', one(hand), SKIN),
+    },
+    {
+      id: 'fists',
+      when: (o) => !soldier(o) && !!o.fists,
+      pieces: both('wrist', one(fist), SKIN),
     },
     {
       id: 'trousers',

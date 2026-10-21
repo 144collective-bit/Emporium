@@ -24,7 +24,7 @@
  *   pits (d.preview).
  *   Boards: a course and a class picker, the fastest lap, the par ghost,
  *   your own top-ten of time trials for that key, then your trophies and
- *   the counters the save keeps, and your laps from the old track (put away
+ *   the counters the save keeps, and your laps from the old tracks (put away
  *   by the rebuild). Global boards come with the game server.
  * - The HUD (`data-kart-hud`): the place and "of 8" top left (a time trial
  *   shows the gap to the ghost there instead) over the drift meter (three
@@ -68,8 +68,7 @@ import {
   type TycoonSave,
 } from './tycoon';
 import { CAR_PAINTS, paintHex, type PaintId } from './mycar';
-import { clockOf } from './races';
-import { D, LV, esc, fmt, repaint, whyNot } from './ui';
+import { D, LV, clockOf, esc, fmt, repaint, whyNot } from './ui';
 import type { KartHud, KartResultView, KartUI, KartUIDeps } from './kart-types';
 
 /** How many karts race a cup (you and seven rivals) */
@@ -77,7 +76,7 @@ const FIELD = 8;
 /** A single race's laps */
 const SINGLE_LAPS = 3;
 const COND_IDS = Object.keys(CONDS) as Cond[];
-/** The old track's courses, for the records it left (save v8 keeps them aside) */
+/** The tracks before this one, for the records they left (the old network, save v8; the circuit at full size, save v9) */
 const OLD_NAMES: Record<string, string> = {
   'neon-loop': 'Neon Loop',
   'neon-reverse': 'Neon Loop, reverse',
@@ -85,6 +84,8 @@ const OLD_NAMES: Record<string, string> = {
   'summit-reverse': 'Summit Run, reverse',
   grand: 'Grand Circuit',
   'grand-reverse': 'Grand Circuit, reverse',
+  'full-circuit': 'Sector 7 Circuit, full size',
+  'full-circuit-reverse': 'Sector 7 Circuit, full size, reverse',
 };
 /** How long a pop stays (ms) and how many at once */
 const POP_MS = 1400;
@@ -190,7 +191,7 @@ function countersHtml(s: TycoonSave) {
   <div><dt>Overtakes</dt><dd>${fmt.format(c.overtakes)}</dd></div>`;
 }
 
-/** Your laps from the old track, put away by the rebuild: best per course at any class (nothing when there are none) */
+/** Your laps from the old tracks (the network before the rebuild, the circuit at full size): best per course at any class (nothing when there are none) */
 function oldHtml(s: TycoonSave) {
   const best = new Map<string, KartTime>();
   for (const [key, t] of Object.entries(s.karts.old)) {
@@ -207,8 +208,8 @@ function oldHtml(s: TycoonSave) {
       return `  <div class="kart-record-time"><dt>${esc(OLD_NAMES[c])}</dt><dd>${clockOf(t.lap)}</dd></div>`;
     })
     .join('\n');
-  return `<h4 class="kart-board-title">The old track</h4>
-<p class="race-note">Your best laps on the track before the rebuild, kept for the memory. They don't count on the new circuit.</p>
+  return `<h4 class="kart-board-title">The old tracks</h4>
+<p class="race-note">Your best laps on the tracks before this one, kept for the memory. They don't count on the circuit as it is now.</p>
 <dl class="race-meta kart-records kart-old">
 ${rows}
 </dl>`;

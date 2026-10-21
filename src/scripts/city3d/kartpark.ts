@@ -4,9 +4,10 @@
  * buildings) is kartcircuit.ts; kart-sim.ts races on it, kartpark3d.ts draws
  * it, kart.ts is the race's view.
  *
- * - The site is a 140 x 144 rectangle of open land north of the Parkway's
- *   top, out to the world's edge, fenced, with a gate on its south side and
- *   a slip road down to the Parkway. Everything inside is drawn in local
+ * - The site is an 88 x 90 rectangle of open land north of the Parkway's
+ *   top (pulled in round the circuit when it was scaled down; the land
+ *   north and east of it is the outskirts' again), fenced, with a gate on
+ *   its south side and a slip road down to the Parkway. Everything inside is drawn in local
  *   numbers: u east from the site's west edge, v south from its north edge
  *   (world x = X0 + u, z = Z0 + v).
  * - A `Line` is a centre line sampled every half tile from control points
@@ -20,16 +21,16 @@
 
 export type Pt = [number, number];
 
-/** The site, in world units: x0, z0, x1, z1 (to the world's edge north and east) */
-export const KART_PARK = { x0: 92, z0: -192, x1: 232, z1: -48 } as const;
+/** The site, in world units: x0, z0, x1, z1 */
+export const KART_PARK = { x0: 92, z0: -138, x1: 180, z1: -48 } as const;
 const X0 = KART_PARK.x0 + 2;
 const Z0 = KART_PARK.z0 + 2;
 /** Local numbers: u east, v south, inside a 2-wide margin */
 export const toWorld = ([u, v]: Pt): Pt => [X0 + u, Z0 + v];
 export const toLocal = ([x, z]: Pt): Pt => [x - X0, z - Z0];
 /** The local frame's size (the site inside its margins) */
-export const SITE_U = 136;
-export const SITE_V = 140;
+export const SITE_U = 84;
+export const SITE_V = 86;
 
 /** A kart's radius (for bumping), length and width (the models in karts.ts keep to these) */
 export const KART_R = 0.5;
@@ -51,6 +52,8 @@ export interface CPt {
   v: number;
   /** Height (cosine-interpolated along to the next point) */
   h?: number;
+  /** The height glides through this point: one cosine from the point before to the point after that set theirs (a long ramp round a bend) */
+  glide?: boolean;
   /** Banking in radians, the right side up when positive (linear along) */
   roll?: number;
   grip?: number;
@@ -157,9 +160,19 @@ export function sampleLine(pts: CPt[], step: number, closed: boolean, before?: C
     const s0 = at[c];
     const s1 = closed && c === n - 1 ? L : at[Math.min(at.length - 1, c + 1)];
     const t = s1 > s0 ? Math.min(1, Math.max(0, (s - s0) / (s1 - s0))) : 0;
-    const h0 = p0.h ?? 0;
-    const h1 = p1.h ?? 0;
-    y[i] = h0 + (h1 - h0) * 0.5 * (1 - Math.cos(Math.PI * t));
+    // The height: a cosine between the nearest points either side that set theirs (gliding points are passed through)
+    const wrap = (k: number) => (closed ? ((k % n) + n) % n : Math.max(0, Math.min(n - 1, k)));
+    const pos = (k: number) => (closed ? at[wrap(k)] + Math.floor(k / n) * L : at[wrap(k)]);
+    let lo = c;
+    while (pts[wrap(lo)].glide && (closed ? lo > c - n : lo > 0)) lo--;
+    let hi = c + 1;
+    while (pts[wrap(hi)].glide && (closed ? hi < c + 1 + n : hi < n - 1)) hi++;
+    const sa = pos(lo);
+    const sb = pos(hi);
+    const ha = pts[wrap(lo)].h ?? 0;
+    const hb = pts[wrap(hi)].h ?? 0;
+    const th = sb > sa ? Math.min(1, Math.max(0, (s - sa) / (sb - sa))) : 0;
+    y[i] = ha + (hb - ha) * 0.5 * (1 - Math.cos(Math.PI * th));
     roll[i] = (p0.roll ?? 0) + ((p1.roll ?? 0) - (p0.roll ?? 0)) * t;
     grip[i] = p0.grip ?? GRIP.dry;
     flags[i] = p0.f ?? 0;

@@ -115,7 +115,29 @@ export function paintMat() {
   return (paintShared ??= new THREE.MeshToonMaterial({ color: '#ffffff', gradientMap: gradient, vertexColors: true }));
 }
 const neonShared = new Map<string, THREE.MeshBasicMaterial>();
-/** Neon with the same brightness by day and night (and flicker) shares one material; its colour is per vertex */
+/** How dark it is, 0 by day to 1 at night, for the shared neon's shader */
+const nightU = { value: 0 };
+let neonAll: THREE.MeshBasicMaterial | null = null;
+/**
+ * The one material every steady neon in a Batch shares: its colour per
+ * vertex, and each vertex's own day and night brightness in a `lit`
+ * attribute, mixed by the time of day in the shader. So a Batch's neon is
+ * one draw whatever brightnesses it mixes. Flickering neon keeps a material
+ * per brightness (`neonMat`), since the flicker is driven on the material.
+ */
+function neonAllMat() {
+  if (neonAll) return neonAll;
+  neonAll = new THREE.MeshBasicMaterial({ color: '#ffffff', vertexColors: true, toneMapped: true });
+  neonAll.onBeforeCompile = (shader) => {
+    shader.uniforms.uNight = nightU;
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', '#include <common>\nattribute vec2 lit;\nuniform float uNight;')
+      .replace('#include <color_vertex>', '#include <color_vertex>\nvColor.rgb *= mix(lit.x, lit.y, uNight);');
+  };
+  neonAll.customProgramCacheKey = () => 'neon-lit';
+  return neonAll;
+}
+/** Flickering neon with the same brightness by day and night shares one material; its colour is per vertex */
 function neonMat(day: number, night: number, flicker: number) {
   const key = `${day}|${night}|${flicker}`;
   let m = neonShared.get(key);
@@ -136,14 +158,29 @@ export function paintVertices(g: THREE.BufferGeometry, c: THREE.Color) {
   return g;
 }
 
+/** Give every vertex the same day and night brightness (for the shared neon) */
+function litVertices(g: THREE.BufferGeometry, day: number, night: number) {
+  const n = g.attributes.position.count;
+  const a = new Float32Array(n * 2);
+  for (let i = 0; i < a.length; i += 2) {
+    a[i] = day;
+    a[i + 1] = night;
+  }
+  g.setAttribute('lit', new THREE.BufferAttribute(a, 2));
+  return g;
+}
+
 /**
  * The shared material a material folds into in a Batch, and the colour its
  * vertices take (null if it keeps its own: textures, glass, special shaders).
  */
-export function sharedFor(mat: THREE.Material): { mat: THREE.Material; color: THREE.Color } | null {
+export function sharedFor(mat: THREE.Material): { mat: THREE.Material; color: THREE.Color; lit?: [number, number] } | null {
   const u = mat.userData as { paint?: boolean; neon?: { color: THREE.Color; day: number; night: number; flicker: number } };
   if (u.paint) return { mat: paintMat(), color: (mat as THREE.MeshToonMaterial).color };
-  if (u.neon) return { mat: neonMat(u.neon.day, u.neon.night, u.neon.flicker), color: u.neon.color };
+  if (u.neon) {
+    if (u.neon.flicker) return { mat: neonMat(u.neon.day, u.neon.night, u.neon.flicker), color: u.neon.color };
+    return { mat: neonAllMat(), color: u.neon.color, lit: [u.neon.day, u.neon.night] };
+  }
   return null;
 }
 
@@ -179,6 +216,7 @@ export function unlit(mat: THREE.Material) {
 }
 
 export function updateLights(night: number, t: number) {
+  nightU.value = night;
   for (const l of lits) {
     let v = l.day + (l.night - l.day) * night;
     if (l.flicker) {
@@ -376,7 +414,9 @@ function ensureUv(g: THREE.BufferGeometry) {
  * Collects static geometry per material and merges it into one mesh each.
  * Plain colours (`toon()` without options) and `neon()` fold into shared
  * materials with the colour per vertex (`sharedFor()`), so all of a Batch's
- * plain colours are one draw call, and its neon one per brightness.
+ * plain colours are one draw call and its steady neon another (each vertex
+ * carries its day and night brightness; only flickering neon is one per
+ * brightness).
  */
 export class Batch {
   private parts = new Map<THREE.Material, THREE.BufferGeometry[]>();
@@ -388,6 +428,7 @@ export class Batch {
     const shared = sharedFor(mat);
     if (shared) {
       paintVertices(g, shared.color);
+      if (shared.lit) litVertices(g, shared.lit[0], shared.lit[1]);
       mat = shared.mat;
     }
     if (!this.parts.has(mat)) this.parts.set(mat, []);

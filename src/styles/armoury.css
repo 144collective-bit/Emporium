@@ -306,14 +306,6 @@
   }
 }
 
-/* A shove from the crew on the south bank (combat.ts puts `is-shoved` on the city root for a
-   moment): a quick red-violet flash round the edges, over the night vignette (global.css) */
-.city.is-shoved::after {
-  box-shadow:
-    inset 0 0 140px 30px #05050ab3,
-    inset 0 0 110px 44px #d8229ecc;
-  animation: shove-flash 0.3s ease-out both;
-}
 @keyframes shove-flash {
   from {
     box-shadow:
@@ -327,7 +319,4 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .city.is-shoved::after {
-    animation: none;
-  }
 }
