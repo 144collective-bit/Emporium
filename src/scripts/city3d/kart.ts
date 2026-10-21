@@ -1,9 +1,9 @@
 /*
  * The kart race on screen. kart-sim.ts holds the rules (the karts, the
- * rivals, the items, the places); this is the view: the karts and their
- * drivers placed from the sim every frame, the drift sparks, boost flames
- * and shields, the oil slicks, glow trails, gummy bombs and homing pigeons,
- * the chase camera, the sounds and the HUD (painted through kart-ui.ts),
+ * rivals, the places); this is the view: the karts and their drivers placed
+ * from the sim every frame, the drift sparks, boost flames, dust off the
+ * run-off and spray in the rain, the chase camera, the sounds and the HUD
+ * (painted through kart-ui.ts),
  * and the results paid through tycoon.ts (`finishKartRace`) once you cross
  * the line. Between races it keeps one kart on show in the pits.
  *
@@ -36,7 +36,8 @@ import type { Sfx } from './combat';
 import type { ClassId } from './catalog';
 import { COUNTDOWN, CUPS, NO_INPUT, T, TICK, createKartSim, tune, type CupId, type KartEvent, type KartInput, type KartSim, type Racer } from './kart-sim';
 import type { KartHud, KartRace, KartRaceDeps, KartResultView, KartStanding } from './kart-types';
-import { COURSES, F, HUT_DOOR, along, yawAt, type Course, type CourseId } from './kartpark';
+import { COURSES, type Course, type CourseId, type Cond } from './kartcircuit';
+import { F, HUT_DOOR, along } from './kartpark';
 import { createKart, type Kart } from './karts';
 import { fx, glowMat, glowTex, mergeMeshes, toon } from './kit';
 import { KART_SPECS, PLAYER_KARTS, type KartId, type MyKart } from './mykart';
@@ -63,18 +64,13 @@ const lineup = (cup: CupId) => Array.from({ length: 7 }, (_, i) => LINEUP[(i + C
 /* ---------- Sizes ---------- */
 
 const MAX_SPARKS = 192;
-const MAX_OIL = 8;
-const MAX_TRAIL = 40;
-const MAX_GUMMY = 8;
-const MAX_PIGEON = 8;
 /** How far a rival's sounds carry (tiles), and how loud they are then */
 const HEAR = 12;
 const HEAR_GAIN = 0.35;
 /** The sparks' colours by drift stage */
 const SPARK = ['#f3f2f7', '#f3f2f7', '#00eaff', '#ff2fb9'];
-const CANDY = ['#e23b3b', '#1fbf6b', '#ffd23f', '#ff6ad5', '#ff8a3d', '#00c2ff', '#8000ff', '#e219e5'];
 
-/** The dust off the dirt and the spray off the wet bend (the spark pool, small and dim) */
+/** The dust off the run-off and the spray in the rain (the spark pool, small and dim) */
 const DUST = '#6b4f2e';
 const SPRAY = '#8fcbff';
 /** Ghost karts: yours and par's */
@@ -239,7 +235,6 @@ interface View {
   pitch: number;
   lastSpeed: number;
   flames: THREE.Mesh[];
-  shield: THREE.Mesh;
 }
 
 export function createKartRace(d: KartRaceDeps): KartRace {
@@ -249,7 +244,8 @@ export function createKartRace(d: KartRaceDeps): KartRace {
   scene.add(group);
 
   let sim: KartSim | null = null;
-  let course: CourseId = 'neon-loop';
+  let course: CourseId = 'circuit';
+  let cond: Cond = 'day';
   let cup: CupId | 'time' = 'time';
   let cls: ClassId = 'sport';
   /** The series this race is part of (a cup): which race of how many */
@@ -290,90 +286,17 @@ export function createKartRace(d: KartRaceDeps): KartRace {
   let sparkNext = 0;
   const sparkColor = new THREE.Color();
 
-  // Boost flames (two cones an exhaust) and shields (a sphere) share a material each
+  // Boost flames (two cones an exhaust) share a material
   const flameGeo = new THREE.ConeGeometry(0.07, 0.34, 7).rotateZ(Math.PI / 2);
   const flameMat = glowMat('#ff9a3d', 0.9, null);
-  const shieldGeo = new THREE.SphereGeometry(0.95, 18, 12);
-  const shieldMat = new THREE.MeshBasicMaterial({ color: '#00eaff', transparent: true, opacity: 0.2, depthWrite: false, fog: false });
   // Ghost karts: every part in one see-through colour, never inked
   const ghostMat = {
     yours: new THREE.MeshBasicMaterial({ color: GHOST_YOURS, transparent: true, opacity: 0.35, depthWrite: false, fog: false }),
     par: new THREE.MeshBasicMaterial({ color: GHOST_PAR, transparent: true, opacity: 0.35, depthWrite: false, fog: false }),
   };
-  // Oil slicks: flat dark glossy discs, instanced
-  const oilGeo = new THREE.CircleGeometry(0.7, 20).rotateX(-Math.PI / 2);
-  const oilMat = toon('#0c0b14', { name: 'kart-oil' });
-  const oil = new THREE.InstancedMesh(oilGeo, oilMat, MAX_OIL);
-  oil.count = 0;
-  oil.frustumCulled = false;
-  group.add(oil);
-  // Glow trails: short lit quads, instanced, each fading through its colour
-  const trailGeo = new THREE.PlaneGeometry(0.8, 0.6).rotateX(-Math.PI / 2);
-  const trail = fx(new THREE.InstancedMesh(trailGeo, glowMat('#ffffff', 0.85, null), MAX_TRAIL));
-  trail.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(MAX_TRAIL * 3), 3);
-  trail.count = 0;
-  trail.frustumCulled = false;
-  group.add(trail);
   const M = new THREE.Matrix4();
   const Q = new THREE.Quaternion();
   const V = new THREE.Vector3();
-  const ONE = new THREE.Vector3(1, 1, 1);
-  const UP = new THREE.Vector3(0, 1, 0);
-  const C = new THREE.Color();
-
-  // Gummy bombs: a candy blob with ears and eyes, one merged mesh each, a colour a slot
-  const gummies: THREE.Group[] = [];
-  for (let i = 0; i < MAX_GUMMY; i++) {
-    const body = new THREE.Mesh(new THREE.SphereGeometry(0.33, 14, 10).scale(1, 1.1, 0.9), toon(CANDY[i]));
-    const ears = [-1, 1].map((s) => {
-      const e = new THREE.Mesh(new THREE.SphereGeometry(0.12, 10, 8), toon(CANDY[i]));
-      e.position.set(0, 0.3, s * 0.2);
-      return e;
-    });
-    const eyes = [-1, 1].map((s) => {
-      const e = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 6), toon('#16141f'));
-      e.position.set(0.28, 0.08, s * 0.12);
-      return e;
-    });
-    const g = mergeMeshes([body, ...ears, ...eyes]);
-    for (const m of [body, ...ears, ...eyes]) m.geometry.dispose();
-    g.visible = false;
-    gummies.push(g);
-    group.add(g);
-  }
-  // Homing pigeons: a body with a head and beak, a tail, and two wings that flap
-  const pigeons: { g: THREE.Group; wings: [THREE.Mesh, THREE.Mesh] }[] = [];
-  const wingGeo = new THREE.BoxGeometry(0.22, 0.02, 0.3).translate(0, 0, 0.15);
-  const wingMat = toon('#c9c4e6');
-  for (let i = 0; i < MAX_PIGEON; i++) {
-    const body = new THREE.Mesh(new THREE.SphereGeometry(0.14, 12, 9).scale(1.5, 0.9, 1), toon('#9a96b8'));
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.085, 10, 8), toon('#8d89b0'));
-    head.position.set(0.2, 0.1, 0);
-    const beak = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.1, 6).rotateZ(-Math.PI / 2), toon('#ffad33'));
-    beak.position.set(0.3, 0.09, 0);
-    const tail = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.02, 0.14), toon('#8d89b0'));
-    tail.position.set(-0.24, 0.03, 0);
-    tail.rotation.z = 0.3;
-    const eyes = [-1, 1].map((s) => {
-      const e = new THREE.Mesh(new THREE.SphereGeometry(0.02, 6, 5), toon('#16141f'));
-      e.position.set(0.26, 0.13, s * 0.06);
-      return e;
-    });
-    const g = mergeMeshes([body, head, beak, tail, ...eyes]);
-    for (const m of [body, head, beak, tail, ...eyes]) m.geometry.dispose();
-    const wing = (s: number) => {
-      const w = new THREE.Mesh(wingGeo, wingMat);
-      w.position.set(0, 0.06, s * 0.08);
-      w.rotation.y = s < 0 ? Math.PI : 0;
-      w.castShadow = true;
-      g.add(w);
-      return w;
-    };
-    const wings: [THREE.Mesh, THREE.Mesh] = [wing(-1), wing(1)];
-    g.visible = false;
-    pigeons.push({ g, wings });
-    group.add(g);
-  }
 
   /* ---------- The camera ---------- */
 
@@ -471,12 +394,6 @@ export function createKartRace(d: KartRaceDeps): KartRace {
           finishAt = 1.5;
         }
         break;
-      case 'shortcut':
-        if (e.on) {
-          sfx('kartShortcut', e.kart);
-          if (e.kart === me) d.ui.pop('Shortcut!', 'good');
-        }
-        break;
       case 'boost':
         sfx('kartBoost', e.kart);
         if (e.kart === me && e.tier >= 3) d.ui.pop('Boost!', 'good');
@@ -484,24 +401,25 @@ export function createKartRace(d: KartRaceDeps): KartRace {
       case 'pad':
         sfx('kartBoost', e.kart, 0.5);
         break;
-      case 'hit':
+      case 'spin':
         if (e.kart === me) {
           d.sfx('kartHit');
-          d.ui.pop(e.item === 'trail' ? 'Slowed' : 'Spun out', 'bad');
-          if (e.item !== 'trail') shake = 0.18;
+          d.ui.pop('Spun out', 'bad');
+          shake = 0.18;
         } else if (e.by === me) d.sfx('kartHitLanded');
         else sfx('kartHit', e.kart, 0.7);
-        if (e.item !== 'trail') views[e.kart].spinDir = e.kart % 2 ? -1 : 1;
+        views[e.kart].spinDir = e.kart % 2 ? -1 : 1;
         break;
-      case 'shield':
-        sfx('kartShield', e.kart);
-        if (e.kart === me) d.ui.pop('Shield!', 'good');
+      case 'offtrack':
+        if (e.on && e.kart === me) d.sfx('bump', 0.25);
         break;
-      case 'item':
-        sfx('kartItem', e.kart);
+      case 'reset':
+        if (e.kart === me) d.ui.pop('Back on track', 'bad');
         break;
-      case 'use':
-        sfx('kartUse', e.kart);
+      case 'clean':
+        if (e.kart === me) d.ui.pop('Clean lap', 'good');
+        break;
+      case 'overtake':
         break;
       case 'drift':
         if (e.on) sfx('kartDrift', e.kart);
@@ -521,11 +439,6 @@ export function createKartRace(d: KartRaceDeps): KartRace {
           d.sfx('bump', Math.min(1, e.force / 7));
           shake = Math.max(shake, Math.min(0.12, e.force * 0.015));
         } else sfx('bump', e.kart, Math.min(1, e.force / 7));
-        break;
-      case 'wall':
-        sfx('bump', e.kart, 0.3);
-        break;
-      case 'box':
         break;
     }
   }
@@ -587,7 +500,7 @@ export function createKartRace(d: KartRaceDeps): KartRace {
       v.kart.lean(k.drift !== 0 ? k.drift : k.steer * 0.4);
       v.kart.look(-k.steer * 0.45 - k.drift * 0.3);
     }
-    // Boost flames flicker; the shield breathes
+    // Boost flames flicker
     const flames = boost > 0;
     for (const f of v.flames) {
       f.visible = flames;
@@ -595,11 +508,6 @@ export function createKartRace(d: KartRaceDeps): KartRace {
         const s = 0.8 + Math.random() * 0.5;
         f.scale.set(s * (k.boostK > 1.35 ? 1.3 : 1), s * 0.8, s * 0.8);
       }
-    }
-    v.shield.visible = k.shield;
-    if (k.shield) {
-      const s = 1 + Math.sin(performance.now() * 0.006) * 0.04;
-      v.shield.scale.setScalar(s);
     }
   }
 
@@ -664,65 +572,9 @@ export function createKartRace(d: KartRaceDeps): KartRace {
     sparks.visible = live > 0;
   }
 
-  function placeHazards(t: number) {
-    if (!sim) return;
-    let no = 0;
-    let nt = 0;
-    const c = sim.course;
-    for (const h of sim.hazards) {
-      if (h.kind === 'oil') {
-        if (no >= MAX_OIL) continue;
-        M.compose(V.set(h.x, h.y + 0.02, h.z), Q.identity(), ONE);
-        oil.setMatrixAt(no++, M);
-      } else {
-        if (nt >= MAX_TRAIL) continue;
-        // The quad lies along the track where it was laid, bright when fresh, fading out through its colour
-        M.compose(V.set(h.x, h.y + 0.025, h.z), Q.setFromAxisAngle(UP, yawAt(c, h.s)), ONE);
-        trail.setMatrixAt(nt, M);
-        const k = Math.min(1, h.t / T.trailLife) * (0.6 + 0.4 * Math.abs(Math.sin(t * 6 + h.s)));
-        C.set(paintOf(h.owner)).multiplyScalar(0.3 + k * 0.9);
-        trail.setColorAt(nt++, C);
-      }
-    }
-    oil.count = no;
-    oil.instanceMatrix.needsUpdate = true;
-    trail.count = nt;
-    trail.instanceMatrix.needsUpdate = true;
-    if (trail.instanceColor) trail.instanceColor.needsUpdate = true;
-  }
-  const paints: string[] = [];
-  const paintOf = (i: number) => paints[i] ?? '#00eaff';
-
-  function placeMissiles(dt: number, t: number) {
-    if (!sim) return;
-    let ng = 0;
-    let np = 0;
-    for (const p of sim.missiles) {
-      if (p.kind === 'gummy') {
-        if (ng >= MAX_GUMMY) continue;
-        const g = gummies[ng++];
-        g.visible = true;
-        g.position.set(p.x, p.y, p.z);
-        g.rotation.y += dt * 5;
-        g.rotation.z = Math.sin(t * 7 + ng) * 0.15;
-      } else {
-        if (np >= MAX_PIGEON) continue;
-        const b = pigeons[np++];
-        b.g.visible = true;
-        b.g.position.set(p.x, p.y + Math.sin(t * 9 + np) * 0.04, p.z);
-        b.g.rotation.y = p.yaw;
-        const flap = Math.sin(t * 24 + np) * 0.7;
-        b.wings[0].rotation.x = -flap;
-        b.wings[1].rotation.x = flap;
-      }
-    }
-    for (let i = ng; i < MAX_GUMMY; i++) gummies[i].visible = false;
-    for (let i = np; i < MAX_PIGEON; i++) pigeons[i].g.visible = false;
-  }
-
   /* ---------- Building and clearing a race ---------- */
 
-  /** A kart on the grid with its driver (a Degen in `outfit` at `detail`), its flames and its shield */
+  /** A kart on the grid with its driver (a Degen in `outfit` at `detail`) and its flames */
   function buildView(k: Racer, paint: string, outfit: Outfit | null, detail: 0 | 1 | 2): View {
     const kart = createKart(k.kart, paint, { detail: d.low ? 1 : 2 });
     const holder = new THREE.Group();
@@ -743,11 +595,7 @@ export function createKartRace(d: KartRaceDeps): KartRace {
       kart.group.add(f);
       return f;
     });
-    const shield = fx(new THREE.Mesh(shieldGeo, shieldMat));
-    shield.position.y = 0.45;
-    shield.visible = false;
-    kart.group.add(shield);
-    return { kart, degen, holder, spinDir: 1, roll: 0, bank: 0, pitch: 0, lastSpeed: 0, flames, shield };
+    return { kart, degen, holder, spinDir: 1, roll: 0, bank: 0, pitch: 0, lastSpeed: 0, flames };
   }
 
   /** A ghost kart: the lap's kart in one see-through colour, no driver, never inked, hidden until the lap starts */
@@ -836,17 +684,12 @@ export function createKartRace(d: KartRaceDeps): KartRace {
       v.holder.removeFromParent();
     }
     views = [];
-    paints.length = 0;
     sim = null;
     clearGhost(yours);
     clearGhost(par);
     yours = par = null;
     rec.reset();
     lapSamples = [];
-    for (const g of gummies) g.visible = false;
-    for (const p of pigeons) p.g.visible = false;
-    oil.count = 0;
-    trail.count = 0;
     sparkLife.fill(0);
     sparkPos.fill(-999);
     sparks.visible = false;
@@ -871,7 +714,7 @@ export function createKartRace(d: KartRaceDeps): KartRace {
     const p = s.player;
     const save = d.game.save();
     const laps = lapTimes.slice();
-    const result = finishKartRace(save, { course, cup, cls, place: p.place, seconds: p.finishT, laps, hits: p.hits, now: Date.now() });
+    const result = finishKartRace(save, { course, cup, cls, place: p.place, seconds: p.finishT, laps, clean: p.cleanLaps, overtakes: p.overtakes, now: Date.now() });
     // A cup's race counts for its series: everyone's place by grid index (the rivals, then you)
     let series: KartResultView['series'] = null;
     if (cup !== 'time') {
@@ -931,6 +774,7 @@ export function createKartRace(d: KartRaceDeps): KartRace {
       if (active) clearRace();
       course = setup.course;
       cup = setup.cup;
+      cond = setup.cond ?? 'day';
       const save = d.game.save();
       const model = save.karts.model;
       // A cup runs at its own class and is a series: begin one unless that cup's is on the go
@@ -942,13 +786,15 @@ export function createKartRace(d: KartRaceDeps): KartRace {
           d.game.commit();
         }
         const sr = save.karts.series;
-        if (sr) seriesInfo = { race: Math.min(sr.race + 1, CUPS[cup].courses.length), of: CUPS[cup].courses.length };
+        if (sr) seriesInfo = { race: Math.min(sr.race + 1, CUPS[cup].races.length), of: CUPS[cup].races.length };
       }
       const rivals = cup === 'time' ? [] : lineup(cup);
       sim = createKartSim({
         course,
         cup,
         cls,
+        laps: setup.laps,
+        cond,
         player: { kart: model, tune: tune(kartStatsOf(save, model), cls) },
         rivals: rivals.map((r) => ({ kart: r.kart, tune: tune(KART_SPECS[r.kart], cls) })),
         seed: Date.now() >>> 0,
@@ -966,7 +812,6 @@ export function createKartRace(d: KartRaceDeps): KartRace {
         const you = k.i === sim.player.i;
         const r = you ? null : rivals[k.i];
         const paint = you ? paintHex(save.karts.paint) : paintHex(r!.paint);
-        paints[k.i] = paint;
         views[k.i] = buildView(k, paint, you ? d.outfit() : r!.outfit, you ? 2 : d.low ? 0 : 1);
       }
       for (let i = 0; i < views.length; i++) placeKart(views[i], sim.racers[i], 1 / 60);
@@ -981,8 +826,8 @@ export function createKartRace(d: KartRaceDeps): KartRace {
       camReady = false;
       fov0 = camera.fov;
       fov = camera.fov;
-      d.park.setCourse(course);
-      d.park.showBoxes(sim.boxes.map((b) => b.gone));
+      // The park still shows the old network's pads and boxes until Phase 3 redraws it: none during a race
+      d.park.showBoxes([]);
       d.ui.showHud(true);
       root.classList.add('is-karting');
       root.dataset.kart = COURSES[course].name;
@@ -1007,8 +852,8 @@ export function createKartRace(d: KartRaceDeps): KartRace {
         placeKart(v, k, dt);
         if (d.reduced || k.air) continue;
         if (k.drift !== 0 && k.hopT <= 0) emitSparks(v, k, s.driftTier(k));
-        // Dust and spray: the player's every frame, a rival's in earshot every other
-        else if (k.flags & (F.dirt | F.wet) && Math.abs(k.speed) > 3 && (i === p.i || ((frameNo + i) % 2 === 0 && gainFor(i) > 0))) emitPuffs(k, !(k.flags & F.dirt));
+        // Dust off the run-off and spray in the rain: the player's every frame, a rival's in earshot every other
+        else if ((k.off || (cond === 'rain' && Math.abs(k.speed) > 6)) && Math.abs(k.speed) > 3 && (i === p.i || ((frameNo + i) % 2 === 0 && gainFor(i) > 0))) emitPuffs(k, !k.off);
       }
       stepSparks(dt);
       // The lap on the go, recorded for its ghost; the ghosts replay theirs from the line
@@ -1021,9 +866,6 @@ export function createKartRace(d: KartRaceDeps): KartRace {
         if (show) placeGhost(g, lapT);
       }
       if (par?.on && s.started && !p.finished) gap = ghostGap(par, s.course, p, lapT);
-      placeHazards(t);
-      placeMissiles(dt, t);
-      d.park.showBoxes(s.boxes.map((b) => b.gone));
       // Timers: the GO clears, the results come after a breath, the fanfare after the finish
       if (goClear > 0 && (goClear -= dt) <= 0) showCount('');
       if (finishAt >= 0 && (finishAt -= dt) < 0) payOut();
@@ -1037,19 +879,16 @@ export function createKartRace(d: KartRaceDeps): KartRace {
         lap: p.finished ? s.laps : Math.min(s.laps, p.lap + 1),
         laps: s.laps,
         time: s.countdown > 0 ? -s.countdown : s.time,
-        item: p.item,
-        roulette: p.rouletteT > 0,
         driftTier: s.driftTier(p),
         boost: p.boostT > 0,
-        shield: p.shield,
         finished: p.finished,
         timeTrial: s.timeTrial,
         cls,
         lastLap: lapTimes.length ? lapTimes[lapTimes.length - 1] : null,
         bestLap: lapTimes.length ? Math.min(...lapTimes) : null,
         ghostGap: gap,
-        surface: p.flags & F.dirt ? 'dirt' : p.flags & F.wet ? 'wet' : p.flags & F.tunnel ? 'tunnel' : p.flags & F.bank ? 'bank' : 'dry',
-        shortcut: p.line === 'short',
+        surface: p.off ? 'runoff' : p.kerb ? 'kerb' : p.flags & F.tunnel ? 'tunnel' : p.flags & F.bank ? 'bank' : 'dry',
+        cond,
         series: seriesInfo,
       };
       d.ui.paintHud(hud);

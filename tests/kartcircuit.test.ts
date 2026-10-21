@@ -9,8 +9,8 @@ import {
   BANK_H,
   BAYS,
   CIRCUIT,
-  CIRCUITS,
-  CIRCUIT_IDS,
+  COURSES,
+  COURSE_IDS,
   CIRCUIT_SOLIDS,
   CLEAR,
   FLY_H,
@@ -71,14 +71,14 @@ test('one narrow track: six karts abreast, kerbs and run-off', () => {
 
 test('the lap is medium length, the same both ways', () => {
   assert.ok(c.L > 520 && c.L < 600, `lap ${c.L.toFixed(0)} tiles`);
-  assert.ok(Math.abs(CIRCUITS['circuit-reverse'].L - c.L) < 0.5);
+  assert.ok(Math.abs(COURSES['circuit-reverse'].L - c.L) < 0.5);
 });
 
 test('no corner is tighter than MIN_RADIUS (and the inside edge never folds), both ways', () => {
   assert.ok(MIN_RADIUS > TRACK_HALF + KERB);
-  for (const id of CIRCUIT_IDS) {
-    const k = CIRCUITS[id].k;
-    for (let i = 0; i < k.length; i++) assert.ok(Math.abs(k[i]) < 1 / MIN_RADIUS, `${id} at ${toLocal([CIRCUITS[id].x[i], CIRCUITS[id].z[i]]).map((v) => v.toFixed(1))}: radius ${(1 / Math.abs(k[i])).toFixed(1)}`);
+  for (const id of COURSE_IDS) {
+    const k = COURSES[id].k;
+    for (let i = 0; i < k.length; i++) assert.ok(Math.abs(k[i]) < 1 / MIN_RADIUS, `${id} at ${toLocal([COURSES[id].x[i], COURSES[id].z[i]]).map((v) => v.toFixed(1))}: radius ${(1 / Math.abs(k[i])).toFixed(1)}`);
   }
 });
 
@@ -90,7 +90,7 @@ test('every ramp is under MAX_SLOPE; the hill reaches its crest, the tunnel and 
   const hill = Math.max(...Array.from(c.y).filter((_, i) => !(c.flags[i] & F.deck)));
   assert.ok(Math.abs(hill - HILL_H) < 0.05, 'the hill reaches its crest');
   assert.ok(c.flags.some((f) => f & F.tunnel), 'a tunnel');
-  for (const id of CIRCUIT_IDS) assert.ok(CIRCUITS[id].jump >= 0, `${id} has the jump`);
+  for (const id of COURSE_IDS) assert.ok(COURSES[id].jump >= 0, `${id} has the jump`);
 });
 
 test('away from the flyover, the track never comes within its run-off of itself', () => {
@@ -142,8 +142,8 @@ test('only the fence, the hut, the garages and the grandstand are solid, all cle
 });
 
 test('the grid is on the start straight, behind the line, both ways', () => {
-  for (const id of CIRCUIT_IDS) {
-    const cc = CIRCUITS[id];
+  for (const id of COURSE_IDS) {
+    const cc = COURSES[id];
     const line = frame(cc, cc.start);
     assert.ok(Math.abs(toLocal([line.x, line.z])[0] - START_U) < 0.3, `${id}: the line is at START_U`);
     const slots = gridSlots(cc);
@@ -198,8 +198,8 @@ test('the gate path leads from the gate to the hut door, clear of the track and 
 });
 
 test('the sweepers are banked to the outside, and their low edge rests on the ground, both ways', () => {
-  for (const id of CIRCUIT_IDS) {
-    const cc = CIRCUITS[id];
+  for (const id of COURSE_IDS) {
+    const cc = COURSES[id];
     let banked = 0;
     for (let s = 0; s < cc.L; s += 0.5) {
       const f = frame(cc, s);
@@ -220,7 +220,7 @@ test('the sweepers are banked to the outside, and their low edge rests on the gr
 });
 
 test('reverse is the same surface the other way, its corners numbered from its own line', () => {
-  const r = CIRCUITS['circuit-reverse'];
+  const r = COURSES['circuit-reverse'];
   for (let s = 0; s < c.L; s += 7) {
     const f = frame(c, s);
     let best = Infinity;
@@ -236,8 +236,8 @@ test('reverse is the same surface the other way, its corners numbered from its o
     if (f.y < 0.5 || r.y[bi] < 0.5) continue;
     assert.ok(Math.abs(r.y[bi] - f.y) < 0.15, 'the same heights');
   }
-  for (const id of CIRCUIT_IDS) {
-    const cc = CIRCUITS[id];
+  for (const id of COURSE_IDS) {
+    const cc = COURSES[id];
     assert.ok(cc.turns.length >= 10, `${id}: plenty of corners`);
     assert.deepEqual(
       cc.turns.map((t) => t.n),

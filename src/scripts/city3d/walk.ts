@@ -41,7 +41,7 @@ import { RACE_SITE, START_LINE, START_R } from './races';
 import { createKartUI } from './kart-ui';
 import { createKartRace } from './kart';
 import { HUT_DOOR, trackSurfaceAt } from './kartpark';
-import type { CourseId } from './kartpark';
+import type { RaceStart } from './kart-types';
 import type { KartPark } from './kart-types';
 import { CUPS } from './kart-sim';
 import type { KartInput, CupId } from './kart-sim';
@@ -468,9 +468,9 @@ export function createWalk(d: WalkDeps) {
       if (karts.active) leaveKart();
       const s = d.game.save();
       const sr = s.karts.series;
-      const course = seriesNext(s);
-      if (!sr || !course) return;
-      startKart({ course, cup: sr.cup, cls: CUPS[sr.cup].cls });
+      const race = seriesNext(s);
+      if (!sr || !race) return;
+      startKart({ course: race.course, cup: sr.cup, cls: CUPS[sr.cup].cls, laps: race.laps, cond: race.cond });
     },
     quitSeries() {
       const s = d.game.save();
@@ -513,7 +513,7 @@ export function createWalk(d: WalkDeps) {
   /** The touch buttons while racing: Drift held, Item pressed */
   const kartBtns = { drift: false, item: false };
   const padKart = { steer: 0, throttle: 0, drift: false };
-  function startKart(setup: { course: CourseId; cup: CupId | 'time'; cls: ClassId }) {
+  function startKart(setup: RaceStart) {
     if (karts.active) return;
     kartUI.close();
     if (drive.active) getOut();
@@ -1219,7 +1219,7 @@ export function createWalk(d: WalkDeps) {
     if (pedals.gas || pedals.brake) throttle = (pedals.gas ? 1 : 0) - (pedals.brake ? 1 : 0);
     if (padKart.steer) steer = padKart.steer;
     if (padKart.throttle) throttle = padKart.throttle;
-    const inp: KartInput = { throttle, steer, drift: jumpHeld || kartBtns.drift || padKart.drift, item: kartBtns.item, back: throttle < -0.3 };
+    const inp: KartInput = { throttle, steer, drift: jumpHeld || kartBtns.drift || padKart.drift };
     kartBtns.item = false;
     karts.update(dt, inp);
     const p = karts.sim?.player;

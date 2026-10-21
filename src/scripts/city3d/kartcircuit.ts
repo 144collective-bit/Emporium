@@ -51,9 +51,11 @@ export const MAX_SLOPE = 0.3;
 export const MIN_RADIUS = 6;
 
 export type Tag = 'line' | 'jump' | 'pit-in' | 'pit-out' | `turn-${number}`;
-type Opt = Omit<CPt, 'u' | 'v'> & { tag?: Tag };
+type Opt = Omit<CPt, 'u' | 'v'> & { tag?: Tag; pad?: boolean };
 interface CirPt extends CPt {
   tag?: Tag;
+  /** A boost pad starts here (in whichever direction it's raced) */
+  pad?: boolean;
 }
 const P = (u: number, v: number, o: Opt = {}): CirPt => ({ u, v, ...o });
 /** Banked: right-handers forward, so the outside (left) edge is up (roll negative: the right side down) */
@@ -73,7 +75,7 @@ const PTS: CirPt[] = [
   P(20, 112.5),
   P(15.5, 104, { tag: 'turn-1' }),
   // Turns 2 and 3: the west esses, out towards the fence and back
-  P(15, 94),
+  P(15, 94, { pad: true }),
   P(13, 85.5),
   P(9.5, 77, { tag: 'turn-2' }),
   P(9.5, 67),
@@ -85,14 +87,14 @@ const PTS: CirPt[] = [
   banked(21.5, 23, { tag: 'turn-4' }),
   banked(31, 17),
   // Turns 5 and 6: the hill, dipping south over its crest and back, down into the tunnel, over the jump
-  P(40, 16),
+  P(40, 16, { pad: true }),
   P(48, 17.5, { h: 0.8 }),
   P(56, 22.5, { h: 2, tag: 'turn-5' }),
   P(64, 24.5, { h: HILL_H }),
   P(72, 22, { h: 2 }),
   P(79, 17.5, { h: 0.8, tag: 'turn-6' }),
   P(86, 16, { f: F.tunnel }),
-  P(93, 16.2),
+  P(93, 16.2, { pad: true }),
   P(100, 16.6, { h: JUMP_H, tag: 'jump' }),
   P(107, 17.6),
   // Turn 7: the banked north-east sweeper, round to the south
@@ -114,7 +116,7 @@ const PTS: CirPt[] = [
   P(89.2, 36.7, { tag: 'turn-10' }),
   P(86, 44.5),
   // Down the middle at ground level, under the flyover
-  P(84, 55),
+  P(84, 55, { pad: true }),
   P(79.6, 65),
   P(76.3, 75.3),
   P(73, 84.5),
@@ -127,7 +129,7 @@ const PTS: CirPt[] = [
   P(40.5, 62.5),
   P(48.5, 57),
   // The flyover: up off the loop, over the run below, down to the south-east
-  P(57, 58.3),
+  P(57, 58.3, { pad: true }),
   P(63.5, 63.6, { h: FLY_H / 2, f: F.deck }),
   P(69.5, 68.8, { h: FLY_H, f: F.deck }),
   P(76.3, 75.3, { h: FLY_H, f: F.deck }),
@@ -147,21 +149,37 @@ const PTS: CirPt[] = [
 /** The start / finish line crosses the straight here (local u) */
 export const START_U = 84;
 
-/* ---------- The two courses ---------- */
+/* ---------- The two courses: the circuit forward and in reverse ---------- */
 
-export type CircuitId = 'circuit' | 'circuit-reverse';
-export const CIRCUIT_IDS: CircuitId[] = ['circuit', 'circuit-reverse'];
-export interface Circuit extends Line {
-  id: CircuitId;
+export type CourseId = 'circuit' | 'circuit-reverse';
+export const COURSE_IDS: CourseId[] = ['circuit', 'circuit-reverse'];
+/** A boost pad's length along the track (it spans the track's width) */
+export const PAD_LEN = 4;
+/** The usual lap count */
+export const LAPS = 3;
+const NAMES: Record<CourseId, { name: string; blurb: string }> = {
+  circuit: { name: 'Sector 7 Circuit', blurb: 'Twelve corners: the west esses, the banked sweepers, the hill and its jump, the hairpin, the loop and the flyover.' },
+  'circuit-reverse': { name: 'Sector 7 Circuit · reverse', blurb: 'The same circuit the other way round: every corner flipped, the flyover before the loop, the jump off the hill the other side.' },
+};
+/** The conditions a race runs in: night is the looks only; rain takes grip away everywhere (kart-sim.ts) */
+export type Cond = 'day' | 'night' | 'rain';
+export const CONDS: Record<Cond, { name: string }> = { day: { name: 'Day' }, night: { name: 'Night' }, rain: { name: 'Rain' } };
+export interface Course extends Line {
+  id: CourseId;
+  name: string;
+  blurb: string;
   reverse: boolean;
+  laps: number;
   /** Where the start line crosses (s), and the jump's lip */
   start: number;
   jump: number;
+  /** The boost pads: where each starts (s) and how long it is, in this direction */
+  pads: { s: number; len: number }[];
   /** The numbered corners' apexes (s), numbered in this direction */
   turns: { n: number; s: number }[];
 }
 
-function makeCircuit(id: CircuitId): Circuit {
+function makeCourse(id: CourseId): Course {
   const reverse = id === 'circuit-reverse';
   // Reversed: the same points the other way round, and the banking flips with the left and right
   const pts: CirPt[] = reverse ? [PTS[0], ...PTS.slice(1).reverse()].map((p) => (p.roll ? { ...p, roll: -p.roll } : p)) : PTS;
@@ -184,11 +202,13 @@ function makeCircuit(id: CircuitId): Circuit {
     .map((t) => t.s)
     .sort((a, b) => ((a - start + line.L) % line.L) - ((b - start + line.L) % line.L))
     .map((s, i) => ({ n: i + 1, s }));
-  return { ...line, id, reverse, start, jump, turns };
+  // A pad starts at its point and runs on in the direction raced
+  const pads = pts.flatMap((p, i) => (p.pad ? [{ s: line.at[i], len: PAD_LEN }] : []));
+  return { ...line, id, ...NAMES[id], reverse, laps: LAPS, start, jump, pads, turns };
 }
-export const CIRCUITS: Record<CircuitId, Circuit> = { circuit: makeCircuit('circuit'), 'circuit-reverse': makeCircuit('circuit-reverse') };
+export const COURSES: Record<CourseId, Course> = { circuit: makeCourse('circuit'), 'circuit-reverse': makeCourse('circuit-reverse') };
 /** The forward circuit: the one physical track (the reverse is the same surface) */
-export const CIRCUIT = CIRCUITS.circuit;
+export const CIRCUIT = COURSES.circuit;
 
 /** A kart's width (karts.ts keeps to it) */
 export const KART_W = 0.95;
@@ -196,7 +216,7 @@ export const KART_W = 0.95;
 export const GRID = 8;
 export const GRID_LATERAL = 1.3;
 /** The grid: on the straight behind the line, two abreast and staggered; slot 0 is pole */
-export function gridSlots(c: Circuit): { s: number; lateral: number }[] {
+export function gridSlots(c: Course): { s: number; lateral: number }[] {
   return Array.from({ length: GRID }, (_, i) => ({ s: c.start - 2.6 - Math.floor(i / 2) * 3.2 - (i % 2) * 1.4, lateral: (i % 2 ? -1 : 1) * GRID_LATERAL }));
 }
 
@@ -334,4 +354,4 @@ export function circuitSurfaceAt(x: number, z: number, yNow: number): { y: numbe
 }
 
 /** A point on the circuit: s along, lateral across (left positive), in world numbers */
-export const circuitAt = (c: Circuit, s: number, lateral = 0) => at(c, s, lateral);
+export const circuitAt = (c: Course, s: number, lateral = 0) => at(c, s, lateral);

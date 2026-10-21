@@ -475,7 +475,7 @@ it and has been retired completely. Build only on what's here.
   `line()` for the Workshop and factories), the ledger (`book()`, called by
   every rule that moves Dorras) and loans (`borrow()`, `repay()`, a share
   of takings in `advance()`).
-  `cleanSave()` cleans anything loaded and upgrades older saves (now v7);
+  `cleanSave()` cleans anything loaded and upgrades older saves (now v8);
   keep that migration when the save changes. New economy rules go here
   first.
 - **The city's game (Phase 5)** sits on the same save: XP and levels
@@ -730,36 +730,48 @@ it and has been retired completely. Build only on what's here.
   the inner edge never folds), ramps under slope 0.3, decks `BRIDGE_H` over
   what they cross, and pieces apart by the track's width.
 - **The rules** are `kart-sim.ts` (DOM-free, seeded, a fixed 60 Hz tick,
-  tested): `createKartSim(setup)` → `step(dt, input)` returning events.
+  tested), racing on the rebuild's circuit (`kartcircuit.ts`) since
+  Phase 2: `createKartSim(setup)` → `step(dt, input)` returning events.
   Arcade karts (`tune()` from the 0..1 stats, times the engine class's
-  pace), a hop into a drift (`T.drift` stages, `T.driftBoost`), boost
-  pads, the walls, bumps weighted by `weight`, air over the hump, banking
-  (more grip), wet and dirt (`GRIP`; dirt caps the top speed `DIRT_CAP`
-  unless boosting), the shortcut (`line: 'main' | 'short'`, taken off a
-  boost; `'shortcut'` events), seven rivals on the racing line (`think()`:
-  look-ahead, braking for curvature, drifting, items, the shortcut when
-  boosting) with a rubber band (`rubber()`), three cups (`CUPS`: `cls`,
-  four `courses`, `ai` pace, `skill`, prizes by place), time trials (`cup:
-  'time'`, alone, no boxes) and `auto` (the sim drives the player: the par
-  ghost and the tests), six items (`ITEMS`, dealt by place in `DEALS`:
-  rocket, oil, gummy, pigeon, shield, trail; hazards and missiles), places
-  by progress (`standings()`), the player's finish (`done`) and everyone's
-  (`over`). New gameplay goes here first; looks and sounds in the view.
+  pace; `turnRate()`), a hop into a drift (`T.drift` stages,
+  `T.driftBoost`), boost pads (`pads` on the course), bumps weighted by
+  `weight` (a heavy kart ramming a light one spins it), air off the jump
+  (`flight()`), banking (more grip), pure racing (no items, the owner's
+  call). **No walls:** kerbs are track; the run-off holds a kart to
+  `RUNOFF_CAP` with `RUNOFF_GRIP`; past `RESET_AT` (or over the deck's
+  edge) it fades back onto the centre line where it had got to
+  (`'reset'`, `RESET_T`, no progress lost). Conditions (`cond`): day,
+  night (looks only), rain (`RAIN_GRIP` everywhere). Clean laps (no
+  wheel in the run-off) and overtakes are counted per racer. Seven
+  rivals (`think()`: pure pursuit on the way they're moving, a lane
+  offset, passing a slower kart ahead or holding back, drifting only
+  where a bend needs more than full lock, braking planned from
+  `cornerSpeed()` back along the track and past the jump's flight) with a
+  rubber band (`rubber()`); three cups (`CUPS`: `cls`, four `races` of
+  { course, laps, cond }, `ai` pace, `skill`, prizes by place), time
+  trials (`cup: 'time'`, alone) and `auto` (the sim drives the player:
+  the par ghost, the tests, and every kart's cool-down lap after the
+  line). Places by progress (`standings()`), the player's finish
+  (`done`) and everyone's (`over`). New gameplay goes here first; looks
+  and sounds in the view.
 - **The rebuild** (the owner's call, `docs/kart-plan.md`): one narrower
   circuit (5.6 wide, kerbs, grass and gravel run-off), raced both ways,
   with a pit lane and nothing solid near it, replaces the network in four
   phases. Phase 1 is built: the circuit as data in `kartcircuit.ts`
   (DOM-free, tested in `tests/kartcircuit.test.ts`; twelve corners, lefts
   and rights, the owner's call: no long runs of straight road besides the
-  start straight): `CIRCUIT` /
-  `CIRCUITS` (forward and reverse; `start`, `jump`, numbered `turns`),
+  start straight): `CIRCUIT` (the physical track) and `COURSES` (forward
+  and reverse; `start`, `jump`, numbered `turns`),
   `TRACK_HALF`, `KERB`, `RUNOFF`, `CLEAR`, `FLY_H`, `BANK`, `MIN_RADIUS`,
   `MAX_SLOPE`, `gridSlots()`, `PIT_LANE`, `BAYS`, `SITE` (garages, hut,
   stand, screen, gate path), `CIRCUIT_SOLIDS`, `GANTRY`, `SUPPORTS`,
-  `onCircuit()`, `circuitSurfaceAt()`. It shares the site, local numbers
-  and sampling (`sampleLine()`, `frame()`, `locate()`) with `kartpark.ts`
-  and isn't wired in yet: the park still races the network below until
-  Phases 2 (the rules) and 3 (the drawing) move onto it.
+  `onCircuit()`, `circuitSurfaceAt()`; the races are `COURSES` /
+  `COURSE_IDS` (`circuit`, `circuit-reverse`: name, laps, `pads`) and
+  `Cond` / `CONDS`. It shares the site, local numbers and sampling
+  (`sampleLine()`, `frame()`, `locate()`) with `kartpark.ts`. Phase 2 is
+  built (the rules race on it, the save is v8); the park's 3D (Phase 3)
+  and the HUD and hut (Phase 4) still show the old network and its items
+  until then, so the branch isn't for `main` before Phase 3.
 - **Classes** (`catalog.ts` `KART_CLASSES`, `ClassId`, `CLASS_IDS`): Street
   (Lv 1, 0.82), Sport (Lv 3, 1) and Neon (Lv 8, 1.18) set everyone's pace
   in a race; a cup fixes its class, a time trial picks one. Records and
@@ -771,18 +783,21 @@ it and has been retired completely. Build only on what's here.
   Degen's style, origin on the ground under the middle, +x forward, wheels
   that steer and roll, a seated Degen driver via `seat()`). Only for the
   kart park: never real money, never tied to the store or the token.
-- **The save** (`tycoon.ts`, v7): `karts` { model, paint, owned, mods,
+- **The save** (`tycoon.ts`, v8): `karts` { model, paint, owned, mods,
   `records` (fastest lap and best run per course and class, `KartTime`),
   `boards` (the local leaderboards, `LEADERBOARD_SIZE` runs per key: your
   own runs for now, built so a server can hold everyone's later),
   `series` (the cup in progress: race, points), `trophies` (cup wins),
-  `challenge` (today's daily challenge, done once a day), `parBeaten` }
+  `challenge` (today's daily challenge, done once a day), `parBeaten`,
+  `old` (the old network's lap records, kept aside when a v7 save moved
+  to the rebuilt circuit; its boards, par ghosts and a series on the go
+  were dropped) }
   with `buyKart()` / `modKart()` / `kartStatsOf()` / `pickKart()`,
   `finishKartRace()` → `KartResult` (prizes by place, lap records in any
   race, run records and boards in time trials, par beaten (`PAR_LAPS`,
   `parLap()`), the daily challenge (`dailyChallenge()`, `dayKey()`,
   `CHALLENGE_PRIZE`), counters `kartRaces` / `podiums` / `kartWins` /
-  `kartHits`, XP `kartFinish` / `kartPodium` / `kartWin` / `kartRecord` /
+  `cleanLaps` / `overtakes`, XP `kartFinish` / `kartPodium` / `kartWin` / `kartRecord` /
   `parBeaten` / `challenge`) and the series (`startSeries()`,
   `seriesNext()`, `seriesRace()` → `SeriesResult`: `SERIES_POINTS`
   15-12-10-8-6-4-2-1, standings between races, the trophy and

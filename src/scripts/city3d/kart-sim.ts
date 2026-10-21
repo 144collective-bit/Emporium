@@ -5,28 +5,24 @@
  * run it. kart.ts is the view (the karts on screen, the camera, the sounds),
  * kart-ui.ts the menu, the HUD and the results.
  *
- * - A race is a course (kartpark.ts), a cup (how fast the rivals are and
- *   what the places pay), three laps, eight karts: you and seven rivals who
- *   follow the racing line, brake for corners, drift and use items, with a
- *   rubber band that keeps the pack close. A time trial is you alone, no
- *   items.
+ * - A race is the circuit one way round (kartcircuit.ts), a cup (how fast
+ *   the rivals are and what the places pay), a lap count, the conditions
+ *   (day, night or rain) and eight karts: you and seven rivals who follow
+ *   the racing line, brake for corners and drift, with a rubber band that
+ *   keeps the pack close. A time trial is you alone. Pure racing: no items.
  * - Karts are arcade: speed tapers to the kart's top; steering is sharper
  *   at speed than a car's; a hop into a drift slides round a corner and
- *   builds a boost in three stages (let go to fire it). Boost pads on the
- *   track give a short burst. The hump throws a kart into the air; walls
- *   along both edges keep everyone on the track (scrape them and you lose
- *   speed). Karts bump each other: the heavier one wins.
- * - Items come from the item boxes, dealt by place (the leader gets
- *   defensive ones, the tail gets rockets and pigeons): a Rocket (boost), an
- *   Oil Slick (dropped behind: whoever drives through it spins), a Gummy
- *   Bomb (thrown, bounces along the track), a Homing Pigeon (chases the
- *   kart ahead), a Shield (soaks up one hit) and a Glow Trail (a line
- *   behind you that slows anyone crossing it). A hit spins a kart for a
- *   second; nothing ever hurts anyone.
- * - The track's surfaces count: a wet stretch halves the grip, the dirt
- *   shortcut caps speed (unless you're boosting) and banking adds grip. A
- *   kart that turns off at the shortcut's mouth runs its own line until it
- *   rejoins, its progress mapped onto the main line's.
+ *   builds a boost in three stages (let go to fire it). Boost pads give a
+ *   short burst. The jump throws a kart into the air. Karts bump each
+ *   other: the heavier one wins, and a heavy kart ramming a light one hard
+ *   spins it. Nothing ever hurts anyone.
+ * - No walls (the owner's call): the kerbs are part of the track; past them
+ *   the grass and gravel run-off has little grip and holds a kart to a
+ *   crawl; going far off (or off the flyover's deck) fades the kart back
+ *   onto the track where it had got to, stopped. Banking adds grip; rain
+ *   takes grip away everywhere (night is the looks only).
+ * - A lap without a wheel in the run-off is a clean lap; passing a kart is
+ *   an overtake (both counted for missions and badges).
  * - Engine classes (catalog.ts `KART_CLASSES`: Street, Sport, Neon) scale
  *   everyone's speed; a cup runs at its class, a time trial at the one you
  *   pick. `auto` lets the rivals' brain drive the player (the par ghost).
@@ -34,77 +30,92 @@
  *   placed by where they are. Prizes and records are paid by tycoon.ts
  *   (`finishKartRace`), not here.
  */
-import { BOX_LATERALS, COURSES, F, GRID, KART_R, TRACK_HALF, along, at, frame, gridSlots, locate, wrapS, type Course, type CourseId, type Line } from './kartpark';
+import { COURSES, CLEAR, GRID, KERB, LAPS, TRACK_HALF, gridSlots, type Cond, type CourseId } from './kartcircuit';
+import { F, KART_R, along, at, frame, heightAt, locate, wrapS } from './kartpark';
 import { KART_CLASSES, type ClassId } from './catalog';
 import { KART_SPECS, type KartId } from './mykart';
 
 /** The sim's tick (seconds) */
 export const TICK = 1 / 60;
 export const COUNTDOWN = 3;
-/** The usual lap count (a course can set its own) */
-export const LAPS = 3;
-/** On dirt a kart goes no faster than this share of its top speed, unless it's boosting */
-export const DIRT_CAP = 0.55;
+export { LAPS };
+/** In the run-off a kart goes no faster than this share of its top speed (more while boosting), with this much grip */
+export const RUNOFF_CAP = 0.45;
+export const RUNOFF_BOOST_CAP = 0.7;
+export const RUNOFF_GRIP = 0.5;
+/** Rain takes this share of the grip away everywhere */
+export const RAIN_GRIP = 0.7;
+/** Beyond this far from the centre line (or off the deck), a kart is put back on the track */
+export const RESET_AT = CLEAR + 0.5;
+/** How long a kart put back stays stopped (the view fades it out and in) */
+export const RESET_T = 0.9;
 
 /* ---------- Cups ---------- */
 
 export type CupId = 'rookie' | 'pro' | 'neon';
+/** One race of a cup: which way round, how many laps, in what conditions */
+export interface CupRace {
+  course: CourseId;
+  laps: number;
+  cond: Cond;
+}
 export interface Cup {
   id: CupId;
   name: string;
   blurb: string;
   /** Level needed to enter */
   level: number;
-  /** The engine class it runs at, and the four courses of its series */
+  /** The engine class it runs at, and the four races of its series */
   cls: ClassId;
-  courses: CourseId[];
+  races: CupRace[];
   /** How fast the rivals go (a share of a fully tuned kart's pace) and how hard they race */
   ai: number;
   skill: number;
   /** What each place pays (Dorras), first to last */
   prizes: number[];
 }
+const R = (course: CourseId, laps: number, cond: Cond = 'day'): CupRace => ({ course, laps, cond });
 export const CUPS: Record<CupId, Cup> = {
-  rookie: { id: 'rookie', name: 'Rookie Cup', blurb: 'Seven easy-going rivals at Street pace. Learn the loop, the drift and the items.', level: 1, cls: 'street', courses: ['neon-loop', 'summit', 'neon-reverse', 'grand'], ai: 0.8, skill: 0.5, prizes: [1500, 900, 600, 400, 300, 200, 150, 100] },
-  pro: { id: 'pro', name: 'Pro Cup', blurb: 'Sport pace. The rivals brake later and throw harder. Bring a tuned kart.', level: 4, cls: 'sport', courses: ['summit', 'neon-reverse', 'grand', 'summit-reverse'], ai: 0.92, skill: 0.8, prizes: [4000, 2400, 1500, 1000, 700, 500, 350, 250] },
-  neon: { id: 'neon', name: 'Neon Cup', blurb: 'Neon pace, flat out. The rivals drift every corner and never miss with a pigeon.', level: 9, cls: 'neon', courses: ['grand', 'neon-loop', 'summit-reverse', 'grand-reverse'], ai: 1.0, skill: 1, prizes: [10000, 6000, 3800, 2500, 1800, 1200, 900, 600] },
+  rookie: {
+    id: 'rookie',
+    name: 'Rookie Cup',
+    blurb: 'Seven easy-going rivals at Street pace. Learn the circuit both ways, and once by night.',
+    level: 1,
+    cls: 'street',
+    races: [R('circuit', 2), R('circuit-reverse', 2), R('circuit', 2, 'night'), R('circuit-reverse', 3)],
+    ai: 0.8,
+    skill: 0.5,
+    prizes: [1500, 900, 600, 400, 300, 200, 150, 100],
+  },
+  pro: {
+    id: 'pro',
+    name: 'Pro Cup',
+    blurb: 'Sport pace. The rivals brake later and drift more. A wet race and a night race. Bring a tuned kart.',
+    level: 4,
+    cls: 'sport',
+    races: [R('circuit-reverse', 3), R('circuit', 3, 'rain'), R('circuit-reverse', 3, 'night'), R('circuit', 3)],
+    ai: 0.92,
+    skill: 0.8,
+    prizes: [4000, 2400, 1500, 1000, 700, 500, 350, 250],
+  },
+  neon: {
+    id: 'neon',
+    name: 'Neon Cup',
+    blurb: 'Neon pace, flat out. The rivals drift every corner, rain or shine, and the last race is four laps.',
+    level: 9,
+    cls: 'neon',
+    races: [R('circuit', 3, 'night'), R('circuit-reverse', 3, 'rain'), R('circuit', 3, 'rain'), R('circuit-reverse', 4, 'night')],
+    ai: 1.0,
+    skill: 1,
+    prizes: [10000, 6000, 3800, 2500, 1800, 1200, 900, 600],
+  },
 };
 export const CUP_IDS = Object.keys(CUPS) as CupId[];
 export const cup = (id: string) => CUPS[id as CupId] ?? null;
 
-/* ---------- Items ---------- */
-
-export type ItemId = 'rocket' | 'oil' | 'gummy' | 'pigeon' | 'shield' | 'trail';
-export const ITEMS: Record<ItemId, { name: string; blurb: string }> = {
-  rocket: { name: 'Rocket', blurb: 'A burst of speed.' },
-  oil: { name: 'Oil Slick', blurb: 'Dropped behind you. Spins whoever drives through it.' },
-  gummy: { name: 'Gummy Bomb', blurb: 'Thrown ahead (or behind). Bounces along the track and spins what it hits.' },
-  pigeon: { name: 'Homing Pigeon', blurb: 'Chases the kart in front of you and spins it.' },
-  shield: { name: 'Shield', blurb: 'Soaks up the next hit.' },
-  trail: { name: 'Glow Trail', blurb: 'A line of light behind you. Anyone crossing it slows right down.' },
-};
-export const ITEM_IDS = Object.keys(ITEMS) as ItemId[];
-/** What the boxes deal, by place: the leader gets defence, the tail gets catch-up */
-const DEALS: { upTo: number; items: ItemId[] }[] = [
-  { upTo: 1, items: ['oil', 'oil', 'gummy', 'shield', 'shield', 'trail'] },
-  { upTo: 3, items: ['oil', 'gummy', 'gummy', 'shield', 'trail', 'pigeon', 'rocket'] },
-  { upTo: 5, items: ['gummy', 'pigeon', 'pigeon', 'rocket', 'rocket', 'trail', 'shield'] },
-  { upTo: 8, items: ['rocket', 'rocket', 'rocket', 'pigeon', 'pigeon', 'gummy'] },
-];
 /** How long things last (seconds) */
 export const T = {
-  roulette: 1.2,
-  boxRespawn: 3,
-  rocket: 2.2,
-  shield: 15,
-  trail: 2.6,
-  trailLife: 4.5,
-  oilLife: 25,
-  gummyLife: 5,
-  pigeonLife: 9,
   spin: 1.1,
-  oilSpin: 0.85,
-  slow: 1.1,
   hop: 0.22,
   pad: 1.3,
   /** The drift's three stages: how long you hold it for each boost */
@@ -135,18 +146,15 @@ export interface KartInput {
   steer: number;
   /** Hop and hold to drift */
   drift: boolean;
-  /** Use the item (a press), and whether to send it behind */
-  item: boolean;
-  back: boolean;
 }
-export const NO_INPUT: KartInput = { throttle: 0, steer: 0, drift: false, item: false, back: false };
+export const NO_INPUT: KartInput = { throttle: 0, steer: 0, drift: false };
 
 export interface Racer {
   i: number;
   kart: KartId;
   tune: KartTune;
   /** A rival's skill (0..1) and where across the track it likes to drive; null for the player */
-  ai: { skill: number; offset: number; itemAt: number; cool: number } | null;
+  ai: { skill: number; offset: number } | null;
   x: number;
   z: number;
   y: number;
@@ -165,7 +173,7 @@ export interface Racer {
   finished: boolean;
   finishT: number;
   place: number;
-  /** Drifting: which way (0: not), for how long; the hop; the boost and how strong; a spin, a slowdown */
+  /** Drifting: which way (0: not), for how long; the hop; the boost and how strong; a spin */
   drift: 0 | 1 | -1;
   driftT: number;
   hopT: number;
@@ -173,64 +181,24 @@ export interface Racer {
   boostK: number;
   spinT: number;
   spinLen: number;
-  slowT: number;
-  shield: boolean;
-  shieldT: number;
-  /** The item held, the roulette still spinning, and a trail being laid */
-  item: ItemId | null;
-  rouletteT: number;
-  trailT: number;
-  /** In the air after the hump, and the rise */
+  /** In the air off the jump, and the rise */
   air: boolean;
   vy: number;
-  /** Scraping a wall or bumped (for sounds and sparks): seconds left */
-  wallT: number;
+  /** Bumped (for sounds and sparks): seconds left */
   bumpT: number;
-  /** Items landed on others */
-  hits: number;
+  /** Where it is across the track: on the kerb, in the run-off; being put back (seconds left, for the view's fade) */
+  kerb: boolean;
+  off: boolean;
+  resetT: number;
+  /** This lap has had a wheel in the run-off (or a reset); clean laps and overtakes so far */
+  dirty: boolean;
+  cleanLaps: number;
+  overtakes: number;
   /** The grip of the surface under it (1 = dry), for the slide */
-  gripNow?: number;
-  /** On the main line or the shortcut; s along whichever (the main's s is kept in `s` either way) */
-  line: 'main' | 'short';
-  sShort: number;
+  gripNow: number;
   /** The surface under it (kartpark.ts F flags) and its banking (radians, right side up), for the view */
   flags: number;
   roll: number;
-}
-
-export interface Hazard {
-  kind: 'oil' | 'trail';
-  x: number;
-  z: number;
-  y: number;
-  s: number;
-  owner: number;
-  t: number;
-}
-export interface Missile {
-  kind: 'gummy' | 'pigeon';
-  x: number;
-  z: number;
-  y: number;
-  yaw: number;
-  /** Along the loop (the pigeon flies it; the gummy bounces across it) */
-  s: number;
-  lateral: number;
-  vx: number;
-  vz: number;
-  owner: number;
-  target: number;
-  t: number;
-  bounces: number;
-}
-export interface ItemBox {
-  s: number;
-  lateral: number;
-  x: number;
-  z: number;
-  y: number;
-  /** Seconds until it's back (0: there) */
-  gone: number;
 }
 
 export type KartEvent =
@@ -242,24 +210,24 @@ export type KartEvent =
   | { kind: 'pad'; kart: number }
   | { kind: 'drift'; kart: number; on: boolean }
   | { kind: 'driftTier'; kart: number; tier: number }
-  | { kind: 'item'; kart: number; item: ItemId }
-  | { kind: 'use'; kart: number; item: ItemId }
-  | { kind: 'hit'; kart: number; by: number; item: ItemId | 'bump' }
-  | { kind: 'shield'; kart: number }
+  | { kind: 'spin'; kart: number; by: number }
   | { kind: 'bump'; kart: number; other: number; force: number }
-  | { kind: 'wall'; kart: number; force: number }
   | { kind: 'jump'; kart: number }
   | { kind: 'land'; kart: number }
-  | { kind: 'shortcut'; kart: number; on: boolean }
-  | { kind: 'box'; box: number };
+  | { kind: 'offtrack'; kart: number; on: boolean }
+  | { kind: 'reset'; kart: number }
+  | { kind: 'clean'; kart: number; lap: number }
+  | { kind: 'overtake'; kart: number; place: number };
 
 export interface RaceSetup {
   course: CourseId;
-  /** A cup, or a time trial (alone, no items) */
+  /** A cup, or a time trial (alone) */
   cup: CupId | 'time';
   /** The engine class (a cup's own when racing a cup) */
   cls?: ClassId;
   laps?: number;
+  /** Day (the default), night (looks only) or rain (less grip) */
+  cond?: Cond;
   /** The rivals' brain drives the player too (the par ghost) */
   auto?: boolean;
   player: { kart: KartId; tune: KartTune };
@@ -284,24 +252,38 @@ const approach = (v: number, target: number, step: number) => (v < target ? Math
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 /** Gravity (tiles/s²) */
 const G = 22;
-/** How fast a kart turns at full lock (radians/s at speed) */
+/** How fast a kart turns at full lock (radians/s at speed), and the speed over which turning eases off */
 const TURN = 1.75;
-/** Sideways push, the wall's limit */
-const WALL = TRACK_HALF - KART_R;
+const TURN_EASE = 28;
+/** The rivals keep this far inside the track's edges */
+const LANE = TRACK_HALF - KART_R - 0.2;
+/** How hard the rivals brake (tiles/s²) when planning for a corner ahead */
+const PLAN_BRAKE = 9;
+
+/** How far a kart flies off the jump's lip at a speed (it takes off at a fifth of its speed upwards) */
+export const flight = (speed: number) => (0.4 * speed * speed) / G;
+/** A kart's yaw rate at full lock (radians/s) at a speed */
+export const turnRate = (handling: number, speed: number) => (TURN * (0.8 + handling * 0.5) * clamp(speed / 3, 0, 1)) / (1 + Math.abs(speed) / TURN_EASE);
+/**
+ * The fastest a kart can take a bend of curvature `k` with `margin` of its full-lock turn rate in
+ * hand (a drift lends it more): v / r ≤ margin · turnRate(v), solved for v.
+ */
+export function cornerSpeed(handling: number, k: number, margin: number) {
+  const a = TURN * (0.8 + handling * 0.5) * margin;
+  const x = a / Math.max(Math.abs(k), 1e-4);
+  return (TURN_EASE / 2) * (Math.sqrt(1 + (4 * x) / TURN_EASE) - 1);
+}
 
 export function createKartSim(setup: RaceSetup) {
   const course = COURSES[setup.course];
   const c = course;
   const r = rng(setup.seed);
   const laps = setup.laps ?? course.laps ?? LAPS;
+  const cond: Cond = setup.cond ?? 'day';
+  const weather = cond === 'rain' ? RAIN_GRIP : 1;
   const timeTrial = setup.cup === 'time';
   const cupOf = timeTrial ? null : CUPS[setup.cup as CupId];
   const cls: ClassId = setup.cls ?? cupOf?.cls ?? 'sport';
-  const sc = course.shortcut;
-  /** The line a kart is on and its s along it */
-  const lineOf = (k: Racer): { line: Line; s: number } => (k.line === 'short' && sc ? { line: sc, s: k.sShort } : { line: c, s: k.s });
-  /** The main line's s for a point along the shortcut (its progress mapped onto the main's span) */
-  const mainOfShort = (sShort: number) => (sc ? wrapS(c, sc.out + (along(c, sc.out, sc.in) * sShort) / sc.L) : 0);
   const slots = gridSlots(c);
   const racers: Racer[] = [];
   const mk = (i: number, kart: KartId, tn: KartTune, ai: Racer['ai']): Racer => {
@@ -334,19 +316,16 @@ export function createKartSim(setup: RaceSetup) {
       boostK: 1,
       spinT: 0,
       spinLen: T.spin,
-      slowT: 0,
-      shield: false,
-      shieldT: 0,
-      item: null,
-      rouletteT: 0,
-      trailT: 0,
       air: false,
       vy: 0,
-      wallT: 0,
       bumpT: 0,
-      hits: 0,
-      line: 'main',
-      sShort: 0,
+      kerb: false,
+      off: false,
+      resetT: 0,
+      dirty: false,
+      cleanLaps: 0,
+      overtakes: 0,
+      gripNow: weather,
       flags: 0,
       roll: 0,
     };
@@ -354,21 +333,9 @@ export function createKartSim(setup: RaceSetup) {
   // The player starts at the back of the grid (the last slot); the rivals fill the rest from pole
   const rivals = timeTrial ? [] : setup.rivals.slice(0, GRID - 1);
   const playerSlot = timeTrial ? 0 : rivals.length;
-  rivals.forEach((v, i) =>
-    racers.push(mk(i, v.kart, v.tune, { skill: clamp((cupOf?.skill ?? 0.5) * (0.85 + r() * 0.3), 0.2, 1), offset: (r() - 0.5) * TRACK_HALF * 1.2, itemAt: 0, cool: 1 + r() * 2 }))
-  );
+  rivals.forEach((v, i) => racers.push(mk(i, v.kart, v.tune, { skill: clamp((cupOf?.skill ?? 0.5) * (0.85 + r() * 0.3), 0.2, 1), offset: (r() - 0.5) * LANE })));
   const player = mk(playerSlot, setup.player.kart, setup.player.tune, null);
   racers.push(player);
-  const boxes: ItemBox[] = timeTrial
-    ? []
-    : c.boxes.flatMap((s) =>
-        BOX_LATERALS.map((lateral) => {
-          const p = at(c, s, lateral);
-          return { s, lateral, x: p.x, z: p.z, y: p.y + 0.9, gone: 0 };
-        })
-      );
-  const hazards: Hazard[] = [];
-  const missiles: Missile[] = [];
   const events: KartEvent[] = [];
   let countdown = COUNTDOWN;
   let time = 0;
@@ -378,92 +345,8 @@ export function createKartSim(setup: RaceSetup) {
   let finishedCount = 0;
   let playerInput: KartInput = { ...NO_INPUT };
   const auto = !!setup.auto;
-  /** The brain that drives the player when `auto` is on: steady, no items */
-  const AUTO = { skill: 0.85, offset: 0, itemAt: -1e9, cool: 1e9 };
-
-  /* ---------- Items ---------- */
-
-  function deal(place: number): ItemId {
-    const d = DEALS.find((x) => place <= x.upTo) ?? DEALS[DEALS.length - 1];
-    return d.items[Math.floor(r() * d.items.length)];
-  }
-  function spin(k: Racer, by: number, item: ItemId | 'bump', len: number = T.spin) {
-    if (k.finished) return;
-    if (k.shield && item !== 'bump') {
-      k.shield = false;
-      k.shieldT = 0;
-      events.push({ kind: 'shield', kart: k.i });
-      return;
-    }
-    if (k.spinT > 0) return;
-    // Armour: the Tank gets up twice as fast
-    k.spinT = len * (1 - 0.5 * clamp(k.tune.weight - 0.6, 0, 0.4) / 0.4 * (k.kart === 'tank' ? 1 : 0));
-    k.spinLen = k.spinT;
-    k.speed *= 0.3;
-    k.vx *= 0.3;
-    k.vz *= 0.3;
-    endDrift(k, false);
-    k.boostT = 0;
-    if (by >= 0 && by !== k.i && item !== 'bump') racers[by].hits++;
-    events.push({ kind: 'hit', kart: k.i, by, item });
-  }
-  function use(k: Racer, back: boolean) {
-    const item = k.item;
-    if (!item || k.rouletteT > 0 || k.spinT > 0) return;
-    k.item = null;
-    events.push({ kind: 'use', kart: k.i, item });
-    const fx = Math.cos(k.yaw);
-    const fz = -Math.sin(k.yaw);
-    switch (item) {
-      case 'rocket':
-        k.boostT = Math.max(k.boostT, T.rocket * k.tune.boost);
-        k.boostK = 1.45;
-        events.push({ kind: 'boost', kart: k.i, tier: 3 });
-        break;
-      case 'shield':
-        k.shield = true;
-        k.shieldT = T.shield;
-        break;
-      case 'trail':
-        k.trailT = T.trail;
-        break;
-      case 'oil': {
-        const s = k.s - 2;
-        const p = at(c, s, clamp(k.lateral, -WALL, WALL));
-        hazards.push({ kind: 'oil', x: p.x, z: p.z, y: p.y, s: wrapS(c, s), owner: k.i, t: T.oilLife });
-        break;
-      }
-      case 'gummy': {
-        const dir = back ? -1 : 1;
-        const v = Math.max(0, k.speed) * dir + 14 * dir;
-        const ahead = 1.1 * dir;
-        missiles.push({
-          kind: 'gummy',
-          x: k.x + fx * ahead,
-          z: k.z + fz * ahead,
-          y: k.y + 0.4,
-          yaw: k.yaw,
-          s: k.s,
-          lateral: k.lateral,
-          vx: fx * v,
-          vz: fz * v,
-          owner: k.i,
-          target: -1,
-          t: T.gummyLife,
-          bounces: 0,
-        });
-        break;
-      }
-      case 'pigeon': {
-        // The kart ahead in the race; the leader's pigeon goes for whoever's behind
-        const order = standings();
-        const idx = order.indexOf(k.i);
-        const target = idx > 0 ? order[idx - 1] : (order[1] ?? -1);
-        missiles.push({ kind: 'pigeon', x: k.x, z: k.z, y: k.y + 0.8, yaw: k.yaw, s: k.s, lateral: k.lateral, vx: 0, vz: 0, owner: k.i, target, t: T.pigeonLife, bounces: 0 });
-        break;
-      }
-    }
-  }
+  /** The brain that drives the player when `auto` is on: steady, on the middle of the track */
+  const AUTO = { skill: 0.85, offset: 0 };
 
   /* ---------- Standings ---------- */
 
@@ -483,57 +366,72 @@ export function createKartSim(setup: RaceSetup) {
 
   /* ---------- Rivals ---------- */
 
-  function think(k: Racer): KartInput {
-    const ai = k.ai!;
+  function think(k: Racer, ai: { skill: number; offset: number }): KartInput {
     const skill = ai.skill;
-    const { line, s } = lineOf(k);
-    const half = line === c ? WALL : sc!.half - KART_R;
-    // The racing line: a look-ahead point along the loop, across at this driver's offset (hugging the inside of bends a little)
-    const ahead = 2.5 + k.speed * 0.32;
-    let fr = frame(line, s + ahead);
-    let bend = frame(line, s + ahead + 4).k;
-    // Coming off the shortcut's end, look on down the main line
-    if (line !== c && s + ahead > line.L) {
-      fr = frame(c, sc!.in + (s + ahead - line.L));
-      bend = frame(c, sc!.in + (s + ahead - line.L) + 4).k;
+    const v = Math.max(0, k.speed);
+    const om = Math.max(turnRate(k.tune.handling, v), 1e-3);
+    // The racing line: a look-ahead point along the loop, across at this driver's offset, keeping to the outside on the way in
+    const look = 2 + v * 0.3;
+    const fr = frame(c, k.s + look);
+    const bend = frame(c, k.s + look + 3).k;
+    let want = clamp(ai.offset + bend * 4 * skill, -LANE, LANE);
+    // Traffic: a slower kart just ahead in its lane. Pull out to pass on the side with more room, and hold back if there's no room yet
+    let follow = Infinity;
+    for (const o of racers) {
+      if (o === k || o.resetT > 0 || Math.abs(o.y - k.y) > 0.9) continue;
+      const gap = along(c, k.s, o.s);
+      if (gap <= 0 || gap > 7) continue;
+      if (Math.abs(o.lateral - want) > 1.25 || o.speed > v + 0.5) continue;
+      const pass = o.lateral > 0 ? o.lateral - 1.5 : o.lateral + 1.5;
+      if (Math.abs(pass) <= LANE) want = pass;
+      else if (Math.abs(o.lateral > 0 ? o.lateral + 1.5 : o.lateral - 1.5) <= LANE) want = o.lateral > 0 ? o.lateral + 1.5 : o.lateral - 1.5;
+      else follow = Math.min(follow, o.speed + gap * 0.6);
     }
-    // At the shortcut's mouth, a boosting rival with the nerve takes it
-    if (sc && k.line === 'main' && k.boostT > 0.4 && skill > 0.45 && along(c, k.s, sc.out) > -4 && along(c, k.s, sc.out) < 2) fr = frame(sc, 4);
-    const want = clamp(ai.offset * (half / WALL) - bend * 6 * skill, -half + 0.3, half - 0.3);
     const tx = fr.x + fr.nx * want;
     const tz = fr.z + fr.nz * want;
-    const heading = Math.atan2(-(tz - k.z), tx - k.x);
-    const err = wrap(heading - k.yaw);
-    let steer = clamp(-err * 2.2, -1, 1);
-    // Brake for the corner ahead: the speed it can take, from its curvature
-    let maxSpeed = Infinity;
-    for (let d = 2; d <= 10; d += 2) {
-      const ff = frame(line, s + d);
-      const kk = Math.abs(ff.k);
-      // Banking lets it carry more speed; a wet or dirt surface less
-      const hold = (9 + skill * 6 + k.tune.handling * 3) * (ff.flags & F.bank ? 1.5 : 1) * ff.grip;
-      if (kk > 0.02) maxSpeed = Math.min(maxSpeed, Math.sqrt(hold / kk) + (10 - d) * 0.25);
-    }
-    let throttle = k.speed > maxSpeed + 1.5 ? -0.4 : k.speed > maxSpeed ? 0 : 1;
-    // Drift through the bends when it's going fast enough
-    const turning = Math.abs(bend) > 0.11 && k.speed > k.tune.top * 0.55;
-    let drift = k.drift !== 0 ? Math.abs(frame(c, k.s + 3).k) > 0.05 || k.driftT < 0.6 : turning && skill > 0.35;
-    if (k.drift !== 0) steer = clamp(steer, k.drift > 0 ? -0.2 : -1, k.drift > 0 ? 1 : 0.2) * 1;
-    if (k.drift !== 0 && k.drift * steer < -0.1) steer = 0;
-    // Items: after a moment, or at once when it's a shield; oil and gummies go behind when someone's close
-    let item = false;
-    let back = false;
-    if (k.item && k.rouletteT <= 0) {
-      ai.itemAt += TICK;
-      if (k.item === 'shield' || ai.itemAt > ai.cool) {
-        item = true;
-        ai.itemAt = 0;
-        ai.cool = 1 + r() * 2.5;
-        const behind = racers.some((o) => o.i !== k.i && !o.finished && along(c, o.s, k.s) > 0 && along(c, o.s, k.s) < 8);
-        back = (k.item === 'oil' || k.item === 'gummy') && behind && k.place <= 3;
+    // Pure pursuit on the way it's actually moving: the yaw rate that bends its path through the point
+    const moving = Math.hypot(k.vx, k.vz) > 2 ? Math.atan2(-k.vz, k.vx) : k.yaw;
+    const err = wrap(Math.atan2(-(tz - k.z), tx - k.x) - moving);
+    const dist = Math.max(1, Math.hypot(tx - k.x, tz - k.z));
+    const rate = (v * 2 * Math.sin(err)) / dist;
+    // How much of its turn the bends just ahead need (above 1: only a drift gets round)
+    let need = 0;
+    let dir = 0;
+    for (let d = 0; d <= Math.max(3, v * 0.5); d += 1) {
+      const kk = frame(c, k.s + d).k;
+      const n = (v * Math.abs(kk)) / om;
+      if (n > need) {
+        need = n;
+        dir = kk > 0 ? -1 : 1;
       }
     }
-    return { throttle, steer, drift, item, back };
+    const drifter = skill > 0.35;
+    let drift: boolean;
+    if (k.drift === 0) drift = drifter && !k.off && need > 1.08 && v > k.tune.top * 0.5;
+    else drift = need > 0.95 && dir === k.drift && rate * -k.drift > 0;
+    // Steering for that yaw rate: plainly, or leaning a drift tighter or looser
+    let steer: number;
+    if (k.drift !== 0 && drift) {
+      const lean = clamp(((rate * -k.drift) / om - 0.85) / 0.75, 0, 1);
+      steer = k.drift * (lean - 0.5) * 2;
+    } else steer = clamp(-rate / om, -1, 1);
+    // Brake for what's ahead: the speed each bend allows (with the grip, the banking and a drift's help), planned back to here
+    // Past the jump there's no braking for as far as it flies
+    const toJump = c.jump >= 0 ? along(c, k.s, c.jump) : -1;
+    let maxSpeed = Infinity;
+    for (let d = 0; d <= 26; d += 1.5) {
+      const ff = frame(c, k.s + d);
+      if (Math.abs(ff.k) < 0.015) continue;
+      const margin = (drifter ? 0.92 + skill * 0.25 : 0.85) * Math.sqrt(weather) * (ff.flags & F.bank ? 1.1 : 1);
+      const vc = cornerSpeed(k.tune.handling, ff.k, margin);
+      const brakeD = toJump >= 0 && toJump < d ? Math.max(0, d - flight(v)) : d;
+      maxSpeed = Math.min(maxSpeed, Math.sqrt(vc * vc + 2 * PLAN_BRAKE * brakeD));
+    }
+    // Out in the run-off: just get back on, gently
+    if (k.off) maxSpeed = Math.min(maxSpeed, k.tune.top * RUNOFF_CAP);
+    maxSpeed = Math.min(maxSpeed, follow);
+    const throttle = v > maxSpeed + 0.5 ? -1 : v > maxSpeed ? -0.3 : 1;
+    return { throttle, steer, drift };
   }
 
   /* ---------- One tick ---------- */
@@ -550,42 +448,67 @@ export function createKartSim(setup: RaceSetup) {
       events.push({ kind: 'boost', kart: k.i, tier });
     }
   }
+  function spin(k: Racer, by: number, len: number = T.spin) {
+    if (k.finished || k.spinT > 0) return;
+    // The Tank gets up faster
+    k.spinT = k.kart === 'tank' ? len * 0.6 : len;
+    k.spinLen = k.spinT;
+    k.speed *= 0.3;
+    k.vx *= 0.3;
+    k.vz *= 0.3;
+    endDrift(k, false);
+    k.boostT = 0;
+    events.push({ kind: 'spin', kart: k.i, by });
+  }
+  /** Put a kart back on the track where it had got to: on the centre line, facing along it, stopped */
+  function reset(k: Racer) {
+    const p = at(c, k.s, 0);
+    k.x = p.x;
+    k.z = p.z;
+    k.y = p.y;
+    k.yaw = p.yaw;
+    k.lateral = 0;
+    k.speed = k.vx = k.vz = 0;
+    k.air = false;
+    k.vy = 0;
+    k.boostT = 0;
+    endDrift(k, false);
+    k.resetT = RESET_T;
+    k.dirty = true;
+    if (k.off) events.push({ kind: 'offtrack', kart: k.i, on: false });
+    k.off = false;
+    k.kerb = false;
+    events.push({ kind: 'reset', kart: k.i });
+  }
 
   function stepKart(k: Racer, inp: KartInput, dt: number) {
     const tn = k.tune;
     const spinning = k.spinT > 0;
-    const live = started && !k.finished && !spinning;
-    if (k.finished) inp = { ...NO_INPUT, throttle: 0.35 };
-    if (!live) inp = { ...inp, throttle: k.finished ? inp.throttle : 0, steer: 0, drift: false, item: false };
+    k.resetT = Math.max(0, k.resetT - dt);
+    // Finished karts roll on round the track at an easy pace (the cool-down lap)
+    const live = started && !spinning && k.resetT === 0;
+    if (k.finished) inp = { ...inp, throttle: Math.min(inp.throttle, 0.35), drift: false };
+    if (!live) inp = { ...inp, throttle: 0, steer: 0, drift: false };
     // Timers
     k.spinT = Math.max(0, k.spinT - dt);
     k.boostT = Math.max(0, k.boostT - dt);
-    k.slowT = Math.max(0, k.slowT - dt);
-    k.wallT = Math.max(0, k.wallT - dt);
     k.bumpT = Math.max(0, k.bumpT - dt);
-    if (k.shield && (k.shieldT -= dt) <= 0) k.shield = false;
-    if (k.rouletteT > 0 && (k.rouletteT -= dt) <= 0) {
-      k.rouletteT = 0;
-      k.item = deal(k.place);
-      events.push({ kind: 'item', kart: k.i, item: k.item });
-    }
-    if (inp.item) use(k, inp.back);
 
-    // Speed: gas, brake, the boost's extra top end, slowed by a trail, capped on dirt (unless boosting), scrubbed by a spin
+    // Speed: gas, brake, the boost's extra top end, held down in the run-off, scrubbed by a spin
     const boost = k.boostT > 0 ? k.boostK : 1;
-    let top = tn.top * boost * (k.slowT > 0 ? 0.5 : 1);
-    if (k.flags & F.dirt && k.boostT <= 0) top = Math.min(top, tn.top * DIRT_CAP);
-    if (spinning) top = 0;
+    let top = tn.top * boost;
+    if (k.off) top = Math.min(top, tn.top * (k.boostT > 0 ? RUNOFF_BOOST_CAP : RUNOFF_CAP));
+    if (spinning || k.resetT > 0) top = 0;
     const th = clamp(inp.throttle, -1, 1);
     if (k.air) {
       /* no gas in the air */
-    } else if (k.boostT > 0 && th >= 0) k.speed = approach(k.speed, top, tn.accel * 2.5 * dt);
-    else if (th > 0.02) k.speed += tn.accel * th * Math.max(0, 1 - (k.speed / top) ** 2) * dt;
+    } else if (k.boostT > 0 && th > 0.02) k.speed = approach(k.speed, top, tn.accel * 2.5 * dt);
+    else if (th > 0.02) k.speed += tn.accel * th * Math.max(0, 1 - (k.speed / Math.max(top, 0.1)) ** 2) * dt;
     else if (th < -0.02) {
       if (k.speed > 0.3) k.speed = approach(k.speed, 0, 14 * -th * dt);
       else k.speed = approach(k.speed, -3 * -th, tn.accel * 0.6 * dt);
     } else k.speed = approach(k.speed, 0, (2.2 + Math.abs(k.speed) * 0.12) * dt);
-    if (k.speed > top && !k.air) k.speed = approach(k.speed, top, (k.flags & F.dirt ? 12 : 6) * dt);
+    if (k.speed > top && !k.air) k.speed = approach(k.speed, top, (k.off ? 14 : 6) * dt);
     if (spinning) k.speed = approach(k.speed, 0, 8 * dt);
 
     // The hop, into a drift
@@ -608,7 +531,7 @@ export function createKartSim(setup: RaceSetup) {
     k.steer = approach(k.steer, want, 7 * dt);
     let yawRate = 0;
     if (!k.air && !spinning) {
-      const turn = TURN * (0.8 + tn.handling * 0.5) * clamp(k.speed / 3, 0, 1) / (1 + Math.abs(k.speed) / 28);
+      const turn = turnRate(tn.handling, k.speed);
       if (k.drift !== 0) {
         const lean = 0.5 + 0.5 * k.drift * k.steer;
         yawRate = -k.drift * turn * (0.85 + lean * 0.75);
@@ -616,9 +539,9 @@ export function createKartSim(setup: RaceSetup) {
     }
     k.yaw += yawRate * dt;
 
-    // The slide follows the nose (less in a drift, less on a wet or dirt surface, more on banking)
+    // The slide follows the nose (less in a drift, less with less grip under it, more on banking)
     const bankGrip = k.flags & F.bank ? 1.3 : 1;
-    const grip = (k.drift !== 0 ? 2.4 + tn.handling * 0.8 : 6.5 + tn.handling * 4) * (k.gripNow ?? 1) * bankGrip;
+    const grip = (k.drift !== 0 ? 2.4 + tn.handling * 0.8 : 6.5 + tn.handling * 4) * k.gripNow * bankGrip;
     const kk = 1 - Math.exp(-grip * dt);
     const fx = Math.cos(k.yaw);
     const fz = -Math.sin(k.yaw);
@@ -627,67 +550,28 @@ export function createKartSim(setup: RaceSetup) {
     k.x += k.vx * dt;
     k.z += k.vz * dt;
 
-    // Where that is on the loop (or the shortcut); the walls
-    let ds = 0;
-    let loc: ReturnType<typeof locate>;
-    let wall = WALL;
-    if (k.line === 'short' && sc) {
-      loc = locate(sc, k.x, k.z, k.sShort, 6);
-      k.sShort = loc.s;
-      wall = sc.half - KART_R;
-      const mainS = mainOfShort(k.sShort);
-      ds = along(c, k.s, mainS);
-      k.s = mainS;
-      // Off the end: back on the main line
-      if (k.sShort >= sc.L - 0.6) {
-        k.line = 'main';
-        k.s = wrapS(c, sc.in);
-        loc = locate(c, k.x, k.z, k.s, 6);
-        k.s = loc.s;
-        wall = WALL;
-        events.push({ kind: 'shortcut', kart: k.i, on: false });
-      }
-    } else {
-      loc = locate(c, k.x, k.z, k.s, 6);
-      ds = along(c, k.s, loc.s);
-      k.s = loc.s;
-      // Just past the shortcut's mouth and nearer its line than the main's: onto the shortcut
-      if (sc && started && !k.finished) {
-        const past = along(c, sc.out, k.s);
-        if (past > 0 && past < 7) {
-          const ls = locate(sc, k.x, k.z, Math.max(0, past), 6);
-          if (ls.s > 0.5 && ls.s < sc.L - 1 && Math.abs(ls.lateral) < sc.half - KART_R && Math.abs(ls.lateral) < Math.abs(loc.lateral)) {
-            k.line = 'short';
-            k.sShort = ls.s;
-            loc = ls;
-            wall = sc.half - KART_R;
-            events.push({ kind: 'shortcut', kart: k.i, on: true });
-          }
-        }
-      }
-    }
+    // Where that is on the loop (keeping to the layer it was on: the deck or the ground under it)
+    const loc = locate(c, k.x, k.z, k.s, 6);
+    const ds = along(c, k.s, loc.s);
+    k.s = loc.s;
     k.lateral = loc.lateral;
     k.flags = loc.frame.flags;
     k.roll = loc.frame.roll;
-    k.gripNow = loc.frame.grip;
-    if (Math.abs(k.lateral) > wall) {
-      const side = Math.sign(k.lateral);
-      const f = loc.frame;
-      const into = (k.vx * f.nx + k.vz * f.nz) * side;
-      k.lateral = side * wall;
-      k.x = f.x + f.nx * k.lateral;
-      k.z = f.z + f.nz * k.lateral;
-      if (into > 0) {
-        k.vx -= f.nx * into * side;
-        k.vz -= f.nz * into * side;
-        const force = into;
-        k.speed *= force > 3 ? 0.6 : 0.88;
-        k.wallT = 0.25;
-        if (force > 1.5) events.push({ kind: 'wall', kart: k.i, force });
-        if (k.drift !== 0 && force > 3) endDrift(k, false);
-      }
+    const side = Math.abs(k.lateral);
+    // Far off, or over the deck's edge: put back on the track
+    const offDeck = loc.frame.flags & F.deck && loc.frame.y > 0.6 && side > TRACK_HALF + KERB;
+    if (started && (side > RESET_AT || offDeck)) {
+      reset(k);
+      return;
     }
-    // Progress, laps, the finish
+    const wasOff = k.off;
+    k.kerb = side > TRACK_HALF && side <= TRACK_HALF + KERB;
+    k.off = side > TRACK_HALF + KERB;
+    if (k.off) k.dirty = true;
+    if (k.off !== wasOff) events.push({ kind: 'offtrack', kart: k.i, on: k.off });
+    k.gripNow = weather * (k.off ? RUNOFF_GRIP : 1);
+
+    // Progress, laps, clean laps, the finish
     if (started && !k.finished) {
       const before = k.progress;
       k.progress += ds;
@@ -695,6 +579,11 @@ export function createKartSim(setup: RaceSetup) {
       const lapNow = Math.floor(k.progress / c.L);
       if (lapNow > lapBefore && lapNow >= 1) {
         k.lap = lapNow;
+        if (!k.dirty) {
+          k.cleanLaps++;
+          events.push({ kind: 'clean', kart: k.i, lap: lapNow });
+        }
+        k.dirty = false;
         if (lapNow >= laps) {
           k.finished = true;
           k.finishT = time;
@@ -705,8 +594,8 @@ export function createKartSim(setup: RaceSetup) {
       }
     }
 
-    // Height: the track's surface, or the air over the hump
-    const surface = loc.y;
+    // Height: the track's surface (the run-off carries on from the track's edge), or the air off the jump
+    const surface = heightAt(loc.frame, clamp(k.lateral, -TRACK_HALF, TRACK_HALF));
     if (k.air) {
       k.vy -= G * dt;
       k.y += k.vy * dt;
@@ -717,9 +606,9 @@ export function createKartSim(setup: RaceSetup) {
         events.push({ kind: 'land', kart: k.i });
       }
     } else {
-      // Over the hump's top at speed the kart takes off
-      const dh = c.hump >= 0 ? along(c, k.s, c.hump) : -1e9;
-      if (dh >= 0 && dh < 1.2 && k.speed > 6 && !k.hopT) {
+      // Over the jump's lip at speed the kart takes off
+      const dh = c.jump >= 0 ? along(c, k.s, c.jump) : -1e9;
+      if (dh >= 0 && dh < 1.2 && k.speed > 6 && !k.hopT && !k.off) {
         k.air = true;
         k.vy = k.speed * 0.2;
         k.y = surface;
@@ -727,8 +616,8 @@ export function createKartSim(setup: RaceSetup) {
       } else k.y = surface;
     }
 
-    // Boost pads
-    if (!k.air && !spinning && started && !k.finished)
+    // Boost pads (on the asphalt)
+    if (!k.air && !spinning && started && !k.finished && side <= TRACK_HALF)
       for (const p of c.pads) {
         const d = along(c, p.s, k.s);
         if (d >= 0 && d < p.len && k.boostT < T.pad * 0.5) {
@@ -737,113 +626,6 @@ export function createKartSim(setup: RaceSetup) {
           events.push({ kind: 'pad', kart: k.i });
         }
       }
-    // Item boxes
-    if (!k.item && k.rouletteT <= 0 && started && !k.finished)
-      for (let b = 0; b < boxes.length; b++) {
-        const box = boxes[b];
-        if (box.gone > 0) continue;
-        if (Math.abs(along(c, box.s, k.s)) < 0.9 && Math.abs(k.lateral - box.lateral) < 1.05 && Math.abs(k.y - (box.y - 0.9)) < 1) {
-          box.gone = T.boxRespawn;
-          k.rouletteT = T.roulette;
-          events.push({ kind: 'box', box: b });
-          break;
-        }
-      }
-    // Laying a trail
-    if (k.trailT > 0) {
-      k.trailT -= dt;
-      const last = hazards.findLast((h) => h.kind === 'trail' && h.owner === k.i);
-      if (!last || Math.hypot(last.x - k.x, last.z - k.z) > 0.6) hazards.push({ kind: 'trail', x: k.x, z: k.z, y: k.y, s: k.s, owner: k.i, t: T.trailLife });
-    }
-    // Hazards underfoot
-    if (!k.air && !spinning && started && !k.finished)
-      for (let h = hazards.length - 1; h >= 0; h--) {
-        const z = hazards[h];
-        if (Math.abs(z.y - k.y) > 0.8 || Math.hypot(z.x - k.x, z.z - k.z) > 0.75) continue;
-        if (z.kind === 'oil') {
-          hazards.splice(h, 1);
-          spin(k, z.owner, 'oil', T.oilSpin);
-        } else if (z.owner !== k.i && k.slowT <= 0) {
-          k.slowT = T.slow;
-          events.push({ kind: 'hit', kart: k.i, by: z.owner, item: 'trail' });
-          racers[z.owner].hits++;
-        }
-      }
-  }
-
-  function stepMissiles(dt: number) {
-    for (let m = missiles.length - 1; m >= 0; m--) {
-      const p = missiles[m];
-      p.t -= dt;
-      if (p.t <= 0) {
-        missiles.splice(m, 1);
-        continue;
-      }
-      if (p.kind === 'gummy') {
-        p.x += p.vx * dt;
-        p.z += p.vz * dt;
-        const loc = locate(c, p.x, p.z, p.s, 4);
-        p.s = loc.s;
-        p.lateral = loc.lateral;
-        p.y = loc.y + 0.3 + Math.abs(Math.sin(p.t * 9)) * 0.35;
-        if (Math.abs(p.lateral) > WALL) {
-          const f = loc.frame;
-          const side = Math.sign(p.lateral);
-          const into = (p.vx * f.nx + p.vz * f.nz) * side;
-          p.lateral = side * WALL;
-          p.x = f.x + f.nx * p.lateral;
-          p.z = f.z + f.nz * p.lateral;
-          if (into > 0) {
-            p.vx -= 2 * f.nx * into * side;
-            p.vz -= 2 * f.nz * into * side;
-            p.bounces++;
-            if (p.bounces > 6) p.t = Math.min(p.t, 0.3);
-          }
-        }
-        p.yaw = Math.atan2(-p.vz, p.vx);
-      } else {
-        const tgt = racers[p.target];
-        const speed = 22;
-        if (!tgt || tgt.finished) {
-          p.t = 0;
-          missiles.splice(m, 1);
-          continue;
-        }
-        // Along the loop after its target, easing across to its line; the last stretch is a straight dash
-        const gap = along(c, p.s, tgt.s);
-        if (gap > 0 && gap < 3.5 && Math.abs(tgt.y - p.y) < 1.2) {
-          const dx = tgt.x - p.x;
-          const dz = tgt.z - p.z;
-          const d = Math.hypot(dx, dz) || 1;
-          p.x += (dx / d) * speed * dt;
-          p.z += (dz / d) * speed * dt;
-          const loc = locate(c, p.x, p.z, p.s, 4);
-          p.s = loc.s;
-          p.lateral = loc.lateral;
-          p.y = loc.y + 0.8;
-        } else {
-          p.s = wrapS(c, p.s + speed * dt);
-          p.lateral = approach(p.lateral, clamp(tgt.lateral, -WALL, WALL), 3 * dt);
-          const q = at(c, p.s, p.lateral);
-          p.yaw = Math.atan2(-(q.z - p.z), q.x - p.x);
-          p.x = q.x;
-          p.z = q.z;
-          p.y = q.y + 0.8;
-        }
-      }
-      // Hits
-      for (const k of racers) {
-        if (k.finished) continue;
-        if (p.kind === 'gummy' && k.i === p.owner && p.t > T.gummyLife - 0.35) continue;
-        if (p.kind === 'pigeon' && k.i === p.owner) continue;
-        if (Math.abs(k.y - p.y) > 1.2 || Math.hypot(k.x - p.x, k.z - p.z) > 0.85) continue;
-        missiles.splice(m, 1);
-        spin(k, p.owner, p.kind);
-        break;
-      }
-    }
-    for (let h = hazards.length - 1; h >= 0; h--) if ((hazards[h].t -= dt) <= 0) hazards.splice(h, 1);
-    for (const b of boxes) b.gone = Math.max(0, b.gone - dt);
   }
 
   /** Karts bump each other: pushed apart, the heavier one less */
@@ -852,7 +634,7 @@ export function createKartSim(setup: RaceSetup) {
       for (let b = a + 1; b < racers.length; b++) {
         const p = racers[a];
         const q = racers[b];
-        if (Math.abs(p.y - q.y) > 0.9) continue;
+        if (Math.abs(p.y - q.y) > 0.9 || p.resetT > 0 || q.resetT > 0) continue;
         const dx = q.x - p.x;
         const dz = q.z - p.z;
         const d = Math.hypot(dx, dz);
@@ -882,11 +664,9 @@ export function createKartSim(setup: RaceSetup) {
           if (into > 1.2) {
             p.bumpT = q.bumpT = 0.3;
             events.push({ kind: 'bump', kart: p.i, other: q.i, force: into });
-            // A heavy kart ramming a light one hard sends it spinning
-            if (into > 6 && !started) {
-              /* (never on the grid) */
-            } else if (into > 6.5 && p.tune.weight - q.tune.weight > 0.5) spin(q, p.i, 'bump', 0.7);
-            else if (into > 6.5 && q.tune.weight - p.tune.weight > 0.5) spin(p, q.i, 'bump', 0.7);
+            // A heavy kart ramming a light one hard sends it spinning (never on the grid)
+            if (started && into > 6.5 && p.tune.weight - q.tune.weight > 0.5) spin(q, p.i, 0.7);
+            else if (started && into > 6.5 && q.tune.weight - p.tune.weight > 0.5) spin(p, q.i, 0.7);
           }
         }
       }
@@ -904,6 +684,17 @@ export function createKartSim(setup: RaceSetup) {
     }
   }
 
+  /** Places gained by passing count as overtakes (while both are still racing) */
+  function overtakes(before: number[]) {
+    if (!started) return;
+    for (const k of racers) {
+      const was = before[k.i];
+      if (k.finished || k.place >= was) continue;
+      k.overtakes += was - k.place;
+      if (k === player) events.push({ kind: 'overtake', kart: k.i, place: k.place });
+    }
+  }
+
   function tick() {
     const dt = TICK;
     if (countdown > 0) {
@@ -918,24 +709,23 @@ export function createKartSim(setup: RaceSetup) {
       }
     } else time += dt;
     rubber();
-    for (const k of racers) stepKart(k, k.ai ? think(k) : auto ? think({ ...k, ai: AUTO } as Racer) : playerInput, dt);
-    playerInput = { ...playerInput, item: false };
+    // The player's own input until the line; after it (or with `auto`) the rivals' brain drives
+    for (const k of racers) stepKart(k, k.ai ? think(k, k.ai) : auto || k.finished ? think(k, AUTO) : playerInput, dt);
     bumps();
-    stepMissiles(dt);
+    const before = racers.map((k) => k.place);
     placeAll();
+    overtakes(before);
   }
 
   return {
     course,
     cup: cupOf,
     cls,
+    cond,
     laps,
     timeTrial,
     racers,
     player,
-    boxes,
-    hazards,
-    missiles,
     get countdown() {
       return countdown;
     },
@@ -956,7 +746,7 @@ export function createKartSim(setup: RaceSetup) {
     standings,
     /** Advance by a frame's worth of time (fixed ticks inside); returns what happened */
     step(dt: number, inp: KartInput): KartEvent[] {
-      playerInput = { ...inp, item: inp.item || playerInput.item };
+      playerInput = inp;
       acc += Math.min(dt, 0.25);
       events.length = 0;
       while (acc >= TICK) {
