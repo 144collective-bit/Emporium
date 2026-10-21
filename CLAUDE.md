@@ -475,7 +475,7 @@ it and has been retired completely. Build only on what's here.
   `line()` for the Workshop and factories), the ledger (`book()`, called by
   every rule that moves Dorras) and loans (`borrow()`, `repay()`, a share
   of takings in `advance()`).
-  `cleanSave()` cleans anything loaded and upgrades older saves (now v8);
+  `cleanSave()` cleans anything loaded and upgrades older saves (now v9);
   keep that migration when the save changes. New economy rules go here
   first.
 - **The city's game (Phase 5)** sits on the same save: XP and levels
@@ -712,8 +712,10 @@ it and has been retired completely. Build only on what's here.
 ## The kart park (3D walk mode)
 
 - **The place** (the owner's call): a Mario-Kart-style go-kart park on the
-  open land outside the Parkway in the north-east, filling the quadrant to
-  the world's edge, fenced, with a slip road down to the Parkway and a gate;
+  open land outside the Parkway in the north-east, fenced round the
+  circuit (pulled in when the circuit was scaled down, the owner's call;
+  the land beyond it is the outskirts' again, open for later), with a slip
+  road down to the Parkway and a gate;
   one circuit raced both ways (the rebuild, `docs/kart-plan.md`), the kart
   hut (door prompt "Kart hut"), a grandstand facing the start straight, the
   pit lane with eight garages and the big screen on their roof. It's a place like the landmarks (spot
@@ -726,12 +728,13 @@ it and has been retired completely. Build only on what's here.
   `circuitSurfaceAt()`, and goes back to the pits when a race starts).
   Walking follows the same ground inside the park (`groundAt()` in
   `walk.ts`).
-- **The site** is `kartpark.ts` (DOM-free): `KART_PARK` (world x 92-232,
-  z -192 to -48), local numbers via `toWorld()` / `toLocal()` (u east, v
+- **The site** is `kartpark.ts` (DOM-free): `KART_PARK` (world x 92-180,
+  z -138 to -48; `SITE_U` x `SITE_V` inside its margins), local numbers via `toWorld()` / `toLocal()` (u east, v
   south from the site's corner), the fence's `GATE`, the `SLIP_ROAD` and
   `KART_SPAWN`, and the line maths every track part uses: `sampleLine()`
   (centripetal Catmull-Rom through control points `CPt`, heights
-  cosine-eased, sampled every half tile), `Line`, `frame()`, `at()`,
+  cosine-eased from point to point, or through a `glide` point in one
+  long ease (a ramp round a bend), sampled every half tile), `Line`, `frame()`, `at()`,
   `locate()` (keeps to the layer its hint is on), `along()`, `wrapS()`,
   `heightAt()` (banking), flags `F` (deck, tunnel, bank). The site is flat
   ground, not a slab, and the outskirts' trees keep off it and the slip
@@ -744,16 +747,19 @@ it and has been retired completely. Build only on what's here.
   `T.driftBoost`), boost pads (`pads` on the course), bumps weighted by
   `weight` (a heavy kart ramming a light one spins it), air off the jump
   (`flight()`), banking (more grip), pure racing (no items, the owner's
-  call). **No walls:** kerbs are track; the run-off holds a kart to
-  `RUNOFF_CAP` with `RUNOFF_GRIP`; past `RESET_AT` (or over the deck's
-  edge) it fades back onto the centre line where it had got to
-  (`'reset'`, `RESET_T`, no progress lost). Conditions (`cond`): day,
+  call). **No invisible walls:** kerbs are track; the run-off holds a
+  kart to `RUNOFF_CAP` with `RUNOFF_GRIP`; past `RESET_AT` (or over the
+  deck's edge) it fades back onto the centre line where it had got to
+  (`'reset'`, `RESET_T`, no progress lost). The tunnel's walls are real:
+  a kart scrapes along them, slower, never put back. Conditions (`cond`): day,
   night (looks only), rain (`RAIN_GRIP` everywhere). Clean laps (no
   wheel in the run-off) and overtakes are counted per racer. Seven
   rivals (`think()`: pure pursuit on the way they're moving, a lane
   offset, passing a slower kart ahead or holding back, drifting only
   where a bend needs more than full lock, braking planned from
-  `cornerSpeed()` back along the track and past the jump's flight) with a
+  `cornerSpeed()` back along the track and past the jump's flight,
+  coasting instead of boosting towards the deck or the tunnel until
+  lined up with the track) with a
   rubber band (`rubber()`); three cups (`CUPS`: `cls`, four `races` of
   { course, laps, cond }, `ai` pace, `skill`, prizes by place), time
   trials (`cup: 'time'`, alone) and `auto` (the sim drives the player:
@@ -762,7 +768,7 @@ it and has been retired completely. Build only on what's here.
   (`done`) and everyone's (`over`). New gameplay goes here first; looks
   and sounds in the view.
 - **The rebuild** (the owner's call, `docs/kart-plan.md`): one narrower
-  circuit (5.6 wide, kerbs, grass and gravel run-off), raced both ways,
+  circuit (kerbs, grass and gravel run-off), raced both ways,
   with a pit lane and nothing solid near it, replaces the network in four
   phases. Phase 1 is built: the circuit as data in `kartcircuit.ts`
   (DOM-free, tested in `tests/kartcircuit.test.ts`; twelve corners, lefts
@@ -782,7 +788,14 @@ it and has been retired completely. Build only on what's here.
   the garages, the stand; **nothing on or beside the track is solid**,
   the owner's call). Phases 2 (the rules race on it, the save is v8), 3
   (the park drawn round it) and 4 (the HUD's minimap, single races in the
-  hut, the item slot and button gone) are built.
+  hut, the item slot and button gone) are built. Then the whole circuit
+  was scaled down to 60% (the owner's call: faster paced, more lifelike):
+  a lap of about 350 tiles (some 630 m), `TRACK_W` 4.4 (four or five
+  karts abreast), `RUNOFF` 3, `MIN_RADIUS` 4, the hill `HILL_H` 2 with
+  the tunnel on its lower slope and the jump clear of it either way,
+  four boost pads (none under a grid or into a deck), the karts about 20%
+  slower (`tune()`), par laps about 34 / 29.5 / 27 s (Street / Sport /
+  Neon), the park's fence pulled in round it, the save v9.
 - **Classes** (`catalog.ts` `KART_CLASSES`, `ClassId`, `CLASS_IDS`): Street
   (Lv 1, 0.82), Sport (Lv 3, 1) and Neon (Lv 8, 1.18) set everyone's pace
   in a race; a cup fixes its class, a time trial picks one. Records and
@@ -800,9 +813,12 @@ it and has been retired completely. Build only on what's here.
   own runs for now, built so a server can hold everyone's later),
   `series` (the cup in progress: race, points), `trophies` (cup wins),
   `challenge` (today's daily challenge, done once a day), `parBeaten`,
-  `old` (the old network's lap records, kept aside when a v7 save moved
-  to the rebuilt circuit; its boards, par ghosts and a series on the go
-  were dropped) }
+  `old` (the old tracks' lap records: the network's, kept aside when a
+  v7 save moved to the rebuilt circuit (its boards, par ghosts and a
+  series on the go were dropped), and the full-size circuit's as
+  `full-circuit` / `full-circuit-reverse`, kept aside when a v8 save met
+  the scaled-down one (its boards and par ghosts beaten dropped, a series
+  kept)) }
   with `buyKart()` / `modKart()` / `kartStatsOf()` / `pickKart()`,
   `finishKartRace()` → `KartResult` (prizes by place, lap records in any
   race, run records and boards in time trials, par beaten (`PAR_LAPS`,
@@ -843,7 +859,8 @@ it and has been retired completely. Build only on what's here.
   `sound.ts`), pays through `finishKartRace()` (and `seriesRace()` in a
   series) + `commit()` and shows the results. **Ghosts** in time trials:
   your best lap on the course and class is recorded as it's set and
-  replayed (`degen-city-ghosts-v1` in localStorage, per key), and a par
+  replayed (`degen-city-ghosts-v2` in localStorage, per key; the v1
+  ghosts were the full-size circuit's and are cleared), and a par
   ghost is driven by the sim's `auto` at the class's pace; `setGhosts()`
   shows or hides each, the HUD shows the gap. `kart-ui.ts`
   (`createKartUI()`, markup `data-karts`, `data-kart-hud`,

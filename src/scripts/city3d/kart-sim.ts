@@ -136,7 +136,8 @@ export interface KartTune {
 /** A kart's 0..1 numbers (KART_SPECS with the hut's mods on, kartStats in catalog.ts) as what the sim uses, at a class's pace */
 export function tune(d: { speed: number; accel: number; handling: number; weight: number; boost?: number }, cls: ClassId = 'sport'): KartTune {
   const mul = KART_CLASSES[cls].pace;
-  return { top: (11 + d.speed * 7) * mul, accel: (6 + d.accel * 7) * mul, handling: d.handling, weight: d.weight, boost: d.boost ?? 1 };
+  // About 20% slower than at first (the owner's call when the circuit was scaled down: closer to real karts)
+  return { top: (8.8 + d.speed * 5.6) * mul, accel: (5.4 + d.accel * 6.3) * mul, handling: d.handling, weight: d.weight, boost: d.boost ?? 1 };
 }
 
 export interface KartInput {
@@ -427,10 +428,17 @@ export function createKartSim(setup: RaceSetup) {
       const brakeD = toJump >= 0 && toJump < d ? Math.max(0, d - flight(v)) : d;
       maxSpeed = Math.min(maxSpeed, Math.sqrt(vc * vc + 2 * PLAN_BRAKE * brakeD));
     }
+    // Coming up fast to the deck or the tunnel (no run-off there), not yet lined up with the track (a drift's exit): coast, no boost, until it is
+    let coast = false;
+    if (!k.off && v > k.tune.top * 0.7) {
+      const here = frame(c, k.s);
+      if (Math.abs(wrap(moving - Math.atan2(-here.tz, here.tx))) > 0.12)
+        for (let d = 2; d <= 4 + v * 0.8 && !coast; d += 2) coast = enclosed(frame(c, k.s + d));
+    }
     // Out in the run-off: just get back on, gently
     if (k.off) maxSpeed = Math.min(maxSpeed, k.tune.top * RUNOFF_CAP);
     maxSpeed = Math.min(maxSpeed, follow);
-    const throttle = v > maxSpeed + 0.5 ? -1 : v > maxSpeed ? -0.3 : 1;
+    const throttle = v > maxSpeed + 0.5 ? -1 : v > maxSpeed ? -0.3 : coast ? 0 : 1;
     return { throttle, steer, drift };
   }
 
@@ -557,8 +565,25 @@ export function createKartSim(setup: RaceSetup) {
     k.lateral = loc.lateral;
     k.flags = loc.frame.flags;
     k.roll = loc.frame.roll;
+    // The tunnel's walls are real: a kart that reaches one scrapes along it (back to the kerb's edge, the push into the wall gone, some speed lost)
+    const wall = TRACK_HALF + KERB;
+    if (loc.frame.flags & F.tunnel && Math.abs(k.lateral) > wall) {
+      const sgn = Math.sign(k.lateral);
+      const f = loc.frame;
+      k.x += f.nx * (sgn * wall - k.lateral);
+      k.z += f.nz * (sgn * wall - k.lateral);
+      k.lateral = sgn * wall;
+      const into = (k.vx * f.nx + k.vz * f.nz) * sgn;
+      if (into > 0) {
+        k.vx -= f.nx * into * sgn;
+        k.vz -= f.nz * into * sgn;
+        k.speed *= 1 - Math.min(0.4, into * 0.06);
+      }
+      // The nose turns along the wall
+      k.yaw += wrap(Math.atan2(-f.tz, f.tx) - k.yaw) * Math.min(1, 6 * dt);
+    }
     const side = Math.abs(k.lateral);
-    // Far off, or over the deck's edge (or into the tunnel's wall): put back on the track
+    // Far off, or over the deck's edge: put back on the track
     const offDeck = enclosed(loc.frame) && side > TRACK_HALF + KERB;
     if (started && (side > RESET_AT || offDeck)) {
       reset(k);

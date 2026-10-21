@@ -181,3 +181,45 @@ flyover's deck is 2.6 over the diagonal below.
      day and night, on the phone tier.
 
 Each phase gets the owner's sign-off before the next one starts.
+
+## After the phases: scaled down (built)
+
+Seen live, the owner liked the circuit but asked for it smaller, "faster
+paced and more lifelike". Their choices: the lap about 40% shorter, the
+track narrower (about 4.4), the karts a bit slower (about 20%), the
+flyover kept, and the park's fence pulled in round the smaller circuit.
+
+As built:
+
+- **The circuit** is the same shape at 60% (`kartcircuit.ts`): about 350
+  tiles a lap (some 630 m, was 589), 4.4 wide with 0.5 kerbs and 3 of
+  run-off (was 5.6 and 4.6), corners down to a radius of 4 (about 7 m,
+  a real kart hairpin). The hill is 2 high (was 3) and climbs and drops
+  in one long ease each way (`glide` points in `sampleLine()`); the
+  dip over its crest is a touch softer; the tunnel is now on the hill's
+  lower slope, so the jump (0.7 high, was 0.9) is far enough on that a
+  kart flying off it either way lands clear of the tunnel. The flyover
+  keeps its 2.6 of clearance on longer, single-ease ramps. Four boost
+  pads (the one in the tunnel moved to the start straight, past both
+  grids; the one on the flyover's ramp went). The grid and the pit lane
+  are tighter to fit the shorter straight.
+- **The site**: the fence pulled in to about 88 x 90 (`KART_PARK` world
+  x 92-180, z -138 to -48), the same gate and slip road; the garages, the
+  hut and the grandstand (three tiers now, a lower canopy) round the
+  smaller circuit; light poles and marshal posts spaced to suit.
+- **The racing**: the karts about 20% slower (`tune()`: top speed x0.8,
+  pick-up x0.9). Par laps about 34 s at Street, 29.5 at Sport, 27 at Neon
+  (were 44 / 38 / 35). The tunnel's walls are real now (a kart scrapes
+  along them, slower, never put back), and a rival coming up to the deck
+  or the tunnel not lined up with the track coasts instead of boosting.
+  The par driver runs every course, class and condition clean; in cup
+  races the pack goes off now and then, nobody is put back.
+- **The save** (v9): a v8 save's circuit records go aside as the
+  full-size circuit's (shown with the old network's on the Boards tab),
+  its boards and par ghosts beaten go, a series on the go stays. Stored
+  ghost laps move to a new key (their paths were the full-size circuit's).
+- **A fix on the way**: painted quads on the track (grid boxes, the jump's
+  stripes, arrows) were built with both windings on shared corners, so
+  their normals could cancel to nothing; the toon shader turned that into
+  NaN and the bloom spread it over the whole picture (a black screen with
+  the park in view). They're one winding, facing up, now.

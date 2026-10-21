@@ -352,17 +352,18 @@ export interface KartSave {
   challenge: { day: string; lap: number } | null;
   /** The course-and-class keys whose par ghost you've beaten */
   parBeaten: string[];
-  /** Your lap records from the old track network (before the rebuild, save v8), kept aside by their old keys */
+  /** Your lap records from the tracks before this one, kept aside: the old network (before the rebuild, save v8) by their old
+   * keys, and the circuit at full size (before it was scaled down, save v9) as `full-circuit` / `full-circuit-reverse` */
   old: Record<string, KartTime>;
 }
-/** The old network's courses (records kept aside from them) */
-const OLD_COURSES = ['neon-loop', 'neon-reverse', 'summit', 'summit-reverse', 'grand', 'grand-reverse'];
+/** The old network's courses and the full-size circuit's (records kept aside from them) */
+const OLD_COURSES = ['neon-loop', 'neon-reverse', 'summit', 'summit-reverse', 'grand', 'grand-reverse', 'full-circuit', 'full-circuit-reverse'];
 export const LEADERBOARD_SIZE = 10;
 export const recordKey = (course: string, cls: string) => `${course}:${cls}`;
 export const emptyKarts = (): KartSave => ({ model: DEFAULT_KART.model, paint: DEFAULT_KART.paint, owned: [], mods: {}, records: {}, boards: {}, series: null, trophies: {}, challenge: null, parBeaten: [], old: {} });
 
 export interface TycoonSave {
-  v: 8;
+  v: 9;
   dorras: number;
   till: number;
   /** When it was last brought up to date (ms since 1970) */
@@ -413,7 +414,7 @@ export const GUIDE_STEPS = 7;
 
 export function newSave(now: number): TycoonSave {
   return {
-    v: 8,
+    v: 9,
     dorras: START_DORRAS,
     till: 0,
     at: now,
@@ -514,7 +515,7 @@ export function cleanSave(raw: unknown, now: number): TycoonSave {
   }
   const mul = (p: PlaceId) => LEVEL_CAPACITY[(levels[p] ?? 1) - 1];
   const s: TycoonSave = {
-    v: 8,
+    v: 9,
     dorras: Math.floor(num(o.dorras, 0, 1e12, START_DORRAS)),
     till: Math.floor(num(o.till, 0, 1e12, 0)),
     at: num(o.at, 0, now, now),
@@ -1810,9 +1811,12 @@ function cleanGame(s: TycoonSave, o: Record<string, unknown>, now: number) {
   s.karts.paint = pick.paint;
   // Records and boards per course and class (v7; a v6 save's plain times are dropped). Save v8 rebuilt the track:
   // an older save's records are kept aside (`old`), its boards, par ghosts beaten and a series on the go are dropped
+  // Save v9 scaled the circuit down to 60%: a v8 save's circuit records go aside as the full-size circuit's, its boards and
+  // par ghosts beaten are dropped (a series on the go stays: the cups race the same courses)
   const rebuilt = typeof o.v === 'number' && o.v >= 8;
+  const scaled = typeof o.v === 'number' && o.v >= 9;
   const keyIn = (ids: readonly string[]) => (k: string) => /^[a-z0-9-]{1,32}:[a-z]{1,16}$/.test(k) && ids.includes(k.split(':')[0]) && CLASS_IDS.includes(k.split(':')[1] as ClassId);
-  const keyOk = rebuilt ? keyIn(COURSE_IDS) : () => false;
+  const keyOk = scaled ? keyIn(COURSE_IDS) : () => false;
   const oldOk = keyIn(OLD_COURSES);
   const cleanTime = (raw: unknown): KartTime | null => {
     const r = obj(raw);
@@ -1830,6 +1834,11 @@ function cleanGame(s: TycoonSave, o: Record<string, unknown>, now: number) {
     const t = oldOk(k) ? cleanTime(raw) : null;
     if (t) s.karts.old[k] = t;
   }
+  if (rebuilt && !scaled)
+    for (const [k, raw] of Object.entries(obj(kt.records))) {
+      const t = keyIn(COURSE_IDS)(k) ? cleanTime(raw) : null;
+      if (t) s.karts.old[`full-${k}`] = t;
+    }
   for (const [k, raw] of Object.entries(obj(kt.boards))) {
     if (!keyOk(k) || !Array.isArray(raw)) continue;
     const list = raw.map(cleanTime).filter((t): t is KartTime => !!t && t.run > 0).sort((a, b) => a.run - b.run).slice(0, LEADERBOARD_SIZE);

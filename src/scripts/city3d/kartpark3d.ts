@@ -42,7 +42,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { SpotId } from '../../lib/city';
 import { Batch, FONT_DISPLAY, FONT_MONO, PAL, canvasTex, fx, glowMat, lit, neon, neonSign, occlude, place, plane, rng, toon } from './kit';
-import { F, GATE, KART_PARK, SLIP_ROAD, frame, toLocal, toWorld, type Frame, type Line } from './kartpark';
+import { F, GATE, KART_PARK, SITE_U, SITE_V, SLIP_ROAD, frame, toLocal, toWorld, type Frame, type Line } from './kartpark';
 import {
   BAYS,
   CIRCUIT,
@@ -94,7 +94,7 @@ const TUBE_T = 0.3;
 /** Tyre stacks and boards stand this far past the run-off */
 const SET_BACK = 1.2;
 /** Where the paving along the south begins (local v) */
-const PAVED_V = 126.6;
+const PAVED_V = SITE.garages.v0 - 0.6;
 
 /* ---------- Materials ---------- */
 
@@ -458,7 +458,7 @@ function circuitDistance(x: number, z: number) {
   return Math.sqrt(best);
 }
 function clearAt(u: number, v: number, margin: number) {
-  if (u < 1.6 || u > 136.4 || v < 0 || v > PAVED_V - 1) return false;
+  if (u < 1.6 || u > SITE_U + 0.4 || v < 0 || v > PAVED_V - 1) return false;
   for (const [u0, v0, u1, v1] of FIXTURES) if (u > u0 - 2 && u < u1 + 2 && v > v0 - 2 && v < v1 + 2) return false;
   const [x, z] = toWorld([u, v]);
   return circuitDistance(x, z) > CLEAR + margin;
@@ -547,7 +547,7 @@ export function buildKartPark(scene: THREE.Scene, opts: { tick: (f: Tick) => voi
       const lats = [-CLEAR, -EDGE - 1, -EDGE, 0, EDGE, EDGE + 1, CLEAR];
       const nx = c.tz[i];
       const nz = -c.tx[i];
-      for (const l of lats) pts.push(c.x[i] + nx * l, 0, c.z[i] + nz * l, c.x[i] + nx * l, Math.max(0, groundAt(fr(c, i), l) - (Math.abs(l) <= EDGE ? DECK : 0)), c.z[i] + nz * l);
+      for (const l of lats) pts.push(c.x[i] + nx * l, 0, c.z[i] + nz * l, c.x[i] + nx * l, Math.max(0.02, groundAt(fr(c, i), l) - (Math.abs(l) <= EDGE ? DECK : 0)), c.z[i] + nz * l);
       const g = new THREE.BufferGeometry();
       g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pts), 3));
       const idx: number[] = [];
@@ -788,12 +788,15 @@ export function buildKartPark(scene: THREE.Scene, opts: { tick: (f: Tick) => voi
   const [sx0, sz0] = W(SITE.stand.u0, SITE.stand.v0);
   const [sx1, sz1] = W(SITE.stand.u1, SITE.stand.v1);
   {
-    // Five tiers rising to the north (the front is the south edge), seats along each tread, fans in them
-    const COUNT = 5;
+    // Tiers rising to the north (the front is the south edge), as many as its depth holds, seats along each tread, fans in them
+    const COUNT = Math.max(3, Math.min(5, Math.floor((sz1 - sz0) / 0.9)));
     const TIER = (sz1 - sz0) / COUNT;
-    const perTier = low ? 10 : 30;
+    const RISE = Math.min(0.85, TIER * 0.75);
+    const perTier = Math.round(((sx1 - sx0) / 42) * (low ? 10 : 30));
+    /** The canopy over the top tier, with head room for a fan standing there */
+    const ROOF = 0.5 + (COUNT - 1) * RISE + 1.7;
     for (let k = 0; k < COUNT; k++) {
-      const h = 0.5 + k * 0.85;
+      const h = 0.5 + k * RISE;
       const front = sz1 - k * TIER;
       pb.box(sx0, -0.3, sz0, sx1 - sx0, h + 0.3, front - sz0, toon('#3b3658'));
       const back = front - TIER;
@@ -805,20 +808,21 @@ export function buildKartPark(scene: THREE.Scene, opts: { tick: (f: Tick) => voi
       }
     }
     // The back wall, posts and a canopy over it all, a neon edge on the canopy's front
-    pb.box(sx0 - 0.1, 0, sz0 - 0.12, sx1 - sx0 + 0.2, 4.8, 0.12, toon('#2b2550'));
-    for (const px of [sx0 + 0.1, (sx0 + sx1) / 2, sx1 - 0.1]) for (const pz of [sz0 + 0.05]) pb.box(px - 0.07, 0, pz - 0.07, 0.14, 5.8, 0.14, STEEL);
-    pb.box(sx0 - 0.4, 5.8, sz0 - 0.4, sx1 - sx0 + 0.8, 0.14, sz1 - sz0 - 0.6, toon('#2b2550'));
-    pb.box(sx0 - 0.4, 5.82, sz1 - 1.04, sx1 - sx0 + 0.8, 0.1, 0.05, soft(PAL.cyan));
+    pb.box(sx0 - 0.1, 0, sz0 - 0.12, sx1 - sx0 + 0.2, ROOF - 1, 0.12, toon('#2b2550'));
+    for (const px of [sx0 + 0.1, (sx0 + sx1) / 2, sx1 - 0.1]) for (const pz of [sz0 + 0.05]) pb.box(px - 0.07, 0, pz - 0.07, 0.14, ROOF, 0.14, STEEL);
+    pb.box(sx0 - 0.4, ROOF, sz0 - 0.4, sx1 - sx0 + 0.8, 0.14, sz1 - sz0 - 0.6, toon('#2b2550'));
+    pb.box(sx0 - 0.4, ROOF + 0.02, sz1 - 1.04, sx1 - sx0 + 0.8, 0.1, 0.05, soft(PAL.cyan));
     // Flags at the ends (PulseChain colours, no logos)
     for (const [px, col, col2] of [
       [sx0 - 0.8, PAL.cyan, PAL.violet],
       [sx1 + 0.8, PAL.pink, PAL.blue],
     ] as const) {
       const pz = sz0 + 0.6;
-      pb.add(new THREE.CylinderGeometry(0.04, 0.05, 6.6, 6).translate(px, 3.3, pz), INK);
-      pb.add(new THREE.SphereGeometry(0.08, 6, 5).translate(px, 6.62, pz), toon(PAL.gold));
-      pb.box(px - 0.015, 5.9, pz + 0.04, 0.03, 0.5, 0.9, toon(col));
-      pb.box(px - 0.015, 5.2, pz + 0.04, 0.03, 0.4, 0.7, toon(col2));
+      const top = ROOF + 0.8;
+      pb.add(new THREE.CylinderGeometry(0.04, 0.05, top, 6).translate(px, top / 2, pz), INK);
+      pb.add(new THREE.SphereGeometry(0.08, 6, 5).translate(px, top + 0.02, pz), toon(PAL.gold));
+      pb.box(px - 0.015, top - 0.7, pz + 0.04, 0.03, 0.5, 0.9, toon(col));
+      pb.box(px - 0.015, top - 1.4, pz + 0.04, 0.03, 0.4, 0.7, toon(col2));
     }
   }
   const fans = new THREE.InstancedMesh(new THREE.CapsuleGeometry(0.16, 0.28, 2, 8), toon('#ffffff', { name: 'fans' }), fanSpots.length);
@@ -921,10 +925,10 @@ export function buildKartPark(scene: THREE.Scene, opts: { tick: (f: Tick) => voi
   }
   const taken: [number, number][] = [];
   const free = (u: number, v: number, d: number) => taken.every(([a, bb]) => Math.hypot(a - u, bb - v) >= d);
-  // Marshal posts every ~45 tiles round the outside, past the run-off
+  // Marshal posts every ~27 tiles round the outside, past the run-off
   {
     let col = 0;
-    for (let s = 15; s < c.L; s += low ? 90 : 45) {
+    for (let s = 9; s < c.L; s += low ? 54 : 27) {
       const f = frame(c, s);
       if (enclosed(f)) continue;
       const side = f.k ? -Math.sign(f.k) : 1;
@@ -942,19 +946,19 @@ export function buildKartPark(scene: THREE.Scene, opts: { tick: (f: Tick) => voi
   {
     const spots: [number, number][] = [
       [3, 3],
-      [45, 3],
-      [95, 3],
-      [133, 3],
-      [133, 45],
-      [133, 95],
-      [3, 45],
-      [3, 100],
-      [60, 40],
-      [95, 50],
-      [24, 70],
-      [70, 102],
-      [101, 110],
-      [26, 124],
+      [28, 3],
+      [58, 3],
+      [SITE_U - 3, 3],
+      [SITE_U - 3, 28],
+      [SITE_U - 3, 58],
+      [3, 28],
+      [3, 58],
+      [37.5, 22],
+      [58.5, 28],
+      [16, 40],
+      [43.5, 59],
+      [62, 64],
+      [14, 74],
     ];
     const poles: { x: number; z: number }[] = [];
     for (const [u, v] of spots) {
@@ -964,7 +968,7 @@ export function buildKartPark(scene: THREE.Scene, opts: { tick: (f: Tick) => voi
       poles.push({ x, z });
     }
     const use = low ? poles.filter((_, k) => k % 2 === 0) : poles;
-    const H = 7;
+    const H = 6;
     const parts = [new THREE.CylinderGeometry(0.08, 0.11, H, 7).translate(0, H / 2, 0), new THREE.BoxGeometry(0.3, 0.12, 0.3).translate(0, 0.06, 0), new THREE.BoxGeometry(1.9, 0.1, 0.1).translate(0, H - 0.1, 0)];
     const heads: THREE.BufferGeometry[] = [];
     for (const k of [-0.75, -0.25, 0.25, 0.75]) {
@@ -973,7 +977,7 @@ export function buildKartPark(scene: THREE.Scene, opts: { tick: (f: Tick) => voi
     }
     const pm = new THREE.InstancedMesh(mergeGeometries(parts, false)!, toon('#1b1830', { name: 'lightpoles' }), Math.max(1, use.length));
     const lampsOn = new THREE.InstancedMesh(mergeGeometries(heads, false)!, soft(PAL.warm), Math.max(1, use.length));
-    const [mx, mz] = W(68, 62);
+    const [mx, mz] = W(SITE_U / 2, SITE_V * 0.42);
     use.forEach((pl, k) => {
       const ry = Math.atan2(-(mz - pl.z), mx - pl.x) + Math.PI / 2;
       _q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), ry);
@@ -996,10 +1000,10 @@ export function buildKartPark(scene: THREE.Scene, opts: { tick: (f: Tick) => voi
       addTree(x, z, 0.85 + r() * 0.4, r() < 0.3, 0);
       taken.push([u, v]);
     };
-    for (let u = 4; u < 134; u += belt) if (clearAt(u, 1.6, 2) && free(u, 1.6, 2.4)) tree(u + (r() - 0.5) * 0.8, 1.6 + r() * 0.8);
-    for (let v = 4; v < PAVED_V - 2; v += belt) if (clearAt(135, v, 2) && free(135, v, 2.4)) tree(135 + (r() - 0.5) * 0.6, v + (r() - 0.5) * 0.8);
+    for (let u = 4; u < SITE_U - 2; u += belt) if (clearAt(u, 1.6, 2) && free(u, 1.6, 2.4)) tree(u + (r() - 0.5) * 0.8, 1.6 + r() * 0.8);
+    for (let v = 4; v < PAVED_V - 2; v += belt) if (clearAt(SITE_U - 1, v, 2) && free(SITE_U - 1, v, 2.4)) tree(SITE_U - 1 + (r() - 0.5) * 0.6, v + (r() - 0.5) * 0.8);
     for (let v = 4; v < PAVED_V - 2; v += 4.5)
-      for (let u = 4; u < 134; u += 4.5) {
+      for (let u = 4; u < SITE_U - 2; u += 4.5) {
         const uu = u + (r() - 0.5) * 3;
         const vv = v + (r() - 0.5) * 3;
         if (r() > (low ? 0.3 : 0.55)) continue;
@@ -1034,7 +1038,7 @@ export function buildKartPark(scene: THREE.Scene, opts: { tick: (f: Tick) => voi
   ring.rotation.x = -Math.PI / 2;
   ring.position.set(HUT_DOOR.x, PAVING + 0.014, HUT_DOOR.z);
   group.add(fx(ring));
-  const spot: Spot = { id: ID, group: places, focus, size: 150, pin, ring };
+  const spot: Spot = { id: ID, group: places, focus, size: 95, pin, ring };
   // The show kart waits in the middle bay, nose to the pit lane (kart.ts: yaw π/2 faces -z)
   const [bayX, bayZ] = BAYS[3];
   const showSpot = { x: bayX, y: PAVING + PIT_Y, z: bayZ + 0.45, yaw: Math.PI / 2 };
@@ -1115,7 +1119,7 @@ export function buildKartPark(scene: THREE.Scene, opts: { tick: (f: Tick) => voi
     /** Somewhere a board can stand: past the run-off, off everything else */
     const standAt = (x: number, z: number) => {
       const [u, v] = toLocal([x, z]);
-      return u > 1 && u < 137 && v > 0 && v < PAVED_V - 0.5 && circuitDistance(x, z) > CLEAR + 0.2;
+      return u > 1 && u < SITE_U + 1 && v > 0 && v < PAVED_V - 0.5 && circuitDistance(x, z) > CLEAR + 0.2;
     };
     const post = (x: number, z: number, h: number) => gb.box(x - 0.05, 0, z - 0.05, 0.1, h, 0.1, INK);
     for (const corner of corners) {
@@ -1228,8 +1232,15 @@ function quadOnTrack(f: Frame, along: number, across: number, lift: number, ahea
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pts), 3));
-  // Both windings, so it shows from above whichever way the frame turns
-  g.setIndex([0, 1, 2, 0, 2, 3, 0, 2, 1, 0, 3, 2]);
+  // One winding, facing up whichever way the frame turns (both windings on shared corners cancel the normals to nothing,
+  // which the toon shader turns into NaN and the bloom spreads over the whole picture)
+  const ax = pts[3] - pts[0];
+  const az = pts[5] - pts[2];
+  const bx = pts[9] - pts[0];
+  const bz = pts[11] - pts[2];
+  // The y of (p1 - p0) x (p3 - p0): positive when 0, 1, 2 already winds facing up
+  const up = az * bx - ax * bz > 0;
+  g.setIndex(up ? [0, 1, 2, 0, 2, 3] : [0, 2, 1, 0, 3, 2]);
   g.computeVertexNormals();
   return g;
 }

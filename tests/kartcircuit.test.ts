@@ -28,6 +28,7 @@ import {
   PIT_STRAIGHT,
   SITE,
   START_U,
+  STRAIGHT_V,
   SUPPORTS,
   TRACK_HALF,
   TRACK_W,
@@ -63,14 +64,14 @@ const CROSS = (() => {
   return best;
 })();
 
-test('one narrow track: six karts abreast, kerbs and run-off', () => {
-  assert.equal(TRACK_W, 5.6);
-  assert.ok(Math.floor(TRACK_W / KART_W) === 5 || Math.round(TRACK_W / KART_W) === 6, 'about six karts abreast');
-  assert.ok(KERB > 0 && CLEAR >= TRACK_HALF + KERB + 4, 'a real run-off');
+test('one narrow track: four or five karts abreast, kerbs and run-off', () => {
+  assert.equal(TRACK_W, 4.4);
+  assert.ok(TRACK_W / KART_W > 4 && TRACK_W / KART_W < 5, 'four or five karts abreast');
+  assert.ok(KERB > 0 && CLEAR >= TRACK_HALF + KERB + 2.5, 'a real run-off');
 });
 
-test('the lap is medium length, the same both ways', () => {
-  assert.ok(c.L > 520 && c.L < 600, `lap ${c.L.toFixed(0)} tiles`);
+test('the lap is short (scaled down to 60%), the same both ways', () => {
+  assert.ok(c.L > 320 && c.L < 380, `lap ${c.L.toFixed(0)} tiles`);
   assert.ok(Math.abs(COURSES['circuit-reverse'].L - c.L) < 0.5);
 });
 
@@ -151,7 +152,7 @@ test('the grid is on the start straight, behind the line, both ways', () => {
     for (const sl of slots) {
       const f = frame(cc, sl.s);
       const [u, v] = toLocal([f.x, f.z]);
-      assert.ok(Math.abs(v - 115) < 0.6 && Math.abs(f.tz) < 0.05, `${id}: a slot off the straight at ${u.toFixed(1)}, ${v.toFixed(1)}`);
+      assert.ok(Math.abs(v - STRAIGHT_V) < 0.6 && Math.abs(f.tz) < 0.05, `${id}: a slot off the straight at ${u.toFixed(1)}, ${v.toFixed(1)}`);
       assert.ok(Math.abs(sl.lateral) + KART_W / 2 < TRACK_HALF, 'on the asphalt');
       assert.ok(f.y === 0, 'flat');
       // Behind the line: forward runs west (u falls), so behind is east

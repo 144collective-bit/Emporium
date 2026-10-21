@@ -38,12 +38,14 @@ const inSite = (x: number, z: number, m = 0) => x >= KART_PARK.x0 + m && x <= KA
 
 /* ---------- The site ---------- */
 
-test('the kart park fills the north-east beyond the Parkway, out to the world\'s edge', () => {
+test('the kart park sits north-east beyond the Parkway, fenced round the scaled-down circuit, inside the world', () => {
   const top = Math.min(...PARKWAY.map((p) => p[1]));
   assert.ok(KART_PARK.z1 < top - 5, 'clear of the Parkway');
   assert.ok(KART_PARK.x0 > 64.5, 'east of the ring');
   assert.ok(KART_PARK.x1 <= WORLD_BOUNDS[2] && KART_PARK.x0 >= WORLD_BOUNDS[0] && KART_PARK.z0 >= WORLD_BOUNDS[1]);
-  assert.ok(KART_PARK.x1 >= WORLD_BOUNDS[2] - 4 && KART_PARK.z0 <= WORLD_BOUNDS[1] + 4, 'to the edge');
+  // Pulled in round the circuit when it was scaled down: about 88 x 90, the land beyond it open again
+  assert.ok(KART_PARK.x1 - KART_PARK.x0 < 100 && KART_PARK.z1 - KART_PARK.z0 < 100, 'a compact park');
+  assert.ok(KART_PARK.x1 < WORLD_BOUNDS[2] - 30 && KART_PARK.z0 > WORLD_BOUNDS[1] + 30, 'open land beyond it');
   assert.equal(SLIP_ROAD.z0, KART_PARK.z1);
   const onParkway = PARKWAY.some((p) => Math.abs(p[0] - SLIP_ROAD.x) < 3 && Math.abs(p[1] - SLIP_ROAD.z1) < 3);
   assert.ok(onParkway, 'the slip road meets the Parkway');
@@ -265,7 +267,7 @@ test('a single race pays like a cup\'s race and leaves a series on the go alone'
   assert.deepEqual(seriesNext(s), CUPS.rookie.races[1]);
 });
 
-test('the save is v8: the old track\'s records are kept aside, its boards and series put away; karts, trophies and Dorras stay', () => {
+test('the save is v9: the old tracks\' records are kept aside, their boards and series put away; karts, trophies and Dorras stay', () => {
   const old = newSave(0) as unknown as Record<string, unknown>;
   old.v = 7;
   old.dorras = 4321;
@@ -284,7 +286,7 @@ test('the save is v8: the old track\'s records are kept aside, its boards and se
   };
   old.counters = { ...newSave(0).counters, kartHits: 40, kartWins: 3 };
   const s = cleanSave(old, 1000);
-  assert.equal(s.v, 8);
+  assert.equal(s.v, 9);
   assert.deepEqual([s.dorras, s.xp], [4321, 999]);
   assert.deepEqual(s.karts.owned, ['zip']);
   assert.equal(s.karts.model, 'zip');
@@ -298,7 +300,31 @@ test('the save is v8: the old track\'s records are kept aside, its boards and se
   assert.deepEqual(s.karts.challenge, { day: '2026-10-20', lap: 30 });
   assert.equal(s.counters.kartWins, 3);
   assert.ok(!('kartHits' in s.counters));
-  // A v8 save keeps its new records, its old ones and its series; junk is cleaned
+  // A v8 save raced the circuit at full size: its records go aside as the full-size circuit's, its boards and par ghosts
+  // beaten go, its series and its older records stay
+  const full = cleanSave(
+    {
+      ...newSave(0),
+      v: 8,
+      karts: {
+        ...newSave(0).karts,
+        records: { 'circuit:sport': { lap: 38.2, run: 120, kart: 'rocket', at: 5 }, 'circuit-reverse:neon': { lap: 35.1, run: 0, kart: 'zip', at: 6 } },
+        boards: { 'circuit:sport': [{ run: 120, lap: 38.2 }] },
+        old: { 'grand:neon': { lap: 50, run: 0, kart: 'tank', at: 1 } },
+        series: { cup: 'rookie', race: 1, points: [1, 2, 3, 4, 5, 6, 7, 8] },
+        parBeaten: ['circuit:sport'],
+      },
+    },
+    1000
+  );
+  assert.equal(full.v, 9);
+  assert.deepEqual(full.karts.records, {});
+  assert.deepEqual(full.karts.boards, {});
+  assert.deepEqual(full.karts.parBeaten, []);
+  assert.deepEqual(Object.keys(full.karts.old).sort(), ['full-circuit-reverse:neon', 'full-circuit:sport', 'grand:neon']);
+  assert.equal(full.karts.old['full-circuit:sport'].lap, 38.2);
+  assert.deepEqual(full.karts.series, { cup: 'rookie', race: 1, points: [1, 2, 3, 4, 5, 6, 7, 8] });
+  // A v9 save keeps its records, its old ones and its series; junk is cleaned
   const v8 = cleanSave(
     {
       ...newSave(0),
@@ -453,6 +479,28 @@ test('off the flyover\'s deck is straight back onto the track, never a fall to t
   for (let i = 0; i < 120 && !reset; i++) for (const e of sim.step(1 / 60, { ...NO_INPUT, throttle: 1 })) if (e.kind === 'reset') reset = true;
   assert.ok(reset, 'put back');
   assert.ok(p.y > 2, 'still up on the deck');
+});
+
+test('the tunnel\'s walls are real: a kart steered into one scrapes along it, slower, and is never put back', () => {
+  const sim = solo('circuit', 'sport', { auto: false });
+  const c = sim.course;
+  const p = sim.player;
+  run(sim, 4, () => NO_INPUT, () => sim.started);
+  // The middle of the tunnel, the kart angled hard at the left wall
+  let s0 = -1;
+  for (let s = 0; s < c.L && s0 < 0; s += 0.5) if (frame(c, s).flags & F.tunnel && frame(c, s + 3).flags & F.tunnel) s0 = s;
+  const q = at(c, s0, 0);
+  const yaw = q.yaw + 0.6;
+  Object.assign(p, { x: q.x, z: q.z, y: q.y, yaw, s: s0, lateral: 0, speed: 10, vx: Math.cos(yaw) * 10, vz: -Math.sin(yaw) * 10, progress: s0 - c.start });
+  let touched = false;
+  for (let i = 0; i < 40; i++) {
+    for (const e of sim.step(1 / 60, { ...NO_INPUT, throttle: 1, steer: -1 })) assert.notEqual(e.kind, 'reset');
+    if (!(p.flags & F.tunnel)) break;
+    assert.ok(Math.abs(p.lateral) <= RACE_HALF + KERB + 1e-6, 'held at the wall');
+    if (Math.abs(p.lateral) > RACE_HALF + KERB - 1e-3) touched = true;
+  }
+  assert.ok(touched, 'it reached the wall');
+  assert.ok(p.speed < 10, 'scraping costs speed');
 });
 
 test('the jump: at speed a kart flies off the lip and lands; the rivals plan their braking past it', () => {
