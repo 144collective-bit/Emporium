@@ -7,7 +7,7 @@
  * timetable (airfield.ts). It's all at ground level, in world numbers.
  */
 import * as THREE from 'three';
-import { Batch, FONT_DISPLAY, PAL, canvasTex, fx, lit, neon, plane, rng, toon } from './kit';
+import { Batch, FONT_DISPLAY, PAL, canvasTex, fx, glowMat, lit, neon, plane, rng, toon } from './kit';
 import {
   AIRBRIDGES,
   APPROACH,
@@ -17,6 +17,8 @@ import {
   CONNECTORS,
   FLIGHTS,
   HANGAR,
+  HANGAR_DOOR,
+  HANGAR_OFFICE,
   HELIPAD,
   MASTS,
   PARKED,
@@ -28,13 +30,15 @@ import {
   TERMINAL,
   TOWER,
   WINDSOCK,
+  SITE,
   poseAt,
   type AircraftKind,
+  type Pose,
 } from './airfield';
 import { createFleet } from './aircraft';
 import { parkedCars, type CarId } from './cars';
 import { NS_ROADS } from './layout';
-import type { Idle } from './landmarks';
+import type { Idle, Spot } from './landmarks';
 import { addLamp, addPool, addTree, type Tick } from './world';
 
 /** Ground surfaces sit just under the roads' height, markings just over it */
@@ -63,22 +67,48 @@ const light = (c: string) => neon(c, 0.25, 2.4);
 /** Bigger lit panels glow softer */
 const soft = (c: string) => neon(c, 0.4, 1.3);
 
-export function buildAirport(scene: THREE.Scene, crowd: Idle[], tick: (f: Tick) => void, opts: { reduced: boolean; low: boolean }) {
+/** The airport's place in the city: the hangar is its building (its pin, its hover, its panel) */
+export interface Airport {
+  spot: Spot;
+  /** Where the airport's own aircraft are now (your aircraft bumps softly off them) */
+  traffic(): { kind: AircraftKind; pose: Pose }[];
+}
+
+export function buildAirport(scene: THREE.Scene, crowd: Idle[], tick: (f: Tick) => void, opts: { reduced: boolean; low: boolean }): Airport {
   const group = new THREE.Group();
   group.name = 'airport';
   scene.add(group);
+  // The hangar and its office: the airport's place (lifted on hover in City view)
+  const places = new THREE.Group();
+  places.name = 'airport-hangar';
+  group.add(places);
   const b = new Batch();
+  const hb = new Batch();
   surfaces(b);
   runwayLights(b);
   terminal(b, group, crowd, opts.low);
   tower(b, group, tick);
-  hangar(b, group);
+  hangar(hb, places);
+  hb.build(places);
   helipad(b);
   apronKit(b);
   windsock(group, tick, opts.reduced);
   roadside(group);
   b.build(group);
-  flying(scene, tick, opts.reduced);
+  const traffic = flying(scene, tick, opts.reduced);
+  const ring = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.64, 48), glowMat(PAL.cyan, 0, null));
+  ring.rotation.x = -Math.PI / 2;
+  ring.position.set(HANGAR_DOOR.x, 0.05, HANGAR_DOOR.z);
+  group.add(fx(ring));
+  const spot: Spot = {
+    id: 'airport',
+    group: places,
+    focus: new THREE.Vector3((SITE[0] + SITE[2]) / 2, 0, (SITE[1] + SITE[3]) / 2),
+    size: 130,
+    pin: new THREE.Vector3((HANGAR[0] + HANGAR[2]) / 2, HANGAR[4] + 1.6, (HANGAR[1] + HANGAR[3]) / 2),
+    ring,
+  };
+  return { spot, traffic };
 }
 
 /* ---------- Runway, taxiway, apron, road ---------- */
@@ -408,6 +438,11 @@ function hangar(b: Batch, group: THREE.Group) {
   gable.lineTo(-W / 2, -0.4);
   const gg = new THREE.ShapeGeometry(gable).translate((x0 + x1) / 2, wallH, z1 + 0.02);
   b.add(gg, wall);
+  // Seen from inside (the hangar menu looks in): the roof's underside, and both gables' inner faces and the back's outer one
+  b.add(inward(arch), toon('#8f8aae'));
+  b.add(new THREE.ShapeGeometry(gable).rotateY(Math.PI).translate((x0 + x1) / 2, wallH, z1 - 0.02), wall);
+  b.add(new THREE.ShapeGeometry(gable).translate((x0 + x1) / 2, wallH, z0 + 0.42), wall);
+  b.add(new THREE.ShapeGeometry(gable).rotateY(Math.PI).translate((x0 + x1) / 2, wallH, z0 - 0.02), wall);
   box(b, x0 + 0.4, 0, z0 + 0.5, x1 - 0.4, wallH - 0.4, z0 + 0.6, toon('#0e0c1a'));
   box(b, x0 + 0.4, 0, z0 + 0.4, x1 - 0.4, 0.01, z1, toon('#4b4766'));
   for (const [a, c] of [
@@ -430,10 +465,29 @@ function hangar(b: Batch, group: THREE.Group) {
   const s = plane(6, 1.05, lit(new THREE.MeshBasicMaterial({ map: sign }), 0.95, 1.15));
   s.position.set((x0 + x1) / 2, wallH + 0.8, z1 + 0.15);
   group.add(fx(s));
-  // An office on the east side (its door is where the hangar menu will open)
-  box(b, x1, 0, z1 - 5, x1 + 3.2, 2.6, z1, toon('#3d4a6b'));
-  box(b, x1 + 1, 0, z1 - 0.05, x1 + 1.8, 1.4, z1 + 0.05, toon('#14102a'));
-  box(b, x1 + 2.1, 0.6, z1 - 0.05, x1 + 2.9, 1.3, z1 + 0.06, soft('#ffd36b'));
+  // The office on the east side: its door opens the hangar menu
+  const [ox0, oz0, ox1, oz1, oh] = HANGAR_OFFICE;
+  box(b, ox0, 0, oz0, ox1, oh, oz1, toon('#3d4a6b'));
+  box(b, HANGAR_DOOR.x - 0.4, 0, oz1 - 0.05, HANGAR_DOOR.x + 0.4, 1.4, oz1 + 0.05, toon('#14102a'));
+  box(b, ox1 - 1.1, 0.6, oz1 - 0.05, ox1 - 0.3, 1.3, oz1 + 0.06, soft('#ffd36b'));
+  // A little lit sign over the door
+  box(b, HANGAR_DOOR.x - 0.55, 1.55, oz1, HANGAR_DOOR.x + 0.55, 1.85, oz1 + 0.08, soft(PAL.cyan));
+}
+
+/** A surface turned to face the other way (its inside): winding reversed, normals flipped */
+function inward(g: THREE.BufferGeometry) {
+  const n = (g.index ? g.toNonIndexed() : g.clone()) as THREE.BufferGeometry;
+  const p = n.attributes.position;
+  const nm = n.attributes.normal;
+  for (let i = 0; i < p.count; i += 3) {
+    for (const a of [p, nm]) {
+      const [x, y, z] = [a.getX(i + 1), a.getY(i + 1), a.getZ(i + 1)];
+      a.setXYZ(i + 1, a.getX(i + 2), a.getY(i + 2), a.getZ(i + 2));
+      a.setXYZ(i + 2, x, y, z);
+    }
+  }
+  for (let i = 0; i < nm.count; i++) nm.setXYZ(i, -nm.getX(i), -nm.getY(i), -nm.getZ(i));
+  return n;
 }
 
 function helipad(b: Batch) {
@@ -584,9 +638,15 @@ function flying(scene: THREE.Scene, tick: (f: Tick) => void, reduced: boolean) {
     return { kind: k, fleet: f, flights: FLIGHTS.filter((x) => x.kind === k) };
   });
   const now = () => Date.now() / 1000;
+  const current: { kind: AircraftKind; pose: Pose }[] = [];
   const place = (t: number, dt: number) => {
-    for (const { fleet, flights } of fleets) {
-      flights.forEach((f, i) => fleet.set(i, reduced ? f.parked : poseAt(f, t)));
+    current.length = 0;
+    for (const { kind, fleet, flights } of fleets) {
+      flights.forEach((f, i) => {
+        const pose = reduced ? f.parked : poseAt(f, t);
+        fleet.set(i, pose);
+        current.push({ kind, pose });
+      });
       fleet.update(t, dt);
     }
   };
@@ -594,4 +654,5 @@ function flying(scene: THREE.Scene, tick: (f: Tick) => void, reduced: boolean) {
   tick(({ dt }) => {
     if (!reduced) place(now(), dt);
   });
+  return () => current;
 }

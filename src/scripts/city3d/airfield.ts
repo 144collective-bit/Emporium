@@ -40,9 +40,21 @@ export const TERMINAL: Footprint = [95, 131, 165, 143, 5.6];
 export const STANDS: Pt[] = [107, 130, 153].map((x): Pt => [x, 154.5]);
 /** The control tower, east of the terminal: kept under the Emporium's height */
 export const TOWER = { x: 171, z: 136, r: 1.5, cab: 9, top: 11.6 };
-/** The hangar: opens south onto the apron, the prop plane's stand in front */
+/** The hangar: opens south onto the apron, the prop plane's stand in front of its west half */
 export const HANGAR: Footprint = [178, 126, 198, 145, 7.4];
-export const PROP_STAND: Pt = [188, 153];
+export const PROP_STAND: Pt = [181.5, 155];
+/** Under the hangar's arched roof (from the top of its walls): what flies in or out keeps under it */
+export const HANGAR_ROOF: Footprint = [HANGAR[0], HANGAR[1], HANGAR[2], HANGAR[3], 4.2];
+/** Your own aircraft (Phase 2) stands in the hangar's east half, nose to the doors, clear of the prop plane's stand */
+export const HANGAR_SPOT = { x: 192.8, z: 136, yaw: -Math.PI / 2 };
+/** The hangar office on its east side; its door opens the hangar menu */
+export const HANGAR_OFFICE: Footprint = [HANGAR[2], HANGAR[3] - 5, HANGAR[2] + 3.2, HANGAR[3], 2.6];
+export const HANGAR_DOOR = { x: HANGAR[2] + 1.4, z: HANGAR[3] + 0.55 };
+/** The airport panel's Walk in: walk mode starts on the apron by the office door, looking into the hangar */
+export const AIR_SPAWN = (() => {
+  const [x, z] = [HANGAR_DOOR.x - 0.6, HANGAR_DOOR.z + 2.4];
+  return { x, z, yaw: Math.atan2(-(HANGAR_SPOT.x - x), -(HANGAR_SPOT.z - z)) };
+})();
 /** The helipad at the apron's east end */
 export const HELIPAD = { x: 208, z: 154, r: 4.5 };
 /** Floodlight masts along the terminal, between the stands' wingtips */
@@ -115,6 +127,7 @@ export const AIRPORT_SOLIDS: Footprint[] = [
   [HANGAR[0], HANGAR[1], HANGAR[0] + 0.4, HANGAR[3], HANGAR[4]],
   [HANGAR[2] - 0.4, HANGAR[1], HANGAR[2], HANGAR[3], HANGAR[4]],
   [HANGAR[0], HANGAR[1], HANGAR[2], HANGAR[1] + 0.4, HANGAR[4]],
+  HANGAR_OFFICE,
   ...MASTS.map(([x, z]): Footprint => [x - 0.2, z - 0.2, x + 0.2, z + 0.2, 8]),
   [WINDSOCK[0] - 0.1, WINDSOCK[1] - 0.1, WINDSOCK[0] + 0.1, WINDSOCK[1] + 0.1, 3],
   // Each airbridge's wheeled leg

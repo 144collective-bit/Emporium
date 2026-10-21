@@ -335,12 +335,12 @@ it and has been retired completely. Build only on what's here.
 - Check every change at 320, 375, 768, 1024 and 1440px wide: no sideways
   scroll, no text clipped by a slanted edge.
 
-## Sector 7 Airport (Phase 1 of `docs/airport-plan.md`)
+## Sector 7 Airport (`docs/airport-plan.md`)
 
 - The plan and its phases are `docs/airport-plan.md`; keep it up to date,
   one phase at a time with the owner's sign-off. Phase 1 (the airport and
-  its flying traffic) is built; Phase 2 (fly it yourself, from the hangar)
-  comes next.
+  its flying traffic) and Phase 2 (fly it yourself, from the hangar) are
+  built.
 - **Where:** south-east of the Southside Loop, east of the x = 64.5 avenue,
   where no road runs (the north-south roads carry on south past the loop).
   `airfield.ts` (DOM-free, tested in `tests/airfield.test.ts`) holds it all:
@@ -377,6 +377,40 @@ it and has been retired completely. Build only on what's here.
 - The skyline ring leaves out the towers within 150 of the airport (they'd
   loom over the runway); trees keep off the airport and the low end of the
   approach.
+- **Flying it yourself** (Phase 2): the airport is a place (spot
+  `airport`, its pin over Hangar 1 (`spot.group` is the hangar, built in
+  its own Batch), directory entry, a panel with **Walk in** to
+  `AIR_SPAWN`). The hangar office's door (`HANGAR_DOOR`, the office
+  `HANGAR_OFFICE` is solid) opens the hangar menu (`hangar-ui.ts`, markup
+  `data-hangar` in `CityMap.astro` on the garage's `.shop` panel and
+  styles): the Sky Hopper (`prop`), the Neon Dart (`bizjet`, a small jet
+  model in `aircraft.ts`) and the Whirlybird (`heli`), twelve paints; free
+  and only for the city, never sold, priced or tied to the store or the
+  token (`myplane.ts`, saved as `degen-city-plane-v1`). While it's open
+  the camera looks into the hangar (`HANGAR_VIEW` in `walk.ts`, the
+  garage's `frameShowroom()`). Your aircraft stands at `HANGAR_SPOT` (the
+  hangar's east half; the airport's prop plane's stand is in front of the
+  west half) and stays wherever you land it.
+  - The rules are `flight-sim.ts` (DOM-free, tested in
+    `tests/flight.test.ts`): `TUNES` per aircraft, `stepFly()`, `HULLS`
+    (spheres for every kind, the airport's too), `floorAt()` (the ground or
+    a roof under the wheels), `canLeave()`, `CEILING`, `EDGE_TURN`. Arcade
+    and forgiving: it levels itself, can't stall, eases a hard descent
+    near the ground and lands wherever it touches down; collisions are soft
+    (it slides off, nothing is damaged). New handling goes in the sim
+    first.
+  - `fly.ts` is the view: your aircraft is a fleet of one
+    (`createFleet()`, repainted with `paint()`), chase and nose cameras
+    (V), the readout (`data-fly-hud`: speed, height, throttle, state), the
+    engine (`aero()` in `sound.ts`), getting out only on the ground and
+    stopped (`exit()`), `abandon()` home to the hangar when walk mode ends
+    in the air. Flying sets `is-flying` on top of `is-driving` (the touch
+    layout is the car's: the stick turns and climbs, the pedals read
+    Faster / Slower) and `data-plane` (the header reads "Flying ·
+    <aircraft>"); styles in `src/styles/fly.css`. Controls: W / S throttle,
+    A / D turn, arrows or Space / Shift climb and dive, V camera, E get out;
+    gamepad left stick, RT / LT, Y, View. Check the readout, stick, pedals
+    and prompt at phone widths, upright and on their side.
 
 ## Drop 001's fitting room
 
@@ -987,7 +1021,8 @@ it and has been retired completely. Build only on what's here.
   (`mycar.ts`), the driving rules (`drive-sim.ts`), target practice
   (`combat-sim.ts`), the economy (`tycoon.ts`, the market square in
   `solids.ts`), the city's game (`catalog.ts`, `races.ts`, `missions.ts`
-  in `tests/game.test.ts`) and the airport and its timetable (`airfield.ts`).
+  in `tests/game.test.ts`), the airport and its timetable (`airfield.ts`) and
+  flying your own aircraft (`flight-sim.ts`, `myplane.ts`).
   Modules that touch the DOM or `kit.ts` (canvas
   textures) can't load in Node; keep data a test needs in the DOM-free
   files.

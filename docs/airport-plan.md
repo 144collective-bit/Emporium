@@ -77,16 +77,46 @@ next starts.
      571 draw calls and 1.04M / 0.50M triangles, the same as before (the
      airport is behind the home camera); looking at the airport itself
      about 185-260 draw calls.
-2. **Fly it yourself** (Phase 2).
-   - The hangar menu (like the garage): prop plane, small jet, helicopter,
-     paints; free and cosmetic.
-   - `flight-sim.ts` (DOM-free, like `drive-sim.ts`): arcade handling for
-     each kind, soft collisions with `SOLIDS`, the ground and the world's
-     edge, take-off and landing.
-   - `fly.ts`: getting in at the hangar, a chase camera, the throttle and
-     stick on keyboard, touch and gamepad, a speed and height readout,
-     synthesised engine sound through the sound switch, getting out on the
-     ground.
-   - Tests for the handling and the collisions.
+2. **Fly it yourself** (Phase 2, built).
+   - The airport is a place: its pin over Hangar 1, a directory entry and a
+     panel with **Walk in** (walk mode starts at the hangar office,
+     `AIR_SPAWN`). The hangar has an office on its east side
+     (`HANGAR_OFFICE`, solid) whose door (`HANGAR_DOOR`) opens the hangar
+     menu (`hangar-ui.ts`, on the garage's panel): the Sky Hopper (prop
+     plane), the Neon Dart (a new small-jet model, `bizjet` in
+     `aircraft.ts`) and the Whirlybird (helicopter), stat bars from their
+     handling, twelve paints; free and only for the city (`myplane.ts`,
+     saved as `degen-city-plane-v1`). The camera looks into the hangar
+     while it's open. The airport's prop plane stand moved to the hangar's
+     west half (`PROP_STAND`) so yours (`HANGAR_SPOT`, the east half) rolls
+     straight out.
+   - `flight-sim.ts` (DOM-free, like `drive-sim.ts`): planes have a
+     throttle lever, roll and steer on the ground, lift off at their
+     rotate speed when the stick comes back (or a little faster on their
+     own), bank into turns, level themselves, can't stall (never under
+     their slowest flying speed; slow, they sink gently), ease off a hard
+     descent near the ground and land wherever they touch down; the
+     helicopter climbs and descends on the stick, holds its height, flies
+     forward and back on the throttle and turns on the spot. Collisions are
+     spheres per aircraft (`HULLS`): they slide off `SOLIDS` and placed
+     buildings, land on roofs, bump softly off the airport's own aircraft,
+     keep under the hangar's roof (`HANGAR_ROOF`), turn back at the world's
+     edge (`EDGE_TURN`) and level off at the ceiling (`CEILING`, 72).
+   - `fly.ts`: getting in at your aircraft ("Fly the ...", wherever it
+     stands), a chase camera and a nose camera (V), the throttle and stick
+     on keyboard (W / S, A / D, the arrows or Space / Shift), touch (the
+     stick turns and climbs, the pedals read Faster and Slower) and
+     gamepad (left stick, RT / LT), a readout (speed, height over the
+     ground, throttle, what it's doing), the engine (`aero()` in
+     `sound.ts`: a prop's buzz, a jet's whine, a rotor's thump) and getting
+     out on the ground once stopped. Leaving walk mode in the air sends it
+     home to the hangar.
+   - Tests (`tests/flight.test.ts`): take-off within the runway, climbing
+     away, no stall and a soft landing, self-levelling, the helicopter's
+     hover, turn and landing (on the ground and on a roof), sliding off a
+     building, the world's edge and the ceiling, a fuzz of random stick
+     input that never leaves the world or enters a building, the hangar
+     (fits, rolls out clear, the helicopter under the roof) and getting
+     out.
 
 Each phase gets the owner's sign-off before the next one starts.

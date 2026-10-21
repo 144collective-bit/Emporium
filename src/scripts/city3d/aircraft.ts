@@ -23,6 +23,9 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { FONT_DISPLAY, canvasTex, fx, glowTex, neon, paintMat, sharedFor, toon } from './kit';
 import type { AircraftKind, Pose } from './airfield';
 
+/** Every model: the airport's three kinds and the players' small jet (Phase 2) */
+export type ModelKind = AircraftKind | 'bizjet';
+
 type Role = 'body' | 'accent' | 'neon' | 'strobe' | 'gear' | 'decal';
 interface Spinner {
   blades: THREE.BufferGeometry;
@@ -34,7 +37,7 @@ interface Spinner {
   rate: number;
 }
 export interface AircraftModel {
-  kind: AircraftKind;
+  kind: ModelKind;
   parts: { role: Role; geo: THREE.BufferGeometry }[];
   spinners: Spinner[];
   /** Nose to tail, wingtip to wingtip, and its blob shadow's size */
@@ -127,7 +130,7 @@ class Parts {
     const b = blades.attributes.color ? clean(blades, false, true) : tint(blades, INK);
     this.spinners.push({ blades: b.translate(pivot.x, pivot.y, pivot.z), blur: clean(blur).translate(pivot.x, pivot.y, pivot.z), pivot, axis, rate });
   }
-  model(kind: AircraftKind, length: number, span: number): AircraftModel {
+  model(kind: ModelKind, length: number, span: number): AircraftModel {
     const parts = [...this.lists].map(([role, geos]) => ({ role, geo: mergeGeometries(geos, false)! }));
     return { kind, parts, spinners: this.spinners, length, span };
   }
@@ -508,9 +511,151 @@ function helicopter(): AircraftModel {
   return P.model('heli', 6.2, 6.2);
 }
 
-const MODELS: Partial<Record<AircraftKind, AircraftModel>> = {};
-export function aircraftModel(kind: AircraftKind) {
-  return (MODELS[kind] ??= kind === 'jet' ? airliner() : kind === 'prop' ? propPlane() : helicopter());
+/* ---------- The small jet (the players' own, Phase 2) ---------- */
+
+function bizjet(): AircraftModel {
+  const P = new Parts();
+  const H = 1.35;
+  const st: [number, number, number, number?][] = [
+    [4.4, 0.03, H - 0.22],
+    [4.2, 0.26, H - 0.17],
+    [3.8, 0.46, H - 0.09],
+    [3.2, 0.6, H - 0.02],
+    [2.5, 0.65, H],
+    [-1.6, 0.65, H],
+    [-2.6, 0.55, H + 0.1],
+    [-3.5, 0.37, H + 0.26],
+    [-4.2, 0.13, H + 0.4],
+    [-4.32, 0.02, H + 0.42],
+  ];
+  P.add(
+    'body',
+    loft(st, () => WHITE, { seg: 20 })
+  );
+  P.add(
+    'body',
+    loft(st.slice(2, 8), () => BELLY, { seg: 20, from: 0.6, to: 0.9, out: 0.01 })
+  );
+  // A sweep of the accent colour along each side, and the nose cone
+  for (const [from, to] of [
+    [0.955, 1.02],
+    [0.48, 0.545],
+  ])
+    P.add(
+      'accent',
+      loft(st.slice(1, 9), () => WHITE, { seg: 60, from, to, out: 0.012 })
+    );
+  P.add(
+    'accent',
+    loft(st.slice(0, 2), () => WHITE, { seg: 20, out: 0.01 })
+  );
+  // Cockpit glazing, oval cabin windows, the door
+  for (const [x, a, w] of [
+    [3.55, 0.09, 0.42],
+    [3.55, 0.41, 0.42],
+    [3.72, 0.17, 0.34],
+    [3.72, 0.33, 0.34],
+  ] as const)
+    onBody(P, 'body', GLASS, st, x, a, w, 0.26);
+  for (let x = -1.1; x <= 2.0; x += 0.52) for (const a of [0.035, 0.465]) onBody(P, 'body', INK, st, x, a, 0.26, 0.2);
+  onBody(P, 'body', GREY, st, 2.65, 0.485, 0.5, 0.82);
+  // Low swept wings with winglets in the accent colour
+  for (const side of [1, -1] as const) {
+    const dih = 0.07;
+    P.slab(
+      'body',
+      GREY,
+      [
+        [1, 0.5],
+        [-0.9, 0.5],
+        [-2.05, 4.05],
+        [-1.4, 4.05],
+      ],
+      0.16,
+      (u, v, t) => [u, H - 0.42 + t + (v - 0.5) * dih, side * v]
+    );
+    P.slab(
+      'accent',
+      undefined,
+      [
+        [-1.35, 0],
+        [-2.05, 0],
+        [-2.35, 0.75],
+        [-1.95, 0.75],
+      ],
+      0.08,
+      (u, v, t) => [u, H - 0.42 + 3.55 * dih + v, side * (4.05 + t + v * 0.1)]
+    );
+    // An engine on each side of the tail, on a short pylon
+    const ez = side * 1.02;
+    const ey = H + 0.38;
+    P.tubeX('accent', undefined, -3.3, -1.55, 0.29, 0.36, ey, ez, 16);
+    P.tubeX('body', INK, -1.55, -1.5, 0.36, 0.33, ey, ez, 16);
+    P.add('body', new THREE.CircleGeometry(0.3, 16).rotateY(Math.PI / 2).translate(-1.51, ey, ez), C('#4b4766'));
+    P.tubeX('body', METAL, -3.55, -3.3, 0.2, 0.27, ey, ez, 12);
+    P.box('body', GREY, -2.45, ey - 0.02, side * 0.68, 0.9, 0.12, 0.42);
+  }
+  // T-tail: the fin in the accent colour with the Emporium's diamond, the tailplane on top
+  const FIN = 2.05;
+  P.slab(
+    'accent',
+    undefined,
+    [
+      [-2.85, 0],
+      [-4.15, 0],
+      [-4.75, FIN],
+      [-4.1, FIN],
+    ],
+    0.14,
+    (u, v, t) => [u, H + 0.3 + v, t]
+  );
+  for (const s of [1, -1]) {
+    const d = [
+      [-3.85, 0.7],
+      [-3.6, 1.05],
+      [-3.85, 1.4],
+      [-4.1, 1.05],
+    ] as [number, number][];
+    P.slab('body', WHITE, d, 0.03, (u, v, t) => [u, H + 0.3 + v, s * (0.08 + t)]);
+    P.slab(
+      'body',
+      C('#00eaff'),
+      d.map(([u, v]) => [-3.85 + (u + 3.85) * 0.5, 1.05 + (v - 1.05) * 0.5] as [number, number]),
+      0.03,
+      (u, v, t) => [u, H + 0.3 + v, s * (0.1 + t)]
+    );
+    P.slab(
+      'body',
+      WHITE,
+      [
+        [-3.95, 0.05],
+        [-4.6, 0.05],
+        [-4.95, 1.75],
+        [-4.55, 1.75],
+      ],
+      0.1,
+      (u, v, t) => [u, H + 0.3 + FIN + t, s * v]
+    );
+  }
+  // Gear: a nose leg and two mains, folding away in flight
+  const leg = (x: number, z: number, r: number, top: number) => {
+    P.add('gear', new THREE.CylinderGeometry(0.06, 0.06, top - r).translate(x, r + (top - r) / 2, z), METAL);
+    P.add('gear', new THREE.CylinderGeometry(r, r, 0.16, 12).rotateX(Math.PI / 2).translate(x, r, z), TYRE);
+    P.add('gear', new THREE.CylinderGeometry(r * 0.5, r * 0.5, 0.18, 10).rotateX(Math.PI / 2).translate(x, r, z), METAL);
+  };
+  leg(3.05, 0, 0.17, H - 0.45);
+  leg(-0.6, 1.05, 0.24, H - 0.45);
+  leg(-0.6, -1.05, 0.24, H - 0.45);
+  navLights(P, -1.75, H - 0.42 + 3.55 * 0.07 + 0.08, 4.1, [-4.95, H + 0.3 + FIN + 0.12, 0]);
+  const red = sharedFor(neon('#ff2b2b', 0.6, 2.4))!.color;
+  P.add('strobe', new THREE.SphereGeometry(0.09, 8, 6).translate(0.2, H + 0.67, 0), red);
+  P.add('strobe', new THREE.SphereGeometry(0.09, 8, 6).translate(0.2, H - 0.67, 0), red);
+  return P.model('bizjet', 9.3, 8.4);
+}
+
+const MODELS: Partial<Record<ModelKind, AircraftModel>> = {};
+export function aircraftModel(kind: ModelKind) {
+  return (MODELS[kind] ??= kind === 'jet' ? airliner() : kind === 'prop' ? propPlane() : kind === 'bizjet' ? bizjet() : helicopter());
 }
 
 /* ---------- Materials ---------- */
@@ -568,7 +713,7 @@ export function poseMatrix(p: Pose, out = new THREE.Matrix4()) {
  * each frame, then `update(t, dt)` turns the props and rotors, folds the
  * gear, blinks the beacons and moves the blob shadows.
  */
-export function createFleet(kind: AircraftKind, liveries: string[]) {
+export function createFleet(kind: ModelKind, liveries: string[]) {
   const model = aircraftModel(kind);
   const m = materials();
   const n = liveries.length;
@@ -590,6 +735,7 @@ export function createFleet(kind: AircraftKind, liveries: string[]) {
     if (p.role === 'accent') liveries.forEach((c, i) => im.setColorAt(i, new THREE.Color(c)));
     return { role: p.role, im };
   });
+  const accent = parts.find((p) => p.role === 'accent')?.im;
   const spins = model.spinners.map((s) => ({ s, blades: inst(s.blades, m.body), blur: fx(inst(s.blur, m.blur, false)), angle: new Array<number>(n).fill(0) }));
   // A soft shadow on the ground, for where the city's shadow map doesn't reach (and while flying low)
   const shadow = fx(inst(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), m.shadow, false));
@@ -600,6 +746,12 @@ export function createFleet(kind: AircraftKind, liveries: string[]) {
     model,
     set(i: number, p: Pose) {
       poses[i] = p;
+    },
+    /** Repaint one aircraft's livery colour (your own, picked at the hangar) */
+    paint(i: number, hex: string) {
+      if (!accent) return;
+      accent.setColorAt(i, new THREE.Color(hex));
+      accent.instanceColor!.needsUpdate = true;
     },
     update(t: number, dt: number) {
       for (let i = 0; i < n; i++) {

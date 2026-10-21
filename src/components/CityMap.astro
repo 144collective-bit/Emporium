@@ -37,8 +37,9 @@ const spots: Record<SpotId, Spot> = {
   telegram: { href: '#city-title', title: 'Post office', sub: 'Couriers', aria: 'Post office: couriers' },
   apartments: { href: '#city-title', title: 'Apartments', sub: 'Staff', aria: 'The Apartments: hire staff' },
   karts: { href: '#city-title', title: 'Kart park', sub: 'Go-karts · races', aria: 'The kart park: go-kart races' },
+  airport: { href: '#city-title', title: 'Airport', sub: 'Hangar · fly', aria: 'Sector 7 Airport: fly your own aircraft' },
 };
-const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts'];
+const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport'];
 const ext = { target: '_blank', rel: 'noopener noreferrer' };
 
 const map = renderCity({ spots, art: { degen: degenImg.src, logo: logoImg.src } });
@@ -506,6 +507,31 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       </div>
       <p class="shop-foot">The five starters are free; the rest cost Dorras you earn in the city. Nothing here is real money.</p>
     </section>
+    {/* The hangar menu (hangar-ui.ts), opened at the hangar office's door at the airport: your aircraft and its paint,
+        on the garage's .shop panel and styles. data-hangar-list the three cards (painted), data-hangar-stats the bars,
+        data-hangar-paints the paints, data-hangar-keep Keep, data-hangar-close its ×. */}
+    <section class="shop garage hangar" data-hangar hidden aria-labelledby="hangar-title">
+      <header class="shop-head">
+        <h2 id="hangar-title" class="shop-title">Hangar</h2>
+        <p class="shop-score">Free to fly</p>
+        <button type="button" class="shop-close" data-hangar-close aria-label="Close the hangar">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+        </button>
+      </header>
+      <div class="shop-list garage-list hangar-list" data-hangar-list role="listbox" aria-label="Aircraft"></div>
+      <div class="shop-detail" data-hangar-detail>
+        <div class="shop-name-row">
+          <h3 class="shop-name" data-hangar-name>Sky Hopper</h3>
+          <p class="shop-mode" data-hangar-kind></p>
+        </div>
+        <p class="shop-blurb" data-hangar-blurb></p>
+        <dl class="shop-stats garage-stats" data-hangar-stats></dl>
+        <p class="garage-paint-head">Paint <span data-hangar-paint-name></span></p>
+        <div class="garage-paints" data-hangar-paints role="radiogroup" aria-label="Paint"></div>
+        <button type="button" class="shop-take" data-hangar-keep>Keep this one</button>
+      </div>
+      <p class="shop-foot">All three are free to fly and only for the city. Nothing here is real money.</p>
+    </section>
     {/* Street races (race-ui.ts), opened at the race board on the south bank avenue or from your car at the start line.
         data-races: the menu (built on the gun store's .shop panel); data-races-level your level; data-races-list the four
         races (painted); data-races-note why you can't start yet (or how to race); data-races-close its ×.
@@ -618,6 +644,14 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     <p class="walk-hint drive-hint"><kbd>W</kbd><kbd>S</kbd> gas / brake · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>Space</kbd> handbrake · <kbd>V</kbd> camera · <kbd>E</kbd> get out</p>
     <div class="drive-hud" data-drive-hud hidden aria-hidden="true">
       <b data-drive-speed>0</b><small>km/h</small><span class="drive-gear" data-drive-gear>N</span>
+    </div>
+    {/* Flying your aircraft (fly.ts): speed, height over the ground, the throttle (or the rotor) and what it's doing */}
+    <p class="walk-hint fly-hint"><kbd>W</kbd><kbd>S</kbd> faster / slower · <kbd>A</kbd><kbd>D</kbd> turn · <kbd>↑</kbd><kbd>↓</kbd> or <kbd>Space</kbd><kbd>Shift</kbd> climb / dive · <kbd>V</kbd> camera · <kbd>E</kbd> get out</p>
+    <div class="fly-hud" data-fly-hud hidden aria-hidden="true">
+      <span class="fly-read"><b data-fly-speed>0</b><small>km/h</small></span>
+      <span class="fly-read"><b data-fly-alt>0</b><small>m up</small></span>
+      <span class="fly-power" title="Throttle"><i data-fly-power></i></span>
+      <span class="drive-gear" data-fly-state>Taxi</span>
     </div>
     <button type="button" class="drive-pedal drive-brake" data-drive-brake aria-label="Brake and reverse">Brake</button>
     <button type="button" class="drive-pedal drive-gas" data-drive-gas aria-label="Gas">Gas</button>
@@ -762,6 +796,12 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     <button type="button" class="chip-link kart-walkin" data-kart-walkin>Walk in</button>
     {/* Your best laps, trophies and race counts (index.ts fills it with kartRecordsHtml() from kart-ui.ts) */}
     <div class="kart-panel-records" data-kart-panel-records></div>
+  </template>
+  <template data-panel-tpl="airport">
+    <p class="kicker"><span class="kicker-num">10</span> Sector 7 Airport</p>
+    <h2 id="city-panel-title" class="city-panel-title">Fly it yourself</h2>
+    <p class="city-panel-text">South-east of the Southside Loop: the runway, the terminal, the tower and the DEGEN AIR jets on their timetable. Your own aircraft waits in Hangar 1: pick a prop plane, a small jet or a helicopter at the office and paint it, then take off from the apron or the runway and fly anywhere over the city. It levels itself, can't stall and bumps softly off everything; touch down anywhere and climb out. Free to fly, and only for the city.</p>
+    <button type="button" class="chip-link kart-walkin" data-air-walkin>Walk in</button>
   </template>
 
   <div class="city-hud" data-city-hud>

@@ -258,7 +258,30 @@ plane and a helicopter fly a timetable that's the same for every visitor:
 the airliners push back, taxi out, take off, cross the city high over
 downtown and come back round to land; the prop plane loops along the river;
 the helicopter circles the Emporium. Under reduced motion they stand parked.
-Flying one yourself is the next phase (`docs/airport-plan.md`).
+
+**Fly it yourself.** The airport is a place on the map (its pin is over
+Hangar 1; its panel's **Walk in** starts you at the hangar office). Your own
+aircraft waits in the hangar:
+
+- **Pick it:** at the office door, press E (tap the prompt, Y on a gamepad)
+  for the hangar menu: the Sky Hopper (a prop plane), the Neon Dart (a small
+  jet) or the Whirlybird (a helicopter), each with bars for top speed, climb
+  and turning, and twelve paints. All three are free and only for the city.
+- **Fly it:** "Fly the ..." at the aircraft. W / S (the Faster and Slower
+  pedals on touch, RT / LT on a gamepad) work the throttle (the helicopter:
+  forward and back), A / D turn, the arrows or Space and Shift climb and
+  dive (the stick does both on touch and gamepad), V swaps the chase camera
+  for a nose camera. A plane rolls out, lifts off once it's fast enough and
+  the stick comes back, banks into turns and levels itself when you let go;
+  it can't stall (slow, it sinks gently instead), so cutting the power and
+  gliding in is a landing. The helicopter lifts straight up, holds its
+  height, turns on the spot and lands on any flat roof.
+- **Soft and safe:** it slides off buildings and other aircraft, turns
+  itself back at the edge of the world and levels off at the ceiling. No
+  damage, no crash. Touch down anywhere and climb out (E, once it's
+  stopped); it stays where you leave it until the hangar menu brings it home.
+- A readout shows the speed, the height and the throttle; the engine is a
+  synthesised buzz, whine or rotor thump through the sound switch.
 
 ### The garage and your own car
 

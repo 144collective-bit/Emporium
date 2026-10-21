@@ -37,6 +37,7 @@ import { buildBeacons } from './beacons';
 import { buildRaceSite } from './racesite';
 import { buildKartPark } from './kartpark3d';
 import { KART_SPAWN } from './kartpark';
+import { AIR_SPAWN } from './airfield';
 import { kartRecordsHtml } from './kart-ui';
 import { destAt } from './tycoon';
 import { CARS } from './cars';
@@ -117,7 +118,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // The garage on the south bank, your saved car on its turntable
   const garage = buildGarage(scene, { tick, reduced, car: loadCar() });
   // The airport south-east of the Southside Loop, and the aircraft flying its timetable
-  buildAirport(scene, crowd, tick, { reduced, low: tier === 'low' });
+  const airport = buildAirport(scene, crowd, tick, { reduced, low: tier === 'low' });
   const plots = createPlots(scene, { degen, tick, reduced });
   // The market square (your stall and the traders'): before the lamps and the crowd are made
   const market = buildMarket(scene, crowd);
@@ -131,7 +132,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const raceSite = buildRaceSite(scene, tick, reduced);
   // The kart park outside the Parkway in the north-east: a place like the landmarks (its pin and panel)
   const kartPark = buildKartPark(scene, { tick, reduced, low: tier === 'low' });
-  spots.push(kartPark.spot);
+  spots.push(kartPark.spot, airport.spot);
   progress(0.55);
   await nextFrame();
   scatterOutskirts(Q.trees);
@@ -273,6 +274,12 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         startWalking(KART_SPAWN);
       });
     }
+    // The airport's panel: Walk in starts walk mode by the hangar office's door
+    if (id === 'airport')
+      panelBody.querySelector('[data-air-walkin]')?.addEventListener('click', () => {
+        close();
+        startWalking(AIR_SPAWN);
+      });
     panel.dataset.spot = id;
     panel.hidden = false;
     requestAnimationFrame(() => panel.classList.add('is-open'));
@@ -352,12 +359,14 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     game,
     raceSite,
     kartPark,
+    airTraffic: airport.traffic,
+    aero: (kind, revs) => sound.aero(kind, revs),
     reduced,
     low: tier === 'low',
   });
   /* ---------- The economy: Dorras, your stall and units, the Workshop, the market hall ---------- */
   tycoon = createTycoonUI(root, {
-    walker: () => (walking && !walk.driving ? { x: walk.position.x, z: walk.position.z } : null),
+    walker: () => (walking && !walk.driving && !walk.flying ? { x: walk.position.x, z: walk.position.z } : null),
     car: () => {
       const c = walk.car;
       return c ? { ...c, name: CARS[c.model as keyof typeof CARS]?.name ?? 'Your car' } : null;
@@ -671,7 +680,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // Walk / Build pills never sit on top of a building's name. Re-read a few
   // times a second (they open, close and move with the layout)
   // The header, its open drop-downs (settings, menu), the welcome card and the race HUD (while a race is on)
-  const chrome = [...root.querySelectorAll<HTMLElement>('.city-head, .head-panel, .city-card, .race-hud, .kart-hud')];
+  const chrome = [...root.querySelectorAll<HTMLElement>('.city-head, .head-panel, .city-card, .race-hud, .kart-hud, .fly-hud, .drive-hud')];
   const chromeRects: { x: number; y: number; w: number; h: number }[] = [];
   const readChrome = () => {
     const o = host.getBoundingClientRect();
@@ -718,8 +727,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       walk.update(dt, reduced ? 0 : t);
       walker.x = walk.position.x;
       walker.z = walk.position.z;
-      // A car reaches further than someone on foot
-      walker.r = walk.driving ? 0.8 : 0;
+      // A car reaches further than someone on foot, an aircraft on the ground further still; in the air it's no one's business
+      walker.r = walk.driving ? 0.8 : walk.flying ? 1.6 : 0;
+      if (walk.airborne) walker.x = walker.z = 1e6;
       mp?.update(dt, t);
       dirty = true;
     } else if (controls.update()) dirty = true;

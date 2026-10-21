@@ -17,6 +17,9 @@
  *   (drive.ts); get out anywhere.
  * - The race board on the south bank avenue (and your car, stopped at the
  *   start line) opens the street races (race-ui.ts); the run reads the car.
+ * - The hangar office's door at the airport opens the hangar menu (the
+ *   camera looks into the hangar while you pick); get in your aircraft and
+ *   fly (fly.ts), land anywhere and get out.
  */
 import * as THREE from 'three';
 import type { SpotId } from '../../lib/city';
@@ -29,6 +32,9 @@ import { createGarageUI, loadCar } from './garage-ui';
 import { DEFAULT_CAR } from './mycar';
 import type { Garage } from './garage';
 import { createDrive } from './drive';
+import { createFly } from './fly';
+import { createHangarUI, loadPlane } from './hangar-ui';
+import { HANGAR_DOOR, HANGAR_SPOT, type AircraftKind, type Pose } from './airfield';
 import { createRaceUI } from './race-ui';
 import type { RaceSite } from './racesite';
 import { RACE_SITE, START_LINE, START_R } from './races';
@@ -47,6 +53,13 @@ import { NS_ROADS, RIVER, SLAB, WALK_W, type Tick } from './world';
 import { WORLD_BOUNDS } from './layout';
 import { PLAN, inPoly } from './streetplan';
 import type { GameDeps } from './ui';
+
+/** What a prompt can open: a landmark's door, or one of walk mode's own places and vehicles */
+type Near = SpotId | 'gear' | 'garage' | 'hangar' | 'car' | 'plane' | 'races' | 'karts' | `place:${string}`;
+/** Prompts that say their own label (the rest say "Enter ...") */
+const OWN_LABEL = new Set<string>(['gear', 'garage', 'hangar', 'car', 'plane', 'races', 'karts']);
+/** The hangar menu's shot: from the doors, looking in at your aircraft */
+const HANGAR_VIEW = { eye: new THREE.Vector3(HANGAR_SPOT.x - 6.5, 3.4, HANGAR_SPOT.z + 12.5), at: new THREE.Vector3(HANGAR_SPOT.x, 1.2, HANGAR_SPOT.z) };
 
 /** Facing the Emporium's doors, the tower over his shoulder */
 const SPAWN_YAW = WALK_SPAWN.yaw;
@@ -119,6 +132,10 @@ export interface WalkDeps {
   raceSite: RaceSite;
   /** The kart park in the north-east (its hut door opens the kart menu; races run on its track) */
   kartPark: KartPark;
+  /** The airport's own aircraft, where they are now (yours bumps softly off them) */
+  airTraffic(): { kind: AircraftKind; pose: Pose }[];
+  /** Your aircraft's engine: its voice and revs 0..1, negative for off */
+  aero(kind: 'prop' | 'jet' | 'heli', revs: number): void;
   reduced: boolean;
   low: boolean;
 }
@@ -209,11 +226,13 @@ export function createWalk(d: WalkDeps) {
   const keys = new Set<string>();
   const joy = { x: 0, y: 0, id: -1 };
   const pad = { x: 0, y: 0, run: false, prev: [] as boolean[] };
-  let near: { id: SpotId | 'gear' | 'garage' | 'car' | 'races' | 'karts' | `place:${string}`; label: string } | null = null;
+  let near: { id: Near; label: string } | null = null;
   const act = () => {
     if (!near) return;
     if (near.id === 'gear') shop.show();
     else if (near.id === 'garage') garageUI.show();
+    else if (near.id === 'hangar') hangarUI.show();
+    else if (near.id === 'plane') (fly.active ? leavePlane() : board());
     else if (near.id === 'races') races.show();
     else if (near.id === 'karts') kartUI.show();
     else if (near.id === 'car') (drive.active ? getOut() : getIn());
@@ -229,7 +248,7 @@ export function createWalk(d: WalkDeps) {
     if (x < BOUNDS[0] || x > BOUNDS[2] || z < BOUNDS[1] || z > BOUNDS[3]) return true;
     if (z > RIVER[0] - 0.3 && z < RIVER[1] + 0.3 && !onBridge(x)) return true;
     if (SOLIDS.some((b) => inBox(b, x, z, RADIUS))) return true;
-    if (drive.blocks(x, z, RADIUS)) return true;
+    if (drive.blocks(x, z, RADIUS) || fly.blocks(x, z, RADIUS)) return true;
     return d.plotSolids().some((b) => inBox(b, x, z, RADIUS));
   }
 
@@ -370,6 +389,47 @@ export function createWalk(d: WalkDeps) {
     engine: d.engine,
     bounds: [BOUNDS[0], BOUNDS[1], BOUNDS[2], BOUNDS[3], 0],
   });
+
+  // Your aircraft: get in at the hangar (or wherever you landed it), fly, land and get out
+  const fly = createFly({
+    scene: d.scene,
+    camera,
+    root,
+    myPlane: loadPlane,
+    solids: () => (d.plotSolids().length ? [...CAR_SOLIDS, ...d.plotSolids()] : CAR_SOLIDS),
+    groundAt,
+    cameraRoom,
+    free: (x, z) => !blocked(x, z),
+    traffic: d.airTraffic,
+    sfx: d.sfx,
+    aero: d.aero,
+    bounds: [BOUNDS[0], BOUNDS[1], BOUNDS[2], BOUNDS[3], 0],
+  });
+  // The hangar menu: like the garage's, it frees the mouse and pauses walking while the camera looks into the hangar
+  let fpBeforeHangar = false;
+  const hangarUI = createHangarUI(root, {
+    preview: (p) => fly.preview(p),
+    keep: (p) => fly.recall(p),
+    cancel: (saved) => fly.cancel(saved),
+    away: () => fly.away,
+    onOpen() {
+      keys.clear();
+      jumpHeld = false;
+      vel.set(0, 0);
+      setAim(false);
+      combat.trigger(false);
+      combat.trigger(false, true);
+      if (document.pointerLockElement === canvas) document.exitPointerLock();
+      fpBeforeHangar = firstPerson;
+      if (firstPerson) setFirstPerson(false);
+    },
+    onClose() {
+      if (fpBeforeHangar) setFirstPerson(true);
+      canvas.focus({ preventScroll: true });
+    },
+  });
+  /** Flying input from the gamepad */
+  const padFly = { turn: 0, climb: 0, throttle: 0 };
 
   /** Driving input from the gamepad and the touch pedals */
   const padDrive = { steer: 0, throttle: 0, handbrake: false };
@@ -525,7 +585,34 @@ export function createWalk(d: WalkDeps) {
     // Getting out mid-race abandons it
     races.abort();
     const out = drive.exit();
-    if (!out) return;
+    if (out) standAt(out);
+  }
+  /** Into your aircraft (the gun is holstered) */
+  function board() {
+    if (drive.active || karts.active) return;
+    if (combat.armed) combat.toggleHolster();
+    if (!fly.enter()) return;
+    keys.clear();
+    vel.set(0, 0);
+    jumpHeld = false;
+    setAim(false);
+    combat.trigger(false);
+    combat.trigger(false, true);
+    hero.g.visible = hero.ring.visible = false;
+    near = null;
+    d.touched();
+  }
+  /** Out of it: only on the ground and stopped */
+  function leavePlane() {
+    const out = fly.exit();
+    if (!out) {
+      d.game.toast('Land and stop first, then get out.', 2500);
+      return;
+    }
+    standAt(out);
+  }
+  /** Degen steps out of a vehicle, looking the way it faces */
+  function standAt(out: { x: number; z: number; yaw: number }) {
     pos.set(out.x, groundAt(out.x, out.z), out.z);
     vel.set(0, 0);
     vy = 0;
@@ -541,8 +628,9 @@ export function createWalk(d: WalkDeps) {
     near = null;
     d.touched();
   }
-  /** How far the camera has swung over to the showroom (0..1) */
+  /** How far the camera has swung over to the showroom (0..1), and which (the garage's turntable or the hangar) */
   let showroom = 0;
+  let showFrom: 'garage' | 'hangar' = 'garage';
   const showEye = new THREE.Vector3();
   let viewShifted = false;
   hero.torso.add(combat.gun);
@@ -553,6 +641,11 @@ export function createWalk(d: WalkDeps) {
   /* ---------- Input ---------- */
 
   const look = (dx: number, dy: number, k: number) => {
+    if (fly.active) {
+      fly.look(dx * k * settings.sens, dy * k * settings.sens * (settings.invert ? -1 : 1));
+      d.touched();
+      return;
+    }
     if (drive.active) {
       drive.look(dx * k * settings.sens, dy * k * settings.sens * (settings.invert ? -1 : 1));
       d.touched();
@@ -588,9 +681,22 @@ export function createWalk(d: WalkDeps) {
     if (!active || (e.target as HTMLElement).matches?.('input, select, textarea')) return false;
     const c = e.code;
     // While the store, the garage, the race menu or the kart hut's menu is open, E closes it and walking keys wait
-    if (shop.open || garageUI.open || races.open || kartUI.open) {
-      if (down && !e.repeat && c === 'KeyE') (shop.open ? shop.close() : garageUI.open ? garageUI.close() : races.open ? races.close() : kartUI.close());
+    if (shop.open || garageUI.open || hangarUI.open || races.open || kartUI.open) {
+      if (down && !e.repeat && c === 'KeyE') (shop.open ? shop.close() : garageUI.open ? garageUI.close() : hangarUI.open ? hangarUI.close() : races.open ? races.close() : kartUI.close());
       return false;
+    }
+    // Flying: W / S faster and slower, A / D turn, the arrows (or Space and Shift / C) climb and dive, V swaps camera, E gets out
+    if (fly.active) {
+      if (down && !e.repeat && c === 'KeyE') act();
+      else if (down && !e.repeat && c === 'KeyV') fly.toggleView();
+      else if (c === 'Space') jumpHeld = down;
+      else if (MOVE.includes(c) || c === 'KeyC') {
+        if (down) keys.add(c);
+        else keys.delete(c);
+      } else return false;
+      d.touched();
+      e.preventDefault();
+      return true;
     }
     // Karting: steer and pedal with the move keys, Space hops into a drift, E uses the item (with S held: behind)
     if (karts.active) {
@@ -725,7 +831,7 @@ export function createWalk(d: WalkDeps) {
   canvas.addEventListener(
     'wheel',
     (e) => {
-      if (!active || drive.active) return;
+      if (!active || drive.active || fly.active) return;
       zoom = THREE.MathUtils.clamp(zoom * (1 + Math.sign(e.deltaY) * 0.12), 0.8, 16);
       if (zoom < 1.2 && !firstPerson) setFirstPerson(true);
       else if (zoom >= 1.2 && firstPerson && e.deltaY > 0) setFirstPerson(false);
@@ -863,6 +969,7 @@ export function createWalk(d: WalkDeps) {
       padDrive.handbrake = false;
       padKart.steer = padKart.throttle = 0;
       padKart.drift = false;
+      padFly.turn = padFly.climb = padFly.throttle = 0;
       // Unplugged with a trigger down: let go of it
       if (pad.prev[6]) setAim(false);
       if (pad.prev[7]) combat.trigger(false);
@@ -896,6 +1003,29 @@ export function createWalk(d: WalkDeps) {
       if (edge(0)) garageUI.keep();
       if (edge(1) || edge(3)) garageUI.close();
       pad.x = pad.y = 0;
+      pad.prev = b;
+      return;
+    }
+    // The hangar menu: like the garage's
+    if (hangarUI.open) {
+      if (edge(14)) hangarUI.step(-1);
+      if (edge(15)) hangarUI.step(1);
+      if (edge(12)) hangarUI.stepPaint(-1);
+      if (edge(13)) hangarUI.stepPaint(1);
+      if (edge(0)) hangarUI.keep();
+      if (edge(1) || edge(3)) hangarUI.close();
+      pad.x = pad.y = 0;
+      pad.prev = b;
+      return;
+    }
+    // Flying: left stick turns and climbs (up climbs), RT faster, LT slower, Y gets out, View swaps camera
+    if (fly.active) {
+      padFly.turn = pad.x;
+      padFly.climb = -pad.y;
+      padFly.throttle = (gp.buttons[7]?.value ?? 0) - (gp.buttons[6]?.value ?? 0);
+      if (edge(3)) act();
+      if (edge(8)) fly.toggleView();
+      if (pad.x || pad.y || padFly.throttle || b.some(Boolean)) d.touched();
       pad.prev = b;
       return;
     }
@@ -972,7 +1102,9 @@ export function createWalk(d: WalkDeps) {
    * it on wide screens, above the bottom sheet on phones).
    */
   function frameShowroom(dt: number) {
-    showroom += ((garageUI.open ? 1 : 0) - showroom) * damp(garageUI.open ? 3.5 : 6, dt);
+    const showing = garageUI.open || hangarUI.open;
+    if (showing) showFrom = hangarUI.open ? 'hangar' : 'garage';
+    showroom += ((showing ? 1 : 0) - showroom) * damp(showing ? 3.5 : 6, dt);
     if (showroom < 0.003) {
       showroom = 0;
       if (viewShifted) {
@@ -982,7 +1114,7 @@ export function createWalk(d: WalkDeps) {
       return;
     }
     const s = showroom * showroom * (3 - 2 * showroom);
-    const v = d.garage.view;
+    const v = showFrom === 'hangar' ? HANGAR_VIEW : d.garage.view;
     // Upright screens see less across: step back so the whole car fits
     const back = THREE.MathUtils.clamp(1.15 / camera.aspect, 1, 1.9);
     camera.position.lerp(showEye.copy(v.eye).sub(v.at).multiplyScalar(back).add(v.at), s);
@@ -992,7 +1124,7 @@ export function createWalk(d: WalkDeps) {
     const w = canvas.clientWidth;
     const h = canvas.clientHeight;
     const c = canvas.getBoundingClientRect();
-    const r = garageUI.panel.getBoundingClientRect();
+    const r = (showFrom === 'hangar' ? hangarUI.panel : garageUI.panel).getBoundingClientRect();
     let ox = 0;
     let oy = 0;
     if (r.width && r.height && w && h) {
@@ -1043,6 +1175,38 @@ export function createWalk(d: WalkDeps) {
     }
   }
 
+  /** In your aircraft: the stick turns and climbs, the pedals (or W / S) go faster and slower */
+  function flyFrame(dt: number, t: number) {
+    const k = (a: string, b: string) => (keys.has(a) || keys.has(b) ? 1 : 0);
+    let turn = k('KeyD', 'ArrowRight') - k('KeyA', 'ArrowLeft');
+    let throttle = k('KeyW', 'KeyW') - k('KeyS', 'KeyS');
+    let climb = (keys.has('ArrowUp') || jumpHeld ? 1 : 0) - (keys.has('ArrowDown') || keys.has('ShiftLeft') || keys.has('ShiftRight') || keys.has('KeyC') ? 1 : 0);
+    if (joy.id >= 0) {
+      turn = joy.x;
+      climb = -joy.y;
+    }
+    if (pedals.gas || pedals.brake) throttle = (pedals.gas ? 1 : 0) - (pedals.brake ? 1 : 0);
+    if (padFly.turn) turn = padFly.turn;
+    if (padFly.climb) climb = padFly.climb;
+    if (padFly.throttle) throttle = padFly.throttle;
+    fly.update(dt, { throttle, turn, climb });
+    const s = fly.state;
+    pos.set(s.x, groundAt(s.x, s.z), s.z);
+    speedNow = Math.hypot(s.vx, s.vz);
+    hero.g.visible = hero.ring.visible = false;
+    // The rest of the city carries on
+    combat.setPlayerPos(NaN, NaN);
+    combat.update(dt, t, false);
+    combat.view(dt, t, { firstPerson: false, aim: false, move: 0, phase: 0, run: 0, air: 0 });
+    // The prompt: Get out once it's down and stopped
+    const want = fly.canLeave ? { id: 'plane' as const, label: 'Get out' } : null;
+    if (near?.id !== want?.id) {
+      near = want;
+      prompt.hidden = !near;
+      if (near) prompt.querySelector('[data-walk-label]')!.textContent = near.label;
+    }
+  }
+
   /** In the kart: the sim takes the pedals, the stick and the buttons; the view does the rest */
   function kartFrame(dt: number, t: number) {
     const k = (a: string, b: string) => (keys.has(a) || keys.has(b) ? 1 : 0);
@@ -1082,6 +1246,8 @@ export function createWalk(d: WalkDeps) {
     kartUI.update(dt);
     if (karts.active) return kartFrame(dt, t);
     karts.idle(dt);
+    if (fly.active) return flyFrame(dt, t);
+    fly.idle(dt);
     if (drive.active) return driveFrame(dt, t);
 
     // What the player wants, in camera space
@@ -1232,7 +1398,7 @@ export function createWalk(d: WalkDeps) {
     }
 
     // Door prompts, and the Armoury's gun store counter
-    let best: { id: SpotId | 'gear' | 'garage' | 'car' | 'races' | 'karts' | `place:${string}`; label: string } | null = null;
+    let best: { id: Near; label: string } | null = null;
     let bestD = 1.7;
     const atCounter = Math.hypot(RACK.x - pos.x, RACK.z - pos.z);
     if (atCounter < 1.1) {
@@ -1260,8 +1426,16 @@ export function createWalk(d: WalkDeps) {
           best = { id: `place:${p.id}`, label: p.label };
           bestD = 0;
         }
-    if (!garageUI.open && drive.nearCar(pos.x, pos.z) < 0.75) {
-      best = { id: 'car', label: 'Get in' };
+    // The hangar office's door at the airport
+    if (Math.hypot(HANGAR_DOOR.x - pos.x, HANGAR_DOOR.z - pos.z) < 1.2) {
+      best = { id: 'hangar', label: 'Hangar' };
+      bestD = 0;
+    }
+    // Your car or kart, or your aircraft: whichever is nearer
+    const carD = garageUI.open ? Infinity : drive.nearCar(pos.x, pos.z);
+    const planeD = hangarUI.open ? Infinity : fly.near(pos.x, pos.z);
+    if (Math.min(carD, planeD) < 0.75) {
+      best = carD <= planeD ? { id: 'car', label: 'Get in' } : { id: 'plane', label: `Fly the ${fly.name}` };
       bestD = 0;
     }
     for (const door of DOORS) {
@@ -1274,7 +1448,7 @@ export function createWalk(d: WalkDeps) {
     if (best?.id !== near?.id || best?.label !== near?.label) {
       near = best;
       prompt.hidden = !near;
-      if (near) prompt.querySelector('[data-walk-label]')!.textContent = near.id === 'gear' || near.id === 'garage' || near.id === 'car' || near.id === 'races' || near.id === 'karts' || near.id.startsWith('place:') ? near.label : `Enter ${near.label}`;
+      if (near) prompt.querySelector('[data-walk-label]')!.textContent = OWN_LABEL.has(near.id) || near.id.startsWith('place:') ? near.label : `Enter ${near.label}`;
     }
   }
 
@@ -1291,6 +1465,14 @@ export function createWalk(d: WalkDeps) {
     /** Driving your car? */
     get driving() {
       return drive.active;
+    },
+    /** Flying your aircraft? */
+    get flying() {
+      return fly.active;
+    },
+    /** ...and off the ground? */
+    get airborne() {
+      return fly.active && !fly.state.ground;
     },
     /** In a kart at the kart park? */
     get karting() {
@@ -1365,6 +1547,12 @@ export function createWalk(d: WalkDeps) {
     exit() {
       // Leaving walk mode in the car: it stays parked where it is (and a race is abandoned)
       if (drive.active) getOut();
+      // In your aircraft: it stays where it stands if it's down, else it goes home to the hangar
+      if (fly.active) {
+        if (fly.canLeave) leavePlane();
+        else fly.abandon(loadPlane());
+      }
+      hangarUI.close();
       races.abort();
       // ...and a kart race is abandoned too
       if (karts.active) {
@@ -1394,7 +1582,7 @@ export function createWalk(d: WalkDeps) {
     },
     /** Esc: close the gun store, the garage, the race or kart menu if one is open, or abandon a race (true if it did) */
     closeShop() {
-      return shop.close() || garageUI.close() || races.close() || races.abort() || kartUI.close() || abandonKart();
+      return shop.close() || garageUI.close() || hangarUI.close() || races.close() || races.abort() || kartUI.close() || abandonKart();
     },
     /** True if Esc was used to free the mouse (so it shouldn't also stop walking). */
     releaseMouse() {

@@ -1,0 +1,127 @@
+/* ---------- Flying your aircraft (walk mode, fly.ts; Airport Phase 2) ----------
+   Flying sets is-flying on top of is-driving, so the walk HUD steps aside and the touch layout
+   is the car's (the stick, now turning and climbing; the pedals, now Faster and Slower; Get out
+   at the top right). The car's readout and key hint give way to the flight readout: speed,
+   height over the ground, the throttle (or the rotor) and what it's doing. The hangar menu is
+   the garage's panel with three cards in a row. */
+.fly-hint,
+.fly-hud {
+  display: none;
+}
+.city.is-flying .drive-hint,
+.city.is-flying .drive-hud {
+  display: none;
+}
+@media (pointer: fine) {
+  .city.is-driving.is-flying .walk-hint.fly-hint {
+    display: block;
+  }
+}
+.city.is-flying .fly-hud {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px 9px;
+  border: 1px solid #0000;
+  border-radius: 999px;
+  background:
+    linear-gradient(#0b0a12e6, #0b0a12e6) padding-box,
+    var(--pulse) border-box;
+  color: #fff;
+  pointer-events: none;
+}
+.fly-read {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+}
+.fly-read b {
+  min-width: 2.2ch;
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1;
+  text-align: right;
+}
+.fly-read small {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+/* The throttle: a slim upright bar filling from the bottom */
+.fly-power {
+  position: relative;
+  width: 8px;
+  height: 26px;
+  border: 1px solid #ffffff40;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.fly-power i {
+  position: absolute;
+  inset: auto 0 0;
+  height: calc(var(--v, 0) * 100%);
+  background: linear-gradient(0deg, var(--p-blue, #037dff), var(--p-cyan));
+}
+.fly-hud .drive-gear {
+  margin: 0;
+  text-transform: uppercase;
+}
+@media (pointer: coarse) {
+  .city.is-flying .fly-hud {
+    top: calc(var(--head-h) + 10px);
+    right: auto;
+    bottom: auto;
+    left: max(12px, env(safe-area-inset-left));
+    gap: 9px;
+    padding: 6px 12px 7px;
+  }
+  .fly-read b {
+    font-size: 21px;
+  }
+  .fly-read small {
+    font-size: 9px;
+  }
+  .fly-power {
+    height: 22px;
+  }
+}
+/* Narrow phones: tighter still, so it never meets Get out at the top right */
+@media (pointer: coarse) and (max-width: 400px) {
+  .city.is-flying .fly-hud {
+    gap: 7px;
+    padding: 5px 10px 6px;
+  }
+  .fly-read b {
+    font-size: 18px;
+  }
+  .fly-read small {
+    font-size: 8px;
+    letter-spacing: 0.04em;
+  }
+  .fly-hud .drive-gear {
+    padding: 2px 5px;
+    font-size: 10px;
+  }
+}
+
+/* The hangar menu: the garage's panel, three aircraft in a row */
+.hangar-list {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.hangar .garage-card svg {
+  max-width: 84px;
+}
+.hangar .shop-score {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--p-cyan);
+}
