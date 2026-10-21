@@ -18,6 +18,8 @@ export function createSound() {
   let beatGain: GainNode;
   let on = false;
   let engine: { g: GainNode; lp: BiquadFilterNode; a: OscillatorNode; b: OscillatorNode } | null = null;
+  /** Your aircraft's engine: a buzz, a hiss and a whine, beaten by a throb (the prop's blades, the rotor's thump) */
+  let aero: { out: GainNode; buzz: OscillatorNode; lp: BiquadFilterNode; gBuzz: GainNode; bp: BiquadFilterNode; gHiss: GainNode; whine: OscillatorNode; gWhine: GainNode; lfo: OscillatorNode; depth: GainNode; am: GainNode } | null = null;
   let nextBeat = 0;
   let step = 0;
   let timer = 0;
@@ -510,6 +512,83 @@ export function createSound() {
       engine.b.frequency.setTargetAtTime(21 + r * 60, t, 0.08);
       engine.lp.frequency.setTargetAtTime(380 + r * 1300, t, 0.1);
       engine.g.gain.setTargetAtTime(on2 ? 0.05 + r * 0.06 : 0, t, on2 ? 0.15 : 0.25);
+    },
+    /**
+     * Your aircraft's engine: `kind` picks the voice (a prop's buzz, a jet's whine and roar, a
+     * rotor's thump), `revs` 0..1 how hard it's working, a negative value switches it off. Made
+     * the first time it's needed; silent unless sound is on.
+     */
+    aero(kind: 'prop' | 'jet' | 'heli', revs: number) {
+      if (!ctx || !on) return;
+      const t = ctx.currentTime;
+      if (!aero) {
+        if (revs < 0) return;
+        const out = ctx.createGain();
+        out.gain.value = 0;
+        // The throb: a gain swung by a slow oscillator
+        const am = ctx.createGain();
+        am.gain.value = 0.7;
+        const lfo = ctx.createOscillator();
+        const depth = ctx.createGain();
+        depth.gain.value = 0.3;
+        lfo.connect(depth).connect(am.gain);
+        am.connect(out).connect(sfxBus);
+        const buzz = ctx.createOscillator();
+        buzz.type = 'sawtooth';
+        const lp = ctx.createBiquadFilter();
+        lp.type = 'lowpass';
+        lp.Q.value = 1.5;
+        const gBuzz = ctx.createGain();
+        buzz.connect(lp).connect(gBuzz).connect(am);
+        const hiss = ctx.createBufferSource();
+        hiss.buffer = white;
+        hiss.loop = true;
+        const bp = ctx.createBiquadFilter();
+        bp.type = 'bandpass';
+        bp.Q.value = 0.8;
+        const gHiss = ctx.createGain();
+        hiss.connect(bp).connect(gHiss).connect(am);
+        const whine = ctx.createOscillator();
+        whine.type = 'sine';
+        const gWhine = ctx.createGain();
+        whine.connect(gWhine).connect(am);
+        for (const o of [lfo, buzz, hiss, whine]) o.start();
+        aero = { out, buzz, lp, gBuzz, bp, gHiss, whine, gWhine, lfo, depth, am };
+      }
+      const a = aero;
+      const r = Math.max(0, Math.min(1, revs));
+      const set = (p: AudioParam, v: number, k = 0.12) => p.setTargetAtTime(v, t, k);
+      if (kind === 'prop') {
+        set(a.buzz.frequency, 52 + r * 120);
+        set(a.lp.frequency, 420 + r * 1500);
+        set(a.gBuzz.gain, 0.5 + r * 0.4);
+        set(a.bp.frequency, 900 + r * 700);
+        set(a.gHiss.gain, 0.08 + r * 0.12);
+        set(a.gWhine.gain, 0);
+        set(a.lfo.frequency, 12 + r * 34);
+        set(a.depth.gain, 0.32);
+      } else if (kind === 'jet') {
+        set(a.buzz.frequency, 34 + r * 36);
+        set(a.lp.frequency, 220 + r * 300);
+        set(a.gBuzz.gain, 0.3);
+        set(a.bp.frequency, 500 + r * 2600);
+        set(a.gHiss.gain, 0.35 + r * 0.55);
+        set(a.whine.frequency, 900 + r * 1900);
+        set(a.gWhine.gain, 0.04 + r * 0.05);
+        set(a.lfo.frequency, 0.6);
+        set(a.depth.gain, 0.04);
+      } else {
+        set(a.buzz.frequency, 38 + r * 22);
+        set(a.lp.frequency, 260 + r * 220);
+        set(a.gBuzz.gain, 0.45);
+        set(a.bp.frequency, 260 + r * 260);
+        set(a.gHiss.gain, 0.4 + r * 0.4);
+        set(a.gWhine.gain, 0.015 * r);
+        set(a.whine.frequency, 1300 + r * 500);
+        set(a.lfo.frequency, 3 + r * 13);
+        set(a.depth.gain, 0.62);
+      }
+      set(a.out.gain, revs >= 0 ? 0.04 + r * 0.07 : 0, revs >= 0 ? 0.2 : 0.3);
     },
     /** Called every frame with the scene's state. `near` is 0-1 closeness to the Emporium. */
     update(rain: number, night: number, near: number) {

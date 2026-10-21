@@ -35,7 +35,7 @@ import { CARGO as BASE_CARGO, DRIVE, PLAYER_CARS, type PaintId, type PlayerCar }
 import { DEFAULT_KART, KART_SPECS, PLAYER_KARTS, cleanKart, type KartId } from './mykart';
 import { CUPS, type CupId } from './kart-sim';
 import { STYLES, type StyleId } from './fight-sim';
-import { COURSE_IDS, type CourseId } from './kartpark';
+import { COURSE_IDS, type CourseId } from './kartcircuit';
 import {
   BOT_LEVELS,
   FIGHT_BOTS,
@@ -304,11 +304,12 @@ export interface Counters {
   built: number;
   upgrades: number;
   missions: number;
-  /** Kart races finished, podiums, wins, and item hits landed on rivals */
+  /** Kart races finished, podiums, wins, laps without a wheel in the run-off, and karts passed */
   kartRaces: number;
   podiums: number;
   kartWins: number;
-  kartHits: number;
+  cleanLaps: number;
+  overtakes: number;
   /** Fights: bouts fought and won, knock-outs landed, chains of three or more */
   bouts: number;
   fightWins: number;
@@ -316,7 +317,7 @@ export interface Counters {
   chains: number;
 }
 export type CounterId = keyof Counters;
-export const COUNTER_IDS: CounterId[] = ['sold', 'earned', 'contracts', 'dummies', 'drones', 'driven', 'bought', 'land', 'built', 'upgrades', 'missions', 'kartRaces', 'podiums', 'kartWins', 'kartHits', 'bouts', 'fightWins', 'kos', 'chains'];
+export const COUNTER_IDS: CounterId[] = ['sold', 'earned', 'contracts', 'dummies', 'drones', 'driven', 'bought', 'land', 'built', 'upgrades', 'missions', 'kartRaces', 'podiums', 'kartWins', 'cleanLaps', 'overtakes', 'bouts', 'fightWins', 'kos', 'chains'];
 export const newCounters = (): Counters => Object.fromEntries(COUNTER_IDS.map((k) => [k, 0])) as unknown as Counters;
 /** A district plot you own, bought with Dorras */
 export interface OwnedPlot {
@@ -355,7 +356,12 @@ export interface KartSave {
   challenge: { day: string; lap: number } | null;
   /** The course-and-class keys whose par ghost you've beaten */
   parBeaten: string[];
+  /** Your lap records from the tracks before this one, kept aside: the old network (before the rebuild, save v8) by their old
+   * keys, and the circuit at full size (before it was scaled down, save v9) as `full-circuit` / `full-circuit-reverse` */
+  old: Record<string, KartTime>;
 }
+/** The old network's courses and the full-size circuit's (records kept aside from them) */
+const OLD_COURSES = ['neon-loop', 'neon-reverse', 'summit', 'summit-reverse', 'grand', 'grand-reverse', 'full-circuit', 'full-circuit-reverse'];
 export const LEADERBOARD_SIZE = 10;
 
 /** The Fight Club (docs/fight-plan.md): your style and the styles you own, your record, and each opponent's */
@@ -372,10 +378,10 @@ export interface FightSave {
 }
 export const emptyFight = (): FightSave => ({ style: 'brawler', styles: ['brawler'], wins: 0, losses: 0, kos: 0, bestChain: 0, bouts: 0, spars: 0, bots: {} });
 export const recordKey = (course: string, cls: string) => `${course}:${cls}`;
-export const emptyKarts = (): KartSave => ({ model: DEFAULT_KART.model, paint: DEFAULT_KART.paint, owned: [], mods: {}, records: {}, boards: {}, series: null, trophies: {}, challenge: null, parBeaten: [] });
+export const emptyKarts = (): KartSave => ({ model: DEFAULT_KART.model, paint: DEFAULT_KART.paint, owned: [], mods: {}, records: {}, boards: {}, series: null, trophies: {}, challenge: null, parBeaten: [], old: {} });
 
 export interface TycoonSave {
-  v: 8;
+  v: 9;
   dorras: number;
   till: number;
   /** When it was last brought up to date (ms since 1970) */
@@ -415,11 +421,17 @@ export interface TycoonSave {
   /** Badges (achievements) earned */
   badges: string[];
   counters: Counters;
+  /** Getting started (guide.ts): the step you're on (GUIDE_STEPS once done), and whether it's hidden */
+  guide: { step: number; hidden: boolean };
+  /** When the save was last downloaded as a backup (ms since 1970; 0 never) */
+  backup: number;
 }
+/** How many steps Getting started has (guide.ts's GUIDE) */
+export const GUIDE_STEPS = 7;
 
 export function newSave(now: number): TycoonSave {
   return {
-    v: 8,
+    v: 9,
     dorras: START_DORRAS,
     till: 0,
     at: now,
@@ -446,6 +458,8 @@ export function newSave(now: number): TycoonSave {
     missions: { active: [], done: [] },
     badges: [],
     counters: newCounters(),
+    guide: { step: 0, hidden: false },
+    backup: 0,
   };
 }
 const emptyLot = (): Lot => ({ kind: null, stock: {}, slots: [], job: null });
@@ -518,7 +532,7 @@ export function cleanSave(raw: unknown, now: number): TycoonSave {
   }
   const mul = (p: PlaceId) => LEVEL_CAPACITY[(levels[p] ?? 1) - 1];
   const s: TycoonSave = {
-    v: 8,
+    v: 9,
     dorras: Math.floor(num(o.dorras, 0, 1e12, START_DORRAS)),
     till: Math.floor(num(o.till, 0, 1e12, 0)),
     at: num(o.at, 0, now, now),
@@ -556,6 +570,8 @@ export function cleanSave(raw: unknown, now: number): TycoonSave {
     missions: { active: [], done: [] },
     badges: [],
     counters: newCounters(),
+    guide: { step: 0, hidden: false },
+    backup: 0,
   };
   cleanGame(s, o, now);
   // Phase 3: staff only where there's a job for them; couriers and contracts checked against the rules
@@ -1565,8 +1581,8 @@ export interface KartResult {
   /** Levels gained */
   levels: number;
 }
-/** The par lap for a course at a class (the par ghost's pace; catalog.ts PAR_LAPS is at Sport pace) */
-export const parLap = (course: string, cls: ClassId) => Math.round(((PAR_LAPS[course as CourseId] ?? 60) / KART_CLASSES[cls].pace) * 100) / 100;
+/** The par lap for a course at a class (the par ghost's pace, catalog.ts PAR_LAPS) */
+export const parLap = (course: string, cls: ClassId) => PAR_LAPS[course]?.[cls] ?? Math.round((60 / KART_CLASSES[cls].pace) * 100) / 100;
 /** Today's challenge: a course and a class from the date, and a lap to beat (a touch slower than par) */
 export function dailyChallenge(day: string) {
   let h = 2166136261;
@@ -1582,10 +1598,10 @@ export const dayKey = (now: number) => {
 };
 /**
  * A finished kart race or time trial: pay the place (a cup's prizes), count it, keep the fastest lap
- * per course and class (any race) and a time trial's run on the board; `hits` are the item hits
- * landed this race (counted for missions). `laps` are the lap times.
+ * per course and class (any race) and a time trial's run on the board; `clean` (laps without a
+ * wheel in the run-off) and `overtakes` are counted for missions and badges. `laps` are the lap times.
  */
-export function finishKartRace(s: TycoonSave, r: { course: string; cup: string; cls: ClassId; place: number; seconds: number; laps?: number[]; hits?: number; now?: number }): KartResult {
+export function finishKartRace(s: TycoonSave, r: { course: string; cup: string; cls: ClassId; place: number; seconds: number; laps?: number[]; clean?: number; overtakes?: number; now?: number }): KartResult {
   const seconds = Math.round(r.seconds * 100) / 100;
   const time = r.cup === 'time';
   const c = time ? null : CUPS[r.cup as CupId];
@@ -1636,7 +1652,8 @@ export function finishKartRace(s: TycoonSave, r: { course: string; cup: string; 
   count(s, 'kartRaces', 1);
   if (c && place <= 3) count(s, 'podiums', 1);
   if (c && place === 1) count(s, 'kartWins', 1);
-  if (r.hits) count(s, 'kartHits', r.hits);
+  if (r.clean) count(s, 'cleanLaps', Math.max(0, Math.min(10, Math.floor(r.clean))));
+  if (r.overtakes) count(s, 'overtakes', Math.max(0, Math.min(50, Math.floor(r.overtakes))));
   const xp =
     XP.kartFinish +
     (c && place <= 3 ? XP.kartPodium : 0) +
@@ -1674,8 +1691,8 @@ export function startSeries(s: TycoonSave, cup: CupId) {
 export const abandonSeries = (s: TycoonSave) => {
   s.karts.series = null;
 };
-/** The next course of the series on the go (null when there's none) */
-export const seriesNext = (s: TycoonSave) => (s.karts.series ? CUPS[s.karts.series.cup].courses[s.karts.series.race] ?? null : null);
+/** The next race of the series on the go: its course, laps and conditions (null when there's none) */
+export const seriesNext = (s: TycoonSave) => (s.karts.series ? (CUPS[s.karts.series.cup].races[s.karts.series.race] ?? null) : null);
 /** Overall places from points (ties broken by grid index, you last among equals) */
 export const seriesPlaces = (points: number[]) => {
   const order = points.map((p, i) => i).sort((a, b) => points[b] - points[a] || a - b);
@@ -1696,7 +1713,7 @@ export function seriesRace(s: TycoonSave, placesByKart: number[]): SeriesResult 
   const places = seriesPlaces(sr.points);
   const you = sr.points.length - 1;
   const overall = places[you];
-  const done = sr.race >= cup.courses.length;
+  const done = sr.race >= cup.races.length;
   let prize = 0;
   let xp = 0;
   let levels = 0;
@@ -1713,7 +1730,7 @@ export function seriesRace(s: TycoonSave, placesByKart: number[]): SeriesResult 
     levels = addXp(s, xp);
     s.karts.series = null;
   }
-  return { points: [...sr.points], places, race: sr.race, of: cup.courses.length, done, overall, prize, xp, levels };
+  return { points: [...sr.points], places, race: sr.race, of: cup.races.length, done, overall, prize, xp, levels };
 }
 
 /* ---------- The Armoury: guns and their mods ---------- */
@@ -1867,8 +1884,15 @@ function cleanGame(s: TycoonSave, o: Record<string, unknown>, now: number) {
   const pick = cleanKart({ model: kt.model, paint: kt.paint });
   s.karts.model = STARTER_KARTS.includes(pick.model) || s.karts.owned.includes(pick.model) ? pick.model : DEFAULT_KART.model;
   s.karts.paint = pick.paint;
-  // Records and boards per course and class (v7; a v6 save's plain times are dropped)
-  const keyOk = (k: string) => /^[a-z0-9-]{1,32}:[a-z]{1,16}$/.test(k) && COURSE_IDS.includes(k.split(':')[0] as CourseId) && CLASS_IDS.includes(k.split(':')[1] as ClassId);
+  // Records and boards per course and class (v7; a v6 save's plain times are dropped). Save v8 rebuilt the track:
+  // an older save's records are kept aside (`old`), its boards, par ghosts beaten and a series on the go are dropped
+  // Save v9 scaled the circuit down to 60%: a v8 save's circuit records go aside as the full-size circuit's, its boards and
+  // par ghosts beaten are dropped (a series on the go stays: the cups race the same courses)
+  const rebuilt = typeof o.v === 'number' && o.v >= 8;
+  const scaled = typeof o.v === 'number' && o.v >= 9;
+  const keyIn = (ids: readonly string[]) => (k: string) => /^[a-z0-9-]{1,32}:[a-z]{1,16}$/.test(k) && ids.includes(k.split(':')[0]) && CLASS_IDS.includes(k.split(':')[1] as ClassId);
+  const keyOk = scaled ? keyIn(COURSE_IDS) : () => false;
+  const oldOk = keyIn(OLD_COURSES);
   const cleanTime = (raw: unknown): KartTime | null => {
     const r = obj(raw);
     const lap = num(r.lap, 0, 36000, 0);
@@ -1881,6 +1905,15 @@ function cleanGame(s: TycoonSave, o: Record<string, unknown>, now: number) {
     const t = keyOk(k) ? cleanTime(raw) : null;
     if (t) s.karts.records[k] = t;
   }
+  for (const [k, raw] of Object.entries(rebuilt ? obj(kt.old) : obj(kt.records))) {
+    const t = oldOk(k) ? cleanTime(raw) : null;
+    if (t) s.karts.old[k] = t;
+  }
+  if (rebuilt && !scaled)
+    for (const [k, raw] of Object.entries(obj(kt.records))) {
+      const t = keyIn(COURSE_IDS)(k) ? cleanTime(raw) : null;
+      if (t) s.karts.old[`full-${k}`] = t;
+    }
   for (const [k, raw] of Object.entries(obj(kt.boards))) {
     if (!keyOk(k) || !Array.isArray(raw)) continue;
     const list = raw.map(cleanTime).filter((t): t is KartTime => !!t && t.run > 0).sort((a, b) => a.run - b.run).slice(0, LEADERBOARD_SIZE);
@@ -1888,10 +1921,10 @@ function cleanGame(s: TycoonSave, o: Record<string, unknown>, now: number) {
   }
   const sr = obj(kt.series);
   const cupId = (Object.keys(CUPS) as CupId[]).find((c) => c === sr.cup);
-  if (cupId) {
-    const race = Math.round(num(sr.race, 0, CUPS[cupId].courses.length, 0));
+  if (cupId && rebuilt) {
+    const race = Math.round(num(sr.race, 0, CUPS[cupId].races.length, 0));
     const points = Array.from({ length: 8 }, (_, i) => Math.round(num((Array.isArray(sr.points) ? sr.points : [])[i], 0, 1e4, 0)));
-    if (race < CUPS[cupId].courses.length) s.karts.series = { cup: cupId, race, points };
+    if (race < CUPS[cupId].races.length) s.karts.series = { cup: cupId, race, points };
   }
   for (const c of Object.keys(CUPS) as CupId[]) {
     const t = Math.round(num(obj(kt.trophies)[c], 0, 8, 0));
@@ -1924,4 +1957,8 @@ function cleanGame(s: TycoonSave, o: Record<string, unknown>, now: number) {
   }
   s.badges = [...new Set((Array.isArray(o.badges) ? o.badges : []).filter(slug))];
   for (const k of COUNTER_IDS) s.counters[k] = Math.floor(num(obj(o.counters)[k], 0, 1e15, 0));
+  // Getting started: a save from before it that's past level 1 has it done already (no rewards for steps long behind you)
+  const gd = obj(o.guide);
+  s.guide = 'guide' in o ? { step: Math.round(num(gd.step, 0, GUIDE_STEPS, 0)), hidden: gd.hidden === true } : { step: level(s) > 1 ? GUIDE_STEPS : 0, hidden: false };
+  s.backup = num(o.backup, 0, now, 0);
 }

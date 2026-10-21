@@ -37,9 +37,10 @@ const spots: Record<SpotId, Spot> = {
   telegram: { href: '#city-title', title: 'Post office', sub: 'Couriers', aria: 'Post office: couriers' },
   apartments: { href: '#city-title', title: 'Apartments', sub: 'Staff', aria: 'The Apartments: hire staff' },
   karts: { href: '#city-title', title: 'Kart park', sub: 'Go-karts · races', aria: 'The kart park: go-kart races' },
+  airport: { href: '#city-title', title: 'Airport', sub: 'Hangar · fly', aria: 'Sector 7 Airport: fly your own aircraft' },
   fightclub: { href: '#city-title', title: 'Fight Club', sub: 'Spar · bouts', aria: 'The Fight Club: spar and bouts' },
 };
-const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'fightclub'];
+const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub'];
 const ext = { target: '_blank', rel: 'noopener noreferrer' };
 
 const map = renderCity({ spots, art: { degen: degenImg.src, logo: logoImg.src } });
@@ -507,21 +508,46 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       </div>
       <p class="shop-foot">The five starters are free; the rest cost Dorras you earn in the city. Nothing here is real money.</p>
     </section>
+    {/* The hangar menu (hangar-ui.ts), opened at the hangar office's door at the airport: your aircraft and its paint,
+        on the garage's .shop panel and styles. data-hangar-list the three cards (painted), data-hangar-stats the bars,
+        data-hangar-paints the paints, data-hangar-keep Keep, data-hangar-close its ×. */}
+    <section class="shop garage hangar" data-hangar hidden aria-labelledby="hangar-title">
+      <header class="shop-head">
+        <h2 id="hangar-title" class="shop-title">Hangar</h2>
+        <p class="shop-score">Free to fly</p>
+        <button type="button" class="shop-close" data-hangar-close aria-label="Close the hangar">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+        </button>
+      </header>
+      <div class="shop-list garage-list hangar-list" data-hangar-list role="listbox" aria-label="Aircraft"></div>
+      <div class="shop-detail" data-hangar-detail>
+        <div class="shop-name-row">
+          <h3 class="shop-name" data-hangar-name>Sky Hopper</h3>
+          <p class="shop-mode" data-hangar-kind></p>
+        </div>
+        <p class="shop-blurb" data-hangar-blurb></p>
+        <dl class="shop-stats garage-stats" data-hangar-stats></dl>
+        <p class="garage-paint-head">Paint <span data-hangar-paint-name></span></p>
+        <div class="garage-paints" data-hangar-paints role="radiogroup" aria-label="Paint"></div>
+        <button type="button" class="shop-take" data-hangar-keep>Keep this one</button>
+      </div>
+      <p class="shop-foot">All three are free to fly and only for the city. Nothing here is real money.</p>
+    </section>
     {/* The kart park (kart-ui.ts), opened at the hut's door or the City-view panel's Walk in.
         data-karts: the hut menu (built on the gun store's .shop panel); data-karts-dorras and data-karts-level in its
         head; data-karts-tabs the Race / Karts / Records tabs (data-karts-tab); data-karts-body (painted);
         data-karts-close its ×.
         data-kart-count: the countdown digits. data-kart-hud: the race HUD: the place (data-kart-place, data-kart-ord,
         data-kart-of; a time trial shows the gap to the ghost, data-kart-gap, instead), the drift meter (data-kart-meter)
-        with the tags (data-kart-boost, data-kart-shield, the surface when it's not dry data-kart-surface, data-kart-shortcut),
-        the lap (data-kart-lap) with the class (data-kart-cls) and the series' race (data-kart-series), the clock
-        (data-kart-clock) with the last and best lap under it (data-kart-laps), the item slot (data-kart-slot:
-        data-kart-slot-icon, data-kart-slot-strip while the roulette spins, data-kart-slot-name) and Quit (data-kart-quit).
+        with the tags (data-kart-boost, the surface when it's not plain asphalt data-kart-surface, the conditions
+        data-kart-cond), the lap (data-kart-lap) with the class (data-kart-cls) and the series' race (data-kart-series),
+        the clock (data-kart-clock) with the last and best lap under it (data-kart-laps), the minimap (data-kart-map: the
+        circuit's outline with every kart's dot, yours lit; kart-ui.ts draws it) and Quit (data-kart-quit).
         data-kart-pops: short lines over the HUD. data-kart-result: the results card; data-kart-result-title,
         data-kart-result-body (painted), data-kart-next (a series' next race, hidden otherwise), data-kart-result-ok and
         data-kart-result-close.
-        Touch, while .city.is-karting (set by kart.ts): data-kart-drift above the Brake pedal and data-kart-item (the
-        held item's icon in data-kart-item-icon) above the Gas pedal; walk.ts wires them. .kart-hint is the key line. */}
+        Touch, while .city.is-karting (set by kart.ts): data-kart-drift above the Brake pedal; walk.ts wires it.
+        .kart-hint is the key line. */}
     <section class="shop karts" data-karts hidden aria-labelledby="karts-title">
       <header class="shop-head">
         <h2 id="karts-title" class="shop-title">Kart hut</h2>
@@ -545,7 +571,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
         <p class="kart-place"><b data-kart-place>1</b><small data-kart-ord>st</small><span class="kart-of" data-kart-of>of 8</span></p>
         <p class="kart-gap" data-kart-gap hidden aria-label="Gap to the ghost">+0.00</p>
         <div class="kart-meter" data-kart-meter data-tier="0" role="img" aria-label="Drift"><i></i><i></i><i></i></div>
-        <p class="kart-tags"><span class="kart-tag is-boost" data-kart-boost hidden>Boost</span><span class="kart-tag is-shield" data-kart-shield hidden>Shield</span><span class="kart-tag is-surface" data-kart-surface data-surface="wet" hidden>Wet</span><span class="kart-tag is-shortcut" data-kart-shortcut hidden>Shortcut</span></p>
+        <p class="kart-tags"><span class="kart-tag is-boost" data-kart-boost hidden>Boost</span><span class="kart-tag is-surface" data-kart-surface data-surface="kerb" hidden>Kerb</span><span class="kart-tag is-cond" data-kart-cond data-cond="night" hidden>Night</span></p>
       </div>
       <div class="kart-hud-mid">
         <p class="kart-lap-row"><b class="kart-lap" data-kart-lap>Lap 1/3</b><span class="kart-cls" data-kart-cls data-cls="sport">Sport</span><span class="kart-series-tag" data-kart-series hidden>Race 1/4</span></p>
@@ -553,12 +579,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
         <small class="kart-laps" data-kart-laps hidden><span data-kart-last>Last —</span><span data-kart-best>Best —</span></small>
       </div>
       <div class="kart-hud-right">
-        <div class="kart-slot is-empty" data-kart-slot data-item="none">
-          <span class="kart-slot-icon" data-kart-slot-icon></span>
-          <span class="kart-slot-strip" data-kart-slot-strip aria-hidden="true"></span>
-          <span class="kart-slot-q" aria-hidden="true">?</span>
-          <small class="kart-slot-name" data-kart-slot-name>No item</small>
-        </div>
+        <div class="kart-map" data-kart-map role="img" aria-label="Map of the circuit"></div>
         <button type="button" class="race-quit kart-quit" data-kart-quit>Quit</button>
       </div>
     </div>
@@ -576,9 +597,8 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
         <button type="button" class="shop-take" data-kart-result-ok>Done</button>
       </div>
     </section>
-    <p class="walk-hint kart-hint"><kbd>W</kbd><kbd>S</kbd> gas / brake · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>Space</kbd> drift · <kbd>E</kbd> item (<kbd>S</kbd> + <kbd>E</kbd> throws behind) · <kbd>Esc</kbd> quit</p>
+    <p class="walk-hint kart-hint"><kbd>W</kbd><kbd>S</kbd> gas / brake · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>Space</kbd> hop and drift (let go for the boost) · <kbd>Esc</kbd> quit</p>
     <button type="button" class="kart-btn kart-drift" data-kart-drift aria-label="Drift">Drift</button>
-    <button type="button" class="kart-btn kart-item" data-kart-item aria-label="Use item"><span class="kart-item-icon" data-kart-item-icon></span><small>Item</small></button>
     {/* The Fight Club (fight-ui.ts), opened at the trainer's counter or the City-view panel's Walk in.
         data-fight: the trainer's menu (built on the gun store's .shop panel); data-fight-dorras and data-fight-level in
         its head; data-fight-tabs the Spar / Bout / Record / Styles tabs (data-fight-tab); data-fight-body (painted);
@@ -657,6 +677,14 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     <p class="walk-hint drive-hint"><kbd>W</kbd><kbd>S</kbd> gas / brake · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>Space</kbd> handbrake · <kbd>V</kbd> camera · <kbd>E</kbd> get out</p>
     <div class="drive-hud" data-drive-hud hidden aria-hidden="true">
       <b data-drive-speed>0</b><small>km/h</small><span class="drive-gear" data-drive-gear>N</span>
+    </div>
+    {/* Flying your aircraft (fly.ts): speed, height over the ground, the throttle (or the rotor) and what it's doing */}
+    <p class="walk-hint fly-hint"><kbd>W</kbd><kbd>S</kbd> faster / slower · <kbd>A</kbd><kbd>D</kbd> turn · <kbd>↑</kbd><kbd>↓</kbd> or <kbd>Space</kbd><kbd>Shift</kbd> climb / dive · <kbd>V</kbd> camera · <kbd>E</kbd> get out</p>
+    <div class="fly-hud" data-fly-hud hidden aria-hidden="true">
+      <span class="fly-read"><b data-fly-speed>0</b><small>km/h</small></span>
+      <span class="fly-read"><b data-fly-alt>0</b><small>m up</small></span>
+      <span class="fly-power" title="Throttle"><i data-fly-power></i></span>
+      <span class="drive-gear" data-fly-state>Taxi</span>
     </div>
     <button type="button" class="drive-pedal drive-brake" data-drive-brake aria-label="Brake and reverse">Brake</button>
     <button type="button" class="drive-pedal drive-gas" data-drive-gas aria-label="Gas">Gas</button>
@@ -797,13 +825,19 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
   <template data-panel-tpl="karts">
     <p class="kicker"><span class="kicker-num">09</span> The kart park</p>
     <h2 id="city-panel-title" class="city-panel-title">Go-karts</h2>
-    <p class="city-panel-text">A track network on the open land north-east of the Parkway: the Neon Loop, the Summit Run and the Grand Circuit, each run both ways, with banked bowls, a hill, a tunnel, a flyover, a jump and a shortcut for the brave. Race seven rivals with items from the boxes on the track, in three classes from Street to Neon. Three cups run as a series of four races with points by place and a trophy for the podium; time trials race the par ghost and go on your boards, and there's a new challenge every day. Karts are bought and tuned at the hut for Dorras earned in the city.</p>
+    <p class="city-panel-text">The Sector 7 Circuit on the open land north-east of the Parkway: twelve corners, two banked sweepers, a hill with a tunnel and a jump, a hairpin and a flyover, raced both ways round. Pure racing against seven rivals in three classes from Street to Neon: drift for boosts, keep it off the grass, and some races run at night or in the rain. Three cups run as a series of four races with points by place and a trophy for the podium; single races and time trials (against the par ghost) any time, and a new challenge every day. Karts are bought and tuned at the hut for Dorras earned in the city.</p>
     <button type="button" class="chip-link kart-walkin" data-kart-walkin>Walk in</button>
     {/* Your best laps, trophies and race counts (index.ts fills it with kartRecordsHtml() from kart-ui.ts) */}
     <div class="kart-panel-records" data-kart-panel-records></div>
   </template>
+  <template data-panel-tpl="airport">
+    <p class="kicker"><span class="kicker-num">10</span> Sector 7 Airport</p>
+    <h2 id="city-panel-title" class="city-panel-title">Fly it yourself</h2>
+    <p class="city-panel-text">South-east of the Southside Loop: the runway, the terminal, the tower and the DEGEN AIR jets on their timetable. Your own aircraft waits in Hangar 1: pick a prop plane, a small jet or a helicopter at the office and paint it, then take off from the apron or the runway and fly anywhere over the city. It levels itself, can't stall and bumps softly off everything; touch down anywhere and climb out. Free to fly, and only for the city.</p>
+    <button type="button" class="chip-link kart-walkin" data-air-walkin>Walk in</button>
+  </template>
   <template data-panel-tpl="fightclub">
-    <p class="kicker"><span class="kicker-num">10</span> The south bank</p>
+    <p class="kicker"><span class="kicker-num">11</span> The south bank</p>
     <h2 id="city-panel-title" class="city-panel-title">Fight Club</h2>
     <p class="city-panel-text">A boxing gym on the south bank: a ring under a shed roof, bags, bleachers and the trainer's counter. Fight hand to hand in the ring: spar with the gym's own fighters for as long as you like, or take one on in a bout of three rounds, first to two. Bouts pay a prize and XP, in Dorras earned in the city, never real money. New fighting styles come to the trainer later.</p>
     <button type="button" class="chip-link fight-walkin" data-fight-walkin>Walk in</button>
@@ -823,6 +857,13 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       </button>
     </div>
 
+    {/* Getting started (missions-ui.ts, guide.ts): the step you're on, a way there and an × (3D only) */}
+    <div class="city-guide" data-guide hidden>
+      <div class="city-guide-body" data-guide-body></div>
+      <button type="button" class="city-card-close" data-guide-close aria-label="Hide the getting started guide">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
+      </button>
+    </div>
 
     {/* Stands in for the card's draft note when the card is hidden (always on phones); with the build's commit, to tell which version is live */}
     <p class="city-draft-tag">Draft · v0{build && ` · ${build}`}</p>

@@ -5,17 +5,18 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { CAMERA_ONLY, DOORS, FIGHTCLUB_SITE, GARAGE_SITE, MARKET_SITE, RACK, SHOT_SOLIDS, SOLIDS, STALL_SPOT, TURNTABLE_BOX, UNIT_SITE, UNIT_SIZE, WALK_SPAWN, LOT_SITE, lotSolids, rayBoxes, unitSolids } from '../src/scripts/city3d/solids';
 import { BIG_LOTS, EW_ROADS, GARAGE, BS, LANE, MARKET, NS_ROADS, UNITS } from '../src/scripts/city3d/layout';
-import { KART_SOLIDS } from '../src/scripts/city3d/kartpark';
+import { CIRCUIT_SOLIDS as KART_SOLIDS } from '../src/scripts/city3d/kartcircuit';
 import { CORNERS, FIGHT_CLUB, FIGHT_SPAWN, OUT, RING, RING_HALF, TRAINER, inRing } from '../src/scripts/city3d/fightsite';
 import { LOT_KIND_IDS, UNIT_KIND_IDS } from '../src/scripts/city3d/tycoon';
 import { inside, onSlab, pointIn, pointOnSlab, type Rect } from './world';
+import { AIRPORT_SOLIDS } from '../src/scripts/city3d/airfield';
 
 /** Degen's radius in walk mode (walk.ts RADIUS) */
 const R = 0.22;
 const blocked = (x: number, z: number) => SOLIDS.some((b) => pointIn(x, z, b, R));
 
-test('every solid box stands on a block, district or the garage lot (the kart park is flat ground, tested in kart.test.ts)', () => {
-  for (const b of [...SOLIDS, ...CAMERA_ONLY]) if (!KART_SOLIDS.includes(b)) assert.ok(onSlab(b), `box ${b.join(', ')} is off the slabs`);
+test('every solid box stands on a block, district or the garage lot (the kart park and the airport are flat open ground, tested in kart.test.ts and airfield.test.ts)', () => {
+  for (const b of [...SOLIDS, ...CAMERA_ONLY]) if (!KART_SOLIDS.includes(b) && !AIRPORT_SOLIDS.includes(b)) assert.ok(onSlab(b), `box ${b.join(', ')} is off the slabs`);
 });
 
 test('no solid box sits on a road', () => {

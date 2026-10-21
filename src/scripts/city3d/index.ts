@@ -14,6 +14,7 @@ import { buildNeighbourhoods } from './neighbourhoods';
 import { buildLife, walker } from './life';
 import { createWalk } from './walk';
 import { buildGarage } from './garage';
+import { buildAirport } from './airport';
 import { WORLD_BOUNDS } from './layout';
 import { loadCar } from './garage-ui';
 import { createProfileUI } from './profile-ui';
@@ -33,11 +34,13 @@ import { buildBigLots } from './biglots';
 import { buildBeacons } from './beacons';
 import { buildKartPark } from './kartpark3d';
 import { KART_SPAWN } from './kartpark';
+import { AIR_SPAWN } from './airfield';
 import { FIGHT_SPAWN } from './fightsite';
 import { buildFightClub } from './fightclub';
 import { fightRecordHtml } from './fight-ui';
 import { kartRecordsHtml } from './kart-ui';
 import { destAt } from './tycoon';
+import { guideAt } from './guide';
 import { CARS } from './cars';
 import { CROWD_VIEW } from './character';
 import type { GameDeps } from './ui';
@@ -115,6 +118,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   buildNeighbourhoods(scene, crowd, tick, { low: tier === 'low', reduced });
   // The garage on the south bank, your saved car on its turntable
   const garage = buildGarage(scene, { tick, reduced, car: loadCar() });
+  // The airport south-east of the Southside Loop, and the aircraft flying its timetable
+  const airport = buildAirport(scene, crowd, tick, { reduced, low: tier === 'low' });
   const plots = createPlots(scene, { degen, tick, reduced });
   // The market square (your stall and the traders'): before the lamps and the crowd are made
   const market = buildMarket(scene, crowd);
@@ -126,7 +131,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const beacons = buildBeacons(scene, tick, reduced);
   // The kart park outside the Parkway in the north-east: a place like the landmarks (its pin and panel)
   const kartPark = buildKartPark(scene, { tick, reduced, low: tier === 'low' });
-  spots.push(kartPark.spot);
+  spots.push(kartPark.spot, airport.spot);
   // The Fight Club on the south bank: a place too (its pin and panel)
   const fightClub = buildFightClub(scene, { tick, reduced, low: tier === 'low' });
   spots.push(fightClub.spot);
@@ -277,6 +282,12 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         startWalking(KART_SPAWN);
       });
     }
+    // The airport's panel: Walk in starts walk mode by the hangar office's door
+    if (id === 'airport')
+      panelBody.querySelector('[data-air-walkin]')?.addEventListener('click', () => {
+        close();
+        startWalking(AIR_SPAWN);
+      });
     // The Fight Club's panel: your record, and Walk in (walk mode starts on its lot)
     if (id === 'fightclub') {
       const rec = panelBody.querySelector<HTMLElement>('[data-fight-panel-record]');
@@ -367,13 +378,31 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     openPlace: (id) => tycoon?.openCard(id as 'stall'),
     game,
     kartPark,
+    raceConditions: (() => {
+      // The visitor's own time and weather, kept while a race's conditions are on the sky
+      let own: { time: TimeMode; weather: WeatherMode } | null = null;
+      return (cond: 'day' | 'night' | 'rain' | null) => {
+        if (cond) {
+          own ??= { time: sky.time, weather: sky.weather };
+          sky.setTime(cond === 'night' ? 'night' : 'day');
+          sky.setWeather(cond === 'rain' ? 'rain' : 'clear');
+        } else if (own) {
+          sky.setTime(own.time);
+          sky.setWeather(own.weather);
+          own = null;
+        }
+        dirty = true;
+      };
+    })(),
+    airTraffic: airport.traffic,
+    aero: (kind, revs) => sound.aero(kind, revs),
     fightClub,
     reduced,
     low: tier === 'low',
   });
   /* ---------- The economy: Dorras, your stall and units, the Workshop, the market hall ---------- */
   tycoon = createTycoonUI(root, {
-    walker: () => (walking && !walk.driving ? { x: walk.position.x, z: walk.position.z } : null),
+    walker: () => (walking && !walk.driving && !walk.flying ? { x: walk.position.x, z: walk.position.z } : null),
     car: () => {
       const c = walk.car;
       return c ? { ...c, name: CARS[c.model as keyof typeof CARS]?.name ?? 'Your car' } : null;
@@ -384,6 +413,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       units.show(s);
       bigLots.show(s);
       beacons.show(s.contracts.map((c) => destAt(c.to)));
+      beacons.guide(guideAt(s));
       dirty = true;
     },
     opened() {
@@ -398,6 +428,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     },
     plotsChanged: () => builder?.refresh(),
     sfx: (kind, gain) => sound.sfx(kind, gain),
+    guideGo: (g) => ('open' in g.go ? open(g.go.open) : startWalking(g.go.walk)),
   });
   // Build mode: the plots, over the economy's save
   const builder = createBuilderUI(root, {
@@ -688,8 +719,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // The city's own buttons and cards: a label under one folds to a dot, so the
   // Walk / Build pills never sit on top of a building's name. Re-read a few
   // times a second (they open, close and move with the layout)
-  // The header, its open drop-downs (settings, menu), the welcome card and the kart and fight HUDs (while a race or a fight is on)
-  const chrome = [...root.querySelectorAll<HTMLElement>('.city-head, .head-panel, .city-card, .kart-hud, .fight-demo, [data-fight-hud]')];
+  // The header, its open drop-downs (settings, menu), the welcome card, the guide and the kart, flight, drive and fight HUDs
+  const chrome = [...root.querySelectorAll<HTMLElement>('.city-head, .head-panel, .city-card, .city-guide, .kart-hud, .fly-hud, .drive-hud, .fight-demo, [data-fight-hud]')];
   const chromeRects: { x: number; y: number; w: number; h: number }[] = [];
   const readChrome = () => {
     const o = host.getBoundingClientRect();
@@ -736,8 +767,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       walk.update(dt, reduced ? 0 : t);
       walker.x = walk.position.x;
       walker.z = walk.position.z;
-      // A car reaches further than someone on foot
-      walker.r = walk.driving ? 0.8 : 0;
+      // A car reaches further than someone on foot, an aircraft on the ground further still; in the air it's no one's business
+      walker.r = walk.driving ? 0.8 : walk.flying ? 1.6 : 0;
+      if (walk.airborne) walker.x = walker.z = 1e6;
       mp?.update(dt, t);
       dirty = true;
     } else if (controls.update()) dirty = true;

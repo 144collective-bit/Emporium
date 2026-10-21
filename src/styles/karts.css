@@ -5,8 +5,8 @@
    body scrolls (the Race tab is long: three cups as series, the time trial's six courses, the
    daily challenge). The race HUD sits under the header in three glass blocks (the place, or a
    time trial's gap to the ghost, over the drift meter and the tags left; the lap with the class
-   and the series' race, the clock and the last / best lap centre; the item slot and Quit right),
-   clear of the stick, the pedals and the Drift / Item buttons at the bottom. The countdown
+   and the series' race, the clock and the last / best lap centre; the minimap and Quit right),
+   clear of the stick, the pedals and the Drift button at the bottom. The countdown
    reuses the shared big digits (.race-count, cards.css) and the results card the shared card
    (.race-result) with the laps, the standings and a series' points table under it. Nothing
    moves under reduced motion. */
@@ -393,6 +393,16 @@
   font-size: 8px;
   letter-spacing: 0.08em;
   color: #ff6ad5;
+}
+.kart-seg button small.is-cls {
+  color: var(--muted);
+}
+/* A single race: three pickers, their labels lined up */
+.kart-single .seg-label {
+  min-width: 44px;
+}
+.kart-single .kart-prizes {
+  margin: 0;
 }
 .kart-seg button:disabled {
   opacity: 0.6;
@@ -938,26 +948,27 @@
 .kart-tag[hidden] {
   display: none;
 }
-.kart-tag.is-shield {
-  border-color: #00eaff66;
-  color: var(--p-cyan);
-}
-/* The surface under the kart when it's not dry (wet, dirt, a bank, the tunnel), and the shortcut */
+/* The surface under the kart when it's not plain asphalt (a kerb, the run-off, a bank, the tunnel) */
 .kart-tag.is-surface {
   border-color: #ffd36b66;
   color: #ffd36b;
 }
-.kart-tag.is-surface[data-surface="wet"] {
-  border-color: #3f98ff88;
-  color: #7fc2ff;
+.kart-tag.is-surface[data-surface="runoff"] {
+  border-color: #ff6ad566;
+  color: #ff6ad5;
 }
 .kart-tag.is-surface[data-surface="tunnel"] {
   border-color: #a36bff88;
   color: #c9a8ff;
 }
-.kart-tag.is-shortcut {
-  border-color: #ff6ad566;
-  color: #ff6ad5;
+/* A night or rain race */
+.kart-tag.is-cond {
+  border-color: #a36bff88;
+  color: #c9a8ff;
+}
+.kart-tag.is-cond[data-cond="rain"] {
+  border-color: #3f98ff88;
+  color: #7fc2ff;
 }
 @keyframes kart-tag-in {
   from {
@@ -1038,90 +1049,52 @@
 .kart-hud.is-counting .kart-clock {
   color: var(--muted);
 }
-/* The item slot: a rounded square with the item's icon, the icons spinning while the roulette runs */
-.kart-slot {
-  position: relative;
-  display: grid;
-  justify-items: center;
-  gap: 2px;
-  width: 68px;
+/* The minimap: the circuit's outline (the flyover's deck drawn over the run below it), the
+   start line, and a dot for every kart, yours bigger and lit */
+.kart-map {
+  width: 84px;
+  height: 84px;
 }
-.kart-slot-icon,
-.kart-slot-strip,
-.kart-slot-q {
-  box-sizing: border-box;
-  width: 46px;
-  height: 46px;
-  border: 1px solid #ffffff30;
-  border-radius: 12px;
-  background: #ffffff0d;
-  color: #fff;
-}
-.kart-slot-icon {
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-}
-.kart-slot-icon svg,
-.kart-slot-strip svg {
-  width: 30px;
-  height: 30px;
-}
-.kart-slot:not(.is-empty):not(.is-spinning) .kart-slot-icon {
-  border-color: #0000;
-  background:
-    linear-gradient(#14102a, #14102a) padding-box,
-    var(--pulse) border-box;
-  box-shadow: 0 0 16px -4px #00eaff99;
-  color: var(--p-cyan);
-}
-.kart-slot-strip,
-.kart-slot-q {
-  position: absolute;
-  top: 0;
-  left: 11px;
-  display: none;
-}
-.kart-slot-strip {
-  overflow: hidden;
-}
-.kart-slot-strip i {
-  display: grid;
-  place-items: center;
-  width: 100%;
-  height: 44px;
-}
-.kart-slot.is-spinning .kart-slot-strip {
+.kart-map svg {
   display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
 }
-.kart-slot.is-spinning .kart-slot-strip i {
-  animation: kart-roulette 0.72s steps(6) infinite;
+.kart-map-track {
+  fill: none;
+  stroke: #ffffff3a;
+  stroke-width: 7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
-@keyframes kart-roulette {
-  to {
-    transform: translateY(-264px);
-  }
+.kart-map-line {
+  fill: none;
+  stroke: #ffffffb0;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
-.kart-slot-q {
-  display: none;
-  place-items: center;
-  font-family: var(--font-display);
-  font-size: 30px;
-  font-weight: 900;
-  color: var(--p-cyan);
+.kart-map-deck {
+  fill: none;
+  stroke: #0b0a12;
+  stroke-width: 11;
+  stroke-linecap: butt;
 }
-.kart-slot-name {
-  max-width: 68px;
-  font-family: var(--font-mono);
-  font-size: 8.5px;
-  line-height: 1.15;
-  letter-spacing: 0.06em;
-  text-align: center;
-  text-transform: uppercase;
-  color: var(--muted);
+.kart-map-start {
+  stroke: #fff;
+  stroke-width: 2.6;
 }
-.kart-slot:not(.is-empty):not(.is-spinning) .kart-slot-name {
-  color: #fff;
+.kart-map-dot {
+  fill: #ff6ad5;
+  stroke: #0b0a12;
+  stroke-width: 1.2;
+}
+.kart-map-dot.is-you {
+  fill: var(--p-cyan);
+  stroke: #fff;
+  stroke-width: 1.6;
+  filter: drop-shadow(0 0 3px #00eaff);
 }
 .kart-quit {
   padding: 6px 12px;
@@ -1526,7 +1499,7 @@
   }
 }
 /* Touch screens: the stick steers bottom-left, Gas and Brake are the driving layout's pedals
-   bottom-right, with Item above Gas and Drift above Brake, all clear of the phone's safe areas */
+   bottom-right, with Drift above Brake, all clear of the phone's safe areas */
 @media (pointer: coarse) {
   .city.is-karting .walk-stick {
     display: grid;
@@ -1613,35 +1586,11 @@
     -webkit-user-select: none;
     user-select: none;
   }
-  /* Drift over Brake, Item over Gas (each pedal's height plus a gap) */
+  /* Drift over Brake (the pedal's height plus a gap) */
   .city.is-karting .kart-drift {
     right: max(106px, calc(env(safe-area-inset-right) + 100px));
     bottom: max(128px, calc(env(safe-area-inset-bottom) + 116px));
     box-shadow: 0 0 24px -8px #00eaff;
-  }
-  .city.is-karting .kart-item {
-    right: max(16px, calc(env(safe-area-inset-right) + 10px));
-    bottom: max(160px, calc(env(safe-area-inset-bottom) + 148px));
-    box-shadow: 0 0 24px -8px #ff2fb9;
-  }
-  .kart-item-icon {
-    display: grid;
-    place-items: center;
-    height: 26px;
-    color: var(--p-cyan);
-  }
-  .kart-item-icon:empty::before {
-    content: "·";
-    font-size: 22px;
-    color: var(--muted);
-  }
-  .kart-item-icon svg {
-    width: 26px;
-    height: 26px;
-  }
-  .kart-item small {
-    font-size: 8.5px;
-    letter-spacing: 0.1em;
   }
   .kart-btn:active {
     transform: scale(0.95);
@@ -1675,9 +1624,6 @@
   .city.is-karting .kart-drift {
     bottom: max(104px, calc(env(safe-area-inset-bottom) + 98px));
   }
-  .city.is-karting .kart-item {
-    bottom: max(128px, calc(env(safe-area-inset-bottom) + 122px));
-  }
 }
 /* Narrow phones: slimmer pedals and stick so nothing touches */
 @media (pointer: coarse) and (max-width: 360px) {
@@ -1690,8 +1636,7 @@
   .city.is-karting .kart-btn {
     width: 70px;
   }
-  .city.is-karting .drive-gas,
-  .city.is-karting .kart-item {
+  .city.is-karting .drive-gas {
     right: 12px;
   }
   .city.is-karting .drive-brake,
@@ -1747,6 +1692,10 @@
   .kart-hud-mid {
     min-width: 96px;
   }
+  .kart-map {
+    width: 66px;
+    height: 66px;
+  }
   .kart-pop {
     font-size: 24px;
   }
@@ -1793,16 +1742,12 @@
     left: 10px;
     gap: 4px;
   }
-  .kart-of,
-  .kart-slot-name {
+  .kart-of {
     display: none;
   }
-  .kart-slot {
-    width: 46px;
-  }
-  .kart-slot-strip,
-  .kart-slot-q {
-    left: 0;
+  .kart-map {
+    width: 58px;
+    height: 58px;
   }
   .kart-meter i {
     width: 18px;
@@ -1909,6 +1854,10 @@
   .kart-clock {
     font-size: 22px;
   }
+  .kart-map {
+    width: 60px;
+    height: 60px;
+  }
   .kart-pops {
     top: calc(var(--head-h) + 98px);
   }
@@ -1922,12 +1871,5 @@
   }
   .kart-pop {
     opacity: 1;
-  }
-  /* No spinning icons: a question mark until the item lands */
-  .kart-slot.is-spinning .kart-slot-strip {
-    display: none;
-  }
-  .kart-slot.is-spinning .kart-slot-q {
-    display: grid;
   }
 }

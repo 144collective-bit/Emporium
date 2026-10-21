@@ -10,8 +10,10 @@
  *   Race: the three cups as series of four races (the class, the level, the
  *   courses in order, what the series pays, your trophy) with one button
  *   each: Start series, or Continue · race n/4 with a Drop beside it when
- *   that cup's series is on the go. Then the time trial: a class picker
- *   (locked classes say the level) and the six courses with your record lap
+ *   that cup's series is on the go. Then a single race: whose rivals (a
+ *   cup's, at its class and level), which way round, day, night or rain,
+ *   three laps, paid like a cup's race. Then the time trial: a class picker
+ *   (locked classes say the level) and both directions with your record lap
  *   and run at that class and the par ghost's lap. Then today's challenge:
  *   the day's course and class, the lap to beat and the prize.
  *   Karts: cards for the four karts (the Pocket Rocket is yours, the others
@@ -22,15 +24,16 @@
  *   pits (d.preview).
  *   Boards: a course and a class picker, the fastest lap, the par ghost,
  *   your own top-ten of time trials for that key, then your trophies and
- *   the counters the save keeps. Global boards come with the game server.
+ *   the counters the save keeps, and your laps from the old tracks (put away
+ *   by the rebuild). Global boards come with the game server.
  * - The HUD (`data-kart-hud`): the place and "of 8" top left (a time trial
  *   shows the gap to the ghost there instead) over the drift meter (three
- *   segments by tier) and the tags (Boost, Shield, the surface when it's
- *   not dry, Shortcut); the lap with the class and the series' race top
- *   centre over the clock and the last / best lap; the item slot top right
- *   (the icons spin while the roulette runs; "?" under reduced motion) with
- *   Quit under it. The touch Drift and Item buttons sit above the pedals;
- *   walk.ts wires them.
+ *   segments by tier) and the tags (Boost, the surface when it's not plain
+ *   asphalt, Night or Rain); the lap with the class and the series' race top
+ *   centre over the clock and the last / best lap; the minimap top right
+ *   (the circuit's outline, the flyover's deck drawn over the run below it,
+ *   the start line, every kart's dot with yours lit) with Quit under it. The
+ *   touch Drift button sits above the Brake pedal; walk.ts wires it.
  * - `count()` shows the big digits, `pop()` a short line over the HUD,
  *   `showResult()` the card: place, time, the laps with the best lit, the
  *   par lap, the tags (lap record, best run, par ghost, the daily
@@ -42,8 +45,9 @@
  * the one picked, Esc / B / E closes (walk.ts calls close()). Prizes and
  * prices are Dorras only: never real money, nothing to do with the token.
  */
-import { CUPS, CUP_IDS, ITEMS, ITEM_IDS, type CupId, type ItemId } from './kart-sim';
-import { COURSES, COURSE_IDS, type CourseId } from './kartpark';
+import { CUPS, CUP_IDS, type CupId } from './kart-sim';
+import { CIRCUIT, CONDS, COURSES, COURSE_IDS, type Cond, type CourseId } from './kartcircuit';
+import { F } from './kartpark';
 import { KART_SPECS, PLAYER_KARTS, type KartId } from './mykart';
 import { CHALLENGE_PRIZE, CLASS_IDS, KART_CATALOG, KART_CLASSES, KART_MODS, KART_MOD_IDS, MOD_LEVELS, SERIES_PRIZES, type ClassId, type KartModId } from './catalog';
 import {
@@ -69,21 +73,25 @@ import type { KartHud, KartResultView, KartUI, KartUIDeps } from './kart-types';
 
 /** How many karts race a cup (you and seven rivals) */
 const FIELD = 8;
+/** A single race's laps */
+const SINGLE_LAPS = 3;
+const COND_IDS = Object.keys(CONDS) as Cond[];
+/** The tracks before this one, for the records they left (the old network, save v8; the circuit at full size, save v9) */
+const OLD_NAMES: Record<string, string> = {
+  'neon-loop': 'Neon Loop',
+  'neon-reverse': 'Neon Loop, reverse',
+  summit: 'Summit Run',
+  'summit-reverse': 'Summit Run, reverse',
+  grand: 'Grand Circuit',
+  'grand-reverse': 'Grand Circuit, reverse',
+  'full-circuit': 'Sector 7 Circuit, full size',
+  'full-circuit-reverse': 'Sector 7 Circuit, full size, reverse',
+};
 /** How long a pop stays (ms) and how many at once */
 const POP_MS = 1400;
 const POPS_MAX = 3;
 
-/* ---------- Icons: the six items (24 x 24, stroked in currentColor) ---------- */
-
 const I = (body: string) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
-export const ITEM_ICONS: Record<ItemId, string> = {
-  rocket: I('<path d="M14.5 3.5c2.5-.5 5 0 6 1 1 1 1.5 3.5 1 6l-5 5-4.5-4.5zM12 11l-3 1-4 4 2 .5.5 2 4-4 1-3M8.5 15.5L5 19"/><circle cx="16" cy="8" r="1.4" fill="currentColor" stroke="none"/><path d="M4 12.5l1.5-1.5M11.5 20l1.5-1.5"/>'),
-  oil: I('<path d="M12 3c3 4 6 7.5 6 11a6 6 0 0 1-12 0c0-3.5 3-7 6-11z"/><path d="M9.5 15.5a2.5 2.5 0 0 0 2 2"/>'),
-  gummy: I('<circle cx="8" cy="7" r="2"/><circle cx="16" cy="7" r="2"/><path d="M9 8.5a4 4 0 0 1 6 0c1 1.5 1 3 1 3.5 1.5 0 3 1 3 2.5s-1.5 2.5-3 2.5c0 1.5-.5 3-1.5 3.5h-5c-1-.5-1.5-2-1.5-3.5-1.5 0-3-1-3-2.5s1.5-2.5 3-2.5c0-.5 0-2 1-3.5z"/><path d="M10.5 11h.01M13.5 11h.01"/>'),
-  pigeon: I('<path d="M3 13c3 0 5-1 7-3l2-2c2-1.5 4-2 6-1l3 1-3 1.5c0 3-2 5.5-5 6.5l-1 3-1-2.5c-3 .5-6-.5-8-3.5z"/><circle cx="16.5" cy="8.5" r=".7" fill="currentColor" stroke="none"/><path d="M9 11.5c1 1 1.5 2.5 1.5 4"/>'),
-  shield: I('<path d="M12 3l7 2.5v6c0 4.5-3 8-7 9.5-4-1.5-7-5-7-9.5v-6z"/><path d="M9 12l2 2 4-4"/>'),
-  trail: I('<path d="M3 15c3-5 5 5 8 0s5-5 8 0 2 0 2 0" stroke-width="2.2"/><path d="M3 19c3-3 5 3 8 0s5-3 8 0" opacity=".45"/>'),
-};
 /** A trophy (a cup on a plinth), for the series */
 const TROPHY = I('<path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H5.5a2.5 2.5 0 0 0 2.5 4M16 6h2.5a2.5 2.5 0 0 1-2.5 4M12 13v4M9 20h6l-.5-3h-5z"/>');
 
@@ -120,6 +128,46 @@ const dateOf = (at: number) => {
 const kartName = (id: KartId) => KART_SPECS[id]?.name ?? '';
 const NONE = '<span class="race-none">No time yet</span>';
 
+/* ---------- The minimap: the circuit drawn once from its samples, in world numbers (x east, z south: north up) ---------- */
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const MAP = (() => {
+  const c = CIRCUIT;
+  const n = c.x.length;
+  let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+  for (let i = 0; i < n; i++) {
+    x0 = Math.min(x0, c.x[i]);
+    x1 = Math.max(x1, c.x[i]);
+    z0 = Math.min(z0, c.z[i]);
+    z1 = Math.max(z1, c.z[i]);
+  }
+  const pad = 7;
+  const w = x1 - x0 + pad * 2;
+  const h = z1 - z0 + pad * 2;
+  const side = Math.max(w, h);
+  const vb = `${(x0 - pad - (side - w) / 2).toFixed(1)} ${(z0 - pad - (side - h) / 2).toFixed(1)} ${side.toFixed(1)} ${side.toFixed(1)}`;
+  const pt = (i: number) => `${c.x[i].toFixed(1)} ${c.z[i].toFixed(1)}`;
+  // The whole loop, every few samples
+  const every = 4;
+  let loop = `M${pt(0)}`;
+  for (let i = every; i < n; i += every) loop += `L${pt(i)}`;
+  loop += 'Z';
+  // The flyover's deck: the run with the deck flag, drawn again on top with a dark edge so it reads as over the run below
+  let deck = '';
+  for (let i = 0; i < n; i++) {
+    if (!(c.flags[i] & F.deck)) continue;
+    deck += `${deck && c.flags[(i - 1 + n) % n] & F.deck ? 'L' : 'M'}${pt(i)}`;
+  }
+  // The start line across the track
+  const si = Math.round(c.start / c.step) % n;
+  const nx = -c.tz[si] * 5;
+  const nz = c.tx[si] * 5;
+  const start = `M${(c.x[si] - nx).toFixed(1)} ${(c.z[si] - nz).toFixed(1)}L${(c.x[si] + nx).toFixed(1)} ${(c.z[si] + nz).toFixed(1)}`;
+  return `<svg viewBox="${vb}" aria-hidden="true"><path class="kart-map-track" d="${loop}"/><path class="kart-map-line" d="${loop}"/>${
+    deck ? `<path class="kart-map-deck" d="${deck}"/><path class="kart-map-track" d="${deck}"/><path class="kart-map-line" d="${deck}"/>` : ''
+  }<path class="kart-map-start" d="${start}"/><g data-kart-dots></g></svg>`;
+})();
+
 /** The four stat bars and the mod that raises each */
 const STATS: { key: 'speed' | 'accel' | 'handling' | 'weight'; label: string; mod: KartModId | null }[] = [
   { key: 'speed', label: 'Top speed', mod: 'motor' },
@@ -139,7 +187,32 @@ function countersHtml(s: TycoonSave) {
   return `  <div><dt>Kart races</dt><dd>${fmt.format(c.kartRaces)}</dd></div>
   <div><dt>Podiums</dt><dd>${fmt.format(c.podiums)}</dd></div>
   <div><dt>Wins</dt><dd>${fmt.format(c.kartWins)}</dd></div>
-  <div><dt>Item hits</dt><dd>${fmt.format(c.kartHits)}</dd></div>`;
+  <div><dt>Clean laps</dt><dd>${fmt.format(c.cleanLaps)}</dd></div>
+  <div><dt>Overtakes</dt><dd>${fmt.format(c.overtakes)}</dd></div>`;
+}
+
+/** Your laps from the old tracks (the network before the rebuild, the circuit at full size): best per course at any class (nothing when there are none) */
+function oldHtml(s: TycoonSave) {
+  const best = new Map<string, KartTime>();
+  for (const [key, t] of Object.entries(s.karts.old)) {
+    const course = key.split(':')[0];
+    if (!OLD_NAMES[course] || !(t.lap > 0)) continue;
+    const had = best.get(course);
+    if (!had || t.lap < had.lap) best.set(course, t);
+  }
+  if (!best.size) return '';
+  const rows = Object.keys(OLD_NAMES)
+    .filter((c) => best.has(c))
+    .map((c) => {
+      const t = best.get(c)!;
+      return `  <div class="kart-record-time"><dt>${esc(OLD_NAMES[c])}</dt><dd>${clockOf(t.lap)}</dd></div>`;
+    })
+    .join('\n');
+  return `<h4 class="kart-board-title">The old tracks</h4>
+<p class="race-note">Your best laps on the tracks before this one, kept for the memory. They don't count on the circuit as it is now.</p>
+<dl class="race-meta kart-records kart-old">
+${rows}
+</dl>`;
 }
 
 /** A compact summary of your records at the park, for the City-view panel (index.ts): best lap per course at Sport, trophies, counters */
@@ -184,24 +257,22 @@ export function createKartUI(root: HTMLElement, d: KartUIDeps): KartUI {
   const lapsEl = hud.querySelector<HTMLElement>('[data-kart-laps]')!;
   const lastEl = lapsEl.querySelector<HTMLElement>('[data-kart-last]')!;
   const bestEl = lapsEl.querySelector<HTMLElement>('[data-kart-best]')!;
-  const slot = hud.querySelector<HTMLElement>('[data-kart-slot]')!;
-  const slotIcon = slot.querySelector<HTMLElement>('[data-kart-slot-icon]')!;
-  const slotStrip = slot.querySelector<HTMLElement>('[data-kart-slot-strip]')!;
-  const slotName = slot.querySelector<HTMLElement>('[data-kart-slot-name]')!;
   const meter = hud.querySelector<HTMLElement>('[data-kart-meter]')!;
   const boostEl = hud.querySelector<HTMLElement>('[data-kart-boost]')!;
-  const shieldEl = hud.querySelector<HTMLElement>('[data-kart-shield]')!;
   const surfaceEl = hud.querySelector<HTMLElement>('[data-kart-surface]')!;
-  const shortcutEl = hud.querySelector<HTMLElement>('[data-kart-shortcut]')!;
+  const condEl = hud.querySelector<HTMLElement>('[data-kart-cond]')!;
+  const mapEl = hud.querySelector<HTMLElement>('[data-kart-map]')!;
   const pops = root.querySelector<HTMLElement>('[data-kart-pops]')!;
-  const itemBtnIcon = root.querySelector<HTMLElement>('[data-kart-item-icon]');
   const result = root.querySelector<HTMLElement>('[data-kart-result]')!;
   const resultTitle = result.querySelector<HTMLElement>('[data-kart-result-title]')!;
   const resultBody = result.querySelector<HTMLElement>('[data-kart-result-body]')!;
   const nextBtn = result.querySelector<HTMLButtonElement>('[data-kart-next]')!;
 
-  // The roulette strip: every item's icon, cycled by CSS while it spins
-  slotStrip.innerHTML = ITEM_IDS.map((id) => `<i>${ITEM_ICONS[id]}</i>`).join('');
+  mapEl.innerHTML = MAP;
+  const dotsEl = mapEl.querySelector<SVGGElement>('[data-kart-dots]')!;
+  /** The dots on the map, one per kart, and where each was last put (tenths of a tile) */
+  let dots: SVGCircleElement[] = [];
+  let dotAt: string[] = [];
 
   let menuOpen = false;
   let resultOpen = false;
@@ -214,9 +285,12 @@ export function createKartUI(root: HTMLElement, d: KartUIDeps): KartUI {
   let trialCls: ClassId = 'street';
   let boardCourse: CourseId = COURSE_IDS[0];
   let boardCls: ClassId = 'street';
+  /** The single race being set up: whose rivals, which way round, the conditions */
+  let singleCup: CupId = 'rookie';
+  let singleCourse: CourseId = COURSE_IDS[0];
+  let singleCond: Cond = 'day';
   let sinceRepaint = 0;
   let goTimer = 0;
-  let slotKey = '';
 
   /* ---------- The menu ---------- */
 
@@ -249,16 +323,16 @@ export function createKartUI(root: HTMLElement, d: KartUIDeps): KartUI {
       const c = CUPS[id];
       const locked = lv < c.level;
       const going = sr?.cup === id;
-      const courses = `<ol class="kart-series-courses" aria-label="Courses">${c.courses
-        .map((cid, i) => `<li${going && i < sr.race ? ' class="is-done"' : going && i === sr.race ? ' class="is-next"' : ''}><span>${courseLabel(cid)}</span><small>${COURSES[cid].laps} laps</small></li>`)
+      const courses = `<ol class="kart-series-courses" aria-label="Races">${c.races
+        .map((r, i) => `<li${going && i < sr.race ? ' class="is-done"' : going && i === sr.race ? ' class="is-next"' : ''}><span>${courseLabel(r.course)}</span><small>${r.laps} laps${r.cond === 'day' ? '' : ` · ${CONDS[r.cond].name}`}</small></li>`)
         .join('')}</ol>`;
       const prizes = SERIES_PRIZES[id];
       const trophy = s.karts.trophies[id];
       const act = going
-        ? `<button type="button" class="kart-go" data-kart-series="${id}"><span>Continue · race ${sr.race + 1}/${c.courses.length}</span></button><button type="button" class="kart-drop" data-kart-drop>Drop</button>`
+        ? `<button type="button" class="kart-go" data-kart-series="${id}"><span>Continue · race ${sr.race + 1}/${c.races.length}</span></button><button type="button" class="kart-drop" data-kart-drop>Drop</button>`
         : `<button type="button" class="kart-go" data-kart-series="${id}"${locked ? ' disabled' : ''}><span>${locked ? `LV ${c.level}` : 'Start series'}</span></button>`;
       return `<div class="kart-cup${locked ? ' is-locked' : ''}${going ? ' is-going' : ''}" role="listitem">
-  <div class="kart-cup-head"><b class="race-name">${esc(c.name)}</b>${LV(c.level)}${classTag(c.cls)}<span class="race-cps">${c.courses.length} races · ${FIELD - 1} rivals</span></div>
+  <div class="kart-cup-head"><b class="race-name">${esc(c.name)}</b>${LV(c.level)}${classTag(c.cls)}<span class="race-cps">${c.races.length} races · ${FIELD - 1} rivals</span></div>
   <p class="race-blurb">${esc(c.blurb)}</p>
   ${courses}
   <p class="kart-prizes"><span>Series</span>${['1st', '2nd', '3rd'].map((p, i) => `<span class="kart-prize"><em>${p}</em> ${D(prizes[i] ?? 0)}</span>`).join('')}<span class="kart-prize"><em>a race win</em> ${D(c.prizes[0] ?? 0)}</span></p>
@@ -266,13 +340,33 @@ export function createKartUI(root: HTMLElement, d: KartUIDeps): KartUI {
 </div>`;
     }).join('');
 
+    // A single race: a cup's rivals at its class, which way round, the conditions
+    if (lv < CUPS[singleCup].level) singleCup = CUP_IDS[0];
+    const sc = CUPS[singleCup];
+    const single = `<section class="kart-sect kart-single" aria-label="Single race">
+  <div class="kart-cup-head"><b class="race-name">Single race</b><span class="race-cps">${SINGLE_LAPS} laps · ${FIELD - 1} rivals · no series</span></div>
+  <p class="race-blurb">One race on its own: pick whose rivals you race (and so the class), which way round, and day, night or rain.</p>
+  <div class="seg kart-seg" role="group" aria-label="Rivals"><span class="seg-label">Rivals</span>${CUP_IDS.map((id) => {
+    const c = CUPS[id];
+    const locked = lv < c.level;
+    return `<button type="button" data-kart-single-cup="${id}" aria-pressed="${id === singleCup}"${locked ? ' disabled' : ''}>${esc(c.name.replace(' Cup', ''))}${locked ? `<small>LV ${c.level}</small>` : `<small class="is-cls">${esc(KART_CLASSES[c.cls].name)}</small>`}</button>`;
+  }).join('')}</div>
+  <div class="seg kart-seg" role="group" aria-label="Way round"><span class="seg-label">Way</span>${COURSE_IDS.map(
+    (id) => `<button type="button" data-kart-single-course="${id}" aria-pressed="${id === singleCourse}">${COURSES[id].reverse ? 'Reverse' : 'Forward'}</button>`
+  ).join('')}</div>
+  <div class="seg kart-seg" role="group" aria-label="Conditions"><span class="seg-label">When</span>${COND_IDS.map(
+    (id) => `<button type="button" data-kart-single-cond="${id}" aria-pressed="${id === singleCond}">${esc(CONDS[id].name)}</button>`
+  ).join('')}</div>
+  <div class="kart-cup-act"><button type="button" class="kart-go" data-kart-single><span>Start race</span></button><p class="kart-prizes"><span class="kart-prize"><em>a win</em> ${D(sc.prizes[0] ?? 0)}</span><span class="kart-prize"><em>2nd</em> ${D(sc.prizes[1] ?? 0)}</span><span class="kart-prize"><em>3rd</em> ${D(sc.prizes[2] ?? 0)}</span></p></div>
+</section>`;
+
     // The time trial: pick a class, then a course
     const rows = COURSE_IDS.map((id) => {
       const c = COURSES[id];
       const rec = s.karts.records[recordKey(id, trialCls)];
       return `<div class="kart-course">
   <div class="kart-course-info">
-    <b class="kart-course-name">${courseLabel(id)}${c.shortcut ? '<span class="kart-sc-tag">Shortcut</span>' : ''}</b>
+    <b class="kart-course-name">${courseLabel(id)}</b>
     <p class="kart-course-blurb">${esc(c.blurb)}</p>
     <p class="kart-course-meta"><span>${c.laps} laps</span><span>Lap <b>${rec ? clockOf(rec.lap) : '—'}</b></span><span>Run <b>${rec ? clockOf(rec.run) : '—'}</b></span><span>Par <b>${clockOf(parLap(id, trialCls))}</b></span></p>
   </div>
@@ -309,6 +403,7 @@ export function createKartUI(root: HTMLElement, d: KartUIDeps): KartUI {
   <div class="kart-cup-head"><b class="race-name">Cups</b><span class="race-cps">a series of four races · points by place</span></div>
   <div class="kart-cups" role="list">${cups}</div>
 </section>
+${single}
 ${trial}
 ${challenge}
 <p class="race-note">You'll race the <b>${esc(KART_SPECS[mine.model].name)}</b> in ${esc(paintName(mine.paint))}. Pick another in the Karts tab.</p>`;
@@ -405,7 +500,7 @@ ${rows}
 <p class="kart-trophies">${trophyLine(s)}</p>
 <dl class="race-meta kart-records">
 ${countersHtml(s)}
-</dl>`;
+</dl>${oldHtml(s)}`;
   }
 
   function paint() {
@@ -509,6 +604,16 @@ ${countersHtml(s)}
     close();
     d.start({ course, cup: 'time', cls });
   }
+  function startSingle() {
+    const c = CUPS[singleCup];
+    if (level(d.game.save()) < c.level) {
+      d.game.toast(`${c.name}'s rivals need level ${c.level}.`);
+      d.game.sfx('denied');
+      return;
+    }
+    close();
+    d.start({ course: singleCourse, cup: singleCup, cls: c.cls, laps: SINGLE_LAPS, cond: singleCond, single: true });
+  }
   function startSeries(cup: CupId) {
     const s = d.game.save();
     const c = CUPS[cup];
@@ -518,9 +623,9 @@ ${countersHtml(s)}
       return;
     }
     // Carry on with this cup's series where it stands; any other starts from its first race
-    const course = (s.karts.series?.cup === cup ? seriesNext(s) : null) ?? c.courses[0];
+    const race = (s.karts.series?.cup === cup ? seriesNext(s) : null) ?? c.races[0];
     close();
-    d.start({ course, cup, cls: c.cls });
+    d.start({ course: race.course, cup, cls: c.cls, laps: race.laps, cond: race.cond });
   }
 
   /* ---------- Opening and closing ---------- */
@@ -583,6 +688,17 @@ ${countersHtml(s)}
     if (!b || b.disabled) return;
     if (b.dataset.kartStart) startTrial(b.dataset.kartStart as CourseId, (b.dataset.kartCls as ClassId) ?? trialCls);
     else if (b.dataset.kartSeries) startSeries(b.dataset.kartSeries as CupId);
+    else if (b.hasAttribute('data-kart-single')) startSingle();
+    else if (b.dataset.kartSingleCup) {
+      singleCup = b.dataset.kartSingleCup as CupId;
+      refocus(`[data-kart-single-cup="${singleCup}"]`);
+    } else if (b.dataset.kartSingleCourse) {
+      singleCourse = b.dataset.kartSingleCourse as CourseId;
+      refocus(`[data-kart-single-course="${singleCourse}"]`);
+    } else if (b.dataset.kartSingleCond) {
+      singleCond = b.dataset.kartSingleCond as Cond;
+      refocus(`[data-kart-single-cond="${singleCond}"]`);
+    }
     else if (b.hasAttribute('data-kart-drop')) {
       d.quitSeries();
       d.game.sfx('holster');
@@ -671,7 +787,6 @@ ${countersHtml(s)}
     if (!on) {
       count('');
       pops.replaceChildren();
-      slotKey = '';
     }
   }
   function paintHud(h: KartHud) {
@@ -703,24 +818,11 @@ ${countersHtml(s)}
       gapEl.classList.toggle('is-behind', behind);
       gapEl.classList.toggle('is-ahead', !behind);
     }
-    // The surface when it's not dry, and the shortcut
+    // The surface when it's not plain asphalt (a kerb, the run-off, banking, the tunnel)
     showIf(surfaceEl, h.surface !== 'dry');
     if (h.surface !== 'dry') {
-      set(surfaceEl, h.surface);
+      set(surfaceEl, h.surface === 'runoff' ? 'run-off' : h.surface);
       if (surfaceEl.dataset.surface !== h.surface) surfaceEl.dataset.surface = h.surface;
-    }
-    showIf(shortcutEl, h.shortcut);
-    // The item slot: the icon and name, or the spinning strip
-    const key = h.roulette ? 'roulette' : (h.item ?? 'none');
-    if (key !== slotKey) {
-      slotKey = key;
-      const icon = h.item && !h.roulette ? ITEM_ICONS[h.item] : '';
-      slotIcon.innerHTML = icon;
-      if (itemBtnIcon) itemBtnIcon.innerHTML = icon;
-      set(slotName, h.roulette ? '?' : h.item ? ITEMS[h.item].name : 'No item');
-      slot.dataset.item = key;
-      slot.classList.toggle('is-spinning', h.roulette);
-      slot.classList.toggle('is-empty', !h.item && !h.roulette);
     }
     const tier = Math.max(0, Math.min(3, Math.floor(h.driftTier)));
     if (meter.dataset.tier !== String(tier)) {
@@ -728,7 +830,36 @@ ${countersHtml(s)}
       meter.querySelectorAll('i').forEach((seg, i) => seg.classList.toggle('on', i < tier));
     }
     showIf(boostEl, h.boost);
-    showIf(shieldEl, h.shield);
+    // Night or rain
+    showIf(condEl, h.cond !== 'day');
+    if (h.cond !== 'day') {
+      set(condEl, CONDS[h.cond].name);
+      if (condEl.dataset.cond !== h.cond) condEl.dataset.cond = h.cond;
+    }
+    paintDots(h.dots);
+  }
+  /** The karts on the minimap: one dot each, yours drawn last (on top), moved only when they've moved */
+  function paintDots(list: KartHud['dots']) {
+    if (dots.length !== list.length) {
+      dots = list.map(() => document.createElementNS(SVG_NS, 'circle'));
+      dotAt = list.map(() => '');
+      dotsEl.replaceChildren();
+      const you = list.findIndex((k) => k.you);
+      list.forEach((k, i) => {
+        const c = dots[i];
+        c.setAttribute('class', `kart-map-dot${k.you ? ' is-you' : ''}`);
+        c.setAttribute('r', k.you ? '5' : '3.6');
+        if (i !== you) dotsEl.append(c);
+      });
+      if (you >= 0) dotsEl.append(dots[you]);
+    }
+    list.forEach((k, i) => {
+      const at = `${k.x.toFixed(1)},${k.z.toFixed(1)}`;
+      if (dotAt[i] === at) return;
+      dotAt[i] = at;
+      dots[i].setAttribute('cx', k.x.toFixed(1));
+      dots[i].setAttribute('cy', k.z.toFixed(1));
+    });
   }
   function pop(text: string, kind: 'good' | 'bad' | 'plain' = 'plain') {
     const p = document.createElement('p');
@@ -745,7 +876,7 @@ ${countersHtml(s)}
     const res = r.result;
     const trial = r.cup === 'time';
     const sr = r.series;
-    const cupName = trial ? 'Time trial' : CUPS[r.cup as CupId]?.name ?? 'Cup';
+    const cupName = trial ? 'Time trial' : r.single ? 'Single race' : CUPS[r.cup as CupId]?.name ?? 'Cup';
     resultTitle.textContent = sr?.done
       ? sr.overall === 1
         ? 'Series won!'
@@ -796,7 +927,7 @@ ${countersHtml(s)}
     .join('')}</ol>
 </div>`;
     }
-    resultBody.innerHTML = `<p class="race-result-name">${courseLabel(r.course)} · ${esc(cupName)} · ${esc(KART_CLASSES[r.cls]?.name ?? '')}</p>
+    resultBody.innerHTML = `<p class="race-result-name">${courseLabel(r.course)} · ${esc(cupName)} · ${esc(KART_CLASSES[r.cls]?.name ?? '')}${r.cond === 'day' ? '' : ` · ${esc(CONDS[r.cond].name)}`}</p>
 <p class="race-result-time">${clockOf(res.seconds)}</p>
 <p class="race-result-tags">${tags}</p>
 ${laps}
@@ -807,7 +938,7 @@ ${laps}
 </dl>${res.levels + (sr?.levels ?? 0) > 0 ? `<p class="race-levelup">Level up! You're now ${LV(level(d.game.save()))}</p>` : ''}${standings}${series}`;
     // Next race, for a series with races still to run
     nextBtn.hidden = !sr || sr.done;
-    if (sr && !sr.done) nextBtn.innerHTML = `Next race <small>${courseLabel(CUPS[r.cup as CupId]?.courses[sr.race] ?? r.course)}</small>`;
+    if (sr && !sr.done) nextBtn.innerHTML = `Next race <small>${courseLabel(CUPS[r.cup as CupId]?.races[sr.race]?.course ?? r.course)}</small>`;
     menuOpen = false;
     el.hidden = true;
     resultOpen = true;

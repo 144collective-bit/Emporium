@@ -2,7 +2,8 @@
  * Where the traffic drives, DOM-free like the street plan: a route for every
  * lane of every straight road, edge of town to edge of town, and routes down
  * each of downtown's diagonals and back (in off the ring, out along a cross
- * street), with the turns rounded off; where along each route it crosses a
+ * street), round the bends, and out to the airport and back, with the turns
+ * rounded off; where along each route it crosses a
  * junction and on which phase; and the lights' timing (two phases, or three
  * where a diagonal comes in). life.ts drives the cars along them.
  */
@@ -10,6 +11,7 @@ import { CITY_EXT, EW_ROADS, LANE, MEDIAN, NS_ROADS, laneCentres } from './layou
 import { PLAN, distToStreet, offsetLine, type Street } from './streetplan';
 import { BENDS } from './outer';
 import { DIAGONALS } from './downtown';
+import { ROAD } from './airfield';
 
 export type Pt = [number, number];
 /** Which way traffic crosses a junction: along x, along z, or down a diagonal (each gets its own green) */
@@ -227,8 +229,24 @@ export const ROUTES: Route[] = (() => {
       legs([{ a: [hi, e[1]], b: e, off: north ? OUT : IN }, { pts: back, off: ST }, { a: w, b: [lo, w[1]], off: north ? OUT : IN }]),
     ].map(makeRoute);
   });
-  // Spread the diagonal and bend routes through the list, so every quality tier sends cars down them
+  // Out to the airport and back: down the east ring avenue, left along the terminal's front, round the
+  // one-way loop past the car park, and back up the avenue
+  const AV = NS_ROADS.at(-1)!.c;
+  const { z: RZ, x1, loopX, loopZ } = ROAD;
+  const airport = makeRoute(
+    legs([
+      { a: [AV, lo], b: [AV, RZ], off: IN },
+      { a: [AV, RZ], b: [x1, RZ], off: ST },
+      { a: [x1, RZ], b: [x1, loopZ], off: ST },
+      { a: [x1, loopZ], b: [loopX, loopZ], off: ST },
+      { a: [loopX, loopZ], b: [loopX, RZ], off: ST },
+      { a: [loopX, RZ], b: [AV, RZ], off: ST },
+      { a: [AV, RZ], b: [AV, lo], off: OUT },
+    ])
+  );
+  // Spread the diagonal and bend routes through the list, and the airport's near the front, so every quality tier sends cars down them
   const out = [...straight];
   [...diag, ...bends].forEach((r, k) => out.splice(k * 5 + 1, 0, r));
+  out.splice(4, 0, airport);
   return out;
 })();

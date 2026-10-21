@@ -144,8 +144,9 @@ it and has been retired completely. Build only on what's here.
 - **Traffic** follows `routes.ts` (DOM-free): a route for every lane of the
   straight roads, two down each diagonal (in off the ring, out along a
   cross street) and two round each bend (in off its avenue, all the way
-  round, out the other end); turns are rounded off (tighter for right
-  turns). Junctions where a diagonal comes in run
+  round, out the other end) and one out to the airport and back (down the
+  east ring avenue, round the car park loop); turns are rounded off
+  (tighter for right turns). Junctions where a diagonal comes in run
   three light phases (x, z, diagonal). Cars follow whoever is ahead going
   the same way on any route. Pedestrians walk loops round downtown's block
   outlines and the south row. Tested in `tests/routes.test.ts`.
@@ -350,6 +351,83 @@ it and has been retired completely. Build only on what's here.
 - Check every change at 320, 375, 768, 1024 and 1440px wide: no sideways
   scroll, no text clipped by a slanted edge.
 
+## Sector 7 Airport (`docs/airport-plan.md`)
+
+- The plan and its phases are `docs/airport-plan.md`; keep it up to date,
+  one phase at a time with the owner's sign-off. Phase 1 (the airport and
+  its flying traffic) and Phase 2 (fly it yourself, from the hangar) are
+  built.
+- **Where:** south-east of the Southside Loop, east of the x = 64.5 avenue,
+  where no road runs (the north-south roads carry on south past the loop).
+  `airfield.ts` (DOM-free, tested in `tests/airfield.test.ts`) holds it all:
+  `SITE`, the runway (east-west, take-offs and landings eastwards), taxiway
+  and connectors, apron, `TERMINAL`, `STANDS` (nose-in, facing north),
+  `TOWER` (under the Emporium's height), `HANGAR` (its east office is where
+  Phase 2's hangar menu will open), `PROP_STAND`, `HELIPAD`, masts, the
+  windsock, apron vehicles, airbridges, the parked cars, and
+  `AIRPORT_SOLIDS` (in `SOLIDS`; the ground itself is open, at ground
+  level, not a slab). The access road and the one-way loop round the car
+  park are `AIRPORT_STREETS` in the street plan.
+- **The flying traffic:** three airliners, a prop plane and a helicopter on
+  one timetable (`PERIOD`, four minutes; `timetable()`, `FLIGHTS`). A flight
+  is a loop of acts (fly along waypoints with rounded corners, eased
+  altitude and speed; hold; turn on the spot; lift); `poseAt()` turns the
+  time into a pose, the same for everyone (the clock is `Date.now()`).
+  Airliners push back, taxi out, take off east, climb round to the north,
+  cross the city high over downtown (above 38), come round the west and
+  land, the prop plane flies a lower loop along the river, the helicopter
+  circles the Emporium (above the hologram and the blimp). The tests check
+  they stay in the world, high over the town, on the ground only at the
+  airport, never near each other (`REACH`) and clear of the solids. Change a
+  route or a take-off time only with the tests passing.
+- **Drawn by** `airport.ts` (runway markings and lights, approach lights,
+  PAPI, terminal with its glass front, wave roof, the SECTOR 7 AIRPORT
+  sign and airbridges, tower, hangar, helipad, masts, windsock, vehicles,
+  road, car park) and `aircraft.ts` (the models: a cartoon airliner in
+  DEGEN AIR colours, a made-up airline, never a real one, maker or badge;
+  a high-wing prop plane; a helicopter). Each model is a few parts by role
+  (body, accent livery colour, neon nav lights, blinking strobe, gear that
+  folds away, decal, spinning props and rotors with blur discs);
+  `createFleet()` makes one instanced mesh per part for each kind, culled
+  as a fleet. Under reduced motion every aircraft stands parked.
+- The skyline ring leaves out the towers within 150 of the airport (they'd
+  loom over the runway); trees keep off the airport and the low end of the
+  approach.
+- **Flying it yourself** (Phase 2): the airport is a place (spot
+  `airport`, its pin over Hangar 1 (`spot.group` is the hangar, built in
+  its own Batch), directory entry, a panel with **Walk in** to
+  `AIR_SPAWN`). The hangar office's door (`HANGAR_DOOR`, the office
+  `HANGAR_OFFICE` is solid) opens the hangar menu (`hangar-ui.ts`, markup
+  `data-hangar` in `CityMap.astro` on the garage's `.shop` panel and
+  styles): the Sky Hopper (`prop`), the Neon Dart (`bizjet`, a small jet
+  model in `aircraft.ts`) and the Whirlybird (`heli`), twelve paints; free
+  and only for the city, never sold, priced or tied to the store or the
+  token (`myplane.ts`, saved as `degen-city-plane-v1`). While it's open
+  the camera looks into the hangar (`HANGAR_VIEW` in `walk.ts`, the
+  garage's `frameShowroom()`). Your aircraft stands at `HANGAR_SPOT` (the
+  hangar's east half; the airport's prop plane's stand is in front of the
+  west half) and stays wherever you land it.
+  - The rules are `flight-sim.ts` (DOM-free, tested in
+    `tests/flight.test.ts`): `TUNES` per aircraft, `stepFly()`, `HULLS`
+    (spheres for every kind, the airport's too), `floorAt()` (the ground or
+    a roof under the wheels), `canLeave()`, `CEILING`, `EDGE_TURN`. Arcade
+    and forgiving: it levels itself, can't stall, eases a hard descent
+    near the ground and lands wherever it touches down; collisions are soft
+    (it slides off, nothing is damaged). New handling goes in the sim
+    first.
+  - `fly.ts` is the view: your aircraft is a fleet of one
+    (`createFleet()`, repainted with `paint()`), chase and nose cameras
+    (V), the readout (`data-fly-hud`: speed, height, throttle, state), the
+    engine (`aero()` in `sound.ts`), getting out only on the ground and
+    stopped (`exit()`), `abandon()` home to the hangar when walk mode ends
+    in the air. Flying sets `is-flying` on top of `is-driving` (the touch
+    layout is the car's: the stick turns and climbs, the pedals read
+    Faster / Slower) and `data-plane` (the header reads "Flying ·
+    <aircraft>"); styles in `src/styles/fly.css`. Controls: W / S throttle,
+    A / D turn, arrows or Space / Shift climb and dive, V camera, E get out;
+    gamepad left stick, RT / LT, Y, View. Check the readout, stick, pedals
+    and prompt at phone widths, upright and on their side.
+
 ## Drop 001's fitting room
 
 - Drop 001's panel (`data-panel-tpl="shop"` in `CityMap.astro`) has the
@@ -413,7 +491,7 @@ it and has been retired completely. Build only on what's here.
   `line()` for the Workshop and factories), the ledger (`book()`, called by
   every rule that moves Dorras) and loans (`borrow()`, `repay()`, a share
   of takings in `advance()`).
-  `cleanSave()` cleans anything loaded and upgrades older saves (now v8);
+  `cleanSave()` cleans anything loaded and upgrades older saves (now v9);
   keep that migration when the save changes. New economy rules go here
   first.
 - **The city's game (Phase 5)** sits on the same save: XP and levels
@@ -501,6 +579,35 @@ it and has been retired completely. Build only on what's here.
   `tycoon.commit()` runs `missions.onCommit()` first, so any screen that
   changes the save and commits gets badges and level-ups checked. Rewards
   are Dorras and XP only: no prizes, nothing real.
+- **Getting started** (the new player's first steps): the rules are
+  `guide.ts` (DOM-free, tested in `tests/guide.test.ts`): `GUIDE`, seven
+  steps in order (stock your stall at the market hall, make 5 sales, take
+  your car out, deliver a contract, target practice, a race at the kart park, back up
+  your save at the Vault), each with a beam spot (`at`), a way in from the
+  City view (`go`: open a panel, or start walking at a free spot facing
+  it) and a check on the save (`met()`, lifetime counters, so a step
+  already done moves straight on). `advanceGuide()` (run first in
+  `missions.onCommit()`) pays each step's small reward (Dorras and XP, the
+  ledger's Missions line) once. The save carries `guide` { step, hidden }
+  (`GUIDE_STEPS` in `tycoon.ts`; a save from before it that's past level 1
+  has it done) and `backup` (when it was last downloaded). On screen
+  (`missions-ui.ts`, styles `src/styles/guide.css`): the City view's card
+  under the welcome tip (`[data-guide]` in `.city-hud`, 3D only, with the
+  way in and an ×; in `chrome`), the top row of the walk tracker (with its
+  own ×), the steps at the top of the Signal tower's board (Show / Hide the
+  guide) and a cyan beam (`beacons.guide()`). Hiding only hides it; the
+  steps still count.
+- **Your save as a file:** everything the city keeps in this browser goes
+  in one backup (`backup.ts`, DOM-free, tested: `BACKUP_KEYS`,
+  `packBackup()`, `readBackup()`; never the guest or wallet login tokens or
+  screen preferences). The Vault's panel ("Your save" in `bankView()`)
+  downloads it (`sector-7-save-<date>.json`) and loads one: the file is
+  checked and the city's game cleaned with `cleanSave()` first, a confirm
+  shows its level and Dorras, then every save is replaced and the page
+  reloads (`frozen` stops the tycoon storing over it). A level-up from 3 on
+  reminds you when the last backup is over a week old. A new save in
+  localStorage needs its key in `BACKUP_KEYS` and a loader that cleans what
+  it reads.
 - **The Apartments** (the tower in the north block, east of the Signal tower, `apartments()` in
   `landmarks.ts` and `city.ts`) are a place since Phase 3: spot
   `apartments`, its pin, door (`DOORS`) and panel. The Emporium stays first
@@ -607,68 +714,90 @@ it and has been retired completely. Build only on what's here.
 ## The kart park (3D walk mode)
 
 - **The place** (the owner's call): a Mario-Kart-style go-kart park on the
-  open land outside the Parkway in the north-east, filling the quadrant to
-  the world's edge, fenced, with a slip road down to the Parkway and a gate;
-  the kart hut (door prompt "Kart hut"), a grandstand along the start
-  straight, pits, a big screen. It's a place like the landmarks (spot
+  open land outside the Parkway in the north-east, fenced round the
+  circuit (pulled in when the circuit was scaled down, the owner's call;
+  the land beyond it is the outskirts' again, open for later), with a slip
+  road down to the Parkway and a gate;
+  one circuit raced both ways (the rebuild, `docs/kart-plan.md`), the kart
+  hut (door prompt "Kart hut"), a grandstand facing the start straight, the
+  pit lane with eight garages and the big screen on their roof. It's a place like the landmarks (spot
   `karts`, pin, directory entry, a City-view panel with your records and
   **Walk in**, which starts walk mode at the gate, `KART_SPAWN`). Race karts
   stay on the track, but your own kart can be taken out of the pits and
   driven anywhere on the map (the owner's call: "Get in" at the show kart,
-  `drive.ts` drives it like the car, with Degen seated; it rides the track's
-  decks and banking through `trackSurfaceAt()`, and goes back to the pits
-  when a race starts).
-- **The layout** is `kartpark.ts` (DOM-free, tested in `tests/kart.test.ts`):
-  `KART_PARK` (world x 92-232, z -192 to -48), local numbers via
-  `toWorld()` (u east, v south from the site's corner; the core loop is
-  drawn in a small frame and blown up `LOOP_SCALE` times by `C()`, the rest
-  in the big frame with `P()`). **One track network, many courses:** the
-  track is `PIECES`, open sectors (`SECTORS`: west, link, hairpin, north,
-  return, descent) meeting at nodes (`NODE` W, E, H, N; `NODES`,
-  `nearNode()`, `NODE_REACH`), plus the dirt `SHORTCUT`. Each control
-  point (`CPt`) can carry a height `h`, a banking `roll`, a `grip` and
-  flags `F` (deck, tunnel, wet, dirt, bank), a `Tag` (line, box, pad, hump,
-  sc-out, sc-in). `sampleLine()` (centripetal Catmull-Rom, heights
-  cosine-eased) makes a `Line` sampled every half tile. The courses
-  (`COURSE_IDS`, `COURSE_DEFS`, `courses()`) chain sectors into closed
-  lines: the Neon Loop (west, link, hairpin; a figure of eight with the
-  flyover `BRIDGE_H` high and the hump), the Summit (west, north, descent:
-  the banked north bowl, the tunnel, the wet patch) and the Grand Prix
-  (west, north, return (a bridge over the north sector), hairpin; two
-  laps), each with its reverse. A `Course` is a `Line` with `start`,
-  `hump`, `boxes` (five abreast at `BOX_LATERALS`), `pads`, `laps`,
-  `sectors` and its `shortcut` (a `Line` with `out` / `in` on the main
-  line). `frame()`, `at()`, `locate()` (keeps to the layer its hint is on),
-  `along()`, `wrapS()`, `heightAt()` (banking), `gridSlots()`,
-  `TRACK_HALF` (5.2; `SHORTCUT_HALF` 3.2). Fixtures: `SITE` (hut, gate,
-  stand, screen, pits), `GATE`, `SLIP_ROAD`, `HUT_DOOR`, `GANTRY`,
-  `PILLARS` (under the decks, never in another piece's lane). Footprints
-  for walking and driving are `KART_SOLIDS` (in `SOLIDS`: the fence with
-  the gate's gap, the hut, the stand, the posts and pillars; **nothing on
-  or beside the track is solid** (the owner's call): the kerbs are low and
-  open, so Degen, the kart and the car cross the track anywhere, and only
-  a race's karts are kept in by the sim's own walls); the site is flat
-  ground, not a slab, and the outskirts' trees
-  keep off it and the slip road (`scatterIn()` in `world.ts`, `onRoad()` in
-  `outer.ts`). Keep every corner's radius above about 5.5 (the test checks
-  the inner edge never folds), ramps under slope 0.3, decks `BRIDGE_H` over
-  what they cross, and pieces apart by the track's width.
+  `drive.ts` drives it like the car, with Degen seated; it rides the
+  circuit's ground (the deck, the banking, the grass banks) through
+  `circuitSurfaceAt()`, and goes back to the pits when a race starts).
+  Walking follows the same ground inside the park (`groundAt()` in
+  `walk.ts`).
+- **The site** is `kartpark.ts` (DOM-free): `KART_PARK` (world x 92-180,
+  z -138 to -48; `SITE_U` x `SITE_V` inside its margins), local numbers via `toWorld()` / `toLocal()` (u east, v
+  south from the site's corner), the fence's `GATE`, the `SLIP_ROAD` and
+  `KART_SPAWN`, and the line maths every track part uses: `sampleLine()`
+  (centripetal Catmull-Rom through control points `CPt`, heights
+  cosine-eased from point to point, or through a `glide` point in one
+  long ease (a ramp round a bend), sampled every half tile), `Line`, `frame()`, `at()`,
+  `locate()` (keeps to the layer its hint is on), `along()`, `wrapS()`,
+  `heightAt()` (banking), flags `F` (deck, tunnel, bank). The site is flat
+  ground, not a slab, and the outskirts' trees keep off it and the slip
+  road (`scatterIn()` in `world.ts`, `onRoad()` in `outer.ts`).
 - **The rules** are `kart-sim.ts` (DOM-free, seeded, a fixed 60 Hz tick,
-  tested): `createKartSim(setup)` → `step(dt, input)` returning events.
+  tested), racing on the rebuild's circuit (`kartcircuit.ts`) since
+  Phase 2: `createKartSim(setup)` → `step(dt, input)` returning events.
   Arcade karts (`tune()` from the 0..1 stats, times the engine class's
-  pace), a hop into a drift (`T.drift` stages, `T.driftBoost`), boost
-  pads, the walls, bumps weighted by `weight`, air over the hump, banking
-  (more grip), wet and dirt (`GRIP`; dirt caps the top speed `DIRT_CAP`
-  unless boosting), the shortcut (`line: 'main' | 'short'`, taken off a
-  boost; `'shortcut'` events), seven rivals on the racing line (`think()`:
-  look-ahead, braking for curvature, drifting, items, the shortcut when
-  boosting) with a rubber band (`rubber()`), three cups (`CUPS`: `cls`,
-  four `courses`, `ai` pace, `skill`, prizes by place), time trials (`cup:
-  'time'`, alone, no boxes) and `auto` (the sim drives the player: the par
-  ghost and the tests), six items (`ITEMS`, dealt by place in `DEALS`:
-  rocket, oil, gummy, pigeon, shield, trail; hazards and missiles), places
-  by progress (`standings()`), the player's finish (`done`) and everyone's
-  (`over`). New gameplay goes here first; looks and sounds in the view.
+  pace; `turnRate()`), a hop into a drift (`T.drift` stages,
+  `T.driftBoost`), boost pads (`pads` on the course), bumps weighted by
+  `weight` (a heavy kart ramming a light one spins it), air off the jump
+  (`flight()`), banking (more grip), pure racing (no items, the owner's
+  call). **No invisible walls:** kerbs are track; the run-off holds a
+  kart to `RUNOFF_CAP` with `RUNOFF_GRIP`; past `RESET_AT` (or over the
+  deck's edge) it fades back onto the centre line where it had got to
+  (`'reset'`, `RESET_T`, no progress lost). The tunnel's walls are real:
+  a kart scrapes along them, slower, never put back. Conditions (`cond`): day,
+  night (looks only), rain (`RAIN_GRIP` everywhere). Clean laps (no
+  wheel in the run-off) and overtakes are counted per racer. Seven
+  rivals (`think()`: pure pursuit on the way they're moving, a lane
+  offset, passing a slower kart ahead or holding back, drifting only
+  where a bend needs more than full lock, braking planned from
+  `cornerSpeed()` back along the track and past the jump's flight,
+  coasting instead of boosting towards the deck or the tunnel until
+  lined up with the track) with a
+  rubber band (`rubber()`); three cups (`CUPS`: `cls`, four `races` of
+  { course, laps, cond }, `ai` pace, `skill`, prizes by place), time
+  trials (`cup: 'time'`, alone) and `auto` (the sim drives the player:
+  the par ghost, the tests, and every kart's cool-down lap after the
+  line). Places by progress (`standings()`), the player's finish
+  (`done`) and everyone's (`over`). New gameplay goes here first; looks
+  and sounds in the view.
+- **The rebuild** (the owner's call, `docs/kart-plan.md`): one narrower
+  circuit (kerbs, grass and gravel run-off), raced both ways,
+  with a pit lane and nothing solid near it, replaces the network in four
+  phases. Phase 1 is built: the circuit as data in `kartcircuit.ts`
+  (DOM-free, tested in `tests/kartcircuit.test.ts`; twelve corners, lefts
+  and rights, the owner's call: no long runs of straight road besides the
+  start straight): `CIRCUIT` (the physical track) and `COURSES` (forward
+  and reverse; `start`, `jump`, numbered `turns`),
+  `TRACK_HALF`, `KERB`, `RUNOFF`, `CLEAR`, `FLY_H`, `BANK`, `MIN_RADIUS`,
+  `MAX_SLOPE`, `gridSlots()`, `PIT_LANE`, `BAYS`, `SITE` (garages, hut,
+  stand, screen, gate path), `CIRCUIT_SOLIDS`, `GANTRY`, `SUPPORTS`,
+  `onCircuit()`, `circuitSurfaceAt()`; the races are `COURSES` /
+  `COURSE_IDS` (`circuit`, `circuit-reverse`: name, laps, `pads`) and
+  `Cond` / `CONDS`; `groundAt()` (the ground across it: the asphalt's
+  plane, the run-off easing down to the lawn at `CLEAR`, the sim's and the
+  drawing's both), `enclosed()` (the deck and the tunnel: no run-off, off
+  their kerbs a kart is put back). Footprints for walking and driving are
+  `CIRCUIT_SOLIDS` (in `SOLIDS`: the fence with the gate's gap, the hut,
+  the garages, the stand; **nothing on or beside the track is solid**,
+  the owner's call). Phases 2 (the rules race on it, the save is v8), 3
+  (the park drawn round it) and 4 (the HUD's minimap, single races in the
+  hut, the item slot and button gone) are built. Then the whole circuit
+  was scaled down to 60% (the owner's call: faster paced, more lifelike):
+  a lap of about 350 tiles (some 630 m), `TRACK_W` 4.4 (four or five
+  karts abreast), `RUNOFF` 3, `MIN_RADIUS` 4, the hill `HILL_H` 2 with
+  the tunnel on its lower slope and the jump clear of it either way,
+  four boost pads (none under a grid or into a deck), the karts about 20%
+  slower (`tune()`), par laps about 34 / 29.5 / 27 s (Street / Sport /
+  Neon), the park's fence pulled in round it, the save v9.
 - **Classes** (`catalog.ts` `KART_CLASSES`, `ClassId`, `CLASS_IDS`): Street
   (Lv 1, 0.82), Sport (Lv 3, 1) and Neon (Lv 8, 1.18) set everyone's pace
   in a race; a cup fixes its class, a time trial picks one. Records and
@@ -680,18 +809,24 @@ it and has been retired completely. Build only on what's here.
   Degen's style, origin on the ground under the middle, +x forward, wheels
   that steer and roll, a seated Degen driver via `seat()`). Only for the
   kart park: never real money, never tied to the store or the token.
-- **The save** (`tycoon.ts`, v8): `karts` { model, paint, owned, mods,
+- **The save** (`tycoon.ts`, v9): `karts` { model, paint, owned, mods,
   `records` (fastest lap and best run per course and class, `KartTime`),
   `boards` (the local leaderboards, `LEADERBOARD_SIZE` runs per key: your
   own runs for now, built so a server can hold everyone's later),
   `series` (the cup in progress: race, points), `trophies` (cup wins),
-  `challenge` (today's daily challenge, done once a day), `parBeaten` }
+  `challenge` (today's daily challenge, done once a day), `parBeaten`,
+  `old` (the old tracks' lap records: the network's, kept aside when a
+  v7 save moved to the rebuilt circuit (its boards, par ghosts and a
+  series on the go were dropped), and the full-size circuit's as
+  `full-circuit` / `full-circuit-reverse`, kept aside when a v8 save met
+  the scaled-down one (its boards and par ghosts beaten dropped, a series
+  kept)) }
   with `buyKart()` / `modKart()` / `kartStatsOf()` / `pickKart()`,
   `finishKartRace()` → `KartResult` (prizes by place, lap records in any
   race, run records and boards in time trials, par beaten (`PAR_LAPS`,
   `parLap()`), the daily challenge (`dailyChallenge()`, `dayKey()`,
   `CHALLENGE_PRIZE`), counters `kartRaces` / `podiums` / `kartWins` /
-  `kartHits`, XP `kartFinish` / `kartPodium` / `kartWin` / `kartRecord` /
+  `cleanLaps` / `overtakes`, XP `kartFinish` / `kartPodium` / `kartWin` / `kartRecord` /
   `parBeaten` / `challenge`) and the series (`startSeries()`,
   `seriesNext()`, `seriesRace()` → `SeriesResult`: `SERIES_POINTS`
   15-12-10-8-6-4-2-1, standings between races, the trophy and
@@ -700,38 +835,58 @@ it and has been retired completely. Build only on what's here.
   missions and five badges in `missions.ts`. Global boards wait for the
   game server (keep the boards' shape server-ready).
 - **On screen:** `kart-types.ts` holds the interfaces the three parts agree
-  on. `kartpark3d.ts` draws the site (`buildKartPark()`: every piece's
-  ribbon from its samples with kerbs and neon-topped walls, banked where
-  it rolls, decks on pillars with embankment ramps, the tunnel, the wet
-  patch, the dirt shortcut, the gantry, the stand, the hut, the screen
-  (fixed copy only), boost pad decals and item boxes per course
-  (`setCourse()`, `showBoxes()`), the `showSpot` in the pits). `kart.ts`
+  on. `kartpark3d.ts` draws the site round the circuit (`buildKartPark()`:
+  asphalt, edge lines and red-and-white kerbs swept along the centre
+  line, banked where it rolls; grass run-off with gravel on the outside
+  of the bends where it lies flat, easing down as grass banks where the
+  track is raised; the tunnel tube; the jump's striped lip; the flyover's
+  railed deck on columns just past its edges, open underneath, with
+  abutments at the ramps; the chequered line, both ways' grids and the
+  gantry; the pit lane, its bays and the cones that close it in a race
+  (`racing()`); eight garages with their numbers and the screen on their
+  roof (fixed copy only); the hut; the grandstand facing south with its
+  fans; tyre stacks, marshal posts, light poles and trees past the
+  run-off), and per course (`setCourse()`, the way round being raced) the
+  guidance: pad chevrons, chevron boards on the outside of the bends,
+  arrows painted before the turns, numbered corner boards and 3-2-1
+  braking markers before the hard corners (one sign atlas, `atlasTex()`).
+  The show kart waits in the middle bay (`showSpot`). A race's conditions
+  go on the sky through `conditions()` (night: night, rain: rain, day:
+  day and dry), and the visitor's own time and weather come back after
+  (`raceConditions` in `index.ts`). `kart.ts`
   (`createKartRace()`) runs a race: builds the sim from the save at the
   class's pace, seats Degen, places the karts from the sim every frame
-  (tilted with the banking), the chase camera, sparks, flames, shields,
-  oil, trails, gummies and pigeons, the sounds (`kart*` kinds in
+  (tilted with the banking), the chase camera, sparks, flames, dust off
+  the run-off and spray in the rain, the sounds (`kart*` kinds in
   `sound.ts`), pays through `finishKartRace()` (and `seriesRace()` in a
   series) + `commit()` and shows the results. **Ghosts** in time trials:
   your best lap on the course and class is recorded as it's set and
-  replayed (`degen-city-ghosts-v1` in localStorage, per key), and a par
+  replayed (`degen-city-ghosts-v2` in localStorage, per key; the v1
+  ghosts were the full-size circuit's and are cleared), and a par
   ghost is driven by the sim's `auto` at the class's pace; `setGhosts()`
   shows or hides each, the HUD shows the gap. `kart-ui.ts`
   (`createKartUI()`, markup `data-karts`, `data-kart-hud`,
-  `data-kart-count`, `data-kart-pops`, `data-kart-result`, the Drift /
-  Item touch buttons `data-kart-drift` / `data-kart-item` in
-  `CityMap.astro`, styles in `src/styles/karts.css`) is the hut's menu
-  (Race: the cups as series (start, continue, drop), single races, time
-  trials with their class and ghosts, the daily challenge; Karts: buy,
-  pick, mods, paints; Boards: the leaderboards per course and class, your
-  records, par and trophies), the HUD (place, lap, clock, last and best
-  lap, the ghost gap, surface, item slot and roulette, drift meter, the
-  series race), the countdown, pops and the results card (laps, par, the
-  series table with Next race / Drop). `walk.ts` wires them: the hut
-  door's prompt opens the menu, a race hides Degen and feeds the kart
-  (`kartFrame()`: W/S gas and brake, A/D steer, Space hop and drift, E (or
-  a click) uses the item, S held sends it behind; touch: the stick, the
-  pedals, Drift and Item; gamepad: stick, RT / LT, A drift, X / RB item, Y
-  quits), `nextRace()` / `quitSeries()` carry a series on, Esc or Quit
+  `data-kart-count`, `data-kart-pops`, `data-kart-result`, the Drift
+  touch button `data-kart-drift` in `CityMap.astro`, styles in
+  `src/styles/karts.css`) is the hut's menu (Race: the cups as series
+  (start, continue, drop); a single race (a cup's rivals at its class and
+  level, forward or reverse, day, night or rain, three laps, paid like a
+  cup's race, outside any series: `RaceStart.single`, kart.ts skips
+  `startSeries()` / `seriesRace()`); time trials with their class and
+  ghosts; the daily challenge. Karts: buy, pick, mods, paints. Boards: the
+  leaderboards per course and class, your records, par, trophies,
+  counters and your laps from the old track (`karts.old`)), the HUD
+  (place, lap, clock, last and best lap, the ghost gap, the surface and
+  Night / Rain tags, drift meter, the series race, and the minimap
+  `data-kart-map`: the circuit's outline drawn once from `CIRCUIT`'s
+  samples in world numbers, the flyover's deck over the run below, the
+  start line, a dot per kart from `KartHud.dots` with yours lit and on
+  top), the countdown, pops and the results card (laps, par, the series
+  table with Next race / Drop). `walk.ts` wires them: the hut door's
+  prompt opens the menu, a race hides Degen and feeds the kart
+  (`kartFrame()`: W/S gas and brake, A/D steer, Space hop and drift;
+  touch: the stick, the pedals and Drift over Brake; gamepad: stick, RT /
+  LT, A drift, Y quits), `nextRace()` / `quitSeries()` carry a series on, Esc or Quit
   abandons (no prize), closing the results stands Degen up by the hut.
   While racing `.city.is-karting` is on the root and `data-kart` makes the
   header read "Karting · <course>". Under reduced motion the race still
@@ -875,7 +1030,7 @@ it and has been retired completely. Build only on what's here.
   stick, X / Y, LB held, A, Start quits), Esc or Quit ends it with the
   card, closing the card stands Degen up outside the ropes (`OUT`);
   `.city.is-fighting` hides the walk HUD and `data-fight` makes the header
-  read "Fighting · <opponent>". The save (`tycoon.ts`, v8) keeps `fight`
+  read "Fighting · <opponent>". The save (`tycoon.ts`, v9) keeps `fight`
   (style, owned styles, wins, losses, knock-outs, best chain, bouts, spars,
   each opponent's record), the ledger entry `fighting` and the counters
   `bouts` / `fightWins` / `kos` / `chains`. New gameplay goes in the sim
@@ -993,8 +1148,11 @@ it and has been retired completely. Build only on what's here.
   and the spawn (`solids.ts`), the plots (`src/data/plots.ts`), your car
   (`mycar.ts`), the driving rules (`drive-sim.ts`), target practice
   (`combat-sim.ts`), the economy (`tycoon.ts`, the market square in
-  `solids.ts`) and the city's game (`catalog.ts`, `missions.ts` and the
-  clock format in `ui.ts`, in `tests/game.test.ts`). Modules that touch the DOM or `kit.ts` (canvas
+  `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
+  clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
+  the save backup (`guide.ts`, `backup.ts`), the airport and its timetable
+  (`airfield.ts`) and flying your own aircraft (`flight-sim.ts`,
+  `myplane.ts`). Modules that touch the DOM or `kit.ts` (canvas
   textures) can't load in Node; keep data a test needs in the DOM-free
   files.
 - When you change a rule or move something in the city, run the tests and

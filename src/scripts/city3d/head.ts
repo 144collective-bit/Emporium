@@ -2,7 +2,7 @@
  * The city's mode header: says which view you're in (City view, Walk mode,
  * Build mode, or the 2D map) with a line on what you can do there, and
  * keeps the City / Walk / Build switch in step. It watches the city root
- * (data-view, data-mode, data-kart, data-fight, is-fp, is-online, is-driving) so every mode change updates it.
+ * (data-view, data-mode, data-kart, data-plane, data-fight, is-fp, is-online, is-driving, is-flying) so every mode change updates it.
  */
 const COPY = {
   map: { title: 'City map', sub: () => (narrow() ? '2D view' : '2D view · pick a lit-up building') },
@@ -37,16 +37,18 @@ export function createCityHead(root: HTMLElement) {
     const driving = mode === 'walk' && root.classList.contains('is-driving');
     // In a kart: "Karting" and which course (kart.ts sets data-kart while a race is on)
     const karting = mode === 'walk' && !!root.dataset.kart;
-    // In the ring: "Fighting" and who (fight.ts sets data-fight while a fight is on)
+    // In your aircraft: "Flying" and which one (fly.ts sets is-flying and data-plane, over is-driving); in the ring: "Fighting" and who (fight.ts sets data-fight)
+    const flying = mode === 'walk' && root.classList.contains('is-flying');
     const fighting = mode === 'walk' && !!root.dataset.fight;
-    const t = fighting ? 'Fighting' : karting ? 'Karting' : driving ? 'Driving' : c.title;
+    const t = fighting ? 'Fighting' : karting ? 'Karting' : flying ? 'Flying' : driving ? 'Driving' : c.title;
     if (title.textContent !== t) title.textContent = t;
-    const s = fighting ? root.dataset.fight! : karting ? root.dataset.kart! : driving ? `${root.dataset.car ?? 'Your car'}${root.classList.contains('is-online') ? ' · online' : ''}` : c.sub(root);
+    const online = root.classList.contains('is-online') ? ' · online' : '';
+    const s = fighting ? root.dataset.fight! : karting ? root.dataset.kart! : flying ? `${root.dataset.plane ?? 'Your aircraft'}${online}` : driving ? `${root.dataset.car ?? 'Your car'}${online}` : c.sub(root);
     if (sub.textContent !== s) sub.textContent = s;
     city.setAttribute('aria-pressed', String(mode === 'explore'));
   }
 
-  new MutationObserver(paint).observe(root, { attributes: true, attributeFilter: ['data-view', 'data-mode', 'data-kart', 'data-fight', 'class'] });
+  new MutationObserver(paint).observe(root, { attributes: true, attributeFilter: ['data-view', 'data-mode', 'data-kart', 'data-plane', 'data-fight', 'class'] });
   // Its real height (two rows on phones while walking) for everything pinned under it (--head-h in global.css)
   new ResizeObserver(() => {
     root.style.setProperty('--head-h', `${head.offsetHeight}px`);
