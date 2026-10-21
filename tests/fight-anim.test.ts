@@ -1,11 +1,14 @@
 // The fight animations (fight-anim.ts): every move's clip is as long as the move
 // in fight-sim.ts, every one-shot clip starts and ends on the guard (so the view
-// can cut between them), the knockdown ends lying and the get-up starts there, the
-// striking limb is at full reach on the frame the sim lands the hit, sampling
-// interpolates, clamps, wraps and mirrors, blending is linear, and nothing is NaN.
+// can cut between them), the knockdown ends lying with the hips on the canvas
+// (pivoting at the hips) and the get-up starts there, the striking limb is at
+// full reach on the frame the sim lands the hit, the wrists turn the hook and
+// the uppercut over, sampling interpolates, clamps, wraps and mirrors (the
+// wrists' roll with it), blending is linear (the wrists and the pivot too), and
+// nothing is NaN.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { CLIPS, CLIP_IDS, KNOCKDOWN_LIE, blendPose, hurtClip, moveClip, newFightPose, sampleClip, type ClipId, type FightPose } from '../src/scripts/city3d/fight-anim';
+import { CLIPS, CLIP_IDS, KNOCKDOWN_LIE, PELVIS, blendPose, hipHeight, hurtClip, moveClip, newFightPose, rootShift, sampleClip, type ClipId, type FightPose } from '../src/scripts/city3d/fight-anim';
 import { MOVES, MOVE_IDS, T, moveFrames } from '../src/scripts/city3d/fight-sim';
 
 const sample = (id: ClipId, frame: number, mirror = false) => sampleClip(id, frame, newFightPose(), { mirror });
@@ -20,6 +23,7 @@ function numbers(p: FightPose): [string, number][] {
     ['headPitch', p.headPitch],
     ['root.y', p.root.y],
     ['root.pitch', p.root.pitch],
+    ['root.pivot', p.root.pivot],
   ];
   for (let i = 0; i < 2; i++) {
     for (const [name, l] of [
@@ -28,6 +32,7 @@ function numbers(p: FightPose): [string, number][] {
     ] as const) {
       out.push([`${name}.fwd`, l.fwd], [`${name}.out`, l.out], [`${name}.bend`, l.bend], [`${name}.twist`, l.twist ?? 0]);
     }
+    out.push([`arms[${i}].wrist.roll`, p.arms[i].wrist?.roll ?? 0], [`arms[${i}].wrist.bend`, p.arms[i].wrist?.bend ?? 0]);
   }
   return out;
 }
@@ -114,6 +119,74 @@ test('the knockdown ends lying, down lies, and the get-up starts lying and ends 
   assert.equal(sample('getup', 100).root.pitch, 0, 'and holds the guard');
 });
 
+test('the fall and the get-up pivot at the hips: the hips drop to the canvas and come back up', () => {
+  // Standing, the hips are at PELVIS; the pivot there changes nothing until the body tips
+  assert.equal(hipHeight(GUARD), PELVIS);
+  assert.deepEqual(rootShift({ y: 0, pitch: 0, pivot: PELVIS }), { dy: 0, dz: 0 });
+  assert.deepEqual(rootShift({ y: -0.1, pitch: 0, pivot: 0 }), { dy: -0.1, dz: 0 });
+  // Tipped flat about the hips, the feet come up and forward and the hips stay put
+  const flat = rootShift({ y: -0.52, pitch: -1.5, pivot: PELVIS });
+  assert.ok(flat.dz > 0.5 && flat.dz < PELVIS + 1e-9, `the feet swing forward (${flat.dz})`);
+  assert.ok(Math.abs(hipHeight({ ...GUARD, root: { y: -0.52, pitch: -1.5, pivot: PELVIS } }) - 0.1) < 1e-9);
+  // The knockdown: the hips start standing, only ever drop, and end on the canvas
+  let last = hipHeight(sample('knockdown', 0));
+  assert.ok(Math.abs(last - PELVIS) < 0.05, 'the knockdown starts standing');
+  for (let f = 0; f < CLIPS.knockdown.frames; f++) {
+    const h = hipHeight(sample('knockdown', f));
+    assert.ok(h <= last + 0.04, `knockdown frame ${f}: the hips keep dropping (${h} after ${last})`);
+    last = h;
+  }
+  assert.ok(last < 0.2, `the knockdown ends with the hips on the canvas (${last})`);
+  assert.equal(sample('knockdown', CLIPS.knockdown.frames - 1).root.pivot, PELVIS);
+  for (let f = 0; f <= 120; f += 10) assert.ok(hipHeight(sample('down', f)) < 0.2, `down frame ${f}: hips on the canvas`);
+  // The get-up starts there and rises to the guard; the feet are back under the body at the end
+  assert.ok(hipHeight(sample('getup', 0)) < 0.2, 'the get-up starts with the hips on the canvas');
+  const end = sample('getup', CLIPS.getup.frames - 1);
+  assert.ok(Math.abs(hipHeight(end) - PELVIS) < 0.05, 'and ends standing');
+  assert.deepEqual(rootShift(end.root), { dy: 0, dz: 0 });
+  // The pivot interpolates like everything else
+  const a = sample('getup', 31);
+  const b = sample('getup', 36);
+  const mid = sample('getup', 33.5);
+  assert.ok(mid.root.pivot > Math.min(a.root.pivot, b.root.pivot) && mid.root.pivot < Math.max(a.root.pivot, b.root.pivot), `pivot ${a.root.pivot} → ${mid.root.pivot} → ${b.root.pivot}`);
+});
+
+test('the wrists: the hook turns the lead fist over, the uppercut comes up palm-in, the jab and cross stay vertical', () => {
+  const W = (p: FightPose, i: 0 | 1) => p.arms[i].wrist ?? { roll: 0, bend: 0 };
+  // The guard holds the wrists straight, and every clip's arms carry a wrist to sample into
+  for (const a of GUARD.arms) assert.deepEqual(a.wrist, { roll: 0, bend: 0 });
+  for (const id of CLIP_IDS) for (const a of sample(id, 5).arms) assert.ok(a.wrist, `${id} arms carry wrists`);
+  // The hook: cocked back and still vertical on the wind-up, rolled over (palm down) on the hit
+  const hookWind = W(sample('hook', Math.round(MOVES.hook.startup * 0.55)), 0);
+  const hookHit = W(sample('hook', MOVES.hook.startup), 0);
+  assert.ok(hookWind.roll < -0.3 && hookWind.bend < -0.2, `hook wind-up ${JSON.stringify(hookWind)}`);
+  assert.ok(hookHit.roll > 0.3, `hook hit rolls the fist over (${hookHit.roll})`);
+  assert.ok(hookHit.roll - hookWind.roll > 0.7, 'the fist turns through the swing');
+  // The uppercut: the rear fist cocked at the dip, rolled palm-in by the top
+  const upWind = W(sample('uppercut', Math.round(MOVES.uppercut.startup * 0.55)), 1);
+  const upHit = W(sample('uppercut', MOVES.uppercut.startup), 1);
+  const upHeld = W(sample('uppercut', MOVES.uppercut.startup + MOVES.uppercut.active - 1), 1);
+  assert.ok(upWind.bend < -0.3, `uppercut dip cocks the wrist (${upWind.bend})`);
+  assert.ok(upHit.roll > 0.8 && upHeld.roll >= upHit.roll, `uppercut rolls palm-in (${upHit.roll}, ${upHeld.roll})`);
+  // The straight punches: a vertical fist (no roll) at the hit, cocked back on the way
+  for (const [id, i] of [['jab', 0], ['cross', 1]] as const) {
+    assert.equal(W(sample(id, MOVES[id].startup), i).roll, 0, `${id} keeps a vertical fist`);
+    assert.ok(W(sample(id, Math.round(MOVES[id].startup * 0.55)), i).bend < -0.2, `${id} cocks the wrist in the wind-up`);
+    assert.ok(Math.abs(W(sample(id, MOVES[id].startup), i).bend) < 0.2, `${id} snaps the wrist straight`);
+  }
+  // Every strike comes back to straight wrists in the guard
+  for (const m of MOVE_IDS) {
+    const end = sample(moveClip(m), moveFrames(m) - 1);
+    for (const a of end.arms) assert.ok(Math.abs(W(end, 0).roll) < 1e-9 && Math.abs(a.wrist!.bend) < 1e-9, `${m} ends with straight wrists`);
+  }
+  // The wrists interpolate between keys
+  const w0 = W(sample('hook', 6), 0);
+  const w1 = W(sample('hook', 10), 0);
+  const wm = W(sample('hook', 8), 0);
+  assert.ok(wm.roll > Math.min(w0.roll, w1.roll) && wm.roll < Math.max(w0.roll, w1.roll), 'the roll eases between keys');
+  assert.ok(wm.bend > Math.min(w0.bend, w1.bend) && wm.bend < Math.max(w0.bend, w1.bend), 'the bend eases between keys');
+});
+
 test("on the first active frame the striking limb leads, at full reach", () => {
   for (const m of MOVE_IDS) {
     const spec = MOVES[m];
@@ -157,15 +230,22 @@ test('sampling interpolates fractional frames, clamps a one-shot, wraps a loop a
   // Mirror: the jab becomes a right-hand jab
   const jab = sample('jab', MOVES.jab.startup);
   const m = sample('jab', MOVES.jab.startup, true);
-  assert.deepEqual(m.arms[1], { ...jab.arms[0], twist: -(jab.arms[0].twist ?? 0) });
-  assert.deepEqual(m.arms[0], { ...jab.arms[1], twist: -(jab.arms[1].twist ?? 0) });
-  assert.deepEqual(m.legs[1], { ...jab.legs[0], twist: -(jab.legs[0].twist ?? 0) });
+  const flip = (l: FightPose['arms'][0]) => ({ ...l, twist: -(l.twist ?? 0), ...(l.wrist ? { wrist: { roll: -l.wrist.roll, bend: l.wrist.bend } } : {}) });
+  assert.deepEqual(m.arms[1], flip(jab.arms[0]));
+  assert.deepEqual(m.arms[0], flip(jab.arms[1]));
+  assert.deepEqual(m.legs[1], flip(jab.legs[0]));
   assert.equal(m.side, -jab.side);
   assert.equal(m.twist, -jab.twist);
   assert.equal(m.headYaw, -jab.headYaw);
   assert.equal(m.headPitch, jab.headPitch);
   assert.equal(m.lean, jab.lean);
   assert.deepEqual(m.root, jab.root);
+  // A mirrored hook is a right hook: the other hand rolls the other way over, the bend as it was
+  const hook = sample('hook', MOVES.hook.startup);
+  const rh = sample('hook', MOVES.hook.startup, true);
+  assert.equal(rh.arms[1].wrist!.roll, -hook.arms[0].wrist!.roll);
+  assert.equal(rh.arms[1].wrist!.bend, hook.arms[0].wrist!.bend);
+  assert.ok(Math.abs(rh.arms[1].wrist!.roll) > 0.3);
   // Sampling writes into `out` and returns it
   const out = newFightPose();
   assert.equal(sampleClip('cross', 5, out), out);
@@ -183,6 +263,18 @@ test('blendPose is linear and reproduces a and b at its ends', () => {
   numbers(out).forEach(([name, v], i) => assert.ok(Math.abs(v - (na[i][1] + (nb[i][1] - na[i][1]) * 0.25)) < 1e-12, name));
   assert.equal(blendPose(a, b, 0.5, out), out);
   assert.equal(newFightPose().root.pitch, 0);
+  assert.equal(newFightPose().root.pivot, 0);
+  // The wrists and the pivot blend too (the hook's rolled fist into the lying pose's straight one, the feet pivot into the hips)
+  assert.ok(Math.abs(a.arms[0].wrist!.roll) > 0.1 && b.arms[0].wrist!.roll === 0 && a.root.pivot === 0 && b.root.pivot === PELVIS);
+  blendPose(a, b, 0.5, out);
+  assert.ok(Math.abs(out.arms[0].wrist!.roll - a.arms[0].wrist!.roll / 2) < 1e-12);
+  assert.ok(Math.abs(out.root.pivot - PELVIS / 2) < 1e-12);
+  // Blending into a pose whose arms have no wrist objects gives them one; `out` never shares them with `a` or `b`
+  const bare = newFightPose();
+  for (const arm of bare.arms) delete arm.wrist;
+  blendPose(a, b, 0.5, bare);
+  assert.ok(bare.arms[0].wrist && bare.arms[0].wrist !== a.arms[0].wrist && bare.arms[0].wrist !== b.arms[0].wrist);
+  assert.ok(Math.abs(bare.arms[0].wrist!.roll - a.arms[0].wrist!.roll / 2) < 1e-12);
 });
 
 test('every sampled number is finite for every clip at every frame (and between)', () => {
@@ -193,11 +285,15 @@ test('every sampled number is finite for every clip at every frame (and between)
         for (const [name, v] of numbers(sample(id, f, mirror))) assert.ok(Number.isFinite(v), `${id} frame ${f}${mirror ? ' mirrored' : ''}: ${name}`);
       }
     }
-    // Sane sizes: nothing wild, and the root only drops or lifts a little
+    // Sane sizes: nothing wild; the root only lifts a little and drops at most to the hips, which pivot at the feet or the hips
     for (let f = 0; f < c.frames; f++) {
       const p = sample(id, f);
       for (const [name, v] of numbers(p)) assert.ok(Math.abs(v) <= Math.PI, `${id} frame ${f}: ${name} = ${v}`);
-      assert.ok(Math.abs(p.root.y) <= 0.2 && p.root.pitch <= 0 && p.root.pitch >= -1.6, `${id} frame ${f}: root`);
+      assert.ok(p.root.y <= 0.2 && p.root.y >= -PELVIS && p.root.pitch <= 0 && p.root.pitch >= -1.6, `${id} frame ${f}: root`);
+      assert.ok(p.root.pivot >= 0 && p.root.pivot <= PELVIS, `${id} frame ${f}: pivot`);
+      const h = hipHeight(p);
+      assert.ok(h > 0.05 && h <= PELVIS + 0.1, `${id} frame ${f}: hips ${h} off the ground and no higher than standing`);
+      for (const a of p.arms) assert.ok(Math.abs(a.wrist!.roll) <= 1.6 && Math.abs(a.wrist!.bend) <= 0.8, `${id} frame ${f}: wrist`);
     }
   }
   assert.ok(Number.isFinite(sample('jab', NaN).bob));
