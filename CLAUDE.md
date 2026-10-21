@@ -290,6 +290,16 @@ it and has been retired completely. Build only on what's here.
 - 3D pin labels stay on screen and fold to dots where they'd sit under the
   city's own buttons and cards (`chrome` in `index.ts`); add any new
   always-visible city overlay to that list.
+- **The start menu** (the owner's call): on every open, `[data-start]` in
+  `CityMap.astro` (styles `src/styles/start.css`) covers the whole page
+  while the 3D city boots behind it, so the 2D map is never seen loading.
+  Single player enters the city (the fly-in runs again, `city.intro()` in
+  `index.ts`); Multiplayer says "Coming soon" without `PUBLIC_GAME_SERVER`
+  and flips the Online switch on and enters with one; Options holds Time,
+  Weather, Sound and the view (3D city / 2D map), driving the header's own
+  settings controls (pressed when the city is up, queued until then). The
+  root carries `has-start` until a choice is made; the loader and the
+  welcome tip wait behind it. Gradient-bordered buttons, white text.
 - The city page has **one header**: the city's own bar (`.city-head` in
   `CityMap.astro`, copy in `head.ts`), slim dark glass. The site bar
   (`Nav.astro`) is left out there (`<Base nav={false}>`) and stays on the

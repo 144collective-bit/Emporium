@@ -1,0 +1,339 @@
+/*
+ * The start menu (CityMap.astro `[data-start]`): over the whole city on every
+ * open, while the 3D city loads behind it, so nothing of the map shows until
+ * you pick Single player, Multiplayer or Options. Dark glass on ink, the
+ * PulseChain gradient for the border, the title and the progress; buttons
+ * are gradient-bordered with white text (never gradient-filled).
+ */
+.city-start {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  overflow: auto;
+  background:
+    radial-gradient(60% 50% at 50% 0%, #8000ff2e, #0000 70%),
+    radial-gradient(50% 40% at 85% 100%, #00eaff1f, #0000 70%),
+    radial-gradient(50% 40% at 10% 100%, #f10e7d1f, #0000 70%),
+    var(--ink, #05050a);
+  transition: opacity 0.4s var(--ease);
+}
+.city-start.is-done {
+  opacity: 0;
+  pointer-events: none;
+}
+.city-start[hidden] {
+  display: none;
+}
+/* The loader card and the welcome tip wait behind the menu */
+.city.has-start .city-loader,
+.city.has-start .city-hud {
+  visibility: hidden;
+}
+
+.city-start-card {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  width: min(460px, 100%);
+  padding: 28px 24px 22px;
+  border: 1px solid #0000;
+  border-radius: 10px;
+  background:
+    linear-gradient(#0b0a12f2, #0b0a12f2) padding-box,
+    var(--pulse) border-box;
+  box-shadow: 0 0 80px -24px #8000ffb3;
+  text-align: center;
+}
+.city-start-logo {
+  width: 132px;
+  height: auto;
+  filter: drop-shadow(0 0 18px #8000ff80);
+}
+.city-start-kicker {
+  margin: 4px 0 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--p-cyan);
+}
+.city-start-title {
+  margin: 0 0 6px;
+  font-family: var(--font-display);
+  font-size: clamp(44px, 10vw, 64px);
+  font-weight: 900;
+  line-height: 0.95;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  color: #fff;
+}
+
+/* The three choices */
+.city-start-main {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+}
+.city-start-main[hidden] {
+  display: none;
+}
+.city-start-btn {
+  display: grid;
+  gap: 3px;
+  width: 100%;
+  padding: 13px 18px;
+  border: 1.5px solid #0000;
+  border-radius: 4px;
+  background:
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
+  box-shadow: 0 0 26px -10px #8000ffa6;
+  color: #fff;
+  text-align: left;
+  cursor: pointer;
+  transition: box-shadow 0.2s, transform 0.2s var(--ease);
+}
+.city-start-btn:hover,
+.city-start-btn:focus-visible {
+  background:
+    var(--pulse-wash) padding-box,
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
+  box-shadow: 0 0 34px -6px #8000ffd9;
+  outline: none;
+}
+.city-start-btn:focus-visible {
+  box-shadow:
+    0 0 0 2px #fff,
+    0 0 34px -6px #8000ffd9;
+}
+.city-start-btn-name {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.city-start-btn-sub {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #ffffff99;
+}
+/* Multiplayer without a game server: still there, still readable, going nowhere yet */
+.city-start-btn[aria-disabled="true"] {
+  opacity: 0.6;
+  box-shadow: none;
+}
+.city-start-btn[aria-disabled="true"]:hover {
+  background:
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
+}
+.city-start-btn[aria-disabled="true"] .city-start-btn-sub {
+  color: var(--p-cyan);
+}
+.city-start-btn.is-nudged {
+  animation: start-nudge 0.35s var(--ease);
+}
+@keyframes start-nudge {
+  30% {
+    transform: translateX(-4px);
+  }
+  70% {
+    transform: translateX(4px);
+  }
+}
+
+/* Options: segmented rows like the header's settings */
+.city-start-options {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+}
+.city-start-options[hidden] {
+  display: none;
+}
+.city-start-row {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  align-items: center;
+  gap: 10px;
+}
+.city-start-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--p-cyan);
+}
+.city-start-seg {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.city-start-seg button {
+  flex: 1 1 auto;
+  padding: 9px 10px;
+  border: 1px solid #ffffff2b;
+  border-radius: 3px;
+  background: #ffffff0a;
+  color: #ffffffb8;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.city-start-seg button:hover {
+  color: #fff;
+  border-color: #ffffff59;
+}
+.city-start-seg button[aria-pressed="true"] {
+  border-color: #0000;
+  background:
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
+  color: #fff;
+}
+.city-start-seg button:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+.city-start-back {
+  justify-self: start;
+  margin-top: 4px;
+  padding: 9px 16px;
+  border: 1.5px solid #0000;
+  border-radius: 3px;
+  background:
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.city-start-back:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+/* Loading, then ready */
+.city-start-status {
+  min-height: 1.4em;
+  margin: 8px 0 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: #ffffffb8;
+}
+.city-start-bar {
+  --p: 0;
+  width: 100%;
+  height: 3px;
+  border-radius: 2px;
+  background: #ffffff14;
+  overflow: hidden;
+}
+.city-start-bar span {
+  display: block;
+  height: 100%;
+  background: var(--pulse);
+  transform: scaleX(var(--p));
+  transform-origin: left;
+  transition: transform 0.4s var(--ease);
+}
+.city-start-note {
+  margin: 6px 0 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: #ffffff73;
+}
+
+@media (max-width: 420px) {
+  .city-start {
+    padding: 12px;
+  }
+  .city-start-card {
+    padding: 22px 16px 18px;
+  }
+  .city-start-logo {
+    width: 104px;
+  }
+  .city-start-btn-name {
+    font-size: 22px;
+  }
+  .city-start-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+}
+@media (max-height: 600px) and (orientation: landscape) {
+  .city-start-card {
+    grid-template-columns: auto 1fr;
+    gap: 6px 20px;
+    padding: 14px 20px;
+    text-align: left;
+    justify-items: start;
+  }
+  .city-start-logo {
+    grid-row: 1 / 3;
+    width: 88px;
+    align-self: center;
+  }
+  .city-start-kicker,
+  .city-start-title {
+    grid-column: 2;
+    margin: 0;
+  }
+  .city-start-title {
+    font-size: 40px;
+  }
+  .city-start-status {
+    margin-top: 2px;
+  }
+  .city-start-note {
+    margin-top: 0;
+  }
+  .city-start-main,
+  .city-start-options,
+  .city-start-status,
+  .city-start-bar,
+  .city-start-note {
+    grid-column: 1 / -1;
+  }
+  .city-start-main {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .city-start-btn {
+    padding: 10px 12px;
+  }
+  .city-start-btn-name {
+    font-size: 20px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .city-start,
+  .city-start-btn,
+  .city-start-bar span {
+    transition: none;
+  }
+  .city-start-btn.is-nudged {
+    animation: none;
+  }
+}

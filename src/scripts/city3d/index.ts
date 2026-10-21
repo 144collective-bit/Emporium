@@ -917,6 +917,16 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     open(id: string) {
       open(id);
     },
+    /** The fly-in again, from far out to the home view (the start menu closing: the first one ran behind it) */
+    intro() {
+      if (root.dataset.mode !== 'explore') return;
+      close();
+      const s = home();
+      camera.position.copy(s.pos.clone().add(new THREE.Vector3(40, 46, 40)));
+      controls.target.copy(s.target);
+      camera.lookAt(controls.target);
+      flyTo(s.pos, s.target, 2.8);
+    },
     stop() {
       running = false;
       cancelAnimationFrame(raf);
