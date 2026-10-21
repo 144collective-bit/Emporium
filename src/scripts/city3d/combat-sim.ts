@@ -167,7 +167,7 @@ const path = (x0: number, x1: number, phase: number): CrewSpot => ({ route: [[x0
 /**
  * The crew's patrol routes: short lines along the riverside walk between the bridges
  * (the bridges' roads cut the walk) and along the avenue's south sidewalk in front of
- * South 2 to 5 (clear of the race start on South 4). Never on the avenue's asphalt.
+ * South 2 to 5. Never on the avenue's asphalt.
  */
 export const CREW_SPOTS: CrewSpot[] = [
   walk(1, 13.5, 0),

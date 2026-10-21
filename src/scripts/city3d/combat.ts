@@ -42,8 +42,8 @@ export { DUMMIES };
 export type Sfx =
   | 'shot' | 'shotSmg' | 'shotShotgun' | 'shotDmr' | 'shotRevolver' | 'shotBurst' | 'shotLmg'
   | 'empty' | 'magout' | 'magin' | 'bolt' | 'hit' | 'hitMetal' | 'down' | 'boom' | 'gear' | 'draw' | 'holster' | 'unlock' | 'bump' | 'door'
-  /** The city's game: buying, upgrading, levelling up, missions, races, the crew */
-  | 'buy' | 'denied' | 'upgrade' | 'levelup' | 'mission' | 'countdown' | 'go' | 'checkpoint' | 'finish' | 'shove' | 'goonDown'
+  /** The city's game: buying, upgrading, levelling up, missions, the kart park's countdown and finish, the crew */
+  | 'buy' | 'denied' | 'upgrade' | 'levelup' | 'mission' | 'countdown' | 'go' | 'finish' | 'shove' | 'goonDown'
   /** The kart park: boosts, hits taken and landed, the shield, the item roulette and a throw, drifts and their sparks, the jump, the shortcut's gravel, beating your ghost */
   | 'kartBoost' | 'kartHit' | 'kartHitLanded' | 'kartShield' | 'kartItem' | 'kartUse' | 'kartDrift' | 'kartSpark' | 'kartJump' | 'kartLand' | 'kartShortcut' | 'kartGhost'
   /** The Fight Club: a swing's whoosh, a punch and a kick landing, a block, a parry, a knockdown's thud, the knock-out, the bell and the count */

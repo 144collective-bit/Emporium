@@ -12,7 +12,6 @@ import { DUMMIES } from './combat-sim';
 import { BIG_LOTS, BS, GARAGE, MARKET, UNITS, design, designBox } from './layout';
 import { ALLEYS, ALLEY_PROPS, BOLLARD_R, INFILL, SQUARE } from './downtown';
 import { SQUARE_SOLIDS } from './outer';
-import { RACE_SITE } from './races';
 import { KART_SOLIDS } from './kartpark';
 import { BAGS, BLEACHERS, COUNTER, LOCKERS, POSTS, POST_R, SHED, SIGN } from './fightsite';
 import type { LotKind, UnitKind } from './tycoon';
@@ -202,12 +201,6 @@ export const DOWNTOWN_SOLIDS: Box[] = [
   ...sq.poles.map(([x, z]): Box => [x - 0.08, z - 0.08, x + 0.08, z + 0.08, 3]),
 ];
 
-/** The race start line (racesite.ts draws it): the gantry's post on South 4's sidewalk and the race board beside it */
-const RACE_SOLIDS: Box[] = [
-  [RACE_SITE.gantry.x - 0.2, RACE_SITE.gantry.post - 0.2, RACE_SITE.gantry.x + 0.2, RACE_SITE.gantry.post + 0.2, RACE_SITE.gantry.h],
-  [RACE_SITE.board.x - 0.55, RACE_SITE.board.z - 0.12, RACE_SITE.board.x + 0.55, RACE_SITE.board.z + 0.12, 1.6],
-];
-
 /**
  * The Fight Club on the south bank, east of the garage (fightsite.ts has the numbers, fightclub.ts
  * draws it): where the shed's posts, the sign's posts and the yard's small things stand, shared by
@@ -258,7 +251,7 @@ export const FIGHTCLUB_SITE: Box[] = [
 
 /** The outer squares' centrepieces, planters and kiosks (outer.ts); the pocket parks and lawns stay walkable */
 /** ...and the kart park's fence, hut, stand, gantry, flyover pillars and track walls (kartpark.ts), and the Fight Club (fightsite.ts) */
-export const SOLIDS: Box[] = [...DRAWN.map(designBox), ...DOWNTOWN_SOLIDS, ...SQUARE_SOLIDS, ...GARAGE_SOLIDS, ...MARKET_SOLIDS, ...DUMMY_SOLIDS, ...RACE_SOLIDS, ...KART_SOLIDS, ...FIGHTCLUB_SITE];
+export const SOLIDS: Box[] = [...DRAWN.map(designBox), ...DOWNTOWN_SOLIDS, ...SQUARE_SOLIDS, ...GARAGE_SOLIDS, ...MARKET_SOLIDS, ...DUMMY_SOLIDS, ...KART_SOLIDS, ...FIGHTCLUB_SITE];
 /** What bullets stop on: everything solid except the dummies' footprints (they test their own shape) */
 export const SHOT_SOLIDS = SOLIDS.filter((b) => !DUMMY_SOLIDS.includes(b));
 

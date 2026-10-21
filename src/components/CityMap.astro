@@ -192,7 +192,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
             <dt><kbd>Right&nbsp;click</kbd></dt><dd>Aim (red dot sight)</dd>
             <dt><kbd>V</kbd></dt><dd>First / third person</dd>
             <dt><kbd>Scroll</kbd></dt><dd>Camera distance</dd>
-            <dt><kbd>E</kbd></dt><dd>Enter a door, open the gun store, the garage or the race board, get in / out of your car</dd>
+            <dt><kbd>E</kbd></dt><dd>Enter a door, open the gun store, the garage, the kart hut or the trainer, get in / out of your car</dd>
             <dt><kbd>Click</kbd></dt><dd>Fire (once geared up)</dd>
             <dt><kbd>R</kbd></dt><dd>Reload</dd>
             <dt><kbd>Q</kbd> <kbd>1</kbd>–<kbd>7</kbd></dt><dd>Swap gun (next, or by number)</dd>
@@ -506,41 +506,6 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
         <button type="button" class="shop-take" data-garage-keep>Keep this one</button>
       </div>
       <p class="shop-foot">The five starters are free; the rest cost Dorras you earn in the city. Nothing here is real money.</p>
-    </section>
-    {/* Street races (race-ui.ts), opened at the race board on the south bank avenue or from your car at the start line.
-        data-races: the menu (built on the gun store's .shop panel); data-races-level your level; data-races-list the four
-        races (painted); data-races-note why you can't start yet (or how to race); data-races-close its ×.
-        data-race-count: the countdown digits. data-race-hud: the race HUD, with the clock (data-race-clock), the
-        checkpoint count (data-race-cp), the distance to the next (data-race-dist) and Quit race (data-race-quit).
-        data-race-result: the results card; data-result-title, data-result-body (painted), data-result-ok and data-result-close. */}
-    <section class="shop races" data-races hidden aria-labelledby="races-title">
-      <header class="shop-head">
-        <h2 id="races-title" class="shop-title">Street races</h2>
-        <p class="shop-score" data-races-level>Level <b>1</b></p>
-        <button type="button" class="shop-close" data-races-close aria-label="Close the races">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
-        </button>
-      </header>
-      <div class="race-list" data-races-list role="list" aria-label="Races"></div>
-      <p class="race-note" data-races-note></p>
-      <p class="shop-foot">Prizes are Dorras, earned in the city. Best times are kept per race.</p>
-    </section>
-    <div class="race-count" data-race-count hidden aria-live="assertive"></div>
-    <div class="race-hud" data-race-hud hidden>
-      <b class="race-clock" data-race-clock>0:00.00</b>
-      <span class="race-cp"><b data-race-cp>1 / 9</b><small>checkpoint</small></span>
-      <span class="race-dist"><b data-race-dist>0 m</b><small>to next</small></span>
-      <button type="button" class="race-quit" data-race-quit>Quit race</button>
-    </div>
-    <section class="shop race-result" data-race-result hidden aria-labelledby="race-result-title">
-      <header class="shop-head">
-        <h2 id="race-result-title" class="shop-title" data-result-title>Finished</h2>
-        <button type="button" class="shop-close" data-result-close aria-label="Close the results">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
-        </button>
-      </header>
-      <div class="race-result-body" data-result-body></div>
-      <button type="button" class="shop-take" data-result-ok>Done</button>
     </section>
     {/* The kart park (kart-ui.ts), opened at the hut's door or the City-view panel's Walk in.
         data-karts: the hut menu (built on the gun store's .shop panel); data-karts-dorras and data-karts-level in its

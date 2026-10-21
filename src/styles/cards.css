@@ -1,49 +1,14 @@
-/* ---------- Street races (walk mode, race-ui.ts) ----------
-   The race menu is built on the gun store's .shop panel (global.css): one column of race rows.
-   The countdown is big centred digits; the race HUD sits top centre under the header, clear of
-   the drive readout (top left on touch screens) and Get out (top right). The results card is a
-   .shop card too. Phones upright keep the shop's bottom sheet; on their side the HUD stays clear
-   of the stick and the pedals. Nothing moves under reduced motion. */
+/* ---------- The game screens' shared pieces (walk mode) ----------
+   What the kart park's menu, HUD and results (kart-ui.ts, karts.css) and the Fight Club's
+   (fight-ui.ts, fight.css) have in common: the big centred countdown digits (.race-count), the
+   results card built on the gun store's .shop panel (.race-result, its body, name, time, tags,
+   meta rows and the level-up line), and the list rows' parts (a name, a small mono caption, a
+   blurb, a meta list of dt / dd pairs, a note) with the tags (.race-tag, .lv-tag). They began
+   life with the retired street races, which is why the classes are still .race-*; each menu
+   lays them out on its own grid (karts.css, fight.css) and sizes the digits for its stack.
+   Nothing moves under reduced motion. */
 
-/* The menu: name, blurb, par / prize / best, Start */
-.races {
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-areas:
-    "head"
-    "list"
-    "note"
-    "foot";
-  width: min(560px, calc(100% - 32px));
-}
-.race-list {
-  grid-area: list;
-  display: grid;
-  gap: 8px;
-}
-.race-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas:
-    "head start"
-    "blurb start"
-    "meta start";
-  gap: 4px 14px;
-  align-items: center;
-  padding: 10px 12px;
-  border: 1px solid #ffffff14;
-  border-radius: 10px;
-  background: #ffffff08;
-}
-.race-row.is-locked {
-  opacity: 0.6;
-}
-.race-row-head {
-  grid-area: head;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 10px;
-}
+/* A row's parts: the name, a small mono caption beside it, the blurb, the meta list, a note */
 .race-name {
   font-family: var(--font-display);
   font-size: 20px;
@@ -51,21 +16,6 @@
   line-height: 1;
   text-transform: uppercase;
   color: #fff;
-}
-.race-row .lv-tag {
-  padding: 2px 7px;
-  border: 1px solid #ffffff33;
-  border-radius: 5px;
-  font-family: var(--font-mono);
-  font-size: 9.5px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--p-cyan);
-}
-.race-row.is-locked .lv-tag {
-  color: #ff6ad5;
-  border-color: #ff6ad566;
 }
 .race-cps {
   font-family: var(--font-mono);
@@ -114,30 +64,6 @@
 .race-none {
   font-weight: 400;
   color: var(--muted);
-}
-.race-start {
-  grid-area: start;
-  align-self: center;
-  min-width: 78px;
-  padding: 10px 16px;
-  border: 1px solid #0000;
-  border-radius: 999px;
-  background:
-    linear-gradient(#0b0a12, #0b0a12) padding-box,
-    var(--pulse) border-box;
-  color: #fff;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  cursor: pointer;
-  box-shadow: 0 0 22px -8px #ff2fb9;
-}
-.race-start:disabled {
-  opacity: 0.55;
-  box-shadow: none;
-  cursor: not-allowed;
 }
 .race-note {
   grid-area: note;
@@ -188,70 +114,7 @@
   }
 }
 
-/* The race HUD: top centre under the header */
-.race-hud {
-  position: absolute;
-  top: calc(var(--head-h) + 12px);
-  left: 50%;
-  z-index: 5;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  max-width: calc(100% - 32px);
-  padding: 8px 10px 8px 16px;
-  border: 1px solid #0000;
-  border-radius: 999px;
-  background:
-    linear-gradient(#0b0a12e6, #0b0a12e6) padding-box,
-    var(--pulse) border-box;
-  box-shadow: 0 0 30px -10px #00eaffaa;
-  color: #fff;
-  transform: translateX(-50%);
-  animation: race-hud-in 0.3s var(--ease);
-}
-.race-hud[hidden] {
-  display: none;
-}
-@keyframes race-hud-in {
-  from {
-    opacity: 0;
-    transform: translate(-50%, -8px);
-  }
-}
-.race-clock {
-  min-width: 6.2ch;
-  font-family: var(--font-display);
-  font-size: 30px;
-  font-weight: 900;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-  color: #fff;
-}
-.race-hud.is-counting .race-clock {
-  color: var(--muted);
-}
-.race-cp,
-.race-dist {
-  display: grid;
-  gap: 2px;
-  white-space: nowrap;
-}
-.race-cp b,
-.race-dist b {
-  font-family: var(--font-mono);
-  font-size: 13px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  color: var(--p-cyan);
-}
-.race-cp small,
-.race-dist small {
-  font-family: var(--font-mono);
-  font-size: 8.5px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
+/* A HUD's Quit: a small outlined pill (the kart and fight HUDs place it) */
 .race-quit {
   padding: 7px 12px;
   border: 1px solid #ffffff33;
@@ -268,10 +131,6 @@
 .race-quit:hover {
   border-color: #fff;
   color: #fff;
-}
-/* Mid-race the key hint at the bottom left goes (the road matters more) */
-.city.is-racing .drive-hint {
-  display: none;
 }
 
 /* The results card: a short centred card */
@@ -379,42 +238,15 @@
   color: var(--p-cyan);
 }
 
-/* Touch screens: the drive readout sits top left and Get out top right, so the HUD drops a
-   row below them (still well above the stick and the pedals) and loses its padding */
+/* Touch screens: a smaller Quit in the HUDs */
 @media (pointer: coarse) {
-  .race-hud {
-    top: calc(var(--head-h) + 58px);
-    gap: 10px;
-    padding: 6px 8px 6px 12px;
-  }
-  .race-clock {
-    font-size: 24px;
-  }
   .race-quit {
     padding: 6px 9px;
     font-size: 9px;
   }
 }
-/* Phones upright: the menu is the shop's bottom sheet; rows put Start under the details */
+/* Phones upright: the card is the shop's bottom sheet */
 @media (max-width: 640px) {
-  .races {
-    width: auto;
-  }
-  .race-row {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas:
-      "head"
-      "blurb"
-      "meta"
-      "start";
-    gap: 4px 0;
-    padding: 9px 10px;
-  }
-  .race-start {
-    justify-self: end;
-    margin-top: 4px;
-    padding: 8px 14px;
-  }
   .race-result {
     width: auto;
   }
@@ -422,27 +254,10 @@
     font-size: 52px;
   }
 }
-/* Narrow phones: the HUD's labels go so it fits between the edges */
-@media (max-width: 400px) {
-  .race-hud {
-    gap: 8px;
-    max-width: calc(100% - 16px);
-  }
-  .race-cp small,
-  .race-dist small {
-    display: none;
-  }
-  .race-clock {
-    font-size: 22px;
-  }
-}
-/* Phones on their side: shorter rows (no blurb), the HUD a touch tighter */
+/* Phones on their side: no blurbs, smaller digits, a tighter card */
 @media (max-height: 500px) {
   .race-blurb {
     display: none;
-  }
-  .race-row {
-    padding: 7px 10px;
   }
   .race-count {
     font-size: clamp(80px, 30vmin, 140px);
@@ -460,14 +275,8 @@
     font-size: 15px;
   }
 }
-@media (pointer: coarse) and (max-height: 500px) {
-  .race-hud {
-    top: calc(var(--head-h) + 50px);
-  }
-}
 @media (prefers-reduced-motion: reduce) {
-  .race-count.is-pop,
-  .race-hud {
+  .race-count.is-pop {
     animation: none;
   }
 }

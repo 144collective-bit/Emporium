@@ -4,17 +4,16 @@
  * counters (tycoon.ts) are the record missions and badges are checked against.
  *
  * - A mission is a target on one counter (sell 150 things, knock down 15
- *   drones, drive 300 tiles), a race to finish (under par, maybe) or plots to
- *   own. Taking one remembers the counters as they stood, so only what you
- *   do after counts. Up to three at once; claim the reward when it's done.
+ *   drones, drive 300 tiles) or plots to own. Taking one remembers the
+ *   counters as they stood, so only what you do after counts. Up to three
+ *   at once; claim the reward when it's done.
  * - Badges are lifetime milestones: earned the moment a counter crosses
  *   the line, each with XP. No prizes, no real rewards: Dorras and XP only.
  */
 import { levelFor } from './catalog';
-import { race } from './races';
 import { addXp, book, count, level, newCounters, plotCount, type ActiveMission, type CounterId, type Counters, type TycoonSave } from './tycoon';
 
-export type Goal = { counter: CounterId; n: number } | { race: string; par?: boolean } | { plots: number };
+export type Goal = { counter: CounterId; n: number } | { plots: number };
 export interface Mission {
   id: string;
   name: string;
@@ -34,42 +33,34 @@ export const MISSIONS: Mission[] = [
   { id: 'drone-patrol', name: 'Drone patrol', blurb: 'Knock down 3 patrol drones.', level: 1, goal: counter('drones', 3), reward: 400, xp: 80 },
   { id: 'paper-run', name: 'Paper run', blurb: 'Deliver 1 contract from the Signal tower.', level: 1, goal: counter('contracts', 1), reward: 400, xp: 80 },
   { id: 'joyride', name: 'Joyride', blurb: 'Drive 300 tiles in your own car.', level: 1, goal: counter('driven', 300), reward: 300, xp: 60 },
-  { id: 'warm-up', name: 'Warm-up lap', blurb: 'Finish the River Loop at the start line on the south bank.', level: 1, goal: { race: 'river-loop' }, reward: 600, xp: 100 },
   { id: 'first-lap', name: 'First lap', blurb: 'Finish a race at the kart park, north-east past the Parkway.', level: 1, goal: counter('kartRaces', 1), reward: 500, xp: 100 },
   // Tier 2
   { id: 'shopkeeper', name: 'Shopkeeper', blurb: 'Sell 150 things.', level: 3, goal: counter('sold', 150), reward: 900, xp: 150 },
   { id: 'courier-king', name: 'Courier king', blurb: 'Deliver 5 contracts.', level: 3, goal: counter('contracts', 5), reward: 1200, xp: 180 },
   { id: 'drone-hunter', name: 'Drone hunter', blurb: 'Knock down 15 drones.', level: 3, goal: counter('drones', 15), reward: 1000, xp: 150 },
   { id: 'dummy-run', name: 'Dummy run', blurb: 'Knock down 25 training dummies.', level: 3, goal: counter('dummies', 25), reward: 800, xp: 120 },
-  { id: 'ring-rookie', name: 'Ring rookie', blurb: 'Finish the Ring Circuit.', level: 3, goal: { race: 'ring-circuit' }, reward: 1200, xp: 160 },
   { id: 'landlord', name: 'Landlord', blurb: 'Buy 2 units, lots or plots.', level: 3, goal: counter('land', 2), reward: 800, xp: 100 },
   { id: 'podium', name: 'Podium', blurb: 'Finish a kart race in the top three.', level: 3, goal: counter('podiums', 1), reward: 1200, xp: 160 },
   { id: 'pigeon-post', name: 'Pigeon post', blurb: 'Land 10 item hits on rivals at the kart park.', level: 3, goal: counter('kartHits', 10), reward: 900, xp: 140 },
   // Tier 3
   { id: 'crew-cut', name: 'Crew cut', blurb: 'Knock down 10 of the crew on the south bank.', level: 5, goal: counter('goons', 10), reward: 1800, xp: 240 },
-  { id: 'dash', name: 'Dash', blurb: 'Finish the Downtown Dash.', level: 5, goal: { race: 'downtown-dash' }, reward: 2000, xp: 240 },
-  { id: 'under-par', name: 'Under par', blurb: 'Finish the River Loop under par.', level: 5, goal: { race: 'river-loop', par: true }, reward: 1500, xp: 200 },
   { id: 'in-training', name: 'Tycoon in training', blurb: 'Take 25,000 Dorras in sales, contracts and prizes.', level: 5, goal: counter('earned', 25000), reward: 2000, xp: 250 },
   { id: 'tuner', name: 'Tuner', blurb: 'Buy 3 upgrades: mods at the garage or the Armoury, or levels for your places.', level: 5, goal: counter('upgrades', 3), reward: 1200, xp: 150 },
   { id: 'retail-chain', name: 'Retail chain', blurb: 'Sell 600 things.', level: 5, goal: counter('sold', 600), reward: 2500, xp: 300 },
   { id: 'kart-winner', name: 'Chequered flag', blurb: 'Win a kart race.', level: 5, goal: counter('kartWins', 1), reward: 2500, xp: 300 },
   // Tier 4
   { id: 'south-bank-sweep', name: 'South bank sweep', blurb: 'Knock down 40 of the crew.', level: 8, goal: counter('goons', 40), reward: 5000, xp: 500 },
-  { id: 'ring-master', name: 'Ring master', blurb: 'Finish the Ring Circuit under par.', level: 8, goal: { race: 'ring-circuit', par: true }, reward: 4000, xp: 400 },
   { id: 'fleet', name: 'Fleet', blurb: 'Buy 3 things at the garage, the Armoury or Drop 001.', level: 8, goal: counter('bought', 3), reward: 3000, xp: 300 },
   { id: 'haulage', name: 'Haulage', blurb: 'Deliver 20 contracts.', level: 8, goal: counter('contracts', 20), reward: 6000, xp: 600 },
   { id: 'road-trip', name: 'Road trip', blurb: 'Drive 3,000 tiles.', level: 8, goal: counter('driven', 3000), reward: 3000, xp: 300 },
   { id: 'property-mogul', name: 'Property mogul', blurb: 'Own a district plot (the estate agent is in the Vault).', level: 8, goal: { plots: 1 }, reward: 10000, xp: 1000 },
   { id: 'kart-hat-trick', name: 'Hat-trick', blurb: 'Win 3 kart races.', level: 8, goal: counter('kartWins', 3), reward: 5000, xp: 500 },
   // Tier 5
-  { id: 'grand-tourist', name: 'Grand tourist', blurb: 'Finish the Grand Tour.', level: 12, goal: { race: 'grand-tour' }, reward: 8000, xp: 800 },
-  { id: 'ace', name: 'Ace', blurb: 'Finish 3 races under par.', level: 12, goal: counter('pars', 3), reward: 6000, xp: 600 },
   { id: 'crew-boss', name: 'Crew boss', blurb: 'Knock down 120 of the crew.', level: 12, goal: counter('goons', 120), reward: 12000, xp: 1200 },
   { id: 'magnate', name: 'Magnate', blurb: 'Take 250,000 Dorras.', level: 12, goal: counter('earned', 250000), reward: 15000, xp: 1500 },
   { id: 'kart-champion', name: 'Kart champion', blurb: 'Win 10 kart races.', level: 12, goal: counter('kartWins', 10), reward: 12000, xp: 1200 },
   // Tier 6
   { id: 'legend-of-the-bank', name: 'Legend of the bank', blurb: 'Knock down 300 of the crew.', level: 18, goal: counter('goons', 300), reward: 30000, xp: 3000 },
-  { id: 'speed-demon', name: 'Speed demon', blurb: 'Finish the Grand Tour under par.', level: 18, goal: { race: 'grand-tour', par: true }, reward: 20000, xp: 2000 },
   { id: 'empire', name: 'Empire', blurb: 'Take 1,000,000 Dorras.', level: 18, goal: counter('earned', 1000000), reward: 50000, xp: 5000 },
   { id: 'master-tuner', name: 'Master tuner', blurb: 'Buy 24 upgrades.', level: 18, goal: counter('upgrades', 24), reward: 20000, xp: 2000 },
 ];
@@ -95,11 +86,7 @@ export function missionProgress(s: TycoonSave, a: ActiveMission): { done: number
     const done = Math.max(0, (s.counters[g.counter] ?? 0) - (a.from[g.counter] ?? 0));
     return { done: Math.min(done, g.n), need: g.n, complete: done >= g.n };
   }
-  if ('plots' in g) return { done: Math.min(plotCount(s), g.plots), need: g.plots, complete: plotCount(s) >= g.plots };
-  const r = race(g.race);
-  const best = s.races[g.race];
-  const complete = !!r && best !== undefined && (!g.par || best <= r.par);
-  return { done: complete ? 1 : 0, need: 1, complete };
+  return { done: Math.min(plotCount(s), g.plots), need: g.plots, complete: plotCount(s) >= g.plots };
 }
 export type MissionResult = { ok: true; reward: number; xp: number; levels: number } | { ok: false; why: 'level' | 'max' | 'owned' | 'place' | 'progress' };
 export function acceptMission(s: TycoonSave, id: string, now: number): MissionResult {
@@ -159,14 +146,11 @@ export const BADGES: Badge[] = [
   b('dummies-50', 'Range day', 'Knocked down 50 dummies.', 'dummies', 50, 150),
   b('goons-25', 'Bouncer', 'Knocked down 25 of the crew.', 'goons', 25, 300),
   b('goons-250', 'South bank legend', 'Knocked down 250 of the crew.', 'goons', 250, 2500),
-  b('races-5', 'Racer', 'Finished 5 races.', 'races', 5, 200),
-  b('races-25', 'Road warrior', 'Finished 25 races.', 'races', 25, 1000),
   b('karts-1', 'Karter', 'Finished a kart race.', 'kartRaces', 1, 100),
   b('karts-25', 'Track regular', 'Finished 25 kart races.', 'kartRaces', 25, 800),
   b('podiums-10', 'Podium regular', 'Ten podiums at the kart park.', 'podiums', 10, 500),
   b('kart-wins-25', 'Kart king', 'Won 25 kart races.', 'kartWins', 25, 2500),
   b('hits-50', 'Pigeon fancier', 'Landed 50 item hits.', 'kartHits', 50, 400),
-  b('records-3', 'Record breaker', 'Set 3 best times.', 'records', 3, 150),
   b('driven-1k', 'Round the block', 'Drove 1,000 tiles.', 'driven', 1000, 100),
   b('driven-10k', 'High mileage', 'Drove 10,000 tiles.', 'driven', 10000, 800),
   b('land-3', 'Landowner', 'Bought 3 units, lots or plots.', 'land', 3, 200),
@@ -201,9 +185,6 @@ export const COUNTER_NAMES: Record<CounterId, string> = {
   dummies: 'dummies down',
   drones: 'drones down',
   goons: 'crew down',
-  races: 'races finished',
-  pars: 'races under par',
-  records: 'best times',
   driven: 'tiles driven',
   bought: 'things bought',
   land: 'land bought',

@@ -15,8 +15,8 @@
  *   the showroom turntable while you pick your car.
  * - Get in your car (at the turntable, or wherever you left it) and drive
  *   (drive.ts); get out anywhere.
- * - The race board on the south bank avenue (and your car, stopped at the
- *   start line) opens the street races (race-ui.ts); the run reads the car.
+ * - The kart hut's door opens the kart park's menu (kart-ui.ts) and the
+ *   trainer's counter the Fight Club's (fight-ui.ts).
  */
 import * as THREE from 'three';
 import type { SpotId } from '../../lib/city';
@@ -29,9 +29,6 @@ import { createGarageUI, loadCar } from './garage-ui';
 import { DEFAULT_CAR } from './mycar';
 import type { Garage } from './garage';
 import { createDrive } from './drive';
-import { createRaceUI } from './race-ui';
-import type { RaceSite } from './racesite';
-import { RACE_SITE, START_LINE, START_R } from './races';
 import { createKartUI } from './kart-ui';
 import { createKartRace } from './kart';
 import { HUT_DOOR, trackSurfaceAt } from './kartpark';
@@ -119,8 +116,6 @@ export interface WalkDeps {
   openPlace(id: string): void;
   /** The economy, for the shops in walk mode (buying, mods) */
   game: GameDeps;
-  /** The street races' start line (its checkpoint markers light up during a run) */
-  raceSite: RaceSite;
   /** The kart park in the north-east (its hut door opens the kart menu; races run on its track) */
   kartPark: KartPark;
   /** The Fight Club on the south bank (the trainer's counter opens its menu; fights run in its ring) */
@@ -215,12 +210,11 @@ export function createWalk(d: WalkDeps) {
   const keys = new Set<string>();
   const joy = { x: 0, y: 0, id: -1 };
   const pad = { x: 0, y: 0, run: false, prev: [] as boolean[] };
-  let near: { id: SpotId | 'gear' | 'garage' | 'car' | 'races' | 'karts' | 'trainer' | `place:${string}`; label: string } | null = null;
+  let near: { id: SpotId | 'gear' | 'garage' | 'car' | 'karts' | 'trainer' | `place:${string}`; label: string } | null = null;
   const act = () => {
     if (!near) return;
     if (near.id === 'gear') shop.show();
     else if (near.id === 'garage') garageUI.show();
-    else if (near.id === 'races') races.show();
     else if (near.id === 'karts') kartUI.show();
     else if (near.id === 'trainer') fightUI.show();
     else if (near.id === 'car') (drive.active ? getOut() : getIn());
@@ -381,28 +375,6 @@ export function createWalk(d: WalkDeps) {
   /** Driving input from the gamepad and the touch pedals */
   const padDrive = { steer: 0, throttle: 0, handbrake: false };
   const pedals = { gas: false, brake: false };
-  // Street races: the board's menu, the countdown and the HUD (race-ui.ts). Like the other
-  // shops it frees the mouse and lets go of the controls while it's open; the run reads the car.
-  const races = createRaceUI(root, {
-    game: d.game,
-    car: () => {
-      const st = drive.carState;
-      return st ? { x: st.x, z: st.z, speed: st.speed, driving: drive.inCar } : null;
-    },
-    onFreeze: (on) => (drive.frozen = on),
-    site: d.raceSite,
-    onOpen() {
-      keys.clear();
-      jumpHeld = false;
-      pedals.gas = pedals.brake = false;
-      vel.set(0, 0);
-      setAim(false);
-      combat.trigger(false);
-      combat.trigger(false, true);
-      if (document.pointerLockElement === canvas) document.exitPointerLock();
-    },
-    onClose: () => canvas.focus({ preventScroll: true }),
-  });
   /* ---------- The kart park: the hut's menu, the race on its track (kart-ui.ts, kart.ts) ---------- */
 
   /** What Degen wears (the kart's driver wears the same) */
@@ -624,8 +596,6 @@ export function createWalk(d: WalkDeps) {
     d.touched();
   }
   function getOut() {
-    // Getting out mid-race abandons it
-    races.abort();
     const out = drive.exit();
     if (!out) return;
     pos.set(out.x, groundAt(out.x, out.z), out.z);
@@ -689,9 +659,9 @@ export function createWalk(d: WalkDeps) {
   function onKey(e: KeyboardEvent, down: boolean) {
     if (!active || (e.target as HTMLElement).matches?.('input, select, textarea')) return false;
     const c = e.code;
-    // While the store, the garage, the race menu or the kart hut's menu is open, E closes it and walking keys wait
-    if (shop.open || garageUI.open || races.open || kartUI.open || fightUI.open) {
-      if (down && !e.repeat && c === 'KeyE') (shop.open ? shop.close() : garageUI.open ? garageUI.close() : races.open ? races.close() : kartUI.open ? kartUI.close() : fightUI.close());
+    // While the store, the garage, the kart hut's or the trainer's menu is open, E closes it and walking keys wait
+    if (shop.open || garageUI.open || kartUI.open || fightUI.open) {
+      if (down && !e.repeat && c === 'KeyE') (shop.open ? shop.close() : garageUI.open ? garageUI.close() : kartUI.open ? kartUI.close() : fightUI.close());
       return false;
     }
     // Fighting: move with the move keys (W towards the opponent), Shift blocks, Space dodges; the mouse punches and kicks
@@ -1086,16 +1056,6 @@ export function createWalk(d: WalkDeps) {
       pad.prev = b;
       return;
     }
-    // The race menu: D-pad picks a race, A starts it, B (or Y again) closes
-    if (races.open) {
-      if (edge(12) || edge(14)) races.step(-1);
-      if (edge(13) || edge(15)) races.step(1);
-      if (edge(0)) races.take();
-      if (edge(1) || edge(3)) races.close();
-      pad.x = pad.y = 0;
-      pad.prev = b;
-      return;
-    }
     // Driving: left stick steers, RT gas, LT brake / reverse, A handbrake, Y gets out, View swaps camera
     if (drive.active) {
       padDrive.steer = pad.x;
@@ -1199,9 +1159,8 @@ export function createWalk(d: WalkDeps) {
     combat.setPlayerPos(NaN, NaN);
     combat.update(dt, t, false);
     combat.view(dt, t, { firstPerson: false, aim: false, move: 0, phase: 0, run: 0, air: 0 });
-    // The prompt: the race menu when nearly stopped at the start line (not mid-race), else Get out
-    const atLine = !races.racing && Math.abs(s.speed) < 0.4 && Math.hypot(s.x - START_LINE.x, s.z - START_LINE.z) <= START_R;
-    const want = atLine ? { id: 'races' as const, label: 'Street races' } : { id: 'car' as const, label: 'Get out' };
+    // The prompt: Get out
+    const want = { id: 'car' as const, label: 'Get out' };
     if (near?.id !== want.id) {
       near = want;
       prompt.hidden = false;
@@ -1274,8 +1233,6 @@ export function createWalk(d: WalkDeps) {
   function update(dt: number, t: number) {
     if (!active) return;
     pollPad(dt);
-    // A race on: the countdown, the clock and the checkpoints (it reads the car)
-    races.update(dt);
     kartUI.update(dt);
     fightUI.update(dt);
     if (fight.active) return fightFrame(dt, t);
@@ -1431,7 +1388,7 @@ export function createWalk(d: WalkDeps) {
     }
 
     // Door prompts, and the Armoury's gun store counter
-    let best: { id: SpotId | 'gear' | 'garage' | 'car' | 'races' | 'karts' | 'trainer' | `place:${string}`; label: string } | null = null;
+    let best: { id: SpotId | 'gear' | 'garage' | 'car' | 'karts' | 'trainer' | `place:${string}`; label: string } | null = null;
     let bestD = 1.7;
     const atCounter = Math.hypot(RACK.x - pos.x, RACK.z - pos.z);
     if (atCounter < 1.1) {
@@ -1441,11 +1398,6 @@ export function createWalk(d: WalkDeps) {
     if (shop.open && atCounter > 2) shop.close();
     if (Math.hypot(GARAGE_SITE.door.x - pos.x, GARAGE_SITE.door.z - pos.z) < 1.3) {
       best = { id: 'garage', label: 'Garage' };
-      bestD = 0;
-    }
-    // The race board on the south bank avenue
-    if (Math.hypot(RACE_SITE.spot.x - pos.x, RACE_SITE.spot.z - pos.z) < 1.2) {
-      best = { id: 'races', label: 'Street races' };
       bestD = 0;
     }
     // The kart hut's door, at the kart park
@@ -1478,7 +1430,7 @@ export function createWalk(d: WalkDeps) {
     if (best?.id !== near?.id || best?.label !== near?.label) {
       near = best;
       prompt.hidden = !near;
-      if (near) prompt.querySelector('[data-walk-label]')!.textContent = near.id === 'gear' || near.id === 'garage' || near.id === 'car' || near.id === 'races' || near.id === 'karts' || near.id === 'trainer' || near.id.startsWith('place:') ? near.label : `Enter ${near.label}`;
+      if (near) prompt.querySelector('[data-walk-label]')!.textContent = near.id === 'gear' || near.id === 'garage' || near.id === 'car' || near.id === 'karts' || near.id === 'trainer' || near.id.startsWith('place:') ? near.label : `Enter ${near.label}`;
     }
   }
 
@@ -1571,10 +1523,9 @@ export function createWalk(d: WalkDeps) {
       root.dataset.mode = 'walk';
     },
     exit() {
-      // Leaving walk mode in the car: it stays parked where it is (and a race is abandoned)
+      // Leaving walk mode in the car: it stays parked where it is
       if (drive.active) getOut();
-      races.abort();
-      // ...and a kart race is abandoned too
+      // ...and a kart race is abandoned
       if (karts.active) {
         kartUI.close();
         leaveKart();
@@ -1593,7 +1544,6 @@ export function createWalk(d: WalkDeps) {
       setAim(false);
       shop.close();
       garageUI.close();
-      races.close();
       combat.exit();
       joy.id = -1;
       joy.x = joy.y = 0;
@@ -1606,9 +1556,9 @@ export function createWalk(d: WalkDeps) {
       camera.updateProjectionMatrix();
       root.dataset.mode = 'explore';
     },
-    /** Esc: close the gun store, the garage, the race or kart menu if one is open, or abandon a race (true if it did) */
+    /** Esc: close the gun store, the garage, the kart or fight menu if one is open, or abandon a kart race or a fight (true if it did) */
     closeShop() {
-      return shop.close() || garageUI.close() || races.close() || races.abort() || kartUI.close() || abandonKart() || fightUI.close() || quitFight();
+      return shop.close() || garageUI.close() || kartUI.close() || abandonKart() || fightUI.close() || quitFight();
     },
     /** True if Esc was used to free the mouse (so it shouldn't also stop walking). */
     releaseMouse() {

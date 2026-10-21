@@ -1,5 +1,5 @@
 // Phase 5, the city's game: levels and the catalog (catalog.ts), buying and upgrading (tycoon.ts),
-// races (races.ts) and the mission board and badges (missions.ts).
+// the mission board and badges (missions.ts) and the shared clock format (ui.ts).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -57,10 +57,9 @@ import {
 } from '../src/scripts/city3d/tycoon';
 import { CARGO, DRIVE, PLAYER_CARS } from '../src/scripts/city3d/mycar';
 import { WEAPONS, WEAPON_IDS } from '../src/scripts/city3d/combat-sim';
-import { CHECK_R, COUNTDOWN, RACES, RACE_SITE, START_LINE, clockOf, finishRun, prizeFor, race, startRun, stepRun } from '../src/scripts/city3d/races';
+import { clockOf } from '../src/scripts/city3d/ui';
 import { BADGES, MISSIONS, MISSIONS_MAX, abandonMission, acceptMission, checkBadges, claimMission, claimable, missionProgress, missionState } from '../src/scripts/city3d/missions';
 import { PLOT_IDS } from '../src/data/plots';
-import { SOLIDS } from '../src/scripts/city3d/solids';
 
 const T0 = 1_700_000_000_000;
 const fresh = () => cleanSave(null, T0);
@@ -266,8 +265,7 @@ test('cleanSave carries a Phase 4 save into Phase 5 and keeps everything within 
       wardrobe: ['halo', 'halo', 'cape'],
       plots: { N3: { design: { type: 'castle' }, paid: 5 }, ZZ: {}, S1: { design: { type: 'house', color: 'bad' }, paid: 1e12 } },
       levels: { u0: 9, stall: 3, workshop: 2, l1: 0 },
-      races: { 'river-loop': 31.123456, bad: -1, 'x y': 4 },
-      missions: { active: [{ id: 'drone-patrol', from: { drones: 2 } }, { id: 'drone-patrol' }, { id: 'nope!' }], done: ['warm-up', 'warm-up'] },
+      missions: { active: [{ id: 'drone-patrol', from: { drones: 2 } }, { id: 'drone-patrol' }, { id: 'nope!' }], done: ['first-lap', 'first-lap'] },
       badges: ['seller-100', 'Bad Badge'],
       counters: { drones: 7.9, goons: -3, made_up: 4 },
     },
@@ -284,81 +282,21 @@ test('cleanSave carries a Phase 4 save into Phase 5 and keeps everything within 
   assert.equal(dirty.plots.S1.design?.type, 'house');
   assert.equal(dirty.plots.S1.paid, 1e9);
   assert.deepEqual(dirty.levels, { u0: 3, workshop: 2 });
-  assert.deepEqual(dirty.races, { 'river-loop': 31.12 });
   assert.equal(dirty.missions.active.length, 1);
   assert.equal(dirty.missions.active[0].from.drones, 2);
-  assert.deepEqual(dirty.missions.done, ['warm-up']);
+  assert.deepEqual(dirty.missions.done, ['first-lap']);
   assert.deepEqual(dirty.badges, ['seller-100']);
   assert.equal(dirty.counters.drones, 7);
   assert.equal(dirty.counters.goons, 0);
   assert.ok(!('made_up' in dirty.counters));
 });
 
-/* ---------- Races ---------- */
+/* ---------- The clock ---------- */
 
-test('the courses: on the roads, in order, the finish by the start line; the site is solid', () => {
-  assert.ok(RACES.length >= 4);
-  for (const r of RACES) {
-    assert.ok(r.checkpoints.length >= 4, r.id);
-    for (const [x, z] of r.checkpoints) assert.ok(Number.isFinite(x) && Number.isFinite(z));
-    const [fx, fz] = r.checkpoints[r.checkpoints.length - 1];
-    assert.ok(Math.hypot(fx - START_LINE.x, fz - START_LINE.z) < 3, `${r.id} finishes at the start line`);
-    assert.ok(r.par > 10 && r.prize > 0 && r.level >= 1);
-  }
-  assert.ok(race('nope') === null);
-  // The gantry's posts stand on the sidewalks, the board beside them: all in SOLIDS
-  const post = SOLIDS.find((b) => b[0] <= RACE_SITE.gantry.x && b[2] >= RACE_SITE.gantry.x && b[1] <= RACE_SITE.gantry.post && b[3] >= RACE_SITE.gantry.post);
-  assert.ok(post, 'the gantry post');
-  const board = SOLIDS.find((b) => b[0] <= RACE_SITE.board.x && b[2] >= RACE_SITE.board.x && b[1] <= RACE_SITE.board.z && b[3] >= RACE_SITE.board.z);
-  assert.ok(board, 'the race board');
-  assert.ok(!SOLIDS.some((b) => b[0] <= RACE_SITE.spot.x && b[2] >= RACE_SITE.spot.x && b[1] <= RACE_SITE.spot.z && b[3] >= RACE_SITE.spot.z), 'you can stand at the board');
-});
-
-test('a run counts down, takes checkpoints in order, finishes and pays by par', () => {
-  assert.equal(startRun('nope'), null);
-  const run = startRun('river-loop')!;
-  const r = race('river-loop')!;
-  const far: [number, number] = [-100, -100];
-  // Countdown: a beep at each whole second, then GO
-  const events: string[] = [];
-  for (let i = 0; i < 40; i++) events.push(...stepRun(run, ...far, 0.1));
-  assert.equal(events.filter((e) => e === 'count').length, COUNTDOWN - 1);
-  assert.equal(events.filter((e) => e === 'go').length, 1);
-  assert.equal(run.countdown, 0);
-  // The second checkpoint doesn't count before the first
-  const [x1, z1] = r.checkpoints[1];
-  assert.deepEqual(stepRun(run, x1, z1, 0.1), []);
-  assert.equal(run.next, 0);
-  for (let i = 0; i < r.checkpoints.length; i++) {
-    const [x, z] = r.checkpoints[i];
-    const ev = stepRun(run, x + CHECK_R * 0.7, z, 0.5);
-    assert.deepEqual(ev, [i === r.checkpoints.length - 1 ? 'finish' : 'checkpoint'], `checkpoint ${i}`);
-  }
-  assert.ok(run.done);
-  assert.equal(run.splits.length, r.checkpoints.length);
-  assert.deepEqual(stepRun(run, 0, 0, 1), []);
-  // Pay-out
-  const s = fresh();
-  const res = finishRun(s, run)!;
-  assert.ok(res.prize === prizeFor(r, res.seconds) && res.record && res.underPar);
-  assert.equal(s.races['river-loop'], res.seconds);
-  assert.equal(s.dorras, 600 + res.prize);
-  assert.equal(s.counters.races, 1);
-  assert.equal(s.counters.pars, 1);
-  assert.equal(s.counters.records, 1);
-  assert.equal(res.xp, XP.raceFinish + XP.racePar + XP.raceRecord);
-  // A slower second run: no record, no par bonus, a smaller prize
-  const slow = startRun('river-loop')!;
-  slow.countdown = 0;
-  slow.t = r.par * 2;
-  slow.done = true;
-  const res2 = finishRun(s, slow)!;
-  assert.ok(!res2.record && !res2.underPar && res2.prize < res.prize);
-  assert.equal(prizeFor(r, r.par), r.prize);
-  assert.equal(prizeFor(r, r.par / 3), Math.round(r.prize * 1.5));
-  assert.equal(prizeFor(r, r.par * 10), Math.round(r.prize * 0.4));
-  assert.equal(finishRun(s, startRun('ring-circuit')!), null, 'not finished');
+test('clockOf: m:ss.hh', () => {
   assert.equal(clockOf(65.5), '1:05.50');
+  assert.equal(clockOf(0), '0:00.00');
+  assert.equal(clockOf(600.004), '10:00.00');
 });
 
 /* ---------- Missions and badges ---------- */
@@ -392,23 +330,15 @@ test('missions: level-gated, three at once, progress from when you took them, cl
   assert.deepEqual(acceptMission(s, 'drone-patrol', T0), { ok: false, why: 'owned' });
   // Three at once
   for (const id of ['first-sales', 'paper-run', 'joyride']) assert.ok(acceptMission(s, id, T0).ok, id);
-  assert.deepEqual(acceptMission(s, 'warm-up', T0), { ok: false, why: 'max' });
+  assert.deepEqual(acceptMission(s, 'first-lap', T0), { ok: false, why: 'max' });
   assert.ok(abandonMission(s, 'joyride'));
   assert.ok(!abandonMission(s, 'joyride'));
-  assert.ok(acceptMission(s, 'warm-up', T0).ok);
-  // A race mission: done once the race is in the records (under par when asked)
-  const a = s.missions.active.find((m) => m.id === 'warm-up')!;
+  assert.ok(acceptMission(s, 'first-lap', T0).ok);
+  // A kart mission counts from when it was taken
+  const a = s.missions.active.find((m) => m.id === 'first-lap')!;
   assert.ok(!missionProgress(s, a).complete);
-  s.races['river-loop'] = 999;
+  s.counters.kartRaces += 1;
   assert.ok(missionProgress(s, a).complete);
-  s.xp = xpForLevel(5);
-  assert.ok(acceptMission(s, 'under-par', T0).ok === false, 'three active');
-  abandonMission(s, 'paper-run');
-  assert.ok(acceptMission(s, 'under-par', T0).ok);
-  const u = s.missions.active.find((m) => m.id === 'under-par')!;
-  assert.ok(!missionProgress(s, u).complete);
-  s.races['river-loop'] = 1;
-  assert.ok(missionProgress(s, u).complete);
   // A plots mission
   s.xp = xpForLevel(8);
   abandonMission(s, 'first-sales');

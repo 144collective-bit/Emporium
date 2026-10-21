@@ -414,11 +414,10 @@ it and has been retired completely. Build only on what's here.
   (`buyCar()` / `modCar()` / `carStatsOf()`, `buyGun()` / `modGun()`,
   `buyWardrobe()`), district plots (`buyPlot()` / `buildPlot()` /
   `sellPlot()`), levels for the places you run (`upgradePlace()`,
-  `capOf()`, `capacityMul()`), race records, missions, badges and the
+  `capOf()`, `capacityMul()`), missions, badges and the
   `counters` everything watches (`count()`, `takedown()`). Prices, the
   level each thing needs, the XP curve and what each mod does are
-  `catalog.ts`; the courses are `races.ts`; the board and badges
-  `missions.ts`. All DOM-free, tested in `tests/game.test.ts`. The starter
+  `catalog.ts`; the board and badges `missions.ts`. All DOM-free, tested in `tests/game.test.ts`. The starter
   tier (the five original cars, the four original guns, the original
   wardrobe) stays free; everything new costs Dorras and needs a level.
   Screens reach the save through `GameDeps` in `ui.ts` (`save()`, then
@@ -531,7 +530,7 @@ it and has been retired completely. Build only on what's here.
 
 - `drive.ts` drives one vehicle at a time, your car or your kart (both can
   be out: "Get in" takes the nearest; `carState` / `inCar` are the car's
-  own, for the street races; `recallKart()` sends the kart to the pits).
+  own; `recallKart()` sends the kart to the pits).
 - The garage is on the south bank, east of S5, facing the south bank
   avenue (`GARAGE` in `layout.ts`; drawn by `garage.ts` in world numbers,
   not the landmarks' drawing grid). A flat-roofed workshop with an open bay
@@ -586,30 +585,17 @@ it and has been retired completely. Build only on what's here.
 - While driving, `.city.is-driving` hides the walk and combat HUD, and the header says "Driving · <car>" (`head.ts`). A gun is holstered on getting in.
 - Check the pedals, stick, prompt and readout at phone widths, upright and on their side: nothing may overlap.
 
-## Street races (3D walk mode)
-
-- The rules are `races.ts` (DOM-free, tested): four courses of checkpoints
-  on the roads from the start line on the south bank avenue in front of
-  South 4 (`RACES`, `START_LINE`, `RACE_SITE`, `CHECK_R`, `START_R`,
-  `COUNTDOWN`, `startRun` / `stepRun` / `finishRun`, `prizeFor`,
-  `clockOf`). `racesite.ts` draws the gantry, the banner (fixed copy only:
-  START / FINISH, SECTOR 7 RACES), the chequered line, the race board and
-  the checkpoint markers (beacons style; `show(next, after)`); its
-  footprints are `RACE_SOLIDS` in `solids.ts`.
-- `race-ui.ts` (markup `data-races`, `data-race-hud`, `data-race-result` in
-  `CityMap.astro`, styles in `src/styles/races.css`) is the menu on the gun
-  store's `.shop` panel, the countdown, the HUD and the results card. It
-  opens at the board on foot or from your car when it's stopped at the
-  line, needs your car within `START_R`, freezes the car (`drive.frozen`)
-  during the countdown, steps the run from the car every frame and pays
-  through `finishRun()` + `commit()`. Getting out, leaving walk mode, Esc
-  or Quit abandons a run. While a run is on, `data-race` on the city root
-  makes the header read "Racing · <race>". Prizes are Dorras only; best
-  times are kept per race in the save.
 - `drive.update()` returns the tiles moved; walk mode counts them on the
   save every ten tiles (`counters.driven`, for missions and badges).
 - `?spawn=x,z[,yaw]` in the address starts walk mode at a spot, and `?fps`
   shows where Degen stands: use them to check a place on a real device.
+- **The street races were retired** (the owner's call): no start line,
+  gantry or board on the south bank avenue, no race menu, HUD or results,
+  no race missions or badges, and no race times in the save. Racing lives
+  at the kart park only. Don't bring them back without the owner. The
+  pieces their screens left behind (the big countdown digits, the results
+  card, the list rows and tags) are shared by the kart and fight menus in
+  `src/styles/cards.css`, still under their `.race-*` class names.
 
 ## The kart park (3D walk mode)
 
@@ -1009,12 +995,12 @@ it and has been retired completely. Build only on what's here.
   build: a failing test means no zip.
 - They cover the code that's free of the DOM and scene code: the street plan
   (`layout.ts`, `streetplan.ts`), downtown (`downtown.ts`), the traffic's
-  routes and lights (`routes.ts`), collision data, doors, the gun counter, the garage, the
-  race start line and the spawn (`solids.ts`), the plots (`src/data/plots.ts`), your car
+  routes and lights (`routes.ts`), collision data, doors, the gun counter, the garage
+  and the spawn (`solids.ts`), the plots (`src/data/plots.ts`), your car
   (`mycar.ts`), the driving rules (`drive-sim.ts`), target practice
   (`combat-sim.ts`), the economy (`tycoon.ts`, the market square in
-  `solids.ts`) and the city's game (`catalog.ts`, `races.ts`, `missions.ts`
-  in `tests/game.test.ts`). Modules that touch the DOM or `kit.ts` (canvas
+  `solids.ts`) and the city's game (`catalog.ts`, `missions.ts` and the
+  clock format in `ui.ts`, in `tests/game.test.ts`). Modules that touch the DOM or `kit.ts` (canvas
   textures) can't load in Node; keep data a test needs in the DOM-free
   files.
 - When you change a rule or move something in the city, run the tests and
