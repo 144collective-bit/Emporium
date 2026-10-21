@@ -651,7 +651,8 @@ export function buildKartPark(scene: THREE.Scene, opts: { tick: (f: Tick) => voi
     const ryN = Math.atan2(-nz, nx);
     const span = G.half * 2 + 0.44;
     b.add(place(unitBox, G.x, top - 0.15, G.z, span, 0.3, 0.3, 0, ryN), STEEL);
-    b.add(place(unitBox, G.x, top - 0.32, G.z, span, 0.04, 0.32, 0, ryN), soft(PAL.cyan));
+    // (its ends just inside the posts' faces: level with them, they flicker)
+    b.add(place(unitBox, G.x, top - 0.32, G.z, span - 0.02, 0.04, 0.32, 0, ryN), soft(PAL.cyan));
     // Five start lights in a housing over the track, steady red both ways (the countdown is in the HUD)
     b.add(place(unitBox, G.x, top + 0.17, G.z, 2.8, 0.34, 0.4, 0, ryN), INK);
     const bulb = new THREE.SphereGeometry(0.085, 8, 6);
@@ -811,7 +812,7 @@ export function buildKartPark(scene: THREE.Scene, opts: { tick: (f: Tick) => voi
     pb.box(sx0 - 0.1, 0, sz0 - 0.12, sx1 - sx0 + 0.2, ROOF - 1, 0.12, toon('#2b2550'));
     for (const px of [sx0 + 0.1, (sx0 + sx1) / 2, sx1 - 0.1]) for (const pz of [sz0 + 0.05]) pb.box(px - 0.07, 0, pz - 0.07, 0.14, ROOF, 0.14, STEEL);
     pb.box(sx0 - 0.4, ROOF, sz0 - 0.4, sx1 - sx0 + 0.8, 0.14, sz1 - sz0 - 0.6, toon('#2b2550'));
-    pb.box(sx0 - 0.4, ROOF + 0.02, sz1 - 1.04, sx1 - sx0 + 0.8, 0.1, 0.05, soft(PAL.cyan));
+    pb.box(sx0 - 0.39, ROOF + 0.02, sz1 - 1.04, sx1 - sx0 + 0.78, 0.1, 0.05, soft(PAL.cyan));
     // Flags at the ends (PulseChain colours, no logos)
     for (const [px, col, col2] of [
       [sx0 - 0.8, PAL.cyan, PAL.violet],
