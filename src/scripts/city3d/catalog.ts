@@ -84,7 +84,27 @@ export const XP = {
   seriesPodium: 250,
   parBeaten: 150,
   challenge: 200,
+  /** Fighting (the Fight Club): a spar (plus a little per hit landed), a bout won or lost, a knock-out, a chain of three or more */
+  spar: 40,
+  sparHit: 2,
+  boutWin: 200,
+  boutLoss: 60,
+  fightKo: 50,
+  chain: 30,
 } as const;
+
+/* ---------- The Fight Club's opponents (docs/fight-plan.md) ---------- */
+
+export type BotLevel = 'easy' | 'medium' | 'hard';
+export const BOT_LEVELS: BotLevel[] = ['easy', 'medium', 'hard'];
+/** The sparring partners and bout opponents: a cartoon fighter per level (fixed names, never real people), its skill, its style and a bout's prize */
+export const FIGHT_BOTS: Record<BotLevel, { name: string; blurb: string; skill: number; style: 'brawler' | 'kickboxer' | 'street'; prize: number; level: number }> = {
+  easy: { name: 'Rookie Ray', blurb: 'Slow hands, big heart. Learn the chain on him.', skill: 0.3, style: 'brawler', prize: 1_500, level: 1 },
+  medium: { name: 'Knuckles', blurb: 'Blocks when he sees it coming. Mix the kicks in.', skill: 0.55, style: 'kickboxer', prize: 3_000, level: 1 },
+  hard: { name: 'The Mayor', blurb: 'Reads you, parries you, finishes you. Bring stamina.', skill: 0.8, style: 'street', prize: 6_000, level: 3 },
+};
+/** XP for taking part is capped per spar so hits can't be farmed */
+export const SPAR_HIT_CAP = 30;
 
 /* ---------- Mods (upgrades): three levels each ---------- */
 
