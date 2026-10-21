@@ -3,9 +3,10 @@
 // counter, the garage door and the walk-mode spawn can be reached.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { CAMERA_ONLY, DOORS, GARAGE_SITE, MARKET_SITE, RACK, SHOT_SOLIDS, SOLIDS, STALL_SPOT, TURNTABLE_BOX, UNIT_SITE, UNIT_SIZE, WALK_SPAWN, LOT_SITE, lotSolids, rayBoxes, unitSolids } from '../src/scripts/city3d/solids';
+import { CAMERA_ONLY, DOORS, FIGHTCLUB_SITE, GARAGE_SITE, MARKET_SITE, RACK, SHOT_SOLIDS, SOLIDS, STALL_SPOT, TURNTABLE_BOX, UNIT_SITE, UNIT_SIZE, WALK_SPAWN, LOT_SITE, lotSolids, rayBoxes, unitSolids } from '../src/scripts/city3d/solids';
 import { BIG_LOTS, EW_ROADS, GARAGE, BS, LANE, MARKET, NS_ROADS, UNITS } from '../src/scripts/city3d/layout';
 import { KART_SOLIDS } from '../src/scripts/city3d/kartpark';
+import { CORNERS, FIGHT_CLUB, FIGHT_SPAWN, OUT, RING, RING_HALF, TRAINER, inRing } from '../src/scripts/city3d/fightsite';
 import { LOT_KIND_IDS, UNIT_KIND_IDS } from '../src/scripts/city3d/tycoon';
 import { inside, onSlab, pointIn, pointOnSlab, type Rect } from './world';
 
@@ -114,6 +115,28 @@ test('the big lots: on their own lots, off the roads, each with a door at its st
   }
   // Clear of Makers' Row and the market
   for (const l of BIG_LOTS) assert.ok(l.ox > UNITS.ox + BS + 1 && l.ox > MARKET.ox + BS + 1);
+});
+
+test('the Fight Club: its footprints on the lot and in SOLIDS, the ring, the trainer\'s spot, the way out, the spawn and the corners free', () => {
+  const lot: Rect = [FIGHT_CLUB.x0, FIGHT_CLUB.z0, FIGHT_CLUB.x1, FIGHT_CLUB.z1];
+  assert.ok(FIGHTCLUB_SITE.length > 10);
+  for (const b of FIGHTCLUB_SITE) {
+    assert.ok(inside(b, lot), `box ${b.join(', ')} is off the lot`);
+    assert.ok(SOLIDS.includes(b), `box ${b.join(', ')} is not in SOLIDS`);
+  }
+  // Nothing solid inside the ropes (the posts stand at the corners, outside)
+  for (let x = RING.x - RING_HALF + 0.2; x <= RING.x + RING_HALF - 0.2 + 1e-9; x += 0.4)
+    for (let z = RING.z - RING_HALF + 0.2; z <= RING.z + RING_HALF - 0.2 + 1e-9; z += 0.4) {
+      assert.ok(inRing(x, z), `${x}, ${z} is not in the ring`);
+      assert.ok(!FIGHTCLUB_SITE.some((b) => pointIn(x, z, b)), `something solid in the ring at ${x.toFixed(1)}, ${z.toFixed(1)}`);
+    }
+  // Where you stand at the counter, where you step out, where Walk in starts and the fighters' corners
+  for (const [name, p] of [['the trainer\'s spot', TRAINER], ['the way out', OUT], ['the spawn', FIGHT_SPAWN], ['your corner', CORNERS[0]], ['their corner', CORNERS[1]]] as const) {
+    assert.ok(pointIn(p.x, p.z, lot), `${name} is off the lot`);
+    assert.ok(!blocked(p.x, p.z), `${name} is inside something`);
+  }
+  // The trainer's spot is in front of the counter, within the prompt's reach
+  assert.ok(TRAINER.z > FIGHTCLUB_SITE.find((b) => b[1] < TRAINER.z && b[3] > 87 && b[0] < TRAINER.x && b[2] > TRAINER.x)![3], 'the trainer stands behind the counter');
 });
 
 test('bullets stop at walls but not at the dummies\' own footprints', () => {
