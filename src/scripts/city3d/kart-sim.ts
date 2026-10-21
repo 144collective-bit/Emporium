@@ -23,17 +23,28 @@
  *   kart ahead), a Shield (soaks up one hit) and a Glow Trail (a line
  *   behind you that slows anyone crossing it). A hit spins a kart for a
  *   second; nothing ever hurts anyone.
+ * - The track's surfaces count: a wet stretch halves the grip, the dirt
+ *   shortcut caps speed (unless you're boosting) and banking adds grip. A
+ *   kart that turns off at the shortcut's mouth runs its own line until it
+ *   rejoins, its progress mapped onto the main line's.
+ * - Engine classes (catalog.ts `KART_CLASSES`: Street, Sport, Neon) scale
+ *   everyone's speed; a cup runs at its class, a time trial at the one you
+ *   pick. `auto` lets the rivals' brain drive the player (the par ghost).
  * - Places are by progress round the loop; once you finish, the rest are
  *   placed by where they are. Prizes and records are paid by tycoon.ts
  *   (`finishKartRace`), not here.
  */
-import { BOX_LATERALS, COURSES, GRID, KART_R, TRACK_HALF, along, at, frame, gridSlots, locate, wrapS, type Course, type CourseId } from './kartpark';
+import { BOX_LATERALS, COURSES, F, GRID, KART_R, TRACK_HALF, along, at, frame, gridSlots, locate, wrapS, type Course, type CourseId, type Line } from './kartpark';
+import { KART_CLASSES, type ClassId } from './catalog';
 import { KART_SPECS, type KartId } from './mykart';
 
 /** The sim's tick (seconds) */
 export const TICK = 1 / 60;
 export const COUNTDOWN = 3;
+/** The usual lap count (a course can set its own) */
 export const LAPS = 3;
+/** On dirt a kart goes no faster than this share of its top speed, unless it's boosting */
+export const DIRT_CAP = 0.55;
 
 /* ---------- Cups ---------- */
 
@@ -44,6 +55,9 @@ export interface Cup {
   blurb: string;
   /** Level needed to enter */
   level: number;
+  /** The engine class it runs at, and the four courses of its series */
+  cls: ClassId;
+  courses: CourseId[];
   /** How fast the rivals go (a share of a fully tuned kart's pace) and how hard they race */
   ai: number;
   skill: number;
@@ -51,9 +65,9 @@ export interface Cup {
   prizes: number[];
 }
 export const CUPS: Record<CupId, Cup> = {
-  rookie: { id: 'rookie', name: 'Rookie Cup', blurb: 'Seven easy-going rivals. Learn the loop, the drift and the items.', level: 1, ai: 0.8, skill: 0.5, prizes: [1500, 900, 600, 400, 300, 200, 150, 100] },
-  pro: { id: 'pro', name: 'Pro Cup', blurb: 'The rivals brake later and throw harder. Bring a tuned kart.', level: 4, ai: 0.92, skill: 0.8, prizes: [4000, 2400, 1500, 1000, 700, 500, 350, 250] },
-  neon: { id: 'neon', name: 'Neon Cup', blurb: 'Flat out. The rivals drift every corner and never miss with a pigeon.', level: 9, ai: 1.0, skill: 1, prizes: [10000, 6000, 3800, 2500, 1800, 1200, 900, 600] },
+  rookie: { id: 'rookie', name: 'Rookie Cup', blurb: 'Seven easy-going rivals at Street pace. Learn the loop, the drift and the items.', level: 1, cls: 'street', courses: ['neon-loop', 'summit', 'neon-reverse', 'grand'], ai: 0.8, skill: 0.5, prizes: [1500, 900, 600, 400, 300, 200, 150, 100] },
+  pro: { id: 'pro', name: 'Pro Cup', blurb: 'Sport pace. The rivals brake later and throw harder. Bring a tuned kart.', level: 4, cls: 'sport', courses: ['summit', 'neon-reverse', 'grand', 'summit-reverse'], ai: 0.92, skill: 0.8, prizes: [4000, 2400, 1500, 1000, 700, 500, 350, 250] },
+  neon: { id: 'neon', name: 'Neon Cup', blurb: 'Neon pace, flat out. The rivals drift every corner and never miss with a pigeon.', level: 9, cls: 'neon', courses: ['grand', 'neon-loop', 'summit-reverse', 'grand-reverse'], ai: 1.0, skill: 1, prizes: [10000, 6000, 3800, 2500, 1800, 1200, 900, 600] },
 };
 export const CUP_IDS = Object.keys(CUPS) as CupId[];
 export const cup = (id: string) => CUPS[id as CupId] ?? null;
@@ -108,9 +122,10 @@ export interface KartTune {
   weight: number;
   boost: number;
 }
-/** A kart's 0..1 numbers (KART_SPECS with the hut's mods on, kartStats in catalog.ts) as what the sim uses */
-export function tune(d: { speed: number; accel: number; handling: number; weight: number; boost?: number }): KartTune {
-  return { top: 11 + d.speed * 7, accel: 6 + d.accel * 7, handling: d.handling, weight: d.weight, boost: d.boost ?? 1 };
+/** A kart's 0..1 numbers (KART_SPECS with the hut's mods on, kartStats in catalog.ts) as what the sim uses, at a class's pace */
+export function tune(d: { speed: number; accel: number; handling: number; weight: number; boost?: number }, cls: ClassId = 'sport'): KartTune {
+  const mul = KART_CLASSES[cls].pace;
+  return { top: (11 + d.speed * 7) * mul, accel: (6 + d.accel * 7) * mul, handling: d.handling, weight: d.weight, boost: d.boost ?? 1 };
 }
 
 export interface KartInput {
@@ -173,6 +188,14 @@ export interface Racer {
   bumpT: number;
   /** Items landed on others */
   hits: number;
+  /** The grip of the surface under it (1 = dry), for the slide */
+  gripNow?: number;
+  /** On the main line or the shortcut; s along whichever (the main's s is kept in `s` either way) */
+  line: 'main' | 'short';
+  sShort: number;
+  /** The surface under it (kartpark.ts F flags) and its banking (radians, right side up), for the view */
+  flags: number;
+  roll: number;
 }
 
 export interface Hazard {
@@ -227,13 +250,18 @@ export type KartEvent =
   | { kind: 'wall'; kart: number; force: number }
   | { kind: 'jump'; kart: number }
   | { kind: 'land'; kart: number }
+  | { kind: 'shortcut'; kart: number; on: boolean }
   | { kind: 'box'; box: number };
 
 export interface RaceSetup {
   course: CourseId;
   /** A cup, or a time trial (alone, no items) */
   cup: CupId | 'time';
+  /** The engine class (a cup's own when racing a cup) */
+  cls?: ClassId;
   laps?: number;
+  /** The rivals' brain drives the player too (the par ghost) */
+  auto?: boolean;
   player: { kart: KartId; tune: KartTune };
   /** The rivals' karts (any number up to GRID - 1; a time trial has none) */
   rivals: { kart: KartId; tune: KartTune }[];
@@ -265,9 +293,15 @@ export function createKartSim(setup: RaceSetup) {
   const course = COURSES[setup.course];
   const c = course;
   const r = rng(setup.seed);
-  const laps = setup.laps ?? LAPS;
+  const laps = setup.laps ?? course.laps ?? LAPS;
   const timeTrial = setup.cup === 'time';
   const cupOf = timeTrial ? null : CUPS[setup.cup as CupId];
+  const cls: ClassId = setup.cls ?? cupOf?.cls ?? 'sport';
+  const sc = course.shortcut;
+  /** The line a kart is on and its s along it */
+  const lineOf = (k: Racer): { line: Line; s: number } => (k.line === 'short' && sc ? { line: sc, s: k.sShort } : { line: c, s: k.s });
+  /** The main line's s for a point along the shortcut (its progress mapped onto the main's span) */
+  const mainOfShort = (sShort: number) => (sc ? wrapS(c, sc.out + (along(c, sc.out, sc.in) * sShort) / sc.L) : 0);
   const slots = gridSlots(c);
   const racers: Racer[] = [];
   const mk = (i: number, kart: KartId, tn: KartTune, ai: Racer['ai']): Racer => {
@@ -311,6 +345,10 @@ export function createKartSim(setup: RaceSetup) {
       wallT: 0,
       bumpT: 0,
       hits: 0,
+      line: 'main',
+      sShort: 0,
+      flags: 0,
+      roll: 0,
     };
   };
   // The player starts at the back of the grid (the last slot); the rivals fill the rest from pole
@@ -339,6 +377,9 @@ export function createKartSim(setup: RaceSetup) {
   let lastCount = Math.ceil(COUNTDOWN);
   let finishedCount = 0;
   let playerInput: KartInput = { ...NO_INPUT };
+  const auto = !!setup.auto;
+  /** The brain that drives the player when `auto` is on: steady, no items */
+  const AUTO = { skill: 0.85, offset: 0, itemAt: -1e9, cool: 1e9 };
 
   /* ---------- Items ---------- */
 
@@ -445,11 +486,20 @@ export function createKartSim(setup: RaceSetup) {
   function think(k: Racer): KartInput {
     const ai = k.ai!;
     const skill = ai.skill;
+    const { line, s } = lineOf(k);
+    const half = line === c ? WALL : sc!.half - KART_R;
     // The racing line: a look-ahead point along the loop, across at this driver's offset (hugging the inside of bends a little)
     const ahead = 2.5 + k.speed * 0.32;
-    const fr = frame(c, k.s + ahead);
-    const bend = frame(c, k.s + ahead + 4).k;
-    const want = clamp(ai.offset - bend * 6 * skill, -WALL + 0.3, WALL - 0.3);
+    let fr = frame(line, s + ahead);
+    let bend = frame(line, s + ahead + 4).k;
+    // Coming off the shortcut's end, look on down the main line
+    if (line !== c && s + ahead > line.L) {
+      fr = frame(c, sc!.in + (s + ahead - line.L));
+      bend = frame(c, sc!.in + (s + ahead - line.L) + 4).k;
+    }
+    // At the shortcut's mouth, a boosting rival with the nerve takes it
+    if (sc && k.line === 'main' && k.boostT > 0.4 && skill > 0.45 && along(c, k.s, sc.out) > -4 && along(c, k.s, sc.out) < 2) fr = frame(sc, 4);
+    const want = clamp(ai.offset * (half / WALL) - bend * 6 * skill, -half + 0.3, half - 0.3);
     const tx = fr.x + fr.nx * want;
     const tz = fr.z + fr.nz * want;
     const heading = Math.atan2(-(tz - k.z), tx - k.x);
@@ -458,8 +508,11 @@ export function createKartSim(setup: RaceSetup) {
     // Brake for the corner ahead: the speed it can take, from its curvature
     let maxSpeed = Infinity;
     for (let d = 2; d <= 10; d += 2) {
-      const kk = Math.abs(frame(c, k.s + d).k);
-      if (kk > 0.02) maxSpeed = Math.min(maxSpeed, Math.sqrt((9 + skill * 6 + k.tune.handling * 3) / kk) + (10 - d) * 0.25);
+      const ff = frame(line, s + d);
+      const kk = Math.abs(ff.k);
+      // Banking lets it carry more speed; a wet or dirt surface less
+      const hold = (9 + skill * 6 + k.tune.handling * 3) * (ff.flags & F.bank ? 1.5 : 1) * ff.grip;
+      if (kk > 0.02) maxSpeed = Math.min(maxSpeed, Math.sqrt(hold / kk) + (10 - d) * 0.25);
     }
     let throttle = k.speed > maxSpeed + 1.5 ? -0.4 : k.speed > maxSpeed ? 0 : 1;
     // Drift through the bends when it's going fast enough
@@ -518,9 +571,10 @@ export function createKartSim(setup: RaceSetup) {
     }
     if (inp.item) use(k, inp.back);
 
-    // Speed: gas, brake, the boost's extra top end, slowed by a trail, scrubbed by a spin
+    // Speed: gas, brake, the boost's extra top end, slowed by a trail, capped on dirt (unless boosting), scrubbed by a spin
     const boost = k.boostT > 0 ? k.boostK : 1;
     let top = tn.top * boost * (k.slowT > 0 ? 0.5 : 1);
+    if (k.flags & F.dirt && k.boostT <= 0) top = Math.min(top, tn.top * DIRT_CAP);
     if (spinning) top = 0;
     const th = clamp(inp.throttle, -1, 1);
     if (k.air) {
@@ -531,7 +585,7 @@ export function createKartSim(setup: RaceSetup) {
       if (k.speed > 0.3) k.speed = approach(k.speed, 0, 14 * -th * dt);
       else k.speed = approach(k.speed, -3 * -th, tn.accel * 0.6 * dt);
     } else k.speed = approach(k.speed, 0, (2.2 + Math.abs(k.speed) * 0.12) * dt);
-    if (k.speed > top && !k.air) k.speed = approach(k.speed, top, 6 * dt);
+    if (k.speed > top && !k.air) k.speed = approach(k.speed, top, (k.flags & F.dirt ? 12 : 6) * dt);
     if (spinning) k.speed = approach(k.speed, 0, 8 * dt);
 
     // The hop, into a drift
@@ -562,8 +616,9 @@ export function createKartSim(setup: RaceSetup) {
     }
     k.yaw += yawRate * dt;
 
-    // The slide follows the nose (less in a drift)
-    const grip = k.drift !== 0 ? 2.4 + tn.handling * 0.8 : 6.5 + tn.handling * 4;
+    // The slide follows the nose (less in a drift, less on a wet or dirt surface, more on banking)
+    const bankGrip = k.flags & F.bank ? 1.3 : 1;
+    const grip = (k.drift !== 0 ? 2.4 + tn.handling * 0.8 : 6.5 + tn.handling * 4) * (k.gripNow ?? 1) * bankGrip;
     const kk = 1 - Math.exp(-grip * dt);
     const fx = Math.cos(k.yaw);
     const fz = -Math.sin(k.yaw);
@@ -572,16 +627,54 @@ export function createKartSim(setup: RaceSetup) {
     k.x += k.vx * dt;
     k.z += k.vz * dt;
 
-    // Where that is on the loop; the walls
-    const loc = locate(c, k.x, k.z, k.s, 6);
-    const ds = along(c, k.s, loc.s);
-    k.s = loc.s;
+    // Where that is on the loop (or the shortcut); the walls
+    let ds = 0;
+    let loc: ReturnType<typeof locate>;
+    let wall = WALL;
+    if (k.line === 'short' && sc) {
+      loc = locate(sc, k.x, k.z, k.sShort, 6);
+      k.sShort = loc.s;
+      wall = sc.half - KART_R;
+      const mainS = mainOfShort(k.sShort);
+      ds = along(c, k.s, mainS);
+      k.s = mainS;
+      // Off the end: back on the main line
+      if (k.sShort >= sc.L - 0.6) {
+        k.line = 'main';
+        k.s = wrapS(c, sc.in);
+        loc = locate(c, k.x, k.z, k.s, 6);
+        k.s = loc.s;
+        wall = WALL;
+        events.push({ kind: 'shortcut', kart: k.i, on: false });
+      }
+    } else {
+      loc = locate(c, k.x, k.z, k.s, 6);
+      ds = along(c, k.s, loc.s);
+      k.s = loc.s;
+      // Just past the shortcut's mouth and nearer its line than the main's: onto the shortcut
+      if (sc && started && !k.finished) {
+        const past = along(c, sc.out, k.s);
+        if (past > 0 && past < 7) {
+          const ls = locate(sc, k.x, k.z, Math.max(0, past), 6);
+          if (ls.s > 0.5 && ls.s < sc.L - 1 && Math.abs(ls.lateral) < sc.half - KART_R && Math.abs(ls.lateral) < Math.abs(loc.lateral)) {
+            k.line = 'short';
+            k.sShort = ls.s;
+            loc = ls;
+            wall = sc.half - KART_R;
+            events.push({ kind: 'shortcut', kart: k.i, on: true });
+          }
+        }
+      }
+    }
     k.lateral = loc.lateral;
-    if (Math.abs(k.lateral) > WALL) {
+    k.flags = loc.frame.flags;
+    k.roll = loc.frame.roll;
+    k.gripNow = loc.frame.grip;
+    if (Math.abs(k.lateral) > wall) {
       const side = Math.sign(k.lateral);
       const f = loc.frame;
       const into = (k.vx * f.nx + k.vz * f.nz) * side;
-      k.lateral = side * WALL;
+      k.lateral = side * wall;
       k.x = f.x + f.nx * k.lateral;
       k.z = f.z + f.nz * k.lateral;
       if (into > 0) {
@@ -624,10 +717,12 @@ export function createKartSim(setup: RaceSetup) {
         events.push({ kind: 'land', kart: k.i });
       }
     } else {
-      // Leaving the hump's top at speed throws the kart up
-      if (surface < k.y - 0.03 && k.speed > 5 && Math.abs(along(c, k.s, c.hump)) < 2.5) {
+      // Over the hump's top at speed the kart takes off
+      const dh = c.hump >= 0 ? along(c, k.s, c.hump) : -1e9;
+      if (dh >= 0 && dh < 1.2 && k.speed > 6 && !k.hopT) {
         k.air = true;
-        k.vy = k.speed * 0.24;
+        k.vy = k.speed * 0.2;
+        k.y = surface;
         events.push({ kind: 'jump', kart: k.i });
       } else k.y = surface;
     }
@@ -804,7 +899,7 @@ export function createKartSim(setup: RaceSetup) {
       const gap = player.progress - k.progress;
       // Behind the player: faster; ahead: a touch slower. The harder the cup, the less it gives.
       const band = clamp(gap / 45, -0.1, 0.16) * (1.2 - cupOf.skill * 0.5);
-      const base = tune(KART_SPECS[k.kart]);
+      const base = tune(KART_SPECS[k.kart], cls);
       k.tune = { ...k.tune, top: base.top * cupOf.ai * (1 + band) * (0.97 + k.ai.skill * 0.06) };
     }
   }
@@ -823,7 +918,7 @@ export function createKartSim(setup: RaceSetup) {
       }
     } else time += dt;
     rubber();
-    for (const k of racers) stepKart(k, k.ai ? think(k) : playerInput, dt);
+    for (const k of racers) stepKart(k, k.ai ? think(k) : auto ? think({ ...k, ai: AUTO } as Racer) : playerInput, dt);
     playerInput = { ...playerInput, item: false };
     bumps();
     stepMissiles(dt);
@@ -833,6 +928,7 @@ export function createKartSim(setup: RaceSetup) {
   return {
     course,
     cup: cupOf,
+    cls,
     laps,
     timeTrial,
     racers,

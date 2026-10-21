@@ -79,6 +79,11 @@ export const XP = {
   kartPodium: 80,
   kartWin: 140,
   kartRecord: 60,
+  /** Winning a cup's series, a podium in one, and beating the par ghost or the daily challenge */
+  seriesWin: 500,
+  seriesPodium: 250,
+  parBeaten: 150,
+  challenge: 200,
 } as const;
 
 /* ---------- Mods (upgrades): three levels each ---------- */
@@ -183,6 +188,23 @@ export function kartStats(base: { speed: number; accel: number; handling: number
     boost: 1 + mods.nitro * NITRO_STEP,
   };
 }
+
+/** Engine classes: everyone's pace in a race, a level to unlock each; boards are kept per class */
+export type ClassId = 'street' | 'sport' | 'neon';
+export const KART_CLASSES: Record<ClassId, { name: string; blurb: string; level: number; pace: number }> = {
+  street: { name: 'Street', blurb: 'Easy pace. Learn the lines.', level: 1, pace: 0.82 },
+  sport: { name: 'Sport', blurb: 'The standard pace.', level: 3, pace: 1 },
+  neon: { name: 'Neon', blurb: 'Flat out. Every corner is a drift.', level: 8, pace: 1.18 },
+};
+export const CLASS_IDS = Object.keys(KART_CLASSES) as ClassId[];
+/** A cup's series: points by place in each race */
+export const SERIES_POINTS = [15, 12, 10, 8, 6, 4, 2, 1];
+/** What winning a series pays on top of the races (first, second, third overall) */
+export const SERIES_PRIZES: Record<'rookie' | 'pro' | 'neon', number[]> = { rookie: [3000, 1500, 800], pro: [8000, 4000, 2000], neon: [20000, 10000, 5000] };
+/** The daily challenge: a time to beat on the day's course and class pays this */
+export const CHALLENGE_PRIZE = 2500;
+/** The par ghost's lap at Sport pace per course (the rivals' brain driving the player; other classes scale by pace) */
+export const PAR_LAPS: Record<string, number> = { 'neon-loop': 29, 'neon-reverse': 30, summit: 27, 'summit-reverse': 27, grand: 53, 'grand-reverse': 53 };
 
 /* ---------- Guns (the Armoury) ---------- */
 

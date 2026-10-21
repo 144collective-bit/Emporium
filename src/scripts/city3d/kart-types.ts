@@ -8,7 +8,8 @@
 import type * as THREE from 'three';
 import type { CourseId } from './kartpark';
 import type { CupId, ItemId, KartSim } from './kart-sim';
-import type { KartResult } from './tycoon';
+import type { KartResult, SeriesResult } from './tycoon';
+import type { ClassId } from './catalog';
 import type { KartId, MyKart } from './mykart';
 import type { Spot } from './landmarks';
 import type { GameDeps } from './ui';
@@ -47,6 +48,18 @@ export interface KartHud {
   finished: boolean;
   /** A time trial: no place or rivals */
   timeTrial: boolean;
+  /** The engine class */
+  cls: ClassId;
+  /** The last lap and the best lap so far this race (null before the first) */
+  lastLap: number | null;
+  bestLap: number | null;
+  /** In a time trial: seconds behind (positive) or ahead (negative) of the ghost at this point; null without one */
+  ghostGap: number | null;
+  /** The surface under the kart, and whether it's on the shortcut */
+  surface: 'dry' | 'wet' | 'dirt' | 'bank' | 'tunnel';
+  shortcut: boolean;
+  /** A series: which race this is (1-based) of how many; null for a single race */
+  series: { race: number; of: number } | null;
 }
 export interface KartStanding {
   /** A rival's fixed name (from the sim's order) or 'You' */
@@ -59,17 +72,24 @@ export interface KartStanding {
 }
 export interface KartResultView {
   cup: CupId | 'time';
+  cls: ClassId;
   course: CourseId;
   of: number;
   result: KartResult;
   standings: KartStanding[];
-  /** Your best lap this race (seconds) */
-  bestLap: number;
+  /** Your lap times this race, and the par ghost's lap for this course and class */
+  laps: number[];
+  par: number;
+  /** A series: the points table after this race (tycoon.ts seriesRace), with names in grid order */
+  series: (SeriesResult & { names: { name: string; kart: KartId; you: boolean }[] }) | null;
 }
 export interface KartUIDeps {
   game: GameDeps;
-  /** Start a race or a time trial in the picked kart (kart.ts) */
-  start(setup: { course: CourseId; cup: CupId | 'time' }): void;
+  /** Start a race or a time trial in the picked kart (kart.ts); a cup starts its series (tycoon.ts startSeries) */
+  start(setup: { course: CourseId; cup: CupId | 'time'; cls: ClassId }): void;
+  /** From the results card of a series race: the next race (kart.ts starts seriesNext); or drop the series */
+  nextRace(): void;
+  quitSeries(): void;
   /** Show a kart being picked on the pits' spot (kart.ts); the save's pick is what's raced */
   preview(k: MyKart): void;
   /** Opening the menu or the results frees the mouse and stops the walker; closing hands control back */
@@ -123,8 +143,10 @@ export interface KartRace {
   readonly active: boolean;
   /** The sim while a race is on */
   readonly sim: KartSim | null;
-  /** Build the race from the save (the picked kart with its mods, seven rivals for a cup), seat Degen, start the countdown */
-  start(setup: { course: CourseId; cup: CupId | 'time' }): void;
+  /** Build the race from the save (the picked kart with its mods, seven rivals for a cup at the class's pace), seat Degen, start the countdown */
+  start(setup: { course: CourseId; cup: CupId | 'time'; cls: ClassId }): void;
+  /** A time trial's ghosts: your best lap on this course and class, and the par ghost; each shown or hidden */
+  setGhosts(on: { yours: boolean; par: boolean }): void;
   /** One frame in the kart: step the sim with the player's input, draw everything, paint the HUD, play the sounds */
   update(dt: number, inp: import('./kart-sim').KartInput): void;
   /** Leave the kart (after the results, or abandoning): where Degen stands up, facing which way */
