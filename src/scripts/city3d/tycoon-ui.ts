@@ -774,9 +774,9 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
       <span class="market-btns backup-btns"><button type="button" data-backup-save>Download backup</button><label class="backup-load"><input type="file" accept=".json,application/json" data-backup-file /><span>Load a backup</span></label></span>`;
   }
   function downloadBackup(now: number) {
-    // The file carries the time it was made, so the guide's last step and "Last backup" see it
+    // The file carries the time it was made, and the guide's last step already done (so loading it doesn't pay that step again)
     save.backup = now;
-    store();
+    changed();
     const ls = (k: string) => {
       try {
         return localStorage.getItem(k);

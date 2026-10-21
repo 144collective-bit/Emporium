@@ -111,6 +111,10 @@
 .mission-tracker-list li.is-guide .mt-top small {
   color: var(--p-cyan);
 }
+/* The step's name wraps rather than cut off (the phones' list is narrow) */
+.mission-tracker-list li.is-guide .mt-top b {
+  white-space: normal;
+}
 .mt-hint {
   font-size: 10.5px;
   line-height: 1.35;
