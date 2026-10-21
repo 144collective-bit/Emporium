@@ -204,12 +204,19 @@ it and has been retired completely. Build only on what's here.
 - **Draw calls are the budget.** Build static geometry through a `Batch`
   (`kit.ts`): plain `toon()` colours (no options) and `neon()` fold into
   shared materials with the colour per vertex (`sharedFor()`), so a Batch's
-  plain colours are one draw and its neon one per brightness. Never change a
+  plain colours are one draw and its steady neon another (each vertex
+  carries its day and night brightness in a `lit` attribute the shared
+  neon's shader mixes by the time of day; only flickering neon is a draw
+  per brightness). Never change a
   plain `toon()` or `neon()` material's colour at runtime (give anything that
   changes colour its own material, or instance it with `setColorAt`). Many
   copies of one thing are instanced (trees, lamps, traffic lights, birds,
   crowds, cars). A moving thing merges its fixed parts (`mergeMeshes()`).
   A box with side and top materials is `sidesBox()` (two draws, not six).
+  Signs that come in sets share one canvas atlas, a row each, and merge
+  into one mesh (the market's canopies and boards, `atlas()` /
+  `rowPlane()` in `market.ts`; the Emporium's LED wall is one mesh with one
+  occluder).
   Flat things are flat: the lane markings are two-triangle planes, tree
   trunks open-ended (triangles count too).
   `consolidate()` merges each landmark's Batch meshes per material after the
