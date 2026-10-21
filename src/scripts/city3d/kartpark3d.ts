@@ -1228,8 +1228,15 @@ function quadOnTrack(f: Frame, along: number, across: number, lift: number, ahea
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pts), 3));
-  // Both windings, so it shows from above whichever way the frame turns
-  g.setIndex([0, 1, 2, 0, 2, 3, 0, 2, 1, 0, 3, 2]);
+  // One winding, facing up whichever way the frame turns (both windings on shared corners cancel the normals to nothing,
+  // which the toon shader turns into NaN and the bloom spreads over the whole picture)
+  const ax = pts[3] - pts[0];
+  const az = pts[5] - pts[2];
+  const bx = pts[9] - pts[0];
+  const bz = pts[11] - pts[2];
+  // The y of (p1 - p0) x (p3 - p0): positive when 0, 1, 2 already winds facing up
+  const up = az * bx - ax * bz > 0;
+  g.setIndex(up ? [0, 1, 2, 0, 2, 3] : [0, 2, 1, 0, 3, 2]);
   g.computeVertexNormals();
   return g;
 }
