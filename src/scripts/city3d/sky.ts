@@ -72,18 +72,23 @@ export function createSky(scene: THREE.Scene, opts: { shadows: number; rainDrops
   const hemi = new THREE.HemisphereLight('#bcd4ff', '#2a2050', 1);
   const sun = new THREE.DirectionalLight('#ffffff', 2);
   sun.target.position.copy(CENTER);
+  /** The shadow camera's reach either way, and one texel of its map, in world units */
+  const SHADOW_REACH = 30;
+  const texel = opts.shadows ? (SHADOW_REACH * 2) / opts.shadows : 0;
   if (opts.shadows) {
     sun.castShadow = true;
     sun.shadow.mapSize.set(opts.shadows, opts.shadows);
     const cam = sun.shadow.camera;
-    cam.left = -30;
-    cam.right = 30;
-    cam.top = 30;
-    cam.bottom = -30;
+    cam.left = -SHADOW_REACH;
+    cam.right = SHADOW_REACH;
+    cam.top = SHADOW_REACH;
+    cam.bottom = -SHADOW_REACH;
     cam.near = 1;
     cam.far = 140;
     sun.shadow.bias = -0.0006;
-    sun.shadow.normalBias = 0.03;
+    // Pushed out along the normal by two and a half texels, so a lit face never shades itself in stripes
+    // (shadow acne; it showed most on pale stone, like Liberty Bridge's, in the low evening sun)
+    sun.shadow.normalBias = texel * 2.5;
   }
   scene.add(hemi, sun, sun.target);
 
@@ -174,6 +179,9 @@ export function createSky(scene: THREE.Scene, opts: { shadows: number; rainDrops
   const tmpTop = new THREE.Color();
   const tmpHor = new THREE.Color();
 
+  const UP = new THREE.Vector3(0, 1, 0);
+  const shadowX = new THREE.Vector3();
+  const shadowY = new THREE.Vector3();
   function update(t: number, dt: number, focus: THREE.Vector3, eye: THREE.Vector3) {
     dome.position.copy(eye);
     stars.position.copy(eye);
@@ -210,8 +218,19 @@ export function createSky(scene: THREE.Scene, opts: { shadows: number; rainDrops
     const az = ang * 0.5 + 0.6;
     const lightElev = night > 0.5 ? 0.75 : Math.max(0.12, elev);
     const dir = new THREE.Vector3(Math.cos(az) * Math.cos(lightElev), Math.sin(lightElev), Math.sin(az) * Math.cos(lightElev)).normalize();
-    // The sun (and its shadow camera) follows the view, so districts get shadows too
+    // The sun (and its shadow camera) follows the view, so districts get shadows too, moving in whole
+    // texels of its map (across the light), so the shadows' edges don't crawl as the view moves
     sun.target.position.set(focus.x, 0, focus.z);
+    if (texel) {
+      shadowX.crossVectors(UP, dir).normalize();
+      shadowY.crossVectors(dir, shadowX);
+      const p = sun.target.position;
+      const [a, b, c] = [p.dot(shadowX), p.dot(shadowY), p.dot(dir)];
+      p.copy(shadowX)
+        .multiplyScalar(Math.round(a / texel) * texel)
+        .addScaledVector(shadowY, Math.round(b / texel) * texel)
+        .addScaledVector(dir, c);
+    }
     sun.position.copy(sun.target.position).addScaledVector(dir, 70);
     domeMat.uniforms.sunDir.value.copy(dir);
     domeMat.uniforms.sunAmt.value = (1 - night) * (1 - rainAmt * 0.8);
