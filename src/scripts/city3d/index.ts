@@ -40,6 +40,7 @@ import { KART_SPAWN } from './kartpark';
 import { AIR_SPAWN } from './airfield';
 import { kartRecordsHtml } from './kart-ui';
 import { destAt } from './tycoon';
+import { guideAt } from './guide';
 import { CARS } from './cars';
 import { CROWD_VIEW } from './character';
 import type { GameDeps } from './ui';
@@ -377,6 +378,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       units.show(s);
       bigLots.show(s);
       beacons.show(s.contracts.map((c) => destAt(c.to)));
+      beacons.guide(guideAt(s));
       dirty = true;
     },
     opened() {
@@ -391,6 +393,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     },
     plotsChanged: () => builder?.refresh(),
     sfx: (kind, gain) => sound.sfx(kind, gain),
+    guideGo: (g) => ('open' in g.go ? open(g.go.open) : startWalking(g.go.walk)),
   });
   // Build mode: the plots, over the economy's save
   const builder = createBuilderUI(root, {
@@ -680,7 +683,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // Walk / Build pills never sit on top of a building's name. Re-read a few
   // times a second (they open, close and move with the layout)
   // The header, its open drop-downs (settings, menu), the welcome card and the race HUD (while a race is on)
-  const chrome = [...root.querySelectorAll<HTMLElement>('.city-head, .head-panel, .city-card, .race-hud, .kart-hud, .fly-hud, .drive-hud')];
+  const chrome = [...root.querySelectorAll<HTMLElement>('.city-head, .head-panel, .city-card, .city-guide, .race-hud, .kart-hud, .fly-hud, .drive-hud')];
   const chromeRects: { x: number; y: number; w: number; h: number }[] = [];
   const readChrome = () => {
     const o = host.getBoundingClientRect();

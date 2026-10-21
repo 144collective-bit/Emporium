@@ -816,6 +816,13 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       </button>
     </div>
 
+    {/* Getting started (missions-ui.ts, guide.ts): the step you're on, a way there and an × (3D only) */}
+    <div class="city-guide" data-guide hidden>
+      <div class="city-guide-body" data-guide-body></div>
+      <button type="button" class="city-card-close" data-guide-close aria-label="Hide the getting started guide">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
+      </button>
+    </div>
 
     {/* Stands in for the card's draft note when the card is hidden (always on phones); with the build's commit, to tell which version is live */}
     <p class="city-draft-tag">Draft · v0{build && ` · ${build}`}</p>

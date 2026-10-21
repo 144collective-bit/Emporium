@@ -398,7 +398,13 @@ export interface TycoonSave {
   /** Badges (achievements) earned */
   badges: string[];
   counters: Counters;
+  /** Getting started (guide.ts): the step you're on (GUIDE_STEPS once done), and whether it's hidden */
+  guide: { step: number; hidden: boolean };
+  /** When the save was last downloaded as a backup (ms since 1970; 0 never) */
+  backup: number;
 }
+/** How many steps Getting started has (guide.ts's GUIDE) */
+export const GUIDE_STEPS = 7;
 
 export function newSave(now: number): TycoonSave {
   return {
@@ -429,6 +435,8 @@ export function newSave(now: number): TycoonSave {
     missions: { active: [], done: [] },
     badges: [],
     counters: newCounters(),
+    guide: { step: 0, hidden: false },
+    backup: 0,
   };
 }
 const emptyLot = (): Lot => ({ kind: null, stock: {}, slots: [], job: null });
@@ -539,6 +547,8 @@ export function cleanSave(raw: unknown, now: number): TycoonSave {
     missions: { active: [], done: [] },
     badges: [],
     counters: newCounters(),
+    guide: { step: 0, hidden: false },
+    backup: 0,
   };
   cleanGame(s, o, now);
   // Phase 3: staff only where there's a job for them; couriers and contracts checked against the rules
@@ -1837,4 +1847,8 @@ function cleanGame(s: TycoonSave, o: Record<string, unknown>, now: number) {
   }
   s.badges = [...new Set((Array.isArray(o.badges) ? o.badges : []).filter(slug))];
   for (const k of COUNTER_IDS) s.counters[k] = Math.floor(num(obj(o.counters)[k], 0, 1e15, 0));
+  // Getting started: a save from before it that's past level 1 has it done already (no rewards for steps long behind you)
+  const gd = obj(o.guide);
+  s.guide = 'guide' in o ? { step: Math.round(num(gd.step, 0, GUIDE_STEPS, 0)), hidden: gd.hidden === true } : { step: level(s) > 1 ? GUIDE_STEPS : 0, hidden: false };
+  s.backup = num(o.backup, 0, now, 0);
 }

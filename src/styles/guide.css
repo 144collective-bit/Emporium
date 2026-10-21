@@ -1,0 +1,262 @@
+/* ==========================================================================
+   Getting started (missions-ui.ts, guide.ts) and the Vault's save backup
+   (tycoon-ui.ts): the City view's card under the header, the guide's row
+   at the top of the walk tracker, its list on the Signal tower's board, and
+   the Download / Load buttons. Shared looks (.city-card, .market-btns,
+   .mission-tracker, .chip-link) are in global.css and missions.css.
+   ========================================================================== */
+
+/* ---------- The City view's card: under the welcome tip, 3D only ---------- */
+.city-guide {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 340px;
+  max-width: 100%;
+  padding: 10px 8px 12px 14px;
+  border: 1px solid #0000;
+  border-radius: 14px;
+  background:
+    linear-gradient(#0b0a12eb, #0b0a12eb) padding-box,
+    var(--pulse) border-box;
+  box-shadow: 0 18px 50px -20px #000, 0 0 40px -18px #00eaff80;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+.city-guide[hidden],
+.city:not([data-view="3d"]) .city-guide {
+  display: none;
+}
+.city-guide-body {
+  display: grid;
+  flex: 1;
+  gap: 5px;
+  min-width: 0;
+}
+.city-guide-body p {
+  margin: 0;
+}
+.guide-kicker {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--p-cyan);
+}
+.guide-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 10px;
+}
+.guide-name b {
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 900;
+  line-height: 1.05;
+  text-transform: uppercase;
+  color: #fff;
+}
+.guide-reward {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 13px;
+  color: #fff;
+}
+.guide-reward .dorra {
+  align-self: center;
+  color: var(--p-cyan);
+}
+.guide-hint {
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--text-2);
+}
+.city-guide-body .chip-link {
+  justify-self: start;
+  margin-top: 3px;
+  color: #fff;
+  cursor: pointer;
+}
+@media (max-width: 640px) {
+  /* Phones: smaller, so the city still fills the screen; hidden behind an open panel with the hud */
+  .city-guide {
+    width: 100%;
+    padding: 8px 6px 9px 11px;
+  }
+  .guide-name b {
+    font-size: 16px;
+  }
+  .guide-hint {
+    font-size: 11.5px;
+  }
+  /* (the welcome card's × is hidden on phones; this card keeps its own) */
+  .city-guide .city-card-close {
+    display: inline-flex;
+    width: 26px;
+    height: 26px;
+  }
+}
+
+/* ---------- The walk tracker's guide row ---------- */
+.mission-tracker-list li.is-guide {
+  background:
+    linear-gradient(#0b0a12e6, #0b0a12e6) padding-box,
+    linear-gradient(90deg, #00eaff, #8000ff) border-box;
+}
+.mission-tracker-list li.is-guide .mt-top small {
+  color: var(--p-cyan);
+}
+/* The step's name wraps rather than cut off (the phones' list is narrow) */
+.mission-tracker-list li.is-guide .mt-top b {
+  white-space: normal;
+}
+.mt-hint {
+  font-size: 10.5px;
+  line-height: 1.35;
+  color: var(--text-2);
+}
+.mt-hide {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin: -3px -5px -3px 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  pointer-events: auto;
+}
+.mt-hide:hover {
+  color: #fff;
+}
+
+/* ---------- The Signal tower's list of steps ---------- */
+.guide-list {
+  display: grid;
+  gap: 4px;
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+}
+.guide-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 6px 2px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.guide-step > i {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-style: normal;
+}
+.guide-step > span {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+}
+.guide-step small {
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--text-2);
+}
+.guide-step .mission-reward {
+  font-size: 12px;
+}
+.guide-step.is-now {
+  color: #fff;
+}
+.guide-step.is-now > i {
+  border-color: var(--p-cyan);
+  color: var(--p-cyan);
+}
+.guide-step.is-done > i {
+  border-color: #2bff8866;
+  color: #2bff88;
+}
+.guide-step.is-done b {
+  font-weight: 500;
+  text-decoration: line-through;
+  text-decoration-color: #ffffff40;
+}
+.guide-toggle {
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 10px;
+  margin-bottom: 14px;
+}
+.guide-toggle small {
+  font-size: 11.5px;
+  color: var(--text-2);
+}
+
+/* ---------- The Vault: your save ---------- */
+.backup-btns {
+  margin: 8px 0 4px;
+}
+.backup-load {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #ffffff08;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+}
+.backup-load:hover,
+.backup-load:focus-within {
+  color: #fff;
+  border-color: #ffffff40;
+}
+/* The file picker itself is invisible over its label, so a tap or a keyboard reaches it */
+.backup-load input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+.backup-btns [data-backup-save] {
+  border-color: #0000;
+  background:
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
+  color: #fff;
+}
+.backup-ask {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+.backup-ask .biz-ask {
+  margin: 0;
+  line-height: 1.4;
+}
