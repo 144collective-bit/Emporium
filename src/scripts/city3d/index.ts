@@ -34,6 +34,9 @@ import { buildUnits } from './units';
 import { buildBigLots } from './biglots';
 import { buildBeacons } from './beacons';
 import { buildRaceSite } from './racesite';
+import { buildKartPark } from './kartpark3d';
+import { KART_SPAWN } from './kartpark';
+import { kartRecordsHtml } from './kart-ui';
 import { destAt } from './tycoon';
 import { CARS } from './cars';
 import { CROWD_VIEW } from './character';
@@ -123,6 +126,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const beacons = buildBeacons(scene, tick, reduced);
   // The street races' start line on the south bank avenue, and the checkpoint markers
   const raceSite = buildRaceSite(scene, tick, reduced);
+  // The kart park outside the Parkway in the north-east: a place like the landmarks (its pin and panel)
+  const kartPark = buildKartPark(scene, { tick, reduced, low: tier === 'low' });
+  spots.push(kartPark.spot);
   progress(0.55);
   await nextFrame();
   scatterOutskirts(Q.trees);
@@ -143,7 +149,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   controls.dampingFactor = 0.08;
   controls.screenSpacePanning = false;
   controls.minDistance = 7;
-  controls.maxDistance = 150;
+  controls.maxDistance = 220;
   controls.minPolarAngle = 0.32;
   controls.maxPolarAngle = 1.18;
   controls.zoomToCursor = true;
@@ -255,6 +261,15 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     else fitting?.unmount();
     // The economy's panels: the market hall, the Workshop, contracts, couriers, staff
     tycoon?.mountPanel(id, panelBody);
+    // The kart park's panel: your records, and Walk in (walk mode starts at its gate)
+    if (id === 'karts') {
+      const rec = panelBody.querySelector<HTMLElement>('[data-kart-panel-records]');
+      if (rec && tycoon) rec.innerHTML = kartRecordsHtml(tycoon.save);
+      panelBody.querySelector('[data-kart-walkin]')?.addEventListener('click', () => {
+        close();
+        startWalking(KART_SPAWN);
+      });
+    }
     panel.dataset.spot = id;
     panel.hidden = false;
     requestAnimationFrame(() => panel.classList.add('is-open'));
@@ -333,6 +348,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     openPlace: (id) => tycoon?.openCard(id as 'stall'),
     game,
     raceSite,
+    kartPark,
+    reduced,
+    low: tier === 'low',
   });
   /* ---------- The economy: Dorras, your stall and units, the Workshop, the market hall ---------- */
   tycoon = createTycoonUI(root, {
@@ -431,7 +449,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   });
   const walkBtn = root.querySelector<HTMLButtonElement>('[data-walk-toggle]')!;
   let beforeWalk: { pos: THREE.Vector3; target: THREE.Vector3 } | null = null;
-  function startWalking() {
+  function startWalking(spawn?: { x: number; z: number; yaw: number }) {
     if (walking) return;
     if (builder.active) builder.setBuild(false);
     close();
@@ -441,7 +459,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     controls.enabled = false;
     walking = true;
     walker.on = true;
-    walk.enter();
+    walk.enter(spawn);
     mp?.walkChanged(true);
     // The site header steps aside so the city and its mode header fill the screen (global.css)
     document.body.classList.add('is-walking');
@@ -650,7 +668,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // Walk / Build pills never sit on top of a building's name. Re-read a few
   // times a second (they open, close and move with the layout)
   // The header, its open drop-downs (settings, menu), the welcome card and the race HUD (while a race is on)
-  const chrome = [...root.querySelectorAll<HTMLElement>('.city-head, .head-panel, .city-card, .race-hud')];
+  const chrome = [...root.querySelectorAll<HTMLElement>('.city-head, .head-panel, .city-card, .race-hud, .kart-hud')];
   const chromeRects: { x: number; y: number; w: number; h: number }[] = [];
   const readChrome = () => {
     const o = host.getBoundingClientRect();

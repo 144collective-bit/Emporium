@@ -32,6 +32,15 @@ import { createDrive } from './drive';
 import { createRaceUI } from './race-ui';
 import type { RaceSite } from './racesite';
 import { RACE_SITE, START_LINE, START_R } from './races';
+import { createKartUI } from './kart-ui';
+import { createKartRace } from './kart';
+import { HUT_DOOR } from './kartpark';
+import type { CourseId } from './kartpark';
+import type { KartPark } from './kart-types';
+import { CUPS } from './kart-sim';
+import type { KartInput, CupId } from './kart-sim';
+import type { ClassId } from './catalog';
+import { abandonSeries, seriesNext } from './tycoon';
 import { CAMERA_ONLY, DOORS, GARAGE_SITE, RACK, SOLIDS, TURNTABLE_BOX, WALK_SPAWN, rayBoxes, type Box } from './solids';
 import { count } from './tycoon';
 import { NS_ROADS, RIVER, SLAB, WALK_W, type Tick } from './world';
@@ -108,6 +117,10 @@ export interface WalkDeps {
   game: GameDeps;
   /** The street races' start line (its checkpoint markers light up during a run) */
   raceSite: RaceSite;
+  /** The kart park in the north-east (its hut door opens the kart menu; races run on its track) */
+  kartPark: KartPark;
+  reduced: boolean;
+  low: boolean;
 }
 
 export function createWalk(d: WalkDeps) {
@@ -196,12 +209,13 @@ export function createWalk(d: WalkDeps) {
   const keys = new Set<string>();
   const joy = { x: 0, y: 0, id: -1 };
   const pad = { x: 0, y: 0, run: false, prev: [] as boolean[] };
-  let near: { id: SpotId | 'gear' | 'garage' | 'car' | 'races' | `place:${string}`; label: string } | null = null;
+  let near: { id: SpotId | 'gear' | 'garage' | 'car' | 'races' | 'karts' | `place:${string}`; label: string } | null = null;
   const act = () => {
     if (!near) return;
     if (near.id === 'gear') shop.show();
     else if (near.id === 'garage') garageUI.show();
     else if (near.id === 'races') races.show();
+    else if (near.id === 'karts') kartUI.show();
     else if (near.id === 'car') (drive.active ? getOut() : getIn());
     else if (near.id.startsWith('place:')) {
       if (document.pointerLockElement === canvas) document.exitPointerLock();
@@ -370,6 +384,114 @@ export function createWalk(d: WalkDeps) {
     },
     onClose: () => canvas.focus({ preventScroll: true }),
   });
+  /* ---------- The kart park: the hut's menu, the race on its track (kart-ui.ts, kart.ts) ---------- */
+
+  /** What Degen wears (the kart's driver wears the same) */
+  let outfit: Outfit = PLAYER;
+  const kartUI = createKartUI(root, {
+    game: d.game,
+    start: (setup) => startKart(setup),
+    // A series: the results card's Next race starts the cup's next course; Drop ends the series
+    nextRace() {
+      if (karts.active) leaveKart();
+      const s = d.game.save();
+      const sr = s.karts.series;
+      const course = seriesNext(s);
+      if (!sr || !course) return;
+      startKart({ course, cup: sr.cup, cls: CUPS[sr.cup].cls });
+    },
+    quitSeries() {
+      const s = d.game.save();
+      if (!s.karts.series) return;
+      abandonSeries(s);
+      d.game.commit();
+    },
+    preview: (k) => karts.preview(k),
+    onOpen() {
+      keys.clear();
+      jumpHeld = false;
+      pedals.gas = pedals.brake = false;
+      kartBtns.drift = false;
+      vel.set(0, 0);
+      setAim(false);
+      combat.trigger(false);
+      combat.trigger(false, true);
+      if (document.pointerLockElement === canvas) document.exitPointerLock();
+    },
+    onClose() {
+      // The results card closed: out of the kart
+      if (karts.active && karts.sim?.done) leaveKart();
+      canvas.focus({ preventScroll: true });
+    },
+    quit: () => abandonKart(),
+  });
+  const karts = createKartRace({
+    scene: d.scene,
+    camera,
+    root,
+    park: d.kartPark,
+    ui: kartUI,
+    game: d.game,
+    outfit: () => outfit,
+    sfx: d.sfx,
+    engine: d.engine,
+    reduced: d.reduced,
+    low: d.low,
+  });
+  /** The touch buttons while racing: Drift held, Item pressed */
+  const kartBtns = { drift: false, item: false };
+  const padKart = { steer: 0, throttle: 0, drift: false };
+  function startKart(setup: { course: CourseId; cup: CupId | 'time'; cls: ClassId }) {
+    if (karts.active) return;
+    kartUI.close();
+    if (combat.armed) combat.toggleHolster();
+    keys.clear();
+    vel.set(0, 0);
+    jumpHeld = false;
+    kartBtns.drift = kartBtns.item = false;
+    setAim(false);
+    combat.trigger(false);
+    combat.trigger(false, true);
+    if (document.pointerLockElement === canvas) document.exitPointerLock();
+    hero.g.visible = hero.ring.visible = false;
+    near = null;
+    prompt.hidden = true;
+    karts.start(setup);
+    canvas.focus({ preventScroll: true });
+    d.touched();
+  }
+  /** Out of the kart: Degen stands up by the hut */
+  function leaveKart() {
+    if (!karts.active) return;
+    const out = karts.exit();
+    pos.set(out.x, groundAt(out.x, out.z), out.z);
+    vel.set(0, 0);
+    vy = 0;
+    yaw = out.yaw;
+    face = yaw + Math.PI;
+    pitch = firstPerson ? -0.05 : 0.35;
+    pivot.set(0, 0, 0);
+    camDist = zoom;
+    camera.fov = fov = baseFov;
+    camera.updateProjectionMatrix();
+    hero.g.visible = !firstPerson;
+    hero.ring.visible = !firstPerson;
+    keys.clear();
+    pedals.gas = pedals.brake = false;
+    kartBtns.drift = kartBtns.item = false;
+    near = null;
+    d.touched();
+  }
+  /** Abandon a race (no prize); true if there was one */
+  function abandonKart() {
+    if (!karts.active) return false;
+    const done = !!karts.sim?.done;
+    kartUI.close();
+    leaveKart();
+    if (!done) d.game.toast('Race abandoned. No prize this time.', 3500);
+    return true;
+  }
+
   /** Tiles driven since the last time they were counted (counted every ten, not every frame) */
   let driven = 0;
   function getIn() {
@@ -451,10 +573,22 @@ export function createWalk(d: WalkDeps) {
   function onKey(e: KeyboardEvent, down: boolean) {
     if (!active || (e.target as HTMLElement).matches?.('input, select, textarea')) return false;
     const c = e.code;
-    // While the store, the garage or the race menu is open, E closes it and walking keys wait
-    if (shop.open || garageUI.open || races.open) {
-      if (down && !e.repeat && c === 'KeyE') (shop.open ? shop.close() : garageUI.open ? garageUI.close() : races.close());
+    // While the store, the garage, the race menu or the kart hut's menu is open, E closes it and walking keys wait
+    if (shop.open || garageUI.open || races.open || kartUI.open) {
+      if (down && !e.repeat && c === 'KeyE') (shop.open ? shop.close() : garageUI.open ? garageUI.close() : races.open ? races.close() : kartUI.close());
       return false;
+    }
+    // Karting: steer and pedal with the move keys, Space hops into a drift, E uses the item (with S held: behind)
+    if (karts.active) {
+      if (down && !e.repeat && c === 'KeyE') kartBtns.item = true;
+      else if (c === 'Space') jumpHeld = down;
+      else if (MOVE.includes(c)) {
+        if (down) keys.add(c);
+        else keys.delete(c);
+      } else return false;
+      d.touched();
+      e.preventDefault();
+      return true;
     }
     // Driving: steer and pedal with the move keys, Space for the handbrake, V swaps camera, E gets out
     if (drive.active) {
@@ -488,6 +622,10 @@ export function createWalk(d: WalkDeps) {
     e.preventDefault();
     return true;
   }
+  // A click uses the item while karting (the mouse isn't captured in the kart)
+  canvas.addEventListener('mousedown', (e) => {
+    if (active && karts.active && e.button === 0) kartBtns.item = true;
+  });
   // Switching away lets go of everything (keys, buttons, sticks, a look drag)
   window.addEventListener('blur', () => {
     keys.clear();
@@ -635,6 +773,24 @@ export function createWalk(d: WalkDeps) {
     });
     for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) b.addEventListener(ev, () => (pedals[key] = false));
   }
+  // Touch while karting: Drift held, Item tapped (the stick steers, the pedals pedal)
+  const driftBtn = root.querySelector<HTMLButtonElement>('[data-kart-drift]');
+  if (driftBtn) {
+    driftBtn.addEventListener('pointerdown', (e) => {
+      try {
+        driftBtn.setPointerCapture(e.pointerId);
+      } catch {
+        /* still pressed */
+      }
+      kartBtns.drift = true;
+      d.touched();
+    });
+    for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) driftBtn.addEventListener(ev, () => (kartBtns.drift = false));
+  }
+  root.querySelector('[data-kart-item]')?.addEventListener('click', () => {
+    kartBtns.item = true;
+    d.touched();
+  });
   fpBtn.addEventListener('click', () => setFirstPerson(!firstPerson));
   sensInput.addEventListener('input', () => {
     settings.sens = Number(sensInput.value);
@@ -691,6 +847,8 @@ export function createWalk(d: WalkDeps) {
       pad.run = false;
       padDrive.steer = padDrive.throttle = 0;
       padDrive.handbrake = false;
+      padKart.steer = padKart.throttle = 0;
+      padKart.drift = false;
       // Unplugged with a trigger down: let go of it
       if (pad.prev[6]) setAim(false);
       if (pad.prev[7]) combat.trigger(false);
@@ -724,6 +882,27 @@ export function createWalk(d: WalkDeps) {
       if (edge(0)) garageUI.keep();
       if (edge(1) || edge(3)) garageUI.close();
       pad.x = pad.y = 0;
+      pad.prev = b;
+      return;
+    }
+    // The kart hut's menu: D-pad moves, A takes, B (or Y again) closes
+    if (kartUI.open) {
+      if (edge(12) || edge(14)) kartUI.step(-1);
+      if (edge(13) || edge(15)) kartUI.step(1);
+      if (edge(0)) kartUI.take();
+      if (edge(1) || edge(3)) kartUI.close();
+      pad.x = pad.y = 0;
+      pad.prev = b;
+      return;
+    }
+    // Karting: left stick steers, RT gas, LT brake, A hops into a drift, X / RB use the item, Y quits
+    if (karts.active) {
+      padKart.steer = pad.x;
+      padKart.throttle = (gp.buttons[7]?.value ?? 0) - (gp.buttons[6]?.value ?? 0);
+      padKart.drift = !!b[0];
+      if (edge(2) || edge(5)) kartBtns.item = true;
+      if (edge(3)) abandonKart();
+      if (pad.x || padKart.throttle || b.some(Boolean)) d.touched();
       pad.prev = b;
       return;
     }
@@ -850,11 +1029,45 @@ export function createWalk(d: WalkDeps) {
     }
   }
 
+  /** In the kart: the sim takes the pedals, the stick and the buttons; the view does the rest */
+  function kartFrame(dt: number, t: number) {
+    const k = (a: string, b: string) => (keys.has(a) || keys.has(b) ? 1 : 0);
+    let steer = k('KeyD', 'ArrowRight') - k('KeyA', 'ArrowLeft');
+    let throttle = k('KeyW', 'ArrowUp') - k('KeyS', 'ArrowDown');
+    if (joy.id >= 0) {
+      steer = joy.x;
+      if (!pedals.gas && !pedals.brake) throttle = -joy.y;
+    }
+    if (pedals.gas || pedals.brake) throttle = (pedals.gas ? 1 : 0) - (pedals.brake ? 1 : 0);
+    if (padKart.steer) steer = padKart.steer;
+    if (padKart.throttle) throttle = padKart.throttle;
+    const inp: KartInput = { throttle, steer, drift: jumpHeld || kartBtns.drift || padKart.drift, item: kartBtns.item, back: throttle < -0.3 };
+    kartBtns.item = false;
+    karts.update(dt, inp);
+    const p = karts.sim?.player;
+    if (p) {
+      pos.set(p.x, p.y, p.z);
+      speedNow = p.speed;
+    }
+    hero.g.visible = hero.ring.visible = false;
+    // The rest of the city carries on
+    combat.setPlayerPos(NaN, NaN);
+    combat.update(dt, t, false);
+    combat.view(dt, t, { firstPerson: false, aim: false, move: 0, phase: 0, run: 0, air: 0 });
+    if (near) {
+      near = null;
+      prompt.hidden = true;
+    }
+  }
+
   function update(dt: number, t: number) {
     if (!active) return;
     pollPad(dt);
     // A race on: the countdown, the clock and the checkpoints (it reads the car)
     races.update(dt);
+    kartUI.update(dt);
+    if (karts.active) return kartFrame(dt, t);
+    karts.idle(dt);
     if (drive.active) return driveFrame(dt, t);
 
     // What the player wants, in camera space
@@ -1005,7 +1218,7 @@ export function createWalk(d: WalkDeps) {
     }
 
     // Door prompts, and the Armoury's gun store counter
-    let best: { id: SpotId | 'gear' | 'garage' | 'car' | 'races' | `place:${string}`; label: string } | null = null;
+    let best: { id: SpotId | 'gear' | 'garage' | 'car' | 'races' | 'karts' | `place:${string}`; label: string } | null = null;
     let bestD = 1.7;
     const atCounter = Math.hypot(RACK.x - pos.x, RACK.z - pos.z);
     if (atCounter < 1.1) {
@@ -1020,6 +1233,11 @@ export function createWalk(d: WalkDeps) {
     // The race board on the south bank avenue
     if (Math.hypot(RACE_SITE.spot.x - pos.x, RACE_SITE.spot.z - pos.z) < 1.2) {
       best = { id: 'races', label: 'Street races' };
+      bestD = 0;
+    }
+    // The kart hut's door, at the kart park
+    if (!drive.active && Math.hypot(HUT_DOOR.x - pos.x, HUT_DOOR.z - pos.z) < 1.4) {
+      best = { id: 'karts', label: 'Kart hut' };
       bestD = 0;
     }
     if (!drive.active)
@@ -1042,7 +1260,7 @@ export function createWalk(d: WalkDeps) {
     if (best?.id !== near?.id || best?.label !== near?.label) {
       near = best;
       prompt.hidden = !near;
-      if (near) prompt.querySelector('[data-walk-label]')!.textContent = near.id === 'gear' || near.id === 'garage' || near.id === 'car' || near.id === 'races' || near.id.startsWith('place:') ? near.label : `Enter ${near.label}`;
+      if (near) prompt.querySelector('[data-walk-label]')!.textContent = near.id === 'gear' || near.id === 'garage' || near.id === 'car' || near.id === 'races' || near.id === 'karts' || near.id.startsWith('place:') ? near.label : `Enter ${near.label}`;
     }
   }
 
@@ -1060,6 +1278,10 @@ export function createWalk(d: WalkDeps) {
     get driving() {
       return drive.active;
     },
+    /** In a kart at the kart park? */
+    get karting() {
+      return karts.active;
+    },
     /** Your car, if it's out of the garage: where it is, its model, and whether you're in it */
     get car() {
       const st = drive.state;
@@ -1071,6 +1293,7 @@ export function createWalk(d: WalkDeps) {
     combat,
     /** Dress Degen in a new outfit (the wardrobe) */
     setLook(o: Outfit) {
+      outfit = o;
       const vis = hero.g.visible;
       d.scene.remove(hero.g);
       // The gun moves to the new body; only the old body's geometry goes
@@ -1095,7 +1318,8 @@ export function createWalk(d: WalkDeps) {
       pos.set(x, y, z);
       vel.set(0, 0);
     },
-    enter() {
+    /** Start walking; `spawn` puts Degen somewhere else (the kart park's gate from its panel) */
+    enter(spawn?: { x: number; z: number; yaw: number }) {
       active = true;
       // A few steps back from the doors, so the arcade tower fills the view
       pos.copy(SPAWN).add(new THREE.Vector3(Math.sin(SPAWN_YAW), 0, Math.cos(SPAWN_YAW)).multiplyScalar(WALK_SPAWN.back));
@@ -1109,6 +1333,10 @@ export function createWalk(d: WalkDeps) {
       if (at && at.length >= 2 && at.every(Number.isFinite)) {
         pos.set(at[0], groundAt(at[0], at[1]), at[1]);
         if (at.length > 2) yaw = at[2];
+      }
+      if (spawn) {
+        pos.set(spawn.x, groundAt(spawn.x, spawn.z), spawn.z);
+        yaw = spawn.yaw;
       }
       // First person by default; V (or the Controls panel) swaps to the shoulder camera
       pitch = -0.16;
@@ -1124,6 +1352,12 @@ export function createWalk(d: WalkDeps) {
       // Leaving walk mode in the car: it stays parked where it is (and a race is abandoned)
       if (drive.active) getOut();
       races.abort();
+      // ...and a kart race is abandoned too
+      if (karts.active) {
+        kartUI.close();
+        leaveKart();
+      }
+      kartUI.close();
       active = false;
       root.classList.remove('is-fp');
       keys.clear();
@@ -1144,9 +1378,9 @@ export function createWalk(d: WalkDeps) {
       camera.updateProjectionMatrix();
       root.dataset.mode = 'explore';
     },
-    /** Esc: close the gun store, the garage or the race menu if one is open, or abandon a race (true if it did) */
+    /** Esc: close the gun store, the garage, the race or kart menu if one is open, or abandon a race (true if it did) */
     closeShop() {
-      return shop.close() || garageUI.close() || races.close() || races.abort();
+      return shop.close() || garageUI.close() || races.close() || races.abort() || kartUI.close() || abandonKart();
     },
     /** True if Esc was used to free the mouse (so it shouldn't also stop walking). */
     releaseMouse() {

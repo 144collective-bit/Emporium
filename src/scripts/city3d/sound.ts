@@ -391,6 +391,68 @@ export function createSound() {
           crack(t, 'bandpass', 700, 0.8, 0.3, 0.2);
           [880, 660, 440].forEach((f, i) => tone(t + 0.1 + i * 0.07, 'triangle', f, f, 0.08, 0.12));
           break;
+        // The kart park: a boost's whoosh, a cartoon boing when you're spun, a ding when you land one
+        case 'kartBoost':
+          tone(t, 'sawtooth', 180, 720, 0.16, 0.3);
+          crack(t, 'bandpass', 1400, 1, 0.3, 0.28);
+          crack(t + 0.05, 'highpass', 3500, 0.7, 0.12, 0.2);
+          break;
+        case 'kartHit':
+          tone(t, 'square', 330, 70, 0.22, 0.3);
+          tone(t + 0.02, 'sine', 620, 540, 0.14, 0.2);
+          crack(t, 'lowpass', 900, 0.8, 0.35, 0.16);
+          break;
+        case 'kartHitLanded':
+          tick(t, 2600, 0.08);
+          tone(t + 0.02, 'triangle', 880, 1320, 0.2, 0.14);
+          tone(t + 0.1, 'triangle', 1760, 1760, 0.12, 0.12);
+          break;
+        // The shield's glassy chime, the roulette stopping on an item, a throw's whoosh
+        case 'kartShield':
+          tone(t, 'sine', 1200, 1180, 0.14, 0.3);
+          tone(t + 0.03, 'sine', 1800, 1760, 0.1, 0.26);
+          crack(t, 'highpass', 4200, 0.7, 0.12, 0.08);
+          break;
+        case 'kartItem':
+          tick(t, 1800, 0.1);
+          tone(t + 0.03, 'triangle', 1046, 1046, 0.14, 0.1);
+          tone(t + 0.1, 'triangle', 1568, 1568, 0.16, 0.16);
+          break;
+        case 'kartUse':
+          tone(t, 'sine', 420, 140, 0.18, 0.16);
+          crack(t, 'bandpass', 1600, 0.9, 0.28, 0.14);
+          break;
+        // Drifting: the tyres' squeal, and a rising tick for each stage of the boost
+        case 'kartDrift':
+          tone(t, 'sawtooth', 1500, 1150, 0.06, 0.3);
+          crack(t, 'bandpass', 3200, 3, 0.2, 0.24);
+          break;
+        case 'kartSpark':
+          tone(t, 'square', 1200, 2100, 0.1, 0.07);
+          tick(t + 0.05, 2600, 0.06);
+          break;
+        // The hump: up, and the landing's thud
+        case 'kartJump':
+          tone(t, 'sine', 300, 760, 0.16, 0.16);
+          crack(t, 'highpass', 2500, 0.7, 0.1, 0.1);
+          break;
+        case 'kartLand':
+          tone(t, 'sine', 130, 48, 0.45, 0.16);
+          crack(t, 'lowpass', 500, 0.8, 0.3, 0.1);
+          break;
+        // Onto the dirt shortcut: a short gravel skid, stones pinging off the floor pan
+        case 'kartShortcut':
+          crack(t, 'lowpass', 900, 0.6, 0.35, 0.32);
+          crack(t + 0.05, 'bandpass', 2200, 1.2, 0.2, 0.26);
+          tone(t, 'sawtooth', 220, 90, 0.08, 0.3);
+          [0.03, 0.11, 0.19, 0.26].forEach((dt, i) => tick(t + dt, 2700 + ((i * 731) % 900), 0.045));
+          break;
+        // Across the line faster than your ghost: a soft three-note chime
+        case 'kartGhost':
+          tone(t, 'sine', 1318, 1318, 0.14, 0.4);
+          tone(t + 0.12, 'sine', 1760, 1760, 0.12, 0.5);
+          tone(t + 0.24, 'sine', 2093, 2093, 0.1, 0.65);
+          break;
       }
     },
     /**

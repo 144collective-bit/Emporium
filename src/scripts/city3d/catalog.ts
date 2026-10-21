@@ -16,6 +16,7 @@
 import type { BuildingType } from '../../data/plots';
 import type { Weapon, WeaponId } from './combat-sim';
 import type { PlayerCar } from './mycar';
+import type { KartId } from './mykart';
 
 /* ---------- XP, levels and titles ---------- */
 
@@ -73,6 +74,16 @@ export const XP = {
   racePar: 180,
   /** A new best time (on top) */
   raceRecord: 60,
+  /** Finishing a kart race; a podium and a win (on top); a time trial's new best */
+  kartFinish: 100,
+  kartPodium: 80,
+  kartWin: 140,
+  kartRecord: 60,
+  /** Winning a cup's series, a podium in one, and beating the par ghost or the daily challenge */
+  seriesWin: 500,
+  seriesPodium: 250,
+  parBeaten: 150,
+  challenge: 200,
 } as const;
 
 /* ---------- Mods (upgrades): three levels each ---------- */
@@ -134,6 +145,66 @@ export function carStats(base: { speed: number; accel: number; grip: number }, c
     cargo: Math.round(cargo * (1 + mods.rack * RACK_STEP)),
   };
 }
+
+/* ---------- Karts (the kart park's hut) ---------- */
+
+export interface KartEntry {
+  price: number;
+  level: number;
+  pitch: string;
+}
+export const KART_CATALOG: Record<KartId, KartEntry> = {
+  rocket: { price: 0, level: 1, pitch: 'Yours from day one.' },
+  zip: { price: 9000, level: 3, pitch: 'Light as a feather: the drifter\'s kart.' },
+  tank: { price: 16000, level: 5, pitch: 'Plated. Bumps and spins barely slow it.' },
+  bigwheel: { price: 28000, level: 8, pitch: 'The fastest thing on the loop, once it gets going.' },
+};
+export const KART_IDS = Object.keys(KART_CATALOG) as KartId[];
+export const STARTER_KARTS = KART_IDS.filter((id) => KART_CATALOG[id].price === 0);
+
+export type KartModId = 'motor' | 'tyres' | 'nitro';
+export interface KartMods {
+  motor: number;
+  tyres: number;
+  nitro: number;
+}
+export const KART_MODS: Record<KartModId, { name: string; blurb: string; stat: 'speed' | 'handling' | 'boost' }> = {
+  motor: { name: 'Motor', blurb: 'A bigger motor: more top speed and pick-up.', stat: 'speed' },
+  tyres: { name: 'Soft tyres', blurb: 'Stickier tyres: sharper turns, tighter drifts.', stat: 'handling' },
+  nitro: { name: 'Nitro kit', blurb: 'Longer boosts from drifts, pads and rockets.', stat: 'boost' },
+};
+export const KART_MOD_IDS = Object.keys(KART_MODS) as KartModId[];
+export const NO_KART_MODS: KartMods = { motor: 0, tyres: 0, nitro: 0 };
+/** Each mod level adds this much to a 0..1 stat (the nitro kit lengthens boosts by this share) */
+export const KART_MOD_STEP = 0.08;
+export const NITRO_STEP = 0.15;
+export function kartStats(base: { speed: number; accel: number; handling: number; weight: number }, mods: KartMods) {
+  const up = (v: number, lvl: number) => Math.min(1.15, v + lvl * KART_MOD_STEP);
+  return {
+    speed: up(base.speed, mods.motor),
+    accel: up(base.accel, mods.motor * 0.5),
+    handling: up(base.handling, mods.tyres),
+    weight: base.weight,
+    boost: 1 + mods.nitro * NITRO_STEP,
+  };
+}
+
+/** Engine classes: everyone's pace in a race, a level to unlock each; boards are kept per class */
+export type ClassId = 'street' | 'sport' | 'neon';
+export const KART_CLASSES: Record<ClassId, { name: string; blurb: string; level: number; pace: number }> = {
+  street: { name: 'Street', blurb: 'Easy pace. Learn the lines.', level: 1, pace: 0.82 },
+  sport: { name: 'Sport', blurb: 'The standard pace.', level: 3, pace: 1 },
+  neon: { name: 'Neon', blurb: 'Flat out. Every corner is a drift.', level: 8, pace: 1.18 },
+};
+export const CLASS_IDS = Object.keys(KART_CLASSES) as ClassId[];
+/** A cup's series: points by place in each race */
+export const SERIES_POINTS = [15, 12, 10, 8, 6, 4, 2, 1];
+/** What winning a series pays on top of the races (first, second, third overall) */
+export const SERIES_PRIZES: Record<'rookie' | 'pro' | 'neon', number[]> = { rookie: [3000, 1500, 800], pro: [8000, 4000, 2000], neon: [20000, 10000, 5000] };
+/** The daily challenge: a time to beat on the day's course and class pays this */
+export const CHALLENGE_PRIZE = 2500;
+/** The par ghost's lap at Sport pace per course (the rivals' brain driving the player; other classes scale by pace) */
+export const PAR_LAPS: Record<string, number> = { 'neon-loop': 29, 'neon-reverse': 30, summit: 27, 'summit-reverse': 27, grand: 53, 'grand-reverse': 53 };
 
 /* ---------- Guns (the Armoury) ---------- */
 

@@ -32,13 +32,24 @@
 import { cleanDesign, type Design } from '../../data/plots';
 import { DOORS, GARAGE_SITE, LOT_SITE, STALL_SPOT, UNIT_SITE } from './solids';
 import type { WeaponId } from './combat-sim';
-import { CARGO as BASE_CARGO, DRIVE, PLAYER_CARS, type PlayerCar } from './mycar';
+import { CARGO as BASE_CARGO, DRIVE, PLAYER_CARS, type PaintId, type PlayerCar } from './mycar';
+import { DEFAULT_KART, KART_SPECS, PLAYER_KARTS, cleanKart, type KartId } from './mykart';
+import { CUPS, type CupId } from './kart-sim';
+import { COURSE_IDS, type CourseId } from './kartpark';
 import {
   BUILD_COSTS,
   CAR_CATALOG,
   CAR_MOD_IDS,
   GUN_CATALOG,
   GUN_MOD_IDS,
+  CHALLENGE_PRIZE,
+  CLASS_IDS,
+  KART_CATALOG,
+  KART_CLASSES,
+  KART_MOD_IDS,
+  PAR_LAPS,
+  SERIES_POINTS,
+  SERIES_PRIZES,
   LEVEL_CAPACITY,
   LEVEL_PACE,
   LEVEL_SPEED,
@@ -46,17 +57,20 @@ import {
   MOD_LEVELS,
   NO_CAR_MODS,
   NO_GUN_MODS,
+  NO_KART_MODS,
   PLACE_LEVELS,
   PLOT_DORRAS,
   PLOT_LEVEL,
   PLOT_REFUND,
   STARTER_CARS,
   STARTER_GUNS,
+  STARTER_KARTS,
   UNIT_LEVEL_COSTS,
   WARDROBE_CATALOG,
   WORKSHOP_LEVEL_COSTS,
   XP,
   carStats,
+  kartStats,
   levelFor,
   modCost,
   wardrobeEntry,
@@ -64,6 +78,9 @@ import {
   type CarMods,
   type GunModId,
   type GunMods,
+  type ClassId,
+  type KartModId,
+  type KartMods,
 } from './catalog';
 
 export type ProductId = 'gummies' | 'coffee' | 'glow' | 'tees' | 'sneakers' | 'neon';
@@ -232,6 +249,7 @@ export const ENTRIES = {
   soldBack: { name: 'Sold to the market', in: true },
   borrowed: { name: 'Loans', in: true },
   races: { name: 'Race prizes', in: true },
+  karting: { name: 'Kart prizes', in: true },
   missions: { name: 'Missions', in: true },
   soldLand: { name: 'Plots sold', in: true },
   bought: { name: 'Stock bought', in: false },
@@ -239,6 +257,7 @@ export const ENTRIES = {
   land: { name: 'District plots', in: false },
   upgrades: { name: 'Upgrades', in: false },
   vehicles: { name: 'Cars', in: false },
+  karts: { name: 'Karts', in: false },
   gear: { name: 'Guns', in: false },
   clothes: { name: 'Clothes', in: false },
   staff: { name: 'Staff', in: false },
@@ -286,9 +305,14 @@ export interface Counters {
   built: number;
   upgrades: number;
   missions: number;
+  /** Kart races finished, podiums, wins, and item hits landed on rivals */
+  kartRaces: number;
+  podiums: number;
+  kartWins: number;
+  kartHits: number;
 }
 export type CounterId = keyof Counters;
-export const COUNTER_IDS: CounterId[] = ['sold', 'earned', 'contracts', 'dummies', 'drones', 'goons', 'races', 'pars', 'records', 'driven', 'bought', 'land', 'built', 'upgrades', 'missions'];
+export const COUNTER_IDS: CounterId[] = ['sold', 'earned', 'contracts', 'dummies', 'drones', 'goons', 'races', 'pars', 'records', 'driven', 'bought', 'land', 'built', 'upgrades', 'missions', 'kartRaces', 'podiums', 'kartWins', 'kartHits'];
 export const newCounters = (): Counters => Object.fromEntries(COUNTER_IDS.map((k) => [k, 0])) as unknown as Counters;
 /** A district plot you own, bought with Dorras */
 export interface OwnedPlot {
@@ -303,8 +327,37 @@ export interface ActiveMission {
   from: Counters;
   at: number;
 }
+/** A time at the park: the best lap and the run it came from */
+export interface KartTime {
+  lap: number;
+  run: number;
+  kart: KartId;
+  at: number;
+}
+export interface KartSave {
+  model: KartId;
+  paint: PaintId;
+  owned: KartId[];
+  mods: Partial<Record<KartId, KartMods>>;
+  /** Your best per course and class (`recordKey`): the fastest lap, and the fastest time trial */
+  records: Record<string, KartTime>;
+  /** Your own leaderboard per course and class: the best time trials, fastest first (up to LEADERBOARD_SIZE) */
+  boards: Record<string, KartTime[]>;
+  /** A cup's series on the go: which race is next and everyone's points (by grid index; you are the last) */
+  series: { cup: CupId; race: number; points: number[] } | null;
+  /** Your best finish in each cup's series (1 = won it) */
+  trophies: Partial<Record<CupId, number>>;
+  /** The daily challenge: the day it was done */
+  challenge: { day: string; lap: number } | null;
+  /** The course-and-class keys whose par ghost you've beaten */
+  parBeaten: string[];
+}
+export const LEADERBOARD_SIZE = 10;
+export const recordKey = (course: string, cls: string) => `${course}:${cls}`;
+export const emptyKarts = (): KartSave => ({ model: DEFAULT_KART.model, paint: DEFAULT_KART.paint, owned: [], mods: {}, records: {}, boards: {}, series: null, trophies: {}, challenge: null, parBeaten: [] });
+
 export interface TycoonSave {
-  v: 5;
+  v: 7;
   dorras: number;
   till: number;
   /** When it was last brought up to date (ms since 1970) */
@@ -339,6 +392,8 @@ export interface TycoonSave {
   levels: Partial<Record<PlaceId, number>>;
   /** Best time (seconds) for each race you've finished */
   races: Record<string, number>;
+  /** The kart park: your pick, the karts you've bought and their mods, your records and boards per course and class, a series on the go, trophies */
+  karts: KartSave;
   missions: { active: ActiveMission[]; done: string[] };
   /** Badges (achievements) earned */
   badges: string[];
@@ -347,7 +402,7 @@ export interface TycoonSave {
 
 export function newSave(now: number): TycoonSave {
   return {
-    v: 5,
+    v: 7,
     dorras: START_DORRAS,
     till: 0,
     at: now,
@@ -370,6 +425,7 @@ export function newSave(now: number): TycoonSave {
     plots: {},
     levels: {},
     races: {},
+    karts: emptyKarts(),
     missions: { active: [], done: [] },
     badges: [],
     counters: newCounters(),
@@ -445,7 +501,7 @@ export function cleanSave(raw: unknown, now: number): TycoonSave {
   }
   const mul = (p: PlaceId) => LEVEL_CAPACITY[(levels[p] ?? 1) - 1];
   const s: TycoonSave = {
-    v: 5,
+    v: 7,
     dorras: Math.floor(num(o.dorras, 0, 1e12, START_DORRAS)),
     till: Math.floor(num(o.till, 0, 1e12, 0)),
     at: num(o.at, 0, now, now),
@@ -479,6 +535,7 @@ export function cleanSave(raw: unknown, now: number): TycoonSave {
     plots: {},
     levels,
     races: {},
+    karts: emptyKarts(),
     missions: { active: [], done: [] },
     badges: [],
     counters: newCounters(),
@@ -1242,6 +1299,11 @@ export function propertyValue(s: TycoonSave) {
 export function gearValue(s: TycoonSave) {
   let v = 0;
   for (const id of s.garage.owned) v += CAR_CATALOG[id]?.price ?? 0;
+  for (const id of s.karts.owned) v += KART_CATALOG[id]?.price ?? 0;
+  for (const id of PLAYER_KARTS) {
+    const m = s.karts.mods[id];
+    if (m) for (const k of KART_MOD_IDS) for (let l = 1; l <= m[k]; l++) v += kartModCost(id, k, { ...m, [k]: l - 1 }) ?? 0;
+  }
   for (const id of PLAYER_CARS) {
     const m = carMods(s, id);
     for (const k of CAR_MOD_IDS) for (let l = 1; l <= m[k]; l++) v += modCost(CAR_CATALOG[id].price, l) ?? 0;
@@ -1369,6 +1431,214 @@ export function modCar(s: TycoonSave, id: PlayerCar, mod: CarModId): BuyResult {
 }
 /** A car's handling and cargo with its mods on */
 export const carStatsOf = (s: TycoonSave, id: PlayerCar) => carStats(DRIVE[id], CARGO[id] ?? CARGO.hatch, carMods(s, id));
+
+/* ---------- The kart park: karts, their mods, and the races' prizes ---------- */
+
+export const ownsKart = (s: TycoonSave, id: KartId) => STARTER_KARTS.includes(id) || s.karts.owned.includes(id);
+export const ownedKarts = (s: TycoonSave) => PLAYER_KARTS.filter((id) => ownsKart(s, id));
+export function buyKart(s: TycoonSave, id: KartId): BuyResult {
+  const k = KART_CATALOG[id];
+  if (!k) return { ok: false, why: 'place' };
+  if (ownsKart(s, id)) return { ok: false, why: 'owned' };
+  const r = pay(s, k.price, k.level, 'karts');
+  if (!r.ok) return r;
+  s.karts.owned.push(id);
+  count(s, 'bought', 1);
+  return r;
+}
+export const kartMods = (s: TycoonSave, id: KartId): KartMods => ({ ...NO_KART_MODS, ...(s.karts.mods[id] ?? {}) });
+/** What the next level of a kart mod costs (null at the top) */
+export const kartModCost = (id: KartId, mod: KartModId, mods: KartMods) => modCost(Math.max(KART_CATALOG[id].price, 6000), mods[mod] + 1);
+export function modKart(s: TycoonSave, id: KartId, mod: KartModId): BuyResult {
+  if (!ownsKart(s, id) || !KART_MOD_IDS.includes(mod)) return { ok: false, why: 'place' };
+  const mods = kartMods(s, id);
+  const cost = kartModCost(id, mod, mods);
+  if (cost === null) return { ok: false, why: 'max' };
+  const r = pay(s, cost, 1, 'upgrades');
+  if (!r.ok) return r;
+  mods[mod] += 1;
+  s.karts.mods[id] = mods;
+  count(s, 'upgrades', 1);
+  addXp(s, XP.upgrade);
+  return r;
+}
+/** A kart's handling with its mods on (0..1 numbers; kart-sim.ts tune() turns them into speeds) */
+export const kartStatsOf = (s: TycoonSave, id: KartId) => kartStats(KART_SPECS[id], kartMods(s, id));
+/** Pick the kart (and paint) you race in; only one you own */
+export function pickKart(s: TycoonSave, model: KartId, paint: PaintId) {
+  const k = cleanKart({ model, paint });
+  if (!ownsKart(s, k.model)) return false;
+  s.karts.model = k.model;
+  s.karts.paint = k.paint;
+  return true;
+}
+export interface KartResult {
+  place: number;
+  prize: number;
+  xp: number;
+  seconds: number;
+  /** Your fastest lap this race, and whether it's a new lap record for the course and class */
+  bestLap: number;
+  lapRecord: boolean;
+  /** A time trial: a new best run (on the board's top) */
+  record: boolean;
+  /** The par ghost beaten for the first time */
+  parBeaten: boolean;
+  /** The daily challenge met (today, for the first time) */
+  challenge: boolean;
+  /** Levels gained */
+  levels: number;
+}
+/** The par lap for a course at a class (the par ghost's pace; catalog.ts PAR_LAPS is at Sport pace) */
+export const parLap = (course: string, cls: ClassId) => Math.round(((PAR_LAPS[course as CourseId] ?? 60) / KART_CLASSES[cls].pace) * 100) / 100;
+/** Today's challenge: a course and a class from the date, and a lap to beat (a touch slower than par) */
+export function dailyChallenge(day: string) {
+  let h = 2166136261;
+  for (let i = 0; i < day.length; i++) h = Math.imul(h ^ day.charCodeAt(i), 16777619) >>> 0;
+  const course = COURSE_IDS[h % COURSE_IDS.length];
+  const cls = CLASS_IDS[(h >>> 8) % CLASS_IDS.length];
+  return { day, course, cls, target: Math.round(parLap(course, cls) * 1.06 * 100) / 100 };
+}
+/** The day as the challenge keys it (the visitor's clock) */
+export const dayKey = (now: number) => {
+  const d = new Date(now);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+/**
+ * A finished kart race or time trial: pay the place (a cup's prizes), count it, keep the fastest lap
+ * per course and class (any race) and a time trial's run on the board; `hits` are the item hits
+ * landed this race (counted for missions). `laps` are the lap times.
+ */
+export function finishKartRace(s: TycoonSave, r: { course: string; cup: string; cls: ClassId; place: number; seconds: number; laps?: number[]; hits?: number; now?: number }): KartResult {
+  const seconds = Math.round(r.seconds * 100) / 100;
+  const time = r.cup === 'time';
+  const c = time ? null : CUPS[r.cup as CupId];
+  const cls: ClassId = KART_CLASSES[r.cls] ? r.cls : 'sport';
+  const place = Math.max(1, Math.min(8, Math.round(r.place)));
+  const prize = c ? (c.prizes[place - 1] ?? 0) : 0;
+  const now = r.now ?? s.at;
+  const lapsIn = (r.laps ?? []).filter((t) => Number.isFinite(t) && t > 0);
+  const bestLap = lapsIn.length ? Math.round(Math.min(...lapsIn) * 100) / 100 : 0;
+  const key = recordKey(r.course, cls);
+  const K = s.karts;
+  let lapRecord = false;
+  let record = false;
+  if (bestLap > 0) {
+    const best = K.records[key];
+    lapRecord = !best || best.lap <= 0 || bestLap < best.lap;
+    if (lapRecord) K.records[key] = { lap: bestLap, run: best?.run ?? 0, kart: K.model, at: now };
+  }
+  if (time) {
+    const entry: KartTime = { lap: bestLap, run: seconds, kart: K.model, at: now };
+    const best = K.records[key];
+    record = !best || best.run <= 0 || seconds < best.run;
+    if (record) K.records[key] = { ...(K.records[key] ?? entry), run: seconds, kart: K.model, at: now };
+    const board = [...(K.boards[key] ?? []), entry].sort((a, b) => a.run - b.run).slice(0, LEADERBOARD_SIZE);
+    K.boards[key] = board;
+  }
+  // The par ghost beaten (XP once per course and class), and the daily challenge
+  let parBeaten = false;
+  if (bestLap > 0 && bestLap < parLap(r.course, cls) && !K.parBeaten.includes(key)) {
+    K.parBeaten.push(key);
+    parBeaten = true;
+  }
+  let challenge = false;
+  const today = dayKey(now);
+  const ch = dailyChallenge(today);
+  if (bestLap > 0 && ch.course === r.course && ch.cls === cls && bestLap <= ch.target && K.challenge?.day !== today) {
+    K.challenge = { day: today, lap: bestLap };
+    challenge = true;
+    s.dorras += CHALLENGE_PRIZE;
+    book(s, 'karting', CHALLENGE_PRIZE);
+    count(s, 'earned', CHALLENGE_PRIZE);
+  }
+  if (prize > 0) {
+    s.dorras += prize;
+    book(s, 'karting', prize);
+    count(s, 'earned', prize);
+  }
+  count(s, 'kartRaces', 1);
+  if (c && place <= 3) count(s, 'podiums', 1);
+  if (c && place === 1) count(s, 'kartWins', 1);
+  if (r.hits) count(s, 'kartHits', r.hits);
+  const xp =
+    XP.kartFinish +
+    (c && place <= 3 ? XP.kartPodium : 0) +
+    (c && place === 1 ? XP.kartWin : 0) +
+    (record || lapRecord ? XP.kartRecord : 0) +
+    (parBeaten ? XP.parBeaten : 0) +
+    (challenge ? XP.challenge : 0);
+  const levels = addXp(s, xp);
+  return { place, prize, xp, seconds, bestLap, lapRecord, record, parBeaten, challenge, levels };
+}
+
+/* ---------- Cups as series: four races, points by place ---------- */
+
+export interface SeriesResult {
+  /** Points after this race (by grid index; you are the last) */
+  points: number[];
+  /** Everyone's overall place after this race (by grid index) */
+  places: number[];
+  /** Which race just finished (1-based) and how many there are */
+  race: number;
+  of: number;
+  /** The series is over: your overall place, the series prize and XP (0 if not over) */
+  done: boolean;
+  overall: number;
+  prize: number;
+  xp: number;
+  levels: number;
+}
+/** Start a cup's series (any series on the go is dropped) */
+export function startSeries(s: TycoonSave, cup: CupId) {
+  if (!CUPS[cup]) return false;
+  s.karts.series = { cup, race: 0, points: Array.from({ length: 8 }, () => 0) };
+  return true;
+}
+export const abandonSeries = (s: TycoonSave) => {
+  s.karts.series = null;
+};
+/** The next course of the series on the go (null when there's none) */
+export const seriesNext = (s: TycoonSave) => (s.karts.series ? CUPS[s.karts.series.cup].courses[s.karts.series.race] ?? null : null);
+/** Overall places from points (ties broken by grid index, you last among equals) */
+export const seriesPlaces = (points: number[]) => {
+  const order = points.map((p, i) => i).sort((a, b) => points[b] - points[a] || a - b);
+  const places = points.map(() => 0);
+  order.forEach((i, p) => (places[i] = p + 1));
+  return places;
+};
+/**
+ * A race of the series finished: `placesByKart` is each grid index's place in it (you last).
+ * Points go on; after the last race the overall standings pay a prize and a trophy.
+ */
+export function seriesRace(s: TycoonSave, placesByKart: number[]): SeriesResult | null {
+  const sr = s.karts.series;
+  if (!sr) return null;
+  const cup = CUPS[sr.cup];
+  for (let i = 0; i < sr.points.length; i++) sr.points[i] += SERIES_POINTS[Math.max(1, Math.min(8, placesByKart[i] ?? 8)) - 1] ?? 0;
+  sr.race += 1;
+  const places = seriesPlaces(sr.points);
+  const you = sr.points.length - 1;
+  const overall = places[you];
+  const done = sr.race >= cup.courses.length;
+  let prize = 0;
+  let xp = 0;
+  let levels = 0;
+  if (done) {
+    prize = SERIES_PRIZES[sr.cup][overall - 1] ?? 0;
+    if (prize > 0) {
+      s.dorras += prize;
+      book(s, 'karting', prize);
+      count(s, 'earned', prize);
+    }
+    const best = s.karts.trophies[sr.cup];
+    if (!best || overall < best) s.karts.trophies[sr.cup] = overall;
+    xp = overall === 1 ? XP.seriesWin : overall <= 3 ? XP.seriesPodium : 0;
+    levels = addXp(s, xp);
+    s.karts.series = null;
+  }
+  return { points: [...sr.points], places, race: sr.race, of: cup.courses.length, done, overall, prize, xp, levels };
+}
 
 /* ---------- The Armoury: guns and their mods ---------- */
 
@@ -1510,6 +1780,51 @@ function cleanGame(s: TycoonSave, o: Record<string, unknown>, now: number) {
     s.plots[id] = { design, paid: Math.round(num(r.paid, 0, 1e9, PLOT_DORRAS)), at: num(r.at, 0, now, now) };
   }
   for (const [id, t] of Object.entries(obj(o.races))) if (/^[a-z0-9-]{1,32}$/.test(id) && typeof t === 'number' && Number.isFinite(t) && t > 0) s.races[id] = Math.round(t * 100) / 100;
+  // The kart park (v6)
+  const kt = obj(o.karts);
+  s.karts.owned = [...new Set((Array.isArray(kt.owned) ? kt.owned : []).filter((id): id is KartId => PLAYER_KARTS.includes(id as KartId) && !STARTER_KARTS.includes(id as KartId)))];
+  for (const id of PLAYER_KARTS) {
+    const m = obj(obj(kt.mods)[id]);
+    const mods = { ...NO_KART_MODS };
+    for (const k of KART_MOD_IDS) mods[k] = Math.round(num(m[k], 0, MOD_LEVELS, 0));
+    if (KART_MOD_IDS.some((k) => mods[k] > 0) && (STARTER_KARTS.includes(id) || s.karts.owned.includes(id))) s.karts.mods[id] = mods;
+  }
+  const pick = cleanKart({ model: kt.model, paint: kt.paint });
+  s.karts.model = STARTER_KARTS.includes(pick.model) || s.karts.owned.includes(pick.model) ? pick.model : DEFAULT_KART.model;
+  s.karts.paint = pick.paint;
+  // Records and boards per course and class (v7; a v6 save's plain times are dropped)
+  const keyOk = (k: string) => /^[a-z0-9-]{1,32}:[a-z]{1,16}$/.test(k) && COURSE_IDS.includes(k.split(':')[0] as CourseId) && CLASS_IDS.includes(k.split(':')[1] as ClassId);
+  const cleanTime = (raw: unknown): KartTime | null => {
+    const r = obj(raw);
+    const lap = num(r.lap, 0, 36000, 0);
+    const run = num(r.run, 0, 36000, 0);
+    const kart = PLAYER_KARTS.find((k) => k === r.kart) ?? DEFAULT_KART.model;
+    if (lap <= 0 && run <= 0) return null;
+    return { lap: Math.round(lap * 100) / 100, run: Math.round(run * 100) / 100, kart, at: num(r.at, 0, now, now) };
+  };
+  for (const [k, raw] of Object.entries(obj(kt.records))) {
+    const t = keyOk(k) ? cleanTime(raw) : null;
+    if (t) s.karts.records[k] = t;
+  }
+  for (const [k, raw] of Object.entries(obj(kt.boards))) {
+    if (!keyOk(k) || !Array.isArray(raw)) continue;
+    const list = raw.map(cleanTime).filter((t): t is KartTime => !!t && t.run > 0).sort((a, b) => a.run - b.run).slice(0, LEADERBOARD_SIZE);
+    if (list.length) s.karts.boards[k] = list;
+  }
+  const sr = obj(kt.series);
+  const cupId = (Object.keys(CUPS) as CupId[]).find((c) => c === sr.cup);
+  if (cupId) {
+    const race = Math.round(num(sr.race, 0, CUPS[cupId].courses.length, 0));
+    const points = Array.from({ length: 8 }, (_, i) => Math.round(num((Array.isArray(sr.points) ? sr.points : [])[i], 0, 1e4, 0)));
+    if (race < CUPS[cupId].courses.length) s.karts.series = { cup: cupId, race, points };
+  }
+  for (const c of Object.keys(CUPS) as CupId[]) {
+    const t = Math.round(num(obj(kt.trophies)[c], 0, 8, 0));
+    if (t >= 1) s.karts.trophies[c] = t;
+  }
+  const ch = obj(kt.challenge);
+  if (typeof ch.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(ch.day)) s.karts.challenge = { day: ch.day, lap: Math.round(num(ch.lap, 0, 36000, 0) * 100) / 100 };
+  s.karts.parBeaten = [...new Set((Array.isArray(kt.parBeaten) ? kt.parBeaten : []).filter((k): k is string => typeof k === 'string' && keyOk(k)))];
   const m = obj(o.missions);
   const slug = (v: unknown): v is string => typeof v === 'string' && /^[a-z0-9-]{1,40}$/.test(v);
   s.missions.done = [...new Set((Array.isArray(m.done) ? m.done : []).filter(slug))];

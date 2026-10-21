@@ -23,7 +23,8 @@ import { CORE_ROADS, DOWNTOWN, LANE, RIVER, WALK_W, design, seat } from '../scri
 import { PLAN } from '../scripts/city3d/streetplan';
 import { ALLEYS, DIAGONALS, INFILL, LANES, NAMED_SHOPS, PARKS, SHOP_H, SIGNS, SQUARE, WATER_TOWER, bodyOf, stoopOf, type Infill, type InfillType, type SignId } from '../scripts/city3d/downtown';
 
-export type SpotId = 'emporium' | 'shop' | 'workshop' | 'vault' | 'signal' | 'telegram' | 'plan' | 'apartments';
+/** The places with a pin (the kart park exists in 3D only: the 2D map draws nothing for it) */
+export type SpotId = 'emporium' | 'shop' | 'workshop' | 'vault' | 'signal' | 'telegram' | 'plan' | 'apartments' | 'karts';
 
 export interface Spot {
   href: string;

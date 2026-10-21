@@ -19,6 +19,7 @@ import { BLOCKS, BS, CENTER_XZ, CITY_EXT, CORE_ROADS, DOWNTOWN, EW_ROADS, EXT, E
 import { PLAN, offsetLine, type Pt } from './streetplan';
 import { DIAGONALS, DIAGONAL_LAMPS } from './downtown';
 import { BENDS, BEND_REACH, KERB_RUNS, OUTSIDE, PADS, PARKWAY, PROMENADE, SOUTHSIDE, inTown } from './outer';
+import { KART_PARK, SLIP_ROAD } from './kartpark';
 
 export { BLOCKS, BS, CORE_ROADS, EW_ROADS, EXT, NS_ROADS, RIVER, SOUTH_ROAD, WALK_W, type Road };
 /** District blocks around the core: one large plot each (src/data/plots.ts). */
@@ -466,6 +467,9 @@ function scatterIn(count: number, xr: [number, number], zr: [number, number], sk
     const x = xr[0] + rand() * (xr[1] - xr[0]);
     const z = zr[0] + rand() * (zr[1] - zr[0]);
     if (skip && x > skip[0] && x < skip[1] && z > skip[2] && z < skip[3]) continue;
+    // The kart park and its slip road (kartpark.ts)
+    if (x > KART_PARK.x0 - 3 && x < KART_PARK.x1 + 3 && z > KART_PARK.z0 - 3 && z < KART_PARK.z1 + 3) continue;
+    if (Math.abs(x - SLIP_ROAD.x) < SLIP_ROAD.half + 2 && z > SLIP_ROAD.z0 - 1 && z < SLIP_ROAD.z1 + 1) continue;
     // Clear of the town (inside the bends, the river and its banks) and of the bends themselves
     if (inTown([x, z], 1.2)) continue;
     if (EW_ROADS.some((r) => Math.abs(z - r.c) < r.half + 0.8) || NS_ROADS.some((r) => Math.abs(x - r.c) < r.half + 0.8)) continue;

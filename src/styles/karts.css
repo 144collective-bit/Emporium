@@ -1,0 +1,1933 @@
+/* ---------- The kart park (walk mode, kart-ui.ts) ----------
+   The hut's menu is built on the gun store's .shop panel (global.css) with the garage's deal,
+   mod and paint rows (garage.css): wide screens put it on the right so the kart on show in the
+   pits stays in view, phones keep the shop's bottom sheet. Its head and tabs stay put and the
+   body scrolls (the Race tab is long: three cups as series, the time trial's six courses, the
+   daily challenge). The race HUD sits under the header in three glass blocks (the place, or a
+   time trial's gap to the ghost, over the drift meter and the tags left; the lap with the class
+   and the series' race, the clock and the last / best lap centre; the item slot and Quit right),
+   clear of the stick, the pedals and the Drift / Item buttons at the bottom. The countdown
+   reuses the street races' digits (.race-count) and the results card the races' card
+   (.race-result) with the laps, the standings and a series' points table under it. Nothing
+   moves under reduced motion. */
+
+/* ---------- The hut menu ---------- */
+/* A column (head, tabs, body, foot) so the body can shrink to the panel's max-height and scroll */
+.karts {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px 0;
+  overflow: hidden;
+}
+.karts .shop-head,
+.karts-tabs,
+.karts .shop-foot {
+  flex: none;
+}
+@media (min-width: 641px) {
+  .karts {
+    top: calc(var(--head-h) + 12px);
+    right: 16px;
+    left: auto;
+    width: min(460px, 48%);
+    transform: none;
+    animation-name: garage-in;
+  }
+}
+.city.is-karts .walk-hint,
+.city.is-karts .walk-stick,
+.city.is-karts .walk-run,
+.city.is-karts .walk-jump,
+.city.is-karts .walk-crosshair,
+.city.is-karts .combat-hud,
+.city.is-karts .city-pins {
+  display: none;
+}
+.karts .shop-score {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.karts .shop-score .dorra {
+  margin: 0 0 0 2px;
+}
+.karts .shop-score b {
+  margin: 0;
+}
+.karts-dorras {
+  margin-left: auto;
+}
+.karts-dorras + .shop-score {
+  margin-left: 0;
+}
+.karts-tabs {
+  grid-area: tabs;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.karts-tabs button {
+  justify-content: center;
+  padding: 7px 4px;
+}
+.karts-body {
+  grid-area: body;
+  flex: 1 1 auto;
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-width: 0;
+  min-height: 0;
+  padding-right: 2px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+/* The shop's and the races' pieces are reused inside the body: their areas belong to the outer grids */
+.karts-body .shop-list,
+.karts-body .shop-detail,
+.karts-body .race-blurb,
+.karts-body .race-meta,
+.karts-body .race-note {
+  grid-area: auto;
+}
+
+/* Race: a row per cup, then the time trial */
+.kart-cups {
+  display: grid;
+  gap: 8px;
+}
+.kart-cup {
+  display: grid;
+  gap: 5px;
+  padding: 10px 12px;
+  border: 1px solid #ffffff14;
+  border-radius: 10px;
+  background: #ffffff08;
+}
+.kart-cup.is-locked {
+  opacity: 0.6;
+}
+.kart-cup-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+.kart-cup .lv-tag {
+  padding: 2px 7px;
+  border: 1px solid #ffffff33;
+  border-radius: 5px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+.kart-cup.is-locked .lv-tag {
+  color: #ff6ad5;
+  border-color: #ff6ad566;
+}
+.kart-prizes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 6px;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: #fff;
+}
+.kart-prizes > span:first-child,
+.kart-prizes em {
+  font-style: normal;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+/* A place and its prize stay together when the line wraps */
+.kart-prize {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 4px;
+  white-space: nowrap;
+}
+.kart-prizes .dorra {
+  margin-right: 2px;
+  width: 11px;
+  height: 11px;
+}
+.kart-courses {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 2px;
+}
+.kart-go {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid #0000;
+  border-radius: 999px;
+  background:
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 0 22px -8px #ff2fb9;
+}
+.kart-go span {
+  max-width: 100%;
+  line-height: 1.25;
+}
+.kart-go small {
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  font-variant-numeric: tabular-nums;
+  color: var(--p-cyan);
+}
+.kart-go:disabled {
+  opacity: 0.55;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+.karts .race-note b {
+  font-weight: 600;
+  color: #fff;
+}
+.kart-go-sm {
+  align-self: center;
+  padding: 8px 14px;
+}
+/* A section of the Race tab (the cups, the time trial, today's challenge) */
+.kart-sect {
+  display: grid;
+  gap: 8px;
+}
+.kart-sect + .kart-sect {
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid #ffffff14;
+}
+/* The engine class: a small tag in the class's colour (Street white, Sport cyan, Neon pink) */
+.kart-cls-tag {
+  display: inline-block;
+  padding: 2px 7px;
+  border: 1px solid #ffffff33;
+  border-radius: 5px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #fff;
+}
+.kart-cls-tag.is-sport {
+  border-color: #00eaff66;
+  color: var(--p-cyan);
+}
+.kart-cls-tag.is-neon {
+  border-color: #ff6ad566;
+  color: #ff6ad5;
+}
+/* "rev" after a course run the other way round */
+.kart-rev {
+  margin-left: 5px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: #ffffff14;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  vertical-align: 2px;
+  color: var(--muted);
+}
+/* A series' four courses in order: the ones run ticked, the next one lit */
+.kart-series-courses {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: race;
+}
+.kart-series-courses li {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+  padding: 5px 7px 5px 9px;
+  border: 1px solid #ffffff10;
+  border-radius: 7px;
+  background: #ffffff06;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.2;
+  color: var(--text-2);
+  counter-increment: race;
+}
+.kart-series-courses li::before {
+  content: counter(race);
+  font-size: 8.5px;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+.kart-series-courses li span {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #fff;
+}
+.kart-series-courses li .kart-rev {
+  margin-left: 3px;
+  padding: 0 3px;
+  vertical-align: 1px;
+}
+.kart-series-courses li small {
+  font-size: 8.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.kart-series-courses li.is-done {
+  opacity: 0.55;
+}
+.kart-series-courses li.is-done::before {
+  content: "\2713";
+  color: #2bff88;
+}
+.kart-series-courses li.is-next {
+  border-color: #0000;
+  background:
+    var(--pulse-wash) padding-box,
+    linear-gradient(#14102a, #14102a) padding-box,
+    var(--pulse) border-box;
+}
+.kart-series-courses li.is-next::before {
+  color: var(--p-cyan);
+}
+/* The cup's button row: Start series / Continue (with Drop), and your trophy */
+.kart-cup-act {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin-top: 2px;
+}
+.kart-cup-act .kart-go {
+  padding: 8px 16px;
+}
+.kart-drop {
+  padding: 7px 10px;
+  border: 1px solid #ffffff22;
+  border-radius: 999px;
+  background: none;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.kart-drop:hover {
+  color: #ff6ad5;
+  border-color: #ff6ad566;
+}
+.kart-trophy {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #ffd36b;
+}
+.kart-trophy svg {
+  width: 15px;
+  height: 15px;
+}
+.kart-trophy.is-2 {
+  color: #d8d6e6;
+}
+.kart-trophy.is-3 {
+  color: #e3a06b;
+}
+.kart-trophies {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 0;
+}
+.kart-trophies .kart-trophy {
+  margin: 0;
+}
+/* The class (and the board's course) pickers: the city's pills, a locked class saying its level */
+.kart-seg {
+  gap: 4px;
+}
+.kart-seg .seg-label {
+  width: auto;
+  margin-right: 4px;
+}
+.kart-seg button {
+  gap: 5px;
+  padding: 5px 9px;
+  font-size: 10px;
+}
+.kart-seg button small {
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  color: #ff6ad5;
+}
+.kart-seg button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.kart-seg button .kart-rev {
+  margin-left: 0;
+  vertical-align: 0;
+}
+/* A course of the time trial: its name, blurb and your numbers, Start on the right */
+.kart-course-list {
+  display: grid;
+  gap: 6px;
+}
+.kart-course {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 8px 10px;
+  border: 1px solid #ffffff14;
+  border-radius: 10px;
+  background: #ffffff08;
+}
+.kart-course-info {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.kart-course-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+  color: #fff;
+}
+.kart-course-name .kart-rev {
+  margin-left: 0;
+  vertical-align: 0;
+}
+.kart-sc-tag {
+  padding: 2px 6px;
+  border: 1px solid #ff6ad566;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #ff6ad5;
+}
+.kart-course-blurb {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--text-2);
+}
+.kart-course-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.kart-course-meta b {
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+}
+.kart-course-meta .kart-prize {
+  margin: 0;
+  font-size: 10.5px;
+  color: #fff;
+}
+.kart-course-meta .kart-prize em {
+  font-style: normal;
+  font-size: 9px;
+  color: var(--muted);
+}
+.kart-course-meta .dorra {
+  width: 11px;
+  height: 11px;
+}
+.kart-course .shop-note {
+  margin: 0;
+}
+/* Today's challenge, done: the row dims and says the lap */
+.kart-challenge.is-done .kart-course {
+  opacity: 0.75;
+}
+.kart-done {
+  padding: 6px 12px;
+  border: 1px solid #2bff8866;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: #2bff88;
+}
+
+/* Karts: four cards, the picked one's details */
+.kart-list {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 5px;
+}
+.kart-card {
+  padding: 7px 3px 6px;
+}
+.kart-card svg {
+  height: 30px;
+  max-width: 76px;
+  fill: none;
+  stroke: none;
+}
+.kart-card .kart-body {
+  fill: var(--paint, #e219e5);
+  stroke: #05050a;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+.kart-card .kart-hoop,
+.kart-card .kart-pipe,
+.kart-card .kart-plate,
+.kart-card .kart-visor {
+  fill: none;
+  stroke: #05050a;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+.kart-card .kart-helmet {
+  fill: #fff;
+  stroke: #05050a;
+  stroke-width: 1.2;
+}
+.kart-card .kart-rivet {
+  fill: #05050a;
+}
+.kart-card .kart-wheel {
+  fill: #14121f;
+  stroke: #05050a;
+  stroke-width: 1.2;
+}
+.kart-card .kart-rim {
+  fill: #9a96b8;
+}
+.kart-card.is-locked .kart-body {
+  fill: #3a3846;
+}
+.kart-card.is-locked .kart-helmet {
+  fill: #8b889c;
+}
+.kart-card b {
+  font-size: 12px;
+}
+.kart-card small {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  max-width: 100%;
+  font-size: 8.5px;
+  line-height: 1.1;
+}
+.kart-price {
+  display: inline-flex;
+  align-items: center;
+}
+.kart-card small .dorra {
+  width: 9px;
+  height: 9px;
+  margin-right: 1px;
+}
+.kart-card.is-locked small {
+  color: var(--muted);
+}
+.kart-card.is-locked small::before {
+  content: none;
+}
+.karts .lv-tag {
+  display: inline-block;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: #ffd36b22;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #ffd36b;
+}
+.kart-stats {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.kart-stats dd {
+  position: relative;
+}
+.kart-pick {
+  margin: 0 0 4px;
+}
+.garage-tune-head .garage-plus {
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+/* Boards: the fastest lap and the par ghost for the picked course and class, your top ten, the trophies and the counters */
+.kart-board-head {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.kart-board-card {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid #ffffff14;
+  border-radius: 9px;
+  background: #ffffff08;
+}
+.kart-board-card dt {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.kart-board-card dd {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+}
+.kart-board-card dd .race-none {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 400;
+}
+.kart-board-card small {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.kart-board-card.is-beaten {
+  border-color: #2bff8844;
+}
+.kart-board-card.is-beaten small {
+  color: #2bff88;
+}
+.kart-board-title {
+  margin: 4px 0 -4px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--p-cyan);
+}
+.kart-board {
+  display: grid;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.kart-board li {
+  display: grid;
+  grid-template-columns: 1.8em minmax(0, 1fr) auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border: 1px solid #ffffff10;
+  border-radius: 8px;
+  background: #ffffff06;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-2);
+}
+.kart-board li.is-top {
+  border-color: #0000;
+  background:
+    var(--pulse-wash) padding-box,
+    linear-gradient(#14102a, #14102a) padding-box,
+    var(--pulse) border-box;
+  color: #fff;
+}
+.kart-board b {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 900;
+  color: #fff;
+}
+.kart-board-run {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--p-cyan);
+}
+.kart-board small {
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--muted);
+}
+.kart-board-kart {
+  overflow: hidden;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.kart-board-date {
+  font-size: 9px;
+  white-space: nowrap;
+  color: var(--muted);
+}
+.kart-board-empty {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px dashed #ffffff1a;
+  border-radius: 9px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+.kart-board-empty span {
+  font-family: var(--font-body);
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+/* The counters (the Boards tab and the City-view panel) */
+.kart-records {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 10px;
+  margin: 2px 0;
+}
+.kart-records > div {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid #ffffff14;
+  border-radius: 9px;
+  background: #ffffff08;
+}
+.kart-records dd {
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+.kart-records .race-none {
+  font-size: 11px;
+}
+.kart-record-wide {
+  grid-column: 1 / -1;
+}
+.kart-records .kart-trophies {
+  font-size: 10px;
+}
+.kart-records-head {
+  margin: 10px 0 6px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--p-cyan);
+}
+
+/* ---------- The race HUD: three glass blocks under the header ---------- */
+.kart-hud {
+  position: absolute;
+  top: calc(var(--head-h) + 12px);
+  right: 16px;
+  left: 16px;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  color: #fff;
+  pointer-events: none;
+  animation: kart-hud-in 0.3s var(--ease);
+}
+.kart-hud[hidden] {
+  display: none;
+}
+@keyframes kart-hud-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+.kart-hud-left,
+.kart-hud-mid,
+.kart-hud-right {
+  display: grid;
+  gap: 4px;
+  padding: 7px 12px 8px;
+  border: 1px solid #0000;
+  border-radius: 14px;
+  background:
+    linear-gradient(#0b0a12e6, #0b0a12e6) padding-box,
+    var(--pulse) border-box;
+  box-shadow: 0 0 30px -10px #00eaffaa;
+}
+.kart-hud-left {
+  justify-self: start;
+  justify-items: start;
+}
+.kart-hud-mid {
+  justify-items: center;
+  min-width: 118px;
+}
+.kart-hud-right {
+  justify-self: end;
+  justify-items: center;
+  pointer-events: auto;
+}
+/* The place: a big number, its ordinal and "of 8" (a time trial has none) */
+.kart-place {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  margin: 0;
+  line-height: 1;
+}
+.kart-place b {
+  font-family: var(--font-display);
+  font-size: 40px;
+  font-weight: 900;
+  line-height: 0.9;
+  font-variant-numeric: tabular-nums;
+  background: var(--pulse-text);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 10px #ff2fb966);
+}
+.kart-place small {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #fff;
+}
+.kart-of {
+  margin-left: 6px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.kart-hud.is-trial .kart-place {
+  display: none;
+}
+/* A time trial: the gap to the ghost where the place would be (pink behind, cyan ahead) */
+.kart-gap {
+  margin: 0;
+  padding: 3px 9px;
+  border: 1px solid #ff6ad566;
+  border-radius: 999px;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: #ff6ad5;
+  text-shadow: 0 0 10px #ff2fb966;
+}
+.kart-gap[hidden] {
+  display: none;
+}
+.kart-gap.is-ahead {
+  border-color: #00eaff66;
+  color: var(--p-cyan);
+  text-shadow: 0 0 10px #00eaff66;
+}
+/* The drift meter: three segments, white, cyan then pink */
+.kart-meter {
+  display: flex;
+  gap: 3px;
+  margin-top: 2px;
+}
+.kart-meter i {
+  width: 24px;
+  height: 6px;
+  border: 1px solid #ffffff2a;
+  border-radius: 3px;
+  background: #ffffff14;
+}
+.kart-meter i:nth-child(1).on {
+  border-color: #fff;
+  background: #fff;
+  box-shadow: 0 0 8px #fffc;
+}
+.kart-meter i:nth-child(2).on {
+  border-color: var(--p-cyan);
+  background: var(--p-cyan);
+  box-shadow: 0 0 8px var(--p-cyan);
+}
+.kart-meter i:nth-child(3).on {
+  border-color: #ff6ad5;
+  background: #ff6ad5;
+  box-shadow: 0 0 8px #ff6ad5;
+}
+.kart-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0;
+  min-height: 0;
+}
+.kart-tags:empty {
+  display: none;
+}
+.kart-tag {
+  padding: 2px 7px;
+  border: 1px solid #2bff8866;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #2bff88;
+  animation: kart-tag-in 0.2s var(--ease);
+}
+.kart-tag[hidden] {
+  display: none;
+}
+.kart-tag.is-shield {
+  border-color: #00eaff66;
+  color: var(--p-cyan);
+}
+/* The surface under the kart when it's not dry (wet, dirt, a bank, the tunnel), and the shortcut */
+.kart-tag.is-surface {
+  border-color: #ffd36b66;
+  color: #ffd36b;
+}
+.kart-tag.is-surface[data-surface="wet"] {
+  border-color: #3f98ff88;
+  color: #7fc2ff;
+}
+.kart-tag.is-surface[data-surface="tunnel"] {
+  border-color: #a36bff88;
+  color: #c9a8ff;
+}
+.kart-tag.is-shortcut {
+  border-color: #ff6ad566;
+  color: #ff6ad5;
+}
+@keyframes kart-tag-in {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+}
+/* The lap with the class and the series' race, the clock, the last and best lap */
+.kart-lap-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 3px 6px;
+  margin: 0;
+}
+.kart-lap {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--p-cyan);
+  white-space: nowrap;
+}
+.kart-cls,
+.kart-series-tag {
+  padding: 1px 5px;
+  border: 1px solid #ffffff33;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: #fff;
+}
+.kart-cls[data-cls="sport"] {
+  border-color: #00eaff66;
+  color: var(--p-cyan);
+}
+.kart-cls[data-cls="neon"] {
+  border-color: #ff6ad566;
+  color: #ff6ad5;
+}
+.kart-series-tag {
+  border-color: #ffd36b66;
+  color: #ffd36b;
+}
+.kart-series-tag[hidden] {
+  display: none;
+}
+.kart-laps {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+.kart-laps span + span::before {
+  content: " \00b7 ";
+}
+.kart-laps[hidden] {
+  display: none;
+}
+.kart-clock {
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: #fff;
+}
+.kart-hud.is-counting .kart-clock {
+  color: var(--muted);
+}
+/* The item slot: a rounded square with the item's icon, the icons spinning while the roulette runs */
+.kart-slot {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  width: 68px;
+}
+.kart-slot-icon,
+.kart-slot-strip,
+.kart-slot-q {
+  box-sizing: border-box;
+  width: 46px;
+  height: 46px;
+  border: 1px solid #ffffff30;
+  border-radius: 12px;
+  background: #ffffff0d;
+  color: #fff;
+}
+.kart-slot-icon {
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.kart-slot-icon svg,
+.kart-slot-strip svg {
+  width: 30px;
+  height: 30px;
+}
+.kart-slot:not(.is-empty):not(.is-spinning) .kart-slot-icon {
+  border-color: #0000;
+  background:
+    linear-gradient(#14102a, #14102a) padding-box,
+    var(--pulse) border-box;
+  box-shadow: 0 0 16px -4px #00eaff99;
+  color: var(--p-cyan);
+}
+.kart-slot-strip,
+.kart-slot-q {
+  position: absolute;
+  top: 0;
+  left: 11px;
+  display: none;
+}
+.kart-slot-strip {
+  overflow: hidden;
+}
+.kart-slot-strip i {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 44px;
+}
+.kart-slot.is-spinning .kart-slot-strip {
+  display: block;
+}
+.kart-slot.is-spinning .kart-slot-strip i {
+  animation: kart-roulette 0.72s steps(6) infinite;
+}
+@keyframes kart-roulette {
+  to {
+    transform: translateY(-264px);
+  }
+}
+.kart-slot-q {
+  display: none;
+  place-items: center;
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 900;
+  color: var(--p-cyan);
+}
+.kart-slot-name {
+  max-width: 68px;
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  line-height: 1.15;
+  letter-spacing: 0.06em;
+  text-align: center;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.kart-slot:not(.is-empty):not(.is-spinning) .kart-slot-name {
+  color: #fff;
+}
+.kart-quit {
+  padding: 6px 12px;
+}
+/* The pops: a short line over the track for a moment */
+.kart-pops {
+  position: absolute;
+  top: calc(var(--head-h) + 126px);
+  left: 50%;
+  z-index: 6;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  max-width: calc(100% - 32px);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.kart-pop {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: center;
+  white-space: nowrap;
+  color: #fff;
+  filter: drop-shadow(0 2px 0 #05050a) drop-shadow(0 0 12px #00eaff88);
+  animation: kart-pop 1.4s ease-out forwards;
+}
+.kart-pop.is-good {
+  background: var(--pulse-text);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 2px 0 #05050a) drop-shadow(0 0 12px #ff2fb988);
+}
+.kart-pop.is-bad {
+  color: #ff6ad5;
+  filter: drop-shadow(0 2px 0 #05050a) drop-shadow(0 0 12px #ff2fb988);
+}
+@keyframes kart-pop {
+  0% { opacity: 0; transform: scale(1.4); }
+  12% { opacity: 1; transform: scale(0.96); }
+  22% { transform: scale(1); }
+  78% { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: translateY(-10px); }
+}
+
+/* ---------- The results card: the races' card with the laps, the standings and the series under it ----------
+   A column whose body scrolls, so Done (and Next race) stay in reach however long the standings run */
+.kart-result {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: min(460px, calc(100% - 32px));
+  overflow: hidden;
+}
+.kart-result .shop-head,
+.kart-result-actions {
+  flex: none;
+}
+.kart-result .race-result-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding-right: 2px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+/* One centred column (the races' meta row names an area the body doesn't have) */
+.kart-result .race-result-body {
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+.kart-result .race-result-name,
+.kart-result .race-result-tags,
+.kart-result .race-meta {
+  grid-area: auto;
+}
+.kart-standings {
+  display: grid;
+  gap: 3px;
+  width: 100%;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+}
+.kart-standings li {
+  display: grid;
+  grid-template-columns: 2.6em minmax(0, 1.1fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  border: 1px solid #ffffff10;
+  border-radius: 8px;
+  background: #ffffff06;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-2);
+}
+.kart-standings li.is-you {
+  border-color: #0000;
+  background:
+    var(--pulse-wash) padding-box,
+    linear-gradient(#14102a, #14102a) padding-box,
+    var(--pulse) border-box;
+  color: #fff;
+}
+.kart-standings b {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 900;
+  color: #fff;
+}
+.kart-standing-name {
+  overflow: hidden;
+  font-weight: 700;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.kart-standings small {
+  justify-self: end;
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--muted);
+}
+.kart-standing-time {
+  font-variant-numeric: tabular-nums;
+  color: var(--p-cyan);
+}
+/* Your laps this race, the best lit, the par ghost's beside them */
+.kart-lap-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.kart-lap-list li {
+  display: grid;
+  gap: 1px;
+  min-width: 64px;
+  padding: 4px 8px;
+  border: 1px solid #ffffff14;
+  border-radius: 8px;
+  background: #ffffff08;
+  font-family: var(--font-mono);
+}
+.kart-lap-list small {
+  font-size: 8.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.kart-lap-list b {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+}
+.kart-lap-list li.is-best {
+  border-color: #0000;
+  background:
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
+}
+.kart-lap-list li.is-best b {
+  color: var(--p-cyan);
+}
+.kart-lap-list li.is-par {
+  border-style: dashed;
+  background: none;
+}
+.kart-lap-list li.is-par b {
+  color: var(--muted);
+}
+.race-tag.is-par {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  border-color: #ffd36b66;
+  color: #ffd36b;
+}
+.race-tag.is-par .dorra {
+  width: 10px;
+  height: 10px;
+}
+.race-tag.is-par b {
+  font-weight: 700;
+}
+/* A series: the points table after this race; after the last one the overall place and the prize */
+.kart-series {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  margin-top: 6px;
+  padding-top: 10px;
+  border-top: 1px solid #ffffff14;
+}
+.kart-series-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px 10px;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.kart-series-head b {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 0;
+  color: #fff;
+}
+.kart-series-final {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px 10px;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+  color: #fff;
+}
+.kart-series-final.is-trophy {
+  background: var(--pulse-text);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.kart-series-final svg {
+  width: 26px;
+  height: 26px;
+  color: #ffd36b;
+}
+.kart-series-prize {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border: 1px solid #0000;
+  border-radius: 999px;
+  background:
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: #fff;
+  -webkit-text-fill-color: #fff;
+}
+.kart-series-note {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--text-2);
+}
+.kart-points {
+  display: grid;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+}
+.kart-points li {
+  display: grid;
+  grid-template-columns: 2.6em minmax(0, 1.1fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border: 1px solid #ffffff10;
+  border-radius: 8px;
+  background: #ffffff06;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-2);
+}
+.kart-points li.is-you {
+  border-color: #0000;
+  background:
+    var(--pulse-wash) padding-box,
+    linear-gradient(#14102a, #14102a) padding-box,
+    var(--pulse) border-box;
+  color: #fff;
+}
+.kart-points b {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 900;
+  color: #fff;
+}
+.kart-points small {
+  justify-self: end;
+  overflow: hidden;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--muted);
+}
+.kart-points-n {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: #ffd36b;
+}
+/* Done, and in a series Next race beside it */
+.kart-result-actions {
+  grid-area: take;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+.kart-result-actions .shop-take {
+  grid-area: auto;
+  flex: 1 1 140px;
+}
+.kart-result-actions .shop-take[hidden] {
+  display: none;
+}
+.kart-next {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  box-shadow: 0 0 24px -6px #00eaff;
+}
+.kart-next small {
+  font-size: 9px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  color: var(--p-cyan);
+}
+
+/* ---------- The City-view panel ---------- */
+.kart-walkin {
+  cursor: pointer;
+}
+.kart-panel-records {
+  margin-top: 14px;
+}
+.kart-panel-records .kart-records {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.kart-panel-records:empty {
+  display: none;
+}
+/* The pin floats over the hut once the 3D site is up (index.ts places it); until then it stays out of sight */
+.city-pin[data-pin="karts"]:not([style]) {
+  visibility: hidden;
+}
+
+/* ---------- In the kart: the walk and combat HUD step aside ---------- */
+.kart-hint,
+.kart-btn {
+  display: none;
+}
+.city.is-karting .walk-hint:not(.kart-hint),
+.city.is-karting .walk-look,
+.city.is-karting .walk-prompt,
+.city.is-karting .walk-run,
+.city.is-karting .walk-jump,
+.city.is-karting .walk-fire,
+.city.is-karting .walk-aim,
+.city.is-karting .walk-reload,
+.city.is-karting .walk-swap,
+.city.is-karting .walk-crosshair,
+.city.is-karting .combat-hud,
+.city.is-karting .combat-cross,
+.city.is-karting .drive-hint,
+.city.is-karting .drive-hud,
+.city.is-karting .city-pins,
+.city.is-karting .mission-tracker {
+  display: none;
+}
+@media (pointer: fine) {
+  .city.is-karting .kart-hint {
+    display: block;
+  }
+}
+/* Touch screens: the stick steers bottom-left, Gas and Brake are the driving layout's pedals
+   bottom-right, with Item above Gas and Drift above Brake, all clear of the phone's safe areas */
+@media (pointer: coarse) {
+  .city.is-karting .walk-stick {
+    display: grid;
+    left: max(18px, calc(env(safe-area-inset-left) + 12px));
+    bottom: max(28px, calc(env(safe-area-inset-bottom) + 16px));
+    width: 136px;
+    height: 136px;
+  }
+  .city.is-karting .walk-stick span {
+    width: 58px;
+    height: 58px;
+  }
+  .city.is-karting .drive-pedal {
+    position: absolute;
+    bottom: max(28px, calc(env(safe-area-inset-bottom) + 16px));
+    z-index: 4;
+    display: grid;
+    place-items: center;
+    align-content: center;
+    gap: 4px;
+    width: 78px;
+    border: 1px solid #0000;
+    border-radius: 22px;
+    background:
+      linear-gradient(#0b0a12e6, #0b0a12e6) padding-box,
+      var(--pulse) border-box;
+    color: #fff;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    touch-action: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  .city.is-karting .drive-pedal::before {
+    font-size: 16px;
+    line-height: 1;
+  }
+  .city.is-karting .drive-gas {
+    right: max(16px, calc(env(safe-area-inset-right) + 10px));
+    height: 124px;
+    font-size: 12px;
+    box-shadow: 0 0 26px -6px #2bff88;
+  }
+  .city.is-karting .drive-gas::before {
+    content: "\25B2";
+    color: #2bff88;
+  }
+  .city.is-karting .drive-brake {
+    right: max(106px, calc(env(safe-area-inset-right) + 100px));
+    height: 92px;
+    font-size: 10px;
+    box-shadow: 0 0 26px -8px #ff2fb9;
+  }
+  .city.is-karting .drive-brake::before {
+    content: "\25BC";
+    color: #ff6ad5;
+  }
+  .city.is-karting .kart-btn {
+    position: absolute;
+    z-index: 4;
+    display: grid;
+    place-items: center;
+    align-content: center;
+    gap: 2px;
+    width: 78px;
+    height: 62px;
+    padding: 0;
+    border: 1px solid #0000;
+    border-radius: 20px;
+    background:
+      linear-gradient(#0b0a12e6, #0b0a12e6) padding-box,
+      var(--pulse) border-box;
+    color: #fff;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    touch-action: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  /* Drift over Brake, Item over Gas (each pedal's height plus a gap) */
+  .city.is-karting .kart-drift {
+    right: max(106px, calc(env(safe-area-inset-right) + 100px));
+    bottom: max(128px, calc(env(safe-area-inset-bottom) + 116px));
+    box-shadow: 0 0 24px -8px #00eaff;
+  }
+  .city.is-karting .kart-item {
+    right: max(16px, calc(env(safe-area-inset-right) + 10px));
+    bottom: max(160px, calc(env(safe-area-inset-bottom) + 148px));
+    box-shadow: 0 0 24px -8px #ff2fb9;
+  }
+  .kart-item-icon {
+    display: grid;
+    place-items: center;
+    height: 26px;
+    color: var(--p-cyan);
+  }
+  .kart-item-icon:empty::before {
+    content: "·";
+    font-size: 22px;
+    color: var(--muted);
+  }
+  .kart-item-icon svg {
+    width: 26px;
+    height: 26px;
+  }
+  .kart-item small {
+    font-size: 8.5px;
+    letter-spacing: 0.1em;
+  }
+  .kart-btn:active {
+    transform: scale(0.95);
+  }
+  .kart-drift[aria-pressed="true"] {
+    background:
+      var(--pulse-wash) padding-box,
+      linear-gradient(#14102a, #14102a) padding-box,
+      var(--pulse) border-box;
+  }
+}
+/* Phones on their side: the stick, the pedals and the buttons sit a little smaller and lower */
+@media (pointer: coarse) and (max-height: 500px) {
+  .city.is-karting .walk-stick {
+    bottom: max(16px, calc(env(safe-area-inset-bottom) + 10px));
+    width: 118px;
+    height: 118px;
+  }
+  .city.is-karting .drive-pedal {
+    bottom: max(16px, calc(env(safe-area-inset-bottom) + 10px));
+  }
+  .city.is-karting .drive-gas {
+    height: 104px;
+  }
+  .city.is-karting .drive-brake {
+    height: 80px;
+  }
+  .city.is-karting .kart-btn {
+    height: 54px;
+  }
+  .city.is-karting .kart-drift {
+    bottom: max(104px, calc(env(safe-area-inset-bottom) + 98px));
+  }
+  .city.is-karting .kart-item {
+    bottom: max(128px, calc(env(safe-area-inset-bottom) + 122px));
+  }
+}
+/* Narrow phones: slimmer pedals and stick so nothing touches */
+@media (pointer: coarse) and (max-width: 360px) {
+  .city.is-karting .walk-stick {
+    left: 12px;
+    width: 120px;
+    height: 120px;
+  }
+  .city.is-karting .drive-pedal,
+  .city.is-karting .kart-btn {
+    width: 70px;
+  }
+  .city.is-karting .drive-gas,
+  .city.is-karting .kart-item {
+    right: 12px;
+  }
+  .city.is-karting .drive-brake,
+  .city.is-karting .kart-drift {
+    right: 92px;
+  }
+}
+
+/* ---------- Phones upright: the menu is the shop's bottom sheet ---------- */
+@media (max-width: 640px) {
+  .karts {
+    max-height: min(64vh, calc(100% - var(--head-h) - 16px));
+  }
+  .karts .shop-blurb,
+  .karts .garage-mod-info small {
+    display: none;
+  }
+  .kart-card svg {
+    height: 22px;
+  }
+  .kart-card b {
+    font-size: 10.5px;
+  }
+  .kart-card small {
+    font-size: 8px;
+  }
+  .kart-paints {
+    grid-template-columns: repeat(6, 28px);
+    gap: 6px 8px;
+  }
+  .kart-result {
+    width: auto;
+  }
+  .kart-standings li {
+    padding: 4px 8px;
+    font-size: 10px;
+  }
+  .kart-hud {
+    gap: 6px;
+  }
+  .kart-hud-left,
+  .kart-hud-mid,
+  .kart-hud-right {
+    padding: 6px 9px 7px;
+    border-radius: 12px;
+  }
+  .kart-place b {
+    font-size: 32px;
+  }
+  .kart-clock {
+    font-size: 24px;
+  }
+  .kart-hud-mid {
+    min-width: 96px;
+  }
+  .kart-pop {
+    font-size: 24px;
+  }
+  .kart-pops {
+    top: calc(var(--head-h) + 150px);
+  }
+}
+@media (max-width: 640px) and (max-height: 700px) {
+  .karts .shop-foot {
+    display: none;
+  }
+}
+/* Where the hut is narrow (phones, and tablets where it takes half the screen), its head puts the
+   Dorras and level pills on a second row under the title; phones on their side keep one row */
+@media (max-width: 400px), (max-width: 900px) and (min-height: 501px) {
+  .karts .shop-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "title close"
+      "pills pills";
+    gap: 8px 12px;
+  }
+  .karts .shop-title {
+    grid-area: title;
+    white-space: nowrap;
+  }
+  .karts .shop-close {
+    grid-area: close;
+  }
+  .karts-dorras {
+    grid-area: pills;
+    margin: 0;
+  }
+  .karts-dorras + .shop-score {
+    grid-area: pills;
+    justify-self: end;
+  }
+}
+/* Narrow phones: the HUD's labels go so the three blocks fit between the edges */
+@media (max-width: 400px) {
+  .kart-hud {
+    right: 10px;
+    left: 10px;
+    gap: 4px;
+  }
+  .kart-of,
+  .kart-slot-name {
+    display: none;
+  }
+  .kart-slot {
+    width: 46px;
+  }
+  .kart-slot-strip,
+  .kart-slot-q {
+    left: 0;
+  }
+  .kart-meter i {
+    width: 18px;
+  }
+  .kart-clock {
+    font-size: 22px;
+  }
+  .kart-hud-mid {
+    min-width: 0;
+    max-width: 118px;
+  }
+  .kart-laps {
+    display: grid;
+    justify-items: center;
+    font-size: 8.5px;
+  }
+  .kart-laps span + span::before {
+    content: none;
+  }
+  .kart-lap-row {
+    gap: 2px 4px;
+  }
+  .kart-cls,
+  .kart-series-tag {
+    padding: 1px 4px;
+    font-size: 8px;
+  }
+  .kart-gap {
+    font-size: 18px;
+  }
+  .kart-quit {
+    padding: 5px 8px;
+    font-size: 8.5px;
+  }
+}
+/* Phones on their side: a tight column on the right that scrolls, the HUD a touch lower-key */
+@media (max-height: 500px) {
+  .karts {
+    gap: 7px 0;
+    width: min(420px, 54%);
+  }
+  .karts .shop-title {
+    font-size: 19px;
+  }
+  .karts .shop-close {
+    width: 28px;
+    height: 28px;
+  }
+  .kart-cup {
+    gap: 4px;
+    padding: 7px 10px;
+  }
+  .kart-card {
+    padding: 5px 2px 4px;
+    gap: 1px;
+  }
+  .kart-card svg {
+    height: 18px;
+  }
+  .kart-card b {
+    font-size: 10px;
+    white-space: nowrap;
+  }
+  .kart-card small {
+    font-size: 8px;
+  }
+  .karts .garage-mod-info small {
+    display: none;
+  }
+  .karts .shop-name {
+    font-size: 17px;
+  }
+  .kart-stats {
+    gap: 4px 10px;
+  }
+  .karts .garage-mod {
+    padding: 3px 5px 3px 8px;
+  }
+  .karts .shop-take {
+    padding: 8px 14px;
+  }
+  .kart-records > div {
+    padding: 5px 8px;
+  }
+  .kart-result .race-result-body {
+    gap: 4px;
+  }
+  .kart-standings {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2px 6px;
+  }
+  .kart-standings li {
+    padding: 3px 8px;
+    font-size: 10px;
+  }
+  .kart-hud-left,
+  .kart-hud-mid,
+  .kart-hud-right {
+    padding: 5px 9px 6px;
+  }
+  .kart-place b {
+    font-size: 30px;
+  }
+  .kart-clock {
+    font-size: 22px;
+  }
+  .kart-pops {
+    top: calc(var(--head-h) + 98px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .karts,
+  .kart-hud,
+  .kart-tag,
+  .kart-pop {
+    animation: none;
+  }
+  .kart-pop {
+    opacity: 1;
+  }
+  /* No spinning icons: a question mark until the item lands */
+  .kart-slot.is-spinning .kart-slot-strip {
+    display: none;
+  }
+  .kart-slot.is-spinning .kart-slot-q {
+    display: grid;
+  }
+}
