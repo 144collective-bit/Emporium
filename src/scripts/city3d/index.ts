@@ -17,12 +17,10 @@ import { buildGarage } from './garage';
 import { WORLD_BOUNDS } from './layout';
 import { loadCar } from './garage-ui';
 import { createProfileUI } from './profile-ui';
-import { createMultiplayer } from './multiplayer';
 import { createSky, type TimeMode, type WeatherMode } from './sky';
 import { createSound } from './sound';
 import { createPlots, type Plot } from './plots';
 import { createPlotStore } from './store';
-import { createOnlineSwitch } from './online';
 import type { Account } from './account';
 import type { AccountHooks, AccountUI } from './account-ui';
 import { createBuilderUI } from './builder-ui';
@@ -338,9 +336,12 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     toast: (text, ms) => tycoon!.toast(text, ms),
     sfx: (kind, gain) => sound.sfx(kind, gain),
   };
-  // A game server adds the Online / Offline switch (multiplayer); plots are the city's own game either way
+  // A game server adds the Online / Offline switch (multiplayer); plots are the city's own game either way.
+  // Without one (the live site, multiplayer paused) none of the net code is loaded or even bundled:
+  // the flag is fixed at build time, so these imports fall out of the production bundle
   const server = import.meta.env.PUBLIC_GAME_SERVER as string | undefined;
-  const onlineSwitch = server ? createOnlineSwitch(root) : null;
+  const net = server ? await Promise.all([import('./multiplayer'), import('./online')]) : null;
+  const onlineSwitch = net ? net[1].createOnlineSwitch(root) : null;
   // Logging in with a wallet (account.ts): the player's online profile
   const account = wallet?.account ?? null;
   const canvas = renderer.domElement;
@@ -442,8 +443,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     low: tier === 'low',
   });
   const mp =
-    server && onlineSwitch
-      ? createMultiplayer({
+    server && onlineSwitch && net
+      ? net[0].createMultiplayer({
           url: server,
           root,
           scene,
