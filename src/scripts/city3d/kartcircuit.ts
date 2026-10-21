@@ -27,7 +27,7 @@
  * Reverse runs the same surface the other way: every corner flipped, the
  * flyover before the west loop.
  */
-import { F, KART_PARK, STEP, at, frame, heightAt, locate, sampleLine, toLocal, toWorld, type CPt, type Line, type Pt } from './kartpark';
+import { F, GATE, KART_PARK, KART_W, STEP, at, frame, heightAt, locate, sampleLine, toLocal, toWorld, type CPt, type Frame, type Line, type Pt } from './kartpark';
 
 /** The track's width and half width (six karts abreast) */
 export const TRACK_W = 5.6;
@@ -94,7 +94,7 @@ const PTS: CirPt[] = [
   P(72, 22, { h: 2 }),
   P(79, 17.5, { h: 0.8, tag: 'turn-6' }),
   P(86, 16, { f: F.tunnel }),
-  P(93, 16.2, { pad: true }),
+  P(93, 16.2, { pad: true, f: F.tunnel }),
   P(100, 16.6, { h: JUMP_H, tag: 'jump' }),
   P(107, 17.6),
   // Turn 7: the banked north-east sweeper, round to the south
@@ -210,8 +210,7 @@ export const COURSES: Record<CourseId, Course> = { circuit: makeCourse('circuit'
 /** The forward circuit: the one physical track (the reverse is the same surface) */
 export const CIRCUIT = COURSES.circuit;
 
-/** A kart's width (karts.ts keeps to it) */
-export const KART_W = 0.95;
+export { KART_W, GATE };
 /** How many race in a grid, and the grid's two columns either side of the centre line */
 export const GRID = 8;
 export const GRID_LATERAL = 1.3;
@@ -243,8 +242,7 @@ export const SITE = {
   stand: { u0: 50, v0: 100, u1: 92, v1: 106, h: 4.5 },
   /** The big screen on the garages' roof, facing north over the straight */
   screen: { u: 67, v: 130, w: 14, h: 4.5 },
-  /** The gate in the south fence (where it's always been, at the slip road), and the path from it to the hut's door */
-  gate: { u: 6, w: 5 },
+  /** The path from the gate (kartpark.ts GATE, where it's always been, at the slip road) to the hut's door */
   path: { v: 137.2, u0: 6, u1: 36, half: 1.2 },
 } as const;
 /** The bays: where each kart waits in front of its garage, on the pit lane's south edge */
@@ -260,11 +258,6 @@ const box = (b: { u0: number; v0: number; u1: number; v1: number; h: number }): 
   const [x1, z1] = toWorld([b.u1, b.v1]);
   return [x0, z0, x1, z1, b.h];
 };
-/** The gate's world x range in the south fence */
-export const GATE = (() => {
-  const [gx] = toWorld([SITE.gate.u, 0]);
-  return { x0: gx - SITE.gate.w / 2, x1: gx + SITE.gate.w / 2, z: KART_PARK.z1, inside: [gx, KART_PARK.z1 - 2] as Pt };
-})();
 /** The hut's door in world numbers, facing south to the gate path */
 export const HUT_DOOR = (() => {
   const [x, z] = toWorld(SITE.hut.door);
@@ -298,8 +291,8 @@ export const GANTRY = (() => {
 })();
 
 /**
- * The flyover's supports: every six tiles along the deck where it's up, either side just outside the
- * run-off, and never in the run-off of the track below.
+ * The flyover's supports: every six tiles along the deck where it's up, a column either side just past
+ * the deck's edge, and never in the run-off of the track below (so the span over it is open).
  */
 export const SUPPORTS: { x: number; z: number; h: number }[] = (() => {
   const c = CIRCUIT;
@@ -312,8 +305,8 @@ export const SUPPORTS: { x: number; z: number; h: number }[] = (() => {
     const f = frame(c, s);
     if (!(f.flags & F.deck) || f.y < 0.8) continue;
     for (const side of [1, -1]) {
-      const x = f.x + f.nx * (CLEAR + 0.4) * side;
-      const z = f.z + f.nz * (CLEAR + 0.4) * side;
+      const x = f.x + f.nx * (TRACK_HALF + KERB + 0.7) * side;
+      const z = f.z + f.nz * (TRACK_HALF + KERB + 0.7) * side;
       if (!nearGround(x, z)) out.push({ x, z, h: f.y });
     }
   }
@@ -328,27 +321,43 @@ export function onCircuit(x: number, z: number, hint: number | null = null) {
 }
 
 /**
+ * The ground across the circuit at a frame: the asphalt and the kerbs follow the banking; the
+ * run-off carries on from the kerb's edge and eases down to the lawn at CLEAR (a grass bank where
+ * the track is raised: the hill, the banked sweepers' high side, the flyover's ramps). The sim
+ * and the drawing both use it, so a kart on the run-off sits on what's drawn.
+ */
+export function groundAt(f: Frame, lateral: number) {
+  const edge = TRACK_HALF + KERB;
+  const side = Math.abs(lateral);
+  if (side <= edge) return heightAt(f, lateral);
+  const top = heightAt(f, Math.sign(lateral) * edge);
+  return top * Math.max(0, 1 - (side - edge) / RUNOFF);
+}
+/** No run-off on the deck or in the tunnel: off their kerbs a kart is put back on the track */
+export const enclosed = (f: Frame) => !!(f.flags & F.tunnel) || (!!(f.flags & F.deck) && f.y > 0.6);
+
+/**
  * The circuit's surface under a point, for driving on it off a race: the height and banking of the
- * nearest stretch whose lane covers the point and whose height is near `yNow` (so a kart under the
- * flyover stays under it, and one on the deck stays up). Null off the track.
+ * nearest stretch whose track or run-off covers the point and whose height is near `yNow` (so a
+ * kart under the flyover stays under it, and one on the deck stays up). Null off it.
  */
 export function circuitSurfaceAt(x: number, z: number, yNow: number): { y: number; roll: number } | null {
   const c = CIRCUIT;
-  const reach = TRACK_HALF + KERB;
   let best: { y: number; roll: number } | null = null;
   let bestDy = Infinity;
-  // Every stretch within reach (the flyover and the diagonal under it are both candidates)
+  // Every stretch within reach (the flyover and the run under it are both candidates)
   for (let i = 0; i < c.x.length; i++) {
     const d2 = (c.x[i] - x) ** 2 + (c.z[i] - z) ** 2;
-    if (d2 > reach * reach) continue;
+    if (d2 > CLEAR * CLEAR) continue;
     const f = frame(c, i * c.step);
     const lat = (x - f.x) * f.nx + (z - f.z) * f.nz;
+    const reach = enclosed(f) ? TRACK_HALF + KERB : CLEAR;
     if (Math.abs(lat) > reach) continue;
-    const y = heightAt(f, Math.max(-TRACK_HALF, Math.min(TRACK_HALF, lat)));
+    const y = groundAt(f, lat);
     const dy = Math.abs(y - yNow);
     if (dy > 1.8 || dy >= bestDy) continue;
     bestDy = dy;
-    best = { y, roll: f.roll };
+    best = { y, roll: Math.abs(lat) <= TRACK_HALF + KERB ? f.roll : 0 };
   }
   return best;
 }

@@ -30,8 +30,8 @@
  *   placed by where they are. Prizes and records are paid by tycoon.ts
  *   (`finishKartRace`), not here.
  */
-import { COURSES, CLEAR, GRID, KERB, LAPS, TRACK_HALF, gridSlots, type Cond, type CourseId } from './kartcircuit';
-import { F, KART_R, along, at, frame, heightAt, locate, wrapS } from './kartpark';
+import { COURSES, CLEAR, GRID, KERB, LAPS, TRACK_HALF, enclosed, gridSlots, groundAt, type Cond, type CourseId } from './kartcircuit';
+import { F, KART_R, along, at, frame, locate, wrapS } from './kartpark';
 import { KART_CLASSES, type ClassId } from './catalog';
 import { KART_SPECS, type KartId } from './mykart';
 
@@ -558,8 +558,8 @@ export function createKartSim(setup: RaceSetup) {
     k.flags = loc.frame.flags;
     k.roll = loc.frame.roll;
     const side = Math.abs(k.lateral);
-    // Far off, or over the deck's edge: put back on the track
-    const offDeck = loc.frame.flags & F.deck && loc.frame.y > 0.6 && side > TRACK_HALF + KERB;
+    // Far off, or over the deck's edge (or into the tunnel's wall): put back on the track
+    const offDeck = enclosed(loc.frame) && side > TRACK_HALF + KERB;
     if (started && (side > RESET_AT || offDeck)) {
       reset(k);
       return;
@@ -594,8 +594,8 @@ export function createKartSim(setup: RaceSetup) {
       }
     }
 
-    // Height: the track's surface (the run-off carries on from the track's edge), or the air off the jump
-    const surface = heightAt(loc.frame, clamp(k.lateral, -TRACK_HALF, TRACK_HALF));
+    // Height: the ground across the circuit (the run-off eases down from the kerb), or the air off the jump
+    const surface = groundAt(loc.frame, k.lateral);
     if (k.air) {
       k.vy -= G * dt;
       k.y += k.vy * dt;

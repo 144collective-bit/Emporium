@@ -36,8 +36,8 @@ import type { Sfx } from './combat';
 import type { ClassId } from './catalog';
 import { COUNTDOWN, CUPS, NO_INPUT, T, TICK, createKartSim, tune, type CupId, type KartEvent, type KartInput, type KartSim, type Racer } from './kart-sim';
 import type { KartHud, KartRace, KartRaceDeps, KartResultView, KartStanding } from './kart-types';
-import { COURSES, type Course, type CourseId, type Cond } from './kartcircuit';
-import { F, HUT_DOOR, along } from './kartpark';
+import { COURSES, HUT_DOOR, type Course, type CourseId, type Cond } from './kartcircuit';
+import { F, along } from './kartpark';
 import { createKart, type Kart } from './karts';
 import { fx, glowMat, glowTex, mergeMeshes, toon } from './kit';
 import { KART_SPECS, PLAYER_KARTS, type KartId, type MyKart } from './mykart';
@@ -826,8 +826,9 @@ export function createKartRace(d: KartRaceDeps): KartRace {
       camReady = false;
       fov0 = camera.fov;
       fov = camera.fov;
-      // The park still shows the old network's pads and boxes until Phase 3 redraws it: none during a race
-      d.park.showBoxes([]);
+      d.park.setCourse(course);
+      d.park.racing(true);
+      d.conditions(cond);
       d.ui.showHud(true);
       root.classList.add('is-karting');
       root.dataset.kart = COURSES[course].name;
@@ -914,11 +915,11 @@ export function createKartRace(d: KartRaceDeps): KartRace {
       shownCount = '';
       root.classList.remove('is-karting');
       delete root.dataset.kart;
-      d.park.showBoxes(null);
-      d.park.setCourse('neon-loop');
-      // Out of the hut's door, a tile south of it, facing the track (walk.ts: forward is (sin yaw, cos yaw))
-      // (walk.ts looks along -z at yaw 0: at the track)
-      return { x: HUT_DOOR.x, z: HUT_DOOR.z + 1, yaw: 0 };
+      d.park.racing(false);
+      d.park.setCourse('circuit');
+      d.conditions(null);
+      // Out of the hut's door onto the gate path, facing along it to the gate (walk.ts looks along -z at yaw 0, -x at π/2)
+      return { x: HUT_DOOR.x, z: HUT_DOOR.z + 1, yaw: Math.PI / 2 };
     },
     preview(k) {
       picked = k;

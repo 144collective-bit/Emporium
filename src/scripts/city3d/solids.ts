@@ -13,7 +13,7 @@ import { BIG_LOTS, BS, GARAGE, MARKET, UNITS, design, designBox } from './layout
 import { ALLEYS, ALLEY_PROPS, BOLLARD_R, INFILL, SQUARE } from './downtown';
 import { SQUARE_SOLIDS } from './outer';
 import { RACE_SITE } from './races';
-import { KART_SOLIDS } from './kartpark';
+import { CIRCUIT_SOLIDS as KART_SOLIDS } from './kartcircuit';
 import { AIRPORT_SOLIDS } from './airfield';
 import type { LotKind, UnitKind } from './tycoon';
 

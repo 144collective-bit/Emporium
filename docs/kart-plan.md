@@ -136,7 +136,19 @@ flyover's deck is 2.6 over the diagonal below.
      "Pigeon post" mission and the "Pigeon fancier" badge) are replaced by
      racing ones (proposal: clean laps without leaving the track, and
      overtakes); the Nitro kit's blurb loses the rockets.
-3. **Drawing it** (`kartpark3d.ts`).
+3. **Drawing it** (built: `kartpark3d.ts`). As built: the park drawn round
+   the circuit (kerbs, grass run-off with gravel traps on the flat
+   outsides, grass banks under the hill and the sweepers' high side, the
+   tunnel (now 14 tiles long), the jump's striped lip, the flyover's deck
+   on columns at its edges, open underneath), the start line, both
+   directions' grids and the gantry, the pit lane with its bays and cones
+   across its mouths during a race, eight numbered garages with the screen
+   on their roof, the hut, the grandstand facing the straight, tyre stacks
+   and marshal posts set back. The guidance is drawn per direction. Night
+   and rain races set the sky (the visitor's own time and weather come
+   back after). The old network's data and drawing are gone; walking
+   follows the circuit's ground too. Draw calls stayed at or under the old
+   park's from the same spots (measured with `?fps`).
    - The narrower ribbon with red-and-white kerbs, grass and gravel
      run-off, tyre stacks set back, the banked bends, the hill, the tunnel,
      the jump, the flyover deck (open underneath), the start gantry and grid
