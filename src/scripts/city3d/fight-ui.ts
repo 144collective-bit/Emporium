@@ -380,6 +380,8 @@ ${botsHtml(f)}
   function showHud(on: boolean) {
     hud.hidden = !on;
     root.classList.toggle('is-fighting', on);
+    ghosts.you = { v: 1, at: 0 };
+    ghosts.opp = { v: 1, at: 0 };
     if (!on) {
       count('');
       pops.replaceChildren();
@@ -387,12 +389,29 @@ ${botsHtml(f)}
       pipsFor = 0;
     }
   }
+  // The pale ghost behind each health bar: a hit chips the bar at once, the ghost drains after a beat
+  const ghostYouEl = hud.querySelector<HTMLElement>('[data-fight-health-ghost]');
+  const ghostOppEl = hud.querySelector<HTMLElement>('[data-fight-opp-health-ghost]');
+  const ghosts = { you: { v: 1, at: 0 }, opp: { v: 1, at: 0 } };
+  function ghost(g: { v: number; at: number }, el: HTMLElement | null, v: number) {
+    const now = performance.now();
+    if (v >= g.v) {
+      g.v = v;
+      g.at = 0;
+    } else {
+      if (!g.at) g.at = now;
+      if (now - g.at > 380) g.v = Math.max(v, g.v - 0.012);
+    }
+    if (el) bar(el, g.v);
+  }
   function paintHud(h: FightHud) {
     set(youEl, h.you);
     set(oppEl, h.opponent);
     bar(healthEl, h.health);
     bar(staminaEl, h.stamina);
     bar(oppHealthEl, h.oppHealth);
+    ghost(ghosts.you, ghostYouEl, h.health);
+    ghost(ghosts.opp, ghostOppEl, h.oppHealth);
     const spar = h.kind === 'spar';
     hud.classList.toggle('is-spar', spar);
     hud.classList.toggle('is-empty', h.empty);

@@ -1310,3 +1310,64 @@
     transition: none;
   }
 }
+
+/* ---------- Hit feedback: the ghost behind a health bar, the floating damage numbers (fight.ts) ---------- */
+.fight-bar {
+  position: relative;
+}
+.fight-ghost {
+  position: absolute;
+  inset: 0;
+  display: block;
+  border-radius: inherit;
+  background: #ffffff59;
+  transform: scaleX(var(--v, 1));
+  transform-origin: left;
+  transition: transform 0.08s linear;
+}
+.fight-bar.is-rev .fight-ghost {
+  transform-origin: right;
+}
+.fight-bar i {
+  position: relative;
+}
+.fight-dmg-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  overflow: hidden;
+  pointer-events: none;
+}
+.fight-dmg {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, -50%) translate(var(--x, 0px), var(--y, 0px)) scale(var(--s, 1));
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  color: #fff;
+  text-shadow:
+    0 0 10px #ffe44d,
+    0 2px 0 #000;
+  opacity: var(--o, 1);
+  white-space: nowrap;
+}
+.fight-dmg.is-heavy {
+  font-size: 36px;
+  color: #ffe44d;
+}
+.fight-dmg.is-you {
+  color: #ff6b6b;
+  text-shadow:
+    0 0 10px #ff3b3b,
+    0 2px 0 #000;
+}
+.fight-dmg.is-block {
+  font-size: 20px;
+  color: var(--p-cyan);
+  text-shadow:
+    0 0 8px #00eaff,
+    0 2px 0 #000;
+}

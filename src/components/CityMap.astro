@@ -654,7 +654,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     <div class="fight-hud" data-fight-hud hidden>
       <div class="fight-side fight-you">
         <p class="fight-name" data-fight-you>You</p>
-        <div class="fight-bar fight-health" role="img" aria-label="Your health"><i data-fight-health></i></div>
+        <div class="fight-bar fight-health" role="img" aria-label="Your health"><b class="fight-ghost" data-fight-health-ghost></b><i data-fight-health></i></div>
         <div class="fight-bar fight-stamina" role="img" aria-label="Your stamina"><i data-fight-stamina></i></div>
         <p class="fight-tags"><span class="fight-chain" data-fight-chain hidden>2 hit chain</span><span class="fight-blocking" data-fight-blocking hidden>Blocking</span></p>
       </div>
@@ -665,7 +665,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       </div>
       <div class="fight-side fight-them">
         <p class="fight-name" data-fight-opponent>Opponent</p>
-        <div class="fight-bar fight-health is-rev" role="img" aria-label="The opponent's health"><i data-fight-opp-health></i></div>
+        <div class="fight-bar fight-health is-rev" role="img" aria-label="The opponent's health"><b class="fight-ghost" data-fight-opp-health-ghost></b><i data-fight-opp-health></i></div>
         <button type="button" class="race-quit fight-quit" data-fight-quit>Quit</button>
       </div>
     </div>

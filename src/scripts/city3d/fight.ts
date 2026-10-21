@@ -102,6 +102,113 @@ export function createFight(d: FightDeps): Fight {
     });
   }
 
+  /* ---------- Impact lines, the flash, the damage numbers ---------- */
+
+  // A starburst of radiating lines (drawn once): the cartoon impact at the point of contact
+  const impactTex = (() => {
+    const c = document.createElement('canvas');
+    c.width = c.height = 128;
+    const g = c.getContext('2d')!;
+    g.translate(64, 64);
+    g.strokeStyle = '#fff';
+    g.lineCap = 'round';
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2 + (i % 2 ? 0.12 : 0);
+      const len = i % 3 === 0 ? 58 : i % 2 ? 40 : 48;
+      g.lineWidth = i % 3 === 0 ? 5 : 3.5;
+      g.beginPath();
+      g.moveTo(Math.cos(a) * 14, Math.sin(a) * 14);
+      g.lineTo(Math.cos(a) * len, Math.sin(a) * len);
+      g.stroke();
+    }
+    g.fillStyle = '#fff';
+    g.beginPath();
+    g.arc(0, 0, 9, 0, Math.PI * 2);
+    g.fill();
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  })();
+  const impacts: { m: THREE.Sprite; t: number; big: boolean }[] = [];
+  for (let i = 0; i < 6; i++) {
+    const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: impactTex, color: '#fff2a8', transparent: true, depthWrite: false, fog: false }));
+    m.visible = false;
+    group.add(fx(m));
+    impacts.push({ m, t: 1, big: false });
+  }
+  let impactN = 0;
+  function impact(x: number, y: number, z: number, kindOf: 'hit' | 'block' | 'heavy') {
+    const im = impacts[impactN++ % impacts.length];
+    const mat = im.m.material as THREE.SpriteMaterial;
+    mat.color.set(kindOf === 'block' ? '#8ff6ff' : kindOf === 'heavy' ? '#ffe44d' : '#fff2a8');
+    mat.rotation = Math.random() * Math.PI;
+    mat.opacity = 1;
+    im.m.position.set(x, y, z);
+    im.m.visible = true;
+    im.t = 0;
+    im.big = kindOf === 'heavy';
+  }
+  // The hit figure flashes white for a couple of frames (each mesh's material swapped and put back)
+  const flashMat = new THREE.MeshBasicMaterial({ color: '#ffffff', fog: false });
+  const flashes: { fg: FighterFigure; frames: number; saved: { m: THREE.Mesh; mat: THREE.Material | THREE.Material[] }[] }[] = [];
+  function flash(fg: FighterFigure) {
+    if (d.reduced || flashes.some((f) => f.fg === fg)) return;
+    const saved: { m: THREE.Mesh; mat: THREE.Material | THREE.Material[] }[] = [];
+    fg.degen.g.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (m.isMesh) {
+        saved.push({ m, mat: m.material });
+        m.material = flashMat;
+      }
+    });
+    flashes.push({ fg, frames: 2, saved });
+  }
+  function tickFlashes() {
+    for (let i = flashes.length - 1; i >= 0; i--) {
+      const f = flashes[i];
+      if (--f.frames > 0) continue;
+      for (const { m, mat } of f.saved) m.material = mat;
+      flashes.splice(i, 1);
+    }
+  }
+  // Floating damage numbers, projected from the hit point each frame
+  const dmgLayer = document.createElement('div');
+  dmgLayer.className = 'fight-dmg-layer';
+  dmgLayer.hidden = true;
+  root.append(dmgLayer);
+  const dmgs: { el: HTMLElement; x: number; y: number; z: number; t: number }[] = [];
+  const v3 = new THREE.Vector3();
+  function dmgPop(x: number, y: number, z: number, text: string, cls: string) {
+    const el = document.createElement('span');
+    el.className = `fight-dmg ${cls}`;
+    el.textContent = text;
+    dmgLayer.append(el);
+    dmgs.push({ el, x: x + (Math.random() - 0.5) * 0.2, y: y + 0.15, z: z + (Math.random() - 0.5) * 0.2, t: 0 });
+  }
+  function tickDmgs(dt: number) {
+    const host = root.querySelector<HTMLElement>('[data-city3d]') ?? root;
+    const w = host.clientWidth;
+    const h = host.clientHeight;
+    for (let i = dmgs.length - 1; i >= 0; i--) {
+      const dm = dmgs[i];
+      dm.t += dt;
+      if (dm.t > 0.9) {
+        dm.el.remove();
+        dmgs.splice(i, 1);
+        continue;
+      }
+      v3.set(dm.x, dm.y + dm.t * 0.45, dm.z).project(camera);
+      const sx = (v3.x * 0.5 + 0.5) * w;
+      const sy = (-v3.y * 0.5 + 0.5) * h;
+      const k = dm.t < 0.12 ? 0.6 + (dm.t / 0.12) * 0.6 : 1.2 - (dm.t - 0.12) * 0.25;
+      dm.el.style.setProperty('--x', `${sx.toFixed(1)}px`);
+      dm.el.style.setProperty('--y', `${sy.toFixed(1)}px`);
+      dm.el.style.setProperty('--s', k.toFixed(3));
+      dm.el.style.setProperty('--o', String(dm.t > 0.6 ? Math.max(0, 1 - (dm.t - 0.6) / 0.3) : 1));
+      dm.el.hidden = v3.z > 1;
+    }
+  }
+
   /* ---------- Starting and ending ---------- */
 
   const fighter = (id: string): Fighter | null => sim?.fighter(id) ?? null;
@@ -134,6 +241,7 @@ export function createFight(d: FightDeps): Fight {
     intro = kind === 'spar' ? 1.2 : 0;
     root.classList.add('is-fighting');
     root.dataset.fight = B.name;
+    dmgLayer.hidden = false;
     d.ui.showHud(true);
     d.club.setLive(true);
     if (kind === 'spar') showCount('FIGHT', 0.9);
@@ -142,6 +250,12 @@ export function createFight(d: FightDeps): Fight {
   }
 
   function clear() {
+    for (const f of flashes) for (const { m, mat } of f.saved) m.material = mat;
+    flashes.length = 0;
+    for (const dm of dmgs) dm.el.remove();
+    dmgs.length = 0;
+    dmgLayer.hidden = true;
+    for (const im of impacts) im.m.visible = false;
     if (you) disposeFigure(you);
     if (them) disposeFigure(them);
     you = them = null;
@@ -207,15 +321,21 @@ export function createFight(d: FightDeps): Fight {
           const heavy = e.heavy;
           d.sfx(e.move === 'frontKick' || e.move === 'roundhouse' ? 'kick' : 'punch', heavy ? 1 : 0.8);
           burst(e.x, e.y, e.z, heavy ? 'heavy' : 'hit');
+          impact(e.x, e.y, e.z, heavy ? 'heavy' : 'hit');
+          const target = e.target === YOU ? you : them;
+          if (target) flash(target);
+          dmgPop(e.x, e.y, e.z, `-${e.damage}`, `${heavy ? 'is-heavy' : ''} ${e.target === YOU ? 'is-you' : ''}`);
           if (!d.reduced) {
             stop = Math.max(stop, heavy ? 0.07 : 0.03);
-            shake = Math.max(shake, heavy ? 0.12 : 0.05);
+            shake = Math.max(shake, heavy ? 0.14 : 0.06);
           }
           break;
         }
         case 'block':
           d.sfx('fightBlock', 0.7);
           burst(e.x, e.y, e.z, 'block');
+          impact(e.x, e.y, e.z, 'block');
+          dmgPop(e.x, e.y, e.z, 'Blocked', 'is-block');
           if (e.who === YOU) d.ui.pop('Blocked', 'good');
           break;
         case 'parry':
@@ -238,7 +358,7 @@ export function createFight(d: FightDeps): Fight {
           d.sfx(e.ko ? 'fightKo' : 'thud');
           if (!d.reduced) {
             stop = Math.max(stop, e.ko ? 0.14 : 0.08);
-            shake = Math.max(shake, e.ko ? 0.2 : 0.12);
+            shake = Math.max(shake, e.ko ? 0.42 : 0.28);
           }
           if (e.ko) showCount('K.O.', 1.6);
           else d.ui.pop(e.who === YOU ? 'Knocked down' : 'Knockdown!', e.who === YOU ? 'bad' : 'good');
@@ -319,7 +439,7 @@ export function createFight(d: FightDeps): Fight {
     if (shake > 0 && !d.reduced) {
       camera.position.x += (Math.random() - 0.5) * shake;
       camera.position.y += (Math.random() - 0.5) * shake * 0.6;
-      shake = Math.max(0, shake - dt * 1.4);
+      shake = Math.max(0, shake - dt * (shake > 0.2 ? 1.1 : 1.6));
     }
     camera.lookAt(camAt);
   }
@@ -384,6 +504,17 @@ export function createFight(d: FightDeps): Fight {
           (bu.m.material as THREE.SpriteMaterial).opacity = 1 - bu.t;
         }
       }
+      for (const im of impacts) {
+        if (!im.m.visible) continue;
+        im.t += dt * (im.big ? 3.2 : 4.5);
+        if (im.t >= 1) im.m.visible = false;
+        else {
+          im.m.scale.setScalar((im.big ? 0.55 : 0.4) + im.t * (im.big ? 1.1 : 0.7));
+          (im.m.material as THREE.SpriteMaterial).opacity = 1 - im.t * im.t;
+        }
+      }
+      if (drawDt > 0 || done) tickFlashes();
+      tickDmgs(dt);
       placeStars(a.down > 0 ? a : b.down > 0 ? b : null, elapsed);
       placeCamera(dt);
       paintHud();
