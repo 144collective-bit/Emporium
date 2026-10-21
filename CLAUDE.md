@@ -245,9 +245,10 @@ it and has been retired completely. Build only on what's here.
   brand-art head, every wardrobe piece rebuilt, grounded hand-keyed
   animation, merch-store logos on the clothes (Dorras and levels), a
   character screen, phones first. Build it one phase at a time with the
-  owner's sign-off. Phase 1 (the skinned body, head, hands and feet) is
-  built; the walk is still the old formula until Phase 2, and crowds stay
-  on the rigid rig until Phase 5.
+  owner's sign-off. Phase 1 (the skinned body, head, hands and feet) and
+  Phase 2 (walking and running, `locomotion.ts`) are built; other players,
+  crowds and fighters still walk the old formula (`walkPose()`), and
+  crowds stay on the rigid rig until Phase 5.
 - Every character is one shared Degen body (`src/scripts/city3d/character.ts`),
   sculpted after the brand art at human proportions (about 1.3 tall at
   scale 1, six and a half heads, hips `HIP_HEIGHT` 0.62), with knees,
@@ -287,6 +288,37 @@ it and has been retired completely. Build only on what's here.
     (`handParts()`: wrist, palm, thumb pad, four fingers and a thumb, each
     vertex weighted; `bakedHand()` sets one solid at a grip, for the
     first-person hands in `viewmodel.ts`).
+  - **Walking and running** are `locomotion.ts` (DOM-free, tested in
+    `tests/locomotion.test.ts`), for your Degen in walk mode
+    (`createLocomotion()`; walk.ts feeds it his position, velocity,
+    facing, the ground (`groundAt`) and whether he's in the air, copies
+    its pose onto his (`copyPose()`) and places him with `placeRoot()`).
+    The feet are planted in the world: each stays where it lands while
+    the body moves over it, and the other swings to where the body will
+    be when it lands (ahead along the way he's going, by `fore` of the
+    stride), at the ground's height there, so nothing slides walking,
+    jogging, sprinting, turning, strafing or backing up (aiming), on
+    kerbs, slopes and stairs; the tests hold a planted foot to under
+    4 mm. Two-bone leg IK (`reachLeg()`) puts each ankle where its foot
+    needs it; the foot keeps its own heading and pitch (`Limb.foot`,
+    `footYaw`, `footRoll`, `toe`) and rolls heel, flat, then onto the ball
+    with the toes flat; the hips (`Pose.sway`, `turn`, `bob`) come down
+    when a planted foot would be out of reach, and ease back up.
+    `gait()` sets the rhythm from the speed in leg lengths a second
+    (`CADENCE` worked out so a stance always stays in reach; Degen's walk
+    speed is a jog for his legs, his run a sprint): steps a second, time
+    on the ground, lift, hip drop, lean, arms; the gait follows the speed
+    over a few steps. A sprinting leg folds up under him. Standing, he
+    stops with both feet down and steps a foot back under him when he
+    turns or drifts (turning on the spot); the idle breathes and shifts
+    its weight, and after a while with the camera still he looks round.
+    Upper body: arms swing with the opposite foot, the pelvis turns with
+    the forward leg (square while armed) and the shoulders against it,
+    the body leans into speed, starts, stops and bends (`root.roll`).
+    Landings are keyed clips (`LANDINGS`: soft, crouch past `LAND_CROUCH`,
+    a forward roll past `LAND_ROLL` on the run; `root.pitch` about
+    `root.pivot`); in the air the legs tuck. Emotes keep the planted legs
+    (the dance has its own).
   - Shapes are built from cross-sections (`loft()`, superellipse rings) and
     flat details laid onto them (`onBody()` with `surface()`: lapels, the
     shirt V, the tie, zips, pockets). Shoes are side profiles (`profile()`).
@@ -1026,7 +1058,8 @@ it and has been retired completely. Build only on what's here.
 - Finishes (`SKINS`) are cosmetic and work on every gun. Lifetime score,
   finish and last gun are saved in the browser under `degen-city-combat-v1`
   (or the player profile online).
-- First person is the default when walking starts. The hands
+- Over the shoulder is the default when walking starts (V or the
+  Controls panel swaps to first person). The first-person hands
   (`viewmodel.ts`, Degen's own from `bakedHand()` in `body.ts`: the right
   closed round the pistol grip, the left under the front) wear the sleeves of Degen's outfit (`setOutfit()`, called
   from `walk.setLook()` through `combat.setOutfit()`: a suit sleeve with a
@@ -1251,7 +1284,7 @@ it and has been retired completely. Build only on what's here.
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`) and Degen's skeleton, weights, head and hands
-  (`skeleton.ts`, `body.ts`). Modules that touch the DOM or `kit.ts` (canvas
+  (`skeleton.ts`, `body.ts`) and his walking (`locomotion.ts`). Modules that touch the DOM or `kit.ts` (canvas
   textures) can't load in Node; keep data a test needs in the DOM-free
   files.
 - When you change a rule or move something in the city, run the tests and

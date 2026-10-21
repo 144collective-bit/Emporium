@@ -23,7 +23,8 @@
  */
 import * as THREE from 'three';
 import type { SpotId } from '../../lib/city';
-import { PLAYER, airPose, createDegen, emotePose, walkPose, type Outfit } from './character';
+import { PLAYER, createDegen, emotePose, type Outfit } from './character';
+import { copyLeg, copyPose, createLocomotion, placeRoot } from './locomotion';
 import { createCombat, type Sfx } from './combat';
 import { WEAPON_IDS } from './combat-sim';
 import { createGunShop } from './gunshop';
@@ -158,6 +159,12 @@ export function createWalk(d: WalkDeps) {
   hero.g.scale.setScalar(SCALE);
   hero.g.visible = hero.ring.visible = false;
   d.scene.add(hero.g, hero.ring);
+  /** His feet and body on the move (locomotion.ts): planted feet, gaits, landings, the idle */
+  const loco = createLocomotion();
+  /** Seconds since the camera last turned (a while standing still, he looks round by himself) */
+  let camStill = 0;
+  let lookAround = 0;
+  let lastYaw = 0;
   let headYaw = 0;
   let headPitch = 0;
   /** An emote playing on Degen (seen in third person, and by other players) */
@@ -208,7 +215,6 @@ export function createWalk(d: WalkDeps) {
   let coyote = 0;
   let jumpBuffer = 0;
   let jumpHeld = false;
-  let land = 0;
   let face = 0;
   let phase = 0;
   let runAmt = 0;
@@ -1469,28 +1475,37 @@ export function createWalk(d: WalkDeps) {
     vy -= (GRAVITY + (!jumpHeld && vy > 0 ? 16 : 0)) * dt;
     pos.y += vy * dt;
     const ground = groundAt(pos.x, pos.z, pos.y + 0.3);
+    const fall = vy;
     if (pos.y <= ground) {
-      if (!grounded && vy < -3) land = 0.16;
       // Kerbs: step up smoothly rather than pop
       pos.y = pos.y < ground - 0.05 ? pos.y + (ground - pos.y) * damp(20, dt) : ground;
       vy = 0;
       grounded = true;
     } else if (pos.y > ground + 0.04) grounded = false;
-    land = Math.max(0, land - dt);
 
-    // Animation
+    // Animation: the feet planted as he goes (locomotion.ts), then emotes, the gun and the head on top
     runAmt += (THREE.MathUtils.clamp((speed - WALK) / (RUN - WALK), 0, 1) - runAmt) * damp(8, dt);
     air += ((grounded ? 0 : 1) - air) * damp(12, dt);
-    phase += dt * speed * 3.1;
+    loco.update({ dt, t, x: pos.x, y: pos.y, z: pos.z, vx: vel.x, vz: vel.y, face, grounded, vy: grounded ? fall : vy, scale: SCALE, ground: groundAt, armed: combat.armed });
+    phase = loco.phase;
     const stride = Math.min(1, speed / WALK);
     const P = hero.pose;
-    walkPose(P, phase, stride, runAmt);
-    if (speed < 0.2) P.bob += Math.sin(t * 1.6) * 0.004;
+    copyPose(loco.pose, P);
     speedNow = speed;
     if (emote) {
       emote.t += dt;
       if (emote.t > 3 || speed > 0.6) emote = null;
-      else if (!combat.armed) emotePose(P, emote.id, emote.t);
+      else if (!combat.armed) {
+        emotePose(P, emote.id, emote.t);
+        // Every emote but the dance keeps his feet where they're planted
+        if (emote.id !== 'dance') {
+          for (let i = 0; i < 2; i++) copyLeg(loco.pose.legs[i], P.legs[i]);
+          P.bob = loco.pose.bob;
+          P.side = loco.pose.side;
+          P.sway = loco.pose.sway;
+          P.turn = loco.pose.turn;
+        } else for (const l of P.legs) l.foot = undefined;
+      }
     }
     // Recoil kicks the view up a touch; the rifle rides the shoulder
     const kick = combat.update(dt, t, aimNow);
@@ -1501,7 +1516,6 @@ export function createWalk(d: WalkDeps) {
     recoil = Math.max(0, recoil - dt * 0.35);
     aimAmt += ((shooting ? 1 : 0) - aimAmt) * damp(14, dt);
     if (hero.held) hero.held.visible = !combat.armed;
-    airPose(P, air);
     // Both hands on the gun (after walking and jumping have posed the arms)
     if (combat.armed) combat.poseGun(P, aimAmt, pitch, recoil, dt);
     else if (aim) Object.assign(P.arms[1], { fwd: 1.45, out: 0.05, bend: 0.15, twist: 0 });
@@ -1509,13 +1523,15 @@ export function createWalk(d: WalkDeps) {
     const lookYaw = THREE.MathUtils.clamp(wrap(lookFace - face), -0.9, 0.9);
     headYaw += ((speed < 0.25 || aim ? lookYaw : 0) - headYaw) * damp(8, dt);
     headPitch += (THREE.MathUtils.clamp((0.35 - pitch) * 0.6, -0.45, 0.55) - headPitch) * damp(8, dt);
-    P.headYaw = headYaw;
-    P.headPitch = headPitch;
+    // Standing a while with the camera still, he looks round by himself
+    camStill = Math.abs(wrap(yaw - lastYaw)) > 0.002 ? 0 : camStill + dt;
+    lastYaw = yaw;
+    lookAround += ((camStill > 3 && !combat.armed ? loco.look : 0) - lookAround) * damp(2, dt);
+    // (on top of the locomotion's own: the head kept steady while the body turns and leans under it)
+    P.headYaw += headYaw + lookAround;
+    P.headPitch += headPitch;
     hero.update();
-    hero.g.position.set(pos.x, pos.y, pos.z);
-    hero.g.rotation.set(0, face, 0);
-    const squash = land / 0.16;
-    hero.g.scale.set(SCALE * (1 + squash * 0.18), SCALE * (1 - squash * 0.22), SCALE * (1 + squash * 0.18));
+    placeRoot(hero.g, pos.x, pos.y, pos.z, face, SCALE, loco.root);
     hero.ring.position.set(pos.x, ground + 0.02, pos.z);
     (hero.ring.material as THREE.MeshBasicMaterial).opacity = 0.55 * (1 - air * 0.6);
 
@@ -1694,11 +1710,11 @@ export function createWalk(d: WalkDeps) {
         pos.set(spawn.x, groundAt(spawn.x, spawn.z), spawn.z);
         yaw = spawn.yaw;
       }
-      // First person by default; V (or the Controls panel) swaps to the shoulder camera
-      pitch = -0.16;
+      // Over the shoulder by default; V (or the Controls panel) swaps to first person
+      pitch = 0.35;
       zoom = camDist = 5.2;
       pivot.set(0, 0, 0);
-      setFirstPerson(true);
+      setFirstPerson(false);
       baseFov = camera.fov;
       fov = camera.fov;
       hero.g.visible = hero.ring.visible = true;
