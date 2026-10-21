@@ -588,7 +588,7 @@ export const HUT_DOOR = (() => {
 /** Where you spawn when you walk in from the city panel: inside the gate, looking north at the track (walk.ts looks along -z at yaw 0) */
 export const KART_SPAWN = { x: GATE.inside[0], z: GATE.inside[1], yaw: 0 };
 
-/** The track walls are solid this often along the loop (kartpark3d.ts draws a block at each) */
+/** The shortcut's rope posts stand this often along it (kartpark3d.ts draws them; nothing is solid) */
 export const WALL_EVERY = 3;
 /** x0, z0, x1, z1, height (solids.ts Box) */
 type Box = [number, number, number, number, number];
@@ -639,10 +639,10 @@ export const NODE_REACH = 16;
 export const nearNode = (x: number, z: number) => NODES.some((n) => Math.hypot(n.x - x, n.z - z) < NODE_REACH);
 
 /**
- * Footprints for walking round the park (solids.ts adds them to SOLIDS): the fence (with the gate's gap),
- * the hut, the stand, the screen, the gantry's posts and the bridges' pillars, and the track's walls every
- * WALL_EVERY tiles along both edges of every piece at ground level (under a bridge there's room to walk;
- * at the junctions the walls stop). The track itself is open: Degen can walk across it.
+ * Footprints for walking and driving round the park (solids.ts adds them to SOLIDS): the fence (with the
+ * gate's gap), the hut, the stand, the screen, the gantry's posts and the bridges' pillars. The track and
+ * its kerbs are open (the owner's call): Degen walks across it and a kart or car drives on and off it
+ * anywhere; only a race's karts are kept in by the sim's own walls.
  */
 export const KART_SOLIDS: Box[] = (() => {
   const P = KART_PARK;
@@ -660,20 +660,39 @@ export const KART_SOLIDS: Box[] = (() => {
   ];
   for (const p of GANTRY.posts) out.push([p.x - 0.22, p.z - 0.22, p.x + 0.22, p.z + 0.22, GANTRY.h]);
   for (const { x, z, h } of PILLARS) out.push([x - 0.2, z - 0.2, x + 0.2, z + 0.2, h]);
-  const scPiece = PIECES.find((p) => p.id === 'shortcut')!;
-  const scEnds = [frame(scPiece, 0), frame(scPiece, scPiece.L)];
-  const nearShortcutEnd = (x: number, z: number) => scEnds.some((e) => Math.hypot(e.x - x, e.z - z) < 12);
-  for (const p of PIECES) {
-    for (let s = 1.5; s < p.L - 1; s += WALL_EVERY) {
-      const f = frame(p, s);
-      if (f.y > 1.0) continue;
-      for (const side of [1, -1]) {
-        const x = f.x + f.nx * (p.half + 0.3) * side;
-        const z = f.z + f.nz * (p.half + 0.3) * side;
-        if (nearNode(x, z) || nearShortcutEnd(x, z)) continue;
-        out.push([x - 0.5, z - 0.5, x + 0.5, z + 0.5, 0.55]);
-      }
-    }
-  }
   return out;
 })();
+
+/**
+ * The track's surface under a point, for driving on it off a race (drive.ts): the height and the
+ * banking of the nearest piece whose lane covers the point and whose height is near `yNow` (so a
+ * kart under a bridge stays under it, and one on the deck stays up). Null off the track.
+ */
+export function trackSurfaceAt(x: number, z: number, yNow: number): { y: number; roll: number } | null {
+  const P = KART_PARK;
+  if (x < P.x0 || x > P.x1 || z < P.z0 || z > P.z1) return null;
+  let best: { y: number; roll: number } | null = null;
+  let bestDy = Infinity;
+  for (const p of PIECES) {
+    const reach = p.half + 0.6;
+    let bi = -1;
+    let bd = reach * reach;
+    for (let i = 0; i < p.x.length; i += 2) {
+      const dd = (p.x[i] - x) ** 2 + (p.z[i] - z) ** 2;
+      if (dd < bd) {
+        bd = dd;
+        bi = i;
+      }
+    }
+    if (bi < 0) continue;
+    const f = frame(p, bi * p.step);
+    const lat = (x - f.x) * f.nx + (z - f.z) * f.nz;
+    if (Math.abs(lat) > reach) continue;
+    const y = heightAt(f, Math.max(-p.half, Math.min(p.half, lat)));
+    const dy = Math.abs(y - yNow);
+    if (dy > 1.8 || dy >= bestDy) continue;
+    bestDy = dy;
+    best = { y, roll: f.roll };
+  }
+  return best;
+}

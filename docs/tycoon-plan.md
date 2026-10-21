@@ -245,8 +245,9 @@ A Mario-Kart-style place of its own, outside the Parkway in the
 north-east: `kartpark.ts` (the site, the track network and the courses as
 data), `kart-sim.ts` (the rules), `kartpark3d.ts` (the site in 3D),
 `karts.ts` / `kart.ts` (the karts and the race on screen) and `kart-ui.ts`
-(the hut's menu, the HUD, the results). Karts stay on the track: they're
-racing machines, not city cars.
+(the hut's menu, the HUD, the results). Race karts stay on the track; your
+own kart can be taken from the pits and driven anywhere on the map (the
+owner's call), and nothing on or beside the track is solid.
 
 - **The site:** the whole north-east quadrant outside the Parkway, to the
   world's edge (140 x 144 tiles, about 250 x 260 m: the owner wanted it big,

@@ -1,12 +1,17 @@
 /*
- * Driving your own car (walk mode): get in at the car, drive anywhere in
- * the city, get out wherever you stop. drive-sim.ts holds the rules (arcade
- * handling, soft collisions); this is the view: the car on screen, the
- * camera, the speed readout and the engine.
+ * Driving your own car, or your kart (walk mode): get in at the vehicle,
+ * drive anywhere in the city, get out wherever you stop. drive-sim.ts holds
+ * the rules (arcade handling, soft collisions); this is the view: the
+ * vehicle on screen, the camera, the speed readout and the engine.
  *
  * - The car lives on the garage's turntable until you first get in; after
  *   that it stays where you leave it (until it's sent home from the garage,
  *   or the page reloads).
+ * - The kart stands in the kart park's pits between races (the owner's
+ *   call: it can be taken out and driven anywhere too, with Degen seated in
+ *   it). It goes back to the pits when a race starts. On the track it rides
+ *   the decks and the banking (`track()`, kartpark.ts trackSurfaceAt).
+ * - Both can be out at once; you're in one at a time.
  * - Cameras (V): a chase camera that swings in behind the car (look around
  *   with the mouse, a drag or the right stick; it settles back behind) and a
  *   roof camera.
@@ -17,13 +22,15 @@
  *   in, so an upgrade bought while the car was parked counts at once.
  */
 import * as THREE from 'three';
+import { createDegen, type Degen, type Outfit } from './character';
 import type { Sfx } from './combat';
-import type { Car } from './cars';
 import { CARS } from './cars';
 import { circles, newCar, stepCar, tune, type CarState, type DriveInput, type DriveTune } from './drive-sim';
 import type { Garage } from './garage';
+import type { Kart } from './karts';
 import { bodies } from './life';
 import type { MyCar, PlayerCar } from './mycar';
+import type { KartId } from './mykart';
 import type { Box } from './solids';
 
 export interface DriveDeps {
@@ -35,6 +42,17 @@ export interface DriveDeps {
   myCar(): MyCar;
   /** A model's 0..1 handling with its mods on (carStatsOf in tycoon.ts) */
   stats(model: PlayerCar): { speed: number; accel: number; grip: number };
+  /** Your kart in the pits (kart.ts): where it stands when it's home, taking it out, and bringing it back; its handling */
+  kart: {
+    home(): { x: number; z: number; yaw: number } | null;
+    takeOut(): { kart: Kart; model: KartId; name: string; x: number; z: number; yaw: number } | null;
+    bringBack(): void;
+    stats(model: KartId): { speed: number; accel: number; grip: number };
+  };
+  /** What Degen wears (the kart's driver is a seated Degen in the same look) */
+  outfit(): Outfit;
+  /** The kart track's surface under a point (height and banking), if it's on the track at about this height */
+  track(x: number, z: number, yNow: number): { y: number; roll: number } | null;
   /** Every solid box in the city (landmarks, placed buildings) */
   solids(): Box[];
   /** The ground's height (the raised blocks and sidewalks) */
@@ -59,9 +77,32 @@ export function createDrive(d: DriveDeps) {
   const speedEl = hud.querySelector<HTMLElement>('[data-drive-speed]')!;
   const gearEl = hud.querySelector<HTMLElement>('[data-drive-gear]')!;
 
-  /** The car out in the city (null while it's on the turntable) */
-  let out: { car: Car; model: PlayerCar; state: CarState; tune: DriveTune; holder: THREE.Group } | null = null;
-  let active = false;
+  /** A vehicle out in the city: the car (off the turntable) or the kart (out of the pits) */
+  interface Out {
+    kind: 'car' | 'kart';
+    name: string;
+    model: PlayerCar | KartId;
+    group: THREE.Group;
+    drive(dist: number, steer: number): void;
+    dispose(): void;
+    seat?(degen: Degen | null): void;
+    state: CarState;
+    tune: DriveTune;
+    holder: THREE.Group;
+    /** Where it sits: the ground or the track's deck, and the banking's tilt */
+    y: number;
+    bank: number;
+    /** The roof camera's height and how far forward it sits */
+    roof: number;
+    roofFwd: number;
+  }
+  let car: Out | null = null;
+  let kart: Out | null = null;
+  /** The one being driven */
+  let out: Out | null = null;
+  const active = () => !!out;
+  /** The seated Degen for the kart, made once */
+  let driver: Degen | null = null;
   /** Locked (a race's countdown): no throttle or steering, handbrake on */
   let frozen = false;
   let roofCam = false;
@@ -70,7 +111,6 @@ export function createDrive(d: DriveDeps) {
   let lookPitch = 0;
   let lookIdle = 0;
   let shake = 0;
-  let y = 0;
   let roll = 0;
   let pitch = 0;
   let lastSpeed = 0;
@@ -81,20 +121,94 @@ export function createDrive(d: DriveDeps) {
   const at = new THREE.Vector3();
   let camReady = false;
 
-  function tuneOf(model: PlayerCar): DriveTune {
-    const s = CARS[model];
-    return tune(d.stats(model), { L: s.L, W: s.W, wheelbase: s.axles[1] - s.axles[0] });
+  function tuneOf(v: Out): DriveTune {
+    if (v.kind === 'car') {
+      const s = CARS[v.model as PlayerCar];
+      return tune(d.stats(v.model as PlayerCar), { L: s.L, W: s.W, wheelbase: s.axles[1] - s.axles[0] });
+    }
+    // A kart: small, quick off the line, a little slower than a race pace on the open road
+    const k = d.kart.stats(v.model as KartId);
+    return tune({ speed: k.speed * 0.8, accel: k.accel, grip: k.grip }, { L: 1.2, W: 0.95, wheelbase: 0.82 });
   }
 
-  /** The car's footprint as circles (for walking round a parked car) */
-  const parkedCircles = () => (out && !active ? circles(out.state, out.tune) : []);
+  /** The parked vehicles' footprints as circles (for walking round them) */
+  const parkedCircles = () => [car, kart].flatMap((v) => (v && v !== out ? circles(v.state, v.tune) : []));
+  const outs = () => [car, kart].filter((v): v is Out => !!v);
 
-  function place() {
-    if (!out) return;
-    const s = out.state;
-    out.holder.position.set(s.x, y, s.z);
-    out.holder.rotation.y = s.yaw;
-    out.car.group.rotation.set(roll, 0, pitch);
+  function place(v: Out) {
+    const s = v.state;
+    v.holder.position.set(s.x, v.y, s.z);
+    v.holder.rotation.y = s.yaw;
+    v.group.rotation.set((v === out ? roll : 0) + v.bank, 0, v === out ? pitch : 0);
+  }
+
+  /** The kart out of the pits, standing where it was shown */
+  function takeKart(): Out | null {
+    const taken = d.kart.takeOut();
+    if (!taken) return null;
+    const holder = new THREE.Group();
+    d.scene.add(holder);
+    holder.add(taken.kart.group);
+    taken.kart.group.position.set(0, 0, 0);
+    const v: Out = {
+      kind: 'kart',
+      name: taken.name,
+      model: taken.model,
+      group: taken.kart.group,
+      drive: (dist, steer) => taken.kart.drive(dist, steer),
+      dispose: () => taken.kart.dispose(),
+      seat: (deg) => taken.kart.seat(deg),
+      state: newCar(taken.x, taken.z, taken.yaw),
+      tune: { top: 0, reverse: 0, accel: 0, brake: 0, grip: 0, L: 1.2, W: 0.95, wheelbase: 0.82 },
+      holder,
+      y: d.groundAt(taken.x, taken.z),
+      bank: 0,
+      roof: 0.95,
+      roofFwd: -0.1,
+    };
+    v.tune = tuneOf(v);
+    place(v);
+    return v;
+  }
+  function takeCar(): Out | null {
+    const taken = d.garage.takeOut();
+    if (!taken) return null;
+    const model = d.myCar().model;
+    const holder = new THREE.Group();
+    d.scene.add(holder);
+    holder.add(taken.car.group);
+    taken.car.group.position.set(0, 0, 0);
+    const spec = CARS[model];
+    const v: Out = {
+      kind: 'car',
+      name: spec.name,
+      model,
+      group: taken.car.group,
+      drive: (dist, steer) => taken.car.drive(dist, steer),
+      dispose: () => taken.car.dispose(),
+      state: newCar(taken.x, taken.z, taken.yaw),
+      tune: { top: 0, reverse: 0, accel: 0, brake: 0, grip: 0, L: spec.L, W: spec.W, wheelbase: 1 },
+      holder,
+      y: d.groundAt(taken.x, taken.z),
+      bank: 0,
+      roof: spec.cabin[1][1] + 0.28,
+      roofFwd: spec.cabin[2][0] * 0.6,
+    };
+    v.tune = tuneOf(v);
+    place(v);
+    return v;
+  }
+  /** How far a point is from a vehicle you could get into: parked ones, the turntable's car, the pits' kart */
+  function nearest(x: number, z: number): { d: number; kind: 'car' | 'kart' } | null {
+    let best: { d: number; kind: 'car' | 'kart' } | null = null;
+    const offer = (dist: number, kind: 'car' | 'kart') => {
+      if (!best || dist < best.d) best = { d: dist, kind };
+    };
+    for (const v of outs()) if (v !== out) offer(Math.min(...circles(v.state, v.tune).map((c) => Math.hypot(c.x - x, c.z - z) - c.r)), v.kind);
+    if (!car && d.garage.hasCar) offer(Math.hypot(d.garage.turntable.x - x, d.garage.turntable.z - z) - d.garage.turntable.r, 'car');
+    const home = kart ? null : d.kart.home();
+    if (home) offer(Math.hypot(home.x - x, home.z - z) - 0.9, 'kart');
+    return best;
   }
 
   /** Things to bump softly: nearby traffic (two circles each) and people */
@@ -118,66 +232,85 @@ export function createDrive(d: DriveDeps) {
 
   return {
     get active() {
-      return active;
+      return active();
     },
-    /** The car being driven (or parked out in the city), for the traffic and the camera */
+    /** The vehicle being driven, else your car out in the city (parked), for the traffic and the camera */
     get state() {
-      return out?.state ?? null;
+      return (out ?? car)?.state ?? null;
+    },
+    /** Your car's own state, out of the garage (driving or parked); null while it's on the turntable */
+    get carState() {
+      return car?.state ?? null;
+    },
+    /** Driving the car (not the kart)? */
+    get inCar() {
+      return !!out && out.kind === 'car';
     },
     /** Is your car out of the garage? */
     get away() {
-      return !!out;
+      return !!car;
+    },
+    /** Is the kart out of the pits? */
+    get kartAway() {
+      return !!kart;
     },
     get model() {
-      return out?.model ?? d.myCar().model;
+      return (car?.model as PlayerCar | undefined) ?? d.myCar().model;
     },
-    /** How far Degen is from a car he can get into (Infinity if there isn't one) */
+    /** What you're driving */
+    get vehicle() {
+      return out ? { kind: out.kind, name: out.name } : null;
+    },
+    /** How far Degen is from a vehicle he can get into (Infinity if there isn't one), and which it is */
     nearCar(x: number, z: number) {
-      if (out) return Math.min(...circles(out.state, out.tune).map((c) => Math.hypot(c.x - x, c.z - z) - c.r));
-      if (d.garage.hasCar) return Math.hypot(d.garage.turntable.x - x, d.garage.turntable.z - z) - d.garage.turntable.r;
-      return Infinity;
+      return nearest(x, z)?.d ?? Infinity;
     },
-    /** Does the parked car block this spot (walking)? */
+    nearKind(x: number, z: number) {
+      return nearest(x, z)?.kind ?? null;
+    },
+    /** Does a parked vehicle block this spot (walking)? */
     blocks(x: number, z: number, pad: number) {
       return parkedCircles().some((c) => Math.hypot(c.x - x, c.z - z) < c.r + pad);
     },
-    /** Get in (from the turntable, or wherever it's parked) */
-    enter() {
-      if (!out) {
-        const taken = d.garage.takeOut();
-        if (!taken) return false;
-        const model = d.myCar().model;
-        const holder = new THREE.Group();
-        d.scene.add(holder);
-        holder.add(taken.car.group);
-        taken.car.group.position.set(0, 0, 0);
-        out = { car: taken.car, model, state: newCar(taken.x, taken.z, taken.yaw), tune: tuneOf(model), holder };
-      }
+    /** Get into the nearest vehicle (from the turntable, the pits, or wherever it's parked) */
+    enter(x: number, z: number) {
+      if (out) return false;
+      const n = nearest(x, z);
+      if (!n) return false;
+      let v: Out | null;
+      if (n.kind === 'car') v = car ?? (car = takeCar());
+      else v = kart ?? (kart = takeKart());
+      if (!v) return false;
+      out = v;
       // Mods may have been bought since it was parked
-      out.tune = tuneOf(out.model);
-      active = true;
-      camYaw = out.state.yaw;
+      v.tune = tuneOf(v);
+      if (v.seat) {
+        driver ??= createDegen(d.outfit(), 2);
+        v.seat(driver);
+      }
+      camYaw = v.state.yaw;
       lookYaw = lookPitch = 0;
-      y = d.groundAt(out.state.x, out.state.z);
       roll = pitch = 0;
       camReady = false;
       fov = camera.fov;
-      place();
+      place(v);
       hud.hidden = false;
       root.classList.add('is-driving');
-      root.dataset.car = CARS[out.model].name;
+      root.dataset.car = v.name;
       d.sfx('door');
       return true;
     },
-    /** Get out: the car stays parked; returns where Degen steps out and which way he faces */
+    /** Get out: the vehicle stays parked; returns where Degen steps out and which way he faces */
     exit() {
-      if (!active || !out) return null;
-      active = false;
-      const s = out.state;
+      if (!out) return null;
+      const v = out;
+      out = null;
+      const s = v.state;
       s.speed = s.vx = s.vz = 0;
       s.steer = 0;
       roll = pitch = 0;
-      place();
+      v.seat?.(null);
+      place(v);
       hud.hidden = true;
       root.classList.remove('is-driving');
       delete root.dataset.car;
@@ -188,8 +321,8 @@ export function createDrive(d: DriveDeps) {
       const fz = -Math.sin(s.yaw);
       const rx = Math.sin(s.yaw);
       const rz = Math.cos(s.yaw);
-      const side = out.tune.W / 2 + 0.45;
-      const end = out.tune.L / 2 + 0.45;
+      const side = v.tune.W / 2 + 0.45;
+      const end = v.tune.L / 2 + 0.45;
       const spots: [number, number][] = [
         [s.x - rx * side, s.z - rz * side],
         [s.x + rx * side, s.z + rz * side],
@@ -201,11 +334,19 @@ export function createDrive(d: DriveDeps) {
     },
     /** Send the car home (the garage brought it back): it leaves the streets */
     recall() {
-      if (!out) return;
-      if (active) return;
-      out.car.dispose();
-      out.holder.removeFromParent();
-      out = null;
+      if (!car || out === car) return;
+      car.dispose();
+      car.holder.removeFromParent();
+      car = null;
+    },
+    /** The kart goes back to the pits (a race is starting, or the hut sends it home) */
+    recallKart() {
+      if (!kart || out === kart) return;
+      kart.seat?.(null);
+      kart.dispose();
+      kart.holder.removeFromParent();
+      kart = null;
+      d.kart.bringBack();
     },
     toggleView() {
       roofCam = !roofCam;
@@ -226,10 +367,12 @@ export function createDrive(d: DriveDeps) {
     },
     /** One frame of driving; returns how far the car moved (tiles) */
     update(dt: number, inp: DriveInput) {
-      if (!active || !out) return 0;
-      const s = out.state;
-      const T = out.tune;
-      const boxes = d.solids();
+      if (!out) return 0;
+      const v = out;
+      const s = v.state;
+      const T = v.tune;
+      // Up on the track's deck, what's below the deck (its pillars) is no obstacle
+      const boxes = v.y > 0.5 ? d.solids().filter((b) => b[4] > v.y + 0.2) : d.solids();
       if (frozen) inp = { throttle: 0, steer: 0, handbrake: true };
       const px = s.x;
       const pz = s.z;
@@ -240,14 +383,17 @@ export function createDrive(d: DriveDeps) {
         shake = Math.min(0.25, hit * 0.03);
       }
 
-      // The body: up the kerbs smoothly, leans into turns and squats under gas or brakes
-      y += (d.groundAt(s.x, s.z) - y) * damp(14, dt);
+      // The body: up the kerbs smoothly (and the kart track's ramps, decks and banking), leans into turns and squats under gas or brakes
+      const track = d.track(s.x, s.z, v.y);
+      v.y += (Math.max(d.groundAt(s.x, s.z), track?.y ?? -Infinity) - v.y) * damp(14, dt);
+      v.bank += (-Math.atan(track?.roll ?? 0) - v.bank) * damp(8, dt);
       const accel = (s.speed - lastSpeed) / Math.max(dt, 1e-3);
       lastSpeed = s.speed;
       roll += (THREE.MathUtils.clamp(s.yawRate * s.speed * 0.012, -0.07, 0.07) - roll) * damp(6, dt);
       pitch += (THREE.MathUtils.clamp(accel * 0.006, -0.05, 0.05) - pitch) * damp(6, dt);
-      out.car.drive(s.speed * dt, -s.steer);
-      place();
+      v.drive(s.speed * dt, -s.steer);
+      place(v);
+      const y = v.y;
 
       // Readout and engine
       const kmh = Math.round(Math.abs(s.speed) * KMH);
@@ -267,10 +413,8 @@ export function createDrive(d: DriveDeps) {
       const yaw = camYaw + lookYaw;
       const fx = Math.cos(yaw);
       const fz = -Math.sin(yaw);
-      const spec = CARS[out.model];
       if (roofCam) {
-        const roof = spec.cabin[1][1];
-        camPos.set(s.x + fx * (spec.cabin[2][0] * 0.6), y + roof + 0.28, s.z + fz * (spec.cabin[2][0] * 0.6));
+        camPos.set(s.x + fx * v.roofFwd, y + v.roof, s.z + fz * v.roofFwd);
         at.set(camPos.x + fx * 6, camPos.y - 0.35 + lookPitch * 4, camPos.z + fz * 6);
         camera.position.copy(camPos);
       } else {

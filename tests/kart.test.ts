@@ -14,6 +14,7 @@ import {
   HUT_DOOR,
   KART_PARK,
   KART_SOLIDS,
+  trackSurfaceAt,
   KART_SPAWN,
   NODE_REACH,
   PIECES,
@@ -239,8 +240,8 @@ test('the grid is eight slots behind the line, on the track; the gantry stands e
   assert.ok(PILLARS.length >= 8 && PILLARS.every((p) => p.h > 0.5 && p.h <= BRIDGE_H + 0.01));
 });
 
-test('the footprints: the fence with a gap at the gate, the hut, the stand, the posts and pillars, walls at ground level off the junctions', () => {
-  assert.ok(KART_SOLIDS.length > 100);
+test('the footprints: the fence with a gap at the gate, the hut, the stand, the posts and pillars; nothing solid on or beside the track', () => {
+  assert.ok(KART_SOLIDS.length > 10);
   for (const b of KART_SOLIDS) {
     assert.ok(b[0] < b[2] && b[1] < b[3] && b[4] > 0);
     assert.ok(b[0] >= KART_PARK.x0 - 0.5 && b[2] <= KART_PARK.x1 + 0.5 && b[1] >= KART_PARK.z0 - 0.5 && b[3] <= KART_PARK.z1 + 0.5, 'on the site');
@@ -250,14 +251,39 @@ test('the footprints: the fence with a gap at the gate, the hut, the stand, the 
   assert.ok(!KART_SOLIDS.some((b) => gateMid[0] > b[0] && gateMid[0] < b[2] && gateMid[1] >= b[1] - 0.01 && gateMid[1] <= b[3] + 0.01));
   const clear = (x: number, z: number) => !KART_SOLIDS.some((b) => x > b[0] - 0.3 && x < b[2] + 0.3 && z > b[1] - 0.3 && z < b[3] + 0.3);
   assert.ok(clear(HUT_DOOR.x, HUT_DOOR.z) && clear(KART_SPAWN.x, KART_SPAWN.z));
-  // Nothing solid on any course's own lane (a bridge's pillars stand beside the ground pass)
+  // Nothing solid on any course's lane, its kerbs included (the owner's call: a kart drives on and off the
+  // track anywhere; a bridge's pillars stand beside the ground pass)
   for (const c of Object.values(COURSES))
     for (let s = 0; s < c.L; s += 1)
-      for (const lat of [-TRACK_HALF + 0.7, 0, TRACK_HALF - 0.7]) {
+      for (const lat of [-TRACK_HALF - 0.4, -TRACK_HALF + 0.7, 0, TRACK_HALF - 0.7, TRACK_HALF + 0.4]) {
         const p = at(c, s, lat);
         const hit = KART_SOLIDS.find((b) => p.x > b[0] && p.x < b[2] && p.z > b[1] && p.z < b[3] && !(p.y > 1 && b[4] <= BRIDGE_H + 0.01));
         assert.equal(hit, undefined, `${c.id}: solid on the track at s ${s} lateral ${lat}: ${hit}`);
       }
+});
+
+test('the track surface for driving off a race: the deck over the ground pass, the banking, nothing off the track', () => {
+  const c = COURSES['neon-loop'];
+  // On the flyover's deck and under it: the same spot, two heights, each found from its own layer
+  let deckS = -1;
+  for (let s = 0; s < c.L; s += 0.5) if (frame(c, s).y > BRIDGE_H - 0.05) { deckS = s; break; }
+  assert.ok(deckS >= 0);
+  const f = frame(c, deckS + 4);
+  const up = trackSurfaceAt(f.x, f.z, f.y);
+  assert.ok(up && Math.abs(up.y - f.y) < 0.05, 'the deck from the deck');
+  const down = trackSurfaceAt(f.x, f.z, 0);
+  assert.ok(down && down.y < 0.3, 'the ground pass from the ground');
+  // The bowls tilt the kart
+  const sum = COURSES['summit'];
+  let bankS = -1;
+  for (let s = 0; s < sum.L; s += 0.5) if (Math.abs(frame(sum, s).roll) > 0.27) { bankS = s; break; }
+  assert.ok(bankS >= 0);
+  const b = frame(sum, bankS);
+  const onBank = trackSurfaceAt(b.x, b.z, b.y);
+  assert.ok(onBank && Math.abs(onBank.roll) > 0.2);
+  // Off the track: the lawn and the city
+  assert.equal(trackSurfaceAt(KART_PARK.x0 + 1, KART_PARK.z0 + 1, 0), null);
+  assert.equal(trackSurfaceAt(0, 0, 0), null);
 });
 
 /* ---------- The karts, classes and the economy ---------- */

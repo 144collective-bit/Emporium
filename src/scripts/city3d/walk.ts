@@ -24,7 +24,7 @@ import { PLAYER, airPose, createDegen, emotePose, walkPose, type Outfit } from '
 import { createCombat, type Sfx } from './combat';
 import { WEAPON_IDS } from './combat-sim';
 import { createGunShop } from './gunshop';
-import { carStatsOf, ownsCar, takedown } from './tycoon';
+import { carStatsOf, kartStatsOf, ownsCar, takedown } from './tycoon';
 import { createGarageUI, loadCar } from './garage-ui';
 import { DEFAULT_CAR } from './mycar';
 import type { Garage } from './garage';
@@ -34,7 +34,7 @@ import type { RaceSite } from './racesite';
 import { RACE_SITE, START_LINE, START_R } from './races';
 import { createKartUI } from './kart-ui';
 import { createKartRace } from './kart';
-import { HUT_DOOR } from './kartpark';
+import { HUT_DOOR, trackSurfaceAt } from './kartpark';
 import type { CourseId } from './kartpark';
 import type { KartPark } from './kart-types';
 import { CUPS } from './kart-sim';
@@ -350,6 +350,18 @@ export function createWalk(d: WalkDeps) {
       return ownsCar(d.game.save(), c.model) ? c : { ...DEFAULT_CAR };
     },
     stats: (model) => carStatsOf(d.game.save(), model),
+    // Your kart, out of the pits and back (kart.ts keeps the show kart); its handling with its mods
+    kart: {
+      home: () => karts.home(),
+      takeOut: () => karts.takeOut(),
+      bringBack: () => karts.bringBack(),
+      stats: (model) => {
+        const k = kartStatsOf(d.game.save(), model);
+        return { speed: k.speed, accel: k.accel, grip: k.handling };
+      },
+    },
+    outfit: () => outfit,
+    track: trackSurfaceAt,
     solids: () => (d.plotSolids().length ? [...CAR_SOLIDS, ...d.plotSolids()] : CAR_SOLIDS),
     groundAt,
     cameraRoom,
@@ -367,8 +379,8 @@ export function createWalk(d: WalkDeps) {
   const races = createRaceUI(root, {
     game: d.game,
     car: () => {
-      const st = drive.state;
-      return st ? { x: st.x, z: st.z, speed: st.speed, driving: drive.active } : null;
+      const st = drive.carState;
+      return st ? { x: st.x, z: st.z, speed: st.speed, driving: drive.inCar } : null;
     },
     onFreeze: (on) => (drive.frozen = on),
     site: d.raceSite,
@@ -444,6 +456,8 @@ export function createWalk(d: WalkDeps) {
   function startKart(setup: { course: CourseId; cup: CupId | 'time'; cls: ClassId }) {
     if (karts.active) return;
     kartUI.close();
+    if (drive.active) getOut();
+    drive.recallKart();
     if (combat.armed) combat.toggleHolster();
     keys.clear();
     vel.set(0, 0);
@@ -496,7 +510,7 @@ export function createWalk(d: WalkDeps) {
   let driven = 0;
   function getIn() {
     if (combat.armed) combat.toggleHolster();
-    if (!drive.enter()) return;
+    if (!drive.enter(pos.x, pos.z)) return;
     keys.clear();
     vel.set(0, 0);
     jumpHeld = false;
@@ -1284,8 +1298,8 @@ export function createWalk(d: WalkDeps) {
     },
     /** Your car, if it's out of the garage: where it is, its model, and whether you're in it */
     get car() {
-      const st = drive.state;
-      return st ? { x: st.x, z: st.z, model: drive.model, driving: drive.active, speed: st.speed } : null;
+      const st = drive.carState;
+      return st ? { x: st.x, z: st.z, model: drive.model, driving: drive.inCar, speed: st.speed } : null;
     },
     onKey,
     update,

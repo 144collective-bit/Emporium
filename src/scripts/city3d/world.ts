@@ -495,9 +495,11 @@ export function buildSkyline(scene: THREE.Scene, count: number, tick: (f: Tick) 
   const beaconMat = neon('#ff3b3b', 0.4, 3);
   for (let i = 0; i < count; i++) {
     const a = (i / count) * Math.PI * 2 + rand() * 0.1;
-    // A ring just past the world's edge, so the metropolis carries on beyond the land you can build on
+    // A ring just past the world's edge, so the metropolis carries on beyond the land you can build on.
+    // The world is square: the ring follows its edge (a rounded square), so no tower stands on the
+    // land in the corners (the kart park fills the north-east one)
     const reach = (EXT[1] - EXT[0]) / 2;
-    const rr = reach + 18 + rand() * 40;
+    const rr = reach / Math.max(Math.abs(Math.cos(a)), Math.abs(Math.sin(a))) + 18 + rand() * 40;
     const x = (EXT[0] + EXT[1]) / 2 + Math.cos(a) * rr;
     const z = (EXT[0] + EXT[1]) / 2 + Math.sin(a) * rr;
     const w = 7 + rand() * 9;
