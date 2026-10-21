@@ -659,6 +659,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const statsEl = new URLSearchParams(location.search).has('fps') ? document.createElement('pre') : null;
   const stat = { frames: 0, draws: 0, tris: 0, worst: 0, last: 0, since: performance.now() };
   if (statsEl) {
+    // For the headless draw-call breakdown (scratch scripts): the scene, renderer and camera on the page
+    (window as unknown as { __city?: unknown }).__city = { scene, renderer, camera };
     statsEl.className = 'city-stats';
     statsEl.setAttribute('aria-hidden', 'true');
     host.append(statsEl);
