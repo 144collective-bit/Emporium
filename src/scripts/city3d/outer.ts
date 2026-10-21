@@ -21,6 +21,7 @@
 import { DISTRICTS } from '../../data/plots';
 import { BIG_LOTS, BS, EW_ROADS, GARAGE, LANE, MARKET, NS_ROADS, RIVER, RING_HI, SOUTH_ROAD, UNITS, WALK_W, type Road } from './layout';
 import { SLIP_ROAD } from './kartpark';
+import { FIGHT_CLUB } from './fightsite';
 
 export type Pt = [number, number];
 /** x0, z0, x1, z1 */
@@ -240,7 +241,8 @@ const parkRects: { id: string; block: string; rect: Rect }[] = [
   { id: 'nw', block: 'o-nw', rect: [-26.5, -16.5, -20, -10.2] },
   { id: 'ne', block: 'o-ne', rect: [83, -27, 99, -12] },
   { id: 'sw', block: 'o-sw', rect: [-31.5, 86.5, -22, 97] },
-  { id: 'se', block: 'o-se', rect: [95, 86, 112, 99] },
+  // East of the Fight Club's lot (fightsite.ts FIGHT_CLUB, x 95-109), which took its old spot
+  { id: 'se', block: 'o-se', rect: [110.5, 85.5, 118.5, 95] },
 ];
 export const OUTER_PARKS: PocketPark[] = parkRects.map((p, i) => {
   const r = rng(700 + i);
@@ -261,7 +263,9 @@ export const OUTER_PARKS: PocketPark[] = parkRects.map((p, i) => {
 /* ---------- Lawns: trees across the rest of each block ---------- */
 
 const clearOf = (p: Pt, r: Rect, m: number) => p[0] < r[0] - m || p[0] > r[2] + m || p[1] < r[1] - m || p[1] > r[3] + m;
-/** Trees on the open lawns of the outer blocks (not on the pads, the squares or the parks) */
+/** The Fight Club's lot on the south bank (fightclub.ts paves it): no lawn tree on it */
+const FIGHT_LOT: Rect = [FIGHT_CLUB.x0, FIGHT_CLUB.z0, FIGHT_CLUB.x1, FIGHT_CLUB.z1];
+/** Trees on the open lawns of the outer blocks (not on the pads, the squares, the parks or the Fight Club) */
 export const LAWN_TREES: Pt[] = OUTER_BLOCKS.flatMap((b, i) => {
   const r = rng(900 + i);
   const xs = b.poly.map((p) => p[0]);
@@ -271,6 +275,7 @@ export const LAWN_TREES: Pt[] = OUTER_BLOCKS.flatMap((b, i) => {
     ...PADS.filter((p) => b.pads.includes(p.id)).map((p) => p.rect),
     ...OUTER_SQUARES.filter((s) => s.block === b.id).map((s) => s.rect),
     ...parkRects.filter((s) => s.block === b.id).map((s) => s.rect),
+    ...(inside(b.poly, [FIGHT_LOT[0] + 0.1, FIGHT_LOT[1] + 0.1]) ? [FIGHT_LOT] : []),
   ];
   for (let x = Math.min(...xs) + 1.5; x < Math.max(...xs) - 1.5; x += 2.9)
     for (let z = Math.min(...zs) + 1.5; z < Math.max(...zs) - 1.5; z += 2.9) {
