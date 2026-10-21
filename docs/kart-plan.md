@@ -147,8 +147,10 @@ flyover's deck is 2.6 over the diagonal below.
    and marshal posts set back. The guidance is drawn per direction. Night
    and rain races set the sky (the visitor's own time and weather come
    back after). The old network's data and drawing are gone; walking
-   follows the circuit's ground too. Draw calls stayed at or under the old
-   park's from the same spots (measured with `?fps`).
+   follows the circuit's ground too. The whole park costs about 21 draw
+   calls a frame (measured by hiding it: 234 with it, 213 without, from the
+   middle of the park): one Batch for everything static, one per direction
+   for the guidance, the rest instanced.
    - The narrower ribbon with red-and-white kerbs, grass and gravel
      run-off, tyre stacks set back, the banked bends, the hill, the tunnel,
      the jump, the flyover deck (open underneath), the start gantry and grid
