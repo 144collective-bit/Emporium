@@ -337,3 +337,61 @@ test('the clock takes whole ticks and carries the rest; big frames are capped', 
   run(close, 2, { a: IDLE, b: IDLE });
   assert.ok(Math.hypot(close.fighter('a')!.x - close.fighter('b')!.x, close.fighter('a')!.z - close.fighter('b')!.z) >= T.radius * 2 - 1e-6);
 });
+
+/* ---------- The save: the Fight Club's record and what a fight pays (tycoon.ts) ---------- */
+import { cleanSave, finishFight, newSave } from '../src/scripts/city3d/tycoon';
+import { FIGHT_BOTS, SPAR_HIT_CAP, XP } from '../src/scripts/city3d/catalog';
+
+test('the save (v8): the fight record cleans, a spar pays XP capped per hit, a bout pays its purse on a win, a quit bout is a loss', () => {
+  const s = newSave(1000);
+  assert.equal(s.v, 8);
+  assert.deepEqual(s.fight.styles, ['brawler']);
+  assert.equal(s.fight.style, 'brawler');
+  const d0 = s.dorras;
+  const x0 = s.xp;
+  // A spar: taking part plus hits, capped
+  let r = finishFight(s, { kind: 'spar', bot: 'easy', won: null, hits: 40, kos: 0, bestChain: 2, seconds: 90 });
+  assert.equal(r.prize, 0);
+  assert.equal(r.xp, XP.spar + SPAR_HIT_CAP);
+  assert.equal(r.won, null);
+  assert.equal(s.fight.spars, 1);
+  assert.equal(s.dorras, d0);
+  // A bout won: the purse, a knock-out, a chain of three
+  r = finishFight(s, { kind: 'bout', bot: 'medium', won: true, hits: 20, kos: 1, bestChain: 3, seconds: 75.5 });
+  assert.equal(r.prize, FIGHT_BOTS.medium.prize);
+  assert.equal(r.xp, XP.boutWin + XP.fightKo + XP.chain);
+  assert.equal(r.won, true);
+  assert.equal(s.dorras, d0 + FIGHT_BOTS.medium.prize);
+  assert.equal(s.fight.wins, 1);
+  assert.equal(s.fight.kos, 1);
+  assert.equal(s.fight.bestChain, 3);
+  assert.deepEqual(s.fight.bots.medium, { beaten: 1, bestSeconds: 75.5 });
+  assert.equal(s.counters.bouts, 1);
+  assert.equal(s.counters.fightWins, 1);
+  assert.equal(s.counters.kos, 1);
+  assert.equal(s.counters.chains, 1);
+  assert.equal(s.ledger.totals.fighting, FIGHT_BOTS.medium.prize);
+  // A faster win keeps the best time; a slower one doesn't
+  finishFight(s, { kind: 'bout', bot: 'medium', won: true, hits: 5, kos: 0, bestChain: 1, seconds: 60 });
+  finishFight(s, { kind: 'bout', bot: 'medium', won: true, hits: 5, kos: 0, bestChain: 1, seconds: 99 });
+  assert.deepEqual(s.fight.bots.medium, { beaten: 3, bestSeconds: 60 });
+  // A loss pays a little XP; a quit pays none
+  const x1 = s.xp;
+  r = finishFight(s, { kind: 'bout', bot: 'hard', won: false, hits: 3, kos: 0, bestChain: 1, seconds: 30 });
+  assert.equal(r.xp, XP.boutLoss);
+  r = finishFight(s, { kind: 'bout', bot: 'hard', won: false, hits: 3, kos: 0, bestChain: 1, seconds: 30, quit: true });
+  assert.equal(r.xp, 0);
+  assert.equal(s.fight.losses, 2);
+  assert.ok(s.xp > x1 && s.xp > x0);
+  // Cleaning: junk dropped, the record kept, an unowned style falls back
+  const c = cleanSave({ ...s, fight: { ...s.fight, style: 'street', styles: ['brawler', 'nope'], wins: -3, bots: { medium: { beaten: 2.4, bestSeconds: 'x' }, bogus: { beaten: 1 } } } }, 2000);
+  assert.equal(c.fight.style, 'brawler');
+  assert.deepEqual(c.fight.styles, ['brawler']);
+  assert.equal(c.fight.wins, 0);
+  assert.deepEqual(c.fight.bots, { medium: { beaten: 2, bestSeconds: null } });
+  // An old save without a fight record comes up with an empty one
+  const old = cleanSave({ v: 7, dorras: 5 }, 2000);
+  assert.equal(old.v, 8);
+  assert.deepEqual(old.fight.styles, ['brawler']);
+  assert.equal(old.fight.bouts, 0);
+});

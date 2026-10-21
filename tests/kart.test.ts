@@ -426,7 +426,7 @@ test('the save is v7: older saves get the kart section, and a loaded one is clea
   old.v = 6;
   old.karts = { model: 'rocket', paint: 'magenta', owned: [], mods: {}, records: { 'neon-loop': 55 } };
   const s = cleanSave(old, 1000);
-  assert.equal(s.v, 7);
+  assert.equal(s.v, 8);
   assert.deepEqual(s.karts.records, {}, 'old plain times are dropped');
   assert.deepEqual(s.karts.boards, {});
   assert.equal(s.karts.series, null);

@@ -214,5 +214,9 @@ export const COUNTER_NAMES: Record<CounterId, string> = {
   podiums: 'kart podiums',
   kartWins: 'kart races won',
   kartHits: 'item hits landed',
+  bouts: 'bouts fought',
+  fightWins: 'bouts won',
+  kos: 'knock-outs',
+  chains: 'chains of three',
 };
 export type { Counters };
