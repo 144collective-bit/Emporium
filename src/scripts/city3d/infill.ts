@@ -609,11 +609,15 @@ function shell(k: Kit, F: Frame, top: number, wallBand: Band, ground: Band | nul
   k.wall(wallBand, [w, -d], [0, -d], S, top, [0, -1], u0 + 0.75);
 }
 
+/** How far a roof slab stands in from the walls it sits between */
+const R_IN = 0.006;
+
 /** The roof slab and its parapet */
 function roof(k: Kit, F: Frame, top: number, par: THREE.Material, ph = 0.22) {
   const { w, d } = F;
   const t = 0.12;
-  k.lbox(0, w, top - 0.04, top, -d, 0, ROOF);
+  // The slab tucked just inside the walls (flush with them, its edge flickers against them); the parapet covers the gap
+  k.lbox(R_IN, w - R_IN, top - 0.04, top, -d + R_IN, -R_IN, ROOF);
   k.lbox(0, w, top, top + ph, -t, 0, par);
   k.lbox(0, w, top, top + ph, -d, -d + t, par);
   k.lbox(0, t, top, top + ph, -d + t, -t, par);
@@ -819,7 +823,7 @@ function building(b: Batch, f: Infill, crowd: Idle[], low: boolean) {
     k.lbox(uc - 0.3, uc + 0.3, S + 0.45, S + 1.45, -0.02, 0.03, toon('#3a2430'));
     k.lbox(uc - 0.4, uc - 0.3, S + 0.45, S + 1.5, 0, 0.08, trimM);
     k.lbox(uc + 0.3, uc + 0.4, S + 0.45, S + 1.5, 0, 0.08, trimM);
-    k.lbox(uc - 0.48, uc + 0.48, S + 1.5, S + 1.62, 0, 0.14, trimM);
+    k.lbox(uc - 0.47, uc + 0.47, S + 1.5, S + 1.62, 0, 0.14, trimM);
     k.put(new THREE.SphereGeometry(0.05, 6, 4).translate(uc - 0.4, S + 1.32, 0.12), glow(PAL.warm));
     // A bay window up the front, if it's wide enough
     if (w >= 3.2 && f.floors >= 2) {
@@ -967,7 +971,8 @@ function building(b: Batch, f: Infill, crowd: Idle[], low: boolean) {
     const teeth = w >= 3.2 && r() < 0.65 && !hasTower;
     if (teeth) {
       // A sawtooth roof, its glazing to the front
-      k.lbox(0, w, top - 0.04, top, -d, 0, ROOF);
+      // (no parapet here to hide a gap: the slab a touch proud of the walls instead of flush with them)
+      k.lbox(-0.01, w + 0.01, top - 0.04, top, -d - 0.01, 0.01, ROOF);
       const n = Math.max(2, Math.round(w / 1.4));
       const du = w / n;
       const ht = 0.7;
@@ -1019,7 +1024,8 @@ function building(b: Batch, f: Infill, crowd: Idle[], low: boolean) {
       [a1, c0],
     ])
       k.lbox(u - 0.08, u + 0.08, podium, top + 0.1, v - 0.08, v + 0.08, trimM);
-    k.lbox(a0, a1, top - 0.04, top + 0.14, c0, c1, ROOF);
+    // The crown's slab a touch proud of the walls (flush with them, its foot flickers against them)
+    k.lbox(Math.min(a0, a1) - 0.01, Math.max(a0, a1) + 0.01, top - 0.04, top + 0.14, Math.min(c0, c1) - 0.01, Math.max(c0, c1) + 0.01, ROOF);
     // The crown: a neon line round the top
     const cyan = glow(PAL.cyan);
     k.lbox(a0 - 0.02, a1 + 0.02, top + 0.14, top + 0.19, c1 - 0.02, c1 + 0.02, cyan);

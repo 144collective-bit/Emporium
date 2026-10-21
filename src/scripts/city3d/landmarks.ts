@@ -485,7 +485,8 @@ function emporium(scene: THREE.Scene, ctx: LandmarkCtx, crowd: Idle[]) {
     boxIn(bt, th, lx, y, lz, 0.3, 0.56, 0.22, cabBody, phi);
     const scr = screens[Math.floor(r() * screens.length)];
     planeIn(bt, th, lx + nx * 0.116, y + 0.38, lz + nz * 0.116, 0.22, 0.17, scr, phi);
-    boxIn(bt, th, lx + nx * 0.02, y + 0.5, lz + nz * 0.02, 0.3, 0.07, 0.2, scr, phi);
+    // The marquee a touch wider than the body (as wide, their sides flicker against each other)
+    boxIn(bt, th, lx + nx * 0.02, y + 0.5, lz + nz * 0.02, 0.31, 0.07, 0.2, scr, phi);
     return [lx, lz, nx, nz] as const;
   };
 
@@ -1209,7 +1210,8 @@ function vault(scene: THREE.Scene, ctx: LandmarkCtx, crowd: Idle[]) {
   for (let y = S + 0.6; y < S + H - 0.2; y += 0.45) b.box(0.98, y, 11.98, 6.64, 0.04, 4.64, stoneDark);
   // Steps
   b.box(0.8, S, 16.6, 7.0, 0.12, 1.8, toon('#e3d9c0'));
-  b.box(0.9, S + 0.12, 16.6, 6.8, 0.12, 1.5, toon('#ebe2cc'));
+  // (a touch wider than the plinth behind it: as wide, their ends flicker)
+  b.box(0.85, S + 0.12, 16.6, 6.9, 0.12, 1.5, toon('#ebe2cc'));
   b.box(1.0, S + 0.24, 16.6, 6.6, 0.12, 1.25, toon('#f1ead8'));
   // Columns with bases and capitals
   const colTop = S + H - 0.1;
@@ -1771,7 +1773,8 @@ function armoury(scene: THREE.Scene, ctx: LandmarkCtx) {
     const sb = new THREE.Mesh(unitPlane, new THREE.MeshToonMaterial({ map: bump }));
     sb.rotation.x = -Math.PI / 2;
     sb.scale.set(2.2, 0.22, 1);
-    sb.position.set(27.1, S + 0.008, 29.85);
+    // Just over the lot's paving (level with it, it flickers)
+    sb.position.set(27.1, S + 0.014, 29.85);
     scene.add(fx(sb));
     const chevron = canvasTex(128, 128, (c) => {
       c.strokeStyle = '#3cff7a';
@@ -1791,7 +1794,7 @@ function armoury(scene: THREE.Scene, ctx: LandmarkCtx) {
       const m = new THREE.Mesh(unitPlane, chevMat);
       m.rotation.set(-Math.PI / 2, 0, Math.PI - yaw);
       m.scale.set(0.42, 0.42, 1);
-      m.position.copy(from).lerp(to, k / 2.2).setY(S + 0.009);
+      m.position.copy(from).lerp(to, k / 2.2).setY(S + 0.016);
       scene.add(fx(m));
     }
   }

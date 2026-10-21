@@ -341,12 +341,13 @@ export function buildFightClub(scene: THREE.Scene, opts: { tick: (f: Tick) => vo
         // Hinged on the door's north edge, swung out into the yard
         const a = FIGHTCLUB_FIX.ajarAngle;
         b.add(place(unitBox, K.x1 + Math.sin(a) * 0.22, S + 0.95, z + Math.cos(a) * 0.22, 0.03, 1.74, 0.44, 0, -a), DOOR);
-        b.box(K.x1 - 0.02, S + 0.1, z, 0.02, 1.74, 0.44, toon('#14102a'));
+        b.box(K.x1 - 0.02, S + 0.1, z, 0.025, 1.74, 0.44, toon('#14102a'));
       } else {
-        b.box(K.x1 - 0.03, S + 0.1, z, 0.03, 1.74, 0.44, DOOR);
+        // The door a touch proud of the lockers' front (level with it, the two flicker), the handle and vent proud of the door
+        b.box(K.x1 - 0.02, S + 0.1, z, 0.03, 1.74, 0.44, DOOR);
         if (!low) {
           b.box(K.x1, S + 0.95, z + 0.33, 0.025, 0.12, 0.03, LIGHT);
-          b.box(K.x1, S + 1.45, z + 0.1, 0.012, 0.03, 0.24, WALL_D);
+          b.box(K.x1 + 0.005, S + 1.45, z + 0.1, 0.012, 0.03, 0.24, WALL_D);
         }
       }
     }
