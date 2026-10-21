@@ -483,11 +483,14 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
         head; data-karts-tabs the Race / Karts / Records tabs (data-karts-tab); data-karts-body (painted);
         data-karts-close its ×.
         data-kart-count: the countdown digits. data-kart-hud: the race HUD: the place (data-kart-place, data-kart-ord,
-        data-kart-of), the drift meter (data-kart-meter) with the Boost / Shield tags (data-kart-boost, data-kart-shield),
-        the lap (data-kart-lap) and the clock (data-kart-clock), the item slot (data-kart-slot: data-kart-slot-icon,
-        data-kart-slot-strip while the roulette spins, data-kart-slot-name) and Quit (data-kart-quit).
+        data-kart-of; a time trial shows the gap to the ghost, data-kart-gap, instead), the drift meter (data-kart-meter)
+        with the tags (data-kart-boost, data-kart-shield, the surface when it's not dry data-kart-surface, data-kart-shortcut),
+        the lap (data-kart-lap) with the class (data-kart-cls) and the series' race (data-kart-series), the clock
+        (data-kart-clock) with the last and best lap under it (data-kart-laps), the item slot (data-kart-slot:
+        data-kart-slot-icon, data-kart-slot-strip while the roulette spins, data-kart-slot-name) and Quit (data-kart-quit).
         data-kart-pops: short lines over the HUD. data-kart-result: the results card; data-kart-result-title,
-        data-kart-result-body (painted), data-kart-result-ok and data-kart-result-close.
+        data-kart-result-body (painted), data-kart-next (a series' next race, hidden otherwise), data-kart-result-ok and
+        data-kart-result-close.
         Touch, while .city.is-karting (set by kart.ts): data-kart-drift above the Brake pedal and data-kart-item (the
         held item's icon in data-kart-item-icon) above the Gas pedal; walk.ts wires them. .kart-hint is the key line. */}
     <section class="shop karts" data-karts hidden aria-labelledby="karts-title">
@@ -502,7 +505,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       <div class="seg karts-tabs" data-karts-tabs role="group" aria-label="Kart hut">
         <button type="button" data-karts-tab="race" aria-pressed="true">Race</button>
         <button type="button" data-karts-tab="karts" aria-pressed="false">Karts</button>
-        <button type="button" data-karts-tab="records" aria-pressed="false">Records</button>
+        <button type="button" data-karts-tab="boards" aria-pressed="false">Boards</button>
       </div>
       <div class="karts-body" data-karts-body></div>
       <p class="shop-foot">Prizes and prices are Dorras, earned in the city. Nothing here is real money.</p>
@@ -511,12 +514,14 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     <div class="kart-hud" data-kart-hud hidden>
       <div class="kart-hud-left">
         <p class="kart-place"><b data-kart-place>1</b><small data-kart-ord>st</small><span class="kart-of" data-kart-of>of 8</span></p>
+        <p class="kart-gap" data-kart-gap hidden aria-label="Gap to the ghost">+0.00</p>
         <div class="kart-meter" data-kart-meter data-tier="0" role="img" aria-label="Drift"><i></i><i></i><i></i></div>
-        <p class="kart-tags"><span class="kart-tag is-boost" data-kart-boost hidden>Boost</span><span class="kart-tag is-shield" data-kart-shield hidden>Shield</span></p>
+        <p class="kart-tags"><span class="kart-tag is-boost" data-kart-boost hidden>Boost</span><span class="kart-tag is-shield" data-kart-shield hidden>Shield</span><span class="kart-tag is-surface" data-kart-surface data-surface="wet" hidden>Wet</span><span class="kart-tag is-shortcut" data-kart-shortcut hidden>Shortcut</span></p>
       </div>
       <div class="kart-hud-mid">
-        <b class="kart-lap" data-kart-lap>Lap 1/3</b>
+        <p class="kart-lap-row"><b class="kart-lap" data-kart-lap>Lap 1/3</b><span class="kart-cls" data-kart-cls data-cls="sport">Sport</span><span class="kart-series-tag" data-kart-series hidden>Race 1/4</span></p>
         <b class="kart-clock" data-kart-clock>0:00.00</b>
+        <small class="kart-laps" data-kart-laps hidden><span data-kart-last>Last —</span><span data-kart-best>Best —</span></small>
       </div>
       <div class="kart-hud-right">
         <div class="kart-slot is-empty" data-kart-slot data-item="none">
@@ -537,7 +542,10 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
         </button>
       </header>
       <div class="race-result-body" data-kart-result-body></div>
-      <button type="button" class="shop-take" data-kart-result-ok>Done</button>
+      <div class="kart-result-actions">
+        <button type="button" class="shop-take kart-next" data-kart-next hidden>Next race</button>
+        <button type="button" class="shop-take" data-kart-result-ok>Done</button>
+      </div>
     </section>
     <p class="walk-hint kart-hint"><kbd>W</kbd><kbd>S</kbd> gas / brake · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>Space</kbd> drift · <kbd>E</kbd> item (<kbd>S</kbd> + <kbd>E</kbd> throws behind) · <kbd>Esc</kbd> quit</p>
     <button type="button" class="kart-btn kart-drift" data-kart-drift aria-label="Drift">Drift</button>
@@ -687,9 +695,9 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
   <template data-panel-tpl="karts">
     <p class="kicker"><span class="kicker-num">09</span> The kart park</p>
     <h2 id="city-panel-title" class="city-panel-title">Go-karts</h2>
-    <p class="city-panel-text">The Neon Loop: three laps against seven rivals, with items from the boxes on the track. Three cups, dearer as you level up, and time trials on your own. Karts are bought and tuned at the hut for Dorras earned in the city.</p>
+    <p class="city-panel-text">A track network on the open land north-east of the Parkway: the Neon Loop, the Summit Run and the Grand Circuit, each run both ways, with banked bowls, a hill, a tunnel, a flyover, a jump and a shortcut for the brave. Race seven rivals with items from the boxes on the track, in three classes from Street to Neon. Three cups run as a series of four races with points by place and a trophy for the podium; time trials race the par ghost and go on your boards, and there's a new challenge every day. Karts are bought and tuned at the hut for Dorras earned in the city.</p>
     <button type="button" class="chip-link kart-walkin" data-kart-walkin>Walk in</button>
-    {/* Your time-trial bests and race counts (index.ts fills it with kartRecordsHtml() from kart-ui.ts) */}
+    {/* Your best laps, trophies and race counts (index.ts fills it with kartRecordsHtml() from kart-ui.ts) */}
     <div class="kart-panel-records" data-kart-panel-records></div>
   </template>
 
