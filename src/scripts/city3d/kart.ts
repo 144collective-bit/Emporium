@@ -20,18 +20,28 @@
  * - The sim's yaw 0 faces +x and left raises it, which is three.js
  *   `rotation.y`, so a kart's holder takes the racer's yaw as it is. Only
  *   `exit()` speaks walk.ts's convention (forward = (sin yaw, cos yaw)).
+ * - A cup runs at its own class (`CUPS[cup].cls`), a time trial at the one
+ *   picked; the class tunes everyone. A cup is a series: starting one begins
+ *   it in the save (`startSeries`) unless that cup's is on the go, and each
+ *   finish adds its points (`seriesRace`), handed to the results card.
+ * - Time trials have ghosts: your best lap on the course and class (kept in
+ *   the browser, `GHOST_KEY`) and the par ghost (the rivals' brain driving
+ *   the Pocket Rocket, made on demand with a headless sim and cached), two
+ *   see-through karts replaying their lap from the moment you cross the
+ *   line. The HUD's gap is the par ghost's time at where you are now.
  */
 import * as THREE from 'three';
 import { createDegen, type Degen, type Outfit } from './character';
 import type { Sfx } from './combat';
-import { COUNTDOWN, T, createKartSim, tune, type CupId, type KartEvent, type KartInput, type KartSim, type Racer } from './kart-sim';
-import type { KartRace, KartRaceDeps, KartStanding } from './kart-types';
-import { COURSES, HUT_DOOR, yawAt, type CourseId } from './kartpark';
+import type { ClassId } from './catalog';
+import { COUNTDOWN, CUPS, NO_INPUT, T, TICK, createKartSim, tune, type CupId, type KartEvent, type KartInput, type KartSim, type Racer } from './kart-sim';
+import type { KartHud, KartRace, KartRaceDeps, KartResultView, KartStanding } from './kart-types';
+import { COURSES, F, HUT_DOOR, along, yawAt, type Course, type CourseId } from './kartpark';
 import { createKart, type Kart } from './karts';
 import { fx, glowMat, glowTex, mergeMeshes, toon } from './kit';
-import { KART_SPECS, type KartId, type MyKart } from './mykart';
-import { paintHex, type PaintId } from './mycar';
-import { finishKartRace, kartStatsOf } from './tycoon';
+import { KART_SPECS, PLAYER_KARTS, type KartId, type MyKart } from './mykart';
+import { CAR_PAINTS, paintHex, type PaintId } from './mycar';
+import { finishKartRace, kartStatsOf, parLap, recordKey, seriesRace, startSeries } from './tycoon';
 
 /* ---------- The rivals ---------- */
 
@@ -64,10 +74,158 @@ const HEAR_GAIN = 0.35;
 const SPARK = ['#f3f2f7', '#f3f2f7', '#00eaff', '#ff2fb9'];
 const CANDY = ['#e23b3b', '#1fbf6b', '#ffd23f', '#ff6ad5', '#ff8a3d', '#00c2ff', '#8000ff', '#e219e5'];
 
+/** The dust off the dirt and the spray off the wet bend (the spark pool, small and dim) */
+const DUST = '#6b4f2e';
+const SPRAY = '#8fcbff';
+/** Ghost karts: yours and par's */
+const GHOST_YOURS = '#00eaff';
+const GHOST_PAR = '#ff2fb9';
+
 const damp = (k: number, dt: number) => 1 - Math.exp(-k * dt);
 const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
 const smooth = (x: number) => x * x * (3 - 2 * x);
 const placeText = (p: number) => (p === 1 ? '1st!' : p === 2 ? '2nd' : p === 3 ? '3rd' : `${p}th`);
+
+/* ---------- Ghosts (time trials) ---------- */
+
+/** Your best laps' ghosts, in the browser: `{ [recordKey(course, cls)]: Ghost }` */
+const GHOST_KEY = 'degen-city-ghosts-v1';
+/** Numbers per sample: x, y, z, yaw, roll (the banking), steer, s (along the main line) */
+const G_N = 7;
+/** Seconds between samples: every third sim tick */
+const G_STEP = TICK * 3;
+/** A ghost is thinned to about this many samples before it's kept */
+const G_CAP = 2000;
+/** The headless par sim gives up after this many ticks (the brain never finishing) */
+const PAR_MAX_TICKS = 60 * 900;
+export interface Ghost {
+  /** The lap's time (seconds), and the kart that drove it */
+  lap: number;
+  kart: KartId;
+  paint: PaintId;
+  /** Seconds between samples (`G_STEP`, or more once thinned) */
+  step: number;
+  /** The poses from the line, `G_N` numbers each, sample i at i * step */
+  samples: number[];
+}
+const num = (v: unknown) => typeof v === 'number' && Number.isFinite(v);
+/** A stored ghost made safe (null if it's no use) */
+function cleanGhost(v: unknown): Ghost | null {
+  const o = (v && typeof v === 'object' ? v : {}) as Record<string, unknown>;
+  if (!num(o.lap) || (o.lap as number) <= 0 || !num(o.step) || (o.step as number) <= 0 || !Array.isArray(o.samples)) return null;
+  const samples = o.samples as unknown[];
+  if (samples.length < G_N * 2 || samples.length % G_N !== 0 || samples.length > G_CAP * G_N * 2 || !samples.every(num)) return null;
+  const kart = PLAYER_KARTS.find((k) => k === o.kart) ?? 'rocket';
+  const paint = CAR_PAINTS.find((p) => p.id === o.paint)?.id ?? 'cyan';
+  return { lap: o.lap as number, kart, paint, step: o.step as number, samples: samples as number[] };
+}
+function loadGhosts(): Record<string, unknown> {
+  try {
+    const raw = localStorage.getItem(GHOST_KEY);
+    const o = raw ? JSON.parse(raw) : null;
+    return o && typeof o === 'object' && !Array.isArray(o) ? o : {};
+  } catch {
+    return {};
+  }
+}
+/** Your ghost for a course and class, if there is one */
+function readGhost(key: string): Ghost | null {
+  return cleanGhost(loadGhosts()[key]);
+}
+/** Keep a ghost (thinned to the cap); quietly does nothing where storage isn't there */
+function writeGhost(key: string, g: Ghost) {
+  const n = g.samples.length / G_N;
+  const stride = Math.max(1, Math.ceil(n / G_CAP));
+  let out = g;
+  if (stride > 1) {
+    const samples: number[] = [];
+    for (let i = 0; i < n; i += stride) for (let c = 0; c < G_N; c++) samples.push(g.samples[i * G_N + c]);
+    out = { ...g, step: g.step * stride, samples };
+  }
+  try {
+    const all = loadGhosts();
+    all[key] = out;
+    localStorage.setItem(GHOST_KEY, JSON.stringify(all));
+  } catch {
+    /* no storage: no ghost kept */
+  }
+}
+/**
+ * Records a racer's pose at a fixed cadence of lap time (`G_STEP`), from the line. Fed once a
+ * frame; a slow frame that skips a slot gets it filled in between the last pose and this one,
+ * so sample i always sits at i * step.
+ */
+function recorder() {
+  let samples: number[] = [];
+  let next = 0;
+  let last: { t: number; p: number[] } | null = null;
+  const pose = (k: Racer) => [k.x, k.y, k.z, k.yaw, k.roll, k.steer, k.s];
+  const reset = () => {
+    samples = [];
+    next = 0;
+    last = null;
+  };
+  return {
+    reset,
+    at(t: number, k: Racer) {
+      const cur = pose(k);
+      while (next <= t + 1e-6) {
+        if (!last || t - last.t < 1e-6) samples.push(...cur);
+        else {
+          const u = Math.min(1, Math.max(0, (next - last.t) / (t - last.t)));
+          for (let c = 0; c < G_N; c++) samples.push(c === 3 ? last.p[c] + wrap(cur[c] - last.p[c]) * u : last.p[c] + (cur[c] - last.p[c]) * u);
+        }
+        next += G_STEP;
+      }
+      last = { t, p: cur };
+    },
+    take() {
+      const s = samples;
+      reset();
+      return s;
+    },
+  };
+}
+/** The par ghosts made so far, per course and class */
+const parCache = new Map<string, Ghost>();
+/**
+ * The par ghost: the rivals' brain driving the Pocket Rocket round the course at the class's
+ * pace, alone, its second lap (a flying one) recorded. A headless sim, a few milliseconds.
+ */
+function parGhost(course: CourseId, cls: ClassId): Ghost | null {
+  const key = recordKey(course, cls);
+  const hit = parCache.get(key);
+  if (hit) return hit;
+  const sim = createKartSim({ course, cup: 'time', cls, player: { kart: 'rocket', tune: tune(KART_SPECS.rocket, cls) }, rivals: [], seed: 7, auto: true, laps: 2 });
+  const rec = recorder();
+  const me = sim.player.i;
+  let lapAt = -1;
+  let ghost: Ghost | null = null;
+  for (let n = 0; n < PAR_MAX_TICKS && !ghost; n++) {
+    const events = sim.step(TICK, NO_INPUT);
+    for (const e of events) {
+      if (e.kind === 'lap' && e.kart === me && lapAt < 0) lapAt = sim.time;
+      else if (e.kind === 'finish' && e.kart === me && lapAt >= 0) {
+        rec.at(e.time - lapAt, sim.player);
+        ghost = { lap: e.time - lapAt, kart: 'rocket', paint: 'magenta', step: G_STEP, samples: rec.take() };
+      }
+    }
+    if (!ghost && lapAt >= 0) rec.at(sim.time - lapAt, sim.player);
+  }
+  if (ghost) parCache.set(key, ghost);
+  return ghost;
+}
+/** A ghost kart replaying its lap */
+interface GhostView {
+  kart: Kart;
+  holder: THREE.Group;
+  ghost: Ghost;
+  /** The sample nearest the player's s (for the gap), and where the kart was last frame (for the wheels) */
+  cursor: number;
+  lastX: number;
+  lastZ: number;
+  on: boolean;
+}
 
 interface View {
   kart: Kart;
@@ -76,6 +234,8 @@ interface View {
   holder: THREE.Group;
   spinDir: number;
   roll: number;
+  /** The track's banking under it (radians, right side up when positive), smoothed */
+  bank: number;
   pitch: number;
   lastSpeed: number;
   flames: THREE.Mesh[];
@@ -91,8 +251,19 @@ export function createKartRace(d: KartRaceDeps): KartRace {
   let sim: KartSim | null = null;
   let course: CourseId = 'neon-loop';
   let cup: CupId | 'time' = 'time';
+  let cls: ClassId = 'sport';
+  /** The series this race is part of (a cup): which race of how many */
+  let seriesInfo: { race: number; of: number } | null = null;
   let views: View[] = [];
   let active = false;
+  /** This race's laps as they're driven (a time trial): the recorder for the lap on the go, the laps done */
+  const rec = recorder();
+  let lapSamples: number[][] = [];
+  /** The ghosts of a time trial, and which are wanted */
+  let yours: GhostView | null = null;
+  let par: GhostView | null = null;
+  let ghostsOn = { yours: true, par: true };
+  let frameNo = 0;
   /** Seconds until the GO clears; until the results are paid; until the level-up's fanfare */
   let goClear = 0;
   let finishAt = -1;
@@ -124,6 +295,11 @@ export function createKartRace(d: KartRaceDeps): KartRace {
   const flameMat = glowMat('#ff9a3d', 0.9, null);
   const shieldGeo = new THREE.SphereGeometry(0.95, 18, 12);
   const shieldMat = new THREE.MeshBasicMaterial({ color: '#00eaff', transparent: true, opacity: 0.2, depthWrite: false, fog: false });
+  // Ghost karts: every part in one see-through colour, never inked
+  const ghostMat = {
+    yours: new THREE.MeshBasicMaterial({ color: GHOST_YOURS, transparent: true, opacity: 0.35, depthWrite: false, fog: false }),
+    par: new THREE.MeshBasicMaterial({ color: GHOST_PAR, transparent: true, opacity: 0.35, depthWrite: false, fog: false }),
+  };
   // Oil slicks: flat dark glossy discs, instanced
   const oilGeo = new THREE.CircleGeometry(0.7, 20).rotateX(-Math.PI / 2);
   const oilMat = toon('#0c0b14', { name: 'kart-oil' });
@@ -278,20 +454,27 @@ export function createKartRace(d: KartRaceDeps): KartRace {
         showCount('GO');
         d.sfx('go');
         goClear = 0.9;
-        lapStart = 0;
+        rec.reset();
+        lapSamples = [];
+        lapOver(0);
         break;
       case 'lap':
         if (e.kart === me) {
-          lapTimes.push(sim.time - lapStart);
-          lapStart = sim.time;
+          lapDone(sim.time);
           if (e.lap === sim.laps) d.ui.pop('Final lap', 'plain');
         }
         break;
       case 'finish':
         if (e.kart === me) {
-          lapTimes.push(e.time - lapStart);
+          lapDone(e.time);
           d.ui.pop(placeText(e.place), e.place <= 3 ? 'good' : 'plain');
           finishAt = 1.5;
+        }
+        break;
+      case 'shortcut':
+        if (e.on) {
+          sfx('kartShortcut', e.kart);
+          if (e.kart === me) d.ui.pop('Shortcut!', 'good');
         }
         break;
       case 'boost':
@@ -351,6 +534,34 @@ export function createKartRace(d: KartRaceDeps): KartRace {
     shownCount = text;
     d.ui.count(text);
   }
+  /** The player crossed the line at `at`: the lap's time, its samples, the ghosts' chime, the next lap */
+  function lapDone(at: number) {
+    if (!sim) return;
+    const p = sim.player;
+    const lapT = at - lapStart;
+    lapTimes.push(lapT);
+    if (sim.timeTrial) {
+      rec.at(lapT, p);
+      lapSamples.push(rec.take());
+      // Faster than your own ghost (or par when you have none): a soft chime
+      const mark = yours?.ghost.lap ?? par?.ghost.lap ?? 0;
+      if (mark > 0 && lapT < mark) {
+        d.sfx('kartGhost');
+        d.ui.pop(yours ? 'Ghost beaten' : 'Under par', 'good');
+      }
+    }
+    lapOver(at);
+  }
+  /** A new lap starts at `at`: the ghosts go back to the line */
+  function lapOver(at: number) {
+    lapStart = at;
+    for (const g of [yours, par]) {
+      if (!g) continue;
+      g.cursor = 0;
+      g.lastX = g.ghost.samples[0];
+      g.lastZ = g.ghost.samples[2];
+    }
+  }
 
   /* ---------- Placing the karts ---------- */
 
@@ -363,12 +574,14 @@ export function createKartRace(d: KartRaceDeps): KartRace {
     // Roll: into the drift (the arcade way), out of a plain corner (body roll), a wobble while spinning
     const wantRoll = k.drift * 0.13 - THREE.MathUtils.clamp(k.steer * k.speed * 0.006, -0.06, 0.06) + (k.spinT > 0 ? Math.sin(spin * 1.5) * 0.08 : 0);
     v.roll += (wantRoll - v.roll) * damp(8, dt);
+    // The banking under it: the track's roll lifts the right side (local +z), which is a turn of -roll about the nose
+    v.bank += (k.roll - v.bank) * damp(14, dt);
     // Pitch: nose up in the air with the rise, squatting back under a boost or gas, dipping under the brakes
     const accel = (k.speed - v.lastSpeed) / Math.max(dt, 1e-3);
     v.lastSpeed = k.speed;
     const wantPitch = k.air ? THREE.MathUtils.clamp(k.vy * 0.06, -0.3, 0.3) : THREE.MathUtils.clamp(accel * 0.008, -0.06, 0.06) + boost * 0.05;
     v.pitch += (wantPitch - v.pitch) * damp(8, dt);
-    v.kart.group.rotation.set(v.roll, 0, v.pitch);
+    v.kart.group.rotation.set(v.roll - v.bank, 0, v.pitch);
     v.kart.drive(k.speed * dt, -k.steer * 0.42);
     if (v.degen) {
       v.kart.lean(k.drift !== 0 ? k.drift : k.steer * 0.4);
@@ -406,6 +619,26 @@ export function createKartRace(d: KartRaceDeps): KartRace {
       sparkPos.set([ox + (Math.random() - 0.5) * 0.1, k.y + 0.05, oz + (Math.random() - 0.5) * 0.1], i * 3);
       sparkVel.set([-f * (2 + Math.random() * 2) + rx * sideK * Math.random() * 1.5, 1 + Math.random() * 2, -g * (2 + Math.random() * 2) + rz * sideK * Math.random() * 1.5], i * 3);
       sparkLife[i] = 0.25 + Math.random() * 0.2;
+      sparkCol.set([sparkColor.r, sparkColor.g, sparkColor.b], i * 3);
+    }
+  }
+  /** Dust off the rear wheels on the dirt, spray on the wet bend: one small puff a wheel, low and short-lived */
+  function emitPuffs(k: Racer, wet: boolean) {
+    const f = Math.cos(k.yaw);
+    const g = -Math.sin(k.yaw);
+    const rx = Math.sin(k.yaw);
+    const rz = Math.cos(k.yaw);
+    const back = Math.sign(k.speed) || 1;
+    sparkColor.set(wet ? SPRAY : DUST);
+    for (const sideK of [-1, 1]) {
+      const i = sparkNext;
+      sparkNext = (sparkNext + 1) % MAX_SPARKS;
+      const ox = k.x - f * 0.42 * back + rx * 0.38 * sideK;
+      const oz = k.z - g * 0.42 * back + rz * 0.38 * sideK;
+      sparkPos.set([ox + (Math.random() - 0.5) * 0.12, k.y + 0.04, oz + (Math.random() - 0.5) * 0.12], i * 3);
+      const up = wet ? 1.2 + Math.random() * 1.2 : 0.5 + Math.random() * 0.7;
+      sparkVel.set([-f * back * (0.6 + Math.random()) + rx * sideK * (0.3 + Math.random() * 0.5), up, -g * back * (0.6 + Math.random()) + rz * sideK * (0.3 + Math.random() * 0.5)], i * 3);
+      sparkLife[i] = (wet ? 0.22 : 0.3) + Math.random() * 0.18;
       sparkCol.set([sparkColor.r, sparkColor.g, sparkColor.b], i * 3);
     }
   }
@@ -514,7 +747,86 @@ export function createKartRace(d: KartRaceDeps): KartRace {
     shield.position.y = 0.45;
     shield.visible = false;
     kart.group.add(shield);
-    return { kart, degen, holder, spinDir: 1, roll: 0, pitch: 0, lastSpeed: 0, flames, shield };
+    return { kart, degen, holder, spinDir: 1, roll: 0, bank: 0, pitch: 0, lastSpeed: 0, flames, shield };
+  }
+
+  /** A ghost kart: the lap's kart in one see-through colour, no driver, never inked, hidden until the lap starts */
+  function buildGhost(ghost: Ghost, mat: THREE.Material): GhostView {
+    const kart = createKart(ghost.kart, paintHex(ghost.paint), { detail: d.low ? 0 : 1 });
+    kart.group.traverse((o) => {
+      if (o instanceof THREE.Mesh) {
+        o.material = mat;
+        o.castShadow = false;
+        o.receiveShadow = false;
+      }
+    });
+    fx(kart.group);
+    const holder = new THREE.Group();
+    holder.add(kart.group);
+    holder.visible = false;
+    group.add(holder);
+    return { kart, holder, ghost, cursor: 0, lastX: ghost.samples[0], lastZ: ghost.samples[2], on: true };
+  }
+  function clearGhost(v: GhostView | null) {
+    if (!v) return;
+    v.kart.dispose();
+    v.holder.removeFromParent();
+  }
+  /** A ghost at `t` seconds into its lap (held at the line once its lap is over), interpolated between samples */
+  function placeGhost(v: GhostView, t: number) {
+    const g = v.ghost;
+    const S = g.samples;
+    const n = S.length / G_N;
+    const f = Math.min(n - 1, Math.max(0, t / g.step));
+    const i = Math.floor(f);
+    const j = Math.min(n - 1, i + 1);
+    const u = f - i;
+    const a = i * G_N;
+    const b = j * G_N;
+    const lerp = (c: number) => S[a + c] + (S[b + c] - S[a + c]) * u;
+    const x = lerp(0);
+    const y = lerp(1);
+    const z = lerp(2);
+    const yaw = S[a + 3] + wrap(S[b + 3] - S[a + 3]) * u;
+    v.holder.position.set(x, y, z);
+    v.holder.rotation.y = yaw;
+    v.kart.group.rotation.set(-lerp(4), 0, 0);
+    const moved = Math.hypot(x - v.lastX, z - v.lastZ);
+    v.lastX = x;
+    v.lastZ = z;
+    v.kart.drive(Math.min(moved, 2), -lerp(5) * 0.42);
+  }
+  /**
+   * How far behind the ghost the player is here (seconds; negative = ahead): the ghost's time at
+   * its sample nearest the player's s, less the player's time into the lap. The cursor walks
+   * along the samples with him, so each frame is a few comparisons.
+   */
+  function ghostGap(v: GhostView, c: Course, p: Racer, lapT: number) {
+    const g = v.ghost;
+    const S = g.samples;
+    const n = S.length / G_N;
+    if (n < 2) return null;
+    const dist = (i: number) => Math.abs(along(c, S[i * G_N + 6], p.s));
+    let i = Math.min(n - 1, v.cursor);
+    let best = dist(i);
+    while (i + 1 < n) {
+      const dd = dist(i + 1);
+      if (dd > best) break;
+      best = dd;
+      i++;
+    }
+    while (i > 0) {
+      const dd = dist(i - 1);
+      if (dd >= best) break;
+      best = dd;
+      i--;
+    }
+    v.cursor = i;
+    return i * g.step - lapT;
+  }
+  function showGhosts() {
+    if (yours) yours.on = ghostsOn.yours;
+    if (par) par.on = ghostsOn.par;
   }
 
   function clearRace() {
@@ -526,6 +838,11 @@ export function createKartRace(d: KartRaceDeps): KartRace {
     views = [];
     paints.length = 0;
     sim = null;
+    clearGhost(yours);
+    clearGhost(par);
+    yours = par = null;
+    rec.reset();
+    lapSamples = [];
     for (const g of gummies) g.visible = false;
     for (const p of pigeons) p.g.visible = false;
     oil.count = 0;
@@ -550,12 +867,31 @@ export function createKartRace(d: KartRaceDeps): KartRace {
   function payOut() {
     if (!sim || paid) return;
     paid = true;
-    const p = sim.player;
-    const result = finishKartRace(d.game.save(), { course, cup, place: p.place, seconds: p.finishT, hits: p.hits });
+    const s = sim;
+    const p = s.player;
+    const save = d.game.save();
+    const laps = lapTimes.slice();
+    const result = finishKartRace(save, { course, cup, cls, place: p.place, seconds: p.finishT, laps, hits: p.hits, now: Date.now() });
+    // A cup's race counts for its series: everyone's place by grid index (the rivals, then you)
+    let series: KartResultView['series'] = null;
+    if (cup !== 'time') {
+      const byKart = s.racers.map(() => s.racers.length);
+      s.standings().forEach((i, idx) => (byKart[i] = idx + 1));
+      const sr = seriesRace(save, byKart);
+      if (sr) series = { ...sr, names: [...lineup(cup).map((r) => ({ name: r.name, kart: r.kart, you: false })), { name: 'You', kart: save.karts.model, you: true }] };
+    }
     d.game.commit();
     d.sfx('finish');
-    if (result.levels > 0) levelAt = 0.7;
-    d.ui.showResult({ cup, course, of: sim.racers.length, result, standings: standings(), bestLap: lapTimes.length ? Math.min(...lapTimes) : p.finishT });
+    if (result.levels > 0 || (series?.levels ?? 0) > 0) levelAt = 0.7;
+    if (series?.done) d.ui.pop(`Series: ${placeText(series.overall)}`, series.overall <= 3 ? 'good' : 'plain');
+    // A time trial's new lap record: that lap's ghost is kept for next time
+    if (s.timeTrial && result.lapRecord && laps.length) {
+      let best = 0;
+      for (let i = 1; i < laps.length; i++) if (laps[i] < laps[best]) best = i;
+      const samples = lapSamples[best];
+      if (samples && samples.length >= G_N * 2) writeGhost(recordKey(course, cls), { lap: Math.round(laps[best] * 100) / 100, kart: save.karts.model, paint: save.karts.paint, step: G_STEP, samples });
+    }
+    d.ui.showResult({ cup, cls, course, of: s.racers.length, result, standings: standings(), laps, par: parLap(course, cls), series });
   }
 
   /* ---------- The kart on show in the pits ---------- */
@@ -594,14 +930,34 @@ export function createKartRace(d: KartRaceDeps): KartRace {
       cup = setup.cup;
       const save = d.game.save();
       const model = save.karts.model;
+      // A cup runs at its own class and is a series: begin one unless that cup's is on the go
+      cls = cup === 'time' ? setup.cls : CUPS[cup].cls;
+      seriesInfo = null;
+      if (cup !== 'time') {
+        if (!save.karts.series || save.karts.series.cup !== cup) {
+          startSeries(save, cup);
+          d.game.commit();
+        }
+        const sr = save.karts.series;
+        if (sr) seriesInfo = { race: Math.min(sr.race + 1, CUPS[cup].courses.length), of: CUPS[cup].courses.length };
+      }
       const rivals = cup === 'time' ? [] : lineup(cup);
       sim = createKartSim({
         course,
         cup,
-        player: { kart: model, tune: tune(kartStatsOf(save, model)) },
-        rivals: rivals.map((r) => ({ kart: r.kart, tune: tune(KART_SPECS[r.kart]) })),
+        cls,
+        player: { kart: model, tune: tune(kartStatsOf(save, model), cls) },
+        rivals: rivals.map((r) => ({ kart: r.kart, tune: tune(KART_SPECS[r.kart], cls) })),
         seed: Date.now() >>> 0,
       });
+      // A time trial's ghosts: your best lap here, and par's
+      if (sim.timeTrial) {
+        const mine = readGhost(recordKey(course, cls));
+        if (mine) yours = buildGhost(mine, ghostMat.yours);
+        const pg = parGhost(course, cls);
+        if (pg) par = buildGhost(pg, ghostMat.par);
+        showGhosts();
+      }
       views = [];
       for (const k of sim.racers) {
         const you = k.i === sim.player.i;
@@ -640,13 +996,28 @@ export function createKartRace(d: KartRaceDeps): KartRace {
       for (const e of events) onEvent(e);
       const t = performance.now() / 1000;
       const p = s.player;
+      frameNo++;
+      const lapT = s.time - lapStart;
       for (let i = 0; i < views.length; i++) {
         const v = views[i];
         const k = s.racers[i];
         placeKart(v, k, dt);
-        if (!d.reduced && k.drift !== 0 && !k.air && k.hopT <= 0) emitSparks(v, k, s.driftTier(k));
+        if (d.reduced || k.air) continue;
+        if (k.drift !== 0 && k.hopT <= 0) emitSparks(v, k, s.driftTier(k));
+        // Dust and spray: the player's every frame, a rival's in earshot every other
+        else if (k.flags & (F.dirt | F.wet) && Math.abs(k.speed) > 3 && (i === p.i || ((frameNo + i) % 2 === 0 && gainFor(i) > 0))) emitPuffs(k, !(k.flags & F.dirt));
       }
       stepSparks(dt);
+      // The lap on the go, recorded for its ghost; the ghosts replay theirs from the line
+      if (s.timeTrial && s.started && !p.finished) rec.at(lapT, p);
+      let gap: number | null = null;
+      for (const g of [yours, par]) {
+        if (!g) continue;
+        const show = g.on && s.started;
+        g.holder.visible = show;
+        if (show) placeGhost(g, lapT);
+      }
+      if (par?.on && s.started && !p.finished) gap = ghostGap(par, s.course, p, lapT);
       placeHazards(t);
       placeMissiles(dt, t);
       d.park.showBoxes(s.boxes.map((b) => b.gone));
@@ -657,7 +1028,7 @@ export function createKartRace(d: KartRaceDeps): KartRace {
       // The engine, the camera, the HUD
       d.engine(0.15 + Math.min(1, Math.abs(p.speed) / p.tune.top) * 0.7 + (p.boostT > 0 ? 0.15 : 0));
       placeCamera(p, dt);
-      d.ui.paintHud({
+      const hud: KartHud = {
         place: p.place,
         of: s.racers.length,
         lap: p.finished ? s.laps : Math.min(s.laps, p.lap + 1),
@@ -670,7 +1041,19 @@ export function createKartRace(d: KartRaceDeps): KartRace {
         shield: p.shield,
         finished: p.finished,
         timeTrial: s.timeTrial,
-      });
+        cls,
+        lastLap: lapTimes.length ? lapTimes[lapTimes.length - 1] : null,
+        bestLap: lapTimes.length ? Math.min(...lapTimes) : null,
+        ghostGap: gap,
+        surface: p.flags & F.dirt ? 'dirt' : p.flags & F.wet ? 'wet' : p.flags & F.tunnel ? 'tunnel' : p.flags & F.bank ? 'bank' : 'dry',
+        shortcut: p.line === 'short',
+        series: seriesInfo,
+      };
+      d.ui.paintHud(hud);
+    },
+    setGhosts(on) {
+      ghostsOn = { yours: !!on.yours, par: !!on.par };
+      showGhosts();
     },
     exit() {
       if (active) {

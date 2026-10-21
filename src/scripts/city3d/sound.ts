@@ -440,6 +440,19 @@ export function createSound() {
           tone(t, 'sine', 130, 48, 0.45, 0.16);
           crack(t, 'lowpass', 500, 0.8, 0.3, 0.1);
           break;
+        // Onto the dirt shortcut: a short gravel skid, stones pinging off the floor pan
+        case 'kartShortcut':
+          crack(t, 'lowpass', 900, 0.6, 0.35, 0.32);
+          crack(t + 0.05, 'bandpass', 2200, 1.2, 0.2, 0.26);
+          tone(t, 'sawtooth', 220, 90, 0.08, 0.3);
+          [0.03, 0.11, 0.19, 0.26].forEach((dt, i) => tick(t + dt, 2700 + ((i * 731) % 900), 0.045));
+          break;
+        // Across the line faster than your ghost: a soft three-note chime
+        case 'kartGhost':
+          tone(t, 'sine', 1318, 1318, 0.14, 0.4);
+          tone(t + 0.12, 'sine', 1760, 1760, 0.12, 0.5);
+          tone(t + 0.24, 'sine', 2093, 2093, 0.1, 0.65);
+          break;
       }
     },
     /**
