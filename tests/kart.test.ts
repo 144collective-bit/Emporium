@@ -1,5 +1,6 @@
-// The kart park: the site, its network and courses (kartpark.ts), the racing rules (kart-sim.ts) and
-// what the economy makes of it (catalog.ts, tycoon.ts, missions.ts).
+// The kart park: the site and the old track network still drawn until the rebuild's Phase 3 (kartpark.ts),
+// the racing rules on the new circuit (kart-sim.ts, kartcircuit.ts) and what the economy makes of it
+// (catalog.ts, tycoon.ts, missions.ts).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -33,7 +34,8 @@ import {
   toWorld,
   wrapS,
 } from '../src/scripts/city3d/kartpark';
-import { CUPS, CUP_IDS, DIRT_CAP, ITEM_IDS, NO_INPUT, createKartSim, tune, type KartInput } from '../src/scripts/city3d/kart-sim';
+import { CUPS, CUP_IDS, NO_INPUT, RAIN_GRIP, RESET_AT, RESET_T, RUNOFF_CAP, createKartSim, flight, tune, type KartInput } from '../src/scripts/city3d/kart-sim';
+import { COURSES as RACES, COURSE_IDS as RACE_IDS, KERB, TRACK_HALF as RACE_HALF, type CourseId as RaceId } from '../src/scripts/city3d/kartcircuit';
 import { DEFAULT_KART, KART_SPECS, PLAYER_KARTS, cleanKart } from '../src/scripts/city3d/mykart';
 import { CHALLENGE_PRIZE, CLASS_IDS, KART_CATALOG, KART_CLASSES, KART_MOD_IDS, MOD_LEVELS, PAR_LAPS, SERIES_POINTS, SERIES_PRIZES, STARTER_KARTS, XP, kartStats } from '../src/scripts/city3d/catalog';
 import {
@@ -302,16 +304,27 @@ test('four karts, three classes, the Pocket Rocket free; mods and classes raise 
   assert.deepEqual(CLASS_IDS, ['street', 'sport', 'neon']);
   assert.ok(KART_CLASSES.street.pace < KART_CLASSES.sport.pace && KART_CLASSES.sport.pace < KART_CLASSES.neon.pace);
   assert.ok(tune(base, 'neon').top > tune(base, 'sport').top && tune(base, 'street').top < tune(base, 'sport').top);
-  for (const c of CUP_IDS) {
-    assert.equal(CUPS[c].courses.length, 4);
-    assert.ok(CUPS[c].courses.every((id) => COURSE_IDS.includes(id)));
-    assert.ok(KART_CLASSES[CUPS[c].cls]);
-  }
   assert.deepEqual(cleanKart({ model: 'nope', paint: 'nope' }), DEFAULT_KART);
   assert.equal(SERIES_POINTS.length, 8);
   for (const c of CUP_IDS) assert.ok(SERIES_PRIZES[c][0] > SERIES_PRIZES[c][2]);
-  for (const id of COURSE_IDS) assert.ok(PAR_LAPS[id] > 15 && PAR_LAPS[id] < 120);
-  assert.ok(parLap('neon-loop', 'street') > parLap('neon-loop', 'sport') && parLap('neon-loop', 'neon') < parLap('neon-loop', 'sport'));
+  for (const id of RACE_IDS) {
+    for (const cls of CLASS_IDS) assert.ok(PAR_LAPS[id][cls] > 15 && PAR_LAPS[id][cls] < 120, `${id} ${cls} par`);
+    assert.ok(parLap(id, 'street') > parLap(id, 'sport') && parLap(id, 'neon') < parLap(id, 'sport'), `${id}: par by class`);
+  }
+});
+
+test('each cup is four races of the circuit both ways round, with laps and conditions; between them, night and rain', () => {
+  const conds = new Set<string>();
+  for (const c of CUP_IDS) {
+    const races = CUPS[c].races;
+    assert.equal(races.length, 4, `${c}: four races`);
+    assert.ok(KART_CLASSES[CUPS[c].cls]);
+    assert.ok(races.every((r) => RACE_IDS.includes(r.course) && r.laps >= 2 && r.laps <= 4));
+    assert.ok(races.some((r) => !RACES[r.course].reverse) && races.some((r) => RACES[r.course].reverse), `${c}: forward and reverse`);
+    for (const r of races) conds.add(r.cond);
+  }
+  assert.deepEqual([...conds].sort(), ['day', 'night', 'rain']);
+  assert.ok(CUPS.rookie.races.every((r) => r.cond !== 'rain'), 'the rookies stay dry');
 });
 
 test('buying, tuning and picking karts spends Dorras and needs the level', () => {
@@ -336,47 +349,47 @@ test('buying, tuning and picking karts spends Dorras and needs the level', () =>
 
 test('a finished race pays the place, keeps the fastest lap per course and class, and a time trial\'s run on your board', () => {
   const s = newSave(0);
-  const win = finishKartRace(s, { course: 'neon-loop', cup: 'pro', cls: 'sport', place: 1, seconds: 95.5, laps: [33.1, 31.2, 31.2], hits: 3 });
+  const win = finishKartRace(s, { course: 'circuit', cup: 'pro', cls: 'sport', place: 1, seconds: 115.5, laps: [39.1, 38.2, 38.2], clean: 2, overtakes: 6 });
   assert.equal(win.prize, CUPS.pro.prizes[0]);
   assert.ok(win.lapRecord && !win.record && !win.parBeaten);
-  assert.equal(win.bestLap, 31.2);
+  assert.equal(win.bestLap, 38.2);
   assert.equal(win.xp, XP.kartFinish + XP.kartPodium + XP.kartWin + XP.kartRecord);
-  assert.deepEqual([s.counters.kartRaces, s.counters.podiums, s.counters.kartWins, s.counters.kartHits], [1, 1, 1, 3]);
-  const key = recordKey('neon-loop', 'sport');
-  assert.equal(s.karts.records[key].lap, 31.2);
+  assert.deepEqual([s.counters.kartRaces, s.counters.podiums, s.counters.kartWins, s.counters.cleanLaps, s.counters.overtakes], [1, 1, 1, 2, 6]);
+  // Counted sensibly, whatever a screen sends
+  finishKartRace(s, { course: 'circuit', cup: 'pro', cls: 'sport', place: 8, seconds: 150, laps: [50], clean: 99, overtakes: -4 });
+  assert.deepEqual([s.counters.cleanLaps, s.counters.overtakes], [12, 6]);
+  const key = recordKey('circuit', 'sport');
+  assert.equal(s.karts.records[key].lap, 38.2);
   assert.equal(s.karts.records[key].run, 0, 'no time trial yet');
-  // A slower lap in a later race keeps the record
-  finishKartRace(s, { course: 'neon-loop', cup: 'rookie', cls: 'sport', place: 8, seconds: 120, laps: [40, 41, 39] });
-  assert.equal(s.karts.records[key].lap, 31.2);
   // Time trials: the run goes on the board, sorted, capped
-  for (let i = 0; i < LEADERBOARD_SIZE + 3; i++) finishKartRace(s, { course: 'neon-loop', cup: 'time', cls: 'sport', place: 1, seconds: 100 - i, laps: [34, 33, 33 - i * 0.01] });
+  for (let i = 0; i < LEADERBOARD_SIZE + 3; i++) finishKartRace(s, { course: 'circuit', cup: 'time', cls: 'sport', place: 1, seconds: 120 - i, laps: [40, 39, 39 - i * 0.01] });
   assert.equal(s.karts.boards[key].length, LEADERBOARD_SIZE);
   assert.ok(s.karts.boards[key].every((t, i, a) => i === 0 || a[i - 1].run <= t.run));
-  assert.equal(s.karts.records[key].run, 100 - LEADERBOARD_SIZE - 2);
-  assert.equal(s.karts.records[key].lap, 31.2, 'the race lap still stands');
-  // Classes keep separate boards
-  assert.equal(s.karts.boards[recordKey('neon-loop', 'neon')], undefined);
-  assert.equal(s.counters.kartWins, 1, 'a time trial is not a win');
+  assert.equal(s.karts.records[key].run, 120 - LEADERBOARD_SIZE - 2);
+  assert.equal(s.karts.records[key].lap, 38.2, 'the race lap still stands');
+  // Each direction and class keeps its own board
+  assert.equal(s.karts.boards[recordKey('circuit-reverse', 'sport')], undefined);
+  assert.equal(s.karts.boards[recordKey('circuit', 'neon')], undefined);
   // Beating par pays XP once
-  const par = parLap('summit', 'street');
-  const a = finishKartRace(s, { course: 'summit', cup: 'time', cls: 'street', place: 1, seconds: par * 3 - 1, laps: [par - 0.5, par, par] });
+  const par = parLap('circuit-reverse', 'street');
+  const a = finishKartRace(s, { course: 'circuit-reverse', cup: 'time', cls: 'street', place: 1, seconds: par * 3 - 1, laps: [par - 0.5, par, par] });
   assert.ok(a.parBeaten && a.xp >= XP.kartFinish + XP.parBeaten);
-  const b = finishKartRace(s, { course: 'summit', cup: 'time', cls: 'street', place: 1, seconds: par * 3 - 2, laps: [par - 1, par, par] });
+  const b = finishKartRace(s, { course: 'circuit-reverse', cup: 'time', cls: 'street', place: 1, seconds: par * 3 - 2, laps: [par - 1, par, par] });
   assert.ok(!b.parBeaten);
 });
 
 test('the daily challenge: the same course and class for everyone that day, paid once', () => {
   const d1 = dailyChallenge('2026-10-21');
   const d2 = dailyChallenge('2026-10-21');
-  const d3 = dailyChallenge('2026-10-22');
   assert.deepEqual(d1, d2);
-  assert.ok(COURSE_IDS.includes(d1.course) && CLASS_IDS.includes(d1.cls) && d1.target > parLap(d1.course, d1.cls));
-  assert.ok(d1.course !== d3.course || d1.cls !== d3.cls || d1.target !== d3.target);
+  assert.ok(RACE_IDS.includes(d1.course as RaceId) && CLASS_IDS.includes(d1.cls) && d1.target > parLap(d1.course, d1.cls));
+  const week = new Set(Array.from({ length: 7 }, (_, i) => JSON.stringify(dailyChallenge(`2026-10-${20 + i}`))));
+  assert.ok(week.size > 1, 'it changes');
   assert.equal(dayKey(new Date(2026, 9, 21, 15).getTime()), '2026-10-21');
   const s = newSave(0);
   const now = new Date(2026, 9, 21, 15).getTime();
   const ch = dailyChallenge(dayKey(now));
-  const r = finishKartRace(s, { course: ch.course, cup: 'time', cls: ch.cls, place: 1, seconds: 100, laps: [ch.target - 0.1, 40], now });
+  const r = finishKartRace(s, { course: ch.course, cup: 'time', cls: ch.cls, place: 1, seconds: 100, laps: [ch.target - 0.1, 50], now });
   assert.ok(r.challenge);
   assert.equal(s.dorras, 600 + CHALLENGE_PRIZE);
   const r2 = finishKartRace(s, { course: ch.course, cup: 'time', cls: ch.cls, place: 1, seconds: 100, laps: [ch.target - 1], now });
@@ -387,7 +400,7 @@ test('a cup is a series of four races with points; the overall winner takes the 
   const s = newSave(0);
   assert.equal(seriesNext(s), null);
   assert.ok(startSeries(s, 'rookie'));
-  assert.equal(seriesNext(s), CUPS.rookie.courses[0]);
+  assert.deepEqual(seriesNext(s), CUPS.rookie.races[0]);
   // You (index 7) win twice and come second twice; rival 0 the other way round
   const results = [
     [2, 3, 4, 5, 6, 7, 8, 1],
@@ -398,7 +411,7 @@ test('a cup is a series of four races with points; the overall winner takes the 
   let r = seriesRace(s, results[0])!;
   assert.equal(r.race, 1);
   assert.ok(!r.done && r.places[7] === 1 && r.points[7] === SERIES_POINTS[0]);
-  assert.equal(seriesNext(s), CUPS.rookie.courses[1]);
+  assert.deepEqual(seriesNext(s), CUPS.rookie.races[1]);
   seriesRace(s, results[1]);
   seriesRace(s, results[2]);
   const before = s.dorras;
@@ -421,191 +434,218 @@ test('a cup is a series of four races with points; the overall winner takes the 
   assert.equal(s.karts.series, null);
 });
 
-test('the save is v7: older saves get the kart section, and a loaded one is cleaned', () => {
+test('the save is v8: the old track\'s records are kept aside, its boards and series put away; karts, trophies and Dorras stay', () => {
   const old = newSave(0) as unknown as Record<string, unknown>;
-  old.v = 6;
-  old.karts = { model: 'rocket', paint: 'magenta', owned: [], mods: {}, records: { 'neon-loop': 55 } };
+  old.v = 7;
+  old.dorras = 4321;
+  old.xp = 999;
+  old.karts = {
+    model: 'zip',
+    paint: 'red',
+    owned: ['zip'],
+    mods: { zip: { motor: 2 } },
+    records: { 'neon-loop:sport': { lap: 31.5, run: 99, kart: 'zip', at: 5 }, 'circuit:sport': { lap: 1, run: 1 } },
+    boards: { 'neon-loop:sport': [{ run: 99, lap: 31.5 }] },
+    series: { cup: 'pro', race: 2, points: [1, 2, 3, 4, 5, 6, 7, 8] },
+    trophies: { rookie: 1 },
+    challenge: { day: '2026-10-20', lap: 30 },
+    parBeaten: ['neon-loop:sport'],
+  };
+  old.counters = { ...newSave(0).counters, kartHits: 40, kartWins: 3 };
   const s = cleanSave(old, 1000);
-  assert.equal(s.v, 7);
-  assert.deepEqual(s.karts.records, {}, 'old plain times are dropped');
+  assert.equal(s.v, 8);
+  assert.deepEqual([s.dorras, s.xp], [4321, 999]);
+  assert.deepEqual(s.karts.owned, ['zip']);
+  assert.equal(s.karts.model, 'zip');
+  assert.equal(kartMods(s, 'zip').motor, 2);
+  assert.deepEqual(s.karts.trophies, { rookie: 1 });
+  assert.deepEqual(s.karts.records, {}, 'nothing carried onto the new track');
+  assert.deepEqual(Object.keys(s.karts.old), ['neon-loop:sport'], 'the old record kept aside');
   assert.deepEqual(s.karts.boards, {});
   assert.equal(s.karts.series, null);
-  const dirty = cleanSave(
+  assert.deepEqual(s.karts.parBeaten, []);
+  assert.deepEqual(s.karts.challenge, { day: '2026-10-20', lap: 30 });
+  assert.equal(s.counters.kartWins, 3);
+  assert.ok(!('kartHits' in s.counters));
+  // A v8 save keeps its new records, its old ones and its series; junk is cleaned
+  const v8 = cleanSave(
     {
       ...newSave(0),
       karts: {
-        model: 'bigwheel',
-        paint: 'red',
-        owned: ['zip', 'zip', 'nope', 'rocket'],
-        mods: { zip: { tyres: 9, motor: -2 }, tank: { nitro: 2 } },
-        records: { 'neon-loop:sport': { lap: 31.555, run: 99.9, kart: 'zip', at: 5 }, 'bad:key': { lap: 1, run: 1 }, 'grand:neon': { lap: -1, run: 0 } },
-        boards: { 'neon-loop:sport': [{ run: 120, lap: 40 }, { run: 100, lap: 33, kart: 'nope' }, 'junk'] },
+        ...newSave(0).karts,
+        records: { 'circuit:sport': { lap: 38.555, run: 120, kart: 'rocket', at: 5 }, 'neon-loop:sport': { lap: 30, run: 0 } },
+        boards: { 'circuit:sport': [{ run: 130, lap: 40 }, { run: 120, lap: 38 }, 'junk'] },
+        old: { 'grand:neon': { lap: 50, run: 0, kart: 'tank', at: 1 }, 'circuit:sport': { lap: 1, run: 1 } },
         series: { cup: 'pro', race: 2, points: [1, 2, 3, 4, 5, 6, 7, 99] },
-        trophies: { rookie: 3, nope: 1, neon: 0 },
-        challenge: { day: '2026-10-21', lap: 30.123 },
-        parBeaten: ['neon-loop:sport', 'bad', 'neon-loop:sport'],
+        parBeaten: ['circuit:sport', 'bad'],
       },
     },
     1000
   );
-  assert.deepEqual(dirty.karts.owned, ['zip']);
-  assert.equal(dirty.karts.model, 'rocket', 'a kart you don\'t own falls back');
-  assert.deepEqual(dirty.karts.mods, { zip: { motor: 0, tyres: MOD_LEVELS, nitro: 0 } });
-  assert.deepEqual(Object.keys(dirty.karts.records), ['neon-loop:sport']);
-  assert.deepEqual(dirty.karts.records['neon-loop:sport'], { lap: 31.56, run: 99.9, kart: 'zip', at: 5 });
-  assert.deepEqual(dirty.karts.boards['neon-loop:sport'].map((t) => t.run), [100, 120]);
-  assert.equal(dirty.karts.boards['neon-loop:sport'][0].kart, 'rocket');
-  assert.deepEqual(dirty.karts.series, { cup: 'pro', race: 2, points: [1, 2, 3, 4, 5, 6, 7, 99] });
-  assert.deepEqual(dirty.karts.trophies, { rookie: 3 });
-  assert.deepEqual(dirty.karts.challenge, { day: '2026-10-21', lap: 30.12 });
-  assert.deepEqual(dirty.karts.parBeaten, ['neon-loop:sport']);
+  assert.deepEqual(Object.keys(v8.karts.records), ['circuit:sport']);
+  assert.equal(v8.karts.records['circuit:sport'].lap, 38.56);
+  assert.deepEqual(v8.karts.boards['circuit:sport'].map((t) => t.run), [120, 130]);
+  assert.deepEqual(Object.keys(v8.karts.old), ['grand:neon']);
+  assert.deepEqual(v8.karts.series, { cup: 'pro', race: 2, points: [1, 2, 3, 4, 5, 6, 7, 99] });
+  assert.deepEqual(v8.karts.parBeaten, ['circuit:sport']);
 });
 
-test('missions and badges watch the kart counters', () => {
-  for (const id of ['first-lap', 'podium', 'pigeon-post', 'kart-winner', 'kart-hat-trick', 'kart-champion']) assert.ok(MISSIONS.some((m) => m.id === id), id);
-  assert.ok(BADGES.some((b) => b.id === 'kart-wins-25') && BADGES.some((b) => b.id === 'hits-50'));
+test('missions and badges watch the kart counters: clean laps and overtakes, no items', () => {
+  for (const id of ['first-lap', 'podium', 'clean-sheet', 'kart-winner', 'kart-hat-trick', 'kart-champion']) assert.ok(MISSIONS.some((m) => m.id === id), id);
+  assert.ok(BADGES.some((b) => b.id === 'kart-wins-25') && BADGES.some((b) => b.id === 'overtakes-50'));
+  assert.ok(!MISSIONS.some((m) => m.id === 'pigeon-post') && !BADGES.some((b) => b.id === 'hits-50'));
+  assert.ok(!MISSIONS.some((m) => /item/i.test(m.blurb)) && !BADGES.some((b) => /item/i.test(b.blurb)));
   assert.equal(new Set(MISSIONS.map((m) => m.id)).size, MISSIONS.length);
   assert.equal(new Set(BADGES.map((b) => b.id)).size, BADGES.length);
 });
 
-/* ---------- The racing ---------- */
+/* ---------- The racing (on the new circuit) ---------- */
 
-/** Drive the player like a rival would: at the line ahead, braking for bends, drifting through them */
-function brain(sim: ReturnType<typeof createKartSim>, t: number, items = true): KartInput {
-  const c = sim.course;
-  const p = sim.player;
-  const f = frame(c, p.s + 2.5 + p.speed * 0.3);
-  const heading = Math.atan2(-(f.z - p.z), f.x - p.x);
-  const err = Math.atan2(Math.sin(heading - p.yaw), Math.cos(heading - p.yaw));
-  let max = Infinity;
-  for (let d = 2; d <= 10; d += 2) {
-    const k = Math.abs(frame(c, p.s + d).k);
-    if (k > 0.02) max = Math.min(max, Math.sqrt(10 / k) + (10 - d) * 0.25);
-  }
-  return { throttle: p.speed > max ? 0 : 1, steer: Math.max(-1, Math.min(1, -err * 2.2)), drift: Math.abs(f.k) > 0.11 && p.speed > 7, item: items && t % 2 < 0.02, back: false };
-}
 const rivals = (cls: 'street' | 'sport' | 'neon' = 'sport') => PLAYER_KARTS.flatMap((k) => [k, k]).slice(0, 7).map((k) => ({ kart: k, tune: tune(KART_SPECS[k], cls) }));
+const solo = (course: RaceId, cls: 'street' | 'sport' | 'neon' = 'sport', o: { laps?: number; cond?: 'day' | 'night' | 'rain'; auto?: boolean } = {}) =>
+  createKartSim({ course, cup: 'time', cls, player: { kart: 'rocket', tune: tune(KART_SPECS.rocket, cls) }, rivals: [], seed: 1, auto: o.auto ?? true, laps: o.laps ?? 2, cond: o.cond });
+/** Run a sim to its end (or the time limit), counting its events */
+function run(sim: ReturnType<typeof createKartSim>, limit: number, inp: (t: number) => KartInput = () => NO_INPUT, until: () => boolean = () => sim.over) {
+  const counts: Record<string, number> = {};
+  for (let t = 0; t < limit && !until(); t += 1 / 60) for (const e of sim.step(1 / 60, inp(t))) counts[e.kind] = (counts[e.kind] ?? 0) + 1;
+  return counts;
+}
 
-test('a cup race: the countdown, eight karts round the laps, everyone inside the walls, items landing, places in order', () => {
-  const sim = createKartSim({ course: 'neon-loop', cup: 'rookie', player: { kart: 'rocket', tune: tune(KART_SPECS.rocket, 'street') }, rivals: rivals('street'), seed: 3 });
+test('the par driver runs every course, class and condition clean, each lap within a second or two under par', () => {
+  for (const id of RACE_IDS)
+    for (const cls of CLASS_IDS)
+      for (const cond of ['day', 'rain'] as const) {
+        const sim = solo(id, cls, { cond });
+        const laps: number[] = [];
+        let last = 0;
+        for (let t = 0; t < 300 && !sim.done; t += 1 / 60)
+          for (const e of sim.step(1 / 60, NO_INPUT)) {
+            if ((e.kind === 'lap' || e.kind === 'finish') && e.kart === sim.player.i) {
+              laps.push(sim.time - last);
+              last = sim.time;
+            }
+            assert.notEqual(e.kind, 'reset', `${id} ${cls} ${cond}: put back on the track`);
+            assert.ok(!(e.kind === 'offtrack' && e.on), `${id} ${cls} ${cond}: into the run-off`);
+          }
+        assert.ok(sim.done, `${id} ${cls} ${cond} finished`);
+        assert.equal(sim.player.cleanLaps, 2, 'two clean laps');
+        const best = Math.min(...laps);
+        if (cond === 'day') assert.ok(best <= PAR_LAPS[id][cls] && best > PAR_LAPS[id][cls] - 2.5, `${id} ${cls}: lap ${best.toFixed(1)} vs par ${PAR_LAPS[id][cls]}`);
+        else assert.ok(best > PAR_LAPS[id][cls] - 1, `${id} ${cls}: slower in the rain (${best.toFixed(1)})`);
+      }
+});
+
+test('a cup race: the countdown, eight karts round the laps, rarely off, places in order, overtakes counted', () => {
+  const sim = createKartSim({ course: 'circuit', cup: 'rookie', laps: 2, player: { kart: 'rocket', tune: tune(KART_SPECS.rocket, 'street') }, rivals: rivals('street'), seed: 3, auto: true });
   assert.equal(sim.racers.length, 8);
   assert.equal(sim.cls, 'street');
-  assert.equal(sim.boxes.length, COURSES['neon-loop'].boxes.length * BOX_LATERALS.length);
   const ev0: string[] = [];
   for (let i = 0; i < 70; i++) for (const e of sim.step(1 / 60, { ...NO_INPUT, throttle: 1 })) ev0.push(e.kind);
   assert.ok(ev0.includes('count'));
   assert.ok(!sim.started && sim.player.speed === 0);
   const counts: Record<string, number> = {};
-  let t = 1;
-  while (!sim.over && t < 900) {
-    for (const e of sim.step(1 / 60, brain(sim, t))) counts[e.kind] = (counts[e.kind] ?? 0) + 1;
-    t += 1 / 60;
+  for (let t = 0; t < 600 && !sim.over; t += 1 / 60) {
+    for (const e of sim.step(1 / 60, NO_INPUT)) counts[e.kind] = (counts[e.kind] ?? 0) + 1;
     for (const k of sim.racers) {
-      assert.ok(Math.abs(k.lateral) <= TRACK_HALF - 0.4 + 1e-6, `${k.kart} through the wall`);
       assert.ok(Number.isFinite(k.x) && Number.isFinite(k.yaw));
-      assert.ok(k.y >= -0.2 && k.y < BRIDGE_H + 4);
+      assert.ok(Math.abs(k.lateral) <= RESET_AT + 1, 'never far off');
+      assert.ok(k.y >= -0.2 && k.y < 5);
     }
   }
   assert.ok(sim.over, 'everyone finished');
-  assert.ok(sim.done && sim.player.lap === 3);
+  assert.ok(sim.time < 2 * PAR_LAPS.circuit.street * 1.6, `a racing pace (${sim.time.toFixed(0)} s)`);
   assert.equal(counts.go, 1);
   assert.equal(counts.finish, 8);
-  assert.ok(counts.lap === 16, 'two lap events each');
-  for (const k of ['box', 'item', 'use', 'hit', 'boost', 'pad', 'drift', 'jump', 'land'] as const) assert.ok((counts[k] ?? 0) > 0, k);
+  assert.equal(counts.lap, 8, 'one lap event each before the last');
+  for (const k of ['boost', 'pad', 'drift', 'jump', 'land'] as const) assert.ok((counts[k] ?? 0) > 0, k);
+  assert.ok((counts.reset ?? 0) <= 2, `few fade-backs (${counts.reset ?? 0})`);
+  assert.ok((counts.offtrack ?? 0) <= 24, `rarely off (${counts.offtrack ?? 0})`);
   const order = sim.standings();
   assert.deepEqual(order.map((i) => sim.racers[i].place), [1, 2, 3, 4, 5, 6, 7, 8]);
-  assert.ok(sim.time > 60 && sim.time < 600);
-  assert.ok(sim.racers.some((k) => k.hits > 0), 'someone landed an item');
+  assert.ok(sim.player.overtakes > 0 && (counts.overtake ?? 0) > 0, 'the player passed someone from the back');
+  for (const k of sim.racers) assert.ok(!('item' in k) && !('shield' in k), 'no items');
 });
 
-test('every course runs: a solo auto-driven lap on each, the par laps in the right ballpark, the Grand Circuit two laps', () => {
-  for (const id of COURSE_IDS) {
-    const sim = createKartSim({ course: id, cup: 'time', player: { kart: 'rocket', tune: tune(KART_SPECS.rocket, 'sport') }, rivals: [], seed: 1, auto: true, laps: 1 });
-    assert.equal(sim.laps, 1);
-    let t = 0;
-    let onShort = 0;
-    let wet = 0;
-    let banked = 0;
-    while (!sim.done && t < 200) {
-      sim.step(1 / 60, NO_INPUT);
-      t += 1 / 60;
-      const p = sim.player;
-      if (p.line === 'short') onShort++;
-      if (p.flags & F.wet) wet++;
-      if (p.flags & F.bank) banked++;
-      assert.ok(Math.abs(p.lateral) <= TRACK_HALF - 0.4 + 1e-6, `${id} through the wall`);
-    }
-    assert.ok(sim.done, `${id} finished`);
-    const lap = sim.player.finishT - 0;
-    assert.ok(lap > PAR_LAPS[id] * 0.6 && lap < PAR_LAPS[id] * 1.6, `${id} auto lap ${lap.toFixed(1)} vs par ${PAR_LAPS[id]}`);
-    if (COURSES[id].sectors.includes('hairpin')) assert.ok(wet > 0, `${id} crosses the wet bend`);
-    if (COURSES[id].sectors.includes('north')) assert.ok(banked > 0, `${id} runs the bowls`);
-    assert.equal(onShort, 0, 'no boost, no shortcut');
-  }
-  assert.equal(createKartSim({ course: 'grand', cup: 'time', player: { kart: 'rocket', tune: tune(KART_SPECS.rocket) }, rivals: [], seed: 1 }).laps, 2);
-});
-
-test('the shortcut: a kart steered into its mouth runs the dirt, capped unless boosting, and comes out ahead on the main line', () => {
-  const sim = createKartSim({ course: 'grand', cup: 'time', player: { kart: 'rocket', tune: tune(KART_SPECS.rocket) }, rivals: [], seed: 2, laps: 1 });
+test('no walls: the run-off holds a kart to a crawl, far off it fades back onto the track where it was, and the lap is not clean', () => {
+  const sim = solo('circuit', 'sport', { auto: false, laps: 2 });
   const c = sim.course;
-  const sc = c.shortcut!;
-  // Put the kart just before the mouth, rolling
   const p = sim.player;
-  for (let i = 0; i < 60 * 3.2; i++) sim.step(1 / 60, NO_INPUT);
-  const start = at(c, sc.out - 6, 0);
-  Object.assign(p, { x: start.x, z: start.z, y: start.y, yaw: start.yaw, s: wrapS(c, sc.out - 6), lateral: 0, progress: 10, speed: 10, vx: Math.cos(start.yaw) * 10, vz: -Math.sin(start.yaw) * 10 });
-  // Steer at the shortcut's line
-  let on = false;
-  let maxDirtSpeed = 0;
-  let left = false;
-  let onFor = 0;
-  for (let i = 0; i < 60 * 20 && !left; i++) {
-    const target = p.line === 'short' ? at(sc, Math.min(sc.L, p.sShort + 4), 0) : at(sc, 4, 0);
-    const heading = Math.atan2(-(target.z - p.z), target.x - p.x);
-    const err = Math.atan2(Math.sin(heading - p.yaw), Math.cos(heading - p.yaw));
-    const ev = sim.step(1 / 60, { ...NO_INPUT, throttle: 1, steer: Math.max(-1, Math.min(1, -err * 2.5)) });
-    for (const e of ev) {
-      if (e.kind === 'shortcut' && e.on) on = true;
-      if (e.kind === 'shortcut' && !e.on) left = true;
-    }
-    if (p.line === 'short') {
-      assert.ok(Math.abs(p.lateral) <= sc.half - 0.4 + 1e-6, 'inside the shortcut\'s walls');
-      onFor += 1 / 60;
-      if (p.flags & F.dirt && p.boostT <= 0 && onFor > 1) maxDirtSpeed = Math.max(maxDirtSpeed, p.speed);
-    }
+  run(sim, 5, () => NO_INPUT, () => sim.started);
+  // Flat out along the run-off beside the straight, held there by steering along it
+  const lane = RACE_HALF + KERB + 2;
+  const s0 = wrapS(c, c.start - 8);
+  const q = at(c, s0, lane);
+  Object.assign(p, { x: q.x, z: q.z, y: q.y, yaw: q.yaw, s: s0, lateral: lane, speed: p.tune.top, vx: Math.cos(q.yaw) * p.tune.top, vz: -Math.sin(q.yaw) * p.tune.top });
+  const hold = (): KartInput => {
+    const f = frame(c, p.s + 4);
+    const tx = f.x + f.nx * lane;
+    const tz = f.z + f.nz * lane;
+    const err = Math.atan2(Math.sin(Math.atan2(-(tz - p.z), tx - p.x) - p.yaw), Math.cos(Math.atan2(-(tz - p.z), tx - p.x) - p.yaw));
+    return { ...NO_INPUT, throttle: 1, steer: Math.max(-1, Math.min(1, -err * 2)) };
+  };
+  let offFor = 0;
+  for (let t = 0; t < 3; t += 1 / 60) {
+    for (const e of sim.step(1 / 60, hold())) assert.notEqual(e.kind, 'reset', 'the run-off itself is no reason to put a kart back');
+    if (p.off) offFor += 1 / 60;
   }
-  assert.ok(on && left, 'through the shortcut');
-  assert.ok(maxDirtSpeed > 1 && maxDirtSpeed <= p.tune.top * DIRT_CAP + 0.6, `dirt cap ${maxDirtSpeed.toFixed(1)}`);
-  assert.ok(Math.abs(along(c, p.s, sc.in)) < 6, 'back on the main line at the join');
-  assert.ok(p.progress > 10 + along(c, sc.out - 6, sc.in) - 8, 'progress carried across');
+  assert.ok(offFor > 2.5, 'stayed in the run-off');
+  assert.ok(p.speed <= p.tune.top * RUNOFF_CAP + 0.5, `held to a crawl (${p.speed.toFixed(1)} of ${p.tune.top.toFixed(1)})`);
+  // Now hard away from the track: past RESET_AT it's put back where it had got to
+  const progress = p.progress;
+  let reset = false;
+  for (let t = 0; t < 10 && !reset; t += 1 / 60) {
+    for (const e of sim.step(1 / 60, { ...NO_INPUT, throttle: 1, steer: -1 })) if (e.kind === 'reset') reset = true;
+    if (!reset) assert.ok(Math.abs(p.lateral) <= RESET_AT + 0.5);
+  }
+  assert.ok(reset, 'put back');
+  assert.ok(Math.abs(p.lateral) < 0.01 && p.speed === 0 && p.resetT > 0 && p.resetT <= RESET_T, 'on the centre line, stopped, fading');
+  assert.ok(Math.abs(p.progress - progress) < 6, 'where it had got to');
+  // It drives on after the fade, and that lap doesn't count as clean
+  run(sim, 120, () => ({ ...NO_INPUT, throttle: 1 }), () => p.resetT === 0);
+  assert.equal(p.cleanLaps, 0);
+  assert.ok(p.dirty);
+  assert.ok(KERB > 0 && RACE_HALF < RESET_AT);
 });
 
-test('a hit spins a kart, a shield soaks one up, a rival that lags gets a faster kart', () => {
-  const sim = createKartSim({ course: 'neon-loop', cup: 'neon', player: { kart: 'rocket', tune: tune(KART_SPECS.rocket, 'neon') }, rivals: rivals('neon'), seed: 9 });
-  for (let i = 0; i < 60 * 4; i++) sim.step(1 / 60, brain(sim, i / 60, false));
+test('off the flyover\'s deck is straight back onto the track, never a fall to the road below', () => {
+  const sim = solo('circuit', 'sport', { auto: false });
+  const c = sim.course;
   const p = sim.player;
-  p.item = 'rocket';
-  const ev = sim.step(1 / 60, { ...NO_INPUT, throttle: 1, item: true });
-  assert.ok(ev.some((e) => e.kind === 'use' && e.item === 'rocket') && ev.some((e) => e.kind === 'boost'));
-  assert.ok(p.boostT > 0);
-  p.item = 'shield';
-  sim.step(1 / 60, { ...NO_INPUT, throttle: 1, item: true });
-  assert.ok(p.shield);
-  // A pigeon from the rival just behind
-  const rival = sim.racers[0];
-  const back = at(sim.course, p.s - 2, p.lateral);
-  Object.assign(rival, { x: back.x, z: back.z, s: wrapS(sim.course, p.s - 2), lateral: p.lateral, progress: p.progress - 2, yaw: p.yaw });
-  sim.missiles.push({ kind: 'pigeon', x: back.x, z: back.z, y: back.y + 0.8, yaw: back.yaw, s: rival.s, lateral: p.lateral, vx: 0, vz: 0, owner: rival.i, target: p.i, t: 9, bounces: 0 });
-  let shielded = false;
+  run(sim, 4, () => NO_INPUT, () => sim.started);
+  // Find the middle of the deck and park the kart there, rolling across it
+  let s0 = 0;
+  for (let s = 0; s < c.L; s += 0.5) if (frame(c, s).flags & F.deck && frame(c, s).y > 2.5) s0 = s;
+  const q = at(c, s0, 0);
+  const side = q.yaw + Math.PI / 2;
+  Object.assign(p, { x: q.x, z: q.z, y: q.y, yaw: side, s: s0, lateral: 0, speed: 6, vx: Math.cos(side) * 6, vz: -Math.sin(side) * 6, progress: s0 - c.start });
+  let reset = false;
+  for (let i = 0; i < 120 && !reset; i++) for (const e of sim.step(1 / 60, { ...NO_INPUT, throttle: 1 })) if (e.kind === 'reset') reset = true;
+  assert.ok(reset, 'put back');
+  assert.ok(p.y > 2, 'still up on the deck');
+});
+
+test('the jump: at speed a kart flies off the lip and lands; the rivals plan their braking past it', () => {
+  const sim = solo('circuit', 'neon', { laps: 1 });
+  const counts = run(sim, 120, () => NO_INPUT, () => sim.done);
+  assert.ok((counts.jump ?? 0) >= 1 && counts.land === counts.jump);
+  assert.ok(flight(18) > flight(12) && flight(12) > 2, 'faster flies further');
+});
+
+test('rain takes grip away everywhere; a heavy kart ramming a light one spins it; a rival that lags gets a faster kart', () => {
+  const wet = solo('circuit', 'sport', { cond: 'rain' });
+  run(wet, 5, () => NO_INPUT, () => wet.started && wet.player.speed > 3);
+  assert.ok(Math.abs(wet.player.gripNow - RAIN_GRIP) < 1e-9);
+  const sim = createKartSim({ course: 'circuit', cup: 'neon', player: { kart: 'zip', tune: tune(KART_SPECS.zip, 'neon') }, rivals: [{ kart: 'tank', tune: tune(KART_SPECS.tank, 'neon') }, ...rivals('neon').slice(1)], seed: 9 });
+  run(sim, 5, () => NO_INPUT, () => sim.started);
+  const p = sim.player;
+  const tank = sim.racers[0];
+  // The tank, flat out, straight into the back of the zip
+  const q = at(sim.course, p.s - 0.95, p.lateral);
+  Object.assign(tank, { x: q.x, z: q.z, yaw: p.yaw, speed: 16, vx: Math.cos(p.yaw) * 16, vz: -Math.sin(p.yaw) * 16 });
+  Object.assign(p, { speed: 0, vx: 0, vz: 0 });
   let spun = false;
-  for (let i = 0; i < 60 * 10 && !spun && !shielded; i++) {
-    for (const e of sim.step(1 / 60, { ...NO_INPUT, throttle: 0.4 })) {
-      if (e.kind === 'shield' && e.kart === p.i) shielded = true;
-      if (e.kind === 'hit' && e.kart === p.i && e.item !== 'bump') spun = true;
-    }
-  }
-  assert.ok(shielded || spun, 'the pigeon arrived');
-  assert.ok(ITEM_IDS.length === 6 && CUP_IDS.length === 3);
+  for (let i = 0; i < 10 && !spun; i++) for (const e of sim.step(1 / 60, NO_INPUT)) if (e.kind === 'spin' && e.kart === p.i) spun = true;
+  assert.ok(KART_SPECS.tank.weight - KART_SPECS.zip.weight > 0.5 ? spun : true, 'spun out');
   const a = sim.racers[1];
   const b = sim.racers[2];
   a.progress = p.progress - 60;

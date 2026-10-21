@@ -171,7 +171,7 @@ export interface KartMods {
 export const KART_MODS: Record<KartModId, { name: string; blurb: string; stat: 'speed' | 'handling' | 'boost' }> = {
   motor: { name: 'Motor', blurb: 'A bigger motor: more top speed and pick-up.', stat: 'speed' },
   tyres: { name: 'Soft tyres', blurb: 'Stickier tyres: sharper turns, tighter drifts.', stat: 'handling' },
-  nitro: { name: 'Nitro kit', blurb: 'Longer boosts from drifts, pads and rockets.', stat: 'boost' },
+  nitro: { name: 'Nitro kit', blurb: 'Longer boosts from drifts and boost pads.', stat: 'boost' },
 };
 export const KART_MOD_IDS = Object.keys(KART_MODS) as KartModId[];
 export const NO_KART_MODS: KartMods = { motor: 0, tyres: 0, nitro: 0 };
@@ -203,8 +203,11 @@ export const SERIES_POINTS = [15, 12, 10, 8, 6, 4, 2, 1];
 export const SERIES_PRIZES: Record<'rookie' | 'pro' | 'neon', number[]> = { rookie: [3000, 1500, 800], pro: [8000, 4000, 2000], neon: [20000, 10000, 5000] };
 /** The daily challenge: a time to beat on the day's course and class pays this */
 export const CHALLENGE_PRIZE = 2500;
-/** The par ghost's lap at Sport pace per course (the rivals' brain driving the player; other classes scale by pace) */
-export const PAR_LAPS: Record<string, number> = { 'neon-loop': 29, 'neon-reverse': 30, summit: 27, 'summit-reverse': 27, grand: 53, 'grand-reverse': 53 };
+/** The par lap per course and class (seconds): the sim's own driver (kart-sim.ts `auto`) in the Pocket Rocket, rounded up (tested) */
+export const PAR_LAPS: Record<string, Record<ClassId, number>> = {
+  circuit: { street: 44, sport: 38, neon: 35 },
+  'circuit-reverse': { street: 45, sport: 38, neon: 35 },
+};
 
 /* ---------- Guns (the Armoury) ---------- */
 

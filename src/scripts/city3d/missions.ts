@@ -44,7 +44,7 @@ export const MISSIONS: Mission[] = [
   { id: 'ring-rookie', name: 'Ring rookie', blurb: 'Finish the Ring Circuit.', level: 3, goal: { race: 'ring-circuit' }, reward: 1200, xp: 160 },
   { id: 'landlord', name: 'Landlord', blurb: 'Buy 2 units, lots or plots.', level: 3, goal: counter('land', 2), reward: 800, xp: 100 },
   { id: 'podium', name: 'Podium', blurb: 'Finish a kart race in the top three.', level: 3, goal: counter('podiums', 1), reward: 1200, xp: 160 },
-  { id: 'pigeon-post', name: 'Pigeon post', blurb: 'Land 10 item hits on rivals at the kart park.', level: 3, goal: counter('kartHits', 10), reward: 900, xp: 140 },
+  { id: 'clean-sheet', name: 'Clean sheet', blurb: 'Drive 5 clean laps at the kart park: not a wheel in the run-off.', level: 3, goal: counter('cleanLaps', 5), reward: 900, xp: 140 },
   // Tier 3
   { id: 'crew-cut', name: 'Crew cut', blurb: 'Knock down 10 of the crew on the south bank.', level: 5, goal: counter('goons', 10), reward: 1800, xp: 240 },
   { id: 'dash', name: 'Dash', blurb: 'Finish the Downtown Dash.', level: 5, goal: { race: 'downtown-dash' }, reward: 2000, xp: 240 },
@@ -165,7 +165,7 @@ export const BADGES: Badge[] = [
   b('karts-25', 'Track regular', 'Finished 25 kart races.', 'kartRaces', 25, 800),
   b('podiums-10', 'Podium regular', 'Ten podiums at the kart park.', 'podiums', 10, 500),
   b('kart-wins-25', 'Kart king', 'Won 25 kart races.', 'kartWins', 25, 2500),
-  b('hits-50', 'Pigeon fancier', 'Landed 50 item hits.', 'kartHits', 50, 400),
+  b('overtakes-50', 'Overtaker', 'Passed 50 karts at the kart park.', 'overtakes', 50, 400),
   b('records-3', 'Record breaker', 'Set 3 best times.', 'records', 3, 150),
   b('driven-1k', 'Round the block', 'Drove 1,000 tiles.', 'driven', 1000, 100),
   b('driven-10k', 'High mileage', 'Drove 10,000 tiles.', 'driven', 10000, 800),
@@ -213,6 +213,7 @@ export const COUNTER_NAMES: Record<CounterId, string> = {
   kartRaces: 'kart races finished',
   podiums: 'kart podiums',
   kartWins: 'kart races won',
-  kartHits: 'item hits landed',
+  cleanLaps: 'clean laps',
+  overtakes: 'karts passed',
 };
 export type { Counters };

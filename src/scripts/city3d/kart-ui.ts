@@ -42,8 +42,8 @@
  * the one picked, Esc / B / E closes (walk.ts calls close()). Prizes and
  * prices are Dorras only: never real money, nothing to do with the token.
  */
-import { CUPS, CUP_IDS, ITEMS, ITEM_IDS, type CupId, type ItemId } from './kart-sim';
-import { COURSES, COURSE_IDS, type CourseId } from './kartpark';
+import { CUPS, CUP_IDS, type CupId } from './kart-sim';
+import { CONDS, COURSES, COURSE_IDS, type CourseId } from './kartcircuit';
 import { KART_SPECS, PLAYER_KARTS, type KartId } from './mykart';
 import { CHALLENGE_PRIZE, CLASS_IDS, KART_CATALOG, KART_CLASSES, KART_MODS, KART_MOD_IDS, MOD_LEVELS, SERIES_PRIZES, type ClassId, type KartModId } from './catalog';
 import {
@@ -74,17 +74,7 @@ const FIELD = 8;
 const POP_MS = 1400;
 const POPS_MAX = 3;
 
-/* ---------- Icons: the six items (24 x 24, stroked in currentColor) ---------- */
-
 const I = (body: string) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
-export const ITEM_ICONS: Record<ItemId, string> = {
-  rocket: I('<path d="M14.5 3.5c2.5-.5 5 0 6 1 1 1 1.5 3.5 1 6l-5 5-4.5-4.5zM12 11l-3 1-4 4 2 .5.5 2 4-4 1-3M8.5 15.5L5 19"/><circle cx="16" cy="8" r="1.4" fill="currentColor" stroke="none"/><path d="M4 12.5l1.5-1.5M11.5 20l1.5-1.5"/>'),
-  oil: I('<path d="M12 3c3 4 6 7.5 6 11a6 6 0 0 1-12 0c0-3.5 3-7 6-11z"/><path d="M9.5 15.5a2.5 2.5 0 0 0 2 2"/>'),
-  gummy: I('<circle cx="8" cy="7" r="2"/><circle cx="16" cy="7" r="2"/><path d="M9 8.5a4 4 0 0 1 6 0c1 1.5 1 3 1 3.5 1.5 0 3 1 3 2.5s-1.5 2.5-3 2.5c0 1.5-.5 3-1.5 3.5h-5c-1-.5-1.5-2-1.5-3.5-1.5 0-3-1-3-2.5s1.5-2.5 3-2.5c0-.5 0-2 1-3.5z"/><path d="M10.5 11h.01M13.5 11h.01"/>'),
-  pigeon: I('<path d="M3 13c3 0 5-1 7-3l2-2c2-1.5 4-2 6-1l3 1-3 1.5c0 3-2 5.5-5 6.5l-1 3-1-2.5c-3 .5-6-.5-8-3.5z"/><circle cx="16.5" cy="8.5" r=".7" fill="currentColor" stroke="none"/><path d="M9 11.5c1 1 1.5 2.5 1.5 4"/>'),
-  shield: I('<path d="M12 3l7 2.5v6c0 4.5-3 8-7 9.5-4-1.5-7-5-7-9.5v-6z"/><path d="M9 12l2 2 4-4"/>'),
-  trail: I('<path d="M3 15c3-5 5 5 8 0s5-5 8 0 2 0 2 0" stroke-width="2.2"/><path d="M3 19c3-3 5 3 8 0s5-3 8 0" opacity=".45"/>'),
-};
 /** A trophy (a cup on a plinth), for the series */
 const TROPHY = I('<path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H5.5a2.5 2.5 0 0 0 2.5 4M16 6h2.5a2.5 2.5 0 0 1-2.5 4M12 13v4M9 20h6l-.5-3h-5z"/>');
 
@@ -140,7 +130,8 @@ function countersHtml(s: TycoonSave) {
   return `  <div><dt>Kart races</dt><dd>${fmt.format(c.kartRaces)}</dd></div>
   <div><dt>Podiums</dt><dd>${fmt.format(c.podiums)}</dd></div>
   <div><dt>Wins</dt><dd>${fmt.format(c.kartWins)}</dd></div>
-  <div><dt>Item hits</dt><dd>${fmt.format(c.kartHits)}</dd></div>`;
+  <div><dt>Clean laps</dt><dd>${fmt.format(c.cleanLaps)}</dd></div>
+  <div><dt>Overtakes</dt><dd>${fmt.format(c.overtakes)}</dd></div>`;
 }
 
 /** A compact summary of your records at the park, for the City-view panel (index.ts): best lap per course at Sport, trophies, counters */
@@ -185,24 +176,17 @@ export function createKartUI(root: HTMLElement, d: KartUIDeps): KartUI {
   const lapsEl = hud.querySelector<HTMLElement>('[data-kart-laps]')!;
   const lastEl = lapsEl.querySelector<HTMLElement>('[data-kart-last]')!;
   const bestEl = lapsEl.querySelector<HTMLElement>('[data-kart-best]')!;
-  const slot = hud.querySelector<HTMLElement>('[data-kart-slot]')!;
-  const slotIcon = slot.querySelector<HTMLElement>('[data-kart-slot-icon]')!;
-  const slotStrip = slot.querySelector<HTMLElement>('[data-kart-slot-strip]')!;
-  const slotName = slot.querySelector<HTMLElement>('[data-kart-slot-name]')!;
   const meter = hud.querySelector<HTMLElement>('[data-kart-meter]')!;
   const boostEl = hud.querySelector<HTMLElement>('[data-kart-boost]')!;
-  const shieldEl = hud.querySelector<HTMLElement>('[data-kart-shield]')!;
   const surfaceEl = hud.querySelector<HTMLElement>('[data-kart-surface]')!;
-  const shortcutEl = hud.querySelector<HTMLElement>('[data-kart-shortcut]')!;
   const pops = root.querySelector<HTMLElement>('[data-kart-pops]')!;
-  const itemBtnIcon = root.querySelector<HTMLElement>('[data-kart-item-icon]');
   const result = root.querySelector<HTMLElement>('[data-kart-result]')!;
   const resultTitle = result.querySelector<HTMLElement>('[data-kart-result-title]')!;
   const resultBody = result.querySelector<HTMLElement>('[data-kart-result-body]')!;
   const nextBtn = result.querySelector<HTMLButtonElement>('[data-kart-next]')!;
 
-  // The roulette strip: every item's icon, cycled by CSS while it spins
-  slotStrip.innerHTML = ITEM_IDS.map((id) => `<i>${ITEM_ICONS[id]}</i>`).join('');
+  // Pure racing since the rebuild: the item slot, the Shield and Shortcut tags and the touch Item button are put away (Phase 4 takes them out of the markup)
+  for (const el of [hud.querySelector('[data-kart-slot]'), hud.querySelector('[data-kart-shield]'), hud.querySelector('[data-kart-shortcut]'), root.querySelector('[data-kart-item]')]) if (el instanceof HTMLElement) el.style.display = 'none';
 
   let menuOpen = false;
   let resultOpen = false;
@@ -217,7 +201,6 @@ export function createKartUI(root: HTMLElement, d: KartUIDeps): KartUI {
   let boardCls: ClassId = 'street';
   let sinceRepaint = 0;
   let goTimer = 0;
-  let slotKey = '';
 
   /* ---------- The menu ---------- */
 
@@ -250,16 +233,16 @@ export function createKartUI(root: HTMLElement, d: KartUIDeps): KartUI {
       const c = CUPS[id];
       const locked = lv < c.level;
       const going = sr?.cup === id;
-      const courses = `<ol class="kart-series-courses" aria-label="Courses">${c.courses
-        .map((cid, i) => `<li${going && i < sr.race ? ' class="is-done"' : going && i === sr.race ? ' class="is-next"' : ''}><span>${courseLabel(cid)}</span><small>${COURSES[cid].laps} laps</small></li>`)
+      const courses = `<ol class="kart-series-courses" aria-label="Races">${c.races
+        .map((r, i) => `<li${going && i < sr.race ? ' class="is-done"' : going && i === sr.race ? ' class="is-next"' : ''}><span>${courseLabel(r.course)}</span><small>${r.laps} laps${r.cond === 'day' ? '' : ` · ${CONDS[r.cond].name}`}</small></li>`)
         .join('')}</ol>`;
       const prizes = SERIES_PRIZES[id];
       const trophy = s.karts.trophies[id];
       const act = going
-        ? `<button type="button" class="kart-go" data-kart-series="${id}"><span>Continue · race ${sr.race + 1}/${c.courses.length}</span></button><button type="button" class="kart-drop" data-kart-drop>Drop</button>`
+        ? `<button type="button" class="kart-go" data-kart-series="${id}"><span>Continue · race ${sr.race + 1}/${c.races.length}</span></button><button type="button" class="kart-drop" data-kart-drop>Drop</button>`
         : `<button type="button" class="kart-go" data-kart-series="${id}"${locked ? ' disabled' : ''}><span>${locked ? `LV ${c.level}` : 'Start series'}</span></button>`;
       return `<div class="kart-cup${locked ? ' is-locked' : ''}${going ? ' is-going' : ''}" role="listitem">
-  <div class="kart-cup-head"><b class="race-name">${esc(c.name)}</b>${LV(c.level)}${classTag(c.cls)}<span class="race-cps">${c.courses.length} races · ${FIELD - 1} rivals</span></div>
+  <div class="kart-cup-head"><b class="race-name">${esc(c.name)}</b>${LV(c.level)}${classTag(c.cls)}<span class="race-cps">${c.races.length} races · ${FIELD - 1} rivals</span></div>
   <p class="race-blurb">${esc(c.blurb)}</p>
   ${courses}
   <p class="kart-prizes"><span>Series</span>${['1st', '2nd', '3rd'].map((p, i) => `<span class="kart-prize"><em>${p}</em> ${D(prizes[i] ?? 0)}</span>`).join('')}<span class="kart-prize"><em>a race win</em> ${D(c.prizes[0] ?? 0)}</span></p>
@@ -273,7 +256,7 @@ export function createKartUI(root: HTMLElement, d: KartUIDeps): KartUI {
       const rec = s.karts.records[recordKey(id, trialCls)];
       return `<div class="kart-course">
   <div class="kart-course-info">
-    <b class="kart-course-name">${courseLabel(id)}${c.shortcut ? '<span class="kart-sc-tag">Shortcut</span>' : ''}</b>
+    <b class="kart-course-name">${courseLabel(id)}</b>
     <p class="kart-course-blurb">${esc(c.blurb)}</p>
     <p class="kart-course-meta"><span>${c.laps} laps</span><span>Lap <b>${rec ? clockOf(rec.lap) : '—'}</b></span><span>Run <b>${rec ? clockOf(rec.run) : '—'}</b></span><span>Par <b>${clockOf(parLap(id, trialCls))}</b></span></p>
   </div>
@@ -519,9 +502,9 @@ ${countersHtml(s)}
       return;
     }
     // Carry on with this cup's series where it stands; any other starts from its first race
-    const course = (s.karts.series?.cup === cup ? seriesNext(s) : null) ?? c.courses[0];
+    const race = (s.karts.series?.cup === cup ? seriesNext(s) : null) ?? c.races[0];
     close();
-    d.start({ course, cup, cls: c.cls });
+    d.start({ course: race.course, cup, cls: c.cls, laps: race.laps, cond: race.cond });
   }
 
   /* ---------- Opening and closing ---------- */
@@ -672,7 +655,6 @@ ${countersHtml(s)}
     if (!on) {
       count('');
       pops.replaceChildren();
-      slotKey = '';
     }
   }
   function paintHud(h: KartHud) {
@@ -704,24 +686,11 @@ ${countersHtml(s)}
       gapEl.classList.toggle('is-behind', behind);
       gapEl.classList.toggle('is-ahead', !behind);
     }
-    // The surface when it's not dry, and the shortcut
+    // The surface when it's not plain asphalt (a kerb, the run-off, banking, the tunnel)
     showIf(surfaceEl, h.surface !== 'dry');
     if (h.surface !== 'dry') {
-      set(surfaceEl, h.surface);
+      set(surfaceEl, h.surface === 'runoff' ? 'run-off' : h.surface);
       if (surfaceEl.dataset.surface !== h.surface) surfaceEl.dataset.surface = h.surface;
-    }
-    showIf(shortcutEl, h.shortcut);
-    // The item slot: the icon and name, or the spinning strip
-    const key = h.roulette ? 'roulette' : (h.item ?? 'none');
-    if (key !== slotKey) {
-      slotKey = key;
-      const icon = h.item && !h.roulette ? ITEM_ICONS[h.item] : '';
-      slotIcon.innerHTML = icon;
-      if (itemBtnIcon) itemBtnIcon.innerHTML = icon;
-      set(slotName, h.roulette ? '?' : h.item ? ITEMS[h.item].name : 'No item');
-      slot.dataset.item = key;
-      slot.classList.toggle('is-spinning', h.roulette);
-      slot.classList.toggle('is-empty', !h.item && !h.roulette);
     }
     const tier = Math.max(0, Math.min(3, Math.floor(h.driftTier)));
     if (meter.dataset.tier !== String(tier)) {
@@ -729,7 +698,6 @@ ${countersHtml(s)}
       meter.querySelectorAll('i').forEach((seg, i) => seg.classList.toggle('on', i < tier));
     }
     showIf(boostEl, h.boost);
-    showIf(shieldEl, h.shield);
   }
   function pop(text: string, kind: 'good' | 'bad' | 'plain' = 'plain') {
     const p = document.createElement('p');
@@ -808,7 +776,7 @@ ${laps}
 </dl>${res.levels + (sr?.levels ?? 0) > 0 ? `<p class="race-levelup">Level up! You're now ${LV(level(d.game.save()))}</p>` : ''}${standings}${series}`;
     // Next race, for a series with races still to run
     nextBtn.hidden = !sr || sr.done;
-    if (sr && !sr.done) nextBtn.innerHTML = `Next race <small>${courseLabel(CUPS[r.cup as CupId]?.courses[sr.race] ?? r.course)}</small>`;
+    if (sr && !sr.done) nextBtn.innerHTML = `Next race <small>${courseLabel(CUPS[r.cup as CupId]?.races[sr.race]?.course ?? r.course)}</small>`;
     menuOpen = false;
     el.hidden = true;
     resultOpen = true;

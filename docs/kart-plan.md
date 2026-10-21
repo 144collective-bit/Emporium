@@ -107,7 +107,20 @@ flyover's deck is 2.6 over the diagonal below.
      least `BRIDGE_H` over it; every solid clear of the track and run-off;
      the grid and pit lane on and off the track as they should be; the lap
      in its range.
-2. **The racing rules** (`kart-sim.ts`, DOM-free, seeded, tested).
+2. **The racing rules** (built: `kart-sim.ts` on `kartcircuit.ts`, tested
+   in `tests/kart.test.ts`). As built: items gone; no walls (run-off at 45%
+   of top speed and half the grip, a fade back onto the track past 8.5
+   from the centre line or over the deck's edge); rivals that pass, hold
+   back in traffic, drift only where a bend needs it and plan their braking
+   past the jump; five boost pads; rain at 70% grip. The par driver runs
+   every course, class and condition clean: about 44 s a lap at Street,
+   38 at Sport, 35 at Neon (`PAR_LAPS`). Cups: Rookie (both ways, a night
+   race, dry), Pro (a rain race and a night race), Neon (two in the rain,
+   two by night, the last four laps). Save v8 keeps the old network's lap
+   records aside (`karts.old`) and drops its boards, par ghosts and a
+   series on the go; "Clean sheet" (5 clean laps) and "Overtaker" (50
+   karts passed) replace the item mission and badge. Until Phase 3 the
+   park still draws the old network, so Phase 2 isn't merged on its own.
    - Items out: the boxes, the six items, the roulette and their events.
    - No walls: the run-off's grip and speed cap slow you; beyond it you're
      put back on the track (a brief fade, the place you'd reached, no
