@@ -139,6 +139,22 @@ Checked with `?fps` at every step (and on a real phone):
 
 Each phase gets the owner's sign-off before the next one starts.
 
+## Liberty Bridge and the wider river (after the redesign)
+
+The owner asked for a one-of-a-kind landmark bridge from West 3 to South 1,
+called Liberty Bridge, with the Liberty flame on it. A first draft (a
+suspension bridge carrying a new road) was replaced, at the owner's call,
+by a stone footbridge in the style of an old gate-tower bridge, built up
+and over the water, with the river widened five times over:
+
+- The river is 15 wide (`RIVER_W`); it widened southwards and everything
+  south of it moved 12 south (`SOUTH_SHIFT`), the airport included.
+- The bridge (liberty.ts, libertybridge.ts) stands just west of the W3 and
+  S1 plots, which stay on the market: a gate tower on each bank with
+  stairs up both sides, the walkway on arches high over both river
+  avenues and the river, and the Liberty flame spiralling up from each
+  tower in 3D.
+
 ## Still to do for performance
 
 - **Signs on one texture sheet.** Each sign has its own canvas texture, so

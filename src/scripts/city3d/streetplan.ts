@@ -18,6 +18,7 @@ import { BLOCKS, BS, CENTER_XZ, CORE_ROADS, EW_ROADS, EXT, EXTRA_LOTS, GARAGE, L
 import { ALLEYS, BLOCKS_DT, DIAGONALS, LANES } from './downtown';
 import { BENDS, BEND_KERBS, OUTER_BLOCKS, OUTER_PARKS, OUTER_SQUARES, PADS } from './outer';
 import { AIRPORT_STREETS, ROAD } from './airfield';
+import { BX, TOWERS } from './liberty';
 
 export type Pt = [number, number];
 
@@ -354,9 +355,11 @@ export function cityPlan(): StreetPlan {
       return { id: `dt-${b.id}`, poly: b.poly, use, places: places.length ? places : undefined, walk: WALK_W };
     }),
     // The outer blocks, named after their first plot (or lot), every pad on them listed
+    // (Liberty Bridge's towers stand on the two west of West 3 and South 1: their blocks list it)
     ...OUTER_BLOCKS.map((b): Block => {
       const plot = b.pads.find((id) => PADS.find((p) => p.id === id)!.kind === 'plot');
-      return { id: b.id, poly: b.poly, use: plot ? 'district' : 'lot', ref: plot ?? b.pads[0], pads: b.pads, walk: WALK_W };
+      const places = TOWERS.some((z) => inPoly(b.poly, [BX, z])) ? ['liberty'] : undefined;
+      return { id: b.id, poly: b.poly, use: plot ? 'district' : 'lot', ref: plot ?? b.pads[0], pads: b.pads, places, walk: WALK_W };
     }),
     // The bends' outer sidewalks (their own outline is the sidewalk)
     ...BEND_KERBS.map((poly, i): Block => ({ id: `kerb-${i}`, poly, use: 'plain', walk: 0 })),

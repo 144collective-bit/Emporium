@@ -141,7 +141,8 @@ it and has been retired completely. Build only on what's here.
   (tighter for right turns). Junctions where a diagonal comes in run
   three light phases (x, z, diagonal). Cars follow whoever is ahead going
   the same way on any route. Pedestrians walk loops round downtown's block
-  outlines and the south row. Tested in `tests/routes.test.ts`.
+  outlines and the south row, and up and down Liberty Bridge's walkway.
+  Tested in `tests/routes.test.ts`.
 - **The street plan** is `src/scripts/city3d/layout.ts` (DOM-free; the 3D
   city, the 2D map, the plots and the server all read it). 1 tile is about
   1.8 m and Degen is about one tile tall. Roads are sized for real-proportion
@@ -158,6 +159,7 @@ it and has been retired completely. Build only on what's here.
   grid, and change street sizes only in `layout.ts`.
 - **The world's size** is in `layout.ts` too:
   - `EXT` (-200 to 240, about 790 m across) is the ground, the river and every road, edge to edge. It's mostly open land, room to grow the city into. Build there only when the owner asks.
+  - The river is `RIVER_W` (15) wide, five times what it was (the owner's call). It widened southwards, so everything south of it moved `SOUTH_SHIFT` (12) south: what's derived from `SOUTH_ROAD` / `SOUTH_ROW` moved by itself, and the south bank's places written in fixed numbers (the Fight Club in `fightsite.ts`, South Square and the south pocket parks in `outer.ts`, the airport and its timetable in `airfield.ts`) add `SOUTH_SHIFT` to their z. Keep doing that for anything new written in fixed numbers south of the river.
   - `WORLD_BOUNDS` is how far you can walk or drive.
   - `CITY_EXT` (-80 to 140) is where traffic and boats loop, past the Parkway; the outskirts' tree belt fills a band round the town (outside the bends) and a lighter sprinkle covers the rest.
   - The skyline ring stands just past `EXT`, kept out of the haze (`fog = false`) so it reads as a far metropolis.
@@ -351,6 +353,53 @@ it and has been retired completely. Build only on what's here.
   (labels).
 - Check every change at 320, 375, 768, 1024 and 1440px wide: no sideways
   scroll, no text clipped by a slanted edge.
+
+## Liberty Bridge (the owner's call)
+
+- A one-of-a-kind landmark: a stone **footbridge** built up and over the
+  water, in the style of an old gate-tower bridge (the owner's photo:
+  sandstone, an arch through each tower, stairs up both sides, domed
+  turrets), with the Liberty flame (the owner's permission; the flame mark
+  only, `src/assets/liberty-flame.png`) as a 3D spiral on top of both
+  towers and as a crest on their faces. Name it "Liberty Bridge"; never
+  link it anywhere, and keep the flame the only outside mark on it. It's
+  for people only: no road, no cars (an earlier draft with Liberty Road and
+  traffic was dropped, and West 3 and South 1 stayed on the market).
+- **The numbers** are `liberty.ts` (DOM-free, tested in
+  `tests/liberty.test.ts`): on `FOOTBRIDGE_X` (`layout.ts`, x -23.5, just
+  west of the W3 and S1 pads, on their blocks' lawns), a gate tower on each
+  bank (`TOWERS`, level with the middle of W3 and of S1; `TOWER`: the
+  ground storey with its arch, the upper storey, roof, turrets, the flame's
+  drum and height, all under the Emporium), stairs beside each tower rising
+  towards the river (`STAIR`, `stairsOf()`), a landing at the tower's river
+  face (`landingOf()`), the walkway between them (`WALKWAY` at `DECK_Y`)
+  raised on round-topped arches (`SUPPORTS`: pairs of pillars on the lawns
+  and promenades you can walk between, two piers in the river; `SPANS`,
+  `archY()`) high over both river avenues, `BOAT_LANES` down the middle of
+  the river's three arches (life.ts's boats), `DECK_STROLLS` (life.ts
+  walks people along the walkway at `DECK_Y`), `LIBERTY_RECTS` (what it
+  covers: the lawns' trees and the promenade's benches and lamps keep off),
+  `LIBERTY_SOLIDS` (in `SOLIDS`: the towers either side of the arch, the
+  stairs past their first steps, the landings' posts, pillars, piers) and
+  `LIBERTY_SPAWN` (the foot of the north tower's east stairs).
+- **Walking on it:** `footbridgeY(x, z, y, m)` is the stairs, landings and
+  walkway as ground when you're up there (walking under them stays on the
+  ground), and `footbridgeWall()` the parapets (you can't step or fall
+  off); `walk.ts` passes Degen's height into `blocked()` and `groundAt()`.
+- **Drawn by** `libertybridge.ts`: the towers (arch and voussoir ring,
+  string course, lit arched windows, the crest and the LIBERTY BRIDGE
+  plaque, cornice, crenellations, four turrets with octagonal slate domes
+  and finials, the drum), the stairs (stepped stone flanks, outer walls,
+  newels, street lamps at their feet), the landings, the walkway (arches
+  with their rings, cutwater piers, parapets with coping, pilasters with
+  lanterns, pools of their light at night), paved aprons round the towers,
+  and `flameGeometry()`: the flame mark as a sculpture, a ribbon
+  spiralling up from violet through magenta into tongues of fire curling
+  to one side, coloured per vertex, turning slowly (still under reduced
+  motion). The whole bridge is the spot's group.
+- **The place:** spot `liberty` (after the Emporium in `spots`), its pin
+  over the north tower's flame, directory entry and an info-only panel
+  (`data-panel-tpl="liberty"`) with **Walk in**. No outside links.
 
 ## Sector 7 Airport (`docs/airport-plan.md`)
 
@@ -1151,7 +1200,8 @@ it and has been retired completely. Build only on what's here.
   (`combat-sim.ts`), the economy (`tycoon.ts`, the market square in
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
-  the save backup (`guide.ts`, `backup.ts`), the airport and its timetable
+  the save backup (`guide.ts`, `backup.ts`), Liberty Bridge (`liberty.ts`),
+  the airport and its timetable
   (`airfield.ts`) and flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`). Modules that touch the DOM or `kit.ts` (canvas
   textures) can't load in Node; keep data a test needs in the DOM-free

@@ -14,6 +14,7 @@ import { ALLEYS, ALLEY_PROPS, BOLLARD_R, INFILL, SQUARE } from './downtown';
 import { SQUARE_SOLIDS } from './outer';
 import { CIRCUIT_SOLIDS as KART_SOLIDS } from './kartcircuit';
 import { AIRPORT_SOLIDS } from './airfield';
+import { LIBERTY_SOLIDS } from './liberty';
 import { BAGS, BLEACHERS, COUNTER, LOCKERS, POSTS, POST_R, SHED, SIGN } from './fightsite';
 import type { LotKind, UnitKind } from './tycoon';
 
@@ -224,8 +225,8 @@ export const FIGHTCLUB_FIX = {
   ajar: [3, 9],
   ajarAngle: 1.0,
   /** The bench by the lockers (not solid) and the water cooler at the row's south end */
-  bench: { x: 96.9, z: 94.3 },
-  cooler: { x: 95.75, z: 96.3 },
+  bench: { x: 96.9, z: LOCKERS.z1 - 1.2 },
+  cooler: { x: 95.75, z: LOCKERS.z1 + 0.8 },
 };
 /**
  * What's solid at the Fight Club: the ring's corner posts (the canvas and the ropes stay open: you
@@ -252,7 +253,7 @@ export const FIGHTCLUB_SITE: Box[] = [
 
 /** The outer squares' centrepieces, planters and kiosks (outer.ts); the pocket parks and lawns stay walkable */
 /** ...and the kart park's fence, hut, garages and stand (kartcircuit.ts), the airport's buildings, masts and parked vehicles (airfield.ts), and the Fight Club (fightsite.ts) */
-export const SOLIDS: Box[] = [...DRAWN.map(designBox), ...DOWNTOWN_SOLIDS, ...SQUARE_SOLIDS, ...GARAGE_SOLIDS, ...MARKET_SOLIDS, ...DUMMY_SOLIDS, ...KART_SOLIDS, ...AIRPORT_SOLIDS, ...FIGHTCLUB_SITE];
+export const SOLIDS: Box[] = [...DRAWN.map(designBox), ...DOWNTOWN_SOLIDS, ...SQUARE_SOLIDS, ...GARAGE_SOLIDS, ...MARKET_SOLIDS, ...DUMMY_SOLIDS, ...KART_SOLIDS, ...AIRPORT_SOLIDS, ...FIGHTCLUB_SITE, ...LIBERTY_SOLIDS];
 /** What bullets stop on: everything solid except the dummies' footprints (they test their own shape) */
 export const SHOT_SOLIDS = SOLIDS.filter((b) => !DUMMY_SOLIDS.includes(b));
 

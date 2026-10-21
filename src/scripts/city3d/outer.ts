@@ -19,7 +19,8 @@
  * Coordinates are world units on the ground: [x, z].
  */
 import { DISTRICTS } from '../../data/plots';
-import { BIG_LOTS, BS, EW_ROADS, GARAGE, LANE, MARKET, NS_ROADS, RIVER, RING_HI, SOUTH_ROAD, UNITS, WALK_W, type Road } from './layout';
+import { BIG_LOTS, BS, EW_ROADS, GARAGE, LANE, MARKET, NS_ROADS, RIVER, RING_HI, SOUTH_ROAD, SOUTH_SHIFT as D, UNITS, WALK_W, type Road } from './layout';
+import { LIBERTY_RECTS } from './liberty';
 import { SLIP_ROAD } from './kartpark';
 import { FIGHT_CLUB } from './fightsite';
 
@@ -228,7 +229,8 @@ export const OUTER_SQUARES: OuterSquare[] = [
   { id: 'north', name: 'North Square', block: 'o-nb', rect: [22.5, -32, 37.5, -21.5], feature: 'fountain' },
   { id: 'west', name: 'West Green', block: 'o-wb', rect: [-33, 23, -22, 37], feature: 'statue' },
   { id: 'east', name: 'East Square', block: 'o-ea', rect: [81.5, 1.2, 93.5, 13.3], feature: 'bandstand' },
-  { id: 'south', name: 'South Square', block: 'o-sb', rect: [23, 96.5, 37, 105], feature: 'clock' },
+  // (South of the river: written before it was widened, so its z adds layout.ts SOUTH_SHIFT)
+  { id: 'south', name: 'South Square', block: 'o-sb', rect: [23, 96.5 + D, 37, 105 + D], feature: 'clock' },
 ];
 export interface PocketPark {
   id: string;
@@ -240,9 +242,10 @@ export interface PocketPark {
 const parkRects: { id: string; block: string; rect: Rect }[] = [
   { id: 'nw', block: 'o-nw', rect: [-26.5, -16.5, -20, -10.2] },
   { id: 'ne', block: 'o-ne', rect: [83, -27, 99, -12] },
-  { id: 'sw', block: 'o-sw', rect: [-31.5, 86.5, -22, 97] },
+  // (South of the river) Behind Liberty Bridge's south tower, where the loop's bend leaves room
+  { id: 'sw', block: 'o-sw', rect: [-32, 93.5 + D, -22.5, 98.5 + D] },
   // East of the Fight Club's lot (fightsite.ts FIGHT_CLUB, x 95-109), which took its old spot
-  { id: 'se', block: 'o-se', rect: [110.5, 85.5, 118.5, 95] },
+  { id: 'se', block: 'o-se', rect: [110.5, 85.5 + D, 118.5, 95 + D] },
 ];
 export const OUTER_PARKS: PocketPark[] = parkRects.map((p, i) => {
   const r = rng(700 + i);
@@ -276,6 +279,8 @@ export const LAWN_TREES: Pt[] = OUTER_BLOCKS.flatMap((b, i) => {
     ...OUTER_SQUARES.filter((s) => s.block === b.id).map((s) => s.rect),
     ...parkRects.filter((s) => s.block === b.id).map((s) => s.rect),
     ...(inside(b.poly, [FIGHT_LOT[0] + 0.1, FIGHT_LOT[1] + 0.1]) ? [FIGHT_LOT] : []),
+    // Liberty Bridge's towers, stairs and walkway (liberty.ts)
+    ...LIBERTY_RECTS,
   ];
   for (let x = Math.min(...xs) + 1.5; x < Math.max(...xs) - 1.5; x += 2.9)
     for (let z = Math.min(...zs) + 1.5; z < Math.max(...zs) - 1.5; z += 2.9) {
@@ -346,6 +351,8 @@ export const JETTIES: { x: number; bank: 'north' | 'south' }[] = [
 ];
 /** Off the bridges: a promenade feature at x is clear of every road crossing the river */
 export const offBridges = (x: number, m = 0.8) => NS_ROADS.every((r) => Math.abs(x - r.c) > r.half + WALK_W + m);
+/** Clear of Liberty Bridge's supports on the promenades (liberty.ts): benches, trees in planters and lamps keep off */
+export const offFootbridge = (x: number, m = 0.8) => LIBERTY_RECTS.every((r) => x < r[0] - m || x > r[2] + m);
 
 /* ---------- The built-up town ---------- */
 

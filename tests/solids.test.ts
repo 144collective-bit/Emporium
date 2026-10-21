@@ -10,13 +10,14 @@ import { CORNERS, FIGHT_CLUB, FIGHT_SPAWN, OUT, RING, RING_HALF, TRAINER, inRing
 import { LOT_KIND_IDS, UNIT_KIND_IDS } from '../src/scripts/city3d/tycoon';
 import { inside, onSlab, pointIn, pointOnSlab, type Rect } from './world';
 import { AIRPORT_SOLIDS } from '../src/scripts/city3d/airfield';
+import { LIBERTY_SOLIDS } from '../src/scripts/city3d/liberty';
 
 /** Degen's radius in walk mode (walk.ts RADIUS) */
 const R = 0.22;
 const blocked = (x: number, z: number) => SOLIDS.some((b) => pointIn(x, z, b, R));
 
-test('every solid box stands on a block, district or the garage lot (the kart park and the airport are flat open ground, tested in kart.test.ts and airfield.test.ts)', () => {
-  for (const b of [...SOLIDS, ...CAMERA_ONLY]) if (!KART_SOLIDS.includes(b) && !AIRPORT_SOLIDS.includes(b)) assert.ok(onSlab(b), `box ${b.join(', ')} is off the slabs`);
+test('every solid box stands on a block, district or the garage lot (the kart park and the airport are flat open ground, tested in kart.test.ts and airfield.test.ts; Liberty Bridge stands on the promenades and in the river too, tested in liberty.test.ts)', () => {
+  for (const b of [...SOLIDS, ...CAMERA_ONLY]) if (!KART_SOLIDS.includes(b) && !AIRPORT_SOLIDS.includes(b) && !LIBERTY_SOLIDS.includes(b)) assert.ok(onSlab(b), `box ${b.join(', ')} is off the slabs`);
 });
 
 test('no solid box sits on a road', () => {

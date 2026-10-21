@@ -68,15 +68,23 @@ export const RING_HI = CORE_END + AVENUE_GAP / 2;
 export const OUTER_LO = -AVENUE_GAP - BS; // -18
 export const OUTER_HI = CORE_END + AVENUE_GAP; // 69
 
+/** How wide the river runs (the owner had it widened five times over, from 3) */
+export const RIVER_W = 15;
 /** The river, south of the north-bank avenue, with a 2-wide promenade either side */
-export const RIVER: [number, number] = [RING_HI + AVENUE_GAP / 2 + 2, RING_HI + AVENUE_GAP / 2 + 5]; // 71-74
+export const RIVER: [number, number] = [RING_HI + AVENUE_GAP / 2 + 2, RING_HI + AVENUE_GAP / 2 + 2 + RIVER_W]; // 71-86
+/**
+ * How far everything south of the river moved when it was widened (from 3 to
+ * `RIVER_W`). Places on the south bank written in fixed numbers (the Fight
+ * Club, South Square, the airport) add it, so they kept their place on the bank.
+ */
+export const SOUTH_SHIFT = RIVER_W - 3;
 /** The south bank avenue, past the river and its riverside walk */
-export const SOUTH_ROAD = RIVER[1] + 2.3 + AVENUE_GAP / 2 - WALK_W; // 80
+export const SOUTH_ROAD = RIVER[1] + 2.3 + AVENUE_GAP / 2 - WALK_W; // 92
 /** Where the south row of districts starts */
-export const SOUTH_ROW = SOUTH_ROAD + AVENUE_GAP / 2; // 84.5
+export const SOUTH_ROW = SOUTH_ROAD + AVENUE_GAP / 2; // 96.5
 
 /** The garage's lot on the south bank, east of the south row (S5), facing the south bank avenue */
-export const GARAGE = { ox: OUTER_HI + BS + 4, oz: SOUTH_ROW }; // 82-91 x 84.5-93.5
+export const GARAGE = { ox: OUTER_HI + BS + 4, oz: SOUTH_ROW }; // 82-91 x 96.5-105.5
 /** The market square, east of the East districts, facing the north bank avenue (across the river from the garage) */
 export const MARKET = { ox: OUTER_HI + BS + 4, oz: BLOCKS[2] }; // 82-91 x 48.25-57.25
 /** Makers' Row: four units of your own, north of the market square across the street */
@@ -85,6 +93,9 @@ export const UNITS = { ox: OUTER_HI + BS + 4, oz: BLOCKS[1] }; // 82-91 x 25.5-3
 export const BIG_LOTS = [0, 1, 2].map((k) => ({ ox: UNITS.ox + BS + 5, oz: BLOCKS[k] })); // 96-105
 /** Lots outside the core and the districts (raised and paved like a block, with a sidewalk round) */
 export const EXTRA_LOTS = [GARAGE, MARKET, UNITS, ...BIG_LOTS];
+
+/** Liberty Bridge, the footbridge from beside West 3 over both river avenues and the river to beside South 1 (liberty.ts): its centre line, just west of the two plots */
+export const FOOTBRIDGE_X = OUTER_LO - 5.5; // -23.5
 
 /** Roads running north-south, at these x */
 export const NS_ROADS: Road[] = [avenue(RING_LO), ...CORE_ROADS.map(street), avenue(RING_HI)];
@@ -97,7 +108,7 @@ export const EW_ROADS: Road[] = [avenue(RING_LO), ...CORE_ROADS.map(street), ave
  */
 export const EXT: [number, number] = [-200, 240];
 /** The built-up part: traffic loops here and the outskirts' trees fill round it */
-export const CITY_EXT: [number, number] = [-80, 140];
+export const CITY_EXT: [number, number] = [-80, 140 + SOUTH_SHIFT];
 /** How far you can walk or drive: x0, z0, x1, z1 (a little inside the edge) */
 export const WORLD_BOUNDS: [number, number, number, number] = [EXT[0] + 6, EXT[0] + 6, EXT[1] - 6, EXT[1] - 6];
 
