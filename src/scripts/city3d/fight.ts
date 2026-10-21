@@ -118,7 +118,7 @@ export function createFight(d: FightDeps): Fight {
       seed: (Date.now() % 1_000_000) + 7,
       fighters: [
         { id: YOU, name: 'You', style: save.fight.style, x: CORNERS[0].x, z: CORNERS[0].z, yaw: CORNERS[0].yaw },
-        { id: THEM, name: B.name, style: B.style, x: CORNERS[1].x, z: CORNERS[1].z, yaw: CORNERS[1].yaw, bot: { skill: B.skill } },
+        { id: THEM, name: B.name, style: B.style, x: CORNERS[1].x, z: CORNERS[1].z, yaw: CORNERS[1].yaw, bot: { skill: B.skill, ...B.traits } },
       ],
       bout: kind === 'bout' ? BOUT : null,
       arena: { x: RING.x, z: RING.z, r: RING.r },

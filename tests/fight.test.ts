@@ -128,8 +128,8 @@ test('a block only covers the front; a kick after a cross is the roundhouse for 
 test('the parry window: a Street block begun just before the hit staggers the attacker; an early block only blocks', () => {
   const late = pair(1.0, {}, ['brawler', 'street']);
   const ev: FightEvent[] = [];
-  for (let i = 0; i < 40; i++) {
-    // Block from the frame before the jab lands
+  for (let i = 0; i < 30; i++) {
+    // Block from the frame before the jab lands (30 ticks: the parried jab and its stagger, before the held punch throws again)
     const block = i >= MOVES.jab.startup - 2;
     ev.push(...late.step(T.tick, { a: press({ punch: true }), b: press({ block }) }));
   }
@@ -394,4 +394,119 @@ test('the save (v8): the fight record cleans, a spar pays XP capped per hit, a b
   assert.equal(old.v, 8);
   assert.deepEqual(old.fight.styles, ['brawler']);
   assert.equal(old.fight.bouts, 0);
+});
+
+/* ---------- The optimisation round: buffered presses, the step-in, the turn rate, the bots' tells ---------- */
+import { botTraits } from '../src/scripts/city3d/fight-sim';
+
+test('a press up to T.buffer frames early still fires: a chain pressed before the recovery window, a punch pressed while stunned', () => {
+  // The cross pressed 5 frames before the jab's recovery opens: it still chains
+  const sim = pair(1.0);
+  const ev: FightEvent[] = [];
+  const window = MOVES.jab.startup + MOVES.jab.active;
+  for (let i = 0; i < 80; i++) ev.push(...sim.step(T.tick, { a: press({ punch: i === 0 || i === window - 5 }) }));
+  assert.deepEqual(ev.filter((e) => e.kind === 'swing').map((e) => (e as { move: string }).move).slice(0, 2), ['jab', 'cross']);
+  // Pressed too early (T.buffer + 4 frames before): lost
+  const s2 = pair(1.0);
+  const ev2: FightEvent[] = [];
+  for (let i = 0; i < 80; i++) ev2.push(...s2.step(T.tick, { a: press({ punch: i === 0 || i === window - T.buffer - 4 }) }));
+  assert.deepEqual(ev2.filter((e) => e.kind === 'swing').map((e) => (e as { move: string }).move), ['jab']);
+  // A punch pressed 4 frames before the stun ends fires as soon as it does
+  const s3 = pair(1.0);
+  const a = s3.fighter('a')!;
+  a.stun = 10;
+  a.hurt = 'head';
+  const ev3: FightEvent[] = [];
+  for (let i = 0; i < 20; i++) ev3.push(...s3.step(T.tick, { a: press({ punch: i === 5 }) }));
+  assert.ok(ev3.some((e) => e.kind === 'swing'));
+  assert.ok(a.move === 'jab' || a.hits > 0);
+});
+
+test('the step-in: a jab from just out of reach steps forward and lands; from well out of reach it still misses', () => {
+  const just = pair(MOVES.jab.reach + T.radius + 0.35);
+  const ev = run(just, moveFrames('jab') + 2, { a: press({ punch: true }) });
+  assert.ok(ev.some((e) => e.kind === 'hit'), 'stepped in');
+  const far = pair(MOVES.jab.reach + T.radius + T.stepIn + 0.3);
+  const ev2 = run(far, moveFrames('jab') + 2, { a: press({ punch: true }) });
+  assert.ok(!ev2.some((e) => e.kind === 'hit'));
+});
+
+test('the facing turns at a rate, and a move only snaps the facing a little', () => {
+  const sim = pair(3.0);
+  const a = sim.fighter('a')!;
+  run(sim, 1, { a: press({ face: Math.PI }) });
+  assert.ok(Math.abs(a.yaw) < Math.PI / 2, 'not there in one tick');
+  assert.ok(Math.abs(a.yaw) > 0.05, 'but turning');
+  run(sim, 40, { a: press({ face: Math.PI }) });
+  assert.ok(Math.abs(Math.abs(a.yaw) - Math.PI) < 1e-6, 'there within 40 ticks');
+  // A move's lock-on snaps at most T.lockSnap towards a target 1 radian off
+  const s2 = pair(1.0);
+  const b = s2.fighter('a')!;
+  b.yaw = 1.0;
+  run(s2, 1, { a: press({ punch: true }) });
+  assert.ok(Math.abs(b.yaw - (1.0 - T.lockSnap)) < 1e-6);
+});
+
+test("the Mayor's tells: a telegraphed hook winds up longer, he parries, and he backs off after a chain; Ray hardly blocks", () => {
+  // A telegraphed heavy move takes its extra frames to land; a jab doesn't
+  const tele = createFightSim({ seed: 1, fighters: [{ id: 'a', name: 'A', style: 'street', x: 0, z: 0, yaw: 0, bot: { skill: 0.8, telegraph: 8 } }, { id: 'b', name: 'B', style: 'brawler', x: 0, z: 1, yaw: Math.PI }] });
+  tele.bots = false;
+  const a = tele.fighter('a')!;
+  a.move = 'cross';
+  a.phase = 'recovery';
+  a.frame = MOVES.cross.startup + MOVES.cross.active + 1;
+  const recov = MOVES.cross.startup + MOVES.cross.active + MOVES.cross.recovery - a.frame;
+  let landed = -1;
+  for (let i = 0; i < 80 && landed < 0; i++) for (const e of tele.step(T.tick, { a: press({ punch: i === 0 }) })) if (e.kind === 'hit' && e.move === 'hook') landed = i;
+  assert.ok(landed > recov + MOVES.hook.startup + 6, `the hook took ${landed} frames: longer than ${recov + MOVES.hook.startup}`);
+  // Traits default from skill; the gym's Mayor parries
+  const t = botTraits({ skill: 0.5 });
+  assert.ok(t.block > 0 && t.pace > 0 && t.parry === 0 && !t.finisher);
+  const mayor = createFightSim({ seed: 3, fighters: [{ id: 'a', name: 'A', style: 'brawler', x: 0, z: 0, yaw: 0 }, { id: 'b', name: 'Mayor', style: 'street', x: 0, z: 1.1, yaw: Math.PI, bot: { skill: 0.8, block: 0.65, parry: 0.5, finisher: true, telegraph: 8, backOff: 45, pace: 1e9 } }] });
+  /** A plain player: walks in, jabs every 40 ticks once in reach, always facing the other */
+  const plain = (sim: ReturnType<typeof createFightSim>, i: number): FighterInput => {
+    const me = sim.fighter('a')!;
+    const o = sim.fighter('b')!;
+    const dx = o.x - me.x;
+    const dz = o.z - me.z;
+    const d = Math.hypot(dx, dz);
+    const near = d < MOVES.jab.reach + T.radius - 0.1;
+    return press({ x: near ? 0 : dx / d, z: near ? 0 : dz / d, punch: near && i % 40 === 0 && !me.move && me.stun <= 0 && me.down <= 0, face: yawTo(me.x, me.z, o.x, o.z) });
+  };
+  let parries = 0;
+  let blocks = 0;
+  for (let i = 0; i < 60 * 40; i++)
+    for (const e of mayor.step(T.tick, { a: plain(mayor, i) })) {
+      if (e.kind === 'parry' && e.who === 'b') parries++;
+      if (e.kind === 'block' && e.who === 'b') blocks++;
+    }
+  // (He only defends here, pace 1e9, so the player gets his jabs off)
+  assert.ok(parries + blocks >= 10, `the Mayor answered ${parries + blocks} of the jabs`);
+  assert.ok(parries >= 1, `he parried ${parries}`);
+  // Ray hardly blocks
+  const ray = createFightSim({ seed: 3, fighters: [{ id: 'a', name: 'A', style: 'brawler', x: 0, z: 0, yaw: 0 }, { id: 'b', name: 'Ray', style: 'brawler', x: 0, z: 1.1, yaw: Math.PI, bot: { skill: 0.3, block: 0.15, dodge: 0.03, kicks: 0.15, pace: 75 } }] });
+  let rayBlocks = 0;
+  let hits = 0;
+  for (let i = 0; i < 60 * 40; i++)
+    for (const e of ray.step(T.tick, { a: plain(ray, i) })) {
+      if (e.kind === 'block' && e.who === 'b') rayBlocks++;
+      if (e.kind === 'hit' && e.who === 'a') hits++;
+    }
+  assert.ok(hits > rayBlocks, `Ray blocked ${rayBlocks}, took ${hits}`);
+  // Backing off: after a chain of two the Mayor retreats for a while
+  const bo = createFightSim({ seed: 2, fighters: [{ id: 'a', name: 'A', style: 'brawler', x: 0, z: 0, yaw: 0 }, { id: 'b', name: 'Mayor', style: 'street', x: 0, z: 1.0, yaw: Math.PI, bot: { skill: 0.8, backOff: 45, pace: 20, block: 0 } }] });
+  const chainAt = { t: -1, d: 0 };
+  for (let i = 0; i < 60 * 20 && chainAt.t < 0; i++) {
+    for (const e of bo.step(T.tick, { a: press({ block: false }) })) if (e.kind === 'chain' && e.who === 'b' && e.n >= 2) chainAt.t = i;
+  }
+  assert.ok(chainAt.t >= 0, 'he landed a chain');
+  const A = bo.fighter('a')!;
+  const B = bo.fighter('b')!;
+  // Once the chain's last move ends he's backing off: the gap opens over the next half second
+  for (let i = 0; i < 120 && !(B.move === null && B.bot!.backT > 0); i++) bo.step(T.tick);
+  assert.ok(B.bot!.backT > 0, 'backing off');
+  const d0 = Math.hypot(B.x - A.x, B.z - A.z);
+  run(bo, 30);
+  const d1 = Math.hypot(B.x - A.x, B.z - A.z);
+  assert.ok(d1 > d0 + 0.3, `backed off from ${d0.toFixed(2)} to ${d1.toFixed(2)}`);
 });

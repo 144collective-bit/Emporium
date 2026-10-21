@@ -114,7 +114,7 @@ export const T = {
   blockCost: 6,
   /** A block begun within this many frames before the hit parries it; the attacker's stagger */
   parryWindow: 4,
-  parryStun: 30,
+  parryStun: 22,
   /** The stun of a heavy hit's stagger (replaces the move's own) */
   staggerStun: 36,
   /** On the ground after a knockdown, after a knock-out, then the get-up */
@@ -136,6 +136,13 @@ export const T = {
   blockedRecovery: 8,
   /** Knockback eases out this fast (per second) */
   slide: 7,
+  /** A punch, kick or dodge pressed this many frames early still fires when it can */
+  buffer: 8,
+  /** A strike from just out of reach steps in this much further (tiles) */
+  stepIn: 0.6,
+  /** How fast a fighter turns to face (radians a second), and the most a move's start snaps the facing */
+  turn: 9,
+  lockSnap: 0.5,
   /** Bouts: the bell's pause, the rest between rounds, the count after a knock-out */
   bell: 120,
   rest: 180,
@@ -154,8 +161,40 @@ export interface FighterInput {
 }
 export const NO_INPUT: FighterInput = { x: 0, z: 0, punch: false, kick: false, block: false, dodge: false };
 
-export interface Brain {
+/** What makes each bot its own fighter (catalog.ts gives the gym's three theirs; `botTraits()` fills the rest from skill) */
+export interface BotTraits {
   skill: number;
+  /** How often it answers a move it sees coming with a block, a dodge; what share of its blocks it times as parries (Street only) */
+  block: number;
+  dodge: number;
+  parry: number;
+  /** Extra start-up frames on its heavy moves (a tell: the wind-up shows) */
+  telegraph: number;
+  /** The share of its attacks that are kicks */
+  kicks: number;
+  /** Presses a staggered opponent with the full chain */
+  finisher: boolean;
+  /** Frames it backs off after landing a chain of two or more */
+  backOff: number;
+  /** Frames between attacks */
+  pace: number;
+}
+export function botTraits(t: Partial<BotTraits> & { skill: number }): BotTraits {
+  const skill = clamp(t.skill, 0, 1);
+  return {
+    skill,
+    block: t.block ?? skill * 0.55,
+    dodge: t.dodge ?? 0.12,
+    parry: t.parry ?? 0,
+    telegraph: t.telegraph ?? 0,
+    kicks: t.kicks ?? 0.25,
+    finisher: t.finisher ?? false,
+    backOff: t.backOff ?? 0,
+    pace: t.pace ?? 40 + Math.round((1 - skill) * 50),
+  };
+}
+
+export interface Brain extends BotTraits {
   /** Frames until the next attack */
   cool: number;
   /** Where it's going: in, pressing a chain, away, or sideways */
@@ -163,9 +202,11 @@ export interface Brain {
   planT: number;
   /** Frames to go before it answers the opponent's move */
   react: number;
-  /** The decision made about the opponent's current move: block, dodge, take it; keyed by the move's start frame */
-  answer: 'block' | 'dodge' | 'none';
+  /** The decision made about the opponent's current move: block, a parry (a block timed late), dodge, take it; keyed by the move's start tick */
+  answer: 'block' | 'parry' | 'dodge' | 'none';
   answerFor: number;
+  /** Backing off after a chain: frames left */
+  backT: number;
   /** Frames left holding the block */
   blockT: number;
   /** Which way it circles */
@@ -194,10 +235,20 @@ export interface Fighter {
   struck: boolean;
   /** The next move queued from a chain input during recovery */
   queued: MoveId | null;
+  /** A press waiting for its moment (T.buffer frames), and the tick the move began */
+  buffer: { kind: 'punch' | 'kick' | 'dodge'; frames: number } | null;
+  moveAt: number;
+  /** This move's start-up and step (a telegraphed wind-up runs longer; a step-in reaches further) */
+  startupNow: number;
+  lungeNow: number;
+  /** Extra start-up on heavy moves (a bot's tell) */
+  telegraph: number;
   /** Extra recovery after a blocked hit */
   extraRecovery: number;
   /** Frames left of hit stun, and what kind of hit (for the reaction clip); `hurtFrame` counts up from the hit */
   stun: number;
+  /** The stagger came from a parry: a free hit, not a floor */
+  parried: boolean;
   hurt: 'head' | 'body' | 'stagger' | null;
   hurtFrame: number;
   /** On the ground: frames left; then getting up: frames left */
@@ -251,7 +302,7 @@ export interface FighterSetup {
   x: number;
   z: number;
   yaw: number;
-  bot?: { skill: number };
+  bot?: Partial<BotTraits> & { skill: number };
 }
 export interface FightSetup {
   seed: number;
@@ -300,8 +351,14 @@ function newFighter(s: FighterSetup): Fighter {
     frame: 0,
     struck: false,
     queued: null,
+    buffer: null,
+    moveAt: -1,
+    startupNow: 0,
+    lungeNow: 0,
+    telegraph: s.bot ? botTraits(s.bot).telegraph : 0,
     extraRecovery: 0,
     stun: 0,
+    parried: false,
     hurt: null,
     hurtFrame: 0,
     down: 0,
@@ -320,7 +377,7 @@ function newFighter(s: FighterSetup): Fighter {
     kos: 0,
     knockdowns: 0,
     rounds: 0,
-    bot: s.bot ? { skill: clamp(s.bot.skill, 0, 1), cool: 30, plan: 'approach', planT: 0, react: 0, answer: 'none', answerFor: -1, blockT: 0, side: 1 } : null,
+    bot: s.bot ? { ...botTraits(s.bot), cool: Math.min(30, botTraits(s.bot).pace), plan: 'approach', planT: 0, react: 0, answer: 'none', answerFor: -1, blockT: 0, side: 1, backT: 0 } : null,
     target: null,
   };
 }
@@ -386,12 +443,19 @@ export function createFightSim(setup: FightSetup) {
       f.stamina = 0;
       f.empty = true;
     }
-    // Turn onto the target if it's close and roughly ahead
+    f.moveAt = ticks;
+    f.startupNow = m.startup + (m.heavy ? f.telegraph : 0);
+    f.lungeNow = m.lunge;
+    // Turn onto the target if it's close and roughly ahead (a bounded snap; the rest turns during the wind-up),
+    // and step in further when it's just out of reach
     const o = f.target ? byId.get(f.target) : other(f);
     if (o && id !== 'dodge') {
       const d = Math.hypot(o.x - f.x, o.z - f.z);
       const want = yawTo(f.x, f.z, o.x, o.z);
-      if (d < T.lockReach && Math.abs(wrap(want - f.yaw)) < T.lockArc) f.yaw = want;
+      const off = wrap(want - f.yaw);
+      if (d < T.lockReach && Math.abs(off) < T.lockArc) f.yaw = wrap(f.yaw + clamp(off, -T.lockSnap, T.lockSnap));
+      const gap = d - (m.reach + T.radius) + 0.08;
+      if (gap > 0 && gap <= T.stepIn && Math.abs(off) < T.lockArc) f.lungeNow = m.lunge + gap;
     }
     if (id === 'dodge') events.push({ kind: 'dodge', who: f.id });
     else events.push({ kind: 'swing', who: f.id, move: id });
@@ -429,6 +493,7 @@ export function createFightSim(setup: FightSetup) {
           // A parry: the attacker staggers
           f.stun = T.parryStun;
           f.hurt = 'stagger';
+          f.parried = true;
           f.hurtFrame = 0;
           f.move = null;
           f.phase = null;
@@ -447,7 +512,7 @@ export function createFightSim(setup: FightSetup) {
         return;
       }
       // A clean hit
-      const staggered = o.hurt === 'stagger' && o.stun > 0;
+      const staggered = o.hurt === 'stagger' && o.stun > 0 && !o.parried;
       o.health = Math.max(0, o.health - m.damage);
       o.taken++;
       o.sinceHit = 0;
@@ -466,6 +531,7 @@ export function createFightSim(setup: FightSetup) {
       else if (m.knockdown || staggered) fall(o, f, false);
       else {
         o.stun = m.heavy ? T.staggerStun : m.stun;
+        o.parried = false;
         o.hurt = m.heavy ? 'stagger' : m.kind === 'kick' || m.id === 'jab' ? 'body' : 'head';
         o.hurtFrame = 0;
         if (m.heavy) events.push({ kind: 'stagger', who: o.id });
@@ -508,20 +574,28 @@ export function createFightSim(setup: FightSetup) {
     if (b.planT > 0) b.planT--;
     if (b.react > 0) b.react--;
     if (b.blockT > 0) b.blockT--;
+    if (b.backT > 0) b.backT--;
     const inReach = d <= MOVES.jab.reach + T.radius - 0.05;
     const kickReach = d <= MOVES.frontKick.reach + T.radius - 0.1;
+    const staggered = o.hurt === 'stagger' && o.stun > 0;
 
     // The opponent's move coming: decide once per move, after the reaction time
     if (o.move && o.move !== 'dodge' && o.phase === 'startup' && o.down <= 0) {
-      const key = ticks - o.frame;
+      const key = o.moveAt;
       if (b.answerFor !== key) {
         b.answerFor = key;
         b.react = Math.round((1 - b.skill) * 14) + 2;
         const r = rand();
-        b.answer = r < b.skill * 0.55 ? 'block' : r < b.skill * 0.55 + 0.12 && !f.empty ? 'dodge' : 'none';
+        const canParry = STYLES[f.style].parry && b.parry > 0;
+        b.answer = r < b.block ? (canParry && rand() < b.parry ? 'parry' : 'block') : r < b.block + b.dodge && !f.empty ? 'dodge' : 'none';
       }
-      if (b.react <= 0 && d < MOVES[o.move].reach + T.radius + 0.5 && Math.abs(wrap(yawTo(o.x, o.z, f.x, f.z) - o.yaw)) < 1.2) {
-        if (b.answer === 'block') b.blockT = Math.max(b.blockT, MOVES[o.move].startup + MOVES[o.move].active + 4);
+      const facing = Math.abs(wrap(yawTo(o.x, o.z, f.x, f.z) - o.yaw)) < 1.2;
+      // A dodge needs its own start-up before the hit lands; too late for that, it's a block
+      if (b.answer === 'dodge' && b.react <= 0 && o.startupNow - o.frame < MOVES.dodge.startup + 1) b.answer = 'block';
+      // A parry: the block goes up in the last frames before the hit
+      if (b.answer === 'parry' && facing && d < MOVES[o.move].reach + T.radius + 0.5 && o.frame >= o.startupNow - 3 && !f.move) b.blockT = Math.max(b.blockT, MOVES[o.move].active + 4);
+      else if (b.answer !== 'parry' && b.react <= 0 && d < MOVES[o.move].reach + T.radius + 0.5 && facing) {
+        if (b.answer === 'block') b.blockT = Math.max(b.blockT, Math.ceil(o.startupNow) + MOVES[o.move].active + 4);
         else if (b.answer === 'dodge' && !f.move) {
           inp.dodge = true;
           inp.x = -ux;
@@ -536,12 +610,14 @@ export function createFightSim(setup: FightSetup) {
       return inp;
     }
 
-    // Pressing a chain
+    // Pressing a chain (a finisher presses a staggered opponent with everything)
     if (f.move && f.move !== 'dodge' && f.phase === 'recovery') {
       const m = MOVES[f.move];
-      if (f.chain > 0 && inReach && rand() < 0.35 + b.skill * 0.6) {
-        if (m.kick && rand() < 0.3 && STYLES[f.style].moves.includes(m.kick)) inp.kick = true;
+      const press = b.finisher && staggered ? 1 : 0.35 + b.skill * 0.6;
+      if (f.chain > 0 && inReach && rand() < press) {
+        if (m.kick && rand() < b.kicks && STYLES[f.style].moves.includes(m.kick)) inp.kick = true;
         else if (m.next && STYLES[f.style].moves.includes(m.next)) inp.punch = true;
+        else if (m.kick && STYLES[f.style].moves.includes(m.kick)) inp.kick = true;
       }
       return inp;
     }
@@ -554,7 +630,12 @@ export function createFightSim(setup: FightSetup) {
       b.planT = 30 + Math.floor(rand() * 60);
       b.side = rand() < 0.5 ? 1 : -1;
     }
-    if (f.empty) b.plan = 'retreat';
+    if (f.empty || b.backT > 0) b.plan = 'retreat';
+    // A finisher goes straight in on a staggered opponent
+    if (b.finisher && staggered && !f.empty) {
+      b.plan = 'approach';
+      b.cool = 0;
+    }
     const want = b.plan === 'retreat' ? 2.4 : MOVES.jab.reach + T.radius - 0.25;
     if (d > want + 0.15) {
       inp.x = ux;
@@ -569,13 +650,13 @@ export function createFightSim(setup: FightSetup) {
     }
     // An attack, only from reach, only with the stamina for it
     if (b.cool <= 0 && !f.empty && b.plan !== 'retreat' && f.stamina >= 24) {
-      if (kickReach && !inReach && rand() < 0.25 + b.skill * 0.3) {
+      if (kickReach && !inReach && rand() < b.kicks + b.skill * 0.2) {
         inp.kick = true;
-        b.cool = 40 + Math.round((1 - b.skill) * 50);
+        b.cool = b.pace;
       } else if (inReach) {
-        if (rand() < 0.25) inp.kick = true;
+        if (rand() < b.kicks) inp.kick = true;
         else inp.punch = true;
-        b.cool = 40 + Math.round((1 - b.skill) * 50);
+        b.cool = b.pace;
       }
     }
     return inp;
@@ -583,8 +664,20 @@ export function createFightSim(setup: FightSetup) {
 
   /* ---------- The tick ---------- */
 
+  /** Turn towards `want` at the turn rate */
+  function face(f: Fighter, want: number) {
+    const off = wrap(want - f.yaw);
+    const max = T.turn * T.tick;
+    f.yaw = wrap(f.yaw + clamp(off, -max, max));
+  }
+
   function act(f: Fighter, inp: FighterInput) {
     f.moving = 0;
+    // A press is kept for a few frames so it fires when it can (the latest wins)
+    if (inp.punch || inp.kick || inp.dodge) f.buffer = { kind: inp.dodge ? 'dodge' : inp.punch ? 'punch' : 'kick', frames: T.buffer };
+    else if (f.buffer && --f.buffer.frames <= 0) f.buffer = null;
+    const wants = (k: 'punch' | 'kick' | 'dodge') => f.buffer?.kind === k;
+    const take = () => (f.buffer = null);
     if (f.down > 0) {
       f.down--;
       if (f.down === 0) {
@@ -603,16 +696,24 @@ export function createFightSim(setup: FightSetup) {
     if (f.stun > 0) {
       f.stun--;
       f.hurtFrame++;
-      if (f.stun === 0) f.hurt = null;
+      if (f.stun === 0) {
+        f.hurt = null;
+        f.parried = false;
+      }
       return;
     }
     f.hurt = null;
-    if (inp.face !== undefined && !f.move) f.yaw = inp.face;
+    // Facing turns at a rate (free, or through a move's wind-up)
+    if (inp.face !== undefined && (!f.move || f.phase === 'startup')) face(f, inp.face);
 
     // A move in progress
     if (f.move) {
       const m = MOVES[f.move];
-      f.frame++;
+      // A telegraphed wind-up runs its start-up frames slower (the clip holds the wind-up)
+      const wind = f.startupNow > m.startup ? m.startup / f.startupNow : 1;
+      const inStartup = f.frame < m.startup - 1e-9;
+      f.frame = inStartup ? Math.min(m.startup, f.frame + wind) : Math.floor(f.frame) + 1;
+      if (f.frame > m.startup - 1e-9 && f.frame < m.startup + 1e-9) f.frame = m.startup;
       const total = m.startup + m.active + m.recovery + f.extraRecovery;
       if (f.frame < m.startup) f.phase = 'startup';
       else if (f.frame < m.startup + m.active) f.phase = 'active';
@@ -622,15 +723,17 @@ export function createFightSim(setup: FightSetup) {
           if (f.frame === m.startup) f.invuln = Math.max(f.invuln, m.active);
         } else {
           const [fx, fz] = forward(f.yaw);
-          const step = m.lunge / (m.startup + m.active);
+          const step = (f.lungeNow / (m.startup + m.active)) * (f.phase === 'startup' ? wind : 1);
           f.x += fx * step;
           f.z += fz * step;
           if (f.phase === 'active') strike(f);
         }
       }
-      // A chain input during recovery queues the next move
-      if (f.phase === 'recovery' && f.extraRecovery === 0 && !f.queued && (inp.punch || inp.kick)) {
-        const n = nextMove(f, inp.punch ? 'punch' : 'kick');
+      // A chain press during recovery (or one kept from a little before it) queues the next move
+      if (f.phase === 'recovery' && f.extraRecovery === 0 && !f.queued && (wants('punch') || wants('kick'))) {
+        const kind = wants('punch') ? 'punch' : 'kick';
+        const n = nextMove(f, kind);
+        take();
         if (n && !f.empty && f.stamina >= MOVES[n].stamina * 0.5) f.queued = n;
         else if (n) events.push({ kind: 'tired', who: f.id });
       }
@@ -640,18 +743,27 @@ export function createFightSim(setup: FightSetup) {
         f.phase = null;
         f.frame = 0;
         if (q) startMove(f, q);
-        else if (m.kind !== 'dodge' && f.chain > 0 && !f.struck) f.chain = 0;
+        else {
+          if (m.kind !== 'dodge' && f.chain >= 2 && f.bot && f.bot.backOff > 0) {
+            f.bot.backT = f.bot.backOff;
+            f.bot.plan = 'retreat';
+            f.bot.planT = f.bot.backOff;
+          }
+          if (m.kind !== 'dodge' && f.chain > 0 && !f.struck) f.chain = 0;
+        }
       }
       return;
     }
 
     // Free: block, dodge, a first move, or walk
     if (inp.block) {
-      if (!f.blocking) f.blockFrames = 0;
+      // A bot's plain block is a guard already up, never a parry by accident; only its 'parry' answer times itself late
+      if (!f.blocking) f.blockFrames = f.bot && f.bot.answer !== 'parry' ? T.parryWindow + 1 : 0;
       else f.blockFrames++;
       f.blocking = true;
     } else f.blocking = false;
-    if (inp.dodge && !f.empty && f.stamina >= MOVES.dodge.stamina * 0.5 && STYLES[f.style].moves.includes('dodge')) {
+    if (wants('dodge') && !f.empty && f.stamina >= MOVES.dodge.stamina * 0.5 && STYLES[f.style].moves.includes('dodge')) {
+      take();
       startMove(f, 'dodge');
       const len = Math.hypot(inp.x, inp.z);
       const [fx, fz] = forward(f.yaw);
@@ -663,8 +775,9 @@ export function createFightSim(setup: FightSetup) {
       f.vz = dirz * speed;
       return;
     }
-    if ((inp.punch || inp.kick) && !f.blocking) {
-      const n = nextMove(f, inp.punch ? 'punch' : 'kick');
+    if ((wants('punch') || wants('kick')) && !f.blocking) {
+      const n = nextMove(f, wants('punch') ? 'punch' : 'kick');
+      take();
       if (n) {
         if (f.empty || f.stamina < MOVES[n].stamina * 0.5) events.push({ kind: 'tired', who: f.id });
         else {
@@ -672,7 +785,7 @@ export function createFightSim(setup: FightSetup) {
           return;
         }
       }
-    }
+    } else if (wants('dodge')) take();
     // Walking
     const len = Math.hypot(inp.x, inp.z);
     if (len > 0.1) {
