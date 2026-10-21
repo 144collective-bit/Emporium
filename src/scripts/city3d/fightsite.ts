@@ -38,7 +38,7 @@ export const POSTS: [number, number][] = [
 export const SHED = { x0: 97.6, z0: 88, x1: 106.4, z1: 96.8, h: 3.6 };
 /** The trainer's counter (a kiosk in the yard) and where you stand at it, facing it */
 export const COUNTER = { x0: 96.2, z0: 86.2, x1: 98.4, z1: 87.2 };
-export const TRAINER = { x: 97.3, z: 88.0, yaw: Math.PI };
+export const TRAINER = { x: 97.3, z: 87.75, yaw: Math.PI };
 /** The fighters' corners: you to the south-west, the opponent to the north-east, facing each other */
 export const CORNERS: { x: number; z: number; yaw: number }[] = [
   { x: RING.x - 1.3, z: RING.z + 1.3, yaw: Math.atan2(2.6, -2.6) },
@@ -47,7 +47,7 @@ export const CORNERS: { x: number; z: number; yaw: number }[] = [
 /** Where Degen stands up after a fight: outside the ropes on the yard side, looking at the ring */
 export const OUT = { x: RING.x - 1.2, z: RING.z - RING_HALF - 0.9, yaw: 0 };
 /** Walk in from the panel: on the lot's front, facing the gym */
-export const FIGHT_SPAWN = { x: 101, z: 85.6, yaw: Math.PI };
+export const FIGHT_SPAWN = { x: 102, z: 85.6, yaw: Math.PI };
 /** The lockers along the west wall, the heavy bag and the speed bag in the yard, the bleachers on the east */
 export const LOCKERS = { x0: 95.3, z0: 88.5, x1: 96.1, z1: 95.5 };
 export const BAGS = { heavy: { x: 100.2, z: 86.4 }, speed: { x: 103.2, z: 86.2 } };

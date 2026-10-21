@@ -1431,7 +1431,7 @@ export function createWalk(d: WalkDeps) {
     }
 
     // Door prompts, and the Armoury's gun store counter
-    let best: { id: SpotId | 'gear' | 'garage' | 'car' | 'races' | 'karts' | `place:${string}`; label: string } | null = null;
+    let best: { id: SpotId | 'gear' | 'garage' | 'car' | 'races' | 'karts' | 'trainer' | `place:${string}`; label: string } | null = null;
     let bestD = 1.7;
     const atCounter = Math.hypot(RACK.x - pos.x, RACK.z - pos.z);
     if (atCounter < 1.1) {

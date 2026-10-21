@@ -34,7 +34,7 @@ import { BAGS, BLEACHERS, COUNTER, FIGHT_CLUB, LOCKERS, POSTS, POST_R, RING, RIN
 import { FIGHTCLUB_FIX } from './solids';
 
 /** The place's id (city.ts SpotId lists it once index.ts wires the pin and panel) */
-const ID = 'fightclub' as unknown as SpotId;
+const ID = 'fightclub';
 /** Fixed copy only */
 const SIGN_TEXT = 'FIGHT CLUB';
 const PLATE_TEXT = 'TRAINER';
