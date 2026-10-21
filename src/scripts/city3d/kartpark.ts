@@ -63,7 +63,7 @@ export const BRIDGE_H = 2.4;
 export const BANK = 0.28;
 export const BANK_H = BANK * TRACK_HALF;
 /** Samples every half tile along the centre line */
-const STEP = 0.5;
+export const STEP = 0.5;
 
 /* ---------- Flags, grip and tags ---------- */
 
@@ -218,7 +218,7 @@ export interface Line {
  * Centripetal Catmull-Rom through control points (no overshoot at uneven spacing), sampled
  * every `step` tiles: closed round a loop, or open with `before` / `after` padding the ends.
  */
-function sampleLine(pts: CPt[], step: number, closed: boolean, before?: CPt, after?: CPt): Line {
+export function sampleLine(pts: CPt[], step: number, closed: boolean, before?: CPt, after?: CPt): Line {
   const n = pts.length;
   const P = (i: number): CPt => {
     if (closed) return pts[((i % n) + n) % n];

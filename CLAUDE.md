@@ -774,6 +774,21 @@ it and has been retired completely. Build only on what's here.
   rocket, oil, gummy, pigeon, shield, trail; hazards and missiles), places
   by progress (`standings()`), the player's finish (`done`) and everyone's
   (`over`). New gameplay goes here first; looks and sounds in the view.
+- **The rebuild** (the owner's call, `docs/kart-plan.md`): one narrower
+  circuit (5.6 wide, kerbs, grass and gravel run-off), raced both ways,
+  with a pit lane and nothing solid near it, replaces the network in four
+  phases. Phase 1 is built: the circuit as data in `kartcircuit.ts`
+  (DOM-free, tested in `tests/kartcircuit.test.ts`; twelve corners, lefts
+  and rights, the owner's call: no long runs of straight road besides the
+  start straight): `CIRCUIT` /
+  `CIRCUITS` (forward and reverse; `start`, `jump`, numbered `turns`),
+  `TRACK_HALF`, `KERB`, `RUNOFF`, `CLEAR`, `FLY_H`, `BANK`, `MIN_RADIUS`,
+  `MAX_SLOPE`, `gridSlots()`, `PIT_LANE`, `BAYS`, `SITE` (garages, hut,
+  stand, screen, gate path), `CIRCUIT_SOLIDS`, `GANTRY`, `SUPPORTS`,
+  `onCircuit()`, `circuitSurfaceAt()`. It shares the site, local numbers
+  and sampling (`sampleLine()`, `frame()`, `locate()`) with `kartpark.ts`
+  and isn't wired in yet: the park still races the network below until
+  Phases 2 (the rules) and 3 (the drawing) move onto it.
 - **Classes** (`catalog.ts` `KART_CLASSES`, `ClassId`, `CLASS_IDS`): Street
   (Lv 1, 0.82), Sport (Lv 3, 1) and Neon (Lv 8, 1.18) set everyone's pace
   in a race; a cup fixes its class, a time trial picks one. Records and
