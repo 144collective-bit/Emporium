@@ -136,14 +136,12 @@ it and has been retired completely. Build only on what's here.
 - **Traffic** follows `routes.ts` (DOM-free): a route for every lane of the
   straight roads, two down each diagonal (in off the ring, out along a
   cross street) and two round each bend (in off its avenue, all the way
-  round, out the other end), four over Liberty Bridge (in off the west
-  cross street and out round the Southside Loop, and from one river avenue
-  to the other, both ways) and one out to the airport and back (down the
+  round, out the other end) and one out to the airport and back (down the
   east ring avenue, round the car park loop); turns are rounded off
   (tighter for right turns). Junctions where a diagonal comes in run
   three light phases (x, z, diagonal). Cars follow whoever is ahead going
   the same way on any route. Pedestrians walk loops round downtown's block
-  outlines and the south row, and up and down Liberty Bridge's deck walks.
+  outlines and the south row, and up and down Liberty Bridge's walkway.
   Tested in `tests/routes.test.ts`.
 - **The street plan** is `src/scripts/city3d/layout.ts` (DOM-free; the 3D
   city, the 2D map, the plots and the server all read it). 1 tile is about
@@ -161,6 +159,7 @@ it and has been retired completely. Build only on what's here.
   grid, and change street sizes only in `layout.ts`.
 - **The world's size** is in `layout.ts` too:
   - `EXT` (-200 to 240, about 790 m across) is the ground, the river and every road, edge to edge. It's mostly open land, room to grow the city into. Build there only when the owner asks.
+  - The river is `RIVER_W` (15) wide, five times what it was (the owner's call). It widened southwards, so everything south of it moved `SOUTH_SHIFT` (12) south: what's derived from `SOUTH_ROAD` / `SOUTH_ROW` moved by itself, and the south bank's places written in fixed numbers (the Fight Club in `fightsite.ts`, South Square and the south pocket parks in `outer.ts`, the airport and its timetable in `airfield.ts`) add `SOUTH_SHIFT` to their z. Keep doing that for anything new written in fixed numbers south of the river.
   - `WORLD_BOUNDS` is how far you can walk or drive.
   - `CITY_EXT` (-80 to 140) is where traffic and boats loop, past the Parkway; the outskirts' tree belt fills a band round the town (outside the bends) and a lighter sprinkle covers the rest.
   - The skyline ring stands just past `EXT`, kept out of the haze (`fog = false`) so it reads as a far metropolis.
@@ -357,47 +356,50 @@ it and has been retired completely. Build only on what's here.
 
 ## Liberty Bridge (the owner's call)
 
-- A one-of-a-kind landmark: a suspension bridge carrying **Liberty Road**
-  over the river, with the Liberty flame (the owner's permission, the flame
-  mark only, `src/assets/liberty-flame.png`) on its towers' crowns. Name it
-  "Liberty Bridge"; never link it anywhere, and keep the flame the only
-  outside mark on it.
-- **The road** is `LIBERTY_ROAD` in `layout.ts` (x -13.5, one lane each
-  way): south off the west cross street (z 43), down the middle of the old
-  West 3 plot, over the river, down the middle of the old South 1 plot to
-  the Southside Loop (`LIBERTY_END` in `outer.ts`). It's the only straight
-  road that doesn't run edge to edge, so it isn't in `NS_ROADS`: whatever
-  reads those (the street plan's `liberty` street and its crossings, lit at
-  the cross street and both river avenues; the routes; the outer blocks,
-  cut in two along it (`o-wcl`, `o-swl`); `onLiberty()`, `offBridges()`;
-  the river walls in `drive-sim.ts`; `onBridge` in `walk.ts`; the medians,
-  lane markings and river walls in `world.ts`; the bend lamps) reads it too.
-- **The plots:** West 3 and South 1 are its grounds (`BRIDGE_PLOTS` in
-  `src/data/plots.ts`, `LIBERTY_GROUNDS` in `outer.ts`), off the market. A
-  save that owned one gets everything paid for it (land and building) back
-  in `cleanSave()`, booked as Plots sold.
+- A one-of-a-kind landmark: a stone **footbridge** built up and over the
+  water, in the style of an old gate-tower bridge (the owner's photo:
+  sandstone, an arch through each tower, stairs up both sides, domed
+  turrets), with the Liberty flame (the owner's permission; the flame mark
+  only, `src/assets/liberty-flame.png`) as a 3D spiral on top of both
+  towers and as a crest on their faces. Name it "Liberty Bridge"; never
+  link it anywhere, and keep the flame the only outside mark on it. It's
+  for people only: no road, no cars (an earlier draft with Liberty Road and
+  traffic was dropped, and West 3 and South 1 stayed on the market).
 - **The numbers** are `liberty.ts` (DOM-free, tested in
-  `tests/liberty.test.ts`): the deck (`DECK`, wide raised walks
-  `DECK_WALK`, `onDeckWalk()`), the towers (`TOWERS` on each bank's
-  grounds, legs `LEG_X` either side of the road, `TOWER_H` well under the
-  Emporium, portal `BEAMS`, the `CROWN`), the main cables (`cableY()`: a
-  parabola saddle to saddle, lowest `LOW` over the water, high over both
-  avenues; backstays to the `ANCHORS`), `HANGERS` (on the deck and over the
-  grounds, never over an avenue), `LIBERTY_SOLIDS` (legs on their plinths,
-  anchorages; in `SOLIDS`), `DECK_STROLLS` (life.ts's walkers) and
-  `LIBERTY_SPAWN`.
-- **Drawn by** `libertybridge.ts`: the road with its centre line, zebras
-  and lamps, the paved grounds, the deck (walks, edge beams with a cyan
-  neon line, railings), the towers (stone plinths, tapering violet legs
-  with neon up the outer corners in the flame's colours, the LIBERTY BRIDGE
-  sign on the low beam, the flame on both faces of each crown, blinking
-  red lights on top), the cables, hangers, stringers and anchorages, and
-  bulbs along the cables with halos at night. The superstructure is the
-  spot's group (it lifts on hover); the road and deck stay down.
+  `tests/liberty.test.ts`): on `FOOTBRIDGE_X` (`layout.ts`, x -23.5, just
+  west of the W3 and S1 pads, on their blocks' lawns), a gate tower on each
+  bank (`TOWERS`, level with the middle of W3 and of S1; `TOWER`: the
+  ground storey with its arch, the upper storey, roof, turrets, the flame's
+  drum and height, all under the Emporium), stairs beside each tower rising
+  towards the river (`STAIR`, `stairsOf()`), a landing at the tower's river
+  face (`landingOf()`), the walkway between them (`WALKWAY` at `DECK_Y`)
+  raised on round-topped arches (`SUPPORTS`: pairs of pillars on the lawns
+  and promenades you can walk between, two piers in the river; `SPANS`,
+  `archY()`) high over both river avenues, `BOAT_LANES` down the middle of
+  the river's three arches (life.ts's boats), `DECK_STROLLS` (life.ts
+  walks people along the walkway at `DECK_Y`), `LIBERTY_RECTS` (what it
+  covers: the lawns' trees and the promenade's benches and lamps keep off),
+  `LIBERTY_SOLIDS` (in `SOLIDS`: the towers either side of the arch, the
+  stairs past their first steps, the landings' posts, pillars, piers) and
+  `LIBERTY_SPAWN` (the foot of the north tower's east stairs).
+- **Walking on it:** `footbridgeY(x, z, y, m)` is the stairs, landings and
+  walkway as ground when you're up there (walking under them stays on the
+  ground), and `footbridgeWall()` the parapets (you can't step or fall
+  off); `walk.ts` passes Degen's height into `blocked()` and `groundAt()`.
+- **Drawn by** `libertybridge.ts`: the towers (arch and voussoir ring,
+  string course, lit arched windows, the crest and the LIBERTY BRIDGE
+  plaque, cornice, crenellations, four turrets with octagonal slate domes
+  and finials, the drum), the stairs (stepped stone flanks, outer walls,
+  newels, street lamps at their feet), the landings, the walkway (arches
+  with their rings, cutwater piers, parapets with coping, pilasters with
+  lanterns, pools of their light at night), paved aprons round the towers,
+  and `flameGeometry()`: the flame mark as a sculpture, a ribbon
+  spiralling up from violet through magenta into tongues of fire curling
+  to one side, coloured per vertex, turning slowly (still under reduced
+  motion). The whole bridge is the spot's group.
 - **The place:** spot `liberty` (after the Emporium in `spots`), its pin
-  over the north crown, directory entry and an info-only panel
-  (`data-panel-tpl="liberty"`) with **Walk in** (`LIBERTY_SPAWN`, the north
-  end of the deck's west walk). No outside links.
+  over the north tower's flame, directory entry and an info-only panel
+  (`data-panel-tpl="liberty"`) with **Walk in**. No outside links.
 
 ## Sector 7 Airport (`docs/airport-plan.md`)
 
@@ -1092,9 +1094,8 @@ it and has been retired completely. Build only on what's here.
 ## City builder (3D build mode)
 
 - Each district around the core is **one large plot** (its 3 x 3 squares
-  merged into one): North 1-5, West 1-2, East 1-3, and the South row (S2-5)
-  across the river (West 3 and South 1 are Liberty Bridge's grounds,
-  `BRIDGE_PLOTS`; never put them back on the market). The south bank has its own east-west road
+  merged into one): North 1-5, West 1-3, East 1-3, and the South row (S1-5)
+  across the river. The south bank has its own east-west road
   (`SOUTH_ROAD`, so roads are split into `NS_ROADS` / `EW_ROADS` in
   `world.ts`), a lamp-lit riverside walk, traffic over the four bridges and
   pedestrians round the south row (`DISTRICTS`, `BUILDINGS`, `cleanDesign()` in

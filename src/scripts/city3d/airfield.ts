@@ -10,7 +10,10 @@
  * time into a position, heading, pitch, bank, gear and power. It's a
  * function of the time only, the same for everyone. airport.ts draws it all.
  */
-import { NS_ROADS, SEATS } from './layout';
+import { NS_ROADS, RIVER, SEATS, SOUTH_SHIFT as D, WORLD_BOUNDS } from './layout';
+
+/** The middle of the river (the prop plane flies along it) */
+const RIVER_MID = (RIVER[0] + RIVER[1]) / 2;
 
 export type Pt = [number, number];
 export type Rect = [number, number, number, number];
@@ -22,31 +25,32 @@ export type Footprint = [number, number, number, number, number];
 /** The east ring avenue the access road leaves from */
 const AVENUE = NS_ROADS.at(-1)!;
 /** The whole airport, landside and airside (no trees in here) */
-export const SITE: Rect = [AVENUE.c + AVENUE.half + 1.2, 112.5, 234, 232];
+/* Written before the river was widened: every z south of it adds `D` (layout.ts SOUTH_SHIFT), so the airport kept its place past the Southside Loop */
+export const SITE: Rect = [AVENUE.c + AVENUE.half + 1.2, 112.5 + D, 234, Math.min(232 + D, WORLD_BOUNDS[3])];
 
 /** The runway: east-west, landings and take-offs eastwards */
-export const RUNWAY = { x0: 92, x1: 232, z: 198, half: 4 };
+export const RUNWAY = { x0: 92, x1: 232, z: 198 + D, half: 4 };
 /** The parallel taxiway and the connectors down to the runway at both ends */
-export const TAXIWAY = { x0: 93.5, x1: 222.5, z: 176, half: 2.5 };
+export const TAXIWAY = { x0: 93.5, x1: 222.5, z: 176 + D, half: 2.5 };
 export const CONNECTORS = [96, 220];
 /** The apron between the terminal and the taxiway */
-export const APRON: Rect = [94, 143, 218, TAXIWAY.z - TAXIWAY.half];
+export const APRON: Rect = [94, 143 + D, 218, TAXIWAY.z - TAXIWAY.half];
 /** Approach lights out past the runway's west end */
 export const APPROACH = { x0: 74, x1: RUNWAY.x0 - 1.5, z: RUNWAY.z };
 
 /** The terminal: glass front to the road, airbridges to the stands behind */
-export const TERMINAL: Footprint = [95, 131, 165, 143, 5.6];
+export const TERMINAL: Footprint = [95, 131 + D, 165, 143 + D, 5.6];
 /** Jet stands, nose in to the terminal (facing north, -z) */
-export const STANDS: Pt[] = [107, 130, 153].map((x): Pt => [x, 154.5]);
+export const STANDS: Pt[] = [107, 130, 153].map((x): Pt => [x, 154.5 + D]);
 /** The control tower, east of the terminal: kept under the Emporium's height */
-export const TOWER = { x: 171, z: 136, r: 1.5, cab: 9, top: 11.6 };
+export const TOWER = { x: 171, z: 136 + D, r: 1.5, cab: 9, top: 11.6 };
 /** The hangar: opens south onto the apron, the prop plane's stand in front of its west half */
-export const HANGAR: Footprint = [178, 126, 198, 145, 7.4];
-export const PROP_STAND: Pt = [181.5, 155];
+export const HANGAR: Footprint = [178, 126 + D, 198, 145 + D, 7.4];
+export const PROP_STAND: Pt = [181.5, 155 + D];
 /** Under the hangar's arched roof (from the top of its walls): what flies in or out keeps under it */
 export const HANGAR_ROOF: Footprint = [HANGAR[0], HANGAR[1], HANGAR[2], HANGAR[3], 4.2];
 /** Your own aircraft (Phase 2) stands in the hangar's east half, nose to the doors, clear of the prop plane's stand */
-export const HANGAR_SPOT = { x: 192.8, z: 136, yaw: -Math.PI / 2 };
+export const HANGAR_SPOT = { x: 192.8, z: 136 + D, yaw: -Math.PI / 2 };
 /** The hangar office on its east side; its door opens the hangar menu */
 export const HANGAR_OFFICE: Footprint = [HANGAR[2], HANGAR[3] - 5, HANGAR[2] + 3.2, HANGAR[3], 2.6];
 export const HANGAR_DOOR = { x: HANGAR[2] + 1.4, z: HANGAR[3] + 0.55 };
@@ -56,18 +60,18 @@ export const AIR_SPAWN = (() => {
   return { x, z, yaw: Math.atan2(-(HANGAR_SPOT.x - x), -(HANGAR_SPOT.z - z)) };
 })();
 /** The helipad at the apron's east end */
-export const HELIPAD = { x: 208, z: 154, r: 4.5 };
+export const HELIPAD = { x: 208, z: 154 + D, r: 4.5 };
 /** Floodlight masts along the terminal, between the stands' wingtips */
 export const MASTS: Pt[] = [
-  [118.5, 145.5],
-  [141.5, 145.5],
-  [166.5, 162],
+  [118.5, 145.5 + D],
+  [141.5, 145.5 + D],
+  [166.5, 162 + D],
 ];
 /** A windsock on the grass between the taxiway and the runway */
-export const WINDSOCK: Pt = [104, 186];
+export const WINDSOCK: Pt = [104, 186 + D];
 
 /** The access road: east off the avenue along the terminal's front, round a one-way loop that holds the car park */
-export const ROAD = { z: 127, x0: AVENUE.c, x1: 168, loopZ: 115, loopX: 98, half: 1.7 };
+export const ROAD = { z: 127 + D, x0: AVENUE.c, x1: 168, loopZ: 115 + D, loopX: 98, half: 1.7 };
 export const AIRPORT_STREETS: { id: string; pts: Pt[] }[] = [
   {
     id: 'airport-road',
@@ -110,9 +114,9 @@ const CAR_HALF = { l: 1.35, w: 0.6 };
 
 /** Ground vehicles parked on the apron: a fuel truck, a baggage tug and carts, a stairs truck */
 export const APRON_KIT: { kind: 'fuel' | 'tug' | 'stairs'; at: Pt; yaw: number }[] = [
-  { kind: 'fuel', at: [119, 168], yaw: 0 },
-  { kind: 'tug', at: [142, 168.5], yaw: Math.PI },
-  { kind: 'stairs', at: [174, 166], yaw: Math.PI / 2 },
+  { kind: 'fuel', at: [119, 168 + D], yaw: 0 },
+  { kind: 'tug', at: [142, 168.5 + D], yaw: Math.PI },
+  { kind: 'stairs', at: [174, 166 + D], yaw: Math.PI / 2 },
 ];
 const KIT_HALF = { fuel: [1.6, 0.6], tug: [2.4, 0.5], stairs: [1.3, 0.55] } as const;
 
@@ -453,8 +457,8 @@ function prop(takeoff: number): Flight {
         w(cw + 6, R, 0, 0),
         w(130, R, 0, 15),
         w(224, R, 8, 18),
-        w(224, 72.5, 20, 20),
-        w(-90, 72.5, 22, 20),
+        w(224, RIVER_MID, 20, 20),
+        w(-90, RIVER_MID, 22, 20),
         w(-90, R, 16, 18),
         w(64, R, 5, 14),
         w(RUNWAY.x0 + 18, R, 0, 12),
@@ -479,7 +483,7 @@ function heli(liftoff: number): Flight {
   const [ex, ez] = EMPORIUM;
   const ORBIT = 24;
   const H = 25;
-  const via: Pt = [120, 102];
+  const via: Pt = [120, 102 + D];
   // Straight up off the pad to clear the hangar before heading off
   const UP = 10;
   // Round the Emporium one and a half times, joining the circle as it comes in and leaving it heading back

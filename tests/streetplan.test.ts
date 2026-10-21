@@ -62,8 +62,8 @@ test('the city as built: the grid\'s roads, three diagonals from the ring\'s cor
   const alleys = p.streets.filter((s) => s.kind === 'alley');
   assert.ok(alleys.length >= 5, 'downtown has its alleys and lanes');
   for (const a of alleys) assert.deepEqual(lanePaths(a), [], 'no cars down an alley');
-  // Lights where downtown's cross streets meet, where Liberty Road crosses a straight road, and nowhere else
-  for (const c of p.crossings) assert.equal(c.lights, (CORE_ROADS.includes(c.at[0]) && CORE_ROADS.includes(c.at[1])) || (c.streets.includes('liberty') && !c.streets.includes('southside')), c.id);
+  // Lights where downtown's cross streets meet, and nowhere else
+  for (const c of p.crossings) assert.equal(c.lights, CORE_ROADS.includes(c.at[0]) && CORE_ROADS.includes(c.at[1]));
 });
 
 test('the city\'s blocks: downtown\'s outlines, every district and lot, off the asphalt, the landmarks on theirs', () => {
@@ -82,9 +82,7 @@ test('the city\'s blocks: downtown\'s outlines, every district and lot, off the 
   }
   // Every landmark has its block
   const places = p.blocks.flatMap((b) => b.places ?? []);
-  assert.deepEqual([...new Set(places)].sort(), ['apartments', 'emporium', 'liberty', 'plan', 'shop', 'signal', 'telegram', 'vault', 'workshop']);
-  // Liberty Bridge's towers stand either side of Liberty Road at both ends: four blocks
-  assert.equal(places.filter((id) => id === 'liberty').length, 4);
+  assert.deepEqual([...places].sort(), ['apartments', 'emporium', 'liberty', 'liberty', 'plan', 'shop', 'signal', 'telegram', 'vault', 'workshop'], 'Liberty Bridge on both banks');
   assert.ok(blockAt(p, [30, 36])?.places?.includes('emporium'));
   // The hangout square is the block south of the Emporium's, and there are pocket parks
   assert.ok(p.plazas.some((q) => q.kind === 'hangout' && inPoly(q.poly, [30, 52])));

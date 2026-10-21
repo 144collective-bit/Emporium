@@ -42,7 +42,7 @@ const spots: Record<SpotId, Spot> = {
   karts: { href: '#city-title', title: 'Kart park', sub: 'Go-karts · races', aria: 'The kart park: go-kart races' },
   airport: { href: '#city-title', title: 'Airport', sub: 'Hangar · fly', aria: 'Sector 7 Airport: fly your own aircraft' },
   fightclub: { href: '#city-title', title: 'Fight Club', sub: 'Spar · bouts', aria: 'The Fight Club: spar and bouts' },
-  liberty: { href: '#city-title', title: 'Liberty Bridge', sub: 'Over the river', aria: 'Liberty Bridge: Liberty Road over the river' },
+  liberty: { href: '#city-title', title: 'Liberty Bridge', sub: 'Footbridge', aria: 'Liberty Bridge: a footbridge over the river' },
 };
 const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty'];
 const ext = { target: '_blank', rel: 'noopener noreferrer' };
@@ -851,7 +851,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
   <template data-panel-tpl="liberty">
     <p class="kicker"><span class="kicker-num">12</span> The river</p>
     <h2 id="city-panel-title" class="city-panel-title">Liberty Bridge</h2>
-    <p class="city-panel-text">Sector 7's suspension bridge, one of a kind. Liberty Road runs south off the west cross street, over the river on it and on to the Southside Loop. Twin towers stand on either bank with the Liberty flame on their crowns; the main cables sweep high over both river avenues and dip over the water, and at night the bulbs along them light up. Cars, buses and people cross it all day: walk it or drive it yourself.</p>
+    <p class="city-panel-text">Sector 7's stone footbridge, one of a kind. A gate tower stands on each bank beside West 3 and South 1, with stairs up both sides and the Liberty flame spiralling up from its roof. The walkway crosses on arches high over both river avenues and the wide river, with boats passing underneath and lanterns along the parapets at night. It's for people only: climb the stairs and walk across.</p>
     <button type="button" class="chip-link kart-walkin" data-liberty-walkin>Walk in</button>
   </template>
 

@@ -17,19 +17,12 @@ import { BLOCKS, OUTER_HI, OUTER_LO, SOUTH_ROW } from '../scripts/city3d/layout'
  * south bank road (SOUTH_ROAD in src/scripts/city3d/world.ts).
  */
 const COLUMNS = [OUTER_LO, ...BLOCKS, OUTER_HI];
-/**
- * West 3 and South 1 are Liberty Bridge's grounds now (the owner's call): its
- * towers stand on them and Liberty Road runs down their middle. They're off
- * the market; a save that owned one gets everything paid for it back
- * (tycoon.ts `cleanSave()`).
- */
-export const BRIDGE_PLOTS = ['W3', 'S1'];
 export const DISTRICTS: { id: string; name: string; ox: number; oz: number }[] = [
   ...COLUMNS.map((ox, i) => ({ id: `N${i + 1}`, name: `North ${i + 1}`, ox, oz: OUTER_LO })),
   ...BLOCKS.map((oz, i) => ({ id: `W${i + 1}`, name: `West ${i + 1}`, ox: OUTER_LO, oz })),
   ...BLOCKS.map((oz, i) => ({ id: `E${i + 1}`, name: `East ${i + 1}`, ox: OUTER_HI, oz })),
   ...COLUMNS.map((ox, i) => ({ id: `S${i + 1}`, name: `South ${i + 1}`, ox, oz: SOUTH_ROW })),
-].filter((d) => !BRIDGE_PLOTS.includes(d.id));
+];
 export const PLOT_IDS = DISTRICTS.map((d) => d.id);
 
 export type BuildingType = 'house' | 'shop' | 'tower' | 'loft' | 'arcade' | 'garden' | 'warehouse' | 'billboard';

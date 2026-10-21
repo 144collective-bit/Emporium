@@ -15,10 +15,10 @@
 import * as THREE from 'three';
 import { DISTRICTS } from '../../data/plots';
 import { Batch, PAL, canvasTex, facadeMat, fx, glowMat, glowTex, lit, neon, rand, sidesBox, toon } from './kit';
-import { BLOCKS, BS, CENTER_XZ, CITY_EXT, CORE_ROADS, DECK_WALK, DOWNTOWN, EW_ROADS, EXT, EXTRA_LOTS, LANE, LIBERTY_ROAD, MEDIAN, NS_ROADS, OUTER_HI, OUTER_LO, RIVER, SEATS, SOUTH_ROAD, WALK_W, type Road } from './layout';
+import { BLOCKS, BS, CENTER_XZ, CITY_EXT, CORE_ROADS, DOWNTOWN, EW_ROADS, EXT, EXTRA_LOTS, LANE, MEDIAN, NS_ROADS, OUTER_HI, OUTER_LO, RIVER, SEATS, SOUTH_ROAD, WALK_W, type Road } from './layout';
 import { PLAN, offsetLine, type Pt } from './streetplan';
 import { DIAGONALS, DIAGONAL_LAMPS } from './downtown';
-import { BENDS, BEND_REACH, KERB_RUNS, LIBERTY_END, OUTSIDE, PADS, PARKWAY, PROMENADE, SOUTHSIDE, inTown, onLiberty } from './outer';
+import { BENDS, BEND_REACH, KERB_RUNS, OUTSIDE, PADS, PARKWAY, PROMENADE, SOUTHSIDE, inTown, offFootbridge } from './outer';
 import { KART_PARK, SLIP_ROAD } from './kartpark';
 import { RUNWAY, SITE } from './airfield';
 
@@ -188,15 +188,8 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
   water.position.set(mid, 0.01, (RIVER[0] + RIVER[1]) / 2);
   scene.add(water);
   const stone = toon('#6b6790');
-  // (Broken under Liberty Bridge's deck, libertybridge.ts)
-  const deck: [number, number] = [LIBERTY_ROAD.c - LIBERTY_ROAD.half - DECK_WALK, LIBERTY_ROAD.c + LIBERTY_ROAD.half + DECK_WALK];
-  for (const [x0, x1] of [
-    [e0, deck[0]],
-    [deck[1], e1],
-  ]) {
-    b.box(x0, 0, RIVER[0] - 0.25, x1 - x0, 0.12, 0.25, stone);
-    b.box(x0, 0, RIVER[1], x1 - x0, 0.12, 0.25, stone);
-  }
+  b.box(e0, 0, RIVER[0] - 0.25, L, 0.12, 0.25, stone);
+  b.box(e0, 0, RIVER[1], L, 0.12, 0.25, stone);
 
   // A promenade on each bank: between the north-bank avenue and the water, and the water and the south bank avenue
   const northBank = EW_ROADS.filter((r) => r.c < RIVER[0]).at(-1)!;
@@ -208,7 +201,7 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
   ])
     b.box(e0, 0, z0, L, 0.05, z1 - z0, promenade);
   // Lamps along the water, reaching out over the walk (clear of the bridges)
-  const nearBridge = (x: number) => NS_ROADS.some((r) => Math.abs(x - r.c) < r.half + WALK_W + 0.9) || Math.abs(x - LIBERTY_ROAD.c) < LIBERTY_ROAD.half + DECK_WALK + 0.9;
+  const nearBridge = (x: number) => NS_ROADS.some((r) => Math.abs(x - r.c) < r.half + WALK_W + 0.9) || !offFootbridge(x, 0.6);
   for (let x = PROMENADE.x[0]; x <= PROMENADE.x[1]; x += 6)
     if (!nearBridge(x)) {
       addLamp(x, RIVER[0] - 0.4, Math.PI / 2, 0.05);
@@ -234,11 +227,9 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
     return runs;
   };
   const river: [number, number] = [RIVER[0] - 0.7, RIVER[1] + 0.7];
-  /** The roads crossing an east-west road: the north-south ones, and Liberty Road where it reaches */
-  const across = (r: Road) => (r.c >= LIBERTY_ROAD.z0 && r.c <= LIBERTY_END[1] ? [...NS_ROADS, LIBERTY_ROAD] : NS_ROADS);
   for (const r of EW_ROADS)
     if (r.lanes === 2)
-      for (const [a0, a1] of runsBetween(across(r))) {
+      for (const [a0, a1] of runsBetween(NS_ROADS)) {
         b.box(a0, 0, r.c - MEDIAN / 2, a1 - a0, SLAB, MEDIAN, kerbTop);
         b.box(a0, SLAB, r.c - MEDIAN / 2 + 0.06, a1 - a0, 0.005, MEDIAN - 0.12, median);
       }
@@ -376,7 +367,7 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
   const lines = (r: Road) => (r.lanes === 1 ? [{ off: 0, yellow: true }] : [-1, 1].map((sd) => ({ off: sd * (MEDIAN / 2 + LANE), yellow: false })));
   for (const r of EW_ROADS)
     for (const { off, yellow } of lines(r))
-      for (const [a0, a1] of runsBetween(across(r)))
+      for (const [a0, a1] of runsBetween(NS_ROADS))
         for (let p = a0 + 0.4; p < a1 - 0.3; p += 1.1) (yellow ? dashes : whites).push(m.clone().compose(new THREE.Vector3(p, 0.036, r.c + off), q0, new THREE.Vector3(0.55, 0.01, 0.07)));
   for (const r of NS_ROADS)
     for (const { off, yellow } of lines(r))
@@ -407,7 +398,7 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
       const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.atan2(-uz, ux));
       for (let p = carry; p < len; p += 1.1) {
         const [x, z] = [a[0] + ux * p, a[1] + uz * p];
-        if (NS_ROADS.some((r) => Math.abs(x - r.c) < r.half + 1.4) || EW_ROADS.some((r) => Math.abs(z - r.c) < r.half + 1.4) || onLiberty([x, z], 1.4)) continue;
+        if (NS_ROADS.some((r) => Math.abs(x - r.c) < r.half + 1.4) || EW_ROADS.some((r) => Math.abs(z - r.c) < r.half + 1.4)) continue;
         dashes.push(m.clone().compose(new THREE.Vector3(x, 0.037, z), q, new THREE.Vector3(0.55, 0.01, 0.07)));
       }
       carry = (carry - len) % 1.1;

@@ -225,8 +225,8 @@ export const FIGHTCLUB_FIX = {
   ajar: [3, 9],
   ajarAngle: 1.0,
   /** The bench by the lockers (not solid) and the water cooler at the row's south end */
-  bench: { x: 96.9, z: 94.3 },
-  cooler: { x: 95.75, z: 96.3 },
+  bench: { x: 96.9, z: LOCKERS.z1 - 1.2 },
+  cooler: { x: 95.75, z: LOCKERS.z1 + 0.8 },
 };
 /**
  * What's solid at the Fight Club: the ring's corner posts (the canvas and the ropes stay open: you

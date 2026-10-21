@@ -28,7 +28,7 @@
  *   the places you run, missions and the counters behind them (catalog.ts
  *   has the prices and curves; missions.ts the board).
  */
-import { BRIDGE_PLOTS, cleanDesign, type Design } from '../../data/plots';
+import { cleanDesign, type Design } from '../../data/plots';
 import { DOORS, GARAGE_SITE, LOT_SITE, STALL_SPOT, UNIT_SITE } from './solids';
 import type { WeaponId } from './combat-sim';
 import { CARGO as BASE_CARGO, DRIVE, PLAYER_CARS, type PaintId, type PlayerCar } from './mycar';
@@ -1869,15 +1869,8 @@ function cleanGame(s: TycoonSave, o: Record<string, unknown>, now: number) {
   for (const [id, raw] of Object.entries(obj(o.plots))) {
     if (!/^[NEWS]\d$/.test(id)) continue;
     const r = obj(raw);
-    const paid = Math.round(num(r.paid, 0, 1e9, PLOT_DORRAS));
-    // West 3 and South 1 are Liberty Bridge's grounds now: whoever owned one gets everything they paid for it (land and building) back
-    if (BRIDGE_PLOTS.includes(id)) {
-      s.dorras += paid;
-      book(s, 'soldLand', paid);
-      continue;
-    }
     const design = r.design ? cleanDesign(r.design) : null;
-    s.plots[id] = { design, paid, at: num(r.at, 0, now, now) };
+    s.plots[id] = { design, paid: Math.round(num(r.paid, 0, 1e9, PLOT_DORRAS)), at: num(r.at, 0, now, now) };
   }
   // The kart park (v6)
   const kt = obj(o.karts);

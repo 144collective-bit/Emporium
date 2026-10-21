@@ -53,7 +53,7 @@ import { abandonSeries, seriesNext } from './tycoon';
 import { CAMERA_ONLY, DOORS, GARAGE_SITE, RACK, SOLIDS, TURNTABLE_BOX, WALK_SPAWN, rayBoxes, type Box } from './solids';
 import { count } from './tycoon';
 import { NS_ROADS, RIVER, SLAB, WALK_W, type Tick } from './world';
-import { DECK_HALF, LX, onDeckWalk } from './liberty';
+import { footbridgeWall, footbridgeY } from './liberty';
 import { WORLD_BOUNDS } from './layout';
 import { PLAN, inPoly } from './streetplan';
 import type { GameDeps } from './ui';
@@ -246,16 +246,23 @@ export function createWalk(d: WalkDeps) {
     } else openSpot(near.id as SpotId);
   };
 
-  /** The ground under a point: a slab, or the street; at the kart park the circuit's own (its banks, the hill, the flyover's deck when `yNow` is up there) */
+  /**
+   * The ground under a point: a slab, or the street; Liberty Bridge's stairs, landings and walkway when
+   * `yNow` is up there; at the kart park the circuit's own (its banks, the hill, the flyover's deck when `yNow` is up there)
+   */
   const groundAt = (x: number, z: number, yNow = 0) => {
-    const base = slabs.some((s) => inBox(s.box, x, z) && inPoly(s.poly, [x, z])) || onDeckWalk(x, z) ? SLAB : 0.035;
+    const slab = slabs.some((s) => inBox(s.box, x, z) && inPoly(s.poly, [x, z])) ? SLAB : 0.035;
+    const base = Math.max(slab, footbridgeY(x, z, yNow) ?? 0);
     if (x < KART_PARK.x0 || x > KART_PARK.x1 || z < KART_PARK.z0 || z > KART_PARK.z1) return base;
     const t = trackSurfaceAt(x, z, yNow);
     return t ? Math.max(base, t.y + 0.035) : base;
   };
-  const onBridge = (x: number) => NS_ROADS.some((r) => Math.abs(x - r.c) < r.half + WALK_W - 0.15) || Math.abs(x - LX) < DECK_HALF - 0.15;
-  function blocked(x: number, z: number) {
+  const onBridge = (x: number) => NS_ROADS.some((r) => Math.abs(x - r.c) < r.half + WALK_W - 0.15);
+  /** `y`: how high Degen is (up on Liberty Bridge only its parapets stop you; under it, its pillars and stairs do) */
+  function blocked(x: number, z: number, y = 0) {
     if (x < BOUNDS[0] || x > BOUNDS[2] || z < BOUNDS[1] || z > BOUNDS[3]) return true;
+    if (footbridgeY(x, z, y, RADIUS) !== null) return false;
+    if (footbridgeWall(x, z, y, RADIUS)) return true;
     if (z > RIVER[0] - 0.3 && z < RIVER[1] + 0.3 && !onBridge(x)) return true;
     if (SOLIDS.some((b) => inBox(b, x, z, RADIUS))) return true;
     if (drive.blocks(x, z, RADIUS) || fly.blocks(x, z, RADIUS)) return true;
@@ -267,7 +274,7 @@ export function createWalk(d: WalkDeps) {
     let t = want;
     // Ground (and kerb) below
     if (dir.y < 0) {
-      const floor = Math.max(groundAt(from.x, from.z), 0.035) + 0.22;
+      const floor = Math.max(groundAt(from.x, from.z, from.y), 0.035) + 0.22;
       t = Math.min(t, (from.y - floor) / -dir.y);
     }
     for (const b of [...SOLIDS, ...CAMERA_ONLY, ...d.plotSolids()]) {
@@ -1437,12 +1444,12 @@ export function createWalk(d: WalkDeps) {
     const k = damp(grounded ? (mag > 0.05 ? 11 : 14) : 2.5, dt);
     vel.x += (dirX * top - vel.x) * k;
     vel.y += (dirZ * top - vel.y) * k;
-    const stuck = blocked(pos.x, pos.z);
+    const stuck = blocked(pos.x, pos.z, pos.y);
     const nx = pos.x + vel.x * dt;
-    if (stuck || !blocked(nx, pos.z)) pos.x = nx;
+    if (stuck || !blocked(nx, pos.z, pos.y)) pos.x = nx;
     else vel.x = 0;
     const nz = pos.z + vel.y * dt;
-    if (stuck || !blocked(pos.x, nz)) pos.z = nz;
+    if (stuck || !blocked(pos.x, nz, pos.y)) pos.z = nz;
     else vel.y = 0;
     const speed = vel.length();
 

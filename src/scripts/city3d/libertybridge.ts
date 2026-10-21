@@ -1,321 +1,554 @@
 /*
- * Liberty Bridge (liberty.ts has the numbers): a one-of-a-kind suspension
- * bridge carrying Liberty Road over the river, in Degen's style (flat
- * cartoon shading, ink outlines, neon).
+ * Liberty Bridge (liberty.ts has the numbers): a one-of-a-kind stone
+ * footbridge built up and over the water, in the old style (sandstone,
+ * domed turrets, crenellations) drawn the city's way (flat cartoon shading,
+ * ink outlines, warm light at night).
  *
- * - Liberty Road itself: asphalt from the west cross street to the Southside
- *   Loop, its dashed centre line, zebras at its three lit junctions and
- *   lamps along its sidewalks.
- * - The deck over the river: the road, two wide raised walks, the edge beams
- *   with a neon line along them, and railings.
- * - Twin towers, one on each bank's grounds (the old West 3 and South 1),
- *   each two tapering legs on plinths with portal beams between them (the
- *   low one carries LIBERTY BRIDGE) and a crown carrying the Liberty flame on
- *   both faces. Neon runs up the legs' outer corners in the flame's colours.
- * - The main cables sweep from saddle to saddle high over both river avenues
- *   and dip over the water; backstays run down to the anchorages behind the
- *   towers; hangers drop to the deck and, over the grounds, to a low stringer.
- *   Bulbs along the cables light up at night.
+ * - Two gate towers: a ground storey with an arch through it and a
+ *   voussoir ring round it, a string course, an upper storey with arched
+ *   windows (lit at night) and the Liberty flame as a crest on both faces,
+ *   LIBERTY BRIDGE on a bronze plaque on the landward face, a corbelled
+ *   cornice, a crenellated parapet, four turrets with octagonal slate domes
+ *   and finials, and on the roof, on a drum, the Liberty flame in 3D: a
+ *   ribbon spiralling up into tongues of fire (turning slowly, never under
+ *   reduced motion).
+ * - Stairs up both sides of each tower (solid stone flanks, a wall on the
+ *   outside, a lamp at the foot) to the landing in front of its river face.
+ * - The walkway: a stone deck on round-topped arches, pillars in pairs on
+ *   the lawns and the promenades, cutwater piers in the river; parapets
+ *   with a coping, pilasters with lanterns on top and pools of their light
+ *   on the walk at night.
  *
- * The superstructure is the spot's group (it lifts on hover); the road and
- * deck stay on the ground. A few draw calls in all: one Batch's colours and
- * neon, the flame and sign textures, the paving, the blinking tower lights.
+ * The whole bridge is the spot's group (it lifts on hover). One Batch for
+ * the stone and the lit windows and lanterns, the plaques, the flames (one
+ * mesh each, their own material: they turn).
  */
 import * as THREE from 'three';
 import { Batch, FONT_DISPLAY, PAL, canvasTex, fx, glowMat, glowTex, lit, neon, roundRect, toon } from './kit';
-import { SLAB, addLamp, flatPoly, lotMat, type Tick } from './world';
-import { EW_ROADS, LIBERTY_ROAD, WALK_W } from './layout';
-import { LIBERTY_GROUNDS } from './outer';
-import { ANCHOR, ANCHORS, BEAMS, CROWN, DECK, DECK_HALF, FASCIA, GROUND_EDGE, HANGERS, LEG, LEG_X, LX, LZ, RAIL_X, SADDLE, TOWERS, TOWER_H, cableY } from './liberty';
+import { SLAB, addLamp, addPool, flatPoly, lotMat, type Tick } from './world';
+import { RIVER } from './layout';
+import { BX, DECK_HALF, DECK_UNDER, DECK_Y, LANDING, LIBERTY_RECTS, PARAPET_H, PIER_HALF, PILLAR, SPANS, STAIR, SUPPORTS, TOWER, TOWERS, TO_RIVER, WALKWAY, WALK_HALF, archY, landingOf, stairsOf } from './liberty';
 import type { Spot } from './landmarks';
 
 const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
 
-const TOWER = toon('#3b2f7d');
-const STONE = toon('#6b6790');
-const CABLE = toon('#ff6a3d');
-const HANGER = toon('#e8e4f8');
-const RAIL = toon('#c9c4e6');
-const DECK_TOP = toon('#34314f');
-const WALK_TOP = toon('#5a5290');
-const ASPHALT = toon('#26243f');
-const ZEBRA = toon('#e8e4f8');
-const DASH = neon('#f5d76e', 0.9, 1.1);
-/** Thin neon tubes and bulbs (pass the bloom threshold at night); bigger lit things softer */
-const glow = (c: string) => neon(c, 0.6, 2.4);
-const soft = (c: string) => neon(c, 0.5, 1.3);
-/** The flame's colours, from its tail (magenta) to its tip (gold): the neon up the legs */
-const FLAME = ['#e219e5', '#ff2e8a', '#ff5a36', '#ff9a2e', '#ffd36b'];
+const STONE = toon('#d8c9a3');
+const TRIM = toon('#bba985');
+const DARK = toon('#8f8265');
+const PAVE = toon('#c7b48d');
+const SLATE = toon('#566070');
+const FINIAL = toon('#3e4552');
+const IRON = toon('#262233');
+/** Window glass: dark by day, warm lamplight at night */
+const WINDOW = neon('#ffc66e', 0.1, 1.1);
+/** Lantern bulbs (small, bright) */
+const BULB = neon('#ffe2a0', 0.6, 2.4);
 
-/** The legs' foot and top (y), and their half sizes at a height (they taper) */
-const FOOT = SLAB + LEG.plinth.h;
-const TOP = CROWN.y1;
-const half = (y: number) => {
-  const f = Math.min(1, Math.max(0, (y - FOOT) / (TOP - FOOT)));
-  const k = 1 + (LEG.taper - 1) * f;
-  return { w: (LEG.w / 2) * k, d: (LEG.d / 2) * k };
-};
+const { hx, hz } = TOWER;
+const AH = TOWER.arch.half;
 
-/** A box narrowing from (w0, d0) at y0 to (w1, d1) at y1, centred on (x, z) */
-function taper(x: number, z: number, y0: number, y1: number, w0: number, d0: number, w1: number, d1: number) {
-  const g = new THREE.BoxGeometry(1, 1, 1);
-  const p = g.attributes.position;
-  for (let i = 0; i < p.count; i++) {
-    const up = p.getY(i) > 0;
-    p.setXYZ(i, x + p.getX(i) * (up ? w1 : w0), up ? y1 : y0, z + p.getZ(i) * (up ? d1 : d0));
-  }
-  g.computeVertexNormals();
-  return g;
+/* ---------- Shapes ---------- */
+
+/** A shape in the x-y plane extruded `depth` along z, its back at z0 */
+function slabZ(shape: THREE.Shape, depth: number, x: number, y: number, z0: number) {
+  return new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false, curveSegments: 14 }).translate(x, y, z0);
 }
-/** A flat plane lying on the ground, centred at (x, y, z), w across x and d along z */
-const flat = (x: number, y: number, z: number, w: number, d: number) => new THREE.PlaneGeometry(w, d).rotateX(-Math.PI / 2).translate(x, y, z);
+/** A profile in the z-y plane (u along z, v up), extruded `w` along x from x0 */
+function slabX(pts: [number, number][], w: number, x0: number) {
+  const shape = new THREE.Shape(pts.map(([u, v]) => new THREE.Vector2(u, v)));
+  return new THREE.ExtrudeGeometry(shape, { depth: w, bevelEnabled: false }).rotateY(-Math.PI / 2).translate(x0 + w, 0, 0);
+}
+/** A wall `w` wide and `h` high with a round-headed arch through it, `half` wide, springing at `spring` (its foot at y 0, centred on x 0) */
+function archWall(w: number, h: number, half: number, spring: number) {
+  const s = new THREE.Shape();
+  s.moveTo(-w / 2, 0);
+  s.lineTo(-half, 0);
+  s.lineTo(-half, spring);
+  s.absarc(0, spring, half, Math.PI, 0, true);
+  s.lineTo(half, 0);
+  s.lineTo(w / 2, 0);
+  s.lineTo(w / 2, h);
+  s.lineTo(-w / 2, h);
+  s.closePath();
+  return s;
+}
+/** The ring of stones round an arch (legs down to the ground) */
+function archRing(half: number, spring: number, band: number) {
+  const s = new THREE.Shape();
+  s.moveTo(-half - band, 0);
+  s.lineTo(-half - band, spring);
+  s.absarc(0, spring, half + band, Math.PI, 0, true);
+  s.lineTo(half + band, 0);
+  s.lineTo(half, 0);
+  s.lineTo(half, spring);
+  s.absarc(0, spring, half, 0, Math.PI, false);
+  s.lineTo(-half, 0);
+  s.closePath();
+  return s;
+}
+/** An arched window, `w` wide, `h` to its springing */
+function archWindow(w: number, h: number) {
+  const s = new THREE.Shape();
+  s.moveTo(-w / 2, 0);
+  s.lineTo(w / 2, 0);
+  s.lineTo(w / 2, h);
+  s.absarc(0, h, w / 2, 0, Math.PI, false);
+  s.closePath();
+  return s;
+}
 /** An upright plane facing +z (or -z with `back`) */
 const face = (x: number, y: number, z: number, w: number, h: number, back: boolean) => new THREE.PlaneGeometry(w, h).rotateY(back ? Math.PI : 0).translate(x, y, z);
-/** A cylinder from a to b (open-ended: its caps are never seen) */
-function rod(a: THREE.Vector3, b: THREE.Vector3, r: number, sides = 5) {
-  const d = b.clone().sub(a);
-  const g = new THREE.CylinderGeometry(r, r, d.length(), sides, 1, true);
-  g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(V(0, 1, 0), d.clone().normalize()));
-  return g.translate((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2);
-}
 
 /* ---------- Textures ---------- */
 
-/** The crown's plaque: the Liberty flame on a dark panel with a gradient rim */
-function flameTex(img: HTMLImageElement | null) {
-  return canvasTex(384, 476, (ctx, w, h) => {
-    ctx.fillStyle = '#120d2a';
+/** The crest: the Liberty flame on a dark shield with a gradient rim */
+function crestTex(img: HTMLImageElement | null) {
+  return canvasTex(320, 400, (ctx, w, h) => {
+    ctx.fillStyle = '#d8c9a3';
     ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = '#1a1430';
+    roundRect(ctx, 12, 12, w - 24, h - 24, 40);
+    ctx.fill();
     const rim = ctx.createLinearGradient(0, h, 0, 0);
-    FLAME.forEach((c, i) => rim.addColorStop(i / (FLAME.length - 1), c));
-    roundRect(ctx, 14, 14, w - 28, h - 28, 34);
+    rim.addColorStop(0, '#e219e5');
+    rim.addColorStop(0.5, '#ff5a36');
+    rim.addColorStop(1, '#ffd36b');
     ctx.lineWidth = 12;
     ctx.strokeStyle = rim;
     ctx.stroke();
     if (img) {
-      const s = Math.min((w - 110) / img.width, (h - 110) / img.height);
+      const s = Math.min((w - 90) / img.width, (h - 90) / img.height);
       const [iw, ih] = [img.width * s, img.height * s];
-      ctx.shadowColor = '#ff6a3d';
-      ctx.shadowBlur = 26;
-      ctx.drawImage(img, (w - iw) / 2, (h - ih) / 2, iw, ih);
-      ctx.shadowBlur = 0;
       ctx.drawImage(img, (w - iw) / 2, (h - ih) / 2, iw, ih);
     }
   });
 }
-/** LIBERTY BRIDGE on the low portal beam, in the city's lettering with the flame's gradient */
+/** LIBERTY BRIDGE in gold on a bronze plaque */
 function nameTex() {
-  return canvasTex(1024, 116, (ctx, w, h) => {
-    ctx.fillStyle = '#120d2a';
+  return canvasTex(1024, 128, (ctx, w, h) => {
+    ctx.fillStyle = '#2b2236';
     ctx.fillRect(0, 0, w, h);
-    ctx.font = `900 84px ${FONT_DISPLAY}`;
+    ctx.strokeStyle = '#c99a4a';
+    ctx.lineWidth = 8;
+    ctx.strokeRect(10, 10, w - 20, h - 20);
+    ctx.font = `900 82px ${FONT_DISPLAY}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = '14px';
-    const g = ctx.createLinearGradient(160, 0, w - 160, 0);
-    g.addColorStop(0, FLAME[0]);
-    g.addColorStop(0.5, FLAME[2]);
-    g.addColorStop(1, FLAME[4]);
-    ctx.shadowColor = FLAME[2];
-    ctx.shadowBlur = 18;
+    (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = '16px';
+    const g = ctx.createLinearGradient(0, 20, 0, h - 20);
+    g.addColorStop(0, '#ffe7a3');
+    g.addColorStop(1, '#d8a24a');
     ctx.fillStyle = g;
     ctx.fillText('LIBERTY BRIDGE', w / 2, h / 2 + 4);
-    ctx.shadowBlur = 0;
-    ctx.fillText('LIBERTY BRIDGE', w / 2, h / 2 + 4);
   });
 }
 
-/* ---------- Liberty Road on the ground ---------- */
+/* ---------- The Liberty flame in 3D ---------- */
 
-function road(b: Batch) {
-  const H = LIBERTY_ROAD.half;
-  const [z0, z1] = LZ;
-  b.box(LX - H, 0.002, z0, H * 2, 0.03, z1 - z0, ASPHALT);
-  const crossing = EW_ROADS.filter((r) => r.c >= z0 && r.c < z1);
-  const onDeck = (z: number) => z > DECK.z0 && z < DECK.z1;
-  const y = (z: number) => (onDeck(z) ? 0.066 : 0.037);
-  // The dashed centre line, clear of the junctions (and of the loop at the south end)
-  for (let z = z0 + crossing[0].half + 1.4; z < z1 - 2.9; z += 1.1)
-    if (!crossing.some((r) => Math.abs(z - r.c) < r.half + 1.4)) b.add(flat(LX, y(z), z, 0.07, 0.55), DASH);
-  // Zebras at each junction: across Liberty Road either side (only the south side where it starts), and across the other road either side of it
-  for (const r of crossing) {
-    for (const s of [-1, 1]) {
-      const z = r.c + s * (r.half + 0.45);
-      if (z < z0) continue;
-      for (let k = LX - H + 0.16; k < LX + H - 0.1; k += 0.32) b.add(flat(k, y(z) + 0.004, z, 0.17, 0.55), ZEBRA);
-    }
-    for (const s of [-1, 1]) for (let k = r.c - r.half + 0.16; k < r.c + r.half - 0.1; k += 0.32) b.add(flat(LX + s * (H + 0.45), 0.041, k, 0.55, 0.17), ZEBRA);
+/**
+ * The flame mark as a sculpture: a ribbon spiralling up from a thin tail,
+ * widening and warming from violet through magenta into red, and tongues of
+ * fire curling out of its top (orange to gold, a pale core). One geometry,
+ * coloured per vertex; its foot at the origin, about `TOWER.flame.h` tall.
+ */
+function flameGeometry() {
+  const pos: number[] = [];
+  const col: number[] = [];
+  const idx: number[] = [];
+  const c = new THREE.Color();
+  const ramp = (stops: string[], t: number) => {
+    const f = Math.min(0.9999, Math.max(0, t)) * (stops.length - 1);
+    const k = Math.floor(f);
+    return c.set(stops[k]).lerp(new THREE.Color(stops[k + 1]), f - k);
+  };
+  /** Rings of points along a spine joined into a closed tube (each ring `sides` points) */
+  const tube = (rings: THREE.Vector3[][], colours: THREE.Color[][]) => {
+    const base = pos.length / 3;
+    const sides = rings[0].length;
+    rings.forEach((ring, i) =>
+      ring.forEach((p, j) => {
+        pos.push(p.x, p.y, p.z);
+        const k = colours[i][j];
+        col.push(k.r, k.g, k.b);
+      })
+    );
+    for (let i = 0; i < rings.length - 1; i++)
+      for (let j = 0; j < sides; j++) {
+        const a = base + i * sides + j;
+        const b = base + i * sides + ((j + 1) % sides);
+        const d = base + (i + 1) * sides + j;
+        const e = base + (i + 1) * sides + ((j + 1) % sides);
+        idx.push(a, d, b, b, d, e);
+      }
+  };
+  const up = V(0, 1, 0);
+
+  // The ribbon: a thin band winding up a turn and a quarter, its tail narrow, opening out as it climbs
+  const RIB = ['#4a1a8c', '#9b1fb0', '#e2197a', '#ff3d4a'];
+  const ribRings: THREE.Vector3[][] = [];
+  const ribCols: THREE.Color[][] = [];
+  const N = 64;
+  const at = (t: number) => {
+    const a = 1.25 * Math.PI * 2 * t;
+    const r = 0.12 + 0.4 * t;
+    return V(Math.cos(a) * r, 0.05 + 2.2 * t, Math.sin(a) * r);
+  };
+  for (let i = 0; i <= N; i++) {
+    const t = i / N;
+    const p = at(t);
+    const tan = at(Math.min(1, t + 0.01)).sub(at(Math.max(0, t - 0.01))).normalize();
+    const out = V(p.x, 0, p.z).normalize();
+    const band = up.clone().addScaledVector(out, 0.35).normalize();
+    const nrm = new THREE.Vector3().crossVectors(tan, band).normalize();
+    const hw = 0.06 + 0.38 * t ** 0.8;
+    const th = 0.035;
+    const ring = [
+      p.clone().addScaledVector(band, hw).addScaledVector(nrm, th),
+      p.clone().addScaledVector(band, hw).addScaledVector(nrm, -th),
+      p.clone().addScaledVector(band, -hw).addScaledVector(nrm, -th),
+      p.clone().addScaledVector(band, -hw).addScaledVector(nrm, th),
+    ];
+    ribRings.push(ring);
+    const body = ramp(RIB, t).clone();
+    // The band's upper edge a shade lighter, like the mark's highlight
+    const edge = body.clone().lerp(new THREE.Color('#ffffff'), 0.18);
+    ribCols.push([edge, edge, body, body]);
   }
-  // Lamps along the sidewalks, the arms out over the road, clear of the junctions and the towers' legs
-  for (const [a, c] of [
-    [z0 + 3.5, GROUND_EDGE[0] - 0.5],
-    [GROUND_EDGE[1] + 1.2, z1 - 4],
-  ])
-    for (let z = a; z <= c; z += 4.4) {
-      if (TOWERS.some((t) => Math.abs(z - t) < 1.6)) continue;
-      addLamp(LX - H - WALK_W * 0.55, z, 0);
-      addLamp(LX + H + WALK_W * 0.55, z + 2.2 <= c ? z + 2.2 : z, Math.PI);
+  tube(ribRings, ribCols);
+
+  // Tongues of fire out of the top, all sweeping up and out to one side the way the mark's flame does, layered
+  // from the big red-orange one to a pale core, curling on round the way the ribbon winds
+  const top = at(1);
+  const a1 = Math.atan2(top.z, top.x) + 0.3;
+  const FIRE = ['#ff3d1f', '#ff7a1f', '#ffb52e', '#ffe066'];
+  const EMBER = ['#e2197a', '#ff3d1f', '#ff8a1f', '#ffc94a'];
+  const CORE = ['#ff9a2e', '#ffd36b', '#fff1b0'];
+  const tongues: { a: number; r: number; h: number; R: number; lean: number; swirl: number; stops: string[]; y0: number }[] = [
+    { a: a1, r: 0.22, h: 1.5, R: 0.34, lean: 0.6, swirl: 0.6, stops: FIRE, y0: 1.95 },
+    { a: a1 + 0.95, r: 0.24, h: 1.15, R: 0.28, lean: 0.5, swirl: 0.7, stops: EMBER, y0: 1.9 },
+    { a: a1 - 0.9, r: 0.2, h: 0.95, R: 0.24, lean: 0.45, swirl: 0.8, stops: FIRE, y0: 1.92 },
+    { a: a1 + 0.3, r: 0.08, h: 1.05, R: 0.18, lean: 0.4, swirl: 0.5, stops: CORE, y0: 2.02 },
+  ];
+  const SIDES = 10;
+  const SEG = 22;
+  for (const g of tongues) {
+    const rings: THREE.Vector3[][] = [];
+    const cols: THREE.Color[][] = [];
+    const spine = (s: number) => {
+      const a = g.a + g.swirl * s;
+      const r = g.r + g.lean * s ** 1.5;
+      return V(Math.cos(a) * r, g.y0 + g.h * s, Math.sin(a) * r);
+    };
+    for (let i = 0; i <= SEG; i++) {
+      const s = i / SEG;
+      const p = spine(s);
+      const tan = spine(Math.min(1, s + 0.01)).sub(spine(Math.max(0, s - 0.01))).normalize();
+      const side = new THREE.Vector3().crossVectors(tan, up).normalize();
+      const fwd = new THREE.Vector3().crossVectors(side, tan).normalize();
+      // A teardrop: swelling quickly, tapering to a point
+      const R = g.R * (s < 0.25 ? Math.sin((s / 0.25) * (Math.PI / 2)) : Math.pow(1 - (s - 0.25) / 0.75, 1.3));
+      const ring: THREE.Vector3[] = [];
+      const cr: THREE.Color[] = [];
+      for (let j = 0; j < SIDES; j++) {
+        const q = (j / SIDES) * Math.PI * 2;
+        ring.push(p.clone().addScaledVector(side, Math.cos(q) * R).addScaledVector(fwd, Math.sin(q) * R * 0.5));
+        cr.push(ramp(g.stops, s).clone());
+      }
+      rings.push(ring);
+      cols.push(cr);
     }
-  // The grounds round the towers are paved, either side of the road
-  const paving = lotMat('paving');
-  for (const g of LIBERTY_GROUNDS)
-    for (const [x0, x1] of [
-      [g[0], LX - H - WALK_W],
-      [LX + H + WALK_W, g[2]],
-    ])
-      b.add(
-        flatPoly(
-          [
-            [x0, g[1]],
-            [x0, g[3]],
-            [x1, g[3]],
-            [x1, g[1]],
-          ],
-          SLAB + 0.012
-        ),
-        paving
-      );
+    tube(rings, cols);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  geo.setIndex(idx);
+  geo.computeVertexNormals();
+  return geo;
 }
 
-/* ---------- The deck over the river ---------- */
+/* ---------- A gate tower ---------- */
 
-function deck(b: Batch, low: boolean) {
-  const H = LIBERTY_ROAD.half;
-  const len = DECK.z1 - DECK.z0;
-  b.box(LX - H, 0, DECK.z0, H * 2, 0.06, len, DECK_TOP);
-  for (const s of [-1, 1]) {
-    // The raised walk, the edge beam outside it (down to the water) with its neon line, the railing on the beam
-    const [w0, w1] = s < 0 ? [LX - DECK_HALF, LX - H] : [LX + H, LX + DECK_HALF];
-    b.box(w0, 0, DECK.z0, w1 - w0, SLAB, len, WALK_TOP);
-    const [f0, f1] = s < 0 ? [LX - FASCIA.x1, LX - FASCIA.x0] : [LX + FASCIA.x0, LX + FASCIA.x1];
-    b.box(f0, -0.2, DECK.z0, f1 - f0, 0.48, len, TOWER);
-    const out = s < 0 ? f0 - 0.012 : f1 + 0.012;
-    b.box(out - 0.012, 0.06, DECK.z0 + 0.1, 0.024, 0.04, len - 0.2, glow(PAL.cyan));
-    const rx = LX + s * RAIL_X;
-    for (let z = DECK.z0 + 0.1; z <= DECK.z1 - 0.05; z += low ? 1.5 : 0.75) b.box(rx - 0.035, 0.28, z - 0.035, 0.07, 0.57, 0.07, RAIL);
-    for (const y of [0.55, 0.82]) b.box(rx - 0.03, y, DECK.z0 + 0.05, 0.06, 0.05, len - 0.1, RAIL);
+function tower(b: Batch, plaques: Batch, i: 0 | 1, crest: THREE.Material, name: THREE.Material) {
+  const z = TOWERS[i];
+  const s = TO_RIVER[i];
+  const G = SLAB;
+  const H1 = TOWER.storey;
+  const R = TOWER.roof;
+  // The ground storey, its arch through it towards the river
+  b.add(slabZ(archWall(hx * 2, H1 - G, AH, TOWER.arch.spring), hz * 2, BX, G, z - hz), STONE);
+  // A darker base course either side of the arch (tucked inside the passage's walls)
+  for (const e of [-1, 1]) {
+    const [a, c] = [BX + e * (AH + 0.03), BX + e * (hx + 0.06)];
+    b.box(Math.min(a, c), G, z - hz - 0.06, Math.abs(c - a), 0.45, hz * 2 + 0.12, DARK);
   }
-}
+  // The ring of stones round the arch on both faces, and its keystone
+  for (const f of [-1, 1]) {
+    const z0 = f < 0 ? z - hz - 0.08 : z + hz;
+    b.add(slabZ(archRing(AH, TOWER.arch.spring, 0.28), 0.08, BX, G, z0), TRIM);
+    b.box(BX - 0.18, G + TOWER.arch.spring + AH - 0.05, f < 0 ? z - hz - 0.12 : z + hz, 0.36, 0.42, 0.12, DARK);
+  }
+  // The string course, the upper storey, the cornice
+  b.box(BX - hx - 0.1, H1 - 0.12, z - hz - 0.1, hx * 2 + 0.2, 0.22, hz * 2 + 0.2, TRIM);
+  b.box(BX - hx, H1 + 0.1, z - hz, hx * 2, R - 0.15 - H1 - 0.1, hz * 2, STONE);
+  b.box(BX - hx - 0.14, R - 0.2, z - hz - 0.14, hx * 2 + 0.28, 0.2, hz * 2 + 0.28, TRIM);
+  // Arched windows: two on each face either side of the crest, two on each side; lit at night
+  const win = archWindow(0.46, 0.75);
+  for (const f of [-1, 1]) {
+    const zf = f < 0 ? z - hz - 0.03 : z + hz;
+    for (const x of [-1.55, 1.55]) {
+      b.add(slabZ(win, 0.03, BX + x, 4.75, zf), WINDOW);
+      b.box(BX + x - 0.32, 4.68, f < 0 ? z - hz - 0.1 : z + hz, 0.64, 0.08, 0.1, TRIM);
+    }
+    // The crest (both faces) and the name plaque (the landward face)
+    plaques.add(face(BX, 5.55, z + f * (hz + 0.012), 1.0, 1.25, f < 0), crest);
+    if (f === -s) plaques.add(face(BX, 4.32, z + f * (hz + 0.012), 3.3, 0.41, f < 0), name);
+  }
+  for (const e of [-1, 1]) for (const dz of [-0.85, 0.85]) b.add(slabZ(win, 0.03, 0, 0, 0).rotateY(Math.PI / 2).translate(BX + e * hx - (e > 0 ? 0 : 0.03), 4.75, z + dz), WINDOW);
 
-/* ---------- The towers, cables and hangers ---------- */
-
-function tower(b: Batch, z: number, plaques: Batch, flameMat: THREE.Material, nameMat: THREE.Material, beacons: Batch, beaconMat: THREE.Material) {
-  for (const s of [-1, 1]) {
-    const x = LX + s * LEG_X;
-    // Plinth, the leg, the saddle housing on top and its hump
-    const P = LEG.plinth;
-    b.box(x - P.w / 2, SLAB, z - P.d / 2, P.w, P.h, P.d, STONE);
-    const top = half(TOP);
-    b.add(taper(x, z, FOOT, TOP, LEG.w, LEG.d, top.w * 2, top.d * 2), TOWER);
-    b.box(x - top.w - 0.05, TOP, z - top.d - 0.05, top.w * 2 + 0.1, 0.5, top.d * 2 + 0.1, STONE);
-    b.add(taper(x, z, TOP + 0.5, TOWER_H, top.w * 2 + 0.1, top.d * 2 + 0.1, 0.36, 0.5), STONE);
-    beacons.add(new THREE.IcosahedronGeometry(0.08, 0).translate(x, TOWER_H + 0.06, z), beaconMat);
-    // Neon up the outer corners, in the flame's colours from foot to crown
-    const n = FLAME.length;
+  // The parapet between the turrets, and its merlons
+  const P0 = R;
+  // (Each run reaches into the turrets at its ends)
+  const runs: [number, number, number, number][] = [
+    [BX - hx + 0.6, z - hz - 0.1, BX + hx - 0.6, z - hz + 0.12],
+    [BX - hx + 0.6, z + hz - 0.12, BX + hx - 0.6, z + hz + 0.1],
+    [BX - hx - 0.1, z - hz + 0.6, BX - hx + 0.12, z + hz - 0.6],
+    [BX + hx - 0.12, z - hz + 0.6, BX + hx + 0.1, z + hz - 0.6],
+  ];
+  for (const [x0, z0, x1, z1] of runs) {
+    b.box(x0, P0, z0, x1 - x0, 0.3, z1 - z0, STONE);
+    const along = x1 - x0 > z1 - z0;
+    const L = along ? x1 - x0 : z1 - z0;
+    const n = Math.max(2, Math.round(L / 0.62));
     for (let k = 0; k < n; k++) {
-      const y0 = FOOT + 0.25 + ((TOP - FOOT - 0.4) * k) / n;
-      const y1 = FOOT + 0.25 + ((TOP - FOOT - 0.4) * (k + 1)) / n - 0.06;
-      const h = half((y0 + y1) / 2);
-      for (const e of [-1, 1]) b.box(x + s * (h.w + 0.01) - 0.025, y0, z + e * (h.d - 0.09) - 0.025, 0.05, y1 - y0, 0.05, glow(FLAME[k]));
+      const c = (k + 0.5) / n;
+      if (along) b.box(x0 + c * L - 0.16, P0 + 0.3, z0, 0.32, 0.3, z1 - z0, STONE);
+      else b.box(x0, P0 + 0.3, z0 + c * L - 0.16, x1 - x0, 0.3, 0.32, STONE);
     }
-    // Uplights on the plinth, either side of the leg, lit at night
-    for (const e of [-1, 1]) b.box(x - 0.12, SLAB + P.h, z + e * (LEG.d / 2 + 0.1) - 0.06, 0.24, 0.025, 0.12, soft(FLAME[3]));
   }
-  // The portal beams between the legs (tucked into them), the low one with the name on both faces
-  BEAMS.forEach(({ y0, y1 }, i) => {
-    const reach = LEG_X - half(y1).w + 0.15;
-    const d = i === 0 ? 0.8 : 0.6;
-    b.box(LX - reach, y0, z - d / 2, reach * 2, y1 - y0, d, TOWER);
-    if (i === 0) {
-      for (const back of [false, true]) plaques.add(face(LX, (y0 + y1) / 2, z + (back ? -1 : 1) * (d / 2 + 0.012), 4.9, 0.56, back), nameMat);
-      // A neon line along its underside edges
-      for (const e of [-1, 1]) b.box(LX - reach + 0.3, y0 - 0.025, z + e * (d / 2 - 0.05) - 0.02, reach * 2 - 0.6, 0.025, 0.04, glow(PAL.cyan));
+  // The roof inside the parapet, and the drum the flame stands on
+  b.box(BX - hx + 0.12, P0, z - hz + 0.12, hx * 2 - 0.24, 0.04, hz * 2 - 0.24, PAVE);
+  b.add(new THREE.CylinderGeometry(0.5, 0.56, TOWER.flame.base - P0, 12).translate(BX, (P0 + TOWER.flame.base) / 2, z), TRIM);
+  b.add(new THREE.CylinderGeometry(0.62, 0.62, 0.1, 12).translate(BX, TOWER.flame.base - 0.05, z), DARK);
+
+  // The turrets at the corners: a little taller than the parapet, octagonal slate domes and finials
+  const T = TOWER.turret;
+  const dome = new THREE.LatheGeometry(
+    [
+      [0.6, 0],
+      [0.62, 0.1],
+      [0.58, 0.32],
+      [0.46, 0.58],
+      [0.28, 0.84],
+      [0.1, 1.0],
+      [0, T.dome],
+    ].map(([r, y]) => new THREE.Vector2(r, y)),
+    8
+  ).rotateY(Math.PI / 8);
+  for (const ex of [-1, 1])
+    for (const ez of [-1, 1]) {
+      // (Standing 2 cm proud of the cornice, so no face of theirs is level with it)
+      const cx = BX + ex * (hx - 0.34);
+      const cz = z + ez * (hz - 0.34);
+      b.box(cx - T.s / 2, R - 0.6, cz - T.s / 2, T.s, T.top - R + 0.6, T.s, STONE);
+      b.box(cx - T.s / 2 - 0.08, T.top - 0.12, cz - T.s / 2 - 0.08, T.s + 0.16, 0.14, T.s + 0.16, TRIM);
+      b.add(dome.clone().translate(cx, T.top + 0.02, cz), SLATE);
+      b.add(new THREE.SphereGeometry(0.08, 8, 6).translate(cx, T.top + T.dome + 0.08, cz), FINIAL);
+      b.add(new THREE.CylinderGeometry(0.012, 0.03, 0.3, 5).translate(cx, T.top + T.dome + 0.28, cz), FINIAL);
+      // A slit window on its outer faces
+      b.box(ex > 0 ? cx + T.s / 2 - 0.03 : cx - T.s / 2 - 0.04, 7.95, cz - 0.07, 0.07, 0.42, 0.14, WINDOW);
+      b.box(cx - 0.07, 7.95, ez > 0 ? cz + T.s / 2 - 0.03 : cz - T.s / 2 - 0.04, 0.14, 0.42, 0.07, WINDOW);
     }
-  });
-  // The crown between the legs' tops, with the flame on both faces
-  const reach = LEG_X - half(CROWN.y1).w + 0.15;
-  const cd = 0.86;
-  b.box(LX - reach, CROWN.y0, z - cd / 2, reach * 2, CROWN.y1 - 0.05 - CROWN.y0, cd, TOWER);
-  for (const back of [false, true]) plaques.add(face(LX, (CROWN.y0 + CROWN.y1) / 2, z + (back ? -1 : 1) * (cd / 2 + 0.012), 1.5, 1.86, back), flameMat);
+
+  // The stairs up both sides, towards the river: a solid stone flank with its steps, a wall on the outside
+  const st = stairsOf(i);
+  const run = Math.abs(st.z1 - st.z0);
+  const rise = (DECK_Y - G) / STAIR.steps;
+  const tread = run / STAIR.steps;
+  for (const e of [-1, 1]) {
+    const pts: [number, number][] = [[st.z0, G]];
+    for (let k = 0; k < STAIR.steps; k++) {
+      pts.push([st.z0 + s * k * tread, G + (k + 1) * rise]);
+      pts.push([st.z0 + s * (k + 1) * tread, G + (k + 1) * rise]);
+    }
+    pts.push([st.z1, G]);
+    const x0 = e > 0 ? BX + hx : BX - hx - STAIR.tread;
+    b.add(slabX(pts, STAIR.tread, x0), STONE);
+    // The outer wall, rising with the steps, its coping and the newel at the foot
+    const wx = e > 0 ? BX + hx + STAIR.tread : BX - hx - STAIR.w;
+    const ww = STAIR.w - STAIR.tread;
+    b.add(
+      slabX(
+        [
+          [st.z0, G],
+          [st.z0, G + PARAPET_H],
+          [st.z1, DECK_Y + PARAPET_H],
+          [st.z1, G],
+        ],
+        ww,
+        wx
+      ),
+      TRIM
+    );
+    b.box(wx - 0.08, G, st.z0 - (s > 0 ? 0.4 : 0), ww + 0.16, 1.15, 0.4, DARK);
+    // A street lamp at the foot of the stairs, its arm over the first steps
+    addLamp(BX + e * (hx + STAIR.w + 0.35), st.z0 - s * 0.2, e > 0 ? Math.PI : 0);
+  }
+
+  // The landing in front of the river face, its parapets (open to the walkway), the posts under its corners
+  const la = landingOf(i);
+  const [l0, l1] = [Math.min(la.z0, la.z1), Math.max(la.z0, la.z1)];
+  const LX = hx + STAIR.w;
+  b.box(BX - LX, DECK_Y - 0.35, l0, LX * 2, 0.35, l1 - l0, STONE);
+  b.box(BX - LX + 0.2, DECK_Y, l0, (LX - 0.2) * 2, 0.006, l1 - l0, PAVE);
+  for (const e of [-1, 1]) {
+    // The sides
+    const x0 = e > 0 ? BX + LX - 0.2 : BX - LX;
+    b.box(x0, DECK_Y, l0, 0.2, PARAPET_H, l1 - l0, TRIM);
+    // The river edge, either side of the walkway
+    const zr = la.z1 - (s > 0 ? 0.2 : 0);
+    const [a, c] = [BX + e * DECK_HALF, BX + e * LX];
+    b.box(Math.min(a, c), DECK_Y, zr, Math.abs(c - a), PARAPET_H, 0.2, TRIM);
+    // The posts under the far corners
+    const px = BX + e * (LX - 0.25);
+    const pz = la.z1 - s * 0.25;
+    b.box(px - 0.25, G, pz - 0.25, 0.5, DECK_Y - 0.35 - G, 0.5, TRIM);
+  }
 }
 
-/** Where the bulbs ride on the main cables and backstays (their halos are drawn as points) */
-function bulbs(low: boolean) {
-  const out: THREE.Vector3[] = [];
-  const step = low ? 2.4 : 1.2;
-  for (const side of [-1, 1])
-    for (let z = ANCHORS[0] + 0.6; z < ANCHORS[1] - 0.5; z += step) if (TOWERS.every((t) => Math.abs(z - t) > 0.7)) out.push(V(LX + side * LEG_X, cableY(z) + 0.14, z));
-  return out;
-}
+/* ---------- The walkway on its arches ---------- */
 
-function cables(b: Batch, at: THREE.Vector3[]) {
-  const [n, s] = TOWERS;
-  const bulb = glow('#ffe9b0');
-  // Bulbs riding on the cables, lit at night
-  for (const p of at) b.add(new THREE.IcosahedronGeometry(0.075, 0).translate(p.x, p.y, p.z), bulb);
-  for (const side of [-1, 1]) {
-    const x = LX + side * LEG_X;
-    // The main cable, saddle to saddle
-    const pts: THREE.Vector3[] = [];
-    for (let z = n; z <= s + 1e-6; z += 0.5) pts.push(V(x, cableY(z), z));
-    b.add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), pts.length, 0.1, 6, false), CABLE);
-    // The backstays, down to the anchorages
-    for (const [a, t] of [
-      [ANCHORS[0], n],
-      [ANCHORS[1], s],
-    ])
-      b.add(rod(V(x, ANCHOR.h - 0.1, a), V(x, SADDLE, t), 0.1, 6), CABLE);
-    // Hangers: onto the deck's edge beam over the river, onto a low stringer over the grounds
-    for (const h of HANGERS) b.add(rod(V(x, h.deck ? 0.28 : SLAB + 0.3, h.z), V(x, cableY(h.z) - 0.06, h.z), 0.025), HANGER);
-    for (const [a, c] of [
-      [n + LEG.plinth.d / 2, GROUND_EDGE[0]],
-      [GROUND_EDGE[1], s - LEG.plinth.d / 2],
-    ])
-      b.box(x - 0.15, SLAB, a, 0.3, 0.3, c - a, TOWER);
+function walkway(b: Batch, low: boolean) {
+  const [z0, z1] = WALKWAY;
+  const len = z1 - z0;
+  // The deck, its paving, its parapets and their coping
+  b.box(BX - DECK_HALF, DECK_UNDER, z0, DECK_HALF * 2, DECK_Y - DECK_UNDER, len, STONE);
+  b.box(BX - WALK_HALF, DECK_Y, z0, WALK_HALF * 2, 0.006, len, PAVE);
+  for (const e of [-1, 1]) {
+    const x0 = e > 0 ? BX + WALK_HALF : BX - DECK_HALF;
+    b.box(x0, DECK_Y, z0, DECK_HALF - WALK_HALF, PARAPET_H, len, STONE);
+    b.box(x0 - 0.04, DECK_Y + PARAPET_H, z0, DECK_HALF - WALK_HALF + 0.08, 0.08, len, TRIM);
+    // The string course along the deck's face
+    b.box(e > 0 ? BX + DECK_HALF : BX - DECK_HALF - 0.05, DECK_UNDER - 0.05, z0, 0.05, 0.17, len, TRIM);
   }
-  // The anchorages
-  for (const z of ANCHORS) for (const side of [-1, 1]) b.box(LX + side * LEG_X - ANCHOR.w / 2, SLAB, z - ANCHOR.d / 2, ANCHOR.w, ANCHOR.h - SLAB, ANCHOR.d, STONE);
+  // The arches between the supports: the barrel under the deck, the ring of stones on both faces
+  for (const { a, b: c } of SPANS) {
+    const n = 24;
+    const under: [number, number][] = [];
+    for (let k = n; k >= 0; k--) {
+      const z = a.z + ((c.z - a.z) * k) / n;
+      under.push([z, archY(Math.min(c.z, Math.max(a.z, z))) ?? a.y]);
+    }
+    const barrel: [number, number][] = [[a.z, DECK_UNDER + 0.01], [c.z, DECK_UNDER + 0.01], ...under];
+    b.add(slabX(barrel, DECK_HALF * 2, BX - DECK_HALF), STONE);
+    const ring: [number, number][] = [...under, ...[...under].reverse().map(([z, y]): [number, number] => [z, Math.min(DECK_UNDER - 0.02, y + 0.28)])];
+    for (const e of [-1, 1]) b.add(slabX(ring, 0.04, e > 0 ? BX + DECK_HALF : BX - DECK_HALF - 0.04), TRIM);
+  }
+  // The supports: pillars in pairs on land (capitals and bases), cutwater piers in the water
+  for (const p of SUPPORTS) {
+    const ground = p.z > RIVER[0] - 3 && p.z < RIVER[1] + 3 ? 0.05 : SLAB;
+    if (p.kind === 'pier') {
+      b.box(BX - DECK_HALF, -0.6, p.z - PIER_HALF, DECK_HALF * 2, p.y + 0.6, PIER_HALF * 2, STONE);
+      for (const e of [-1, 1]) b.add(new THREE.BoxGeometry(PIER_HALF * 1.42, p.y + 0.6, PIER_HALF * 1.42).rotateY(Math.PI / 4).translate(BX + e * DECK_HALF, (p.y - 0.6) / 2, p.z), STONE);
+      b.box(BX - DECK_HALF - 0.08, p.y - 0.14, p.z - PIER_HALF - 0.08, DECK_HALF * 2 + 0.16, 0.14, PIER_HALF * 2 + 0.16, TRIM);
+      continue;
+    }
+    for (const e of [-1, 1]) {
+      const x = BX + e * PILLAR.x;
+      b.box(x - PILLAR.half, ground, p.z - PILLAR.half, PILLAR.half * 2, p.y - ground, PILLAR.half * 2, STONE);
+      b.box(x - PILLAR.half - 0.06, ground, p.z - PILLAR.half - 0.06, PILLAR.half * 2 + 0.12, 0.3, PILLAR.half * 2 + 0.12, DARK);
+      b.box(x - PILLAR.half - 0.06, p.y - 0.16, p.z - PILLAR.half - 0.06, PILLAR.half * 2 + 0.12, 0.16, PILLAR.half * 2 + 0.12, TRIM);
+    }
+  }
+  // Pilasters on the parapets with lanterns on top, their light pooled on the walk at night
+  const lanterns: THREE.Vector3[] = [];
+  const step = low ? 6.6 : 4.4;
+  const n = Math.max(2, Math.round(len / step));
+  for (let k = 0; k <= n; k++) {
+    const z = z0 + 0.4 + ((len - 0.8) * k) / n;
+    for (const e of [-1, 1]) {
+      const x = BX + e * ((WALK_HALF + DECK_HALF) / 2);
+      b.box(x - 0.17, DECK_Y, z - 0.17, 0.34, PARAPET_H + 0.14, 0.34, TRIM);
+      b.box(x - 0.04, DECK_Y + PARAPET_H + 0.14, z - 0.04, 0.08, 0.32, 0.08, IRON);
+      b.box(x - 0.09, DECK_Y + PARAPET_H + 0.44, z - 0.09, 0.18, 0.04, 0.18, IRON);
+      b.add(new THREE.BoxGeometry(0.11, 0.16, 0.11).translate(x, DECK_Y + PARAPET_H + 0.38, z), BULB);
+      lanterns.push(V(x, DECK_Y + PARAPET_H + 0.38, z));
+      if (k % 2 === (e > 0 ? 0 : 1)) addPool(x - e * 0.6, z, 1.6, DECK_Y);
+    }
+  }
+  return lanterns;
 }
 
 /* ---------- The place ---------- */
 
 export function buildLibertyBridge(scene: THREE.Scene, opts: { flame: HTMLImageElement | null; tick: (f: Tick) => void; reduced: boolean; low: boolean }): { spot: Spot } {
-  const ground = new Batch();
-  road(ground);
-  deck(ground, opts.low);
-  ground.build(scene, { cast: false, receive: true });
-
   const group = new THREE.Group();
   group.name = 'liberty';
   scene.add(group);
+
+  // A paved apron round each tower and its stairs, on its lawn
+  const ground = new Batch();
+  const paving = lotMat('paving');
+  for (const [x0, z0, x1, z1] of LIBERTY_RECTS.slice(0, 2)) {
+    const m = 0.8;
+    ground.add(
+      flatPoly(
+        [
+          [x0 - m, z0 - m],
+          [x0 - m, z1 + m],
+          [x1 + m, z1 + m],
+          [x1 + m, z0 - m],
+        ],
+        SLAB + 0.012
+      ),
+      paving
+    );
+  }
+  ground.build(scene, { cast: false, receive: true });
+
   const b = new Batch();
   const plaques = new Batch();
-  const beacons = new Batch();
-  const flameMat = lit(new THREE.MeshBasicMaterial({ map: flameTex(opts.flame), toneMapped: true }), 1, 1.35);
-  const nameMat = lit(new THREE.MeshBasicMaterial({ map: nameTex(), toneMapped: true }), 1, 1.4);
-  // The towers' red lights blink (their own material, so the shared neon never changes)
-  const beaconMat = new THREE.MeshBasicMaterial({ color: '#ff2b2b', toneMapped: true });
-  for (const z of TOWERS) tower(b, z, plaques, flameMat, nameMat, beacons, beaconMat);
-  const at = bulbs(opts.low);
-  cables(b, at);
+  const crest = lit(new THREE.MeshBasicMaterial({ map: crestTex(opts.flame), toneMapped: true }), 0.95, 1.2);
+  const name = lit(new THREE.MeshBasicMaterial({ map: nameTex(), toneMapped: true }), 0.95, 1.25);
+  for (const i of [0, 1] as const) tower(b, plaques, i, crest, name);
+  const lanterns = walkway(b, opts.low);
   b.build(group);
-  // The bulbs' halos: points (always facing the camera), only at night, so the cables read as strings of light from across town
-  const haloMat = lit(new THREE.PointsMaterial({ color: '#ffe2a0', map: glowTex, size: 0.9, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }), 0, 0.45);
-  group.add(fx(new THREE.Points(new THREE.BufferGeometry().setFromPoints(at), haloMat)));
   plaques.build(group, { cast: false, receive: false });
-  beacons.build(group, { cast: false, receive: false });
-  const red = new THREE.Color('#ff2b2b');
-  opts.tick(({ t, night }) => {
-    const on = opts.reduced || t % 2 < 0.25 ? 0.6 + night * 1.8 : 0.15;
-    beaconMat.color.copy(red).multiplyScalar(on);
+  // The lanterns' halos (points, always facing the camera), only at night
+  const haloMat = lit(new THREE.PointsMaterial({ color: '#ffe2a0', map: glowTex, size: 0.9, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }), 0, 0.4);
+  group.add(fx(new THREE.Points(new THREE.BufferGeometry().setFromPoints(lanterns), haloMat)));
+
+  // The Liberty flame on each tower, turning slowly (still under reduced motion); its colours are its own light
+  const flameGeo = flameGeometry();
+  const flameMat = lit(new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: true }), 0.95, 1.1);
+  const flames = TOWERS.map((z, i) => {
+    const m = new THREE.Mesh(flameGeo, flameMat);
+    m.position.set(BX, TOWER.flame.base, z);
+    m.rotation.y = i * Math.PI;
+    m.castShadow = true;
+    group.add(m);
+    return m;
+  });
+  // A warm light on each flame's drum at night, and pools of it on the paving round each tower's foot
+  for (const z of TOWERS) {
+    addPool(BX, z, 2.4, TOWER.roof + 0.04);
+    for (const e of [-1, 1]) addPool(BX + e * (hx + STAIR.w + 0.4), z, 3.2, SLAB + 0.01);
+    for (const f of [-1, 1]) addPool(BX, z + f * (hz + 0.9), 2.6, SLAB + 0.01);
+  }
+  opts.tick(({ t, dt }) => {
+    if (opts.reduced) return;
+    flames.forEach((m, i) => {
+      m.rotation.y += dt * 0.35;
+      m.scale.set(1, 1 + Math.sin(t * 2.3 + i * 1.7) * 0.025, 1);
+    });
   });
 
-  // The hover ring on the deck, and the pin over the north tower's crown
-  const ring = new THREE.Mesh(new THREE.RingGeometry(2.4, 2.54, 64), glowMat(PAL.cyan, 0, null));
+  // The hover ring round the north tower's foot, and the pin over its flame
+  const ring = new THREE.Mesh(new THREE.RingGeometry(4.6, 4.74, 72), glowMat(PAL.cyan, 0, null));
   ring.rotation.x = -Math.PI / 2;
-  const mid = (DECK.z0 + DECK.z1) / 2;
-  ring.position.set(LX, 0.075, mid);
+  ring.position.set(BX, SLAB + 0.03, TOWERS[0]);
   group.add(fx(ring));
-  const spot: Spot = { id: 'liberty', group, focus: V(LX, 4.5, (TOWERS[0] + TOWERS[1]) / 2), size: 22, pin: V(LX, TOWER_H + 1.3, TOWERS[0]), ring };
+  const mid = (TOWERS[0] + TOWERS[1]) / 2;
+  const spot: Spot = { id: 'liberty', group, focus: V(BX, 4, mid), size: 24, pin: V(BX, TOWER.flame.base + TOWER.flame.h + 1.2, TOWERS[0]), ring };
   return { spot };
 }

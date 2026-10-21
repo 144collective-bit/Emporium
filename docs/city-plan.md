@@ -139,22 +139,21 @@ Checked with `?fps` at every step (and on a real phone):
 
 Each phase gets the owner's sign-off before the next one starts.
 
-## Liberty Bridge (after the redesign)
+## Liberty Bridge and the wider river (after the redesign)
 
 The owner asked for a one-of-a-kind landmark bridge from West 3 to South 1,
-called Liberty Bridge, with the Liberty flame on it: road and walks, twin
-towers. Built in one go:
+called Liberty Bridge, with the Liberty flame on it. A first draft (a
+suspension bridge carrying a new road) was replaced, at the owner's call,
+by a stone footbridge in the style of an old gate-tower bridge, built up
+and over the water, with the river widened five times over:
 
-- Liberty Road (`LIBERTY_ROAD`, layout.ts) runs south off the west cross
-  street down the middle of the old West 3 and South 1 plots, over the
-  river to the Southside Loop: lights where it crosses the cross street and
-  both river avenues, real traffic both ways, walkers on the deck.
-- West 3 and South 1 left the plot market (`BRIDGE_PLOTS`); owners got
-  everything they paid back. Their outer blocks are cut in two along the
-  road.
-- The bridge itself is liberty.ts (numbers) and libertybridge.ts (scene):
-  a suspension bridge whose towers stand on the two old plots, the cables
-  leaping both river avenues and dipping over the water.
+- The river is 15 wide (`RIVER_W`); it widened southwards and everything
+  south of it moved 12 south (`SOUTH_SHIFT`), the airport included.
+- The bridge (liberty.ts, libertybridge.ts) stands just west of the W3 and
+  S1 plots, which stay on the market: a gate tower on each bank with
+  stairs up both sides, the walkway on arches high over both river
+  avenues and the river, and the Liberty flame spiralling up from each
+  tower in 3D.
 
 ## Still to do for performance
 

@@ -9,7 +9,7 @@ import { CENTER, EW_ROADS, NS_ROADS, RIVER, SLAB, type Tick } from './world';
 
 import { PLAN, distToStreet, outset } from './streetplan';
 import { CITY_EXT } from './layout';
-import { DECK_STROLLS } from './liberty';
+import { BOAT_LANES, DECK_STROLLS, DECK_Y } from './liberty';
 import { JUNCTIONS, ROUTES, lightState, phaseOf, pointOn, rightOf, type Junction, type Phase, type Pt, type Route } from './routes';
 import { CARS, PAINTS, carGeometry, carMaterials, type CarId } from './cars';
 import type { Idle } from './landmarks';
@@ -321,8 +321,12 @@ const SEAT_DROP = (HIP_HEIGHT - 0.03) * PERSON_SCALE;
 function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f: Tick) => void) {
   const people: Person[] = [];
   // Round downtown's blocks (the square and the pocket parks too), and the south row's (the street life across the river),
-  // and up and down Liberty Bridge's deck walks
-  const blocks = [...PLAN.blocks.filter((b) => b.id.startsWith('dt-') || (b.use === 'district' && b.ref!.startsWith('S'))).map((b) => b.poly), ...DECK_STROLLS];
+  // and up and down Liberty Bridge's walkway, up on its arches
+  const walks: { poly: Pt[]; y?: number }[] = [
+    ...PLAN.blocks.filter((b) => b.id.startsWith('dt-') || (b.use === 'district' && b.ref!.startsWith('S'))).map((b) => ({ poly: b.poly })),
+    ...DECK_STROLLS.map((poly) => ({ poly, y: DECK_Y })),
+  ];
+  const blocks = walks.map((w) => w.poly);
   const loops = new Map<string, Loop>();
   const loopOf = (b: number, inset: number) => {
     const key = `${b}:${inset}`;
@@ -354,6 +358,7 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
         loop,
         seg: 0,
         inset: lane.inset,
+        y: walks[b].y,
         u: (off + (k / members.length) * loop.len) % loop.len,
         dir: lane.dir,
         speed: lane.speed,
@@ -424,9 +429,10 @@ function buildBoats(scene: THREE.Scene, tick: (f: Tick) => void) {
   const boats: { g: THREE.Group; x: number; z: number; v: number; ph: number }[] = [];
   const wakeMat = new THREE.MeshBasicMaterial({ color: '#cfefff', transparent: true, opacity: 0.35, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, map: glowTex });
   const specs: [string, number, number][] = [
-    ['#f3f2f7', RIVER[0] + 1.0, 1.1],
-    ['#e23b3b', RIVER[1] - 1.0, -0.8],
-    ['#ffd23f', RIVER[0] + 1.6, 0.6],
+    // Spread across the river, each down the middle of one of Liberty Bridge's arches (liberty.ts)
+    ['#f3f2f7', BOAT_LANES[0], 1.1],
+    ['#e23b3b', BOAT_LANES[2], -0.8],
+    ['#ffd23f', BOAT_LANES[1], 0.6],
   ];
   specs.forEach(([color, z, v], i) => {
     const g = new THREE.Group();

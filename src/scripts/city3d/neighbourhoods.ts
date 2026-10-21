@@ -12,7 +12,7 @@
  */
 import * as THREE from 'three';
 import { Batch, PAL, neon, toon } from './kit';
-import { BENDS, BEND_REACH, JETTIES, LAWN_TREES, OUTER_PARKS, PROMENADE, SQUARE_LAYOUTS, offBridges, onLiberty, type Pt, type SquareLayout } from './outer';
+import { BENDS, BEND_REACH, JETTIES, LAWN_TREES, OUTER_PARKS, PROMENADE, SQUARE_LAYOUTS, offBridges, offFootbridge, type Pt, type SquareLayout } from './outer';
 import { EW_ROADS, LANE, NS_ROADS, RIVER } from './layout';
 import { SLAB as S, addLamp, addTree, lotMat, waterMat, type Tick } from './world';
 import type { Idle } from './landmarks';
@@ -200,7 +200,7 @@ function bendLamps() {
       let n: Pt = [-(c[1] - a[1]) / l, (c[0] - a[0]) / l];
       if ((bend.centre[0] - c[0]) * n[0] + (bend.centre[1] - c[1]) * n[1] < 0) n = [-n[0], -n[1]];
       const [x, z] = [c[0] + n[0] * (LANE + 0.15), c[1] + n[1] * (LANE + 0.15)];
-      if (NS_ROADS.some((r) => Math.abs(x - r.c) < r.half + BEND_REACH + 1) || EW_ROADS.some((r) => Math.abs(z - r.c) < r.half + BEND_REACH + 1) || onLiberty([x, z], BEND_REACH + 1)) continue;
+      if (NS_ROADS.some((r) => Math.abs(x - r.c) < r.half + BEND_REACH + 1) || EW_ROADS.some((r) => Math.abs(z - r.c) < r.half + BEND_REACH + 1)) continue;
       // The arm reaches back over the road
       addLamp(x, z, Math.atan2(n[1], -n[0]));
     }
@@ -233,13 +233,13 @@ function promenade(b: Batch, low: boolean) {
     }
     // Trees in planters and benches facing the water, between the lamps (which stand every 6 from x0)
     for (let x = x0 + 3; x < x1; x += 12) {
-      if (!offBridges(x, 1.2) || deckAt(x)) continue;
+      if (!offBridges(x, 1.2) || !offFootbridge(x, 1.2) || deckAt(x)) continue;
       const z = (inner + edge) / 2 - toWater * 0.15;
       cyl(b, 0.42, 0.4, x, 0, z, toon('#6e6a8c'), 10);
       addTree(x, z, 0.8, false, 0.4);
     }
     for (let x = x0 + 9; x < x1; x += 12) {
-      if (!offBridges(x, 1.2) || deckAt(x)) continue;
+      if (!offBridges(x, 1.2) || !offFootbridge(x, 1.2) || deckAt(x)) continue;
       bench(b, [x, edge - toWater * 0.75], toWater > 0 ? 0 : Math.PI, 0.02);
     }
     // Viewing decks out over the water, with a rail round them

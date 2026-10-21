@@ -334,7 +334,7 @@ function terminal(b: Batch, group: THREE.Group, crowd: Idle[], low: boolean) {
   box(b, x0 - 1, H - 0.18, z0 - 3.25, x1 + 1, H - 0.12, z0 - 3.15, soft(PAL.cyan));
   for (let x = x0 + 4; x < x1; x += 10) cyl(b, 0.14, H - 0.1, x, 0, z0 - 2.8, PALE, 10);
   // Rooftop plant
-  for (const x of [104, 126, 151]) box(b, x, H + 1.0, 136, x + 2.2, H + 1.6, 137.6, STEEL);
+  for (const x of [104, 126, 151]) box(b, x, H + 1.0, z0 + 5, x + 2.2, H + 1.6, z0 + 6.6, STEEL);
 
   // The sign over the entrance
   const sign = canvasTex(1024, 128, (c) => {

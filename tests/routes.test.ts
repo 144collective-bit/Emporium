@@ -7,28 +7,13 @@ import { JUNCTIONS, ROUTES, lightState, pointOn, type Phase } from '../src/scrip
 import { PLAN, distToStreet, onSlab } from '../src/scripts/city3d/streetplan';
 import { DIAGONALS } from '../src/scripts/city3d/downtown';
 import { BENDS } from '../src/scripts/city3d/outer';
-import { EW_ROADS, LIBERTY_ROAD, NS_ROADS, RIVER } from '../src/scripts/city3d/layout';
+import { EW_ROADS, NS_ROADS } from '../src/scripts/city3d/layout';
 
 const roads = PLAN.streets.filter((s) => s.lanes > 0);
 
-test('a route for every lane of every straight road, two down each diagonal, two round each bend, four over Liberty Bridge, one to the airport', () => {
+test('a route for every lane of every straight road, two down each diagonal, two round each bend, one to the airport', () => {
   const lanes = [...EW_ROADS, ...NS_ROADS].reduce((n, r) => n + r.lanes * 2, 0);
-  assert.equal(ROUTES.length, lanes + DIAGONALS.length * 2 + BENDS.length * 2 + 4 + 1);
-});
-
-test('Liberty Bridge carries traffic both ways, stopping at the lights at both river avenues', () => {
-  // Where each route crosses the middle of the river on Liberty Road: +1 heading south, -1 heading north
-  const ways = ROUTES.map((r) => {
-    const i = r.pts.findIndex((p, i) => i > 0 && Math.abs(p[0] - LIBERTY_ROAD.c) < LIBERTY_ROAD.half && (p[1] - RIVER[0]) * (r.pts[i - 1][1] - RIVER[0]) <= 0);
-    return i < 0 ? 0 : Math.sign(r.pts[i][1] - r.pts[i - 1][1]);
-  });
-  assert.equal(ways.filter((w) => w > 0).length, 2, 'two routes south over it');
-  assert.equal(ways.filter((w) => w < 0).length, 2, 'two routes north over it');
-  ROUTES.forEach((r, i) => {
-    if (!ways[i]) return;
-    const lit = r.stops.filter((s) => s.j.lit && s.j.streets.some((st) => st.id === 'liberty'));
-    assert.ok(lit.length >= 2, 'stops at the lights at both river avenues');
-  });
+  assert.equal(ROUTES.length, lanes + DIAGONALS.length * 2 + BENDS.length * 2 + 1);
 });
 
 test("every route stays on the asphalt, a car's width in from the kerb, and off every slab", () => {

@@ -137,7 +137,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // The Fight Club on the south bank: a place too (its pin and panel)
   const fightClub = buildFightClub(scene, { tick, reduced, low: tier === 'low' });
   spots.push(fightClub.spot);
-  // Liberty Bridge: Liberty Road over the river on its twin towers (a place too: its pin and panel)
+  // Liberty Bridge: the stone footbridge over the river (a place too: its pin and panel)
   const liberty = buildLibertyBridge(scene, { flame, tick, reduced, low: tier === 'low' });
   spots.push(liberty.spot);
   // ?fight: the sparring demo on the hangout square (the fight clips, before the Fight Club exists)
@@ -302,7 +302,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         startWalking(FIGHT_SPAWN);
       });
     }
-    // Liberty Bridge's panel: Walk in starts walk mode on the deck, looking along it to the south tower
+    // Liberty Bridge's panel: Walk in starts walk mode at the foot of the north tower's stairs
     if (id === 'liberty')
       panelBody.querySelector('[data-liberty-walkin]')?.addEventListener('click', () => {
         close();
