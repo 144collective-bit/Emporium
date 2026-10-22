@@ -536,3 +536,98 @@
     padding: 8px 10px;
   }
 }
+
+/* The metro's station card (metro-ui.ts): right side under the header (a bottom sheet on phones) */
+.metro-card {
+  position: absolute;
+  top: calc(var(--head-h) + 12px);
+  right: 16px;
+  z-index: 8;
+  display: grid;
+  gap: 10px;
+  width: 300px;
+  max-width: calc(100% - 32px);
+  padding: 12px 14px 14px;
+  border: 1px solid #0000;
+  border-radius: 14px;
+  background:
+    linear-gradient(#100d1ef5, #100d1ef5) padding-box,
+    linear-gradient(135deg, #e219e5, #8000ff) border-box;
+}
+.metro-card[hidden],
+.city:not([data-mode="walk"]) .metro-card {
+  display: none;
+}
+.metro-roundel,
+.metro-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #e219e5;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 900;
+  color: #fff;
+}
+.metro-mark {
+  padding: 0;
+}
+.metro-note {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+.metro-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.metro-go {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #0000;
+  border-radius: 10px;
+  background:
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
+  font: inherit;
+  font-size: 14px;
+  color: #fff;
+  text-align: left;
+  cursor: pointer;
+}
+.metro-go:hover {
+  background:
+    var(--pulse-wash) padding-box,
+    linear-gradient(#14102a, #14102a) padding-box,
+    var(--pulse) border-box;
+}
+.metro-go small {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  color: var(--p-cyan);
+}
+.metro-bar {
+  border-color: #0000;
+  background:
+    linear-gradient(#0b0a12f0, #0b0a12f0) padding-box,
+    linear-gradient(90deg, #e219e5, #8000ff) border-box;
+}
+@media (max-width: 640px) {
+  .metro-card {
+    top: auto;
+    right: 8px;
+    bottom: calc(8px + env(safe-area-inset-bottom));
+    left: 8px;
+    width: auto;
+    max-width: none;
+  }
+}

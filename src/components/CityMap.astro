@@ -758,6 +758,22 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     <button type="button" class="taxi-btn" data-taxi-skip hidden>Skip ride</button>
     <button type="button" class="taxi-btn taxi-cancel" data-taxi-cancel hidden>Cancel</button>
   </div>
+  {/* The metro (metro-ui.ts, growth plan Phase 8): a station's card (the other stations, a ride each), and the ride's bar */}
+  <section class="metro-card" data-metro hidden aria-labelledby="metro-title">
+    <div class="pop-head">
+      <p class="pop-title"><span class="metro-roundel" aria-hidden="true">M</span> <span id="metro-title" data-metro-title>Station</span></p>
+      <button type="button" class="pop-close" data-metro-close aria-label="Close the station card">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
+      </button>
+    </div>
+    <p class="metro-note">Sector 7 Metro: pick a station and ride. Free.</p>
+    <ul class="metro-list" data-metro-list></ul>
+  </section>
+  <div class="taxi-bar metro-bar" data-metro-bar hidden aria-live="polite">
+    <span class="taxi-mark metro-mark" aria-hidden="true">M</span>
+    <p class="taxi-text" data-metro-text></p>
+    <button type="button" class="taxi-btn" data-metro-skip>Skip ride</button>
+  </div>
   {/* The world map (worldmap.ts, growth plan Phase 8): the whole city drawn from the street plan, places,
       you, your car and aircraft and your waypoint; a card for what's tapped (waypoint, taxi, fast travel, bring my car) */}
   <section class="worldmap" data-worldmap hidden role="dialog" aria-modal="true" aria-labelledby="wm-title">
