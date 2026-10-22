@@ -1,0 +1,452 @@
+/* The world map (worldmap.ts, growth plan Phase 8): an overlay under the header with the map's canvas,
+   zoom tools, a legend and the card for what's tapped; the Map walk tab, the Directory's entry and the
+   waypoint's compass in the walk HUD. */
+.worldmap {
+  position: absolute;
+  inset: calc(var(--head-h) + 8px) 8px 8px;
+  z-index: 13;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+  border: 1px solid #0000;
+  border-radius: 16px;
+  background:
+    linear-gradient(#0a0a14f5, #0a0a14f5) padding-box,
+    var(--pulse) border-box;
+}
+.worldmap[hidden] {
+  display: none;
+}
+.wm-head {
+  position: relative;
+  padding: 12px 250px 10px 16px;
+  border-bottom: 1px solid var(--line);
+}
+.wm-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  line-height: 1.1;
+  color: #fff;
+}
+.wm-sub {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+.wm-close {
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+}
+.wm-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: grab;
+}
+.wm-canvas:active {
+  cursor: grabbing;
+}
+.wm-tools {
+  position: absolute;
+  top: calc(var(--wm-head, 64px) + 12px);
+  right: 12px;
+  display: grid;
+  gap: 6px;
+}
+.wm-tools button {
+  min-width: 40px;
+  height: 40px;
+  padding: 0 8px;
+  border: 1px solid #0000;
+  border-radius: 10px;
+  background:
+    linear-gradient(#0b0a12e8, #0b0a12e8) padding-box,
+    var(--pulse) border-box;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+}
+.wm-tools button[data-wm-zoom="1"],
+.wm-tools button[data-wm-zoom="-1"] {
+  font-size: 18px;
+}
+.wm-legend {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  max-width: calc(100% - 24px);
+  margin: 0;
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: #0b0a12d0;
+  list-style: none;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-2);
+  pointer-events: none;
+}
+.wm-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.wm-key {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+.wm-key-you {
+  background: #00eaff;
+  clip-path: polygon(50% 0, 100% 100%, 50% 75%, 0 100%);
+  border-radius: 0;
+}
+.wm-key-place {
+  background: #00eaff;
+}
+.wm-key-metro {
+  background: #e219e5;
+}
+.wm-key-car {
+  background: #ffc23d;
+  border-radius: 2px;
+}
+.wm-key-way {
+  background: #f10e7d;
+  border-radius: 0;
+  transform: rotate(45deg) scale(0.85);
+}
+/* The card for what's tapped: bottom left over the map (a bottom sheet on phones) */
+.wm-card {
+  position: absolute;
+  left: 12px;
+  bottom: 52px;
+  display: grid;
+  gap: 10px;
+  width: 300px;
+  max-width: calc(100% - 24px);
+  padding: 12px 14px 14px;
+  border: 1px solid #0000;
+  border-radius: 12px;
+  background:
+    linear-gradient(#100d1ef5, #100d1ef5) padding-box,
+    var(--pulse) border-box;
+}
+.wm-card[hidden] {
+  display: none;
+}
+.wm-card-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 800;
+  text-transform: uppercase;
+  line-height: 1.1;
+  color: #fff;
+}
+.wm-card-sub {
+  margin: 2px 0 0;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--p-cyan);
+}
+.wm-acts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+}
+.wm-act {
+  padding: 8px 12px;
+  border: 1px solid #0000;
+  border-radius: 999px;
+  background:
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #fff;
+  cursor: pointer;
+}
+.wm-act:hover:not(:disabled) {
+  background:
+    var(--pulse-wash) padding-box,
+    linear-gradient(#14102a, #14102a) padding-box,
+    var(--pulse) border-box;
+}
+.wm-act:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.wm-note {
+  flex-basis: 100%;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+/* The Directory's entry and the Map walk tab */
+.city-dir .dir-map {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  width: calc(100% - 16px);
+  margin: 0 8px 4px;
+  padding: 8px 10px;
+  border: 1px solid #0000;
+  border-radius: 6px;
+  background:
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
+  font: inherit;
+  font-size: 14px;
+  color: #fff;
+  text-align: left;
+  cursor: pointer;
+}
+.city-dir .dir-map span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.city-dir .dir-map svg {
+  color: var(--p-cyan);
+}
+.city:not([data-view="3d"]) .city-dir .dir-map {
+  display: none;
+}
+.walk-map-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border: 1px solid #0000;
+  border-radius: 999px;
+  background:
+    linear-gradient(#0b0a12e0, #0b0a12e0) padding-box,
+    var(--pulse) border-box;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #fff;
+  cursor: pointer;
+}
+.walk-map-tab svg {
+  color: var(--p-cyan);
+}
+.city.has-worldmap .walk-map-tab {
+  background:
+    var(--pulse-wash) padding-box,
+    linear-gradient(#14102a, #14102a) padding-box,
+    var(--pulse) border-box;
+}
+/* While the map is open the walk HUD's touch controls step aside */
+.city.has-worldmap .walk-hud,
+.city.has-worldmap .walk-prompt {
+  visibility: hidden;
+}
+
+/* The waypoint's compass: top right under the header (the middle has the hints and toasts), an arrow turning towards it */
+.wm-compass {
+  position: absolute;
+  top: calc(var(--head-h) + 12px);
+  right: 16px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px 5px 10px;
+  border: 1px solid #0000;
+  border-radius: 999px;
+  background:
+    linear-gradient(#0b0a12e0, #0b0a12e0) padding-box,
+    linear-gradient(90deg, #f10e7d, #e219e5) border-box;
+  white-space: nowrap;
+}
+.wm-compass[hidden] {
+  display: none;
+}
+.wm-compass-arrow {
+  width: 14px;
+  height: 16px;
+  background: #f10e7d;
+  clip-path: polygon(50% 0, 100% 100%, 50% 72%, 0 100%);
+}
+.wm-compass-text {
+  display: grid;
+  line-height: 1.1;
+}
+.wm-compass-text b {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: #fff;
+}
+.wm-compass-text small {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--p-cyan);
+}
+.wm-compass-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: none;
+  color: var(--text-2);
+  cursor: pointer;
+}
+/* Racing or fighting: their own HUD has the top */
+.city.is-karting .wm-compass,
+.city.is-fighting .wm-compass {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .worldmap {
+    inset: calc(var(--head-h) + 4px) 4px 4px;
+    border-radius: 12px;
+  }
+  .wm-head {
+    padding: 9px 56px 8px 12px;
+  }
+  .wm-title {
+    font-size: 18px;
+  }
+  .wm-sub {
+    font-size: 11.5px;
+  }
+  .wm-tools {
+    top: calc(var(--wm-head, 60px) + 8px);
+    right: 8px;
+  }
+  .wm-tools button {
+    min-width: 38px;
+    height: 38px;
+  }
+  .wm-legend {
+    left: 8px;
+    bottom: 8px;
+    gap: 3px 10px;
+    font-size: 9px;
+  }
+  .wm-card {
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    width: auto;
+    max-width: none;
+  }
+  .wm-compass {
+    top: calc(var(--head-h) + 8px);
+    right: 12px;
+  }
+}
+@media (max-width: 420px) {
+  .walk-map-tab {
+    padding: 9px 12px;
+  }
+  .city-head .walk-map-tab {
+    padding: 8px 9px;
+  }
+}
+/* Phones on their side: a shorter head */
+@media (max-height: 520px) and (orientation: landscape) {
+  .wm-sub {
+    display: none;
+  }
+  .wm-head {
+    padding-block: 6px;
+  }
+}
+
+/* Fast travel: the city fades out and back in round the jump */
+.city3d::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: #05050a;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s;
+}
+.city.is-fading .city3d::after {
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .city3d::after {
+    transition: none;
+  }
+}
+
+/* Find a place: top right of the head, left of the × */
+.wm-find {
+  position: absolute;
+  top: 50%;
+  right: 60px;
+  transform: translateY(-50%);
+}
+.wm-find select {
+  max-width: 180px;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #0b0a12;
+  font: inherit;
+  font-size: 13px;
+  color: #fff;
+}
+@media (max-width: 760px) {
+  .wm-head {
+    padding-right: 196px;
+  }
+  .wm-find {
+    right: 54px;
+  }
+  .wm-find select {
+    max-width: 136px;
+    font-size: 12px;
+  }
+}
+@media (max-width: 640px) {
+  .wm-sub {
+    display: none;
+  }
+}
+@media (max-width: 340px) {
+  .wm-head {
+    padding-right: 160px;
+  }
+  .wm-find select {
+    max-width: 104px;
+  }
+}

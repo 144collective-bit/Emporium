@@ -3,7 +3,8 @@
  * Signal tower's board): a tall neon column and a ring on the ground at the
  * building's door, so you can find it from anywhere in the city, walking,
  * driving or from the City view. Getting started's step (guide.ts) has one
- * of its own in cyan. Under reduced motion they don't pulse.
+ * of its own in cyan, and the world map's waypoint (worldmap.ts) one in
+ * magenta. Under reduced motion they don't pulse.
  */
 import * as THREE from 'three';
 import { PAL, fx, glowMat, neon } from './kit';
@@ -28,10 +29,11 @@ export function buildBeacons(scene: THREE.Scene, tick: (f: Tick) => void, reduce
   };
   const beams = Array.from({ length: MAX }, () => beam(PAL.warm));
   const step = beam(PAL.cyan);
+  const way = beam(PAL.magenta);
   tick((env) => {
     if (reduced) return;
     const k = 1 + Math.sin(env.t * 3) * 0.08;
-    for (const b of [...beams, step]) if (b.g.visible) b.ring.scale.setScalar(k);
+    for (const b of [...beams, step, way]) if (b.g.visible) b.ring.scale.setScalar(k);
   });
   return {
     /** Light the drop-offs (up to three) */
@@ -46,6 +48,11 @@ export function buildBeacons(scene: THREE.Scene, tick: (f: Tick) => void, reduce
     guide(at: { x: number; z: number } | null) {
       step.g.visible = !!at;
       if (at) step.g.position.set(at.x, 0, at.z);
+    },
+    /** Light the world map's waypoint (null: none) */
+    waypoint(at: { x: number; z: number } | null) {
+      way.g.visible = !!at;
+      if (at) way.g.position.set(at.x, 0, at.z);
     },
   };
 }

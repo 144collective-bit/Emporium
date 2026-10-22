@@ -32,6 +32,8 @@ export interface WorldMapDeps {
   /** Walking on foot (free to take a taxi or travel), walking but busy (driving...), or not walking */
   state(): 'foot' | 'busy' | 'city';
   openSpot(id: string): void;
+  /** From the City view: start walking there (places you've been) */
+  walkHere(p: Place): void;
   travel(p: Place): void;
   taxi(p: Place): void;
   bringCar(): boolean;
@@ -62,17 +64,19 @@ const C = {
   label: '#f3f2f7',
 };
 
+/** A place's name and a line under it: the copy on its pin (CityMap.astro's directory), or its own */
+export function placeName(root: HTMLElement, p: Place) {
+  if (p.name) return { name: p.name, sub: p.kind === 'metro' ? 'Metro' : '' };
+  const a = root.querySelector(`[data-dir-spot="${p.spot}"]`);
+  return { name: a?.querySelector('span')?.textContent?.trim() ?? p.id, sub: a?.querySelector('small')?.textContent?.trim() ?? '' };
+}
+
 export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
   const el = root.querySelector<HTMLElement>('[data-worldmap]')!;
   const canvas = el.querySelector<HTMLCanvasElement>('[data-wm-canvas]')!;
   const card = el.querySelector<HTMLElement>('[data-wm-card]')!;
   const ctx = canvas.getContext('2d')!;
-  /** The names on the pins (CityMap.astro's directory), for places with one */
-  const nameOf = (p: Place) => {
-    if (p.name) return { name: p.name, sub: p.kind === 'metro' ? 'Metro' : '' };
-    const a = root.querySelector(`[data-dir-spot="${p.spot}"]`);
-    return { name: a?.querySelector('span')?.textContent ?? p.id, sub: a?.querySelector('small')?.textContent ?? '' };
-  };
+  const nameOf = (p: Place) => placeName(root, p);
 
   /** The view: the world point at the middle and how many pixels a tile is */
   const view = { x: 30, z: 40, s: 1 };
@@ -203,7 +207,7 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
       const name = nameOf(p).name;
       const tw = ctx.measureText(name).width;
       const lx = x + 10;
-      if (!(pick?.kind === 'place' && pick.place === p) && labels.some((o) => Math.abs(o.y - y) < 13 && lx < o.x + o.w && lx + tw > o.x)) continue;
+      if (!(pick?.kind === 'place' && pick.place === p) && labels.some((o) => Math.abs(o.y - y) < 14 && lx < o.x + o.w + 8 && lx + tw + 8 > o.x)) continue;
       labels.push({ x: lx, y, w: tw });
       ctx.lineWidth = 3;
       ctx.strokeStyle = '#05050acc';
@@ -309,6 +313,7 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
       const been = d.visited().includes(p.id);
       if (st === 'city') {
         if (p.spot) acts += btn('open', 'Open');
+        acts += btn('walkhere', 'Walk here', !been, been ? '' : 'Walk there once to start walking from it');
         acts += btn('waypoint', 'Set waypoint');
       } else {
         acts += btn('waypoint', 'Set waypoint');
@@ -345,6 +350,10 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
     } else if (act === 'open' && pick.kind === 'place' && pick.place.spot) {
       close();
       d.openSpot(pick.place.spot);
+    } else if (act === 'walkhere' && pick.kind === 'place') {
+      const p = pick.place;
+      close();
+      d.walkHere(p);
     } else if (act === 'taxi' && pick.kind === 'place') {
       const p = pick.place;
       close();
@@ -460,12 +469,32 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
     redraw();
   }
 
+  // Find a place (the keyboard's way in too): centre on it and open its card
+  const find = el.querySelector<HTMLSelectElement>('[data-wm-find]');
+  if (find) {
+    for (const p of PLACES) find.add(new Option(nameOf(p).name, p.id));
+    find.addEventListener('change', () => {
+      const p = PLACES.find((o) => o.id === find.value);
+      find.value = '';
+      if (!p) return;
+      view.x = p.at.x;
+      view.z = p.at.z;
+      view.s = Math.max(view.s, 3);
+      clampView();
+      pick = { kind: 'place', place: p };
+      showCard();
+      redraw();
+      card.querySelector<HTMLButtonElement>('.wm-act:not(:disabled)')?.focus({ preventScroll: true });
+    });
+  }
+
   /* ---------- Open and close ---------- */
   const resize = () => {
     const r = canvas.getBoundingClientRect();
     dpr = Math.min(2, window.devicePixelRatio || 1);
     w = r.width;
     h = r.height;
+    el.style.setProperty('--wm-head', `${el.querySelector<HTMLElement>('.wm-head')?.offsetHeight ?? 60}px`);
     canvas.width = Math.round(w * dpr);
     canvas.height = Math.round(h * dpr);
     clampView();

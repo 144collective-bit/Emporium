@@ -33,6 +33,7 @@ import { createTycoonUI, type TycoonUI } from './tycoon-ui';
 import { buildUnits } from './units';
 import { buildBigLots } from './biglots';
 import { buildBeacons } from './beacons';
+import { createTravelUI } from './travel-ui';
 import { buildKartPark } from './kartpark3d';
 import { KART_SPAWN } from './kartpark';
 import { AIR_SPAWN } from './airfield';
@@ -657,6 +658,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     if (e.key === 'Escape' && accountUI?.close()) return;
     if (root.dataset.view !== '3d') return;
     if (accountUI?.isOpen) return;
+    // The world map: M opens it walking (no panel or menu open) or in City view, M or Esc closes it
+    if (travel.key(e, walking ? !active && walk.onFoot && !root.querySelector('.shop:not([hidden]), [data-char]:not([hidden])') : !builder.active)) return;
     if (walking) {
       if (e.key === 'Escape') {
         if (walk.closeShop() || walk.releaseMouse() || closePop()) return;
@@ -728,6 +731,26 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       open(a.dataset.dirSpot!);
     })
   );
+
+  /* ---------- Getting about (growth plan Phase 8): the world map, waypoints, fast travel, taxis, the metro ---------- */
+  const travel = createTravelUI({
+    root,
+    camera,
+    walk,
+    game,
+    reduced,
+    walking: () => walking,
+    target: () => controls.target,
+    beam: (at) => {
+      beacons.waypoint(at);
+      dirty = true;
+    },
+    open: (id) => open(id),
+    startWalking: (at) => startWalking(at),
+    want: (x, z, r) => works.want(x, z, r),
+    taxi: () => game.toast('Taxis are on their way'),
+    riding: () => false,
+  });
 
   /* ---------- Controls: time, weather, sound, view ---------- */
   const sound = createSound();
@@ -838,7 +861,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // Walk / Build pills never sit on top of a building's name. Re-read a few
   // times a second (they open, close and move with the layout)
   // The header, its open drop-downs (settings, menu), the welcome card, the guide and the kart, flight, drive and fight HUDs
-  const chrome = [...root.querySelectorAll<HTMLElement>('.city-head, .head-panel, .city-card, .city-guide, .kart-hud, .fly-hud, .drive-hud, .fight-demo, [data-fight-hud]')];
+  const chrome = [...root.querySelectorAll<HTMLElement>('.city-head, .head-panel, .city-card, .city-guide, .kart-hud, .fly-hud, .drive-hud, .fight-demo, [data-fight-hud], .wm-compass')];
   const chromeRects: { x: number; y: number; w: number; h: number }[] = [];
   const readChrome = () => {
     const o = host.getBoundingClientRect();
@@ -894,6 +917,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       }
     } else if (walking) {
       walk.update(dt, reduced ? 0 : t);
+      travel.update(dt);
       walker.x = walk.position.x;
       walker.z = walk.position.z;
       // A car reaches further than someone on foot, an aircraft on the ground further still; in the air it's no one's business
