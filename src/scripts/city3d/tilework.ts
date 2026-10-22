@@ -45,7 +45,7 @@ export interface TileWork {
   want(x: number, z: number, r: number): void;
   /** Build now everything waiting in a view (the intro) */
   wantView(planes: readonly Plane[], far: number, x: number, y: number, z: number): void;
-  stats(): { built: number; waiting: number; atBoot: number; released: number; held: number; budget: number; rebuilt: number; bootMs: number; laterMs: number };
+  stats(): { built: number; waiting: number; atBoot: number; released: number; held: number; budget: number; rebuilt: number; bootMs: number; laterMs: number; slowest: { ms: number; id: string } };
 }
 
 /** The tallest the city's fixed geometry stands, for whether a tile is in view */
@@ -64,6 +64,8 @@ export function createTileWork(scene: THREE.Scene, opts: { budget: number; compi
   // Milliseconds spent building sites at the boot, and after it
   let bootMs = 0;
   let laterMs = 0;
+  // The longest one site took to build after the boot (a frame's hitch), and which
+  let slowest = { ms: 0, id: '' };
   const released = new Set<string>();
   // The camera's speed over the ground (smoothed), for building ahead
   const vel = { x: 0, z: 0, px: NaN, pz: NaN };
@@ -80,7 +82,9 @@ export function createTileWork(scene: THREE.Scene, opts: { budget: number; compi
     g.removeFromParent();
     // A site only fills Batches: anything else it left is let go
     g.traverse((o) => (o as THREE.Mesh).geometry?.dispose());
-    laterMs += performance.now() - t0;
+    const ms = performance.now() - t0;
+    laterMs += ms;
+    if (ms > slowest.ms) slowest = { ms, id: s.id };
   }
 
   function build(i: number) {
@@ -181,6 +185,6 @@ export function createTileWork(scene: THREE.Scene, opts: { budget: number; compi
         if (back.length) rebuild(back.map((t) => t.key));
       }
     },
-    stats: () => ({ built, waiting: queue.length, atBoot, released: released.size, held: tiled?.heldBytes() ?? 0, budget: opts.budget, rebuilt, bootMs, laterMs }),
+    stats: () => ({ built, waiting: queue.length, atBoot, released: released.size, held: tiled?.heldBytes() ?? 0, budget: opts.budget, rebuilt, bootMs, laterMs, slowest }),
   };
 }

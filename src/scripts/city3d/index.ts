@@ -7,12 +7,12 @@ import * as THREE from 'three';
 import { MapControls } from 'three/addons/controls/MapControls.js';
 import { consolidate, loadImage, loadTex, updateLights } from './kit';
 import { createPost } from './post';
-import { CENTER, buildGround, buildLamps, buildSkyline, buildTrees, puddleMat, scatterOutskirts, waterMat, type Env, type Tick } from './world';
+import { CENTER, buildGround, buildLamps, buildSkyline, buildTrees, puddleMat, keepTreesOff, scatterOutskirts, waterMat, type Env, type Tick } from './world';
 import { buildLandmarks, type Spot } from './landmarks';
 import { buildInfill } from './infill';
 import { buildNeighbourhoods } from './neighbourhoods';
 import { buildLife, walker } from './life';
-import { createWalk } from './walk';
+import { addSlabs, createWalk } from './walk';
 import { buildGarage } from './garage';
 import { buildAirport } from './airport';
 import { WORLD_BOUNDS } from './layout';
@@ -51,6 +51,8 @@ import { createBench } from './bench';
 import { mb, sceneMemory } from './perf';
 import { tileBatch } from './tilebatch';
 import { createTileWork } from './tilework';
+import { DISTRICT_VIEWS, buildTestDistrict } from './district3d';
+import { DISTRICT_RECT } from './testdistrict';
 import { tilesInView, type Plane } from './tiles';
 import { farForm, farLods, updateLods } from './lod';
 
@@ -161,6 +163,12 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   spots.push(liberty.spot);
   // ?fight: the sparring demo on the hangout square (the fight clips, before the Fight Club exists)
   const fightDemo = new URLSearchParams(location.search).has('fight') ? (await import('./fight-demo')).buildFightDemo({ scene, root, reduced, low: tier === 'low', tick }) : null;
+  // ?district=test: the building kits' test district on the open land south-west of the town (growth plan Phase 4)
+  const district = new URLSearchParams(location.search).get('district') === 'test' ? buildTestDistrict(tier === 'low') : null;
+  if (district) {
+    keepTreesOff(DISTRICT_RECT);
+    addSlabs(district.slabs);
+  }
   progress(0.55);
   await waited(nextFrame());
   scatterOutskirts(Q.trees);
@@ -773,7 +781,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // (frames a second, the slowest frame, draw calls and triangles per frame, the
   // shadow map's share, memory, how long the boot took). ?bench runs the benchmark (bench.ts)
   const query = new URLSearchParams(location.search);
-  const bench = query.has('bench') ? createBench({ host, scene, tier, pixelRatio: () => renderer.getPixelRatio(), home, conditions: benchSky, boot: bootTimes }, query.get('bench') === 'night') : null;
+  const bench = query.has('bench') ? createBench({ host, scene, tier, pixelRatio: () => renderer.getPixelRatio(), home, conditions: benchSky, boot: bootTimes, extra: district ? DISTRICT_VIEWS : [] }, query.get('bench') === 'night') : null;
   const statsEl = query.has('fps') || bench ? document.createElement('pre') : null;
   const stat = { frames: 0, draws: 0, tris: 0, shadowDraws: 0, shadowTris: 0, worst: 0, last: 0, since: performance.now(), memAt: 0, mem: '' };
   function bootTimes() {
@@ -851,8 +859,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     const cpuStart = performance.now();
     timer.update();
     const t = timer.getElapsed();
-    // The benchmark starts once the start menu has gone and the city is showing
-    if (bench && !bench.active && !bench.done && !walking && !root.classList.contains('has-start')) bench.begin(t);
+    // The benchmark starts once the start menu has gone, the city is showing and every site is built (growth plan Phase 3)
+    if (bench && !bench.active && !bench.done && !walking && !root.classList.contains('has-start') && !works.stats().waiting) bench.begin(t);
     const busy = !!flight || walking || t - lastInput < 1 || !!bench?.active;
     if (idleFps && !busy && t - lastT < 1 / idleFps - 0.004) return;
     const dt = Math.min(t - lastT, 0.1);
@@ -907,7 +915,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     CROWD_VIEW.frustum.setFromProjectionMatrix(viewProj.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
     CROWD_VIEW.shadowOn = renderer.shadowMap.enabled && sky.shadowFrustum(CROWD_VIEW.shadow);
     // Building as you go (growth plan Phase 3): a few milliseconds a frame (more while the start menu covers the city)
-    works.step(root.classList.contains('has-start') ? 12 : tier === 'low' ? 2 : 3, CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, CROWD_VIEW.eye.z, dt, Q.far);
+    works.step(root.classList.contains('has-start') || (bench && !bench.active && !bench.done) ? 12 : tier === 'low' ? 2 : 3, CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, CROWD_VIEW.eye.z, dt, Q.far);
     // Near and far forms (growth plan Phase 2): the details only within the tier's `far` of the camera
     tiled.update(CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, CROWD_VIEW.eye.z, Q.far);
     updateLods(CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, CROWD_VIEW.eye.z, Q.far);
@@ -1022,7 +1030,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           stat.mem,
           `tiles ${tiled.drawn()} of ${tiled.pieces()} pieces drawn · ${tiled.nearTiles()} near · ${farLods()} far forms`,
           `boot ${(b.total / 1000).toFixed(1)} s · build ${(b.build / 1000).toFixed(1)} (work ${(b.work / 1000).toFixed(2)}, tiles ${(b.tiles / 1000).toFixed(2)}) · shaders ${(b.shaders / 1000).toFixed(1)}`,
-          (({ built, waiting, atBoot, bootMs, laterMs }) => `sites ${built} built: ${atBoot} at boot (${Math.round(bootMs)} ms), the rest after (${Math.round(laterMs)} ms) · ${waiting} waiting`)(works.stats()),
+          (({ built, waiting, atBoot, bootMs, laterMs, slowest }) => `sites ${built} built: ${atBoot} at boot (${Math.round(bootMs)} ms), the rest after (${Math.round(laterMs)} ms, slowest ${Math.round(slowest.ms)} ms: ${slowest.id}) · ${waiting} waiting`)(works.stats()),
           (({ released, held, budget, rebuilt }) => `near forms ${mb(held)} held of ${mb(budget)} · ${released} tiles let go · ${rebuilt} built again`)(works.stats()),
           `${tier} · px ${renderer.getPixelRatio().toFixed(2)}${lost.length ? ` · lowered: ${lost.join(', ')}` : ''}`,
           // Where Degen stands while walking (for placing things: ?spawn=x,z puts him back there)
