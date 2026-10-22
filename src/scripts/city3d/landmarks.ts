@@ -36,7 +36,8 @@ import {
 import { rifleGeometry } from './guns';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { parkedCars } from './cars';
-import { PLAYER, SOLDIER, attentionPose, createCrowd, createDegen, dancePose, lookPose, marchPose, newPose, type Outfit } from './character';
+import { PLAYER, SOLDIER, createCrowd, createDegen, dancePose, type Outfit } from './character';
+import { CLIP_SECONDS, MARCH_STRIDE } from './crowdclips';
 import { walker } from './life';
 import { SLAB as S, addLamp, addTree, placedMark, shiftPlaced, waterMat, type Tick } from './world';
 import { design, seat } from './layout';
@@ -2238,7 +2239,6 @@ function armoury(scene: THREE.Scene, ctx: LandmarkCtx) {
     ];
     const outfits: Outfit[] = [...Array.from({ length: squad }, () => SOLDIER), ...guards.map((): Outfit => ({ ...SOLDIER, rifle: 'left' })), { ...SOLDIER, rifle: undefined }];
     const crowd = createCrowd(g, outfits, { light: ctx.low });
-    const pose = newPose();
     // The patrol's route: a rounded rectangle in the open yard, east of the counter and clear of
     // the checkpoint lane and the vehicle bays
     const route: THREE.Vector2[] = [];
@@ -2276,19 +2276,17 @@ function armoury(scene: THREE.Scene, ctx: LandmarkCtx) {
       for (let i = 0; i < squad; i++) {
         const s = t * 0.38 - i * 1.05;
         const p = along(s);
-        marchPose(pose, s * 9, 'right');
-        crowd.set(i, p.x, S, p.z, p.yaw, 0.85, pose);
+        // The march played at its stride, so their boots stay put on the yard
+        crowd.set(i, p.x, S, p.z, p.yaw, 0.85, 'march', s / (MARCH_STRIDE * 0.85));
       }
       guards.forEach(([x, z], k) => {
         const [wx, wz] = design(x, z);
         const near = walker.on && Math.hypot(walker.x - wx, walker.z - wz) < 1.8;
         salute[k] += ((near ? 1 : 0) - salute[k]) * Math.min(1, dt * 6);
-        attentionPose(pose, salute[k], 'left');
-        crowd.set(squad + k, x, S, z, 0, 0.85, pose);
+        crowd.set(squad + k, x, S, z, 0, 0.85, 'salute', salute[k]);
       });
       // The clerk: at ease behind the counter, now and then looking round
-      lookPose(pose, t, 3);
-      crowd.set(squad + guards.length, 24.7, S, 26.99, 0, 0.85, pose);
+      crowd.set(squad + guards.length, 24.7, S, 26.99, 0, 0.85, 'look', t / CLIP_SECONDS + 0.3);
       crowd.commit();
     });
   }

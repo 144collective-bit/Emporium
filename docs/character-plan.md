@@ -306,7 +306,35 @@ The plan as it was:
 - No body options for now (the owner's call): every Degen wears the
   balaclava, and build and height stay as they are. Maybe later.
 
-### Phase 5: crowds, soldiers and the Fight Club's opponents
+### Phase 5: crowds, soldiers and the Fight Club's opponents (built)
+
+What's in (for the owner's sign-off):
+
+- **Every crowd person is the new body:** the brand-art head, the hands
+  with fingers and the new shoes, at a crowd's detail near the camera and
+  coarser further away (block hands, a simpler head).
+- **Skinned on the GPU from baked clips** (`crowdclips.ts`,
+  `crowdskin.ts`): the crowd's moves are sampled once into a float texture
+  of bone matrices, and each person is an instance that says which clip
+  and how far through it; the vertex shader does the skinning, in colour,
+  in shadow and in the ink outlines. The CPU only places people and picks
+  their frame, so hundreds of people cost what they did.
+- **The walk is the planted-feet walk:** recorded from `locomotion.ts` over
+  one cycle and played at its stride, so pedestrians' feet stay put on the
+  pavement (the tests hold a planted foot to about a centimetre a frame).
+  The soldiers' patrol is the same walk as a march (rifle arm still, the
+  free arm swinging straight); the guards salute to the brow now.
+- **Idle, look, chat and sit** loop seamlessly (the end eased into the
+  start), each person at their own point in it.
+- **The Fight Club's fighters** step with planted feet while moving round
+  the ring (the guard fades to the walk and back), and **other players**
+  (multiplayer, paused) walk and run the same way.
+- Measured with `?fps`: draw calls a little lower than before (desktop home
+  ~540, walking ~440, phone tier ~290), triangles about the same (desktop
+  ~1.1-1.2M, phone tier ~0.4M).
+- Not yet: crowds don't wear merch marks or prints.
+
+The plan as it was:
 
 - The new head and proportions in the instanced crowds at their levels,
   the better walk through baked animation (clips sampled into a texture

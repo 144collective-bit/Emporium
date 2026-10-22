@@ -3,6 +3,7 @@
  * bloom, tone mapping and (on low pixel ratios) anti-aliasing.
  */
 import * as THREE from 'three';
+import { injectCrowdSkin } from './crowdskin';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
@@ -87,6 +88,9 @@ export function createPost(renderer: THREE.WebGLRenderer, scene: THREE.Scene, ca
   depthTexture.type = THREE.UnsignedIntType;
   const normalTarget = new THREE.WebGLRenderTarget(size.x, size.y, { depthTexture, type: THREE.UnsignedByteType });
   const normalMat = new THREE.MeshNormalMaterial();
+  // The crowds are skinned on the GPU from their baked clips: their outlines follow (everything else reads crowdOn 0)
+  normalMat.onBeforeCompile = (sh) => injectCrowdSkin(sh);
+  normalMat.customProgramCacheKey = () => 'normal-crowd';
 
   const target = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples: opts.msaa });
   const composer = new EffectComposer(renderer, target);
