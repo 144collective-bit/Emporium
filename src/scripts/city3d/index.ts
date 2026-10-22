@@ -15,7 +15,7 @@ import { buildLife, walker } from './life';
 import { addSlabs, createWalk } from './walk';
 import { buildGarage } from './garage';
 import { buildAirport } from './airport';
-import { PAN_BOUNDS, overviewFrame } from './bounds';
+import { CAMERA_FAR, PAN_BOUNDS, overviewFrame } from './bounds';
 import { loadCar } from './garage-ui';
 import { createProfileUI } from './profile-ui';
 import { createCharScreen } from './charscreen';
@@ -183,7 +183,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   await waited(nextFrame());
 
   /* ---------- Camera ---------- */
-  const camera = new THREE.PerspectiveCamera(34, 1, 0.5, 440);
+  // Far enough to see the skyline ring past the world's edge from town (bounds.ts)
+  const camera = new THREE.PerspectiveCamera(34, 1, 0.5, CAMERA_FAR);
   const controls = new MapControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.dampingFactor = 0.08;

@@ -158,15 +158,15 @@ it and has been retired completely. Build only on what's here.
   for each block's scene objects). Keep writing landmark numbers on that
   grid, and change street sizes only in `layout.ts`.
 - **The world's size** is in `layout.ts` too:
-  - `EXT` (-200 to 240, about 790 m across) is the ground, the river and every road, edge to edge. It's mostly open land, room to grow the city into. Build there only when the owner asks.
+  - `EXT` (-420 to 460, about 1.6 km across; growth plan Phase 6 moved it out from -200 to 240) is the ground, the river and every road, edge to edge (the far-off roads are plain continuations of today's, with no traffic). It's mostly open land, room to grow the city into. Build there only when the owner asks.
   - The river is `RIVER_W` (15) wide, five times what it was (the owner's call). It widened southwards, so everything south of it moved `SOUTH_SHIFT` (12) south: what's derived from `SOUTH_ROAD` / `SOUTH_ROW` moved by itself, and the south bank's places written in fixed numbers (the Fight Club in `fightsite.ts`, South Square and the south pocket parks in `outer.ts`, the airport and its timetable in `airfield.ts`) add `SOUTH_SHIFT` to their z. Keep doing that for anything new written in fixed numbers south of the river.
   - `WORLD_BOUNDS` is how far you can walk or drive.
-  - `CITY_EXT` (-80 to 140) is where traffic and boats loop, past the Parkway; the outskirts' tree belt fills a band round the town (outside the bends) and a lighter sprinkle covers the rest, seeded tile by tile at a density per area (`outskirtsTrees()` in `outskirts.ts`: `BELT_FREE` / `OPEN_FREE` are today's land a tree may stand on, so today keeps its trees and a bigger world gets more, never thinner ones; trees keep off land in `keepTreesOff()`).
-  - The skyline ring stands just past `EXT`, kept out of the haze (`fog = false`) so it reads as a far metropolis; as many towers as today's ring had for its length (`SKYLINE_REACH`), each from its own seeded numbers, on grass that carries on `SKIRT` (80) past the edge (the grass is a plane per tile).
-  - The sky dome and stars travel with the camera at 400, inside its far plane (440), so everything in the world stays in front of the sky.
+  - `CITY_EXT` (-80 to 140) is where traffic and boats loop, past the Parkway; the outskirts' tree belt fills a band round the town (outside the bends) and a lighter sprinkle covers the rest, seeded tile by tile at a density per area (`outskirtsTrees()` in `outskirts.ts`: `BELT_FREE` / `OPEN_FREE` are the land a tree could stand on in the world before Phase 6, so a bigger world gets more trees, never thinner ones, and a tile's trees are the same whatever the world's size; trees keep off land in `keepTreesOff()`). Pine woods stand in patches on the land well away from the city (`WOODS`, `inWoods()`: a smooth seeded noise, only past `WOODS.clear` from `BUILT_UP`, so none on the land the world had before Phase 6), their trees bigger than the town's.
+  - The skyline ring stands just past `EXT` (`SKYLINE` in `bounds.ts`: `gap` to `gap` + `depth` past it), kept out of the haze (`fog = false`) so it reads as a far metropolis; as many towers as the ring had for its length before Phase 6 (`SKYLINE_REACH`), each from its own seeded numbers, on grass that carries on `SKIRT` (80) past the edge (the grass is a plane per tile).
+  - The sky dome and stars travel with the camera at `SKY_RADIUS` (`bounds.ts`: far enough that the skyline's far side stands in front of it seen from downtown, about 720 today, never under 400), inside its far plane (`CAMERA_FAR`, 40 further), so everything in the world stays in front of the sky and the skyline stays on the horizon however far out the edge is.
   - City view pans round the built-up area (`bounds.ts`: `BUILT_UP` is the town, the airport and the kart park; `PAN_BOUNDS` reaches `PAN_MARGIN` (160) past it, never closer than 10 to where you can walk: today that's the whole world), and the Build overview frames the plots (`overviewFrame()`).
-  - **The edge is data** (growth plan Phase 5): `EXT` is set in one place, and a test run can set another (`WORLD_EXT=x0,x1`, `npm run test:wide` at Phase 6's -420 to 460); both must pass. Nothing that exists reads the edge: the airport's `SITE` is fixed numbers, the river walls and their bridge gaps come from the street plan (`riverCrossings()` in `streetplan.ts`), flying turns back at whatever bounds it's given. Anything new written against the edge must work at both sizes.
-  - **Growing the city** (many more buildings, then a bigger world) is planned in `docs/growth-plan.md`. Part A (Phases 0-4) makes size cheap: the measuring kit and a snapshot test that nothing moves, tiles and a collision grid, near and far building forms, building as you go, building kits. Part B (Phases 5-10) grows the world: the edge as data (the airport's site frozen, trees per tile), `EXT` out to about 880 across, roads to reach it (a ring highway, more bridges, traffic spent near you), getting about (a world map, waypoints, and the owner's pick of metro, taxis or fast travel), districts one at a time, then optionally about 1,400 across. Phases 0 (the measuring kit), 1 (tiles, the collision grid, the city's fixed geometry merged per tile, crowds and traffic culled for the shadow map), 2 (near and far forms: details near only, far forms for the places and the cars) 3 (building as you go: sites built round the home view at the boot and the rest after it, near forms let go past a budget), 4 (building kits: kits, recipes for blocks, a test district behind `?district=test`) and 5 (the edge as data: `EXT` in one place, tests at both sizes) are built; follow the rest one phase at a time with the owner's sign-off, and never add buildings in bulk outside the tiles (`tileBatch()`) or outside sites (`site()`).
+  - **The edge is data** (growth plan Phase 5): `EXT` is set in one place, and a test run can set another (`WORLD_EXT=x0,x1`, `npm run test:wide` at Phase 10's -680 to 720); both must pass. Nothing that exists reads the edge: the airport's `SITE` is fixed numbers, the river walls and their bridge gaps come from the street plan (`riverCrossings()` in `streetplan.ts`), flying turns back at whatever bounds it's given. Anything new written against the edge must work at both sizes.
+  - **Growing the city** (many more buildings, then a bigger world) is planned in `docs/growth-plan.md`. Part A (Phases 0-4) makes size cheap: the measuring kit and a snapshot test that nothing moves, tiles and a collision grid, near and far building forms, building as you go, building kits. Part B (Phases 5-10) grows the world: the edge as data (the airport's site frozen, trees per tile), `EXT` out to about 880 across, roads to reach it (a ring highway, more bridges, traffic spent near you), getting about (a world map, waypoints, and the owner's pick of metro, taxis or fast travel), districts one at a time, then optionally about 1,400 across. Phases 0 (the measuring kit), 1 (tiles, the collision grid, the city's fixed geometry merged per tile, crowds and traffic culled for the shadow map), 2 (near and far forms: details near only, far forms for the places and the cars) 3 (building as you go: sites built round the home view at the boot and the rest after it, near forms let go past a budget), 4 (building kits: kits, recipes for blocks, a test district behind `?district=test`), 5 (the edge as data: `EXT` in one place, tests at both sizes) and 6 (the edge moves out: `EXT` -420 to 460, the woods, the far plane and sky dome from the edge) are built; follow the rest one phase at a time with the owner's sign-off, and never add buildings in bulk outside the tiles (`tileBatch()`) or outside sites (`site()`).
 - **Cars** are `src/scripts/city3d/cars.ts`: real-proportion cartoon models
   (City Hatch, Cruiser, Street GT coupe, Hauler pickup, Box Van, City Bus;
   made-up names, never a real make or badge), each a bevelled extruded
@@ -342,10 +342,11 @@ it and has been retired completely. Build only on what's here.
 - `?bench` runs the benchmark (`bench.ts`, growth plan Phase 0): straight
   into the 3D city, clear day (`?bench=night` for night), quality held, the
   same views (`BENCH_VIEWS`: home, a downtown street, the square, the Build
-  overview, the airport, the kart park, the far edge; with
+  overview, the airport, the kart park, where the edge was before Phase 6,
+  the far edge (from `EXT`); with
   `?district=test` the test district's two after them) measured for a few
   seconds each, once every site is built (it builds faster while it
-  waits), then a 40 s camera route through them. Results (fps,
+  waits), then a 48 s camera route through them. Results (fps,
   average / 95th-percentile / slowest frame, CPU ms, draws and triangles,
   the shadow map's, memory, boot) go in a card on the page, the console and
   `window.__bench`. Run it before and after anything that could make the
@@ -694,9 +695,9 @@ it and has been retired completely. Build only on what's here.
   folds away, decal, spinning props and rotors with blur discs);
   `createFleet()` makes one instanced mesh per part for each kind, culled
   as a fleet. Under reduced motion every aircraft stands parked.
-- The skyline ring leaves out the towers within 150 of the airport (they'd
-  loom over the runway); trees keep off the airport and the low end of the
-  approach.
+- The skyline ring leaves out any tower within 150 of the airport (they'd
+  loom over the runway; since Phase 6 the ring stands far enough out that
+  none is); trees keep off the airport and the low end of the approach.
 - **Flying it yourself** (Phase 2): the airport is a place (spot
   `airport`, its pin over Hangar 1 (`spot.group` is the hangar, built in
   its own Batch), directory entry, a panel with **Walk in** to
@@ -1494,7 +1495,7 @@ it and has been retired completely. Build only on what's here.
 - `npm test` runs `tests/*.test.ts` with Node's own test runner
   (`scripts/test.mjs` bundles each with esbuild first; `npm test -- drive`
   runs only matching files). `npm run test:wide` runs them all in Phase
-  6's bigger world (`WORLD_EXT`): run both when anything reads the edge. The "Build site" Action runs them before the
+  10's bigger world (`WORLD_EXT`): run both when anything reads the edge. The "Build site" Action runs them before the
   build: a failing test means no zip.
 - They cover the code that's free of the DOM and scene code: the street plan
   (`layout.ts`, `streetplan.ts`), downtown (`downtown.ts`), the traffic's

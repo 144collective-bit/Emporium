@@ -23,6 +23,7 @@ import { KART_PARK, SLIP_ROAD } from './kartpark';
 import { RUNWAY, SITE } from './airfield';
 import { TILE, tileKey, tileOf, tilesIn } from './tiles';
 import { outskirtsTrees } from './outskirts';
+import { SKYLINE } from './bounds';
 import { keyRect } from './tileplan';
 import { site } from './tilework';
 
@@ -457,8 +458,9 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
 
 /**
  * Scatter trees outside town, off the roads and the river: `count` in the belt round the
- * city, and a lighter sprinkle (`count` * `sparse`) across the open land out to the world's edge,
- * seeded tile by tile at a density per area (outskirts.ts, growth plan Phase 5)
+ * city, a lighter sprinkle (`count` * `sparse`) across the open land out to the world's edge,
+ * and woods in patches well away from the city, seeded tile by tile at a density per area
+ * (outskirts.ts, growth plan Phases 5 and 6)
  */
 export function scatterOutskirts(count: number, sparse = 0.6) {
   for (const t of outskirtsTrees(count, sparse, CLEAR)) addTree(t.x, t.z, t.s, t.pine, 0);
@@ -470,7 +472,7 @@ export function keepTreesOff(rect: [number, number, number, number]) {
   CLEAR.push(rect);
 }
 
-/** The world's half-width the skyline's `count` is for (today's): a wider world's ring has more towers, as far apart */
+/** The world's half-width the skyline's `count` is for (before Phase 6): a wider world's ring has more towers, as far apart */
 const SKYLINE_REACH = 220;
 /** A ring of towers on the horizon, past the world's edge, so the city reads as part of a metropolis. */
 export function buildSkyline(scene: THREE.Scene, count: number, tick: (f: Tick) => void) {
@@ -495,10 +497,10 @@ export function buildSkyline(scene: THREE.Scene, count: number, tick: (f: Tick) 
     // A ring just past the world's edge, so the metropolis carries on beyond the land you can build on.
     // The world is square: the ring follows its edge (a rounded square), so no tower stands on the
     // land in the corners (the kart park fills the north-east one)
-    const rr = reach / Math.max(Math.abs(Math.cos(a)), Math.abs(Math.sin(a))) + 18 + r() * 40;
+    const rr = reach / Math.max(Math.abs(Math.cos(a)), Math.abs(Math.sin(a))) + SKYLINE.gap + r() * SKYLINE.depth;
     const x = (EXT[0] + EXT[1]) / 2 + Math.cos(a) * rr;
     const z = (EXT[0] + EXT[1]) / 2 + Math.sin(a) * rr;
-    // None by the airport (it reaches nearly to the world's edge in the south-east): they'd loom over the runway
+    // None by the airport: they'd loom over the runway (since Phase 6 the ring stands far enough out that none is)
     const w = 7 + r() * 9;
     const h = 22 + r() * 50;
     if (Math.hypot(x - (SITE[0] + SITE[2]) / 2, z - (SITE[1] + SITE[3]) / 2) < 150) continue;

@@ -1,13 +1,14 @@
 /*
- * The outskirts' trees (docs/growth-plan.md Phase 5; DOM-free, tested in
- * tests/outskirts.test.ts): seeded tile by tile with a density per area, not
- * a fixed number spread over the whole world, so a bigger world gets more
- * trees, never thinner ones, and a tile's trees are the same whatever the
- * world's size. A belt round the town (out past the Parkway and the
- * Southside Loop) is planted thickly, the open land out to the edge
- * lightly; both keep off the town, the roads, the river, the airport and
- * its approach, the kart park and its slip road, and any land kept clear
- * (the test district's).
+ * The outskirts' trees (docs/growth-plan.md Phases 5 and 6; DOM-free,
+ * tested in tests/outskirts.test.ts): seeded tile by tile with a density per
+ * area, not a fixed number spread over the whole world, so a bigger world
+ * gets more trees, never thinner ones, and a tile's trees are the same
+ * whatever the world's size. A belt round the town (out past the Parkway
+ * and the Southside Loop) is planted thickly, the open land out to the edge
+ * lightly, and well away from the city pine woods stand in patches; all
+ * keep off the town, the roads, the river, the airport and its approach,
+ * the kart park and its slip road, and any land kept clear (the test
+ * district's).
  */
 import { EW_ROADS, EXT, NS_ROADS, RIVER } from './layout';
 import { PARKWAY, PROMENADE, SOUTHSIDE, inTown } from './outer';
@@ -15,6 +16,7 @@ import { KART_PARK, SLIP_ROAD } from './kartpark';
 import { RUNWAY, SITE } from './airfield';
 import { TILE, tileKey, tilesIn } from './tiles';
 import { rng } from './recipes';
+import { BUILT_UP } from './bounds';
 import type { Rect } from './downtown';
 
 const PARKWAY_TOP = Math.min(...PARKWAY.map((p) => p[1]));
@@ -23,10 +25,11 @@ const SOUTHSIDE_BOTTOM = Math.max(...SOUTHSIDE.map((p) => p[1]));
 export const BELT: Rect = [PROMENADE.x[0] - 24, PARKWAY_TOP - 24, PROMENADE.x[1] + 24, SOUTHSIDE_BOTTOM + 24];
 
 /**
- * How much land a tree may stand on, in today's world (the belt's, and the
- * open land's past it to 4 in from the edge): the densities are worked
- * out from these, so today's world keeps the trees it had (`count` in the
- * belt, `count` x `sparse` past it); the tests check they're still right
+ * How much land a tree may stand on in the world before Phase 6 (-200 to
+ * 240: the belt's, and the open land's past it to 4 in from that edge): the
+ * densities are worked out from these, so that world kept the trees it had
+ * (`count` in the belt, `count` x `sparse` past it); the tests check they're
+ * still right
  */
 export const BELT_FREE = 11570;
 export const OPEN_FREE = 98100;
@@ -47,6 +50,40 @@ export function treeSpot(x: number, z: number, clear: readonly Rect[] = []) {
   return true;
 }
 
+/**
+ * The woods (growth plan Phase 6): patches where a smooth seeded noise (on a
+ * lattice `cell` apart) is over `over`, only further than `clear` from the
+ * built-up area (so none on the land the world had before, -200 to 240);
+ * planted `density` times as thickly as the belt, `pine` of them pines,
+ * and bigger than the town's trees
+ */
+export const WOODS = { clear: 120, cell: 90, over: 0.66, density: 2.5, pine: 0.8 };
+
+/** How far a point is from the built-up area (0 inside it) */
+const fromCity = (x: number, z: number) => Math.hypot(Math.max(BUILT_UP[0] - x, 0, x - BUILT_UP[2]), Math.max(BUILT_UP[1] - z, 0, z - BUILT_UP[3]));
+/** A lattice point's own number, 0-1 */
+const corner = (i: number, j: number, k: number) => ((hash(`woods ${k} ${i},${j}`) >>> 0) % 10007) / 10007;
+/** Smooth noise on a lattice 1 apart, eased between its points (0-1) */
+function lattice(u: number, v: number, k: number) {
+  const [i, j] = [Math.floor(u), Math.floor(v)];
+  const ease = (t: number) => t * t * (3 - 2 * t);
+  const [a, b] = [ease(u - i), ease(v - j)];
+  const top = corner(i, j, k) * (1 - a) + corner(i + 1, j, k) * a;
+  const bottom = corner(i, j + 1, k) * (1 - a) + corner(i + 1, j + 1, k) * a;
+  return top * (1 - b) + bottom * b;
+}
+/** The woods' noise at x, z (0-1): two layers on lattices turned off the world's grid, so the patches come out round, not boxy */
+function woodsNoise(x: number, z: number) {
+  const c = WOODS.cell;
+  const big = lattice((x * 0.8 + z * 0.6) / c, (z * 0.8 - x * 0.6) / c, 0);
+  const small = lattice((x * 0.34 - z * 0.94) / (c * 0.4), (z * 0.34 + x * 0.94) / (c * 0.4), 1);
+  return big * 0.7 + small * 0.3;
+}
+/** Whether x, z is in the woods (a tree may still not stand there: `treeSpot()`) */
+export function inWoods(x: number, z: number) {
+  return fromCity(x, z) > WOODS.clear && woodsNoise(x, z) > WOODS.over;
+}
+
 export interface OutskirtTree {
   x: number;
   z: number;
@@ -62,10 +99,10 @@ const overlap = (a: Rect, b: Rect): Rect | null => {
 const area = (r: Rect) => (r[2] - r[0]) * (r[3] - r[1]);
 
 /**
- * The outskirts' trees: `count` is the belt's in today's world (the tier's),
- * `sparse` the open land's share of it. Tile by tile, each tile its own seed:
- * a number of tries in proportion to its land, each kept where a tree may
- * stand.
+ * The outskirts' trees: `count` is the belt's (the tier's),
+ * `sparse` the open land's share of it (the woods' comes from the belt's).
+ * Tile by tile, each tile its own seed: a number of tries in proportion to
+ * its land, each kept where a tree may stand.
  */
 export function outskirtsTrees(count: number, sparse = 0.6, clear: readonly Rect[] = [], ext: [number, number] = EXT): OutskirtTree[] {
   const belt = count / BELT_FREE;
@@ -91,6 +128,20 @@ export function outskirtsTrees(count: number, sparse = 0.6, clear: readonly Rect
     const inBelt = overlap(here, BELT);
     if (inBelt) plant(inBelt, belt, () => true);
     plant(here, open, (x, z) => !inside(BELT, x, z));
+    // The woods, after the rest (so the trees before them stay as they were), in tiles reaching out past the clearance
+    // (the distance is greatest at a corner)
+    if (Math.max(fromCity(here[0], here[1]), fromCity(here[2], here[1]), fromCity(here[0], here[3]), fromCity(here[2], here[3])) > WOODS.clear) {
+      const want = belt * WOODS.density * area(here);
+      const tries = Math.floor(want) + (r() < want - Math.floor(want) ? 1 : 0);
+      for (let n = 0; n < tries; n++) {
+        const x = here[0] + r() * (here[2] - here[0]);
+        const z = here[1] + r() * (here[3] - here[1]);
+        const pine = r() < WOODS.pine;
+        // Old woods: taller than the town's trees, so they read as woods without standing any thicker
+        const s = pine ? 1.8 + r() * 1.4 : 1.5 + r() * 0.9;
+        if (inWoods(x, z) && treeSpot(x, z, clear)) out.push({ x, z, s, pine });
+      }
+    }
   }
   return out;
 }
