@@ -39,6 +39,7 @@
  * stay put.
  */
 import * as THREE from 'three';
+import { site } from './tilework';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { SpotId } from '../../lib/city';
 import { Batch, FONT_DISPLAY, FONT_MONO, PAL, canvasTex, fx, glowMat, lit, neon, neonSign, occlude, place, plane, rng, toon } from './kit';
@@ -464,23 +465,12 @@ function clearAt(u: number, v: number, margin: number) {
   return circuitDistance(x, z) > CLEAR + margin;
 }
 
-/* ---------- The park ---------- */
+/* ---------- The park's grounds and the circuit: sites of the fixed city, built as you go (tilework.ts) ---------- */
 
-export function buildKartPark(scene: THREE.Scene, opts: { tick: (f: Tick) => void; reduced: boolean; low: boolean }): KartPark {
-  const { low, reduced } = opts;
-  const r = rng(4747);
-  const group = new THREE.Group();
-  group.name = 'kartpark';
-  scene.add(group);
-  /** The hut, the stand, the garages and the screen: the spot's group, lifted on hover */
-  const places = new THREE.Group();
-  places.name = ID;
-  group.add(places);
-  const b = new Batch();
-  const pb = new Batch();
+/** The lawn, the paving and the run-off */
+function grounds(b: Batch) {
   const P = KART_PARK;
   const c = CIRCUIT;
-  const n = c.x.length;
   const W = (u: number, v: number) => toWorld([u, v]);
   const flat = (batch: Batch, x0: number, z0: number, x1: number, z1: number, y: number, mat: THREE.Material) =>
     batch.add(place(new THREE.PlaneGeometry(x1 - x0, z1 - z0), (x0 + x1) / 2, y, (z0 + z1) / 2, 1, 1, 1, -Math.PI / 2), mat);
@@ -517,6 +507,20 @@ export function buildKartPark(scene: THREE.Scene, opts: { tick: (f: Tick) => voi
     // Split by side so the gravel follows each bend's own outside
     for (const side of [1, -1]) for (const part of splitRun(run, (i) => outside(i) === side)) b.add(sweep(c, part, strip(side * (EDGE + 0.5), side * (CLEAR - 0.8), onGround(c, GRAVEL_Y))), GRAVEL);
   }
+}
+
+/** The asphalt, its lines and kerbs, the flyover, the tunnel, the jump's lip and the banked sweepers */
+function track(b: Batch, low: boolean) {
+  const P = KART_PARK;
+  const c = CIRCUIT;
+  const W = (u: number, v: number) => toWorld([u, v]);
+  const flat = (batch: Batch, x0: number, z0: number, x1: number, z1: number, y: number, mat: THREE.Material) =>
+    batch.add(place(new THREE.PlaneGeometry(x1 - x0, z1 - z0), (x0 + x1) / 2, y, (z0 + z1) / 2, 1, 1, 1, -Math.PI / 2), mat);
+  const fl = (i: number) => c.flags[i];
+  const open = (i: number) => !enclosed(fr(c, i));
+  /** Which side a bend's outside is on (left positive), 0 on the straight */
+  const outside = (i: number) => (Math.abs(c.k[i]) > 0.04 ? -Math.sign(c.k[i]) : 0);
+
   // The asphalt, its edge lines and the kerbs: red and white blocks a tile each, both sides
   b.add(sweep(c, runs(c, () => true)[0], strip(-TRACK_HALF, TRACK_HALF, onPlane(c, RIBBON))), ASPHALT);
   for (const s of [1, -1]) b.add(sweep(c, runs(c, () => true)[0], strip(s * (TRACK_HALF - 0.16), s * (TRACK_HALF - 0.05), onPlane(c, LINE_Y))), LINE_C);
@@ -615,6 +619,45 @@ export function buildKartPark(scene: THREE.Scene, opts: { tick: (f: Tick) => voi
         if (posts.length === 2) bunting(b, posts[0], posts[1], 0.5);
       }
   }
+
+}
+
+/* ---------- The park ---------- */
+
+export function buildKartPark(scene: THREE.Scene, opts: { tick: (f: Tick) => void; reduced: boolean; low: boolean }): KartPark {
+  const { low, reduced } = opts;
+  const r = rng(4747);
+  const group = new THREE.Group();
+  group.name = 'kartpark';
+  scene.add(group);
+  /** The hut, the stand, the garages and the screen: the spot's group, lifted on hover */
+  const places = new THREE.Group();
+  places.name = ID;
+  group.add(places);
+  const b = new Batch();
+  const pb = new Batch();
+  const P = KART_PARK;
+  const c = CIRCUIT;
+  const n = c.x.length;
+  const W = (u: number, v: number) => toWorld([u, v]);
+  const flat = (batch: Batch, x0: number, z0: number, x1: number, z1: number, y: number, mat: THREE.Material) =>
+    batch.add(place(new THREE.PlaneGeometry(x1 - x0, z1 - z0), (x0 + x1) / 2, y, (z0 + z1) / 2, 1, 1, 1, -Math.PI / 2), mat);
+  const fl = (i: number) => c.flags[i];
+  const open = (i: number) => !enclosed(fr(c, i));
+  /** Which side a bend's outside is on (left positive), 0 on the straight */
+  const outside = (i: number) => (Math.abs(c.k[i]) > 0.04 ? -Math.sign(c.k[i]) : 0);
+
+  // The grounds and the circuit: sites (growth plan Phase 3), built when there's time unless they're in the home view
+  site('kart park grounds', [P.x0, P.z0, P.x1, P.z1], (into) => {
+    const gb = new Batch();
+    grounds(gb);
+    gb.build(into);
+  });
+  site('kart park circuit', [P.x0, P.z0, P.x1, P.z1], (into) => {
+    const tb = new Batch();
+    track(tb, low);
+    tb.build(into);
+  });
 
   /* ----- The start: the line, both ways' grids, the gantry ----- */
 

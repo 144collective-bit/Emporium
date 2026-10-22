@@ -112,7 +112,11 @@ export function toon(color: THREE.ColorRepresentation, opts: THREE.MeshToonMater
 let paintShared: THREE.MeshToonMaterial | null = null;
 /** The one toon material every Batch's plain colours share */
 export function paintMat() {
-  return (paintShared ??= new THREE.MeshToonMaterial({ color: '#ffffff', gradientMap: gradient, vertexColors: true }));
+  if (!paintShared) {
+    paintShared = new THREE.MeshToonMaterial({ color: '#ffffff', gradientMap: gradient, vertexColors: true });
+    paintShared.userData.shared = true;
+  }
+  return paintShared;
 }
 const neonShared = new Map<string, THREE.MeshBasicMaterial>();
 /** How dark it is, 0 by day to 1 at night, for the shared neon's shader (and the far forms', lod.ts) */
@@ -128,6 +132,7 @@ let neonAll: THREE.MeshBasicMaterial | null = null;
 function neonAllMat() {
   if (neonAll) return neonAll;
   neonAll = new THREE.MeshBasicMaterial({ color: '#ffffff', vertexColors: true, toneMapped: true });
+  neonAll.userData.shared = true;
   neonAll.onBeforeCompile = (shader) => {
     shader.uniforms.uNight = nightU;
     shader.vertexShader = shader.vertexShader
@@ -141,7 +146,10 @@ function neonAllMat() {
 function neonMat(day: number, night: number, flicker: number) {
   const key = `${day}|${night}|${flicker}`;
   let m = neonShared.get(key);
-  if (!m) neonShared.set(key, (m = lit(new THREE.MeshBasicMaterial({ color: '#ffffff', vertexColors: true, toneMapped: true }), day, night, flicker)));
+  if (!m) {
+    neonShared.set(key, (m = lit(new THREE.MeshBasicMaterial({ color: '#ffffff', vertexColors: true, toneMapped: true }), day, night, flicker)));
+    m.userData.shared = true;
+  }
   return m;
 }
 

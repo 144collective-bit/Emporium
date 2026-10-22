@@ -165,7 +165,7 @@ it and has been retired completely. Build only on what's here.
   - The skyline ring stands just past `EXT`, kept out of the haze (`fog = false`) so it reads as a far metropolis.
   - The sky dome and stars travel with the camera at 400, inside its far plane (440), so everything in the world stays in front of the sky.
   - City view can pan anywhere inside the bounds.
-  - **Growing the city** (many more buildings, then a bigger world) is planned in `docs/growth-plan.md`. Part A (Phases 0-4) makes size cheap: the measuring kit and a snapshot test that nothing moves, tiles and a collision grid, near and far building forms, building as you go, building kits. Part B (Phases 5-10) grows the world: the edge as data (the airport's site frozen, trees per tile), `EXT` out to about 880 across, roads to reach it (a ring highway, more bridges, traffic spent near you), getting about (a world map, waypoints, and the owner's pick of metro, taxis or fast travel), districts one at a time, then optionally about 1,400 across. Phases 0 (the measuring kit), 1 (tiles, the collision grid, the city's fixed geometry merged per tile, crowds and traffic culled for the shadow map) and 2 (near and far forms: details near only, far forms for the places and the cars) are built; follow the rest one phase at a time with the owner's sign-off, and never add buildings in bulk outside the tiles (`tileBatch()`).
+  - **Growing the city** (many more buildings, then a bigger world) is planned in `docs/growth-plan.md`. Part A (Phases 0-4) makes size cheap: the measuring kit and a snapshot test that nothing moves, tiles and a collision grid, near and far building forms, building as you go, building kits. Part B (Phases 5-10) grows the world: the edge as data (the airport's site frozen, trees per tile), `EXT` out to about 880 across, roads to reach it (a ring highway, more bridges, traffic spent near you), getting about (a world map, waypoints, and the owner's pick of metro, taxis or fast travel), districts one at a time, then optionally about 1,400 across. Phases 0 (the measuring kit), 1 (tiles, the collision grid, the city's fixed geometry merged per tile, crowds and traffic culled for the shadow map), 2 (near and far forms: details near only, far forms for the places and the cars) and 3 (building as you go: sites built round the home view at the boot and the rest after it, near forms let go past a budget) are built; follow the rest one phase at a time with the owner's sign-off, and never add buildings in bulk outside the tiles (`tileBatch()`) or outside sites (`site()`).
 - **Cars** are `src/scripts/city3d/cars.ts`: real-proportion cartoon models
   (City Hatch, Cruiser, Street GT coupe, Hauler pickup, Box Van, City Bus;
   made-up names, never a real make or badge), each a bevelled extruded
@@ -264,11 +264,41 @@ it and has been retired completely. Build only on what's here.
     `BatchedMesh` (`initFarCars()`, `theFarCars()`), one draw for every
     far car; a parked lot swaps whole, a car in traffic by its own
     distance.
+- **Building as you go** (growth plan Phase 3): the fixed city outside
+  the places is made of sites (`site(id, rect, build)` in `tilework.ts`):
+  a function that draws a piece of the city from data into Batches only
+  (no ticks, crowds, solids or pools of light; those stay with the boot),
+  the same every time it runs. Today they're each tile's trees and lamps
+  (`world.ts`), the airport's runway and apron (`airport.ts`) and the
+  kart park's grounds and circuit (`kartpark3d.ts`); new districts and
+  building kits come as sites.
+  - The boot builds only the sites in the home view's and the intro's
+    tiles (`bootSites()` in `tileplan.ts`) and merges them with the rest
+    (`tileBatch()`); the others wait and `works.step()` builds them a few
+    milliseconds a frame (12 behind the start menu, 3 in the city, 2 on
+    phones), nearest first and ahead of the camera when it moves fast
+    (`focusOf()`, `LOOK_AHEAD`). What's built later joins the same
+    batched meshes (`TileBatches.add()`; a mesh grows when it's full).
+  - Places ask first: `flyTo()` (every panel's fly-in), walking in
+    (`startWalking()`) and the intro (`works.wantView()`) build what's
+    waiting where they're going, so nothing pops in on screen.
+  - A tile far away (past `far` + `KEEP_LEAD`) lets its sites' near pieces
+    in the shared materials go when what's held passes the tier's
+    `nearBudget` (`TIERS`: 96, 64, 32 MB; `?budget=MB` in the address
+    overrides it, for testing), furthest first (`toRelease()`); it's drawn
+    far until the site runs again and puts them back, before it's near
+    (`toRebuild()`, `REBUILD_LEAD`). The room they took is reused
+    (`BatchedMesh.optimize()`) before a mesh grows. The places, the
+    landmarks and downtown's monolithic builders are built at the boot and
+    never let go.
+  - The rules are DOM-free in `tileplan.ts` (tested in
+    `tests/tileplan.test.ts`); the tile pieces and the scheduler are
+    tested too (`tests/tilebatch.test.ts`, `tests/tilework.test.ts`).
 - `?fps` in the address shows a performance readout (`.city-stats`, built in
   `index.ts`): fps, slowest frame, draw calls and triangles per frame, the
   shadow map's share (`post.shadowStat`), geometry and texture memory
   (`sceneMemory()` in `perf.ts`), how many tile pieces were drawn and
-  tiles are near, how many far forms are showing, how long the boot took (art, build, shaders), quality tier, pixel ratio and any
+  tiles are near, how many far forms are showing, how long the boot took (art, build and its own work less the waits, tiles, shaders), the sites built (at the boot, after, waiting) and the near forms held against the budget, quality tier, pixel ratio and any
   quality stepped down. Use it on
   real devices before and after changes; it's invisible without the
   parameter.
@@ -1434,7 +1464,7 @@ it and has been retired completely. Build only on what's here.
   (`combat-sim.ts`), the economy (`tycoon.ts`, the market square in
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
-  the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), Liberty Bridge (`liberty.ts`),
+  the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), Liberty Bridge (`liberty.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,

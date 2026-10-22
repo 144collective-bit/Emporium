@@ -1,7 +1,7 @@
 # Growing Sector 7: the plan
 
 How the city gets many more buildings, and then a bigger world, without
-getting slower. Nothing here is built yet. Like the other plans, it waits
+getting slower. Phases 0-3 are built. Like the other plans, it waits
 for the owner's sign-off one phase at a time. Keep it up to date.
 
 ## What the owner asked
@@ -437,21 +437,74 @@ Phase 1's numbers, then Phase 2's:
   have no far forms yet). Building as you go (Phase 3) can give those far
   forms when they're rebuilt.
 
-## Phase 3: building as you go
+## Phase 3: building as you go (built)
 
-- **Boot builds only the tiles round the home view.** The rest are built a
-  few at a time in spare time between frames: nearest first, far forms
-  before near ones.
-- **Tiles far from the camera drop their near form.**
-  - It is kept for reuse up to a memory budget per tier, so coming back
-    costs nothing.
-  - Past the budget it's freed and rebuilt from data later.
-- **Places stay ready:** walk mode, the fly-in and every panel's camera
-  move ask for their tiles first. Walking or driving fast pulls tiles
-  ahead along the way you're going.
-- **The fly-in and the start menu hide anything still building.**
-- **Done when** boot time stays flat however many tiles there are, and
-  memory stays inside the targets on the benchmark route.
+The city's fixed geometry outside the places is now made of **sites**: a
+piece of the city drawn from data by a function that only fills Batches
+(`site(id, rect, build)` in `tilework.ts`), the same every time it runs,
+so it can run again.
+
+- **What's a site today:** each tile's trees and each tile's lamps
+  (`world.ts`; a tree's turn now comes from its position, so a tile built
+  twice is the same), the airport's runway and its apron (`airport.ts`),
+  and the kart park's grounds and circuit (`kartpark3d.ts`): 174 sites.
+  The places (the landmarks, Liberty Bridge, the garage, the market, the
+  Fight Club, the hangar, the kart park's buildings), downtown's infill,
+  the outer districts and the ground stay with the boot: they're in the
+  home view, or have pins, doors, crowds and things that move. The
+  districts and kits to come (Phases 4 and 8) are sites from the start.
+- **The boot builds only the sites round the home view:** those in the
+  tiles the home view and the intro's first frame can see (`bootSites()`
+  in `tileplan.ts`), 65 of the 174, merged with the rest of the boot in
+  one go (`tileBatch()`). However many sites there are elsewhere, the
+  boot builds the same ones (a test adds ten thousand far away and checks
+  the boot list doesn't change).
+- **The rest are built a few milliseconds a frame** (`works.step()`):
+  12 while the start menu covers the city, 3 in the city, 2 on phones.
+  Nearest first (`nextSite()`), and ahead of the camera when it's moving
+  (`focusOf()`: where it will be in 2.5 s), so walking, driving or flying
+  fast pulls the tiles ahead first. They join the same batched meshes
+  (`TileBatches.add()`); a mesh made at the boot grows when a later site
+  doesn't fit, with a quarter's room to spare so it doesn't grow often.
+- **Places stay ready:** every fly-to (a panel's camera move, Build mode,
+  the City button), walking in (any spawn) and the intro build what's
+  waiting where they're going before they get there (`want()`,
+  `wantView()` for the intro's view), so nothing pops in on screen. The
+  start menu and the intro's first frame hide whatever is still waiting.
+- **Near forms are let go past a budget** (`nearBudget` in `TIERS`: 96 MB
+  high, 64 medium, 32 on phones):
+  - while the near pieces held add up to less, they're kept, so coming
+    back costs nothing;
+  - past it, tiles past the swap distance plus 40 (`KEEP_LEAD`) let their
+    sites' near pieces in the shared materials go, furthest first, until
+    it fits (`toRelease()`); never a tile drawn near;
+  - a tile that let them go is drawn in its far form until its sites run
+    again, keeping only its near pieces (`toRebuild()`), once it's within
+    the swap distance plus 24 (`REBUILD_LEAD`): before it's near, and far
+    enough from where it was let go that a tile on the line doesn't churn;
+  - the room they took is taken back (`optimize()`) before a mesh grows,
+    so memory stays at the budget however far you go;
+  - today the near forms held come to under 1 MB (the lamps are the only
+    sites' near pieces yet), so nothing is let go at the tiers' budgets.
+    `?budget=0.05` in the address sets a tiny one, to see it work: flying
+    out to the far edge lets downtown's lamps go, and they're back before
+    the camera returns.
+- `?fps` shows the sites built (at the boot, with how long they took, and
+  after it), how many are waiting, and the near forms held against the
+  budget, how many tiles let them go and were built again; the
+  benchmark's boot line has the boot's sites too.
+- **Tested** (DOM-free): `tests/tileplan.test.ts` (which sites the boot
+  builds, nearest first and ahead, what's let go and built again) and
+  `tests/tilebatch.test.ts` (later sites join the meshes and grow them, a
+  far tile lets go only its sites' near pieces in shared materials and is
+  drawn far until they're back, room let go is reused before a mesh grows)
+  and `tests/tilework.test.ts` (the boot builds only the home view's
+  sites, the rest nearest first, a place asked for at once, and a tile
+  let go is built again before the camera gets back).
+
+### Measured after Phase 3
+
+BOOT_NUMBERS
 
 ## Phase 4: building kits
 

@@ -21,6 +21,9 @@ import { DIAGONALS, DIAGONAL_LAMPS } from './downtown';
 import { BENDS, BEND_REACH, KERB_RUNS, OUTSIDE, PADS, PARKWAY, PROMENADE, SOUTHSIDE, inTown, offFootbridge } from './outer';
 import { KART_PARK, SLIP_ROAD } from './kartpark';
 import { RUNWAY, SITE } from './airfield';
+import { tileKey, tileOf } from './tiles';
+import { keyRect } from './tileplan';
+import { site } from './tilework';
 
 export { BLOCKS, BS, CORE_ROADS, EW_ROADS, EXT, NS_ROADS, RIVER, SOUTH_ROAD, WALK_W, type Road };
 /** District blocks around the core: one large plot each (src/data/plots.ts). */
@@ -525,36 +528,60 @@ export function buildSkyline(scene: THREE.Scene, count: number, tick: (f: Tick) 
 
 /* ---------- Instanced trees and lamps ---------- */
 
-export function buildTrees(scene: THREE.Scene) {
-  const round = trees.filter((t) => !t.pine);
-  const pines = trees.filter((t) => t.pine);
+/** Things placed over the map, grouped by the tile they stand in (each tile a site, built as you go: tilework.ts) */
+function byTile<T extends { x: number; z: number }>(list: readonly T[]) {
+  const out = new Map<string, T[]>();
+  for (const t of list) {
+    const k = tileKey(...tileOf(t.x, t.z));
+    let l = out.get(k);
+    if (!l) out.set(k, (l = []));
+    l.push(t);
+  }
+  return out;
+}
+/** A turn from a position (the same every time a tile is built) */
+const turnAt = (x: number, z: number) => {
+  const h = Math.sin(x * 12.9898 + z * 78.233) * 43758.5453;
+  return (h - Math.floor(h)) * 6;
+};
+
+export function buildTrees() {
   // Open-ended: the canopy hides the top, the ground the bottom
   const trunkGeo = new THREE.CylinderGeometry(0.07, 0.09, 1, 6, 1, true);
   const canopyGeo = new THREE.IcosahedronGeometry(0.42, 1);
   const coneGeo = new THREE.ConeGeometry(0.42, 0.9, 7);
-  // Every tree merged with the city's fixed geometry (split by tile, only those in view drawn: tileBatch() in kit.ts)
   const q = new THREE.Quaternion();
+  const up = new THREE.Vector3(0, 1, 0);
   const greens = ['#2fae6e', '#33b878', '#24995f', '#3fc485', '#2a9d63'];
-  const trunks = trees.map((t) => {
-    const h = t.pine ? 0.45 : 0.6;
-    return new THREE.Matrix4().compose(new THREE.Vector3(t.x, t.y + (h * t.s) / 2, t.z), q, new THREE.Vector3(t.s, h * t.s, t.s));
-  });
-  // Round canopies in five greens, each turned its own way
-  const canopies: THREE.Matrix4[][] = greens.map(() => []);
-  round.forEach((t, i) => {
-    canopies[i % greens.length].push(
-      new THREE.Matrix4().compose(new THREE.Vector3(t.x, t.y + 0.85 * t.s, t.z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), rand() * 6), new THREE.Vector3(t.s, t.s * 0.95, t.s))
-    );
-  });
-  const cones = pines.flatMap((t) => [
-    new THREE.Matrix4().compose(new THREE.Vector3(t.x, t.y + 0.75 * t.s, t.z), q, new THREE.Vector3(t.s, t.s, t.s)),
-    new THREE.Matrix4().compose(new THREE.Vector3(t.x, t.y + 1.2 * t.s, t.z), q, new THREE.Vector3(t.s * 0.75, t.s * 0.8, t.s * 0.75)),
-  ]);
-  const b = new Batch();
-  b.instances(trunkGeo, toon('#6b4630'), trunks);
-  greens.forEach((g, i) => b.instances(canopyGeo, toon(g), canopies[i]));
-  b.instances(coneGeo, toon('#1d7a55'), cones);
-  b.build(scene);
+  // (the canopies used to take a turn each from the city's shared random numbers: kept, so what's made after is as it was)
+  for (const t of trees) if (!t.pine) rand();
+  // Every tile's trees a site, merged with the city's fixed geometry (split by tile, only those in view drawn: tileBatch())
+  for (const [key, list] of byTile(trees))
+    site(`trees ${key}`, keyRect(key), (into) => {
+      const trunks = list.map((t) => {
+        const h = t.pine ? 0.45 : 0.6;
+        return new THREE.Matrix4().compose(new THREE.Vector3(t.x, t.y + (h * t.s) / 2, t.z), q, new THREE.Vector3(t.s, h * t.s, t.s));
+      });
+      // Round canopies in five greens, each turned its own way
+      const canopies: THREE.Matrix4[][] = greens.map(() => []);
+      list.forEach((t, i) => {
+        if (t.pine) return;
+        canopies[i % greens.length].push(
+          new THREE.Matrix4().compose(new THREE.Vector3(t.x, t.y + 0.85 * t.s, t.z), new THREE.Quaternion().setFromAxisAngle(up, turnAt(t.x, t.z)), new THREE.Vector3(t.s, t.s * 0.95, t.s))
+        );
+      });
+      const cones = list
+        .filter((t) => t.pine)
+        .flatMap((t) => [
+          new THREE.Matrix4().compose(new THREE.Vector3(t.x, t.y + 0.75 * t.s, t.z), q, new THREE.Vector3(t.s, t.s, t.s)),
+          new THREE.Matrix4().compose(new THREE.Vector3(t.x, t.y + 1.2 * t.s, t.z), q, new THREE.Vector3(t.s * 0.75, t.s * 0.8, t.s * 0.75)),
+        ]);
+      const b = new Batch();
+      b.instances(trunkGeo, toon('#6b4630'), trunks);
+      greens.forEach((g, i) => b.instances(canopyGeo, toon(g), canopies[i]));
+      b.instances(coneGeo, toon('#1d7a55'), cones);
+      b.build(into);
+    });
 }
 
 export function buildLamps(scene: THREE.Scene) {
@@ -585,15 +612,23 @@ export function buildLamps(scene: THREE.Scene) {
     pool.setMatrixAt(i, m.compose(new THREE.Vector3(l.x + dir.x * 2, l.y + 0.02, l.z + dir.z * 2), flat, new THREE.Vector3(2.6, 2.6, 2.6)));
   });
   pools.forEach((p, i) => pool.setMatrixAt(n + i, m.compose(new THREE.Vector3(p.x, p.y + 0.02, p.z), flat, new THREE.Vector3(p.size, p.size, p.size))));
-  // Near only (growth plan Phase 2): far off, a lamp is a hairline; its halo (below) still shows at night
-  const lampB = new Batch();
-  lampB.lod = 'near';
-  lampB.instances(new THREE.CylinderGeometry(0.035, 0.05, 1.6, 6), toon('#1b1830'), poles).instances(new THREE.BoxGeometry(0.4, 0.05, 0.05), toon('#1b1830'), arms);
-  lampB.build(scene, { cast: true, receive: true });
-  // (the bulbs cast no shadow)
-  const bulbB = new Batch();
-  bulbB.lod = 'near';
-  bulbB.instances(new THREE.BoxGeometry(0.2, 0.07, 0.12), neon('#fff1c2', 0.6, 2.4), bulbs).build(scene, { cast: false, receive: true });
+  // Near only (growth plan Phase 2): far off, a lamp is a hairline; its halo (below) still shows at night.
+  // Each tile's lamps a site (built as you go: tilework.ts)
+  const poleGeo = new THREE.CylinderGeometry(0.035, 0.05, 1.6, 6);
+  const armGeo = new THREE.BoxGeometry(0.4, 0.05, 0.05);
+  const bulbGeo = new THREE.BoxGeometry(0.2, 0.07, 0.12);
+  for (const [key, list] of byTile(lamps.map((l, i) => ({ x: l.x, z: l.z, i }))))
+    site(`lamps ${key}`, keyRect(key), (into) => {
+      const pick = (all: THREE.Matrix4[]) => list.map((l) => all[l.i]);
+      const lampB = new Batch();
+      lampB.lod = 'near';
+      lampB.instances(poleGeo, toon('#1b1830'), pick(poles)).instances(armGeo, toon('#1b1830'), pick(arms));
+      lampB.build(into, { cast: true, receive: true });
+      // (the bulbs cast no shadow)
+      const bulbB = new Batch();
+      bulbB.lod = 'near';
+      bulbB.instances(bulbGeo, neon('#fff1c2', 0.6, 2.4), pick(bulbs)).build(into, { cast: false, receive: true });
+    });
   const haloGeo = new THREE.BufferGeometry();
   haloGeo.setAttribute('position', new THREE.BufferAttribute(haloPos, 3));
   scene.add(fx(new THREE.Points(haloGeo, haloMat)), fx(pool));
