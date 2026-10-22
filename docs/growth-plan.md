@@ -1,7 +1,7 @@
 # Growing Sector 7: the plan
 
 How the city gets many more buildings, and then a bigger world, without
-getting slower. Phases 0-5 are built. Like the other plans, it waits
+getting slower. Phases 0-6 are built. Like the other plans, it waits
 for the owner's sign-off one phase at a time. Keep it up to date.
 
 ## What the owner asked
@@ -721,24 +721,80 @@ with it, before the edge moves.
 - **Done:** `EXT` is set in one place, the tests pass at today's and
   Phase 6's size, and today's city looks the same.
 
-## Phase 6: the edge moves out
+## Phase 6: the edge moves out (built)
 
-- **`EXT` grows to about -420 to 460** (about 880 tiles, 1.6 km across).
-  The details:
-  - `WORLD_BOUNDS` follows it.
-  - `CITY_EXT` stays until Phase 7 brings roads.
-  - The river runs on to the new edge both ways.
-- **What's out there for now:** the outskirts' land (lawns, woods, the tree
-  belt carried on), the skyline ring further out, and the far-off roads as
-  plain continuations of today's (no traffic yet).
-- **Nothing in town changes.** The kart park, the airport and the south
-  bank stay where they are.
-  - The airport gains open land round its approach, so the ring of towers
-    can come closer elsewhere.
-  - The kart park's fence keeps its line; the land past it stays open.
-- **Done when** the targets hold at the new edge on the benchmark route,
-  and walking, driving, flying and the kart park behave exactly as before
-  inside the old edge.
+- **`EXT` is -420 to 460** (880 tiles, about 1.6 km across), set in
+  `layout.ts` as before; `npm run test:wide` now runs every test at Phase
+  10's -680 to 720, and both runs pass.
+  - `WORLD_BOUNDS` follows it: you can walk, drive and fly out to 6 in
+    from the new edge.
+  - `CITY_EXT` stays (traffic and boats loop round the town) until Phase
+    7 brings roads.
+  - The river, its banks and promenades, the roads, their medians and lane
+    markings run on to the new edge both ways (each still a few long boxes
+    or markings split by tile). The far-off roads are plain continuations
+    of today's, with no traffic and no lamps.
+- **What's out there:** grass to the edge and 80 past it (`SKIRT`), the
+  open land's light sprinkle of trees and the belt as before, and **pine
+  woods** (`WOODS`, `inWoods()` in `outskirts.ts`): patches where a smooth
+  seeded noise (two layers on lattices turned off the world's grid, so the
+  patches come out round, not boxy) is high, only further than
+  `WOODS.clear` (120) from the built-up area, so none stand on the land
+  the world had before. They're planted 2.5 times as thickly as the belt,
+  mostly pines, and the trees are about twice the town's size (old woods),
+  so they read as woods without standing thicker. Like the other trees
+  they're seeded per tile (after the tile's other trees, which stay as
+  they were) and they're the same whatever the world's size.
+- **The skyline ring** stands past the new edge, as many towers as before
+  for its length (about twice as many). Seen from town it's now 450-700
+  away, past the old far plane, so **the camera sees further**: the sky
+  dome's radius (`SKY_RADIUS` in `bounds.ts`) is worked out from the edge
+  (far enough that the ring's far side, out to its corners, stands in
+  front of the sky seen from downtown: about 720, never under 400), and the
+  far plane (`CAMERA_FAR`) is 40 past it. The depth buffer's precision
+  depends on the near plane (0.5), not the far, so nothing in town
+  flickers more; the haze hides the land long before the far plane, and
+  the skyline stays out of the haze as before.
+- **Nothing in town changes:** the kart park, the airport, the south bank
+  and every place stay where they are (the snapshot test passes at both
+  sizes). The ring is now about 300 from the airport, so none of its
+  towers is left out for the runway any more; the kart park's fence keeps
+  its line, and the woods keep 120 clear of it, the airport and the town.
+- **The benchmark** has a view where the edge was (`outskirts`) and the far
+  edge from `EXT` (`edge`, 20 in from the corner, looking back); the route
+  goes through both and takes 48 s.
+- **Measured** (headless, before and after, from the same views; frame
+  rates headless mean nothing):
+
+  | | Medium (laptop) before | after | Low (phone) before | after |
+  | --- | --- | --- | --- | --- |
+  | Home view | 500 draws · 0.77M | 498 · 0.79M | 256 · 0.24M | 274 · 0.26M |
+  | Downtown street | 555 · 0.78M | 537 · 0.81M | 240 · 0.24M | 250 · 0.25M |
+  | Build overview | 597 · 1.01M | 599 · 0.99M | 261 · 0.28M | 279 · 0.29M |
+  | Where the edge was | 535 · 0.38M | 577 · 0.49M | 392 · 0.18M | 429 · 0.21M |
+  | The new edge | (none) | 523 · 0.52M | (none) | 403 · 0.26M |
+  | Route (average) | 429 · 0.57M | 449 · 0.59M | 226 · 0.23M | 262 · 0.24M |
+  | Geometry | 40 MB | 68 MB | 36 MB | 52 MB |
+
+  The city's own views are the same within the noise of the traffic and
+  the crowds. Looking out from where the edge was, the woods beyond add a
+  little. The views from the edges are over the phones' 300 draws (they
+  were before: the places' far forms all show from out there). The extra
+  memory is the trees (most of it the woods: about 2,000 trees on phones,
+  3,200 on the medium tier, 5,400 on the high), well inside the targets
+  (150 MB on phones, 400 on desktop).
+- **Boot:** unchanged (the boot builds the same 42-66 sites round the home
+  view). After it, 750 sites instead of 192 on the medium tier (581 on
+  phones), about 2.1 s of work in all (1.2 s on phones) spread over the
+  frames a few milliseconds at a time, nearest first; the slowest site is
+  still the kart park's circuit (about 40 ms headless).
+- **Behaviour inside the old edge** is exactly as before: the walking,
+  driving, flying, kart and fight rules' tests pass at both sizes, the
+  river walls are the same walls, and the airport's timetable is fixed
+  numbers. Walking past where the edge was carries on to 6 in from the new
+  one.
+- **To check on real devices:** `?bench` on a phone and a laptop (the
+  route now goes out to the edge), and the skyline from town at night.
 
 ## Phase 7: roads to reach it
 

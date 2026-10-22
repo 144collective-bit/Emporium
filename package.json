@@ -8,7 +8,7 @@
     "build": "astro build",
     "preview": "astro preview",
     "test": "node scripts/test.mjs",
-    "test:wide": "WORLD_EXT=-420,460 node scripts/test.mjs"
+    "test:wide": "WORLD_EXT=-680,720 node scripts/test.mjs"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.4",

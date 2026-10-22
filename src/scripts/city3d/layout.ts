@@ -102,16 +102,16 @@ export const NS_ROADS: Road[] = [avenue(RING_LO), ...CORE_ROADS.map(street), ave
 /** Roads running east-west, at these z (the south bank avenue only runs east-west) */
 export const EW_ROADS: Road[] = [avenue(RING_LO), ...CORE_ROADS.map(street), avenue(RING_HI), avenue(SOUTH_ROAD)];
 
-/** A test run's own world size (scripts/test.mjs: `WORLD_EXT=-420,460 npm test`), unset in the site */
+/** A test run's own world size (scripts/test.mjs: `WORLD_EXT=-680,720 npm test`), unset in the site */
 declare const __WORLD_EXT__: [number, number] | undefined;
 /**
  * The world, edge to edge: grass, the river and every road run all the way. Room
  * to grow the city into; nothing is built past the districts and the garage yet.
  * The one place the world's size is set (growth plan Phase 5): everything that
- * reads the edge reads it from here, and the tests run at Phase 6's size too
- * (`npm run test:wide`).
+ * reads the edge reads it from here, and the tests run at Phase 10's size too
+ * (`npm run test:wide`). Phase 6 moved it out from -200 to 240 (440 across).
  */
-export const EXT: [number, number] = typeof __WORLD_EXT__ !== 'undefined' ? __WORLD_EXT__ : [-200, 240];
+export const EXT: [number, number] = typeof __WORLD_EXT__ !== 'undefined' ? __WORLD_EXT__ : [-420, 460];
 /** The built-up part: traffic loops here and the outskirts' trees fill round it */
 export const CITY_EXT: [number, number] = [-80, 140 + SOUTH_SHIFT];
 /** How far you can walk or drive: x0, z0, x1, z1 (a little inside the edge) */

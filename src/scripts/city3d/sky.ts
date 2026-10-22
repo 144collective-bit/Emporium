@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import { FX, canvasTex, fx, rand } from './kit';
 import { CENTER } from './world';
+import { SKY_RADIUS } from './bounds';
 
 export type TimeMode = 'live' | 'day' | 'sunset' | 'night';
 export type WeatherMode = 'auto' | 'clear' | 'rain';
@@ -46,9 +47,9 @@ export function createSky(scene: THREE.Scene, opts: { shadows: number; rainDrops
       }
     `,
   });
-  // The dome (and the stars on it) travels with the camera, just inside its far plane (440),
+  // The dome (and the stars on it) travels with the camera, just inside its far plane (bounds.ts),
   // so the whole world and the skyline past its edge always stand in front of the sky
-  const dome = new THREE.Mesh(new THREE.SphereGeometry(400, 32, 16), domeMat);
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(SKY_RADIUS, 32, 16), domeMat);
   dome.position.copy(CENTER);
   scene.add(fx(dome));
 
@@ -59,7 +60,7 @@ export function createSky(scene: THREE.Scene, opts: { shadows: number; rainDrops
     const a = rand() * Math.PI * 2;
     const y = 0.08 + rand() * 0.92;
     const r = Math.sqrt(1 - y * y);
-    sp.set([Math.cos(a) * r * 380, y * 380, Math.sin(a) * r * 380], i * 3);
+    sp.set([Math.cos(a) * r * SKY_RADIUS * 0.95, y * SKY_RADIUS * 0.95, Math.sin(a) * r * SKY_RADIUS * 0.95], i * 3);
   }
   const starGeo = new THREE.BufferGeometry();
   starGeo.setAttribute('position', new THREE.BufferAttribute(sp, 3));
