@@ -48,6 +48,7 @@ import { FIGHT_SPAWN } from './fightsite';
 import { LIBERTY_SPAWN } from './liberty';
 import { buildLibertyBridge } from './libertybridge';
 import { buildProjects } from './projects3d';
+import { buildCommons } from './commons3d';
 import { buildTheBlock } from './theblock';
 import { BLOCK_SPAWN } from './projects';
 import { buildFightClub } from './fightclub';
@@ -181,6 +182,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   buildTrenches();
   // ...its towers, lawns and rows (sites too), and The Block, a place (its pin and panel) with its people
   buildProjects(tier === 'low');
+  // ...the lawns' communal areas, the rec block, parking bays and railings (the redesign's step B), and the people out there
+  buildCommons(scene, crowd, { low: tier === 'low' });
   const theBlock = buildTheBlock(scene, crowd, { tick, reduced, low: tier === 'low' });
   spots.push(theBlock.spot);
   // ...and the metro's el where it crosses the open land south of the south row: no trees under it

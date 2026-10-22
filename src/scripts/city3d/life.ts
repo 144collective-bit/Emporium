@@ -447,6 +447,8 @@ interface Person {
   /** Standing height (or seat height for someone sitting) */
   y?: number;
   act?: Idle['act'];
+  /** How big (PERSON_SCALE unless set: kids) */
+  scale?: number;
   /** How far they've walked in all (their walk is played at its stride from it) */
   walked: number;
   u: number;
@@ -528,7 +530,7 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
       });
     });
   }
-  for (const c of crowd) people.push({ kind: 'idle', seg: 0, inset: 0, u: 0, dir: 1, speed: 0, phase: rand() * 6, x: c.x, z: c.z, y: c.y, act: c.act, ry: c.ry, face: c.ry, walked: 0 });
+  for (const c of crowd) people.push({ kind: 'idle', seg: 0, inset: 0, u: 0, dir: 1, speed: 0, phase: rand() * 6, x: c.x, z: c.z, y: c.y, act: c.act, scale: c.scale, ry: c.ry, face: c.ry, walked: 0 });
   const n = people.length;
   bodies.people = people;
 
@@ -566,7 +568,7 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
       p.face += turn * Math.min(1, dt * 9);
       const y = p.act === 'sit' ? (p.y ?? SLAB) - SEAT_DROP : (p.y ?? SLAB);
       if (p.kind === 'walk') people3d.set(i, p.x, y, p.z, p.face, PERSON_SCALE, 'walk', p.walked / (WALK_STRIDE * PERSON_SCALE) + p.phase / 6);
-      else people3d.set(i, p.x, y, p.z, p.face, PERSON_SCALE, p.act === 'sit' ? 'sit' : p.act === 'chat' ? 'chat' : p.act === 'queue' ? 'idle' : 'look', loop);
+      else people3d.set(i, p.x, y, p.z, p.face, p.scale ?? PERSON_SCALE, p.act === 'sit' ? 'sit' : p.act === 'chat' ? 'chat' : p.act === 'queue' ? 'idle' : 'look', loop);
     });
     people3d.commit();
   });

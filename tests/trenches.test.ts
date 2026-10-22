@@ -9,6 +9,7 @@ import { fromHighway, insideHighway } from '../src/scripts/city3d/highway';
 import { RIVER, WALK_W } from '../src/scripts/city3d/layout';
 import { SOLIDS } from '../src/scripts/city3d/solids';
 import { PROJECT_SOLIDS } from '../src/scripts/city3d/projects';
+import { COMMONS_SOLIDS } from '../src/scripts/city3d/commons';
 import { PADS } from '../src/scripts/city3d/outer';
 import { ROUTES, pointOn } from '../src/scripts/city3d/routes';
 
@@ -57,7 +58,7 @@ test('its blocks: between its streets and off them, clear of the highway, the to
     }
     // Nothing that stands is on it but the metro's (its stair tower at The Trenches) and The Trenches' own (projects.ts)
     for (const box of SOLIDS) {
-      if (PROJECT_SOLIDS.includes(box)) continue;
+      if (PROJECT_SOLIDS.includes(box) || COMMONS_SOLIDS.includes(box)) continue;
       const c: [number, number] = [(box[0] + box[2]) / 2, (box[1] + box[3]) / 2];
       if (inPoly(b.poly, c)) assert.ok(box[4] !== undefined && box[4] > 5, `${b.id} has a box on it at ${box.join(', ')}`);
     }
