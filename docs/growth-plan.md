@@ -997,7 +997,7 @@ the aircraft and the kart.
 
 ## Phase 9: filling the map (each district its own sub-phase)
 
-### 9a The Trenches (the owner's call; in progress)
+### 9a The Trenches (the owner's call; built, three steps)
 
 A neighbourhood of projects in the style of Brooklyn: the starting point
 for a storyline that comes much later. The owner's answers:
@@ -1075,7 +1075,18 @@ In three steps, each a PR for the owner's sign-off:
      court with a game on, the playground, the handball wall, the
      garden, tables, string lights; people on the court, the benches and
      round the plaza, and walking the blocks round it.
-3. **The corner shops for Dorras** (save v10, new ids).
+3. **The corner shops for Dorras** (built, save v10): four row lots made
+   shops with made-up names (Block Bodega across Trench Avenue from The
+   Block, Trench Mart and Avenue Deli along the avenue, Corner Stop on
+   Bottom Street), 20,000 / 30,000 / 45,000 / 60,000 Dorras by how many
+   you own, from level 5. A shop from the day it's bought (4 shelves of 60,
+   busier than a unit's), levels 1-3, clerks, couriers and car deliveries
+   like your other shops. In the city each is drawn from your save: a
+   shutter and a FOR SALE board, then its lit name, awning, open door and
+   crates of what it sells, more at each level. The business card's Units
+   tab and the Vault's estate agent sell and run them; walk mode prompts at
+   their doors. (Bottom Street's row now faces the street; in step 2 it
+   faced the car park.)
 
 **Measured** (headless, Phase 8's numbers and after each step, the same views):
 

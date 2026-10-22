@@ -196,7 +196,7 @@ it and has been retired completely. Build only on what's here.
   - The sky dome and stars travel with the camera at `SKY_RADIUS` (`bounds.ts`: far enough that the skyline's far side stands in front of it seen from downtown, about 720 today, never under 400), inside its far plane (`CAMERA_FAR`, 40 further), so everything in the world stays in front of the sky and the skyline stays on the horizon however far out the edge is.
   - City view pans round the built-up area (`bounds.ts`: `BUILT_UP` is the town, the airport and the kart park; `PAN_BOUNDS` reaches `PAN_MARGIN` (160) past it, never closer than 10 to where you can walk: today that's the whole world), and the Build overview frames the plots (`overviewFrame()`).
   - **The edge is data** (growth plan Phase 5): `EXT` is set in one place, and a test run can set another (`WORLD_EXT=x0,x1`, `npm run test:wide` at Phase 10's -680 to 720); both must pass. Nothing that exists reads the edge: the airport's `SITE` is fixed numbers, the river walls and their bridge gaps come from the street plan (`riverCrossings()` in `streetplan.ts`), flying turns back at whatever bounds it's given. Anything new written against the edge must work at both sizes.
-  - **Growing the city** (many more buildings, then a bigger world) is planned in `docs/growth-plan.md`. Part A (Phases 0-4) makes size cheap: the measuring kit and a snapshot test that nothing moves, tiles and a collision grid, near and far building forms, building as you go, building kits. Part B (Phases 5-10) grows the world: the edge as data (the airport's site frozen, trees per tile), `EXT` out to about 880 across, roads to reach it (a ring highway, more bridges, traffic spent near you), getting about (a world map, waypoints, and the owner's pick of metro, taxis or fast travel), districts one at a time, then optionally about 1,400 across. Phases 0 (the measuring kit), 1 (tiles, the collision grid, the city's fixed geometry merged per tile, crowds and traffic culled for the shadow map), 2 (near and far forms: details near only, far forms for the places and the cars) 3 (building as you go: sites built round the home view at the boot and the rest after it, near forms let go past a budget), 4 (building kits: kits, recipes for blocks, a test district behind `?district=test`), 5 (the edge as data: `EXT` in one place, tests at both sizes) 6 (the edge moves out: `EXT` -420 to 460, the woods, the far plane and sky dome from the edge) 7 (roads to reach it: the ring highway, its bridges and slip lanes, routes generated from the street plan, traffic and boats spent near you) and 8 (getting about: the world map, waypoints, Bring my car, taxis, fast travel, the metro, sound by district) are built, and Phase 9's first district, **The Trenches**, is under way (below); follow the rest one phase at a time with the owner's sign-off, and never add buildings in bulk outside the tiles (`tileBatch()`) or outside sites (`site()`).
+  - **Growing the city** (many more buildings, then a bigger world) is planned in `docs/growth-plan.md`. Part A (Phases 0-4) makes size cheap: the measuring kit and a snapshot test that nothing moves, tiles and a collision grid, near and far building forms, building as you go, building kits. Part B (Phases 5-10) grows the world: the edge as data (the airport's site frozen, trees per tile), `EXT` out to about 880 across, roads to reach it (a ring highway, more bridges, traffic spent near you), getting about (a world map, waypoints, and the owner's pick of metro, taxis or fast travel), districts one at a time, then optionally about 1,400 across. Phases 0 (the measuring kit), 1 (tiles, the collision grid, the city's fixed geometry merged per tile, crowds and traffic culled for the shadow map), 2 (near and far forms: details near only, far forms for the places and the cars) 3 (building as you go: sites built round the home view at the boot and the rest after it, near forms let go past a budget), 4 (building kits: kits, recipes for blocks, a test district behind `?district=test`), 5 (the edge as data: `EXT` in one place, tests at both sizes) 6 (the edge moves out: `EXT` -420 to 460, the woods, the far plane and sky dome from the edge) 7 (roads to reach it: the ring highway, its bridges and slip lanes, routes generated from the street plan, traffic and boats spent near you) and 8 (getting about: the world map, waypoints, Bring my car, taxis, fast travel, the metro, sound by district) are built, and Phase 9's first district, **The Trenches**, is built (below); follow the rest one phase at a time with the owner's sign-off, and never add buildings in bulk outside the tiles (`tileBatch()`) or outside sites (`site()`).
 - **Getting about** (growth plan Phase 8; the owner picked taxis, fast
   travel and the metro):
   - **Places** are `places.ts` (DOM-free, tested in `tests/travel.test.ts`):
@@ -279,7 +279,8 @@ it and has been retired completely. Build only on what's here.
   with the owner's sign-off: (1) streets, traffic and the metro (built);
   (2) the brick tower blocks (8-10 floors, under the Emporium),
   brownstones, The Block and its pin (built); (3) four corner shops for Dorras
-  (20,000 / 30,000 / 45,000 / 60,000 from level 5, run like your units).
+  (20,000 / 30,000 / 45,000 / 60,000 from level 5, run like your units;
+  built).
   - `trenches.ts` (DOM-free, tested in `tests/trenches.test.ts`): Trench
     Avenue (`AVENUE_Z`, an avenue from the west ring avenue to West
     Street, lit junctions, the el over its median), the cross streets
@@ -306,7 +307,8 @@ it and has been retired completely. Build only on what's here.
     handball wall, garden beds, benches, tables, string-light poles;
     `BLOCK_SPAWN` on the plaza), and the rows (`ROW_BLOCKS`: row A's
     blocks whole, row C as a strip along Bottom Street, laid by the
-    `rowhouses` recipe, `rows()`). `PROJECT_SOLIDS` (in `SOLIDS`) are the
+    `rowhouses` recipe, `rows()`; row C's strip is laid with its back edge
+    a hair off straight so its one row faces Bottom Street). `PROJECT_SOLIDS` (in `SOLIDS`) are the
     towers to their tops, the fence, the handball wall, the rows'
     buildings and their alleys' bollards. `TRENCH_WALKS` are the blocks
     people walk round (`life.ts`, with walkers of their own so downtown
@@ -321,6 +323,27 @@ it and has been retired completely. Build only on what's here.
     by each, trees round them), the rows (`drawLot()`), their alleys and
     bollards, and behind Bottom Street a car park and trees along the
     highway.
+  - **The corner shops** (step 3, the owner's call): `CORNER_SHOPS` in
+    `projects.ts` turns four row lots (one each on rows A's a2, a1, a3 and
+    C's c2, facing their street) into shops with made-up names (Block
+    Bodega, Trench Mart, Avenue Deli, Corner Stop) and a `door` on the
+    sidewalk; `isCorner()` keeps them out of the rows' drawing. The rules
+    are tycoon.ts's: places `c0`-`c3` (`CORNER_PLACES`), `corners` in the
+    save (v10; older saves own none), `buyCorner()` / `cornerPrice()`
+    (`CORNER_PRICES` 20,000 / 30,000 / 45,000 / 60,000 by how many you own,
+    from `CORNER_LEVEL` 5, ledger `property`), always a shop (`CORNER`: 4
+    shelves of 60, a faster pace than a unit's shop; `kindAt()` reads
+    `'corner'`), levels 1-3 (`CORNER_LEVEL_COSTS` in catalog.ts), clerks,
+    couriers, car deliveries with the bonus. Drawn from the save by
+    `cornershops.ts` (`buildCornerShops()`, `show()` rebuilds only what
+    changed): for sale behind a shutter with a FOR SALE board; yours with
+    its name lit on the fascia, an awning, the door open, an OPEN sign,
+    crates of its stock on stands, neon and planters at level 2, its name on
+    the roof at level 3, stars by the door. On screen: the business card's
+    Units tab has a second row of chips for them (buy, shelves, Market hall,
+    Upgrade), the Vault's estate agent lists them, the market hall and the
+    Post office take them, the Apartments hire for them, and walk mode
+    prompts at each door ("Trench Mart · For sale").
   - **The Block** is a place (`theblock.ts`, built at the boot): spot
     `trenches` (pin over the court, directory entry, panel
     `data-panel-tpl="trenches"`: the storyline starts here, coming soon,
@@ -976,7 +999,8 @@ it and has been retired completely. Build only on what's here.
   `line()` for the Workshop and factories), the ledger (`book()`, called by
   every rule that moves Dorras) and loans (`borrow()`, `repay()`, a share
   of takings in `advance()`).
-  `cleanSave()` cleans anything loaded and upgrades older saves (now v9);
+  `cleanSave()` cleans anything loaded and upgrades older saves (now v10: The
+  Trenches' corner shops, `corners`);
   keep that migration when the save changes. New economy rules go here
   first.
 - **The city's game (Phase 5)** sits on the same save: XP and levels
@@ -1301,7 +1325,7 @@ it and has been retired completely. Build only on what's here.
   Degen's style, origin on the ground under the middle, +x forward, wheels
   that steer and roll, a seated Degen driver via `seat()`). Only for the
   kart park: never real money, never tied to the store or the token.
-- **The save** (`tycoon.ts`, v9): `karts` { model, paint, owned, mods,
+- **The save** (`tycoon.ts`, v10): `karts` { model, paint, owned, mods,
   `records` (fastest lap and best run per course and class, `KartTime`),
   `boards` (the local leaderboards, `LEADERBOARD_SIZE` runs per key: your
   own runs for now, built so a server can hold everyone's later),
@@ -1548,7 +1572,7 @@ it and has been retired completely. Build only on what's here.
   stick, X / Y, LB held, A, Start quits), Esc or Quit ends it with the
   card, closing the card stands Degen up outside the ropes (`OUT`);
   `.city.is-fighting` hides the walk HUD and `data-fight` makes the header
-  read "Fighting · <opponent>". The save (`tycoon.ts`, v9) keeps `fight`
+  read "Fighting · <opponent>". The save (`tycoon.ts`, v10) keeps `fight`
   (style, owned styles, wins, losses, knock-outs, best chain, bouts, spars,
   each opponent's record), the ledger entry `fighting` and the counters
   `bouts` / `fightWins` / `kos` / `chains`. New gameplay goes in the sim

@@ -286,7 +286,7 @@ test('the save is v9: the old tracks\' records are kept aside, their boards and 
   };
   old.counters = { ...newSave(0).counters, kartHits: 40, kartWins: 3 };
   const s = cleanSave(old, 1000);
-  assert.equal(s.v, 9);
+  assert.equal(s.v, 10);
   assert.deepEqual([s.dorras, s.xp], [4321, 999]);
   assert.deepEqual(s.karts.owned, ['zip']);
   assert.equal(s.karts.model, 'zip');
@@ -317,7 +317,7 @@ test('the save is v9: the old tracks\' records are kept aside, their boards and 
     },
     1000
   );
-  assert.equal(full.v, 9);
+  assert.equal(full.v, 10);
   assert.deepEqual(full.karts.records, {});
   assert.deepEqual(full.karts.boards, {});
   assert.deepEqual(full.karts.parBeaten, []);
