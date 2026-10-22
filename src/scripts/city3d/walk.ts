@@ -58,6 +58,8 @@ import { NS_ROADS, RIVER, SLAB, WALK_W, type Tick } from './world';
 import { footbridgeWall, footbridgeY } from './liberty';
 import { WORLD_BOUNDS } from './layout';
 import { PLAN, inPoly, type Pt } from './streetplan';
+import { SPOTS, pointOn, ROUTES } from './routes';
+import { bodies } from './life';
 import type { GameDeps } from './ui';
 
 /** What a prompt can open: a landmark's door, or one of walk mode's own places and vehicles */
@@ -1673,6 +1675,49 @@ export function createWalk(d: WalkDeps) {
     /** In the ring at the Fight Club? */
     get fighting() {
       return fight.active;
+    },
+    /** Your aircraft: where it stands (home in the hangar, or wherever you landed it), or flies */
+    get plane() {
+      const s = fly.state;
+      return { x: s.x, z: s.z, away: fly.away };
+    },
+    /** On foot (not driving, flying, karting or fighting): free to take a taxi or travel */
+    get onFoot() {
+      return active && !drive.active && !fly.active && !karts.active && !fight.active;
+    },
+    /**
+     * Bring my car (the world map, growth plan Phase 8): to the nearest lane round you, facing the way it
+     * runs, clear of the traffic. False if you're driving it, or there's no road within reach
+     */
+    bringCar() {
+      if (drive.active) return false;
+      let best: { x: number; z: number; yaw: number; d: number } | null = null;
+      for (const sp of SPOTS) {
+        const d = Math.hypot(sp.x - pos.x, sp.z - pos.z);
+        if (d > 45 || d < 3 || (best && d >= best.d)) continue;
+        if (bodies.cars.some((c) => Math.hypot(c.x - sp.x, c.z - sp.z) < 7)) continue;
+        const dir = pointOn(ROUTES[sp.r], sp.p, 0).dir;
+        best = { x: sp.x, z: sp.z, yaw: Math.atan2(-dir[1], dir[0]), d };
+      }
+      return !!best && drive.bring(best.x, best.z, best.yaw);
+    },
+    /** Stand Degen somewhere else at once, looking the way he faces (fast travel, the end of a taxi or metro ride) */
+    placeAt(at: { x: number; z: number; yaw: number }) {
+      if (drive.active || fly.active || karts.active || fight.active) return false;
+      pos.set(at.x, groundAt(at.x, at.z), at.z);
+      vel.set(0, 0);
+      vy = 0;
+      grounded = true;
+      yaw = at.yaw;
+      face = yaw + Math.PI;
+      pitch = firstPerson ? -0.05 : 0.35;
+      pivot.set(0, 0, 0);
+      camDist = zoom;
+      keys.clear();
+      near = null;
+      prompt.hidden = true;
+      d.touched();
+      return true;
     },
     /** Your car, if it's out of the garage: where it is, its model, and whether you're in it */
     get car() {
