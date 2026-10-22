@@ -7,6 +7,7 @@
  * timetable (airfield.ts). It's all at ground level, in world numbers.
  */
 import * as THREE from 'three';
+import { site } from './tilework';
 import { Batch, FONT_DISPLAY, PAL, canvasTex, fx, glowMat, lit, neon, plane, rng, toon } from './kit';
 import {
   AIRBRIDGES,
@@ -84,14 +85,25 @@ export function buildAirport(scene: THREE.Scene, crowd: Idle[], tick: (f: Tick) 
   group.add(places);
   const b = new Batch();
   const hb = new Batch();
-  surfaces(b);
-  runwayLights(b);
+  // The runway, taxiway, apron and their lights and kit: sites (growth plan Phase 3), built as you go
+  site('airport runway', SITE, (into) => {
+    const sb = new Batch();
+    surfaces(sb);
+    runwayLights(sb);
+    sb.build(into);
+  });
+  site('airport apron', SITE, (into) => {
+    const sb = new Batch();
+    helipad(sb);
+    apronKit(sb);
+    sb.build(into);
+  });
+  // (the floodlights' pools of light go with the lamps', at the boot)
+  for (const [x, z] of MASTS) for (const dz of [4, 11]) addPool(x, z + dz, 13, 0);
   terminal(b, group, crowd, opts.low);
   tower(b, group, tick);
   hangar(hb, places);
   hb.build(places);
-  helipad(b);
-  apronKit(b);
   windsock(group, tick, opts.reduced);
   roadside(group);
   b.build(group);
@@ -570,7 +582,6 @@ function apronKit(b: Batch) {
     cyl(b, 0.16, 8, x, 0, z, STEEL, 8, 0.22);
     box(b, x - 1.0, 8, z - 0.25, x + 1.0, 8.5, z + 0.25, INK);
     for (const dx of [-0.6, 0, 0.6]) box(b, x + dx - 0.2, 7.95, z - 0.18, x + dx + 0.2, 8.05, z + 0.18, light('#fff6c8'));
-    for (const dz of [4, 11]) addPool(x, z + dz, 13, 0);
   }
 }
 

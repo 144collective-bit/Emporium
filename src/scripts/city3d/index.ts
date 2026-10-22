@@ -50,14 +50,16 @@ import type { GameDeps } from './ui';
 import { createBench } from './bench';
 import { mb, sceneMemory } from './perf';
 import { tileBatch } from './tilebatch';
+import { createTileWork } from './tilework';
+import { tilesInView, type Plane } from './tiles';
 import { farForm, farLods, updateLods } from './lod';
 
 type Tier = 'high' | 'medium' | 'low';
 
 const TIERS = {
-  high: { dpr: 2, shadows: 2048, msaa: 4, bloomScale: 0.5, cars: 38, buses: 3, walkers: 100, trees: 250, skyline: 70, rain: 6000, clouds: 12, far: 120 },
-  medium: { dpr: 1.5, shadows: 1024, msaa: 0, bloomScale: 0.5, cars: 27, buses: 2, walkers: 62, trees: 150, skyline: 50, rain: 3500, clouds: 9, far: 110 },
-  low: { dpr: 1.25, shadows: 0, msaa: 0, bloomScale: 0.3, cars: 16, buses: 2, walkers: 30, trees: 90, skyline: 26, rain: 1200, clouds: 4, far: 90 },
+  high: { dpr: 2, shadows: 2048, msaa: 4, bloomScale: 0.5, cars: 38, buses: 3, walkers: 100, trees: 250, skyline: 70, rain: 6000, clouds: 12, far: 120, nearBudget: 96 },
+  medium: { dpr: 1.5, shadows: 1024, msaa: 0, bloomScale: 0.5, cars: 27, buses: 2, walkers: 62, trees: 150, skyline: 50, rain: 3500, clouds: 9, far: 110, nearBudget: 64 },
+  low: { dpr: 1.25, shadows: 0, msaa: 0, bloomScale: 0.3, cars: 16, buses: 2, walkers: 30, trees: 90, skyline: 26, rain: 1200, clouds: 4, far: 90, nearBudget: 32 },
 };
 
 function pickTier(): Tier {
@@ -82,7 +84,14 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const Q = TIERS[tier];
   const progress = (k: number) => bar.style.setProperty('--p', String(k));
   // When each part of the boot finished (the ?fps readout and the benchmark)
-  const bootAt = { start: performance.now(), art: 0, scene: 0, tiled: 0, built: 0, compiled: 0, first: 0 };
+  const bootAt = { start: performance.now(), art: 0, scene: 0, tiled: 0, built: 0, compiled: 0, first: 0, waits: 0 };
+  // Building, apart from waiting on the browser (a frame drawn between steps, the canvas sized): the city's own work
+  const waited = async <T,>(p: Promise<T> | T) => {
+    const t0 = performance.now();
+    const r = await p;
+    bootAt.waits += performance.now() - t0;
+    return r;
+  };
 
   // Renderer first: if WebGL is missing, stay on the 2D map
   let renderer: THREE.WebGLRenderer;
@@ -110,7 +119,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const [logo, degen, flame] = await Promise.all([loadTex(root.dataset.logo!), loadImage(root.dataset.degen!), loadImage(root.dataset.flame!)]);
   progress(0.2);
   bootAt.art = performance.now();
-  await nextFrame();
+  await waited(nextFrame());
 
   /* ---------- Scene ---------- */
   const scene = new THREE.Scene();
@@ -120,7 +129,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // Downtown's blocks are paved; the landmarks' own lots (by their old block, layout.ts SEATS) get their own ground
   const { streaks } = buildGround(scene, { 'dt-se': 'concrete', '22,22': 'concrete', '22,11': 'concrete', '11,22': 'concrete', '11,0': 'grass', '22,0': 'grass', '0,22': 'grass' });
   progress(0.3);
-  await nextFrame();
+  await waited(nextFrame());
   // Every far-away car, parked or driving, in one mesh (growth plan Phase 2): before anything parks one
   initFarCars(scene);
   const { spots, crowd } = buildLandmarks(scene, { degen, logo, tick, low: tier === 'low' });
@@ -153,17 +162,17 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // ?fight: the sparring demo on the hangout square (the fight clips, before the Fight Club exists)
   const fightDemo = new URLSearchParams(location.search).has('fight') ? (await import('./fight-demo')).buildFightDemo({ scene, root, reduced, low: tier === 'low', tick }) : null;
   progress(0.55);
-  await nextFrame();
+  await waited(nextFrame());
   scatterOutskirts(Q.trees);
   buildSkyline(scene, Q.skyline, tick);
-  buildTrees(scene);
+  buildTrees();
   buildLamps(scene);
   progress(0.7);
-  await nextFrame();
+  await waited(nextFrame());
   buildLife(scene, { cars: Q.cars, buses: Q.buses, walkers: Q.walkers, light: tier === 'low', far: Q.far }, crowd, tick);
   const sky = createSky(scene, { shadows: Q.shadows, rainDrops: Q.rain, clouds: Q.clouds });
   progress(0.85);
-  await nextFrame();
+  await waited(nextFrame());
 
   /* ---------- Camera ---------- */
   const camera = new THREE.PerspectiveCamera(34, 1, 0.5, 440);
@@ -201,8 +210,28 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   }
   let dirty = true;
   new ResizeObserver(resize).observe(host);
-  resize();
+  {
+    const t0 = performance.now();
+    resize();
+    bootAt.waits += performance.now() - t0;
+  }
 
+  /** The tiles a camera at `pos` looking at `target` sees (the boot builds those of the home view and the intro's start) */
+  const probe = new THREE.PerspectiveCamera();
+  const planesOf = (cam: THREE.PerspectiveCamera): Plane[] => {
+    cam.updateMatrixWorld();
+    const f = new THREE.Frustum().setFromProjectionMatrix(new THREE.Matrix4().multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse));
+    return f.planes.map((p) => [p.normal.x, p.normal.y, p.normal.z, p.constant]);
+  };
+  function viewTiles(pos: THREE.Vector3, target: THREE.Vector3) {
+    probe.copy(camera);
+    probe.position.copy(pos);
+    probe.lookAt(target);
+    probe.updateProjectionMatrix();
+    return tilesInView(planesOf(probe), 0, 24);
+  }
+  /** Where the intro's fly-in starts from */
+  const introFrom = (h: { pos: THREE.Vector3 }) => h.pos.clone().add(new THREE.Vector3(40, 46, 40));
   // Compile shaders before the reveal so the fly-in doesn't stutter
   const h0 = home();
   camera.position.copy(h0.pos);
@@ -213,7 +242,16 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   consolidate(spots.map((sp) => sp.group));
   // The rest of the city's fixed geometry (the ground, roads, downtown's infill, the districts, trees, lamps,
   // the airport and the kart park) merged per tile: one draw per material, only the tiles in view drawn
-  const tiled = tileBatch(scene, [scene, ...['airport', 'kartpark'].flatMap((n) => scene.getObjectByName(n) ?? [])]);
+  // Building as you go (growth plan Phase 3): of the sites (the fixed city drawn from data: trees, lamps, the
+  // airport's grounds, the kart park's circuit), only those in the home view and the intro's are built now
+  const works = createTileWork(scene, {
+    budget: (Number(new URLSearchParams(location.search).get('budget')) || Q.nearBudget) * 2 ** 20,
+    compile: (meshes) => meshes.forEach((m) => renderer.compile(m, camera, scene)),
+  });
+  const atBoot = works.boot([...new Set([...viewTiles(h0.pos, h0.target), ...viewTiles(introFrom(h0), h0.target)].map((t) => t.join()))].map((k) => k.split(',').map(Number) as [number, number]));
+  const tiled = tileBatch(scene, [scene, ...['airport', 'kartpark'].flatMap((n) => scene.getObjectByName(n) ?? []), ...atBoot]);
+  for (const g of atBoot) g.removeFromParent();
+  works.attach(tiled);
   bootAt.tiled = performance.now();
   // Each place's far form (growth plan Phase 2): a couple of draws far away instead of one per material.
   // Made after the boot, a place at a time in spare moments (each stays near until it has one)
@@ -234,6 +272,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   let flight: { from: THREE.Vector3; to: THREE.Vector3; tFrom: THREE.Vector3; tTo: THREE.Vector3; start: number; dur: number; done?: () => void } | null = null;
   function flyTo(pos: THREE.Vector3, target: THREE.Vector3, dur = 1.6, done?: () => void) {
     if (reduced) dur = 0;
+    // What's waiting where it's going is built first (growth plan Phase 3)
+    works.want(target.x, target.z, 70);
     flight = { from: camera.position.clone(), to: pos.clone(), tFrom: controls.target.clone(), tTo: target.clone(), start: timer.getElapsed(), dur, done };
     controls.enabled = false;
   }
@@ -557,6 +597,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     walking = true;
     walker.on = true;
     walk.enter(spawn);
+    works.want(walk.position.x, walk.position.z, 70);
     mp?.walkChanged(true);
     // The site header steps aside so the city and its mode header fill the screen (global.css)
     document.body.classList.add('is-walking');
@@ -737,8 +778,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const stat = { frames: 0, draws: 0, tris: 0, shadowDraws: 0, shadowTris: 0, worst: 0, last: 0, since: performance.now(), memAt: 0, mem: '' };
   function bootTimes() {
     const r = (a: number, b: number) => Math.round(b - a);
-    // (`build` includes merging per tile, `tiles`)
-    return { total: r(bootAt.start, bootAt.first), art: r(bootAt.start, bootAt.art), build: r(bootAt.art, bootAt.built), tiles: r(bootAt.scene, bootAt.tiled), shaders: r(bootAt.built, bootAt.compiled), firstFrame: r(bootAt.compiled, bootAt.first) };
+    // (`build` includes merging per tile, `tiles`, which includes building the sites round the home view, `sites`;
+    // `work` is `build` less the waits on the browser)
+    return { total: r(bootAt.start, bootAt.first), art: r(bootAt.start, bootAt.art), build: r(bootAt.art, bootAt.built), work: r(bootAt.art + bootAt.waits, bootAt.built), sites: Math.round(works.stats().bootMs), tiles: r(bootAt.scene, bootAt.tiled), shaders: r(bootAt.built, bootAt.compiled), firstFrame: r(bootAt.compiled, bootAt.first) };
   }
   // The benchmark's sky: clear day or night, then the visitor's own back
   function benchSky(night: boolean) {
@@ -864,6 +906,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     CROWD_VIEW.eye.setFromMatrixPosition(camera.matrixWorld);
     CROWD_VIEW.frustum.setFromProjectionMatrix(viewProj.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
     CROWD_VIEW.shadowOn = renderer.shadowMap.enabled && sky.shadowFrustum(CROWD_VIEW.shadow);
+    // Building as you go (growth plan Phase 3): a few milliseconds a frame (more while the start menu covers the city)
+    works.step(root.classList.contains('has-start') ? 12 : tier === 'low' ? 2 : 3, CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, CROWD_VIEW.eye.z, dt, Q.far);
     // Near and far forms (growth plan Phase 2): the details only within the tier's `far` of the camera
     tiled.update(CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, CROWD_VIEW.eye.z, Q.far);
     updateLods(CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, CROWD_VIEW.eye.z, Q.far);
@@ -976,8 +1020,10 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           `${Math.round(stat.draws / n)} draws · ${(stat.tris / n / 1e6).toFixed(2)}M tris`,
           `of which shadows ${Math.round(stat.shadowDraws / n)} draws · ${(stat.shadowTris / n / 1e6).toFixed(2)}M tris`,
           stat.mem,
-          `tiles ${tiled.drawn()} of ${tiled.pieces} pieces drawn · ${tiled.nearTiles()} near · ${farLods()} far forms`,
-          `boot ${(b.total / 1000).toFixed(1)} s · build ${(b.build / 1000).toFixed(1)} (tiles ${(b.tiles / 1000).toFixed(1)}) · shaders ${(b.shaders / 1000).toFixed(1)}`,
+          `tiles ${tiled.drawn()} of ${tiled.pieces()} pieces drawn · ${tiled.nearTiles()} near · ${farLods()} far forms`,
+          `boot ${(b.total / 1000).toFixed(1)} s · build ${(b.build / 1000).toFixed(1)} (work ${(b.work / 1000).toFixed(2)}, tiles ${(b.tiles / 1000).toFixed(2)}) · shaders ${(b.shaders / 1000).toFixed(1)}`,
+          (({ built, waiting, atBoot, bootMs, laterMs }) => `sites ${built} built: ${atBoot} at boot (${Math.round(bootMs)} ms), the rest after (${Math.round(laterMs)} ms) · ${waiting} waiting`)(works.stats()),
+          (({ released, held, budget, rebuilt }) => `near forms ${mb(held)} held of ${mb(budget)} · ${released} tiles let go · ${rebuilt} built again`)(works.stats()),
           `${tier} · px ${renderer.getPixelRatio().toFixed(2)}${lost.length ? ` · lowered: ${lost.join(', ')}` : ''}`,
           // Where Degen stands while walking (for placing things: ?spawn=x,z puts him back there)
           ...(walking ? [`at ${walk.position.x.toFixed(1)}, ${walk.position.z.toFixed(1)}`] : []),
@@ -1077,9 +1123,11 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       if (root.dataset.mode !== 'explore') return;
       close();
       const s = home();
-      camera.position.copy(s.pos.clone().add(new THREE.Vector3(40, 46, 40)));
+      camera.position.copy(introFrom(s));
       controls.target.copy(s.target);
       camera.lookAt(controls.target);
+      // Nothing still building shows in the fly-in: what's in its view is built first
+      works.wantView(planesOf(camera), Q.far, camera.position.x, camera.position.y, camera.position.z);
       flyTo(s.pos, s.target, 2.8);
     },
     stop() {
