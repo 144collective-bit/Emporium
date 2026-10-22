@@ -865,7 +865,27 @@ with it, before the edge moves.
 - **The benchmark** has a view of a highway junction, on the route.
 - **Measured** (headless, before and after, the same views):
 
-MEASURED
+  | | Medium (laptop) before | after | Low (phone) before | after |
+  | --- | --- | --- | --- | --- |
+  | Home view | 498 draws · 0.80M | 488 · 0.73M | 269 · 0.24M | 258 · 0.25M |
+  | Downtown street | 529 · 0.81M | 556 · 0.82M | 240 · 0.23M | 246 · 0.21M |
+  | Build overview | 585 · 0.97M | 608 · 1.00M | 261 · 0.28M | 269 · 0.30M |
+  | A highway junction | (none) | 53 · 0.07M | (none) | 56 · 0.08M |
+  | The far edge | 528 · 0.53M | 510 · 0.56M | 406 · 0.26M | 385 · 0.27M |
+  | Route (average) | 474 · 0.59M | 397 · 0.53M | 261 · 0.24M | 240 · 0.22M |
+  | Geometry | 68 MB | 71 MB | 52 MB | 55 MB |
+
+  - The city's views are the same within the noise of the traffic and
+    the crowds.
+  - The highway is cheap: a few draws, its pieces split by tile like the
+    rest of the fixed city.
+  - The boot is unchanged. There are about 30 more sites (the highway's
+    lamps, by tile), built after it.
+- **Done:** you can drive the ring highway round the whole city, with
+  traffic round you, inside the targets.
+- **To check on real devices:** drive the highway round (`?spawn=25,-160`
+  starts you beside it on the north side), and `?bench`, whose route now
+  passes a highway junction.
 
 ## Phase 8: getting about (the owner picks)
 
