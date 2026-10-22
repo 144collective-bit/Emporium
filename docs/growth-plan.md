@@ -1058,7 +1058,23 @@ In three steps, each a PR for the owner's sign-off:
    people on the sidewalks and stoops; murals.
 3. **The corner shops for Dorras** (save v10, new ids).
 
-BENCH_9
+**Measured** (headless, Phase 8's numbers and now, the same views):
+
+| | Medium (laptop) Phase 8 | step 1 | Low (phone) Phase 8 | step 1 |
+| --- | --- | --- | --- | --- |
+| Home view | 501 draws · 0.76M | 487 · 0.78M | 260 · 0.26M | 267 · 0.27M |
+| Downtown street | 537 · 0.81M | 594 · 0.86M | 253 · 0.22M | 276 · 0.26M |
+| Build overview | 591 · 1.00M | 613 · 1.01M | 280 · 0.30M | 293 · 0.33M |
+| A highway junction | 48 · 0.06M | 53 · 0.07M | 57 · 0.09M | 63 · 0.09M |
+| The far edge | 529 · 0.58M | 525 · 0.58M | 403 · 0.27M | 402 · 0.29M |
+| Route (average) | 404 · 0.53M | 406 · 0.54M | 228 · 0.22M | 237 · 0.22M |
+| Geometry / textures | 76 / 99 MB | 75 / 100 MB | 55 / 99 MB | 61 / 100 MB |
+
+- Within the noise of the traffic and the crowds, a few draws more where the
+  south-west's streets and lamps are in view (the downtown street looks
+  across to it). The boot's own work is unchanged (build 7.8 to 8.1 s
+  headless). Phones hold about 6 MB more geometry: the district's streets,
+  lamps and the longer viaduct.
 
 
 The open land inside the new edge is room for several districts. Each one
