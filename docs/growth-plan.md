@@ -1052,30 +1052,56 @@ In three steps, each a PR for the owner's sign-off:
      Airport the train turns round at South Bank. The longest ride, Kart
      Park to The Trenches, is about 37 s. The two cars each follow the
      track, round the bend too.
-2. **The buildings:** a tower-block kit and the projects' recipe; the
-   brownstones and corner shops on row A; The Block (court, playground,
-   handball wall, benches, community garden, string lights) and its pin;
-   people on the sidewalks and stoops; murals.
+2. **The buildings** (built):
+   - `projects.ts` (DOM-free, tested in `tests/projects.test.ts`): 24
+     Trench Houses on the projects' blocks (row B), crosses and slabs, 8
+     to 10 storeys (the three blocks round The Block the tallest, every
+     roof and tank at least half a tile under the Emporium's roof), set
+     back on lawns, each door on the side nearest a street; The Block on
+     the block straight south of the station; 140 brownstones and corner
+     shops round row A's blocks and along Bottom Street (a `rowhouses`
+     recipe: walk-ups with stoops and fire escapes, a mart, a laundromat,
+     a barber, a slice shop, tacos, noodles), with 19 alleys. Every
+     footprint is solid (`PROJECT_SOLIDS`).
+   - `projects3d.ts` draws them as sites: brick towers with lit windows,
+     a stone string course and cornice, the parapet, the stair and lift
+     house and a water tank on the roof, a canopy with lamps and the
+     tower's number at its door, murals with made-up words on the arms
+     facing Trench Avenue; paths, benches, lamps and trees on the lawns;
+     the rows from the kits; a car park and trees behind Bottom Street.
+   - **The Block** (`theblock.ts`) is a place: pin, directory entry,
+     panel (the storyline starts here, coming soon) and Walk in. The
+     plaza by the station's stairs under THE BLOCK's gantry, a fenced
+     court with a game on, the playground, the handball wall, the
+     garden, tables, string lights; people on the court, the benches and
+     round the plaza, and walking the blocks round it.
 3. **The corner shops for Dorras** (save v10, new ids).
 
-**Measured** (headless, Phase 8's numbers and now, the same views):
+**Measured** (headless, Phase 8's numbers and after each step, the same views):
 
-| | Medium (laptop) Phase 8 | step 1 | Low (phone) Phase 8 | step 1 |
-| --- | --- | --- | --- | --- |
-| Home view | 501 draws · 0.76M | 487 · 0.78M | 260 · 0.26M | 267 · 0.27M |
-| Downtown street | 537 · 0.81M | 594 · 0.86M | 253 · 0.22M | 276 · 0.26M |
-| Build overview | 591 · 1.00M | 613 · 1.01M | 280 · 0.30M | 293 · 0.33M |
-| A highway junction | 48 · 0.06M | 53 · 0.07M | 57 · 0.09M | 63 · 0.09M |
-| The far edge | 529 · 0.58M | 525 · 0.58M | 403 · 0.27M | 402 · 0.29M |
-| Route (average) | 404 · 0.53M | 406 · 0.54M | 228 · 0.22M | 237 · 0.22M |
-| Geometry / textures | 76 / 99 MB | 75 / 100 MB | 55 / 99 MB | 61 / 100 MB |
+| | Medium (laptop) Phase 8 | step 1 | step 2 | Low (phone) Phase 8 | step 1 | step 2 |
+| --- | --- | --- | --- | --- | --- | --- |
+| Home view | 501 draws · 0.76M | 487 · 0.78M | 491 · 0.78M | 260 · 0.26M | 267 · 0.27M | 257 · 0.27M |
+| Downtown street | 537 · 0.81M | 594 · 0.86M | 564 · 0.88M | 253 · 0.22M | 276 · 0.26M | 246 · 0.24M |
+| Build overview | 591 · 1.00M | 613 · 1.01M | 595 · 1.03M | 280 · 0.30M | 293 · 0.33M | 299 · 0.34M |
+| A highway junction | 48 · 0.06M | 53 · 0.07M | 53 · 0.07M | 57 · 0.09M | 63 · 0.09M | 67 · 0.10M |
+| The Trenches, round The Block (new) | | | 170 · 0.39M | | | 120 · 0.16M |
+| The far edge | 529 · 0.58M | 525 · 0.58M | 532 · 0.68M | 403 · 0.27M | 402 · 0.29M | 418 · 0.30M |
+| Route (average) | 404 · 0.53M | 406 · 0.54M | 405 · 0.56M | 228 · 0.22M | 237 · 0.22M | 238 · 0.22M |
+| Geometry / textures | 76 / 99 MB | 75 / 100 MB | 89 / 109 MB | 55 / 99 MB | 61 / 100 MB | 71 / 109 MB |
 
-- Within the noise of the traffic and the crowds, a few draws more where the
-  south-west's streets and lamps are in view (the downtown street looks
-  across to it). The boot's own work is unchanged (build 7.8 to 8.1 s
+- Step 1: within the noise of the traffic and the crowds, a few draws more
+  where the south-west's streets and lamps are in view (the downtown street
+  looks across to it). The boot's own work is unchanged (build 7.8 to 8.1 s
   headless). Phones hold about 6 MB more geometry: the district's streets,
   lamps and the longer viaduct.
-
+- Step 2: the towers and rows go into the tiles' shared materials, so the
+  draws barely move anywhere (the far edge looks back over the district:
+  0.1M more triangles). Looking round The Block itself is light: 170
+  draws on a laptop, 120 on a phone. The geometry grows by about 14 MB
+  (laptop) and 10 MB (phone) once every site is built, the textures by
+  about 9 MB (the towers' numbers, the murals, The Block's signs). The
+  boot's own work is unchanged (sites at the boot 0.11 s).
 
 The open land inside the new edge is room for several districts. Each one
 is its own PR and the owner's call, built from Phase 4's kits. For

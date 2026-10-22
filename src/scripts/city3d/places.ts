@@ -13,6 +13,7 @@ import { AIR_SPAWN } from './airfield';
 import { FIGHT_SPAWN } from './fightsite';
 import { LIBERTY_SPAWN } from './liberty';
 import { STATIONS } from './metro';
+import { BLOCK_SPAWN } from './projects';
 
 export type PlaceKind = 'spot' | 'lot' | 'metro';
 export interface Place {
@@ -50,6 +51,7 @@ export const PLACES: Place[] = [
   { id: 'airport', kind: 'spot', spot: 'airport', at: AIR_SPAWN },
   { id: 'fightclub', kind: 'spot', spot: 'fightclub', at: FIGHT_SPAWN },
   { id: 'liberty', kind: 'spot', spot: 'liberty', at: LIBERTY_SPAWN },
+  { id: 'trenches', kind: 'spot', spot: 'trenches', at: BLOCK_SPAWN },
   // The garage's forecourt, facing its office door; the market square, at your stall
   // (its office door faces north, onto the forecourt)
   { id: 'garage', kind: 'lot', name: 'Garage', at: { x: GARAGE_SITE.door.x - 1, z: GARAGE_SITE.door.z - 1.8, yaw: Math.atan2(-1, -1.8) } },

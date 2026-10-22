@@ -14,6 +14,7 @@ import { JUNCTIONS, ROUTES, SPOTS, lightState, phaseOf, pointOn, rightOf, type J
 import { CARS, PAINTS, carGeometry, carMaterials, theFarCars, type CarId } from './cars';
 import { isNear, tileKey, tileOf } from './tiles';
 import type { Idle } from './landmarks';
+import { TRENCH_WALKS } from './projects';
 import { CROWD_VIEW, HIP_HEIGHT, cityOutfit, createCrowd } from './character';
 import { CLIP_SECONDS, WALK_STRIDE } from './crowdclips';
 
@@ -478,6 +479,10 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
     ...PLAN.blocks.filter((b) => b.id.startsWith('dt-') || (b.use === 'district' && b.ref!.startsWith('S'))).map((b) => ({ poly: b.poly })),
     ...DECK_STROLLS.map((poly) => ({ poly, y: DECK_Y })),
   ];
+  // ...and round The Trenches' blocks nearest The Block, with walkers of their own (so downtown keeps its crowd)
+  const town = walks.length;
+  walks.push(...PLAN.blocks.filter((b) => TRENCH_WALKS.includes(b.id)).map((b) => ({ poly: b.poly })));
+  const walkers = Math.round((opts.walkers * walks.length) / town);
   const blocks = walks.map((w) => w.poly);
   const loops = new Map<string, Loop>();
   const loopOf = (b: number, inset: number) => {
@@ -494,7 +499,7 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
   // Spread walkers evenly round each lane. Everyone in a lane keeps the same
   // pace, so nobody walks through the person in front.
   const perLane = new Map<string, number[]>();
-  for (let i = 0; i < opts.walkers; i++) {
+  for (let i = 0; i < walkers; i++) {
     const key = `${i % blocks.length}:${Math.floor(i / blocks.length) % WALK_LANES.length}`;
     if (!perLane.has(key)) perLane.set(key, []);
     perLane.get(key)!.push(i);

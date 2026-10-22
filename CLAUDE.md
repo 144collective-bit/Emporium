@@ -278,7 +278,7 @@ it and has been retired completely. Build only on what's here.
   stoops, kids on the court; nothing threatening). Built in steps, each
   with the owner's sign-off: (1) streets, traffic and the metro (built);
   (2) the brick tower blocks (8-10 floors, under the Emporium),
-  brownstones, The Block and its pin; (3) four corner shops for Dorras
+  brownstones, The Block and its pin (built); (3) four corner shops for Dorras
   (20,000 / 30,000 / 45,000 / 60,000 from level 5, run like your units).
   - `trenches.ts` (DOM-free, tested in `tests/trenches.test.ts`): Trench
     Avenue (`AVENUE_Z`, an avenue from the west ring avenue to West
@@ -296,6 +296,42 @@ it and has been retired completely. Build only on what's here.
     median, lane lines, zebras on every arm, lamps along both sides); its
     blocks' slabs and lawns are the street plan's (`world.ts`), and the
     avenues it meets break their medians and lines there (`highwayGaps()`).
+  - `projects.ts` (DOM-free, tested in `tests/projects.test.ts`) is what
+    stands on its blocks: the Trench Houses (`TOWERS`, numbered: crosses
+    and slabs on row B's blocks, 8 to 10 storeys, the ones round The
+    Block the tallest, every top `EMPORIUM_ROOF` less half a tile or more
+    under; each with its door on the side nearest a street), The Block
+    (`THE_BLOCK` on `trench-b0-2`, south of the station: plaza, court and
+    its fence with a gate each side (`blockFence()`), playground,
+    handball wall, garden beds, benches, tables, string-light poles;
+    `BLOCK_SPAWN` on the plaza), and the rows (`ROW_BLOCKS`: row A's
+    blocks whole, row C as a strip along Bottom Street, laid by the
+    `rowhouses` recipe, `rows()`). `PROJECT_SOLIDS` (in `SOLIDS`) are the
+    towers to their tops, the fence, the handball wall, the rows'
+    buildings and their alleys' bollards. `TRENCH_WALKS` are the blocks
+    people walk round (`life.ts`, with walkers of their own so downtown
+    keeps its crowd).
+  - `projects3d.ts` draws them as sites (`buildProjects()`): each tower
+    (brick from the wall atlas, its windows lit at night, string course
+    and cornice, the roof inside a parapet, the stair and lift house, a
+    water tank on the lower ones, the door's canopy with lamps and its
+    "TRENCH HOUSES · n" sign from one small atlas, a mural with made-up
+    words on the north arm of those along Trench Avenue (`MURAL_TEXT`)),
+    the lawns (paths from the doors to the sidewalk with benches, a lamp
+    by each, trees round them), the rows (`drawLot()`), their alleys and
+    bollards, and behind Bottom Street a car park and trees along the
+    highway.
+  - **The Block** is a place (`theblock.ts`, built at the boot): spot
+    `trenches` (pin over the court, directory entry, panel
+    `data-panel-tpl="trenches"`: the storyline starts here, coming soon,
+    with **Walk in** to `BLOCK_SPAWN`; place `trenches` in `places.ts`).
+    The plaza with THE BLOCK on a gantry (both ways, `occlude()`), the
+    court (lines, keys, two hoops, the chain-link in the FX layer, two
+    floodlights), the playground (climbing frame and slide, swings, a
+    see-saw, a low wall), the handball wall painted both sides, the
+    garden, tables, string lights over it all, lamps, trees, and its
+    people (a game on the court, benches, tables, groups chatting,
+    handball).
 - **Cars** are `src/scripts/city3d/cars.ts`: real-proportion cartoon models
   (City Hatch, Cruiser, Street GT coupe, Hauler pickup, Box Van, City Bus;
   made-up names, never a real make or badge), each a bevelled extruded
@@ -434,7 +470,8 @@ it and has been retired completely. Build only on what's here.
     `lotFrame()`, `lotSolids()`; nothing taller than `KIT_TALLEST` (11.2,
     under the Emporium).
   - `recipes.ts` (DOM-free, seeded): `RECIPES` (midtown, mainstreet,
-    terraces, suburb, warehouses, and factory / school / mall / stadium /
+    terraces, suburb, warehouses, rowhouses (The Trenches' brownstones
+    and corner shops), and factory / school / mall / stadium /
     works, one big kit each) and `layBlock()`: a row along every straight
     side of a block's outline (the land inside its sidewalk), downtown's
     way (widths in the kit's range, a few set back, alleys with bollards,
@@ -470,6 +507,7 @@ it and has been retired completely. Build only on what's here.
   into the 3D city, clear day (`?bench=night` for night), quality held, the
   same views (`BENCH_VIEWS`: home, a downtown street, the square, the Build
   overview, the airport, the kart park, a junction on the ring highway,
+  The Trenches round The Block,
   where the edge was before Phase 6, the far edge (from `EXT`)) measured for a few
   seconds each, once every site is built (it builds faster while it
   waits), then a 48 s camera route through them (all but the Build overview). Results (fps,
@@ -1632,7 +1670,7 @@ it and has been retired completely. Build only on what's here.
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes and the test district (`kits.ts`, `recipes.ts`, `testdistrict.ts`), Liberty Bridge (`liberty.ts`),
-  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), The Trenches (`trenches.ts`),
+  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), The Trenches (`trenches.ts`, `projects.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,
