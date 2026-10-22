@@ -14,14 +14,15 @@
  */
 import * as THREE from 'three';
 import { DISTRICTS } from '../../data/plots';
-import { Batch, PAL, canvasTex, facadeMat, fx, glowMat, glowTex, lit, neon, rand, sidesBox, toon } from './kit';
+import { Batch, PAL, canvasTex, facadeMat, fx, glowMat, glowTex, lit, neon, rand, rng, sidesBox, toon } from './kit';
 import { BLOCKS, BS, CENTER_XZ, CITY_EXT, CORE_ROADS, DOWNTOWN, EW_ROADS, EXT, EXTRA_LOTS, LANE, MEDIAN, NS_ROADS, OUTER_HI, OUTER_LO, RIVER, SEATS, SOUTH_ROAD, WALK_W, type Road } from './layout';
 import { PLAN, offsetLine, type Pt } from './streetplan';
 import { DIAGONALS, DIAGONAL_LAMPS } from './downtown';
 import { BENDS, BEND_REACH, KERB_RUNS, OUTSIDE, PADS, PARKWAY, PROMENADE, SOUTHSIDE, inTown, offFootbridge } from './outer';
 import { KART_PARK, SLIP_ROAD } from './kartpark';
 import { RUNWAY, SITE } from './airfield';
-import { tileKey, tileOf } from './tiles';
+import { TILE, tileKey, tileOf, tilesIn } from './tiles';
+import { outskirtsTrees } from './outskirts';
 import { keyRect } from './tileplan';
 import { site } from './tilework';
 
@@ -29,6 +30,8 @@ export { BLOCKS, BS, CORE_ROADS, EW_ROADS, EXT, NS_ROADS, RIVER, SOUTH_ROAD, WAL
 /** District blocks around the core: one large plot each (src/data/plots.ts). */
 export { DISTRICTS };
 export const SLAB = 0.15;
+/** How far the grass carries on past the world's edge, under the skyline ring */
+export const SKIRT = 80;
 export const CENTER = new THREE.Vector3(CENTER_XZ.x, 0, CENTER_XZ.z);
 
 export type Env = { t: number; dt: number; night: number; rain: number; day: number };
@@ -184,8 +187,14 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
   const mid = (e0 + e1) / 2;
   const b = new Batch();
 
-  // Grass everywhere, then the river cut in on top
-  b.box(e0, -0.5, e0, L, 0.5, L, toon('#245c45'));
+  // Grass everywhere, a tile at a time (growth plan Phase 5), and on past the edge under the skyline's towers
+  // (so they stand on land, not on nothing); then the river cut in on top
+  const grass = toon('#245c45');
+  const [g0, g1] = [e0 - SKIRT, e1 + SKIRT];
+  for (const [i, j] of tilesIn(g0, g0, g1 - 1e-6, g1 - 1e-6)) {
+    const [x0, z0, x1, z1] = [Math.max(g0, i * TILE), Math.max(g0, j * TILE), Math.min(g1, (i + 1) * TILE), Math.min(g1, (j + 1) * TILE)];
+    b.add(new THREE.PlaneGeometry(x1 - x0, z1 - z0).rotateX(-Math.PI / 2).translate((x0 + x1) / 2, 0, (z0 + z1) / 2), grass);
+  }
   const water = new THREE.Mesh(new THREE.PlaneGeometry(L, RIVER[1] - RIVER[0]), waterMat);
   water.rotation.x = -Math.PI / 2;
   water.position.set(mid, 0.01, (RIVER[0] + RIVER[1]) / 2);
@@ -448,13 +457,11 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
 
 /**
  * Scatter trees outside town, off the roads and the river: `count` in the belt round the
- * city, and a lighter sprinkle (`count` * `sparse`) across the open land out to the world's edge.
+ * city, and a lighter sprinkle (`count` * `sparse`) across the open land out to the world's edge,
+ * seeded tile by tile at a density per area (outskirts.ts, growth plan Phase 5)
  */
 export function scatterOutskirts(count: number, sparse = 0.6) {
-  // The belt: a band round the town (inside the Parkway and the Southside Loop), out to about 20 past them
-  const belt: [number, number, number, number] = [PROMENADE.x[0] - 24, PROMENADE.x[1] + 24, PARKWAY_TOP - 24, SOUTHSIDE_BOTTOM + 24];
-  scatterIn(count, [belt[0], belt[1]], [belt[2], belt[3]]);
-  scatterIn(Math.round(count * sparse), [EXT[0] + 4, EXT[1] - 4], [EXT[0] + 4, EXT[1] - 4], belt);
+  for (const t of outskirtsTrees(count, sparse, CLEAR)) addTree(t.x, t.z, t.s, t.pine, 0);
 }
 
 /** Land the outskirts' trees keep off besides the town (the test district's, with ?district=test) */
@@ -463,30 +470,8 @@ export function keepTreesOff(rect: [number, number, number, number]) {
   CLEAR.push(rect);
 }
 
-/** Trees across x / z ranges, kept off the town, the roads and the river (and out of `skip`, a box already planted) */
-function scatterIn(count: number, xr: [number, number], zr: [number, number], skip?: [number, number, number, number]) {
-  let placed = 0;
-  let guard = 0;
-  while (placed < count && guard++ < count * 20) {
-    const x = xr[0] + rand() * (xr[1] - xr[0]);
-    const z = zr[0] + rand() * (zr[1] - zr[0]);
-    if (skip && x > skip[0] && x < skip[1] && z > skip[2] && z < skip[3]) continue;
-    if (CLEAR.some((c) => x > c[0] - 2 && x < c[2] + 2 && z > c[1] - 2 && z < c[3] + 2)) continue;
-    // The kart park and its slip road (kartpark.ts)
-    if (x > KART_PARK.x0 - 3 && x < KART_PARK.x1 + 3 && z > KART_PARK.z0 - 3 && z < KART_PARK.z1 + 3) continue;
-    if (Math.abs(x - SLIP_ROAD.x) < SLIP_ROAD.half + 2 && z > SLIP_ROAD.z0 - 1 && z < SLIP_ROAD.z1 + 1) continue;
-    // Clear of the town (inside the bends, the river and its banks) and of the bends themselves
-    if (inTown([x, z], 1.2)) continue;
-    // Clear of the airport and of the low end of its approach
-    if (x > SITE[0] - 1 && x < SITE[2] + 1 && z > SITE[1] - 1 && z < SITE[3] + 1) continue;
-    if (x > -40 && x < SITE[0] && Math.abs(z - RUNWAY.z) < 12) continue;
-    if (EW_ROADS.some((r) => Math.abs(z - r.c) < r.half + 0.8) || NS_ROADS.some((r) => Math.abs(x - r.c) < r.half + 0.8)) continue;
-    if (z > RIVER[0] - 1 && z < RIVER[1] + 0.8) continue;
-    addTree(x, z, 0.8 + rand() * 0.6, rand() < 0.4, 0);
-    placed++;
-  }
-}
-
+/** The world's half-width the skyline's `count` is for (today's): a wider world's ring has more towers, as far apart */
+const SKYLINE_REACH = 220;
 /** A ring of towers on the horizon, past the world's edge, so the city reads as part of a metropolis. */
 export function buildSkyline(scene: THREE.Scene, count: number, tick: (f: Tick) => void) {
   const mats = [
@@ -501,23 +486,26 @@ export function buildSkyline(scene: THREE.Scene, count: number, tick: (f: Tick) 
   const b = new Batch();
   const lights = new Batch();
   const beaconMat = neon('#ff3b3b', 0.4, 3);
-  for (let i = 0; i < count; i++) {
-    const a = (i / count) * Math.PI * 2 + rand() * 0.1;
+  // As many as today's ring had for its length, wherever the edge is (growth plan Phase 5), each from its own seeded numbers
+  const reach = (EXT[1] - EXT[0]) / 2;
+  const n = Math.round((count * reach) / SKYLINE_REACH);
+  const r = rng(808);
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2 + r() * 0.1;
     // A ring just past the world's edge, so the metropolis carries on beyond the land you can build on.
     // The world is square: the ring follows its edge (a rounded square), so no tower stands on the
     // land in the corners (the kart park fills the north-east one)
-    const reach = (EXT[1] - EXT[0]) / 2;
-    const rr = reach / Math.max(Math.abs(Math.cos(a)), Math.abs(Math.sin(a))) + 18 + rand() * 40;
+    const rr = reach / Math.max(Math.abs(Math.cos(a)), Math.abs(Math.sin(a))) + 18 + r() * 40;
     const x = (EXT[0] + EXT[1]) / 2 + Math.cos(a) * rr;
     const z = (EXT[0] + EXT[1]) / 2 + Math.sin(a) * rr;
     // None by the airport (it reaches nearly to the world's edge in the south-east): they'd loom over the runway
-    const w = 7 + rand() * 9;
-    const h = 22 + rand() * 50;
+    const w = 7 + r() * 9;
+    const h = 22 + r() * 50;
     if (Math.hypot(x - (SITE[0] + SITE[2]) / 2, z - (SITE[1] + SITE[3]) / 2) < 150) continue;
     const mat = mats[i % mats.length];
     const mesh = new THREE.Mesh(sidesBox(w, h, w), [mat, roof]);
     mesh.position.set(x, h / 2, z);
-    mesh.rotation.y = rand() * Math.PI;
+    mesh.rotation.y = r() * Math.PI;
     b.mesh(mesh);
     if (h > 45) {
       lights.add(new THREE.SphereGeometry(0.6, 8, 6).translate(x, h + 2.6, z), beaconMat);
