@@ -504,7 +504,41 @@ so it can run again.
 
 ### Measured after Phase 3
 
-BOOT_NUMBERS
+Headless, five boots each, the median (`work` in `?fps`: building the
+scene, less the time spent waiting on the browser for a frame or the
+canvas; the boot's total is mostly the headless browser's own waiting and
+shader linking, too noisy to compare):
+
+| | Phase 2 | Phase 3 |
+| --- | --- | --- |
+| Building the scene, medium tier | 1.67 s | 1.48 s |
+| Building the scene, phone tier | 1.38 s | 1.26 s |
+| Sites built at the boot | (all) | 65 of 174 in about 0.1-0.17 s (40 of 154 on phones, about 0.07-0.1 s) |
+| Sites built after it | none | the rest in about 0.25-0.33 s, a few milliseconds a frame |
+
+- **About a tenth less work before the start menu is ready.** What's left
+  in the boot is the places and downtown, which are in the home view; the
+  kart park's and the airport's grounds and most of the outskirts' trees
+  now wait. The sites left waiting are built in the first second or two
+  while the start menu is up.
+- **The boot no longer grows with the world:** a district built as sites
+  (Phase 4's kits, Phase 8's districts) costs the boot nothing unless it's
+  in the home view.
+- **Drawing is unchanged:** once everything is built the views draw the
+  same draws and triangles as after Phase 2, within the noise of the
+  traffic and the crowds (home view on the phone tier: 265 draws before,
+  264 after), and the screenshots from the same views match. In the
+  benchmark's first views on the phone tier a few more are drawn (up to
+  about 15) while the far forms and the last sites are still being made:
+  headless, the phone tier runs at a few frames a second, so they take
+  longer to finish there.
+- **Memory:** geometry 40 MB on the medium tier and 35 MB on phones (34
+  before): the meshes grown for later sites keep a little room.
+- **Done when** boot time stays flat however many tiles there are, and
+  memory stays inside the targets: the boot builds the home view's sites
+  only (tested with ten thousand more sites elsewhere), and geometry is
+  40 MB against the 150 MB phone target, with the near forms held to the
+  tier's budget.
 
 ## Phase 4: building kits
 
