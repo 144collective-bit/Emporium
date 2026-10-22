@@ -80,6 +80,7 @@ export function farFormMaterial() {
 
 /** A texture's average colour and cover (alpha), from a few pixels of it; white if it can't be read */
 const averages = new WeakMap<THREE.Texture, { color: THREE.Color; alpha: number }>();
+let avgCtx: CanvasRenderingContext2D | null = null;
 function average(tex: THREE.Texture | null | undefined) {
   if (!tex) return null;
   const hit = averages.get(tex);
@@ -88,9 +89,13 @@ function average(tex: THREE.Texture | null | undefined) {
   const img = tex.image as CanvasImageSource & { width?: number; height?: number; complete?: boolean };
   try {
     if (img && (img.width ?? 0) > 0 && img.complete !== false) {
-      const c = document.createElement('canvas');
-      c.width = c.height = 8;
-      const ctx = c.getContext('2d', { willReadFrequently: true })!;
+      if (!avgCtx) {
+        const c = document.createElement('canvas');
+        c.width = c.height = 8;
+        avgCtx = c.getContext('2d', { willReadFrequently: true })!;
+      }
+      const ctx = avgCtx;
+      ctx.clearRect(0, 0, 8, 8);
       ctx.drawImage(img, 0, 0, 8, 8);
       const d = ctx.getImageData(0, 0, 8, 8).data;
       let r = 0;
@@ -146,6 +151,8 @@ function lookOf(mat: THREE.Material) {
 
 /** Triangles smaller than this (tiles²) are left out of a far form: bolts, rivets, a handle */
 const TINY = 0.0025;
+/** Textured parts smaller than this (tiles²) too: signs and plaques */
+const SMALL_SIGN = 1.5;
 
 /** Every opaque mesh under `root` (not those `skip` names), in `inv`'s frame, coloured from its material, small triangles left out */
 function flatten(root: THREE.Object3D, inv: THREE.Matrix4, skip: Set<THREE.Object3D>) {
@@ -160,7 +167,9 @@ function flatten(root: THREE.Object3D, inv: THREE.Matrix4, skip: Set<THREE.Objec
   const b = new THREE.Vector3();
   const c = new THREE.Vector3();
   const n = new THREE.Vector3();
+  const e = new THREE.Vector3();
   const vc = new THREE.Color();
+  const vx = new THREE.Color();
   const add = (geo: THREE.BufferGeometry, world: THREE.Matrix4, look: NonNullable<ReturnType<typeof lookOf>>, tint: THREE.Color | null, range: { start: number; count: number } | null) => {
     m4.multiplyMatrices(inv, world);
     nm.getNormalMatrix(m4);
@@ -172,24 +181,27 @@ function flatten(root: THREE.Object3D, inv: THREE.Matrix4, skip: Set<THREE.Objec
     const idx = geo.index;
     const start = range?.start ?? 0;
     const end = Math.min(idx ? idx.count : p.count, range ? start + range.count : Infinity);
+    const ids = [0, 0, 0];
     for (let i = start; i + 2 < end; i += 3) {
-      const ids = [0, 1, 2].map((k) => (idx ? idx.getX(i + k) : i + k));
+      for (let k = 0; k < 3; k++) ids[k] = idx ? idx.getX(i + k) : i + k;
       a.fromBufferAttribute(p, ids[0]).applyMatrix4(m4);
       b.fromBufferAttribute(p, ids[1]).applyMatrix4(m4);
       c.fromBufferAttribute(p, ids[2]).applyMatrix4(m4);
-      if (n.subVectors(b, a).cross(c.clone().sub(a)).length() / 2 < TINY) continue;
-      for (const [k, v] of ids.entries()) {
+      if (n.subVectors(b, a).cross(e.subVectors(c, a)).length() / 2 < TINY) continue;
+      for (let k = 0; k < 3; k++) {
+        const v = ids[k];
         const q = k === 0 ? a : k === 1 ? b : c;
         pos.push(q.x, q.y, q.z);
         if (no) n.fromBufferAttribute(no, v).applyMatrix3(nm).normalize();
         else n.set(0, 1, 0);
         nor.push(n.x, n.y, n.z);
+        if (cc) vx.setRGB(cc.getX(v), cc.getY(v), cc.getZ(v));
         vc.copy(look.diffuse);
-        if (cc) vc.multiply(new THREE.Color(cc.getX(v), cc.getY(v), cc.getZ(v)));
+        if (cc) vc.multiply(vx);
         if (tint) vc.multiply(tint);
         col.push(vc.r, vc.g, vc.b);
         vc.copy(look.glow);
-        if (cc && look.unlit) vc.multiply(new THREE.Color(cc.getX(v), cc.getY(v), cc.getZ(v)));
+        if (cc && look.unlit) vc.multiply(vx);
         if (tint && look.unlit) vc.multiply(tint);
         glo.push(vc.r, vc.g, vc.b);
         if (dl) lit.push(dl.getX(v), dl.getY(v));
@@ -206,6 +218,8 @@ function flatten(root: THREE.Object3D, inv: THREE.Matrix4, skip: Set<THREE.Objec
     // Hidden right now (a beacon off by day, a ghost): not part of the far form
     for (let p: THREE.Object3D | null = o; p && p !== root; p = p.parent) if (!p.visible) return;
     const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    // A small textured part (a sign): a few pixels far away, left out
+    if (!mesh.isInstancedMesh && mats.some((x) => (x as THREE.MeshBasicMaterial).map) && areaOf(mesh) < SMALL_SIGN) return;
     const groups = Array.isArray(mesh.material) && mesh.geometry.groups.length ? mesh.geometry.groups : [{ start: 0, count: Infinity, materialIndex: 0 }];
     for (const g of groups) {
       const look = lookOf(mats[g.materialIndex ?? 0]);

@@ -255,7 +255,9 @@ it and has been retired completely. Build only on what's here.
     `userData.keep` on a part) is drawn at every distance. The near parts
     move into a `<name>-near` group, so code that shows or hides a part
     still can. `addLod()` / `addLodSwitch()` swap them (`updateLods()`
-    from `index.ts`).
+    from `index.ts`). They're made after the first frame, a place at a
+    time in spare moments (`farQueue` in `index.ts`); until then a place
+    stays near.
   - Cars far away (parked and traffic) are their model's far form
     (`farCarGeometry()` in `cars.ts`: the body and cabin outlines
     extruded, block wheels, about a hundred triangles), all in one

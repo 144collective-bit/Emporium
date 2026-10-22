@@ -82,7 +82,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const Q = TIERS[tier];
   const progress = (k: number) => bar.style.setProperty('--p', String(k));
   // When each part of the boot finished (the ?fps readout and the benchmark)
-  const bootAt = { start: performance.now(), art: 0, built: 0, compiled: 0, first: 0 };
+  const bootAt = { start: performance.now(), art: 0, scene: 0, tiled: 0, built: 0, compiled: 0, first: 0 };
 
   // Renderer first: if WebGL is missing, stay on the 2D map
   let renderer: THREE.WebGLRenderer;
@@ -209,12 +209,22 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   controls.target.copy(h0.target);
   controls.update();
   // One mesh per material for each landmark, not one per Batch (they lift on hover)
+  bootAt.scene = performance.now();
   consolidate(spots.map((sp) => sp.group));
   // The rest of the city's fixed geometry (the ground, roads, downtown's infill, the districts, trees, lamps,
   // the airport and the kart park) merged per tile: one draw per material, only the tiles in view drawn
   const tiled = tileBatch(scene, [scene, ...['airport', 'kartpark'].flatMap((n) => scene.getObjectByName(n) ?? [])]);
-  // Each place's far form (growth plan Phase 2): a couple of draws far away instead of one per material
-  for (const g of [...spots.map((sp) => sp.group), ...['garage', 'market'].flatMap((n) => scene.getObjectByName(n) ?? [])]) farForm(g);
+  bootAt.tiled = performance.now();
+  // Each place's far form (growth plan Phase 2): a couple of draws far away instead of one per material.
+  // Made after the boot, a place at a time in spare moments (each stays near until it has one)
+  const farQueue = [...spots.map((sp) => sp.group), ...['garage', 'market'].flatMap((n) => scene.getObjectByName(n) ?? [])];
+  const idle = (f: () => void) => ('requestIdleCallback' in window ? requestIdleCallback(() => f(), { timeout: 400 }) : setTimeout(f, 60));
+  const nextFar = () => {
+    const g = farQueue.shift();
+    if (!g) return;
+    farForm(g);
+    idle(nextFar);
+  };
   bootAt.built = performance.now();
   renderer.compile(scene, camera);
   bootAt.compiled = performance.now();
@@ -727,7 +737,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const stat = { frames: 0, draws: 0, tris: 0, shadowDraws: 0, shadowTris: 0, worst: 0, last: 0, since: performance.now(), memAt: 0, mem: '' };
   function bootTimes() {
     const r = (a: number, b: number) => Math.round(b - a);
-    return { total: r(bootAt.start, bootAt.first), art: r(bootAt.start, bootAt.art), build: r(bootAt.art, bootAt.built), shaders: r(bootAt.built, bootAt.compiled), firstFrame: r(bootAt.compiled, bootAt.first) };
+    // (`build` includes merging per tile, `tiles`)
+    return { total: r(bootAt.start, bootAt.first), art: r(bootAt.start, bootAt.art), build: r(bootAt.art, bootAt.built), tiles: r(bootAt.scene, bootAt.tiled), shaders: r(bootAt.built, bootAt.compiled), firstFrame: r(bootAt.compiled, bootAt.first) };
   }
   // The benchmark's sky: clear day or night, then the visitor's own back
   function benchSky(night: boolean) {
@@ -932,7 +943,10 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       }
       post.render();
       dirty = false;
-      if (!bootAt.first) bootAt.first = performance.now();
+      if (!bootAt.first) {
+        bootAt.first = performance.now();
+        idle(nextFar);
+      }
       if (statsEl) {
         const { calls, triangles } = renderer.info.render;
         stat.draws += calls;
@@ -963,7 +977,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           `of which shadows ${Math.round(stat.shadowDraws / n)} draws · ${(stat.shadowTris / n / 1e6).toFixed(2)}M tris`,
           stat.mem,
           `tiles ${tiled.drawn()} of ${tiled.pieces} pieces drawn · ${tiled.nearTiles()} near · ${farLods()} far forms`,
-          `boot ${(b.total / 1000).toFixed(1)} s · build ${(b.build / 1000).toFixed(1)} · shaders ${(b.shaders / 1000).toFixed(1)}`,
+          `boot ${(b.total / 1000).toFixed(1)} s · build ${(b.build / 1000).toFixed(1)} (tiles ${(b.tiles / 1000).toFixed(1)}) · shaders ${(b.shaders / 1000).toFixed(1)}`,
           `${tier} · px ${renderer.getPixelRatio().toFixed(2)}${lost.length ? ` · lowered: ${lost.join(', ')}` : ''}`,
           // Where Degen stands while walking (for placing things: ?spawn=x,z puts him back there)
           ...(walking ? [`at ${walk.position.x.toFixed(1)}, ${walk.position.z.toFixed(1)}`] : []),

@@ -403,7 +403,39 @@ with a margin of 8 so nothing flickers on the line.
 
 ### Benchmark after Phase 2
 
-BENCH2
+Headless (draws and triangles; the shadow map's are part of the totals).
+Phase 1's numbers, then Phase 2's:
+
+| View | Medium tier: draws | Medium tier: triangles | Phone tier: draws | Phone tier: triangles |
+| --- | --- | --- | --- | --- |
+| Home view | 517 → 500 | 0.81M → 0.77M | 276 → 257 | 0.32M → 0.23M |
+| Downtown, street level | 571 → 563 | 0.97M → 0.81M | 255 → 245 | 0.27M → 0.23M |
+| The square and the Emporium | 431 → 429 | 0.58M → 0.56M | 236 → 225 | 0.29M → 0.24M |
+| Every district (Build overview) | 639 → 585 | 1.12M → 0.99M | 335 → 264 | 0.42M → 0.27M |
+| The airport | 205 → 202 | 0.61M → 0.61M | 137 → 113 | 0.41M → 0.31M |
+| The kart park | 79 → 79 | 0.14M → 0.14M | 85 → 63 | 0.18M → 0.08M |
+| The far edge, looking back | 726 → 515 | 1.03M → 0.39M | 554 → 375 | 0.60M → 0.19M |
+| Route, average | 493 → 447 | 0.75M → 0.59M | 234 → 223 | 0.33M → 0.22M |
+| Route, most | 808 → 734 | 1.46M → 1.15M | 583 → 429 | 0.78M → 0.44M |
+
+- **Against Phase 0** (before any of this), the far edge is 760 → 515
+  draws and 1.19M → 0.39M triangles on the medium tier, and 564 → 375 and
+  0.66M → 0.19M on phones: about a third of the triangles.
+- **On phones** every view but the far edge and the route's busiest moment
+  is now inside the target (300 draws, 0.5M triangles), and every
+  triangle count is.
+- **Memory:** geometry 35 MB → 40 MB on the medium tier (the far forms).
+- **Boot:** the same as Phase 1 within the noise. The far forms are made
+  after the first frame, a place at a time in spare moments, while the
+  start menu is still up; a place stays near until its far form is ready.
+  Making them all takes about a second headless, most of it reading back
+  textures' average colours; small signs are left out instead.
+- **Still over the targets:** the far edge on phones (375 draws). What's
+  left there is the post-processing passes, the aircraft (kept as they
+  are), the crowds' and places' parts that stay as they are, and the units
+  and big lots (drawn from the save, rebuilt when they change, so they
+  have no far forms yet). Building as you go (Phase 3) can give those far
+  forms when they're rebuilt.
 
 ## Phase 3: building as you go
 
