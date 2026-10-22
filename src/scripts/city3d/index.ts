@@ -44,19 +44,20 @@ import { fightRecordHtml } from './fight-ui';
 import { kartRecordsHtml } from './kart-ui';
 import { destAt } from './tycoon';
 import { guideAt } from './guide';
-import { CARS } from './cars';
+import { CARS, initFarCars } from './cars';
 import { CROWD_VIEW } from './character';
 import type { GameDeps } from './ui';
 import { createBench } from './bench';
 import { mb, sceneMemory } from './perf';
 import { tileBatch } from './tilebatch';
+import { farForm, farLods, updateLods } from './lod';
 
 type Tier = 'high' | 'medium' | 'low';
 
 const TIERS = {
-  high: { dpr: 2, shadows: 2048, msaa: 4, bloomScale: 0.5, cars: 38, buses: 3, walkers: 100, trees: 250, skyline: 70, rain: 6000, clouds: 12 },
-  medium: { dpr: 1.5, shadows: 1024, msaa: 0, bloomScale: 0.5, cars: 27, buses: 2, walkers: 62, trees: 150, skyline: 50, rain: 3500, clouds: 9 },
-  low: { dpr: 1.25, shadows: 0, msaa: 0, bloomScale: 0.3, cars: 16, buses: 2, walkers: 30, trees: 90, skyline: 26, rain: 1200, clouds: 4 },
+  high: { dpr: 2, shadows: 2048, msaa: 4, bloomScale: 0.5, cars: 38, buses: 3, walkers: 100, trees: 250, skyline: 70, rain: 6000, clouds: 12, far: 120 },
+  medium: { dpr: 1.5, shadows: 1024, msaa: 0, bloomScale: 0.5, cars: 27, buses: 2, walkers: 62, trees: 150, skyline: 50, rain: 3500, clouds: 9, far: 110 },
+  low: { dpr: 1.25, shadows: 0, msaa: 0, bloomScale: 0.3, cars: 16, buses: 2, walkers: 30, trees: 90, skyline: 26, rain: 1200, clouds: 4, far: 90 },
 };
 
 function pickTier(): Tier {
@@ -120,6 +121,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const { streaks } = buildGround(scene, { 'dt-se': 'concrete', '22,22': 'concrete', '22,11': 'concrete', '11,22': 'concrete', '11,0': 'grass', '22,0': 'grass', '0,22': 'grass' });
   progress(0.3);
   await nextFrame();
+  // Every far-away car, parked or driving, in one mesh (growth plan Phase 2): before anything parks one
+  initFarCars(scene);
   const { spots, crowd } = buildLandmarks(scene, { degen, logo, tick, low: tier === 'low' });
   // Downtown round the landmarks: infill, alleys, pocket parks and the hangout square (its crowd joins the landmarks')
   buildInfill(scene, crowd, tick, tier === 'low');
@@ -157,7 +160,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   buildLamps(scene);
   progress(0.7);
   await nextFrame();
-  buildLife(scene, { cars: Q.cars, buses: Q.buses, walkers: Q.walkers, light: tier === 'low' }, crowd, tick);
+  buildLife(scene, { cars: Q.cars, buses: Q.buses, walkers: Q.walkers, light: tier === 'low', far: Q.far }, crowd, tick);
   const sky = createSky(scene, { shadows: Q.shadows, rainDrops: Q.rain, clouds: Q.clouds });
   progress(0.85);
   await nextFrame();
@@ -210,6 +213,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // The rest of the city's fixed geometry (the ground, roads, downtown's infill, the districts, trees, lamps,
   // the airport and the kart park) merged per tile: one draw per material, only the tiles in view drawn
   const tiled = tileBatch(scene, [scene, ...['airport', 'kartpark'].flatMap((n) => scene.getObjectByName(n) ?? [])]);
+  // Each place's far form (growth plan Phase 2): a couple of draws far away instead of one per material
+  for (const g of [...spots.map((sp) => sp.group), ...['garage', 'market'].flatMap((n) => scene.getObjectByName(n) ?? [])]) farForm(g);
   bootAt.built = performance.now();
   renderer.compile(scene, camera);
   bootAt.compiled = performance.now();
@@ -848,6 +853,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     CROWD_VIEW.eye.setFromMatrixPosition(camera.matrixWorld);
     CROWD_VIEW.frustum.setFromProjectionMatrix(viewProj.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
     CROWD_VIEW.shadowOn = renderer.shadowMap.enabled && sky.shadowFrustum(CROWD_VIEW.shadow);
+    // Near and far forms (growth plan Phase 2): the details only within the tier's `far` of the camera
+    tiled.update(CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, CROWD_VIEW.eye.z, Q.far);
+    updateLods(CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, CROWD_VIEW.eye.z, Q.far);
     if (!reduced || frames === 0) for (const f of ticks) f(env);
     updateLights(s.night, env.t);
     waterMat.uniforms.time.value = env.t;
@@ -954,7 +962,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           `${Math.round(stat.draws / n)} draws · ${(stat.tris / n / 1e6).toFixed(2)}M tris`,
           `of which shadows ${Math.round(stat.shadowDraws / n)} draws · ${(stat.shadowTris / n / 1e6).toFixed(2)}M tris`,
           stat.mem,
-          `tiles ${tiled.drawn()} of ${tiled.pieces} pieces drawn`,
+          `tiles ${tiled.drawn()} of ${tiled.pieces} pieces drawn · ${tiled.nearTiles()} near · ${farLods()} far forms`,
           `boot ${(b.total / 1000).toFixed(1)} s · build ${(b.build / 1000).toFixed(1)} · shaders ${(b.shaders / 1000).toFixed(1)}`,
           `${tier} · px ${renderer.getPixelRatio().toFixed(2)}${lost.length ? ` · lowered: ${lost.join(', ')}` : ''}`,
           // Where Degen stands while walking (for placing things: ?spawn=x,z puts him back there)

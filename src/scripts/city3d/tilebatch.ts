@@ -9,9 +9,16 @@
  * piece of a BatchedMesh: still one draw call per material, but three.js
  * draws only the pieces in view (and, for the shadow map, only those in the
  * sun's shadow box). The landmarks keep theirs (they lift on hover).
+ *
+ * Near and far (Phase 2): a Batch's details are marked near only (`Lod`,
+ * `Batch.detail()`), and stand-ins far only; each tile's near and far pieces
+ * are swapped together by the camera's distance from the tile (`update()`,
+ * `isNear()` in tiles.ts), so a building's details go when it's too far
+ * away to see them and come back before it's close.
  */
 import * as THREE from 'three';
-import { tileKey, tileOf } from './tiles';
+import { boxDistance, isNear, tileKey, tileOf, tileRect } from './tiles';
+import type { Lod } from './kit';
 
 /** What the merge made: the batched meshes, and how many tile pieces they hold */
 export interface TileBatches {
@@ -19,6 +26,21 @@ export interface TileBatches {
   pieces: number;
   /** How many pieces were drawn in the last frame's camera view (the ?fps readout) */
   drawn(): number;
+  /** Swap each tile's near and far pieces for a camera at x, y, z: near within `far` of it */
+  update(x: number, y: number, z: number, far: number): void;
+  /** How many tiles are drawn near (the ?fps readout) */
+  nearTiles(): number;
+}
+
+/** A tile with near or far pieces, and whether it's drawn near */
+interface LodTile {
+  x0: number;
+  z0: number;
+  x1: number;
+  z1: number;
+  top: number;
+  near: boolean;
+  pieces: { bm: THREE.BatchedMesh; id: number; lod: Lod }[];
 }
 
 /** The triangles of `g` whose middle falls in each tile, each as its own compact geometry */
@@ -100,7 +122,9 @@ export function tileBatch(scene: THREE.Scene, parents: THREE.Object3D[]): TileBa
       const key = `${m.material.uuid}|${m.layers.mask}|${m.castShadow}|${m.receiveShadow}|${m.renderOrder}|${shape}`;
       let set = sets.get(key);
       if (!set) sets.set(key, (set = { mat: m.material, layers: m.layers.mask, cast: m.castShadow, receive: m.receiveShadow, order: m.renderOrder, shape, pieces: new Map() }));
-      for (const [k, part] of splitByTile(g)) {
+      const lod: Lod = m.userData.lod ?? 'all';
+      for (const [t, part] of splitByTile(g)) {
+        const k = `${t}|${lod}`;
         let list = set.pieces.get(k);
         if (!list) set.pieces.set(k, (list = []));
         list.push(part);
@@ -108,9 +132,11 @@ export function tileBatch(scene: THREE.Scene, parents: THREE.Object3D[]): TileBa
       taken.push(m);
     }
   const meshes: THREE.BatchedMesh[] = [];
+  const lodTiles = new Map<string, LodTile>();
   let pieces = 0;
   for (const set of sets.values()) {
-    // One geometry a tile
+    // One geometry a tile (and level)
+    const keys = [...set.pieces.keys()];
     const tiles = [...set.pieces.values()].map((list) => {
       if (list.length === 1) return list[0];
       const merged = mergeIndexed(list);
@@ -123,10 +149,24 @@ export function tileBatch(scene: THREE.Scene, parents: THREE.Object3D[]): TileBa
     // Opaque city geometry: no need to sort the pieces every frame
     bm.sortObjects = false;
     bm.perObjectFrustumCulled = true;
-    for (const g of tiles) {
-      bm.addInstance(bm.addGeometry(g));
+    tiles.forEach((g, n) => {
+      const id = bm.addInstance(bm.addGeometry(g));
+      const [t, lod] = keys[n].split('|') as [string, Lod];
+      if (lod !== 'all') {
+        // Near and far pieces of a tile swap together; it starts near
+        let lt = lodTiles.get(t);
+        if (!lt) {
+          const [i, j] = t.split(',').map(Number);
+          const [x0, z0, x1, z1] = tileRect(i, j);
+          lodTiles.set(t, (lt = { x0, z0, x1, z1, top: 0, near: true, pieces: [] }));
+        }
+        g.computeBoundingBox();
+        lt.top = Math.max(lt.top, g.boundingBox!.max.y);
+        lt.pieces.push({ bm, id, lod });
+        if (lod === 'far') bm.setVisibleAt(id, false);
+      }
       g.dispose();
-    }
+    });
     bm.castShadow = set.cast;
     bm.receiveShadow = set.receive;
     bm.layers.mask = set.layers;
@@ -146,6 +186,15 @@ export function tileBatch(scene: THREE.Scene, parents: THREE.Object3D[]): TileBa
     meshes,
     pieces,
     drawn: () => meshes.reduce((n, m) => n + (m as unknown as { _multiDrawCount: number })._multiDrawCount, 0),
+    update(x, y, z, far) {
+      for (const t of lodTiles.values()) {
+        const near = isNear(boxDistance(x, y, z, t.x0, 0, t.z0, t.x1, t.top, t.z1), far, t.near);
+        if (near === t.near) continue;
+        t.near = near;
+        for (const p of t.pieces) p.bm.setVisibleAt(p.id, p.lod === 'near' ? near : !near);
+      }
+    },
+    nearTiles: () => [...lodTiles.values()].filter((t) => t.near).length,
   };
 }
 

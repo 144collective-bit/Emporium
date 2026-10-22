@@ -11,7 +11,8 @@ import { PLAN, distToStreet, outset } from './streetplan';
 import { CITY_EXT } from './layout';
 import { BOAT_LANES, DECK_STROLLS, DECK_Y } from './liberty';
 import { JUNCTIONS, ROUTES, lightState, phaseOf, pointOn, rightOf, type Junction, type Phase, type Pt, type Route } from './routes';
-import { CARS, PAINTS, carGeometry, carMaterials, type CarId } from './cars';
+import { CARS, PAINTS, carGeometry, carMaterials, theFarCars, type CarId } from './cars';
+import { isNear } from './tiles';
 import type { Idle } from './landmarks';
 import { CROWD_VIEW, HIP_HEIGHT, cityOutfit, createCrowd } from './character';
 import { CLIP_SECONDS, WALK_STRIDE } from './crowdclips';
@@ -22,6 +23,8 @@ export interface LifeOpts {
   walkers: number;
   /** Leave the characters' small details out (phones) */
   light?: boolean;
+  /** How far from the camera a car is drawn in full (beyond, its far form: growth plan Phase 2) */
+  far?: number;
 }
 
 /* ======================================================================
@@ -46,6 +49,9 @@ interface Vehicle {
   fz: number;
   /** Its placing this frame */
   matrix: THREE.Matrix4;
+  /** Drawn in full (near the camera) or its far form, and its far form's instance (cars.ts `FarCars`) */
+  near: boolean;
+  far: number;
 }
 
 const ROAD_Y = 0.035;
@@ -91,6 +97,8 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
       fx: 1,
       fz: 0,
       matrix: new THREE.Matrix4(),
+      near: true,
+      far: -1,
     });
   }
   const place = (v: Vehicle) => {
@@ -107,10 +115,33 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
   const mats = carMaterials();
   const busGlow = lit(new THREE.MeshToonMaterial({ color: '#2a3b66', emissive: '#ffd36b' }), 0.05, 1.6);
   /**
-   * Each model's meshes, and this frame's cars: only the ones in view are drawn, those in the sun's
-   * shadow box first (`shadow` of them), so the shadow map leaves the rest out
+   * Each model's meshes (in full, and its far form), and this frame's cars: only the ones in view are
+   * drawn, those in the sun's shadow box first (`shadow` of them), so the shadow map leaves the rest out
    */
-  const fleets = new Map<CarId, { meshes: THREE.InstancedMesh[]; front: Vehicle[]; back: Vehicle[]; view: number; shadow: number }>();
+  interface Fleet {
+    meshes: THREE.InstancedMesh[];
+    front: Vehicle[];
+    back: Vehicle[];
+    view: number;
+    shadow: number;
+  }
+  const fleets = new Map<CarId, Fleet>();
+  const newFleet = (meshes: THREE.InstancedMesh[]): Fleet => {
+    const f: Fleet = { meshes, front: [], back: [], view: 0, shadow: 0 };
+    for (const m of meshes) {
+      m.castShadow = true;
+      m.frustumCulled = false;
+      m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      m.onBeforeShadow = () => void (m.count = f.shadow);
+      m.onBeforeRender = () => void (m.count = f.view);
+      scene.add(m);
+    }
+    m0(meshes).setColorAt(0, new THREE.Color());
+    m0(meshes).instanceColor!.setUsage(THREE.DynamicDrawUsage);
+    return f;
+  };
+  const m0 = (list: THREE.InstancedMesh[]) => list[0];
+  const farDist = opts.far ?? Infinity;
   const moving: THREE.InstancedMesh[] = [];
   /** Each car's own paint (by its slot in its model's fleet) */
   const paintOf = new Map<CarId, THREE.Color[]>();
@@ -120,20 +151,12 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
     if (g.glow) list.push(new THREE.InstancedMesh(g.glow, busGlow, n));
     const paints = PAINTS[model];
     paintOf.set(model, Array.from({ length: n }, (_, i) => new THREE.Color(paints[(i * 5 + 2) % paints.length])));
-    list[0].setColorAt(0, paintOf.get(model)![0]);
-    list[0].instanceColor!.setUsage(THREE.DynamicDrawUsage);
-    const fleet = { meshes: list, front: [] as Vehicle[], back: [] as Vehicle[], view: 0, shadow: 0 };
-    for (const m of list) {
-      m.castShadow = true;
-      m.frustumCulled = false;
-      m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-      m.onBeforeShadow = () => void (m.count = fleet.shadow);
-      m.onBeforeRender = () => void (m.count = fleet.view);
-      scene.add(m);
-    }
-    fleets.set(model, fleet);
+    fleets.set(model, newFleet(list));
     moving.push(...list);
   }
+  // Each car's far form, in its own paint, in the city's one mesh of far cars (one draw for all of them)
+  const farCars = theFarCars();
+  for (const v of vehicles) v.far = farCars.add(v.model, paintOf.get(v.model)![v.slot]);
   const nVeh = vehicles.length;
   const head = new THREE.InstancedMesh(lightBox(0.03, 0.08, 0.17), neon('#fff6c8', 0.8, 3), nVeh * 2);
   const tail = new THREE.InstancedMesh(lightBox(0.03, 0.07, 0.15), neon('#ff2b2b', 0.8, 3), nVeh * 2);
@@ -269,7 +292,8 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
       }
     }
 
-    // Instances: the cars in view, those in the sun's shadow box first (the shadow map draws only them)
+    // Instances: the cars in view, those in the sun's shadow box first (the shadow map draws only them),
+    // in full near the camera and in their far form beyond (culled by three.js, one car at a time)
     for (const f of fleets.values()) f.front.length = f.back.length = 0;
     let hi = 0;
     vehicles.forEach((v, idx) => {
@@ -277,8 +301,11 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
       q.setFromAxisAngle(up, v.yaw);
       M.makeRotationFromQuaternion(q).setPosition(v.x, ROAD_Y, v.z);
       v.matrix.copy(M);
+      v.near = !CROWD_VIEW.on || isNear(Math.hypot(v.x - CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, v.z - CROWD_VIEW.eye.z), farDist, v.near);
+      farCars.show(v.far, !v.near);
       const f = fleets.get(v.model)!;
-      if (!CROWD_VIEW.on) f.front.push(v);
+      if (!v.near) farCars.place(v.far, M);
+      else if (!CROWD_VIEW.on) f.front.push(v);
       else {
         carBall.center.set(v.x, 0.6, v.z);
         carBall.radius = v.len / 2 + 0.6;
@@ -296,15 +323,19 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
     });
     for (const [model, f] of fleets) {
       const paints = paintOf.get(model)!;
-      let k = 0;
-      for (const v of [...f.front, ...f.back]) {
-        for (const m of f.meshes) m.setMatrixAt(k, v.matrix);
-        f.meshes[0].setColorAt(k, paints[v.slot]);
-        k++;
+      {
+        let k = 0;
+        for (const v of [...f.front, ...f.back]) {
+          for (const m of f.meshes) m.setMatrixAt(k, v.matrix);
+          f.meshes[0].setColorAt(k, paints[v.slot]);
+          k++;
+        }
+        f.shadow = f.front.length;
+        f.view = k;
+        f.meshes[0].instanceColor!.needsUpdate = true;
+        // (no draw call at all for a fleet with nobody in it)
+        for (const m of f.meshes) m.visible = k > 0;
       }
-      f.shadow = f.front.length;
-      f.view = k;
-      f.meshes[0].instanceColor!.needsUpdate = true;
     }
     for (const m of moving) m.instanceMatrix.needsUpdate = true;
     beamGeo.attributes.position.needsUpdate = true;

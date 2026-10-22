@@ -142,6 +142,8 @@ export function buildGarage(scene: THREE.Scene, opts: { tick: (f: Tick) => void;
   const spin = new THREE.Group();
   spin.position.set(TT.x, S, TT.z);
   spin.rotation.y = REST;
+  // Your car comes and goes on it: never baked into the garage's far form (lod.ts)
+  spin.userData.keep = true;
   g.add(spin);
   const disc = new THREE.Mesh(new THREE.CylinderGeometry(TT.r, TT.r, 0.07, 40), toon('#2b2a40'));
   disc.position.y = 0.035;

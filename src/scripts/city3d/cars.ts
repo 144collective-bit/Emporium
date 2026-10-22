@@ -30,6 +30,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { fx, toon } from './kit';
+import { addLodSwitch } from './lod';
 
 export type CarId = 'hatch' | 'sedan' | 'coupe' | 'pickup' | 'van' | 'bus' | 'muscle' | 'suv' | 'super';
 type V2 = [number, number];
@@ -928,8 +929,93 @@ export function carMaterials() {
   return mats;
 }
 
+/* ---------- Far away (growth plan Phase 2) ---------- */
+
+const farCache = new Map<CarId, THREE.BufferGeometry>();
+let farMat: THREE.MeshToonMaterial | null = null;
 /**
- * Parked cars (static, instanced: two draw calls a model). Each is [model, x, z, turn, colour];
+ * A car seen from far away: its own body and cabin outlines extruded flat
+ * and four block wheels, about a hundred triangles (the model is a couple of
+ * thousand). White where the paint goes (each car's colour comes from its
+ * instance), a dark cabin and tyres. Built like the models: facing +x, the
+ * origin on the ground under its middle.
+ */
+export function farCarGeometry(id: CarId) {
+  const hit = farCache.get(id);
+  if (hit) return hit;
+  const s = CARS[id];
+  const half = s.L / 2;
+  const body = new THREE.Shape();
+  body.moveTo(half, s.clr);
+  for (const [x, y] of s.top) body.lineTo(x, y);
+  body.lineTo(-half, s.clr);
+  const flat = (shape: THREE.Shape, depth: number) => new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false }).translate(0, 0, -depth / 2);
+  const paint = (g: THREE.BufferGeometry, hex: string) => {
+    const c = new THREE.Color(hex);
+    const n = g.attributes.position.count;
+    g.setAttribute('color', new THREE.Float32BufferAttribute(Array.from({ length: n * 3 }, (_, i) => (i % 3 === 0 ? c.r : i % 3 === 1 ? c.g : c.b)), 3));
+    return g.index ? g.toNonIndexed() : g;
+  };
+  const parts = [paint(flat(body, s.W), '#ffffff'), paint(flat(new THREE.Shape(s.cabin.map(([x, y]) => new THREE.Vector2(x, y))), s.W * s.cabinW), s.id === 'bus' ? '#ffffff' : '#46506e')];
+  for (const ax of s.axles) for (const side of [-1, 1]) parts.push(paint(new THREE.BoxGeometry(s.r * 2, s.r * 2, s.tw).translate(ax, s.r, side * (s.W / 2 - s.tw / 2 + 0.02)), TYRE));
+  for (const g of parts) g.deleteAttribute('uv');
+  const g = mergeGeometries(parts)!;
+  for (const p of parts) p.dispose();
+  farCache.set(id, g);
+  return g;
+}
+/** The far cars' material: toon, coloured per vertex and per car */
+export function farCarMaterial() {
+  return (farMat ??= toon('#ffffff', { vertexColors: true, name: 'car-far' }));
+}
+
+/**
+ * Every car far from the camera, parked or driving, in one BatchedMesh: one
+ * draw call for all of them (three.js culls each car against the view and
+ * the shadow box). Each car takes an instance of its model's far form, in
+ * its own paint, shown while it's far away.
+ */
+export interface FarCars {
+  add(model: CarId, paint: THREE.ColorRepresentation, at?: THREE.Matrix4): number;
+  place(id: number, at: THREE.Matrix4): void;
+  show(id: number, on: boolean): void;
+}
+let farCars: FarCars | null = null;
+/** Make the far cars' mesh (index.ts, before anything adds a car) */
+export function initFarCars(scene: THREE.Scene, max = 400) {
+  const models = Object.keys(CARS) as CarId[];
+  const geos = models.map(farCarGeometry);
+  const bm = new THREE.BatchedMesh(max, geos.reduce((n, g) => n + g.attributes.position.count, 0), 0, farCarMaterial());
+  const ids = new Map(models.map((m, i) => [m, bm.addGeometry(geos[i])]));
+  bm.sortObjects = false;
+  bm.perObjectFrustumCulled = true;
+  // (its cars move all over the map: culled one by one, never as a whole)
+  bm.frustumCulled = false;
+  bm.castShadow = true;
+  bm.receiveShadow = true;
+  bm.name = 'far-cars';
+  scene.add(bm);
+  const c = new THREE.Color();
+  farCars = {
+    add(model, paint, at) {
+      const id = bm.addInstance(ids.get(model)!);
+      bm.setColorAt(id, c.set(paint));
+      if (at) bm.setMatrixAt(id, at);
+      bm.setVisibleAt(id, false);
+      return id;
+    },
+    place: (id, at) => void bm.setMatrixAt(id, at),
+    show: (id, on) => void bm.setVisibleAt(id, on),
+  };
+  return farCars;
+}
+/** The far cars' mesh (`initFarCars()` made it) */
+export const theFarCars = () => farCars!;
+
+/**
+ * Parked cars (static, instanced: two draw calls a model near the camera,
+ * one far away: `farCarGeometry()`, swapped by the camera's distance from
+ * the whole lot, `addLod()` in lod.ts). Each is [model, x, z, turn, colour];
  * x, z on the ground at `y`.
  */
 export function parkedCars(parent: THREE.Object3D, y: number, list: [CarId, number, number, number, string][]) {
@@ -937,6 +1023,10 @@ export function parkedCars(parent: THREE.Object3D, y: number, list: [CarId, numb
   const M = new THREE.Matrix4();
   const q = new THREE.Quaternion();
   const one = new THREE.Vector3(1, 1, 1);
+  const near: THREE.Object3D[] = [];
+  const far: number[] = [];
+  const fleet = theFarCars();
+  parent.updateMatrixWorld(true);
   for (const id of new Set(list.map((c) => c[0]))) {
     const cars = list.filter((c) => c[0] === id);
     const g = carGeometry(id);
@@ -945,6 +1035,7 @@ export function parkedCars(parent: THREE.Object3D, y: number, list: [CarId, numb
       M.compose(new THREE.Vector3(x, y, z), q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), ry), one);
       for (const m of meshes) m.setMatrixAt(i, M);
       meshes[0].setColorAt(i, new THREE.Color(color));
+      far.push(fleet.add(id, color, M.clone().premultiply(parent.matrixWorld)));
     });
     for (const m of meshes) {
       m.castShadow = true;
@@ -952,7 +1043,16 @@ export function parkedCars(parent: THREE.Object3D, y: number, list: [CarId, numb
       m.computeBoundingSphere();
       parent.add(m);
     }
+    near.push(...meshes);
   }
+  // The whole lot swaps at once (world numbers)
+  const box = new THREE.Box3();
+  for (const [, x, z] of list) box.expandByPoint(new THREE.Vector3(x, y, z));
+  box.expandByScalar(3).applyMatrix4(parent.matrixWorld);
+  addLodSwitch((on) => {
+    for (const o of near) o.visible = on;
+    for (const id of far) fleet.show(id, !on);
+  }, box);
 }
 
 /**

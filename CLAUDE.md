@@ -165,7 +165,7 @@ it and has been retired completely. Build only on what's here.
   - The skyline ring stands just past `EXT`, kept out of the haze (`fog = false`) so it reads as a far metropolis.
   - The sky dome and stars travel with the camera at 400, inside its far plane (440), so everything in the world stays in front of the sky.
   - City view can pan anywhere inside the bounds.
-  - **Growing the city** (many more buildings, then a bigger world) is planned in `docs/growth-plan.md`. Part A (Phases 0-4) makes size cheap: the measuring kit and a snapshot test that nothing moves, tiles and a collision grid, near and far building forms, building as you go, building kits. Part B (Phases 5-10) grows the world: the edge as data (the airport's site frozen, trees per tile), `EXT` out to about 880 across, roads to reach it (a ring highway, more bridges, traffic spent near you), getting about (a world map, waypoints, and the owner's pick of metro, taxis or fast travel), districts one at a time, then optionally about 1,400 across. Phases 0 (the measuring kit) and 1 (tiles, the collision grid, the city's fixed geometry merged per tile, crowds and traffic culled for the shadow map) are built; follow the rest one phase at a time with the owner's sign-off, and never add buildings in bulk outside the tiles (`tileBatch()`).
+  - **Growing the city** (many more buildings, then a bigger world) is planned in `docs/growth-plan.md`. Part A (Phases 0-4) makes size cheap: the measuring kit and a snapshot test that nothing moves, tiles and a collision grid, near and far building forms, building as you go, building kits. Part B (Phases 5-10) grows the world: the edge as data (the airport's site frozen, trees per tile), `EXT` out to about 880 across, roads to reach it (a ring highway, more bridges, traffic spent near you), getting about (a world map, waypoints, and the owner's pick of metro, taxis or fast travel), districts one at a time, then optionally about 1,400 across. Phases 0 (the measuring kit), 1 (tiles, the collision grid, the city's fixed geometry merged per tile, crowds and traffic culled for the shadow map) and 2 (near and far forms: details near only, far forms for the places and the cars) are built; follow the rest one phase at a time with the owner's sign-off, and never add buildings in bulk outside the tiles (`tileBatch()`).
 - **Cars** are `src/scripts/city3d/cars.ts`: real-proportion cartoon models
   (City Hatch, Cruiser, Street GT coupe, Hauler pickup, Box Van, City Bus;
   made-up names, never a real make or badge), each a bevelled extruded
@@ -232,11 +232,41 @@ it and has been retired completely. Build only on what's here.
   mesh's count per pass). The shadow map is drawn once a frame (`post.ts`),
   however many passes render the scene. Measure with `?fps` and `?bench`
   before and after.
+- **Near and far** (growth plan Phase 2): past the tier's `far` (`TIERS`:
+  120 high, 110 medium, 90 low) from the camera, things are drawn in a far
+  form; `isNear()` in `tiles.ts` decides, with a margin so nothing flickers
+  on the line.
+  - A Batch's details are near only (`Batch.lod`, `Batch.detail()`; Lod
+    'all' / 'near' / 'far'): `tileBatch()` keeps each tile's near and far
+    pieces apart and swaps them together (`tiled.update()`). The infill's
+    walls, roof slabs, signs, the diner's neon and the offices' crowns are
+    drawn at every distance (`k.all()` in `infill.ts`), everything else on
+    a building is near only, and so are the alleys', lanes' and parks'
+    dressing, benches, bollards, the promenade's posts and the lamps (their
+    halos stay). New fine detail on a building goes in near only.
+  - Each place (every spot's group, the garage, the market) has a far form
+    (`farForm()` in `lod.ts`): everything in it flattened into one mesh
+    coloured per vertex with a glow per vertex for lit windows and neon
+    (`farFormMaterial()`, by day and at night), triangles under `TINY` left
+    out; big textured surfaces (facades) keep their textures, merged per
+    material. What must stay as it is (the hologram, the LED wall, the
+    equalizer, beams and glows, glass, Liberty's flames, the garage's
+    turntable with your car, anything moving: `keeps()`, or
+    `userData.keep` on a part) is drawn at every distance. The near parts
+    move into a `<name>-near` group, so code that shows or hides a part
+    still can. `addLod()` / `addLodSwitch()` swap them (`updateLods()`
+    from `index.ts`).
+  - Cars far away (parked and traffic) are their model's far form
+    (`farCarGeometry()` in `cars.ts`: the body and cabin outlines
+    extruded, block wheels, about a hundred triangles), all in one
+    `BatchedMesh` (`initFarCars()`, `theFarCars()`), one draw for every
+    far car; a parked lot swaps whole, a car in traffic by its own
+    distance.
 - `?fps` in the address shows a performance readout (`.city-stats`, built in
   `index.ts`): fps, slowest frame, draw calls and triangles per frame, the
   shadow map's share (`post.shadowStat`), geometry and texture memory
-  (`sceneMemory()` in `perf.ts`), how many tile pieces were drawn, how long
-  the boot took (art, build, shaders), quality tier, pixel ratio and any
+  (`sceneMemory()` in `perf.ts`), how many tile pieces were drawn and
+  tiles are near, how many far forms are showing, how long the boot took (art, build, shaders), quality tier, pixel ratio and any
   quality stepped down. Use it on
   real devices before and after changes; it's invisible without the
   parameter.

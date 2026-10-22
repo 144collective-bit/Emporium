@@ -115,8 +115,8 @@ export function paintMat() {
   return (paintShared ??= new THREE.MeshToonMaterial({ color: '#ffffff', gradientMap: gradient, vertexColors: true }));
 }
 const neonShared = new Map<string, THREE.MeshBasicMaterial>();
-/** How dark it is, 0 by day to 1 at night, for the shared neon's shader */
-const nightU = { value: 0 };
+/** How dark it is, 0 by day to 1 at night, for the shared neon's shader (and the far forms', lod.ts) */
+export const nightU = { value: 0 };
 let neonAll: THREE.MeshBasicMaterial | null = null;
 /**
  * The one material every steady neon in a Batch shares: its colour per
@@ -207,6 +207,13 @@ export function lit<M extends THREE.Material>(mat: M, day: number, night: number
   if (m.color && !m.emissive) entry.base = m.color.clone();
   lits.push(entry);
   return mat;
+}
+
+/** How bright a registered glowing material is by day and at night (`lit()`), or null */
+export function litOf(mat: THREE.Material): { day: number; night: number; base?: THREE.Color } | null {
+  const l = lits.find((e) => e.mat === mat);
+  // (`base`: an unlit material's own colour, before the time of day scales it)
+  return l ? { day: l.day, night: l.night, base: l.base } : null;
 }
 
 /** Stop driving a material that's being thrown away (guns that come and go) */
@@ -418,8 +425,37 @@ function ensureUv(g: THREE.BufferGeometry) {
  * carries its day and night brightness; only flickering neon is one per
  * brightness).
  */
+/**
+ * Which distances a piece of geometry is drawn at (growth plan Phase 2):
+ * 'all' always, 'near' only close to the camera (the details: stoops,
+ * cornices, rooftop clutter, props), 'far' only further away (a stand-in
+ * for details left out). `tileBatch()` swaps them per tile.
+ */
+export type Lod = 'all' | 'near' | 'far';
+
 export class Batch {
-  private parts = new Map<THREE.Material, THREE.BufferGeometry[]>();
+  private parts = new Map<string, { mat: THREE.Material; lod: Lod; geos: THREE.BufferGeometry[] }>();
+  /** The level what's added now is drawn at (see `Lod`; `detail()` sets it for a while) */
+  lod: Lod = 'all';
+
+  /** Add what `draw` adds at level `lod` (the details of a building: near only) */
+  detail(draw: () => void, lod: Lod = 'near') {
+    const was = this.lod;
+    this.lod = lod;
+    try {
+      draw();
+    } finally {
+      this.lod = was;
+    }
+    return this;
+  }
+
+  private file(mat: THREE.Material) {
+    const key = `${mat.uuid}|${this.lod}`;
+    let part = this.parts.get(key);
+    if (!part) this.parts.set(key, (part = { mat, lod: this.lod, geos: [] }));
+    return part.geos;
+  }
 
   add(geo: THREE.BufferGeometry, mat: THREE.Material) {
     const g = ensureIndexed(ensureUv(geo));
@@ -431,8 +467,7 @@ export class Batch {
       if (shared.lit) litVertices(g, shared.lit[0], shared.lit[1]);
       mat = shared.mat;
     }
-    if (!this.parts.has(mat)) this.parts.set(mat, []);
-    this.parts.get(mat)!.push(g);
+    this.file(mat).push(g);
     this.lastAdded = { geo: g, mat };
     return this;
   }
@@ -468,7 +503,7 @@ export class Batch {
     if (!matrices.length) return this;
     // The shape made ready once (indexed, its colour per vertex), then copied
     const first = this.add(geo.clone(), mat).lastAdded!;
-    const list = this.parts.get(first.mat)!;
+    const list = this.file(first.mat);
     list.pop();
     for (const m of matrices) list.push(first.geo.clone().applyMatrix4(m));
     first.geo.dispose();
@@ -478,10 +513,11 @@ export class Batch {
   private lastAdded: { geo: THREE.BufferGeometry; mat: THREE.Material } | null = null;
 
   build(parent: THREE.Object3D, { cast = true, receive = true } = {}) {
-    for (const [mat, geos] of this.parts) {
+    for (const { mat, lod, geos } of this.parts.values()) {
       const merged = mergeGeometries(geos, false);
       if (!merged) continue;
       const mesh = new THREE.Mesh(merged, mat);
+      if (lod !== 'all') mesh.userData.lod = lod;
       mesh.castShadow = cast;
       mesh.receiveShadow = receive;
       mesh.matrixAutoUpdate = false;
@@ -506,7 +542,7 @@ export function consolidate(parents: THREE.Object3D[]) {
     for (const c of parent.children) {
       const m = c as THREE.Mesh;
       if (!m.isMesh || !m.userData.batched || Array.isArray(m.material)) continue;
-      const key = `${m.material.uuid}|${m.layers.mask}|${m.castShadow}|${m.receiveShadow}|${m.visible}`;
+      const key = `${m.material.uuid}|${m.layers.mask}|${m.castShadow}|${m.receiveShadow}|${m.visible}|${m.userData.lod ?? 'all'}`;
       if (!sets.has(key)) sets.set(key, []);
       sets.get(key)!.push(m);
     }
@@ -525,6 +561,7 @@ export function consolidate(parents: THREE.Object3D[]) {
       mesh.layers.mask = first.layers.mask;
       mesh.matrixAutoUpdate = false;
       mesh.userData.batched = true;
+      if (first.userData.lod) mesh.userData.lod = first.userData.lod;
       for (const m of list) {
         parent.remove(m);
         m.geometry.dispose();

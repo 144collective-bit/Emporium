@@ -725,6 +725,8 @@ function emporium(scene: THREE.Scene, ctx: LandmarkCtx, crowd: Idle[]) {
       return geo.rotateY(th).translate(x, y0 + i * FH + 0.1 + (FH - 0.1) / 2, z);
     });
     const wall = new THREE.Mesh(mergeGeometries(panels, false)!, mat);
+    // Meant to be seen from far away, and changing: never in the Emporium's far form (lod.ts)
+    wall.userData.keep = true;
     for (const p of panels) p.dispose();
     occlude(wall, tex);
     g.add(fx(wall));
@@ -771,6 +773,8 @@ function emporium(scene: THREE.Scene, ctx: LandmarkCtx, crowd: Idle[]) {
       }
     }
     const mesh = new THREE.InstancedMesh(unitBox, lit(new THREE.MeshBasicMaterial({ color: '#ffffff' }), 0.55, 1.15), segs.length);
+    // (its colours pulse: it stays as it is far away too)
+    mesh.userData.keep = true;
     mats.forEach((mm, j) => mesh.setMatrixAt(j, mm));
     const col = new THREE.Color();
     const pink = new THREE.Color('#ff2fb9');

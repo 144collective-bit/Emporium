@@ -585,11 +585,15 @@ export function buildLamps(scene: THREE.Scene) {
     pool.setMatrixAt(i, m.compose(new THREE.Vector3(l.x + dir.x * 2, l.y + 0.02, l.z + dir.z * 2), flat, new THREE.Vector3(2.6, 2.6, 2.6)));
   });
   pools.forEach((p, i) => pool.setMatrixAt(n + i, m.compose(new THREE.Vector3(p.x, p.y + 0.02, p.z), flat, new THREE.Vector3(p.size, p.size, p.size))));
+  // Near only (growth plan Phase 2): far off, a lamp is a hairline; its halo (below) still shows at night
   const lampB = new Batch();
+  lampB.lod = 'near';
   lampB.instances(new THREE.CylinderGeometry(0.035, 0.05, 1.6, 6), toon('#1b1830'), poles).instances(new THREE.BoxGeometry(0.4, 0.05, 0.05), toon('#1b1830'), arms);
   lampB.build(scene, { cast: true, receive: true });
   // (the bulbs cast no shadow)
-  new Batch().instances(new THREE.BoxGeometry(0.2, 0.07, 0.12), neon('#fff1c2', 0.6, 2.4), bulbs).build(scene, { cast: false, receive: true });
+  const bulbB = new Batch();
+  bulbB.lod = 'near';
+  bulbB.instances(new THREE.BoxGeometry(0.2, 0.07, 0.12), neon('#fff1c2', 0.6, 2.4), bulbs).build(scene, { cast: false, receive: true });
   const haloGeo = new THREE.BufferGeometry();
   haloGeo.setAttribute('position', new THREE.BufferAttribute(haloPos, 3));
   scene.add(fx(new THREE.Points(haloGeo, haloMat)), fx(pool));
