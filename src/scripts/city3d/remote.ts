@@ -42,6 +42,8 @@ interface Remote {
   aim: number;
   air: number;
   reload: number;
+  /** 0 put away .. 1 in hand */
+  draw: number;
   emote: { id: string; t: number } | null;
   tag: HTMLElement;
   bubble: HTMLElement;
@@ -118,6 +120,7 @@ export function createRemotes(scene: THREE.Scene, camera: THREE.PerspectiveCamer
         aim: 0,
         air: 0,
         reload: 0,
+        draw: 0,
         emote: null,
         tag,
         bubble: tag.querySelector('em')!,
@@ -240,12 +243,14 @@ export function createRemotes(scene: THREE.Scene, camera: THREE.PerspectiveCamer
         }
         r.aim += (((flags & (FLAG.aim | FLAG.fire)) !== 0 ? 1 : 0) - r.aim) * Math.min(1, dt * 14);
         r.reload = flags & FLAG.reload ? (r.reload + dt / WEAPONS[r.gun.id].reload) % 1 : 0;
-        r.pivot.visible = armed;
-        if (r.fig.held) r.fig.held.visible = !armed;
+        // Drawn and put away (not seen once away: other players' gear isn't sent)
+        r.draw = THREE.MathUtils.clamp(r.draw + (armed ? dt : -dt) / 0.45, 0, 1);
+        r.pivot.visible = r.draw > 0;
+        if (r.fig.held) r.fig.held.visible = !r.pivot.visible;
         r.air += (((flags & FLAG.air) !== 0 ? 1 : 0) - r.air) * Math.min(1, dt * 12);
         airPose(P, r.air);
         // Hands on the gun last, so walking and jumping don't pull them off it
-        if (armed && !r.emote) holdGun(P, r.stance, r.pivot, r.gun, { aim: r.aim, pitch, recoil: 0, reload: r.reload, dt });
+        if (r.draw > 0 && !r.emote) holdGun(P, r.stance, r.pivot, r.gun, { aim: r.aim, ready: 1 - run, draw: r.draw, pitch, recoil: 0, reload: r.reload, dt });
         P.headPitch = THREE.MathUtils.clamp((0.35 - pitch) * 0.6, -0.45, 0.55);
         P.headYaw = 0;
         r.fig.update();

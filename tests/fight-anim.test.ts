@@ -8,7 +8,7 @@
 // nothing is NaN.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { CLIPS, CLIP_IDS, KNOCKDOWN_LIE, PELVIS, blendPose, hipHeight, hurtClip, moveClip, newFightPose, rootShift, sampleClip, type ClipId, type FightPose } from '../src/scripts/city3d/fight-anim';
+import { CLIPS, CLIP_IDS, KNOCKDOWN_LIE, PELVIS, blendPose, hipHeight, hurtClip, hurtMirror, moveClip, newFightPose, rootShift, sampleClip, type ClipId, type FightPose } from '../src/scripts/city3d/fight-anim';
 import { MOVES, MOVE_IDS, T, moveFrames } from '../src/scripts/city3d/fight-sim';
 
 const sample = (id: ClipId, frame: number, mirror = false) => sampleClip(id, frame, newFightPose(), { mirror });
@@ -19,6 +19,8 @@ function numbers(p: FightPose): [string, number][] {
     ['lean', p.lean],
     ['twist', p.twist],
     ['side', p.side],
+    ['turn', p.turn],
+    ['sway', p.sway],
     ['headYaw', p.headYaw],
     ['headPitch', p.headPitch],
     ['root.y', p.root.y],
@@ -297,4 +299,61 @@ test('every sampled number is finite for every clip at every frame (and between)
     }
   }
   assert.ok(Number.isFinite(sample('jab', NaN).bob));
+});
+
+test('the hips and shoulders turn into every punch and kick, and the weight moves', () => {
+  for (const id of MOVE_IDS) {
+    const m = MOVES[id];
+    if (m.kind === 'dodge') continue;
+    const wind = sample(moveClip(id), Math.round(m.startup * 0.55));
+    const hit = sample(moveClip(id), m.startup);
+    const hips = Math.abs(hit.turn - wind.turn);
+    const shoulders = Math.abs(hit.turn + hit.twist - (wind.turn + wind.twist));
+    assert.ok(hips >= 0.15, `${id}: the hips turn ${hips.toFixed(2)}`);
+    assert.ok(shoulders >= 0.2, `${id}: the shoulders turn ${shoulders.toFixed(2)}`);
+    // Through the strike: the rear-hand punches and kicks turn the hips the right way round (positive
+    // brings the left hip forward), the left-hand ones the other way after loading
+    assert.ok(hit.turn < wind.turn, `${id}: turns through`);
+    assert.ok(Math.abs(hit.sway - GUARD.sway) > 0.015 || Math.abs(wind.sway - GUARD.sway) > 0.015, `${id}: the weight shifts`);
+  }
+  // The kicks stand on the left foot: the hips go over it
+  for (const id of ['frontKick', 'roundhouse'] as const) assert.ok(sample(id, MOVES[id].startup).sway < -0.03);
+});
+
+test('the recoveries settle back into the guard (no snap at the end)', () => {
+  for (const id of MOVE_IDS) {
+    const c = CLIPS[moveClip(id)];
+    const a = sample(c.id, c.frames - 3);
+    const b = sample(c.id, c.frames - 1);
+    for (const [k, v] of numbers(a)) {
+      const w = numbers(b).find(([n]) => n === k)![1];
+      assert.ok(Math.abs(v - w) < 0.35, `${id}: ${k} still ${(v - w).toFixed(2)} off two frames from the end`);
+    }
+  }
+});
+
+test('hit reactions play off the side the blow came from', () => {
+  // Keyed for a blow from the right: the head snaps away (to the +x side), the left shoulder goes back
+  const head = sample('hitHead', 3);
+  assert.ok(head.headYaw > 0.3 && head.twist < GUARD.twist && head.turn < GUARD.turn && head.sway > 0);
+  assert.equal(hurtMirror('cross'), false);
+  assert.equal(hurtMirror('frontKick'), false);
+  assert.equal(hurtMirror('roundhouse'), false);
+  assert.equal(hurtMirror('jab'), true);
+  assert.equal(hurtMirror('hook'), true);
+  assert.equal(hurtMirror(null), false);
+  // Mirrored for a blow from the left
+  for (const hurt of ['head', 'body', 'stagger'] as const) {
+    const id = hurtClip(hurt);
+    const r = sample(id, 4);
+    const l = sample(id, 4, true);
+    assert.ok(Math.abs(r.headYaw + l.headYaw) < 1e-9 && Math.abs(r.turn + l.turn) < 1e-9 && Math.abs(r.sway + l.sway) < 1e-9, id);
+    assert.ok(r.sway > 0 && r.turn < 0, `${id}: knocked to the right, the left hip back`);
+  }
+});
+
+test('the knockdown and the get-up use the whole body: the hips and shoulders turn as he falls and rolls up', () => {
+  const turnOf = (id: ClipId) => Array.from({ length: CLIPS[id].frames }, (_, f) => Math.abs(sample(id, f).turn - (id === 'getup' ? 0 : GUARD.turn)));
+  assert.ok(Math.max(...turnOf('knockdown')) > 0.15);
+  assert.ok(Math.max(...turnOf('getup')) > 0.25);
 });

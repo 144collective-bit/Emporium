@@ -13,6 +13,7 @@ import {
   HIP_Y,
   PALM_Y,
   PALM_Z,
+  REACH_GAIN,
   REST,
   SHIN_GROUND,
   SHOULDERS,
@@ -239,4 +240,29 @@ test('the hands: palm, wrist, four fingers and a thumb, every vertex weighted, m
   }
   // The head: a few thousand triangles at most
   assert.ok(headGeometry(30, 2).index!.count / 3 < 2400);
+});
+
+test('the collarbone brings the shoulder forward for a reach just past the arm (two-handed holds)', () => {
+  const sk = makeSkeleton();
+  const inv = new THREE.Matrix4();
+  for (const i of [0, 1] as const) {
+    const s = i === 0 ? -1 : 1;
+    // Straight ahead of the shoulder, past the arm's own length but within the collarbone's help
+    const t = new THREE.Vector3(s * 0.12, 0.34, ARM_REACH + REACH_GAIN * 0.7 - 0.02);
+    assert.ok(SHOULDERS[i].distanceTo(t) > ARM_REACH);
+    const p = newPose();
+    reachArm(p, i, t);
+    assert.ok((p.arms[i].reach ?? 0) > 0.1, 'the collarbone swings forward');
+    poseSkeleton(sk, p);
+    sk.root.updateMatrixWorld(true);
+    const fore = i === 0 ? sk.bones.foreL : sk.bones.foreR;
+    const palm = new THREE.Vector3(0, -PALM_Y, PALM_Z).applyMatrix4(fore.matrixWorld).applyMatrix4(inv.copy(sk.torso.matrixWorld).invert());
+    assert.ok(palm.distanceTo(t) < 2e-3, `arm ${i}: off by ${palm.distanceTo(t)}`);
+    // Close in, it stays back; a given reach pulls it back (recoil)
+    const q = newPose();
+    reachArm(q, i, new THREE.Vector3(s * 0.05, 0.3, 0.2));
+    assert.equal(q.arms[i].reach, 0);
+    reachArm(q, i, new THREE.Vector3(s * 0.05, 0.3, 0.2), -0.2);
+    assert.equal(q.arms[i].reach, -0.2);
+  }
 });

@@ -15,6 +15,7 @@ import * as THREE from 'three';
 import { PAL, canvasTex, fx, lit, toon, unlit } from './kit';
 import type { SkinId } from '../net/profile-data';
 import type { WeaponId } from './combat-sim';
+import { FIT, type Fit } from './gunfit';
 
 /** Finishes and their unlock scores live with the profile data (the game server checks them too) */
 export { SKINS, type SkinId } from '../net/profile-data';
@@ -51,22 +52,16 @@ const holo = (y: number, z: number, base: number): Part[] => [
   [box(0.024, 0.0085, 0.05, 0, y + 0.0355, z), 'accent'],
 ];
 
-/** How each gun is put together, and where the hands, sight and muzzle are */
-interface Spec {
+/** How each gun is put together (where the hands, sight and muzzle are is gunfit.ts) */
+interface Spec extends Fit {
   body: () => Part[];
   /** The magazine: a separate group so it can come out on a reload */
   mag: () => Part[];
-  muzzle: THREE.Vector3;
-  sight: { kind: 'holo' | 'irons' | 'scope'; at: THREE.Vector3; ads: number };
-  /** Where the left hand holds the front, and where it reaches for the magazine (relative to that) */
-  fore: THREE.Vector3;
-  magAt: THREE.Vector3;
-  /** Third person: the middle of the front hand's palm (under the handguard, round a foregrip or pump), close in for his short arms */
-  hold: THREE.Vector3;
 }
 
 const SPECS: Record<WeaponId, Spec> = {
   rifle: {
+    ...FIT.rifle,
     body: () => {
       const p: Part[] = [
         // Receiver, ejection port, charging handle, top rail
@@ -100,13 +95,9 @@ const SPECS: Record<WeaponId, Spec> = {
       [box(0.036, 0.07, 0.058, 0, -0.094, 0.133, -0.32), 'steel'],
       [box(0.042, 0.012, 0.066, 0, -0.131, 0.146, -0.32), 'accent'],
     ],
-    muzzle: new THREE.Vector3(0, 0.05, 0.535),
-    sight: { kind: 'holo', at: new THREE.Vector3(0, 0.152, 0.075), ads: 0.36 },
-    fore: new THREE.Vector3(0.008, 0.016, 0.28),
-    magAt: new THREE.Vector3(-0.008, -0.075, -0.15),
-    hold: new THREE.Vector3(0, -0.015, 0.22),
   },
   smg: {
+    ...FIT.smg,
     body: () => [
       // Boxy receiver, top cover, barrel shroud with a stripe, short barrel and cap
       [box(0.05, 0.06, 0.24, 0, 0.045, 0.04), 'steel'],
@@ -131,13 +122,9 @@ const SPECS: Record<WeaponId, Spec> = {
       [box(0.03, 0.15, 0.045, 0, -0.06, 0.085, -0.08), 'steel'],
       [box(0.036, 0.012, 0.05, 0, -0.135, 0.09, -0.08), 'accent'],
     ],
-    muzzle: new THREE.Vector3(0, 0.05, 0.365),
-    sight: { kind: 'holo', at: new THREE.Vector3(0, 0.13, 0.03), ads: 0.34 },
-    fore: new THREE.Vector3(0.004, -0.01, 0.2),
-    magAt: new THREE.Vector3(-0.004, -0.06, -0.11),
-    hold: new THREE.Vector3(0, -0.03, 0.2),
   },
   shotgun: {
+    ...FIT.shotgun,
     body: () => {
       const p: Part[] = [
         // Receiver, long barrel, the tube under it, the pump with ridges
@@ -166,13 +153,9 @@ const SPECS: Record<WeaponId, Spec> = {
       [box(0.04, 0.075, 0.06, 0, -0.025, 0.115, -0.08), 'steel'],
       [box(0.044, 0.012, 0.064, 0, -0.064, 0.12, -0.08), 'accent'],
     ],
-    muzzle: new THREE.Vector3(0, 0.066, 0.545),
-    sight: { kind: 'irons', at: new THREE.Vector3(0, 0.1, 0), ads: 0.3 },
-    fore: new THREE.Vector3(0.006, 0.0, 0.3),
-    magAt: new THREE.Vector3(-0.006, -0.06, -0.19),
-    hold: new THREE.Vector3(0, -0.022, 0.255),
   },
   dmr: {
+    ...FIT.dmr,
     body: () => [
       // Long receiver and lower, handguard with a stripe, long barrel, muzzle brake
       [box(0.058, 0.055, 0.36, 0, 0.05, 0.06), 'steel'],
@@ -203,13 +186,9 @@ const SPECS: Record<WeaponId, Spec> = {
       [box(0.034, 0.09, 0.06, 0, -0.035, 0.13, -0.1), 'steel'],
       [box(0.04, 0.012, 0.064, 0, -0.078, 0.138, -0.1), 'accent'],
     ],
-    muzzle: new THREE.Vector3(0, 0.05, 0.78),
-    sight: { kind: 'scope', at: new THREE.Vector3(0, 0.13, -0.106), ads: 0.26 },
-    fore: new THREE.Vector3(0.008, 0.016, 0.36),
-    magAt: new THREE.Vector3(-0.008, -0.075, -0.23),
-    hold: new THREE.Vector3(0, -0.013, 0.27),
   },
   revolver: {
+    ...FIT.revolver,
     // The Hand Cannon: a big fluted cylinder, a long heavy barrel with a vent rib,
     // wooden grip panels, iron sights and a lanyard ring. Both hands on the grip.
     body: () => {
@@ -252,13 +231,9 @@ const SPECS: Record<WeaponId, Spec> = {
       }
       return p;
     },
-    muzzle: new THREE.Vector3(0, 0.055, 0.35),
-    sight: { kind: 'irons', at: new THREE.Vector3(0, 0.094, -0.04), ads: 0.3 },
-    fore: new THREE.Vector3(0.034, -0.035, 0.035),
-    magAt: new THREE.Vector3(-0.03, 0.08, 0.01),
-    hold: new THREE.Vector3(0.03, -0.045, 0.02),
   },
   burst: {
+    ...FIT.burst,
     // The Tri-Tap: a compact bullpup carbine (the magazine behind the grip), a carry
     // handle with the holo sight on it, a short barrel with a flash hider, accent stripes.
     body: () => [
@@ -289,13 +264,9 @@ const SPECS: Record<WeaponId, Spec> = {
       [box(0.034, 0.1, 0.055, 0, -0.03, -0.13, -0.1), 'steel'],
       [box(0.04, 0.012, 0.06, 0, -0.08, -0.136, -0.1), 'accent'],
     ],
-    muzzle: new THREE.Vector3(0, 0.05, 0.32),
-    sight: { kind: 'holo', at: new THREE.Vector3(0, 0.172, 0.0), ads: 0.34 },
-    fore: new THREE.Vector3(0.008, 0.012, 0.17),
-    magAt: new THREE.Vector3(-0.01, -0.08, -0.3),
-    hold: new THREE.Vector3(0, -0.012, 0.15),
   },
   lmg: {
+    ...FIT.lmg,
     // The Belt Feeder: a long receiver under a top cover, the belt box hanging under it,
     // a heavy finned barrel with the bipod folded back under it, a stock.
     body: () => {
@@ -340,11 +311,6 @@ const SPECS: Record<WeaponId, Spec> = {
       [box(0.054, 0.012, 0.114, 0, -0.03, 0.14), 'accent'],
       [box(0.012, 0.04, 0.03, -0.031, 0.055, 0.12), 'accent'],
     ],
-    muzzle: new THREE.Vector3(0, 0.058, 0.63),
-    sight: { kind: 'irons', at: new THREE.Vector3(0, 0.115, -0.12), ads: 0.3 },
-    fore: new THREE.Vector3(0.008, 0.014, 0.26),
-    magAt: new THREE.Vector3(-0.008, -0.05, -0.12),
-    hold: new THREE.Vector3(0, -0.014, 0.23),
   },
 };
 

@@ -1517,8 +1517,8 @@ export function createWalk(d: WalkDeps) {
     aimAmt += ((shooting ? 1 : 0) - aimAmt) * damp(14, dt);
     if (hero.held) hero.held.visible = !combat.armed;
     // Both hands on the gun (after walking and jumping have posed the arms)
-    if (combat.armed) combat.poseGun(P, aimAmt, pitch, recoil, dt);
-    else if (aim) Object.assign(P.arms[1], { fwd: 1.45, out: 0.05, bend: 0.15, twist: 0 });
+    const gunInHand = combat.geared && combat.poseGun(P, { aim: aimAmt, pitch, recoil, run: runAmt, dt });
+    if (!gunInHand && aim) Object.assign(P.arms[1], { fwd: 1.45, out: 0.05, bend: 0.15, twist: 0 });
     // The head follows the camera: turns towards where you look, tilts up and down
     const lookYaw = THREE.MathUtils.clamp(wrap(lookFace - face), -0.9, 0.9);
     headYaw += ((speed < 0.25 || aim ? lookYaw : 0) - headYaw) * damp(8, dt);

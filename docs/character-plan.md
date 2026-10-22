@@ -196,7 +196,42 @@ The plan as it was:
   every speed), continuous blends (no pops between clips), clips' lengths
   and loops.
 
-### Phase 3: guns and fighting on the new bones
+### Phase 3: guns and fighting on the new bones (built)
+
+What's in (for the owner's sign-off):
+
+- `gunfit.ts` (DOM-free, tested in `tests/gunfit.test.ts`): each gun's
+  hand spots, sight and muzzle, how it's carried (`long`: shouldered, slung
+  on his back when put away; `pistol`: the Hand Cannon, on his hip, carried
+  in one hand, both on the grip to shoot), its reload kind and kick, and
+  the reloads as keyed clips (`reloadAt()`, `RELOAD_CUES` for the sounds)
+  that the third-person hold and the first-person hands both play: a
+  magazine (tilt it, the magazine out in the hand, to the pouch and back,
+  seat it, the charging handle), shells (rolled over, four shells from the
+  belt one at a time, rack the pump), the revolver's cylinder (swing it
+  out, muzzle up to dump the empties, a speed loader, swing it shut) and
+  the Belt Feeder's box (cover up, box off and on, belt in, cover shut).
+- `stance.ts` (now DOM-free): the hold on top of the walk or run. Ready
+  after a shot, an aim or a reload, relaxed (a long gun carried low across
+  the body, the revolver hanging in one hand) after a couple of seconds or
+  while sprinting; aiming bends the spine a share of the way (the head
+  takes it back out); the collarbone brings the front shoulder forward
+  before he turns side-on; recoil shoves the chest and the shooting
+  shoulder back.
+- Drawing and putting away: the hand goes to the gun on his back or hip
+  and it swings round to both hands (backwards to holster); swapping puts
+  one away and draws the other in `SWAP_TIME`. Geared up and holstered,
+  the gun stays slung on his back or holstered on his hip.
+- The fight clips: the hips turn (and the weight shifts) into every punch
+  and kick, the recoveries settle back into the guard, the hit reactions
+  play off the side the blow came from (the sim keeps `hurtBy`, the move
+  that landed), and the knockdown and get-up turn the hips and shoulders
+  as he falls and rolls up. The sim's frames are unchanged.
+- Not yet: other players draw and carry but aren't sent whether they're
+  geared, so their gun isn't shown once it's away; crowds and fighters
+  still walk the old formula.
+
+The plan as it was:
 
 - Upper body on its own layer while the legs walk or run: aiming up and
   down and to the side (the spine and neck share the turn), a ready stance

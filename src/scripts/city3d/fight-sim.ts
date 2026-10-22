@@ -251,6 +251,8 @@ export interface Fighter {
   parried: boolean;
   hurt: 'head' | 'body' | 'stagger' | null;
   hurtFrame: number;
+  /** The move that hurt it (its `limb` says which side the blow came from; null for a parry) */
+  hurtBy: MoveId | null;
   /** On the ground: frames left; then getting up: frames left */
   down: number;
   downTotal: number;
@@ -361,6 +363,7 @@ function newFighter(s: FighterSetup): Fighter {
     parried: false,
     hurt: null,
     hurtFrame: 0,
+    hurtBy: null,
     down: 0,
     downTotal: 0,
     getup: 0,
@@ -493,6 +496,7 @@ export function createFightSim(setup: FightSetup) {
           // A parry: the attacker staggers
           f.stun = T.parryStun;
           f.hurt = 'stagger';
+          f.hurtBy = null;
           f.parried = true;
           f.hurtFrame = 0;
           f.move = null;
@@ -533,6 +537,7 @@ export function createFightSim(setup: FightSetup) {
         o.stun = m.heavy ? T.staggerStun : m.stun;
         o.parried = false;
         o.hurt = m.heavy ? 'stagger' : m.kind === 'kick' || m.id === 'jab' ? 'body' : 'head';
+        o.hurtBy = m.id;
         o.hurtFrame = 0;
         if (m.heavy) events.push({ kind: 'stagger', who: o.id });
       }

@@ -218,6 +218,7 @@ const set = (l: Limb, fwd: number, out: number, bend: number) => {
   l.bend = bend;
   l.twist = 0;
   if (l.wrist) l.wrist = undefined;
+  if (l.reach) l.reach = undefined;
 };
 
 /**

@@ -17,6 +17,7 @@
 import * as THREE from 'three';
 import { canvasTex, fx } from './kit';
 import { buildGun, gunSpec, type Gun, type SkinId, type Tintable } from './guns';
+import { newReloadFrame, reloadAt } from './gunfit';
 import type { WeaponId } from './combat-sim';
 import { PLAYER, type Outfit } from './character';
 import { bakedHand } from './body';
@@ -242,30 +243,23 @@ export function createViewmodel(scene: THREE.Scene, skin: SkinId, weapon: Weapon
   const dirNow = new THREE.Vector3();
   let haveDir = false;
   const L = THREE.MathUtils.lerp;
-  const ease = (x: number) => x * x * (3 - 2 * x);
-  const seg = (r: number, a: number, b: number) => ease(THREE.MathUtils.clamp((r - a) / (b - a), 0, 1));
 
-  // Reload: where the left hand goes (offsets from where it holds the front), and the magazine with it
-  const handOff = new THREE.Vector3();
-  const magOff = new THREE.Vector3();
+  // Reload: the same clip as the third-person hands (gunfit.ts). The left hand
+  // leaves the front for the magazine, the pouch (down by his belt) and back;
+  // the magazine rides in it while it's carried
+  const rf = newReloadFrame();
+  const POUCH = new THREE.Vector3(0.18, -0.34, 0.05);
   const tmp = new THREE.Vector3();
   function reloadPose(r: number) {
-    handOff.set(0, 0, 0);
-    magOff.set(0, 0, 0);
-    gun.mag.visible = true;
-    if (r <= 0) return;
-    // To the magazine, pull it out and away, come back with a fresh one, seat it, back to the handguard
-    const toMag = seg(r, 0.04, 0.14) * (1 - seg(r, 0.72, 0.86));
-    const out = seg(r, 0.14, 0.24) * (1 - seg(r, 0.6, 0.7));
-    const away = seg(r, 0.24, 0.4) * (1 - seg(r, 0.44, 0.6));
-    handOff.copy(spec.magAt).multiplyScalar(toMag);
-    tmp.set(0.03, -0.11, 0.02).multiplyScalar(out);
-    handOff.add(tmp);
-    magOff.copy(tmp);
-    tmp.set(0.18, -0.34, 0.05).multiplyScalar(away);
-    handOff.add(tmp);
-    magOff.add(tmp);
-    gun.mag.visible = !(r > 0.38 && r < 0.46);
+    reloadAt(gun.id, r, rf);
+    tmp.copy(spec.fore);
+    tmp.z += rf.slide;
+    left.position.lerpVectors(tmp, tmp.copy(rf.at).add(rf.mag), rf.hand);
+    left.position.addScaledVector(POUCH, rf.away);
+    if (rf.carried) gun.mag.position.copy(left.position).sub(spec.fore).sub(spec.magAt);
+    else gun.mag.position.copy(rf.mag);
+    gun.mag.rotation.z = rf.magRoll;
+    gun.mag.visible = rf.magShown;
   }
 
   return {
@@ -360,27 +354,25 @@ export function createViewmodel(scene: THREE.Scene, skin: SkinId, weapon: Weapon
       const P = { x: L(HIP.x * wide, ADS.x, ads), y: L(HIP.y, ADS.y, ads), z: L(HIP.z, ADS.z, ads), ry: L(HIP.ry, ADS.ry, ads), rz: L(HIP.rz, ADS.rz, ads) };
       const swayK = 1 - ads * 0.65;
       const r = s.reload;
-      const tilt = r > 0 ? seg(r, 0.02, 0.12) * (1 - seg(r, 0.86, 0.98)) : 0;
-      const bolt = r > 0 ? Math.sin(seg(r, 0.84, 0.92) * Math.PI) : 0;
+      reloadPose(r);
+      const tilt = rf.roll;
+      const bolt = rf.bolt;
       const down = 1 - draw;
       holder.position.set(
-        P.x + bx - swayX * 0.05 * swayK - sprint * 0.03 + tilt * 0.01,
-        P.y + by + breathe - swayY * 0.04 * swayK - down * 0.22 - sprint * 0.035 - s.air * 0.015 + tilt * 0.02,
+        P.x + bx - swayX * 0.05 * swayK - sprint * 0.03 + tilt * 0.02,
+        P.y + by + breathe - swayY * 0.04 * swayK - down * 0.22 - sprint * 0.035 - s.air * 0.015 + tilt * 0.04 - rf.pull * 0.3,
         P.z + kickZ * (1 - ads * 0.4) + sprint * 0.02 + bolt * 0.012
       );
       // Scaling the whole gun about the eye keeps the sight on the line of sight
       holder.position.multiplyScalar(m);
       holder.scale.setScalar(m);
       holder.rotation.set(
-        kickX * (1 - ads * 0.5) - down * 0.7 - sprint * 0.32 - swayY * 0.6 * swayK + tilt * 0.18 + bolt * 0.05,
-        P.ry + swayX * 0.6 * swayK + sprint * 0.55 + tilt * 0.1,
-        P.rz + kickRoll + swayX * 0.3 * swayK + tilt * 0.5 - sprint * 0.12,
+        kickX * (1 - ads * 0.5) - down * 0.7 - sprint * 0.32 - swayY * 0.6 * swayK + rf.pitch + bolt * 0.05,
+        P.ry + swayX * 0.6 * swayK + sprint * 0.55 + tilt * 0.2,
+        P.rz + kickRoll + swayX * 0.3 * swayK + tilt - sprint * 0.12,
         'YXZ'
       );
 
-      reloadPose(r);
-      left.position.copy(spec.fore).add(handOff);
-      gun.mag.position.copy(magOff);
 
       flashT -= dt;
       flash.visible = flashT > 0;
