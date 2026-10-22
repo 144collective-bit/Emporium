@@ -450,3 +450,89 @@
     max-width: 104px;
   }
 }
+
+/* A taxi: a bar at the bottom while it comes, waits and drives you (taxi.ts) */
+.taxi-bar {
+  position: absolute;
+  left: 50%;
+  bottom: 136px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100% - 32px);
+  padding: 7px 8px 7px 8px;
+  border: 1px solid #0000;
+  border-radius: 999px;
+  background:
+    linear-gradient(#0b0a12f0, #0b0a12f0) padding-box,
+    linear-gradient(90deg, #ffc23d, #ff8a3d) border-box;
+  transform: translateX(-50%);
+}
+.taxi-bar[hidden],
+.city:not([data-mode="walk"]) .taxi-bar {
+  display: none;
+}
+.taxi-mark {
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: #ffc23d;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: #111;
+}
+.taxi-text {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: #fff;
+}
+.taxi-btn {
+  flex: none;
+  padding: 8px 13px;
+  border: 1px solid #0000;
+  border-radius: 999px;
+  background:
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #fff;
+  cursor: pointer;
+}
+.taxi-btn[hidden] {
+  display: none;
+}
+.taxi-cancel {
+  border-color: var(--line);
+  background: none;
+  color: var(--text-2);
+}
+/* Riding (a taxi or the metro): the walk HUD's buttons and stick step aside, the bar sits low */
+.city.is-riding .walk-hud,
+.city.is-riding .walk-prompt {
+  display: none;
+}
+.city.is-riding .taxi-bar {
+  bottom: calc(20px + env(safe-area-inset-bottom));
+}
+@media (max-width: 640px) {
+  .taxi-bar {
+    bottom: 150px;
+    gap: 7px;
+  }
+  .taxi-text {
+    font-size: 12px;
+  }
+  .taxi-btn {
+    padding: 8px 10px;
+  }
+}

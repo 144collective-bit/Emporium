@@ -129,9 +129,9 @@ export function createTravelUI(d: TravelDeps) {
   function update(dt: number) {
     if (!d.walking()) return;
     const p = walk.position;
-    // The places you've reached (on foot or at the wheel; not from the air)
+    // The places you've reached (on foot or at the wheel; not from the air, nor driving past in a taxi or on the metro)
     check -= dt;
-    if (check <= 0 && !walk.airborne) {
+    if (check <= 0 && !walk.airborne && !walk.riding) {
       check = 0.5;
       const ids = seen(p.x, p.z);
       if (ids.length) {

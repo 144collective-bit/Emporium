@@ -58,6 +58,8 @@ const ROAD_Y = 0.035;
 
 /** The player in walk mode: cars stop rather than drive through them. `r` is how far they reach (more in a car). */
 export const walker = { x: 0, z: 0, on: false, r: 0 };
+/** Anything else in the road the traffic stops short of (a taxi pulled up or on its way: taxi.ts) */
+export const stoppers: { x: number; z: number; r: number; on: boolean }[] = [];
 /** Where the traffic and the people on the sidewalks are, so your car can bump them softly (drive.ts) */
 export const bodies = {
   cars: [] as { x: number; z: number; yaw: number; len: number; model: CarId }[],
@@ -308,6 +310,13 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
   const up = new THREE.Vector3(0, 1, 0);
   const carBall = new THREE.Sphere();
 
+  /** How fast a car may go to stop short of someone (or something) in the road ahead of it */
+  const shortOf = (v: { x: number; z: number; fx: number; fz: number; len: number }, w: { x: number; z: number; r: number }) => {
+    const ahead = (w.x - v.x) * v.fx + (w.z - v.z) * v.fz - v.len / 2 - w.r;
+    const side = Math.abs((w.x - v.x) * v.fz - (w.z - v.z) * v.fx);
+    return ahead > -0.2 - w.r && ahead < 4 && side < 1.0 + w.r * 0.6 ? Math.max(0, (ahead - 0.8) * 1.8) : Infinity;
+  };
+
   tick(({ t, dt, night }) => {
     // Lamp states
     lamps.forEach((l, i) => {
@@ -342,12 +351,9 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
         for (const ph of occupied[s.j.ix]) if (ph !== s.phase) blocked = true;
         if (light === 'r' || (light === 'y' && d > 1.2) || blocked) target = Math.min(target, Math.max(0, d * 1.3));
       }
-      // Someone walking in the road ahead: stop short of them
-      if (walker.on) {
-        const ahead = (walker.x - v.x) * v.fx + (walker.z - v.z) * v.fz - v.len / 2 - walker.r;
-        const side = Math.abs((walker.x - v.x) * v.fz - (walker.z - v.z) * v.fx);
-        if (ahead > -0.2 - walker.r && ahead < 4 && side < 1.0 + walker.r * 0.6) target = Math.min(target, Math.max(0, (ahead - 0.8) * 1.8));
-      }
+      // Someone walking in the road ahead (or anything else in it): stop short of them
+      if (walker.on) target = Math.min(target, shortOf(v, walker));
+      for (const w of stoppers) if (w.on) target = Math.min(target, shortOf(v, w));
       const acc = target > v.v ? 1.8 : 5;
       v.v += Math.max(-acc * dt, Math.min(acc * dt, target - v.v));
       v.p += v.v * dt;

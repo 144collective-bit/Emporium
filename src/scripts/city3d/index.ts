@@ -34,6 +34,8 @@ import { buildUnits } from './units';
 import { buildBigLots } from './biglots';
 import { buildBeacons } from './beacons';
 import { createTravelUI } from './travel-ui';
+import { createTaxis } from './taxi';
+import { placeName } from './worldmap';
 import { buildKartPark } from './kartpark3d';
 import { KART_SPAWN } from './kartpark';
 import { AIR_SPAWN } from './airfield';
@@ -622,6 +624,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     walking = false;
     walker.on = false;
     walk.exit();
+    taxis.reset();
     mp?.walkChanged(false);
     document.body.classList.remove('is-walking');
     close();
@@ -662,7 +665,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     if (travel.key(e, walking ? !active && walk.onFoot && !root.querySelector('.shop:not([hidden]), [data-char]:not([hidden])') : !builder.active)) return;
     if (walking) {
       if (e.key === 'Escape') {
-        if (walk.closeShop() || walk.releaseMouse() || closePop()) return;
+        if (taxis.skip() || walk.closeShop() || walk.releaseMouse() || closePop()) return;
         active ? close() : stopWalking();
       }
       else if (!active) walk.onKey(e, true);
@@ -748,8 +751,24 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     open: (id) => open(id),
     startWalking: (at) => startWalking(at),
     want: (x, z, r) => works.want(x, z, r),
-    taxi: () => game.toast('Taxis are on their way'),
-    riding: () => false,
+    taxi: (p) => taxis.call(p),
+    riding: () => walk.riding,
+  });
+  const taxis = createTaxis(root, {
+    scene,
+    camera,
+    reduced,
+    you: () => walk.position,
+    free: () => walking && walk.onFoot,
+    setRide: (r) => walk.setRide(r),
+    arrive: (p) => {
+      works.want(p.at.x, p.at.z, 70);
+      walk.placeAt(p.at);
+    },
+    want: (x, z, r) => works.want(x, z, r),
+    name: (p) => placeName(root, p).name,
+    toast: (text) => game.toast(text),
+    sfx: (kind) => sound.sfx(kind),
   });
 
   /* ---------- Controls: time, weather, sound, view ---------- */
@@ -918,10 +937,11 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     } else if (walking) {
       walk.update(dt, reduced ? 0 : t);
       travel.update(dt);
+      taxis.update(dt, reduced ? 0 : t);
       walker.x = walk.position.x;
       walker.z = walk.position.z;
       // A car reaches further than someone on foot, an aircraft on the ground further still; in the air it's no one's business
-      walker.r = walk.driving ? 0.8 : walk.flying ? 1.6 : 0;
+      walker.r = walk.driving || walk.riding ? 0.8 : walk.flying ? 1.6 : 0;
       if (walk.airborne) walker.x = walker.z = 1e6;
       mp?.update(dt, t);
       dirty = true;

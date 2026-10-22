@@ -750,6 +750,14 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
   <button type="button" class="walk-prompt" data-walk-prompt hidden>
     <kbd>E</kbd> <span data-walk-label>Enter</span>
   </button>
+  {/* A taxi (taxi.ts, growth plan Phase 8): on its way, waiting (Get in), or the ride (Skip ride) */}
+  <div class="taxi-bar" data-taxi hidden aria-live="polite">
+    <span class="taxi-mark" aria-hidden="true">TAXI</span>
+    <p class="taxi-text" data-taxi-text></p>
+    <button type="button" class="taxi-btn" data-taxi-in hidden>Get in</button>
+    <button type="button" class="taxi-btn" data-taxi-skip hidden>Skip ride</button>
+    <button type="button" class="taxi-btn taxi-cancel" data-taxi-cancel hidden>Cancel</button>
+  </div>
   {/* The world map (worldmap.ts, growth plan Phase 8): the whole city drawn from the street plan, places,
       you, your car and aircraft and your waypoint; a card for what's tapped (waypoint, taxi, fast travel, bring my car) */}
   <section class="worldmap" data-worldmap hidden role="dialog" aria-modal="true" aria-labelledby="wm-title">

@@ -120,6 +120,12 @@ const AUTO_ADS_HOLD = 0.35;
 
 /* ---------- Walk mode ---------- */
 
+/** A ride (taxi.ts, the metro): each frame it moves on and says where Degen is (in it); `end` when walk mode stops mid-ride */
+export interface Ride {
+  update(dt: number, t: number): { x: number; z: number; y?: number };
+  end(): void;
+}
+
 export interface WalkDeps {
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
@@ -1340,6 +1346,28 @@ export function createWalk(d: WalkDeps) {
     }
   }
 
+  /**
+   * Riding (a taxi or the metro, growth plan Phase 8): the ride moves Degen (hidden in it) and its own
+   * camera; the keys and the stick wait, the rest of the city carries on
+   */
+  let ride: Ride | null = null;
+  function rideFrame(dt: number, t: number) {
+    const r = ride!;
+    const at = r.update(dt, t);
+    // (the ride may have ended this frame and stood Degen at its end)
+    if (ride !== r) return;
+    pos.set(at.x, at.y ?? groundAt(at.x, at.z), at.z);
+    vel.set(0, 0);
+    speedNow = 0;
+    hero.g.visible = hero.ring.visible = false;
+    combat.update(dt, t, false);
+    combat.view(dt, t, { firstPerson: false, aim: false, move: 0, phase: 0, run: 0, air: 0 });
+    if (near) {
+      near = null;
+      prompt.hidden = true;
+    }
+  }
+
   /** In your aircraft: the stick turns and climbs, the pedals (or W / S) go faster and slower */
   function flyFrame(dt: number, t: number) {
     const k = (a: string, b: string) => (keys.has(a) || keys.has(b) ? 1 : 0);
@@ -1435,6 +1463,7 @@ export function createWalk(d: WalkDeps) {
     pollPad(dt);
     kartUI.update(dt);
     fightUI.update(dt);
+    if (ride) return rideFrame(dt, t);
     if (fight.active) return fightFrame(dt, t);
     if (karts.active) return kartFrame(dt, t);
     karts.idle(dt);
@@ -1681,9 +1710,25 @@ export function createWalk(d: WalkDeps) {
       const s = fly.state;
       return { x: s.x, z: s.z, away: fly.away };
     },
-    /** On foot (not driving, flying, karting or fighting): free to take a taxi or travel */
+    /** On foot (not driving, flying, karting, fighting or riding): free to take a taxi or travel */
     get onFoot() {
-      return active && !drive.active && !fly.active && !karts.active && !fight.active;
+      return active && !drive.active && !fly.active && !karts.active && !fight.active && !ride;
+    },
+    /** In a taxi or on the metro */
+    get riding() {
+      return !!ride;
+    },
+    /** Start a ride (on foot only: false otherwise), or end it (null: Degen stands where the ride left him) */
+    setRide(r: Ride | null) {
+      if (r && (ride || drive.active || fly.active || karts.active || fight.active)) return false;
+      ride = r;
+      keys.clear();
+      jumpHeld = false;
+      setAim(false);
+      if (r && locked()) document.exitPointerLock();
+      root.classList.toggle('is-riding', !!r);
+      if (!r) hero.g.visible = hero.ring.visible = !firstPerson;
+      return true;
     },
     /**
      * Bring my car (the world map, growth plan Phase 8): to the nearest lane round you, facing the way it
@@ -1703,7 +1748,7 @@ export function createWalk(d: WalkDeps) {
     },
     /** Stand Degen somewhere else at once, looking the way he faces (fast travel, the end of a taxi or metro ride) */
     placeAt(at: { x: number; z: number; yaw: number }) {
-      if (drive.active || fly.active || karts.active || fight.active) return false;
+      if (ride || drive.active || fly.active || karts.active || fight.active) return false;
       pos.set(at.x, groundAt(at.x, at.z), at.z);
       vel.set(0, 0);
       vy = 0;
@@ -1786,6 +1831,12 @@ export function createWalk(d: WalkDeps) {
       root.dataset.mode = 'walk';
     },
     exit() {
+      // Leaving walk mode on a ride: it ends where it is
+      if (ride) {
+        const r = ride;
+        ride = null;
+        r.end();
+      }
       // Leaving walk mode in the car: it stays parked where it is
       if (drive.active) getOut();
       // In your aircraft: it stays where it stands if it's down, else it goes home to the hangar
