@@ -99,7 +99,8 @@ test('between them the routes drive every street that goes anywhere, each way (a
 
 test('the highway all the way round, both ways, in both lanes; and every slip lane is driven', () => {
   const hw = PLAN.streets.find((s) => s.kind === 'highway')!;
-  const round = ROUTES.filter((r) => r.pts.every((p) => Math.abs(fromHighway(p[0], p[1])) < HIGHWAY_HALF));
+  // (all along it: its points every half tile, not only its corners, which a straight run across town would hide)
+  const round = ROUTES.filter((r) => points(r, 2).every(({ at: p }) => Math.abs(fromHighway(p[0], p[1])) < HIGHWAY_HALF));
   assert.equal(round.length, 4);
   for (const r of round) assert.ok(Math.abs(r.len - streetLength(hw)) < 40, `${r.len} round the highway`);
   // A stop at every junction on the way round

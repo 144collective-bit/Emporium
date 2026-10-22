@@ -1,38 +1,95 @@
-// The Sector 7 Metro (metro.ts, growth plan Phase 8): the viaduct's pillars stand in the east ring avenue's median
-// clear of every junction and the river, never too far apart; its stations sit between the junctions; the stair
-// towers stand on open lawn, off every road, pad and solid; and the train keeps to its line and its timetable.
+// The Sector 7 Metro (metro.ts, growth plan Phases 8 and 9): the line runs down the east ring avenue's median, bends
+// west to The Trenches over Trench Avenue's median, and the Airport's branch carries on south from the bend; its
+// pillars stand only in a median clear of the junctions, or on open ground, never in the river and never too far
+// apart; its stations sit between junctions, their stair towers on open ground off every road, pad and solid; and the
+// train keeps to its tracks and its timetable, and every ride takes well under a minute.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DECK_HALF, LINE, LINE_X, METRO_SOLIDS, PILLARS, PILLAR_HALF, PLATFORM, ROUND_TRIP, STATIONS, TRAIN, rideAt, timetableAt, trainAt } from '../src/scripts/city3d/metro';
+import {
+  AIRPORT_END,
+  BEND_R,
+  DECK_HALF,
+  LEGS,
+  LINE_X,
+  METRO_SOLIDS,
+  NORTH_END,
+  PILLARS,
+  PILLAR_HALF,
+  PLATFORM,
+  PLATFORM_SIDE,
+  ROUND_TRIP,
+  STATIONS,
+  SWITCH_S,
+  TRACKS,
+  TRAIN,
+  WEST_END,
+  carAt,
+  pointOn,
+  rideAt,
+  sideOf,
+  stationAt,
+  timetableAt,
+  trainAt,
+} from '../src/scripts/city3d/metro';
 import { PLAN, distToStreet } from '../src/scripts/city3d/streetplan';
-import { MEDIAN, NS_ROADS, RIVER } from '../src/scripts/city3d/layout';
+import { MEDIAN, RIVER } from '../src/scripts/city3d/layout';
 import { PADS } from '../src/scripts/city3d/outer';
 import { SOLIDS } from '../src/scripts/city3d/solids';
+import { AVENUE_Z } from '../src/scripts/city3d/trenches';
 
-const avenue = PLAN.streets.find((s) => s.id === `ns${NS_ROADS.length - 1}`)!;
-const others = PLAN.streets.filter((s) => s !== avenue && s.kind !== 'alley');
+const roads = PLAN.streets.filter((s) => s.kind !== 'alley');
+const near = (a: [number, number], b: [number, number], e = 1e-6) => Math.hypot(a[0] - b[0], a[1] - b[1]) < e;
 
-test('the line runs down the middle of the east ring avenue', () => {
-  assert.equal(LINE_X, avenue.pts[0][0]);
-  assert.ok(LINE[0] < LINE[1]);
-  for (const s of STATIONS) assert.ok(s.z - PLATFORM.half > LINE[0] && s.z + PLATFORM.half < LINE[1], s.id);
+test('the line runs down the east ring avenue, bends west onto Trench Avenue, and the Airport branch carries straight on', () => {
+  const { main, branch } = TRACKS;
+  assert.ok(near(main.pts[0], [LINE_X, NORTH_END]));
+  assert.ok(near(main.pts[main.pts.length - 1], [WEST_END, AVENUE_Z]));
+  assert.ok(near(branch.pts[0], pointOn('main', SWITCH_S).at));
+  assert.ok(near(branch.pts[branch.pts.length - 1], [LINE_X, AIRPORT_END]));
+  // The bend is a quarter circle: about BEND_R * pi / 2 long
+  assert.ok(Math.abs(main.len - (SWITCH_S + (BEND_R * Math.PI) / 2 + (LINE_X - BEND_R - WEST_END))) < 0.05);
+  // Every point on the line is over a road's median, or open ground, or the river (on the deck): never under a building's footprint
+  for (const t of Object.values(TRACKS))
+    for (let s = 0; s <= t.len; s += 1) {
+      const [x, z] = pointOn(t.id, s).at;
+      for (const b of SOLIDS.filter((b) => !METRO_SOLIDS.includes(b))) assert.ok(!(x > b[0] && x < b[2] && z > b[1] && z < b[3] && (b[4] ?? 9) > 4.5), `${t.id} at ${s.toFixed(0)} through a box at ${b.join(', ')}`);
+    }
 });
 
-test("the pillars stand in the avenue's median, clear of every junction and the river, never more than 18 apart", () => {
+test('the pillars stand in a median clear of every junction or on open ground, never in the river, never more than 18 apart', () => {
   assert.ok(PILLAR_HALF < MEDIAN / 2);
-  for (const z of PILLARS) {
-    for (const o of others) assert.ok(distToStreet(o, [LINE_X, z]) > o.half + PILLAR_HALF + 0.2, `a pillar at z ${z.toFixed(1)} in ${o.id}`);
-    assert.ok(z < RIVER[0] - 0.5 || z > RIVER[1] + 0.5, `a pillar at z ${z.toFixed(1)} in the river`);
+  for (const p of PILLARS) {
+    const [x, z] = p.at;
+    assert.ok(z < RIVER[0] - 0.5 || z > RIVER[1] + 0.5, `a pillar at ${x.toFixed(1)}, ${z.toFixed(1)} in the river`);
+    const hits = roads.filter((s) => distToStreet(s, p.at) <= s.half + PILLAR_HALF + 0.2);
+    // At most one road, an avenue, with the pillar inside its median
+    assert.ok(hits.length <= 1, `a pillar at ${x.toFixed(1)}, ${z.toFixed(1)} in a junction (${hits.map((s) => s.id)})`);
+    if (hits.length) assert.ok(hits[0].kind === 'avenue' && distToStreet(hits[0], p.at) + PILLAR_HALF <= MEDIAN / 2 + 1e-6, `a pillar in ${hits[0].id}'s lanes`);
   }
-  for (let i = 1; i < PILLARS.length; i++) assert.ok(PILLARS[i] - PILLARS[i - 1] <= 18.1, `${PILLARS[i - 1]} to ${PILLARS[i]}`);
-  assert.ok(PILLARS[0] - LINE[0] < 3 && LINE[1] - PILLARS[PILLARS.length - 1] < 3, 'held up at both ends');
+  for (const t of Object.values(TRACKS)) {
+    const ss = PILLARS.filter((p) => p.track === t.id).map((p) => p.s);
+    // (the branch's first stretch is held up by the main line's pillar at the switch)
+    const all = t.id === 'branch' ? [0, ...ss] : ss;
+    for (let i = 1; i < all.length; i++) assert.ok(all[i] - all[i - 1] <= 18.1, `${t.id}: ${all[i - 1].toFixed(1)} to ${all[i].toFixed(1)}`);
+    assert.ok(all[0] < 3 && t.len - all[all.length - 1] < 3, `${t.id} is held up at both ends`);
+  }
 });
 
-test('the platforms are between junctions; the stair towers on open lawn, off every road, pad and solid', () => {
-  for (const s of STATIONS) {
-    for (let z = s.z - PLATFORM.half; z <= s.z + PLATFORM.half; z += 0.5)
-      for (const o of others) assert.ok(distToStreet(o, [LINE_X, z]) > o.half + 0.3, `${s.id}'s platform over ${o.id}`);
-    const [x0, z0, x1, z1] = s.tower;
+test('the platforms are between junctions; the stair towers on open ground, off every road, pad and solid, by their platforms', () => {
+  for (const st of STATIONS) {
+    const mid = stationAt(st);
+    // The road the line runs down here (its median), if any: the platform may be over its lanes, never over another road
+    const host = roads.find((s) => s.kind === 'avenue' && distToStreet(s, mid.at) < 0.5);
+    for (let k = -PLATFORM.half; k <= PLATFORM.half; k += 0.5) {
+      const p = pointOn(st.track, st.s + k);
+      const n = sideOf(p.dir, PLATFORM_SIDE);
+      for (const w of [PLATFORM.from, PLATFORM.to]) {
+        const q: [number, number] = [p.at[0] + n[0] * w, p.at[1] + n[1] * w];
+        for (const o of roads) if (o !== host) assert.ok(distToStreet(o, q) > o.half + 0.3 || distToStreet(o, p.at) > o.half + 0.3, `${st.id}'s platform over ${o.id}`);
+      }
+      assert.ok(p.at[1] < RIVER[0] || p.at[1] > RIVER[1], `${st.id}'s platform over the river`);
+    }
+    const [x0, z0, x1, z1] = st.tower;
     const corners: [number, number][] = [
       [x0, z0],
       [x1, z0],
@@ -40,42 +97,75 @@ test('the platforms are between junctions; the stair towers on open lawn, off ev
       [x1, z1],
       [(x0 + x1) / 2, (z0 + z1) / 2],
     ];
-    for (const c of corners) for (const o of PLAN.streets) assert.ok(distToStreet(o, c) > o.half, `${s.id}'s tower on ${o.id}`);
-    for (const p of PADS) assert.ok(x1 < p.rect[0] - 0.3 || x0 > p.rect[2] + 0.3 || z1 < p.rect[1] - 0.3 || z0 > p.rect[3] + 0.3, `${s.id}'s tower on pad ${p.id}`);
-    for (const b of SOLIDS.filter((b) => !METRO_SOLIDS.includes(b))) assert.ok(x1 <= b[0] || x0 >= b[2] || z1 <= b[1] || z0 >= b[3], `${s.id}'s tower in a box at ${b.join(', ')}`);
-    // Its door is at street level on the avenue's side, the stair tower within reach of the skybridge over the lanes
-    assert.ok(s.door.x < x0 && x0 - s.door.x < 0.6 && s.door.z > z0 && s.door.z < z1);
-    assert.ok(x0 - PLATFORM.x1 < 4 && PLATFORM.x0 === LINE_X + DECK_HALF);
-    assert.ok(Math.abs((z0 + z1) / 2 - s.z) <= PLATFORM.half, `${s.id}'s tower is by its platform`);
+    for (const c of corners) for (const o of roads) assert.ok(distToStreet(o, c) > o.half, `${st.id}'s tower on ${o.id}`);
+    for (const p of PADS) assert.ok(x1 < p.rect[0] - 0.3 || x0 > p.rect[2] + 0.3 || z1 < p.rect[1] - 0.3 || z0 > p.rect[3] + 0.3, `${st.id}'s tower on pad ${p.id}`);
+    for (const b of SOLIDS.filter((b) => !METRO_SOLIDS.includes(b))) assert.ok(x1 <= b[0] || x0 >= b[2] || z1 <= b[1] || z0 >= b[3], `${st.id}'s tower in a box at ${b.join(', ')}`);
+    // The tower is on the platform's side, its face within a skybridge's reach of the platform's outer edge, by the platform
+    const c: [number, number] = [(x0 + x1) / 2, (z0 + z1) / 2];
+    const n = sideOf(mid.dir, PLATFORM_SIDE);
+    const out = (c[0] - mid.at[0]) * n[0] + (c[1] - mid.at[1]) * n[1];
+    const half = Math.abs(n[0]) > 0.5 ? (x1 - x0) / 2 : (z1 - z0) / 2;
+    assert.ok(out - half > PLATFORM.to - 0.2 && out - half - PLATFORM.to < 4, `${st.id}'s tower is ${(out - half - PLATFORM.to).toFixed(2)} from its platform`);
+    const alongT = (c[0] - mid.at[0]) * mid.dir[0] + (c[1] - mid.at[1]) * mid.dir[1];
+    assert.ok(Math.abs(alongT) <= PLATFORM.half, `${st.id}'s tower is by its platform`);
+    // Its door at street level, just out of its face, the way you walk out pointing away from the tower
+    const dx = st.door.x - c[0];
+    const dz = st.door.z - c[1];
+    assert.ok(dx * st.face[0] + dz * st.face[1] > 0, `${st.id}'s door faces out`);
+    assert.ok(!(st.door.x > x0 && st.door.x < x1 && st.door.z > z0 && st.door.z < z1), `${st.id}'s door is outside the tower`);
+    assert.ok(Math.min(Math.abs(st.door.x - x0), Math.abs(st.door.x - x1), Math.abs(st.door.z - z0), Math.abs(st.door.z - z1)) < 0.6);
+    assert.ok(DECK_HALF <= PLATFORM.from);
   }
 });
 
-test('the train keeps to the line, stops at every station, and never jumps', () => {
+test('the train keeps to its tracks, stops at every station, and never jumps', () => {
   const seen = new Set<string>();
   let prev = trainAt(0);
+  const pos = (t: ReturnType<typeof trainAt>) => pointOn(t.track, t.s).at;
   for (let t = 0; t <= ROUND_TRIP * 2; t += 0.05) {
     const p = trainAt(t);
-    assert.ok(p.z >= LINE[0] + TRAIN.len / 2 - 6 && p.z <= LINE[1] - TRAIN.len / 2 + 6, `${p.z} at ${t}`);
     assert.ok(p.speed <= TRAIN.speed + 1e-9);
-    assert.ok(Math.abs(p.z - prev.z) <= TRAIN.speed * 0.05 + 1e-6, `a jump at ${t}`);
+    // Its cars are on the line too (past the ends of the line by no more than half a car)
+    for (const off of [-TRAIN.len / 2, TRAIN.len / 2]) {
+      const c = carAt(p, off).at;
+      const onLine = Object.values(TRACKS).some((tr) => {
+        for (let s = -3; s <= tr.len + 3; s += 0.5) if (near(pointOn(tr.id, s).at, c, 0.5)) return true;
+        return false;
+      });
+      assert.ok(onLine, `a car off the line at ${t.toFixed(2)}`);
+    }
+    // Between one moment and the next it moves no further than it could (a dwell turns it round in place)
+    const [a, b] = [pos(prev), pos(p)];
+    assert.ok(Math.hypot(a[0] - b[0], a[1] - b[1]) <= TRAIN.speed * 0.05 + 1e-6, `a jump at ${t.toFixed(2)}`);
     if (p.at) seen.add(p.at);
     prev = p;
   }
   assert.deepEqual([...seen].sort(), STATIONS.map((s) => s.id).sort());
-  assert.ok(ROUND_TRIP > 60 && ROUND_TRIP < 240);
+  assert.ok(ROUND_TRIP > 60 && ROUND_TRIP < 300);
+  assert.equal(LEGS.length, 8);
 });
 
-test('a ride goes straight there in well under a minute, and the timetable carries on from where it stops', () => {
+test('a ride goes there in well under a minute, and the timetable carries on from where it stops', () => {
   for (const a of STATIONS)
     for (const b of STATIONS) {
       if (a === b) continue;
       const r = rideAt(a.id, b.id, 0);
-      assert.ok(r.total < 30, `${a.id} to ${b.id} takes ${r.total}`);
-      assert.equal(rideAt(a.id, b.id, 0).z, a.z);
-      assert.ok(Math.abs(rideAt(a.id, b.id, r.total).z - b.z) < 1e-9);
-      const dir = b.z > a.z ? 1 : -1;
-      const t = timetableAt(b.id, dir);
-      assert.equal(trainAt(t).at, b.id);
-      assert.equal(trainAt(t).z, b.z);
+      assert.ok(r.total < 45, `${a.id} to ${b.id} takes ${r.total.toFixed(1)}`);
+      assert.ok(near(pointOn(r.track, r.s).at, stationAt(a).at));
+      const end = rideAt(a.id, b.id, r.total);
+      assert.ok(near(pointOn(end.track, end.s).at, stationAt(b).at, 1e-6), `${a.id} to ${b.id} ends at ${b.id}`);
+      // Smoothly all the way (turning round at South Bank in place)
+      let last = pointOn(r.track, r.s).at;
+      for (let t = 0; t <= r.total; t += 0.05) {
+        const p = rideAt(a.id, b.id, t);
+        const q = pointOn(p.track, p.s).at;
+        assert.ok(Math.hypot(q[0] - last[0], q[1] - last[1]) <= TRAIN.speed * 0.05 + 1e-6, `${a.id} to ${b.id} jumps at ${t.toFixed(2)}`);
+        last = q;
+      }
+      const lastRun = end.runs[end.runs.length - 1];
+      const t = timetableAt(b.id, lastRun.pieces[lastRun.pieces.length - 1]);
+      const on = trainAt(t);
+      assert.equal(on.at, b.id, `after ${a.id} to ${b.id} the timetable stands it at ${b.id}`);
+      assert.ok(near(pointOn(on.track, on.s).at, stationAt(b).at, 1e-6));
     }
 });

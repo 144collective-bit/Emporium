@@ -9,7 +9,6 @@ import { EW_ROADS, NS_ROADS, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
 import { PARKWAY, SOUTHSIDE } from '../src/scripts/city3d/outer';
 import { KART_PARK } from '../src/scripts/city3d/kartpark';
 import { SITE } from '../src/scripts/city3d/airfield';
-import { DISTRICT_RECT } from '../src/scripts/city3d/testdistrict';
 import { outskirtsTrees } from '../src/scripts/city3d/outskirts';
 
 test('a closed loop, measured right, inside the world', () => {
@@ -26,7 +25,7 @@ test('a closed loop, measured right, inside the world', () => {
   assert.ok(insideHighway(30, 30) && !insideHighway(x0 - 10, 30));
 });
 
-test('well outside the town, the kart park, the airport and the test district', () => {
+test('well outside the town, the kart park and the airport', () => {
   const clear = (x: number, z: number, m: number) => fromHighway(x, z) > HIGHWAY_HALF + m && insideHighway(x, z);
   for (const p of [...PARKWAY, ...SOUTHSIDE]) assert.ok(clear(p[0], p[1], 40), `the bends at ${p}`);
   for (const [x, z] of [
@@ -35,9 +34,6 @@ test('well outside the town, the kart park, the airport and the test district', 
     [SITE[2], SITE[3]],
     [SITE[0], SITE[3]],
     [SITE[2], SITE[1]],
-    [DISTRICT_RECT[0], DISTRICT_RECT[1]],
-    [DISTRICT_RECT[0], DISTRICT_RECT[3]],
-    [DISTRICT_RECT[2], DISTRICT_RECT[3]],
   ])
     assert.ok(clear(x, z, 15), `${x}, ${z}`);
 });

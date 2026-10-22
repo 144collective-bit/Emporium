@@ -9,7 +9,7 @@
  * reduced motion the ride is a cut.
  */
 import * as THREE from 'three';
-import { DECK_Y, LINE_X, STATIONS, rideAt, timetableAt, type Station } from './metro';
+import { DECK_Y, STATIONS, carAt, pointOn, rideAt, sideOf, stationAt, timetableAt, type Run, type Station } from './metro';
 import { PLATFORM_Y, type buildMetro } from './metro3d';
 import type { Ride } from './walk';
 
@@ -64,35 +64,41 @@ export function createMetroUI(root: HTMLElement, d: MetroDeps) {
   /* ---------- The ride ---------- */
   let from: Station | null = null;
   let to: Station | null = null;
-  let dir: 1 | -1 = 1;
   let t = 0;
   let total = 0;
   const cam = new THREE.Vector3();
   const look = new THREE.Vector3();
-  function view(z: number, dt: number, snap = false) {
-    // Alongside from the west at the train's height, a little behind it, looking ahead
-    const want = new THREE.Vector3(LINE_X - 9, DECK_Y + 2.6, z - dir * 6);
-    const at = new THREE.Vector3(LINE_X, DECK_Y + 1.1, z + dir * 3);
+  /** Alongside the train at its height, on the side away from the platforms, a little behind it, looking ahead */
+  function view(tr: { run: Run; d: number; track: 'main' | 'branch'; s: number }, dt: number, snap = false) {
+    const c = carAt(tr, 0);
+    const n = sideOf(pointOn(tr.track, tr.s).dir, 1);
+    const want = new THREE.Vector3(c.at[0] + n[0] * 9 - c.dir[0] * 6, DECK_Y + 2.6, c.at[1] + n[1] * 9 - c.dir[1] * 6);
+    const at = new THREE.Vector3(c.at[0] + c.dir[0] * 3, DECK_Y + 1.1, c.at[1] + c.dir[1] * 3);
     const k = snap ? 1 : 1 - Math.exp(-dt * 4);
     cam.lerp(want, k);
     look.lerp(at, k);
+    if (snap) {
+      cam.copy(want);
+      look.copy(at);
+    }
     d.camera.position.copy(cam);
     d.camera.lookAt(look);
   }
+  let last: ReturnType<typeof rideAt> | null = null;
   const ride: Ride = {
     update(dt) {
-      if (!from || !to) return { x: LINE_X, z: 0 };
+      if (!from || !to) return { x: 0, z: 0 };
       t += dt;
-      const r = rideAt(from.id, to.id, t);
-      d.metro.hold({ z: r.z, dir });
-      view(r.z, dt);
+      const r = (last = rideAt(from.id, to.id, t));
+      d.metro.hold(r);
+      view(r, dt);
       text.textContent = `Metro to ${to.name} · ${Math.max(0, Math.ceil(total - t))} s`;
-      const at = { x: LINE_X, z: r.z, y: PLATFORM_Y };
+      const p = pointOn(r.track, r.s).at;
       if (t >= total + 0.8) finish();
-      return at;
+      return { x: p[0], z: p[1], y: PLATFORM_Y };
     },
     end() {
-      // Walk mode stopped mid-ride: the train goes back on its timetable where it is
+      // Walk mode stopped mid-ride: the train goes back on its timetable
       d.metro.hold(null);
       from = to = null;
       bar.hidden = true;
@@ -103,23 +109,26 @@ export function createMetroUI(root: HTMLElement, d: MetroDeps) {
     if (!d.free() || !d.setRide(ride)) return;
     from = a;
     to = b;
-    dir = b.z > a.z ? 1 : -1;
     t = 0;
-    total = rideAt(a.id, b.id, 0).total;
-    d.metro.hold({ z: a.z, dir });
-    d.want(LINE_X + 4, b.z, 70);
+    const r = (last = rideAt(a.id, b.id, 0));
+    total = r.total;
+    d.metro.hold(r);
+    const end = stationAt(b).at;
+    d.want(end[0], end[1], 70);
     d.sfx('door');
-    view(a.z, 0, true);
+    view(r, 0, true);
     bar.hidden = false;
     text.textContent = `Metro to ${b.name}`;
     if (d.reduced) finish();
   }
   function finish() {
-    if (!to) return;
+    if (!to || !from) return;
     const b = to;
+    // The train carries on its timetable from this station, the way it came in
+    const runs = (last ?? rideAt(from.id, b.id, 0)).runs;
+    const lastRun = runs[runs.length - 1];
     from = to = null;
-    // The train carries on its timetable from this station
-    d.metro.resume(timetableAt(b.id, dir));
+    d.metro.resume(timetableAt(b.id, lastRun.pieces[lastRun.pieces.length - 1]));
     d.setRide(null);
     d.arrive(b.id);
     d.sfx('door');

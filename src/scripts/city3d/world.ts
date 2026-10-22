@@ -179,13 +179,18 @@ export const puddleMat = new THREE.MeshBasicMaterial({
     depthWrite: false,
 });
 
-/** Where the highway crosses road `i` (an east-west road's x, a north-south road's z), each widened to its asphalt: gaps in that road's median and lines */
+/**
+ * Where the highway, or a street of The Trenches (trenches.ts), meets road `i` (an east-west road's x, a north-south
+ * road's z), each widened to the asphalt of the road that meets it: gaps in that road's median and lines
+ */
 function highwayGaps(axis: 'ew' | 'ns', i: number): [number, number][] {
+  const road = `${axis}${i}`;
   return PLAN.crossings
-    .filter((c) => c.streets.includes('highway') && c.streets.includes(`${axis}${i}`))
+    .filter((c) => c.streets.includes(road) && (c.streets.includes('highway') || c.streets.some((id) => id.startsWith('trench-'))))
     .map((c) => {
       const v = axis === 'ew' ? c.at[0] : c.at[1];
-      return [v - HIGHWAY_HALF - 0.2, v + HIGHWAY_HALF + 0.2];
+      const half = c.streets.includes('highway') ? HIGHWAY_HALF : PLAN.streets.find((s) => s.id === c.streets.find((id) => id !== road))!.half;
+      return [v - half - 0.2, v + half + 0.2];
     });
 }
 
