@@ -36,6 +36,7 @@ import { DEFAULT_KART, KART_SPECS, PLAYER_KARTS, cleanKart, type KartId } from '
 import { CUPS, type CupId } from './kart-sim';
 import { STYLES, type StyleId } from './fight-sim';
 import { COURSE_IDS, type CourseId } from './kartcircuit';
+import { PLACE_IDS as MAP_PLACES } from './places';
 import {
   BOT_LEVELS,
   FIGHT_BOTS,
@@ -425,6 +426,8 @@ export interface TycoonSave {
   guide: { step: number; hidden: boolean };
   /** When the save was last downloaded as a backup (ms since 1970; 0 never) */
   backup: number;
+  /** The places you've walked to (places.ts), where fast travel can take you */
+  visited: string[];
 }
 /** How many steps Getting started has (guide.ts's GUIDE) */
 export const GUIDE_STEPS = 7;
@@ -460,6 +463,7 @@ export function newSave(now: number): TycoonSave {
     counters: newCounters(),
     guide: { step: 0, hidden: false },
     backup: 0,
+    visited: [],
   };
 }
 const emptyLot = (): Lot => ({ kind: null, stock: {}, slots: [], job: null });
@@ -572,6 +576,7 @@ export function cleanSave(raw: unknown, now: number): TycoonSave {
     counters: newCounters(),
     guide: { step: 0, hidden: false },
     backup: 0,
+    visited: [],
   };
   cleanGame(s, o, now);
   // Phase 3: staff only where there's a job for them; couriers and contracts checked against the rules
@@ -1961,4 +1966,13 @@ function cleanGame(s: TycoonSave, o: Record<string, unknown>, now: number) {
   const gd = obj(o.guide);
   s.guide = 'guide' in o ? { step: Math.round(num(gd.step, 0, GUIDE_STEPS, 0)), hidden: gd.hidden === true } : { step: level(s) > 1 ? GUIDE_STEPS : 0, hidden: false };
   s.backup = num(o.backup, 0, now, 0);
+  // Getting about (growth plan Phase 8): the places you've walked to, only ones that are on the map
+  s.visited = [...new Set((Array.isArray(o.visited) ? o.visited : []).filter((id): id is string => typeof id === 'string' && MAP_PLACES.includes(id)))];
+}
+
+/** You've walked to these places (places.ts `seen()`): fast travel can take you there now. The ones that are new */
+export function visit(s: TycoonSave, ids: readonly string[]) {
+  const fresh = ids.filter((id) => MAP_PLACES.includes(id) && !s.visited.includes(id));
+  s.visited.push(...fresh);
+  return fresh;
 }

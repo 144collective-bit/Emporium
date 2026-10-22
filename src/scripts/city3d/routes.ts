@@ -499,3 +499,154 @@ export const SPOTS: { r: number; p: number; x: number; z: number }[] = ROUTES.fl
   }
   return out;
 });
+
+/* ---------- A drive from one place to another (a taxi's) ---------- */
+
+/** Where a point is nearest the drivable streets: the way, how far along it, and the stretch it's on */
+function project(p: Pt) {
+  let best = { w: -1, along: 0, d: Infinity };
+  WAYS.forEach((way, w) => {
+    const along = alongOf(way.s, p);
+    const q = between(way, along, along, 1)[0];
+    const d = Math.hypot(q[0] - p[0], q[1] - p[1]);
+    if (d < best.d) best = { w, along, d };
+  });
+  const way = WAYS[best.w];
+  // The stretch it's on: between station i and the next (round the seam on a loop)
+  let i = way.stations.length - 1;
+  for (let k = 0; k < way.stations.length; k++) if (way.stations[k].along <= best.along + 1e-9) i = k;
+  if (!way.s.loop && i === way.stations.length - 1) i = Math.max(0, i - 1);
+  return { w: best.w, along: best.along, i, dist: best.d };
+}
+/** The next station along a way from station i going d (round a loop), or -1 past an end */
+const stepFrom = (w: number, i: number, d: 1 | -1) => {
+  const way = WAYS[w];
+  const n = i + d;
+  if (way.s.loop) return (n + way.stations.length) % way.stations.length;
+  return n < 0 || n >= way.stations.length ? -1 : n;
+};
+/** How far along a way from `a` to `b` going d (round a loop if need be) */
+const span = (w: number, a: number, b: number, d: 1 | -1) => {
+  const way = WAYS[w];
+  let x = (b - a) * d;
+  if (way.s.loop && x < 0) x += way.len;
+  return x;
+};
+/** Can a car arriving at a junction along way w (going d) set off along way w2 (going d2) from there: no U-turn, the right way down a one-way street */
+function canTurn(w: number, n: number, d: 1 | -1, w2: number, n2: number, d2: 1 | -1): Turn | null {
+  const way2 = WAYS[w2];
+  if (way2.s.oneway && way2.s.oneway !== d2) return null;
+  if (w === w2) return d === d2 ? 'straight' : null;
+  const uIn = tangent(WAYS[w], WAYS[w].stations[n].along, d);
+  const uOut = tangent(way2, way2.stations[n2].along, d2);
+  const cross = uOut[0] * rightOf(...uIn)[0] + uOut[1] * rightOf(...uIn)[1];
+  const dot = uOut[0] * uIn[0] + uOut[1] * uIn[1];
+  if (dot < -0.7 || Math.abs(cross) < 0.4) return null;
+  return cross > 0 ? 'right' : 'left';
+}
+
+/**
+ * The shortest drive from near `a` to near `b` along the streets, the right
+ * way down one-way streets, turning right through the slip lanes at the
+ * highway: a route (open, not a loop) from the road nearest `a` to the kerb
+ * nearest `b`, in its lane, with where it crosses each junction. Null when
+ * there's no way (it never happens on today's plan).
+ */
+export function pathBetween(a: Pt, b: Pt): Route | null {
+  const from = project(a);
+  const to = project(b);
+  type Node = { w: number; n: number; d: 1 | -1; cost: number; prev: string | null; turn: Turn };
+  const nodes = new Map<string, Node>();
+  const open: string[] = [];
+  const push = (w: number, n: number, d: 1 | -1, cost: number, prev: string | null, turn: Turn) => {
+    const k = `${w}:${n}:${d}`;
+    const had = nodes.get(k);
+    if (had && had.cost <= cost) return;
+    nodes.set(k, { w, n, d, cost, prev, turn });
+    open.push(k);
+  };
+  // Off down its stretch either way (the right way on a one-way street), to the junction at its end
+  const W = WAYS[from.w];
+  for (const d of [1, -1] as const) {
+    if (W.s.oneway && W.s.oneway !== d) continue;
+    const n = d === 1 ? stepFrom(from.w, from.i, 1) : from.i;
+    if (n < 0 || !W.stations[n].j) continue;
+    push(from.w, n, d, span(from.w, from.along, W.stations[n].along, d), null, 'straight');
+  }
+  // On the same stretch already, ahead: no junction at all
+  let best: { cost: number; at: string | null; d: 1 | -1 } = { cost: Infinity, at: null, d: 1 };
+  if (from.w === to.w && from.i === to.i)
+    for (const d of [1, -1] as const) {
+      if (W.s.oneway && W.s.oneway !== d) continue;
+      if ((to.along - from.along) * d > 0 && !W.s.loop) best = { cost: Math.abs(to.along - from.along), at: null, d };
+    }
+  const T = WAYS[to.w];
+  while (open.length) {
+    // Cheapest first (a short list: a few hundred junctions at most)
+    let bi = 0;
+    for (let k = 1; k < open.length; k++) if (nodes.get(open[k])!.cost < nodes.get(open[bi])!.cost) bi = k;
+    const key0 = open.splice(bi, 1)[0];
+    const at = nodes.get(key0)!;
+    if (at.cost >= best.cost) break;
+    const j = WAYS[at.w].stations[at.n].j!;
+    // Finish: off down the destination's stretch from this junction, to the kerb
+    for (const [n2, d2] of [
+      [to.i, 1],
+      [stepFrom(to.w, to.i, 1), -1],
+    ] as [number, 1 | -1][]) {
+      if (n2 < 0 || T.stations[n2].j !== j) continue;
+      if (!canTurn(at.w, at.n, at.d, to.w, n2, d2)) continue;
+      const c = at.cost + span(to.w, T.stations[n2].along, to.along, d2);
+      if (c < best.cost) best = { cost: c, at: key0, d: d2 };
+    }
+    for (const o of onward(at.w, at.n, at.d)) {
+      const nn = next(o.to)!;
+      push(o.to.w, nn, o.to.d, at.cost + span(o.to.w, WAYS[o.to.w].stations[o.to.i].along, WAYS[o.to.w].stations[nn].along, o.to.d), key0, o.turn);
+    }
+  }
+  if (best.cost === Infinity) return null;
+  // The junctions it passes, in order, and the legs between them
+  const chain: Node[] = [];
+  for (let k = best.at; k; k = nodes.get(k)!.prev) chain.unshift(nodes.get(k)!);
+  type Run = { w: number; d: 1 | -1; a: number; b: number };
+  const runs: Run[] = [];
+  if (!chain.length) runs.push({ w: from.w, d: best.d, a: from.along, b: to.along });
+  else {
+    runs.push({ w: chain[0].w, d: chain[0].d, a: from.along, b: WAYS[chain[0].w].stations[chain[0].n].along });
+    for (let k = 1; k < chain.length; k++) {
+      const c = chain[k];
+      const prevRun = runs[runs.length - 1];
+      const end = WAYS[c.w].stations[c.n].along;
+      // Straight on along the same street: the same leg goes further
+      if (c.turn === 'straight' && prevRun.w === c.w && prevRun.d === c.d) prevRun.b = end;
+      // (turning onto another street: from the junction, where it is along that one)
+      else runs.push({ w: c.w, d: c.d, a: WAYS[c.w].stations[stepFrom(c.w, c.n, -c.d as 1 | -1)].along, b: end });
+    }
+    const lastRun = runs[runs.length - 1];
+    const n2 = best.d === 1 ? to.i : stepFrom(to.w, to.i, 1);
+    if (lastRun.w === to.w && lastRun.d === best.d) lastRun.b = to.along;
+    else runs.push({ w: to.w, d: best.d, a: T.stations[n2].along, b: to.along });
+  }
+  // Each leg in its lane: the outer one into a right turn or out of a slip lane, and to the kerb at the end
+  const legs: Leg[] = runs.map((r, k) => {
+    const way = WAYS[r.w];
+    const nextRun = runs[k + 1];
+    let turn: Turn = 'straight';
+    if (nextRun) {
+      const uIn = tangent(way, r.b, r.d);
+      const uOut = tangent(WAYS[nextRun.w], nextRun.a, nextRun.d);
+      const cross = uOut[0] * rightOf(...uIn)[0] + uOut[1] * rightOf(...uIn)[1];
+      turn = cross > 0 ? 'right' : 'left';
+    }
+    const at = way.stations.find((s) => Math.abs(s.along - r.b) < 0.5)?.j;
+    return { pts: between(way, r.a, r.b, r.d), off: 0, turn, slip: turn === 'right' && !!at?.highway };
+  });
+  legs.forEach((l, k) => {
+    const way = WAYS[runs[k].w];
+    const inSlip = k > 0 && legs[k - 1].slip;
+    l.off = way.s.oneway ? 0 : way.s.lanes === 2 ? (l.turn === 'right' || inSlip || k === legs.length - 1 ? OUT : l.turn === 'left' ? IN : OUT) : ST;
+  });
+  // (a leg too short to draw is dropped: the corners round over it)
+  const kept = legs.filter((l) => Math.hypot(l.pts[0][0] - l.pts[l.pts.length - 1][0], l.pts[0][1] - l.pts[l.pts.length - 1][1]) > 0.05);
+  return makeRoute(joinLegs(kept));
+}

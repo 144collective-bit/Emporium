@@ -1,6 +1,7 @@
 // Collision data (solids.ts, shared by walk mode, your car and the game server):
 // everything solid stands on a slab and off the roads, and every door, the gun
 // counter, the garage door and the walk-mode spawn can be reached.
+import { METRO_SOLIDS } from '../src/scripts/city3d/metro';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { CAMERA_ONLY, DOORS, FIGHTCLUB_SITE, GARAGE_SITE, MARKET_SITE, RACK, SHOT_SOLIDS, SOLIDS, STALL_SPOT, TURNTABLE_BOX, UNIT_SITE, UNIT_SIZE, WALK_SPAWN, LOT_SITE, lotSolids, rayBoxes, unitSolids } from '../src/scripts/city3d/solids';
@@ -16,12 +17,13 @@ import { LIBERTY_SOLIDS } from '../src/scripts/city3d/liberty';
 const R = 0.22;
 const blocked = (x: number, z: number) => SOLIDS.some((b) => pointIn(x, z, b, R));
 
-test('every solid box stands on a block, district or the garage lot (the kart park and the airport are flat open ground, tested in kart.test.ts and airfield.test.ts; Liberty Bridge stands on the promenades and in the river too, tested in liberty.test.ts)', () => {
-  for (const b of [...SOLIDS, ...CAMERA_ONLY]) if (!KART_SOLIDS.includes(b) && !AIRPORT_SOLIDS.includes(b) && !LIBERTY_SOLIDS.includes(b)) assert.ok(onSlab(b), `box ${b.join(', ')} is off the slabs`);
+test('every solid box stands on a block, district or the garage lot (the kart park and the airport are flat open ground, tested in kart.test.ts and airfield.test.ts; Liberty Bridge stands on the promenades and in the river too, tested in liberty.test.ts; the metro on the avenue\'s median and the lawns, tested in metro.test.ts)', () => {
+  for (const b of [...SOLIDS, ...CAMERA_ONLY]) if (!KART_SOLIDS.includes(b) && !AIRPORT_SOLIDS.includes(b) && !LIBERTY_SOLIDS.includes(b) && !METRO_SOLIDS.includes(b)) assert.ok(onSlab(b), `box ${b.join(', ')} is off the slabs`);
 });
 
-test('no solid box sits on a road', () => {
+test('no solid box sits on a road (but the metro\'s pillars in an avenue\'s median, metro.test.ts)', () => {
   for (const b of SOLIDS) {
+    if (METRO_SOLIDS.includes(b)) continue;
     for (const r of NS_ROADS) assert.ok(b[2] <= r.c - r.half || b[0] >= r.c + r.half, `box ${b.join(', ')} on the road at x ${r.c}`);
     for (const r of EW_ROADS) assert.ok(b[3] <= r.c - r.half || b[1] >= r.c + r.half, `box ${b.join(', ')} on the road at z ${r.c}`);
   }
