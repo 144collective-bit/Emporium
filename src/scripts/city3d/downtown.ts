@@ -166,6 +166,10 @@ export const SIGNS = {
   diner: { name: 'STARLITE DINER', blade: 'EAT', color: '#ff3b8a' },
   hotel: { name: 'HOTEL NOVA', blade: 'HOTEL', color: '#ff6ad5' },
   gm: { name: 'GM DEGENS', blade: 'GM', color: '#00eaff' },
+  // The building kits' (kits.ts): a school, a mall and a stadium in a district
+  school: { name: 'SECTOR 7 HIGH', blade: 'SCHOOL', color: '#ffd23f' },
+  mall: { name: 'NEON MALL', blade: 'MALL', color: '#e219e5' },
+  stadium: { name: 'SECTOR 7 STADIUM', blade: 'ARENA', color: '#2bff88' },
 } as const satisfies Record<string, { name: string; blade: string; color: string; icon?: string }>;
 export type SignId = keyof typeof SIGNS;
 /** Your three shops (the owner's names), spread across downtown */

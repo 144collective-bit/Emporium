@@ -446,8 +446,9 @@ const SIGN_ATLAS = (() => {
       c.shadowBlur = 0;
       c.fillStyle = shadeHex(sg.color, 0.55);
       c.fillText(sg.name, x + left + room / 2, y + CELL.h / 2 + 3);
-      // Its blade sign: the short word, letters stacked
+      // Its blade sign: the short word, letters stacked (one row of them: the building kits' signs, last, have none)
       const bx = i * BLADE.w;
+      if (bx + BLADE.w > SIGN_W) return;
       const by = SIGN_H - BLADE.h;
       c.fillStyle = '#0d0b1c';
       c.fillRect(bx + 3, by + 3, BLADE.w - 6, BLADE.h - 6);

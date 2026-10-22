@@ -291,6 +291,19 @@ export const SOLID_GRID = new BoxGrid(SOLIDS);
 export const CAMERA_GRID = new BoxGrid([...SOLIDS, ...CAMERA_ONLY]);
 /** What bullets stop on */
 const SHOT_GRID = new BoxGrid([...SHOT_SOLIDS, ...CAMERA_ONLY]);
+/** Every grid that holds the solids (walk.ts adds the car's, which leaves out the turntable) */
+export const SOLID_GRIDS: BoxGrid[] = [SOLID_GRID, CAMERA_GRID, SHOT_GRID];
+
+/**
+ * Solid boxes added after the city's own (a district laid by a recipe:
+ * growth plan Phase 4): into `SOLIDS` and every grid, so walking, the
+ * camera, bullets, driving and flying all meet them
+ */
+export function addSolids(boxes: readonly Box[]) {
+  SOLIDS.push(...boxes);
+  SHOT_SOLIDS.push(...boxes);
+  for (const g of SOLID_GRIDS) g.add(boxes);
+}
 
 /**
  * Distance along a ray to the first solid box or the ground (y 0.1), up to
