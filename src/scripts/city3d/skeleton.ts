@@ -75,6 +75,8 @@ export interface Limb {
   twist?: number;
   /** Arms only: the wrist, absent or zero for the hand straight on the forearm (fighting turns the fist) */
   wrist?: Wrist;
+  /** Arms only: the collarbone swung forward (radians; negative pulls the shoulder back), set by `reachArm()` and the gun's recoil */
+  reach?: number;
   /** Legs only: the foot's pitch at the ankle (positive tips the toes down) and the toes' bend (negative lifts them); left out, the foot eases towards level by itself */
   foot?: number;
   toe?: number;
@@ -280,11 +282,10 @@ export function poseSkeleton(sk: Skeleton, p: Pose, grip: [number, number] = [0.
     const S = i === 0 ? 'L' : 'R';
     const s = i === 0 ? -1 : 1;
     const a = p.arms[i];
-    // The arm's turn, and how high that lifts it: past the shoulder the collarbone shrugs
+    // The arm's turn, and the collarbone under it: shrugging when the arm goes over the shoulder,
+    // swinging forward when a hand reaches out (`reach`)
+    clavicle(a, s, qc);
     qa.setFromEuler(ea.set(-a.fwd, a.twist ?? 0, s * a.out));
-    down.set(0, -1, 0).applyQuaternion(qa);
-    const raise = Math.min(0.45, Math.max(0, Math.acos(THREE.MathUtils.clamp(-down.y, -1, 1)) - SHRUG_FROM) * SHRUG);
-    qc.setFromAxisAngle(Z, s * raise);
     b[`clav${S}`].quaternion.copy(qc);
     // The arm keeps its turn in the chest: take the shrug back out of it
     b[`arm${S}`].quaternion.copy(qc.invert()).multiply(qa);
@@ -319,6 +320,29 @@ export function poseSkeleton(sk: Skeleton, p: Pose, grip: [number, number] = [0.
     b[`toe${S}`].rotation.set(-Math.min(0.6, Math.max(0, toesDown)) * 0.9, 0, 0);
   }
 }
+
+const Y = new THREE.Vector3(0, 1, 0);
+const qr = new THREE.Quaternion();
+/** The collarbone's turn for an arm (side `s`): the shrug its raise calls for, then its forward reach */
+function clavicle(a: Limb, s: number, out: THREE.Quaternion) {
+  qa.setFromEuler(ea.set(-a.fwd, a.twist ?? 0, s * a.out));
+  down.set(0, -1, 0).applyQuaternion(qa);
+  const raise = Math.min(0.45, Math.max(0, Math.acos(THREE.MathUtils.clamp(-down.y, -1, 1)) - SHRUG_FROM) * SHRUG);
+  out.setFromAxisAngle(Z, s * raise);
+  if (a.reach) out.multiply(qr.setFromAxisAngle(Y, -s * a.reach));
+  return out;
+}
+/** The most the collarbone swings forward to reach (radians), and about how much further that puts the hand */
+export const CLAV_REACH = 0.32;
+export const REACH_GAIN = (SHOULDER_X - CLAV_X) * Math.sin(CLAV_REACH);
+const qs = new THREE.Quaternion();
+/** Where arm `i`'s shoulder is in the torso frame, with its collarbone turned as the limb says */
+export function shoulderAt(i: 0 | 1, a: Limb, out: THREE.Vector3) {
+  const s = i === 0 ? -1 : 1;
+  clavicle(a, s, qs);
+  return out.set(s * (SHOULDER_X - CLAV_X), 0, 0).applyQuaternion(qs).add(tv.set(s * CLAV_X, SHOULDER_Y, 0));
+}
+const tv = new THREE.Vector3();
 
 let scratch: Skeleton | null = null;
 /** The torso frame in the figure's own space for a pose (where `reachArm()` targets live): for callers that place hands before posing */
@@ -357,9 +381,16 @@ const rEuler = new THREE.Euler();
  * out and back, like holding a gun. Out of reach, the arm points at it fully
  * stretched.
  */
-export function reachArm(p: Pose, i: 0 | 1, target: THREE.Vector3) {
+export function reachArm(p: Pose, i: 0 | 1, target: THREE.Vector3, reach?: number) {
+  const l = p.arms[i];
+  // The collarbone swings forward when the hand is near the end of the arm's reach (or as asked)
+  l.reach = reach ?? CLAV_REACH * THREE.MathUtils.clamp((SHOULDERS[i].distanceTo(target) - (ARM_REACH - 0.06)) / 0.08, 0, 1);
+  // Twice: the arm's new angle can change the collarbone's shrug, which moves the shoulder
+  for (let k = 0; k < 2; k++) solveArm(p, i, target, shoulderAt(i, l, rS));
+}
+const rS = new THREE.Vector3();
+function solveArm(p: Pose, i: 0 | 1, target: THREE.Vector3, S: THREE.Vector3) {
   const s = i === 0 ? -1 : 1;
-  const S = SHOULDERS[i];
   rN.subVectors(target, S);
   const len = rN.length() || 1e-6;
   rN.divideScalar(len);

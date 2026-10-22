@@ -791,6 +791,7 @@ export function copyPose(from: Pose, to: Pose) {
     b.bend = a.bend;
     b.twist = a.twist ?? 0;
     b.wrist = undefined;
+    b.reach = undefined;
     copyLeg(from.legs[i], to.legs[i]);
   }
 }

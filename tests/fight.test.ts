@@ -59,7 +59,7 @@ test('a jab lands at reach and not past it, with its stun, knockback and a swing
   const hit = ev.find((e) => e.kind === 'hit');
   assert.ok(hit && hit.kind === 'hit' && hit.target === 'b' && hit.damage === MOVES.jab.damage);
   assert.equal(b.health, T.health - MOVES.jab.damage);
-  assert.ok(b.stun > 0 && b.hurt === 'body');
+  assert.ok(b.stun > 0 && b.hurt === 'body' && b.hurtBy === 'jab', 'the reaction knows which move hurt it');
   assert.ok(b.vz > 0, 'knocked back along the punch');
   assert.ok(a.stamina < T.stamina);
   // Too far: a swing, no hit, the chain count stays zero

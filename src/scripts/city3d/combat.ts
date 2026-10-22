@@ -25,10 +25,11 @@
 import * as THREE from 'three';
 import { FONT_DISPLAY, PAL, canvasTex, fx, glowTex, mergeMeshes, neon, sidesBox, toon } from './kit';
 import { type Tick } from './world';
-import { DRONES, DUMMIES, WEAPONS, WEAPON_IDS, createSim, dronePose, weaponUnlocked, type SimEvent, type TargetKind, type WeaponId } from './combat-sim';
+import { DRONES, DUMMIES, SWAP_TIME, WEAPONS, WEAPON_IDS, createSim, dronePose, weaponUnlocked, type SimEvent, type TargetKind, type WeaponId } from './combat-sim';
 import type { ClientMsg, MeRow, NetEvent } from '../net/protocol';
 import { SKINS, buildGun, gunSpec, type Gun, type SkinId } from './guns';
 import { holdGun, newStance } from './stance';
+import { FIT, RELOAD_CUES } from './gunfit';
 import type { Outfit, Pose } from './character';
 import { createViewmodel, type ViewState } from './viewmodel';
 import { gunMods, ownsGun } from './tycoon';
@@ -64,6 +65,9 @@ export interface CombatDeps {
 }
 
 const ME = 'me';
+/** Third person: seconds to draw or put the gun away, and to stay ready after the last shot or aim */
+const DRAW_TIME = 0.45;
+const READY_HOLD = 2.5;
 const SHOT_SOUND: Record<WeaponId, Sfx> = { rifle: 'shot', smg: 'shotSmg', shotgun: 'shotShotgun', dmr: 'shotDmr', revolver: 'shotRevolver', burst: 'shotBurst', lmg: 'shotLmg' };
 const PROFILE_KEY = 'degen-city-combat-v1';
 
@@ -289,9 +293,14 @@ export function createCombat(d: CombatDeps) {
     if (!me.geared && !owns(me.weapon)) me.weapon = 'rifle';
   };
 
-  // Third person: the gun on Degen's shoulder, in a pivot the walk code parents to his chest
+  // Third person: the gun in Degen's hands, in a pivot the walk code parents to his chest
+  // (slung on his back or holstered on his hip while geared up and not drawn)
   const pivot = new THREE.Group();
   const stance = newStance();
+  /** 0 put away .. 1 in his hands (third person), and how ready he holds it (0 relaxed) */
+  let drawn = 0;
+  let ready = 0;
+  let readyT = 0;
   const flash = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 0.22), new THREE.MeshBasicMaterial({ map: glowTex, color: '#ffd36b', transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false }));
   flash.visible = false;
   fx(flash);
@@ -314,10 +323,11 @@ export function createCombat(d: CombatDeps) {
 
   // First person: Degen's hands on the gun
   const vm = createViewmodel(scene, profile.skin, me.weapon);
+  // The first-person gun changes at once; in third person the old one is put
+  // away first and the new one drawn (see poseGun), unless none is in hand
   const showWeapon = (id: WeaponId) => {
-    if (id === shownWeapon) return;
-    mountGun(id);
     vm.setWeapon(id);
+    if (id !== shownWeapon && drawn <= 0) mountGun(id);
   };
 
   let trigger = false;
@@ -563,7 +573,7 @@ export function createCombat(d: CombatDeps) {
   };
 
   const setArmedLook = (on: boolean) => {
-    pivot.visible = on;
+    pivot.visible = me.geared;
     root.classList.toggle('is-armed', on);
     if (!on) trigger = touchFire = false;
     paintHud();
@@ -881,13 +891,9 @@ export function createCombat(d: CombatDeps) {
       step(dt, t);
 
       showWeapon(me.weapon);
-      // Reload sounds, in step with the hands
+      // Reload sounds, in step with the hands (each gun's clip in gunfit.ts)
       const r = me.reload > 0 ? 1 - me.reload / W().reload : 0;
-      if (r > 0) {
-        if (lastReload < 0.15 && r >= 0.15) d.sfx('magout');
-        if (lastReload < 0.68 && r >= 0.68) d.sfx('magin');
-        if (lastReload < 0.87 && r >= 0.87) d.sfx('bolt');
-      }
+      if (r > 0) for (const [at, cue] of RELOAD_CUES[FIT[me.weapon].reload]) if (lastReload < at && r >= at) d.sfx(cue);
       lastReload = r;
       paintHud();
 
@@ -927,9 +933,29 @@ export function createCombat(d: CombatDeps) {
       // All the way down the Long Shot's scope: a full-screen scope view (global.css)
       root.classList.toggle('is-scoped', s.firstPerson && me.armed && gunSpec(me.weapon).sight.kind === 'scope' && vm.aimed > 0.92);
     },
-    /** Third person, per frame: the gun in Degen's hands (`aim` 0..1 brings it up to aim) */
-    poseGun(pose: Pose, aim: number, pitch: number, holdRecoil: number, dt: number) {
-      holdGun(pose, stance, pivot, gun, { aim, pitch, recoil: holdRecoil, reload: me.reload > 0 ? 1 - me.reload / W().reload : 0, dt });
+    /**
+     * Third person, per frame while geared up: the gun in Degen's hands (`aim`
+     * 0..1 brings it up to aim), drawn, put away or swapped, or slung on his
+     * back / holstered while he walks. Returns whether his hands are on it.
+     */
+    poseGun(pose: Pose, s: { aim: number; pitch: number; recoil: number; run: number; dt: number }) {
+      pivot.visible = me.geared;
+      if (!me.geared) {
+        drawn = 0;
+        return false;
+      }
+      const reload = me.reload > 0 ? 1 - me.reload / W().reload : 0;
+      // Out of the hands to swap: the old gun goes away, the new one comes out (SWAP_TIME both ways)
+      const swapping = me.weapon !== shownWeapon;
+      const want = me.armed && !swapping ? 1 : 0;
+      drawn = THREE.MathUtils.clamp(drawn + Math.sign(want - drawn) * s.dt * (swapping ? 2 / SWAP_TIME : 1 / DRAW_TIME), 0, 1);
+      if (Math.abs(want - drawn) < 1e-3) drawn = want;
+      if (swapping && drawn <= 0) mountGun(me.weapon);
+      // Ready for a while after shooting, aiming or reloading; otherwise (and sprinting) carried relaxed
+      readyT = s.aim > 0.05 || reload > 0 || trigger || touchFire ? READY_HOLD : Math.max(0, readyT - s.dt);
+      ready += ((readyT > 0 && s.run < 0.5 ? 1 : 0) - ready) * Math.min(1, s.dt * 6);
+      holdGun(pose, stance, pivot, gun, { aim: s.aim, ready, draw: drawn, pitch: s.pitch, recoil: s.recoil, reload, dt: s.dt });
+      return drawn > 0;
     },
     /** Every rifle finish change and lifetime score update (for the profile panel) */
     onLifetime(fn: (total: number) => void) {

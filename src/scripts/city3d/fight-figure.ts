@@ -19,7 +19,7 @@
  */
 import * as THREE from 'three';
 import { createDegen, walkPose, type Degen, type Limb, type Outfit } from './character';
-import { CLIPS, blendPose, hurtClip, moveClip, newFightPose, rootShift, sampleClip, type ClipId, type FightPose } from './fight-anim';
+import { CLIPS, blendPose, hurtClip, hurtMirror, moveClip, newFightPose, rootShift, sampleClip, type ClipId, type FightPose } from './fight-anim';
 import { T, type Fighter } from './fight-sim';
 
 /** Figures stand at the walker's scale */
@@ -32,6 +32,8 @@ export interface FighterFigure {
   prev: FightPose;
   tmp: FightPose;
   clip: ClipId | null;
+  /** The clip is playing mirrored (a hit reaction to a blow from the left) */
+  mirror: boolean;
   frame: number;
   fade: number;
   walk: number;
@@ -45,7 +47,7 @@ export function createFighterFigure(parent: THREE.Object3D, outfit: Outfit, low:
   const degen = createDegen({ ...outfit, fists: true }, low ? 1 : 2);
   degen.g.scale.setScalar(FIGHTER_SCALE);
   parent.add(degen.g);
-  return { degen, pose: newFightPose(), prev: newFightPose(), tmp: newFightPose(), clip: null, frame: 0, fade: 0, walk: 0, manual: null, seed };
+  return { degen, pose: newFightPose(), prev: newFightPose(), tmp: newFightPose(), clip: null, mirror: false, frame: 0, fade: 0, walk: 0, manual: null, seed };
 }
 export function disposeFigure(fg: FighterFigure) {
   fg.degen.g.removeFromParent();
@@ -58,6 +60,8 @@ const copyPose = (from: FightPose, to: FightPose) => {
   to.lean = from.lean;
   to.twist = from.twist;
   to.side = from.side;
+  to.turn = from.turn;
+  to.sway = from.sway;
   to.headYaw = from.headYaw;
   to.headPitch = from.headPitch;
   for (let i = 0; i < 2; i++) {
@@ -74,6 +78,7 @@ const copyLimb = (to: Limb, from: Limb) => {
   to.out = from.out;
   to.bend = from.bend;
   to.twist = from.twist ?? 0;
+  to.reach = from.reach;
   if (from.wrist) {
     if (to.wrist) {
       to.wrist.roll = from.wrist.roll;
@@ -82,34 +87,39 @@ const copyLimb = (to: Limb, from: Limb) => {
   } else if (to.wrist) to.wrist = undefined;
 };
 
-/** Which clip and frame a fighter's state calls for */
-export function pickClip(f: Fighter, fg: FighterFigure, ticks: number): { id: ClipId; frame: number } {
+/**
+ * Which clip and frame a fighter's state calls for. Hit reactions are keyed
+ * for a blow from the right (`armR`, `legR`): `mirror` plays them for one
+ * from the left.
+ */
+export function pickClip(f: Fighter, fg: FighterFigure, ticks: number): { id: ClipId; frame: number; mirror?: boolean } {
   if (fg.manual) return fg.manual;
   if (f.down > 0) {
     const since = f.downTotal - f.down;
     return since < CLIPS.knockdown.frames ? { id: 'knockdown', frame: since } : { id: 'down', frame: since - CLIPS.knockdown.frames };
   }
   if (f.getup > 0) return { id: 'getup', frame: T.getupFrames - f.getup };
-  if (f.stun > 0 && f.hurt) return { id: hurtClip(f.hurt), frame: f.hurtFrame };
+  if (f.stun > 0 && f.hurt) return { id: hurtClip(f.hurt), frame: f.hurtFrame, mirror: hurtMirror(f.hurtBy) };
   if (f.move) return { id: moveClip(f.move), frame: f.frame };
   if (f.blocking) return { id: 'block', frame: f.blockFrames };
   return { id: 'guard', frame: fg.seed + ticks };
 }
 
 /** Pose and place the figure from the fighter's state; `dt` 0 holds the frame */
-export function drawFighter(fg: FighterFigure, f: Fighter, dt: number, ticks: number, overrideClip?: { id: ClipId; frame: number }) {
-  const { id, frame } = overrideClip ?? pickClip(f, fg, ticks);
+export function drawFighter(fg: FighterFigure, f: Fighter, dt: number, ticks: number, overrideClip?: { id: ClipId; frame: number; mirror?: boolean }) {
+  const { id, frame, mirror } = overrideClip ?? pickClip(f, fg, ticks);
   if (fg.manual) {
     fg.manual.frame += dt * 60;
     if (!CLIPS[id].loop && fg.manual.frame >= CLIPS[id].frames + 20) fg.manual = null;
   }
-  if (id !== fg.clip) {
+  if (id !== fg.clip || !!mirror !== fg.mirror) {
     copyPose(fg.pose, fg.prev);
     fg.fade = fg.clip ? FADE : 0;
     fg.clip = id;
+    fg.mirror = !!mirror;
   }
   fg.frame = frame;
-  sampleClip(id, frame, fg.pose);
+  sampleClip(id, frame, fg.pose, { mirror });
   // Walking: the legs from the walk cycle under the guard
   if (id === 'guard' && f.moving > 0.05) {
     fg.walk += dt * 7 * f.moving;
@@ -128,7 +138,10 @@ export function drawFighter(fg: FighterFigure, f: Fighter, dt: number, ticks: nu
   deg.pose.lean = fg.pose.lean;
   deg.pose.twist = fg.pose.twist;
   deg.pose.side = fg.pose.side;
-  deg.pose.headYaw = fg.pose.headYaw;
+  deg.pose.turn = fg.pose.turn;
+  deg.pose.sway = fg.pose.sway;
+  // The clips' head turn is against the shoulders over square hips: the hips' own turn is taken back out
+  deg.pose.headYaw = fg.pose.headYaw - fg.pose.turn;
   deg.pose.headPitch = fg.pose.headPitch;
   for (let i = 0; i < 2; i++) {
     copyLimb(deg.pose.arms[i], fg.pose.arms[i]);

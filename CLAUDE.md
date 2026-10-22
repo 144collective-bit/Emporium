@@ -245,8 +245,10 @@ it and has been retired completely. Build only on what's here.
   brand-art head, every wardrobe piece rebuilt, grounded hand-keyed
   animation, merch-store logos on the clothes (Dorras and levels), a
   character screen, phones first. Build it one phase at a time with the
-  owner's sign-off. Phase 1 (the skinned body, head, hands and feet) and
-  Phase 2 (walking and running, `locomotion.ts`) are built; other players,
+  owner's sign-off. Phase 1 (the skinned body, head, hands and feet),
+  Phase 2 (walking and running, `locomotion.ts`) and Phase 3 (guns and
+  fighting on the new bones: `gunfit.ts`, `stance.ts`, the fight clips)
+  are built; other players,
   crowds and fighters still walk the old formula (`walkPose()`), and
   crowds stay on the rigid rig until Phase 5.
 - Every character is one shared Degen body (`src/scripts/city3d/character.ts`),
@@ -1045,16 +1047,35 @@ it and has been retired completely. Build only on what's here.
   player in the sim) are bought at the Armoury's workbench. Never real
   money, never tied to the token. Keep them cartoon: no real-world gun
   names, brands or markings. A new gun needs a `WEAPONS` entry (with a `short` name for the Swap
-  button), a `SPECS` entry (with its
-  third-person `hold` spot for the front hand), store art (`ART` in
-  `gunshop.ts`) and a shot sound (`SHOT_SOUND` in `combat.ts`).
+  button), a `FIT` entry in `gunfit.ts` (its hand spots, muzzle and sight,
+  third-person `hold` spot for the front hand, `carry`, `reload` kind and
+  `kick`), a `SPECS` entry in `guns.ts` (its parts), store art (`ART` in
+  `gunshop.ts`) and a shot sound (`SHOT_SOUND` in `combat.ts`); the tests
+  check the hands land on it.
 - In third person (the player and other players), `stance.ts` `holdGun()`
-  puts both hands on the gun with `reachArm()` (`skeleton.ts`): the
-  shooting hand on the pistol grip (every gun's origin), the other on its
-  `hold` spot, or on the magazine during a reload, both closed round it
-  (`grip`). Longer guns turn Degen side-on just enough for the front hand
-  to reach. Call it after the walk and jump poses so they don't pull the
-  hands off.
+  (DOM-free, tested in `tests/gunfit.test.ts`) poses the gun's pivot (a
+  child of Degen's torso frame) and puts both hands on it with
+  `reachArm()` (`skeleton.ts`): the shooting hand on the pistol grip
+  (every gun's origin, `GRIP`), the other on its `hold` spot, or wherever
+  the reload clip sends it, both closed round it (`grip`). On top of the
+  walk or run: `aim` (the spine bends a share of the way, the head takes it
+  back out), `ready` (1 after a shot, an aim or a reload for
+  `READY_HOLD`; 0 is the relaxed carry: a long gun low across the body, the
+  revolver hanging in one hand; sprinting relaxes it), `draw` (0 put away:
+  slung on his back or the revolver on his hip (`STOWED`); the hand goes to
+  it, then it swings round to his hands), recoil (the chest and the
+  shooting shoulder shoved back; `Limb.reach` turns the collarbone).
+  Longer guns turn Degen side-on just enough for the front hand to reach
+  (the collarbone brings the shoulder forward first). Call it after the
+  walk and jump poses so they don't pull the hands off; walk mode calls
+  `combat.poseGun()` every frame while geared up (it returns whether the
+  hands are on the gun), and `combat.ts` runs the draw, holster and swap
+  (`DRAW_TIME`, the old gun away and the new one out in `SWAP_TIME`).
+- Reloads are keyed clips in `gunfit.ts` (`reloadAt()`: `mag`, `shells`,
+  `cylinder`, `box`), played by the third-person hold and the first-person
+  hands (`viewmodel.ts`) alike; the magazine rides in the hand while it's
+  `carried`, and the sounds follow `RELOAD_CUES`. Every clip starts and
+  ends at rest.
 - Finishes (`SKINS`) are cosmetic and work on every gun. Lifetime score,
   finish and last gun are saved in the browser under `degen-city-combat-v1`
   (or the player profile online).
@@ -1116,7 +1137,11 @@ it and has been retired completely. Build only on what's here.
   `fight-anim.ts` (DOM-free, tested in `tests/fight-anim.test.ts`: every
   clip is keyframed on the `Pose` rig, a move's clip is exactly its sim
   frames long with the strike on the first active frame; `sampleClip()`,
-  `blendPose()`, `moveClip()`, `hurtClip()`, `root` { y, pitch, pivot } for
+  `blendPose()`, `moveClip()`, `hurtClip()`; the hips' `turn` and `sway`
+  go into every punch and kick, the reactions are keyed for a blow from the
+  right and mirrored for one from the left (`hurtMirror()`, from the sim's
+  `hurtBy`), the clips' head turn is over square hips (the figure takes
+  the hips' turn back out); `root` { y, pitch, pivot } for
   the lying poses (the fall and the get-up pivot at the hips, `rootShift()`
   in `fight-figure.ts` moves the group so); `fists: true` on an `Outfit`
   closes the hands); `?fight` in the address
@@ -1284,7 +1309,7 @@ it and has been retired completely. Build only on what's here.
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`) and Degen's skeleton, weights, head and hands
-  (`skeleton.ts`, `body.ts`) and his walking (`locomotion.ts`). Modules that touch the DOM or `kit.ts` (canvas
+  (`skeleton.ts`, `body.ts`), his walking (`locomotion.ts`) and the guns in his hands (`gunfit.ts`, `stance.ts`). Modules that touch the DOM or `kit.ts` (canvas
   textures) can't load in Node; keep data a test needs in the DOM-free
   files.
 - When you change a rule or move something in the city, run the tests and
