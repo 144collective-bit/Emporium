@@ -165,6 +165,7 @@ it and has been retired completely. Build only on what's here.
   - The skyline ring stands just past `EXT`, kept out of the haze (`fog = false`) so it reads as a far metropolis.
   - The sky dome and stars travel with the camera at 400, inside its far plane (440), so everything in the world stays in front of the sky.
   - City view can pan anywhere inside the bounds.
+  - **Growing the city** (many more buildings, then a bigger world) is planned in `docs/growth-plan.md`: tiles, near and far building forms, building as you go, a collision grid, building kits, then new districts and a bigger `EXT`. Not built yet; follow it one phase at a time with the owner's sign-off, and never add buildings in bulk the way the city is merged today (every merged district is drawn all the time).
 - **Cars** are `src/scripts/city3d/cars.ts`: real-proportion cartoon models
   (City Hatch, Cruiser, Street GT coupe, Hauler pickup, Box Van, City Bus;
   made-up names, never a real make or badge), each a bevelled extruded
@@ -246,9 +247,10 @@ it and has been retired completely. Build only on what's here.
   animation, merch-store logos on the clothes (Dorras and levels), a
   character screen, phones first. Build it one phase at a time with the
   owner's sign-off. Phase 1 (the skinned body, head, hands and feet),
-  Phase 2 (walking and running, `locomotion.ts`) and Phase 3 (guns and
+  Phase 2 (walking and running, `locomotion.ts`), Phase 3 (guns and
   fighting on the new bones: `gunfit.ts`, `stance.ts`, the fight clips)
-  are built; other players,
+  and Phase 4 (merch marks and prints on the clothes, the Merch tab, the
+  character screen) are built; other players,
   crowds and fighters still walk the old formula (`walkPose()`), and
   crowds stay on the rigid rig until Phase 5.
 - Every character is one shared Degen body (`src/scripts/city3d/character.ts`),
@@ -352,8 +354,24 @@ it and has been retired completely. Build only on what's here.
   - Outfits (`suit`, `hoodie`, `track`, `soldier`) only change clothes and
     colours; poses come from the helpers there (walk/run, idle, look, chat,
     sit, march, attention/salute, dance). The cap patch is the Emporium
-    diamond: never put another brand's logo on it. Whites on clothes are
+    diamond (the crowd's always; your own can carry another of the city's
+    made-up marks): never put another brand's logo on it. Whites on clothes are
     `SHIRT`, a shade under white, so they don't bloom.
+  - **The merch** (single figures only; `createDegen()`): marks (`MARKS`
+    in `profile-data.ts`, their art in `marks.ts`: SVG paths in a 100 box,
+    drawn into one logo atlas, `logoAtlas()`) printed as `decal()`s laid on
+    the cloth's own surface (`onFront()`, `onBack()`, `onSleeve()`), pieces
+    with `mat: 'logo'` and `logo` (which mark: the top's, the hat's, the
+    sneakers' or the varsity's badge, `markFor()`; `atlasUV()` points the
+    square at its cell) in the outfit's `ink`; the top's mark goes on the
+    chest (a lapel pin on the suit, the badge on the varsity), big on the
+    front or back, or on the left sleeve (`TOPS` in `items()`); hats and
+    the varsity carry a cream patch with the mark a touch in front. The
+    top's all-over print (`pattern`) puts its own cloth (colour `top`, no
+    shade) on `patternMaterial()`: a tiling mask laid on from three sides
+    by where the cloth is at rest (`rest` / `restNormal`), so it moves with
+    it. A mark replaced by the merch store's real art is a change to its
+    art in `marks.ts` only; check it against the content rules.
 - **Minimal bloom, nothing washes out** (the owner's call). Bloom is faint
   and tight (`post.bloom` in `index.ts`: threshold 1.05, 1.2 close up and
   walking; strength at most about 0.3, less close up and on phones, whose
@@ -561,9 +579,22 @@ it and has been retired completely. Build only on what's here.
 
 - Drop 001's panel (`data-panel-tpl="shop"` in `CityMap.astro`) has the
   fitting room (`fitting.ts`): item cards by tab (Fit, Head, Shades, Bags,
-  Hand, Extras, Kicks), colours, and a turning preview of the player's Degen drawn by a
-  small second renderer with the same ink outlines, only while the panel is
-  open (still under reduced motion; drag turns him).
+  Hand, Extras, Kicks, Merch), colours, and a turning preview of the player's Degen drawn by a
+  small second renderer with the same ink outlines (`stage.ts`), only while the panel is
+  open (still under reduced motion; drag turns him). The **Merch** tab
+  (`merchItems()`, `[data-fit-merch]`) dresses the top, the hat or the
+  kicks with a mark, or the top with a print; where the top's mark goes
+  and the ink are rows of their own; a note says when it won't show (no
+  cap or beanie, a suit's dress shoes).
+- **The character screen** (`charscreen.ts`, markup `[data-char]` in
+  `CityMap.astro`, styles in `fitting.css`), from the Profile tab's "See
+  your Degen": an overlay under the header with the same stage
+  (`createStage(..., { zoom: true })`): drag turns him, scroll, pinch or
+  Full / Face zoom to his face, poses (idle, walk, the fighter's guard and
+  the emotes, `StagePose`), lights (studio, day, night, `StageLight`), what
+  he's wearing (`describe()`) and the way to Drop 001. × or Esc closes it;
+  while it's open no other key handler hears the keyboard (Esc never
+  stops walking). Check it upright and on its side at phone widths.
 - The look belongs to `profile-ui.ts` (browser and player profile); the
   fitting room only calls `wear()`. The original wardrobe is free; the
   premium wardrobe (`WARDROBE_CATALOG` in `catalog.ts`) costs Dorras and
@@ -574,8 +605,11 @@ it and has been retired completely. Build only on what's here.
   `WARDROBE_CATALOG` (catalog.ts) for Dorras earned in the city, each piece
   with a price and a level: the varsity and puffer fits, the cowboy hat, top
   hat and neon halo, the duffel bag and neon wings, the phone and briefcase,
-  the gold watch, and the Gold and Holo colour packs for tops and bottoms
-  (`PALETTE.gold` / `PALETTE.holo`, `PACKS`, `packOf()`). The look carries
+  the gold watch, the Gold and Holo colour packs for tops and bottoms
+  (`PALETTE.gold` / `PALETTE.holo`, `PACKS`, `packOf()`), and the merch:
+  the marks but the diamond and the Sector 7 badge (`markItem()`, ids
+  `mark-<id>`) and the prints (`patternItem()`, `pattern-<id>`), tab
+  `merch`. The look carries
   them as ordinary values (`cleanLook()` validates, it never checks
   ownership); owning them is `wardrobe` in the save (`buyWardrobe()` /
   `ownsWardrobe()`), and the fitting room (`fitting.ts`, with
@@ -1308,7 +1342,8 @@ it and has been retired completely. Build only on what's here.
   the save backup (`guide.ts`, `backup.ts`), Liberty Bridge (`liberty.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
-  `myplane.ts`) and Degen's skeleton, weights, head and hands
+  `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,
+  in `tests/merch.test.ts`) and Degen's skeleton, weights, head and hands
   (`skeleton.ts`, `body.ts`), his walking (`locomotion.ts`) and the guns in his hands (`gunfit.ts`, `stance.ts`). Modules that touch the DOM or `kit.ts` (canvas
   textures) can't load in Node; keep data a test needs in the DOM-free
   files.

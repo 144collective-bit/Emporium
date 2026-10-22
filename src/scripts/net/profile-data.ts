@@ -63,7 +63,8 @@ export const skinUnlocked = (id: SkinId, total: number) => total >= (SKINS.find(
  * The original wardrobe is free. Drop 001 also sells a premium wardrobe for
  * Dorras (catalog.ts: the varsity and puffer jackets, the cowboy hat, top hat
  * and neon halo, the duffel bag and neon wings, the phone and briefcase, the
- * gold watch, and the gold and holo colour packs). Those are ordinary Look
+ * gold watch, the gold and holo colour packs, and the merch: marks and
+ * all-over patterns). Those are ordinary Look
  * values here: whether a player owns them is the fitting room's business
  * (tycoon.ts), not the validator's, so a look that wears them is a valid
  * look.
@@ -76,6 +77,45 @@ export const KINDS: LookKind[] = ['suit', 'hoodie', 'track', 'varsity', 'puffer'
 export const HATS: Hat[] = ['cap', 'backcap', 'beanie', 'bucket', 'crown', 'cowboy', 'tophat', 'halo'];
 export const BAGS: Bag[] = ['backpack', 'crossbody', 'board', 'duffel', 'wings'];
 export const HELD: Held[] = ['gummy', 'coffee', 'boombox', 'phone', 'briefcase'];
+
+/*
+ * Merch (character rebuild Phase 4): made-up marks for the clothes, drawn in
+ * the city's style (logos.ts), placeholders until the merch store's own
+ * designs go in, each a single swap (no real brand, nothing about the
+ * token). The Emporium diamond and the Sector 7 badge are free; the rest,
+ * and the all-over patterns, are sold at Drop 001 for Dorras (catalog.ts).
+ */
+export type MarkId = 'diamond' | 'seven' | 'bolt' | 'star' | 'heart' | 'wave' | 'eye' | 'mask';
+export const MARKS: { id: MarkId; name: string }[] = [
+  { id: 'diamond', name: 'Emporium Diamond' },
+  { id: 'seven', name: 'Sector 7' },
+  { id: 'bolt', name: 'Bolt' },
+  { id: 'star', name: 'Star' },
+  { id: 'heart', name: 'Heart' },
+  { id: 'wave', name: 'Wave' },
+  { id: 'eye', name: 'Eye' },
+  { id: 'mask', name: 'Degen Mask' },
+];
+export const MARK_IDS = MARKS.map((m) => m.id);
+/** Where the top's mark goes: the left chest, big on the front, big on the back, or the left sleeve */
+export type MarkSlot = 'chest' | 'centre' | 'back' | 'sleeve';
+export const MARK_SLOTS: { id: MarkSlot; name: string }[] = [
+  { id: 'chest', name: 'Chest' },
+  { id: 'centre', name: 'Front' },
+  { id: 'back', name: 'Back' },
+  { id: 'sleeve', name: 'Sleeve' },
+];
+export const SLOT_IDS = MARK_SLOTS.map((m) => m.id);
+/** An all-over print on the top */
+export type PatternId = 'plain' | 'stripes' | 'checks' | 'fade' | 'camo';
+export const PATTERNS: { id: PatternId; name: string }[] = [
+  { id: 'plain', name: 'Plain' },
+  { id: 'stripes', name: 'Stripes' },
+  { id: 'checks', name: 'Checks' },
+  { id: 'fade', name: 'Fade' },
+  { id: 'camo', name: 'Camo' },
+];
+export const PATTERN_IDS = PATTERNS.map((p) => p.id);
 
 export interface Look {
   kind: LookKind;
@@ -102,6 +142,16 @@ export interface Look {
   necklace: boolean;
   /** Gold watch on the left wrist (premium) */
   watch: boolean;
+  /** The top's mark (or none), where it goes and its ink */
+  mark: MarkId | null;
+  markAt: MarkSlot;
+  ink: string;
+  /** The mark on the front of a cap, beanie or bucket hat (the diamond, as in the art) */
+  hatMark: MarkId;
+  /** A mark on the outside of each sneaker (or none) */
+  shoeMark: MarkId | null;
+  /** An all-over print on the top */
+  pattern: PatternId;
 }
 
 export const PALETTE = {
@@ -116,6 +166,8 @@ export const PALETTE = {
   gold: ['#e2b04a', '#c9922e', '#a9741f', '#b8732f', '#8c5a2b', '#d9c27a'],
   /** The Holo Pack: holographic pastels for tops and bottoms */
   holo: ['#b9f3ff', '#ffc6f2', '#d9c6ff', '#c6ffe4', '#fff3b0', '#ffd3c2'],
+  /** A mark's ink (the whites a shade under white, so they don't bloom) */
+  ink: ['#16c7b5', '#dedce8', '#16141f', '#e219e5', '#00b8d8', '#ffd23f', '#d8312f', '#e2b04a'],
 };
 /** The colour packs sold at Drop 001 (ids are the catalog's), each a list of top and bottom colours */
 export const PACKS = { gold: PALETTE.gold, holo: PALETTE.holo } as const;
@@ -148,6 +200,12 @@ export const DEFAULT_LOOK: Look = {
   chain: true,
   necklace: false,
   watch: false,
+  mark: null,
+  markAt: 'chest',
+  ink: '#16c7b5',
+  hatMark: 'diamond',
+  shoeMark: null,
+  pattern: 'plain',
 };
 
 /** Anything from a player, made safe: unknown values fall back to Degen's own look */
@@ -183,6 +241,13 @@ export function cleanLook(raw: unknown): Look {
     chain: o.chain === undefined ? DEFAULT_LOOK.chain : o.chain === true,
     necklace: o.necklace === true,
     watch: o.watch === true,
+    // (looks saved before the merch had none of these: Degen as in the art)
+    mark: orNull(o.mark, MARK_IDS, null),
+    markAt: from(o.markAt, SLOT_IDS, DEFAULT_LOOK.markAt),
+    ink: from(o.ink, PALETTE.ink, DEFAULT_LOOK.ink),
+    hatMark: from(o.hatMark, MARK_IDS, DEFAULT_LOOK.hatMark),
+    shoeMark: orNull(o.shoeMark, MARK_IDS, null),
+    pattern: from(o.pattern, PATTERN_IDS, DEFAULT_LOOK.pattern),
   };
 }
 

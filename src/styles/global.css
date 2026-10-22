@@ -3913,7 +3913,7 @@ body.is-walking .nav {
 }
 .fit-tabs {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(8, 1fr);
   gap: 4px;
 }
 /* Narrow panels: the tabs take two rows */

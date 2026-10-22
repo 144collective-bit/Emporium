@@ -246,7 +246,43 @@ The plan as it was:
 - Tests: clip lengths still match the sim's frames, the strike on the
   first active frame, hands on every gun's grip and hold spot.
 
-### Phase 4: merch clothing, logos and the character screen
+### Phase 4: merch clothing, logos and the character screen (built)
+
+What's in (for the owner's sign-off):
+
+- **Placeholder marks** (`marks.ts`, made up in the city's style, no real
+  brand, nothing about the token): the Emporium diamond and the Sector 7
+  badge (free), and a bolt, star, heart, wave, eye and the Degen mask
+  (Dorras, each with a level). Each is a few SVG paths, drawn into one
+  logo atlas for the clothes and shown as icons in the fitting room, so
+  swapping in the merch store's real designs is replacing a mark's art.
+- **On the clothes** (single figures: you, other players, the previews):
+  the top's mark on the chest (a lapel pin on the suit, the badge on the
+  varsity), big on the front or the back, or on the left sleeve; the mark
+  on the front of a cap or beanie (the diamond, as in the art, unless you
+  pick another); a mark on the outside of each sneaker; all in one ink
+  from eight colourways. Marks are printed from the atlas onto the cloth's
+  own shape, so they follow the chest and the sleeve.
+- **All-over prints** for the top: stripes, checks, fade and camo (Dorras,
+  each with a level), laid on the cloth where it is at rest, so they move
+  with it; the second tone is the top's own colour darkened (or lightened
+  on a black top).
+- **In the game:** new `Look` fields (`mark`, `markAt`, `ink`, `hatMark`,
+  `shoeMark`, `pattern`) checked by `cleanLook()` (the server's too), with
+  looks saved before them getting Degen's own; the marks and prints in
+  `WARDROBE_CATALOG` (tab `merch`); the fitting room's **Merch** tab (dress
+  the top, the hat, the kicks or pick a print; where the top's mark goes;
+  the ink), bought with Dorras like the rest, nothing tied to the store.
+- **The character screen** (Profile tab, "See your Degen"): your Degen
+  full size on the podium; drag to turn, scroll, pinch or Full / Face to
+  zoom to his face; poses (idle, a walk on the spot, the fighter's guard,
+  wave, cheer, dance, salute); studio, day and night light; what he's
+  wearing; and the way to Drop 001 to change it. The fitting room's
+  preview is the same stage (`stage.ts`).
+- Not yet: the crowds don't wear marks or prints (Phase 5); the real
+  merch art waits for the owner's pick.
+
+The plan as it was:
 
 - **The designs:** placeholders for now: a set of made-up marks drawn in
   the city's style (no real brand, no token), built so each one is a
