@@ -258,13 +258,14 @@ function legsOf(cycle: { from: State; turn: Turn }[], r: () => number): Leg[] {
   // Start just after a turn, so no leg runs over the seam
   const k0 = cycle.findIndex((_, k) => cycle[(k - 1 + cycle.length) % cycle.length].turn !== 'straight');
   const moves = [...cycle.slice(k0), ...cycle.slice(0, k0)];
-  const legs: (Leg & { first: State; last: State; inSlip: boolean })[] = [];
+  const legs: (Leg & { first: State; last: State; lastIx: number; inSlip: boolean })[] = [];
   moves.forEach((m, k) => {
-    if (k > 0 && moves[k - 1].turn === 'straight') legs.at(-1)!.last = m.from;
-    else legs.push({ pts: [], off: 0, turn: 'straight', slip: false, first: m.from, last: m.from, inSlip: false });
+    const prev = legs.at(-1);
+    if (prev && moves[k - 1].turn === 'straight') [prev.last, prev.lastIx] = [m.from, k];
+    else legs.push({ pts: [], off: 0, turn: 'straight', slip: false, first: m.from, last: m.from, lastIx: k, inSlip: false });
   });
   for (const l of legs) {
-    l.turn = moves.find((m) => m.from === l.last)!.turn;
+    l.turn = moves[l.lastIx].turn;
     l.slip = l.turn === 'right' && !!WAYS[l.last.w].stations[next(l.last)!].j?.highway;
   }
   legs.forEach((l, k) => (legs[(k + 1) % legs.length].inSlip = l.slip));
