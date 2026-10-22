@@ -126,7 +126,7 @@ export interface BenchDeps {
   /** Clear day (or night) for the run; the visitor's own sky back after */
   conditions(night: boolean): () => void;
   boot(): Record<string, number>;
-  /** More views after the fixed ones (the test district's, with ?district=test) */
+  /** More views after the fixed ones (a district's, while one is being measured) */
   extra?: BenchView[];
 }
 

@@ -592,7 +592,7 @@ export function scatterOutskirts(count: number, sparse = 0.6) {
   for (const t of outskirtsTrees(count, sparse, CLEAR)) addTree(t.x, t.z, t.s, t.pine, 0);
 }
 
-/** Land the outskirts' trees keep off besides the town (the test district's, with ?district=test) */
+/** Land the outskirts' trees keep off besides the town (The Trenches', the metro's el over open land) */
 const CLEAR: [number, number, number, number][] = [];
 export function keepTreesOff(rect: [number, number, number, number]) {
   CLEAR.push(rect);

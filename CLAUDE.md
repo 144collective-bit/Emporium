@@ -196,7 +196,7 @@ it and has been retired completely. Build only on what's here.
   - The sky dome and stars travel with the camera at `SKY_RADIUS` (`bounds.ts`: far enough that the skyline's far side stands in front of it seen from downtown, about 720 today, never under 400), inside its far plane (`CAMERA_FAR`, 40 further), so everything in the world stays in front of the sky and the skyline stays on the horizon however far out the edge is.
   - City view pans round the built-up area (`bounds.ts`: `BUILT_UP` is the town, the airport and the kart park; `PAN_BOUNDS` reaches `PAN_MARGIN` (160) past it, never closer than 10 to where you can walk: today that's the whole world), and the Build overview frames the plots (`overviewFrame()`).
   - **The edge is data** (growth plan Phase 5): `EXT` is set in one place, and a test run can set another (`WORLD_EXT=x0,x1`, `npm run test:wide` at Phase 10's -680 to 720); both must pass. Nothing that exists reads the edge: the airport's `SITE` is fixed numbers, the river walls and their bridge gaps come from the street plan (`riverCrossings()` in `streetplan.ts`), flying turns back at whatever bounds it's given. Anything new written against the edge must work at both sizes.
-  - **Growing the city** (many more buildings, then a bigger world) is planned in `docs/growth-plan.md`. Part A (Phases 0-4) makes size cheap: the measuring kit and a snapshot test that nothing moves, tiles and a collision grid, near and far building forms, building as you go, building kits. Part B (Phases 5-10) grows the world: the edge as data (the airport's site frozen, trees per tile), `EXT` out to about 880 across, roads to reach it (a ring highway, more bridges, traffic spent near you), getting about (a world map, waypoints, and the owner's pick of metro, taxis or fast travel), districts one at a time, then optionally about 1,400 across. Phases 0 (the measuring kit), 1 (tiles, the collision grid, the city's fixed geometry merged per tile, crowds and traffic culled for the shadow map), 2 (near and far forms: details near only, far forms for the places and the cars) 3 (building as you go: sites built round the home view at the boot and the rest after it, near forms let go past a budget), 4 (building kits: kits, recipes for blocks, a test district behind `?district=test`), 5 (the edge as data: `EXT` in one place, tests at both sizes) 6 (the edge moves out: `EXT` -420 to 460, the woods, the far plane and sky dome from the edge) 7 (roads to reach it: the ring highway, its bridges and slip lanes, routes generated from the street plan, traffic and boats spent near you) and 8 (getting about: the world map, waypoints, Bring my car, taxis, fast travel, the metro, sound by district) are built; follow the rest one phase at a time with the owner's sign-off, and never add buildings in bulk outside the tiles (`tileBatch()`) or outside sites (`site()`).
+  - **Growing the city** (many more buildings, then a bigger world) is planned in `docs/growth-plan.md`. Part A (Phases 0-4) makes size cheap: the measuring kit and a snapshot test that nothing moves, tiles and a collision grid, near and far building forms, building as you go, building kits. Part B (Phases 5-10) grows the world: the edge as data (the airport's site frozen, trees per tile), `EXT` out to about 880 across, roads to reach it (a ring highway, more bridges, traffic spent near you), getting about (a world map, waypoints, and the owner's pick of metro, taxis or fast travel), districts one at a time, then optionally about 1,400 across. Phases 0 (the measuring kit), 1 (tiles, the collision grid, the city's fixed geometry merged per tile, crowds and traffic culled for the shadow map), 2 (near and far forms: details near only, far forms for the places and the cars) 3 (building as you go: sites built round the home view at the boot and the rest after it, near forms let go past a budget), 4 (building kits: kits, recipes for blocks, a test district behind `?district=test`), 5 (the edge as data: `EXT` in one place, tests at both sizes) 6 (the edge moves out: `EXT` -420 to 460, the woods, the far plane and sky dome from the edge) 7 (roads to reach it: the ring highway, its bridges and slip lanes, routes generated from the street plan, traffic and boats spent near you) and 8 (getting about: the world map, waypoints, Bring my car, taxis, fast travel, the metro, sound by district) are built, and Phase 9's first district, **The Trenches**, is under way (below); follow the rest one phase at a time with the owner's sign-off, and never add buildings in bulk outside the tiles (`tileBatch()`) or outside sites (`site()`).
 - **Getting about** (growth plan Phase 8; the owner picked taxis, fast
   travel and the metro):
   - **Places** are `places.ts` (DOM-free, tested in `tests/travel.test.ts`):
@@ -238,28 +238,64 @@ it and has been retired completely. Build only on what's here.
     `walk.ts`): the ride moves Degen (hidden) and its own camera, the keys
     wait, `.city.is-riding` hides the walk HUD; leaving walk mode ends it.
   - **The metro** is `metro.ts` (DOM-free, tested in `tests/metro.test.ts`):
-    one elevated line on a viaduct down the east ring avenue's median
-    (`LINE_X`, `LINE`, `DECK_Y`), pillars only where the median is clear
-    of junctions and the river (`PILLARS`), four stations (`STATIONS`:
-    Kart Park, Downtown, South Bank, Airport; a platform east of the track,
-    a stair tower on the lawn with its door at street level),
-    `METRO_SOLIDS` (in `SOLIDS`), the train (`TRAIN`, two cars) on a
-    timetable from the clock (`trainAt()`, `ROUND_TRIP`), rides straight
-    between stations (`rideAt()`, at most about 22 s) and back on the
-    timetable after (`timetableAt()`). Drawn by `metro3d.ts` (the deck in
-    spans, rails, parapets with magenta neon, hammerhead pillars, a girder
-    over the river; platforms, canopies with the station names from one
-    sign atlas, skybridges, towers with an M roundel over the door, totems;
-    the train merged, `userData.keep`). Its rides are `metro-ui.ts`: the
-    station door's "Metro" prompt (a walk `places` entry, `metro:<id>`)
-    opens the station card (`[data-metro]`), a ride runs alongside the
-    train (`[data-metro-bar]`, Skip ride / Esc) and you step out at the
-    destination's door.
+    an elevated line on a viaduct as tracks (`TRACKS`: `main` from the kart
+    park down the east ring avenue's median to the switch (`SWITCH_S`), a
+    quarter-circle bend (`BEND_R`) and west over the open land south of the
+    south row and Trench Avenue's median to The Trenches; `branch` straight
+    on from the switch to the Airport, Phase 9, the owner's call); a place
+    on them is a track and a distance (`pointOn()`, `along()`, `sideOf()`);
+    pillars wherever the ground is clear (`PILLARS`: an avenue's median
+    clear of its junctions, or open land off every road; never the river);
+    five stations (`STATIONS`: Kart Park, Downtown, South Bank, The
+    Trenches, Airport; each a track and distance, a platform on the track's
+    left (`PLATFORM_SIDE`), a stair tower with its door at street level and
+    the way out of it, `face`), `METRO_SOLIDS` (in `SOLIDS`), the train
+    (`TRAIN`, two cars) on a timetable from the clock (`trainAt()`, `LEGS`:
+    down to South Bank, out to The Trenches and back, out to the Airport and
+    back, up again; `ROUND_TRIP`), runs as pieces of track (`runsBetween()`,
+    `placeOn()`, `carAt()`: each car on the track where it is, round the
+    bend), rides straight between stations (`rideAt()`, turning round at
+    South Bank between The Trenches and the Airport; at most about 37 s)
+    and back on the timetable after (`timetableAt()`). Drawn by `metro3d.ts`
+    (the deck in short straight pieces between its pillars, rails, parapets
+    with magenta neon, hammerhead pillars, a girder over the river; each
+    station in its own frame along its track: platform, canopy with the
+    station names from one sign atlas, skybridge, tower with an M roundel
+    over the door, totem; two cars, `userData.keep`). Its rides are
+    `metro-ui.ts`: the station door's "Metro" prompt (a walk `places` entry,
+    `metro:<id>`) opens the station card (`[data-metro]`), a ride runs
+    alongside the train (`[data-metro-bar]`, Skip ride / Esc) and you step
+    out at the destination's door.
   - **Sound by district** is `ambience.ts` (DOM-free, tested in
     `tests/ambience.test.ts`): `ambienceAt(x, z, lift)` gives the town's
     hum, the river, the traffic's rush (the highway, the avenues inside
     it), wind over open land and the Emporium's beat; `sound.update()`
     mixes its layers from it, where you walk or where the City view looks.
+- **The Trenches** (growth plan Phase 9, the owner's call): a
+  neighbourhood of projects in the style of Brooklyn on the south-west
+  quadrant inside the ring highway, where the storyline will start later.
+  Lived-in and lively (murals and tags with made-up names only, people on
+  stoops, kids on the court; nothing threatening). Built in steps, each
+  with the owner's sign-off: (1) streets, traffic and the metro (built);
+  (2) the brick tower blocks (8-10 floors, under the Emporium),
+  brownstones, The Block and its pin; (3) four corner shops for Dorras
+  (20,000 / 30,000 / 45,000 / 60,000 from level 5, run like your units).
+  - `trenches.ts` (DOM-free, tested in `tests/trenches.test.ts`): Trench
+    Avenue (`AVENUE_Z`, an avenue from the west ring avenue to West
+    Street, lit junctions, the el over its median), the cross streets
+    (`NS_X`, north to the south bank avenue where the south row's bend
+    leaves room, south to Bottom Street), the streets through the
+    projects (`EW_Z`) and Bottom Street (`BOTTOM_Z`), all kept
+    `HIGHWAY_CLEAR` from the highway and inside its south-west bend
+    (`BEND_C`, `BEND_REACH`); `TRENCH_STREETS`, `TRENCH_CROSSINGS` and
+    `TRENCH_BLOCKS` (rows A: Trench Avenue's north side, nearest town; B:
+    the projects; C: the strip along the highway) join the street plan
+    (`cityPlan()`), so traffic, taxis, walking (the slabs), the world map
+    and the sound read them; `TRENCH_RECT` / `inTrenches()`.
+  - `trenches3d.ts` draws its streets as sites (asphalt, Trench Avenue's
+    median, lane lines, zebras on every arm, lamps along both sides); its
+    blocks' slabs and lawns are the street plan's (`world.ts`), and the
+    avenues it meets break their medians and lines there (`highwayGaps()`).
 - **Cars** are `src/scripts/city3d/cars.ts`: real-proportion cartoon models
   (City Hatch, Cruiser, Street GT coupe, Hauler pickup, Box Van, City Bus;
   made-up names, never a real make or badge), each a bevelled extruded
@@ -414,15 +450,13 @@ it and has been retired completely. Build only on what's here.
     added `school`, `mall`, `stadium`; their blades are left out).
     Nothing drawn in a site goes into the city's own lists (a rooftop
     garden's trees are drawn in the site's own Batch, `IN_SITE`).
-  - The test district (`testdistrict.ts`, drawn by `district3d.ts`): 285
-    buildings on 20 blocks on the open land south of the river, west of
-    the town, only with `?district=test` (the city itself doesn't change;
-    new districts are the owner's call). Its streets, blocks and buildings
-    are sites (a block's buildings four at a time, so none takes long),
-    its footprints join every grid (`addSolids()` in `solids.ts`,
-    `BoxGrid.add()`), its blocks the walkable ground (`addSlabs()` in
-    `walk.ts`), the outskirts' trees keep off it (`keepTreesOff()`), and
-    the benchmark adds two views of it (`DISTRICT_VIEWS`).
+  - The test district that proved the kits (`?district=test`) was retired
+    in Phase 9 (the owner's call: The Trenches took its land); the recipes'
+    test lays its 20-block grid as a fixture instead. A district laid by
+    recipes joins every grid through `addSolids()` (`solids.ts`,
+    `BoxGrid.add()`) and `addSlabs()` (`walk.ts`) when its blocks aren't
+    the street plan's, and the outskirts' trees keep off it
+    (`keepTreesOff()`).
   - Tested in `tests/recipes.test.ts`.
 - `?fps` in the address (`.city-stats`, built in
   `index.ts`): fps, slowest frame, draw calls and triangles per frame, the
@@ -436,8 +470,7 @@ it and has been retired completely. Build only on what's here.
   into the 3D city, clear day (`?bench=night` for night), quality held, the
   same views (`BENCH_VIEWS`: home, a downtown street, the square, the Build
   overview, the airport, the kart park, a junction on the ring highway,
-  where the edge was before Phase 6, the far edge (from `EXT`); with
-  `?district=test` the test district's two after them) measured for a few
+  where the edge was before Phase 6, the far edge (from `EXT`)) measured for a few
   seconds each, once every site is built (it builds faster while it
   waits), then a 48 s camera route through them (all but the Build overview). Results (fps,
   average / 95th-percentile / slowest frame, CPU ms, draws and triangles,
@@ -1599,7 +1632,7 @@ it and has been retired completely. Build only on what's here.
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes and the test district (`kits.ts`, `recipes.ts`, `testdistrict.ts`), Liberty Bridge (`liberty.ts`),
-  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`),
+  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), The Trenches (`trenches.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,
