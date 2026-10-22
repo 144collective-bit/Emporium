@@ -1,10 +1,14 @@
 /*
  * Ambient sound, synthesised (no audio files): a low city hum, rain when it
- * rains, a neon buzz at night and a beat that gets louder near the Emporium.
+ * rains, a neon buzz at night and a beat that gets louder near the Emporium;
+ * since growth plan Phase 8 the mix follows the district you're in
+ * (ambience.ts): the hum in town, the river by the water, traffic's rush by
+ * the highway and the avenues, wind over the open land.
  * Nothing plays until the visitor turns it on.
  */
 
 import type { Sfx } from './combat';
+import type { Ambience } from './ambience';
 
 export function createSound() {
   let ctx: AudioContext | null = null;
@@ -16,6 +20,10 @@ export function createSound() {
   let rainGain: GainNode;
   let buzzGain: GainNode;
   let beatGain: GainNode;
+  let humGain: GainNode;
+  let waterGain: GainNode;
+  let roadGain: GainNode;
+  let windGain: GainNode;
   let on = false;
   let engine: { g: GainNode; lp: BiquadFilterNode; a: OscillatorNode; b: OscillatorNode } | null = null;
   /** Your aircraft's engine: a buzz, a hiss and a whine, beaten by a throb (the prop's blades, the rotor's thump) */
@@ -72,10 +80,35 @@ export function createSound() {
     const lp = ctx.createBiquadFilter();
     lp.type = 'lowpass';
     lp.frequency.value = 380;
-    const humGain = ctx.createGain();
+    humGain = ctx.createGain();
     humGain.gain.value = 0.5;
     hum.connect(lp).connect(humGain).connect(master);
     hum.start();
+
+    // A layer of noise through a filter, its level swayed slowly by an LFO (waves, gusts, passing cars)
+    const layer = (type: BiquadFilterType, f: number, q: number, sway: number, rate: number, brown = false) => {
+      const src = noise(4, brown);
+      const filt = ctx!.createBiquadFilter();
+      filt.type = type;
+      filt.frequency.value = f;
+      filt.Q.value = q;
+      const g = ctx!.createGain();
+      g.gain.value = 0;
+      const swayG = ctx!.createGain();
+      swayG.gain.value = 1;
+      const lfo = ctx!.createOscillator();
+      lfo.frequency.value = rate;
+      const depth = ctx!.createGain();
+      depth.gain.value = sway;
+      lfo.connect(depth).connect(swayG.gain);
+      src.connect(filt).connect(swayG).connect(g).connect(master);
+      src.start();
+      lfo.start();
+      return g;
+    };
+    waterGain = layer('lowpass', 520, 0.7, 0.45, 0.17, true);
+    roadGain = layer('bandpass', 700, 0.6, 0.35, 0.09);
+    windGain = layer('bandpass', 380, 1.4, 0.6, 0.06, true);
 
     const rain = noise(3);
     const bp = ctx.createBiquadFilter();
@@ -590,13 +623,18 @@ export function createSound() {
       }
       set(a.out.gain, revs >= 0 ? 0.04 + r * 0.07 : 0, revs >= 0 ? 0.2 : 0.3);
     },
-    /** Called every frame with the scene's state. `near` is 0-1 closeness to the Emporium. */
-    update(rain: number, night: number, near: number) {
+    /** Called every frame with the scene's state and the district's layers where you are (ambience.ts) */
+    update(rain: number, night: number, a: Ambience) {
       if (!ctx || !on) return;
       const t = ctx.currentTime;
       rainGain.gain.setTargetAtTime(rain * 0.5, t, 0.5);
-      buzzGain.gain.setTargetAtTime(night * 0.012, t, 0.5);
-      beatGain.gain.setTargetAtTime(0.06 + near * 0.5, t, 0.3);
+      // The neon buzz is the town's; the beat carries a little everywhere in town, more near the Emporium
+      buzzGain.gain.setTargetAtTime(night * 0.012 * a.city, t, 0.5);
+      beatGain.gain.setTargetAtTime(0.06 * a.city + a.beat * 0.5, t, 0.3);
+      humGain.gain.setTargetAtTime(0.15 + 0.35 * a.city, t, 1);
+      waterGain.gain.setTargetAtTime(a.water * 0.22, t, 1);
+      roadGain.gain.setTargetAtTime(a.road * 0.09, t, 1);
+      windGain.gain.setTargetAtTime(a.open * 0.16 * (1 + rain * 0.5), t, 1.5);
     },
     suspend() {
       if (ctx && on) ctx.suspend();

@@ -40,7 +40,7 @@ export interface WorldMapDeps {
   toast(text: string): void;
 }
 
-type Pick = { kind: 'place'; place: Place } | { kind: 'car' } | { kind: 'plane' } | { kind: 'ground'; x: number; z: number };
+type Pick = { kind: 'place'; place: Place } | { kind: 'car' } | { kind: 'plane' } | { kind: 'you' } | { kind: 'ground'; x: number; z: number };
 
 /** The map's colours: dark land, neon roads, PulseChain cyan for you and magenta for the metro */
 const C = {
@@ -86,6 +86,7 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
   let open = false;
   let pick: Pick | null = null;
   let raf = 0;
+  let refresh = 0;
   let lastFocus: HTMLElement | null = null;
 
   const toScreen = (x: number, z: number): Pt => [(x - view.x) * view.s + w / 2, (z - view.z) * view.s + h / 2];
@@ -261,8 +262,9 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
       ctx.lineWidth = 2;
       ctx.stroke();
     }
-    // Keep you, your car and the traffic of the city moving on the map while it's open
-    raf = requestAnimationFrame(draw);
+    // Keep you and your car moving on the map while it's open, a few times a second
+    clearTimeout(refresh);
+    refresh = window.setTimeout(redraw, 120);
   }
   function glyph(x: number, z: number, color: string, kind: 'car' | 'plane') {
     const [sx, sy] = toScreen(x, z);
@@ -327,6 +329,10 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
     } else if (pick.kind === 'plane') {
       title = 'Your aircraft';
       acts += btn('waypoint', 'Set waypoint');
+    } else if (pick.kind === 'you') {
+      title = 'You';
+      sub = st === 'city' ? 'Where the view looks' : 'Where you stand';
+      if (st !== 'city') acts += btn('bring', 'Bring my car', st !== 'foot', st === 'busy' ? 'Get out first' : '');
     } else {
       title = 'Here';
       sub = 'Open ground';
@@ -339,7 +345,7 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
   card.addEventListener('click', (e) => {
     const act = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-wm-act]')?.dataset.wmAct;
     if (!act || !pick) return;
-    const at = pick.kind === 'place' ? { x: pick.place.at.x, z: pick.place.at.z } : pick.kind === 'car' ? d.car() : pick.kind === 'plane' ? d.plane() : { x: pick.x, z: pick.z };
+    const at = pick.kind === 'place' ? { x: pick.place.at.x, z: pick.place.at.z } : pick.kind === 'car' ? d.car() : pick.kind === 'plane' ? d.plane() : pick.kind === 'you' ? null : { x: pick.x, z: pick.z };
     const name = pick.kind === 'place' ? nameOf(pick.place).name : pick.kind === 'car' ? 'Your car' : pick.kind === 'plane' ? 'Your aircraft' : 'Waypoint';
     if (act === 'waypoint' && at) {
       d.setWaypoint({ x: at.x, z: at.z }, name);
@@ -458,7 +464,9 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
     const place = PLACES.map((p) => ({ p, dd: Math.hypot(...((([px, py]) => [px - sx, py - sy])(toScreen(p.at.x, p.at.z)) as [number, number])) }))
       .filter((o) => o.dd < 18)
       .sort((a, b) => a.dd - b.dd)[0]?.p;
+    const you = d.you();
     if (car && near(car.x, car.z, 14)) pick = { kind: 'car' };
+    else if (you.walking && near(you.x, you.z, 10)) pick = { kind: 'you' };
     else if (place) pick = { kind: 'place', place };
     else if (plane && near(plane.x, plane.z, 14)) pick = { kind: 'plane' };
     else {
@@ -529,6 +537,7 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
     el.hidden = true;
     root.classList.remove('has-worldmap');
     cancelAnimationFrame(raf);
+    clearTimeout(refresh);
     raf = 0;
     lastFocus?.focus({ preventScroll: true });
     return true;

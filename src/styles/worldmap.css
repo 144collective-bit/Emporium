@@ -451,11 +451,12 @@
   }
 }
 
-/* A taxi: a bar at the bottom while it comes, waits and drives you (taxi.ts) */
+/* A taxi: a bar under the header while it comes and waits (clear of the touch controls and the door prompt),
+   at the bottom while it drives you (taxi.ts) */
 .taxi-bar {
   position: absolute;
   left: 50%;
-  bottom: 136px;
+  top: calc(var(--head-h) + 58px);
   z-index: 5;
   display: flex;
   align-items: center;
@@ -522,11 +523,12 @@
   display: none;
 }
 .city.is-riding .taxi-bar {
+  top: auto;
   bottom: calc(20px + env(safe-area-inset-bottom));
 }
 @media (max-width: 640px) {
   .taxi-bar {
-    bottom: 150px;
+    top: calc(var(--head-h) + 50px);
     gap: 7px;
   }
   .taxi-text {

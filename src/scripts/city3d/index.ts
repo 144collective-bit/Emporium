@@ -34,6 +34,7 @@ import { buildUnits } from './units';
 import { buildBigLots } from './biglots';
 import { buildBeacons } from './beacons';
 import { createTravelUI } from './travel-ui';
+import { ambienceAt } from './ambience';
 import { createTaxis } from './taxi';
 import { buildMetro } from './metro3d';
 import { createMetroUI, type MetroUI } from './metro-ui';
@@ -802,6 +803,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
 
   /* ---------- Controls: time, weather, sound, view ---------- */
   const sound = createSound();
+  let amb = ambienceAt(controls.target.x, controls.target.z);
+  let ambT = 0;
   const group = (name: string, apply: (v: string) => void) => {
     const btns = root.querySelectorAll<HTMLButtonElement>(`[data-${name}]`);
     btns.forEach((b) =>
@@ -1066,8 +1069,14 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       if (!clash) placed.push(r);
     }
 
-    const dE = controls.target.distanceTo(spots[0].focus) + camera.position.distanceTo(controls.target) * 0.4;
-    sound.update(s.rain, s.night, 1 - THREE.MathUtils.smoothstep(dE, 8, 36));
+    // The sound follows the district you're in (ambience.ts): where you walk, or where the City view looks
+    // (its height softening it), a few times a second
+    ambT -= dt;
+    if (ambT <= 0) {
+      ambT = 0.25;
+      amb = walking ? ambienceAt(walk.position.x, walk.position.z) : ambienceAt(controls.target.x, controls.target.z, camera.position.distanceTo(controls.target));
+    }
+    sound.update(s.rain, s.night, amb);
 
     if (!reduced || dirty || flight) {
       if (statsEl) {
