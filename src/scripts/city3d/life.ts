@@ -13,7 +13,8 @@ import { BOAT_LANES, DECK_STROLLS, DECK_Y } from './liberty';
 import { JUNCTIONS, ROUTES, lightState, phaseOf, pointOn, rightOf, type Junction, type Phase, type Pt, type Route } from './routes';
 import { CARS, PAINTS, carGeometry, carMaterials, type CarId } from './cars';
 import type { Idle } from './landmarks';
-import { HIP_HEIGHT, chatPose, cityOutfit, createCrowd, idlePose, lookPose, newPose, sitPose, walkPose } from './character';
+import { HIP_HEIGHT, cityOutfit, createCrowd } from './character';
+import { CLIP_SECONDS, WALK_STRIDE } from './crowdclips';
 
 export interface LifeOpts {
   cars: number;
@@ -293,9 +294,8 @@ interface Person {
   /** Standing height (or seat height for someone sitting) */
   y?: number;
   act?: Idle['act'];
-  /** Posture: a little forward or back, how much the arms swing */
-  lean: number;
-  swing: number;
+  /** How far they've walked in all (their walk is played at its stride from it) */
+  walked: number;
   u: number;
   dir: 1 | -1;
   speed: number;
@@ -367,12 +367,11 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
         z: 0,
         ry: 0,
         face: NaN,
-        lean: (rand() - 0.4) * 0.08,
-        swing: 0.8 + rand() * 0.35,
+        walked: 0,
       });
     });
   }
-  for (const c of crowd) people.push({ kind: 'idle', seg: 0, inset: 0, u: 0, dir: 1, speed: 0, phase: rand() * 6, x: c.x, z: c.z, y: c.y, act: c.act, ry: c.ry, face: c.ry, lean: 0, swing: 1 });
+  for (const c of crowd) people.push({ kind: 'idle', seg: 0, inset: 0, u: 0, dir: 1, speed: 0, phase: rand() * 6, x: c.x, z: c.z, y: c.y, act: c.act, ry: c.ry, face: c.ry, walked: 0 });
   const n = people.length;
   bodies.people = people;
 
@@ -382,8 +381,6 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
     people.map(() => cityOutfit(rand)),
     { light: opts.light }
   );
-  const pose = newPose();
-
   tick(({ t, dt }) => {
     people.forEach((p, i) => {
       if (p.kind === 'walk') {
@@ -401,21 +398,18 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
         p.z = a[1] + (c[1] - a[1]) * f;
         // Facing along the side (reversed when walking the other way round)
         p.ry = Math.atan2(c[0] - a[0], c[1] - a[1]) + (p.dir === -1 ? Math.PI : 0);
-        // Stride matched to walking pace, so feet don't slide
-        walkPose(pose, t * p.speed * 11 + p.phase, 1, 0, p.swing);
-        pose.lean += p.lean;
-      } else if (p.act === 'sit') sitPose(pose, t, p.phase);
-      else if (p.act === 'chat') chatPose(pose, t, p.phase);
-      else if (p.act === 'queue') {
-        idlePose(pose, t, p.phase);
-        pose.headYaw = Math.sin(t * 0.23 + p.phase) * 0.25;
-      } else lookPose(pose, t, p.phase);
+        p.walked += p.speed * dt;
+      }
+      // Each plays a baked clip (crowdclips.ts): the walk at its stride, so their feet stay put on the pavement;
+      // the rest from where their own offset puts them in it
+      const loop = t / CLIP_SECONDS + p.phase / 6;
       // Turn corners over a few frames instead of snapping
       if (Number.isNaN(p.face)) p.face = p.ry;
       const turn = Math.atan2(Math.sin(p.ry - p.face), Math.cos(p.ry - p.face));
       p.face += turn * Math.min(1, dt * 9);
       const y = p.act === 'sit' ? (p.y ?? SLAB) - SEAT_DROP : (p.y ?? SLAB);
-      people3d.set(i, p.x, y, p.z, p.face, PERSON_SCALE, pose);
+      if (p.kind === 'walk') people3d.set(i, p.x, y, p.z, p.face, PERSON_SCALE, 'walk', p.walked / (WALK_STRIDE * PERSON_SCALE) + p.phase / 6);
+      else people3d.set(i, p.x, y, p.z, p.face, PERSON_SCALE, p.act === 'sit' ? 'sit' : p.act === 'chat' ? 'chat' : p.act === 'queue' ? 'idle' : 'look', loop);
     });
     people3d.commit();
   });

@@ -249,10 +249,10 @@ it and has been retired completely. Build only on what's here.
   owner's sign-off. Phase 1 (the skinned body, head, hands and feet),
   Phase 2 (walking and running, `locomotion.ts`), Phase 3 (guns and
   fighting on the new bones: `gunfit.ts`, `stance.ts`, the fight clips)
-  and Phase 4 (merch marks and prints on the clothes, the Merch tab, the
-  character screen) are built; other players,
-  crowds and fighters still walk the old formula (`walkPose()`), and
-  crowds stay on the rigid rig until Phase 5.
+  Phase 4 (merch marks and prints on the clothes, the Merch tab, the
+  character screen) and Phase 5 (the crowds and soldiers on the new body,
+  skinned on the GPU from baked clips; fighters and other players stepping
+  with planted feet) are built: every figure in the city is the one body.
 - Every character is one shared Degen body (`src/scripts/city3d/character.ts`),
   sculpted after the brand art at human proportions (about 1.3 tall at
   scale 1, six and a half heads, hips `HIP_HEIGHT` 0.62), with knees,
@@ -332,10 +332,11 @@ it and has been retired completely. Build only on what's here.
     darkens or lightens it: lapels, ribbing). New clothes are new items.
   - Three detail levels (`Detail`): 2 for single figures (`createDegen()`:
     the player, other players, the fitting room, the hologram; about 13-15k
-    triangles), 1 for crowd people near the camera (about 6k; the phones'
-    `light` crowd leaves out the `detail` pieces), 0 for crowd people
-    further away (`far`: plain boxes for rounded ones, no ears or nose, the
-    shades as one bar; about 1.5k).
+    triangles), 1 for crowd people near the camera (the new head, fingers
+    and shoes at a crowd's detail, about 7-9k; the phones' `light` crowd
+    leaves out the `detail` pieces), 0 for crowd people further away (`far`:
+    plain boxes for rounded ones, the head coarser, block hands instead of
+    fingers, no ears or nose; about 2k).
   - `createDegen()` builds the skinned body (`items(q, true)`: the hero
     wardrobe, with the new head, fingers and shoes on the feet) as one
     `SkinnedMesh` coloured per vertex, plus one each for the lenses, the
@@ -344,16 +345,37 @@ it and has been retired completely. Build only on what's here.
     the hand bone. `dispose()` frees a figure's geometry and bones. A
     material swapped onto a figure (the hologram's `ShaderMaterial`, a
     fighter's hit flash) must handle skinning (three's skinning chunks).
-    `createCrowd()` (pedestrians, soldiers) merges an item's pieces per
-    joint and colour and shares them left and right. Every frame each person
-    in view takes instances of only what they wear, at their level: near
-    within `CROWD_NEAR` (12, 8 on phones) of the camera, far beyond, and not
-    at all out of the view or past `CROWD_FAR`. The city fills `CROWD_VIEW`
-    (camera position and view) each frame in `index.ts`; under reduced
-    motion it's off and everyone is drawn near.
+    `createCrowd()` (pedestrians, soldiers) is the same skinned body
+    (`items(q, true)`) drawn instanced: an item's pieces of one colour and
+    material make one part (`crowdGeometry()`, its bones and weights as
+    `crowdIdx` / `crowdWt`, shared between crowds), one `InstancedMesh`
+    each, skinned on the GPU (`crowdskin.ts`: `injectCrowdSkin()` in every
+    pass that draws them: their materials (`crowdVersion()`), their
+    shadows (`crowdDepth()`) and the ink outlines' normal pass in
+    `post.ts`, where everything else reads `crowdOn` 0) from one float
+    texture of baked clips (`crowdclips.ts`, DOM-free, tested in
+    `tests/crowdclips.test.ts`): `walk` and `march` recorded from the
+    planted-feet walk (locomotion.ts) over one cycle, played at their
+    stride (`WALK_STRIDE`, `MARCH_STRIDE`: a person at scale s and speed v
+    plays v / (stride s) cycles a second, so their feet stay put), `idle`,
+    `look`, `chat` and `sit` from the formulas in `poses.ts` over
+    `CLIP_SECONDS` with the end eased into the start, and `salute` from
+    attention to the hand at the brow. Callers set each person's clip and
+    how far through it they are (`set(i, x, y, z, yaw, scale, clip, u)`;
+    `crowdFrame()` picks the two rows and the blend); the CPU never poses
+    a crowd. Every frame each person in view takes instances of only what
+    they wear, at their level: near within `CROWD_NEAR` (12, 8 on phones)
+    of the camera, far beyond, and not at all out of the view or past
+    `CROWD_FAR`. The city fills `CROWD_VIEW` (camera position and view)
+    each frame in `index.ts`; under reduced motion it's off and everyone is
+    drawn near. A new crowd move is a new clip in `CLIP_DEFS`.
   - Outfits (`suit`, `hoodie`, `track`, `soldier`) only change clothes and
-    colours; poses come from the helpers there (walk/run, idle, look, chat,
-    sit, march, attention/salute, dance). The cap patch is the Emporium
+    colours; poses come from the helpers in `poses.ts` (DOM-free; walk/run
+    by formula, idle, look, chat, sit, march, attention/salute, dance, the
+    emotes), re-exported by `character.ts`. The Fight Club's fighters
+    (`fight-figure.ts`) and other players (`remote.ts`) step with the
+    planted-feet walk (`createLocomotion()` each, fed where they're drawn);
+    a fighter's guard fades to it while moving round the ring. The cap patch is the Emporium
     diamond (the crowd's always; your own can carry another of the city's
     made-up marks): never put another brand's logo on it. Whites on clothes are
     `SHIRT`, a shade under white, so they don't bloom.
@@ -1343,7 +1365,7 @@ it and has been retired completely. Build only on what's here.
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,
-  in `tests/merch.test.ts`) and Degen's skeleton, weights, head and hands
+  in `tests/merch.test.ts`), the crowd's baked clips (`crowdclips.ts`) and Degen's skeleton, weights, head and hands
   (`skeleton.ts`, `body.ts`), his walking (`locomotion.ts`) and the guns in his hands (`gunfit.ts`, `stance.ts`). Modules that touch the DOM or `kit.ts` (canvas
   textures) can't load in Node; keep data a test needs in the DOM-free
   files.

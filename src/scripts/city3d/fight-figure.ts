@@ -8,8 +8,8 @@
  *   `getup`. Stunned: the hit reaction for `hurt` (`hurtClip`), timed by
  *   `hurtFrame`. In a move: the move's clip at the sim's own `frame`, so
  *   the strike lands on the frame the rules say. Blocking: `block` (its
- *   hold loops). Walking: the guard with the legs from `walkPose`. Else
- *   the `guard` loop.
+ *   hold loops). Else the `guard` loop; moving round the ring, its legs
+ *   are the planted-feet walk (locomotion.ts), so the feet step, not slide.
  * - A change of clip crossfades over a few frames (`blendPose`).
  * - `root` (the lying pose's lift, back-rotation and the height it turns
  *   about, `rootShift()`) goes on the figure's group with the sim's x, z and
@@ -18,7 +18,8 @@
  * - `manual` plays a clip by hand (the demo's clip picker) over the sim.
  */
 import * as THREE from 'three';
-import { createDegen, walkPose, type Degen, type Limb, type Outfit } from './character';
+import { createDegen, type Degen, type Limb, type Outfit } from './character';
+import { createLocomotion, type Locomotion } from './locomotion';
 import { CLIPS, blendPose, hurtClip, hurtMirror, moveClip, newFightPose, rootShift, sampleClip, type ClipId, type FightPose } from './fight-anim';
 import { T, type Fighter } from './fight-sim';
 
@@ -36,7 +37,10 @@ export interface FighterFigure {
   mirror: boolean;
   frame: number;
   fade: number;
+  /** Moving round the ring: the legs from the planted-feet walk (locomotion.ts), weighed in over the guard's by `walk` */
+  loco: Locomotion;
   walk: number;
+  last: { x: number; z: number } | null;
   /** A clip being played by hand, with its frame */
   manual: { id: ClipId; frame: number } | null;
   /** The guard loop's own phase so two figures don't bounce in step */
@@ -47,14 +51,13 @@ export function createFighterFigure(parent: THREE.Object3D, outfit: Outfit, low:
   const degen = createDegen({ ...outfit, fists: true }, low ? 1 : 2);
   degen.g.scale.setScalar(FIGHTER_SCALE);
   parent.add(degen.g);
-  return { degen, pose: newFightPose(), prev: newFightPose(), tmp: newFightPose(), clip: null, mirror: false, frame: 0, fade: 0, walk: 0, manual: null, seed };
+  return { degen, pose: newFightPose(), prev: newFightPose(), tmp: newFightPose(), clip: null, mirror: false, frame: 0, fade: 0, loco: createLocomotion(), walk: 0, last: null, manual: null, seed };
 }
 export function disposeFigure(fg: FighterFigure) {
   fg.degen.g.removeFromParent();
   fg.degen.dispose();
 }
 
-const walkTmp = newFightPose();
 const copyPose = (from: FightPose, to: FightPose) => {
   to.bob = from.bob;
   to.lean = from.lean;
@@ -120,13 +123,14 @@ export function drawFighter(fg: FighterFigure, f: Fighter, dt: number, ticks: nu
   }
   fg.frame = frame;
   sampleClip(id, frame, fg.pose, { mirror });
-  // Walking: the legs from the walk cycle under the guard
-  if (id === 'guard' && f.moving > 0.05) {
-    fg.walk += dt * 7 * f.moving;
-    walkPose(walkTmp, fg.walk, Math.min(1, f.moving), 0, 0);
-    for (let i = 0; i < 2; i++) copyLimb(fg.pose.legs[i], walkTmp.legs[i]);
-    fg.pose.bob += walkTmp.bob;
-  }
+  // Moving round the ring: the planted-feet walk under the guard (square to the opponent, as when armed),
+  // so the feet step instead of sliding; it fades in over the guard's stance and back out when they stop
+  const vx = fg.last && dt > 0 ? (f.x - fg.last.x) / dt : 0;
+  const vz = fg.last && dt > 0 ? (f.z - fg.last.z) / dt : 0;
+  if (dt > 0) fg.last = { x: f.x, z: f.z };
+  if (dt > 0) fg.loco.update({ dt, t: ticks / 60, x: f.x, y: 0, z: f.z, vx, vz, face: f.yaw, grounded: true, vy: 0, scale: FIGHTER_SCALE, ground: () => 0, armed: true });
+  const walking = id === 'guard' && (f.moving > 0.05 || fg.loco.stepping);
+  if (dt > 0) fg.walk += ((walking ? 1 : 0) - fg.walk) * Math.min(1, dt * 10);
   if (fg.fade > 0) {
     fg.fade -= dt * 60;
     const k = 1 - Math.max(0, fg.fade) / FADE;
@@ -146,6 +150,23 @@ export function drawFighter(fg: FighterFigure, f: Fighter, dt: number, ticks: nu
   for (let i = 0; i < 2; i++) {
     copyLimb(deg.pose.arms[i], fg.pose.arms[i]);
     copyLimb(deg.pose.legs[i], fg.pose.legs[i]);
+    // The walk's legs, weighed in (its feet's own turn once it has the legs)
+    const w = fg.walk;
+    const l = deg.pose.legs[i];
+    const s = fg.loco.pose.legs[i];
+    l.foot = l.footYaw = l.footRoll = l.toe = undefined;
+    if (w > 0.01) {
+      l.fwd += (s.fwd - l.fwd) * w;
+      l.out += (s.out - l.out) * w;
+      l.bend += (s.bend - l.bend) * w;
+      if (w > 0.5) Object.assign(l, { foot: s.foot, footYaw: s.footYaw, footRoll: s.footRoll, toe: s.toe });
+    }
+  }
+  if (fg.walk > 0.01) {
+    deg.pose.bob += (fg.loco.pose.bob - deg.pose.bob) * fg.walk;
+    deg.pose.sway = (deg.pose.sway ?? 0) + ((fg.loco.pose.sway ?? 0) - (deg.pose.sway ?? 0)) * fg.walk;
+    // (the walk's legs are worked out on its own hips: square them to it as it takes over)
+    deg.pose.turn = (deg.pose.turn ?? 0) + ((fg.loco.pose.turn ?? 0) - (deg.pose.turn ?? 0)) * fg.walk;
   }
   deg.update();
   // The group turns about its origin (the feet); move it so the pitch turns about the root's pivot instead

@@ -31,13 +31,11 @@ import { MARK_IDS, type Look, type MarkId, type MarkSlot, type PatternId } from 
 import { ATLAS_COLS, ATLAS_ROWS, MARK_ART } from './marks';
 import { canvasTex, lit, neon, toon } from './kit';
 import { EYE_Y as HERO_EYE_Y, handParts, headFront, headGeometry } from './body';
+import { crowdFrame, type CrowdClip } from './crowdclips';
+import { crowdDepth, crowdTexture, crowdVersion } from './crowdskin';
 import {
   HIP_Y,
-  LEG_X,
-  SHOULDER_X,
-  SHOULDER_Y,
   THIGH,
-  UPPER_ARM,
   WRIST_Y,
   WRIST_Z,
   makeSkeleton,
@@ -51,6 +49,7 @@ import {
   type Limb,
   type Pose,
   type Region,
+  type Skeleton,
 } from './skeleton';
 
 export { ARM_REACH, HIP_HEIGHT, newPose, reachArm, shoulderTo, torsoFrame, type Limb, type Pose, type Wrist } from './skeleton';
@@ -135,247 +134,9 @@ export const SOLDIER: Outfit = {
   rifle: 'right',
 };
 
-/* ---------- The crowd's rig ---------- */
+/* ---------- Poses (poses.ts) ---------- */
 
-/*
- * Crowds (pedestrians, soldiers, the Fight Club's opponents' stand-ins) are
- * still the rigid figure: 15 parts on this simple rig, each an instanced
- * part. Single figures (createDegen) are the skinned body on skeleton.ts.
- */
-export interface Rig {
-  root: THREE.Object3D;
-  hips: THREE.Object3D;
-  j: Record<Joint, THREE.Object3D>;
-}
-
-/** The crowd's head on the old, shorter neck (the skinned body's is `HEAD_Y`) */
-const NECK = 0.41;
-
-function makeRig(): Rig {
-  const node = (parent: THREE.Object3D, x: number, y: number, z = 0) => {
-    const o = new THREE.Object3D();
-    o.position.set(x, y, z);
-    parent.add(o);
-    return o;
-  };
-  const root = new THREE.Object3D();
-  const hips = node(root, 0, HIP_Y);
-  const torso = node(hips, 0, 0);
-  const head = node(torso, 0, NECK);
-  const armL = node(torso, -SHOULDER_X, SHOULDER_Y);
-  const armR = node(torso, SHOULDER_X, SHOULDER_Y);
-  const foreL = node(armL, 0, -UPPER_ARM);
-  const foreR = node(armR, 0, -UPPER_ARM);
-  const wristL = node(foreL, 0, WRIST_Y, WRIST_Z);
-  const wristR = node(foreR, 0, WRIST_Y, WRIST_Z);
-  // The roll is about the forearm's length, then the bend about the rolled wrist
-  wristL.rotation.order = 'YXZ';
-  wristR.rotation.order = 'YXZ';
-  const handL = node(wristL, 0, 0);
-  const handR = node(wristR, 0, 0);
-  const legL = node(hips, -LEG_X, 0);
-  const legR = node(hips, LEG_X, 0);
-  const shinL = node(legL, 0, -THIGH);
-  const shinR = node(legR, 0, -THIGH);
-  return {
-    root,
-    hips,
-    j: {
-      pelvis: hips,
-      torso,
-      head,
-      armL,
-      armR,
-      foreL,
-      foreR,
-      legL,
-      legR,
-      shinL,
-      shinR,
-      wristL,
-      wristR,
-      handL,
-      handR,
-    },
-  };
-}
-
-/* ---------- Poses ---------- */
-
-function applyPose(r: Rig, p: Pose) {
-  r.hips.position.y = HIP_Y + p.bob;
-  r.hips.rotation.z = p.side;
-  r.j.torso.rotation.set(p.lean, p.twist, -p.side * 0.6);
-  r.j.head.rotation.set(-p.headPitch - p.lean * 0.6, p.headYaw - p.twist * 0.8, p.side * 0.4);
-  for (let i = 0; i < 2; i++) {
-    const s = i === 0 ? -1 : 1;
-    const a = p.arms[i];
-    (i === 0 ? r.j.armL : r.j.armR).rotation.set(-a.fwd, a.twist ?? 0, s * a.out);
-    (i === 0 ? r.j.foreL : r.j.foreR).rotation.set(-a.bend, 0, 0);
-    const w = a.wrist;
-    (i === 0 ? r.j.wristL : r.j.wristR).rotation.set(w ? -w.bend : 0, w ? w.roll : 0, 0, 'YXZ');
-    const l = p.legs[i];
-    (i === 0 ? r.j.legL : r.j.legR).rotation.set(-l.fwd, 0, s * l.out - p.side);
-    (i === 0 ? r.j.shinL : r.j.shinR).rotation.set(l.bend, 0, 0);
-  }
-}
-
-const set = (l: Limb, fwd: number, out: number, bend: number) => {
-  l.fwd = fwd;
-  l.out = out;
-  l.bend = bend;
-  l.twist = 0;
-  if (l.wrist) l.wrist = undefined;
-  if (l.reach) l.reach = undefined;
-};
-
-/**
- * Walking and running. `phase` advances with distance covered, `stride`
- * 0..1 scales the whole cycle (0 = standing), `run` 0..1 blends to a run.
- */
-export function walkPose(p: Pose, phase: number, stride: number, run: number, armSwing = 1) {
-  const A = (0.42 + run * 0.36) * stride;
-  for (let i = 0; i < 2; i++) {
-    const ph = phase + i * Math.PI;
-    const s = Math.sin(ph);
-    const c = Math.cos(ph);
-    // Knees bend most while the leg swings through, a little at the heel strike
-    set(p.legs[i], A * s, 0.02, 0.06 + stride * (0.5 + run * 0.85) * Math.max(0, c) + stride * 0.12 * Math.max(0, -s));
-    // Arms swing against the legs, elbows tighten as you speed up
-    set(p.arms[1 - i], A * 0.95 * s * armSwing + run * 0.15, 0.08 + run * 0.06, 0.2 + run * 1.05 + 0.15 * stride * Math.max(0, s));
-  }
-  p.bob = (Math.abs(Math.cos(phase)) - 0.6) * 0.03 * stride * (1 + run * 1.2);
-  p.lean = 0.03 * stride + run * 0.24;
-  p.twist = Math.sin(phase) * 0.08 * stride;
-  p.side = Math.sin(phase) * 0.025 * stride;
-  p.headYaw = 0;
-  p.headPitch = 0;
-}
-
-/** Standing: breathing, a slow weight shift. */
-export function idlePose(p: Pose, t: number, seed = 0) {
-  const sh = Math.sin(t * 0.35 + seed);
-  p.bob = Math.sin(t * 1.6 + seed) * 0.003 - Math.abs(sh) * 0.008;
-  p.lean = 0.01;
-  p.twist = 0;
-  p.side = sh * 0.035;
-  set(p.arms[0], 0.03, 0.09 + Math.sin(t * 1.6 + seed) * 0.01, 0.18);
-  set(p.arms[1], 0.03, 0.09, 0.18);
-  set(p.legs[0], 0, 0.04, 0.04 + Math.max(0, -sh) * 0.1);
-  set(p.legs[1], 0, 0.04, 0.04 + Math.max(0, sh) * 0.1);
-  p.headYaw = 0;
-  p.headPitch = 0;
-}
-
-/** Looking around while standing. */
-export function lookPose(p: Pose, t: number, seed = 0) {
-  idlePose(p, t, seed);
-  p.headYaw = Math.sin(t * 0.37 + seed * 2) * 0.55 + Math.sin(t * 0.13 + seed) * 0.3;
-  p.headPitch = Math.sin(t * 0.21 + seed) * 0.12;
-}
-
-/** Talking with a group: gestures with one hand, nods, now and then both hands. */
-export function chatPose(p: Pose, t: number, seed = 0) {
-  idlePose(p, t, seed);
-  const talk = Math.sin(t * 0.5 + seed * 3) > -0.2;
-  if (talk) {
-    set(p.arms[1], 0.55 + Math.sin(t * 2.3 + seed) * 0.3, 0.16, 1.25 + Math.sin(t * 3.1 + seed) * 0.35);
-    if (Math.sin(t * 0.9 + seed) > 0.4) set(p.arms[0], 0.45 + Math.sin(t * 2.0 + seed) * 0.2, 0.14, 1.1);
-    p.headPitch = Math.sin(t * 2.6 + seed) * 0.06;
-  } else {
-    // Listening: hands in pockets, the odd nod
-    set(p.arms[0], -0.05, 0.1, 0.45);
-    set(p.arms[1], -0.05, 0.1, 0.45);
-    p.headPitch = Math.max(0, Math.sin(t * 1.4 + seed)) * -0.12;
-  }
-  p.headYaw = Math.sin(t * 0.3 + seed) * 0.25;
-}
-
-/** Sitting on a bench: thighs level, hands on the knees. Hips sit HIP_HEIGHT - 0.03 above the feet's root. */
-export function sitPose(p: Pose, t: number, seed = 0) {
-  p.bob = -0.03;
-  p.lean = -0.08 + Math.sin(t * 0.3 + seed) * 0.03;
-  p.twist = 0;
-  p.side = 0;
-  set(p.legs[0], 1.5, 0.08, 1.45);
-  set(p.legs[1], 1.5, 0.08, 1.45);
-  set(p.arms[0], 0.55, 0.12, 0.7);
-  set(p.arms[1], 0.55, 0.12, 0.7);
-  p.headYaw = Math.sin(t * 0.25 + seed) * 0.5;
-  p.headPitch = 0.05;
-}
-
-/** In the air: knees up, arms out for balance. `a` 0..1 blends it over whatever pose is set. */
-export function airPose(p: Pose, a: number) {
-  if (a <= 0) return;
-  const mix = (l: Limb, fwd: number, out: number, bend: number) => {
-    l.fwd += (fwd - l.fwd) * a;
-    l.out += (out - l.out) * a;
-    l.bend += (bend - l.bend) * a;
-  };
-  mix(p.legs[0], 0.7, 0.06, 1.1);
-  mix(p.legs[1], -0.1, 0.06, 0.55);
-  mix(p.arms[0], 0.5, 0.7, 0.6);
-  mix(p.arms[1], 0.3, 0.75, 0.5);
-  p.lean += (0.1 - p.lean) * a;
-  p.bob *= 1 - a;
-}
-
-/** Soldier on parade: a crisp march, arms straighter, the rifle hand still. */
-export function marchPose(p: Pose, phase: number, rifle: 'left' | 'right') {
-  walkPose(p, phase, 1, 0.15, 1.1);
-  for (const l of p.legs) l.bend *= 1.25;
-  for (const a of p.arms) a.bend = 0.12;
-  const r = p.arms[rifle === 'left' ? 0 : 1];
-  set(r, 0.05, 0.1, 0.35);
-  p.lean = 0.02;
-  p.twist *= 0.4;
-}
-
-/** Standing to attention, `salute` 0..1 brings the free hand to the brow. */
-export function attentionPose(p: Pose, salute: number, rifle: 'left' | 'right') {
-  idlePose(p, 0, 0);
-  p.side = 0;
-  for (const l of p.legs) set(l, 0, 0.02, 0.03);
-  const held = p.arms[rifle === 'left' ? 0 : 1];
-  set(held, 0.05, 0.1, 0.35);
-  const free = p.arms[rifle === 'left' ? 1 : 0];
-  set(free, 0.02 + salute * 2.0, 0.07 + salute * 0.45, 0.12 + salute * 2.0);
-  p.headPitch = salute * 0.05;
-}
-
-/** A dance for the rooftop hologram, on a two-beats-a-second groove. */
-export function dancePose(p: Pose, t: number) {
-  const b = t * Math.PI * 2;
-  const beat = Math.pow(1 - ((t * 2) % 1), 3);
-  p.bob = -beat * 0.05;
-  p.lean = 0.05 + beat * 0.06;
-  p.twist = Math.sin(b * 0.5) * 0.35;
-  p.side = Math.sin(b * 0.5) * 0.06;
-  set(p.arms[0], 2.4 + Math.sin(b) * 0.4, 0.4, 0.4);
-  set(p.arms[1], 2.4 - Math.sin(b) * 0.4, 0.4, 0.4);
-  set(p.legs[0], 0.1 + Math.max(0, Math.sin(b)) * 0.4, 0.12, 0.25 + beat * 0.3 + Math.max(0, Math.sin(b)) * 0.6);
-  set(p.legs[1], 0.1 + Math.max(0, -Math.sin(b)) * 0.4, 0.12, 0.25 + beat * 0.3 + Math.max(0, -Math.sin(b)) * 0.6);
-  p.headPitch = -beat * 0.15;
-  p.headYaw = Math.sin(b * 0.5) * 0.2;
-}
-
-/** Multiplayer emotes (ids from EMOTES in profile-data.ts); `t` is seconds since it started */
-export function emotePose(p: Pose, id: string, t: number) {
-  if (id === 'dance') return dancePose(p, t);
-  if (id === 'salute') return attentionPose(p, Math.min(1, t * 4), 'right');
-  idlePose(p, t);
-  if (id === 'wave') {
-    set(p.arms[0], 2.55, 0.3 + Math.sin(t * 10) * 0.28, 0.55);
-    p.headPitch = -0.08;
-  } else if (id === 'cheer') {
-    const hop = Math.abs(Math.sin(t * 7));
-    p.bob = hop * 0.04;
-    set(p.arms[0], 2.75, 0.32, 0.25 + hop * 0.3);
-    set(p.arms[1], 2.75, 0.32, 0.25 + hop * 0.3);
-    p.headPitch = -0.15;
-  }
-}
+export { walkPose, idlePose, lookPose, chatPose, sitPose, airPose, marchPose, attentionPose, dancePose, emotePose } from './poses';
 
 /** A player's wardrobe choices as a Degen outfit */
 export function lookOutfit(l: Look): Outfit {
@@ -771,8 +532,9 @@ function items(q: Detail, hero = false): Item[] {
   const hatPatch = (patch: THREE.BufferGeometry, logo: THREE.BufferGeometry): Piece[] =>
     hero ? [P('head', patch, PATCH), P('head', logo, 'ink', { mat: 'logo', logo: 'hat' })] : [P('head', patch, '#ffffff', { mat: 'patch', detail: true })];
   /** The skinned body's hands, fingers and all, each vertex weighted to its bones */
+  // (far off, a crowd person's hands are the simple block: fingers are wasted at a few pixels)
   const fingers = (color: string): Piece[] =>
-    ([-1, 1] as const).flatMap((s) => handParts(s, R(9)).map(({ geo, skin }) => P(s < 0 ? 'handL' : 'handR', geo, color, { skin })));
+    far ? both('wrist', one(hand), color) : ([-1, 1] as const).flatMap((s) => handParts(s, R(9)).map(({ geo, skin }) => P(s < 0 ? 'handL' : 'handR', geo, color, { skin })));
 
   const suit = (o: Outfit) => o.kind === 'suit';
   const hoodie = (o: Outfit) => o.kind === 'hoodie';
@@ -2146,7 +1908,7 @@ function colorOf(p: Piece, o: Outfit, out = new THREE.Color()) {
   return p.shade ? out.multiplyScalar(p.shade) : out;
 }
 /** An outfit's colour for a key (the lenses are green as in the art when an outfit doesn't say) */
-const outfitColor = (o: Outfit, k: ColorKey) => (o[k] as string | undefined) ?? (k === 'lens' ? '#22d07a' : '#ff00ff');
+const outfitColor = (o: Outfit, k: ColorKey) => (o[k] as string | undefined) ?? (k === 'lens' ? '#22d07a' : k === 'ink' ? '#16c7b5' : '#ff00ff');
 
 /* ---------- Materials ---------- */
 
@@ -2505,8 +2267,12 @@ export function createDegen(o: Outfit = PLAYER, q: Detail = 2): Degen {
 /* ---------- A crowd ---------- */
 
 export interface Crowd {
-  /** Pose figure `i` standing at (x, y, z) facing `yaw` (0 = +z) */
-  set(i: number, x: number, y: number, z: number, yaw: number, scale: number, pose: Pose): void;
+  /**
+   * Figure `i` standing at (x, y, z) facing `yaw` (0 = +z), `u` (0..1) of
+   * the way through one of the baked clips (crowdclips.ts): `crowdFrame()`
+   * picks the rows, the GPU does the rest
+   */
+  set(i: number, x: number, y: number, z: number, yaw: number, scale: number, clip: CrowdClip, u: number): void;
   /** Call once a frame after setting everyone */
   commit(): void;
   meshes: THREE.InstancedMesh[];
@@ -2522,15 +2288,60 @@ const CROWD_NEAR = 12;
 const CROWD_NEAR_LIGHT = 8;
 const CROWD_FAR = 170;
 
-/** Merged pieces shared between crowds (and between left and right limbs) */
-const crowdGeo = new Map<string, THREE.BufferGeometry>();
+/** Each crowd part's skinned geometry at rest, shared between crowds (each mesh adds its own per-person rows) */
+const crowdBase = new Map<string, THREE.BufferGeometry>();
+/** The crowd's version of each material (skinned on the GPU) */
+const crowdMats = new Map<string, THREE.Material>();
+function crowdMaterial(m: Mat | undefined) {
+  const key = m ?? '';
+  let c = crowdMats.get(key);
+  if (!c) {
+    c = crowdVersion(material(m), key);
+    // (the lenses and neon follow the time of day like everyone's)
+    if (m === 'lens') lit(c, 0.12, 0.7);
+    if (m === 'neon') lit(c, 1, 1.8);
+    crowdMats.set(key, c);
+  }
+  return c;
+}
+/** The bone a rig frame hangs from (things held in a hand ride that hand's bone, unbent) */
+function boneOf(o: THREE.Object3D | null): BoneName {
+  while (o && !(o as THREE.Bone).isBone) o = o.parent;
+  return (o?.name ?? 'hips') as BoneName;
+}
+/**
+ * One crowd part (an item's pieces of one colour and material) skinned at
+ * rest, its bones and weights renamed for the crowd's shader, coloured per
+ * vertex (a fixed colour, or the shade a person's own colour is multiplied by)
+ */
+function crowdGeometry(list: Piece[], held: boolean, sk: Skeleton) {
+  const fixed = list[0].color.startsWith('#');
+  const parts = list.map((src) => {
+    let p = src;
+    if (p.logo) p = { ...p, geo: atlasUV(p.geo, 'diamond') };
+    if (held || ((p.joint === 'handL' || p.joint === 'handR') && !p.skin)) p = { ...p, bone: boneOf(sk.j[p.joint]) };
+    const g = skinPiece(p, sk.j[p.joint].matrixWorld, fixed ? new THREE.Color(p.color) : new THREE.Color().setScalar(p.shade ?? 1));
+    if (src.logo) p.geo.dispose();
+    const idx = g.attributes.skinIndex as THREE.BufferAttribute;
+    g.setAttribute('crowdIdx', new THREE.Float32BufferAttribute(Float32Array.from(idx.array as Uint16Array), 4));
+    g.setAttribute('crowdWt', g.attributes.skinWeight);
+    g.setAttribute('crowdOn', new THREE.Float32BufferAttribute(new Float32Array(idx.count).fill(1), 1));
+    g.deleteAttribute('skinIndex');
+    g.deleteAttribute('skinWeight');
+    return g;
+  });
+  const geo = mergeGeometries(parts)!;
+  for (const g of parts) g.dispose();
+  return geo;
+}
 
-interface Group {
-  geo: THREE.BufferGeometry;
+interface Part {
+  mesh: THREE.InstancedMesh;
+  /** Each person's rows and blend */
+  anim: THREE.InstancedBufferAttribute;
+  /** The outfit colour it takes ('#': a fixed colour) */
   key: string;
-  mat?: Mat;
-  uses: { joint: Joint; item: Item }[];
-  mesh?: THREE.InstancedMesh;
+  lens: boolean;
   /** Instances used so far this frame, and who has each one (to repaint only when it changes hands) */
   n: number;
   owner: Int32Array;
@@ -2538,69 +2349,63 @@ interface Group {
 }
 
 /**
- * Many figures as instanced pieces, at two detail levels: near the camera
- * the crowd's own (`Detail` 1, without the small details on phones), further
- * away the far one (0). An item's pieces on one joint merge into one
- * geometry per outfit colour (lapels are the jacket's colour, shaded per
- * vertex) and left and right limbs share it. Each frame every figure in view
- * takes instances of only what it wears, at its level, so a crowd costs a
- * draw call per kind of piece and nothing for clothes nobody has on, people
- * out of view or the level they're not at.
+ * Many figures, each the skinned body (the new head, hands and shoes) at a
+ * crowd's detail, drawn instanced and skinned on the GPU from the baked
+ * clips (crowdclips.ts, crowdskin.ts), at two levels: near the camera the
+ * crowd's own (`Detail` 1, without the small details on phones), further
+ * away the far one (0). An item's pieces of one colour make one part, drawn
+ * for everyone wearing it; each frame every figure in view takes an
+ * instance of only what it wears, at its level, with its clip's rows. So a
+ * crowd costs a draw call per kind of part, and the CPU only works out
+ * where each person is and which frame they're on.
  */
 export function createCrowd(parent: THREE.Object3D, outfits: Outfit[], opts: { light?: boolean } = {}): Crowd {
-  const rig = makeRig();
+  crowdTexture();
+  const sk = makeSkeleton();
+  sk.root.updateMatrixWorld(true);
   const near = opts.light ? CROWD_NEAR_LIGHT : CROWD_NEAR;
   const meshes: THREE.InstancedMesh[] = [];
-  // Per level, each figure's pieces: [group, joint]
   const levels = ([1, 0] as Detail[]).map((q) => {
     const details = q === 1 && !opts.light;
-    const groups = new Map<string, Group>();
-    for (const it of items(q)) {
-      if (!outfits.some(it.when)) continue;
+    const parts: Part[] = [];
+    const wear: Part[][] = outfits.map(() => []);
+    for (const it of items(q, true)) {
+      const who = outfits.flatMap((o, i) => (it.when(o) ? [i] : []));
+      if (!who.length) continue;
       const sub = new Map<string, Piece[]>();
       for (const p of it.pieces) {
         if (!details && p.detail) continue;
-        const k = `${p.joint}|${p.color.startsWith('#') ? '#' : p.color}|${p.mat ?? ''}`;
+        const k = `${p.color.startsWith('#') ? '#' : p.color}|${p.mat ?? ''}`;
         if (!sub.has(k)) sub.set(k, []);
         sub.get(k)!.push(p);
       }
-      for (const list of sub.values()) {
-        const fixed = list[0].color.startsWith('#');
-        const id = `${q}|` + list.map((p) => `${p.geo.uuid}:${fixed ? p.color : (p.shade ?? 1)}`).join(',');
-        let geo = crowdGeo.get(id);
-        if (!geo) {
-          geo = paintMerge(list.map((p) => ({ geo: p.geo, color: fixed ? new THREE.Color(p.color) : new THREE.Color().setScalar(p.shade ?? 1) })));
-          crowdGeo.set(id, geo);
-        }
-        const gk = `${geo.uuid}|${fixed ? '#' : list[0].color}|${list[0].mat ?? ''}`;
-        if (!groups.has(gk)) groups.set(gk, { geo, key: fixed ? '#' : list[0].color, mat: list[0].mat, uses: [], n: 0, owner: new Int32Array(0), painted: false });
-        groups.get(gk)!.uses.push({ joint: list[0].joint, item: it });
+      for (const [k, list] of sub) {
+        const id = `${q}|${details}|${it.id}|${k}`;
+        let base = crowdBase.get(id);
+        if (!base) crowdBase.set(id, (base = crowdGeometry(list, !!it.held, sk)));
+        // The shared shape, and this mesh's own rows for its people
+        const geo = new THREE.BufferGeometry();
+        for (const [name, attr] of Object.entries(base.attributes)) geo.setAttribute(name, attr);
+        const anim = new THREE.InstancedBufferAttribute(new Float32Array(who.length * 3), 3);
+        anim.setUsage(THREE.DynamicDrawUsage);
+        geo.setAttribute('crowdAnim', anim);
+        const mat = list[0].mat;
+        const m = new THREE.InstancedMesh(geo, crowdMaterial(mat), who.length);
+        m.customDepthMaterial = crowdDepth();
+        m.castShadow = true;
+        m.frustumCulled = false;
+        m.count = 0;
+        m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+        m.setColorAt(0, tmp.set('#ffffff'));
+        m.instanceColor!.setUsage(THREE.DynamicDrawUsage);
+        parent.add(m);
+        meshes.push(m);
+        const part: Part = { mesh: m, anim, key: k.split('|')[0], lens: mat === 'lens', n: 0, owner: new Int32Array(who.length).fill(-1), painted: false };
+        parts.push(part);
+        for (const i of who) wear[i].push(part);
       }
     }
-    const wear: [Group, Joint][][] = outfits.map(() => []);
-    for (const g of groups.values()) {
-      let count = 0;
-      outfits.forEach((o, i) =>
-        g.uses.forEach((u) => {
-          if (!u.item.when(o)) return;
-          wear[i].push([g, u.joint]);
-          count++;
-        })
-      );
-      if (!count) continue;
-      const m = new THREE.InstancedMesh(g.geo, material(g.mat), count);
-      m.castShadow = true;
-      m.frustumCulled = false;
-      m.count = 0;
-      m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-      m.setColorAt(0, tmp.set('#ffffff'));
-      m.instanceColor!.setUsage(THREE.DynamicDrawUsage);
-      g.mesh = m;
-      g.owner = new Int32Array(count).fill(-1);
-      parent.add(m);
-      meshes.push(m);
-    }
-    return { groups: [...groups.values()].filter((g) => g.mesh), wear };
+    return { parts, wear };
   });
   // Each figure's colour per outfit key, worked out once
   const colors = outfits.map((o) => {
@@ -2610,9 +2415,15 @@ export function createCrowd(parent: THREE.Object3D, outfits: Outfit[], opts: { l
   });
   const at = new THREE.Vector3();
   const ball = new THREE.Sphere(at, 0);
+  const m4 = new THREE.Matrix4();
+  const pos = new THREE.Vector3();
+  const quat = new THREE.Quaternion();
+  const scl = new THREE.Vector3();
+  const UP = new THREE.Vector3(0, 1, 0);
+  const frame: [number, number, number] = [0, 0, 0];
   return {
     meshes,
-    set(i, x, y, z, yaw, scale, pose) {
+    set(i, x, y, z, yaw, scale, clip, u) {
       const o = outfits[i];
       // Which level, if any: out of view or very far, nothing is drawn
       let level = levels[0];
@@ -2623,28 +2434,27 @@ export function createCrowd(parent: THREE.Object3D, outfits: Outfit[], opts: { l
         if (d > CROWD_FAR || !CROWD_VIEW.frustum.intersectsSphere(ball)) return;
         if (d > near) level = levels[1];
       }
-      rig.root.position.set(x, y, z);
-      rig.root.rotation.set(0, yaw, 0);
-      rig.root.scale.set(scale * (o.build ?? 1), scale * (o.height ?? 1), scale * (o.build ?? 1));
-      applyPose(rig, pose);
-      rig.root.updateMatrixWorld(true);
-      for (const [g, j] of level.wear[i]) {
+      m4.compose(pos.set(x, y, z), quat.setFromAxisAngle(UP, yaw), scl.set(scale * (o.build ?? 1), scale * (o.height ?? 1), scale * (o.build ?? 1)));
+      crowdFrame(clip, u, frame);
+      for (const g of level.wear[i]) {
         const k = g.n++;
-        g.mesh!.setMatrixAt(k, rig.j[j].matrixWorld);
+        g.mesh.setMatrixAt(k, m4);
+        g.anim.setXYZ(k, frame[0], frame[1], frame[2]);
         if (g.owner[k] !== i) {
           g.owner[k] = i;
-          g.mesh!.setColorAt(k, g.mat === 'lens' ? colors[i]['#'] : colors[i][g.key]);
+          g.mesh.setColorAt(k, g.lens ? colors[i]['#'] : colors[i][g.key]);
           g.painted = true;
         }
       }
     },
     commit() {
       for (const l of levels)
-        for (const g of l.groups) {
-          const m = g.mesh!;
+        for (const g of l.parts) {
+          const m = g.mesh;
           m.count = g.n;
           m.visible = g.n > 0;
           m.instanceMatrix.needsUpdate = true;
+          g.anim.needsUpdate = true;
           if (g.painted) m.instanceColor!.needsUpdate = true;
           g.painted = false;
           g.n = 0;

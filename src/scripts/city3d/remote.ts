@@ -6,7 +6,8 @@
  * shows emote and phrase bubbles.
  */
 import * as THREE from 'three';
-import { airPose, createDegen, emotePose, lookOutfit, walkPose, type Degen } from './character';
+import { createDegen, emotePose, lookOutfit, type Degen } from './character';
+import { copyLeg, copyPose, createLocomotion, placeRoot, type Locomotion } from './locomotion';
 import { buildGun, gunSpec, type Gun } from './guns';
 import { holdGun, newStance, type Stance } from './stance';
 import { WEAPONS } from './combat-sim';
@@ -38,7 +39,9 @@ interface Remote {
   samples: Sample[];
   /** Last time this player was in a snapshot (local seconds) */
   seenAt: number;
-  phase: number;
+  /** Their walk and run with planted feet, from where they're drawn each frame (and where that was last frame) */
+  loco: Locomotion;
+  last: { x: number; z: number } | null;
   aim: number;
   air: number;
   reload: number;
@@ -116,7 +119,8 @@ export function createRemotes(scene: THREE.Scene, camera: THREE.PerspectiveCamer
         stance: newStance(),
         samples: [],
         seenAt: 0,
-        phase: Math.random() * 6,
+        loco: createLocomotion(),
+        last: null,
         aim: 0,
         air: 0,
         reload: 0,
@@ -230,16 +234,22 @@ export function createRemotes(scene: THREE.Scene, camera: THREE.PerspectiveCamer
         const flags = k < 0.5 ? a.flags : b.flags;
         const armed = (flags & FLAG.armed) !== 0;
 
-        // Pose: walk / run, air, gun, emote
+        // Pose: their walk or run with planted feet (locomotion.ts, from how they're moving as drawn), the gun, an emote
         const P = r.fig.pose;
-        r.phase += dt * speed * 3.1;
         const run = THREE.MathUtils.clamp((speed - 2.4) / 3, 0, 1);
-        walkPose(P, r.phase, Math.min(1, speed / 2.4), run);
-        if (speed < 0.2) P.bob += Math.sin(t * 1.6 + r.info.id) * 0.004;
+        const vx = r.last && dt > 0 ? (x - r.last.x) / dt : 0;
+        const vz = r.last && dt > 0 ? (z - r.last.z) / dt : 0;
+        r.last = { x, z };
+        const air = (flags & FLAG.air) !== 0;
+        r.loco.update({ dt, t, x, y, z, vx, vz, face, grounded: !air, vy: 0, scale: SCALE, ground: () => y, armed });
+        copyPose(r.loco.pose, P);
         if (r.emote) {
           r.emote.t += dt;
           if (r.emote.t > 3 || speed > 0.6) r.emote = null;
-          else emotePose(P, r.emote.id, r.emote.t);
+          else {
+            emotePose(P, r.emote.id, r.emote.t);
+            if (r.emote.id !== 'dance') for (let i = 0; i < 2; i++) copyLeg(r.loco.pose.legs[i], P.legs[i]);
+          }
         }
         r.aim += (((flags & (FLAG.aim | FLAG.fire)) !== 0 ? 1 : 0) - r.aim) * Math.min(1, dt * 14);
         r.reload = flags & FLAG.reload ? (r.reload + dt / WEAPONS[r.gun.id].reload) % 1 : 0;
@@ -247,15 +257,13 @@ export function createRemotes(scene: THREE.Scene, camera: THREE.PerspectiveCamer
         r.draw = THREE.MathUtils.clamp(r.draw + (armed ? dt : -dt) / 0.45, 0, 1);
         r.pivot.visible = r.draw > 0;
         if (r.fig.held) r.fig.held.visible = !r.pivot.visible;
-        r.air += (((flags & FLAG.air) !== 0 ? 1 : 0) - r.air) * Math.min(1, dt * 12);
-        airPose(P, r.air);
+        r.air += ((air ? 1 : 0) - r.air) * Math.min(1, dt * 12);
         // Hands on the gun last, so walking and jumping don't pull them off it
         if (r.draw > 0 && !r.emote) holdGun(P, r.stance, r.pivot, r.gun, { aim: r.aim, ready: 1 - run, draw: r.draw, pitch, recoil: 0, reload: r.reload, dt });
         P.headPitch = THREE.MathUtils.clamp((0.35 - pitch) * 0.6, -0.45, 0.55);
         P.headYaw = 0;
         r.fig.update();
-        r.fig.g.position.set(x, y, z);
-        r.fig.g.rotation.set(0, face, 0);
+        placeRoot(r.fig.g, x, y, z, face, SCALE, r.loco.root);
 
         // Name tag over the head (hidden far away or behind the camera)
         r.bubbleT -= dt;

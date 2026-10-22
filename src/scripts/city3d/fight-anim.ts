@@ -41,7 +41,7 @@
  *   yaw) and crossfades with `blendPose()` into the guard or over the walk
  *   cycle (the legs keep walking under a punch thrown on the move).
  *
- * The rig's numbers (applyPose in character.ts): an arm's `fwd` swings the
+ * The rig's numbers (poseSkeleton() in skeleton.ts): an arm's `fwd` swings the
  * upper arm forward from hanging (PI/2 is straight ahead), `out` spreads it
  * from the body, `bend` folds the forearm forward and up; a leg's `fwd`
  * raises the thigh forward, `bend` folds the shin back. Positive `lean` tips
