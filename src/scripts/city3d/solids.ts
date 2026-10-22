@@ -17,6 +17,7 @@ import { AIRPORT_SOLIDS } from './airfield';
 import { LIBERTY_SOLIDS } from './liberty';
 import { BAGS, BLEACHERS, COUNTER, LOCKERS, POSTS, POST_R, SHED, SIGN } from './fightsite';
 import type { LotKind, UnitKind } from './tycoon';
+import { BoxGrid } from './boxgrid';
 
 /** x0, z0, x1, z1, height */
 export type Box = [number, number, number, number, number];
@@ -284,6 +285,13 @@ export const CAMERA_ONLY: Box[] = [
   [11.9, 11.9, 17.5, 17.5, 12.6], // the Emporium's glass tower
 ].map((b) => designBox(b as Box));
 
+/** The same boxes sorted into the collision grid (boxgrid.ts): a check looks only at those near it */
+export const SOLID_GRID = new BoxGrid(SOLIDS);
+/** What the walk camera bumps into */
+export const CAMERA_GRID = new BoxGrid([...SOLIDS, ...CAMERA_ONLY]);
+/** What bullets stop on */
+const SHOT_GRID = new BoxGrid([...SHOT_SOLIDS, ...CAMERA_ONLY]);
+
 /**
  * Distance along a ray to the first solid box or the ground (y 0.1), up to
  * `max`. Boxes the ray starts inside or very near (the shooter's own
@@ -294,7 +302,8 @@ export function rayBoxes(from: { x: number; y: number; z: number }, dir: { x: nu
   if (dir.y < 0) t = Math.min(t, (from.y - 0.1) / -dir.y);
   const o = [from.x, from.y, from.z];
   const v = [dir.x, dir.y, dir.z];
-  for (const list of [SHOT_SOLIDS, CAMERA_ONLY, extra]) {
+  // Only the boxes under the ray's path can stop it
+  for (const list of [SHOT_GRID.alongRay(from, dir, t), extra]) {
     for (const b of list) {
       if (b[4] < 0.3) continue;
       const lo = [b[0], 0, b[1]];

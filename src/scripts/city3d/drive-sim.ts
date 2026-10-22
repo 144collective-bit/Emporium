@@ -78,6 +78,13 @@ export interface DriveWorld {
   soft: { x: number; z: number; r: number }[];
 }
 
+/**
+ * How far round a car the solid boxes need gathering for a step (the collision
+ * grid's `near()`): its length, how far it goes and a push or two. The tests
+ * check a step with only these boxes ends exactly where it would with all.
+ */
+export const reachOf = (c: { speed: number }) => 8 + Math.abs(c.speed) * 0.05;
+
 export const newCar = (x: number, z: number, yaw: number): CarState => ({ x, z, yaw, speed: 0, vx: 0, vz: 0, steer: 0, yawRate: 0 });
 
 /** The river is a wall except where the bridges cross it */

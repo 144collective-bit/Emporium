@@ -2282,7 +2282,14 @@ export interface Crowd {
  * Where the camera is and what it sees, for every crowd: the city sets it
  * each frame (`view()` in index.ts). Until it's set, everyone is near.
  */
-export const CROWD_VIEW = { eye: new THREE.Vector3(), frustum: new THREE.Frustum(), on: false };
+export const CROWD_VIEW = {
+  eye: new THREE.Vector3(),
+  frustum: new THREE.Frustum(),
+  on: false,
+  /** The sun's shadow box this frame (`shadowOn` while shadows are drawn): moving things outside it stay out of the shadow map */
+  shadow: new THREE.Frustum(),
+  shadowOn: false,
+};
 /** People nearer the camera than this get the crowd's detail, the rest the far one (and past `CROWD_FAR` nobody is drawn) */
 const CROWD_NEAR = 12;
 const CROWD_NEAR_LIGHT = 8;
@@ -2342,10 +2349,18 @@ interface Part {
   /** The outfit colour it takes ('#': a fixed colour) */
   key: string;
   lens: boolean;
-  /** Instances used so far this frame, and who has each one (to repaint only when it changes hands) */
+  /**
+   * Instances used so far this frame: from the front for people in the sun's shadow box (`n`), from the
+   * back for the rest (`back`, moved up behind them at commit), so the shadow map draws only the front
+   * ones. Who has each one (to repaint only when it changes hands).
+   */
   n: number;
+  back: number;
   owner: Int32Array;
   painted: boolean;
+  /** How many the camera's passes draw, and the shadow map */
+  view: number;
+  shadow: number;
 }
 
 /**
@@ -2400,7 +2415,10 @@ export function createCrowd(parent: THREE.Object3D, outfits: Outfit[], opts: { l
         m.instanceColor!.setUsage(THREE.DynamicDrawUsage);
         parent.add(m);
         meshes.push(m);
-        const part: Part = { mesh: m, anim, key: k.split('|')[0], lens: mat === 'lens', n: 0, owner: new Int32Array(who.length).fill(-1), painted: false };
+        const part: Part = { mesh: m, anim, key: k.split('|')[0], lens: mat === 'lens', n: 0, back: 0, owner: new Int32Array(who.length).fill(-1), painted: false, view: 0, shadow: 0 };
+        // The shadow map draws only the people in the sun's shadow box (the front ones), the camera everyone in view
+        m.onBeforeShadow = () => void (m.count = part.shadow);
+        m.onBeforeRender = () => void (m.count = part.view);
         parts.push(part);
         for (const i of who) wear[i].push(part);
       }
@@ -2427,17 +2445,20 @@ export function createCrowd(parent: THREE.Object3D, outfits: Outfit[], opts: { l
       const o = outfits[i];
       // Which level, if any: out of view or very far, nothing is drawn
       let level = levels[0];
+      let shadow = true;
       if (CROWD_VIEW.on) {
         at.set(x, y + 0.6 * scale, z).applyMatrix4(parent.matrixWorld);
         ball.radius = 1.6 * scale;
         const d = at.distanceTo(CROWD_VIEW.eye);
         if (d > CROWD_FAR || !CROWD_VIEW.frustum.intersectsSphere(ball)) return;
         if (d > near) level = levels[1];
+        // Out of the sun's shadow box, they cast nothing it can see
+        shadow = !CROWD_VIEW.shadowOn || CROWD_VIEW.shadow.intersectsSphere(ball);
       }
       m4.compose(pos.set(x, y, z), quat.setFromAxisAngle(UP, yaw), scl.set(scale * (o.build ?? 1), scale * (o.height ?? 1), scale * (o.build ?? 1)));
       crowdFrame(clip, u, frame);
       for (const g of level.wear[i]) {
-        const k = g.n++;
+        const k = shadow ? g.n++ : g.owner.length - 1 - g.back++;
         g.mesh.setMatrixAt(k, m4);
         g.anim.setXYZ(k, frame[0], frame[1], frame[2]);
         if (g.owner[k] !== i) {
@@ -2451,16 +2472,36 @@ export function createCrowd(parent: THREE.Object3D, outfits: Outfit[], opts: { l
       for (const l of levels)
         for (const g of l.parts) {
           const m = g.mesh;
-          m.count = g.n;
-          m.visible = g.n > 0;
+          // The ones out of the shadow box, from the back up behind the rest: only those not already in place
+          // fill the gap (where the two ends meet, some already are)
+          const cap = g.owner.length;
+          const gap = Math.min(g.n + g.back, cap - g.back);
+          const from = Math.max(cap - g.back, g.n + g.back);
+          for (let j = 0; j < gap - g.n; j++) moveInstance(g, from + j, g.n + j);
+          g.shadow = g.n;
+          g.view = m.count = g.n + g.back;
+          m.visible = m.count > 0;
           m.instanceMatrix.needsUpdate = true;
           g.anim.needsUpdate = true;
           if (g.painted) m.instanceColor!.needsUpdate = true;
           g.painted = false;
-          g.n = 0;
+          g.n = g.back = 0;
         }
     },
   };
+}
+
+/** One crowd instance from slot `from` to slot `to` (its matrix, clip rows and colour) */
+function moveInstance(g: Part, from: number, to: number) {
+  if (from === to) return;
+  const m = g.mesh;
+  m.instanceMatrix.array.copyWithin(to * 16, from * 16, from * 16 + 16);
+  g.anim.array.copyWithin(to * 3, from * 3, from * 3 + 3);
+  if (g.owner[to] !== g.owner[from]) {
+    m.instanceColor!.array.copyWithin(to * 3, from * 3, from * 3 + 3);
+    g.owner[to] = g.owner[from];
+    g.painted = true;
+  }
 }
 
 /* ---------- A varied city crowd ---------- */

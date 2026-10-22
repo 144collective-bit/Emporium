@@ -262,34 +262,86 @@ their own rows as the owner runs `?bench` on them.
   - The route peaks at 869 draws on the medium tier and 602 on the phone
     tier, both over the targets.
 
-## Phase 1: tiles and the collision grid (nothing new to see)
+## Phase 1: tiles and the collision grid (built)
 
-- **`tiles.ts`** (DOM-free, tested):
-  - the tile grid over `EXT`;
-  - the tile a point is in;
-  - the tiles near a point;
-  - the tiles inside a view (a frustum against each tile's box, with a
-    height for its tallest building).
-- **The collision grid** over `SOLIDS` and the plots', units' and lots'
-  solids:
-  - used by walking, driving, the kart, flying (`HULLS`), bullets and the
-    server;
-  - placed buildings update their cells when they change;
-  - the tests check it answers exactly as the one-by-one check does, over
-    thousands of random points and moves.
-- **Static geometry merged per tile instead of per district:**
-  - `Batch` learns to split by tile;
-  - `consolidate()` merges per landmark per tile;
-  - frustum culling is on for the tile meshes.
-- **The long meshes cut into tiles too:** the ground, the river, the
-  straight roads and their markings, the kerbs, and the instanced trees and
-  lamps (one instanced mesh per tile and kind, or a tile range inside one
-  instanced mesh).
-- **Shadows:** only tiles inside the sun's shadow box are drawn into the
-  shadow map.
-- **Done when** the city looks the same and the benchmark shows fewer
-  triangles (in the colour pass and the shadow map) and no more draw calls
-  than today.
+Nothing new to see; the city draws less of itself.
+
+- **`tiles.ts`** (DOM-free, tested in `tests/tiles.test.ts`):
+  - the tile grid, `TILE` 30 (about 54 m; the sun's shadow box, 60 across,
+    covers four to nine of them; smaller than the 60 first planned, so the
+    culling is finer);
+  - the tile a point is in, the tiles near a point, and the tiles in a view
+    (the same test three.js makes, checked against it).
+- **The collision grid** (`boxgrid.ts`, tested in `tests/boxgrid.test.ts`):
+  - `BoxGrid` sorts boxes into cells of 8; a query gives every box touching
+    an area, in the list's own order, so the caller's own test gives the
+    same answer as before;
+  - used by walking (`SOLID_GRID`), the walk camera (`CAMERA_GRID`),
+    bullets (`rayBoxes()`, the game server too), and driving and flying (the
+    boxes within `reachOf()` / `flyReach()` of the vehicle);
+  - the tests hold every check to exactly the one-by-one answer over
+    thousands of random points and rays, and run cars (the fastest one) and
+    all three aircraft through hundreds of steps with only the near boxes,
+    ending every step exactly where they would with all of them;
+  - placed buildings, units and lots stay a short list checked as before
+    (there are few of them).
+- **The city's fixed geometry merged per tile** (`tilebatch.ts`,
+  `tileBatch()`):
+  - every Batch built straight onto the scene, and the airport's and kart
+    park's, is split by the tile each triangle's middle is in, and each
+    tile's share becomes one piece of a `BatchedMesh` per material;
+  - so it's still one draw call per material (fewer than before, since the
+    airport's and kart park's Batches join the rest), but three.js draws
+    only the pieces in view, and in the shadow map only those in the sun's
+    shadow box;
+  - the trees, lamps and road markings were instanced across the whole map
+    (never culled); they go through a Batch now (`Batch.instances()`) and
+    are split by tile with the rest;
+  - the landmarks keep their own merged meshes (they lift on hover);
+  - the long road and river meshes aren't cut: they're a few triangles, and
+    a piece too big for one tile is simply drawn whenever it's in view.
+- **Moving things culled for the shadow map:**
+  - the crowds and the traffic were drawn into the shadow map wherever they
+    were in view; now the people and cars in the sun's shadow box take the
+    front instances, the rest the back, and the shadow map draws only the
+    front ones (`CROWD_VIEW.shadow`, from `sky.shadowFrustum()`);
+  - the traffic was drawn whole every pass (frustum culling off); now only
+    the cars in view are drawn.
+- **The readout** (`?fps`) shows how many tile pieces were drawn.
+
+### Benchmark after Phase 1
+
+Headless again (draws and triangles only; shadow draws and triangles are
+part of the totals). Phase 0's numbers, then Phase 1's:
+
+| View | Medium tier: draws | Medium tier: triangles | Phone tier: draws | Phone tier: triangles |
+| --- | --- | --- | --- | --- |
+| Home view | 546 → 517 | 1.14M → 0.81M | 295 → 276 | 0.40M → 0.32M |
+| Downtown, street level | 637 → 571 | 1.40M → 0.97M | 269 → 255 | 0.37M → 0.27M |
+| The square and the Emporium | 483 → 431 | 0.99M → 0.58M | 247 → 236 | 0.38M → 0.29M |
+| Every district (Build overview) | 674 → 639 | 1.45M → 1.12M | 348 → 335 | 0.51M → 0.42M |
+| The airport | 263 → 205 | 1.13M → 0.61M | 161 → 137 | 0.52M → 0.41M |
+| The kart park | 142 → 79 | 0.62M → 0.14M | 109 → 85 | 0.29M → 0.18M |
+| The far edge, looking back | 760 → 726 | 1.19M → 1.03M | 564 → 554 | 0.66M → 0.60M |
+| Route, average | 522 → 493 | 1.11M → 0.75M | 281 → 234 | 0.45M → 0.33M |
+| Route, most | 869 → 808 | 1.76M → 1.46M | 602 → 583 | 0.86M → 0.78M |
+
+- **The shadow map** on the medium tier: 0.38M triangles at the home view
+  down to 0.25M, and 0.21M at the kart park down to 0.04M.
+- **Walking downtown** (medium tier): about 384 draws and 0.60M triangles,
+  from about 440 and 1.2M.
+- **Memory:** geometry 27 MB → 35 MB on the medium tier (the trees, lamps
+  and markings are now real geometry, not instances). Textures unchanged.
+- **Boot:** the same within the noise (building the scene about 8.5 s on
+  the medium tier and 4-6 s on the phone tier headless, before and after).
+  Compiling shaders takes about 0.3 s longer for the batched versions.
+- **Still over the targets:** the far edge and the Build overview, where
+  the whole city is in view at once (554 draws on the phone tier). Tiles
+  can't help there; that's Phase 2's far forms.
+- **To check on real devices:** `BatchedMesh` draws with one call where
+  the browser has `WEBGL_multi_draw` (Chrome, Edge, Firefox; Safari's
+  newer versions). Where it doesn't, three.js draws each piece on its own
+  and `?fps` shows more draws: worth a look on an iPhone.
 
 ## Phase 2: near and far buildings
 

@@ -144,6 +144,9 @@ export interface FlyWorld {
   ground(x: number, z: number): number;
 }
 
+/** How far round an aircraft the solid boxes need gathering for a step: its hull's reach (a wing or the tail), how far it goes and a push */
+export const flyReach = (s: { speed: number }) => 14 + Math.abs(s.speed) * 0.05;
+
 export const newFlight = (x: number, z: number, yaw: number, y = 0): FlyState => ({
   x,
   y,

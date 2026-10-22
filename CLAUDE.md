@@ -165,7 +165,7 @@ it and has been retired completely. Build only on what's here.
   - The skyline ring stands just past `EXT`, kept out of the haze (`fog = false`) so it reads as a far metropolis.
   - The sky dome and stars travel with the camera at 400, inside its far plane (440), so everything in the world stays in front of the sky.
   - City view can pan anywhere inside the bounds.
-  - **Growing the city** (many more buildings, then a bigger world) is planned in `docs/growth-plan.md`. Part A (Phases 0-4) makes size cheap: the measuring kit and a snapshot test that nothing moves, tiles and a collision grid, near and far building forms, building as you go, building kits. Part B (Phases 5-10) grows the world: the edge as data (the airport's site frozen, trees per tile), `EXT` out to about 880 across, roads to reach it (a ring highway, more bridges, traffic spent near you), getting about (a world map, waypoints, and the owner's pick of metro, taxis or fast travel), districts one at a time, then optionally about 1,400 across. Not built yet; follow it one phase at a time with the owner's sign-off, and never add buildings in bulk the way the city is merged today (every merged district is drawn all the time).
+  - **Growing the city** (many more buildings, then a bigger world) is planned in `docs/growth-plan.md`. Part A (Phases 0-4) makes size cheap: the measuring kit and a snapshot test that nothing moves, tiles and a collision grid, near and far building forms, building as you go, building kits. Part B (Phases 5-10) grows the world: the edge as data (the airport's site frozen, trees per tile), `EXT` out to about 880 across, roads to reach it (a ring highway, more bridges, traffic spent near you), getting about (a world map, waypoints, and the owner's pick of metro, taxis or fast travel), districts one at a time, then optionally about 1,400 across. Phases 0 (the measuring kit) and 1 (tiles, the collision grid, the city's fixed geometry merged per tile, crowds and traffic culled for the shadow map) are built; follow the rest one phase at a time with the owner's sign-off, and never add buildings in bulk outside the tiles (`tileBatch()`).
 - **Cars** are `src/scripts/city3d/cars.ts`: real-proportion cartoon models
   (City Hatch, Cruiser, Street GT coupe, Hauler pickup, Box Van, City Bus;
   made-up names, never a real make or badge), each a bevelled extruded
@@ -217,13 +217,27 @@ it and has been retired completely. Build only on what's here.
   trunks open-ended (triangles count too).
   `consolidate()` merges each landmark's Batch meshes per material after the
   city is built (not for the units, lots and plots, which rebuild theirs).
-  The shadow map is drawn once a frame (`post.ts`), however many passes
-  render the scene. Measure with `?fps` before and after.
+  Everything else fixed (the Batches built straight onto the scene, and the
+  airport's and kart park's) is merged **per tile** by `tileBatch()`
+  (`tilebatch.ts`, growth plan Phase 1): each material's triangles split by
+  the tile (`tiles.ts`, `TILE` 30) their middle is in, each tile's share one
+  piece of a `BatchedMesh`, so it's still one draw per material but only
+  the pieces in view are drawn (and in the shadow map only those in the
+  sun's shadow box). Fixed things spread over the map go through a Batch
+  too, not an InstancedMesh: `Batch.instances()` (the trees, lamps and road
+  markings), so they're split by tile with the rest. Moving instanced
+  things (crowds, traffic) draw only what's in view and put what's in the
+  sun's shadow box first, so the shadow map draws only those
+  (`CROWD_VIEW.shadow`, `onBeforeShadow` / `onBeforeRender` set each
+  mesh's count per pass). The shadow map is drawn once a frame (`post.ts`),
+  however many passes render the scene. Measure with `?fps` and `?bench`
+  before and after.
 - `?fps` in the address shows a performance readout (`.city-stats`, built in
   `index.ts`): fps, slowest frame, draw calls and triangles per frame, the
   shadow map's share (`post.shadowStat`), geometry and texture memory
-  (`sceneMemory()` in `perf.ts`), how long the boot took (art, build,
-  shaders), quality tier, pixel ratio and any quality stepped down. Use it on
+  (`sceneMemory()` in `perf.ts`), how many tile pieces were drawn, how long
+  the boot took (art, build, shaders), quality tier, pixel ratio and any
+  quality stepped down. Use it on
   real devices before and after changes; it's invisible without the
   parameter.
 - `?bench` runs the benchmark (`bench.ts`, growth plan Phase 0): straight
@@ -383,9 +397,12 @@ it and has been retired completely. Build only on what's here.
     a crowd. Every frame each person in view takes instances of only what
     they wear, at their level: near within `CROWD_NEAR` (12, 8 on phones)
     of the camera, far beyond, and not at all out of the view or past
-    `CROWD_FAR`. The city fills `CROWD_VIEW` (camera position and view)
-    each frame in `index.ts`; under reduced motion it's off and everyone is
-    drawn near. A new crowd move is a new clip in `CLIP_DEFS`.
+    `CROWD_FAR`. The city fills `CROWD_VIEW` (camera position and view,
+    and the sun's shadow box, `sky.shadowFrustum()`) each frame in
+    `index.ts`; people in the shadow box take instances from the front,
+    the rest from the back (moved up behind them at `commit()`), and the
+    shadow map draws only the front ones. Under reduced motion it's off and
+    everyone is drawn near. A new crowd move is a new clip in `CLIP_DEFS`.
   - Outfits (`suit`, `hoodie`, `track`, `soldier`) only change clothes and
     colours; poses come from the helpers in `poses.ts` (DOM-free; walk/run
     by formula, idle, look, chat, sit, march, attention/salute, dance, the
@@ -840,6 +857,13 @@ it and has been retired completely. Build only on what's here.
   `solids.ts` with the walk-mode start (`WALK_SPAWN`), mirror
   `landmarks.ts`. When a landmark moves or changes size, update both.
   Placed buildings block via `plots.solids()`; parks stay walkable.
+- Checks go through the collision grid (`boxgrid.ts`, `BoxGrid`: boxes in
+  cells of `CELL`, a query gives every box touching an area in the list's
+  order): `SOLID_GRID` for walking, `CAMERA_GRID` for the walk camera,
+  bullets through `rayBoxes()` (the server too), and driving and flying
+  ask for the boxes within `reachOf()` / `flyReach()` of the vehicle
+  (`solids(x, z, reach)`). `tests/boxgrid.test.ts` holds them to exactly
+  the answers of checking every box; keep new checks going through it.
 - Cars yield to the walker through `walker` in `life.ts`.
 
 ## The garage and your car (3D walk mode)
@@ -1378,7 +1402,7 @@ it and has been retired completely. Build only on what's here.
   (`combat-sim.ts`), the economy (`tycoon.ts`, the market square in
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
-  the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), Liberty Bridge (`liberty.ts`),
+  the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), Liberty Bridge (`liberty.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,

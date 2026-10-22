@@ -51,7 +51,8 @@ import { CUPS } from './kart-sim';
 import type { KartInput, CupId } from './kart-sim';
 import type { ClassId } from './catalog';
 import { abandonSeries, seriesNext } from './tycoon';
-import { CAMERA_ONLY, DOORS, GARAGE_SITE, RACK, SOLIDS, TURNTABLE_BOX, WALK_SPAWN, rayBoxes, type Box } from './solids';
+import { CAMERA_GRID, DOORS, GARAGE_SITE, RACK, SOLIDS, SOLID_GRID, TURNTABLE_BOX, WALK_SPAWN, rayBoxes, type Box } from './solids';
+import { BoxGrid } from './boxgrid';
 import { count } from './tycoon';
 import { NS_ROADS, RIVER, SLAB, WALK_W, type Tick } from './world';
 import { footbridgeWall, footbridgeY } from './liberty';
@@ -80,6 +81,8 @@ const BOUNDS = WORLD_BOUNDS;
 const slabs = PLAN.slabs.map((poly) => ({ poly, box: [Math.min(...poly.map((p) => p[0])), Math.min(...poly.map((p) => p[1])), Math.max(...poly.map((p) => p[0])), Math.max(...poly.map((p) => p[1])), 0] as Box }));
 /** What your own car bumps into: everything solid but the turntable it starts on */
 const CAR_SOLIDS = SOLIDS.filter((b) => b !== TURNTABLE_BOX);
+/** What a car or an aircraft bumps into, in the collision grid (boxgrid.ts) */
+const CAR_GRID = new BoxGrid(CAR_SOLIDS);
 const inBox = (b: Box, x: number, z: number, pad = 0) => x > b[0] - pad && x < b[2] + pad && z > b[1] - pad && z < b[3] + pad;
 const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
 const damp = (k: number, dt: number) => 1 - Math.exp(-k * dt);
@@ -263,6 +266,8 @@ export function createWalk(d: WalkDeps) {
     const t = trackSurfaceAt(x, z, yNow);
     return t ? Math.max(base, t.y + 0.035) : base;
   };
+  /** Scratch for the collision grid's answers */
+  const nearBoxes: Box[] = [];
   const onBridge = (x: number) => NS_ROADS.some((r) => Math.abs(x - r.c) < r.half + WALK_W - 0.15);
   /** `y`: how high Degen is (up on Liberty Bridge only its parapets stop you; under it, its pillars and stairs do) */
   function blocked(x: number, z: number, y = 0) {
@@ -270,7 +275,7 @@ export function createWalk(d: WalkDeps) {
     if (footbridgeY(x, z, y, RADIUS) !== null) return false;
     if (footbridgeWall(x, z, y, RADIUS)) return true;
     if (z > RIVER[0] - 0.3 && z < RIVER[1] + 0.3 && !onBridge(x)) return true;
-    if (SOLIDS.some((b) => inBox(b, x, z, RADIUS))) return true;
+    if (SOLID_GRID.near(x, z, RADIUS, nearBoxes).some((b) => inBox(b, x, z, RADIUS))) return true;
     if (drive.blocks(x, z, RADIUS) || fly.blocks(x, z, RADIUS)) return true;
     return d.plotSolids().some((b) => inBox(b, x, z, RADIUS));
   }
@@ -283,7 +288,8 @@ export function createWalk(d: WalkDeps) {
       const floor = Math.max(groundAt(from.x, from.z, from.y), 0.035) + 0.22;
       t = Math.min(t, (from.y - floor) / -dir.y);
     }
-    for (const b of [...SOLIDS, ...CAMERA_ONLY, ...d.plotSolids()]) {
+    // Only the boxes under the camera's line can be in its way (padded as the test below pads them)
+    for (const b of [...CAMERA_GRID.alongRay(from, dir, t, 0.18, nearBoxes), ...d.plotSolids()]) {
       if (b[4] < 0.5) continue;
       const lo = [b[0] - 0.18, 0, b[1] - 0.18];
       const hi = [b[2] + 0.18, b[4] + 0.15, b[3] + 0.18];
@@ -404,7 +410,11 @@ export function createWalk(d: WalkDeps) {
     },
     outfit: () => outfit,
     track: trackSurfaceAt,
-    solids: () => (d.plotSolids().length ? [...CAR_SOLIDS, ...d.plotSolids()] : CAR_SOLIDS),
+    // The boxes within `reach` of where the car is (the collision grid's answer, then placed buildings)
+    solids: (x, z, reach) => {
+      const near = CAR_GRID.near(x, z, reach);
+      return d.plotSolids().length ? [...near, ...d.plotSolids()] : near;
+    },
     groundAt,
     cameraRoom,
     free: (x, z) => !blocked(x, z),
@@ -419,7 +429,10 @@ export function createWalk(d: WalkDeps) {
     camera,
     root,
     myPlane: loadPlane,
-    solids: () => (d.plotSolids().length ? [...CAR_SOLIDS, ...d.plotSolids()] : CAR_SOLIDS),
+    solids: (x, z, reach) => {
+      const near = CAR_GRID.near(x, z, reach);
+      return d.plotSolids().length ? [...near, ...d.plotSolids()] : near;
+    },
     groundAt,
     cameraRoom,
     free: (x, z) => !blocked(x, z),

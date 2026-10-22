@@ -21,7 +21,7 @@ import * as THREE from 'three';
 import { createFleet, type Fleet, type ModelKind } from './aircraft';
 import { HANGAR_ROOF, HANGAR_SPOT, type AircraftKind, type Pose } from './airfield';
 import type { Sfx } from './combat';
-import { CEILING, TUNES, canLeave, hullAt, newFlight, stepFly, type FlyInput, type FlyState, type FlyTune } from './flight-sim';
+import { CEILING, TUNES, canLeave, flyReach, hullAt, newFlight, stepFly, type FlyInput, type FlyState, type FlyTune } from './flight-sim';
 import { paintHex } from './mycar';
 import { FLY, type MyPlane, type PlaneId } from './myplane';
 import type { Box } from './solids';
@@ -33,7 +33,8 @@ export interface FlyDeps {
   /** Your saved aircraft (model and paint) */
   myPlane(): MyPlane;
   /** Every solid box in the city (landmarks, placed buildings) */
-  solids(): Box[];
+  /** The solid boxes within `reach` of a point (the collision grid's answer) */
+  solids(x: number, z: number, reach: number): Box[];
   /** The ground's height (the raised blocks and sidewalks) */
   groundAt(x: number, z: number): number;
   /** How far the camera can sit from a point along a direction before something's in the way */
@@ -298,7 +299,7 @@ export function createFly(d: FlyDeps) {
       const T = tune;
       const px = s.x;
       const pz = s.z;
-      const hit = stepFly(s, inp, T, Math.min(dt, 1 / 20), { boxes: d.solids(), ceilings: [HANGAR_ROOF], soft: gatherSoft(s), ground: d.groundAt }, d.bounds);
+      const hit = stepFly(s, inp, T, Math.min(dt, 1 / 20), { boxes: d.solids(s.x, s.z, flyReach(s)), ceilings: [HANGAR_ROOF], soft: gatherSoft(s), ground: d.groundAt }, d.bounds);
       if (hit > 1.5) {
         d.sfx('bump', Math.min(1, hit / 8));
         shake = Math.min(0.3, hit * 0.03);
