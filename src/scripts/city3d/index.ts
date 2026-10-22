@@ -15,7 +15,7 @@ import { buildLife, walker } from './life';
 import { addSlabs, createWalk } from './walk';
 import { buildGarage } from './garage';
 import { buildAirport } from './airport';
-import { WORLD_BOUNDS } from './layout';
+import { PAN_BOUNDS, overviewFrame } from './bounds';
 import { loadCar } from './garage-ui';
 import { createProfileUI } from './profile-ui';
 import { createCharScreen } from './charscreen';
@@ -526,8 +526,10 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     },
     overview() {
       // Every district, the south row across the river included
-      const k = camera.aspect < 1 ? 1.5 : 1.62;
-      const target = new THREE.Vector3(20, 0, 34);
+      // (framed from the plots themselves: growth plan Phase 5)
+      const frame = overviewFrame();
+      const k = (camera.aspect < 1 ? 1.5 : 1.62) * frame.scale;
+      const target = new THREE.Vector3(frame.target[0], 0, frame.target[1]);
       flyTo(target.clone().add(new THREE.Vector3(34, 50, 44).multiplyScalar(k)), target, 1.6);
     },
     onMode(on) {
@@ -898,9 +900,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       mp?.update(dt, t);
       dirty = true;
     } else if (controls.update()) dirty = true;
-    // Keep the view over the world (it reaches past the city, room to build)
-    controls.target.x = THREE.MathUtils.clamp(controls.target.x, WORLD_BOUNDS[0] + 10, WORLD_BOUNDS[2] - 10);
-    controls.target.z = THREE.MathUtils.clamp(controls.target.z, WORLD_BOUNDS[1] + 10, WORLD_BOUNDS[3] - 10);
+    // Keep the view over the city (round the built-up area, never past the world: bounds.ts, growth plan Phase 5)
+    controls.target.x = THREE.MathUtils.clamp(controls.target.x, PAN_BOUNDS[0], PAN_BOUNDS[2]);
+    controls.target.z = THREE.MathUtils.clamp(controls.target.z, PAN_BOUNDS[1], PAN_BOUNDS[3]);
 
     const s = sky.update(reduced ? 0 : t, dt, controls.target, camera.position);
     env.t = reduced ? 0 : t;

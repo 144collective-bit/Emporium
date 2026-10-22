@@ -16,7 +16,8 @@
  *   never hurting anyone.
  */
 import type { Box } from './solids';
-import { EXT, NS_ROADS, RIVER, WALK_W } from './layout';
+import { RIVER } from './layout';
+import { riverCrossings } from './streetplan';
 
 export interface DriveTune {
   /** Top speed and reverse top speed (tiles/s) */
@@ -87,16 +88,16 @@ export const reachOf = (c: { speed: number }) => 8 + Math.abs(c.speed) * 0.05;
 
 export const newCar = (x: number, z: number, yaw: number): CarState => ({ x, z, yaw, speed: 0, vx: 0, vz: 0, steer: 0, yawRate: 0 });
 
-/** The river is a wall except where the bridges cross it */
+/** The river is a wall except where the bridges cross it (the river's run and its bridges from the street plan: growth plan Phase 5) */
 export const RIVER_WALLS: Box[] = (() => {
-  const gaps = NS_ROADS.map((r) => [r.c - r.half - WALK_W + 0.1, r.c + r.half + WALK_W - 0.1]).sort((a, b) => a[0] - b[0]);
+  const { run, bridges } = riverCrossings();
   const out: Box[] = [];
-  let at = EXT[0];
-  for (const [g0, g1] of gaps) {
-    out.push([at, RIVER[0] - 0.3, g0, RIVER[1] + 0.3, 2]);
-    at = g1;
+  let at = run[0];
+  for (const [g0, g1] of bridges) {
+    out.push([at, RIVER[0] - 0.3, g0 + 0.1, RIVER[1] + 0.3, 2]);
+    at = g1 - 0.1;
   }
-  out.push([at, RIVER[0] - 0.3, EXT[1], RIVER[1] + 0.3, 2]);
+  out.push([at, RIVER[0] - 0.3, run[1], RIVER[1] + 0.3, 2]);
   return out;
 })();
 

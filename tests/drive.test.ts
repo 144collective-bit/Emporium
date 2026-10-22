@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { RIVER_WALLS, circles, newCar, stepCar, tune, type CarState, type DriveInput, type DriveWorld } from '../src/scripts/city3d/drive-sim';
-import { NS_ROADS, RIVER, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
+import { EXT, NS_ROADS, RIVER, WALK_W, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
 import { CARGO, DRIVE } from '../src/scripts/city3d/mycar';
 import { NO_CAR_MODS, carStats } from '../src/scripts/city3d/catalog';
 import { carStatsOf, cleanSave, modCar } from '../src/scripts/city3d/tycoon';
@@ -132,6 +132,11 @@ test('the river stops it except over the bridges', () => {
   // The gaps in the river walls are the bridges' width
   assert.equal(RIVER_WALLS.length, NS_ROADS.length + 1);
   for (const r of NS_ROADS) assert.ok(!RIVER_WALLS.some((w) => w[0] < r.c + r.half && w[2] > r.c - r.half), `no gap at x ${r.c}`);
+  // From the street plan (growth plan Phase 5): the river runs edge to edge, and the walls are what they were
+  assert.equal(RIVER_WALLS[0][0], EXT[0]);
+  assert.equal(RIVER_WALLS.at(-1)![2], EXT[1]);
+  const gaps = NS_ROADS.map((r) => [r.c - r.half - WALK_W + 0.1, r.c + r.half + WALK_W - 0.1]);
+  RIVER_WALLS.slice(1).forEach((w, i) => assert.ok(Math.abs(w[0] - gaps[i][1]) < 1e-9 && Math.abs(RIVER_WALLS[i][2] - gaps[i][0]) < 1e-9));
 });
 
 test('people and other cars are soft: a bump, never driving through', () => {

@@ -163,7 +163,8 @@ export function createSky(scene: THREE.Scene, opts: { shadows: number; rainDrops
   /* State */
   let timeMode: TimeMode = 'live';
   let weatherMode: WeatherMode = 'auto';
-  let rainAmt = rand() < 0.22 ? 1 : 0;
+  // Every visit starts dry (it always did: this used to be a draw from the city's seeded numbers that came out dry); in auto, rain comes and goes after
+  let rainAmt = 0;
   let rainTarget = rainAmt;
   let nextFlip = 60 + rand() * 120;
   let hourSmooth = currentHour();

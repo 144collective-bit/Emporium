@@ -14,7 +14,7 @@
  * Coordinates are world units on the ground: [x, z].
  */
 import { DISTRICTS } from '../../data/plots';
-import { BLOCKS, BS, CENTER_XZ, CORE_ROADS, EW_ROADS, EXT, EXTRA_LOTS, GARAGE, LANE, MARKET, MEDIAN, NS_ROADS, SEATS, UNITS, WALK_W, type Road } from './layout';
+import { BLOCKS, BS, CENTER_XZ, CORE_ROADS, EW_ROADS, EXT, EXTRA_LOTS, GARAGE, LANE, MARKET, MEDIAN, NS_ROADS, RIVER, SEATS, UNITS, WALK_W, type Road } from './layout';
 import { ALLEYS, BLOCKS_DT, DIAGONALS, LANES } from './downtown';
 import { BENDS, BEND_KERBS, OUTER_BLOCKS, OUTER_PARKS, OUTER_SQUARES, PADS } from './outer';
 import { AIRPORT_STREETS, ROAD } from './airfield';
@@ -374,6 +374,19 @@ export function cityPlan(): StreetPlan {
 
 /** The plan the city is built from */
 export const PLAN: StreetPlan = cityPlan();
+
+/**
+ * The river and its bridges, from the plan (growth plan Phase 5): where it
+ * runs (x, edge to edge) and, for each street that crosses it, the span its
+ * bridge takes (x0, x1, the sidewalks included), west to east
+ */
+export function riverCrossings(plan: StreetPlan = PLAN) {
+  const bridges = plan.streets
+    .filter((s) => s.kind !== 'alley' && s.pts.length === 2 && s.pts[0][0] === s.pts[1][0] && Math.min(s.pts[0][1], s.pts[1][1]) < RIVER[0] && Math.max(s.pts[0][1], s.pts[1][1]) > RIVER[1])
+    .map((s): [number, number] => [s.pts[0][0] - s.half - WALK_W, s.pts[0][0] + s.half + WALK_W])
+    .sort((a, b) => a[0] - b[0]);
+  return { run: [...EXT] as [number, number], bridges };
+}
 
 /** The middle of the city */
 export const PLAN_CENTRE: Pt = [CENTER_XZ.x, CENTER_XZ.z];

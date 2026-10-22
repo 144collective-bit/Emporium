@@ -10,7 +10,7 @@
  * time into a position, heading, pitch, bank, gear and power. It's a
  * function of the time only, the same for everyone. airport.ts draws it all.
  */
-import { NS_ROADS, RIVER, SEATS, SOUTH_SHIFT as D, WORLD_BOUNDS } from './layout';
+import { NS_ROADS, RIVER, SEATS, SOUTH_SHIFT as D } from './layout';
 
 /** The middle of the river (the prop plane flies along it) */
 const RIVER_MID = (RIVER[0] + RIVER[1]) / 2;
@@ -25,8 +25,9 @@ export type Footprint = [number, number, number, number, number];
 /** The east ring avenue the access road leaves from */
 const AVENUE = NS_ROADS.at(-1)!;
 /** The whole airport, landside and airside (no trees in here) */
-/* Written before the river was widened: every z south of it adds `D` (layout.ts SOUTH_SHIFT), so the airport kept its place past the Southside Loop */
-export const SITE: Rect = [AVENUE.c + AVENUE.half + 1.2, 112.5 + D, 234, Math.min(232 + D, WORLD_BOUNDS[3])];
+/* Written before the river was widened: every z south of it adds `D` (layout.ts SOUTH_SHIFT), so the airport kept its place past the Southside Loop.
+   Fixed numbers, not the world's edge (growth plan Phase 5): when the edge moves out, the airport stays where it is */
+export const SITE: Rect = [AVENUE.c + AVENUE.half + 1.2, 112.5 + D, 234, 234];
 
 /** The runway: east-west, landings and take-offs eastwards */
 export const RUNWAY = { x0: 92, x1: 232, z: 198 + D, half: 4 };
