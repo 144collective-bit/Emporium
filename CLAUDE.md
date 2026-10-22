@@ -220,9 +220,26 @@ it and has been retired completely. Build only on what's here.
   The shadow map is drawn once a frame (`post.ts`), however many passes
   render the scene. Measure with `?fps` before and after.
 - `?fps` in the address shows a performance readout (`.city-stats`, built in
-  `index.ts`): fps, slowest frame, draw calls and triangles per frame, quality
-  tier, pixel ratio and any quality stepped down. Use it on real devices
-  before and after changes; it's invisible without the parameter.
+  `index.ts`): fps, slowest frame, draw calls and triangles per frame, the
+  shadow map's share (`post.shadowStat`), geometry and texture memory
+  (`sceneMemory()` in `perf.ts`), how long the boot took (art, build,
+  shaders), quality tier, pixel ratio and any quality stepped down. Use it on
+  real devices before and after changes; it's invisible without the
+  parameter.
+- `?bench` runs the benchmark (`bench.ts`, growth plan Phase 0): straight
+  into the 3D city, clear day (`?bench=night` for night), quality held, the
+  same views (`BENCH_VIEWS`: home, a downtown street, the square, the Build
+  overview, the airport, the kart park, the far edge) measured for a few
+  seconds each, then a 40 s camera route through them. Results (fps,
+  average / 95th-percentile / slowest frame, CPU ms, draws and triangles,
+  the shadow map's, memory, boot) go in a card on the page, the console and
+  `window.__bench`. Run it before and after anything that could make the
+  city heavier, on a phone and a laptop.
+- `tests/snapshot.test.ts` holds every place, door, pad, lot, spawn,
+  landmark, downtown building and street where it stands
+  (`tests/fixtures/layout.json`; a street's end at the world's edge is
+  `'edge'`). Nothing that exists moves; only when the owner moves something
+  on purpose, rewrite it with `UPDATE_SNAPSHOT=1 npm test -- snapshot`.
 - The Emporium arcade tower (`emporium()` in `landmarks.ts`, and in
   `city.ts` for the 2D map) is the centrepiece: keep it the tallest, most
   detailed building. Its LED wall shows (`drawWall`), pixel font, ticker and
@@ -1361,7 +1378,7 @@ it and has been retired completely. Build only on what's here.
   (`combat-sim.ts`), the economy (`tycoon.ts`, the market square in
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
-  the save backup (`guide.ts`, `backup.ts`), Liberty Bridge (`liberty.ts`),
+  the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), Liberty Bridge (`liberty.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,

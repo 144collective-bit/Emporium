@@ -4865,6 +4865,27 @@ body.is-walking .nav {
   white-space: pre;
   pointer-events: none;
 }
+/* ?bench: the benchmark's results (bench.ts), top left under the header; scrolls sideways on narrow screens */
+.city-bench {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: calc(var(--head-h, 56px) + 12px);
+  z-index: 9;
+  max-width: max-content;
+  max-height: 60%;
+  overflow: auto;
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: #000000d9;
+  color: #2bff88;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.45;
+  white-space: pre;
+  user-select: text;
+}
 
 /* ---------- The economy (tycoon-ui.ts): Dorras, your stall, the market hall ----------
    The Dorras readout sits in the header's tools in the 3D city (not in Build mode or on the

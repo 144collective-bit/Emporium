@@ -47,6 +47,8 @@ import { guideAt } from './guide';
 import { CARS } from './cars';
 import { CROWD_VIEW } from './character';
 import type { GameDeps } from './ui';
+import { createBench } from './bench';
+import { mb, sceneMemory } from './perf';
 
 type Tier = 'high' | 'medium' | 'low';
 
@@ -77,6 +79,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const tier = (root.dataset.tier as Tier) || pickTier();
   const Q = TIERS[tier];
   const progress = (k: number) => bar.style.setProperty('--p', String(k));
+  // When each part of the boot finished (the ?fps readout and the benchmark)
+  const bootAt = { start: performance.now(), art: 0, built: 0, compiled: 0, first: 0 };
 
   // Renderer first: if WebGL is missing, stay on the 2D map
   let renderer: THREE.WebGLRenderer;
@@ -103,6 +107,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   ]);
   const [logo, degen, flame] = await Promise.all([loadTex(root.dataset.logo!), loadImage(root.dataset.degen!), loadImage(root.dataset.flame!)]);
   progress(0.2);
+  bootAt.art = performance.now();
   await nextFrame();
 
   /* ---------- Scene ---------- */
@@ -201,7 +206,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   controls.update();
   // One mesh per material for each landmark and for the city's ground, not one per Batch
   consolidate([scene, ...spots.map((sp) => sp.group)]);
+  bootAt.built = performance.now();
   renderer.compile(scene, camera);
+  bootAt.compiled = performance.now();
   progress(1);
 
   /* ---------- Fly-to ---------- */
@@ -703,9 +710,26 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   let lastRaf = 0;
   let tickN = 0;
   // ?fps in the address: a small readout for checking performance on real devices
-  // (frames a second, the slowest frame, draw calls and triangles per frame)
-  const statsEl = new URLSearchParams(location.search).has('fps') ? document.createElement('pre') : null;
-  const stat = { frames: 0, draws: 0, tris: 0, worst: 0, last: 0, since: performance.now() };
+  // (frames a second, the slowest frame, draw calls and triangles per frame, the
+  // shadow map's share, memory, how long the boot took). ?bench runs the benchmark (bench.ts)
+  const query = new URLSearchParams(location.search);
+  const bench = query.has('bench') ? createBench({ host, scene, tier, pixelRatio: () => renderer.getPixelRatio(), home, conditions: benchSky, boot: bootTimes }, query.get('bench') === 'night') : null;
+  const statsEl = query.has('fps') || bench ? document.createElement('pre') : null;
+  const stat = { frames: 0, draws: 0, tris: 0, shadowDraws: 0, shadowTris: 0, worst: 0, last: 0, since: performance.now(), memAt: 0, mem: '' };
+  function bootTimes() {
+    const r = (a: number, b: number) => Math.round(b - a);
+    return { total: r(bootAt.start, bootAt.first), art: r(bootAt.start, bootAt.art), build: r(bootAt.art, bootAt.built), shaders: r(bootAt.built, bootAt.compiled), firstFrame: r(bootAt.compiled, bootAt.first) };
+  }
+  // The benchmark's sky: clear day or night, then the visitor's own back
+  function benchSky(night: boolean) {
+    const own = { time: sky.time, weather: sky.weather };
+    sky.setTime(night ? 'night' : 'day');
+    sky.setWeather('clear');
+    return () => {
+      sky.setTime(own.time);
+      sky.setWeather(own.weather);
+    };
+  }
   if (statsEl) {
     // For the headless draw-call breakdown (scratch scripts): the scene, renderer and camera on the page
     (window as unknown as { __city?: unknown }).__city = { scene, renderer, camera };
@@ -762,15 +786,25 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     const skip = refresh < 1 / 100 ? Math.round(1 / 60 / refresh) : 1;
     if (++tickN % skip) return;
     if (!onScreen && !walking) return;
+    const cpuStart = performance.now();
     timer.update();
     const t = timer.getElapsed();
-    const busy = !!flight || walking || t - lastInput < 1;
+    // The benchmark starts once the start menu has gone and the city is showing
+    if (bench && !bench.active && !bench.done && !walking && !root.classList.contains('has-start')) bench.begin(t);
+    const busy = !!flight || walking || t - lastInput < 1 || !!bench?.active;
     if (idleFps && !busy && t - lastT < 1 / idleFps - 0.004) return;
     const dt = Math.min(t - lastT, 0.1);
     lastT = t;
 
-    // Camera flight
-    if (flight) {
+    // The benchmark has the camera while it runs
+    if (bench?.active && !walking) {
+      if (flight) {
+        flight = null;
+        controls.enabled = true;
+      }
+      bench.place(t, camera, controls.target);
+      dirty = true;
+    } else if (flight) {
       const k = flight.dur ? Math.min(1, (t - flight.start) / flight.dur) : 1;
       const e = ease(k);
       camera.position.lerpVectors(flight.from, flight.to, e);
@@ -879,12 +913,20 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     sound.update(s.rain, s.night, 1 - THREE.MathUtils.smoothstep(dE, 8, 36));
 
     if (!reduced || dirty || flight) {
-      if (statsEl) renderer.info.reset();
+      if (statsEl) {
+        renderer.info.reset();
+        post.shadowStat.calls = post.shadowStat.tris = 0;
+      }
       post.render();
       dirty = false;
+      if (!bootAt.first) bootAt.first = performance.now();
       if (statsEl) {
-        stat.draws += renderer.info.render.calls;
-        stat.tris += renderer.info.render.triangles;
+        const { calls, triangles } = renderer.info.render;
+        stat.draws += calls;
+        stat.tris += triangles;
+        stat.shadowDraws += post.shadowStat.calls;
+        stat.shadowTris += post.shadowStat.tris;
+        if (bench?.active) bench.sample(t, performance.now(), performance.now() - cpuStart, calls, triangles, post.shadowStat.calls, post.shadowStat.tris);
       }
     }
     if (statsEl) {
@@ -895,19 +937,30 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       if (now - stat.since >= 1000) {
         const n = Math.max(1, stat.frames);
         const lost = Object.entries(lowered).filter(([, v]) => v).map(([k]) => k);
+        // Memory every few seconds (it walks the whole scene)
+        if (now - stat.memAt > 5000) {
+          const m = sceneMemory(scene);
+          stat.mem = `geometry ${mb(m.geometry)} · textures ${mb(m.textures)}`;
+          stat.memAt = now;
+        }
+        const b = bootTimes();
         statsEl.textContent = [
           `${Math.round((stat.frames * 1000) / (now - stat.since))} fps · slowest ${Math.round(stat.worst)} ms`,
           `${Math.round(stat.draws / n)} draws · ${(stat.tris / n / 1e6).toFixed(2)}M tris`,
+          `of which shadows ${Math.round(stat.shadowDraws / n)} draws · ${(stat.shadowTris / n / 1e6).toFixed(2)}M tris`,
+          stat.mem,
+          `boot ${(b.total / 1000).toFixed(1)} s · build ${(b.build / 1000).toFixed(1)} · shaders ${(b.shaders / 1000).toFixed(1)}`,
           `${tier} · px ${renderer.getPixelRatio().toFixed(2)}${lost.length ? ` · lowered: ${lost.join(', ')}` : ''}`,
           // Where Degen stands while walking (for placing things: ?spawn=x,z puts him back there)
           ...(walking ? [`at ${walk.position.x.toFixed(1)}, ${walk.position.z.toFixed(1)}`] : []),
         ].join('\n');
-        Object.assign(stat, { frames: 0, draws: 0, tris: 0, worst: 0, since: now });
+        Object.assign(stat, { frames: 0, draws: 0, tris: 0, shadowDraws: 0, shadowTris: 0, worst: 0, since: now });
       }
     }
 
     frames++;
-    if (t > 4) {
+    // Quality is held where it is while the benchmark runs
+    if (t > 4 && !bench?.active) {
       windowFrames++;
       // "Slow" is relative to the rate we're aiming for (30fps on phones when idle)
       const budget = idleFps && !busy ? 1 / idleFps : 1 / 60;

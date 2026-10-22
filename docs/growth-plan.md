@@ -193,25 +193,46 @@ second. All three steps keep downtown in the middle.
 
 # Part A: making size cheap
 
-## Phase 0: the measuring kit
+## Phase 0: the measuring kit (built)
 
-- **More readouts in `?fps`:**
-  - tiles drawn, tiles built and tiles waiting to be built;
-  - build time at boot;
-  - geometry and texture memory (`renderer.info.memory`);
-  - the triangles drawn into the shadow map, separately.
-- **A fixed benchmark** (`?bench`): saved views (home, downtown at street
-  level, the outer districts, the far edge, the airport) and a scripted
-  camera route through them. It prints the slowest and average frame, the
-  draw calls and the triangles per view, so every later phase compares
-  like for like.
-- **A layout snapshot test:** every landmark's, place's, door's, pad's,
-  lot's and spawn's coordinates written down today. A test fails if any of
-  them moves. Every later phase keeps it passing (the "nothing moves"
-  rule).
-- **Record today's numbers here**, on a real phone and a laptop.
-- **Done when** the benchmark runs the same way twice and the numbers are
-  in this plan.
+- **More readouts in `?fps`** (`index.ts`):
+  - the shadow map's draws and triangles, apart (`post.shadowStat`, counted
+    round three's shadow pass);
+  - geometry and texture memory (`sceneMemory()` in `perf.ts`: every
+    geometry, instance buffer and texture the scene draws, counted once);
+  - how long the boot took: art, building the scene, compiling shaders and
+    the first frame.
+  - Tiles drawn, built and waiting come with Phase 1, when there are tiles.
+- **The benchmark, `?bench`** (`bench.ts`):
+  - goes straight into the 3D city, sets clear day (`?bench=night` for
+    night), holds quality where the tier put it and turns off the phones'
+    idle 30fps;
+  - measures fixed views (`BENCH_VIEWS`: home, a downtown street at eye
+    level, the square and the Emporium, the Build overview, the airport, the
+    kart park and the far edge looking back), each settling for a second
+    and measured for four;
+  - then flies a 40 s route through them and back home;
+  - reports, for each: frames a second; average, 95th-percentile and
+    slowest frame; the CPU's share; draws and triangles (average and most),
+    the shadow map's; then memory and the boot;
+  - shows them in a card on the page, the console and `window.__bench`.
+  - The views stay where they are when the world grows, so later phases
+    compare like for like. A bigger world adds views; it doesn't move
+    these.
+- **The layout snapshot** (`tests/snapshot.test.ts`, `tests/fixtures/layout.json`):
+  - every landmark, door, spawn, pad, lot, plot district, market stall,
+    unit, the airport, kart park, Fight Club, Liberty Bridge, downtown's
+    buildings and every street, as they stand;
+  - a street's end at the world's edge is written as `'edge'`, so the edge
+    can move out without the street "moving";
+  - a test fails if anything moves. Only when the owner moves something on
+    purpose: `UPDATE_SNAPSHOT=1 npm test -- snapshot`.
+- **Today's numbers:** see "Benchmark, today" below. Real phones and
+  laptops go in as the owner runs them.
+
+### Benchmark, today
+
+BENCH_RESULTS
 
 ## Phase 1: tiles and the collision grid (nothing new to see)
 
