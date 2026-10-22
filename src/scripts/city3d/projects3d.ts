@@ -19,11 +19,11 @@
  */
 import * as THREE from 'three';
 import { Batch, FONT_DISPLAY, PAL, canvasTex, lit, roundRect, toon } from './kit';
-import { ATLAS, INK, METAL, ROOF, STONE, CREAM, acUnit, glow, kit, tank, type Frame } from './infill';
+import { ATLAS, INK, METAL, ROOF, STONE, CREAM, WOOD, acUnit, glow, kit, planter, tank, type Frame } from './infill';
 import { drawLot } from './kits3d';
 import { SLAB as S, addLamp, addTree } from './world';
 import { site } from './tilework';
-import { TOWERS, ROW_BLOCKS, isCorner, rows, type Tower } from './projects';
+import { SCAFFOLD_OUT, STOOP, TOWERS, ROW_BLOCKS, isCorner, rows, towerShell, type Brick, type Tower, type TowerWall } from './projects';
 import { RECIPES, rng } from './recipes';
 import { TRENCH_BLOCKS } from './trenches';
 import type { Pt, Rect } from './downtown';
@@ -121,89 +121,185 @@ function atlasPlane(row: number, rows: number, w: number, h: number, n: Pt, x: n
   return g.translate(x, y, z);
 }
 
-/** A tower's outline, counter-clockwise from above (a cross's twelve corners, a slab's four) */
-function outline(t: Tower): Pt[] {
-  if (t.parts.length === 1) {
-    const [x0, z0, x1, z1] = t.parts[0];
-    return [
-      [x0, z0],
-      [x0, z1],
-      [x1, z1],
-      [x1, z0],
-    ];
-  }
-  const [[ax0, az0, ax1, az1], [bx0, bz0, bx1, bz1]] = t.parts;
-  return [
-    [bx0, bz0],
-    [bx0, az0],
-    [ax0, az0],
-    [ax0, az1],
-    [bx0, az1],
-    [bx0, bz1],
-    [bx1, bz1],
-    [bx1, az1],
-    [ax1, az1],
-    [ax1, az0],
-    [bx1, az0],
-    [bx1, bz0],
-  ];
-}
-const inParts = (t: Tower, [x, z]: Pt) => t.parts.some(([x0, z0, x1, z1]) => x > x0 && x < x1 && z > z0 && z < z1);
-/** Each side of the outline with the way out of it */
-function sides(t: Tower) {
-  const o = outline(t);
-  return o.map((a, i) => {
-    const c = o[(i + 1) % o.length];
-    const m: Pt = [(a[0] + c[0]) / 2, (a[1] + c[1]) / 2];
-    const l = Math.hypot(c[0] - a[0], c[1] - a[1]);
-    let n: Pt = [-(c[1] - a[1]) / l, (c[0] - a[0]) / l];
-    if (inParts(t, [m[0] + n[0] * 0.05, m[1] + n[1] * 0.05])) n = [-n[0], -n[1]];
-    return { a, c, n, l };
-  });
-}
-
 const FACE_N: Record<Tower['door']['face'], Pt> = { n: [0, -1], s: [0, 1], w: [-1, 0], e: [1, 0] };
+/** The parapets' brick, a shade under each wall's */
+const PARAPET_OF: Record<Brick, string> = { brick: '#5a2c2a', brownstone: '#4e3326', brickTan: '#7a5c40', brickDark: '#3a2124' };
+const BULK_H = 0.9;
+/** The wall atlas's bays (infill.ts): a window every 0.75 along, one a floor; the sill this far over the floor line */
+const BAY = 0.75;
+const SILL = 0.2;
+const PANEL = toon('#cfc9e4');
+const LAUNDRY = ['#f3f2f7', '#ff6ad5', '#00c2ff', '#ffd23f', '#2bff88', '#e23b3b'];
 
-/** One tower, into a Batch */
-function tower(b: Batch, t: Tower, low: boolean) {
+/** A wall as the atlas lays it (infill.ts's kit flips a and c so its texture runs left to right seen from outside): its start, the way along it, its length */
+function laid(w: TowerWall) {
+  let { a, c } = w;
+  if (-(c[1] - a[1]) * w.n[0] + (c[0] - a[0]) * w.n[1] < 0) [a, c] = [c, a];
+  const len = Math.hypot(c[0] - a[0], c[1] - a[1]);
+  return { a, t: [(c[0] - a[0]) / len, (c[1] - a[1]) / len] as Pt, len };
+}
+
+/**
+ * One tower, into a Batch, a piece at a time (each its own site, so none takes
+ * long to build): its shell (walls, roofs, parapets, cornices and the door at
+ * every distance, the roof's furniture), then the lived-in details of each wall
+ * (near only), then its scaffolding
+ */
+type TowerPiece = 'shell' | 'scaffold' | number;
+function tower(b: Batch, t: Tower, low: boolean, piece: TowerPiece) {
   const k = kit(b, WORLD);
-  const top = S + t.h;
-  const r = rng(t.no * 131);
+  const r = rng(t.no * 131 + (typeof piece === 'number' ? piece + 1 : piece === 'scaffold' ? 97 : 0));
   const trim = STONE;
-  const sd = sides(t);
+  const band = ATLAS.wall[t.brick];
+  const parapet = toon(PARAPET_OF[t.brick]);
+  const { walls, roofs } = towerShell(t.parts);
+  /** A box along a wall: s0..s1 along it, out0..out1 out of it, y0..y1 up */
+  const onWall = (w: ReturnType<typeof laid>, n: Pt, s0: number, s1: number, out0: number, out1: number, y0: number, y1: number, mat: THREE.Material) => {
+    const xs = [w.a[0] + w.t[0] * s0 + n[0] * out0, w.a[0] + w.t[0] * s1 + n[0] * out1];
+    const zs = [w.a[1] + w.t[1] * s0 + n[1] * out0, w.a[1] + w.t[1] * s1 + n[1] * out1];
+    k.lbox(Math.min(...xs), Math.max(...xs), y0, y1, Math.min(...zs), Math.max(...zs), mat);
+  };
+  // The door's wall and the mural's are kept clear of clutter
+  const doorN = FACE_N[t.door.face];
+  const onDoorWall = (w: TowerWall) => w.n[0] === doorN[0] && w.n[1] === doorN[1] && w.y0 === 0 && Math.abs(w.n[0] ? w.a[0] - (t.door.x - doorN[0] * 0.25) : w.a[1] - (t.door.z - doorN[1] * 0.25)) < 1e-6;
+  const muralWall = t.block.startsWith('trench-b0-') && t.door.face !== 'n' ? walls.filter((w) => w.n[1] < -0.5 && w.y0 === 0 && laid(w).len >= 5).sort((p, q) => p.a[1] - q.a[1])[0] : undefined;
+
+  if (piece !== 'shell') {
+    // Lived in: window air conditioners, window boxes and the odd dish; balconies with washing on some towers
+    b.detail(() => {
+      if (typeof piece === 'number') {
+        const w = walls[piece];
+        if (w === muralWall) return;
+        const L = laid(w);
+        const door = onDoorWall(w);
+        const balconies = t.balconies && L.len >= 6 && (w.n[1] > 0.5 || w.n[0] < -0.5);
+        for (let y = w.y0; y + 0.9 < w.y1 - PARAPET_GAP; y += 1) {
+          if (y < 1) continue;
+          const yb = S + y;
+          for (let j = 0; (j + 0.5) * BAY < L.len - 0.3; j++) {
+            const s = (j + 0.5) * BAY;
+            if (door && y < 2 && Math.abs(s - L.len / 2) < 1.6) continue;
+            if (balconies && y >= 2 && j % 4 === 0 && s + BAY < L.len - 0.2) {
+              // A balcony across two bays (every other pair): the slab, a light panel and a rail, washing on the line on some
+              const s0 = s - 0.3;
+              const s1 = s + BAY + 0.3;
+              onWall(L, w.n, s0, s1, 0.004, 0.55, yb - 0.04, yb + 0.03, CREAM);
+              onWall(L, w.n, s0, s1, 0.52, 0.545, yb + 0.03, yb + 0.3, PANEL);
+              onWall(L, w.n, s0, s1, 0.51, 0.55, yb + 0.47, yb + 0.51, METAL);
+              for (const e of [s0, s1 - 0.03]) onWall(L, w.n, e, e + 0.03, 0.004, 0.55, yb + 0.03, yb + 0.47, METAL);
+              if (!low && r() < 0.35)
+                for (let q = 0; q < 3; q++) {
+                  const c0 = s0 + 0.18 + q * 0.32;
+                  onWall(L, w.n, c0, c0 + 0.24, 0.5, 0.505, yb + 0.22, yb + 0.5, toon(LAUNDRY[Math.floor(r() * LAUNDRY.length)]));
+                }
+              continue;
+            }
+            if (balconies && y >= 2 && j % 4 === 1) continue;
+            const pick = r();
+            if (pick < 0.07) {
+              // An air conditioner under the window
+              onWall(L, w.n, s - 0.18, s + 0.18, 0.004, 0.26, yb + SILL - 0.2, yb + SILL + 0.04, toon('#c9c4e6'));
+              onWall(L, w.n, s - 0.14, s + 0.14, 0.26, 0.265, yb + SILL - 0.16, yb + SILL, INK);
+            } else if (pick < 0.11 && !low) {
+              // A window box of flowers
+              onWall(L, w.n, s - 0.26, s + 0.26, 0.004, 0.15, yb + SILL - 0.04, yb + SILL + 0.08, WOOD);
+              onWall(L, w.n, s - 0.24, s + 0.24, 0.02, 0.14, yb + SILL + 0.08, yb + SILL + 0.16, toon(r() < 0.5 ? '#36b06c' : '#ff6ad5'));
+            } else if (pick < 0.12 && !low) {
+              const [px, pz] = [L.a[0] + L.t[0] * (s + 0.42) + w.n[0] * 0.2, L.a[1] + L.t[1] * (s + 0.42) + w.n[1] * 0.2];
+              dish(k, px, yb + 0.55, pz, Math.atan2(w.n[0], w.n[1]));
+            }
+          }
+        }
+      }
+      // Scaffolding up one face: poles, a ledger at each floor, boards on some, braces
+      if (piece === 'scaffold' && t.scaffold) {
+        const [x0, z0, x1, z1] = t.scaffold;
+        const alongX = x1 - x0 > z1 - z0;
+        const len = alongX ? x1 - x0 : z1 - z0;
+        const hTop = S + t.parts[t.main].h + 0.6;
+        const at = (s: number, o: number): Pt => (alongX ? [x0 + s, z0 + o] : [x0 + o, z0 + s]);
+        const depth = SCAFFOLD_OUT;
+        const pole = toon('#9aa0b0');
+        for (let s = 0.1; s <= len - 0.1 + 1e-6; s += (len - 0.2) / Math.round((len - 0.2) / 1.6)) {
+          for (const o of [0.15, depth - 0.1]) {
+            const [px, pz] = at(s, o);
+            k.lbox(px - 0.03, px + 0.03, S, hTop, pz - 0.03, pz + 0.03, pole);
+          }
+        }
+        for (let y = S + 1; y < hTop - 0.3; y += 1)
+          for (const o of [0.15, depth - 0.1]) {
+            const [a0, a1] = [at(0.05, o), at(len - 0.05, o)];
+            k.lbox(Math.min(a0[0], a1[0]) - 0.02, Math.max(a0[0], a1[0]) + 0.02, y, y + 0.05, Math.min(a0[1], a1[1]) - 0.02, Math.max(a0[1], a1[1]) + 0.02, pole);
+          }
+        for (let y = S + 2; y < hTop - 0.5; y += 2) {
+          const [a0, a1] = [at(0.1, 0.12), at(len - 0.1, depth - 0.08)];
+          k.lbox(Math.min(a0[0], a1[0]), Math.max(a0[0], a1[0]), y + 0.05, y + 0.09, Math.min(a0[1], a1[1]), Math.max(a0[1], a1[1]), WOOD);
+        }
+        // Orange toe boards along the outside of each deck
+        for (let y = S + 2; y < hTop - 0.5; y += 2) {
+          const [a0, a1] = [at(0.05, depth - 0.07), at(len - 0.05, depth - 0.04)];
+          k.lbox(Math.min(a0[0], a1[0]), Math.max(a0[0], a1[0]), y + 0.09, y + 0.24, Math.min(a0[1], a1[1]), Math.max(a0[1], a1[1]), toon('#ff8a3d'));
+        }
+      }
+    });
+    return;
+  }
+
   k.all(() => {
-    sd.forEach(({ a, c, n }, i) => k.wall(ATLAS.wall.brick, a, c, S, top, n, (i * 0.37 + r()) % 1));
-    // The roof slab tucked inside the walls, the parapet round it (flat on the walls' tops)
-    for (const [x0, z0, x1, z1] of t.parts) k.lbox(x0 + 0.006, x1 - 0.006, top - 0.04, top, z0 + 0.006, z1 - 0.006, ROOF);
-    for (const { a, c, n } of sd) {
-      const [x0, x1] = [Math.min(a[0], c[0]), Math.max(a[0], c[0])];
-      const [z0, z1] = [Math.min(a[1], c[1]), Math.max(a[1], c[1])];
-      // 0.14 thick, inside the wall line
-      const ix = n[0] ? -n[0] * 0.14 : 0;
-      const iz = n[1] ? -n[1] * 0.14 : 0;
-      k.lbox(Math.min(x0, x0 + ix), Math.max(x1, x1 + ix), top, top + 0.26, Math.min(z0, z0 + iz), Math.max(z1, z1 + iz), toon('#5a2c2a'));
+    for (const w of walls) k.wall(band, w.a, w.c, S + w.y0, S + w.y1, w.n, 0);
+    for (const rf of roofs) k.lbox(rf.rect[0], rf.rect[2], S + rf.h - 0.04, S + rf.h, rf.rect[1], rf.rect[3], ROOF);
+    // Parapets along every wall's top, on the inside
+    for (const w of walls) {
+      const L = laid(w);
+      onWall(L, w.n, 0, L.len, -0.14, 0, S + w.y1, S + w.y1 + 0.26, parapet);
     }
   });
-  // A stone string course over the ground floor and a cornice under the parapet, a touch proud of the walls
-  for (const { a, c, n } of sd) {
-    const [x0, x1] = [Math.min(a[0], c[0]), Math.max(a[0], c[0])];
-    const [z0, z1] = [Math.min(a[1], c[1]), Math.max(a[1], c[1])];
-    const ox = n[0] * 0.05;
-    const oz = n[1] * 0.05;
-    for (const [y0, y1] of [
-      [S + 1.18, S + 1.26],
-      [top - 0.3, top - 0.18],
-    ])
-      k.lbox(Math.min(x0, x0 + ox) - (n[1] ? 0.05 : 0), Math.max(x1, x1 + ox) + (n[1] ? 0.05 : 0), y0, y1, Math.min(z0, z0 + oz) - (n[0] ? 0.05 : 0), Math.max(z1, z1 + oz) + (n[0] ? 0.05 : 0), trim);
+  // A stone string course over the ground floor, a cornice under each roof, a touch proud of the walls
+  for (const w of walls) {
+    const L = laid(w);
+    onWall(L, w.n, -0.05, L.len + 0.05, 0, 0.05, S + w.y1 - 0.3, S + w.y1 - 0.18, trim);
+    if (w.y0 === 0) onWall(L, w.n, -0.05, L.len + 0.05, 0, 0.05, S + 1.18, S + 1.26, trim);
   }
-  // The roof: the stair and lift house, a water tank (the lower towers), a vent or two
-  const [cx, cz] = t.c;
-  k.all(() => k.lbox(cx - 1.1, cx + 1.1, top, top + BULK_H, cz - 0.7, cz + 0.7, toon('#6b3432')));
-  k.lbox(cx - 1.2, cx + 1.2, top + BULK_H, top + BULK_H + 0.08, cz - 0.8, cz + 0.8, ROOF);
-  if (t.tank) tank(k, cx + (t.parts.length > 1 ? 0 : 2.6), cz + (t.parts.length > 1 ? 1.4 : 0), top + 0.02);
-  if (!low) for (const [du, dv] of [[-3.2, 0.3], [3, -0.4]] as Pt[]) acUnit(k, cx + (t.along === 'x' || t.parts.length > 1 ? du : dv), cz + (t.along === 'x' || t.parts.length > 1 ? dv : du), top);
-  // The door: a dark opening in a stone surround, a canopy on two posts, two lamps, its number over it
-  const n = FACE_N[t.door.face];
+
+  // The roofs: the stair and lift house on the tallest part, a water tank on the lower towers, vents; terraces on a stepped tower's lower steps
+  const m = t.parts[t.main].rect;
+  const top = S + t.h;
+  const [cx, cz] = [(m[0] + m[2]) / 2, (m[1] + m[3]) / 2];
+  const wide = m[2] - m[0] >= m[3] - m[1];
+  k.all(() => k.lbox(cx - (wide ? 1.1 : 0.7), cx + (wide ? 1.1 : 0.7), top, top + BULK_H, cz - (wide ? 0.7 : 1.1), cz + (wide ? 0.7 : 1.1), toon('#6b3432')));
+  b.detail(() => {
+    k.lbox(cx - (wide ? 1.2 : 0.8), cx + (wide ? 1.2 : 0.8), top + BULK_H, top + BULK_H + 0.08, cz - (wide ? 0.8 : 1.2), cz + (wide ? 0.8 : 1.2), ROOF);
+    const room = Math.max(m[2] - m[0], m[3] - m[1]) / 2;
+    if (t.tank) tank(k, cx + (wide ? Math.min(2.6, room - 1) : 0), cz + (wide ? 0 : Math.min(2.6, room - 1)), top + 0.02);
+    if (!low) {
+      acUnit(k, cx - (wide ? Math.min(3, room - 1) : 0.6), cz + (wide ? 0.4 : -Math.min(3, room - 1)), top);
+      // A satellite dish or two on the roof
+      for (let i = 0; i < 2; i++) dish(k, cx + (r() - 0.5) * (m[2] - m[0] - 1.6), top + 0.02, cz + (r() - 0.5) * (m[3] - m[1] - 1.6), r() * Math.PI * 2);
+    }
+    if (t.design === 'stepped')
+      t.parts.forEach((p, i) => {
+        if (i === t.main) return;
+        const [x0, z0, x1, z1] = p.rect;
+        const y = S + p.h;
+        // A roof terrace: decking, planters along the edge, a table under a parasol
+        k.lbox(x0 + 0.3, x1 - 0.3, y, y + 0.03, z0 + 0.3, z1 - 0.3, WOOD);
+        if (low) return;
+        for (const [px, pz] of [
+          [x0 + 0.6, z0 + 0.6],
+          [x1 - 0.6, z0 + 0.6],
+          [x0 + 0.6, z1 - 0.6],
+          [x1 - 0.6, z1 - 0.6],
+        ] as Pt[])
+          planter(k, px, pz, y);
+        const [tx, tz] = [(x0 + x1) / 2, (z0 + z1) / 2];
+        k.put(new THREE.CylinderGeometry(0.3, 0.3, 0.03, 10).translate(tx, y + 0.45, tz), CREAM);
+        k.put(new THREE.CylinderGeometry(0.025, 0.025, 1.3, 5).translate(tx, y + 0.65, tz), METAL);
+        k.put(new THREE.ConeGeometry(0.75, 0.28, 8).translate(tx, y + 1.42, tz), toon(['#e23b3b', '#00a3d6', '#ffd23f'][i % 3]));
+      });
+  });
+
+  // The way in: a canopy on posts with lamps (a walk-up's front steps instead), and its number
+  const n = doorN;
   const tg: Pt = [n[1], -n[0]];
   const [dx, dz] = [t.door.x - n[0] * 0.25, t.door.z - n[1] * 0.25];
   const box = (u0: number, u1: number, y0: number, y1: number, v0: number, v1: number, mat: THREE.Material) => {
@@ -211,29 +307,61 @@ function tower(b: Batch, t: Tower, low: boolean) {
     const zs = [dz + tg[1] * u0 + n[1] * v0, dz + tg[1] * u1 + n[1] * v1];
     k.lbox(Math.min(...xs), Math.max(...xs), y0, y1, Math.min(...zs), Math.max(...zs), mat);
   };
-  k.all(() => {
-    box(-0.75, 0.75, S, S + 1.1, 0, 0.02, INK);
-    box(-0.85, 0.85, S + 1.1, S + 1.2, 0, 0.04, trim);
-    k.put(atlasPlane(t.no - 1, NUMBERS.rows, 1.9, 0.24, n, dx + n[0] * 0.03, S + 1.55, dz + n[1] * 0.03), NUMBERS.mat);
-  });
-  box(-1.1, 1.1, S + 1.3, S + 1.4, 0, 1.3, toon('#2f3a4a'));
-  for (const u of [-1.0, 1.0]) box(u - 0.04, u + 0.04, S, S + 1.3, 1.22, 1.3, METAL);
-  for (const u of [-0.95, 0.95]) {
-    const [lx, lz] = [dx + tg[0] * u + n[0] * 0.06, dz + tg[1] * u + n[1] * 0.06];
-    k.put(new THREE.SphereGeometry(0.06, 6, 4).translate(lx, S + 0.95, lz), glow(PAL.warm));
-  }
-  // A mural on the arm facing Trench Avenue (towers on its south side), where the door isn't
-  if (t.block.startsWith('trench-b0-') && t.door.face !== 'n') {
-    const north = sd.filter((s) => s.n[1] < -0.5).sort((p, q) => Math.min(p.a[1], p.c[1]) - Math.min(q.a[1], q.c[1]))[0];
-    if (north) {
-      const w = Math.min(north.l - 0.4, 6);
-      const mx = (north.a[0] + north.c[0]) / 2;
-      const mz = north.a[1] - 0.012;
-      k.all(() => k.put(atlasPlane(t.no % MURALS.rows, MURALS.rows, w, Math.min(w, 4.2), [0, -1], mx, S + 1.5 + Math.min(w, 4.2) / 2, mz), MURALS.mat));
+  k.all(() => k.put(atlasPlane(t.no - 1, NUMBERS.rows, 1.9, 0.24, n, dx + n[0] * 0.03, S + 1.55, dz + n[1] * 0.03), NUMBERS.mat));
+  if (t.design === 'walkup') {
+    // Stone stoops up to doors in carved surrounds, a lamp by each
+    const stone = toon('#8f7a8a');
+    for (const st of t.stoops) {
+      const [sx, sz] = [(st[0] + st[2]) / 2, (st[1] + st[3]) / 2];
+      const along = n[1] !== 0;
+      const half = (along ? st[2] - st[0] : st[3] - st[1]) / 2;
+      const w0: Pt = [sx - n[0] * STOOP.out / 2, sz - n[1] * STOOP.out / 2];
+      const sb = (u0: number, u1: number, y0: number, y1: number, v0: number, v1: number, mat: THREE.Material) => {
+        const xs = [w0[0] + tg[0] * u0 + n[0] * v0, w0[0] + tg[0] * u1 + n[0] * v1];
+        const zs = [w0[1] + tg[1] * u0 + n[1] * v0, w0[1] + tg[1] * u1 + n[1] * v1];
+        k.lbox(Math.min(...xs), Math.max(...xs), y0, y1, Math.min(...zs), Math.max(...zs), mat);
+      };
+      k.all(() => {
+        for (let i = 0; i < 3; i++) sb(-half, half, S + i * 0.15, S + (i + 1) * 0.15, 0, STOOP.out - i * 0.25, stone);
+        sb(-0.32, 0.32, S + 0.45, S + 1.15, 0.006, 0.02, toon('#3a2430'));
+      });
+      sb(-0.42, -0.32, S + 0.45, S + 1.2, 0, 0.08, trim);
+      sb(0.32, 0.42, S + 0.45, S + 1.2, 0, 0.08, trim);
+      sb(-0.48, 0.48, S + 1.2, S + 1.3, 0, 0.12, trim);
+      const [lx, lz] = [w0[0] + tg[0] * 0.55 + n[0] * 0.08, w0[1] + tg[1] * 0.55 + n[1] * 0.08];
+      k.put(new THREE.SphereGeometry(0.05, 6, 4).translate(lx, S + 1.05, lz), glow(PAL.warm));
+    }
+  } else {
+    k.all(() => {
+      box(-0.75, 0.75, S, S + 1.1, 0.006, 0.02, INK);
+      box(-0.85, 0.85, S + 1.1, S + 1.2, 0, 0.04, trim);
+    });
+    box(-1.1, 1.1, S + 1.3, S + 1.4, 0, 1.3, toon('#2f3a4a'));
+    for (const u of [-1.0, 1.0]) box(u - 0.04, u + 0.04, S, S + 1.3, 1.22, 1.3, METAL);
+    for (const u of [-0.95, 0.95]) {
+      const [lx, lz] = [dx + tg[0] * u + n[0] * 0.06, dz + tg[1] * u + n[1] * 0.06];
+      k.put(new THREE.SphereGeometry(0.06, 6, 4).translate(lx, S + 0.95, lz), glow(PAL.warm));
     }
   }
+
+  // A mural on the arm facing Trench Avenue (towers on its south side)
+  if (muralWall) {
+    const L = laid(muralWall);
+    const w = Math.min(L.len - 0.4, 6);
+    const mh = Math.min(w, 4.2, muralWall.y1 - 1.8);
+    const mx = L.a[0] + L.t[0] * L.len / 2;
+    k.all(() => k.put(atlasPlane(t.no % MURALS.rows, MURALS.rows, w, mh, [0, -1], mx, S + 1.5 + mh / 2, muralWall.a[1] - 0.012), MURALS.mat));
+  }
+
 }
-const BULK_H = 0.9;
+/** Details keep below a wall's parapet and cornice */
+const PARAPET_GAP = 0.35;
+
+/** A satellite dish on a bracket, facing `ry` */
+function dish(k: ReturnType<typeof kit>, x: number, y: number, z: number, ry: number) {
+  k.put(new THREE.CylinderGeometry(0.02, 0.02, 0.3, 4).translate(x, y + 0.15, z), METAL);
+  k.put(new THREE.CylinderGeometry(0.2, 0.06, 0.06, 10).rotateX(Math.PI / 2 - 0.5).rotateY(ry).translate(x, y + 0.36, z), toon('#e8e2f0'));
+}
 
 /** The lawn round a block's towers: a path from each door to the sidewalk, benches by it (the trees and lamps are the city's) */
 function lawn(b: Batch, towers: Tower[], blk: Rect) {
@@ -269,13 +397,16 @@ export function buildProjects(low: boolean) {
   const byBlock = new Map<string, Tower[]>();
   for (const t of TOWERS) byBlock.set(t.block, [...(byBlock.get(t.block) ?? []), t]);
   for (const t of TOWERS) {
-    const xs = t.parts.flatMap((p) => [p[0], p[2]]);
-    const zs = t.parts.flatMap((p) => [p[1], p[3]]);
-    site(`trench tower ${t.no}`, [Math.min(...xs) - 1.5, Math.min(...zs) - 1.5, Math.max(...xs) + 1.5, Math.max(...zs) + 1.5], (into) => {
-      const b = new Batch();
-      tower(b, t, low);
-      b.build(into);
-    });
+    const xs = t.parts.flatMap((p) => [p.rect[0], p.rect[2]]);
+    const zs = t.parts.flatMap((p) => [p.rect[1], p.rect[3]]);
+    const rect: Rect = [Math.min(...xs) - 1.5, Math.min(...zs) - 1.5, Math.max(...xs) + 1.5, Math.max(...zs) + 1.5];
+    const pieces: TowerPiece[] = ['shell', ...towerShell(t.parts).walls.map((_, i) => i), ...(t.scaffold ? ['scaffold' as const] : [])];
+    for (const piece of pieces)
+      site(`trench tower ${t.no} ${piece}`, rect, (into) => {
+        const b = new Batch();
+        tower(b, t, low, piece);
+        b.build(into);
+      });
   }
   for (const [id, towers] of byBlock) {
     const blk = TRENCH_BLOCKS.find((o) => o.id === id)!;
@@ -294,7 +425,7 @@ export function buildProjects(low: boolean) {
     }
     const r = rng(rect[0] * 7 + rect[1]);
     const clear = (x: number, z: number) =>
-      towers.every((t) => t.parts.every(([a, c, d, e]) => x < a - 1.6 || x > d + 1.6 || z < c - 1.6 || z > e + 1.6)) &&
+      towers.every((t) => t.parts.every(({ rect: [a, c, d, e] }) => x < a - 1.6 || x > d + 1.6 || z < c - 1.6 || z > e + 1.6)) &&
       towers.every((t) => {
         const n = FACE_N[t.door.face];
         return n[0] ? Math.abs(z - t.door.z) > 2.2 || (x - t.door.x) * n[0] < -1 : Math.abs(x - t.door.x) > 2.2 || (z - t.door.z) * n[1] < -1;

@@ -47,9 +47,9 @@ const WALL_PX = ROWS * PX_H;
 const SHOP_W = 3.2;
 const GROUND_PX = 100;
 
-type WallKind = 'brick' | 'brownstone' | 'stuccoTeal' | 'stuccoPink' | 'stuccoViolet' | 'industrial' | 'glassBlue' | 'glassTeal' | 'hotel';
+type WallKind = 'brick' | 'brownstone' | 'stuccoTeal' | 'stuccoPink' | 'stuccoViolet' | 'industrial' | 'glassBlue' | 'glassTeal' | 'hotel' | 'brickTan' | 'brickDark';
 type GroundKind = 'shopWarm' | 'shopPink' | 'shopCyan' | 'diner' | 'lobby' | 'stoneBase' | 'loading';
-const WALL_KINDS: WallKind[] = ['brick', 'brownstone', 'stuccoTeal', 'stuccoPink', 'stuccoViolet', 'industrial', 'glassBlue', 'glassTeal', 'hotel'];
+const WALL_KINDS: WallKind[] = ['brick', 'brownstone', 'stuccoTeal', 'stuccoPink', 'stuccoViolet', 'industrial', 'glassBlue', 'glassTeal', 'hotel', 'brickTan', 'brickDark'];
 const GROUND_KINDS: GroundKind[] = ['shopWarm', 'shopPink', 'shopCyan', 'diner', 'lobby', 'stoneBase', 'loading'];
 /** Each wall's own colour (for its trim and parapet) and the colour of its stone trim */
 const WALL_COLOR: Record<WallKind, { wall: string; trim: string }> = {
@@ -62,6 +62,9 @@ const WALL_COLOR: Record<WallKind, { wall: string; trim: string }> = {
   glassBlue: { wall: '#1d3a6b', trim: '#b9c4dc' },
   glassTeal: { wall: '#1d5a5f', trim: '#b9c4dc' },
   hotel: { wall: '#8a5a4a', trim: '#d6c3a5' },
+  // The Trench Houses' other bricks (projects.ts): tan and dark
+  brickTan: { wall: '#9c7650', trim: '#e6dccb' },
+  brickDark: { wall: '#4f2d30', trim: '#bfb2a6' },
 };
 const GLOWS = [PAL.warm, PAL.warm, PAL.cyan, PAL.pink];
 
@@ -116,7 +119,7 @@ function wallBand(c: CanvasRenderingContext2D, kind: WallKind, y0: number, glow:
   for (let row = 0; row < ROWS; row++) {
     const y = y0 + row * PX_H;
     // The wall's surface
-    if (!glow && (kind === 'brick' || kind === 'industrial')) {
+    if (!glow && (kind === 'brick' || kind === 'brickTan' || kind === 'brickDark' || kind === 'industrial')) {
       c.fillStyle = dark;
       for (let k = 0; k < PX_H; k += 8) {
         c.fillRect(0, y + k, ATLAS_W, 1.5);
@@ -184,7 +187,7 @@ function wallBand(c: CanvasRenderingContext2D, kind: WallKind, y0: number, glow:
         c.fillRect(wx - 9, wy - 1, 6, wh + 2);
         c.fillRect(wx + ww + 3, wy - 1, 6, wh + 2);
       }
-      pane(c, wx, wy, ww, wh, kind === 'brick' || kind === 'brownstone' ? '#e8e2f0' : trim, on, glow);
+      pane(c, wx, wy, ww, wh, kind === 'brick' || kind === 'brickTan' || kind === 'brickDark' || kind === 'brownstone' ? '#e8e2f0' : trim, on, glow);
       if (!glow) {
         // Lintel and sill
         c.fillStyle = trim;

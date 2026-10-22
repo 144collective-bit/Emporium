@@ -298,10 +298,23 @@ it and has been retired completely. Build only on what's here.
     blocks' slabs and lawns are the street plan's (`world.ts`), and the
     avenues it meets break their medians and lines there (`highwayGaps()`).
   - `projects.ts` (DOM-free, tested in `tests/projects.test.ts`) is what
-    stands on its blocks: the Trench Houses (`TOWERS`, numbered: crosses
-    and slabs on row B's blocks, 8 to 10 storeys, the ones round The
-    Block the tallest, every top `EMPORIUM_ROOF` less half a tile or more
-    under; each with its door on the side nearest a street), The Block
+    stands on its blocks: the Trench Houses (`TOWERS`, numbered; the
+    redesign, the owner's call: each block of row B laid out by hand in
+    `LAYOUTS` from a mix of designs (`TowerDesign`: L and T shapes round
+    half-courtyards, stepped towers, low walk-ups with stoops (`STOOP`),
+    slim point towers (the tallest), crosses and a slab), every block its
+    own; a tower is parts (`TowerPart`: a footprint and its own storeys, 3
+    to 9 over the ground floor), its `main` part carrying the stair house
+    (and a water tank up to 8 storeys), every top `EMPORIUM_ROOF` less half
+    a tile or more under; mostly red brick with some brown, tan and dark
+    (`Brick`, new wall atlas bands `brickTan` / `brickDark` in infill.ts);
+    balconies on some (`balconies`), scaffolding up one (`scaffold`); each
+    door on the side nearest a street. `towerShell()` turns the parts into
+    walls and roofs: the footprint cut into cells, each as tall as the
+    tallest part over it, a wall wherever a cell meets a lower one, from
+    the floor line under the lower roof, so no two walls share a plane.
+    `trench-b0-3`, east of The Block, waits for the rec centre (the
+    redesign's step B)), The Block
     (`THE_BLOCK` on `trench-b0-2`, south of the station: plaza, court and
     its fence with a gate each side (`blockFence()`), playground,
     handball wall, garden beds, benches, tables, string-light poles;
@@ -309,16 +322,24 @@ it and has been retired completely. Build only on what's here.
     blocks whole, row C as a strip along Bottom Street, laid by the
     `rowhouses` recipe, `rows()`; row C's strip is laid with its back edge
     a hair off straight so its one row faces Bottom Street). `PROJECT_SOLIDS` (in `SOLIDS`) are the
-    towers to their tops, the fence, the handball wall, the rows'
+    towers' parts to their roofs (the main one to its top), stoops and
+    scaffolding, the fence, the handball wall, the rows'
     buildings and their alleys' bollards. `TRENCH_WALKS` are the blocks
     people walk round (`life.ts`, with walkers of their own so downtown
     keeps its crowd).
-  - `projects3d.ts` draws them as sites (`buildProjects()`): each tower
-    (brick from the wall atlas, its windows lit at night, string course
-    and cornice, the roof inside a parapet, the stair and lift house, a
-    water tank on the lower ones, the door's canopy with lamps and its
-    "TRENCH HOUSES · n" sign from one small atlas, a mural with made-up
-    words on the north arm of those along Trench Avenue (`MURAL_TEXT`)),
+  - `projects3d.ts` draws them as sites (`buildProjects()`), each tower a
+    site per piece (its shell, each wall's details, its scaffolding: none
+    takes long to build): the shell (`towerShell()`'s walls from the wall
+    atlas in its brick, windows lit at night and lined up from wall to
+    wall, string course and cornices, roofs inside parapets, the stair and
+    lift house, a water tank, roof terraces on a stepped tower's lower
+    steps, the door's canopy with lamps (a walk-up's stoops and carved
+    door surrounds) and its "TRENCH HOUSES · n" sign from one small atlas,
+    a mural with made-up words on the north wall of those along Trench
+    Avenue (`MURAL_TEXT`)), then, near only, the lived-in details laid on
+    the atlas's bays (window air conditioners, window boxes, dishes,
+    balconies with light panels and washing on some) and the scaffolding
+    (poles, ledgers, boards, orange toe boards),
     the lawns (paths from the doors to the sidewalk with benches, a lamp
     by each, trees round them), the rows (`drawLot()`), their alleys and
     bollards, and behind Bottom Street a car park and trees along the

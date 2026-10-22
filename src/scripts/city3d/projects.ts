@@ -3,11 +3,14 @@
  * DOM-free, tested in tests/projects.test.ts): what stands on The Trenches'
  * blocks (trenches.ts).
  *
- * - **The projects** (`TOWERS`): brick tower blocks on the blocks of row B,
- *   cross-shaped or long slabs, 8 to 10 storeys (every one under the
- *   Emporium), set back on lawns, each with its door at the end of the arm
- *   (or the middle of the long side) nearest a street and a path out to
- *   the sidewalk. They're the Trench Houses, numbered.
+ * - **The projects** (`TOWERS`): the Trench Houses, numbered, on the blocks
+ *   of row B, each block laid out by hand (`LAYOUTS`) from a mix of designs
+ *   (`TowerDesign`): L and T shapes round half-courtyards, stepped towers,
+ *   low walk-ups with stoops, slim point towers (the tallest), crosses and a
+ *   slab; 4 to 10 storeys, every one under the Emporium; mostly red brick
+ *   with some brown, tan and dark (`Brick`); set back on lawns, each door on
+ *   the side nearest a street. `towerShell()` turns a tower's parts into its
+ *   walls and roofs.
  * - **The Block** (`THE_BLOCK`): the courtyard at the heart of the projects,
  *   on the block straight south of The Trenches' metro station: a fenced
  *   basketball court, a playground, a handball wall, benches, a community
@@ -28,57 +31,115 @@ import { STATIONS } from './metro';
 /** The Emporium's roof (landmarks.ts): nothing here comes near it */
 export const EMPORIUM_ROOF = 12.5;
 
-export type TowerShape = 'cross' | 'slab';
+/** The Trench Houses' designs: no two blocks alike */
+export type TowerDesign = 'cross' | 'slab' | 'L' | 'T' | 'stepped' | 'walkup' | 'point';
+export const TOWER_DESIGNS: TowerDesign[] = ['cross', 'slab', 'L', 'T', 'stepped', 'walkup', 'point'];
+/** Brick: mostly red, some brown, tan and dark (wall atlas bands, infill.ts) */
+export type Brick = 'brick' | 'brownstone' | 'brickTan' | 'brickDark';
+/** One piece of a tower: its footprint and its own height (a stepped tower's ends are lower than its middle) */
+export interface TowerPart {
+  rect: Rect;
+  /** Storeys above the ground floor */
+  floors: number;
+  /** Its roof over the slab */
+  h: number;
+}
 export interface Tower {
   id: string;
   /** Its number on the door (the Trench Houses) */
   no: number;
   block: string;
-  shape: TowerShape;
-  /** Its middle, and which way a slab runs (a cross is the same both ways) */
+  design: TowerDesign;
+  parts: TowerPart[];
+  /** The middle of its footprint's bounds */
   c: Pt;
-  along: 'x' | 'z';
-  /** Storeys above the ground floor */
+  /** Its tallest part's storeys and roof, and the top of whatever's on that roof (the stair and lift house, a water tank) */
   floors: number;
-  /** Its roof over the slab, and the top of whatever's on the roof (the stair and lift house, a water tank) */
   h: number;
   top: number;
-  /** A water tank on its roof (the lower ones), or only the stair and lift house */
+  /** The tallest part (the stair and lift house stands in its middle; a water tank on the lower towers) */
+  main: number;
   tank: boolean;
-  /** Its footprint: one rectangle for a slab, the two arms for a cross */
-  parts: Rect[];
   /** Its door: where, and the way it faces (out of the building) */
   door: { x: number; z: number; face: Face };
+  /** A walk-up's front stoops, every few steps along its front (solid, knee high) */
+  stoops: Rect[];
+  brick: Brick;
+  /** Balconies (with washing on some) on its long walls */
+  balconies: boolean;
+  /** Scaffolding up one face (the footprint of its poles), on one tower only */
+  scaffold: Rect | null;
 }
 
-/** A cross's arms: this long end to end, this wide */
+/** A cross's arms: this long end to end, this wide (kept for The Block's neighbours) */
 export const CROSS = { span: 11, arm: 4.2 };
-/** A slab: this long, this deep */
-export const SLAB_SIZE = { long: 14, deep: 5 };
 /** Roof furniture: the stair and lift house and a water tank on its legs, above the parapet */
 export const BULKHEAD = 0.9;
 export const TANK = 1.75;
+/** A stoop: out from the wall, wide, high */
+export const STOOP = { out: 0.75, w: 1.3, h: 0.45 };
+/** Scaffolding stands this far out from its wall */
+export const SCAFFOLD_OUT = 0.9;
 
-/** What each block of row B carries: two crosses, two slabs one behind the other, one cross, or The Block */
-type BlockPlan = 'crosses' | 'slabs' | 'cross' | 'block';
-const PLANS: Record<string, BlockPlan> = {
-  'trench-b0-0': 'slabs',
-  'trench-b0-1': 'crosses',
-  'trench-b0-2': 'block',
-  'trench-b0-3': 'crosses',
-  'trench-b0-4': 'cross',
-  'trench-b1-0': 'slabs',
-  'trench-b1-1': 'crosses',
-  'trench-b1-2': 'crosses',
-  'trench-b1-3': 'crosses',
-  'trench-b1-4': 'cross',
-  'trench-b2-0': 'cross',
-  'trench-b2-1': 'slabs',
-  'trench-b2-2': 'crosses',
-  'trench-b2-3': 'slabs',
-  'trench-b2-4': 'cross',
+/** Five in eight red, then brown, tan and dark (picked by a tower's number, so they scatter) */
+const BRICKS: Brick[] = ['brick', 'brick', 'brownstone', 'brick', 'brickTan', 'brick', 'brick', 'brickDark'];
+const roofOver = (floors: number) => Math.round((SHOP_H + floors * FLOOR + PARAPET) * 100) / 100;
+
+/**
+ * Every block of the projects, laid out by hand in its own numbers (u east,
+ * v south from its north-west corner): each tower a design and its parts
+ * [u0, v0, u1, v1, floors]. The three blocks round The Block rise the
+ * highest; point towers are the tallest of all (nine storeys over the
+ * ground floor, the roof's stair house still well under the Emporium).
+ * `trench-b0-3`, east of The Block, is left for the rec centre.
+ */
+type PartSpec = [number, number, number, number, number];
+const LAYOUTS: Record<string, { design: TowerDesign; parts: PartSpec[]; scaffold?: Face; balconies?: boolean }[]> = {
+  'trench-b0-0': [
+    { design: 'L', parts: [[2, 2, 20, 7, 7], [2, 7, 7, 18, 7]], balconies: true },
+    { design: 'point', parts: [[20.5, 24.5, 27.5, 31.5, 9]] },
+  ],
+  'trench-b0-1': [
+    { design: 'stepped', parts: [[13, 6.5, 20, 13.5, 6], [13, 13.5, 20, 25.5, 9], [13, 25.5, 20, 32.5, 6]] },
+    { design: 'walkup', parts: [[2, 3, 6.5, 36, 4]] },
+  ],
+  'trench-b0-4': [
+    { design: 'point', parts: [[8.75, 6.5, 15.75, 13.5, 9]] },
+    { design: 'walkup', parts: [[2, 30, 22.5, 34.5, 4]] },
+  ],
+  'trench-b1-0': [
+    { design: 'T', parts: [[3, 3, 30, 8, 7], [14, 8, 19, 24, 7]], balconies: true },
+    { design: 'walkup', parts: [[3, 28.8, 30, 33.3, 4]] },
+  ],
+  'trench-b1-1': [
+    { design: 'L', parts: [[2, 2, 16, 7, 8], [2, 7, 7, 16, 8]] },
+    { design: 'L', parts: [[17, 28, 31, 33, 7], [26, 19, 31, 28, 7]], balconies: true },
+  ],
+  'trench-b1-2': [
+    { design: 'cross', parts: [[11, 15.4, 22, 19.6, 9], [14.4, 12, 18.6, 23, 9]] },
+    { design: 'walkup', parts: [[2, 3, 6.5, 32, 5]] },
+    { design: 'walkup', parts: [[26.5, 3, 31, 32, 5]] },
+  ],
+  'trench-b1-3': [
+    { design: 'stepped', parts: [[4.5, 7, 11.5, 13, 5], [11.5, 7, 21.5, 13, 8], [21.5, 7, 28.5, 13, 5]], balconies: true },
+    { design: 'point', parts: [[21, 23, 27.5, 29.5, 9]] },
+    { design: 'walkup', parts: [[2, 23, 13, 27.5, 4]] },
+  ],
+  'trench-b1-4': [{ design: 'slab', parts: [[9.25, 7.5, 15.25, 27.5, 8]], balconies: true }],
+  'trench-b2-0': [
+    { design: 'walkup', parts: [[2, 2, 31, 6.5, 4]] },
+    { design: 'walkup', parts: [[2, 9.5, 6.5, 27, 5]] },
+    { design: 'walkup', parts: [[26.5, 9.5, 31, 27, 4]] },
+  ],
+  'trench-b2-1': [{ design: 'cross', parts: [[11, 12.4, 22, 16.6, 7], [14.4, 9, 18.6, 20, 7]] }],
+  'trench-b2-2': [
+    { design: 'L', parts: [[15, 2, 31, 7, 8], [26, 7, 31, 18, 8]], balconies: true },
+    { design: 'walkup', parts: [[2, 22.8, 18, 27.3, 5]] },
+  ],
+  'trench-b2-3': [{ design: 'stepped', parts: [[3.5, 11.5, 10.5, 17.5, 6], [10.5, 11.5, 22.5, 17.5, 8], [22.5, 11.5, 29.5, 17.5, 6]], scaffold: 's' }],
+  'trench-b2-4': [{ design: 'T', parts: [[2, 3, 7, 26, 7], [7, 12, 20, 17, 7]] }],
 };
-/** The blocks round The Block: their towers rise the highest */
+/** The blocks round The Block */
 const ROUND_THE_BLOCK = ['trench-b0-1', 'trench-b0-3', 'trench-b1-2'];
 /** The blocks people walk round (life.ts): The Block, its neighbours and the rows across Trench Avenue from it */
 export const TRENCH_WALKS = ['trench-b0-2', ...ROUND_THE_BLOCK, 'trench-a1', 'trench-a2'];
@@ -88,83 +149,157 @@ const bounds = (b: TrenchBlock): Rect => {
   const zs = b.poly.map((p) => p[1]);
   return [Math.min(...xs), Math.min(...zs), Math.max(...xs), Math.max(...zs)];
 };
+const FACE_OUT: Record<Face, Pt> = { n: [0, -1], s: [0, 1], w: [-1, 0], e: [1, 0] };
+const boundsOf = (rs: Rect[]): Rect => [Math.min(...rs.map((r) => r[0])), Math.min(...rs.map((r) => r[1])), Math.max(...rs.map((r) => r[2])), Math.max(...rs.map((r) => r[3]))];
 
-/** A tower's footprint from its shape and middle */
-export function partsOf(shape: TowerShape, [cx, cz]: Pt, along: 'x' | 'z'): Rect[] {
-  if (shape === 'cross') {
-    const s = CROSS.span / 2;
-    const a = CROSS.arm / 2;
-    return [
-      [cx - s, cz - a, cx + s, cz + a],
-      [cx - a, cz - s, cx + a, cz + s],
-    ];
-  }
-  const [l, d] = [SLAB_SIZE.long / 2, SLAB_SIZE.deep / 2];
-  return along === 'x' ? [[cx - l, cz - d, cx + l, cz + d]] : [[cx - d, cz - l, cx + d, cz + l]];
-}
-
-/** Its door: on the side nearest the block's edge (a street), at the end of the arm or the middle of the long side */
-function doorOf(shape: TowerShape, c: Pt, along: 'x' | 'z', blk: Rect): Tower['door'] {
+/** Its door: on the side nearest the block's edge (a street), in the middle of the part that reaches furthest that way */
+function doorOf(parts: Rect[], blk: Rect): Tower['door'] {
   const [x0, z0, x1, z1] = blk;
+  const [bx0, bz0, bx1, bz1] = boundsOf(parts);
   const gaps: [Face, number][] = [
-    ['n', c[1] - z0],
-    ['s', z1 - c[1]],
-    ['w', c[0] - x0],
-    ['e', x1 - c[0]],
+    ['n', bz0 - z0],
+    ['s', z1 - bz1],
+    ['w', bx0 - x0],
+    ['e', x1 - bx1],
   ];
-  // A slab's door is on one of its long sides
-  const ok = gaps.filter(([f]) => shape === 'cross' || (along === 'x' ? f === 'n' || f === 's' : f === 'e' || f === 'w'));
-  const face = ok.sort((p, q) => p[1] - q[1])[0][0];
-  const reach = shape === 'cross' ? CROSS.span / 2 : SLAB_SIZE.deep / 2;
-  const out = reach + 0.25;
-  return face === 'n' ? { x: c[0], z: c[1] - out, face } : face === 's' ? { x: c[0], z: c[1] + out, face } : face === 'w' ? { x: c[0] - out, z: c[1], face } : { x: c[0] + out, z: c[1], face };
+  const face = gaps.sort((p, q) => p[1] - q[1])[0][0];
+  const edge = (r: Rect) => (face === 'n' ? -r[1] : face === 's' ? r[3] : face === 'w' ? -r[0] : r[2]);
+  const r = [...parts].sort((a, b) => edge(b) - edge(a))[0];
+  const out = 0.25;
+  const [mx, mz] = [(r[0] + r[2]) / 2, (r[1] + r[3]) / 2];
+  return face === 'n' ? { x: mx, z: r[1] - out, face } : face === 's' ? { x: mx, z: r[3] + out, face } : face === 'w' ? { x: r[0] - out, z: mz, face } : { x: r[2] + out, z: mz, face };
+}
+/** A walk-up's stoops: one at its door and every six or so along the same front */
+function stoopsOf(r: Rect, door: Tower['door']): Rect[] {
+  const along = door.face === 'n' || door.face === 's';
+  const [a0, a1] = along ? [r[0], r[2]] : [r[1], r[3]];
+  const n = Math.max(1, Math.round((a1 - a0) / 6));
+  const out: Rect[] = [];
+  for (let k = 0; k < n; k++) {
+    const m = a0 + ((a1 - a0) * (k + 0.5)) / n;
+    const [w, o] = [STOOP.w / 2, STOOP.out];
+    if (door.face === 'n') out.push([m - w, r[1] - o, m + w, r[1]]);
+    else if (door.face === 's') out.push([m - w, r[3], m + w, r[3] + o]);
+    else if (door.face === 'w') out.push([r[0] - o, m - w, r[0], m + w]);
+    else out.push([r[2], m - w, r[2] + o, m + w]);
+  }
+  return out;
 }
 
 export const TOWERS: Tower[] = (() => {
   const out: Tower[] = [];
-  const r = rng(9090);
   for (const blk of TRENCH_BLOCKS) {
-    const plan = PLANS[blk.id];
-    if (!plan || plan === 'block') continue;
+    const lay = LAYOUTS[blk.id];
+    if (!lay) continue;
     const b = bounds(blk);
-    const [x0, z0, x1, z1] = b;
-    const [mx, mz] = [(x0 + x1) / 2, (z0 + z1) / 2];
-    const spots: { shape: TowerShape; c: Pt; along: 'x' | 'z' }[] =
-      plan === 'crosses'
-        ? [
-            { shape: 'cross', c: [x0 + 8, mz], along: 'x' },
-            { shape: 'cross', c: [x1 - 8, mz], along: 'x' },
-          ]
-        : plan === 'slabs'
-          ? [
-              { shape: 'slab', c: [mx, z0 + 7.5], along: 'x' },
-              { shape: 'slab', c: [mx, z1 - 7.5], along: 'x' },
-            ]
-          : [{ shape: 'cross', c: [mx, mz], along: 'x' }];
-    for (const s of spots) {
-      const tall = ROUND_THE_BLOCK.includes(blk.id);
-      const floors = tall ? 9 : 7 + Math.floor(r() * 3);
-      const h = Math.round((SHOP_H + floors * FLOOR + PARAPET) * 100) / 100;
+    for (const spec of lay) {
+      const parts: TowerPart[] = spec.parts.map(([u0, v0, u1, v1, floors]) => ({ rect: [b[0] + u0, b[1] + v0, b[0] + u1, b[1] + v1], floors, h: roofOver(floors) }));
+      const rects = parts.map((p) => p.rect);
+      const main = parts.reduce((m, p, i) => (p.h > parts[m].h || (p.h === parts[m].h && (p.rect[2] - p.rect[0]) * (p.rect[3] - p.rect[1]) > (parts[m].rect[2] - parts[m].rect[0]) * (parts[m].rect[3] - parts[m].rect[1])) ? i : m), 0);
+      const floors = parts[main].floors;
+      const h = parts[main].h;
       // The tallest carry only the stair and lift house; the rest a water tank too
       const tank = floors <= 8;
+      const door = doorOf(rects, b);
+      const [bx0, bz0, bx1, bz1] = boundsOf(rects);
+      // Mostly red brick; some brown, tan and dark, scattered
+      const brick = BRICKS[((out.length + 1) * 3) % BRICKS.length];
+      let scaffold: Rect | null = null;
+      if (spec.scaffold) {
+        const m = parts[main].rect;
+        const o = SCAFFOLD_OUT;
+        scaffold = spec.scaffold === 's' ? [m[0], m[3], m[2], m[3] + o] : spec.scaffold === 'n' ? [m[0], m[1] - o, m[2], m[1]] : spec.scaffold === 'w' ? [m[0] - o, m[1], m[0], m[3]] : [m[2], m[1], m[2] + o, m[3]];
+      }
       out.push({
         id: `tower-${out.length + 1}`,
         no: out.length + 1,
         block: blk.id,
-        shape: s.shape,
-        c: s.c,
-        along: s.along,
+        design: spec.design,
+        parts,
+        c: [(bx0 + bx1) / 2, (bz0 + bz1) / 2],
         floors,
         h,
         top: Math.round((h + (tank ? TANK : BULKHEAD)) * 100) / 100,
+        main,
         tank,
-        parts: partsOf(s.shape, s.c, s.along),
-        door: doorOf(s.shape, s.c, s.along, b),
+        door,
+        stoops: spec.design === 'walkup' ? stoopsOf(parts[0].rect, door) : [],
+        brick,
+        balconies: !!spec.balconies,
+        scaffold,
       });
     }
   }
   return out;
 })();
+
+/**
+ * A tower's walls and roofs, from its parts: the parts cut its footprint into
+ * cells, each as tall as the tallest part over it; a wall stands wherever a
+ * cell meets a lower one (or the ground), from the lower one's roof (down to
+ * the floor line under it, hidden inside, so the windows line up with the
+ * rest) to its own. No two walls ever share a plane, however the parts meet.
+ * Heights are over the slab.
+ */
+export interface TowerWall {
+  a: Pt;
+  c: Pt;
+  /** The way it faces (out of the building) */
+  n: Pt;
+  y0: number;
+  y1: number;
+}
+export function towerShell(parts: TowerPart[]) {
+  const xs = [...new Set(parts.flatMap((p) => [p.rect[0], p.rect[2]]))].sort((a, b) => a - b);
+  const zs = [...new Set(parts.flatMap((p) => [p.rect[1], p.rect[3]]))].sort((a, b) => a - b);
+  const H = (i: number, j: number) => {
+    if (i < 0 || j < 0 || i >= xs.length - 1 || j >= zs.length - 1) return 0;
+    const cx = (xs[i] + xs[i + 1]) / 2;
+    const cz = (zs[j] + zs[j + 1]) / 2;
+    return Math.max(0, ...parts.filter((p) => cx > p.rect[0] && cx < p.rect[2] && cz > p.rect[1] && cz < p.rect[3]).map((p) => p.h));
+  };
+  type Raw = { x: boolean; at: number; from: number; to: number; n: Pt; lo: number; hi: number };
+  const raw: Raw[] = [];
+  for (let i = 0; i < xs.length; i++)
+    for (let j = 0; j < zs.length - 1; j++) {
+      const [l, r] = [H(i - 1, j), H(i, j)];
+      if (l !== r) raw.push({ x: true, at: xs[i], from: zs[j], to: zs[j + 1], n: r > l ? [-1, 0] : [1, 0], lo: Math.min(l, r), hi: Math.max(l, r) });
+    }
+  for (let j = 0; j < zs.length; j++)
+    for (let i = 0; i < xs.length - 1; i++) {
+      const [up, dn] = [H(i, j - 1), H(i, j)];
+      if (up !== dn) raw.push({ x: false, at: zs[j], from: xs[i], to: xs[i + 1], n: dn > up ? [0, -1] : [0, 1], lo: Math.min(up, dn), hi: Math.max(up, dn) });
+    }
+  // Runs of the same wall along one line join up
+  const key = (w: Raw) => `${w.x}:${w.at}:${w.n}:${w.lo}:${w.hi}`;
+  raw.sort((p, q) => (key(p) < key(q) ? -1 : key(p) > key(q) ? 1 : p.from - q.from));
+  const merged: Raw[] = [];
+  for (const w of raw) {
+    const last = merged[merged.length - 1];
+    if (last && key(last) === key(w) && Math.abs(last.to - w.from) < 1e-9) last.to = w.to;
+    else merged.push({ ...w });
+  }
+  const walls: TowerWall[] = merged.map((w) => ({
+    a: w.x ? [w.at, w.from] : [w.from, w.at],
+    c: w.x ? [w.at, w.to] : [w.to, w.at],
+    n: w.n,
+    y0: w.lo > 0 ? Math.floor(w.lo) : 0,
+    y1: w.hi,
+  }));
+  // The roofs: every cell under a part, pulled in a hair from each edge it stands over a lower one by (never flush with a wall)
+  const roofs: { rect: Rect; h: number }[] = [];
+  for (let i = 0; i < xs.length - 1; i++)
+    for (let j = 0; j < zs.length - 1; j++) {
+      const h = H(i, j);
+      if (!h) continue;
+      const e = 0.006;
+      roofs.push({
+        rect: [xs[i] + (H(i - 1, j) < h ? e : 0), zs[j] + (H(i, j - 1) < h ? e : 0), xs[i + 1] - (H(i + 1, j) < h ? e : 0), zs[j + 1] - (H(i, j + 1) < h ? e : 0)],
+        h,
+      });
+    }
+  return { walls, roofs };
+}
 
 /* ---------- The Block ---------- */
 
@@ -319,12 +454,15 @@ export const CORNER_SHOPS: CornerShop[] = LAID.corners;
 /** Is a row lot one of the corner shops' (drawn from the save, not with the rows) */
 export const isCorner = (l: Lot) => CORNER_SHOPS.some((c) => c.lot === l);
 
-/** Everything solid: the towers, The Block's fence and handball wall, the rows' buildings and their alleys' bollards */
+/** Everything solid: the towers (their stoops and scaffolding), The Block's fence and handball wall, the rows' buildings and their alleys' bollards */
 export function projectSolids(): Footprint[] {
   const r = 0.1;
   const d = rows();
   return [
-    ...TOWERS.flatMap((t) => t.parts.map((p): Footprint => [...p, t.top])),
+    // (each part to its own roof; the tallest to the top of what's on it)
+    ...TOWERS.flatMap((t) => t.parts.map((p, i): Footprint => [...p.rect, i === t.main ? t.top : p.h])),
+    ...TOWERS.flatMap((t) => t.stoops.map((r): Footprint => [...r, STOOP.h])),
+    ...TOWERS.flatMap((t) => (t.scaffold ? [[...t.scaffold, t.parts[t.main].h] as Footprint] : [])),
     ...blockFence().map((f): Footprint => [...f, THE_BLOCK.fenceH]),
     [...THE_BLOCK.handball, THE_BLOCK.handballH],
     ...d.lots.flatMap((l) => l.solids),
