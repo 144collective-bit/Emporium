@@ -146,7 +146,34 @@ The plan as it was:
   fighting, day and night, on the phone tier; draws and triangles before
   and after.
 
-### Phase 2: walking and running
+### Phase 2: walking and running (built)
+
+What's in (for the owner's sign-off):
+
+- `locomotion.ts`: the feet planted in the world (each stays where it
+  lands; the other swings to where the body will be), leg IK with a
+  heel-to-toe roll, the hips dropping when a foot needs it. No slide at
+  any speed, turning, strafing, backing up, on stairs and slopes (the tests
+  hold a planted foot to under 4 mm).
+- The gait from the speed: walk, jog and sprint blend by steps a second,
+  time on the ground, lift, hip height, lean and arms; a jogging and
+  running foot lands close under him and pushes off behind, and a
+  sprinting leg folds up. Degen's walking speed is a jog for his legs and
+  his run a sprint, so those are the gaits you'll see most.
+- Starts lean in, stops lean back and settle, bends lean in, he steps
+  round on the spot when he turns; arms swing with the opposite leg, the
+  pelvis and shoulders counter-turn.
+- Jumps tuck the legs; landings are clips by how hard: a soft step, a
+  crouch, a forward roll after a big drop on the run.
+- The idle breathes, shifts its weight, and looks round after a while.
+- Over the shoulder is the default camera when walking starts.
+- The clips are short keyed tracks added on top of the procedural walk
+  (the walk itself has to be procedural for the feet to stay planted).
+- Not yet: other players (paused multiplayer), crowds and fighters still
+  use the old walk; the run's quick rhythm (Degen covers ground fast for
+  his size) is the price of feet that never slide.
+
+The plan as it was:
 
 - A clip system grown out of `fight-anim.ts`: keyframed clips on the new
   bones, sampled and blended, with layers (lower body / upper body) and

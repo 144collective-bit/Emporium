@@ -75,6 +75,12 @@ export interface Limb {
   twist?: number;
   /** Arms only: the wrist, absent or zero for the hand straight on the forearm (fighting turns the fist) */
   wrist?: Wrist;
+  /** Legs only: the foot's pitch at the ankle (positive tips the toes down) and the toes' bend (negative lifts them); left out, the foot eases towards level by itself */
+  foot?: number;
+  toe?: number;
+  /** Legs only, with `foot`: the foot turned about the shin and rolled (so a planted foot keeps its heading whatever the leg does) */
+  footYaw?: number;
+  footRoll?: number;
 }
 /** A wrist: `roll` turns the hand about the forearm's length (positive brings the thumb inward on a forward arm, so the palm faces down), `bend` tips it forward at the wrist (negative back) */
 export interface Wrist {
@@ -98,6 +104,10 @@ export interface Pose {
    * it every frame you want it (holding a gun).
    */
   grip?: [number, number];
+  /** The hips moved sideways (+x), over the foot taking the weight (locomotion.ts) */
+  sway?: number;
+  /** The pelvis turned about the spine (positive brings the -x hip forward); the spine's `twist` is on top of it */
+  turn?: number;
 }
 
 export const newPose = (): Pose => ({
@@ -254,8 +264,8 @@ const Z = new THREE.Vector3(0, 0, 1);
 /** Pose the skeleton. `grip` is each hand's closing (0 open, 1 a fist). */
 export function poseSkeleton(sk: Skeleton, p: Pose, grip: [number, number] = [0.2, 0.2]) {
   const b = sk.bones;
-  b.hips.position.y = HIP_Y + p.bob;
-  b.hips.rotation.set(0, 0, p.side);
+  b.hips.position.set(p.sway ?? 0, HIP_Y + p.bob, 0);
+  b.hips.rotation.set(0, p.turn ?? 0, p.side);
   const spine = [b.spine1, b.spine2, b.chest];
   for (let i = 0; i < 3; i++) {
     const k = SPINE_SHARE[i];
@@ -295,10 +305,16 @@ export function poseSkeleton(sk: Skeleton, p: Pose, grip: [number, number] = [0.
     const l = p.legs[i];
     b[`leg${S}`].rotation.set(-l.fwd, 0, s * l.out - p.side);
     b[`shin${S}`].rotation.set(l.bend, 0, 0);
+    if (l.foot !== undefined) {
+      // Placed by the pose (the walk's planted feet)
+      b[`foot${S}`].rotation.set(l.foot, l.footYaw ?? 0, l.footRoll ?? 0, 'YXZ');
+      b[`toe${S}`].rotation.set(l.toe ?? 0, 0, 0);
+      continue;
+    }
     // The foot eases towards level; if it still tips forward onto its toes, the toes bend back
     const tip = l.fwd - l.bend;
     const foot = THREE.MathUtils.clamp(tip * FOOT_LEVEL, -FOOT_MAX, FOOT_MAX);
-    b[`foot${S}`].rotation.set(foot, 0, 0);
+    b[`foot${S}`].rotation.set(foot, 0, 0, 'YXZ');
     const toesDown = foot - tip;
     b[`toe${S}`].rotation.set(-Math.min(0.6, Math.max(0, toesDown)) * 0.9, 0, 0);
   }
