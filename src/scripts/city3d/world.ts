@@ -414,18 +414,12 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
     const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.atan2(-uz, ux));
     for (let p = 6; p < len - 3.6; p += 1.1) dashes.push(m.clone().compose(new THREE.Vector3(ax + ux * p, 0.037, az + uz * p), q, new THREE.Vector3(0.55, 0.01, 0.07)));
   }
-  // Flat: two triangles a marking (thousands of them), lying on the asphalt
+  // Flat: two triangles a marking (thousands of them), lying on the asphalt; merged with the city's
+  // fixed geometry, so they're split by tile and only the ones in view are drawn (tileBatch() in kit.ts)
   const unit = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
-  for (const [list, mat] of [
-    [dashes, neon('#f5d76e', 0.9, 1.1)],
-    [whites, toon('#d9d5ee')],
-    [zebra, toon('#e8e4f8')],
-  ] as const) {
-    const im = new THREE.InstancedMesh(unit, mat, list.length);
-    list.forEach((mm, i) => im.setMatrixAt(i, mm));
-    im.receiveShadow = true;
-    scene.add(im);
-  }
+  const marks = new Batch();
+  marks.instances(unit, neon('#f5d76e', 0.9, 1.1), dashes).instances(unit, toon('#d9d5ee'), whites).instances(unit, toon('#e8e4f8'), zebra);
+  marks.build(scene, { cast: false, receive: true });
 
   // Neon streaks on wet asphalt (only visible in the rain, at dusk and night): one mesh,
   // shown only while it's raining (index.ts hides it when the sheen is off)
@@ -538,37 +532,37 @@ export function buildTrees(scene: THREE.Scene) {
   const trunkGeo = new THREE.CylinderGeometry(0.07, 0.09, 1, 6, 1, true);
   const canopyGeo = new THREE.IcosahedronGeometry(0.42, 1);
   const coneGeo = new THREE.ConeGeometry(0.42, 0.9, 7);
-  const trunk = new THREE.InstancedMesh(trunkGeo, toon('#6b4630'), trees.length);
-  const canopy = new THREE.InstancedMesh(canopyGeo, toon('#ffffff', { name: 'canopy' }), round.length);
-  const cones = new THREE.InstancedMesh(coneGeo, toon('#1d7a55'), pines.length * 2);
-  const m = new THREE.Matrix4();
+  // Every tree merged with the city's fixed geometry (split by tile, only those in view drawn: tileBatch() in kit.ts)
   const q = new THREE.Quaternion();
-  const greens = ['#2fae6e', '#33b878', '#24995f', '#3fc485', '#2a9d63'].map((c) => new THREE.Color(c));
-  trees.forEach((t, i) => {
+  const greens = ['#2fae6e', '#33b878', '#24995f', '#3fc485', '#2a9d63'];
+  const trunks = trees.map((t) => {
     const h = t.pine ? 0.45 : 0.6;
-    trunk.setMatrixAt(i, m.compose(new THREE.Vector3(t.x, t.y + (h * t.s) / 2, t.z), q, new THREE.Vector3(t.s, h * t.s, t.s)));
+    return new THREE.Matrix4().compose(new THREE.Vector3(t.x, t.y + (h * t.s) / 2, t.z), q, new THREE.Vector3(t.s, h * t.s, t.s));
   });
+  // Round canopies in five greens, each turned its own way
+  const canopies: THREE.Matrix4[][] = greens.map(() => []);
   round.forEach((t, i) => {
-    canopy.setMatrixAt(i, m.compose(new THREE.Vector3(t.x, t.y + 0.85 * t.s, t.z), q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), rand() * 6), new THREE.Vector3(t.s, t.s * 0.95, t.s)));
-    canopy.setColorAt(i, greens[i % greens.length]);
+    canopies[i % greens.length].push(
+      new THREE.Matrix4().compose(new THREE.Vector3(t.x, t.y + 0.85 * t.s, t.z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), rand() * 6), new THREE.Vector3(t.s, t.s * 0.95, t.s))
+    );
   });
-  q.identity();
-  pines.forEach((t, i) => {
-    cones.setMatrixAt(i * 2, m.compose(new THREE.Vector3(t.x, t.y + 0.75 * t.s, t.z), q, new THREE.Vector3(t.s, t.s, t.s)));
-    cones.setMatrixAt(i * 2 + 1, m.compose(new THREE.Vector3(t.x, t.y + 1.2 * t.s, t.z), q, new THREE.Vector3(t.s * 0.75, t.s * 0.8, t.s * 0.75)));
-  });
-  for (const im of [trunk, canopy, cones]) {
-    im.castShadow = true;
-    im.receiveShadow = true;
-    scene.add(im);
-  }
+  const cones = pines.flatMap((t) => [
+    new THREE.Matrix4().compose(new THREE.Vector3(t.x, t.y + 0.75 * t.s, t.z), q, new THREE.Vector3(t.s, t.s, t.s)),
+    new THREE.Matrix4().compose(new THREE.Vector3(t.x, t.y + 1.2 * t.s, t.z), q, new THREE.Vector3(t.s * 0.75, t.s * 0.8, t.s * 0.75)),
+  ]);
+  const b = new Batch();
+  b.instances(trunkGeo, toon('#6b4630'), trunks);
+  greens.forEach((g, i) => b.instances(canopyGeo, toon(g), canopies[i]));
+  b.instances(coneGeo, toon('#1d7a55'), cones);
+  b.build(scene);
 }
 
 export function buildLamps(scene: THREE.Scene) {
   const n = lamps.length;
-  const pole = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.035, 0.05, 1.6, 6), toon('#1b1830'), n);
-  const arm = new THREE.InstancedMesh(new THREE.BoxGeometry(0.4, 0.05, 0.05), toon('#1b1830'), n);
-  const bulb = new THREE.InstancedMesh(new THREE.BoxGeometry(0.2, 0.07, 0.12), neon('#fff1c2', 0.6, 2.4), n);
+  // The lamps themselves are merged with the city's fixed geometry (split by tile: tileBatch() in kit.ts)
+  const poles: THREE.Matrix4[] = [];
+  const arms: THREE.Matrix4[] = [];
+  const bulbs: THREE.Matrix4[] = [];
   // Halos are points, so they always face the camera
   const haloPos = new Float32Array(n * 3);
   const haloMat = lit(
@@ -584,15 +578,19 @@ export function buildLamps(scene: THREE.Scene) {
   lamps.forEach((l, i) => {
     q.setFromAxisAngle(up, l.ry);
     const dir = new THREE.Vector3(0.2, 0, 0).applyQuaternion(q);
-    pole.setMatrixAt(i, m.compose(new THREE.Vector3(l.x, l.y + 0.8, l.z), q, new THREE.Vector3(1, 1, 1)));
-    arm.setMatrixAt(i, m.compose(new THREE.Vector3(l.x + dir.x, l.y + 1.58, l.z + dir.z), q, new THREE.Vector3(1, 1, 1)));
-    bulb.setMatrixAt(i, m.compose(new THREE.Vector3(l.x + dir.x * 2, l.y + 1.53, l.z + dir.z * 2), q, new THREE.Vector3(1, 1, 1)));
+    poles.push(new THREE.Matrix4().compose(new THREE.Vector3(l.x, l.y + 0.8, l.z), q, new THREE.Vector3(1, 1, 1)));
+    arms.push(new THREE.Matrix4().compose(new THREE.Vector3(l.x + dir.x, l.y + 1.58, l.z + dir.z), q, new THREE.Vector3(1, 1, 1)));
+    bulbs.push(new THREE.Matrix4().compose(new THREE.Vector3(l.x + dir.x * 2, l.y + 1.53, l.z + dir.z * 2), q, new THREE.Vector3(1, 1, 1)));
     haloPos.set([l.x + dir.x * 2, l.y + 1.5, l.z + dir.z * 2], i * 3);
     pool.setMatrixAt(i, m.compose(new THREE.Vector3(l.x + dir.x * 2, l.y + 0.02, l.z + dir.z * 2), flat, new THREE.Vector3(2.6, 2.6, 2.6)));
   });
   pools.forEach((p, i) => pool.setMatrixAt(n + i, m.compose(new THREE.Vector3(p.x, p.y + 0.02, p.z), flat, new THREE.Vector3(p.size, p.size, p.size))));
-  pole.castShadow = arm.castShadow = true;
+  const lampB = new Batch();
+  lampB.instances(new THREE.CylinderGeometry(0.035, 0.05, 1.6, 6), toon('#1b1830'), poles).instances(new THREE.BoxGeometry(0.4, 0.05, 0.05), toon('#1b1830'), arms);
+  lampB.build(scene, { cast: true, receive: true });
+  // (the bulbs cast no shadow)
+  new Batch().instances(new THREE.BoxGeometry(0.2, 0.07, 0.12), neon('#fff1c2', 0.6, 2.4), bulbs).build(scene, { cast: false, receive: true });
   const haloGeo = new THREE.BufferGeometry();
   haloGeo.setAttribute('position', new THREE.BufferAttribute(haloPos, 3));
-  scene.add(pole, arm, bulb, fx(new THREE.Points(haloGeo, haloMat)), fx(pool));
+  scene.add(fx(new THREE.Points(haloGeo, haloMat)), fx(pool));
 }

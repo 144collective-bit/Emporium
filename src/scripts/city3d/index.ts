@@ -49,6 +49,7 @@ import { CROWD_VIEW } from './character';
 import type { GameDeps } from './ui';
 import { createBench } from './bench';
 import { mb, sceneMemory } from './perf';
+import { tileBatch } from './tilebatch';
 
 type Tier = 'high' | 'medium' | 'low';
 
@@ -204,8 +205,11 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   camera.position.copy(h0.pos);
   controls.target.copy(h0.target);
   controls.update();
-  // One mesh per material for each landmark and for the city's ground, not one per Batch
-  consolidate([scene, ...spots.map((sp) => sp.group)]);
+  // One mesh per material for each landmark, not one per Batch (they lift on hover)
+  consolidate(spots.map((sp) => sp.group));
+  // The rest of the city's fixed geometry (the ground, roads, downtown's infill, the districts, trees, lamps,
+  // the airport and the kart park) merged per tile: one draw per material, only the tiles in view drawn
+  const tiled = tileBatch(scene, [scene, ...['airport', 'kartpark'].flatMap((n) => scene.getObjectByName(n) ?? [])]);
   bootAt.built = performance.now();
   renderer.compile(scene, camera);
   bootAt.compiled = performance.now();
@@ -732,7 +736,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   }
   if (statsEl) {
     // For the headless draw-call breakdown (scratch scripts): the scene, renderer and camera on the page
-    (window as unknown as { __city?: unknown }).__city = { scene, renderer, camera };
+    (window as unknown as { __city?: unknown }).__city = { scene, renderer, camera, controls };
     statsEl.className = 'city-stats';
     statsEl.setAttribute('aria-hidden', 'true');
     host.append(statsEl);
@@ -843,6 +847,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     camera.updateMatrixWorld();
     CROWD_VIEW.eye.setFromMatrixPosition(camera.matrixWorld);
     CROWD_VIEW.frustum.setFromProjectionMatrix(viewProj.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
+    CROWD_VIEW.shadowOn = renderer.shadowMap.enabled && sky.shadowFrustum(CROWD_VIEW.shadow);
     if (!reduced || frames === 0) for (const f of ticks) f(env);
     updateLights(s.night, env.t);
     waterMat.uniforms.time.value = env.t;
@@ -949,6 +954,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           `${Math.round(stat.draws / n)} draws · ${(stat.tris / n / 1e6).toFixed(2)}M tris`,
           `of which shadows ${Math.round(stat.shadowDraws / n)} draws · ${(stat.shadowTris / n / 1e6).toFixed(2)}M tris`,
           stat.mem,
+          `tiles ${tiled.drawn()} of ${tiled.pieces} pieces drawn`,
           `boot ${(b.total / 1000).toFixed(1)} s · build ${(b.build / 1000).toFixed(1)} · shaders ${(b.shaders / 1000).toFixed(1)}`,
           `${tier} · px ${renderer.getPixelRatio().toFixed(2)}${lost.length ? ` · lowered: ${lost.join(', ')}` : ''}`,
           // Where Degen stands while walking (for placing things: ?spawn=x,z puts him back there)

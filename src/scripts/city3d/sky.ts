@@ -275,6 +275,18 @@ export function createSky(scene: THREE.Scene, opts: { shadows: number; rainDrops
 
   return {
     update,
+    /**
+     * Where the sun's shadow box is this frame (after `update()`), into `out`: only what's in it can
+     * cast a shadow, so the crowds and the traffic leave the rest out of the shadow map. False without shadows.
+     */
+    shadowFrustum(out: THREE.Frustum) {
+      if (!opts.shadows) return false;
+      sun.updateMatrixWorld();
+      sun.target.updateMatrixWorld();
+      sun.shadow.updateMatrices(sun);
+      out.copy(sun.shadow.getFrustum());
+      return true;
+    },
     setTime(m: TimeMode) {
       timeMode = m;
     },

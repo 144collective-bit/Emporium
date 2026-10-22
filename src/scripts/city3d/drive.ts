@@ -25,7 +25,7 @@ import * as THREE from 'three';
 import { createDegen, type Degen, type Outfit } from './character';
 import type { Sfx } from './combat';
 import { CARS } from './cars';
-import { circles, newCar, stepCar, tune, type CarState, type DriveInput, type DriveTune } from './drive-sim';
+import { circles, newCar, reachOf, stepCar, tune, type CarState, type DriveInput, type DriveTune } from './drive-sim';
 import type { Garage } from './garage';
 import type { Kart } from './karts';
 import { bodies } from './life';
@@ -54,7 +54,8 @@ export interface DriveDeps {
   /** The kart track's surface under a point (height and banking), if it's on the track at about this height */
   track(x: number, z: number, yNow: number): { y: number; roll: number } | null;
   /** Every solid box in the city (landmarks, placed buildings) */
-  solids(): Box[];
+  /** The solid boxes within `reach` of a point (the collision grid's answer; everything the car could touch this step) */
+  solids(x: number, z: number, reach: number): Box[];
   /** The ground's height (the raised blocks and sidewalks) */
   groundAt(x: number, z: number): number;
   /** How far the camera can sit from a point along a direction before something's in the way */
@@ -372,7 +373,9 @@ export function createDrive(d: DriveDeps) {
       const s = v.state;
       const T = v.tune;
       // Up on the track's deck, what's below the deck (its pillars) is no obstacle
-      const boxes = v.y > 0.5 ? d.solids().filter((b) => b[4] > v.y + 0.2) : d.solids();
+      // What it could touch this step: its length, how far it goes and a push or two
+      const near = d.solids(s.x, s.z, reachOf(s));
+      const boxes = v.y > 0.5 ? near.filter((b) => b[4] > v.y + 0.2) : near;
       if (frozen) inp = { throttle: 0, steer: 0, handbrake: true };
       const px = s.x;
       const pz = s.z;

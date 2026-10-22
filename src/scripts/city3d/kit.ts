@@ -433,6 +433,7 @@ export class Batch {
     }
     if (!this.parts.has(mat)) this.parts.set(mat, []);
     this.parts.get(mat)!.push(g);
+    this.lastAdded = { geo: g, mat };
     return this;
   }
 
@@ -455,6 +456,26 @@ export class Batch {
   box(x: number, y: number, z: number, w: number, h: number, d: number, mat: THREE.Material) {
     return this.add(boxAt(x, y, z, w, h, d), mat);
   }
+
+  /**
+   * Many copies of one shape, each placed by its matrix (what an
+   * InstancedMesh would draw), merged with the rest: fixed things spread
+   * over the whole map (trees, lamps, road markings), so they're split by
+   * tile with everything else (`tileBatch()`) and only the copies in view
+   * are drawn.
+   */
+  instances(geo: THREE.BufferGeometry, mat: THREE.Material, matrices: readonly THREE.Matrix4[]) {
+    if (!matrices.length) return this;
+    // The shape made ready once (indexed, its colour per vertex), then copied
+    const first = this.add(geo.clone(), mat).lastAdded!;
+    const list = this.parts.get(first.mat)!;
+    list.pop();
+    for (const m of matrices) list.push(first.geo.clone().applyMatrix4(m));
+    first.geo.dispose();
+    return this;
+  }
+  /** The geometry and material the last `add()` filed (for `instances()`) */
+  private lastAdded: { geo: THREE.BufferGeometry; mat: THREE.Material } | null = null;
 
   build(parent: THREE.Object3D, { cast = true, receive = true } = {}) {
     for (const [mat, geos] of this.parts) {
