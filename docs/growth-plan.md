@@ -1,7 +1,7 @@
 # Growing Sector 7: the plan
 
 How the city gets many more buildings, and then a bigger world, without
-getting slower. Phases 0-4 are built. Like the other plans, it waits
+getting slower. Phases 0-5 are built. Like the other plans, it waits
 for the owner's sign-off one phase at a time. Keep it up to date.
 
 ## What the owner asked
@@ -664,39 +664,62 @@ triangles, the shadow map's included; headless frame rates mean nothing):
 
 # Part B: a bigger world
 
-## Phase 5: the edge as data (nothing new to see)
+## Phase 5: the edge as data (built)
 
-Everything that reads the world's edge is made to scale with it, before
-the edge moves:
+Nothing new to see: everything that reads the world's edge now scales
+with it, before the edge moves.
 
-- **Freeze what mustn't move.**
-  - The airport's `SITE` gets fixed numbers instead of clamping to
-    `WORLD_BOUNDS`.
-  - The same check applies to the kart park, the Fight Club, the south
-    bank's places and anything else written against the edge.
-  - Phase 0's snapshot test guards it.
-- **The land, river and roads come from tiles** (Phase 1), so a longer
-  river or road costs nothing outside the view.
-- **The outskirts' trees** are seeded per tile with a density per area, not
-  a fixed count spread over the whole world. A bigger world gets more
-  trees, never thinner ones.
-- **The skyline ring:**
-  - it follows the edge at a set distance, its towers per tile so only
-    the visible arc is drawn;
-  - it still leaves out the airport's approach;
-  - it goes far form only (it's past the haze anyway).
-- **The camera and sky:**
-  - the City-view pan limit and the Build overview are worked out from the
-    built-up area, not hard-coded;
-  - the far plane and sky dome stay at 440 and 400, since the haze hides
-    everything past about 180 and the dome travels with the camera;
-  - the haze is checked so the new edge never shows as a hard line.
-- **Flying:** `CEILING` stays. `EDGE_TURN` and the airport's timetable read
-  the bounds, and `tests/airfield.test.ts` keeps them inside.
-- **Driving:** `RIVER_WALLS` and the bridges' gaps come from the street plan
-  data, not from `EXT`.
-- **Done when** `EXT` can be changed in one place, the tests pass at both
-  today's and Phase 6's size, and today's city looks the same.
+- **The edge in one place:** `EXT` in `layout.ts`. A test run can set
+  another (`WORLD_EXT=x0,x1`; `npm run test:wide` runs every test at
+  Phase 6's -420 to 460), and both runs pass.
+- **Frozen:** the airport's `SITE` is fixed numbers (it used to clamp to
+  `WORLD_BOUNDS`, so in a bigger world it would have grown; the snapshot
+  test at Phase 6's size caught it). The kart park, the Fight Club, the
+  south bank's places and every street were already fixed numbers or
+  ended at `'edge'` in the snapshot; the test passes at both sizes.
+- **The land, river and roads:** the grass is a plane per tile, and
+  carries on 80 past the edge (`SKIRT`) under the skyline's towers, which
+  used to stand on nothing past the ground's edge (it showed from high up
+  near the edge). The river, its banks, the promenades and the roads are
+  each a few long boxes from edge to edge: a longer world makes them
+  longer, not heavier.
+- **The outskirts' trees** (`outskirts.ts`, DOM-free, tested in
+  `tests/outskirts.test.ts`) are seeded tile by tile at a density per
+  area: the belt round the town thickly, the open land lightly
+  (`BELT_FREE`, `OPEN_FREE`: the land a tree may stand on today, so today
+  keeps its numbers, within a few percent on every tier). A tile's trees
+  are the same whatever the world's size, so a bigger world keeps every
+  tree where it was and adds more past the old edge, never thinner ones.
+  They stand in new places today (each tile its own seed, not one draw
+  for the whole map); scattering them takes about 10 ms.
+- **The skyline ring** follows the edge at the same distance, with as many
+  towers as today's for its length (`SKYLINE_REACH`), each from its own
+  seeded numbers; it still leaves out the airport's approach, and it was
+  already split by tile (the towers in view drawn, Phase 1) and simple
+  boxes (its only form; it's past the haze).
+- **The camera** (`bounds.ts`): City view pans round the built-up area
+  (`BUILT_UP`: the town, the airport and the kart park; `PAN_BOUNDS`
+  reaches 160 past it, never past 10 in from where you can walk), so
+  today it's the whole world as before and in a bigger world it stays
+  round the city. The Build overview frames the plots
+  (`overviewFrame()`), the same view as before. The far plane (440) and
+  the sky dome (400, travelling with the camera) stay.
+- **Flying:** `CEILING` stays; flying already turns back at whatever bounds
+  it's given, and the airport's timetable is fixed numbers the tests keep
+  inside the world at both sizes.
+- **Driving:** the river walls and their gaps come from the street plan
+  (`riverCrossings()`: the river's run, and every street crossing it with
+  its sidewalks), the same walls as before (tested).
+- **What changed to look at:** the outskirts' trees and the skyline's
+  towers stand in new places, and the city's other random choices
+  (traffic's and pedestrians' colours and starting places, clouds) come
+  out differently, since the trees no longer draw from the city's shared
+  random numbers. The weather used to start from one of those draws and
+  always came out dry; it now starts dry on purpose. The draws and
+  triangles from the same views are the same as before, within the
+  noise.
+- **Done:** `EXT` is set in one place, the tests pass at today's and
+  Phase 6's size, and today's city looks the same.
 
 ## Phase 6: the edge moves out
 

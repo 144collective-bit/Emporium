@@ -548,8 +548,6 @@ export function buildTrees() {
   const q = new THREE.Quaternion();
   const up = new THREE.Vector3(0, 1, 0);
   const greens = ['#2fae6e', '#33b878', '#24995f', '#3fc485', '#2a9d63'];
-  // (the canopies used to take a turn each from the city's shared random numbers: kept, so what's made after is as it was)
-  for (const t of trees) if (!t.pine) rand();
   // Every tile's trees a site, merged with the city's fixed geometry (split by tile, only those in view drawn: tileBatch())
   for (const [key, list] of byTile(trees))
     site(`trees ${key}`, keyRect(key), (into) => {
