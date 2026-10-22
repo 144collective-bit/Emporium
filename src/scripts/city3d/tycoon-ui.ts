@@ -148,7 +148,13 @@ import {
   plotPrice,
   sellPlot,
   upgradePlace,
+  CORNER,
+  CORNER_LEVEL,
+  buyCorner,
+  cornerAt,
+  cornerPrice,
 } from './tycoon';
+import { CORNER_SHOPS } from './projects';
 import { DOORS, LOT_SITE, STALL_SPOT, UNIT_SITE } from './solids';
 import { BUILDINGS, DISTRICTS, PLOT_IDS } from '../../data/plots';
 import { PLACE_LEVELS, PLOT_LEVEL, PLOT_REFUND } from './catalog';
@@ -169,7 +175,7 @@ const perMin = (n: number) => (n >= 1 ? fmt.format(Math.round(n)) : n.toFixed(1)
 const secs = (min: number) => (min >= 1 ? `${+min.toFixed(1)} min` : `${Math.max(1, Math.round(min * 60))} s`);
 
 /** Where you stand to run a place, and where your car parks to load and unload */
-const PLACE_LIST: PlaceId[] = ['stall', 'u0', 'u1', 'u2', 'u3', 'l0', 'l1', 'l2', 'workshop'];
+const PLACE_LIST: PlaceId[] = ['stall', 'u0', 'u1', 'u2', 'u3', 'l0', 'l1', 'l2', 'c0', 'c1', 'c2', 'c3', 'workshop'];
 const STAND = Object.fromEntries(PLACE_LIST.map((p) => [p, placeAt(p)])) as Record<PlaceId, { x: number; z: number }>;
 /** Standing this close serves a stall's or shop's customers; a car this close is parked there */
 const SERVE_R = 2.2;
@@ -178,6 +184,9 @@ const UNIT_IDS = ['u0', 'u1', 'u2', 'u3'] as const;
 const LOT_IDS = ['l0', 'l1', 'l2'] as const;
 /** The Units tab's places: Makers' Row's four units, then the three big lots */
 const ROW_IDS: PlaceId[] = [...UNIT_IDS, ...LOT_IDS];
+/** The Trenches' corner shops (on the Units tab after them), and their names as you'd say them ("Block Bodega") */
+const CORNER_IDS = ['c0', 'c1', 'c2', 'c3'] as const;
+const cornerName = (i: number) => CORNER_SHOPS[i].name.toLowerCase().replace(/(^|\s)\S/g, (c) => c.toUpperCase());
 const LETTER = 'ABC';
 const PRODUCT_LIST = GOODS.filter((g) => !g.raw).map((g) => g.id);
 type Tab = 'stall' | 'units' | 'workshop' | 'car';
@@ -329,6 +338,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     if (p === 'stall') return 'Your stall';
     if (p === 'workshop') return 'The Workshop';
     const i = Number(p.slice(1));
+    if (p.startsWith('c')) return cornerName(i);
     if (p.startsWith('l')) {
       const l = save.lots[i];
       return `Lot ${LETTER[i]}${l?.kind ? ` · ${LOT_KINDS[l.kind].name}` : ''}`;
@@ -418,9 +428,11 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
   /** A stall's or shop's shelves */
   function shelvesView(p: PlaceId, now: number) {
     const big = kindAt(save, p) === 'superstore';
-    const slots = p === 'stall' ? save.stall.slots : (unitAt(save, p) ?? lotAt(save, p))!.slots;
-    const max = p === 'stall' ? stallLevel(save.stall.level).slots : big ? SUPERSTORE.slots : SHOP.slots;
-    const capacity = p === 'stall' ? stallLevel(save.stall.level).capacity : Math.round((big ? SUPERSTORE.capacity : SHOP.capacity) * capacityMul(save, p));
+    const corner = cornerAt(save, p);
+    const spec = corner ? CORNER : big ? SUPERSTORE : SHOP;
+    const slots = p === 'stall' ? save.stall.slots : (corner ?? unitAt(save, p) ?? lotAt(save, p))!.slots;
+    const max = p === 'stall' ? stallLevel(save.stall.level).slots : spec.slots;
+    const capacity = p === 'stall' ? stallLevel(save.stall.level).capacity : Math.round(spec.capacity * capacityMul(save, p));
     const free = max - slots.length;
     return `${slots.length ? `<ul class="stall-slots">${slots.map((s) => slotRow(s, p, now, capacity)).join('')}</ul>` : ''}
       ${free > 0 ? `<p class="stall-empty">${free === max ? 'The shelves are empty.' : `${free} empty shel${free > 1 ? 'ves' : 'f'}.`} Buy stock at the Emporium's market hall, or bring it from the Workshop or a warehouse in your car. Low sells fast, High earns more each.</p>` : ''}`;
@@ -505,6 +517,21 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     return `${body}${l?.kind ? upgradeRow(p) : ''}${rebuild}`;
   }
 
+  /** A corner shop's view (on the Units tab, after the big lots) */
+  function cornerView(i: number, now: number) {
+    const p = CORNER_IDS[i];
+    if (!save.corners[i]) {
+      const price = cornerPrice(save);
+      const lv = level(save);
+      return `<p class="stall-empty">${esc(cornerName(i))}, a corner shop in The Trenches across the river: a shop from the day you buy it, ${CORNER.slots} shelves and The Trenches' foot traffic. Bought with Dorras, ${LV(CORNER_LEVEL)}.</p>
+        <div class="stall-actions"><button type="button" class="shop-take" data-buy-corner="${i}" ${price !== null && save.dorras >= price && lv >= CORNER_LEVEL ? '' : 'disabled'}>Buy ${esc(cornerName(i))} · ${fmt.format(price ?? 0)} Dorras</button>${lv < CORNER_LEVEL ? `<small class="biz-level-note">Needs level ${CORNER_LEVEL} (you're ${lv})</small>` : ''}</div>`;
+    }
+    return `<p class="stall-status">Corner shop · ${CORNER.slots} kinds of goods, ${Math.round(CORNER.capacity * capacityMul(save, p))} of each${levelNote(p)}${serveNote(p)}</p>
+      ${shelvesView(p, now)}${carHere(p)}
+      <div class="stall-actions"><button type="button" class="shop-take" data-to-market data-at="${p}">Market hall</button></div>
+      ${upgradeRow(p)}`;
+  }
+
   function unitView(now: number) {
     const chips = ROW_IDS.map((p, i) => {
       const k = kindAt(save, p);
@@ -512,7 +539,13 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
       const name = k ? (i < 4 ? UNIT_KINDS[k as UnitKind].name : LOT_KINDS[k as LotKind].name) : owned ? 'Empty' : i < 4 ? 'To let' : 'For sale';
       return `<button type="button" data-unit="${i}" aria-pressed="${i === unitSel}">${i < 4 ? i + 1 : LETTER[i - 4]}<small>${name}</small></button>`;
     }).join('');
-    const tabs = `<p class="biz-label">Makers' Row · big lots</p><div class="seg biz-units" role="group" aria-label="Your units and lots">${chips}</div>`;
+    const corners = CORNER_IDS.map((p, i) => {
+      const k = ROW_IDS.length + i;
+      return `<button type="button" data-unit="${k}" aria-pressed="${k === unitSel}">${esc(cornerName(i).split(' ')[0])}<small>${save.corners[i] ? 'Yours' : 'For sale'}</small></button>`;
+    }).join('');
+    const tabs = `<p class="biz-label">Makers' Row · big lots</p><div class="seg biz-units" role="group" aria-label="Your units and lots">${chips}</div>
+      <p class="biz-label">The Trenches · corner shops</p><div class="seg biz-units" role="group" aria-label="The Trenches' corner shops">${corners}</div>`;
+    if (unitSel >= ROW_IDS.length) return tabs + cornerView(unitSel - ROW_IDS.length, now);
     if (unitSel >= 4) return tabs + lotView(unitSel - 4, now);
     const i = unitSel;
     const p = UNIT_IDS[i];
@@ -673,7 +706,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
   function couriersView(now: number) {
     const sources = PLACE_LIST.filter((p) => loadsFrom(save, p) && total(stockAt(save, p)) > 0);
     if (!sources.includes(sendFrom!)) sendFrom = sources[0] ?? null;
-    const dests = PLACE_LIST.filter((p) => p !== sendFrom && (p === 'stall' || p === 'workshop' || ['shop', 'warehouse', 'superstore', 'depot', 'factory'].includes(kindAt(save, p) ?? '')));
+    const dests = PLACE_LIST.filter((p) => p !== sendFrom && (p === 'stall' || p === 'workshop' || ['shop', 'warehouse', 'superstore', 'depot', 'factory', 'corner'].includes(kindAt(save, p) ?? '')));
     if (!dests.includes(sendTo!)) sendTo = dests[0] ?? null;
     const transit = save.shipments
       .map(
@@ -751,6 +784,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
         <li class="is-total"><span>You're worth</span><b>${D(worth(save, now))}</b></li>
       </ul>
       <p class="biz-label">Estate agent · district plots</p>${estateView()}
+      <p class="biz-label">Estate agent · The Trenches' corner shops</p>${cornersView()}
       <p class="biz-label">Loans</p>${loan}
       <div class="biz-ledger"><div><p class="biz-label">In, all time</p><ul>${rows(true)}</ul></div><div><p class="biz-label">Out, all time</p><ul>${rows(false)}</ul></div></div>
       ${recent ? `<p class="biz-label">Latest</p><ul class="biz-recent">${recent}</ul>` : ''}
@@ -854,6 +888,22 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
       <ul class="market-list biz-estate">${rows}</ul>`;
   }
 
+  /** The corner shops at the estate agent: buy one, or go to yours */
+  function cornersView() {
+    const lv = level(save);
+    const price = cornerPrice(save);
+    const rows = CORNER_SHOPS.map((c, i) => {
+      const mine = !!save.corners[i];
+      const acts = mine
+        ? `<span class="market-btns"><button type="button" data-open-corner="${i}">Run it</button></span>`
+        : `<span class="market-btns"><button type="button" data-buy-corner="${i}" ${price !== null && lv >= CORNER_LEVEL && save.dorras >= price ? '' : 'disabled'}>Buy</button></span>`;
+      return `<li class="market-row"><div class="market-top"><b>${esc(cornerName(i))}</b><span class="market-price">${mine ? '<span class="tag tag-mine">Yours</span>' : D(price ?? 0)}</span></div>
+        <div class="market-acts"><small>${mine ? `Corner shop · level ${placeLevel(save, CORNER_IDS[i])}` : lv < CORNER_LEVEL ? `Needs level ${CORNER_LEVEL} (you're ${lv})` : `A shop from day one: ${CORNER.slots} shelves, busy sidewalks`}</small>${acts}</div></li>`;
+    }).join('');
+    return `<p class="stall-empty">Four corner shops in The Trenches, south-west across the river. Each one you own makes the next dearer. ${LV(CORNER_LEVEL)} to buy.</p>
+      <ul class="market-list biz-estate">${rows}</ul>`;
+  }
+
   function paintCard() {
     if (card.hidden) return;
     const now = Date.now();
@@ -876,6 +926,9 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     else if (at?.startsWith('u') || at?.startsWith('l')) {
       tab = 'units';
       unitSel = ROW_IDS.indexOf(at);
+    } else if (at?.startsWith('c')) {
+      tab = 'units';
+      unitSel = ROW_IDS.length + Number(at.slice(1));
     }
     note = '';
     if (card.hidden) {
@@ -932,6 +985,10 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
       h.showPlot(ds.showPlot);
       return;
     } else if (ds.unit) unitSel = Number(ds.unit);
+    else if (ds.openCorner) {
+      openCard(CORNER_IDS[Number(ds.openCorner)]);
+      return;
+    }
     else if ('collect' in ds) {
       const n = collect(save);
       if (n) note = `Collected ${fmt.format(n)} Dorras.`;
@@ -954,6 +1011,11 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     } else if (ds.repay) {
       const r = repay(save, Number(ds.repay));
       note = r.ok ? (save.loan ? `Paid ${fmt.format(r.dorras)} Dorras off your loan.` : 'Your loan is paid off.') : why(r);
+    } else if (ds.buyCorner) {
+      const i = Number(ds.buyCorner);
+      const r = buyCorner(save, i);
+      note = r.ok ? `${cornerName(i)} is yours: stock its shelves at the market hall, or bring goods in your car.` : whyNot(r.why, CORNER_LEVEL);
+      h.sfx(r.ok ? 'buy' : 'denied');
     } else if (ds.buyUnit) {
       const r = buyUnit(save, Number(ds.buyUnit));
       note = r.ok ? `Unit ${Number(ds.buyUnit) + 1} is yours. Build something on it.` : why(r);
@@ -1044,7 +1106,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
   function marketView(now: number) {
     // Where Buy can deliver to and Sell can take from
     const car = h.car();
-    const at: (PlaceId | 'car')[] = ['stall', ...ROW_IDS.filter((p) => kindAt(save, p) && kindAt(save, p) !== 'offices'), 'workshop', ...(car && carAtEmporium() ? (['car'] as const) : [])];
+    const at: (PlaceId | 'car')[] = ['stall', ...ROW_IDS.filter((p) => kindAt(save, p) && kindAt(save, p) !== 'offices'), ...CORNER_IDS.filter((p) => cornerAt(save, p)), 'workshop', ...(car && carAtEmporium() ? (['car'] as const) : [])];
     if (!at.includes(marketAt)) marketAt = 'stall';
     const row = (id: GoodId) => {
       const t = trend(id, now);
@@ -1177,6 +1239,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
         { id: 'stall', ...STALL_SPOT, label: 'Your stall' },
         ...UNIT_IDS.map((p, i) => ({ id: p as string, ...UNIT_SITE[i].door, label: save.units[i] ? placeName(p) : `Unit ${i + 1} · To let` })),
         ...LOT_IDS.map((p, i) => ({ id: p as string, ...LOT_SITE[i].door, label: save.lots[i] ? placeName(p) : `Lot ${LETTER[i]} · For sale` })),
+        ...CORNER_IDS.map((p, i) => ({ id: p as string, ...CORNER_SHOPS[i].door, label: save.corners[i] ? placeName(p) : `${cornerName(i)} · For sale` })),
         ...save.contracts.map((c) => ({ id: 'car', ...destAt(c.to), label: `Deliver · ${DESTS[c.to]}` })),
       ];
     },

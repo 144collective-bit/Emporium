@@ -352,6 +352,8 @@ export const BUILD_COSTS: Record<BuildingType, number> = {
 export const PLACE_LEVELS = 3;
 export const UNIT_LEVEL_COSTS = [0, 1500, 4000];
 export const LOT_LEVEL_COSTS = [0, 12000, 30000];
+/** The Trenches' corner shops (tycoon.ts): dearer than a unit's, under a big lot's */
+export const CORNER_LEVEL_COSTS = [0, 10000, 25000];
 export const WORKSHOP_LEVEL_COSTS = [0, 5000, 15000];
 export const LEVEL_CAPACITY = [1, 1.5, 2];
 export const LEVEL_PACE = [1, 1.25, 1.5];

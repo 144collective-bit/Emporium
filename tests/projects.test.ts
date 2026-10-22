@@ -3,9 +3,10 @@
 // block and clear of the station's stair tower; the rows inside their blocks; and every footprint in SOLIDS.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { EMPORIUM_ROOF, PROJECT_SOLIDS, ROW_BLOCKS, THE_BLOCK, TOWERS, blockFence, rows } from '../src/scripts/city3d/projects';
+import { CORNER_SHOPS, EMPORIUM_ROOF, PROJECT_SOLIDS, ROW_BLOCKS, THE_BLOCK, TOWERS, blockFence, isCorner, rows } from '../src/scripts/city3d/projects';
+import { WALK_W } from '../src/scripts/city3d/layout';
 import { TRENCH_BLOCKS } from '../src/scripts/city3d/trenches';
-import { PLAN, distToStreet, inPoly } from '../src/scripts/city3d/streetplan';
+import { PLAN, distToStreet, inPoly, outset } from '../src/scripts/city3d/streetplan';
 import { METRO_SOLIDS, STATIONS } from '../src/scripts/city3d/metro';
 import { SOLIDS } from '../src/scripts/city3d/solids';
 import { KIT_TALLEST } from '../src/scripts/city3d/kits';
@@ -110,4 +111,28 @@ test('every footprint is solid, and none is on a street or the metro', () => {
   }
   // Each tower is solid to its top
   for (const t of TOWERS) for (const p of t.parts) assert.ok(PROJECT_SOLIDS.some((b) => b[0] === p[0] && b[1] === p[1] && b[2] === p[2] && b[3] === p[3] && b[4] === t.top));
+});
+
+test('the corner shops: four row lots made shops, each facing its street, the door out on the sidewalk, a car can pull up', () => {
+  assert.equal(CORNER_SHOPS.length, 4);
+  assert.deepEqual(
+    CORNER_SHOPS.map((c) => c.id),
+    ['c0', 'c1', 'c2', 'c3']
+  );
+  assert.equal(new Set(CORNER_SHOPS.map((c) => c.name)).size, 4);
+  for (const c of CORNER_SHOPS) {
+    const blk = blockOf(c.block);
+    assert.equal(c.lot.type, 'shop');
+    assert.ok(isCorner(c.lot) && rows().lots.includes(c.lot));
+    assert.ok(c.lot.solids.every((b) => b[4] < EMPORIUM_ROOF - 0.5) && c.lot.solids.length === 1, 'a shopfront, no stoop');
+    for (const b of c.lot.solids) assert.ok(PROJECT_SOLIDS.some((p) => p.join() === b.join()));
+    // The door: off the block, on its sidewalk (within the slab), clear of everything solid
+    const { x, z } = c.door;
+    assert.ok(!inPoly(blk.poly, [x, z]) && inPoly(outset(blk.poly, WALK_W), [x, z]), `${c.id}'s door on the sidewalk`);
+    assert.ok(!SOLIDS.some((b) => x > b[0] - 0.3 && x < b[2] + 0.3 && z > b[1] - 0.3 && z < b[3] + 0.3), `${c.id}'s door clear`);
+    // A drivable street within a car's reach of it (the business card's Car tab)
+    assert.ok(roads.some((s) => s.kind !== 'highway' && distToStreet(s, [x, z]) - s.half < 1.5), `${c.id} on a street`);
+  }
+  // Spread out: no two on one block
+  assert.equal(new Set(CORNER_SHOPS.map((c) => c.block)).size, 4);
 });

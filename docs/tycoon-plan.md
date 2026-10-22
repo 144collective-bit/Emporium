@@ -306,3 +306,13 @@ owner's call), and nothing on or beside the track is solid.
   missions and five badges. Saves carry on (`cleanSave()`, v8).
 - **Later (not built):** global leaderboards on the game server when
   multiplayer resumes; presentation (crowd, fireworks, replays).
+
+## The Trenches' corner shops (growth plan Phase 9, step 3; built)
+
+Four corner shops in The Trenches (Block Bodega, Trench Mart, Avenue Deli,
+Corner Stop: made-up names), the owner's "Dearer" prices: 20,000 / 30,000 /
+45,000 / 60,000 Dorras by how many you own, from level 5. A shop from the
+day it's bought (4 shelves of 60, busier than a unit's shop), levels 1-3
+(10,000 and 25,000), clerks, couriers, car deliveries with the bonus, sold
+at the Vault's estate agent and on the business card's Units tab. The save
+is v10 (`corners`; older saves own none).

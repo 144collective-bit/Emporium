@@ -89,7 +89,17 @@ import {
   slotOf,
   upgrade,
   type TycoonSave,
+  CORNER,
+  CORNER_COUNT,
+  CORNER_LEVEL,
+  CORNER_PRICES,
+  buyCorner,
+  sells,
+  cornerPrice,
+  placeLevel,
+  placeLevelCost,
 } from '../src/scripts/city3d/tycoon';
+import { CORNER_LEVEL_COSTS, xpForLevel } from '../src/scripts/city3d/catalog';
 
 const T0 = Date.UTC(2026, 9, 20, 12, 0, 0);
 const MIN = 60000;
@@ -269,7 +279,7 @@ function rich() {
 
 test('a Phase 1 save carries on: stall kept, no units, an empty Workshop and car', () => {
   const s = cleanSave({ v: 1, dorras: 900, till: 12, at: T0, stall: { level: 2, slots: [{ good: 'tees', qty: 7, price: 'high', carry: 0 }] } }, T0);
-  assert.equal(s.v, 9);
+  assert.equal(s.v, 10);
   assert.equal(s.dorras, 900);
   assert.equal(s.stall.slots[0].qty, 7);
   assert.equal(s.units.length, UNIT_COUNT);
@@ -449,7 +459,7 @@ test('cleanSave keeps units, the Workshop and the car within their limits', () =
 
 test('a Phase 2 save carries on into Phase 3: no staff, couriers or contracts yet', () => {
   const s = cleanSave({ v: 2, dorras: 100, units: [{ kind: 'shop', slots: [] }], workshop: { stock: { sugar: 4 }, job: null }, cargo: { tees: 2 } }, T0);
-  assert.equal(s.v, 9);
+  assert.equal(s.v, 10);
   assert.equal(s.units[0]!.kind, 'shop');
   assert.deepEqual(s.cargo, { tees: 2 });
   assert.deepEqual([s.staff, s.shipments, s.contracts, s.taken], [[], [], [], []]);
@@ -643,7 +653,7 @@ function tycoon() {
 
 test('a Phase 3 save carries on into Phase 4: no big lots, an empty ledger, no loan', () => {
   const s = cleanSave({ v: 3, dorras: 100, staff: ['stall'] }, T0);
-  assert.equal(s.v, 9);
+  assert.equal(s.v, 10);
   assert.deepEqual(s.lots, [null, null, null]);
   assert.deepEqual(s.ledger, { totals: {}, recent: [] });
   assert.equal(s.loan, null);
@@ -779,4 +789,55 @@ test('cleanSave keeps Phase 4 within the rules', () => {
   assert.equal(s.ledger.recent.length, 1);
   assert.ok(s.ledger.recent[0].t <= T0);
   assert.ok(s.loan!.owed <= 50000 * 1.1 && s.loan!.borrowed <= 50000);
+});
+
+/* ---------- The Trenches' corner shops (save v10) ---------- */
+
+test('corner shops: from level 5, dearer each time, a shop straight away that sells faster than a unit shop', () => {
+  const s = newSave(T0);
+  s.dorras = 1e6;
+  assert.deepEqual(buyCorner(s, 0), { ok: false, why: 'level' }, 'a new player can\'t buy one');
+  s.xp = xpForLevel(CORNER_LEVEL);
+  assert.equal(cornerPrice(s), CORNER_PRICES[0]);
+  assert.ok(buyCorner(s, 2).ok);
+  assert.equal(s.dorras, 1e6 - CORNER_PRICES[0]);
+  assert.equal(cornerPrice(s), CORNER_PRICES[1]);
+  assert.deepEqual(buyCorner(s, 2), { ok: false, why: 'owned' });
+  assert.deepEqual(buyCorner(s, 4), { ok: false, why: 'place' });
+  assert.equal(s.ledger.totals.property, CORNER_PRICES[0]);
+  assert.equal(propertyValue(s), CORNER_PRICES[0]);
+  // A shop: products on its shelves, never raw goods; a clerk can work it; it levels up
+  assert.ok(sells(s, 'c2') && !sells(s, 'c0'));
+  assert.equal(room(s, 'sugar', 'c2'), 0);
+  assert.equal(room(s, 'tees', 'c2'), CORNER.capacity);
+  assert.equal(roleAt(s, 'c2'), 'clerk');
+  assert.equal(placeLevelCost(s, 'c2'), CORNER_LEVEL_COSTS[1]);
+  assert.equal(placeLevelCost(s, 'c0'), null, 'nothing to level where you don\'t own it');
+  // Customers come faster than at a unit shop
+  assert.ok(buyUnit(s, 0).ok && buildUnit(s, 0, 'shop').ok);
+  buy(s, 'glow', 50, T0, 'c2');
+  buy(s, 'glow', 50, T0, 'u0');
+  advance(s, T0 + 2 * MIN);
+  assert.ok(holds(s, 'u0', 'glow') > 0, 'neither sold out');
+  assert.ok(50 - holds(s, 'c2', 'glow') > 50 - holds(s, 'u0', 'glow'));
+  // Your car unloads into it, with the delivery bonus; couriers bring stock to it
+  s.cargo = { tees: 10 };
+  const r = unload(s, 'c2', 'tees', 10, T0 + 2 * MIN);
+  assert.ok(r.ok && r.dorras > 0);
+  assert.equal(load(s, 'c2', 'tees', 5, 80).ok, false, 'stock on sale stays on the shelves');
+});
+
+test('a v9 save carries on into v10 owning no corner shops; a v10 save keeps its shelves, clamped', () => {
+  const old = cleanSave({ v: 9, dorras: 500, lots: [null, null, null] }, T0);
+  assert.equal(old.v, 10);
+  assert.deepEqual(old.corners, [null, null, null, null]);
+  const s = cleanSave(
+    { v: 10, levels: { c1: 2 }, corners: [null, { slots: [{ good: 'tees', qty: 9999, price: 'high' }, { good: 'sugar', qty: 5 }] }, 'junk', null, { slots: [] }] },
+    T0
+  );
+  assert.equal(s.corners.length, CORNER_COUNT);
+  assert.equal(s.corners[0], null);
+  assert.equal(s.corners[2], null);
+  assert.deepEqual(s.corners[1]!.slots.map((x) => [x.good, x.qty, x.price]), [['tees', Math.round(CORNER.capacity * 1.5), 'high']]);
+  assert.equal(placeLevel(s, 'c1'), 2);
 });

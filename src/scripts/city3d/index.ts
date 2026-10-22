@@ -32,6 +32,7 @@ import { buildMarket } from './market';
 import { createTycoonUI, type TycoonUI } from './tycoon-ui';
 import { buildUnits } from './units';
 import { buildBigLots } from './biglots';
+import { buildCornerShops } from './cornershops';
 import { buildBeacons } from './beacons';
 import { createTravelUI } from './travel-ui';
 import { ambienceAt } from './ambience';
@@ -159,6 +160,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const units = buildUnits(scene);
   // The big lots east of Makers' Row (Dorras only), drawn from your save too
   const bigLots = buildBigLots(scene);
+  // The Trenches' corner shops (growth plan Phase 9 step 3), drawn from your save too
+  const corners = buildCornerShops(scene, { low: tier === 'low' });
   // Beams of light over your contracts' drop-offs
   const beacons = buildBeacons(scene, tick, reduced);
   // The kart park outside the Parkway in the north-east: a place like the landmarks (its pin and panel)
@@ -521,6 +524,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       market.show(s.stall.slots, s.stall.level);
       units.show(s);
       bigLots.show(s);
+      corners.show(s);
       beacons.show(s.contracts.map((c) => destAt(c.to)));
       beacons.guide(guideAt(s));
       dirty = true;

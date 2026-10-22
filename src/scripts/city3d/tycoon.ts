@@ -27,6 +27,8 @@
  *   and upgraded with Dorras, district plots as Dorras property, levels for
  *   the places you run, missions and the counters behind them (catalog.ts
  *   has the prices and curves; missions.ts the board).
+ * - Phase 9 (The Trenches, save v10): four corner shops (`c0`-`c3`), bought
+ *   with Dorras from level 5, a shop from the day they're bought.
  */
 import { cleanDesign, type Design } from '../../data/plots';
 import { DOORS, GARAGE_SITE, LOT_SITE, STALL_SPOT, UNIT_SITE } from './solids';
@@ -37,6 +39,7 @@ import { CUPS, type CupId } from './kart-sim';
 import { STYLES, type StyleId } from './fight-sim';
 import { COURSE_IDS, type CourseId } from './kartcircuit';
 import { PLACE_IDS as MAP_PLACES } from './places';
+import { CORNER_SHOPS, type CornerId } from './projects';
 import {
   BOT_LEVELS,
   FIGHT_BOTS,
@@ -59,6 +62,7 @@ import {
   LEVEL_PACE,
   LEVEL_SPEED,
   LOT_LEVEL_COSTS,
+  CORNER_LEVEL_COSTS,
   MOD_LEVELS,
   NO_CAR_MODS,
   NO_GUN_MODS,
@@ -214,6 +218,14 @@ export const DEPOT_CAP = 1000;
 /** Your offices (one HQ is enough): every stall, shop and superstore sells this much faster */
 export const HQ_BOOST = 1.2;
 
+/* Phase 9 (The Trenches, step 3): four corner shops, Dorras only, from level CORNER_LEVEL */
+export const CORNER_COUNT = 4;
+/** The 1st, 2nd, 3rd and 4th corner shop you buy */
+export const CORNER_PRICES = [20000, 30000, 45000, 60000];
+export const CORNER_LEVEL = 5;
+/** A corner shop: always a shop (nothing to build), its shelves busier than Makers' Row's with The Trenches' foot traffic */
+export const CORNER = { slots: 4, capacity: 60, pace: 2 } as const;
+
 export type Stock = Partial<Record<GoodId, number>>;
 export interface Slot {
   good: ProductId;
@@ -242,10 +254,15 @@ export interface Lot {
   slots: Slot[];
   job: Job | null;
 }
-export type PlaceId = 'stall' | 'workshop' | 'u0' | 'u1' | 'u2' | 'u3' | 'l0' | 'l1' | 'l2';
+/** A corner shop in The Trenches: its shelves */
+export interface Corner {
+  slots: Slot[];
+}
+export type PlaceId = 'stall' | 'workshop' | 'u0' | 'u1' | 'u2' | 'u3' | 'l0' | 'l1' | 'l2' | CornerId;
 export const UNIT_PLACES = ['u0', 'u1', 'u2', 'u3'] as const;
 export const LOT_PLACES = ['l0', 'l1', 'l2'] as const;
-export const PLACE_IDS: PlaceId[] = ['stall', 'u0', 'u1', 'u2', 'u3', 'l0', 'l1', 'l2', 'workshop'];
+export const CORNER_PLACES = ['c0', 'c1', 'c2', 'c3'] as const;
+export const PLACE_IDS: PlaceId[] = ['stall', 'u0', 'u1', 'u2', 'u3', 'l0', 'l1', 'l2', ...CORNER_PLACES, 'workshop'];
 /** The Vault's ledger: where Dorras came from and went */
 export const ENTRIES = {
   sales: { name: 'Sales', in: true },
@@ -382,7 +399,7 @@ export const recordKey = (course: string, cls: string) => `${course}:${cls}`;
 export const emptyKarts = (): KartSave => ({ model: DEFAULT_KART.model, paint: DEFAULT_KART.paint, owned: [], mods: {}, records: {}, boards: {}, series: null, trophies: {}, challenge: null, parBeaten: [], old: {} });
 
 export interface TycoonSave {
-  v: 9;
+  v: 10;
   dorras: number;
   till: number;
   /** When it was last brought up to date (ms since 1970) */
@@ -402,6 +419,8 @@ export interface TycoonSave {
   taken: number[];
   /** The big lots (Phase 4): null where you don't own the lot */
   lots: (Lot | null)[];
+  /** The Trenches' corner shops (save v10): null where you don't own the shop */
+  corners: (Corner | null)[];
   ledger: Ledger;
   loan: Loan | null;
   stats: { earned: number; sold: number; made: number; grown: number; bonus: number; wages: number; contracts: number };
@@ -434,7 +453,7 @@ export const GUIDE_STEPS = 7;
 
 export function newSave(now: number): TycoonSave {
   return {
-    v: 9,
+    v: 10,
     dorras: START_DORRAS,
     till: 0,
     at: now,
@@ -447,6 +466,7 @@ export function newSave(now: number): TycoonSave {
     contracts: [],
     taken: [],
     lots: Array.from({ length: LOT_COUNT }, () => null),
+    corners: Array.from({ length: CORNER_COUNT }, () => null),
     ledger: { totals: {}, recent: [] },
     loan: null,
     stats: { earned: 0, sold: 0, made: 0, grown: 0, bonus: 0, wages: 0, contracts: 0 },
@@ -536,7 +556,7 @@ export function cleanSave(raw: unknown, now: number): TycoonSave {
   }
   const mul = (p: PlaceId) => LEVEL_CAPACITY[(levels[p] ?? 1) - 1];
   const s: TycoonSave = {
-    v: 9,
+    v: 10,
     dorras: Math.floor(num(o.dorras, 0, 1e12, START_DORRAS)),
     till: Math.floor(num(o.till, 0, 1e12, 0)),
     at: num(o.at, 0, now, now),
@@ -552,6 +572,8 @@ export function cleanSave(raw: unknown, now: number): TycoonSave {
     contracts: [],
     taken: [],
     lots: Array.from({ length: LOT_COUNT }, (_, i) => cleanLot((Array.isArray(o.lots) ? o.lots : [])[i], mul(`l${i}` as PlaceId))),
+    // (v10: a save from before them owns none)
+    corners: Array.from({ length: CORNER_COUNT }, (_, i) => cleanCorner((Array.isArray(o.corners) ? o.corners : [])[i], mul(`c${i}` as PlaceId))),
     ledger: cleanLedger(o.ledger, now),
     loan: null,
     stats: {
@@ -624,6 +646,10 @@ function cleanLot(raw: unknown, mul = 1): Lot | null {
     job: kind === 'factory' ? cleanJob(r.job, FACTORY.jobMax) : null,
   };
 }
+function cleanCorner(raw: unknown, mul = 1): Corner | null {
+  if (!raw || typeof raw !== 'object') return null;
+  return { slots: cleanSlots(obj(raw).slots, CORNER.slots, Math.round(CORNER.capacity * mul)) };
+}
 function cleanLedger(raw: unknown, now: number): Ledger {
   const l = obj(raw);
   const totals: Partial<Record<Entry, number>> = {};
@@ -672,10 +698,12 @@ export const unitIndex = (p: PlaceId) => (p.startsWith('u') ? Number(p.slice(1))
 export const unitAt = (s: TycoonSave, p: PlaceId) => s.units[unitIndex(p)] ?? null;
 export const lotIndex = (p: PlaceId) => (p.startsWith('l') ? Number(p.slice(1)) : -1);
 export const lotAt = (s: TycoonSave, p: PlaceId) => s.lots[lotIndex(p)] ?? null;
-/** What's built at a place you own (a unit's or a big lot's kind), if anything */
-export const kindAt = (s: TycoonSave, p: PlaceId): UnitKind | LotKind | null => unitAt(s, p)?.kind ?? lotAt(s, p)?.kind ?? null;
-/** Places that sell to the public: the stall, your shops and superstores */
-export const sells = (s: TycoonSave, p: PlaceId) => p === 'stall' || kindAt(s, p) === 'shop' || kindAt(s, p) === 'superstore';
+export const cornerIndex = (p: PlaceId) => (p.startsWith('c') ? Number(p.slice(1)) : -1);
+export const cornerAt = (s: TycoonSave, p: PlaceId) => s.corners[cornerIndex(p)] ?? null;
+/** What's built at a place you own (a unit's or a big lot's kind; a corner shop is always one), if anything */
+export const kindAt = (s: TycoonSave, p: PlaceId): UnitKind | LotKind | 'corner' | null => unitAt(s, p)?.kind ?? lotAt(s, p)?.kind ?? (cornerAt(s, p) ? 'corner' : null);
+/** Places that sell to the public: the stall, your shops, superstores and corner shops */
+export const sells = (s: TycoonSave, p: PlaceId) => p === 'stall' || kindAt(s, p) === 'shop' || kindAt(s, p) === 'superstore' || kindAt(s, p) === 'corner';
 /** Places you can load your car from (stock on sale stays on the shelves) */
 export const loadsFrom = (s: TycoonSave, p: PlaceId) => p === 'workshop' || ['garden', 'warehouse', 'depot', 'factory'].includes(kindAt(s, p) ?? '');
 /** Places that make things: the Workshop and your factories */
@@ -686,6 +714,8 @@ function shelves(s: TycoonSave, p: PlaceId) {
     const L = stallLevel(s.stall.level);
     return { slots: s.stall.slots, max: L.slots, capacity: L.capacity, pace: L.pace, set: (v: Slot[]) => (s.stall.slots = v) };
   }
+  const c = cornerAt(s, p);
+  if (c) return { slots: c.slots, max: CORNER.slots, capacity: Math.round(CORNER.capacity * capacityMul(s, p)), pace: CORNER.pace * paceMul(s, p), set: (v: Slot[]) => (c.slots = v) };
   const u = unitAt(s, p) ?? lotAt(s, p);
   const spec = u?.kind === 'shop' ? SHOP : u?.kind === 'superstore' ? SUPERSTORE : null;
   if (!u || !spec) return null;
@@ -1125,7 +1155,15 @@ export const SHIP_MAX = 3;
 export const SHIP_QTY = 50;
 /** Where each of your places is (for the couriers' journeys) */
 export const placeAt = (p: PlaceId) =>
-  p === 'stall' ? STALL_SPOT : p === 'workshop' ? DOORS.find((d) => d.id === 'workshop')! : p.startsWith('l') ? LOT_SITE[lotIndex(p)].door : UNIT_SITE[unitIndex(p)].door;
+  p === 'stall'
+    ? STALL_SPOT
+    : p === 'workshop'
+      ? DOORS.find((d) => d.id === 'workshop')!
+      : p.startsWith('l')
+        ? LOT_SITE[lotIndex(p)].door
+        : p.startsWith('c')
+          ? CORNER_SHOPS[cornerIndex(p)].door
+          : UNIT_SITE[unitIndex(p)].door;
 /** A courier's journey in minutes: a minute to load, then about 40 tiles a minute */
 export const shipMinutes = (from: PlaceId, to: PlaceId) => {
   const a = placeAt(from);
@@ -1308,6 +1346,25 @@ export function buildLot(s: TycoonSave, i: number, kind: LotKind): Result {
   return { ok: true, qty: 1, dorras: cost };
 }
 
+/* The Trenches' corner shops (Phase 9, step 3) */
+
+/** What the next corner shop costs (null once you own all four) */
+export function cornerPrice(s: TycoonSave) {
+  const owned = s.corners.filter(Boolean).length;
+  return owned < CORNER_PRICES.length ? CORNER_PRICES[owned] : null;
+}
+/** Buy a corner shop: it opens as a shop straight away, its shelves empty */
+export function buyCorner(s: TycoonSave, i: number): BuyResult {
+  if (i < 0 || i >= CORNER_COUNT) return { ok: false, why: 'place' };
+  if (s.corners[i]) return { ok: false, why: 'owned' };
+  const r = pay(s, cornerPrice(s)!, CORNER_LEVEL, 'property');
+  if (!r.ok) return r;
+  s.corners[i] = { slots: [] };
+  count(s, 'land', 1);
+  addXp(s, XP.property);
+  return r;
+}
+
 /* The ledger */
 export const LEDGER_LINES = 30;
 /** Write a movement of Dorras in the Vault's ledger (a run of the same kind within a minute is one line) */
@@ -1328,6 +1385,7 @@ export function propertyValue(s: TycoonSave) {
   v += UNIT_PRICES.slice(0, units.length).reduce((a, b) => a + b, 0) + units.reduce((a, u) => a + (u.kind ? UNIT_KINDS[u.kind].cost : 0), 0);
   const lots = s.lots.filter(Boolean) as Lot[];
   v += LOT_PRICES.slice(0, lots.length).reduce((a, b) => a + b, 0) + lots.reduce((a, l) => a + (l.kind ? LOT_KINDS[l.kind].cost : 0), 0);
+  v += CORNER_PRICES.slice(0, s.corners.filter(Boolean).length).reduce((a, b) => a + b, 0);
   // Phase 5: the places' levels and your district plots
   for (const p of PLACE_IDS) v += levelCosts(p).slice(1, placeLevel(s, p)).reduce((a, b) => a + b, 0);
   for (const o of Object.values(s.plots)) v += o.paid;
@@ -1830,7 +1888,7 @@ export function sellPlot(s: TycoonSave, id: string): BuyResult {
 
 /* ---------- Levels for the places you run ---------- */
 
-export const levelCosts = (p: PlaceId) => (p === 'workshop' ? WORKSHOP_LEVEL_COSTS : p.startsWith('l') ? LOT_LEVEL_COSTS : p === 'stall' ? [] : UNIT_LEVEL_COSTS);
+export const levelCosts = (p: PlaceId) => (p === 'workshop' ? WORKSHOP_LEVEL_COSTS : p.startsWith('l') ? LOT_LEVEL_COSTS : p.startsWith('c') ? CORNER_LEVEL_COSTS : p === 'stall' ? [] : UNIT_LEVEL_COSTS);
 /** What the next level costs (null at the top, or where there's nothing to level yet) */
 export function placeLevelCost(s: TycoonSave, p: PlaceId) {
   if (p === 'stall') return null;

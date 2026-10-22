@@ -23,7 +23,7 @@ import { ATLAS, INK, METAL, ROOF, STONE, CREAM, acUnit, glow, kit, tank, type Fr
 import { drawLot } from './kits3d';
 import { SLAB as S, addLamp, addTree } from './world';
 import { site } from './tilework';
-import { TOWERS, ROW_BLOCKS, rows, type Tower } from './projects';
+import { TOWERS, ROW_BLOCKS, isCorner, rows, type Tower } from './projects';
 import { RECIPES, rng } from './recipes';
 import { TRENCH_BLOCKS } from './trenches';
 import type { Pt, Rect } from './downtown';
@@ -315,7 +315,8 @@ export function buildProjects(low: boolean) {
       const rect: Rect = [Math.min(...lots.map((o) => o.box[0])), Math.min(...lots.map((o) => o.box[1])), Math.max(...lots.map((o) => o.box[2])), Math.max(...lots.map((o) => o.box[3]))];
       site(`trench row ${blk.id} ${n / 4}`, rect, (into) => {
         const b = new Batch();
-        for (const o of lots) drawLot(b, o, low);
+        // (the corner shops' lots are drawn from the save: cornershops.ts)
+        for (const o of lots) if (!isCorner(o)) drawLot(b, o, low);
         b.build(into);
       });
     }

@@ -19,7 +19,9 @@
  * Every footprint is in `PROJECT_SOLIDS`, from the same numbers.
  */
 import { FLOOR, PARAPET, SHOP_H, type Face, type Footprint, type Pt, type Rect } from './downtown';
-import { RECIPES, layBlock, rng, type Laid } from './recipes';
+import { RECIPES, layBlock, rng } from './recipes';
+import { KIT_SPEC, heightOf, lotSolids, type Lot } from './kits';
+import { WALK_W } from './layout';
 import { TRENCH_BLOCKS, type TrenchBlock } from './trenches';
 import { STATIONS } from './metro';
 
@@ -255,24 +257,67 @@ export const ROW_BLOCKS: RowBlock[] = TRENCH_BLOCKS.filter((b) => b.row !== 'B')
   if (b.row === 'A') return { id: b.id, poly: b.poly, seed: 7100 + i };
   const [x0, z0, x1] = bounds(b);
   const d = RECIPES.rowhouses.depth + 0.1;
+  // (its back edge a hair off straight, so the recipe lays its one row along Bottom Street, facing it)
   const poly: Pt[] = [
     [x0, z0],
     [x0, z0 + d],
-    [x1, z0 + d],
+    [x1, z0 + d + 0.01],
     [x1, z0],
   ];
   return { id: b.id, poly, seed: 7100 + i };
 });
 
-let laid: (Laid & { byBlock: Laid[] }) | null = null;
-/** The rows laid (on first ask) */
-export function rows() {
-  if (!laid) {
-    const byBlock = ROW_BLOCKS.map((b) => layBlock(b.poly, RECIPES.rowhouses, b.seed));
-    laid = { lots: byBlock.flatMap((l) => l.lots), alleys: byBlock.flatMap((l) => l.alleys), byBlock };
-  }
-  return laid;
+/* ---------- The corner shops (step 3) ---------- */
+
+export type CornerId = 'c0' | 'c1' | 'c2' | 'c3';
+/** A corner shop: its made-up name and colour, and the row lot it takes (a shop, facing its street) */
+export interface CornerShop {
+  id: CornerId;
+  name: string;
+  color: string;
+  block: string;
+  lot: Lot;
+  /** Where you stand to serve its customers, and where a courier drops off: out on the sidewalk at its door */
+  door: { x: number; z: number };
 }
+/** Which lot: the one facing `face` nearest `near` on the block, at least this wide */
+const CORNER_SPECS: { id: CornerId; name: string; color: string; block: string; near: Pt; face: Face }[] = [
+  { id: 'c0', name: 'BLOCK BODEGA', color: '#ffd23f', block: 'trench-a2', near: [-76.5, 125.5], face: 's' },
+  { id: 'c1', name: 'TRENCH MART', color: '#2bff88', block: 'trench-a1', near: [-147.5, 125.5], face: 's' },
+  { id: 'c2', name: 'AVENUE DELI', color: '#ff6a2f', block: 'trench-a3', near: [-48, 125.5], face: 's' },
+  { id: 'c3', name: 'CORNER STOP', color: '#00eaff', block: 'trench-c2', near: [-76.5, 252.5], face: 'n' },
+];
+const CORNER_W = 3;
+
+/** The rows laid, with the corner shops' lots made shops (their own drawing, cornershops.ts) */
+const LAID = (() => {
+  const byBlock = ROW_BLOCKS.map((b) => layBlock(b.poly, RECIPES.rowhouses, b.seed));
+  const corners: CornerShop[] = CORNER_SPECS.map((c) => {
+    const i = ROW_BLOCKS.findIndex((b) => b.id === c.block);
+    const mid = (l: Lot): Pt => [(l.box[0] + l.box[2]) / 2, (l.box[1] + l.box[3]) / 2];
+    const wide = (l: Lot) => (l.face === 'n' || l.face === 's' ? l.box[2] - l.box[0] : l.box[3] - l.box[1]);
+    const lot = byBlock[i].lots
+      .filter((l) => l.face === c.face && wide(l) >= CORNER_W)
+      .sort((a, b) => Math.hypot(mid(a)[0] - c.near[0], mid(a)[1] - c.near[1]) - Math.hypot(mid(b)[0] - c.near[0], mid(b)[1] - c.near[1]))[0];
+    // A shop of its height (a shopfront, no stoop)
+    lot.type = 'shop';
+    lot.sign = undefined;
+    lot.front = KIT_SPEC.shop.front;
+    lot.h = heightOf('shop', lot.floors);
+    lot.solids = lotSolids(lot);
+    const [x0, z0, x1, z1] = lot.box;
+    const [mx, mz] = mid(lot);
+    const out = WALK_W / 2;
+    const door = c.face === 's' ? { x: mx, z: z1 + out } : c.face === 'n' ? { x: mx, z: z0 - out } : c.face === 'w' ? { x: x0 - out, z: mz } : { x: x1 + out, z: mz };
+    return { id: c.id, name: c.name, color: c.color, block: c.block, lot, door };
+  });
+  return { lots: byBlock.flatMap((l) => l.lots), alleys: byBlock.flatMap((l) => l.alleys), byBlock, corners };
+})();
+/** The rows laid */
+export const rows = () => LAID;
+export const CORNER_SHOPS: CornerShop[] = LAID.corners;
+/** Is a row lot one of the corner shops' (drawn from the save, not with the rows) */
+export const isCorner = (l: Lot) => CORNER_SHOPS.some((c) => c.lot === l);
 
 /** Everything solid: the towers, The Block's fence and handball wall, the rows' buildings and their alleys' bollards */
 export function projectSolids(): Footprint[] {
