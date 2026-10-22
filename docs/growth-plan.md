@@ -1150,6 +1150,40 @@ corner shops stay where they are.
   towers, hydrants, low iron fences and hedges; kids at play and
   neighbours hanging out.
 
+### 9a++ The Trenches' grit (the owner's call; step 1 built)
+
+"More concrete... a gritty urban city feel... more moody and realistic as
+a hood... more built up and have more buildings" (the owner's answers:
+mostly concrete with only a few patches of worn grass; tenement street
+walls, gritty low commercial and vacant lots; sodium lamps, trash and
+wear, the hood's own sounds; the full dark-steel el; the courts kept but
+worn; a gun store, a bar and a big neon nightclub on Trench Avenue under
+the el; lighter on phones). Three steps, each its own PR:
+
+- **Step 1, concrete, mood and the el** (built, `grit.ts` / `grit3d.ts`,
+  `grime.ts`): the yards worn concrete with patches of worn grass and dirt,
+  trees in pits, chain-link on low kerbs round every yard (solid, open at
+  every way in), the courts on old asphalt, the garden fenced; jersey
+  barriers, dumpsters and trash, shuttered shops, boarded windows, tags and
+  bills (made-up names); patched and cracked streets; sodium lamps (some
+  flickering, the odd one dead); the el in dark steel with a lamp under
+  each span and sparks off the wheels; parked cars in a lay-by along the
+  avenue under it (its median is too narrow to park in); the el's rumble,
+  sirens far off, dogs, three boombox corners. Measured on the phone tier:
+  The Trenches view 140 draws (119), 0.25M triangles (0.21M), geometry
+  75 MB (72), textures 122 MB (113: the yard, tag and bill atlases); every
+  site under about 60 ms on the slow test machine.
+- **Step 2, built up** (next): tenement street walls (4-6 storeys, fire
+  escapes, shops below) along the street fronts with the towers behind,
+  gritty low commercial along Bottom Street and the highway side (auto
+  shops, a tyre place, a scrap yard, warehouses, a car wash), two vacant
+  lots.
+- **Step 3, three places on Trench Avenue under the el**: Club PULSE (a
+  big corner nightclub, neon, a marquee, a queue at a velvet rope with a
+  bouncer; tasteful, non-explicit; coming soon), The Rusty Nail (a dive
+  bar; coming soon) and Trench Arms (a gun store that opens the Armoury's
+  store and workbench: cartoon guns, Dorras only).
+
 The open land inside the new edge is room for several districts. Each one
 is its own PR and the owner's call, built from Phase 4's kits. For
 example:
