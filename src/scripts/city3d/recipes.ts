@@ -15,7 +15,7 @@
 import { SHOP_H, PARAPET, TOWER_FLOORS, insideBy, type Alley, type Face, type Pt, type Rect, type SignId } from './downtown';
 import { KIT_SPEC, heightOf, lotSolids, type BigKit, type KitId, type Lot, type RowKit } from './kits';
 
-export type RecipeId = 'midtown' | 'mainstreet' | 'terraces' | 'suburb' | 'warehouses' | 'factory' | 'school' | 'mall' | 'stadium' | 'works';
+export type RecipeId = 'midtown' | 'mainstreet' | 'terraces' | 'suburb' | 'warehouses' | 'rowhouses' | 'factory' | 'school' | 'mall' | 'stadium' | 'works';
 
 export interface Recipe {
   id: RecipeId;
@@ -52,6 +52,8 @@ export const RECIPES: Record<RecipeId, Recipe> = {
   suburb: { id: 'suburb', houses: true, depth: 6.4, tall: 4, towers: 0, alleys: 0, signs: [], ground: 'grass' },
   // Warehouses and old lofts along the streets
   warehouses: { id: 'warehouses', mix: { warehouse: 4, loft: 1.5 }, depth: 5.6, tall: 4.6, towers: 0, alleys: 0.25, signs: [], ground: 'concrete' },
+  // The Trenches' rows (projects.ts): brownstone walk-ups with their stoops, a corner shop now and then
+  rowhouses: { id: 'rowhouses', mix: { brownstone: 5, shop: 1.3 }, depth: 4.4, tall: 5.2, towers: 0, alleys: 0.3, signs: ['mart', 'laundry', 'barber', 'pizza', 'tacos', 'noodles'], ground: 'paving' },
   // One to a block
   factory: { id: 'factory', big: 'factory', depth: 0, tall: 0, towers: 0, alleys: 0, signs: [], ground: 'concrete' },
   school: { id: 'school', big: 'school', depth: 0, tall: 0, towers: 0, alleys: 0, signs: ['school'], ground: 'paving' },

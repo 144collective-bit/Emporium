@@ -43,8 +43,9 @@ const spots: Record<SpotId, Spot> = {
   airport: { href: '#city-title', title: 'Airport', sub: 'Hangar · fly', aria: 'Sector 7 Airport: fly your own aircraft' },
   fightclub: { href: '#city-title', title: 'Fight Club', sub: 'Spar · bouts', aria: 'The Fight Club: spar and bouts' },
   liberty: { href: '#city-title', title: 'Liberty Bridge', sub: 'Footbridge', aria: 'Liberty Bridge: a footbridge over the river' },
+  trenches: { href: '#city-title', title: 'The Block', sub: 'The Trenches', aria: 'The Block: the courtyard at the heart of The Trenches' },
 };
-const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty'];
+const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'trenches'];
 const ext = { target: '_blank', rel: 'noopener noreferrer' };
 
 const map = renderCity({ spots, art: { degen: degenImg.src, logo: logoImg.src } });
@@ -947,6 +948,12 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     <h2 id="city-panel-title" class="city-panel-title">Liberty Bridge</h2>
     <p class="city-panel-text">Sector 7's stone footbridge, one of a kind. A gate tower stands on each bank beside West 3 and South 1, with stairs up both sides and the Liberty flame spiralling up from its roof. The walkway crosses on arches high over both river avenues and the wide river, with boats passing underneath and lanterns along the parapets at night. It's for people only: climb the stairs and walk across.</p>
     <button type="button" class="chip-link kart-walkin" data-liberty-walkin>Walk in</button>
+  </template>
+  <template data-panel-tpl="trenches">
+    <p class="kicker"><span class="kicker-num">13</span> The Trenches</p>
+    <h2 id="city-panel-title" class="city-panel-title">The Block</h2>
+    <p class="city-panel-text">The courtyard at the heart of the Trench Houses, south of the river. Brick towers all round, a fenced court with a game always on, a playground, the handball wall, the community garden and string lights over it all at night. The metro stops right outside. The story starts here: coming soon.</p>
+    <button type="button" class="chip-link kart-walkin" data-block-walkin>Walk in</button>
   </template>
 
   <div class="city-hud" data-city-hud>

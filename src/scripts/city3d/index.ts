@@ -46,6 +46,9 @@ import { AIR_SPAWN } from './airfield';
 import { FIGHT_SPAWN } from './fightsite';
 import { LIBERTY_SPAWN } from './liberty';
 import { buildLibertyBridge } from './libertybridge';
+import { buildProjects } from './projects3d';
+import { buildTheBlock } from './theblock';
+import { BLOCK_SPAWN } from './projects';
 import { buildFightClub } from './fightclub';
 import { fightRecordHtml } from './fight-ui';
 import { kartRecordsHtml } from './kart-ui';
@@ -173,6 +176,10 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const fightDemo = new URLSearchParams(location.search).has('fight') ? (await import('./fight-demo')).buildFightDemo({ scene, root, reduced, low: tier === 'low', tick }) : null;
   // The Trenches (growth plan Phase 9): its streets, built as you go (its blocks are the street plan's)
   buildTrenches();
+  // ...its towers, lawns and rows (sites too), and The Block, a place (its pin and panel) with its people
+  buildProjects(tier === 'low');
+  const theBlock = buildTheBlock(scene, crowd, { tick, reduced, low: tier === 'low' });
+  spots.push(theBlock.spot);
   // ...and the metro's el where it crosses the open land south of the south row: no trees under it
   keepTreesOff([-10, 125, 56, 135]);
   progress(0.55);
@@ -389,6 +396,12 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       panelBody.querySelector('[data-liberty-walkin]')?.addEventListener('click', () => {
         close();
         startWalking(LIBERTY_SPAWN);
+      });
+    // The Block's panel: Walk in starts walk mode on its plaza by the metro's stairs
+    if (id === 'trenches')
+      panelBody.querySelector('[data-block-walkin]')?.addEventListener('click', () => {
+        close();
+        startWalking(BLOCK_SPAWN);
       });
     panel.dataset.spot = id;
     panel.hidden = false;
