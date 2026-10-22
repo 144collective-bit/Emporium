@@ -133,16 +133,46 @@ it and has been retired completely. Build only on what's here.
     ground level, not a slab: nothing on it is solid.
   - `inTown()` keeps the outskirts' trees out of all this. Tested in
     `tests/outer.test.ts`.
-- **Traffic** follows `routes.ts` (DOM-free): a route for every lane of the
-  straight roads, two down each diagonal (in off the ring, out along a
-  cross street) and two round each bend (in off its avenue, all the way
-  round, out the other end) and one out to the airport and back (down the
-  east ring avenue, round the car park loop); turns are rounded off
-  (tighter for right turns). Junctions where a diagonal comes in run
-  three light phases (x, z, diagonal). Cars follow whoever is ahead going
-  the same way on any route. Pedestrians walk loops round downtown's block
-  outlines and the south row, and up and down Liberty Bridge's walkway.
-  Tested in `tests/routes.test.ts`.
+- **Traffic** follows `routes.ts` (DOM-free), generated from the street
+  plan (growth plan Phase 7): its drivable streets and crossings make a
+  graph (each street cut into stretches between crossings, either way, or
+  the one way a one-way street (`oneway`, the airport's car park loop)
+  allows; stretches out towards the world's edge go nowhere and carry no
+  traffic), and every route is a closed loop through it: a seeded drive of
+  a few stretches, then the shortest way back, until every stretch is
+  driven and every slip lane taken; plus the ring highway all the way
+  round, both ways, in both lanes. Turns are rounded off (`cornerCurve()`
+  in `highway.ts`: tighter for right turns, through the slip lanes where
+  the highway meets an arterial), an avenue's lane picked for the next
+  turn. Junctions where a diagonal comes in run three light phases (x, z,
+  diagonal). Cars drive round and round and follow whoever is ahead going
+  the same way on any route; they're **spent where you are** (`life.ts`):
+  a car further than `POOL_R` from what the camera looks at
+  (`CROWD_VIEW.focus`), out of sight (or past `POOL_FAR`), is put back at
+  one of the routes' `SPOTS` near it, out of sight (or past `POOL_SEEN`
+  beyond the focus); boats do the same along the river (`BOAT_R`).
+  Traffic lights stand on every way into a lit junction, found along each
+  street (curved and looped ones too). Pedestrians walk loops round
+  downtown's block outlines and the south row, and up and down Liberty
+  Bridge's walkway. Tested in `tests/routes.test.ts`.
+- **The ring highway** (growth plan Phase 7) is `highway.ts` (DOM-free,
+  tested in `tests/highway.test.ts`): `HIGHWAY`, a closed centre line on
+  a rounded box (`HIGHWAY_BOX` x -215 to 275, z -170 to 275, corners
+  `HIGHWAY_R` 70) round the town, the kart park, the airport and the test
+  district; two lanes each way with a median and a hard shoulder
+  (`HIGHWAY_HALF`); `fromHighway()` / `insideHighway()` measure it
+  exactly. In the street plan it's a street of kind `highway` (`loop`),
+  with a lit junction wherever it meets a straight arterial (18), and on
+  the town side of each, two `slip` streets (one-way slip lanes across
+  the corners for the right turns on and off it, `slipCurve()`); it
+  crosses the river on two bridges (`riverBridges()` in `streetplan.ts`,
+  every road crossing the river: they're drawn, and they're the gaps in
+  `RIVER_WALLS`). It's all at ground level: nothing to climb, nothing
+  solid. Drawn in `world.ts` (the asphalt, the median broken at the
+  junctions and over the river, lane dashes and edge lines, lamps along
+  both verges, the slips); the arterials' medians and lines break where it
+  crosses them (`highwayGaps()`), and the outskirts' trees keep off it and
+  its slips (`treeSpot()`).
 - **The street plan** is `src/scripts/city3d/layout.ts` (DOM-free; the 3D
   city, the 2D map, the plots and the server all read it). 1 tile is about
   1.8 m and Degen is about one tile tall. Roads are sized for real-proportion
@@ -161,12 +191,12 @@ it and has been retired completely. Build only on what's here.
   - `EXT` (-420 to 460, about 1.6 km across; growth plan Phase 6 moved it out from -200 to 240) is the ground, the river and every road, edge to edge (the far-off roads are plain continuations of today's, with no traffic). It's mostly open land, room to grow the city into. Build there only when the owner asks.
   - The river is `RIVER_W` (15) wide, five times what it was (the owner's call). It widened southwards, so everything south of it moved `SOUTH_SHIFT` (12) south: what's derived from `SOUTH_ROAD` / `SOUTH_ROW` moved by itself, and the south bank's places written in fixed numbers (the Fight Club in `fightsite.ts`, South Square and the south pocket parks in `outer.ts`, the airport and its timetable in `airfield.ts`) add `SOUTH_SHIFT` to their z. Keep doing that for anything new written in fixed numbers south of the river.
   - `WORLD_BOUNDS` is how far you can walk or drive.
-  - `CITY_EXT` (-80 to 140) is where traffic and boats loop, past the Parkway; the outskirts' tree belt fills a band round the town (outside the bends) and a lighter sprinkle covers the rest, seeded tile by tile at a density per area (`outskirtsTrees()` in `outskirts.ts`: `BELT_FREE` / `OPEN_FREE` are the land a tree could stand on in the world before Phase 6, so a bigger world gets more trees, never thinner ones, and a tile's trees are the same whatever the world's size; trees keep off land in `keepTreesOff()`). Pine woods stand in patches on the land well away from the city (`WOODS`, `inWoods()`: a smooth seeded noise, only past `WOODS.clear` from `BUILT_UP`, so none on the land the world had before Phase 6), their trees bigger than the town's.
+  - `CITY_EXT` (-80 to 140) is the town past the Parkway (with the airport and the kart park it's `BUILT_UP`); the outskirts' tree belt fills a band round the town (outside the bends) and a lighter sprinkle covers the rest, seeded tile by tile at a density per area (`outskirtsTrees()` in `outskirts.ts`: `BELT_FREE` / `OPEN_FREE` are the land a tree could stand on in the world before Phase 6, so a bigger world gets more trees, never thinner ones, and a tile's trees are the same whatever the world's size; trees keep off land in `keepTreesOff()`). Pine woods stand in patches on the land well away from the city (`WOODS`, `inWoods()`: a smooth seeded noise, only past `WOODS.clear` from `BUILT_UP`, so none on the land the world had before Phase 6), their trees bigger than the town's.
   - The skyline ring stands just past `EXT` (`SKYLINE` in `bounds.ts`: `gap` to `gap` + `depth` past it), kept out of the haze (`fog = false`) so it reads as a far metropolis; as many towers as the ring had for its length before Phase 6 (`SKYLINE_REACH`), each from its own seeded numbers, on grass that carries on `SKIRT` (80) past the edge (the grass is a plane per tile).
   - The sky dome and stars travel with the camera at `SKY_RADIUS` (`bounds.ts`: far enough that the skyline's far side stands in front of it seen from downtown, about 720 today, never under 400), inside its far plane (`CAMERA_FAR`, 40 further), so everything in the world stays in front of the sky and the skyline stays on the horizon however far out the edge is.
   - City view pans round the built-up area (`bounds.ts`: `BUILT_UP` is the town, the airport and the kart park; `PAN_BOUNDS` reaches `PAN_MARGIN` (160) past it, never closer than 10 to where you can walk: today that's the whole world), and the Build overview frames the plots (`overviewFrame()`).
   - **The edge is data** (growth plan Phase 5): `EXT` is set in one place, and a test run can set another (`WORLD_EXT=x0,x1`, `npm run test:wide` at Phase 10's -680 to 720); both must pass. Nothing that exists reads the edge: the airport's `SITE` is fixed numbers, the river walls and their bridge gaps come from the street plan (`riverCrossings()` in `streetplan.ts`), flying turns back at whatever bounds it's given. Anything new written against the edge must work at both sizes.
-  - **Growing the city** (many more buildings, then a bigger world) is planned in `docs/growth-plan.md`. Part A (Phases 0-4) makes size cheap: the measuring kit and a snapshot test that nothing moves, tiles and a collision grid, near and far building forms, building as you go, building kits. Part B (Phases 5-10) grows the world: the edge as data (the airport's site frozen, trees per tile), `EXT` out to about 880 across, roads to reach it (a ring highway, more bridges, traffic spent near you), getting about (a world map, waypoints, and the owner's pick of metro, taxis or fast travel), districts one at a time, then optionally about 1,400 across. Phases 0 (the measuring kit), 1 (tiles, the collision grid, the city's fixed geometry merged per tile, crowds and traffic culled for the shadow map), 2 (near and far forms: details near only, far forms for the places and the cars) 3 (building as you go: sites built round the home view at the boot and the rest after it, near forms let go past a budget), 4 (building kits: kits, recipes for blocks, a test district behind `?district=test`), 5 (the edge as data: `EXT` in one place, tests at both sizes) and 6 (the edge moves out: `EXT` -420 to 460, the woods, the far plane and sky dome from the edge) are built; follow the rest one phase at a time with the owner's sign-off, and never add buildings in bulk outside the tiles (`tileBatch()`) or outside sites (`site()`).
+  - **Growing the city** (many more buildings, then a bigger world) is planned in `docs/growth-plan.md`. Part A (Phases 0-4) makes size cheap: the measuring kit and a snapshot test that nothing moves, tiles and a collision grid, near and far building forms, building as you go, building kits. Part B (Phases 5-10) grows the world: the edge as data (the airport's site frozen, trees per tile), `EXT` out to about 880 across, roads to reach it (a ring highway, more bridges, traffic spent near you), getting about (a world map, waypoints, and the owner's pick of metro, taxis or fast travel), districts one at a time, then optionally about 1,400 across. Phases 0 (the measuring kit), 1 (tiles, the collision grid, the city's fixed geometry merged per tile, crowds and traffic culled for the shadow map), 2 (near and far forms: details near only, far forms for the places and the cars) 3 (building as you go: sites built round the home view at the boot and the rest after it, near forms let go past a budget), 4 (building kits: kits, recipes for blocks, a test district behind `?district=test`), 5 (the edge as data: `EXT` in one place, tests at both sizes) 6 (the edge moves out: `EXT` -420 to 460, the woods, the far plane and sky dome from the edge) and 7 (roads to reach it: the ring highway, its bridges and slip lanes, routes generated from the street plan, traffic and boats spent near you) are built; follow the rest one phase at a time with the owner's sign-off, and never add buildings in bulk outside the tiles (`tileBatch()`) or outside sites (`site()`).
 - **Cars** are `src/scripts/city3d/cars.ts`: real-proportion cartoon models
   (City Hatch, Cruiser, Street GT coupe, Hauler pickup, Box Van, City Bus;
   made-up names, never a real make or badge), each a bevelled extruded
@@ -342,11 +372,11 @@ it and has been retired completely. Build only on what's here.
 - `?bench` runs the benchmark (`bench.ts`, growth plan Phase 0): straight
   into the 3D city, clear day (`?bench=night` for night), quality held, the
   same views (`BENCH_VIEWS`: home, a downtown street, the square, the Build
-  overview, the airport, the kart park, where the edge was before Phase 6,
-  the far edge (from `EXT`); with
+  overview, the airport, the kart park, a junction on the ring highway,
+  where the edge was before Phase 6, the far edge (from `EXT`); with
   `?district=test` the test district's two after them) measured for a few
   seconds each, once every site is built (it builds faster while it
-  waits), then a 48 s camera route through them. Results (fps,
+  waits), then a 48 s camera route through them (all but the Build overview). Results (fps,
   average / 95th-percentile / slowest frame, CPU ms, draws and triangles,
   the shadow map's, memory, boot) go in a card on the page, the console and
   `window.__bench`. Run it before and after anything that could make the
@@ -1498,8 +1528,8 @@ it and has been retired completely. Build only on what's here.
   10's bigger world (`WORLD_EXT`): run both when anything reads the edge. The "Build site" Action runs them before the
   build: a failing test means no zip.
 - They cover the code that's free of the DOM and scene code: the street plan
-  (`layout.ts`, `streetplan.ts`), downtown (`downtown.ts`), the traffic's
-  routes and lights (`routes.ts`), collision data, doors, the gun counter, the garage
+  (`layout.ts`, `streetplan.ts`), downtown (`downtown.ts`), the ring highway
+  (`highway.ts`), the traffic's routes and lights (`routes.ts`), collision data, doors, the gun counter, the garage
   and the spawn (`solids.ts`), the plots (`src/data/plots.ts`), your car
   (`mycar.ts`), the driving rules (`drive-sim.ts`), target practice
   (`combat-sim.ts`), the economy (`tycoon.ts`, the market square in

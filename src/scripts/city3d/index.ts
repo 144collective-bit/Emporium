@@ -11,7 +11,7 @@ import { CENTER, buildGround, buildLamps, buildSkyline, buildTrees, puddleMat, k
 import { buildLandmarks, type Spot } from './landmarks';
 import { buildInfill } from './infill';
 import { buildNeighbourhoods } from './neighbourhoods';
-import { buildLife, walker } from './life';
+import { bodies, buildLife, walker } from './life';
 import { addSlabs, createWalk } from './walk';
 import { buildGarage } from './garage';
 import { buildAirport } from './airport';
@@ -805,7 +805,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   }
   if (statsEl) {
     // For the headless draw-call breakdown (scratch scripts): the scene, renderer and camera on the page
-    (window as unknown as { __city?: unknown }).__city = { scene, renderer, camera, controls };
+    (window as unknown as { __city?: unknown }).__city = { scene, renderer, camera, controls, traffic: bodies, view: CROWD_VIEW };
     statsEl.className = 'city-stats';
     statsEl.setAttribute('aria-hidden', 'true');
     host.append(statsEl);
@@ -850,6 +850,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   };
 
   const viewProj = new THREE.Matrix4();
+  const look = new THREE.Vector3();
   function frame(now: number) {
     if (!running) return;
     raf = requestAnimationFrame(frame);
@@ -917,6 +918,10 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     CROWD_VIEW.eye.setFromMatrixPosition(camera.matrixWorld);
     CROWD_VIEW.frustum.setFromProjectionMatrix(viewProj.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
     CROWD_VIEW.shadowOn = renderer.shadowMap.enabled && sky.shadowFrustum(CROWD_VIEW.shadow);
+    // What the camera looks at on the ground (straight ahead a way when it looks level, walking)
+    camera.getWorldDirection(look);
+    const reach = look.y < -0.02 ? THREE.MathUtils.clamp(CROWD_VIEW.eye.y / -look.y, 40, 250) : 60;
+    CROWD_VIEW.focus.set(CROWD_VIEW.eye.x + look.x * reach, 0, CROWD_VIEW.eye.z + look.z * reach);
     // Building as you go (growth plan Phase 3): a few milliseconds a frame (more while the start menu covers the city)
     works.step(root.classList.contains('has-start') || (bench && !bench.active && !bench.done) ? 12 : tier === 'low' ? 2 : 3, CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, CROWD_VIEW.eye.z, dt, Q.far);
     // Near and far forms (growth plan Phase 2): the details only within the tier's `far` of the camera

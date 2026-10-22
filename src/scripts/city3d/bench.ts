@@ -35,11 +35,12 @@ export const BENCH_VIEWS: BenchView[] = [
   { id: 'overview', name: 'Every district (Build overview)', pos: [75, 81, 105], target: [20, 0, 34] },
   { id: 'airport', name: 'The airport', pos: [118, 22, 205], target: [140, 2, 160] },
   { id: 'karts', name: 'The kart park', pos: [136, 30, -30], target: [136, 0, -93] },
+  { id: 'highway', name: 'The ring highway, a junction', pos: [0, 30, -120], target: [30, 0, -170] },
   { id: 'outskirts', name: 'Where the edge was, looking back', pos: [-180, 14, -180], target: [30, 0, 30] },
   { id: 'edge', name: 'The far edge, looking back', pos: [EXT[0] + 20, 14, EXT[0] + 20], target: [30, 0, 30] },
 ];
 /** The route, through these views in order and back home */
-const ROUTE = ['home', 'street', 'square', 'airport', 'karts', 'outskirts', 'edge', 'home'];
+const ROUTE = ['home', 'street', 'square', 'airport', 'karts', 'highway', 'outskirts', 'edge', 'home'];
 const SETTLE = 1;
 const MEASURE = 4;
 const ROUTE_SECONDS = 48;

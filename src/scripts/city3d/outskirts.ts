@@ -17,6 +17,8 @@ import { RUNWAY, SITE } from './airfield';
 import { TILE, tileKey, tilesIn } from './tiles';
 import { rng } from './recipes';
 import { BUILT_UP } from './bounds';
+import { HIGHWAY_HALF, fromHighway } from './highway';
+import { PLAN } from './streetplan';
 import type { Rect } from './downtown';
 
 const PARKWAY_TOP = Math.min(...PARKWAY.map((p) => p[1]));
@@ -34,9 +36,17 @@ export const BELT: Rect = [PROMENADE.x[0] - 24, PARKWAY_TOP - 24, PROMENADE.x[1]
 export const BELT_FREE = 11570;
 export const OPEN_FREE = 98100;
 
-/** Whether a tree may stand at x, z */
-export function treeSpot(x: number, z: number, clear: readonly Rect[] = []) {
+/** Where the highway meets the arterials (its slip lanes are round them) */
+const MEETS = PLAN.crossings.filter((c) => c.streets.includes('highway')).map((c) => c.at);
+
+/**
+ * Whether a tree may stand at x, z (`highway` false leaves the ring highway
+ * out: the densities were worked out before it)
+ */
+export function treeSpot(x: number, z: number, clear: readonly Rect[] = [], highway = true) {
   if (clear.some((c) => x > c[0] - 2 && x < c[2] + 2 && z > c[1] - 2 && z < c[3] + 2)) return false;
+  // Off the ring highway, its verges and the slip lanes at its junctions (highway.ts)
+  if (highway && (fromHighway(x, z) < HIGHWAY_HALF + 1.5 || MEETS.some((m) => Math.abs(x - m[0]) < 17 && Math.abs(z - m[1]) < 17))) return false;
   // The kart park and its slip road (kartpark.ts)
   if (x > KART_PARK.x0 - 3 && x < KART_PARK.x1 + 3 && z > KART_PARK.z0 - 3 && z < KART_PARK.z1 + 3) return false;
   if (Math.abs(x - SLIP_ROAD.x) < SLIP_ROAD.half + 2 && z > SLIP_ROAD.z0 - 1 && z < SLIP_ROAD.z1 + 1) return false;
@@ -157,6 +167,6 @@ function hash(key: string) {
 export function freeLand(rect: Rect, step: number, skip?: Rect) {
   let n = 0;
   for (let x = rect[0] + step / 2; x < rect[2]; x += step)
-    for (let z = rect[1] + step / 2; z < rect[3]; z += step) if (!(skip && inside(skip, x, z)) && treeSpot(x, z)) n++;
+    for (let z = rect[1] + step / 2; z < rect[3]; z += step) if (!(skip && inside(skip, x, z)) && treeSpot(x, z, [], false)) n++;
   return n * step * step;
 }

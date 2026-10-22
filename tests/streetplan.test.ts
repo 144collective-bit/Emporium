@@ -62,8 +62,8 @@ test('the city as built: the grid\'s roads, three diagonals from the ring\'s cor
   const alleys = p.streets.filter((s) => s.kind === 'alley');
   assert.ok(alleys.length >= 5, 'downtown has its alleys and lanes');
   for (const a of alleys) assert.deepEqual(lanePaths(a), [], 'no cars down an alley');
-  // Lights where downtown's cross streets meet, and nowhere else
-  for (const c of p.crossings) assert.equal(c.lights, CORE_ROADS.includes(c.at[0]) && CORE_ROADS.includes(c.at[1]));
+  // Lights where downtown's cross streets meet and where the highway meets an arterial, and nowhere else
+  for (const c of p.crossings) assert.equal(c.lights, (CORE_ROADS.includes(c.at[0]) && CORE_ROADS.includes(c.at[1])) || c.streets.includes('highway'));
 });
 
 test('the city\'s blocks: downtown\'s outlines, every district and lot, off the asphalt, the landmarks on theirs', () => {
