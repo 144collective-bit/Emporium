@@ -123,6 +123,8 @@ export interface BenchDeps {
   /** Clear day (or night) for the run; the visitor's own sky back after */
   conditions(night: boolean): () => void;
   boot(): Record<string, number>;
+  /** More views after the fixed ones (the test district's, with ?district=test) */
+  extra?: BenchView[];
 }
 
 export function createBench(d: BenchDeps, night: boolean) {
@@ -133,7 +135,7 @@ export function createBench(d: BenchDeps, night: boolean) {
   // On the city's root, over the welcome card and the guide (the 3D view's own box sits under them)
   (d.host.closest('[data-city-root]') ?? d.host).append(card);
 
-  const views = BENCH_VIEWS.map((v) => ({ ...v }));
+  const views = [...BENCH_VIEWS, ...(d.extra ?? [])].map((v) => ({ ...v }));
   const pts = (k: 'pos' | 'target') =>
     new THREE.CatmullRomCurve3(
       ROUTE.map((id) => new THREE.Vector3(...views.find((v) => v.id === id)![k])),

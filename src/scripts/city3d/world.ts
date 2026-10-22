@@ -457,6 +457,12 @@ export function scatterOutskirts(count: number, sparse = 0.6) {
   scatterIn(Math.round(count * sparse), [EXT[0] + 4, EXT[1] - 4], [EXT[0] + 4, EXT[1] - 4], belt);
 }
 
+/** Land the outskirts' trees keep off besides the town (the test district's, with ?district=test) */
+const CLEAR: [number, number, number, number][] = [];
+export function keepTreesOff(rect: [number, number, number, number]) {
+  CLEAR.push(rect);
+}
+
 /** Trees across x / z ranges, kept off the town, the roads and the river (and out of `skip`, a box already planted) */
 function scatterIn(count: number, xr: [number, number], zr: [number, number], skip?: [number, number, number, number]) {
   let placed = 0;
@@ -465,6 +471,7 @@ function scatterIn(count: number, xr: [number, number], zr: [number, number], sk
     const x = xr[0] + rand() * (xr[1] - xr[0]);
     const z = zr[0] + rand() * (zr[1] - zr[0]);
     if (skip && x > skip[0] && x < skip[1] && z > skip[2] && z < skip[3]) continue;
+    if (CLEAR.some((c) => x > c[0] - 2 && x < c[2] + 2 && z > c[1] - 2 && z < c[3] + 2)) continue;
     // The kart park and its slip road (kartpark.ts)
     if (x > KART_PARK.x0 - 3 && x < KART_PARK.x1 + 3 && z > KART_PARK.z0 - 3 && z < KART_PARK.z1 + 3) continue;
     if (Math.abs(x - SLIP_ROAD.x) < SLIP_ROAD.half + 2 && z > SLIP_ROAD.z0 - 1 && z < SLIP_ROAD.z1 + 1) continue;

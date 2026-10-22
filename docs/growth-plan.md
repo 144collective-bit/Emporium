@@ -1,7 +1,7 @@
 # Growing Sector 7: the plan
 
 How the city gets many more buildings, and then a bigger world, without
-getting slower. Phases 0-3 are built. Like the other plans, it waits
+getting slower. Phases 0-4 are built. Like the other plans, it waits
 for the owner's sign-off one phase at a time. Keep it up to date.
 
 ## What the owner asked
@@ -540,29 +540,125 @@ shader linking, too noisy to compare):
   40 MB against the 150 MB phone target, with the near forms held to the
   tier's budget.
 
-## Phase 4: building kits
+## Phase 4: building kits (built)
 
-- **Recipes for blocks** (DOM-free, seeded):
-  - a district's density;
-  - its mix of building types, heights and setbacks;
-  - its alleys and front details;
-  - all laid out from the street plan's block outlines.
+A new district is now a few lines of data: a grid of blocks and a recipe
+for each. Nothing in the city itself changed; the test district that
+proves it is only there with `?district=test` in the address.
 
-  A new district then becomes a few lines of data, not hand-placed
-  buildings.
-- **The infill's building types as instanced kits:**
-  - brownstone, shop, diner, loft, office and hotel;
-  - colour and sign set per instance;
-  - a hundred brownstones cost about one draw.
-- **New kits for the new districts:** warehouse, factory shed, terrace
-  house, detached house, school, mall, stadium stand, crane. Each comes in
-  a near form and a far form.
-- **Collisions come from the same recipe,** so the kits' footprints go
-  into the collision grid with no hand-written boxes.
-- **Signs stay fixed copy from `SIGNS`:** made-up names, never the token.
-- **Heights stay well under the Emporium,** so it stays the tallest.
-- **Done when** a test district of about 300 buildings stays inside the
-  targets.
+- **The kits** (`kits.ts`, DOM-free): fourteen kinds of building.
+  - The downtown six, drawn as downtown draws them (infill.ts): brownstone,
+    shop, diner, loft, office and hotel.
+  - Rows: the terrace (a narrow two-storey house, a pitched roof, a front
+    garden behind a low wall) and the warehouse (wide and low, a loading
+    dock, skylights).
+  - The house: detached, in its yard (a porch, a picket fence, a tree, a
+    chimney).
+  - One to a block: the factory (sheds under a sawtooth roof, a red and
+    white chimney, tanks, a fence), the school (a long block, its name over
+    the doors, a flagpole, a court behind), the mall (shops along the
+    ground floor, glass above, its name lit, a car park), the stadium stand
+    (a pitch with its lines and goals, tiers of seats, a roof with the
+    name, floodlights) and the crane (a frame going up, scaffolding, a
+    hoarding, a tower crane over it).
+  - Each kit's sizes, floors and front strip (`KIT_SPEC`), its height, and
+    its footprints (`lotSolids()`). Nothing stands taller than 11.2, the
+    crane's mast (the Emporium's roof is about 12.5); offices keep
+    downtown's nine-floor cap.
+- **Recipes for blocks** (`recipes.ts`, DOM-free, seeded):
+  - a recipe is a mix of kits, how tall they get, how many towers a block
+    may have, how often an alley breaks a row, rows of houses in yards, or
+    one big kit to a block: midtown, mainstreet, terraces, suburb,
+    warehouses, and factory, school, mall, stadium and works;
+  - `layBlock()` lays one on a block's outline (the land inside its
+    sidewalk): a row along every straight side, downtown's way (widths in
+    each kit's range, a few set back, an alley every few with bollards at
+    its mouth, the corners going to the longer side, slanted sides left as
+    they are), houses with yards between, or the big kit filling the
+    inside;
+  - the same seed lays the same block, in the browser or on a server.
+- **Collisions come from the same recipe:** every building carries its
+  footprints, and a district's go into every collision grid at once
+  (`addSolids()`, `BoxGrid.add()`, tested to answer exactly as a grid made
+  with all of them). Walking, the walk camera, bullets, driving and flying
+  all meet them, with no hand-written boxes; the district's raised blocks
+  are walkable ground (`addSlabs()`).
+- **Drawn merge-ready** (`kits3d.ts`): every wall from the one wall atlas,
+  every sign from the one sign atlas, plain colours in the shared paint,
+  neon in the shared neon. Walls, roofs, signs and lit trims are drawn at
+  every distance (a building's far form), everything else near only, and
+  phones leave out the finest details.
+- **Signs stay fixed copy:** the kits added SECTOR 7 HIGH, NEON MALL and
+  SECTOR 7 STADIUM to `SIGNS` (made-up names, never the token).
+- **The test district** (`testdistrict.ts`, `district3d.ts`):
+  - 285 buildings on 20 blocks of about 25 x 28, on the open land south of
+    the river avenue, west of the town (x -190 to -46, z 100 to 228), off
+    a grid of streets a lane each way;
+  - its streets, its blocks' ground and its buildings (four at a time) are
+    sites, built as you go (Phase 3), so the boot doesn't build any of it
+    (it's out of the home view) and no one site takes long;
+  - the outskirts' trees keep off it, and the benchmark adds two views of
+    it: the whole district from above and down one of its streets.
+- **Tested:** `tests/recipes.test.ts` (every kit under the Emporium; a
+  lot's frame turns the way the drawing does; every recipe lays every
+  block inside its outline, nothing overlapping, its own kits, its
+  footprints on its lots, the same every time; rows fill their street
+  fronts; houses stand apart; the test district has every kit and stays
+  clear of the town, roads, river, airport and kart park).
+- **What differs from the plan above:**
+  - The kits aren't instanced meshes. Each building is its own size, and
+    it's merged into the tile pieces of the shared materials' batched
+    meshes, so a district's buildings are already a handful of draws
+    however many there are (a hundred brownstones cost the same draws as
+    one), and they keep the per-tile culling and the near / far swap that
+    instancing would lose.
+  - Recipes lay rows along a block's sides that run along x or z;
+    a slanted side (a diagonal, a bend) is left as it is, like
+    downtown's triangles' planted strips.
+  - The benchmark now waits for every site to be built before it measures
+    (it builds faster while it waits), so its views measure the finished
+    city.
+
+### Measured with the test district
+
+Headless, the benchmark with and without `?district=test` (draws and
+triangles, the shadow map's included; headless frame rates mean nothing):
+
+| View | Medium tier, without | Medium tier, with | Phone tier, without | Phone tier, with |
+| --- | --- | --- | --- | --- |
+| Home view | 503 / 0.77M | 506 / 0.78M | 268 / 0.25M | 267 / 0.24M |
+| Downtown, street level | 549 / 0.78M | 557 / 0.81M | 244 / 0.25M | 243 / 0.24M |
+| Every district (Build overview) | 585 / 1.00M | 593 / 1.00M | 258 / 0.27M | 267 / 0.27M |
+| The far edge, looking back | 538 / 0.38M | 520 / 0.37M | 374 / 0.18M | 377 / 0.17M |
+| Route, average | 445 / 0.58M | 432 / 0.58M | 222 / 0.22M | 219 / 0.22M |
+| Test district, from above | | 59 / 0.28M | | 52 / 0.07M |
+| Test district, street level | | 59 / 0.33M | | 46 / 0.07M |
+
+- **The 285 buildings cost a handful of draws:** looking at the whole
+  district takes 59 draws on the medium tier (the city round it
+  included), well inside the targets (700 draws and 1.5M triangles on
+  desktop, 300 and 0.5M on phones). On phones its views are 46-52 draws
+  and 0.07M triangles: the finest details are left out and most of it is
+  past the swap distance, drawn in its far form.
+- **The rest of the city is unchanged** with it on (within the noise of
+  the traffic and the crowds): it's out of the other views, and each
+  tile's pieces are culled on their own.
+- **Memory:** geometry 41 → 60 MB on the medium tier, 34 → 44 MB on
+  phones, against the 150 MB phone target.
+- **Boot:** unchanged. The district is out of the home view, so the boot
+  builds none of it (the sites built at the boot take the same 0.12 s, or
+  0.07-0.08 s on phones, with it or without). Its 112 sites are built
+  after, nearest first. A block's buildings are four to a site (the
+  whole block at once took up to 0.18 s headless, the stadium's); the
+  slowest site is now 24-55 ms headless, a tile of trees, the kart park's
+  circuit or four of midtown's buildings, depending on the run. (The first site that brings a
+  material the city hadn't drawn yet also compiles its shader, once,
+  which took up to about 0.15 s headless.)
+- **Done:** a test district of 285 buildings stays inside every target.
+- **To check on real devices:** `?district=test&fps` (and
+  `?bench&district=test`) on a phone and a laptop: how long the district
+  takes to finish building, and the frame rate walking and driving
+  through it.
 
 ---
 

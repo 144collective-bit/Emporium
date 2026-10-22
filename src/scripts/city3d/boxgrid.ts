@@ -15,15 +15,31 @@ import type { Box } from './solids';
 export const CELL = 8;
 
 export class BoxGrid {
-  readonly boxes: readonly Box[];
+  private list: Box[];
   private cells = new Map<number, number[]>();
   private seen: Int32Array;
   private stamp = 0;
 
   constructor(boxes: readonly Box[], readonly cell = CELL) {
-    this.boxes = boxes;
-    this.seen = new Int32Array(boxes.length);
-    boxes.forEach((b, i) => {
+    this.list = [];
+    this.seen = new Int32Array(0);
+    this.add(boxes);
+  }
+
+  /** Every box, in the order they were given */
+  get boxes(): readonly Box[] {
+    return this.list;
+  }
+
+  /** More boxes, after those already in (a district built later: growth plan Phase 4) */
+  add(boxes: readonly Box[]) {
+    const from = this.list.length;
+    this.list.push(...boxes);
+    const seen = new Int32Array(this.list.length);
+    seen.set(this.seen);
+    this.seen = seen;
+    boxes.forEach((b, n) => {
+      const i = from + n;
       for (let cx = this.ix(b[0]); cx <= this.ix(b[2]); cx++)
         for (let cz = this.ix(b[1]); cz <= this.ix(b[3]); cz++) {
           const k = key(cx, cz);
@@ -56,14 +72,14 @@ export class BoxGrid {
         for (const i of list) {
           if (this.seen[i] === this.stamp) continue;
           this.seen[i] = this.stamp;
-          const b = this.boxes[i];
+          const b = this.list[i];
           if (b[2] < x0 || b[0] > x1 || b[3] < z0 || b[1] > z1) continue;
           hits.push(i);
         }
       }
     // In the list's own order, so anything that works through them in turn (the car's pushes) does the same
     hits.sort((a, b) => a - b);
-    for (const i of hits) out.push(this.boxes[i]);
+    for (const i of hits) out.push(this.list[i]);
     return out;
   }
 

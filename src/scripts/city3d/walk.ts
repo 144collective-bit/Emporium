@@ -51,13 +51,13 @@ import { CUPS } from './kart-sim';
 import type { KartInput, CupId } from './kart-sim';
 import type { ClassId } from './catalog';
 import { abandonSeries, seriesNext } from './tycoon';
-import { CAMERA_GRID, DOORS, GARAGE_SITE, RACK, SOLIDS, SOLID_GRID, TURNTABLE_BOX, WALK_SPAWN, rayBoxes, type Box } from './solids';
+import { CAMERA_GRID, DOORS, GARAGE_SITE, RACK, SOLIDS, SOLID_GRID, SOLID_GRIDS, TURNTABLE_BOX, WALK_SPAWN, rayBoxes, type Box } from './solids';
 import { BoxGrid } from './boxgrid';
 import { count } from './tycoon';
 import { NS_ROADS, RIVER, SLAB, WALK_W, type Tick } from './world';
 import { footbridgeWall, footbridgeY } from './liberty';
 import { WORLD_BOUNDS } from './layout';
-import { PLAN, inPoly } from './streetplan';
+import { PLAN, inPoly, type Pt } from './streetplan';
 import type { GameDeps } from './ui';
 
 /** What a prompt can open: a landmark's door, or one of walk mode's own places and vehicles */
@@ -78,11 +78,18 @@ const SCALE = 0.85;
 /** How far you can go: the world's edge */
 const BOUNDS = WORLD_BOUNDS;
 /** Downtown's blocks, the districts and the extra lots (garage, market...) with their sidewalks: the raised ground (with bounding boxes for a quick test first) */
-const slabs = PLAN.slabs.map((poly) => ({ poly, box: [Math.min(...poly.map((p) => p[0])), Math.min(...poly.map((p) => p[1])), Math.max(...poly.map((p) => p[0])), Math.max(...poly.map((p) => p[1])), 0] as Box }));
+const slabOf = (poly: Pt[]) => ({ poly, box: [Math.min(...poly.map((p) => p[0])), Math.min(...poly.map((p) => p[1])), Math.max(...poly.map((p) => p[0])), Math.max(...poly.map((p) => p[1])), 0] as Box });
+const slabs = PLAN.slabs.map(slabOf);
+/** More raised blocks to walk on (a district laid by a recipe: growth plan Phase 4) */
+export function addSlabs(polys: Pt[][]) {
+  slabs.push(...polys.map(slabOf));
+}
 /** What your own car bumps into: everything solid but the turntable it starts on */
 const CAR_SOLIDS = SOLIDS.filter((b) => b !== TURNTABLE_BOX);
 /** What a car or an aircraft bumps into, in the collision grid (boxgrid.ts) */
 const CAR_GRID = new BoxGrid(CAR_SOLIDS);
+// (solids added later, a district's, join it too)
+SOLID_GRIDS.push(CAR_GRID);
 const inBox = (b: Box, x: number, z: number, pad = 0) => x > b[0] - pad && x < b[2] + pad && z > b[1] - pad && z < b[3] + pad;
 const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
 const damp = (k: number, dt: number) => 1 - Math.exp(-k * dt);

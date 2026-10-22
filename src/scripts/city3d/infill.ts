@@ -446,8 +446,9 @@ const SIGN_ATLAS = (() => {
       c.shadowBlur = 0;
       c.fillStyle = shadeHex(sg.color, 0.55);
       c.fillText(sg.name, x + left + room / 2, y + CELL.h / 2 + 3);
-      // Its blade sign: the short word, letters stacked
+      // Its blade sign: the short word, letters stacked (one row of them: the building kits' signs, last, have none)
       const bx = i * BLADE.w;
+      if (bx + BLADE.w > SIGN_W) return;
       const by = SIGN_H - BLADE.h;
       c.fillStyle = '#0d0b1c';
       c.fillRect(bx + 3, by + 3, BLADE.w - 6, BLADE.h - 6);
@@ -639,6 +640,8 @@ function cornice(k: Kit, w: number, top: number, trim: THREE.Material, low: bool
 
 /** Phones: the finest details (string courses, pilasters, chairs, chalk boards) are left out */
 let LOW = false;
+/** Drawing a district's building in a site (kits3d.ts): nothing goes into the city's own lists */
+let IN_SITE = false;
 
 /** A string course at each floor line and pilasters at the ends: the front isn't flat */
 function dress(k: Kit, w: number, from: number, top: number, floors: number, trim: THREE.Material) {
@@ -687,7 +690,11 @@ function garden(k: Kit, F: Frame, top: number) {
   k.lbox(0.2, w - 0.2, top + 0.27, top + 0.3, -0.52, -0.23, toon('#3b2a22'));
   for (let u = 0.5; u < w - 0.3; u += LOW ? 1.6 : 0.9) {
     const [x, z] = toWorld(F, u, -0.38);
-    addTree(x, z, 0.45, false, top + 0.28);
+    // (in a site, built as you go, the little trees are its own: the city's tree list was laid out at the boot)
+    if (IN_SITE) {
+      k.put(new THREE.CylinderGeometry(0.03, 0.04, 0.3, 5, 1, true).translate(u, top + 0.43, -0.38), WOOD);
+      k.put(new THREE.IcosahedronGeometry(0.2, 0).translate(u, top + 0.68, -0.38), LEAF);
+    } else addTree(x, z, 0.45, false, top + 0.28);
   }
   k.lbox(0.2, 0.55, top, top + 0.28, -d + 0.3, -0.7, toon('#6e6a8c'));
   k.put(new THREE.IcosahedronGeometry(0.16, 0).translate(0.37, top + 0.42, -d / 2), LEAF);
@@ -1423,3 +1430,22 @@ function streetLamps() {
       }
     }
 }
+
+/* ---------- For the building kits (growth plan Phase 4, kits3d.ts) ---------- */
+
+export { ATLAS, SIGN_ATLAS, WALL_COLOR, frameOf, kit, shell, roof, cornice, dress, tank, acUnit, hut, antenna, planter, awning, table, bike, glow, soft, toWorld, toLocal, V, INK, METAL, ROOF, STONE, WOOD, GREEN, LEAF, CREAM };
+export type { Kit, Frame, WallKind, Band };
+/** A downtown-type building in a district (built in a site: its people and trees kept to itself) */
+export function infillBuilding(b: Batch, f: Infill, low: boolean) {
+  const was = LOW;
+  LOW = low;
+  IN_SITE = true;
+  try {
+    building(b, f, [], low);
+  } finally {
+    LOW = was;
+    IN_SITE = false;
+  }
+}
+/** Phones leave out the finest details: kits3d.ts asks too */
+export const isLow = () => LOW;

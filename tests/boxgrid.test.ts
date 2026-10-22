@@ -168,3 +168,24 @@ test('flying: an aircraft only given the boxes near it flies exactly as it would
   }
   assert.ok(bumps > 50, `only ${bumps} bumps`);
 });
+
+test('boxes added later (a district) answer exactly as a grid made with all of them', () => {
+  let s = 9;
+  const r = () => ((s = (s * 16807) % 2147483647) - 1) / 2147483646;
+  const more: Box[] = Array.from({ length: 400 }, () => {
+    const x = -190 + r() * 140;
+    const z = 100 + r() * 125;
+    return [x, z, x + 0.5 + r() * 6, z + 0.5 + r() * 6, r() * 8];
+  });
+  const later = new BoxGrid(SOLIDS);
+  later.add(more.slice(0, 150));
+  later.add(more.slice(150));
+  const all = new BoxGrid([...SOLIDS, ...more]);
+  assert.equal(later.boxes.length, SOLIDS.length + more.length);
+  for (let k = 0; k < 2000; k++) {
+    const x = -200 + r() * 440;
+    const z = -200 + r() * 440;
+    const w = r() * 20;
+    assert.deepEqual(later.query(x, z, x + w, z + w), all.query(x, z, x + w, z + w));
+  }
+});
