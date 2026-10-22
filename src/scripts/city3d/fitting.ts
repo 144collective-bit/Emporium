@@ -12,20 +12,17 @@
  * The look itself lives in profile-ui.ts (saved in the browser, and on the
  * player profile when online); this is the menu and the preview.
  *
- * The preview is a small second renderer with the city's own ink outlines,
- * drawing only while the panel is open. Under reduced motion he stands
- * still (drag still turns him).
+ * The preview is the podium stage (stage.ts): a small second renderer with
+ * the city's own ink outlines, drawing only while the panel is open.
  */
-import * as THREE from 'three';
-import { DEFAULT_LOOK, PACKS, PACK_IDS, PALETTE, type Bag, type Hat, type Held, type Look, type PackId } from '../net/profile-data';
-import { wardrobeEntry, type WardrobeEntry } from './catalog';
-import { createDegen, emotePose, idlePose, lookOutfit, type Degen } from './character';
-import { canvasTex, lit, toon } from './kit';
-import { createPost } from './post';
+import { DEFAULT_LOOK, MARKS, MARK_SLOTS, PACKS, PACK_IDS, PALETTE, PATTERNS, type Bag, type Hat, type Held, type Look, type MarkId, type PackId, type PatternId } from '../net/profile-data';
+import { markItem, patternItem, wardrobeEntry, type WardrobeEntry } from './catalog';
+import { MARK_ART } from './marks';
+import { createStage, type Stage } from './stage';
 import { buyWardrobe, level, ownsWardrobe } from './tycoon';
 import { D, LV, fmt, whyNot, type GameDeps } from './ui';
 
-type ColorKey = 'top' | 'bottom' | 'tie' | 'shoes' | 'hatColor' | 'bagColor' | 'lens' | 'headphones';
+type ColorKey = 'top' | 'bottom' | 'tie' | 'shoes' | 'hatColor' | 'bagColor' | 'lens' | 'headphones' | 'ink';
 interface Colors {
   key: ColorKey;
   label: string;
@@ -36,6 +33,8 @@ interface Item {
   name: string;
   /** 24 x 24 line icon */
   icon: string;
+  /** Or an icon of its own (a mark's art) */
+  iconHtml?: string;
   /** Wearing it now? */
   on(l: Look): boolean;
   /** Put it on (or, in a tab of toggles, take it off again) */
@@ -95,6 +94,68 @@ const held = (id: Held | null, name: string, icon: string, catalog?: string): It
   wear: (l) => ({ ...l, held: id }),
   catalog,
 });
+
+/* ----- The merch: marks for the top, the hat and the sneakers, and prints for the top ----- */
+
+type MerchFor = 'top' | 'hat' | 'kicks' | 'print';
+const MERCH_FOR: { id: MerchFor; name: string }[] = [
+  { id: 'top', name: 'Top' },
+  { id: 'hat', name: 'Hat' },
+  { id: 'kicks', name: 'Kicks' },
+  { id: 'print', name: 'Print' },
+];
+/** A mark's art as an icon, in the card's own colour */
+const markIcon = (id: MarkId, size = 26) => {
+  const a = MARK_ART[id];
+  const path = (d: string | undefined, attrs: string) => (d ? `<path d="${d}" ${attrs}/>` : '');
+  return (
+    `<svg viewBox="0 0 100 100" width="${size}" height="${size}" aria-hidden="true" stroke-linejoin="round" stroke-linecap="round">` +
+    path(a.stroke, `fill="none" stroke="currentColor" stroke-width="${a.width ?? 8}"`) +
+    path(a.fill, 'fill="currentColor" stroke="#0b0a12" stroke-width="4"') +
+    path(a.dark, 'fill="#0b0a12"') +
+    path(a.line, 'fill="none" stroke="#0b0a12" stroke-width="5"') +
+    '</svg>'
+  );
+};
+const PRINT_ICONS: Record<PatternId, string> = {
+  plain: 'M4 4h16v16H4z',
+  stripes: 'M4 4h16v16H4z M4 9.3h16 M4 14.7h16',
+  checks: 'M4 4h16v16H4z M12 4v16 M4 12h16 M4 4h8v8H4z M12 12h8v8h-8z',
+  fade: 'M4 4h16v16H4z M4 16h16 M4 12h16 M7 20v-4 M11 20v-4 M15 20v-4 M9 16v-4 M13 16v-4',
+  camo: 'M4 4h16v16H4z M7 9c1-2 4-2 5 0s-1 3-3 3-3-1-2-3z M13 15c1-1.5 4-1.5 4.5 0s-1 2.5-2.5 2.5-2.5-1-2-2.5z M15 7.5c.7-1 2.3-1 2.7 0',
+};
+/** The cards for what the Merch tab is dressing */
+function merchItems(of: MerchFor): Item[] {
+  const markCard = (id: MarkId, key: 'mark' | 'hatMark' | 'shoeMark'): Item => ({
+    id: `${key}-${id}`,
+    name: MARKS.find((m) => m.id === id)!.name,
+    icon: '',
+    iconHtml: markIcon(id),
+    on: (l) => l[key] === id,
+    wear: (l) => ({ ...l, [key]: id }),
+    catalog: markItem(id) ?? undefined,
+  });
+  if (of === 'print')
+    return PATTERNS.map((p) => ({
+      id: `print-${p.id}`,
+      name: p.id === 'plain' ? 'Plain' : (wardrobeEntry(patternItem(p.id)!)?.name ?? p.name),
+      icon: PRINT_ICONS[p.id],
+      on: (l) => l.pattern === p.id,
+      wear: (l) => ({ ...l, pattern: p.id }),
+      catalog: patternItem(p.id) ?? undefined,
+    }));
+  const key = of === 'top' ? 'mark' : of === 'hat' ? 'hatMark' : 'shoeMark';
+  const cards = MARKS.map((m) => markCard(m.id, key));
+  // A hat always carries its patch; the top and the sneakers can go without
+  if (of !== 'hat') cards.unshift({ id: `${key}-none`, name: 'No mark', icon: NONE, on: (l) => !l[key], wear: (l) => ({ ...l, [key]: null }) });
+  return cards;
+}
+/** Can what the Merch tab is dressing be seen? (Else a note says what shows it) */
+function merchNote(of: MerchFor, l: Look): string | null {
+  if (of === 'hat' && !((l.hat === 'cap' || l.hat === 'backcap' || l.hat === 'beanie') && !(l.kind === 'hoodie' && l.hood))) return 'Shows on a cap or a beanie (the Head tab).';
+  if (of === 'kicks' && l.kind === 'suit') return 'Shows on sneakers: they come with every fit but the suit.';
+  return null;
+}
 
 const TABS: Tab[] = [
   {
@@ -263,6 +324,8 @@ const TABS: Tab[] = [
     items: [],
     colors: [{ key: 'shoes', label: 'Kicks', list: PALETTE.shoes }],
   },
+  // (its cards depend on what it's dressing: merchItems())
+  { id: 'merch', label: 'Merch', items: [] },
 ];
 
 const svg = (d: string, size = 22) =>
@@ -291,9 +354,11 @@ interface Pending {
 export function createFitting(d: FittingDeps) {
   let el: HTMLElement | null = null;
   let tab = TABS[0];
-  let preview: Preview | null = null;
+  let preview: Stage | null = null;
   let pending: Pending | null = null;
   let tick = 0;
+  let merchFor: MerchFor = 'top';
+  const itemsOf = (t: Tab) => (t.id === 'merch' ? merchItems(merchFor) : t.items);
 
   /** A premium card's state, from the save: owned, on sale, or locked behind a level */
   function stateOf(it: Item): { entry: WardrobeEntry | null; state: State } {
@@ -332,14 +397,44 @@ export function createFitting(d: FittingDeps) {
     p.append(Object.assign(document.createElement('small'), { textContent: ` ${entry.pitch}` }));
   }
 
+  /** The Merch tab's own rows over its cards: what it's dressing, where the top's mark goes, and a note if it won't show */
+  function paintMerch(l: Look) {
+    const box = el?.querySelector<HTMLElement>('[data-fit-merch]');
+    if (!box) return;
+    box.hidden = tab.id !== 'merch';
+    if (box.hidden) return box.replaceChildren();
+    const chips = (label: string, attr: string, opts: { id: string; name: string; on: boolean }[]) =>
+      `<div class="fit-row"><span>${label}</span><div class="fit-chips" role="group" aria-label="${label}">` +
+      opts.map((o) => `<button type="button" class="fit-chip" ${attr}="${o.id}" aria-pressed="${o.on}">${o.name}</button>`).join('') +
+      '</div></div>';
+    let html = chips(
+      'Dress',
+      'data-merch-for',
+      MERCH_FOR.map((m) => ({ ...m, on: m.id === merchFor }))
+    );
+    if (merchFor === 'top' && l.mark)
+      html += chips(
+        'Where',
+        'data-mark-at',
+        MARK_SLOTS.map((m) => ({ id: m.id, name: m.id === 'centre' && l.kind === 'suit' ? 'Front (pin)' : m.name, on: m.id === l.markAt }))
+      );
+    const note = merchNote(merchFor, l);
+    if (note) html += `<p class="fit-note">${note}</p>`;
+    if (box.dataset.html !== html) {
+      box.dataset.html = html;
+      box.innerHTML = html;
+    }
+  }
+
   function paint() {
     if (!el) return;
     const l = d.look();
     for (const b of el.querySelectorAll<HTMLButtonElement>('[data-fit-tab]')) b.setAttribute('aria-selected', String(b.dataset.fitTab === tab.id));
     const items = el.querySelector<HTMLElement>('[data-fit-items]')!;
     items.replaceChildren();
+    const list = itemsOf(tab);
     let premium = false;
-    for (const it of tab.items) {
+    for (const it of list) {
       if (it.only && !it.only(l)) continue;
       const { entry, state } = stateOf(it);
       // The premium pieces follow the free ones under a header
@@ -358,7 +453,12 @@ export function createFitting(d: FittingDeps) {
       b.dataset.state = state;
       b.setAttribute('aria-pressed', String(on));
       if (state === 'locked') b.setAttribute('aria-disabled', 'true');
-      b.innerHTML = `${svg(it.icon)}<b></b><small></small>`;
+      b.innerHTML = `${it.iconHtml ?? svg(it.icon)}<b></b><small></small>`;
+      // A mark's card shows it in your ink
+      if (it.iconHtml) {
+        b.classList.add('is-mark');
+        b.style.setProperty('--mark', l.ink);
+      }
       b.querySelector('b')!.textContent = it.name;
       const small = b.querySelector('small')!;
       if (on) small.textContent = 'Wearing';
@@ -376,11 +476,14 @@ export function createFitting(d: FittingDeps) {
       }
       items.append(b);
     }
-    items.hidden = !tab.items.length;
+    items.hidden = !list.length;
+    paintMerch(l);
     // Colours for what's on in this tab
     const rows = el.querySelector<HTMLElement>('[data-fit-colors]')!;
     rows.replaceChildren();
-    const sets = [...(tab.colors ?? []), ...tab.items.filter((it) => it.on(l) && (!it.only || it.only(l))).flatMap((it) => it.colors ?? [])];
+    const sets = [...(tab.colors ?? []), ...list.filter((it) => it.on(l) && (!it.only || it.only(l))).flatMap((it) => it.colors ?? [])];
+    // The marks' ink (shared by the top, the hat and the sneakers)
+    if (tab.id === 'merch' && merchFor !== 'print') sets.push({ key: 'ink', label: 'Ink', list: PALETTE.ink });
     for (const c of sets) {
       if (c.key === 'tie' && l.kind !== 'suit') continue;
       const row = document.createElement('div');
@@ -495,9 +598,23 @@ export function createFitting(d: FittingDeps) {
       paintConfirm();
       return;
     }
+    const mf = t.closest<HTMLButtonElement>('[data-merch-for]');
+    if (mf) {
+      merchFor = mf.dataset.merchFor as MerchFor;
+      pending = null;
+      paint();
+      el?.querySelector<HTMLButtonElement>(`[data-merch-for="${merchFor}"]`)?.focus({ preventScroll: true });
+      return;
+    }
+    const ma = t.closest<HTMLButtonElement>('[data-mark-at]');
+    if (ma) {
+      wear({ ...d.look(), markAt: ma.dataset.markAt as Look['markAt'] }, false);
+      el?.querySelector<HTMLButtonElement>(`[data-mark-at="${ma.dataset.markAt}"]`)?.focus({ preventScroll: true });
+      return;
+    }
     const ib = t.closest<HTMLButtonElement>('[data-item]');
     if (ib) {
-      const it = tab.items.find((x) => x.id === ib.dataset.item);
+      const it = itemsOf(tab).find((x) => x.id === ib.dataset.item);
       if (!it) return;
       const { entry, state } = stateOf(it);
       if (entry && state !== 'owned') {
@@ -566,7 +683,7 @@ export function createFitting(d: FittingDeps) {
       // Takings keep coming in while you browse: keep the balance honest
       tick = window.setInterval(paintBalance, 1000);
       const canvas = el.querySelector<HTMLCanvasElement>('[data-fit-canvas]')!;
-      preview ??= createPreview(d);
+      preview ??= createStage(d);
       preview.attach(canvas, d.look());
       if (focus) {
         el.scrollIntoView({ block: 'start', behavior: d.reduced ? 'auto' : 'smooth' });
@@ -580,188 +697,6 @@ export function createFitting(d: FittingDeps) {
       tick = 0;
       pending = null;
       el = null;
-    },
-  };
-}
-
-/* ---------- The turning preview ---------- */
-
-interface Preview {
-  attach(canvas: HTMLCanvasElement, l: Look): void;
-  detach(): void;
-  dress(l: Look): void;
-  showOff(): void;
-}
-
-function createPreview(d: { reduced: boolean; low: boolean }): Preview {
-  // One renderer for the page, moved to whichever canvas the panel has now
-  let renderer: THREE.WebGLRenderer | null = null;
-  let post: ReturnType<typeof createPost> | null = null;
-  const scene = new THREE.Scene();
-  // A lit backdrop, light enough that his black ink outline (and a black suit) reads against it
-  scene.background = canvasTex(256, 256, (c) => {
-    const g = c.createRadialGradient(128, 96, 10, 128, 128, 190);
-    g.addColorStop(0, '#6a5cc4');
-    g.addColorStop(0.55, '#3a2f7a');
-    g.addColorStop(1, '#17122e');
-    c.fillStyle = g;
-    c.fillRect(0, 0, 256, 256);
-  });
-  const camera = new THREE.PerspectiveCamera(26, 1, 0.5, 30);
-  camera.position.set(0, 1.05, 3.6);
-  camera.lookAt(0, 0.66, 0);
-  scene.add(new THREE.HemisphereLight('#d6e2ff', '#3a2f6a', 1.8));
-  const key = new THREE.DirectionalLight('#ffffff', 2.4);
-  key.position.set(2, 4, 3);
-  scene.add(key);
-  // Neon rims either side pick out dark clothes
-  const rimL = new THREE.DirectionalLight('#ff6ad5', 1.6);
-  rimL.position.set(-3, 2, -2);
-  const rimR = new THREE.DirectionalLight('#00eaff', 1.4);
-  rimR.position.set(3, 1.5, -2.5);
-  scene.add(rimL, rimR);
-
-  // The podium: a dark drum with a neon ring
-  const podium = new THREE.Group();
-  const drum = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.66, 0.14, 40), toon('#2e2752'));
-  drum.position.y = -0.07;
-  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.64, 0.016, 8, 64), lit(new THREE.MeshBasicMaterial({ color: '#00eaff', toneMapped: true }), 1.6, 1.6));
-  ring.rotation.x = Math.PI / 2;
-  ring.position.y = -0.005;
-  podium.add(drum, ring);
-  scene.add(podium);
-
-  const turn = new THREE.Group();
-  scene.add(turn);
-  let fig: Degen | null = null;
-  let canvas: HTMLCanvasElement | null = null;
-  let raf = 0;
-  let last = 0;
-  let t = 0;
-  let spin = 0.5;
-  let yaw = 0.35;
-  let cheer = -1;
-  let drag: { x: number; yaw: number } | null = null;
-  let ro: ResizeObserver | null = null;
-
-  function dress(l: Look) {
-    if (fig) {
-      turn.remove(fig.g);
-      fig.dispose();
-    }
-    fig = createDegen(lookOutfit(l));
-    fig.g.traverse((m) => ((m as THREE.Mesh).castShadow = false));
-    turn.add(fig.g);
-    frame();
-  }
-
-  function size() {
-    if (!renderer || !canvas || !post) return;
-    const w = Math.max(1, canvas.clientWidth);
-    const h = Math.max(1, canvas.clientHeight);
-    const pr = Math.min(devicePixelRatio, d.low ? 1.5 : 2);
-    renderer.setPixelRatio(pr);
-    renderer.setSize(w, h, false);
-    post.setSize(w, h, pr);
-    camera.aspect = w / h;
-    // Keep all of him in view on wide and narrow stages
-    camera.fov = camera.aspect < 0.9 ? 34 : 26;
-    camera.updateProjectionMatrix();
-    frame();
-  }
-
-  function frame() {
-    if (!renderer || !post || !fig) return;
-    turn.rotation.y = yaw;
-    const P = fig.pose;
-    idlePose(P, t);
-    if (cheer >= 0) emotePose(P, 'cheer', cheer);
-    fig.update();
-    post.render();
-  }
-
-  function loop(now: number) {
-    raf = requestAnimationFrame(loop);
-    const dt = Math.min(0.1, (now - last) / 1000 || 0);
-    last = now;
-    t += dt;
-    if (!drag) yaw += spin * dt;
-    if (cheer >= 0) {
-      cheer += dt;
-      if (cheer > 1.1) cheer = -1;
-    }
-    frame();
-  }
-
-  function down(e: PointerEvent) {
-    drag = { x: e.clientX, yaw };
-    canvas?.setPointerCapture(e.pointerId);
-  }
-  function move(e: PointerEvent) {
-    if (!drag) return;
-    yaw = drag.yaw + (e.clientX - drag.x) * 0.012;
-    if (d.reduced) frame();
-  }
-  function up() {
-    drag = null;
-  }
-
-  return {
-    attach(c, l) {
-      canvas = c;
-      if (!renderer) {
-        try {
-          renderer = new THREE.WebGLRenderer({ canvas: c, antialias: false, alpha: false, powerPreference: 'low-power' });
-        } catch {
-          c.hidden = true;
-          return;
-        }
-        renderer.toneMapping = THREE.NeutralToneMapping;
-        post = createPost(renderer, scene, camera, { msaa: d.low ? 0 : 4, bloomScale: 0.5, smaa: d.low });
-        // Only the podium's neon ring glows; white clothes stay clothes
-        post.bloom.strength = 0.4;
-        post.bloom.threshold = 0.97;
-        post.ink.uniforms.fadeNear.value = 40;
-      } else {
-        // The panel's markup is new each time it opens: move the drawing surface over
-        c.replaceWith(renderer.domElement);
-        renderer.domElement.className = c.className;
-        renderer.domElement.setAttribute('aria-hidden', 'true');
-        canvas = renderer.domElement;
-      }
-      canvas.addEventListener('pointerdown', down);
-      canvas.addEventListener('pointermove', move);
-      canvas.addEventListener('pointerup', up);
-      canvas.addEventListener('pointercancel', up);
-      ro = new ResizeObserver(size);
-      ro.observe(canvas);
-      dress(l);
-      size();
-      // Reduced motion: drawn when something changes, never on a loop
-      if (d.reduced) return;
-      last = performance.now();
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(loop);
-    },
-    detach() {
-      cancelAnimationFrame(raf);
-      raf = 0;
-      ro?.disconnect();
-      ro = null;
-      if (canvas) {
-        canvas.removeEventListener('pointerdown', down);
-        canvas.removeEventListener('pointermove', move);
-        canvas.removeEventListener('pointerup', up);
-        canvas.removeEventListener('pointercancel', up);
-      }
-      canvas = null;
-      drag = null;
-    },
-    dress(l) {
-      if (canvas) dress(l);
-    },
-    showOff() {
-      if (!d.reduced) cheer = 0;
     },
   };
 }

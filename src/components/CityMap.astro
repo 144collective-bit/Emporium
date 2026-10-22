@@ -237,7 +237,8 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
           </div>
           <div class="wardrobe" data-wardrobe>
             <p class="walk-skins-head"><span>Wardrobe</span></p>
-            <p class="walk-pad">Pick your fit, headwear, bag and kicks in the fitting room at Drop 001.</p>
+            <p class="walk-pad">Pick your fit, headwear, bag, kicks and merch in the fitting room at Drop 001.</p>
+            <button type="button" class="walk-fp" data-open-char>See your Degen</button>
             <button type="button" class="walk-fp" data-open-fitting>Open the fitting room</button>
           </div>
           {/* Level, XP and badges (missions-ui.ts) */}
@@ -470,6 +471,30 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       </button>
       <ul class="mission-tracker-list" id="mission-tracker-list" data-tracker-list></ul>
     </div>
+    {/* The character screen (charscreen.ts), from the Profile tab: your Degen full size on the podium, turning, zooming to his face, posing, under three lights, with what he wears */}
+    <section class="charscreen" data-char hidden role="dialog" aria-modal="true" aria-labelledby="char-title">
+      <header class="char-head">
+        <h2 id="char-title" class="char-title">Your Degen</h2>
+        <button type="button" class="city-panel-close" data-char-close aria-label="Close the character screen">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
+        </button>
+      </header>
+      <div class="char-stage">
+        <canvas class="char-canvas" data-char-canvas aria-hidden="true"></canvas>
+        <div class="fit-chips char-view" role="group" aria-label="View">
+          <button type="button" class="fit-chip" data-char-view="0" aria-pressed="true">Full</button>
+          <button type="button" class="fit-chip" data-char-view="1" aria-pressed="false">Face</button>
+        </div>
+        <span class="char-hint">Drag to turn · scroll or pinch to zoom</span>
+      </div>
+      <div class="char-side">
+        <div class="fit-row"><span>Pose</span><div class="fit-chips" role="group" aria-label="Pose" data-char-poses></div></div>
+        <div class="fit-row"><span>Light</span><div class="fit-chips" role="group" aria-label="Light" data-char-lights></div></div>
+        <p class="walk-skins-head"><span>Wearing</span></p>
+        <dl class="char-list" data-char-list></dl>
+        <button type="button" class="chip-link char-fit" data-char-fit>Change the look at Drop 001</button>
+      </div>
+    </section>
     {/* The Armoury's store and workbench at its counter (gunshop.ts). The starters unlock with lifetime score; the rest cost Dorras earned in the city, never real money. */}
     <section class="shop armoury" data-shop hidden aria-labelledby="shop-title">
       <header class="shop-head">
@@ -783,6 +808,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
         <span class="fit-hint" aria-hidden="true">Drag to turn</span>
       </div>
       <div class="fit-tabs" data-fit-tabs role="tablist" aria-label="Wardrobe"></div>
+      <div class="fit-merch" data-fit-merch hidden></div>
       <div class="fit-items" data-fit-items></div>
       <div class="fit-confirm" data-fit-confirm role="group" aria-label="Confirm the purchase" hidden></div>
       <div class="fit-colors" data-fit-colors></div>

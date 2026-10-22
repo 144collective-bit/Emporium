@@ -18,6 +18,7 @@ import { buildAirport } from './airport';
 import { WORLD_BOUNDS } from './layout';
 import { loadCar } from './garage-ui';
 import { createProfileUI } from './profile-ui';
+import { createCharScreen } from './charscreen';
 import { createSky, type TimeMode, type WeatherMode } from './sky';
 import { createSound } from './sound';
 import { createPlots, type Plot } from './plots';
@@ -471,6 +472,15 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     setLook: (o) => walk.setLook(o),
     onLifetime: (fn) => walk.combat.onLifetime(fn),
     openFitting: () => open('shop', true),
+    openChar: () => charScreen.open(),
+  });
+  const charScreen = createCharScreen({
+    root,
+    look: () => profileUI.look,
+    onChange: (fn) => profileUI.onChange(fn),
+    openFitting: () => open('shop', true),
+    reduced,
+    low: tier === 'low',
   });
   fitting = createFitting({
     look: () => profileUI.look,

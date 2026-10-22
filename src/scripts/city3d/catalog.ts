@@ -18,6 +18,7 @@ import type { Weapon, WeaponId } from './combat-sim';
 import type { PlayerCar } from './mycar';
 import type { KartId } from './mykart';
 import type { BotTraits } from './fight-sim';
+import type { MarkId, PatternId } from '../net/profile-data';
 
 /* ---------- XP, levels and titles ---------- */
 
@@ -286,7 +287,7 @@ export function applyGunMods(w: Weapon, mods: GunMods): Weapon {
 
 /* ---------- Clothes (Drop 001) ---------- */
 
-export type WardrobeTab = 'fit' | 'head' | 'bag' | 'hand' | 'extras' | 'colours';
+export type WardrobeTab = 'fit' | 'head' | 'bag' | 'hand' | 'extras' | 'colours' | 'merch';
 export interface WardrobeEntry {
   id: string;
   name: string;
@@ -309,7 +310,22 @@ export const WARDROBE_CATALOG: WardrobeEntry[] = [
   { id: 'watch', name: 'Gold Watch', price: 8000, level: 5, tab: 'extras', pitch: 'A fat gold watch on the wrist.' },
   { id: 'gold', name: 'Gold Pack', price: 10000, level: 7, tab: 'colours', pitch: 'Metallic gold and bronze for every fit.' },
   { id: 'holo', name: 'Holo Pack', price: 6000, level: 4, tab: 'colours', pitch: 'Holographic pastels for every fit.' },
+  // The merch (character Phase 4): marks for the clothes (the Emporium diamond and the Sector 7 badge are free)
+  // and all-over prints for the top. Placeholders in the city's style until the merch store's designs go in.
+  { id: 'mark-bolt', name: 'Bolt Mark', price: 1500, level: 1, tab: 'merch', pitch: 'A lightning bolt for your chest, back, sleeve, hat or kicks.' },
+  { id: 'mark-star', name: 'Star Mark', price: 1500, level: 1, tab: 'merch', pitch: 'A five-point star, wherever you want it.' },
+  { id: 'mark-heart', name: 'Heart Mark', price: 2000, level: 2, tab: 'merch', pitch: 'Wear it on your sleeve. Or anywhere.' },
+  { id: 'mark-wave', name: 'Wave Mark', price: 2500, level: 2, tab: 'merch', pitch: 'Three rolling waves.' },
+  { id: 'mark-eye', name: 'Eye Mark', price: 3500, level: 3, tab: 'merch', pitch: 'Watching the city.' },
+  { id: 'mark-mask', name: 'Degen Mask Mark', price: 5000, level: 4, tab: 'merch', pitch: 'The balaclava and shades, as a badge.' },
+  { id: 'pattern-stripes', name: 'Stripes Print', price: 3000, level: 2, tab: 'merch', pitch: 'Bold stripes all over the top.' },
+  { id: 'pattern-checks', name: 'Checks Print', price: 4000, level: 3, tab: 'merch', pitch: 'Checkerboard, all over.' },
+  { id: 'pattern-fade', name: 'Fade Print', price: 5000, level: 4, tab: 'merch', pitch: 'Dark at the hem, light at the shoulders.' },
+  { id: 'pattern-camo', name: 'Camo Print', price: 7500, level: 5, tab: 'merch', pitch: 'City camo. Blends in nowhere.' },
 ];
+/** A mark's or a print's catalog id (null for the free ones) */
+export const markItem = (id: MarkId): string | null => (id === 'diamond' || id === 'seven' ? null : `mark-${id}`);
+export const patternItem = (id: PatternId): string | null => (id === 'plain' ? null : `pattern-${id}`);
 export const WARDROBE_IDS = WARDROBE_CATALOG.map((w) => w.id);
 export const wardrobeEntry = (id: string) => WARDROBE_CATALOG.find((w) => w.id === id) ?? null;
 

@@ -1,8 +1,8 @@
 /*
  * The Profile panel in walk mode: your player name and rank badge, lifetime
- * score and rifle finish (painted by combat.ts), and a way into the
- * wardrobe (the fitting room at Drop 001, fitting.ts). This module owns the
- * look itself.
+ * score and rifle finish (painted by combat.ts), and the ways into the
+ * wardrobe: the character screen (charscreen.ts) and the fitting room at
+ * Drop 001 (fitting.ts). This module owns the look itself.
  *
  * Offline, your look is saved in this browser (`degen-city-look-v1`) and the
  * rank comes from this browser's lifetime score. Online, the profile on the
@@ -19,7 +19,7 @@ const LOOK_KEY = 'degen-city-look-v1';
 
 const same = (a: Look, b: Look) => JSON.stringify(a) === JSON.stringify(b);
 
-export function createProfileUI(root: HTMLElement, d: { setLook(o: Outfit): void; onLifetime(fn: (total: number) => void): void; openFitting(): void }) {
+export function createProfileUI(root: HTMLElement, d: { setLook(o: Outfit): void; onLifetime(fn: (total: number) => void): void; openFitting(): void; openChar(): void }) {
   const $ = <T extends HTMLElement>(s: string) => root.querySelector<T>(s)!;
   const nameEl = $('[data-profile-name]');
   const rankEl = $('[data-profile-rank]');
@@ -79,6 +79,10 @@ export function createProfileUI(root: HTMLElement, d: { setLook(o: Outfit): void
   $('[data-open-fitting]').addEventListener('click', () => {
     root.querySelector<HTMLDetailsElement>('[data-profile]')!.open = false;
     d.openFitting();
+  });
+  root.querySelector('[data-open-char]')?.addEventListener('click', () => {
+    root.querySelector<HTMLDetailsElement>('[data-profile]')!.open = false;
+    d.openChar();
   });
   renameBtn.addEventListener('click', () => renameFns.forEach((f) => f()));
   // One panel open at a time in walk mode's top-left row (Controls, Profile, Online, Emote)
