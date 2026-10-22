@@ -1,17 +1,22 @@
 /*
- * Where the traffic drives, DOM-free like the street plan: a route for every
- * lane of every straight road, edge of town to edge of town, and routes down
- * each of downtown's diagonals and back (in off the ring, out along a cross
- * street), round the bends, and out to the airport and back, with the turns
- * rounded off; where along each route it crosses a
- * junction and on which phase; and the lights' timing (two phases, or three
- * where a diagonal comes in). life.ts drives the cars along them.
+ * Where the traffic drives, DOM-free like the street plan, and generated from
+ * it (docs/growth-plan.md Phase 7): the plan's drivable streets and their
+ * crossings make a graph (each street cut into stretches between crossings,
+ * driven either way or the one way a one-way street allows), and every route
+ * is a closed loop through it: a seeded drive of a few stretches, turning
+ * where it likes, then the shortest way back to where it set off, until
+ * every stretch is driven by at least one route; and the ring highway all
+ * the way round, both ways, in both lanes. Turns are rounded off (tighter
+ * for right turns, and through the slip lanes where the highway meets an
+ * arterial), the lane on an avenue picked for the next turn. Stretches out
+ * towards the world's edge go nowhere and carry no traffic. Each route knows
+ * where along it it crosses each junction and on which phase, and the
+ * lights' timing (two phases, or three where a diagonal comes in). life.ts
+ * drives the cars along them, round and round.
  */
-import { CITY_EXT, EW_ROADS, LANE, MEDIAN, NS_ROADS, laneCentres } from './layout';
+import { LANE, MEDIAN } from './layout';
 import { PLAN, distToStreet, offsetLine, type Street } from './streetplan';
-import { BENDS } from './outer';
-import { DIAGONALS } from './downtown';
-import { ROAD } from './airfield';
+import { SLIP_CUT, cornerCurve } from './highway';
 
 export type Pt = [number, number];
 /** Which way traffic crosses a junction: along x, along z, or down a diagonal (each gets its own green) */
@@ -26,10 +31,13 @@ export interface Junction {
   lit: boolean;
   /** A diagonal meets here: the lights run three phases */
   three: boolean;
+  /** The highway meets an arterial here: right turns take the slip lanes */
+  highway: boolean;
 }
 /**
- * A route a car drives, edge of town to edge of town: a centre line in its
- * lane (turns rounded off), and where along it each crossing starts and ends.
+ * A route a car drives, round and round: a closed centre line in its lane
+ * (its last point is its first; turns rounded off), and where along it each
+ * crossing starts and ends.
  */
 export interface Route {
   pts: Pt[];
@@ -37,8 +45,6 @@ export interface Route {
   len: number;
   stops: { j: Junction; enter: number; exit: number; phase: Phase }[];
 }
-/** Traffic loops round the built-up part of the world */
-const [E0, E1] = CITY_EXT;
 
 /** Lights cycle each phase in turn: green, then yellow, then red while the others go */
 const CYCLE2 = 22;
@@ -61,19 +67,160 @@ export const JUNCTIONS: Junction[] = PLAN.crossings.map((c, ix) => ({
   streets: c.streets.map((id) => PLAN.streets.find((s) => s.id === id)!),
   lit: c.lights,
   three: c.streets.some((id) => id.startsWith('diag')),
+  highway: c.streets.includes('highway'),
 }));
 
 /** The right-hand side of travel along (dx, dz) */
 export const rightOf = (dx: number, dz: number): Pt => [-dz, dx];
 
-/**
- * A route from legs, each a street's centre line (a -> b, or a polyline
- * `pts`) and how far right of it the lane runs; where two legs meet, the
- * corner is rounded off.
- */
-type Leg = { a: Pt; b: Pt; off: number } | { pts: Pt[]; off: number };
-function legs(list: Leg[]): Pt[] {
-  const lanes = list.map((l) => offsetLine('pts' in l ? l.pts : [l.a, l.b], l.off));
+/* ---------- The streets as a graph ---------- */
+
+/** A street traffic drives, its crossings (stations) in order along it, and its ends where they aren't crossings */
+interface Way {
+  s: Street;
+  len: number;
+  /** Distances along the street, in order; `j` is the junction there (none at a dead end) */
+  stations: { along: number; j?: Junction }[];
+}
+/** Where `p` lies along a street (its nearest point's distance from the start) */
+function alongOf(s: Street, p: Pt) {
+  let best = Infinity;
+  let at = 0;
+  let run = 0;
+  for (let i = 1; i < s.pts.length; i++) {
+    const [a, b] = [s.pts[i - 1], s.pts[i]];
+    const v: Pt = [b[0] - a[0], b[1] - a[1]];
+    const l = Math.hypot(v[0], v[1]);
+    const t = l ? Math.max(0, Math.min(1, ((p[0] - a[0]) * v[0] + (p[1] - a[1]) * v[1]) / (l * l))) : 0;
+    const d = Math.hypot(p[0] - (a[0] + v[0] * t), p[1] - (a[1] + v[1] * t));
+    if (d < best - 1e-9) {
+      best = d;
+      at = run + t * l;
+    }
+    run += l;
+  }
+  return at;
+}
+/** The street's line from `a` to `b` along it (going backwards if dir is -1; round past the seam on a loop) */
+function between(w: Way, a: number, b: number, dir: 1 | -1): Pt[] {
+  const s = w.s;
+  // A loop goes round twice, so a stretch over its seam is one run
+  const P = s.loop ? [...s.pts, ...s.pts.slice(1)] : s.pts;
+  const cum = [0];
+  for (let i = 1; i < P.length; i++) cum.push(cum[i - 1] + Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]));
+  const at = (d: number): Pt => {
+    let i = 1;
+    while (i < P.length - 1 && cum[i] < d) i++;
+    const f = (d - cum[i - 1]) / (cum[i] - cum[i - 1] || 1);
+    return [P[i - 1][0] + (P[i][0] - P[i - 1][0]) * f, P[i - 1][1] + (P[i][1] - P[i - 1][1]) * f];
+  };
+  const fwd = (from: number, to: number): Pt[] => {
+    if (s.loop && to <= from) to += w.len;
+    const out: Pt[] = [at(from)];
+    for (let i = 0; i < P.length; i++) if (cum[i] > from + 1e-6 && cum[i] < to - 1e-6) out.push(P[i]);
+    out.push(at(to));
+    return out;
+  };
+  return dir === 1 ? fwd(a, b) : fwd(b, a).reverse();
+}
+
+const WAYS: Way[] = PLAN.streets
+  .filter((s) => s.lanes > 0 && s.kind !== 'slip')
+  .map((s) => {
+    let len = 0;
+    for (let i = 1; i < s.pts.length; i++) len += Math.hypot(s.pts[i][0] - s.pts[i - 1][0], s.pts[i][1] - s.pts[i - 1][1]);
+    const stations: Way['stations'] = JUNCTIONS.filter((j) => j.streets.includes(s)).map((j) => ({ along: alongOf(s, j.at), j }));
+    // Its ends, where they aren't crossings, are dead ends (out at the world's edge)
+    if (!s.loop) for (const d of [0, len]) if (!stations.some((t) => Math.abs(t.along - d) < 0.5)) stations.push({ along: d });
+    stations.sort((a, b) => a.along - b.along);
+    return { s, len, stations };
+  });
+
+/** A car about to leave station `i` of way `w` going `d` (1 along its points, -1 against) */
+type State = { w: number; i: number; d: 1 | -1 };
+const key = (s: State) => `${s.w}:${s.i}:${s.d}`;
+/** The station a stretch leads to, if it can be driven: from a junction (not a dead end), the right way down a one-way street, and on to a junction */
+function next(s: State): number | null {
+  const w = WAYS[s.w];
+  if (!w.stations[s.i].j || (w.s.oneway && w.s.oneway !== s.d)) return null;
+  let n = s.i + s.d;
+  if (w.s.loop) n = (n + w.stations.length) % w.stations.length;
+  if (n < 0 || n >= w.stations.length || !w.stations[n].j) return null;
+  return n;
+}
+/** The direction a way runs at a station, going d */
+function tangent(w: Way, along: number, d: 1 | -1): Pt {
+  const pts = w.s.pts;
+  let run = 0;
+  for (let i = 1; i < pts.length; i++) {
+    const l = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+    // The stretch it's on (going d: the one ahead of it)
+    if (l > 1e-9 && (d === 1 ? along < run + l - 1e-6 : along <= run + l + 1e-6) && (d === 1 ? along >= run - 1e-6 : along > run + 1e-6)) return [((pts[i][0] - pts[i - 1][0]) / l) * d, ((pts[i][1] - pts[i - 1][1]) / l) * d];
+    run += l;
+  }
+  // At the very end (or the loop's seam): its last or first stretch
+  const [p, q] = d === 1 ? [pts[0], pts[1]] : [pts[pts.length - 2], pts[pts.length - 1]];
+  const l = Math.hypot(q[0] - p[0], q[1] - p[1]) || 1;
+  return [((q[0] - p[0]) / l) * d, ((q[1] - p[1]) / l) * d];
+}
+type Turn = 'straight' | 'right' | 'left';
+/** Where a car arriving at station n of way w (going d) can go on to, and which way it turns (worked out once) */
+const ONWARD = new Map<string, { to: State; turn: Turn }[]>();
+function onward(w: number, n: number, d: 1 | -1): { to: State; turn: Turn }[] {
+  const k = `${w}:${n}:${d}`;
+  let o = ONWARD.get(k);
+  if (!o) ONWARD.set(k, (o = onwardOf(w, n, d)));
+  return o;
+}
+function onwardOf(w: number, n: number, d: 1 | -1): { to: State; turn: Turn }[] {
+  const way = WAYS[w];
+  const j = way.stations[n].j!;
+  const uIn = tangent(way, way.stations[n].along, d);
+  const out: { to: State; turn: Turn }[] = [];
+  const straight: State = { w, i: n, d };
+  if (next(straight) !== null) out.push({ to: straight, turn: 'straight' });
+  for (const s of j.streets) {
+    const w2 = WAYS.findIndex((x) => x.s === s);
+    if (w2 < 0 || w2 === w) continue;
+    const i2 = WAYS[w2].stations.findIndex((t) => t.j === j);
+    for (const d2 of [1, -1] as const) {
+      const to: State = { w: w2, i: i2, d: d2 };
+      if (next(to) === null) continue;
+      const uOut = tangent(WAYS[w2], WAYS[w2].stations[i2].along, d2);
+      const cross = uOut[0] * rightOf(...uIn)[0] + uOut[1] * rightOf(...uIn)[1];
+      const dot = uOut[0] * uIn[0] + uOut[1] * uIn[1];
+      // No U-turns, and no running straight on from one street onto another
+      if (dot < -0.7 || Math.abs(cross) < 0.4) continue;
+      out.push({ to, turn: cross > 0 ? 'right' : 'left' });
+    }
+  }
+  return out;
+}
+
+/* ---------- Routes ---------- */
+
+/** A small seeded random generator: the same routes for everyone */
+function rng(seed: number) {
+  let s = seed | 0;
+  return () => {
+    s = (s + 0x6d2b79f5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** A lane's offset right of its street's centre: a street's one lane, an avenue's (or the highway's) inner or outer one */
+const ST = LANE / 2;
+const IN = MEDIAN / 2 + LANE / 2;
+const OUT = MEDIAN / 2 + LANE * 1.5;
+
+/** One leg of a route: a stretch of one street driven one way in one lane, and how it turns onto the next */
+type Leg = { pts: Pt[]; off: number; turn: Turn; slip: boolean };
+
+/** A route from legs, each a centre line and how far right of it the lane runs; each corner rounded off */
+function joinLegs(list: Leg[]): Pt[] {
+  const lanes = list.map((l) => offsetLine(l.pts, l.off));
   const dir = (a: Pt, b: Pt): Pt => {
     const l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
     return [(b[0] - a[0]) / l, (b[1] - a[1]) / l];
@@ -89,48 +236,148 @@ function legs(list: Leg[]): Pt[] {
     const den = uA[0] * uB[1] - uA[1] * uB[0];
     const t = ((B[0][0] - a0[0]) * uB[1] - (B[0][1] - a0[1]) * uB[0]) / den;
     const P: Pt = [a0[0] + uA[0] * t, a0[1] + uA[1] * t];
-    // Right turns (from the kerb-side lane) turn tight round the corner; left turns sweep wider
-    const cut = den > 0 ? 1.4 : 2.6;
+    // Right turns (from the kerb-side lane) turn tight round the corner, or wide through a slip lane; left turns sweep wider
+    const cut = list[i - 1].slip ? SLIP_CUT : den > 0 ? 1.4 : 2.6;
     const near = (q: Pt) => Math.hypot(q[0] - P[0], q[1] - P[1]) < cut;
     // Round the corner: drop what's within `cut` of it either side, and curve from a little before it to a little after
     while (A.length > 1 && near(A[A.length - 1])) A.pop();
     let k0 = 0;
     while (k0 < B.length - 1 && near(B[k0])) k0++;
-    const s: Pt = [P[0] - uA[0] * cut, P[1] - uA[1] * cut];
-    const e: Pt = [P[0] + uB[0] * cut, P[1] + uB[1] * cut];
-    for (let k = 0; k <= 6; k++) {
-      const f = k / 6;
-      A.push([(1 - f) * (1 - f) * s[0] + 2 * (1 - f) * f * P[0] + f * f * e[0], (1 - f) * (1 - f) * s[1] + 2 * (1 - f) * f * P[1] + f * f * e[1]]);
-    }
+    A.push(...cornerCurve(P, uA, uB, cut));
     out = [...A, ...B.slice(k0)];
   }
   return out;
+}
+
+/**
+ * The legs of a closed drive (its moves in order, each with the turn it ends
+ * in; the last turns onto the first): moves on one street run together into
+ * one leg, each in the lane for its next turn
+ */
+function legsOf(cycle: { from: State; turn: Turn }[], r: () => number): Leg[] {
+  // Start just after a turn, so no leg runs over the seam
+  const k0 = cycle.findIndex((_, k) => cycle[(k - 1 + cycle.length) % cycle.length].turn !== 'straight');
+  const moves = [...cycle.slice(k0), ...cycle.slice(0, k0)];
+  const legs: (Leg & { first: State; last: State; lastIx: number; inSlip: boolean })[] = [];
+  moves.forEach((m, k) => {
+    const prev = legs.at(-1);
+    if (prev && moves[k - 1].turn === 'straight') [prev.last, prev.lastIx] = [m.from, k];
+    else legs.push({ pts: [], off: 0, turn: 'straight', slip: false, first: m.from, last: m.from, lastIx: k, inSlip: false });
+  });
+  for (const l of legs) {
+    l.turn = moves[l.lastIx].turn;
+    l.slip = l.turn === 'right' && !!WAYS[l.last.w].stations[next(l.last)!].j?.highway;
+  }
+  legs.forEach((l, k) => (legs[(k + 1) % legs.length].inSlip = l.slip));
+  for (const l of legs) {
+    const way = WAYS[l.first.w];
+    l.pts = between(way, way.stations[l.first.i].along, way.stations[next(l.last)!].along, l.first.d);
+    // An avenue's lane: the outer one into a right turn or out of a slip lane, the inner one into a left turn
+    l.off = way.s.lanes === 2 ? (l.turn === 'right' || l.inSlip ? OUT : l.turn === 'left' ? IN : r() < 0.5 ? IN : OUT) : ST;
+    if (way.s.oneway) l.off = 0;
+  }
+  return legs;
+}
+
+/**
+ * The shortest way (fewest stretches) from a car arriving at station `n` of
+ * way `w` to setting off from `goal`: the turn it takes there, and the moves
+ * after it (each with the turn it ends in; the last turns onto the goal)
+ */
+function wayBack(w: number, n: number, d: 1 | -1, goal: State): { turn: Turn; moves: { from: State; turn: Turn }[] } | null {
+  type Node = { prev: string | null; into: { from: State; turn: Turn } | null; w: number; n: number; d: 1 | -1 };
+  const seen = new Map<string, Node>();
+  const k0 = `${w}:${n}:${d}`;
+  seen.set(k0, { prev: null, into: null, w, n, d });
+  const queue = [k0];
+  while (queue.length) {
+    const k = queue.shift()!;
+    const at = seen.get(k)!;
+    for (const o of onward(at.w, at.n, at.d)) {
+      if (key(o.to) === key(goal)) {
+        // The moves that got here, each with the turn onto it; a move's own turn is the next one's
+        const chain: { from: State; turn: Turn }[] = [];
+        for (let c: string | null = k; c; c = seen.get(c)!.prev) {
+          const e = seen.get(c)!;
+          if (e.into) chain.unshift(e.into);
+        }
+        const turns = [...chain.map((m) => m.turn), o.turn];
+        return { turn: turns[0], moves: chain.map((m, i) => ({ from: m.from, turn: turns[i + 1] })) };
+      }
+      const nn = next(o.to)!;
+      const ak = `${o.to.w}:${nn}:${o.to.d}`;
+      if (seen.has(ak)) continue;
+      seen.set(ak, { prev: k, into: { from: o.to, turn: o.turn }, w: o.to.w, n: nn, d: o.to.d });
+      queue.push(ak);
+    }
+  }
+  return null;
+}
+
+/** Each junction's streets cut down to their segments within 24 of it (quicker to measure against) */
+const NEAR: { half: number; segs: [Pt, Pt][] }[][] = JUNCTIONS.map((j) =>
+  j.streets.map((s) => {
+    const segs: [Pt, Pt][] = [];
+    for (let i = 1; i < s.pts.length; i++) {
+      const seg: Street = { ...s, pts: [s.pts[i - 1], s.pts[i]] };
+      if (distToStreet(seg, j.at) < 24) segs.push([s.pts[i - 1], s.pts[i]]);
+    }
+    return { half: s.half, segs };
+  })
+);
+/** How far q is from the nearest of some segments */
+function toSegs(segs: [Pt, Pt][], q: Pt) {
+  let best = Infinity;
+  for (const [a, b] of segs) {
+    const v: Pt = [b[0] - a[0], b[1] - a[1]];
+    const l2 = v[0] * v[0] + v[1] * v[1];
+    const t = l2 ? Math.max(0, Math.min(1, ((q[0] - a[0]) * v[0] + (q[1] - a[1]) * v[1]) / l2)) : 0;
+    best = Math.min(best, Math.hypot(q[0] - (a[0] + v[0] * t), q[1] - (a[1] + v[1] * t)));
+  }
+  return best;
 }
 
 function makeRoute(pts: Pt[]): Route {
   const cum = [0];
   for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
   const route: Route = { pts, cum, len: cum.at(-1)!, stops: [] };
-  // Where it crosses each junction: inside the asphalt of two of the streets meeting there
+  // Where it crosses each junction: inside the asphalt of two of the streets meeting there. Coarsely first
+  // (every half tile, which junctions it passes near), then finely round each pass
+  const STEP = 0.5;
+  const coarse: Pt[] = [];
+  for (let p = 0, seg = 0; p <= route.len; p += STEP) {
+    const o = pointOn(route, p, seg);
+    seg = o.seg;
+    coarse.push(o.at);
+  }
+  const inside = (j: Junction, q: Pt) => NEAR[j.ix].filter((s) => toSegs(s.segs, q) < s.half + 0.2).length >= 2;
   for (const j of JUNCTIONS) {
-    let enter = -1;
-    let exit = -1;
-    for (let p = 0; p <= route.len; p += 0.1) {
-      const q = pointOn(route, p, 0).at;
-      if (Math.hypot(q[0] - j.at[0], q[1] - j.at[1]) > 12) continue;
-      const n = j.streets.filter((s) => distToStreet(s, q) < s.half + 0.2).length;
-      if (n >= 2) {
-        if (enter < 0) enter = p;
-        exit = p;
+    for (let k = 0; k < coarse.length; k++) {
+      if (Math.hypot(coarse[k][0] - j.at[0], coarse[k][1] - j.at[1]) > 12) continue;
+      // A pass near the junction: from here to where it's 12 away again, scanned finely
+      let end = k;
+      while (end + 1 < coarse.length && Math.hypot(coarse[end + 1][0] - j.at[0], coarse[end + 1][1] - j.at[1]) <= 12) end++;
+      let enter = -1;
+      let exit = -1;
+      for (let p = k * STEP, seg = 0; p <= Math.min(route.len, (end + 1) * STEP); p += 0.1) {
+        const o = pointOn(route, p, seg);
+        seg = o.seg;
+        if (inside(j, o.at)) {
+          if (enter < 0) enter = p;
+          exit = p;
+        }
       }
+      if (enter >= 0) {
+        const a = pointOn(route, enter, 0).dir;
+        route.stops.push({ j, enter, exit, phase: phaseOf(a[0], a[1]) });
+      }
+      k = end;
     }
-    if (enter < 0) continue;
-    const a = pointOn(route, enter, 0).dir;
-    route.stops.push({ j, enter, exit, phase: phaseOf(a[0], a[1]) });
   }
   route.stops.sort((a, b) => a.enter - b.enter);
   return route;
 }
+
 /** The point `p` along a route (from segment `seg` on), its direction and segment */
 export function pointOn(r: Route, p: number, seg: number): { at: Pt; dir: Pt; seg: number } {
   let i = Math.max(0, Math.min(seg, r.pts.length - 2));
@@ -143,110 +390,112 @@ export function pointOn(r: Route, p: number, seg: number): { at: Pt; dir: Pt; se
   return { at: [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f], dir: [(b[0] - a[0]) / l, (b[1] - a[1]) / l], seg: i };
 }
 
-export const ROUTES: Route[] = (() => {
-  // Every lane of every straight road, edge to edge: one each way on streets, two each way on avenues (over the bridges too)
-  const straight: Route[] = [];
-  const lo = E0 + 4;
-  const hi = E1 - 4;
-  for (const r of EW_ROADS)
-    for (const l of laneCentres(r, 'x'))
-      straight.push(
-        makeRoute(
-          l.dir === 1
-            ? [
-                [lo, l.coord],
-                [hi, l.coord],
-              ]
-            : [
-                [hi, l.coord],
-                [lo, l.coord],
-              ]
-        )
-      );
-  for (const r of NS_ROADS)
-    for (const l of laneCentres(r, 'z'))
-      straight.push(
-        makeRoute(
-          l.dir === 1
-            ? [
-                [l.coord, lo],
-                [l.coord, hi],
-              ]
-            : [
-                [l.coord, hi],
-                [l.coord, lo],
-              ]
-        )
-      );
-  // Down each diagonal and back: in off the ring onto the diagonal, then out along a cross street; and the other way
-  const ST = LANE / 2;
-  const OUT = MEDIAN / 2 + LANE * 1.5;
-  const IN = MEDIAN / 2 + LANE / 2;
-  const [NW, NE, SW] = DIAGONALS;
-  const diag: Route[] = [
-    // North-west: from the west along the north ring, down the diagonal, east along the first cross street
-    legs([
-      { a: [lo, NW.from[1]], b: NW.from, off: OUT },
-      { a: NW.from, b: NW.to, off: ST },
-      { a: NW.to, b: [hi, NW.to[1]], off: ST },
-    ]),
-    legs([
-      { a: [hi, NW.to[1]], b: NW.to, off: ST },
-      { a: NW.to, b: NW.from, off: ST },
-      { a: NW.from, b: [lo, NW.from[1]], off: IN },
-    ]),
-    // North-east: from the north down the east ring, down the diagonal, west along the first cross street
-    legs([
-      { a: [NE.from[0], lo], b: NE.from, off: OUT },
-      { a: NE.from, b: NE.to, off: ST },
-      { a: NE.to, b: [lo, NE.to[1]], off: ST },
-    ]),
-    legs([
-      { a: [lo, NE.to[1]], b: NE.to, off: ST },
-      { a: NE.to, b: NE.from, off: ST },
-      { a: NE.from, b: [NE.from[0], lo], off: IN },
-    ]),
-    // South-west: up the west ring from across the river, up the diagonal, north along the first cross street
-    legs([
-      { a: [SW.from[0], hi], b: SW.from, off: OUT },
-      { a: SW.from, b: SW.to, off: ST },
-      { a: SW.to, b: [SW.to[0], lo], off: ST },
-    ]),
-    legs([
-      { a: [SW.to[0], lo], b: SW.to, off: ST },
-      { a: SW.to, b: SW.from, off: ST },
-      { a: SW.from, b: [SW.from[0], hi], off: IN },
-    ]),
-  ].map(makeRoute);
-  // Round each bend and back: in off its avenue at one end, all the way round, out along the avenue at the other
-  const bends: Route[] = BENDS.flatMap((b) => {
-    const [w, e] = [b.pts[0], b.pts.at(-1)!];
-    const back = [...b.pts].reverse();
-    // The Parkway leaves its avenue northwards (a left turn heading east), the Southside Loop southwards (a right turn)
-    const north = b.pts[1][1] < w[1];
-    return [
-      legs([{ a: [lo, w[1]], b: w, off: north ? IN : OUT }, { pts: b.pts, off: ST }, { a: e, b: [hi, e[1]], off: north ? IN : OUT }]),
-      legs([{ a: [hi, e[1]], b: e, off: north ? OUT : IN }, { pts: back, off: ST }, { a: w, b: [lo, w[1]], off: north ? OUT : IN }]),
-    ].map(makeRoute);
-  });
-  // Out to the airport and back: down the east ring avenue, left along the terminal's front, round the
-  // one-way loop past the car park, and back up the avenue
-  const AV = NS_ROADS.at(-1)!.c;
-  const { z: RZ, x1, loopX, loopZ } = ROAD;
-  const airport = makeRoute(
-    legs([
-      { a: [AV, lo], b: [AV, RZ], off: IN },
-      { a: [AV, RZ], b: [x1, RZ], off: ST },
-      { a: [x1, RZ], b: [x1, loopZ], off: ST },
-      { a: [x1, loopZ], b: [loopX, loopZ], off: ST },
-      { a: [loopX, loopZ], b: [loopX, RZ], off: ST },
-      { a: [loopX, RZ], b: [AV, RZ], off: ST },
-      { a: [AV, RZ], b: [AV, lo], off: OUT },
-    ])
-  );
-  // Spread the diagonal and bend routes through the list, and the airport's near the front, so every quality tier sends cars down them
-  const out = [...straight];
-  [...diag, ...bends].forEach((r, k) => out.splice(k * 5 + 1, 0, r));
-  out.splice(4, 0, airport);
+/** A closed route from its legs (cyclic): it starts and ends halfway down the longest */
+function loopOf(legs: Leg[]): Pt[] {
+  // The longest leg first, so the seam is well clear of any corner
+  const lens = legs.map((l) => offsetLine(l.pts, l.off).reduce((a, p, i, ps) => a + (i ? Math.hypot(p[0] - ps[i - 1][0], p[1] - ps[i - 1][1]) : 0), 0));
+  const k = lens.indexOf(Math.max(...lens));
+  const list = [...legs.slice(k), ...legs.slice(0, k)];
+  const pts = joinLegs([...list, list[0]]);
+  // From halfway down the first leg (untouched at the start) to halfway down its copy at the end
+  const half = lens[k] / 2;
+  const cum = [0];
+  for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+  const total = cum.at(-1)!;
+  const at = (d: number): Pt => {
+    let i = 1;
+    while (i < pts.length - 1 && cum[i] < d) i++;
+    const f = (d - cum[i - 1]) / (cum[i] - cum[i - 1] || 1);
+    return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * f, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * f];
+  };
+  const [a, b] = [half, total - half];
+  const out: Pt[] = [at(a)];
+  for (let i = 0; i < pts.length; i++) if (cum[i] > a + 1e-6 && cum[i] < b - 1e-6) out.push(pts[i]);
+  out.push([...out[0]]);
   return out;
+}
+
+/** The ring highway all the way round, one way, in one lane */
+function highwayLoop(d: 1 | -1, off: number): Pt[] {
+  const w = WAYS.find((x) => x.s.kind === 'highway')!;
+  const pts = d === 1 ? w.s.pts : [...w.s.pts].reverse();
+  const lane = offsetLine(pts, off);
+  lane[lane.length - 1] = [...lane[0]];
+  return lane;
+}
+
+/** How long a seeded drive goes before heading back */
+const DRIVE_MOVES = 9;
+
+export const ROUTES: Route[] = (() => {
+  const r = rng(7007);
+  const routes: Pt[][] = [highwayLoop(1, IN), highwayLoop(1, OUT), highwayLoop(-1, IN), highwayLoop(-1, OUT)];
+  // Every stretch that can be driven (some turn leads onto it: a one-way loop can leave a stretch nobody can
+  // get to without a U-turn), and which are driven so far
+  const all: State[] = [];
+  WAYS.forEach((w, wi) => w.stations.forEach((_, i) => ([1, -1] as const).forEach((d) => next({ w: wi, i, d }) !== null && all.push({ w: wi, i, d }))));
+  const reached = new Set(all.flatMap((s) => onward(s.w, next(s)!, s.d).map((o) => key(o.to))));
+  const stretches = all.filter((s) => reached.has(key(s)));
+  const driven = new Set<string>();
+  for (const s of stretches) if (WAYS[s.w].s.kind === 'highway') driven.add(key(s));
+  // And every turn through a slip lane (the right turns where the highway meets an arterial), each taken by some route
+  const slipTurns = new Map<string, { from: State; o: { to: State; turn: Turn } }>();
+  for (const s of stretches) {
+    const n = next(s)!;
+    if (!WAYS[s.w].stations[n].j?.highway) continue;
+    for (const o of onward(s.w, n, s.d)) if (o.turn === 'right') slipTurns.set(`${key(s)}>${key(o.to)}`, { from: s, o });
+  }
+  const taken = new Set<string>();
+  for (let tries = 0; tries < 2000; tries++) {
+    // Set off down a stretch nobody drives yet, or into a slip lane nobody takes yet
+    const todo = stretches.find((s) => !driven.has(key(s)));
+    const turn = todo ? null : [...slipTurns.entries()].find(([k]) => !taken.has(k))?.[1];
+    if (!todo && !turn) break;
+    const start = todo ?? turn!.from;
+    const moves: { from: State; turn: Turn }[] = [];
+    let at = start;
+    let ok = true;
+    for (let k = 0; k < DRIVE_MOVES; k++) {
+      const n = next(at)!;
+      const opts = onward(at.w, n, at.d);
+      // Keep on the highway a while, rather than off at the next junction
+      const weight = (o: { turn: Turn }) => (o.turn === 'straight' ? (WAYS[at.w].s.kind === 'highway' ? 5 : 3) : 1.5);
+      const total = opts.reduce((a, o) => a + weight(o), 0);
+      let pick = r() * total;
+      const o = k === 0 && turn ? turn.o : (opts.find((x) => (pick -= weight(x)) < 0) ?? opts[0]);
+      if (!o) {
+        ok = false;
+        break;
+      }
+      moves.push({ from: at, turn: o.turn });
+      at = o.to;
+    }
+    if (!ok) continue;
+    // And the shortest way back to where it set off: `at` is still to be driven, then it turns onto the way back
+    const back = wayBack(at.w, next(at)!, at.d, start);
+    if (!back) continue;
+    const cycle = [...moves, { from: at, turn: back.turn }, ...back.moves];
+    cycle.forEach((m, k) => {
+      driven.add(key(m.from));
+      taken.add(`${key(m.from)}>${key(cycle[(k + 1) % cycle.length].from)}`);
+    });
+    routes.push(loopOf(legsOf(cycle, r)));
+  }
+  return routes.map(makeRoute);
 })();
+
+/**
+ * Spots along the routes, every few tiles: where a car can be put on the
+ * road (life.ts keeps the traffic round the camera: a car that's drifted far
+ * off is put back at one of these near you, out of sight)
+ */
+export const SPOTS: { r: number; p: number; x: number; z: number }[] = ROUTES.flatMap((route, ri) => {
+  const out: { r: number; p: number; x: number; z: number }[] = [];
+  for (let p = 0; p < route.len; p += 7) {
+    // Not inside a junction
+    if (route.stops.some((s) => p > s.enter - 3 && p < s.exit + 2)) continue;
+    const q = pointOn(route, p, 0).at;
+    out.push({ r: ri, p, x: q[0], z: q[1] });
+  }
+  return out;
+});

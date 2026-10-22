@@ -7,12 +7,12 @@ import * as THREE from 'three';
 import { FONT_DISPLAY, PAL, canvasTex, fx, glowTex, lit, mergeMeshes, neon, rand, toon } from './kit';
 import { CENTER, EW_ROADS, NS_ROADS, RIVER, SLAB, type Tick } from './world';
 
-import { PLAN, distToStreet, outset } from './streetplan';
-import { CITY_EXT } from './layout';
+import { PLAN, distToStreet, outset, pointAt, streetLength } from './streetplan';
+import { EXT } from './layout';
 import { BOAT_LANES, DECK_STROLLS, DECK_Y } from './liberty';
-import { JUNCTIONS, ROUTES, lightState, phaseOf, pointOn, rightOf, type Junction, type Phase, type Pt, type Route } from './routes';
+import { JUNCTIONS, ROUTES, SPOTS, lightState, phaseOf, pointOn, rightOf, type Junction, type Phase, type Pt, type Route } from './routes';
 import { CARS, PAINTS, carGeometry, carMaterials, theFarCars, type CarId } from './cars';
-import { isNear } from './tiles';
+import { isNear, tileKey, tileOf } from './tiles';
 import type { Idle } from './landmarks';
 import { CROWD_VIEW, HIP_HEIGHT, cityOutfit, createCrowd } from './character';
 import { CLIP_SECONDS, WALK_STRIDE } from './crowdclips';
@@ -63,8 +63,41 @@ export const bodies = {
   cars: [] as { x: number; z: number; yaw: number; len: number; model: CarId }[],
   people: [] as { x: number; z: number }[],
 };
-/** Traffic and boats loop round the built-up part of the world */
-const [E0, E1] = CITY_EXT;
+/**
+ * The traffic and the boats are spent where you are (growth plan Phase 7): a car further than `POOL_R`
+ * from what the camera's looking at, out of sight (or further than `POOL_FAR`, in sight or not), is put
+ * back on the road somewhere within `POOL_R` of it, out of sight; a boat drifting past `BOAT_R` comes
+ * round from the other side
+ */
+const POOL_R = 170;
+const POOL_FAR = 320;
+/** A car is only put back where you can see it this far from the camera, or further */
+const POOL_SEEN = 130;
+const BOAT_R = 170;
+
+/** The spots cars can be put back at (routes.ts SPOTS), by tile */
+const SPOTS_BY_TILE = (() => {
+  const m = new Map<string, typeof SPOTS>();
+  for (const s of SPOTS) {
+    const k = tileKey(...tileOf(s.x, s.z));
+    let l = m.get(k);
+    if (!l) m.set(k, (l = []));
+    l.push(s);
+  }
+  return m;
+})();
+/** The spots within r of x, z */
+function spotsNear(x: number, z: number, r: number) {
+  const out: typeof SPOTS = [];
+  const [i0, j0] = tileOf(x - r, z - r);
+  const [i1, j1] = tileOf(x + r, z + r);
+  for (let i = i0; i <= i1; i++)
+    for (let j = j0; j <= j1; j++) {
+      const l = SPOTS_BY_TILE.get(tileKey(i, j));
+      if (l) for (const s of l) if (Math.hypot(s.x - x, s.z - z) < r) out.push(s);
+    }
+  return out;
+}
 
 /** The traffic's mix of cars, repeated (buses come first, as many as the quality tier allows) */
 const MIX: CarId[] = ['hatch', 'sedan', 'van', 'hatch', 'pickup', 'sedan', 'coupe', 'hatch', 'sedan', 'van', 'pickup'];
@@ -77,14 +110,17 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
   const vehicles: Vehicle[] = [];
   const counts = new Map<CarId, number>();
   const total = opts.cars + opts.buses;
+  // Every car starts somewhere round the home view, a little apart
+  const start = spotsNear(CENTER.x, CENTER.z, POOL_R);
   for (let i = 0; i < total; i++) {
     const model: CarId = i < opts.buses ? 'bus' : MIX[(i - opts.buses) % MIX.length];
-    const route = ROUTES[i % ROUTES.length];
+    const spot = start[Math.floor(((i * 7919) % 1000) / 1000 * start.length)] ?? SPOTS[i % SPOTS.length];
+    const route = ROUTES[spot.r];
     const slot = counts.get(model) ?? 0;
     counts.set(model, slot + 1);
     vehicles.push({
       route,
-      p: (((i * 37) % 100) / 100) * route.len,
+      p: spot.p,
       seg: 0,
       v: 0,
       vmax: model === 'bus' ? 3.2 : model === 'van' || model === 'pickup' ? 3.8 + rand() * 1.5 : 4.2 + rand() * 2,
@@ -101,6 +137,25 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
       far: -1,
     });
   }
+  /** Put a car back on the road near x, z: out of sight, clear of the others; it keeps its speed */
+  const respawn = (v: Vehicle, x: number, z: number) => {
+    const near = spotsNear(x, z, POOL_R);
+    for (let tries = 0; tries < 16 && near.length; tries++) {
+      const s = near[Math.floor(rand() * near.length)];
+      if (Math.hypot(s.x - x, s.z - z) < 40) continue;
+      carBall.center.set(s.x, 0.6, s.z);
+      carBall.radius = 3;
+      // In sight only far off, past what the camera's looking at (where it's a speck in its far form)
+      const fromEye = Math.hypot(s.x - CROWD_VIEW.eye.x, s.z - CROWD_VIEW.eye.z);
+      if (CROWD_VIEW.frustum.intersectsSphere(carBall) && (fromEye < POOL_SEEN || fromEye < Math.hypot(x - CROWD_VIEW.eye.x, z - CROWD_VIEW.eye.z) + 20)) continue;
+      if (vehicles.some((o) => o !== v && Math.hypot(o.x - s.x, o.z - s.z) < 9)) continue;
+      v.route = ROUTES[s.r];
+      v.p = s.p;
+      v.seg = 0;
+      place(v);
+      return;
+    }
+  };
   const place = (v: Vehicle) => {
     const o = pointOn(v.route, v.p, v.seg);
     v.seg = o.seg;
@@ -187,11 +242,21 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
   for (const j of JUNCTIONS) {
     if (!j.lit) continue;
     for (const s of j.streets) {
-      // Each end of the street that comes into the junction (a diagonal only comes in from its far end)
-      const [a, b] = [s.pts[0], s.pts.at(-1)!];
+      // Each way the street comes into the junction: from before it along the street and from after it
+      // (a diagonal only from its far end; round a loop, both)
+      const len = streetLength(s);
+      let along = 0;
+      for (let d = 0, best = Infinity; d <= len; d += 0.5) {
+        const q = pointAt(s, d).at;
+        const e = Math.hypot(q[0] - j.at[0], q[1] - j.at[1]);
+        if (e < best) [best, along] = [e, d];
+      }
       const ins: Pt[] = [];
-      if (Math.hypot(a[0] - j.at[0], a[1] - j.at[1]) > 1) ins.push(a);
-      if (Math.hypot(b[0] - j.at[0], b[1] - j.at[1]) > 1) ins.push(b);
+      for (const back of [-6, 6]) {
+        const d = along + back;
+        if (s.loop) ins.push(pointAt(s, (d + len) % len).at);
+        else if (d >= 0 && d <= len) ins.push(pointAt(s, d).at);
+      }
       for (const from of ins) {
         const l = Math.hypot(j.at[0] - from[0], j.at[1] - from[1]);
         const u: Pt = [(j.at[0] - from[0]) / l, (j.at[1] - from[1]) / l];
@@ -286,9 +351,22 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
       const acc = target > v.v ? 1.8 : 5;
       v.v += Math.max(-acc * dt, Math.min(acc * dt, target - v.v));
       v.p += v.v * dt;
+      // Round and round: every route is a loop
       if (v.p > v.route.len) {
-        v.p = 0;
+        v.p -= v.route.len;
         v.seg = 0;
+      }
+    }
+    // Spent where you are: a car far off and out of sight goes back on the road near you, out of sight
+    if (CROWD_VIEW.on) {
+      const f = CROWD_VIEW.focus;
+      for (const v of vehicles) {
+        const d = Math.hypot(v.x - f.x, v.z - f.z);
+        if (d < POOL_R) continue;
+        carBall.center.set(v.x, 0.6, v.z);
+        carBall.radius = v.len / 2 + 1;
+        if (d < POOL_FAR && CROWD_VIEW.frustum.intersectsSphere(carBall)) continue;
+        respawn(v, f.x, f.z);
       }
     }
 
@@ -519,8 +597,12 @@ function buildBoats(scene: THREE.Scene, tick: (f: Tick) => void) {
   tick(({ t, dt }) => {
     for (const b of boats) {
       b.x += b.v * dt;
-      if (b.x > E1 - 6) b.x = E0 + 6;
-      if (b.x < E0 + 6) b.x = E1 - 6;
+      // The whole river, but only round you: a boat drifting off one way comes back round from the other
+      const f = CROWD_VIEW.on ? CROWD_VIEW.focus.x : CENTER.x;
+      const lo = Math.max(EXT[0] + 6, f - BOAT_R);
+      const hi = Math.min(EXT[1] - 6, f + BOAT_R);
+      if (b.x > hi) b.x = lo + ((b.x - hi) % (hi - lo));
+      if (b.x < lo) b.x = hi - ((lo - b.x) % (hi - lo));
       b.g.position.set(b.x, 0.02 + Math.sin(t * 1.6 + b.ph) * 0.03, b.z);
       b.g.rotation.z = Math.sin(t * 1.2 + b.ph) * 0.03;
     }

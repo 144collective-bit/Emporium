@@ -2289,6 +2289,8 @@ export const CROWD_VIEW = {
   /** The sun's shadow box this frame (`shadowOn` while shadows are drawn): moving things outside it stay out of the shadow map */
   shadow: new THREE.Frustum(),
   shadowOn: false,
+  /** Where on the ground the camera is looking, about (the traffic and the boats stay round it: life.ts) */
+  focus: new THREE.Vector3(),
 };
 /** People nearer the camera than this get the crowd's detail, the rest the far one (and past `CROWD_FAR` nobody is drawn) */
 const CROWD_NEAR = 12;

@@ -8,6 +8,7 @@ import { CARGO, DRIVE } from '../src/scripts/city3d/mycar';
 import { NO_CAR_MODS, carStats } from '../src/scripts/city3d/catalog';
 import { carStatsOf, cleanSave, modCar } from '../src/scripts/city3d/tycoon';
 import type { Box } from '../src/scripts/city3d/solids';
+import { riverBridges } from '../src/scripts/city3d/streetplan';
 
 const HATCH = { L: 2.2, W: 0.98, wheelbase: 1.38 };
 const T = tune(DRIVE.hatch, HATCH);
@@ -129,13 +130,21 @@ test('the river stops it except over the bridges', () => {
     run(c, GAS, 5);
     assert.ok(c.z > RIVER[1] + 1, `blocked on the bridge at x ${r.c}`);
   }
-  // The gaps in the river walls are the bridges' width
-  assert.equal(RIVER_WALLS.length, NS_ROADS.length + 1);
+  // The ring highway's two bridges (growth plan Phase 7), down each of its lanes
+  for (const b of riverBridges().filter((b) => b.street === 'highway'))
+    for (const off of [-2.85, -1.15, 1.15, 2.85]) {
+      const c = newCar(b.c + off, off > 0 ? RIVER[0] - 6 : RIVER[1] + 6, off > 0 ? -Math.PI / 2 : Math.PI / 2);
+      run(c, GAS, 5);
+      assert.ok(off > 0 ? c.z > RIVER[1] + 1 : c.z < RIVER[0] - 1, `blocked on the highway's bridge at x ${b.c}`);
+    }
+  // The gaps in the river walls are the bridges' width: the town's four and the highway's two
+  assert.equal(RIVER_WALLS.length, NS_ROADS.length + 2 + 1);
   for (const r of NS_ROADS) assert.ok(!RIVER_WALLS.some((w) => w[0] < r.c + r.half && w[2] > r.c - r.half), `no gap at x ${r.c}`);
   // From the street plan (growth plan Phase 5): the river runs edge to edge, and the walls are what they were
   assert.equal(RIVER_WALLS[0][0], EXT[0]);
   assert.equal(RIVER_WALLS.at(-1)![2], EXT[1]);
-  const gaps = NS_ROADS.map((r) => [r.c - r.half - WALK_W + 0.1, r.c + r.half + WALK_W - 0.1]);
+  const gaps = riverBridges().map((b) => [b.x0 + 0.1, b.x1 - 0.1]);
+  for (const r of NS_ROADS) assert.ok(gaps.some((g) => Math.abs(g[0] - (r.c - r.half - WALK_W + 0.1)) < 1e-9 && Math.abs(g[1] - (r.c + r.half + WALK_W - 0.1)) < 1e-9), `the town's bridge at x ${r.c} is as it was`);
   RIVER_WALLS.slice(1).forEach((w, i) => assert.ok(Math.abs(w[0] - gaps[i][1]) < 1e-9 && Math.abs(RIVER_WALLS[i][2] - gaps[i][0]) < 1e-9));
 });
 

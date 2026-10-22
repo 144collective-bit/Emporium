@@ -16,7 +16,8 @@ import * as THREE from 'three';
 import { DISTRICTS } from '../../data/plots';
 import { Batch, PAL, canvasTex, facadeMat, fx, glowMat, glowTex, lit, neon, rand, rng, sidesBox, toon } from './kit';
 import { BLOCKS, BS, CENTER_XZ, CITY_EXT, CORE_ROADS, DOWNTOWN, EW_ROADS, EXT, EXTRA_LOTS, LANE, MEDIAN, NS_ROADS, OUTER_HI, OUTER_LO, RIVER, SEATS, SOUTH_ROAD, WALK_W, type Road } from './layout';
-import { PLAN, offsetLine, type Pt } from './streetplan';
+import { PLAN, offsetLine, pointAt, riverBridges, streetLength, type Pt, type Street } from './streetplan';
+import { HIGHWAY, HIGHWAY_HALF, fromHighway } from './highway';
 import { DIAGONALS, DIAGONAL_LAMPS } from './downtown';
 import { BENDS, BEND_REACH, KERB_RUNS, OUTSIDE, PADS, PARKWAY, PROMENADE, SOUTHSIDE, inTown, offFootbridge } from './outer';
 import { KART_PARK, SLIP_ROAD } from './kartpark';
@@ -178,6 +179,98 @@ export const puddleMat = new THREE.MeshBasicMaterial({
     depthWrite: false,
 });
 
+/** Where the highway crosses road `i` (an east-west road's x, a north-south road's z), each widened to its asphalt: gaps in that road's median and lines */
+function highwayGaps(axis: 'ew' | 'ns', i: number): [number, number][] {
+  return PLAN.crossings
+    .filter((c) => c.streets.includes('highway') && c.streets.includes(`${axis}${i}`))
+    .map((c) => {
+      const v = axis === 'ew' ? c.at[0] : c.at[1];
+      return [v - HIGHWAY_HALF - 0.2, v + HIGHWAY_HALF + 0.2];
+    });
+}
+
+/**
+ * The highway's centre line in runs, sampled every `step`: broken at each of its junctions (the crossing
+ * road's asphalt and a little more) and over the river (its bridge has no median)
+ */
+function highwayRuns(step: number): Pt[][] {
+  const hw: Street = PLAN.streets.find((s) => s.kind === 'highway')!;
+  const len = streetLength(hw);
+  const meets = PLAN.crossings
+    .filter((c) => c.streets.includes('highway'))
+    .map((c) => ({ at: c.at, clear: PLAN.streets.find((s) => s.id === c.streets[0])!.half + 1.2 }));
+  const runs: Pt[][] = [];
+  let run: Pt[] = [];
+  for (let d = 0; d <= len + 1e-6; d += step) {
+    const p = pointAt(hw, Math.min(d, len)).at;
+    const open = meets.every((c) => Math.hypot(p[0] - c.at[0], p[1] - c.at[1]) > c.clear) && !(p[1] > RIVER[0] - 0.7 && p[1] < RIVER[1] + 0.7);
+    if (open) run.push(p);
+    else if (run.length) {
+      if (run.length > 1) runs.push(run);
+      run = [];
+    }
+  }
+  if (run.length > 1) runs.push(run);
+  return runs;
+}
+
+/** A flat strip along a polyline, from `l` to `r` right of it, its top at y, facing up */
+function strip(pts: Pt[], l: number, r: number, y: number) {
+  const L = offsetLine(pts, l);
+  const R = offsetLine(pts, r);
+  const pos: number[] = [];
+  const tri = (p: Pt, q: Pt, t: Pt) => {
+    const up = (q[1] - p[1]) * (t[0] - p[0]) - (q[0] - p[0]) * (t[1] - p[1]) > 0;
+    for (const v of up ? [p, q, t] : [p, t, q]) pos.push(v[0], y, v[1]);
+  };
+  for (let i = 1; i < pts.length; i++) {
+    tri(L[i - 1], R[i - 1], R[i]);
+    tri(L[i - 1], R[i], L[i]);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(pos.map((_, i) => (i % 3 === 1 ? 1 : 0)), 3));
+  return g;
+}
+
+/** An upright wall along a polyline, `off` right of it, from the ground to y, facing right (side 1) or left (-1) */
+function wall(pts: Pt[], off: number, y: number, side: number) {
+  const W = offsetLine(pts, off);
+  const pos: number[] = [];
+  for (let i = 1; i < W.length; i++) {
+    const [a, c] = [W[i - 1], W[i]];
+    const quad = [
+      [a[0], 0, a[1]],
+      [c[0], 0, c[1]],
+      [c[0], y, c[1]],
+      [a[0], y, a[1]],
+    ];
+    // Facing right of travel: wound so (c - a) x up points right
+    const [p0, p1, p2, p3] = side > 0 ? [quad[1], quad[0], quad[3], quad[2]] : quad;
+    pos.push(...p0, ...p2, ...p1, ...p0, ...p3, ...p2);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.computeVertexNormals();
+  return g;
+}
+
+/** Marks along a polyline every `every`, each turned along it */
+function along(pts: Pt[], every: number, put: (x: number, z: number, q: THREE.Quaternion) => void) {
+  let carry = 0;
+  const yAxis = new THREE.Vector3(0, 1, 0);
+  for (let i = 1; i < pts.length; i++) {
+    const [a, c] = [pts[i - 1], pts[i]];
+    const len = Math.hypot(c[0] - a[0], c[1] - a[1]);
+    if (len < 1e-9) continue;
+    const [ux, uz] = [(c[0] - a[0]) / len, (c[1] - a[1]) / len];
+    const q = new THREE.Quaternion().setFromAxisAngle(yAxis, Math.atan2(-uz, ux));
+    for (let p = carry; p < len; p += every) put(a[0] + ux * p, a[1] + uz * p, q);
+    carry = (carry - len) % every;
+    if (carry < 0) carry += every;
+  }
+}
+
 /**
  * The ground. `lots` picks a surface for a block (by its plan id, like 'dt-c' or
  * 'district-N1') or for a landmark's own lot inside its block (by its old block, layout.ts SEATS).
@@ -242,13 +335,13 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
   const river: [number, number] = [RIVER[0] - 0.7, RIVER[1] + 0.7];
   for (const r of EW_ROADS)
     if (r.lanes === 2)
-      for (const [a0, a1] of runsBetween(NS_ROADS)) {
+      for (const [a0, a1] of runsBetween(NS_ROADS, highwayGaps('ew', EW_ROADS.indexOf(r)))) {
         b.box(a0, 0, r.c - MEDIAN / 2, a1 - a0, SLAB, MEDIAN, kerbTop);
         b.box(a0, SLAB, r.c - MEDIAN / 2 + 0.06, a1 - a0, 0.005, MEDIAN - 0.12, median);
       }
   for (const r of NS_ROADS)
     if (r.lanes === 2)
-      for (const [a0, a1] of runsBetween(EW_ROADS, [river])) {
+      for (const [a0, a1] of runsBetween(EW_ROADS, [river, ...highwayGaps('ns', NS_ROADS.indexOf(r))])) {
         b.box(r.c - MEDIAN / 2, 0, a0, MEDIAN, SLAB, a1 - a0, kerbTop);
         b.box(r.c - MEDIAN / 2 + 0.06, SLAB, a0, MEDIAN - 0.12, 0.005, a1 - a0, median);
       }
@@ -256,7 +349,8 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
   // Bridges over the river: the road and its sidewalks, with rails
   const rail = toon('#c9c4e6');
   const span = RIVER[1] - RIVER[0] + 1.2;
-  for (const r of NS_ROADS) {
+  // Every road that crosses the river (the highway too: streetplan.ts riverBridges())
+  for (const r of riverBridges()) {
     const w = r.half + WALK_W;
     b.box(r.c - w, 0, RIVER[0] - 0.6, w * 2, 0.06, span, toon('#34314f'));
     b.box(r.c - w, 0.06, RIVER[0] - 0.6, WALK_W, SLAB - 0.06, span, kerbTop);
@@ -366,6 +460,26 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
     }
   });
 
+  // The ring highway (growth plan Phase 7): its asphalt, the median (broken at its junctions and over the
+  // river), lamps along both verges, and the slip lanes across the corners on the town side
+  b.add(strip(HIGHWAY, -HIGHWAY_HALF, HIGHWAY_HALF, 0.034), asphalt);
+  for (const run of highwayRuns(1)) {
+    b.add(strip(run, -MEDIAN / 2, MEDIAN / 2, SLAB), kerbTop);
+    b.add(strip(run, -MEDIAN / 2 + 0.06, MEDIAN / 2 - 0.06, SLAB + 0.005), median);
+    for (const side of [-1, 1]) b.add(wall(run, (side * MEDIAN) / 2, SLAB, side), kerbTop);
+  }
+  for (const run of highwayRuns(24))
+    run.forEach((p, i) => {
+      if (i === 0) return;
+      const [ux, uz] = [p[0] - run[i - 1][0], p[1] - run[i - 1][1]];
+      const l = Math.hypot(ux, uz) || 1;
+      // Alternate sides, the arm reaching in over the road
+      const side = i % 2 ? 1 : -1;
+      const [nx, nz] = [(-uz / l) * side, (ux / l) * side];
+      addLamp(p[0] + nx * (HIGHWAY_HALF + 0.5), p[1] + nz * (HIGHWAY_HALF + 0.5), Math.atan2(nz, -nx), 0.02);
+    });
+  for (const s of PLAN.streets) if (s.kind === 'slip') b.add(strip(s.pts, -s.half, s.half, 0.036), asphalt);
+
   // Lamps along the diagonals
   for (const l of DIAGONAL_LAMPS) addLamp(l.at[0], l.at[1], l.ry);
   b.build(scene, { cast: false, receive: true });
@@ -380,11 +494,11 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
   const lines = (r: Road) => (r.lanes === 1 ? [{ off: 0, yellow: true }] : [-1, 1].map((sd) => ({ off: sd * (MEDIAN / 2 + LANE), yellow: false })));
   for (const r of EW_ROADS)
     for (const { off, yellow } of lines(r))
-      for (const [a0, a1] of runsBetween(NS_ROADS))
+      for (const [a0, a1] of runsBetween(NS_ROADS, highwayGaps('ew', EW_ROADS.indexOf(r))))
         for (let p = a0 + 0.4; p < a1 - 0.3; p += 1.1) (yellow ? dashes : whites).push(m.clone().compose(new THREE.Vector3(p, 0.036, r.c + off), q0, new THREE.Vector3(0.55, 0.01, 0.07)));
   for (const r of NS_ROADS)
     for (const { off, yellow } of lines(r))
-      for (const [a0, a1] of runsBetween(EW_ROADS, [river]))
+      for (const [a0, a1] of runsBetween(EW_ROADS, [river, ...highwayGaps('ns', NS_ROADS.indexOf(r))]))
         for (let p = a0 + 0.4; p < a1 - 0.3; p += 1.1) (yellow ? dashes : whites).push(m.clone().compose(new THREE.Vector3(r.c + off, 0.038, p), q0, new THREE.Vector3(0.07, 0.01, 0.55)));
   for (const nr of NS_ROADS)
     for (const er of EW_ROADS) {
@@ -417,6 +531,13 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
       carry = (carry - len) % 1.1;
       if (carry < 0) carry += 1.1;
     }
+  }
+  // The highway's lines: dashes between each way's two lanes, a solid line along each edge
+  for (const run of highwayRuns(0.5)) {
+    for (const off of [-(MEDIAN / 2 + LANE), MEDIAN / 2 + LANE])
+      along(offsetLine(run, off), 3, (x, z, q) => whites.push(m.clone().compose(new THREE.Vector3(x, 0.041, z), q, new THREE.Vector3(1.2, 0.01, 0.08))));
+    for (const off of [-(MEDIAN / 2 + 2 * LANE + 0.06), MEDIAN / 2 + 2 * LANE + 0.06])
+      along(offsetLine(run, off), 0.5, (x, z, q) => whites.push(m.clone().compose(new THREE.Vector3(x, 0.041, z), q, new THREE.Vector3(0.52, 0.01, 0.07))));
   }
   // A dashed centre line down each diagonal, clear of the crossings at its ends
   for (const d of DIAGONALS) {

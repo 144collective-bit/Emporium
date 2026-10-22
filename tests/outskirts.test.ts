@@ -21,10 +21,11 @@ test('the densities still fit the land the world had before Phase 6', () => {
   assert.ok(Math.abs(open - OPEN_FREE) / OPEN_FREE < 0.03, `open land ${open} against ${OPEN_FREE}`);
 });
 
-test('the world before Phase 6 keeps the trees it had, each where a tree may stand', () => {
+test('the world before Phase 6 keeps the trees it had (but by the highway), each where a tree may stand', () => {
   for (const count of [250, 150, 90]) {
     const trees = outskirtsTrees(count, 0.6, [], TODAY);
-    assert.ok(Math.abs(trees.length - count * 1.6) / (count * 1.6) < 0.08, `${trees.length} for ${count}`);
+    // (less the ones where the ring highway now runs, Phase 7: its north side crosses that land)
+    assert.ok(trees.length <= count * 1.6 * 1.08 && trees.length > count * 1.6 * 0.86, `${trees.length} for ${count}`);
     for (const t of trees) {
       assert.ok(treeSpot(t.x, t.z));
       assert.ok(t.x > TODAY[0] + 4 && t.x < TODAY[1] - 4 && t.z > TODAY[0] + 4 && t.z < TODAY[1] - 4);

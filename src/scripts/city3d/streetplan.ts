@@ -19,15 +19,18 @@ import { ALLEYS, BLOCKS_DT, DIAGONALS, LANES } from './downtown';
 import { BENDS, BEND_KERBS, OUTER_BLOCKS, OUTER_PARKS, OUTER_SQUARES, PADS } from './outer';
 import { AIRPORT_STREETS, ROAD } from './airfield';
 import { BX, TOWERS } from './liberty';
+import { HIGHWAY, HIGHWAY_HALF, insideHighway, outerLane, slipCurve } from './highway';
 
 export type Pt = [number, number];
 
 /**
  * - street: one lane each way
  * - avenue: two lanes each way with a median
+ * - highway: the ring highway (highway.ts), an avenue with a hard shoulder and no sidewalks
+ * - slip: a one-way slip lane across a corner where the highway meets an arterial
  * - alley: walk-only, no cars (cars never route along it)
  */
-export type StreetKind = 'street' | 'avenue' | 'alley';
+export type StreetKind = 'street' | 'avenue' | 'highway' | 'slip' | 'alley';
 
 export interface Street {
   id: string;
@@ -38,6 +41,10 @@ export interface Street {
   half: number;
   /** Lanes each way (0 for an alley) */
   lanes: 0 | 1 | 2;
+  /** A closed loop: its last point is its first (the highway) */
+  loop?: boolean;
+  /** Traffic runs one way only: along its points (1) or against them (-1); it then has one lane, down its middle */
+  oneway?: 1 | -1;
 }
 
 export interface Crossing {
@@ -131,6 +138,7 @@ export function distToStreet(s: Street, p: Pt) {
  */
 export function lanePaths(s: Street): { pts: Pt[]; dir: 1 | -1 }[] {
   if (!s.lanes) return [];
+  if (s.oneway) return [{ pts: s.pts, dir: s.oneway }];
   const inner = s.lanes === 2 ? MEDIAN / 2 : 0;
   const out: { pts: Pt[]; dir: 1 | -1 }[] = [];
   for (let k = 0; k < s.lanes; k++) {
@@ -323,13 +331,37 @@ export function cityPlan(): StreetPlan {
     EW_ROADS.forEach((r, i) => crossingsOf(b.pts, 1, r.c).forEach((at, k) => crossings.push({ id: `${b.id}-ew${i}-${k}`, at, streets: [`ew${i}`, b.id], lights: false })));
   }
   // The airport's access road off the east ring avenue, and the one-way loop round its car park
-  for (const a of AIRPORT_STREETS) streets.push({ id: a.id, kind: 'street', pts: a.pts, half: ROAD.half, lanes: 1 });
+  // (driven against its points: north up the east side, west, south down the west side)
+  for (const a of AIRPORT_STREETS) streets.push({ id: a.id, kind: 'street', pts: a.pts, half: ROAD.half, lanes: 1, ...(a.id === 'airport-loop' ? { oneway: -1 as const } : {}) });
   const avenue = `ns${NS_ROADS.length - 1}`;
   crossings.push(
     { id: 'airport-in', at: [ROAD.x0, ROAD.z], streets: [avenue, 'airport-road'], lights: false },
     { id: 'airport-loop-w', at: [ROAD.loopX, ROAD.z], streets: ['airport-road', 'airport-loop'], lights: false },
     { id: 'airport-loop-e', at: [ROAD.x1, ROAD.z], streets: ['airport-road', 'airport-loop'], lights: false }
   );
+  // The ring highway (highway.ts): a lit junction wherever it meets a straight arterial, and on the town
+  // side of each, slip lanes for the right turns on and off it
+  streets.push({ id: 'highway', kind: 'highway', pts: HIGHWAY, half: HIGHWAY_HALF, lanes: 2, loop: true });
+  const meets: { id: string; at: Pt; road: Road; along: 0 | 1 }[] = [];
+  NS_ROADS.forEach((r, i) => crossingsOf(HIGHWAY, 0, r.c).forEach((at, k) => meets.push({ id: `highway-ns${i}-${k}`, at, road: r, along: 1 })));
+  EW_ROADS.forEach((r, i) => crossingsOf(HIGHWAY, 1, r.c).forEach((at, k) => meets.push({ id: `highway-ew${i}-${k}`, at, road: r, along: 0 })));
+  for (const m of meets) {
+    crossings.push({ id: m.id, at: m.at, streets: [m.id.split('-')[1], 'highway'], lights: true });
+    // The arterial runs along z (along 1) or x; the highway, square to it there, the other way
+    const ta: Pt = m.along === 1 ? [0, 1] : [1, 0];
+    const th: Pt = m.along === 1 ? [1, 0] : [0, 1];
+    const turns: [Pt, number, number][] = [
+      [ta, outerLane(m.road.lanes), outerLane(2)],
+      [[-ta[0], -ta[1]], outerLane(m.road.lanes), outerLane(2)],
+      [th, outerLane(2), outerLane(m.road.lanes)],
+      [[-th[0], -th[1]], outerLane(2), outerLane(m.road.lanes)],
+    ];
+    turns.forEach(([uA, offA, offB], k) => {
+      const pts = slipCurve(m.at, uA, offA, [-uA[1], uA[0]], offB);
+      // Only on the town side: the arterials past the highway carry no traffic yet
+      if (insideHighway(...pts[3])) streets.push({ id: `slip-${m.id}-${k}`, kind: 'slip', pts, half: 1.2, lanes: 1, oneway: 1 });
+    });
+  }
   // Alleys and lanes: walk-only, from the street front through to the back
   [...ALLEYS.map((a) => a.box), ...LANES].forEach((b, i) => {
     const [x0, z0, x1, z1] = b;
@@ -381,11 +413,26 @@ export const PLAN: StreetPlan = cityPlan();
  * bridge takes (x0, x1, the sidewalks included), west to east
  */
 export function riverCrossings(plan: StreetPlan = PLAN) {
-  const bridges = plan.streets
-    .filter((s) => s.kind !== 'alley' && s.pts.length === 2 && s.pts[0][0] === s.pts[1][0] && Math.min(s.pts[0][1], s.pts[1][1]) < RIVER[0] && Math.max(s.pts[0][1], s.pts[1][1]) > RIVER[1])
-    .map((s): [number, number] => [s.pts[0][0] - s.half - WALK_W, s.pts[0][0] + s.half + WALK_W])
-    .sort((a, b) => a[0] - b[0]);
-  return { run: [...EXT] as [number, number], bridges };
+  return { run: [...EXT] as [number, number], bridges: riverBridges(plan).map((b): [number, number] => [b.x0, b.x1]) };
+}
+
+/**
+ * Every bridge over the river, west to east: each street that crosses it on
+ * a north-south stretch, its centre and half width, and the span it takes
+ * (x0, x1, its sidewalks included; the highway's bridge carries a footway
+ * each side too)
+ */
+export function riverBridges(plan: StreetPlan = PLAN) {
+  const out: { street: string; c: number; half: number; x0: number; x1: number }[] = [];
+  for (const s of plan.streets) {
+    if (s.kind === 'alley') continue;
+    for (let i = 1; i < s.pts.length; i++) {
+      const [a, b] = [s.pts[i - 1], s.pts[i]];
+      if (a[0] !== b[0] || Math.min(a[1], b[1]) >= RIVER[0] || Math.max(a[1], b[1]) <= RIVER[1]) continue;
+      out.push({ street: s.id, c: a[0], half: s.half, x0: a[0] - s.half - WALK_W, x1: a[0] + s.half + WALK_W });
+    }
+  }
+  return out.sort((p, q) => p.x0 - q.x0);
 }
 
 /** The middle of the city */
