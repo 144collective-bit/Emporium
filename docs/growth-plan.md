@@ -232,7 +232,35 @@ second. All three steps keep downtown in the middle.
 
 ### Benchmark, today
 
-BENCH_RESULTS
+Measured headless (swiftshader, no graphics card), so frame rates are left
+out: only draw calls and triangles mean anything here. Draws and triangles
+include the shadow map's, shown after the slash. Real phones and laptops get
+their own rows as the owner runs `?bench` on them.
+
+| View | Medium tier (1280 × 800; headless picks medium) | Low (phone) tier (390 × 844) |
+| --- | --- | --- |
+| Home view | 546 draws (144 shadow) · 1.14M tris (0.38M) | 295 draws · 0.40M tris |
+| Downtown, street level | 637 (164) · 1.40M (0.38M) | 269 · 0.37M |
+| The square and the Emporium | 483 (144) · 0.99M (0.30M) | 247 · 0.38M |
+| Every district (Build overview) | 674 (141) · 1.45M (0.45M) | 348 · 0.51M |
+| The airport | 263 (56) · 1.13M (0.33M) | 161 · 0.52M |
+| The kart park | 142 (29) · 0.62M (0.21M) | 109 · 0.29M |
+| The far edge, looking back | 760 (122) · 1.19M (0.25M) | 564 · 0.66M |
+| Route (average / most) | 522 / 869 draws · 1.11M / 1.76M tris | 281 / 602 · 0.45M / 0.86M |
+
+- **Memory:** geometry about 27 MB on the medium tier and 24 MB on the
+  phone tier; textures about 90 MB on both (118 of them).
+- **Boot (headless):** medium tier 19.3 s (art 5.4, building the scene
+  7.9, shaders 0.1, first frame 5.9); phone tier 10.8 s (1.8, 4.6, 0.1,
+  4.3). On a real device the first frame is far quicker; the build time is
+  what Phase 3 shortens.
+- **What it shows:**
+  - The phone tier has no shadows (0 shadow draws).
+  - The worst view is the far edge looking back, where the whole city is in
+    view at once. On the phone tier it's 564 draws, well over the target
+    (300). That's what tiles and far forms (Phases 1-2) are for.
+  - The route peaks at 869 draws on the medium tier and 602 on the phone
+    tier, both over the targets.
 
 ## Phase 1: tiles and the collision grid (nothing new to see)
 
