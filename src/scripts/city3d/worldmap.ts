@@ -14,7 +14,7 @@
 import { EXT, RIVER } from './layout';
 import { PLAN, type Pt } from './streetplan';
 import { PLACES, type Place } from './places';
-import { LINE, LINE_X, STATIONS } from './metro';
+import { TRACKS } from './metro';
 import { RUNWAY, SITE } from './airfield';
 import { CIRCUIT } from './kartcircuit';
 import { KART_PARK } from './kartpark';
@@ -175,11 +175,10 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
     // The metro line and its stations
     ctx.strokeStyle = C.metro;
     ctx.lineWidth = Math.max(2, 1.2 * view.s);
-    poly([
-      [LINE_X, LINE[0]],
-      [LINE_X, LINE[1]],
-    ]);
-    ctx.stroke();
+    for (const t of Object.values(TRACKS)) {
+      poly(t.pts);
+      ctx.stroke();
+    }
     // The places: a dot each (bright where you can fast travel), with its name
     const visited = d.visited();
     const foot = d.state() === 'foot';

@@ -20,6 +20,7 @@ import { BENDS, BEND_KERBS, OUTER_BLOCKS, OUTER_PARKS, OUTER_SQUARES, PADS } fro
 import { AIRPORT_STREETS, ROAD } from './airfield';
 import { BX, TOWERS } from './liberty';
 import { HIGHWAY, HIGHWAY_HALF, insideHighway, outerLane, slipCurve } from './highway';
+import { TRENCH_BLOCKS, TRENCH_CROSSINGS, TRENCH_STREETS } from './trenches';
 
 export type Pt = [number, number];
 
@@ -362,6 +363,9 @@ export function cityPlan(): StreetPlan {
       if (insideHighway(...pts[3])) streets.push({ id: `slip-${m.id}-${k}`, kind: 'slip', pts, half: 1.2, lanes: 1, oneway: 1 });
     });
   }
+  // The Trenches (trenches.ts, growth plan Phase 9): Trench Avenue, its cross streets and Bottom Street, south-west of town
+  for (const t of TRENCH_STREETS) streets.push({ id: t.id, kind: t.kind, pts: t.pts, half: t.half, lanes: t.lanes });
+  for (const c of TRENCH_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: c.streets, lights: c.lights });
   // Alleys and lanes: walk-only, from the street front through to the back
   [...ALLEYS.map((a) => a.box), ...LANES].forEach((b, i) => {
     const [x0, z0, x1, z1] = b;
@@ -393,6 +397,8 @@ export function cityPlan(): StreetPlan {
       const places = TOWERS.some((z) => inPoly(b.poly, [BX, z])) ? ['liberty'] : undefined;
       return { id: b.id, poly: b.poly, use: plot ? 'district' : 'lot', ref: plot ?? b.pads[0], pads: b.pads, places, walk: WALK_W };
     }),
+    // The Trenches' blocks (rows A, B and C), built on in the next steps
+    ...TRENCH_BLOCKS.map((b): Block => ({ id: b.id, poly: b.poly, use: 'plain', ref: 'trenches', walk: WALK_W })),
     // The bends' outer sidewalks (their own outline is the sidewalk)
     ...BEND_KERBS.map((poly, i): Block => ({ id: `kerb-${i}`, poly, use: 'plain', walk: 0 })),
   ];

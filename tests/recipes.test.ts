@@ -1,16 +1,12 @@
 // Building kits and recipes for blocks (kits.ts, recipes.ts, growth plan Phase 4): a recipe lays the same block the
 // same way every time, every building inside its block and clear of the others and of the alleys, under the
-// Emporium, its footprints from the same layout; and the test district holds about 300 of them on open land.
+// Emporium, its footprints from the same layout; and a district of 20 blocks, one recipe each, holds every kit.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { BIG_KITS, KIT_IDS, KIT_SPEC, KIT_TALLEST, bigParts, heightOf, lotFrame, lotSolids, type KitId } from '../src/scripts/city3d/kits';
-import { RECIPES, layBlock, rowsOf, kitsOf, type RecipeId } from '../src/scripts/city3d/recipes';
-import { DISTRICT_BLOCKS, DISTRICT_RECT, DISTRICT_STREETS, districtSolids, inDistrict, testDistrict } from '../src/scripts/city3d/testdistrict';
+import { RECIPES, layBlock, layDistrict, rowsOf, kitsOf, type DistrictBlock, type RecipeId } from '../src/scripts/city3d/recipes';
 import { SIGNS, bodyOf, insideBy, type Infill, type Pt, type Rect } from '../src/scripts/city3d/downtown';
-import { EW_ROADS, NS_ROADS, RIVER, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
-import { inTown } from '../src/scripts/city3d/outer';
-import { SITE } from '../src/scripts/city3d/airfield';
-import { KART_PARK } from '../src/scripts/city3d/kartpark';
+import { LANE, WALK_W } from '../src/scripts/city3d/layout';
 
 const EMPORIUM_ROOF = 12.5;
 const overlap = (a: Rect, b: Rect) => Math.min(a[2], b[2]) - Math.max(a[0], b[0]) > 1e-6 && Math.min(a[3], b[3]) - Math.max(a[1], b[1]) > 1e-6;
@@ -112,23 +108,34 @@ test('rows fill a street front: widths in their kit\'s range, alleys between, fe
     }
 });
 
-test('the test district: about 300 buildings on open land, clear of the town, roads, river, airport and kart park', () => {
-  const d = testDistrict();
+/** A district for the tests (the retired test district's grid, growth plan Phase 4): 5 x 4 blocks, every recipe */
+const GRID: RecipeId[][] = [
+  ['mall', 'midtown', 'midtown', 'mainstreet', 'terraces'],
+  ['midtown', 'midtown', 'mainstreet', 'terraces', 'suburb'],
+  ['warehouses', 'midtown', 'mainstreet', 'school', 'terraces'],
+  ['factory', 'warehouses', 'works', 'stadium', 'suburb'],
+];
+const [GX0, GZ0, GX1, GZ1] = [-190, 100, -46, 228];
+const SW = LANE * 2;
+const BW = (GX1 - GX0 - 6 * SW) / 5;
+const BH = (GZ1 - GZ0 - 5 * SW) / 4;
+const GRID_BLOCKS: DistrictBlock[] = GRID.flatMap((row, j) =>
+  row.map((recipe, i): DistrictBlock => {
+    const x0 = GX0 + SW + i * (BW + SW) + WALK_W;
+    const z0 = GZ0 + SW + j * (BH + SW) + WALK_W;
+    const [x1, z1] = [x0 + BW - 2 * WALK_W, z0 + BH - 2 * WALK_W];
+    return { poly: [[x0, z0], [x1, z0], [x1, z1], [x0, z1]], recipe, seed: 4000 + j * 10 + i };
+  })
+);
+
+test('a district of 20 blocks, one recipe each: about 300 buildings, every kit, each inside its block, its footprints from the same layout', () => {
+  const d = layDistrict(GRID_BLOCKS);
   assert.ok(d.lots.length >= 270 && d.lots.length <= 340, `${d.lots.length} buildings`);
-  // Every kit is in it
   const kinds = new Set<KitId>(d.lots.map((l) => l.type));
   for (const id of KIT_IDS) assert.ok(kinds.has(id), `a ${id}`);
-  const [x0, z0, x1, z1] = DISTRICT_RECT;
-  assert.ok(x0 > WORLD_BOUNDS[0] && x1 < WORLD_BOUNDS[2] && z0 > WORLD_BOUNDS[1] && z1 < WORLD_BOUNDS[3]);
-  assert.ok(z0 > RIVER[1]);
-  for (const r of NS_ROADS) assert.ok(r.c + r.half < x0 || r.c - r.half > x1);
-  for (const r of EW_ROADS) assert.ok(r.c + r.half < z0 || r.c - r.half > z1);
-  assert.ok(x1 < SITE[0] && !(KART_PARK.z1 > z0 && KART_PARK.x0 < x1));
-  for (let x = x0; x <= x1; x += 4) for (let z = z0; z <= z1; z += 4) assert.ok(!inTown([x, z], 0), `${x}, ${z} out of town`);
-  // Blocks clear of the streets, buildings on their blocks
-  for (const b of DISTRICT_BLOCKS) for (const s of DISTRICT_STREETS) assert.ok(!overlap(b.slab, s));
-  for (const [n, laid] of d.byBlock.entries()) for (const l of laid.lots) assert.ok(within(DISTRICT_BLOCKS[n].poly, l.box));
-  const solids = districtSolids();
+  for (const [n, laid] of d.byBlock.entries()) for (const l of laid.lots) assert.ok(within(GRID_BLOCKS[n].poly, l.box));
+  const solids = d.lots.flatMap((l) => lotSolids(l));
   assert.ok(solids.length >= d.lots.length);
-  assert.ok(solids.every(([a, b, c, e]) => inDistrict((a + c) / 2, (b + e) / 2)));
+  // The same district every time
+  assert.deepEqual(layDistrict(GRID_BLOCKS).lots.map((l) => l.box), d.lots.map((l) => l.box));
 });

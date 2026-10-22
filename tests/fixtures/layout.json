@@ -6392,6 +6392,150 @@
    ]
   },
   {
+   "id": "trench-ave",
+   "kind": "avenue",
+   "half": 3.7,
+   "lanes": 2,
+   "pts": [
+    [
+     -4.5,
+     130
+    ],
+    [
+     -188,
+     130
+    ]
+   ]
+  },
+  {
+   "id": "trench-ns0",
+   "kind": "street",
+   "half": 1.7,
+   "lanes": 1,
+   "pts": [
+    [
+     -188,
+     92
+    ],
+    [
+     -188,
+     216
+    ]
+   ]
+  },
+  {
+   "id": "trench-ns1",
+   "kind": "street",
+   "half": 1.7,
+   "lanes": 1,
+   "pts": [
+    [
+     -150,
+     92
+    ],
+    [
+     -150,
+     250
+    ]
+   ]
+  },
+  {
+   "id": "trench-ns2",
+   "kind": "street",
+   "half": 1.7,
+   "lanes": 1,
+   "pts": [
+    [
+     -112,
+     92
+    ],
+    [
+     -112,
+     250
+    ]
+   ]
+  },
+  {
+   "id": "trench-ns3",
+   "kind": "street",
+   "half": 1.7,
+   "lanes": 1,
+   "pts": [
+    [
+     -74,
+     92
+    ],
+    [
+     -74,
+     250
+    ]
+   ]
+  },
+  {
+   "id": "trench-ns4",
+   "kind": "street",
+   "half": 1.7,
+   "lanes": 1,
+   "pts": [
+    [
+     -36,
+     130
+    ],
+    [
+     -36,
+     250
+    ]
+   ]
+  },
+  {
+   "id": "trench-ew0",
+   "kind": "street",
+   "half": 1.7,
+   "lanes": 1,
+   "pts": [
+    [
+     -4.5,
+     176
+    ],
+    [
+     -188,
+     176
+    ]
+   ]
+  },
+  {
+   "id": "trench-ew1",
+   "kind": "street",
+   "half": 1.7,
+   "lanes": 1,
+   "pts": [
+    [
+     -4.5,
+     216
+    ],
+    [
+     -188,
+     216
+    ]
+   ]
+  },
+  {
+   "id": "trench-bottom",
+   "kind": "street",
+   "half": 1.7,
+   "lanes": 1,
+   "pts": [
+    [
+     -4.5,
+     250
+    ],
+    [
+     -150,
+     250
+    ]
+   ]
+  },
+  {
    "id": "alley0",
    "kind": "alley",
    "half": 0.8,

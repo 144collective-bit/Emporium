@@ -12,7 +12,7 @@ import { buildLandmarks, type Spot } from './landmarks';
 import { buildInfill } from './infill';
 import { buildNeighbourhoods } from './neighbourhoods';
 import { bodies, buildLife, walker } from './life';
-import { addSlabs, createWalk } from './walk';
+import { createWalk } from './walk';
 import { buildGarage } from './garage';
 import { buildAirport } from './airport';
 import { CAMERA_FAR, PAN_BOUNDS, overviewFrame } from './bounds';
@@ -58,8 +58,7 @@ import { createBench } from './bench';
 import { mb, sceneMemory } from './perf';
 import { tileBatch } from './tilebatch';
 import { createTileWork } from './tilework';
-import { DISTRICT_VIEWS, buildTestDistrict } from './district3d';
-import { DISTRICT_RECT } from './testdistrict';
+import { buildTrenches } from './trenches3d';
 import { tilesInView, type Plane } from './tiles';
 import { farForm, farLods, updateLods } from './lod';
 
@@ -172,12 +171,10 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   spots.push(liberty.spot);
   // ?fight: the sparring demo on the hangout square (the fight clips, before the Fight Club exists)
   const fightDemo = new URLSearchParams(location.search).has('fight') ? (await import('./fight-demo')).buildFightDemo({ scene, root, reduced, low: tier === 'low', tick }) : null;
-  // ?district=test: the building kits' test district on the open land south-west of the town (growth plan Phase 4)
-  const district = new URLSearchParams(location.search).get('district') === 'test' ? buildTestDistrict(tier === 'low') : null;
-  if (district) {
-    keepTreesOff(DISTRICT_RECT);
-    addSlabs(district.slabs);
-  }
+  // The Trenches (growth plan Phase 9): its streets, built as you go (its blocks are the street plan's)
+  buildTrenches();
+  // ...and the metro's el where it crosses the open land south of the south row: no trees under it
+  keepTreesOff([-10, 125, 56, 135]);
   progress(0.55);
   await waited(nextFrame());
   scatterOutskirts(Q.trees);
@@ -858,7 +855,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // (frames a second, the slowest frame, draw calls and triangles per frame, the
   // shadow map's share, memory, how long the boot took). ?bench runs the benchmark (bench.ts)
   const query = new URLSearchParams(location.search);
-  const bench = query.has('bench') ? createBench({ host, scene, tier, pixelRatio: () => renderer.getPixelRatio(), home, conditions: benchSky, boot: bootTimes, extra: district ? DISTRICT_VIEWS : [] }, query.get('bench') === 'night') : null;
+  const bench = query.has('bench') ? createBench({ host, scene, tier, pixelRatio: () => renderer.getPixelRatio(), home, conditions: benchSky, boot: bootTimes, extra: [] }, query.get('bench') === 'night') : null;
   const statsEl = query.has('fps') || bench ? document.createElement('pre') : null;
   const stat = { frames: 0, draws: 0, tris: 0, shadowDraws: 0, shadowTris: 0, worst: 0, last: 0, since: performance.now(), memAt: 0, mem: '' };
   function bootTimes() {

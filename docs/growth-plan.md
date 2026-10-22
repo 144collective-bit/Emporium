@@ -544,7 +544,9 @@ shader linking, too noisy to compare):
 
 A new district is now a few lines of data: a grid of blocks and a recipe
 for each. Nothing in the city itself changed; the test district that
-proves it is only there with `?district=test` in the address.
+proved it was only there with `?district=test` in the address (retired in
+Phase 9, when The Trenches took its land; the recipes' test lays its grid
+as a fixture).
 
 - **The kits** (`kits.ts`, DOM-free): fourteen kinds of building.
   - The downtown six, drawn as downtown draws them (infill.ts): brownstone,
@@ -994,6 +996,86 @@ the aircraft and the kart.
   river and out past the highway.
 
 ## Phase 9: filling the map (each district its own sub-phase)
+
+### 9a The Trenches (the owner's call; in progress)
+
+A neighbourhood of projects in the style of Brooklyn: the starting point
+for a storyline that comes much later. The owner's answers:
+
+- **Where:** the whole south-west quadrant inside the ring highway, from the
+  south bank avenue down to the highway and from the highway's west side to
+  the town's south row and the west ring avenue (about 170 x 165 tiles).
+  The test district stood there and was retired.
+- **The look:** brick tower blocks (8-10 floors, under the Emporium) on
+  superblocks with lawns and paths; brownstones and corner shops (stoops,
+  fire escapes, a bodega, a laundromat, a barbershop, a slice shop, made-up
+  names); courts and playgrounds; the el over the street.
+- **The mood:** lived-in and lively. Murals and tags (made-up names only),
+  people on stoops, kids at the court, string lights at night; gritty
+  enough to feel like a starting point, never threatening.
+- **The place:** The Block, the courtyard at the heart of the projects,
+  with its pin, a panel ("the storyline starts here, coming soon") and
+  Walk in.
+- **The metro:** bend the line west (one line, one new station, The
+  Trenches); the Airport stays on a branch from the bend.
+- **For sale:** four corner shops to run like your units, dearer than the
+  units: 20,000 / 30,000 / 45,000 / 60,000 Dorras, from level 5.
+- **Names:** made up (the towers, the shops, a THE TRENCHES mural), the
+  owner can change any.
+
+In three steps, each a PR for the owner's sign-off:
+
+1. **Streets, traffic and the metro** (built):
+   - `trenches.ts` (DOM-free, tested in `tests/trenches.test.ts`): Trench
+     Avenue (an avenue, lit junctions, the el over its median) from the
+     west ring avenue to West Street; five cross streets, north to the
+     south bank avenue where the south row's bend leaves room and south to
+     Bottom Street; two streets through the projects; Bottom Street along
+     the highway side; 22 blocks in rows A (Trench Avenue's north side), B
+     (the projects) and C (along the highway), the corner by the highway's
+     bend cut by it. All of it in the street plan, so traffic, taxis,
+     walking, the world map and the sound pick it up. Nothing that exists
+     moved (the snapshot only gained the new streets).
+   - Drawn by `trenches3d.ts` as sites (asphalt, Trench Avenue's median,
+     lane lines, zebras on every arm, lamps along both sides); the blocks'
+     slabs and lawns by the street plan; the avenues it meets break their
+     medians at its junctions.
+   - **The metro as tracks** (`metro.ts` rewritten): the main line runs
+     down the east ring avenue's median as before, bends west on a
+     quarter circle just south of the South Bank station, crosses the open
+     land south of the south row and runs over Trench Avenue's median to
+     The Trenches station; the Airport branch carries straight on south
+     from the bend. Pillars stand wherever the ground is clear. One train
+     on one timetable: Kart Park, Downtown, South Bank, The Trenches, back
+     to South Bank, out to the Airport and back, up to the Kart Park (about
+     2 min 45 s round). Rides go straight there; from The Trenches to the
+     Airport the train turns round at South Bank. The longest ride, Kart
+     Park to The Trenches, is about 37 s. The two cars each follow the
+     track, round the bend too.
+2. **The buildings:** a tower-block kit and the projects' recipe; the
+   brownstones and corner shops on row A; The Block (court, playground,
+   handball wall, benches, community garden, string lights) and its pin;
+   people on the sidewalks and stoops; murals.
+3. **The corner shops for Dorras** (save v10, new ids).
+
+**Measured** (headless, Phase 8's numbers and now, the same views):
+
+| | Medium (laptop) Phase 8 | step 1 | Low (phone) Phase 8 | step 1 |
+| --- | --- | --- | --- | --- |
+| Home view | 501 draws · 0.76M | 487 · 0.78M | 260 · 0.26M | 267 · 0.27M |
+| Downtown street | 537 · 0.81M | 594 · 0.86M | 253 · 0.22M | 276 · 0.26M |
+| Build overview | 591 · 1.00M | 613 · 1.01M | 280 · 0.30M | 293 · 0.33M |
+| A highway junction | 48 · 0.06M | 53 · 0.07M | 57 · 0.09M | 63 · 0.09M |
+| The far edge | 529 · 0.58M | 525 · 0.58M | 403 · 0.27M | 402 · 0.29M |
+| Route (average) | 404 · 0.53M | 406 · 0.54M | 228 · 0.22M | 237 · 0.22M |
+| Geometry / textures | 76 / 99 MB | 75 / 100 MB | 55 / 99 MB | 61 / 100 MB |
+
+- Within the noise of the traffic and the crowds, a few draws more where the
+  south-west's streets and lamps are in view (the downtown street looks
+  across to it). The boot's own work is unchanged (build 7.8 to 8.1 s
+  headless). Phones hold about 6 MB more geometry: the district's streets,
+  lamps and the longer viaduct.
+
 
 The open land inside the new edge is room for several districts. Each one
 is its own PR and the owner's call, built from Phase 4's kits. For

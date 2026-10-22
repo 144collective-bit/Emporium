@@ -12,7 +12,7 @@ import { LANE, MEDIAN } from './layout';
 
 export type Pt = [number, number];
 
-/** The centre line's box: x0, z0, x1, z1 (clear of the test district in the west, the kart park in the north, the airport in the south-east) */
+/** The centre line's box: x0, z0, x1, z1 (round The Trenches in the south-west, the kart park in the north, the airport in the south-east) */
 export const HIGHWAY_BOX: [number, number, number, number] = [-215, -170, 275, 275];
 /** Its corners' radius */
 export const HIGHWAY_R = 70;
