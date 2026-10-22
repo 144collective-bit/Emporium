@@ -1230,5 +1230,10 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       enter(true);
     });
     start.querySelector<HTMLButtonElement>('[data-start-single]')!.focus({ preventScroll: true });
+    // ?bench (the benchmark, bench.ts): straight into the 3D city, no menu
+    if (new URLSearchParams(location.search).has('bench') && gl) {
+      view = '3d';
+      enter(false);
+    }
   }
 </script>

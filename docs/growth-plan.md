@@ -193,25 +193,74 @@ second. All three steps keep downtown in the middle.
 
 # Part A: making size cheap
 
-## Phase 0: the measuring kit
+## Phase 0: the measuring kit (built)
 
-- **More readouts in `?fps`:**
-  - tiles drawn, tiles built and tiles waiting to be built;
-  - build time at boot;
-  - geometry and texture memory (`renderer.info.memory`);
-  - the triangles drawn into the shadow map, separately.
-- **A fixed benchmark** (`?bench`): saved views (home, downtown at street
-  level, the outer districts, the far edge, the airport) and a scripted
-  camera route through them. It prints the slowest and average frame, the
-  draw calls and the triangles per view, so every later phase compares
-  like for like.
-- **A layout snapshot test:** every landmark's, place's, door's, pad's,
-  lot's and spawn's coordinates written down today. A test fails if any of
-  them moves. Every later phase keeps it passing (the "nothing moves"
-  rule).
-- **Record today's numbers here**, on a real phone and a laptop.
-- **Done when** the benchmark runs the same way twice and the numbers are
-  in this plan.
+- **More readouts in `?fps`** (`index.ts`):
+  - the shadow map's draws and triangles, apart (`post.shadowStat`, counted
+    round three's shadow pass);
+  - geometry and texture memory (`sceneMemory()` in `perf.ts`: every
+    geometry, instance buffer and texture the scene draws, counted once);
+  - how long the boot took: art, building the scene, compiling shaders and
+    the first frame.
+  - Tiles drawn, built and waiting come with Phase 1, when there are tiles.
+- **The benchmark, `?bench`** (`bench.ts`):
+  - goes straight into the 3D city, sets clear day (`?bench=night` for
+    night), holds quality where the tier put it and turns off the phones'
+    idle 30fps;
+  - measures fixed views (`BENCH_VIEWS`: home, a downtown street at eye
+    level, the square and the Emporium, the Build overview, the airport, the
+    kart park and the far edge looking back), each settling for a second
+    and measured for four;
+  - then flies a 40 s route through them and back home;
+  - reports, for each: frames a second; average, 95th-percentile and
+    slowest frame; the CPU's share; draws and triangles (average and most),
+    the shadow map's; then memory and the boot;
+  - shows them in a card on the page, the console and `window.__bench`.
+  - The views stay where they are when the world grows, so later phases
+    compare like for like. A bigger world adds views; it doesn't move
+    these.
+- **The layout snapshot** (`tests/snapshot.test.ts`, `tests/fixtures/layout.json`):
+  - every landmark, door, spawn, pad, lot, plot district, market stall,
+    unit, the airport, kart park, Fight Club, Liberty Bridge, downtown's
+    buildings and every street, as they stand;
+  - a street's end at the world's edge is written as `'edge'`, so the edge
+    can move out without the street "moving";
+  - a test fails if anything moves. Only when the owner moves something on
+    purpose: `UPDATE_SNAPSHOT=1 npm test -- snapshot`.
+- **Today's numbers:** see "Benchmark, today" below. Real phones and
+  laptops go in as the owner runs them.
+
+### Benchmark, today
+
+Measured headless (swiftshader, no graphics card), so frame rates are left
+out: only draw calls and triangles mean anything here. Draws and triangles
+include the shadow map's, shown after the slash. Real phones and laptops get
+their own rows as the owner runs `?bench` on them.
+
+| View | Medium tier (1280 × 800; headless picks medium) | Low (phone) tier (390 × 844) |
+| --- | --- | --- |
+| Home view | 546 draws (144 shadow) · 1.14M tris (0.38M) | 295 draws · 0.40M tris |
+| Downtown, street level | 637 (164) · 1.40M (0.38M) | 269 · 0.37M |
+| The square and the Emporium | 483 (144) · 0.99M (0.30M) | 247 · 0.38M |
+| Every district (Build overview) | 674 (141) · 1.45M (0.45M) | 348 · 0.51M |
+| The airport | 263 (56) · 1.13M (0.33M) | 161 · 0.52M |
+| The kart park | 142 (29) · 0.62M (0.21M) | 109 · 0.29M |
+| The far edge, looking back | 760 (122) · 1.19M (0.25M) | 564 · 0.66M |
+| Route (average / most) | 522 / 869 draws · 1.11M / 1.76M tris | 281 / 602 · 0.45M / 0.86M |
+
+- **Memory:** geometry about 27 MB on the medium tier and 24 MB on the
+  phone tier; textures about 90 MB on both (118 of them).
+- **Boot (headless):** medium tier 19.3 s (art 5.4, building the scene
+  7.9, shaders 0.1, first frame 5.9); phone tier 10.8 s (1.8, 4.6, 0.1,
+  4.3). On a real device the first frame is far quicker; the build time is
+  what Phase 3 shortens.
+- **What it shows:**
+  - The phone tier has no shadows (0 shadow draws).
+  - The worst view is the far edge looking back, where the whole city is in
+    view at once. On the phone tier it's 564 draws, well over the target
+    (300). That's what tiles and far forms (Phases 1-2) are for.
+  - The route peaks at 869 draws on the medium tier and 602 on the phone
+    tier, both over the targets.
 
 ## Phase 1: tiles and the collision grid (nothing new to see)
 

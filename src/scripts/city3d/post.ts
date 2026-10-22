@@ -126,6 +126,16 @@ export function createPost(renderer: THREE.WebGLRenderer, scene: THREE.Scene, ca
   // The frame draws the scene more than once (the ink pre-pass, then colour): the shadow map
   // is drawn once a frame, by the first of them, not again by each
   renderer.shadowMap.autoUpdate = false;
+  // What the shadow map costs, apart (the ?fps readout): its draws and triangles since the last `shadowStat` reset
+  const shadowStat = { calls: 0, tris: 0 };
+  const shadowMap = renderer.shadowMap as THREE.WebGLShadowMap & { render: (...a: unknown[]) => void };
+  const drawShadows = shadowMap.render.bind(shadowMap);
+  shadowMap.render = (...a: unknown[]) => {
+    const { calls, triangles } = renderer.info.render;
+    drawShadows(...a);
+    shadowStat.calls += renderer.info.render.calls - calls;
+    shadowStat.tris += renderer.info.render.triangles - triangles;
+  };
   function render() {
     renderer.shadowMap.needsUpdate = renderer.shadowMap.enabled;
     ink.uniforms.cameraNear.value = camera.near;
@@ -161,5 +171,5 @@ export function createPost(renderer: THREE.WebGLRenderer, scene: THREE.Scene, ca
     composer.render();
   }
 
-  return { composer, bloom, ink, render, setSize };
+  return { composer, bloom, ink, render, setSize, shadowStat };
 }
