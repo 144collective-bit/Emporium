@@ -1,7 +1,7 @@
 # Growing Sector 7: the plan
 
 How the city gets many more buildings, and then a bigger world, without
-getting slower. Phases 0-6 are built. Like the other plans, it waits
+getting slower. Phases 0-7 are built. Like the other plans, it waits
 for the owner's sign-off one phase at a time. Keep it up to date.
 
 ## What the owner asked
@@ -796,33 +796,76 @@ with it, before the edge moves.
 - **To check on real devices:** `?bench` on a phone and a laptop (the
   route now goes out to the edge), and the skyline from town at night.
 
-## Phase 7: roads to reach it
+## Phase 7: roads to reach it (built)
 
-- **A network beyond the Parkway and the Southside Loop**, all in
-  `streetplan.ts` (tested):
-  - a ring highway well outside the bends: two lanes each way with a
-    median and gentle curves, joined to the avenues by slip roads;
-  - today's arterials carried on out as avenues;
-  - local streets only where districts come later (Phase 9).
-- **More bridges over the river,** further out east and west, so the far
-  banks join up. Each one has a gap in `RIVER_WALLS` and its own boat
-  clearance.
-- **Traffic over the whole network:**
-  - `routes.ts` generates its routes from the street plan rather than by
-    hand;
-  - lights and junctions come from data;
-  - cars are spent where you are (the pool rule above), so the busiest
-    stretch is always the one you're on;
-  - cars still follow whoever is ahead.
-- **Boats:** they run the whole river, spent near you, under every bridge.
-- **The aircraft:** the timetable's routes can widen to fly over the new
-  land (the owner's call). They still stay high over town, and the tests
-  still pass.
-- **Driving feel:** the highway lets the faster cars stretch their legs.
-  No new handling is needed, but the drive sim's tests are checked for
-  long straights and slip roads.
-- **Done when** you can drive the ring highway round the whole city, with
-  traffic, inside the targets.
+- **The ring highway** (`highway.ts`, DOM-free, tested in
+  `tests/highway.test.ts`): two lanes each way with a median and a hard
+  shoulder, on a rounded box (x -215 to 275, z -170 to 275, corners of
+  70) round the town, the kart park, the airport and the test district,
+  well outside the Parkway and the Southside Loop: about 1,700 tiles
+  round (some 3 km), about 1 minute 45 in a fast car.
+  - It meets each of the 18 arterials at a lit junction (two phases, like
+    downtown's), all at ground level. That's the simple way: no overpasses,
+    so walking, driving, flying and the kart park need no new ground
+    heights or ramps.
+  - **Slip lanes:** on the town side of each junction, a one-way slip lane
+    cuts across each corner for the right turns on and off the highway
+    (`slipCurve()`). Cars turning right take it rather than the junction.
+    The corners on the outside have none: the arterials past the highway
+    go nowhere yet.
+  - **Two more bridges** over the river, one each side (`riverBridges()`
+    in `streetplan.ts` finds every road that crosses it). They're drawn
+    like the others and are gaps in `RIVER_WALLS` (tested by driving
+    across both, in every lane). Boats pass under them as under the
+    town's.
+  - **Drawn** in `world.ts`: the asphalt, the median (broken at the
+    junctions and over the river), lane dashes and edge lines, lamps along
+    both verges and the slip lanes. The arterials' medians and lines break
+    where it crosses them, and the outskirts' trees keep off it and its
+    slips.
+- **Today's arterials** already ran edge to edge; they stay as they are
+  (the town's two cross streets one lane each way, the ring avenues two).
+  Past the highway they carry no traffic until districts come (Phase 9).
+  No local streets yet.
+- **Routes from the street plan** (`routes.ts`): the plan's drivable
+  streets and crossings make a graph, each street cut into stretches
+  between crossings, either way, or the one way a one-way street allows
+  (`oneway` on the street: the airport's car park loop).
+  - Every route is a closed loop: a seeded drive of nine stretches,
+    turning where it likes, then the shortest way back. Routes are added
+    until every stretch is driven and every slip lane taken.
+  - The highway gets four of its own: all the way round, both ways, in
+    both lanes. That makes 53 routes, about 51,000 tiles between them.
+  - An avenue's lane is picked for the next turn: the outer lane into a
+    right turn or out of a slip lane, the inner one into a left turn.
+  - Lights and junctions come from the plan's crossings, as before.
+  - Building them takes about 0.4-0.5 s at load (headless). The
+    hand-made routes took 0.65 s against the same plan.
+- **Traffic spent where you are** (`life.ts`):
+  - The same pool of cars as before (the tier's count).
+  - A car further than 170 from what the camera looks at
+    (`CROWD_VIEW.focus`) and out of sight, or further than 320 in sight
+    or not, is put back on the road near it.
+  - It reappears at one of the routes' spots, out of sight. It can
+    appear in view only far off past the focus, where it's a speck in its
+    far form.
+  - So the busiest roads are always round you: in town, on the highway,
+    at the far edge.
+  - Cars go round and round their loops and still follow whoever is
+    ahead.
+  - Traffic lights stand on every way into a lit junction, found along
+    each street, curved and looped ones too.
+- **Boats** run the whole river, kept within 170 of what you're looking
+  at (one drifting off one way comes back round from the other).
+- **The aircraft:** unchanged (widening their routes over the new land is
+  the owner's call).
+- **Driving feel:** no new handling. The drive sim is free-roaming, so
+  the highway is just more road. Its tests now drive over the highway's
+  bridges too.
+- **The benchmark** has a view of a highway junction, on the route.
+- **Measured** (headless, before and after, the same views):
+
+MEASURED
 
 ## Phase 8: getting about (the owner picks)
 
