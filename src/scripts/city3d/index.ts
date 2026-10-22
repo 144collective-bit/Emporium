@@ -33,6 +33,13 @@ import { createTycoonUI, type TycoonUI } from './tycoon-ui';
 import { buildUnits } from './units';
 import { buildBigLots } from './biglots';
 import { buildBeacons } from './beacons';
+import { createTravelUI } from './travel-ui';
+import { ambienceAt } from './ambience';
+import { createTaxis } from './taxi';
+import { buildMetro } from './metro3d';
+import { createMetroUI, type MetroUI } from './metro-ui';
+import { PLACES } from './places';
+import { placeName } from './worldmap';
 import { buildKartPark } from './kartpark3d';
 import { KART_SPAWN } from './kartpark';
 import { AIR_SPAWN } from './airfield';
@@ -160,6 +167,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   spots.push(fightClub.spot);
   // Liberty Bridge: the stone footbridge over the river (a place too: its pin and panel)
   const liberty = buildLibertyBridge(scene, { flame, tick, reduced, low: tier === 'low' });
+  // The metro (growth plan Phase 8): the viaduct, its stations and the train
+  const metro = buildMetro(scene, tick, { reduced, low: tier === 'low' });
   spots.push(liberty.spot);
   // ?fight: the sparring demo on the hangout square (the fight clips, before the Fight Club exists)
   const fightDemo = new URLSearchParams(location.search).has('fight') ? (await import('./fight-demo')).buildFightDemo({ scene, root, reduced, low: tier === 'low', tick }) : null;
@@ -442,6 +451,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const canvas = renderer.domElement;
 
   /* ---------- Walk mode ---------- */
+  // The metro's station card and rides (made once walk mode exists; its doors are walk mode's prompts)
+  let metroUI: MetroUI | null = null;
   const walk = createWalk({
     scene,
     camera,
@@ -461,8 +472,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     garage,
     // Made further down too, like sfx
     engine: (revs) => sound.engine(revs),
-    places: () => tycoon?.places() ?? [],
-    openPlace: (id) => tycoon?.openCard(id as 'stall'),
+    // Your business's places, and the metro's station doors
+    places: () => [...(tycoon?.places() ?? []), ...(metroUI?.doors ?? [])],
+    openPlace: (id) => (id.startsWith('metro:') ? metroUI?.open(id.slice(6)) : tycoon?.openCard(id as 'stall')),
     game,
     kartPark,
     raceConditions: (() => {
@@ -621,6 +633,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     walking = false;
     walker.on = false;
     walk.exit();
+    taxis.reset();
+    metroUI?.close();
     mp?.walkChanged(false);
     document.body.classList.remove('is-walking');
     close();
@@ -657,9 +671,11 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     if (e.key === 'Escape' && accountUI?.close()) return;
     if (root.dataset.view !== '3d') return;
     if (accountUI?.isOpen) return;
+    // The world map: M opens it walking (no panel or menu open) or in City view, M or Esc closes it
+    if (travel.key(e, walking ? !active && walk.onFoot && !root.querySelector('.shop:not([hidden]), [data-char]:not([hidden])') : !builder.active)) return;
     if (walking) {
       if (e.key === 'Escape') {
-        if (walk.closeShop() || walk.releaseMouse() || closePop()) return;
+        if (taxis.skip() || metroUI!.skip() || metroUI!.close() || walk.closeShop() || walk.releaseMouse() || closePop()) return;
         active ? close() : stopWalking();
       }
       else if (!active) walk.onKey(e, true);
@@ -729,8 +745,66 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     })
   );
 
+  /* ---------- Getting about (growth plan Phase 8): the world map, waypoints, fast travel, taxis, the metro ---------- */
+  const travel = createTravelUI({
+    root,
+    camera,
+    walk,
+    game,
+    reduced,
+    walking: () => walking,
+    target: () => controls.target,
+    beam: (at) => {
+      beacons.waypoint(at);
+      dirty = true;
+    },
+    open: (id) => open(id),
+    startWalking: (at) => startWalking(at),
+    want: (x, z, r) => works.want(x, z, r),
+    taxi: (p) => taxis.call(p),
+    riding: () => walk.riding,
+  });
+  const taxis = createTaxis(root, {
+    scene,
+    camera,
+    reduced,
+    you: () => walk.position,
+    free: () => walking && walk.onFoot,
+    setRide: (r) => walk.setRide(r),
+    arrive: (p) => {
+      works.want(p.at.x, p.at.z, 70);
+      walk.placeAt(p.at);
+    },
+    want: (x, z, r) => works.want(x, z, r),
+    name: (p) => placeName(root, p).name,
+    toast: (text) => game.toast(text),
+    sfx: (kind) => sound.sfx(kind),
+  });
+  metroUI = createMetroUI(root, {
+    metro,
+    camera,
+    reduced,
+    free: () => walking && walk.onFoot,
+    setRide: (r) => walk.setRide(r),
+    arrive: (id) => {
+      const p = PLACES.find((o) => o.id === `metro-${id}`)!;
+      works.want(p.at.x, p.at.z, 70);
+      walk.placeAt(p.at);
+    },
+    want: (x, z, r) => works.want(x, z, r),
+    toast: (text) => game.toast(text),
+    sfx: (kind) => sound.sfx(kind),
+    opened: () => {
+      walk.releaseMouse();
+      close();
+      tycoon?.closeCard();
+    },
+  });
+
   /* ---------- Controls: time, weather, sound, view ---------- */
   const sound = createSound();
+  let amb = ambienceAt(controls.target.x, controls.target.z);
+  let ambT = 0;
   const group = (name: string, apply: (v: string) => void) => {
     const btns = root.querySelectorAll<HTMLButtonElement>(`[data-${name}]`);
     btns.forEach((b) =>
@@ -838,7 +912,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // Walk / Build pills never sit on top of a building's name. Re-read a few
   // times a second (they open, close and move with the layout)
   // The header, its open drop-downs (settings, menu), the welcome card, the guide and the kart, flight, drive and fight HUDs
-  const chrome = [...root.querySelectorAll<HTMLElement>('.city-head, .head-panel, .city-card, .city-guide, .kart-hud, .fly-hud, .drive-hud, .fight-demo, [data-fight-hud]')];
+  const chrome = [...root.querySelectorAll<HTMLElement>('.city-head, .head-panel, .city-card, .city-guide, .kart-hud, .fly-hud, .drive-hud, .fight-demo, [data-fight-hud], .wm-compass')];
   const chromeRects: { x: number; y: number; w: number; h: number }[] = [];
   const readChrome = () => {
     const o = host.getBoundingClientRect();
@@ -894,10 +968,12 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       }
     } else if (walking) {
       walk.update(dt, reduced ? 0 : t);
+      travel.update(dt);
+      taxis.update(dt, reduced ? 0 : t);
       walker.x = walk.position.x;
       walker.z = walk.position.z;
       // A car reaches further than someone on foot, an aircraft on the ground further still; in the air it's no one's business
-      walker.r = walk.driving ? 0.8 : walk.flying ? 1.6 : 0;
+      walker.r = walk.driving || walk.riding ? 0.8 : walk.flying ? 1.6 : 0;
       if (walk.airborne) walker.x = walker.z = 1e6;
       mp?.update(dt, t);
       dirty = true;
@@ -993,8 +1069,14 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       if (!clash) placed.push(r);
     }
 
-    const dE = controls.target.distanceTo(spots[0].focus) + camera.position.distanceTo(controls.target) * 0.4;
-    sound.update(s.rain, s.night, 1 - THREE.MathUtils.smoothstep(dE, 8, 36));
+    // The sound follows the district you're in (ambience.ts): where you walk, or where the City view looks
+    // (its height softening it), a few times a second
+    ambT -= dt;
+    if (ambT <= 0) {
+      ambT = 0.25;
+      amb = walking ? ambienceAt(walk.position.x, walk.position.z) : ambienceAt(controls.target.x, controls.target.z, camera.position.distanceTo(controls.target));
+    }
+    sound.update(s.rain, s.night, amb);
 
     if (!reduced || dirty || flight) {
       if (statsEl) {

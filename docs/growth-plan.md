@@ -887,34 +887,111 @@ with it, before the edge moves.
   starts you beside it on the north side), and `?bench`, whose route now
   passes a highway junction.
 
-## Phase 8: getting about (the owner picks)
+## Phase 8: getting about (built)
 
-- **The world map:** a full-screen map from the ☰ Menu (and M while
-  walking).
-  - It is drawn from the street plan data: roads, the river, districts,
-    places, your car, your aircraft and your kart's pits.
-  - It is not the 2D poster: the 2D map stays downtown, the loading poster
-    and the fallback without WebGL.
-  - Tapping a place opens its panel, as the directory does.
-- **Waypoints:** pick a place on the map and a beam (`beacons.ts`) and a
-  marker on the compass lead you there.
-- **Ways to cross the city** (pick any):
-  - **Your car, aircraft and kart**, as today. The map shows where you
-    left each one, and "Bring my car" calls the car to the nearest road.
-  - **A metro:** an elevated line with stations downtown and in each new
-    district. You board on the platform and ride a short trip with the
-    city passing below, then step off at the next station. It brings one
-    new train model and station kits.
-  - **Taxis:** wave one down at any kerb and pick a place, then ride in the
-    back with the camera outside, or skip the ride.
-  - **Fast travel:** from the map, to places you've already walked to (a
-    list in the save). It's quick and simple, but it makes the city feel
-    smaller.
-- **Sound:** the city's ambient sound follows the district you're in. It
-  stops centring on the Emporium (`spots[0]`) when you're far from
-  downtown.
-- **Done when** any place on the map is a minute or less away, by the way
-  the owner chose.
+The owner picked taxis, fast travel and the metro, on top of the car,
+the aircraft and the kart.
+
+- **Places** (`places.ts`, DOM-free, tested in `tests/travel.test.ts`):
+  every place on the map with the spot you arrive at, standing and facing
+  it: the twelve spots with a pin, the garage, the market square and the
+  four metro stations. Walking or driving to one (within 9 tiles of its
+  spot) adds it to the save's `visited` list, with a toast; flying over or
+  riding past in a taxi or on the metro doesn't count.
+- **The world map** (`worldmap.ts`, `travel-ui.ts`): a full-screen map
+  from the ☰ Menu (World map), the Map walk tab, or M.
+  - It's drawn on a canvas from the street plan's data: the blocks and
+    squares, every road at its width, the ring highway, the river, the
+    airport and its runway, the kart park's circuit, Liberty Bridge and the
+    metro line.
+  - On it: every place with its pin's name, you (an arrow the way you
+    face), your car, your aircraft when it's away from the hangar, and your
+    waypoint.
+  - Drag or two fingers to pan, scroll or pinch to zoom, + / − / Fit /
+    You, and "Find a place" (a list, the keyboard's way in).
+  - Tapping a place opens a card: in City view Open (its panel) and Walk
+    here; walking Set waypoint, Taxi here and Fast travel. Tapping yourself:
+    Bring my car. Tapping open ground: drop a waypoint.
+  - It isn't the 2D poster: that stays downtown's, the loading poster and
+    the fallback without WebGL.
+- **Waypoints:** a magenta beam (`beacons.ts`) and a compass top right in
+  the walk HUD (an arrow, the distance in metres, the name, an ×), cleared
+  when you get there.
+- **Bring my car:** your car (off the turntable, or wherever you left it)
+  appears on the nearest lane round you, within 45 tiles, clear of the
+  traffic, facing the way the lane runs.
+- **Taxis** (`taxi.ts`; the drive is `pathBetween()` in `routes.ts`, the
+  shortest way along the streets, in the right lanes, to the kerb nearest
+  the place):
+  - Taxi here on the map: a yellow Cruiser with a lit TAXI sign comes from
+    the roads a way off and pulls up at the kerb nearest you, stopping at
+    red lights and behind the traffic (and the traffic stops behind it).
+  - Walk up to it (or Get in): it drives you there under a chase camera.
+    Skip ride (or Esc) cuts to the end. You step out at the place's spot.
+  - Every place to every other is found and stays on the asphalt; the
+    longest drive is about 320 tiles, under half a minute.
+  - Free: there's no fare.
+- **Fast travel:** to places you've walked to, on foot: a quick fade and
+  you're standing there. From City view, Walk here starts walking there.
+- **The Sector 7 Metro** (`metro.ts`, DOM-free, tested in
+  `tests/metro.test.ts`; drawn by `metro3d.ts`, ridden through
+  `metro-ui.ts`):
+  - One elevated line on a viaduct down the east ring avenue's median,
+    from the kart park to the airport, over downtown's east side and the
+    river. Its pillars stand only where the median is clear of the
+    junctions and the river (none more than 12 apart there, the river's
+    span a deeper girder); the deck is 5.2 up, over the traffic.
+  - Four stations: Kart Park, Downtown, South Bank and Airport. Each is a
+    platform east of the track under a canopy with its name, a skybridge
+    over the lanes and a stair tower on the lawn (clear of every pad, road
+    and solid) with its door at street level, an M over it and a totem on
+    the sidewalk.
+  - One train of two cars shuttles up and down on a timetable from the
+    clock (the same for everyone), stopping at every station.
+  - At a station's door, "Metro" opens the station card: the other
+    stations and how long each ride takes. A ride runs straight there
+    (at most about 22 s) with the camera alongside the train, and you step
+    out at the destination's door. The train goes back on its timetable
+    from there. Skip ride (or Esc) cuts to the end.
+  - Nothing that exists moved (the layout snapshot is unchanged).
+- **Sound by district** (`ambience.ts`, DOM-free, tested in
+  `tests/ambience.test.ts`): the mix follows where you are (walking) or
+  where the City view looks: the town's hum and neon buzz in town, fading
+  past it; water by the river; the traffic's rush by the highway and the
+  avenues; wind over the open land and the woods; the Emporium's beat
+  near it (and faintly through town). It no longer centres on the
+  Emporium alone.
+- **Under reduced motion** the taxi is there at once and both rides are a
+  cut; the train stands at a station.
+- **Measured** (headless, Phase 7's numbers and now, the same views):
+
+  | | Medium (laptop) Phase 7 | Phase 8 | Low (phone) Phase 7 | Phase 8 |
+  | --- | --- | --- | --- | --- |
+  | Home view | 488 draws · 0.73M | 501 · 0.76M | 258 · 0.25M | 260 · 0.26M |
+  | Downtown street | 556 · 0.82M | 537 · 0.81M | 246 · 0.21M | 253 · 0.22M |
+  | Build overview | 608 · 1.00M | 591 · 1.00M | 269 · 0.30M | 280 · 0.30M |
+  | A highway junction | 53 · 0.07M | 48 · 0.06M | 56 · 0.08M | 57 · 0.09M |
+  | The far edge | 510 · 0.56M | 529 · 0.58M | 385 · 0.27M | 403 · 0.27M |
+  | Route (average) | 397 · 0.53M | 404 · 0.53M | 240 · 0.22M | 228 · 0.22M |
+  | Geometry / textures | 75 / 95 MB | 76 / 99 MB | 58 / 95 MB | 55 / 99 MB |
+
+  - The same within the noise of the traffic and the crowds: the viaduct
+    and the stations are a few pieces of the fixed city, split by tile;
+    the train is two draws. The textures grew by the station signs' atlas,
+    the M roundel and the taxi's sign.
+  - The boot's own work is unchanged (build 7.8 s headless before and
+    after); the map, the taxis and the metro's card cost nothing until
+    they're used.
+
+- **Done:** every place on the map is a minute or less away: fast
+  travel at once to anywhere you've been, a taxi from anywhere to anywhere
+  in under half a minute, the metro in under 25 s between its stations.
+- **To check on real devices:** the map from the Menu and M (pan, pinch,
+  Find a place), a waypoint across the river and the compass, Bring my car
+  from the far side of the park, a taxi to the airport (watch it stop at
+  the lights), the metro from Downtown to the Airport (`?spawn=68.8,37.5`
+  stands you at the Downtown station's door), sound on in town, by the
+  river and out past the highway.
 
 ## Phase 9: filling the map (each district its own sub-phase)
 
@@ -1002,7 +1079,7 @@ Every district comes with the same set of things:
   redesign does today)?
 - **Plots and lots:** should new districts carry them for sale, and at
   what prices?
-- **Getting about:** how should players cross a bigger city? Car and
-  aircraft only, or a metro, taxis or fast travel (and if fast travel,
-  only to places you've already been)?
+- **Getting about:** answered: taxis, fast travel (to places you've been)
+  and a metro, built in Phase 8. More metro lines and stations come with
+  the districts (Phase 9), the owner's call.
 - **The aircraft:** should the airliners' routes widen over the new land?

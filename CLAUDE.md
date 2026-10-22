@@ -196,7 +196,70 @@ it and has been retired completely. Build only on what's here.
   - The sky dome and stars travel with the camera at `SKY_RADIUS` (`bounds.ts`: far enough that the skyline's far side stands in front of it seen from downtown, about 720 today, never under 400), inside its far plane (`CAMERA_FAR`, 40 further), so everything in the world stays in front of the sky and the skyline stays on the horizon however far out the edge is.
   - City view pans round the built-up area (`bounds.ts`: `BUILT_UP` is the town, the airport and the kart park; `PAN_BOUNDS` reaches `PAN_MARGIN` (160) past it, never closer than 10 to where you can walk: today that's the whole world), and the Build overview frames the plots (`overviewFrame()`).
   - **The edge is data** (growth plan Phase 5): `EXT` is set in one place, and a test run can set another (`WORLD_EXT=x0,x1`, `npm run test:wide` at Phase 10's -680 to 720); both must pass. Nothing that exists reads the edge: the airport's `SITE` is fixed numbers, the river walls and their bridge gaps come from the street plan (`riverCrossings()` in `streetplan.ts`), flying turns back at whatever bounds it's given. Anything new written against the edge must work at both sizes.
-  - **Growing the city** (many more buildings, then a bigger world) is planned in `docs/growth-plan.md`. Part A (Phases 0-4) makes size cheap: the measuring kit and a snapshot test that nothing moves, tiles and a collision grid, near and far building forms, building as you go, building kits. Part B (Phases 5-10) grows the world: the edge as data (the airport's site frozen, trees per tile), `EXT` out to about 880 across, roads to reach it (a ring highway, more bridges, traffic spent near you), getting about (a world map, waypoints, and the owner's pick of metro, taxis or fast travel), districts one at a time, then optionally about 1,400 across. Phases 0 (the measuring kit), 1 (tiles, the collision grid, the city's fixed geometry merged per tile, crowds and traffic culled for the shadow map), 2 (near and far forms: details near only, far forms for the places and the cars) 3 (building as you go: sites built round the home view at the boot and the rest after it, near forms let go past a budget), 4 (building kits: kits, recipes for blocks, a test district behind `?district=test`), 5 (the edge as data: `EXT` in one place, tests at both sizes) 6 (the edge moves out: `EXT` -420 to 460, the woods, the far plane and sky dome from the edge) and 7 (roads to reach it: the ring highway, its bridges and slip lanes, routes generated from the street plan, traffic and boats spent near you) are built; follow the rest one phase at a time with the owner's sign-off, and never add buildings in bulk outside the tiles (`tileBatch()`) or outside sites (`site()`).
+  - **Growing the city** (many more buildings, then a bigger world) is planned in `docs/growth-plan.md`. Part A (Phases 0-4) makes size cheap: the measuring kit and a snapshot test that nothing moves, tiles and a collision grid, near and far building forms, building as you go, building kits. Part B (Phases 5-10) grows the world: the edge as data (the airport's site frozen, trees per tile), `EXT` out to about 880 across, roads to reach it (a ring highway, more bridges, traffic spent near you), getting about (a world map, waypoints, and the owner's pick of metro, taxis or fast travel), districts one at a time, then optionally about 1,400 across. Phases 0 (the measuring kit), 1 (tiles, the collision grid, the city's fixed geometry merged per tile, crowds and traffic culled for the shadow map), 2 (near and far forms: details near only, far forms for the places and the cars) 3 (building as you go: sites built round the home view at the boot and the rest after it, near forms let go past a budget), 4 (building kits: kits, recipes for blocks, a test district behind `?district=test`), 5 (the edge as data: `EXT` in one place, tests at both sizes) 6 (the edge moves out: `EXT` -420 to 460, the woods, the far plane and sky dome from the edge) 7 (roads to reach it: the ring highway, its bridges and slip lanes, routes generated from the street plan, traffic and boats spent near you) and 8 (getting about: the world map, waypoints, Bring my car, taxis, fast travel, the metro, sound by district) are built; follow the rest one phase at a time with the owner's sign-off, and never add buildings in bulk outside the tiles (`tileBatch()`) or outside sites (`site()`).
+- **Getting about** (growth plan Phase 8; the owner picked taxis, fast
+  travel and the metro):
+  - **Places** are `places.ts` (DOM-free, tested in `tests/travel.test.ts`):
+    every place on the map (`PLACES`: the spots with a pin, the garage, the
+    market square, the metro's stations) with the spot you arrive at,
+    standing, facing it; `seen()` says which you've reached (`SEEN_R`).
+    Walking or driving there (not flying over, not riding past) adds it to
+    the save's `visited` (`visit()` in `tycoon.ts`, cleaned to `PLACE_IDS`),
+    with a toast.
+  - **The world map** is `worldmap.ts` (markup `[data-worldmap]` in
+    `CityMap.astro`, styles `src/styles/worldmap.css`): a canvas drawn
+    from the street plan (slabs, plazas, roads by width, the highway, the
+    river, the airport and runway, the kart park's circuit, Liberty
+    Bridge, the metro line), the places with their pins' names
+    (`placeName()`), you, your car, your aircraft when it's away, your
+    waypoint. Drag or two fingers pan, scroll or pinch zoom, + / − / Fit /
+    You, "Find a place" (the keyboard's way in). From the ☰ Menu's World
+    map, the Map walk tab, or M (walking with no panel open, or the City
+    view); M, Esc or × close it. Tapping a place opens a card: Open and
+    Walk here (City view), Set waypoint, Taxi here, Fast travel (on foot,
+    places you've been); yourself: Bring my car; open ground: a waypoint.
+    It isn't the 2D poster (`city.ts`), which stays downtown's.
+  - **Waypoints** (`travel-ui.ts`, which wires the map in): a magenta beam
+    (`beacons.waypoint()`) and the compass in the walk HUD (`[data-compass]`,
+    top right: an arrow, metres, the name, an ×), cleared when you're there.
+    **Fast travel** fades out, stands you at the place (`walk.placeAt()`)
+    and fades in. **Bring my car** (`walk.bringCar()`, `drive.bring()`):
+    the nearest lane spot round you, clear of traffic.
+  - **Taxis** are `taxi.ts`: a Cruiser in taxi yellow with a lit TAXI sign
+    comes from a spot on the roads a way off to the kerb nearest you, along
+    `pathBetween()` (`routes.ts`: the shortest drive between two points on
+    the streets, in the right lanes, ending at the kerb nearest the place),
+    stopping at red lights and behind traffic; the traffic stops behind it
+    (`stoppers` in `life.ts`). Walk up to it (or Get in) and it drives you
+    there under a chase camera; Skip ride or Esc cuts to the end. Its bar is
+    `[data-taxi]` (under the header while it comes, at the bottom while you
+    ride). Free: no fare.
+  - **Rides** (taxi and metro) go through `walk.setRide()` (`Ride` in
+    `walk.ts`): the ride moves Degen (hidden) and its own camera, the keys
+    wait, `.city.is-riding` hides the walk HUD; leaving walk mode ends it.
+  - **The metro** is `metro.ts` (DOM-free, tested in `tests/metro.test.ts`):
+    one elevated line on a viaduct down the east ring avenue's median
+    (`LINE_X`, `LINE`, `DECK_Y`), pillars only where the median is clear
+    of junctions and the river (`PILLARS`), four stations (`STATIONS`:
+    Kart Park, Downtown, South Bank, Airport; a platform east of the track,
+    a stair tower on the lawn with its door at street level),
+    `METRO_SOLIDS` (in `SOLIDS`), the train (`TRAIN`, two cars) on a
+    timetable from the clock (`trainAt()`, `ROUND_TRIP`), rides straight
+    between stations (`rideAt()`, at most about 22 s) and back on the
+    timetable after (`timetableAt()`). Drawn by `metro3d.ts` (the deck in
+    spans, rails, parapets with magenta neon, hammerhead pillars, a girder
+    over the river; platforms, canopies with the station names from one
+    sign atlas, skybridges, towers with an M roundel over the door, totems;
+    the train merged, `userData.keep`). Its rides are `metro-ui.ts`: the
+    station door's "Metro" prompt (a walk `places` entry, `metro:<id>`)
+    opens the station card (`[data-metro]`), a ride runs alongside the
+    train (`[data-metro-bar]`, Skip ride / Esc) and you step out at the
+    destination's door.
+  - **Sound by district** is `ambience.ts` (DOM-free, tested in
+    `tests/ambience.test.ts`): `ambienceAt(x, z, lift)` gives the town's
+    hum, the river, the traffic's rush (the highway, the avenues inside
+    it), wind over open land and the Emporium's beat; `sound.update()`
+    mixes its layers from it, where you walk or where the City view looks.
 - **Cars** are `src/scripts/city3d/cars.ts`: real-proportion cartoon models
   (City Hatch, Cruiser, Street GT coupe, Hauler pickup, Box Van, City Bus;
   made-up names, never a real make or badge), each a bevelled extruded
@@ -962,7 +1025,7 @@ it and has been retired completely. Build only on what's here.
 - **The Apartments** (the tower in the north block, east of the Signal tower, `apartments()` in
   `landmarks.ts` and `city.ts`) are a place since Phase 3: spot
   `apartments`, its pin, door (`DOORS`) and panel. The Emporium stays first
-  in the 3D `spots` list (the city's sound centres on `spots[0]`).
+  in the 3D `spots` list.
 
 ## Walk mode (3D)
 
@@ -1536,6 +1599,7 @@ it and has been retired completely. Build only on what's here.
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes and the test district (`kits.ts`, `recipes.ts`, `testdistrict.ts`), Liberty Bridge (`liberty.ts`),
+  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,

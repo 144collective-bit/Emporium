@@ -280,6 +280,11 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
           <p class="walk-pad">Press T to open this. Others see a bubble over your head.</p>
         </div>
       </details>
+      {/* The world map (worldmap.ts): M opens it too */}
+      <button type="button" class="walk-map-tab" data-worldmap-open aria-label="World map (M)">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14" /></svg>
+        <span class="walk-pill-text">Map</span>
+      </button>
     </div>
     {/* Walking with a gun: ammo and score (combat.ts paints them) */}
     <div class="city-head-stats" aria-live="off">
@@ -403,6 +408,10 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
             </button>
           </div>
+          <button type="button" class="dir-map" data-worldmap-open>
+            <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14" /></svg> World map</span>
+            <small>Get about</small>
+          </button>
           <ul class="dir-places">
             {directory.map((id) => {
               const s = spots[id];
@@ -462,6 +471,14 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       <div class="combat-dmg" data-dmg aria-hidden="true"></div>
       <div class="combat-pops" data-pops aria-live="polite"></div>
       <div class="combat-scope" aria-hidden="true"><i></i></div>
+    </div>
+    {/* The waypoint's compass (worldmap.ts, index.ts): which way and how far, and its name */}
+    <div class="wm-compass" data-compass hidden aria-live="off">
+      <span class="wm-compass-arrow" data-compass-arrow aria-hidden="true"></span>
+      <span class="wm-compass-text"><b data-compass-dist></b><small data-compass-name></small></span>
+      <button type="button" class="wm-compass-clear" data-compass-clear aria-label="Clear the waypoint">
+        <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
+      </button>
     </div>
     {/* Your missions on the go (missions-ui.ts): a line and a bar each; on phones a pill that opens on a tap */}
     <div class="mission-tracker" data-missions-tracker hidden>
@@ -733,6 +750,57 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
   <button type="button" class="walk-prompt" data-walk-prompt hidden>
     <kbd>E</kbd> <span data-walk-label>Enter</span>
   </button>
+  {/* A taxi (taxi.ts, growth plan Phase 8): on its way, waiting (Get in), or the ride (Skip ride) */}
+  <div class="taxi-bar" data-taxi hidden aria-live="polite">
+    <span class="taxi-mark" aria-hidden="true">TAXI</span>
+    <p class="taxi-text" data-taxi-text></p>
+    <button type="button" class="taxi-btn" data-taxi-in hidden>Get in</button>
+    <button type="button" class="taxi-btn" data-taxi-skip hidden>Skip ride</button>
+    <button type="button" class="taxi-btn taxi-cancel" data-taxi-cancel hidden>Cancel</button>
+  </div>
+  {/* The metro (metro-ui.ts, growth plan Phase 8): a station's card (the other stations, a ride each), and the ride's bar */}
+  <section class="metro-card" data-metro hidden aria-labelledby="metro-title">
+    <div class="pop-head">
+      <p class="pop-title"><span class="metro-roundel" aria-hidden="true">M</span> <span id="metro-title" data-metro-title>Station</span></p>
+      <button type="button" class="pop-close" data-metro-close aria-label="Close the station card">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
+      </button>
+    </div>
+    <p class="metro-note">Sector 7 Metro: pick a station and ride. Free.</p>
+    <ul class="metro-list" data-metro-list></ul>
+  </section>
+  <div class="taxi-bar metro-bar" data-metro-bar hidden aria-live="polite">
+    <span class="taxi-mark metro-mark" aria-hidden="true">M</span>
+    <p class="taxi-text" data-metro-text></p>
+    <button type="button" class="taxi-btn" data-metro-skip>Skip ride</button>
+  </div>
+  {/* The world map (worldmap.ts, growth plan Phase 8): the whole city drawn from the street plan, places,
+      you, your car and aircraft and your waypoint; a card for what's tapped (waypoint, taxi, fast travel, bring my car) */}
+  <section class="worldmap" data-worldmap hidden role="dialog" aria-modal="true" aria-labelledby="wm-title">
+    <div class="wm-head">
+      <p class="wm-title" id="wm-title">World map</p>
+      <p class="wm-sub">Tap a place: set a waypoint, take a taxi, or fast travel where you've been</p>
+      <label class="wm-find"><select data-wm-find aria-label="Find a place"><option value="">Find a place</option></select></label>
+      <button type="button" class="city-panel-close wm-close" data-wm-close aria-label="Close the world map">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
+      </button>
+    </div>
+    <canvas class="wm-canvas" data-wm-canvas aria-label="Map of Sector 7"></canvas>
+    <div class="wm-tools" role="group" aria-label="Zoom">
+      <button type="button" data-wm-zoom="1" aria-label="Zoom in">+</button>
+      <button type="button" data-wm-zoom="-1" aria-label="Zoom out">&minus;</button>
+      <button type="button" data-wm-zoom="0">Fit</button>
+      <button type="button" data-wm-you>You</button>
+    </div>
+    <ul class="wm-legend" aria-hidden="true">
+      <li><i class="wm-key wm-key-you"></i>You</li>
+      <li><i class="wm-key wm-key-place"></i>Place</li>
+      <li><i class="wm-key wm-key-metro"></i>Metro</li>
+      <li><i class="wm-key wm-key-car"></i>Your car</li>
+      <li><i class="wm-key wm-key-way"></i>Waypoint</li>
+    </ul>
+    <div class="wm-card" data-wm-card hidden></div>
+  </section>
   <aside class="city-panel builder-panel" data-plot-panel hidden role="dialog" aria-labelledby="plot-title">
     <button type="button" class="city-panel-close" data-plot-close aria-label="Close plot">
       <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>

@@ -333,6 +333,23 @@ export function createDrive(d: DriveDeps) {
       const [x, z] = spots.find(([px, pz]) => d.free(px, pz)) ?? spots[0];
       return { x, z, yaw: s.yaw + Math.PI / 2 };
     },
+    /**
+     * Bring the car to x, z facing yaw (the world map's Bring my car, growth plan Phase 8): off the turntable if
+     * it's home, or from wherever it's parked; not while you're driving
+     */
+    bring(x: number, z: number, yaw: number) {
+      if (out) return false;
+      const v = car ?? (car = takeCar());
+      if (!v) return false;
+      const s = v.state;
+      s.x = x;
+      s.z = z;
+      s.yaw = yaw;
+      s.speed = s.vx = s.vz = s.steer = 0;
+      v.y = d.groundAt(x, z);
+      place(v);
+      return true;
+    },
     /** Send the car home (the garage brought it back): it leaves the streets */
     recall() {
       if (!car || out === car) return;
