@@ -165,7 +165,7 @@ it and has been retired completely. Build only on what's here.
   - The skyline ring stands just past `EXT`, kept out of the haze (`fog = false`) so it reads as a far metropolis.
   - The sky dome and stars travel with the camera at 400, inside its far plane (440), so everything in the world stays in front of the sky.
   - City view can pan anywhere inside the bounds.
-  - **Growing the city** (many more buildings, then a bigger world) is planned in `docs/growth-plan.md`. Part A (Phases 0-4) makes size cheap: the measuring kit and a snapshot test that nothing moves, tiles and a collision grid, near and far building forms, building as you go, building kits. Part B (Phases 5-10) grows the world: the edge as data (the airport's site frozen, trees per tile), `EXT` out to about 880 across, roads to reach it (a ring highway, more bridges, traffic spent near you), getting about (a world map, waypoints, and the owner's pick of metro, taxis or fast travel), districts one at a time, then optionally about 1,400 across. Phases 0 (the measuring kit), 1 (tiles, the collision grid, the city's fixed geometry merged per tile, crowds and traffic culled for the shadow map), 2 (near and far forms: details near only, far forms for the places and the cars) and 3 (building as you go: sites built round the home view at the boot and the rest after it, near forms let go past a budget) are built; follow the rest one phase at a time with the owner's sign-off, and never add buildings in bulk outside the tiles (`tileBatch()`) or outside sites (`site()`).
+  - **Growing the city** (many more buildings, then a bigger world) is planned in `docs/growth-plan.md`. Part A (Phases 0-4) makes size cheap: the measuring kit and a snapshot test that nothing moves, tiles and a collision grid, near and far building forms, building as you go, building kits. Part B (Phases 5-10) grows the world: the edge as data (the airport's site frozen, trees per tile), `EXT` out to about 880 across, roads to reach it (a ring highway, more bridges, traffic spent near you), getting about (a world map, waypoints, and the owner's pick of metro, taxis or fast travel), districts one at a time, then optionally about 1,400 across. Phases 0 (the measuring kit), 1 (tiles, the collision grid, the city's fixed geometry merged per tile, crowds and traffic culled for the shadow map), 2 (near and far forms: details near only, far forms for the places and the cars) 3 (building as you go: sites built round the home view at the boot and the rest after it, near forms let go past a budget) and 4 (building kits: kits, recipes for blocks, a test district behind `?district=test`) are built; follow the rest one phase at a time with the owner's sign-off, and never add buildings in bulk outside the tiles (`tileBatch()`) or outside sites (`site()`).
 - **Cars** are `src/scripts/city3d/cars.ts`: real-proportion cartoon models
   (City Hatch, Cruiser, Street GT coupe, Hauler pickup, Box Van, City Bus;
   made-up names, never a real make or badge), each a bevelled extruded
@@ -294,19 +294,57 @@ it and has been retired completely. Build only on what's here.
   - The rules are DOM-free in `tileplan.ts` (tested in
     `tests/tileplan.test.ts`); the tile pieces and the scheduler are
     tested too (`tests/tilebatch.test.ts`, `tests/tilework.test.ts`).
-- `?fps` in the address shows a performance readout (`.city-stats`, built in
+- **Building kits** (growth plan Phase 4): what a new district is built
+  from, as data, so a district is a few lines, not hand-placed buildings.
+  - `kits.ts` (DOM-free): the kits (`KitId`): the downtown six
+    (brownstone, shop, diner, loft, office, hotel), the terrace and the
+    warehouse (rows), the house (in its yard), and one to a block: the
+    factory, the school, the mall, the stadium stand and the crane;
+    `KIT_SPEC` (widths, floors, front strip), `heightOf()`, `bigParts()`,
+    `lotFrame()`, `lotSolids()`; nothing taller than `KIT_TALLEST` (11.2,
+    under the Emporium).
+  - `recipes.ts` (DOM-free, seeded): `RECIPES` (midtown, mainstreet,
+    terraces, suburb, warehouses, and factory / school / mall / stadium /
+    works, one big kit each) and `layBlock()`: a row along every straight
+    side of a block's outline (the land inside its sidewalk), downtown's
+    way (widths in the kit's range, a few set back, alleys with bollards,
+    corners to the longer side, slanted sides left as they are), houses
+    with yards between, or the big kit filling the inside. Each building
+    comes with its footprints, so the collisions come from the same
+    recipe. `layDistrict()` lays a district block by block.
+  - `kits3d.ts` draws them: the downtown six through infill.ts
+    (`infillBuilding()`, its helpers exported), the rest here, all from
+    the wall atlas, the sign atlas and the shared materials; walls, roofs,
+    signs and lit trims at every distance, details near only, phones
+    leaving out the finest. Signs are fixed copy from `SIGNS` (the kits
+    added `school`, `mall`, `stadium`; their blades are left out).
+    Nothing drawn in a site goes into the city's own lists (a rooftop
+    garden's trees are drawn in the site's own Batch, `IN_SITE`).
+  - The test district (`testdistrict.ts`, drawn by `district3d.ts`): 285
+    buildings on 20 blocks on the open land south of the river, west of
+    the town, only with `?district=test` (the city itself doesn't change;
+    new districts are the owner's call). Its streets, blocks and buildings
+    are sites (a block's buildings four at a time, so none takes long),
+    its footprints join every grid (`addSolids()` in `solids.ts`,
+    `BoxGrid.add()`), its blocks the walkable ground (`addSlabs()` in
+    `walk.ts`), the outskirts' trees keep off it (`keepTreesOff()`), and
+    the benchmark adds two views of it (`DISTRICT_VIEWS`).
+  - Tested in `tests/recipes.test.ts`.
+- `?fps` in the address (`.city-stats`, built in
   `index.ts`): fps, slowest frame, draw calls and triangles per frame, the
   shadow map's share (`post.shadowStat`), geometry and texture memory
   (`sceneMemory()` in `perf.ts`), how many tile pieces were drawn and
-  tiles are near, how many far forms are showing, how long the boot took (art, build and its own work less the waits, tiles, shaders), the sites built (at the boot, after, waiting) and the near forms held against the budget, quality tier, pixel ratio and any
+  tiles are near, how many far forms are showing, how long the boot took (art, build and its own work less the waits, tiles, shaders), the sites built (at the boot, after, the slowest, waiting) and the near forms held against the budget, quality tier, pixel ratio and any
   quality stepped down. Use it on
   real devices before and after changes; it's invisible without the
   parameter.
 - `?bench` runs the benchmark (`bench.ts`, growth plan Phase 0): straight
   into the 3D city, clear day (`?bench=night` for night), quality held, the
   same views (`BENCH_VIEWS`: home, a downtown street, the square, the Build
-  overview, the airport, the kart park, the far edge) measured for a few
-  seconds each, then a 40 s camera route through them. Results (fps,
+  overview, the airport, the kart park, the far edge; with
+  `?district=test` the test district's two after them) measured for a few
+  seconds each, once every site is built (it builds faster while it
+  waits), then a 40 s camera route through them. Results (fps,
   average / 95th-percentile / slowest frame, CPU ms, draws and triangles,
   the shadow map's, memory, boot) go in a card on the page, the console and
   `window.__bench`. Run it before and after anything that could make the
@@ -1464,7 +1502,7 @@ it and has been retired completely. Build only on what's here.
   (`combat-sim.ts`), the economy (`tycoon.ts`, the market square in
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
-  the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), Liberty Bridge (`liberty.ts`),
+  the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the building kits and recipes and the test district (`kits.ts`, `recipes.ts`, `testdistrict.ts`), Liberty Bridge (`liberty.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,
