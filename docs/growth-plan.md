@@ -1114,7 +1114,7 @@ In three steps, each a PR for the owner's sign-off:
   about 9 MB (the towers' numbers, the murals, The Block's signs). The
   boot's own work is unchanged (sites at the boot 0.11 s).
 
-### 9a+ The Trenches redesign (the owner's call; step A built)
+### 9a+ The Trenches redesign (the owner's call; built)
 
 More variety and communal areas, scenery only for now (the owner's
 answers): the towers in many designs, mostly red brick with some brown,
@@ -1134,7 +1134,14 @@ corner shops stay where they are.
   The Trenches view 120 to 124 draws, 0.16M triangles, geometry 71 MB as
   before, textures 109 to 112 MB (the two new brick bands); each tower
   built in pieces so none takes long.
-- **Step B, the courtyards and streets:** a different mix on every lawn
+- **Step B, the courtyards and streets** (built, `commons.ts` /
+  `commons3d.ts`): 36 amenities over 13 lawns, the rec block, 27 parking
+  bays with about 60 parked cars, railings and hedges, hydrants, and some
+  150 more people (kids at play smaller). Measured on the phone tier: The
+  Trenches view 119 draws, 0.21M triangles (step A 124, 0.16M), geometry
+  72 MB (71), textures 113 MB; every site under about 40 ms on the slow
+  test machine. The original plan:
+  a different mix on every lawn
   (playgrounds, basketball half-courts, a soccer cage, a skate spot, a
   community garden with BBQs and picnic tables), paths, benches and chess
   tables, washing lines behind the towers; the rec block east of The

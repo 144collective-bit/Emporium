@@ -23,6 +23,7 @@ import { ATLAS, INK, METAL, ROOF, STONE, CREAM, WOOD, acUnit, glow, kit, planter
 import { drawLot } from './kits3d';
 import { SLAB as S, addLamp, addTree } from './world';
 import { site } from './tilework';
+import { commonsTaken } from './commons';
 import { SCAFFOLD_OUT, STOOP, TOWERS, ROW_BLOCKS, isCorner, rows, towerShell, type Brick, type Tower, type TowerWall } from './projects';
 import { RECIPES, rng } from './recipes';
 import { TRENCH_BLOCKS } from './trenches';
@@ -424,7 +425,9 @@ export function buildProjects(low: boolean) {
       addLamp(t.door.x + n[0] * 1.6 + n[1] * 1.1, t.door.z + n[1] * 1.6 - n[0] * 1.1, Math.atan2(-n[1], n[0]));
     }
     const r = rng(rect[0] * 7 + rect[1]);
+    const taken = commonsTaken(id);
     const clear = (x: number, z: number) =>
+      !taken.some((t) => x > t[0] - 0.8 && x < t[2] + 0.8 && z > t[1] - 0.8 && z < t[3] + 0.8) &&
       towers.every((t) => t.parts.every(({ rect: [a, c, d, e] }) => x < a - 1.6 || x > d + 1.6 || z < c - 1.6 || z > e + 1.6)) &&
       towers.every((t) => {
         const n = FACE_N[t.door.face];

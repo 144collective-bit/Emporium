@@ -63,6 +63,8 @@ export interface Idle {
   y?: number;
   /** What they're doing: looking around (default), chatting, sitting, queueing */
   act?: 'look' | 'chat' | 'sit' | 'queue';
+  /** How big (a grown-up by default; kids at play are smaller) */
+  scale?: number;
 }
 
 export interface LandmarkCtx {

@@ -313,8 +313,7 @@ it and has been retired completely. Build only on what's here.
     walls and roofs: the footprint cut into cells, each as tall as the
     tallest part over it, a wall wherever a cell meets a lower one, from
     the floor line under the lower roof, so no two walls share a plane.
-    `trench-b0-3`, east of The Block, waits for the rec centre (the
-    redesign's step B)), The Block
+    `trench-b0-3`, east of The Block, is the rec block (commons.ts)), The Block
     (`THE_BLOCK` on `trench-b0-2`, south of the station: plaza, court and
     its fence with a gate each side (`blockFence()`), playground,
     handball wall, garden beds, benches, tables, string-light poles;
@@ -344,6 +343,31 @@ it and has been retired completely. Build only on what's here.
     by each, trees round them), the rows (`drawLot()`), their alleys and
     bollards, and behind Bottom Street a car park and trees along the
     highway.
+  - **The communal areas** (the redesign's step B, the owner's call;
+    scenery only for now) are `commons.ts` (DOM-free, tested in
+    `tests/commons.test.ts`): `AMENITIES`, each projects block its own
+    `MIX` (no two alike) of playgrounds, basketball half-courts, a soccer
+    cage, skate spots, community gardens with grills and picnic tables,
+    chess tables and washing lines, each placed on the open lawn (the
+    first spot from the lawn's middle that's clear of the towers, their
+    stoops and scaffolding, every door's way out (`doorWay()`) and the
+    others) and opening onto the nearest edge its way out (`amenityWay()`)
+    is clear to; the rec block (`REC`: the rec centre, the laundromat,
+    the pavilion, the path, `REC_DOORS`); parking bays (`BAYS`: lay-bys
+    behind the sidewalk along the projects' streets, not the avenue,
+    clear of every way in, cars in about two spaces in three,
+    `BAY_CARS`); low iron railings or hedges round every lawn (`EDGES`,
+    open at every way in and bay); hydrants on the sidewalk corners
+    (`HYDRANTS`); `COMMONS_SOLIDS` (in `SOLIDS`: fences with a gate on the
+    way out, ramps, grills, washing poles, the rec block's buildings and
+    the pavilion's posts, the parked cars); `commonsPeople()` (kids at
+    play, neighbours at the grills, chess and the pavilion); and
+    `commonsTaken()` (the projects' lawn trees keep off). Drawn by
+    `commons3d.ts` as sites (`buildCommons()`, before the trees, lamps and
+    crowd: the parked cars a lot to a block, the rec block's trees and
+    lamps, the people, kids smaller through `Idle.scale`); the signs (TRENCHES
+    REC CENTER, WASH & FOLD) are fixed made-up copy; phones leave out the
+    railings' pickets and the cages' bars.
   - **The corner shops** (step 3, the owner's call): `CORNER_SHOPS` in
     `projects.ts` turns four row lots (one each on rows A's a2, a1, a3 and
     C's c2, facing their street) into shops with made-up names (Block
