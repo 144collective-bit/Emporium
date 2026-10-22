@@ -165,6 +165,7 @@ it and has been retired completely. Build only on what's here.
   - The skyline ring stands just past `EXT`, kept out of the haze (`fog = false`) so it reads as a far metropolis.
   - The sky dome and stars travel with the camera at 400, inside its far plane (440), so everything in the world stays in front of the sky.
   - City view can pan anywhere inside the bounds.
+  - **Growing the city** (many more buildings, then a bigger world) is planned in `docs/growth-plan.md`: tiles, near and far building forms, building as you go, a collision grid, building kits, then new districts and a bigger `EXT`. Not built yet; follow it one phase at a time with the owner's sign-off, and never add buildings in bulk the way the city is merged today (every merged district is drawn all the time).
 - **Cars** are `src/scripts/city3d/cars.ts`: real-proportion cartoon models
   (City Hatch, Cruiser, Street GT coupe, Hauler pickup, Box Van, City Bus;
   made-up names, never a real make or badge), each a bevelled extruded
