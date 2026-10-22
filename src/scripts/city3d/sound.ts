@@ -3,7 +3,11 @@
  * rains, a neon buzz at night and a beat that gets louder near the Emporium;
  * since growth plan Phase 8 the mix follows the district you're in
  * (ambience.ts): the hum in town, the river by the water, traffic's rush by
- * the highway and the avenues, wind over the open land.
+ * the highway and the avenues, wind over the open land. In The Trenches
+ * (the grit step) the el rumbles and screeches overhead as the train goes
+ * by, a siren wails somewhere far off now and then, a dog barks, and a
+ * boombox plays by a walk-up's stoop (its own slow beat, through a small
+ * speaker).
  * Nothing plays until the visitor turns it on.
  */
 
@@ -24,6 +28,16 @@ export function createSound() {
   let waterGain: GainNode;
   let roadGain: GainNode;
   let windGain: GainNode;
+  /** The Trenches: the el's rumble and screech, the boombox, the hood's own (sirens, dogs) */
+  let elGain: GainNode;
+  let screechGain: GainNode;
+  let boomGain: GainNode;
+  let hoodGain: GainNode;
+  let nextBoom = 0;
+  let boomStep = 0;
+  let nextSiren = 0;
+  let nextDog = 0;
+  const BOOM_BPM = 88;
   let on = false;
   let engine: { g: GainNode; lp: BiquadFilterNode; a: OscillatorNode; b: OscillatorNode } | null = null;
   /** Your aircraft's engine: a buzz, a hiss and a whine, beaten by a throb (the prop's blades, the rotor's thump) */
@@ -136,16 +150,94 @@ export function createSound() {
     beatGain.gain.value = 0;
     beatGain.connect(master);
     nextBeat = ctx.currentTime + 0.1;
+
+    // The el overhead: a deep rumble, and the wheels' screech on the rails swaying in and out
+    elGain = layer('lowpass', 150, 0.8, 0.3, 0.7, true);
+    screechGain = layer('bandpass', 3100, 9, 0.8, 0.45);
+    // The boombox: its own beat through a small speaker (a band, a bit of crunch)
+    boomGain = ctx.createGain();
+    boomGain.gain.value = 0;
+    const speaker = ctx.createBiquadFilter();
+    speaker.type = 'bandpass';
+    speaker.frequency.value = 900;
+    speaker.Q.value = 0.45;
+    boomGain.connect(speaker).connect(master);
+    nextBoom = ctx.currentTime + 0.1;
+    // The hood's far-off sounds (sirens, dogs) go through this, its level the district's
+    hoodGain = ctx.createGain();
+    hoodGain.gain.value = 0;
+    hoodGain.connect(master);
+    nextSiren = ctx.currentTime + 8 + Math.random() * 20;
+    nextDog = ctx.currentTime + 4 + Math.random() * 10;
   }
 
-  function kick(t: number) {
+  /** A siren far off: a wail rising and falling, muffled by the blocks between */
+  function siren(t: number) {
+    const o = ctx!.createOscillator();
+    o.type = 'sawtooth';
+    const len = 6 + Math.random() * 4;
+    const rate = 0.35 + Math.random() * 0.2;
+    o.frequency.setValueAtTime(700, t);
+    for (let k = 0; k < len * rate; k++) {
+      o.frequency.linearRampToValueAtTime(1250, t + (k + 0.5) / rate);
+      o.frequency.linearRampToValueAtTime(700, t + (k + 1) / rate);
+    }
+    const lp = ctx!.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 1500;
+    const g = ctx!.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.03, t + len * 0.4);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+    o.connect(lp).connect(g).connect(hoodGain);
+    o.start(t);
+    o.stop(t + len + 0.1);
+  }
+  /** A dog a few yards over: two or three barks */
+  function dog(t: number) {
+    const n = 2 + Math.floor(Math.random() * 2);
+    for (let i = 0; i < n; i++) {
+      const at = t + i * (0.32 + Math.random() * 0.15);
+      const o = ctx!.createOscillator();
+      o.type = 'sawtooth';
+      o.frequency.setValueAtTime(520, at);
+      o.frequency.exponentialRampToValueAtTime(260, at + 0.12);
+      const bp = ctx!.createBiquadFilter();
+      bp.type = 'bandpass';
+      bp.frequency.value = 900;
+      bp.Q.value = 2.5;
+      const g = ctx!.createGain();
+      g.gain.setValueAtTime(0.0001, at);
+      g.gain.exponentialRampToValueAtTime(0.09, at + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.0001, at + 0.16);
+      o.connect(bp).connect(g).connect(hoodGain);
+      o.start(at);
+      o.stop(at + 0.2);
+    }
+  }
+  /** A snare: a crack of noise over a short tone */
+  function snare(t: number, out: AudioNode) {
+    const src = burst();
+    const bp = ctx!.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = 1900;
+    bp.Q.value = 0.8;
+    const g = ctx!.createGain();
+    g.gain.setValueAtTime(0.5, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+    src.connect(bp).connect(g).connect(out);
+    src.start(t, Math.random() * 1.5);
+    src.stop(t + 0.2);
+  }
+
+  function kick(t: number, out: AudioNode = beatGain) {
     const o = ctx!.createOscillator();
     const g = ctx!.createGain();
     o.frequency.setValueAtTime(130, t);
     o.frequency.exponentialRampToValueAtTime(42, t + 0.18);
     g.gain.setValueAtTime(0.9, t);
     g.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
-    o.connect(g).connect(beatGain);
+    o.connect(g).connect(out);
     o.start(t);
     o.stop(t + 0.4);
   }
@@ -157,7 +249,7 @@ export function createSound() {
     return src;
   }
 
-  function hat(t: number, open = false) {
+  function hat(t: number, open = false, out: AudioNode = beatGain) {
     const src = burst();
     const hp = ctx!.createBiquadFilter();
     hp.type = 'highpass';
@@ -165,12 +257,12 @@ export function createSound() {
     const g = ctx!.createGain();
     g.gain.setValueAtTime(0.18, t);
     g.gain.exponentialRampToValueAtTime(0.001, t + (open ? 0.22 : 0.05));
-    src.connect(hp).connect(g).connect(beatGain);
+    src.connect(hp).connect(g).connect(out);
     src.start(t, Math.random() * 1.5);
     src.stop(t + 0.3);
   }
 
-  function bass(t: number, f: number) {
+  function bass(t: number, f: number, out: AudioNode = beatGain) {
     const o = ctx!.createOscillator();
     o.type = 'square';
     o.frequency.value = f;
@@ -180,7 +272,7 @@ export function createSound() {
     const g = ctx!.createGain();
     g.gain.setValueAtTime(0.12, t);
     g.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
-    o.connect(lp).connect(g).connect(beatGain);
+    o.connect(lp).connect(g).connect(out);
     o.start(t);
     o.stop(t + 0.3);
   }
@@ -199,6 +291,17 @@ export function createSound() {
       nextBeat += sixteenth;
       step++;
     }
+    // The boombox: a slow head-nod beat (kick, snare on two and four, hats, a bass line)
+    const boomSixteenth = 60 / BOOM_BPM / 4;
+    while (nextBoom < ctx.currentTime + 0.2) {
+      const k = boomStep % 16;
+      if (k === 0 || k === 7 || k === 10) kick(nextBoom, boomGain);
+      if (k === 4 || k === 12) snare(nextBoom, boomGain);
+      if (k % 2 === 0) hat(nextBoom, false, boomGain);
+      if (k === 0 || k === 10) bass(nextBoom, [49, 49, 58.3, 43.7][Math.floor(boomStep / 16) % 4], boomGain);
+      nextBoom += boomSixteenth;
+      boomStep++;
+    }
   }
 
   return {
@@ -214,6 +317,7 @@ export function createSound() {
         if (!on) return on;
         window.clearInterval(timer);
         nextBeat = ctx!.currentTime + 0.1;
+        nextBoom = ctx!.currentTime + 0.1;
         timer = window.setInterval(schedule, 50);
         master.gain.setTargetAtTime(0.55, ctx!.currentTime, 0.4);
       } else {
@@ -624,9 +728,22 @@ export function createSound() {
       set(a.out.gain, revs >= 0 ? 0.04 + r * 0.07 : 0, revs >= 0 ? 0.2 : 0.3);
     },
     /** Called every frame with the scene's state and the district's layers where you are (ambience.ts) */
-    update(rain: number, night: number, a: Ambience) {
+    update(rain: number, night: number, a: Ambience, rumble = 0) {
       if (!ctx || !on) return;
       const t = ctx.currentTime;
+      // The Trenches: the el as the train goes over, the boombox, sirens and dogs now and then
+      elGain.gain.setTargetAtTime(rumble * 0.5, t, 0.3);
+      screechGain.gain.setTargetAtTime(rumble * rumble * 0.035, t, 0.3);
+      boomGain.gain.setTargetAtTime(a.boombox * 0.32, t, 0.4);
+      hoodGain.gain.setTargetAtTime(a.hood, t, 1);
+      if (a.hood > 0.15 && t > nextSiren) {
+        siren(t);
+        nextSiren = t + 40 + Math.random() * 60;
+      }
+      if (a.hood > 0.15 && t > nextDog) {
+        dog(t);
+        nextDog = t + 14 + Math.random() * 30;
+      }
       rainGain.gain.setTargetAtTime(rain * 0.5, t, 0.5);
       // The neon buzz is the town's; the beat carries a little everywhere in town, more near the Emporium
       buzzGain.gain.setTargetAtTime(night * 0.012 * a.city, t, 0.5);

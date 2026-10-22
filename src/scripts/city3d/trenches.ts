@@ -187,3 +187,17 @@ export const inTrenches = (x: number, z: number, m = 0) => {
   if (x < x0 - m || x > x1 + m || z < z0 - m || z > z1 + m) return false;
   return Math.hypot(Math.min(0, x - BEND_C[0]), Math.max(0, z - BEND_C[1])) <= HIGHWAY_R - HIGHWAY_HALF - 1 + m;
 };
+
+/**
+ * The Trenches' street lights (the grit step, the owner's call): sodium
+ * orange inside the district, a few flickering and the odd one dead, picked
+ * from where each stands so it's the same every visit; null outside it (the
+ * town's own white lamps)
+ */
+export type LampKind = 'sodium' | 'flicker' | 'dead';
+export function lampKind(x: number, z: number): LampKind | null {
+  if (!inTrenches(x, z)) return null;
+  const h = Math.sin(x * 12.9898 + z * 78.233) * 43758.5453;
+  const u = h - Math.floor(h);
+  return u < 0.06 ? 'dead' : u < 0.16 ? 'flicker' : 'sodium';
+}

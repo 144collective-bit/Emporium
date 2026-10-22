@@ -13,10 +13,19 @@
  * Everything fixed is built in Batches straight onto the scene (merged per
  * tile by tileBatch()); the details are near only. Under reduced motion the
  * train stands at a station.
+ *
+ * Over The Trenches (the grit step, the owner's call) it's a dark steel el:
+ * the deck grimy, deep plate girders under both edges with cross-bracing
+ * between them, steel pillars (flanged columns on concrete plinths, tagged
+ * and billed: grit3d.ts) with steel hammerheads, a sodium lamp under each
+ * span with its pool of light on the avenue, and sparks off the wheels as
+ * the train goes over (not under reduced motion).
  */
 import * as THREE from 'three';
-import { Batch, PAL, boxAt, canvasTex, FONT_DISPLAY, lit, mergeMeshes, neon, roundRect, toon } from './kit';
-import { SLAB, type Tick } from './world';
+import { Batch, PAL, boxAt, canvasTex, FONT_DISPLAY, fx, glowTex, lit, mergeMeshes, neon, roundRect, toon } from './kit';
+import { SLAB, addPool, type Tick } from './world';
+import { inTrenches } from './trenches';
+import { EL_SPANS, PLINTH } from './grit';
 import {
   DECK_HALF,
   DECK_T,
@@ -150,6 +159,10 @@ export function buildMetro(scene: THREE.Scene, tick: (f: Tick) => void, opts: { 
   const concrete = toon('#b9b4cc');
   const pier = toon('#7d7898');
   const steel = toon('#2a2838');
+  // (the el over The Trenches)
+  const grimy = toon('#6b6780');
+  const plinth = toon('#8a8698');
+  const sodium = neon('#ffb35c', 0.5, 2.4);
   const paving = toon('#cfcadf');
   const dark = toon('#3b3756');
   const roof = toon('#25223a');
@@ -174,7 +187,24 @@ export function buildMetro(scene: THREE.Scene, tick: (f: Tick) => void, opts: { 
       for (const [a, c] of piecesOf(t.id, cuts[i], cuts[i + 1])) {
         const f = trackFrame(b, t.id, a);
         const l = c - a + 0.02;
-        f.box(0, DECK_Y - DECK_T, -DECK_HALF, l, DECK_T, DECK_HALF * 2, concrete);
+        const el = inTrenches(...pointOn(t.id, (a + c) / 2).at);
+        f.box(0, DECK_Y - DECK_T, -DECK_HALF, l, DECK_T, DECK_HALF * 2, el ? grimy : concrete);
+        if (el) {
+          // Over The Trenches: deep plate girders under both edges, braced across near
+          for (const s of [-1, 1]) {
+            const zc = s * (DECK_HALF - 0.22);
+            f.box(0, DECK_Y - DECK_T - 0.5, zc - 0.03, l, 0.5, 0.06, steel);
+            f.box(0, DECK_Y - DECK_T - 0.55, zc - 0.13, l, 0.05, 0.26, steel);
+          }
+          b.detail(() => {
+            const span = (DECK_HALF - 0.22) * 2;
+            for (let x = 0.7; x < l - 0.5; x += 1.4)
+              for (const s of [-1, 1]) {
+                const g = new THREE.BoxGeometry(Math.hypot(1.2, span), 0.05, 0.05).rotateY(s * Math.atan2(span, 1.2));
+                f.add(g, steel, x, DECK_Y - DECK_T - 0.3, 0);
+              }
+          });
+        }
         for (const s of [-1, 1]) f.box(0, DECK_Y, s * 0.5 - 0.04, l, 0.08, 0.08, steel);
         // Over the river a deeper girder under it
         const z = pointOn(t.id, a).at[1];
@@ -191,8 +221,31 @@ export function buildMetro(scene: THREE.Scene, tick: (f: Tick) => void, opts: { 
   // The pillars, each with a hammerhead under the deck across the track
   for (const p of PILLARS) {
     const f = trackFrame(b, p.track, p.s);
+    if (inTrenches(...p.at)) {
+      // A flanged steel column on a concrete plinth, a steel hammerhead
+      const H = PLINTH.half;
+      const y0 = SLAB + PLINTH.h;
+      const h = DECK_Y - DECK_T - 0.3 - y0;
+      f.box(-H, SLAB, -H, H * 2, PLINTH.h, H * 2, plinth);
+      f.box(-PILLAR_HALF + 0.03, y0, -PILLAR_HALF + 0.03, (PILLAR_HALF - 0.03) * 2, h, (PILLAR_HALF - 0.03) * 2, steel);
+      for (const s of [-1, 1]) f.box(s > 0 ? PILLAR_HALF - 0.03 : -PILLAR_HALF, y0, -PILLAR_HALF, 0.03, h, PILLAR_HALF * 2, steel);
+      f.box(-0.45, DECK_Y - DECK_T - 0.3, -DECK_HALF + 0.1, 0.9, 0.3, DECK_HALF * 2 - 0.2, steel);
+      b.detail(() => {
+        // Gusset plates where the column meets the hammerhead, a base plate on the plinth
+        for (const s of [-1, 1]) f.box(-0.04, DECK_Y - DECK_T - 0.75, s > 0 ? PILLAR_HALF - 0.03 : -0.6, 0.08, 0.45, 0.6 - PILLAR_HALF + 0.03, steel);
+        f.box(-PILLAR_HALF - 0.01, y0, -PILLAR_HALF - 0.01, (PILLAR_HALF + 0.01) * 2, 0.04, (PILLAR_HALF + 0.01) * 2, steel);
+      });
+      continue;
+    }
     f.box(-PILLAR_HALF, SLAB, -PILLAR_HALF, PILLAR_HALF * 2, DECK_Y - DECK_T - SLAB - 0.3, PILLAR_HALF * 2, pier);
     f.box(-0.45, DECK_Y - DECK_T - 0.3, -DECK_HALF + 0.15, 0.9, 0.3, DECK_HALF * 2 - 0.3, pier);
+  }
+  // A sodium lamp under each span over The Trenches, its pool on the avenue below
+  for (const sp of EL_SPANS) {
+    const f = trackFrame(b, sp.track, sp.s);
+    f.box(-0.3, DECK_Y - DECK_T - 0.1, -0.09, 0.6, 0.08, 0.18, steel);
+    f.box(-0.26, DECK_Y - DECK_T - 0.115, -0.07, 0.52, 0.015, 0.14, sodium);
+    addPool(sp.at[0], sp.at[1], 4.6, 0.03, true);
   }
 
   /* ---------- The stations ---------- */
@@ -308,12 +361,70 @@ export function buildMetro(scene: THREE.Scene, tick: (f: Tick) => void, opts: { 
     place(back, tr, -GAP);
   };
   set(trainAt(0));
-  tick(() => {
+  // Sparks off the wheels over The Trenches: a few at a time from under each car, falling and fading
+  const N = 72;
+  const sparkPos = new Float32Array(N * 3).fill(-100);
+  const sparkVel = new Float32Array(N * 3);
+  const sparkLife = new Float32Array(N);
+  const sparkGeo = new THREE.BufferGeometry();
+  sparkGeo.setAttribute('position', new THREE.BufferAttribute(sparkPos, 3));
+  const sparks = fx(new THREE.Points(sparkGeo, new THREE.PointsMaterial({ color: '#ffcf7a', map: glowTex, size: 0.32, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false })));
+  sparks.frustumCulled = false;
+  sparks.userData.keep = true;
+  scene.add(sparks);
+  let nextSpark = 0;
+  let live = 0;
+  const last = new THREE.Vector3();
+  /** How fast the train is going (tiles a second), from where it was a frame ago */
+  let speed = 0;
+  tick((env) => {
     if (opts.reduced && !held) return;
     set(held ?? trainAt(now()));
+    const dt = Math.min(env.dt, 0.1);
+    if (dt > 0) speed = speed * 0.8 + (front.position.distanceTo(last) / dt) * 0.2;
+    last.copy(front.position);
+    if (opts.reduced) return;
+    // A burst now and then from under a car moving over The Trenches
+    nextSpark -= dt;
+    if (nextSpark <= 0 && speed > 2) {
+      nextSpark = 0.08 + Math.random() * 0.5;
+      const car = Math.random() < 0.5 ? front : back;
+      if (inTrenches(car.position.x, car.position.z)) {
+        const fwd = new THREE.Vector3(Math.sin(car.rotation.y), 0, Math.cos(car.rotation.y));
+        const end = (Math.random() < 0.5 ? -1 : 1) * TRAIN.len * 0.18;
+        const side = Math.random() < 0.5 ? -0.45 : 0.45;
+        const [ox, oz] = [car.position.x + fwd.x * end + fwd.z * side, car.position.z + fwd.z * end - fwd.x * side];
+        for (let k = 0, i = 0; k < 8 && i < N; i++) {
+          if (sparkLife[i] > 0) continue;
+          sparkLife[i] = 0.35 + Math.random() * 0.4;
+          sparkPos.set([ox, RAIL_Y + 0.05, oz], i * 3);
+          sparkVel.set([-fwd.x * speed * 0.3 + (Math.random() - 0.5) * 2.5, Math.random() * 1.5, -fwd.z * speed * 0.3 + (Math.random() - 0.5) * 2.5], i * 3);
+          k++;
+        }
+      }
+    }
+    live = 0;
+    for (let i = 0; i < N; i++) {
+      if (sparkLife[i] <= 0) continue;
+      sparkLife[i] -= dt;
+      if (sparkLife[i] <= 0) {
+        sparkPos[i * 3 + 1] = -100;
+        continue;
+      }
+      live++;
+      sparkVel[i * 3 + 1] -= 9 * dt;
+      for (let a = 0; a < 3; a++) sparkPos[i * 3 + a] += sparkVel[i * 3 + a] * dt;
+    }
+    sparks.visible = live > 0;
+    if (live || sparks.visible) sparkGeo.attributes.position.needsUpdate = true;
   });
   return {
     train,
+    /** How loud the train is from (x, z) (0-1): near it and moving (sound.ts rumbles with it) */
+    rumbleAt(x: number, z: number) {
+      const d = Math.min(Math.hypot(front.position.x - x, front.position.z - z), Math.hypot(back.position.x - x, back.position.z - z));
+      return Math.min(1, speed / 6) * Math.max(0, 1 - Math.max(0, d - 5) / 45);
+    },
     /** A ride holds the train where it puts it (null: back on the timetable where it was) */
     hold(at: { run: Run; d: number } | null) {
       held = at;

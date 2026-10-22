@@ -23,7 +23,8 @@ import { ATLAS, INK, METAL, ROOF, STONE, CREAM, WOOD, acUnit, glow, kit, planter
 import { drawLot } from './kits3d';
 import { SLAB as S, addLamp, addTree } from './world';
 import { site } from './tilework';
-import { commonsTaken } from './commons';
+import { boarded } from './grit';
+import { buildFx, tag } from './grime';
 import { SCAFFOLD_OUT, STOOP, TOWERS, ROW_BLOCKS, isCorner, rows, towerShell, type Brick, type Tower, type TowerWall } from './projects';
 import { RECIPES, rng } from './recipes';
 import { TRENCH_BLOCKS } from './trenches';
@@ -147,7 +148,7 @@ function laid(w: TowerWall) {
  * (near only), then its scaffolding
  */
 type TowerPiece = 'shell' | 'scaffold' | number;
-function tower(b: Batch, t: Tower, low: boolean, piece: TowerPiece) {
+function tower(b: Batch, t: Tower, low: boolean, piece: TowerPiece, fxb: Batch) {
   const k = kit(b, WORLD);
   const r = rng(t.no * 131 + (typeof piece === 'number' ? piece + 1 : piece === 'scaffold' ? 97 : 0));
   const trim = STONE;
@@ -175,11 +176,20 @@ function tower(b: Batch, t: Tower, low: boolean, piece: TowerPiece) {
         const door = onDoorWall(w);
         const balconies = t.balconies && L.len >= 6 && (w.n[1] > 0.5 || w.n[0] < -0.5);
         for (let y = w.y0; y + 0.9 < w.y1 - PARAPET_GAP; y += 1) {
-          if (y < 1) continue;
           const yb = S + y;
           for (let j = 0; (j + 0.5) * BAY < L.len - 0.3; j++) {
             const s = (j + 0.5) * BAY;
             if (door && y < 2 && Math.abs(s - L.len / 2) < 1.6) continue;
+            // (the grit step) A window boarded up, the plywood tagged on the lower floors
+            if (boarded(t, piece, j, y)) {
+              onWall(L, w.n, s - 0.24, s + 0.24, 0.004, 0.026, yb + 0.18, yb + 0.85, toon('#a07a52'));
+              if (y < 2 && !low) {
+                const [x, z] = [L.a[0] + L.t[0] * s + w.n[0] * 0.032, L.a[1] + L.t[1] * s + w.n[1] * 0.032];
+                tag(fxb, t.no + j, 0.5, w.n, x, yb + 0.5, z);
+              }
+              continue;
+            }
+            if (y < 1) continue;
             if (balconies && y >= 2 && j % 4 === 0 && s + BAY < L.len - 0.2) {
               // A balcony across two bays (every other pair): the slab, a light panel and a rail, washing on the line on some
               const s0 = s - 0.3;
@@ -366,7 +376,8 @@ function dish(k: ReturnType<typeof kit>, x: number, y: number, z: number, ry: nu
 
 /** The lawn round a block's towers: a path from each door to the sidewalk, benches by it (the trees and lamps are the city's) */
 function lawn(b: Batch, towers: Tower[], blk: Rect) {
-  const path = toon('#8f8ab0');
+  // (the yards are concrete now: the paths a lighter, newer concrete)
+  const path = toon('#77738a');
   const k = kit(b, WORLD);
   const [x0, z0, x1, z1] = blk;
   for (const t of towers) {
@@ -405,8 +416,11 @@ export function buildProjects(low: boolean) {
     for (const piece of pieces)
       site(`trench tower ${t.no} ${piece}`, rect, (into) => {
         const b = new Batch();
-        tower(b, t, low, piece);
+        const fxb = new Batch();
+        fxb.lod = 'near';
+        tower(b, t, low, piece, fxb);
         b.build(into);
+        buildFx(fxb, into);
       });
   }
   for (const [id, towers] of byBlock) {
@@ -424,20 +438,6 @@ export function buildProjects(low: boolean) {
       const n = FACE_N[t.door.face];
       addLamp(t.door.x + n[0] * 1.6 + n[1] * 1.1, t.door.z + n[1] * 1.6 - n[0] * 1.1, Math.atan2(-n[1], n[0]));
     }
-    const r = rng(rect[0] * 7 + rect[1]);
-    const taken = commonsTaken(id);
-    const clear = (x: number, z: number) =>
-      !taken.some((t) => x > t[0] - 0.8 && x < t[2] + 0.8 && z > t[1] - 0.8 && z < t[3] + 0.8) &&
-      towers.every((t) => t.parts.every(({ rect: [a, c, d, e] }) => x < a - 1.6 || x > d + 1.6 || z < c - 1.6 || z > e + 1.6)) &&
-      towers.every((t) => {
-        const n = FACE_N[t.door.face];
-        return n[0] ? Math.abs(z - t.door.z) > 2.2 || (x - t.door.x) * n[0] < -1 : Math.abs(x - t.door.x) > 2.2 || (z - t.door.z) * n[1] < -1;
-      });
-    for (let x = rect[0] + 2; x <= rect[2] - 2; x += 4.5)
-      for (let z = rect[1] + 2; z <= rect[3] - 2; z += 4.5) {
-        const edge = x < rect[0] + 3 || x > rect[2] - 3 || z < rect[1] + 3 || z > rect[3] - 3;
-        if (clear(x, z) && r() < (edge ? 0.75 : 0.35)) addTree(x + (r() - 0.5), z + (r() - 0.5), 0.9 + r() * 0.4, false);
-      }
   }
 
   // The rows: their buildings a few at a time, their alleys with each block

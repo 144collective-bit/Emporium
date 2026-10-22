@@ -224,6 +224,11 @@ export function litOf(mat: THREE.Material): { day: number; night: number; base?:
   return l ? { day: l.day, night: l.night, base: l.base } : null;
 }
 
+/** Glowing materials that flicker (`lit()` with a flicker) going out together: a lamp's bulb, halo and pool */
+export function flickerTogether(mats: THREE.Material[], seed: number) {
+  for (const l of lits) if (mats.includes(l.mat)) l.seed = seed;
+}
+
 /** Stop driving a material that's being thrown away (guns that come and go) */
 export function unlit(mat: THREE.Material) {
   const i = lits.findIndex((l) => l.mat === mat);

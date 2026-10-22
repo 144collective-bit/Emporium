@@ -13,9 +13,13 @@
  *   a laundromat, a pavilion with BBQs and picnic tables, and a big lawn.
  * - **Parking bays** (`BAYS`): lay-bys behind the sidewalk on the projects'
  *   street sides, clear of the doors' ways out, with cars parked in some
- *   (`BAY_CARS`), so nothing parks in the traffic lanes.
- * - **Edges** (`EDGES`): low iron railings or hedges round each lawn, open
- *   at every way in; fire hydrants (`HYDRANTS`) on the sidewalk corners.
+ *   (`BAY_CARS`), so nothing parks in the traffic lanes; and (the grit
+ *   step) a longer one along Trench Avenue under the el wherever its
+ *   pillars stand over a block's front (the el's median is too narrow for
+ *   cars), fuller.
+ * - **Edges** (`EDGES`): chain-link on a low concrete kerb round each yard
+ *   (the grit step: once iron railings and hedges round lawns), open at
+ *   every way in; fire hydrants (`HYDRANTS`) on the sidewalk corners.
  *
  * Everything here is scenery: nothing to do yet. What's solid
  * (`COMMONS_SOLIDS`: the cage's and courts' fences, ramps, grills, the
@@ -23,7 +27,8 @@
  */
 import type { Face, Footprint, Pt, Rect } from './downtown';
 import { TOWERS, type Tower } from './projects';
-import { TRENCH_BLOCKS } from './trenches';
+import { TRENCH_BLOCKS, inTrenches } from './trenches';
+import { PILLARS } from './metro';
 import { WALK_W } from './layout';
 import { rng } from './recipes';
 
@@ -237,6 +242,32 @@ export const BAYS: Bay[] = (() => {
     for (const r of runs) if (pick.length < 2 && !pick.some((p) => p.face === r.face)) pick.push(r);
     pick.forEach((p, i) => out.push({ ...p, id: `${p.id}:${i}` }));
   }
+  // (the grit step) Along Trench Avenue under the el: where its pillars stand over a block's front, its longest clear run
+  for (const blk of TRENCH_BLOCKS) {
+    if (!blk.id.startsWith('trench-b0-') || blk.id === 'trench-b0-2') continue;
+    const b = bounds(blk.poly);
+    if (!PILLARS.some((p) => inTrenches(p.at[0], p.at[1]) && p.at[0] > b[0] && p.at[0] < b[2])) continue;
+    const keep = [...waysIn(blk.id), ...standing(blk.id)];
+    const strip = (a0: number, a1: number): Rect => [a0, b[1], a1, b[1] + BAY_DEPTH];
+    let best: [number, number] | null = null;
+    let start: number | null = null;
+    const close = (end: number) => {
+      if (start !== null && (!best || end - start > best[1] - best[0])) best = [start, end];
+      start = null;
+    };
+    for (let a = b[0] + 3; a <= b[2] - 3; a += 0.5) {
+      const free = !keep.some((k) => overlaps(k, strip(a, a + 0.5)));
+      if (free && start === null) start = a;
+      if (!free) close(a);
+    }
+    close(b[2] - 3);
+    if (!best) continue;
+    const [s0, s1] = best as [number, number];
+    const n = Math.min(6, Math.floor((s1 - s0) / SPACE));
+    if (n < 2) continue;
+    const a0 = s0 + (s1 - s0 - n * SPACE) / 2;
+    out.push({ id: `${blk.id}:el`, block: blk.id, rect: strip(a0, a0 + n * SPACE), face: 'n' });
+  }
   return out;
 })();
 /** The cars parked in the bays: model, x, z, heading (cars.ts's yaw), colour; about two spaces in three taken */
@@ -250,7 +281,8 @@ export const BAY_CARS: { bay: string; car: [string, number, number, number, stri
     const [x0, z0, x1, z1] = bay.rect;
     const n = Math.round((alongX ? x1 - x0 : z1 - z0) / SPACE);
     for (let i = 0; i < n; i++) {
-      if (r() > 0.68) continue;
+      // (fuller under the el)
+      if (r() > (bay.id.endsWith(':el') ? 0.85 : 0.68)) continue;
       const a = (alongX ? x0 : z0) + (i + 0.5) * SPACE;
       const [x, z] = alongX ? [a, (z0 + z1) / 2] : [(x0 + x1) / 2, a];
       // Parked along the street, either way
@@ -265,20 +297,20 @@ export const CAR_HALF = { l: 1.5, w: 0.6 };
 
 /* ---------- The lawns' edges ---------- */
 
-/** A run of railing or hedge along a lawn's edge, a little in from it */
+/** A run of chain-link (on its low kerb) along a yard's edge, a little in from it */
 export interface EdgeRun {
   block: string;
   a: Pt;
   c: Pt;
-  kind: 'rail' | 'hedge';
 }
+/** The yards' chain-link: how high (over its kerb) */
+export const EDGE_H = 1.1;
 export const EDGE_IN = 0.3;
 export const EDGES: EdgeRun[] = (() => {
   const out: EdgeRun[] = [];
-  TRENCH_BLOCKS.forEach((blk, bi) => {
+  TRENCH_BLOCKS.forEach((blk) => {
     if (blk.row !== 'B' || blk.id === 'trench-b0-2') return;
     const b = bounds(blk.poly);
-    const kind: EdgeRun['kind'] = bi % 3 === 1 ? 'hedge' : 'rail';
     const gaps = [...waysIn(blk.id), ...BAYS.filter((y) => y.block === blk.id).map((y) => grow(y.rect, 0.3)), ...standing(blk.id)];
     const i = EDGE_IN;
     const lines: [Pt, Pt][] = [
@@ -293,7 +325,7 @@ export const EDGES: EdgeRun[] = (() => {
       const probe = (a: number): Rect => (alongX ? [a, p[1] - 0.05, a + 0.5, p[1] + 0.05] : [p[0] - 0.05, a, p[0] + 0.05, a + 0.5]);
       let start: number | null = null;
       const close = (end: number) => {
-        if (start !== null && end - start >= 1) out.push({ block: blk.id, a: alongX ? [start, p[1]] : [p[0], start], c: alongX ? [end, p[1]] : [p[0], end], kind });
+        if (start !== null && end - start >= 1) out.push({ block: blk.id, a: alongX ? [start, p[1]] : [p[0], start], c: alongX ? [end, p[1]] : [p[0], end] });
         start = null;
       };
       for (let a = a0; a < a1 - 1e-6; a += 0.5) {
@@ -317,14 +349,10 @@ export const HYDRANTS: Pt[] = TRENCH_BLOCKS.filter((b) => b.row === 'B').flatMap
   ] as Pt[];
 });
 
-/** Everything the commons take on a lawn (the amenities, their ways out, the bays): the projects' trees keep off it (projects3d.ts) */
-export const commonsTaken = (block: string): Rect[] => [
-  ...AMENITIES.filter((a) => a.block === block).flatMap((a) => [grow(a.rect, 1), amenityWay(a)]),
-  ...BAYS.filter((y) => y.block === block).map((y) => grow(y.rect, 0.6)),
-];
-
 /* ---------- What's solid, and who's out there ---------- */
 
+/** The community garden's chain-link, how high */
+export const GARDEN_FENCE = 1.4;
 /** An amenity's solid parts (fences with their gates, ramps, grills, the washing lines' poles) */
 export function amenitySolids(a: Amenity): Footprint[] {
   const [x0, z0, x1, z1] = a.rect;
@@ -363,7 +391,8 @@ export function amenitySolids(a: Amenity): Footprint[] {
           [cx - 0.9, cz - 1.2, cx + 0.9, cz + 1.2, 0.45],
         ];
   }
-  if (a.kind === 'garden') return gardenGrills(a).map(([x, z]): Footprint => [x - 0.3, z - 0.3, x + 0.3, z + 0.3, 0.9]);
+  // (the grit step) The community garden fenced in with chain-link, a gate on its way out
+  if (a.kind === 'garden') return [...fence(GARDEN_FENCE, 1.6), ...gardenGrills(a).map(([x, z]): Footprint => [x - 0.3, z - 0.3, x + 0.3, z + 0.3, 0.9])];
   if (a.kind === 'washing') return washingPoles(a).map(([x, z]): Footprint => [x - 0.06, z - 0.06, x + 0.06, z + 0.06, 1.9]);
   return [];
 }
@@ -410,6 +439,12 @@ export const COMMONS_SOLIDS: Footprint[] = [
   [...REC.centre, REC.centreH + 0.3],
   [...REC.laundry, REC.laundryH + 0.25],
   ...pavilionPosts().map(([x, z]): Footprint => [x - 0.1, z - 0.1, x + 0.1, z + 0.1, REC.pavilionH]),
+  // (the grit step) The yards' chain-link on its kerb, open at the ways in
+  ...EDGES.map((e): Footprint => {
+    const alongX = e.a[1] === e.c[1];
+    const [wx, wz] = alongX ? [0, 0.1] : [0.1, 0];
+    return [Math.min(e.a[0], e.c[0]) - wx, Math.min(e.a[1], e.c[1]) - wz, Math.max(e.a[0], e.c[0]) + wx, Math.max(e.a[1], e.c[1]) + wz, EDGE_H + 0.12];
+  }),
   ...BAY_CARS.map(({ car: [, x, z, yaw] }): Footprint => {
     const along = Math.abs(Math.cos(yaw)) > 0.5;
     const [hx, hz] = along ? [CAR_HALF.l, CAR_HALF.w] : [CAR_HALF.w, CAR_HALF.l];

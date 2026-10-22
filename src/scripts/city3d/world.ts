@@ -14,7 +14,7 @@
  */
 import * as THREE from 'three';
 import { DISTRICTS } from '../../data/plots';
-import { Batch, PAL, canvasTex, facadeMat, fx, glowMat, glowTex, lit, neon, rand, rng, sidesBox, toon } from './kit';
+import { Batch, PAL, canvasTex, facadeMat, flickerTogether, fx, glowMat, glowTex, lit, neon, rand, rng, sidesBox, toon } from './kit';
 import { BLOCKS, BS, CENTER_XZ, CITY_EXT, CORE_ROADS, DOWNTOWN, EW_ROADS, EXT, EXTRA_LOTS, LANE, MEDIAN, NS_ROADS, OUTER_HI, OUTER_LO, RIVER, SEATS, SOUTH_ROAD, WALK_W, type Road } from './layout';
 import { PLAN, offsetLine, pointAt, riverBridges, streetLength, type Pt, type Street } from './streetplan';
 import { HIGHWAY, HIGHWAY_HALF, fromHighway } from './highway';
@@ -27,6 +27,7 @@ import { outskirtsTrees } from './outskirts';
 import { SKYLINE } from './bounds';
 import { keyRect } from './tileplan';
 import { site } from './tilework';
+import { lampKind } from './trenches';
 
 export { BLOCKS, BS, CORE_ROADS, EW_ROADS, EXT, NS_ROADS, RIVER, SOUTH_ROAD, WALK_W, type Road };
 /** District blocks around the core: one large plot each (src/data/plots.ts). */
@@ -57,9 +58,9 @@ export function addLamp(x: number, z: number, ry = 0, y = SLAB) {
   lamps.push({ x, z, ry, y });
 }
 /** A pool of lamplight on the ground with no street lamp over it (alley wall lamps): drawn with the street lamps' pools */
-const pools: { x: number; z: number; y: number; size: number }[] = [];
-export function addPool(x: number, z: number, size: number, y = SLAB) {
-  pools.push({ x, z, y, size });
+const pools: { x: number; z: number; y: number; size: number; sodium: boolean }[] = [];
+export function addPool(x: number, z: number, size: number, y = SLAB, sodium = false) {
+  pools.push({ x, z, y, size, sodium });
 }
 
 /* ---------- Ground ---------- */
@@ -81,22 +82,87 @@ const paving = canvasTex(256, 256, (ctx) => {
 paving.wrapS = paving.wrapT = THREE.RepeatWrapping;
 paving.repeat.set(4, 4);
 
+/**
+ * The Trenches' yards (the grit step): worn concrete, 8 tiles to a repeat (laid on in world units): slabs two tiles
+ * square with their joints, a few slabs patched, oil stains, specks and cracks running across
+ */
+export const YARD_REPEAT = 8;
+const yard = canvasTex(512, 512, (c) => {
+  const r = rng(77);
+  c.fillStyle = '#5d5a6d';
+  c.fillRect(0, 0, 512, 512);
+  // Specks of grit, light and dark
+  for (let i = 0; i < 2600; i++) {
+    c.fillStyle = r() < 0.5 ? 'rgba(30,26,40,0.22)' : 'rgba(160,156,176,0.16)';
+    c.fillRect(r() * 512, r() * 512, 1 + r() * 2, 1 + r() * 2);
+  }
+  // A few slabs replaced, a shade off
+  for (let i = 0; i < 6; i++) {
+    c.fillStyle = r() < 0.5 ? '#67647a' : '#545164';
+    c.fillRect(Math.floor(r() * 4) * 128 + 2, Math.floor(r() * 4) * 128 + 2, 124, 124);
+  }
+  // Stains, wrapping round the edges so the repeat doesn't show
+  for (let i = 0; i < 14; i++) {
+    const [x, y, rad] = [r() * 512, r() * 512, 14 + r() * 44];
+    for (const [ox, oy] of [
+      [0, 0],
+      [512, 0],
+      [-512, 0],
+      [0, 512],
+      [0, -512],
+    ]) {
+      const g = c.createRadialGradient(x + ox, y + oy, 0, x + ox, y + oy, rad);
+      g.addColorStop(0, 'rgba(24,20,34,0.38)');
+      g.addColorStop(1, 'rgba(24,20,34,0)');
+      c.fillStyle = g;
+      c.fillRect(x + ox - rad, y + oy - rad, rad * 2, rad * 2);
+    }
+  }
+  // The joints
+  c.fillStyle = '#423f53';
+  for (let k = 0; k < 512; k += 128) {
+    c.fillRect(k, 0, 3, 512);
+    c.fillRect(0, k, 512, 3);
+  }
+  // Cracks: wandering lines, drawn again a repeat over where they run off an edge
+  c.strokeStyle = '#363346';
+  c.lineWidth = 1.6;
+  c.lineJoin = 'round';
+  for (let i = 0; i < 16; i++) {
+    const pts: [number, number][] = [[r() * 512, r() * 512]];
+    let a = r() * Math.PI * 2;
+    for (let k = 0; k < 7; k++) {
+      a += (r() - 0.5) * 1.3;
+      const [x, y] = pts[pts.length - 1];
+      pts.push([x + Math.cos(a) * (8 + r() * 16), y + Math.sin(a) * (8 + r() * 16)]);
+    }
+    for (const ox of [-512, 0, 512])
+      for (const oy of [-512, 0, 512]) {
+        c.beginPath();
+        pts.forEach(([x, y], k) => (k ? c.lineTo(x + ox, y + oy) : c.moveTo(x + ox, y + oy)));
+        c.stroke();
+      }
+  }
+});
+yard.wrapS = yard.wrapT = THREE.RepeatWrapping;
+
 const LOTS: Record<string, THREE.Material> = {
   grass: toon('#2f7a52'),
   paving: new THREE.MeshToonMaterial({ map: paving, color: '#ffffff' }),
   concrete: toon('#4b4766'),
   dirt: toon('#6a4a3c'),
+  yard: new THREE.MeshToonMaterial({ map: yard, color: '#ffffff' }),
 };
 export type LotKind = keyof typeof LOTS;
 /** The lot surfaces (grass, paving, concrete, dirt), for squares and pads drawn elsewhere */
 export const lotMat = (k: LotKind) => LOTS[k];
 
 /** A flat outline at height y, facing up (UVs one texture repeat per lot, like a block's) */
-export function flatPoly(poly: Pt[], y: number) {
+export function flatPoly(poly: Pt[], y: number, repeat = BS - 0.8) {
   const shape = new THREE.Shape(poly.map(([x, z]) => new THREE.Vector2(x, -z)));
   const g = new THREE.ShapeGeometry(shape).rotateX(-Math.PI / 2).translate(0, y, 0);
   const uv = g.attributes.uv;
-  for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) / (BS - 0.8), uv.getY(i) / (BS - 0.8));
+  for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) / repeat, uv.getY(i) / repeat);
   return g;
 }
 /** An outline raised from the ground to height h (a kerbed slab) */
@@ -378,10 +444,17 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
 
   // Block slabs: the sidewalk round every block (the kerb) and the lot inside: downtown's blocks, the districts and the extra lots
   const kerb = toon('#5a5290');
+  // (The Trenches' sidewalks are plain grey concrete, their yards worn concrete: the grit step)
+  const trenchKerb = toon('#5f5c70');
   PLAN.blocks.forEach((blk, i) => {
     // (The bends' outer sidewalks are drawn as one kerb each, below)
     if (blk.id.startsWith('kerb-')) return;
     const slab = PLAN.slabs[i];
+    if (blk.id.startsWith('trench-')) {
+      b.add(slabPoly(slab, SLAB), trenchKerb);
+      b.add(flatPoly(insetPoly(blk.poly, 0.4), SLAB + 0.005, YARD_REPEAT), LOTS.yard);
+      return;
+    }
     const kind: LotKind =
       lots[blk.id] ??
       (blk.ref === 'garage' ? 'concrete' : blk.ref === 'market' || blk.ref === 'units' ? 'paving' : blk.use === 'park' ? 'grass' : blk.id.startsWith('dt-') ? 'paving' : 'grass');
@@ -705,21 +778,25 @@ export function buildTrees() {
     });
 }
 
+/**
+ * The street lamps: white in town; in The Trenches (the grit step, `lampKind()` in trenches.ts) sodium orange, a few
+ * flickering (two sets, each going out together: its bulbs, halos and pools) and the odd one dead (no light at all)
+ */
+type Tone = 'white' | 'sodium' | 'flickA' | 'flickB';
+const TONES: Tone[] = ['white', 'sodium', 'flickA', 'flickB'];
+const SODIUM = { bulb: '#ffb35c', halo: '#ffab55', pool: '#ff9a45' };
 export function buildLamps(scene: THREE.Scene) {
-  const n = lamps.length;
+  const toneOf = lamps.map((l, i): Tone | 'dead' => {
+    const k = lampKind(l.x, l.z);
+    return k === null ? 'white' : k === 'sodium' ? 'sodium' : k === 'dead' ? 'dead' : i % 2 ? 'flickA' : 'flickB';
+  });
   // The lamps themselves are merged with the city's fixed geometry (split by tile: tileBatch() in kit.ts)
   const poles: THREE.Matrix4[] = [];
   const arms: THREE.Matrix4[] = [];
   const bulbs: THREE.Matrix4[] = [];
-  // Halos are points, so they always face the camera
-  const haloPos = new Float32Array(n * 3);
-  const haloMat = lit(
-    new THREE.PointsMaterial({ color: '#ffe2a0', map: glowTex, size: 1.1, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }),
-    0,
-    0.3
-  );
-  const pool = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), lit(glowMat('#ffd98a', 1), 0, 0.26), n + pools.length);
-  const m = new THREE.Matrix4();
+  // Halos are points, so they always face the camera; pools are flat glows on the ground
+  const halos: Record<Tone, number[]> = { white: [], sodium: [], flickA: [], flickB: [] };
+  const poolsOf: Record<Tone, THREE.Matrix4[]> = { white: [], sodium: [], flickA: [], flickB: [] };
   const q = new THREE.Quaternion();
   const up = new THREE.Vector3(0, 1, 0);
   const flat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
@@ -729,10 +806,26 @@ export function buildLamps(scene: THREE.Scene) {
     poles.push(new THREE.Matrix4().compose(new THREE.Vector3(l.x, l.y + 0.8, l.z), q, new THREE.Vector3(1, 1, 1)));
     arms.push(new THREE.Matrix4().compose(new THREE.Vector3(l.x + dir.x, l.y + 1.58, l.z + dir.z), q, new THREE.Vector3(1, 1, 1)));
     bulbs.push(new THREE.Matrix4().compose(new THREE.Vector3(l.x + dir.x * 2, l.y + 1.53, l.z + dir.z * 2), q, new THREE.Vector3(1, 1, 1)));
-    haloPos.set([l.x + dir.x * 2, l.y + 1.5, l.z + dir.z * 2], i * 3);
-    pool.setMatrixAt(i, m.compose(new THREE.Vector3(l.x + dir.x * 2, l.y + 0.02, l.z + dir.z * 2), flat, new THREE.Vector3(2.6, 2.6, 2.6)));
+    const tone = toneOf[i];
+    if (tone === 'dead') return;
+    halos[tone].push(l.x + dir.x * 2, l.y + 1.5, l.z + dir.z * 2);
+    poolsOf[tone].push(new THREE.Matrix4().compose(new THREE.Vector3(l.x + dir.x * 2, l.y + 0.02, l.z + dir.z * 2), flat, new THREE.Vector3(2.6, 2.6, 2.6)));
   });
-  pools.forEach((p, i) => pool.setMatrixAt(n + i, m.compose(new THREE.Vector3(p.x, p.y + 0.02, p.z), flat, new THREE.Vector3(p.size, p.size, p.size))));
+  for (const p of pools) poolsOf[p.sodium ? 'sodium' : 'white'].push(new THREE.Matrix4().compose(new THREE.Vector3(p.x, p.y + 0.02, p.z), flat, new THREE.Vector3(p.size, p.size, p.size)));
+  // Each tone's materials: the flickering ones going out together
+  const flicker = (t: Tone) => (t === 'flickA' || t === 'flickB' ? 1.3 : 0);
+  const mats = Object.fromEntries(
+    TONES.map((t) => {
+      const white = t === 'white';
+      // (a flickering bulb keeps its own material, not the Batch's shared neon, so it goes out with its halo and pool)
+      const bulb = white ? neon('#fff1c2', 0.6, 2.4) : flicker(t) ? lit(new THREE.MeshBasicMaterial({ color: SODIUM.bulb, toneMapped: true }), 0.6, 2.4, flicker(t)) : neon(SODIUM.bulb, 0.6, 2.4);
+      const halo = lit(new THREE.PointsMaterial({ color: white ? '#ffe2a0' : SODIUM.halo, map: glowTex, size: 1.1, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }), 0, white ? 0.3 : 0.34, flicker(t));
+      const pool = lit(glowMat(white ? '#ffd98a' : SODIUM.pool, 1), 0, white ? 0.26 : 0.3, flicker(t));
+      if (flicker(t)) flickerTogether([bulb, halo, pool], t === 'flickA' ? 11 : 47);
+      return [t, { bulb, halo, pool }];
+    })
+  ) as unknown as Record<Tone, { bulb: THREE.Material; halo: THREE.PointsMaterial; pool: THREE.Material }>;
+  const dead = toon('#3a3644');
   // Near only (growth plan Phase 2): far off, a lamp is a hairline; its halo (below) still shows at night.
   // Each tile's lamps a site (built as you go: tilework.ts)
   const poleGeo = new THREE.CylinderGeometry(0.035, 0.05, 1.6, 6);
@@ -748,9 +841,22 @@ export function buildLamps(scene: THREE.Scene) {
       // (the bulbs cast no shadow)
       const bulbB = new Batch();
       bulbB.lod = 'near';
-      bulbB.instances(bulbGeo, neon('#fff1c2', 0.6, 2.4), pick(bulbs)).build(into, { cast: false, receive: true });
+      for (const t of [...TONES, 'dead' as const]) {
+        const mine = list.filter((l) => toneOf[l.i] === t).map((l) => bulbs[l.i]);
+        if (mine.length) bulbB.instances(bulbGeo, t === 'dead' ? dead : mats[t].bulb, mine);
+      }
+      bulbB.build(into, { cast: false, receive: true });
     });
-  const haloGeo = new THREE.BufferGeometry();
-  haloGeo.setAttribute('position', new THREE.BufferAttribute(haloPos, 3));
-  scene.add(fx(new THREE.Points(haloGeo, haloMat)), fx(pool));
+  for (const t of TONES) {
+    if (halos[t].length) {
+      const haloGeo = new THREE.BufferGeometry();
+      haloGeo.setAttribute('position', new THREE.Float32BufferAttribute(halos[t], 3));
+      scene.add(fx(new THREE.Points(haloGeo, mats[t].halo)));
+    }
+    if (poolsOf[t].length) {
+      const pool = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), mats[t].pool, poolsOf[t].length);
+      poolsOf[t].forEach((m, i) => pool.setMatrixAt(i, m));
+      scene.add(fx(pool));
+    }
+  }
 }

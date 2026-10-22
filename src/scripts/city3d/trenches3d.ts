@@ -6,10 +6,14 @@
  * line down the streets, white dashes between the avenue's lanes), zebra
  * crossings on every arm of every junction, and street lamps along both
  * sides. Its blocks are the street plan's (world.ts draws their slabs and
- * lawns). The towers, brownstones and The Block come in the next steps.
+ * yards). The towers, brownstones and The Block come in the next steps.
+ *
+ * The grit step wore them: patches of newer and older asphalt down the lanes
+ * (each inside its lane, clear of the lines), cracks, and manhole covers;
+ * the lamps are sodium orange (world.ts, `lampKind()`).
  */
 import * as THREE from 'three';
-import { Batch, neon, toon } from './kit';
+import { Batch, neon, rng, toon } from './kit';
 import { LANE, MEDIAN } from './layout';
 import { SLAB, addLamp, keepTreesOff } from './world';
 import { site } from './tilework';
@@ -51,6 +55,8 @@ export function buildTrenches() {
   const white = toon('#d9d5ee');
   const zebra = toon('#e8e4f8');
   const unit = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
+  // (a manhole cover: a disc a unit across)
+  const disc = new THREE.CircleGeometry(0.5, 14).rotateX(-Math.PI / 2);
   const m = new THREE.Matrix4();
   const q = new THREE.Quaternion();
   /** A flat mark at x, z, w along x and d along z */
@@ -91,6 +97,32 @@ export function buildTrenches() {
             if (s.kind === 'avenue') for (const off of [-(MEDIAN / 2 + LANE), MEDIAN / 2 + LANE]) alongX ? mark(ws, p, c + off, 0.55, 0.07, 0.036) : mark(ws, c + off, p, 0.07, 0.55, 0.038);
             else alongX ? mark(ys, p, c, 0.55, 0.07, 0.036) : mark(ys, c, p, 0.07, 0.55, 0.038);
         b.instances(unit, yellow, ys).instances(unit, white, ws);
+        // Wear: patches inside the lanes (never across a line), cracks and manholes near
+        const r = rng(Math.round(c * 13 + p0 * 7));
+        const top = (alongX ? 0.03 : 0.034) + 0.0016;
+        const lanes = s.kind === 'avenue' ? [-(MEDIAN / 2 + LANE * 1.5), -(MEDIAN / 2 + LANE / 2), MEDIAN / 2 + LANE / 2, MEDIAN / 2 + LANE * 1.5] : [-LANE / 2, LANE / 2];
+        const patches: THREE.Matrix4[][] = [[], []];
+        const cracks: THREE.Matrix4[] = [];
+        const holes: THREE.Matrix4[] = [];
+        for (const [u, v] of mine)
+          for (let p = u + 1 + r() * 4, len = 0; p < v - 2; p += len + 1 + r() * 5) {
+            const lane = lanes[Math.floor(r() * lanes.length)];
+            len = 1.2 + r() * 2.6;
+            const wid = 0.6 + r() * 0.6;
+            if (p + len > v - 0.5) break;
+            const k = r();
+            if (k < 0.55) alongX ? mark(patches[k < 0.3 ? 0 : 1], p + len / 2, c + lane, len, wid, top) : mark(patches[k < 0.3 ? 0 : 1], c + lane, p + len / 2, wid, len, top);
+            else if (k < 0.85)
+              for (let q = 0; q < 3; q++) {
+                // A crack: a few short dark strokes wandering down the lane
+                const off = lane + (r() - 0.5) * 0.8;
+                const at = p + q * 0.5;
+                alongX ? mark(cracks, at, c + off, 0.5, 0.025, top + 0.0004) : mark(cracks, c + off, at, 0.025, 0.5, top + 0.0004);
+              }
+            else alongX ? mark(holes, p, c + lane, 0.55, 0.55, top + 0.0004) : mark(holes, c + lane, p, 0.55, 0.55, top + 0.0004);
+          }
+        b.instances(unit, toon('#1d1b2f'), patches[0]).instances(unit, toon('#2f2c45'), patches[1]);
+        b.detail(() => b.instances(unit, toon('#121020'), cracks).instances(disc, toon('#47445a'), holes));
         b.build(into, { cast: false, receive: true });
       });
     }
