@@ -592,13 +592,18 @@ function kit(b: Batch, F: Frame) {
     g.translate((p.x + q.x) / 2, (p.y + q.y) / 2, (p.z + q.z) / 2);
     put(g, mat);
   };
-  return { put, lbox, wall, sign, beam };
+  /** What `draw` adds is drawn at every distance (the walls, roofs, signs and lit crowns: a building's far form); the rest is near only */
+  const all = (draw: () => void) => b.detail(draw, 'all');
+  return { put, lbox, wall, sign, beam, all };
 }
 type Kit = ReturnType<typeof kit>;
 const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
 
 /** The four walls: the front's ground floor (if any) and upper floors from `upper`, the sides and back full height */
 function shell(k: Kit, F: Frame, top: number, wallBand: Band, ground: Band | null, upper: number, u0: number) {
+  k.all(() => shellWalls(k, F, top, wallBand, ground, upper, u0));
+}
+function shellWalls(k: Kit, F: Frame, top: number, wallBand: Band, ground: Band | null, upper: number, u0: number) {
   const { w, d } = F;
   if (ground) {
     k.wall(ground, [0, 0], [w, 0], S, S + SHOP_H, [0, 1], u0 * 0.37);
@@ -617,7 +622,7 @@ function roof(k: Kit, F: Frame, top: number, par: THREE.Material, ph = 0.22) {
   const { w, d } = F;
   const t = 0.12;
   // The slab tucked just inside the walls (flush with them, its edge flickers against them); the parapet covers the gap
-  k.lbox(R_IN, w - R_IN, top - 0.04, top, -d + R_IN, -R_IN, ROOF);
+  k.all(() => k.lbox(R_IN, w - R_IN, top - 0.04, top, -d + R_IN, -R_IN, ROOF));
   k.lbox(0, w, top, top + ph, -t, 0, par);
   k.lbox(0, w, top, top + ph, -d, -d + t, par);
   k.lbox(0, t, top, top + ph, -d + t, -t, par);
@@ -789,7 +794,11 @@ const shopBand = (color: string): GroundKind =>
       ? 'shopPink'
       : 'shopWarm';
 
+/** A building: its walls, roof, signs and lit crown at every distance, its details only near (growth plan Phase 2) */
 function building(b: Batch, f: Infill, crowd: Idle[], low: boolean) {
+  b.detail(() => buildingAt(b, f, crowd, low));
+}
+function buildingAt(b: Batch, f: Infill, crowd: Idle[], low: boolean) {
   const r = rng(f.seed);
   const F = frameOf(f);
   const k = kit(b, F);
@@ -866,7 +875,7 @@ function building(b: Batch, f: Infill, crowd: Idle[], low: boolean) {
     const trimM = toon(trim);
     const upper = S + SHOP_H + FASCIA;
     shell(k, F, top, ATLAS.wall[kind], ATLAS.ground[shopBand(sg.color)], upper, u0);
-    fascia(k, w, id, sg.color);
+    k.all(() => fascia(k, w, id, sg.color));
     if (f.floors > 0) dress(k, w, upper, top, f.floors, trimM);
     cornice(k, w, top, trimM, low, kind === 'brick' || kind === 'brownstone');
     roof(k, F, top, toon(shadeHex(wall, -0.25)));
@@ -874,7 +883,7 @@ function building(b: Batch, f: Infill, crowd: Idle[], low: boolean) {
     const stripes = id === 'crumpet' ? ['#f2c94c', '#f3f2f7'] : id === 'coffee' ? ['#5a3a2a', '#e8d9c0'] : [AWNINGS[Math.floor(r() * AWNINGS.length)], '#f3f2f7'];
     if (named || r() < 0.65) awning(k, 0.15, w - 0.15, S + SHOP_H - 0.02, 0.48, stripes);
     const escape = f.floors >= 2 && w >= 3.1 && !named && r() < 0.55 && !LOW;
-    if (f.floors >= 1) blade(k, id, w - 0.3, upper + 0.15, Math.min(top - 0.5, upper + 0.15 + 1.5));
+    if (f.floors >= 1) k.all(() => blade(k, id, w - 0.3, upper + 0.15, Math.min(top - 0.5, upper + 0.15 + 1.5)));
     if (escape) fireEscape(k, 0.3, Math.min(w - 0.8, 1.9), upper, f.floors, low);
     // Out front: café tables (with people), or a chalk board, a planter and a bike
     if (id === 'coffee') {
@@ -920,6 +929,7 @@ function building(b: Batch, f: Infill, crowd: Idle[], low: boolean) {
 
   if (f.type === 'diner') {
     const chrome = toon('#c9c4e6');
+    k.all(() => {
     k.wall(ATLAS.ground.diner, [0, 0], [w, 0], S, S + SHOP_H, [0, 1], u0);
     for (const [a, c, n] of [
       [
@@ -940,6 +950,7 @@ function building(b: Batch, f: Infill, crowd: Idle[], low: boolean) {
     k.lbox(-0.04, w + 0.04, S + SHOP_H + 0.08, S + SHOP_H + 0.13, -d + 0.1, 0.05, glow('#ff3b8a'));
     k.lbox(-0.04, w + 0.04, top - 0.1, top - 0.05, -d + 0.1, 0.05, glow(PAL.cyan));
     k.lbox(0, w, top, top + 0.06, -d, 0, ROOF);
+    });
     // The door: a chrome frame on the front
     k.lbox(w * 0.5 - 0.35, w * 0.5 + 0.35, S, S + 1.15, 0, 0.04, chrome);
     k.lbox(w * 0.5 - 0.27, w * 0.5 + 0.27, S + 0.05, S + 1.08, 0.02, 0.05, toon('#3e5a8f'));
@@ -947,9 +958,11 @@ function building(b: Batch, f: Infill, crowd: Idle[], low: boolean) {
     const sw = Math.min(w - 0.2, 2.6);
     const sy = top + 0.95;
     for (const u of [w / 2 - sw * 0.35, w / 2 + sw * 0.35]) k.lbox(u - 0.04, u + 0.04, top, sy - 0.3, -0.6, -0.52, METAL);
-    k.lbox(w / 2 - sw / 2 - 0.04, w / 2 + sw / 2 + 0.04, sy - sw / 8.4 - 0.04, sy + sw / 8.4 + 0.04, -0.6, -0.5, INK);
-    k.sign(SIGN_ATLAS.board('diner'), w / 2, sy, -0.498, sw, sw / 4.2);
-    k.sign(SIGN_ATLAS.board('diner'), w / 2, sy, -0.602, sw, sw / 4.2, Math.PI);
+    k.all(() => {
+      k.lbox(w / 2 - sw / 2 - 0.04, w / 2 + sw / 2 + 0.04, sy - sw / 8.4 - 0.04, sy + sw / 8.4 + 0.04, -0.6, -0.5, INK);
+      k.sign(SIGN_ATLAS.board('diner'), w / 2, sy, -0.498, sw, sw / 4.2);
+      k.sign(SIGN_ATLAS.board('diner'), w / 2, sy, -0.602, sw, sw / 4.2, Math.PI);
+    });
     acUnit(k, w * 0.25, -d * 0.6, top + 0.06);
     // Tables out front, someone at one
     table(k, 0.8, 0.5, null);
@@ -972,7 +985,7 @@ function building(b: Batch, f: Infill, crowd: Idle[], low: boolean) {
     if (teeth) {
       // A sawtooth roof, its glazing to the front
       // (no parapet here to hide a gap: the slab a touch proud of the walls instead of flush with them)
-      k.lbox(-0.01, w + 0.01, top - 0.04, top, -d - 0.01, 0.01, ROOF);
+      k.all(() => k.lbox(-0.01, w + 0.01, top - 0.04, top, -d - 0.01, 0.01, ROOF));
       const n = Math.max(2, Math.round(w / 1.4));
       const du = w / n;
       const ht = 0.7;
@@ -990,8 +1003,10 @@ function building(b: Batch, f: Infill, crowd: Idle[], low: boolean) {
           const id = (['records', 'pizza', 'noodles', 'books'] as SignId[])[Math.floor(r() * 4)];
           const bw = Math.min(w - 0.4, 2.4);
           for (const u of [w / 2 - bw * 0.3, w / 2 + bw * 0.3]) k.lbox(u - 0.04, u + 0.04, top, top + 1.1, -d * 0.5 - 0.04, -d * 0.5 + 0.04, METAL);
-          k.lbox(w / 2 - bw / 2 - 0.04, w / 2 + bw / 2 + 0.04, top + 0.95, top + 1.6, -d * 0.5 - 0.1, -d * 0.5 - 0.04, INK);
-          k.sign(SIGN_ATLAS.board(id), w / 2, top + 1.275, -d * 0.5 + 0.0, bw, 0.57);
+          k.all(() => {
+            k.lbox(w / 2 - bw / 2 - 0.04, w / 2 + bw / 2 + 0.04, top + 0.95, top + 1.6, -d * 0.5 - 0.1, -d * 0.5 - 0.04, INK);
+            k.sign(SIGN_ATLAS.board(id), w / 2, top + 1.275, -d * 0.5 + 0.0, bw, 0.57);
+          });
         }
       });
     }
@@ -1004,19 +1019,25 @@ function building(b: Batch, f: Infill, crowd: Idle[], low: boolean) {
     const inset = Math.min(0.5, (d - 2.4) / 2);
     const side = Math.min(0.35, (w - 2.6) / 2);
     const podBand = ATLAS.wall.glassTeal;
-    k.wall(ATLAS.ground.lobby, [0, 0], [w, 0], S, S + SHOP_H, [0, 1], u0);
-    k.wall(podBand, [0, 0], [w, 0], S + SHOP_H, podium, [0, 1], u0);
-    k.wall(podBand, [0, -d], [0, 0], S, podium, [-1, 0], u0);
-    k.wall(podBand, [w, 0], [w, -d], S, podium, [1, 0], u0);
-    k.wall(podBand, [w, -d], [0, -d], S, podium, [0, -1], u0);
+    k.all(() => {
+      k.wall(ATLAS.ground.lobby, [0, 0], [w, 0], S, S + SHOP_H, [0, 1], u0);
+      k.wall(podBand, [0, 0], [w, 0], S + SHOP_H, podium, [0, 1], u0);
+      k.wall(podBand, [0, -d], [0, 0], S, podium, [-1, 0], u0);
+      k.wall(podBand, [w, 0], [w, -d], S, podium, [1, 0], u0);
+      k.wall(podBand, [w, -d], [0, -d], S, podium, [0, -1], u0);
+    });
     const trimM = toon(WALL_COLOR.glassBlue.trim);
     k.lbox(-0.04, w + 0.04, podium - 0.04, podium + 0.12, -d - 0.04, 0.04, trimM);
     const [a0, a1, c0, c1] = [side, w - side, -d + side, -inset];
     const tb = ATLAS.wall.glassBlue;
-    k.wall(tb, [a0, c1], [a1, c1], podium, top, [0, 1], u0);
-    k.wall(tb, [a0, c0], [a0, c1], podium, top, [-1, 0], u0);
-    k.wall(tb, [a1, c1], [a1, c0], podium, top, [1, 0], u0);
-    k.wall(tb, [a1, c0], [a0, c0], podium, top, [0, -1], u0);
+    k.all(() => {
+      k.wall(tb, [a0, c1], [a1, c1], podium, top, [0, 1], u0);
+      k.wall(tb, [a0, c0], [a0, c1], podium, top, [-1, 0], u0);
+      k.wall(tb, [a1, c1], [a1, c0], podium, top, [1, 0], u0);
+      k.wall(tb, [a1, c0], [a0, c0], podium, top, [0, -1], u0);
+      // The podium's roof, under the trim (near, the trim covers it)
+      k.lbox(0.005, w - 0.005, podium - 0.05, podium - 0.01, -d + 0.005, -0.005, ROOF);
+    });
     for (const [u, v] of [
       [a0, c1],
       [a1, c1],
@@ -1024,14 +1045,16 @@ function building(b: Batch, f: Infill, crowd: Idle[], low: boolean) {
       [a1, c0],
     ])
       k.lbox(u - 0.08, u + 0.08, podium, top + 0.1, v - 0.08, v + 0.08, trimM);
-    // The crown's slab a touch proud of the walls (flush with them, its foot flickers against them)
-    k.lbox(Math.min(a0, a1) - 0.01, Math.max(a0, a1) + 0.01, top - 0.04, top + 0.14, Math.min(c0, c1) - 0.01, Math.max(c0, c1) + 0.01, ROOF);
-    // The crown: a neon line round the top
     const cyan = glow(PAL.cyan);
-    k.lbox(a0 - 0.02, a1 + 0.02, top + 0.14, top + 0.19, c1 - 0.02, c1 + 0.02, cyan);
-    k.lbox(a0 - 0.02, a1 + 0.02, top + 0.14, top + 0.19, c0 - 0.02, c0 + 0.02, cyan);
-    k.lbox(a0 - 0.02, a0 + 0.02, top + 0.14, top + 0.19, c0, c1, cyan);
-    k.lbox(a1 - 0.02, a1 + 0.02, top + 0.14, top + 0.19, c0, c1, cyan);
+    k.all(() => {
+      // The crown's slab a touch proud of the walls (flush with them, its foot flickers against them)
+      k.lbox(Math.min(a0, a1) - 0.01, Math.max(a0, a1) + 0.01, top - 0.04, top + 0.14, Math.min(c0, c1) - 0.01, Math.max(c0, c1) + 0.01, ROOF);
+      // The crown: a neon line round the top
+      k.lbox(a0 - 0.02, a1 + 0.02, top + 0.14, top + 0.19, c1 - 0.02, c1 + 0.02, cyan);
+      k.lbox(a0 - 0.02, a1 + 0.02, top + 0.14, top + 0.19, c0 - 0.02, c0 + 0.02, cyan);
+      k.lbox(a0 - 0.02, a0 + 0.02, top + 0.14, top + 0.19, c0, c1, cyan);
+      k.lbox(a1 - 0.02, a1 + 0.02, top + 0.14, top + 0.19, c0, c1, cyan);
+    });
     roofTop(() => {
       antenna(k, (a0 + a1) / 2, (c0 + c1) / 2, top + 0.14, 1.2);
       acUnit(k, a0 + 0.5, c0 + 0.5, top + 0.14);
@@ -1065,7 +1088,7 @@ function building(b: Batch, f: Infill, crowd: Idle[], low: boolean) {
   }
   k.lbox(w * 0.2, w * 0.62, S + SHOP_H - 0.1, S + SHOP_H, 0, 0.66, toon('#3a1f45'));
   k.lbox(w * 0.2, w * 0.62, S + SHOP_H - 0.13, S + SHOP_H - 0.1, 0.62, 0.66, glow(PAL.pink));
-  blade(k, 'hotel', w - 0.22, S + SHOP_H + 0.6, top - 0.4, 0.85, 0.6);
+  k.all(() => blade(k, 'hotel', w - 0.22, S + SHOP_H + 0.6, top - 0.4, 0.85, 0.6));
   planter(k, w * 0.15, 0.4);
   planter(k, w * 0.68, 0.4);
   roofTop(() => {
@@ -1170,6 +1193,9 @@ export function buildInfill(scene: THREE.Scene, crowd: Idle[], tick: (f: Tick) =
   LOW = low;
   for (const f of INFILL) building(b, f, crowd, low);
   waterTower(b, WATER_TOWER);
+
+  // The alleys', lanes' and pocket parks' dressing is too small to see from far away: near only (growth plan Phase 2)
+  b.lod = 'near';
 
   // Alleys: bollards at the mouth, string lights overhead, a caged lamp and a drainpipe on one wall,
   // pallets on the other, a bin and stacked crates at the back (ALLEY_PROPS, solid when walking)
@@ -1277,6 +1303,7 @@ export function buildInfill(scene: THREE.Scene, crowd: Idle[], tick: (f: Tick) =
     for (const l of p.lamps) addLamp(l[0], l[1], 0);
   }
 
+  b.lod = 'all';
   square(scene, b, crowd, tick, low);
   streetLamps();
 

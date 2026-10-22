@@ -526,6 +526,8 @@ export function buildLibertyBridge(scene: THREE.Scene, opts: { flame: HTMLImageE
     m.position.set(BX, TOWER.flame.base, z);
     m.rotation.y = i * Math.PI;
     m.castShadow = true;
+    // Meant to be seen from far away, and turning: never in the bridge's far form (lod.ts)
+    m.userData.keep = true;
     group.add(m);
     return m;
   });

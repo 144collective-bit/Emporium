@@ -343,22 +343,99 @@ part of the totals). Phase 0's numbers, then Phase 1's:
   newer versions). Where it doesn't, three.js draws each piece on its own
   and `?fps` shows more draws: worth a look on an iPhone.
 
-## Phase 2: near and far buildings
+## Phase 2: near and far forms (built)
 
-- **A far form for every infill type and landmark:**
-  - its outline;
-  - the windows and lit windows painted on from the wall atlas;
-  - a lit crown where it has one.
-- **Swapped by distance, per quality tier,** with a cross-fade or a dither
-  so nobody sees the swap.
-- **Far forms neither cast nor receive shadows.**
-- **The ink outlines still draw round far forms** (they're Degen's style),
-  just with fewer edges.
-- **Some things stay as they are,** because they're meant to be seen from
-  far away: pins, the Emporium's hologram, the blimp, Liberty Bridge's
-  flames and the aircraft.
-- **Done when** the far edge of the benchmark route costs a fraction of
-  today's and nobody can see the swap happen.
+Past the tier's swap distance (`far` in `TIERS`: 120 on the high tier,
+110 medium, 90 on phones), things are drawn in a far form. `isNear()`
+(`tiles.ts`, tested) decides from the camera's distance to the thing's box,
+with a margin of 8 so nothing flickers on the line.
+
+- **Downtown's buildings: details near only.**
+  - A Batch can mark what it adds as near only (`Batch.detail()`,
+    `Batch.lod`). `tileBatch()` keeps each tile's near pieces apart and
+    swaps them per tile (`update()`), inside the same batched meshes, so the
+    swap costs no draw calls.
+  - At every distance: the walls (the wall atlas, so the windows and lit
+    windows stay), roof slabs, signs, the diner's neon and the offices' lit
+    crowns.
+  - Near only: stoops, cornices, string courses, bay windows, balconies,
+    fire escapes, awnings, rooftop tanks, huts, masts and gardens, and the
+    street fronts' tables, planters and bikes.
+  - Near only too: the alleys', lanes' and parks' dressing, benches,
+    bollards, the promenade's railing posts and the street lamps (their
+    halos still glow far away at night).
+- **Every place has a far form** (`farForm()` in `lod.ts`): the
+  landmarks, Liberty Bridge, the airport's hangar, the kart park's and
+  Fight Club's places, the garage and the market.
+  - Everything in the place is flattened into one mesh, coloured per vertex
+    from its materials (a texture by its average colour), with a glow per
+    vertex for lit windows, neon and unlit signs that follows the time of
+    day (`farFormMaterial()`, one shader for every far form).
+  - Triangles too small to see are left out.
+  - Big textured surfaces (window facades) keep their textures, merged per
+    material, so a place keeps its windows by day and its lights at night.
+  - What's meant to be seen from far away, or moves, stays as it is: the
+    Emporium's hologram, LED wall and equalizer, beams, glows and glass,
+    Liberty Bridge's flames, the garage's turntable with your car.
+  - A place far away costs a few draw calls instead of one for each of its
+    materials (the Emporium had 31 in the colour pass alone).
+- **Cars far away:**
+  - Each model has a far form (`farCarGeometry()`): its own body and cabin
+    outlines extruded and four block wheels, about a hundred triangles
+    instead of about 2,500, in the car's own paint.
+  - Every far car, parked or driving, is one instance in one
+    `BatchedMesh`, so they're one draw call together and three.js culls
+    them one by one.
+  - A parked lot (the airport's car park) swaps whole; a car in traffic
+    swaps by its own distance.
+- **What differs from the plan above:**
+  - The far forms cast and receive shadows. They're simple, and with the
+    camera pulled far back the place the camera looks at can be far from
+    it but inside the shadow box.
+  - The swap is a clean switch, not a cross-fade or dither. The swap
+    distances are where the details are a few pixels and the haze has
+    started to soften them; checked flying out across them by day and
+    night with a narrow lens, which shows them twice the size the city's
+    own camera does.
+  - The aircraft, pins, the blimp and the crowds' own two levels stay as
+    they were.
+- `?fps` shows how many tiles are near and how many far forms are showing.
+
+### Benchmark after Phase 2
+
+Headless (draws and triangles; the shadow map's are part of the totals).
+Phase 1's numbers, then Phase 2's:
+
+| View | Medium tier: draws | Medium tier: triangles | Phone tier: draws | Phone tier: triangles |
+| --- | --- | --- | --- | --- |
+| Home view | 517 → 500 | 0.81M → 0.77M | 276 → 257 | 0.32M → 0.23M |
+| Downtown, street level | 571 → 563 | 0.97M → 0.81M | 255 → 245 | 0.27M → 0.23M |
+| The square and the Emporium | 431 → 429 | 0.58M → 0.56M | 236 → 225 | 0.29M → 0.24M |
+| Every district (Build overview) | 639 → 585 | 1.12M → 0.99M | 335 → 264 | 0.42M → 0.27M |
+| The airport | 205 → 202 | 0.61M → 0.61M | 137 → 113 | 0.41M → 0.31M |
+| The kart park | 79 → 79 | 0.14M → 0.14M | 85 → 63 | 0.18M → 0.08M |
+| The far edge, looking back | 726 → 515 | 1.03M → 0.39M | 554 → 375 | 0.60M → 0.19M |
+| Route, average | 493 → 447 | 0.75M → 0.59M | 234 → 223 | 0.33M → 0.22M |
+| Route, most | 808 → 734 | 1.46M → 1.15M | 583 → 429 | 0.78M → 0.44M |
+
+- **Against Phase 0** (before any of this), the far edge is 760 → 515
+  draws and 1.19M → 0.39M triangles on the medium tier, and 564 → 375 and
+  0.66M → 0.19M on phones: about a third of the triangles.
+- **On phones** every view but the far edge and the route's busiest moment
+  is now inside the target (300 draws, 0.5M triangles), and every
+  triangle count is.
+- **Memory:** geometry 35 MB → 40 MB on the medium tier (the far forms).
+- **Boot:** the same as Phase 1 within the noise. The far forms are made
+  after the first frame, a place at a time in spare moments, while the
+  start menu is still up; a place stays near until its far form is ready.
+  Making them all takes about a second headless, most of it reading back
+  textures' average colours; small signs are left out instead.
+- **Still over the targets:** the far edge on phones (375 draws). What's
+  left there is the post-processing passes, the aircraft (kept as they
+  are), the crowds' and places' parts that stay as they are, and the units
+  and big lots (drawn from the save, rebuilt when they change, so they
+  have no far forms yet). Building as you go (Phase 3) can give those far
+  forms when they're rebuilt.
 
 ## Phase 3: building as you go
 

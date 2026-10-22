@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { TILE, WORLD_TILES, boxInView, tileOf, tileRect, tilesIn, tilesInView, tilesNear, type Plane } from '../src/scripts/city3d/tiles';
+import { FAR_MARGIN, TILE, WORLD_TILES, boxDistance, boxInView, isNear, tileOf, tileRect, tilesIn, tilesInView, tilesNear, type Plane } from '../src/scripts/city3d/tiles';
 import { EXT } from '../src/scripts/city3d/layout';
 
 let seed = 3;
@@ -70,4 +70,25 @@ test('a tile is in view exactly when three.js says its box is, and nothing in vi
       }
     }
   }
+});
+
+test('near and far: the distance to a box, and a swap that never flickers on the line', () => {
+  assert.equal(boxDistance(5, 1, 5, 0, 0, 0, 10, 2, 10), 0);
+  assert.equal(boxDistance(13, 1, 5, 0, 0, 0, 10, 2, 10), 3);
+  assert.equal(boxDistance(13, 6, 14, 0, 0, 0, 10, 2, 10), Math.hypot(3, 4, 4));
+  // Walking away: near until past the margin, then far; coming back: far until within the swap distance
+  let near = true;
+  const seen: boolean[] = [];
+  for (let d = 90; d <= 130; d += 1) seen.push((near = isNear(d, 100, near)));
+  assert.equal(seen.indexOf(false), 100 + FAR_MARGIN + 1 - 90);
+  for (let d = 130; d >= 90; d -= 1) near = isNear(d, 100, near);
+  assert.ok(near);
+  near = false;
+  assert.equal(isNear(104, 100, near), false);
+  assert.equal(isNear(100, 100, near), true);
+  // Jitter changes nothing once it's settled: near stays near inside the margin, far stays far outside the swap distance
+  near = true;
+  for (const d of [99, 103, 100.5, 107, 102]) assert.equal((near = isNear(d, 100, near)), true);
+  near = false;
+  for (const d of [109, 101, 115, 100.5, 107]) assert.equal((near = isNear(d, 100, near)), false);
 });

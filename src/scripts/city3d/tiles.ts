@@ -68,3 +68,22 @@ export function tilesInView(planes: readonly Plane[], y0: number, y1: number, ti
     return boxInView(planes, x0, y0, z0, x1, y1, z1);
   });
 }
+
+/* ---------- Near and far (growth plan Phase 2) ---------- */
+
+/** How far a point is from an upright box (0 inside it) */
+export function boxDistance(x: number, y: number, z: number, x0: number, y0: number, z0: number, x1: number, y1: number, z1: number) {
+  const dx = Math.max(x0 - x, 0, x - x1);
+  const dy = Math.max(y0 - y, 0, y - y1);
+  const dz = Math.max(z0 - z, 0, z - z1);
+  return Math.hypot(dx, dy, dz);
+}
+
+/** How much further than the swap distance something already near stays near, so a tile on the line doesn't flicker */
+export const FAR_MARGIN = 8;
+
+/**
+ * Whether something `d` from the camera is drawn in its near form: within
+ * `far` it is; once near, it stays near until `FAR_MARGIN` past it
+ */
+export const isNear = (d: number, far: number, wasNear: boolean) => d <= (wasNear ? far + FAR_MARGIN : far);

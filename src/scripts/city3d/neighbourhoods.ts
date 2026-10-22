@@ -37,9 +37,12 @@ function bench(b: Batch, at: Pt, ry: number, y = S) {
       .translate(x, yy + h / 2, z)
       .rotateY(ry)
       .translate(at[0], y, at[1]);
-  b.add(g(0.9, 0.06, 0.3, 0, 0.24, 0), WOOD);
-  b.add(g(0.9, 0.3, 0.05, 0, 0.32, -0.15), WOOD);
-  for (const sx of [-0.36, 0.36]) b.add(g(0.05, 0.26, 0.28, sx, 0, 0), INK);
+  // Too small to see from far away: near only (growth plan Phase 2)
+  b.detail(() => {
+    b.add(g(0.9, 0.06, 0.3, 0, 0.24, 0), WOOD);
+    b.add(g(0.9, 0.3, 0.05, 0, 0.32, -0.15), WOOD);
+    for (const sx of [-0.36, 0.36]) b.add(g(0.05, 0.26, 0.28, sx, 0, 0), INK);
+  });
 }
 
 /* ---------- The squares ---------- */
@@ -147,12 +150,14 @@ function square(b: Batch, scene: THREE.Scene, l: SquareLayout, crowd: Idle[], ti
     crowd.push({ x: kx1 + 0.85, z: (kz0 + kz1) / 2, ry: -Math.PI / 2, act: 'queue' });
   }
   for (const [x, z] of l.lamps) addLamp(x, z, x < (x0 + x1) / 2 ? 0 : Math.PI);
-  // Light bollards at the ways in, uplights round the centrepiece
-  for (const [x, z] of l.bollards) {
-    cyl(b, 0.08, 0.45, x, S, z, METAL, 8, 0.09);
-    cyl(b, 0.085, 0.1, x, S + 0.45, z, soft(PAL.warm), 8);
-  }
-  for (const [x, z] of l.uplights) cyl(b, 0.09, 0.02, x, S + 0.012, z, soft(PAL.warm), 8);
+  // Light bollards at the ways in, uplights round the centrepiece (near only)
+  b.detail(() => {
+    for (const [x, z] of l.bollards) {
+      cyl(b, 0.08, 0.45, x, S, z, METAL, 8, 0.09);
+      cyl(b, 0.085, 0.1, x, S + 0.45, z, soft(PAL.warm), 8);
+    }
+    for (const [x, z] of l.uplights) cyl(b, 0.09, 0.02, x, S + 0.012, z, soft(PAL.warm), 8);
+  });
   // A pair chatting by the centrepiece
   if (!low) {
     const [cx, cz] = l.centre;
@@ -222,7 +227,8 @@ function promenade(b: Batch, low: boolean) {
     for (let x = x0; x <= x1 + 0.01; x += step) {
       const open = offBridges(x, 0.3) && !deckAt(x);
       if (open) {
-        box(b, x - 0.04, 0, edge - 0.04, x + 0.04, 0.55, edge + 0.04, rail);
+        // (the posts near only: the rails still draw the line from far away)
+        b.detail(() => box(b, x - 0.04, 0, edge - 0.04, x + 0.04, 0.55, edge + 0.04, rail));
         if (run === null) run = x;
       }
       if ((!open || x + step > x1) && run !== null) {
