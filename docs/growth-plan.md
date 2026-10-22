@@ -1114,6 +1114,35 @@ In three steps, each a PR for the owner's sign-off:
   about 9 MB (the towers' numbers, the murals, The Block's signs). The
   boot's own work is unchanged (sites at the boot 0.11 s).
 
+### 9a+ The Trenches redesign (the owner's call; step A built)
+
+More variety and communal areas, scenery only for now (the owner's
+answers): the towers in many designs, mostly red brick with some brown,
+tan and dark, lived-in details; then the lawns round the towers as
+communal areas, a rec block, parking bays and street life. Rich up close,
+light far away and on phones. The Block, the streets, the metro and the
+corner shops stay where they are.
+
+- **Step A, the towers** (built): each block of the projects laid out by
+  hand from a mix of designs (L and T shapes round half-courtyards,
+  stepped towers with roof terraces, low walk-ups with stoops, slim point
+  towers, the tallest, crosses and a slab; 25 towers, 4 to 10 storeys),
+  walls and roofs from the parts (`towerShell()`: no two walls share a
+  plane), the brick mix, window air conditioners, window boxes, dishes,
+  balconies with washing and one tower in scaffolding. The block east of
+  The Block is cleared for the rec centre. Measured on the phone tier:
+  The Trenches view 120 to 124 draws, 0.16M triangles, geometry 71 MB as
+  before, textures 109 to 112 MB (the two new brick bands); each tower
+  built in pieces so none takes long.
+- **Step B, the courtyards and streets:** a different mix on every lawn
+  (playgrounds, basketball half-courts, a soccer cage, a skate spot, a
+  community garden with BBQs and picnic tables), paths, benches and chess
+  tables, washing lines behind the towers; the rec block east of The
+  Block (the rec centre, a laundromat, a big lawn and a pavilion);
+  parking bays cut into the kerbs with parked cars, small lots behind
+  towers, hydrants, low iron fences and hedges; kids at play and
+  neighbours hanging out.
+
 The open land inside the new edge is room for several districts. Each one
 is its own PR and the owner's call, built from Phase 4's kits. For
 example:
