@@ -965,7 +965,23 @@ the aircraft and the kart.
   cut; the train stands at a station.
 - **Measured** (headless, Phase 7's numbers and now, the same views):
 
-BENCH_TABLE
+  | | Medium (laptop) Phase 7 | Phase 8 | Low (phone) Phase 7 | Phase 8 |
+  | --- | --- | --- | --- | --- |
+  | Home view | 488 draws · 0.73M | 501 · 0.76M | 258 · 0.25M | 260 · 0.26M |
+  | Downtown street | 556 · 0.82M | 537 · 0.81M | 246 · 0.21M | 253 · 0.22M |
+  | Build overview | 608 · 1.00M | 591 · 1.00M | 269 · 0.30M | 280 · 0.30M |
+  | A highway junction | 53 · 0.07M | 48 · 0.06M | 56 · 0.08M | 57 · 0.09M |
+  | The far edge | 510 · 0.56M | 529 · 0.58M | 385 · 0.27M | 403 · 0.27M |
+  | Route (average) | 397 · 0.53M | 404 · 0.53M | 240 · 0.22M | 228 · 0.22M |
+  | Geometry / textures | 75 / 95 MB | 76 / 99 MB | 58 / 95 MB | 55 / 99 MB |
+
+  - The same within the noise of the traffic and the crowds: the viaduct
+    and the stations are a few pieces of the fixed city, split by tile;
+    the train is two draws. The textures grew by the station signs' atlas,
+    the M roundel and the taxi's sign.
+  - The boot's own work is unchanged (build 7.8 s headless before and
+    after); the map, the taxis and the metro's card cost nothing until
+    they're used.
 
 - **Done:** every place on the map is a minute or less away: fast
   travel at once to anywhere you've been, a taxi from anywhere to anywhere
