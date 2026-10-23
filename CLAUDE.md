@@ -269,8 +269,10 @@ it and has been retired completely. Build only on what's here.
   - **Sound by district** is `ambience.ts` (DOM-free, tested in
     `tests/ambience.test.ts`): `ambienceAt(x, z, lift)` gives the town's
     hum, the river, the traffic's rush (the highway, the avenues inside
-    it), wind over open land and the Emporium's beat; `sound.update()`
-    mixes its layers from it, where you walk or where the City view looks.
+    it), wind over open land, the Emporium's beat and The Trenches' own
+    (`hood`, `boombox`: the grit step); `sound.update()` mixes its layers
+    from it (and the el's rumble from `metro.rumbleAt()`), where you walk
+    or where the City view looks.
 - **The Trenches** (growth plan Phase 9, the owner's call): a
   neighbourhood of projects in the style of Brooklyn on the south-west
   quadrant inside the ring highway, where the storyline will start later.
@@ -338,11 +340,11 @@ it and has been retired completely. Build only on what's here.
     Avenue (`MURAL_TEXT`)), then, near only, the lived-in details laid on
     the atlas's bays (window air conditioners, window boxes, dishes,
     balconies with light panels and washing on some) and the scaffolding
-    (poles, ledgers, boards, orange toe boards),
-    the lawns (paths from the doors to the sidewalk with benches, a lamp
-    by each, trees round them), the rows (`drawLot()`), their alleys and
-    bollards, and behind Bottom Street a car park and trees along the
-    highway.
+    (poles, ledgers, boards, orange toe boards; a few windows boarded up,
+    `boarded()`, tagged low down), the yards (paths from the doors to the
+    sidewalk with benches, a lamp by each), the rows (`drawLot()`), their
+    alleys and bollards, and behind Bottom Street a car park and trees
+    along the highway.
   - **The communal areas** (the redesign's step B, the owner's call;
     scenery only for now) are `commons.ts` (DOM-free, tested in
     `tests/commons.test.ts`): `AMENITIES`, each projects block its own
@@ -354,20 +356,61 @@ it and has been retired completely. Build only on what's here.
     others) and opening onto the nearest edge its way out (`amenityWay()`)
     is clear to; the rec block (`REC`: the rec centre, the laundromat,
     the pavilion, the path, `REC_DOORS`); parking bays (`BAYS`: lay-bys
-    behind the sidewalk along the projects' streets, not the avenue,
-    clear of every way in, cars in about two spaces in three,
-    `BAY_CARS`); low iron railings or hedges round every lawn (`EDGES`,
-    open at every way in and bay); hydrants on the sidewalk corners
-    (`HYDRANTS`); `COMMONS_SOLIDS` (in `SOLIDS`: fences with a gate on the
-    way out, ramps, grills, washing poles, the rec block's buildings and
-    the pavilion's posts, the parked cars); `commonsPeople()` (kids at
-    play, neighbours at the grills, chess and the pavilion); and
-    `commonsTaken()` (the projects' lawn trees keep off). Drawn by
-    `commons3d.ts` as sites (`buildCommons()`, before the trees, lamps and
-    crowd: the parked cars a lot to a block, the rec block's trees and
-    lamps, the people, kids smaller through `Idle.scale`); the signs (TRENCHES
-    REC CENTER, WASH & FOLD) are fixed made-up copy; phones leave out the
-    railings' pickets and the cages' bars.
+    behind the sidewalk along the projects' streets, clear of every way
+    in, cars in about two spaces in three, `BAY_CARS`; and a fuller one
+    along Trench Avenue under the el, `<block>:el`, where its pillars
+    stand over a yard: the el's median is too narrow to park in);
+    chain-link on a low concrete kerb round every yard (`EDGES`,
+    `EDGE_H`, solid, open at every way in and bay); hydrants on the
+    sidewalk corners (`HYDRANTS`); `COMMONS_SOLIDS` (in `SOLIDS`: the
+    chain-link, fences with a gate on the way out (the courts', the
+    cage's, the garden's, `GARDEN_FENCE`), ramps, grills, washing poles,
+    the rec block's buildings and the pavilion's posts, the parked cars);
+    and `commonsPeople()` (kids at play, neighbours at the grills, chess
+    and the pavilion). Drawn by `commons3d.ts` as sites (`buildCommons()`,
+    before the trees, lamps and crowd: the parked cars a lot to a block,
+    the rec block's lamps, the people, kids smaller through `Idle.scale`;
+    the courts on old asphalt with faded lines and a tagged backboard, the
+    rubber faded, the cage's turf worn bald, the chain-link's mesh in the
+    FX layer, `chainMesh()` / `buildFx()` in `grime.ts`); the signs
+    (TRENCHES REC CENTER, WASH & FOLD) are fixed made-up copy.
+  - **The grit** (the owner's call: "more concrete... a gritty urban city
+    feel", moody and realistic; step 1 of three, then the street walls and
+    the three places on Trench Avenue) is `grit.ts` (DOM-free, tested in
+    `tests/grit.test.ts`), drawn by `grit3d.ts` (`buildGrit()`, sites, after
+    the commons): the yards (`YARDS`, row B but The Block) are worn
+    concrete (world.ts's `yard` lot, a texture 8 tiles to a repeat laid on
+    in world units, `YARD_REPEAT`; The Trenches' sidewalks plain grey) with
+    patches of worn grass and bare dirt (`PATCHES`, clear of everything
+    `taken()` lists) and the rec block's lawn worn; trees in pits with
+    grates along the yards' street sides and on the worn grass
+    (`YARD_TREES`, `PIT`); jersey barriers behind Bottom Street's car parks
+    (`BARRIERS`, `JERSEY`, `CAR_PARKS`); a dumpster against a side wall of
+    each tower but the walk-ups (`DUMPSTERS`) with bags beside it and in
+    some of the rows' alleys (`TRASH`); about two in five of the rows' shops
+    shuttered (`shuttered()`, never a corner shop), windows boarded
+    (`boarded()`); three boombox corners by walk-ups' stoops with folding
+    chairs and neighbours (`BOOMBOXES`); the el's pillars and spans in The
+    Trenches (`EL_PILLARS`, `PLINTH`, `EL_SPANS`); `GRIT_SOLIDS` (in
+    `SOLIDS`: the barriers, the dumpsters). Tags and wheatpasted bills are
+    two atlases in `grime.ts` (`TAGS`, `POSTERS`: made-up names and made-up
+    things on the block, nothing for sale, never a real crew, brand or
+    person), laid on near only in the FX layer: on the dumpsters, the
+    barriers' slopes, the shutters, boarded windows, backboards, the skate
+    ramps and the el's pillars. The streets are worn too (`trenches3d.ts`:
+    patched asphalt inside the lanes, never across a line, cracks,
+    manholes). The lamps there are sodium orange (`lampKind()` in
+    trenches.ts, `buildLamps()` in world.ts: about one in ten flickering,
+    in two sets going out together through `flickerTogether()` in kit.ts,
+    the odd one dead). The el over Trench Avenue is dark steel
+    (`metro3d.ts`: a grimy deck, deep plate girders braced across, flanged
+    steel columns on concrete plinths, steel hammerheads, a sodium lamp
+    under each span with its pool, sparks off the wheels as the train goes
+    over (not under reduced motion), and `rumbleAt()` for the sound). The
+    sound (ambience.ts `hood`, `boombox`; sound.ts): the el's rumble and
+    screech by the train, a siren far off and a dog now and then, the
+    boombox's own slow beat by its corner. Phones get fewer bags and no
+    grate bars. Nothing threatening: worn and lived-in, that's all.
   - **The corner shops** (step 3, the owner's call): `CORNER_SHOPS` in
     `projects.ts` turns four row lots (one each on rows A's a2, a1, a3 and
     C's c2, facing their street) into shops with made-up names (Block
@@ -1739,7 +1782,7 @@ it and has been retired completely. Build only on what's here.
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes and the test district (`kits.ts`, `recipes.ts`, `testdistrict.ts`), Liberty Bridge (`liberty.ts`),
-  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), The Trenches (`trenches.ts`, `projects.ts`),
+  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,

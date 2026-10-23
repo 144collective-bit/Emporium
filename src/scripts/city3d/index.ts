@@ -49,6 +49,7 @@ import { LIBERTY_SPAWN } from './liberty';
 import { buildLibertyBridge } from './libertybridge';
 import { buildProjects } from './projects3d';
 import { buildCommons } from './commons3d';
+import { buildGrit } from './grit3d';
 import { buildTheBlock } from './theblock';
 import { BLOCK_SPAWN } from './projects';
 import { buildFightClub } from './fightclub';
@@ -184,6 +185,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   buildProjects(tier === 'low');
   // ...the lawns' communal areas, the rec block, parking bays and railings (the redesign's step B), and the people out there
   buildCommons(scene, crowd, { low: tier === 'low' });
+  // ...and its grit (the owner's call): worn yards, tree pits, dumpsters, trash, barriers, shutters, tags and bills
+  buildGrit(scene, crowd, { low: tier === 'low' });
   const theBlock = buildTheBlock(scene, crowd, { tick, reduced, low: tier === 'low' });
   spots.push(theBlock.spot);
   // ...and the metro's el where it crosses the open land south of the south row: no trees under it
@@ -1093,7 +1096,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       ambT = 0.25;
       amb = walking ? ambienceAt(walk.position.x, walk.position.z) : ambienceAt(controls.target.x, controls.target.z, camera.position.distanceTo(controls.target));
     }
-    sound.update(s.rain, s.night, amb);
+    // (the el rumbles where the train is: walking, by Degen; in the City view, where it looks, softened by height)
+    const ear = walking ? walk.position : controls.target;
+    sound.update(s.rain, s.night, amb, metro.rumbleAt(ear.x, ear.z) * (walking ? 1 : Math.max(0, 1 - camera.position.distanceTo(controls.target) / 120)));
 
     if (!reduced || dirty || flight) {
       if (statsEl) {

@@ -17,8 +17,13 @@
  *   and a grill, a notice board, paths, trees and lamps.
  * - Parking bays: tarmac lay-bys behind the sidewalk, lined, a kerb on the
  *   lawn side, cars parked in about two spaces in three.
- * - Low iron railings or clipped hedges round the lawns, open at every way
- *   in; fire hydrants on the corners.
+ * - Chain-link on a low concrete kerb round the yards (the grit step: once
+ *   railings and hedges round lawns), open at every way in; fire hydrants on
+ *   the corners.
+ *
+ * The grit step wore them down: the courts on old asphalt with faded lines
+ * and tagged backboards behind chain-link, the playground's rubber faded,
+ * the cage's turf worn bald at the goals, the garden's beds fenced in.
  *
  * Signs are fixed copy with made-up names. Details are near only; surfaces,
  * buildings, fences and hedges at every distance.
@@ -26,7 +31,8 @@
 import * as THREE from 'three';
 import { Batch, FONT_DISPLAY, canvasTex, lit, toon } from './kit';
 import { ATLAS, CREAM, INK, LEAF, METAL, ROOF, STONE, WOOD, glow, kit, type Frame } from './infill';
-import { SLAB as S, addLamp, addTree } from './world';
+import { buildFx, chainMesh, tag } from './grime';
+import { SLAB as S, addLamp } from './world';
 import { site } from './tilework';
 import { parkedCars, type CarId } from './cars';
 import { towerShell } from './projects';
@@ -36,6 +42,8 @@ import {
   BAYS,
   BAY_CARS,
   EDGES,
+  EDGE_H,
+  GARDEN_FENCE,
   HYDRANTS,
   REC,
   REC_DOORS,
@@ -53,21 +61,24 @@ import type { Pt, Rect } from './downtown';
 
 const WORLD: Frame = { M: new THREE.Matrix4(), w: 0, d: 0, L: [0, 0], t: [1, 0], n: [0, 1] };
 const KID = 0.44;
-/** Phones: no pickets or cage bars (the rails and posts stay) */
-let LOW = false;
 const box = (b: Batch, x0: number, y0: number, z0: number, x1: number, y1: number, z1: number, mat: THREE.Material) => b.box(Math.min(x0, x1), y0, Math.min(z0, z1), Math.abs(x1 - x0), y1 - y0, Math.abs(z1 - z0), mat);
 const flat = (b: Batch, [x0, z0, x1, z1]: Rect, y: number, mat: THREE.Material) => b.add(new THREE.PlaneGeometry(x1 - x0, z1 - z0).rotateX(-Math.PI / 2).translate((x0 + x1) / 2, S + y, (z0 + z1) / 2), mat);
 const cyl = (b: Batch, r: number, h: number, x: number, y: number, z: number, mat: THREE.Material, seg = 8) => b.add(new THREE.CylinderGeometry(r, r, h, seg).translate(x, y + h / 2, z), mat);
 
-const PAVING = toon('#8f8ab0');
+const PAVING = toon('#77738a');
 const TARMAC = toon('#2e2b45');
 const LINE = toon('#e8e2f0');
-const RUBBER = toon('#d0573f');
-const TURF = toon('#2f8a4a');
-const COURT = toon('#2d6a8a');
+/** (worn: the grit step) */
+const FADED = toon('#a6a2b8');
+const RUBBER = toon('#9a4c44');
+const TURF = toon('#3c6a44');
+const BALD = toon('#6a5644');
+const COURT = toon('#36334a');
 const CONCRETE = toon('#9a96b4');
 const RAIL = toon('#2a2b38');
-const HEDGE = toon('#2c7a43');
+/** Galvanised pipe: the chain-link's posts and rails */
+const PIPE = toon('#8c90a2');
+const KERB = toon('#8a8698');
 const RED = toon('#d6283a');
 
 /** An amenity's own frame: u along its long side, v across, both from its corner (x0, z0) */
@@ -84,10 +95,9 @@ function frameOf(a: Amenity) {
   return { L, D, at, ubox };
 }
 
-/** A railed fence round a rectangle (posts, top, middle and bottom rails), open where `gap` crosses it */
-function railedFence(b: Batch, r: Rect, h: number, gap: Rect | null) {
+/** A chain-link fence round a rectangle (pipe posts, a top rail, the mesh in the FX layer), open where `gap` crosses it */
+function chainFence(b: Batch, wire: Batch, r: Rect, h: number, gap: Rect | null) {
   const [x0, z0, x1, z1] = r;
-  const t = 0.05;
   const runs: [Pt, Pt][] = [
     [[x0, z0], [x1, z0]],
     [[x0, z1], [x1, z1]],
@@ -104,25 +114,19 @@ function railedFence(b: Batch, r: Rect, h: number, gap: Rect | null) {
     else pieces.push([a0, a1]);
     for (const [s0, s1] of pieces) {
       if (s1 - s0 < 0.2) continue;
-      const seg = (y0: number, y1: number) => (alongX ? box(b, s0, S + y0, p[1] - t / 2, s1, S + y1, p[1] + t / 2, RAIL) : box(b, p[0] - t / 2, S + y0, s0, p[0] + t / 2, S + y1, s1, RAIL));
-      for (const y of [0.15, h * 0.5, h - 0.06]) seg(y, y + 0.05);
-      const n = Math.max(1, Math.round((s1 - s0) / 1.6));
+      const at = (a: number): Pt => (alongX ? [a, p[1]] : [p[0], a]);
+      // The top rail, posts every couple of tiles, and the mesh between
+      const [t0, t1] = [at(s0), at(s1)];
+      box(b, t0[0] - (alongX ? 0 : 0.025), S + h - 0.05, t0[1] - (alongX ? 0.025 : 0), t1[0] + (alongX ? 0 : 0.025), S + h, t1[1] + (alongX ? 0.025 : 0), PIPE);
+      const n = Math.max(1, Math.round((s1 - s0) / 2.4));
       for (let i = 0; i <= n; i++) {
-        const a = s0 + ((s1 - s0) * i) / n;
-        if (alongX) box(b, a - 0.04, S, p[1] - 0.04, a + 0.04, S + h, p[1] + 0.04, RAIL);
-        else box(b, p[0] - 0.04, S, a - 0.04, p[0] + 0.04, S + h, a + 0.04, RAIL);
+        const [x, z] = at(s0 + ((s1 - s0) * i) / n);
+        cyl(b, 0.04, h + 0.05, x, S, z, PIPE, 6);
       }
-      // Thin uprights between the posts (near only, one instanced piece)
-      const ups: THREE.Matrix4[] = [];
-      for (let a = s0 + 0.4; a < s1 - 0.2; a += 0.4) ups.push(upright(alongX ? a : p[0], alongX ? p[1] : a, S + 0.15, S + h - 0.06, 0.012));
-      if (!LOW) b.detail(() => b.instances(UNIT, RAIL, ups));
+      chainMesh(wire, t0, t1, S + 0.02, h - 0.07);
     }
   }
 }
-
-/** A unit box, and an upright bar of it (a picket, a cage's bar): x, z, from y0 to y1, `t` thick */
-const UNIT = new THREE.BoxGeometry(1, 1, 1);
-const upright = (x: number, z: number, y0: number, y1: number, t: number) => new THREE.Matrix4().compose(new THREE.Vector3(x, (y0 + y1) / 2, z), new THREE.Quaternion(), new THREE.Vector3(t * 2, y1 - y0, t * 2));
 
 /** A park bench, the sitter facing `ry` */
 function bench(b: Batch, [x, z]: Pt, ry: number) {
@@ -204,7 +208,7 @@ function playground(b: Batch, a: Amenity) {
   });
 }
 
-function halfcourt(b: Batch, a: Amenity) {
+function halfcourt(b: Batch, a: Amenity, wire: Batch) {
   const f = frameOf(a);
   flat(b, a.rect, 0.016, COURT);
   // The far end from the gate carries the hoop
@@ -214,11 +218,11 @@ function halfcourt(b: Batch, a: Amenity) {
   const ly = 0.024;
   b.detail(() => {
     // The key and the three-point line
-    f.ubox(b, Math.min(hu, hu + dir * 3.5), Math.max(hu, hu + dir * 3.5), ly, ly + 0.004, f.D / 2 - 1.2, f.D / 2 + 1.2, toon('#e219e5'));
+    f.ubox(b, Math.min(hu, hu + dir * 3.5), Math.max(hu, hu + dir * 3.5), ly, ly + 0.004, f.D / 2 - 1.2, f.D / 2 + 1.2, toon('#6a3a66'));
     const [cx, cz] = f.at(hu, f.D / 2);
     const arc = new THREE.RingGeometry(3.3, 3.37, 24, 1, dir > 0 ? -Math.PI / 2 : Math.PI / 2, Math.PI).rotateX(-Math.PI / 2);
     if (a.turned) arc.rotateY(-Math.PI / 2);
-    b.add(arc.translate(cx, S + ly + 0.006, cz), LINE);
+    b.add(arc.translate(cx, S + ly + 0.006, cz), FADED);
   });
   // The hoop: pole, arm, backboard, rim
   const pu = hoopAtEnd ? f.L - 0.25 : 0.25;
@@ -227,23 +231,32 @@ function halfcourt(b: Batch, a: Amenity) {
   f.ubox(b, Math.min(pu, bu), Math.max(pu, bu), 2.85, 2.92, f.D / 2 - 0.04, f.D / 2 + 0.04, METAL);
   f.ubox(b, bu - 0.04, bu + 0.04, 2.45, 3.4, f.D / 2 - 0.85, f.D / 2 + 0.85, CREAM);
   b.detail(() => {
+    // A tag across the backboard's front
+    const [tx, tz] = f.at(bu + dir * 0.046, f.D / 2);
+    const tn: Pt = a.turned ? [0, dir] : [dir, 0];
+    wire.detail(() => tag(wire, Math.round(a.rect[0] + a.rect[1]), 1.3, tn, tx, S + 3.15, tz));
     const [rx, rz] = f.at(bu + dir * 0.3, f.D / 2);
     b.add(new THREE.TorusGeometry(0.22, 0.02, 6, 16).rotateX(Math.PI / 2).translate(rx, S + 2.62, rz), toon('#ff6a2f'));
     b.add(new THREE.CylinderGeometry(0.22, 0.14, 0.38, 10, 1, true).translate(rx, S + 2.43, rz), CREAM);
   });
-  railedFence(b, a.rect, 2.2, amenityWay(a, 0.8));
+  chainFence(b, wire, a.rect, 2.2, amenityWay(a, 0.8));
 }
 
-function soccer(b: Batch, a: Amenity) {
+function soccer(b: Batch, a: Amenity, wire: Batch) {
   const f = frameOf(a);
   flat(b, a.rect, 0.016, TURF);
   b.detail(() => {
     const y = 0.024;
-    f.ubox(b, 0.3, f.L - 0.3, y, y + 0.004, 0.3, 0.36, LINE);
-    f.ubox(b, 0.3, f.L - 0.3, y, y + 0.004, f.D - 0.36, f.D - 0.3, LINE);
-    f.ubox(b, f.L / 2 - 0.03, f.L / 2 + 0.03, y, y + 0.004, 0.3, f.D - 0.3, LINE);
+    f.ubox(b, 0.3, f.L - 0.3, y, y + 0.004, 0.3, 0.36, FADED);
+    f.ubox(b, 0.3, f.L - 0.3, y, y + 0.004, f.D - 0.36, f.D - 0.3, FADED);
+    f.ubox(b, f.L / 2 - 0.03, f.L / 2 + 0.03, y, y + 0.004, 0.3, f.D - 0.3, FADED);
     const [cx, cz] = f.at(f.L / 2, f.D / 2);
-    b.add(new THREE.RingGeometry(1.3, 1.36, 24).rotateX(-Math.PI / 2).translate(cx, S + y + 0.006, cz), LINE);
+    b.add(new THREE.RingGeometry(1.3, 1.36, 24).rotateX(-Math.PI / 2).translate(cx, S + y + 0.006, cz), FADED);
+    // Worn bald in each goalmouth and the middle
+    for (const u of [1.6, f.L / 2, f.L - 1.6]) {
+      const [x, z] = f.at(u, f.D / 2);
+      b.add(new THREE.CircleGeometry(u === f.L / 2 ? 0.9 : 1.1, 12).scale(1, a.turned ? 1 : 0.7, 1).rotateX(-Math.PI / 2).translate(x, S + 0.02, z), BALD);
+    }
   });
   // A goal at each end
   for (const [u0, u1] of [
@@ -255,7 +268,7 @@ function soccer(b: Batch, a: Amenity) {
     f.ubox(b, um - 0.05, um + 0.05, 1.55, 1.62, f.D / 2 - 1.55, f.D / 2 + 1.55, CREAM);
     b.detail(() => f.ubox(b, Math.min(u0, u1), Math.max(u0, u1), 1.55, 1.58, f.D / 2 - 1.5, f.D / 2 + 1.5, toon('#c9c4e6')));
   }
-  railedFence(b, a.rect, 2.6, amenityWay(a, 0.8));
+  chainFence(b, wire, a.rect, 2.6, amenityWay(a, 0.8));
 }
 
 /** A quarter pipe's side outline (u across it, y up), its ramp curving up to the deck */
@@ -271,7 +284,7 @@ const QUARTER = (() => {
   }
   return s;
 })();
-function skate(b: Batch, a: Amenity) {
+function skate(b: Batch, a: Amenity, wire: Batch) {
   const f = frameOf(a);
   flat(b, a.rect, 0.016, CONCRETE);
   // A quarter pipe at each end, facing in, its sides painted
@@ -290,8 +303,13 @@ function skate(b: Batch, a: Amenity) {
       for (const [x, z, s] of [
         [px, pz, -1],
         [qx, qz, 1],
-      ])
+      ]) {
         b.add(new THREE.PlaneGeometry(1.2, 0.35).rotateY(a.turned ? (s > 0 ? Math.PI / 2 : -Math.PI / 2) : s > 0 ? 0 : Math.PI).translate(x, S + 0.3, z), stripe);
+        // A tag up on its high end (where the side is tallest)
+        const tn: Pt = a.turned ? [s, 0] : [0, s];
+        const [gx, gz] = f.at(end === 0 ? 0.6 : f.L - 0.6, s > 0 ? f.D - 0.5 + 0.01 : 0.5 - 0.01);
+        wire.detail(() => tag(wire, end * 2 + (s > 0 ? 1 : 0) + 3, 0.7, tn, gx, S + 0.56, gz));
+      }
       // The coping along the top
       f.ubox(b, end === 0 ? 1.25 : f.L - 1.35, end === 0 ? 1.35 : f.L - 1.25, 0.9, 0.96, 0.5, f.D - 0.5, METAL);
     });
@@ -305,9 +323,10 @@ function skate(b: Batch, a: Amenity) {
   });
 }
 
-function garden(b: Batch, a: Amenity) {
+function garden(b: Batch, a: Amenity, wire: Batch) {
   const f = frameOf(a);
-  flat(b, a.rect, 0.014, toon('#7d6a58'));
+  // Raised beds in a fenced concrete lot (the grit step): the yard's concrete underfoot, chain-link round it
+  chainFence(b, wire, a.rect, GARDEN_FENCE, amenityWay(a, 0.8));
   b.detail(() => {
     // Raised beds along the far side
     for (let i = 0; i < 3; i++) {
@@ -383,7 +402,7 @@ function washing(b: Batch, a: Amenity) {
   });
 }
 
-const DRAW: Record<Amenity['kind'], (b: Batch, a: Amenity) => void> = { playground, halfcourt, soccer, skate, garden, chess, washing };
+const DRAW: Record<Amenity['kind'], (b: Batch, a: Amenity, wire: Batch) => void> = { playground, halfcourt, soccer, skate, garden, chess, washing };
 
 /* ---------- The rec block ---------- */
 
@@ -508,27 +527,22 @@ function bay(b: Batch, y: (typeof BAYS)[number]) {
     }
   });
 }
-function edges(b: Batch, block: string) {
+function edges(b: Batch, wire: Batch, block: string) {
   for (const e of EDGES.filter((o) => o.block === block)) {
     const [x0, x1] = [Math.min(e.a[0], e.c[0]), Math.max(e.a[0], e.c[0])];
     const [z0, z1] = [Math.min(e.a[1], e.c[1]), Math.max(e.a[1], e.c[1])];
     const alongX = z0 === z1;
-    if (e.kind === 'hedge') {
-      box(b, x0 - (alongX ? 0 : 0.25), S, z0 - (alongX ? 0.25 : 0), x1 + (alongX ? 0 : 0.25), S + 0.55, z1 + (alongX ? 0.25 : 0), HEDGE);
-      continue;
+    const [wx, wz] = alongX ? [0, 0.1] : [0.1, 0];
+    // A low concrete kerb, pipe posts on it every couple of tiles, a top rail, and the mesh between
+    box(b, x0 - wx, S, z0 - wz, x1 + wx, S + 0.12, z1 + wz, KERB);
+    box(b, x0 - wx / 4, S + 0.12 + EDGE_H - 0.05, z0 - wz / 4, x1 + wx / 4, S + 0.12 + EDGE_H, z1 + wz / 4, PIPE);
+    const len = alongX ? x1 - x0 : z1 - z0;
+    const n = Math.max(1, Math.round(len / 2.5));
+    for (let i = 0; i <= n; i++) {
+      const [x, z] = alongX ? [x0 + (len * i) / n, z0] : [x0, z0 + (len * i) / n];
+      cyl(b, 0.035, EDGE_H, x, S + 0.12, z, PIPE, 6);
     }
-    // A low iron railing: posts with knobs, two rails (all near only but the top rail)
-    box(b, x0 - (alongX ? 0 : 0.02), S + 0.62, z0 - (alongX ? 0.02 : 0), x1 + (alongX ? 0 : 0.02), S + 0.66, z1 + (alongX ? 0.02 : 0), RAIL);
-    b.detail(() => {
-      box(b, x0 - (alongX ? 0 : 0.015), S + 0.2, z0 - (alongX ? 0.015 : 0), x1 + (alongX ? 0 : 0.015), S + 0.23, z1 + (alongX ? 0.015 : 0), RAIL);
-      const len = alongX ? x1 - x0 : z1 - z0;
-      const ups: THREE.Matrix4[] = [];
-      for (let s = 0; s <= len + 1e-6 && !LOW; s += 0.3) {
-        const [x, z] = alongX ? [x0 + s, z0] : [x0, z0 + s];
-        ups.push(upright(x, z, S, S + 0.66, 0.012));
-      }
-      if (ups.length) b.instances(UNIT, RAIL, ups);
-    });
+    chainMesh(wire, [x0, z0], [x1, z1], S + 0.14, EDGE_H - 0.07);
   }
 }
 function hydrant(b: Batch, [x, z]: Pt) {
@@ -539,15 +553,16 @@ function hydrant(b: Batch, [x, z]: Pt) {
 
 /** The commons: their sites, and at the boot the parked cars, the rec block's trees and lamps, and the people */
 export function buildCommons(scene: THREE.Scene, crowd: Idle[], opts: { low: boolean }) {
-  LOW = opts.low;
   const pad = (r: Rect, m: number): Rect => [r[0] - m, r[1] - m, r[2] + m, r[3] + m];
   for (const a of AMENITIES)
     site(`trench ${a.kind} ${a.id}`, pad(a.rect, 1), (into) => {
       const b = new Batch();
-      DRAW[a.kind](b, a);
+      const wire = new Batch();
+      DRAW[a.kind](b, a, wire);
       // Its path out to the street
       flat(b, amenityWay(a, 0.8), 0.012, PAVING);
       b.build(into);
+      buildFx(wire, into);
     });
   site('trench rec block', REC.rect, (into) => {
     const b = new Batch();
@@ -566,7 +581,9 @@ export function buildCommons(scene: THREE.Scene, crowd: Idle[], opts: { low: boo
     const rect: Rect = [Math.min(...xs) - 1, Math.min(...zs) - 1, Math.max(...xs) + 1, Math.max(...zs) + 1];
     site(`trench edges ${blk.id}`, rect, (into) => {
       const b = new Batch();
-      edges(b, blk.id);
+      const wire = new Batch();
+      edges(b, wire, blk.id);
+      buildFx(wire, into);
       for (const h of HYDRANTS) if (h[0] >= rect[0] && h[0] <= rect[2] && h[1] >= rect[1] && h[1] <= rect[3]) hydrant(b, h);
       b.build(into);
     });
@@ -580,20 +597,10 @@ export function buildCommons(scene: THREE.Scene, crowd: Idle[], opts: { low: boo
   }
   for (const list of byBlock.values()) parkedCars(scene, S, list);
 
-  // The rec block's lamps and trees
-  const [x0, z0, x1, z1] = REC.rect;
+  // The rec block's lamps (its trees are the yards', grit3d.ts)
   for (const d of Object.values(REC_DOORS)) addLamp(d.x + 2.2, d.z + 1.8, 0);
-  addLamp(REC.path[0] - 0.6, z1 - 6, Math.PI / 2);
+  addLamp(REC.path[0] - 0.6, REC.rect[3] - 6, Math.PI / 2);
   addLamp(REC.path[0] - 0.6, (REC.pavilion[1] + REC.pavilion[3]) / 2 - 4, Math.PI / 2);
-  const keep = [REC.centre, REC.laundry, REC.pavilion, REC.path].map((r) => pad(r, 1.8));
-  const pr = (s: number) => Math.abs(Math.sin(s * 12.9898) * 43758.5453) % 1;
-  let k = 0;
-  for (let x = x0 + 1.8; x < x1 - 1.5; x += 3.6)
-    for (let z = z0 + 15; z < z1 - 1.5; z += 3.6) {
-      k++;
-      if (keep.some((r) => x > r[0] && x < r[2] && z > r[1] && z < r[3]) || pr(k) < 0.45) continue;
-      addTree(x + (pr(k * 3) - 0.5), z + (pr(k * 5) - 0.5), 0.95 + pr(k * 7) * 0.35, false);
-    }
 
   // The people out on the lawns (kids smaller)
   for (const p of commonsPeople(opts.low)) crowd.push({ x: p.x, z: p.z, ry: p.ry, act: p.act, y: p.seat !== undefined ? S + p.seat : undefined, scale: p.kid ? KID : undefined });
