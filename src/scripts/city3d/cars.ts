@@ -32,7 +32,8 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { fx, toon } from './kit';
 import { addLodSwitch } from './lod';
 
-export type CarId = 'hatch' | 'sedan' | 'coupe' | 'pickup' | 'van' | 'bus' | 'muscle' | 'suv' | 'super';
+import type { CarId } from './mycar';
+export type { CarId };
 type V2 = [number, number];
 
 export interface CarSpec {

@@ -293,6 +293,12 @@ export function createCombat(d: CombatDeps) {
     if (!me.geared && !owns(me.weapon)) me.weapon = 'rifle';
   };
 
+  /** The mods on each of his guns, for the server's copy of the rules (they're in this browser's save) */
+  const netMods = () => {
+    const save = d.game.save();
+    return Object.fromEntries(guns().map((id) => [id, gunMods(save, id)]));
+  };
+
   // Third person: the gun in Degen's hands, in a pivot the walk code parents to his chest
   // (slung on his back or holstered on his hip while geared up and not drawn)
   const pivot = new THREE.Group();
@@ -823,7 +829,7 @@ export function createCombat(d: CombatDeps) {
       if (!owns(id)) return false;
       applyMods();
       sim.equip(ME, id);
-      net?.send({ t: 'equip', w: id });
+      net?.send({ t: 'equip', w: id, m: netMods() });
       hold();
       profile.weapon = id;
       saveProfile();
@@ -851,7 +857,7 @@ export function createCombat(d: CombatDeps) {
       }
       applyMods();
       sim.swap(ME, id);
-      net?.send({ t: 'swap', w: id });
+      net?.send({ t: 'swap', w: id, m: netMods() });
       hold();
       profile.weapon = id;
       saveProfile();

@@ -63,6 +63,7 @@ import { PLAN, inPoly, type Pt } from './streetplan';
 import { SPOTS, pointOn, ROUTES } from './routes';
 import { bodies } from './life';
 import type { GameDeps } from './ui';
+import type { Mode } from '../net/protocol';
 
 /** What a prompt can open: a landmark's door, or one of walk mode's own places and vehicles */
 type Near = SpotId | 'gear' | 'garage' | 'hangar' | 'car' | 'plane' | 'karts' | 'trainer' | `place:${string}`;
@@ -1820,10 +1821,12 @@ export function createWalk(d: WalkDeps) {
     },
     /** What other players need to see of us, for the game server */
     netState() {
-      return { pos, face, pitch, speed: speedNow, air: !grounded, run: runAmt > 0.5, aim: aimNow };
+      const mode: Mode = ride ? 'ride' : fly.active ? 'fly' : karts.active ? 'kart' : drive.active ? 'drive' : fighting() ? 'fight' : 'walk';
+      return { pos, face, pitch, speed: speedNow, air: !grounded, run: runAmt > 0.5, aim: aimNow, mode };
     },
-    /** The server put us back (we moved somewhere impossible) */
+    /** The server put us back (we moved somewhere impossible); only on foot (a car, a kart, an aircraft or a ride says where Degen is) */
     fix(x: number, y: number, z: number) {
+      if (ride || drive.active || fly.active || karts.active || fighting()) return;
       pos.set(x, y, z);
       vel.set(0, 0);
     },

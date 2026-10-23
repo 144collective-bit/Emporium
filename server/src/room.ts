@@ -3,8 +3,10 @@
  *
  * - Runs the shared combat rules (combat-sim.ts) at 60 Hz: it decides every
  *   hit on the dummies and drones, ammo, reloads, scores and streaks.
- * - Checks movement (speed, world bounds) and snaps impossible moves back;
- *   checks shots start near the shooter and gear-ups happen at the rack.
+ * - Checks movement (speed for the way they're getting about, world bounds;
+ *   a jump such as fast travel at most once a second) and snaps impossible
+ *   moves back; checks shots start near the shooter and gear-ups happen at a
+ *   gun store's counter (the Armoury's, Trench Arms' hatch).
  * - Sends everyone's positions 15 times a second, combat events as they
  *   happen, emotes and fixed phrases (rate-limited; nothing typed).
  * - Saves points to each player's Profile every few seconds.
@@ -17,17 +19,22 @@ import { DurableObject } from 'cloudflare:workers';
 import * as THREE from 'three';
 import { POINTS, WEAPON_IDS, createSim, weaponUnlocked, type SimEvent, type WeaponId } from '../../src/scripts/city3d/combat-sim';
 import { RACK, rayBoxes } from '../../src/scripts/city3d/solids';
+import { ARMS } from '../../src/scripts/city3d/avenue';
 import { EMOTES, PHRASES } from '../../src/scripts/net/profile-data';
 import {
   FLAG,
   GROUND,
-  MAX_SPEED,
   PROTOCOL,
   RACK_REACH,
   ROOM_SIZE,
   SHOT_REACH,
   SNAP_HZ,
-  WORLD,
+  SPEEDS,
+  WARP_GAP,
+  cleanMods,
+  inWorld,
+  modeOf,
+  moveOk,
   r2,
   v3,
   type ClientMsg,
@@ -48,6 +55,8 @@ const AWAY = 3000;
 /** No controls for this long (hidden tab, rejected move): the trigger is let go */
 const INPUT_STALE = 250;
 const IDLE_KICK = 90_000;
+/** Where a player may gear up: the gun stores' counters */
+const COUNTERS = [RACK, ARMS.counter];
 
 interface Player {
   id: number;
@@ -71,6 +80,8 @@ interface Player {
   msgs: number;
   msgWindow: number;
   fixAt: number;
+  /** When their last jump (FLAG.warp) was taken */
+  warpAt: number;
 }
 
 const send = (ws: WebSocket, msg: ServerMsg) => {
@@ -174,6 +185,7 @@ export class Room extends DurableObject<Env> {
       msgs: 0,
       msgWindow: now,
       fixAt: 0,
+      warpAt: 0,
     };
     this.players.set(id, p);
     // They carry the gun they picked last time once they gear up again
@@ -252,9 +264,10 @@ export class Room extends DurableObject<Env> {
         this.input(p, m, now);
         break;
       case 'equip': {
-        // Only at the store counter, and only guns this player's lifetime score has unlocked
-        if (Math.hypot(p.pos.x - RACK.x, p.pos.z - RACK.z) > RACK_REACH || !weaponUnlocked(m.w, p.me.total)) break;
+        // Only at a store counter, and only guns this player's lifetime score has unlocked
+        if (!COUNTERS.some((c) => Math.hypot(p.pos.x - c.x, p.pos.z - c.z) <= RACK_REACH) || !weaponUnlocked(m.w, p.me.total)) break;
         const changed = this.sim.players.get(id)?.weapon !== m.w;
+        this.mods(id, m.m);
         this.sim.equip(id, m.w as WeaponId);
         if (changed)
           this.soon(p, 'weapon', 300, () => {
@@ -268,6 +281,7 @@ export class Room extends DurableObject<Env> {
       case 'swap':
         // Anywhere, but only between guns this player's lifetime score has unlocked
         if (!weaponUnlocked(m.w, p.me.total) || !this.allow(p, 'swap', 150)) break;
+        this.mods(id, m.m);
         if (this.sim.swap(id, m.w as WeaponId))
           this.soon(p, 'weapon', 300, () => {
             const w = this.sim.players.get(id)?.weapon;
@@ -303,6 +317,11 @@ export class Room extends DurableObject<Env> {
     }
   }
 
+  /** The Armoury's mods the browser says its guns carry (Dorras and the workbench live in its own save) */
+  private mods(id: string, raw: unknown) {
+    for (const [w, mods] of Object.entries(cleanMods(raw))) this.sim.setMods(id, w as WeaponId, mods);
+  }
+
   private async changed(p: Player, next: Promise<OwnProfile>) {
     try {
       p.me = await next;
@@ -316,12 +335,13 @@ export class Room extends DurableObject<Env> {
   private input(p: Player, m: Extract<ClientMsg, { t: 'in' }>, now: number) {
     if (!triple(m.p) || !triple(m.o) || !triple(m.d) || !finite(m.f, m.k, m.s, m.fl, m.pt)) return;
     const [x, y, z] = m.p;
-    const inWorld = x >= WORLD[0] && x <= WORLD[1] && z >= WORLD[0] && z <= WORLD[1] && y > -1 && y < 40;
-    if (!inWorld) return;
-    // Faster than anyone can run: put them back where they were
-    if (p.posAt && now - p.posAt < AWAY) {
-      const dt = (now - p.posAt) / 1000;
-      if (Math.hypot(x - p.pos.x, z - p.pos.z) > MAX_SPEED * dt + 0.75) {
+    if (!inWorld(x, y, z)) return;
+    const fl = m.fl | 0;
+    // Faster than anyone can go the way they say they're moving: put them back where they were.
+    // A jump (fast travel, the end of a ride or a race) is let through, once a second at most.
+    if (p.posAt && now - p.posAt < AWAY && !moveOk(p.pos, { x, z }, (now - p.posAt) / 1000, fl)) {
+      if (fl & FLAG.warp && now - p.warpAt > WARP_GAP) p.warpAt = now;
+      else {
         if (now - p.fixAt > 500) {
           p.fixAt = now;
           send(p.ws, { t: 'fix', p: v3(p.pos) });
@@ -333,8 +353,8 @@ export class Room extends DurableObject<Env> {
     p.posAt = now;
     p.face = m.f;
     p.pitch = clamp(m.k, -1.5, 1.5);
-    p.speed = clamp(m.s, 0, MAX_SPEED);
-    p.flags = m.fl | 0;
+    p.speed = clamp(m.s, 0, SPEEDS[modeOf(fl)]);
+    p.flags = fl & ~FLAG.warp;
     // The shot ray starts at the player's camera, which can't be far from them
     this.origin.set(...m.o);
     this.dir.set(...m.d);
