@@ -200,7 +200,7 @@ Modules (DOM-free and tested unless marked):
 - Every hint, prompt and the Controls panel's key list (`CityMap.astro`)
   follow the new keys; CLAUDE.md gets them too.
 
-### Speeds (to be tuned in the lab)
+### Speeds (tuned: walk 0.78, run 2.8, sprint 4.2 tiles a second since the stride fix, below under "Fixes along the way"; the table is the first plan)
 
 Degen is about 1.1 tiles tall, a tile about 1.8 m; leg length about 0.95 m.
 
@@ -327,6 +327,32 @@ What's in:
   them under 0.3 rad). With it, the model's shoulders went natural
   athletic for every top (sloping trapezius, rounded deltoids: CLAUDE.md,
   the character section).
+
+- **Legs too fast when sprinting** (the owner: "his step size is small,
+  causing his legs to move very fast"): subject 143, whose run, walk,
+  starts and stops carry most of Phase 1, was captured at 60 frames a
+  second but the conversion marks it 120, so he played at double speed
+  (running at 5.7 steps a second, walking at 3.3; a real runner takes about
+  3, a walker about 2). His takes now say `"fps": 60` in `takes.json`. That
+  made his run a 3.4 m/s jog, so the owner picked: speeds a bit slower
+  (`GAITS`: walk 1.4, run 5, sprint 7.5 m/s), an athletic sprint, and the
+  difference made up the way a runner does (`WARP` in animator.ts): his legs
+  turn over only a little quicker (a power of 0.3 of the ratio), a foot on
+  the ground plays fast enough to stay put under him (a shorter contact,
+  no sliding, no hips dropping), the air plays slower (more hang time),
+  a swinging knee lifts higher, and into a sprint, once he's done speeding
+  up, he reaches up to 1.2 times further; the sprint's arm and knee drive
+  is a little stronger (`LAYERS.sprintSwing` 0.55). Measured: walking 2.1
+  steps a second of 0.66 m, running 3.3 of 1.55 m, sprinting 3.6 of 2.1 m
+  (it was 7.8 steps a second of 1.16 m). Other actors' runs were tried
+  for longer steps (127_07, 104_37, 78_06): one had a foot that flips in
+  the data, one quick short steps, one a dip on one side; subject 9's
+  (09_01) stayed. The clips file is 505 KB (it was 336 KB at double speed).
+  Along the way: the ball of a foot is never put under the ground (a blend
+  between two clips could put one's ankle with the other's tilt), a free
+  foot reaches no further down than a step (it reached off ledges), the
+  take-off's push plays at about its own speed, and the sprint's layers
+  ease out in the air.
 
 ### Phase 1 as it was planned
 

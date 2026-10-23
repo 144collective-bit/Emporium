@@ -9,11 +9,14 @@ The files in `cmu/` are copied unchanged.
   `143_32`, `143_38`, `143_42`: running, walking, starts, stops, turns),
   subject 127 (`127_04`, `127_15`, `127_16`, `127_19`: running turns, a
   quick stop, walking into a run; `127_21`, `127_22`, `127_25` to
-  `127_28`: running jumps), subject 143's jumps (`143_05`, `143_06`:
+  `127_28`: running jumps), subject 9 (`09_01`: a run), subject 143's jumps (`143_05`, `143_06`:
   standing jumps for distance and height), subject 69 (`69_17`: turning on the
   spot) and subject 137 (`137_28`, its first 9 s: standing, waiting), in
   Bruce Hahne's 2010 BVH conversion (cgspeed), from the
-  una-dinosauria/cmu-mocap copy on GitHub.
+  una-dinosauria/cmu-mocap copy on GitHub. The conversion marks every file
+  120 frames a second; subject 143's were captured at 60 (played at 120 he
+  walks at 3.3 steps a second and runs at 6), so `takes.json` gives them
+  `"fps": 60`.
 - Terms, as the conversion's READMEFIRST quotes them from mocap.cs.cmu.edu:
   "This data is free for use in research and commercial projects
   worldwide." CMU places no restrictions on the original dataset and the
