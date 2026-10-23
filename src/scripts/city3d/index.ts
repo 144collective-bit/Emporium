@@ -10,6 +10,8 @@ import { createPost } from './post';
 import { CENTER, addLamp, addTree, buildGround, buildLamps, buildSkyline, buildTrees, placed as everyPlaced, puddleMat, keepTreesOff, scatterOutskirts, waterMat, type Env, type Tick } from './world';
 import { PARK_LAMPS, PARK_TREES, WESTLAKE_RECT } from './westlake';
 import { createDistricts } from './districts';
+import { buildStadium } from './stadium3d';
+import { STADIUM_SPAWN } from './stadium';
 import { buildLandmarks, type Spot } from './landmarks';
 import { buildInfill } from './infill';
 import { buildNeighbourhoods } from './neighbourhoods';
@@ -213,6 +215,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   buildRiverside(tier === 'low');
   buildWaterfront(tier === 'low');
   spots.push(buildPier(scene, crowd, { tick, low: tier === 'low' }).spot);
+  // Westlake Park's stadium (step 2): a place, built at the boot (the rest of the park is loaded as you approach)
+  spots.push(buildStadium(scene, { low: tier === 'low' }).spot);
   // ...and the metro's el where it crosses the open land south of the south row: no trees under it
   keepTreesOff([-10, 125, 56, 135]);
   // Westlake Park (growth plan Phase 9b): its land is the street plan's; its trees and lamps stand with the town's
@@ -472,6 +476,12 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       panelBody.querySelector('[data-pier-walkin]')?.addEventListener('click', () => {
         close();
         startWalking(PIER_SPAWN);
+      });
+    // The stadium's panel: Walk in starts walk mode on its forecourt, facing the gate
+    if (id === 'stadium')
+      panelBody.querySelector('[data-stadium-walkin]')?.addEventListener('click', () => {
+        close();
+        startWalking(STADIUM_SPAWN);
       });
     // The Block's panel: Walk in starts walk mode on its plaza by the metro's stairs
     if (id === 'trenches')

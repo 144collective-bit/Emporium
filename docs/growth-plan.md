@@ -1205,7 +1205,7 @@ the el; lighter on phones). Three steps, each its own PR:
   (75), textures 135 MB (122: the tenements' and the places' signs);
   every site under about 30 ms.
 
-### 9b Westlake Park (the owner's call; step 1 built)
+### 9b Westlake Park (the owner's call; steps 1 and 2 built)
 
 The second district: a park, with a stadium as its big attraction. The
 owner's answers:
@@ -1219,8 +1219,8 @@ owner's answers:
   across the lawns from the lake.
 - **For sale:** nothing for now, scenery only (lots can come in a later
   step, as The Trenches' corner shops did).
-- **Names:** made up: Westlake Park; the stadium's comes with step 2. The
-  owner can change any.
+- **Names:** made up: Westlake Park and Sector 7 Stadium. The owner can
+  change any.
 
 In three steps, each a PR for the owner's sign-off:
 
@@ -1241,9 +1241,26 @@ In three steps, each a PR for the owner's sign-off:
    district loaded as you approach (performance plan item 10,
    `districts.ts`). On the world map: its lawns, the lake and the paths.
    A benchmark view over the lake.
-2. **The stadium:** the bowl and its stands, floodlights, the forecourt
-   and its approach from the avenue (a road and a car park), the place
-   (pin, panel: events coming soon, Walk in), its sound.
+2. **The stadium** (built): Sector 7 Stadium, `stadium.ts` (DOM-free,
+   tested in `tests/stadium.test.ts`) on `STADIUM_SITE` at the top of the
+   Mall: a soft-cornered oval bowl (`ovalAt()`, `FACADE` 62 x 50, 7.2
+   high), two tiers of seats (`TIERS`) with a concourse between, a roof
+   ring over the upper tier (`ROOF`), the pitch and a running track round
+   it, four floodlight masts outside the corners (`MASTS`, the tallest
+   thing at about 11.2, under the Emporium) with pools of light on the
+   pitch at night, the big screen over the north stand (`SCREEN`, fixed
+   copy: SECTOR 7, events coming soon) and the main gate in the south
+   facade under the name (`GATE`). `STADIUM_SOLIDS`: the facade all round
+   (the gates stay shut until there are events), the masts and the parked
+   cars. The car park (`CAR_PARK` in westlake.ts, `BAYS`, `ENTRANCES`,
+   `PARKED`) is on the first strip, across the west ring avenue from the
+   park's south gate, with a P sign and lamps; its surface is drawn with
+   the park (`westlake3d.ts`), its cars at the boot. Drawn by
+   `stadium3d.ts` (`buildStadium()`, a place built at the boot like the
+   avenue's: spot `stadium`, pin, directory entry, a panel (events coming
+   soon) with Walk in to `STADIUM_SPAWN`, the gate's door prompt, `PLACES`
+   entry for the map, taxis and fast travel). Its sound waits for the
+   events (an empty bowl is quiet).
 3. **The park's life:** boats on the lake and a boathouse, people
    (joggers, picnics, dog walkers), sports on the strips, the park's own
    sound (birds, the water), and perhaps a riverside walk along the river

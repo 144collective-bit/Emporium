@@ -67,6 +67,8 @@ export const STRIPS: ParkBlock[] = AVES.slice(0, -1).map((a, i) => {
   const z1 = b.c - b.half - WALK_W;
   return { id: `westlake-s${i}`, poly: [[X0, z0], [X0, z1], [X1, z1], [X1, z0]] };
 });
+/** The stadium's car park (step 2, stadium.ts) on the first strip, from its west end (x0, z0, x1, z1) */
+export const CAR_PARK: Rect = [X0 + 1.4, STRIPS[0].poly[0][1] + 1, -149, STRIPS[0].poly[1][1] - 1];
 /** Every block of the park, for the street plan */
 export const WESTLAKE_BLOCKS: ParkBlock[] = [{ id: 'westlake-big', poly: BIG }, ...STRIPS];
 /** The park's land, for the outskirts' trees to keep off (x0, z0, x1, z1) */
@@ -195,10 +197,10 @@ export const PATHS: ParkPath[] = [
   { id: 'meadow', pts: smooth([[X1, -128], [-62, -124], [-84, -106], [-102, -90], [STADIUM_SITE[2] - 4, STADIUM_SITE[3] + 2.6]]), half: 1.1 },
   // The south-west gate up to the ring walk
   { id: 'sw', pts: [[-182, ZS], [-182, ZS - RING_IN]], half: 1.1 },
-  // Each strip: one walk down its middle, end to end
-  ...STRIPS.map((s): ParkPath => {
+  // Each strip: one walk down its middle, end to end (the first from the stadium's car park)
+  ...STRIPS.map((s, i): ParkPath => {
     const z = (s.poly[0][1] + s.poly[1][1]) / 2;
-    return { id: `${s.id}-walk`, pts: [[X0, z], [X1, z]], half: 1.1 };
+    return { id: `${s.id}-walk`, pts: [[i === 0 ? CAR_PARK[2] + 1 : X0, z], [X1, z]], half: 1.1 };
   }),
 ];
 
@@ -269,7 +271,7 @@ export interface ParkTree {
 
 /** Where a tree may stand: on the park, off the paths, the lake and its loop, the stadium's site and the gates */
 export const treeFree = (p: Pt) =>
-  inPark(p, 1.6) && !onPath(p, 1.4) && !inLake(p[0], p[1], LOOP_OUT + 2.6) && !inRect(STADIUM_SITE, p, 3) && GATES.every((g) => Math.hypot(p[0] - g.at[0], p[1] - g.at[1]) > 4);
+  inPark(p, 1.6) && !onPath(p, 1.4) && !inLake(p[0], p[1], LOOP_OUT + 2.6) && !inRect(STADIUM_SITE, p, 3) && !inRect(CAR_PARK, p, 1.8) && GATES.every((g) => Math.hypot(p[0] - g.at[0], p[1] - g.at[1]) > 4);
 
 export const PARK_TREES: ParkTree[] = (() => {
   const r = rng(808);
@@ -328,6 +330,8 @@ export const PARK_LAMPS: [number, number, number][] = (() => {
     else if (q.id === 'ring') along(q, 18, false);
     else if (q.id !== 'forecourt') along(q, 15, false);
   }
+  // Along the stadium's car park, on the strip's lawn north of it, the arms out over the cars
+  for (let x = CAR_PARK[0] + 5; x < CAR_PARK[2]; x += 11) out.push([x, CAR_PARK[3] + 0.6, Math.PI / 2]);
   // Not on another path where paths meet, nor two on top of each other
   return out.filter((l, i) => !onPath([l[0], l[1]], 0.25) && out.slice(0, i).every((o) => Math.hypot(o[0] - l[0], o[1] - l[1]) > 3));
 })();
