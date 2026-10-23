@@ -197,6 +197,7 @@ it and has been retired completely. Build only on what's here.
   - City view pans round the built-up area (`bounds.ts`: `BUILT_UP` is the town, the airport and the kart park; `PAN_BOUNDS` reaches `PAN_MARGIN` (160) past it, never closer than 10 to where you can walk: today that's the whole world), and the Build overview frames the plots (`overviewFrame()`).
   - **The edge is data** (growth plan Phase 5): `EXT` is set in one place, and a test run can set another (`WORLD_EXT=x0,x1`, `npm run test:wide` at Phase 10's -680 to 720); both must pass. Nothing that exists reads the edge: the airport's `SITE` is fixed numbers, the river walls and their bridge gaps come from the street plan (`riverCrossings()` in `streetplan.ts`), flying turns back at whatever bounds it's given. Anything new written against the edge must work at both sizes.
   - **Growing the city** (many more buildings, then a bigger world) is planned in `docs/growth-plan.md`. Part A (Phases 0-4) makes size cheap: the measuring kit and a snapshot test that nothing moves, tiles and a collision grid, near and far building forms, building as you go, building kits. Part B (Phases 5-10) grows the world: the edge as data (the airport's site frozen, trees per tile), `EXT` out to about 880 across, roads to reach it (a ring highway, more bridges, traffic spent near you), getting about (a world map, waypoints, and the owner's pick of metro, taxis or fast travel), districts one at a time, then optionally about 1,400 across. Phases 0 (the measuring kit), 1 (tiles, the collision grid, the city's fixed geometry merged per tile, crowds and traffic culled for the shadow map), 2 (near and far forms: details near only, far forms for the places and the cars) 3 (building as you go: sites built round the home view at the boot and the rest after it, near forms let go past a budget), 4 (building kits: kits, recipes for blocks, a test district behind `?district=test`), 5 (the edge as data: `EXT` in one place, tests at both sizes) 6 (the edge moves out: `EXT` -420 to 460, the woods, the far plane and sky dome from the edge) 7 (roads to reach it: the ring highway, its bridges and slip lanes, routes generated from the street plan, traffic and boats spent near you) and 8 (getting about: the world map, waypoints, Bring my car, taxis, fast travel, the metro, sound by district) are built, and Phase 9's first district, **The Trenches**, is built (below); follow the rest one phase at a time with the owner's sign-off, and never add buildings in bulk outside the tiles (`tileBatch()`) or outside sites (`site()`).
+  - **Solid and fast first** (the owner's call): fixes and performance are planned in `docs/performance-plan.md` (where the time goes, what each phase measured, what's next); keep it up to date. Fix phase 1 (phones: the city builds behind the start menu and in spare frames, the outline pre-pass only as far as outlines reach, big textures at half size on phones) is built; then fix phase 2 (bugs and broken flows), fix phase 3 (the code clean-up) and the performance phases, with the foundations (sites built off the main thread, districts loaded as you approach, textures made at build time) **before any more districts**. On phones only, a softer neon glow and simpler far districts are allowed; desktop stays as it is.
 - **Getting about** (growth plan Phase 8; the owner picked taxis, fast
   travel and the metro):
   - **Places** are `places.ts` (DOM-free, tested in `tests/travel.test.ts`):
@@ -519,6 +520,12 @@ it and has been retired completely. Build only on what's here.
   (pixels, then shadows, then bloom; never the ink outlines) if frames are
   slow. When frames stay fast again, bloom and then pixels come back (once
   each; shadows stay off, re-enabling them recompiles every material).
+  Phones also draw the big canvas textures (512 x 512 pixels or more: the
+  atlases, the long signs) at half size, a quarter of the memory
+  (`canvasTex()` in `kit.ts`; a draw function works in the numbers it
+  asked for and never knows; a texture redrawn live in pixels afterwards
+  must stay under that size). While the 3D city boots behind the start
+  menu, the 2D map's SMIL traffic holds still.
 - One render loop only: always (re)start it with `loop()` in `index.ts`,
   which cancels any frame already queued. A hidden tab holds its queued frame
   back, so a bare `requestAnimationFrame(frame)` on return stacks a second
@@ -558,8 +565,11 @@ it and has been retired completely. Build only on what's here.
   sun's shadow box first, so the shadow map draws only those
   (`CROWD_VIEW.shadow`, `onBeforeShadow` / `onBeforeRender` set each
   mesh's count per pass). The shadow map is drawn once a frame (`post.ts`),
-  however many passes render the scene. Measure with `?fps` and `?bench`
-  before and after.
+  however many passes render the scene, and the ink outlines' normal and
+  depth pre-pass only reaches as far as the outlines do (its own camera's
+  far plane at the ink's `fadeFar`), so the far city is drawn once, not
+  twice. A place's hover ring isn't drawn while it's faded out. Measure
+  with `?fps` and `?bench` before and after.
 - **Near and far** (growth plan Phase 2): past the tier's `far` (`TIERS`:
   120 high, 110 medium, 90 low) from the camera, things are drawn in a far
   form; `isNear()` in `tiles.ts` decides, with a margin so nothing flickers
@@ -602,11 +612,17 @@ it and has been retired completely. Build only on what's here.
   building kits come as sites.
   - The boot builds only the sites in the home view's and the intro's
     tiles (`bootSites()` in `tileplan.ts`) and merges them with the rest
-    (`tileBatch()`); the others wait and `works.step()` builds them a few
-    milliseconds a frame (12 behind the start menu, 3 in the city, 2 on
-    phones), nearest first and ahead of the camera when it moves fast
-    (`focusOf()`, `LOOK_AHEAD`). What's built later joins the same
-    batched meshes (`TileBatches.add()`; a mesh grows when it's full).
+    (`tileBatch()`); the others wait and `works.step()` builds them a
+    share of the time since the last frame (15%, 2-3 ms at 60fps, up to
+    10 ms on a slow phone: its CPU is free while the GPU draws), and the
+    frames that draw nothing build too (`spare()` in `index.ts`: a phone
+    resting at 30fps, a fast screen's in-between frames). The start menu
+    covers the city completely, so behind it the city is drawn only once
+    a second and each frame builds for 24 ms. Nearest first: in the City
+    view nearest what it looks at (`look`, `CROWD_VIEW.focus`), walking
+    round Degen, and ahead of the camera when it moves fast (`focusOf()`,
+    `LOOK_AHEAD`). What's built later joins the same batched meshes
+    (`TileBatches.add()`; a mesh grows when it's full).
   - Places ask first: `flyTo()` (every panel's fly-in), walking in
     (`startWalking()`) and the intro (`works.wantView()`) build what's
     waiting where they're going, so nothing pops in on screen.
@@ -675,7 +691,9 @@ it and has been retired completely. Build only on what's here.
   waits), then a 48 s camera route through them (all but the Build overview). Results (fps,
   average / 95th-percentile / slowest frame, CPU ms, draws and triangles,
   the shadow map's, memory, boot) go in a card on the page, the console and
-  `window.__bench`. Run it before and after anything that could make the
+  `window.__bench`; the card's **Copy results** button copies them with the
+  device (its user agent and screen), so a real phone's numbers can be
+  pasted back. Run it before and after anything that could make the
   city heavier, on a phone and a laptop.
 - `tests/snapshot.test.ts` holds every place, door, pad, lot, spawn,
   landmark, downtown building and street where it stands

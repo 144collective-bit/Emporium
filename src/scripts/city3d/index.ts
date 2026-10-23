@@ -958,6 +958,14 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
 
   const viewProj = new THREE.Matrix4();
   const look = new THREE.Vector3();
+  /** Where the City view looks on the ground (the sites there are built first) */
+  const viewSpot: [number, number] = [0, 0];
+  /** When the city was last drawn behind the start menu */
+  let coveredAt = -Infinity;
+  /** A frame that draws nothing (a high refresh rate's in-between frames, a phone resting at 30fps): `ms` for building what's waiting */
+  const spare = (ms: number) => {
+    if (works.pending() && !bench?.active) works.step(ms, CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, CROWD_VIEW.eye.z, 0, Q.far, walking ? undefined : viewSpot);
+  };
   function frame(now: number) {
     if (!running) return;
     raf = requestAnimationFrame(frame);
@@ -965,7 +973,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     lastRaf = now;
     if (gap > 0.002 && gap < 0.05) refresh += (gap - refresh) * 0.05;
     const skip = refresh < 1 / 100 ? Math.round(1 / 60 / refresh) : 1;
-    if (++tickN % skip) return;
+    if (++tickN % skip) return spare(2);
     if (!onScreen && !walking) return;
     const cpuStart = performance.now();
     timer.update();
@@ -973,7 +981,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     // The benchmark starts once the start menu has gone, the city is showing and every site is built (growth plan Phase 3)
     if (bench && !bench.active && !bench.done && !walking && !root.classList.contains('has-start') && !works.stats().waiting) bench.begin(t);
     const busy = !!flight || walking || t - lastInput < 1 || !!bench?.active;
-    if (idleFps && !busy && t - lastT < 1 / idleFps - 0.004) return;
+    // (a phone resting at 30fps: the frames in between draw nothing, so they build what's waiting)
+    if (idleFps && !busy && t - lastT < 1 / idleFps - 0.004) return spare(6);
     const dt = Math.min(t - lastT, 0.1);
     lastT = t;
 
@@ -1031,8 +1040,16 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     camera.getWorldDirection(look);
     const reach = look.y < -0.02 ? THREE.MathUtils.clamp(CROWD_VIEW.eye.y / -look.y, 40, 250) : 60;
     CROWD_VIEW.focus.set(CROWD_VIEW.eye.x + look.x * reach, 0, CROWD_VIEW.eye.z + look.z * reach);
-    // Building as you go (growth plan Phase 3): a few milliseconds a frame (more while the start menu covers the city)
-    works.step(root.classList.contains('has-start') || (bench && !bench.active && !bench.done) ? 12 : tier === 'low' ? 2 : 3, CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, CROWD_VIEW.eye.z, dt, Q.far);
+    // Building as you go (growth plan Phase 3): a few milliseconds a frame, nearest what the City view looks at
+    // (round Degen while walking). The start menu covers the city completely: behind it the city is drawn only
+    // once a second (its shaders made ready as it fills) and the frame's time goes on building instead
+    const covered = root.classList.contains('has-start');
+    viewSpot[0] = CROWD_VIEW.focus.x;
+    viewSpot[1] = CROWD_VIEW.focus.z;
+    // (a share of the time since the last frame, not a fixed slice: a slow phone draws few frames, and while its
+    // GPU draws the next one its CPU is free; at 60fps that's the 2-3 ms it always was)
+    const share = Math.min(10, Math.max(tier === 'low' ? 2 : 3, gap * 1000 * 0.15));
+    works.step(covered ? 24 : bench && !bench.active && !bench.done ? 12 : share, CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, CROWD_VIEW.eye.z, dt, Q.far, walking ? undefined : viewSpot);
     // Near and far forms (growth plan Phase 2): the details only within the tier's `far` of the camera
     tiled.update(CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, CROWD_VIEW.eye.z, Q.far);
     updateLods(CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, CROWD_VIEW.eye.z, Q.far);
@@ -1061,6 +1078,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       const m = sp.ring.material as THREE.MeshBasicMaterial;
       m.opacity += ((on ? 0.85 : 0) - m.opacity) * Math.min(1, dt * 8);
       sp.ring.scale.setScalar(1 + (on ? Math.sin(t * 4) * 0.04 : 0));
+      // (faded out, it's not drawn at all: a draw call a place saved)
+      sp.ring.visible = m.opacity > 0.01;
     }
 
     // Pins follow their buildings on screen; far ones shrink
@@ -1113,7 +1132,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     const ear = walking ? walk.position : controls.target;
     sound.update(s.rain, s.night, amb, metro.rumbleAt(ear.x, ear.z) * (walking ? 1 : Math.max(0, 1 - camera.position.distanceTo(controls.target) / 120)));
 
-    if (!reduced || dirty || flight) {
+    if ((!reduced || dirty || flight) && (!covered || frames === 0 || t - coveredAt >= 1)) {
+      if (covered) coveredAt = t;
       if (statsEl) {
         renderer.info.reset();
         post.shadowStat.calls = post.shadowStat.tris = 0;

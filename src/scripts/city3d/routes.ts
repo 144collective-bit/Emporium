@@ -337,6 +337,25 @@ function toSegs(segs: [Pt, Pt][], q: Pt) {
   return best;
 }
 
+/** The junctions in cells of 12, for what's near a point (`junctionsNear()`: its cell and the eight round it) */
+const J_CELL = 12;
+let jGrid: Map<string, Junction[]> | null = null;
+function junctionsNear([x, z]: Pt): Junction[] {
+  if (!jGrid) {
+    jGrid = new Map();
+    for (const j of JUNCTIONS) {
+      const key = `${Math.floor(j.at[0] / J_CELL)},${Math.floor(j.at[1] / J_CELL)}`;
+      const l = jGrid.get(key);
+      if (l) l.push(j);
+      else jGrid.set(key, [j]);
+    }
+  }
+  const [cx, cz] = [Math.floor(x / J_CELL), Math.floor(z / J_CELL)];
+  const out: Junction[] = [];
+  for (let i = -1; i <= 1; i++) for (let k = -1; k <= 1; k++) for (const j of jGrid.get(`${cx + i},${cz + k}`) ?? []) out.push(j);
+  return out;
+}
+
 function makeRoute(pts: Pt[]): Route {
   const cum = [0];
   for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
@@ -351,12 +370,23 @@ function makeRoute(pts: Pt[]): Route {
     coarse.push(o.at);
   }
   const inside = (j: Junction, q: Pt) => NEAR[j.ix].filter((s) => toSegs(s.segs, q) < s.half + 0.2).length >= 2;
+  // Which junctions each coarse point is within 12 of (through the junctions' grid, not every junction)
+  const near = new Map<Junction, number[]>();
+  coarse.forEach((q, k) => {
+    for (const j of junctionsNear(q))
+      if (Math.hypot(q[0] - j.at[0], q[1] - j.at[1]) <= 12) {
+        let l = near.get(j);
+        if (!l) near.set(j, (l = []));
+        l.push(k);
+      }
+  });
   for (const j of JUNCTIONS) {
-    for (let k = 0; k < coarse.length; k++) {
-      if (Math.hypot(coarse[k][0] - j.at[0], coarse[k][1] - j.at[1]) > 12) continue;
+    const ks = near.get(j) ?? [];
+    for (let i = 0; i < ks.length; i++) {
+      const k = ks[i];
       // A pass near the junction: from here to where it's 12 away again, scanned finely
       let end = k;
-      while (end + 1 < coarse.length && Math.hypot(coarse[end + 1][0] - j.at[0], coarse[end + 1][1] - j.at[1]) <= 12) end++;
+      while (i + 1 < ks.length && ks[i + 1] === end + 1) end = ks[++i];
       let enter = -1;
       let exit = -1;
       for (let p = k * STEP, seg = 0; p <= Math.min(route.len, (end + 1) * STEP); p += 0.1) {
@@ -371,7 +401,6 @@ function makeRoute(pts: Pt[]): Route {
         const a = pointOn(route, enter, 0).dir;
         route.stops.push({ j, enter, exit, phase: phaseOf(a[0], a[1]) });
       }
-      k = end;
     }
   }
   route.stops.sort((a, b) => a.enter - b.enter);

@@ -136,29 +136,40 @@ export function createPost(renderer: THREE.WebGLRenderer, scene: THREE.Scene, ca
     shadowStat.calls += renderer.info.render.calls - calls;
     shadowStat.tris += renderer.info.render.triangles - triangles;
   };
+  // The pre-pass only reaches as far as the outlines do (they've faded out by `fadeFar`): everything
+  // further off is left out of it, so the frame draws the far city once, not twice
+  const pre = new THREE.PerspectiveCamera();
   function render() {
     renderer.shadowMap.needsUpdate = renderer.shadowMap.enabled;
-    ink.uniforms.cameraNear.value = camera.near;
-    ink.uniforms.cameraFar.value = camera.far;
+    pre.copy(camera, false);
+    // (placed where the camera is in the world, whatever it's a child of)
+    pre.matrixAutoUpdate = pre.matrixWorldAutoUpdate = false;
+    pre.far = Math.min(camera.far, ink.uniforms.fadeFar.value + 5);
+    pre.updateProjectionMatrix();
+    camera.updateMatrixWorld();
+    pre.matrixWorld.copy(camera.matrixWorld);
+    pre.matrixWorldInverse.copy(camera.matrixWorldInverse);
+    ink.uniforms.cameraNear.value = pre.near;
+    ink.uniforms.cameraFar.value = pre.far;
 
     const bg = scene.background;
     const fog = scene.fog;
     scene.background = null;
     scene.fog = null;
     scene.overrideMaterial = normalMat;
-    camera.layers.set(SOLID);
+    pre.layers.set(SOLID);
     renderer.getClearColor(clear);
     const alpha = renderer.getClearAlpha();
     renderer.setRenderTarget(normalTarget);
     renderer.setClearColor(0x8080ff, 1);
     renderer.clear();
-    renderer.render(scene, camera);
+    renderer.render(scene, pre);
     // Cut-out signs: their stand-ins mask the outlines behind them
     scene.overrideMaterial = null;
-    camera.layers.set(OCC);
+    pre.layers.set(OCC);
     const autoClear = renderer.autoClear;
     renderer.autoClear = false;
-    renderer.render(scene, camera);
+    renderer.render(scene, pre);
     renderer.autoClear = autoClear;
     renderer.setClearColor(clear, alpha);
     scene.overrideMaterial = null;

@@ -4883,8 +4883,27 @@ body.is-walking .nav {
   font-family: var(--font-mono);
   font-size: 11px;
   line-height: 1.45;
-  white-space: pre;
   user-select: text;
+}
+.city-bench pre {
+  margin: 0;
+  font: inherit;
+  white-space: pre;
+}
+.city-bench-copy {
+  margin-top: 8px;
+  padding: 6px 12px;
+  border: 1px solid #0000;
+  border-radius: 6px;
+  background:
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+.city-bench-copy[hidden] {
+  display: none;
 }
 
 /* ---------- The economy (tycoon-ui.ts): Dorras, your stall, the market hall ----------

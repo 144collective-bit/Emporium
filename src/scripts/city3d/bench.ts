@@ -132,10 +132,30 @@ export interface BenchDeps {
 }
 
 export function createBench(d: BenchDeps, night: boolean) {
-  const card = document.createElement('pre');
+  const card = document.createElement('div');
   card.className = 'city-bench';
-  card.setAttribute('aria-hidden', 'true');
-  card.textContent = 'Benchmark: waiting for the city…';
+  const text = document.createElement('pre');
+  text.setAttribute('aria-hidden', 'true');
+  text.textContent = 'Benchmark: waiting for the city…';
+  // Copy results: the card's text and the full results, with the device, to paste back (real phones' numbers)
+  const copy = document.createElement('button');
+  copy.type = 'button';
+  copy.className = 'city-bench-copy';
+  copy.textContent = 'Copy results';
+  copy.hidden = true;
+  copy.addEventListener('click', async () => {
+    const report = [text.textContent, '', `Device: ${navigator.userAgent}`, `Screen: ${screen.width} x ${screen.height} @ ${devicePixelRatio}x`, '', JSON.stringify(out)].join('\n');
+    try {
+      await navigator.clipboard.writeText(report);
+      copy.textContent = 'Copied';
+    } catch {
+      // (no clipboard here: the text is selected instead, to copy by hand)
+      text.textContent = report;
+      getSelection()?.selectAllChildren(text);
+      copy.textContent = 'Selected: copy it';
+    }
+  });
+  card.append(text, copy);
   // On the city's root, over the welcome card and the guide (the 3D view's own box sits under them)
   (d.host.closest('[data-city-root]') ?? d.host).append(card);
 
@@ -179,9 +199,10 @@ export function createBench(d: BenchDeps, night: boolean) {
       lines.push(`${'Route'.padEnd(32)} ${String(r.fps).padStart(5)} fps · ${String(r.p95).padStart(5)} ms p95 · worst ${r.worst} ms · ${r.draws} draws · ${(r.tris / 1e6).toFixed(2)}M`);
       lines.push(`Memory: geometry ${mb(out.memory.geometry)} · textures ${mb(out.memory.textures)} · ${out.memory.objects} objects`);
       lines.push(`Boot: ${Object.entries(out.boot).map(([k, v]) => `${k} ${(v / 1000).toFixed(2)} s`).join(' · ')}`);
-      lines.push('Done. Full results in the console (window.__bench).');
+      lines.push('Done. Full results in the console (window.__bench), or Copy results.');
     }
-    card.textContent = lines.join('\n');
+    text.textContent = lines.join('\n');
+    copy.hidden = !out;
   }
 
   return {

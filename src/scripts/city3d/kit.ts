@@ -258,11 +258,26 @@ export function neon(color: THREE.ColorRepresentation, day = 1, night = 2.4, fli
 
 /* ---------- Canvas textures ---------- */
 
+/**
+ * Phones (a coarse pointer or a small screen: index.ts's `low` tier) draw the big canvas textures at
+ * half size, a quarter of the memory; their screens can't show the difference
+ */
+const HALF_TEX = typeof matchMedia !== 'undefined' && (matchMedia('(pointer: coarse)').matches || Math.min(innerWidth, innerHeight) < 700);
+/** What counts as big (a 512 x 512 canvas's pixels or more): the atlases and the long signs */
+const BIG_TEX = 512 * 512;
+
+/**
+ * A canvas texture `w` x `h`, drawn by `draw` in those numbers (on phones a big one is drawn into a
+ * canvas half the size, scaled to fit, so `draw` never knows). Never draw into its canvas afterwards
+ * in pixels: the textures redrawn live (the LED wall) stay small enough to keep their size
+ */
 export function canvasTex(w: number, h: number, draw: (ctx: CanvasRenderingContext2D, w: number, h: number) => void) {
+  const k = HALF_TEX && w * h >= BIG_TEX ? 0.5 : 1;
   const c = document.createElement('canvas');
-  c.width = w;
-  c.height = h;
+  c.width = Math.max(1, Math.round(w * k));
+  c.height = Math.max(1, Math.round(h * k));
   const ctx = c.getContext('2d')!;
+  if (k !== 1) ctx.scale(c.width / w, c.height / h);
   draw(ctx, w, h);
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
