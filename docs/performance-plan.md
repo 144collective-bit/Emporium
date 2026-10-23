@@ -208,10 +208,10 @@ frame:
 The first frame after the boot (where the real shaders used to compile):
 2.84 s to 1.27 s on the phone tier, 3.23 s to 1.97 s on desktop.
 
-## Performance phase 4 (in progress): the foundations
+## Performance phase 4 (done): the foundations
 
-Items 9 and 3 below, and the plan for 10. Nothing looks or plays
-differently.
+Items 9 and 3 below, and the plan for 10 (built with the next district).
+Nothing looks or plays differently.
 
 - **Sites built off the main thread (9).** A worker (`sitework.ts`)
   imports the city's own chunk (already in the browser's cache), registers
@@ -350,8 +350,9 @@ week or more); risk is how much could break or look different.
 
 Fix phases 1, 2 and 3 and the trim (done) → performance phase 2 (done): **1, 2, 4, 6, 11, 12**
 (quick wins and the guard rails) → performance phase 3 (done): **5, 7, 8** (smoother
-frames; 8 measured and left until the districts grow) → performance phase 4: **9, 10, 3** (the foundations for a much
-bigger world), before Phase 10.
+frames; 8 measured and left until the districts grow) → performance phase 4 (done): **9, 3**, with **10** planned
+for the next district (the foundations for a much bigger world) → real-device numbers (`?bench` on the owner's
+phone and laptop) → the next district, with 10 (and 8 once the far tiles pass about 60,000 triangles).
 
 ## The owner's decisions
 
