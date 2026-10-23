@@ -817,6 +817,17 @@ it and has been retired completely. Build only on what's here.
   character screen) and Phase 5 (the crowds and soldiers on the new body,
   skinned on the GPU from baked clips; fighters and other players stepping
   with planted feet) are built: every figure in the city is the one body.
+- **The animation rebuild** (the owner's call, critical) is planned in
+  `docs/animation-plan.md`: AAA movement (Spider-Man / Ratchet feel,
+  neutral athletic) from permissively licensed motion capture retargeted
+  onto the 34 bones and baked at build time, motion matching,
+  inertialization, a spring-based movement sim, stride warping and foot
+  locking (near-zero slide, not the old 4 mm rule), a run by default and a
+  Shift sprint, then turns, jumps, armed movement, peeking (Q / E), crouch,
+  slide, vault and climb, contact, and finally everyone on the same clips.
+  **F becomes the interact key** (every job E does today) when Phase 1
+  lands. Build it one phase at a time with the owner's sign-off; nothing
+  is built yet.
 - Every character is one shared Degen body (`src/scripts/city3d/character.ts`),
   sculpted after the brand art at human proportions (about 1.3 tall at
   scale 1, six and a half heads, hips `HIP_HEIGHT` 0.62), with knees,
