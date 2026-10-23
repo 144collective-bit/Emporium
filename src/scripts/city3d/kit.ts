@@ -116,9 +116,14 @@ let paintShared: THREE.MeshToonMaterial | null = null;
  */
 export const windU = { value: new THREE.Vector3(0, 0, 0) };
 /**
+ * What marks a vertex that sways, in its uv's y (`Batch.instances()`): a number no shape's own coordinates
+ * land on (a shape's uv is its coordinates), and exact in a float, so the shader can match it exactly
+ */
+export const SWAY_MARK = -7.3125;
+/**
  * The sway in a vertex shader: a canopy's vertices carry how much they sway in their `uv` (the shared
- * paint has no texture, so the uv is free: x the sway, y -1 as the mark; everything else's uv is 0 or
- * more, and nothing else moves), read back here and swung by the wind. Into the shared paint and the
+ * paint has no texture, so the uv is free: x the sway, y `SWAY_MARK`; `Batch.add()` zeroes everything
+ * else's, and nothing else moves), read back here and swung by the wind. Into the shared paint and the
  * ink outlines' normal pass (post.ts), so the outlines follow; the shadow map's depth pass leaves it
  * out (a tree's shadow holding still is never seen). (Not the normals' lengths: merging a tile's
  * geometry re-normalises them.)
@@ -131,7 +136,7 @@ export function injectWind(sh: { vertexShader: string; uniforms: Record<string, 
       '#include <begin_vertex>',
       `#include <begin_vertex>
   {
-    float sway = uv.y < -0.5 ? uv.x : 0.0;
+    float sway = abs(uv.y - (${SWAY_MARK.toFixed(4)})) < 0.001 ? uv.x : 0.0;
     if (sway > 0.0) {
       float ph = transformed.x * 0.37 + transformed.z * 0.23;
       float g = sin(uWind.x * 1.1 + ph) * 0.6 + sin(uWind.x * 2.9 + ph * 1.7) * 0.4;
@@ -733,6 +738,11 @@ export class Batch {
     if (shared) {
       paintVertices(g, shared.color);
       if (shared.lit) litVertices(g, shared.lit[0], shared.lit[1]);
+      // The shared materials have no texture: the uv is free, and the paint's shader reads the wind's sway
+      // from it (`injectWind()`), so it must be zero here. An extruded or lathed shape carries its own
+      // coordinates as uv (three's world uv generator), which read as a sway of whole tiles: Liberty Bridge's
+      // arches once stretched across the river in the wind.
+      (g.attributes.uv as THREE.BufferAttribute).array.fill(0);
       mat = shared.mat;
     }
     this.file(mat).push(g);
@@ -774,8 +784,8 @@ export class Batch {
     const list = this.file(first.mat);
     list.pop();
     // Something that sways in the wind (a tree's canopy) carries how much each vertex sways in its uv (the
-    // shared paint has no texture): `sway` at its top, 0.4 of that at its foot, and -1 as the mark
-    // (`injectWind()` reads it back; zero memory: the uv is there anyway)
+    // shared paint has no texture, and `add()` has just zeroed it): `sway` at its top, 0.4 of that at its
+    // foot, and `SWAY_MARK` as the mark (`injectWind()` reads it back; zero memory: the uv is there anyway)
     if (sway > 0) {
       const pos = first.geo.attributes.position;
       let lo = Infinity;
@@ -785,7 +795,7 @@ export class Batch {
         hi = Math.max(hi, pos.getY(i));
       }
       const uv = first.geo.attributes.uv;
-      for (let i = 0; i < pos.count; i++) uv.setXY(i, sway * (0.4 + 0.6 * (hi > lo ? (pos.getY(i) - lo) / (hi - lo) : 1)), -1);
+      for (let i = 0; i < pos.count; i++) uv.setXY(i, sway * (0.4 + 0.6 * (hi > lo ? (pos.getY(i) - lo) / (hi - lo) : 1)), SWAY_MARK);
     }
     for (const m of matrices) list.push(first.geo.clone().applyMatrix4(m));
     first.geo.dispose();
