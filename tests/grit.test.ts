@@ -22,8 +22,9 @@ import {
   shuttered,
   taken,
 } from '../src/scripts/city3d/grit';
-import { AMENITIES, BAYS, BAY_CARS, COMMONS_SOLIDS, EDGES, REC, amenityWay, doorWay, overlaps, towerRects } from '../src/scripts/city3d/commons';
+import { AMENITIES, BAYS, BAY_CARS, COMMONS_SOLIDS, REC, amenityWay, doorWay, overlaps, towerRects } from '../src/scripts/city3d/commons';
 import { CORNER_SHOPS, PROJECT_SOLIDS, THE_BLOCK, TOWERS, rows } from '../src/scripts/city3d/projects';
+import { EDGES, STREETWALL_SOLIDS } from '../src/scripts/city3d/streetwall';
 import { TRENCH_BLOCKS, inTrenches, lampKind } from '../src/scripts/city3d/trenches';
 import { METRO_SOLIDS, PILLARS } from '../src/scripts/city3d/metro';
 import { SOLIDS } from '../src/scripts/city3d/solids';
@@ -91,7 +92,7 @@ test('trees in pits along the yards\' street sides (and on the worn grass), clea
 
 test('the chain-link: solid, open at every way in (doors, amenities, bays, the rec block\'s path)', () => {
   assert.ok(EDGES.length > 40);
-  const fences = COMMONS_SOLIDS.filter((s) => s[4] > 1 && s[4] < 1.4 && Math.min(s[2] - s[0], s[3] - s[1]) < 0.25);
+  const fences = STREETWALL_SOLIDS.filter((s) => s[4] > 1 && s[4] < 1.4 && Math.min(s[2] - s[0], s[3] - s[1]) < 0.25);
   assert.ok(fences.length >= EDGES.length, 'every run solid');
   for (const t of TOWERS) {
     if (t.block === THE_BLOCK.block) continue;

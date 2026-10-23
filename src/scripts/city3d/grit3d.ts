@@ -17,6 +17,8 @@ import { ROW_BLOCKS, rows } from './projects';
 import { PILLAR_HALF } from './metro';
 import { BARRIERS, BOOMBOXES, CAR_PARKS, DUMPSTER, DUMPSTERS, EL_PILLARS, JERSEY, PATCHES, PIT, PLINTH, TRASH, YARDS, YARD_TREES, barrierRect, shuttered, type Dumpster } from './grit';
 import { buildFx, poster, tag } from './grime';
+import { TENEMENTS } from './streetwall';
+import type { Lot } from './kits';
 import type { Idle } from './landmarks';
 
 const PATCH = { grass: toon('#5f7f3f'), dirt: toon('#6b5848'), lawn: toon('#4c7d47') };
@@ -188,14 +190,18 @@ export function buildGrit(scene: THREE.Scene, crowd: Idle[], opts: { low: boolea
     });
   }
 
-  // The rows' shuttered shops: the roller shutter down over the front, its housing, tags on some
+  // The rows' and the street walls' shuttered shops: the roller shutter down over the front, its housing, tags on some
   const laid = rows();
-  ROW_BLOCKS.forEach((blk, i) => {
-    const shut = laid.byBlock[i].lots.filter(shuttered);
+  const groups = [
+    ...ROW_BLOCKS.map((blk, i) => ({ id: blk.id, lots: laid.byBlock[i].lots as Lot[] })),
+    ...[...new Set(TENEMENTS.map((t) => t.block))].map((id) => ({ id: `${id} walls`, lots: TENEMENTS.filter((t) => t.block === id) as Lot[] })),
+  ];
+  groups.forEach(({ id, lots }) => {
+    const shut = lots.filter(shuttered);
     if (!shut.length) return;
     const xs = shut.flatMap((o) => [o.box[0], o.box[2]]);
     const zs = shut.flatMap((o) => [o.box[1], o.box[3]]);
-    site(`trench shutters ${blk.id}`, [Math.min(...xs), Math.min(...zs), Math.max(...xs), Math.max(...zs)], (into) => {
+    site(`trench shutters ${id}`, [Math.min(...xs), Math.min(...zs), Math.max(...xs), Math.max(...zs)], (into) => {
       const b = new Batch();
       const fxb = new Batch();
       fxb.lod = 'near';

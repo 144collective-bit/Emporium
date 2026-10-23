@@ -20,7 +20,8 @@
  * - **Blocks** (`TRENCH_BLOCKS`): the land between them, inside their
  *   sidewalks, in rows A (Trench Avenue's north side, nearest the town), B
  *   (the projects) and C (the strip along the highway); the corner by the
- *   highway's bend is a block cut by it.
+ *   highway's bend is a block cut by it. Row W (the grit's step 2) is the
+ *   strip between West Street and the highway.
  */
 import { EW_ROADS, LANE, NS_ROADS, WALK_W } from './layout';
 import { HIGHWAY_BOX, HIGHWAY_HALF, HIGHWAY_R } from './highway';
@@ -100,7 +101,7 @@ export const TRENCH_CROSSINGS: TrenchCrossing[] = (() => {
   return out;
 })();
 
-export type Row = 'A' | 'B' | 'C';
+export type Row = 'A' | 'B' | 'C' | 'W';
 export interface TrenchBlock {
   id: string;
   row: Row;
@@ -176,11 +177,15 @@ export const TRENCH_BLOCKS: TrenchBlock[] = (() => {
     const x1 = i === cols.length - 2 ? cols[i + 1] - IN_AVE - 7 : cols[i + 1] - IN;
     out.push({ id: `trench-c${i}`, row: 'C', poly: i === cols.indexOf(bottomWest) ? cutByBend(x0, cz0, x1, cz1) : rect(x0, cz0, x1, cz1) });
   }
+  // Row W (step 2 of the grit): the strip between West Street and the highway, from the bank avenue down to where
+  // the highway starts to bend (the gritty low commercial: streetwall.ts); its north end clear of the slip lane
+  // off the highway onto the bank avenue
+  out.push({ id: 'trench-w0', row: 'W', poly: rect(HX0 + HIGHWAY_CLEAR + WALK_W, BANK.c + BANK.half + WALK_W + 2.5, WEST_X - IN, BEND_C[1]) });
   return out;
 })();
 
 /** Its land, for the outskirts' trees to keep off (x0, z0, x1, z1) */
-export const TRENCH_RECT: [number, number, number, number] = [WEST_X - 10, BANK.c + BANK.half, RING_W.c - RING_W.half, HZ1 - HIGHWAY_HALF - 1];
+export const TRENCH_RECT: [number, number, number, number] = [HX0 + HIGHWAY_HALF + 1, BANK.c + BANK.half, RING_W.c - RING_W.half, HZ1 - HIGHWAY_HALF - 1];
 /** Is a point on The Trenches' land (its rectangle, short of the highway's bend) */
 export const inTrenches = (x: number, z: number, m = 0) => {
   const [x0, z0, x1, z1] = TRENCH_RECT;

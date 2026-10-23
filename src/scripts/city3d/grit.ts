@@ -26,6 +26,7 @@
  */
 import type { Face, Footprint, Pt, Rect } from './downtown';
 import { AMENITIES, BAYS, REC, amenityWay, doorWay, overlaps, towerRects } from './commons';
+import { built } from './streetwall';
 import { THE_BLOCK, TOWERS, isCorner, rows, type Tower } from './projects';
 import { RECIPES, rng } from './recipes';
 import { TRENCH_BLOCKS, inTrenches } from './trenches';
@@ -55,6 +56,8 @@ export function taken(block: string): Rect[] {
     ...AMENITIES.filter((a) => a.block === block).flatMap((a) => [grow(a.rect, 0.8), amenityWay(a, 1.2)]),
     ...BAYS.filter((y) => y.block === block).map((y) => grow(y.rect, 0.6)),
     ...(block === REC.block ? [REC.centre, REC.laundry, REC.pavilion, REC.path].map((r) => grow(r, 1)) : []),
+    // (the grit's step 2) the street walls, the vacant lots and the low commercial
+    ...built(block).map((r) => grow(r, 0.4)),
   ];
 }
 
@@ -96,11 +99,22 @@ export const PATCHES: Patch[] = (() => {
     const r = rng(9100 + bi * 31);
     if (blk.id === REC.block) {
       // The rec block's lawn, worn: either side of the path, south of the buildings
-      for (const rect of [
+      for (const lawn of [
         [b[0] + 1.5, REC.centre[3] + 2.5, REC.path[0] - 1.2, b[3] - 1.5],
         [REC.path[2] + 1.2, REC.laundry[3] + 2.5, b[2] - 1.5, b[3] - 1.5],
-      ] as Rect[])
-        out.push({ block: blk.id, kind: 'lawn', poly: ragged(rect, r), rect });
+      ] as Rect[]) {
+        // (pulled back from the street walls round it: the grit's step 2)
+        const rect: Rect = [...lawn];
+        for (const k of built(blk.id)) {
+          if (!overlaps(grow(k, 0.8), rect)) continue;
+          const kx = k[2] - k[0] < k[3] - k[1];
+          if (kx && k[0] <= b[0] + 1e-6) rect[0] = Math.max(rect[0], k[2] + 0.8);
+          else if (kx) rect[2] = Math.min(rect[2], k[0] - 0.8);
+          else if (k[1] <= b[1] + 1e-6) rect[1] = Math.max(rect[1], k[3] + 0.8);
+          else rect[3] = Math.min(rect[3], k[1] - 0.8);
+        }
+        if (rect[2] - rect[0] > 3 && rect[3] - rect[1] > 3) out.push({ block: blk.id, kind: 'lawn', poly: ragged(rect, r), rect });
+      }
       return;
     }
     const keep = taken(blk.id);

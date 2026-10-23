@@ -166,6 +166,11 @@ export const SIGNS = {
   diner: { name: 'STARLITE DINER', blade: 'EAT', color: '#ff3b8a' },
   hotel: { name: 'HOTEL NOVA', blade: 'HOTEL', color: '#ff6ad5' },
   gm: { name: 'GM DEGENS', blade: 'GM', color: '#00eaff' },
+  // The Trenches' tenement shops (the grit's step 2, streetwall.ts): made-up names
+  chicken: { name: 'CLUCK HOUSE', blade: 'WINGS', color: '#ffd23f' },
+  nails: { name: 'GLOSS NAILS', blade: 'NAILS', color: '#ff6ad5' },
+  deli: { name: 'HERO DELI', blade: 'DELI', color: '#2bff88' },
+  phones: { name: 'CELL FIX', blade: 'PHONES', color: '#00eaff' },
   // The building kits' (kits.ts): a school, a mall and a stadium in a district
   school: { name: 'SECTOR 7 HIGH', blade: 'SCHOOL', color: '#ffd23f' },
   mall: { name: 'NEON MALL', blade: 'MALL', color: '#e219e5' },
@@ -196,6 +201,10 @@ export interface Infill {
   front: number;
   /** What's solid: the building, and a stoop */
   solids: Footprint[];
+  /** A shop with a fire escape up its front for certain (The Trenches' tenements); unset, the shop picks */
+  escape?: boolean;
+  /** A shop's walls in this brick (The Trenches' tenements); unset, the shop picks */
+  wall?: 'brick' | 'brownstone' | 'brickTan' | 'brickDark';
 }
 export interface Alley {
   /** The walk-only gap between two buildings, from the street front to the back */

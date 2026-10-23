@@ -292,7 +292,8 @@ it and has been retired completely. Build only on what's here.
     `HIGHWAY_CLEAR` from the highway and inside its south-west bend
     (`BEND_C`, `BEND_REACH`); `TRENCH_STREETS`, `TRENCH_CROSSINGS` and
     `TRENCH_BLOCKS` (rows A: Trench Avenue's north side, nearest town; B:
-    the projects; C: the strip along the highway) join the street plan
+    the projects; C: the strip along the highway; W: the strip between
+    West Street and the highway) join the street plan
     (`cityPlan()`), so traffic, taxis, walking (the slabs), the world map
     and the sound read them; `TRENCH_RECT` / `inTrenches()`.
   - `trenches3d.ts` draws its streets as sites (asphalt, Trench Avenue's
@@ -360,10 +361,8 @@ it and has been retired completely. Build only on what's here.
     in, cars in about two spaces in three, `BAY_CARS`; and a fuller one
     along Trench Avenue under the el, `<block>:el`, where its pillars
     stand over a yard: the el's median is too narrow to park in);
-    chain-link on a low concrete kerb round every yard (`EDGES`,
-    `EDGE_H`, solid, open at every way in and bay); hydrants on the
-    sidewalk corners (`HYDRANTS`); `COMMONS_SOLIDS` (in `SOLIDS`: the
-    chain-link, fences with a gate on the way out (the courts', the
+    hydrants on the sidewalk corners (`HYDRANTS`); `COMMONS_SOLIDS` (in
+    `SOLIDS`: fences with a gate on the way out (the courts', the
     cage's, the garden's, `GARDEN_FENCE`), ramps, grills, washing poles,
     the rec block's buildings and the pavilion's posts, the parked cars);
     and `commonsPeople()` (kids at play, neighbours at the grills, chess
@@ -411,6 +410,32 @@ it and has been retired completely. Build only on what's here.
     screech by the train, a siren far off and a dog now and then, the
     boombox's own slow beat by its corner. Phones get fewer bags and no
     grate bars. Nothing threatening: worn and lived-in, that's all.
+  - **Built up** (the grit's step 2, the owner's call) is `streetwall.ts`
+    (DOM-free, tested in `tests/streetwall.test.ts`), drawn by
+    `streetwall3d.ts` (`buildStreetWalls()`, sites, after the grit): the
+    street walls (`TENEMENTS`: 4-6 storey tenements, the kits' shops with
+    `escape` (a fire escape up the front for certain) and `wall` (their
+    brick), Infill fields infill.ts honours; made-up names `TRENCH_SIGNS`
+    (CLUCK HOUSE, GLOSS NAILS, HERO DELI, CELL FIX added to `SIGNS`)) laid
+    shoulder to shoulder along the yards' street fronts wherever there's
+    room (`WALL_DEPTH`): broken at every way in, `BACK_CLEAR` from the
+    towers, never in front of a mural, drawn two to a site through
+    `drawLot()`; two vacant lots in the walls (`VACANT`: dirt, rubble,
+    weeds, chain-link front and back (`vacantFences()`), a billboard with
+    made-up copy, tags on the neighbours' side walls); low commercial
+    (`LOWRISE`, `LowLot`, `lowFrame()`: lock-ups along Bottom Street's
+    side of the yards (`LOCKUP_DEPTH`), and on row W, the strip between
+    West Street and the highway (`trench-w0` in trenches.ts, kept clear of
+    the slip lane), warehouses, an auto shop, a tyre place, a car wash, a
+    scrap yard, a body shop and lock-ups facing West Street, signs from
+    one atlas (`LOWRISE_NAMES`), cars on the aprons and in the car wash
+    (`LOW_CARS`), trees along the highway behind, a few people at work).
+    The yards' chain-link is `EDGES` here (`EDGE_H`, `edgeSolid()`): it
+    runs only where nothing's built (`built()`), and the grit keeps its
+    patches, trees and dumpsters off what's built. `STREETWALL_SOLIDS`
+    (in `SOLIDS`): the buildings, the fences, the chain-link, the scrap
+    yard's piles, the car wash's posts and brushes, the docks, the cars.
+    Some of the tenements' shops are shuttered too (grit's `shuttered()`).
   - **The corner shops** (step 3, the owner's call): `CORNER_SHOPS` in
     `projects.ts` turns four row lots (one each on rows A's a2, a1, a3 and
     C's c2, facing their street) into shops with made-up names (Block
@@ -1782,7 +1807,7 @@ it and has been retired completely. Build only on what's here.
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes and the test district (`kits.ts`, `recipes.ts`, `testdistrict.ts`), Liberty Bridge (`liberty.ts`),
-  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`),
+  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,

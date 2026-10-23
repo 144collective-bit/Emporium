@@ -874,13 +874,14 @@ function buildingAt(b: Batch, f: Infill, crowd: Idle[], low: boolean) {
     const sg = SIGNS[id];
     const named = NAMED_SHOPS.includes(id);
     const kind: WallKind =
-      id === 'validator'
+      f.wall ??
+      (id === 'validator'
         ? 'stuccoViolet'
         : id === 'crumpet'
           ? 'brick'
           : id === 'coffee'
             ? 'stuccoTeal'
-            : (['brick', 'stuccoTeal', 'stuccoPink', 'stuccoViolet', 'brownstone'] as WallKind[])[Math.floor(r() * 5)];
+            : (['brick', 'stuccoTeal', 'stuccoPink', 'stuccoViolet', 'brownstone'] as WallKind[])[Math.floor(r() * 5)]);
     const { wall, trim } = WALL_COLOR[kind];
     const trimM = toon(trim);
     const upper = S + SHOP_H + FASCIA;
@@ -892,7 +893,7 @@ function buildingAt(b: Batch, f: Infill, crowd: Idle[], low: boolean) {
     // An awning in the shop's colours, a blade sign, a fire escape on taller ones
     const stripes = id === 'crumpet' ? ['#f2c94c', '#f3f2f7'] : id === 'coffee' ? ['#5a3a2a', '#e8d9c0'] : [AWNINGS[Math.floor(r() * AWNINGS.length)], '#f3f2f7'];
     if (named || r() < 0.65) awning(k, 0.15, w - 0.15, S + SHOP_H - 0.02, 0.48, stripes);
-    const escape = f.floors >= 2 && w >= 3.1 && !named && r() < 0.55 && !LOW;
+    const escape = f.floors >= 2 && w >= 3.1 && !named && (f.escape ?? r() < 0.55) && !LOW;
     if (f.floors >= 1) k.all(() => blade(k, id, w - 0.3, upper + 0.15, Math.min(top - 0.5, upper + 0.15 + 1.5)));
     if (escape) fireEscape(k, 0.3, Math.min(w - 0.8, 1.9), upper, f.floors, low);
     // Out front: café tables (with people), or a chalk board, a planter and a bike
