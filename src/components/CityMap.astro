@@ -62,9 +62,12 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
 
 <section class="city has-start" aria-labelledby="city-title" data-city-root data-view="2d" data-mode="explore" data-degen={degenBig.src} data-logo={logoBig.src} data-flame={flameImg.src}>
   <div class="city-viewport" data-city data-focus-x={focusX} data-focus-y={focusY} tabindex="0" role="region" aria-label="City map: scroll or drag to look around">
-    <svg class="city-map" viewBox={`${VIEW.x} ${VIEW.y} ${VIEW.w} ${VIEW.h}`} role="group" aria-label="Sector 7">
-      <g set:html={map} />
-    </svg>
+    {/* Inert until the 2D map is shown (mountMap() below): the 3D city's boot never lays it out */}
+    <template data-map-tpl>
+      <svg class="city-map" viewBox={`${VIEW.x} ${VIEW.y} ${VIEW.w} ${VIEW.h}`} role="group" aria-label="Sector 7">
+        <g set:html={map} />
+      </svg>
+    </template>
   </div>
 
   {/* The 3D city: canvas is added by the script; pins float over their buildings */}
@@ -1013,13 +1016,47 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
 <script>
   const root = document.querySelector<HTMLElement>('[data-city-root]');
   const vp = document.querySelector<HTMLElement>('[data-city]');
-  const svg = vp?.querySelector('svg');
+  const tpl = vp?.querySelector<HTMLTemplateElement>('template[data-map-tpl]');
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  if (root && vp && svg) {
-    // Open on the Emporium
-    vp.scrollLeft = svg.clientWidth * Number(vp.dataset.focusX) - vp.clientWidth / 2;
-    vp.scrollTop = svg.clientHeight * Number(vp.dataset.focusY) - vp.clientHeight / 2;
+  if (root && vp && tpl) {
+    // WebGL2 here? (the 3D city boots where it works; on the 2D map the buildings take you there)
+    const gl = document.createElement('canvas').getContext('webgl2');
+    gl?.getExtension('WEBGL_lose_context')?.loseContext();
+
+    /** The 2D map, put in the page the first time it's shown (it's big: nobody who stays in 3D pays for it) */
+    let svg: SVGSVGElement | null = null;
+    function mountMap(): SVGSVGElement {
+      if (svg) return svg;
+      vp!.append(tpl!.content);
+      svg = vp!.querySelector('svg')!;
+      // A building and its pin light up together
+      const hot = (id: string, on: boolean) =>
+        vp!.querySelectorAll(`[data-spot="${id}"]`).forEach((el) => el.classList.toggle('is-hot', on));
+      vp!.querySelectorAll<SVGElement>('[data-spot]').forEach((el) => {
+        const id = el.dataset.spot!;
+        el.addEventListener('pointerenter', () => hot(id, true));
+        el.addEventListener('pointerleave', () => hot(id, false));
+        el.addEventListener('focus', () => hot(id, true));
+        el.addEventListener('blur', () => hot(id, false));
+        // The buildings are places in the 3D city's game: on the 2D map they take you there
+        if (gl)
+          el.addEventListener('click', async (e) => {
+            e.preventDefault();
+            remember('3d');
+            await go3d();
+            if (root!.dataset.view === '3d') city?.open(id);
+          });
+      });
+      // SMIL animations (cars, rings, the plane) ignore CSS, so pause them here
+      if (reduced) svg.pauseAnimations();
+      // Open on the Emporium (once the map is showing: show2d() sets the view first)
+      requestAnimationFrame(() => {
+        vp!.scrollLeft = svg!.clientWidth * Number(vp!.dataset.focusX) - vp!.clientWidth / 2;
+        vp!.scrollTop = svg!.clientHeight * Number(vp!.dataset.focusY) - vp!.clientHeight / 2;
+      });
+      return svg;
+    }
 
     // Drag to pan with a mouse; touch and trackpads scroll natively
     let drag: { x: number; y: number; left: number; top: number } | null = null;
@@ -1060,17 +1097,6 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     );
     vp.addEventListener('dragstart', (e) => e.preventDefault());
 
-    // A building and its pin light up together
-    const hot = (id: string, on: boolean) =>
-      vp.querySelectorAll(`[data-spot="${id}"]`).forEach((el) => el.classList.toggle('is-hot', on));
-    vp.querySelectorAll<SVGElement>('[data-spot]').forEach((el) => {
-      const id = el.dataset.spot!;
-      el.addEventListener('pointerenter', () => hot(id, true));
-      el.addEventListener('pointerleave', () => hot(id, false));
-      el.addEventListener('focus', () => hot(id, true));
-      el.addEventListener('blur', () => hot(id, false));
-    });
-
     // Tablets and desktops: the welcome card can be closed, and stays closed on return
     document.querySelector('[data-card-close]')?.addEventListener('click', () => {
       const hud = document.querySelector<HTMLElement>('[data-city-hud]')!;
@@ -1108,9 +1134,6 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       if (e.key !== 'Escape' || root.dataset.view === '3d') return;
       openMenus().forEach((menu) => (menu.open = false));
     });
-
-    // SMIL animations (cars, rings, the plane) ignore CSS, so pause them here
-    if (reduced) svg.pauseAnimations();
 
     /* ---------- Connect wallet (works on the 2D map too; the 3D city plugs in when it starts) ---------- */
     const server = import.meta.env.PUBLIC_GAME_SERVER as string | undefined;
@@ -1164,14 +1187,15 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
         // Options picked in the start menu before the city was up
         for (const apply of pendingOpts.splice(0)) apply();
       }
-      svg!.pauseAnimations();
+      svg?.pauseAnimations();
       to3d.hidden = true;
     }
     function show2d(offer: boolean) {
       city?.stop();
       root!.dataset.view = '2d';
       to3d.hidden = !offer;
-      if (!reduced) svg!.unpauseAnimations();
+      const map = mountMap();
+      if (!reduced) map.unpauseAnimations();
     }
     root.querySelectorAll<HTMLButtonElement>('[data-view-toggle]').forEach((b) =>
       b.addEventListener('click', () => {
@@ -1186,26 +1210,12 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     try {
       saved = localStorage.getItem('city-view');
     } catch {}
-    const gl = document.createElement('canvas').getContext('webgl2');
-    gl?.getExtension('WEBGL_lose_context')?.loseContext();
-    // The buildings are places in the 3D city's game: on the 2D map they take you there
-    if (gl)
-      vp.querySelectorAll<SVGElement>('[data-spot]').forEach((el) =>
-        el.addEventListener('click', async (e) => {
-          e.preventDefault();
-          remember('3d');
-          await go3d();
-          if (root!.dataset.view === '3d') city?.open(el.dataset.spot!);
-        })
-      );
     /** Resolves once the first boot has settled (the 3D city is up, or it fell back to the map) */
     let booted: Promise<unknown> = Promise.resolve();
     let bootStarted = false;
     if (!gl) to3d.remove();
     else if (saved === '2d') to3d.hidden = false;
     else {
-      // (the 2D map's traffic stays still behind the start menu while the 3D city boots: frames for the boot)
-      svg.pauseAnimations();
       bootStarted = true;
       booted = go3d();
     }
