@@ -498,6 +498,11 @@ it and has been retired completely. Build only on what's here.
     garden, tables, string lights over it all, lamps, trees, and its
     people (a game on the court, benches, tables, groups chatting,
     handball).
+- **City life** (behaviour and animation of the traffic, the people and
+  your car at no cost in memory: the owner's brief, 2026-10) is planned in
+  `docs/life-plan.md`; keep it up to date, one phase at a time with the
+  owner's sign-off. Rules go in DOM-free code with tests; the view only
+  draws them on the meshes the city already has.
 - **Cars** are `src/scripts/city3d/cars.ts`: real-proportion cartoon models
   (City Hatch, Cruiser, Street GT coupe, Hauler pickup, Box Van, City Bus;
   made-up names, never a real make or badge), each a bevelled extruded
