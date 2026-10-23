@@ -1150,7 +1150,7 @@ corner shops stay where they are.
   towers, hydrants, low iron fences and hedges; kids at play and
   neighbours hanging out.
 
-### 9a++ The Trenches' grit (the owner's call; step 1 built)
+### 9a++ The Trenches' grit (the owner's call; built)
 
 "More concrete... a gritty urban city feel... more moody and realistic as
 a hood... more built up and have more buildings" (the owner's answers:
@@ -1181,13 +1181,25 @@ the el; lighter on phones). Three steps, each its own PR:
   the highway (row W) with warehouses, an auto shop, a tyre place, a car
   wash, a scrap yard, a body shop and lock-ups; the yards' chain-link only
   where nothing's built. Each tenement site two buildings (under about
-  60 ms on the slow test machine). The phone numbers are measured with
-  step 3's.
-- **Step 3, three places on Trench Avenue under the el**: Club PULSE (a
-  big corner nightclub, neon, a marquee, a queue at a velvet rope with a
-  bouncer; tasteful, non-explicit; coming soon), The Rusty Nail (a dive
-  bar; coming soon) and Trench Arms (a gun store that opens the Armoury's
-  store and workbench: cartoon guns, Dorras only).
+  60 ms on the slow test machine).
+- **Step 3, three places on Trench Avenue under the el** (built,
+  `avenue.ts` / `avenue3d.ts`; the row lots they stand on are
+  `AVENUE_LOTS` in projects.ts, out of the rows): Club PULSE on the
+  corner of trench-a3 (a black box, neon tubes up its front throbbing with
+  the beat, PULSE over a marquee with chasing bulbs, the blade on its
+  corner over the roof, a queue behind a velvet rope on its forecourt and
+  a bouncer; its beat muffled through the walls by the door; tasteful,
+  coming soon), The Rusty Nail next to Block Bodega (a dark-brick walk-up,
+  a dark wood front, its name in neon, a BAR blade; coming soon) and Trench
+  Arms across from the station (red brick over concrete, barred windows,
+  a hatch on the street whose counter opens the Armoury's store and
+  workbench under its own name: cartoon guns, Dorras only). Each is a
+  place: pin, directory entry, panel with Walk in, a stop on the world map
+  and for taxis and fast travel.
+  Steps 2 and 3 measured together on the phone tier: The Trenches view
+  158 draws (140 after step 1), 0.27M triangles (0.25M), geometry 75 MB
+  (75), textures 135 MB (122: the tenements' and the places' signs);
+  every site under about 30 ms.
 
 The open land inside the new edge is room for several districts. Each one
 is its own PR and the owner's call, built from Phase 4's kits. For

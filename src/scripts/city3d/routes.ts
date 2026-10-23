@@ -573,12 +573,12 @@ export function pathBetween(a: Pt, b: Pt): Route | null {
     if (n < 0 || !W.stations[n].j) continue;
     push(from.w, n, d, span(from.w, from.along, W.stations[n].along, d), null, 'straight');
   }
-  // On the same stretch already, ahead: no junction at all
+  // On the same stretch already, ahead: no junction at all (a place straight across the street is round the block)
   let best: { cost: number; at: string | null; d: 1 | -1 } = { cost: Infinity, at: null, d: 1 };
   if (from.w === to.w && from.i === to.i)
     for (const d of [1, -1] as const) {
       if (W.s.oneway && W.s.oneway !== d) continue;
-      if ((to.along - from.along) * d > 0 && !W.s.loop) best = { cost: Math.abs(to.along - from.along), at: null, d };
+      if ((to.along - from.along) * d > 1 && !W.s.loop) best = { cost: Math.abs(to.along - from.along), at: null, d };
     }
   const T = WAYS[to.w];
   while (open.length) {

@@ -27,7 +27,7 @@
 import type { Face, Footprint, Pt, Rect } from './downtown';
 import { AMENITIES, BAYS, REC, amenityWay, doorWay, overlaps, towerRects } from './commons';
 import { built } from './streetwall';
-import { THE_BLOCK, TOWERS, isCorner, rows, type Tower } from './projects';
+import { THE_BLOCK, TOWERS, isAvenue, isCorner, rows, type Tower } from './projects';
 import { RECIPES, rng } from './recipes';
 import { TRENCH_BLOCKS, inTrenches } from './trenches';
 import { PILLARS, PILLAR_HALF } from './metro';
@@ -290,8 +290,8 @@ export const TRASH: Trash[] = (() => {
 
 /* ---------- Worn fronts ---------- */
 
-/** Is one of the rows' shops (not a corner shop) shuttered for good: about two in five */
-export const shuttered = (lot: Lot) => lot.type === 'shop' && !isCorner(lot) && hash(lot.seed, 3.1) < 0.4;
+/** Is one of the rows' shops (not a corner shop or one of the avenue's places) shuttered for good: about two in five */
+export const shuttered = (lot: Lot) => lot.type === 'shop' && !isCorner(lot) && !isAvenue(lot) && hash(lot.seed, 3.1) < 0.4;
 /** Is a tower's window boarded up (wall, bay along it, floor): a few on the lower floors, the odd one higher */
 export const boarded = (t: Tower, wall: number, bay: number, floor: number) => hash(t.no, wall + 0.5, bay, floor) < (floor < 3 ? 0.045 : 0.01);
 

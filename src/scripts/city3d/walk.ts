@@ -28,6 +28,7 @@ import { copyLeg, copyPose, createLocomotion, placeRoot } from './locomotion';
 import { createCombat, type Sfx } from './combat';
 import { WEAPON_IDS } from './combat-sim';
 import { createGunShop } from './gunshop';
+import { ARMS, AVENUE_DOORS } from './avenue';
 import { carStatsOf, kartStatsOf, ownsCar, takedown } from './tycoon';
 import { createGarageUI, loadCar } from './garage-ui';
 import { DEFAULT_CAR } from './mycar';
@@ -65,6 +66,8 @@ import type { GameDeps } from './ui';
 /** What a prompt can open: a landmark's door, or one of walk mode's own places and vehicles */
 type Near = SpotId | 'gear' | 'garage' | 'hangar' | 'car' | 'plane' | 'karts' | 'trainer' | `place:${string}`;
 /** Prompts that say their own label (the rest say "Enter ...") */
+/** The landmarks' doors and Trench Avenue's (their prompts open their panels) */
+const ALL_DOORS = [...DOORS, ...AVENUE_DOORS];
 const OWN_LABEL = new Set<string>(['gear', 'garage', 'hangar', 'car', 'plane', 'karts', 'trainer']);
 /** The hangar menu's shot: from the doors, looking in at your aircraft */
 const HANGAR_VIEW = { eye: new THREE.Vector3(HANGAR_SPOT.x - 6.5, 3.4, HANGAR_SPOT.z + 12.5), at: new THREE.Vector3(HANGAR_SPOT.x, 1.2, HANGAR_SPOT.z) };
@@ -257,7 +260,7 @@ export function createWalk(d: WalkDeps) {
   let near: { id: Near; label: string } | null = null;
   const act = () => {
     if (!near) return;
-    if (near.id === 'gear') shop.show();
+    if (near.id === 'gear') shop.show(near.label === ARMS.name ? ARMS.name : 'Armoury');
     else if (near.id === 'garage') garageUI.show();
     else if (near.id === 'hangar') hangarUI.show();
     else if (near.id === 'plane') (fly.active ? leavePlane() : board());
@@ -1628,7 +1631,13 @@ export function createWalk(d: WalkDeps) {
       best = { id: 'gear', label: 'Gun store' };
       bestD = 0;
     }
-    if (shop.open && atCounter > 2) shop.close();
+    // ...and Trench Arms' hatch, the same store under its own name
+    const atHatch = Math.hypot(ARMS.counter.x - pos.x, ARMS.counter.z - pos.z);
+    if (atHatch < 1.1) {
+      best = { id: 'gear', label: ARMS.name };
+      bestD = 0;
+    }
+    if (shop.open && Math.min(atCounter, atHatch) > 2) shop.close();
     if (Math.hypot(GARAGE_SITE.door.x - pos.x, GARAGE_SITE.door.z - pos.z) < 1.3) {
       best = { id: 'garage', label: 'Garage' };
       bestD = 0;
@@ -1661,7 +1670,7 @@ export function createWalk(d: WalkDeps) {
       best = carD <= planeD ? { id: 'car', label: 'Get in' } : { id: 'plane', label: `Fly the ${fly.name}` };
       bestD = 0;
     }
-    for (const door of DOORS) {
+    for (const door of ALL_DOORS) {
       const dd = Math.hypot(door.x - pos.x, door.z - pos.z);
       if (dd < bestD) {
         bestD = dd;
