@@ -109,9 +109,9 @@ week or more); risk is how much could break or look different.
     numbers: the size of the code, how long each site takes, how many draws
     and how much memory each benchmark view may use. A district that blows
     a budget fails before it ever reaches the site.
-12. **Your phone's numbers in one tap (S, low risk).** `?bench` already
-    measures; a "copy results" button on its card, so real-device numbers
-    (yours) go straight into the plan.
+12. **Your phone's numbers in one tap (S, low risk; done in fix phase 1).**
+    `?bench` already measures; a Copy results button on its card, so
+    real-device numbers (yours) go straight into the plan.
 
 ## Suggested order
 
@@ -120,3 +120,19 @@ Fix phase 1 (done) → the bugs pass (fix phase 2) and the code clean-up
 (quick wins and the guard rails) → performance phase 3: **5, 7, 8** (smoother
 frames) → performance phase 4: **9, 10, 3** (the foundations for a much
 bigger world), before Phase 10.
+
+## The owner's decisions
+
+- **Order:** fix phase 2 (bugs and broken flows) and fix phase 3 (the code
+  clean-up) first, so the speed work lands on clean code; then the
+  performance phases.
+- **Foundations: all of them, before any more districts** (9 the sites built
+  off the main thread, 10 districts loaded as you approach, 3 textures made
+  at build time), so every district after that costs the same to start and
+  to hold in memory.
+- **On phones only** (desktop stays as it is): a softer neon glow (fewer
+  bloom passes) and simpler far districts are fine. The picture's
+  resolution stays as it steps today.
+- **Real-device numbers:** `?bench`'s card has a **Copy results** button
+  (the card's text, the full results and the device), to paste back from the
+  owner's phone once the site is live.
