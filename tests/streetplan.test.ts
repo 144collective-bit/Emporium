@@ -2,6 +2,7 @@
 // city as built (downtown's diagonals, blocks, alleys and squares on top), and
 // the geometry helpers they're made with.
 import { TRENCH_BLOCKS } from '../src/scripts/city3d/trenches';
+import { WESTLAKE_BLOCKS } from '../src/scripts/city3d/westlake';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { PLAN, blockAt, cityPlan, distToStreet, gridPlan, inPoly, lanePaths, offsetLine, onSlab, outset, pointAt, polyArea, polyCentre, streetLength, type Pt, type Street } from '../src/scripts/city3d/streetplan';
@@ -69,7 +70,7 @@ test('the city as built: the grid\'s roads, three diagonals from the ring\'s cor
 
 test('the city\'s blocks: downtown\'s outlines, every district and lot, off the asphalt, the landmarks on theirs', () => {
   const p = cityPlan();
-  assert.equal(p.blocks.length, BLOCKS_DT.length + OUTER_BLOCKS.length + BEND_KERBS.length + TRENCH_BLOCKS.length);
+  assert.equal(p.blocks.length, BLOCKS_DT.length + OUTER_BLOCKS.length + BEND_KERBS.length + TRENCH_BLOCKS.length + WESTLAKE_BLOCKS.length);
   // Every plot and every lot sits on an outer block
   for (const d of DISTRICTS) assert.equal(p.blocks.filter((b) => b.pads?.includes(d.id)).length, 1, `plot ${d.id}`);
   assert.equal(p.blocks.flatMap((b) => b.pads ?? []).length, DISTRICTS.length + EXTRA_LOTS.length);

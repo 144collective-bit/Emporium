@@ -52,11 +52,18 @@ export interface BuiltSite {
   id: string;
   meshes: SentMesh[] | null;
 }
-type FromWorker = { ready: string[] } | { failed: string } | BuiltSite;
+type FromWorker = { ready: string[]; loaded?: string } | { failed: string } | BuiltSite;
 
 interface Scope {
   postMessage(m: unknown, transfer?: Transferable[]): void;
-  onmessage: ((e: MessageEvent<{ id: string }>) => void) | null;
+  onmessage: ((e: MessageEvent<{ id: string } | { load: string }>) => void) | null;
+}
+
+/** A district's module, loaded as you approach (districts.ts): it registers its sites (and on the main thread the rest of it) */
+export interface DistrictModule {
+  /** Its own address, for the site worker to load it too */
+  SELF: string;
+  register(opts: { low: boolean; scene: THREE.Scene | null }): void;
 }
 
 /** In the worker: register the sites, then build each one when it's asked for */
@@ -76,6 +83,19 @@ export function serveSites(scope: Scope, init: SiteInit) {
   buildLamps(scene, init.low);
   const sites = new Map(takeSites().map((s) => [s.id, s]));
   scope.onmessage = (e) => {
+    // A district loaded as you approach (districts.ts): its module, and the sites it registers
+    if ('load' in e.data) {
+      const url = e.data.load;
+      import(/* @vite-ignore */ url)
+        .then((m: DistrictModule) => {
+          m.register({ low: init.low, scene: null });
+          const more = takeSites();
+          for (const s of more) sites.set(s.id, s);
+          scope.postMessage({ ready: more.map((s) => s.id), loaded: url });
+        })
+        .catch(() => scope.postMessage({ ready: [], loaded: url }));
+      return;
+    }
     const { id } = e.data;
     const s = sites.get(id);
     if (!s) return scope.postMessage({ id, meshes: null });
@@ -139,6 +159,8 @@ export interface SiteWorker {
   ready(): boolean;
   can(id: string): boolean;
   ask(id: string): void;
+  /** Load a district's module too (its address), resolved once its sites are registered there (or it can't) */
+  load(url: string): Promise<void>;
   /** The sites built since the last call */
   take(): BuiltSite[];
   close(): void;
@@ -161,16 +183,24 @@ export function startSiteWorker(chunk: string, init: SiteInit): SiteWorker | nul
   let ids: Set<string> | null = null;
   let done: BuiltSite[] = [];
   let closed = false;
+  const loading = new Map<string, () => void>();
   const close = () => {
     if (closed) return;
     closed = true;
     ids = null;
     w.terminate();
+    for (const f of loading.values()) f();
+    loading.clear();
   };
   w.onmessage = (e: MessageEvent<FromWorker>) => {
     const d = e.data;
-    if ('ready' in d) ids = new Set(d.ready);
-    else if ('failed' in d) close();
+    if ('ready' in d) {
+      ids = new Set([...(ids ?? []), ...d.ready]);
+      if (d.loaded) {
+        loading.get(d.loaded)?.();
+        loading.delete(d.loaded);
+      }
+    } else if ('failed' in d) close();
     else done.push(d);
   };
   w.onerror = () => close();
@@ -179,6 +209,13 @@ export function startSiteWorker(chunk: string, init: SiteInit): SiteWorker | nul
     ready: () => !!ids,
     can: (id) => !!ids?.has(id),
     ask: (id) => w.postMessage({ id }),
+    load(url) {
+      if (closed) return Promise.resolve();
+      return new Promise((r) => {
+        loading.set(url, r);
+        w.postMessage({ load: url });
+      });
+    },
     take() {
       const out = done;
       done = [];
