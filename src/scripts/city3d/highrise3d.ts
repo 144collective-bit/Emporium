@@ -23,7 +23,7 @@
  * from across town); parapets' caps, plant and the doors near only.
  */
 import * as THREE from 'three';
-import { Batch, canvasTex, lit, neon, PAL, rng, shadeHex, siteMat, toon } from './kit';
+import { Batch, canvasTex, lit, neon, rng, shadeHex, siteMat, toon } from './kit';
 import { SLAB } from './world';
 import { site } from './tilework';
 import { HIGHRISES, PODIUM, type Highrise, type Part, type Skin } from './highrise';
@@ -49,8 +49,8 @@ const GLASS: Record<Skin, { wall: string; mullion: string }> = {
   silver: { wall: '#7d8fb3', mullion: '#e6ecf8' },
   stone: { wall: '#cdbf9f', mullion: '#a8873a' },
 };
-/** Lights in the offices at night: warm white, cool white, now and then the city's cyan */
-const LIGHTS = ['#ffe6b0', '#ffe6b0', '#dff0ff', PAL.cyan];
+/** Lights in the offices at night: warm white and cool white */
+const LIGHTS = ['#ffe6b0', '#ffe6b0', '#fff3d6', '#dff0ff'];
 
 interface Band {
   v0: number;
@@ -71,7 +71,7 @@ function skinBand(c: CanvasRenderingContext2D, skin: Skin, y0: number, glow: boo
       // Stone piers between tall window strips, a gold spandrel under each window
       for (let col = 0; col < COLS; col++) {
         const x = col * PX_W;
-        const on = r() < 0.5 ? LIGHTS[Math.floor(r() * LIGHTS.length)] : null;
+        const on = r() < 0.45 ? LIGHTS[Math.floor(r() * LIGHTS.length)] : null;
         if (glow) {
           if (on) {
             c.fillStyle = on;
@@ -79,21 +79,26 @@ function skinBand(c: CanvasRenderingContext2D, skin: Skin, y0: number, glow: boo
           }
           continue;
         }
+        // (by day the windows are all the same dark glass: the lights are the light map's, at night)
         c.fillStyle = shadeHex(wall, 0.12);
         c.fillRect(x, y, 6, PX_H);
         c.fillStyle = '#16131f';
         c.fillRect(x + 12, y + 4, 24, 48);
-        c.fillStyle = on ? shadeHex(on, -0.4) : '#2c3a5c';
+        const g = c.createLinearGradient(0, y + 6, 0, y + 50);
+        g.addColorStop(0, '#5a6f9c');
+        g.addColorStop(1, '#26304e');
+        c.fillStyle = g;
         c.fillRect(x + 14, y + 6, 20, 44);
         c.fillStyle = mullion;
         c.fillRect(x + 12, y + 52, 24, 8);
       }
       continue;
     }
-    // A curtain wall: glass from slab to slab, a dark slab edge at each floor, a mullion at every bay
+    // A curtain wall: glass from slab to slab, a dark slab edge at each floor, a mullion at every bay; by day one even
+    // tint with the sky's reflection down each floor (the lights are the light map's, at night)
     for (let col = 0; col < COLS; col++) {
       const x = col * PX_W;
-      const on = r() < 0.5 ? LIGHTS[Math.floor(r() * LIGHTS.length)] : null;
+      const on = r() < 0.45 ? LIGHTS[Math.floor(r() * LIGHTS.length)] : null;
       if (glow) {
         if (on) {
           c.fillStyle = on;
@@ -101,11 +106,12 @@ function skinBand(c: CanvasRenderingContext2D, skin: Skin, y0: number, glow: boo
         }
         continue;
       }
-      const g = c.createLinearGradient(x, y, x + PX_W, y + PX_H);
-      g.addColorStop(0, shadeHex(wall, 0.45));
-      g.addColorStop(0.55, wall);
-      g.addColorStop(1, shadeHex(wall, -0.45));
-      c.fillStyle = on ? shadeHex(on, -0.5) : g;
+      const tint = shadeHex(wall, (r() - 0.5) * 0.08);
+      const g = c.createLinearGradient(0, y + 7, 0, y + PX_H);
+      g.addColorStop(0, shadeHex(tint, 0.3));
+      g.addColorStop(0.5, tint);
+      g.addColorStop(1, shadeHex(tint, -0.25));
+      c.fillStyle = g;
       c.fillRect(x, y + 7, PX_W, PX_H - 7);
       c.fillStyle = mullion;
       c.fillRect(x, y + 7, 2, PX_H - 7);
@@ -271,7 +277,7 @@ function rim(b: Batch, line: Pt[], y: number, t: number, h: number, mat: THREE.M
 
 const ROOF = toon('#3a3550');
 const PARAPET = toon('#5a5478');
-const GOLD = toon('#d4a73c');
+const GOLD = toon('#b8892e');
 const STEEL = toon('#8f93ad');
 const DARK = toon('#1b1830');
 const CANOPY = toon('#2a2740');
@@ -312,7 +318,7 @@ function tower(b: Batch, t: Highrise, low: boolean) {
       // Gold edges at each setback, a gold pyramid and a finial
       for (const p of shafts) rim(b, shrink(outline(p), -0.03), SLAB + p.y1 - 0.42, 0.08, 0.08, trim);
       const half = Math.min(x1 - x0, z1 - z0) / 2;
-      b.add(new THREE.ConeGeometry(half * Math.SQRT2 * 0.92, 3.2, 4, 1).rotateY(Math.PI / 4).scale((x1 - x0) / (2 * half), 1, (z1 - z0) / (2 * half)).translate(cx, R + 1.6 + 0.28, cz), GOLD);
+      b.add(new THREE.ConeGeometry(half * Math.SQRT2 * 0.92, 4.4, 4, 1).rotateY(Math.PI / 4).scale((x1 - x0) / (2 * half), 1, (z1 - z0) / (2 * half)).translate(cx, R + 2.2 + 0.28, cz), GOLD);
     }
     if (t.design === 'round') {
       // A neon ring round the top and a low cap
@@ -337,7 +343,7 @@ function tower(b: Batch, t: Highrise, low: boolean) {
       for (const p of shafts) rim(b, shrink(outline(p), -0.03), SLAB + p.y1 - 0.45, 0.08, 0.08, trim);
     }
     // The mast to the tip, a red light at its top
-    const mastFrom = t.design === 'deco' || t.design === 'spire' ? R + 3.3 : R + 0.28;
+    const mastFrom = t.design === 'deco' ? R + 4.5 : t.design === 'spire' ? R + 3.3 : R + 0.28;
     const tip = SLAB + t.tip;
     b.add(new THREE.CylinderGeometry(0.06, 0.14, tip - mastFrom, 6, 1, true).translate(cx, (mastFrom + tip) / 2, cz), STEEL);
     b.add(new THREE.OctahedronGeometry(0.16, 0).translate(cx, tip + 0.08, cz), WARNING);
