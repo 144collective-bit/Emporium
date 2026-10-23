@@ -145,12 +145,13 @@ page to the start menu's "The city is ready", best of 3:
 
 | | before | after |
 |---|---|---|
-| Ready | 16.3-17.9 s | 12.3 s |
+| Ready | 16.3 s | 12.5 s |
 | The city's code before it's up (gzipped) | 568 KB | 590 KB |
 | The homepage's HTML (gzipped) | 95 KB | 92 KB |
 
-The step by step: 17.9 s, 15.8 s with the data baked, 12.3 s with the 2D
-map held back. The code is a little bigger over the wire (the baked data,
+Both measured in the same session (the machine varies a second or two
+between sessions). The step by step, in an earlier one: 17.9 s, 15.8 s with
+the data baked, 12.3 s with the 2D map held back. The code is a little bigger over the wire (the baked data,
 84 KB, against SMAA and the fight, 50 KB, now loaded later), but the
 browser no longer works any of it out.
 
