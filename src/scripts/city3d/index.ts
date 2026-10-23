@@ -11,7 +11,7 @@ import { CENTER, addLamp, addTree, buildGround, buildLamps, buildSkyline, buildT
 import { PARK_LAMPS, PARK_TREES, WESTLAKE_RECT } from './westlake';
 import { createDistricts } from './districts';
 import { buildStadium } from './stadium3d';
-import { STADIUM_SPAWN } from './stadium';
+import { STADIUM_LAMPS, STADIUM_RECTS, STADIUM_SPAWN } from './stadium';
 import { buildLandmarks, type Spot } from './landmarks';
 import { buildInfill } from './infill';
 import { buildNeighbourhoods } from './neighbourhoods';
@@ -229,6 +229,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   keepTreesOff(WESTLAKE_RECT);
   PARK_TREES.forEach((t, i) => !(tier === 'low' && t.clump && i % 2) && addTree(t.x, t.z, t.s, t.pine));
   for (const [x, z, ry] of PARK_LAMPS) addLamp(x, z, ry);
+  // ...and the stadium's, north of the highway (stadium.ts): no trees on its block, its road and car park or under its footbridge
+  for (const r of STADIUM_RECTS) keepTreesOff(r);
+  for (const [x, z, ry, y] of STADIUM_LAMPS) addLamp(x, z, ry, y);
   progress(0.55);
   await waited(nextFrame());
   // (phones keep half of them: the trim)

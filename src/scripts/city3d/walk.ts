@@ -57,7 +57,7 @@ import { count } from './tycoon';
 import { NS_ROADS, RIVER, SLAB, WALK_W, type Tick } from './world';
 import { footbridgeWall, footbridgeY } from './liberty';
 import { JETTY, RIM, inLake, onJetty } from './westlake';
-import { GATE } from './stadium';
+import { GATE, bridgeWall, bridgeY } from './stadium';
 import { WORLD_BOUNDS } from './layout';
 import { PLAN, inPoly, type Pt } from './streetplan';
 import { SPOTS, pointOn, ROUTES } from './routes';
@@ -280,7 +280,7 @@ export function createWalk(d: WalkDeps) {
    */
   const groundAt = (x: number, z: number, yNow = 0) => {
     const slab = slabs.some((s) => inBox(s.box, x, z) && inPoly(s.poly, [x, z])) ? SLAB : onDeck(x, z) ? DECK_Y : 0.035;
-    const base = Math.max(slab, footbridgeY(x, z, yNow) ?? 0, onJetty(x, z) ? SLAB + JETTY.y : 0);
+    const base = Math.max(slab, footbridgeY(x, z, yNow) ?? 0, bridgeY(x, z, yNow) ?? 0, onJetty(x, z) ? SLAB + JETTY.y : 0);
     if (x < KART_PARK.x0 || x > KART_PARK.x1 || z < KART_PARK.z0 || z > KART_PARK.z1) return base;
     const t = trackSurfaceAt(x, z, yNow);
     return t ? Math.max(base, t.y + 0.035) : base;
@@ -293,6 +293,9 @@ export function createWalk(d: WalkDeps) {
     if (x < BOUNDS[0] || x > BOUNDS[2] || z < BOUNDS[1] || z > BOUNDS[3]) return true;
     if (footbridgeY(x, z, y, RADIUS) !== null) return false;
     if (footbridgeWall(x, z, y, RADIUS)) return true;
+    // The stadium's footbridge over the highway (stadium.ts): up there only its parapets stop you
+    if (bridgeY(x, z, y, RADIUS) !== null) return false;
+    if (bridgeWall(x, z, y, RADIUS)) return true;
     // (the river is a wall but at the bridges, and on The Trenches' boardwalk and pier: their railings are the decks' edges)
     if (z > RIVER[0] - 0.3 && z < RIVER[1] + 0.3 && !onBridge(x) && !onDeck(x, z, RADIUS)) return true;
     // Westlake Park's lake (westlake.ts): you stop on the lawn at its stone rim, but out along the jetty (its edges stop you)

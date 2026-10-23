@@ -39,7 +39,8 @@ import {
   PATHS,
   PITCH,
   RING_IN,
-  STADIUM_SITE,
+  GARDEN_SITE,
+  BRIDGE_FOOT,
   TENNIS,
   ZS,
   courtMid,
@@ -136,7 +137,7 @@ export const LANES: Lane[] = (() => {
   lane('ring-jog-in', inset(BIG, RING_IN + 0.85), -1, JOG_PACE, 3);
   lane('ring-jog-out', inset(BIG, RING_IN - 0.85), 1, JOG_PACE, 2);
   // The Mall, up one side and down the other, and each strip's walk the same
-  lane('mall', thin([[MALL.x, ZS - 0.6], [MALL.x, STADIUM_SITE[3] + 3.4]], 1.0), 1, WALK_PACE, 6, [3]);
+  lane('mall', thin([[MALL.x, ZS - 0.6], [MALL.x, BRIDGE_FOOT + 1.2]], 1.0), 1, WALK_PACE, 6, [3]);
   // (the strips' turning short of their ends, where the walks meet the sidewalks)
   const trim = (pts: Pt[]): Pt[] => [[pts[0][0] + 1.5, pts[0][1]], ...pts.slice(1, -1), [pts.at(-1)![0] - 1.5, pts.at(-1)![1]]];
   for (const s of ['westlake-s0-walk', 'westlake-s1-walk', 'westlake-s2-walk']) lane(s, thin(trim(mid(s).pts), 0.4), 1, WALK_PACE, 3, s === 'westlake-s1-walk' ? [1] : []);
@@ -191,7 +192,7 @@ export const PICNICS: Picnic[] = (() => {
   for (let tries = 0; tries < 4000 && out.length < 9; tries++) {
     const p: Pt = [x0 + r() * (x1 - x0), z0 + r() * (z1 - z0)];
     if (!inPark(p, 4) || onPath(p, 3.2) || inLake(p[0], p[1], LOOP_OUT + 3.5)) continue;
-    if (p[0] > STADIUM_SITE[0] - 5 && p[0] < STADIUM_SITE[2] + 5 && p[1] > STADIUM_SITE[1] - 5 && p[1] < STADIUM_SITE[3] + 5) continue;
+    if (p[0] > GARDEN_SITE[0] - 5 && p[0] < GARDEN_SITE[2] + 5 && p[1] > GARDEN_SITE[1] - 5 && p[1] < GARDEN_SITE[3] + 5) continue;
     if (PARK_TREES.some((t) => Math.hypot(t.x - p[0], t.z - p[1]) < 3.2)) continue;
     if (out.some((o) => Math.hypot(o.at[0] - p[0], o.at[1] - p[1]) < 16)) continue;
     const ry = r() * Math.PI;

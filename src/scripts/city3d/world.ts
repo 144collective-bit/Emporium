@@ -28,6 +28,7 @@ import { keyRect } from './tileplan';
 import { site } from './tilework';
 import { lampKind } from './trenches';
 import { WATERFRONT_RECT } from './waterfront';
+import { BRIDGE_RECT } from './stadium';
 
 export { BLOCKS, BS, CORE_ROADS, EW_ROADS, EXT, NS_ROADS, RIVER, SOUTH_ROAD, WALK_W, type Road };
 /** District blocks around the core: one large plot each (src/data/plots.ts). */
@@ -667,7 +668,10 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
       // Alternate sides, the arm reaching in over the road
       const side = i % 2 ? 1 : -1;
       const [nx, nz] = [(-uz / l) * side, (ux / l) * side];
-      addLamp(p[0] + nx * (HIGHWAY_HALF + 0.5), p[1] + nz * (HIGHWAY_HALF + 0.5), Math.atan2(nz, -nx), 0.02);
+      const [lx, lz] = [p[0] + nx * (HIGHWAY_HALF + 0.5), p[1] + nz * (HIGHWAY_HALF + 0.5)];
+      // (none under the stadium's footbridge: stadium.ts)
+      if (lx > BRIDGE_RECT[0] - 2 && lx < BRIDGE_RECT[2] + 2 && lz > BRIDGE_RECT[1] && lz < BRIDGE_RECT[3]) return;
+      addLamp(lx, lz, Math.atan2(nz, -nx), 0.02);
     });
   for (const s of PLAN.streets) if (s.kind === 'slip') b.add(strip(s.pts, -s.half, s.half, 0.036), asphalt);
 
