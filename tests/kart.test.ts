@@ -1,9 +1,9 @@
-// The kart park: the site and the old track network still drawn until the rebuild's Phase 3 (kartpark.ts),
+// The kart park: the site north of the ring highway (kartpark.ts; its facility is kartfacility.test.ts),
 // the racing rules on the new circuit (kart-sim.ts, kartcircuit.ts) and what the economy makes of it
 // (catalog.ts, tycoon.ts, missions.ts).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BRIDGE_H, F, KART_PARK, KART_SPAWN, SLIP_ROAD, GATE, along, at, frame, locate, wrapS } from '../src/scripts/city3d/kartpark';
+import { BRIDGE_H, F, KART_PARK, KART_SPAWN, ROAD, GATE, along, at, frame, locate, wrapS } from '../src/scripts/city3d/kartpark';
 import { CUPS, CUP_IDS, NO_INPUT, RAIN_GRIP, RESET_AT, RESET_T, RUNOFF_CAP, createKartSim, flight, tune, type KartInput } from '../src/scripts/city3d/kart-sim';
 import { CIRCUIT_SOLIDS, COURSES as RACES, COURSE_IDS as RACE_IDS, HUT_DOOR, KERB, TRACK_HALF as RACE_HALF, circuitSurfaceAt, type CourseId as RaceId } from '../src/scripts/city3d/kartcircuit';
 import { DEFAULT_KART, KART_SPECS, PLAYER_KARTS, cleanKart } from '../src/scripts/city3d/mykart';
@@ -30,7 +30,7 @@ import {
   startSeries,
 } from '../src/scripts/city3d/tycoon';
 import { BADGES, MISSIONS } from '../src/scripts/city3d/missions';
-import { PARKWAY } from '../src/scripts/city3d/outer';
+import { HIGHWAY_HALF, fromHighway, insideHighway } from '../src/scripts/city3d/highway';
 import { WORLD_BOUNDS } from '../src/scripts/city3d/layout';
 import { SOLIDS } from '../src/scripts/city3d/solids';
 
@@ -38,18 +38,21 @@ const inSite = (x: number, z: number, m = 0) => x >= KART_PARK.x0 + m && x <= KA
 
 /* ---------- The site ---------- */
 
-test('the kart park sits north-east beyond the Parkway, fenced round the scaled-down circuit, inside the world', () => {
-  const top = Math.min(...PARKWAY.map((p) => p[1]));
-  assert.ok(KART_PARK.z1 < top - 5, 'clear of the Parkway');
-  assert.ok(KART_PARK.x0 > 64.5, 'east of the ring');
+test('the kart park sits north of the ring highway in the north-east, fenced round its facility, its gate on Kart Road, inside the world', () => {
+  for (const [x, z] of [
+    [KART_PARK.x0, KART_PARK.z0],
+    [KART_PARK.x1, KART_PARK.z1],
+    [KART_PARK.x0, KART_PARK.z1],
+    [KART_PARK.x1, KART_PARK.z0],
+  ])
+    assert.ok(!insideHighway(x, z) && fromHighway(x, z) > HIGHWAY_HALF + 8, 'north of the highway, clear of it');
+  assert.ok(KART_PARK.x0 > 64.5, 'east of the east ring avenue');
   assert.ok(KART_PARK.x1 <= WORLD_BOUNDS[2] && KART_PARK.x0 >= WORLD_BOUNDS[0] && KART_PARK.z0 >= WORLD_BOUNDS[1]);
-  // Pulled in round the circuit when it was scaled down: about 88 x 90, the land beyond it open again
-  assert.ok(KART_PARK.x1 - KART_PARK.x0 < 100 && KART_PARK.z1 - KART_PARK.z0 < 100, 'a compact park');
+  assert.ok(KART_PARK.x1 - KART_PARK.x0 < 120 && KART_PARK.z1 - KART_PARK.z0 < 125, 'a compact park');
   assert.ok(KART_PARK.x1 < WORLD_BOUNDS[2] - 30 && KART_PARK.z0 > WORLD_BOUNDS[1] + 30, 'open land beyond it');
-  assert.equal(SLIP_ROAD.z0, KART_PARK.z1);
-  const onParkway = PARKWAY.some((p) => Math.abs(p[0] - SLIP_ROAD.x) < 3 && Math.abs(p[1] - SLIP_ROAD.z1) < 3);
-  assert.ok(onParkway, 'the slip road meets the Parkway');
-  assert.ok(GATE.x0 < SLIP_ROAD.x && GATE.x1 > SLIP_ROAD.x && GATE.z === KART_PARK.z1);
+  // The gate on the south fence, Kart Road just outside it, running past it
+  assert.ok(GATE.z === KART_PARK.z1 && ROAD.z - ROAD.half - KART_PARK.z1 > 0.8 && ROAD.z - ROAD.half - KART_PARK.z1 < 3);
+  assert.ok(ROAD.x1 > GATE.x1 && ROAD.x0 < KART_PARK.x0);
   assert.ok(inSite(KART_SPAWN.x, KART_SPAWN.z, 1) && inSite(HUT_DOOR.x, HUT_DOOR.z, 1));
 });
 

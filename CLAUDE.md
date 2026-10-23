@@ -240,8 +240,10 @@ it and has been retired completely. Build only on what's here.
     `walk.ts`): the ride moves Degen (hidden) and its own camera, the keys
     wait, `.city.is-riding` hides the walk HUD; leaving walk mode ends it.
   - **The metro** is `metro.ts` (DOM-free, tested in `tests/metro.test.ts`):
-    an elevated line on a viaduct as tracks (`TRACKS`: `main` from the kart
-    park down the east ring avenue's median to the switch (`SWITCH_S`), a
+    an elevated line on a viaduct as tracks (`TRACKS`: `main` from the Kart
+    Park station north of the ring highway (the north side's stage 2: it
+    crosses the highway's junction on a span) down the east ring avenue's
+    median to the switch (`SWITCH_S`), a
     quarter-circle bend (`BEND_R`) and west over the open land south of the
     south row and Trench Avenue's median to The Trenches; `branch` straight
     on from the switch to the Airport, Phase 9, the owner's call); a place
@@ -257,7 +259,7 @@ it and has been retired completely. Build only on what's here.
     back, up again; `ROUND_TRIP`), runs as pieces of track (`runsBetween()`,
     `placeOn()`, `carAt()`: each car on the track where it is, round the
     bend), rides straight between stations (`rideAt()`, turning round at
-    South Bank between The Trenches and the Airport; at most about 37 s)
+    South Bank between The Trenches and the Airport; at most about 40 s)
     and back on the timetable after (`timetableAt()`). Drawn by `metro3d.ts`
     (the deck in short straight pieces between its pillars, rails, parapets
     with magenta neon, hammerhead pillars, a girder over the river; each
@@ -676,7 +678,8 @@ it and has been retired completely. Build only on what's here.
   moving north of the ring highway and Westlake Park's paths, kerbs, low
   walls and gardens, planned in `docs/north-plan.md` in three stages, each
   with the owner's sign-off; keep it up to date. Stage 1 (the stadium
-  north, above) is built.
+  north, above) and stage 2 (the kart park north, with its facility, below)
+  are built.
 - **Districts loaded as you approach** (performance phase 4, item 10):
   a district's drawing is a module of its own (`LAZY_DISTRICTS` in
   `districts.ts`: an id, its land and `load()`, a dynamic import), a chunk
@@ -802,8 +805,11 @@ it and has been retired completely. Build only on what's here.
     and the character screen (`stage.ts`), SMAA (`post.ts`), the fight
     demo, the benchmark (`?bench`, `bench.ts`), Drop 001's fitting room
     (`fitting.ts`, when its panel first opens: `loadFitting()` in index.ts)
-    and the world map (`worldmap.ts`, when it first opens: `loadMap()` in
-    travel-ui.ts; `placeName()` is places.ts's). New features that aren't needed until they're used come the same
+    the world map (`worldmap.ts`, when it first opens: `loadMap()` in
+    travel-ui.ts; `placeName()` is places.ts's) and the kart park's game
+    (the hut's menu and the race, `kartgame.ts`: `loadKarts()` in walk.ts,
+    when Degen comes near the park or asks at the hut; idle stand-ins until
+    then; the City-view panel's records are `kart-records.ts`, at the boot). New features that aren't needed until they're used come the same
     way. three.js is a chunk of its own (`manualChunks` in
     `astro.config.mjs`), so a deploy that doesn't change it leaves it
     cached.
@@ -944,7 +950,7 @@ it and has been retired completely. Build only on what's here.
   (no ticks, crowds, solids or pools of light; those stay with the boot),
   the same every time it runs. Today they're each tile's trees and lamps
   (`world.ts`), the airport's runway and apron (`airport.ts`) and the
-  kart park's grounds and circuit (`kartpark3d.ts`); new districts and
+  kart park's grounds and circuit (`kartgrounds3d.ts`); new districts and
   building kits come as sites.
   - The boot builds only the sites in the home view's and the intro's
     tiles (`bootSites()` in `tileplan.ts`) and merges them with the rest
@@ -1793,14 +1799,20 @@ it and has been retired completely. Build only on what's here.
 
 ## The kart park (3D walk mode)
 
-- **The place** (the owner's call): a Mario-Kart-style go-kart park on the
-  open land outside the Parkway in the north-east, fenced round the
-  circuit (pulled in when the circuit was scaled down, the owner's call;
-  the land beyond it is the outskirts' again, open for later), with a slip
-  road down to the Parkway and a gate;
+- **The place** (the owner's call): a Mario-Kart-style go-kart park north
+  of the ring highway in the north-east (the north side's stage 2,
+  `docs/north-plan.md`, the owner's call: moved from outside the Parkway,
+  the same circuit to the last sample, "a more realistic track with more
+  than just a fence around it"; its old land is open again, kept clear for
+  a district later), fenced round its facility, its gate on Kart Road off
+  the east ring avenue, the metro's Kart Park station at the corner;
   one circuit raced both ways (the rebuild, `docs/kart-plan.md`), the kart
-  hut (door prompt "Kart hut"), a grandstand facing the start straight, the
-  pit lane with eight garages and the big screen on their roof. It's a place like the landmarks (spot
+  hut (door prompt "Kart hut") with a viewing terrace on its roof, a
+  grandstand in the infield facing the start straight and a big covered
+  one over the hill and the jump, grass banks with people, the pit lane
+  with eight garages, the big screen on their roof and the timing tower,
+  the paddock and the plaza inside the gate, armco, tyre walls, catch
+  fencing, marshal posts and floodlights (`kartfacility.ts`, below). It's a place like the landmarks (spot
   `karts`, pin, directory entry, a City-view panel with your records and
   **Walk in**, which starts walk mode at the gate, `KART_SPAWN`). Race karts
   stay on the track, but your own kart can be taken out of the pits and
@@ -1808,19 +1820,42 @@ it and has been retired completely. Build only on what's here.
   `drive.ts` drives it like the car, with Degen seated; it rides the
   circuit's ground (the deck, the banking, the grass banks) through
   `circuitSurfaceAt()`, and goes back to the pits when a race starts).
-  Walking follows the same ground inside the park (`groundAt()` in
-  `walk.ts`).
-- **The site** is `kartpark.ts` (DOM-free): `KART_PARK` (world x 92-180,
-  z -138 to -48; `SITE_U` x `SITE_V` inside its margins), local numbers via `toWorld()` / `toLocal()` (u east, v
-  south from the site's corner), the fence's `GATE`, the `SLIP_ROAD` and
+  Walking follows the same ground inside the park, and up the banks
+  (`groundAt()` in `walk.ts`, `bankY()`; your kart climbs them too).
+- **The site** is `kartpark.ts` (DOM-free): `KART_PARK` (world x 113-225,
+  z -311.5 to -191.5, its fence), local numbers via `toWorld()` /
+  `toLocal()` (u east, v south from the circuit frame's corner; `SITE_U`
+  x `SITE_V` is the circuit's frame, the site reaches past it on every
+  side), Kart Road (`ROAD`, east off ns3 past the gate) and the car park's
+  one-way loop (`LOOP`), in the street plan as `KART_STREETS` /
+  `KART_CROSSINGS` (traffic drives them, off the highway at ns3, whose
+  outer corners get slip lanes: `OUTER_SLIPS`), the fence's `GATE` and
   `KART_SPAWN`, and the line maths every track part uses: `sampleLine()`
   (centripetal Catmull-Rom through control points `CPt`, heights
   cosine-eased from point to point, or through a `glide` point in one
   long ease (a ramp round a bend), sampled every half tile), `Line`, `frame()`, `at()`,
   `locate()` (keeps to the layer its hint is on), `along()`, `wrapS()`,
   `heightAt()` (banking), flags `F` (deck, tunnel, bank). The site is flat
-  ground, not a slab, and the outskirts' trees keep off it and the slip
-  road (`treeSpot()` in `outskirts.ts`, `onRoad()` in `outer.ts`).
+  ground, not a slab, and the outskirts' trees keep off it, the road and
+  the car park (`KART_RECTS`, `treeSpot()` in `outskirts.ts`).
+- **The facility** (the north side's stage 2, the owner's picks: proper
+  trackside, spectator areas, a paddock and entrance, night lighting) is
+  `kartfacility.ts` (DOM-free, tested in `tests/kartfacility.test.ts`), in
+  the park's local numbers round the unchanged circuit: armco along the
+  run-off's edge wherever it's open and clear of the rest of the circuit
+  and the pits (`BARRIERS`, `ARMCO_OUT`), tyre walls round the outside of
+  the bends (`TYRE_WALLS`), catch fencing in front of the spectators
+  (`CATCH`), none of it solid (a kart that wide is put back); the covered
+  `GRANDSTAND` north of the hill and the jump (`tierAt()`), three grass
+  `BANKS` (`bankAt()`, `bankY()`: walkable), the hut's roof `TERRACE` and
+  its stairs; the `PLAZA` inside the gate with the ticket `KIOSK` and the
+  gate's `ARCH`, the `TOWER` (timing) at the pit lane's east end, the
+  `PADDOCK` behind the garages with its team `TENTS`; `FLOODLIGHTS`
+  (`FLOOD`, under the Emporium); the car park in the loop (`CAR_PARK`,
+  `BAY_COLS`, `BAYS`, `PARKED`), `KART_LAMPS`, `KART_TREES` and the
+  people (`KART_PEOPLE`: on the banks, sitting in the grandstand, on the
+  terrace, the plaza and in the paddock; `trim` ones left out on phones);
+  `FACILITY_SOLIDS` (in `SOLIDS`), `KART_RECTS` / `KART_AREA`.
 - **The rules** are `kart-sim.ts` (DOM-free, seeded, a fixed 60 Hz tick,
   tested), racing on the rebuild's circuit (`kartcircuit.ts`) since
   Phase 2: `createKartSim(setup)` → `step(dt, input)` returning events.
@@ -1915,7 +1950,16 @@ it and has been retired completely. Build only on what's here.
   missions and five badges in `missions.ts`. Global boards wait for the
   game server (keep the boards' shape server-ready).
 - **On screen:** `kart-types.ts` holds the interfaces the three parts agree
-  on. `kartpark3d.ts` draws the site round the circuit (`buildKartPark()`:
+  on. `kartpark3d.ts` (`buildKartPark()`, at the boot) is the place: the
+  spot's group (the garages with their numbers and the screen, the hut and
+  its terrace, the timing tower with its board, both grandstands, the
+  gate's arch with SECTOR 7 KART PARK both ways, the kiosk), its people,
+  trees, lamps and parked cars, and `KART_VIEW` (the way round and whether
+  the pits are closed, which `setCourse()` / `racing()` set and the
+  grounds apply when they've come). `kartgrounds3d.ts` (a district loaded
+  as you approach, `LAZY_DISTRICTS` id `karts`; signs shared through
+  `kartsigns.ts`) draws the rest as sites: the lawn, the paving and the
+  banks; the circuit:
   asphalt, edge lines and red-and-white kerbs swept along the centre
   line, banked where it rolls; grass run-off with gravel on the outside
   of the bends where it lies flat, easing down as grass banks where the
@@ -1923,10 +1967,12 @@ it and has been retired completely. Build only on what's here.
   railed deck on columns just past its edges, open underneath, with
   abutments at the ramps; the chequered line, both ways' grids and the
   gantry; the pit lane, its bays and the cones that close it in a race
-  (`racing()`); eight garages with their numbers and the screen on their
-  roof (fixed copy only); the hut; the grandstand facing south with its
-  fans; tyre stacks, marshal posts, light poles and trees past the
-  run-off), and per course (`setCourse()`, the way round being raced) the
+  (`racing()`); the armco, tyre walls and catch fencing (its mesh in the
+  FX layer), marshal posts with their booths and flags, the floodlight
+  towers, the fence; the paddock's tents with karts on stands; the plaza's
+  flags and benches; Kart Road, the loop and the car park with its bays,
+  arrows and P sign), and on the main thread the start line, the banner,
+  the cones and per course (`setCourse()`, the way round being raced) the
   guidance: pad chevrons, chevron boards on the outside of the bends,
   arrows painted before the turns, numbered corner boards and 3-2-1
   braking markers before the hard corners (one sign atlas, `atlasTex()`).
@@ -2265,7 +2311,7 @@ it and has been retired completely. Build only on what's here.
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`),
-  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`),
+  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`), the kart park's facility (`kartfacility.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,

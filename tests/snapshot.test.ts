@@ -17,7 +17,7 @@ import { PLAN } from '../src/scripts/city3d/streetplan';
 import { ALLEYS, DIAGONALS, INFILL, LANES, PARKS, PRACTICE, SQUARE, WATER_TOWER } from '../src/scripts/city3d/downtown';
 import { OUTER_PARKS, OUTER_SQUARES, PADS, PARKWAY, SOUTHSIDE } from '../src/scripts/city3d/outer';
 import * as AIR from '../src/scripts/city3d/airfield';
-import { GATE, KART_PARK, KART_SPAWN, SLIP_ROAD } from '../src/scripts/city3d/kartpark';
+import { GATE, KART_PARK, KART_SPAWN, LOOP as KART_LOOP, ROAD as KART_ROAD } from '../src/scripts/city3d/kartpark';
 import { BAYS, CIRCUIT, HUT_DOOR, SITE as KART_SITE } from '../src/scripts/city3d/kartcircuit';
 import { COUNTER, FIGHT_CLUB, FIGHT_SPAWN, OUT, RING, TRAINER } from '../src/scripts/city3d/fightsite';
 import { LIBERTY_SPAWN, SUPPORTS, TOWERS, WALKWAY } from '../src/scripts/city3d/liberty';
@@ -82,7 +82,7 @@ const layout = () =>
       road: AIR.ROAD,
       carPark: AIR.CAR_PARK,
     },
-    karts: { park: KART_PARK, gate: GATE, slipRoad: SLIP_ROAD, site: KART_SITE, bays: BAYS, hutDoor: HUT_DOOR, circuit },
+    karts: { park: KART_PARK, gate: GATE, road: KART_ROAD, loop: KART_LOOP, site: KART_SITE, bays: BAYS, hutDoor: HUT_DOOR, circuit },
     fightClub: { lot: FIGHT_CLUB, ring: RING, counter: COUNTER, trainer: TRAINER, out: OUT },
     liberty: { x: FOOTBRIDGE_X, towers: TOWERS, walkway: WALKWAY, supports: SUPPORTS },
     westlake: { blocks: WESTLAKE_BLOCKS, lake: LAKE_C, gates: GATES, garden: GARDEN_SITE },

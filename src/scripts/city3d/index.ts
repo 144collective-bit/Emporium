@@ -66,7 +66,7 @@ import { BLOCK_SPAWN } from './projects';
 import { AVENUE_SPAWNS } from './avenue';
 import { buildFightClub } from './fightclub';
 import { fightRecordHtml } from './fight-ui';
-import { kartRecordsHtml } from './kart-ui';
+import { kartRecordsHtml } from './kart-records';
 import { destAt } from './tycoon';
 import { guideAt } from './guide';
 import { CARS, initFarCars } from './cars';
@@ -190,8 +190,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const corners = buildCornerShops(scene, { low: tier === 'low' });
   // Beams of light over your contracts' drop-offs
   const beacons = buildBeacons(scene, tick, reduced);
-  // The kart park outside the Parkway in the north-east: a place like the landmarks (its pin and panel)
-  const kartPark = buildKartPark(scene, { tick, reduced, low: tier === 'low' });
+  // The kart park north of the ring highway in the north-east: a place like the landmarks (its pin and panel); its grounds load as you approach
+  const kartPark = buildKartPark(scene, crowd, { tick, reduced, low: tier === 'low' });
   spots.push(kartPark.spot, airport.spot);
   // The Fight Club on the south bank: a place too (its pin and panel)
   const fightClub = buildFightClub(scene, { tick, reduced, low: tier === 'low' });

@@ -56,7 +56,7 @@ export const SWITCH_Z = 116;
 /** The bend's radius: it comes out of it running west along Trench Avenue */
 export const BEND_R = AVENUE_Z - SWITCH_Z;
 /** The ends of the tracks: north, west (past The Trenches' station) and south (past the Airport's) */
-export const NORTH_END = -56;
+export const NORTH_END = -204;
 export const WEST_END = -103;
 export const AIRPORT_END = 136.4;
 
@@ -136,7 +136,7 @@ const TRENCH_X = -93;
 const trenchTower: Pick<Station, 'tower' | 'door' | 'face'> = { tower: [TRENCH_X - 1.2, AVENUE_Z + 5.3, TRENCH_X + 1.2, AVENUE_Z + 7.8], door: { x: TRENCH_X, z: AVENUE_Z + 4.9 }, face: [0, -1] };
 
 export const STATIONS: Station[] = [
-  { id: 'kart', name: 'Kart Park', track: 'main', s: -48 - NORTH_END, ...eastTower(-48) },
+  { id: 'kart', name: 'Kart Park', track: 'main', s: -196 - NORTH_END, ...eastTower(-196) },
   { id: 'downtown', name: 'Downtown', track: 'main', s: 33 - NORTH_END, ...eastTower(37.5) },
   { id: 'southbank', name: 'South Bank', track: 'main', s: 109 - NORTH_END, ...eastTower(109.5) },
   { id: 'trenches', name: 'The Trenches', track: 'main', s: along('main', [TRENCH_X, AVENUE_Z]), ...trenchTower },
@@ -195,7 +195,7 @@ export const METRO_SOLIDS: Box[] = [
 /* ---------- The train and its timetable ---------- */
 
 /** The train: its length (two cars), top speed, how hard it pulls away and brakes, how long it waits at a station */
-export const TRAIN = { len: 10, speed: 10, accel: 2.5, dwell: 8 };
+export const TRAIN = { len: 10, speed: 14, accel: 2.5, dwell: 8 };
 /** How long it stops to turn round at South Bank on a ride from The Trenches to the Airport */
 export const TURN_STOP = 2;
 

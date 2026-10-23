@@ -23,6 +23,7 @@ import { HIGHWAY, HIGHWAY_HALF, insideHighway, outerLane, slipCurve } from './hi
 import { TRENCH_BLOCKS, TRENCH_CROSSINGS, TRENCH_STREETS } from './trenches';
 import { WESTLAKE_BLOCKS } from './westlake';
 import { BLOCK as STADIUM_BLOCK, STADIUM_CROSSINGS, STADIUM_STREETS } from './stadium';
+import { KART_CROSSINGS, KART_STREETS } from './kartpark';
 
 export type Pt = [number, number];
 
@@ -325,8 +326,8 @@ function crossingsOf(pts: Pt[], axis: 0 | 1, c: number): Pt[] {
  * the Southside Loop, the landscaped blocks round the plots and lots, their
  * squares and pocket parks.
  */
-/** The highway's junctions whose outer corners get slip lanes too: where an arterial past it carries traffic (the north road to the stadium) */
-export const OUTER_SLIPS = ['highway-ns0-1'];
+/** The highway's junctions whose outer corners get slip lanes too: where an arterial past it carries traffic (the north roads to the stadium and the kart park) */
+export const OUTER_SLIPS = ['highway-ns0-1', 'highway-ns3-0'];
 
 export function cityPlan(): StreetPlan {
   const streets = gridStreets();
@@ -354,6 +355,9 @@ export function cityPlan(): StreetPlan {
   // Stadium Road off the north road past the highway, and the one-way loop round the stadium's car park (stadium.ts)
   for (const t of STADIUM_STREETS) streets.push({ id: t.id, kind: 'street', pts: t.pts, half: t.half, lanes: 1, ...(t.oneway ? { oneway: t.oneway } : {}) });
   for (const c of STADIUM_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: false });
+  // Kart Road off the east ring avenue past the highway, and the one-way loop round the kart park's car park (kartpark.ts)
+  for (const t of KART_STREETS) streets.push({ id: t.id, kind: 'street', pts: t.pts, half: t.half, lanes: 1, ...(t.oneway ? { oneway: t.oneway } : {}) });
+  for (const c of KART_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: false });
   // The ring highway (highway.ts): a lit junction wherever it meets a straight arterial, and on the town
   // side of each, slip lanes for the right turns on and off it (and on the outside too where an arterial past
   // it carries traffic: the north road to the stadium, `OUTER_SLIPS`)
