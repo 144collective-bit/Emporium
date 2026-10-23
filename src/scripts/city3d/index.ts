@@ -72,7 +72,7 @@ import { guideAt } from './guide';
 import { CARS, initFarCars } from './cars';
 import { CROWD_VIEW } from './character';
 import type { GameDeps } from './ui';
-import { createBench } from './bench';
+import type { Bench } from './bench';
 import { mb, sceneMemory } from './perf';
 import { tileBatch } from './tilebatch';
 import { createTileWork } from './tilework';
@@ -968,8 +968,13 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // (frames a second, the slowest frame, draw calls and triangles per frame, the
   // shadow map's share, memory, how long the boot took). ?bench runs the benchmark (bench.ts)
   const query = new URLSearchParams(location.search);
-  const bench = query.has('bench') ? createBench({ host, scene, tier, pixelRatio: () => renderer.getPixelRatio(), home, conditions: benchSky, boot: bootTimes, extra: [] }, query.get('bench') === 'night') : null;
-  const statsEl = query.has('fps') || bench ? document.createElement('pre') : null;
+  // (the benchmark is a chunk of its own, loaded only when asked for; it starts once every site is built)
+  let bench: Bench | null = null;
+  if (query.has('bench'))
+    void import('./bench').then(({ createBench }) => {
+      bench = createBench({ host, scene, tier, pixelRatio: () => renderer.getPixelRatio(), home, conditions: benchSky, boot: bootTimes, extra: [] }, query.get('bench') === 'night');
+    });
+  const statsEl = query.has('fps') || query.has('bench') ? document.createElement('pre') : null;
   const stat = { frames: 0, draws: 0, tris: 0, shadowDraws: 0, shadowTris: 0, worst: 0, last: 0, since: performance.now(), memAt: 0, mem: '' };
   function bootTimes() {
     const r = (a: number, b: number) => Math.round(b - a);

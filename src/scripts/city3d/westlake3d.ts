@@ -17,6 +17,7 @@ import * as THREE from 'three';
 import { Batch, FONT_DISPLAY, canvasTex, lit, neon, siteMat, toon } from './kit';
 import { SLAB, flatPoly, waterMat, type Tick } from './world';
 import { registerParkLife, registerParkSites } from './parklife3d';
+import { register as registerGrounds } from './stadiumgrounds3d';
 import { site } from './tilework';
 import { offsetLine } from './streetplan';
 import { BENCHES, GATES, GATE_PIERS, LAKE_C, PATHS, PIER, RIM, lakeLine, type ParkPath, type Pt } from './westlake';
@@ -132,6 +133,8 @@ function bench(b: Batch, at: Pt, ry: number) {
 export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
   // Step 3: the boathouse, the jetty, the courts and the picnics as sites; on the main thread, what moves
   registerParkSites();
+  // The stadium's grounds north of the highway, loaded with the park (stadiumgrounds3d.ts)
+  registerGrounds();
   if (scene && tick) registerParkLife(scene, tick, low);
   // The paths: a site a stretch
   for (const q of PATHS)

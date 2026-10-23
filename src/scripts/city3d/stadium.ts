@@ -263,5 +263,7 @@ export const STADIUM_RECTS: Rect[] = [
   [LOOP.x0 - LOOP.half - 1, LOOP.z1 - LOOP.half - 1, LOOP.x1 + LOOP.half + 1, ROAD.z],
   BRIDGE_RECT,
 ];
+/** All of it, for loading its grounds as you approach (districts.ts) */
+export const STADIUM_AREA: Rect = [Math.min(...STADIUM_RECTS.map((r) => r[0])), Math.min(...STADIUM_RECTS.map((r) => r[1])), Math.max(...STADIUM_RECTS.map((r) => r[2])), Math.max(...STADIUM_RECTS.map((r) => r[3]))];
 /** The highway's north side (z), for the tests: everything here is north of it */
 export const HIGHWAY_NORTH = HIGHWAY_BOX[1];

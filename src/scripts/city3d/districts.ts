@@ -20,6 +20,7 @@ import { rectDistance } from './tileplan';
 import type { Rect } from './tiles';
 import type { Tick } from './world';
 import { WESTLAKE_RECT } from './westlake';
+import { STADIUM_AREA } from './stadium';
 
 export interface LazyDistrict {
   id: string;
@@ -28,7 +29,12 @@ export interface LazyDistrict {
   load(): Promise<DistrictModule>;
 }
 
-export const LAZY_DISTRICTS: LazyDistrict[] = [{ id: 'westlake', rect: WESTLAKE_RECT, load: () => import('./westlake3d') }];
+const union = (a: Rect, b: Rect): Rect => [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[2], b[2]), Math.max(a[3], b[3])];
+export const LAZY_DISTRICTS: LazyDistrict[] = [
+  // (with the stadium's grounds north of the highway beside it: its road, car park and footbridge, stadiumgrounds3d.ts)
+  { id: 'westlake', rect: union(WESTLAKE_RECT, STADIUM_AREA), load: () => import('./westlake3d') },
+];
+
 
 /** How far past the tier's `far` a district starts loading (time to download it and build what's nearest) */
 export const LEAD = 90;

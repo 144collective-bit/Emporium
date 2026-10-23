@@ -1260,7 +1260,10 @@ In three steps, each a PR for the owner's sign-off:
    avenue's: spot `stadium`, pin, directory entry, a panel (events coming
    soon) with Walk in to `STADIUM_SPAWN`, the gate's door prompt, `PLACES`
    entry for the map, taxis and fast travel). Its sound waits for the
-   events (an empty bowl is quiet).
+   events (an empty bowl is quiet). Since the north side's stage 1
+   (`docs/north-plan.md`, the owner's call) it stands north of the ring
+   highway, its car park beside it and a footbridge from the Mall over the
+   highway; its old site is kept for a formal garden.
 3. **The park's life** (built): the land it needed is in `westlake.ts`:
    the boathouse on the lake's north shore (`BOATHOUSE`, solid) and its
    jetty out over the rim (`JETTY`, `onJetty()`: you can walk out along
