@@ -35,10 +35,17 @@ jobs:
       # To bring it back, set PUBLIC_GAME_SERVER here (see server/README.md).
       - run: npm run build
       # The city's textures made ahead and GPU-compressed (scripts/bake-textures.mjs): painted in a
-      # headless Chromium from the built site, then written into dist/. If it can't run, it says so
-      # and the site paints them in the browser as before.
-      - run: npx playwright-core install --with-deps chromium
-      - run: npm run bake:textures
+      # headless browser from the built site, then written into dist/. The runner's own Chrome does
+      # (installing Playwright's took 12 minutes); if it can't run, it says so and the site paints
+      # them in the browser as before.
+      - name: Make the textures
+        timeout-minutes: 30
+        # (stopped by the timeout, the site still builds: its list goes into the page last)
+        continue-on-error: true
+        run: |
+          if command -v google-chrome >/dev/null; then export CHROMIUM_PATH="$(command -v google-chrome)"
+          else npx playwright-core install --with-deps chromium; fi
+          npm run bake:textures
       # What a visitor downloads before the city is up, held to fixed sizes (scripts/budget.mjs):
       # a start that got heavier stops the build too.
       - run: npm run budget
