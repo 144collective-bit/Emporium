@@ -61,7 +61,7 @@ function mapping(): Link[] {
     ['Right', -1],
     ['Left', 1],
   ] as const)
-    out.push([`${src}Shoulder`, `${src}Arm`, v(s, 0, 0)], [`${src}Arm`, `${src}ForeArm`, v(0, -1, 0)], [`${src}ForeArm`, `${src}Hand`, v(0, WRIST_Y, WRIST_Z)], [`${src}Hand`, `${src}FingerBase`, v(0, -1, 0)]);
+    out.push([`${src}Shoulder`, `=${src}Arm`, v(s, 0, 0)], [`${src}Arm`, `${src}ForeArm`, v(0, -1, 0)], [`${src}ForeArm`, `${src}Hand`, v(0, WRIST_Y, WRIST_Z)], [`${src}Hand`, `${src}FingerBase`, v(0, -1, 0)]);
   for (const [src] of [['Right'], ['Left']] as const)
     out.push([`${src}UpLeg`, `${src}Leg`, v(0, -1, 0)], [`${src}Leg`, `${src}Foot`, v(0, -1, 0)], [`${src}Foot`, `=${src}ToeBase`, v(0, 0, 1)], [`${src}ToeBase`, '', v(0, 0, 1)]);
   return out;
