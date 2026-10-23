@@ -48,9 +48,10 @@ const spots: Record<SpotId, Spot> = {
   bar: { href: '#city-title', title: 'The Rusty Nail', sub: 'Bar · coming soon', aria: 'The Rusty Nail: a bar in The Trenches facing the river, coming soon' },
   arms: { href: '#city-title', title: 'Trench Arms', sub: 'Guns & gear', aria: 'Trench Arms: guns and gear in The Trenches' },
   pier: { href: '#city-title', title: 'Pier 7', sub: 'The waterfront', aria: 'Pier 7: the boardwalk and pier on The Trenches\' waterfront' },
+  nightmarket: { href: '#city-title', title: 'Night Market', sub: 'Street food', aria: 'The Night Market: food stalls on the waterfront by Harbor Stores' },
   stadium: { href: '#city-title', title: 'Sector 7 Stadium', sub: 'Events · coming soon', aria: 'Sector 7 Stadium in Westlake Park: events coming soon' },
 };
-const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'trenches', 'club', 'bar', 'arms', 'pier', 'stadium'];
+const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'trenches', 'club', 'bar', 'arms', 'pier', 'nightmarket', 'stadium'];
 const ext = { target: '_blank', rel: 'noopener noreferrer' };
 
 const map = renderCity({ spots, art: { degen: degenImg.src, logo: logoImg.src } });
@@ -986,6 +987,12 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     <h2 id="city-panel-title" class="city-panel-title">Pier 7</h2>
     <p class="city-panel-text">The Trenches' waterfront: a timber boardwalk out over the river from the highway to the town's promenade, with sodium lamps, benches facing the water and the old dock crane by the Refinery. Pier 7 runs out under its lit arch to a head with the bait and coffee kiosk, binoculars and people fishing off the rail. At its head stands the Pier House, its clock tower keeping your time. Behind the boardwalk is the riverside: The Wharf, the Refinery, Harbor Stores and Club PULSE.</p>
     <button type="button" class="chip-link kart-walkin" data-pier-walkin>Walk in</button>
+  </template>
+  <template data-panel-tpl="nightmarket">
+    <p class="kicker"><span class="kicker-num">17</span> The waterfront</p>
+    <h2 id="city-panel-title" class="city-panel-title">Night Market</h2>
+    <p class="city-panel-text">Street food on a deck out over the river in front of Harbor Stores: shipping containers turned kitchens, two food trucks and a cart, picnic tables, patio heaters and string lights with paper lanterns, under NIGHT MARKET lit on its gantry over the boardwalk. Best after dark. Stalls of your own to run come later: coming soon.</p>
+    <button type="button" class="chip-link kart-walkin" data-market-walkin>Walk in</button>
   </template>
 
   <template data-panel-tpl="stadium">

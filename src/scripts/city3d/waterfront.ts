@@ -16,19 +16,22 @@
  * - **The old docks** in front of the Refinery: a rust-red dock crane
  *   standing on the boardwalk, its jib out over a barge tied up alongside
  *   (`CRANE`, `BARGE`).
+ * - **The night market's deck** (`MARKET_DECK`, what stands on it is
+ *   nightmarket.ts): a broad deck out over the water in front of Harbor
+ *   Stores, its whole length open to the boardwalk (`RAIL_GAPS`).
  *
  * It's a place (spot `pier`, its pin over the arch, `PIER_SPAWN`). Walking:
  * the decks are ground at `DECK_Y` (`onDeck()`: the river's wall stops you
  * everywhere else); the railing is the decks' edge. The boats keep clear:
  * the south lane's boat stays east of the boardwalk and the middle lane
- * swings north round the pier's head (`boatZ()`). What's solid is
+ * swings north round the pier's head and the market's deck (`boatZ()`). What's solid is
  * `WATERFRONT_SOLIDS` (in SOLIDS): the crane's legs, the arch's posts, the
  * kiosk.
  */
 import type { Footprint, Pt, Rect } from './downtown';
 import { EW_ROADS, RIVER } from './layout';
 import { BOAT_LANES } from './liberty';
-import { PIER_HOUSE, REFINERY } from './riverside';
+import { PIER_HOUSE, REFINERY, STORES } from './riverside';
 
 /** The south bank avenue: the boardwalk runs from its kerb to the water */
 const BANK = EW_ROADS[EW_ROADS.length - 1];
@@ -48,8 +51,20 @@ export const PIER = {
   neck: [PX - 2, BZ0 - 3.4, PX + 2, BZ0] as Rect,
   head: [PX - 8, BZ0 - 6.8, PX + 8, BZ0 - 3.4] as Rect,
 };
+/** The night market's deck (nightmarket.ts): a broad deck out over the water in front of Harbor Stores, joining the boardwalk along its whole length */
+export const MARKET_DECK: Rect = [STORES.lot[0] + 1.5, BZ0 - 5.2, STORES.lot[2] + 5, BZ0];
 /** The decks you walk on, overlapping where they meet (so a walker's middle is always in one of them) */
-export const DECKS: Rect[] = [BOARDWALK, [PIER.neck[0], PIER.neck[1], PIER.neck[2], BZ0 + 1], [PIER.head[0], PIER.head[1], PIER.head[2], PIER.head[3] + 1]];
+export const DECKS: Rect[] = [
+  BOARDWALK,
+  [PIER.neck[0], PIER.neck[1], PIER.neck[2], BZ0 + 1],
+  [PIER.head[0], PIER.head[1], PIER.head[2], PIER.head[3] + 1],
+  [MARKET_DECK[0], MARKET_DECK[1], MARKET_DECK[2], BZ0 + 1],
+];
+/** Where the boardwalk's railing at the water stops: the pier's neck and the market's deck run on out from it (x0, x1) */
+export const RAIL_GAPS: [number, number][] = [
+  [PIER.neck[0], PIER.neck[2]],
+  [MARKET_DECK[0], MARKET_DECK[2]],
+];
 /** Is a point on a deck, `m` (a walker's radius) inside its edge */
 export const onDeck = (x: number, z: number, m = 0) => DECKS.some((r) => x > r[0] + m && x < r[2] - m && z > r[1] + m && z < r[3] - m);
 /** Over the water (past the river's wall): the deck that's drawn on piles */
@@ -85,8 +100,9 @@ export const CRANE = (() => {
 /** The barge tied up alongside, under the crane's jib */
 export const BARGE: Rect = [CRANE.cx - 5.5, BZ0 - 3.6, CRANE.cx + 5.5, BZ0 - 0.55];
 
-/** Where things stand along the boardwalk: never in the pier's mouth or under the crane */
-const clearAt = (x: number, m: number) => Math.abs(x - PX) > ARCH.x1 - PX + m && (x < CRANE.portal[0] - m || x > CRANE.portal[2] + m);
+/** Where things stand along the boardwalk: never in the pier's mouth, under the crane or along the market (it has its own) */
+const clearAt = (x: number, m: number) =>
+  Math.abs(x - PX) > ARCH.x1 - PX + m && (x < CRANE.portal[0] - m || x > CRANE.portal[2] + m) && (x < MARKET_DECK[0] - m || x > MARKET_DECK[2] + m);
 /** Lamps at the water's edge, their arms reaching in over the walk */
 export const LAMPS: Pt[] = [];
 for (let x = BX0 + 3; x < BX1 - 1; x += 9) if (clearAt(x, 0.8)) LAMPS.push([x, BZ0 + 0.4]);
@@ -111,18 +127,26 @@ export const STROLL: Pt[] = [
 
 /**
  * The boats keep clear (life.ts): the south lane only east of the boardwalk; the middle lane swings north
- * round the pier's head, eased in and out
+ * round the pier's head and the market's deck, eased in and out
  */
 export const BOAT_EAST = BX1 + 8;
-const SWING = { flat: PIER.head[2] - PX + 2.5, ease: 14, z: PIER.head[1] - 1.1 };
+const SWINGS = [
+  { c: PX, flat: PIER.head[2] - PX + 2.5, ease: 14, z: PIER.head[1] - 1.1 },
+  { c: (MARKET_DECK[0] + MARKET_DECK[2]) / 2, flat: (MARKET_DECK[2] - MARKET_DECK[0]) / 2 + 2.5, ease: 14, z: MARKET_DECK[1] - 1.1 },
+];
 export function boatZ(lane: number, x: number) {
   const z = BOAT_LANES[lane];
   if (lane !== 1) return z;
-  const d = Math.abs(x - PX);
-  if (d >= SWING.flat + SWING.ease) return z;
-  const t = d <= SWING.flat ? 1 : 1 - (d - SWING.flat) / SWING.ease;
-  const s = t * t * (3 - 2 * t);
-  return z + (Math.min(z, SWING.z) - z) * s;
+  // (the furthest north any swing wants it here)
+  let out = z;
+  for (const w of SWINGS) {
+    const d = Math.abs(x - w.c);
+    if (d >= w.flat + w.ease) continue;
+    const t = d <= w.flat ? 1 : 1 - (d - w.flat) / w.ease;
+    const s = t * t * (3 - 2 * t);
+    out = Math.min(out, z + (Math.min(z, w.z) - z) * s);
+  }
+  return out;
 }
 
 /** Its land, for the trees and the promenade's dressing to keep off (x0, z0, x1, z1) */
