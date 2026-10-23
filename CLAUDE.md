@@ -1109,7 +1109,9 @@ it and has been retired completely. Build only on what's here.
     acknowledgment is in the start menu's Options > Credits, named, never
     linked): mostly subject 143's and 127's takes, in `assets/mocap/cmu/`
     (BVH, untouched), listed in `assets/mocap/takes.json` (a `loop` makes a seamless cycle,
-    `loopClip()`). `npm run mocap` (`scripts/mocap.mjs`) retargets them
+    `loopClip()`; `fps` where the file's frame rate is wrong: subject 143's
+    are 60, not the 120 cgspeed wrote, so he walked and ran at double speed
+    until it was fixed). `npm run mocap` (`scripts/mocap.mjs`) retargets them
     (`mocap-build.ts`: each target bone takes its source joint's turn
     since the T-pose, the feet and the collarbones kept level (CMU's
     shoulder joint sits at the neck: aligned to it, the collarbones held a
@@ -1122,12 +1124,20 @@ it and has been retired completely. Build only on what's here.
     chunk (`import('./animator')`).
   - **Moving** is `movesim.ts`: velocity and facing on critically damped
     springs (`MOVE` half-lives), `ahead()` the trajectory; `GAITS` walk
-    1.25, run 3.4 (the default), sprint 5 tiles a second.
+    0.78, run 2.8 (the default), sprint 4.2 tiles a second (about 1.4, 5 and
+    7.5 m/s, the owner's call: quick but believable).
   - **The animation** is `animator.ts`: motion matching (`motionmatch.ts`,
     Holden's 27 features, every clip and its mirror, a search about ten
     times a second) with inertialization (`inertia.ts`), playback warped
-    to his speed (`RATE`), the sprint's harder swing and lean and a lean
-    into bends (`LAYERS`), and the feet: each held by the ball of the foot
+    to his speed (`RATE`), and faster than the capture his steps lengthen
+    as a runner's do (`WARP`: his legs turn over only a little quicker; a
+    foot on the ground plays fast enough to stay put, the air slower for
+    more hang time, a swinging knee driving higher, and into a sprint a
+    longer reach once he's done speeding up: the owner's call, "his legs
+    move very fast when sprinting"), the sprint's harder swing and lean and
+    a lean into bends (`LAYERS`), and the feet (the ball never under the
+    ground, `BALL_UNDER`; a free foot no further down than a step,
+    `AIR.kerb`): each held by the ball of the foot
     where the clip has it down (`LOCK`), reached by a hinge-knee two-bone
     IK with a soft reach (`twoBone()`), on the ground under it, the hips
     coming down (at most `LOCK.drop`) when a leg can't reach. `applyTo()`

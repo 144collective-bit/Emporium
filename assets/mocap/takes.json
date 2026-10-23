@@ -1,12 +1,13 @@
 [
-  { "file": "cmu/143_01.bvh", "name": "run-loop", "loop": 6 },
-  { "file": "cmu/143_02.bvh", "name": "run-stop" },
-  { "file": "cmu/143_03.bvh", "name": "start-run" },
-  { "file": "cmu/143_04.bvh", "name": "run-eight" },
-  { "file": "cmu/143_42.bvh", "name": "run-stop-run" },
-  { "file": "cmu/143_32.bvh", "name": "walk" },
-  { "file": "cmu/143_38.bvh", "name": "walk-eight" },
-  { "file": "cmu/143_29.bvh", "name": "pacing" },
+  { "file": "cmu/143_01.bvh", "name": "run-loop", "loop": 6, "fps": 60 },
+  { "file": "cmu/09_01.bvh", "name": "run-long-2", "loop": 3 },
+  { "file": "cmu/143_02.bvh", "name": "run-stop", "fps": 60 },
+  { "file": "cmu/143_03.bvh", "name": "start-run", "fps": 60 },
+  { "file": "cmu/143_04.bvh", "name": "run-eight", "fps": 60, "to": 9 },
+  { "file": "cmu/143_42.bvh", "name": "run-stop-run", "fps": 60 },
+  { "file": "cmu/143_32.bvh", "name": "walk", "fps": 60 },
+  { "file": "cmu/143_38.bvh", "name": "walk-eight", "fps": 60, "to": 11 },
+  { "file": "cmu/143_29.bvh", "name": "pacing", "fps": 60, "to": 9 },
   { "file": "cmu/127_15.bvh", "name": "run-turn-left" },
   { "file": "cmu/127_16.bvh", "name": "run-turn-right" },
   { "file": "cmu/127_19.bvh", "name": "run-quick-stop-run" },
@@ -19,6 +20,6 @@
   { "file": "cmu/127_28.bvh", "name": "run-jump-4" },
   { "file": "cmu/127_21.bvh", "name": "run-jump-stop", "to": 2.4 },
   { "file": "cmu/127_22.bvh", "name": "run-jump-stop-2", "to": 2.4 },
-  { "file": "cmu/143_05.bvh", "name": "jump-far", "from": 0.6 },
-  { "file": "cmu/143_06.bvh", "name": "jump-high", "from": 1.0 }
+  { "file": "cmu/143_05.bvh", "name": "jump-far", "from": 1.2, "fps": 60 },
+  { "file": "cmu/143_06.bvh", "name": "jump-high", "from": 2.0, "fps": 60 }
 ]

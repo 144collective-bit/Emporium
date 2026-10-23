@@ -200,7 +200,9 @@ test('up and down kerbs the feet stand on the slab and the road, never in them',
       posed(an.rot, 0, an.hips.x, an.hips.y, an.hips.z, P);
       for (const k of [0, 1]) {
         const p = P.pos[TOE_BONES[k]];
-        into = Math.max(into, kerbs(0, z + (-p.x * Math.sin(an.face) + p.z * Math.cos(an.face)) * SCALE) - (y + p.y * SCALE));
+        // (a ball of the foot within a centimetre of a kerb's edge is on its lip, either side)
+        const wz = z + (-p.x * Math.sin(an.face) + p.z * Math.cos(an.face)) * SCALE;
+        into = Math.max(into, Math.min(kerbs(0, wz - 0.006), kerbs(0, wz + 0.006)) - (y + p.y * SCALE));
       }
       if (i > 30) for (let b = 0; b < NB; b++) step = Math.max(step, qa.fromArray(prev, b * 4).angleTo(qb.fromArray(an.rot, b * 4)));
       prev.set(an.rot);
@@ -214,7 +216,7 @@ test('up a flight of Liberty Bridge\'s size the feet climb the treads (he walks 
   const RISE = 0.23;
   const RUN = 0.31;
   const N = 15;
-  const Z0 = 3;
+  const Z0 = 1.5;
   const ramp = (_x: number, z: number) => THREE.MathUtils.clamp(((z - Z0) / (RUN * N)) * RISE * N, 0, RISE * N);
   const tread = (_x: number, z: number) => (z < Z0 ? 0 : z >= Z0 + RUN * N ? RISE * N : (Math.floor((z - Z0) / RUN) + 1) * RISE);
   for (const speed of [GAITS.walk, 1.75]) {
