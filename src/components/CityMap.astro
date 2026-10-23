@@ -44,11 +44,12 @@ const spots: Record<SpotId, Spot> = {
   fightclub: { href: '#city-title', title: 'Fight Club', sub: 'Spar · bouts', aria: 'The Fight Club: spar and bouts' },
   liberty: { href: '#city-title', title: 'Liberty Bridge', sub: 'Footbridge', aria: 'Liberty Bridge: a footbridge over the river' },
   trenches: { href: '#city-title', title: 'The Block', sub: 'The Trenches', aria: 'The Block: the courtyard at the heart of The Trenches' },
-  club: { href: '#city-title', title: 'Club PULSE', sub: 'Nightclub · coming soon', aria: 'Club PULSE: a nightclub on Trench Avenue, coming soon' },
-  bar: { href: '#city-title', title: 'The Rusty Nail', sub: 'Bar · coming soon', aria: 'The Rusty Nail: a bar on Trench Avenue, coming soon' },
-  arms: { href: '#city-title', title: 'Trench Arms', sub: 'Guns & gear', aria: 'Trench Arms: guns and gear on Trench Avenue' },
+  club: { href: '#city-title', title: 'Club PULSE', sub: 'Nightclub · coming soon', aria: 'Club PULSE: a nightclub in The Trenches facing the river, coming soon' },
+  bar: { href: '#city-title', title: 'The Rusty Nail', sub: 'Bar · coming soon', aria: 'The Rusty Nail: a bar in The Trenches facing the river, coming soon' },
+  arms: { href: '#city-title', title: 'Trench Arms', sub: 'Guns & gear', aria: 'Trench Arms: guns and gear in The Trenches' },
+  pier: { href: '#city-title', title: 'Pier 7', sub: 'The waterfront', aria: 'Pier 7: the boardwalk and pier on The Trenches\' waterfront' },
 };
-const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'trenches', 'club', 'bar', 'arms'];
+const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'trenches', 'club', 'bar', 'arms', 'pier'];
 const ext = { target: '_blank', rel: 'noopener noreferrer' };
 
 const map = renderCity({ spots, art: { degen: degenImg.src, logo: logoImg.src } });
@@ -963,22 +964,28 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     <button type="button" class="chip-link kart-walkin" data-block-walkin>Walk in</button>
   </template>
   <template data-panel-tpl="club">
-    <p class="kicker"><span class="kicker-num">14</span> Trench Avenue</p>
+    <p class="kicker"><span class="kicker-num">14</span> The Trenches</p>
     <h2 id="city-panel-title" class="city-panel-title">Club PULSE</h2>
-    <p class="city-panel-text">The big nightclub on the corner of Trench Avenue, under the el. Neon up the corner, the marquee lit, a queue along the velvet rope and the bouncer on the door. The doors open later: coming soon.</p>
+    <p class="city-panel-text">The riverside's landmark: a black hall behind neon fins that throb with the beat, PULSE across them, the tall sign on its corner pylon and a heartbeat traced in neon over the roof. Up top, the sky deck looks out over the river, and searchlights sweep the sky at night. Down at the door, a queue waits along the velvet rope by the red carpet. The doors open later: coming soon.</p>
     <button type="button" class="chip-link kart-walkin" data-avenue-walkin="club">Walk in</button>
   </template>
   <template data-panel-tpl="bar">
-    <p class="kicker"><span class="kicker-num">15</span> Trench Avenue</p>
+    <p class="kicker"><span class="kicker-num">15</span> The Trenches</p>
     <h2 id="city-panel-title" class="city-panel-title">The Rusty Nail</h2>
-    <p class="city-panel-text">A dive bar in an old brick walk-up on Trench Avenue, next door to Block Bodega: a dark wood front, warm windows and its name in neon. Pull up a stool later: coming soon.</p>
+    <p class="city-panel-text">A dive bar in an old brick walk-up on the corner, facing the boardwalk and the river: a dark wood front, warm windows and its name in neon. Pull up a stool later: coming soon.</p>
     <button type="button" class="chip-link kart-walkin" data-avenue-walkin="bar">Walk in</button>
   </template>
   <template data-panel-tpl="arms">
-    <p class="kicker"><span class="kicker-num">16</span> Trench Avenue</p>
+    <p class="kicker"><span class="kicker-num">16</span> The Trenches</p>
     <h2 id="city-panel-title" class="city-panel-title">Guns &amp; gear</h2>
-    <p class="city-panel-text">Trench Arms, across the avenue from the metro station. Step up to the hatch on the street: it's the Armoury's counter and workbench, the same guns and mods. The ones your score unlocks are free; the rest cost Dorras earned in the city.</p>
+    <p class="city-panel-text">Trench Arms, on the corner by Harbor Stores, facing the boardwalk and the river. Step up to the hatch on the street: it's the Armoury's counter and workbench, the same guns and mods. The ones your score unlocks are free; the rest cost Dorras earned in the city.</p>
     <button type="button" class="chip-link kart-walkin" data-avenue-walkin="arms">Walk in</button>
+  </template>
+  <template data-panel-tpl="pier">
+    <p class="kicker"><span class="kicker-num">17</span> The waterfront</p>
+    <h2 id="city-panel-title" class="city-panel-title">Pier 7</h2>
+    <p class="city-panel-text">The Trenches' waterfront: a timber boardwalk out over the river from the highway to the town's promenade, with sodium lamps, benches facing the water and the old dock crane by the Refinery. Pier 7 runs out under its lit arch to a head with the bait and coffee kiosk, binoculars and people fishing off the rail. At its head stands the Pier House, its clock tower keeping your time. Behind the boardwalk is the riverside: The Wharf, the Refinery, Harbor Stores and Club PULSE.</p>
+    <button type="button" class="chip-link kart-walkin" data-pier-walkin>Walk in</button>
   </template>
 
   <div class="city-hud" data-city-hud>

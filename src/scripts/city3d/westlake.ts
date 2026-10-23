@@ -1,0 +1,380 @@
+/*
+ * Westlake Park (docs/growth-plan.md Phase 9b, the owner's call; DOM-free,
+ * tested in tests/westlake.test.ts): the park district on the open land west
+ * of town, north of the river, between the ring highway and the Parkway.
+ * Step 1 is the land: its blocks (one big one north of the west ring avenue,
+ * three strips between the avenues south of it), the lake, the paths, the
+ * gates, its trees, lamps and benches, and the site kept clear for the
+ * stadium (step 2). The park's own life (boats, the boathouse, people) is
+ * step 3.
+ *
+ * - **The big block** (`BIG`): from the highway's west side (clear of its
+ *   slip lanes) to the Parkway's west leg, and from the highway's north side
+ *   (round its north-west bend) down to the west ring avenue.
+ * - **The strips** (`STRIPS`): between the avenues that run west from town
+ *   to the highway, as far east as the Parkway.
+ * - **The lake** (`LAKE_C`, `lakeR()`): a smooth outline round a centre,
+ *   its radius a sum of a few waves; `inLake()` keeps walkers and cars out.
+ * - **The paths** (`PATHS`): a walk round the big block, a loop round the
+ *   lake, the Mall (a wide straight walk with trees either side, from the
+ *   south gate to the stadium) and the ways in from the gates (`GATES`).
+ * - **The stadium's site** (`STADIUM_SITE`), kept clear for step 2.
+ */
+import { EW_ROADS, WALK_W } from './layout';
+import { HIGHWAY_BOX, HIGHWAY_HALF, HIGHWAY_R } from './highway';
+import { BEND_REACH, PARKWAY } from './outer';
+
+export type Pt = [number, number];
+export type Rect = [number, number, number, number];
+
+/** How far the park keeps from the highway's centre line (as The Trenches do: its half, a shoulder and a verge) */
+export const HIGHWAY_CLEAR = HIGHWAY_HALF + 6;
+const [HX0, HZ0] = HIGHWAY_BOX;
+/** The highway's north-west bend: its centre, and how far from it the park may reach */
+export const BEND_C: Pt = [HX0 + HIGHWAY_R, HZ0 + HIGHWAY_R];
+export const BEND_IN = HIGHWAY_R - HIGHWAY_CLEAR;
+
+/** The west edge: clear of the highway and of the slip lanes where it meets the avenues (they reach in to about -202) */
+export const X0 = -200.5;
+/** The east edge: past the Parkway's west leg and its sidewalk (the park's own sidewalk alongside) */
+export const X1 = Math.min(...PARKWAY.map((p) => p[0])) - BEND_REACH - WALK_W - 0.05;
+/** The north edge: the highway's north side */
+export const Z0 = HZ0 + HIGHWAY_CLEAR;
+/** The west ring avenue and the avenues west of town (z), north to south: the big block is north of the first */
+const AVES = EW_ROADS.filter((r) => r.c < 70);
+/** The big block's south edge (inside its sidewalk) */
+export const ZS = AVES[0].c - AVES[0].half - WALK_W;
+
+/** The arc of the highway's bend between two angles, `n` points */
+const arc = (a0: number, a1: number, n: number): Pt[] => Array.from({ length: n + 1 }, (_, k) => [BEND_C[0] + Math.cos(a0 + ((a1 - a0) * k) / n) * BEND_IN, BEND_C[1] + Math.sin(a0 + ((a1 - a0) * k) / n) * BEND_IN] as Pt);
+
+/** The big block, inside its sidewalk, counter-clockwise seen from above (the order the street plan's blocks keep) */
+export const BIG: Pt[] = (() => {
+  // Where the bend meets the west edge: from straight up (the north edge) round to there
+  const aW = -Math.PI + Math.acos((BEND_C[0] - X0) / BEND_IN);
+  const bend = arc(-Math.PI / 2, aW, 16);
+  return [[X0, bend.at(-1)![1]], [X0, ZS], [X1, ZS], [X1, Z0], ...bend.slice(0, -1)];
+})();
+
+export interface ParkBlock {
+  id: string;
+  poly: Pt[];
+}
+/** The strips between the avenues south of the big block, west to east the whole way */
+export const STRIPS: ParkBlock[] = AVES.slice(0, -1).map((a, i) => {
+  const b = AVES[i + 1];
+  const z0 = a.c + a.half + WALK_W;
+  const z1 = b.c - b.half - WALK_W;
+  return { id: `westlake-s${i}`, poly: [[X0, z0], [X0, z1], [X1, z1], [X1, z0]] };
+});
+/** Every block of the park, for the street plan */
+export const WESTLAKE_BLOCKS: ParkBlock[] = [{ id: 'westlake-big', poly: BIG }, ...STRIPS];
+/** The park's land, for the outskirts' trees to keep off (x0, z0, x1, z1) */
+export const WESTLAKE_RECT: Rect = [X0 - WALK_W, Z0 - WALK_W, X1 + WALK_W, AVES.at(-1)!.c - AVES.at(-1)!.half];
+
+/* ---------- The stadium's site (step 2) ---------- */
+
+/** Kept clear for the stadium: no paths, trees or lamps on it (x0, z0, x1, z1) */
+export const STADIUM_SITE: Rect = [-172, -138, -108, -86];
+
+/* ---------- The lake ---------- */
+
+export const LAKE_C: Pt = [-92, -52];
+/** The lake's radius at angle a (from +x towards +z): a sum of a few slow waves, longest east to west */
+export const lakeR = (a: number) => 24 * (1 + 0.3 * Math.cos(2 * (a - 0.15)) + 0.1 * Math.cos(3 * a + 1.1) + 0.05 * Math.cos(5 * a + 2.3));
+/** A point on the lake's edge, `out` beyond it */
+export const lakeAt = (a: number, out = 0): Pt => {
+  const r = lakeR(a) + out;
+  return [LAKE_C[0] + Math.cos(a) * r, LAKE_C[1] + Math.sin(a) * r];
+};
+/** The lake's outline, `n` points round (counter-clockwise from above, as the blocks are) */
+export const lakeLine = (out = 0, n = 96): Pt[] => Array.from({ length: n }, (_, k) => lakeAt((-2 * Math.PI * k) / n, out));
+/** Is a point in the lake (`m` short of its edge: a walker's radius) */
+export function inLake(x: number, z: number, m = 0) {
+  const dx = x - LAKE_C[0];
+  const dz = z - LAKE_C[1];
+  const d = Math.hypot(dx, dz);
+  if (d > 36 + m) return false;
+  return d < lakeR(Math.atan2(dz, dx)) + m;
+}
+/** The stone rim round the water: how wide and how high above the lawn */
+export const RIM = { w: 0.35, h: 0.12 };
+
+/* ---------- Paths and gates ---------- */
+
+export interface ParkPath {
+  id: string;
+  /** Its centre line (closed: its last point back to its first) */
+  pts: Pt[];
+  half: number;
+  loop?: boolean;
+}
+
+/** An outline pulled in by d (a convex one: the big block) */
+function inset(poly: Pt[], d: number): Pt[] {
+  const n = poly.length;
+  const nrm = poly.map((p, i) => {
+    const q = poly[(i + 1) % n];
+    const l = Math.hypot(q[0] - p[0], q[1] - p[1]);
+    // Inward: to the left of travel (counter-clockwise from above, as world.ts insetPoly)
+    return [(q[1] - p[1]) / l, -(q[0] - p[0]) / l] as Pt;
+  });
+  return poly.map((p, i) => {
+    const a = nrm[(i + n - 1) % n];
+    const b = nrm[i];
+    const k = d / (1 + a[0] * b[0] + a[1] * b[1]);
+    return [p[0] + (a[0] + b[0]) * k, p[1] + (a[1] + b[1]) * k] as Pt;
+  });
+}
+
+/** The Mall: a wide walk from the south gate north to the stadium's site (x, and its half width) */
+export const MALL = { x: -140, half: 2.4 };
+/** The walk round the big block: this far in from its edge */
+export const RING_IN = 6;
+/** The lake loop: this far out from the water's edge */
+export const LOOP_OUT = 4.5;
+
+/** The ways in: on the block's edge, facing out (the gate's two stone piers either side of its path) */
+export interface Gate {
+  id: string;
+  at: Pt;
+  /** Outward, along the path */
+  out: Pt;
+  half: number;
+}
+const southGate = (id: string, x: number, half = 1.3): Gate => ({ id, at: [x, ZS], out: [0, 1], half });
+const eastGate = (id: string, z: number, half = 1.3): Gate => ({ id, at: [X1, z], out: [1, 0], half });
+export const GATES: Gate[] = [
+  southGate('gate-mall', MALL.x, MALL.half),
+  southGate('gate-sw', -182),
+  southGate('gate-lake', -96),
+  southGate('gate-se', -58),
+  eastGate('gate-e1', -28),
+  eastGate('gate-e2', -78),
+  eastGate('gate-e3', -128),
+];
+
+/** A path through control points, rounded off (centripetal Catmull-Rom), a point about every `step` */
+function smooth(ctrl: Pt[], step = 1.5): Pt[] {
+  if (ctrl.length < 3) return ctrl;
+  const P = [ctrl[0], ...ctrl, ctrl.at(-1)!];
+  const out: Pt[] = [ctrl[0]];
+  for (let i = 1; i < P.length - 2; i++) {
+    const [p0, p1, p2, p3] = [P[i - 1], P[i], P[i + 1], P[i + 2]];
+    const n = Math.max(2, Math.ceil(Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) / step));
+    for (let k = 1; k <= n; k++) {
+      const t = k / n;
+      const t2 = t * t;
+      const t3 = t2 * t;
+      const f = (a: number, b: number, c: number, d: number) => 0.5 * (2 * b + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3);
+      out.push([f(p0[0], p1[0], p2[0], p3[0]), f(p0[1], p1[1], p2[1], p3[1])]);
+    }
+  }
+  return out;
+}
+
+/** The ring walk round the big block */
+export const RING_WALK: Pt[] = inset(BIG, RING_IN);
+/** Where the lake loop is nearest a point (for paths that join it) */
+const toLoop = (p: Pt): Pt => lakeAt(Math.atan2(p[1] - LAKE_C[1], p[0] - LAKE_C[0]), LOOP_OUT);
+
+export const PATHS: ParkPath[] = [
+  { id: 'ring', pts: RING_WALK, half: 1.2, loop: true },
+  { id: 'loop', pts: lakeLine(LOOP_OUT, 120), half: 1.1, loop: true },
+  // The Mall, from the south gate to the stadium's site
+  { id: 'mall', pts: [[MALL.x, ZS], [MALL.x, STADIUM_SITE[3] + 1]], half: MALL.half },
+  // The stadium's forecourt along its south side, the Mall in its middle
+  { id: 'forecourt', pts: [[STADIUM_SITE[0] + 4, STADIUM_SITE[3] + 2.6], [STADIUM_SITE[2] - 4, STADIUM_SITE[3] + 2.6]], half: 2 },
+  // From the Mall across to the lake, and the lake's south and east gates in to the loop
+  { id: 'mall-lake', pts: [[MALL.x, -50], toLoop([MALL.x, -50])], half: 1.1 },
+  { id: 'lake-s', pts: smooth([[-96, ZS], [-96, -16], [-92, -24], toLoop([-92, -26])]), half: 1.1 },
+  { id: 'lake-se', pts: smooth([[-58, ZS], [-62, -18], [-70, -26], toLoop([-72, -30])]), half: 1.1 },
+  { id: 'lake-e', pts: smooth([[X1, -28], [-50, -30], [-56, -36], toLoop([-58, -40])]), half: 1.1 },
+  { id: 'lake-ne', pts: smooth([[X1, -78], [-54, -76], [-62, -70], toLoop([-66, -66])]), half: 1.1 },
+  // From the east gate up north across the lawns to the stadium's forecourt
+  { id: 'meadow', pts: smooth([[X1, -128], [-62, -124], [-84, -106], [-102, -90], [STADIUM_SITE[2] - 4, STADIUM_SITE[3] + 2.6]]), half: 1.1 },
+  // The south-west gate up to the ring walk
+  { id: 'sw', pts: [[-182, ZS], [-182, ZS - RING_IN]], half: 1.1 },
+  // Each strip: one walk down its middle, end to end
+  ...STRIPS.map((s): ParkPath => {
+    const z = (s.poly[0][1] + s.poly[1][1]) / 2;
+    return { id: `${s.id}-walk`, pts: [[X0, z], [X1, z]], half: 1.1 };
+  }),
+];
+
+/** How far a point is from a polyline (closed if `loop`) */
+export function distToLine(pts: Pt[], p: Pt, loop = false) {
+  let best = Infinity;
+  const n = pts.length;
+  for (let i = 0; i < (loop ? n : n - 1); i++) {
+    const a = pts[i];
+    const b = pts[(i + 1) % n];
+    const vx = b[0] - a[0];
+    const vz = b[1] - a[1];
+    const t = Math.max(0, Math.min(1, ((p[0] - a[0]) * vx + (p[1] - a[1]) * vz) / (vx * vx + vz * vz || 1)));
+    best = Math.min(best, Math.hypot(p[0] - a[0] - vx * t, p[1] - a[1] - vz * t));
+  }
+  return best;
+}
+/** Is a point on a path (`m` more either side) */
+export const onPath = (p: Pt, m = 0) => PATHS.some((q) => distToLine(q.pts, p, q.loop) < q.half + m);
+
+/* ---------- What stands in it ---------- */
+
+/** Is a point inside an outline */
+function inPoly(poly: Pt[], p: Pt) {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, zi] = poly[i];
+    const [xj, zj] = poly[j];
+    if (zi > p[1] !== zj > p[1] && p[0] < ((xj - xi) * (p[1] - zi)) / (zj - zi) + xi) inside = !inside;
+  }
+  return inside;
+}
+/** On the park's land (one of its blocks, `m` in from their edges) */
+export const inPark = (p: Pt, m = 0) => WESTLAKE_BLOCKS.some((b) => inPoly(m ? inset(b.poly, m) : b.poly, p));
+const inRect = (r: Rect, p: Pt, m = 0) => p[0] > r[0] - m && p[0] < r[2] + m && p[1] > r[1] - m && p[1] < r[3] + m;
+
+/** A seeded generator (the same park for everyone) */
+function rng(seed: number) {
+  let s = seed >>> 0;
+  return () => {
+    s = (s + 0x6d2b79f5) >>> 0;
+    let t = s;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+/** Smooth noise 0-1 (clumps of trees and the glades between) */
+function noise(x: number, z: number) {
+  const h = (i: number, j: number) => {
+    const v = Math.sin(i * 127.1 + j * 311.7) * 43758.5453;
+    return v - Math.floor(v);
+  };
+  const [i, j] = [Math.floor(x), Math.floor(z)];
+  const [u, v] = [x - i, z - j];
+  const [su, sv] = [u * u * (3 - 2 * u), v * v * (3 - 2 * v)];
+  return h(i, j) * (1 - su) * (1 - sv) + h(i + 1, j) * su * (1 - sv) + h(i, j + 1) * (1 - su) * sv + h(i + 1, j + 1) * su * sv;
+}
+
+export interface ParkTree {
+  x: number;
+  z: number;
+  s: number;
+  pine: boolean;
+  /** Left out on phones (the trim: half the lawns' clumps) */
+  clump: boolean;
+}
+
+/** Where a tree may stand: on the park, off the paths, the lake and its loop, the stadium's site and the gates */
+export const treeFree = (p: Pt) =>
+  inPark(p, 1.6) && !onPath(p, 1.4) && !inLake(p[0], p[1], LOOP_OUT + 2.6) && !inRect(STADIUM_SITE, p, 3) && GATES.every((g) => Math.hypot(p[0] - g.at[0], p[1] - g.at[1]) > 4);
+
+export const PARK_TREES: ParkTree[] = (() => {
+  const r = rng(808);
+  const out: ParkTree[] = [];
+  const put = (x: number, z: number, s: number, pine: boolean, clump: boolean) => {
+    if (treeFree([x, z]) && out.every((t) => Math.hypot(t.x - x, t.z - z) > 2.2)) out.push({ x, z, s, pine, clump });
+  };
+  // The Mall: an avenue of trees either side, evenly spaced
+  for (let z = ZS - 3; z > STADIUM_SITE[3] + 6; z -= 4.5) for (const side of [-1, 1]) put(MALL.x + side * (MALL.half + 1.7), z, 1.05, false, false);
+  // The strips: a row along each side of the walk
+  for (const s of STRIPS) {
+    const z = (s.poly[0][1] + s.poly[1][1]) / 2;
+    for (let x = X0 + 4; x < X1 - 3; x += 6) for (const side of [-1, 1]) put(x + (side > 0 ? 3 : 0), z + side * 3.4, 0.95 + r() * 0.2, false, false);
+  }
+  // The lawns: clumps where the noise is high, glades where it's low; pines towards the highway
+  for (let x = X0; x < X1; x += 3.2)
+    for (let z = Z0; z < ZS; z += 3.2) {
+      const n = noise(x / 22, z / 22);
+      if (n < 0.36 || r() > (n - 0.36) * 2.6) continue;
+      const jx = x + (r() - 0.5) * 2.6;
+      const jz = z + (r() - 0.5) * 2.6;
+      const pine = r() < (jx < -170 || jz < -140 ? 0.55 : 0.15);
+      put(jx, jz, 0.85 + r() * 0.5, pine, true);
+    }
+  return out;
+})();
+
+/** Lamps along the paths: [x, z, ry] (the arm reaching over the path: ry turns +x towards it) */
+export const PARK_LAMPS: [number, number, number][] = (() => {
+  const out: [number, number, number][] = [];
+  /** Along a path every `every`, `off` to one side (alternating if `zig`), the arm back over it */
+  const along = (q: ParkPath, every: number, zig: boolean) => {
+    const pts = q.loop ? [...q.pts, q.pts[0]] : q.pts;
+    let carry = every / 2;
+    let k = 0;
+    for (let i = 1; i < pts.length; i++) {
+      const [a, b] = [pts[i - 1], pts[i]];
+      const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      if (len < 1e-6) continue;
+      const [ux, uz] = [(b[0] - a[0]) / len, (b[1] - a[1]) / len];
+      for (let d = carry; d < len; d += every) {
+        const side = zig && k++ % 2 ? -1 : 1;
+        // Right of travel: (-uz, ux)
+        const [nx, nz] = [-uz * side, ux * side];
+        const off = q.half + 0.5;
+        const [x, z] = [a[0] + ux * d + nx * off, a[1] + uz * d + nz * off];
+        // (the arm points back across the path: from the lamp towards -n)
+        if (!inLake(x, z, 1.2) && !inRect(STADIUM_SITE, [x, z], 1) && inPark([x, z], 0.3)) out.push([x, z, Math.atan2(nz, -nx)]);
+      }
+      carry = (((carry - len) % every) + every) % every;
+    }
+  };
+  for (const q of PATHS) {
+    if (q.id === 'mall') along(q, 9, true);
+    else if (q.id === 'loop') along(q, 13, false);
+    else if (q.id === 'ring') along(q, 18, false);
+    else if (q.id !== 'forecourt') along(q, 15, false);
+  }
+  // Not on another path where paths meet, nor two on top of each other
+  return out.filter((l, i) => !onPath([l[0], l[1]], 0.25) && out.slice(0, i).every((o) => Math.hypot(o[0] - l[0], o[1] - l[1]) > 3));
+})();
+
+/** Benches along the lake loop (facing the water) and the Mall (facing across it): where, and which way the sitter faces (ry, +z turned) */
+export const BENCHES: { at: Pt; ry: number }[] = (() => {
+  const out: { at: Pt; ry: number }[] = [];
+  // Round the lake, on the loop's water side, facing the water
+  for (let k = 0; k < 18; k++) {
+    const a = (2 * Math.PI * (k + 0.5)) / 18;
+    const at = lakeAt(a, LOOP_OUT - 1.1 - 0.55);
+    const [dx, dz] = [LAKE_C[0] - at[0], LAKE_C[1] - at[1]];
+    out.push({ at, ry: Math.atan2(dx, dz) });
+  }
+  // Along the Mall, either side, facing across it
+  for (let z = ZS - 6; z > STADIUM_SITE[3] + 8; z -= 13.5)
+    for (const side of [-1, 1]) out.push({ at: [MALL.x + side * (MALL.half + 0.45), z], ry: side > 0 ? -Math.PI / 2 : Math.PI / 2 });
+  // (none where another path comes in)
+  return out.filter((b) => PATHS.every((q) => q.id === 'loop' || q.id === 'mall' || distToLine(q.pts, b.at, q.loop) > q.half + 0.8));
+})();
+
+/** Each gate's two stone piers (x0, z0, x1, z1, height): solid, the path between them */
+export const PIER = { w: 0.7, h: 1.5 };
+export const GATE_PIERS: [number, number, number, number, number][] = GATES.flatMap((g) => {
+  const across: Pt = [g.out[1], -g.out[0]];
+  return [-1, 1].map((side) => {
+    const c: Pt = [g.at[0] + across[0] * side * (g.half + 0.2 + PIER.w / 2), g.at[1] + across[1] * side * (g.half + 0.2 + PIER.w / 2)];
+    return [c[0] - PIER.w / 2, c[1] - PIER.w / 2, c[0] + PIER.w / 2, c[1] + PIER.w / 2, PIER.h] as [number, number, number, number, number];
+  });
+});
+/** What's solid in the park: the gates' piers (the lake keeps walkers out through `inLake()`, cars through `LAKE_WALLS`) */
+export const WESTLAKE_SOLIDS = GATE_PIERS;
+
+/** The lake as walls for cars (drive-sim.ts): strips across it, a tile deep, each its width there */
+export const LAKE_WALLS: [number, number, number, number, number][] = (() => {
+  const out: [number, number, number, number, number][] = [];
+  for (let z = LAKE_C[1] - 36; z < LAKE_C[1] + 36; z += 1) {
+    let lo = Infinity;
+    let hi = -Infinity;
+    // (its widest across the strip: sampled at its edges and between)
+    for (let x = LAKE_C[0] - 37; x <= LAKE_C[0] + 37; x += 0.25)
+      for (const dz of [0, 0.25, 0.5, 0.75, 1])
+        if (inLake(x, z + dz)) {
+          lo = Math.min(lo, x);
+          hi = Math.max(hi, x);
+        }
+    if (hi > lo) out.push([lo - 0.3, z, hi + 0.3, z + 1, 2]);
+  }
+  return out;
+})();

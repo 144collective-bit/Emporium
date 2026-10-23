@@ -27,6 +27,7 @@ import { SKYLINE } from './bounds';
 import { keyRect } from './tileplan';
 import { site } from './tilework';
 import { lampKind } from './trenches';
+import { WATERFRONT_RECT } from './waterfront';
 
 export { BLOCKS, BS, CORE_ROADS, EW_ROADS, EXT, NS_ROADS, RIVER, SOUTH_ROAD, WALK_W, type Road };
 /** District blocks around the core: one large plot each (src/data/plots.ts). */
@@ -200,6 +201,100 @@ export function insetPoly(poly: Pt[], d: number): Pt[] {
     const k = d / (1 + n0[0] * n1[0] + n0[1] * n1[1]);
     return [p[0] + m[0] * k, p[1] + m[1] * k] as Pt;
   });
+}
+/** A convex outline clipped to a rectangle (empty if it's outside it) */
+function clipRect(poly: Pt[], x0: number, z0: number, x1: number, z1: number): Pt[] {
+  let out = poly;
+  const edges: [(p: Pt) => number, (a: Pt, b: Pt) => Pt][] = [
+    [(p) => p[0] - x0, (a, b) => [x0, a[1] + ((b[1] - a[1]) * (x0 - a[0])) / (b[0] - a[0])]],
+    [(p) => x1 - p[0], (a, b) => [x1, a[1] + ((b[1] - a[1]) * (x1 - a[0])) / (b[0] - a[0])]],
+    [(p) => p[1] - z0, (a, b) => [a[0] + ((b[0] - a[0]) * (z0 - a[1])) / (b[1] - a[1]), z0]],
+    [(p) => z1 - p[1], (a, b) => [a[0] + ((b[0] - a[0]) * (z1 - a[1])) / (b[1] - a[1]), z1]],
+  ];
+  for (const [inside, cut] of edges) {
+    const src = out;
+    out = [];
+    for (let i = 0; i < src.length; i++) {
+      const a = src[i];
+      const b = src[(i + 1) % src.length];
+      const ia = inside(a) >= 0;
+      const ib = inside(b) >= 0;
+      if (ia) out.push(a);
+      if (ia !== ib) out.push(cut(a, b));
+    }
+    if (out.length < 3) return [];
+  }
+  return out;
+}
+/** Bigger than a tile either way (a park's lawn): drawn in a piece per tile (`tiled()`) */
+const bigPoly = (poly: Pt[]) => {
+  const xs = poly.map((p) => p[0]);
+  const zs = poly.map((p) => p[1]);
+  return Math.max(...xs) - Math.min(...xs) > TILE || Math.max(...zs) - Math.min(...zs) > TILE;
+};
+/**
+ * A flat convex outline at y cut into a piece per tile. `tileBatch()` files each triangle under the tile its middle
+ * is in, so one long triangle across a big lawn would go with that tile (out of view, all of it)
+ */
+function tiled(poly: Pt[], y: number, repeat?: number): THREE.BufferGeometry[] {
+  const xs = poly.map((p) => p[0]);
+  const zs = poly.map((p) => p[1]);
+  return tilesIn(Math.min(...xs), Math.min(...zs), Math.max(...xs) - 1e-6, Math.max(...zs) - 1e-6)
+    .map(([i, j]) => clipRect(poly, i * TILE, j * TILE, (i + 1) * TILE, (j + 1) * TILE))
+    .filter((piece) => piece.length >= 3)
+    .map((piece) => flatPoly(piece, y, repeat));
+}
+/**
+ * The ring of a sidewalk `w` wide just inside an outline, at y: its edges cut every few tiles so no triangle is long
+ * (tileBatch() files each under the tile its middle is in)
+ */
+function ring(poly: Pt[], w: number, y: number) {
+  const dense: Pt[] = [];
+  poly.forEach((p, i) => {
+    const q = poly[(i + 1) % poly.length];
+    const n = Math.max(1, Math.ceil(Math.hypot(q[0] - p[0], q[1] - p[1]) / 8));
+    for (let k = 0; k < n; k++) dense.push([p[0] + ((q[0] - p[0]) * k) / n, p[1] + ((q[1] - p[1]) * k) / n]);
+  });
+  const inner = insetPoly(dense, w);
+  const pos: number[] = [];
+  for (let i = 0; i < dense.length; i++) {
+    const j = (i + 1) % dense.length;
+    const [a, c, d, e] = [dense[i], dense[j], inner[j], inner[i]];
+    // Each triangle wound to face up
+    const tri = (p: Pt, q: Pt, t: Pt) => {
+      const up = (q[1] - p[1]) * (t[0] - p[0]) - (q[0] - p[0]) * (t[1] - p[1]) > 0;
+      for (const v of up ? [p, q, t] : [p, t, q]) pos.push(v[0], y, v[1]);
+    };
+    tri(a, c, d);
+    tri(a, d, e);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(pos.map((_, i) => (i % 3 === 1 ? 1 : 0)), 3));
+  return g;
+}
+/** A big outline raised to h, in pieces: its top a piece per tile, its sides a wall each edge */
+function tiledSlab(poly: Pt[], h: number): THREE.BufferGeometry[] {
+  const pos: number[] = [];
+  const cx = poly.reduce((s, p) => s + p[0], 0) / poly.length;
+  const cz = poly.reduce((s, p) => s + p[1], 0) / poly.length;
+  for (let i = 0; i < poly.length; i++) {
+    const [p, q] = [poly[i], poly[(i + 1) % poly.length]];
+    const quad = [
+      [p[0], 0, p[1]],
+      [q[0], 0, q[1]],
+      [q[0], h, q[1]],
+      [p[0], h, p[1]],
+    ];
+    // Wound 0-1-2 it faces (-ez, ex): turned round if that faces in
+    const [ex, ez] = [q[0] - p[0], q[1] - p[1]];
+    const out = -ez * (p[0] - cx) + ex * (p[1] - cz) > 0;
+    for (const k of out ? [0, 1, 2, 0, 2, 3] : [0, 2, 1, 0, 3, 2]) pos.push(...quad[k]);
+  }
+  const walls = new THREE.BufferGeometry();
+  walls.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  walls.computeVertexNormals();
+  return [walls, ...tiled(poly, h)];
 }
 const isRect = (poly: Pt[]) => poly.length === 4 && poly.every((p, i) => { const q = poly[(i + 1) % 4]; return p[0] === q[0] || p[1] === q[1]; });
 
@@ -469,11 +564,18 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
     const kind: LotKind =
       lots[blk.id] ??
       (blk.ref === 'garage' ? 'concrete' : blk.ref === 'market' || blk.ref === 'units' ? 'paving' : blk.use === 'park' ? 'grass' : blk.id.startsWith('dt-') ? 'paving' : 'grass');
-    if (isRect(slab)) {
+    if (isRect(slab) && !bigPoly(slab)) {
       const [x0, z0] = [Math.min(...slab.map((p) => p[0])), Math.min(...slab.map((p) => p[1]))];
       const [x1, z1] = [Math.max(...slab.map((p) => p[0])), Math.max(...slab.map((p) => p[1]))];
       b.box(x0, 0, z0, x1 - x0, SLAB, z1 - z0, kerb);
       b.box(x0 + WALK_W + 0.4, SLAB, z0 + WALK_W + 0.4, x1 - x0 - (WALK_W + 0.4) * 2, 0.005, z1 - z0 - (WALK_W + 0.4) * 2, LOTS[kind]);
+    } else if (bigPoly(slab)) {
+      // (a big one, a park's: in pieces a tile each. Its top is the lot itself, the sidewalk a ring laid on it: a lot
+      // a few millimetres over a slab that size would flicker through it far off)
+      const [walls, ...top] = tiledSlab(slab, SLAB);
+      b.add(walls, kerb);
+      for (const g of top) b.add(g, LOTS[kind]);
+      b.add(ring(slab, blk.walk + 0.4, SLAB + 0.004), kerb);
     } else {
       b.add(slabPoly(slab, SLAB), kerb);
       // (A bend's outer sidewalk is all sidewalk: no lot)
@@ -842,7 +944,9 @@ const TONES: Tone[] = ['white', 'sodium', 'flickA', 'flickB'];
 const SODIUM = { bulb: '#ffb35c', halo: '#ffab55', pool: '#ff9a45' };
 export function buildLamps(scene: THREE.Scene, low = false) {
   const toneOf = lamps.map((l, i): Tone | 'dead' => {
-    const k = lampKind(l.x, l.z);
+    // (the waterfront's are all sodium, none flickering: it's kept up)
+    const [wx0, wz0, wx1, wz1] = WATERFRONT_RECT;
+    const k = l.x > wx0 && l.x < wx1 && l.z > wz0 && l.z < wz1 ? 'sodium' : lampKind(l.x, l.z);
     return k === null ? 'white' : k === 'sodium' ? 'sodium' : k === 'dead' ? 'dead' : i % 2 ? 'flickA' : 'flickB';
   });
   // The lamps themselves are merged with the city's fixed geometry (split by tile: tileBatch() in kit.ts)

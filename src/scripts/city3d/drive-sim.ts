@@ -18,6 +18,7 @@
 import type { Box } from './solids';
 import { RIVER } from './layout';
 import { riverCrossings } from './streetplan';
+import { LAKE_C, LAKE_WALLS } from './westlake';
 
 export interface DriveTune {
   /** Top speed and reverse top speed (tiles/s) */
@@ -146,7 +147,8 @@ export function stepCar(c: CarState, inp: DriveInput, t: DriveTune, dt: number, 
 
   // Soft collisions: push each circle out of whatever it overlaps and lose the speed going into it
   let hit = 0;
-  const walls = world.boxes.concat(RIVER_WALLS);
+  // (Westlake Park's lake only when the car's anywhere near it)
+  const walls = world.boxes.concat(RIVER_WALLS, Math.hypot(c.x - LAKE_C[0], c.z - LAKE_C[1]) < 50 ? LAKE_WALLS : []);
   /** Move the car (and the circle being checked) out along n */
   const push = (cc: { x: number; z: number }, nx: number, nz: number, depth: number, soft: boolean) => {
     c.x += nx * depth;
