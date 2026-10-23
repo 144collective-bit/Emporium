@@ -376,12 +376,15 @@ function runBoxes(run: Pt[], half: number, h: number): Box[] {
   }
   return out;
 }
+const WALL_BOXES = [...WALLS.flatMap((r) => runBoxes(r, WALL.w / 2, WALL.h)), ...GARDEN_WALLS.flatMap((r) => runBoxes(r, WALL.w / 2, WALL.h))];
+const HEDGE_BOXES = PARTERRES.flatMap((p) => p.hedge.flatMap((r) => runBoxes(r, HEDGE.w / 2, HEDGE.h)));
+const BED_BOXES = [...MALL_BEDS.map((r): Box => [...r, SOLID_H(PLANTER.h)]), ...PLANTERS.map(({ at: [x, z], r }): Box => [x - r * 0.8, z - r * 0.8, x + r * 0.8, z + r * 0.8, SOLID_H(PLANTER.h)])];
 export const GARDEN_SOLIDS: Box[] = [
-  ...WALLS.flatMap((r) => runBoxes(r, WALL.w / 2, WALL.h)),
-  ...GARDEN_WALLS.flatMap((r) => runBoxes(r, WALL.w / 2, WALL.h)),
-  ...PARTERRES.flatMap((p) => p.hedge.flatMap((r) => runBoxes(r, HEDGE.w / 2, HEDGE.h))),
+  ...WALL_BOXES,
+  ...HEDGE_BOXES,
   ...ROUNDS.map(({ c }): Box => [c[0] - FOUNTAIN.r, c[1] - FOUNTAIN.r, c[0] + FOUNTAIN.r, c[1] + FOUNTAIN.r, SOLID_H(FOUNTAIN.h)]),
   ...URNS.map(([x, z]): Box => [x - URN.plinth / 2, z - URN.plinth / 2, x + URN.plinth / 2, z + URN.plinth / 2, SOLID_H(URN.plinth + URN.h)]),
-  ...MALL_BEDS.map((r): Box => [...r, SOLID_H(PLANTER.h)]),
-  ...PLANTERS.map(({ at: [x, z], r }): Box => [x - r * 0.8, z - r * 0.8, x + r * 0.8, z + r * 0.8, SOLID_H(PLANTER.h)]),
+  ...BED_BOXES,
 ];
+/** The low ones a walker can vault (animation Phase 5, vault.ts): the walls, the hedges, the beds and planters (not the fountains or the urns) */
+export const GARDEN_LOW: Box[] = [...WALL_BOXES, ...HEDGE_BOXES, ...BED_BOXES];
