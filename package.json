@@ -7,6 +7,7 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
+    "typecheck": "astro sync && tsc --noEmit -p . --noUnusedLocals",
     "test": "node scripts/test.mjs",
     "test:wide": "WORLD_EXT=-680,720 node scripts/test.mjs"
   },
@@ -19,6 +20,7 @@
   },
   "devDependencies": {
     "@types/three": "^0.186.0",
-    "esbuild": "^0.28.2"
+    "esbuild": "^0.28.2",
+    "typescript": "^6.0.2"
   }
 }

@@ -27,7 +27,7 @@ import * as THREE from 'three';
 import { Batch, FONT_DISPLAY, PAL, canvasTex, fx, glowMat, glowTex, lit, neon, roundRect, toon } from './kit';
 import { SLAB, addLamp, addPool, flatPoly, lotMat, type Tick } from './world';
 import { RIVER } from './layout';
-import { BX, DECK_HALF, DECK_UNDER, DECK_Y, LANDING, LIBERTY_RECTS, PARAPET_H, PIER_HALF, PILLAR, SPANS, STAIR, SUPPORTS, TOWER, TOWERS, TO_RIVER, WALKWAY, WALK_HALF, archY, landingOf, stairsOf } from './liberty';
+import { BX, DECK_HALF, DECK_UNDER, DECK_Y, LIBERTY_RECTS, PARAPET_H, PIER_HALF, PILLAR, SPANS, STAIR, SUPPORTS, TOWER, TOWERS, TO_RIVER, WALKWAY, WALK_HALF, archY, landingOf, stairsOf } from './liberty';
 import type { Spot } from './landmarks';
 
 const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);

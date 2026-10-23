@@ -73,7 +73,6 @@ const TURF = toon('#3c6a44');
 const BALD = toon('#6a5644');
 const COURT = toon('#36334a');
 const CONCRETE = toon('#9a96b4');
-const RAIL = toon('#2a2b38');
 /** Galvanised pipe: the chain-link's posts and rails */
 const PIPE = toon('#8c90a2');
 const KERB = toon('#8a8698');

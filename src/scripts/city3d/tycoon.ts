@@ -37,7 +37,7 @@ import { CARGO as BASE_CARGO, DRIVE, PLAYER_CARS, type PaintId, type PlayerCar }
 import { DEFAULT_KART, KART_SPECS, PLAYER_KARTS, cleanKart, type KartId } from './mykart';
 import { CUPS, type CupId } from './kart-sim';
 import { STYLES, type StyleId } from './fight-sim';
-import { COURSE_IDS, type CourseId } from './kartcircuit';
+import { COURSE_IDS } from './kartcircuit';
 import { PLACE_IDS as MAP_PLACES } from './places';
 import { CORNER_SHOPS, type CornerId } from './projects';
 import {
@@ -1498,7 +1498,6 @@ function pay(s: TycoonSave, price: number, need: number, entry: Entry): BuyResul
 /* ---------- The garage: cars and their mods ---------- */
 
 export const ownsCar = (s: TycoonSave, id: PlayerCar) => STARTER_CARS.includes(id) || s.garage.owned.includes(id);
-export const ownedCars = (s: TycoonSave) => PLAYER_CARS.filter((id) => ownsCar(s, id));
 export function buyCar(s: TycoonSave, id: PlayerCar): BuyResult {
   const c = CAR_CATALOG[id];
   if (!c) return { ok: false, why: 'place' };
@@ -1531,7 +1530,6 @@ export const carStatsOf = (s: TycoonSave, id: PlayerCar) => carStats(DRIVE[id], 
 /* ---------- The kart park: karts, their mods, and the races' prizes ---------- */
 
 export const ownsKart = (s: TycoonSave, id: KartId) => STARTER_KARTS.includes(id) || s.karts.owned.includes(id);
-export const ownedKarts = (s: TycoonSave) => PLAYER_KARTS.filter((id) => ownsKart(s, id));
 export function buyKart(s: TycoonSave, id: KartId): BuyResult {
   const k = KART_CATALOG[id];
   if (!k) return { ok: false, why: 'place' };

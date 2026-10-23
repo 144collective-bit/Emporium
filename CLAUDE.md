@@ -158,8 +158,8 @@ it and has been retired completely. Build only on what's here.
 - **The ring highway** (growth plan Phase 7) is `highway.ts` (DOM-free,
   tested in `tests/highway.test.ts`): `HIGHWAY`, a closed centre line on
   a rounded box (`HIGHWAY_BOX` x -215 to 275, z -170 to 275, corners
-  `HIGHWAY_R` 70) round the town, the kart park, the airport and the test
-  district; two lanes each way with a median and a hard shoulder
+  `HIGHWAY_R` 70) round the town, the kart park, the airport and The
+  Trenches; two lanes each way with a median and a hard shoulder
   (`HIGHWAY_HALF`); `fromHighway()` / `insideHighway()` measure it
   exactly. In the street plan it's a street of kind `highway` (`loop`),
   with a lit junction wherever it meets a straight arterial (18), and on
@@ -185,7 +185,8 @@ it and has been retired completely. Build only on what's here.
   dummies and the 2D buildings are still written on the old drawing grid
   (blocks at 0, 11, 22) and moved onto their lots with `design()` /
   `designBox()` / `seat()` (`SEATS`; in `landmarks.ts`, `onBlock()` does it
-  for each block's scene objects). Keep writing landmark numbers on that
+  for each block's scene objects; the Emporium is `emporium.ts`, the Armoury
+  `armoury.ts`, their shared helpers `landmark-kit.ts`). Keep writing landmark numbers on that
   grid, and change street sizes only in `layout.ts`.
 - **The world's size** is in `layout.ts` too:
   - `EXT` (-420 to 460, about 1.6 km across; growth plan Phase 6 moved it out from -200 to 240) is the ground, the river and every road, edge to edge (the far-off roads are plain continuations of today's, with no traffic). It's mostly open land, room to grow the city into. Build there only when the owner asks.
@@ -197,7 +198,7 @@ it and has been retired completely. Build only on what's here.
   - City view pans round the built-up area (`bounds.ts`: `BUILT_UP` is the town, the airport and the kart park; `PAN_BOUNDS` reaches `PAN_MARGIN` (160) past it, never closer than 10 to where you can walk: today that's the whole world), and the Build overview frames the plots (`overviewFrame()`).
   - **The edge is data** (growth plan Phase 5): `EXT` is set in one place, and a test run can set another (`WORLD_EXT=x0,x1`, `npm run test:wide` at Phase 10's -680 to 720); both must pass. Nothing that exists reads the edge: the airport's `SITE` is fixed numbers, the river walls and their bridge gaps come from the street plan (`riverCrossings()` in `streetplan.ts`), flying turns back at whatever bounds it's given. Anything new written against the edge must work at both sizes.
   - **Growing the city** (many more buildings, then a bigger world) is planned in `docs/growth-plan.md`. Part A (Phases 0-4) makes size cheap: the measuring kit and a snapshot test that nothing moves, tiles and a collision grid, near and far building forms, building as you go, building kits. Part B (Phases 5-10) grows the world: the edge as data (the airport's site frozen, trees per tile), `EXT` out to about 880 across, roads to reach it (a ring highway, more bridges, traffic spent near you), getting about (a world map, waypoints, and the owner's pick of metro, taxis or fast travel), districts one at a time, then optionally about 1,400 across. Phases 0 (the measuring kit), 1 (tiles, the collision grid, the city's fixed geometry merged per tile, crowds and traffic culled for the shadow map), 2 (near and far forms: details near only, far forms for the places and the cars) 3 (building as you go: sites built round the home view at the boot and the rest after it, near forms let go past a budget), 4 (building kits: kits, recipes for blocks, a test district behind `?district=test`), 5 (the edge as data: `EXT` in one place, tests at both sizes) 6 (the edge moves out: `EXT` -420 to 460, the woods, the far plane and sky dome from the edge) 7 (roads to reach it: the ring highway, its bridges and slip lanes, routes generated from the street plan, traffic and boats spent near you) and 8 (getting about: the world map, waypoints, Bring my car, taxis, fast travel, the metro, sound by district) are built, and Phase 9's first district, **The Trenches**, is built (below); follow the rest one phase at a time with the owner's sign-off, and never add buildings in bulk outside the tiles (`tileBatch()`) or outside sites (`site()`).
-  - **Solid and fast first** (the owner's call): fixes and performance are planned in `docs/performance-plan.md` (where the time goes, what each phase measured, what's next); keep it up to date. Fix phase 1 (phones: the city builds behind the start menu and in spare frames, the outline pre-pass only as far as outlines reach, big textures at half size on phones) is built; then fix phase 2 (bugs and broken flows), fix phase 3 (the code clean-up) and the performance phases, with the foundations (sites built off the main thread, districts loaded as you approach, textures made at build time) **before any more districts**. On phones only, a softer neon glow and simpler far districts are allowed; desktop stays as it is.
+  - **Solid and fast first** (the owner's call): fixes and performance are planned in `docs/performance-plan.md` (where the time goes, what each phase measured, what's next); keep it up to date. Fix phase 1 (phones: the city builds behind the start menu and in spare frames, the outline pre-pass only as far as outlines reach, big textures at half size on phones), fix phase 2 (bugs and broken flows at every width), the trim and fix phase 3 (the code clean-up, the type check in the build) are built; then the performance phases, with the foundations (sites built off the main thread, districts loaded as you approach, textures made at build time) **before any more districts**. On phones only, a softer neon glow and simpler far districts are allowed; desktop stays as it is.
 - **Getting about** (growth plan Phase 8; the owner picked taxis, fast
   travel and the metro):
   - **Places** are `places.ts` (DOM-free, tested in `tests/travel.test.ts`):
@@ -711,7 +712,7 @@ it and has been retired completely. Build only on what's here.
   (`tests/fixtures/layout.json`; a street's end at the world's edge is
   `'edge'`). Nothing that exists moves; only when the owner moves something
   on purpose, rewrite it with `UPDATE_SNAPSHOT=1 npm test -- snapshot`.
-- The Emporium arcade tower (`emporium()` in `landmarks.ts`, and in
+- The Emporium arcade tower (`emporium()` in `emporium.ts`, and in
   `city.ts` for the 2D map) is the centrepiece: keep it the tallest, most
   detailed building. Its LED wall shows (`drawWall`), pixel font, ticker and
   signs use fixed copy only (Insert coin, Player 1, Game on, Hi score with
@@ -719,7 +720,7 @@ it and has been retired completely. Build only on what's here.
   them. The rooftop hologram is `createDegen()` in hologram light. Its
   podium, claw machines and prize booth are mirrored in `walk.ts`
   (`SOLIDS`, `CAMERA_ONLY`).
-- The Armoury (`armoury()` in `landmarks.ts` and `city.ts`) is a modern
+- The Armoury (`armoury()` in `armoury.ts` and `city.ts`) is a modern
   military compound and the players' gun store, not a castle: blast walls
   with razor wire, steel watchtowers, a checkpoint (booth, boom barrier, sign
   gantry) and a flat-roofed concrete gun store with a shopfront, canopy sign
@@ -964,6 +965,13 @@ it and has been retired completely. Build only on what's here.
   (labels).
 - Check every change at 320, 375, 768, 1024 and 1440px wide: no sideways
   scroll, no text clipped by a slanted edge.
+- Styles: `global.css` (the site: tokens, the comic page, the nav, small
+  screens and reduced motion), `city.css` (the city page: the 2D map, pins,
+  panels, the mode header, Settings, the Menu), `walk.css` (walk mode, its
+  HUD, the fitting room, the gun store, driving), `economy.css` (the business
+  card, the market hall and the tycoon panels), then a file per game screen.
+  `Base.astro` imports them in that order, which is the order rules apply
+  in: keep it.
 
 ## Liberty Bridge (the owner's call)
 
@@ -1425,7 +1433,7 @@ it and has been retired completely. Build only on what's here.
   `locate()` (keeps to the layer its hint is on), `along()`, `wrapS()`,
   `heightAt()` (banking), flags `F` (deck, tunnel, bank). The site is flat
   ground, not a slab, and the outskirts' trees keep off it and the slip
-  road (`scatterIn()` in `world.ts`, `onRoad()` in `outer.ts`).
+  road (`treeSpot()` in `outskirts.ts`, `onRoad()` in `outer.ts`).
 - **The rules** are `kart-sim.ts` (DOM-free, seeded, a fixed 60 Hz tick,
   tested), racing on the rebuild's circuit (`kartcircuit.ts`) since
   Phase 2: `createKartSim(setup)` → `step(dt, input)` returning events.
@@ -1850,6 +1858,9 @@ it and has been retired completely. Build only on what's here.
 
 ## Tests
 
+- `npm run typecheck` (`astro sync`, then `tsc` with `--noUnusedLocals`)
+  checks the types and that nothing declared is left unused; the "Build
+  site" Action runs it first, so a type error stops the build too.
 - `npm test` runs `tests/*.test.ts` with Node's own test runner
   (`scripts/test.mjs` bundles each with esbuild first; `npm test -- drive`
   runs only matching files). `npm run test:wide` runs them all in Phase
@@ -1863,7 +1874,7 @@ it and has been retired completely. Build only on what's here.
   (`combat-sim.ts`), the economy (`tycoon.ts`, the market square in
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
-  the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes and the test district (`kits.ts`, `recipes.ts`, `testdistrict.ts`), Liberty Bridge (`liberty.ts`),
+  the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`),
   getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,

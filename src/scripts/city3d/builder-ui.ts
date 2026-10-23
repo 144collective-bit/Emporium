@@ -39,7 +39,6 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
   const body = $('[data-plot-body]');
   const modal = $('[data-buy-modal]');
   const modalBody = $('[data-buy-body]');
-  const modalClose = $('[data-buy-close]');
   const toastEl = $('[data-toast]');
   const panelNote = $('[data-plot-note]');
 

@@ -64,7 +64,6 @@ export const MISSIONS: Mission[] = [
   { id: 'master-tuner', name: 'Master tuner', blurb: 'Buy 24 upgrades.', level: 18, goal: counter('upgrades', 24), reward: 20000, xp: 2000 },
   { id: 'champion', name: 'Champion', blurb: 'Win 15 bouts at the Fight Club.', level: 18, goal: counter('fightWins', 15), reward: 20000, xp: 2000 },
 ];
-export const MISSION_IDS = MISSIONS.map((m) => m.id);
 export const mission = (id: string) => MISSIONS.find((m) => m.id === id) ?? null;
 
 export type MissionState = 'done' | 'active' | 'open' | 'locked';
@@ -162,7 +161,6 @@ export const BADGES: Badge[] = [
   { id: 'level-20', name: 'Level 20', blurb: 'Reached level 20.', xp: 0, on: { level: 20 } },
   { id: 'level-30', name: 'Level 30', blurb: 'Reached level 30.', xp: 0, on: { level: 30 } },
 ];
-export const BADGE_IDS = BADGES.map((x) => x.id);
 export const badge = (id: string) => BADGES.find((x) => x.id === id) ?? null;
 export const hasBadge = (s: TycoonSave, id: string) => s.badges.includes(id);
 export const badgeMet = (s: TycoonSave, x: Badge) => ('level' in x.on ? levelFor(s.xp) >= x.on.level : (s.counters[x.on.counter] ?? 0) >= x.on.n);

@@ -72,9 +72,6 @@
   line-height: 1.4;
   color: var(--muted);
 }
-.race-note.is-warn {
-  color: #ffd36b;
-}
 
 /* The countdown: huge digits in the middle of the screen, PulseChain gradient, a glow */
 .race-count {

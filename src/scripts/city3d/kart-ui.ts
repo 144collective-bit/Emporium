@@ -232,11 +232,6 @@ ${countersHtml(s)}
 }
 
 type Tab = 'race' | 'karts' | 'boards';
-const TABS: { id: Tab; name: string }[] = [
-  { id: 'race', name: 'Race' },
-  { id: 'karts', name: 'Karts' },
-  { id: 'boards', name: 'Boards' },
-];
 
 export function createKartUI(root: HTMLElement, d: KartUIDeps): KartUI {
   const el = root.querySelector<HTMLElement>('[data-karts]')!;

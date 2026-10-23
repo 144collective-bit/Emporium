@@ -157,12 +157,6 @@
   width: 11px;
   height: 11px;
 }
-.kart-courses {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
-  margin-top: 2px;
-}
 .kart-go {
   display: grid;
   justify-items: center;
@@ -447,16 +441,6 @@
 .kart-course-name .kart-rev {
   margin-left: 0;
   vertical-align: 0;
-}
-.kart-sc-tag {
-  padding: 2px 6px;
-  border: 1px solid #ff6ad566;
-  border-radius: 999px;
-  font-family: var(--font-mono);
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  color: #ff6ad5;
 }
 .kart-course-blurb {
   margin: 0;

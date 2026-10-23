@@ -28,7 +28,7 @@
  * Reverse runs the same surface the other way: every corner flipped, the
  * flyover before the west loop.
  */
-import { F, GATE, KART_PARK, KART_W, STEP, at, frame, heightAt, locate, sampleLine, toLocal, toWorld, type CPt, type Frame, type Line, type Pt } from './kartpark';
+import { F, GATE, KART_PARK, KART_W, STEP, frame, heightAt, locate, sampleLine, toLocal, toWorld, type CPt, type Frame, type Line, type Pt } from './kartpark';
 
 /** The track's width and half width (four or five karts abreast) */
 export const TRACK_W = 4.4;
@@ -366,6 +366,3 @@ export function circuitSurfaceAt(x: number, z: number, yNow: number): { y: numbe
   }
   return best;
 }
-
-/** A point on the circuit: s along, lateral across (left positive), in world numbers */
-export const circuitAt = (c: Course, s: number, lateral = 0) => at(c, s, lateral);

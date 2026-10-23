@@ -385,8 +385,6 @@ function newFighter(s: FighterSetup): Fighter {
   };
 }
 
-/** Can this fighter act (walk, block, throw)? */
-export const canAct = (f: Fighter) => f.down <= 0 && f.getup <= 0 && f.stun <= 0;
 /** Which move a punch or a kick starts from here (null if none) */
 export function nextMove(f: Fighter, kind: 'punch' | 'kick'): MoveId | null {
   const style = STYLES[f.style];

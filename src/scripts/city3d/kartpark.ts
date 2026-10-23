@@ -253,11 +253,6 @@ export function frame(c: Line, s: number): Frame {
     flags: c.flags[i],
   };
 }
-/** The way a kart faces when it sits on the line at s (yaw: 0 faces +x, left raises it) */
-export const yawAt = (c: Line, s: number) => {
-  const f = frame(c, s);
-  return Math.atan2(-f.tz, f.tx);
-};
 /** The surface's height across the track: the banking lifts the right side (lateral < 0) */
 export const heightAt = (f: Frame, lateral: number) => f.y - f.roll * lateral;
 /** A point on the track: s along, lateral across (left positive) */

@@ -474,7 +474,6 @@ function grounds(b: Batch) {
   const W = (u: number, v: number) => toWorld([u, v]);
   const flat = (batch: Batch, x0: number, z0: number, x1: number, z1: number, y: number, mat: THREE.Material) =>
     batch.add(place(new THREE.PlaneGeometry(x1 - x0, z1 - z0), (x0 + x1) / 2, y, (z0 + z1) / 2, 1, 1, 1, -Math.PI / 2), mat);
-  const fl = (i: number) => c.flags[i];
   const open = (i: number) => !enclosed(fr(c, i));
   /** Which side a bend's outside is on (left positive), 0 on the straight */
   const outside = (i: number) => (Math.abs(c.k[i]) > 0.04 ? -Math.sign(c.k[i]) : 0);
@@ -513,13 +512,7 @@ function grounds(b: Batch) {
 function track(b: Batch, low: boolean) {
   const P = KART_PARK;
   const c = CIRCUIT;
-  const W = (u: number, v: number) => toWorld([u, v]);
-  const flat = (batch: Batch, x0: number, z0: number, x1: number, z1: number, y: number, mat: THREE.Material) =>
-    batch.add(place(new THREE.PlaneGeometry(x1 - x0, z1 - z0), (x0 + x1) / 2, y, (z0 + z1) / 2, 1, 1, 1, -Math.PI / 2), mat);
   const fl = (i: number) => c.flags[i];
-  const open = (i: number) => !enclosed(fr(c, i));
-  /** Which side a bend's outside is on (left positive), 0 on the straight */
-  const outside = (i: number) => (Math.abs(c.k[i]) > 0.04 ? -Math.sign(c.k[i]) : 0);
 
   // The asphalt, its edge lines and the kerbs: red and white blocks a tile each, both sides
   b.add(sweep(c, runs(c, () => true)[0], strip(-TRACK_HALF, TRACK_HALF, onPlane(c, RIBBON))), ASPHALT);
@@ -642,8 +635,6 @@ export function buildKartPark(scene: THREE.Scene, opts: { tick: (f: Tick) => voi
   const W = (u: number, v: number) => toWorld([u, v]);
   const flat = (batch: Batch, x0: number, z0: number, x1: number, z1: number, y: number, mat: THREE.Material) =>
     batch.add(place(new THREE.PlaneGeometry(x1 - x0, z1 - z0), (x0 + x1) / 2, y, (z0 + z1) / 2, 1, 1, 1, -Math.PI / 2), mat);
-  const fl = (i: number) => c.flags[i];
-  const open = (i: number) => !enclosed(fr(c, i));
   /** Which side a bend's outside is on (left positive), 0 on the straight */
   const outside = (i: number) => (Math.abs(c.k[i]) > 0.04 ? -Math.sign(c.k[i]) : 0);
 

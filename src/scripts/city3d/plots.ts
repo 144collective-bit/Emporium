@@ -7,7 +7,7 @@
  */
 import * as THREE from 'three';
 import { DISTRICTS, type BuildingType, type Design } from '../../data/plots';
-import { Batch, FONT_MONO, PAL, canvasTex, facadeMat, fx, glowTex, lit, neon, neonSign, roundRect, shadeHex, toon } from './kit';
+import { Batch, FONT_MONO, PAL, canvasTex, facadeMat, fx, glowTex, lit, neonSign, roundRect, shadeHex, toon } from './kit';
 import { BS, SLAB, type Tick } from './world';
 
 export type { Design };

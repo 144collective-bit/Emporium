@@ -11,7 +11,7 @@
 import * as THREE from 'three';
 import { PLAYER, type Outfit } from './character';
 import { crewOutfit } from './crew';
-import { CLIPS, CLIP_IDS, type ClipId } from './fight-anim';
+import { CLIP_IDS, type ClipId } from './fight-anim';
 import { createFighterFigure, drawFighter, type FighterFigure } from './fight-figure';
 import { T, createFightSim, type FightEvent, type FightSim } from './fight-sim';
 import { fx, glowTex } from './kit';

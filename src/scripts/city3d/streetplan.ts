@@ -14,7 +14,7 @@
  * Coordinates are world units on the ground: [x, z].
  */
 import { DISTRICTS } from '../../data/plots';
-import { BLOCKS, BS, CENTER_XZ, CORE_ROADS, EW_ROADS, EXT, EXTRA_LOTS, GARAGE, LANE, MARKET, MEDIAN, NS_ROADS, RIVER, SEATS, UNITS, WALK_W, type Road } from './layout';
+import { BLOCKS, BS, CORE_ROADS, EW_ROADS, EXT, EXTRA_LOTS, GARAGE, LANE, MARKET, MEDIAN, NS_ROADS, RIVER, SEATS, UNITS, WALK_W, type Road } from './layout';
 import { ALLEYS, BLOCKS_DT, DIAGONALS, LANES } from './downtown';
 import { BENDS, BEND_KERBS, OUTER_BLOCKS, OUTER_PARKS, OUTER_SQUARES, PADS } from './outer';
 import { AIRPORT_STREETS, ROAD } from './airfield';
@@ -441,5 +441,3 @@ export function riverBridges(plan: StreetPlan = PLAN) {
   return out.sort((p, q) => p.x0 - q.x0);
 }
 
-/** The middle of the city */
-export const PLAN_CENTRE: Pt = [CENTER_XZ.x, CENTER_XZ.z];

@@ -28,7 +28,6 @@
 import {
   CROPS,
   DELIVERY_BONUS,
-  GARDEN_CAP,
   GOODS,
   PRICE_LEVELS,
   PRICE_LEVEL_IDS,
@@ -40,7 +39,6 @@ import {
   UNIT_KINDS,
   UNIT_KIND_IDS,
   WAREHOUSE_CAP,
-  WORKSHOP_CAP,
   advance,
   askPrice,
   bidPrice,
@@ -108,7 +106,6 @@ import {
   roleAt,
   sellFromCar,
   ship,
-  shipFee,
   shipMinutes,
   type DestId,
   DEPOT_CAP,

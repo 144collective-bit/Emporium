@@ -43,7 +43,6 @@ export const AMENITY_SIZE: Record<AmenityKind, [number, number]> = {
   chess: [4.5, 3.5],
   washing: [5.5, 2.5],
 };
-export const AMENITY_KINDS = Object.keys(AMENITY_SIZE) as AmenityKind[];
 /** What each block of the projects gets, in the order they're placed (no two blocks alike) */
 export const MIX: Record<string, AmenityKind[]> = {
   'trench-b0-0': ['playground', 'garden', 'washing'],
@@ -74,7 +73,6 @@ export interface Amenity {
 const bounds = (poly: Pt[]): Rect => [Math.min(...poly.map((p) => p[0])), Math.min(...poly.map((p) => p[1])), Math.max(...poly.map((p) => p[0])), Math.max(...poly.map((p) => p[1]))];
 const grow = ([x0, z0, x1, z1]: Rect, m: number): Rect => [x0 - m, z0 - m, x1 + m, z1 + m];
 export const overlaps = (a: Rect, b: Rect) => Math.min(a[2], b[2]) - Math.max(a[0], b[0]) > 1e-6 && Math.min(a[3], b[3]) - Math.max(a[1], b[1]) > 1e-6;
-const FACE_OUT: Record<Face, Pt> = { n: [0, -1], s: [0, 1], w: [-1, 0], e: [1, 0] };
 
 /** Everything a tower puts on its lawn: its parts, stoops and scaffolding */
 export const towerRects = (t: Tower): Rect[] => [...t.parts.map((p) => p.rect), ...t.stoops, ...(t.scaffold ? [t.scaffold] : [])];

@@ -142,7 +142,6 @@ export const STATIONS: Station[] = [
   { id: 'trenches', name: 'The Trenches', track: 'main', s: along('main', [TRENCH_X, AVENUE_Z]), ...trenchTower },
   { id: 'airport', name: 'Airport', track: 'branch', s: 130.5 - SWITCH_Z, ...eastTower(130.5) },
 ];
-export const STATION_IDS = STATIONS.map((s) => s.id);
 const station = (id: string) => STATIONS.find((s) => s.id === id)!;
 /** Where a station's platform is: its middle and the way its track runs there */
 export const stationAt = (st: Station) => pointOn(st.track, st.s);

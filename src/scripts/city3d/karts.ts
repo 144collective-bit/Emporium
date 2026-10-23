@@ -21,14 +21,13 @@
 import * as THREE from 'three';
 import { carMaterials, wheelGeometry, type CarSpec } from './cars';
 import { HIP_HEIGHT, reachArm, torsoFrame, type Degen } from './character';
-import { FONT_DISPLAY, PAL, canvasTex, fx, mergeMeshes, neon, toon } from './kit';
-import { KART_L, KART_W } from './kartpark';
+import { FONT_DISPLAY, PAL, canvasTex, mergeMeshes, neon, toon } from './kit';
+import { KART_L } from './kartpark';
 import type { KartId } from './mykart';
 
 /* ---------- Colours ---------- */
 
 const FRAME = '#2a2838';
-const TYRE = '#17151f';
 const RIM = '#c9c4e6';
 const SEAT = '#1b1830';
 const ENGINE = '#4a485c';

@@ -46,7 +46,6 @@ import {
   type BoneName,
   type Influence,
   type Joint,
-  type Limb,
   type Pose,
   type Region,
   type Skeleton,
@@ -937,7 +936,6 @@ function items(q: Detail, hero = false): Item[] {
   ];
 
   const FATIGUES = grow(SUIT, 1.03);
-  const fatiguesFront = surface(FATIGUES, 2.8);
   const fatigues = loft(FATIGUES, R(22), 2.8);
   const VEST: Sec[] = [
     [0.05, 0.155, 0.11, 0],
