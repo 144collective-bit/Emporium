@@ -1216,8 +1216,9 @@ it and has been retired completely. Build only on what's here.
   held properly, its butt in his shoulder. Build it one phase at a time
   with the owner's sign-off. Phase 1 (run, sprint and momentum), Phase 2
   (turning, terrain and transitions), Phase 3 (jumps, falls and landings),
-  Phase 4 (armed movement and peeking) and Phase 8 (the rifle shouldered,
-  below under Target practice) are built, for the player on foot:
+  Phase 4 (armed movement and peeking), Phase 5's crouch and slide (its
+  vault and climb next) and Phase 8 (the rifle shouldered, below under
+  Target practice) are built, for the player on foot:
   - **The data** is CMU's motion capture (free for commercial use; the
     acknowledgment is in the start menu's Options > Credits, named, never
     linked): mostly subject 143's and 127's takes, in `assets/mocap/cmu/`
@@ -1311,13 +1312,32 @@ it and has been retired completely. Build only on what's here.
     shoulder, or across to his left), never into a wall beside him (its
     sideways shift clamped through `CAMERA_GRID` too); in first person the
     eye shifts and the view tilts a little (not under reduced motion).
+  - **Phase 5 (crouch and slide):** subject 136's crouched walks
+    (`136_09` to `136_11`, `sink` in `takes.json` where the capture's feet
+    stand high); `AnimInput.crouch` (walk.ts eases it): crouched and moving
+    only `CROUCH.clips` are searched, standing up never them; standing
+    still crouched the idle plays with the crouch laid over it (`CROUCH`:
+    the hips down, the legs' IK bending the knees over planted feet, the
+    spine forward, the head back up), eased as the clip changes. walk.ts:
+    C toggles it (B on a gamepad, the touch **Crouch** button over the
+    stick, `[data-walk-crouch]`, aria-pressed; hidden wherever Sprint is),
+    `CROUCH.speed` 0.55, sprinting stands him up, a jump too, the camera
+    comes down (`CROUCH.cam`). Crouching while sprinting **slides**
+    (`SLIDE`, `startSlide()` / `stepSlide()` in movesim.ts, DOM-free: from
+    `SLIDE.min`, a little faster than he was going, slowing by its
+    friction, steering a little, about 3 tiles); its pose is keyed
+    (`slidePose()`, `SLIDE_POSE` in poses.ts: low, leant back, the lead
+    heel out, the other knee and shin on the ground, a hand back), the
+    motion capture stepping aside for it; it ends in a run with the stick
+    pushed, a crouch without, crouched against anything it runs into, or
+    up into a jump.
   - **The lab** is `?anim` (`anim-lab.ts`, styles `animlab.css`): the new
     animation beside the old on an open floor, scripted moves or W A S D,
     slow motion, cameras (over his right shoulder too), floors (flat,
     kerbs, stairs, a ledge), any gun in his hands (`gun`, `aim`, `pitch`;
     markers at the butt and his shoulder's pocket; on the motion capture's
     legs, as in the city), strafing, aiming round and peeking programs (Q / E
-    by hand), any kind of top
+    by hand), crouching and sprint-and-slide (C by hand), any kind of top
     (`outfit`), the free camera placed with `orbit=yaw,pitch,dist`, jumps
     (programs and Space, walk.ts's jump and gravity), foot traces and
     readouts (the clip, its rate, the match, the blend left, the foot
@@ -2304,7 +2324,8 @@ it and has been retired completely. Build only on what's here.
   buildings and on the ground. When dummies move, their footprints follow
   `DUMMIES` automatically.
 - Keys: click fires, right-click aims, R reloads, G holsters, X / 1-4 swap
-  guns, Q / E held peek round a corner (animation Phase 4); F does what the
+  guns, Q / E held peek round a corner (animation Phase 4), C crouches and
+  slides when sprinting (Phase 5); F does what the
   prompt says (the owner's call: every door, counter and getting in or
   out, and F closes those menus); Shift sprints, Caps Lock (not R) toggles
   walking, the touch Sprint button locks the sprint. Where the mouse can't be captured

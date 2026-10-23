@@ -66,6 +66,8 @@ export interface AnimInput {
   gravity?: number;
   /** The way the springs are turning him to face, when it isn't where he's going (aiming, peeking: where the camera looks) */
   faceGoal?: number;
+  /** How far into a crouch (0 standing to 1 crouched; walk.ts eases it) */
+  crouch?: number;
 }
 
 /** How much faster or slower a clip may play to match his speed, and how much more flat out */
@@ -136,6 +138,15 @@ const BLEND = 0.09;
  * once the flight's frames have been used up for `armsAfter`
  */
 export const AIR = { kerb: 0.3, margin: 0.75, drop: 0.3, after: 0.18, lead: 4, settle: 0.3, crouch: 4.5, hard: 9.5, squash: 0.16, bow: 1.6, arms: 0.7, armsAfter: 0.15, armsIn: 0.6 };
+/**
+ * Crouching (Phase 5): past `at` of the way into a crouch, moving, only the
+ * crouched walks are searched (`clips`), and standing up, never them;
+ * standing still crouched, the idle plays with the crouch laid over it: the
+ * hips `drop` lower (the legs' IK bends the knees, the feet stay put), the
+ * spine leant `lean` forward and the head back up, eased in and out over
+ * `ease` (a half-life) as the clip changes
+ */
+export const CROUCH = { clips: ['crouch-walk', 'crouch-walk-2', 'crouch-back'], at: 0.5, drop: 0.16, lean: 0.42, ease: 0.1 };
 /** The game's jump and gravity, when the input doesn't say (walk.ts's) */
 const JUMP = 3.9;
 const GRAVITY = 11.5;
@@ -259,6 +270,11 @@ export function createAnimator(data: MoData) {
   const P = newPosed();
   const q = new Float32Array(FEATURES);
   const standing = Uint8Array.from(db.clips, (c) => (STAND.clips.includes(c.name.replace('~', '')) ? 1 : 0));
+  const crouching = Uint8Array.from(db.clips, (c) => (CROUCH.clips.includes(c.name.replace('~', '')) ? 1 : 0));
+  const upright = crouching.map((v) => 1 - v);
+  /** Crouched (past CROUCH.at), and how much of the crouch is laid over a clip that isn't one */
+  let crouched = false;
+  let crouchW = 0;
   let still = 0;
   let clip = 0;
   let t = 0;
@@ -435,7 +451,8 @@ export function createAnimator(data: MoData) {
     if (!started) {
       // The first frame: whatever fits best, no blend
       q.fill(0);
-      const best = searchFor(true);
+      crouched = (inp.crouch ?? 0) > CROUCH.at;
+      const best = searchFor(true, 0, crouched ? crouching : upright);
       clip = db.clipOf[best];
       t = db.frameOf[best];
       started = true;
@@ -537,6 +554,10 @@ export function createAnimator(data: MoData) {
     const stand = still > STAND.after && settle <= 0;
     // (settling: the first search standing still looks for the idle at once)
     if (stand && !standing[clip]) searchIn = 0;
+    // (crouching or standing up on the move: over to the other kind of walk at once)
+    crouched = (inp.crouch ?? 0) > CROUCH.at;
+    const wrongKind = !stand && !inAir && (crouched ? !crouching[clip] : crouching[clip] === 1);
+    if (wrongKind) searchIn = 0;
     searchIn -= dt;
     const sharp = Math.hypot(inp.gx - lastGx, inp.gz - lastGz) > MATCH.sharp;
     lastGx = inp.gx;
@@ -544,10 +565,10 @@ export function createAnimator(data: MoData) {
     if (!inAir && (force || searchIn <= 0 || sharp)) {
       searchIn = MATCH.every;
       const cur = at(clip, t);
-      const best = searchFor(false, cur, stand ? standing : undefined);
+      const best = searchFor(false, cur, stand ? standing : crouched ? crouching : upright);
       const curCost = db.open[cur] && !force ? cost(db, q, cur) : Infinity;
       const near = db.clipOf[best] === clip && Math.abs(db.frameOf[best] - t) < 3;
-      const better = settle > 0 ? lastCost < curCost * AIR.margin : lastCost + (stand && standing[clip] ? STAND.margin : MATCH.margin) < curCost || (stand && !standing[clip]);
+      const better = wrongKind || (settle > 0 ? lastCost < curCost * AIR.margin : lastCost + (stand && standing[clip] ? STAND.margin : MATCH.margin) < curCost || (stand && !standing[clip]));
       if (best >= 0 && !near && (force || better)) cut(best);
     }
 
@@ -589,6 +610,21 @@ export function createAnimator(data: MoData) {
       hips.applyQuaternion(qa);
       qb.fromArray(rot, 0);
       qa.multiply(qb).toArray(rot, 0);
+    }
+
+    // The crouch over a clip that isn't one (standing still, turning on the spot): the hips down
+    // (the feet's IK, below, bends the knees), the spine forward, the head back up
+    crouchW += ((crouched && !crouching[clip] && !inAir ? 1 : 0) - crouchW) * (1 - Math.exp((-Math.LN2 * dt) / CROUCH.ease));
+    if (crouchW > 1e-3) {
+      hips.y -= CROUCH.drop * crouchW;
+      for (const b of [MB.spine1, MB.spine2]) {
+        qa.setFromAxisAngle(X, (CROUCH.lean / 2) * crouchW).multiply(qb.fromArray(rot, b * 4));
+        qa.toArray(rot, b * 4);
+      }
+      for (const b of [MB.neck, MB.head]) {
+        qa.setFromAxisAngle(X, (-CROUCH.lean / 2) * crouchW).multiply(qb.fromArray(rot, b * 4));
+        qa.toArray(rot, b * 4);
+      }
     }
 
     // A long fall: the flight's frames used up, the arms come up and out
@@ -827,7 +863,7 @@ export function createAnimator(data: MoData) {
       }
       drop = dropV = bank = bankV = lift = liftV = squash = squashV = 0;
       warp = faster = turnLately = airK = 1;
-      sprintW = 0;
+      sprintW = crouchW = 0;
       inAir = false;
       flight = -1;
       settle = held = airT = 0;
@@ -835,7 +871,7 @@ export function createAnimator(data: MoData) {
     },
     /** What it's doing, for the lab */
     get debug() {
-      return { clip: db.clips[clip].name, frame: t, rate, warp, cost: lastCost, blend: inertia.left, jumps, drop, lift, bank, air: inAir, squash, arms: AIR.arms * THREE.MathUtils.smoothstep(held, AIR.armsAfter, AIR.armsAfter + AIR.armsIn) };
+      return { clip: db.clips[clip].name, frame: t, rate, warp, cost: lastCost, blend: inertia.left, jumps, drop, lift, bank, air: inAir, crouch: crouchW, squash, arms: AIR.arms * THREE.MathUtils.smoothstep(held, AIR.armsAfter, AIR.armsAfter + AIR.armsIn) };
     },
   };
 }

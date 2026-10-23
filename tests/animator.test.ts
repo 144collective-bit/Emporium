@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import * as THREE from 'three';
-import { FACE, addLean, applyTo, createAnimator, twoBone } from '../src/scripts/city3d/animator';
+import { CROUCH, FACE, addLean, applyTo, createAnimator, twoBone } from '../src/scripts/city3d/animator';
 import { makeSkeleton, newPose, poseSkeleton } from '../src/scripts/city3d/skeleton';
 import { MB, NB, TOE_BONES, decodeMocap, newPosed, posed } from '../src/scripts/city3d/mocap';
 import { wrap } from '../src/scripts/city3d/inertia';
@@ -548,4 +548,51 @@ test('standing, aiming round past his hips steps him round instead of twisting h
     assert.ok(lag <= FACE.most + 1e-3, `${turn}: his hips ${lag.toFixed(2)} rad off the aim at most`);
     assert.ok(slide * SCALE * CM < 2, `${turn}: a held foot slid ${(slide * SCALE * CM).toFixed(1)} cm`);
   }
+});
+
+/* ---------- Phase 5: crouching ---------- */
+
+test('crouched he walks on the crouched takes and stands still in the crouch over the idle, his feet planted; standing up, never', () => {
+  const an = createAnimator(data);
+  const m = newMove(0);
+  let z = 0;
+  let crouch = 0;
+  const kinds = { crouchedMoving: 0, crouchedWalks: 0, still: 0, idle: 0, upright: 0, uprightCrouch: 0 };
+  let slide = 0;
+  let hipsStill = 0;
+  let hipsUp = 0;
+  const P = newPosed();
+  for (let i = 0; i < 60 * 12; i++) {
+    const t = i * DT;
+    // (crouched for 8 s: still, on, still; then up and on)
+    const down = t < 8;
+    const gz = (t > 1.5 && t < 4.5) || t > 9 ? (down ? 0.55 : GAITS.run) : 0;
+    crouch += ((down ? 1 : 0) - crouch) * (1 - Math.exp(-10 * DT));
+    stepMove(m, 0, gz, true, DT);
+    z += m.vz * DT;
+    an.update({ dt: DT, x: 0, y: 0, z, move: m, gx: 0, gz, scale: SCALE, ground: () => 0, sprint: 0, crouch });
+    const clip = an.debug.clip.replace('~', '');
+    const isCrouch = CROUCH.clips.includes(clip);
+    if (down && t > 2.5 && t < 4.5) {
+      kinds.crouchedMoving++;
+      if (isCrouch) kinds.crouchedWalks++;
+    }
+    if (down && t > 6 && t < 8) {
+      kinds.still++;
+      if (clip === 'idle') kinds.idle++;
+      posed(an.rot, 0, an.hips.x, an.hips.y, an.hips.z, P);
+      hipsStill = Math.max(hipsStill, P.pos[0].y);
+    }
+    if (t > 10) {
+      kinds.upright++;
+      if (isCrouch) kinds.uprightCrouch++;
+      hipsUp = Math.max(hipsUp, an.hips.y);
+    }
+    if (t > 1) slide = Math.max(slide, ...an.feet.map((f) => f.drift));
+  }
+  assert.ok(kinds.crouchedWalks / kinds.crouchedMoving > 0.9, `crouched walks ${kinds.crouchedWalks} of ${kinds.crouchedMoving} frames`);
+  assert.ok(kinds.idle / kinds.still > 0.9, `still crouched on the idle ${kinds.idle} of ${kinds.still} frames`);
+  assert.ok(hipsStill < hipsUp - CROUCH.drop * 0.6, `the hips ${hipsStill.toFixed(3)} still crouched, ${hipsUp.toFixed(3)} running`);
+  assert.equal(kinds.uprightCrouch, 0, 'standing up, never a crouched take');
+  assert.ok(slide * SCALE * CM < 2.5, `a held foot slid ${(slide * SCALE * CM).toFixed(1)} cm`);
 });
