@@ -28,7 +28,7 @@ import { site } from './tilework';
 import { RIVER } from './layout';
 import type { Pt, Rect } from './downtown';
 import type { Idle, Spot } from './landmarks';
-import { ARCH, BARGE, BENCHES, BINOCULARS, BOARDWALK, BOLLARDS, CRANE, DECK_Y, FISHERS, KIOSK, LAMPS, PIER, PLANTERS, RINGS, WATERFRONT_RECT } from './waterfront';
+import { ARCH, BARGE, BENCHES, BINOCULARS, BOARDWALK, BOLLARDS, CRANE, DECK_Y, FISHERS, KIOSK, LAMPS, PIER, PLANTERS, RAIL_GAPS, RINGS, WATERFRONT_RECT } from './waterfront';
 import { PIER_HOUSE } from './riverside';
 import { SIGNS, archFrame, archPane, box, signPlane } from './riverside3d';
 
@@ -53,7 +53,7 @@ const T = DECK_Y;
 const [BX0, BZ0, BX1, BZ1] = BOARDWALK;
 
 /** A bench facing the water (north), seat at the deck's height + 0.3 */
-function bench(b: Batch, x: number, z: number) {
+export function bench(b: Batch, x: number, z: number) {
   b.detail(() => {
     box(b, x - 0.45, T + 0.24, z - 0.15, x + 0.45, T + 0.3, z + 0.15, WOOD);
     box(b, x - 0.45, T + 0.32, z + 0.12, x + 0.45, T + 0.62, z + 0.17, WOOD);
@@ -69,14 +69,14 @@ function binoculars(b: Batch, x: number, z: number) {
   });
 }
 /** A railing along x at z (posts near, a rail, a wood cap) */
-function railX(b: Batch, xa: number, xb: number, z: number, low: boolean) {
+export function railX(b: Batch, xa: number, xb: number, z: number, low: boolean) {
   box(b, xa, T + 0.58, z - 0.06, xb, T + 0.64, z + 0.06, CAP);
   box(b, xa, T + 0.28, z - 0.02, xb, T + 0.32, z + 0.02, RAIL);
   b.detail(() => {
     for (let x = xa; x <= xb + 1e-6; x += low ? 2.4 : 1.2) box(b, x - 0.03, T, z - 0.03, x + 0.03, T + 0.58, z + 0.03, RAIL);
   });
 }
-function railZ(b: Batch, za: number, zb: number, x: number, low: boolean) {
+export function railZ(b: Batch, za: number, zb: number, x: number, low: boolean) {
   box(b, x - 0.06, T + 0.58, za, x + 0.06, T + 0.64, zb, CAP);
   box(b, x - 0.02, T + 0.28, za, x + 0.02, T + 0.32, zb, RAIL);
   b.detail(() => {
@@ -84,7 +84,7 @@ function railZ(b: Batch, za: number, zb: number, x: number, low: boolean) {
   });
 }
 /** A deck on piles: the boards, plank seams across, the fascia round its water edges, piles under it */
-function deck(b: Batch, r: Rect, low: boolean, seamsAlongX = true) {
+export function deck(b: Batch, r: Rect, low: boolean, seamsAlongX = true) {
   const [x0, z0, x1, z1] = r;
   box(b, x0, T - 0.08, z0, x1, T, z1, DECK);
   const wz = Math.min(z1, RIVER[1]);
@@ -106,16 +106,11 @@ function deck(b: Batch, r: Rect, low: boolean, seamsAlongX = true) {
 /* ---------- The boardwalk ---------- */
 
 function boardwalkPiece(b: Batch, xa: number, xb: number, low: boolean) {
-  const [n0, , n1] = PIER.neck;
   deck(b, [xa, BZ0, xb, BZ1], low);
-  // The railing at the water, open where the pier's neck leaves it
+  // The railing at the water, open where the pier's neck and the market's deck run on out from it
   const edge = BZ0 + 0.08;
-  const runs: [number, number][] = [];
-  if (xb <= n0 || xa >= n1) runs.push([xa, xb]);
-  else {
-    if (xa < n0) runs.push([xa, n0]);
-    if (xb > n1) runs.push([n1, xb]);
-  }
+  let runs: [number, number][] = [[xa, xb]];
+  for (const [g0, g1] of RAIL_GAPS) runs = runs.flatMap(([a, c]): [number, number][] => (c <= g0 || a >= g1 ? [[a, c]] : [...(a < g0 ? [[a, g0] as [number, number]] : []), ...(c > g1 ? [[g1, c] as [number, number]] : [])]));
   for (const [a, c] of runs) railX(b, a, c, edge, low);
   // The ends of the boardwalk over the water closed off
   if (Math.abs(xa - BX0) < 1e-6) railZ(b, BZ0, RIVER[1], BX0 + 0.08, low);

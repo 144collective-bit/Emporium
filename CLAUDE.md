@@ -546,6 +546,23 @@ it and has been retired completely. Build only on what's here.
     `data-panel-tpl="pier"` with Walk in to `PIER_SPAWN`, a `PLACES` entry;
     the clock's hands keep the visitor's time). On the world map the decks
     are drawn in wood.
+  - **The Night Market** (the owner's call, the waterfront plan's first
+    next step; scenery for now, stalls to run later) is `nightmarket.ts`
+    (DOM-free, tested in `tests/nightmarket.test.ts`) on its deck out over
+    the water in front of Harbor Stores (`MARKET_DECK` in waterfront.ts, one
+    of `DECKS`, open to the boardwalk along its length (`RAIL_GAPS`), the
+    middle boat lane swinging round it in `boatZ()`, the boardwalk's dressing
+    kept off it): `STALLS` along its water side, counters facing the city
+    (four containers, two food trucks, a cart, made-up names `STALL_NAMES`),
+    `TABLES` (two rows of picnic tables) between the queues (`QUEUE`) and the
+    boardwalk's walk (`WALK_FROM`, the strollers pass behind), NIGHT MARKET
+    on the `GANTRY` over the boardwalk (both ways), string lights and paper
+    lanterns from the stalls' roofs to the `POLES`, `HEATERS`, the cooks
+    (`VENDORS`) and diners (`DINERS`), `NIGHT_MARKET_SOLIDS` (in `SOLIDS`).
+    Drawn by `nightmarket3d.ts` (`buildNightMarket()`, a place at the boot:
+    spot `nightmarket`, its pin over the gantry, directory entry, panel
+    `data-panel-tpl="nightmarket"` with Walk in to `MARKET_SPAWN`, a `PLACES`
+    entry; one sign atlas of fixed made-up copy).
   - **The Block** is a place (`theblock.ts`, built at the boot): spot
     `trenches` (pin over the court, directory entry, panel
     `data-panel-tpl="trenches"`: the storyline starts here, coming soon,
@@ -2116,7 +2133,7 @@ it and has been retired completely. Build only on what's here.
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`),
-  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`),
+  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,
