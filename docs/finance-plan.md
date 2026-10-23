@@ -44,7 +44,9 @@ sign-off. Keep this plan up to date as each phase lands.
     at both world sizes.
   - Nothing that exists moves unless the owner says so: the snapshot is
     rewritten only for what the owner moves (the courts).
-- **The budget:** the boot's code is at 634.4 of 640 KB. Everything drawn
+- **The budget:** the boot's code is at 640.2 of 642 KB (raised from 640
+  on purpose in Phase 3: the plaza's solids, trees, lamps and people must be
+  there at the boot). Everything drawn
   goes in the district's own chunk; what the boot must hold (solids,
   places, the street plan's blocks) is kept small. The towers' far forms
   are made from data, not shipped as geometry.
@@ -63,6 +65,8 @@ sign-off. Keep this plan up to date as each phase lands.
 3. **The name is Uptown.**
 4. **Scenery through Phases 1-4.** In Phase 5 the tallest tower becomes a
    place (pin, panel, "coming soon"), with a walkable sky deck at the top.
+5. **The plaza's centrepiece is a Christian cross** (the owner's pick, in
+   Phase 3).
 
 ## Phases
 
@@ -108,13 +112,12 @@ sign-off. Keep this plan up to date as each phase lands.
      - hulls for flying;
      - a new `?bench` view (`finance`);
      - phones checked.
-3. **The plaza.**
+3. **The plaza** (built: see "Phase 3 as built" below).
    - **The plaza itself:** the heart of the district on the middle strip,
      the towers' lobbies opening onto it. It has:
      - granite paving;
      - a long stepped water wall and a fountain pool;
-     - a centrepiece sculpture of the city's own (the owner's pick: for
-       example a turning gold Emporium diamond or a giant Dorra coin);
+     - the centrepiece (the owner's pick: a Christian cross);
      - trees in grates, benches and planters;
      - café kiosks with made-up names;
      - lit canopies and string lights;
@@ -223,3 +226,52 @@ owner's sign-off.
 - **Measured:** a bench view over Uptown from the river (`uptown`). The
   boot's code is 636.0 of 640 KB (the towers' data, for their solids).
 
+## Phase 3 as built
+
+- **The data:** `plaza.ts` (DOM-free, tested in `tests/plaza.test.ts`) is
+  what the boot needs: its solids, trees, lamps and people.
+  `plazadress.ts` (DOM-free, tested there too) is what only the drawing
+  needs, kept in Uptown's chunk: the canopies, the kiosks' names and the LED
+  ribbon.
+- **The layout:** the forecourt is the plaza's block west of the spire. The
+  Mall's axis (north-south) meets the line between the spire's lobby and
+  the lobby across the street (east-west) at the centre. The ways through
+  are kept open: down the axis round the pool, in from the street through
+  the water wall, and on to the spire's door.
+- **The cross** (the owner's pick):
+  - gold, on a three-step stone plinth in a round pool;
+  - its arms across the axis, so it faces the Mall and the river;
+  - 7.6 tall, the tallest thing in the plaza, under the spire's roof and
+    the Emporium's;
+  - glowing softly at night as if floodlit, with uplights at its foot and
+    jets in the pool;
+  - drawn so it takes no shadows (the shadow map's steps striped its
+    gold).
+- **The water wall:** three stone steps with water sheeting down them into a
+  trough, in two halves either side of the way in from the street. The
+  falls are a streaked texture the tick scrolls; they glow a little at
+  night.
+- **Lunch:**
+  - lit glass canopies on posts along the north and south edges, six
+    tables with chairs under them, string lights between the canopies;
+  - trees in grates, four benches facing the pool, lamps flanking the way
+    in and the spire's lobby, planters along the spire's sides;
+  - granite paving with darker inlays along both axes and a ring round the
+    pool.
+- **The terraces:** the slivers west of the lanes are café terraces, each
+  with a kiosk (MARBLE CAFÉ, SKYLINE DELI, made up), four tables under
+  umbrellas and a tree at each end.
+- **The LED ribbon:** round the podium across the street, above its lobby's
+  canopy. Fixed made-up words only, never a number; they scroll round with
+  the tick.
+- **People at lunch:** 37 (half on phones): at the tables, on the benches,
+  two pairs chatting by the spire's lobby, two looking up at the cross, two
+  queueing at each kiosk.
+- **Solid:** the pool (in six boxes with their corners on its rim, so
+  nobody walks into the water), the cross, the water wall and troughs, the
+  planters and the kiosks.
+- **Retired:** the hoardings round the open lots.
+- **The budget:** the boot's code went from 639.4 to 640.2 KB. The budget
+  was raised on purpose from 640 to 642: the plaza's people, trees, lamps
+  and solids have to be in the boot, and everything drawing-only was moved
+  out to `plazadress.ts`.
