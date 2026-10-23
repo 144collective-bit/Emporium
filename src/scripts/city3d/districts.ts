@@ -18,6 +18,7 @@ import type * as THREE from 'three';
 import type { DistrictModule, SiteWorker } from './sitework';
 import { rectDistance } from './tileplan';
 import type { Rect } from './tiles';
+import type { Tick } from './world';
 import { WESTLAKE_RECT } from './westlake';
 
 export interface LazyDistrict {
@@ -42,7 +43,7 @@ export interface Districts {
   loaded(): string[];
 }
 
-export function createDistricts(opts: { scene: THREE.Scene; low: boolean; worker: SiteWorker | null; adopt(): void; list?: LazyDistrict[] }): Districts {
+export function createDistricts(opts: { scene: THREE.Scene; low: boolean; worker: SiteWorker | null; adopt(): void; tick?: (f: Tick) => void; list?: LazyDistrict[] }): Districts {
   const list = opts.list ?? LAZY_DISTRICTS;
   const state = new Map<string, 'loading' | 'done' | 'failed'>();
   let near = 0;
@@ -51,7 +52,7 @@ export function createDistricts(opts: { scene: THREE.Scene; low: boolean; worker
     state.set(d.id, 'loading');
     d.load()
       .then(async (m) => {
-        m.register({ low: opts.low, scene: opts.scene });
+        m.register({ low: opts.low, scene: opts.scene, tick: opts.tick });
         // The worker registers the same sites before they're queued here, so it can take them (a few seconds at most)
         if (opts.worker) await Promise.race([opts.worker.load(m.SELF), new Promise((r) => setTimeout(r, 4000))]);
         opts.adopt();

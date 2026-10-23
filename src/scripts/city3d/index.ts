@@ -331,7 +331,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     meshesOf,
   });
   // Districts loaded as you approach (performance phase 4, item 10): their drawing a chunk of its own each
-  const districts = createDistricts({ scene, low: tier === 'low', worker: siteWorker, adopt: () => works.adopt() });
+  const districts = createDistricts({ scene, low: tier === 'low', worker: siteWorker, adopt: () => works.adopt(), tick });
   const atBoot = works.boot([...new Set([...viewTiles(h0.pos, h0.target), ...viewTiles(introFrom(h0), h0.target)].map((t) => t.join()))].map((k) => k.split(',').map(Number) as [number, number]));
   const tiled = tileBatch(scene, [scene, ...['airport', 'kartpark'].flatMap((n) => scene.getObjectByName(n) ?? []), ...atBoot]);
   for (const g of atBoot) g.removeFromParent();

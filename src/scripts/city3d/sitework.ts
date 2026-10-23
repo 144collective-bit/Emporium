@@ -23,7 +23,7 @@ import * as THREE from 'three';
 import { initFarCars } from './cars';
 import { siteMatOf } from './kit';
 import { takeSites } from './tilework';
-import { buildLamps, buildTrees, usePlaced, type Placed } from './world';
+import { buildLamps, buildTrees, usePlaced, type Placed, type Tick } from './world';
 import { buildTrenches } from './trenches3d';
 import { buildProjects } from './projects3d';
 import { buildCommons } from './commons3d';
@@ -65,7 +65,8 @@ interface Scope {
 export interface DistrictModule {
   /** Its own address, for the site worker to load it too */
   SELF: string;
-  register(opts: { low: boolean; scene: THREE.Scene | null }): void;
+  /** On the main thread with the scene (and a tick for what moves); in the site worker with neither */
+  register(opts: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }): void;
 }
 
 /** In the worker: register the sites, then build each one when it's asked for */
