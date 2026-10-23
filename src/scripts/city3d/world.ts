@@ -661,8 +661,9 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
  * and woods in patches well away from the city, seeded tile by tile at a density per area
  * (outskirts.ts, growth plan Phases 5 and 6)
  */
-export function scatterOutskirts(count: number, sparse = 0.6) {
-  for (const t of outskirtsTrees(count, sparse, CLEAR)) addTree(t.x, t.z, t.s, t.pine, 0);
+export function scatterOutskirts(count: number, sparse = 0.6, keep = 1) {
+  // (`keep` < 1 leaves the rest out, the same ones whatever else changes: phones keep half, the trim)
+  for (const t of outskirtsTrees(count, sparse, CLEAR)) if (keep >= 1 || turnAt(t.z, t.x) / 6 < keep) addTree(t.x, t.z, t.s, t.pine, 0);
 }
 
 /** Land the outskirts' trees keep off besides the town (The Trenches', the metro's el over open land) */
@@ -741,11 +742,42 @@ const turnAt = (x: number, z: number) => {
   return (h - Math.floor(h)) * 6;
 };
 
-export function buildTrees() {
-  // Open-ended: the canopy hides the top, the ground the bottom
-  const trunkGeo = new THREE.CylinderGeometry(0.07, 0.09, 1, 6, 1, true);
-  const canopyGeo = new THREE.IcosahedronGeometry(0.42, 1);
-  const coneGeo = new THREE.ConeGeometry(0.42, 0.9, 7);
+/**
+ * A tree far away on a phone (the trim): two flat cards crossed, each faced both ways (no new material),
+ * its outline in (across, up) at scale 1; the normals tip up and out so the toon light still reads it as round
+ */
+function crossedCards(outline: [number, number][]) {
+  const pos: number[] = [];
+  const nor: number[] = [];
+  for (const a of [0, Math.PI / 2]) {
+    const [dx, dz] = [Math.cos(a), -Math.sin(a)];
+    for (const side of [1, -1]) {
+      const n = new THREE.Vector3(-dz * side * 0.7, 0.7, dx * side * 0.7).normalize();
+      const at = (k: number) => [outline[k][0] * dx, outline[k][1], outline[k][0] * dz];
+      for (let k = 1; k < outline.length - 1; k++) {
+        const tri = side > 0 ? [0, k, k + 1] : [0, k + 1, k];
+        for (const v of tri) {
+          pos.push(...at(v));
+          nor.push(n.x, n.y, n.z);
+        }
+      }
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+  return g;
+}
+
+export function buildTrees(low = false) {
+  // Open-ended: the canopy hides the top, the ground the bottom. Phones (the trim): a rounder
+  // dodecahedron canopy at less than half the triangles, four-sided trunks, open five-sided cones
+  const trunkGeo = new THREE.CylinderGeometry(0.07, 0.09, 1, low ? 4 : 6, 1, true);
+  const canopyGeo = low ? new THREE.DodecahedronGeometry(0.42, 0) : new THREE.IcosahedronGeometry(0.42, 1);
+  const coneGeo = low ? new THREE.ConeGeometry(0.42, 0.9, 5, 1, true) : new THREE.ConeGeometry(0.42, 0.9, 7);
+  // ...and far away, flat cards: a hexagon for a round tree (down over its trunk), a triangle for a pine
+  const roundCard = crossedCards([[0, 0.3], [0.42, 0.6], [0.42, 1.05], [0, 1.27], [-0.42, 1.05], [-0.42, 0.6]]);
+  const pineCard = crossedCards([[-0.42, 0.28], [0.42, 0.28], [0, 1.56]]);
   const q = new THREE.Quaternion();
   const up = new THREE.Vector3(0, 1, 0);
   const greens = ['#2fae6e', '#33b878', '#24995f', '#3fc485', '#2a9d63'];
@@ -771,9 +803,21 @@ export function buildTrees() {
           new THREE.Matrix4().compose(new THREE.Vector3(t.x, t.y + 1.2 * t.s, t.z), q, new THREE.Vector3(t.s * 0.75, t.s * 0.8, t.s * 0.75)),
         ]);
       const b = new Batch();
+      if (low) b.lod = 'near';
       b.instances(trunkGeo, toon('#6b4630'), trunks);
       greens.forEach((g, i) => b.instances(canopyGeo, toon(g), canopies[i]));
       b.instances(coneGeo, toon('#1d7a55'), cones);
+      if (low) {
+        b.lod = 'far';
+        const cards: THREE.Matrix4[][] = greens.map(() => []);
+        list.forEach((t, i) => {
+          if (t.pine) return;
+          cards[i % greens.length].push(new THREE.Matrix4().compose(new THREE.Vector3(t.x, t.y, t.z), new THREE.Quaternion().setFromAxisAngle(up, turnAt(t.x, t.z)), new THREE.Vector3(t.s, t.s, t.s)));
+        });
+        greens.forEach((g, i) => b.instances(roundCard, toon(g), cards[i]));
+        const pines = list.filter((t) => t.pine).map((t) => new THREE.Matrix4().compose(new THREE.Vector3(t.x, t.y, t.z), new THREE.Quaternion().setFromAxisAngle(up, turnAt(t.x, t.z)), new THREE.Vector3(t.s, t.s, t.s)));
+        b.instances(pineCard, toon('#1d7a55'), pines);
+      }
       b.build(into);
     });
 }
@@ -785,7 +829,7 @@ export function buildTrees() {
 type Tone = 'white' | 'sodium' | 'flickA' | 'flickB';
 const TONES: Tone[] = ['white', 'sodium', 'flickA', 'flickB'];
 const SODIUM = { bulb: '#ffb35c', halo: '#ffab55', pool: '#ff9a45' };
-export function buildLamps(scene: THREE.Scene) {
+export function buildLamps(scene: THREE.Scene, low = false) {
   const toneOf = lamps.map((l, i): Tone | 'dead' => {
     const k = lampKind(l.x, l.z);
     return k === null ? 'white' : k === 'sodium' ? 'sodium' : k === 'dead' ? 'dead' : i % 2 ? 'flickA' : 'flickB';
@@ -828,9 +872,11 @@ export function buildLamps(scene: THREE.Scene) {
   const dead = toon('#3a3644');
   // Near only (growth plan Phase 2): far off, a lamp is a hairline; its halo (below) still shows at night.
   // Each tile's lamps a site (built as you go: tilework.ts)
-  const poleGeo = new THREE.CylinderGeometry(0.035, 0.05, 1.6, 6);
-  const armGeo = new THREE.BoxGeometry(0.4, 0.05, 0.05);
-  const bulbGeo = new THREE.BoxGeometry(0.2, 0.07, 0.12);
+  // Phones (the trim): four-sided and open-ended (the ends are too small to see), half the triangles
+  const bar = (r: number, len: number) => new THREE.CylinderGeometry(r, r, len, 4, 1, true).rotateY(Math.PI / 4).rotateZ(Math.PI / 2);
+  const poleGeo = low ? new THREE.CylinderGeometry(0.035, 0.05, 1.6, 4, 1, true).rotateY(Math.PI / 4) : new THREE.CylinderGeometry(0.035, 0.05, 1.6, 6);
+  const armGeo = low ? bar(0.035, 0.4) : new THREE.BoxGeometry(0.4, 0.05, 0.05);
+  const bulbGeo = low ? bar(0.075, 0.2) : new THREE.BoxGeometry(0.2, 0.07, 0.12);
   for (const [key, list] of byTile(lamps.map((l, i) => ({ x: l.x, z: l.z, i }))))
     site(`lamps ${key}`, keyRect(key), (into) => {
       const pick = (all: THREE.Matrix4[]) => list.map((l) => all[l.i]);

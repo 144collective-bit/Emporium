@@ -1,4 +1,4 @@
-// The Trenches' grit (grit.ts, the owner's call): concrete yards with worn patches and trees in pits, chain-link round
+// The Trenches' grit (grit.ts, the owner's call): concrete yards with worn patches and trees in pits, a low kerb round
 // them (commons.ts), jersey barriers, dumpsters and trash, shuttered shops and boarded windows, the boombox corners, the
 // el's pillars and spans, sodium lamps (trenches.ts) and the hood's sound (ambience.ts). Nothing in anyone's way.
 import { test } from 'node:test';
@@ -24,7 +24,7 @@ import {
 } from '../src/scripts/city3d/grit';
 import { AMENITIES, BAYS, BAY_CARS, COMMONS_SOLIDS, REC, amenityWay, doorWay, overlaps, towerRects } from '../src/scripts/city3d/commons';
 import { CORNER_SHOPS, PROJECT_SOLIDS, THE_BLOCK, TOWERS, rows } from '../src/scripts/city3d/projects';
-import { EDGES, STREETWALL_SOLIDS } from '../src/scripts/city3d/streetwall';
+import { EDGES, EDGE_H, EDGE_W, STREETWALL_SOLIDS } from '../src/scripts/city3d/streetwall';
 import { TRENCH_BLOCKS, inTrenches, lampKind } from '../src/scripts/city3d/trenches';
 import { METRO_SOLIDS, PILLARS } from '../src/scripts/city3d/metro';
 import { SOLIDS } from '../src/scripts/city3d/solids';
@@ -71,7 +71,7 @@ test('the yards: worn patches on the concrete, clear of everything on them', () 
   assert.ok(PATCHES.some((p) => p.kind === 'grass') && PATCHES.some((p) => p.kind === 'dirt'));
 });
 
-test('trees in pits along the yards\' street sides (and on the worn grass), clear of the ways in and the chain-link', () => {
+test('trees in pits along the yards\' street sides (and on the worn grass), clear of the ways in and the kerb', () => {
   const pits = YARD_TREES.filter((t) => t.pit);
   assert.ok(pits.length >= 40, `${pits.length} in pits`);
   assert.ok(YARD_TREES.some((t) => !t.pit && t.block === REC.block), 'some on the rec block\'s lawn');
@@ -85,22 +85,22 @@ test('trees in pits along the yards\' street sides (and on the worn grass), clea
     if (t.pit)
       for (const e of EDGES.filter((o) => o.block === t.block)) {
         const r: Rect = [Math.min(e.a[0], e.c[0]), Math.min(e.a[1], e.c[1]), Math.max(e.a[0], e.c[0]), Math.max(e.a[1], e.c[1])];
-        assert.ok(!overlaps([r[0] - 0.15, r[1] - 0.15, r[2] + 0.15, r[3] + 0.15], [t.x - PIT, t.z - PIT, t.x + PIT, t.z + PIT]), 'a pit clear of the chain-link');
+        assert.ok(!overlaps([r[0] - 0.15, r[1] - 0.15, r[2] + 0.15, r[3] + 0.15], [t.x - PIT, t.z - PIT, t.x + PIT, t.z + PIT]), 'a pit clear of the kerb');
       }
   }
 });
 
-test('the chain-link: solid, open at every way in (doors, amenities, bays, the rec block\'s path)', () => {
+test('the yards\' kerb (chain-link until the trim): solid, open at every way in (doors, amenities, bays, the rec block\'s path)', () => {
   assert.ok(EDGES.length > 40);
-  const fences = STREETWALL_SOLIDS.filter((s) => s[4] > 1 && s[4] < 1.4 && Math.min(s[2] - s[0], s[3] - s[1]) < 0.25);
+  const fences = STREETWALL_SOLIDS.filter((s) => s[4] === EDGE_H && Math.min(s[2] - s[0], s[3] - s[1]) <= EDGE_W + 1e-6);
   assert.ok(fences.length >= EDGES.length, 'every run solid');
   for (const t of TOWERS) {
     if (t.block === THE_BLOCK.block) continue;
     const way = doorWay(t, blockRect(t.block), 1.2);
-    for (const f of fences) assert.ok(!overlaps(way, [f[0], f[1], f[2], f[3]]), `the chain-link across ${t.id}'s way in`);
+    for (const f of fences) assert.ok(!overlaps(way, [f[0], f[1], f[2], f[3]]), `the kerb across ${t.id}'s way in`);
   }
-  for (const a of AMENITIES) for (const f of fences) assert.ok(!overlaps(amenityWay(a, 0.8), [f[0], f[1], f[2], f[3]]), `the chain-link across ${a.id}'s way out`);
-  for (const y of BAYS) for (const f of fences) assert.ok(!overlaps(y.rect, [f[0], f[1], f[2], f[3]]), `the chain-link across ${y.id}`);
+  for (const a of AMENITIES) for (const f of fences) assert.ok(!overlaps(amenityWay(a, 0.8), [f[0], f[1], f[2], f[3]]), `the kerb across ${a.id}'s way out`);
+  for (const y of BAYS) for (const f of fences) assert.ok(!overlaps(y.rect, [f[0], f[1], f[2], f[3]]), `the kerb across ${y.id}`);
   for (const f of fences) assert.ok(!overlaps(REC.path, [f[0], f[1], f[2], f[3]]), 'the rec block\'s path open');
 });
 

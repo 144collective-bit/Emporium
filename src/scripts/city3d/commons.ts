@@ -309,8 +309,6 @@ export const HYDRANTS: Pt[] = TRENCH_BLOCKS.filter((b) => b.row === 'B').flatMap
 
 /* ---------- What's solid, and who's out there ---------- */
 
-/** The community garden's chain-link, how high */
-export const GARDEN_FENCE = 1.4;
 /** An amenity's solid parts (fences with their gates, ramps, grills, the washing lines' poles) */
 export function amenitySolids(a: Amenity): Footprint[] {
   const [x0, z0, x1, z1] = a.rect;
@@ -349,8 +347,8 @@ export function amenitySolids(a: Amenity): Footprint[] {
           [cx - 0.9, cz - 1.2, cx + 0.9, cz + 1.2, 0.45],
         ];
   }
-  // (the grit step) The community garden fenced in with chain-link, a gate on its way out
-  if (a.kind === 'garden') return [...fence(GARDEN_FENCE, 1.6), ...gardenGrills(a).map(([x, z]): Footprint => [x - 0.3, z - 0.3, x + 0.3, z + 0.3, 0.9])];
+  // The community garden's grills (its chain-link came out in the trim, the owner's call)
+  if (a.kind === 'garden') return gardenGrills(a).map(([x, z]): Footprint => [x - 0.3, z - 0.3, x + 0.3, z + 0.3, 0.9]);
   if (a.kind === 'washing') return washingPoles(a).map(([x, z]): Footprint => [x - 0.06, z - 0.06, x + 0.06, z + 0.06, 1.9]);
   return [];
 }

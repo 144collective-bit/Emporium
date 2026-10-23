@@ -10,17 +10,17 @@
  *   out, a bay, the rec block's path), keeps clear of the towers (light
  *   between) and never stands in front of a mural. They're the kits' shops
  *   (kits.ts, infill.ts), in brick, with made-up names (`TRENCH_SIGNS`).
- * - **Two vacant lots** (`VACANT`): gaps in the walls, fenced off, rubble,
- *   weeds and a billboard.
+ * - **Two vacant lots** (`VACANT`): gaps in the walls, open (their fences
+ *   came out in the trim), rubble, weeds and a billboard.
  * - **Low commercial** (`LOWRISE`): lock-up garages along Bottom Street,
  *   and on the strip between West Street and the highway (row W) an auto
  *   shop, a tyre place, a car wash, a scrap yard, a body shop and
  *   warehouses, signs with made-up names (`LOWRISE_NAMES`).
- * - **The yards' chain-link** (`EDGES`, moved here from commons.ts) runs
- *   only where no building stands.
+ * - **The yards' kerb** (`EDGES`, moved here from commons.ts; chain-link
+ *   until the trim) runs only where no building stands.
  *
  * What's solid is `STREETWALL_SOLIDS` (in SOLIDS): the buildings, the
- * fences, the scrap yard's piles, the car wash's posts and brushes.
+ * kerbs, the scrap yard's piles, the car wash's posts and brushes.
  */
 import type { Face, Footprint, Pt, Rect, SignId } from './downtown';
 import { AMENITIES, BAYS, REC, amenityWay, doorWay, overlaps, standing, waysIn } from './commons';
@@ -187,8 +187,6 @@ const LAID = (() => {
 })();
 export const TENEMENTS: (Lot & { block: string })[] = LAID.tenements;
 export const VACANT: Vacant[] = LAID.vacant;
-/** A vacant lot's fence: along its street front and its back, how high */
-export const VACANT_FENCE = 1.6;
 
 /* ---------- Low commercial ---------- */
 
@@ -335,16 +333,17 @@ export const carSolid = ([, x, z, yaw]: [string, number, number, number, string]
 /** Low lots' solids: the building (but the car wash's kiosk counts as one too) and the rest */
 export const lowSolids = (l: LowLot): Footprint[] => [[...l.body, l.h + 0.2], ...l.extra];
 
-/* ---------- The yards' chain-link (moved from commons.ts: it runs only where nothing's built) ---------- */
+/* ---------- The yards' kerb (moved from commons.ts: it runs only where nothing's built) ---------- */
 
-/** A run of chain-link (on its low kerb) along a yard's edge, a little in from it */
+/** A run of the low worn concrete kerb along a yard's edge, a little in from it (chain-link until the trim, the owner's call) */
 export interface EdgeRun {
   block: string;
   a: Pt;
   c: Pt;
 }
-/** How high the chain-link stands over its kerb */
-export const EDGE_H = 1.1;
+/** How high the kerb stands, and how thick it is */
+export const EDGE_H = 0.4;
+export const EDGE_W = 0.24;
 export const EDGE_IN = 0.3;
 /** Everything built along a block's front (the walls, the vacant lots, the low lots) */
 export const built = (block: string): Rect[] => [...TENEMENTS.filter((l) => l.block === block).map((l) => l.box), ...VACANT.filter((v) => v.block === block).map((v) => v.rect), ...LOWRISE.filter((l) => l.block === block).map((l) => l.rect)];
@@ -379,21 +378,13 @@ export const EDGES: EdgeRun[] = (() => {
   }
   return out;
 })();
-/** A chain-link run's footprint */
+/** A kerb run's footprint */
 export const edgeSolid = (e: EdgeRun): Footprint => {
   const alongX = e.a[1] === e.c[1];
-  const [wx, wz] = alongX ? [0, 0.1] : [0.1, 0];
-  return [Math.min(e.a[0], e.c[0]) - wx, Math.min(e.a[1], e.c[1]) - wz, Math.max(e.a[0], e.c[0]) + wx, Math.max(e.a[1], e.c[1]) + wz, EDGE_H + 0.12];
+  const [wx, wz] = alongX ? [0, EDGE_W / 2] : [EDGE_W / 2, 0];
+  return [Math.min(e.a[0], e.c[0]) - wx, Math.min(e.a[1], e.c[1]) - wz, Math.max(e.a[0], e.c[0]) + wx, Math.max(e.a[1], e.c[1]) + wz, EDGE_H];
 };
 
 /* ---------- What's solid ---------- */
 
-/** A vacant lot's fences: along its street front and its back */
-export function vacantFences(v: Vacant): Footprint[] {
-  const F = lowFrame(v);
-  return [
-    [...F.rect(0.1, 0.25, F.W - 0.1, 0.35), VACANT_FENCE],
-    [...F.rect(0.1, F.D - 0.35, F.W - 0.1, F.D - 0.25), VACANT_FENCE],
-  ];
-}
-export const STREETWALL_SOLIDS: Footprint[] = [...TENEMENTS.flatMap((l) => l.solids), ...VACANT.flatMap(vacantFences), ...LOWRISE.flatMap(lowSolids), ...LOW_CARS.map(carSolid), ...EDGES.map(edgeSolid)];
+export const STREETWALL_SOLIDS: Footprint[] = [...TENEMENTS.flatMap((l) => l.solids), ...LOWRISE.flatMap(lowSolids), ...LOW_CARS.map(carSolid), ...EDGES.map(edgeSolid)];

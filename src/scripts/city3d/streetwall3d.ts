@@ -26,8 +26,8 @@ import { SLAB as S, addTree } from './world';
 import { site } from './tilework';
 import { parkedCars, type CarId } from './cars';
 import { TRENCH_BLOCKS } from './trenches';
-import { LOWRISE, LOWRISE_NAMES, LOW_CARS, TENEMENTS, VACANT, VACANT_FENCE, lowFrame, type LowLot, type Vacant } from './streetwall';
-import { buildFx, chainMesh, poster, tag, atlasQuad } from './grime';
+import { LOWRISE, LOWRISE_NAMES, LOW_CARS, TENEMENTS, VACANT, lowFrame, type LowLot, type Vacant } from './streetwall';
+import { buildFx, poster, tag, atlasQuad } from './grime';
 import type { Idle } from './landmarks';
 import type { Pt, Rect } from './downtown';
 
@@ -89,7 +89,6 @@ const DRUM = toon('#2b4f7a');
 const BRUSH = toon('#2aabee');
 const CANOPY = toon('#2f3a4a');
 const FENCE = toon('#6b7280');
-const PIPE = toon('#8c90a2');
 
 const box = (b: Batch, [x0, z0, x1, z1]: Rect, y0: number, y1: number, mat: THREE.Material) => b.box(x0, y0, z0, x1 - x0, y1 - y0, z1 - z0, mat);
 const hash = (a: number, b: number) => {
@@ -262,7 +261,7 @@ function lowLotDraw(b: Batch, fxb: Batch, l: LowLot, low: boolean) {
   }
 }
 
-/** A vacant lot: dirt, rubble and weeds; chain-link front and back; a billboard; tags on the neighbours' side walls */
+/** A vacant lot: dirt, rubble and weeds, open to the street (its chain-link came out in the trim); a billboard; tags on the neighbours' side walls */
 function vacantDraw(b: Batch, fxb: Batch, v: Vacant, i: number, low: boolean) {
   const F = lowFrame(v);
   const n = OUT[v.face];
@@ -277,17 +276,6 @@ function vacantDraw(b: Batch, fxb: Batch, v: Vacant, i: number, low: boolean) {
       else b.add(new THREE.IcosahedronGeometry(s, 0).scale(1, 0.6, 1).translate(x, S + s * 0.5, z), RUBBLE[k % RUBBLE.length]);
     }
   });
-  // The chain-link along the front and the back: posts, top rail, the mesh
-  for (const vv of [0.3, D - 0.3]) {
-    const a = F.at(0.1, vv);
-    const c = F.at(W - 0.1, vv);
-    for (const u of [0.1, W / 2, W - 0.1]) {
-      const [x, z] = F.at(u, vv);
-      b.add(new THREE.CylinderGeometry(0.04, 0.04, VACANT_FENCE, 6).translate(x, S + VACANT_FENCE / 2, z), PIPE);
-    }
-    box(b, [Math.min(a[0], c[0]) - 0.02, Math.min(a[1], c[1]) - 0.02, Math.max(a[0], c[0]) + 0.02, Math.max(a[1], c[1]) + 0.02], S + VACANT_FENCE - 0.05, S + VACANT_FENCE, PIPE);
-    chainMesh(fxb, a, c, S + 0.02, VACANT_FENCE - 0.07);
-  }
   // A billboard on two posts at the back, facing the street
   const bw = Math.min(W - 0.4, 3.4);
   for (const u of [W / 2 - bw / 3, W / 2 + bw / 3]) {

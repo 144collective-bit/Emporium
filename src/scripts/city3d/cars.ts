@@ -982,7 +982,10 @@ export interface FarCars {
 }
 let farCars: FarCars | null = null;
 /** Make the far cars' mesh (index.ts, before anything adds a car) */
-export function initFarCars(scene: THREE.Scene, max = 400) {
+/** Phones (the trim): parked cars are always their far form, close up too (`initFarCars()` sets it) */
+let parkedFar = false;
+export function initFarCars(scene: THREE.Scene, max = 400, parkedAlwaysFar = false) {
+  parkedFar = parkedAlwaysFar;
   const models = Object.keys(CARS) as CarId[];
   const geos = models.map(farCarGeometry);
   const bm = new THREE.BatchedMesh(max, geos.reduce((n, g) => n + g.attributes.position.count, 0), 0, farCarMaterial());
@@ -1015,7 +1018,7 @@ export const theFarCars = () => farCars!;
 /**
  * Parked cars (static, instanced: two draw calls a model near the camera,
  * one far away: `farCarGeometry()`, swapped by the camera's distance from
- * the whole lot, `addLod()` in lod.ts). Each is [model, x, z, turn, colour];
+ * the whole lot, `addLod()` in lod.ts; on phones always far). Each is [model, x, z, turn, colour];
  * x, z on the ground at `y`.
  */
 export function parkedCars(parent: THREE.Object3D, y: number, list: [CarId, number, number, number, string][]) {
@@ -1027,6 +1030,10 @@ export function parkedCars(parent: THREE.Object3D, y: number, list: [CarId, numb
   const far: number[] = [];
   const fleet = theFarCars();
   parent.updateMatrixWorld(true);
+  if (parkedFar) {
+    for (const [id, x, z, ry, color] of list) fleet.show(fleet.add(id, color, M.compose(new THREE.Vector3(x, y, z), q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), ry), one).premultiply(parent.matrixWorld)), true);
+    return;
+  }
   for (const id of new Set(list.map((c) => c[0]))) {
     const cars = list.filter((c) => c[0] === id);
     const g = carGeometry(id);

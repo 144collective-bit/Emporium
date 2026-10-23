@@ -8,13 +8,14 @@ import { FONT_DISPLAY, PAL, canvasTex, fx, glowTex, lit, mergeMeshes, neon, rand
 import { CENTER, EW_ROADS, NS_ROADS, RIVER, SLAB, type Tick } from './world';
 
 import { PLAN, distToStreet, outset, pointAt, streetLength } from './streetplan';
-import { EXT } from './layout';
+import { DOWNTOWN, EXT, MARKET } from './layout';
 import { BOAT_LANES, DECK_STROLLS, DECK_Y } from './liberty';
 import { JUNCTIONS, ROUTES, SPOTS, lightState, phaseOf, pointOn, rightOf, type Junction, type Phase, type Pt, type Route } from './routes';
 import { CARS, PAINTS, carGeometry, carMaterials, theFarCars, type CarId } from './cars';
 import { isNear, tileKey, tileOf } from './tiles';
 import type { Idle } from './landmarks';
 import { TRENCH_WALKS } from './projects';
+import { inTrenches } from './trenches';
 import { CROWD_VIEW, HIP_HEIGHT, cityOutfit, createCrowd } from './character';
 import { CLIP_SECONDS, WALK_STRIDE } from './crowdclips';
 
@@ -530,7 +531,12 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
       });
     });
   }
-  for (const c of crowd) people.push({ kind: 'idle', seg: 0, inset: 0, u: 0, dir: 1, speed: 0, phase: rand() * 6, x: c.x, z: c.z, y: c.y, act: c.act, scale: c.scale, ry: c.ry, face: c.ry, walked: 0 });
+  // Phones (the trim): every other idle person in The Trenches and downtown (the square, the market, the landmarks)
+  const busy = (c: Idle) =>
+    inTrenches(c.x, c.z) || (c.x > -6 && c.x < DOWNTOWN + 6 && c.z > -6 && c.z < DOWNTOWN + 6) || (c.x > MARKET.ox - 2 && c.x < MARKET.ox + 11 && c.z > MARKET.oz - 2 && c.z < MARKET.oz + 11);
+  let every = 0;
+  const idlers = opts.light ? crowd.filter((c) => !busy(c) || every++ % 2 === 0) : crowd;
+  for (const c of idlers) people.push({ kind: 'idle', seg: 0, inset: 0, u: 0, dir: 1, speed: 0, phase: rand() * 6, x: c.x, z: c.z, y: c.y, act: c.act, scale: c.scale, ry: c.ry, face: c.ry, walked: 0 });
   const n = people.length;
   bodies.people = people;
 
