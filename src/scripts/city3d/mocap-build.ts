@@ -31,6 +31,12 @@ export interface Take {
   to?: number;
   /** Made into a seamless loop of the take's best cycle, this many times round (`loopClip()`) */
   loop?: number;
+  /**
+   * The take's real frame rate, where its file says otherwise: cgspeed's
+   * conversion writes 120 for every file, but subject 143 was captured at
+   * 60 (played at 120 he walks at 3.3 steps a second and runs at 6)
+   */
+  fps?: number;
 }
 
 const UP = new THREE.Vector3(0, 1, 0);
@@ -118,7 +124,7 @@ export function retarget(b: Bvh, take: Take): MoClip {
   const k = LEG / ((seg('LeftUpLeg', 'LeftLeg') + seg('LeftLeg', 'LeftFoot') + seg('RightUpLeg', 'RightLeg') + seg('RightLeg', 'RightFoot')) / 2);
 
   // The frames to keep (after the T-pose), at MOCAP_FPS
-  const src = 1 / b.frameTime;
+  const src = take.fps ?? 1 / b.frameTime;
   const first = 1 + Math.round((take.from ?? 0) * src);
   const last = Math.min(b.frames.length - 1, take.to === undefined ? b.frames.length - 1 : 1 + Math.round(take.to * src));
   const picks: number[] = [];

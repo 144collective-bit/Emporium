@@ -46,10 +46,10 @@ test('running straight on finds running; standing still finds standing', () => {
   const runSpeed = db.speed[at('run-loop', 30)];
   const run = search(db, query(at('run-loop', 30), runSpeed));
   assert.ok(db.speed[run.g] > runSpeed * 0.85, `a running frame (${db.clips[db.clipOf[run.g]].name} at ${db.speed[run.g].toFixed(2)})`);
-  const still = search(db, query(at('run-stop', 50), 0));
+  const still = search(db, query(at('run-stop', 95), 0));
   assert.ok(db.speed[still.g] < 0.3, `a standing frame (${db.clips[db.clipOf[still.g]].name} at ${db.speed[still.g].toFixed(2)})`);
   // ...and from standing, a run ahead finds a start
-  const start = search(db, query(at('run-stop', 50), runSpeed));
+  const start = search(db, query(at('run-stop', 95), runSpeed));
   const c = db.clips[db.clipOf[start.g]];
   const f = db.frameOf[start.g];
   const later = db.start[db.clipOf[start.g]] + Math.min(c.frames - 1, f + 15);

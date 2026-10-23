@@ -19,6 +19,8 @@ import { SLAB, flatPoly, waterMat, type Tick } from './world';
 import { registerParkLife, registerParkSites } from './parklife3d';
 import { register as registerGrounds } from './stadiumgrounds3d';
 import { site } from './tilework';
+import { PATH_Y, PAVE_Y, bench, registerGardens } from './gardens3d';
+import { isMain } from './gardens';
 import { offsetLine } from './streetplan';
 import { BENCHES, GATES, GATE_PIERS, LAKE_C, PATHS, PIER, RIM, lakeLine, type ParkPath, type Pt } from './westlake';
 
@@ -29,9 +31,8 @@ const GRAVEL = toon('#9a91b8');
 const STONE = toon('#8f8ab0');
 const CAP = toon('#b3aed2');
 const IRON = toon('#1b1830');
-const WOOD = toon('#8a5a3c');
-/** The paths lie this far over the lawn (its grass is at SLAB + 0.003 to 0.005) */
-const PATH_Y = SLAB + 0.012;
+/** The main walks' paving (the gravel paths' is GRAVEL) */
+const PAVING = toon('#b7b0cf');
 
 /** A flat ribbon along a polyline (closed if `loop`), `half` either side, at y, facing up */
 function ribbon(pts: Pt[], half: number, y: number, loop = false) {
@@ -118,30 +119,22 @@ function nameSign() {
   return siteMat('westlake-sign', lit(new THREE.MeshBasicMaterial({ map: tex, toneMapped: true }), 0.95, 1.15));
 }
 
-/** A bench, the sitter facing `ry` (0 is +z), as the town's (neighbourhoods.ts) */
-function bench(b: Batch, at: Pt, ry: number) {
-  const g = (w: number, h: number, d: number, x: number, y: number, z: number) =>
-    new THREE.BoxGeometry(w, h, d)
-      .translate(x, y + h / 2, z)
-      .rotateY(ry)
-      .translate(at[0], SLAB, at[1]);
-  b.add(g(0.9, 0.06, 0.3, 0, 0.24, 0), WOOD);
-  b.add(g(0.9, 0.3, 0.05, 0, 0.32, -0.15), WOOD);
-  for (const sx of [-0.36, 0.36]) b.add(g(0.05, 0.26, 0.28, sx, 0, 0), IRON);
-}
-
 export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
   // Step 3: the boathouse, the jetty, the courts and the picnics as sites; on the main thread, what moves
   registerParkSites();
   // The stadium's grounds north of the highway, loaded with the park (stadiumgrounds3d.ts)
   registerGrounds();
   if (scene && tick) registerParkLife(scene, tick, low);
+  // The walks' kerbs and edges, the park's wall, the formal garden, the planters and the terraces (stage 3)
+  registerGardens(low);
   // The paths: a site a stretch
   for (const q of PATHS)
     stretches(q).forEach((s, k) =>
       site(`westlake path ${q.id} ${k}`, s.rect, (into) => {
         const b = new Batch();
-        b.add(ribbon(s.pts, q.half, PATH_Y), GRAVEL);
+        // The main walks paved (their kerbs and the gravel paths' edges are gardens3d.ts's)
+        if (isMain(q)) b.add(ribbon(s.pts, q.half, PAVE_Y), PAVING);
+        else b.add(ribbon(s.pts, q.half, PATH_Y), GRAVEL);
         b.build(into, { cast: false, receive: true });
       })
     );

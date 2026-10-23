@@ -604,15 +604,14 @@ it and has been retired completely. Build only on what's here.
     `COURT_SOLIDS`), each strip's walk eased round its court. Its
     trees and lamps are placed
     at the boot with the town's (`addTree()` / `addLamp()` in index.ts).
-  - `westlake3d.ts` draws the rest as sites: the paths (pale gravel
-    ribbons a stretch a site), the lake's stone rim (in quarters), the
+  - `westlake3d.ts` draws the rest as sites: the paths (a stretch a
+    site: the main walks paved, the rest pale gravel), the lake's stone rim (in quarters), the
     gates (stone piers, caps, lanterns; the Mall's with iron posts, a beam
     and WESTLAKE PARK on a board both ways, one small texture), benches
     (near only); and on the main thread the lake's water (one mesh, the
     river's `waterMat`). It's the first district loaded as you approach
     (`districts.ts`, below). The world map draws its lawns, the lake and
-    its paths; the benchmark has a view over the lake (`park`). The car
-    park's asphalt, bays, ways in and P sign are its sites too.
+    its paths; the benchmark has a view over the lake (`park`).
   - **The park's life** (step 3) is `parklife.ts` (DOM-free, tested in
     `tests/parklife.test.ts`), everyone and everything a function of the
     time: walkers, joggers and dog walkers in lanes (`LANES`: walkers near
@@ -678,8 +677,32 @@ it and has been retired completely. Build only on what's here.
   moving north of the ring highway and Westlake Park's paths, kerbs, low
   walls and gardens, planned in `docs/north-plan.md` in three stages, each
   with the owner's sign-off; keep it up to date. Stage 1 (the stadium
-  north, above) and stage 2 (the kart park north, with its facility, below)
-  are built.
+  north, above), stage 2 (the kart park north, with its facility, below)
+  and stage 3 (the park's walks, walls and gardens) are built:
+  - `gardens.ts` (DOM-free, tested in `tests/gardens.test.ts`): the main
+    walks (`MAIN_WALKS`: the ring walk, the lake loop, the Mall) paved with
+    a raised stone kerb both sides (`KERBS`, `KERB`), the gravel paths with
+    a flush stone edge (`EDGES`), both cut where a path joins, at the
+    jetty, the round places and the terraces; the park's low stone wall
+    (`WALLS`, `WALL`), broken at the gates and the paths; the formal garden
+    on the stadium's old site (`GARDEN_SITE`) in its own wall
+    (`GARDEN_WALLS`): the cross walk and two garden walks (`garden-cross`,
+    `garden-w`, `garden-e` in westlake.ts's `PATHS`), two round places with
+    fountains (`ROUNDS`, `FOUNTAIN`), eight parterres (`PARTERRES`: hedge,
+    gravel border, flower bed, topiary cone), urns (`URNS`), benches
+    (`GARDEN_BENCHES`), lamps and people (`GARDEN_LAMPS`, `GARDEN_PEOPLE`,
+    placed at the boot in index.ts); planters (`MALL_BEDS` along the Mall,
+    round `PLANTERS` at junctions and along the ring walk and the loop);
+    `GARDEN_SOLIDS` (in `SOLIDS`: walls, hedges, fountains, urns,
+    planters). The lakeside terraces are westlake.ts's (`TERRACES`,
+    `TERRACE_STEPS`, `onTerrace()`, `terraceY()`): steps off the loop down
+    to just over the water, walkable (walk.ts, as the jetty), nothing on
+    them solid; the trees, lamps and benches keep off them.
+  - `gardens3d.ts` (the park's chunk, from westlake3d.ts's `register()`)
+    draws them as sites: kerbs, edges and walls a site per tile, the
+    garden one, the planters a site per tile, each terrace one; flowers,
+    benches and lanterns near only. The main walks' paving is
+    westlake3d.ts's (`PAVE_Y`, over the gravel's `PATH_Y`).
 - **Districts loaded as you approach** (performance phase 4, item 10):
   a district's drawing is a module of its own (`LAZY_DISTRICTS` in
   `districts.ts`: an id, its land and `load()`, a dynamic import), a chunk
@@ -1111,7 +1134,9 @@ it and has been retired completely. Build only on what's here.
     acknowledgment is in the start menu's Options > Credits, named, never
     linked): mostly subject 143's and 127's takes, in `assets/mocap/cmu/`
     (BVH, untouched), listed in `assets/mocap/takes.json` (a `loop` makes a seamless cycle,
-    `loopClip()`). `npm run mocap` (`scripts/mocap.mjs`) retargets them
+    `loopClip()`; `fps` where the file's frame rate is wrong: subject 143's
+    are 60, not the 120 cgspeed wrote, so he walked and ran at double speed
+    until it was fixed). `npm run mocap` (`scripts/mocap.mjs`) retargets them
     (`mocap-build.ts`: each target bone takes its source joint's turn
     since the T-pose, the feet and the collarbones kept level (CMU's
     shoulder joint sits at the neck: aligned to it, the collarbones held a
@@ -1124,12 +1149,20 @@ it and has been retired completely. Build only on what's here.
     chunk (`import('./animator')`).
   - **Moving** is `movesim.ts`: velocity and facing on critically damped
     springs (`MOVE` half-lives), `ahead()` the trajectory; `GAITS` walk
-    1.25, run 3.4 (the default), sprint 5 tiles a second.
+    0.78, run 2.8 (the default), sprint 4.2 tiles a second (about 1.4, 5 and
+    7.5 m/s, the owner's call: quick but believable).
   - **The animation** is `animator.ts`: motion matching (`motionmatch.ts`,
     Holden's 27 features, every clip and its mirror, a search about ten
     times a second) with inertialization (`inertia.ts`), playback warped
-    to his speed (`RATE`), the sprint's harder swing and lean and a lean
-    into bends (`LAYERS`), and the feet: each held by the ball of the foot
+    to his speed (`RATE`), and faster than the capture his steps lengthen
+    as a runner's do (`WARP`: his legs turn over only a little quicker; a
+    foot on the ground plays fast enough to stay put, the air slower for
+    more hang time, a swinging knee driving higher, and into a sprint a
+    longer reach once he's done speeding up: the owner's call, "his legs
+    move very fast when sprinting"), the sprint's harder swing and lean and
+    a lean into bends (`LAYERS`), and the feet (the ball never under the
+    ground, `BALL_UNDER`; a free foot no further down than a step,
+    `AIR.kerb`): each held by the ball of the foot
     where the clip has it down (`LOCK`), reached by a hinge-knee two-bone
     IK with a soft reach (`twoBone()`), on the ground under it, the hips
     coming down (at most `LOCK.drop`) when a leg can't reach. `applyTo()`
@@ -2373,7 +2406,7 @@ it and has been retired completely. Build only on what's here.
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`),
-  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`), the kart park's facility (`kartfacility.ts`),
+  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), the kart park's facility (`kartfacility.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,
