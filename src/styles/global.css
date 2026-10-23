@@ -2309,6 +2309,10 @@ body.is-walking .nav {
   box-shadow: 0 18px 50px -20px #000, 0 0 40px -18px #8000ffa6;
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
+  /* (never taller than the screen under the header: a long menu scrolls) */
+  max-height: calc(100dvh - var(--head-h, 56px) - 24px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .city-head .head-panel .pop-head {
   margin-bottom: 2px;

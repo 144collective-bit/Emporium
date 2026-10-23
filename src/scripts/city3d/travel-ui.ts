@@ -126,9 +126,16 @@ export function createTravelUI(d: TravelDeps) {
   /* ---------- Every frame while walking: places reached, the compass ---------- */
   let check = 0;
   let shown = '';
+  /** Places just reached, for the toast: held while a menu, a panel or the metro's card is open (it'd sit on their header) */
+  let reached: string[] = [];
+  const sheetOpen = () => root.classList.contains('is-shopping') || root.classList.contains('has-panel') || root.querySelector<HTMLElement>('[data-metro]')?.hidden === false;
   function update(dt: number) {
     if (!d.walking()) return;
     const p = walk.position;
+    if (reached.length && !sheetOpen()) {
+      game.toast(`${reached.join(', ')}: on the map for fast travel`);
+      reached = [];
+    }
     // The places you've reached (on foot or at the wheel; not from the air, nor driving past in a taxi or on the metro)
     check -= dt;
     if (check <= 0 && !walk.airborne && !walk.riding) {
@@ -138,8 +145,7 @@ export function createTravelUI(d: TravelDeps) {
         const fresh = visit(game.save(), ids);
         if (fresh.length) {
           game.commit();
-          const names = fresh.map((id) => placeName(root, PLACES.find((o) => o.id === id)!).name);
-          game.toast(`${names.join(', ')}: on the map for fast travel`);
+          reached.push(...fresh.map((id) => placeName(root, PLACES.find((o) => o.id === id)!).name));
         }
       }
     }
