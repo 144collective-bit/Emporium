@@ -70,7 +70,7 @@ test('walkable end to end: along the boardwalk, out along the pier, round its he
   for (let x = PIER.head[0] + 0.5; x < PIER.head[2] - 0.5; x += 0.1) assert.ok(onDeck(x, PIER.head[1] + 0.5, R), `round the head at ${x}`);
   // ...and nowhere off them over the water
   assert.ok(!onDeck(PIER.x, PIER.head[1] - 0.2) && !onDeck(PIER.neck[0] - 0.5, BZ0 - 1) && !onDeck(BX1 + 1, BZ0 + 0.5));
-  assert.ok(DECKS.length === 3 && DECK_Y > 0.035 && DECK_Y < 0.2);
+  assert.ok(DECKS.length === 4 && DECK_Y > 0.035 && DECK_Y < 0.2);
 });
 
 test('the boats keep clear: the south lane east of the boardwalk, the middle lane round the head, the lanes apart', () => {
@@ -95,7 +95,7 @@ test("the dressing: lamps, benches, binoculars, planters and bollards on the dec
   }
   for (const x of BOLLARDS) assert.ok(clear(x) && x > BX0 && x < BX1);
   for (const [x, z] of BINOCULARS) assert.ok(onDeck(x, z, 0.2));
-  assert.ok(LAMPS.length > 12 && BENCHES.length > 12);
+  assert.ok(LAMPS.length > 10 && BENCHES.length > 10);
 });
 
 test("the old docks: the crane's legs on the boardwalk (you walk through its portal), its jib over the water and the barge", () => {

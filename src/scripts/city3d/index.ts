@@ -60,6 +60,8 @@ import { buildAvenue } from './avenue3d';
 import { buildRiverside } from './riverside3d';
 import { buildPier, buildWaterfront } from './waterfront3d';
 import { PIER_SPAWN } from './waterfront';
+import { buildNightMarket } from './nightmarket3d';
+import { MARKET_SPAWN } from './nightmarket';
 import { BLOCK_SPAWN } from './projects';
 import { AVENUE_SPAWNS } from './avenue';
 import { buildFightClub } from './fightclub';
@@ -215,6 +217,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   buildRiverside(tier === 'low');
   buildWaterfront(tier === 'low');
   spots.push(buildPier(scene, crowd, { tick, low: tier === 'low' }).spot);
+  // The Night Market on its deck in front of Harbor Stores, a place
+  spots.push(buildNightMarket(scene, crowd, { tick, low: tier === 'low' }).spot);
   // Westlake Park's stadium (step 2): a place, built at the boot (the rest of the park is loaded as you approach)
   spots.push(buildStadium(scene, { low: tier === 'low' }).spot);
   // ...and the metro's el where it crosses the open land south of the south row: no trees under it
@@ -476,6 +480,12 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       panelBody.querySelector('[data-pier-walkin]')?.addEventListener('click', () => {
         close();
         startWalking(PIER_SPAWN);
+      });
+    // The Night Market's panel: Walk in starts walk mode on the boardwalk behind its tables
+    if (id === 'nightmarket')
+      panelBody.querySelector('[data-market-walkin]')?.addEventListener('click', () => {
+        close();
+        startWalking(MARKET_SPAWN);
       });
     // The stadium's panel: Walk in starts walk mode on its forecourt, facing the gate
     if (id === 'stadium')
