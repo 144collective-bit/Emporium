@@ -8,10 +8,9 @@
  * Everything is open unless the config says otherwise, and anything the
  * config gets wrong (an unknown key, a bad value) is left out, so a missing
  * or broken config is the city as it is in the code. live-client.ts fetches
- * it; this file only reads it.
+ * it; this file only reads it. It imports nothing, so the command center
+ * reads the same lists (LIVE_PLACES, LIVE_FEATURES) and shapes from here.
  */
-import type { SpotId } from '../../lib/city';
-
 /** Where the city reads its live settings (the backend's `config` function: public settings only) */
 export const LIVE_URL = 'https://jqdoyzpblaavkvenvria.supabase.co/functions/v1/config';
 /** How often an open tab checks again */
@@ -21,8 +20,8 @@ export const LIVE_TIMEOUT = 1500;
 /** The last copy seen, for a visit when the backend can't be reached */
 export const LIVE_KEY = 'degen-city-live-v1';
 
-/** The places that can be closed: every spot with a pin and a panel (names as on their pins) */
-export const LIVE_PLACES: { id: SpotId; name: string }[] = [
+/** The places that can be closed: every spot with a pin and a panel (names as on their pins; the test holds it to PLACES) */
+export const LIVE_PLACES = [
   { id: 'emporium', name: 'The Emporium' },
   { id: 'shop', name: 'Drop 001' },
   { id: 'workshop', name: 'The Workshop' },
@@ -42,7 +41,8 @@ export const LIVE_PLACES: { id: SpotId; name: string }[] = [
   { id: 'pier', name: 'Pier 7' },
   { id: 'nightmarket', name: 'Night Market' },
   { id: 'stadium', name: 'Sector 7 Stadium' },
-];
+] as const satisfies readonly { id: string; name: string }[];
+export type LivePlaceId = (typeof LIVE_PLACES)[number]['id'];
 
 export type FeatureId = 'walk' | 'build' | 'drive' | 'fly' | 'karts' | 'fight' | 'guns' | 'taxi' | 'metro' | 'travel';
 /** The features that can be closed, and what closing each one stops */
@@ -68,7 +68,7 @@ export interface Banner {
   id: string;
   text: string;
   /** A place it points to (opens its panel) */
-  place: SpotId | null;
+  place: LivePlaceId | null;
   /** Shown from and until (ms since 1970; null: no limit) */
   from: number | null;
   until: number | null;
@@ -79,7 +79,7 @@ export interface Maintenance {
   eta: number | null;
 }
 export interface Live {
-  places: Partial<Record<SpotId, Gate>>;
+  places: Partial<Record<LivePlaceId, Gate>>;
   features: Partial<Record<FeatureId, Gate>>;
   banners: Banner[];
   maintenance: Maintenance | null;
@@ -124,14 +124,14 @@ export function readLive(raw: unknown): Live {
     const [kind, id] = [key.slice(0, key.indexOf('.')), key.slice(key.indexOf('.') + 1)];
     if (kind === 'place' && PLACE_IDS.has(id)) {
       const g = cleanGate(v);
-      if (g) live.places[id as SpotId] = g;
+      if (g) live.places[id as LivePlaceId] = g;
     } else if (kind === 'feature' && FEATURE_IDS.has(id)) {
       const g = cleanGate(v);
       if (g) live.features[id as FeatureId] = g;
     } else if (kind === 'banner' && /^[a-z0-9_-]{1,40}$/.test(id) && isObj(v)) {
       const text = cleanText(v.text, TEXT_MAX.banner);
       if (!text) continue;
-      const place = typeof v.place === 'string' && PLACE_IDS.has(v.place) ? (v.place as SpotId) : null;
+      const place = typeof v.place === 'string' && PLACE_IDS.has(v.place) ? (v.place as LivePlaceId) : null;
       live.banners.push({ id, text, place, from: cleanTime(v.from), until: cleanTime(v.until) });
     } else if (key === 'maintenance' && isObj(v) && v.on === true) {
       live.maintenance = { message: cleanText(v.message, TEXT_MAX.maintenance) || DEFAULT_MAINTENANCE, eta: cleanTime(v.eta) };
@@ -141,7 +141,7 @@ export function readLive(raw: unknown): Live {
 }
 
 /** Is a place open (its panel and its door) */
-export const placeGate = (live: Live, id: string): Gate => live.places[id as SpotId] ?? { open: true, note: '' };
+export const placeGate = (live: Live, id: string): Gate => live.places[id as LivePlaceId] ?? { open: true, note: '' };
 /** Is a feature open */
 export const featureGate = (live: Live, id: FeatureId): Gate => live.features[id] ?? { open: true, note: '' };
 
