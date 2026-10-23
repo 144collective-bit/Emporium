@@ -145,7 +145,8 @@ through a handbrake slide by day, fading after.
    change) and at a stop, held `SIGNAL_HOLD` after it straightens so they
    don't flicker with the stick; `blinkOn()` (traffic.ts) flashes them. The
    lenses follow the time of day through `lit` (headlights faint by day).
-   No manual indicators: the owner's call if wanted (Q / E are free).
+   No manual indicators (Q and E are the animation plan's peek keys,
+   `docs/animation-plan.md`); the owner's call if wanted, on other keys.
 2. **A horn.** H, the Horn button on touch screens (over the Brake pedal,
    your car's only: `.in-car`), the gamepad's left stick pressed; the
    traffic's `horn` sound at full gain, at most twice a second.
