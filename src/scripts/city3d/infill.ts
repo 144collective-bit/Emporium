@@ -21,7 +21,7 @@
  * Footprints are DOWNTOWN_SOLIDS in solids.ts.
  */
 import * as THREE from 'three';
-import { Batch, FONT_DISPLAY, PAL, canvasTex, fx, glowTex, lit, neon, rng, shadeHex, toon } from './kit';
+import { Batch, canvasTex, FONT_DISPLAY, fx, glowTex, lit, neon, PAL, rng, shadeHex, siteMat, toon } from './kit';
 import { ALLEYS, ALLEY_LAMPS, ALLEY_PIPES, ALLEY_PROPS, DIAGONALS, FLOOR, INFILL, LANES, NAMED_SHOPS, PARKS, SHOP_H, SIGNS, SQUARE, WATER_TOWER, bodyOf, stoopOf, type Infill, type Pt, type SignId } from './downtown';
 import { CORE_ROADS, DOWNTOWN, LANE } from './layout';
 import { SLAB as S, addLamp, addPool, addTree, waterMat, type Tick } from './world';
@@ -347,7 +347,7 @@ const ATLAS = (() => {
   // Canvas textures are flipped: the canvas's top row is v = 1. Ground bands keep a pixel off each edge.
   const band = (top: number, h: number, tw: number, th: number): Band => ({ v0: 1 - (top + h) / H, vh: h / H, tw, th });
   return {
-    mat: lit(toon('#ffffff', { map, emissiveMap, emissive: '#ffffff' }), 0.15, 1),
+    mat: siteMat('wall-atlas', lit(toon('#ffffff', { map, emissiveMap, emissive: '#ffffff' }), 0.15, 1)),
     wall: Object.fromEntries(WALL_KINDS.map((k, i) => [k, band(i * WALL_PX, WALL_PX, CELL_W * COLS, FLOOR * ROWS)])) as Record<WallKind, Band>,
     ground: Object.fromEntries(GROUND_KINDS.map((k, i) => [k, band(WALL_KINDS.length * WALL_PX + i * GROUND_PX + 1, GROUND_PX - 2, SHOP_W, SHOP_H)])) as Record<GroundKind, Band>,
   };
@@ -473,7 +473,7 @@ const SIGN_ATLAS = (() => {
       });
     });
   });
-  const mat = lit(new THREE.MeshBasicMaterial({ map: tex }), 0.95, 1.1);
+  const mat = siteMat('sign-atlas', lit(new THREE.MeshBasicMaterial({ map: tex }), 0.95, 1.1));
   const uv = (x: number, y: number, w: number, h: number) => [x / SIGN_W, 1 - (y + h) / SIGN_H, (x + w) / SIGN_W, 1 - y / SIGN_H];
   return {
     mat,

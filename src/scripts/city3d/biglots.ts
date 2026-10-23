@@ -32,7 +32,7 @@
  * Batch per lot with the materials shared from the module scope.
  */
 import * as THREE from 'three';
-import { Batch, FONT_DISPLAY, PAL, canvasTex, facadeMat, fx, lit, neon, occlude, place, plane, toon } from './kit';
+import { Batch, facadeMat, FONT_DISPLAY, fx, lit, liveTex, neon, occlude, PAL, place, plane, toon } from './kit';
 import { BS } from './layout';
 import { LOT_SITE, lotSolids, type Box } from './solids';
 import { SLAB as S } from './world';
@@ -59,7 +59,7 @@ function board(text: string, color: string, sub = '', w = 512) {
   if (!boards.has(key))
     boards.set(
       key,
-      canvasTex(w, 128, (c) => {
+      liveTex(w, 128, (c) => {
         c.fillStyle = '#0b0a18';
         c.fillRect(0, 0, w, 128);
         c.strokeStyle = color;
@@ -85,7 +85,7 @@ function materials() {
   mats ??= {
     store: toon('#3a3550'),
     brick: new THREE.MeshToonMaterial({
-      map: canvasTex(128, 128, (c) => {
+      map: liveTex(128, 128, (c) => {
         c.fillStyle = '#8a3b32';
         c.fillRect(0, 0, 128, 128);
         c.fillStyle = '#6e2c26';
@@ -96,7 +96,7 @@ function materials() {
       }),
     }),
     shed: new THREE.MeshToonMaterial({
-      map: canvasTex(128, 128, (c) => {
+      map: liveTex(128, 128, (c) => {
         c.fillStyle = '#5b6b86';
         c.fillRect(0, 0, 128, 128);
         for (let x = 0; x < 128; x += 8) {
@@ -106,7 +106,7 @@ function materials() {
       }),
     }),
     shutter: new THREE.MeshToonMaterial({
-      map: canvasTex(64, 64, (c) => {
+      map: liveTex(64, 64, (c) => {
         c.fillStyle = '#c9ccd6';
         c.fillRect(0, 0, 64, 64);
         for (let y = 0; y < 64; y += 6) {
@@ -115,7 +115,7 @@ function materials() {
         }
       }),
     }),
-    tower: facadeMat({ cols: 6, rows: 9, wall: '#1d2f4f', glass: '#15214a', lit: [PAL.cyan, PAL.warm, '#ffffff'], litRatio: 0.55, seed: 77, bands: '#2c4570' }, 0.2, 1.8),
+    tower: facadeMat({ cols: 6, rows: 9, wall: '#1d2f4f', glass: '#15214a', lit: [PAL.cyan, PAL.warm, '#ffffff'], litRatio: 0.55, seed: 77, bands: '#2c4570', live: true }, 0.2, 1.8),
     roof: toon('#24203a'),
     glass: lit(new THREE.MeshBasicMaterial({ color: '#2a5d8a' }), 0.6, 1.4),
     glow: neon(PAL.warm, 0.6, 2.2),
@@ -124,7 +124,7 @@ function materials() {
     pink: neon(PAL.pink, 0.7, 2.4),
     red: neon(PAL.red, 1, 2.6),
     chimney: new THREE.MeshToonMaterial({
-      map: canvasTex(32, 128, (c) => {
+      map: liveTex(32, 128, (c) => {
         for (let y = 0; y < 128; y += 32) {
           c.fillStyle = '#e23b3b';
           c.fillRect(0, y, 32, 16);
@@ -135,7 +135,7 @@ function materials() {
     }),
     /** Warning stripes: yellow and black on the slant */
     hazard: new THREE.MeshToonMaterial({
-      map: canvasTex(64, 64, (c) => {
+      map: liveTex(64, 64, (c) => {
         c.fillStyle = '#ffd23f';
         c.fillRect(0, 0, 64, 64);
         c.fillStyle = '#1b1830';

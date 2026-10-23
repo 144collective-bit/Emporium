@@ -198,7 +198,7 @@ it and has been retired completely. Build only on what's here.
   - City view pans round the built-up area (`bounds.ts`: `BUILT_UP` is the town, the airport and the kart park; `PAN_BOUNDS` reaches `PAN_MARGIN` (160) past it, never closer than 10 to where you can walk: today that's the whole world), and the Build overview frames the plots (`overviewFrame()`).
   - **The edge is data** (growth plan Phase 5): `EXT` is set in one place, and a test run can set another (`WORLD_EXT=x0,x1`, `npm run test:wide` at Phase 10's -680 to 720); both must pass. Nothing that exists reads the edge: the airport's `SITE` is fixed numbers, the river walls and their bridge gaps come from the street plan (`riverCrossings()` in `streetplan.ts`), flying turns back at whatever bounds it's given. Anything new written against the edge must work at both sizes.
   - **Growing the city** (many more buildings, then a bigger world) is planned in `docs/growth-plan.md`. Part A (Phases 0-4) makes size cheap: the measuring kit and a snapshot test that nothing moves, tiles and a collision grid, near and far building forms, building as you go, building kits. Part B (Phases 5-10) grows the world: the edge as data (the airport's site frozen, trees per tile), `EXT` out to about 880 across, roads to reach it (a ring highway, more bridges, traffic spent near you), getting about (a world map, waypoints, and the owner's pick of metro, taxis or fast travel), districts one at a time, then optionally about 1,400 across. Phases 0 (the measuring kit), 1 (tiles, the collision grid, the city's fixed geometry merged per tile, crowds and traffic culled for the shadow map), 2 (near and far forms: details near only, far forms for the places and the cars) 3 (building as you go: sites built round the home view at the boot and the rest after it, near forms let go past a budget), 4 (building kits: kits, recipes for blocks, a test district behind `?district=test`), 5 (the edge as data: `EXT` in one place, tests at both sizes) 6 (the edge moves out: `EXT` -420 to 460, the woods, the far plane and sky dome from the edge) 7 (roads to reach it: the ring highway, its bridges and slip lanes, routes generated from the street plan, traffic and boats spent near you) and 8 (getting about: the world map, waypoints, Bring my car, taxis, fast travel, the metro, sound by district) are built, and Phase 9's first district, **The Trenches**, is built (below); follow the rest one phase at a time with the owner's sign-off, and never add buildings in bulk outside the tiles (`tileBatch()`) or outside sites (`site()`).
-  - **Solid and fast first** (the owner's call): fixes and performance are planned in `docs/performance-plan.md` (where the time goes, what each phase measured, what's next); keep it up to date. Fix phase 1 (phones: the city builds behind the start menu and in spare frames, the outline pre-pass only as far as outlines reach, big textures at half size on phones), fix phase 2 (bugs and broken flows at every width), the trim, fix phase 3 (the code clean-up, the type check in the build) performance phase 2 (data baked at build time, the 2D map held back, features loaded when used, a service worker, the phones' lighter glow, budgets in the build) and performance phase 3 (the crowd in a few meshes, shaders compiled once for the right target; far-district impostors measured and left until the districts grow) are built; then the performance phases, with the foundations (sites built off the main thread, districts loaded as you approach, textures made at build time) **before any more districts**. On phones only, a softer neon glow and simpler far districts are allowed; desktop stays as it is.
+  - **Solid and fast first** (the owner's call): fixes and performance are planned in `docs/performance-plan.md` (where the time goes, what each phase measured, what's next); keep it up to date. Fix phase 1 (phones: the city builds behind the start menu and in spare frames, the outline pre-pass only as far as outlines reach, big textures at half size on phones), fix phase 2 (bugs and broken flows at every width), the trim, fix phase 3 (the code clean-up, the type check in the build) performance phase 2 (data baked at build time, the 2D map held back, features loaded when used, a service worker, the phones' lighter glow, budgets in the build) performance phase 3 (the crowd in a few meshes, shaders compiled once for the right target; far-district impostors measured and left until the districts grow) and most of performance phase 4, the foundations (sites built off the main thread, textures made at build time) are built; districts loaded as you approach comes with the next district (the owner's call; the plan is in `docs/performance-plan.md`). On phones only, a softer neon glow and simpler far districts are allowed; desktop stays as it is.
 - **Getting about** (growth plan Phase 8; the owner picked taxis, fast
   travel and the metro):
   - **Places** are `places.ts` (DOM-free, tested in `tests/travel.test.ts`):
@@ -536,7 +536,7 @@ it and has been retired completely. Build only on what's here.
   atlases, the long signs) at half size, a quarter of the memory
   (`canvasTex()` in `kit.ts`; a draw function works in the numbers it
   asked for and never knows; a texture redrawn live in pixels afterwards
-  must stay under that size). The 2D map isn't in the page until it's
+  must stay under that size, and goes through `liveTex()`). The 2D map isn't in the page until it's
   shown: it waits, inert, in a `<template data-map-tpl>` (`mountMap()` in
   `CityMap.astro`, from `show2d()`), so the 3D city's boot never lays it
   out. Phones draw the bloom at 3 of its 5 blur levels (`bloomMips` in
@@ -573,6 +573,40 @@ it and has been retired completely. Build only on what's here.
     it's made). `renderer.compile()` with the screen as the target makes
     sRGB programs no frame uses, and the real ones then compile the first
     time they're drawn (a hitch): never call it bare.
+  - **Textures made at build time** (performance phase 4): every canvas
+    texture the boot paints (`canvasTex()` in `kit.ts`) is painted once by
+    `scripts/bake-textures.mjs` (`npm run bake:textures` after a build;
+    the "Build site" Action runs it) in a headless Chromium with
+    `?bake-textures`, for phones (`low`) and everyone else (`full`), twice
+    each (a fresh save at noon, a well-used one at midnight): only what
+    both runs painted the same is kept, so a key (`texKey()`: what draws
+    it, its size, how many like it came before) stands for one picture.
+    Each is GPU-compressed (KTX2: Basis ETC1S, UASTC where ETC1S loses
+    too much), written to `_astro/tex/` and listed in the page
+    (`#city-tex`); `loadBuiltTextures()` loads them with three's
+    transcoder (`_astro/basis-<three's version>/`) and the boot waits for
+    them (up to 8 s, then they come in as they arrive). The bake waits for
+    the web fonts; if it can't run it warns and the site paints them as
+    before. A texture drawn from the save or changed while the city runs
+    (units, lots, plots, corner shops, the garage's car, karts, guns, the
+    first-person hands, the stage, the LED wall, a sign with `live: true`
+    in `neonSign()` / `facade()`) uses `liveTex()`: always painted, never
+    baked. A drawing that changes means a new bake (every build makes
+    one). `?textures=0` paints them all in the browser, to compare.
+  - **Sites built off the main thread** (performance phase 4,
+    `sitework.ts`): a worker imports the city's own chunk, registers the
+    same sites the boot does (The Trenches' builders, every tile's trees
+    and lamps from the main thread's `placed()`) and builds them as
+    they're asked for (`IN_FLIGHT` at a time, nearest first, from
+    `works.step()` in `tilework.ts`), sending each mesh's arrays and its
+    material's name; the main thread joins them with its own material of
+    that name (`siteMat()` / `siteMatOf()` in `kit.ts`: every material a
+    site draws with needs one, the Batches' shared ones have theirs). A
+    site whose material has no name, and anything wanted at once (the
+    boot, `want()`, `wantView()`, near pieces built again) is built on
+    the main thread. The worker closes once every site is built.
+    `?worker=0` turns it off. A new district's builders go in
+    `serveSites()` too.
   - **Budgets** (`scripts/budget.mjs`, `npm run budget` after a build; the
     "Build site" Action runs it): the homepage's HTML, the page's own
     script, the 3D city's boot code (its chunk and what it imports

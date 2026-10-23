@@ -22,6 +22,9 @@ export interface SceneMemory {
 const bytesOf = (a: { array: ArrayLike<number> & { byteLength?: number } } | null | undefined) => (a?.array && 'byteLength' in a.array ? (a.array.byteLength ?? 0) : 0);
 
 function textureBytes(t: THREE.Texture) {
+  // A compressed one (made at build time, kit.ts): what its levels hold on the GPU
+  const mips = (t as THREE.CompressedTexture).isCompressedTexture ? ((t as THREE.CompressedTexture).mipmaps as { data?: ArrayBufferView }[]) : null;
+  if (mips?.length) return mips.reduce((n, m) => n + (m.data?.byteLength ?? 0), 0);
   const img = t.image as { width?: number; height?: number; data?: ArrayBufferView } | null;
   if (!img) return 0;
   let bytes = img.data ? img.data.byteLength : (img.width ?? 0) * (img.height ?? 0) * 4;

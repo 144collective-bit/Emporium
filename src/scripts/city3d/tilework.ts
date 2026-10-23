@@ -19,6 +19,7 @@
  */
 import * as THREE from 'three';
 import type { TileBatches } from './tilebatch';
+import type { BuiltSite, SiteWorker } from './sitework';
 import { boxInView, tileKey, type Plane, type Rect, type TileIx } from './tiles';
 import { bootSites, focusOf, keyRect, nextSite, rectDistance, sitesNear, tilesOfRect, toRebuild, toRelease } from './tileplan';
 
@@ -31,6 +32,8 @@ export interface Site {
 }
 
 const SITES: Site[] = [];
+/** The sites registered so far, taken (the site worker builds its own from them: sitework.ts) */
+export const takeSites = () => SITES.splice(0);
 /** Register a site of the fixed city (built at the boot if it's round the home view, otherwise later) */
 export function site(id: string, rect: Rect, build: (into: THREE.Object3D) => void) {
   SITES.push({ id, rect, build });
@@ -50,15 +53,21 @@ export interface TileWork {
   want(x: number, z: number, r: number): void;
   /** Build now everything waiting in a view (the intro) */
   wantView(planes: readonly Plane[], far: number, x: number, y: number, z: number): void;
-  stats(): { built: number; waiting: number; atBoot: number; released: number; held: number; budget: number; rebuilt: number; bootMs: number; laterMs: number; slowest: { ms: number; id: string } };
+  stats(): { built: number; waiting: number; atBoot: number; released: number; held: number; budget: number; rebuilt: number; bootMs: number; laterMs: number; slowest: { ms: number; id: string }; offMain: number };
 }
+
+/** Sites in the worker's hands at once (enough to keep it busy between frames) */
+const IN_FLIGHT = 4;
 
 /** The tallest the city's fixed geometry stands, for whether a tile is in view */
 const TOP = 24;
 /** The fastest the camera is taken to move over the ground, in tiles a second (an aircraft's cruise) */
 const MAX_SPEED = 40;
 
-export function createTileWork(scene: THREE.Scene, opts: { budget: number; compile(meshes: THREE.Object3D[]): void }): TileWork & { attach(t: TileBatches): void } {
+export function createTileWork(
+  scene: THREE.Scene,
+  opts: { budget: number; compile(meshes: THREE.Object3D[]): void; worker?: SiteWorker | null; meshesOf?(b: BuiltSite): THREE.Group | null }
+): TileWork & { attach(t: TileBatches): void } {
   let tiled: TileBatches | null = null;
   // (taken: the city is built once a page)
   const queue: Site[] = SITES.splice(0);
@@ -75,13 +84,20 @@ export function createTileWork(scene: THREE.Scene, opts: { budget: number; compi
   // The camera's speed over the ground (smoothed), for building ahead
   const vel = { x: 0, z: 0, px: NaN, pz: NaN };
   let checked = -Infinity;
+  // Off the main thread (sitework.ts): the sites the worker is building (still in the queue: one wanted at
+  // once is built here and its worker's copy dropped), those it couldn't send (built here), how many it built
+  let worker = opts.worker ?? null;
+  const flying = new Set<string>();
+  const here = new Set<string>();
+  let offMain = 0;
+  const byWorker = (s: Site) => !!worker?.can(s.id) && !here.has(s.id);
 
-  /** Run a site; `keep` limits what's kept (building near pieces again) */
-  function run(s: Site, keep?: (tile: string, lod: string) => boolean) {
+  /** Run a site (or join one the worker built, `g`); `keep` limits what's kept (building near pieces again) */
+  function run(s: Site, keep?: (tile: string, lod: string) => boolean, made0?: THREE.Group) {
     const t0 = performance.now();
-    const g = new THREE.Group();
+    const g = made0 ?? new THREE.Group();
     scene.add(g);
-    s.build(g);
+    if (!made0) s.build(g);
     const made = tiled!.add([g], { site: s.id, keep: keep as never });
     if (made.length) opts.compile(made);
     g.removeFromParent();
@@ -94,8 +110,31 @@ export function createTileWork(scene: THREE.Scene, opts: { budget: number; compi
 
   function build(i: number) {
     const [s] = queue.splice(i, 1);
+    flying.delete(s.id);
     run(s);
     built++;
+  }
+
+  /** What the worker built, waiting to join (in up to `ms` a frame) */
+  let arrived: BuiltSite[] = [];
+  function joinBuilt(t0: number, ms: number) {
+    arrived.push(...worker!.take());
+    while (arrived.length && performance.now() - t0 < ms) {
+      const b = arrived.shift()!;
+      flying.delete(b.id);
+      // (a site wanted meanwhile was built here: this copy is dropped)
+      const i = queue.findIndex((s) => s.id === b.id);
+      if (i < 0) continue;
+      const g = b.meshes && opts.meshesOf ? opts.meshesOf(b) : null;
+      if (!g) {
+        here.add(b.id);
+        continue;
+      }
+      const [s] = queue.splice(i, 1);
+      run(s, undefined, g);
+      built++;
+      offMain++;
+    }
   }
 
   /** Build again the near pieces of the tiles in `keys` (each site touching them runs once) */
@@ -168,7 +207,25 @@ export function createTileWork(scene: THREE.Scene, opts: { budget: number; compi
         if (back.length) rebuild(back.slice(0, 4));
       }
       const [fx, fz] = focusOf(look ? look[0] : x, look ? look[1] : z, vel.x, vel.z);
-      while (queue.length && performance.now() - t0 < ms) build(nextSite(queue, fx, fz));
+      if (worker?.ready()) {
+        joinBuilt(t0, ms);
+        // The worker's next ones, nearest first
+        while (flying.size < IN_FLIGHT) {
+          const theirs = queue.filter((s) => byWorker(s) && !flying.has(s.id));
+          if (!theirs.length) break;
+          const s = theirs[nextSite(theirs, fx, fz)];
+          flying.add(s.id);
+          worker.ask(s.id);
+        }
+        // Every site built: it's let go (a tile built again later is the main thread's)
+        if (!queue.length && !arrived.length) {
+          worker.close();
+          worker = null;
+        }
+      }
+      // The rest here, in what's left of the time (all of them until the worker is ready)
+      const mine = () => (worker?.ready() ? queue.filter((s) => !byWorker(s)) : queue);
+      for (let list = mine(); list.length && performance.now() - t0 < ms; list = mine()) build(queue.indexOf(list[nextSite(list, fx, fz)]));
     },
     want(x, z, r) {
       if (!tiled) return;
@@ -191,6 +248,6 @@ export function createTileWork(scene: THREE.Scene, opts: { budget: number; compi
       }
     },
     pending: () => queue.length,
-    stats: () => ({ built, waiting: queue.length, atBoot, released: released.size, held: tiled?.heldBytes() ?? 0, budget: opts.budget, rebuilt, bootMs, laterMs, slowest }),
+    stats: () => ({ built, waiting: queue.length, atBoot, released: released.size, held: tiled?.heldBytes() ?? 0, budget: opts.budget, rebuilt, bootMs, laterMs, slowest, offMain }),
   };
 }

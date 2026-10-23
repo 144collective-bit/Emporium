@@ -15,7 +15,7 @@ export default defineConfig({
         output: {
           // three.js on its own: it changes far less often than the city, so a return visit after a
           // deploy usually still has it cached (its file name only changes when three does)
-          manualChunks: (id) => (/node_modules\/three\/(build|src)\//.test(id) ? 'three' : undefined),
+          manualChunks: (id) => (/node_modules\/three\/(build|src)\//.test(id) ? 'three' : id.includes('vite/preload-helper') ? 'preload' : undefined),
         },
       },
     },

@@ -19,7 +19,7 @@
  * here is solid and nothing stands further out than the front strip.
  */
 import * as THREE from 'three';
-import { Batch, FONT_DISPLAY, canvasTex, lit, neon, toon } from './kit';
+import { Batch, FONT_DISPLAY, lit, liveTex, neon, toon } from './kit';
 import { ATLAS, INK, METAL, WOOD, cornice, dress, frameOf, glow, kit, planter, roof, shell, soft, type Frame } from './infill';
 import { SLAB as S } from './world';
 import { FLOOR, SHOP_H, type Infill } from './downtown';
@@ -34,7 +34,7 @@ const BOARDS = (() => {
   const W = 512;
   const H = 96;
   const rows = [...CORNER_SHOPS.map((c) => ({ text: c.name, color: c.color })), { text: 'FOR SALE', color: '#ff3b5c' }];
-  const tex = canvasTex(W, H * rows.length, (c) => {
+  const tex = liveTex(W, H * rows.length, (c) => {
     rows.forEach(({ text, color }, i) => {
       const y = i * H;
       const sale = i === SALE;

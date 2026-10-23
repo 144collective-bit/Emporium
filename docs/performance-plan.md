@@ -208,6 +208,83 @@ frame:
 The first frame after the boot (where the real shaders used to compile):
 2.84 s to 1.27 s on the phone tier, 3.23 s to 1.97 s on desktop.
 
+## Performance phase 4 (in progress): the foundations
+
+Items 9 and 3 below, and the plan for 10. Nothing looks or plays
+differently.
+
+- **Sites built off the main thread (9).** A worker (`sitework.ts`)
+  imports the city's own chunk (already in the browser's cache), registers
+  the same sites the boot does (The Trenches' builders, and every tile's
+  trees and lamps from the main thread's own list, `placed()`) and builds
+  them as they're asked for, nearest first, a few at a time. Each comes
+  back as its meshes' arrays (transferred, not copied) and its material's
+  name (`siteMat()` in kit.ts); the main thread only joins them into the
+  tile meshes with its own material of that name. A site it can't send
+  (a material with no name) is built on the main thread, and so is
+  anything wanted at once (the boot, a fly-in, walking in, a tile's near
+  pieces built again): slower, never wrong. The worker closes once every
+  site is built. `?worker=0` turns it off; `?fps` says how many were built
+  off the main thread. The tile meshes' bounds now grow with each piece
+  instead of being worked out again from every vertex, which took a third
+  of the joining.
+- **Textures made at build time (3).** Every canvas texture the boot
+  paints is painted once at build time instead, in a headless Chromium
+  (`scripts/bake-textures.mjs`, run by the "Build site" Action after the
+  build), twice for each set (phones' half-size, everyone else's): with a
+  fresh save at noon and a well-used one at midnight. A texture is kept
+  only if both runs painted it the same, so a texture's key (what draws
+  it, its size, how many like it came before) always stands for one
+  picture. Each is compressed for the GPU (KTX2: Basis ETC1S, or UASTC
+  where ETC1S loses too much, checked by decoding it again) and listed in
+  the page (`#city-tex`); the city loads them with three's transcoder,
+  which turns them into whatever the device's GPU reads. Textures drawn
+  from the save (your units, lots, plots, corner shops, the garage's car,
+  karts, guns, the LED wall) go through `liveTex()` and are always painted.
+  If the bake can't run, the build says so and the site paints them in the
+  browser as before; `?textures=0` paints them anyway, to compare.
+- **Districts loaded as you approach (10): with the next district** (the
+  owner's call). The Trenches costs about 0.2 s of a 13 s phone start
+  today and its sites already build in the worker, so splitting it out
+  buys little now. The plan, for the next district:
+  1. A district is a module of its own (`districts/<name>.ts`) with one
+     entry point: its street plan pieces, its solids and its sites, the
+     same three things The Trenches registers today. The street plan
+     (traffic, walking, the world map) keeps every district's streets and
+     blocks, built at build time like the rest of the plan (`baked()`), so
+     roads and the map never wait on a download.
+  2. The boot loads the districts round the home view; the rest load when
+     the camera comes within a district's reach (its rect plus the tier's
+     `far` and the scheduler's lead), through the same nearest-first queue
+     as the sites. The worker imports the same module when it's loaded.
+  3. Its far form is the tile pieces' far halves, kept; its near pieces
+     go with the existing budget (`toRelease()`), so memory stays flat
+     however many districts there are.
+  4. Its places (pins, panels, doors) are registered by the boot from
+     data, so the world map and the directory list them before the
+     district is loaded; walking in or a fly-in asks for it first
+     (`want()`), as sites do today.
+  5. The budget script holds each district's chunk under `lazyJs`, and
+     the bench gains a view per district.
+
+### What phase 4 measured
+
+Headless Chromium, phone tier (the ready times at 4x CPU throttle).
+
+| | before | after |
+|---|---|---|
+| Sites built after the boot, on the main thread | 1,235 (3.5 s of work) | 32 (1.3 s); 1,203 in the worker |
+| Joining sites into the tile meshes | 1.53 s | 0.48 s |
+| Texture memory on a phone | 60 MB | 20 MB |
+| Ready (start menu up), best of three | 15.4 s | 14.6 s |
+
+What the textures cost to download: phones 1.75 MB and everyone else 2.69
+MB (111 textures each, compressed already), plus the transcoder once
+(257 KB zipped: a little more than the 100 KB first guessed). All of it is
+cached for a year, and by the service worker. The bake takes about seven
+minutes of the Action's time. The budgets (`npm run budget`) hold the two
+sets and the transcoder.
+
 ## What else can be done
 
 Grouped by what it buys. Effort is S (a day or less), M (a few days) or L (a
