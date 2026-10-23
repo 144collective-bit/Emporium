@@ -31,6 +31,13 @@ driving downtown), the city looks finished but moves like a model railway:
 Everything above can be fixed as behaviour on meshes the city already draws,
 with no new textures, no new draw calls and (nearly) no new geometry.
 
+**Not character animation** (the owner's call, 2026-10): the animation
+rebuild (`docs/animation-plan.md`) owns how Degen and the crowd move. This
+plan only decides *what they do and where*: which of the existing clips a
+crowd person plays and where they stand, never a new pose, clip or rig
+change on Degen. Anything that poses Degen (sitting on a bench, leaning
+on a railing) waits for the rebuild and becomes a state of its animator.
+
 ## Rules of thumb: what's cheap here
 
 - **Behaviour on existing instances is free.** The traffic, the crowd and
@@ -176,8 +183,7 @@ instance not set that frame), one small table of crossings worked out at
 the boot from the street plan (44 today), a list of 53 benches. Checked
 in headless Chromium: walkers waiting at kerbs and crossing from their
 corners when the lights hold the cars (up to five at once), one stopping
-as Degen passed, Degen sitting on a square bench's free end beside its
-sitter and standing up at a touch of the stick.
+as Degen passed.
 
 1. **Crossing with the lights.** `crossingLinks()`: a walked block's
    corner to another's across one street at a lit junction (the zebra),
@@ -204,10 +210,13 @@ sitter and standing up at a touch of the stick.
    `outAtNight()`: from 1 to 5 every other walker has gone home. The
    evening's crowd gathering round the square and the club was left out:
    the same count stays spread round the blocks.
-5. **Sit down.** `BENCHES` (the square's, the pocket parks', the outer
-   squares', The Block's) with `SEAT_H`; walk mode's "Sit" prompt at a free
-   seat (the middle or an end, clear of the crowd's sitters), `sitPose`
-   with the hips on the seat, "Stand up" or any move to get up.
+5. **Sit down: held back.** It poses Degen, so it belongs to the animation
+   rebuild (a seated state of its animator, with the bench's seat as the
+   hips' height). The data is in: `BENCHES` (the square's, the pocket
+   parks', the outer squares', The Block's) with `SEAT_H`, and the crowd's
+   sitters are told apart (`bodies.people[].act`) so a free seat can be
+   found (its middle or an end, clear of them). It was built and checked
+   here, then taken out again before the rebuild started.
 
 ### Phase 4: buses, boats and the weather's small reactions (S-M, small memory)
 

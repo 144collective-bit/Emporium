@@ -534,13 +534,15 @@ it and has been retired completely. Build only on what's here.
   an avenue or a junction's middle), `walkLight()` / `redLeft()` (red for
   the cars with time to get over), `takesCrossing()`, `noticing()`
   (`NOTICE`, `NOTICE_HOLD`), `hurry()` (the rain), `outAtNight()` (1 to 5,
-  `Env.hour` from sky.ts) and `BENCHES` / `SEAT_H`; life.ts's people tick
-  walks them (a walker on a crossing or waiting at a kerb, `Person.cross`
-  / `wait`, joins the other block's lane at the corner it arrives at;
-  stops and faces you within reach; sitters go in past 0.6 of rain); walk
-  mode's "Sit" prompt (`Near` 'sit') puts Degen on a free seat of a bench
-  (`sitPose`, the hips `SEAT_H` up less the hip drop), "Stand up" or any
-  move gets him up. Nothing new is drawn.
+  `Env.hour` from sky.ts) and `BENCHES` / `SEAT_H` (data for a later
+  seated state); life.ts's people tick walks them (a walker on a crossing
+  or waiting at a kerb, `Person.cross` / `wait`, joins the other block's
+  lane at the corner it arrives at; stops and faces you within reach;
+  sitters go in past 0.6 of rain). Nothing new is drawn. **Not character
+  animation** (the owner's call): this plan picks which existing clip a
+  crowd person plays and where they stand, never a pose, clip or rig
+  change on Degen; that's `docs/animation-plan.md`'s (sitting on a bench
+  waits for it).
 - **Cars** are `src/scripts/city3d/cars.ts`: real-proportion cartoon models
   (City Hatch, Cruiser, Street GT coupe, Hauler pickup, Box Van, City Bus;
   made-up names, never a real make or badge), each a bevelled extruded
@@ -1436,9 +1438,6 @@ it and has been retired completely. Build only on what's here.
   `data-walk-*` element to exist.
 - Buildings only lift and glow on hover in City view; while walking nothing
   is hovered and nothing lifts (Degen stands on the same ground).
-- Standing by a bench with a free seat shows "Sit" (city life plan,
-  Phase 3): Degen sits facing the bench's way, the crowd's sitters keep
-  theirs; "Stand up", a move or a jump gets him up.
 - Esc frees the mouse first and only then stops walking. Door panels free
   the mouse so their links can be clicked.
 - While walking (`body.is-walking`, set in `index.ts`) the header drops the
