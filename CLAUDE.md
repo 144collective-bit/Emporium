@@ -519,6 +519,12 @@ it and has been retired completely. Build only on what's here.
   (pixels, then shadows, then bloom; never the ink outlines) if frames are
   slow. When frames stay fast again, bloom and then pixels come back (once
   each; shadows stay off, re-enabling them recompiles every material).
+  Phones also draw the big canvas textures (512 x 512 pixels or more: the
+  atlases, the long signs) at half size, a quarter of the memory
+  (`canvasTex()` in `kit.ts`; a draw function works in the numbers it
+  asked for and never knows; a texture redrawn live in pixels afterwards
+  must stay under that size). While the 3D city boots behind the start
+  menu, the 2D map's SMIL traffic holds still.
 - One render loop only: always (re)start it with `loop()` in `index.ts`,
   which cancels any frame already queued. A hidden tab holds its queued frame
   back, so a bare `requestAnimationFrame(frame)` on return stacks a second
@@ -558,8 +564,11 @@ it and has been retired completely. Build only on what's here.
   sun's shadow box first, so the shadow map draws only those
   (`CROWD_VIEW.shadow`, `onBeforeShadow` / `onBeforeRender` set each
   mesh's count per pass). The shadow map is drawn once a frame (`post.ts`),
-  however many passes render the scene. Measure with `?fps` and `?bench`
-  before and after.
+  however many passes render the scene, and the ink outlines' normal and
+  depth pre-pass only reaches as far as the outlines do (its own camera's
+  far plane at the ink's `fadeFar`), so the far city is drawn once, not
+  twice. A place's hover ring isn't drawn while it's faded out. Measure
+  with `?fps` and `?bench` before and after.
 - **Near and far** (growth plan Phase 2): past the tier's `far` (`TIERS`:
   120 high, 110 medium, 90 low) from the camera, things are drawn in a far
   form; `isNear()` in `tiles.ts` decides, with a margin so nothing flickers
@@ -602,11 +611,17 @@ it and has been retired completely. Build only on what's here.
   building kits come as sites.
   - The boot builds only the sites in the home view's and the intro's
     tiles (`bootSites()` in `tileplan.ts`) and merges them with the rest
-    (`tileBatch()`); the others wait and `works.step()` builds them a few
-    milliseconds a frame (12 behind the start menu, 3 in the city, 2 on
-    phones), nearest first and ahead of the camera when it moves fast
-    (`focusOf()`, `LOOK_AHEAD`). What's built later joins the same
-    batched meshes (`TileBatches.add()`; a mesh grows when it's full).
+    (`tileBatch()`); the others wait and `works.step()` builds them a
+    share of the time since the last frame (15%, 2-3 ms at 60fps, up to
+    10 ms on a slow phone: its CPU is free while the GPU draws), and the
+    frames that draw nothing build too (`spare()` in `index.ts`: a phone
+    resting at 30fps, a fast screen's in-between frames). The start menu
+    covers the city completely, so behind it the city is drawn only once
+    a second and each frame builds for 24 ms. Nearest first: in the City
+    view nearest what it looks at (`look`, `CROWD_VIEW.focus`), walking
+    round Degen, and ahead of the camera when it moves fast (`focusOf()`,
+    `LOOK_AHEAD`). What's built later joins the same batched meshes
+    (`TileBatches.add()`; a mesh grows when it's full).
   - Places ask first: `flyTo()` (every panel's fly-in), walking in
     (`startWalking()`) and the intro (`works.wantView()`) build what's
     waiting where they're going, so nothing pops in on screen.
