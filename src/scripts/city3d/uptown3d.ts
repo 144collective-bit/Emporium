@@ -1,19 +1,21 @@
 /*
- * Uptown on screen, Phase 1 (docs/finance-plan.md; the numbers are
- * uptown.ts): a district loaded as you approach (districts.ts), its sites
- * built as you go. Until the towers come, its lots are bare earth (world.ts)
- * behind hoardings: dark boards round every block, printed outside with
- * UPTOWN and fixed made-up copy (one small atlas, two panels), a capping
- * rail, posts behind (near only), open at each lot's gate (two posts and a
- * header) and either side of the Mall's axis, whose lanes are paved across
- * the blocks. Its streets, lamps and the axis's zebras are the boot's
+ * Uptown on screen (docs/finance-plan.md; the numbers are uptown.ts and
+ * highrise.ts): a district loaded as you approach (districts.ts, from well
+ * out: the skyline is seen from across town), its sites built as you go.
+ * Its towers (Phase 2) are highrise3d.ts's. Its open lots (the plaza's
+ * block, the slivers by the lanes) are bare earth behind hoardings until
+ * their phase: dark boards printed outside with UPTOWN and fixed made-up
+ * copy (one small atlas, two panels), a capping rail, posts behind (near
+ * only), open at the axis's gates (two posts and a header). The axis's
+ * lanes are paved across their blocks. Its streets, lamps and the axis's zebras are the boot's
  * (streets3d.ts), the promenade along the bank the town's (neighbourhoods.ts).
  */
 import * as THREE from 'three';
 import { Batch, FONT_DISPLAY, FONT_MONO, canvasTex, siteMat, toon } from './kit';
 import { SLAB, type Tick } from './world';
 import { site } from './tilework';
-import { HOARDING, HOARDINGS, HOARDING_GATES, UPTOWN_BLOCKS, UPTOWN_LANES, type Pt, type Rect } from './uptown';
+import { HOARDING, HOARDINGS, OPEN_LOTS, UPTOWN_LANES, type Pt, type Rect } from './uptown';
+import { registerHighrises } from './highrise3d';
 
 /** Its own address, for the site worker (sitework.ts) */
 export const SELF = import.meta.url;
@@ -22,6 +24,7 @@ const BOARD = toon('#1d1b2f');
 const CAP = toon('#3a3656');
 const POST = toon('#2a2740');
 const PAVING = toon('#b7b0cf');
+const EARTH = toon('#6a4a3c');
 
 /** The hoardings' prints: one atlas, two panels (rows), fixed made-up copy only */
 function prints() {
@@ -51,10 +54,10 @@ function prints() {
 }
 
 const PANEL = { w: 5.6, h: 1.4, y: 0.45 };
-/** Is a point inside a block's hoarded lot (in from its edges, off the axis's lane) */
+/** Is a point inside an open lot's hoarding */
 function hoarded(p: Pt) {
   const m = HOARDING.in;
-  return UPTOWN_BLOCKS.some((b) => p[0] > b.rect[0] + m && p[0] < b.rect[2] - m && p[1] > b.rect[1] + m && p[1] < b.rect[3] - m) && !UPTOWN_LANES.some((l) => p[0] > l[0] - 0.4 && p[0] < l[2] + 0.4 && p[1] > l[1] && p[1] < l[3]);
+  return OPEN_LOTS.some(({ rect: r }) => p[0] > r[0] + m && p[0] < r[2] - m && p[1] > r[1] + m && p[1] < r[3] - m);
 }
 
 /** One run of hoarding: the boards, a capping rail, posts behind, printed panels outside (`k` picks the copy) */
@@ -95,21 +98,26 @@ function run(b: Batch, [x0, z0, x1, z1]: Rect, mat: THREE.Material, k: number) {
   }
 }
 
-export function register(_: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
+export function register({ low }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
   const mat = prints();
-  // The hoardings, a block's to a site, and its gate: two posts and a header over the opening
-  UPTOWN_BLOCKS.forEach((blk, i) => {
-    const [x0, z0, x1, z1] = blk.rect;
-    site(`uptown hoardings ${blk.id}`, [x0 - 1, z0 - 1, x1 + 1, z1 + 1], (into) => {
+  // The towers (Phase 2): a site each
+  registerHighrises(low);
+  // The open lots: bare earth behind their hoardings (a lot's to a site), a header over each gate
+  OPEN_LOTS.forEach((o, i) => {
+    const [x0, z0, x1, z1] = o.rect;
+    site(`uptown hoardings ${o.id}`, [x0 - 1, z0 - 1, x1 + 1, z1 + 1], (into) => {
       const b = new Batch();
+      const m = HOARDING.in;
+      b.box(x0 + m, SLAB, z0 + m, x1 - x0 - 2 * m, 0.008, z1 - z0 - 2 * m, EARTH);
       HOARDINGS.filter((h) => {
         const mx = (h[0] + h[2]) / 2;
         const mz = (h[1] + h[3]) / 2;
         return mx >= x0 && mx <= x1 && mz >= z0 && mz <= z1;
       }).forEach((h, k) => run(b, h, mat, k + i));
-      const [gx, gz] = HOARDING_GATES[i];
-      for (const s of [-1, 1]) b.box(gx + s * HOARDING.gate - 0.1, SLAB, gz - 0.1, 0.2, HOARDING.h + 0.3, 0.2, CAP);
-      b.box(gx - HOARDING.gate - 0.1, SLAB + HOARDING.h + 0.1, gz - 0.08, HOARDING.gate * 2 + 0.2, 0.2, 0.16, CAP);
+      for (const [gx, gz] of o.gates) {
+        for (const s of [-1, 1]) b.box(gx + s * HOARDING.gate - 0.1, SLAB, gz - 0.1, 0.2, HOARDING.h + 0.3, 0.2, CAP);
+        b.box(gx - HOARDING.gate - 0.1, SLAB + HOARDING.h + 0.1, gz - 0.08, HOARDING.gate * 2 + 0.2, 0.2, 0.16, CAP);
+      }
       b.build(into, { cast: true, receive: true });
     });
   });

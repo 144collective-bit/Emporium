@@ -708,8 +708,8 @@ it and has been retired completely. Build only on what's here.
   tallest downtown and the most detailed, and "under the Emporium" holds
   everywhere else); the flying traffic and your own aircraft clear them.
   The strips' courts and their players are retired with it. Scenery first;
-  in Phase 5 the tallest tower becomes a place with a sky deck. Phase 1
-  (the land and the streets) is built:
+  in Phase 5 the tallest tower becomes a place with a sky deck. Phases 1
+  (the land and the streets) and 2 (the towers) are built:
   - `uptown.ts` (DOM-free, tested in `tests/uptown.test.ts`): three
     north-south streets (`UPTOWN_STREETS`, `NS_X`: in line with The
     Trenches' cross streets across the river) from the west ring avenue to
@@ -728,11 +728,37 @@ it and has been retired completely. Build only on what's here.
     north bank, its railings, trees, benches and lamps on the town's
     rhythm, neighbourhoods.ts and world.ts); `UPTOWN_RECT` / `inUptown()`.
   - Its streets are drawn at the boot by `streets3d.ts` (`drawStreets()`,
-    shared with The Trenches, clean here: no wear), its lots are bare
-    earth (world.ts), and the hoardings (dark boards printed with UPTOWN
-    and COMING SOON from one small atlas, capping rail, posts behind near
-    only, a header over each gate) and the lanes' paving are a district
-    loaded as you approach (`uptown3d.ts`, `LAZY_DISTRICTS` id `uptown`).
+    shared with The Trenches, clean here: no wear), its lots paved
+    (world.ts), and the rest is a district loaded as you approach from
+    well out (`uptown3d.ts`, `LAZY_DISTRICTS` id `uptown`, its land
+    widened by `UPTOWN_REACH`: the skyline is seen from across town): the
+    open lots (`OPEN_LOTS`: the plaza's block, the slivers west of the
+    lanes) bare earth behind hoardings (dark boards printed with UPTOWN and
+    COMING SOON from one small atlas, a header over each of the axis's
+    gates), the lanes' paving, and the towers.
+  - **The towers** (Phase 2) are `highrise.ts` (DOM-free, tested in
+    `tests/highrise.test.ts`): five designs (`Design`, `design()`: a glass
+    slab with its plant room set back, a stepped deco tower in stone and
+    gold, a round glass drum, twin towers with a skybridge, and the spire),
+    one to a block (`HIGHRISES`), laid by hand: the spire in the plaza's
+    block the tallest (`TALLEST`: roof 30, mast 36; `SPIRE_LOT`, no
+    podium), the rest 15 to 24 on podiums (`PODIUM`), each its skin
+    (`Skin`: blue, gold, black or silver glass, or deco stone) and front
+    (its lobby's `door`); parts (`Part`: box, drum or octagon) bottom up,
+    each tier on the one below and inside it; `HIGHRISE_SOLIDS` (in
+    `SOLIDS`) in strips no wider than `STRIP` (`partStrips()`: a car put
+    out of one is pushed only a little, inside the collision grid's
+    reach). They're drawn by `highrise3d.ts` (a site a tower): walls from
+    Uptown's own curtain-wall atlas (`ATLAS` there, `uptown-glass`: the
+    four glasses and the deco stone a floor to a row, windows lit at night
+    from its light map; the podium's lobby), stacked so a band never wraps
+    and in pieces no longer than `SPAN`; roofs and parapets on every tier;
+    the crowns (a slab's lit band, the deco's gold edges and pyramid, the
+    drum's neon ring and cap, the twins' skybridge, the spire's lantern);
+    a mast and a red warning light on every tip; a canopy over each lobby
+    door and a revolving door near. The airliners' westbound leg crosses
+    Uptown at 46 to 48 (airfield.ts), and the flight tests keep every
+    aircraft well over every tip.
 - **Districts loaded as you approach** (performance phase 4, item 10):
   a district's drawing is a module of its own (`LAZY_DISTRICTS` in
   `districts.ts`: an id, its land and `load()`, a dynamic import), a chunk
@@ -1613,7 +1639,8 @@ it and has been retired completely. Build only on what's here.
   altitude and speed; hold; turn on the spot; lift); `poseAt()` turns the
   time into a pose, the same for everyone (the clock is `Date.now()`).
   Airliners push back, taxi out, take off east, climb round to the north,
-  cross the city high over downtown (above 38), come round the west and
+  cross the city high over downtown (above 38; 46 to 48 over Uptown's
+  towers, highrise.ts), come round the west and
   land, the prop plane flies a lower loop along the river, the helicopter
   circles the Emporium (above the hologram and the blimp). The tests check
   they stay in the world, high over the town, on the ground only at the
@@ -2495,7 +2522,7 @@ it and has been retired completely. Build only on what's here.
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`),
-  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`), the kart park's facility (`kartfacility.ts`),
+  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`), the kart park's facility (`kartfacility.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,

@@ -571,8 +571,8 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
     }
     const kind: LotKind =
       lots[blk.id] ??
-      // (Uptown's empty lots are bare earth behind their hoardings until the towers come: uptown.ts)
-      (blk.ref === 'garage' ? 'concrete' : blk.ref === 'market' || blk.ref === 'units' ? 'paving' : blk.ref === 'uptown' ? 'dirt' : blk.use === 'park' ? 'grass' : blk.id.startsWith('dt-') ? 'paving' : 'grass');
+      // (Uptown's lots paved round its towers; its open lots' earth is uptown3d.ts's, behind their hoardings)
+      (blk.ref === 'garage' ? 'concrete' : blk.ref === 'market' || blk.ref === 'units' || blk.ref === 'uptown' ? 'paving' : blk.use === 'park' ? 'grass' : blk.id.startsWith('dt-') ? 'paving' : 'grass');
     if (isRect(slab) && !bigPoly(slab)) {
       const [x0, z0] = [Math.min(...slab.map((p) => p[0])), Math.min(...slab.map((p) => p[1]))];
       const [x1, z1] = [Math.max(...slab.map((p) => p[0])), Math.max(...slab.map((p) => p[1]))];
