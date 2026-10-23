@@ -22,7 +22,7 @@
  * Every footprint is in `PROJECT_SOLIDS`, from the same numbers.
  */
 import { FLOOR, PARAPET, SHOP_H, type Face, type Footprint, type Pt, type Rect } from './downtown';
-import { RECIPES, layBlock, rng } from './recipes';
+import { RECIPES, layBlock } from './recipes';
 import { KIT_SPEC, heightOf, lotSolids, type Lot } from './kits';
 import { WALK_W } from './layout';
 import { TRENCH_BLOCKS, type TrenchBlock } from './trenches';
@@ -149,7 +149,6 @@ const bounds = (b: TrenchBlock): Rect => {
   const zs = b.poly.map((p) => p[1]);
   return [Math.min(...xs), Math.min(...zs), Math.max(...xs), Math.max(...zs)];
 };
-const FACE_OUT: Record<Face, Pt> = { n: [0, -1], s: [0, 1], w: [-1, 0], e: [1, 0] };
 const boundsOf = (rs: Rect[]): Rect => [Math.min(...rs.map((r) => r[0])), Math.min(...rs.map((r) => r[1])), Math.max(...rs.map((r) => r[2])), Math.max(...rs.map((r) => r[3]))];
 
 /** Its door: on the side nearest the block's edge (a street), in the middle of the part that reaches furthest that way */

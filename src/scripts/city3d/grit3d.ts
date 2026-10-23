@@ -9,7 +9,7 @@
  */
 import * as THREE from 'three';
 import { Batch, toon } from './kit';
-import { INK, METAL, WOOD, frameOf, kit, soft } from './infill';
+import { INK, METAL, frameOf, kit, soft } from './infill';
 import { SLAB as S, addTree, flatPoly } from './world';
 import { site } from './tilework';
 import { SHOP_H, type Infill, type Pt, type Rect } from './downtown';

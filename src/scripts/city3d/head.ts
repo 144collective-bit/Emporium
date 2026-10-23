@@ -49,7 +49,7 @@ export function createCityHead(root: HTMLElement) {
   }
 
   new MutationObserver(paint).observe(root, { attributes: true, attributeFilter: ['data-view', 'data-mode', 'data-kart', 'data-plane', 'data-fight', 'class'] });
-  // Its real height (two rows on phones while walking) for everything pinned under it (--head-h in global.css)
+  // Its real height (two rows on phones while walking) for everything pinned under it (--head-h in city.css)
   new ResizeObserver(() => {
     root.style.setProperty('--head-h', `${head.offsetHeight}px`);
     paint();

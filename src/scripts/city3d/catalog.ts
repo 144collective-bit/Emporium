@@ -326,7 +326,6 @@ export const WARDROBE_CATALOG: WardrobeEntry[] = [
 /** A mark's or a print's catalog id (null for the free ones) */
 export const markItem = (id: MarkId): string | null => (id === 'diamond' || id === 'seven' ? null : `mark-${id}`);
 export const patternItem = (id: PatternId): string | null => (id === 'plain' ? null : `pattern-${id}`);
-export const WARDROBE_IDS = WARDROBE_CATALOG.map((w) => w.id);
 export const wardrobeEntry = (id: string) => WARDROBE_CATALOG.find((w) => w.id === id) ?? null;
 
 /* ---------- Property ---------- */

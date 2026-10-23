@@ -20,7 +20,7 @@
  */
 import * as THREE from 'three';
 import { Batch, FONT_DISPLAY, canvasTex, lit, toon } from './kit';
-import { INK, METAL, ROOF, glow } from './infill';
+import { METAL, ROOF, glow } from './infill';
 import { drawLot } from './kits3d';
 import { SLAB as S, addTree } from './world';
 import { site } from './tilework';
@@ -227,7 +227,7 @@ function lowLotDraw(b: Batch, fxb: Batch, l: LowLot, low: boolean) {
     ];
     for (const [u0, v0, u1, v1] of runs) box(b, F.rect(u0, v0, u1, v1), S, S + 2.2, FENCE);
     b.detail(() => {
-      for (const [u0, v0, u1, v1] of runs.slice(0, 2))
+      for (const [u0, v0, u1] of runs.slice(0, 2))
         for (let u = u0 + 0.3; u < u1 - 0.1; u += 0.3) box(b, F.rect(u - 0.03, v0 - 0.02, u + 0.03, v0), S + 0.05, S + 2.15, CLAD_LINE);
     });
     // Tags and a bill on the fence's street side

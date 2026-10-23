@@ -6,9 +6,6 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { BURST_PAUSE, DUMMIES, POINTS, TICK, WEAPONS, createSim, weaponUnlocked, type WeaponId } from '../src/scripts/city3d/combat-sim';
 import { GUN_MOD_EFFECT, NO_GUN_MODS, applyGunMods } from '../src/scripts/city3d/catalog';
-import { SOLIDS } from '../src/scripts/city3d/solids';
-import { EW_ROADS, NS_ROADS, RIVER, SOUTH_ROAD, WALK_W } from '../src/scripts/city3d/layout';
-import { pointIn } from './world';
 
 /** A sim with one player aiming at the first dummy from 6 away */
 function atFirstDummy(seed = 1) {

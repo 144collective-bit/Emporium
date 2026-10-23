@@ -1,0 +1,2123 @@
+/* Walk mode: the walk tabs and panels, the HUD and touch controls, target practice, other players,
+   Drop 001's fitting room, the gun store and driving. Imported after city.css (Base.astro). */
+
+/* Walk mode */
+.walk-hud {
+  display: none;
+}
+.city[data-mode="walk"] .walk-hud {
+  display: block;
+}
+.walk-hint {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  z-index: 4;
+  max-width: calc(100% - 32px);
+  padding: 10px 14px;
+  border: 1px solid #0000;
+  border-radius: 8px;
+  background:
+    linear-gradient(#0b0a12e0, #0b0a12e0) padding-box,
+    var(--pulse) border-box;
+  font-size: 13px;
+  color: var(--text-2);
+}
+.walk-hud kbd,
+.walk-prompt kbd {
+  display: inline-block;
+  min-width: 1.6em;
+  padding: 1px 6px;
+  border: 1px solid #ffffff40;
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: #fff;
+  text-align: center;
+}
+.walk-stick,
+.walk-jump,
+.walk-run {
+  display: none;
+}
+/* Walk mode's tabs in the mode header: Controls, Profile, Online, Emote. Panels drop down under them. */
+.walk-top {
+  position: relative;
+  display: none;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.city[data-view="3d"][data-mode="walk"] .walk-top {
+  display: flex;
+}
+.walk-top > details[hidden] {
+  display: none;
+}
+.walk-top .walk-settings-body {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  margin-top: 0 !important;
+}
+.walk-pop summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border: 1px solid #0000;
+  border-radius: 999px;
+  background:
+    linear-gradient(#0b0a12e0, #0b0a12e0) padding-box,
+    var(--pulse) border-box;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #fff;
+  cursor: pointer;
+  list-style: none;
+}
+.walk-pop summary::-webkit-details-marker {
+  display: none;
+}
+.walk-pop summary svg {
+  color: var(--p-cyan);
+}
+.walk-pop[open] summary {
+  background:
+    var(--pulse-wash) padding-box,
+    linear-gradient(#14102a, #14102a) padding-box,
+    var(--pulse) border-box;
+}
+.walk-settings-body {
+  display: grid;
+  gap: 12px;
+  width: 280px;
+  /* Measured against the screen: it hangs from the narrow tab row */
+  max-width: calc(100vw - 24px);
+  max-height: calc(100vh - 120px);
+  margin-top: 8px;
+  padding: 14px 16px;
+  overflow-y: auto;
+  border: 1px solid #0000;
+  border-radius: 10px;
+  background:
+    linear-gradient(#0b0a12f0, #0b0a12f0) padding-box,
+    var(--pulse) border-box;
+  font-size: 13px;
+  color: var(--text-2);
+}
+.walk-field {
+  display: grid;
+  gap: 6px;
+}
+.walk-field span,
+.walk-check span {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--p-cyan);
+}
+.walk-field input {
+  width: 100%;
+  accent-color: var(--p-cyan);
+}
+.walk-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.walk-check input {
+  accent-color: var(--p-cyan);
+}
+.walk-fp,
+.walk-run {
+  border: 1px solid #0000;
+  background:
+    linear-gradient(#0b0a12e0, #0b0a12e0) padding-box,
+    var(--pulse) border-box;
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+/* Walk panels' header: title and × */
+.pop-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: -4px -6px -2px 0;
+}
+.pop-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: uppercase;
+  color: #fff;
+}
+.pop-close {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: none;
+  color: var(--text-2);
+  cursor: pointer;
+}
+.pop-close:hover {
+  color: #fff;
+  border-color: #ffffff40;
+}
+/* Controls panel sections (Look, Shooting) */
+.walk-section {
+  margin: 4px 0 -4px;
+  padding-top: 10px;
+  border-top: 1px solid #ffffff14;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.walk-section:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+.walk-seg {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+.walk-seg button {
+  min-width: 0;
+  padding: 8px 4px;
+  border: 1px solid #ffffff24;
+  border-radius: 8px;
+  background: #0b0a12;
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.walk-seg button[aria-pressed="true"] {
+  border-color: #0000;
+  background:
+    var(--pulse-wash) padding-box,
+    linear-gradient(#14102a, #14102a) padding-box,
+    var(--pulse) border-box;
+  color: #fff;
+}
+.walk-fp {
+  justify-self: start;
+  padding: 8px 14px;
+  border-radius: 999px;
+}
+.walk-fp[aria-pressed="true"],
+.walk-run[aria-pressed="true"] {
+  background:
+    var(--pulse-wash) padding-box,
+    linear-gradient(#14102a, #14102a) padding-box,
+    var(--pulse) border-box;
+  box-shadow: 0 0 20px -6px #00eaffaa;
+}
+.walk-keys {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 12px;
+  margin: 0;
+  align-items: center;
+}
+.walk-keys dd {
+  margin: 0;
+}
+.walk-pad {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.walk-look {
+  position: absolute;
+  top: calc(var(--head-h) + 14px);
+  left: 50%;
+  z-index: 3;
+  margin: 0;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: #0b0a12b0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #fff;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translateX(-50%);
+  transition: opacity 0.3s;
+}
+.city:has(.walk-top details[open]) :is(.walk-hint, .walk-look) {
+  display: none;
+}
+.city.is-looking .walk-look {
+  opacity: 0;
+}
+/* While the mouse is captured, a small crosshair marks the centre */
+.walk-crosshair {
+  display: none;
+}
+.city.is-looking .walk-crosshair {
+  position: absolute;
+  display: block;
+  top: 50%;
+  left: 50%;
+  z-index: 3;
+  width: 6px;
+  height: 6px;
+  border: 1px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 6px #00eaff;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+.walk-prompt {
+  position: absolute;
+  left: 50%;
+  bottom: 84px;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 18px;
+  border: 1px solid #0000;
+  border-radius: 999px;
+  background:
+    var(--pulse-wash) padding-box,
+    linear-gradient(#0b0a12f0, #0b0a12f0) padding-box,
+    var(--pulse) border-box;
+  box-shadow: 0 0 30px -8px #00eaffaa;
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transform: translateX(-50%);
+  animation: prompt-in 0.25s var(--ease);
+}
+.walk-prompt[hidden] {
+  display: none;
+}
+@keyframes prompt-in {
+  from { opacity: 0; transform: translate(-50%, 8px); }
+}
+/* Touch: joystick bottom-left, jump bottom-right */
+/* Combat HUD (walk mode, once geared up at the Armoury) */
+.combat-hud,
+.walk-fire,
+.walk-reload,
+.walk-aim,
+.walk-swap {
+  display: none;
+}
+.city.is-armed[data-mode="walk"] .combat-hud {
+  display: block;
+}
+.city.is-armed .walk-crosshair {
+  display: none;
+}
+.combat-cross {
+  --spread: 8px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 3;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+.combat-cross i {
+  position: absolute;
+  background: #fff;
+  box-shadow: 0 0 0 1px #05050a, 0 0 6px #00eaff;
+  transition: transform 0.06s linear;
+}
+.combat-cross i:nth-child(1),
+.combat-cross i:nth-child(2) {
+  left: -1px;
+  width: 2px;
+  height: 8px;
+}
+.combat-cross i:nth-child(3),
+.combat-cross i:nth-child(4) {
+  top: -1px;
+  width: 8px;
+  height: 2px;
+}
+.combat-cross i:nth-child(1) {
+  top: calc(-8px - var(--spread));
+}
+.combat-cross i:nth-child(2) {
+  top: var(--spread);
+}
+.combat-cross i:nth-child(3) {
+  left: calc(-8px - var(--spread));
+}
+.combat-cross i:nth-child(4) {
+  left: var(--spread);
+}
+.combat-hit {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 3;
+  width: 22px;
+  height: 22px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%) rotate(45deg);
+  background:
+    linear-gradient(#ff3b3b, #ff3b3b) center / 2px 100% no-repeat,
+    linear-gradient(#ff3b3b, #ff3b3b) center / 100% 2px no-repeat;
+  mask: radial-gradient(circle, transparent 5px, #000 5.5px);
+}
+.combat-hit.is-on {
+  opacity: 1;
+}
+.combat-hit.is-kill {
+  width: 30px;
+  height: 30px;
+  filter: drop-shadow(0 0 6px #ff3b3b);
+}
+/* Down the red-dot sight the reticle replaces the crosshair */
+.city.is-ads .combat-cross {
+  opacity: 0;
+}
+.combat-dmg {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  overflow: hidden;
+  pointer-events: none;
+}
+.combat-num {
+  position: absolute;
+  top: 0;
+  left: 0;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+  color: #fff;
+  text-shadow:
+    0 2px 0 #05050a,
+    2px 0 0 #05050a,
+    -2px 0 0 #05050a,
+    0 -2px 0 #05050a;
+  will-change: transform, opacity;
+}
+.combat-num.is-kill {
+  font-size: 28px;
+  color: #ffd36b;
+}
+.combat-pops {
+  position: absolute;
+  top: calc(50% + 44px);
+  left: 50%;
+  z-index: 4;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.combat-pop {
+  display: grid;
+  justify-items: center;
+  animation: pop-stamp 1.3s ease-out forwards;
+}
+.combat-pop b {
+  font-family: var(--font-display);
+  font-size: 34px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  background: var(--pulse-text);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 2px 0 #05050a) drop-shadow(0 0 10px #ff2fb966);
+}
+.combat-pop span {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--p-cyan);
+  text-shadow: 0 1px 0 #05050a;
+}
+.combat-pop.is-streak b,
+.combat-pop.is-unlock b {
+  font-size: 26px;
+}
+@keyframes pop-stamp {
+  0% { opacity: 0; transform: scale(1.7); }
+  12% { opacity: 1; transform: scale(0.94); }
+  20% { transform: scale(1); }
+  78% { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: translateY(-10px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .combat-pop {
+    animation: none;
+  }
+}
+/* Rifle finishes, in the Controls panel */
+.walk-skins {
+  display: grid;
+  gap: 8px;
+}
+.walk-skins-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.walk-skins-head b {
+  color: var(--p-cyan);
+}
+.walk-skins-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.walk-skins-row button {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 8px 4px;
+  border: 1px solid #ffffff24;
+  border-radius: 8px;
+  background: #0b0a12;
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.2;
+  text-align: center;
+  cursor: pointer;
+}
+.walk-skins-row button[aria-pressed="true"] {
+  border-color: #0000;
+  background:
+    linear-gradient(#14102a, #14102a) padding-box,
+    var(--pulse) border-box;
+}
+.walk-skins-row button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.walk-skins-row small {
+  font-size: 9px;
+  color: var(--p-cyan);
+}
+.sw {
+  width: 30px;
+  height: 10px;
+  border: 1px solid #ffffff40;
+  border-radius: 3px;
+}
+.sw-olive {
+  background: linear-gradient(90deg, #5a6b3a 70%, #c9a04a 70%);
+}
+.sw-ink {
+  background: linear-gradient(90deg, #1d1b26 70%, #8f8aa8 70%);
+}
+.sw-neon {
+  background: linear-gradient(90deg, #1a1530 45%, #ff2fb9 45%, #8f3dff 72%, #00eaff);
+}
+.combat-ammo,
+.combat-score {
+  padding: 6px 12px;
+  border: 1px solid #0000;
+  border-radius: 8px;
+  background:
+    linear-gradient(#0b0a12e0, #0b0a12e0) padding-box,
+    var(--pulse) border-box;
+  font-family: var(--font-mono);
+  color: #fff;
+  pointer-events: none;
+}
+.combat-ammo {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: baseline;
+  gap: 0 6px;
+  font-size: 12px;
+}
+.combat-ammo b {
+  font-family: var(--font-display);
+  font-size: 22px;
+  line-height: 1;
+}
+.combat-ammo b.is-low {
+  color: #ff5a5a;
+}
+.combat-ammo .combat-gun {
+  margin-top: 1px;
+  color: var(--muted);
+}
+.combat-ammo small {
+  grid-column: 1 / -1;
+  white-space: nowrap;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--p-cyan);
+}
+.combat-score {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.combat-score b {
+  margin-left: 6px;
+  font-family: var(--font-display);
+  font-size: 18px;
+  letter-spacing: 0.04em;
+}
+.combat-hud [hidden] {
+  display: none !important;
+}
+.combat-score small {
+  display: block;
+  margin-top: 2px;
+  color: #ffd36b;
+}
+@media (pointer: coarse) {
+  .walk-hint,
+  .walk-look {
+    display: none;
+  }
+  .walk-keys {
+    display: none;
+  }
+  .city.is-armed .walk-fire,
+  .city.is-armed .walk-reload,
+  .city.is-armed .walk-aim,
+  .city.is-armed .walk-swap {
+    position: absolute;
+    z-index: 4;
+    display: grid;
+    place-items: center;
+    border: 1px solid #0000;
+    border-radius: 50%;
+    background:
+      linear-gradient(#0b0a12e0, #0b0a12e0) padding-box,
+      var(--pulse) border-box;
+    color: #fff;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    touch-action: none;
+  }
+  .city.is-armed .walk-fire {
+    right: 104px;
+    bottom: 34px;
+    width: 76px;
+    height: 76px;
+    font-size: 11px;
+    box-shadow: 0 0 24px -6px #ff2fb9;
+  }
+  .city.is-armed .walk-reload {
+    right: 116px;
+    bottom: 122px;
+    width: 52px;
+    height: 52px;
+    font-size: 9px;
+  }
+  .city.is-armed .walk-aim {
+    right: 30px;
+    bottom: 194px;
+    width: 56px;
+    height: 56px;
+    font-size: 10px;
+  }
+  /* Swap: above Fire, beside Aim; shows the gun in hand */
+  .city.is-armed .walk-swap {
+    right: 112px;
+    bottom: 190px;
+    align-content: center;
+    gap: 2px;
+    width: 58px;
+    height: 58px;
+    font-size: 8px;
+    letter-spacing: 0.02em;
+  }
+  .walk-swap span {
+    max-width: 52px;
+    overflow: hidden;
+    line-height: 1.1;
+    text-align: center;
+    white-space: nowrap;
+  }
+  .walk-swap svg {
+    color: var(--p-cyan);
+  }
+  .walk-swap:active,
+  .walk-reload:active,
+  .walk-jump:active {
+    transform: scale(0.92);
+  }
+  .walk-fire:active {
+    box-shadow: 0 0 30px -2px #ff2fb9;
+  }
+  /* The swap button carries the gun's name on touch screens */
+  .combat-gun {
+    display: none;
+  }
+  .city.is-armed .walk-aim[aria-pressed="true"] {
+    background:
+      var(--pulse-wash) padding-box,
+      linear-gradient(#14102a, #14102a) padding-box,
+      var(--pulse) border-box;
+    box-shadow: 0 0 20px -6px #00eaffaa;
+  }
+  .walk-run {
+    position: absolute;
+    right: 30px;
+    bottom: 122px;
+    z-index: 4;
+    display: grid;
+    place-items: center;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    font-size: 10px;
+    touch-action: manipulation;
+  }
+  .walk-stick {
+    position: absolute;
+    left: 22px;
+    bottom: 26px;
+    z-index: 4;
+    display: grid;
+    place-items: center;
+    width: 120px;
+    height: 120px;
+    border: 1px solid #ffffff30;
+    border-radius: 50%;
+    background: radial-gradient(circle, #0b0a1299, #0b0a1255);
+    touch-action: none;
+  }
+  .walk-stick span {
+    width: 52px;
+    height: 52px;
+    border: 2px solid var(--p-cyan);
+    border-radius: 50%;
+    background: #00eaff33;
+    box-shadow: 0 0 18px #00eaff66;
+  }
+  .walk-jump {
+    position: absolute;
+    right: 26px;
+    bottom: 42px;
+    z-index: 4;
+    display: grid;
+    place-items: center;
+    width: 64px;
+    height: 64px;
+    border: 1px solid #0000;
+    border-radius: 50%;
+    background:
+      linear-gradient(#0b0a12e0, #0b0a12e0) padding-box,
+      var(--pulse) border-box;
+    color: #fff;
+    touch-action: manipulation;
+  }
+  .walk-prompt {
+    bottom: 170px;
+  }
+  /* Geared up, the right-hand buttons stand taller: the door prompt goes above them */
+  .city.is-armed .walk-prompt {
+    bottom: 264px;
+  }
+}
+/* Phones on their side: the buttons sit far right, so the door prompt can stay low */
+@media (pointer: coarse) and (max-height: 500px) {
+  .city.is-armed .walk-prompt {
+    bottom: 150px;
+  }
+}
+/* Narrow phones: a smaller stick and a tighter right-hand cluster, so nothing touches */
+@media (pointer: coarse) and (max-width: 360px) {
+  .walk-stick {
+    left: 14px;
+    width: 108px;
+    height: 108px;
+  }
+  .walk-stick span {
+    width: 46px;
+    height: 46px;
+  }
+  .city.is-armed .walk-fire {
+    right: 96px;
+  }
+  .city.is-armed .walk-reload {
+    right: 108px;
+  }
+  .city.is-armed .walk-swap {
+    right: 102px;
+  }
+}
+
+.city-draft-tag {
+  display: none;
+}
+/* The welcome card closes (tablets and desktops; phones never show it) */
+.city-card-close {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: none;
+  color: var(--text-2);
+  cursor: pointer;
+}
+.city-card-close:hover {
+  color: #fff;
+  border-color: #ffffff40;
+}
+/* Hidden only visually, so the page keeps its heading for screen readers */
+.city-hud[data-card="hidden"] .city-card {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.city-hud[data-card="hidden"] .city-card-close {
+  display: none;
+}
+.city-hud[data-card="hidden"] .city-draft-tag {
+  display: inline-flex;
+}
+.city-draft-tag {
+  align-self: flex-end;
+  margin-top: auto;
+  padding: 0.5em 0.85em;
+  border-radius: 2px;
+  background: #0b0a12e0;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+@media (max-width: 640px) {
+  .city-hud {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+  }
+  /* No welcome card on phones, so the city fills the screen. Hidden only
+     visually, so the page keeps its heading for screen readers */
+  .city-card {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .city-card-close {
+    display: none;
+  }
+  .city-draft-tag {
+    display: inline-flex;
+  }
+  /* 3D on phones: settings top-left, the panel becomes a bottom sheet */
+  .city-controls {
+    top: calc(var(--head-h) + 8px);
+    right: auto;
+    left: 12px;
+  }
+  .city-controls[open] {
+    right: 12px;
+  }
+  .city-panel {
+    top: auto;
+    right: 12px;
+    left: 12px;
+    bottom: 12px;
+    width: auto;
+    max-height: 62%;
+    padding: 22px 18px 16px;
+    transform: translateY(24px);
+  }
+  .city.has-panel .city-hud {
+    visibility: hidden;
+  }
+  .city-pin-title {
+    font-size: 14px;
+  }
+  /* Phones: the mode header is two rows while walking (mode and switch; tabs, ammo and score) */
+  .city {
+    --head-h: 48px;
+  }
+  /* Two rows. City, Build and the 2D map: logo, title, settings and menu, then City / Walk / Build
+     across the width with their names. Walking: the title and the switch, then the walk tabs,
+     ammo and score. */
+  .city-head {
+    flex-wrap: wrap;
+    column-gap: 8px;
+    row-gap: 6px;
+    min-height: 48px;
+    padding: 6px 12px 8px;
+  }
+  .city-head::before {
+    content: "";
+    order: 3;
+    flex-basis: 100%;
+  }
+  .city-head-logo {
+    height: 36px;
+    padding-right: 10px;
+  }
+  .city-head-id {
+    flex: 1 1 0;
+  }
+  .city-head-tools {
+    order: 2;
+  }
+  .city-online {
+    order: 4;
+  }
+  .city-head-modes {
+    flex: 1 1 auto;
+  }
+  .city:not([data-mode="walk"]) .city-head-modes .city-mode-btn {
+    flex: 1;
+    justify-content: center;
+  }
+  .city:not([data-mode="walk"]) .city-head .city-mode-btn .city-mode-label {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
+  }
+  .city-head .walk-top {
+    order: 6;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .city-head-stats {
+    order: 7;
+    margin-left: auto;
+  }
+  .city[data-mode="walk"] .city-head-modes {
+    order: 2;
+    flex: none;
+  }
+  /* Settings and menu: the menu last, and their cards span the width under the header */
+  .city-head .city-dir {
+    order: 1;
+    align-self: auto;
+  }
+  .city-head .head-pop {
+    position: static;
+  }
+  .city-head .head-panel {
+    top: calc(100% + 8px);
+    right: 12px;
+    left: 12px;
+    width: auto;
+    min-width: 0;
+    max-width: none;
+  }
+  .city-head-text b {
+    font-size: 16px;
+  }
+  .city-head-text small {
+    font-size: 9px;
+    letter-spacing: 0.08em;
+  }
+  .city-head .city-mode-btn {
+    padding: 8px 10px;
+  }
+  .walk-top {
+    gap: 6px;
+  }
+  /* Phones: Profile, Online and Emote as icons */
+  .walk-pill-text {
+    display: none;
+  }
+  .walk-pop summary {
+    padding: 9px 12px;
+  }
+  .walk-online summary {
+    padding: 9px 11px;
+  }
+  .builder-catalog {
+    grid-template-columns: 1fr;
+  }
+  .builder-panel {
+    max-height: 56%;
+  }
+  .city-pin-sub {
+    font-size: 8.5px;
+  }
+}
+
+/* ---------- Player profile and multiplayer (walk mode) ---------- */
+.profile-head {
+  display: grid;
+  gap: 8px;
+}
+.profile-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+.profile-name b {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #fff;
+}
+.mp-rank {
+  padding: 2px 7px;
+  border: 1px solid #ffffff3a;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--p-cyan);
+  background: #0b0a12;
+}
+.mp-rank[data-rank="cadet"] { color: #9be7ff; }
+.mp-rank[data-rank="sharpshooter"] { color: #ffd36b; border-color: #ffd36b66; }
+.mp-rank[data-rank="marksman"] { color: #ff9a5a; border-color: #ff9a5a66; }
+.mp-rank[data-rank="elite"] { color: #ff6ad5; border-color: #ff6ad566; }
+.mp-rank[data-rank="legend"] {
+  border-color: #0000;
+  background:
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
+  color: #fff;
+}
+.wardrobe {
+  display: grid;
+  gap: 8px;
+}
+.emote-btn,
+.phrase-btn,
+.mp-mute {
+  padding: 7px 8px;
+  border: 1px solid #ffffff24;
+  border-radius: 8px;
+  background: #0b0a12;
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  cursor: pointer;
+}
+.mp-mute[aria-pressed="true"] {
+  border-color: #0000;
+  background:
+    linear-gradient(#14102a, #14102a) padding-box,
+    var(--pulse) border-box;
+}
+/* Drop 001's fitting room (fitting.ts): the turning preview, item cards and colours */
+.fit {
+  display: grid;
+  align-self: stretch;
+  gap: 12px;
+  margin-top: 4px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  scroll-margin-top: 12px;
+}
+.fit-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+}
+.fit-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+.fit-stage {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 16 / 10;
+  max-height: 250px;
+  border: 1px solid #0000;
+  border-radius: 8px;
+  background:
+    linear-gradient(#120f22, #120f22) padding-box,
+    var(--pulse) border-box;
+}
+.fit-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  /* Sideways drags turn him; up and down still scroll the panel */
+  touch-action: pan-y;
+}
+.fit-canvas:active {
+  cursor: grabbing;
+}
+.fit-hint {
+  position: absolute;
+  right: 10px;
+  bottom: 8px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  pointer-events: none;
+}
+.fit-tabs {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 4px;
+}
+/* Narrow panels: the tabs take two rows */
+@media (max-width: 520px) {
+  .fit-tabs {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+.fit-tabs button {
+  min-width: 0;
+  padding: 8px 0;
+  border: 1px solid #ffffff24;
+  border-radius: 8px;
+  background: #0b0a12;
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.fit-tabs button[aria-selected="true"] {
+  border-color: #0000;
+  background:
+    linear-gradient(#14102a, #14102a) padding-box,
+    var(--pulse) border-box;
+  color: #fff;
+}
+.fit-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(86px, 1fr));
+  gap: 6px;
+}
+.fit-items[hidden] {
+  display: none;
+}
+.fit-item {
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  padding: 10px 4px 8px;
+  border: 1px solid #ffffff24;
+  border-radius: 10px;
+  background: #0b0a12;
+  color: #fff;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, transform 0.2s;
+}
+.fit-item svg {
+  color: var(--text-2);
+}
+.fit-item b {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1.05;
+  text-transform: uppercase;
+}
+.fit-item small {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.fit-item:hover {
+  transform: translateY(-2px);
+}
+.fit-item[aria-pressed="true"] {
+  border-color: #0000;
+  background:
+    var(--pulse-wash) padding-box,
+    linear-gradient(#14102a, #14102a) padding-box,
+    var(--pulse) border-box;
+  box-shadow: 0 0 22px -10px #00eaffaa;
+}
+.fit-item[aria-pressed="true"] svg,
+.fit-item[aria-pressed="true"] small {
+  color: var(--p-cyan);
+}
+.fit-colors {
+  display: grid;
+  gap: 8px;
+}
+.fit-colors:empty {
+  display: none;
+}
+.fit-row {
+  display: grid;
+  grid-template-columns: 74px 1fr;
+  align-items: center;
+  gap: 6px;
+}
+.fit-note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.fit-reset {
+  justify-self: start;
+  cursor: pointer;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fit-item {
+    transition: none;
+  }
+  .fit-item:hover {
+    transform: none;
+  }
+}
+.fit .sw-row {
+  gap: 6px;
+}
+.fit .sw-btn {
+  width: 26px;
+  height: 26px;
+}
+.fit-row > span {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.sw-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.sw-btn {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid #ffffff40;
+  border-radius: 50%;
+  background: var(--c, #0b0a12);
+  cursor: pointer;
+}
+.sw-btn[aria-pressed="true"] {
+  outline: 2px solid var(--p-cyan);
+  outline-offset: 2px;
+}
+.walk-check[hidden] {
+  display: none;
+}
+/* Online pill: a status dot */
+.mp-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #6b6880;
+}
+.mp-dot[data-state="online"] {
+  background: #3ce06a;
+  box-shadow: 0 0 10px #3ce06a;
+}
+.mp-dot[data-state="connecting"],
+.mp-dot[data-state="retrying"] {
+  background: #ffd36b;
+}
+.mp-dot[data-state="full"],
+.mp-dot[data-state="error"] {
+  background: #ff5a5a;
+}
+.mp-status {
+  margin: 0;
+  font-size: 12px;
+}
+.mp-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.mp-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.mp-who {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: #fff;
+  font-size: 12px;
+}
+.mp-mute {
+  flex: none;
+  padding: 4px 8px;
+  font-size: 10px;
+}
+.emote-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+.emote-btn {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 6px 2px;
+  font-size: 10px;
+}
+.emote-btn span {
+  font-size: 20px;
+}
+.phrase-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.phrase-btn {
+  text-align: left;
+}
+/* Name tags and bubbles over other players */
+.mp-tags {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  overflow: hidden;
+  pointer-events: none;
+}
+.mp-tag {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  white-space: nowrap;
+  will-change: transform;
+}
+.mp-tag[hidden] {
+  display: none;
+}
+.mp-tag b {
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: #0b0a12cc;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+}
+.mp-bubble {
+  max-width: 180px;
+  padding: 5px 10px;
+  border: 1px solid #0000;
+  border-radius: 12px;
+  background:
+    linear-gradient(#0b0a12f0, #0b0a12f0) padding-box,
+    var(--pulse) border-box;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-style: normal;
+  color: #fff;
+  white-space: normal;
+  text-align: center;
+}
+.mp-bubble[hidden] {
+  display: none;
+}
+.mp-toast {
+  position: absolute;
+  bottom: 70px;
+  left: 50%;
+  z-index: 4;
+  margin: 0;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: #0b0a12e0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--p-cyan);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.mp-toast[hidden] {
+  display: none;
+}
+@media (max-width: 640px) {
+  .mp-toast {
+    bottom: 176px;
+  }
+}
+/* Narrower screens (tablets, phones on their side): icons for the walk tabs, and only the
+   current mode's name in the switch, so the mode header stays one row */
+@media (max-width: 1100px) {
+  .walk-pill-text {
+    display: none;
+  }
+  /* Settings and Menu as icons (their names stay for screen readers), and no logo while walking */
+  .head-btn-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .city-head .head-pop > summary {
+    padding: 0 11px;
+  }
+  .city[data-mode="walk"] .city-head-logo {
+    display: none;
+  }
+  /* Out of walk mode there's room for all three mode names */
+  .city:not([data-mode="walk"]) .city-head .city-mode-btn .city-mode-label {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
+  }
+  .walk-pop summary {
+    padding: 9px 11px;
+  }
+  .city-head .city-mode-btn:not([aria-pressed="true"]) .city-mode-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+/* ---------- The gun store at the Armoury's counter (walk mode, gunshop.ts) ----------
+   Compact: the guns as a 2 x 2 grid beside the picked gun's details. Phones stack it as a
+   short bottom sheet with the four guns in one row; phones on their side keep the two columns. */
+.shop {
+  position: absolute;
+  top: calc(50% + var(--head-h) / 2);
+  left: 50%;
+  z-index: 7;
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  grid-template-areas:
+    "head head"
+    "list detail"
+    "foot foot";
+  align-items: start;
+  gap: 12px 18px;
+  width: min(720px, calc(100% - 32px));
+  max-height: calc(100% - var(--head-h) - 24px);
+  padding: 14px 16px 12px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid #0000;
+  border-radius: 14px;
+  background:
+    linear-gradient(#0b0a12f2, #0b0a12f2) padding-box,
+    var(--pulse) border-box;
+  box-shadow: 0 24px 60px -20px #000c, 0 0 40px -18px #8f3dff;
+  color: var(--text-2);
+  transform: translate(-50%, -50%);
+  animation: shop-in 0.25s var(--ease);
+}
+.shop[hidden] {
+  display: none;
+}
+@keyframes shop-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 12px));
+  }
+}
+.city.is-shopping .walk-prompt,
+.city.is-shopping .walk-look,
+.city.is-shopping .combat-cross,
+.city.is-shopping .walk-fire,
+.city.is-shopping .walk-aim,
+.city.is-shopping .walk-reload,
+.city.is-shopping .walk-swap {
+  display: none;
+}
+.shop-head {
+  grid-area: head;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.shop-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+  background: var(--pulse-text);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.shop-score {
+  margin: 0 0 0 auto;
+  padding: 5px 10px;
+  border: 1px solid #ffffff1f;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.shop-score b {
+  margin-left: 4px;
+  font-family: var(--font-display);
+  font-size: 15px;
+  letter-spacing: 0.02em;
+  color: var(--p-cyan);
+}
+.shop-close {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #0000;
+  border-radius: 50%;
+  background:
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
+  color: #fff;
+  cursor: pointer;
+}
+.shop-list {
+  grid-area: list;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+.shop-card {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 3px;
+  min-width: 0;
+  padding: 8px 6px 7px;
+  border: 1px solid #ffffff24;
+  border-radius: 10px;
+  background: #0b0a12;
+  color: #fff;
+  font-family: var(--font-mono);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, transform 0.2s;
+}
+.shop-card svg {
+  width: 100%;
+  max-width: 96px;
+  height: 28px;
+  fill: #c9c6d6;
+  stroke: #05050a;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+.shop-card b {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1.05;
+  text-transform: uppercase;
+}
+.shop-card small {
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--p-cyan);
+  white-space: nowrap;
+}
+.shop-card:hover {
+  transform: translateY(-2px);
+}
+.shop-card[aria-selected="true"] {
+  border-color: #0000;
+  background:
+    var(--pulse-wash) padding-box,
+    linear-gradient(#14102a, #14102a) padding-box,
+    var(--pulse) border-box;
+  box-shadow: 0 0 20px -8px #00eaffaa;
+}
+.shop-card[aria-selected="true"] svg {
+  fill: #fff;
+}
+.shop-card.is-locked svg {
+  fill: #3a3846;
+}
+.shop-card.is-locked b {
+  color: var(--muted);
+}
+.shop-card.is-locked small {
+  color: #ffd36b;
+}
+.shop-card.is-locked small::before {
+  content: "🔒 ";
+}
+.shop-detail {
+  grid-area: detail;
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.shop-name-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+}
+.shop-name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+  color: #fff;
+}
+.shop-mode {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--p-cyan);
+}
+.shop-blurb {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+.shop-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px 14px;
+  margin: 0;
+}
+.shop-stats > div {
+  display: grid;
+  gap: 3px;
+}
+.shop-stats dt {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.shop-stats dd {
+  height: 6px;
+  margin: 0;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #ffffff14;
+}
+.shop-stats i {
+  display: block;
+  width: calc(var(--v, 0) * 100%);
+  height: 100%;
+  border-radius: inherit;
+  background: var(--pulse);
+  transition: width 0.3s var(--ease);
+}
+.shop-take {
+  margin-top: 2px;
+  padding: 11px 16px;
+  border: 1px solid #0000;
+  border-radius: 999px;
+  background:
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 0 22px -8px #ff2fb9;
+}
+.shop-take:disabled {
+  opacity: 0.55;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+.shop-note {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+.shop-note[hidden] {
+  display: none;
+}
+.shop-foot {
+  grid-area: foot;
+  margin: 0;
+  padding-top: 8px;
+  border-top: 1px solid #ffffff14;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+/* Phones upright: a short bottom sheet, the four guns in one row above the details */
+@media (max-width: 640px) {
+  .shop {
+    top: auto;
+    right: 8px;
+    bottom: 8px;
+    left: 8px;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "head"
+      "list"
+      "detail"
+      "foot";
+    gap: 10px;
+    width: auto;
+    max-height: calc(100% - var(--head-h) - 16px);
+    padding: 12px 12px 10px;
+    transform: none;
+    animation-name: shop-up;
+  }
+  .shop-title {
+    font-size: 22px;
+  }
+  .shop-list {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 5px;
+  }
+  .shop-card {
+    padding: 7px 3px 6px;
+    border-radius: 8px;
+  }
+  .shop-card svg {
+    height: 18px;
+  }
+  .shop-card b {
+    font-size: 11.5px;
+  }
+  .shop-card small {
+    font-size: 8px;
+    letter-spacing: 0.04em;
+  }
+  .shop-name {
+    font-size: 20px;
+  }
+  .shop-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px 10px;
+  }
+}
+/* Short screens (phones on their side): tighter, and the footnote goes */
+@media (max-height: 500px) {
+  .shop {
+    gap: 8px 14px;
+    max-height: calc(100% - var(--head-h) - 12px);
+    padding: 10px 12px 10px;
+  }
+  .shop-title {
+    font-size: 20px;
+  }
+  .shop-card svg {
+    height: 18px;
+  }
+  .shop-card b {
+    font-size: 12px;
+  }
+  .shop-blurb {
+    display: none;
+  }
+  .shop-foot {
+    display: none;
+  }
+}
+@keyframes shop-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .shop {
+    animation: none;
+  }
+}
+
+/* ---------- Driving your car (walk mode, drive.ts) ----------
+   The walk HUD steps aside for a speed readout (bottom right; top left on touch screens),
+   a key hint, and on touch screens Gas and Brake pedals (the stick steers). */
+.drive-hint,
+.drive-hud,
+.drive-pedal {
+  display: none;
+}
+.city.is-driving .walk-hint:not(.drive-hint),
+.city.is-driving .walk-look,
+.city.is-driving .walk-run,
+.city.is-driving .walk-jump,
+.city.is-driving .walk-fire,
+.city.is-driving .walk-aim,
+.city.is-driving .walk-reload,
+.city.is-driving .walk-swap,
+.city.is-driving .walk-crosshair,
+.city.is-driving .combat-hud {
+  display: none;
+}
+@media (pointer: fine) {
+  .city.is-driving .drive-hint {
+    display: block;
+  }
+}
+.city.is-driving .drive-hud {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  z-index: 4;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 8px 16px 9px;
+  border: 1px solid #0000;
+  border-radius: 999px;
+  background:
+    linear-gradient(#0b0a12e6, #0b0a12e6) padding-box,
+    var(--pulse) border-box;
+  color: #fff;
+  pointer-events: none;
+}
+.drive-hud b {
+  min-width: 2.2ch;
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 900;
+  line-height: 1;
+  text-align: right;
+}
+.drive-hud small {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.drive-gear {
+  margin-left: 4px;
+  padding: 2px 7px;
+  border: 1px solid #ffffff33;
+  border-radius: 5px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--p-cyan);
+}
+/* Touch screens: the stick (bigger) steers bottom-left; Gas and Brake are tall pedals side by
+   side bottom-right (Gas the taller, on the outside); Get out moves to the top right and the
+   speed to the top left, both out of the thumbs' way and off the road ahead. */
+@media (pointer: coarse) {
+  .city.is-driving .drive-hud {
+    top: calc(var(--head-h) + 10px);
+    right: auto;
+    bottom: auto;
+    left: max(12px, env(safe-area-inset-left));
+    padding: 6px 12px 7px;
+  }
+  .drive-hud b {
+    font-size: 24px;
+  }
+  .city.is-driving .walk-stick {
+    left: max(18px, calc(env(safe-area-inset-left) + 12px));
+    bottom: max(28px, calc(env(safe-area-inset-bottom) + 16px));
+    width: 136px;
+    height: 136px;
+  }
+  .city.is-driving .walk-stick span {
+    width: 58px;
+    height: 58px;
+  }
+  .city.is-driving .drive-pedal {
+    position: absolute;
+    bottom: max(28px, calc(env(safe-area-inset-bottom) + 16px));
+    z-index: 4;
+    display: grid;
+    place-items: center;
+    align-content: center;
+    gap: 4px;
+    width: 78px;
+    border: 1px solid #0000;
+    border-radius: 22px;
+    background:
+      linear-gradient(#0b0a12e6, #0b0a12e6) padding-box,
+      var(--pulse) border-box;
+    color: #fff;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    touch-action: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  .city.is-driving .drive-pedal::before {
+    font-size: 16px;
+    line-height: 1;
+  }
+  .city.is-driving .drive-gas {
+    right: max(16px, calc(env(safe-area-inset-right) + 10px));
+    height: 124px;
+    font-size: 12px;
+    box-shadow: 0 0 26px -6px #2bff88;
+  }
+  .city.is-driving .drive-gas::before {
+    content: "\25B2";
+    color: #2bff88;
+  }
+  .city.is-driving .drive-brake {
+    right: max(106px, calc(env(safe-area-inset-right) + 100px));
+    height: 92px;
+    font-size: 10px;
+    box-shadow: 0 0 26px -8px #ff2fb9;
+  }
+  .city.is-driving .drive-brake::before {
+    content: "\25BC";
+    color: #ff6ad5;
+  }
+  .drive-pedal:active {
+    transform: scale(0.95);
+  }
+  .city.is-driving .walk-prompt {
+    top: calc(var(--head-h) + 10px);
+    right: max(12px, env(safe-area-inset-right));
+    bottom: auto;
+    left: auto;
+    padding: 9px 14px;
+    transform: none;
+    animation: none;
+  }
+  .city.is-driving .walk-prompt kbd {
+    display: none;
+  }
+}
+/* Phones on their side: a little smaller and lower, so the road stays in view */
+@media (pointer: coarse) and (max-height: 500px) {
+  .city.is-driving .walk-stick {
+    bottom: max(16px, calc(env(safe-area-inset-bottom) + 10px));
+    width: 118px;
+    height: 118px;
+  }
+  .city.is-driving .drive-pedal {
+    bottom: max(16px, calc(env(safe-area-inset-bottom) + 10px));
+  }
+  .city.is-driving .drive-gas {
+    height: 104px;
+  }
+  .city.is-driving .drive-brake {
+    height: 80px;
+  }
+}
+/* Narrow phones: slimmer pedals and stick so nothing touches */
+@media (pointer: coarse) and (max-width: 360px) {
+  .city.is-driving .walk-stick {
+    left: 12px;
+    width: 120px;
+    height: 120px;
+  }
+  .city.is-driving .drive-pedal {
+    width: 70px;
+  }
+  .city.is-driving .drive-gas {
+    right: 12px;
+  }
+  .city.is-driving .drive-brake {
+    right: 92px;
+  }
+}
+
+/* All the way down the Long Shot's scope: a full-screen scope view */
+.combat-scope {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: none;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 50%, transparent 0 min(34vh, 34vw), #05050a calc(min(34vh, 34vw) + 2px));
+}
+.combat-scope::before,
+.combat-scope::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  background: #05050a;
+  transform: translate(-50%, -50%);
+}
+.combat-scope::before {
+  width: min(68vh, 68vw);
+  height: 2px;
+}
+.combat-scope::after {
+  width: 2px;
+  height: min(68vh, 68vw);
+}
+.combat-scope i {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ff3b5c;
+  box-shadow: 0 0 10px #ff3b5c;
+  transform: translate(-50%, -50%);
+}
+.city.is-scoped .combat-scope {
+  display: block;
+}
+
+/* Keeps a name like a plot id on one line */
+.nowrap {
+  white-space: nowrap;
+}
+
+/* ?fps: the performance readout (index.ts), for testing on real devices */
+.city-stats {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  z-index: 9;
+  margin: 0;
+  padding: 6px 9px;
+  border-radius: 6px;
+  background: #000000cc;
+  color: #2bff88;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.45;
+  white-space: pre;
+  pointer-events: none;
+}
+/* ?bench: the benchmark's results (bench.ts), top left under the header; scrolls sideways on narrow screens */
+.city-bench {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: calc(var(--head-h, 56px) + 12px);
+  z-index: 9;
+  max-width: max-content;
+  max-height: 60%;
+  overflow: auto;
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: #000000d9;
+  color: #2bff88;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.45;
+  user-select: text;
+}
+.city-bench pre {
+  margin: 0;
+  font: inherit;
+  white-space: pre;
+}
+.city-bench-copy {
+  margin-top: 8px;
+  padding: 6px 12px;
+  border: 1px solid #0000;
+  border-radius: 6px;
+  background:
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+.city-bench-copy[hidden] {
+  display: none;
+}

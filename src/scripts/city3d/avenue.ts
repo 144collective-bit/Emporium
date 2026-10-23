@@ -20,7 +20,7 @@
  * out of the rows' drawing and solids) and keeps their front strip. What's
  * solid is `AVENUE_SOLIDS` (in SOLIDS): the buildings, the club's rope.
  */
-import type { Footprint, Pt, Rect } from './downtown';
+import type { Footprint, Rect } from './downtown';
 import { AVENUE_LOTS, type AvenueId, type AvenueLots } from './projects';
 import { WALK_W } from './layout';
 
@@ -135,6 +135,3 @@ export const AVENUE_SOLIDS: Footprint[] = (() => {
     [p[0] - r, CLUB.rope.z - r, p[p.length - 1] + r, CLUB.rope.z + r, CLUB.rope.h],
   ];
 })();
-
-/** The spots a place's people take: the queue and the bouncer at the club (avenue3d.ts) */
-export const clubPeople = (): Pt[] => [...CLUB.queue.map((q): Pt => [q.x, q.z]), [CLUB.bouncer.x, CLUB.bouncer.z]];

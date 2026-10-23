@@ -71,6 +71,32 @@ clipped, buttons covering each other, and errors. Fixed:
 No page errors anywhere. Left as they are: an open bottom sheet covers the
 walk buttons under it (on purpose).
 
+## Fix phase 3 (done): the code clean-up
+
+So the speed work lands on clean code. Nothing in the city looks or plays
+differently: the tests pass at both world sizes, the built CSS has exactly the
+same rules, and the city builds the same meshes and geometry as before.
+
+- **Dead code out.** 15 exports nothing used (retired features' helpers:
+  the old kart network's `yawAt`, the club's `clubPeople`, id lists, a
+  street gap, ...), and about 65 unused imports and locals across 35 files.
+  `addSolids()` / `addSlabs()` and the kits' `drawBlock()` stay: they're
+  how the next district joins in.
+- **Dead styles out.** Rules for markup that no longer exists (the panels'
+  old lists and steps, the wallet's plot list, the 2D map's rebar and
+  second beacon, the fitting room's "free" tag, the kart hut's old course
+  grid and tag, the street races' warning note).
+- **Big files split.** `global.css` (5,600 lines) into `global.css` (the
+  site), `city.css`, `walk.css` and `economy.css`, imported in the same order;
+  `landmarks.ts` (2,400) into `landmarks.ts`, `emporium.ts`, `armoury.ts` and
+  `landmark-kit.ts` (the helpers they share).
+- **A type check in the build.** `npm run typecheck` (TypeScript, now a
+  declared dev dependency, with no unused locals allowed) runs in the "Build
+  site" Action before the tests: a type error or a leftover stops the zip.
+- **Docs.** Stale mentions fixed (a retired test district, a function that
+  no longer exists, the ring highway's neighbours, "real plot sales", the
+  Action's "play-money demo").
+
 ## What else can be done
 
 Grouped by what it buys. Effort is S (a day or less), M (a few days) or L (a
@@ -134,8 +160,7 @@ week or more); risk is how much could break or look different.
 
 ## Suggested order
 
-Fix phase 1 (done) → the bugs pass (fix phase 2) and the code clean-up
-(fix phase 3), as agreed → then performance phase 2: **1, 2, 4, 6, 11, 12**
+Fix phases 1, 2 and 3 and the trim (done) → performance phase 2: **1, 2, 4, 6, 11, 12**
 (quick wins and the guard rails) → performance phase 3: **5, 7, 8** (smoother
 frames) → performance phase 4: **9, 10, 3** (the foundations for a much
 bigger world), before Phase 10.

@@ -25,11 +25,13 @@ jobs:
           cache: npm
 
       - run: npm ci
+      # The types, and nothing declared that's never used: a type error stops the build too.
+      - run: npm run typecheck
       # The street plan, collisions, plots, driving and target practice rules (tests/).
       # A failing test stops the build, so a broken city never reaches the zip.
       - run: npm test
       # Multiplayer is paused: built without a game server, so the city runs on its
-      # own (solo walking and target practice, the builder as a play-money demo).
+      # own (the whole city game in this browser's save).
       # To bring it back, set PUBLIC_GAME_SERVER here (see server/README.md).
       - run: npm run build
 

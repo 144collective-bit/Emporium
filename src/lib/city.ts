@@ -1009,7 +1009,6 @@ function emporium(s: Spot, art: CityInput['art']) {
 /** Block (2,1): Drop 001, shutters down until the store opens. */
 function shop(s: Spot) {
   let b = prism(22.8, 12.4, 6.6, 4.4, 3.4, { c: '#9e2a36', z: Z0 });
-  const W = 6.6 * TL;
   let shutter = '';
   for (let y = 32; y < 82; y += 6) shutter += `<line x1="112" y1="${y}" x2="242" y2="${y}"/>`;
   b += g(

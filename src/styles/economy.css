@@ -1,0 +1,722 @@
+/* The economy (tycoon-ui.ts): Dorras, the business card, the market hall, units, contracts,
+   staff, the Vault; then the late header tweaks and the Fight Club's HUD hand-over.
+   Imported after walk.css (Base.astro). */
+
+/* ---------- The economy (tycoon-ui.ts): Dorras, your stall, the market hall ----------
+   The Dorras readout sits in the header's tools in the 3D city (not in Build mode or on the
+   2D map); it opens your stall's card, built on the gun store's panel. */
+.dorras-pill {
+  position: relative;
+  display: none;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 12px 0 9px;
+  border: 1px solid #0000;
+  border-radius: 999px;
+  background:
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.city[data-view="3d"]:not([data-mode="build"]) .dorras-pill {
+  display: inline-flex;
+}
+.dorras-pill svg {
+  flex: none;
+  color: var(--p-cyan);
+}
+.dorras-pill:hover {
+  background:
+    var(--pulse-wash) padding-box,
+    linear-gradient(#14102a, #14102a) padding-box,
+    var(--pulse) border-box;
+}
+.dorras-pill:focus-visible {
+  outline: 2px solid var(--p-cyan);
+  outline-offset: 2px;
+}
+.city.is-stall .dorras-pill {
+  background:
+    var(--pulse-wash) padding-box,
+    linear-gradient(#14102a, #14102a) padding-box,
+    var(--pulse) border-box;
+}
+/* Takings waiting in the till */
+.dorras-dot {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  display: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #2bff88;
+  box-shadow: 0 0 0 2px #0b0a12, 0 0 8px #2bff88;
+}
+.dorras-pill.has-till .dorras-dot {
+  display: block;
+}
+.dorra {
+  flex: none;
+  margin-right: 4px;
+  color: var(--p-cyan);
+  vertical-align: -2px;
+}
+
+/* Your stall's card: on the right under the header on wide screens (the city stays in view),
+   the gun store's bottom sheet on phones */
+.stall-card {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "head"
+    "tabs"
+    "body"
+    "foot";
+  gap: 10px;
+}
+/* Your business's tabs: Stall, Units, Workshop, Car */
+.biz-tabs {
+  grid-area: tabs;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.biz-tabs button {
+  justify-content: center;
+  padding: 7px 4px;
+}
+@media (min-width: 641px) {
+  .stall-card {
+    top: calc(var(--head-h) + 12px);
+    right: 16px;
+    left: auto;
+    width: min(420px, calc(100% - 32px));
+    transform: none;
+    animation-name: garage-in;
+  }
+}
+.stall-card .shop-score b {
+  font-size: 14px;
+}
+.stall-card .shop-score .dorra {
+  margin-right: 0;
+}
+.stall-body {
+  grid-area: body;
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+.stall-till {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid #ffffff1a;
+  border-radius: 10px;
+  background: #ffffff08;
+}
+.stall-till small {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.stall-till-amount {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1.1;
+  color: #fff;
+}
+.stall-till-amount .dorra {
+  width: 18px;
+  height: 18px;
+}
+.stall-collect {
+  margin: 0;
+  padding: 9px 16px;
+}
+.stall-status {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.5;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.stall-serving {
+  color: #2bff88;
+  font-weight: 700;
+}
+.stall-slots,
+.market-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.stall-slot,
+.market-row {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid #ffffff14;
+  border-radius: 10px;
+  background: #ffffff06;
+}
+.stall-slot-top,
+.market-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.stall-slot-top b,
+.market-top b {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 14px;
+  color: #fff;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.good-dot {
+  flex: none;
+  width: 11px;
+  height: 11px;
+  border: 1.5px solid #000;
+  border-radius: 50%;
+  background: var(--c);
+  box-shadow: 0 0 8px -1px var(--c);
+}
+.stall-qty {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--muted);
+}
+.stall-bar {
+  position: relative;
+  display: block;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: #ffffff14;
+}
+.stall-bar::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(var(--v) * 100%);
+  border-radius: 2px;
+  background: var(--pulse);
+}
+.stall-slot-row,
+.market-acts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 10px;
+}
+.stall-seg button,
+.market-btns button {
+  padding: 5px 9px;
+  font-size: 10px;
+}
+.stall-each {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-2);
+}
+.stall-each b {
+  margin-right: 4px;
+  color: #fff;
+}
+.stall-pace {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--muted);
+}
+.stall-clear {
+  padding: 3px 7px;
+  font-size: 9.5px;
+  cursor: pointer;
+}
+.stall-empty {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--text-2);
+}
+.stall-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.stall-actions .shop-take {
+  margin: 0;
+  padding: 9px 16px;
+}
+.stall-actions .chip-link {
+  cursor: pointer;
+}
+.stall-actions .chip-link:disabled,
+.market-btns button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.stall-max {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* The market hall, in the Emporium's panel */
+.market {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+.market-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.market-balance {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  color: #fff;
+}
+.market-price {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 900;
+  color: #fff;
+}
+.market-price .dorra {
+  width: 13px;
+  height: 13px;
+}
+.trend {
+  margin-left: 6px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-style: normal;
+  color: var(--muted);
+}
+.trend[data-t="1"] {
+  color: #2bff88;
+}
+.trend[data-t="-1"] {
+  color: #ff5a7a;
+}
+.market-acts small {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--muted);
+}
+.market-acts small b {
+  color: #fff;
+}
+.market-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.market-btns button {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #ffffff08;
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.market-btns button:not(:disabled):hover {
+  color: #fff;
+  border-color: #ffffff40;
+}
+.market-btns [data-buy] {
+  border-color: #0000;
+  background:
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
+  color: #fff;
+}
+.market .shop-note {
+  color: var(--p-cyan);
+}
+.market .city-panel-actions,
+.market .city-panel-fine {
+  margin: 0;
+}
+.market .chip-link {
+  cursor: pointer;
+}
+
+/* News from your stall: at the bottom in the city view; under the header while walking,
+   clear of the walk and drive controls */
+.econ-toast {
+  z-index: 8;
+  width: max-content;
+  border-radius: 14px;
+  text-align: center;
+}
+.city[data-mode="walk"] .econ-toast {
+  top: calc(var(--head-h) + 12px);
+  bottom: auto;
+  transform: translate(-50%, -12px);
+}
+
+/* The menu: the city's places (3D only), then under "More" the comic page and the merch store */
+.city-dir .dir-label {
+  margin: 4px 0 0;
+  padding: 8px 10px 2px;
+  border-top: 1px solid var(--line);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.city:not([data-view="3d"]) .city-dir .dir-places,
+.city:not([data-view="3d"]) .city-dir .dir-label {
+  display: none;
+}
+@media (max-width: 640px) {
+  .dorras-pill {
+    height: 32px;
+    padding: 0 9px 0 7px;
+    font-size: 11px;
+  }
+}
+/* The narrowest phones: tighter, so the mode title keeps its room */
+@media (max-width: 380px) {
+  .dorras-pill {
+    gap: 4px;
+    padding: 0 8px 0 6px;
+    letter-spacing: 0;
+  }
+}
+
+/* ---------- Your business, Phase 2: units, the Workshop, your car (tycoon-ui.ts) ---------- */
+.biz-units {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.biz-units button {
+  flex-direction: column;
+  gap: 1px;
+  padding: 6px 4px;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 1;
+}
+.biz-units small {
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.biz-units [aria-pressed="true"] small {
+  color: var(--p-cyan);
+}
+.biz-stock {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 4px 12px;
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid #ffffff14;
+  border-radius: 10px;
+  list-style: none;
+}
+.biz-stock li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 12.5px;
+}
+.biz-stock span:not(.good-dot) {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.biz-stock b {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: #fff;
+}
+.biz-label {
+  margin: 4px 0 0;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.biz-carhere {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid #2bff8855;
+  border-radius: 10px;
+  background: #2bff880d;
+  font-size: 12.5px;
+  color: #fff;
+}
+.biz-carhere .chip-link,
+.biz-build .chip-link,
+.biz-tabs + .stall-body .chip-link {
+  cursor: pointer;
+}
+.biz-build {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.biz-build li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid #ffffff14;
+  border-radius: 10px;
+  background: #ffffff06;
+}
+.biz-build li > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.biz-build b {
+  font-size: 14px;
+  color: #fff;
+}
+.biz-build small {
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: var(--text-2);
+}
+.biz-build .chip-link:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.biz-rebuild summary {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  cursor: pointer;
+}
+.biz-rebuild[open] summary {
+  margin-bottom: 6px;
+}
+.market-at {
+  display: grid;
+  gap: 5px;
+}
+.market-at small {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.market .biz-label {
+  margin: 2px 0 -2px;
+}
+
+/* ---------- Phase 3: the Signal tower's news, contracts, couriers, staff (tycoon-ui.ts) ---------- */
+.biz-news {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #ffffff14;
+  border-left: 3px solid var(--p-cyan);
+  border-radius: 10px;
+  background: #00eaff0a;
+  list-style: none;
+}
+.biz-news li {
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--text);
+}
+.biz-news li::before {
+  content: "›";
+  margin-right: 6px;
+  color: var(--p-cyan);
+}
+.market-btns [data-take],
+.market-btns [data-deliver],
+.market-btns [data-hire],
+.market-btns [data-send] {
+  border-color: #0000;
+  background:
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
+  color: #fff;
+}
+
+/* ---------- Phase 4: the Vault (tycoon-ui.ts) ---------- */
+.biz-worth,
+.biz-ledger ul,
+.biz-recent {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.biz-worth {
+  padding: 10px 12px;
+  border: 1px solid #ffffff14;
+  border-radius: 10px;
+  background: #ffffff06;
+}
+.biz-worth li,
+.biz-ledger li,
+.biz-recent li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+.biz-worth b,
+.biz-ledger b,
+.biz-recent b {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: #fff;
+  white-space: nowrap;
+}
+.biz-worth .is-total {
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid #ffffff1a;
+  color: #fff;
+}
+.biz-worth .is-total b {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 900;
+}
+.biz-ledger {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 6px 16px;
+}
+.biz-recent .is-in {
+  color: #2bff88;
+}
+.biz-recent .is-out {
+  color: #ff8aa8;
+}
+.biz-loans {
+  display: flex;
+  flex-wrap: wrap;
+}
+.market-btns [data-borrow],
+.market-btns [data-repay] {
+  border-color: #0000;
+  background:
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
+  color: #fff;
+}
+.biz-units {
+  row-gap: 4px;
+}
+
+/* ---------- The city's game (ui.ts LV()): a level tag on things that need a level ---------- */
+.lv-tag {
+  display: inline-block;
+  padding: 0.15em 0.5em;
+  border: 1px solid #ffffff2b;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--p-cyan);
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+/* ---------- In the ring (the Fight Club): the walk and combat HUD step aside; fight.css has the fight's own ---------- */
+.city.is-fighting .walk-hint,
+.city.is-fighting .walk-look,
+.city.is-fighting .walk-run,
+.city.is-fighting .walk-jump,
+.city.is-fighting .walk-fire,
+.city.is-fighting .walk-aim,
+.city.is-fighting .walk-reload,
+.city.is-fighting .walk-swap,
+.city.is-fighting .walk-crosshair,
+.city.is-fighting .combat-hud,
+.city.is-fighting .combat-cross,
+.city.is-fighting .drive-hint,
+.city.is-fighting .drive-hud,
+.city.is-fighting .city-pins,
+.city.is-fighting .mission-tracker {
+  display: none;
+}

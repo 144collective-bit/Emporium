@@ -58,6 +58,5 @@ export const BLEACHERS = { x0: 107.2, z0: 89 + D, x1: 108.8, z1: 96 + D };
 /** The neon FIGHT CLUB sign on its gantry over the yard's front */
 export const SIGN = { x: 102, z: 85.6 + D, h: 3.8, w: 6 };
 
-export const inLot = (x: number, z: number) => x >= FIGHT_CLUB.x0 && x <= FIGHT_CLUB.x1 && z >= FIGHT_CLUB.z0 && z <= FIGHT_CLUB.z1;
 /** Inside the ropes */
 export const inRing = (x: number, z: number) => Math.abs(x - RING.x) < RING_HALF - 0.1 && Math.abs(z - RING.z) < RING_HALF - 0.1;

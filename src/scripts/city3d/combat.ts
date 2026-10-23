@@ -930,7 +930,7 @@ export function createCombat(d: CombatDeps) {
       firstPerson = s.firstPerson;
       vm.update(camera, dt, t, { ...s, armed: me.armed, reload: me.reload > 0 ? 1 - me.reload / W().reload : 0 }, s.firstPerson);
       root.classList.toggle('is-ads', s.firstPerson && vm.aimed > 0.6);
-      // All the way down the Long Shot's scope: a full-screen scope view (global.css)
+      // All the way down the Long Shot's scope: a full-screen scope view (walk.css)
       root.classList.toggle('is-scoped', s.firstPerson && me.armed && gunSpec(me.weapon).sight.kind === 'scope' && vm.aimed > 0.92);
     },
     /**

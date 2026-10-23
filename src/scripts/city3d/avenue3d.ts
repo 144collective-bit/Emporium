@@ -23,7 +23,7 @@
  */
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { Batch, FONT_DISPLAY, PAL, canvasTex, fx, glowMat, lit, neon, toon } from './kit';
+import { Batch, FONT_DISPLAY, PAL, canvasTex, fx, glowMat, lit, toon } from './kit';
 import { ATLAS, INK, METAL, WOOD, cornice, dress, frameOf, glow, kit, roof, shell, soft, type Frame } from './infill';
 import { SLAB as S, addPool, type Tick } from './world';
 import { FLOOR, SHOP_H, type Infill, type Pt } from './downtown';

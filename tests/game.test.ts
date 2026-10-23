@@ -53,7 +53,6 @@ import {
   takedown,
   upgradePlace,
   worth,
-  type TycoonSave,
 } from '../src/scripts/city3d/tycoon';
 import { CARGO, DRIVE, PLAYER_CARS } from '../src/scripts/city3d/mycar';
 import { WEAPONS, WEAPON_IDS } from '../src/scripts/city3d/combat-sim';

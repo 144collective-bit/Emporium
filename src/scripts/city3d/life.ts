@@ -5,7 +5,7 @@
  */
 import * as THREE from 'three';
 import { FONT_DISPLAY, PAL, canvasTex, fx, glowTex, lit, mergeMeshes, neon, rand, toon } from './kit';
-import { CENTER, EW_ROADS, NS_ROADS, RIVER, SLAB, type Tick } from './world';
+import { CENTER, SLAB, type Tick } from './world';
 
 import { PLAN, distToStreet, outset, pointAt, streetLength } from './streetplan';
 import { DOWNTOWN, EXT, MARKET } from './layout';
@@ -537,7 +537,6 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
   let every = 0;
   const idlers = opts.light ? crowd.filter((c) => !busy(c) || every++ % 2 === 0) : crowd;
   for (const c of idlers) people.push({ kind: 'idle', seg: 0, inset: 0, u: 0, dir: 1, speed: 0, phase: rand() * 6, x: c.x, z: c.z, y: c.y, act: c.act, scale: c.scale, ry: c.ry, face: c.ry, walked: 0 });
-  const n = people.length;
   bodies.people = people;
 
   // Everyone is the shared Degen body in a city outfit: suits and hoodies, bags, headphones

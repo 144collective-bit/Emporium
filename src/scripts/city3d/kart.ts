@@ -41,7 +41,7 @@ import type { KartHud, KartRace, KartRaceDeps, KartResultView, KartStanding } fr
 import { COURSES, HUT_DOOR, type Course, type CourseId, type Cond } from './kartcircuit';
 import { F, along } from './kartpark';
 import { createKart, type Kart } from './karts';
-import { fx, glowMat, glowTex, mergeMeshes, toon } from './kit';
+import { fx, glowMat, glowTex } from './kit';
 import { KART_SPECS, PLAYER_KARTS, type KartId, type MyKart } from './mykart';
 import { CAR_PAINTS, paintHex, type PaintId } from './mycar';
 import { finishKartRace, kartStatsOf, parLap, recordKey, seriesRace, startSeries } from './tycoon';
@@ -303,9 +303,6 @@ export function createKartRace(d: KartRaceDeps): KartRace {
     yours: new THREE.MeshBasicMaterial({ color: GHOST_YOURS, transparent: true, opacity: 0.35, depthWrite: false, fog: false }),
     par: new THREE.MeshBasicMaterial({ color: GHOST_PAR, transparent: true, opacity: 0.35, depthWrite: false, fog: false }),
   };
-  const M = new THREE.Matrix4();
-  const Q = new THREE.Quaternion();
-  const V = new THREE.Vector3();
 
   /* ---------- The camera ---------- */
 
@@ -853,7 +850,6 @@ export function createKartRace(d: KartRaceDeps): KartRace {
       const s = sim;
       const events = s.step(dt, inp);
       for (const e of events) onEvent(e);
-      const t = performance.now() / 1000;
       const p = s.player;
       frameNo++;
       const lapT = s.time - lapStart;

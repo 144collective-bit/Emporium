@@ -657,7 +657,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     walk.enter(spawn);
     works.want(walk.position.x, walk.position.z, 70);
     mp?.walkChanged(true);
-    // The site header steps aside so the city and its mode header fill the screen (global.css)
+    // The site header steps aside so the city and its mode header fill the screen (city.css)
     document.body.classList.add('is-walking');
     walkBtn.setAttribute('aria-pressed', 'true');
     root.classList.add('has-moved');

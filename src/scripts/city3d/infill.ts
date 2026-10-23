@@ -1451,5 +1451,3 @@ export function infillBuilding(b: Batch, f: Infill, low: boolean) {
     IN_SITE = false;
   }
 }
-/** Phones leave out the finest details: kits3d.ts asks too */
-export const isLow = () => LOW;

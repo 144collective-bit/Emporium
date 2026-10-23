@@ -191,7 +191,6 @@ function roundPath(ways: Way[], r: number): Path {
     const d = Math.min(r * Math.tan(phi / 2), l1 / 2, l2 / 2);
     const rr = d / Math.tan(phi / 2);
     const A: Pt = [b[0] - u1[0] * d, b[1] - u1[1] * d];
-    const B: Pt = [b[0] + u2[0] * d, b[1] + u2[1] * d];
     const turn = Math.sign(u1[0] * u2[1] - u1[1] * u2[0]);
     // The centre is to the turn's side of the incoming run
     const cx = A[0] - u1[1] * turn * rr;

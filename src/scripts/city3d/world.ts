@@ -15,13 +15,12 @@
 import * as THREE from 'three';
 import { DISTRICTS } from '../../data/plots';
 import { Batch, PAL, canvasTex, facadeMat, flickerTogether, fx, glowMat, glowTex, lit, neon, rand, rng, sidesBox, toon } from './kit';
-import { BLOCKS, BS, CENTER_XZ, CITY_EXT, CORE_ROADS, DOWNTOWN, EW_ROADS, EXT, EXTRA_LOTS, LANE, MEDIAN, NS_ROADS, OUTER_HI, OUTER_LO, RIVER, SEATS, SOUTH_ROAD, WALK_W, type Road } from './layout';
+import { BLOCKS, BS, CENTER_XZ, CORE_ROADS, DOWNTOWN, EW_ROADS, EXT, LANE, MEDIAN, NS_ROADS, RIVER, SEATS, SOUTH_ROAD, WALK_W, type Road } from './layout';
 import { PLAN, offsetLine, pointAt, riverBridges, streetLength, type Pt, type Street } from './streetplan';
-import { HIGHWAY, HIGHWAY_HALF, fromHighway } from './highway';
+import { HIGHWAY, HIGHWAY_HALF } from './highway';
 import { DIAGONALS, DIAGONAL_LAMPS } from './downtown';
-import { BENDS, BEND_REACH, KERB_RUNS, OUTSIDE, PADS, PARKWAY, PROMENADE, SOUTHSIDE, inTown, offFootbridge } from './outer';
-import { KART_PARK, SLIP_ROAD } from './kartpark';
-import { RUNWAY, SITE } from './airfield';
+import { BENDS, BEND_REACH, KERB_RUNS, OUTSIDE, PADS, PROMENADE, offFootbridge } from './outer';
+import { SITE } from './airfield';
 import { TILE, tileKey, tileOf, tilesIn } from './tiles';
 import { outskirtsTrees } from './outskirts';
 import { SKYLINE } from './bounds';
@@ -188,8 +187,6 @@ export function insetPoly(poly: Pt[], d: number): Pt[] {
     return [p[0] + m[0] * k, p[1] + m[1] * k] as Pt;
   });
 }
-const PARKWAY_TOP = Math.min(...PARKWAY.map((p) => p[1]));
-const SOUTHSIDE_BOTTOM = Math.max(...SOUTHSIDE.map((p) => p[1]));
 const isRect = (poly: Pt[]) => poly.length === 4 && poly.every((p, i) => { const q = poly[(i + 1) % 4]; return p[0] === q[0] || p[1] === q[1]; });
 
 /** Water: deep colour with drifting highlights and, at night, neon streaks. */

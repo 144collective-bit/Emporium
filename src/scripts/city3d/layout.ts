@@ -31,7 +31,6 @@ export const LANE = 1.7;
 export const WALK_W = 0.8;
 /** Raised strip down the middle of an avenue */
 export const MEDIAN = 0.6;
-export const STREET_GAP = 5;
 export const AVENUE_GAP = 9;
 
 export interface Road {
