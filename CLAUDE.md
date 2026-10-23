@@ -419,7 +419,7 @@ it and has been retired completely. Build only on what's here.
     (CLUCK HOUSE, GLOSS NAILS, HERO DELI, CELL FIX added to `SIGNS`)) laid
     shoulder to shoulder along the yards' street fronts wherever there's
     room (`WALL_DEPTH`): broken at every way in, `BACK_CLEAR` from the
-    towers, never in front of a mural, drawn four to a site through
+    towers, never in front of a mural, drawn two to a site through
     `drawLot()`; two vacant lots in the walls (`VACANT`: dirt, rubble,
     weeds, chain-link front and back (`vacantFences()`), a billboard with
     made-up copy, tags on the neighbours' side walls); low commercial

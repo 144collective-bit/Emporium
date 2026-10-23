@@ -3,7 +3,7 @@
  * streetwall.ts), all as sites:
  *
  * - **The tenements**: the kits' shops (kits3d.ts `drawLot()`, infill.ts),
- *   four to a site, in brick with a fire escape up the front (phones leave
+ *   two to a site, in brick with a fire escape up the front (phones leave
  *   the fire escapes out, like downtown's).
  * - **The vacant lots**: bare dirt with rubble and weeds, chain-link along
  *   the street and the back, a billboard on posts (made-up copy), tags on
@@ -312,14 +312,14 @@ function vacantDraw(b: Batch, fxb: Batch, v: Vacant, i: number, low: boolean) {
 
 export function buildStreetWalls(scene: THREE.Scene, crowd: Idle[], opts: { low: boolean }) {
   const low = opts.low;
-  // The tenements, four to a site, block by block
+  // The tenements, two to a site (none takes long to build), block by block
   const byBlock = new Map<string, typeof TENEMENTS>();
   for (const t of TENEMENTS) byBlock.set(t.block, [...(byBlock.get(t.block) ?? []), t]);
   for (const [id, lots] of byBlock)
-    for (let n = 0; n < lots.length; n += 4) {
-      const mine = lots.slice(n, n + 4);
+    for (let n = 0; n < lots.length; n += 2) {
+      const mine = lots.slice(n, n + 2);
       const rect: Rect = [Math.min(...mine.map((o) => o.box[0])), Math.min(...mine.map((o) => o.box[1])), Math.max(...mine.map((o) => o.box[2])), Math.max(...mine.map((o) => o.box[3]))];
-      site(`trench tenements ${id} ${n / 4}`, rect, (into) => {
+      site(`trench tenements ${id} ${n / 2}`, rect, (into) => {
         const b = new Batch();
         for (const o of mine) drawLot(b, o, low);
         b.build(into);
