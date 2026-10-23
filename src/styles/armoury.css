@@ -233,7 +233,13 @@
   }
   .armoury .shop-head {
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 4px 8px;
+  }
+  /* (the title and its × on the first row, Dorras and the score always on the second) */
+  .armoury .shop-head::before {
+    content: '';
+    flex-basis: 100%;
+    order: 2;
   }
   .armoury .shop-dorras {
     order: 3;
@@ -244,7 +250,7 @@
     order: 4;
   }
   .armoury .shop-close {
-    order: 2;
+    order: 1;
     margin-left: auto;
   }
   .armoury .shop-list {
