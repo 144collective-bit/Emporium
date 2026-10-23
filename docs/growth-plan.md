@@ -1173,11 +1173,16 @@ the el; lighter on phones). Three steps, each its own PR:
   The Trenches view 140 draws (119), 0.25M triangles (0.21M), geometry
   75 MB (72), textures 122 MB (113: the yard, tag and bill atlases); every
   site under about 60 ms on the slow test machine.
-- **Step 2, built up** (next): tenement street walls (4-6 storeys, fire
-  escapes, shops below) along the street fronts with the towers behind,
-  gritty low commercial along Bottom Street and the highway side (auto
-  shops, a tyre place, a scrap yard, warehouses, a car wash), two vacant
-  lots.
+- **Step 2, built up** (built, `streetwall.ts` / `streetwall3d.ts`): 64
+  tenements (4-6 storeys, fire escapes, shops below, brick) along the
+  yards' street fronts wherever there's room, the towers behind, broken at
+  every way in and never in front of a mural; two vacant lots in the walls;
+  lock-ups along Bottom Street; a new strip block between West Street and
+  the highway (row W) with warehouses, an auto shop, a tyre place, a car
+  wash, a scrap yard, a body shop and lock-ups; the yards' chain-link only
+  where nothing's built. Each tenement site two buildings (under about
+  60 ms on the slow test machine). The phone numbers are measured with
+  step 3's.
 - **Step 3, three places on Trench Avenue under the el**: Club PULSE (a
   big corner nightclub, neon, a marquee, a queue at a velvet rope with a
   bouncer; tasteful, non-explicit; coming soon), The Rusty Nail (a dive
