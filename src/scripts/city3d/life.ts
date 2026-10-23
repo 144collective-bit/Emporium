@@ -9,7 +9,8 @@ import { CENTER, SLAB, type Tick } from './world';
 
 import { PLAN, distToStreet, outset, pointAt, streetLength } from './streetplan';
 import { DOWNTOWN, EXT, MARKET } from './layout';
-import { BOAT_LANES, DECK_STROLLS, DECK_Y } from './liberty';
+import { DECK_STROLLS, DECK_Y } from './liberty';
+import { BOAT_EAST, DECK_Y as BOARDWALK_Y, STROLL, boatZ } from './waterfront';
 import { JUNCTIONS, ROUTES, SPOTS, lightState, phaseOf, pointOn, rightOf, type Junction, type Phase, type Pt, type Route } from './routes';
 import { CARS, PAINTS, carGeometry, carMaterials, theFarCars, type CarId } from './cars';
 import { isNear, tileKey, tileOf } from './tiles';
@@ -485,6 +486,8 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
   // ...and round The Trenches' blocks nearest The Block, with walkers of their own (so downtown keeps its crowd)
   const town = walks.length;
   walks.push(...PLAN.blocks.filter((b) => TRENCH_WALKS.includes(b.id)).map((b) => ({ poly: b.poly })));
+  // ...and up and down the waterfront's boardwalk
+  walks.push({ poly: STROLL, y: BOARDWALK_Y });
   const walkers = Math.round((opts.walkers * walks.length) / town);
   const blocks = walks.map((w) => w.poly);
   const loops = new Map<string, Loop>();
@@ -584,15 +587,15 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
    ====================================================================== */
 
 function buildBoats(scene: THREE.Scene, tick: (f: Tick) => void) {
-  const boats: { g: THREE.Group; x: number; z: number; v: number; ph: number }[] = [];
+  const boats: { g: THREE.Group; x: number; lane: number; v: number; ph: number }[] = [];
   const wakeMat = new THREE.MeshBasicMaterial({ color: '#cfefff', transparent: true, opacity: 0.35, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, map: glowTex });
   const specs: [string, number, number][] = [
     // Spread across the river, each down the middle of one of Liberty Bridge's arches (liberty.ts)
-    ['#f3f2f7', BOAT_LANES[0], 1.1],
-    ['#e23b3b', BOAT_LANES[2], -0.8],
-    ['#ffd23f', BOAT_LANES[1], 0.6],
+    ['#f3f2f7', 0, 1.1],
+    ['#e23b3b', 2, -0.8],
+    ['#ffd23f', 1, 0.6],
   ];
-  specs.forEach(([color, z, v], i) => {
+  specs.forEach(([color, lane, v], i) => {
     const g = new THREE.Group();
     const hull = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.28, 0.6), toon(color));
     hull.position.y = 0.1;
@@ -608,21 +611,26 @@ function buildBoats(scene: THREE.Scene, tick: (f: Tick) => void) {
     wake.position.set(-1.4, 0.03, 0);
     // The hull, bow and cabin are one mesh
     g.add(mergeMeshes([hull, bow, cabin], { cast: true, receive: true }), fx(lamp), fx(wake));
-    if (v < 0) g.rotation.y = Math.PI;
     scene.add(g);
-    boats.push({ g, x: CENTER.x + (i - 1) * 25, z, v, ph: rand() * 6 });
+    boats.push({ g, x: CENTER.x + (i - 1) * 25, lane, v, ph: rand() * 6 });
   });
   tick(({ t, dt }) => {
     for (const b of boats) {
       b.x += b.v * dt;
       // The whole river, but only round you: a boat drifting off one way comes back round from the other
       const f = CROWD_VIEW.on ? CROWD_VIEW.focus.x : CENTER.x;
-      const lo = Math.max(EXT[0] + 6, f - BOAT_R);
+      // (the south lane's boat keeps east of The Trenches' boardwalk: waterfront.ts)
+      const lo = Math.max(EXT[0] + 6, f - BOAT_R, b.lane === 2 ? BOAT_EAST : -Infinity);
       const hi = Math.min(EXT[1] - 6, f + BOAT_R);
+      b.g.visible = hi - lo > 30;
+      if (!b.g.visible) continue;
       if (b.x > hi) b.x = lo + ((b.x - hi) % (hi - lo));
       if (b.x < lo) b.x = hi - ((lo - b.x) % (hi - lo));
-      b.g.position.set(b.x, 0.02 + Math.sin(t * 1.6 + b.ph) * 0.03, b.z);
-      b.g.rotation.z = Math.sin(t * 1.2 + b.ph) * 0.03;
+      // ...and the middle lane's swings round Pier 7's head, turning into the swing
+      const z = boatZ(b.lane, b.x);
+      const slope = (boatZ(b.lane, b.x + 0.5) - boatZ(b.lane, b.x - 0.5)) * Math.sign(b.v);
+      b.g.position.set(b.x, 0.02 + Math.sin(t * 1.6 + b.ph) * 0.03, z);
+      b.g.rotation.set(0, (b.v < 0 ? Math.PI : 0) - Math.atan(slope), Math.sin(t * 1.2 + b.ph) * 0.03);
     }
   });
 }

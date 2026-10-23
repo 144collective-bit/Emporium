@@ -47,6 +47,8 @@ export interface Spot {
   /** Where the pin floats */
   pin: THREE.Vector3;
   ring: THREE.Mesh;
+  /** The way it faces, if not south (+z) like the landmarks: the fly-in comes from that side (the riverside's face north) */
+  faces?: 'n';
 }
 
 export interface Idle {
