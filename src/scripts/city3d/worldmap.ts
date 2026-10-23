@@ -13,7 +13,7 @@
  */
 import { EXT, RIVER } from './layout';
 import { PLAN, type Pt } from './streetplan';
-import { PLACES, type Place } from './places';
+import { PLACES, placeName, type Place } from './places';
 import { PATHS, WESTLAKE_BLOCKS, lakeLine } from './westlake';
 import { TRACKS } from './metro';
 import { RUNWAY, SITE } from './airfield';
@@ -22,6 +22,7 @@ import { KART_PARK } from './kartpark';
 import { BX, WALKWAY } from './liberty';
 import { DECKS } from './waterfront';
 import { HIGHWAY_BOX } from './highway';
+import { STADIUM_AREA } from './stadium';
 
 export interface WorldMapDeps {
   /** Where you are and which way you face (walking), else where the camera looks */
@@ -68,12 +69,6 @@ const C = {
   boardwalk: '#7a6250',
 };
 
-/** A place's name and a line under it: the copy on its pin (CityMap.astro's directory), or its own */
-export function placeName(root: HTMLElement, p: Place) {
-  if (p.name) return { name: p.name, sub: p.kind === 'metro' ? 'Metro' : '' };
-  const a = root.querySelector(`[data-dir-spot="${p.spot}"]`);
-  return { name: a?.querySelector('span')?.textContent?.trim() ?? p.id, sub: a?.querySelector('small')?.textContent?.trim() ?? '' };
-}
 
 export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
   const el = root.querySelector<HTMLElement>('[data-worldmap]')!;
@@ -95,9 +90,10 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
 
   const toScreen = (x: number, z: number): Pt => [(x - view.x) * view.s + w / 2, (z - view.z) * view.s + h / 2];
   const toWorld = (sx: number, sy: number): Pt => [(sx - w / 2) / view.s + view.x, (sy - h / 2) / view.s + view.z];
-  /** Fit the city (the highway and all inside it) on screen */
+  /** Fit the city (the highway and all inside it, and the stadium north of it) on screen */
   const fit = () => {
-    const [x0, z0, x1, z1] = HIGHWAY_BOX;
+    const [x0, , x1, z1] = HIGHWAY_BOX;
+    const z0 = Math.min(HIGHWAY_BOX[1], STADIUM_AREA[1]);
     view.s = Math.min(w / (x1 - x0 + 40), h / (z1 - z0 + 40));
     view.x = (x0 + x1) / 2;
     view.z = (z0 + z1) / 2;

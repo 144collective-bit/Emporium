@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { HIGHWAY, HIGHWAY_BOX, HIGHWAY_HALF, fromHighway, insideHighway } from '../src/scripts/city3d/highway';
-import { PLAN, distToStreet, riverBridges, streetLength } from '../src/scripts/city3d/streetplan';
+import { OUTER_SLIPS, PLAN, distToStreet, riverBridges, streetLength } from '../src/scripts/city3d/streetplan';
 import { EW_ROADS, NS_ROADS, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
 import { PARKWAY, SOUTHSIDE } from '../src/scripts/city3d/outer';
 import { KART_PARK } from '../src/scripts/city3d/kartpark';
@@ -38,18 +38,19 @@ test('well outside the town, the kart park and the airport', () => {
     assert.ok(clear(x, z, 15), `${x}, ${z}`);
 });
 
-test('a lit junction wherever it meets an arterial, two slip lanes on the town side of each', () => {
+test('a lit junction wherever it meets an arterial, two slip lanes on the town side of each (four where the road past it carries traffic)', () => {
   const meets = PLAN.crossings.filter((c) => c.streets.includes('highway'));
   assert.equal(meets.length, (NS_ROADS.length + EW_ROADS.length) * 2);
   for (const c of meets) {
     assert.ok(c.lights);
     assert.ok(fromHighway(c.at[0], c.at[1]) < 1e-6);
     const slips = PLAN.streets.filter((s) => s.id.startsWith(`slip-${c.id}-`));
-    assert.equal(slips.length, 2, c.id);
+    const outer = OUTER_SLIPS.includes(c.id);
+    assert.equal(slips.length, outer ? 4 : 2, c.id);
     for (const s of slips) {
       assert.equal(s.oneway, 1);
-      // From the one road's outer lane to the other's, out across the corner, on the town side
-      for (const p of s.pts) assert.ok(insideHighway(p[0], p[1]) || fromHighway(p[0], p[1]) < HIGHWAY_HALF);
+      // From the one road's outer lane to the other's, out across the corner, on the town side (or either side)
+      if (!outer) for (const p of s.pts) assert.ok(insideHighway(p[0], p[1]) || fromHighway(p[0], p[1]) < HIGHWAY_HALF);
       const mid = s.pts[3];
       assert.ok(fromHighway(mid[0], mid[1]) > HIGHWAY_HALF, `${s.id} cuts across the corner, off the highway`);
       const art = PLAN.streets.find((t) => t.id === c.streets[0])!;

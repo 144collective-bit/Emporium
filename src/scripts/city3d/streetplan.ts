@@ -22,6 +22,7 @@ import { BX, TOWERS } from './liberty';
 import { HIGHWAY, HIGHWAY_HALF, insideHighway, outerLane, slipCurve } from './highway';
 import { TRENCH_BLOCKS, TRENCH_CROSSINGS, TRENCH_STREETS } from './trenches';
 import { WESTLAKE_BLOCKS } from './westlake';
+import { BLOCK as STADIUM_BLOCK, STADIUM_CROSSINGS, STADIUM_STREETS } from './stadium';
 
 export type Pt = [number, number];
 
@@ -324,6 +325,9 @@ function crossingsOf(pts: Pt[], axis: 0 | 1, c: number): Pt[] {
  * the Southside Loop, the landscaped blocks round the plots and lots, their
  * squares and pocket parks.
  */
+/** The highway's junctions whose outer corners get slip lanes too: where an arterial past it carries traffic (the north road to the stadium) */
+export const OUTER_SLIPS = ['highway-ns0-1'];
+
 export function cityPlan(): StreetPlan {
   const streets = gridStreets();
   const crossings = gridCrossings();
@@ -347,8 +351,12 @@ export function cityPlan(): StreetPlan {
     { id: 'airport-loop-w', at: [ROAD.loopX, ROAD.z], streets: ['airport-road', 'airport-loop'], lights: false },
     { id: 'airport-loop-e', at: [ROAD.x1, ROAD.z], streets: ['airport-road', 'airport-loop'], lights: false }
   );
+  // Stadium Road off the north road past the highway, and the one-way loop round the stadium's car park (stadium.ts)
+  for (const t of STADIUM_STREETS) streets.push({ id: t.id, kind: 'street', pts: t.pts, half: t.half, lanes: 1, ...(t.oneway ? { oneway: t.oneway } : {}) });
+  for (const c of STADIUM_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: false });
   // The ring highway (highway.ts): a lit junction wherever it meets a straight arterial, and on the town
-  // side of each, slip lanes for the right turns on and off it
+  // side of each, slip lanes for the right turns on and off it (and on the outside too where an arterial past
+  // it carries traffic: the north road to the stadium, `OUTER_SLIPS`)
   streets.push({ id: 'highway', kind: 'highway', pts: HIGHWAY, half: HIGHWAY_HALF, lanes: 2, loop: true });
   const meets: { id: string; at: Pt; road: Road; along: 0 | 1 }[] = [];
   NS_ROADS.forEach((r, i) => crossingsOf(HIGHWAY, 0, r.c).forEach((at, k) => meets.push({ id: `highway-ns${i}-${k}`, at, road: r, along: 1 })));
@@ -367,7 +375,7 @@ export function cityPlan(): StreetPlan {
     turns.forEach(([uA, offA, offB], k) => {
       const pts = slipCurve(m.at, uA, offA, [-uA[1], uA[0]], offB);
       // Only on the town side: the arterials past the highway carry no traffic yet
-      if (insideHighway(...pts[3])) streets.push({ id: `slip-${m.id}-${k}`, kind: 'slip', pts, half: 1.2, lanes: 1, oneway: 1 });
+      if (insideHighway(...pts[3]) || OUTER_SLIPS.includes(m.id)) streets.push({ id: `slip-${m.id}-${k}`, kind: 'slip', pts, half: 1.2, lanes: 1, oneway: 1 });
     });
   }
   // The Trenches (trenches.ts, growth plan Phase 9): Trench Avenue, its cross streets and Bottom Street, south-west of town
@@ -408,6 +416,8 @@ export function cityPlan(): StreetPlan {
     ...TRENCH_BLOCKS.map((b): Block => ({ id: b.id, poly: b.poly, use: 'plain', ref: 'trenches', walk: WALK_W })),
     // Westlake Park's blocks (westlake.ts, growth plan Phase 9b): the big one and the strips, west of town
     ...WESTLAKE_BLOCKS.map((b): Block => ({ id: b.id, poly: b.poly, use: 'park', ref: 'westlake', walk: WALK_W })),
+    // The stadium's block north of the highway (stadium.ts, the north side's stage 1)
+    { id: 'stadium', poly: square(STADIUM_BLOCK[0], STADIUM_BLOCK[1], STADIUM_BLOCK[2] - STADIUM_BLOCK[0], STADIUM_BLOCK[3] - STADIUM_BLOCK[1]), use: 'plain', ref: 'stadium', walk: WALK_W },
     // The bends' outer sidewalks (their own outline is the sidewalk)
     ...BEND_KERBS.map((poly, i): Block => ({ id: `kerb-${i}`, poly, use: 'plain', walk: 0 })),
   ];

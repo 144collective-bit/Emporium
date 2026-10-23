@@ -11,7 +11,7 @@ import { CENTER, addLamp, addTree, buildGround, buildLamps, buildSkyline, buildT
 import { PARK_LAMPS, PARK_TREES, WESTLAKE_RECT } from './westlake';
 import { createDistricts } from './districts';
 import { buildStadium } from './stadium3d';
-import { STADIUM_SPAWN } from './stadium';
+import { STADIUM_LAMPS, STADIUM_RECTS, STADIUM_SPAWN } from './stadium';
 import { buildLandmarks, type Spot } from './landmarks';
 import { buildInfill } from './infill';
 import { buildNeighbourhoods } from './neighbourhoods';
@@ -30,7 +30,7 @@ import { createPlotStore } from './store';
 import type { Account } from './account';
 import type { AccountHooks, AccountUI } from './account-ui';
 import { createBuilderUI } from './builder-ui';
-import { createFitting, type Fitting } from './fitting';
+import type { Fitting } from './fitting';
 import { createCityHead } from './head';
 import { buildMarket } from './market';
 import { createTycoonUI, type TycoonUI } from './tycoon-ui';
@@ -44,7 +44,7 @@ import { createTaxis } from './taxi';
 import { buildMetro } from './metro3d';
 import { createMetroUI, type MetroUI } from './metro-ui';
 import { PLACES } from './places';
-import { placeName } from './worldmap';
+import { placeName } from './places';
 import { buildKartPark } from './kartpark3d';
 import { KART_SPAWN } from './kartpark';
 import { AIR_SPAWN } from './airfield';
@@ -72,7 +72,7 @@ import { guideAt } from './guide';
 import { CARS, initFarCars } from './cars';
 import { CROWD_VIEW } from './character';
 import type { GameDeps } from './ui';
-import { createBench } from './bench';
+import type { Bench } from './bench';
 import { mb, sceneMemory } from './perf';
 import { tileBatch } from './tilebatch';
 import { createTileWork } from './tilework';
@@ -234,6 +234,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   keepTreesOff(WESTLAKE_RECT);
   PARK_TREES.forEach((t, i) => !(tier === 'low' && t.clump && i % 2) && addTree(t.x, t.z, t.s, t.pine));
   for (const [x, z, ry] of PARK_LAMPS) addLamp(x, z, ry);
+  // ...and the stadium's, north of the highway (stadium.ts): no trees on its block, its road and car park or under its footbridge
+  for (const r of STADIUM_RECTS) keepTreesOff(r);
+  for (const [x, z, ry, y] of STADIUM_LAMPS) addLamp(x, z, ry, y);
   progress(0.55);
   await waited(nextFrame());
   // (phones keep half of them: the trim)
@@ -424,8 +427,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const panelBody = panel.querySelector<HTMLElement>('[data-panel-body]')!;
   const panelClose = panel.querySelector<HTMLButtonElement>('[data-panel-close]')!;
   let lastFocus: HTMLElement | null = null;
-  // Drop 001's panel has the fitting room (made once the profile exists, further down)
+  // Drop 001's panel has the fitting room (loaded when it first opens, once the profile exists, further down)
   let fitting: Fitting | null = null;
+  let loadFitting: () => Promise<Fitting> = () => new Promise(() => {});
   // The Emporium's panel has the market hall (the economy is made further down)
   let tycoon: TycoonUI | null = null;
 
@@ -442,7 +446,11 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     panelBody.replaceChildren(tpl.content.cloneNode(true));
     // One card at a time: a panel closes your stall's card
     tycoon?.closeCard();
-    if (id === 'shop') fitting?.mount(panelBody, toFitting);
+    // (the fitting room is a chunk of its own, loaded the first time Drop 001's panel opens)
+    if (id === 'shop')
+      void loadFitting().then((f) => {
+        if (active === s) f.mount(panelBody, toFitting);
+      });
     else fitting?.unmount();
     // The economy's panels: the market hall, the Workshop, contracts, couriers, staff
     tycoon?.mountPanel(id, panelBody);
@@ -686,14 +694,18 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     reduced,
     low: tier === 'low',
   });
-  fitting = createFitting({
-    look: () => profileUI.look,
-    apply: (l) => profileUI.wear(l),
-    onChange: (fn) => profileUI.onChange(fn),
-    game,
-    reduced,
-    low: tier === 'low',
-  });
+  let fittingLoad: Promise<Fitting> | null = null;
+  loadFitting = () =>
+    (fittingLoad ??= import('./fitting').then(({ createFitting }) =>
+      (fitting = createFitting({
+        look: () => profileUI.look,
+        apply: (l) => profileUI.wear(l),
+        onChange: (fn) => profileUI.onChange(fn),
+        game,
+        reduced,
+        low: tier === 'low',
+      }))
+    ));
   const mp =
     server && onlineSwitch && net
       ? net[0].createMultiplayer({
@@ -974,8 +986,13 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // (frames a second, the slowest frame, draw calls and triangles per frame, the
   // shadow map's share, memory, how long the boot took). ?bench runs the benchmark (bench.ts)
   const query = new URLSearchParams(location.search);
-  const bench = query.has('bench') ? createBench({ host, scene, tier, pixelRatio: () => renderer.getPixelRatio(), home, conditions: benchSky, boot: bootTimes, extra: [] }, query.get('bench') === 'night') : null;
-  const statsEl = query.has('fps') || bench ? document.createElement('pre') : null;
+  // (the benchmark is a chunk of its own, loaded only when asked for; it starts once every site is built)
+  let bench: Bench | null = null;
+  if (query.has('bench'))
+    void import('./bench').then(({ createBench }) => {
+      bench = createBench({ host, scene, tier, pixelRatio: () => renderer.getPixelRatio(), home, conditions: benchSky, boot: bootTimes, extra: [] }, query.get('bench') === 'night');
+    });
+  const statsEl = query.has('fps') || query.has('bench') ? document.createElement('pre') : null;
   const stat = { frames: 0, draws: 0, tris: 0, shadowDraws: 0, shadowTris: 0, worst: 0, last: 0, since: performance.now(), memAt: 0, mem: '' };
   function bootTimes() {
     const r = (a: number, b: number) => Math.round(b - a);

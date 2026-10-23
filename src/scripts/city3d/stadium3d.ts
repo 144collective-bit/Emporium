@@ -14,8 +14,13 @@
  * - Four floodlight masts outside the corners, their lamps aimed at the
  *   pitch (lit at night, their light pooled on the pitch), and the big
  *   screen on the north side's roof.
- * - A paved apron round it all, the forecourt in front; the car park's cars
- *   (its surface is the park's, westlake3d.ts).
+ * - A paved apron round it all, the forecourt in front.
+ * - Since the north side's stage 1 (docs/north-plan.md) it stands north of
+ *   the ring highway: Stadium Road off the north road, the car park inside
+ *   its one-way loop (asphalt, bays, arrows, a P sign, the parked cars) and
+ *   the footbridge from the Mall over the highway (stairs, deck, parapets
+ *   with a cyan line, lamps, piers), sites in a chunk of their own loaded
+ *   as you approach (stadiumgrounds3d.ts).
  *
  * The signs are one small atlas of fixed made-up copy. Nothing here is
  * solid (`STADIUM_SOLIDS` is).
@@ -255,8 +260,10 @@ export function buildStadium(scene: THREE.Scene, opts: { low: boolean }): { spot
   // The floodlights' light on the pitch at night: pools over it, drawn with the street lamps' (world.ts)
   for (const sx of [-1, 0, 1]) for (const sz of [-1, 1]) addPool(CENTRE[0] + sx * 10, CENTRE[1] + sz * 4.8, 13, S + 0.03);
 
-  // The car park's cars (its surface is the park's: westlake3d.ts)
-  parkedCars(scene, S, PARKED as [CarId, number, number, number, string][]);
+  // The car park's cars, on its asphalt (the grounds, roads, car park and footbridge, are a chunk loaded as you
+  // approach: stadiumgrounds3d.ts, districts.ts)
+  parkedCars(scene, 0.04, PARKED as [CarId, number, number, number, string][]);
 
   return { spot: { id: 'stadium', group, focus: V(CENTRE[0], 4, CENTRE[1]), size: 62, pin: V(CENTRE[0], S + ROOF.y1 + 3.6, CENTRE[1]), ring: ringMesh } };
 }
+
