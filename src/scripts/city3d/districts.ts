@@ -21,6 +21,7 @@ import type { Rect } from './tiles';
 import type { Tick } from './world';
 import { WESTLAKE_RECT } from './westlake';
 import { STADIUM_AREA } from './stadium';
+import { KART_AREA } from './kartfacility';
 
 export interface LazyDistrict {
   id: string;
@@ -33,6 +34,8 @@ const union = (a: Rect, b: Rect): Rect => [Math.min(a[0], b[0]), Math.min(a[1], 
 export const LAZY_DISTRICTS: LazyDistrict[] = [
   // (with the stadium's grounds north of the highway beside it: its road, car park and footbridge, stadiumgrounds3d.ts)
   { id: 'westlake', rect: union(WESTLAKE_RECT, STADIUM_AREA), load: () => import('./westlake3d') },
+  // The kart park's grounds north of the highway: the circuit, trackside, the paddock, Kart Road and the car park (kartgrounds3d.ts)
+  { id: 'karts', rect: KART_AREA, load: () => import('./kartgrounds3d') },
 ];
 
 

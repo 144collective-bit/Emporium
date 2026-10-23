@@ -48,16 +48,15 @@ import { createDrive } from './drive';
 import { createFly } from './fly';
 import { createHangarUI, loadPlane } from './hangar-ui';
 import { HANGAR_DOOR, HANGAR_SPOT, type AircraftKind, type Pose } from './airfield';
-import { createKartUI } from './kart-ui';
-import { createKartRace } from './kart';
 import { HUT_DOOR, circuitSurfaceAt as trackSurfaceAt } from './kartcircuit';
 import { KART_PARK } from './kartpark';
+import { bankY } from './kartfacility';
 import type { RaceStart } from './kart-types';
 import type { Cond } from './kartcircuit';
 import { createFightUI } from './fight-ui';
 import { TRAINER } from './fightsite';
 import type { Fight, FightClub, FightInput } from './fight-types';
-import type { KartPark } from './kart-types';
+import type { KartPark, KartRace, KartUI } from './kart-types';
 import { CUPS } from './kart-sim';
 import type { KartInput } from './kart-sim';
 import { abandonSeries, seriesNext } from './tycoon';
@@ -303,7 +302,7 @@ export function createWalk(d: WalkDeps) {
     else if (near.id === 'garage') garageUI.show();
     else if (near.id === 'hangar') hangarUI.show();
     else if (near.id === 'plane') (fly.active ? leavePlane() : board());
-    else if (near.id === 'karts') kartUI.show();
+    else if (near.id === 'karts') void loadKarts().then(() => kartUI.show());
     else if (near.id === 'trainer') fightUI.show();
     else if (near.id === 'car') (drive.active ? getOut() : getIn());
     else if (near.id.startsWith('place:')) {
@@ -323,7 +322,8 @@ export function createWalk(d: WalkDeps) {
     const base = Math.max(slab, footbridgeY(x, z, yNow) ?? 0, bridgeY(x, z, yNow) ?? 0, onJetty(x, z) ? SLAB + JETTY.y : 0);
     if (x < KART_PARK.x0 || x > KART_PARK.x1 || z < KART_PARK.z0 || z > KART_PARK.z1) return base;
     const t = trackSurfaceAt(x, z, yNow);
-    return t ? Math.max(base, t.y + 0.035) : base;
+    // (and the spectators' grass banks round it, kartfacility.ts)
+    return Math.max(base, t ? t.y + 0.035 : 0, bankY(x, z) + 0.035);
   };
   /** Scratch for the collision grid's answers */
   const nearBoxes: Box[] = [];
@@ -474,7 +474,12 @@ export function createWalk(d: WalkDeps) {
       },
     },
     outfit: () => outfit,
-    track: trackSurfaceAt,
+    // (the banks too: a kart can climb them)
+    track: (x, z, y) => {
+      const t = trackSurfaceAt(x, z, y);
+      const b = bankY(x, z);
+      return b > 0.01 && (!t || b > t.y) ? { y: b, roll: 0 } : t;
+    },
     // The boxes within `reach` of where the car is (the collision grid's answer, then placed buildings)
     solids: (x, z, reach) => {
       const near = CAR_GRID.near(x, z, reach);
@@ -542,7 +547,23 @@ export function createWalk(d: WalkDeps) {
 
   /** What Degen wears (the kart's driver wears the same) */
   let outfit: Outfit = PLAYER;
-  const kartUI = createKartUI(root, {
+  /**
+   * The hut's menu and the race (kart-ui.ts, kart.ts) come in their own chunk (kartgame.ts), loaded when Degen comes
+   * near the park or asks at the hut; until then they stand idle
+   */
+  const NO_KART_UI: KartUI = { open: false, show() {}, close: () => false, step() {}, take() {}, showHud() {}, paintHud() {}, count() {}, pop() {}, showResult() {}, update() {} };
+  const NO_KARTS: KartRace = { active: false, sim: null, start() {}, setGhosts() {}, update() {}, exit: () => ({ x: pos.x, z: pos.z, yaw }), preview() {}, idle() {}, home: () => null, takeOut: () => null, bringBack() {} };
+  let kartUI: KartUI = NO_KART_UI;
+  let karts: KartRace = NO_KARTS;
+  let kartLoad: Promise<void> | null = null;
+  const loadKarts = () =>
+    (kartLoad ??= import('./kartgame').then(({ createKartUI, createKartRace }) => {
+      kartUI = makeKartUI(createKartUI);
+      karts = makeKartRace(createKartRace);
+    }));
+  /** Near enough the park to fetch them (its land and a margin) */
+  const nearKarts = (x: number, z: number) => x > KART_PARK.x0 - 80 && x < KART_PARK.x1 + 80 && z > KART_PARK.z0 - 80 && z < KART_PARK.z1 + 80;
+  const makeKartUI = (createKartUI: typeof import('./kart-ui').createKartUI) => createKartUI(root, {
     game: d.game,
     start: (setup) => startKart(setup),
     // A series: the results card's Next race starts the cup's next course; Drop ends the series
@@ -579,7 +600,7 @@ export function createWalk(d: WalkDeps) {
     },
     quit: () => abandonKart(),
   });
-  const karts = createKartRace({
+  const makeKartRace = (createKartRace: typeof import('./kart').createKartRace) => createKartRace({
     scene: d.scene,
     camera,
     root,
@@ -1539,6 +1560,7 @@ export function createWalk(d: WalkDeps) {
     if (ride) return rideFrame(dt, t);
     if (fighting()) return fightFrame(dt, t);
     if (karts.active) return kartFrame(dt, t);
+    if (!kartLoad && nearKarts(pos.x, pos.z)) void loadKarts();
     karts.idle(dt);
     if (fly.active) return flyFrame(dt, t);
     fly.idle(dt);

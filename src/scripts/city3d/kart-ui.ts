@@ -70,6 +70,7 @@ import {
 import { CAR_PAINTS, paintHex, type PaintId } from './mycar';
 import { D, LV, clockOf, esc, fmt, repaint, whyNot } from './ui';
 import type { KartHud, KartResultView, KartUI, KartUIDeps } from './kart-types';
+import { NONE, TROPHY, countersHtml, courseLabel, ord, placeOf, trophyLine } from './kart-records';
 
 /** How many karts race a cup (you and seven rivals) */
 const FIELD = 8;
@@ -91,9 +92,7 @@ const OLD_NAMES: Record<string, string> = {
 const POP_MS = 1400;
 const POPS_MAX = 3;
 
-const I = (body: string) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
-/** A trophy (a cup on a plinth), for the series */
-const TROPHY = I('<path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H5.5a2.5 2.5 0 0 0 2.5 4M16 6h2.5a2.5 2.5 0 0 1-2.5 4M12 13v4M9 20h6l-.5-3h-5z"/>');
+
 
 /* ---------- Icons: the karts, side on (64 x 32, the body in currentColor) ---------- */
 
@@ -107,14 +106,7 @@ const KART_ICONS: Record<KartId, string> = {
   tank: K(`<path class="kart-body" d="M5 22h6l1-5h4v-6h20v6h5l4 5h14l2-3-3-4H44l-2-6H16l-4 6H7z"/><path class="kart-plate" d="M17 12h19M18 15h18"/><circle class="kart-rivet" cx="20" cy="18" r=".8"/><circle class="kart-rivet" cx="34" cy="18" r=".8"/><path class="kart-hoop" d="M31 11v-5h3"/>${driver(26, 7)}`, wheel(14, 6.5) + wheel(50, 6.5)),
 };
 
-const ord = (n: number) => (n === 1 ? 'st' : n === 2 ? 'nd' : n === 3 ? 'rd' : 'th');
 const fill = (n: number) => Math.max(0, Math.min(1, n)).toFixed(3);
-const placeOf = (n: number) => `${n}${ord(n)}`;
-/** A course's name without " · reverse", and a small tag when it is the reverse */
-const courseLabel = (id: CourseId) => {
-  const c = COURSES[id];
-  return `${esc(c.name.replace(' · reverse', ''))}${c.reverse ? '<i class="kart-rev">rev</i>' : ''}`;
-};
 /** The engine class as a small tag */
 const classTag = (cls: ClassId) => `<span class="kart-cls-tag is-${cls}">${esc(KART_CLASSES[cls].name)}</span>`;
 /** The highest class your level unlocks */
@@ -126,7 +118,6 @@ const dateOf = (at: number) => {
   return d.toLocaleDateString('en-GB', thisYear ? { day: 'numeric', month: 'short' } : { day: 'numeric', month: 'short', year: 'numeric' });
 };
 const kartName = (id: KartId) => KART_SPECS[id]?.name ?? '';
-const NONE = '<span class="race-none">No time yet</span>';
 
 /* ---------- The minimap: the circuit drawn once from its samples, in world numbers (x east, z south: north up) ---------- */
 
@@ -176,21 +167,6 @@ const STATS: { key: 'speed' | 'accel' | 'handling' | 'weight'; label: string; mo
   { key: 'weight', label: 'Weight', mod: null },
 ];
 
-/** Your trophies, one line: "Rookie Cup 1st · Pro Cup 3rd" (or none yet) */
-function trophyLine(s: TycoonSave) {
-  const won = CUP_IDS.filter((id) => s.karts.trophies[id]);
-  return won.length ? won.map((id) => `<span class="kart-trophy is-${s.karts.trophies[id]}">${TROPHY}${esc(CUPS[id].name)} ${placeOf(s.karts.trophies[id]!)}</span>`).join('') : '<span class="race-none">None yet</span>';
-}
-/** The lifetime counters the park keeps */
-function countersHtml(s: TycoonSave) {
-  const c = s.counters;
-  return `  <div><dt>Kart races</dt><dd>${fmt.format(c.kartRaces)}</dd></div>
-  <div><dt>Podiums</dt><dd>${fmt.format(c.podiums)}</dd></div>
-  <div><dt>Wins</dt><dd>${fmt.format(c.kartWins)}</dd></div>
-  <div><dt>Clean laps</dt><dd>${fmt.format(c.cleanLaps)}</dd></div>
-  <div><dt>Overtakes</dt><dd>${fmt.format(c.overtakes)}</dd></div>`;
-}
-
 /** Your laps from the old tracks (the network before the rebuild, the circuit at full size): best per course at any class (nothing when there are none) */
 function oldHtml(s: TycoonSave) {
   const best = new Map<string, KartTime>();
@@ -212,22 +188,6 @@ function oldHtml(s: TycoonSave) {
 <p class="race-note">Your best laps on the tracks before this one, kept for the memory. They don't count on the circuit as it is now.</p>
 <dl class="race-meta kart-records kart-old">
 ${rows}
-</dl>`;
-}
-
-/** A compact summary of your records at the park, for the City-view panel (index.ts): best lap per course at Sport, trophies, counters */
-export function kartRecordsHtml(s: TycoonSave) {
-  const owned = PLAYER_KARTS.filter((id) => ownsKart(s, id)).length;
-  const best = (id: CourseId) => {
-    const t = s.karts.records[recordKey(id, 'sport')];
-    return t === undefined ? NONE : clockOf(t.lap);
-  };
-  return `<p class="kart-records-head">Best laps · Sport class</p>
-<dl class="race-meta kart-records">
-${COURSE_IDS.map((id) => `  <div class="kart-record-time"><dt>${courseLabel(id)}</dt><dd>${best(id)}</dd></div>`).join('\n')}
-  <div class="kart-record-wide"><dt>Trophies</dt><dd class="kart-trophies">${trophyLine(s)}</dd></div>
-${countersHtml(s)}
-  <div><dt>Karts</dt><dd>${owned} of ${PLAYER_KARTS.length}</dd></div>
 </dl>`;
 }
 

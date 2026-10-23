@@ -207,6 +207,9 @@ As built:
   x 92-180, z -138 to -48), the same gate and slip road; the garages, the
   hut and the grandstand (three tiers now, a lower canopy) round the
   smaller circuit; light poles and marshal posts spaced to suit.
+  (Since the north side's stage 2, `docs/north-plan.md`, the park stands
+  north of the ring highway off Kart Road, the circuit unchanged, the site
+  grown round it with its facility: `kartfacility.ts`.)
 - **The racing**: the karts about 20% slower (`tune()`: top speed x0.8,
   pick-up x0.9). Par laps about 34 s at Street, 29.5 at Sport, 27 at Neon
   (were 44 / 38 / 35). The tunnel's walls are real now (a kart scrapes

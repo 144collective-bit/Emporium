@@ -47,14 +47,34 @@ gardens. Built in stages, each a PR for the owner's sign-off.
    The boot's code had no room left for it: the benchmark (`?bench`), Drop
    001's fitting room and the world map are chunks loaded when first used
    now, which made the room (638.5 of 640 KB with main's animation rebuild).
-   Stage 2 should load the kart park's drawing, race and menus as you
-   approach (it moves out of town), which frees much more. The old
+   Stage 2 loads the kart park's drawing, race and menus as you approach
+   (below). The old
    site is kept clear (`GARDEN_SITE`) with the Mall running on through it
    to the footbridge (`BRIDGE_FOOT`); the old car park went back to park.
-2. **The kart park moves north and grows up:** the same circuit on new
-   ground north of the highway, its trackside, stands, paddock, entrance,
-   car park and lights; its north road, slip lanes and the metro extended
-   to a new station; its old land left open.
+2. **The kart park moves north and grows up** (built): the same circuit
+   to the last sample (`kartcircuit.ts` is untouched: records, ghosts and
+   boards stay valid), its local frame moved north of the highway east of
+   the east ring avenue (`kartpark.ts`: `KART_PARK` x 113-225, z -311.5 to
+   -191.5), the site grown round it on every side for the facility
+   (`kartfacility.ts`): armco, tyre walls and catch fencing (none solid),
+   marshal posts with flags, the timing tower, the covered grandstand over
+   the hill and the jump, three grass banks you can walk up, a viewing
+   terrace on the hut's roof, the plaza inside the gate with the ticket
+   kiosk and the gate's arch, the paddock's team tents with karts on
+   stands, floodlight towers, lit signs, and over a hundred people. Kart
+   Road runs east off ns3 past the gate, the car park in a one-way loop off
+   it like the stadium's (`ROAD`, `LOOP`, `KART_STREETS`); ns3's junction
+   with the highway gets outer slip lanes (`OUTER_SLIPS`). The metro's main
+   line runs on north over the highway to a new Kart Park station at the
+   corner of Kart Road (`NORTH_END`, the train a little faster so the
+   longest ride stays about 40 s). The old land outside the Parkway is
+   open again, kept clear for a later district.
+   The place (hut, garages, tower, stands, gate, kiosk) is built at the
+   boot (`kartpark3d.ts`); everything else round the circuit is a district
+   loaded as you approach (`kartgrounds3d.ts`, `LAZY_DISTRICTS` id
+   `karts`), and the hut's menu and the race are a chunk loaded near the
+   park (`kartgame.ts`): the boot's code went from 638.5 to 628.9 KB of
+   640 with the facility added.
 3. **The park:** paved main walks with stone kerbs, edged gravel paths,
    the formal garden on the stadium's old site, flower beds, the low wall
    round the park, the lakeside terraces.

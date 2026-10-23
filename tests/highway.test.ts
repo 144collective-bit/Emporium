@@ -1,4 +1,4 @@
-// The ring highway (highway.ts, growth plan Phase 7): a closed loop well outside the town, the kart park, the
+// The ring highway (highway.ts, growth plan Phase 7): a closed loop well outside the town (the kart park is past it), the
 // airport and the test district, inside the world; a lit junction wherever it meets an arterial, two slip lanes
 // on the town side of each; a bridge each side over the river; and the trees keep off it.
 import { test } from 'node:test';
@@ -25,12 +25,16 @@ test('a closed loop, measured right, inside the world', () => {
   assert.ok(insideHighway(30, 30) && !insideHighway(x0 - 10, 30));
 });
 
-test('well outside the town, the kart park and the airport', () => {
+test('well outside the town and the airport, and clear of the kart park north of it', () => {
   const clear = (x: number, z: number, m: number) => fromHighway(x, z) > HIGHWAY_HALF + m && insideHighway(x, z);
   for (const p of [...PARKWAY, ...SOUTHSIDE]) assert.ok(clear(p[0], p[1], 40), `the bends at ${p}`);
+  // (the kart park moved past it in the north side's stage 2)
   for (const [x, z] of [
-    [KART_PARK.x0, KART_PARK.z0],
-    [KART_PARK.x1, KART_PARK.z0],
+    [KART_PARK.x0, KART_PARK.z1],
+    [KART_PARK.x1, KART_PARK.z1],
+  ])
+    assert.ok(!insideHighway(x, z) && fromHighway(x, z) > HIGHWAY_HALF + 8, `${x}, ${z}`);
+  for (const [x, z] of [
     [SITE[2], SITE[3]],
     [SITE[0], SITE[3]],
     [SITE[2], SITE[1]],
