@@ -155,6 +155,59 @@ the data baked, 12.3 s with the 2D map held back. The code is a little bigger ov
 84 KB, against SMAA and the fight, 50 KB, now loaded later), but the
 browser no longer works any of it out.
 
+## Performance phase 3 (done): fewer draws, shaders once
+
+Items 5 and 7 below; item 8 measured and left for later. Nothing looks or
+plays differently.
+
+- **The crowd in a few meshes (5).** At each level everyone of one outfit
+  kind (suits, hoodies, soldiers) shares one mesh per material: every item
+  anyone of that kind wears, each vertex knowing its item and its colour
+  key. A person's colours and what they wear are a row in one float
+  texture (the wardrobe); items they don't wear fold to a point in every
+  pass. Grouped by kind because within a kind everyone wears nearly the
+  same (a suit's whole set is 5% more vertices than one suit, a hoodie's
+  17%; across kinds it would be 71%). The city crowd is 8 meshes instead of
+  44, the soldiers 4 instead of 18, and each person one instance per mesh
+  instead of one per part (about ten), so the CPU writes a tenth as much a
+  frame. Close up the people are pixel for pixel as they were.
+- **Shaders compiled once, for the right target (7).** The boot compiled
+  every material for the screen, but the city draws into the post chain's
+  linear target: each material got a program no frame used, and the real
+  one compiled the first time it was drawn (a hitch as you looked round).
+  Now they're compiled for the post chain's target (`compileFor()`, in
+  parallel with `compileAsync` at the boot), each site as it's built and
+  each place's far form as it's made. A phone holds 83 programs instead of
+  148, and the benchmark's route compiles 4 after the start instead of 16.
+- **Far districts as simple blocks (8): not needed yet.** From the Build
+  overview on a phone, every district's tiles (near and far) are about
+  17,000 triangles, and the tiles already keep the draws flat (one per
+  material however many districts). The far triangles are people (the
+  crowd's far level, about 2,000 each out to 170) and the soldiers.
+  Impostors are worth building when new districts push the tiles' far
+  pieces past about 60,000 triangles from the overview; a lighter far
+  crowd on phones (a simpler level, or a shorter reach) is the owner's
+  call, as people would pop a little.
+
+### What phase 3 measured
+
+`?bench`, headless Chromium (software GL: the draws, triangles and
+programs are what to read; its frame rates aren't a device's). Draws a
+frame:
+
+| View | phone before | after | desktop before | after |
+|---|---|---|---|---|
+| Home | 250 | 232 | 347 | 338 |
+| Downtown street | 249 | 223 | 408 | 361 |
+| The square | 213 | 194 | 293 | 259 |
+| Build overview | 267 | 236 | 454 | 419 |
+| The airport | 102 | 78 | 143 | 124 |
+| The Trenches | 132 | 105 | 212 | 184 |
+| Route (average) | 190 | 180 | 296 | 261 |
+
+The first frame after the boot (where the real shaders used to compile):
+2.84 s to 1.27 s on the phone tier, 3.23 s to 1.97 s on desktop.
+
 ## What else can be done
 
 Grouped by what it buys. Effort is S (a day or less), M (a few days) or L (a
@@ -219,8 +272,8 @@ week or more); risk is how much could break or look different.
 ## Suggested order
 
 Fix phases 1, 2 and 3 and the trim (done) → performance phase 2 (done): **1, 2, 4, 6, 11, 12**
-(quick wins and the guard rails) → performance phase 3: **5, 7, 8** (smoother
-frames) → performance phase 4: **9, 10, 3** (the foundations for a much
+(quick wins and the guard rails) → performance phase 3 (done): **5, 7, 8** (smoother
+frames; 8 measured and left until the districts grow) → performance phase 4: **9, 10, 3** (the foundations for a much
 bigger world), before Phase 10.
 
 ## The owner's decisions
