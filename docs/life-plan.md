@@ -125,28 +125,45 @@ vertex shader turn them (`onBeforeCompile`, one program for every model).
 Front wheels can steer the same way from the car's turn. The one real
 geometry change in this plan: well under a megabyte over every model.
 
-### Phase 2: your car's feel (S, zero memory)
+### Phase 2: your car's feel (S, zero memory): built
 
-`drive.ts` and `createCar()` in `cars.ts`; the rules in `drive-sim.ts`.
+The rules are in `drive-sim.ts` (`carLights()`, `gearOf()`, `skidding()`,
+tested in `tests/drive.test.ts`); `drive.ts` and `createCar()` in
+`cars.ts` draw them. What it added: your car's five light materials (own
+to the car, swapped on its lenses: no new draw while nothing is lit; one
+draw a side while an indicator flashes), one fixed skid-mark mesh of
+`SKID_N` quads (240) with one small shader, two glow points for the
+headlights' pool and the brake wash, one synthesised tyre layer. Checked
+in headless Chromium: the gearbox climbing 2, 3, 4 and R in reverse, the
+white reversing lenses, the amber indicator at a stop with the wheel
+turned, the headlight pool at night, dark marks under both rear tyres
+through a handbrake slide by day, fading after.
 
-1. **Lights that mean something.** The car's own tail material brightens
-   under braking; reversing lights come on in reverse; indicators flash
-   with the steering below walking pace and when stopped (and from a key,
-   Q/E, if the owner wants manual ones). The car's materials are its own
-   already, so this is a colour write a frame.
-2. **A horn.** H, or a touch button beside Get out; the gamepad's left
-   stick press. Traffic doesn't react (it already stops for you); people
-   nearby look (Phase 3).
-3. **The handbrake leaves a mark.** A tyre screech while sliding (synth),
-   and skid marks: one fixed ring buffer of about 240 dark quads in one
-   mesh, laid under the rear wheels while the slide is on, fading over a
-   few seconds; the oldest is reused. Fixed, tiny memory; one draw. Near
-   only; none under reduced motion.
-4. **Headlights on the road at night.** Your car gets the traffic's beam
-   pool (`beamPos`'s pattern): an additive glow sprite ahead of the nose,
-   and the brake lights' red wash behind when braking. Zero memory.
-5. **Engine that shifts.** The synth engine steps its pitch through four
-   gears as the speed climbs (the gear readout already exists). Zero memory.
+1. **Lights that mean something.** Brake lights while braking from a roll
+   or with the handbrake on the move, reversing lights in reverse, the
+   indicators with the wheel below `SIGNAL_SPEED` (a turn, not a lane
+   change) and at a stop, held `SIGNAL_HOLD` after it straightens so they
+   don't flicker with the stick; `blinkOn()` (traffic.ts) flashes them. The
+   lenses follow the time of day through `lit` (headlights faint by day).
+   No manual indicators: the owner's call if wanted (Q / E are free).
+2. **A horn.** H, the Horn button on touch screens (over the Brake pedal,
+   your car's only: `.in-car`), the gamepad's left stick pressed; the
+   traffic's `horn` sound at full gain, at most twice a second.
+3. **The handbrake leaves a mark.** `skidding()` is the tyres' sideways
+   speed (or the handbrake on at a roll): the `tyres()` screech in
+   sound.ts follows it, and marks are laid under the rear wheels, a piece
+   every 0.15 tiles, fading over `SKID_FADE` (7 s); the oldest is reused.
+   None under reduced motion. What was learnt: the marks were first
+   multiply-blended quads, and came out light grey: the blend isn't
+   honoured in the post chain's target. They're dark rubber with an alpha
+   per vertex instead (one small shader).
+4. **Headlights on the road at night.** Two glow points (the traffic's
+   beam pools' pattern, dark by day through `lit`): the pool ahead of the
+   nose, and a faint red wash behind while braking. Only while driving the
+   car.
+5. **Engine that shifts.** `gearOf()`: four gears up the speed range
+   (`GEARS`), the revs climbing in each and dropping at the shift; the
+   gear readout shows 1-4, R and N.
 
 ### Phase 3: people who notice (S-M, zero memory)
 
@@ -198,8 +215,9 @@ geometry change in this plan: well under a megabyte over every model.
 
 ## Suggested order
 
-Phase 1 (built) → Phase 2 (what the player holds most) → Phase 3 (the city noticing you) → Phase 4. 1b (rolling
-wheels) after Phase 2 if the owner wants it: it's the one shader change.
+Phase 1 (built) → Phase 2 (built) → Phase 3 (the city noticing you) →
+Phase 4. 1b (rolling wheels) after Phase 3 if the owner wants it: it's the
+one shader change.
 
 ## What has to keep working
 

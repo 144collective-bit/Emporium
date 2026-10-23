@@ -29,7 +29,7 @@
  */
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { fx, toon } from './kit';
+import { fx, lit, mergeMeshes, toon } from './kit';
 import { addLodSwitch } from './lod';
 
 export type CarId = 'hatch' | 'sedan' | 'coupe' | 'pickup' | 'van' | 'bus' | 'muscle' | 'suv' | 'super';
@@ -1103,10 +1103,17 @@ export function createCar(id: CarId, paint: string) {
     m.castShadow = true;
     m.receiveShadow = true;
   }
-  // A touch deeper than the lamps they light up (level with them, the two flicker)
+  // A touch deeper than the lamps they light up (level with them, the two flicker). The lights follow the
+  // time of day (`lit`: headlights faint by day, on at dusk) and the driving (city life plan, Phase 2: the
+  // tail lenses swap material for the brakes and reverse; amber indicator lenses under the lamps, one merged
+  // mesh a side, shown while that side flashes)
   const lightGeo = new THREE.BoxGeometry(0.04, 0.08, 0.17);
-  const headMat = new THREE.MeshBasicMaterial({ color: '#fff6c8' });
-  const tailMat = new THREE.MeshBasicMaterial({ color: '#ff2b2b' });
+  const headMat = lit(new THREE.MeshBasicMaterial({ color: '#fff6c8' }), 0.3, 1.2);
+  const tailMat = lit(new THREE.MeshBasicMaterial({ color: '#ff2b2b' }), 0.7, 1.6);
+  const brakeMat = lit(new THREE.MeshBasicMaterial({ color: '#ff2b2b' }), 1.5, 3.2);
+  const reverseMat = lit(new THREE.MeshBasicMaterial({ color: '#fff1d6' }), 1.1, 2.2);
+  const turnMat = lit(new THREE.MeshBasicMaterial({ color: '#ffb020' }), 1.3, 2.6);
+  const tails: THREE.Mesh[] = [];
   for (const [list, mat] of [
     [g.head, headMat],
     [g.tail, tailMat],
@@ -1115,7 +1122,25 @@ export function createCar(id: CarId, paint: string) {
       const l = new THREE.Mesh(lightGeo, mat);
       l.position.set(x, y, z);
       group.add(fx(l));
+      if (mat === tailMat) tails.push(l);
     }
+  const lensGeo = new THREE.BoxGeometry(0.03, 0.04, 0.1);
+  const lensOf = (ix: number[]) =>
+    fx(
+      mergeMeshes(
+        ix.map((i) => {
+          const m = new THREE.Mesh(lensGeo, turnMat);
+          m.position.set(...g.turn[i]);
+          return m;
+        }),
+        { cast: false, receive: false }
+      )
+    );
+  // (right is +z, left -z: CarGeometry.turn's order)
+  const turnR = lensOf([0, 2]);
+  const turnL = lensOf([1, 3]);
+  turnR.visible = turnL.visible = false;
+  group.add(turnR, turnL);
   let roll = 0;
   return {
     group,
@@ -1128,12 +1153,19 @@ export function createCar(id: CarId, paint: string) {
         w.pivot.rotation.y = w.front ? steer : 0;
       }
     },
+    /** What the lights show: the brakes, reversing, and which indicator is lit this frame (if any) */
+    lights(brake: boolean, reverse: boolean, turn: 'L' | 'R' | null) {
+      const mat = reverse ? reverseMat : brake ? brakeMat : tailMat;
+      for (const t of tails) t.material = mat;
+      turnL.visible = turn === 'L';
+      turnR.visible = turn === 'R';
+    },
     dispose() {
       group.removeFromParent();
       wheelGeo.dispose();
       lightGeo.dispose();
-      headMat.dispose();
-      tailMat.dispose();
+      lensGeo.dispose();
+      for (const m of [headMat, tailMat, brakeMat, reverseMat, turnMat]) m.dispose();
     },
   };
 }

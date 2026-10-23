@@ -514,7 +514,21 @@ it and has been retired completely. Build only on what's here.
   `CarGeometry.turn`, on the flat of the body: a lit lens laid over one of
   the model's own small details is swallowed by its ink outline) and a
   horn when a car is held up by you (`hornDue()`, `LifeOpts.horn`, the
-  `horn` sound). No new draws, no new geometry.
+  `horn` sound). No new draws, no new geometry. Phase 2 (your car's feel)
+  is built: the rules in `drive-sim.ts` (`carLights()`: brake lights,
+  reversing lights, indicators with the wheel below `SIGNAL_SPEED` and
+  held `SIGNAL_HOLD`; `gearOf()`: four gears, the revs dropping at each
+  shift; `skidding()`: the tyres' sideways speed), drawn by `drive.ts`
+  and `createCar()` in cars.ts (lit lens materials swapped on the car's
+  own lenses, amber indicator lenses under the lamps, `car.lights()`), a
+  horn (H, the Horn button `[data-drive-horn]` over the Brake pedal, your
+  car's only through `.in-car`, the gamepad's left stick pressed,
+  `drive.horn()`), skid marks (one fixed mesh of `SKID_N` quads with a
+  small alpha shader, under the rear wheels while sliding, fading over
+  `SKID_FADE`; none under reduced motion; multiply blending isn't honoured
+  in the post chain, so don't use it for decals), the `tyres()` screech in
+  sound.ts, and the headlights' pool and brake wash as two glow points
+  dark by day.
 - **Cars** are `src/scripts/city3d/cars.ts`: real-proportion cartoon models
   (City Hatch, Cruiser, Street GT coupe, Hauler pickup, Box Van, City Bus;
   made-up names, never a real make or badge), each a bevelled extruded
@@ -1451,10 +1465,10 @@ it and has been retired completely. Build only on what's here.
   - **Sending it home:** the garage menu's Keep calls it back to the turntable ("Bring my car home"). A reload puts it back there too.
 - Traffic stops for your car (`walker.r` in `life.ts` reaches further while driving). `bodies` in `life.ts` shares where the traffic and the pedestrians are, for the soft bumps.
 - **Controls:**
-  - Keyboard: W / S (or arrows) gas and brake / reverse, A / D steer, Space handbrake, V camera, E get out.
+  - Keyboard: W / S (or arrows) gas and brake / reverse, A / D steer, Space handbrake, H horn, V camera, E get out.
   - Touch: the stick steers (and pedals when no pedal is held), with Gas and Brake buttons (`data-drive-gas`, `data-drive-brake`). Layout while driving: a bigger stick bottom-left, Gas and Brake as tall pedals side by side bottom-right (Gas taller, on the outside), Get out at the top right and the speed at the top left, all clear of the phone's safe areas. Getting out brings the walk layout back.
-  - Gamepad: left stick steers, RT gas, LT brake, A handbrake, Y get out, View camera; the right stick or the mouse looks.
-- While driving, `.city.is-driving` hides the walk and combat HUD, and the header says "Driving · <car>" (`head.ts`). A gun is holstered on getting in.
+  - Gamepad: left stick steers (pressed: the horn), RT gas, LT brake, A handbrake, Y get out, View camera; the right stick or the mouse looks.
+- While driving, `.city.is-driving` hides the walk and combat HUD, and the header says "Driving · <car>" (`head.ts`). A gun is holstered on getting in. Your car's lights, horn, skid marks and gears are the city life plan's Phase 2 (above; `docs/life-plan.md`).
 - Check the pedals, stick, prompt and readout at phone widths, upright and on their side: nothing may overlap.
 
 - `drive.update()` returns the tiles moved; walk mode counts them on the
