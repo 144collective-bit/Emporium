@@ -247,7 +247,72 @@ change.
 
 ## Build order
 
-### Phase 1: run, sprint and momentum (the owner's pick for the first sign-off)
+### Phase 1: run, sprint and momentum (built, for the owner's sign-off)
+
+What's in:
+
+- **The data: CMU, not 100STYLE (yet).** This environment can't reach
+  Zenodo (where 100STYLE lives) or its author's site, so its licence
+  couldn't be confirmed or its files fetched. CMU's terms are confirmed in
+  the files themselves ("free for use in research and commercial projects
+  worldwide", an acknowledgment asked for). One actor carries the whole
+  phase: **subject 143**, a quick, athletic mover (neutral, the owner's
+  pick): run, run to stop, start to run, a running figure eight, run-stop-
+  run, walk, a walking figure eight and pacing (eight takes, 48 s,
+  `assets/mocap/takes.json`). The run is made a seamless six-cycle loop
+  (`loopClip()`). 100STYLE can be added on top later if the owner allows
+  `zenodo.org` in the environment's network settings and its licence
+  checks out.
+- **The pipeline** is `npm run mocap` (`scripts/mocap.mjs`, the work in
+  `mocap-build.ts`, the BVH reader `bvh.ts`), writing
+  `src/data/mocap/clips.bin` (211 KB, fetched when walking starts); a test
+  holds the file to exactly what the pipeline makes. Two fixes found on
+  the way: the feet are kept level in the T-pose (CMU's ankle sits lower
+  over the sole than Degen's, so lining up ankle-to-toe tipped his toes up
+  23°), and the floor is found from the ankles.
+- **The runtime**, all DOM-free and tested: `movesim.ts` (the springs),
+  `inertia.ts` (springs and inertialization), `motionmatch.ts`,
+  `animator.ts` (playback warping, the sprint and bank layers, the foot
+  lock and IK). `bonepose.ts` and `footlock.ts` from the plan went into
+  `mocap.ts` and `animator.ts`; `Pose` stays for everything else
+  (`applyTo()` overwrites the 22 body bones after the figure's own
+  `update()`, so fingers, grips and held things are as before).
+- **The feet**, as measured by the tests over every kind of move (a held
+  foot's movement over the ground): under 0.5 cm running, walking,
+  sprinting, weaving and circling; 1.6 cm turning straight back; 2.4-2.7 cm
+  in a hard stop from a run or a sprint (a foot the body has left behind
+  lets go and catches up rather than crouch the hips). The knee is a hinge
+  that never bends backwards, with a soft reach so a straight leg never
+  snaps; no bone turns more than 0.7 rad between frames.
+- **Where it plays:** the player on foot, unarmed, not aiming or emoting,
+  on the ground. Armed or aiming, emoting, in the air and landing hard
+  (the crouch and roll) it's the procedural walk as before, blended across
+  in about 0.15 s. Armed movement is Phase 4, jumps Phase 3.
+- **Speeds** (`GAITS`): walk 1.25 tiles a second (Caps Lock), run 3.4 (the
+  default, the actor's own run), sprint 5 (Shift, or the stick pushed all
+  the way, or the touch button, now "Sprint"). No capture goes that fast
+  (CMU's quickest runs are about 4.5 m/s, Degen's sprint is about 9): the
+  sprint is the run played up to 35% faster, with the longer strides the
+  feet's lock allows and a harder arm and knee drive and lean.
+- **Momentum:** starts reach 90% of the run in about a quarter of a second
+  without overshooting, a stop takes 0.3-1.2 tiles, a turn round about a
+  third of a second; the lean into bends reads the springs (capped at
+  0.12 rad), the start and stop leans are the actor's own.
+- **Keys:** F does everything E did (doors, counters, getting in and out,
+  closing menus); X swaps guns; Q and E are free on foot for peeking
+  (Phase 4); F no longer punches in the ring (the click does). The gamepad
+  is unchanged.
+- **The camera:** a touch wider at a run, more at a sprint, the camera
+  falling a little behind on a sprint and dipping softly on a hard stop
+  (off under reduced motion).
+- **The lab** (`?anim`) and **Options > Credits** in the start menu.
+- **The weight it adds:** 3.8 KB gzipped to the city's boot (the springs
+  and the loader); the animator is its own chunk with the clips.
+- Not yet: other players, crowds, fighters (Phase 7); idle variety
+  (standing is the actor's quiet stands between takes); stairs from
+  capture (the feet follow kerbs and slopes; Phase 2).
+
+### Phase 1 as it was planned
 
 1. **Licences confirmed** (100STYLE's official terms; CMU's), the takes
    picked from the Neutral style (idle, walk, run, starts and stops from
@@ -336,8 +401,12 @@ change.
 
 ## Open questions for the owner
 
-- The sprint's top speed: decided in the lab in Phase 1 (5.4 kept if it
-  looks right stretched).
+- The sprint's top speed: 5 tiles a second for now (today's run was 5.4);
+  it's the run pushed harder, since no capture runs that fast. Faster is a
+  number in `GAITS`, at the cost of more stretch.
+- 100STYLE: allow `zenodo.org` in the environment's network settings so
+  its licence can be checked and its locomotion added (more turns, starts
+  and stops in the same style)?
 - If motion matching's starts and stops look worse than hand-picked
   transition clips in the lab, Phase 1 falls back to a blend space with
   start / stop / pivot clips; the owner picks from recordings of both.

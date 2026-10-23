@@ -1,0 +1,10 @@
+[
+  { "file": "cmu/143_01.bvh", "name": "run-loop", "loop": 6 },
+  { "file": "cmu/143_02.bvh", "name": "run-stop" },
+  { "file": "cmu/143_03.bvh", "name": "start-run" },
+  { "file": "cmu/143_04.bvh", "name": "run-eight" },
+  { "file": "cmu/143_42.bvh", "name": "run-stop-run" },
+  { "file": "cmu/143_32.bvh", "name": "walk" },
+  { "file": "cmu/143_38.bvh", "name": "walk-eight" },
+  { "file": "cmu/143_29.bvh", "name": "pacing" }
+]

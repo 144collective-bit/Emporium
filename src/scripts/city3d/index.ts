@@ -102,6 +102,11 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const tier = (root.dataset.tier as Tier) || pickTier();
   const Q = TIERS[tier];
   const progress = (k: number) => bar.style.setProperty('--p', String(k));
+  // ?anim: the animation lab on its own, over the page (no city behind it)
+  if (new URLSearchParams(location.search).has('anim')) {
+    await (await import('./anim-lab')).openLab(root, { reduced, low: tier === 'low' });
+    return null;
+  }
   // When each part of the boot finished (the ?fps readout and the benchmark)
   const bootAt = { start: performance.now(), art: 0, scene: 0, tiled: 0, built: 0, compiled: 0, first: 0, waits: 0 };
   // Building, apart from waiting on the browser (a frame drawn between steps, the canvas sized): the city's own work

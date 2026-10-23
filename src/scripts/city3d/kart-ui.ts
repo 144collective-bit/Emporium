@@ -42,7 +42,7 @@
  *   series prize and the trophy after the last race).
  *
  * Arrow keys or the D-pad move between the buttons (step), Enter / A takes
- * the one picked, Esc / B / E closes (walk.ts calls close()). Prizes and
+ * the one picked, Esc / B / F closes (walk.ts calls close()). Prizes and
  * prices are Dorras only: never real money, nothing to do with the token.
  */
 import { CUPS, CUP_IDS, type CupId } from './kart-sim';

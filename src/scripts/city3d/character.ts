@@ -2114,6 +2114,8 @@ export interface Degen {
   hands: [THREE.Object3D, THREE.Object3D];
   /** The torso frame on the chest, for things carried at the shoulder (the gun): `reachArm()`'s space */
   torso: THREE.Object3D;
+  /** The bones, for the motion capture (animator.ts `applyTo()`, after `update()`) */
+  rig: Skeleton;
   /** What he holds in his right hand, if anything (put away while he holds the rifle) */
   held?: THREE.Object3D;
   /** Free the figure's geometry and bones (when it's rebuilt or leaves) */
@@ -2254,6 +2256,7 @@ export function createDegen(o: Outfit = PLAYER, q: Detail = 2): Degen {
     update,
     hands: [sk.bones.handL, sk.bones.handR],
     torso: sk.torso,
+    rig: sk,
     held,
     dispose() {
       sk.root.traverse((m) => (m as THREE.Mesh).geometry?.dispose());
