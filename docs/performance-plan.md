@@ -38,6 +38,20 @@ in JavaScript are the real thing.
 - **Quicker start.** The traffic's routes are worked out in half the time
   (a grid of junctions instead of checking every one), the same routes.
 
+Measured on the phone tier, the old build and the new one back to back:
+
+| | Before | After |
+|---|---|---|
+| The city filled in, from the start menu | 249 s | **64 s** |
+| Texture memory | 141 MB | **62 MB** |
+| Geometry memory | 79 MB | 88 MB (more of the city held near at the time) |
+| Draws, out by the old edge / at the far edge | 445 / 408 | **270 / 254** |
+| Triangles there | 245k / 295k | **142k / 164k** |
+| Frame rate there (software renderer) | 3.5 / 4.3 | **5.5 / 4.5** |
+| The camera route through every view | 4.1 fps, 235 draws | **4.6 fps, 194 draws** |
+| The traffic's routes worked out | 745 ms | **356 ms** |
+| Downtown, the square, The Trenches, the airport | unchanged (within a few percent) | |
+
 ## What else can be done
 
 Grouped by what it buys. Effort is S (a day or less), M (a few days) or L (a
