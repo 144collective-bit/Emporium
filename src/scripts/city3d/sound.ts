@@ -9,8 +9,7 @@
  * boombox plays by a walk-up's stoop (its own slow beat, through a small
  * speaker); by Club PULSE's door its four-on-the-floor thumps through the
  * walls (the grit's step 3). In Westlake Park birds sing by day and an owl
- * hoots at night, the lake laps at its rim, and by the courts a ball is
- * kicked, bounced and hit (step 3).
+ * hoots at night and the lake laps at its rim (step 3).
  * Nothing plays until the visitor turns it on.
  */
 
@@ -46,10 +45,8 @@ export function createSound() {
   let nextDog = 0;
   /** Westlake Park: birds by day and an owl at night through one, the games' balls through the other */
   let parkGain: GainNode;
-  let sportGain: GainNode;
   let nextBird = 0;
   let nextOwl = 0;
-  let nextBall = 0;
   const BOOM_BPM = 88;
   const CLUB_BPM = 124;
   let on = false;
@@ -197,9 +194,6 @@ export function createSound() {
     parkGain = ctx.createGain();
     parkGain.gain.value = 0;
     parkGain.connect(master);
-    sportGain = ctx.createGain();
-    sportGain.gain.value = 0;
-    sportGain.connect(master);
   }
 
   /** A bird in the trees: a few quick whistles sweeping up and down */
@@ -240,23 +234,6 @@ export function createSound() {
       o.stop(t + d + len + 0.05);
     }
   }
-  /** A ball: a tennis ball's pock, a football's kick or a basketball's bounce */
-  function ball(t: number) {
-    const kind = Math.floor(Math.random() * 3);
-    const o = ctx!.createOscillator();
-    o.type = kind === 0 ? 'triangle' : 'sine';
-    const [f0, f1, len] = kind === 0 ? [1100, 700, 0.05] : kind === 1 ? [160, 70, 0.12] : [230, 120, 0.1];
-    o.frequency.setValueAtTime(f0, t);
-    o.frequency.exponentialRampToValueAtTime(f1, t + len);
-    const g = ctx!.createGain();
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(kind === 0 ? 0.05 : 0.12, t + 0.004);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + len);
-    o.connect(g).connect(sportGain);
-    o.start(t);
-    o.stop(t + len + 0.02);
-  }
-
   /** A siren far off: a wail rising and falling, muffled by the blocks between */
   function siren(t: number) {
     const o = ctx!.createOscillator();
@@ -884,9 +861,8 @@ export function createSound() {
         dog(t);
         nextDog = t + 14 + Math.random() * 30;
       }
-      // Westlake Park: birds by day (fewer in the rain), an owl now and then at night; a ball by the courts
+      // Westlake Park: birds by day (fewer in the rain), an owl now and then at night
       parkGain.gain.setTargetAtTime(a.park, t, 1);
-      sportGain.gain.setTargetAtTime(a.sport, t, 0.5);
       if (a.park > 0.15 && night < 0.5 && t > nextBird) {
         bird(t);
         nextBird = t + (1.2 + Math.random() * 4) * (1 + rain * 3);
@@ -894,10 +870,6 @@ export function createSound() {
       if (a.park > 0.15 && night > 0.6 && t > nextOwl) {
         owl(t);
         nextOwl = t + 12 + Math.random() * 20;
-      }
-      if (a.sport > 0.15 && rain < 0.5 && t > nextBall) {
-        ball(t);
-        nextBall = t + 0.6 + Math.random() * 1.1;
       }
       rainGain.gain.setTargetAtTime(rain * 0.5, t, 0.5);
       // The neon buzz is the town's; the beat carries a little everywhere in town, more near the Emporium

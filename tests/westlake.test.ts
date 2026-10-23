@@ -15,7 +15,6 @@ import {
   PARK_TREES,
   PATHS,
   GARDEN_SITE,
-  STRIPS,
   WESTLAKE_SOLIDS,
   WESTLAKE_BLOCKS,
   WESTLAKE_RECT,
@@ -45,7 +44,7 @@ const along = (a: Pt, b: Pt, step = 0.5): Pt[] => {
 };
 
 test('its blocks: west of town, north of the river, inside the highway and clear of it, its slips and every street', () => {
-  assert.equal(WESTLAKE_BLOCKS.length, 4);
+  assert.equal(WESTLAKE_BLOCKS.length, 1);
   for (const b of WESTLAKE_BLOCKS) {
     assert.ok(polyArea(b.poly) > 0 || polyArea(b.poly) < 0, `${b.id} has an area`);
     for (const [a, c] of edges(b.poly))
@@ -58,9 +57,9 @@ test('its blocks: west of town, north of the river, inside the highway and clear
         for (const s of PLAN.streets) if (s.kind !== 'alley') assert.ok(distToStreet(s, p) > s.half + WALK_W - 0.05, `${b.id}'s sidewalk on ${s.id} at ${p}`);
       }
   }
-  // The big one is big, the strips run the park's width
+  // The big one is big (the strips south of it are Uptown's now: uptown.ts)
   assert.ok(Math.abs(polyArea(BIG)) > 20000);
-  for (const s of STRIPS) assert.ok(Math.abs(s.poly[2][0] - s.poly[0][0]) > 150);
+  assert.equal(WESTLAKE_BLOCKS.length, 1);
 });
 
 test('its blocks are the street plan\'s, and no other block or pad is on them', () => {
@@ -114,7 +113,7 @@ test('the paths: on the park, off the lake and the garden\'s site (but the Mall 
 });
 
 test('trees, lamps and benches: on the park, off the paths, the water and the garden\'s site', () => {
-  assert.ok(PARK_TREES.length > 300, `${PARK_TREES.length} trees`);
+  assert.ok(PARK_TREES.length > 250, `${PARK_TREES.length} trees`);
   assert.ok(PARK_TREES.filter((t) => t.clump).length > 150);
   const [x0, z0, x1, z1] = GARDEN_SITE;
   const onSite = (p: Pt, m: number) => p[0] > x0 - m && p[0] < x1 + m && p[1] > z0 - m && p[1] < z1 + m;

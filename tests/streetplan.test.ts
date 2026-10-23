@@ -3,6 +3,7 @@
 // the geometry helpers they're made with.
 import { TRENCH_BLOCKS } from '../src/scripts/city3d/trenches';
 import { WESTLAKE_BLOCKS } from '../src/scripts/city3d/westlake';
+import { UPTOWN_BLOCKS } from '../src/scripts/city3d/uptown';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { PLAN, blockAt, cityPlan, distToStreet, gridPlan, inPoly, lanePaths, offsetLine, onSlab, outset, pointAt, polyArea, polyCentre, streetLength, type Pt, type Street } from '../src/scripts/city3d/streetplan';
@@ -64,14 +65,15 @@ test('the city as built: the grid\'s roads, three diagonals from the ring\'s cor
   const alleys = p.streets.filter((s) => s.kind === 'alley');
   assert.ok(alleys.length >= 5, 'downtown has its alleys and lanes');
   for (const a of alleys) assert.deepEqual(lanePaths(a), [], 'no cars down an alley');
-  // Lights where downtown's cross streets meet, where the highway meets an arterial, and along Trench Avenue (trenches.ts), and nowhere else
-  for (const c of p.crossings) assert.equal(c.lights, (CORE_ROADS.includes(c.at[0]) && CORE_ROADS.includes(c.at[1])) || c.streets.includes('highway') || c.streets.includes('trench-ave'));
+  // Lights where downtown's cross streets meet, where the highway meets an arterial, along Trench Avenue (trenches.ts) and
+  // at every junction in Uptown (uptown.ts), and nowhere else
+  for (const c of p.crossings) assert.equal(c.lights, (CORE_ROADS.includes(c.at[0]) && CORE_ROADS.includes(c.at[1])) || c.streets.includes('highway') || c.streets.includes('trench-ave') || c.streets.some((id) => id.startsWith('uptown-')));
 });
 
 test('the city\'s blocks: downtown\'s outlines, every district and lot, off the asphalt, the landmarks on theirs', () => {
   const p = cityPlan();
   // (and the stadium's, north of the highway)
-  assert.equal(p.blocks.length, BLOCKS_DT.length + OUTER_BLOCKS.length + BEND_KERBS.length + TRENCH_BLOCKS.length + WESTLAKE_BLOCKS.length + 1);
+  assert.equal(p.blocks.length, BLOCKS_DT.length + OUTER_BLOCKS.length + BEND_KERBS.length + TRENCH_BLOCKS.length + WESTLAKE_BLOCKS.length + UPTOWN_BLOCKS.length + 1);
   // Every plot and every lot sits on an outer block
   for (const d of DISTRICTS) assert.equal(p.blocks.filter((b) => b.pads?.includes(d.id)).length, 1, `plot ${d.id}`);
   assert.equal(p.blocks.flatMap((b) => b.pads ?? []).length, DISTRICTS.length + EXTRA_LOTS.length);

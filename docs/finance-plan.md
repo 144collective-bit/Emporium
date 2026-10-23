@@ -66,7 +66,7 @@ sign-off. Keep this plan up to date as each phase lands.
 
 ## Phases
 
-1. **The land and the streets.**
+1. **The land and the streets** (built: see "Phase 1 as built" below).
    - **The data:** `finance.ts` (DOM-free, tested). The strips leave
      Westlake Park and become the district's blocks in the street plan.
    - **A real grid:** new north-south streets cut each strip into blocks
@@ -152,3 +152,37 @@ sign-off. Keep this plan up to date as each phase lands.
 Each phase: tests at both sizes, the type check, the build and budget,
 browser checks at every width (day, night, phones), then a PR for the
 owner's sign-off.
+
+## Phase 1 as built
+
+- **The data:** `uptown.ts` (DOM-free, tested in `tests/uptown.test.ts`).
+  - **Streets:** three north-south streets at x -150, -112 and -74, in line
+    with The Trenches' cross streets across the river, from the west ring
+    avenue to the north bank avenue. Every junction is lit (12), and
+    traffic drives them (the routes come from the plan).
+  - **Blocks:** twelve, in rows n, m and s, 31 to 50 tiles long. The
+    plaza's block is `uptown-m1`, the middle row's on the Mall's axis.
+  - **The axis:** Westlake Park's Mall (x -140) carried on south from its
+    gate: walk-only lanes through the blocks either side of the plaza, and
+    zebras over the ring avenue, the cross streets and the bank avenue.
+    The plan's walk-only lanes between lots wait for the lots themselves
+    (Phase 2): the axis's lanes are the first.
+  - **Hoardings:** round every lot, open at a gate on its front and along
+    the lanes; solid.
+  - **Lamps:** along the avenues and cross streets through Uptown.
+  - **The boulevard's line:** the town's promenade (railings, trees in
+    planters, benches, lamps) carried on west along the north bank from
+    Uptown's edge, on the town's rhythm so nothing of the town's moved.
+- **Retired with the strips:** Westlake Park's three strips, their walks,
+  rows of trees, lamps and benches; the tennis, football and basketball
+  courts, their players, balls and sound. The park's wall now runs round
+  its big block only.
+- **Drawn:**
+  - Uptown's streets at the boot, by the drawer The Trenches' use
+    (`streets3d.ts`, clean here);
+  - the lots as bare earth (world.ts);
+  - the hoardings and the lanes' paving as a district loaded as you
+    approach (`uptown3d.ts`).
+- **The budget:** the boot's code went from 634.4 to 629.5 KB of 640 (the
+  courts' players and balls went).
+

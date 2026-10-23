@@ -27,6 +27,7 @@ import { SKYLINE } from './bounds';
 import { keyRect } from './tileplan';
 import { site } from './tilework';
 import { lampKind } from './trenches';
+import { AXIS_X, AXIS_ZEBRAS, BOULEVARD_X, LANE_HALF } from './uptown';
 import { WATERFRONT_RECT } from './waterfront';
 import { BRIDGE_RECT } from './stadium';
 
@@ -353,18 +354,21 @@ export const puddleMat = new THREE.MeshBasicMaterial({
 });
 
 /**
- * Where the highway, or a street of The Trenches (trenches.ts), meets road `i` (an east-west road's x, a north-south
- * road's z), each widened to the asphalt of the road that meets it: gaps in that road's median and lines
+ * Where the highway, or a street of The Trenches (trenches.ts) or Uptown (uptown.ts), meets road `i` (an east-west
+ * road's x, a north-south road's z), each widened to the asphalt of the road that meets it: gaps in that road's median
+ * and lines (and where Uptown's axis crosses it on foot, for its zebra)
  */
 function highwayGaps(axis: 'ew' | 'ns', i: number): [number, number][] {
   const road = `${axis}${i}`;
-  return PLAN.crossings
-    .filter((c) => c.streets.includes(road) && (c.streets.includes('highway') || c.streets.some((id) => id.startsWith('trench-'))))
-    .map((c) => {
+  const gaps = PLAN.crossings
+    .filter((c) => c.streets.includes(road) && (c.streets.includes('highway') || c.streets.some((id) => id.startsWith('trench-') || id.startsWith('uptown-'))))
+    .map((c): [number, number] => {
       const v = axis === 'ew' ? c.at[0] : c.at[1];
       const half = c.streets.includes('highway') ? HIGHWAY_HALF : PLAN.streets.find((s) => s.id === c.streets.find((id) => id !== road))!.half;
       return [v - half - 0.2, v + half + 0.2];
     });
+  if (axis === 'ew' && AXIS_ZEBRAS.some((z) => z.z === EW_ROADS[i].c)) gaps.push([AXIS_X - LANE_HALF - 0.2, AXIS_X + LANE_HALF + 0.2]);
+  return gaps;
 }
 
 /**
@@ -486,11 +490,13 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
     b.box(e0, 0, z0, L, 0.05, z1 - z0, promenade);
   // Lamps along the water, reaching out over the walk (clear of the bridges)
   const nearBridge = (x: number) => NS_ROADS.some((r) => Math.abs(x - r.c) < r.half + WALK_W + 0.9) || !offFootbridge(x, 0.6);
+  // (the north bank's carried on west along Uptown, the boulevard's line: uptown.ts)
   for (let x = PROMENADE.x[0]; x <= PROMENADE.x[1]; x += 6)
     if (!nearBridge(x)) {
       addLamp(x, RIVER[0] - 0.4, Math.PI / 2, 0.05);
       addLamp(x, RIVER[1] + 0.4, -Math.PI / 2, 0.05);
     }
+  for (let x = PROMENADE.x[0] - 6; x >= BOULEVARD_X[0] + 1; x -= 6) if (!nearBridge(x)) addLamp(x, RIVER[0] - 0.4, Math.PI / 2, 0.05);
 
   // Roads: asphalt, and down each avenue a raised median (broken at crossings and over the river)
   const asphalt = toon('#26243f');
@@ -564,7 +570,8 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
     }
     const kind: LotKind =
       lots[blk.id] ??
-      (blk.ref === 'garage' ? 'concrete' : blk.ref === 'market' || blk.ref === 'units' ? 'paving' : blk.use === 'park' ? 'grass' : blk.id.startsWith('dt-') ? 'paving' : 'grass');
+      // (Uptown's empty lots are bare earth behind their hoardings until the towers come: uptown.ts)
+      (blk.ref === 'garage' ? 'concrete' : blk.ref === 'market' || blk.ref === 'units' ? 'paving' : blk.ref === 'uptown' ? 'dirt' : blk.use === 'park' ? 'grass' : blk.id.startsWith('dt-') ? 'paving' : 'grass');
     if (isRect(slab) && !bigPoly(slab)) {
       const [x0, z0] = [Math.min(...slab.map((p) => p[0])), Math.min(...slab.map((p) => p[1]))];
       const [x1, z1] = [Math.max(...slab.map((p) => p[0])), Math.max(...slab.map((p) => p[1]))];

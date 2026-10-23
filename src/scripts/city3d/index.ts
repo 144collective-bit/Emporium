@@ -80,6 +80,7 @@ import { createTileWork } from './tilework';
 // (the site worker imports this module, the city's chunk, and starts with sitework.ts's `serveSites()`)
 import { meshesOf, startSiteWorker } from './sitework';
 import { buildTrenches } from './trenches3d';
+import { buildUptownStreets } from './streets3d';
 import { tilesInView, type Plane } from './tiles';
 import { farForm, farLods, updateLods } from './lod';
 
@@ -206,6 +207,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const fightDemo = new URLSearchParams(location.search).has('fight') ? (await import('./fight-demo')).buildFightDemo({ scene, root, reduced, low: tier === 'low', tick }) : null;
   // The Trenches (growth plan Phase 9): its streets, built as you go (its blocks are the street plan's)
   buildTrenches();
+  buildUptownStreets();
   // ...its towers, lawns and rows (sites too), and The Block, a place (its pin and panel) with its people
   buildProjects(tier === 'low');
   // ...the lawns' communal areas, the rec block, parking bays and railings (the redesign's step B), and the people out there

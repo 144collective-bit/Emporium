@@ -22,6 +22,7 @@ import type { Tick } from './world';
 import { WESTLAKE_RECT } from './westlake';
 import { STADIUM_AREA } from './stadium';
 import { KART_AREA } from './kartfacility';
+import { UPTOWN_RECT } from './uptown';
 
 export interface LazyDistrict {
   id: string;
@@ -36,6 +37,8 @@ export const LAZY_DISTRICTS: LazyDistrict[] = [
   { id: 'westlake', rect: union(WESTLAKE_RECT, STADIUM_AREA), load: () => import('./westlake3d') },
   // The kart park's grounds north of the highway: the circuit, trackside, the paddock, Kart Road and the car park (kartgrounds3d.ts)
   { id: 'karts', rect: KART_AREA, load: () => import('./kartgrounds3d') },
+  // Uptown, the financial centre west of town (uptown.ts): its hoardings until the towers come (uptown3d.ts)
+  { id: 'uptown', rect: UPTOWN_RECT, load: () => import('./uptown3d') },
 ];
 
 
