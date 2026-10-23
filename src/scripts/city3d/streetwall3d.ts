@@ -19,7 +19,7 @@
  * Details near only; walls, roofs, signs at every distance.
  */
 import * as THREE from 'three';
-import { Batch, FONT_DISPLAY, canvasTex, lit, toon } from './kit';
+import { Batch, canvasTex, FONT_DISPLAY, lit, siteMat, toon } from './kit';
 import { METAL, ROOF, glow } from './infill';
 import { drawLot } from './kits3d';
 import { SLAB as S, addTree } from './world';
@@ -69,7 +69,7 @@ const SIGNS = (() => {
       c.fillText(text, W / 2, y + H / 2 + 4);
     });
   });
-  return { mat: lit(new THREE.MeshBasicMaterial({ map: tex, toneMapped: true }), 0.95, 1.15) };
+  return { mat: siteMat('lowrise-signs', lit(new THREE.MeshBasicMaterial({ map: tex, toneMapped: true }), 0.95, 1.15)) };
 })();
 
 const BLOCK_WALL = toon('#8a8698');

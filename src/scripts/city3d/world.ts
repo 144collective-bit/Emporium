@@ -14,7 +14,7 @@
  */
 import * as THREE from 'three';
 import { DISTRICTS } from '../../data/plots';
-import { Batch, PAL, canvasTex, facadeMat, flickerTogether, fx, glowMat, glowTex, lit, neon, rand, rng, sidesBox, toon } from './kit';
+import { Batch, canvasTex, facadeMat, flickerTogether, fx, glowMat, glowTex, lit, neon, PAL, rand, rng, sidesBox, siteMat, toon } from './kit';
 import { BLOCKS, BS, CENTER_XZ, CORE_ROADS, DOWNTOWN, EW_ROADS, EXT, LANE, MEDIAN, NS_ROADS, RIVER, SEATS, SOUTH_ROAD, WALK_W, type Road } from './layout';
 import { PLAN, offsetLine, pointAt, riverBridges, streetLength, type Pt, type Street } from './streetplan';
 import { HIGHWAY, HIGHWAY_HALF } from './highway';
@@ -60,6 +60,20 @@ export function addLamp(x: number, z: number, ry = 0, y = SLAB) {
 const pools: { x: number; z: number; y: number; size: number; sodium: boolean }[] = [];
 export function addPool(x: number, z: number, size: number, y = SLAB, sodium = false) {
   pools.push({ x, z, y, size, sodium });
+}
+
+/** Every tree, lamp and pool placed (the site worker takes the main thread's: sitework.ts) */
+export interface Placed {
+  trees: typeof trees;
+  lamps: typeof lamps;
+  pools: typeof pools;
+}
+export const placed = (): Placed => ({ trees, lamps, pools });
+/** The site worker: the main thread's trees, lamps and pools, in place of its own (sitework.ts) */
+export function usePlaced(p: Placed) {
+  trees.splice(0, trees.length, ...p.trees);
+  lamps.splice(0, lamps.length, ...p.lamps);
+  pools.splice(0, pools.length, ...p.pools);
 }
 
 /* ---------- Ground ---------- */
@@ -859,7 +873,7 @@ export function buildLamps(scene: THREE.Scene, low = false) {
     TONES.map((t) => {
       const white = t === 'white';
       // (a flickering bulb keeps its own material, not the Batch's shared neon, so it goes out with its halo and pool)
-      const bulb = white ? neon('#fff1c2', 0.6, 2.4) : flicker(t) ? lit(new THREE.MeshBasicMaterial({ color: SODIUM.bulb, toneMapped: true }), 0.6, 2.4, flicker(t)) : neon(SODIUM.bulb, 0.6, 2.4);
+      const bulb = white ? neon('#fff1c2', 0.6, 2.4) : flicker(t) ? siteMat(`lamp-bulb-${t}`, lit(new THREE.MeshBasicMaterial({ color: SODIUM.bulb, toneMapped: true }), 0.6, 2.4, flicker(t))) : neon(SODIUM.bulb, 0.6, 2.4);
       const halo = lit(new THREE.PointsMaterial({ color: white ? '#ffe2a0' : SODIUM.halo, map: glowTex, size: 1.1, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }), 0, white ? 0.3 : 0.34, flicker(t));
       const pool = lit(glowMat(white ? '#ffd98a' : SODIUM.pool, 1), 0, white ? 0.26 : 0.3, flicker(t));
       if (flicker(t)) flickerTogether([bulb, halo, pool], t === 'flickA' ? 11 : 47);

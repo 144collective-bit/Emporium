@@ -9,7 +9,7 @@
  * solids.ts holds the footprints walk mode and the server share).
  */
 import * as THREE from 'three';
-import { Batch, FONT_DISPLAY, PAL, canvasTex, fx, lit, neon, neonSign, plane, toon } from './kit';
+import { Batch, FONT_DISPLAY, fx, lit, liveTex, neon, neonSign, PAL, plane, toon } from './kit';
 import { GARAGE_SITE } from './solids';
 import { SLAB as S, addLamp, type Tick } from './world';
 import { GARAGE } from './layout';
@@ -62,7 +62,7 @@ export function buildGarage(scene: THREE.Scene, opts: { tick: (f: Tick) => void;
 
   // Bay 2: a roller door, down
   const [r0, r1] = bays[1];
-  const shutter = canvasTex(256, 192, (c) => {
+  const shutter = liveTex(256, 192, (c) => {
     c.fillStyle = '#8a86a8';
     c.fillRect(0, 0, 256, 192);
     c.fillStyle = '#6f6a8f';
@@ -107,7 +107,7 @@ export function buildGarage(scene: THREE.Scene, opts: { tick: (f: Tick) => void;
   sign.rotation.y = Math.PI;
   g.add(fx(sign));
   // A small "OFFICE" plate over its door
-  const plate = canvasTex(256, 64, (c) => {
+  const plate = liveTex(256, 64, (c) => {
     c.fillStyle = '#0b0a18';
     c.fillRect(0, 0, 256, 64);
     c.font = `900 44px ${FONT_DISPLAY}`;

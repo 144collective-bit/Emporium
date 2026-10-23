@@ -12,7 +12,7 @@
  * or markings.
  */
 import * as THREE from 'three';
-import { PAL, canvasTex, fx, lit, toon, unlit } from './kit';
+import { fx, lit, liveTex, PAL, toon, unlit } from './kit';
 import type { SkinId } from '../net/profile-data';
 import type { WeaponId } from './combat-sim';
 import { FIT, type Fit } from './gunfit';
@@ -353,7 +353,7 @@ export function rifleGeometry() {
 
 /* ----- Finishes and sights ----- */
 
-const neonTex = canvasTex(256, 16, (c) => {
+const neonTex = liveTex(256, 16, (c) => {
   const g = c.createLinearGradient(0, 0, 256, 0);
   g.addColorStop(0, '#ff2fb9');
   g.addColorStop(0.5, '#8f3dff');
@@ -363,7 +363,7 @@ const neonTex = canvasTex(256, 16, (c) => {
 });
 
 /** The red-dot reticle: a gradient ring and a centre dot */
-export const reticleTex = canvasTex(128, 128, (c) => {
+export const reticleTex = liveTex(128, 128, (c) => {
   const g = c.createLinearGradient(20, 20, 108, 108);
   g.addColorStop(0, '#ff2fb9');
   g.addColorStop(0.5, '#ff5aa8');
@@ -393,7 +393,7 @@ export const reticleTex = canvasTex(128, 128, (c) => {
 });
 
 /** The scope's lens: tinted glass with fine crosshairs */
-const lensTex = canvasTex(128, 128, (c) => {
+const lensTex = liveTex(128, 128, (c) => {
   const g = c.createRadialGradient(64, 64, 10, 64, 64, 64);
   g.addColorStop(0, '#2a6a8a');
   g.addColorStop(1, '#0a1a2a');

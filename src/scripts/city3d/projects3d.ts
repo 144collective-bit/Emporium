@@ -18,7 +18,7 @@
  *   trees along the highway.
  */
 import * as THREE from 'three';
-import { Batch, FONT_DISPLAY, PAL, canvasTex, lit, roundRect, toon } from './kit';
+import { Batch, canvasTex, FONT_DISPLAY, lit, PAL, roundRect, siteMat, toon } from './kit';
 import { ATLAS, INK, METAL, ROOF, STONE, CREAM, WOOD, acUnit, glow, kit, planter, tank, type Frame } from './infill';
 import { drawLot } from './kits3d';
 import { SLAB as S, addLamp, addTree } from './world';
@@ -54,7 +54,7 @@ const NUMBERS = (() => {
       c.fillText(`TRENCH HOUSES · ${TOWERS[i].no}`, W / 2, y + H / 2 + 2);
     }
   });
-  return { mat: lit(new THREE.MeshBasicMaterial({ map: tex, toneMapped: true }), 0.9, 1.1), rows: n };
+  return { mat: siteMat('tower-signs', lit(new THREE.MeshBasicMaterial({ map: tex, toneMapped: true }), 0.9, 1.1)), rows: n };
 })();
 
 /** The murals: big painted walls with made-up names, one row each */
@@ -109,7 +109,7 @@ const MURALS = (() => {
       }
     });
   });
-  return { mat: lit(new THREE.MeshBasicMaterial({ map: tex, toneMapped: true }), 0.9, 0.45), rows: MURAL_TEXT.length };
+  return { mat: siteMat('murals', lit(new THREE.MeshBasicMaterial({ map: tex, toneMapped: true }), 0.9, 0.45)), rows: MURAL_TEXT.length };
 })();
 
 /** A plane facing out along n (one of the four), w wide and h high, its middle at (x, y, z), showing row `row` of an atlas of `rows` */

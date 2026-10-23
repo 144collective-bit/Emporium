@@ -13,7 +13,7 @@ import * as THREE from 'three';
 import type { Look } from '../net/profile-data';
 import { createDegen, emotePose, idlePose, lookOutfit, walkPose, type Degen } from './character';
 import { newFightPose, sampleClip } from './fight-anim';
-import { canvasTex, lit, toon } from './kit';
+import { lit, liveTex, toon } from './kit';
 import { createPost } from './post';
 
 export type StagePose = 'idle' | 'walk' | 'guard' | 'wave' | 'dance' | 'cheer' | 'salute';
@@ -33,7 +33,7 @@ export interface Stage {
 }
 
 const backdrop = (stops: [number, string][]) =>
-  canvasTex(256, 256, (c) => {
+  liveTex(256, 256, (c) => {
     const g = c.createRadialGradient(128, 96, 10, 128, 128, 190);
     for (const [k, col] of stops) g.addColorStop(k, col);
     c.fillStyle = g;

@@ -21,7 +21,7 @@
 import * as THREE from 'three';
 import { carMaterials, wheelGeometry, type CarSpec } from './cars';
 import { HIP_HEIGHT, reachArm, torsoFrame, type Degen } from './character';
-import { FONT_DISPLAY, PAL, canvasTex, mergeMeshes, neon, toon } from './kit';
+import { FONT_DISPLAY, liveTex, mergeMeshes, neon, PAL, toon } from './kit';
 import { KART_L } from './kartpark';
 import type { KartId } from './mykart';
 
@@ -78,7 +78,7 @@ const plateMats = new Map<number, THREE.MeshBasicMaterial>();
 function plateMat(n: number) {
   let m = plateMats.get(n);
   if (m) return m;
-  const map = canvasTex(64, 64, (c) => {
+  const map = liveTex(64, 64, (c) => {
     c.clearRect(0, 0, 64, 64);
     c.fillStyle = '#f3f2f7';
     c.strokeStyle = PAL.ink;

@@ -23,7 +23,7 @@
  *   your player profile when online).
  */
 import * as THREE from 'three';
-import { FONT_DISPLAY, PAL, canvasTex, fx, glowTex, mergeMeshes, neon, sidesBox, toon } from './kit';
+import { FONT_DISPLAY, fx, glowTex, liveTex, mergeMeshes, neon, PAL, sidesBox, toon } from './kit';
 import { type Tick } from './world';
 import { DRONES, DUMMIES, SWAP_TIME, WEAPONS, WEAPON_IDS, createSim, dronePose, weaponUnlocked, type SimEvent, type TargetKind, type WeaponId } from './combat-sim';
 import type { ClientMsg, MeRow, NetEvent } from '../net/protocol';
@@ -76,7 +76,7 @@ const PROFILE_KEY = 'degen-city-combat-v1';
 /* ---------- Target looks ---------- */
 
 const bodyTex = () =>
-  canvasTex(256, 384, (c) => {
+  liveTex(256, 384, (c) => {
     // A cardboard "jeet bot": a cartoon robot cutout with a target on its chest
     c.fillStyle = '#c99a5a';
     c.fillRect(0, 0, 256, 384);

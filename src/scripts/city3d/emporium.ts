@@ -4,19 +4,7 @@
  * machines and prize booth (mirrored in solids.ts).
  */
 import * as THREE from 'three';
-import {
-  Batch,
-  PAL,
-  canvasTex,
-  fx,
-  glowMat,
-  lit,
-  neonSign,
-  occlude,
-  place,
-  rng,
-  toon,
-} from './kit';
+import { Batch, canvasTex, fx, glowMat, lit, liveTex, neonSign, occlude, PAL, place, rng, toon } from './kit';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { PLAYER, createDegen, dancePose } from './character';
 import { SLAB as S, addLamp, addTree } from './world';
@@ -494,7 +482,7 @@ export function emporium(scene: THREE.Scene, ctx: LandmarkCtx, crowd: Idle[]) {
   /* ----- The LED wall: one face of the tower, twisting with it, playing pixel shows ----- */
   {
     const H = wallFloors.length * 12;
-    const tex = canvasTex(WALL_W, H, () => {});
+    const tex = liveTex(WALL_W, H, () => {});
     tex.magFilter = THREE.NearestFilter;
     tex.minFilter = THREE.LinearFilter;
     tex.generateMipmaps = false;
@@ -623,7 +611,7 @@ export function emporium(scene: THREE.Scene, ctx: LandmarkCtx, crowd: Idle[]) {
   {
     const COLS = 18;
     const ROWS = 12;
-    const tex = canvasTex(COLS * 8, ROWS * 8, () => {});
+    const tex = liveTex(COLS * 8, ROWS * 8, () => {});
     tex.magFilter = THREE.NearestFilter;
     const c = (tex.image as HTMLCanvasElement).getContext('2d')!;
     const tiles = ['#ff2fb9', '#8f3dff', '#00eaff', '#ffd36b'];
