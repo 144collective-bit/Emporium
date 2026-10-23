@@ -83,8 +83,8 @@ sign-off. Keep this plan up to date as each phase lands.
      the north bank to the highway, ready for Phase 4.
    - **Drawn:**
      - the streets, sidewalks and slabs;
-     - the empty lots behind hoardings carrying the district's name
-       (made-up developer copy).
+     - the empty lots behind hoardings carrying UPTOWN (made-up
+       developer copy).
 2. **The towers.**
    - **A skyscraper kit** (`kits.ts`, `kits3d.ts`): a podium with a double-
      height lobby (revolving doors, a canopy), a shaft and setbacks, and a
