@@ -37,6 +37,7 @@ import type { Animator } from './animator';
 import { loadMocap } from './mocap-load';
 import { GAITS, newMove, startSlide, stepMove, stepSlide, type Slide } from './movesim';
 import { slidePose } from './poses';
+import { OVER, isLow, overAhead, overAt, overPose, type Over } from './vault';
 import { springVel } from './inertia';
 import { createCombat, type Sfx } from './combat';
 import { WEAPON_IDS } from './combat-sim';
@@ -244,6 +245,10 @@ export function createWalk(d: WalkDeps) {
   let crouchAmt = 0;
   let slide: Slide | null = null;
   let slideAmt = 0;
+  /** Going over something low (Jump at it, vault.ts): how far into it, the ground at the start and the landing, how fast he came at it; how much of its pose shows, and the last one (to blend out of) */
+  let over: { o: Over; t: number; g0: number; g1: number; v: number } | null = null;
+  let overAmt = 0;
+  let overLast: Over | null = null;
   /** Seconds the procedural landing (a crouch or a roll) still has, before the motion capture takes him back */
   let landHold = 0;
   const lastPos = new THREE.Vector3();
@@ -373,7 +378,7 @@ export function createWalk(d: WalkDeps) {
   const nearBoxes: Box[] = [];
   const onBridge = (x: number) => NS_ROADS.some((r) => Math.abs(x - r.c) < r.half + WALK_W - 0.15);
   /** `y`: how high Degen is (up on Liberty Bridge only its parapets stop you; under it, its pillars and stairs do) */
-  function blocked(x: number, z: number, y = 0) {
+  function blocked(x: number, z: number, y = 0, skip?: (b: Box) => boolean) {
     if (x < BOUNDS[0] || x > BOUNDS[2] || z < BOUNDS[1] || z > BOUNDS[3]) return true;
     if (footbridgeY(x, z, y, RADIUS) !== null) return false;
     if (footbridgeWall(x, z, y, RADIUS)) return true;
@@ -384,7 +389,7 @@ export function createWalk(d: WalkDeps) {
     if (z > RIVER[0] - 0.3 && z < RIVER[1] + 0.3 && !onBridge(x) && !onDeck(x, z, RADIUS)) return true;
     // Westlake Park's lake (westlake.ts): you stop on the lawn at its stone rim, but out along the jetty (its edges stop you)
     if (inLake(x, z, RADIUS + RIM.w + 0.1) && !onJetty(x, z, RADIUS) && !onTerrace(x, z, RADIUS)) return true;
-    if (SOLID_GRID.near(x, z, RADIUS, nearBoxes).some((b) => inBox(b, x, z, RADIUS))) return true;
+    if (SOLID_GRID.near(x, z, RADIUS, nearBoxes).some((b) => inBox(b, x, z, RADIUS) && !skip?.(b))) return true;
     if (drive.blocks(x, z, RADIUS) || fly.blocks(x, z, RADIUS)) return true;
     return d.plotSolids().some((b) => inBox(b, x, z, RADIUS));
   }
@@ -1427,6 +1432,25 @@ export function createWalk(d: WalkDeps) {
 
   /* ---------- Per frame ---------- */
 
+  /**
+   * Jump at something low straight ahead (going `dir`): over it, if it's a
+   * low thing (vault.ts), the landing's clear and near his own ground, and
+   * nothing but low things under the arc stands in the way over
+   */
+  function tryOver(dir: number) {
+    const g0 = groundAt(pos.x, pos.z, pos.y + 0.3);
+    const ahead = SOLID_GRID.near(pos.x + Math.sin(dir) * 1.1, pos.z + Math.cos(dir) * 1.1, 1.5, []);
+    const o = overAhead(pos.x, pos.z, dir, g0, ahead, RADIUS);
+    if (!o) return null;
+    const g1 = groundAt(o.x1, o.z1, g0 + 0.3);
+    if (Math.abs(g1 - g0) > OVER.drop || blocked(o.x1, o.z1, g1)) return null;
+    for (let k = 1; k < 10; k++) {
+      const at = overAt(o, k / 10, g0, g1);
+      if (blocked(at.x, at.z, at.y, (b) => isLow(b) && b[4] <= o.top + 0.02)) return null;
+    }
+    return { o, t: 0, g0, g1, v: speedNow };
+  }
+
   const headAt = new THREE.Vector3();
   const sideDir = new THREE.Vector3();
   const lookDir = new THREE.Vector3();
@@ -1711,25 +1735,47 @@ export function createWalk(d: WalkDeps) {
     ms.vx = vel.x;
     ms.vz = vel.y;
     ms.face = face;
-    if (slide) {
-      // (a slide carries him on, slowing; when it's done he runs on with the stick pushed, or stays down in a crouch)
-      if (!stepSlide(slide, ms, gx, gz, dt) || !grounded) {
-        slide = null;
-        crouched = Math.hypot(gx, gz) < 0.01;
+    if (over) {
+      // Over something low: along the way over, his feet over its top (vault.ts), the springs carried along
+      over.t += dt;
+      const u = Math.min(1, over.t / over.o.dur);
+      const at = overAt(over.o, u, over.g0, over.g1);
+      vel.set((at.x - pos.x) / dt, (at.z - pos.z) / dt);
+      pos.set(at.x, at.y, at.z);
+      ms.vx = vel.x;
+      ms.vz = vel.y;
+      ms.ax = ms.az = ms.w = 0;
+      ms.face = over.o.dir;
+      if (u >= 1) {
+        // (down: on at a run with the stick pushed, at most as fast as he came at it; else stopping)
+        const v = Math.hypot(gx, gz) > 0.01 ? Math.min(over.v, RUN) : 0.4;
+        ms.vx = Math.sin(over.o.dir) * v;
+        ms.vz = Math.cos(over.o.dir) * v;
+        vel.set(ms.vx, ms.vz);
+        overLast = over.o;
+        over = null;
       }
-    } else stepMove(ms, gx, gz, grounded, dt, faceGoal);
-    vel.set(ms.vx, ms.vz);
-    const stuck = blocked(pos.x, pos.z, pos.y);
-    const nx = pos.x + vel.x * dt;
-    if (stuck || !blocked(nx, pos.z, pos.y)) pos.x = nx;
-    else vel.x = 0;
-    const nz = pos.z + vel.y * dt;
-    if (stuck || !blocked(pos.x, nz, pos.y)) pos.z = nz;
-    else vel.y = 0;
-    // (a slide into something stops there, crouched)
-    if (slide && (vel.x !== ms.vx || vel.y !== ms.vz)) {
-      slide = null;
-      crouched = true;
+    } else {
+      if (slide) {
+        // (a slide carries him on, slowing; when it's done he runs on with the stick pushed, or stays down in a crouch)
+        if (!stepSlide(slide, ms, gx, gz, dt) || !grounded) {
+          slide = null;
+          crouched = Math.hypot(gx, gz) < 0.01;
+        }
+      } else stepMove(ms, gx, gz, grounded, dt, faceGoal);
+      vel.set(ms.vx, ms.vz);
+      const stuck = blocked(pos.x, pos.z, pos.y);
+      const nx = pos.x + vel.x * dt;
+      if (stuck || !blocked(nx, pos.z, pos.y)) pos.x = nx;
+      else vel.x = 0;
+      const nz = pos.z + vel.y * dt;
+      if (stuck || !blocked(pos.x, nz, pos.y)) pos.z = nz;
+      else vel.y = 0;
+      // (a slide into something stops there, crouched)
+      if (slide && (vel.x !== ms.vx || vel.y !== ms.vz)) {
+        slide = null;
+        crouched = true;
+      }
     }
     const speed = vel.length();
 
@@ -1737,8 +1783,17 @@ export function createWalk(d: WalkDeps) {
 
     // Jumping: buffered presses, a little coyote time, release early for a short hop
     coyote = grounded ? 0.12 : coyote - dt;
-    jumpBuffer -= dt;
-    if (jumpBuffer > 0 && coyote > 0) {
+    // (Jump going at something low goes over it instead: vault.ts)
+    if (!over && jumpBuffer > 0 && coyote > 0 && grounded && mag > 0.3) {
+      const o = tryOver(Math.atan2(dirX, dirZ));
+      if (o) {
+        over = o;
+        jumpBuffer = 0;
+        crouched = false;
+        slide = null;
+      }
+    }
+    if (!over && jumpBuffer > 0 && coyote > 0) {
       vy = JUMP;
       grounded = false;
       coyote = jumpBuffer = 0;
@@ -1746,8 +1801,13 @@ export function createWalk(d: WalkDeps) {
       crouched = false;
       slide = null;
     }
-    vy -= (GRAVITY + (!jumpHeld && vy > 0 ? 16 : 0)) * dt;
-    pos.y += vy * dt;
+    // (the press waits a moment for the ground: counted down after it's looked at, so a slow frame can't lose it)
+    jumpBuffer -= dt;
+    if (over) vy = 0;
+    else {
+      vy -= (GRAVITY + (!jumpHeld && vy > 0 ? 16 : 0)) * dt;
+      pos.y += vy * dt;
+    }
     const ground = groundAt(pos.x, pos.z, pos.y + 0.3);
     const fall = vy;
     const wasGrounded = grounded;
@@ -1803,6 +1863,10 @@ export function createWalk(d: WalkDeps) {
     crouchAmt += ((crouched ? 1 : 0) - crouchAmt) * damp(10, dt);
     if (crouchBtn.ariaPressed !== String(crouched)) crouchBtn.setAttribute('aria-pressed', String(crouched));
     slidePose(P, slideAmt);
+    // ...and going over something low, its keyed pose with the hands planted on its top (blended out from its end)
+    overAmt += ((over ? 1 : 0) - overAmt) * damp(over ? 30 : 8, dt);
+    const ov = over?.o ?? overLast;
+    if (ov && overAmt > 0.01) overPose(P, ov, over ? Math.min(1, over.t / over.o.dur) : 1, overAmt, pos.x, pos.y, pos.z, face, SCALE);
     // Recoil kicks the view up a touch; the rifle rides the shoulder
     const kick = combat.update(dt, t, aimNow);
     if (kick) {
@@ -1843,7 +1907,7 @@ export function createWalk(d: WalkDeps) {
     }
     let drawFace = face;
     // ...with a gun in his hands or an arm out aiming, only its legs and hips: his own pose over them
-    const mocapOn = !!animator && landHold <= 0 && !emote && !slide;
+    const mocapOn = !!animator && landHold <= 0 && !emote && !slide && !over;
     upperW = THREE.MathUtils.clamp(upperW + (gunInHand || aim ? dt / 0.15 : -dt / 0.15), 0, 1);
     if (animator && anim) {
       // (a fresh start after a jump in place: walking started, a fast travel, the end of a ride)
@@ -2065,6 +2129,7 @@ export function createWalk(d: WalkDeps) {
       vel.set(0, 0);
       vy = 0;
       grounded = true;
+      over = slide = null;
       yaw = at.yaw;
       face = yaw + Math.PI;
       pitch = firstPerson ? -0.05 : 0.35;
@@ -2124,6 +2189,7 @@ export function createWalk(d: WalkDeps) {
       yaw = SPAWN_YAW;
       crouched = false;
       slide = null;
+      over = null;
       // ?spawn=x,z[,yaw] in the address: start walking somewhere else (for checking a place on real devices)
       const at = new URLSearchParams(location.search).get('spawn')?.split(',').map(Number);
       if (at && at.length >= 2 && at.every(Number.isFinite)) {
