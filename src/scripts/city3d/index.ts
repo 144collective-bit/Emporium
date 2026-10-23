@@ -1046,7 +1046,10 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     const covered = root.classList.contains('has-start');
     viewSpot[0] = CROWD_VIEW.focus.x;
     viewSpot[1] = CROWD_VIEW.focus.z;
-    works.step(covered ? 24 : bench && !bench.active && !bench.done ? 12 : tier === 'low' ? 2 : 3, CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, CROWD_VIEW.eye.z, dt, Q.far, walking ? undefined : viewSpot);
+    // (a share of the time since the last frame, not a fixed slice: a slow phone draws few frames, and while its
+    // GPU draws the next one its CPU is free; at 60fps that's the 2-3 ms it always was)
+    const share = Math.min(10, Math.max(tier === 'low' ? 2 : 3, gap * 1000 * 0.15));
+    works.step(covered ? 24 : bench && !bench.active && !bench.done ? 12 : share, CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, CROWD_VIEW.eye.z, dt, Q.far, walking ? undefined : viewSpot);
     // Near and far forms (growth plan Phase 2): the details only within the tier's `far` of the camera
     tiled.update(CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, CROWD_VIEW.eye.z, Q.far);
     updateLods(CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, CROWD_VIEW.eye.z, Q.far);
