@@ -86,6 +86,8 @@ import { buildTrenches } from './trenches3d';
 import { buildUptownStreets } from './streets3d';
 import { tilesInView, type Plane } from './tiles';
 import { farForm, farLods, updateLods } from './lod';
+import { live } from './live-client';
+import { closedLine } from './live';
 
 type Tier = 'high' | 'medium' | 'low';
 
@@ -456,14 +458,24 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     panelBody.replaceChildren(tpl.content.cloneNode(true));
     // One card at a time: a panel closes your stall's card
     tycoon?.closeCard();
+    // Closed for now by the owner (live settings): its kicker and name, and the closed line; nothing to do in it
+    const gate = live.place(id);
+    if (!gate.open) {
+      const title = panelBody.querySelector('.city-panel-title');
+      for (const el of [...panelBody.children]) if (el !== title && !el.classList.contains('kicker')) el.remove();
+      const line = document.createElement('p');
+      line.className = 'live-closed';
+      line.textContent = closedLine(title?.textContent?.trim() || 'This place', gate);
+      panelBody.append(line);
+    }
     // (the fitting room is a chunk of its own, loaded the first time Drop 001's panel opens)
-    if (id === 'shop')
+    if (id === 'shop' && gate.open)
       void loadFitting().then((f) => {
         if (active === s) f.mount(panelBody, toFitting);
       });
     else fitting?.unmount();
     // The economy's panels: the market hall, the Workshop, contracts, couriers, staff
-    tycoon?.mountPanel(id, panelBody);
+    if (gate.open) tycoon?.mountPanel(id, panelBody);
     // The kart park's panel: your records, and Walk in (walk mode starts at its gate)
     if (id === 'karts') {
       const rec = panelBody.querySelector<HTMLElement>('[data-kart-panel-records]');
@@ -606,7 +618,12 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     tyres: (level) => sound.tyres(level),
     // Your business's places, and the metro's station doors
     places: () => [...(tycoon?.places() ?? []), ...(metroUI?.doors ?? [])],
-    openPlace: (id) => (id.startsWith('metro:') ? metroUI?.open(id.slice(6)) : tycoon?.openCard(id as 'stall')),
+    openPlace: (id) => {
+      if (!id.startsWith('metro:')) return tycoon?.openCard(id as 'stall');
+      const shut = live.closed('metro');
+      if (shut) tycoon?.toast(shut, 3500);
+      else metroUI?.open(id.slice(6));
+    },
     game,
     kartPark,
     raceConditions: (() => {
@@ -748,6 +765,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   let beforeWalk: { pos: THREE.Vector3; target: THREE.Vector3 } | null = null;
   function startWalking(spawn?: { x: number; z: number; yaw: number }) {
     if (walking) return;
+    // (unless the owner has closed it for now: live settings)
+    const shut = live.closed('walk');
+    if (shut) return tycoon?.toast(shut, 3500);
     if (builder.active) builder.setBuild(false);
     close();
     setHover(null);
@@ -1056,7 +1076,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // Walk / Build pills never sit on top of a building's name. Re-read a few
   // times a second (they open, close and move with the layout)
   // The header, its open drop-downs (settings, menu), the welcome card, the guide and the kart, flight, drive and fight HUDs
-  const chrome = [...root.querySelectorAll<HTMLElement>('.city-head, .head-panel, .city-card, .city-guide, .kart-hud, .fly-hud, .drive-hud, .fight-demo, [data-fight-hud], .wm-compass')];
+  const chrome = [...root.querySelectorAll<HTMLElement>('.city-head, .head-panel, .city-banner, .city-card, .city-guide, .kart-hud, .fly-hud, .drive-hud, .fight-demo, [data-fight-hud], .wm-compass')];
   const chromeRects: { x: number; y: number; w: number; h: number }[] = [];
   const readChrome = () => {
     const o = host.getBoundingClientRect();

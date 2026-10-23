@@ -833,6 +833,38 @@ it and has been retired completely. Build only on what's here.
   costs two draw calls a model. Parked cars use `parkedCars()`; give them a
   footprint in `solids.ts`. Keep a new model inside a 1.7-wide lane and in
   scale with Degen (a hatch's roof is about 0.95 tiles up).
+- **Live settings** (the owner's call): the owner switches parts of the
+  city from outside the code, in a private command center, through the
+  backend's public config (`LIVE_URL`, public settings only).
+  - The rules are `live.ts` (DOM-free, tested in `tests/live.test.ts`):
+    `readLive()` reads `place.<spot>` and `feature.<id>` ({ open, note }),
+    `banner.<id>` ({ text, place, from, until }) and `maintenance` ({ on,
+    message, eta }); anything unknown or wrong is left out, so no config,
+    a broken one or a backend that's down is the city as it is in the code.
+    `LIVE_PLACES` (every spot with a pin: keep it in step with `PLACES`, the
+    test checks) and `LIVE_FEATURES` (walk, build, drive, fly, karts,
+    fight, guns, taxi, metro, travel) are what can be switched; the command
+    center reads these lists from here, so a new place or feature is added
+    once, here.
+  - `live-client.ts` fetches it: once at the boot (the 3D city's boot waits
+    at most `LIVE_TIMEOUT` for it, while its code downloads), again every
+    `POLL_MS` while the tab is showing, the last copy kept in localStorage
+    (`degen-city-live-v1`); off under `?bake-textures` and `?bench`.
+    Everything gated asks `live` as it happens: a closed place's panel
+    (`open()` in index.ts) keeps its kicker and name and says it's closed
+    (`.live-closed`, its note or "closed for now"), nothing mounted in it;
+    a closed feature's way in toasts its closed line instead (`startWalking()`,
+    Build's `setBuild()`, walk mode's `act()` via `GATED` (getting into the
+    car or aircraft, never out), the metro's doors, the world map's taxi and
+    fast travel). A new way into a feature goes through `live.closed()`.
+  - The owner's notice is `[data-live-banner]`, first in `.city-hud` (in
+    `chrome`): one at a time, a Go to its place, its × hiding that notice
+    (id and words) for good (`degen-city-notices-v1`). Maintenance is
+    `[data-maint]` over everything, the start menu too: the city doesn't
+    boot behind it (`go3d()` waits), it stops a city that's running, and
+    the page reloads when it lifts. Styles in `src/styles/live.css`.
+  - Copy from the config is shown as text only (`textContent`), one line,
+    cut to `TEXT_MAX`.
 - Keep the city's motion optional: under `prefers-reduced-motion` the 3D
   city stands still (no fly-in, no traffic), CSS animations stop and the 2D
   map's SMIL traffic is paused. It's drawn only when something changes
@@ -2436,7 +2468,7 @@ it and has been retired completely. Build only on what's here.
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`),
-  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`), the kart park's facility (`kartfacility.ts`),
+  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`), the kart park's facility (`kartfacility.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,

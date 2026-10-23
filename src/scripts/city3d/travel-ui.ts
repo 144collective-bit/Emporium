@@ -14,6 +14,7 @@ import { visit } from './tycoon';
 import type { WorldMap, WorldMapDeps } from './worldmap';
 import type { createWalk } from './walk';
 import type { GameDeps } from './ui';
+import { live } from './live-client';
 
 type Walk = ReturnType<typeof createWalk>;
 /** Closer than this (tiles) and you've reached your waypoint */
@@ -68,6 +69,9 @@ export function createTravelUI(d: TravelDeps) {
   let fading = false;
   function travel(p: Place) {
     if (state() !== 'foot' || fading || !visited().includes(p.id)) return;
+    // (unless the owner has closed it for now: live settings)
+    const shut = live.closed('travel');
+    if (shut) return game.toast(shut);
     d.want(p.at.x, p.at.z, 70);
     fading = true;
     root.classList.add('is-fading');
@@ -104,7 +108,11 @@ export function createTravelUI(d: TravelDeps) {
       d.startWalking(p.at);
     },
     travel,
-    taxi: (p) => d.taxi(p),
+    taxi(p) {
+      const shut = live.closed('taxi');
+      if (shut) game.toast(shut);
+      else d.taxi(p);
+    },
     bringCar: () => walk.bringCar(),
     toast: (text) => game.toast(text),
   };
