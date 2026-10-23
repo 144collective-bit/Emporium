@@ -30,7 +30,7 @@
  * module scope, so a unit stays a handful of draw calls.
  */
 import * as THREE from 'three';
-import { Batch, FONT_DISPLAY, PAL, canvasTex, fx, lit, neon, occlude, place, plane, toon } from './kit';
+import { Batch, FONT_DISPLAY, fx, lit, liveTex, neon, occlude, PAL, place, plane, toon } from './kit';
 import { UNITS, BS } from './layout';
 import { UNIT_SITE, UNIT_SIZE, unitSolids, type Box } from './solids';
 import { SLAB as S, addLamp } from './world';
@@ -63,7 +63,7 @@ const neonFor = (c: string) => {
 };
 /** Solar panels (a warehouse's and a factory's roof): dark cells under a light grid */
 export const solarMat = new THREE.MeshToonMaterial({
-  map: canvasTex(64, 64, (c) => {
+  map: liveTex(64, 64, (c) => {
     c.fillStyle = '#1a2f5a';
     c.fillRect(0, 0, 64, 64);
     c.fillStyle = '#3a5a9a';
@@ -82,7 +82,7 @@ function board(text: string, color: string, sub = '') {
   if (!boards.has(key))
     boards.set(
       key,
-      canvasTex(256, 96, (c) => {
+      liveTex(256, 96, (c) => {
         c.fillStyle = '#0b0a18';
         c.fillRect(0, 0, 256, 96);
         c.strokeStyle = color;
@@ -108,7 +108,7 @@ export function starBoard(level: number) {
   if (!plaques.has(level))
     plaques.set(
       level,
-      canvasTex(192, 64, (c) => {
+      liveTex(192, 64, (c) => {
         c.fillStyle = '#0b0a18';
         c.fillRect(0, 0, 192, 64);
         c.strokeStyle = PAL.gold;
@@ -132,7 +132,7 @@ export function starBoard(level: number) {
   return plaques.get(level)!;
 }
 const stripes = (color: string) =>
-  canvasTex(128, 64, (c) => {
+  liveTex(128, 64, (c) => {
     for (let x = 0; x < 128; x += 32) {
       c.fillStyle = color;
       c.fillRect(x, 0, 16, 64);
@@ -140,7 +140,7 @@ const stripes = (color: string) =>
       c.fillRect(x + 16, 0, 16, 64);
     }
   });
-const corrugated = canvasTex(128, 128, (c) => {
+const corrugated = liveTex(128, 128, (c) => {
   c.fillStyle = '#7d8aa3';
   c.fillRect(0, 0, 128, 128);
   for (let x = 0; x < 128; x += 8) {
@@ -148,7 +148,7 @@ const corrugated = canvasTex(128, 128, (c) => {
     c.fillRect(x, 0, 3, 128);
   }
 });
-const shutter = canvasTex(128, 128, (c) => {
+const shutter = liveTex(128, 128, (c) => {
   c.fillStyle = '#c9ccd6';
   c.fillRect(0, 0, 128, 128);
   for (let y = 0; y < 128; y += 10) {

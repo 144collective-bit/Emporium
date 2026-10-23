@@ -29,7 +29,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { rifleGeometry } from './guns';
 import { MARK_IDS, type Look, type MarkId, type MarkSlot, type PatternId } from '../net/profile-data';
 import { ATLAS_COLS, ATLAS_ROWS, MARK_ART } from './marks';
-import { canvasTex, lit, neon, toon } from './kit';
+import { lit, liveTex, neon, toon } from './kit';
 import { EYE_Y as HERO_EYE_Y, handParts, headFront, headGeometry } from './body';
 import { crowdFrame, type CrowdClip } from './crowdclips';
 import { WARDROBE_W, addWardrobe, crowdDepth, crowdTexture, crowdVersion } from './crowdskin';
@@ -1922,7 +1922,7 @@ let atlas: THREE.Texture | null = null;
  */
 function logoAtlas() {
   const S = 128;
-  return (atlas ??= canvasTex(S * ATLAS_COLS, S * ATLAS_ROWS, (c) => {
+  return (atlas ??= liveTex(S * ATLAS_COLS, S * ATLAS_ROWS, (c) => {
     MARK_IDS.forEach((id, i) => {
       const art = MARK_ART[id];
       c.save();
@@ -1964,7 +1964,7 @@ function logoAtlas() {
 const printTex: Partial<Record<PatternId, THREE.Texture>> = {};
 function printMask(id: PatternId) {
   if (printTex[id]) return printTex[id]!;
-  const t = canvasTex(64, 64, (c) => {
+  const t = liveTex(64, 64, (c) => {
     c.fillStyle = '#ffffff';
     c.fillRect(0, 0, 64, 64);
     c.fillStyle = '#000000';
@@ -2033,7 +2033,7 @@ function patternMaterial(id: PatternId) {
   return (printMats[id] = m);
 }
 function textures() {
-  texCache.patch ??= canvasTex(128, 84, (c) => {
+  texCache.patch ??= liveTex(128, 84, (c) => {
     c.fillStyle = '#dedce8';
     c.fillRect(0, 0, 128, 84);
     c.fillStyle = '#16c7b5';
@@ -2056,7 +2056,7 @@ function textures() {
     c.lineTo(76, 22);
     c.stroke();
   });
-  texCache.gummy ??= canvasTex(128, 160, (c) => {
+  texCache.gummy ??= liveTex(128, 160, (c) => {
     c.fillStyle = '#d8312f';
     c.fillRect(0, 0, 128, 160);
     c.fillStyle = '#c99a4a';

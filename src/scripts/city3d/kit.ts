@@ -295,18 +295,39 @@ const HALF_TEX = typeof matchMedia !== 'undefined' && (matchMedia('(pointer: coa
 /** What counts as big (a 512 x 512 canvas's pixels or more): the atlases and the long signs */
 const BIG_TEX = 512 * 512;
 
+type Draw = (ctx: CanvasRenderingContext2D, w: number, h: number) => void;
+
 /**
  * A canvas texture `w` x `h`, drawn by `draw` in those numbers (on phones a big one is drawn into a
  * canvas half the size, scaled to fit, so `draw` never knows). Never draw into its canvas afterwards
- * in pixels: the textures redrawn live (the LED wall) stay small enough to keep their size
+ * in pixels: the textures redrawn live (the LED wall) stay small enough to keep their size, and are
+ * `liveTex()`. Made at build time where it can be (below): then it's downloaded, not painted.
  */
-export function canvasTex(w: number, h: number, draw: (ctx: CanvasRenderingContext2D, w: number, h: number) => void): THREE.CanvasTexture {
+export function canvasTex(w: number, h: number, draw: Draw): THREE.CanvasTexture {
   // (in the site worker: a texture to name a material by, never painted or drawn)
   if (NO_DOM) {
     const t = new THREE.Texture();
     t.colorSpace = THREE.SRGBColorSpace;
     return t as THREE.CanvasTexture;
   }
+  const key = texKey(w, h, draw);
+  const made = BUILT?.[key];
+  if (made) return builtTexture(made, () => paint(w, h, draw));
+  const c = paint(w, h, draw);
+  if (BAKING) BAKING.push({ key, canvas: c, src: draw.toString().slice(0, 160) });
+  return canvasTexOf(c);
+}
+
+/**
+ * A canvas texture that's never made at build time: drawn from the save, the look or the visitor's own
+ * things (plots, units, the car), or drawn into afterwards (the LED wall). Painted here every time.
+ */
+export function liveTex(w: number, h: number, draw: Draw): THREE.CanvasTexture {
+  if (NO_DOM) return canvasTex(w, h, draw);
+  return canvasTexOf(paint(w, h, draw));
+}
+
+function paint(w: number, h: number, draw: Draw) {
   const k = HALF_TEX && w * h >= BIG_TEX ? 0.5 : 1;
   const c = document.createElement('canvas');
   c.width = Math.max(1, Math.round(w * k));
@@ -314,19 +335,163 @@ export function canvasTex(w: number, h: number, draw: (ctx: CanvasRenderingConte
   const ctx = c.getContext('2d')!;
   if (k !== 1) ctx.scale(c.width / w, c.height / h);
   draw(ctx, w, h);
+  return c;
+}
+function canvasTexOf(c: HTMLCanvasElement) {
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   t.anisotropy = 8;
   return t;
 }
 
+/* ---------- Textures made at build time (performance phase 4, scripts/bake-textures.mjs) ---------- */
+
+/**
+ * Which build-time set this device takes: phones' (their big textures half size, `HALF_TEX`, which is
+ * also index.ts's `low` tier) or everyone else's
+ */
+export const TEX_SET = HALF_TEX ? 'low' : 'full';
+/** One texture made at build time: its file (GPU-compressed, KTX2), size and average colour (the far forms', lod.ts) */
+export interface BuiltTex {
+  file: string;
+  w: number;
+  h: number;
+  avg: [number, number, number, number];
+}
+/** ?bake-textures: the build's own run, recording what's painted (each texture's key and canvas) */
+const BAKING: { key: string; canvas: HTMLCanvasElement; src: string }[] | null =
+  !NO_DOM && /[?&]bake-textures\b/.test(location.search) ? ((globalThis as { __texBake?: unknown[] }).__texBake = []) as never : null;
+/** Where the build put them, and the transcoder (three's, under its version) */
+let builtBase = '';
+let builtTranscoder = '';
+/** The build's own run (?bake-textures): the boot waits for the web fonts however long they take */
+export const BAKING_TEXTURES = !!BAKING;
+/**
+ * The textures made at build time for this device, from the page (the build writes them in, `#city-tex`).
+ * None while baking, with ?textures=0, or with the options that change what the boot paints (?fight, ?district)
+ */
+const BUILT: Record<string, BuiltTex> | null = (() => {
+  if (NO_DOM || BAKING || /[?&](textures=0|fight|district)\b/.test(location.search)) return null;
+  try {
+    const all = JSON.parse(document.getElementById('city-tex')?.textContent ?? 'null') as { base: string; transcoder: string; sets: Record<string, Record<string, BuiltTex>> } | null;
+    if (!all) return null;
+    builtBase = all.base;
+    builtTranscoder = all.base + all.transcoder;
+    return all.sets[TEX_SET] ?? null;
+  } catch {
+    return null;
+  }
+})();
+/**
+ * A texture's key: what draws it (its function's source), its size, and how many like it came before
+ * (the boot paints in the same order every time). The build keeps only the keys that came out the same
+ * with two different saves and clocks, so a key always stands for the same picture.
+ */
+const texCounts = new Map<string, number>();
+function texKey(w: number, h: number, draw: Draw) {
+  const src = draw.toString();
+  let x = 2166136261;
+  for (let i = 0; i < src.length; i++) x = Math.imul(x ^ src.charCodeAt(i), 16777619);
+  const base = `${(x >>> 0).toString(36)}-${w}x${h}`;
+  const n = texCounts.get(base) ?? 0;
+  texCounts.set(base, n + 1);
+  return `${base}-${n}`;
+}
+
+/** One made at build time: the texture standing in for it, and its painted fallback */
+interface Waiting {
+  tex: THREE.CompressedTexture;
+  made: BuiltTex;
+  paint: () => HTMLCanvasElement;
+  ready: () => void;
+}
+/** Those asked for before there was a renderer to load them with */
+const waiting: Waiting[] = [];
+/** The loader, once there's a renderer (which compressed formats this GPU takes), and the loads under way */
+let loading: Promise<import('three/addons/loaders/KTX2Loader.js').KTX2Loader> | null = null;
+let loads: Promise<void>[] = [];
+/**
+ * A texture made at build time: empty until its file is in, and never sent to the GPU before (three
+ * would try to upload nothing); the materials take it as they'd take the canvas
+ */
+function builtTexture(made: BuiltTex, paint: () => HTMLCanvasElement) {
+  const t = new THREE.CompressedTexture([], made.w, made.h);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 8;
+  t.userData.average = made.avg;
+  let ready = false;
+  Object.defineProperty(t, 'needsUpdate', {
+    set(v: boolean) {
+      if (v && ready) {
+        t.version++;
+        t.source.needsUpdate = true;
+      }
+    },
+  });
+  const w: Waiting = { tex: t, made, paint, ready: () => (ready = true) };
+  // (downloading at once if it can, while the rest of the city is built)
+  if (loading) loads.push(fill(w));
+  else {
+    waiting.push(w);
+    // (after the boot: a new loader)
+    if (loader3d) void loadBuiltTextures(loader3d);
+  }
+  return t as unknown as THREE.CanvasTexture;
+}
+
+/** Fetch and decode one texture's file into it; one that won't load is painted after all */
+async function fill({ tex, made, paint, ready }: Waiting) {
+  try {
+    const k = await (await loading!).loadAsync(builtBase + made.file);
+    tex.mipmaps = k.mipmaps;
+    tex.format = k.format;
+    tex.type = k.type;
+    tex.image = k.image;
+    tex.minFilter = k.minFilter;
+    tex.colorSpace = THREE.SRGBColorSpace;
+  } catch {
+    // (the canvas, as if it had never been made at build time)
+    const c = paint();
+    (tex as unknown as { isCompressedTexture: boolean }).isCompressedTexture = false;
+    tex.image = c;
+    tex.mipmaps = [];
+    tex.flipY = true;
+    tex.generateMipmaps = true;
+  }
+  ready();
+  tex.needsUpdate = true;
+}
+
+/**
+ * Start loading the textures made at build time, now there's a renderer (those asked for since start
+ * loading as they're asked for); resolves when every one asked for so far is in. `done()` lets the
+ * loader's workers go once the boot is over.
+ */
+let loader3d: THREE.WebGLRenderer | null = null;
+export function loadBuiltTextures(renderer: THREE.WebGLRenderer) {
+  loader3d = renderer;
+  if (!loading && (waiting.length || BUILT))
+    loading = import('three/addons/loaders/KTX2Loader.js').then(({ KTX2Loader }) => new KTX2Loader().setTranscoderPath(builtTranscoder).detectSupport(renderer));
+  for (const w of waiting.splice(0)) loads.push(fill(w));
+  return Promise.all(loads).then(() => undefined);
+}
+/** The boot is over: the loader's workers go (anything made at build time after this loads with a new one) */
+export function builtTexturesDone() {
+  const l = loading;
+  if (!l) return;
+  void Promise.all(loads).then(() => l.then((x) => x.dispose()));
+  loading = null;
+  loads = [];
+}
+
 export const FONT_DISPLAY = '"Big Shoulders Display", Impact, "Arial Narrow", sans-serif';
 export const FONT_MONO = '"JetBrains Mono", ui-monospace, monospace';
 
 /** Neon lettering on a transparent background, glow baked in. */
-export function neonSign(text: string, color: string, opts: { w?: number; h?: number; size?: number; font?: string; board?: string | null; tracking?: number } = {}) {
+export function neonSign(text: string, color: string, opts: { w?: number; h?: number; size?: number; font?: string; board?: string | null; tracking?: number; live?: boolean } = {}) {
   const { w = 1024, h = 256, size = 170, font = FONT_DISPLAY, board = '#0b0a18', tracking = 6 } = opts;
-  return canvasTex(w, h, (ctx) => {
+  // (`live`: drawn from the save, never made at build time: liveTex())
+  return (opts.live ? liveTex : canvasTex)(w, h, (ctx) => {
     if (board) {
       ctx.fillStyle = board;
       roundRect(ctx, 6, 6, w - 12, h - 12, 22);
@@ -374,6 +539,8 @@ interface FacadeOpts {
   bands?: string | null;
   /** Leave the bottom N rows as a lit shopfront */
   shopRows?: number;
+  /** Drawn from the save (a plot's, a lot's): never made at build time (liveTex()) */
+  live?: boolean;
 }
 
 /** Window grid for a facade: a day map and a matching night-glow map. */
@@ -391,7 +558,8 @@ export function facade(o: FacadeOpts) {
       cells.push({ x: x * cw + 9, y: y * ch + 12, w: cw - 18, h: ch - 22, on });
     }
   }
-  const map = canvasTex(W, H, (ctx) => {
+  const tex = o.live ? liveTex : canvasTex;
+  const map = tex(W, H, (ctx) => {
     ctx.fillStyle = wall;
     ctx.fillRect(0, 0, W, H);
     if (bands) {
@@ -412,7 +580,7 @@ export function facade(o: FacadeOpts) {
       ctx.fillRect(c.x + c.w / 2 - 1.5, c.y, 3, c.h);
     }
   });
-  const emissiveMap = canvasTex(W, H, (ctx) => {
+  const emissiveMap = tex(W, H, (ctx) => {
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, W, H);
     for (const c of cells) {

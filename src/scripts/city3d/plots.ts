@@ -7,7 +7,7 @@
  */
 import * as THREE from 'three';
 import { DISTRICTS, type BuildingType, type Design } from '../../data/plots';
-import { Batch, FONT_MONO, PAL, canvasTex, facadeMat, fx, glowTex, lit, neonSign, roundRect, shadeHex, toon } from './kit';
+import { Batch, facadeMat, FONT_MONO, fx, glowTex, lit, liveTex, neonSign, PAL, roundRect, shadeHex, toon } from './kit';
 import { BS, SLAB, type Tick } from './world';
 
 export type { Design };
@@ -71,14 +71,14 @@ function cached<M extends THREE.Material>(key: string, make: () => M): M {
   if (!cache.has(key)) cache.set(key, make());
   return cache.get(key) as M;
 }
-const facadeOf = (key: string, o: Parameters<typeof facadeMat>[0]) => cached(`facade:${key}`, () => facadeMat(o, 0.15, 1.7));
+const facadeOf = (key: string, o: Parameters<typeof facadeMat>[0]) => cached(`facade:${key}`, () => facadeMat({ ...o, live: true }, 0.15, 1.7));
 const signOf = (text: string, color: string) =>
-  cached(`sign:${text}:${color}`, () => lit(new THREE.MeshBasicMaterial({ map: neonSign(text, color, { board: null }), transparent: true, depthWrite: false }), 1, 1.8));
+  cached(`sign:${text}:${color}`, () => lit(new THREE.MeshBasicMaterial({ map: neonSign(text, color, { board: null, live: true }), transparent: true, depthWrite: false }), 1, 1.8));
 const glowOf = (color: string, day = 0.8, night = 2) => cached(`glow:${color}:${day}:${night}`, () => lit(new THREE.MeshBasicMaterial({ color }), day, night));
 
 const degenBoard = (img: HTMLImageElement | null) =>
   cached('billboard', () => {
-    const tex = canvasTex(1024, 640, (c) => {
+    const tex = liveTex(1024, 640, (c) => {
       const g = c.createLinearGradient(0, 640, 1024, 0);
       g.addColorStop(0, '#5a0f6e');
       g.addColorStop(0.55, '#2a1a8a');
@@ -105,7 +105,7 @@ const degenBoard = (img: HTMLImageElement | null) =>
 
 const stripeOf = (color: string) =>
   cached(`stripe:${color}`, () => {
-    const tex = canvasTex(256, 32, (c) => {
+    const tex = liveTex(256, 32, (c) => {
       for (let i = 0; i < 8; i++) {
         c.fillStyle = i % 2 ? '#f3f2f7' : color;
         c.fillRect(i * 32, 0, 32, 32);
@@ -117,7 +117,7 @@ const stripeOf = (color: string) =>
 /** Glass doors with a warm glow behind them, tinted by the neon */
 const doorOf = (neonColor: string) =>
   cached(`door:${neonColor}`, () => {
-    const tex = canvasTex(128, 256, (c) => {
+    const tex = liveTex(128, 256, (c) => {
       c.fillStyle = PAL.ink;
       c.fillRect(0, 0, 128, 256);
       const g = c.createLinearGradient(0, 0, 0, 256);
@@ -136,7 +136,7 @@ const doorOf = (neonColor: string) =>
 /** A lit shop window: shelves and goods in a warm glow */
 const shopWindowOf = (accent: string) =>
   cached(`shopwin:${accent}`, () => {
-    const tex = canvasTex(256, 128, (c) => {
+    const tex = liveTex(256, 128, (c) => {
       const g = c.createLinearGradient(0, 0, 0, 128);
       g.addColorStop(0, '#fff3c4');
       g.addColorStop(1, '#ffc46b');
@@ -160,7 +160,7 @@ const shopWindowOf = (accent: string) =>
 
 /** Roller doors (garage, loading dock) */
 const rollerMat = cached('roller', () => {
-  const tex = canvasTex(64, 128, (c) => {
+  const tex = liveTex(64, 128, (c) => {
     c.fillStyle = '#7c7898';
     c.fillRect(0, 0, 64, 128);
     c.fillStyle = '#5c5878';
@@ -172,7 +172,7 @@ const rollerMat = cached('roller', () => {
 /** Neon checkerboard paving in front of the arcade */
 const checkerOf = (neonColor: string) =>
   cached(`checker:${neonColor}`, () => {
-    const tex = canvasTex(256, 256, (c) => {
+    const tex = liveTex(256, 256, (c) => {
       for (let y = 0; y < 8; y++)
         for (let x = 0; x < 8; x++) {
           c.fillStyle = (x + y) % 2 ? '#14102a' : shadeHex(neonColor, -0.25);
@@ -185,7 +185,7 @@ const checkerOf = (neonColor: string) =>
 /** Pixel-art game screens for the arcade's windows */
 const screenOf = (neonColor: string, seed: number) =>
   cached(`screen:${neonColor}:${seed}`, () => {
-    const tex = canvasTex(128, 96, (c) => {
+    const tex = liveTex(128, 96, (c) => {
       c.fillStyle = '#0b0a1a';
       c.fillRect(0, 0, 128, 96);
       const invader = ['00100000100', '00010001000', '00111111100', '01101110110', '11111111111', '10111111101', '10100000101', '00011011000'];
@@ -205,7 +205,7 @@ const screenOf = (neonColor: string, seed: number) =>
 /** Ribbed shipping container sides */
 const containerOf = (color: string) =>
   cached(`container:${color}`, () => {
-    const tex = canvasTex(256, 64, (c) => {
+    const tex = liveTex(256, 64, (c) => {
       c.fillStyle = color;
       c.fillRect(0, 0, 256, 64);
       c.fillStyle = shadeHex(color, -0.3);
@@ -958,7 +958,7 @@ const GEN: Record<BuildingType, (o: Design, g: THREE.Group, b: Batch, ctx: GenCt
 
 /* ---------- Overlay and for-sale signs ---------- */
 
-const frameTex = canvasTex(128, 128, (c) => {
+const frameTex = liveTex(128, 128, (c) => {
   c.fillStyle = 'rgba(255,255,255,0.14)';
   roundRect(c, 6, 6, 116, 116, 14);
   c.fill();
@@ -966,7 +966,7 @@ const frameTex = canvasTex(128, 128, (c) => {
   c.strokeStyle = '#ffffff';
   c.stroke();
 });
-const saleTex = canvasTex(256, 128, (c) => {
+const saleTex = liveTex(256, 128, (c) => {
   c.fillStyle = '#14102a';
   c.fillRect(0, 0, 256, 128);
   c.lineWidth = 8;

@@ -5,7 +5,7 @@
  */
 import * as THREE from 'three';
 import { MapControls } from 'three/addons/controls/MapControls.js';
-import { consolidate, loadImage, loadTex, updateLights } from './kit';
+import { BAKING_TEXTURES, builtTexturesDone, consolidate, loadBuiltTextures, loadImage, loadTex, updateLights } from './kit';
 import { createPost } from './post';
 import { CENTER, buildGround, buildLamps, buildSkyline, buildTrees, placed as everyPlaced, puddleMat, keepTreesOff, scatterOutskirts, waterMat, type Env, type Tick } from './world';
 import { buildLandmarks, type Spot } from './landmarks';
@@ -129,11 +129,15 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.domElement.setAttribute('aria-hidden', 'true');
   host.prepend(renderer.domElement);
+  // Textures made at build time (kit.ts): the atlases made as the modules loaded start downloading now,
+  // the rest once the builders below have asked for theirs; the boot waits for them before it's ready
+  void loadBuiltTextures(renderer);
 
   // Fonts and art for the signs
+  // (the build's own run for the textures never paints with stand-in fonts: scripts/bake-textures.mjs)
   await Promise.race([
     Promise.all([document.fonts.load('900 64px "Big Shoulders Display"'), document.fonts.load('700 32px "JetBrains Mono"')]),
-    new Promise((r) => setTimeout(r, 2500)),
+    new Promise((r) => setTimeout(r, BAKING_TEXTURES ? 120000 : 2500)),
   ]);
   const [logo, degen, flame] = await Promise.all([loadTex(root.dataset.logo!), loadImage(root.dataset.degen!), loadImage(root.dataset.flame!)]);
   progress(0.2);
@@ -326,6 +330,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // (in parallel where the GPU can: the page stays free while they compile)
   await compileFor(scene, (o) => renderer.compileAsync(o, camera));
   bootAt.compiled = performance.now();
+  // (on a very slow connection the boot goes on without them: they appear as they come in)
+  await waited(Promise.race([loadBuiltTextures(renderer), new Promise((r) => setTimeout(r, 8000))]));
+  builtTexturesDone();
   progress(1);
 
   /* ---------- Fly-to ---------- */

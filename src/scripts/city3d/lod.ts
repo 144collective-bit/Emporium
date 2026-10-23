@@ -86,6 +86,13 @@ function average(tex: THREE.Texture | null | undefined) {
   const hit = averages.get(tex);
   if (hit) return hit;
   let out = { color: new THREE.Color(1, 1, 1), alpha: 1 };
+  // (a texture made at build time has no picture here to read: the build wrote down its average, kit.ts)
+  const avg = tex.userData.average as [number, number, number, number] | undefined;
+  if (avg) {
+    out = { color: new THREE.Color().setRGB(avg[0], avg[1], avg[2], THREE.SRGBColorSpace), alpha: avg[3] };
+    averages.set(tex, out);
+    return out;
+  }
   const img = tex.image as CanvasImageSource & { width?: number; height?: number; complete?: boolean };
   try {
     if (img && (img.width ?? 0) > 0 && img.complete !== false) {

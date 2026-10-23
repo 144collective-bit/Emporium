@@ -15,7 +15,7 @@
  * the depth buffer so walls never cut through them. They still get ink lines.
  */
 import * as THREE from 'three';
-import { canvasTex, fx } from './kit';
+import { fx, liveTex } from './kit';
 import { buildGun, gunSpec, type Gun, type SkinId, type Tintable } from './guns';
 import { newReloadFrame, reloadAt } from './gunfit';
 import type { WeaponId } from './combat-sim';
@@ -122,7 +122,7 @@ function arm(dir: THREE.Vector3, hand: THREE.BufferGeometry) {
   };
 }
 
-const flashTex = canvasTex(128, 128, (c) => {
+const flashTex = liveTex(128, 128, (c) => {
   // A cartoon muzzle flash: a hot core with five spikes
   c.translate(64, 64);
   const g = c.createRadialGradient(0, 0, 0, 0, 0, 62);

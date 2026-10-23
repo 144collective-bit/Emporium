@@ -18,6 +18,12 @@ const BUDGETS = {
   lazyJs: 60,
   /** All the CSS */
   css: 60,
+  /** The textures made at build time (scripts/bake-textures.mjs), as phones fetch them (KTX2, already compressed) */
+  texLow: 2300,
+  /** ... and as everyone else does */
+  texFull: 3500,
+  /** Their transcoder (three's Basis wasm and its script) */
+  transcoder: 300,
 };
 
 const dist = process.argv[2] ?? 'dist';
@@ -57,11 +63,21 @@ const rows = [
   ['lazyJs', biggestLazy[1], `${biggestLazy[0]} (the biggest of ${lazy.length})`],
   ['css', sum(css), `${css.length} files`],
 ];
+// The textures made at build time, if they were (without them the city paints its own, as before)
+const tex = html.match(/<script type="application\/json" id="city-tex">(.*?)<\/script>/s);
+if (tex) {
+  const { transcoder, sets } = JSON.parse(tex[1]);
+  const bytes = (set) => [...new Set(Object.values(sets[set]).map((t) => t.file))].reduce((s, f) => s + readFileSync(join(astro, f)).length, 0) / 1024;
+  const tdir = join(astro, transcoder);
+  rows.push(['texLow', bytes('low'), `${Object.keys(sets.low).length} textures`]);
+  rows.push(['texFull', bytes('full'), `${Object.keys(sets.full).length} textures`]);
+  rows.push(['transcoder', readdirSync(tdir).reduce((s, f) => s + gz(join(tdir, f)), 0), transcoder]);
+} else console.log('(no textures made at build time: the city paints them)');
 let failed = false;
 for (const [key, kb, what] of rows) {
   const over = kb > BUDGETS[key];
   failed ||= over;
-  console.log(`${over ? 'OVER' : 'ok  '} ${key.padEnd(7)} ${kb.toFixed(1).padStart(7)} KB of ${String(BUDGETS[key]).padStart(4)} KB gz  ${what}`);
+  console.log(`${over ? 'OVER' : 'ok  '} ${key.padEnd(10)} ${kb.toFixed(1).padStart(7)} KB of ${String(BUDGETS[key]).padStart(4)} KB${key.startsWith('tex') ? '   ' : ' gz'}  ${what}`);
 }
 if (failed) {
   console.error('A budget is blown (scripts/budget.mjs): make the start lighter, or load the new part when it is used.');
