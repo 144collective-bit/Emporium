@@ -332,8 +332,9 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
     return out.set(x + dx / 2, 0.62, z + dz / 2 + clear);
   };
   const want = new THREE.Vector3();
-  const view = (dt: number) => {
-    look.lerp(target(want), Math.min(1, dt * 6) || 1);
+  // (the camera keeps exactly with them: eased after a runner, it trails and the picture slides off the figures)
+  const view = () => {
+    look.copy(target(want));
     if (cam === 'free') camera.position.set(look.x + Math.sin(orbit.yaw) * Math.cos(orbit.pitch) * orbit.dist, look.y + Math.sin(orbit.pitch) * orbit.dist, look.z + Math.cos(orbit.yaw) * Math.cos(orbit.pitch) * orbit.dist);
     else if (cam === 'side') camera.position.set(look.x + (compare ? 6 : 4.5) / near, look.y + 0.3, look.z);
     else if (cam === 'front') camera.position.set(look.x, look.y + 0.5, look.z + 5.5 / near);
@@ -378,7 +379,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
         left -= h;
       }
     }
-    view(real);
+    view();
     post.render();
     readIn -= real;
     if (readIn <= 0) {
@@ -420,7 +421,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
     /** Step on `n` frames and draw (recordings) */
     shoot(n: number) {
       for (let i = 0; i < n; i++) step(1 / 60);
-      view(n / 60);
+      view();
       post.render();
       paintRead();
     },
