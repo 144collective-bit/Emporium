@@ -97,6 +97,63 @@ same rules, and the city builds the same meshes and geometry as before.
   no longer exists, the ring highway's neighbours, "real plot sales", the
   Action's "play-money demo").
 
+## Performance phase 2 (done): a quicker start, and guard rails
+
+Items 1, 2, 4, 6, 11 and 12 below. Nothing in the city looks or plays
+differently (but for the phones' glow, the owner's call): the tests pass at
+both world sizes, and a test holds the baked data to exactly what the
+browser used to work out.
+
+- **The city's data worked out at build time (2).** The traffic's routes,
+  the crowd's walk and march cycles and The Trenches' amenities are made
+  once when the site is built (`scripts/bake.mjs`, `baked.ts`) and shipped
+  in the page as one JSON string (about 310 KB, 84 KB over the wire). The
+  searches behind them got quicker too (squared distances, number keys,
+  the amenity spots sorted once, each block's outline worked out once):
+  the city's data modules load in about 480 ms on this machine, from 690.
+- **The 2D map held back.** The isometric map (550 KB of SVG, 10,000
+  elements, 200 animations) was laid out and timed on every visit behind
+  the start menu. It now waits, inert, in a `<template>` and goes in the
+  page only when the 2D view is picked or 3D isn't available. This was the
+  biggest single cost of the start.
+- **Features loaded when they're used (1).** SMAA (60 KB, desktop only),
+  the fight (when the trainer's menu first opens), the fitting room's and
+  character screen's stage, each a chunk of its own; three.js a chunk of
+  its own, so a deploy that leaves it alone keeps it cached. The kart race,
+  flying and Build mode stay in the main chunk: they're tied into the city
+  at the boot (the show kart, your aircraft in its hangar, the plots), so
+  splitting them is a bigger change for little (about 100 KB raw).
+- **Return visits (4).** A service worker (`public/sw.js`) keeps the
+  fingerprinted files in `/_astro/` on the device: a second visit takes
+  every one of them from there. Pages always come from the network, so an
+  upload shows straight away.
+- **A lighter glow on phones (6).** The bloom at 3 of its 5 blur levels on
+  the phone tier: 4 fewer passes a frame and the widest halo left out (a
+  touch tighter, nothing washes out). The outlines and the picture's
+  resolution are as they were (the owner's call).
+- **Budgets that fail the build (11).** `scripts/budget.mjs` (`npm run
+  budget`, run by the "Build site" Action after the build): the homepage's
+  HTML, the page's own script, the 3D city's boot code, the biggest lazy
+  chunk and the CSS, gzipped, each under a fixed size. Budgets for sites'
+  build times, draws and memory per view need a real GPU and stay with
+  `?bench` (12, done in fix phase 1) on real devices.
+
+### What phase 2 measured
+
+Headless Chromium as a phone (390 x 844, CPU slowed 4x), from opening the
+page to the start menu's "The city is ready", best of 3:
+
+| | before | after |
+|---|---|---|
+| Ready | 16.3-17.9 s | 12.3 s |
+| The city's code before it's up (gzipped) | 568 KB | 590 KB |
+| The homepage's HTML (gzipped) | 95 KB | 92 KB |
+
+The step by step: 17.9 s, 15.8 s with the data baked, 12.3 s with the 2D
+map held back. The code is a little bigger over the wire (the baked data,
+84 KB, against SMAA and the fight, 50 KB, now loaded later), but the
+browser no longer works any of it out.
+
 ## What else can be done
 
 Grouped by what it buys. Effort is S (a day or less), M (a few days) or L (a
@@ -160,7 +217,7 @@ week or more); risk is how much could break or look different.
 
 ## Suggested order
 
-Fix phases 1, 2 and 3 and the trim (done) → performance phase 2: **1, 2, 4, 6, 11, 12**
+Fix phases 1, 2 and 3 and the trim (done) → performance phase 2 (done): **1, 2, 4, 6, 11, 12**
 (quick wins and the guard rails) → performance phase 3: **5, 7, 8** (smoother
 frames) → performance phase 4: **9, 10, 3** (the foundations for a much
 bigger world), before Phase 10.

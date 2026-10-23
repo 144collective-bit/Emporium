@@ -198,7 +198,7 @@ it and has been retired completely. Build only on what's here.
   - City view pans round the built-up area (`bounds.ts`: `BUILT_UP` is the town, the airport and the kart park; `PAN_BOUNDS` reaches `PAN_MARGIN` (160) past it, never closer than 10 to where you can walk: today that's the whole world), and the Build overview frames the plots (`overviewFrame()`).
   - **The edge is data** (growth plan Phase 5): `EXT` is set in one place, and a test run can set another (`WORLD_EXT=x0,x1`, `npm run test:wide` at Phase 10's -680 to 720); both must pass. Nothing that exists reads the edge: the airport's `SITE` is fixed numbers, the river walls and their bridge gaps come from the street plan (`riverCrossings()` in `streetplan.ts`), flying turns back at whatever bounds it's given. Anything new written against the edge must work at both sizes.
   - **Growing the city** (many more buildings, then a bigger world) is planned in `docs/growth-plan.md`. Part A (Phases 0-4) makes size cheap: the measuring kit and a snapshot test that nothing moves, tiles and a collision grid, near and far building forms, building as you go, building kits. Part B (Phases 5-10) grows the world: the edge as data (the airport's site frozen, trees per tile), `EXT` out to about 880 across, roads to reach it (a ring highway, more bridges, traffic spent near you), getting about (a world map, waypoints, and the owner's pick of metro, taxis or fast travel), districts one at a time, then optionally about 1,400 across. Phases 0 (the measuring kit), 1 (tiles, the collision grid, the city's fixed geometry merged per tile, crowds and traffic culled for the shadow map), 2 (near and far forms: details near only, far forms for the places and the cars) 3 (building as you go: sites built round the home view at the boot and the rest after it, near forms let go past a budget), 4 (building kits: kits, recipes for blocks, a test district behind `?district=test`), 5 (the edge as data: `EXT` in one place, tests at both sizes) 6 (the edge moves out: `EXT` -420 to 460, the woods, the far plane and sky dome from the edge) 7 (roads to reach it: the ring highway, its bridges and slip lanes, routes generated from the street plan, traffic and boats spent near you) and 8 (getting about: the world map, waypoints, Bring my car, taxis, fast travel, the metro, sound by district) are built, and Phase 9's first district, **The Trenches**, is built (below); follow the rest one phase at a time with the owner's sign-off, and never add buildings in bulk outside the tiles (`tileBatch()`) or outside sites (`site()`).
-  - **Solid and fast first** (the owner's call): fixes and performance are planned in `docs/performance-plan.md` (where the time goes, what each phase measured, what's next); keep it up to date. Fix phase 1 (phones: the city builds behind the start menu and in spare frames, the outline pre-pass only as far as outlines reach, big textures at half size on phones), fix phase 2 (bugs and broken flows at every width), the trim and fix phase 3 (the code clean-up, the type check in the build) are built; then the performance phases, with the foundations (sites built off the main thread, districts loaded as you approach, textures made at build time) **before any more districts**. On phones only, a softer neon glow and simpler far districts are allowed; desktop stays as it is.
+  - **Solid and fast first** (the owner's call): fixes and performance are planned in `docs/performance-plan.md` (where the time goes, what each phase measured, what's next); keep it up to date. Fix phase 1 (phones: the city builds behind the start menu and in spare frames, the outline pre-pass only as far as outlines reach, big textures at half size on phones), fix phase 2 (bugs and broken flows at every width), the trim, fix phase 3 (the code clean-up, the type check in the build) and performance phase 2 (data baked at build time, the 2D map held back, features loaded when used, a service worker, the phones' lighter glow, budgets in the build) are built; then the performance phases, with the foundations (sites built off the main thread, districts loaded as you approach, textures made at build time) **before any more districts**. On phones only, a softer neon glow and simpler far districts are allowed; desktop stays as it is.
 - **Getting about** (growth plan Phase 8; the owner picked taxis, fast
   travel and the metro):
   - **Places** are `places.ts` (DOM-free, tested in `tests/travel.test.ts`):
@@ -536,8 +536,43 @@ it and has been retired completely. Build only on what's here.
   atlases, the long signs) at half size, a quarter of the memory
   (`canvasTex()` in `kit.ts`; a draw function works in the numbers it
   asked for and never knows; a texture redrawn live in pixels afterwards
-  must stay under that size). While the 3D city boots behind the start
-  menu, the 2D map's SMIL traffic holds still.
+  must stay under that size). The 2D map isn't in the page until it's
+  shown: it waits, inert, in a `<template data-map-tpl>` (`mountMap()` in
+  `CityMap.astro`, from `show2d()`), so the 3D city's boot never lays it
+  out. Phones draw the bloom at 3 of its 5 blur levels (`bloomMips` in
+  `post.ts`: a softer glow, 4 fewer passes a frame); desktop draws all 5.
+- **Start-up stays light** (performance phase 2,
+  `docs/performance-plan.md`):
+  - Data that's the same for everyone is worked out when the site is
+    built, not in the browser: `baked(key, make, pack?, unpack?)` in
+    `baked.ts` returns what the build put in the page (`__CITY_BAKED__`, a
+    JSON string; `scripts/bake.mjs`, run from `astro.config.mjs`, loads the
+    modules in Node and records what each `make()` made), or works it out
+    with `make()` where there's none (the tests, the game server). Today:
+    the traffic's routes (`routes.ts`, packed with `packRoutes()`), the
+    crowd's walk and march cycles (`crowdclips.ts`) and The Trenches'
+    amenities (`commons.ts`). A new module that bakes goes in `MODULES` in
+    `bake.mjs` and in `tests/baked.test.ts`, which holds every key to
+    exactly what `make()` makes. Baked data must be plain (numbers,
+    strings, arrays, objects): anything with references packs and unpacks.
+  - Features load when they're used, each its own chunk (`import()`):
+    the fight (`fight.ts` and the figures' clips, when the trainer's menu
+    first opens: `loadFight()` in `walk.ts`), the stage of the fitting room
+    and the character screen (`stage.ts`), SMAA (`post.ts`) and the fight
+    demo. New features that aren't needed until they're used come the same
+    way. three.js is a chunk of its own (`manualChunks` in
+    `astro.config.mjs`), so a deploy that doesn't change it leaves it
+    cached.
+  - A service worker (`public/sw.js`, registered in `Base.astro` in the
+    built site only) keeps the files in `/_astro/` (named by their contents)
+    on the device for return visits; pages always come from the network.
+    `.htaccess` keeps `sw.js` itself uncached.
+  - **Budgets** (`scripts/budget.mjs`, `npm run budget` after a build; the
+    "Build site" Action runs it): the homepage's HTML, the page's own
+    script, the 3D city's boot code (its chunk and what it imports
+    straight away), the biggest lazy chunk and the CSS, gzipped, each
+    under a fixed size. Raise one only on purpose, never to get a build
+    through.
 - One render loop only: always (re)start it with `loop()` in `index.ts`,
   which cancels any frame already queued. A hidden tab holds its queued frame
   back, so a bare `requestAnimationFrame(frame)` on return stacks a second
@@ -1886,6 +1921,9 @@ it and has been retired completely. Build only on what's here.
 - When you change a rule or move something in the city, run the tests and
   extend them: a new landmark's boxes and door, a new model's handling, a
   new road. Fix the code, not the test, unless the test was wrong.
+- `npm run budget` (after `npm run build`) holds the start's download to
+  its budgets (`scripts/budget.mjs`); the "Build site" Action runs it after
+  the build.
 - Browser checks (the widths above, walk and drive flows) are still done by
   hand with Playwright against `npm run preview`.
 
