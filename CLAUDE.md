@@ -809,10 +809,14 @@ it and has been retired completely. Build only on what's here.
   streets (`puff()`; six points near the camera at night, none on
   phones) and the wind (`windStrength()`): the canopies' sway rides in
   their uv (`SWAY`, `Batch.instances()`'s `sway`; the shared paint has no
-  texture) and `injectWind()` in kit.ts swings it in the paint's shader
-  and the ink outlines' normal pass (phones' canopies carry none; merging
-  a tile re-normalises normals, so never encode anything in their
-  lengths)). The life's sounds go through `LifeOpts.sfx` (`horn`,
+  texture: `Batch.add()` zeroes every shared geometry's uv, since an
+  extruded or lathed shape's uv is its own coordinates, and the canopies'
+  mark is `SWAY_MARK`, an exact value no shape lands on; Liberty Bridge's
+  arches once stretched across the river in the wind) and `injectWind()`
+  in kit.ts swings it in the paint's shader and the ink outlines' normal
+  pass (phones' canopies carry none; merging a tile re-normalises normals,
+  so never encode anything in their lengths)). The life's sounds go
+  through `LifeOpts.sfx` (`horn`,
   `doors`, `boatHorn`; `thunder` from index.ts). **Not character
   animation** (the owner's call): this plan picks which existing clip a
   crowd person plays and where they stand, never a pose, clip or rig
