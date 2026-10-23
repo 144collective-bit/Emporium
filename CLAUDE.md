@@ -270,9 +270,10 @@ it and has been retired completely. Build only on what's here.
     out at the destination's door.
   - **Sound by district** is `ambience.ts` (DOM-free, tested in
     `tests/ambience.test.ts`): `ambienceAt(x, z, lift)` gives the town's
-    hum, the river, the traffic's rush (the highway, the avenues inside
-    it), wind over open land, the Emporium's beat and The Trenches' own
-    (`hood`, `boombox`: the grit step); `sound.update()` mixes its layers
+    hum, the river (and Westlake's lake), the traffic's rush (the highway,
+    the avenues inside it), wind over open land, the Emporium's beat, The
+    Trenches' own (`hood`, `boombox`: the grit step) and Westlake Park's
+    (`park`: birds by day, an owl at night; `sport`: a ball by the courts); `sound.update()` mixes its layers
     from it (and the el's rumble from `metro.rumbleAt()`), where you walk
     or where the City view looks.
 - **The Trenches** (growth plan Phase 9, the owner's call): a
@@ -545,6 +546,23 @@ it and has been retired completely. Build only on what's here.
     `data-panel-tpl="pier"` with Walk in to `PIER_SPAWN`, a `PLACES` entry;
     the clock's hands keep the visitor's time). On the world map the decks
     are drawn in wood.
+  - **The Night Market** (the owner's call, the waterfront plan's first
+    next step; scenery for now, stalls to run later) is `nightmarket.ts`
+    (DOM-free, tested in `tests/nightmarket.test.ts`) on its deck out over
+    the water in front of Harbor Stores (`MARKET_DECK` in waterfront.ts, one
+    of `DECKS`, open to the boardwalk along its length (`RAIL_GAPS`), the
+    middle boat lane swinging round it in `boatZ()`, the boardwalk's dressing
+    kept off it): `STALLS` along its water side, counters facing the city
+    (four containers, two food trucks, a cart, made-up names `STALL_NAMES`),
+    `TABLES` (two rows of picnic tables) between the queues (`QUEUE`) and the
+    boardwalk's walk (`WALK_FROM`, the strollers pass behind), NIGHT MARKET
+    on the `GANTRY` over the boardwalk (both ways), string lights and paper
+    lanterns from the stalls' roofs to the `POLES`, `HEATERS`, the cooks
+    (`VENDORS`) and diners (`DINERS`), `NIGHT_MARKET_SOLIDS` (in `SOLIDS`).
+    Drawn by `nightmarket3d.ts` (`buildNightMarket()`, a place at the boot:
+    spot `nightmarket`, its pin over the gantry, directory entry, panel
+    `data-panel-tpl="nightmarket"` with Walk in to `MARKET_SPAWN`, a `PLACES`
+    entry; one sign atlas of fixed made-up copy).
   - **The Block** is a place (`theblock.ts`, built at the boot): spot
     `trenches` (pin over the court, directory entry, panel
     `data-panel-tpl="trenches"`: the storyline starts here, coming soon,
@@ -560,8 +578,8 @@ it and has been retired completely. Build only on what's here.
   district with a stadium as its attraction, scenery only for now) on the
   land west of town, north of the river, between the ring highway and the
   Parkway. Built in steps, each with the owner's sign-off: (1) the land,
-  the lake and the paths (built); (2) the stadium; (3) the park's life
-  (boats, a boathouse, people, sports on the strips, its sound).
+  the lake and the paths (built); (2) the stadium (built); (3) the park's life
+  (boats, a boathouse, people, sports on the strips, its sound; built).
   - `westlake.ts` (DOM-free, tested in `tests/westlake.test.ts`): the big
     block (`BIG`: `X0` clear of the highway's slip lanes, `X1` its
     sidewalk alongside the Parkway's, `Z0` the highway's north side round
@@ -577,7 +595,12 @@ it and has been retired completely. Build only on what's here.
     (`GATE_PIERS`, `WESTLAKE_SOLIDS` in `SOLIDS`); `PARK_TREES` (the Mall's
     avenue, the strips' rows, clumps from a seeded noise; `clump` ones,
     every other, left out on phones), `PARK_LAMPS` and `BENCHES`;
-    `STADIUM_SITE` kept clear for step 2. Its trees and lamps are placed
+    `STADIUM_SITE` for the stadium; `CAR_PARK` on the first strip; step 3's
+    land: the boathouse (`BOATHOUSE`, solid) and its jetty (`JETTY`,
+    `onJetty()`: walk.ts lets you out along it, at its deck's height), the
+    courts on the strips (`COURTS`, `TENNIS`, `PITCH`, `HOOPS`,
+    `COURT_SOLIDS`), each strip's walk eased round its court. Its
+    trees and lamps are placed
     at the boot with the town's (`addTree()` / `addLamp()` in index.ts).
   - `westlake3d.ts` draws the rest as sites: the paths (pale gravel
     ribbons a stretch a site), the lake's stone rim (in quarters), the
@@ -586,14 +609,56 @@ it and has been retired completely. Build only on what's here.
     (near only); and on the main thread the lake's water (one mesh, the
     river's `waterMat`). It's the first district loaded as you approach
     (`districts.ts`, below). The world map draws its lawns, the lake and
-    its paths; the benchmark has a view over the lake (`park`).
+    its paths; the benchmark has a view over the lake (`park`). The car
+    park's asphalt, bays, ways in and P sign are its sites too.
+  - **The park's life** (step 3) is `parklife.ts` (DOM-free, tested in
+    `tests/parklife.test.ts`), everyone and everything a function of the
+    time: walkers, joggers and dog walkers in lanes (`LANES`: walkers near
+    a path's middle, joggers by its edges, either way, everyone in a lane
+    at its pace and evenly spread) round the lake loop and the ring walk,
+    up and down the Mall and the strips (`PARK_PEOPLE`, `trim` ones left
+    out on phones), dogs on the lead ahead of their walkers (`DOGS`,
+    `LEAD`), people on every third bench, picnics in the glades
+    (`PICNICS`), the games on the courts (players wandering, keepers, a
+    rally on each tennis court, passes and shots, `BALLS`, `GAMES`) and the
+    boats on the lake (`BOATS`: rowing boats and swan pedalos on rings
+    along the shore's normals, `ringLine()`, `RINGS`, each its own pace and
+    way round so none meet; rowers and swan riders aboard; two moored at the
+    jetty). The people are the crowd's (life.ts, kind `park`; clips `jog`
+    and `picnic`); `parklife3d.ts` (the park's chunk) draws the boathouse,
+    the jetty, the courts and the picnics as sites and, on the main thread
+    with the district's tick, the boats with their sweeping oars, the dogs
+    and their leads and the balls, an instanced mesh a kind (not drawn
+    while the camera is far from the park). Its sound: `park` (birds by
+    day, an owl at night) and `sport` (a ball by the courts) in
+    ambience.ts, the lake in `water`.
+  - **Sector 7 Stadium** (step 2) is `stadium.ts` (DOM-free, tested in
+    `tests/stadium.test.ts`) on `STADIUM_SITE` at the top of the Mall: a
+    soft-cornered oval bowl (`ovalAt()`, `oval()`, `inOval()`; `FACADE`),
+    two tiers of seats (`TIERS`) with a concourse between (`CONCOURSE`),
+    a roof ring over the upper tier (`ROOF`), the pitch (`PITCH`) and its
+    track (`TRACK`), four floodlight masts (`MASTS`, `MAST`; `TALLEST`
+    under the Emporium), the big screen over the north stand (`SCREEN`)
+    and the main gate in the south facade (`GATE`, under `NAME`, fixed
+    made-up copy), `STADIUM_SPAWN` on the forecourt; the car park's
+    `BAYS`, `ENTRANCES` and `PARKED` cars; `STADIUM_SOLIDS` (in `SOLIDS`:
+    the facade all round, the gates shut until there are events, the masts,
+    the parked cars). Drawn by `stadium3d.ts` (`buildStadium()`, a place
+    built at the boot like the avenue's, not in the park's chunk): seats in
+    sections of magenta, purple and cyan, the roof's neon edge, lamp heads
+    on the masts and their pools of light on the pitch at night, the screen
+    and the name board from one small atlas, the parked cars. It's a
+    place: spot `stadium` (pin, directory entry, panel
+    `data-panel-tpl="stadium"`: events coming soon, Walk in), the gate's
+    door prompt opens it, `PLACES` entry. Its sound waits for events.
 - **Districts loaded as you approach** (performance phase 4, item 10):
   a district's drawing is a module of its own (`LAZY_DISTRICTS` in
   `districts.ts`: an id, its land and `load()`, a dynamic import), a chunk
   the boot never downloads. `createDistricts()` loads it when what the
   camera looks at (or Degen, walking) comes within the tier's `far` and
-  `LEAD` of its land; its `register({ low, scene })` registers its sites
-  (and, given the scene, anything the main thread draws itself), the site
+  `LEAD` of its land; its `register({ low, scene, tick })` registers its
+  sites (and, given the scene and the city's tick, anything the main thread
+  draws itself, moving things too), the site
   worker loads the same module from its `SELF` (`import.meta.url`) and
   registers them there (`SiteWorker.load()`), and then `works.adopt()`
   queues them. Everything else about a district (its blocks and streets
@@ -700,7 +765,7 @@ it and has been retired completely. Build only on what's here.
     modules in Node and records what each `make()` made), or works it out
     with `make()` where there's none (the tests, the game server). Today:
     the traffic's routes (`routes.ts`, packed with `packRoutes()`), the
-    crowd's walk and march cycles (`crowdclips.ts`) and The Trenches'
+    crowd's walk, jog and march cycles (`crowdclips.ts`) and The Trenches'
     amenities (`commons.ts`). A new module that bakes goes in `MODULES` in
     `bake.mjs` and in `tests/baked.test.ts`, which holds every key to
     exactly what `make()` makes. Baked data must be plain (numbers,
@@ -1080,11 +1145,12 @@ it and has been retired completely. Build only on what's here.
     shadows (`crowdDepth()`) and the ink outlines' normal pass in
     `post.ts`, where everything else reads `crowdOn` 0) from one float
     texture of baked clips (`crowdclips.ts`, DOM-free, tested in
-    `tests/crowdclips.test.ts`): `walk` and `march` recorded from the
-    planted-feet walk (locomotion.ts) over one cycle, played at their
-    stride (`WALK_STRIDE`, `MARCH_STRIDE`: a person at scale s and speed v
-    plays v / (stride s) cycles a second, so their feet stay put), `idle`,
-    `look`, `chat` and `sit` from the formulas in `poses.ts` over
+    `tests/crowdclips.test.ts`): `walk`, `jog` (Westlake Park's joggers)
+    and `march` recorded from the planted-feet walk (locomotion.ts) over one
+    cycle, played at their stride (`WALK_STRIDE`, `JOG_STRIDE`,
+    `MARCH_STRIDE`: a person at scale s and speed v plays v / (stride s)
+    cycles a second, so their feet stay put), `idle`, `look`, `chat`, `sit`
+    and `picnic` (sitting on the ground) from the formulas in `poses.ts` over
     `CLIP_SECONDS` with the end eased into the start, and `salute` from
     attention to the hand at the brow. Callers set each person's clip and
     how far through it they are (`set(i, x, y, z, yaw, scale, clip, u)`;
@@ -2112,7 +2178,7 @@ it and has been retired completely. Build only on what's here.
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`),
-  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`), Westlake Park (`westlake.ts`),
+  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,

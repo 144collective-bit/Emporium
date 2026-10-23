@@ -18,7 +18,8 @@ import type { Idle } from './landmarks';
 import { TRENCH_WALKS } from './projects';
 import { inTrenches } from './trenches';
 import { CROWD_VIEW, HIP_HEIGHT, cityOutfit, createCrowd } from './character';
-import { CLIP_SECONDS, WALK_STRIDE } from './crowdclips';
+import { CLIP_SECONDS, JOG_STRIDE, WALK_STRIDE } from './crowdclips';
+import { PARK_PEOPLE, moment, type Moment, type ParkPerson } from './parklife';
 import { blinkOn, bodyMotion, braking, hornDue, indicating, newBody, newHorn, pullAway, reactionOf, resetBody, turnsOf, type Body, type Horn, type Mover, type Turn } from './traffic';
 import { CROSS_PACE, crossingLinks, hurry, noticing, outAtNight, takesCrossing, walkLight, type Link } from './pedestrians';
 
@@ -515,7 +516,10 @@ interface Loop {
   exits: Map<number, Link[]>;
 }
 interface Person {
-  kind: 'walk' | 'idle';
+  kind: 'walk' | 'idle' | 'park';
+  /** Westlake Park's people (parklife.ts): where they are is a function of the time */
+  park?: ParkPerson;
+  m?: Moment;
   loop?: Loop;
   /** The corner the walker last passed */
   seg: number;
@@ -653,6 +657,8 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
   let every = 0;
   const idlers = opts.light ? crowd.filter((c) => !busy(c) || every++ % 2 === 0) : crowd;
   for (const c of idlers) people.push({ kind: 'idle', seg: 0, inset: 0, u: 0, dir: 1, speed: 0, phase: rand() * 6, x: c.x, z: c.z, y: c.y, act: c.act, scale: c.scale, ry: c.ry, face: c.ry, walked: 0, crossed: 0, seed: rand(), notice: { hold: 0 } });
+  // Westlake Park's walkers, joggers, dog walkers, picnics, players and boaters (phones: half of them, the trim)
+  for (const pp of PARK_PEOPLE) if (!(opts.light && pp.trim)) people.push({ kind: 'park', park: pp, m: moment(), seg: 0, inset: 0, u: 0, dir: 1, speed: 0, phase: rand() * 6, x: 0, z: 0, ry: 0, face: NaN, walked: 0, crossed: 0, seed: rand(), notice: { hold: 0 } });
   bodies.people = people;
 
   // Everyone is the shared Degen body in a city outfit: suits and hoodies, bags, headphones
@@ -735,6 +741,12 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
             }
           }
         }
+      } else if (p.kind === 'park') {
+        const m = p.park!.at(t, p.m!);
+        p.x = m.x;
+        p.z = m.z;
+        p.ry = m.ry;
+        p.walked += m.speed * dt;
       }
       // Each plays a baked clip (crowdclips.ts): the walk at its stride, so their feet stay put on the pavement;
       // the rest from where their own offset puts them in it
@@ -744,7 +756,13 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
       const turn = Math.atan2(Math.sin(p.ry - p.face), Math.cos(p.ry - p.face));
       p.face += turn * Math.min(1, dt * 9);
       const y = p.act === 'sit' ? (p.y ?? SLAB) - SEAT_DROP : (p.y ?? SLAB);
-      if (p.kind === 'walk' && standing) people3d.set(i, p.x, y, p.z, p.face, PERSON_SCALE, looking ? 'idle' : 'look', loop);
+      if (p.kind === 'park') {
+        const m = p.m!;
+        const c = m.clip;
+        const py = c === 'sit' || c === 'picnic' ? m.y - SEAT_DROP : m.y;
+        const u = c === 'walk' ? p.walked / (WALK_STRIDE * PERSON_SCALE) + p.phase / 6 : c === 'jog' ? p.walked / (JOG_STRIDE * PERSON_SCALE) + p.phase / 6 : loop;
+        people3d.set(i, p.x, py, p.z, p.face, PERSON_SCALE, c, u);
+      } else if (p.kind === 'walk' && standing) people3d.set(i, p.x, y, p.z, p.face, PERSON_SCALE, looking ? 'idle' : 'look', loop);
       else if (p.kind === 'walk') people3d.set(i, p.x, y, p.z, p.face, PERSON_SCALE, 'walk', p.walked / (WALK_STRIDE * PERSON_SCALE) + p.phase / 6);
       else people3d.set(i, p.x, y, p.z, p.face, p.scale ?? PERSON_SCALE, p.act === 'sit' ? 'sit' : p.act === 'chat' ? 'chat' : p.act === 'queue' ? 'idle' : 'look', loop);
     });

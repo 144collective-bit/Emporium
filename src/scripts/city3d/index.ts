@@ -10,6 +10,8 @@ import { createPost } from './post';
 import { CENTER, addLamp, addTree, buildGround, buildLamps, buildSkyline, buildTrees, placed as everyPlaced, puddleMat, keepTreesOff, scatterOutskirts, waterMat, type Env, type Tick } from './world';
 import { PARK_LAMPS, PARK_TREES, WESTLAKE_RECT } from './westlake';
 import { createDistricts } from './districts';
+import { buildStadium } from './stadium3d';
+import { STADIUM_SPAWN } from './stadium';
 import { buildLandmarks, type Spot } from './landmarks';
 import { buildInfill } from './infill';
 import { buildNeighbourhoods } from './neighbourhoods';
@@ -58,6 +60,8 @@ import { buildAvenue } from './avenue3d';
 import { buildRiverside } from './riverside3d';
 import { buildPier, buildWaterfront } from './waterfront3d';
 import { PIER_SPAWN } from './waterfront';
+import { buildNightMarket } from './nightmarket3d';
+import { MARKET_SPAWN } from './nightmarket';
 import { BLOCK_SPAWN } from './projects';
 import { AVENUE_SPAWNS } from './avenue';
 import { buildFightClub } from './fightclub';
@@ -213,6 +217,10 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   buildRiverside(tier === 'low');
   buildWaterfront(tier === 'low');
   spots.push(buildPier(scene, crowd, { tick, low: tier === 'low' }).spot);
+  // The Night Market on its deck in front of Harbor Stores, a place
+  spots.push(buildNightMarket(scene, crowd, { tick, low: tier === 'low' }).spot);
+  // Westlake Park's stadium (step 2): a place, built at the boot (the rest of the park is loaded as you approach)
+  spots.push(buildStadium(scene, { low: tier === 'low' }).spot);
   // ...and the metro's el where it crosses the open land south of the south row: no trees under it
   keepTreesOff([-10, 125, 56, 135]);
   // Westlake Park (growth plan Phase 9b): its land is the street plan's; its trees and lamps stand with the town's
@@ -329,7 +337,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     meshesOf,
   });
   // Districts loaded as you approach (performance phase 4, item 10): their drawing a chunk of its own each
-  const districts = createDistricts({ scene, low: tier === 'low', worker: siteWorker, adopt: () => works.adopt() });
+  const districts = createDistricts({ scene, low: tier === 'low', worker: siteWorker, adopt: () => works.adopt(), tick });
   const atBoot = works.boot([...new Set([...viewTiles(h0.pos, h0.target), ...viewTiles(introFrom(h0), h0.target)].map((t) => t.join()))].map((k) => k.split(',').map(Number) as [number, number]));
   const tiled = tileBatch(scene, [scene, ...['airport', 'kartpark'].flatMap((n) => scene.getObjectByName(n) ?? []), ...atBoot]);
   for (const g of atBoot) g.removeFromParent();
@@ -474,6 +482,18 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       panelBody.querySelector('[data-pier-walkin]')?.addEventListener('click', () => {
         close();
         startWalking(PIER_SPAWN);
+      });
+    // The Night Market's panel: Walk in starts walk mode on the boardwalk behind its tables
+    if (id === 'nightmarket')
+      panelBody.querySelector('[data-market-walkin]')?.addEventListener('click', () => {
+        close();
+        startWalking(MARKET_SPAWN);
+      });
+    // The stadium's panel: Walk in starts walk mode on its forecourt, facing the gate
+    if (id === 'stadium')
+      panelBody.querySelector('[data-stadium-walkin]')?.addEventListener('click', () => {
+        close();
+        startWalking(STADIUM_SPAWN);
       });
     // The Block's panel: Walk in starts walk mode on its plaza by the metro's stairs
     if (id === 'trenches')
