@@ -9,7 +9,8 @@
     "preview": "astro preview",
     "typecheck": "astro sync && tsc --noEmit -p . --noUnusedLocals",
     "test": "node scripts/test.mjs",
-    "test:wide": "WORLD_EXT=-680,720 node scripts/test.mjs"
+    "test:wide": "WORLD_EXT=-680,720 node scripts/test.mjs",
+    "budget": "node scripts/budget.mjs"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.4",

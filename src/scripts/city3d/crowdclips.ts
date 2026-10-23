@@ -24,6 +24,7 @@ import * as THREE from 'three';
 import { BONES, makeSkeleton, newPose, poseSkeleton, type Limb, type Pose } from './skeleton';
 import { copyPose, createLocomotion } from './locomotion';
 import { attentionPose, chatPose, idlePose, lookPose, set, sitPose } from './poses';
+import { baked as atBuild } from './baked';
 
 export type CrowdClip = 'walk' | 'march' | 'idle' | 'look' | 'chat' | 'sit' | 'salute';
 
@@ -134,8 +135,9 @@ function recordWalk(speed: number, frames: number) {
 /** Pedestrians stroll at about this (0.55 tiles a second at their 0.66 scale), soldiers march at about this */
 const WALK_SPEED = 0.83;
 const MARCH_SPEED = 0.5;
-const walk = recordWalk(WALK_SPEED, 32);
-const march = recordWalk(MARCH_SPEED, 32);
+// (recorded when the site is built: baked.ts)
+const walk = atBuild('walk-cycle', () => recordWalk(WALK_SPEED, 32));
+const march = atBuild('march-cycle', () => recordWalk(MARCH_SPEED, 32));
 /** How far one walk (or march) cycle goes at scale 1: a person at scale s and speed v plays v / (STRIDE s) cycles a second */
 export const WALK_STRIDE = walk.stride;
 export const MARCH_STRIDE = march.stride;

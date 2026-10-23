@@ -121,15 +121,21 @@ export function pointAt(s: Street, d: number): { at: Pt; dir: Pt } {
 
 /** How far a point is from a street's centre line */
 export function distToStreet(s: Street, p: Pt) {
+  // (squared distances, rooted once: it's asked a great many times as the city is worked out)
   let best = Infinity;
   for (let i = 1; i < s.pts.length; i++) {
     const a = s.pts[i - 1];
-    const v = sub(s.pts[i], a);
-    const l2 = v[0] * v[0] + v[1] * v[1];
-    const t = l2 ? Math.max(0, Math.min(1, ((p[0] - a[0]) * v[0] + (p[1] - a[1]) * v[1]) / l2)) : 0;
-    best = Math.min(best, Math.hypot(p[0] - (a[0] + v[0] * t), p[1] - (a[1] + v[1] * t)));
+    const b = s.pts[i];
+    const vx = b[0] - a[0];
+    const vz = b[1] - a[1];
+    const l2 = vx * vx + vz * vz;
+    const t = l2 ? Math.max(0, Math.min(1, ((p[0] - a[0]) * vx + (p[1] - a[1]) * vz) / l2)) : 0;
+    const dx = p[0] - (a[0] + vx * t);
+    const dz = p[1] - (a[1] + vz * t);
+    const d2 = dx * dx + dz * dz;
+    if (d2 < best) best = d2;
   }
-  return best;
+  return Math.sqrt(best);
 }
 
 /**

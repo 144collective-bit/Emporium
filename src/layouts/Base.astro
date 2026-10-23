@@ -79,5 +79,10 @@ const ogImage = new URL('/og-default.jpg', base);
       <slot />
     </main>
     {!fitViewport && !fullBleed && <Footer />}
+    <script>
+      // Return visits: the code and art kept on the device (public/sw.js); the built site only
+      if (import.meta.env.PROD && 'serviceWorker' in navigator)
+        addEventListener('load', () => navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).catch(() => {}));
+    </script>
   </body>
 </html>

@@ -9,7 +9,6 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 import { FX, OCC, SOLID } from './kit';
 
 const InkShader = {
@@ -78,6 +77,8 @@ export interface PostOpts {
   msaa: number;
   bloomScale: number;
   smaa: boolean;
+  /** How many of the bloom's blur levels to draw (5, all of them, if not given): phones draw 3 */
+  bloomMips?: number;
 }
 
 export function createPost(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.PerspectiveCamera, opts: PostOpts) {
@@ -103,12 +104,17 @@ export function createPost(renderer: THREE.WebGLRenderer, scene: THREE.Scene, ca
 
   const bloom = new UnrealBloomPass(new THREE.Vector2(size.x * opts.bloomScale, size.y * opts.bloomScale), 0.8, 0.55, 0.86);
   composer.addPass(bloom);
-  composer.addPass(new OutputPass());
-  let smaa: SMAAPass | null = null;
-  if (opts.smaa) {
-    smaa = new SMAAPass();
-    composer.addPass(smaa);
+  // Fewer levels: 2 fewer passes each, and the widest, faintest halo left out (a softer glow). The
+  // composite still reads the levels left out, weighted 0 (their targets are never drawn: all zero)
+  if (opts.bloomMips && opts.bloomMips < bloom.nMips) {
+    const factors = bloom.compositeMaterial.uniforms.bloomFactors.value as number[];
+    for (let i = opts.bloomMips; i < factors.length; i++) factors[i] = 0;
+    bloom.nMips = opts.bloomMips;
   }
+  composer.addPass(new OutputPass());
+  // SMAA (desktops at a low pixel ratio, the fitting room on phones) comes in its own chunk, after the boot:
+  // its look-up textures are 60 KB nobody else needs (until it's there the frame goes out without it)
+  if (opts.smaa) import('three/addons/postprocessing/SMAAPass.js').then(({ SMAAPass }) => composer.addPass(new SMAAPass()));
 
   function setSize(w: number, h: number, pr: number) {
     composer.setPixelRatio(pr);

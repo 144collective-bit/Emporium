@@ -44,7 +44,13 @@ const hash = (...v: number[]) => {
 
 /** The projects' yards (row B but The Block), the rec block among them */
 export const YARDS = TRENCH_BLOCKS.filter((b) => b.row === 'B' && b.id !== THE_BLOCK.block);
-const rectOf = (id: string) => bounds(TRENCH_BLOCKS.find((b) => b.id === id)!.poly);
+/** A block's rectangle (each worked out once) */
+const RECTS = new Map<string, Rect>();
+const rectOf = (id: string): Rect => {
+  let r = RECTS.get(id);
+  if (!r) RECTS.set(id, (r = bounds(TRENCH_BLOCKS.find((b) => b.id === id)!.poly)));
+  return r;
+};
 
 /** What's in a yard already and must stay clear: the towers and their ways in, the amenities and theirs, the bays, the rec block's buildings */
 export function taken(block: string): Rect[] {
