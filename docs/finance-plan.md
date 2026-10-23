@@ -85,7 +85,7 @@ sign-off. Keep this plan up to date as each phase lands.
      - the streets, sidewalks and slabs;
      - the empty lots behind hoardings carrying UPTOWN (made-up
        developer copy).
-2. **The towers.**
+2. **The towers** (built: see "Phase 2 as built" below).
    - **A skyscraper kit** (`kits.ts`, `kits3d.ts`): a podium with a double-
      height lobby (revolving doors, a canopy), a shaft and setbacks, and a
      crown. Four or five designs:
@@ -185,4 +185,41 @@ owner's sign-off.
     approach (`uptown3d.ts`).
 - **The budget:** the boot's code went from 634.4 to 629.5 KB of 640 (the
   courts' players and balls went).
+
+## Phase 2 as built
+
+- **The data:** `highrise.ts` (DOM-free, tested in `tests/highrise.test.ts`).
+  - **Designs:** five (`design()`): a glass slab (a shaft no longer than
+    2.2 times its depth, its plant room set back), a stepped deco tower
+    (stone, three setbacks, a gold pyramid and finial), a round glass drum
+    (a crown ring and cap), twin towers (two shafts, the second a little
+    lower, a skybridge at about 0.6 of the height) and the spire.
+  - **The towers:** one to a block, twelve in all, fourteen shafts.
+    - The spire stands in the plaza's block, east of the axis: roof 30,
+      mast 36, no podium, its lobby facing the plaza.
+    - The rest are 17 to 24 on a podium 3.2 high. The deco on the middle
+      row is 24, its finial under the spire's roof.
+    - The two either side of the plaza front it; the river row fronts the
+      water.
+  - **The lots:** the two blocks the axis's lanes cross keep a sliver west
+    of the lane, hoarded with the plaza's block until Phase 3
+    (`OPEN_LOTS` in uptown.ts). Every other lot is paved round its tower.
+  - **Solid** in strips no wider than 6 (a car started inside a 31-tile
+    podium was pushed past the collision grid's reach: the kart
+    grandstand's lesson).
+- **The flying traffic:** the airliners' westbound leg over Uptown was
+  raised from 40-42 to 46-48. The tests keep every aircraft at least 4
+  over any tower's tip within its reach. The prop plane's loop stays over
+  the river, about 18 from the river row.
+- **Drawn** by `highrise3d.ts`, a site a tower, in Uptown's chunk, which
+  now loads from well out (its land widened by 240): the skyline is seen
+  from across town.
+  - **Walls:** Uptown's own curtain-wall atlas (blue, gold, black and
+    silver glass, deco stone; the lobby), windows lit at night.
+  - **Roofs and crowns:** roofs and parapets on every tier, each design's
+    crown.
+  - **Masts:** a mast with a red warning light on every tip.
+  - **Lobbies:** a canopy over each door, a revolving door (near).
+- **Measured:** a bench view over Uptown from the river (`uptown`). The
+  boot's code is 636.0 of 640 KB (the towers' data, for their solids).
 
