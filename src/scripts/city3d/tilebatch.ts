@@ -271,13 +271,18 @@ export function tileBatch(scene: THREE.Scene, parents: THREE.Object3D[]): TileBa
       touched.add(set);
       const bm = set.bm;
       geos.forEach((g, n) => {
+        // (its box first: the batched mesh keeps a copy for culling the piece, rather than working it out)
+        g.computeBoundingBox();
         const geo = bm.addGeometry(g);
         const id = bm.addInstance(geo);
         const [t, lod] = keys[n].split('|') as [string, Lod];
         const tile = tileOfKey(t);
         if (site) tile.sites.add(site);
+        // The mesh's bounds grow with each piece (working them out again from every piece, each site,
+        // was two thirds of the time a site took to join)
+        if (bm.boundingBox) bm.boundingBox.union(g.boundingBox!);
+        else bm.boundingBox = g.boundingBox!.clone();
         if (lod !== 'all') {
-          g.computeBoundingBox();
           tile.top = Math.max(tile.top, g.boundingBox!.max.y);
           if (!tile.lod) {
             tile.lod = true;
@@ -289,10 +294,7 @@ export function tileBatch(scene: THREE.Scene, parents: THREE.Object3D[]): TileBa
         g.dispose();
       });
     }
-    for (const { bm } of touched) {
-      bm.computeBoundingBox();
-      bm.computeBoundingSphere();
-    }
+    for (const { bm } of touched) bm.boundingBox!.getBoundingSphere((bm.boundingSphere ??= new THREE.Sphere()));
     for (const m of taken) {
       m.removeFromParent();
       m.geometry.dispose();
