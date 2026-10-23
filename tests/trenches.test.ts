@@ -15,6 +15,7 @@ import { GRIT_SOLIDS } from '../src/scripts/city3d/grit';
 import { STREETWALL_SOLIDS } from '../src/scripts/city3d/streetwall';
 import { PADS } from '../src/scripts/city3d/outer';
 import { ROUTES, pointOn } from '../src/scripts/city3d/routes';
+import { RIVERSIDE_SOLIDS } from '../src/scripts/city3d/riverside';
 
 const others = PLAN.blocks.filter((b) => !b.id.startsWith('trench-'));
 
@@ -59,9 +60,9 @@ test('its blocks: between its streets and off them, clear of the highway, the to
       assert.ok(p[1] > BANK.c + BANK.half - 1e-6);
       for (const o of others) assert.ok(!inPoly(o.poly, p), `${b.id} on ${o.id}`);
     }
-    // Nothing that stands is on it but the metro's (its stair tower at The Trenches) and The Trenches' own (projects.ts, commons.ts, grit.ts, streetwall.ts, avenue.ts)
+    // Nothing that stands is on it but the metro's (its stair tower at The Trenches) and The Trenches' own (projects.ts, commons.ts, grit.ts, streetwall.ts, avenue.ts, riverside.ts)
     for (const box of SOLIDS) {
-      if (PROJECT_SOLIDS.includes(box) || COMMONS_SOLIDS.includes(box) || GRIT_SOLIDS.includes(box) || STREETWALL_SOLIDS.includes(box) || AVENUE_SOLIDS.includes(box)) continue;
+      if (PROJECT_SOLIDS.includes(box) || COMMONS_SOLIDS.includes(box) || GRIT_SOLIDS.includes(box) || STREETWALL_SOLIDS.includes(box) || AVENUE_SOLIDS.includes(box) || RIVERSIDE_SOLIDS.includes(box)) continue;
       const c: [number, number] = [(box[0] + box[2]) / 2, (box[1] + box[3]) / 2];
       if (inPoly(b.poly, c)) assert.ok(box[4] !== undefined && box[4] > 5, `${b.id} has a box on it at ${box.join(', ')}`);
     }

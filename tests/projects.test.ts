@@ -130,7 +130,8 @@ test('The Block: its parts on its block, clear of each other and of the station'
 
 test('the rows: inside their blocks, off the streets, low, clear of the towers', () => {
   const laid = rows();
-  assert.ok(laid.lots.length > 80);
+  // (row A's blocks a strip each along Trench Avenue, row C's along Bottom Street: the riverside is riverside.ts's)
+  assert.ok(laid.lots.length > 40);
   assert.equal(laid.byBlock.length, ROW_BLOCKS.length);
   ROW_BLOCKS.forEach((rb, i) => {
     const blk = blockOf(rb.id);

@@ -39,6 +39,7 @@ import { createCombat, type Sfx } from './combat';
 import { WEAPON_IDS } from './combat-sim';
 import { createGunShop } from './gunshop';
 import { ARMS, AVENUE_DOORS } from './avenue';
+import { DECK_Y, onDeck } from './waterfront';
 import { carStatsOf, kartStatsOf, ownsCar, takedown } from './tycoon';
 import { createGarageUI, loadCar } from './garage-ui';
 import { DEFAULT_CAR } from './mycar';
@@ -65,6 +66,8 @@ import { BoxGrid } from './boxgrid';
 import { count } from './tycoon';
 import { NS_ROADS, RIVER, SLAB, WALK_W, type Tick } from './world';
 import { footbridgeWall, footbridgeY, stairTread } from './liberty';
+import { JETTY, RIM, inLake, onJetty } from './westlake';
+import { GATE } from './stadium';
 import { WORLD_BOUNDS } from './layout';
 import { PLAN, inPoly, type Pt } from './streetplan';
 import { SPOTS, pointOn, ROUTES } from './routes';
@@ -75,7 +78,7 @@ import type { GameDeps } from './ui';
 type Near = SpotId | 'gear' | 'garage' | 'hangar' | 'car' | 'plane' | 'karts' | 'trainer' | `place:${string}`;
 /** Prompts that say their own label (the rest say "Enter ...") */
 /** The landmarks' doors and Trench Avenue's (their prompts open their panels) */
-const ALL_DOORS = [...DOORS, ...AVENUE_DOORS];
+const ALL_DOORS = [...DOORS, ...AVENUE_DOORS, { id: 'stadium' as const, ...GATE.spot }];
 const OWN_LABEL = new Set<string>(['gear', 'garage', 'hangar', 'car', 'plane', 'karts', 'trainer']);
 /** The hangar menu's shot: from the doors, looking in at your aircraft */
 const HANGAR_VIEW = { eye: new THREE.Vector3(HANGAR_SPOT.x - 6.5, 3.4, HANGAR_SPOT.z + 12.5), at: new THREE.Vector3(HANGAR_SPOT.x, 1.2, HANGAR_SPOT.z) };
@@ -157,6 +160,8 @@ export interface WalkDeps {
   garage: Garage;
   /** Your car's engine sound: revs 0..1, or negative for off */
   engine(revs: number): void;
+  /** Your car's tyres sliding, 0..1 (sound.ts) */
+  tyres(level: number): void;
   /** Your business's places on foot (your stall, your units): where to stand, and the prompt's label */
   places(): { id: string; x: number; z: number; label: string }[];
   /** Open one of them (tycoon-ui.ts) */
@@ -309,8 +314,8 @@ export function createWalk(d: WalkDeps) {
   /** What the feet stand on: the stairs' treads as they're drawn (he walks up their even ramp), else the ground */
   const feetAt = (x: number, z: number, yNow = 0) => stairTread(x, z, yNow) ?? groundAt(x, z, yNow);
   const groundAt = (x: number, z: number, yNow = 0) => {
-    const slab = slabs.some((s) => inBox(s.box, x, z) && inPoly(s.poly, [x, z])) ? SLAB : 0.035;
-    const base = Math.max(slab, footbridgeY(x, z, yNow) ?? 0);
+    const slab = slabs.some((s) => inBox(s.box, x, z) && inPoly(s.poly, [x, z])) ? SLAB : onDeck(x, z) ? DECK_Y : 0.035;
+    const base = Math.max(slab, footbridgeY(x, z, yNow) ?? 0, onJetty(x, z) ? SLAB + JETTY.y : 0);
     if (x < KART_PARK.x0 || x > KART_PARK.x1 || z < KART_PARK.z0 || z > KART_PARK.z1) return base;
     const t = trackSurfaceAt(x, z, yNow);
     return t ? Math.max(base, t.y + 0.035) : base;
@@ -323,7 +328,10 @@ export function createWalk(d: WalkDeps) {
     if (x < BOUNDS[0] || x > BOUNDS[2] || z < BOUNDS[1] || z > BOUNDS[3]) return true;
     if (footbridgeY(x, z, y, RADIUS) !== null) return false;
     if (footbridgeWall(x, z, y, RADIUS)) return true;
-    if (z > RIVER[0] - 0.3 && z < RIVER[1] + 0.3 && !onBridge(x)) return true;
+    // (the river is a wall but at the bridges, and on The Trenches' boardwalk and pier: their railings are the decks' edges)
+    if (z > RIVER[0] - 0.3 && z < RIVER[1] + 0.3 && !onBridge(x) && !onDeck(x, z, RADIUS)) return true;
+    // Westlake Park's lake (westlake.ts): you stop on the lawn at its stone rim, but out along the jetty (its edges stop you)
+    if (inLake(x, z, RADIUS + RIM.w + 0.1) && !onJetty(x, z, RADIUS)) return true;
     if (SOLID_GRID.near(x, z, RADIUS, nearBoxes).some((b) => inBox(b, x, z, RADIUS))) return true;
     if (drive.blocks(x, z, RADIUS) || fly.blocks(x, z, RADIUS)) return true;
     return d.plotSolids().some((b) => inBox(b, x, z, RADIUS));
@@ -469,8 +477,11 @@ export function createWalk(d: WalkDeps) {
     free: (x, z) => !blocked(x, z),
     sfx: d.sfx,
     engine: d.engine,
+    tyres: d.tyres,
     bounds: [BOUNDS[0], BOUNDS[1], BOUNDS[2], BOUNDS[3], 0],
+    reduced: d.reduced,
   });
+
 
   // Your aircraft: get in at the hangar (or wherever you landed it), fly, land and get out
   const fly = createFly({
@@ -896,10 +907,11 @@ export function createWalk(d: WalkDeps) {
       e.preventDefault();
       return true;
     }
-    // Driving: steer and pedal with the move keys, Space for the handbrake, V swaps camera, F gets out
+    // Driving: steer and pedal with the move keys, Space for the handbrake, V swaps camera, H the horn, F gets out
     if (drive.active) {
       if (down && !e.repeat && c === 'KeyF') act();
       else if (down && !e.repeat && c === 'KeyV') drive.toggleView();
+      else if (down && !e.repeat && c === 'KeyH') drive.horn();
       else if (c === 'Space') jumpHeld = down;
       else if (MOVE.includes(c)) {
         if (down) keys.add(c);
@@ -1082,6 +1094,11 @@ export function createWalk(d: WalkDeps) {
     });
     for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) b.addEventListener(ev, () => (pedals[key] = false));
   }
+  // The horn while driving your car (city life plan, Phase 2)
+  $('[data-drive-horn]').addEventListener('pointerdown', () => {
+    drive.horn();
+    d.touched();
+  });
   // Touch while karting: Drift held, Item tapped (the stick steers, the pedals pedal)
   const driftBtn = root.querySelector<HTMLButtonElement>('[data-kart-drift]');
   if (driftBtn) {
@@ -1280,13 +1297,14 @@ export function createWalk(d: WalkDeps) {
       pad.prev = b;
       return;
     }
-    // Driving: left stick steers, RT gas, LT brake / reverse, A handbrake, Y gets out, View swaps camera
+    // Driving: left stick steers, RT gas, LT brake / reverse, A handbrake, Y gets out, View swaps camera, the left stick pressed is the horn
     if (drive.active) {
       padDrive.steer = pad.x;
       padDrive.throttle = (gp.buttons[7]?.value ?? 0) - (gp.buttons[6]?.value ?? 0);
       padDrive.handbrake = !!b[0];
       if (edge(3)) act();
       if (edge(8)) drive.toggleView();
+      if (edge(10)) drive.horn();
       if (pad.x || padDrive.throttle || b.some(Boolean)) d.touched();
       pad.prev = b;
       return;

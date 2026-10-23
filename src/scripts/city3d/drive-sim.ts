@@ -18,6 +18,7 @@
 import type { Box } from './solids';
 import { RIVER } from './layout';
 import { riverCrossings } from './streetplan';
+import { LAKE_C, LAKE_WALLS } from './westlake';
 
 export interface DriveTune {
   /** Top speed and reverse top speed (tiles/s) */
@@ -146,7 +147,8 @@ export function stepCar(c: CarState, inp: DriveInput, t: DriveTune, dt: number, 
 
   // Soft collisions: push each circle out of whatever it overlaps and lose the speed going into it
   let hit = 0;
-  const walls = world.boxes.concat(RIVER_WALLS);
+  // (Westlake Park's lake only when the car's anywhere near it)
+  const walls = world.boxes.concat(RIVER_WALLS, Math.hypot(c.x - LAKE_C[0], c.z - LAKE_C[1]) < 50 ? LAKE_WALLS : []);
   /** Move the car (and the circle being checked) out along n */
   const push = (cc: { x: number; z: number }, nx: number, nz: number, depth: number, soft: boolean) => {
     c.x += nx * depth;
@@ -208,4 +210,78 @@ export function stepCar(c: CarState, inp: DriveInput, t: DriveTune, dt: number, 
     c.vz *= 0.3;
   }
   return hit;
+}
+
+/* ---------- What the car shows and sounds (city life plan, Phase 2) ---------- */
+
+/** The car's lights this frame */
+export interface CarLights {
+  /** Brake lights: braking from a roll, or the handbrake on the move */
+  brake: boolean;
+  /** Reversing lights */
+  reverse: boolean;
+  /** The indicator flashing, if any */
+  turn: 'L' | 'R' | null;
+}
+
+/** Below this speed (tiles/s) steering is a turn, not a lane change: the indicators follow the wheel */
+export const SIGNAL_SPEED = 2.5;
+/** How long an indicator stays on after the wheel straightens (seconds) */
+export const SIGNAL_HOLD = 1.2;
+
+/** The indicators' memory: the side lit and how long it has left */
+export interface TurnSignal {
+  side: 'L' | 'R' | null;
+  hold: number;
+}
+export const newSignal = (): TurnSignal => ({ side: null, hold: 0 });
+
+/**
+ * The lights from the car's state and the driver's input. The indicators come on with the wheel below
+ * SIGNAL_SPEED (and at a stop) and stay SIGNAL_HOLD after it straightens, so they don't flicker with the stick.
+ */
+export function carLights(c: CarState, inp: DriveInput, sig: TurnSignal, dt: number): CarLights {
+  const brake = (inp.throttle < -0.05 && c.speed > 0.3) || (inp.handbrake && Math.abs(c.speed) > 0.3);
+  const reverse = c.speed < -0.2;
+  if (Math.abs(c.speed) < SIGNAL_SPEED && Math.abs(inp.steer) > 0.5) {
+    sig.side = inp.steer > 0 ? 'R' : 'L';
+    sig.hold = SIGNAL_HOLD;
+  } else if (sig.side) {
+    sig.hold -= dt;
+    if (sig.hold <= 0) sig.side = null;
+  }
+  return { brake, reverse, turn: sig.side };
+}
+
+/** Where the gearbox shifts up, as shares of the top speed */
+export const GEARS = [0.22, 0.45, 0.7];
+
+/**
+ * The gear for a speed: 'R' in reverse, 'N' stopped with no throttle, else 1-4; and the engine's revs
+ * (0..1) climbing through each gear and dropping at the shift
+ */
+export function gearOf(speed: number, top: number, throttle = 0): { gear: 'R' | 'N' | 1 | 2 | 3 | 4; revs: number } {
+  if (speed < -0.2) return { gear: 'R', revs: Math.min(1, -speed / 3.5) };
+  if (Math.abs(speed) < 0.2 && Math.abs(throttle) < 0.05) return { gear: 'N', revs: 0 };
+  const f = Math.max(0, speed / top);
+  let g = 0;
+  while (g < GEARS.length && f >= GEARS[g]) g++;
+  const lo = g ? GEARS[g - 1] : 0;
+  const hi = g < GEARS.length ? GEARS[g] : 1.08;
+  return { gear: (g + 1) as 1 | 2 | 3 | 4, revs: Math.min(1, 0.25 + 0.75 * ((f - lo) / (hi - lo))) };
+}
+
+/** A tyre leaves a mark past this much sideways speed (tiles/s) */
+export const SKID_SLIP = 1.2;
+
+/**
+ * How hard the tyres are sliding: the speed sideways to the nose (tiles/s), 0 under SKID_SLIP unless the
+ * handbrake is on at a roll. The marks and the screech follow it.
+ */
+export function skidding(c: CarState, inp: DriveInput): number {
+  const nx = Math.cos(c.yaw);
+  const nz = -Math.sin(c.yaw);
+  const side = Math.abs(c.vx * nz - c.vz * nx);
+  if (inp.handbrake && Math.abs(c.speed) > 1.5) return Math.max(side, 1.5);
+  return side >= SKID_SLIP ? side : 0;
 }

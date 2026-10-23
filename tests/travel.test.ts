@@ -9,6 +9,7 @@ import { RIVER, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
 import { cleanSave, newSave, visit } from '../src/scripts/city3d/tycoon';
 import { pathBetween, pointOn } from '../src/scripts/city3d/routes';
 import { PLAN, distToStreet } from '../src/scripts/city3d/streetplan';
+import { onDeck } from '../src/scripts/city3d/waterfront';
 
 const R = 0.3;
 const blocked = (x: number, z: number) => SOLIDS.some((b) => x > b[0] - R && x < b[2] + R && z > b[1] - R && z < b[3] + R);
@@ -18,7 +19,8 @@ test('every place has a spot to arrive at, free to stand on, in the world and ou
   for (const p of PLACES) {
     assert.ok(!blocked(p.at.x, p.at.z), `${p.id}'s spot is in something solid`);
     assert.ok(p.at.x > WORLD_BOUNDS[0] && p.at.x < WORLD_BOUNDS[2] && p.at.z > WORLD_BOUNDS[1] && p.at.z < WORLD_BOUNDS[3]);
-    assert.ok(p.at.z < RIVER[0] || p.at.z > RIVER[1], `${p.id} is in the river`);
+    // (or on The Trenches' boardwalk, out over the water)
+    assert.ok(p.at.z < RIVER[0] || p.at.z > RIVER[1] || onDeck(p.at.x, p.at.z, 0.3), `${p.id} is in the river`);
     assert.ok(Number.isFinite(p.at.yaw));
     assert.ok(p.spot || p.name, `${p.id} has a name`);
   }
@@ -56,6 +58,7 @@ test('a taxi drives from any place to any other along the streets, to the kerb n
       const end = r!.pts[r!.pts.length - 1];
       const nearest = Math.min(...roads.filter((s) => s.kind !== 'slip').map((s) => distToStreet(s, [b.at.x, b.at.z])));
       assert.ok(Math.hypot(end[0] - b.at.x, end[1] - b.at.z) < nearest + 4, `${a.id} to ${b.id} stops ${Math.hypot(end[0] - b.at.x, end[1] - b.at.z).toFixed(1)} away`);
-      assert.ok(r!.len / TAXI_SPEED < 45, `${a.id} to ${b.id}: ${r!.len.toFixed(0)}`);
+      // (the longest, between the airport and Westlake Park's stadium, corner to corner of the map, is about 50 s)
+      assert.ok(r!.len / TAXI_SPEED < 55, `${a.id} to ${b.id}: ${r!.len.toFixed(0)}`);
     }
 });

@@ -1195,11 +1195,97 @@ the el; lighter on phones). Three steps, each its own PR:
   a hatch on the street whose counter opens the Armoury's store and
   workbench under its own name: cartoon guns, Dorras only). Each is a
   place: pin, directory entry, panel with Walk in, a stop on the world map
-  and for taxis and fast travel.
+  and for taxis and fast travel. Since then row A's four blocks are
+  redesigned as the riverside (the owner's call, riverside.ts): the three
+  places, the Club four times the size, face north across the bank avenue
+  to the boardwalk and Pier 7 (`docs/waterfront-plan.md`), the corner
+  shops on Trench Avenue's strips.
   Steps 2 and 3 measured together on the phone tier: The Trenches view
   158 draws (140 after step 1), 0.27M triangles (0.25M), geometry 75 MB
   (75), textures 135 MB (122: the tenements' and the places' signs);
   every site under about 30 ms.
+
+### 9b Westlake Park (the owner's call; built)
+
+The second district: a park, with a stadium as its big attraction. The
+owner's answers:
+
+- **Where:** west of town, north of the river: the open land between the
+  ring highway and the Parkway, from the highway's north side (round its
+  north-west bend) down to the west ring avenue, and the three strips
+  between the avenues that run west from town to the highway, down to the
+  river avenue (about 160 x 230 tiles).
+- **The attraction:** a stadium (the owner's pick over a fairground),
+  across the lawns from the lake.
+- **For sale:** nothing for now, scenery only (lots can come in a later
+  step, as The Trenches' corner shops did).
+- **Names:** made up: Westlake Park and Sector 7 Stadium. The owner can
+  change any.
+
+In three steps, each a PR for the owner's sign-off:
+
+1. **The land, the lake and the paths** (built): `westlake.ts` (DOM-free,
+   tested in `tests/westlake.test.ts`): the big block (`BIG`, clear of the
+   highway and its slip lanes, its sidewalk alongside the Parkway's) and
+   the strips (`STRIPS`) join the street plan as parks; the lake
+   (`LAKE_C`, `lakeR()`, `inLake()`: walkers stop at its rim, cars at
+   `LAKE_WALLS`); the paths (`PATHS`: the ring walk round the big block,
+   the loop round the lake, the Mall from the south gate to the stadium's
+   site, the ways in from seven gates, a walk down each strip); the gates
+   (`GATES`, two stone piers each, solid; the Mall's carries the park's
+   name both ways); about 430 trees (an avenue either side of the Mall,
+   rows along the strips, clumps and glades on the lawns from a seeded
+   noise, pines towards the highway; phones leave out half the clumps),
+   about 100 lamps along the paths and benches round the lake and along the
+   Mall; `STADIUM_SITE` kept clear. Drawn by `westlake3d.ts`, the first
+   district loaded as you approach (performance plan item 10,
+   `districts.ts`). On the world map: its lawns, the lake and the paths.
+   A benchmark view over the lake.
+2. **The stadium** (built): Sector 7 Stadium, `stadium.ts` (DOM-free,
+   tested in `tests/stadium.test.ts`) on `STADIUM_SITE` at the top of the
+   Mall: a soft-cornered oval bowl (`ovalAt()`, `FACADE` 62 x 50, 7.2
+   high), two tiers of seats (`TIERS`) with a concourse between, a roof
+   ring over the upper tier (`ROOF`), the pitch and a running track round
+   it, four floodlight masts outside the corners (`MASTS`, the tallest
+   thing at about 11.2, under the Emporium) with pools of light on the
+   pitch at night, the big screen over the north stand (`SCREEN`, fixed
+   copy: SECTOR 7, events coming soon) and the main gate in the south
+   facade under the name (`GATE`). `STADIUM_SOLIDS`: the facade all round
+   (the gates stay shut until there are events), the masts and the parked
+   cars. The car park (`CAR_PARK` in westlake.ts, `BAYS`, `ENTRANCES`,
+   `PARKED`) is on the first strip, across the west ring avenue from the
+   park's south gate, with a P sign and lamps; its surface is drawn with
+   the park (`westlake3d.ts`), its cars at the boot. Drawn by
+   `stadium3d.ts` (`buildStadium()`, a place built at the boot like the
+   avenue's: spot `stadium`, pin, directory entry, a panel (events coming
+   soon) with Walk in to `STADIUM_SPAWN`, the gate's door prompt, `PLACES`
+   entry for the map, taxis and fast travel). Its sound waits for the
+   events (an empty bowl is quiet).
+3. **The park's life** (built): the land it needed is in `westlake.ts`:
+   the boathouse on the lake's north shore (`BOATHOUSE`, solid) and its
+   jetty out over the rim (`JETTY`, `onJetty()`: you can walk out along
+   it), and a court on each strip (`COURTS`: two tennis courts, a
+   five-a-side pitch, a basketball court; `TENNIS`, `PITCH`, `HOOPS`, their
+   posts in `COURT_SOLIDS`), each strip's walk eased round its court. What
+   moves is `parklife.ts` (DOM-free, tested in `tests/parklife.test.ts`),
+   every one of them a function of the time: walkers, joggers and dog
+   walkers in lanes round the lake loop and the ring walk, up and down the
+   Mall and along the strips (`LANES`, `PARK_PEOPLE`), their dogs on the
+   lead (`DOGS`), people on every third bench, picnics in the glades
+   (`PICNICS`), the games (players wandering their courts, keepers in the
+   goals, a tennis rally on each court, passes and shots, `BALLS`) and
+   boats going round in rings on the lake, rowing boats and swan pedalos
+   with people aboard, two moored at the jetty (`BOATS`, `RINGS`). The
+   crowd plays two new clips for them (crowdclips.ts: `jog`, recorded from
+   the planted-feet walk at a jog, and `picnic`, sitting on the ground);
+   life.ts places them. `parklife3d.ts` (in the park's chunk) draws the
+   boathouse, the jetty, the courts and the picnics as sites, and on the
+   main thread (the district gets the city's tick now) the boats with
+   their oars, the dogs and their leads and the balls, an instanced mesh a
+   kind. Phones leave out half the park's people. The sound
+   (ambience.ts `park`, `sport`, the lake in `water`): birdsong by day, an
+   owl at night, the lake lapping, a ball's kicks, bounces and hits by the
+   courts. A riverside walk along the river avenue is left for later.
 
 The open land inside the new edge is room for several districts. Each one
 is its own PR and the owner's call, built from Phase 4's kits. For
@@ -1214,8 +1300,7 @@ example:
 - **9c Suburbs**, north and west: low houses with gardens, quieter
   streets, a school, a mall and a little main street. There's more land
   per building, so it's cheaper per tile.
-- **9d A park district:** a big green with a lake, paths and boats on the
-  lake. Optionally a stadium or a fairground (the owner's pick).
+- **9d A park district:** built as 9b, Westlake Park (above).
 
 Every district comes with the same set of things:
 

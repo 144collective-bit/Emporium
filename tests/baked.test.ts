@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { bake } from '../scripts/bake.mjs';
 import { JUNCTIONS, ROUTES, packRoutes, unpackRoutes, type PackedRoute } from '../src/scripts/city3d/routes';
 import { AMENITIES } from '../src/scripts/city3d/commons';
-import { WALK_STRIDE, MARCH_STRIDE } from '../src/scripts/city3d/crowdclips';
+import { JOG_STRIDE, WALK_STRIDE, MARCH_STRIDE } from '../src/scripts/city3d/crowdclips';
 
 const made: Record<string, unknown> = await bake({ quiet: true });
 /** Into the page and back, as the browser gets it */
@@ -22,7 +22,7 @@ function assertPlain(v: unknown, path: string) {
 }
 
 test('everything baked is plain data: it comes into the page as it was made', () => {
-  assert.deepEqual(Object.keys(made).sort(), ['amenities', 'march-cycle', 'routes', 'walk-cycle']);
+  assert.deepEqual(Object.keys(made).sort(), ['amenities', 'jog-cycle', 'march-cycle', 'routes', 'walk-cycle']);
   for (const [key, v] of Object.entries(made)) assertPlain(v, key);
 });
 
@@ -38,4 +38,5 @@ test('the amenities and the crowd\'s walk cycles from the page are the ones work
   assert.deepStrictEqual(viaPage(made.amenities), AMENITIES);
   assert.equal((made['walk-cycle'] as { stride: number }).stride, WALK_STRIDE);
   assert.equal((made['march-cycle'] as { stride: number }).stride, MARCH_STRIDE);
+  assert.equal((made['jog-cycle'] as { stride: number }).stride, JOG_STRIDE);
 });

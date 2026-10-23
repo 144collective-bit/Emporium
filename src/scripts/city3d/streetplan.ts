@@ -21,6 +21,7 @@ import { AIRPORT_STREETS, ROAD } from './airfield';
 import { BX, TOWERS } from './liberty';
 import { HIGHWAY, HIGHWAY_HALF, insideHighway, outerLane, slipCurve } from './highway';
 import { TRENCH_BLOCKS, TRENCH_CROSSINGS, TRENCH_STREETS } from './trenches';
+import { WESTLAKE_BLOCKS } from './westlake';
 
 export type Pt = [number, number];
 
@@ -405,6 +406,8 @@ export function cityPlan(): StreetPlan {
     }),
     // The Trenches' blocks (rows A, B and C), built on in the next steps
     ...TRENCH_BLOCKS.map((b): Block => ({ id: b.id, poly: b.poly, use: 'plain', ref: 'trenches', walk: WALK_W })),
+    // Westlake Park's blocks (westlake.ts, growth plan Phase 9b): the big one and the strips, west of town
+    ...WESTLAKE_BLOCKS.map((b): Block => ({ id: b.id, poly: b.poly, use: 'park', ref: 'westlake', walk: WALK_W })),
     // The bends' outer sidewalks (their own outline is the sidewalk)
     ...BEND_KERBS.map((poly, i): Block => ({ id: `kerb-${i}`, poly, use: 'plain', walk: 0 })),
   ];

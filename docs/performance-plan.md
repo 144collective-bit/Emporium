@@ -208,10 +208,10 @@ frame:
 The first frame after the boot (where the real shaders used to compile):
 2.84 s to 1.27 s on the phone tier, 3.23 s to 1.97 s on desktop.
 
-## Performance phase 4 (in progress): the foundations
+## Performance phase 4 (done): the foundations
 
-Items 9 and 3 below, and the plan for 10. Nothing looks or plays
-differently.
+Items 9, 3 and 10 below (10 built with the next district, Westlake Park).
+Nothing looks or plays differently.
 
 - **Sites built off the main thread (9).** A worker (`sitework.ts`)
   imports the city's own chunk (already in the browser's cache), registers
@@ -243,29 +243,29 @@ differently.
   karts, guns, the LED wall) go through `liveTex()` and are always painted.
   If the bake can't run, the build says so and the site paints them in the
   browser as before; `?textures=0` paints them anyway, to compare.
-- **Districts loaded as you approach (10): with the next district** (the
-  owner's call). The Trenches costs about 0.2 s of a 13 s phone start
-  today and its sites already build in the worker, so splitting it out
-  buys little now. The plan, for the next district:
-  1. A district is a module of its own (`districts/<name>.ts`) with one
-     entry point: its street plan pieces, its solids and its sites, the
-     same three things The Trenches registers today. The street plan
-     (traffic, walking, the world map) keeps every district's streets and
-     blocks, built at build time like the rest of the plan (`baked()`), so
-     roads and the map never wait on a download.
-  2. The boot loads the districts round the home view; the rest load when
-     the camera comes within a district's reach (its rect plus the tier's
-     `far` and the scheduler's lead), through the same nearest-first queue
-     as the sites. The worker imports the same module when it's loaded.
-  3. Its far form is the tile pieces' far halves, kept; its near pieces
-     go with the existing budget (`toRelease()`), so memory stays flat
-     however many districts there are.
-  4. Its places (pins, panels, doors) are registered by the boot from
-     data, so the world map and the directory list them before the
-     district is loaded; walking in or a fly-in asks for it first
-     (`want()`), as sites do today.
-  5. The budget script holds each district's chunk under `lazyJs`, and
-     the bench gains a view per district.
+- **Districts loaded as you approach (10): built with the next district,
+  Westlake Park** (the owner's call). The Trenches costs about 0.2 s of a
+  13 s phone start, so it stayed as it is. How it works (`districts.ts`):
+  1. A district's drawing is a module of its own (`westlake3d.ts`), a
+     chunk the boot never downloads. What the rest of the city needs (its
+     blocks in the street plan, its solids, the lake that keeps walkers
+     and cars out, where its trees and lamps stand) is DOM-free data in
+     the boot already, so walking, driving, traffic and the world map
+     never wait on it.
+  2. It's loaded when what the camera looks at (or Degen, walking) comes
+     within the tier's `far` and `LEAD` (90) of its land. It registers its
+     sites then (`register()`), and the tile work takes them on
+     (`works.adopt()`); the site worker loads the same module (its own
+     address, `SELF`) and builds them, the main thread waiting a few
+     seconds at most for it. The benchmark loads every district first.
+  3. Once built it's held like the rest of the city: far tiles let their
+     near pieces go past the budget (`toRelease()`).
+  4. The budget script holds each district's chunk under `lazyJs`, and the
+     bench has a view of it.
+  5. Its places, when it has some (the stadium, step 2), are registered by
+     the boot from data, so the world map and the directory list them
+     before it's loaded, and a fly-in or walking in asks for its sites
+     first (`want()`).
 
 ### What phase 4 measured
 
@@ -350,8 +350,9 @@ week or more); risk is how much could break or look different.
 
 Fix phases 1, 2 and 3 and the trim (done) → performance phase 2 (done): **1, 2, 4, 6, 11, 12**
 (quick wins and the guard rails) → performance phase 3 (done): **5, 7, 8** (smoother
-frames; 8 measured and left until the districts grow) → performance phase 4: **9, 10, 3** (the foundations for a much
-bigger world), before Phase 10.
+frames; 8 measured and left until the districts grow) → performance phase 4 (done): **9, 3**, and **10** with the
+next district, Westlake Park (the foundations for a much bigger world) → real-device numbers (`?bench` on the
+owner's phone and laptop) → 8 once the far tiles pass about 60,000 triangles.
 
 ## The owner's decisions
 

@@ -6,12 +6,14 @@
  * frame, each row every bone's matrix (posed world x the bind pose's
  * inverse) in the figure's own space at scale 1.
  *
- * - **walk** and **march** are the planted-feet walk (locomotion.ts) recorded
- *   over one full cycle at a steady pace: a person plays it at the rate their
- *   own speed calls for (`WALK_STRIDE` / `MARCH_STRIDE` is the distance one
- *   cycle covers at scale 1), so their feet stay put on the pavement.
+ * - **walk**, **jog** and **march** are the planted-feet walk (locomotion.ts)
+ *   recorded over one full cycle at a steady pace: a person plays it at the
+ *   rate their own speed calls for (`WALK_STRIDE` / `JOG_STRIDE` /
+ *   `MARCH_STRIDE` is the distance one cycle covers at scale 1), so their
+ *   feet stay put on the pavement. The jog is Westlake Park's joggers'.
  *   The march keeps the rifle arm still and the free arm swinging straight.
- * - **idle**, **look**, **chat** and **sit** are the pose formulas (poses.ts)
+ * - **idle**, **look**, **chat**, **sit** and **picnic** (sitting on the
+ *   ground, legs out) are the pose formulas (poses.ts)
  *   over a few seconds, the last part eased into the first so the loop has
  *   no seam.
  * - **salute** isn't a loop: its frames go from attention (0) to the hand at
@@ -23,10 +25,10 @@
 import * as THREE from 'three';
 import { BONES, makeSkeleton, newPose, poseSkeleton, type Limb, type Pose } from './skeleton';
 import { copyPose, createLocomotion } from './locomotion';
-import { attentionPose, chatPose, idlePose, lookPose, set, sitPose } from './poses';
+import { attentionPose, chatPose, idlePose, lookPose, picnicPose, set, sitPose } from './poses';
 import { baked as atBuild } from './baked';
 
-export type CrowdClip = 'walk' | 'march' | 'idle' | 'look' | 'chat' | 'sit' | 'salute';
+export type CrowdClip = 'walk' | 'jog' | 'march' | 'idle' | 'look' | 'chat' | 'sit' | 'picnic' | 'salute';
 
 interface ClipDef {
   frames: number;
@@ -132,14 +134,17 @@ function recordWalk(speed: number, frames: number) {
   return { poses: out, stride: z - start };
 }
 
-/** Pedestrians stroll at about this (0.55 tiles a second at their 0.66 scale), soldiers march at about this */
+/** Pedestrians stroll at about this (0.55 tiles a second at their 0.66 scale), joggers jog at this (1.7), soldiers march at about this */
 const WALK_SPEED = 0.83;
+const JOG_SPEED = 2.6;
 const MARCH_SPEED = 0.5;
 // (recorded when the site is built: baked.ts)
 const walk = atBuild('walk-cycle', () => recordWalk(WALK_SPEED, 32));
+const jog = atBuild('jog-cycle', () => recordWalk(JOG_SPEED, 24));
 const march = atBuild('march-cycle', () => recordWalk(MARCH_SPEED, 32));
 /** How far one walk (or march) cycle goes at scale 1: a person at scale s and speed v plays v / (STRIDE s) cycles a second */
 export const WALK_STRIDE = walk.stride;
+export const JOG_STRIDE = jog.stride;
 export const MARCH_STRIDE = march.stride;
 
 /** From a recorded cycle: frame `u` (the recording already loops) */
@@ -150,6 +155,7 @@ const recorded = (poses: Pose[], after?: (p: Pose) => void): ClipDef['sample'] =
 
 export const CLIP_DEFS: Record<CrowdClip, ClipDef> = {
   walk: { frames: walk.poses.length, loop: true, grip: RELAXED, sample: recorded(walk.poses) },
+  jog: { frames: jog.poses.length, loop: true, grip: 0.5, sample: recorded(jog.poses) },
   // On parade: the rifle arm (right) still, the free arm swinging straight
   march: {
     frames: march.poses.length,
@@ -166,6 +172,7 @@ export const CLIP_DEFS: Record<CrowdClip, ClipDef> = {
   look: { frames: 192, loop: true, grip: RELAXED, sample: looped((p, t) => lookPose(p, t)) },
   chat: { frames: 192, loop: true, grip: RELAXED, sample: looped((p, t) => chatPose(p, t)) },
   sit: { frames: 144, loop: true, grip: RELAXED, sample: looped((p, t) => sitPose(p, t)) },
+  picnic: { frames: 144, loop: true, grip: RELAXED, sample: looped((p, t) => picnicPose(p, t)) },
   // Attention (0) to the free hand at the brow (1), the rifle in the left hand
   salute: { frames: 9, loop: false, grip: RIFLE, sample: (u, p) => attentionPose(p, u, 'left') },
 };
