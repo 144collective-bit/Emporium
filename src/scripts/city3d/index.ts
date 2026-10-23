@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import { MapControls } from 'three/addons/controls/MapControls.js';
 import { consolidate, loadImage, loadTex, updateLights } from './kit';
 import { createPost } from './post';
-import { CENTER, buildGround, buildLamps, buildSkyline, buildTrees, puddleMat, keepTreesOff, scatterOutskirts, waterMat, type Env, type Tick } from './world';
+import { CENTER, buildGround, buildLamps, buildSkyline, buildTrees, placed as everyPlaced, puddleMat, keepTreesOff, scatterOutskirts, waterMat, type Env, type Tick } from './world';
 import { buildLandmarks, type Spot } from './landmarks';
 import { buildInfill } from './infill';
 import { buildNeighbourhoods } from './neighbourhoods';
@@ -67,6 +67,8 @@ import { createBench } from './bench';
 import { mb, sceneMemory } from './perf';
 import { tileBatch } from './tilebatch';
 import { createTileWork } from './tilework';
+// (the site worker imports this module, the city's chunk, and starts with sitework.ts's `serveSites()`)
+import { meshesOf, startSiteWorker } from './sitework';
 import { buildTrenches } from './trenches3d';
 import { tilesInView, type Plane } from './tiles';
 import { farForm, farLods, updateLods } from './lod';
@@ -299,6 +301,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const works = createTileWork(scene, {
     budget: (Number(new URLSearchParams(location.search).get('budget')) || Q.nearBudget) * 2 ** 20,
     compile: (meshes) => meshes.forEach((m) => compileFor(m)),
+    // Most sites built off the main thread (performance phase 4): in the built site, unless ?worker=0
+    worker: import.meta.env.PROD && new URLSearchParams(location.search).get('worker') !== '0' ? startSiteWorker(import.meta.url, { low: tier === 'low', placed: everyPlaced() }) : null,
+    meshesOf,
   });
   const atBoot = works.boot([...new Set([...viewTiles(h0.pos, h0.target), ...viewTiles(introFrom(h0), h0.target)].map((t) => t.join()))].map((k) => k.split(',').map(Number) as [number, number]));
   const tiled = tileBatch(scene, [scene, ...['airport', 'kartpark'].flatMap((n) => scene.getObjectByName(n) ?? []), ...atBoot]);
@@ -1193,7 +1198,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           stat.mem,
           `tiles ${tiled.drawn()} of ${tiled.pieces()} pieces drawn · ${tiled.nearTiles()} near · ${farLods()} far forms`,
           `boot ${(b.total / 1000).toFixed(1)} s · build ${(b.build / 1000).toFixed(1)} (work ${(b.work / 1000).toFixed(2)}, tiles ${(b.tiles / 1000).toFixed(2)}) · shaders ${(b.shaders / 1000).toFixed(1)}`,
-          (({ built, waiting, atBoot, bootMs, laterMs, slowest }) => `sites ${built} built: ${atBoot} at boot (${Math.round(bootMs)} ms), the rest after (${Math.round(laterMs)} ms, slowest ${Math.round(slowest.ms)} ms: ${slowest.id}) · ${waiting} waiting`)(works.stats()),
+          (({ built, waiting, atBoot, bootMs, laterMs, slowest, offMain }) => `sites ${built} built: ${atBoot} at boot (${Math.round(bootMs)} ms), the rest after (${Math.round(laterMs)} ms here, ${offMain} of them off the main thread; slowest ${Math.round(slowest.ms)} ms: ${slowest.id}) · ${waiting} waiting`)(works.stats()),
           (({ released, held, budget, rebuilt }) => `near forms ${mb(held)} held of ${mb(budget)} · ${released} tiles let go · ${rebuilt} built again`)(works.stats()),
           `${tier} · px ${renderer.getPixelRatio().toFixed(2)}${lost.length ? ` · lowered: ${lost.join(', ')}` : ''}`,
           // Where Degen stands while walking (for placing things: ?spawn=x,z puts him back there)

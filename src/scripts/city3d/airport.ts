@@ -8,7 +8,7 @@
  */
 import * as THREE from 'three';
 import { site } from './tilework';
-import { Batch, FONT_DISPLAY, PAL, canvasTex, fx, glowMat, lit, neon, plane, rng, toon } from './kit';
+import { Batch, canvasTex, FONT_DISPLAY, fx, glowMat, lit, neon, PAL, plane, rng, siteMat, toon } from './kit';
 import {
   AIRBRIDGES,
   APPROACH,
@@ -159,7 +159,7 @@ function surfaces(b: Batch) {
     c.fillText('09', 64, 68);
     c.fillText('27', 192, 68);
   });
-  const numMat = toon('#ffffff', { map: numbers, transparent: true, alphaTest: 0.4 });
+  const numMat = siteMat('runway-numbers', toon('#ffffff', { map: numbers, transparent: true, alphaTest: 0.4 }));
   for (const [x, u0, ry] of [
     [x0 + 10, 0, -Math.PI / 2],
     [x1 - 10, 0.5, Math.PI / 2],

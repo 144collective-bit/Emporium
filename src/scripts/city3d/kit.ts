@@ -115,6 +115,7 @@ export function paintMat() {
   if (!paintShared) {
     paintShared = new THREE.MeshToonMaterial({ color: '#ffffff', gradientMap: gradient, vertexColors: true });
     paintShared.userData.shared = true;
+    paintShared.userData.siteKey = 'paint';
   }
   return paintShared;
 }
@@ -133,6 +134,7 @@ function neonAllMat() {
   if (neonAll) return neonAll;
   neonAll = new THREE.MeshBasicMaterial({ color: '#ffffff', vertexColors: true, toneMapped: true });
   neonAll.userData.shared = true;
+  neonAll.userData.siteKey = 'neon';
   neonAll.onBeforeCompile = (shader) => {
     shader.uniforms.uNight = nightU;
     shader.vertexShader = shader.vertexShader
@@ -149,8 +151,35 @@ function neonMat(day: number, night: number, flicker: number) {
   if (!m) {
     neonShared.set(key, (m = lit(new THREE.MeshBasicMaterial({ color: '#ffffff', vertexColors: true, toneMapped: true }), day, night, flicker)));
     m.userData.shared = true;
+    m.userData.siteKey = `neon|${key}`;
   }
   return m;
+}
+
+/* ---------- Sites built off the main thread (performance phase 4, sitework.ts) ---------- */
+
+/** No DOM here: the site worker (canvases aren't painted there: the main thread's are the ones drawn) */
+export const NO_DOM = typeof document === 'undefined';
+const SITE_MATS = new Map<string, THREE.Material>();
+/**
+ * Name a material sites draw with (anything but the shared ones, which are named already): a site built
+ * in the worker comes back as geometry and these names, drawn with the main thread's own materials.
+ * One name, one material; a site drawing with a material without a name is built on the main thread.
+ */
+export function siteMat<M extends THREE.Material>(key: string, m: M): M {
+  m.userData.siteKey = key;
+  if (!SITE_MATS.has(key)) SITE_MATS.set(key, m);
+  return m;
+}
+/** The main thread's material for a site material's name (null: not made here yet) */
+export function siteMatOf(key: string): THREE.Material | null {
+  if (key === 'paint') return paintMat();
+  if (key === 'neon') return neonAllMat();
+  if (key.startsWith('neon|')) {
+    const [day, night, flicker] = key.slice(5).split('|').map(Number);
+    return neonMat(day, night, flicker);
+  }
+  return SITE_MATS.get(key) ?? null;
 }
 
 /** Paint every vertex of a geometry one colour (for the shared materials) */
@@ -271,7 +300,13 @@ const BIG_TEX = 512 * 512;
  * canvas half the size, scaled to fit, so `draw` never knows). Never draw into its canvas afterwards
  * in pixels: the textures redrawn live (the LED wall) stay small enough to keep their size
  */
-export function canvasTex(w: number, h: number, draw: (ctx: CanvasRenderingContext2D, w: number, h: number) => void) {
+export function canvasTex(w: number, h: number, draw: (ctx: CanvasRenderingContext2D, w: number, h: number) => void): THREE.CanvasTexture {
+  // (in the site worker: a texture to name a material by, never painted or drawn)
+  if (NO_DOM) {
+    const t = new THREE.Texture();
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t as THREE.CanvasTexture;
+  }
   const k = HALF_TEX && w * h >= BIG_TEX ? 0.5 : 1;
   const c = document.createElement('canvas');
   c.width = Math.max(1, Math.round(w * k));

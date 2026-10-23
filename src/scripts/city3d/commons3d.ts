@@ -29,7 +29,7 @@
  * buildings, fences and hedges at every distance.
  */
 import * as THREE from 'three';
-import { Batch, FONT_DISPLAY, canvasTex, lit, toon } from './kit';
+import { Batch, canvasTex, FONT_DISPLAY, lit, siteMat, toon } from './kit';
 import { ATLAS, CREAM, INK, LEAF, METAL, ROOF, STONE, WOOD, glow, kit, type Frame } from './infill';
 import { buildFx, chainMesh, tag } from './grime';
 import { EDGES, EDGE_H, EDGE_W } from './streetwall';
@@ -430,7 +430,7 @@ const REC_SIGNS = (() => {
       c.fillText(text, W / 2, y + H / 2 + 4);
     });
   });
-  return { mat: lit(new THREE.MeshBasicMaterial({ map: tex, toneMapped: true }), 0.95, 1.3), rows: rows.length };
+  return { mat: siteMat('rec-signs', lit(new THREE.MeshBasicMaterial({ map: tex, toneMapped: true }), 0.95, 1.3)), rows: rows.length };
 })();
 function signPlane(row: number, w: number, h: number, x: number, y: number, z: number) {
   const g = new THREE.PlaneGeometry(w, h);

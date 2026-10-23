@@ -13,7 +13,7 @@
  * FX layer so the ink outlines don't draw its quads (`buildFx()`).
  */
 import * as THREE from 'three';
-import { Batch, FONT_DISPLAY, canvasTex, fx, lit, rng } from './kit';
+import { Batch, canvasTex, FONT_DISPLAY, fx, lit, rng, siteMat } from './kit';
 
 export type Pt = [number, number];
 
@@ -96,7 +96,7 @@ export const TAGS = (() => {
       c.restore();
     });
   });
-  const mat = lit(new THREE.MeshBasicMaterial({ map: tex, transparent: true, alphaTest: 0.35, side: THREE.FrontSide, depthWrite: true, toneMapped: true }), 0.85, 0.45);
+  const mat = siteMat('tags', lit(new THREE.MeshBasicMaterial({ map: tex, transparent: true, alphaTest: 0.35, side: THREE.FrontSide, depthWrite: true, toneMapped: true }), 0.85, 0.45));
   return { mat, rows };
 })();
 
@@ -142,7 +142,7 @@ export const POSTERS = (() => {
       c.restore();
     });
   });
-  const mat = lit(new THREE.MeshBasicMaterial({ map: tex, transparent: true, alphaTest: 0.3, depthWrite: true, toneMapped: true }), 0.8, 0.4);
+  const mat = siteMat('posters', lit(new THREE.MeshBasicMaterial({ map: tex, transparent: true, alphaTest: 0.3, depthWrite: true, toneMapped: true }), 0.8, 0.4));
   return { mat, rows };
 })();
 
@@ -175,7 +175,7 @@ const meshTex = canvasTex(64, 64, (c) => {
   c.stroke();
 });
 meshTex.wrapS = meshTex.wrapT = THREE.RepeatWrapping;
-export const CHAIN = lit(new THREE.MeshBasicMaterial({ color: '#aeb2c6', map: meshTex, transparent: true, alphaTest: 0.2, side: THREE.DoubleSide, depthWrite: false }), 0.8, 0.32);
+export const CHAIN = siteMat('chain', lit(new THREE.MeshBasicMaterial({ color: '#aeb2c6', map: meshTex, transparent: true, alphaTest: 0.2, side: THREE.DoubleSide, depthWrite: false }), 0.8, 0.32));
 /** The chain-link's mesh from a to c (a straight run), from y0 up h, into a Batch for the FX layer */
 export function chainMesh(b: Batch, a: Pt, c: Pt, y0: number, h: number) {
   const len = Math.hypot(c[0] - a[0], c[1] - a[1]);
