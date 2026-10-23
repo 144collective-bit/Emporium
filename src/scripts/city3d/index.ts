@@ -52,7 +52,9 @@ import { buildCommons } from './commons3d';
 import { buildGrit } from './grit3d';
 import { buildStreetWalls } from './streetwall3d';
 import { buildTheBlock } from './theblock';
+import { buildAvenue } from './avenue3d';
 import { BLOCK_SPAWN } from './projects';
+import { AVENUE_SPAWNS } from './avenue';
 import { buildFightClub } from './fightclub';
 import { fightRecordHtml } from './fight-ui';
 import { kartRecordsHtml } from './kart-ui';
@@ -192,6 +194,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   buildStreetWalls(scene, crowd, { low: tier === 'low' });
   const theBlock = buildTheBlock(scene, crowd, { tick, reduced, low: tier === 'low' });
   spots.push(theBlock.spot);
+  // ...and Trench Avenue's places under the el (the grit's step 3): Club PULSE, The Rusty Nail, Trench Arms
+  spots.push(...buildAvenue(scene, crowd, { tick, reduced, low: tier === 'low' }).spots);
   // ...and the metro's el where it crosses the open land south of the south row: no trees under it
   keepTreesOff([-10, 125, 56, 135]);
   progress(0.55);
@@ -408,6 +412,12 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       panelBody.querySelector('[data-liberty-walkin]')?.addEventListener('click', () => {
         close();
         startWalking(LIBERTY_SPAWN);
+      });
+    // Trench Avenue's places: Walk in starts walk mode on the sidewalk in front
+    if (id === 'club' || id === 'bar' || id === 'arms')
+      panelBody.querySelector('[data-avenue-walkin]')?.addEventListener('click', () => {
+        close();
+        startWalking(AVENUE_SPAWNS[id]);
       });
     // The Block's panel: Walk in starts walk mode on its plaza by the metro's stairs
     if (id === 'trenches')

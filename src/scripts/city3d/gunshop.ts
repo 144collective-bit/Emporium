@@ -229,9 +229,14 @@ export function createGunShop(root: HTMLElement, d: ShopDeps) {
       }
     }
   }
-  function show() {
+  const title = el.querySelector<HTMLElement>('#shop-title');
+  const closeBtn = el.querySelector<HTMLElement>('[data-shop-close]');
+  /** Open it: at the Armoury's counter, or another counter with the same stock (Trench Arms) under its own name */
+  function show(name = 'Armoury') {
     if (open) return;
     open = true;
+    if (title) title.textContent = name;
+    closeBtn?.setAttribute('aria-label', `Close ${name === 'Armoury' ? 'the Armoury' : name}`);
     pick = d.weapon();
     confirming = false;
     paint();

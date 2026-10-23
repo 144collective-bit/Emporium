@@ -7,7 +7,8 @@
  * (the grit step) the el rumbles and screeches overhead as the train goes
  * by, a siren wails somewhere far off now and then, a dog barks, and a
  * boombox plays by a walk-up's stoop (its own slow beat, through a small
- * speaker).
+ * speaker); by Club PULSE's door its four-on-the-floor thumps through the
+ * walls (the grit's step 3).
  * Nothing plays until the visitor turns it on.
  */
 
@@ -34,10 +35,15 @@ export function createSound() {
   let boomGain: GainNode;
   let hoodGain: GainNode;
   let nextBoom = 0;
+  /** Club PULSE: its beat through the walls (a four-on-the-floor kick and bass, everything over a low hum cut off) */
+  let clubGain: GainNode;
+  let nextClub = 0;
+  let clubStep = 0;
   let boomStep = 0;
   let nextSiren = 0;
   let nextDog = 0;
   const BOOM_BPM = 88;
+  const CLUB_BPM = 124;
   let on = false;
   let engine: { g: GainNode; lp: BiquadFilterNode; a: OscillatorNode; b: OscillatorNode } | null = null;
   /** Your aircraft's engine: a buzz, a hiss and a whine, beaten by a throb (the prop's blades, the rotor's thump) */
@@ -163,6 +169,15 @@ export function createSound() {
     speaker.Q.value = 0.45;
     boomGain.connect(speaker).connect(master);
     nextBoom = ctx.currentTime + 0.1;
+    // Club PULSE: through its walls only the low end gets out
+    clubGain = ctx.createGain();
+    clubGain.gain.value = 0;
+    const wall = ctx.createBiquadFilter();
+    wall.type = 'lowpass';
+    wall.frequency.value = 180;
+    wall.Q.value = 0.7;
+    clubGain.connect(wall).connect(master);
+    nextClub = ctx.currentTime + 0.1;
     // The hood's far-off sounds (sirens, dogs) go through this, its level the district's
     hoodGain = ctx.createGain();
     hoodGain.gain.value = 0;
@@ -302,6 +317,15 @@ export function createSound() {
       nextBoom += boomSixteenth;
       boomStep++;
     }
+    // The club: a kick on every beat, the bass on the off-beats
+    const clubSixteenth = 60 / CLUB_BPM / 4;
+    while (nextClub < ctx.currentTime + 0.2) {
+      const k = clubStep % 16;
+      if (k % 4 === 0) kick(nextClub, clubGain);
+      if (k % 4 === 2) bass(nextClub, [41.2, 41.2, 49, 36.7][Math.floor(clubStep / 16) % 4], clubGain);
+      nextClub += clubSixteenth;
+      clubStep++;
+    }
   }
 
   return {
@@ -318,6 +342,7 @@ export function createSound() {
         window.clearInterval(timer);
         nextBeat = ctx!.currentTime + 0.1;
         nextBoom = ctx!.currentTime + 0.1;
+        nextClub = ctx!.currentTime + 0.1;
         timer = window.setInterval(schedule, 50);
         master.gain.setTargetAtTime(0.55, ctx!.currentTime, 0.4);
       } else {
@@ -735,6 +760,7 @@ export function createSound() {
       elGain.gain.setTargetAtTime(rumble * 0.5, t, 0.3);
       screechGain.gain.setTargetAtTime(rumble * rumble * 0.035, t, 0.3);
       boomGain.gain.setTargetAtTime(a.boombox * 0.32, t, 0.4);
+      clubGain.gain.setTargetAtTime(a.club * 0.55, t, 0.4);
       hoodGain.gain.setTargetAtTime(a.hood, t, 1);
       if (a.hood > 0.15 && t > nextSiren) {
         siren(t);

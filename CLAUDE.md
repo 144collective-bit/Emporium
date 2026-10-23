@@ -375,7 +375,7 @@ it and has been retired completely. Build only on what's here.
     (TRENCHES REC CENTER, WASH & FOLD) are fixed made-up copy.
   - **The grit** (the owner's call: "more concrete... a gritty urban city
     feel", moody and realistic; step 1 of three, then the street walls and
-    the three places on Trench Avenue) is `grit.ts` (DOM-free, tested in
+    the three places on Trench Avenue, all built) is `grit.ts` (DOM-free, tested in
     `tests/grit.test.ts`), drawn by `grit3d.ts` (`buildGrit()`, sites, after
     the commons): the yards (`YARDS`, row B but The Block) are worn
     concrete (world.ts's `yard` lot, a texture 8 tiles to a repeat laid on
@@ -436,6 +436,32 @@ it and has been retired completely. Build only on what's here.
     (in `SOLIDS`): the buildings, the fences, the chain-link, the scrap
     yard's piles, the car wash's posts and brushes, the docks, the cars.
     Some of the tenements' shops are shuttered too (grit's `shuttered()`).
+  - **Trench Avenue's places** (the grit's step 3, the owner's call:
+    "a gun store, a bar, and a large neon nightclub" under the el) are
+    `avenue.ts` (DOM-free, tested in `tests/avenue.test.ts`) on row lots
+    set aside in projects.ts (`AVENUE_LOTS`, `isAvenue()`: kept out of the
+    rows' drawing, their solids and the shutters), drawn by `avenue3d.ts`
+    (`buildAvenue()`, at the boot, after The Block): **Club PULSE**
+    (`CLUB`, trench-a3's corner: a black box with neon tubes up its front
+    throbbing with the beat and bulbs chasing round the marquee (four
+    materials of their own driven by the tick, `userData.keep`; still under
+    reduced motion), PULSE on a big board, the vertical blade on its corner
+    over the roof, a velvet rope on brass posts along its forecourt
+    (`FORECOURT`) with the queue behind it and a bouncer at the door;
+    tasteful, nothing explicit), **The Rusty Nail** (`BAR`, next to Block
+    Bodega: dark brick, a dark wood front, its name in neon, a BAR blade, an
+    OPEN sign) and **Trench Arms** (`ARMS`, across from the station: red
+    brick over concrete, barred windows, a hatch on the street,
+    `ARMS.counter`). Signs are one atlas of fixed made-up copy, the blades
+    another. Each is a place: spots `club`, `bar`, `arms` (pins, directory
+    entries, panels `data-panel-tpl` with Walk in to `AVENUE_SPAWNS`,
+    `PLACES` entries). The club's and the bar's doors (`AVENUE_DOORS`) prompt
+    "Enter ..." and open their panels (coming soon); Trench Arms' hatch
+    prompts "Trench Arms" and opens the Armoury's gun store and workbench
+    under its own name (`shop.show(name)` in gunshop.ts). The club's beat
+    thumps through its walls by the door (ambience.ts `club`, sound.ts:
+    a kick and bass under a low-pass). `AVENUE_SOLIDS` (in `SOLIDS`): the
+    buildings and the rope.
   - **The corner shops** (step 3, the owner's call): `CORNER_SHOPS` in
     `projects.ts` turns four row lots (one each on rows A's a2, a1, a3 and
     C's c2, facing their street) into shops with made-up names (Block
@@ -1525,7 +1551,8 @@ it and has been retired completely. Build only on what's here.
 
 - Solo shooting practice. Only the player's Degen carries a gun, picked up
   at the gun store counter in the Armoury (`RACK` in `solids.ts`, the
-  counter itself in `armoury()`). Targets are the cardboard dummies (`DUMMIES`) and the patrol
+  counter itself in `armoury()`) or at Trench Arms' hatch in The Trenches
+  (`ARMS.counter` in `avenue.ts`, the same store). Targets are the cardboard dummies (`DUMMIES`) and the patrol
   drones; never make pedestrians, soldiers or other characters targets.
 - **Rules and view are split, ready for multiplayer.** `combat-sim.ts` owns
   the rules (ammo, fire rate, spread, hits, health, respawns, score, streaks)
@@ -1807,7 +1834,7 @@ it and has been retired completely. Build only on what's here.
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes and the test district (`kits.ts`, `recipes.ts`, `testdistrict.ts`), Liberty Bridge (`liberty.ts`),
-  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`),
+  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,

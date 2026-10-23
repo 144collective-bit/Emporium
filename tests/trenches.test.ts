@@ -1,6 +1,7 @@
 // The Trenches (trenches.ts, growth plan Phase 9): its streets and blocks on the south-west quadrant inside the ring
 // highway, clear of the highway, the river, the town's south row and everything that stands; every street end a
 // junction (so traffic runs it), lights all along Trench Avenue; and the blocks between the streets, off them.
+import { AVENUE_SOLIDS } from '../src/scripts/city3d/avenue';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { AVENUE_Z, BANK, HIGHWAY_CLEAR, NS_X, RING_W, TRENCH_BLOCKS, TRENCH_CROSSINGS, TRENCH_RECT, TRENCH_STREETS, inTrenches } from '../src/scripts/city3d/trenches';
@@ -58,9 +59,9 @@ test('its blocks: between its streets and off them, clear of the highway, the to
       assert.ok(p[1] > BANK.c + BANK.half - 1e-6);
       for (const o of others) assert.ok(!inPoly(o.poly, p), `${b.id} on ${o.id}`);
     }
-    // Nothing that stands is on it but the metro's (its stair tower at The Trenches) and The Trenches' own (projects.ts, commons.ts, grit.ts)
+    // Nothing that stands is on it but the metro's (its stair tower at The Trenches) and The Trenches' own (projects.ts, commons.ts, grit.ts, streetwall.ts, avenue.ts)
     for (const box of SOLIDS) {
-      if (PROJECT_SOLIDS.includes(box) || COMMONS_SOLIDS.includes(box) || GRIT_SOLIDS.includes(box) || STREETWALL_SOLIDS.includes(box)) continue;
+      if (PROJECT_SOLIDS.includes(box) || COMMONS_SOLIDS.includes(box) || GRIT_SOLIDS.includes(box) || STREETWALL_SOLIDS.includes(box) || AVENUE_SOLIDS.includes(box)) continue;
       const c: [number, number] = [(box[0] + box[2]) / 2, (box[1] + box[3]) / 2];
       if (inPoly(b.poly, c)) assert.ok(box[4] !== undefined && box[4] > 5, `${b.id} has a box on it at ${box.join(', ')}`);
     }

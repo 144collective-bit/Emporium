@@ -454,6 +454,37 @@ export const CORNER_SHOPS: CornerShop[] = LAID.corners;
 /** Is a row lot one of the corner shops' (drawn from the save, not with the rows) */
 export const isCorner = (l: Lot) => CORNER_SHOPS.some((c) => c.lot === l);
 
+/* ---------- Trench Avenue's places (the grit's step 3) ---------- */
+
+export type AvenueId = 'club' | 'bar' | 'arms';
+/** A place on Trench Avenue under the el: the row lots it takes (avenue.ts builds on them) and the land they cover */
+export interface AvenueLots {
+  id: AvenueId;
+  block: string;
+  lots: Lot[];
+  rect: Rect;
+}
+/**
+ * Which lots: every row lot on the block inside this area. Club PULSE takes
+ * the corner of trench-a3 (two lots on the cross street, three on the
+ * avenue); The Rusty Nail and Trench Arms two lots each on trench-a2,
+ * across the avenue from the station, the bar next to Block Bodega
+ */
+const AVENUE_SPECS: { id: AvenueId; block: string; area: Rect }[] = [
+  { id: 'club', block: 'trench-a3', area: [-71.6, 117.3, -58.9, 125.6] },
+  { id: 'bar', block: 'trench-a2', area: [-88.9, 121, -81.85, 125.6] },
+  { id: 'arms', block: 'trench-a2', area: [-95.7, 121, -88.6, 125.6] },
+];
+export const AVENUE_LOTS: AvenueLots[] = AVENUE_SPECS.map((a) => {
+  const i = ROW_BLOCKS.findIndex((b) => b.id === a.block);
+  const [x0, z0, x1, z1] = a.area;
+  const lots = LAID.byBlock[i].lots.filter((l) => !isCorner(l) && l.box[0] >= x0 && l.box[1] >= z0 && l.box[2] <= x1 && l.box[3] <= z1);
+  const rect: Rect = [Math.min(...lots.map((l) => l.box[0])), Math.min(...lots.map((l) => l.box[1])), Math.max(...lots.map((l) => l.box[2])), Math.max(...lots.map((l) => l.box[3]))];
+  return { id: a.id, block: a.block, lots, rect };
+});
+/** Is a row lot one of the avenue's places' (drawn by avenue3d.ts, not with the rows) */
+export const isAvenue = (l: Lot) => AVENUE_LOTS.some((a) => a.lots.includes(l));
+
 /** Everything solid: the towers (their stoops and scaffolding), The Block's fence and handball wall, the rows' buildings and their alleys' bollards */
 export function projectSolids(): Footprint[] {
   const r = 0.1;
@@ -465,7 +496,7 @@ export function projectSolids(): Footprint[] {
     ...TOWERS.flatMap((t) => (t.scaffold ? [[...t.scaffold, t.parts[t.main].h] as Footprint] : [])),
     ...blockFence().map((f): Footprint => [...f, THE_BLOCK.fenceH]),
     [...THE_BLOCK.handball, THE_BLOCK.handballH],
-    ...d.lots.flatMap((l) => l.solids),
+    ...d.lots.filter((l) => !isAvenue(l)).flatMap((l) => l.solids),
     ...d.alleys.flatMap((a) => a.bollards.map(([x, z]): Footprint => [x - r, z - r, x + r, z + r, 0.9])),
   ];
 }

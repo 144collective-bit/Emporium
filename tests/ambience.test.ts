@@ -6,6 +6,7 @@ import { ambienceAt } from '../src/scripts/city3d/ambience';
 import { DOORS } from '../src/scripts/city3d/solids';
 import { EXT, RIVER, NS_ROADS } from '../src/scripts/city3d/layout';
 import { HIGHWAY_BOX } from '../src/scripts/city3d/highway';
+import { CLUB } from '../src/scripts/city3d/avenue';
 
 test('every layer stays between 0 and 1 across the world', () => {
   for (let x = EXT[0]; x <= EXT[1]; x += 23)
@@ -31,4 +32,12 @@ test('the river by the water, traffic by the highway and the avenues', () => {
   assert.ok(ambienceAt((HIGHWAY_BOX[0] + HIGHWAY_BOX[2]) / 2, HIGHWAY_BOX[1]).road > 0.95);
   assert.ok(ambienceAt(NS_ROADS[NS_ROADS.length - 1].c, 40).road >= 0.55);
   assert.ok(ambienceAt(EXT[0] + 20, EXT[0] + 20).road === 0);
+});
+
+test("Club PULSE's beat by its door on Trench Avenue, none across town", () => {
+  assert.ok(ambienceAt(CLUB.spot.x, CLUB.spot.z).club > 0.95);
+  assert.ok(ambienceAt(CLUB.door.x + 15, CLUB.door.z + 4).club > 0.2, 'down the avenue');
+  const e = DOORS.find((d) => d.id === 'emporium')!;
+  assert.equal(ambienceAt(e.x, e.z).club, 0);
+  assert.ok(ambienceAt(CLUB.spot.x, CLUB.spot.z, 120).club < 0.05, 'high over it, a wash');
 });
