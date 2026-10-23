@@ -15,6 +15,7 @@ import { LIBERTY_SPAWN } from './liberty';
 import { STATIONS } from './metro';
 import { BLOCK_SPAWN } from './projects';
 import { AVENUE_SPAWNS } from './avenue';
+import { STADIUM_SPAWN } from './stadium';
 
 export type PlaceKind = 'spot' | 'lot' | 'metro';
 export interface Place {
@@ -57,6 +58,8 @@ export const PLACES: Place[] = [
   { id: 'club', kind: 'spot', spot: 'club', at: AVENUE_SPAWNS.club },
   { id: 'bar', kind: 'spot', spot: 'bar', at: AVENUE_SPAWNS.bar },
   { id: 'arms', kind: 'spot', spot: 'arms', at: AVENUE_SPAWNS.arms },
+  // Westlake Park's stadium: on its forecourt, facing the gate
+  { id: 'stadium', kind: 'spot', spot: 'stadium', at: STADIUM_SPAWN },
   // The garage's forecourt, facing its office door; the market square, at your stall
   // (its office door faces north, onto the forecourt)
   { id: 'garage', kind: 'lot', name: 'Garage', at: { x: GARAGE_SITE.door.x - 1, z: GARAGE_SITE.door.z - 1.8, yaw: Math.atan2(-1, -1.8) } },

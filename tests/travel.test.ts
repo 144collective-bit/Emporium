@@ -56,6 +56,7 @@ test('a taxi drives from any place to any other along the streets, to the kerb n
       const end = r!.pts[r!.pts.length - 1];
       const nearest = Math.min(...roads.filter((s) => s.kind !== 'slip').map((s) => distToStreet(s, [b.at.x, b.at.z])));
       assert.ok(Math.hypot(end[0] - b.at.x, end[1] - b.at.z) < nearest + 4, `${a.id} to ${b.id} stops ${Math.hypot(end[0] - b.at.x, end[1] - b.at.z).toFixed(1)} away`);
-      assert.ok(r!.len / TAXI_SPEED < 45, `${a.id} to ${b.id}: ${r!.len.toFixed(0)}`);
+      // (the longest, between the airport and Westlake Park's stadium, corner to corner of the map, is about 50 s)
+      assert.ok(r!.len / TAXI_SPEED < 55, `${a.id} to ${b.id}: ${r!.len.toFixed(0)}`);
     }
 });

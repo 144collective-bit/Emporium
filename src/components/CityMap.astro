@@ -47,8 +47,9 @@ const spots: Record<SpotId, Spot> = {
   club: { href: '#city-title', title: 'Club PULSE', sub: 'Nightclub · coming soon', aria: 'Club PULSE: a nightclub on Trench Avenue, coming soon' },
   bar: { href: '#city-title', title: 'The Rusty Nail', sub: 'Bar · coming soon', aria: 'The Rusty Nail: a bar on Trench Avenue, coming soon' },
   arms: { href: '#city-title', title: 'Trench Arms', sub: 'Guns & gear', aria: 'Trench Arms: guns and gear on Trench Avenue' },
+  stadium: { href: '#city-title', title: 'Sector 7 Stadium', sub: 'Events · coming soon', aria: 'Sector 7 Stadium in Westlake Park: events coming soon' },
 };
-const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'trenches', 'club', 'bar', 'arms'];
+const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'trenches', 'club', 'bar', 'arms', 'stadium'];
 const ext = { target: '_blank', rel: 'noopener noreferrer' };
 
 const map = renderCity({ spots, art: { degen: degenImg.src, logo: logoImg.src } });
@@ -978,6 +979,13 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     <h2 id="city-panel-title" class="city-panel-title">Guns &amp; gear</h2>
     <p class="city-panel-text">Trench Arms, across the avenue from the metro station. Step up to the hatch on the street: it's the Armoury's counter and workbench, the same guns and mods. The ones your score unlocks are free; the rest cost Dorras earned in the city.</p>
     <button type="button" class="chip-link kart-walkin" data-avenue-walkin="arms">Walk in</button>
+  </template>
+
+  <template data-panel-tpl="stadium">
+    <p class="kicker"><span class="kicker-num">17</span> Westlake Park</p>
+    <h2 id="city-panel-title" class="city-panel-title">Sector 7 Stadium</h2>
+    <p class="city-panel-text">The bowl at the top of the Mall in Westlake Park, west of town: two tiers of stands round the pitch and the track, floodlights on four masts and the big screen over the north stand. The car park is across the avenue from the park's south gate. The gates open for events later: coming soon.</p>
+    <button type="button" class="chip-link kart-walkin" data-stadium-walkin>Walk in</button>
   </template>
 
   <div class="city-hud" data-city-hud>

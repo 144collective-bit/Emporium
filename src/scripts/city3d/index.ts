@@ -10,6 +10,8 @@ import { createPost } from './post';
 import { CENTER, addLamp, addTree, buildGround, buildLamps, buildSkyline, buildTrees, placed as everyPlaced, puddleMat, keepTreesOff, scatterOutskirts, waterMat, type Env, type Tick } from './world';
 import { PARK_LAMPS, PARK_TREES, WESTLAKE_RECT } from './westlake';
 import { createDistricts } from './districts';
+import { buildStadium } from './stadium3d';
+import { STADIUM_SPAWN } from './stadium';
 import { buildLandmarks, type Spot } from './landmarks';
 import { buildInfill } from './infill';
 import { buildNeighbourhoods } from './neighbourhoods';
@@ -205,6 +207,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   spots.push(theBlock.spot);
   // ...and Trench Avenue's places under the el (the grit's step 3): Club PULSE, The Rusty Nail, Trench Arms
   spots.push(...buildAvenue(scene, crowd, { tick, reduced, low: tier === 'low' }).spots);
+  // Westlake Park's stadium (step 2): a place, built at the boot (the rest of the park is loaded as you approach)
+  spots.push(buildStadium(scene, { low: tier === 'low' }).spot);
   // ...and the metro's el where it crosses the open land south of the south row: no trees under it
   keepTreesOff([-10, 125, 56, 135]);
   // Westlake Park (growth plan Phase 9b): its land is the street plan's; its trees and lamps stand with the town's
@@ -458,6 +462,12 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       panelBody.querySelector('[data-avenue-walkin]')?.addEventListener('click', () => {
         close();
         startWalking(AVENUE_SPAWNS[id]);
+      });
+    // The stadium's panel: Walk in starts walk mode on its forecourt, facing the gate
+    if (id === 'stadium')
+      panelBody.querySelector('[data-stadium-walkin]')?.addEventListener('click', () => {
+        close();
+        startWalking(STADIUM_SPAWN);
       });
     // The Block's panel: Walk in starts walk mode on its plaza by the metro's stairs
     if (id === 'trenches')

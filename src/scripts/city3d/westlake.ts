@@ -330,6 +330,8 @@ export const PARK_LAMPS: [number, number, number][] = (() => {
     else if (q.id === 'ring') along(q, 18, false);
     else if (q.id !== 'forecourt') along(q, 15, false);
   }
+  // Along the stadium's car park, on the strip's lawn north of it, the arms out over the cars
+  for (let x = CAR_PARK[0] + 5; x < CAR_PARK[2]; x += 11) out.push([x, CAR_PARK[3] + 0.6, Math.PI / 2]);
   // Not on another path where paths meet, nor two on top of each other
   return out.filter((l, i) => !onPath([l[0], l[1]], 0.25) && out.slice(0, i).every((o) => Math.hypot(o[0] - l[0], o[1] - l[1]) > 3));
 })();
