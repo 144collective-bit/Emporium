@@ -130,6 +130,40 @@ export function airPose(p: Pose, a: number) {
   p.bob *= 1 - a;
 }
 
+/**
+ * A slide (animation Phase 5): low on the hips, leant back, the leading leg
+ * out straight on its heel, the other folded under with its shin along the
+ * ground, an arm forward and the other back towards the ground. `a` 0..1
+ * blends it over whatever pose is set (the feet are its own, `foot` set)
+ */
+export const SLIDE_POSE = { bob: -0.36, lean: -0.95, lead: [1.22, 0.08, 0.1, -0.35], tuck: [0.7, 0.14, 2.3, 1.0], fore: [0.7, 0.3, 0.55], back: [-0.85, 0.55, 0.12], head: -0.6 };
+export function slidePose(p: Pose, a: number) {
+  if (a <= 0) return;
+  const S = SLIDE_POSE;
+  const mix = (l: Limb, [fwd, out, bend, foot]: readonly number[]) => {
+    l.fwd += (fwd - l.fwd) * a;
+    l.out += (out - l.out) * a;
+    l.bend += (bend - l.bend) * a;
+    if (foot !== undefined) {
+      l.foot = (l.foot ?? 0) + (foot - (l.foot ?? 0)) * a;
+      l.toe = (l.toe ?? 0) * (1 - a);
+      l.footYaw = (l.footYaw ?? 0) * (1 - a);
+      l.footRoll = (l.footRoll ?? 0) * (1 - a);
+    }
+  };
+  mix(p.legs[0], S.lead);
+  mix(p.legs[1], S.tuck);
+  mix(p.arms[0], S.fore);
+  mix(p.arms[1], S.back);
+  p.bob += (S.bob - p.bob) * a;
+  p.lean += (S.lean - p.lean) * a;
+  p.twist *= 1 - a;
+  p.side *= 1 - a;
+  p.sway = (p.sway ?? 0) * (1 - a);
+  p.turn = (p.turn ?? 0) * (1 - a);
+  p.headPitch += (S.head - p.headPitch) * a;
+}
+
 /** Soldier on parade: a crisp march, arms straighter, the rifle hand still. */
 export function marchPose(p: Pose, phase: number, rifle: 'left' | 'right') {
   walkPose(p, phase, 1, 0.15, 1.1);

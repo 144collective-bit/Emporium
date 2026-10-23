@@ -69,7 +69,9 @@ test('the clips stand on the ground: ankles at their height, the balls of the fe
     hips /= down;
     assert.ok(Math.abs(ankle - ANKLE_H) < 0.02, `${c.name}: the lowest ankle ${ankle.toFixed(3)}`);
     assert.ok(ball > -0.035 && ball < 0.02, `${c.name}: the lowest ball of a foot ${ball.toFixed(3)}`);
-    assert.ok(hips > 0.5 && hips < 0.63, `${c.name}: the hips ${hips.toFixed(3)} up on average`);
+    // (lower crouched: subject 136's crouched walks)
+    const [lo, hi] = c.name.startsWith('crouch') ? [0.44, 0.56] : [0.5, 0.63];
+    assert.ok(hips > lo && hips < hi, `${c.name}: the hips ${hips.toFixed(3)} up on average`);
   }
 });
 
@@ -135,7 +137,7 @@ test('the feet are on the ground about as long as a run and a walk keep them', (
 
 test('the clips file stays small (it loads when walking starts)', () => {
   // (subject 143's takes at their real speed are twice as long as when they played at double speed)
-  assert.ok(file.length < 680 * 1024, `${(file.length / 1024).toFixed(0)} KB`);
+  assert.ok(file.length < 720 * 1024, `${(file.length / 1024).toFixed(0)} KB`);
 });
 
 test('the collarbones sit level, as Degen\'s do at rest (the capture\'s own shoulder joint sits at the neck and would shrug them)', () => {

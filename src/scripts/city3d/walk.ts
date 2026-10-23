@@ -35,7 +35,8 @@ import { PLAYER, createDegen, emotePose, type Outfit } from './character';
 import { LAND_CROUCH, LAND_ROLL, copyLeg, copyPose, createLocomotion, placeRoot, type Root } from './locomotion';
 import type { Animator } from './animator';
 import { loadMocap } from './mocap-load';
-import { GAITS, newMove, stepMove } from './movesim';
+import { GAITS, newMove, startSlide, stepMove, stepSlide, type Slide } from './movesim';
+import { slidePose } from './poses';
 import { springVel } from './inertia';
 import { createCombat, type Sfx } from './combat';
 import { WEAPON_IDS } from './combat-sim';
@@ -94,6 +95,12 @@ const RADIUS = 0.22;
 /** His speeds (movesim.ts): a walk (Caps Lock), the run he goes at, the sprint (Shift), and walking while he aims */
 const { walk: WALK, run: RUN, sprint: SPRINT } = GAITS;
 const AIMING = 1.4;
+/**
+ * Crouched (animation Phase 5: C toggles, B on a gamepad, the touch Crouch
+ * button; crouching while sprinting slides): how fast he goes, and how far
+ * the camera comes down crouched and sliding (tiles at his scale)
+ */
+const CROUCH = { speed: 0.55, cam: 0.26, slideCam: 0.42 };
 /**
  * Peeking (Q / E held; LB / RB while aiming on a gamepad; on touch, aiming
  * by a corner): how far the upper body leans out over the hips (radians),
@@ -232,6 +239,11 @@ export function createWalk(d: WalkDeps) {
   let padLean = 0;
   let cornerLean = 0;
   let cornerIn = 0;
+  /** Crouched, and how far into it (eased); the slide under way, and how much of its pose shows */
+  let crouched = false;
+  let crouchAmt = 0;
+  let slide: Slide | null = null;
+  let slideAmt = 0;
   /** Seconds the procedural landing (a crouch or a roll) still has, before the motion capture takes him back */
   let landHold = 0;
   const lastPos = new THREE.Vector3();
@@ -265,6 +277,7 @@ export function createWalk(d: WalkDeps) {
   const stick = $('[data-walk-stick]');
   const knob = stick.querySelector<HTMLElement>('span')!;
   const runBtn = $<HTMLButtonElement>('[data-walk-run]');
+  const crouchBtn = $<HTMLButtonElement>('[data-walk-crouch]');
   const sensInput = $<HTMLInputElement>('[data-walk-sens]');
   const invertInput = $<HTMLInputElement>('[data-walk-invert]');
   const fpBtn = $<HTMLButtonElement>('[data-walk-fp]');
@@ -905,6 +918,14 @@ export function createWalk(d: WalkDeps) {
     jumpBuffer = 0.14;
     d.touched();
   };
+  /** C, B or the touch Crouch button: a slide when sprinting, else into or out of a crouch */
+  const crouchPress = () => {
+    d.touched();
+    if (slide) return;
+    const fast = grounded ? startSlide(ms) : null;
+    if (fast) slide = fast;
+    else crouched = !crouched;
+  };
   function setFirstPerson(on: boolean) {
     firstPerson = on;
     root.classList.toggle('is-fp', on);
@@ -989,6 +1010,7 @@ export function createWalk(d: WalkDeps) {
     else if (down && !e.repeat && c === 'KeyR') combat.reload();
     else if (down && !e.repeat && c === 'KeyG') combat.toggleHolster();
     else if (down && !e.repeat && c === 'KeyX') combat.swap(1);
+    else if (down && !e.repeat && c === 'KeyC') crouchPress();
     // Q / E held: peek left and right
     else if (c === 'KeyQ' || c === 'KeyE') {
       if (down) keys.add(c);
@@ -1145,6 +1167,11 @@ export function createWalk(d: WalkDeps) {
   jumpBtn.addEventListener('pointerup', () => (jumpHeld = false));
   jumpBtn.addEventListener('pointercancel', () => (jumpHeld = false));
   runBtn.addEventListener('click', () => setSprintLock(!sprintLock));
+  crouchBtn.addEventListener('click', () => {
+    crouchPress();
+    // (a crouch lets go of the locked sprint, which would stand him straight back up)
+    if (crouched) setSprintLock(false);
+  });
   // Touch pedals while driving (the stick steers)
   for (const [sel, key] of [
     ['[data-drive-gas]', 'gas'],
@@ -1378,6 +1405,7 @@ export function createWalk(d: WalkDeps) {
       return;
     }
     if (edge(0)) tryJump();
+    if (edge(1)) crouchPress();
     jumpHeld = jumpHeld || b[0] || false;
     if (!b[0] && pad.prev[0]) jumpHeld = false;
     // (aiming, LB and RB lean out instead: peeking)
@@ -1669,8 +1697,10 @@ export function createWalk(d: WalkDeps) {
     }
     peek += (peekWant * leanRoom - peek) * (1 - Math.exp((-Math.LN2 * dt) / PEEK.ease));
     if (Math.abs(peek) < 1e-4) peek = 0;
+    // (sprinting stands him up out of a crouch)
+    if (crouched && sprint && mag > 0.1 && !slide) crouched = false;
     const onStairs = stairTread(pos.x, pos.z, pos.y + 0.3) !== null;
-    const top = Math.min(shooting ? AIMING : sprint ? SPRINT : walkLock ? WALK : RUN, onStairs ? CLIMB : Infinity) * (1 - (1 - PEEK.slow) * Math.abs(peek));
+    const top = Math.min(shooting ? AIMING : sprint ? SPRINT : walkLock ? WALK : RUN, crouched ? CROUCH.speed : Infinity, onStairs ? CLIMB : Infinity) * (1 - (1 - PEEK.slow) * Math.abs(peek));
 
     // Towards it on the springs (movesim.ts; hardly any control in the air), facing where he's
     // going, or where you look when aiming / in first person
@@ -1681,7 +1711,13 @@ export function createWalk(d: WalkDeps) {
     ms.vx = vel.x;
     ms.vz = vel.y;
     ms.face = face;
-    stepMove(ms, gx, gz, grounded, dt, faceGoal);
+    if (slide) {
+      // (a slide carries him on, slowing; when it's done he runs on with the stick pushed, or stays down in a crouch)
+      if (!stepSlide(slide, ms, gx, gz, dt) || !grounded) {
+        slide = null;
+        crouched = Math.hypot(gx, gz) < 0.01;
+      }
+    } else stepMove(ms, gx, gz, grounded, dt, faceGoal);
     vel.set(ms.vx, ms.vz);
     const stuck = blocked(pos.x, pos.z, pos.y);
     const nx = pos.x + vel.x * dt;
@@ -1690,6 +1726,11 @@ export function createWalk(d: WalkDeps) {
     const nz = pos.z + vel.y * dt;
     if (stuck || !blocked(pos.x, nz, pos.y)) pos.z = nz;
     else vel.y = 0;
+    // (a slide into something stops there, crouched)
+    if (slide && (vel.x !== ms.vx || vel.y !== ms.vz)) {
+      slide = null;
+      crouched = true;
+    }
     const speed = vel.length();
 
     face = ms.face;
@@ -1701,6 +1742,9 @@ export function createWalk(d: WalkDeps) {
       vy = JUMP;
       grounded = false;
       coyote = jumpBuffer = 0;
+      // (out of a crouch or a slide, up)
+      crouched = false;
+      slide = null;
     }
     vy -= (GRAVITY + (!jumpHeld && vy > 0 ? 16 : 0)) * dt;
     pos.y += vy * dt;
@@ -1754,6 +1798,11 @@ export function createWalk(d: WalkDeps) {
         } else for (const l of P.legs) l.foot = undefined;
       }
     }
+    // The slide's pose, blended in quickly and out a little slower (the motion capture steps aside for it)
+    slideAmt += ((slide ? 1 : 0) - slideAmt) * damp(slide ? 18 : 9, dt);
+    crouchAmt += ((crouched ? 1 : 0) - crouchAmt) * damp(10, dt);
+    if (crouchBtn.ariaPressed !== String(crouched)) crouchBtn.setAttribute('aria-pressed', String(crouched));
+    slidePose(P, slideAmt);
     // Recoil kicks the view up a touch; the rifle rides the shoulder
     const kick = combat.update(dt, t, aimNow);
     if (kick) {
@@ -1794,7 +1843,7 @@ export function createWalk(d: WalkDeps) {
     }
     let drawFace = face;
     // ...with a gun in his hands or an arm out aiming, only its legs and hips: his own pose over them
-    const mocapOn = !!animator && landHold <= 0 && !emote;
+    const mocapOn = !!animator && landHold <= 0 && !emote && !slide;
     upperW = THREE.MathUtils.clamp(upperW + (gunInHand || aim ? dt / 0.15 : -dt / 0.15), 0, 1);
     if (animator && anim) {
       // (a fresh start after a jump in place: walking started, a fast travel, the end of a ride)
@@ -1803,7 +1852,7 @@ export function createWalk(d: WalkDeps) {
       if (mocapW > 0) {
         const w = mocapW * mocapW * (3 - 2 * mocapW);
         const u = upperW * upperW * (3 - 2 * upperW);
-        animator.update({ dt, x: pos.x, y: pos.y, z: pos.z, move: ms, gx, gz, scale: SCALE, ground: groundAt, feet: feetAt, sprint: runAmt, grounded, vy: grounded ? fall : vy, jump: JUMP, gravity: GRAVITY, faceGoal });
+        animator.update({ dt, x: pos.x, y: pos.y, z: pos.z, move: ms, gx, gz, scale: SCALE, ground: groundAt, feet: feetAt, sprint: runAmt, grounded, vy: grounded ? fall : vy, jump: JUMP, gravity: GRAVITY, faceGoal, crouch: crouchAmt });
         // (shown facing the way the motion capture turns him; his own upper body turned back to the springs' facing)
         drawFace = face + wrap(animator.face - face) * mocapW;
         anim.applyTo(hero.rig, animator.rot, animator.hips, w, u, face - drawFace);
@@ -1826,7 +1875,8 @@ export function createWalk(d: WalkDeps) {
     const shoulder = firstPerson ? 0 : THREE.MathUtils.clamp(1 - zoom / 10, 0, 1) * 0.38 + armAmt * 0.42;
     // (a peek takes it out with him: further over his right shoulder, or across to his left; never into a wall beside him)
     let lateral = firstPerson ? peek * PEEK.eye : shoulder + peek * (peek > 0 ? PEEK.cam : 2 * shoulder + PEEK.cam);
-    const eyeY = pos.y + (firstPerson ? 1.2 : 1.0) * SCALE + 0.05;
+    // (lower crouched, lower still sliding)
+    const eyeY = pos.y + ((firstPerson ? 1.2 : 1.0) - crouchAmt * CROUCH.cam - slideAmt * CROUCH.slideCam) * SCALE + 0.05;
     if (Math.abs(lateral) > 0.01) {
       const sgn = Math.sign(lateral);
       headAt.set(pos.x, eyeY, pos.z);
@@ -2072,6 +2122,8 @@ export function createWalk(d: WalkDeps) {
       grounded = true;
       face = 0;
       yaw = SPAWN_YAW;
+      crouched = false;
+      slide = null;
       // ?spawn=x,z[,yaw] in the address: start walking somewhere else (for checking a place on real devices)
       const at = new URLSearchParams(location.search).get('spawn')?.split(',').map(Number);
       if (at && at.length >= 2 && at.every(Number.isFinite)) {

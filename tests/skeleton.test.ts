@@ -266,3 +266,16 @@ test('the collarbone brings the shoulder forward for a reach just past the arm (
     assert.equal(q.arms[i].reach, -0.2);
   }
 });
+
+test('the slide pose: low on the hips, the leading heel and the folded knee and shin on the ground, nothing under it', async () => {
+  const { slidePose } = await import('../src/scripts/city3d/poses');
+  const sk = makeSkeleton();
+  const p = newPose();
+  slidePose(p, 1);
+  poseSkeleton(sk, p);
+  sk.root.updateMatrixWorld(true);
+  const y = (n: 'footL' | 'toeL' | 'shinR' | 'footR' | 'toeR' | 'hips') => sk.bones[n].getWorldPosition(new THREE.Vector3()).y;
+  assert.ok(y('hips') < 0.3, `hips ${y('hips').toFixed(3)} up`);
+  assert.ok(Math.abs(y('footL') - ANKLE_H) < 0.03, `the leading ankle ${y('footL').toFixed(3)} up: its heel on the ground`);
+  for (const n of ['shinR', 'footR', 'toeR'] as const) assert.ok(y(n) > -0.005 && y(n) < 0.07, `the folded leg's ${n} ${y(n).toFixed(3)} up`);
+});
