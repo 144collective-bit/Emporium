@@ -255,3 +255,169 @@ test('up a flight of Liberty Bridge\'s size the feet climb the treads (he walks 
     assert.ok(step < 0.8, `at ${speed}: the biggest turn between frames ${step.toFixed(2)} rad`);
   }
 });
+
+/* ---------- Phase 3: jumps, falls and landings ---------- */
+
+const JUMP = 3.9;
+const GRAVITY = 11.5;
+/**
+ * walk.ts's jumping: gravity always, Jump pressed at `at` and held `hold`
+ * seconds (let go early it pulls down harder), the stick asking for
+ * `speed` (none after `stop`), over ground `ground`
+ */
+function jump(o: { speed: number; at?: number; hold?: number; stop?: number; ground?: (x: number, z: number) => number; seconds?: number }) {
+  const an = createAnimator(data);
+  const m = newMove(0);
+  const ground = o.ground ?? (() => 0);
+  const at = o.at ?? 2;
+  let z = 0;
+  let y = ground(0, 0);
+  let vy = 0;
+  let grounded = true;
+  const P = newPosed();
+  const prev = new Float32Array(NB * 4);
+  const qa = new THREE.Quaternion();
+  const qb = new THREE.Quaternion();
+  const out = { below: 0, step: 0, heldInAir: 0, airFrames: 0, takeoff: '', landedOn: '', landedAt: -1, upAt: -1, squash: 0, arms: 0, after: 0, frames: [] as Float32Array[] };
+  for (let i = 0; i < (o.seconds ?? 4) * 60; i++) {
+    const t = i * DT;
+    const gz = o.stop !== undefined && t > o.stop ? 0 : o.speed;
+    stepMove(m, 0, gz, grounded, DT);
+    z += m.vz * DT;
+    if (o.at !== undefined || !o.ground) {
+      if (Math.abs(t - at) < DT / 2 && grounded) {
+        vy = JUMP;
+        grounded = false;
+      }
+    }
+    vy -= (GRAVITY + (t > at + (o.hold ?? 1) && vy > 0 ? 16 : 0)) * DT;
+    y += vy * DT;
+    const fall = vy;
+    const g = ground(0, z);
+    const was = grounded;
+    if (y <= g) {
+      y = g;
+      vy = 0;
+      grounded = true;
+    } else if (y > g + 0.04) grounded = false;
+    an.update({ dt: DT, x: 0, y, z, move: m, gx: 0, gz, scale: SCALE, ground, sprint: THREE.MathUtils.clamp((o.speed - GAITS.run) / (GAITS.sprint - GAITS.run), 0, 1), grounded, vy: grounded ? fall : vy, jump: JUMP, gravity: GRAVITY });
+    const d = an.debug;
+    out.frames.push(an.rot.slice());
+    if (d.air && out.upAt < 0) {
+      out.upAt = t;
+      out.takeoff = d.clip;
+    }
+    if (d.air) {
+      out.airFrames++;
+      if (an.feet.some((f) => f.locked)) out.heldInAir++;
+      out.arms = Math.max(out.arms, d.arms);
+    }
+    if (grounded && !was && out.landedAt < 0 && out.upAt >= 0) {
+      out.landedAt = t;
+      out.landedOn = d.clip;
+    }
+    out.squash = Math.max(out.squash, d.squash);
+    // (how fast the clip half a second after landing goes, rig numbers a second)
+    if (out.landedAt >= 0 && Math.abs(t - out.landedAt - 0.5) < DT / 2) {
+      const ci = an.db.clips.findIndex((c) => c.name === d.clip);
+      out.after = an.db.speed[an.db.start[ci] + Math.round(d.frame)];
+    }
+    // How far the feet (ankles and balls) go into the ground, and the biggest turn between frames
+    posed(an.rot, 0, an.hips.x, an.hips.y, an.hips.z, P);
+    for (const b of [MB.footL, MB.footR, ...TOE_BONES]) {
+      const p = P.pos[b];
+      out.below = Math.max(out.below, ground(0, z + (-p.x * Math.sin(an.face) + p.z * Math.cos(an.face)) * SCALE) - (y + p.y * SCALE));
+    }
+    if (i > 30) for (let b = 0; b < NB; b++) out.step = Math.max(out.step, qa.fromArray(prev, b * 4).angleTo(qb.fromArray(an.rot, b * 4)));
+    prev.set(an.rot);
+  }
+  return out;
+}
+const flat = jump({ speed: GAITS.run, at: 99 });
+const clipOf = (name: string) => name.replace('~', '');
+
+test('a running jump takes off from a running take-off, flies free and lands running on', () => {
+  for (const speed of [GAITS.run, GAITS.sprint]) {
+    const r = jump({ speed });
+    assert.ok(r.upAt >= 2 && r.upAt < 2.05, `into the air at once (${r.upAt.toFixed(2)} s)`);
+    assert.ok(clipOf(r.takeoff).startsWith('run-jump'), `from a running jump (${r.takeoff})`);
+    assert.equal(r.heldInAir, 0, 'no foot held in the air');
+    assert.ok(r.landedAt > 2.5, 'down again');
+    assert.ok(r.after > 1.5, `running on after it (the clip half a second after landing goes ${r.after.toFixed(2)})`);
+    assert.ok(r.below < flat.below + 0.02 / SCALE, `the feet ${(r.below * CM).toFixed(1)} cm into the ground at most (running on the flat: ${(flat.below * CM).toFixed(1)})`);
+    assert.ok(r.step < 0.7, `the biggest turn between frames ${r.step.toFixed(2)} rad`);
+  }
+});
+
+test('a standing jump takes off from both feet and lands standing, settling back into the idle', () => {
+  const an = jump({ speed: 0, seconds: 5 });
+  assert.equal(clipOf(an.takeoff), 'jump-high');
+  assert.equal(clipOf(an.landedOn), 'jump-high', 'its own landing plays');
+  assert.equal(an.heldInAir, 0);
+  assert.ok(an.below < flat.below + 0.02 / SCALE, `the feet ${(an.below * CM).toFixed(1)} cm into the ground at most`);
+  assert.ok(an.step < 0.7, `the biggest turn between frames ${an.step.toFixed(2)} rad`);
+  // ...and is back in the idle a second after
+  const r = createAnimator(data);
+  const m = newMove(0);
+  let y = 0;
+  let vy = 0;
+  let grounded = true;
+  let idle = 0;
+  for (let i = 0; i < 60 * 5; i++) {
+    stepMove(m, 0, 0, grounded, DT);
+    if (i === 120) {
+      vy = JUMP;
+      grounded = false;
+    }
+    vy -= GRAVITY * DT;
+    y += vy * DT;
+    const fall = vy;
+    if (y <= 0) {
+      y = vy = 0;
+      grounded = true;
+    }
+    r.update({ dt: DT, x: 0, y, z: 0, move: m, gx: 0, gz: 0, scale: SCALE, ground: () => 0, sprint: 0, grounded, vy: grounded ? fall : vy });
+    if (i > 60 * 3.7 && r.debug.clip.startsWith('idle')) idle++;
+  }
+  assert.ok(idle > 60 * 1.2, `in the idle ${(idle / 60).toFixed(1)} s of the last 1.3`);
+});
+
+test('let go early, a short hop flies its flight through in time to land', () => {
+  const hop = jump({ speed: GAITS.run, hold: 0.06 });
+  const full = jump({ speed: GAITS.run });
+  assert.ok(hop.landedAt - hop.upAt < (full.landedAt - full.upAt) * 0.75, `a hop ${(hop.landedAt - hop.upAt).toFixed(2)} s up, a jump ${(full.landedAt - full.upAt).toFixed(2)}`);
+  assert.equal(hop.heldInAir, 0);
+  assert.ok(hop.step < 0.7, `the biggest turn between frames ${hop.step.toFixed(2)} rad`);
+});
+
+test('off a ledge he falls without a jump, a long fall raises his arms, and a hard landing squashes him down', () => {
+  for (const [h, hard] of [
+    [0.6, false],
+    [2, true],
+    [4, true],
+  ] as const) {
+    const ledge = (_x: number, z: number) => (z < 6 ? h : 0);
+    const r = jump({ speed: GAITS.run, ground: ledge, seconds: 4 });
+    assert.ok(r.upAt > 0, `${h}: a fall`);
+    assert.ok(r.landedAt > r.upAt, `${h}: down again`);
+    assert.equal(r.heldInAir, 0, `${h}: no foot held in the air`);
+    // (2 tiles down he lands at about 6.8 tiles a second; 0.6 down, about 3.7: no harder than a jump on the flat)
+    if (hard) assert.ok(r.squash > 0.04, `${h}: the hips squashed ${(r.squash * SCALE * CM).toFixed(1)} cm`);
+    else assert.ok(r.squash < 1e-3, `${h}: no squash (${r.squash})`);
+    if (h === 4) assert.ok(r.arms > 0.2, `a long fall: the arms up ${r.arms.toFixed(2)} rad`);
+    assert.ok(r.below < flat.below + 0.02 / SCALE, `${h}: the feet ${(r.below * CM).toFixed(1)} cm into the ground at most`);
+    assert.ok(r.step < 0.75, `${h}: the biggest turn between frames ${r.step.toFixed(2)} rad`);
+  }
+});
+
+test('stepping down a kerb isn\'t a fall', () => {
+  const kerb = (_x: number, z: number) => (z < 5 ? 0.15 : 0);
+  const r = jump({ speed: GAITS.run, ground: kerb, seconds: 3 });
+  assert.ok(r.upAt < 0, 'still on the ground');
+});
+
+test('jumps animate the same every time', () => {
+  const a = jump({ speed: GAITS.run, hold: 0.3 }).frames;
+  const b = jump({ speed: GAITS.run, hold: 0.3 }).frames;
+  a.forEach((f, i) => assert.deepEqual(f, b[i]));
+});

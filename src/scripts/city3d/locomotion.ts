@@ -783,6 +783,7 @@ export function copyPose(from: Pose, to: Pose) {
   to.turn = from.turn;
   to.headYaw = from.headYaw;
   to.headPitch = from.headPitch;
+  to.headRoll = from.headRoll;
   for (let i = 0; i < 2; i++) {
     const a = from.arms[i];
     const b = to.arms[i];

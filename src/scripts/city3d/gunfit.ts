@@ -24,6 +24,8 @@ export interface Fit {
   magAt: THREE.Vector3;
   /** Third person: the middle of the front hand's palm (under the handguard, round a foregrip or pump), close in for his short arms */
   hold: THREE.Vector3;
+  /** Long guns: the middle of the butt pad's back face (it goes in his shoulder when he aims) */
+  butt?: THREE.Vector3;
   /** 'long': two hands, shouldered, slung on his back when put away; 'pistol': on his hip, carried in one hand, both on the grip to shoot */
   carry: 'long' | 'pistol';
   reload: ReloadKind;
@@ -33,6 +35,7 @@ export interface Fit {
 
 export const FIT: Record<WeaponId, Fit> = {
   rifle: {
+    butt: v(0, 0.025, -0.335),
     muzzle: v(0, 0.05, 0.535),
     sight: { kind: 'holo', at: v(0, 0.152, 0.075), ads: 0.36 },
     fore: v(0.008, 0.016, 0.28),
@@ -43,6 +46,7 @@ export const FIT: Record<WeaponId, Fit> = {
     kick: 1,
   },
   smg: {
+    butt: v(0, 0.022, -0.279),
     muzzle: v(0, 0.05, 0.365),
     sight: { kind: 'holo', at: v(0, 0.13, 0.03), ads: 0.34 },
     fore: v(0.004, -0.01, 0.2),
@@ -53,6 +57,7 @@ export const FIT: Record<WeaponId, Fit> = {
     kick: 0.7,
   },
   shotgun: {
+    butt: v(0, 0.004, -0.315),
     muzzle: v(0, 0.066, 0.545),
     sight: { kind: 'irons', at: v(0, 0.1, 0), ads: 0.3 },
     fore: v(0.006, 0.0, 0.3),
@@ -64,6 +69,7 @@ export const FIT: Record<WeaponId, Fit> = {
     kick: 1.6,
   },
   dmr: {
+    butt: v(0, 0.025, -0.355),
     muzzle: v(0, 0.05, 0.78),
     sight: { kind: 'scope', at: v(0, 0.13, -0.106), ads: 0.26 },
     fore: v(0.008, 0.016, 0.36),
@@ -85,6 +91,7 @@ export const FIT: Record<WeaponId, Fit> = {
     kick: 1.4,
   },
   burst: {
+    butt: v(0, 0.04, -0.223),
     muzzle: v(0, 0.05, 0.32),
     sight: { kind: 'holo', at: v(0, 0.172, 0.0), ads: 0.34 },
     fore: v(0.008, 0.012, 0.17),
@@ -96,6 +103,7 @@ export const FIT: Record<WeaponId, Fit> = {
     kick: 0.9,
   },
   lmg: {
+    butt: v(0, 0.028, -0.37),
     muzzle: v(0, 0.058, 0.63),
     sight: { kind: 'irons', at: v(0, 0.115, -0.12), ads: 0.3 },
     fore: v(0.008, 0.014, 0.26),

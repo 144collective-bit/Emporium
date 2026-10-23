@@ -1,11 +1,11 @@
 // Motion matching (animation Phase 1, motionmatch.ts): the database holds every clip and its mirror,
 // a frame finds itself, a straight run's trajectory finds running and a still one finds standing,
-// and a search is quick.
+// and a search is quick; the jumps (Phase 3) are found, and shut to the ground's searches.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { decodeMocap } from '../src/scripts/city3d/mocap';
-import { AHEAD, FEATURES, buildDatabase, search, setTrajectory } from '../src/scripts/city3d/motionmatch';
+import { AHEAD, FEATURES, JUMPS_ONLY, TAKEOFF, buildDatabase, search, setTrajectory } from '../src/scripts/city3d/motionmatch';
 import { MOCAP_FPS } from '../src/scripts/city3d/mocap';
 
 const data = decodeMocap(readFileSync('src/data/mocap/clips.bin'));
@@ -62,4 +62,28 @@ test('a search is quick (the whole database, a few thousand frames)', () => {
   for (let i = 0; i < 50; i++) search(db, q);
   const ms = (performance.now() - t0) / 50;
   assert.ok(ms < 2, `${ms.toFixed(3)} ms a search`);
+});
+
+test('the jumps: every jump take\'s flights are found, with a take-off before and a touchdown after', () => {
+  const names = new Set(db.flights.map((f) => db.clips[f.clip].name.replace('~', '')));
+  for (const n of ['run-jump', 'run-jump-2', 'run-jump-3', 'run-jump-4', 'run-jump-stop', 'run-jump-stop-2', 'jump-far', 'jump-high']) assert.ok(names.has(n), `a flight in ${n}`);
+  // (a run's own flights are too short and flat to count)
+  for (const f of db.flights) assert.ok(!db.clips[f.clip].name.startsWith('run-loop'), 'no flights in the run');
+  for (const f of db.flights) {
+    const s = db.start[f.clip];
+    assert.equal(db.takeoff[s + f.from - TAKEOFF], 1);
+    assert.equal(db.touchdown[s + f.to], 1);
+    for (let k = f.from - TAKEOFF; k < f.to; k++) assert.equal(db.open[s + k], 0, 'shut to the ground');
+    const c = db.contacts[f.clip];
+    for (let k = f.from; k < f.to; k++) assert.ok(!c[k * 2] && !c[k * 2 + 1], 'both feet off the ground');
+  }
+});
+
+test('on the ground a search never lands in a jump, nor in the standing jumps\' wind-ups', () => {
+  for (let g = 0; g < db.count; g += 7) {
+    if (!db.open[g]) continue;
+    const r = search(db, db.feat.slice(g * FEATURES, (g + 1) * FEATURES));
+    assert.equal(db.flightOf[r.g], -1);
+    assert.ok(!JUMPS_ONLY.includes(db.clips[db.clipOf[r.g]].name.replace('~', '')));
+  }
 });

@@ -12,5 +12,13 @@
   { "file": "cmu/127_19.bvh", "name": "run-quick-stop-run" },
   { "file": "cmu/127_04.bvh", "name": "walk-to-run" },
   { "file": "cmu/69_17.bvh", "name": "turn-on-spot" },
-  { "file": "cmu/137_28.bvh", "name": "idle", "to": 9 }
+  { "file": "cmu/137_28.bvh", "name": "idle", "to": 9 },
+  { "file": "cmu/127_25.bvh", "name": "run-jump" },
+  { "file": "cmu/127_26.bvh", "name": "run-jump-2", "to": 1.75 },
+  { "file": "cmu/127_27.bvh", "name": "run-jump-3" },
+  { "file": "cmu/127_28.bvh", "name": "run-jump-4" },
+  { "file": "cmu/127_21.bvh", "name": "run-jump-stop", "to": 2.4 },
+  { "file": "cmu/127_22.bvh", "name": "run-jump-stop-2", "to": 2.4 },
+  { "file": "cmu/143_05.bvh", "name": "jump-far", "from": 0.6 },
+  { "file": "cmu/143_06.bvh", "name": "jump-high", "from": 1.0 }
 ]

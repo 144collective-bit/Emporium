@@ -55,12 +55,18 @@ test('the clips stand on the ground: ankles at their height, the balls of the fe
     let ankle = Infinity;
     let ball = Infinity;
     let hips = 0;
+    let down = 0;
+    // (the hips' height while a foot is down: the jumps' flights are higher)
+    const on = contacts(c);
     for (let f = 0; f < c.frames; f++) {
       posedFrame(c, f, P);
       ankle = Math.min(ankle, P.pos[MB.footL].y, P.pos[MB.footR].y);
       ball = Math.min(ball, P.pos[MB.toeL].y, P.pos[MB.toeR].y);
-      hips += c.hips[f * 3 + 1] / c.frames;
+      if (!on[f * 2] && !on[f * 2 + 1]) continue;
+      hips += c.hips[f * 3 + 1];
+      down++;
     }
+    hips /= down;
     assert.ok(Math.abs(ankle - ANKLE_H) < 0.02, `${c.name}: the lowest ankle ${ankle.toFixed(3)}`);
     assert.ok(ball > -0.035 && ball < 0.02, `${c.name}: the lowest ball of a foot ${ball.toFixed(3)}`);
     assert.ok(hips > 0.5 && hips < 0.63, `${c.name}: the hips ${hips.toFixed(3)} up on average`);
@@ -127,5 +133,5 @@ test('the feet are on the ground about as long as a run and a walk keep them', (
 });
 
 test('the clips file stays small (it loads when walking starts)', () => {
-  assert.ok(file.length < 400 * 1024, `${(file.length / 1024).toFixed(0)} KB`);
+  assert.ok(file.length < 450 * 1024, `${(file.length / 1024).toFixed(0)} KB`);
 });

@@ -97,6 +97,8 @@ export interface Pose {
   side: number;
   headYaw: number;
   headPitch: number;
+  /** The head tilted sideways (+ towards his right), on top of what the hips' tilt gives it (a cheek on a rifle's stock) */
+  headRoll?: number;
   arms: [Limb, Limb];
   legs: [Limb, Limb];
   /**
@@ -249,7 +251,7 @@ export function makeSkeleton(): Skeleton {
 /** How the spine shares the lean, twist and the hips' counter-tilt (spine1, spine2, chest) */
 const SPINE_SHARE = [0.3, 0.35, 0.35];
 /** How much of the head's turn the neck takes */
-const NECK_SHARE = 0.35;
+export const NECK_SHARE = 0.35;
 /** An arm raised past this (radians from hanging down) starts lifting its collarbone, by this much of the extra */
 const SHRUG_FROM = 1.65;
 const SHRUG = 0.35;
@@ -275,7 +277,7 @@ export function poseSkeleton(sk: Skeleton, p: Pose, grip: [number, number] = [0.
   }
   const hx = -p.headPitch - p.lean * 0.6;
   const hy = p.headYaw - p.twist * 0.8;
-  const hz = p.side * 0.4;
+  const hz = p.side * 0.4 + (p.headRoll ?? 0);
   b.neck.rotation.set(hx * NECK_SHARE, hy * NECK_SHARE, hz * NECK_SHARE);
   b.head.rotation.set(hx * (1 - NECK_SHARE), hy * (1 - NECK_SHARE), hz * (1 - NECK_SHARE));
   for (let i = 0; i < 2; i++) {
