@@ -1121,6 +1121,9 @@ body.is-walking .nav {
   position: relative;
   flex: 1;
   min-height: 0;
+  /* A panel slides in from 24px right of its place; don't let that widen
+     the page for the moment it's past the edge. */
+  overflow-x: clip;
 }
 .city-viewport {
   position: absolute;
