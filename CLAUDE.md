@@ -1190,8 +1190,8 @@ it and has been retired completely. Build only on what's here.
   held properly, its butt in his shoulder. Build it one phase at a time
   with the owner's sign-off. Phase 1 (run, sprint and momentum), Phase 2
   (turning, terrain and transitions), Phase 3 (jumps, falls and landings),
-  Phase 4 (armed movement and peeking), Phase 5's crouch and slide (its
-  vault and climb next) and Phase 8 (the rifle shouldered, below under
+  Phase 4 (armed movement and peeking), Phase 5 (crouch, slide, vault and
+  climb) and Phase 8 (the rifle shouldered, below under
   Target practice) are built, for the player on foot:
   - **The data** is CMU's motion capture (free for commercial use; the
     acknowledgment is in the start menu's Options > Credits, named, never
@@ -1305,13 +1305,33 @@ it and has been retired completely. Build only on what's here.
     motion capture stepping aside for it; it ends in a run with the stick
     pushed, a crouch without, crouched against anything it runs into, or
     up into a jump.
+  - **Phase 5 (vault and climb;** the owner's calls: low things only, over
+    and down, never standing on top**)** is `vault.ts` (DOM-free, tested in
+    `tests/vault.test.ts`): `LOW_THINGS` from the data that knows their
+    real heights (The Trenches' jersey barriers, yard kerbs and dumpsters,
+    Westlake's walls, hedges, beds and planters (`GARDEN_LOW` in
+    gardens.ts), downtown's alley props; never a building, car, kiosk or
+    stall), `isLow()` (matched by numbers: the grids hold their own copies
+    of the boxes), `overAhead()` (the nearest thing straight ahead in reach,
+    high enough, low enough, thin enough and come at squarely; `OVER`: a
+    vault to 0.75 over his ground, a climb to 1.25), `overAt()` (along the
+    way and up, his feet over the top) and `overPose()` (keyed: a speed
+    vault, his left hand planted and the legs swung out to his right; a
+    climb, both hands on the top, pulled up, over and down; the hands put
+    on the top by `reachArm()`). walk.ts (`tryOver()`): Jump while moving
+    at one goes over it instead of jumping, if the landing is clear and near
+    his own ground and nothing but low things under the arc is in the way
+    (`blocked()`'s `skip`); the motion capture steps aside for it, and he
+    runs on after with the stick pushed. The jump's press is counted down
+    after it's looked at, so a slow frame can't lose it.
   - **The lab** is `?anim` (`anim-lab.ts`, styles `animlab.css`): the new
     animation beside the old on an open floor, scripted moves or W A S D,
     slow motion, cameras (over his right shoulder too), floors (flat,
     kerbs, stairs, a ledge), any gun in his hands (`gun`, `aim`, `pitch`;
     markers at the butt and his shoulder's pocket; on the motion capture's
     legs, as in the city), strafing, aiming round and peeking programs (Q / E
-    by hand), crouching and sprint-and-slide (C by hand), any kind of top
+    by hand), crouching and sprint-and-slide (C by hand), a walls floor and
+    a Vault & climb program (Jump at a wall by hand), any kind of top
     (`outfit`), the free camera placed with `orbit=yaw,pitch,dist`, jumps
     (programs and Space, walk.ts's jump and gravity), foot traces and
     readouts (the clip, its rate, the match, the blend left, the foot

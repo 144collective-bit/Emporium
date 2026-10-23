@@ -573,7 +573,7 @@ As it was planned:
   shifts with it (and stays out of walls, through `CAMERA_GRID`). Touch
   and pad as in "Controls".
 
-### Phase 5: crouch, slide, vault and climb (crouch and slide built; vault and climb next)
+### Phase 5: crouch, slide, vault and climb (built, for the owner's sign-off)
 
 What's in so far:
 
@@ -605,8 +605,31 @@ What's in so far:
   stepping aside for it (in 0.06 s, back over 0.12). It ends in a run with
   the stick pushed, a crouch without, a crouch against whatever it runs
   into, or a jump; the camera comes down 0.42 during it.
-- **The lab:** Crouch and Sprint & slide programs, C by hand, a Crouch
-  readout.
+- **Vault and climb** (the owner's calls: low things only, over and down,
+  he never stands on top): no CMU take vaults or mantles (127_33-36 "Run
+  Over" step across a low box), so both are keyed (`vault.ts`). What
+  counts is a list made from the data with real heights, `LOW_THINGS`: The
+  Trenches' jersey barriers (0.55), yard kerbs (0.4) and dumpsters (1.0),
+  Westlake Park's walls and hedges (0.55), beds and planters (0.42), and
+  downtown's alley crates, pallets and bins; never a building, a car, a
+  kiosk or a stall, and nothing on top of anything. Jump while moving at
+  one within reach (0.85 tiles), 0.25 to 0.75 over his ground (a vault)
+  or up to 1.25 (a climb), at most 1.3 thick, come at squarely: he goes
+  over it to the far side if the landing is clear and within 0.45 of his
+  own ground and nothing but low things under the arc stands in the way;
+  otherwise it's a jump as before. The vault (about 0.9 s): up early, his
+  left hand planted on the top (the arm IK) and the tucked legs swung out
+  to his right, down and on at a run. The climb (about 1.1 s): up to the
+  face, both hands on the top, pulled up with the knees tucked, over and
+  down. Tested: his feet, shins and hips never more than 3 cm into the
+  thing, a hand on its top while planted, from where he set off to the
+  far side; every low thing is a solid walking meets and none is tall.
+  In the city: over a jersey barrier behind Bottom Street's car park.
+  Jumps now count the press down after looking at it (a slow frame lost
+  it before).
+- **The lab:** Crouch, Sprint & slide and Vault & climb programs (a walls
+  floor: a park wall's height, then a dumpster's), C and Jump by hand, a
+  Crouch readout.
 - **Controls:** the Controls panel and the gamepad and touch notes.
 
 As it was planned:

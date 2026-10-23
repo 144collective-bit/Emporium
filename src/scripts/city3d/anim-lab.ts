@@ -16,8 +16,9 @@
  *   speed, the clip and frame playing, its rate, the match's cost, the
  *   blend left, jumps a second, the foot slide (how far a held foot has
  *   moved over the ground: now and the worst lately).
- * - Floors: flat, kerbs, stairs, and a ledge to run off (up a ramp, a drop
- *   of 1.6 tiles).
+ * - Floors: flat, kerbs, stairs, a ledge to run off (up a ramp, a drop
+ *   of 1.6 tiles), and walls to vault and climb over (a park wall's height
+ *   and a dumpster's, Jump at them).
  * - Armed (animation Phases 4 and 8): any gun in his hands (stance.ts's
  *   hold on the procedural pose, over the motion capture's legs, as in the
  *   city), aiming or not, the look swept up and down; markers at the gun's
@@ -33,6 +34,8 @@ import { copyPose, createLocomotion, placeRoot } from './locomotion';
 import { loadMocap } from './mocap-load';
 import { GAITS, newMove, startSlide, stepMove, stepSlide, type MoveState, type Slide } from './movesim';
 import { slidePose } from './poses';
+import { overAhead, overAt, overPose, type Over } from './vault';
+import type { Box } from './solids';
 import { toon } from './kit';
 import { buildGun } from './guns';
 import { FIT } from './gunfit';
@@ -43,11 +46,11 @@ import { createPost } from './post';
 const SCALE = 0.85;
 /** One tile in centimetres, for the readouts */
 const CM = 180;
-type Prog = 'manual' | 'runstop' | 'turnback' | 'weave' | 'circle' | 'startstop' | 'startback' | 'gaits' | 'idle' | 'jumps' | 'standjump' | 'hops' | 'strafe' | 'aimturn' | 'peek' | 'crouch' | 'slide';
+type Prog = 'manual' | 'runstop' | 'turnback' | 'weave' | 'circle' | 'startstop' | 'startback' | 'gaits' | 'idle' | 'jumps' | 'standjump' | 'hops' | 'strafe' | 'aimturn' | 'peek' | 'crouch' | 'slide' | 'over';
 type Gait = 'walk' | 'run' | 'sprint';
 type Cam = 'side' | 'front' | 'back' | 'over' | 'free';
-type Floor = 'flat' | 'kerbs' | 'stairs' | 'ledge';
-const FLOORS: Floor[] = ['flat', 'kerbs', 'stairs', 'ledge'];
+type Floor = 'flat' | 'kerbs' | 'stairs' | 'ledge' | 'walls';
+const FLOORS: Floor[] = ['flat', 'kerbs', 'stairs', 'ledge', 'walls'];
 
 /* ---------- The floors: flat, kerbs, stairs (along +z, the same for both figures) ---------- */
 
@@ -62,6 +65,17 @@ const mod = (a: number, n: number) => ((a % n) + n) % n;
 const wrapA = (a: number) => mod(a + Math.PI, Math.PI * 2) - Math.PI;
 /** A ledge every LEDGE.every tiles: flat, a ramp up to `top`, a flat top, then a drop back down */
 const LEDGE = { every: 16, ramp: 4, up: 6, flat: 2, top: 1.6 };
+/** Walls to go over (vault.ts): every `every` tiles along +z, a low one (a park wall's height) and then a high one (a dumpster's) */
+const WALLS = { every: 7, low: [0.55, 0.3], high: [1.0, 0.6] } as const;
+const wallBoxes = (): Box[] => {
+  const out: Box[] = [];
+  for (let k = 0; k < 60; k++) {
+    const [h, d] = k % 2 ? WALLS.high : WALLS.low;
+    const z0 = 4 + k * WALLS.every;
+    out.push([-0.9, z0, 2.1, z0 + d, h]);
+  }
+  return out;
+};
 /** walk.ts's jump, gravity and the extra pull down when the jump is let go early */
 const JUMP = 3.9;
 const GRAVITY = 11.5;
@@ -114,6 +128,7 @@ const PROGS: [Prog, string][] = [
   ['peek', 'Peek'],
   ['crouch', 'Crouch'],
   ['slide', 'Sprint & slide'],
+  ['over', 'Vault & climb'],
   ['idle', 'Stand'],
   ['manual', 'By hand'],
 ];
@@ -174,6 +189,9 @@ function program(p: Prog, t: number, speed: number): [number, number] {
     // A sprint, a slide at two seconds (slideOf), down in a crouch, up again
     case 'slide':
       return cycle(5) < 2.2 ? [0, GAITS.sprint] : [0, 0];
+    // On at a run over the walls (the walls floor)
+    case 'over':
+      return [0, GAITS.run];
     default:
       return [0, 0];
   }
@@ -236,7 +254,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   const rec = q.has('rec');
   let compare = q.get('compare') !== '0';
   let traces = q.get('traces') !== '0';
-  let floorKind: Floor = FLOORS.find((f) => f === q.get('floor')) ?? 'flat';
+  let floorKind: Floor = FLOORS.find((f) => f === q.get('floor')) ?? (prog === 'over' ? 'walls' : 'flat');
   let paused = false;
   let stepOnce = false;
   const GUNS: [WeaponId | 'none', string][] = [
@@ -273,6 +291,8 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       button('progs', label, () => prog === p, () => {
         prog = p;
         clock = 0;
+        // (the walls to go over are a floor of their own)
+        if (p === 'over' && floorKind !== 'walls') (floorKind = 'walls'), buildFloor();
       }),
     );
   for (const g of ['walk', 'run', 'sprint'] as Gait[]) paints.push(button('gaits', g[0].toUpperCase() + g.slice(1), () => gait === g, () => (gait = g)));
@@ -360,6 +380,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
         const z2 = z0 + RUN_LEN + FLIGHT.landing;
         for (let k = 0; k < FLIGHT.steps; k++) box(z2 + k * FLIGHT.tread, z2 + (k + 1) * FLIGHT.tread, (FLIGHT.steps - k) * FLIGHT.rise);
       }
+    if (floorKind === 'walls') for (const b of wallBoxes()) box(b[1], b[3], b[4]);
     if (floorKind === 'ledge') {
       // (the ramp and the top as one side profile, across both lanes)
       const sh = new THREE.Shape();
@@ -452,6 +473,11 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   let slide: Slide | null = null;
   let slideAmt = 0;
   let crouchPress = false;
+  // Going over a wall (Jump at it; by itself in the Vault & climb program)
+  let over: { o: Over; t: number } | null = null;
+  let overLast: Over | null = null;
+  let overAmt = 0;
+  const walls = wallBoxes();
 
   // By hand
   const keys = new Set<string>();
@@ -571,7 +597,29 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       if (!slide) crouched = crouchOf(prog, clock);
     }
     crouchPress = false;
-    if (slide) {
+    // Over a wall: Jump at one by hand, or by itself when the program comes up to it
+    if (!over && floorKind === 'walls' && me.grounded && Math.hypot(gx, gz) > 0.1 && (prog === 'over' || (prog === 'manual' && jumpPress))) {
+      const o = overAhead(x, z, Math.atan2(gx, gz), ground(x, z), walls, 0.22, () => true);
+      if (o && (prog === 'manual' || o.near < 0.45)) {
+        over = { o, t: 0 };
+        jumpPress = false;
+      }
+    }
+    if (over) {
+      over.t += dt;
+      const u = Math.min(1, over.t / over.o.dur);
+      const at = overAt(over.o, u, 0, 0);
+      move.vx = (at.x - x) / dt;
+      move.vz = (at.z - z) / dt;
+      move.ax = move.az = move.w = 0;
+      move.face = over.o.dir;
+      if (u >= 1) {
+        move.vx = Math.sin(over.o.dir) * Math.min(Math.hypot(gx, gz), GAITS.run);
+        move.vz = Math.cos(over.o.dir) * Math.min(Math.hypot(gx, gz), GAITS.run);
+        overLast = over.o;
+        over = null;
+      }
+    } else if (slide) {
       if (!stepSlide(slide, move, gx, gz, dt)) {
         slide = null;
         crouched = Math.hypot(gx, gz) < 0.01;
@@ -583,7 +631,15 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
     z += move.vz * dt;
     const j = prog === 'manual' ? { press: jumpPress, hold: keys.has('Space') } : jumpOf(prog, clock, dt);
     jumpHeld = j.hold;
-    y = fallTo(me, ground(x, z), dt, j.press, j.hold);
+    if (over) {
+      const at = overAt(over.o, Math.min(1, over.t / over.o.dur), 0, 0);
+      x = at.x;
+      z = at.z;
+      y = me.y = at.y;
+      me.vy = 0;
+      me.grounded = at.y < 0.01;
+    } else y = fallTo(me, ground(x, z), dt, j.press, j.hold);
+    overAmt += ((over ? 1 : 0) - overAmt) * (1 - Math.exp(-(over ? 30 : 8) * dt));
     const v = Math.hypot(move.vx, move.vz);
     const sprint = THREE.MathUtils.clamp((v - GAITS.run) / (GAITS.sprint - GAITS.run), 0, 1);
     anim.update({ dt, x, y, z, move, gx, gz, scale: SCALE, ground, feet, sprint, grounded: me.grounded, vy: me.grounded ? me.fall : me.vy, jump: JUMP, gravity: GRAVITY, faceGoal, crouch: crouchAmt });
@@ -604,8 +660,10 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       // (the slide is a keyed pose over the last of the procedural walk, the motion capture stepping aside for it)
       copyPose(loco.pose, hero.pose);
       slidePose(hero.pose, slideAmt);
+      const ov = over?.o ?? overLast;
+      if (ov && overAmt > 0.01) overPose(hero.pose, ov, over ? Math.min(1, over.t / over.o.dur) : 1, overAmt, x, y, z, anim.face, SCALE);
       hero.update();
-      applyTo(hero.rig, anim.rot, anim.hips, 1 - slideAmt);
+      applyTo(hero.rig, anim.rot, anim.hips, 1 - Math.max(slideAmt, overAmt));
     }
     hero.g.position.set(x, y, z);
     hero.g.rotation.set(0, anim.face, 0);
