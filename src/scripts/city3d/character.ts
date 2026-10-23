@@ -32,7 +32,7 @@ import { ATLAS_COLS, ATLAS_ROWS, MARK_ART } from './marks';
 import { canvasTex, lit, neon, toon } from './kit';
 import { EYE_Y as HERO_EYE_Y, handParts, headFront, headGeometry } from './body';
 import { crowdFrame, type CrowdClip } from './crowdclips';
-import { crowdDepth, crowdTexture, crowdVersion } from './crowdskin';
+import { WARDROBE_W, addWardrobe, crowdDepth, crowdTexture, crowdVersion } from './crowdskin';
 import {
   HIP_Y,
   THIGH,
@@ -2344,23 +2344,30 @@ function crowdGeometry(list: Piece[], held: boolean, sk: Skeleton) {
 
 interface Part {
   mesh: THREE.InstancedMesh;
-  /** Each person's rows and blend */
+  /** Each person's rows and blend, and their row in the wardrobe */
   anim: THREE.InstancedBufferAttribute;
-  /** The outfit colour it takes ('#': a fixed colour) */
-  key: string;
-  lens: boolean;
   /**
    * Instances used so far this frame: from the front for people in the sun's shadow box (`n`), from the
-   * back for the rest (`back`, moved up behind them at commit), so the shadow map draws only the front
-   * ones. Who has each one (to repaint only when it changes hands).
+   * back for the rest (`back`, moved up behind them at commit), so the shadow map draws only the front ones
    */
   n: number;
   back: number;
-  owner: Int32Array;
-  painted: boolean;
+  cap: number;
   /** How many the camera's passes draw, and the shadow map */
   view: number;
   shadow: number;
+}
+
+/** Each item's column in the wardrobe (its texel's alpha: whether a person wears it), the same for every crowd */
+const itemCols = new Map<string, number>();
+function itemCol(id: string) {
+  let c = itemCols.get(id);
+  if (c === undefined) {
+    c = itemCols.size;
+    if (c >= WARDROBE_W) throw new Error('crowd wardrobe: more items than columns');
+    itemCols.set(id, c);
+  }
+  return c;
 }
 
 /**
@@ -2368,11 +2375,13 @@ interface Part {
  * crowd's detail, drawn instanced and skinned on the GPU from the baked
  * clips (crowdclips.ts, crowdskin.ts), at two levels: near the camera the
  * crowd's own (`Detail` 1, without the small details on phones), further
- * away the far one (0). An item's pieces of one colour make one part, drawn
- * for everyone wearing it; each frame every figure in view takes an
- * instance of only what it wears, at its level, with its clip's rows. So a
- * crowd costs a draw call per kind of part, and the CPU only works out
- * where each person is and which frame they're on.
+ * away the far one (0). At each level everyone of one outfit kind (suits,
+ * hoodies, soldiers...) shares one mesh per material: every item anyone of
+ * that kind wears, each vertex knowing its item and the colour it takes;
+ * a person's row in the wardrobe (crowdskin.ts) says what they wear and
+ * their colours, and the rest folds away. So a crowd costs a draw call per
+ * kind and material (a handful), each person one instance per mesh, and
+ * the CPU only works out where each person is and which frame they're on.
  */
 export function createCrowd(parent: THREE.Object3D, outfits: Outfit[], opts: { light?: boolean } = {}): Crowd {
   crowdTexture();
@@ -2380,56 +2389,84 @@ export function createCrowd(parent: THREE.Object3D, outfits: Outfit[], opts: { l
   sk.root.updateMatrixWorld(true);
   const near = opts.light ? CROWD_NEAR_LIGHT : CROWD_NEAR;
   const meshes: THREE.InstancedMesh[] = [];
+  // Everyone's row: their colours, then which items they wear
+  const rowOf = addWardrobe(
+    outfits.map((o) => {
+      const row = new Float32Array(WARDROBE_W * 4);
+      COLOR_KEYS.forEach((k, c) => {
+        tmp.set(outfitColor(o, k));
+        row[c * 4] = tmp.r;
+        row[c * 4 + 1] = tmp.g;
+        row[c * 4 + 2] = tmp.b;
+      });
+      for (const q of [1, 0] as Detail[]) for (const it of items(q, true)) if (it.when(o)) row[itemCol(it.id) * 4 + 3] = 1;
+      return row;
+    })
+  );
+  const kinds = [...new Set(outfits.map((o) => o.kind))];
   const levels = ([1, 0] as Detail[]).map((q) => {
     const details = q === 1 && !opts.light;
     const parts: Part[] = [];
     const wear: Part[][] = outfits.map(() => []);
-    for (const it of items(q, true)) {
-      const who = outfits.flatMap((o, i) => (it.when(o) ? [i] : []));
-      if (!who.length) continue;
-      const sub = new Map<string, Piece[]>();
-      for (const p of it.pieces) {
-        if (!details && p.detail) continue;
-        const k = `${p.color.startsWith('#') ? '#' : p.color}|${p.mat ?? ''}`;
-        if (!sub.has(k)) sub.set(k, []);
-        sub.get(k)!.push(p);
+    for (const kind of kinds) {
+      const who = outfits.flatMap((o, i) => (o.kind === kind ? [i] : []));
+      // This kind's pieces by material: each item's pieces of one colour, with the colour they take and their item
+      const byMat = new Map<string, { geos: THREE.BufferGeometry[]; wearers: Set<number> }>();
+      for (const it of items(q, true)) {
+        const wearers = who.filter((i) => it.when(outfits[i]));
+        if (!wearers.length) continue;
+        const sub = new Map<string, Piece[]>();
+        for (const p of it.pieces) {
+          if (!details && p.detail) continue;
+          const k = `${p.color.startsWith('#') ? '#' : p.color}|${p.mat ?? ''}`;
+          if (!sub.has(k)) sub.set(k, []);
+          sub.get(k)!.push(p);
+        }
+        for (const [k, list] of sub) {
+          const id = `${q}|${details}|${it.id}|${k}`;
+          let base = crowdBase.get(id);
+          if (!base) crowdBase.set(id, (base = crowdGeometry(list, !!it.held, sk)));
+          const [key, mat] = k.split('|');
+          const geo = new THREE.BufferGeometry();
+          for (const [name, attr] of Object.entries(base.attributes)) geo.setAttribute(name, attr);
+          // (the lenses keep their material's own colour, as fixed colours keep theirs)
+          const colour = key === '#' || mat === 'lens' ? -1 : COLOR_KEYS.indexOf(key as ColorKey);
+          const slot = new Float32Array(base.attributes.position.count * 2);
+          for (let v = 0; v < slot.length; v += 2) {
+            slot[v] = colour;
+            slot[v + 1] = itemCol(it.id);
+          }
+          geo.setAttribute('crowdSlot', new THREE.Float32BufferAttribute(slot, 2));
+          if (!byMat.has(mat)) byMat.set(mat, { geos: [], wearers: new Set() });
+          const m = byMat.get(mat)!;
+          m.geos.push(geo);
+          wearers.forEach((i) => m.wearers.add(i));
+        }
       }
-      for (const [k, list] of sub) {
-        const id = `${q}|${details}|${it.id}|${k}`;
-        let base = crowdBase.get(id);
-        if (!base) crowdBase.set(id, (base = crowdGeometry(list, !!it.held, sk)));
-        // The shared shape, and this mesh's own rows for its people
-        const geo = new THREE.BufferGeometry();
-        for (const [name, attr] of Object.entries(base.attributes)) geo.setAttribute(name, attr);
-        const anim = new THREE.InstancedBufferAttribute(new Float32Array(who.length * 3), 3);
+      for (const [mat, { geos, wearers }] of byMat) {
+        const geo = mergeGeometries(geos)!;
+        for (const g of geos) g.dispose();
+        const cap = wearers.size;
+        const anim = new THREE.InstancedBufferAttribute(new Float32Array(cap * 4), 4);
         anim.setUsage(THREE.DynamicDrawUsage);
         geo.setAttribute('crowdAnim', anim);
-        const mat = list[0].mat;
-        const m = new THREE.InstancedMesh(geo, crowdMaterial(mat), who.length);
+        const m = new THREE.InstancedMesh(geo, crowdMaterial((mat || undefined) as Mat | undefined), cap);
         m.customDepthMaterial = crowdDepth();
         m.castShadow = true;
         m.frustumCulled = false;
         m.count = 0;
         m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-        m.setColorAt(0, tmp.set('#ffffff'));
-        m.instanceColor!.setUsage(THREE.DynamicDrawUsage);
         parent.add(m);
         meshes.push(m);
-        const part: Part = { mesh: m, anim, key: k.split('|')[0], lens: mat === 'lens', n: 0, back: 0, owner: new Int32Array(who.length).fill(-1), painted: false, view: 0, shadow: 0 };
+        const part: Part = { mesh: m, anim, n: 0, back: 0, cap, view: 0, shadow: 0 };
         // The shadow map draws only the people in the sun's shadow box (the front ones), the camera everyone in view
         m.onBeforeShadow = () => void (m.count = part.shadow);
         m.onBeforeRender = () => void (m.count = part.view);
         parts.push(part);
-        for (const i of who) wear[i].push(part);
+        for (const i of wearers) wear[i].push(part);
       }
     }
     return { parts, wear };
-  });
-  // Each figure's colour per outfit key, worked out once
-  const colors = outfits.map((o) => {
-    const c: Record<string, THREE.Color> = { '#': new THREE.Color('#ffffff') };
-    for (const k of COLOR_KEYS) c[k] = new THREE.Color(outfitColor(o, k));
-    return c;
   });
   const at = new THREE.Vector3();
   const ball = new THREE.Sphere(at, 0);
@@ -2458,50 +2495,35 @@ export function createCrowd(parent: THREE.Object3D, outfits: Outfit[], opts: { l
       m4.compose(pos.set(x, y, z), quat.setFromAxisAngle(UP, yaw), scl.set(scale * (o.build ?? 1), scale * (o.height ?? 1), scale * (o.build ?? 1)));
       crowdFrame(clip, u, frame);
       for (const g of level.wear[i]) {
-        const k = shadow ? g.n++ : g.owner.length - 1 - g.back++;
+        const k = shadow ? g.n++ : g.cap - 1 - g.back++;
         g.mesh.setMatrixAt(k, m4);
-        g.anim.setXYZ(k, frame[0], frame[1], frame[2]);
-        if (g.owner[k] !== i) {
-          g.owner[k] = i;
-          g.mesh.setColorAt(k, g.lens ? colors[i]['#'] : colors[i][g.key]);
-          g.painted = true;
-        }
+        g.anim.setXYZW(k, frame[0], frame[1], frame[2], rowOf + i);
       }
     },
     commit() {
       for (const l of levels)
         for (const g of l.parts) {
           const m = g.mesh;
-          // The ones out of the shadow box, from the back up behind the rest: only those not already in place
-          // fill the gap (where the two ends meet, some already are)
-          const cap = g.owner.length;
-          const gap = Math.min(g.n + g.back, cap - g.back);
-          const from = Math.max(cap - g.back, g.n + g.back);
+          // The ones out of the shadow box, from the back up behind the rest (where the two ends meet, some already are)
+          const gap = Math.min(g.n + g.back, g.cap - g.back);
+          const from = Math.max(g.cap - g.back, g.n + g.back);
           for (let j = 0; j < gap - g.n; j++) moveInstance(g, from + j, g.n + j);
           g.shadow = g.n;
           g.view = m.count = g.n + g.back;
           m.visible = m.count > 0;
           m.instanceMatrix.needsUpdate = true;
           g.anim.needsUpdate = true;
-          if (g.painted) m.instanceColor!.needsUpdate = true;
-          g.painted = false;
           g.n = g.back = 0;
         }
     },
   };
 }
 
-/** One crowd instance from slot `from` to slot `to` (its matrix, clip rows and colour) */
+/** One crowd instance from slot `from` to slot `to` (its matrix, and its rows and wardrobe row) */
 function moveInstance(g: Part, from: number, to: number) {
   if (from === to) return;
-  const m = g.mesh;
-  m.instanceMatrix.array.copyWithin(to * 16, from * 16, from * 16 + 16);
-  g.anim.array.copyWithin(to * 3, from * 3, from * 3 + 3);
-  if (g.owner[to] !== g.owner[from]) {
-    m.instanceColor!.array.copyWithin(to * 3, from * 3, from * 3 + 3);
-    g.owner[to] = g.owner[from];
-    g.painted = true;
-  }
+  g.mesh.instanceMatrix.array.copyWithin(to * 16, from * 16, from * 16 + 16);
+  g.anim.array.copyWithin(to * 4, from * 4, from * 4 + 4);
 }
 
 /* ---------- A varied city crowd ---------- */
