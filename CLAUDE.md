@@ -1088,8 +1088,10 @@ it and has been retired completely. Build only on what's here.
     (BVH, untouched), listed in `assets/mocap/takes.json` (a `loop` makes a seamless cycle,
     `loopClip()`). `npm run mocap` (`scripts/mocap.mjs`) retargets them
     (`mocap-build.ts`: each target bone takes its source joint's turn
-    since the T-pose, the feet kept level, the floor from the ankles, the
-    root smoothed from the hips) into `src/data/mocap/clips.bin`
+    since the T-pose, the feet and the collarbones kept level (CMU's
+    shoulder joint sits at the neck: aligned to it, the collarbones held a
+    37° shrug), the floor from the ankles, the root smoothed from the
+    hips) into `src/data/mocap/clips.bin`
     (`mocap.ts`: 22 body bones at `MOCAP_FPS` 30, turns in 16 bits;
     `mirrorClip()`, `posed()`, `contacts()`); `tests/mocap.test.ts` holds
     the file to exactly what the pipeline makes. It's fetched when walking
@@ -1142,7 +1144,8 @@ it and has been retired completely. Build only on what's here.
     animation beside the old on an open floor, scripted moves or W A S D,
     slow motion, cameras (over his right shoulder too), floors (flat,
     kerbs, stairs, a ledge), any gun in his hands (`gun`, `aim`, `pitch`;
-    markers at the butt and his shoulder's pocket), jumps
+    markers at the butt and his shoulder's pocket), any kind of top
+    (`outfit`), the free camera placed with `orbit=yaw,pitch,dist`, jumps
     (programs and Space, walk.ts's jump and gravity), foot traces and
     readouts (the clip, its rate, the match, the blend left, the foot
     slide, the air); `rec`, `prog`, `gait`, `cam`, `floor`, `zoom`, `compare=0` in
@@ -1218,6 +1221,12 @@ it and has been retired completely. Build only on what's here.
     a forward roll past `LAND_ROLL` on the run; `root.pitch` about
     `root.pivot`); in the air the legs tuck. Emotes keep the planted legs
     (the dance has its own).
+  - **Shoulders: natural athletic** (the owner's call): every top's
+    cross-sections slope from the neck down to the shoulder (the
+    trapezius, no padded shelf) and the sleeve's cap is a low rounded
+    deltoid running down into the arm (`SUIT`, `HOODIE`, `UPPER_S`; the
+    rest grow from them). Check new tops from the front and back running
+    in the lab (`?anim&outfit=hoodie`, ...).
   - Shapes are built from cross-sections (`loft()`, superellipse rings) and
     flat details laid onto them (`onBody()` with `surface()`: lapels, the
     shirt V, the tie, zips, pockets). Shoes are side profiles (`profile()`).
