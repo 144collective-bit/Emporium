@@ -5,7 +5,10 @@
  */
 import * as THREE from 'three';
 import { MapControls } from 'three/addons/controls/MapControls.js';
-import { BAKING_TEXTURES, builtTexturesDone, consolidate, loadBuiltTextures, loadImage, loadTex, updateLights } from './kit';
+import { BAKING_TEXTURES, builtTexturesDone, consolidate, loadBuiltTextures, loadImage, loadTex, updateLights, updateWind } from './kit';
+import { SWAY, windStrength } from './dusk';
+import { buildBusStops } from './transit3d';
+import type { LifeSfx } from './life';
 import { createPost } from './post';
 import { CENTER, SLAB, addLamp, addTree, buildGround, buildLamps, buildSkyline, buildTrees, placed as everyPlaced, puddleMat, keepTreesOff, scatterOutskirts, waterMat, type Env, type Tick } from './world';
 import { PARK_LAMPS, PARK_TREES, WESTLAKE_RECT } from './westlake';
@@ -247,13 +250,14 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   scatterOutskirts(Q.trees, 0.6, tier === 'low' ? 0.5 : 1);
   buildSkyline(scene, Q.skyline, tick);
   buildTrees(tier === 'low');
-  buildLamps(scene, tier === 'low');
+  buildLamps(scene, tier === 'low', tick, reduced);
+  buildBusStops(tier === 'low');
   progress(0.7);
   await waited(nextFrame());
-  // (the horn plays through the sound, made with the controls below; a toot before then is dropped)
-  let horn: ((gain: number) => void) | null = null;
-  buildLife(scene, { cars: Q.cars, buses: Q.buses, walkers: Q.walkers, light: tier === 'low', far: Q.far, horn: (g) => horn?.(g) }, crowd, tick);
-  const sky = createSky(scene, { shadows: Q.shadows, rainDrops: Q.rain, clouds: Q.clouds });
+  // (the horns and the bus doors play through the sound, made with the controls below; one before then is dropped)
+  let lifeSfx: ((kind: LifeSfx, gain: number) => void) | null = null;
+  buildLife(scene, { cars: Q.cars, buses: Q.buses, walkers: Q.walkers, light: tier === 'low', far: Q.far, sfx: (k, g) => lifeSfx?.(k, g) }, crowd, tick);
+  const sky = createSky(scene, { shadows: Q.shadows, rainDrops: Q.rain, clouds: Q.clouds, storms: !reduced });
   progress(0.85);
   await waited(nextFrame());
 
@@ -934,7 +938,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
 
   /* ---------- Controls: time, weather, sound, view ---------- */
   const sound = createSound();
-  horn = (g) => sound.sfx('horn', g);
+  lifeSfx = (k, g) => sound.sfx(k, g);
   let amb = ambienceAt(controls.target.x, controls.target.z);
   let ambT = 0;
   const group = (name: string, apply: (v: string) => void) => {
@@ -1180,6 +1184,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     updateLods(CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, CROWD_VIEW.eye.z, Q.far);
     if (!reduced || frames === 0) for (const f of ticks) f(env);
     updateLights(s.night, env.t);
+    // The wind in the trees (desktop; phones carry no sway) and the thunder's rumble when one is due (city life plan, Phase 4)
+    updateWind(env.t, windStrength(s.rain), tier === 'low' ? 0 : SWAY);
+    if (s.thunder) sound.sfx('thunder', s.thunder);
     waterMat.uniforms.time.value = env.t;
     waterMat.uniforms.night.value = s.night;
     waterMat.uniforms.rain.value = s.rain;

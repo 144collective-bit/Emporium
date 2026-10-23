@@ -218,32 +218,91 @@ as Degen passed.
    found (its middle or an end, clear of them). It was built and checked
    here, then taken out again before the rebuild started.
 
-### Phase 4: buses, boats and the weather's small reactions (S-M, small memory)
+### Phase 4: buses, boats and the weather's small reactions (S-M, small memory): built
 
-1. **Buses that stop.** Bus stops as data (a few spots along the avenues
-   and Trench Avenue, clear of junctions), a stop with a dwell of a few
-   seconds, doors' hiss, brake lights on. A shelter kit (a post, a roof, a
-   bench: a few dozen triangles each, through a Batch, near only) is the
-   one geometry here; or none, a sign post only, the owner's call.
-2. **Boats with a horn** under the bridges, and a wake that trails the
-   speed; the odd boat moored at a jetty. Zero memory.
-3. **Lamps that come on one by one** at dusk, with a flicker-on, over a
-   minute (the `lit` registry has every lamp; a seeded delay each). Zero
-   memory.
-4. **Trees that sway** (desktop only): a `sway` attribute on the canopies
-   (1 float a vertex, about 0.5 MB across the town's trees) and a wind
-   uniform on the shared toon material; stronger in rain, still under
-   reduced motion.
-5. **Steam from the vents** in The Trenches at night: at most six soft
-   sprites near the camera, the FX layer, none on phones.
-6. **Thunder, now and then, in rain** (the owner's call): a soft brighten
-   of the sky and a synth rumble a few seconds later; never a hard flash,
-   never under reduced motion.
+The rules are `transit.ts` (the buses), `boats.ts` (the river) and
+`dusk.ts` (the lamps, the thunder, the vents, the wind), all DOM-free and
+tested (`tests/transit.test.ts`, `tests/boats.test.ts`,
+`tests/dusk.test.ts`); `life.ts`, `world.ts`, `sky.ts` and `transit3d.ts`
+draw them. What it added: the shelters (30 sites of a dozen boxes each,
+near only, about 3,500 triangles in all), two moored boats (two more
+groups like the three that sail), one mesh of six points for the steam,
+a colour per lamp on the halos and pools (some 14 KB), and three
+synthesised sounds. The trees' sway costs nothing: it rides in the
+canopies' uv, which the shared paint never used. Checked in headless
+Chromium: a bus slowing in to the kerb, halting with its front a third of
+a tile before the stop with its brake lights on, and standing its dwell;
+the shelter by day and lit by night; the lamps trickling on over half a
+minute after a jump to night; the moored boat past the jetty's end; the
+canopies moving between two frames in the rain while the paving held
+still; the steam's points in place by the vent.
+
+1. **Buses that stop.** `BUS_STOPS`: along every avenue in town (the
+   ring, the bank avenues, Trench Avenue), each way, every `STOP_GAP`
+   (32) tiles or so, in the kerb lane, `STOP_CLEAR` (9) from any
+   crossing, never on a bridge, never where something solid stands on the
+   sidewalk; 30 today, and every one is passed by some route.
+   `routeStops()` finds where a route passes them in their direction, in
+   the kerb lane or the lane inside it; `pullIn()` eases a bus in the
+   inner lane over to the kerb through the approach and back out after
+   (`PULL_IN`, `PULL_OUT`), so the cars in the inner lane pass it and
+   those behind it in the kerb lane wait. `busStep()`: slowing in from
+   `APPROACH` (12), a halt with the front at the stop, a dwell of `DWELL`
+   (4-7 s, the bus's own) with the brake lights on and the doors' hiss
+   (`doors` in sound.ts) at the open and the shut, then on; the stop just
+   left counts again once it's well past it, and a bus put back on the
+   road elsewhere starts afresh. The shelter (`transit3d.ts`): two posts
+   and a roof, a back panel (not on phones), a bench and a sign post with
+   its lit flag along the street, a hair along the kerb from any lamp
+   post in its way. Not solid: it's open, and you walk through it (a
+   footprint would be the stops' data to add, if wanted).
+2. **Boats with a horn.** `BRIDGES` (every road over the river, from the
+   street plan) and `hornDue()`: once a bridge, `HORN_AHEAD` (10) before
+   it, either way (`boatHorn` in sound.ts, quieter the further off).
+   `cruise()` eases each boat's speed between about 0.55 and 1 of its
+   own, and `wakeOf()` trails the wake by it (longer, wider and brighter
+   the faster; each wake its own material now, no new draws). `MOORED`:
+   two boats tied up past a jetty's end (one on each bank), riding the
+   water, clear of the three lanes the others run in.
+3. **Lamps that come on one by one.** `lampGlow()`: each lamp has its
+   moment in the dusk (`SWITCH_FROM` 0.08 to `SWITCH_TO` 0.55 of the night
+   level, by its seed), then its own delay (up to `TRICKLE`, 25 s: a dusk
+   that comes in a jump, from the Time control, still trickles) and a
+   flicker as it strikes (`flickerOn()`, `FLICKER_ON` 0.9 s). The halos
+   and pools carry it (a colour per point, a colour per instance: the one
+   new memory here); the bulbs, in the Batches' shared neon, come up with
+   the night as before. A visit that starts at night finds them on (the
+   first frame sets them without the trickle), and reduced motion leaves
+   them lit together.
+4. **Trees that sway** (desktop only). The plan's `sway` attribute would
+   have cost half a megabyte; instead `Batch.instances()` writes each
+   canopy vertex's sway into its uv (`SWAY` 0.08 at the top, 0.4 of that
+   at the foot, -1 as the mark; the shared paint has no texture, so the
+   uv was free), and `injectWind()` (kit.ts) swings it in the shared
+   paint's vertex shader and in the ink outlines' normal pass (post.ts),
+   so the outlines follow; `windStrength()` is stronger in the rain,
+   `updateWind()` feeds it each frame. Phones' canopies carry no sway.
+   Still under reduced motion (the time holds). What was learnt: the
+   normals' lengths were tried first (zero memory too), but merging a
+   tile's geometry re-normalises them.
+5. **Steam from the vents.** `VENTS`: two to each of The Trenches'
+   streets, in the right-hand lane, clear of the junctions (`ventsNear()`
+   picks the `VENT_N` nearest the camera); `puff()` is one rising, growing,
+   fading puff on a `PUFF_LEN` cycle. One mesh of six points with a small
+   shader (size and alpha per point, the glow texture), in the FX layer,
+   at night within `VENT_REACH` of a vent; none on phones.
+6. **Thunder, now and then, in rain.** `stormStep()`: in rain past
+   `STORM_RAIN` (0.65) a strike every `STRIKE_GAP` (18-55 s, seeded): the
+   sky brightens softly to `FLASH_PEAK` (0.4, towards a pale lavender,
+   never white; the fog, the hemisphere light and the water follow it)
+   over `FLASH_LEN` (0.7 s), and the rumble (`thunder` in sound.ts: a long
+   roll of low noise) follows `RUMBLE_DELAY` (1.2-4 s) later. sky.ts runs
+   it (`storms`), off under reduced motion.
 
 ## Suggested order
 
-Phase 1 (built) → Phase 2 (built) → Phase 3 (built) → Phase 4. 1b (rolling
-wheels) after Phase 4 if the owner wants it: it's the one shader change.
+Phase 1 (built) → Phase 2 (built) → Phase 3 (built) → Phase 4 (built). 1b
+(rolling wheels) next if the owner wants it: it's the one shader change.
 
 ## What has to keep working
 

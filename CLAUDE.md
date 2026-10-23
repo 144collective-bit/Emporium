@@ -758,7 +758,32 @@ it and has been retired completely. Build only on what's here.
   seated state); life.ts's people tick walks them (a walker on a crossing
   or waiting at a kerb, `Person.cross` / `wait`, joins the other block's
   lane at the corner it arrives at; stops and faces you within reach;
-  sitters go in past 0.6 of rain). Nothing new is drawn. **Not character
+  sitters go in past 0.6 of rain). Nothing new is drawn. Phase 4 (buses,
+  boats and the weather's small reactions) is built: `transit.ts`
+  (DOM-free, tested in `tests/transit.test.ts`: `BUS_STOPS` from the
+  street plan, along every avenue in town each way, in the kerb lane,
+  clear of the crossings, the bridges and anything solid on the sidewalk;
+  `routeStops()`, `pullIn()` (a bus in the inner lane eases over to the
+  kerb and back), `busStep()` (slowing in, a `DWELL` with the brake
+  lights on and the doors' hiss, then on); the shelters are
+  `transit3d.ts`, a site each, near only, not solid, built in the worker
+  too), `boats.ts` (DOM-free, tested in `tests/boats.test.ts`: a horn
+  before every bridge (`hornDue()`), the speed easing (`cruise()`), the
+  wake by the speed (`wakeOf()`), two boats `MOORED` at jetties clear of
+  the lanes) and `dusk.ts` (DOM-free, tested in `tests/dusk.test.ts`: the
+  lamps coming on one by one at dusk with a flicker (`lampGlow()`, drawn
+  by `buildLamps()`'s tick on the halos' and pools' colours; the bulbs
+  come up with the night), thunder in heavy rain (`stormStep()`: a soft
+  brighten of the sky, never a hard flash, the rumble after; run by
+  sky.ts, off under reduced motion), the steam `VENTS` in The Trenches'
+  streets (`puff()`; six points near the camera at night, none on
+  phones) and the wind (`windStrength()`): the canopies' sway rides in
+  their uv (`SWAY`, `Batch.instances()`'s `sway`; the shared paint has no
+  texture) and `injectWind()` in kit.ts swings it in the paint's shader
+  and the ink outlines' normal pass (phones' canopies carry none; merging
+  a tile re-normalises normals, so never encode anything in their
+  lengths)). The life's sounds go through `LifeOpts.sfx` (`horn`,
+  `doors`, `boatHorn`; `thunder` from index.ts). **Not character
   animation** (the owner's call): this plan picks which existing clip a
   crowd person plays and where they stand, never a pose, clip or rig
   change on Degen; that's `docs/animation-plan.md`'s (sitting on a bench
@@ -2381,7 +2406,7 @@ it and has been retired completely. Build only on what's here.
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`),
-  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), the kart park's facility (`kartfacility.ts`),
+  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), the kart park's facility (`kartfacility.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,

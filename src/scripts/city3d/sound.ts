@@ -566,6 +566,53 @@ export function createSound() {
           tone(t, 'sawtooth', 466, 455, 0.08, 0.42);
           tone(t, 'square', 185, 181, 0.04, 0.4);
           break;
+        // A bus's doors (city life plan, Phase 4): a hiss of air, then the fold
+        case 'doors':
+          crack(t, 'bandpass', 2400, 0.9, 0.2, 0.4);
+          crack(t + 0.05, 'highpass', 1500, 0.7, 0.1, 0.55);
+          tone(t + 0.42, 'square', 160, 120, 0.04, 0.08);
+          break;
+        // A boat's horn before a bridge: two low reeds held a moment, sent down the river
+        case 'boatHorn': {
+          const g = ctx.createGain();
+          g.gain.setValueAtTime(0.0001, t);
+          g.gain.exponentialRampToValueAtTime(0.14, t + 0.18);
+          g.gain.setValueAtTime(0.14, t + 0.9);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + 1.4);
+          const lp = ctx.createBiquadFilter();
+          lp.type = 'lowpass';
+          lp.frequency.value = 900;
+          for (const [f, type] of [[98, 'sawtooth'], [131, 'sawtooth'], [49, 'square']] as const) {
+            const o = ctx.createOscillator();
+            o.type = type;
+            o.frequency.value = f;
+            o.connect(lp);
+            o.start(t);
+            o.stop(t + 1.5);
+          }
+          lp.connect(g).connect(bus);
+          g.connect(echoIn);
+          break;
+        }
+        // Thunder: a long roll of low noise swelling and dying away, a second roll behind it
+        case 'thunder': {
+          const src = noise(3, true);
+          const lp = ctx.createBiquadFilter();
+          lp.type = 'lowpass';
+          lp.frequency.setValueAtTime(90, t);
+          lp.frequency.linearRampToValueAtTime(170, t + 0.4);
+          lp.frequency.exponentialRampToValueAtTime(60, t + 3.2);
+          const g = ctx.createGain();
+          g.gain.setValueAtTime(0.0001, t);
+          g.gain.exponentialRampToValueAtTime(0.55, t + 0.35);
+          g.gain.exponentialRampToValueAtTime(0.2, t + 1.1);
+          g.gain.exponentialRampToValueAtTime(0.45, t + 1.5);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + 3.4);
+          src.connect(lp).connect(g).connect(bus);
+          src.start(t);
+          src.stop(t + 3.5);
+          break;
+        }
         // The premium guns: a heavy revolver boom and its hammer, the carbine's crisp burst, the belt-fed thump
         case 'shotRevolver':
           tone(t, 'sine', 120, 32, 0.95, 0.26, true);
