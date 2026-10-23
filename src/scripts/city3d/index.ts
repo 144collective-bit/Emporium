@@ -1075,6 +1075,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       const m = sp.ring.material as THREE.MeshBasicMaterial;
       m.opacity += ((on ? 0.85 : 0) - m.opacity) * Math.min(1, dt * 8);
       sp.ring.scale.setScalar(1 + (on ? Math.sin(t * 4) * 0.04 : 0));
+      // (faded out, it's not drawn at all: a draw call a place saved)
+      sp.ring.visible = m.opacity > 0.01;
     }
 
     // Pins follow their buildings on screen; far ones shrink

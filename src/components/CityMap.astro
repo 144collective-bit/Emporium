@@ -1204,6 +1204,8 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     if (!gl) to3d.remove();
     else if (saved === '2d') to3d.hidden = false;
     else {
+      // (the 2D map's traffic stays still behind the start menu while the 3D city boots: frames for the boot)
+      svg.pauseAnimations();
       bootStarted = true;
       booted = go3d();
     }
