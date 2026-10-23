@@ -136,3 +136,28 @@ bigger world), before Phase 10.
 - **Real-device numbers:** `?bench`'s card has a **Copy results** button
   (the card's text, the full results and the device), to paste back from the
   owner's phone once the site is live.
+
+## The trim (the owner's call, its own PR after the bugs pass)
+
+"Remove some things that may not be important and create strain on the
+performance... replaced by more efficient builds." Measured on the phone
+tier (the outer city's sites, every one built): trees are 41% of their
+triangles (about 1,700 trees, 157k triangles, 17 MB, about a second to
+build), the yards' chain-link 4.6%, the lamps 6%; the airport's aircraft
+120k triangles; a nearby person 7-9k.
+
+- **Trees, on phones:** simpler models (a lower-poly canopy, fewer sides on
+  the pines), flat crossed cards far away, and half the trees out of town
+  (the belt round the town and the pine woods; in town, the parks and The
+  Trenches keep theirs).
+- **Street lamps, on phones:** a simpler post and head.
+- **Parked cars, on phones:** always their simple far form (the bays, lots
+  and aprons), even close up. Your own car and the traffic stay as they are.
+- **People, on phones:** half the idle people in The Trenches and downtown
+  (the square, the market, the landmarks), and 15 walkers instead of 30.
+- **Everywhere:** the chain-link round the Trenches' yards becomes a low
+  worn concrete kerb (a gap at every way in); the fences round the
+  community gardens and the two vacant lots come out. The courts', the
+  soccer cage's and The Block's chain-link stay.
+- **Kept:** the Trenches' small details (washing lines, chess tables, trash
+  bags, the bays' cars, tags, bills and shutters) and the aircraft.
