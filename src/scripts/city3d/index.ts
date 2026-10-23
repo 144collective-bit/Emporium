@@ -238,7 +238,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   buildLamps(scene, tier === 'low');
   progress(0.7);
   await waited(nextFrame());
-  buildLife(scene, { cars: Q.cars, buses: Q.buses, walkers: Q.walkers, light: tier === 'low', far: Q.far }, crowd, tick);
+  // (the horn plays through the sound, made with the controls below; a toot before then is dropped)
+  let horn: ((gain: number) => void) | null = null;
+  buildLife(scene, { cars: Q.cars, buses: Q.buses, walkers: Q.walkers, light: tier === 'low', far: Q.far, horn: (g) => horn?.(g) }, crowd, tick);
   const sky = createSky(scene, { shadows: Q.shadows, rainDrops: Q.rain, clouds: Q.clouds });
   progress(0.85);
   await waited(nextFrame());
@@ -578,6 +580,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     garage,
     // Made further down too, like sfx
     engine: (revs) => sound.engine(revs),
+    tyres: (level) => sound.tyres(level),
     // Your business's places, and the metro's station doors
     places: () => [...(tycoon?.places() ?? []), ...(metroUI?.doors ?? [])],
     openPlace: (id) => (id.startsWith('metro:') ? metroUI?.open(id.slice(6)) : tycoon?.openCard(id as 'stall')),
@@ -910,6 +913,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
 
   /* ---------- Controls: time, weather, sound, view ---------- */
   const sound = createSound();
+  horn = (g) => sound.sfx('horn', g);
   let amb = ambienceAt(controls.target.x, controls.target.z);
   let ambT = 0;
   const group = (name: string, apply: (v: string) => void) => {
@@ -940,7 +944,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   /* ---------- Loop ---------- */
   const timer = new THREE.Timer();
   timer.connect(document);
-  const env: Env = { t: 0, dt: 0, night: 1, rain: 0, day: 0 };
+  const env: Env = { t: 0, dt: 0, night: 1, rain: 0, day: 0, hour: 12 };
   let running = true;
   let frames = 0;
   // Phones run the city at a steady 30fps while nobody is touching it, and at
@@ -1119,6 +1123,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     env.night = s.night;
     env.rain = s.rain;
     env.day = s.day;
+    env.hour = s.hour;
     // Crowds draw only the people in view, in detail near the camera (character.ts); a still city draws everyone once
     CROWD_VIEW.on = !reduced;
     camera.updateMatrixWorld();

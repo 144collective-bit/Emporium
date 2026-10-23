@@ -54,6 +54,8 @@ export function createSound() {
   const CLUB_BPM = 124;
   let on = false;
   let engine: { g: GainNode; lp: BiquadFilterNode; a: OscillatorNode; b: OscillatorNode } | null = null;
+  /** Your car's tyres sliding (city life plan, Phase 2): a squeal and a hiss, by how hard they slide */
+  let tyres: { g: GainNode; bp: BiquadFilterNode; sq: OscillatorNode; gSq: GainNode } | null = null;
   /** Your aircraft's engine: a buzz, a hiss and a whine, beaten by a throb (the prop's blades, the rotor's thump) */
   let aero: { out: GainNode; buzz: OscillatorNode; lp: BiquadFilterNode; gBuzz: GainNode; bp: BiquadFilterNode; gHiss: GainNode; whine: OscillatorNode; gWhine: GainNode; lfo: OscillatorNode; depth: GainNode; am: GainNode } | null = null;
   let nextBeat = 0;
@@ -558,6 +560,12 @@ export function createSound() {
           crack(t, 'bandpass', 900, 1.2, 0.25, 0.05);
           tone(t + 0.03, 'square', 140, 90, 0.18, 0.08);
           break;
+        // A car's horn: two reeds a third apart, a short toot (quieter the further off)
+        case 'horn':
+          tone(t, 'sawtooth', 370, 362, 0.1, 0.42);
+          tone(t, 'sawtooth', 466, 455, 0.08, 0.42);
+          tone(t, 'square', 185, 181, 0.04, 0.4);
+          break;
         // The premium guns: a heavy revolver boom and its hammer, the carbine's crisp burst, the belt-fed thump
         case 'shotRevolver':
           tone(t, 'sine', 120, 32, 0.95, 0.26, true);
@@ -743,6 +751,43 @@ export function createSound() {
       engine.b.frequency.setTargetAtTime(21 + r * 60, t, 0.08);
       engine.lp.frequency.setTargetAtTime(380 + r * 1300, t, 0.1);
       engine.g.gain.setTargetAtTime(on2 ? 0.05 + r * 0.06 : 0, t, on2 ? 0.15 : 0.25);
+    },
+    /**
+     * Your car's tyres sliding: `level` 0..1 how hard (0 or a negative value is silent). A hiss of
+     * filtered noise under a thin squeal that climbs a little with the slide. Made the first time it's
+     * needed; silent unless sound is on.
+     */
+    tyres(level: number) {
+      if (!ctx || !on) return;
+      const t = ctx.currentTime;
+      if (!tyres) {
+        if (level <= 0) return;
+        const g = ctx.createGain();
+        g.gain.value = 0;
+        const src = noise(4, false);
+        const bp = ctx.createBiquadFilter();
+        bp.type = 'bandpass';
+        bp.frequency.value = 1900;
+        bp.Q.value = 2.2;
+        src.connect(bp).connect(g);
+        src.start();
+        const sq = ctx.createOscillator();
+        sq.type = 'sawtooth';
+        const lp = ctx.createBiquadFilter();
+        lp.type = 'lowpass';
+        lp.frequency.value = 2400;
+        const gSq = ctx.createGain();
+        gSq.gain.value = 0;
+        sq.connect(lp).connect(gSq).connect(g);
+        sq.start();
+        g.connect(sfxBus);
+        tyres = { g, bp, sq, gSq };
+      }
+      const l = Math.max(0, Math.min(1, level));
+      tyres.sq.frequency.setTargetAtTime(560 + l * 260, t, 0.06);
+      tyres.bp.frequency.setTargetAtTime(1600 + l * 900, t, 0.06);
+      tyres.gSq.gain.setTargetAtTime(l * 0.05, t, 0.05);
+      tyres.g.gain.setTargetAtTime(l > 0 ? 0.08 + l * 0.14 : 0, t, l > 0 ? 0.05 : 0.12);
     },
     /**
      * Your aircraft's engine: `kind` picks the voice (a prop's buzz, a jet's whine and roar, a

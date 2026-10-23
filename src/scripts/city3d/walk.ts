@@ -147,6 +147,8 @@ export interface WalkDeps {
   garage: Garage;
   /** Your car's engine sound: revs 0..1, or negative for off */
   engine(revs: number): void;
+  /** Your car's tyres sliding, 0..1 (sound.ts) */
+  tyres(level: number): void;
   /** Your business's places on foot (your stall, your units): where to stand, and the prompt's label */
   places(): { id: string; x: number; z: number; label: string }[];
   /** Open one of them (tycoon-ui.ts) */
@@ -442,8 +444,11 @@ export function createWalk(d: WalkDeps) {
     free: (x, z) => !blocked(x, z),
     sfx: d.sfx,
     engine: d.engine,
+    tyres: d.tyres,
     bounds: [BOUNDS[0], BOUNDS[1], BOUNDS[2], BOUNDS[3], 0],
+    reduced: d.reduced,
   });
+
 
   // Your aircraft: get in at the hangar (or wherever you landed it), fly, land and get out
   const fly = createFly({
@@ -870,10 +875,11 @@ export function createWalk(d: WalkDeps) {
       e.preventDefault();
       return true;
     }
-    // Driving: steer and pedal with the move keys, Space for the handbrake, V swaps camera, E gets out
+    // Driving: steer and pedal with the move keys, Space for the handbrake, V swaps camera, H the horn, E gets out
     if (drive.active) {
       if (down && !e.repeat && c === 'KeyE') act();
       else if (down && !e.repeat && c === 'KeyV') drive.toggleView();
+      else if (down && !e.repeat && c === 'KeyH') drive.horn();
       else if (c === 'Space') jumpHeld = down;
       else if (MOVE.includes(c)) {
         if (down) keys.add(c);
@@ -1056,6 +1062,11 @@ export function createWalk(d: WalkDeps) {
     });
     for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) b.addEventListener(ev, () => (pedals[key] = false));
   }
+  // The horn while driving your car (city life plan, Phase 2)
+  $('[data-drive-horn]').addEventListener('pointerdown', () => {
+    drive.horn();
+    d.touched();
+  });
   // Touch while karting: Drift held, Item tapped (the stick steers, the pedals pedal)
   const driftBtn = root.querySelector<HTMLButtonElement>('[data-kart-drift]');
   if (driftBtn) {
@@ -1254,13 +1265,14 @@ export function createWalk(d: WalkDeps) {
       pad.prev = b;
       return;
     }
-    // Driving: left stick steers, RT gas, LT brake / reverse, A handbrake, Y gets out, View swaps camera
+    // Driving: left stick steers, RT gas, LT brake / reverse, A handbrake, Y gets out, View swaps camera, the left stick pressed is the horn
     if (drive.active) {
       padDrive.steer = pad.x;
       padDrive.throttle = (gp.buttons[7]?.value ?? 0) - (gp.buttons[6]?.value ?? 0);
       padDrive.handbrake = !!b[0];
       if (edge(3)) act();
       if (edge(8)) drive.toggleView();
+      if (edge(10)) drive.horn();
       if (pad.x || padDrive.throttle || b.some(Boolean)) d.touched();
       pad.prev = b;
       return;

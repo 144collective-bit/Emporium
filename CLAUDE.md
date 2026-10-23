@@ -666,6 +666,51 @@ it and has been retired completely. Build only on what's here.
   places) is DOM-free data in the boot, so nothing waits on the chunk.
   `?bench` loads every district before it starts. A new district comes
   the same way.
+- **City life** (behaviour and animation of the traffic, the people and
+  your car at no cost in memory: the owner's brief, 2026-10) is planned in
+  `docs/life-plan.md`; keep it up to date, one phase at a time with the
+  owner's sign-off. Rules go in DOM-free code with tests; the view only
+  draws them on the meshes the city already has. Phase 1 (traffic that
+  behaves) is built: `traffic.ts` (DOM-free, tested in
+  `tests/traffic.test.ts`) holds the rules and `life.ts` draws them:
+  brake lights (the tail-light mesh's `instanceColor`, bright while
+  `braking()`), headlights faint by day, a reaction time at every stop
+  (`pullAway()`, a queue peels from the front), a nod under braking and a
+  lean in turns (`bodyMotion()`), indicators before turns (`turnsOf()` on
+  each route's polyline, `indicating()`, `blinkOn()`; four more instances
+  a car in the tail-light mesh, amber lenses under the lamps at
+  `CarGeometry.turn`, on the flat of the body: a lit lens laid over one of
+  the model's own small details is swallowed by its ink outline) and a
+  horn when a car is held up by you (`hornDue()`, `LifeOpts.horn`, the
+  `horn` sound). No new draws, no new geometry. Phase 2 (your car's feel)
+  is built: the rules in `drive-sim.ts` (`carLights()`: brake lights,
+  reversing lights, indicators with the wheel below `SIGNAL_SPEED` and
+  held `SIGNAL_HOLD`; `gearOf()`: four gears, the revs dropping at each
+  shift; `skidding()`: the tyres' sideways speed), drawn by `drive.ts`
+  and `createCar()` in cars.ts (lit lens materials swapped on the car's
+  own lenses, amber indicator lenses under the lamps, `car.lights()`), a
+  horn (H, the Horn button `[data-drive-horn]` over the Brake pedal, your
+  car's only through `.in-car`, the gamepad's left stick pressed,
+  `drive.horn()`), skid marks (one fixed mesh of `SKID_N` quads with a
+  small alpha shader, under the rear wheels while sliding, fading over
+  `SKID_FADE`; none under reduced motion; multiply blending isn't honoured
+  in the post chain, so don't use it for decals), the `tyres()` screech in
+  sound.ts, and the headlights' pool and brake wash as two glow points
+  dark by day. Phase 3 (people who notice) is built: `pedestrians.ts`
+  (DOM-free, tested in `tests/pedestrians.test.ts`): `crossingLinks()`
+  (the walked blocks' corners across one street at a lit junction, never
+  an avenue or a junction's middle), `walkLight()` / `redLeft()` (red for
+  the cars with time to get over), `takesCrossing()`, `noticing()`
+  (`NOTICE`, `NOTICE_HOLD`), `hurry()` (the rain), `outAtNight()` (1 to 5,
+  `Env.hour` from sky.ts) and `BENCHES` / `SEAT_H` (data for a later
+  seated state); life.ts's people tick walks them (a walker on a crossing
+  or waiting at a kerb, `Person.cross` / `wait`, joins the other block's
+  lane at the corner it arrives at; stops and faces you within reach;
+  sitters go in past 0.6 of rain). Nothing new is drawn. **Not character
+  animation** (the owner's call): this plan picks which existing clip a
+  crowd person plays and where they stand, never a pose, clip or rig
+  change on Degen; that's `docs/animation-plan.md`'s (sitting on a bench
+  waits for it).
 - **Cars** are `src/scripts/city3d/cars.ts`: real-proportion cartoon models
   (City Hatch, Cruiser, Street GT coupe, Hauler pickup, Box Van, City Bus;
   made-up names, never a real make or badge), each a bevelled extruded
@@ -1644,10 +1689,10 @@ it and has been retired completely. Build only on what's here.
   - **Sending it home:** the garage menu's Keep calls it back to the turntable ("Bring my car home"). A reload puts it back there too.
 - Traffic stops for your car (`walker.r` in `life.ts` reaches further while driving). `bodies` in `life.ts` shares where the traffic and the pedestrians are, for the soft bumps.
 - **Controls:**
-  - Keyboard: W / S (or arrows) gas and brake / reverse, A / D steer, Space handbrake, V camera, E get out.
+  - Keyboard: W / S (or arrows) gas and brake / reverse, A / D steer, Space handbrake, H horn, V camera, E get out.
   - Touch: the stick steers (and pedals when no pedal is held), with Gas and Brake buttons (`data-drive-gas`, `data-drive-brake`). Layout while driving: a bigger stick bottom-left, Gas and Brake as tall pedals side by side bottom-right (Gas taller, on the outside), Get out at the top right and the speed at the top left, all clear of the phone's safe areas. Getting out brings the walk layout back.
-  - Gamepad: left stick steers, RT gas, LT brake, A handbrake, Y get out, View camera; the right stick or the mouse looks.
-- While driving, `.city.is-driving` hides the walk and combat HUD, and the header says "Driving · <car>" (`head.ts`). A gun is holstered on getting in.
+  - Gamepad: left stick steers (pressed: the horn), RT gas, LT brake, A handbrake, Y get out, View camera; the right stick or the mouse looks.
+- While driving, `.city.is-driving` hides the walk and combat HUD, and the header says "Driving · <car>" (`head.ts`). A gun is holstered on getting in. Your car's lights, horn, skid marks and gears are the city life plan's Phase 2 (above; `docs/life-plan.md`).
 - Check the pedals, stick, prompt and readout at phone widths, upright and on their side: nothing may overlap.
 
 - `drive.update()` returns the tiles moved; walk mode counts them on the
@@ -2133,7 +2178,7 @@ it and has been retired completely. Build only on what's here.
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`),
-  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`),
+  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,
