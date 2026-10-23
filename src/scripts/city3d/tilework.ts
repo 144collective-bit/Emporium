@@ -39,8 +39,13 @@ export function site(id: string, rect: Rect, build: (into: THREE.Object3D) => vo
 export interface TileWork {
   /** Build the sites touching `tiles` now; returns their groups, for `tileBatch()` to merge with the rest */
   boot(tiles: readonly TileIx[]): THREE.Group[];
-  /** Spend up to `ms` building what's waiting, for a camera at x, y, z (`dt` since the last step) */
-  step(ms: number, x: number, y: number, z: number, dt: number, far: number): void;
+  /**
+   * Spend up to `ms` building what's waiting, for a camera at x, y, z (`dt` since the last step); `look`
+   * is where on the ground it looks (the City view: what's on screen fills first), else round the camera
+   */
+  step(ms: number, x: number, y: number, z: number, dt: number, far: number, look?: readonly [number, number]): void;
+  /** How many sites are still waiting to be built (cheap: every frame) */
+  pending(): number;
   /** Build now everything waiting within `r` of a point (walking in, a fly-in's end) */
   want(x: number, z: number, r: number): void;
   /** Build now everything waiting in a view (the intro) */
@@ -133,7 +138,7 @@ export function createTileWork(scene: THREE.Scene, opts: { budget: number; compi
       bootMs = performance.now() - t0;
       return groups;
     },
-    step(ms, x, y, z, dt, far) {
+    step(ms, x, y, z, dt, far, look) {
       if (!tiled) return;
       const t0 = performance.now();
       if (dt > 0 && dt < 0.5 && !Number.isNaN(vel.px)) {
@@ -162,7 +167,7 @@ export function createTileWork(scene: THREE.Scene, opts: { budget: number; compi
         const back = toRebuild(releasedNear(x, y, z), far);
         if (back.length) rebuild(back.slice(0, 4));
       }
-      const [fx, fz] = focusOf(x, z, vel.x, vel.z);
+      const [fx, fz] = focusOf(look ? look[0] : x, look ? look[1] : z, vel.x, vel.z);
       while (queue.length && performance.now() - t0 < ms) build(nextSite(queue, fx, fz));
     },
     want(x, z, r) {
@@ -185,6 +190,7 @@ export function createTileWork(scene: THREE.Scene, opts: { budget: number; compi
         if (back.length) rebuild(back.map((t) => t.key));
       }
     },
+    pending: () => queue.length,
     stats: () => ({ built, waiting: queue.length, atBoot, released: released.size, held: tiled?.heldBytes() ?? 0, budget: opts.budget, rebuilt, bootMs, laterMs, slowest }),
   };
 }
