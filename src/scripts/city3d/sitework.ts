@@ -29,6 +29,8 @@ import { buildProjects } from './projects3d';
 import { buildCommons } from './commons3d';
 import { buildGrit } from './grit3d';
 import { buildStreetWalls } from './streetwall3d';
+import { buildRiverside } from './riverside3d';
+import { buildWaterfront } from './waterfront3d';
 
 export interface SiteInit {
   low: boolean;
@@ -77,6 +79,8 @@ export function serveSites(scope: Scope, init: SiteInit) {
   buildCommons(scene, [], { low: init.low });
   buildGrit(scene, [], { low: init.low });
   buildStreetWalls(scene, [], { low: init.low });
+  buildRiverside(init.low);
+  buildWaterfront(init.low);
   // (the trees and lamps every builder placed: the main thread's list, not these builders' few)
   usePlaced(init.placed);
   buildTrees(init.low);

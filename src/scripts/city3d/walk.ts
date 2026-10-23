@@ -29,6 +29,7 @@ import { createCombat, type Sfx } from './combat';
 import { WEAPON_IDS } from './combat-sim';
 import { createGunShop } from './gunshop';
 import { ARMS, AVENUE_DOORS } from './avenue';
+import { DECK_Y, onDeck } from './waterfront';
 import { carStatsOf, kartStatsOf, ownsCar, takedown } from './tycoon';
 import { createGarageUI, loadCar } from './garage-ui';
 import { DEFAULT_CAR } from './mycar';
@@ -278,7 +279,7 @@ export function createWalk(d: WalkDeps) {
    * `yNow` is up there; at the kart park the circuit's own (its banks, the hill, the flyover's deck when `yNow` is up there)
    */
   const groundAt = (x: number, z: number, yNow = 0) => {
-    const slab = slabs.some((s) => inBox(s.box, x, z) && inPoly(s.poly, [x, z])) ? SLAB : 0.035;
+    const slab = slabs.some((s) => inBox(s.box, x, z) && inPoly(s.poly, [x, z])) ? SLAB : onDeck(x, z) ? DECK_Y : 0.035;
     const base = Math.max(slab, footbridgeY(x, z, yNow) ?? 0);
     if (x < KART_PARK.x0 || x > KART_PARK.x1 || z < KART_PARK.z0 || z > KART_PARK.z1) return base;
     const t = trackSurfaceAt(x, z, yNow);
@@ -292,7 +293,8 @@ export function createWalk(d: WalkDeps) {
     if (x < BOUNDS[0] || x > BOUNDS[2] || z < BOUNDS[1] || z > BOUNDS[3]) return true;
     if (footbridgeY(x, z, y, RADIUS) !== null) return false;
     if (footbridgeWall(x, z, y, RADIUS)) return true;
-    if (z > RIVER[0] - 0.3 && z < RIVER[1] + 0.3 && !onBridge(x)) return true;
+    // (the river is a wall but at the bridges, and on The Trenches' boardwalk and pier: their railings are the decks' edges)
+    if (z > RIVER[0] - 0.3 && z < RIVER[1] + 0.3 && !onBridge(x) && !onDeck(x, z, RADIUS)) return true;
     // Westlake Park's lake (westlake.ts): you stop on the lawn at its stone rim
     if (inLake(x, z, RADIUS + RIM.w + 0.1)) return true;
     if (SOLID_GRID.near(x, z, RADIUS, nearBoxes).some((b) => inBox(b, x, z, RADIUS))) return true;
