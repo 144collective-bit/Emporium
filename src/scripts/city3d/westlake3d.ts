@@ -15,7 +15,8 @@
  */
 import * as THREE from 'three';
 import { Batch, FONT_DISPLAY, canvasTex, lit, neon, siteMat, toon } from './kit';
-import { SLAB, WALK_W, flatPoly, waterMat } from './world';
+import { SLAB, WALK_W, flatPoly, waterMat, type Tick } from './world';
+import { registerParkLife, registerParkSites } from './parklife3d';
 import { site } from './tilework';
 import { offsetLine } from './streetplan';
 import { BENCHES, CAR_PARK, GATES, GATE_PIERS, LAKE_C, PATHS, PIER, RIM, STRIPS, lakeLine, type ParkPath, type Pt } from './westlake';
@@ -131,7 +132,10 @@ function bench(b: Batch, at: Pt, ry: number) {
   for (const sx of [-0.36, 0.36]) b.add(g(0.05, 0.26, 0.28, sx, 0, 0), IRON);
 }
 
-export function register({ low, scene }: { low: boolean; scene: THREE.Scene | null }) {
+export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
+  // Step 3: the boathouse, the jetty, the courts and the picnics as sites; on the main thread, what moves
+  registerParkSites();
+  if (scene && tick) registerParkLife(scene, tick, low);
   // The paths: a site a stretch
   for (const q of PATHS)
     stretches(q).forEach((s, k) =>

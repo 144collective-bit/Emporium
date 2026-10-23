@@ -94,6 +94,26 @@ export function sitPose(p: Pose, t: number, seed = 0) {
   p.headPitch = 0.05;
 }
 
+/**
+ * Sitting on the ground (a picnic blanket): legs out in front, leaning back a little on the hands behind; looking
+ * round and now and then sitting up to talk. Hips sit HIP_HEIGHT - 0.03 above the feet's root, as on a bench.
+ */
+export function picnicPose(p: Pose, t: number, seed = 0) {
+  const up = Math.max(0, Math.sin(t * 0.21 + seed));
+  p.bob = -0.03;
+  p.lean = -0.22 + up * 0.26;
+  p.twist = Math.sin(t * 0.17 + seed) * 0.08;
+  p.side = 0;
+  set(p.legs[0], 1.48, 0.1, 0.12);
+  set(p.legs[1], 1.42, 0.14, 0.32 + Math.sin(t * 0.3 + seed) * 0.1);
+  // Hands back on the ground, or (sat up) in the lap, gesturing now and then
+  const back = 1 - up;
+  set(p.arms[0], -0.42 * back + 0.75 * up, 0.24 * back + 0.12 * up, 0.08 * back + 0.9 * up);
+  set(p.arms[1], -0.42 * back + (0.75 + Math.sin(t * 2.1 + seed) * 0.2 * up) * up, 0.24 * back + 0.14 * up, 0.08 * back + (1.0 + Math.sin(t * 2.7) * 0.3) * up);
+  p.headYaw = Math.sin(t * 0.23 + seed) * 0.45;
+  p.headPitch = 0.04 - up * 0.04;
+}
+
 /** In the air: knees up, arms out for balance. `a` 0..1 blends it over whatever pose is set. */
 export function airPose(p: Pose, a: number) {
   if (a <= 0) return;
