@@ -325,9 +325,15 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
     while (jumpTimes.length && clock - jumpTimes[0] > 2) jumpTimes.shift();
   };
 
-  const view = (dt: number) => {
+  /** What the camera looks at: between the two figures, and side on, on a wide screen, right of the panel (both clear of it) */
+  const target = (out: THREE.Vector3) => {
     const [dx, dz] = compare ? beside() : [0, 0];
-    look.lerp(new THREE.Vector3(x + dx / 2, 0.62, z + dz / 2), Math.min(1, dt * 6) || 1);
+    const clear = cam === 'side' && innerWidth > 600 ? 1.3 / near : 0;
+    return out.set(x + dx / 2, 0.62, z + dz / 2 + clear);
+  };
+  const want = new THREE.Vector3();
+  const view = (dt: number) => {
+    look.lerp(target(want), Math.min(1, dt * 6) || 1);
     if (cam === 'free') camera.position.set(look.x + Math.sin(orbit.yaw) * Math.cos(orbit.pitch) * orbit.dist, look.y + Math.sin(orbit.pitch) * orbit.dist, look.z + Math.cos(orbit.yaw) * Math.cos(orbit.pitch) * orbit.dist);
     else if (cam === 'side') camera.position.set(look.x + (compare ? 6 : 4.5) / near, look.y + 0.3, look.z);
     else if (cam === 'front') camera.position.set(look.x, look.y + 0.5, look.z + 5.5 / near);
@@ -340,6 +346,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
     const v = Math.hypot(move.vx, move.vz);
     const slideNow = Math.max(0, ...anim.feet.map((f) => f.drift));
     const rows: [string, string][] = [
+      ...(compare ? ([['Beside', cam === 'back' ? 'new right · old left' : cam === 'free' ? 'the old walk is the other one' : 'new left · old right']] as [string, string][]) : []),
       ['Speed', `${v.toFixed(2)} tiles/s · ${(v * 1.8).toFixed(1)} m/s`],
       ['Clip', `${dbg.clip} @ ${dbg.frame.toFixed(1)}`],
       ['Rate', dbg.rate.toFixed(2)],
@@ -404,6 +411,11 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
     },
     steps(n: number) {
       for (let i = 0; i < n; i++) step(1 / 60);
+      // (a skip ahead: the camera's there too)
+      look.copy(target(want));
+    },
+    get where() {
+      return { x, z, look: look.toArray(), eye: camera.position.toArray() };
     },
     /** Step on `n` frames and draw (recordings) */
     shoot(n: number) {
