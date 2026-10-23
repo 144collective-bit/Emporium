@@ -156,7 +156,7 @@ bigger world), before Phase 10.
   (the card's text, the full results and the device), to paste back from the
   owner's phone once the site is live.
 
-## The trim (the owner's call, its own PR after the bugs pass)
+## The trim (the owner's call; done, its own PR after the bugs pass)
 
 "Remove some things that may not be important and create strain on the
 performance... replaced by more efficient builds." Measured on the phone
@@ -180,3 +180,33 @@ build), the yards' chain-link 4.6%, the lamps 6%; the airport's aircraft
   soccer cage's and The Block's chain-link stay.
 - **Kept:** the Trenches' small details (washing lines, chess tables, trash
   bags, the bays' cars, tags, bills and shutters) and the aircraft.
+
+### What the trim measured
+
+The phone tier, the build before and after back to back (the software
+renderer: frame rates only for comparing).
+
+| | Before | After |
+|---|---|---|
+| Geometry memory | 84 MB | **65 MB** |
+| Objects in the scene | 1,024 | **914** |
+| Sites to build after the start | 1,155 (3.2 s) | **1,032 (2.7 s)** |
+| Triangles: home / downtown / the square | 0.26M / 0.25M / 0.26M | **0.23M / 0.20M / 0.23M** |
+| Triangles: Build overview / airport / The Trenches | 0.32M / 0.35M / 0.27M | **0.22M / 0.10M / 0.17M** |
+| Triangles: the old edge / the far edge | 0.14M / 0.16M | **0.13M / 0.13M** |
+| Draws: airport / The Trenches / Build overview | 130 / 156 / 287 | **105 / 136 / 270** |
+| The camera route through every view | 4.0 fps, 203 draws, 0.19M | **4.3 fps, 191 draws, 0.14M** |
+| Frame rate: airport / far edge | 4.8 / 4.4 | **5.7 / 5.9** |
+
+The ring highway's junction went the other way (0.07M to 0.10M triangles,
+56 to 58 draws): the traffic in view differs from run to run. Texture
+memory is unchanged (60 MB): the trim is geometry.
+
+How each looks: a near tree on a phone is a dodecahedron canopy (36
+triangles, was 80) on a four-sided trunk; a pine two open five-sided cones;
+far off, two crossed flat cards (16 triangles a round tree, 4 a pine); half
+the trees in the belt and the woods; lamps half the triangles; parked cars
+the simple far form even close up (blocky wheels, dark windows); the yards'
+edge a low worn concrete kerb with a gap at every way in; the gardens and
+the vacant lots open.
+

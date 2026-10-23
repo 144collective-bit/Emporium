@@ -1,6 +1,6 @@
 // The Trenches built up (streetwall.ts, the grit's step 2): tenement street walls round the yards, never in a way in or
 // against a tower; two vacant lots; lock-ups along Bottom Street and the low commercial strip by the highway; the yards'
-// chain-link only where nothing's built; everything solid in SOLIDS and off the streets.
+// the yards' kerb only where nothing's built; everything solid in SOLIDS and off the streets.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -114,10 +114,10 @@ test('low commercial: lock-ups on Bottom Street, and the strip by the highway', 
   }
 });
 
-test('the chain-link only where nothing\'s built; every tower still reached', () => {
+test('the yards\' kerb only where nothing\'s built; every tower still reached', () => {
   for (const e of EDGES) {
     const r: Rect = [Math.min(e.a[0], e.c[0]) - 0.05, Math.min(e.a[1], e.c[1]) - 0.05, Math.max(e.a[0], e.c[0]) + 0.05, Math.max(e.a[1], e.c[1]) + 0.05];
-    for (const k of built(e.block)) assert.ok(!overlaps(r, k), `chain-link through a building on ${e.block}`);
+    for (const k of built(e.block)) assert.ok(!overlaps(r, k), `a kerb through a building on ${e.block}`);
   }
   for (const t of TOWERS) {
     if (t.block === THE_BLOCK.block) continue;

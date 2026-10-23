@@ -363,8 +363,8 @@ it and has been retired completely. Build only on what's here.
     along Trench Avenue under the el, `<block>:el`, where its pillars
     stand over a yard: the el's median is too narrow to park in);
     hydrants on the sidewalk corners (`HYDRANTS`); `COMMONS_SOLIDS` (in
-    `SOLIDS`: fences with a gate on the way out (the courts', the
-    cage's, the garden's, `GARDEN_FENCE`), ramps, grills, washing poles,
+    `SOLIDS`: fences with a gate on the way out (the courts' and the
+    cage's; the garden's came out in the trim), ramps, grills, washing poles,
     the rec block's buildings and the pavilion's posts, the parked cars);
     and `commonsPeople()` (kids at play, neighbours at the grills, chess
     and the pavilion). Drawn by `commons3d.ts` as sites (`buildCommons()`,
@@ -422,8 +422,8 @@ it and has been retired completely. Build only on what's here.
     room (`WALL_DEPTH`): broken at every way in, `BACK_CLEAR` from the
     towers, never in front of a mural, drawn two to a site through
     `drawLot()`; two vacant lots in the walls (`VACANT`: dirt, rubble,
-    weeds, chain-link front and back (`vacantFences()`), a billboard with
-    made-up copy, tags on the neighbours' side walls); low commercial
+    weeds, open to the street (their chain-link came out in the trim), a
+    billboard with made-up copy, tags on the neighbours' side walls); low commercial
     (`LOWRISE`, `LowLot`, `lowFrame()`: lock-ups along Bottom Street's
     side of the yards (`LOCKUP_DEPTH`), and on row W, the strip between
     West Street and the highway (`trench-w0` in trenches.ts, kept clear of
@@ -431,10 +431,12 @@ it and has been retired completely. Build only on what's here.
     scrap yard, a body shop and lock-ups facing West Street, signs from
     one atlas (`LOWRISE_NAMES`), cars on the aprons and in the car wash
     (`LOW_CARS`), trees along the highway behind, a few people at work).
-    The yards' chain-link is `EDGES` here (`EDGE_H`, `edgeSolid()`): it
-    runs only where nothing's built (`built()`), and the grit keeps its
-    patches, trees and dumpsters off what's built. `STREETWALL_SOLIDS`
-    (in `SOLIDS`): the buildings, the fences, the chain-link, the scrap
+    The yards' edge is a low worn concrete kerb (`EDGES` here, `EDGE_H`,
+    `EDGE_W`, `edgeSolid()`; chain-link until the trim, the owner's call,
+    the courts', the cage's and The Block's chain-link stay): it runs only
+    where nothing's built (`built()`), with a gap at every way in, and the
+    grit keeps its patches, trees and dumpsters off what's built.
+    `STREETWALL_SOLIDS` (in `SOLIDS`): the buildings, the kerbs, the scrap
     yard's piles, the car wash's posts and brushes, the docks, the cars.
     Some of the tenements' shops are shuttered too (grit's `shuttered()`).
   - **Trench Avenue's places** (the grit's step 3, the owner's call:
@@ -520,6 +522,15 @@ it and has been retired completely. Build only on what's here.
   (pixels, then shadows, then bloom; never the ink outlines) if frames are
   slow. When frames stay fast again, bloom and then pixels come back (once
   each; shadows stay off, re-enabling them recompiles every material).
+  The trim (the owner's call, phones only; `docs/performance-plan.md`):
+  trees are lighter near (a dodecahedron canopy, four-sided trunks, open
+  five-sided cones) and two crossed flat cards far (`crossedCards()` in
+  `world.ts`, the tile's far piece), and half the outskirts' trees (the
+  belt and the woods, `scatterOutskirts()`'s `keep`) are left out; lamps
+  are four-sided and open-ended; parked cars are always their far form
+  (`initFarCars()`'s `parkedAlwaysFar`); every other idle person in The
+  Trenches and downtown (the square, the market, the landmarks) is left
+  out (`buildPeople()` in `life.ts`) and there are 15 walkers (`TIERS`).
   Phones also draw the big canvas textures (512 x 512 pixels or more: the
   atlases, the long signs) at half size, a quarter of the memory
   (`canvasTex()` in `kit.ts`; a draw function works in the numbers it
@@ -601,7 +612,7 @@ it and has been retired completely. Build only on what's here.
     extruded, block wheels, about a hundred triangles), all in one
     `BatchedMesh` (`initFarCars()`, `theFarCars()`), one draw for every
     far car; a parked lot swaps whole, a car in traffic by its own
-    distance.
+    distance. On phones parked cars are always far (the trim).
 - **Building as you go** (growth plan Phase 3): the fixed city outside
   the places is made of sites (`site(id, rect, build)` in `tilework.ts`):
   a function that draws a piece of the city from data into Batches only

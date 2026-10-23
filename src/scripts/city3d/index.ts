@@ -76,7 +76,7 @@ type Tier = 'high' | 'medium' | 'low';
 const TIERS = {
   high: { dpr: 2, shadows: 2048, msaa: 4, bloomScale: 0.5, cars: 38, buses: 3, walkers: 100, trees: 250, skyline: 70, rain: 6000, clouds: 12, far: 120, nearBudget: 96 },
   medium: { dpr: 1.5, shadows: 1024, msaa: 0, bloomScale: 0.5, cars: 27, buses: 2, walkers: 62, trees: 150, skyline: 50, rain: 3500, clouds: 9, far: 110, nearBudget: 64 },
-  low: { dpr: 1.25, shadows: 0, msaa: 0, bloomScale: 0.3, cars: 16, buses: 2, walkers: 30, trees: 90, skyline: 26, rain: 1200, clouds: 4, far: 90, nearBudget: 32 },
+  low: { dpr: 1.25, shadows: 0, msaa: 0, bloomScale: 0.3, cars: 16, buses: 2, walkers: 15, trees: 90, skyline: 26, rain: 1200, clouds: 4, far: 90, nearBudget: 32 },
 };
 
 function pickTier(): Tier {
@@ -148,7 +148,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   progress(0.3);
   await waited(nextFrame());
   // Every far-away car, parked or driving, in one mesh (growth plan Phase 2): before anything parks one
-  initFarCars(scene);
+  // (phones: parked cars always far, the trim)
+  initFarCars(scene, 400, tier === 'low');
   const { spots, crowd } = buildLandmarks(scene, { degen, logo, tick, low: tier === 'low' });
   // Downtown round the landmarks: infill, alleys, pocket parks and the hangout square (its crowd joins the landmarks')
   buildInfill(scene, crowd, tick, tier === 'low');
@@ -200,10 +201,11 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   keepTreesOff([-10, 125, 56, 135]);
   progress(0.55);
   await waited(nextFrame());
-  scatterOutskirts(Q.trees);
+  // (phones keep half of them: the trim)
+  scatterOutskirts(Q.trees, 0.6, tier === 'low' ? 0.5 : 1);
   buildSkyline(scene, Q.skyline, tick);
-  buildTrees();
-  buildLamps(scene);
+  buildTrees(tier === 'low');
+  buildLamps(scene, tier === 'low');
   progress(0.7);
   await waited(nextFrame());
   buildLife(scene, { cars: Q.cars, buses: Q.buses, walkers: Q.walkers, light: tier === 'low', far: Q.far }, crowd, tick);

@@ -32,7 +32,7 @@ import * as THREE from 'three';
 import { Batch, FONT_DISPLAY, canvasTex, lit, toon } from './kit';
 import { ATLAS, CREAM, INK, LEAF, METAL, ROOF, STONE, WOOD, glow, kit, type Frame } from './infill';
 import { buildFx, chainMesh, tag } from './grime';
-import { EDGES, EDGE_H } from './streetwall';
+import { EDGES, EDGE_H, EDGE_W } from './streetwall';
 import { SLAB as S, addLamp } from './world';
 import { site } from './tilework';
 import { parkedCars, type CarId } from './cars';
@@ -42,7 +42,6 @@ import {
   AMENITIES,
   BAYS,
   BAY_CARS,
-  GARDEN_FENCE,
   HYDRANTS,
   REC,
   REC_DOORS,
@@ -78,6 +77,7 @@ const RAIL = toon('#2a2b38');
 /** Galvanised pipe: the chain-link's posts and rails */
 const PIPE = toon('#8c90a2');
 const KERB = toon('#8a8698');
+const KERB_TOP = toon('#77738a');
 const RED = toon('#d6283a');
 
 /** An amenity's own frame: u along its long side, v across, both from its corner (x0, z0) */
@@ -324,8 +324,7 @@ function skate(b: Batch, a: Amenity, wire: Batch) {
 
 function garden(b: Batch, a: Amenity, wire: Batch) {
   const f = frameOf(a);
-  // Raised beds in a fenced concrete lot (the grit step): the yard's concrete underfoot, chain-link round it
-  chainFence(b, wire, a.rect, GARDEN_FENCE, amenityWay(a, 0.8));
+  // Raised beds on the yard's concrete (the grit step; open since the trim)
   b.detail(() => {
     // Raised beds along the far side
     for (let i = 0; i < 3; i++) {
@@ -526,22 +525,15 @@ function bay(b: Batch, y: (typeof BAYS)[number]) {
     }
   });
 }
-function edges(b: Batch, wire: Batch, block: string) {
+function edges(b: Batch, block: string) {
   for (const e of EDGES.filter((o) => o.block === block)) {
     const [x0, x1] = [Math.min(e.a[0], e.c[0]), Math.max(e.a[0], e.c[0])];
     const [z0, z1] = [Math.min(e.a[1], e.c[1]), Math.max(e.a[1], e.c[1])];
     const alongX = z0 === z1;
-    const [wx, wz] = alongX ? [0, 0.1] : [0.1, 0];
-    // A low concrete kerb, pipe posts on it every couple of tiles, a top rail, and the mesh between
-    box(b, x0 - wx, S, z0 - wz, x1 + wx, S + 0.12, z1 + wz, KERB);
-    box(b, x0 - wx / 4, S + 0.12 + EDGE_H - 0.05, z0 - wz / 4, x1 + wx / 4, S + 0.12 + EDGE_H, z1 + wz / 4, PIPE);
-    const len = alongX ? x1 - x0 : z1 - z0;
-    const n = Math.max(1, Math.round(len / 2.5));
-    for (let i = 0; i <= n; i++) {
-      const [x, z] = alongX ? [x0 + (len * i) / n, z0] : [x0, z0 + (len * i) / n];
-      cyl(b, 0.035, EDGE_H, x, S + 0.12, z, PIPE, 6);
-    }
-    chainMesh(wire, [x0, z0], [x1, z1], S + 0.14, EDGE_H - 0.07);
+    const [wx, wz] = alongX ? [0, EDGE_W / 2] : [EDGE_W / 2, 0];
+    // A low worn concrete kerb (the trim: it was chain-link), its top a shade darker where feet and weather wore it
+    box(b, x0 - wx, S, z0 - wz, x1 + wx, S + EDGE_H - 0.03, z1 + wz, KERB);
+    box(b, x0 - wx - 0.005, S + EDGE_H - 0.03, z0 - wz - 0.005, x1 + wx + 0.005, S + EDGE_H, z1 + wz + 0.005, KERB_TOP);
   }
 }
 function hydrant(b: Batch, [x, z]: Pt) {
@@ -580,9 +572,7 @@ export function buildCommons(scene: THREE.Scene, crowd: Idle[], opts: { low: boo
     const rect: Rect = [Math.min(...xs) - 1, Math.min(...zs) - 1, Math.max(...xs) + 1, Math.max(...zs) + 1];
     site(`trench edges ${blk.id}`, rect, (into) => {
       const b = new Batch();
-      const wire = new Batch();
-      edges(b, wire, blk.id);
-      buildFx(wire, into);
+      edges(b, blk.id);
       for (const h of HYDRANTS) if (h[0] >= rect[0] && h[0] <= rect[2] && h[1] >= rect[1] && h[1] <= rect[3]) hydrant(b, h);
       b.build(into);
     });
