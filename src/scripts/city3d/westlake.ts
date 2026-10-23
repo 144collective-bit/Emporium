@@ -159,6 +159,61 @@ export const JETTY = (() => {
 /** Is a point on the jetty's deck (`m` in from its edges) */
 export const onJetty = (x: number, z: number, m = 0) => Math.abs(x - JETTY.x) < JETTY.half - m && z > JETTY.z0 + m && z < JETTY.z1 - m;
 
+/* ---------- The lakeside terraces (the north side's stage 3) ---------- */
+
+export interface Terrace {
+  /** The angle round the lake, the point on the water's edge, out of the water (u) and along the shore (t), its half width */
+  a: number;
+  at: Pt;
+  u: Pt;
+  t: Pt;
+  half: number;
+}
+/**
+ * The terraces' levels from the lake loop down to the water: from d to d (out from the water's edge along u, negative
+ * over the water), height over the lawn's slab: a step up off the loop, the platform, then three steps down to just over
+ * the water (which lies at SLAB + 0.04)
+ */
+export const TERRACE_STEPS: [number, number, number][] = [
+  [3.2, 2.6, 0.12],
+  [2.6, 0.6, 0.24],
+  [0.6, -0.4, 0.17],
+  [-0.4, -1.4, 0.11],
+  [-1.4, -2.4, 0.065],
+];
+/** Three terraces: on the south shore by the lake's south walk, the west shore and the east shore */
+export const TERRACES: Terrace[] = [Math.PI / 2 + 0.35, Math.PI + 0.45, 0.05].map((a) => {
+  const at = lakeAt(a);
+  const [p, q] = [lakeAt(a - 0.01), lakeAt(a + 0.01)];
+  const l = Math.hypot(q[0] - p[0], q[1] - p[1]);
+  const t: Pt = [(q[0] - p[0]) / l, (q[1] - p[1]) / l];
+  // Out of the water: the normal pointing away from the lake's middle
+  let u: Pt = [t[1], -t[0]];
+  if (u[0] * (at[0] - LAKE_C[0]) + u[1] * (at[1] - LAKE_C[1]) < 0) u = [-u[0], -u[1]];
+  return { a, at, u, t, half: 4 };
+});
+/** Where a point is on a terrace: out from the water's edge (d) and along the shore (s); null off them all */
+function terraceOf(x: number, z: number, m = 0) {
+  for (const tr of TERRACES) {
+    const [dx, dz] = [x - tr.at[0], z - tr.at[1]];
+    const d = dx * tr.u[0] + dz * tr.u[1];
+    const s = dx * tr.t[0] + dz * tr.t[1];
+    if (Math.abs(s) < tr.half - m && d > TERRACE_STEPS.at(-1)![1] + m && d < TERRACE_STEPS[0][0] - m) return { tr, d, s };
+  }
+  return null;
+}
+/** Is a point on a terrace (`m` in from its edges) */
+export const onTerrace = (x: number, z: number, m = 0) => terraceOf(x, z, m) !== null;
+/** The terrace's top under a point (over the lawn's slab), or null off them */
+export function terraceY(x: number, z: number) {
+  const o = terraceOf(x, z);
+  if (!o) return null;
+  for (const [d0, d1, h] of TERRACE_STEPS) if (o.d <= d0 && o.d > d1) return h;
+  return null;
+}
+/** What a terrace covers (its footprint's corners), for keeping benches, lamps and trees off */
+export const nearTerrace = (p: Pt, m = 0) => terraceOf(p[0], p[1], -m) !== null;
+
 /* ---------- Paths and gates ---------- */
 
 export interface ParkPath {
@@ -239,6 +294,30 @@ function smooth(ctrl: Pt[], step = 1.5): Pt[] {
 export const RING_WALK: Pt[] = inset(BIG, RING_IN);
 /** Where the lake loop is nearest a point (for paths that join it) */
 const toLoop = (p: Pt): Pt => lakeAt(Math.atan2(p[1] - LAKE_C[1], p[0] - LAKE_C[0]), LOOP_OUT);
+/** The meadow walk: from the east gate up north-west across the lawns to the Mall, by the garden */
+const MEADOW = smooth([[X1, -128], [-62, -124], [-84, -106], [-102, -84], [-122, -80], [MALL.x + MALL.half - 0.3, -80]]);
+/** The formal garden's cross walk (the north side's stage 3): its line (z), from the ring walk's west side through the garden to the meadow walk */
+export const GARDEN_Z = (GARDEN_SITE[1] + GARDEN_SITE[3]) / 2;
+const MEADOW_X = (() => {
+  // (where the meadow walk crosses the cross walk's line)
+  for (let i = 1; i < MEADOW.length; i++) {
+    const [a, b] = [MEADOW[i - 1], MEADOW[i]];
+    if ((a[1] - GARDEN_Z) * (b[1] - GARDEN_Z) <= 0 && a[1] !== b[1]) return a[0] + ((b[0] - a[0]) * (GARDEN_Z - a[1])) / (b[1] - a[1]);
+  }
+  return GARDEN_SITE[2];
+})();
+
+/** The formal garden's two walks, either side of the Mall: from the ring walk's north side down to the garden's south wall */
+export const GARDEN_XS = [MALL.x - 17, MALL.x + 17];
+/** Where the ring walk crosses a north-south line on its north side (z) */
+const ringNorthZ = (x: number) => {
+  let z = Infinity;
+  for (let i = 0; i < RING_WALK.length; i++) {
+    const [a, b] = [RING_WALK[i], RING_WALK[(i + 1) % RING_WALK.length]];
+    if ((a[0] - x) * (b[0] - x) <= 0 && a[0] !== b[0]) z = Math.min(z, a[1] + ((b[1] - a[1]) * (x - a[0])) / (b[0] - a[0]));
+  }
+  return z;
+};
 
 export const PATHS: ParkPath[] = [
   { id: 'ring', pts: RING_WALK, half: 1.2, loop: true },
@@ -252,7 +331,10 @@ export const PATHS: ParkPath[] = [
   { id: 'lake-e', pts: smooth([[X1, -28], [-50, -30], [-56, -36], toLoop([-58, -40])]), half: 1.1 },
   { id: 'lake-ne', pts: smooth([[X1, -78], [-54, -76], [-62, -70], toLoop([-66, -66])]), half: 1.1 },
   // From the east gate up north-west across the lawns to the Mall, by the garden's site
-  { id: 'meadow', pts: smooth([[X1, -128], [-62, -124], [-84, -106], [-102, -84], [-122, -80], [MALL.x + MALL.half - 0.3, -80]]), half: 1.1 },
+  { id: 'meadow', pts: MEADOW, half: 1.1 },
+  // The garden's cross walk, from the ring walk through the garden (across the Mall) to the meadow walk
+  { id: 'garden-cross', pts: [[X0 + RING_IN, GARDEN_Z], [MEADOW_X, GARDEN_Z]], half: 1.2 },
+  ...GARDEN_XS.map((x, i): ParkPath => ({ id: i ? 'garden-e' : 'garden-w', pts: [[x, ringNorthZ(x)], [x, GARDEN_SITE[3] - 0.5]], half: 1.1 })),
   // The south-west gate up to the ring walk
   { id: 'sw', pts: [[-182, ZS], [-182, ZS - RING_IN]], half: 1.1 },
   // Each strip: one walk down its middle, end to end
@@ -342,7 +424,7 @@ export interface ParkTree {
 
 /** Where a tree may stand: on the park, off the paths, the lake and its loop, the stadium's site and the gates */
 export const treeFree = (p: Pt) =>
-  inPark(p, 1.6) && !onPath(p, 1.4) && !inLake(p[0], p[1], LOOP_OUT + 2.6) && !inRect(GARDEN_SITE, p, 3) && !inRect(BRIDGE_PARK, p, 1.8) && !inRect(BOATHOUSE.rect, p, 2.2) && COURTS.every((c) => !inRect(c.rect, p, 1.6)) && GATES.every((g) => Math.hypot(p[0] - g.at[0], p[1] - g.at[1]) > 4);
+  inPark(p, 1.6) && !onPath(p, 1.4) && !inLake(p[0], p[1], LOOP_OUT + 2.6) && !inRect(GARDEN_SITE, p, 3) && !nearTerrace(p, 1.5) && !inRect(BRIDGE_PARK, p, 1.8) && !inRect(BOATHOUSE.rect, p, 2.2) && COURTS.every((c) => !inRect(c.rect, p, 1.6)) && GATES.every((g) => Math.hypot(p[0] - g.at[0], p[1] - g.at[1]) > 4);
 
 export const PARK_TREES: ParkTree[] = (() => {
   const r = rng(808);
@@ -402,7 +484,8 @@ export const PARK_LAMPS: [number, number, number][] = (() => {
     else along(q, 15, false);
   }
   // Not on another path where paths meet, nor two on top of each other, nor on a court or by the boathouse and its jetty
-  const clear = (l: [number, number, number]) => COURTS.every((c) => !inRect(c.rect, [l[0], l[1]], 0.6)) && !inRect(BOATHOUSE.rect, [l[0], l[1]], 0.8) && !inRect([JETTY.x - JETTY.half, JETTY.z0, JETTY.x + JETTY.half, JETTY.z1], [l[0], l[1]], 1.2);
+  // (and none in the formal garden, which has its own, nor on a terrace)
+  const clear = (l: [number, number, number]) => !inRect(GARDEN_SITE, [l[0], l[1]], 1) && !nearTerrace([l[0], l[1]], 0.6) && COURTS.every((c) => !inRect(c.rect, [l[0], l[1]], 0.6)) && !inRect(BOATHOUSE.rect, [l[0], l[1]], 0.8) && !inRect([JETTY.x - JETTY.half, JETTY.z0, JETTY.x + JETTY.half, JETTY.z1], [l[0], l[1]], 1.2);
   return out.filter((l, i) => clear(l) && !onPath([l[0], l[1]], 0.25) && out.slice(0, i).every((o) => Math.hypot(o[0] - l[0], o[1] - l[1]) > 3));
 })();
 
@@ -419,8 +502,8 @@ export const BENCHES: { at: Pt; ry: number }[] = (() => {
   // Along the Mall, either side, facing across it
   for (let z = ZS - 6; z > GARDEN_SITE[3] + 8; z -= 13.5)
     for (const side of [-1, 1]) out.push({ at: [MALL.x + side * (MALL.half + 0.45), z], ry: side > 0 ? -Math.PI / 2 : Math.PI / 2 });
-  // (none where another path comes in)
-  return out.filter((b) => Math.abs(b.at[0] - JETTY.x) > JETTY.half + 1.6 || b.at[1] > JETTY.z1 + 1 || b.at[1] < JETTY.z0 - 1.5).filter((b) => PATHS.every((q) => q.id === 'loop' || q.id === 'mall' || distToLine(q.pts, b.at, q.loop) > q.half + 0.8));
+  // (none where another path comes in, nor on a terrace)
+  return out.filter((b) => !nearTerrace(b.at, 0.8)).filter((b) => Math.abs(b.at[0] - JETTY.x) > JETTY.half + 1.6 || b.at[1] > JETTY.z1 + 1 || b.at[1] < JETTY.z0 - 1.5).filter((b) => PATHS.every((q) => q.id === 'loop' || q.id === 'mall' || distToLine(q.pts, b.at, q.loop) > q.half + 0.8));
 })();
 
 /** Each gate's two stone piers (x0, z0, x1, z1, height): solid, the path between them */

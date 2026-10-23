@@ -604,15 +604,14 @@ it and has been retired completely. Build only on what's here.
     `COURT_SOLIDS`), each strip's walk eased round its court. Its
     trees and lamps are placed
     at the boot with the town's (`addTree()` / `addLamp()` in index.ts).
-  - `westlake3d.ts` draws the rest as sites: the paths (pale gravel
-    ribbons a stretch a site), the lake's stone rim (in quarters), the
+  - `westlake3d.ts` draws the rest as sites: the paths (a stretch a
+    site: the main walks paved, the rest pale gravel), the lake's stone rim (in quarters), the
     gates (stone piers, caps, lanterns; the Mall's with iron posts, a beam
     and WESTLAKE PARK on a board both ways, one small texture), benches
     (near only); and on the main thread the lake's water (one mesh, the
     river's `waterMat`). It's the first district loaded as you approach
     (`districts.ts`, below). The world map draws its lawns, the lake and
-    its paths; the benchmark has a view over the lake (`park`). The car
-    park's asphalt, bays, ways in and P sign are its sites too.
+    its paths; the benchmark has a view over the lake (`park`).
   - **The park's life** (step 3) is `parklife.ts` (DOM-free, tested in
     `tests/parklife.test.ts`), everyone and everything a function of the
     time: walkers, joggers and dog walkers in lanes (`LANES`: walkers near
@@ -678,8 +677,32 @@ it and has been retired completely. Build only on what's here.
   moving north of the ring highway and Westlake Park's paths, kerbs, low
   walls and gardens, planned in `docs/north-plan.md` in three stages, each
   with the owner's sign-off; keep it up to date. Stage 1 (the stadium
-  north, above) and stage 2 (the kart park north, with its facility, below)
-  are built.
+  north, above), stage 2 (the kart park north, with its facility, below)
+  and stage 3 (the park's walks, walls and gardens) are built:
+  - `gardens.ts` (DOM-free, tested in `tests/gardens.test.ts`): the main
+    walks (`MAIN_WALKS`: the ring walk, the lake loop, the Mall) paved with
+    a raised stone kerb both sides (`KERBS`, `KERB`), the gravel paths with
+    a flush stone edge (`EDGES`), both cut where a path joins, at the
+    jetty, the round places and the terraces; the park's low stone wall
+    (`WALLS`, `WALL`), broken at the gates and the paths; the formal garden
+    on the stadium's old site (`GARDEN_SITE`) in its own wall
+    (`GARDEN_WALLS`): the cross walk and two garden walks (`garden-cross`,
+    `garden-w`, `garden-e` in westlake.ts's `PATHS`), two round places with
+    fountains (`ROUNDS`, `FOUNTAIN`), eight parterres (`PARTERRES`: hedge,
+    gravel border, flower bed, topiary cone), urns (`URNS`), benches
+    (`GARDEN_BENCHES`), lamps and people (`GARDEN_LAMPS`, `GARDEN_PEOPLE`,
+    placed at the boot in index.ts); planters (`MALL_BEDS` along the Mall,
+    round `PLANTERS` at junctions and along the ring walk and the loop);
+    `GARDEN_SOLIDS` (in `SOLIDS`: walls, hedges, fountains, urns,
+    planters). The lakeside terraces are westlake.ts's (`TERRACES`,
+    `TERRACE_STEPS`, `onTerrace()`, `terraceY()`): steps off the loop down
+    to just over the water, walkable (walk.ts, as the jetty), nothing on
+    them solid; the trees, lamps and benches keep off them.
+  - `gardens3d.ts` (the park's chunk, from westlake3d.ts's `register()`)
+    draws them as sites: kerbs, edges and walls a site per tile, the
+    garden one, the planters a site per tile, each terrace one; flowers,
+    benches and lanterns near only. The main walks' paving is
+    westlake3d.ts's (`PAVE_Y`, over the gravel's `PATH_Y`).
 - **Districts loaded as you approach** (performance phase 4, item 10):
   a district's drawing is a module of its own (`LAZY_DISTRICTS` in
   `districts.ts`: an id, its land and `load()`, a dynamic import), a chunk
@@ -2348,7 +2371,7 @@ it and has been retired completely. Build only on what's here.
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`),
-  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`), the kart park's facility (`kartfacility.ts`),
+  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), the kart park's facility (`kartfacility.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,

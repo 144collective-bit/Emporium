@@ -31,6 +31,7 @@ import { fromHighway, insideHighway } from '../src/scripts/city3d/highway';
 import { RIVER, WALK_W } from '../src/scripts/city3d/layout';
 import { SOLIDS } from '../src/scripts/city3d/solids';
 import { STADIUM_SOLIDS } from '../src/scripts/city3d/stadium';
+import { GARDEN_SOLIDS } from '../src/scripts/city3d/gardens';
 import { PADS } from '../src/scripts/city3d/outer';
 import { inTown } from '../src/scripts/city3d/outer';
 import { inTrenches } from '../src/scripts/city3d/trenches';
@@ -72,8 +73,9 @@ test('its blocks are the street plan\'s, and no other block or pad is on them', 
   for (const b of WESTLAKE_BLOCKS)
     for (const p of b.poly) for (const o of others) assert.ok(!inPoly(o.poly, p), `${b.id}'s corner ${p} in ${o.id}`);
   for (const pad of PADS) assert.ok(!inPark([(pad.rect[0] + pad.rect[2]) / 2, (pad.rect[1] + pad.rect[3]) / 2]), `${pad.id} on the park`);
-  // What was solid there before (nothing): the park's land is open (but its own gates and the stadium, stadium.ts)
-  const before = SOLIDS.filter((s) => !WESTLAKE_SOLIDS.includes(s as never) && !STADIUM_SOLIDS.includes(s));
+  // What was solid there before (nothing): the park's land is open (but its own gates, the stadium (stadium.ts) and its
+  // walls, garden and planters (gardens.ts, gardens.test.ts))
+  const before = SOLIDS.filter((s) => !WESTLAKE_SOLIDS.includes(s as never) && !STADIUM_SOLIDS.includes(s) && !GARDEN_SOLIDS.includes(s));
   for (const s of before) assert.ok(!inPark([(s[0] + s[2]) / 2, (s[1] + s[3]) / 2]), `a solid on the park at ${s}`);
   const [x0, z0, x1, z1] = WESTLAKE_RECT;
   for (const b of WESTLAKE_BLOCKS) for (const p of b.poly) assert.ok(p[0] >= x0 && p[0] <= x1 && p[1] >= z0 && p[1] <= z1);
@@ -93,7 +95,7 @@ test('the lake: inside the big block, its loop round it on the park, its walls c
   for (const w of LAKE_WALLS) assert.ok(!RIVER_WALLS.some((r) => r[1] < w[3] && r[3] > w[1] && r[0] < w[2] && r[2] > w[0]));
 });
 
-test('the paths: on the park, off the lake and the garden\'s site (but the Mall through it), each gate on one', () => {
+test('the paths: on the park, off the lake and the garden\'s site (but the Mall and the garden\'s own walks through it), each gate on one', () => {
   for (const q of PATHS) {
     const pts = q.loop ? [...q.pts, q.pts[0]] : q.pts;
     for (let i = 1; i < pts.length; i++)
@@ -101,7 +103,7 @@ test('the paths: on the park, off the lake and the garden\'s site (but the Mall 
         assert.ok(inPark(p, -0.01), `${q.id} on the park at ${p}`);
         assert.ok(!inLake(p[0], p[1], q.half + 0.5), `${q.id} in the lake at ${p}`);
         const [x0, z0, x1, z1] = GARDEN_SITE;
-        if (q.id !== 'mall') assert.ok(!(p[0] > x0 && p[0] < x1 && p[1] > z0 && p[1] < z1), `${q.id} on the garden's site at ${p}`);
+        if (q.id !== 'mall' && !q.id.startsWith('garden-')) assert.ok(!(p[0] > x0 && p[0] < x1 && p[1] > z0 && p[1] < z1), `${q.id} on the garden's site at ${p}`);
       }
   }
   for (const g of GATES) assert.ok(onPath(g.at), `${g.id} on a path`);

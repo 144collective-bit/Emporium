@@ -75,6 +75,31 @@ gardens. Built in stages, each a PR for the owner's sign-off.
    `karts`), and the hut's menu and the race are a chunk loaded near the
    park (`kartgame.ts`): the boot's code went from 638.5 to 628.9 KB of
    640 with the facility added.
-3. **The park:** paved main walks with stone kerbs, edged gravel paths,
-   the formal garden on the stadium's old site, flower beds, the low wall
-   round the park, the lakeside terraces.
+3. **The park** (built): `gardens.ts` (DOM-free, tested in
+   `tests/gardens.test.ts`), drawn by `gardens3d.ts` in the park's chunk.
+   The main walks (`MAIN_WALKS`: the ring walk, the lake loop, the Mall)
+   are paved, a stone kerb along both sides (`KERBS`, `KERB`), cut where
+   another path joins, at the jetty, the round places and the terraces;
+   the gravel paths keep a flush stone edge (`EDGES`). A low stone wall
+   with a coping runs round the park and the strips (`WALLS`, `WALL`),
+   broken at the gates and wherever a path goes through. The formal
+   garden fills the stadium's old site (`GARDEN_SITE`) inside its own
+   low wall (`GARDEN_WALLS`, open at the Mall, the cross walk and the
+   garden walks): a cross walk (`garden-cross`) and two garden walks
+   (`garden-w`, `garden-e`) from the ring walk, two round gravel places
+   on the cross walk with a fountain in each (`ROUNDS`, `FOUNTAIN`),
+   eight parterres (`PARTERRES`: a clipped hedge open towards a walk, a
+   gravel border, a bed of flowers in bands, a topiary cone), urns on
+   plinths at the corners (`URNS`), benches round the places and along
+   the Mall (`GARDEN_BENCHES`), lamps and a few people. Flower beds in
+   low stone-walled planters: oblongs along the Mall between its trees
+   (`MALL_BEDS`), round ones in pairs at the main walks' junctions and
+   along the ring walk and the loop (`PLANTERS`). Three lakeside terraces
+   (`TERRACES`, `TERRACE_STEPS` in westlake.ts) step down off the loop to
+   just over the water, a platform with low walls and lantern posts at
+   the water: walkable (`onTerrace()`, `terraceY()` in walk.ts, as the
+   jetty), nothing on them solid, the boats' rings and the jetty clear of
+   them. `GARDEN_SOLIDS` (in `SOLIDS`): the walls, hedges, fountains,
+   urns and planters. Kerbs, edges and walls are a site per tile, the
+   garden a site, the planters a site per tile, each terrace a site;
+   flowers, benches and lanterns near only.
