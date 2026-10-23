@@ -37,6 +37,12 @@ export interface Take {
    * 60 (played at 120 he walks at 3.3 steps a second and runs at 6)
    */
   fps?: number;
+  /**
+   * How much lower the take stands than its floor finds it (rig numbers):
+   * where the capture's planted feet sit a little high over the ankles'
+   * low point (subject 136's), so the feet are found on the ground
+   */
+  sink?: number;
 }
 
 const UP = new THREE.Vector3(0, 1, 0);
@@ -150,7 +156,7 @@ export function retarget(b: Bvh, take: Take): MoClip {
     }
     hipsR.push(G[0].clone());
     const mid = p.pos[ul[0]].clone().add(p.pos[ul[1]]).multiplyScalar(0.5);
-    hipsW.push(new THREE.Vector3(mid.x * k, (mid.y - floor) * k + ANKLE_H, mid.z * k));
+    hipsW.push(new THREE.Vector3(mid.x * k, (mid.y - floor) * k + ANKLE_H - (take.sink ?? 0), mid.z * k));
   }
   // The root: the hips on the ground, smoothed; facing where the hips face, smoothed more
   const sig = (s: number) => s * MOCAP_FPS;

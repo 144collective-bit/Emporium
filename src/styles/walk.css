@@ -38,7 +38,8 @@
 }
 .walk-stick,
 .walk-jump,
-.walk-run {
+.walk-run,
+.walk-crouch {
   display: none;
 }
 /* Walk mode's tabs in the mode header: Controls, Profile, Online, Emote. Panels drop down under them. */
@@ -136,7 +137,8 @@
   accent-color: var(--p-cyan);
 }
 .walk-fp,
-.walk-run {
+.walk-run,
+.walk-crouch {
   border: 1px solid #0000;
   background:
     linear-gradient(#0b0a12e0, #0b0a12e0) padding-box,
@@ -231,7 +233,8 @@
   border-radius: 999px;
 }
 .walk-fp[aria-pressed="true"],
-.walk-run[aria-pressed="true"] {
+.walk-run[aria-pressed="true"],
+.walk-crouch[aria-pressed="true"] {
   background:
     var(--pulse-wash) padding-box,
     linear-gradient(#14102a, #14102a) padding-box,
@@ -720,6 +723,20 @@
     font-size: 10px;
     touch-action: manipulation;
   }
+  /* Crouch (a slide when sprinting): over the stick, clear of the right-hand cluster armed or not */
+  .walk-crouch {
+    position: absolute;
+    left: 56px;
+    bottom: 160px;
+    z-index: 4;
+    display: grid;
+    place-items: center;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    font-size: 9px;
+    touch-action: manipulation;
+  }
   .walk-stick {
     position: absolute;
     left: 22px;
@@ -759,8 +776,9 @@
     color: #fff;
     touch-action: manipulation;
   }
+  /* (over the Crouch button on the left and Sprint on the right) */
   .walk-prompt {
-    bottom: 170px;
+    bottom: 222px;
   }
   /* Geared up, the right-hand buttons stand taller: the door prompt goes above them */
   .city.is-armed .walk-prompt {
@@ -769,6 +787,7 @@
 }
 /* Phones on their side: the buttons sit far right, so the door prompt can stay low */
 @media (pointer: coarse) and (max-height: 500px) {
+  .walk-prompt,
   .city.is-armed .walk-prompt {
     bottom: 150px;
   }
@@ -779,6 +798,10 @@
     left: 14px;
     width: 108px;
     height: 108px;
+  }
+  .walk-crouch {
+    left: 42px;
+    bottom: 146px;
   }
   .walk-stick span {
     width: 46px;
@@ -1839,6 +1862,7 @@
 .city.is-driving .walk-hint:not(.drive-hint),
 .city.is-driving .walk-look,
 .city.is-driving .walk-run,
+.city.is-driving .walk-crouch,
 .city.is-driving .walk-jump,
 .city.is-driving .walk-fire,
 .city.is-driving .walk-aim,
