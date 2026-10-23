@@ -937,7 +937,8 @@ it and has been retired completely. Build only on what's here.
   (`[data-dorras]`, painted by `tycoon-ui.ts`, a green dot when the stall's
   till has takings); it opens your business card. Beside it the level pill
   (`[data-level]`, `missions-ui.ts`: level, XP bar, title). Their cards drop down under them (`.head-panel`, one open at a
-  time, with a `.pop-head` ×), spanning the width on phones. Tablets show
+  time, with a `.pop-head` ×), spanning the width on phones, never taller
+  than the screen under the header (they scroll inside). Tablets show
   Settings and Menu as icons; phones put logo, title, ⚙ and ☰ on the first
   row and the switch, with names, across the second (walking: title and
   switch, then the walk tabs, ammo and score). Its live height is

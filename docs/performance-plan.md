@@ -19,7 +19,7 @@ in JavaScript are the real thing.
 | **Each frame** | Little JavaScript (the main thread is mostly idle); the GPU is the limit | 150-450 draw calls, the scene drawn twice (the outline pre-pass, then colour), bloom, 0.25M triangles |
 | **Memory** | Textures 117-135 MB, geometry 76 MB, 143 shader programs | Phones can run out of GPU memory and reload the page; every shader program is compiled once, a stutter each |
 
-## Fix phase 1 (done, this PR)
+## Fix phase 1 (done)
 
 - **Building faster.** The start menu covers the city completely, so behind
   it the city isn't drawn (once a second, to get its shaders ready) and the
@@ -51,6 +51,25 @@ Measured on the phone tier, the old build and the new one back to back:
 | The camera route through every view | 4.1 fps, 235 draws | **4.6 fps, 194 draws** |
 | The traffic's routes worked out | 745 ms | **356 ms** |
 | Downtown, the square, The Trenches, the airport | unchanged (within a few percent) | |
+
+## Fix phase 2 (done): every flow at every width
+
+Every flow played in the real build at 320, 375, 768, 1024 and 1440 wide and
+a phone on its side, with a busy save: every place's panel, the header's
+cards, the world map, Build mode, the 2D map; walking, the gun store, the
+metro and taxis; driving, flying, a kart race, a spar, the fitting room and
+the character screen. Checked for sideways scroll, buttons off screen or
+clipped, buttons covering each other, and errors. Fixed:
+
+- The header's cards (☰ Menu, ⚙ Settings, Dorras, level) are never taller
+  than the screen; on phones the Menu's last links were out of reach.
+- The fast-travel toast waits for a menu, panel or the metro's card to
+  close instead of landing on its header.
+- The gun store's header on phones: title and × always on the first row.
+- A place's panel sliding in no longer widens the page by 8 px.
+
+No page errors anywhere. Left as they are: an open bottom sheet covers the
+walk buttons under it (on purpose).
 
 ## What else can be done
 
