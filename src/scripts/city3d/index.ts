@@ -7,7 +7,9 @@ import * as THREE from 'three';
 import { MapControls } from 'three/addons/controls/MapControls.js';
 import { BAKING_TEXTURES, builtTexturesDone, consolidate, loadBuiltTextures, loadImage, loadTex, updateLights } from './kit';
 import { createPost } from './post';
-import { CENTER, buildGround, buildLamps, buildSkyline, buildTrees, placed as everyPlaced, puddleMat, keepTreesOff, scatterOutskirts, waterMat, type Env, type Tick } from './world';
+import { CENTER, addLamp, addTree, buildGround, buildLamps, buildSkyline, buildTrees, placed as everyPlaced, puddleMat, keepTreesOff, scatterOutskirts, waterMat, type Env, type Tick } from './world';
+import { PARK_LAMPS, PARK_TREES, WESTLAKE_RECT } from './westlake';
+import { createDistricts } from './districts';
 import { buildLandmarks, type Spot } from './landmarks';
 import { buildInfill } from './infill';
 import { buildNeighbourhoods } from './neighbourhoods';
@@ -205,6 +207,12 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   spots.push(...buildAvenue(scene, crowd, { tick, reduced, low: tier === 'low' }).spots);
   // ...and the metro's el where it crosses the open land south of the south row: no trees under it
   keepTreesOff([-10, 125, 56, 135]);
+  // Westlake Park (growth plan Phase 9b): its land is the street plan's; its trees and lamps stand with the town's
+  // (from its data: phones leave out every other tree of its lawns' clumps, the trim); the rest of it is a chunk
+  // of its own, loaded as you approach (districts.ts)
+  keepTreesOff(WESTLAKE_RECT);
+  PARK_TREES.forEach((t, i) => !(tier === 'low' && t.clump && i % 2) && addTree(t.x, t.z, t.s, t.pine));
+  for (const [x, z, ry] of PARK_LAMPS) addLamp(x, z, ry);
   progress(0.55);
   await waited(nextFrame());
   // (phones keep half of them: the trim)
@@ -302,13 +310,16 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // the airport and the kart park) merged per tile: one draw per material, only the tiles in view drawn
   // Building as you go (growth plan Phase 3): of the sites (the fixed city drawn from data: trees, lamps, the
   // airport's grounds, the kart park's circuit), only those in the home view and the intro's are built now
+  // Most sites built off the main thread (performance phase 4): in the built site, unless ?worker=0
+  const siteWorker = import.meta.env.PROD && new URLSearchParams(location.search).get('worker') !== '0' ? startSiteWorker(import.meta.url, { low: tier === 'low', placed: everyPlaced() }) : null;
   const works = createTileWork(scene, {
     budget: (Number(new URLSearchParams(location.search).get('budget')) || Q.nearBudget) * 2 ** 20,
     compile: (meshes) => meshes.forEach((m) => compileFor(m)),
-    // Most sites built off the main thread (performance phase 4): in the built site, unless ?worker=0
-    worker: import.meta.env.PROD && new URLSearchParams(location.search).get('worker') !== '0' ? startSiteWorker(import.meta.url, { low: tier === 'low', placed: everyPlaced() }) : null,
+    worker: siteWorker,
     meshesOf,
   });
+  // Districts loaded as you approach (performance phase 4, item 10): their drawing a chunk of its own each
+  const districts = createDistricts({ scene, low: tier === 'low', worker: siteWorker, adopt: () => works.adopt() });
   const atBoot = works.boot([...new Set([...viewTiles(h0.pos, h0.target), ...viewTiles(introFrom(h0), h0.target)].map((t) => t.join()))].map((k) => k.split(',').map(Number) as [number, number]));
   const tiled = tileBatch(scene, [scene, ...['airport', 'kartpark'].flatMap((n) => scene.getObjectByName(n) ?? []), ...atBoot]);
   for (const g of atBoot) g.removeFromParent();
@@ -992,9 +1003,23 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const viewSpot: [number, number] = [0, 0];
   /** When the city was last drawn behind the start menu */
   let coveredAt = -Infinity;
+  /**
+   * What was built shows: under reduced motion the city is only drawn again when something changes, so new pieces
+   * ask for a frame (at most once a second: building goes on between)
+   */
+  let builtDrawn = 0;
+  const builtShows = () => {
+    const now = performance.now();
+    if (now - builtDrawn < 1000) return;
+    builtDrawn = now;
+    dirty = true;
+  };
   /** A frame that draws nothing (a high refresh rate's in-between frames, a phone resting at 30fps): `ms` for building what's waiting */
   const spare = (ms: number) => {
-    if (works.pending() && !bench?.active) works.step(ms, CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, CROWD_VIEW.eye.z, 0, Q.far, walking ? undefined : viewSpot);
+    if (!works.pending() || bench?.active) return;
+    const was = works.pending();
+    works.step(ms, CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, CROWD_VIEW.eye.z, 0, Q.far, walking ? undefined : viewSpot);
+    if (works.pending() !== was) builtShows();
   };
   function frame(now: number) {
     if (!running) return;
@@ -1009,7 +1034,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     timer.update();
     const t = timer.getElapsed();
     // The benchmark starts once the start menu has gone, the city is showing and every site is built (growth plan Phase 3)
-    if (bench && !bench.active && !bench.done && !walking && !root.classList.contains('has-start') && !works.stats().waiting) bench.begin(t);
+    if (bench && !bench.active && !bench.done && !walking && !root.classList.contains('has-start') && !works.stats().waiting && !districts.pending()) bench.begin(t);
     const busy = !!flight || walking || t - lastInput < 1 || !!bench?.active;
     // (a phone resting at 30fps: the frames in between draw nothing, so they build what's waiting)
     if (idleFps && !busy && t - lastT < 1 / idleFps - 0.004) return spare(6);
@@ -1076,10 +1101,15 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     const covered = root.classList.contains('has-start');
     viewSpot[0] = CROWD_VIEW.focus.x;
     viewSpot[1] = CROWD_VIEW.focus.z;
+    // A district within reach of what's looked at (or of Degen) is loaded (the benchmark loads them all)
+    if (bench) districts.all();
+    districts.step(walking ? walk.position.x : viewSpot[0], walking ? walk.position.z : viewSpot[1], Q.far);
     // (a share of the time since the last frame, not a fixed slice: a slow phone draws few frames, and while its
     // GPU draws the next one its CPU is free; at 60fps that's the 2-3 ms it always was)
     const share = Math.min(10, Math.max(tier === 'low' ? 2 : 3, gap * 1000 * 0.15));
+    const waiting = works.pending();
     works.step(covered ? 24 : bench && !bench.active && !bench.done ? 12 : share, CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, CROWD_VIEW.eye.z, dt, Q.far, walking ? undefined : viewSpot);
+    if (works.pending() !== waiting) builtShows();
     // Near and far forms (growth plan Phase 2): the details only within the tier's `far` of the camera
     tiled.update(CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, CROWD_VIEW.eye.z, Q.far);
     updateLods(CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, CROWD_VIEW.eye.z, Q.far);
@@ -1205,7 +1235,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           stat.mem,
           `tiles ${tiled.drawn()} of ${tiled.pieces()} pieces drawn · ${tiled.nearTiles()} near · ${farLods()} far forms`,
           `boot ${(b.total / 1000).toFixed(1)} s · build ${(b.build / 1000).toFixed(1)} (work ${(b.work / 1000).toFixed(2)}, tiles ${(b.tiles / 1000).toFixed(2)}) · shaders ${(b.shaders / 1000).toFixed(1)}`,
-          (({ built, waiting, atBoot, bootMs, laterMs, slowest, offMain }) => `sites ${built} built: ${atBoot} at boot (${Math.round(bootMs)} ms), the rest after (${Math.round(laterMs)} ms here, ${offMain} of them off the main thread; slowest ${Math.round(slowest.ms)} ms: ${slowest.id}) · ${waiting} waiting`)(works.stats()),
+          (({ built, waiting, atBoot, bootMs, laterMs, slowest, offMain }) => `sites ${built} built: ${atBoot} at boot (${Math.round(bootMs)} ms), the rest after (${Math.round(laterMs)} ms here, ${offMain} of them off the main thread; slowest ${Math.round(slowest.ms)} ms: ${slowest.id}) · ${waiting} waiting · districts loaded: ${districts.loaded().join(', ') || 'none'}`)(works.stats()),
           (({ released, held, budget, rebuilt }) => `near forms ${mb(held)} held of ${mb(budget)} · ${released} tiles let go · ${rebuilt} built again`)(works.stats()),
           `${tier} · px ${renderer.getPixelRatio().toFixed(2)}${lost.length ? ` · lowered: ${lost.join(', ')}` : ''}`,
           // Where Degen stands while walking (for placing things: ?spawn=x,z puts him back there)

@@ -1201,6 +1201,50 @@ the el; lighter on phones). Three steps, each its own PR:
   (75), textures 135 MB (122: the tenements' and the places' signs);
   every site under about 30 ms.
 
+### 9b Westlake Park (the owner's call; step 1 built)
+
+The second district: a park, with a stadium as its big attraction. The
+owner's answers:
+
+- **Where:** west of town, north of the river: the open land between the
+  ring highway and the Parkway, from the highway's north side (round its
+  north-west bend) down to the west ring avenue, and the three strips
+  between the avenues that run west from town to the highway, down to the
+  river avenue (about 160 x 230 tiles).
+- **The attraction:** a stadium (the owner's pick over a fairground),
+  across the lawns from the lake.
+- **For sale:** nothing for now, scenery only (lots can come in a later
+  step, as The Trenches' corner shops did).
+- **Names:** made up: Westlake Park; the stadium's comes with step 2. The
+  owner can change any.
+
+In three steps, each a PR for the owner's sign-off:
+
+1. **The land, the lake and the paths** (built): `westlake.ts` (DOM-free,
+   tested in `tests/westlake.test.ts`): the big block (`BIG`, clear of the
+   highway and its slip lanes, its sidewalk alongside the Parkway's) and
+   the strips (`STRIPS`) join the street plan as parks; the lake
+   (`LAKE_C`, `lakeR()`, `inLake()`: walkers stop at its rim, cars at
+   `LAKE_WALLS`); the paths (`PATHS`: the ring walk round the big block,
+   the loop round the lake, the Mall from the south gate to the stadium's
+   site, the ways in from seven gates, a walk down each strip); the gates
+   (`GATES`, two stone piers each, solid; the Mall's carries the park's
+   name both ways); about 430 trees (an avenue either side of the Mall,
+   rows along the strips, clumps and glades on the lawns from a seeded
+   noise, pines towards the highway; phones leave out half the clumps),
+   about 100 lamps along the paths and benches round the lake and along the
+   Mall; `STADIUM_SITE` kept clear. Drawn by `westlake3d.ts`, the first
+   district loaded as you approach (performance plan item 10,
+   `districts.ts`). On the world map: its lawns, the lake and the paths.
+   A benchmark view over the lake.
+2. **The stadium:** the bowl and its stands, floodlights, the forecourt
+   and its approach from the avenue (a road and a car park), the place
+   (pin, panel: events coming soon, Walk in), its sound.
+3. **The park's life:** boats on the lake and a boathouse, people
+   (joggers, picnics, dog walkers), sports on the strips, the park's own
+   sound (birds, the water), and perhaps a riverside walk along the river
+   avenue.
+
 The open land inside the new edge is room for several districts. Each one
 is its own PR and the owner's call, built from Phase 4's kits. For
 example:
@@ -1214,8 +1258,7 @@ example:
 - **9c Suburbs**, north and west: low houses with gardens, quieter
   streets, a school, a mall and a little main street. There's more land
   per building, so it's cheaper per tile.
-- **9d A park district:** a big green with a lake, paths and boats on the
-  lake. Optionally a stadium or a fairground (the owner's pick).
+- **9d A park district:** built as 9b, Westlake Park (above).
 
 Every district comes with the same set of things:
 
