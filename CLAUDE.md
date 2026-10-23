@@ -197,8 +197,8 @@ it and has been retired completely. Build only on what's here.
   - The sky dome and stars travel with the camera at `SKY_RADIUS` (`bounds.ts`: far enough that the skyline's far side stands in front of it seen from downtown, about 720 today, never under 400), inside its far plane (`CAMERA_FAR`, 40 further), so everything in the world stays in front of the sky and the skyline stays on the horizon however far out the edge is.
   - City view pans round the built-up area (`bounds.ts`: `BUILT_UP` is the town, the airport and the kart park; `PAN_BOUNDS` reaches `PAN_MARGIN` (160) past it, never closer than 10 to where you can walk: today that's the whole world), and the Build overview frames the plots (`overviewFrame()`).
   - **The edge is data** (growth plan Phase 5): `EXT` is set in one place, and a test run can set another (`WORLD_EXT=x0,x1`, `npm run test:wide` at Phase 10's -680 to 720); both must pass. Nothing that exists reads the edge: the airport's `SITE` is fixed numbers, the river walls and their bridge gaps come from the street plan (`riverCrossings()` in `streetplan.ts`), flying turns back at whatever bounds it's given. Anything new written against the edge must work at both sizes.
-  - **Growing the city** (many more buildings, then a bigger world) is planned in `docs/growth-plan.md`. Part A (Phases 0-4) makes size cheap: the measuring kit and a snapshot test that nothing moves, tiles and a collision grid, near and far building forms, building as you go, building kits. Part B (Phases 5-10) grows the world: the edge as data (the airport's site frozen, trees per tile), `EXT` out to about 880 across, roads to reach it (a ring highway, more bridges, traffic spent near you), getting about (a world map, waypoints, and the owner's pick of metro, taxis or fast travel), districts one at a time, then optionally about 1,400 across. Phases 0 (the measuring kit), 1 (tiles, the collision grid, the city's fixed geometry merged per tile, crowds and traffic culled for the shadow map), 2 (near and far forms: details near only, far forms for the places and the cars) 3 (building as you go: sites built round the home view at the boot and the rest after it, near forms let go past a budget), 4 (building kits: kits, recipes for blocks, a test district behind `?district=test`), 5 (the edge as data: `EXT` in one place, tests at both sizes) 6 (the edge moves out: `EXT` -420 to 460, the woods, the far plane and sky dome from the edge) 7 (roads to reach it: the ring highway, its bridges and slip lanes, routes generated from the street plan, traffic and boats spent near you) and 8 (getting about: the world map, waypoints, Bring my car, taxis, fast travel, the metro, sound by district) are built, and Phase 9's first district, **The Trenches**, is built (below); follow the rest one phase at a time with the owner's sign-off, and never add buildings in bulk outside the tiles (`tileBatch()`) or outside sites (`site()`).
-  - **Solid and fast first** (the owner's call): fixes and performance are planned in `docs/performance-plan.md` (where the time goes, what each phase measured, what's next); keep it up to date. Fix phase 1 (phones: the city builds behind the start menu and in spare frames, the outline pre-pass only as far as outlines reach, big textures at half size on phones), fix phase 2 (bugs and broken flows at every width), the trim, fix phase 3 (the code clean-up, the type check in the build) performance phase 2 (data baked at build time, the 2D map held back, features loaded when used, a service worker, the phones' lighter glow, budgets in the build) performance phase 3 (the crowd in a few meshes, shaders compiled once for the right target; far-district impostors measured and left until the districts grow) and most of performance phase 4, the foundations (sites built off the main thread, textures made at build time) are built; districts loaded as you approach comes with the next district (the owner's call; the plan is in `docs/performance-plan.md`). On phones only, a softer neon glow and simpler far districts are allowed; desktop stays as it is.
+  - **Growing the city** (many more buildings, then a bigger world) is planned in `docs/growth-plan.md`. Part A (Phases 0-4) makes size cheap: the measuring kit and a snapshot test that nothing moves, tiles and a collision grid, near and far building forms, building as you go, building kits. Part B (Phases 5-10) grows the world: the edge as data (the airport's site frozen, trees per tile), `EXT` out to about 880 across, roads to reach it (a ring highway, more bridges, traffic spent near you), getting about (a world map, waypoints, and the owner's pick of metro, taxis or fast travel), districts one at a time, then optionally about 1,400 across. Phases 0 (the measuring kit), 1 (tiles, the collision grid, the city's fixed geometry merged per tile, crowds and traffic culled for the shadow map), 2 (near and far forms: details near only, far forms for the places and the cars) 3 (building as you go: sites built round the home view at the boot and the rest after it, near forms let go past a budget), 4 (building kits: kits, recipes for blocks, a test district behind `?district=test`), 5 (the edge as data: `EXT` in one place, tests at both sizes) 6 (the edge moves out: `EXT` -420 to 460, the woods, the far plane and sky dome from the edge) 7 (roads to reach it: the ring highway, its bridges and slip lanes, routes generated from the street plan, traffic and boats spent near you) and 8 (getting about: the world map, waypoints, Bring my car, taxis, fast travel, the metro, sound by district) are built, and Phase 9's first district, **The Trenches**, is built, and the second, **Westlake Park**, is under way (below); follow the rest one phase at a time with the owner's sign-off, and never add buildings in bulk outside the tiles (`tileBatch()`) or outside sites (`site()`).
+  - **Solid and fast first** (the owner's call): fixes and performance are planned in `docs/performance-plan.md` (where the time goes, what each phase measured, what's next); keep it up to date. Fix phase 1 (phones: the city builds behind the start menu and in spare frames, the outline pre-pass only as far as outlines reach, big textures at half size on phones), fix phase 2 (bugs and broken flows at every width), the trim, fix phase 3 (the code clean-up, the type check in the build) performance phase 2 (data baked at build time, the 2D map held back, features loaded when used, a service worker, the phones' lighter glow, budgets in the build) performance phase 3 (the crowd in a few meshes, shaders compiled once for the right target; far-district impostors measured and left until the districts grow) and performance phase 4, the foundations (sites built off the main thread, textures made at build time, and districts loaded as you approach, built with Westlake Park) are built. On phones only, a softer neon glow and simpler far districts are allowed; desktop stays as it is.
 - **Getting about** (growth plan Phase 8; the owner picked taxis, fast
   travel and the metro):
   - **Places** are `places.ts` (DOM-free, tested in `tests/travel.test.ts`):
@@ -498,6 +498,51 @@ it and has been retired completely. Build only on what's here.
     garden, tables, string lights over it all, lamps, trees, and its
     people (a game on the court, benches, tables, groups chatting,
     handball).
+- **Westlake Park** (growth plan Phase 9b, the owner's call: a park
+  district with a stadium as its attraction, scenery only for now) on the
+  land west of town, north of the river, between the ring highway and the
+  Parkway. Built in steps, each with the owner's sign-off: (1) the land,
+  the lake and the paths (built); (2) the stadium; (3) the park's life
+  (boats, a boathouse, people, sports on the strips, its sound).
+  - `westlake.ts` (DOM-free, tested in `tests/westlake.test.ts`): the big
+    block (`BIG`: `X0` clear of the highway's slip lanes, `X1` its
+    sidewalk alongside the Parkway's, `Z0` the highway's north side round
+    its north-west bend, `ZS` the west ring avenue) and the strips between
+    the avenues west of town (`STRIPS`), `WESTLAKE_BLOCKS` in the street
+    plan as parks, `WESTLAKE_RECT` (the outskirts' trees keep off it);
+    the lake (`LAKE_C`, `lakeR()`, `lakeAt()`, `lakeLine()`, `inLake()`:
+    walk.ts stops you on the lawn at its rim (`RIM`), cars stop at
+    `LAKE_WALLS`, which drive-sim.ts adds near it); the paths (`PATHS`:
+    `ring` round the big block, `loop` round the lake (`LOOP_OUT`), the
+    Mall (`MALL`) from the south gate to the stadium's forecourt, the ways
+    in from `GATES`, a walk down each strip; `onPath()`); the gates' piers
+    (`GATE_PIERS`, `WESTLAKE_SOLIDS` in `SOLIDS`); `PARK_TREES` (the Mall's
+    avenue, the strips' rows, clumps from a seeded noise; `clump` ones,
+    every other, left out on phones), `PARK_LAMPS` and `BENCHES`;
+    `STADIUM_SITE` kept clear for step 2. Its trees and lamps are placed
+    at the boot with the town's (`addTree()` / `addLamp()` in index.ts).
+  - `westlake3d.ts` draws the rest as sites: the paths (pale gravel
+    ribbons a stretch a site), the lake's stone rim (in quarters), the
+    gates (stone piers, caps, lanterns; the Mall's with iron posts, a beam
+    and WESTLAKE PARK on a board both ways, one small texture), benches
+    (near only); and on the main thread the lake's water (one mesh, the
+    river's `waterMat`). It's the first district loaded as you approach
+    (`districts.ts`, below). The world map draws its lawns, the lake and
+    its paths; the benchmark has a view over the lake (`park`).
+- **Districts loaded as you approach** (performance phase 4, item 10):
+  a district's drawing is a module of its own (`LAZY_DISTRICTS` in
+  `districts.ts`: an id, its land and `load()`, a dynamic import), a chunk
+  the boot never downloads. `createDistricts()` loads it when what the
+  camera looks at (or Degen, walking) comes within the tier's `far` and
+  `LEAD` of its land; its `register({ low, scene })` registers its sites
+  (and, given the scene, anything the main thread draws itself), the site
+  worker loads the same module from its `SELF` (`import.meta.url`) and
+  registers them there (`SiteWorker.load()`), and then `works.adopt()`
+  queues them. Everything else about a district (its blocks and streets
+  in the street plan, its solids, where its trees and lamps stand, its
+  places) is DOM-free data in the boot, so nothing waits on the chunk.
+  `?bench` loads every district before it starts. A new district comes
+  the same way.
 - **Cars** are `src/scripts/city3d/cars.ts`: real-proportion cartoon models
   (City Hatch, Cruiser, Street GT coupe, Hauler pickup, Box Van, City Bus;
   made-up names, never a real make or badge), each a bevelled extruded
@@ -515,7 +560,9 @@ it and has been retired completely. Build only on what's here.
   scale with Degen (a hatch's roof is about 0.95 tiles up).
 - Keep the city's motion optional: under `prefers-reduced-motion` the 3D
   city stands still (no fly-in, no traffic), CSS animations stop and the 2D
-  map's SMIL traffic is paused. Sound is always off until the visitor
+  map's SMIL traffic is paused. It's drawn only when something changes
+  (`dirty` in index.ts): what's built as you go asks for a frame at most
+  once a second (`builtShows()`). Sound is always off until the visitor
   turns it on.
 - Keep phones light: `src/scripts/city3d/index.ts` picks a quality tier
   (fewer cars and people, no shadows, smaller bloom on phones), runs phones
@@ -636,7 +683,12 @@ it and has been retired completely. Build only on what's here.
   `rowPlane()` in `market.ts`; the Emporium's LED wall is one mesh with one
   occluder).
   Flat things are flat: the lane markings are two-triangle planes, tree
-  trunks open-ended (triangles count too).
+  trunks open-ended (triangles count too). `tileBatch()` files each
+  triangle under the tile its middle is in, so nothing fixed may have a
+  triangle much longer than a tile (it would go with that tile when it's
+  out of view): world.ts draws a block bigger than a tile a piece per tile
+  (`tiled()`, `tiledSlab()`: the lot as its top, the sidewalk a `ring()`
+  laid on it), and long things go in stretches.
   `consolidate()` merges each landmark's Batch meshes per material after the
   city is built (not for the units, lots and plots, which rebuild theirs).
   Everything else fixed (the Batches built straight onto the scene, and the
@@ -1957,7 +2009,7 @@ it and has been retired completely. Build only on what's here.
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`),
-  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`),
+  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`), Westlake Park (`westlake.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,

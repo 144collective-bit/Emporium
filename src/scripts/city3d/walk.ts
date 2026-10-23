@@ -55,7 +55,7 @@ import { BoxGrid } from './boxgrid';
 import { count } from './tycoon';
 import { NS_ROADS, RIVER, SLAB, WALK_W, type Tick } from './world';
 import { footbridgeWall, footbridgeY } from './liberty';
-import { inLake } from './westlake';
+import { RIM, inLake } from './westlake';
 import { WORLD_BOUNDS } from './layout';
 import { PLAN, inPoly, type Pt } from './streetplan';
 import { SPOTS, pointOn, ROUTES } from './routes';
@@ -292,8 +292,8 @@ export function createWalk(d: WalkDeps) {
     if (footbridgeY(x, z, y, RADIUS) !== null) return false;
     if (footbridgeWall(x, z, y, RADIUS)) return true;
     if (z > RIVER[0] - 0.3 && z < RIVER[1] + 0.3 && !onBridge(x)) return true;
-    // Westlake Park's lake (westlake.ts): its stone rim is as far as you go
-    if (inLake(x, z, RADIUS)) return true;
+    // Westlake Park's lake (westlake.ts): you stop on the lawn at its stone rim
+    if (inLake(x, z, RADIUS + RIM.w + 0.1)) return true;
     if (SOLID_GRID.near(x, z, RADIUS, nearBoxes).some((b) => inBox(b, x, z, RADIUS))) return true;
     if (drive.blocks(x, z, RADIUS) || fly.blocks(x, z, RADIUS)) return true;
     return d.plotSolids().some((b) => inBox(b, x, z, RADIUS));
