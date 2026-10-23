@@ -45,6 +45,10 @@ stays the record of how the body was built.
   each phase.
 - **First phase:** run, sprint and momentum (the fastest visible fix),
   with the pipeline and the lab under it.
+- **The rifle** (added with Phase 3, as the final phase): aiming a rifle,
+  he holds it properly, the butt in his shoulder. Today it's held low in
+  front of his chest (Phase 8).
+- **Review since Phase 2:** no videos; straight to the merge.
 
 ## Where it starts from (why it looks the way it does)
 
@@ -334,7 +338,7 @@ What's in:
    new: idle, walk, run, sprint, start, stop, a 180° turn, a curve) and the
    build to try.
 
-### Phase 2: turning, terrain and transitions (built, for the owner's sign-off)
+### Phase 2: turning, terrain and transitions (built, merged)
 
 What's in:
 
@@ -390,7 +394,72 @@ What's in:
   (weight shifts, looking round after a while: today's ideas, now from
   mocap).
 
-### Phase 3: jumps, falls and landings
+### Phase 3: jumps, falls and landings (built, for the owner's sign-off)
+
+What's in:
+
+- **More data** (CMU, credited): four running jumps over something
+  (127_25-28) and two run-jump-stops (127_21, 127_22, cut to 2.4 s), all
+  subject 127 at a jog's pace, and subject 143's standing jumps for
+  distance and for height (143_05, 143_06). 22 clips, 93 s, 410 KB.
+- **The flights are found in the data** (`motionmatch.ts`: both feet off
+  the ground at least 6 frames with the hips rising at least 0.06, so a
+  run's own flights don't count): 20 jumps counting the mirrored ones, each
+  with a take-off 3 frames before it leaves the ground and a touchdown.
+  Searches on the ground never land in a jump or just before one (as at a
+  clip's end), and the standing jumps' wind-ups (a crouch and an arm swing
+  that looked like a jog to the search) are shut to them altogether
+  (`JUMPS_ONLY`).
+- **Taking off** (`animator.ts`, `AIR`): on the frame Jump is pressed the
+  game launches him as before (no delay added: the jump stays snappy) and
+  the animator cuts, inertialized, to the take-off that carries on best
+  from the pose and the trajectory: a running jump off the right foot at
+  a run or a sprint, a standing two-footed one from the idle. A walk or run
+  off something higher than a kerb (over 0.3 tiles, or 0.18 s in the air)
+  starts from a flight's top instead: a fall, no jump.
+- **In the air** the flight plays as far through as the game's own rise
+  and fall have gone (its vertical speed against the jump's), never
+  backwards, so a short hop (Jump let go early) flies its flight through
+  in time; its last frames (the legs reaching for the ground) play as the
+  ground comes up, worked out from his height and speed. The flight's own
+  rise is taken out of the hips (the game does the jump), no foot is held,
+  and nothing reaches for the ground. **A long fall** (the flight's frames
+  used up) raises the arms up and out, up to 0.7 rad over 0.6 s.
+- **Landing** plays the flight's own touchdown straight on unless another
+  costs under three quarters of it: a running jump lands running on (its
+  clip runs on after), a standing one lands standing and settles into the
+  idle, and letting go of the stick mid-air lands on one that stops. For
+  0.3 s the landing plays out unless a search finds something far better.
+  **Harder landings** (faster than 4.5 tiles a second: a drop of about a
+  tile or more) squash the hips down and bow the chest, more the harder
+  (about 9 cm from a 1-tile drop, 16 cm from 2 tiles, 25 cm at most), with
+  the feet held where they landed so the knees take it; then he comes back
+  up into his run. The roll on a very hard landing at a run (`LAND_ROLL`)
+  stays the keyed one from locomotion.ts; the crouch under it is now the
+  capture's.
+- **The camera** dips with every landing (more the harder) and shakes
+  briefly on a hard one (walk.ts, `LAND_SHAKE`); neither under reduced
+  motion or in first person.
+- **Walking it:** the motion capture now plays in the air too (walk.ts
+  passes `grounded`, his vertical speed, the jump and gravity); armed,
+  aiming or emoting it's the procedural walk and jump as before.
+- **Measured** by the tests (running, sprinting, walking and standing
+  jumps, short hops, falls off ledges of 0.6 to 4 tiles, a kerb that isn't
+  a fall): no foot held in the air; the feet never more than 2 cm deeper
+  into the ground than running on the flat does (the ball of a foot rolls
+  a few centimetres under it at push-off); no bone turns more than 0.7 rad
+  between frames (0.75 on a hard landing); the same every time.
+- **The lab:** Run & jump, Stand & jump and Short hops; a ledge floor (a
+  ramp up, a drop of 1.6 tiles); Space jumps by hand; the walk.ts jump and
+  gravity for both figures; an Air readout (in the air, Jump held, the arms
+  coming up, the landing's squash).
+- Not yet: a stumble on a big drop (the hard landings squash and come up
+  instead); jumps from capture while armed (Phase 4); the crowds (Phase 7).
+  CMU has no running jumps at Degen's run speed: subject 127's are a jog's,
+  so the flight is the jog's leap played over the game's faster, higher
+  jump (about 0.65 s up against the capture's 0.45).
+
+### Phase 3 as it was planned
 
 - Standing and running jumps (take-off timed to the stride's push-off),
   the air (a fall loop that reads how long he's been falling), landings by
@@ -444,6 +513,48 @@ What's in:
 - `locomotion.ts` retired once nothing uses it (its leg IK lives on in
   `reachLeg()`).
 
+### Phase 8: the rifle in his shoulder (the owner's call, the final phase)
+
+What's wrong today (the owner's screenshot, from behind while aiming):
+the rifle is held low in front of his chest, the stock nowhere near his
+shoulder. `holdGun()` in `stance.ts` places the gun by its pistol grip
+(about 18 cm in front of the torso frame, on his middle, a little under
+the shoulders) and turns it to where he looks; the butt pad, 32 cm behind
+the grip, ends up under his chin in the middle of his chest. The hands are
+right (reachArm() puts them on the grip and the handguard); the gun isn't.
+
+What it will be, for every long gun (rifle, SMG, shotgun, marksman rifle,
+burst carbine, belt feeder; the revolver keeps its two-handed hold):
+
+- **The butt in the shoulder pocket:** each long gun gets a `butt` point
+  in `FIT` (`gunfit.ts`, where its butt pad is in gun space), and aiming
+  places the gun so the butt sits in the pocket of the shooting (right)
+  shoulder, just inside the joint and in front of it, following the
+  collarbone as it moves. The gun pivots there: up and down with where he
+  looks, round with the aim.
+- **The cheek on the stock:** the sight's height over the butt brings it
+  to about his eye; the head comes down and over onto the stock (a tilt
+  and a turn within the neck's limits) so the eye sits behind the sight,
+  as it does in first person.
+- **The body behind it:** bladed side-on far enough for the support hand
+  to reach the handguard (it does a little of this today), the shooting
+  elbow out and up, the support elbow under the gun, the chest leaning
+  into it. Recoil pushes the shoulder back and the gun pivots in it, rather
+  than the whole gun sliding back.
+- **Ready and carried:** at the low ready the butt stays in the shoulder
+  with the muzzle down; carried relaxed (`ready` 0) and slung (`STOWED`)
+  as today. The draw and the reload clips end in the shouldered hold.
+- **Others too:** other players use the same hold (`remote.ts`); the
+  soldiers carry theirs at the port as today.
+- **Tests** (`tests/gunfit.test.ts`): at full aim, at every pitch from
+  looking down to looking up, for every long gun, the butt within about
+  2 cm of the shoulder pocket, the sight within a few centimetres of the
+  line from his eye along the aim, both hands on the gun, no arm past its
+  reach; the reloads still start and end at rest.
+- **The lab:** an armed mode (each gun, aim held, the pitch swept) with a
+  view from behind and from the side, to compare against the owner's
+  screenshot.
+
 ## Open questions for the owner
 
 - The sprint's top speed: 5 tiles a second for now (today's run was 5.4);
@@ -459,3 +570,6 @@ What's in:
   roof, a wall top)?
 - Whether the crowds (Phase 7) get a little variety from other 100STYLE
   styles (still within "neutral athletic" for Degen himself).
+- The rifle (Phase 8): planned last, as the owner asked; it touches only
+  the gun hold (`stance.ts`, `gunfit.ts`), so it can come sooner, before
+  or alongside Phase 4's armed movement, if the owner wants it fixed first.

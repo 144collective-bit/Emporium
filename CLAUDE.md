@@ -1070,13 +1070,15 @@ it and has been retired completely. Build only on what's here.
   `docs/animation-plan.md`: AAA movement (Spider-Man / Ratchet feel,
   neutral athletic) from motion capture, then turns, jumps, armed
   movement, peeking (Q / E), crouch, slide, vault and climb, contact, and
-  everyone on the same clips. Build it one phase at a time with the
-  owner's sign-off. Phase 1 (run, sprint and momentum) and Phase 2
-  (turning, terrain and transitions) are built, for the player on foot:
+  everyone on the same clips, and last (Phase 8, the owner's call) the
+  rifle held properly, its butt in his shoulder. Build it one phase at a
+  time with the owner's sign-off. Phase 1 (run, sprint and momentum),
+  Phase 2 (turning, terrain and transitions) and Phase 3 (jumps, falls
+  and landings) are built, for the player on foot:
   - **The data** is CMU's motion capture (free for commercial use; the
     acknowledgment is in the start menu's Options > Credits, named, never
-    linked): subject 143's takes in `assets/mocap/cmu/` (BVH, untouched),
-    listed in `assets/mocap/takes.json` (a `loop` makes a seamless cycle,
+    linked): mostly subject 143's and 127's takes, in `assets/mocap/cmu/`
+    (BVH, untouched), listed in `assets/mocap/takes.json` (a `loop` makes a seamless cycle,
     `loopClip()`). `npm run mocap` (`scripts/mocap.mjs`) retargets them
     (`mocap-build.ts`: each target bone takes its source joint's turn
     since the T-pose, the feet kept level, the floor from the ankles, the
@@ -1099,8 +1101,8 @@ it and has been retired completely. Build only on what's here.
     coming down (at most `LOCK.drop`) when a leg can't reach. `applyTo()`
     puts it on the figure (`Degen.rig`) after its own `update()`, and
     `addLook()` turns the head where the camera looks. walk.ts blends it
-    in (`mocapW`) on the ground, unarmed, not aiming or emoting, and not
-    for a moment after a hard landing (the procedural crouch and roll);
+    in (`mocapW`) on foot, unarmed, not aiming or emoting, and not during
+    the roll on a very hard landing at a run (`LAND_ROLL`, the keyed one);
     everywhere else, and for everyone else, it's `locomotion.ts` as before.
   - **Phase 2:** more takes (running turns, a quick stop, walking into a
     run, turning on the spot, standing and waiting: `assets/mocap/takes.json`
@@ -1114,11 +1116,27 @@ it and has been retired completely. Build only on what's here.
     Liberty Bridge's treads as drawn (`stairTread()` in liberty.ts, the
     drawing's `STAIR_BASE`) over the ramp walking follows, and walk.ts slows
     him to a brisk climb on them (`CLIMB`).
+  - **Phase 3:** jump takes (subject 127's running jumps, 143's standing
+    ones; `JUMPS_ONLY` keeps the standing ones' wind-ups out of the
+    ground's searches); motionmatch.ts finds each take's flights
+    (`FLIGHT`, `Database.flights`, `takeoff` / `touchdown` frames, the
+    hips' `bump`), shut to the ground's searches. The animator (`AIR`;
+    `AnimInput.grounded`, `vy`, `jump`, `gravity` from walk.ts): a jump
+    cuts to the take-off that carries on best, a fall (off something higher
+    than a kerb) to a flight's top; the flight plays as far through as his
+    rise and fall have gone, its last frames as the ground comes up, the
+    flight's own rise taken out (the game does the jump), nothing held; a
+    long fall raises the arms; it lands on its own touchdown unless another
+    is far better (`AIR.margin`), the landing plays out (`settle`), and a
+    harder one squashes the hips and bows the chest (`squash`). walk.ts
+    dips the camera on landings and shakes it on hard ones (`LAND_SHAKE`,
+    not under reduced motion).
   - **The lab** is `?anim` (`anim-lab.ts`, styles `animlab.css`): the new
     animation beside the old on an open floor, scripted moves or W A S D,
-    slow motion, cameras, floors (flat, kerbs, stairs), foot traces and
+    slow motion, cameras, floors (flat, kerbs, stairs, a ledge), jumps
+    (programs and Space, walk.ts's jump and gravity), foot traces and
     readouts (the clip, its rate, the match, the blend left, the foot
-    slide); `rec`, `prog`, `gait`, `cam`, `floor`, `zoom`, `compare=0` in
+    slide, the air); `rec`, `prog`, `gait`, `cam`, `floor`, `zoom`, `compare=0` in
     the address set it up for recordings. Review
     every animation change there, and run `tests/animator.test.ts`.
 - Every character is one shared Degen body (`src/scripts/city3d/character.ts`),
