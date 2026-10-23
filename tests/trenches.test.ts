@@ -3,7 +3,7 @@
 // junction (so traffic runs it), lights all along Trench Avenue; and the blocks between the streets, off them.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { AVENUE_Z, BANK, HIGHWAY_CLEAR, RING_W, TRENCH_BLOCKS, TRENCH_CROSSINGS, TRENCH_RECT, TRENCH_STREETS, inTrenches } from '../src/scripts/city3d/trenches';
+import { AVENUE_Z, BANK, HIGHWAY_CLEAR, NS_X, RING_W, TRENCH_BLOCKS, TRENCH_CROSSINGS, TRENCH_RECT, TRENCH_STREETS, inTrenches } from '../src/scripts/city3d/trenches';
 import { PLAN, distToStreet, inPoly, outset, polyArea } from '../src/scripts/city3d/streetplan';
 import { fromHighway, insideHighway } from '../src/scripts/city3d/highway';
 import { RIVER, WALK_W } from '../src/scripts/city3d/layout';
@@ -11,6 +11,7 @@ import { SOLIDS } from '../src/scripts/city3d/solids';
 import { PROJECT_SOLIDS } from '../src/scripts/city3d/projects';
 import { COMMONS_SOLIDS } from '../src/scripts/city3d/commons';
 import { GRIT_SOLIDS } from '../src/scripts/city3d/grit';
+import { STREETWALL_SOLIDS } from '../src/scripts/city3d/streetwall';
 import { PADS } from '../src/scripts/city3d/outer';
 import { ROUTES, pointOn } from '../src/scripts/city3d/routes';
 
@@ -59,7 +60,7 @@ test('its blocks: between its streets and off them, clear of the highway, the to
     }
     // Nothing that stands is on it but the metro's (its stair tower at The Trenches) and The Trenches' own (projects.ts, commons.ts, grit.ts)
     for (const box of SOLIDS) {
-      if (PROJECT_SOLIDS.includes(box) || COMMONS_SOLIDS.includes(box) || GRIT_SOLIDS.includes(box)) continue;
+      if (PROJECT_SOLIDS.includes(box) || COMMONS_SOLIDS.includes(box) || GRIT_SOLIDS.includes(box) || STREETWALL_SOLIDS.includes(box)) continue;
       const c: [number, number] = [(box[0] + box[2]) / 2, (box[1] + box[3]) / 2];
       if (inPoly(b.poly, c)) assert.ok(box[4] !== undefined && box[4] > 5, `${b.id} has a box on it at ${box.join(', ')}`);
     }
@@ -67,9 +68,12 @@ test('its blocks: between its streets and off them, clear of the highway, the to
     const m = b.poly.reduce((a, p) => [a[0] + p[0] / b.poly.length, a[1] + p[1] / b.poly.length], [0, 0]);
     assert.ok(inTrenches(m[0], m[1]));
   }
-  // Rows: A along Trench Avenue's north side, B the projects, C along the highway
+  // Rows: A along Trench Avenue's north side, B the projects, C along the highway, W between West Street and the highway
   assert.ok(TRENCH_BLOCKS.filter((b) => b.row === 'A').every((b) => b.poly.every((p) => p[1] < AVENUE_Z)));
-  assert.ok(TRENCH_BLOCKS.filter((b) => b.row !== 'A').every((b) => b.poly.every((p) => p[1] > AVENUE_Z)));
+  assert.ok(TRENCH_BLOCKS.filter((b) => b.row === 'B' || b.row === 'C').every((b) => b.poly.every((p) => p[1] > AVENUE_Z)));
+  const w = TRENCH_BLOCKS.filter((b) => b.row === 'W');
+  assert.equal(w.length, 1);
+  assert.ok(w[0].poly.every((p) => p[0] < NS_X[0]), 'west of West Street');
   // Not the town
   assert.ok(!inTrenches(30, 30) && !inTrenches(0, 110));
   assert.ok(TRENCH_RECT[0] < TRENCH_RECT[2] && TRENCH_RECT[1] < TRENCH_RECT[3]);

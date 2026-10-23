@@ -10,7 +10,6 @@ import {
   BAY_CARS,
   BAY_DEPTH,
   COMMONS_SOLIDS,
-  EDGES,
   HYDRANTS,
   MIX,
   REC,
@@ -24,6 +23,7 @@ import {
   towerRects,
 } from '../src/scripts/city3d/commons';
 import { TOWERS, THE_BLOCK } from '../src/scripts/city3d/projects';
+import { EDGES } from '../src/scripts/city3d/streetwall';
 import { TRENCH_BLOCKS } from '../src/scripts/city3d/trenches';
 import { PLAN, distToStreet, inPoly, outset } from '../src/scripts/city3d/streetplan';
 import { WALK_W } from '../src/scripts/city3d/layout';

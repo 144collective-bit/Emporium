@@ -50,6 +50,7 @@ import { buildLibertyBridge } from './libertybridge';
 import { buildProjects } from './projects3d';
 import { buildCommons } from './commons3d';
 import { buildGrit } from './grit3d';
+import { buildStreetWalls } from './streetwall3d';
 import { buildTheBlock } from './theblock';
 import { BLOCK_SPAWN } from './projects';
 import { buildFightClub } from './fightclub';
@@ -187,6 +188,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   buildCommons(scene, crowd, { low: tier === 'low' });
   // ...and its grit (the owner's call): worn yards, tree pits, dumpsters, trash, barriers, shutters, tags and bills
   buildGrit(scene, crowd, { low: tier === 'low' });
+  // ...and built up (the grit's step 2): tenement street walls, vacant lots, low commercial along Bottom Street and West Street
+  buildStreetWalls(scene, crowd, { low: tier === 'low' });
   const theBlock = buildTheBlock(scene, crowd, { tick, reduced, low: tier === 'low' });
   spots.push(theBlock.spot);
   // ...and the metro's el where it crosses the open land south of the south row: no trees under it

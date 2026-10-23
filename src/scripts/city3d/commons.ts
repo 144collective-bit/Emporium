@@ -17,9 +17,9 @@
  *   step) a longer one along Trench Avenue under the el wherever its
  *   pillars stand over a block's front (the el's median is too narrow for
  *   cars), fuller.
- * - **Edges** (`EDGES`): chain-link on a low concrete kerb round each yard
- *   (the grit step: once iron railings and hedges round lawns), open at
- *   every way in; fire hydrants (`HYDRANTS`) on the sidewalk corners.
+ * - Fire hydrants (`HYDRANTS`) on the sidewalk corners. (The yards'
+ *   chain-link is streetwall.ts's `EDGES` since the grit's step 2: it runs
+ *   only where no building stands.)
  *
  * Everything here is scenery: nothing to do yet. What's solid
  * (`COMMONS_SOLIDS`: the cage's and courts' fences, ramps, grills, the
@@ -187,13 +187,13 @@ export const BAY_DEPTH = 2;
 export const SPACE = 3.4;
 
 /** Every block of the projects' ways in (doors, amenities, the rec block's path) */
-function waysIn(block: string): Rect[] {
+export function waysIn(block: string): Rect[] {
   const blk = TRENCH_BLOCKS.find((o) => o.id === block)!;
   const b = bounds(blk.poly);
   return [...TOWERS.filter((t) => t.block === block).map((t) => doorWay(t, b, 1.6)), ...AMENITIES.filter((a) => a.block === block).map((a) => amenityWay(a, 1.4)), ...(block === REC.block ? [REC.path] : [])];
 }
 /** What else stands near a block's edge (towers and their bits, amenities, the rec block's buildings) */
-function standing(block: string): Rect[] {
+export function standing(block: string): Rect[] {
   return [
     ...TOWERS.filter((t) => t.block === block).flatMap(towerRects),
     ...AMENITIES.filter((a) => a.block === block).map((a) => a.rect),
@@ -295,49 +295,7 @@ export const BAY_CARS: { bay: string; car: [string, number, number, number, stri
 /** A parked car's footprint, half its length and width (the longest model) */
 export const CAR_HALF = { l: 1.5, w: 0.6 };
 
-/* ---------- The lawns' edges ---------- */
-
-/** A run of chain-link (on its low kerb) along a yard's edge, a little in from it */
-export interface EdgeRun {
-  block: string;
-  a: Pt;
-  c: Pt;
-}
-/** The yards' chain-link: how high (over its kerb) */
-export const EDGE_H = 1.1;
-export const EDGE_IN = 0.3;
-export const EDGES: EdgeRun[] = (() => {
-  const out: EdgeRun[] = [];
-  TRENCH_BLOCKS.forEach((blk) => {
-    if (blk.row !== 'B' || blk.id === 'trench-b0-2') return;
-    const b = bounds(blk.poly);
-    const gaps = [...waysIn(blk.id), ...BAYS.filter((y) => y.block === blk.id).map((y) => grow(y.rect, 0.3)), ...standing(blk.id)];
-    const i = EDGE_IN;
-    const lines: [Pt, Pt][] = [
-      [[b[0] + i, b[1] + i], [b[2] - i, b[1] + i]],
-      [[b[0] + i, b[3] - i], [b[2] - i, b[3] - i]],
-      [[b[0] + i, b[1] + i], [b[0] + i, b[3] - i]],
-      [[b[2] - i, b[1] + i], [b[2] - i, b[3] - i]],
-    ];
-    for (const [p, q] of lines) {
-      const alongX = p[1] === q[1];
-      const [a0, a1] = alongX ? [p[0], q[0]] : [p[1], q[1]];
-      const probe = (a: number): Rect => (alongX ? [a, p[1] - 0.05, a + 0.5, p[1] + 0.05] : [p[0] - 0.05, a, p[0] + 0.05, a + 0.5]);
-      let start: number | null = null;
-      const close = (end: number) => {
-        if (start !== null && end - start >= 1) out.push({ block: blk.id, a: alongX ? [start, p[1]] : [p[0], start], c: alongX ? [end, p[1]] : [p[0], end] });
-        start = null;
-      };
-      for (let a = a0; a < a1 - 1e-6; a += 0.5) {
-        const free = !gaps.some((g) => overlaps(g, probe(a)));
-        if (free && start === null) start = a;
-        if (!free) close(a);
-      }
-      close(a1);
-    }
-  });
-  return out;
-})();
+/* ---------- Hydrants ---------- */
 
 /** Fire hydrants: on the sidewalk at each projects block's corners */
 export const HYDRANTS: Pt[] = TRENCH_BLOCKS.filter((b) => b.row === 'B').flatMap((blk) => {
@@ -439,12 +397,6 @@ export const COMMONS_SOLIDS: Footprint[] = [
   [...REC.centre, REC.centreH + 0.3],
   [...REC.laundry, REC.laundryH + 0.25],
   ...pavilionPosts().map(([x, z]): Footprint => [x - 0.1, z - 0.1, x + 0.1, z + 0.1, REC.pavilionH]),
-  // (the grit step) The yards' chain-link on its kerb, open at the ways in
-  ...EDGES.map((e): Footprint => {
-    const alongX = e.a[1] === e.c[1];
-    const [wx, wz] = alongX ? [0, 0.1] : [0.1, 0];
-    return [Math.min(e.a[0], e.c[0]) - wx, Math.min(e.a[1], e.c[1]) - wz, Math.max(e.a[0], e.c[0]) + wx, Math.max(e.a[1], e.c[1]) + wz, EDGE_H + 0.12];
-  }),
   ...BAY_CARS.map(({ car: [, x, z, yaw] }): Footprint => {
     const along = Math.abs(Math.cos(yaw)) > 0.5;
     const [hx, hz] = along ? [CAR_HALF.l, CAR_HALF.w] : [CAR_HALF.w, CAR_HALF.l];

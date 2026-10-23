@@ -32,6 +32,7 @@ import * as THREE from 'three';
 import { Batch, FONT_DISPLAY, canvasTex, lit, toon } from './kit';
 import { ATLAS, CREAM, INK, LEAF, METAL, ROOF, STONE, WOOD, glow, kit, type Frame } from './infill';
 import { buildFx, chainMesh, tag } from './grime';
+import { EDGES, EDGE_H } from './streetwall';
 import { SLAB as S, addLamp } from './world';
 import { site } from './tilework';
 import { parkedCars, type CarId } from './cars';
@@ -41,8 +42,6 @@ import {
   AMENITIES,
   BAYS,
   BAY_CARS,
-  EDGES,
-  EDGE_H,
   GARDEN_FENCE,
   HYDRANTS,
   REC,

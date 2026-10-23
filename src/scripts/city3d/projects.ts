@@ -388,7 +388,7 @@ export interface RowBlock {
  * only along Bottom Street (a strip one row deep: behind it, the parking and
  * the trees along the highway)
  */
-export const ROW_BLOCKS: RowBlock[] = TRENCH_BLOCKS.filter((b) => b.row !== 'B').map((b, i) => {
+export const ROW_BLOCKS: RowBlock[] = TRENCH_BLOCKS.filter((b) => b.row === 'A' || b.row === 'C').map((b, i) => {
   if (b.row === 'A') return { id: b.id, poly: b.poly, seed: 7100 + i };
   const [x0, z0, x1] = bounds(b);
   const d = RECIPES.rowhouses.depth + 0.1;
