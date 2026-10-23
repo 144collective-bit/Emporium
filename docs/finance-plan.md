@@ -1,4 +1,4 @@
-# The financial centre (the owner's call)
+# Uptown, the financial centre (the owner's call)
 
 The owner wants the land of Westlake Park's three strips turned into a
 waterfront boulevard and financial centre: skyscrapers, a plaza, the
@@ -49,34 +49,20 @@ sign-off. Keep this plan up to date as each phase lands.
   places, the street plan's blocks) is kept small. The towers' far forms
   are made from data, not shipped as geometry.
 
-## Decisions for the owner (before Phase 1)
+## The owner's decisions
 
-1. **How tall.** Today nothing may be taller than the Emporium (roof 12.5
-   tiles, about 22 m; the kits stop at 11.2). Under that cap the towers are
-   about seven storeys at Degen's scale: tall and slim, but not
-   skyscrapers.
-   - **(a) Keep the Emporium the tallest.** The towers stay under 12.5 and
-     read as a skyline through slender shafts, setbacks, crowns and a
-     dense cluster.
-   - **(b) Let the financial centre rise above it.** For example, the
-     tallest tower at about 30 tiles and the rest 15 to 25. The Emporium
-     stays the tallest downtown and the most detailed building in the
-     city. Seen from the home view the cluster is a skyline about 150
-     tiles west, behind downtown.
-     - This changes a standing rule (CLAUDE.md).
-     - The flying traffic's routes (the prop plane flies low along the
-       river) and your own aircraft's roofs (`floorAt()`) have to clear
-       the towers.
-   - Recommended: (b), if real skyscrapers are what's wanted.
-2. **The courts and the people playing on them.** The options:
-   - move them into Westlake Park's big block (recommended);
-   - retire them;
-   - keep one strip's court as a pocket park in the district.
-3. **The name.** A made-up name for the district (working name: "Crown
-   Quay").
-4. **Scenery or places.** Recommended: scenery first (Phases 1-4), then
-   in Phase 5 the tallest tower becomes a place (pin, panel, "coming
-   soon"), with its sky deck walkable if the owner wants it.
+1. **Height: the district rises above the Emporium** (the owner's call).
+   - The tallest tower is about 30 tiles, the rest 15 to 25.
+   - The Emporium stays the tallest building downtown and the most detailed
+     in the city. The "under the Emporium" rule holds everywhere else.
+   - The flying traffic's routes (the prop plane's low loop along the
+     river) and your own aircraft (`floorAt()`, `HULLS`) clear the towers,
+     and the flight tests check them.
+2. **The courts are retired**, with the people playing on them (tennis,
+   football, basketball, their balls and their sound).
+3. **The name is Uptown.**
+4. **Scenery through Phases 1-4.** In Phase 5 the tallest tower becomes a
+   place (pin, panel, "coming soon"), with a walkable sky deck at the top.
 
 ## Phases
 
@@ -90,7 +76,7 @@ sign-off. Keep this plan up to date as each phase lands.
    - **Lanes and plots:** walk-only lanes between some lots. Each block's
      lots and the plaza's land are set aside on the middle strip, a block
      from the river.
-   - **Moving out:** the courts move or go (decision 2). The strips' walks,
+   - **Moving out:** the courts and their players go (decision 2). The strips' walks,
      rows of trees, lamps and benches go, and Westlake Park's rect and
      paths shrink to the big block.
    - **The boulevard's line:** the town's promenade carried on west along
@@ -113,7 +99,8 @@ sign-off. Keep this plan up to date as each phase lands.
      and trims go through the shared lit neon (minimal bloom), with
      aircraft warning lights on top.
    - **The layout:** about 12 to 16 towers laid out by hand (`TOWERS`), the
-     tallest on the plaza, heights by decision 1. The south row fronts the
+     tallest on the plaza, about 30 tiles
+     for the tallest, 15 to 25 for the rest. The south row fronts the
      river.
    - **Drawn and measured:**
      - far forms for each tower;
