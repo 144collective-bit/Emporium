@@ -1003,9 +1003,23 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const viewSpot: [number, number] = [0, 0];
   /** When the city was last drawn behind the start menu */
   let coveredAt = -Infinity;
+  /**
+   * What was built shows: under reduced motion the city is only drawn again when something changes, so new pieces
+   * ask for a frame (at most once a second: building goes on between)
+   */
+  let builtDrawn = 0;
+  const builtShows = () => {
+    const now = performance.now();
+    if (now - builtDrawn < 1000) return;
+    builtDrawn = now;
+    dirty = true;
+  };
   /** A frame that draws nothing (a high refresh rate's in-between frames, a phone resting at 30fps): `ms` for building what's waiting */
   const spare = (ms: number) => {
-    if (works.pending() && !bench?.active) works.step(ms, CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, CROWD_VIEW.eye.z, 0, Q.far, walking ? undefined : viewSpot);
+    if (!works.pending() || bench?.active) return;
+    const was = works.pending();
+    works.step(ms, CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, CROWD_VIEW.eye.z, 0, Q.far, walking ? undefined : viewSpot);
+    if (works.pending() !== was) builtShows();
   };
   function frame(now: number) {
     if (!running) return;
@@ -1093,7 +1107,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     // (a share of the time since the last frame, not a fixed slice: a slow phone draws few frames, and while its
     // GPU draws the next one its CPU is free; at 60fps that's the 2-3 ms it always was)
     const share = Math.min(10, Math.max(tier === 'low' ? 2 : 3, gap * 1000 * 0.15));
+    const waiting = works.pending();
     works.step(covered ? 24 : bench && !bench.active && !bench.done ? 12 : share, CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, CROWD_VIEW.eye.z, dt, Q.far, walking ? undefined : viewSpot);
+    if (works.pending() !== waiting) builtShows();
     // Near and far forms (growth plan Phase 2): the details only within the tier's `far` of the camera
     tiled.update(CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, CROWD_VIEW.eye.z, Q.far);
     updateLods(CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, CROWD_VIEW.eye.z, Q.far);
