@@ -800,7 +800,10 @@ it and has been retired completely. Build only on what's here.
     the fight (`fight.ts` and the figures' clips, when the trainer's menu
     first opens: `loadFight()` in `walk.ts`), the stage of the fitting room
     and the character screen (`stage.ts`), SMAA (`post.ts`), the fight
-    demo and the benchmark (`?bench`, `bench.ts`). New features that aren't needed until they're used come the same
+    demo, the benchmark (`?bench`, `bench.ts`), Drop 001's fitting room
+    (`fitting.ts`, when its panel first opens: `loadFitting()` in index.ts)
+    and the world map (`worldmap.ts`, when it first opens: `loadMap()` in
+    travel-ui.ts; `placeName()` is places.ts's). New features that aren't needed until they're used come the same
     way. three.js is a chunk of its own (`manualChunks` in
     `astro.config.mjs`), so a deploy that doesn't change it leaves it
     cached.

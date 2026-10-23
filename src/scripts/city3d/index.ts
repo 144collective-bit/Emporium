@@ -30,7 +30,7 @@ import { createPlotStore } from './store';
 import type { Account } from './account';
 import type { AccountHooks, AccountUI } from './account-ui';
 import { createBuilderUI } from './builder-ui';
-import { createFitting, type Fitting } from './fitting';
+import type { Fitting } from './fitting';
 import { createCityHead } from './head';
 import { buildMarket } from './market';
 import { createTycoonUI, type TycoonUI } from './tycoon-ui';
@@ -44,7 +44,7 @@ import { createTaxis } from './taxi';
 import { buildMetro } from './metro3d';
 import { createMetroUI, type MetroUI } from './metro-ui';
 import { PLACES } from './places';
-import { placeName } from './worldmap';
+import { placeName } from './places';
 import { buildKartPark } from './kartpark3d';
 import { KART_SPAWN } from './kartpark';
 import { AIR_SPAWN } from './airfield';
@@ -427,8 +427,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const panelBody = panel.querySelector<HTMLElement>('[data-panel-body]')!;
   const panelClose = panel.querySelector<HTMLButtonElement>('[data-panel-close]')!;
   let lastFocus: HTMLElement | null = null;
-  // Drop 001's panel has the fitting room (made once the profile exists, further down)
+  // Drop 001's panel has the fitting room (loaded when it first opens, once the profile exists, further down)
   let fitting: Fitting | null = null;
+  let loadFitting: () => Promise<Fitting> = () => new Promise(() => {});
   // The Emporium's panel has the market hall (the economy is made further down)
   let tycoon: TycoonUI | null = null;
 
@@ -445,7 +446,11 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     panelBody.replaceChildren(tpl.content.cloneNode(true));
     // One card at a time: a panel closes your stall's card
     tycoon?.closeCard();
-    if (id === 'shop') fitting?.mount(panelBody, toFitting);
+    // (the fitting room is a chunk of its own, loaded the first time Drop 001's panel opens)
+    if (id === 'shop')
+      void loadFitting().then((f) => {
+        if (active === s) f.mount(panelBody, toFitting);
+      });
     else fitting?.unmount();
     // The economy's panels: the market hall, the Workshop, contracts, couriers, staff
     tycoon?.mountPanel(id, panelBody);
@@ -689,14 +694,18 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     reduced,
     low: tier === 'low',
   });
-  fitting = createFitting({
-    look: () => profileUI.look,
-    apply: (l) => profileUI.wear(l),
-    onChange: (fn) => profileUI.onChange(fn),
-    game,
-    reduced,
-    low: tier === 'low',
-  });
+  let fittingLoad: Promise<Fitting> | null = null;
+  loadFitting = () =>
+    (fittingLoad ??= import('./fitting').then(({ createFitting }) =>
+      (fitting = createFitting({
+        look: () => profileUI.look,
+        apply: (l) => profileUI.wear(l),
+        onChange: (fn) => profileUI.onChange(fn),
+        game,
+        reduced,
+        low: tier === 'low',
+      }))
+    ));
   const mp =
     server && onlineSwitch && net
       ? net[0].createMultiplayer({

@@ -44,8 +44,11 @@ gardens. Built in stages, each a PR for the owner's sign-off.
    forecourt, walkable (`BRIDGE`, `bridgeY()`, `bridgeWall()`); lamps along
    the road and round the loop; the outskirts' trees off it all. Its
    grounds load with the park's chunk as you approach (`LAZY_DISTRICTS`).
-   The boot's code had no room left for it: the benchmark (`?bench`) is a
-   chunk loaded when asked for now, which made the room (637.7 of 640 KB). The old
+   The boot's code had no room left for it: the benchmark (`?bench`), Drop
+   001's fitting room and the world map are chunks loaded when first used
+   now, which made the room (638.5 of 640 KB with main's animation rebuild).
+   Stage 2 should load the kart park's drawing, race and menus as you
+   approach (it moves out of town), which frees much more. The old
    site is kept clear (`GARDEN_SITE`) with the Mall running on through it
    to the footbridge (`BRIDGE_FOOT`); the old car park went back to park.
 2. **The kart park moves north and grows up:** the same circuit on new
