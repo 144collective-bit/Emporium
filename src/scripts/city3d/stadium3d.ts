@@ -12,7 +12,8 @@
  * - The roof ring over the upper tier, held off the facade on short posts,
  *   a lit line round its inner edge.
  * - Four floodlight masts outside the corners, their lamps aimed at the
- *   pitch (lit at night), and the big screen on the north side's roof.
+ *   pitch (lit at night, their light pooled on the pitch), and the big
+ *   screen on the north side's roof.
  * - A paved apron round it all, the forecourt in front; the car park's cars
  *   (its surface is the park's, westlake3d.ts).
  *
@@ -21,7 +22,7 @@
  */
 import * as THREE from 'three';
 import { Batch, FONT_DISPLAY, FONT_MONO, PAL, canvasTex, fx, glowMat, lit, neon, toon } from './kit';
-import { SLAB } from './world';
+import { SLAB, addPool } from './world';
 import { parkedCars, type CarId } from './cars';
 import type { Spot } from './landmarks';
 import { CENTRE, CONCOURSE, FACADE, GATE, MAST, MASTS, NAME, PARKED, PITCH, ROOF, SCREEN, TIERS, TRACK, ovalAt, type Pt } from './stadium';
@@ -250,6 +251,9 @@ export function buildStadium(scene: THREE.Scene, opts: { low: boolean }): { spot
   ringMesh.scale.set(1, FACADE.b / FACADE.a, 1);
   ringMesh.position.set(CENTRE[0], S + 0.05, CENTRE[1]);
   group.add(fx(ringMesh));
+
+  // The floodlights' light on the pitch at night: pools over it, drawn with the street lamps' (world.ts)
+  for (const sx of [-1, 0, 1]) for (const sz of [-1, 1]) addPool(CENTRE[0] + sx * 10, CENTRE[1] + sz * 4.8, 13, S + 0.03);
 
   // The car park's cars (its surface is the park's: westlake3d.ts)
   parkedCars(scene, S, PARKED as [CarId, number, number, number, string][]);

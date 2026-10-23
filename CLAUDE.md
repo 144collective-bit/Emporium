@@ -502,7 +502,7 @@ it and has been retired completely. Build only on what's here.
   district with a stadium as its attraction, scenery only for now) on the
   land west of town, north of the river, between the ring highway and the
   Parkway. Built in steps, each with the owner's sign-off: (1) the land,
-  the lake and the paths (built); (2) the stadium; (3) the park's life
+  the lake and the paths (built); (2) the stadium (built); (3) the park's life
   (boats, a boathouse, people, sports on the strips, its sound).
   - `westlake.ts` (DOM-free, tested in `tests/westlake.test.ts`): the big
     block (`BIG`: `X0` clear of the highway's slip lanes, `X1` its
@@ -519,7 +519,8 @@ it and has been retired completely. Build only on what's here.
     (`GATE_PIERS`, `WESTLAKE_SOLIDS` in `SOLIDS`); `PARK_TREES` (the Mall's
     avenue, the strips' rows, clumps from a seeded noise; `clump` ones,
     every other, left out on phones), `PARK_LAMPS` and `BENCHES`;
-    `STADIUM_SITE` kept clear for step 2. Its trees and lamps are placed
+    `STADIUM_SITE` for the stadium; `CAR_PARK` on the first strip. Its
+    trees and lamps are placed
     at the boot with the town's (`addTree()` / `addLamp()` in index.ts).
   - `westlake3d.ts` draws the rest as sites: the paths (pale gravel
     ribbons a stretch a site), the lake's stone rim (in quarters), the
@@ -528,7 +529,27 @@ it and has been retired completely. Build only on what's here.
     (near only); and on the main thread the lake's water (one mesh, the
     river's `waterMat`). It's the first district loaded as you approach
     (`districts.ts`, below). The world map draws its lawns, the lake and
-    its paths; the benchmark has a view over the lake (`park`).
+    its paths; the benchmark has a view over the lake (`park`). The car
+    park's asphalt, bays, ways in and P sign are its sites too.
+  - **Sector 7 Stadium** (step 2) is `stadium.ts` (DOM-free, tested in
+    `tests/stadium.test.ts`) on `STADIUM_SITE` at the top of the Mall: a
+    soft-cornered oval bowl (`ovalAt()`, `oval()`, `inOval()`; `FACADE`),
+    two tiers of seats (`TIERS`) with a concourse between (`CONCOURSE`),
+    a roof ring over the upper tier (`ROOF`), the pitch (`PITCH`) and its
+    track (`TRACK`), four floodlight masts (`MASTS`, `MAST`; `TALLEST`
+    under the Emporium), the big screen over the north stand (`SCREEN`)
+    and the main gate in the south facade (`GATE`, under `NAME`, fixed
+    made-up copy), `STADIUM_SPAWN` on the forecourt; the car park's
+    `BAYS`, `ENTRANCES` and `PARKED` cars; `STADIUM_SOLIDS` (in `SOLIDS`:
+    the facade all round, the gates shut until there are events, the masts,
+    the parked cars). Drawn by `stadium3d.ts` (`buildStadium()`, a place
+    built at the boot like the avenue's, not in the park's chunk): seats in
+    sections of magenta, purple and cyan, the roof's neon edge, lamp heads
+    on the masts and their pools of light on the pitch at night, the screen
+    and the name board from one small atlas, the parked cars. It's a
+    place: spot `stadium` (pin, directory entry, panel
+    `data-panel-tpl="stadium"`: events coming soon, Walk in), the gate's
+    door prompt opens it, `PLACES` entry. Its sound waits for events.
 - **Districts loaded as you approach** (performance phase 4, item 10):
   a district's drawing is a module of its own (`LAZY_DISTRICTS` in
   `districts.ts`: an id, its land and `load()`, a dynamic import), a chunk
