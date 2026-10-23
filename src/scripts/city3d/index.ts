@@ -53,6 +53,9 @@ import { buildGrit } from './grit3d';
 import { buildStreetWalls } from './streetwall3d';
 import { buildTheBlock } from './theblock';
 import { buildAvenue } from './avenue3d';
+import { buildRiverside } from './riverside3d';
+import { buildPier, buildWaterfront } from './waterfront3d';
+import { PIER_SPAWN } from './waterfront';
 import { BLOCK_SPAWN } from './projects';
 import { AVENUE_SPAWNS } from './avenue';
 import { buildFightClub } from './fightclub';
@@ -201,8 +204,13 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   buildStreetWalls(scene, crowd, { low: tier === 'low' });
   const theBlock = buildTheBlock(scene, crowd, { tick, reduced, low: tier === 'low' });
   spots.push(theBlock.spot);
-  // ...and Trench Avenue's places under the el (the grit's step 3): Club PULSE, The Rusty Nail, Trench Arms
+  // ...and its three places on the riverside (the grit's step 3): Club PULSE, The Rusty Nail, Trench Arms
   spots.push(...buildAvenue(scene, crowd, { tick, reduced, low: tier === 'low' }).spots);
+  // ...and the riverside (the owner's call): the Wharf, the Refinery and Harbor Stores (sites), the boardwalk out over
+  // the water and the old docks (sites), and Pier 7 with the Pier House at its head, a place (its pin and panel)
+  buildRiverside(tier === 'low');
+  buildWaterfront(tier === 'low');
+  spots.push(buildPier(scene, crowd, { tick, low: tier === 'low' }).spot);
   // ...and the metro's el where it crosses the open land south of the south row: no trees under it
   keepTreesOff([-10, 125, 56, 135]);
   progress(0.55);
@@ -349,7 +357,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     // and aim below the building so it sits in the top half of the screen
     const portrait = camera.aspect < 1;
     const dist = (s.size * 1.55 + 5) * (portrait ? Math.min(1.7, 0.8 / camera.aspect) : 1);
-    const dir = new THREE.Vector3(0.95, 0.85, 1.25).normalize();
+    const dir = new THREE.Vector3(0.95, 0.85, s.faces === 'n' ? -1.25 : 1.25).normalize();
     const target = s.focus.clone();
     if (portrait) target.y -= s.size * 0.55;
     return { pos: s.focus.clone().addScaledVector(dir, dist), target };
@@ -447,6 +455,12 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       panelBody.querySelector('[data-avenue-walkin]')?.addEventListener('click', () => {
         close();
         startWalking(AVENUE_SPAWNS[id]);
+      });
+    // Pier 7's panel: Walk in starts walk mode on the boardwalk under its arch
+    if (id === 'pier')
+      panelBody.querySelector('[data-pier-walkin]')?.addEventListener('click', () => {
+        close();
+        startWalking(PIER_SPAWN);
       });
     // The Block's panel: Walk in starts walk mode on its plaza by the metro's stairs
     if (id === 'trenches')
@@ -942,7 +956,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   if (statsEl) {
     // For the headless checks (scratch scripts): the scene, renderer and camera on the page; opening a place
     // and walking in somewhere without a click through the city
-    (window as unknown as { __city?: unknown }).__city = { scene, renderer, camera, controls, traffic: bodies, view: CROWD_VIEW, open, startWalking, walk };
+    (window as unknown as { __city?: unknown }).__city = { scene, renderer, camera, controls, traffic: bodies, view: CROWD_VIEW, open, startWalking, walk, sky };
     statsEl.className = 'city-stats';
     statsEl.setAttribute('aria-hidden', 'true');
     host.append(statsEl);

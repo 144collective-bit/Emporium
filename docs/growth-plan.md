@@ -1195,10 +1195,11 @@ the el; lighter on phones). Three steps, each its own PR:
   a hatch on the street whose counter opens the Armoury's store and
   workbench under its own name: cartoon guns, Dorras only). Each is a
   place: pin, directory entry, panel with Walk in, a stop on the world map
-  and for taxis and fast travel. Since then trench-a2 and trench-a3 are
-  turned round (the owner's call, `TURNED` in projects.ts): the three
-  places and the corner shops on them face north across the bank avenue to
-  the river, the start of the waterfront (`docs/waterfront-plan.md`).
+  and for taxis and fast travel. Since then row A's four blocks are
+  redesigned as the riverside (the owner's call, riverside.ts): the three
+  places, the Club four times the size, face north across the bank avenue
+  to the boardwalk and Pier 7 (`docs/waterfront-plan.md`), the corner
+  shops on Trench Avenue's strips.
   Steps 2 and 3 measured together on the phone tier: The Trenches view
   158 draws (140 after step 1), 0.27M triangles (0.25M), geometry 75 MB
   (75), textures 135 MB (122: the tenements' and the places' signs);

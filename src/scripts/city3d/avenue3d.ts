@@ -1,14 +1,20 @@
 /*
- * Trench Avenue's places on screen (the grit's step 3; the numbers are
- * avenue.ts): three places like The Block, each a spot with a pin and a
- * panel, built at the boot.
+ * The Trenches' three places on screen (the grit's step 3; the numbers are
+ * avenue.ts, their lots riverside.ts's): each a spot with a pin and a
+ * panel, built at the boot, facing north to the boardwalk and the river.
  *
- * - **Club PULSE**: a black box on the corner, neon tubes up its front
- *   that throb with the beat (still under reduced motion), a magenta line
- *   along its parapet, PULSE on a big board, the vertical blade on its
- *   corner reaching over the roof, the marquee over the door with its
- *   bulbs chasing, a velvet rope on brass posts with the queue behind it
- *   and the bouncer on the door.
+ * - **Club PULSE**, the riverside's landmark: a black hall, its ground
+ *   storey clad round the door's portal and lit vitrines, vertical fins up
+ *   its front each with a neon tube throbbing with the beat, PULSE on a big
+ *   board across them, a magenta line along the parapet; the corner pylon
+ *   with the vertical PULSE on its two outer faces, neon up its edges, a
+ *   cyan crown ring and a mast; the fly tower at the back with a heartbeat
+ *   in neon across its face; the sky deck on the roof (its rail, the DJ
+ *   booth under its canopy and SKY DECK, string lights, the dancers); the
+ *   searchlights' drums and their beams (`beams()`); a wide marquee lit
+ *   underneath, its bulbs chasing; the red carpet, the velvet rope on brass
+ *   posts with the queue behind it, two bouncers; fins and the stage door
+ *   on the cross street.
  * - **The Rusty Nail**: an old dark-brick walk-up, its ground floor a dark
  *   wood front round warm windows, its name in neon over it, a BAR blade
  *   and an OPEN sign; a couple out front.
@@ -19,7 +25,8 @@
  *
  * The signs are one atlas (fixed made-up copy) and the blades another; the
  * club's throbbing tubes and chasing bulbs are four materials of their
- * own, driven by the tick. Nothing here is solid (`AVENUE_SOLIDS` is).
+ * own, driven by the tick, the beams one more. Nothing here is solid
+ * (`AVENUE_SOLIDS` is).
  */
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
@@ -44,8 +51,9 @@ const ROWS = [
   { text: 'TONIGHT · NEON NIGHTS', color: '#15121f', glow: '', board: '#f3eedf', font: 800 },
   { text: 'GUNS · GEAR · MODS', color: '#f3eedf', glow: '', board: '#1d1e27', font: 700 },
   { text: 'OPEN', color: '#ff3b5c', glow: '#ff3b5c', board: '#0b0910', font: 900 },
+  { text: 'SKY DECK', color: '#00eaff', glow: '#ff3bd4', board: '#0a0716', font: 900 },
 ] as const;
-type Row = 0 | 1 | 2 | 3 | 4 | 5;
+type Row = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 const SIGNS = (() => {
   const W = 1024;
   const H = 128;
@@ -152,14 +160,34 @@ function movers(parent: THREE.Object3D, parts: Map<THREE.Material, THREE.BufferG
 
 const CLUB_WALL = toon('#17142a');
 const CLUB_TRIM = toon('#2a2444');
+const CLUB_CLAD = toon('#221d38');
 const GLASS = toon('#0c0b18');
 const BRASS = toon('#d4a64a');
 const VELVET = toon('#a0142e');
+const CARPET = toon('#8c1426');
+const DECK = toon('#2b2440');
+
+/** The heartbeat across the fly tower: (u, y) from 0 to 1 along its front and up its middle band */
+const ECG: Pt[] = [
+  [0, 0.5],
+  [0.2, 0.5],
+  [0.25, 0.62],
+  [0.3, 0.5],
+  [0.38, 0.5],
+  [0.42, 0.3],
+  [0.47, 1],
+  [0.52, 0],
+  [0.56, 0.5],
+  [0.64, 0.5],
+  [0.69, 0.68],
+  [0.75, 0.5],
+  [1, 0.5],
+];
 
 function drawClub(b: Batch, parts: Map<THREE.Material, THREE.BufferGeometry[]>, crowd: Idle[], low: boolean) {
   const [x0, , x1] = CLUB.body;
   const top = S + CLUB.h;
-  // Its front wall and its back (z), and the way out of the front: every z below is a step out of the front (f) or in from the back
+  // Its front wall and its back (z), and the way out of the front: every z below is a step out of the front (F) or in from the back (R)
   const f = CLUB.out;
   const front = CLUB.wall;
   const rear = f > 0 ? CLUB.body[1] : CLUB.body[3];
@@ -167,109 +195,241 @@ function drawClub(b: Batch, parts: Map<THREE.Material, THREE.BufferGeometry[]>, 
   const R = (o: number) => rear + f * o;
   // A sign facing out of the front (the atlas's boards face +z)
   const outward = (g: THREE.BufferGeometry) => (f > 0 ? g : g.rotateY(Math.PI));
-  // The box, a plinth round its foot, the parapet's coping and the roof inside it
+  const tube = (x: number, z: number, y0: number, y1: number, mat: THREE.Material, alongZ = false, t = 0.07) =>
+    parts.get(mat)!.push(new THREE.BoxGeometry(alongZ ? 0.05 : t, y1 - y0, alongZ ? t : 0.05).translate(x, (y0 + y1) / 2, z));
+  /** A tube between two points in the front's plane (the heartbeat, the pylon's crown) */
+  const segment = (a: THREE.Vector3, c: THREE.Vector3, mat: THREE.Material, th = 0.07) => {
+    const d = c.clone().sub(a);
+    const g = new THREE.BoxGeometry(th, d.length() + th, th).applyQuaternion(new THREE.Quaternion().setFromUnitVectors(V(0, 1, 0), d.normalize()));
+    parts.get(mat)!.push(g.translate((a.x + c.x) / 2, (a.y + c.y) / 2, (a.z + c.z) / 2));
+  };
+
+  /* --- The hall: the box, its cladding, the parapet and the roof --- */
   box(b, x0, S, rear, x1, top, front, CLUB_WALL);
-  box(b, x0 - 0.04, S, R(0.3), x0, S + 0.45, F(0.04), CLUB_TRIM);
-  box(b, x0 - 0.04, S, front, x1, S + 0.45, F(0.04), CLUB_TRIM);
-  box(b, x0 - 0.06, top, R(-0.06), x1 + 0.06, top + 0.3, R(0.12), INK);
-  box(b, x0 - 0.06, top, F(-0.12), x1 + 0.06, top + 0.3, F(0.06), INK);
-  box(b, x0 - 0.06, top, R(0.12), x0 + 0.12, top + 0.3, F(-0.12), INK);
-  box(b, x1 - 0.12, top, R(0.12), x1 + 0.06, top + 0.3, F(-0.12), INK);
-  // Panel seams round it, a storey up and two
-  for (const y of [S + 3.05, S + 5.65]) {
-    box(b, x0 - 0.03, y, front, x1, y + 0.08, F(0.03), CLUB_TRIM);
-    box(b, x0 - 0.03, y, rear, x0, y + 0.08, front, CLUB_TRIM);
-  }
-  // Magenta along the parapet's front and its side on the cross street, cyan just under
-  box(b, x0 - 0.08, top + 0.31, F(0.02), x1 + 0.02, top + 0.36, F(0.08), glow('#ff3bd4'));
-  box(b, x0 - 0.08, top + 0.31, R(0.1), x0 - 0.02, top + 0.36, F(0.08), glow('#ff3bd4'));
-  box(b, x0 + 0.1, top - 0.32, F(0.01), x1 - 0.1, top - 0.28, F(0.05), glow('#00eaff'));
-  // On the roof: plant boxes and a vent
-  b.detail(() => {
-    box(b, x1 - 3, top, R(1), x1 - 1.6, top + 0.7, R(2.2), METAL);
-    box(b, x1 - 5.2, top, R(1.2), x1 - 4.2, top + 0.55, R(2.1), METAL);
-    b.add(new THREE.CylinderGeometry(0.22, 0.22, 0.8, 10).translate(x0 + 3, top + 0.4, R(1.5)), METAL);
+  // A plinth round its foot (the front and the side on the cross street) and the ground storey's cladding
+  box(b, x0 - 0.05, S, R(0.3), x0, S + 0.45, F(0.05), CLUB_TRIM);
+  box(b, x0 - 0.05, S, front, x1, S + 0.45, F(0.05), CLUB_TRIM);
+  box(b, x0 - 0.03, S + 0.45, front, x1, S + 3.2, F(0.03), CLUB_CLAD);
+  box(b, x0 - 0.03, S + 0.45, R(0.3), x0, S + 3.2, front, CLUB_CLAD);
+  // The coping round the parapet
+  box(b, x0 - 0.06, top, R(-0.06), x1 + 0.06, top + 0.32, R(0.12), INK);
+  box(b, x0 - 0.06, top, F(-0.12), x1 + 0.06, top + 0.32, F(0.06), INK);
+  box(b, x0 - 0.06, top, R(0.12), x0 + 0.12, top + 0.32, F(-0.12), INK);
+  box(b, x1 - 0.12, top, R(0.12), x1 + 0.06, top + 0.32, F(-0.12), INK);
+  // Magenta along the parapet's front and its side on the cross street, cyan under the coping
+  box(b, x0 - 0.08, top + 0.33, F(0.02), x1 + 0.02, top + 0.38, F(0.08), glow('#ff3bd4'));
+  box(b, x0 - 0.08, top + 0.33, R(0.1), x0 - 0.02, top + 0.38, F(0.08), glow('#ff3bd4'));
+  box(b, x0 + 0.1, top - 0.3, F(0.03), x1 - 0.1, top - 0.26, F(0.07), glow('#00eaff'));
+  // A storey line between the cladding and the fins
+  box(b, x0 - 0.05, S + 3.2, front, x1 + 0.02, S + 3.34, F(0.12), CLUB_TRIM);
+
+  /* --- The front: dark glass behind neon fins, throbbing with the beat --- */
+  const p = CLUB.pylon.rect;
+  const fx0 = p[2] + 0.2;
+  box(b, fx0, S + 3.34, F(0.02), x1 - 0.2, top - 0.34, F(0.03), GLASS);
+  CLUB.fins.forEach((x, i) => {
+    box(b, x - 0.09, S + 3.34, F(0.03), x + 0.09, top - 0.34, F(0.4), INK);
+    tube(x, F(0.43), S + 3.45, top - 0.45, i % 2 ? BEAT.cyan : BEAT.magenta);
   });
+  // A wash of violet behind the glass, a storey up and two (lit, never see-through)
+  for (const y of [S + 4.6, S + 6.6]) box(b, fx0 + 0.1, y, F(0.03), x1 - 0.3, y + 0.05, F(0.036), soft('#7b2cff'));
 
-  // The front: tubes up it, throbbing (one at each end, a pair flanking the board)
-  const tube = (x: number, z: number, y0: number, y1: number, mat: THREE.Material, alongZ = false) =>
-    parts.get(mat)!.push(new THREE.BoxGeometry(alongZ ? 0.05 : 0.07, y1 - y0, alongZ ? 0.07 : 0.05).translate(x, (y0 + y1) / 2, z));
-  const fz = F(0.05);
-  tube(x0 + 0.3, fz, S + 0.6, top - 0.45, BEAT.magenta);
-  tube(x0 + 0.48, fz, S + 0.6, top - 0.45, BEAT.cyan);
-  tube(x1 - 0.3, fz, S + 0.6, top - 0.45, BEAT.magenta);
-  tube(x1 - 0.48, fz, S + 0.6, top - 0.45, BEAT.cyan);
-  // ...and on the side wall, along the cross street
-  for (const [k, o] of [0.5, 2.4, 4.3].entries()) tube(x0 - 0.05, R(o), S + 0.6, top - 0.45, k % 2 ? BEAT.cyan : BEAT.magenta, true);
-
-  // PULSE on a big board over the marquee, framed
-  const m = CLUB.marquee;
-  const bc = (m.x0 + m.x1) / 2 - 1;
-  const bw = 6.4;
-  const by = S + 4.25;
-  box(b, bc - bw / 2 - 0.12, by - 0.92, front, bc + bw / 2 + 0.12, by + 0.92, F(0.08), INK);
-  b.add(outward(sign(0, bw, 1.6)).translate(bc, by, F(0.086)), SIGNS);
-  // The door: double glass doors in a lit frame
+  // PULSE on a big board across the fins, framed
   const d = CLUB.door;
-  box(b, d.x - d.w / 2 - 0.12, S, front, d.x + d.w / 2 + 0.12, S + 1.92, F(0.03), INK);
-  box(b, d.x - d.w / 2, S, F(0.03), d.x + d.w / 2, S + 1.8, F(0.04), GLASS);
-  box(b, d.x - 0.012, S, F(0.04), d.x + 0.012, S + 1.8, F(0.05), METAL);
-  box(b, d.x - d.w / 2 - 0.12, S + 1.92, F(0.03), d.x + d.w / 2 + 0.12, S + 1.96, F(0.07), soft('#ff3bd4'));
-  // Dark glass blocks either side, a wash of colour behind (not see-through)
-  for (const [a, c] of [
-    [x0 + 0.8, d.x - d.w / 2 - 0.5],
-    [d.x + d.w / 2 + 0.5, x1 - 0.8],
-  ] as Pt[])
-    if (c - a > 0.6) {
-      box(b, a, S + 0.55, front, c, S + 2.05, F(0.02), GLASS);
-      box(b, a + 0.08, S + 0.62, F(0.02), c - 0.08, S + 0.66, F(0.03), soft('#7b2cff'));
-    }
+  const bw = 11.5;
+  const by = S + 5.55;
+  box(b, d.x - bw / 2 - 0.16, by - 1.32, F(0.42), d.x + bw / 2 + 0.16, by + 1.32, F(0.52), INK);
+  b.add(outward(sign(0, bw, 2.36)).translate(d.x, by, F(0.526)), SIGNS);
+  for (const y of [by - 1.38, by + 1.38]) box(b, d.x - bw / 2 - 0.2, y - 0.03, F(0.5), d.x + bw / 2 + 0.2, y + 0.03, F(0.56), glow('#ff3bd4'));
 
-  // The marquee: a canopy out over the forecourt, its letterboard, bulbs round its edge chasing
+  /* --- The ground storey: the door in its portal, vitrines either side, the red carpet --- */
+  box(b, d.x - d.w / 2 - 0.35, S, front, d.x + d.w / 2 + 0.35, S + 2.55, F(0.06), INK);
+  box(b, d.x - d.w / 2, S, F(0.06), d.x + d.w / 2, S + 2.2, F(0.07), GLASS);
+  box(b, d.x - 0.015, S, F(0.07), d.x + 0.015, S + 2.2, F(0.08), METAL);
+  for (const o of [-0.22, 0.22]) box(b, d.x + o - 0.02, S + 0.9, F(0.07), d.x + o + 0.02, S + 1.5, F(0.12), BRASS);
+  box(b, d.x - d.w / 2 - 0.35, S + 2.55, F(0.06), d.x + d.w / 2 + 0.35, S + 2.6, F(0.1), soft('#ff3bd4'));
+  for (const o of [-1, 1]) box(b, d.x + o * (d.w / 2 + 0.22) - 0.03, S + 0.1, F(0.06), d.x + o * (d.w / 2 + 0.22) + 0.03, S + 2.5, F(0.1), soft('#00eaff'));
+  for (const [a, c] of [
+    [fx0 + 0.4, d.x - d.w / 2 - 0.7],
+    [d.x + d.w / 2 + 0.7, x1 - 0.5],
+  ] as Pt[])
+    if (c - a > 0.8) {
+      box(b, a, S + 0.6, front, c, S + 2.6, F(0.04), GLASS);
+      box(b, a + 0.1, S + 0.68, F(0.04), c - 0.1, S + 0.72, F(0.05), soft('#7b2cff'));
+      box(b, a + 0.1, S + 2.5, F(0.04), c - 0.1, S + 2.54, F(0.05), soft('#ff3bd4'));
+    }
+  const cp = CLUB.carpet;
+  box(b, cp[0], S + 0.006, cp[1], cp[2], S + 0.018, cp[3], CARPET);
+  box(b, cp[0] - 0.05, S + 0.006, cp[1], cp[0], S + 0.022, cp[3], BRASS);
+  box(b, cp[2], S + 0.006, cp[1], cp[2] + 0.05, S + 0.022, cp[3], BRASS);
+
+  /* --- The marquee: a wide canopy out over the forecourt, lit underneath, its letterboard, bulbs chasing round it --- */
+  const m = CLUB.marquee;
   const mz = m.z;
   const reach = (mz - front) * f;
-  box(b, m.x0, S + m.y, front, m.x1, S + m.y + 0.32, mz, INK);
-  box(b, m.x0 + 0.05, S + m.y - 0.012, F(0.05), m.x1 - 0.05, S + m.y, mz - f * 0.05, CLUB_TRIM);
-  b.add(outward(sign(3, m.x1 - m.x0 - 0.5, 0.26)).translate((m.x0 + m.x1) / 2, S + m.y + 0.16, mz + f * 0.006), SIGNS);
+  box(b, m.x0, S + m.y, front, m.x1, S + m.y + 0.42, mz, INK);
+  box(b, m.x0 + 0.08, S + m.y - 0.012, F(0.08), m.x1 - 0.08, S + m.y, mz - f * 0.08, soft('#ffd9f4'));
+  box(b, m.x0 - 0.02, S + m.y + 0.42, front, m.x1 + 0.02, S + m.y + 0.46, mz - f * 0.02, CLUB_TRIM);
+  b.add(outward(sign(3, m.x1 - m.x0 - 0.7, 0.32)).translate((m.x0 + m.x1) / 2, S + m.y + 0.21, mz + f * 0.006), SIGNS);
   for (const e of [-1, 1]) {
-    const x = e < 0 ? m.x0 : m.x1;
-    // Ties back up to the wall
-    const g = new THREE.CylinderGeometry(0.02, 0.02, Math.hypot(mz - front, 1.3), 5);
-    g.rotateX(-Math.atan2(mz - front, 1.3)).translate(x + -e * 0.15, S + m.y + 0.32 + 0.65, (front + mz) / 2);
-    b.add(g, METAL);
+    // Two rods each side back up to the wall
+    for (const k of [0.4, 2.6]) {
+      const x = (e < 0 ? m.x0 : m.x1) - e * k;
+      const g = new THREE.CylinderGeometry(0.025, 0.025, Math.hypot(mz - front, 1.6), 5);
+      g.rotateX(-Math.atan2(mz - front, 1.6)).translate(x, S + m.y + 0.42 + 0.8, (front + mz) / 2);
+      b.add(g, METAL);
+    }
   }
-  const bulb = new THREE.SphereGeometry(low ? 0.04 : 0.035, low ? 5 : 6, 4);
+  const bulb = new THREE.SphereGeometry(low ? 0.045 : 0.04, low ? 5 : 6, 4);
   let n = 0;
   const put = (x: number, y: number, z: number) => parts.get(CHASE[n++ % 2])!.push(bulb.clone().translate(x, y, z));
-  for (const y of [S + m.y + 0.36, S + m.y - 0.03]) {
-    for (let x = m.x0 + 0.1; x <= m.x1 - 0.1 + 1e-6; x += low ? 0.32 : 0.2) put(x, y, mz + f * 0.02);
-    for (const x of [m.x0 - 0.02, m.x1 + 0.02]) for (let o = 0.25; o < reach - 0.05; o += low ? 0.32 : 0.2) put(x, y, F(o));
+  for (const y of [S + m.y + 0.47, S + m.y - 0.04]) {
+    for (let x = m.x0 + 0.1; x <= m.x1 - 0.1 + 1e-6; x += low ? 0.34 : 0.22) put(x, y, mz + f * 0.03);
+    for (const x of [m.x0 - 0.03, m.x1 + 0.03]) for (let o = 0.25; o < reach - 0.05; o += low ? 0.34 : 0.22) put(x, y, F(o));
   }
-  addPool(d.x, F(1.1), 3.4, S + 0.03);
+  addPool(d.x, F(1.4), 4.6, S + 0.03);
 
-  // The blade on the corner, turned to look down both streets, over the roof; two-sided on its brackets
-  const bl = CLUB.blade;
-  const bh = bl.h - 3;
-  const out = 0.75;
-  // (out from the corner, west and out of the front)
-  const turn = f > 0 ? -Math.PI / 4 : (-3 * Math.PI) / 4;
-  const [ox, oz]: Pt = [-Math.SQRT1_2, f * Math.SQRT1_2];
-  const [cx, cz]: Pt = [bl.x + out * ox, bl.z + out * oz];
-  const bladeBox = new THREE.BoxGeometry(1.1, bh + 0.2, 0.16).rotateY(turn).translate(cx, S + 3 + bh / 2, cz);
-  b.add(bladeBox, INK);
-  for (const s of [1, -1]) {
-    const g = blade(0, 0.96, bh).rotateY(turn + (s < 0 ? Math.PI : 0));
-    const nx = Math.sin(turn) * s;
-    const nz = Math.cos(turn) * s;
-    b.add(g.translate(cx + nx * 0.086, S + 3 + bh / 2, cz + nz * 0.086), BLADES.mat);
-  }
-  for (const y of [S + 3.6, S + bl.h - 1.2]) {
-    const g = new THREE.BoxGeometry(0.08, 0.08, out + 0.3).rotateY(turn).translate(bl.x + (out / 2) * ox, y, bl.z + (out / 2) * oz);
-    b.add(g, METAL);
-  }
-  parts.get(BEAT.magenta)!.push(new THREE.BoxGeometry(1.16, 0.05, 0.05).rotateY(turn).translate(cx, S + bl.h - 0.38, cz));
+  /* --- The pylon on the corner: the vertical PULSE on its two outer faces, neon up its edges, a crown and a mast --- */
+  const ph = S + CLUB.pylon.h;
+  const [pz0, pz1] = [p[1], p[3]];
+  box(b, p[0], S, pz0, p[2], ph, pz1, CLUB_WALL);
+  box(b, p[0] - 0.05, S, pz0 - 0.05, p[2] + 0.05, S + 0.5, pz1 + 0.05, CLUB_TRIM);
+  // The coping and the neon round the top
+  box(b, p[0] - 0.08, ph, pz0 - 0.08, p[2] + 0.08, ph + 0.26, pz1 + 0.08, INK);
+  const pzOut = f > 0 ? pz1 : pz0;
+  // (the outer corner: on the cross street and out of the front)
+  for (const [x, z] of [
+    [p[0] - 0.04, pzOut + f * 0.04],
+    [p[2] + 0.04, pzOut + f * 0.04],
+    [p[0] - 0.04, (f > 0 ? pz0 : pz1) - f * 0.04],
+  ] as Pt[])
+    tube(x, z, S + 0.6, ph - 0.2, BEAT.magenta, false, 0.06);
+  const blH = CLUB.blade.h - 1.6;
+  const blY = S + 1.6 + blH / 2;
+  // The sign out of the front (framed), and the one on the cross street
+  const pcx = (p[0] + p[2]) / 2;
+  const pcz = (pz0 + pz1) / 2;
+  box(b, pcx - 0.82, blY - blH / 2 - 0.12, pzOut, pcx + 0.82, blY + blH / 2 + 0.12, pzOut + f * 0.08, INK);
+  b.add(outward(blade(0, 1.5, blH)).translate(pcx, blY, pzOut + f * 0.086), BLADES.mat);
+  box(b, p[0] - 0.08, blY - blH / 2 - 0.12, pcz - 0.82, p[0], blY + blH / 2 + 0.12, pcz + 0.82, INK);
+  b.add(blade(0, 1.5, blH).rotateY(-Math.PI / 2).translate(p[0] - 0.086, blY, pcz), BLADES.mat);
+  // The crown: a ring of cyan over the top, the mast and its beacon
+  const ring = new THREE.TorusGeometry(1.05, 0.05, 6, low ? 16 : 28).rotateX(Math.PI / 2).translate(pcx, ph + 0.55, pcz);
+  parts.get(BEAT.cyan)!.push(ring);
+  for (const [dx, dz] of [
+    [-0.75, -0.75],
+    [0.75, -0.75],
+    [0.75, 0.75],
+    [-0.75, 0.75],
+  ])
+    b.add(new THREE.CylinderGeometry(0.03, 0.03, 0.55, 5).translate(pcx + dx, ph + 0.27, pcz + dz), METAL);
+  b.add(new THREE.CylinderGeometry(0.035, 0.06, CLUB.pylon.top - CLUB.pylon.h - 0.1, 6).translate(pcx, ph + (CLUB.pylon.top - CLUB.pylon.h) / 2, pcz), METAL);
+  b.add(new THREE.SphereGeometry(0.08, 8, 6).translate(pcx, S + CLUB.pylon.top - 0.04, pcz), glow('#ff3b3b'));
 
-  // The velvet rope on brass posts, the queue behind it, the bouncer by the door
+  /* --- The fly tower at the back: its heartbeat in neon across the front, plant on its roof --- */
+  const fl = CLUB.fly.rect;
+  const fh = S + CLUB.fly.h;
+  const flyFront = f > 0 ? fl[3] : fl[1];
+  const flyRear = f > 0 ? fl[1] : fl[3];
+  box(b, fl[0], top - 0.1, flyRear, fl[2], fh, flyFront, CLUB_WALL);
+  box(b, fl[0] - 0.06, fh, flyRear - f * 0.06, fl[2] + 0.06, fh + 0.26, flyFront + f * 0.06, INK);
+  box(b, fl[0] + 0.1, fh - 0.25, flyFront + f * 0.02, fl[2] - 0.1, fh - 0.2, flyFront + f * 0.06, glow('#ff3bd4'));
+  const [eu0, eu1] = [fl[0] + 0.8, fl[2] - 0.8];
+  const [ey0, ey1] = [top + 0.2, fh - 0.4];
+  const ez = flyFront + f * 0.06;
+  const ecg = ECG.map(([u, y]) => V(eu0 + (eu1 - eu0) * u, ey0 + (ey1 - ey0) * y, ez));
+  for (let i = 1; i < ecg.length; i++) segment(ecg[i - 1], ecg[i], i >= 5 && i <= 8 ? BEAT.magenta : BEAT.cyan, 0.13);
+  b.detail(() => {
+    for (const [u, w] of [
+      [0.25, 1.4],
+      [0.62, 1],
+    ] as Pt[]) {
+      const cx = fl[0] + (fl[2] - fl[0]) * u;
+      box(b, cx - w / 2, fh, R(1.2), cx + w / 2, fh + 0.7, R(2.4), METAL);
+    }
+    b.add(new THREE.CylinderGeometry(0.25, 0.25, 0.9, 10).translate(fl[2] - 1.2, fh + 0.45, R(1.4)), METAL);
+  });
+
+  /* --- The sky deck: its floor and railing, the DJ booth under a canopy, string lights, the dancers --- */
+  const dk = CLUB.deck.rect;
+  const dz0 = Math.min(dk[1], dk[3]);
+  const dz1 = Math.max(dk[1], dk[3]);
+  const deckY = top + 0.06;
+  box(b, dk[0], top, dz0, dk[2], deckY, dz1, DECK);
+  b.detail(() => {
+    // The rail: posts every metre or so, a top rail, a mid rail, round the front and the sides
+    const rail = toon('#c9c4e6');
+    const ry = deckY + 0.55;
+    const edge = f > 0 ? dz1 : dz0;
+    box(b, dk[0], ry - 0.03, edge - 0.03, dk[2], ry + 0.03, edge + 0.03, rail);
+    box(b, dk[0], deckY + 0.25, edge - 0.02, dk[2], deckY + 0.29, edge + 0.02, rail);
+    for (const x of [dk[0], dk[2]]) box(b, x - 0.03, ry - 0.03, dz0, x + 0.03, ry + 0.03, dz1, rail);
+    for (let x = dk[0]; x <= dk[2] + 1e-6; x += low ? 2.2 : 1.1) box(b, x - 0.025, deckY, edge - 0.025, x + 0.025, ry, edge + 0.025, rail);
+  });
+  // The booth: its desk lit along the front, the decks on it, a canopy on four posts, SKY DECK over it
+  const bt = CLUB.deck.booth;
+  const [bz0, bz1] = [Math.min(bt[1], bt[3]), Math.max(bt[1], bt[3])];
+  const bfront = f > 0 ? bz1 : bz0;
+  box(b, bt[0] + 0.3, deckY, bz0 + 0.5, bt[2] - 0.3, deckY + 0.95, bz1 - 0.5, INK);
+  box(b, bt[0] + 0.35, deckY + 0.2, bfront - f * 0.5, bt[2] - 0.35, deckY + 0.8, bfront - f * 0.48, soft('#ff3bd4'));
+  b.detail(() => {
+    for (const o of [-0.55, 0.55]) b.add(new THREE.CylinderGeometry(0.2, 0.2, 0.04, 14).translate((bt[0] + bt[2]) / 2 + o, deckY + 0.97, (bz0 + bz1) / 2), METAL);
+    // Speakers either side
+    for (const x of [bt[0] - 0.2, bt[2] + 0.2]) box(b, x - 0.3, deckY, bz0 + 0.6, x + 0.3, deckY + 1.3, bz1 - 0.6, CLUB_TRIM);
+  });
+  for (const x of [bt[0], bt[2]]) for (const z of [bz0, bz1]) b.add(new THREE.CylinderGeometry(0.04, 0.04, 2.1, 6).translate(x, deckY + 1.05, z), METAL);
+  box(b, bt[0] - 0.15, deckY + 2.1, bz0 - 0.15, bt[2] + 0.15, deckY + 2.22, bz1 + 0.15, INK);
+  box(b, bt[0] - 0.17, deckY + 2.14, bfront + f * 0.15, bt[2] + 0.17, deckY + 2.19, bfront + f * 0.19, glow('#00eaff'));
+  box(b, (bt[0] + bt[2]) / 2 - 1.16, deckY + 2.22, (bz0 + bz1) / 2 - 0.03, (bt[0] + bt[2]) / 2 + 1.16, deckY + 2.66, (bz0 + bz1) / 2 + 0.03, INK);
+  b.add(outward(sign(6, 2.2, 0.36)).translate((bt[0] + bt[2]) / 2, deckY + 2.45, (bz0 + bz1) / 2 + f * 0.036), SIGNS);
+  // String lights from the booth's canopy out to poles at the deck's front corners
+  const poles: Pt[] = [
+    [dk[0] + 0.3, f > 0 ? dz1 - 0.3 : dz0 + 0.3],
+    [dk[2] - 0.3, f > 0 ? dz1 - 0.3 : dz0 + 0.3],
+    [(dk[0] + dk[2]) / 2, f > 0 ? dz1 - 0.3 : dz0 + 0.3],
+  ];
+  for (const [x, z] of poles) b.add(new THREE.CylinderGeometry(0.035, 0.035, 2.4, 6).translate(x, deckY + 1.2, z), METAL);
+  const warm = glow('#ffd27a');
+  const pink = glow('#ff7ad9');
+  b.detail(() => {
+    const from: Pt[] = [
+      [bt[0], (bz0 + bz1) / 2],
+      [bt[2], (bz0 + bz1) / 2],
+      [(bt[0] + bt[2]) / 2, (bz0 + bz1) / 2],
+    ];
+    poles.forEach(([px, pz], i) => {
+      const [ax, az] = from[i];
+      const k = low ? 8 : 14;
+      for (let j = 0; j <= k; j++) {
+        const t = j / k;
+        const y = deckY + 2.2 + (2.4 - 2.2) * t - Math.sin(t * Math.PI) * 0.45;
+        b.add(new THREE.SphereGeometry(0.045, 5, 4).translate(ax + (px - ax) * t, y, az + (pz - az) * t), j % 2 ? pink : warm);
+      }
+    });
+  });
+  for (const q of CLUB.deck.people.slice(0, low ? 5 : CLUB.deck.people.length)) crowd.push({ x: q.x, z: q.z, y: deckY, ry: q.yaw, act: 'look' });
+
+  /* --- The searchlights' drums on the parapet (their beams are their own: buildAvenue) --- */
+  for (const [x, z] of CLUB.searchlights) {
+    box(b, x - 0.35, top + 0.32, z - 0.35, x + 0.35, top + 0.5, z + 0.35, METAL);
+    b.add(new THREE.CylinderGeometry(0.26, 0.3, 0.45, 12).translate(x, top + 0.72, z), INK);
+    b.add(new THREE.CircleGeometry(0.22, 12).rotateX(-Math.PI / 2).translate(x, top + 0.951, z), soft('#e8f6ff'));
+  }
+
+  /* --- The side on the cross street: fins and tubes, the stage door under its own little canopy --- */
+  const side = x0;
+  for (let o = 1.2, k = 0; o < Math.abs(rear - front) - 0.8; o += 1.7, k++) {
+    const z = F(-o);
+    box(b, side - 0.36, S + 3.34, z - 0.08, side, top - 0.34, z + 0.08, INK);
+    tube(side - 0.39, z, S + 3.45, top - 0.45, k % 2 ? BEAT.magenta : BEAT.cyan, true);
+  }
+  const sd = R(3.2);
+  box(b, side - 0.05, S, sd - 0.6, side, S + 2.1, sd + 0.6, toon('#30313d'));
+  box(b, side - 0.75, S + 2.2, sd - 0.85, side, S + 2.3, sd + 0.85, INK);
+  b.add(new THREE.SphereGeometry(0.06, 8, 6).translate(side - 0.12, S + 2.05, sd + 0.75), glow('#ffb347'));
+  addPool(side - 0.6, sd, 2, S + 0.03);
+
+  /* --- The velvet rope on brass posts, the queue behind it, the bouncers by the door --- */
   const r = CLUB.rope;
   for (const x of r.posts) {
     b.add(new THREE.CylinderGeometry(0.13, 0.16, 0.04, 10).translate(x, S + 0.02, r.z), BRASS);
@@ -281,17 +441,52 @@ function drawClub(b: Batch, parts: Map<THREE.Material, THREE.BufferGeometry[]>, 
     // A sag in each run: two halves dipping to the middle
     const mid = (a + c) / 2;
     const dip = 0.12;
-    for (const [p, q] of [
+    for (const [pa, q] of [
       [a, mid],
       [mid, c],
     ] as Pt[]) {
-      const len = Math.hypot(q - p, dip);
-      const g = new THREE.CylinderGeometry(0.022, 0.022, len, 5).rotateZ(Math.PI / 2 + (q === mid ? -1 : 1) * Math.atan2(dip, q - p));
-      b.add(g.translate((p + q) / 2, S + r.h - 0.14 - dip / 2, r.z), VELVET);
+      const len = Math.hypot(q - pa, dip);
+      const g = new THREE.CylinderGeometry(0.022, 0.022, len, 5).rotateZ(Math.PI / 2 + (q === mid ? -1 : 1) * Math.atan2(dip, q - pa));
+      b.add(g.translate((pa + q) / 2, S + r.h - 0.14 - dip / 2, r.z), VELVET);
     }
   }
-  for (const q of CLUB.queue.slice(0, low ? 5 : CLUB.queue.length)) crowd.push({ x: q.x, z: q.z, ry: q.yaw, act: 'queue' });
-  crowd.push({ x: CLUB.bouncer.x, z: CLUB.bouncer.z, ry: CLUB.bouncer.yaw, scale: 1.1 });
+  for (const q of CLUB.queue.slice(0, low ? 6 : CLUB.queue.length)) crowd.push({ x: q.x, z: q.z, ry: q.yaw, act: 'queue' });
+  for (const q of CLUB.bouncers) crowd.push({ x: q.x, z: q.z, ry: q.yaw, scale: 1.1 });
+}
+
+/** The searchlights' beams: long soft cones from the drums, sweeping the sky at night (their own material; still under reduced motion) */
+function beams(group: THREE.Group, tick: (f: Tick) => void, reduced: boolean) {
+  const L = 34;
+  const g = new THREE.CylinderGeometry(1.9, 0.18, L, 16, 1, true).translate(0, L / 2, 0);
+  // Fading out towards the tip: vertex alpha
+  const pos = g.attributes.position as THREE.BufferAttribute;
+  const col = new Float32Array(pos.count * 4);
+  for (let i = 0; i < pos.count; i++) col.set([1, 1, 1, Math.max(0, 1 - pos.getY(i) / L) ** 1.6], i * 4);
+  g.setAttribute('color', new THREE.BufferAttribute(col, 4));
+  const mat = new THREE.MeshBasicMaterial({ color: '#cfe9ff', vertexColors: true, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false });
+  const top = S + CLUB.h + 0.85;
+  const lights = CLUB.searchlights.map(([x, z], i) => {
+    const pivot = new THREE.Group();
+    pivot.position.set(x, top, z);
+    const m = fx(new THREE.Mesh(g, mat));
+    m.userData.keep = true;
+    m.frustumCulled = false;
+    pivot.add(m);
+    pivot.userData.keep = true;
+    group.add(pivot);
+    return { pivot, ph: i * 2.1 };
+  });
+  tick(({ t, night }) => {
+    mat.opacity = 0.085 * night;
+    const on = night > 0.05;
+    for (const l of lights) {
+      l.pivot.visible = on;
+      if (!on) continue;
+      const a = reduced ? l.ph : t * 0.35 + l.ph;
+      // Leaning out over the river, swinging side to side
+      l.pivot.rotation.set(-0.42 + Math.sin(a * 0.7) * 0.12, 0, Math.sin(a) * 0.55);
+    }
+  });
 }
 
 /* ---------- The bar and the gun store: brick buildings in their lots' frames (infill.ts's kit) ---------- */
@@ -424,10 +619,11 @@ export function buildAvenue(scene: THREE.Scene, crowd: Idle[], opts: { tick: (f:
     ring.rotation.x = -Math.PI / 2;
     ring.position.set(cx, S + 0.05, cz + p.out * 0.6);
     group.add(fx(ring));
-    return { id: p.id, group, focus: V(cx, 2, cz), size, pin: V(cx, S + pinY, cz), ring };
+    return { id: p.id, group, focus: V(cx, 2, cz), size, pin: V(cx, S + pinY, cz), ring, faces: p.face === 'n' ? ('n' as const) : undefined };
   };
-  const club = make(CLUB, (b) => drawClub(b, parts, crowd, opts.low), 8, 18, CLUB.blade.h + 1);
+  const club = make(CLUB, (b) => drawClub(b, parts, crowd, opts.low), 13, 34, CLUB.pylon.top + 0.8);
   movers(club.group, parts);
+  beams(club.group, opts.tick, opts.reduced);
   const bar = make(BAR, (b) => drawBar(b, crowd, opts.low), 4.4, 10, BAR.h + 1.6);
   const arms = make(ARMS, (b) => drawArms(b, opts.low), 4.4, 10, ARMS.h + 1.6);
 

@@ -1,128 +1,89 @@
-# The Trenches' waterfront (a proposal: nothing built yet)
+# The Trenches' waterfront and riverside
 
-The owner's call: a waterfront area on The Trenches' side of the river. This
-is the starting plan: what's there today, the choices, some suggestions and
-the questions to settle before anything is built. Build it one step at a
-time with the owner's sign-off, like every other plan in `docs/`.
+The owner's call: a waterfront on The Trenches' side of the river. The
+first version of this plan set out the choices. The owner picked the
+boardwalk out over the water and a pier, asked for Club PULSE four times
+bigger and more detailed as a landmark, and for row A's four blocks to be
+redesigned for "variety and an architecturally impressive waterfront".
+That is built (below). What's next is at the end; build it one step at a
+time with the owner's sign-off, and keep this plan up to date.
 
-## Done first: the turned blocks
+## Built
 
-Row A's two eastern blocks, `trench-a2` and `trench-a3`, are turned round
-(`TURNED` in `projects.ts`): the recipe lays them as before and the rows
-are mirrored north for south. Their businesses now face north across the
-bank avenue to the river: Trench Arms, The Rusty Nail, Club PULSE (still on
-its corner with the cross street), Block Bodega and Avenue Deli. The
-brownstones that faced the river face Trench Avenue and the el. Corner-shop
-ownership is by id, so saves are unchanged. These fronts are where the
-waterfront would start.
+### The riverside (`riverside.ts`, `riverside3d.ts`, `avenue.ts`)
 
-## What's there today
+Row A's four blocks, between the bank avenue and Trench Avenue, west to
+east. Their river side is a row of landmarks fronting the bank avenue, each
+its own architecture. Their Trench Avenue side keeps a strip of brownstones
+and the corner shops (`STRIPS`, laid by the rows' recipe), with service
+yards between.
 
-- **The stretch:** the south bank from the highway's west bridge (x -215)
-  to Liberty Bridge (x -23.5), where the town's promenade begins
-  (`PROMENADE.x` starts at -42). About 190 tiles, some 340 m.
-- **The land:** very little. The river wall is at z 86 and the bank avenue
-  (`BANK`, two lanes each way with a median) has its kerbs at z 88.3 and 95.7,
-  with row A from 96.5. Between the water and the kerb there are only about
-  2 tiles (3.7 m) of land, with no promenade, benches, railings, lamps or
-  jetties (the only jetty on this side is Liberty Bridge's, at x -24).
-- **Crossings:** none between the highway (x -215) and Liberty Bridge. The
-  nearest road bridge is the x -4.5 avenue.
-- **Across the water:** the north bank avenue (z 64.5) and the outskirts'
-  trees, open land west of the Parkway. Downtown and the Emporium are up
-  the river to the east.
-- **On the water:** three boats run the whole river in Liberty Bridge's
-  three lanes (`BOAT_LANES`), spent near you.
-- **Behind it:** row A (a0 and a1 still rows facing out on all four sides,
-  a2 and a3 turned), and row W's low commercial at the west end
-  (`trench-w0`, warehouses, the auto shop, the scrap yard).
+- **trench-a0:** **The Wharf**, a slim glass tower of four stacks of floors,
+  each shifted off the one under it, on a glass lobby with a roof terrace,
+  and a lit crown. **The Refinery**, an old red-brick sugar works turned
+  lofts: tall arched windows between brick piers, a corbelled cornice, a
+  monitor roof, the round brick chimney, and REFINERY in yellow neon on a
+  steel lattice on its roof.
+- **trench-a1:** **Harbor Stores**, a dark-brick warehouse over an arcade
+  of round arches with shop windows lit behind, hoist beams, a ghost sign,
+  and a glass penthouse set back on the roof. **Trench Arms** is on the
+  corner.
+- **trench-a2:** **The Pier House**, a pale stone ferry hall with tall
+  arched windows, a balustrade and a copper mansard. Its clock tower stands
+  on Pier 7's line, with a dial on each face (the hands keep the visitor's
+  time), an open belfry and a copper cupola. **The Rusty Nail** is on the
+  corner.
+- **trench-a3:** **Club PULSE**, the landmark, four times the club it was:
+  - a black hall behind vertical neon fins throbbing with the beat, and
+    PULSE across them;
+  - the corner pylon with the vertical sign, a crown ring and a mast;
+  - a fly tower with a heartbeat traced in neon;
+  - the sky deck on the roof with its DJ booth and dancers;
+  - searchlights at night;
+  - a wide marquee over the red carpet, the queue along the velvet rope,
+    and two bouncers.
 
-## The big choice: where the room comes from
+Everything stays under the Emporium. The corner shops (Block Bodega,
+Trench Mart, Avenue Deli) are on the Trench Avenue strips, facing the
+avenue. Saves own them by id, so nothing is lost.
 
-1. **Out over the water.** A timber boardwalk on piles along the south
-   wall, 4-5 tiles out. Nothing on land moves. The river is 15 wide, so the
-   boats' lanes would have to shift north or narrow (checked in a test).
-2. **Calm the bank avenue.** West of the south row's bend, one lane each
-   way and no median, giving about 4 tiles to a wide riverside walk.
-   Traffic follows by itself (routes are generated from the street plan);
-   the snapshot changes on purpose.
-3. **Give up a block.** Turn `trench-a0` or `trench-a1` into the
-   waterfront's hub (a pier plaza, a market hall) and keep the rest a
-   narrow walk.
-4. **A mix (my pick):** the boardwalk out over the water (1) for the
-   length, plus one hub (3) in front of the turned blocks or on a1, and the
-   avenue kept as it is. That's the most room for the least disruption.
+### The waterfront (`waterfront.ts`, `waterfront3d.ts`)
 
-## Suggestions (pick and mix)
+- **The boardwalk:** a timber deck from the bank avenue's kerb out over the
+  water, from the highway's slip lanes to the town's promenade. It has:
+  - a black steel railing with a wood cap;
+  - sodium lamps reaching in over the walk;
+  - benches facing the river and trees in planters;
+  - mooring bollards and life rings;
+  - people strolling it.
+- **Pier 7**, a place: its neck runs out under a steel arch with PIER 7 lit
+  on both sides. Its head has:
+  - the octagonal BAIT · COFFEE kiosk;
+  - coin binoculars and benches;
+  - string lights out to the corner lamps;
+  - people fishing off the rail.
 
-The feel: a working waterfront that came alive, Brooklyn-style (Red Hook,
-DUMBO): old docks, brick and steel, sodium light, murals with made-up
-words, people out at night. Gritty like the rest of The Trenches, never
-glossy, nothing threatening.
+  You can walk the boardwalk and the pier end to end (`onDeck()`); the
+  railings are the decks' edges.
+- **The old docks:** a rust-red dock crane straddling the boardwalk (you
+  walk through its portal), its jib out over a barge tied up with
+  containers.
+- **The boats** keep clear: the south lane's boat stays east of the
+  boardwalk, and the middle lane swings north round the pier's head.
 
-- **The boardwalk:** a timber deck along the wall, railings at the water,
-  sodium lamps (`lampKind()`), benches facing the river, trees in planters,
-  string lights in places. It joins the town's promenade at -42 and Liberty
-  Bridge's south stairs.
-- **A pier (the centrepiece):** a long pier out into the river, opposite
-  the turned blocks, with a lit arch sign (a made-up name: "Pier 7",
-  "Trench Pier"...), coin binoculars, people fishing off the end,
-  benches, and the Emporium in view up the river.
-- **A night market:** shipping-container stalls and food trucks with
-  picnic tables and string lights. Scenery first, later perhaps stalls you
-  run for Dorras, like the market square.
-- **The old docks:** a dock crane (the `crane` kit exists), stacked
-  containers, mooring bollards, a rusty barge tied up, a warehouse turned
-  lofts, a mural on the flood wall.
-- **Things to do:** a basketball court on a pier deck, a skate spot under
-  the boardwalk's ramp, a boathouse with kayaks.
-- **Boats:** a few tied up at new jetties. Bigger: a **ferry or water
-  taxi** stop, a new way to get about next to taxis and the metro (growth
-  plan Phase 8 style), from The Trenches to downtown's jetties.
-- **Club PULSE on the water:** a riverside terrace, the queue along the
-  rail at night.
-- **Sound:** water lapping, gulls by day, a foghorn now and then, the
-  market's hum, the club's beat over the water (a `waterfront` layer in
-  `ambience.ts`).
-- **Later, the game:** fishing as a mini-game (XP, missions, badges), a
-  waterfront business to own (Dorras only, like the corner shops).
+## Next (suggestions, each the owner's call)
 
-## How it would be built
-
-- `waterfront.ts` (DOM-free, tested in `tests/waterfront.test.ts`): the
-  boardwalk, pier, hub, jetties and dressing as data, z written from
-  `RIVER` and `SOUTH_ROAD` (never fixed numbers south of the river), its
-  solids in `SOLIDS`, trees and lamps kept off it, the boats' lanes clear,
-  every top under the Emporium.
-- `waterfront3d.ts` draws it as sites (`site()`, merged by the tiles),
-  details near only, phones lighter (the trim's rules).
-- Walking on a boardwalk out over the water needs ground there: a slab or
-  a `footbridgeY()`-style height for the deck, and the river walls opened
-  where you step on.
-- Works at both world sizes (`npm run test:wide`); the snapshot only grows
-  unless a choice above moves something on purpose.
-
-### Steps (each with the owner's sign-off)
-
-1. **The walk:** the boardwalk (or the wider walk) along the whole stretch,
-   railings, lamps, benches, planters, a zebra over the bank avenue to the
-   turned blocks' fronts.
-2. **The pier and the hub:** the centrepiece, the night market, people.
-3. **The old docks:** crane, containers, barge, murals, the sound.
-4. **Optional, the game:** a ferry, fishing, a business to own.
-
-## Questions for the owner
-
-1. **Room:** out over the water, a narrower bank avenue, a block given up,
-   or the mix?
-2. **How far:** only The Trenches' stretch (-215 to -42), or carried on to
-   join the town's promenade and Liberty Bridge? And the north bank
-   opposite (outskirts today)?
-3. **The feel:** gritty working docks, a lively night spot (market, lights,
-   music), a calmer riverside park, or a blend?
-4. **Scenery or things to do:** scenery first, or something to play from
-   the start (fishing, a ferry, a stall or business)?
-5. **The pier:** yes or no, and its name (made up)?
-6. **Boats:** a few tied up, or a ferry / water taxi as a way to travel?
-7. **Row A's other blocks** (a0, a1): turn them to face the river too?
-8. **Club PULSE:** give it a riverside terrace?
+1. **A night market:** container stalls and food trucks with picnic tables
+   and string lights, on the boardwalk by the Refinery or in a yard.
+   Scenery first; later stalls you run for Dorras.
+2. **A ferry or water taxi** from Pier 7 to downtown's jetties: a new way to
+   get about next to taxis and the metro.
+3. **Fishing** off Pier 7 as a mini-game (XP, missions, badges; nothing
+   real).
+4. **Sound:** water lapping, gulls by day, a foghorn now and then, the
+   market's hum (a `waterfront` layer in `ambience.ts`).
+5. **Club PULSE's doors:** what happens inside (its panel says coming
+   soon).
+6. **The north bank opposite** (open land outside the Parkway today).
+7. **The yards** behind the riverside: parked vans, dumpsters, a loading
+   dock or two.

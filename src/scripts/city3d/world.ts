@@ -27,6 +27,7 @@ import { SKYLINE } from './bounds';
 import { keyRect } from './tileplan';
 import { site } from './tilework';
 import { lampKind } from './trenches';
+import { WATERFRONT_RECT } from './waterfront';
 
 export { BLOCKS, BS, CORE_ROADS, EW_ROADS, EXT, NS_ROADS, RIVER, SOUTH_ROAD, WALK_W, type Road };
 /** District blocks around the core: one large plot each (src/data/plots.ts). */
@@ -842,7 +843,9 @@ const TONES: Tone[] = ['white', 'sodium', 'flickA', 'flickB'];
 const SODIUM = { bulb: '#ffb35c', halo: '#ffab55', pool: '#ff9a45' };
 export function buildLamps(scene: THREE.Scene, low = false) {
   const toneOf = lamps.map((l, i): Tone | 'dead' => {
-    const k = lampKind(l.x, l.z);
+    // (the waterfront's are all sodium, none flickering: it's kept up)
+    const [wx0, wz0, wx1, wz1] = WATERFRONT_RECT;
+    const k = l.x > wx0 && l.x < wx1 && l.z > wz0 && l.z < wz1 ? 'sodium' : lampKind(l.x, l.z);
     return k === null ? 'white' : k === 'sodium' ? 'sodium' : k === 'dead' ? 'dead' : i % 2 ? 'flickA' : 'flickB';
   });
   // The lamps themselves are merged with the city's fixed geometry (split by tile: tileBatch() in kit.ts)

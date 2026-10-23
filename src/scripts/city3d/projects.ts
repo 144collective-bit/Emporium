@@ -15,14 +15,16 @@
  *   on the block straight south of The Trenches' metro station: a fenced
  *   basketball court, a playground, a handball wall, benches, a community
  *   garden and string lights; the storyline will start here.
- * - **Rows** (`ROW_BLOCKS`): brownstone walk-ups and corner shops round the
- *   blocks of row A (along Trench Avenue and the bank avenue) and along
- *   Bottom Street on row C, laid by a recipe (`rowhouses`, recipes.ts).
+ * - **Rows** (`ROW_BLOCKS`): brownstone walk-ups and corner shops along
+ *   Trench Avenue on row A (a strip each: the blocks' river side is the
+ *   riverside's, riverside.ts) and along Bottom Street on row C, laid by a
+ *   recipe (`rowhouses`, recipes.ts).
  *
  * Every footprint is in `PROJECT_SOLIDS`, from the same numbers.
  */
 import { FLOOR, PARAPET, SHOP_H, type Face, type Footprint, type Pt, type Rect } from './downtown';
-import { RECIPES, layBlock, type Laid } from './recipes';
+import { RECIPES, layBlock } from './recipes';
+import { STRIPS } from './riverside';
 import { KIT_SPEC, heightOf, lotSolids, type Lot } from './kits';
 import { WALK_W } from './layout';
 import { TRENCH_BLOCKS, type TrenchBlock } from './trenches';
@@ -376,29 +378,19 @@ export function blockFence(): Rect[] {
 
 /* ---------- The rows ---------- */
 
-/** A row block: the land a recipe lays on, its seed, and whether its rows are turned round (north for south) */
+/** A row block: the land a recipe lays on, its seed */
 export interface RowBlock {
   id: string;
   poly: Pt[];
   seed: number;
-  turned?: boolean;
 }
 /**
- * The blocks turned round (the owner's call): trench-a2 and trench-a3, so
- * their businesses (Trench Arms, The Rusty Nail, Club PULSE, Block Bodega,
- * Avenue Deli) face north, across the bank avenue to the river, and the
- * brownstones that faced the river face Trench Avenue and the el. The recipe
- * lays them as before and the rows are mirrored north for south: the club
- * keeps its corner on the cross street, every lot and alley its width.
- */
-export const TURNED = ['trench-a2', 'trench-a3'];
-/**
- * Row A's blocks whole (rows round all four sides, a yard inside); row C's
- * only along Bottom Street (a strip one row deep: behind it, the parking and
- * the trees along the highway)
+ * Row A's blocks as strips along Trench Avenue (their river side is the riverside's landmarks: riverside.ts);
+ * row C's only along Bottom Street (a strip one row deep: behind it, the parking and the trees along the
+ * highway). Each strip's back edge is a hair off straight, so the recipe lays its one row along the street.
  */
 export const ROW_BLOCKS: RowBlock[] = TRENCH_BLOCKS.filter((b) => b.row === 'A' || b.row === 'C').map((b, i) => {
-  if (b.row === 'A') return { id: b.id, poly: b.poly, seed: 7100 + i, turned: TURNED.includes(b.id) };
+  if (b.row === 'A') return { id: b.id, poly: STRIPS.find((t) => t.id === b.id)!.poly, seed: 7100 + i };
   const [x0, z0, x1] = bounds(b);
   const d = RECIPES.rowhouses.depth + 0.1;
   // (its back edge a hair off straight, so the recipe lays its one row along Bottom Street, facing it)
@@ -426,34 +418,16 @@ export interface CornerShop {
 }
 /** Which lot: the one facing `face` nearest `near` on the block, at least this wide */
 const CORNER_SPECS: { id: CornerId; name: string; color: string; block: string; near: Pt; face: Face }[] = [
-  { id: 'c0', name: 'BLOCK BODEGA', color: '#ffd23f', block: 'trench-a2', near: [-76.5, 96.5], face: 'n' },
+  { id: 'c0', name: 'BLOCK BODEGA', color: '#ffd23f', block: 'trench-a2', near: [-76.5, 125.5], face: 's' },
   { id: 'c1', name: 'TRENCH MART', color: '#2bff88', block: 'trench-a1', near: [-147.5, 125.5], face: 's' },
-  { id: 'c2', name: 'AVENUE DELI', color: '#ff6a2f', block: 'trench-a3', near: [-48, 96.5], face: 'n' },
+  { id: 'c2', name: 'AVENUE DELI', color: '#ff6a2f', block: 'trench-a3', near: [-48, 125.5], face: 's' },
   { id: 'c3', name: 'CORNER STOP', color: '#00eaff', block: 'trench-c2', near: [-76.5, 252.5], face: 'n' },
 ];
 const CORNER_W = 3;
 
-/** A block's rows mirrored north for south about its middle (`TURNED`): every lot's box and face, its solids, the alleys and their bollards */
-function turnRound(laid: Laid, poly: Pt[]): Laid {
-  const zs = poly.map((p) => p[1]);
-  const m = Math.min(...zs) + Math.max(...zs);
-  const flip = (r: Rect): Rect => [r[0], m - r[3], r[2], m - r[1]];
-  const face = (f: Face): Face => (f === 'n' ? 's' : f === 's' ? 'n' : f);
-  const lots = laid.lots.map((l) => {
-    const t: Lot = { ...l, box: flip(l.box), face: face(l.face) };
-    t.solids = lotSolids(t);
-    return t;
-  });
-  const alleys = laid.alleys.map((a) => ({ box: flip(a.box), bollards: a.bollards.map(([x, z]): Pt => [x, m - z]) }));
-  return { lots, alleys };
-}
-
 /** The rows laid, with the corner shops' lots made shops (their own drawing, cornershops.ts) */
 const LAID = (() => {
-  const byBlock = ROW_BLOCKS.map((b) => {
-    const laid = layBlock(b.poly, RECIPES.rowhouses, b.seed);
-    return b.turned ? turnRound(laid, b.poly) : laid;
-  });
+  const byBlock = ROW_BLOCKS.map((b) => layBlock(b.poly, RECIPES.rowhouses, b.seed));
   const corners: CornerShop[] = CORNER_SPECS.map((c) => {
     const i = ROW_BLOCKS.findIndex((b) => b.id === c.block);
     const mid = (l: Lot): Pt => [(l.box[0] + l.box[2]) / 2, (l.box[1] + l.box[3]) / 2];
@@ -481,38 +455,6 @@ export const CORNER_SHOPS: CornerShop[] = LAID.corners;
 /** Is a row lot one of the corner shops' (drawn from the save, not with the rows) */
 export const isCorner = (l: Lot) => CORNER_SHOPS.some((c) => c.lot === l);
 
-/* ---------- Trench Avenue's places (the grit's step 3) ---------- */
-
-export type AvenueId = 'club' | 'bar' | 'arms';
-/** One of The Trenches' places on row A (named for Trench Avenue, where they first stood): the row lots it takes (avenue.ts builds on them) and the land they cover */
-export interface AvenueLots {
-  id: AvenueId;
-  block: string;
-  lots: Lot[];
-  rect: Rect;
-}
-/**
- * Which lots: every row lot on the block inside this area, on the turned
- * blocks' north side (`TURNED`), facing the bank avenue and the river.
- * Club PULSE takes the corner of trench-a3 (two lots on the cross street,
- * three on the bank avenue); The Rusty Nail and Trench Arms two lots each on
- * trench-a2, the bar next to Block Bodega
- */
-const AVENUE_SPECS: { id: AvenueId; block: string; area: Rect }[] = [
-  { id: 'club', block: 'trench-a3', area: [-71.6, 96.4, -58.9, 104.7] },
-  { id: 'bar', block: 'trench-a2', area: [-88.9, 96.4, -81.85, 101] },
-  { id: 'arms', block: 'trench-a2', area: [-95.7, 96.4, -88.6, 101] },
-];
-export const AVENUE_LOTS: AvenueLots[] = AVENUE_SPECS.map((a) => {
-  const i = ROW_BLOCKS.findIndex((b) => b.id === a.block);
-  const [x0, z0, x1, z1] = a.area;
-  const lots = LAID.byBlock[i].lots.filter((l) => !isCorner(l) && l.box[0] >= x0 && l.box[1] >= z0 && l.box[2] <= x1 && l.box[3] <= z1);
-  const rect: Rect = [Math.min(...lots.map((l) => l.box[0])), Math.min(...lots.map((l) => l.box[1])), Math.max(...lots.map((l) => l.box[2])), Math.max(...lots.map((l) => l.box[3]))];
-  return { id: a.id, block: a.block, lots, rect };
-});
-/** Is a row lot one of the avenue's places' (drawn by avenue3d.ts, not with the rows) */
-export const isAvenue = (l: Lot) => AVENUE_LOTS.some((a) => a.lots.includes(l));
-
 /** Everything solid: the towers (their stoops and scaffolding), The Block's fence and handball wall, the rows' buildings and their alleys' bollards */
 export function projectSolids(): Footprint[] {
   const r = 0.1;
@@ -524,7 +466,7 @@ export function projectSolids(): Footprint[] {
     ...TOWERS.flatMap((t) => (t.scaffold ? [[...t.scaffold, t.parts[t.main].h] as Footprint] : [])),
     ...blockFence().map((f): Footprint => [...f, THE_BLOCK.fenceH]),
     [...THE_BLOCK.handball, THE_BLOCK.handballH],
-    ...d.lots.filter((l) => !isAvenue(l)).flatMap((l) => l.solids),
+    ...d.lots.flatMap((l) => l.solids),
     ...d.alleys.flatMap((a) => a.bollards.map(([x, z]): Footprint => [x - r, z - r, x + r, z + r, 0.9])),
   ];
 }

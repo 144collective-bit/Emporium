@@ -19,6 +19,7 @@ import { RUNWAY, SITE } from './airfield';
 import { CIRCUIT } from './kartcircuit';
 import { KART_PARK } from './kartpark';
 import { BX, WALKWAY } from './liberty';
+import { DECKS } from './waterfront';
 import { HIGHWAY_BOX } from './highway';
 
 export interface WorldMapDeps {
@@ -62,6 +63,7 @@ const C = {
   plane: '#a8b2ff',
   waypoint: '#f10e7d',
   label: '#f3f2f7',
+  boardwalk: '#7a6250',
 };
 
 /** A place's name and a line under it: the copy on its pin (CityMap.astro's directory), or its own */
@@ -149,6 +151,8 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
       poly(p.poly);
       ctx.fill();
     }
+    // The Trenches' boardwalk and Pier 7, out over the water
+    for (const d of DECKS) rect(d, C.boardwalk);
     // The roads, the highway widest, their real width (at least a hairline)
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';

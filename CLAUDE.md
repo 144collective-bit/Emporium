@@ -322,10 +322,11 @@ it and has been retired completely. Build only on what's here.
     (`THE_BLOCK` on `trench-b0-2`, south of the station: plaza, court and
     its fence with a gate each side (`blockFence()`), playground,
     handball wall, garden beds, benches, tables, string-light poles;
-    `BLOCK_SPAWN` on the plaza), and the rows (`ROW_BLOCKS`: row A's
-    blocks whole, row C as a strip along Bottom Street, laid by the
-    `rowhouses` recipe, `rows()`; row C's strip is laid with its back edge
-    a hair off straight so its one row faces Bottom Street). `PROJECT_SOLIDS` (in `SOLIDS`) are the
+    `BLOCK_SPAWN` on the plaza), and the rows (`ROW_BLOCKS`: row A's as
+    strips along Trench Avenue (`STRIPS` in riverside.ts: their river side
+    is the riverside's), row C as a strip along Bottom Street, laid by the
+    `rowhouses` recipe, `rows()`; each strip is laid with its back edge a
+    hair off straight so its one row faces its street). `PROJECT_SOLIDS` (in `SOLIDS`) are the
     towers' parts to their roofs (the main one to its top), stoops and
     scaffolding, the fence, the handball wall, the rows'
     buildings and their alleys' bollards. `TRENCH_WALKS` are the blocks
@@ -445,24 +446,32 @@ it and has been retired completely. Build only on what's here.
     are `avenue.ts` (DOM-free, tested in `tests/avenue.test.ts`) on row lots
     set aside in projects.ts (`AVENUE_LOTS`, `isAvenue()`: kept out of the
     rows' drawing, their solids and the shutters), drawn by `avenue3d.ts`
-    (`buildAvenue()`, at the boot, after The Block). **Turned to face the
-    river** (the owner's call): trench-a2 and trench-a3 are `TURNED` in
-    projects.ts (the recipe's rows mirrored north for south,
-    `turnRound()`), so these three, Block Bodega and Avenue Deli face north
-    across the bank avenue to the river; every number in avenue.ts and
-    avenue3d.ts follows the way a place faces (`face`, `out`, `wall`,
-    `street`), so keep new ones doing so. **Club PULSE**
-    (`CLUB`, trench-a3's corner on the cross street: a black box with neon tubes up its front
-    throbbing with the beat and bulbs chasing round the marquee (four
-    materials of their own driven by the tick, `userData.keep`; still under
-    reduced motion), PULSE on a big board, the vertical blade on its corner
-    over the roof, a velvet rope on brass posts along its forecourt
-    (`FORECOURT`) with the queue behind it and a bouncer at the door;
-    tasteful, nothing explicit), **The Rusty Nail** (`BAR`, next to Block
-    Bodega: dark brick, a dark wood front, its name in neon, a BAR blade, an
-    OPEN sign) and **Trench Arms** (`ARMS`, across from the station: red
-    brick over concrete, barred windows, a hatch on the street,
-    `ARMS.counter`). Signs are one atlas of fixed made-up copy, the blades
+    (`buildAvenue()`, at the boot, after The Block). Since the riverside's
+    redesign (below) they stand on its lots (`CLUB_LOT`, `BAR_LOT`,
+    `ARMS_LOT` in riverside.ts), facing north across the bank avenue to
+    the boardwalk; every number in avenue.ts and avenue3d.ts follows the way
+    a place faces (`face`, `out`, `wall`, `street`), keep new ones doing so,
+    and their spots carry `faces: 'n'` so the fly-in comes from the river
+    (`spotView()` in index.ts). **Club PULSE** (`CLUB`, the riverside's
+    landmark, the owner's call: four times the club it was, the whole river
+    half of trench-a3): a black hall behind vertical neon fins (`fins`)
+    throbbing with the beat, PULSE on a big board across them, the corner
+    pylon by the cross street (`pylon`: the vertical PULSE on its two outer
+    faces, neon up its edges, a cyan crown ring and a mast, its top under
+    the Emporium), the fly tower at the back with a heartbeat traced in neon
+    across its face (`fly`, `ECG`), the sky deck on the roof (`deck`: its
+    rail, the DJ booth under a canopy with SKY DECK, string lights,
+    dancers), two searchlights sweeping the sky at night (`searchlights`,
+    `beams()`: soft cones of their own, still under reduced motion), a wide
+    marquee with chasing bulbs over the red carpet (`carpet`), the stage
+    door on the cross street, a velvet rope on brass posts along its
+    forecourt (`FORECOURT`) with the queue behind it and two bouncers (the
+    tubes, ring, heartbeat and bulbs are four materials of their own driven
+    by the tick, `userData.keep`; tasteful, nothing explicit), **The Rusty
+    Nail** (`BAR`, on trench-a2's corner: dark brick, a dark wood front, its
+    name in neon, a BAR blade, an OPEN sign) and **Trench Arms** (`ARMS`, on
+    trench-a1's corner by Harbor Stores: red brick over concrete, barred
+    windows, a hatch on the street, `ARMS.counter`). Signs are one atlas of fixed made-up copy, the blades
     another. Each is a place: spots `club`, `bar`, `arms` (pins, directory
     entries, panels `data-panel-tpl` with Walk in to `AVENUE_SPAWNS`,
     `PLACES` entries). The club's and the bar's doors (`AVENUE_DOORS`) prompt
@@ -471,7 +480,7 @@ it and has been retired completely. Build only on what's here.
     under its own name (`shop.show(name)` in gunshop.ts). The club's beat
     thumps through its walls by the door (ambience.ts `club`, sound.ts:
     a kick and bass under a low-pass). `AVENUE_SOLIDS` (in `SOLIDS`): the
-    buildings and the rope.
+    buildings, the club's pylon and fly tower, and the rope.
   - **The corner shops** (step 3, the owner's call): `CORNER_SHOPS` in
     `projects.ts` turns four row lots (one each on rows A's a2, a1, a3 and
     C's c2, facing their street) into shops with made-up names (Block
@@ -493,11 +502,49 @@ it and has been retired completely. Build only on what's here.
     Upgrade), the Vault's estate agent lists them, the market hall and the
     Post office take them, the Apartments hire for them, and walk mode
     prompts at each door ("Trench Mart · For sale").
-  - **The waterfront** (the owner's call, a proposal, nothing built):
-    `docs/waterfront-plan.md` holds what's on The Trenches' riverside
-    today, the choices, suggestions and the owner's open questions. Build
-    it one step at a time with the owner's sign-off; keep the plan up to
-    date.
+  - **The riverside** (the owner's call: "variety and an architecturally
+    impressive waterfront") is row A's four blocks redesigned:
+    `riverside.ts` (DOM-free, tested in `tests/riverside.test.ts`): their
+    river side a row of landmarks fronting the bank avenue (`FRONT_Z`), each
+    its own architecture, their Trench Avenue side a strip of brownstones
+    and the corner shops (`STRIPS`), service yards between (`YARD_Z`):
+    **The Wharf** (`WHARF`: a glass lobby with a roof terrace, four stacks
+    of glass floors each shifted off the one under it, white floor plates,
+    a lit crown), **The Refinery** (`REFINERY`: an old red-brick sugar works
+    turned lofts, tall arched windows, a monitor roof, the round brick
+    chimney, REFINERY in yellow neon on a steel lattice on its roof),
+    **Harbor Stores** (`STORES`: dark brick over an arcade of round arches,
+    hoist beams, a ghost sign, a glass penthouse set back on the roof),
+    Trench Arms, **The Pier House** (`PIER_HOUSE`: a pale stone ferry hall
+    with tall arched windows, a balustrade and a copper mansard, its clock
+    tower on Pier 7's line with a dial on each face, the belfry and the
+    copper cupola), The Rusty Nail and Club PULSE; every top under the
+    Emporium (`TALLEST`). `RIVERSIDE_SOLIDS` (in `SOLIDS`). Drawn by
+    `riverside3d.ts` (`buildRiverside()`: the Wharf, the Refinery and
+    Harbor Stores as sites, walls from the wall atlas, arches as flat
+    shapes with extruded frames (`archPane()`, `archFrame()`), the
+    riverside's sign atlas `SIGNS` / `signPlane()` with fixed made-up copy).
+  - **The waterfront** (the owner's pick: a boardwalk over the water and a
+    pier; the plan and what's next: `docs/waterfront-plan.md`) is
+    `waterfront.ts` (DOM-free, tested in `tests/waterfront.test.ts`): the
+    boardwalk (`BOARDWALK`, from the bank avenue's kerb out `OUT` over the
+    water, from the highway's slip lanes to the town's promenade), **Pier
+    7** (`PIER`: its neck under the arch, `ARCH`, and its head with the
+    `KIOSK`, `BINOCULARS`, `FISHERS`), the old docks (`CRANE` straddling the
+    boardwalk, its jib over the `BARGE`), the dressing (`LAMPS`, sodium
+    always (world.ts), `BENCHES`, `PLANTERS`, `BOLLARDS`, `RINGS`), people
+    strolling (`STROLL`, life.ts), `WATERFRONT_SOLIDS` (in `SOLIDS`: the
+    crane's legs, the arch's posts, the kiosk). Walking: the decks are
+    ground at `DECK_Y` (`DECKS`, `onDeck()`: walk.ts lets you off the river's
+    wall only onto them; their edge is the railing). The boats keep clear:
+    the south lane's boat stays east of it (`BOAT_EAST`), the middle lane
+    swings north round the pier's head (`boatZ()`). Drawn by
+    `waterfront3d.ts`: the boardwalk in sites a tile long and the docks a
+    site (`buildWaterfront()`), and Pier 7 with the Pier House a place at
+    the boot (`buildPier()`: spot `pier`, its pin over the arch, panel
+    `data-panel-tpl="pier"` with Walk in to `PIER_SPAWN`, a `PLACES` entry;
+    the clock's hands keep the visitor's time). On the world map the decks
+    are drawn in wood.
   - **The Block** is a place (`theblock.ts`, built at the boot): spot
     `trenches` (pin over the court, directory entry, panel
     `data-panel-tpl="trenches"`: the storyline starts here, coming soon,
@@ -1968,7 +2015,7 @@ it and has been retired completely. Build only on what's here.
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`),
-  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`),
+  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,
