@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { CLIP_DEFS, CLIP_IDS, CLIP_ROWS, CROWD_BONES, CROWD_ROWS, MARCH_STRIDE, WALK_STRIDE, bakeCrowdClips, crowdFrame, type CrowdClip } from '../src/scripts/city3d/crowdclips';
+import { CLIP_DEFS, CLIP_IDS, CLIP_ROWS, CROWD_BONES, CROWD_ROWS, JOG_STRIDE, MARCH_STRIDE, WALK_STRIDE, bakeCrowdClips, crowdFrame, type CrowdClip } from '../src/scripts/city3d/crowdclips';
 import { BONE_INDEX, makeSkeleton } from '../src/scripts/city3d/skeleton';
 
 const data = bakeCrowdClips();
@@ -58,12 +58,13 @@ test('crowdFrame: rows and blend for a loop (wrapping) and for the salute (held 
   assert.deepEqual(crowdFrame('salute', 1), [CLIP_ROWS.salute + s - 2, CLIP_ROWS.salute + s - 1, 1]);
 });
 
-test('played at its stride, the walk keeps a planted foot planted (and so does the march)', () => {
+test('played at its stride, the walk keeps a planted foot planted (and so do the jog and the march)', () => {
   for (const [id, stride] of [
     ['walk', WALK_STRIDE],
+    ['jog', JOG_STRIDE],
     ['march', MARCH_STRIDE],
   ] as [CrowdClip, number][]) {
-    assert.ok(stride > 0.2 && stride < 1.5, `${id} stride ${stride}`);
+    assert.ok(stride > 0.2 && stride < (id === 'jog' ? 3 : 1.5), `${id} stride ${stride}`);
     const n = CLIP_DEFS[id].frames;
     const r = CLIP_ROWS[id];
     for (const foot of [BONE_INDEX.footL, BONE_INDEX.footR]) {
@@ -78,7 +79,8 @@ test('played at its stride, the walk keeps a planted foot planted (and so does t
         const slide = Math.hypot(at[f + 1].x - at[f].x, at[f + 1].z - at[f].z);
         assert.ok(slide < 0.012, `${id} foot ${foot} slides ${slide.toFixed(4)} at frame ${f}`);
       }
-      assert.ok(planted >= n * 0.2, `${id}: planted for ${planted} of ${n} frames`);
+      // (a jogging foot is down for less of its cycle)
+      assert.ok(planted >= n * (id === 'jog' ? 0.12 : 0.2), `${id}: planted for ${planted} of ${n} frames`);
     }
   }
 });

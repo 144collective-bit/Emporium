@@ -16,6 +16,7 @@ import {
   PATHS,
   STADIUM_SITE,
   STRIPS,
+  WESTLAKE_SOLIDS,
   WESTLAKE_BLOCKS,
   WESTLAKE_RECT,
   distToLine,
@@ -72,7 +73,7 @@ test('its blocks are the street plan\'s, and no other block or pad is on them', 
     for (const p of b.poly) for (const o of others) assert.ok(!inPoly(o.poly, p), `${b.id}'s corner ${p} in ${o.id}`);
   for (const pad of PADS) assert.ok(!inPark([(pad.rect[0] + pad.rect[2]) / 2, (pad.rect[1] + pad.rect[3]) / 2]), `${pad.id} on the park`);
   // What was solid there before (nothing): the park's land is open (but its own gates and the stadium, stadium.ts)
-  const before = SOLIDS.filter((s) => !GATE_PIERS.includes(s as never) && !STADIUM_SOLIDS.includes(s));
+  const before = SOLIDS.filter((s) => !WESTLAKE_SOLIDS.includes(s as never) && !STADIUM_SOLIDS.includes(s));
   for (const s of before) assert.ok(!inPark([(s[0] + s[2]) / 2, (s[1] + s[3]) / 2]), `a solid on the park at ${s}`);
   const [x0, z0, x1, z1] = WESTLAKE_RECT;
   for (const b of WESTLAKE_BLOCKS) for (const p of b.poly) assert.ok(p[0] >= x0 && p[0] <= x1 && p[1] >= z0 && p[1] <= z1);
