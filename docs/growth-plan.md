@@ -1181,8 +1181,7 @@ the el; lighter on phones). Three steps, each its own PR:
   the highway (row W) with warehouses, an auto shop, a tyre place, a car
   wash, a scrap yard, a body shop and lock-ups; the yards' chain-link only
   where nothing's built. Each tenement site two buildings (under about
-  60 ms on the slow test machine). The phone numbers are measured with
-  step 3's.
+  60 ms on the slow test machine).
 - **Step 3, three places on Trench Avenue under the el** (built,
   `avenue.ts` / `avenue3d.ts`; the row lots they stand on are
   `AVENUE_LOTS` in projects.ts, out of the rows): Club PULSE on the
@@ -1196,7 +1195,11 @@ the el; lighter on phones). Three steps, each its own PR:
   a hatch on the street whose counter opens the Armoury's store and
   workbench under its own name: cartoon guns, Dorras only). Each is a
   place: pin, directory entry, panel with Walk in, a stop on the world map
-  and for taxis and fast travel. PHONES_PENDING
+  and for taxis and fast travel.
+  Steps 2 and 3 measured together on the phone tier: The Trenches view
+  158 draws (140 after step 1), 0.27M triangles (0.25M), geometry 75 MB
+  (75), textures 135 MB (122: the tenements' and the places' signs);
+  every site under about 30 ms.
 
 The open land inside the new edge is room for several districts. Each one
 is its own PR and the owner's call, built from Phase 4's kits. For
