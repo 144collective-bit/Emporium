@@ -21,10 +21,11 @@
  *   the procedural walk, as in the city), aiming or not, the look swept up
  *   and down; markers at the gun's butt and his shoulder pocket.
  * - The address can set it all up for recordings: `prog`, `gait`, `cam`,
- *   `floor`, `speed`, `gun`, `aim=0`, `pitch`, `compare=0`, `traces=0`.
+ *   `floor`, `speed`, `gun`, `aim=0`, `pitch`, `outfit`, `orbit`,
+ *   `compare=0`, `traces=0`.
  */
 import * as THREE from 'three';
-import { PLAYER, createDegen, type Degen } from './character';
+import { PLAYER, SOLDIER, createDegen, type Degen } from './character';
 import { applyTo, createAnimator, type Animator } from './animator';
 import { copyPose, createLocomotion, placeRoot } from './locomotion';
 import { loadMocap } from './mocap-load';
@@ -323,8 +324,11 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   }
   buildFloor();
 
-  const hero: Degen = createDegen(PLAYER);
-  const old: Degen = createDegen(PLAYER);
+  // (`outfit=hoodie|track|varsity|puffer|soldier` in the address: the player's look in another kind of top)
+  const kind = (['suit', 'hoodie', 'track', 'varsity', 'puffer', 'soldier'] as const).find((k) => k === q.get('outfit'));
+  const outfit = kind === 'soldier' ? SOLDIER : kind ? { ...PLAYER, kind } : PLAYER;
+  const hero: Degen = createDegen(outfit);
+  const old: Degen = createDegen(outfit);
   scene.add(hero.g, old.g);
   const loco = createLocomotion();
 
@@ -414,7 +418,10 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   addEventListener('keyup', onKey);
 
   // The free camera
-  let orbit = { yaw: 0.9, pitch: 0.25, dist: 5 };
+  // (`orbit=yaw,pitch,dist` in the address: the free camera's start)
+  const o0 = (q.get('orbit') ?? '').split(',').map(Number);
+  const [yaw0, pitch0, dist0] = o0.length === 3 && o0.every(Number.isFinite) ? o0 : [0.9, 0.25, 5];
+  let orbit = { yaw: yaw0, pitch: pitch0, dist: dist0 };
   let drag: { x: number; y: number; yaw: number; pitch: number } | null = null;
   canvas.addEventListener('pointerdown', (e) => {
     drag = { x: e.clientX, y: e.clientY, yaw: orbit.yaw, pitch: orbit.pitch };

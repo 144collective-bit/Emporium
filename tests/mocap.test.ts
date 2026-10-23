@@ -135,3 +135,13 @@ test('the feet are on the ground about as long as a run and a walk keep them', (
 test('the clips file stays small (it loads when walking starts)', () => {
   assert.ok(file.length < 450 * 1024, `${(file.length / 1024).toFixed(0)} KB`);
 });
+
+test('the collarbones sit level, as Degen\'s do at rest (the capture\'s own shoulder joint sits at the neck and would shrug them)', () => {
+  const q = new THREE.Quaternion();
+  for (const c of data.clips)
+    for (const b of [MB.clavL, MB.clavR]) {
+      let most = 0;
+      for (let f = 0; f < c.frames; f++) most = Math.max(most, q.fromArray(c.rot, (f * NB + b) * 4).angleTo(new THREE.Quaternion()));
+      assert.ok(most < 0.3, `${c.name}: a collarbone turned ${most.toFixed(2)} rad`);
+    }
+});

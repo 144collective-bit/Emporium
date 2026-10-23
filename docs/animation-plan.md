@@ -316,6 +316,18 @@ What's in:
   (standing is the actor's quiet stands between takes); stairs from
   capture (the feet follow kerbs and slopes; Phase 2).
 
+### Fixes along the way
+
+- **Shoulders up by his ears** (the owner, after Phase 8: "his shoulders
+  look unnatural when he runs"): CMU's shoulder joint sits at the base of
+  the neck, so aligning Degen's collarbones to the segment from it to the
+  arm held them in a 37° shrug in every clip (the arms made up for it, so
+  the hands were right and the shoulders weren't). The collarbones are now
+  kept level like the feet (`=` in `mocap-build.ts`'s map; a test holds
+  them under 0.3 rad). With it, the model's shoulders went natural
+  athletic for every top (sloping trapezius, rounded deltoids: CLAUDE.md,
+  the character section).
+
 ### Phase 1 as it was planned
 
 1. **Licences confirmed** (100STYLE's official terms; CMU's), the takes
