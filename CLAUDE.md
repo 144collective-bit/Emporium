@@ -1159,9 +1159,9 @@ it and has been retired completely. Build only on what's here.
   everyone on the same clips, and (Phase 8, the owner's call) the rifle
   held properly, its butt in his shoulder. Build it one phase at a time
   with the owner's sign-off. Phase 1 (run, sprint and momentum), Phase 2
-  (turning, terrain and transitions), Phase 3 (jumps, falls and landings)
-  and Phase 8 (the rifle shouldered, below under Target practice) are
-  built, for the player on foot:
+  (turning, terrain and transitions), Phase 3 (jumps, falls and landings),
+  Phase 4 (armed movement and peeking) and Phase 8 (the rifle shouldered,
+  below under Target practice) are built, for the player on foot:
   - **The data** is CMU's motion capture (free for commercial use; the
     acknowledgment is in the start menu's Options > Credits, named, never
     linked): mostly subject 143's and 127's takes, in `assets/mocap/cmu/`
@@ -1200,9 +1200,10 @@ it and has been retired completely. Build only on what's here.
     coming down (at most `LOCK.drop`) when a leg can't reach. `applyTo()`
     puts it on the figure (`Degen.rig`) after its own `update()`, and
     `addLook()` turns the head where the camera looks. walk.ts blends it
-    in (`mocapW`) on foot, unarmed, not aiming or emoting, and not during
-    the roll on a very hard landing at a run (`LAND_ROLL`, the keyed one);
-    everywhere else, and for everyone else, it's `locomotion.ts` as before.
+    in (`mocapW`) on foot, not emoting, and not during the roll on a very
+    hard landing at a run (`LAND_ROLL`, the keyed one); armed or aiming,
+    only its legs and hips (Phase 4, below); everywhere else, and for
+    everyone else, it's `locomotion.ts` as before.
   - **Phase 2:** more takes (running turns, a quick stop, walking into a
     run, turning on the spot, standing and waiting: `assets/mocap/takes.json`
     and `CREDITS.md`); his shown facing follows the clip's own turn, pulled
@@ -1230,11 +1231,37 @@ it and has been retired completely. Build only on what's here.
     harder one squashes the hips and bows the chest (`squash`). walk.ts
     dips the camera on landings and shakes it on hard ones (`LAND_SHAKE`,
     not under reduced motion).
+  - **Phase 4:** strafing and backpedalling takes (subject 143's and
+    141's walking backwards and sideways, a side shuffle, a crossover
+    step); aiming (or peeking, or in first person) the springs turn him to
+    face where the camera looks (`AnimInput.faceGoal`, into the
+    trajectory's facing), so the matching picks the strafes and the way
+    back, the hips within `FACE.most` of the aim, stepping round past it
+    (standing, an aim further than `STAND.turn` off his hips searches past
+    the idle).
+    With the gun in his hands (or an arm out aiming) the animator gives
+    only the legs and hips: `applyTo(..., upper, yaw)` keeps the figure's
+    own upper body (locomotion.ts's pose with stance.ts's hold) and turns
+    the spine so the chest keeps the turn the pose gave it, `yaw` more
+    (walk.ts passes the springs' facing less the shown one), so the gun
+    points where you look over whatever the legs do; `upperW` eases the
+    mask in and out. Aiming he goes at `AIMING` (1.4). The **peek** (Q / E
+    held, LB / RB while aiming on a gamepad, on touch aiming by a corner:
+    `cornerSide()`, `CORNER`; `PEEK` in walk.ts) is `addLean()`: the spine
+    leant out over the hips about where the camera looks, the head turned
+    back level (less with his cheek on a stock), the feet where they are,
+    as far out as there's room (`cameraRoom()`); he slows (`PEEK.slow`),
+    faces the look, and the camera goes out with him (over his right
+    shoulder, or across to his left), never into a wall beside him (its
+    sideways shift clamped through `CAMERA_GRID` too); in first person the
+    eye shifts and the view tilts a little (not under reduced motion).
   - **The lab** is `?anim` (`anim-lab.ts`, styles `animlab.css`): the new
     animation beside the old on an open floor, scripted moves or W A S D,
     slow motion, cameras (over his right shoulder too), floors (flat,
     kerbs, stairs, a ledge), any gun in his hands (`gun`, `aim`, `pitch`;
-    markers at the butt and his shoulder's pocket), any kind of top
+    markers at the butt and his shoulder's pocket; on the motion capture's
+    legs, as in the city), strafing, aiming round and peeking programs (Q / E
+    by hand), any kind of top
     (`outfit`), the free camera placed with `orbit=yaw,pitch,dist`, jumps
     (programs and Space, walk.ts's jump and gravity), foot traces and
     readouts (the clip, its rate, the match, the blend left, the foot
@@ -2220,7 +2247,7 @@ it and has been retired completely. Build only on what's here.
   buildings and on the ground. When dummies move, their footprints follow
   `DUMMIES` automatically.
 - Keys: click fires, right-click aims, R reloads, G holsters, X / 1-4 swap
-  guns (Q and E are kept for peeking, animation Phase 4); F does what the
+  guns, Q / E held peek round a corner (animation Phase 4); F does what the
   prompt says (the owner's call: every door, counter and getting in or
   out, and F closes those menus); Shift sprints, Caps Lock (not R) toggles
   walking, the touch Sprint button locks the sprint. Where the mouse can't be captured

@@ -505,7 +505,63 @@ What's in:
   the run without a stop.
 - Camera: a small shake on hard landings (not under reduced motion).
 
-### Phase 4: armed movement and peeking
+### Phase 4: armed movement and peeking (built, for the owner's sign-off)
+
+What's in:
+
+- **More data** (CMU, credited): subject 143's walking backwards and
+  sideways (143_39, 143_40, at their real 60 frames a second, about 0.8
+  m/s), subject 141's quicker ones (141_31 backwards at a jog, about 2.4
+  m/s; 141_33 a side shuffle, about 1.3 m/s; 141_32 a crossover step on
+  the diagonal), cut to their good parts. 28 clips, 138 s, 605 KB (the
+  file's test limit went to 680 KB; it's fetched when walking starts, not
+  at the boot).
+- **Facing the aim:** aiming, peeking or in first person the springs turn
+  him to where the camera looks (as before), and now the trajectory the
+  matching looks for faces it too (`AnimInput.faceGoal`), so going
+  sideways or back finds the strafes and backpedals, never a run turned
+  round. Measured aiming down one way and going each of the eight ways
+  at the aiming speed and the walk: the hips within 4° of the aim, a held
+  foot sliding under 1 cm, the strafing takes playing sideways and back.
+  The hips stay within `FACE.most` of the aim; standing, turning the aim
+  further than `STAND.turn` (0.35 rad) from his hips lets the search past
+  the idle, so he steps round (the turn on the spot) instead of twisting
+  on his planted feet.
+- **The gun's hold over the capture's legs:** with the gun in his hands
+  (or an arm out aiming, unarmed) the animator gives only the legs and
+  the hips; the upper body is the procedural pose with `stance.ts`'s hold
+  on it, the spine turned so the chest keeps the turn that pose gave it
+  under the figure as it's drawn (`applyTo(..., upper, yaw)`), so the
+  gun points where you look whatever the legs do (the test holds the
+  chest and head to the pose's to 1e-4). The mask eases in and out
+  (`upperW`, 0.15 s). Sprinting armed, the hold relaxes the gun low
+  across him as before, over the capture's sprint.
+- **Aiming speed** 1.4 tiles a second (about 2.5 m/s, the plan's low end;
+  it was 1.68): the strafing takes go up to about 2.4 m/s.
+- **The peek** (`addLean()` in animator.ts, `PEEK` in walk.ts): Q / E held,
+  LB / RB while aiming on a gamepad, and on touch aiming by a corner (the
+  view ahead blocked within 1.4 tiles, clear for 3.5 from a lean out to
+  one side: `cornerSide()`, looked at five times a second). The spine leans
+  out 0.42 rad over the hips about where the camera looks, the head turned
+  back level (less with his cheek on a stock), the feet where they are; as
+  far as there's room beside him; he slows to 55%, faces the look, and the
+  camera goes out with him (over his right shoulder, or across to his
+  left), its sideways shift clamped through `CAMERA_GRID` so it never ends
+  in a wall (that clamp now holds the shoulder offset too, always). First
+  person: the eye shifts 0.3 and the view tilts 0.08 rad (not under
+  reduced motion).
+- **The inertialization** now moves each side at the speed it plays (the
+  clip being left at its rate, the next at its own), so a cut out of a
+  time-warped stride keeps its real speed (a sprint's take-off).
+- **The lab:** Strafe 8 ways, Aim round and Peek programs, Q / E by hand,
+  the armed mode on the capture's legs (as in the city), and an Aim
+  readout (how far the legs are off the aim, the peek).
+- **Controls:** the Controls panel lists Q / E, the gamepad and touch notes
+  say how to peek.
+- Not yet: other players and the crowds still walk procedurally armed
+  (Phase 7); jumping armed is the capture's jumps under the hold.
+
+As it was planned:
 
 - Strafing and backpedalling in eight directions from mocap while aiming
   (the body faces the aim, the legs the way he goes: the hips rotate within
@@ -584,8 +640,8 @@ What's in:
   swept up and down or fixed with `pitch`), a camera over his right
   shoulder like walk mode's, and markers at the gun's butt (yellow) and
   his shoulder's pocket (cyan).
-- Not yet: armed movement from capture (Phase 4: today the procedural walk
-  is under the hold); the shooting elbow is reachArm()'s (down, a little
+- Armed movement from capture came in Phase 4 (the hold over the
+  capture's legs). Not yet: the shooting elbow is reachArm()'s (down, a little
   out), not raised.
 
 What was wrong (the owner's screenshot) (the owner's screenshot, from behind while aiming):
