@@ -703,6 +703,13 @@ it and has been retired completely. Build only on what's here.
     garden one, the planters a site per tile, each terrace one; flowers,
     benches and lanterns near only. The main walks' paving is
     westlake3d.ts's (`PAVE_Y`, over the gravel's `PATH_Y`).
+- **The financial centre** (the owner's call): Westlake Park's three
+  strips (x -200.5 to -43.3, z 0 to 60, the north bank avenue along the
+  river) becoming a waterfront boulevard and financial centre with
+  skyscrapers and a plaza, planned in `docs/finance-plan.md` in five
+  phases, each with the owner's sign-off; keep it up to date. Nothing is
+  built yet; the owner's decisions (how tall against the Emporium, the
+  courts, the name, places) come first.
 - **Districts loaded as you approach** (performance phase 4, item 10):
   a district's drawing is a module of its own (`LAZY_DISTRICTS` in
   `districts.ts`: an id, its land and `load()`, a dynamic import), a chunk
