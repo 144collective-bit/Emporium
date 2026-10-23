@@ -959,6 +959,10 @@ export function createCombat(d: CombatDeps) {
       holdGun(pose, stance, pivot, gun, { aim: s.aim, ready, draw: drawn, pitch: s.pitch, recoil: s.recoil, reload, dt: s.dt });
       return drawn > 0;
     },
+    /** How far his head is down on the stock (0..1): the look added after it goes only the rest of the way */
+    get cheek() {
+      return stance.cheek;
+    },
     /** Every rifle finish change and lifetime score update (for the profile panel) */
     onLifetime(fn: (total: number) => void) {
       lifetimeFns.push(fn);

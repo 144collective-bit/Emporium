@@ -1070,11 +1070,12 @@ it and has been retired completely. Build only on what's here.
   `docs/animation-plan.md`: AAA movement (Spider-Man / Ratchet feel,
   neutral athletic) from motion capture, then turns, jumps, armed
   movement, peeking (Q / E), crouch, slide, vault and climb, contact, and
-  everyone on the same clips, and last (Phase 8, the owner's call) the
-  rifle held properly, its butt in his shoulder. Build it one phase at a
-  time with the owner's sign-off. Phase 1 (run, sprint and momentum),
-  Phase 2 (turning, terrain and transitions) and Phase 3 (jumps, falls
-  and landings) are built, for the player on foot:
+  everyone on the same clips, and (Phase 8, the owner's call) the rifle
+  held properly, its butt in his shoulder. Build it one phase at a time
+  with the owner's sign-off. Phase 1 (run, sprint and momentum), Phase 2
+  (turning, terrain and transitions), Phase 3 (jumps, falls and landings)
+  and Phase 8 (the rifle shouldered, below under Target practice) are
+  built, for the player on foot:
   - **The data** is CMU's motion capture (free for commercial use; the
     acknowledgment is in the start menu's Options > Credits, named, never
     linked): mostly subject 143's and 127's takes, in `assets/mocap/cmu/`
@@ -1133,7 +1134,9 @@ it and has been retired completely. Build only on what's here.
     not under reduced motion).
   - **The lab** is `?anim` (`anim-lab.ts`, styles `animlab.css`): the new
     animation beside the old on an open floor, scripted moves or W A S D,
-    slow motion, cameras, floors (flat, kerbs, stairs, a ledge), jumps
+    slow motion, cameras (over his right shoulder too), floors (flat,
+    kerbs, stairs, a ledge), any gun in his hands (`gun`, `aim`, `pitch`;
+    markers at the butt and his shoulder's pocket), jumps
     (programs and Space, walk.ts's jump and gravity), foot traces and
     readouts (the clip, its rate, the match, the blend left, the foot
     slide, the air); `rec`, `prog`, `gait`, `cam`, `floor`, `zoom`, `compare=0` in
@@ -2017,7 +2020,7 @@ it and has been retired completely. Build only on what's here.
   player in the sim) are bought at the Armoury's workbench. Never real
   money, never tied to the token. Keep them cartoon: no real-world gun
   names, brands or markings. A new gun needs a `WEAPONS` entry (with a `short` name for the Swap
-  button), a `FIT` entry in `gunfit.ts` (its hand spots, muzzle and sight,
+  button), a `FIT` entry in `gunfit.ts` (its hand spots, muzzle and sight, a long gun's `butt`,
   third-person `hold` spot for the front hand, `carry`, `reload` kind and
   `kick`), a `SPECS` entry in `guns.ts` (its parts), store art (`ART` in
   `gunshop.ts`) and a shot sound (`SHOT_SOUND` in `combat.ts`); the tests
@@ -2029,7 +2032,14 @@ it and has been retired completely. Build only on what's here.
   (every gun's origin, `GRIP`), the other on its `hold` spot, or wherever
   the reload clip sends it, both closed round it (`grip`). On top of the
   walk or run: `aim` (the spine bends a share of the way, the head takes it
-  back out), `ready` (1 after a shot, an aim or a reload for
+  back out; a long gun's `SPINE_AIM` share is bigger),
+  **shouldered** (animation Phase 8: at the ready and aiming a long gun's
+  `butt` in `FIT` sits in his right shoulder's `POCKET` and the gun pivots
+  there; aiming, his head comes down onto the stock, `CHEEK`, pitched and
+  tilted (`Pose.headRoll`) so his eye is on the sight's line, the gun
+  meeting it part of the way; `Stance.cheek` says how far, and walk.ts and
+  remote.ts add the look only the rest of the way; a new long gun needs its
+  `butt`), `ready` (1 after a shot, an aim or a reload for
   `READY_HOLD`; 0 is the relaxed carry: a long gun low across the body, the
   revolver hanging in one hand; sprinting relaxes it), `draw` (0 put away:
   slung on his back or the revolver on his hip (`STOWED`); the hand goes to

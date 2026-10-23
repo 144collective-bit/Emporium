@@ -1672,9 +1672,11 @@ export function createWalk(d: WalkDeps) {
     camStill = Math.abs(wrap(yaw - lastYaw)) > 0.002 ? 0 : camStill + dt;
     lastYaw = yaw;
     lookAround += ((camStill > 3 && !combat.armed ? loco.look : 0) - lookAround) * damp(2, dt);
-    // (on top of the locomotion's own: the head kept steady while the body turns and leans under it)
-    P.headYaw += headYaw + lookAround;
-    P.headPitch += headPitch;
+    // (on top of the locomotion's own: the head kept steady while the body turns and leans under it;
+    // with his cheek on a rifle's stock the head is the gun's)
+    const free = gunInHand ? 1 - combat.cheek : 1;
+    P.headYaw += (headYaw + lookAround) * free;
+    P.headPitch += headPitch * free;
     hero.update();
     // On foot, unarmed and not showing off, the motion capture: blended in and out over a moment
     if (!animator && !animLoading) {
