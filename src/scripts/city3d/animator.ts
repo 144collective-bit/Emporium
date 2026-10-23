@@ -64,6 +64,8 @@ export interface AnimInput {
   /** The game's take-off speed and gravity (walk.ts's JUMP and GRAVITY) */
   jump?: number;
   gravity?: number;
+  /** The way the springs are turning him to face, when it isn't where he's going (aiming, peeking: where the camera looks) */
+  faceGoal?: number;
 }
 
 /** How much faster or slower a clip may play to match his speed, and how much more flat out */
@@ -93,9 +95,11 @@ export const MATCH = { every: 0.1, margin: 0.02, sharp: 1.2 };
  * a second, nothing asked), only the standing clips are searched, so he
  * settles into the long idle instead of the quiet frames before a take sets
  * off (whose trajectory knows a run is coming); settled in it, a frame must
- * be `margin` better to take over, so its weight shifts and shuffles play on
+ * be `margin` better to take over, so its weight shifts and shuffles play on.
+ * Not while the springs turn him further than `turn` radians from the way
+ * he's shown facing (aiming round: the turns on the spot are searched)
  */
-export const STAND = { after: 0.35, speed: 0.08, clips: ['idle'], margin: 0.6 };
+export const STAND = { after: 0.35, speed: 0.08, clips: ['idle'], margin: 0.6, turn: 0.35 };
 /**
  * A locked foot lets go once the clip's foot is this far away (rig
  * numbers), or when holding it would bring the hips down more than `drop`;
@@ -383,7 +387,7 @@ export function createAnimator(data: MoData) {
     const c = Math.cos(-face);
     const s = Math.sin(-face);
     AHEAD.forEach((k, i) => {
-      ahead(m, inp.gx, inp.gz, k / MOCAP_FPS, ah);
+      ahead(m, inp.gx, inp.gz, k / MOCAP_FPS, ah, inp.faceGoal);
       // Into his own frame (rig numbers)
       pts[i].x = (ah.x * c + ah.z * s) / inp.scale;
       pts[i].z = (-ah.x * s + ah.z * c) / inp.scale;
@@ -529,7 +533,7 @@ export function createAnimator(data: MoData) {
     // 2. Search (on the ground; while a landing plays out, only for something far better)
     settle = Math.max(0, settle - dt);
     // (standing: not in the air, nor while a landing plays out)
-    still = !inAir && Math.hypot(m.vx, m.vz) < STAND.speed && Math.hypot(inp.gx, inp.gz) < 0.01 ? still + dt : 0;
+    still = !inAir && Math.hypot(m.vx, m.vz) < STAND.speed && Math.hypot(inp.gx, inp.gz) < 0.01 && Math.abs(wrap(m.face - face)) < STAND.turn ? still + dt : 0;
     const stand = still > STAND.after && settle <= 0;
     // (settling: the first search standing still looks for the idle at once)
     if (stand && !standing[clip]) searchIn = 0;
@@ -752,15 +756,19 @@ export function createAnimator(data: MoData) {
     lastCost = r.cost;
     return r.g;
   }
-  /** Over to frame `g`, what was showing inertialized away */
-  function cut(g: number) {
+  /** Over to frame `g`, what was showing inertialized away (each side moving as fast as it plays: this clip at its rate, the next at `next`) */
+  function cut(g: number, next = rate) {
     sample(clip, t, srcRot, srcHips, srcAv, srcHv);
     // (the flight's rise is the game's: both sides without it)
     srcHips.y -= db.bump[at(clip, t)];
+    for (const v of srcAv) v.multiplyScalar(rate);
+    srcHv.multiplyScalar(rate);
     clip = db.clipOf[g];
     t = db.frameOf[g];
     sample(clip, t, dstRot, dstHips, dstAv, dstHv);
     dstHips.y -= db.bump[g];
+    for (const v of dstAv) v.multiplyScalar(next);
+    dstHv.multiplyScalar(next);
     inertia.jump(srcRot, srcAv, srcHips, srcHv, dstRot, dstAv, dstHips, dstHv);
     jumps++;
   }
@@ -768,7 +776,8 @@ export function createAnimator(data: MoData) {
   function takeOff(jumping: boolean, vy: number, jumpV: number) {
     const g = searchFor(false, at(clip, t), undefined, jumping ? db.takeoff : falls);
     if (g < 0) return;
-    cut(g);
+    // (the push off plays at about its own speed, a fall's flight as the fall goes)
+    cut(g, jumping ? 1.2 : 1);
     inAir = true;
     flight = db.flightOf[g];
     v0 = jumping ? Math.max(vy, jumpV * 0.5) : jumpV;
@@ -834,21 +843,97 @@ export type Animator = ReturnType<typeof createAnimator>;
 
 const qw = new THREE.Quaternion();
 const vw = new THREE.Vector3();
+const qp = new THREE.Quaternion();
+const qd = new THREE.Quaternion();
+const qs = new THREE.Quaternion();
+const qt = new THREE.Quaternion();
+/** The bones under the hips that carry the upper body, and the share of a turn each takes */
+const SPINE = [
+  ['spine1', 0.35],
+  ['spine2', 0.5],
+  ['chest', 1],
+] as const;
+/** The legs' bones (all but the hips under them) */
+const LOWER = new Set(['legL', 'shinL', 'footL', 'toeL', 'legR', 'shinR', 'footR', 'toeR']);
 /**
  * Put the animator's pose on a figure's bones (after its own `update()`,
  * which has posed the fingers and anything held), `w` of the way from the
- * pose it has (1 all of it)
+ * pose it has (1 all of it).
+ *
+ * `upper` (0 to 1) keeps the figure's own upper body over the animator's
+ * legs (Phase 4: the gun's hold, an arm out aiming): the hips and legs are
+ * the animator's, and the spine turns so the chest keeps the turn the
+ * figure's pose gave it, `yaw` (radians about up) more: the figure is drawn
+ * turned by the animator's facing, and the pose was made for the springs'
+ * (walk.ts passes the difference), so the gun still points where you look.
  */
-export function applyTo(sk: Skeleton, rot: Float32Array, hips: THREE.Vector3, w = 1) {
-  for (let i = 0; i < NB; i++) {
-    const b = sk.bones[MOCAP_BONES[i]];
-    qw.fromArray(rot, i * 4);
-    if (w >= 1) b.quaternion.copy(qw);
-    else b.quaternion.slerp(qw, w);
-  }
+export function applyTo(sk: Skeleton, rot: Float32Array, hips: THREE.Vector3, w = 1, upper = 0, yaw = 0) {
   const h = sk.bones.hips;
+  // (the pose's own hips, before they're the animator's)
+  qp.copy(h.quaternion);
+  for (let i = 0; i < NB; i++) {
+    const n = MOCAP_BONES[i];
+    const b = sk.bones[n];
+    qw.fromArray(rot, i * 4);
+    // (the upper body only as far as it isn't the pose's own)
+    const k = i === 0 || LOWER.has(n) ? w : w * (1 - upper);
+    if (k >= 1) b.quaternion.copy(qw);
+    else if (k > 0) b.quaternion.slerp(qw, k);
+  }
   if (w >= 1) h.position.copy(hips);
   else h.position.lerp(vw.copy(hips), w);
+  if (upper <= 0) return;
+  // What turns the pose's chest under the hips as they are now: hips⁻¹ · yaw · the pose's hips, a share of it
+  // down each bone of the spine (each time brought into the next bone's frame)
+  qd.copy(h.quaternion).invert().multiply(qt.setFromAxisAngle(UPV, yaw)).multiply(qp);
+  qd.slerp(qs.identity(), 1 - upper);
+  for (const [n, k] of SPINE) {
+    const b = sk.bones[n];
+    qs.identity().slerp(qd, k);
+    // the rest, in this bone's frame: b⁻¹ · share⁻¹ · rest · b
+    qt.copy(qs).invert().multiply(qd);
+    qd.copy(b.quaternion).invert().multiply(qt).multiply(b.quaternion);
+    b.quaternion.premultiply(qs).normalize();
+  }
+}
+
+const qa2 = new THREE.Quaternion();
+const qr = new THREE.Quaternion();
+const vax = new THREE.Vector3();
+/** The lean of a peek over the spine (spine1, spine2, the chest) and the head's levelling back (neck, head) */
+const LEAN = [
+  ['spine1', 0.3],
+  ['spine2', 0.35],
+  ['chest', 0.35],
+] as const;
+const LEVEL = [
+  ['neck', 0.4],
+  ['head', 0.6],
+] as const;
+/**
+ * A peek (Phase 4): the upper body leant out over the hips by `lean`
+ * radians (+ to his right) about the figure's way `yaw` (radians about up,
+ * in its own frame: where the camera looks), the feet where they are, and
+ * the head turned back `level` of the way, so it stays level. On top of
+ * whatever posed the figure (the animator, the pose, both).
+ */
+export function addLean(sk: Skeleton, lean: number, yaw = 0, level = 0.85) {
+  if (Math.abs(lean) < 1e-4) return;
+  // (the axis in the figure's frame; each bone's parent's turn in it, built up going down the chain)
+  vax.set(Math.sin(yaw), 0, Math.cos(yaw));
+  qa2.copy(sk.bones.hips.quaternion);
+  for (const [n, k] of LEAN) {
+    const b = sk.bones[n];
+    const ax = vw.copy(vax).applyQuaternion(qt.copy(qa2).invert());
+    b.quaternion.premultiply(qr.setFromAxisAngle(ax, lean * k)).normalize();
+    qa2.multiply(b.quaternion);
+  }
+  for (const [n, k] of LEVEL) {
+    const b = sk.bones[n];
+    const ax = vw.copy(vax).applyQuaternion(qt.copy(qa2).invert());
+    b.quaternion.premultiply(qr.setFromAxisAngle(ax, -lean * level * k)).normalize();
+    qa2.multiply(b.quaternion);
+  }
 }
 
 const qx = new THREE.Quaternion();
