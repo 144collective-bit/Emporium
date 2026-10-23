@@ -14,9 +14,15 @@ const P6: [number, number] = [-420, 460];
 const WIDE: [number, number] = [-680, 720];
 const inBox = (b: readonly number[], x: number, z: number) => x > b[0] && x < b[2] && z > b[1] && z < b[3];
 
+/** Where the kart park stood when the densities were worked out (north of the Parkway; it moved north of the highway in the north side's stage 2) */
+const OLD_KART: [number, number, number, number] = [92, -138, 180, -48];
+const overlap = (a: readonly number[], b: readonly number[]): [number, number, number, number] => [Math.max(a[0], b[0]), Math.max(a[1], b[1]), Math.min(a[2], b[2]), Math.min(a[3], b[3])];
+
 test('the densities still fit the land the world had before Phase 6', () => {
-  const belt = freeLand(BELT, 2);
-  const open = freeLand([TODAY[0] + 4, TODAY[0] + 4, TODAY[1] - 4, TODAY[1] - 4], 2, BELT);
+  // (the kart park's old land counted out: open again, its trees come at the same density as the rest)
+  const outer: [number, number, number, number] = [TODAY[0] + 4, TODAY[0] + 4, TODAY[1] - 4, TODAY[1] - 4];
+  const belt = freeLand(BELT, 2) - freeLand(overlap(BELT, OLD_KART), 2);
+  const open = freeLand(outer, 2, BELT) - freeLand(overlap(outer, OLD_KART), 2, BELT);
   assert.ok(Math.abs(belt - BELT_FREE) / BELT_FREE < 0.03, `belt ${belt} against ${BELT_FREE}`);
   assert.ok(Math.abs(open - OPEN_FREE) / OPEN_FREE < 0.03, `open land ${open} against ${OPEN_FREE}`);
 });
@@ -97,8 +103,9 @@ test('City view pans round the built-up area, never past the world, and the Buil
     // and never further than PAN_MARGIN from the built-up area
     assert.ok(Math.abs(PAN_BOUNDS[k] - BUILT_UP[k]) <= PAN_MARGIN + 1e-9);
   }
-  // Since Phase 6 the world is bigger than that: the pan stops round the city, short of the edge
-  assert.ok(PAN_BOUNDS[0] > WORLD_BOUNDS[0] + 10 && PAN_BOUNDS[1] > WORLD_BOUNDS[1] + 10 && PAN_BOUNDS[2] < WORLD_BOUNDS[2] - 10 && PAN_BOUNDS[3] < WORLD_BOUNDS[3] - 10);
+  // Since Phase 6 the world is bigger than that: the pan stops round the city, short of the edge (but to the north,
+  // where the kart park moved past the ring highway: there it can reach the edge's margin)
+  assert.ok(PAN_BOUNDS[0] > WORLD_BOUNDS[0] + 10 && PAN_BOUNDS[2] < WORLD_BOUNDS[2] - 10 && PAN_BOUNDS[3] < WORLD_BOUNDS[3] - 10);
   // The Build overview: where it always looked from (the plots don't move)
   const f = overviewFrame();
   assert.deepEqual(f.target, [20, 34]);

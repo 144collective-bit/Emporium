@@ -2,7 +2,7 @@
 // the garage's mods (catalog.ts, tycoon.ts) making a car faster through tune().
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { RIVER_WALLS, circles, newCar, stepCar, tune, type CarState, type DriveInput, type DriveWorld } from '../src/scripts/city3d/drive-sim';
+import { GEARS, RIVER_WALLS, SIGNAL_HOLD, SIGNAL_SPEED, carLights, circles, gearOf, newCar, newSignal, skidding, stepCar, tune, type CarState, type DriveInput, type DriveWorld } from '../src/scripts/city3d/drive-sim';
 import { EXT, NS_ROADS, RIVER, WALK_W, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
 import { CARGO, DRIVE } from '../src/scripts/city3d/mycar';
 import { NO_CAR_MODS, carStats } from '../src/scripts/city3d/catalog';
@@ -164,4 +164,86 @@ test('the edge of the world holds it in', () => {
   const c = newCar(BOUNDS[2] - 4, 0, 0);
   run(c, GAS, 5, OPEN, BOUNDS);
   assert.ok(c.x <= BOUNDS[2]);
+});
+
+/* ---------- What the car shows (city life plan, Phase 2) ---------- */
+
+test('brake lights on braking from a roll or with the handbrake on the move, reversing lights in reverse', () => {
+  const sig = newSignal();
+  const c = newCar(0, 0, 0);
+  c.speed = 5;
+  assert.equal(carLights(c, GAS, sig, DT).brake, false);
+  assert.equal(carLights(c, { throttle: -1, steer: 0, handbrake: false }, sig, DT).brake, true);
+  assert.equal(carLights(c, { throttle: 0, steer: 0, handbrake: true }, sig, DT).brake, true);
+  // Coasting: nothing lit
+  assert.deepEqual(carLights(c, { throttle: 0, steer: 0, handbrake: false }, sig, DT), { brake: false, reverse: false, turn: null });
+  // Stopped with the brake held: that's the start of reversing, not a brake light; reversing lights once rolling back
+  c.speed = 0;
+  assert.equal(carLights(c, { throttle: -1, steer: 0, handbrake: false }, sig, DT).brake, false);
+  c.speed = -1;
+  assert.equal(carLights(c, { throttle: -1, steer: 0, handbrake: false }, sig, DT).reverse, true);
+  // The handbrake at a standstill lights nothing
+  c.speed = 0;
+  assert.equal(carLights(c, { throttle: 0, steer: 0, handbrake: true }, sig, DT).brake, false);
+});
+
+test('indicators follow the wheel below walking pace and stay on a moment after it straightens', () => {
+  const sig = newSignal();
+  const c = newCar(0, 0, 0);
+  c.speed = 1;
+  assert.equal(carLights(c, { throttle: 0, steer: 1, handbrake: false }, sig, DT).turn, 'R');
+  assert.equal(carLights(c, { throttle: 0, steer: -1, handbrake: false }, sig, DT).turn, 'L');
+  // Let go: held for SIGNAL_HOLD, then off
+  let t = 0;
+  let off = -1;
+  for (; t < 3 && off < 0; t += DT) if (!carLights(c, { throttle: 0, steer: 0, handbrake: false }, sig, DT).turn) off = t;
+  assert.ok(off >= SIGNAL_HOLD - DT && off <= SIGNAL_HOLD + 2 * DT, `off after the hold (${off.toFixed(2)})`);
+  // At speed the wheel is a lane change, not a turn
+  c.speed = SIGNAL_SPEED + 1;
+  assert.equal(carLights(c, { throttle: 1, steer: 1, handbrake: false }, sig, DT).turn, null);
+  // Stopped at a junction with the wheel turned: indicating
+  c.speed = 0;
+  assert.equal(carLights(c, { throttle: 0, steer: -0.8, handbrake: false }, sig, DT).turn, 'L');
+});
+
+test('the gearbox: N, R, then four gears up the speed range, the revs dropping at each shift', () => {
+  assert.deepEqual(gearOf(0, T.top), { gear: 'N', revs: 0 });
+  assert.equal(gearOf(0, T.top, 1).gear, 1);
+  assert.equal(gearOf(-2, T.top).gear, 'R');
+  let last = 0;
+  let shifts = 0;
+  let gear: number | string = 0;
+  for (let v = 0.3; v <= T.top; v += 0.1) {
+    const g = gearOf(v, T.top);
+    assert.ok(g.revs >= 0.25 && g.revs <= 1);
+    if (g.gear !== gear) {
+      if (gear) {
+        shifts++;
+        assert.ok(g.revs < last, `revs drop at the shift into ${g.gear}`);
+      }
+      gear = g.gear;
+    } else assert.ok(g.revs >= last - 1e-9, 'revs climb within a gear');
+    last = g.revs;
+  }
+  assert.equal(shifts, GEARS.length);
+  assert.equal(gearOf(T.top, T.top).gear, 4);
+});
+
+test('skidding: a handbrake slide or a real sideways slip, never a clean drive', () => {
+  const c = newCar(0, 0, 0);
+  run(c, GAS, 3);
+  assert.equal(skidding(c, GAS), 0);
+  assert.ok(skidding(c, { throttle: 0, steer: 0, handbrake: true }) >= 1.5);
+  // Thrown sideways: the slip itself
+  c.vx = Math.cos(c.yaw) * 4;
+  c.vz = 3;
+  assert.ok(skidding(c, GAS) >= 2.9);
+  // A gentle turn's slip is nothing
+  c.vz = 0.5;
+  assert.equal(skidding(c, GAS), 0);
+  // The handbrake at a crawl marks nothing
+  const slow = newCar(0, 0, 0);
+  slow.speed = 1;
+  slow.vx = 1;
+  assert.equal(skidding(slow, { throttle: 0, steer: 0, handbrake: true }), 0);
 });

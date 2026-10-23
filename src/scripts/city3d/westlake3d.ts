@@ -15,11 +15,12 @@
  */
 import * as THREE from 'three';
 import { Batch, FONT_DISPLAY, canvasTex, lit, neon, siteMat, toon } from './kit';
-import { SLAB, WALK_W, flatPoly, waterMat } from './world';
+import { SLAB, flatPoly, waterMat, type Tick } from './world';
+import { registerParkLife, registerParkSites } from './parklife3d';
+import { register as registerGrounds } from './stadiumgrounds3d';
 import { site } from './tilework';
 import { offsetLine } from './streetplan';
-import { BENCHES, CAR_PARK, GATES, GATE_PIERS, LAKE_C, PATHS, PIER, RIM, STRIPS, lakeLine, type ParkPath, type Pt } from './westlake';
-import { BAY, BAYS, ENTRANCES } from './stadium';
+import { BENCHES, GATES, GATE_PIERS, LAKE_C, PATHS, PIER, RIM, lakeLine, type ParkPath, type Pt } from './westlake';
 
 /** Its own address, for the site worker (sitework.ts) */
 export const SELF = import.meta.url;
@@ -29,8 +30,6 @@ const STONE = toon('#8f8ab0');
 const CAP = toon('#b3aed2');
 const IRON = toon('#1b1830');
 const WOOD = toon('#8a5a3c');
-const ASPHALT = toon('#2c2a44');
-const LINES = toon('#e8e4f8');
 /** The paths lie this far over the lawn (its grass is at SLAB + 0.003 to 0.005) */
 const PATH_Y = SLAB + 0.012;
 
@@ -131,7 +130,12 @@ function bench(b: Batch, at: Pt, ry: number) {
   for (const sx of [-0.36, 0.36]) b.add(g(0.05, 0.26, 0.28, sx, 0, 0), IRON);
 }
 
-export function register({ low, scene }: { low: boolean; scene: THREE.Scene | null }) {
+export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
+  // Step 3: the boathouse, the jetty, the courts and the picnics as sites; on the main thread, what moves
+  registerParkSites();
+  // The stadium's grounds north of the highway, loaded with the park (stadiumgrounds3d.ts)
+  registerGrounds();
+  if (scene && tick) registerParkLife(scene, tick, low);
   // The paths: a site a stretch
   for (const q of PATHS)
     stretches(q).forEach((s, k) =>
@@ -234,42 +238,6 @@ export function register({ low, scene }: { low: boolean; scene: THREE.Scene | nu
       b.build(into, { cast: true, receive: true });
     });
   }
-
-  // The stadium's car park (step 2): asphalt over the strip's lawn, its bays marked, two ways in across the sidewalk
-  // from the avenue (its cars are the stadium's, parked at the boot: stadium3d.ts)
-  const [cx0, cz0, cx1, cz1] = CAR_PARK;
-  const edge = STRIPS[0].poly[0][1];
-  const halves = [cx0, (cx0 + cx1) / 2, cx1];
-  for (let h = 0; h < 2; h++)
-    site(`westlake car park ${h}`, [halves[h], edge - 1, halves[h + 1], cz1], (into) => {
-      const b = new Batch();
-      const [x0, x1] = [halves[h], halves[h + 1]];
-      b.add(new THREE.PlaneGeometry(x1 - x0, cz1 - cz0).rotateX(-Math.PI / 2).translate((x0 + x1) / 2, PATH_Y, (cz0 + cz1) / 2), ASPHALT);
-      for (const e of ENTRANCES)
-        if (e.x > x0 && e.x <= x1) b.add(new THREE.PlaneGeometry(e.w, cz0 - edge + WALK_W + 0.1).rotateX(-Math.PI / 2).translate(e.x, PATH_Y, (cz0 + edge - WALK_W - 0.1) / 2), ASPHALT);
-      // The bays' lines: one either side of each bay, out from its row's edge
-      b.detail(() => {
-        for (const bay of BAYS) {
-          if (bay.x <= x0 || bay.x > x1) continue;
-          const back = bay.z < (cz0 + cz1) / 2 ? cz0 : cz1;
-          const mid = back + Math.sign((cz0 + cz1) / 2 - back) * (BAY.d / 2);
-          for (const sx of [-1, 1]) b.add(new THREE.PlaneGeometry(0.08, BAY.d).rotateX(-Math.PI / 2).translate(bay.x + (sx * BAY.w) / 2, PATH_Y + 0.006, mid), LINES);
-        }
-      });
-      b.build(into, { cast: false, receive: true });
-    });
-  // A P sign by the east way in
-  const pe = ENTRANCES[ENTRANCES.length - 1];
-  site('westlake car park sign', [pe.x + 2, cz0 - 1, pe.x + 4, cz0 + 1], (into) => {
-    const b = new Batch();
-    b.box(pe.x + pe.w / 2 + 0.8, SLAB, cz0 - 0.5, 0.12, 2.6, 0.12, IRON);
-    b.box(pe.x + pe.w / 2 + 0.35, SLAB + 2.0, cz0 - 0.47, 1.0, 1.0, 0.1, toon('#1d4fd6'));
-    b.box(pe.x + pe.w / 2 + 0.55, SLAB + 2.2, cz0 - 0.52, 0.16, 0.6, 0.06, neon('#ffffff', 0.8, 1.4));
-    b.box(pe.x + pe.w / 2 + 0.55, SLAB + 2.62, cz0 - 0.52, 0.42, 0.16, 0.06, neon('#ffffff', 0.8, 1.4));
-    b.box(pe.x + pe.w / 2 + 0.87, SLAB + 2.4, cz0 - 0.52, 0.12, 0.38, 0.06, neon('#ffffff', 0.8, 1.4));
-    b.box(pe.x + pe.w / 2 + 0.55, SLAB + 2.36, cz0 - 0.52, 0.42, 0.14, 0.06, neon('#ffffff', 0.8, 1.4));
-    b.build(into, { cast: true, receive: true });
-  });
 
   // The water: on the main thread only (the river's shader, one mesh, never in the tile meshes)
   if (scene) {

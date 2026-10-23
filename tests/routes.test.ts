@@ -3,6 +3,8 @@
 // drive every lane of every street that goes anywhere, the highway all the way round, and every slip lane;
 // the diagonals' routes turn in and out at both ends; and the lights never show two ways green at once.
 import { test } from 'node:test';
+import { LOOP, ROAD } from '../src/scripts/city3d/stadium';
+import { LOOP as K_LOOP, ROAD as K_ROAD } from '../src/scripts/city3d/kartpark';
 import assert from 'node:assert/strict';
 import { JUNCTIONS, ROUTES, SPOTS, lightState, pointOn, type Phase, type Pt, type Route } from '../src/scripts/city3d/routes';
 import { PLAN, distToStreet, lanePaths, onSlab, streetLength } from '../src/scripts/city3d/streetplan';
@@ -33,7 +35,15 @@ test('every route is a closed loop: round and round', () => {
   }
 });
 
-test("every route stays on the asphalt, a car's width in from the kerb, off every slab, and inside the highway", () => {
+/** The stadium's and the kart park's streets north of the highway, the north roads up to them and their slip lanes there: driven too */
+const stadiumWay = (q: Pt) =>
+  (q[0] > LOOP.x0 - 3 && q[0] < LOOP.x1 + 3 && q[1] > LOOP.z1 - 3 && q[1] < -165) ||
+  (q[0] >= LOOP.x1 + 3 && q[0] < ROAD.x0 + 12 && q[1] > ROAD.z - 3 && q[1] < -165) ||
+  // ...and the kart park's (kartpark.ts): Kart Road off the east ring avenue, the car park's loop
+  (q[0] > K_LOOP.x0 - 3 && q[0] < K_LOOP.x1 + 3 && q[1] > K_LOOP.z1 - 3 && q[1] < -165) ||
+  (q[0] > K_ROAD.x0 - 12 && q[0] <= K_LOOP.x0 - 3 && q[1] > K_ROAD.z - 3 && q[1] < -165);
+
+test("every route stays on the asphalt, a car's width in from the kerb, off every slab, and inside the highway (or on the stadium's and the kart park's streets)", () => {
   for (const [i, r] of ROUTES.entries())
     for (const { at: q } of points(r)) {
       assert.ok(
@@ -41,7 +51,7 @@ test("every route stays on the asphalt, a car's width in from the kerb, off ever
         `route ${i} leaves the road at ${q.map((v) => v.toFixed(1))}`
       );
       assert.ok(!onSlab(PLAN, q), `route ${i} drives over a sidewalk at ${q.map((v) => v.toFixed(1))}`);
-      assert.ok(insideHighway(q[0], q[1]) || fromHighway(q[0], q[1]) < HIGHWAY_HALF, `route ${i} goes out past the highway at ${q.map((v) => v.toFixed(1))}`);
+      assert.ok(insideHighway(q[0], q[1]) || fromHighway(q[0], q[1]) < HIGHWAY_HALF || stadiumWay(q), `route ${i} goes out past the highway at ${q.map((v) => v.toFixed(1))}`);
     }
 });
 
@@ -84,11 +94,15 @@ test('between them the routes drive every street that goes anywhere, each way (a
           }
           run += l;
         }
-        // Only where it goes anywhere (inside the highway) and away from the junctions, where cars turn
-        if (!insideHighway(at[0], at[1]) && fromHighway(at[0], at[1]) > 1) continue;
+        // Only where it goes anywhere (inside the highway, or out to the stadium) and away from the junctions, where cars turn
+        if (!insideHighway(at[0], at[1]) && fromHighway(at[0], at[1]) > 1 && !stadiumWay(at)) continue;
         if (JUNCTIONS.some((j) => Math.hypot(at[0] - j.at[0], at[1] - j.at[1]) < 14)) continue;
         // (westbound up the airport road from the far end of its one-way loop: nobody gets there without a U-turn)
         if (s.id === 'airport-road' && lane.dir === -1 && at[0] > 98) continue;
+        // (the same on Stadium Road east along the stadium's loop: its cars leave the loop at its east end)
+        if (s.id === 'stadium-road' && lane.dir === -1 && at[0] < LOOP.x1) continue;
+        // (and on Kart Road west along the kart park's loop: its cars leave the loop at its west end)
+        if (s.id === 'kart-road' && lane.dir === -1 && at[0] > K_LOOP.x0) continue;
         checked++;
         // (an avenue's either lane that way: the lane a car keeps to depends on its next turn)
         assert.ok(driven(at, u) || (s.lanes === 2 && drivenSide(at, u)), `nobody drives ${s.id} (${lane.dir === 1 ? 'with' : 'against'} its points) at ${at.map((v) => v.toFixed(1))}`);

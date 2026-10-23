@@ -11,7 +11,7 @@ import { CENTER, addLamp, addTree, buildGround, buildLamps, buildSkyline, buildT
 import { PARK_LAMPS, PARK_TREES, WESTLAKE_RECT } from './westlake';
 import { createDistricts } from './districts';
 import { buildStadium } from './stadium3d';
-import { STADIUM_SPAWN } from './stadium';
+import { STADIUM_LAMPS, STADIUM_RECTS, STADIUM_SPAWN } from './stadium';
 import { buildLandmarks, type Spot } from './landmarks';
 import { buildInfill } from './infill';
 import { buildNeighbourhoods } from './neighbourhoods';
@@ -30,7 +30,7 @@ import { createPlotStore } from './store';
 import type { Account } from './account';
 import type { AccountHooks, AccountUI } from './account-ui';
 import { createBuilderUI } from './builder-ui';
-import { createFitting, type Fitting } from './fitting';
+import type { Fitting } from './fitting';
 import { createCityHead } from './head';
 import { buildMarket } from './market';
 import { createTycoonUI, type TycoonUI } from './tycoon-ui';
@@ -44,7 +44,7 @@ import { createTaxis } from './taxi';
 import { buildMetro } from './metro3d';
 import { createMetroUI, type MetroUI } from './metro-ui';
 import { PLACES } from './places';
-import { placeName } from './worldmap';
+import { placeName } from './places';
 import { buildKartPark } from './kartpark3d';
 import { KART_SPAWN } from './kartpark';
 import { AIR_SPAWN } from './airfield';
@@ -60,17 +60,19 @@ import { buildAvenue } from './avenue3d';
 import { buildRiverside } from './riverside3d';
 import { buildPier, buildWaterfront } from './waterfront3d';
 import { PIER_SPAWN } from './waterfront';
+import { buildNightMarket } from './nightmarket3d';
+import { MARKET_SPAWN } from './nightmarket';
 import { BLOCK_SPAWN } from './projects';
 import { AVENUE_SPAWNS } from './avenue';
 import { buildFightClub } from './fightclub';
 import { fightRecordHtml } from './fight-ui';
-import { kartRecordsHtml } from './kart-ui';
+import { kartRecordsHtml } from './kart-records';
 import { destAt } from './tycoon';
 import { guideAt } from './guide';
 import { CARS, initFarCars } from './cars';
 import { CROWD_VIEW } from './character';
 import type { GameDeps } from './ui';
-import { createBench } from './bench';
+import type { Bench } from './bench';
 import { mb, sceneMemory } from './perf';
 import { tileBatch } from './tilebatch';
 import { createTileWork } from './tilework';
@@ -109,6 +111,11 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const tier = (root.dataset.tier as Tier) || pickTier();
   const Q = TIERS[tier];
   const progress = (k: number) => bar.style.setProperty('--p', String(k));
+  // ?anim: the animation lab on its own, over the page (no city behind it)
+  if (new URLSearchParams(location.search).has('anim')) {
+    await (await import('./anim-lab')).openLab(root, { reduced, low: tier === 'low' });
+    return null;
+  }
   // When each part of the boot finished (the ?fps readout and the benchmark)
   const bootAt = { start: performance.now(), art: 0, scene: 0, tiled: 0, built: 0, compiled: 0, first: 0, waits: 0 };
   // Building, apart from waiting on the browser (a frame drawn between steps, the canvas sized): the city's own work
@@ -183,8 +190,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const corners = buildCornerShops(scene, { low: tier === 'low' });
   // Beams of light over your contracts' drop-offs
   const beacons = buildBeacons(scene, tick, reduced);
-  // The kart park outside the Parkway in the north-east: a place like the landmarks (its pin and panel)
-  const kartPark = buildKartPark(scene, { tick, reduced, low: tier === 'low' });
+  // The kart park north of the ring highway in the north-east: a place like the landmarks (its pin and panel); its grounds load as you approach
+  const kartPark = buildKartPark(scene, crowd, { tick, reduced, low: tier === 'low' });
   spots.push(kartPark.spot, airport.spot);
   // The Fight Club on the south bank: a place too (its pin and panel)
   const fightClub = buildFightClub(scene, { tick, reduced, low: tier === 'low' });
@@ -215,6 +222,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   buildRiverside(tier === 'low');
   buildWaterfront(tier === 'low');
   spots.push(buildPier(scene, crowd, { tick, low: tier === 'low' }).spot);
+  // The Night Market on its deck in front of Harbor Stores, a place
+  spots.push(buildNightMarket(scene, crowd, { tick, low: tier === 'low' }).spot);
   // Westlake Park's stadium (step 2): a place, built at the boot (the rest of the park is loaded as you approach)
   spots.push(buildStadium(scene, { low: tier === 'low' }).spot);
   // ...and the metro's el where it crosses the open land south of the south row: no trees under it
@@ -225,6 +234,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   keepTreesOff(WESTLAKE_RECT);
   PARK_TREES.forEach((t, i) => !(tier === 'low' && t.clump && i % 2) && addTree(t.x, t.z, t.s, t.pine));
   for (const [x, z, ry] of PARK_LAMPS) addLamp(x, z, ry);
+  // ...and the stadium's, north of the highway (stadium.ts): no trees on its block, its road and car park or under its footbridge
+  for (const r of STADIUM_RECTS) keepTreesOff(r);
+  for (const [x, z, ry, y] of STADIUM_LAMPS) addLamp(x, z, ry, y);
   progress(0.55);
   await waited(nextFrame());
   // (phones keep half of them: the trim)
@@ -234,7 +246,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   buildLamps(scene, tier === 'low');
   progress(0.7);
   await waited(nextFrame());
-  buildLife(scene, { cars: Q.cars, buses: Q.buses, walkers: Q.walkers, light: tier === 'low', far: Q.far }, crowd, tick);
+  // (the horn plays through the sound, made with the controls below; a toot before then is dropped)
+  let horn: ((gain: number) => void) | null = null;
+  buildLife(scene, { cars: Q.cars, buses: Q.buses, walkers: Q.walkers, light: tier === 'low', far: Q.far, horn: (g) => horn?.(g) }, crowd, tick);
   const sky = createSky(scene, { shadows: Q.shadows, rainDrops: Q.rain, clouds: Q.clouds });
   progress(0.85);
   await waited(nextFrame());
@@ -331,7 +345,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     meshesOf,
   });
   // Districts loaded as you approach (performance phase 4, item 10): their drawing a chunk of its own each
-  const districts = createDistricts({ scene, low: tier === 'low', worker: siteWorker, adopt: () => works.adopt() });
+  const districts = createDistricts({ scene, low: tier === 'low', worker: siteWorker, adopt: () => works.adopt(), tick });
   const atBoot = works.boot([...new Set([...viewTiles(h0.pos, h0.target), ...viewTiles(introFrom(h0), h0.target)].map((t) => t.join()))].map((k) => k.split(',').map(Number) as [number, number]));
   const tiled = tileBatch(scene, [scene, ...['airport', 'kartpark'].flatMap((n) => scene.getObjectByName(n) ?? []), ...atBoot]);
   for (const g of atBoot) g.removeFromParent();
@@ -413,8 +427,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const panelBody = panel.querySelector<HTMLElement>('[data-panel-body]')!;
   const panelClose = panel.querySelector<HTMLButtonElement>('[data-panel-close]')!;
   let lastFocus: HTMLElement | null = null;
-  // Drop 001's panel has the fitting room (made once the profile exists, further down)
+  // Drop 001's panel has the fitting room (loaded when it first opens, once the profile exists, further down)
   let fitting: Fitting | null = null;
+  let loadFitting: () => Promise<Fitting> = () => new Promise(() => {});
   // The Emporium's panel has the market hall (the economy is made further down)
   let tycoon: TycoonUI | null = null;
 
@@ -431,7 +446,11 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     panelBody.replaceChildren(tpl.content.cloneNode(true));
     // One card at a time: a panel closes your stall's card
     tycoon?.closeCard();
-    if (id === 'shop') fitting?.mount(panelBody, toFitting);
+    // (the fitting room is a chunk of its own, loaded the first time Drop 001's panel opens)
+    if (id === 'shop')
+      void loadFitting().then((f) => {
+        if (active === s) f.mount(panelBody, toFitting);
+      });
     else fitting?.unmount();
     // The economy's panels: the market hall, the Workshop, contracts, couriers, staff
     tycoon?.mountPanel(id, panelBody);
@@ -476,6 +495,12 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       panelBody.querySelector('[data-pier-walkin]')?.addEventListener('click', () => {
         close();
         startWalking(PIER_SPAWN);
+      });
+    // The Night Market's panel: Walk in starts walk mode on the boardwalk behind its tables
+    if (id === 'nightmarket')
+      panelBody.querySelector('[data-market-walkin]')?.addEventListener('click', () => {
+        close();
+        startWalking(MARKET_SPAWN);
       });
     // The stadium's panel: Walk in starts walk mode on its forecourt, facing the gate
     if (id === 'stadium')
@@ -568,6 +593,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     garage,
     // Made further down too, like sfx
     engine: (revs) => sound.engine(revs),
+    tyres: (level) => sound.tyres(level),
     // Your business's places, and the metro's station doors
     places: () => [...(tycoon?.places() ?? []), ...(metroUI?.doors ?? [])],
     openPlace: (id) => (id.startsWith('metro:') ? metroUI?.open(id.slice(6)) : tycoon?.openCard(id as 'stall')),
@@ -668,14 +694,18 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     reduced,
     low: tier === 'low',
   });
-  fitting = createFitting({
-    look: () => profileUI.look,
-    apply: (l) => profileUI.wear(l),
-    onChange: (fn) => profileUI.onChange(fn),
-    game,
-    reduced,
-    low: tier === 'low',
-  });
+  let fittingLoad: Promise<Fitting> | null = null;
+  loadFitting = () =>
+    (fittingLoad ??= import('./fitting').then(({ createFitting }) =>
+      (fitting = createFitting({
+        look: () => profileUI.look,
+        apply: (l) => profileUI.wear(l),
+        onChange: (fn) => profileUI.onChange(fn),
+        game,
+        reduced,
+        low: tier === 'low',
+      }))
+    ));
   const mp =
     server && onlineSwitch && net
       ? net[0].createMultiplayer({
@@ -900,6 +930,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
 
   /* ---------- Controls: time, weather, sound, view ---------- */
   const sound = createSound();
+  horn = (g) => sound.sfx('horn', g);
   let amb = ambienceAt(controls.target.x, controls.target.z);
   let ambT = 0;
   const group = (name: string, apply: (v: string) => void) => {
@@ -930,7 +961,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   /* ---------- Loop ---------- */
   const timer = new THREE.Timer();
   timer.connect(document);
-  const env: Env = { t: 0, dt: 0, night: 1, rain: 0, day: 0 };
+  const env: Env = { t: 0, dt: 0, night: 1, rain: 0, day: 0, hour: 12 };
   let running = true;
   let frames = 0;
   // Phones run the city at a steady 30fps while nobody is touching it, and at
@@ -955,8 +986,13 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // (frames a second, the slowest frame, draw calls and triangles per frame, the
   // shadow map's share, memory, how long the boot took). ?bench runs the benchmark (bench.ts)
   const query = new URLSearchParams(location.search);
-  const bench = query.has('bench') ? createBench({ host, scene, tier, pixelRatio: () => renderer.getPixelRatio(), home, conditions: benchSky, boot: bootTimes, extra: [] }, query.get('bench') === 'night') : null;
-  const statsEl = query.has('fps') || bench ? document.createElement('pre') : null;
+  // (the benchmark is a chunk of its own, loaded only when asked for; it starts once every site is built)
+  let bench: Bench | null = null;
+  if (query.has('bench'))
+    void import('./bench').then(({ createBench }) => {
+      bench = createBench({ host, scene, tier, pixelRatio: () => renderer.getPixelRatio(), home, conditions: benchSky, boot: bootTimes, extra: [] }, query.get('bench') === 'night');
+    });
+  const statsEl = query.has('fps') || query.has('bench') ? document.createElement('pre') : null;
   const stat = { frames: 0, draws: 0, tris: 0, shadowDraws: 0, shadowTris: 0, worst: 0, last: 0, since: performance.now(), memAt: 0, mem: '' };
   function bootTimes() {
     const r = (a: number, b: number) => Math.round(b - a);
@@ -1109,6 +1145,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     env.night = s.night;
     env.rain = s.rain;
     env.day = s.day;
+    env.hour = s.hour;
     // Crowds draw only the people in view, in detail near the camera (character.ts); a still city draws everyone once
     CROWD_VIEW.on = !reduced;
     camera.updateMatrixWorld();

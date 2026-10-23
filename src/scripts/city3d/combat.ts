@@ -40,6 +40,8 @@ export { DUMMIES };
 export type Sfx =
   | 'shot' | 'shotSmg' | 'shotShotgun' | 'shotDmr' | 'shotRevolver' | 'shotBurst' | 'shotLmg'
   | 'empty' | 'magout' | 'magin' | 'bolt' | 'hit' | 'hitMetal' | 'down' | 'boom' | 'gear' | 'draw' | 'holster' | 'unlock' | 'bump' | 'door'
+  /** The traffic's horn (a car held up by you: life.ts, traffic.ts) */
+  | 'horn'
   /** The city's game: buying, upgrading, levelling up, missions, the kart park's countdown and finish */
   | 'buy' | 'denied' | 'upgrade' | 'levelup' | 'mission' | 'countdown' | 'go' | 'finish'
   /** The kart park: boosts, hits taken and landed, the shield, the item roulette and a throw, drifts and their sparks, the jump, the shortcut's gravel, beating your ghost */
@@ -962,6 +964,10 @@ export function createCombat(d: CombatDeps) {
       ready += ((readyT > 0 && s.run < 0.5 ? 1 : 0) - ready) * Math.min(1, s.dt * 6);
       holdGun(pose, stance, pivot, gun, { aim: s.aim, ready, draw: drawn, pitch: s.pitch, recoil: s.recoil, reload, dt: s.dt });
       return drawn > 0;
+    },
+    /** How far his head is down on the stock (0..1): the look added after it goes only the rest of the way */
+    get cheek() {
+      return stance.cheek;
     },
     /** Every rifle finish change and lifetime score update (for the profile panel) */
     onLifetime(fn: (total: number) => void) {

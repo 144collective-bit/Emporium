@@ -18,7 +18,10 @@
  * - **The paths** (`PATHS`): a walk round the big block, a loop round the
  *   lake, the Mall (a wide straight walk with trees either side, from the
  *   south gate to the stadium) and the ways in from the gates (`GATES`).
- * - **The stadium's site** (`STADIUM_SITE`), kept clear for step 2.
+ * - **The stadium's old site** (`GARDEN_SITE`), kept clear for the formal
+ *   garden (the north side's stage 3, docs/north-plan.md): the stadium moved
+ *   north of the ring highway (stadium.ts), the Mall carried on to it over
+ *   a footbridge (`BRIDGE_FOOT`).
  */
 import { EW_ROADS, WALK_W } from './layout';
 import { HIGHWAY_BOX, HIGHWAY_HALF, HIGHWAY_R } from './highway';
@@ -67,17 +70,15 @@ export const STRIPS: ParkBlock[] = AVES.slice(0, -1).map((a, i) => {
   const z1 = b.c - b.half - WALK_W;
   return { id: `westlake-s${i}`, poly: [[X0, z0], [X0, z1], [X1, z1], [X1, z0]] };
 });
-/** The stadium's car park (step 2, stadium.ts) on the first strip, from its west end (x0, z0, x1, z1) */
-export const CAR_PARK: Rect = [X0 + 1.4, STRIPS[0].poly[0][1] + 1, -149, STRIPS[0].poly[1][1] - 1];
 /** Every block of the park, for the street plan */
 export const WESTLAKE_BLOCKS: ParkBlock[] = [{ id: 'westlake-big', poly: BIG }, ...STRIPS];
 /** The park's land, for the outskirts' trees to keep off (x0, z0, x1, z1) */
 export const WESTLAKE_RECT: Rect = [X0 - WALK_W, Z0 - WALK_W, X1 + WALK_W, AVES.at(-1)!.c - AVES.at(-1)!.half];
 
-/* ---------- The stadium's site (step 2) ---------- */
+/* ---------- The stadium's old site ---------- */
 
-/** Kept clear for the stadium: no paths, trees or lamps on it (x0, z0, x1, z1) */
-export const STADIUM_SITE: Rect = [-172, -138, -108, -86];
+/** Where the stadium stood (step 2) until it moved north of the highway: kept clear for the formal garden (x0, z0, x1, z1) */
+export const GARDEN_SITE: Rect = [-172, -138, -108, -86];
 
 /* ---------- The lake ---------- */
 
@@ -102,6 +103,62 @@ export function inLake(x: number, z: number, m = 0) {
 /** The stone rim round the water: how wide and how high above the lawn */
 export const RIM = { w: 0.35, h: 0.12 };
 
+/* ---------- What step 3 puts on the land: the courts and the boathouse ---------- */
+
+/** A court on a strip (x0, z0, x1, z1: with its run-off), its strip's walk bent round it along the strip's north edge */
+export interface Court {
+  id: string;
+  kind: 'tennis' | 'football' | 'basketball';
+  rect: Rect;
+  /** Which strip, and where its walk runs along it (z) */
+  strip: number;
+  walkZ: number;
+}
+/** Two tennis courts side by side on the first strip, a five-a-side pitch on the second (the deepest), a basketball court on the third */
+export const COURTS: Court[] = [
+  { id: 'tennis', kind: 'tennis', rect: [-136, 4.0, -98, 13.4], strip: 0, walkZ: 2.0 },
+  { id: 'football', kind: 'football', rect: [-128, 23.6, -106, 39.4], strip: 1, walkZ: 21.5 },
+  { id: 'basketball', kind: 'basketball', rect: [-96, 49.6, -79, 58.8], strip: 2, walkZ: 47.6 },
+];
+
+/** A court's middle */
+export const courtMid = (c: Court): Pt => [(c.rect[0] + c.rect[2]) / 2, (c.rect[1] + c.rect[3]) / 2];
+/** The tennis courts' middles (two, side by side along x), each's lines' half sizes (doubles) and its net's posts' half span */
+export const TENNIS = { half: [6.6, 3.05] as Pt, post: 3.6, netH: 0.5, mids: [0, 1].map((i): Pt => [COURTS[0].rect[0] + 9.5 + 19 * i, courtMid(COURTS[0])[1]]) };
+/** The pitch's lines' half sizes; each goal's mouth (half), height and depth, its line at x = mid ± half[0] */
+export const PITCH = { half: [9.5, 6.25] as Pt, goal: { half: 1.3, h: 1.1, d: 0.8 } };
+/** The basketball court's lines' half sizes; each hoop's rim in from the baseline, its height, the board's and the pole's */
+export const HOOPS = { half: [7.75, 4.15] as Pt, rim: 0.88, rimY: 1.69, board: 0.67, pole: 1.0 };
+
+/** The lake loop's line, `out` beyond the water (as PATHS' loop, LOOP_OUT; declared below) */
+const loopZ = (x: number, out: number) => {
+  // (its north side, where the boathouse stands: the furthest north it comes over x-0.5..x+0.5)
+  let z = Infinity;
+  for (const p of lakeLine(out, 720)) if (Math.abs(p[0] - x) < 0.5 && p[1] < LAKE_C[1]) z = Math.min(z, p[1]);
+  return z;
+};
+/**
+ * The boathouse on the lake's north shore, across the loop from the water, its front (south, +z) to the lake;
+ * its jetty from the loop's water side out over the rim into the water, the boats moored either side of it
+ */
+export const BOATHOUSE = (() => {
+  const x = LAKE_C[0];
+  const w = 7.2;
+  const d = 4.6;
+  // Clear of the loop (4.5 out, 1.1 either side) all along its front
+  let front = Infinity;
+  for (let dx = -w / 2 - 0.5; dx <= w / 2 + 0.5; dx += 0.25) front = Math.min(front, loopZ(x + dx, 4.5) - 1.1 - 0.9);
+  return { x, w, d, h: 3.0, ridge: 4.5, rect: [x - w / 2, front - d, x + w / 2, front] as Rect };
+})();
+/** The jetty: over the rim and 3.4 out into the water, a little above the lawn (x0, z0, x1, z1, deck height over SLAB) */
+export const JETTY = (() => {
+  const x = LAKE_C[0];
+  const half = 0.8;
+  return { x, half, z0: loopZ(x, 4.5 - 1.1) - 0.1, z1: loopZ(x, -3.4), y: 0.16 };
+})();
+/** Is a point on the jetty's deck (`m` in from its edges) */
+export const onJetty = (x: number, z: number, m = 0) => Math.abs(x - JETTY.x) < JETTY.half - m && z > JETTY.z0 + m && z < JETTY.z1 - m;
+
 /* ---------- Paths and gates ---------- */
 
 export interface ParkPath {
@@ -113,7 +170,7 @@ export interface ParkPath {
 }
 
 /** An outline pulled in by d (a convex one: the big block) */
-function inset(poly: Pt[], d: number): Pt[] {
+export function inset(poly: Pt[], d: number): Pt[] {
   const n = poly.length;
   const nrm = poly.map((p, i) => {
     const q = poly[(i + 1) % n];
@@ -129,8 +186,11 @@ function inset(poly: Pt[], d: number): Pt[] {
   });
 }
 
-/** The Mall: a wide walk from the south gate north to the stadium's site (x, and its half width) */
+/** The Mall: a wide walk from the south gate north through the garden's site to the footbridge (x, and its half width) */
 export const MALL = { x: -140, half: 2.4 };
+/** Where the Mall meets the footbridge's stairs up over the highway to the stadium (stadium.ts `BRIDGE`), and what the bridge covers in the park */
+export const BRIDGE_FOOT = -140.5;
+export const BRIDGE_PARK: Rect = [MALL.x - 2.2, Z0 - 1, MALL.x + 2.2, BRIDGE_FOOT + 0.6];
 /** The walk round the big block: this far in from its edge */
 export const RING_IN = 6;
 /** The lake loop: this far out from the water's edge */
@@ -183,24 +243,35 @@ const toLoop = (p: Pt): Pt => lakeAt(Math.atan2(p[1] - LAKE_C[1], p[0] - LAKE_C[
 export const PATHS: ParkPath[] = [
   { id: 'ring', pts: RING_WALK, half: 1.2, loop: true },
   { id: 'loop', pts: lakeLine(LOOP_OUT, 120), half: 1.1, loop: true },
-  // The Mall, from the south gate to the stadium's site
-  { id: 'mall', pts: [[MALL.x, ZS], [MALL.x, STADIUM_SITE[3] + 1]], half: MALL.half },
-  // The stadium's forecourt along its south side, the Mall in its middle
-  { id: 'forecourt', pts: [[STADIUM_SITE[0] + 4, STADIUM_SITE[3] + 2.6], [STADIUM_SITE[2] - 4, STADIUM_SITE[3] + 2.6]], half: 2 },
+  // The Mall, from the south gate through the garden's site to the footbridge
+  { id: 'mall', pts: [[MALL.x, ZS], [MALL.x, BRIDGE_FOOT]], half: MALL.half },
   // From the Mall across to the lake, and the lake's south and east gates in to the loop
   { id: 'mall-lake', pts: [[MALL.x, -50], toLoop([MALL.x, -50])], half: 1.1 },
   { id: 'lake-s', pts: smooth([[-96, ZS], [-96, -16], [-92, -24], toLoop([-92, -26])]), half: 1.1 },
   { id: 'lake-se', pts: smooth([[-58, ZS], [-62, -18], [-70, -26], toLoop([-72, -30])]), half: 1.1 },
   { id: 'lake-e', pts: smooth([[X1, -28], [-50, -30], [-56, -36], toLoop([-58, -40])]), half: 1.1 },
   { id: 'lake-ne', pts: smooth([[X1, -78], [-54, -76], [-62, -70], toLoop([-66, -66])]), half: 1.1 },
-  // From the east gate up north across the lawns to the stadium's forecourt
-  { id: 'meadow', pts: smooth([[X1, -128], [-62, -124], [-84, -106], [-102, -90], [STADIUM_SITE[2] - 4, STADIUM_SITE[3] + 2.6]]), half: 1.1 },
+  // From the east gate up north-west across the lawns to the Mall, by the garden's site
+  { id: 'meadow', pts: smooth([[X1, -128], [-62, -124], [-84, -106], [-102, -84], [-122, -80], [MALL.x + MALL.half - 0.3, -80]]), half: 1.1 },
   // The south-west gate up to the ring walk
   { id: 'sw', pts: [[-182, ZS], [-182, ZS - RING_IN]], half: 1.1 },
-  // Each strip: one walk down its middle, end to end (the first from the stadium's car park)
+  // Each strip: one walk down its middle, end to end
+  // (bent round its court along the strip's north edge: step 3)
   ...STRIPS.map((s, i): ParkPath => {
     const z = (s.poly[0][1] + s.poly[1][1]) / 2;
-    return { id: `${s.id}-walk`, pts: [[i === 0 ? CAR_PARK[2] + 1 : X0, z], [X1, z]], half: 1.1 };
+    const x0 = X0;
+    const c = COURTS.find((q) => q.strip === i);
+    if (!c) return { id: `${s.id}-walk`, pts: [[x0, z], [X1, z]], half: 1.1 };
+    // (eased over to the edge and back: no overshoot past it)
+    const ease = (a: number, b: number, x: number) => {
+      const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+      return t * t * (3 - 2 * t);
+    };
+    const pts: Pt[] = [];
+    const [a0, a1, b0, b1] = [c.rect[0] - 9, c.rect[0] - 3, c.rect[2] + 3, c.rect[2] + 9];
+    for (const x of [x0, ...Array.from({ length: 13 }, (_, k) => a0 + ((a1 - a0) * k) / 12), ...Array.from({ length: 13 }, (_, k) => b0 + ((b1 - b0) * k) / 12), X1])
+      pts.push([x, z + (c.walkZ - z) * ease(a0, a1, x) * (1 - ease(b0, b1, x))]);
+    return { id: `${s.id}-walk`, pts, half: 1.1 };
   }),
 ];
 
@@ -271,7 +342,7 @@ export interface ParkTree {
 
 /** Where a tree may stand: on the park, off the paths, the lake and its loop, the stadium's site and the gates */
 export const treeFree = (p: Pt) =>
-  inPark(p, 1.6) && !onPath(p, 1.4) && !inLake(p[0], p[1], LOOP_OUT + 2.6) && !inRect(STADIUM_SITE, p, 3) && !inRect(CAR_PARK, p, 1.8) && GATES.every((g) => Math.hypot(p[0] - g.at[0], p[1] - g.at[1]) > 4);
+  inPark(p, 1.6) && !onPath(p, 1.4) && !inLake(p[0], p[1], LOOP_OUT + 2.6) && !inRect(GARDEN_SITE, p, 3) && !inRect(BRIDGE_PARK, p, 1.8) && !inRect(BOATHOUSE.rect, p, 2.2) && COURTS.every((c) => !inRect(c.rect, p, 1.6)) && GATES.every((g) => Math.hypot(p[0] - g.at[0], p[1] - g.at[1]) > 4);
 
 export const PARK_TREES: ParkTree[] = (() => {
   const r = rng(808);
@@ -280,7 +351,7 @@ export const PARK_TREES: ParkTree[] = (() => {
     if (treeFree([x, z]) && out.every((t) => Math.hypot(t.x - x, t.z - z) > 2.2)) out.push({ x, z, s, pine, clump });
   };
   // The Mall: an avenue of trees either side, evenly spaced
-  for (let z = ZS - 3; z > STADIUM_SITE[3] + 6; z -= 4.5) for (const side of [-1, 1]) put(MALL.x + side * (MALL.half + 1.7), z, 1.05, false, false);
+  for (let z = ZS - 3; z > GARDEN_SITE[3] + 6; z -= 4.5) for (const side of [-1, 1]) put(MALL.x + side * (MALL.half + 1.7), z, 1.05, false, false);
   // The strips: a row along each side of the walk
   for (const s of STRIPS) {
     const z = (s.poly[0][1] + s.poly[1][1]) / 2;
@@ -319,7 +390,7 @@ export const PARK_LAMPS: [number, number, number][] = (() => {
         const off = q.half + 0.5;
         const [x, z] = [a[0] + ux * d + nx * off, a[1] + uz * d + nz * off];
         // (the arm points back across the path: from the lamp towards -n)
-        if (!inLake(x, z, 1.2) && !inRect(STADIUM_SITE, [x, z], 1) && inPark([x, z], 0.3)) out.push([x, z, Math.atan2(nz, -nx)]);
+        if (!inLake(x, z, 1.2) && !inRect(BRIDGE_PARK, [x, z], 0.8) && inPark([x, z], 0.3)) out.push([x, z, Math.atan2(nz, -nx)]);
       }
       carry = (((carry - len) % every) + every) % every;
     }
@@ -328,12 +399,11 @@ export const PARK_LAMPS: [number, number, number][] = (() => {
     if (q.id === 'mall') along(q, 9, true);
     else if (q.id === 'loop') along(q, 13, false);
     else if (q.id === 'ring') along(q, 18, false);
-    else if (q.id !== 'forecourt') along(q, 15, false);
+    else along(q, 15, false);
   }
-  // Along the stadium's car park, on the strip's lawn north of it, the arms out over the cars
-  for (let x = CAR_PARK[0] + 5; x < CAR_PARK[2]; x += 11) out.push([x, CAR_PARK[3] + 0.6, Math.PI / 2]);
-  // Not on another path where paths meet, nor two on top of each other
-  return out.filter((l, i) => !onPath([l[0], l[1]], 0.25) && out.slice(0, i).every((o) => Math.hypot(o[0] - l[0], o[1] - l[1]) > 3));
+  // Not on another path where paths meet, nor two on top of each other, nor on a court or by the boathouse and its jetty
+  const clear = (l: [number, number, number]) => COURTS.every((c) => !inRect(c.rect, [l[0], l[1]], 0.6)) && !inRect(BOATHOUSE.rect, [l[0], l[1]], 0.8) && !inRect([JETTY.x - JETTY.half, JETTY.z0, JETTY.x + JETTY.half, JETTY.z1], [l[0], l[1]], 1.2);
+  return out.filter((l, i) => clear(l) && !onPath([l[0], l[1]], 0.25) && out.slice(0, i).every((o) => Math.hypot(o[0] - l[0], o[1] - l[1]) > 3));
 })();
 
 /** Benches along the lake loop (facing the water) and the Mall (facing across it): where, and which way the sitter faces (ry, +z turned) */
@@ -347,10 +417,10 @@ export const BENCHES: { at: Pt; ry: number }[] = (() => {
     out.push({ at, ry: Math.atan2(dx, dz) });
   }
   // Along the Mall, either side, facing across it
-  for (let z = ZS - 6; z > STADIUM_SITE[3] + 8; z -= 13.5)
+  for (let z = ZS - 6; z > GARDEN_SITE[3] + 8; z -= 13.5)
     for (const side of [-1, 1]) out.push({ at: [MALL.x + side * (MALL.half + 0.45), z], ry: side > 0 ? -Math.PI / 2 : Math.PI / 2 });
   // (none where another path comes in)
-  return out.filter((b) => PATHS.every((q) => q.id === 'loop' || q.id === 'mall' || distToLine(q.pts, b.at, q.loop) > q.half + 0.8));
+  return out.filter((b) => Math.abs(b.at[0] - JETTY.x) > JETTY.half + 1.6 || b.at[1] > JETTY.z1 + 1 || b.at[1] < JETTY.z0 - 1.5).filter((b) => PATHS.every((q) => q.id === 'loop' || q.id === 'mall' || distToLine(q.pts, b.at, q.loop) > q.half + 0.8));
 })();
 
 /** Each gate's two stone piers (x0, z0, x1, z1, height): solid, the path between them */
@@ -362,8 +432,24 @@ export const GATE_PIERS: [number, number, number, number, number][] = GATES.flat
     return [c[0] - PIER.w / 2, c[1] - PIER.w / 2, c[0] + PIER.w / 2, c[1] + PIER.w / 2, PIER.h] as [number, number, number, number, number];
   });
 });
-/** What's solid in the park: the gates' piers (the lake keeps walkers out through `inLake()`, cars through `LAKE_WALLS`) */
-export const WESTLAKE_SOLIDS = GATE_PIERS;
+/** The posts and poles on the courts (step 3): the tennis nets' posts, the goals' posts, the hoops' poles */
+export const COURT_SOLIDS: [number, number, number, number, number][] = (() => {
+  const box = (x: number, z: number, r: number, h: number): [number, number, number, number, number] => [x - r, z - r, x + r, z + r, h];
+  const out: [number, number, number, number, number][] = [];
+  for (const [x, z] of TENNIS.mids) for (const sz of [-1, 1]) out.push(box(x, z + sz * TENNIS.post, 0.08, TENNIS.netH + 0.05));
+  const [fx, fz] = courtMid(COURTS[1]);
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) out.push(box(fx + sx * PITCH.half[0], fz + sz * PITCH.goal.half, 0.08, PITCH.goal.h));
+  const [bx, bz] = courtMid(COURTS[2]);
+  for (const sx of [-1, 1]) out.push(box(bx + sx * (HOOPS.half[0] + HOOPS.pole), bz, 0.14, HOOPS.rimY + 0.9));
+  return out;
+})();
+/** The boathouse to its ridge */
+export const BOATHOUSE_SOLID: [number, number, number, number, number] = [...BOATHOUSE.rect, BOATHOUSE.ridge];
+/**
+ * What's solid in the park: the gates' piers, the boathouse, the courts' posts (the lake keeps walkers out through
+ * `inLake()` but on the jetty, cars through `LAKE_WALLS`)
+ */
+export const WESTLAKE_SOLIDS = [...GATE_PIERS, BOATHOUSE_SOLID, ...COURT_SOLIDS];
 
 /** The lake as walls for cars (drive-sim.ts): strips across it, a tile deep, each its width there */
 export const LAKE_WALLS: [number, number, number, number, number][] = (() => {

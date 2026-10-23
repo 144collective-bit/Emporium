@@ -266,6 +266,13 @@ Nothing looks or plays differently.
      the boot from data, so the world map and the directory list them
      before it's loaded, and a fly-in or walking in asks for its sites
      first (`want()`).
+  6. The kart park is the second (the north side's stage 2): its grounds
+     round the circuit (`kartgrounds3d.ts`, id `karts`) load as you
+     approach, the place itself (the hut, garages, stands, gate) stays in
+     the boot, and its game (the hut's menu and the race, `kartgame.ts`)
+     is a chunk of its own fetched when Degen comes near or asks at the
+     hut. With the facility added the boot's code went from 638.5 to
+     628.9 KB of 640.
 
 ### What phase 4 measured
 

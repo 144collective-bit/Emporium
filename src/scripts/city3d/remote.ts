@@ -259,9 +259,12 @@ export function createRemotes(scene: THREE.Scene, camera: THREE.PerspectiveCamer
         if (r.fig.held) r.fig.held.visible = !r.pivot.visible;
         r.air += ((air ? 1 : 0) - r.air) * Math.min(1, dt * 12);
         // Hands on the gun last, so walking and jumping don't pull them off it
-        if (r.draw > 0 && !r.emote) holdGun(P, r.stance, r.pivot, r.gun, { aim: r.aim, ready: 1 - run, draw: r.draw, pitch, recoil: 0, reload: r.reload, dt });
-        P.headPitch = THREE.MathUtils.clamp((0.35 - pitch) * 0.6, -0.45, 0.55);
-        P.headYaw = 0;
+        const holding = r.draw > 0 && !r.emote;
+        if (holding) holdGun(P, r.stance, r.pivot, r.gun, { aim: r.aim, ready: 1 - run, draw: r.draw, pitch, recoil: 0, reload: r.reload, dt });
+        // (the head looks where they look, unless it's down on a rifle's stock)
+        const free = holding ? 1 - r.stance.cheek : 1;
+        P.headPitch = THREE.MathUtils.lerp(P.headPitch, THREE.MathUtils.clamp((0.35 - pitch) * 0.6, -0.45, 0.55), free);
+        P.headYaw *= 1 - free;
         r.fig.update();
         placeRoot(r.fig.g, x, y, z, face, SCALE, r.loco.root);
 

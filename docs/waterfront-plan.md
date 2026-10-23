@@ -69,13 +69,32 @@ avenue. Saves own them by id, so nothing is lost.
   walk through its portal), its jib out over a barge tied up with
   containers.
 - **The boats** keep clear: the south lane's boat stays east of the
-  boardwalk, and the middle lane swings north round the pier's head.
+  boardwalk, and the middle lane swings north round the pier's head and
+  the night market's deck.
+
+### The Night Market (`nightmarket.ts`, `nightmarket3d.ts`)
+
+The owner's call ("build the night market next"), scenery for now. A broad
+deck out over the water in front of Harbor Stores, open to the boardwalk
+along its length, a place (pin, directory, panel, Walk in):
+
+- along its water side, counters facing the city: four shipping containers
+  turned kitchens (NOODLES, TACOS, BAO BUNS, DUMPLINGS), two food trucks
+  (WINGS, SMOOTHIES) and a cart under its umbrella (SWEETS), each with its
+  name on the roof both ways, its flap propped up, lit inside, a cook
+  behind the counter and a queue in front;
+- two rows of picnic tables with people eating, patio heaters between;
+- NIGHT MARKET on a gantry over the boardwalk, framed in neon with bulbs
+  along its beam, readable both ways;
+- string lights and paper lanterns from the stalls' roofs to poles along
+  the boardwalk, pools of light at the counters.
+
+The boardwalk's strollers pass along behind the tables.
 
 ## Next (suggestions, each the owner's call)
 
-1. **A night market:** container stalls and food trucks with picnic tables
-   and string lights, on the boardwalk by the Refinery or in a yard.
-   Scenery first; later stalls you run for Dorras.
+1. **The night market's stalls to run** for Dorras (like the corner shops),
+   and its sound: the crowd's hum and sizzling (with 4 below).
 2. **A ferry or water taxi** from Pier 7 to downtown's jetties: a new way to
    get about next to taxis and the metro.
 3. **Fishing** off Pier 7 as a mini-game (XP, missions, badges; nothing

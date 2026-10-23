@@ -12,7 +12,7 @@
  */
 import { EW_ROADS, EXT, NS_ROADS, RIVER } from './layout';
 import { PARKWAY, PROMENADE, SOUTHSIDE, inTown } from './outer';
-import { KART_PARK, SLIP_ROAD } from './kartpark';
+import { KART_RECTS } from './kartfacility';
 import { RUNWAY, SITE } from './airfield';
 import { TILE, tileKey, tilesIn } from './tiles';
 import { rng } from './recipes';
@@ -47,9 +47,8 @@ export function treeSpot(x: number, z: number, clear: readonly Rect[] = [], high
   if (clear.some((c) => x > c[0] - 2 && x < c[2] + 2 && z > c[1] - 2 && z < c[3] + 2)) return false;
   // Off the ring highway, its verges and the slip lanes at its junctions (highway.ts)
   if (highway && (fromHighway(x, z) < HIGHWAY_HALF + 1.5 || MEETS.some((m) => Math.abs(x - m[0]) < 17 && Math.abs(z - m[1]) < 17))) return false;
-  // The kart park and its slip road (kartpark.ts)
-  if (x > KART_PARK.x0 - 3 && x < KART_PARK.x1 + 3 && z > KART_PARK.z0 - 3 && z < KART_PARK.z1 + 3) return false;
-  if (Math.abs(x - SLIP_ROAD.x) < SLIP_ROAD.half + 2 && z > SLIP_ROAD.z0 - 1 && z < SLIP_ROAD.z1 + 1) return false;
+  // The kart park, Kart Road and the car park (kartfacility.ts)
+  if (KART_RECTS.some((r) => x > r[0] - 3 && x < r[2] + 3 && z > r[1] - 3 && z < r[3] + 3)) return false;
   // Clear of the town (inside the bends, the river and its banks) and of the bends themselves
   if (inTown([x, z], 1.2)) return false;
   // Clear of the airport and of the low end of its approach

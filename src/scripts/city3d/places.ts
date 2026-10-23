@@ -16,6 +16,7 @@ import { STATIONS } from './metro';
 import { BLOCK_SPAWN } from './projects';
 import { AVENUE_SPAWNS } from './avenue';
 import { PIER_SPAWN } from './waterfront';
+import { MARKET_SPAWN } from './nightmarket';
 import { STADIUM_SPAWN } from './stadium';
 
 export type PlaceKind = 'spot' | 'lot' | 'metro';
@@ -60,6 +61,7 @@ export const PLACES: Place[] = [
   { id: 'bar', kind: 'spot', spot: 'bar', at: AVENUE_SPAWNS.bar },
   { id: 'arms', kind: 'spot', spot: 'arms', at: AVENUE_SPAWNS.arms },
   { id: 'pier', kind: 'spot', spot: 'pier', at: PIER_SPAWN },
+  { id: 'nightmarket', kind: 'spot', spot: 'nightmarket', at: MARKET_SPAWN },
   // Westlake Park's stadium: on its forecourt, facing the gate
   { id: 'stadium', kind: 'spot', spot: 'stadium', at: STADIUM_SPAWN },
   // The garage's forecourt, facing its office door; the market square, at your stall
@@ -75,3 +77,10 @@ export const PLACE_IDS = PLACES.map((p) => p.id);
 export const SEEN_R = 9;
 /** The places a walker at x, z has just reached */
 export const seen = (x: number, z: number) => PLACES.filter((p) => Math.hypot(p.at.x - x, p.at.z - z) < SEEN_R).map((p) => p.id);
+
+/** A place's name and a line under it: the copy on its pin (CityMap.astro's directory, found under `root`), or its own */
+export function placeName(root: ParentNode, p: Place) {
+  if (p.name) return { name: p.name, sub: p.kind === 'metro' ? 'Metro' : '' };
+  const a = root.querySelector(`[data-dir-spot="${p.spot}"]`);
+  return { name: a?.querySelector('span')?.textContent?.trim() ?? p.id, sub: a?.querySelector('small')?.textContent?.trim() ?? '' };
+}

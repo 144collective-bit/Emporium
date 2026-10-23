@@ -26,8 +26,10 @@ import { STREETWALL_SOLIDS } from './streetwall';
 import { AVENUE_SOLIDS } from './avenue';
 import { RIVERSIDE_SOLIDS } from './riverside';
 import { WATERFRONT_SOLIDS } from './waterfront';
+import { NIGHT_MARKET_SOLIDS } from './nightmarket';
 import { WESTLAKE_SOLIDS } from './westlake';
 import { STADIUM_SOLIDS } from './stadium';
+import { FACILITY_SOLIDS } from './kartfacility';
 
 /** x0, z0, x1, z1, height */
 export type Box = [number, number, number, number, number];
@@ -264,7 +266,7 @@ export const FIGHTCLUB_SITE: Box[] = [
 
 /** The outer squares' centrepieces, planters and kiosks (outer.ts); the pocket parks and lawns stay walkable */
 /** ...and the kart park's fence, hut, garages and stand (kartcircuit.ts), the airport's buildings, masts and parked vehicles (airfield.ts), the Fight Club (fightsite.ts), Liberty Bridge, the metro and The Trenches' towers, rows and The Block (projects.ts) */
-export const SOLIDS: Box[] = [...DRAWN.map(designBox), ...DOWNTOWN_SOLIDS, ...SQUARE_SOLIDS, ...GARAGE_SOLIDS, ...MARKET_SOLIDS, ...DUMMY_SOLIDS, ...KART_SOLIDS, ...AIRPORT_SOLIDS, ...FIGHTCLUB_SITE, ...LIBERTY_SOLIDS, ...METRO_SOLIDS, ...PROJECT_SOLIDS, ...COMMONS_SOLIDS, ...GRIT_SOLIDS, ...STREETWALL_SOLIDS, ...AVENUE_SOLIDS, ...RIVERSIDE_SOLIDS, ...WATERFRONT_SOLIDS, ...WESTLAKE_SOLIDS, ...STADIUM_SOLIDS];
+export const SOLIDS: Box[] = [...DRAWN.map(designBox), ...DOWNTOWN_SOLIDS, ...SQUARE_SOLIDS, ...GARAGE_SOLIDS, ...MARKET_SOLIDS, ...DUMMY_SOLIDS, ...KART_SOLIDS, ...AIRPORT_SOLIDS, ...FIGHTCLUB_SITE, ...LIBERTY_SOLIDS, ...METRO_SOLIDS, ...PROJECT_SOLIDS, ...COMMONS_SOLIDS, ...GRIT_SOLIDS, ...STREETWALL_SOLIDS, ...AVENUE_SOLIDS, ...RIVERSIDE_SOLIDS, ...WATERFRONT_SOLIDS, ...NIGHT_MARKET_SOLIDS, ...WESTLAKE_SOLIDS, ...STADIUM_SOLIDS, ...FACILITY_SOLIDS];
 /** What bullets stop on: everything solid except the dummies' footprints (they test their own shape) */
 export const SHOT_SOLIDS = SOLIDS.filter((b) => !DUMMY_SOLIDS.includes(b));
 

@@ -12,7 +12,7 @@
  * on the airfield (or anywhere you landed it), Keep also brings it home.
  *
  * Arrow keys or the D-pad pick an aircraft (up / down on the pad: the
- * paint), Enter / A keeps it, Esc / B / E closes.
+ * paint), Enter / A keeps it, Esc / B / F closes.
  */
 import { TUNES } from './flight-sim';
 import { DEFAULT_PLANE, FLY, PLANE_PAINTS, PLAYER_AIRCRAFT, cleanPlane, type MyPlane, type PlaneId } from './myplane';

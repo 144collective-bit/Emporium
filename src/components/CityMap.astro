@@ -48,9 +48,10 @@ const spots: Record<SpotId, Spot> = {
   bar: { href: '#city-title', title: 'The Rusty Nail', sub: 'Bar · coming soon', aria: 'The Rusty Nail: a bar in The Trenches facing the river, coming soon' },
   arms: { href: '#city-title', title: 'Trench Arms', sub: 'Guns & gear', aria: 'Trench Arms: guns and gear in The Trenches' },
   pier: { href: '#city-title', title: 'Pier 7', sub: 'The waterfront', aria: 'Pier 7: the boardwalk and pier on The Trenches\' waterfront' },
+  nightmarket: { href: '#city-title', title: 'Night Market', sub: 'Street food', aria: 'The Night Market: food stalls on the waterfront by Harbor Stores' },
   stadium: { href: '#city-title', title: 'Sector 7 Stadium', sub: 'Events · coming soon', aria: 'Sector 7 Stadium in Westlake Park: events coming soon' },
 };
-const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'trenches', 'club', 'bar', 'arms', 'pier', 'stadium'];
+const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'trenches', 'club', 'bar', 'arms', 'pier', 'nightmarket', 'stadium'];
 const ext = { target: '_blank', rel: 'noopener noreferrer' };
 
 const map = renderCity({ spots, art: { degen: degenImg.src, logo: logoImg.src } });
@@ -110,7 +111,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
         </button>
         <button type="button" class="city-start-btn" data-start-options aria-expanded="false">
           <span class="city-start-btn-name">Options</span>
-          <span class="city-start-btn-sub">Time, weather, sound, 2D map</span>
+          <span class="city-start-btn-sub">Time, weather, sound, 2D map, credits</span>
         </button>
       </div>
       <div class="city-start-options" data-start-pane hidden>
@@ -145,6 +146,11 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
             <button type="button" data-opt="view" data-val="2d" aria-pressed="false">2D map</button>
           </div>
         </div>
+        {/* The credits the city's borrowed work asks for (docs/animation-plan.md): named, never linked */}
+        <details class="city-start-credits">
+          <summary><span class="city-start-label">Credits</span></summary>
+          <p>Degen's movement is motion capture from the CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu), created with funding from NSF EIA-0196217, in Bruce Hahne's BVH conversion.</p>
+        </details>
         <button type="button" class="city-start-back" data-start-back>Back</button>
       </div>
       <p class="city-start-status" aria-live="polite"><span data-start-status>Loading the city…</span></p>
@@ -200,22 +206,22 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
           <dl class="walk-keys">
             <dt><kbd>WASD</kbd></dt><dd>Move</dd>
             <dt><kbd>Mouse</kbd></dt><dd>Look around</dd>
-            <dt><kbd>Shift</kbd></dt><dd>Run (hold)</dd>
-            <dt><kbd>Caps&nbsp;Lock</kbd></dt><dd>Run (toggle)</dd>
+            <dt><kbd>Shift</kbd></dt><dd>Sprint (hold)</dd>
+            <dt><kbd>Caps&nbsp;Lock</kbd></dt><dd>Walk (toggle)</dd>
             <dt><kbd>Space</kbd></dt><dd>Jump (hold for higher)</dd>
             <dt><kbd>Right&nbsp;click</kbd></dt><dd>Aim (red dot sight)</dd>
             <dt><kbd>V</kbd></dt><dd>First / third person</dd>
             <dt><kbd>Scroll</kbd></dt><dd>Camera distance</dd>
-            <dt><kbd>E</kbd></dt><dd>Enter a door, open the gun store, the garage, the kart hut or the trainer, get in / out of your car</dd>
+            <dt><kbd>F</kbd></dt><dd>Enter a door, open the gun store, the garage, the kart hut or the trainer, get in / out of your car</dd>
             <dt><kbd>Click</kbd></dt><dd>Fire (once geared up)</dd>
             <dt><kbd>R</kbd></dt><dd>Reload</dd>
-            <dt><kbd>Q</kbd> <kbd>1</kbd>–<kbd>7</kbd></dt><dd>Swap gun (next, or by number)</dd>
+            <dt><kbd>X</kbd> <kbd>1</kbd>–<kbd>7</kbd></dt><dd>Swap gun (next, or by number)</dd>
             <dt><kbd>G</kbd></dt><dd>Holster / draw</dd>
             <dt><kbd>T</kbd></dt><dd>Emotes and phrases (online)</dd>
             <dt><kbd>Esc</kbd></dt><dd>Free the mouse, then stop</dd>
           </dl>
           <p class="walk-pad">Driving: <kbd>W</kbd> / <kbd>S</kbd> gas and brake (hold to reverse), <kbd>A</kbd> / <kbd>D</kbd> steer, <kbd>Space</kbd> handbrake, <kbd>V</kbd> chase or roof camera. Your car waits on the turntable at the garage on the south bank. Gamepad: RT gas, LT brake, A handbrake, Y get out. Touch: the stick steers, with Gas and Brake buttons.</p>
-          <p class="walk-pad">Gear up at the gun store counter inside the Armoury. Gamepads work too: left stick moves, right stick looks, A jumps, LB runs, LT aims, RT fires, X reloads, RB swaps guns. On a touch screen, drag the Fire button to aim while you shoot. Your look and rifle finish are in Profile.</p>
+          <p class="walk-pad">Gear up at the gun store counter inside the Armoury. Gamepads work too: left stick moves, right stick looks, A jumps, LB sprints, LT aims, RT fires, X reloads, RB swaps guns. On a touch screen, drag the Fire button to aim while you shoot. Your look and rifle finish are in Profile.</p>
         </div>
       </details>
       <details class="walk-pop walk-profile" data-pop data-profile>
@@ -727,24 +733,25 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     <button type="button" class="fight-btn fight-kick" data-fight-kick aria-label="Kick">Kick</button>
     <button type="button" class="fight-btn fight-block" data-fight-block aria-label="Block (hold)">Block</button>
     <button type="button" class="fight-btn fight-dodge" data-fight-dodge aria-label="Dodge">Dodge</button>
-    <p class="walk-hint"><kbd>WASD</kbd> move · <kbd>Shift</kbd> run · <kbd>Space</kbd> jump · <kbd>V</kbd> camera · <kbd>Esc</kbd> stop</p>
+    <p class="walk-hint"><kbd>WASD</kbd> move · <kbd>Shift</kbd> sprint · <kbd>Space</kbd> jump · <kbd>V</kbd> camera · <kbd>Esc</kbd> stop</p>
     {/* Driving your car (drive.ts): speed readout, key hint, touch pedals (the stick steers) */}
-    <p class="walk-hint drive-hint"><kbd>W</kbd><kbd>S</kbd> gas / brake · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>Space</kbd> handbrake · <kbd>V</kbd> camera · <kbd>E</kbd> get out</p>
+    <p class="walk-hint drive-hint"><kbd>W</kbd><kbd>S</kbd> gas / brake · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>Space</kbd> handbrake · <kbd>H</kbd> horn · <kbd>V</kbd> camera · <kbd>F</kbd> get out</p>
     <div class="drive-hud" data-drive-hud hidden aria-hidden="true">
       <b data-drive-speed>0</b><small>km/h</small><span class="drive-gear" data-drive-gear>N</span>
     </div>
     {/* Flying your aircraft (fly.ts): speed, height over the ground, the throttle (or the rotor) and what it's doing */}
-    <p class="walk-hint fly-hint"><kbd>W</kbd><kbd>S</kbd> faster / slower · <kbd>A</kbd><kbd>D</kbd> turn · <kbd>↑</kbd><kbd>↓</kbd> or <kbd>Space</kbd><kbd>Shift</kbd> climb / dive · <kbd>V</kbd> camera · <kbd>E</kbd> get out</p>
+    <p class="walk-hint fly-hint"><kbd>W</kbd><kbd>S</kbd> faster / slower · <kbd>A</kbd><kbd>D</kbd> turn · <kbd>↑</kbd><kbd>↓</kbd> or <kbd>Space</kbd><kbd>Shift</kbd> climb / dive · <kbd>V</kbd> camera · <kbd>F</kbd> get out</p>
     <div class="fly-hud" data-fly-hud hidden aria-hidden="true">
       <span class="fly-read"><b data-fly-speed>0</b><small>km/h</small></span>
       <span class="fly-read"><b data-fly-alt>0</b><small>m up</small></span>
       <span class="fly-power" title="Throttle"><i data-fly-power></i></span>
       <span class="drive-gear" data-fly-state>Taxi</span>
     </div>
+    <button type="button" class="drive-pedal drive-horn" data-drive-horn aria-label="Horn">Horn</button>
     <button type="button" class="drive-pedal drive-brake" data-drive-brake aria-label="Brake and reverse">Brake</button>
     <button type="button" class="drive-pedal drive-gas" data-drive-gas aria-label="Gas">Gas</button>
     <div class="walk-stick" data-walk-stick aria-hidden="true"><span></span></div>
-    <button type="button" class="walk-run" data-walk-run aria-pressed="false">Run</button>
+    <button type="button" class="walk-run" data-walk-run aria-pressed="false">Sprint</button>
     <button type="button" class="walk-fire" data-walk-fire>Fire</button>
     <button type="button" class="walk-reload" data-walk-reload>Reload</button>
     <button type="button" class="walk-aim" data-walk-aim aria-pressed="false">Aim</button>
@@ -757,7 +764,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     </button>
   </div>
   <button type="button" class="walk-prompt" data-walk-prompt hidden>
-    <kbd>E</kbd> <span data-walk-label>Enter</span>
+    <kbd>F</kbd> <span data-walk-label>Enter</span>
   </button>
   {/* A taxi (taxi.ts, growth plan Phase 8): on its way, waiting (Get in), or the ride (Skip ride) */}
   <div class="taxi-bar" data-taxi hidden aria-live="polite">
@@ -932,9 +939,9 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
   <template data-panel-tpl="karts">
     <p class="kicker"><span class="kicker-num">09</span> The kart park</p>
     <h2 id="city-panel-title" class="city-panel-title">Go-karts</h2>
-    <p class="city-panel-text">The Sector 7 Circuit on the open land north-east of the Parkway: twelve corners, two banked sweepers, a hill with a tunnel and a jump, a hairpin and a flyover, raced both ways round. Pure racing against seven rivals in three classes from Street to Neon: drift for boosts, keep it off the grass, and some races run at night or in the rain. Three cups run as a series of four races with points by place and a trophy for the podium; single races and time trials (against the par ghost) any time, and a new challenge every day. Karts are bought and tuned at the hut for Dorras earned in the city.</p>
+    <p class="city-panel-text">The Sector 7 Circuit north of the ring highway in the north-east, off Kart Road with its own metro stop: twelve corners, two banked sweepers, a hill with a tunnel and a jump, a hairpin and a flyover, raced both ways round. Pure racing against seven rivals in three classes from Street to Neon: drift for boosts, keep it off the grass, and some races run at night or in the rain. Three cups run as a series of four races with points by place and a trophy for the podium; single races and time trials (against the par ghost) any time, and a new challenge every day. Watch from the covered grandstand, the grass banks or the hut's roof terrace. Karts are bought and tuned at the hut for Dorras earned in the city.</p>
     <button type="button" class="chip-link kart-walkin" data-kart-walkin>Walk in</button>
-    {/* Your best laps, trophies and race counts (index.ts fills it with kartRecordsHtml() from kart-ui.ts) */}
+    {/* Your best laps, trophies and race counts (index.ts fills it with kartRecordsHtml() from kart-records.ts) */}
     <div class="kart-panel-records" data-kart-panel-records></div>
   </template>
   <template data-panel-tpl="airport">
@@ -986,6 +993,12 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     <h2 id="city-panel-title" class="city-panel-title">Pier 7</h2>
     <p class="city-panel-text">The Trenches' waterfront: a timber boardwalk out over the river from the highway to the town's promenade, with sodium lamps, benches facing the water and the old dock crane by the Refinery. Pier 7 runs out under its lit arch to a head with the bait and coffee kiosk, binoculars and people fishing off the rail. At its head stands the Pier House, its clock tower keeping your time. Behind the boardwalk is the riverside: The Wharf, the Refinery, Harbor Stores and Club PULSE.</p>
     <button type="button" class="chip-link kart-walkin" data-pier-walkin>Walk in</button>
+  </template>
+  <template data-panel-tpl="nightmarket">
+    <p class="kicker"><span class="kicker-num">17</span> The waterfront</p>
+    <h2 id="city-panel-title" class="city-panel-title">Night Market</h2>
+    <p class="city-panel-text">Street food on a deck out over the river in front of Harbor Stores: shipping containers turned kitchens, two food trucks and a cart, picnic tables, patio heaters and string lights with paper lanterns, under NIGHT MARKET lit on its gantry over the boardwalk. Best after dark. Stalls of your own to run come later: coming soon.</p>
+    <button type="button" class="chip-link kart-walkin" data-market-walkin>Walk in</button>
   </template>
 
   <template data-panel-tpl="stadium">

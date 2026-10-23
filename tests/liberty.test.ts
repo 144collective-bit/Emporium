@@ -16,6 +16,7 @@ import {
   LIBERTY_SOLIDS,
   LIBERTY_SPAWN,
   STAIR,
+  STAIR_BASE,
   SUPPORTS,
   TOWER,
   TOWERS,
@@ -25,6 +26,7 @@ import {
   footbridgeWall,
   footbridgeY,
   landingOf,
+  stairTread,
   stairsOf,
 } from '../src/scripts/city3d/liberty';
 import { SOLIDS } from '../src/scripts/city3d/solids';
@@ -111,4 +113,23 @@ test('walking: up the stairs, across the landing, along the walkway to the other
   assert.ok(!SOLIDS.some((b) => BX > b[0] - 0.22 && BX < b[2] + 0.22 && prom.z > b[1] - 0.22 && prom.z < b[3] + 0.22));
   // People stroll the walkway
   for (const poly of DECK_STROLLS) for (const [px, pz] of poly) for (const d of [-0.65, 0.65]) assert.equal(footbridgeY(px + d, pz, DECK_Y), DECK_Y);
+});
+
+test('the stairs\' treads, as the feet stand on them: each step at its height, on or over the ramp he walks up', () => {
+  const rise = (DECK_Y - STAIR_BASE) / STAIR.steps;
+  for (const i of [0, 1] as const) {
+    const st = stairsOf(i);
+    const x = BX + TOWER.hx + STAIR.tread / 2;
+    for (let k = 0; k < STAIR.steps; k++) {
+      // The middle of step k
+      const z = st.z0 + ((st.z1 - st.z0) * (k + 0.5)) / STAIR.steps;
+      const tread = stairTread(x, z, 10);
+      assert.ok(tread !== null);
+      assert.ok(Math.abs(tread - (STAIR_BASE + (k + 1) * rise)) < 1e-9, `step ${k}`);
+      assert.ok(tread >= (footbridgeY(x, z, 10) ?? 0) - 1e-9, 'never under the ramp');
+    }
+    // Off the stairs (beside them, or well below them: under the walkway) there's no tread
+    assert.equal(stairTread(BX, (st.z0 + st.z1) / 2, 10), null);
+    assert.equal(stairTread(x, (st.z0 + st.z1) / 2, -5), null);
+  }
 });

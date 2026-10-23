@@ -240,8 +240,10 @@ it and has been retired completely. Build only on what's here.
     `walk.ts`): the ride moves Degen (hidden) and its own camera, the keys
     wait, `.city.is-riding` hides the walk HUD; leaving walk mode ends it.
   - **The metro** is `metro.ts` (DOM-free, tested in `tests/metro.test.ts`):
-    an elevated line on a viaduct as tracks (`TRACKS`: `main` from the kart
-    park down the east ring avenue's median to the switch (`SWITCH_S`), a
+    an elevated line on a viaduct as tracks (`TRACKS`: `main` from the Kart
+    Park station north of the ring highway (the north side's stage 2: it
+    crosses the highway's junction on a span) down the east ring avenue's
+    median to the switch (`SWITCH_S`), a
     quarter-circle bend (`BEND_R`) and west over the open land south of the
     south row and Trench Avenue's median to The Trenches; `branch` straight
     on from the switch to the Airport, Phase 9, the owner's call); a place
@@ -257,7 +259,7 @@ it and has been retired completely. Build only on what's here.
     back, up again; `ROUND_TRIP`), runs as pieces of track (`runsBetween()`,
     `placeOn()`, `carAt()`: each car on the track where it is, round the
     bend), rides straight between stations (`rideAt()`, turning round at
-    South Bank between The Trenches and the Airport; at most about 37 s)
+    South Bank between The Trenches and the Airport; at most about 40 s)
     and back on the timetable after (`timetableAt()`). Drawn by `metro3d.ts`
     (the deck in short straight pieces between its pillars, rails, parapets
     with magenta neon, hammerhead pillars, a girder over the river; each
@@ -270,9 +272,10 @@ it and has been retired completely. Build only on what's here.
     out at the destination's door.
   - **Sound by district** is `ambience.ts` (DOM-free, tested in
     `tests/ambience.test.ts`): `ambienceAt(x, z, lift)` gives the town's
-    hum, the river, the traffic's rush (the highway, the avenues inside
-    it), wind over open land, the Emporium's beat and The Trenches' own
-    (`hood`, `boombox`: the grit step); `sound.update()` mixes its layers
+    hum, the river (and Westlake's lake), the traffic's rush (the highway,
+    the avenues inside it), wind over open land, the Emporium's beat, The
+    Trenches' own (`hood`, `boombox`: the grit step) and Westlake Park's
+    (`park`: birds by day, an owl at night; `sport`: a ball by the courts); `sound.update()` mixes its layers
     from it (and the el's rumble from `metro.rumbleAt()`), where you walk
     or where the City view looks.
 - **The Trenches** (growth plan Phase 9, the owner's call): a
@@ -545,6 +548,23 @@ it and has been retired completely. Build only on what's here.
     `data-panel-tpl="pier"` with Walk in to `PIER_SPAWN`, a `PLACES` entry;
     the clock's hands keep the visitor's time). On the world map the decks
     are drawn in wood.
+  - **The Night Market** (the owner's call, the waterfront plan's first
+    next step; scenery for now, stalls to run later) is `nightmarket.ts`
+    (DOM-free, tested in `tests/nightmarket.test.ts`) on its deck out over
+    the water in front of Harbor Stores (`MARKET_DECK` in waterfront.ts, one
+    of `DECKS`, open to the boardwalk along its length (`RAIL_GAPS`), the
+    middle boat lane swinging round it in `boatZ()`, the boardwalk's dressing
+    kept off it): `STALLS` along its water side, counters facing the city
+    (four containers, two food trucks, a cart, made-up names `STALL_NAMES`),
+    `TABLES` (two rows of picnic tables) between the queues (`QUEUE`) and the
+    boardwalk's walk (`WALK_FROM`, the strollers pass behind), NIGHT MARKET
+    on the `GANTRY` over the boardwalk (both ways), string lights and paper
+    lanterns from the stalls' roofs to the `POLES`, `HEATERS`, the cooks
+    (`VENDORS`) and diners (`DINERS`), `NIGHT_MARKET_SOLIDS` (in `SOLIDS`).
+    Drawn by `nightmarket3d.ts` (`buildNightMarket()`, a place at the boot:
+    spot `nightmarket`, its pin over the gantry, directory entry, panel
+    `data-panel-tpl="nightmarket"` with Walk in to `MARKET_SPAWN`, a `PLACES`
+    entry; one sign atlas of fixed made-up copy).
   - **The Block** is a place (`theblock.ts`, built at the boot): spot
     `trenches` (pin over the court, directory entry, panel
     `data-panel-tpl="trenches"`: the storyline starts here, coming soon,
@@ -561,7 +581,7 @@ it and has been retired completely. Build only on what's here.
   land west of town, north of the river, between the ring highway and the
   Parkway. Built in steps, each with the owner's sign-off: (1) the land,
   the lake and the paths (built); (2) the stadium (built); (3) the park's life
-  (boats, a boathouse, people, sports on the strips, its sound).
+  (boats, a boathouse, people, sports on the strips, its sound; built).
   - `westlake.ts` (DOM-free, tested in `tests/westlake.test.ts`): the big
     block (`BIG`: `X0` clear of the highway's slip lanes, `X1` its
     sidewalk alongside the Parkway's, `Z0` the highway's north side round
@@ -577,7 +597,11 @@ it and has been retired completely. Build only on what's here.
     (`GATE_PIERS`, `WESTLAKE_SOLIDS` in `SOLIDS`); `PARK_TREES` (the Mall's
     avenue, the strips' rows, clumps from a seeded noise; `clump` ones,
     every other, left out on phones), `PARK_LAMPS` and `BENCHES`;
-    `STADIUM_SITE` for the stadium; `CAR_PARK` on the first strip. Its
+    `GARDEN_SITE` (the stadium's old site, kept for the formal garden); step 3's
+    land: the boathouse (`BOATHOUSE`, solid) and its jetty (`JETTY`,
+    `onJetty()`: walk.ts lets you out along it, at its deck's height), the
+    courts on the strips (`COURTS`, `TENNIS`, `PITCH`, `HOOPS`,
+    `COURT_SOLIDS`), each strip's walk eased round its court. Its
     trees and lamps are placed
     at the boot with the town's (`addTree()` / `addLamp()` in index.ts).
   - `westlake3d.ts` draws the rest as sites: the paths (pale gravel
@@ -589,32 +613,81 @@ it and has been retired completely. Build only on what's here.
     (`districts.ts`, below). The world map draws its lawns, the lake and
     its paths; the benchmark has a view over the lake (`park`). The car
     park's asphalt, bays, ways in and P sign are its sites too.
-  - **Sector 7 Stadium** (step 2) is `stadium.ts` (DOM-free, tested in
-    `tests/stadium.test.ts`) on `STADIUM_SITE` at the top of the Mall: a
-    soft-cornered oval bowl (`ovalAt()`, `oval()`, `inOval()`; `FACADE`),
-    two tiers of seats (`TIERS`) with a concourse between (`CONCOURSE`),
-    a roof ring over the upper tier (`ROOF`), the pitch (`PITCH`) and its
-    track (`TRACK`), four floodlight masts (`MASTS`, `MAST`; `TALLEST`
-    under the Emporium), the big screen over the north stand (`SCREEN`)
-    and the main gate in the south facade (`GATE`, under `NAME`, fixed
-    made-up copy), `STADIUM_SPAWN` on the forecourt; the car park's
-    `BAYS`, `ENTRANCES` and `PARKED` cars; `STADIUM_SOLIDS` (in `SOLIDS`:
+  - **The park's life** (step 3) is `parklife.ts` (DOM-free, tested in
+    `tests/parklife.test.ts`), everyone and everything a function of the
+    time: walkers, joggers and dog walkers in lanes (`LANES`: walkers near
+    a path's middle, joggers by its edges, either way, everyone in a lane
+    at its pace and evenly spread) round the lake loop and the ring walk,
+    up and down the Mall and the strips (`PARK_PEOPLE`, `trim` ones left
+    out on phones), dogs on the lead ahead of their walkers (`DOGS`,
+    `LEAD`), people on every third bench, picnics in the glades
+    (`PICNICS`), the games on the courts (players wandering, keepers, a
+    rally on each tennis court, passes and shots, `BALLS`, `GAMES`) and the
+    boats on the lake (`BOATS`: rowing boats and swan pedalos on rings
+    along the shore's normals, `ringLine()`, `RINGS`, each its own pace and
+    way round so none meet; rowers and swan riders aboard; two moored at the
+    jetty). The people are the crowd's (life.ts, kind `park`; clips `jog`
+    and `picnic`); `parklife3d.ts` (the park's chunk) draws the boathouse,
+    the jetty, the courts and the picnics as sites and, on the main thread
+    with the district's tick, the boats with their sweeping oars, the dogs
+    and their leads and the balls, an instanced mesh a kind (not drawn
+    while the camera is far from the park). Its sound: `park` (birds by
+    day, an owl at night) and `sport` (a ball by the courts) in
+    ambience.ts, the lake in `water`.
+  - **Sector 7 Stadium** (step 2; moved north of the ring highway in the
+    north side's stage 1, `docs/north-plan.md`, the owner's call) is
+    `stadium.ts` (DOM-free, tested in `tests/stadium.test.ts`) on its own
+    block north of the highway (`BLOCK`, in the street plan as `stadium`),
+    in line with the Mall (`CENTRE`): a soft-cornered oval bowl (`ovalAt()`,
+    `oval()`, `inOval()`; `FACADE`), two tiers of seats (`TIERS`) with a
+    concourse between (`CONCOURSE`), a roof ring over the upper tier
+    (`ROOF`), the pitch (`PITCH`) and its track (`TRACK`), four floodlight
+    masts (`MASTS`, `MAST`; `TALLEST` under the Emporium), the big screen
+    over the north stand (`SCREEN`) and the main gate in the south facade
+    (`GATE`, under `NAME`, fixed made-up copy), `STADIUM_SPAWN` on the
+    forecourt. Stadium Road (`ROAD`) runs west off the north road (ns0) past
+    its front, and the car park (`CAR_PARK`, `BAY_ROWS`, `BAYS`, `PARKED`) is
+    inside a one-way loop off it east of the stadium (`LOOP`), as the
+    airport's is: `STADIUM_STREETS` / `STADIUM_CROSSINGS` in the street
+    plan, so traffic drives them, coming off the highway at ns0, whose outer
+    corners get slip lanes too (`OUTER_SLIPS` in streetplan.ts). The
+    footbridge (`BRIDGE`) carries the Mall from the park up over the ring
+    walk, the park's edge, the highway and Stadium Road and down to the
+    forecourt: walkable (`bridgeY()`, `bridgeWall()` in walk.ts, as Liberty
+    Bridge's), its piers (the middle one on the highway's median) and its
+    stairs past their first steps solid. `STADIUM_SOLIDS` (in `SOLIDS`):
     the facade all round, the gates shut until there are events, the masts,
-    the parked cars). Drawn by `stadium3d.ts` (`buildStadium()`, a place
-    built at the boot like the avenue's, not in the park's chunk): seats in
-    sections of magenta, purple and cyan, the roof's neon edge, lamp heads
-    on the masts and their pools of light on the pitch at night, the screen
-    and the name board from one small atlas, the parked cars. It's a
-    place: spot `stadium` (pin, directory entry, panel
+    the parked cars, the footbridge's piers and stairs; `STADIUM_LAMPS`,
+    `STADIUM_RECTS` (the outskirts' trees keep off; no highway lamp under
+    the bridge). The stadium is drawn by `stadium3d.ts` (`buildStadium()`, a
+    place built at the boot: seats in sections of magenta, purple and cyan,
+    the roof's neon edge, lamp heads on the masts and their pools of light
+    on the pitch at night, the screen and the name board from one small
+    atlas, the parked cars); its grounds (the road, the car park with its
+    bays, one-way arrows and P sign, the footbridge) by
+    `stadiumgrounds3d.ts`, loaded as you approach with the park's chunk
+    (`LAZY_DISTRICTS`: `westlake`, whose land covers it too).
+    It's a place: spot `stadium` (pin, directory entry, panel
     `data-panel-tpl="stadium"`: events coming soon, Walk in), the gate's
-    door prompt opens it, `PLACES` entry. Its sound waits for events.
+    door prompt opens it, `PLACES` entry. Its sound waits for events. Its
+    old site in the park (`GARDEN_SITE` in westlake.ts) is kept clear for
+    the formal garden (stage 3), the Mall running through it to the
+    footbridge's foot (`BRIDGE_FOOT`); the old car park on the first strip
+    went back to park.
+- **The north side** (the owner's call): the stadium and the kart park
+  moving north of the ring highway and Westlake Park's paths, kerbs, low
+  walls and gardens, planned in `docs/north-plan.md` in three stages, each
+  with the owner's sign-off; keep it up to date. Stage 1 (the stadium
+  north, above) and stage 2 (the kart park north, with its facility, below)
+  are built.
 - **Districts loaded as you approach** (performance phase 4, item 10):
   a district's drawing is a module of its own (`LAZY_DISTRICTS` in
   `districts.ts`: an id, its land and `load()`, a dynamic import), a chunk
   the boot never downloads. `createDistricts()` loads it when what the
   camera looks at (or Degen, walking) comes within the tier's `far` and
-  `LEAD` of its land; its `register({ low, scene })` registers its sites
-  (and, given the scene, anything the main thread draws itself), the site
+  `LEAD` of its land; its `register({ low, scene, tick })` registers its
+  sites (and, given the scene and the city's tick, anything the main thread
+  draws itself, moving things too), the site
   worker loads the same module from its `SELF` (`import.meta.url`) and
   registers them there (`SiteWorker.load()`), and then `works.adopt()`
   queues them. Everything else about a district (its blocks and streets
@@ -622,6 +695,51 @@ it and has been retired completely. Build only on what's here.
   places) is DOM-free data in the boot, so nothing waits on the chunk.
   `?bench` loads every district before it starts. A new district comes
   the same way.
+- **City life** (behaviour and animation of the traffic, the people and
+  your car at no cost in memory: the owner's brief, 2026-10) is planned in
+  `docs/life-plan.md`; keep it up to date, one phase at a time with the
+  owner's sign-off. Rules go in DOM-free code with tests; the view only
+  draws them on the meshes the city already has. Phase 1 (traffic that
+  behaves) is built: `traffic.ts` (DOM-free, tested in
+  `tests/traffic.test.ts`) holds the rules and `life.ts` draws them:
+  brake lights (the tail-light mesh's `instanceColor`, bright while
+  `braking()`), headlights faint by day, a reaction time at every stop
+  (`pullAway()`, a queue peels from the front), a nod under braking and a
+  lean in turns (`bodyMotion()`), indicators before turns (`turnsOf()` on
+  each route's polyline, `indicating()`, `blinkOn()`; four more instances
+  a car in the tail-light mesh, amber lenses under the lamps at
+  `CarGeometry.turn`, on the flat of the body: a lit lens laid over one of
+  the model's own small details is swallowed by its ink outline) and a
+  horn when a car is held up by you (`hornDue()`, `LifeOpts.horn`, the
+  `horn` sound). No new draws, no new geometry. Phase 2 (your car's feel)
+  is built: the rules in `drive-sim.ts` (`carLights()`: brake lights,
+  reversing lights, indicators with the wheel below `SIGNAL_SPEED` and
+  held `SIGNAL_HOLD`; `gearOf()`: four gears, the revs dropping at each
+  shift; `skidding()`: the tyres' sideways speed), drawn by `drive.ts`
+  and `createCar()` in cars.ts (lit lens materials swapped on the car's
+  own lenses, amber indicator lenses under the lamps, `car.lights()`), a
+  horn (H, the Horn button `[data-drive-horn]` over the Brake pedal, your
+  car's only through `.in-car`, the gamepad's left stick pressed,
+  `drive.horn()`), skid marks (one fixed mesh of `SKID_N` quads with a
+  small alpha shader, under the rear wheels while sliding, fading over
+  `SKID_FADE`; none under reduced motion; multiply blending isn't honoured
+  in the post chain, so don't use it for decals), the `tyres()` screech in
+  sound.ts, and the headlights' pool and brake wash as two glow points
+  dark by day. Phase 3 (people who notice) is built: `pedestrians.ts`
+  (DOM-free, tested in `tests/pedestrians.test.ts`): `crossingLinks()`
+  (the walked blocks' corners across one street at a lit junction, never
+  an avenue or a junction's middle), `walkLight()` / `redLeft()` (red for
+  the cars with time to get over), `takesCrossing()`, `noticing()`
+  (`NOTICE`, `NOTICE_HOLD`), `hurry()` (the rain), `outAtNight()` (1 to 5,
+  `Env.hour` from sky.ts) and `BENCHES` / `SEAT_H` (data for a later
+  seated state); life.ts's people tick walks them (a walker on a crossing
+  or waiting at a kerb, `Person.cross` / `wait`, joins the other block's
+  lane at the corner it arrives at; stops and faces you within reach;
+  sitters go in past 0.6 of rain). Nothing new is drawn. **Not character
+  animation** (the owner's call): this plan picks which existing clip a
+  crowd person plays and where they stand, never a pose, clip or rig
+  change on Degen; that's `docs/animation-plan.md`'s (sitting on a bench
+  waits for it).
 - **Cars** are `src/scripts/city3d/cars.ts`: real-proportion cartoon models
   (City Hatch, Cruiser, Street GT coupe, Hauler pickup, Box Van, City Bus;
   made-up names, never a real make or badge), each a bevelled extruded
@@ -676,7 +794,7 @@ it and has been retired completely. Build only on what's here.
     modules in Node and records what each `make()` made), or works it out
     with `make()` where there's none (the tests, the game server). Today:
     the traffic's routes (`routes.ts`, packed with `packRoutes()`), the
-    crowd's walk and march cycles (`crowdclips.ts`) and The Trenches'
+    crowd's walk, jog and march cycles (`crowdclips.ts`) and The Trenches'
     amenities (`commons.ts`). A new module that bakes goes in `MODULES` in
     `bake.mjs` and in `tests/baked.test.ts`, which holds every key to
     exactly what `make()` makes. Baked data must be plain (numbers,
@@ -684,8 +802,14 @@ it and has been retired completely. Build only on what's here.
   - Features load when they're used, each its own chunk (`import()`):
     the fight (`fight.ts` and the figures' clips, when the trainer's menu
     first opens: `loadFight()` in `walk.ts`), the stage of the fitting room
-    and the character screen (`stage.ts`), SMAA (`post.ts`) and the fight
-    demo. New features that aren't needed until they're used come the same
+    and the character screen (`stage.ts`), SMAA (`post.ts`), the fight
+    demo, the benchmark (`?bench`, `bench.ts`), Drop 001's fitting room
+    (`fitting.ts`, when its panel first opens: `loadFitting()` in index.ts)
+    the world map (`worldmap.ts`, when it first opens: `loadMap()` in
+    travel-ui.ts; `placeName()` is places.ts's) and the kart park's game
+    (the hut's menu and the race, `kartgame.ts`: `loadKarts()` in walk.ts,
+    when Degen comes near the park or asks at the hut; idle stand-ins until
+    then; the City-view panel's records are `kart-records.ts`, at the boot). New features that aren't needed until they're used come the same
     way. three.js is a chunk of its own (`manualChunks` in
     `astro.config.mjs`), so a deploy that doesn't change it leaves it
     cached.
@@ -826,7 +950,7 @@ it and has been retired completely. Build only on what's here.
   (no ticks, crowds, solids or pools of light; those stay with the boot),
   the same every time it runs. Today they're each tile's trees and lamps
   (`world.ts`), the airport's runway and apron (`airport.ts`) and the
-  kart park's grounds and circuit (`kartpark3d.ts`); new districts and
+  kart park's grounds and circuit (`kartgrounds3d.ts`); new districts and
   building kits come as sites.
   - The boot builds only the sites in the home view's and the intro's
     tiles (`bootSites()` in `tileplan.ts`) and merges them with the rest
@@ -948,6 +1072,85 @@ it and has been retired completely. Build only on what's here.
   character screen) and Phase 5 (the crowds and soldiers on the new body,
   skinned on the GPU from baked clips; fighters and other players stepping
   with planted feet) are built: every figure in the city is the one body.
+- **The animation rebuild** (the owner's call, critical) is planned in
+  `docs/animation-plan.md`: AAA movement (Spider-Man / Ratchet feel,
+  neutral athletic) from motion capture, then turns, jumps, armed
+  movement, peeking (Q / E), crouch, slide, vault and climb, contact, and
+  everyone on the same clips, and (Phase 8, the owner's call) the rifle
+  held properly, its butt in his shoulder. Build it one phase at a time
+  with the owner's sign-off. Phase 1 (run, sprint and momentum), Phase 2
+  (turning, terrain and transitions), Phase 3 (jumps, falls and landings)
+  and Phase 8 (the rifle shouldered, below under Target practice) are
+  built, for the player on foot:
+  - **The data** is CMU's motion capture (free for commercial use; the
+    acknowledgment is in the start menu's Options > Credits, named, never
+    linked): mostly subject 143's and 127's takes, in `assets/mocap/cmu/`
+    (BVH, untouched), listed in `assets/mocap/takes.json` (a `loop` makes a seamless cycle,
+    `loopClip()`). `npm run mocap` (`scripts/mocap.mjs`) retargets them
+    (`mocap-build.ts`: each target bone takes its source joint's turn
+    since the T-pose, the feet and the collarbones kept level (CMU's
+    shoulder joint sits at the neck: aligned to it, the collarbones held a
+    37° shrug), the floor from the ankles, the root smoothed from the
+    hips) into `src/data/mocap/clips.bin`
+    (`mocap.ts`: 22 body bones at `MOCAP_FPS` 30, turns in 16 bits;
+    `mirrorClip()`, `posed()`, `contacts()`); `tests/mocap.test.ts` holds
+    the file to exactly what the pipeline makes. It's fetched when walking
+    starts (`mocap-load.ts`, a hashed asset), with the animator's own
+    chunk (`import('./animator')`).
+  - **Moving** is `movesim.ts`: velocity and facing on critically damped
+    springs (`MOVE` half-lives), `ahead()` the trajectory; `GAITS` walk
+    1.25, run 3.4 (the default), sprint 5 tiles a second.
+  - **The animation** is `animator.ts`: motion matching (`motionmatch.ts`,
+    Holden's 27 features, every clip and its mirror, a search about ten
+    times a second) with inertialization (`inertia.ts`), playback warped
+    to his speed (`RATE`), the sprint's harder swing and lean and a lean
+    into bends (`LAYERS`), and the feet: each held by the ball of the foot
+    where the clip has it down (`LOCK`), reached by a hinge-knee two-bone
+    IK with a soft reach (`twoBone()`), on the ground under it, the hips
+    coming down (at most `LOCK.drop`) when a leg can't reach. `applyTo()`
+    puts it on the figure (`Degen.rig`) after its own `update()`, and
+    `addLook()` turns the head where the camera looks. walk.ts blends it
+    in (`mocapW`) on foot, unarmed, not aiming or emoting, and not during
+    the roll on a very hard landing at a run (`LAND_ROLL`, the keyed one);
+    everywhere else, and for everyone else, it's `locomotion.ts` as before.
+  - **Phase 2:** more takes (running turns, a quick stop, walking into a
+    run, turning on the spot, standing and waiting: `assets/mocap/takes.json`
+    and `CREDITS.md`); his shown facing follows the clip's own turn, pulled
+    to the springs' (`FACE`, `animator.face`: place the figure with it);
+    standing still only the idle is searched (`STAND`), and frames near a
+    clip's end cost more (`ENDING`); a free foot clears the ground just
+    ahead of it (`LOCK.look`), a held one stands on the ground it was put
+    down on, the hips follow the feet above his ground (`LIFT`). The feet
+    can stand on something other than what he walks on (`AnimInput.feet`):
+    Liberty Bridge's treads as drawn (`stairTread()` in liberty.ts, the
+    drawing's `STAIR_BASE`) over the ramp walking follows, and walk.ts slows
+    him to a brisk climb on them (`CLIMB`).
+  - **Phase 3:** jump takes (subject 127's running jumps, 143's standing
+    ones; `JUMPS_ONLY` keeps the standing ones' wind-ups out of the
+    ground's searches); motionmatch.ts finds each take's flights
+    (`FLIGHT`, `Database.flights`, `takeoff` / `touchdown` frames, the
+    hips' `bump`), shut to the ground's searches. The animator (`AIR`;
+    `AnimInput.grounded`, `vy`, `jump`, `gravity` from walk.ts): a jump
+    cuts to the take-off that carries on best, a fall (off something higher
+    than a kerb) to a flight's top; the flight plays as far through as his
+    rise and fall have gone, its last frames as the ground comes up, the
+    flight's own rise taken out (the game does the jump), nothing held; a
+    long fall raises the arms; it lands on its own touchdown unless another
+    is far better (`AIR.margin`), the landing plays out (`settle`), and a
+    harder one squashes the hips and bows the chest (`squash`). walk.ts
+    dips the camera on landings and shakes it on hard ones (`LAND_SHAKE`,
+    not under reduced motion).
+  - **The lab** is `?anim` (`anim-lab.ts`, styles `animlab.css`): the new
+    animation beside the old on an open floor, scripted moves or W A S D,
+    slow motion, cameras (over his right shoulder too), floors (flat,
+    kerbs, stairs, a ledge), any gun in his hands (`gun`, `aim`, `pitch`;
+    markers at the butt and his shoulder's pocket), any kind of top
+    (`outfit`), the free camera placed with `orbit=yaw,pitch,dist`, jumps
+    (programs and Space, walk.ts's jump and gravity), foot traces and
+    readouts (the clip, its rate, the match, the blend left, the foot
+    slide, the air); `rec`, `prog`, `gait`, `cam`, `floor`, `zoom`, `compare=0` in
+    the address set it up for recordings. Review
+    every animation change there, and run `tests/animator.test.ts`.
 - Every character is one shared Degen body (`src/scripts/city3d/character.ts`),
   sculpted after the brand art at human proportions (about 1.3 tall at
   scale 1, six and a half heads, hips `HIP_HEIGHT` 0.62), with knees,
@@ -1018,6 +1221,12 @@ it and has been retired completely. Build only on what's here.
     a forward roll past `LAND_ROLL` on the run; `root.pitch` about
     `root.pivot`); in the air the legs tuck. Emotes keep the planted legs
     (the dance has its own).
+  - **Shoulders: natural athletic** (the owner's call): every top's
+    cross-sections slope from the neck down to the shoulder (the
+    trapezius, no padded shelf) and the sleeve's cap is a low rounded
+    deltoid running down into the arm (`SUIT`, `HOODIE`, `UPPER_S`; the
+    rest grow from them). Check new tops from the front and back running
+    in the lab (`?anim&outfit=hoodie`, ...).
   - Shapes are built from cross-sections (`loft()`, superellipse rings) and
     flat details laid onto them (`onBody()` with `surface()`: lapels, the
     shirt V, the tie, zips, pockets). Shoes are side profiles (`profile()`).
@@ -1056,11 +1265,12 @@ it and has been retired completely. Build only on what's here.
     shadows (`crowdDepth()`) and the ink outlines' normal pass in
     `post.ts`, where everything else reads `crowdOn` 0) from one float
     texture of baked clips (`crowdclips.ts`, DOM-free, tested in
-    `tests/crowdclips.test.ts`): `walk` and `march` recorded from the
-    planted-feet walk (locomotion.ts) over one cycle, played at their
-    stride (`WALK_STRIDE`, `MARCH_STRIDE`: a person at scale s and speed v
-    plays v / (stride s) cycles a second, so their feet stay put), `idle`,
-    `look`, `chat` and `sit` from the formulas in `poses.ts` over
+    `tests/crowdclips.test.ts`): `walk`, `jog` (Westlake Park's joggers)
+    and `march` recorded from the planted-feet walk (locomotion.ts) over one
+    cycle, played at their stride (`WALK_STRIDE`, `JOG_STRIDE`,
+    `MARCH_STRIDE`: a person at scale s and speed v plays v / (stride s)
+    cycles a second, so their feet stay put), `idle`, `look`, `chat`, `sit`
+    and `picnic` (sitting on the ground) from the formulas in `poses.ts` over
     `CLIP_SECONDS` with the end eased into the start, and `salute` from
     attention to the hand at the brow. Callers set each person's clip and
     how far through it they are (`set(i, x, y, z, yaw, scale, clip, u)`;
@@ -1306,7 +1516,7 @@ it and has been retired completely. Build only on what's here.
     layout is the car's: the stick turns and climbs, the pedals read
     Faster / Slower) and `data-plane` (the header reads "Flying ·
     <aircraft>"); styles in `src/styles/fly.css`. Controls: W / S throttle,
-    A / D turn, arrows or Space / Shift climb and dive, V camera, E get out;
+    A / D turn, arrows or Space / Shift climb and dive, V camera, F get out;
     gamepad left stick, RT / LT, Y, View. Check the readout, stick, pedals
     and prompt at phone widths, upright and on their side.
 
@@ -1441,7 +1651,7 @@ it and has been retired completely. Build only on what's here.
   are `unitSolids()` (per kind, `UNIT_SHAPES`), fed to walking and driving
   with the plots' (`plotSolids` in `index.ts`). Signs use `occlude()`.
 - In walk mode, standing at your stall or a unit's door (`places()` in
-  `tycoon-ui.ts`, the walk deps `places` / `openPlace`) shows a prompt (E or
+  `tycoon-ui.ts`, the walk deps `places` / `openPlace`) shows a prompt (F or
   a tap) that opens the card on that place, and standing at a stall or shop
   doubles its customers. The Workshop's door opens its panel. Your car
   parked near one of your places (stall, a built unit or the Workshop) lets
@@ -1599,10 +1809,10 @@ it and has been retired completely. Build only on what's here.
   - **Sending it home:** the garage menu's Keep calls it back to the turntable ("Bring my car home"). A reload puts it back there too.
 - Traffic stops for your car (`walker.r` in `life.ts` reaches further while driving). `bodies` in `life.ts` shares where the traffic and the pedestrians are, for the soft bumps.
 - **Controls:**
-  - Keyboard: W / S (or arrows) gas and brake / reverse, A / D steer, Space handbrake, V camera, E get out.
+  - Keyboard: W / S (or arrows) gas and brake / reverse, A / D steer, Space handbrake, H horn, V camera, F get out.
   - Touch: the stick steers (and pedals when no pedal is held), with Gas and Brake buttons (`data-drive-gas`, `data-drive-brake`). Layout while driving: a bigger stick bottom-left, Gas and Brake as tall pedals side by side bottom-right (Gas taller, on the outside), Get out at the top right and the speed at the top left, all clear of the phone's safe areas. Getting out brings the walk layout back.
-  - Gamepad: left stick steers, RT gas, LT brake, A handbrake, Y get out, View camera; the right stick or the mouse looks.
-- While driving, `.city.is-driving` hides the walk and combat HUD, and the header says "Driving · <car>" (`head.ts`). A gun is holstered on getting in.
+  - Gamepad: left stick steers (pressed: the horn), RT gas, LT brake, A handbrake, Y get out, View camera; the right stick or the mouse looks.
+- While driving, `.city.is-driving` hides the walk and combat HUD, and the header says "Driving · <car>" (`head.ts`). A gun is holstered on getting in. Your car's lights, horn, skid marks and gears are the city life plan's Phase 2 (above; `docs/life-plan.md`).
 - Check the pedals, stick, prompt and readout at phone widths, upright and on their side: nothing may overlap.
 
 - `drive.update()` returns the tiles moved; walk mode counts them on the
@@ -1619,14 +1829,20 @@ it and has been retired completely. Build only on what's here.
 
 ## The kart park (3D walk mode)
 
-- **The place** (the owner's call): a Mario-Kart-style go-kart park on the
-  open land outside the Parkway in the north-east, fenced round the
-  circuit (pulled in when the circuit was scaled down, the owner's call;
-  the land beyond it is the outskirts' again, open for later), with a slip
-  road down to the Parkway and a gate;
+- **The place** (the owner's call): a Mario-Kart-style go-kart park north
+  of the ring highway in the north-east (the north side's stage 2,
+  `docs/north-plan.md`, the owner's call: moved from outside the Parkway,
+  the same circuit to the last sample, "a more realistic track with more
+  than just a fence around it"; its old land is open again, kept clear for
+  a district later), fenced round its facility, its gate on Kart Road off
+  the east ring avenue, the metro's Kart Park station at the corner;
   one circuit raced both ways (the rebuild, `docs/kart-plan.md`), the kart
-  hut (door prompt "Kart hut"), a grandstand facing the start straight, the
-  pit lane with eight garages and the big screen on their roof. It's a place like the landmarks (spot
+  hut (door prompt "Kart hut") with a viewing terrace on its roof, a
+  grandstand in the infield facing the start straight and a big covered
+  one over the hill and the jump, grass banks with people, the pit lane
+  with eight garages, the big screen on their roof and the timing tower,
+  the paddock and the plaza inside the gate, armco, tyre walls, catch
+  fencing, marshal posts and floodlights (`kartfacility.ts`, below). It's a place like the landmarks (spot
   `karts`, pin, directory entry, a City-view panel with your records and
   **Walk in**, which starts walk mode at the gate, `KART_SPAWN`). Race karts
   stay on the track, but your own kart can be taken out of the pits and
@@ -1634,19 +1850,42 @@ it and has been retired completely. Build only on what's here.
   `drive.ts` drives it like the car, with Degen seated; it rides the
   circuit's ground (the deck, the banking, the grass banks) through
   `circuitSurfaceAt()`, and goes back to the pits when a race starts).
-  Walking follows the same ground inside the park (`groundAt()` in
-  `walk.ts`).
-- **The site** is `kartpark.ts` (DOM-free): `KART_PARK` (world x 92-180,
-  z -138 to -48; `SITE_U` x `SITE_V` inside its margins), local numbers via `toWorld()` / `toLocal()` (u east, v
-  south from the site's corner), the fence's `GATE`, the `SLIP_ROAD` and
+  Walking follows the same ground inside the park, and up the banks
+  (`groundAt()` in `walk.ts`, `bankY()`; your kart climbs them too).
+- **The site** is `kartpark.ts` (DOM-free): `KART_PARK` (world x 113-225,
+  z -311.5 to -191.5, its fence), local numbers via `toWorld()` /
+  `toLocal()` (u east, v south from the circuit frame's corner; `SITE_U`
+  x `SITE_V` is the circuit's frame, the site reaches past it on every
+  side), Kart Road (`ROAD`, east off ns3 past the gate) and the car park's
+  one-way loop (`LOOP`), in the street plan as `KART_STREETS` /
+  `KART_CROSSINGS` (traffic drives them, off the highway at ns3, whose
+  outer corners get slip lanes: `OUTER_SLIPS`), the fence's `GATE` and
   `KART_SPAWN`, and the line maths every track part uses: `sampleLine()`
   (centripetal Catmull-Rom through control points `CPt`, heights
   cosine-eased from point to point, or through a `glide` point in one
   long ease (a ramp round a bend), sampled every half tile), `Line`, `frame()`, `at()`,
   `locate()` (keeps to the layer its hint is on), `along()`, `wrapS()`,
   `heightAt()` (banking), flags `F` (deck, tunnel, bank). The site is flat
-  ground, not a slab, and the outskirts' trees keep off it and the slip
-  road (`treeSpot()` in `outskirts.ts`, `onRoad()` in `outer.ts`).
+  ground, not a slab, and the outskirts' trees keep off it, the road and
+  the car park (`KART_RECTS`, `treeSpot()` in `outskirts.ts`).
+- **The facility** (the north side's stage 2, the owner's picks: proper
+  trackside, spectator areas, a paddock and entrance, night lighting) is
+  `kartfacility.ts` (DOM-free, tested in `tests/kartfacility.test.ts`), in
+  the park's local numbers round the unchanged circuit: armco along the
+  run-off's edge wherever it's open and clear of the rest of the circuit
+  and the pits (`BARRIERS`, `ARMCO_OUT`), tyre walls round the outside of
+  the bends (`TYRE_WALLS`), catch fencing in front of the spectators
+  (`CATCH`), none of it solid (a kart that wide is put back); the covered
+  `GRANDSTAND` north of the hill and the jump (`tierAt()`), three grass
+  `BANKS` (`bankAt()`, `bankY()`: walkable), the hut's roof `TERRACE` and
+  its stairs; the `PLAZA` inside the gate with the ticket `KIOSK` and the
+  gate's `ARCH`, the `TOWER` (timing) at the pit lane's east end, the
+  `PADDOCK` behind the garages with its team `TENTS`; `FLOODLIGHTS`
+  (`FLOOD`, under the Emporium); the car park in the loop (`CAR_PARK`,
+  `BAY_COLS`, `BAYS`, `PARKED`), `KART_LAMPS`, `KART_TREES` and the
+  people (`KART_PEOPLE`: on the banks, sitting in the grandstand, on the
+  terrace, the plaza and in the paddock; `trim` ones left out on phones);
+  `FACILITY_SOLIDS` (in `SOLIDS`), `KART_RECTS` / `KART_AREA`.
 - **The rules** are `kart-sim.ts` (DOM-free, seeded, a fixed 60 Hz tick,
   tested), racing on the rebuild's circuit (`kartcircuit.ts`) since
   Phase 2: `createKartSim(setup)` → `step(dt, input)` returning events.
@@ -1741,7 +1980,16 @@ it and has been retired completely. Build only on what's here.
   missions and five badges in `missions.ts`. Global boards wait for the
   game server (keep the boards' shape server-ready).
 - **On screen:** `kart-types.ts` holds the interfaces the three parts agree
-  on. `kartpark3d.ts` draws the site round the circuit (`buildKartPark()`:
+  on. `kartpark3d.ts` (`buildKartPark()`, at the boot) is the place: the
+  spot's group (the garages with their numbers and the screen, the hut and
+  its terrace, the timing tower with its board, both grandstands, the
+  gate's arch with SECTOR 7 KART PARK both ways, the kiosk), its people,
+  trees, lamps and parked cars, and `KART_VIEW` (the way round and whether
+  the pits are closed, which `setCourse()` / `racing()` set and the
+  grounds apply when they've come). `kartgrounds3d.ts` (a district loaded
+  as you approach, `LAZY_DISTRICTS` id `karts`; signs shared through
+  `kartsigns.ts`) draws the rest as sites: the lawn, the paving and the
+  banks; the circuit:
   asphalt, edge lines and red-and-white kerbs swept along the centre
   line, banked where it rolls; grass run-off with gravel on the outside
   of the bends where it lies flat, easing down as grass banks where the
@@ -1749,10 +1997,12 @@ it and has been retired completely. Build only on what's here.
   railed deck on columns just past its edges, open underneath, with
   abutments at the ramps; the chequered line, both ways' grids and the
   gantry; the pit lane, its bays and the cones that close it in a race
-  (`racing()`); eight garages with their numbers and the screen on their
-  roof (fixed copy only); the hut; the grandstand facing south with its
-  fans; tyre stacks, marshal posts, light poles and trees past the
-  run-off), and per course (`setCourse()`, the way round being raced) the
+  (`racing()`); the armco, tyre walls and catch fencing (its mesh in the
+  FX layer), marshal posts with their booths and flags, the floodlight
+  towers, the fence; the paddock's tents with karts on stands; the plaza's
+  flags and benches; Kart Road, the loop and the car park with its bays,
+  arrows and P sign), and on the main thread the start line, the banner,
+  the cones and per course (`setCourse()`, the way round being raced) the
   guidance: pad chevrons, chevron boards on the outside of the bends,
   arrows painted before the turns, numbered corner boards and 3-2-1
   braking markers before the hard corners (one sign atlas, `atlasTex()`).
@@ -1825,7 +2075,7 @@ it and has been retired completely. Build only on what's here.
   player in the sim) are bought at the Armoury's workbench. Never real
   money, never tied to the token. Keep them cartoon: no real-world gun
   names, brands or markings. A new gun needs a `WEAPONS` entry (with a `short` name for the Swap
-  button), a `FIT` entry in `gunfit.ts` (its hand spots, muzzle and sight,
+  button), a `FIT` entry in `gunfit.ts` (its hand spots, muzzle and sight, a long gun's `butt`,
   third-person `hold` spot for the front hand, `carry`, `reload` kind and
   `kick`), a `SPECS` entry in `guns.ts` (its parts), store art (`ART` in
   `gunshop.ts`) and a shot sound (`SHOT_SOUND` in `combat.ts`); the tests
@@ -1837,7 +2087,14 @@ it and has been retired completely. Build only on what's here.
   (every gun's origin, `GRIP`), the other on its `hold` spot, or wherever
   the reload clip sends it, both closed round it (`grip`). On top of the
   walk or run: `aim` (the spine bends a share of the way, the head takes it
-  back out), `ready` (1 after a shot, an aim or a reload for
+  back out; a long gun's `SPINE_AIM` share is bigger),
+  **shouldered** (animation Phase 8: at the ready and aiming a long gun's
+  `butt` in `FIT` sits in his right shoulder's `POCKET` and the gun pivots
+  there; aiming, his head comes down onto the stock, `CHEEK`, pitched and
+  tilted (`Pose.headRoll`) so his eye is on the sight's line, the gun
+  meeting it part of the way; `Stance.cheek` says how far, and walk.ts and
+  remote.ts add the look only the rest of the way; a new long gun needs its
+  `butt`), `ready` (1 after a shot, an aim or a reload for
   `READY_HOLD`; 0 is the relaxed carry: a long gun low across the body, the
   revolver hanging in one hand; sprinting relaxes it), `draw` (0 put away:
   slung on his back or the revolver on his hip (`STOWED`); the hand goes to
@@ -1872,8 +2129,11 @@ it and has been retired completely. Build only on what's here.
   `SOLIDS` except the dummies' own footprints (`SHOT_SOLIDS`), on plot
   buildings and on the ground. When dummies move, their footprints follow
   `DUMMIES` automatically.
-- Keys: click fires, right-click aims, R reloads, G holsters, Q / 1-4 swap
-  guns; Caps Lock (not R) toggles run. Where the mouse can't be captured
+- Keys: click fires, right-click aims, R reloads, G holsters, X / 1-4 swap
+  guns (Q and E are kept for peeking, animation Phase 4); F does what the
+  prompt says (the owner's call: every door, counter and getting in or
+  out, and F closes those menus); Shift sprints, Caps Lock (not R) toggles
+  walking, the touch Sprint button locks the sprint. Where the mouse can't be captured
   (`noLock` in `walk.ts`), click fires and dragging looks. Only a real mouse
   fires from the canvas (taps send mouse events too).
 - Swapping (`swap()` in `combat.ts`, `sim.swap()`, the `swap` message): once
@@ -1958,7 +2218,7 @@ it and has been retired completely. Build only on what's here.
   the purse on a win, XP either way, a quit is a loss; knock-outs and
   chains of three add XP). `walk.ts` wires it: the counter's prompt opens
   the menu, a fight hides Degen and feeds `fightFrame()` (W/A/S/D move
-  relative to the opponent, click or F punch, right-click or G kick, Shift
+  relative to the opponent, click punch, right-click or G kick, Shift
   block, Space dodge; touch: the stick and the four buttons; gamepad:
   stick, X / Y, LB held, A, Start quits), Esc or Quit ends it with the
   card, closing the card stands Degen up outside the ropes (`OUT`);
@@ -2102,12 +2362,12 @@ it and has been retired completely. Build only on what's here.
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`),
-  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`), Westlake Park (`westlake.ts`),
+  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`), the kart park's facility (`kartfacility.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,
   in `tests/merch.test.ts`), the crowd's baked clips (`crowdclips.ts`) and Degen's skeleton, weights, head and hands
-  (`skeleton.ts`, `body.ts`), his walking (`locomotion.ts`) and the guns in his hands (`gunfit.ts`, `stance.ts`). Modules that touch the DOM or `kit.ts` (canvas
+  (`skeleton.ts`, `body.ts`), his walking (`locomotion.ts`), the motion capture and its animation (`bvh.ts`, `mocap-build.ts`, `mocap.ts`, `movesim.ts`, `inertia.ts`, `motionmatch.ts`, `animator.ts`) and the guns in his hands (`gunfit.ts`, `stance.ts`). Modules that touch the DOM or `kit.ts` (canvas
   textures) can't load in Node; keep data a test needs in the DOM-free
   files.
 - When you change a rule or move something in the city, run the tests and

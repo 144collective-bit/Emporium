@@ -12,6 +12,11 @@
  *   share of the way so the gun isn't only the arms; **ready** (`ready` 1):
  *   low and ready; **relaxed** (`ready` 0): a long gun carried low across his
  *   body, the revolver hanging in one hand at his side.
+ * - **Shouldered** (animation Phase 8): at the ready and aiming, a long gun's
+ *   butt (`butt` in gunfit.ts) sits in the pocket of his right shoulder
+ *   (`POCKET`) and the gun pivots there; aiming, his head comes down onto
+ *   the stock (`CHEEK`: pitched and tilted so his eye is on the sight's
+ *   line, facing along the barrel).
  * - Longer guns turn him side-on just far enough for the front hand to reach
  *   (his collarbone brings the shoulder forward first).
  * - **Recoil** pushes the gun back and up and shoves the shooting shoulder
@@ -21,7 +26,8 @@
  *   hip), then the gun swings round to his hands; backwards to put it away.
  */
 import * as THREE from 'three';
-import { ARM_REACH, REACH_GAIN, reachArm, shoulderTo, type Limb, type Pose } from './skeleton';
+import { ARM_REACH, HEAD_Y, NECK_SHARE, NECK_Y, REACH_GAIN, reachArm, shoulderTo, type Limb, type Pose } from './skeleton';
+import { EYE_Y } from './body';
 import type { WeaponId } from './combat-sim';
 import { FIT, GRIP, newReloadFrame, reloadAt, type ReloadFrame } from './gunfit';
 
@@ -30,8 +36,21 @@ const FRONT_REACH = ARM_REACH - 0.045 + REACH_GAIN * 0.75;
 /** Both hands closed round the gun (the front one a little looser on the handguard); open, at rest */
 const GUN_GRIP: [number, number] = [0.86, 0.72];
 const OPEN = 0.2;
+/** At the ready, a shouldered gun's muzzle down this far (radians; the revolver's 0.45) */
+const LOW_READY = 0.3;
+/** How much of the look up or down a shouldered gun's aim takes into the spine */
+const SPINE_AIM = 0.6;
 /** Most he turns side-on (radians) */
-const MAX_TURN = 1.1;
+const MAX_TURN = 1.2;
+/**
+ * The cheek on the stock: his (right) eye in the head's space, how far the
+ * head may pitch (the neck and head together; + is the chin down) and tilt
+ * (+ towards his right) to bring it onto the sight's line, and the head's
+ * own lean onto the stock it starts from (`rest`). The gun comes `meet` of
+ * the way up and across to that eye (his shoulder rising to it, at most
+ * `most`), the head the rest
+ */
+export const CHEEK = { eye: new THREE.Vector3(-0.034, EYE_Y, 0.085), pitch: [-0.3, 0.75], roll: 0.22, rest: [0.3, 0.1], meet: 0.6, most: 0.06 };
 
 /** Where the gun goes, in the torso frame: a pose for the pivot */
 interface Place {
@@ -50,6 +69,10 @@ export const STOWED: Record<'long' | 'pistol', Place> = {
   long: { pos: new THREE.Vector3(-0.1, 0.15, -0.175), q: basis([0, 0, -1], [0.55, 0.83, 0]) },
   pistol: { pos: new THREE.Vector3(-0.205, 0.03, 0.035), q: basis([1, 0, 0], [0, -1, 0.12]) },
 };
+/** The pocket of his shooting (right) shoulder, where a long gun's butt goes when he aims, in the torso frame */
+export const POCKET = new THREE.Vector3(-0.11, 0.345, 0.085);
+/** A long gun carried relaxed: low across his body, in the torso frame */
+const CARRIED = new THREE.Vector3(0.0, 0.22, 0.17);
 /** The pouch on his belt the front hand goes to on a reload, in the torso frame */
 export const POUCH = new THREE.Vector3(0.13, 0.04, 0.11);
 
@@ -58,8 +81,10 @@ export interface Stance {
   turn: number;
   frame: ReloadFrame;
   grip: [number, number];
+  /** How far his head is down on the stock (0..1): the head is the gun's, the look's added on top only the rest of the way */
+  cheek: number;
 }
-export const newStance = (): Stance => ({ turn: 0, frame: newReloadFrame(), grip: [OPEN, OPEN] });
+export const newStance = (): Stance => ({ turn: 0, frame: newReloadFrame(), grip: [OPEN, OPEN], cheek: 0 });
 
 /** What's needed of the gun in his hands (guns.ts's Gun): which one, and its magazine to move */
 export interface HeldGun {
@@ -89,6 +114,49 @@ const seg = (r: number, a: number, b: number) => ease(THREE.MathUtils.clamp((r -
 const L = THREE.MathUtils.lerp;
 
 const euler = new THREE.Euler(0, 0, 0, 'YXZ');
+const at = new THREE.Vector3();
+const meet = new THREE.Vector3();
+const back = new THREE.Vector3();
+const eyeG = new THREE.Vector3();
+const qn = new THREE.Quaternion();
+const qh = new THREE.Quaternion();
+const qg = new THREE.Quaternion();
+const en = new THREE.Euler();
+const NECK = new THREE.Vector3(0, NECK_Y, 0);
+const HEAD = new THREE.Vector3(0, HEAD_Y - NECK_Y, 0);
+
+/** His eye in the torso frame, the neck and head turned `hx` (pitch), `hy` (yaw) and `hz` (tilt) between them, as poseSkeleton() turns them */
+export function eyeAt(hx: number, hy: number, hz: number, out = new THREE.Vector3()) {
+  qn.setFromEuler(en.set(hx * NECK_SHARE, hy * NECK_SHARE, hz * NECK_SHARE));
+  qh.setFromEuler(en.set(hx * (1 - NECK_SHARE), hy * (1 - NECK_SHARE), hz * (1 - NECK_SHARE)));
+  return out.copy(CHEEK.eye).applyQuaternion(qh).add(HEAD).applyQuaternion(qn).add(NECK);
+}
+/** Where the eye is off the sight's line (across and up, in the gun's frame) */
+function offLine(pivot: THREE.Object3D, sight: THREE.Vector3, hx: number, hy: number, hz: number) {
+  eyeAt(hx, hy, hz, eyeG).sub(pivot.position).applyQuaternion(qg.copy(pivot.quaternion).invert());
+  return [eyeG.x - sight.x, eyeG.y - sight.y];
+}
+/** The head's pitch and tilt (the neck and head together) that put his eye on the sight's line, facing `hy`, within CHEEK's limits */
+function cheekOn(pivot: THREE.Object3D, sight: THREE.Vector3, hy: number): [number, number] {
+  let hx = CHEEK.rest[0];
+  let hz = CHEEK.rest[1];
+  const d = 1e-3;
+  for (let k = 0; k < 6; k++) {
+    const [ax, ay] = offLine(pivot, sight, hx, hy, hz);
+    const [bx, by] = offLine(pivot, sight, hx + d, hy, hz);
+    const [cx, cy] = offLine(pivot, sight, hx, hy, hz + d);
+    // (Newton's step on the 2 x 2: d(off)/d(pitch, tilt))
+    const j11 = (bx - ax) / d;
+    const j21 = (by - ay) / d;
+    const j12 = (cx - ax) / d;
+    const j22 = (cy - ay) / d;
+    const det = j11 * j22 - j12 * j21;
+    if (Math.abs(det) < 1e-9) break;
+    hx = THREE.MathUtils.clamp(hx - (j22 * ax - j12 * ay) / det, CHEEK.pitch[0], CHEEK.pitch[1]);
+    hz = THREE.MathUtils.clamp(hz - (-j21 * ax + j11 * ay) / det, -CHEEK.roll, CHEEK.roll);
+  }
+  return [hx, hz];
+}
 const grip = new THREE.Vector3();
 const front = new THREE.Vector3();
 const rest = new THREE.Vector3();
@@ -119,11 +187,11 @@ const blend = (l: Limb, from: Limb, w: number) => {
 };
 
 /** The gun's pivot in his hands for this frame (before the side-on turn) */
-function inHands(p: Pose, s: HoldState, carry: 'long' | 'pistol', f: ReloadFrame, ready: number, kick: number) {
+function inHands(p: Pose, s: HoldState, carry: 'long' | 'pistol', f: ReloadFrame, ready: number, kick: number, low: number) {
   const aim = s.aim;
   const rec = s.recoil * kick;
   // Ready: low, or level with where he looks; the chest's lean is taken back out
-  const rp = L(0.45, s.pitch, aim) - p.lean - f.pitch - rec * 2;
+  const rp = L(low, s.pitch, aim) - p.lean - f.pitch - rec * 2;
   held.pos.set(-0.02, 0.32 + aim * 0.08, 0.16 + aim * 0.02 - rec * 0.4 - f.pull);
   let pitch = rp;
   let yaw = 0;
@@ -132,7 +200,7 @@ function inHands(p: Pose, s: HoldState, carry: 'long' | 'pistol', f: ReloadFrame
     // Relaxed: a long gun low across his body, muzzle down; the revolver hanging in his hand at his side
     const k = 1 - ready;
     if (carry === 'long') {
-      held.pos.lerp(rest.set(0.0, 0.22, 0.17), k);
+      held.pos.lerp(CARRIED, k);
       pitch = L(rp, 0.72 - p.lean, k);
       yaw = 0.5 * k;
       roll = L(roll, 0.25, k);
@@ -164,24 +232,44 @@ export function holdGun(p: Pose, st: Stance, pivot: THREE.Object3D, gun: HeldGun
 
   // The aim shared down the spine, and the recoil shoving the chest back
   const rec = s.recoil * fit.kick;
-  const bend = (s.pitch * 0.3 * s.aim - rec * 2.2) * lift;
+  // (a shouldered gun takes more of it into the spine: the head and the stock stay together)
+  const bend = (s.pitch * (fit.butt ? SPINE_AIM : 0.3) * s.aim - rec * 2.2) * lift;
   p.lean += bend;
   p.headPitch -= bend;
 
   // Side-on just enough for the front hand to reach (the gun turns back the
   // other way inside the chest, so it still points where he faces)
-  const e = inHands(p, s, fit.carry, f, ready, fit.kick);
+  const e = inHands(p, s, fit.carry, f, ready, fit.kick, fit.butt ? LOW_READY : 0.45);
   const [ex, yaw, ez] = [e.x, e.y, e.z];
+  // Where the gun goes for a turn: a long gun by its butt in his shoulder (a shot shoves it back
+  // along the gun, a reload brings it down off the shoulder), carried relaxed off it; the revolver by its grip
+  const place = (q: THREE.Quaternion, out: THREE.Vector3, hy: number) => {
+    if (!fit.butt) return out.copy(held.pos);
+    out.copy(fit.butt).applyQuaternion(q).negate().add(POCKET);
+    // (aiming, up and across to meet his eye, the head leaning onto the stock)
+    if (s.aim > 0) {
+      eyeAt(CHEEK.rest[0], hy, CHEEK.rest[1], meet).sub(out).applyQuaternion(qg.copy(q).invert());
+      meet.set(meet.x - fit.sight.at.x, meet.y - fit.sight.at.y, 0);
+      const n = meet.length();
+      if (n > CHEEK.most / CHEEK.meet) meet.multiplyScalar(CHEEK.most / CHEEK.meet / n);
+      out.add(meet.multiplyScalar(CHEEK.meet * s.aim).applyQuaternion(q));
+    }
+    out.addScaledVector(back.set(0, 0, -1).applyQuaternion(q), rec * 0.4);
+    out.y -= f.pull;
+    out.z -= f.pull * 0.5;
+    return ready < 1 ? out.lerp(CARRIED, 1 - ready) : out;
+  };
   let want = 0;
   if (frontW > 0)
     for (; want < MAX_TURN; want += 0.05) {
       pivot.quaternion.setFromEuler(euler.set(ex, yaw + want, ez));
-      front.copy(fit.hold).applyQuaternion(pivot.quaternion).add(held.pos);
+      front.copy(fit.hold).applyQuaternion(pivot.quaternion).add(place(pivot.quaternion, at, yaw + want));
       if (shoulderTo(1, front) <= FRONT_REACH) break;
     }
   want *= lift * frontW;
   st.turn = s.dt > 0 ? st.turn + (want - st.turn) * Math.min(1, s.dt * 10) : want;
   held.q.setFromEuler(euler.set(ex, yaw + st.turn, ez));
+  place(held.q, held.pos, yaw + st.turn);
   p.twist -= (p.twist * 0.7 + st.turn) * lift;
 
   // From where it's put away to his hands, swinging out round his right side
@@ -192,6 +280,18 @@ export function holdGun(p: Pose, st: Stance, pivot: THREE.Object3D, gun: HeldGun
   pivot.position.z += arc * 0.06;
   pivot.quaternion.slerpQuaternions(away.q, held.q, lift);
   pivot.updateMatrix();
+
+  // Aiming a long gun, his cheek on the stock: the head pitched and tilted so his eye is on the
+  // sight's line, facing along the barrel (off it as a reload takes the gun down)
+  const cheek = fit.butt ? s.aim * lift * (1 - Math.max(f.hand, f.away)) : 0;
+  st.cheek = cheek;
+  if (cheek > 0) {
+    const hy = yaw + st.turn;
+    const [hx, hz] = cheekOn(pivot, fit.sight.at, hy);
+    p.headPitch = L(p.headPitch, -hx - p.lean * 0.6, cheek);
+    p.headYaw = L(p.headYaw, hy + p.twist * 0.8, cheek);
+    p.headRoll = L(p.headRoll ?? 0, hz - p.side * 0.4, cheek);
+  }
 
   // The shooting hand on the grip, its shoulder shoved back by a shot
   grip.copy(GRIP).applyMatrix4(pivot.matrix);
