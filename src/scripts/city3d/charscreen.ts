@@ -10,7 +10,7 @@
  * never stops walking), and nothing else hears the keys while it's open.
  */
 import { MARKS, MARK_SLOTS, PATTERNS, type Look, type MarkId } from '../net/profile-data';
-import { createStage, type Stage, type StageLight, type StagePose } from './stage';
+import type { Stage, StageLight, StagePose } from './stage';
 
 const POSES: { id: StagePose; name: string }[] = [
   { id: 'idle', name: 'Idle' },
@@ -69,6 +69,8 @@ export function createCharScreen(d: CharDeps) {
   const canvas = el.querySelector<HTMLCanvasElement>('[data-char-canvas]')!;
   const list = el.querySelector<HTMLElement>('[data-char-list]')!;
   let stage: Stage | null = null;
+  /** Each open's number (a close and open while the stage loads attaches it once) */
+  let opens = 0;
   let pose: StagePose = 'idle';
   let light: StageLight = 'studio';
   let back: HTMLElement | null = null;
@@ -123,10 +125,15 @@ export function createCharScreen(d: CharDeps) {
     // The mouse back from the walk camera, so the screen can be used
     if (document.pointerLockElement) document.exitPointerLock();
     el!.hidden = false;
-    stage ??= createStage({ reduced: d.reduced, low: d.low }, { zoom: true });
-    stage.attach(el!.querySelector<HTMLCanvasElement>('[data-char-canvas]') ?? canvas, d.look());
-    stage.setPose(pose);
-    stage.setLight(light);
+    // (the stage comes in its own chunk the first time: it's only for this and the fitting room)
+    const n = ++opens;
+    void import('./stage').then(({ createStage }) => {
+      if (el!.hidden || n !== opens) return;
+      stage ??= createStage({ reduced: d.reduced, low: d.low }, { zoom: true });
+      stage.attach(el!.querySelector<HTMLCanvasElement>('[data-char-canvas]') ?? canvas, d.look());
+      stage.setPose(pose);
+      stage.setLight(light);
+    });
     press('data-char-pose', pose);
     press('data-char-light', light);
     paintList(d.look());

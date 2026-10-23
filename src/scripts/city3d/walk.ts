@@ -44,9 +44,8 @@ import { KART_PARK } from './kartpark';
 import type { RaceStart } from './kart-types';
 import type { Cond } from './kartcircuit';
 import { createFightUI } from './fight-ui';
-import { createFight } from './fight';
 import { TRAINER } from './fightsite';
-import type { FightClub, FightInput } from './fight-types';
+import type { Fight, FightClub, FightInput } from './fight-types';
 import type { KartPark } from './kart-types';
 import { CUPS } from './kart-sim';
 import type { KartInput } from './kart-sim';
@@ -557,34 +556,48 @@ export function createWalk(d: WalkDeps) {
       combat.trigger(false);
       combat.trigger(false, true);
       if (document.pointerLockElement === canvas) document.exitPointerLock();
+      void loadFight();
     },
     onClose() {
       // The bout card closed: out of the ring
-      if (fight.active && (fightDone || fightOver())) leaveFight();
+      if (fighting() && (fightDone || fightOver())) leaveFight();
       canvas.focus({ preventScroll: true });
     },
     quit: () => quitFight(),
   });
-  const fight = createFight({
-    scene: d.scene,
-    camera,
-    root,
-    club: d.fightClub,
-    ui: fightUI,
-    game: d.game,
-    outfit: () => outfit,
-    sfx: d.sfx,
-    reduced: d.reduced,
-    low: d.low,
-  });
+  /** The fight itself (fight.ts and the figures' clips) comes in its own chunk, when the trainer's menu first opens */
+  let fight: Fight | null = null;
+  let fightLoad: Promise<Fight> | null = null;
+  const loadFight = () =>
+    (fightLoad ??= import('./fight').then(({ createFight }) => {
+      fight = createFight({
+        scene: d.scene,
+        camera,
+        root,
+        club: d.fightClub,
+        ui: fightUI,
+        game: d.game,
+        outfit: () => outfit,
+        sfx: d.sfx,
+        reduced: d.reduced,
+        low: d.low,
+      });
+      return fight;
+    }));
+  const fighting = () => !!fight?.active;
   /** The card is up (the fight's over): closing it leaves the ring */
   let fightDone = false;
-  const fightOver = () => !!fight.sim?.over;
+  const fightOver = () => !!fight?.sim?.over;
   /** The buttons while fighting: Block held, Punch / Kick / Dodge pressed (edges) */
   const fightBtns = { punch: false, kick: false, block: false, dodge: false };
   const padFight = { x: 0, y: 0, block: false };
   function startFight(setup: { kind: 'spar' | 'bout'; bot: import('./catalog').BotLevel }) {
-    if (fight.active) return;
+    if (fighting()) return;
+    // (still loading: it starts as soon as it's here)
+    if (!fight) {
+      void loadFight().then(() => startFight(setup));
+      return;
+    }
     fightUI.close();
     if (drive.active) getOut();
     if (combat.armed) combat.toggleHolster();
@@ -606,7 +619,7 @@ export function createWalk(d: WalkDeps) {
   }
   /** Out of the ring: Degen stands up outside the ropes */
   function leaveFight() {
-    if (!fight.active) return;
+    if (!fight?.active) return;
     const out = fight.exit();
     fightDone = false;
     pos.set(out.x, groundAt(out.x, out.z), out.z);
@@ -629,7 +642,7 @@ export function createWalk(d: WalkDeps) {
   }
   /** Quit a fight (a bout is forfeited): the card comes up; true if there was one */
   function quitFight() {
-    if (!fight.active) return false;
+    if (!fight?.active) return false;
     if (!fightDone) {
       fightDone = true;
       fight.quit();
@@ -811,7 +824,7 @@ export function createWalk(d: WalkDeps) {
       return false;
     }
     // Fighting: move with the move keys (W towards the opponent), Shift blocks, Space dodges; the mouse punches and kicks
-    if (fight.active) {
+    if (fighting()) {
       if (c === 'Space') {
         if (down && !e.repeat) fightBtns.dodge = true;
       } else if (c === 'ShiftLeft' || c === 'ShiftRight') fightBtns.block = down;
@@ -885,7 +898,7 @@ export function createWalk(d: WalkDeps) {
   }
   // A click punches and a right-click kicks while fighting (the mouse isn't captured in the ring)
   canvas.addEventListener('mousedown', (e) => {
-    if (active && fight.active) {
+    if (active && fighting()) {
       if (e.button === 0) fightBtns.punch = true;
       else if (e.button === 2) fightBtns.kick = true;
     }
@@ -933,7 +946,7 @@ export function createWalk(d: WalkDeps) {
   let lastPointer = 'mouse';
   canvas.addEventListener('pointerdown', (e) => (lastPointer = e.pointerType), true);
   canvas.addEventListener('mousedown', (e) => {
-    if (!active || lastPointer !== 'mouse' || fight.active) return;
+    if (!active || lastPointer !== 'mouse' || fighting()) return;
     if (e.button === 2) aim = mouseR = true;
     if (e.button === 0 && (locked() || noLock)) {
       mouseL = true;
@@ -1192,7 +1205,7 @@ export function createWalk(d: WalkDeps) {
       return;
     }
     // Fighting: left stick moves, X punches, Y kicks, LB (held) blocks, A dodges, Start quits
-    if (fight.active) {
+    if (fighting()) {
       padFight.x = pad.x;
       padFight.y = pad.y;
       padFight.block = !!b[4];
@@ -1415,8 +1428,8 @@ export function createWalk(d: WalkDeps) {
     }
     const inp: FightInput = { fwd, right, punch: fightBtns.punch, kick: fightBtns.kick, block: fightBtns.block || padFight.block, dodge: fightBtns.dodge };
     fightBtns.punch = fightBtns.kick = fightBtns.dodge = false;
-    fight.update(dt, inp);
-    const you = fight.sim?.fighter('you');
+    fight!.update(dt, inp);
+    const you = fight!.sim?.fighter('you');
     if (you) {
       pos.set(you.x, groundAt(you.x, you.z), you.z);
       speedNow = you.moving * 3;
@@ -1466,7 +1479,7 @@ export function createWalk(d: WalkDeps) {
     kartUI.update(dt);
     fightUI.update(dt);
     if (ride) return rideFrame(dt, t);
-    if (fight.active) return fightFrame(dt, t);
+    if (fighting()) return fightFrame(dt, t);
     if (karts.active) return kartFrame(dt, t);
     karts.idle(dt);
     if (fly.active) return flyFrame(dt, t);
@@ -1711,7 +1724,7 @@ export function createWalk(d: WalkDeps) {
     },
     /** In the ring at the Fight Club? */
     get fighting() {
-      return fight.active;
+      return fighting();
     },
     /** Your aircraft: where it stands (home in the hangar, or wherever you landed it), or flies */
     get plane() {
@@ -1720,7 +1733,7 @@ export function createWalk(d: WalkDeps) {
     },
     /** On foot (not driving, flying, karting, fighting or riding): free to take a taxi or travel */
     get onFoot() {
-      return active && !drive.active && !fly.active && !karts.active && !fight.active && !ride;
+      return active && !drive.active && !fly.active && !karts.active && !fighting() && !ride;
     },
     /** In a taxi or on the metro */
     get riding() {
@@ -1728,7 +1741,7 @@ export function createWalk(d: WalkDeps) {
     },
     /** Start a ride (on foot only: false otherwise), or end it (null: Degen stands where the ride left him) */
     setRide(r: Ride | null) {
-      if (r && (ride || drive.active || fly.active || karts.active || fight.active)) return false;
+      if (r && (ride || drive.active || fly.active || karts.active || fighting())) return false;
       ride = r;
       keys.clear();
       jumpHeld = false;
@@ -1756,7 +1769,7 @@ export function createWalk(d: WalkDeps) {
     },
     /** Stand Degen somewhere else at once, looking the way he faces (fast travel, the end of a taxi or metro ride) */
     placeAt(at: { x: number; z: number; yaw: number }) {
-      if (ride || drive.active || fly.active || karts.active || fight.active) return false;
+      if (ride || drive.active || fly.active || karts.active || fighting()) return false;
       pos.set(at.x, groundAt(at.x, at.z), at.z);
       vel.set(0, 0);
       vy = 0;
@@ -1860,7 +1873,7 @@ export function createWalk(d: WalkDeps) {
       }
       kartUI.close();
       // ...and a fight (a bout is forfeited)
-      if (fight.active) {
+      if (fighting()) {
         fightUI.close();
         leaveFight();
       }

@@ -18,7 +18,7 @@
 import { DEFAULT_LOOK, MARKS, MARK_SLOTS, PACKS, PACK_IDS, PALETTE, PATTERNS, type Bag, type Hat, type Held, type Look, type MarkId, type PackId, type PatternId } from '../net/profile-data';
 import { markItem, patternItem, wardrobeEntry, type WardrobeEntry } from './catalog';
 import { MARK_ART } from './marks';
-import { createStage, type Stage } from './stage';
+import type { Stage } from './stage';
 import { buyWardrobe, level, ownsWardrobe } from './tycoon';
 import { D, LV, fmt, whyNot, type GameDeps } from './ui';
 
@@ -683,8 +683,13 @@ export function createFitting(d: FittingDeps) {
       // Takings keep coming in while you browse: keep the balance honest
       tick = window.setInterval(paintBalance, 1000);
       const canvas = el.querySelector<HTMLCanvasElement>('[data-fit-canvas]')!;
-      preview ??= createStage(d);
-      preview.attach(canvas, d.look());
+      // (the stage comes in its own chunk the first time: it's only for this and the character screen)
+      const at = el;
+      void import('./stage').then(({ createStage }) => {
+        if (el !== at || !at.contains(canvas)) return;
+        preview ??= createStage(d);
+        preview.attach(canvas, d.look());
+      });
       if (focus) {
         el.scrollIntoView({ block: 'start', behavior: d.reduced ? 'auto' : 'smooth' });
         el.querySelector<HTMLButtonElement>('[data-fit-tab]')?.focus({ preventScroll: true });

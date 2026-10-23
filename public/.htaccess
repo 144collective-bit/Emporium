@@ -25,4 +25,8 @@ ErrorDocument 404 /404.html
   <FilesMatch "\.(html|xml|webmanifest)$">
     Header set Cache-Control "public, max-age=0, must-revalidate"
   </FilesMatch>
+  # The service worker (its name has no fingerprint): always re-checked, so an update reaches everyone
+  <Files "sw.js">
+    Header set Cache-Control "no-cache"
+  </Files>
 </IfModule>

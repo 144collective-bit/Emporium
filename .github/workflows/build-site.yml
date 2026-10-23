@@ -34,6 +34,9 @@ jobs:
       # own (the whole city game in this browser's save).
       # To bring it back, set PUBLIC_GAME_SERVER here (see server/README.md).
       - run: npm run build
+      # What a visitor downloads before the city is up, held to fixed sizes (scripts/budget.mjs):
+      # a start that got heavier stops the build too.
+      - run: npm run budget
 
       - uses: actions/upload-artifact@v4
         with:
