@@ -3,9 +3,15 @@
  *
  * - Look: mouse (pointer lock after a click), drag, touch or a gamepad's
  *   right stick. You can look up at the towers and sky as well as down.
- * - Move: WASD / arrows / joystick / left stick, with acceleration, strafing,
- *   run (hold Shift, or Caps Lock to toggle) and a jump with coyote time,
- *   buffering and variable height.
+ * - Move: WASD / arrows / joystick / left stick, on springs (movesim.ts:
+ *   speeding up, slowing down and turning with real weight), a run by
+ *   default, a sprint (hold Shift; the touch Sprint button locks it), a walk
+ *   (Caps Lock toggles it) and a jump with coyote time, buffering and
+ *   variable height.
+ * - His body on foot is motion capture (animator.ts, docs/animation-plan.md)
+ *   once its clips have loaded; armed, aiming, emoting, in the air and
+ *   landing hard it's the procedural walk (locomotion.ts), blended across.
+ * - F does what the prompt says (doors, counters, getting in and out).
  * - Camera: first person when you start walking (with Degen's hands on the
  *   rifle once he's geared up). V, or scrolling out, swaps to over the
  *   shoulder, pulled in when a building or the ground is in the way. Wider
@@ -24,7 +30,11 @@
 import * as THREE from 'three';
 import type { SpotId } from '../../lib/city';
 import { PLAYER, createDegen, emotePose, type Outfit } from './character';
-import { copyLeg, copyPose, createLocomotion, placeRoot } from './locomotion';
+import { LAND_CROUCH, LAND_ROLL, copyLeg, copyPose, createLocomotion, placeRoot, type Root } from './locomotion';
+import type { Animator } from './animator';
+import { loadMocap } from './mocap-load';
+import { GAITS, newMove, stepMove } from './movesim';
+import { springVel } from './inertia';
 import { createCombat, type Sfx } from './combat';
 import { WEAPON_IDS } from './combat-sim';
 import { createGunShop } from './gunshop';
@@ -55,7 +65,7 @@ import { CAMERA_GRID, DOORS, GARAGE_SITE, RACK, SOLIDS, SOLID_GRID, SOLID_GRIDS,
 import { BoxGrid } from './boxgrid';
 import { count } from './tycoon';
 import { NS_ROADS, RIVER, SLAB, WALK_W, type Tick } from './world';
-import { footbridgeWall, footbridgeY } from './liberty';
+import { footbridgeWall, footbridgeY, stairTread } from './liberty';
 import { JETTY, RIM, inLake, onJetty } from './westlake';
 import { GATE } from './stadium';
 import { WORLD_BOUNDS } from './layout';
@@ -76,8 +86,11 @@ const HANGAR_VIEW = { eye: new THREE.Vector3(HANGAR_SPOT.x - 6.5, 3.4, HANGAR_SP
 /** Facing the Emporium's doors, the tower over his shoulder */
 const SPAWN_YAW = WALK_SPAWN.yaw;
 const RADIUS = 0.22;
-const WALK = 2.4;
-const RUN = 5.4;
+/** His speeds (movesim.ts): a walk (Caps Lock), the run he goes at, the sprint (Shift), and walking while he aims */
+const { walk: WALK, run: RUN, sprint: SPRINT } = GAITS;
+const AIMING = 1.68;
+/** Up and down Liberty Bridge's stairs (big stone steps): a brisk climb at most */
+const CLIMB = 1.75;
 const JUMP = 3.9;
 const GRAVITY = 11.5;
 const SCALE = 0.85;
@@ -185,6 +198,22 @@ export function createWalk(d: WalkDeps) {
   d.scene.add(hero.g, hero.ring);
   /** His feet and body on the move (locomotion.ts): planted feet, gaits, landings, the idle */
   const loco = createLocomotion();
+  /** ...and the motion capture over it on foot (animator.ts), once its clips are in; how much of it shows */
+  let animator: Animator | null = null;
+  /** ...its code (its own chunk, fetched with the clips the first time he walks) */
+  let anim: typeof import('./animator') | null = null;
+  let animLoading = false;
+  let mocapW = 0;
+  /** Seconds the procedural landing (a crouch or a roll) still has, before the motion capture takes him back */
+  let landHold = 0;
+  const lastPos = new THREE.Vector3();
+  /** His movement springs (movesim.ts) */
+  const ms = newMove();
+  /** The root's lean and roll as the procedural walk has them, less as the motion capture takes over */
+  const root0: Root = { roll: 0, pitch: 0, pivot: 0 };
+  /** The camera's dip on a hard stop, and how fast it's moving */
+  let dip = 0;
+  let dipV = 0;
   /** Seconds since the camera last turned (a while standing still, he looks round by himself) */
   let camStill = 0;
   let lookAround = 0;
@@ -253,7 +282,9 @@ export function createWalk(d: WalkDeps) {
   /** Aiming right now: held aim, or the sight brought up by firing (Aim when firing) */
   let aimNow = false;
   let autoAdsT = 0;
-  let runLock = false;
+  /** The touch Sprint button's lock, and Caps Lock's walk */
+  let sprintLock = false;
+  let walkLock = false;
   let baseFov = camera.fov;
   let fov = 52;
   const pivot = new THREE.Vector3();
@@ -280,6 +311,8 @@ export function createWalk(d: WalkDeps) {
    * The ground under a point: a slab, or the street; Liberty Bridge's stairs, landings and walkway when
    * `yNow` is up there; at the kart park the circuit's own (its banks, the hill, the flyover's deck when `yNow` is up there)
    */
+  /** What the feet stand on: the stairs' treads as they're drawn (he walks up their even ramp), else the ground */
+  const feetAt = (x: number, z: number, yNow = 0) => stairTread(x, z, yNow) ?? groundAt(x, z, yNow);
   const groundAt = (x: number, z: number, yNow = 0) => {
     const slab = slabs.some((s) => inBox(s.box, x, z) && inPoly(s.poly, [x, z])) ? SLAB : onDeck(x, z) ? DECK_Y : 0.035;
     const base = Math.max(slab, footbridgeY(x, z, yNow) ?? 0, onJetty(x, z) ? SLAB + JETTY.y : 0);
@@ -820,8 +853,8 @@ export function createWalk(d: WalkDeps) {
     if (on) pitch = THREE.MathUtils.clamp(pitch, -1.35, 1.35);
     else pitch = Math.max(pitch, -0.55);
   }
-  function setRunLock(on: boolean) {
-    runLock = on;
+  function setSprintLock(on: boolean) {
+    sprintLock = on;
     runBtn.setAttribute('aria-pressed', String(on));
   }
 
@@ -829,9 +862,9 @@ export function createWalk(d: WalkDeps) {
   function onKey(e: KeyboardEvent, down: boolean) {
     if (!active || (e.target as HTMLElement).matches?.('input, select, textarea')) return false;
     const c = e.code;
-    // While the store, the garage, the hangar, the kart hut's or the trainer's menu is open, E closes it and walking keys wait
+    // While the store, the garage, the hangar, the kart hut's or the trainer's menu is open, F closes it and walking keys wait
     if (shop.open || garageUI.open || hangarUI.open || kartUI.open || fightUI.open) {
-      if (down && !e.repeat && c === 'KeyE') (shop.open ? shop.close() : garageUI.open ? garageUI.close() : hangarUI.open ? hangarUI.close() : kartUI.open ? kartUI.close() : fightUI.close());
+      if (down && !e.repeat && c === 'KeyF') (shop.open ? shop.close() : garageUI.open ? garageUI.close() : hangarUI.open ? hangarUI.close() : kartUI.open ? kartUI.close() : fightUI.close());
       return false;
     }
     // Fighting: move with the move keys (W towards the opponent), Shift blocks, Space dodges; the mouse punches and kicks
@@ -839,7 +872,6 @@ export function createWalk(d: WalkDeps) {
       if (c === 'Space') {
         if (down && !e.repeat) fightBtns.dodge = true;
       } else if (c === 'ShiftLeft' || c === 'ShiftRight') fightBtns.block = down;
-      else if (down && !e.repeat && c === 'KeyF') fightBtns.punch = true;
       else if (down && !e.repeat && c === 'KeyG') fightBtns.kick = true;
       else if (MOVE.includes(c)) {
         if (down) keys.add(c);
@@ -849,9 +881,9 @@ export function createWalk(d: WalkDeps) {
       e.preventDefault();
       return true;
     }
-    // Flying: W / S faster and slower, A / D turn, the arrows (or Space and Shift / C) climb and dive, V swaps camera, E gets out
+    // Flying: W / S faster and slower, A / D turn, the arrows (or Space and Shift / C) climb and dive, V swaps camera, F gets out
     if (fly.active) {
-      if (down && !e.repeat && c === 'KeyE') act();
+      if (down && !e.repeat && c === 'KeyF') act();
       else if (down && !e.repeat && c === 'KeyV') fly.toggleView();
       else if (c === 'Space') jumpHeld = down;
       else if (MOVE.includes(c) || c === 'KeyC') {
@@ -862,9 +894,9 @@ export function createWalk(d: WalkDeps) {
       e.preventDefault();
       return true;
     }
-    // Karting: steer and pedal with the move keys, Space hops into a drift (E does nothing in a race: no getting out mid-lap)
+    // Karting: steer and pedal with the move keys, Space hops into a drift (F does nothing in a race: no getting out mid-lap)
     if (karts.active) {
-      if (c === 'KeyE') {
+      if (c === 'KeyF') {
         /* swallowed */
       } else if (c === 'Space') jumpHeld = down;
       else if (MOVE.includes(c)) {
@@ -875,9 +907,9 @@ export function createWalk(d: WalkDeps) {
       e.preventDefault();
       return true;
     }
-    // Driving: steer and pedal with the move keys, Space for the handbrake, V swaps camera, H the horn, E gets out
+    // Driving: steer and pedal with the move keys, Space for the handbrake, V swaps camera, H the horn, F gets out
     if (drive.active) {
-      if (down && !e.repeat && c === 'KeyE') act();
+      if (down && !e.repeat && c === 'KeyF') act();
       else if (down && !e.repeat && c === 'KeyV') drive.toggleView();
       else if (down && !e.repeat && c === 'KeyH') drive.horn();
       else if (c === 'Space') jumpHeld = down;
@@ -889,12 +921,12 @@ export function createWalk(d: WalkDeps) {
       e.preventDefault();
       return true;
     }
-    if (down && c === 'KeyE' && near) act();
+    if (down && c === 'KeyF' && near) act();
     else if (down && !e.repeat && c === 'KeyV') setFirstPerson(!firstPerson);
-    else if (down && !e.repeat && c === 'CapsLock') setRunLock(!runLock);
+    else if (down && !e.repeat && c === 'CapsLock') walkLock = !walkLock;
     else if (down && !e.repeat && c === 'KeyR') combat.reload();
     else if (down && !e.repeat && c === 'KeyG') combat.toggleHolster();
-    else if (down && !e.repeat && c === 'KeyQ') combat.swap(1);
+    else if (down && !e.repeat && c === 'KeyX') combat.swap(1);
     // 1-4 pick a gun (unless the emote panel has them)
     else if (down && !e.repeat && /^Digit[1-7]$/.test(c) && !root.querySelector('[data-emotes][open]')) combat.swap(WEAPON_IDS[Number(c.slice(5)) - 1]);
     else if (c === 'Space') {
@@ -1044,7 +1076,7 @@ export function createWalk(d: WalkDeps) {
   });
   jumpBtn.addEventListener('pointerup', () => (jumpHeld = false));
   jumpBtn.addEventListener('pointercancel', () => (jumpHeld = false));
-  runBtn.addEventListener('click', () => setRunLock(!runLock));
+  runBtn.addEventListener('click', () => setSprintLock(!sprintLock));
   // Touch pedals while driving (the stick steers)
   for (const [sel, key] of [
     ['[data-drive-gas]', 'gas'],
@@ -1507,15 +1539,15 @@ export function createWalk(d: WalkDeps) {
     // What the player wants, in camera space
     let ix = (keys.has('KeyD') || keys.has('ArrowRight') ? 1 : 0) - (keys.has('KeyA') || keys.has('ArrowLeft') ? 1 : 0);
     let iz = (keys.has('KeyW') || keys.has('ArrowUp') ? 1 : 0) - (keys.has('KeyS') || keys.has('ArrowDown') ? 1 : 0);
-    let run = runLock || keys.has('ShiftLeft') || keys.has('ShiftRight') || pad.run;
+    let sprint = sprintLock || keys.has('ShiftLeft') || keys.has('ShiftRight') || pad.run;
     if (joy.id >= 0) {
       ix = joy.x;
       iz = -joy.y;
-      run ||= Math.hypot(joy.x, joy.y) > 0.9;
+      sprint ||= Math.hypot(joy.x, joy.y) > 0.9;
     } else if (pad.x || pad.y) {
       ix = pad.x;
       iz = -pad.y;
-      run ||= Math.hypot(pad.x, pad.y) > 0.95;
+      sprint ||= Math.hypot(pad.x, pad.y) > 0.95;
     }
     const mag = Math.min(1, Math.hypot(ix, iz));
     const n = Math.hypot(ix, iz) || 1;
@@ -1528,12 +1560,19 @@ export function createWalk(d: WalkDeps) {
     autoAdsT = combat.armed && autoFire ? AUTO_ADS_HOLD : Math.max(0, autoAdsT - dt);
     aimNow = aim || autoAdsT > 0;
     const shooting = combat.armed && (aimNow || combat.firing);
-    const top = run && !shooting ? RUN : shooting ? WALK * 0.7 : WALK;
+    const onStairs = stairTread(pos.x, pos.z, pos.y + 0.3) !== null;
+    const top = Math.min(shooting ? AIMING : sprint ? SPRINT : walkLock ? WALK : RUN, onStairs ? CLIMB : Infinity);
 
-    // Accelerate towards it (less control in the air)
-    const k = damp(grounded ? (mag > 0.05 ? 11 : 14) : 2.5, dt);
-    vel.x += (dirX * top - vel.x) * k;
-    vel.y += (dirZ * top - vel.y) * k;
+    // Towards it on the springs (movesim.ts; hardly any control in the air), facing where he's
+    // going, or where you look when aiming / in first person
+    const gx = dirX * top;
+    const gz = dirZ * top;
+    const lookFace = yaw + Math.PI;
+    ms.vx = vel.x;
+    ms.vz = vel.y;
+    ms.face = face;
+    stepMove(ms, gx, gz, grounded, dt, aim || firstPerson || shooting ? lookFace : undefined);
+    vel.set(ms.vx, ms.vz);
     const stuck = blocked(pos.x, pos.z, pos.y);
     const nx = pos.x + vel.x * dt;
     if (stuck || !blocked(nx, pos.z, pos.y)) pos.x = nx;
@@ -1543,10 +1582,7 @@ export function createWalk(d: WalkDeps) {
     else vel.y = 0;
     const speed = vel.length();
 
-    // Face where you're going, or where you look when aiming / in first person
-    const lookFace = yaw + Math.PI;
-    if (aim || firstPerson || shooting) face += wrap(lookFace - face) * damp(16, dt);
-    else if (speed > 0.25) face += wrap(Math.atan2(vel.x, vel.y) - face) * damp(12, dt);
+    face = ms.face;
 
     // Jumping: buffered presses, a little coyote time, release early for a short hop
     coyote = grounded ? 0.12 : coyote - dt;
@@ -1560,6 +1596,7 @@ export function createWalk(d: WalkDeps) {
     pos.y += vy * dt;
     const ground = groundAt(pos.x, pos.z, pos.y + 0.3);
     const fall = vy;
+    const wasGrounded = grounded;
     if (pos.y <= ground) {
       // Kerbs: step up smoothly rather than pop
       pos.y = pos.y < ground - 0.05 ? pos.y + (ground - pos.y) * damp(20, dt) : ground;
@@ -1567,12 +1604,17 @@ export function createWalk(d: WalkDeps) {
       grounded = true;
     } else if (pos.y > ground + 0.04) grounded = false;
 
+    // A hard landing plays the procedural crouch or roll before the motion capture takes him back
+    if (grounded && !wasGrounded && -fall > LAND_CROUCH) landHold = -fall > LAND_ROLL && speed > 2 ? 0.75 : 0.5;
+    landHold = Math.max(0, landHold - dt);
+
     // Animation: the feet planted as he goes (locomotion.ts), then emotes, the gun and the head on top
-    runAmt += (THREE.MathUtils.clamp((speed - WALK) / (RUN - WALK), 0, 1) - runAmt) * damp(8, dt);
+    // (runAmt: how far into a sprint)
+    runAmt += (THREE.MathUtils.clamp((speed - RUN) / (SPRINT - RUN), 0, 1) - runAmt) * damp(8, dt);
     air += ((grounded ? 0 : 1) - air) * damp(12, dt);
     loco.update({ dt, t, x: pos.x, y: pos.y, z: pos.z, vx: vel.x, vz: vel.y, face, grounded, vy: grounded ? fall : vy, scale: SCALE, ground: groundAt, armed: combat.armed });
     phase = loco.phase;
-    const stride = Math.min(1, speed / WALK);
+    const stride = Math.min(1, speed / RUN);
     const P = hero.pose;
     copyPose(loco.pose, P);
     speedNow = speed;
@@ -1615,7 +1657,38 @@ export function createWalk(d: WalkDeps) {
     P.headYaw += headYaw + lookAround;
     P.headPitch += headPitch;
     hero.update();
-    placeRoot(hero.g, pos.x, pos.y, pos.z, face, SCALE, loco.root);
+    // On foot, unarmed and not showing off, the motion capture: blended in and out over a moment
+    if (!animator && !animLoading) {
+      animLoading = true;
+      Promise.all([import('./animator'), loadMocap()]).then(
+        ([m, data]) => {
+          anim = m;
+          animator = m.createAnimator(data);
+        },
+        // (it can be tried again: the procedural walk carries on meanwhile)
+        () => (animLoading = false),
+      );
+    }
+    let drawFace = face;
+    const mocapOn = !!animator && grounded && landHold <= 0 && !combat.armed && !emote && !aim && !shooting;
+    if (animator && anim) {
+      // (a fresh start after a jump in place: walking started, a fast travel, the end of a ride)
+      if ((mocapW < 0.01 && mocapOn) || lastPos.distanceToSquared(pos) > 4) animator.reset();
+      mocapW = THREE.MathUtils.clamp(mocapW + (mocapOn ? dt / 0.18 : -dt / 0.12), 0, 1);
+      if (mocapW > 0) {
+        const w = mocapW * mocapW * (3 - 2 * mocapW);
+        animator.update({ dt, x: pos.x, y: pos.y, z: pos.z, move: ms, gx, gz, scale: SCALE, ground: groundAt, feet: feetAt, sprint: runAmt });
+        anim.applyTo(hero.rig, animator.rot, animator.hips, w);
+        anim.addLook(hero.rig, headYaw + lookAround, headPitch * 0.5, w);
+      }
+      // (shown facing the way the motion capture turns him)
+      drawFace = face + wrap(animator.face - face) * mocapW;
+      root0.roll = loco.root.roll * (1 - mocapW);
+      root0.pitch = loco.root.pitch * (1 - mocapW);
+      root0.pivot = loco.root.pivot;
+    }
+    lastPos.copy(pos);
+    placeRoot(hero.g, pos.x, pos.y, pos.z, animator ? drawFace : face, SCALE, animator ? root0 : loco.root);
     hero.ring.position.set(pos.x, ground + 0.02, pos.z);
     (hero.ring.material as THREE.MeshBasicMaterial).opacity = 0.55 * (1 - air * 0.6);
 
@@ -1625,9 +1698,13 @@ export function createWalk(d: WalkDeps) {
     const shoulder = firstPerson ? 0 : THREE.MathUtils.clamp(1 - zoom / 10, 0, 1) * 0.38 + armAmt * 0.42;
     pivotWant.set(pos.x + Math.cos(yaw) * shoulder, pos.y + (firstPerson ? 1.2 : 1.0) * SCALE + 0.05, pos.z - Math.sin(yaw) * shoulder);
     if (pivot.lengthSq() === 0) pivot.copy(pivotWant);
-    pivot.x += (pivotWant.x - pivot.x) * damp(18, dt);
-    pivot.z += (pivotWant.z - pivot.z) * damp(18, dt);
-    pivot.y += (pivotWant.y - pivot.y) * damp(firstPerson ? 25 : 10, dt);
+    // (a sprint pulls ahead of the camera a touch; a hard stop dips it and lets it settle)
+    const follow = firstPerson ? 18 : 18 - 6 * runAmt;
+    pivot.x += (pivotWant.x - pivot.x) * damp(follow, dt);
+    pivot.z += (pivotWant.z - pivot.z) * damp(follow, dt);
+    const brake = d.reduced || firstPerson ? 0 : THREE.MathUtils.clamp(-(ms.ax * Math.sin(face) + ms.az * Math.cos(face)) / 40, 0, 1);
+    [dip, dipV] = springVel(dip, dipV, -0.05 * brake, 0.12, dt);
+    pivot.y += (pivotWant.y + dip - pivot.y) * damp(firstPerson ? 25 : 10, dt);
     // Looking up tilts the view but keeps the camera behind him (not down at his feet),
     // so he drops to the bottom of the frame and the sky opens up
     const camPitch = firstPerson ? pitch : Math.max(pitch, -0.12);
@@ -1646,7 +1723,7 @@ export function createWalk(d: WalkDeps) {
     combat.view(dt, t, { firstPerson, aim: aimNow, move: stride, phase, run: runAmt, air });
 
     // Field of view widens with speed, narrows when aiming
-    const wantFov = (firstPerson ? 70 : 52) + runAmt * 8 - (aimNow ? (firstPerson && combat.armed ? combat.adsZoom : 10) : 0);
+    const wantFov = (firstPerson ? 70 : 52) + (d.reduced ? 0 : 2 * Math.min(1, speed / RUN) + 6 * runAmt) - (aimNow ? (firstPerson && combat.armed ? combat.adsZoom : 10) : 0);
     fov += (wantFov - fov) * damp(6, dt);
     if (Math.abs(camera.fov - fov) > 0.05) {
       camera.fov = fov;

@@ -146,6 +146,26 @@ export function footbridgeY(x: number, z: number, y: number, m = 0): number | nu
   if (z >= WALKWAY[0] && z <= WALKWAY[1] && ax <= WALK_HALF - m) return y >= DECK_Y - STEP ? DECK_Y : null;
   return null;
 }
+/** Where the stairs start: on the lawn's slab (world.ts SLAB), as they're drawn */
+export const STAIR_BASE = 0.15;
+/**
+ * The tread under a foot on the stairs, as they're drawn (libertybridge.ts):
+ * step k, its share of the run, at the base and k + 1 rises up. Walking
+ * follows the even ramp of `footbridgeY()`; the feet stand on the steps
+ * (animator.ts). Null off the stairs, or well below them.
+ */
+export function stairTread(x: number, z: number, y: number): number | null {
+  const ax = Math.abs(x - BX);
+  for (const i of [0, 1] as const) {
+    const st = stairsOf(i);
+    if (z < Math.min(st.z0, st.z1) || z > Math.max(st.z0, st.z1) || ax < TOWER.hx || ax > TOWER.hx + STAIR.tread) continue;
+    const ramp = (DECK_Y * (z - st.z0)) / (st.z1 - st.z0);
+    if (y < ramp - STEP) return null;
+    const k = Math.min(STAIR.steps - 1, Math.max(0, Math.floor((Math.abs(z - st.z0) / Math.abs(st.z1 - st.z0)) * STAIR.steps)));
+    return STAIR_BASE + ((k + 1) * (DECK_Y - STAIR_BASE)) / STAIR.steps;
+  }
+  return null;
+}
 /** Everything the bridge covers, from above: the towers with their stairs and landings, and the walkway */
 export const LIBERTY_RECTS: Rect[] = [
   ...([0, 1] as const).map((i): Rect => {

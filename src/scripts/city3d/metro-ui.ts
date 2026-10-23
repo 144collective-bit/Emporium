@@ -1,6 +1,6 @@
 /*
  * Riding the metro (docs/growth-plan.md Phase 8): at a station's door on
- * the street ("Metro", E or a tap) the station card opens with the other
+ * the street ("Metro", F or a tap) the station card opens with the other
  * stations and how long each ride takes; pick one and you're on the
  * train: it runs straight there (`rideAt()` in metro.ts) under a camera
  * alongside, and you step out at the destination's door. Skip ride (or

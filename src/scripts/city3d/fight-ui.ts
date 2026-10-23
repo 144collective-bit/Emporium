@@ -36,7 +36,7 @@
  *   (Dorras and XP, a level-up) and Done.
  *
  * Arrow keys or the D-pad move between the buttons (step), Enter / A takes
- * the one picked, Esc / B / E closes (walk.ts calls close()). Prizes are
+ * the one picked, Esc / B / F closes (walk.ts calls close()). Prizes are
  * Dorras and XP only: never real money, nothing to do with the token.
  */
 import { BOT_LEVELS, FIGHT_BOTS, SPAR_HIT_CAP, XP, type BotLevel } from './catalog';
