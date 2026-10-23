@@ -208,7 +208,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   buildLamps(scene, tier === 'low');
   progress(0.7);
   await waited(nextFrame());
-  buildLife(scene, { cars: Q.cars, buses: Q.buses, walkers: Q.walkers, light: tier === 'low', far: Q.far }, crowd, tick);
+  // (the horn plays through the sound, made with the controls below; a toot before then is dropped)
+  let horn: ((gain: number) => void) | null = null;
+  buildLife(scene, { cars: Q.cars, buses: Q.buses, walkers: Q.walkers, light: tier === 'low', far: Q.far, horn: (g) => horn?.(g) }, crowd, tick);
   const sky = createSky(scene, { shadows: Q.shadows, rainDrops: Q.rain, clouds: Q.clouds });
   progress(0.85);
   await waited(nextFrame());
@@ -853,6 +855,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
 
   /* ---------- Controls: time, weather, sound, view ---------- */
   const sound = createSound();
+  horn = (g) => sound.sfx('horn', g);
   let amb = ambienceAt(controls.target.x, controls.target.z);
   let ambT = 0;
   const group = (name: string, apply: (v: string) => void) => {

@@ -18,6 +18,7 @@ import { TRENCH_WALKS } from './projects';
 import { inTrenches } from './trenches';
 import { CROWD_VIEW, HIP_HEIGHT, cityOutfit, createCrowd } from './character';
 import { CLIP_SECONDS, WALK_STRIDE } from './crowdclips';
+import { blinkOn, bodyMotion, braking, hornDue, indicating, newBody, newHorn, pullAway, reactionOf, resetBody, turnsOf, type Body, type Horn, type Mover, type Turn } from './traffic';
 
 export interface LifeOpts {
   cars: number;
@@ -27,6 +28,8 @@ export interface LifeOpts {
   light?: boolean;
   /** How far from the camera a car is drawn in full (beyond, its far form: growth plan Phase 2) */
   far?: number;
+  /** A car's horn (sound.ts), `gain` by how far off it is */
+  horn?: (gain: number) => void;
 }
 
 /* ======================================================================
@@ -54,6 +57,14 @@ interface Vehicle {
   /** Drawn in full (near the camera) or its far form, and its far form's instance (cars.ts `FarCars`) */
   near: boolean;
   far: number;
+  /** How it behaves (traffic.ts): its wait at a stop, its body's nod and lean, its horn, and 0..1 its own */
+  mover: Mover;
+  body: Body;
+  horn: Horn;
+  seed: number;
+  /** Its brake lights, and which way it's indicating (what the lights showed this frame) */
+  brake: boolean;
+  turn: 'L' | 'R' | null;
 }
 
 const ROAD_Y = 0.035;
@@ -114,6 +125,13 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
   const vehicles: Vehicle[] = [];
   const counts = new Map<CarId, number>();
   const total = opts.cars + opts.buses;
+  /** Where each route turns (traffic.ts), for the indicators */
+  const turnsBy = new Map<Route, Turn[]>();
+  const turnsFor = (r: Route) => {
+    let t = turnsBy.get(r);
+    if (!t) turnsBy.set(r, (t = turnsOf(r.pts, r.cum)));
+    return t;
+  };
   // Every car starts somewhere round the home view, a little apart
   const start = spotsNear(CENTER.x, CENTER.z, POOL_R);
   for (let i = 0; i < total; i++) {
@@ -139,6 +157,12 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
       matrix: new THREE.Matrix4(),
       near: true,
       far: -1,
+      mover: { v: 0, held: 0, react: reactionOf(i) },
+      body: newBody(0, 0),
+      horn: newHorn(((i * 0.7548776662) % 1)),
+      seed: (i * 0.7548776662) % 1,
+      brake: false,
+      turn: null,
     });
   }
   /** Put a car back on the road near x, z: out of sight, clear of the others; it keeps its speed */
@@ -157,6 +181,7 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
       v.p = s.p;
       v.seg = 0;
       place(v);
+      resetBody(v.body, v.v, v.yaw);
       return;
     }
   };
@@ -168,6 +193,7 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
     v.yaw = Math.atan2(-v.fz, v.fx);
   };
   vehicles.forEach(place);
+  for (const v of vehicles) resetBody(v.body, 0, v.yaw);
 
   bodies.cars = vehicles;
   // One fleet per model: its paint (each car its own colour) and its details; the bus's windows glow at night
@@ -217,14 +243,27 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
   const farCars = theFarCars();
   for (const v of vehicles) v.far = farCars.add(v.model, paintOf.get(v.model)![v.slot]);
   const nVeh = vehicles.length;
-  const head = new THREE.InstancedMesh(lightBox(0.03, 0.08, 0.17), neon('#fff6c8', 0.8, 3), nVeh * 2);
-  const tail = new THREE.InstancedMesh(lightBox(0.03, 0.07, 0.15), neon('#ff2b2b', 0.8, 3), nVeh * 2);
+  // Headlights: faint by day, on at dusk. The tail mesh carries each car's two brake lights (red, brighter
+  // while it brakes) and four indicators (amber, flashing before a turn; folded to nothing otherwise), the
+  // colour per instance over a white material: one draw for all of them (city life plan, Phase 1)
+  const head = new THREE.InstancedMesh(lightBox(0.03, 0.08, 0.17), neon('#fff6c8', 0.12, 3), nVeh * 2);
+  const PER_CAR = 6;
+  const tail = new THREE.InstancedMesh(lightBox(0.03, 0.07, 0.15), neon('#ffffff', 0.8, 3), nVeh * PER_CAR);
   for (const m of [head, tail]) {
     m.frustumCulled = false;
     m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     moving.push(m);
   }
+  tail.setColorAt(0, new THREE.Color());
+  tail.instanceColor!.setUsage(THREE.DynamicDrawUsage);
+  const TAIL_DIM = new THREE.Color('#ff2b2b').multiplyScalar(0.55);
+  const TAIL_BRAKE = new THREE.Color('#ff2b2b').multiplyScalar(1.3);
+  const AMBER = new THREE.Color('#ffb020').multiplyScalar(1.2);
+  const NONE = new THREE.Matrix4().makeScale(0, 0, 0);
+  // (an indicator lens: 0.04 tall, 0.1 wide, bigger than an ink outline)
+  const LENS = new THREE.Vector3(1, 0.57, 0.67);
   scene.add(fx(head), fx(tail));
+
 
   // Headlight beams on the road
   const beamPos = new Float32Array(nVeh * 3);
@@ -309,6 +348,10 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
   const L = new THREE.Matrix4();
   const T = new THREE.Matrix4();
   const q = new THREE.Quaternion();
+  const q2 = new THREE.Quaternion();
+  const Q0 = new THREE.Quaternion();
+  const lean = new THREE.Euler();
+  const T0 = new THREE.Vector3();
   const up = new THREE.Vector3(0, 1, 0);
   const carBall = new THREE.Sphere();
 
@@ -354,11 +397,22 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
         if (light === 'r' || (light === 'y' && d > 1.2) || blocked) target = Math.min(target, Math.max(0, d * 1.3));
       }
       // Someone walking in the road ahead (or anything else in it): stop short of them
-      if (walker.on) target = Math.min(target, shortOf(v, walker));
+      const byYou = walker.on ? shortOf(v, walker) : Infinity;
+      target = Math.min(target, byYou);
       for (const w of stoppers) if (w.on) target = Math.min(target, shortOf(v, w));
+      // Held up by you: a toot after a while (quieter the further off)
+      if (hornDue(v.horn, byYou < 0.1 && v.v < 0.1, dt, v.seed) && opts.horn) {
+        const off = Math.hypot(v.x - CROWD_VIEW.eye.x, v.z - CROWD_VIEW.eye.z);
+        opts.horn(Math.max(0, 1 - off / 45) * 0.9);
+      }
+      // Stopped, it waits its own reaction time before moving off (a queue peels from the front)
+      v.mover.v = v.v;
+      target = pullAway(v.mover, target, dt);
+      v.brake = braking(v.v, target);
       const acc = target > v.v ? 1.8 : 5;
       v.v += Math.max(-acc * dt, Math.min(acc * dt, target - v.v));
       v.p += v.v * dt;
+      v.turn = indicating(turnsFor(v.route), v.p + v.len / 2, v.route.len);
       // Round and round: every route is a loop
       if (v.p > v.route.len) {
         v.p -= v.route.len;
@@ -382,9 +436,12 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
     // in full near the camera and in their far form beyond (culled by three.js, one car at a time)
     for (const f of fleets.values()) f.front.length = f.back.length = 0;
     let hi = 0;
+    let ti = 0;
     vehicles.forEach((v, idx) => {
       place(v);
-      q.setFromAxisAngle(up, v.yaw);
+      // The body nods under braking and leans out of a turn (traffic.ts), on top of its heading
+      bodyMotion(v.body, v.v, v.yaw, dt);
+      q.setFromAxisAngle(up, v.yaw).multiply(q2.setFromEuler(lean.set(v.body.roll, 0, v.body.pitch)));
       M.makeRotationFromQuaternion(q).setPosition(v.x, ROAD_Y, v.z);
       v.matrix.copy(M);
       v.near = !CROWD_VIEW.on || isNear(Math.hypot(v.x - CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, v.z - CROWD_VIEW.eye.z), farDist, v.near);
@@ -402,8 +459,20 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
       const g = carGeometry(v.model);
       for (let k = 0; k < 2; k++) {
         head.setMatrixAt(hi, L.multiplyMatrices(M, T.makeTranslation(...g.head[k])));
-        tail.setMatrixAt(hi, L.multiplyMatrices(M, T.makeTranslation(...g.tail[k])));
         hi++;
+        tail.setMatrixAt(ti, L.multiplyMatrices(M, T.makeTranslation(...g.tail[k])));
+        tail.setColorAt(ti, v.brake ? TAIL_BRAKE : TAIL_DIM);
+        ti++;
+      }
+      // The indicators: the turning side's two lenses (right is +z, the car's left -z) while the flash is on
+      const on = v.turn && blinkOn(t, v.seed);
+      for (let k = 0; k < 4; k++) {
+        const side = k % 2 === 0 ? 'R' : 'L';
+        if (on && side === v.turn) {
+          tail.setMatrixAt(ti, L.multiplyMatrices(M, T.compose(T0.set(...g.turn[k]), Q0, LENS)));
+          tail.setColorAt(ti, AMBER);
+        } else tail.setMatrixAt(ti, NONE);
+        ti++;
       }
       beamPos.set([v.x + v.fx * (v.len / 2 + 1.4), 0.06, v.z + v.fz * (v.len / 2 + 1.4)], idx * 3);
     });
@@ -424,6 +493,7 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
       }
     }
     for (const m of moving) m.instanceMatrix.needsUpdate = true;
+    tail.instanceColor!.needsUpdate = true;
     beamGeo.attributes.position.needsUpdate = true;
   });
 }

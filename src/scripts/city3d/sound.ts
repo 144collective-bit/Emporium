@@ -489,6 +489,12 @@ export function createSound() {
           crack(t, 'bandpass', 900, 1.2, 0.25, 0.05);
           tone(t + 0.03, 'square', 140, 90, 0.18, 0.08);
           break;
+        // A car's horn: two reeds a third apart, a short toot (quieter the further off)
+        case 'horn':
+          tone(t, 'sawtooth', 370, 362, 0.1, 0.42);
+          tone(t, 'sawtooth', 466, 455, 0.08, 0.42);
+          tone(t, 'square', 185, 181, 0.04, 0.4);
+          break;
         // The premium guns: a heavy revolver boom and its hammer, the carbine's crisp burst, the belt-fed thump
         case 'shotRevolver':
           tone(t, 'sine', 120, 32, 0.95, 0.26, true);

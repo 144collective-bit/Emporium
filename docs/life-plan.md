@@ -72,33 +72,50 @@ with no new textures, no new draw calls and (nearly) no new geometry.
 
 Effort: S a day or less, M a few days. Memory: what each adds, honestly.
 
-### Phase 1: traffic that behaves (S-M, zero memory)
+### Phase 1: traffic that behaves (S-M, zero memory): built
 
-All in `life.ts`'s traffic tick; the rules as pure functions in a new
-DOM-free `traffic.ts` with tests.
+The rules are `traffic.ts` (DOM-free, tested in `tests/traffic.test.ts`);
+`life.ts`'s traffic tick draws them. What it added: no new draw calls, no
+new geometry, 6 instances a car in the tail-light mesh (was 2), 3 floats of
+colour each; one new sound (synthesised). Checked in headless Chromium at
+night on the software renderer: brake lights bright on a car held at a
+light and dim once it rolls, headlights on at dusk, the amber indicator
+under the lamp on the turning side, a car stopping short of Degen.
 
-1. **Brake lights.** The tail mesh gets `instanceColor`: bright red when a
-   car is slowing or stopped at a light (`target < v.v`, or `v.v` near 0
-   with a stop ahead), dim otherwise. 3 floats a light.
+What was learnt: a lit lens laid *over* one of a model's own small
+details is swallowed by the ink outlines of the detail behind it (the
+outline pass draws the solid scene's edges over the FX layer, and a box the
+size of an outline is all edge). Lit lenses go on the flat of the body,
+clear of bezels, and bigger than an outline (`turn` in cars.ts).
+
+1. **Brake lights.** The tail mesh gets `instanceColor` over a white
+   material: bright red when a car is slowing or holding at a stop
+   (`braking()`), dim otherwise. 3 floats a light.
 2. **Headlights by night only.** Head lamps and the beam pools faint by day
    (`lit` day level down), full at dusk. Zero memory.
 3. **Pull-away that peels.** Each car gets a reaction time (0.3-0.9 s,
-   seeded by its slot) before it moves off a green or follows the car
-   ahead, so a queue unrolls from the front. Zero memory.
+   `reactionOf()` from its number) before it moves off a green or follows
+   the car ahead (`pullAway()`), so a queue unrolls from the front. Zero
+   memory.
 4. **Bodies that pitch and lean.** From each car's own acceleration and yaw
-   rate (both already known), a small pitch under braking and a roll in
-   turns, written into the matrix it already gets. Zero memory.
+   rate (`bodyMotion()`), a small pitch under braking and a roll in turns,
+   written into the matrix it already gets (level again when a car is put
+   back on the road elsewhere, `resetBody()`). Zero memory.
 5. **Indicators before turns.** A route is a polyline with its corners
-   already rounded in (`Route.pts`); a table of its turns (where the heading
-   swings more than about 45° over a few points, and which way) is worked
-   out once per route (a few numbers each; bakeable with the routes), and a
-   car within a few tiles of one flashes the side it's turning to. Either a tiny instanced lens mesh (one draw for
-   all, 4 instances a car) or an orange tint on the existing head/tail
-   instances. The models already carry indicator lenses in their geometry
-   (cars.ts), so the lit lens sits a hair in front of them (nothing flush).
+   already rounded in (`Route.pts`); `turnsOf()` finds its turns once
+   (runs of heading change the same way adding up to `TURN_SWING` within
+   `TURN_LEN` tiles; a long gentle bend like the highway's corners isn't
+   one), and `indicating()` says which way a car is signalling from
+   `TURN_LEAD` before a turn to its end (the turn it's in before the one
+   it's coming up to). The lenses ride in the tail-light mesh: four more
+   instances a car, amber when the flash is on (`blinkOn()`, 1.5 Hz, each
+   car its own phase), folded to nothing otherwise, under each lamp on
+   the body (`CarGeometry.turn`).
 6. **A horn when held up.** A car stopped behind you (`walker`) for more
-   than about 2 s toots once, then again later (synth in `sound.ts`, through
-   the sound switch, never in reduced motion). Zero memory.
+   than about 2 s toots once, then again later (`hornDue()`; `horn` in
+   `sound.ts`, quieter the further off, through the sound switch, never in
+   reduced motion; `LifeOpts.horn`, wired in index.ts once the sound
+   exists). Zero memory.
 
 **1b. Wheels that roll (M, small memory).** The traffic's wheels are part
 of each model's `detail` geometry. A per-vertex attribute marking wheel
@@ -181,8 +198,7 @@ geometry change in this plan: well under a megabyte over every model.
 
 ## Suggested order
 
-Phase 1 (the roads are where every view lands) → Phase 2 (what the player
-holds most) → Phase 3 (the city noticing you) → Phase 4. 1b (rolling
+Phase 1 (built) → Phase 2 (what the player holds most) → Phase 3 (the city noticing you) → Phase 4. 1b (rolling
 wheels) after Phase 2 if the owner wants it: it's the one shader change.
 
 ## What has to keep working

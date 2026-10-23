@@ -777,6 +777,12 @@ export interface CarGeometry {
   /** Head- and taillight spots (on the front / rear faces) */
   head: [number, number, number][];
   tail: [number, number, number][];
+  /**
+   * Where the traffic's lit indicator lenses go (life.ts): under each lamp on the flat of the body, clear of the
+   * bezels (the ink outlines of the model's own small amber lenses would cover a lit lens laid over them):
+   * front right (+z), front left, rear right, rear left
+   */
+  turn: [number, number, number][];
 }
 
 const cache = new Map<string, CarGeometry>();
@@ -913,6 +919,12 @@ export function carGeometry(id: CarId, { wheels = true } = {}): CarGeometry {
     tail: [
       [-half - 0.005, s.lightY, lz],
       [-half - 0.005, s.lightY, -lz],
+    ],
+    turn: [
+      [half + 0.016, s.lightY - lh / 2 - 0.065, lz],
+      [half + 0.016, s.lightY - lh / 2 - 0.065, -lz],
+      [-half - 0.016, s.lightY - lh / 2 - 0.07, lz],
+      [-half - 0.016, s.lightY - lh / 2 - 0.07, -lz],
     ],
   };
   cache.set(key, out);

@@ -502,7 +502,19 @@ it and has been retired completely. Build only on what's here.
   your car at no cost in memory: the owner's brief, 2026-10) is planned in
   `docs/life-plan.md`; keep it up to date, one phase at a time with the
   owner's sign-off. Rules go in DOM-free code with tests; the view only
-  draws them on the meshes the city already has.
+  draws them on the meshes the city already has. Phase 1 (traffic that
+  behaves) is built: `traffic.ts` (DOM-free, tested in
+  `tests/traffic.test.ts`) holds the rules and `life.ts` draws them:
+  brake lights (the tail-light mesh's `instanceColor`, bright while
+  `braking()`), headlights faint by day, a reaction time at every stop
+  (`pullAway()`, a queue peels from the front), a nod under braking and a
+  lean in turns (`bodyMotion()`), indicators before turns (`turnsOf()` on
+  each route's polyline, `indicating()`, `blinkOn()`; four more instances
+  a car in the tail-light mesh, amber lenses under the lamps at
+  `CarGeometry.turn`, on the flat of the body: a lit lens laid over one of
+  the model's own small details is swallowed by its ink outline) and a
+  horn when a car is held up by you (`hornDue()`, `LifeOpts.horn`, the
+  `horn` sound). No new draws, no new geometry.
 - **Cars** are `src/scripts/city3d/cars.ts`: real-proportion cartoon models
   (City Hatch, Cruiser, Street GT coupe, Hauler pickup, Box Van, City Bus;
   made-up names, never a real make or badge), each a bevelled extruded
@@ -1928,7 +1940,7 @@ it and has been retired completely. Build only on what's here.
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`),
-  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`),
+  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), how the traffic behaves (`traffic.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,
