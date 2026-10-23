@@ -14,11 +14,13 @@ import { springAhead, springAngle, springVel, wrap } from './inertia';
 
 /**
  * His speeds (tiles a second; a tile is about 1.8 m, his hips 0.95 m up):
- * a walk (Caps Lock), the run he goes at by default and the sprint (Shift).
- * The walk and run are the captured actor's own; the sprint is the run
- * played faster with longer strides and harder drive (animator.ts).
+ * a walk (Caps Lock, about 1.4 m/s), the run he goes at by default (about
+ * 5 m/s) and the sprint (Shift, about 7.5 m/s). The captures run at 3-4 m/s;
+ * the animator (animator.ts) makes up the rest a little in cadence and
+ * mostly in longer strides, as a runner does (the owner's call, after the
+ * capture's double-speed timing was fixed: quick but believable).
  */
-export const GAITS = { walk: 1.25, run: 3.4, sprint: 5 };
+export const GAITS = { walk: 0.78, run: 2.8, sprint: 4.2 };
 
 /** The springs' half-lives (seconds): speeding up, slowing down, turning to face, and the little control there is in the air */
 export const MOVE = { accel: 0.11, stop: 0.1, face: 0.075, air: 0.9 };

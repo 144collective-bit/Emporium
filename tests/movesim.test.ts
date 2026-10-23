@@ -10,7 +10,8 @@ const speed = (s: { vx: number; vz: number }) => Math.hypot(s.vx, s.vz);
 
 test('the speeds: a walk, the run he goes at and a faster sprint', () => {
   assert.ok(GAITS.walk < GAITS.run && GAITS.run < GAITS.sprint);
-  assert.ok(Math.abs(GAITS.run - 3.4) < 0.3, 'the captured actor\'s run');
+  // (about 1.4, 5 and 7.5 m/s: a tile is about 1.8 m)
+  assert.ok(Math.abs(GAITS.walk * 1.8 - 1.4) < 0.15 && Math.abs(GAITS.run * 1.8 - 5) < 0.3 && Math.abs(GAITS.sprint * 1.8 - 7.5) < 0.3, 'a walk, a quick run and a sprint');
 });
 
 test('from standing he reaches his run in about a quarter of a second, and never overshoots', () => {
