@@ -25,7 +25,9 @@ import * as THREE from 'three';
 import { createDegen, type Degen, type Outfit } from './character';
 import type { Sfx } from './combat';
 import { CARS } from './cars';
-import { circles, newCar, reachOf, stepCar, tune, type CarState, type DriveInput, type DriveTune } from './drive-sim';
+import { carLights, circles, gearOf, newCar, newSignal, reachOf, skidding, stepCar, tune, type CarState, type DriveInput, type DriveTune, type TurnSignal } from './drive-sim';
+import { blinkOn } from './traffic';
+import { fx, glowTex, lit } from './kit';
 import type { Garage } from './garage';
 import type { Kart } from './karts';
 import { bodies } from './life';
@@ -64,7 +66,89 @@ export interface DriveDeps {
   free(x: number, z: number): boolean;
   sfx(kind: Sfx, gain?: number): void;
   engine(revs: number): void;
+  /** The tyres' screech while sliding, 0..1 (0 is silent) */
+  tyres(level: number): void;
   bounds: Box;
+  /** prefers-reduced-motion: no skid marks */
+  reduced?: boolean;
+}
+
+/** How many skid-mark pieces the road keeps (the oldest is reused), and how long one takes to fade (seconds) */
+const SKID_N = 240;
+const SKID_FADE = 7;
+/** A fresh mark's opacity (dark rubber over the ground) and width */
+const SKID_ALPHA = 0.55;
+const SKID_W = 0.13;
+
+/**
+ * Skid marks (city life plan, Phase 2): one fixed mesh of SKID_N quads laid under the rear wheels while
+ * the tyres slide, each fading over SKID_FADE; the oldest is reused. Dark rubber with an alpha per vertex
+ * (one small shader: a basic material can't fade per quad), a hair above the lane markings, in the FX
+ * layer so no outline is drawn round them.
+ */
+function createSkidMarks(scene: THREE.Scene) {
+  const pos = new Float32Array(SKID_N * 4 * 3);
+  const fade = new Float32Array(SKID_N * 4);
+  const idx = new Uint16Array(SKID_N * 6);
+  for (let i = 0; i < SKID_N; i++) idx.set([i * 4, i * 4 + 1, i * 4 + 2, i * 4, i * 4 + 2, i * 4 + 3], i * 6);
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3).setUsage(THREE.DynamicDrawUsage));
+  geo.setAttribute('fade', new THREE.BufferAttribute(fade, 1).setUsage(THREE.DynamicDrawUsage));
+  geo.setIndex(new THREE.BufferAttribute(idx, 1));
+  geo.setDrawRange(0, 0);
+  const mat = new THREE.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    uniforms: { alpha: { value: SKID_ALPHA } },
+    vertexShader: /* glsl */ `
+      attribute float fade; varying float vFade;
+      void main() { vFade = fade; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }
+    `,
+    fragmentShader: /* glsl */ `
+      uniform float alpha; varying float vFade;
+      void main() { gl_FragColor = vec4(0.02, 0.02, 0.03, alpha * vFade); }
+    `,
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.frustumCulled = false;
+  mesh.renderOrder = -1;
+  mesh.visible = false;
+  scene.add(fx(mesh));
+  const born = new Float32Array(SKID_N).fill(-Infinity);
+  let next = 0;
+  let used = 0;
+  return {
+    /** Lay one piece from (ax, az) to (bx, bz) at height y */
+    add(ax: number, az: number, bx: number, bz: number, y: number, t: number) {
+      const l = Math.hypot(bx - ax, bz - az) || 1;
+      const nx = (-(bz - az) / l) * SKID_W * 0.5;
+      const nz = ((bx - ax) / l) * SKID_W * 0.5;
+      const i = next;
+      next = (next + 1) % SKID_N;
+      used = Math.min(SKID_N, used + 1);
+      pos.set([ax + nx, y, az + nz, bx + nx, y, bz + nz, bx - nx, y, bz - nz, ax - nx, y, az - nz], i * 12);
+      fade.fill(1, i * 4, i * 4 + 4);
+      born[i] = t;
+      geo.attributes.position.needsUpdate = true;
+      geo.attributes.fade.needsUpdate = true;
+      geo.setDrawRange(0, used * 6);
+      mesh.visible = true;
+    },
+    /** Fade every piece by its age; the mesh hides once all have gone */
+    update(t: number) {
+      if (!mesh.visible) return;
+      let alive = 0;
+      for (let i = 0; i < used; i++) {
+        const age = t - born[i];
+        const k = age >= SKID_FADE ? 0 : 1 - age / SKID_FADE;
+        if (k > 0) alive++;
+        fade.fill(k, i * 4, i * 4 + 4);
+      }
+      geo.attributes.fade.needsUpdate = true;
+      if (!alive) mesh.visible = false;
+    },
+  };
 }
 
 const damp = (k: number, dt: number) => 1 - Math.exp(-k * dt);
@@ -87,6 +171,8 @@ export function createDrive(d: DriveDeps) {
     drive(dist: number, steer: number): void;
     dispose(): void;
     seat?(degen: Degen | null): void;
+    /** The car's lights (not the kart's) */
+    lights?(brake: boolean, reverse: boolean, turn: 'L' | 'R' | null): void;
     state: CarState;
     tune: DriveTune;
     holder: THREE.Group;
@@ -116,6 +202,27 @@ export function createDrive(d: DriveDeps) {
   let pitch = 0;
   let lastSpeed = 0;
   let fov = 60;
+  /** The lights' memory (the indicators' hold), the clock for the flash and the marks, the horn's last toot */
+  const signal: TurnSignal = newSignal();
+  let clock = 0;
+  let lastHorn = -1;
+  /** The rear tyres' last mark, each (null between slides) */
+  const marks: ([number, number] | null)[] = [null, null];
+  const skids = d.reduced ? null : createSkidMarks(d.scene);
+  // The headlights' pool on the road ahead and the brake lights' red wash behind: two glow points,
+  // coloured per vertex, dark by day (the traffic's beams work the same way); only while driving the car
+  const poolPos = new Float32Array(6);
+  const poolCol = new Float32Array(6);
+  const poolGeo = new THREE.BufferGeometry();
+  poolGeo.setAttribute('position', new THREE.BufferAttribute(poolPos, 3).setUsage(THREE.DynamicDrawUsage));
+  poolGeo.setAttribute('color', new THREE.BufferAttribute(poolCol, 3).setUsage(THREE.DynamicDrawUsage));
+  const pools = new THREE.Points(poolGeo, lit(new THREE.PointsMaterial({ color: '#ffffff', vertexColors: true, map: glowTex, size: 1.9, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }), 0, 0.3));
+  pools.frustumCulled = false;
+  pools.visible = false;
+  d.scene.add(fx(pools));
+  const HEAD_POOL = new THREE.Color('#fff0c0');
+  const BRAKE_WASH = new THREE.Color('#ff2b2b').multiplyScalar(0.22);
+  const DARK = new THREE.Color(0, 0, 0);
   const camPos = new THREE.Vector3();
   const pivot = new THREE.Vector3();
   const dir = new THREE.Vector3();
@@ -187,6 +294,7 @@ export function createDrive(d: DriveDeps) {
       group: taken.car.group,
       drive: (dist, steer) => taken.car.drive(dist, steer),
       dispose: () => taken.car.dispose(),
+      lights: (brake, reverse, turn) => taken.car.lights(brake, reverse, turn),
       state: newCar(taken.x, taken.z, taken.yaw),
       tune: { top: 0, reverse: 0, accel: 0, brake: 0, grip: 0, L: spec.L, W: spec.W, wheelbase: 1 },
       holder,
@@ -297,7 +405,11 @@ export function createDrive(d: DriveDeps) {
       place(v);
       hud.hidden = false;
       root.classList.add('is-driving');
+      root.classList.toggle('in-car', v.kind === 'car');
       root.dataset.car = v.name;
+      signal.side = null;
+      marks[0] = marks[1] = null;
+      pools.visible = v.kind === 'car';
       d.sfx('door');
       return true;
     },
@@ -313,9 +425,12 @@ export function createDrive(d: DriveDeps) {
       v.seat?.(null);
       place(v);
       hud.hidden = true;
-      root.classList.remove('is-driving');
+      root.classList.remove('is-driving', 'in-car');
       delete root.dataset.car;
       d.engine(-1);
+      d.tyres(0);
+      v.lights?.(false, false, null);
+      pools.visible = false;
       d.sfx('door');
       // Out of the left door if there's room, else the right, the back or the front
       const fx = Math.cos(s.yaw);
@@ -376,6 +491,12 @@ export function createDrive(d: DriveDeps) {
       lookPitch = THREE.MathUtils.clamp(lookPitch + dy, -0.25, 0.7);
       lookIdle = 0;
     },
+    /** The horn (H, the Horn button, the gamepad's stick press): your car's only, a toot at most twice a second */
+    horn() {
+      if (!out || out.kind !== 'car' || clock - lastHorn < 0.5) return;
+      lastHorn = clock;
+      d.sfx('horn');
+    },
     /** Is the car locked (a countdown)? */
     get frozen() {
       return frozen;
@@ -398,10 +519,37 @@ export function createDrive(d: DriveDeps) {
       const pz = s.z;
       const hit = stepCar(s, inp, T, Math.min(dt, 1 / 20), { boxes, soft: gatherSoft(s) }, d.bounds);
       const moved = Math.hypot(s.x - px, s.z - pz);
+      clock += dt;
       if (hit > 1.2) {
         d.sfx('bump', Math.min(1, hit / 7));
         shake = Math.min(0.25, hit * 0.03);
       }
+      // The lights (drive-sim.ts carLights): brake lights, reversing lights, the indicators flashing
+      const lights = carLights(s, frozen ? { throttle: 0, steer: 0, handbrake: false } : inp, signal, dt);
+      v.lights?.(lights.brake, lights.reverse, lights.turn && blinkOn(clock) ? lights.turn : null);
+      // The tyres: a screech while they slide, and marks under the rear wheels (one piece per 0.15 moved)
+      const slip = skidding(s, inp);
+      d.tyres(slip > 0 ? Math.min(1, slip / 4) : 0);
+      if (v.kind === 'car') {
+        const rear = -T.wheelbase / 2;
+        const half = T.W / 2 - 0.1;
+        const fx0 = Math.cos(s.yaw);
+        const fz0 = -Math.sin(s.yaw);
+        for (let w = 0; w < 2; w++) {
+          const side = w ? half : -half;
+          const wx = s.x + fx0 * rear + Math.sin(s.yaw) * side;
+          const wz = s.z + fz0 * rear + Math.cos(s.yaw) * side;
+          if (slip > 0 && skids && Math.abs(s.speed) > 1) {
+            const last = marks[w];
+            if (!last) marks[w] = [wx, wz];
+            else if (Math.hypot(wx - last[0], wz - last[1]) > 0.15) {
+              skids.add(last[0], last[1], wx, wz, d.groundAt(wx, wz) + 0.046, clock);
+              marks[w] = [wx, wz];
+            }
+          } else marks[w] = null;
+        }
+      }
+      skids?.update(clock);
 
       // The body: up the kerbs smoothly (and the kart track's ramps, decks and banking), leans into turns and squats under gas or brakes
       const track = d.track(s.x, s.z, v.y);
@@ -415,12 +563,23 @@ export function createDrive(d: DriveDeps) {
       place(v);
       const y = v.y;
 
-      // Readout and engine
+      // Readout and engine: four gears up the speed range (drive-sim.ts gearOf), the revs dropping at each shift
       const kmh = Math.round(Math.abs(s.speed) * KMH);
       if (speedEl.textContent !== String(kmh)) speedEl.textContent = String(kmh);
-      const gear = s.speed < -0.2 ? 'R' : Math.abs(s.speed) < 0.2 && Math.abs(inp.throttle) < 0.05 ? 'N' : 'D';
+      const box = gearOf(s.speed, T.top, inp.throttle);
+      const gear = String(box.gear);
       if (gearEl.textContent !== gear) gearEl.textContent = gear;
-      d.engine(0.12 + Math.min(1, Math.abs(s.speed) / T.top) * 0.75 + Math.max(0, inp.throttle) * 0.13);
+      d.engine(0.12 + box.revs * 0.72 + Math.max(0, inp.throttle) * 0.13);
+      // The headlights' pool ahead and the brake lights' wash behind (dark by day through `lit`)
+      if (pools.visible) {
+        const fxp = Math.cos(s.yaw);
+        const fzp = -Math.sin(s.yaw);
+        poolPos.set([s.x + fxp * (T.L / 2 + 1.5), y + 0.06, s.z + fzp * (T.L / 2 + 1.5), s.x - fxp * (T.L / 2 + 0.7), y + 0.06, s.z - fzp * (T.L / 2 + 0.7)]);
+        HEAD_POOL.toArray(poolCol, 0);
+        (lights.brake ? BRAKE_WASH : DARK).toArray(poolCol, 3);
+        poolGeo.attributes.position.needsUpdate = true;
+        poolGeo.attributes.color.needsUpdate = true;
+      }
 
       // Camera
       lookIdle += dt;

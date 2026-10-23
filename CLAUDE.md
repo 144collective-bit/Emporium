@@ -692,6 +692,51 @@ it and has been retired completely. Build only on what's here.
   places) is DOM-free data in the boot, so nothing waits on the chunk.
   `?bench` loads every district before it starts. A new district comes
   the same way.
+- **City life** (behaviour and animation of the traffic, the people and
+  your car at no cost in memory: the owner's brief, 2026-10) is planned in
+  `docs/life-plan.md`; keep it up to date, one phase at a time with the
+  owner's sign-off. Rules go in DOM-free code with tests; the view only
+  draws them on the meshes the city already has. Phase 1 (traffic that
+  behaves) is built: `traffic.ts` (DOM-free, tested in
+  `tests/traffic.test.ts`) holds the rules and `life.ts` draws them:
+  brake lights (the tail-light mesh's `instanceColor`, bright while
+  `braking()`), headlights faint by day, a reaction time at every stop
+  (`pullAway()`, a queue peels from the front), a nod under braking and a
+  lean in turns (`bodyMotion()`), indicators before turns (`turnsOf()` on
+  each route's polyline, `indicating()`, `blinkOn()`; four more instances
+  a car in the tail-light mesh, amber lenses under the lamps at
+  `CarGeometry.turn`, on the flat of the body: a lit lens laid over one of
+  the model's own small details is swallowed by its ink outline) and a
+  horn when a car is held up by you (`hornDue()`, `LifeOpts.horn`, the
+  `horn` sound). No new draws, no new geometry. Phase 2 (your car's feel)
+  is built: the rules in `drive-sim.ts` (`carLights()`: brake lights,
+  reversing lights, indicators with the wheel below `SIGNAL_SPEED` and
+  held `SIGNAL_HOLD`; `gearOf()`: four gears, the revs dropping at each
+  shift; `skidding()`: the tyres' sideways speed), drawn by `drive.ts`
+  and `createCar()` in cars.ts (lit lens materials swapped on the car's
+  own lenses, amber indicator lenses under the lamps, `car.lights()`), a
+  horn (H, the Horn button `[data-drive-horn]` over the Brake pedal, your
+  car's only through `.in-car`, the gamepad's left stick pressed,
+  `drive.horn()`), skid marks (one fixed mesh of `SKID_N` quads with a
+  small alpha shader, under the rear wheels while sliding, fading over
+  `SKID_FADE`; none under reduced motion; multiply blending isn't honoured
+  in the post chain, so don't use it for decals), the `tyres()` screech in
+  sound.ts, and the headlights' pool and brake wash as two glow points
+  dark by day. Phase 3 (people who notice) is built: `pedestrians.ts`
+  (DOM-free, tested in `tests/pedestrians.test.ts`): `crossingLinks()`
+  (the walked blocks' corners across one street at a lit junction, never
+  an avenue or a junction's middle), `walkLight()` / `redLeft()` (red for
+  the cars with time to get over), `takesCrossing()`, `noticing()`
+  (`NOTICE`, `NOTICE_HOLD`), `hurry()` (the rain), `outAtNight()` (1 to 5,
+  `Env.hour` from sky.ts) and `BENCHES` / `SEAT_H` (data for a later
+  seated state); life.ts's people tick walks them (a walker on a crossing
+  or waiting at a kerb, `Person.cross` / `wait`, joins the other block's
+  lane at the corner it arrives at; stops and faces you within reach;
+  sitters go in past 0.6 of rain). Nothing new is drawn. **Not character
+  animation** (the owner's call): this plan picks which existing clip a
+  crowd person plays and where they stand, never a pose, clip or rig
+  change on Degen; that's `docs/animation-plan.md`'s (sitting on a bench
+  waits for it).
 - **Cars** are `src/scripts/city3d/cars.ts`: real-proportion cartoon models
   (City Hatch, Cruiser, Street GT coupe, Hauler pickup, Box Van, City Bus;
   made-up names, never a real make or badge), each a bevelled extruded
@@ -1018,6 +1063,61 @@ it and has been retired completely. Build only on what's here.
   character screen) and Phase 5 (the crowds and soldiers on the new body,
   skinned on the GPU from baked clips; fighters and other players stepping
   with planted feet) are built: every figure in the city is the one body.
+- **The animation rebuild** (the owner's call, critical) is planned in
+  `docs/animation-plan.md`: AAA movement (Spider-Man / Ratchet feel,
+  neutral athletic) from motion capture, then turns, jumps, armed
+  movement, peeking (Q / E), crouch, slide, vault and climb, contact, and
+  everyone on the same clips. Build it one phase at a time with the
+  owner's sign-off. Phase 1 (run, sprint and momentum) and Phase 2
+  (turning, terrain and transitions) are built, for the player on foot:
+  - **The data** is CMU's motion capture (free for commercial use; the
+    acknowledgment is in the start menu's Options > Credits, named, never
+    linked): subject 143's takes in `assets/mocap/cmu/` (BVH, untouched),
+    listed in `assets/mocap/takes.json` (a `loop` makes a seamless cycle,
+    `loopClip()`). `npm run mocap` (`scripts/mocap.mjs`) retargets them
+    (`mocap-build.ts`: each target bone takes its source joint's turn
+    since the T-pose, the feet kept level, the floor from the ankles, the
+    root smoothed from the hips) into `src/data/mocap/clips.bin`
+    (`mocap.ts`: 22 body bones at `MOCAP_FPS` 30, turns in 16 bits;
+    `mirrorClip()`, `posed()`, `contacts()`); `tests/mocap.test.ts` holds
+    the file to exactly what the pipeline makes. It's fetched when walking
+    starts (`mocap-load.ts`, a hashed asset), with the animator's own
+    chunk (`import('./animator')`).
+  - **Moving** is `movesim.ts`: velocity and facing on critically damped
+    springs (`MOVE` half-lives), `ahead()` the trajectory; `GAITS` walk
+    1.25, run 3.4 (the default), sprint 5 tiles a second.
+  - **The animation** is `animator.ts`: motion matching (`motionmatch.ts`,
+    Holden's 27 features, every clip and its mirror, a search about ten
+    times a second) with inertialization (`inertia.ts`), playback warped
+    to his speed (`RATE`), the sprint's harder swing and lean and a lean
+    into bends (`LAYERS`), and the feet: each held by the ball of the foot
+    where the clip has it down (`LOCK`), reached by a hinge-knee two-bone
+    IK with a soft reach (`twoBone()`), on the ground under it, the hips
+    coming down (at most `LOCK.drop`) when a leg can't reach. `applyTo()`
+    puts it on the figure (`Degen.rig`) after its own `update()`, and
+    `addLook()` turns the head where the camera looks. walk.ts blends it
+    in (`mocapW`) on the ground, unarmed, not aiming or emoting, and not
+    for a moment after a hard landing (the procedural crouch and roll);
+    everywhere else, and for everyone else, it's `locomotion.ts` as before.
+  - **Phase 2:** more takes (running turns, a quick stop, walking into a
+    run, turning on the spot, standing and waiting: `assets/mocap/takes.json`
+    and `CREDITS.md`); his shown facing follows the clip's own turn, pulled
+    to the springs' (`FACE`, `animator.face`: place the figure with it);
+    standing still only the idle is searched (`STAND`), and frames near a
+    clip's end cost more (`ENDING`); a free foot clears the ground just
+    ahead of it (`LOCK.look`), a held one stands on the ground it was put
+    down on, the hips follow the feet above his ground (`LIFT`). The feet
+    can stand on something other than what he walks on (`AnimInput.feet`):
+    Liberty Bridge's treads as drawn (`stairTread()` in liberty.ts, the
+    drawing's `STAIR_BASE`) over the ramp walking follows, and walk.ts slows
+    him to a brisk climb on them (`CLIMB`).
+  - **The lab** is `?anim` (`anim-lab.ts`, styles `animlab.css`): the new
+    animation beside the old on an open floor, scripted moves or W A S D,
+    slow motion, cameras, floors (flat, kerbs, stairs), foot traces and
+    readouts (the clip, its rate, the match, the blend left, the foot
+    slide); `rec`, `prog`, `gait`, `cam`, `floor`, `zoom`, `compare=0` in
+    the address set it up for recordings. Review
+    every animation change there, and run `tests/animator.test.ts`.
 - Every character is one shared Degen body (`src/scripts/city3d/character.ts`),
   sculpted after the brand art at human proportions (about 1.3 tall at
   scale 1, six and a half heads, hips `HIP_HEIGHT` 0.62), with knees,
@@ -1377,7 +1477,7 @@ it and has been retired completely. Build only on what's here.
     layout is the car's: the stick turns and climbs, the pedals read
     Faster / Slower) and `data-plane` (the header reads "Flying ·
     <aircraft>"); styles in `src/styles/fly.css`. Controls: W / S throttle,
-    A / D turn, arrows or Space / Shift climb and dive, V camera, E get out;
+    A / D turn, arrows or Space / Shift climb and dive, V camera, F get out;
     gamepad left stick, RT / LT, Y, View. Check the readout, stick, pedals
     and prompt at phone widths, upright and on their side.
 
@@ -1512,7 +1612,7 @@ it and has been retired completely. Build only on what's here.
   are `unitSolids()` (per kind, `UNIT_SHAPES`), fed to walking and driving
   with the plots' (`plotSolids` in `index.ts`). Signs use `occlude()`.
 - In walk mode, standing at your stall or a unit's door (`places()` in
-  `tycoon-ui.ts`, the walk deps `places` / `openPlace`) shows a prompt (E or
+  `tycoon-ui.ts`, the walk deps `places` / `openPlace`) shows a prompt (F or
   a tap) that opens the card on that place, and standing at a stall or shop
   doubles its customers. The Workshop's door opens its panel. Your car
   parked near one of your places (stall, a built unit or the Workshop) lets
@@ -1670,10 +1770,10 @@ it and has been retired completely. Build only on what's here.
   - **Sending it home:** the garage menu's Keep calls it back to the turntable ("Bring my car home"). A reload puts it back there too.
 - Traffic stops for your car (`walker.r` in `life.ts` reaches further while driving). `bodies` in `life.ts` shares where the traffic and the pedestrians are, for the soft bumps.
 - **Controls:**
-  - Keyboard: W / S (or arrows) gas and brake / reverse, A / D steer, Space handbrake, V camera, E get out.
+  - Keyboard: W / S (or arrows) gas and brake / reverse, A / D steer, Space handbrake, H horn, V camera, F get out.
   - Touch: the stick steers (and pedals when no pedal is held), with Gas and Brake buttons (`data-drive-gas`, `data-drive-brake`). Layout while driving: a bigger stick bottom-left, Gas and Brake as tall pedals side by side bottom-right (Gas taller, on the outside), Get out at the top right and the speed at the top left, all clear of the phone's safe areas. Getting out brings the walk layout back.
-  - Gamepad: left stick steers, RT gas, LT brake, A handbrake, Y get out, View camera; the right stick or the mouse looks.
-- While driving, `.city.is-driving` hides the walk and combat HUD, and the header says "Driving · <car>" (`head.ts`). A gun is holstered on getting in.
+  - Gamepad: left stick steers (pressed: the horn), RT gas, LT brake, A handbrake, Y get out, View camera; the right stick or the mouse looks.
+- While driving, `.city.is-driving` hides the walk and combat HUD, and the header says "Driving · <car>" (`head.ts`). A gun is holstered on getting in. Your car's lights, horn, skid marks and gears are the city life plan's Phase 2 (above; `docs/life-plan.md`).
 - Check the pedals, stick, prompt and readout at phone widths, upright and on their side: nothing may overlap.
 
 - `drive.update()` returns the tiles moved; walk mode counts them on the
@@ -1943,8 +2043,11 @@ it and has been retired completely. Build only on what's here.
   `SOLIDS` except the dummies' own footprints (`SHOT_SOLIDS`), on plot
   buildings and on the ground. When dummies move, their footprints follow
   `DUMMIES` automatically.
-- Keys: click fires, right-click aims, R reloads, G holsters, Q / 1-4 swap
-  guns; Caps Lock (not R) toggles run. Where the mouse can't be captured
+- Keys: click fires, right-click aims, R reloads, G holsters, X / 1-4 swap
+  guns (Q and E are kept for peeking, animation Phase 4); F does what the
+  prompt says (the owner's call: every door, counter and getting in or
+  out, and F closes those menus); Shift sprints, Caps Lock (not R) toggles
+  walking, the touch Sprint button locks the sprint. Where the mouse can't be captured
   (`noLock` in `walk.ts`), click fires and dragging looks. Only a real mouse
   fires from the canvas (taps send mouse events too).
 - Swapping (`swap()` in `combat.ts`, `sim.swap()`, the `swap` message): once
@@ -2029,7 +2132,7 @@ it and has been retired completely. Build only on what's here.
   the purse on a win, XP either way, a quit is a loss; knock-outs and
   chains of three add XP). `walk.ts` wires it: the counter's prompt opens
   the menu, a fight hides Degen and feeds `fightFrame()` (W/A/S/D move
-  relative to the opponent, click or F punch, right-click or G kick, Shift
+  relative to the opponent, click punch, right-click or G kick, Shift
   block, Space dodge; touch: the stick and the four buttons; gamepad:
   stick, X / Y, LB held, A, Start quits), Esc or Quit ends it with the
   card, closing the card stands Degen up outside the ropes (`OUT`);
@@ -2159,12 +2262,12 @@ it and has been retired completely. Build only on what's here.
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`),
-  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`),
+  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,
   in `tests/merch.test.ts`), the crowd's baked clips (`crowdclips.ts`) and Degen's skeleton, weights, head and hands
-  (`skeleton.ts`, `body.ts`), his walking (`locomotion.ts`) and the guns in his hands (`gunfit.ts`, `stance.ts`). Modules that touch the DOM or `kit.ts` (canvas
+  (`skeleton.ts`, `body.ts`), his walking (`locomotion.ts`), the motion capture and its animation (`bvh.ts`, `mocap-build.ts`, `mocap.ts`, `movesim.ts`, `inertia.ts`, `motionmatch.ts`, `animator.ts`) and the guns in his hands (`gunfit.ts`, `stance.ts`). Modules that touch the DOM or `kit.ts` (canvas
   textures) can't load in Node; keep data a test needs in the DOM-free
   files.
 - When you change a rule or move something in the city, run the tests and

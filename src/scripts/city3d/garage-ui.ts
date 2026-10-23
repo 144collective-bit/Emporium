@@ -25,7 +25,7 @@
  * is real money and nothing is tied to the store or the token.
  *
  * Arrow keys or the D-pad pick a model (up / down on the pad: the paint),
- * Enter / A keeps it, Esc / B / E closes.
+ * Enter / A keeps it, Esc / B / F closes.
  */
 import { CAR_CATALOG, CAR_MODS, CAR_MOD_IDS, MOD_LEVELS, type CarModId } from './catalog';
 import { CARS } from './cars';

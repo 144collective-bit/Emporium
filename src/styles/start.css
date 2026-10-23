@@ -210,6 +210,37 @@
   outline: 2px solid #fff;
   outline-offset: 2px;
 }
+/* The credits: a line under the options, opened from its label */
+.city-start-credits summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  list-style: none;
+}
+.city-start-credits summary::-webkit-details-marker {
+  display: none;
+}
+.city-start-credits summary::after {
+  content: '+';
+  color: #ffffffb8;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.city-start-credits[open] summary::after {
+  content: '−';
+}
+.city-start-credits summary:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+.city-start-credits p {
+  margin: 6px 0 0;
+  color: #ffffffb8;
+  font-size: 12px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
 .city-start-back {
   justify-self: start;
   margin-top: 4px;
