@@ -6,16 +6,19 @@
  * the same movement (movesim.ts).
  *
  * - Moves: scripted programs (run and stop, turning back, weaving, a
- *   circle, starts and stops at a sprint...) or by hand (W A S D across
- *   the floor, Shift sprints, Caps Lock walks).
+ *   circle, starts and stops at a sprint, jumps running and standing,
+ *   short hops...) or by hand (W A S D across the floor, Shift sprints,
+ *   Caps Lock walks, Space jumps), with walk.ts's jump and gravity.
  * - Time: full speed, a quarter, a tenth; P pauses, . steps a frame.
  * - Cameras: side on, front, behind, free (drag to orbit, wheel to zoom).
  * - Foot traces (where each ball of the foot was held), and readouts:
  *   speed, the clip and frame playing, its rate, the match's cost, the
  *   blend left, jumps a second, the foot slide (how far a held foot has
  *   moved over the ground: now and the worst lately).
+ * - Floors: flat, kerbs, stairs, and a ledge to run off (up a ramp, a drop
+ *   of 1.6 tiles).
  * - The address can set it all up for recordings: `prog`, `gait`, `cam`,
- *   `speed`, `compare=0`, `traces=0`.
+ *   `floor`, `speed`, `compare=0`, `traces=0`.
  */
 import * as THREE from 'three';
 import { PLAYER, createDegen, type Degen } from './character';
@@ -29,10 +32,11 @@ import { createPost } from './post';
 const SCALE = 0.85;
 /** One tile in centimetres, for the readouts */
 const CM = 180;
-type Prog = 'manual' | 'runstop' | 'turnback' | 'weave' | 'circle' | 'startstop' | 'startback' | 'gaits' | 'idle';
+type Prog = 'manual' | 'runstop' | 'turnback' | 'weave' | 'circle' | 'startstop' | 'startback' | 'gaits' | 'idle' | 'jumps' | 'standjump' | 'hops';
 type Gait = 'walk' | 'run' | 'sprint';
 type Cam = 'side' | 'front' | 'back' | 'free';
-type Floor = 'flat' | 'kerbs' | 'stairs';
+type Floor = 'flat' | 'kerbs' | 'stairs' | 'ledge';
+const FLOORS: Floor[] = ['flat', 'kerbs', 'stairs', 'ledge'];
 
 /* ---------- The floors: flat, kerbs, stairs (along +z, the same for both figures) ---------- */
 
@@ -44,8 +48,18 @@ const RUN_LEN = FLIGHT.steps * FLIGHT.tread;
 const TOP = FLIGHT.steps * FLIGHT.rise;
 const PERIOD = FLIGHT.flat * 2 + RUN_LEN * 2 + FLIGHT.landing;
 const mod = (a: number, n: number) => ((a % n) + n) % n;
+/** A ledge every LEDGE.every tiles: flat, a ramp up to `top`, a flat top, then a drop back down */
+const LEDGE = { every: 16, ramp: 4, up: 6, flat: 2, top: 1.6 };
+/** walk.ts's jump, gravity and the extra pull down when the jump is let go early */
+const JUMP = 3.9;
+const GRAVITY = 11.5;
+const LET_GO = 16;
 /** The ground he walks on (the stairs an even ramp, as the city's are) and what his feet stand on (their treads) */
 function floorAt(kind: Floor, z: number, feet: boolean) {
+  if (kind === 'ledge') {
+    const u = mod(z, LEDGE.every) - LEDGE.ramp;
+    return u < 0 ? 0 : u < LEDGE.up ? (u / LEDGE.up) * LEDGE.top : u < LEDGE.up + LEDGE.flat ? LEDGE.top : 0;
+  }
   if (kind === 'kerbs') {
     const u = mod(z, KERB.every);
     return u >= KERB.from && u < KERB.from + KERB.long ? KERB.slab : KERB.road;
@@ -73,6 +87,9 @@ const PROGS: [Prog, string][] = [
   ['startstop', 'Start / stop'],
   ['startback', 'Set off back'],
   ['gaits', 'Gait changes'],
+  ['jumps', 'Run & jump'],
+  ['standjump', 'Stand & jump'],
+  ['hops', 'Short hops'],
   ['idle', 'Stand'],
   ['manual', 'By hand'],
 ];
@@ -111,9 +128,21 @@ function program(p: Prog, t: number, speed: number): [number, number] {
     // Walk, run, sprint, run, every two seconds (the gait buttons don't matter)
     case 'gaits':
       return [0, [GAITS.walk, GAITS.run, GAITS.sprint, GAITS.run][Math.floor(t / 2) % 4]];
+    case 'jumps':
+    case 'hops':
+      return [0, speed];
+    case 'standjump':
+      return [0, 0];
     default:
       return [0, 0];
   }
+}
+/** Whether a program presses Jump at `t` (once a cycle), and holds it: a full jump, or a short hop let go at once */
+function jumpOf(p: Prog, t: number, dt: number): { press: boolean; hold: boolean } {
+  const len = p === 'hops' ? 1.4 : 2.4;
+  const u = t % len;
+  if (p !== 'jumps' && p !== 'standjump' && p !== 'hops') return { press: false, hold: false };
+  return { press: u >= 1.2 && u - dt < 1.2, hold: u >= 1.2 && u < (p === 'hops' ? 1.27 : 1.9) };
 }
 
 export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boolean }) {
@@ -123,7 +152,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   ui.innerHTML = `
     <canvas class="anim-lab-view" aria-hidden="true"></canvas>
     <div class="anim-lab-panel">
-      <div class="anim-lab-head"><span class="anim-lab-title">Animation lab</span><span class="anim-lab-note">?anim · Phase 1</span><button class="anim-lab-close" type="button" aria-label="Close the lab">×</button></div>
+      <div class="anim-lab-head"><span class="anim-lab-title">Animation lab</span><span class="anim-lab-note">?anim · Phase 3</span><button class="anim-lab-close" type="button" aria-label="Close the lab">×</button></div>
       <div class="anim-lab-row" data-progs></div>
       <div class="anim-lab-row" data-gaits></div>
       <div class="anim-lab-row" data-time></div>
@@ -131,7 +160,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       <div class="anim-lab-row" data-floors></div>
       <div class="anim-lab-row" data-toggles></div>
       <dl class="anim-lab-read" data-read></dl>
-      <p class="anim-lab-hint">By hand: W A S D, Shift sprints, Caps Lock walks. P pauses, . steps.</p>
+      <p class="anim-lab-hint">By hand: W A S D, Shift sprints, Caps Lock walks, Space jumps. P pauses, . steps.</p>
     </div>`;
   root.append(ui);
   const canvas = ui.querySelector<HTMLCanvasElement>('canvas')!;
@@ -148,7 +177,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   const rec = q.has('rec');
   let compare = q.get('compare') !== '0';
   let traces = q.get('traces') !== '0';
-  let floorKind: Floor = (['flat', 'kerbs', 'stairs'] as Floor[]).find((f) => f === q.get('floor')) ?? 'flat';
+  let floorKind: Floor = FLOORS.find((f) => f === q.get('floor')) ?? 'flat';
   let paused = false;
   let stepOnce = false;
 
@@ -182,7 +211,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
     paints.push(button('time', label, () => speed === s && !paused, () => ((speed = s), (paused = false))));
   paints.push(button('time', 'Pause', () => paused, () => (paused = !paused)));
   paints.push(button('time', 'Step', () => false, () => ((paused = true), (stepOnce = true))));
-  for (const f of ['flat', 'kerbs', 'stairs'] as Floor[]) paints.push(button('floors', f[0].toUpperCase() + f.slice(1), () => floorKind === f, () => ((floorKind = f), buildFloor())));
+  for (const f of FLOORS) paints.push(button('floors', f[0].toUpperCase() + f.slice(1), () => floorKind === f, () => ((floorKind = f), buildFloor())));
   for (const c of ['side', 'front', 'back', 'free'] as Cam[]) paints.push(button('cams', c[0].toUpperCase() + c.slice(1), () => cam === c, () => (cam = c)));
   paints.push(button('toggles', 'Old beside', () => compare, () => (compare = !compare)));
   paints.push(button('toggles', 'Foot traces', () => traces, () => (traces = !traces)));
@@ -255,6 +284,17 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
         const z2 = z0 + RUN_LEN + FLIGHT.landing;
         for (let k = 0; k < FLIGHT.steps; k++) box(z2 + k * FLIGHT.tread, z2 + (k + 1) * FLIGHT.tread, (FLIGHT.steps - k) * FLIGHT.rise);
       }
+    if (floorKind === 'ledge') {
+      // (the ramp and the top as one side profile, across both lanes)
+      const sh = new THREE.Shape();
+      sh.moveTo(LEDGE.ramp, 0);
+      sh.lineTo(LEDGE.ramp + LEDGE.up, LEDGE.top);
+      sh.lineTo(LEDGE.ramp + LEDGE.up + LEDGE.flat, LEDGE.top);
+      sh.lineTo(LEDGE.ramp + LEDGE.up + LEDGE.flat, 0);
+      const g = new THREE.ExtrudeGeometry(sh, { depth: 3, bevelEnabled: false }).rotateY(-Math.PI / 2);
+      for (let z = -3 * LEDGE.every; z < 400; z += LEDGE.every) terrain.add(new THREE.Mesh(g.clone().translate(2.1, 0, z), stone));
+      g.dispose();
+    }
   }
   buildFloor();
 
@@ -290,6 +330,12 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   let worstAt = 0;
   const jumpTimes: number[] = [];
   let lastJumps = 0;
+  // Up and down (walk.ts's way): his and the old walk's beside him
+  const body = () => ({ y: 0, vy: 0, fall: 0, grounded: true });
+  const me = body();
+  const them = body();
+  let jumpHeld = false;
+  let jumpPress = false;
 
   // By hand
   const keys = new Set<string>();
@@ -300,6 +346,10 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       else if (e.code === 'Period') (paused = true), (stepOnce = true);
       else if (e.code === 'CapsLock') walkLock = !walkLock;
       else if (e.code === 'Escape') close();
+      else if (e.code === 'Space' && !e.repeat) {
+        jumpPress = true;
+        e.preventDefault();
+      }
       keys.add(e.code);
       if (['KeyW', 'KeyA', 'KeyS', 'KeyD'].includes(e.code) && prog !== 'manual') prog = 'manual';
       paint();
@@ -346,10 +396,24 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
 
   const ground = (_x: number, gz: number) => floorAt(floorKind, gz, false);
   const feet = (_x: number, gz: number) => floorAt(floorKind, gz, true);
-  // (his height: up a kerb eased as walk.ts does it, otherwise on the ground)
+  // (his height as walk.ts has it: gravity always, up a kerb eased, a jump pressed with Jump held or let go)
   let y = 0;
   let oy = 0;
-  const climb = (now: number, g: number, dt: number) => (now < g - 0.05 ? now + (g - now) * (1 - Math.exp(-20 * dt)) : g);
+  const fallTo = (b: ReturnType<typeof body>, g: number, dt: number, press: boolean, hold: boolean) => {
+    if (press && b.grounded) {
+      b.vy = JUMP;
+      b.grounded = false;
+    }
+    b.vy -= (GRAVITY + (!hold && b.vy > 0 ? LET_GO : 0)) * dt;
+    b.y += b.vy * dt;
+    b.fall = b.vy;
+    if (b.y <= g) {
+      b.y = b.y < g - 0.05 ? b.y + (g - b.y) * (1 - Math.exp(-20 * dt)) : g;
+      b.vy = 0;
+      b.grounded = true;
+    } else if (b.y > g + 0.04) b.grounded = false;
+    return b.y;
+  };
   const beside = (): [number, number] => (cam === 'side' ? [0, -2.2] : [1.6, 0]);
   const look = new THREE.Vector3();
   const step = (dt: number) => {
@@ -371,13 +435,15 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
         gz *= CLIMB / g;
       }
     }
-    stepMove(move, gx, gz, true, dt);
+    stepMove(move, gx, gz, me.grounded, dt);
     x += move.vx * dt;
     z += move.vz * dt;
-    y = climb(y, ground(x, z), dt);
+    const j = prog === 'manual' ? { press: jumpPress, hold: keys.has('Space') } : jumpOf(prog, clock, dt);
+    jumpHeld = j.hold;
+    y = fallTo(me, ground(x, z), dt, j.press, j.hold);
     const v = Math.hypot(move.vx, move.vz);
     const sprint = THREE.MathUtils.clamp((v - GAITS.run) / (GAITS.sprint - GAITS.run), 0, 1);
-    anim.update({ dt, x, y, z, move, gx, gz, scale: SCALE, ground, feet, sprint });
+    anim.update({ dt, x, y, z, move, gx, gz, scale: SCALE, ground, feet, sprint, grounded: me.grounded, vy: me.grounded ? me.fall : me.vy, jump: JUMP, gravity: GRAVITY });
     hero.update();
     applyTo(hero.rig, anim.rot, anim.hips);
     hero.g.position.set(x, y, z);
@@ -385,8 +451,9 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
     hero.g.scale.setScalar(SCALE);
     // The old walk beside him, on the same movement (across the picture from him, whichever the camera)
     const [dx, dz] = beside();
-    oy = climb(oy, ground(x + dx, z + dz), dt);
-    loco.update({ dt, t: clock, x: x + dx, y: oy, z: z + dz, vx: move.vx, vz: move.vz, face: move.face, grounded: true, vy: 0, scale: SCALE, ground, armed: false });
+    oy = fallTo(them, ground(x + dx, z + dz), dt, j.press, j.hold);
+    jumpPress = false;
+    loco.update({ dt, t: clock, x: x + dx, y: oy, z: z + dz, vx: move.vx, vz: move.vz, face: move.face, grounded: them.grounded, vy: them.grounded ? them.fall : them.vy, scale: SCALE, ground, armed: false });
     copyPose(loco.pose, old.pose);
     old.update();
     placeRoot(old.g, x + dx, oy, z + dz, move.face, SCALE, loco.root);
@@ -440,6 +507,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       ['Jumps', `${(jumpTimes.length / 2).toFixed(1)} a second`],
       ['Foot slide', `${(slideNow * CM).toFixed(1)} cm (worst lately ${(worst * CM).toFixed(1)} cm)`],
       ['Hips down', `${(dbg.drop * SCALE * CM).toFixed(1)} cm`],
+      ['Air', dbg.air ? `in the air${jumpHeld ? ' · Jump held' : ''}${dbg.arms > 0.01 ? ` · arms up ${((dbg.arms * 180) / Math.PI).toFixed(0)}°` : ''}` : `on the ground${dbg.squash > 0.002 ? ` · landing ${(dbg.squash * SCALE * CM).toFixed(0)} cm down` : ''}`],
       ['Feet', anim.feet.map((f) => (f.locked ? 'held' : 'free')).join(' · ')],
     ];
     read.innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');

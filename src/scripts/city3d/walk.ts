@@ -93,6 +93,8 @@ const AIMING = 1.68;
 const CLIMB = 1.75;
 const JUMP = 3.9;
 const GRAVITY = 11.5;
+/** How long a hard landing shakes the camera */
+const LAND_SHAKE = 0.3;
 const SCALE = 0.85;
 /** How far you can go: the world's edge */
 const BOUNDS = WORLD_BOUNDS;
@@ -214,6 +216,9 @@ export function createWalk(d: WalkDeps) {
   /** The camera's dip on a hard stop, and how fast it's moving */
   let dip = 0;
   let dipV = 0;
+  // A hard landing's shake (seconds left of it, and how hard)
+  let shakeT = 0;
+  let shakeK = 0;
   /** Seconds since the camera last turned (a while standing still, he looks round by himself) */
   let camStill = 0;
   let lookAround = 0;
@@ -1604,8 +1609,19 @@ export function createWalk(d: WalkDeps) {
       grounded = true;
     } else if (pos.y > ground + 0.04) grounded = false;
 
-    // A hard landing plays the procedural crouch or roll before the motion capture takes him back
-    if (grounded && !wasGrounded && -fall > LAND_CROUCH) landHold = -fall > LAND_ROLL && speed > 2 ? 0.75 : 0.5;
+    // A hard landing at a run plays the procedural roll before the motion capture takes him back (it
+    // lands everything else itself: animator.ts); the camera dips with every landing and shakes with a hard one
+    if (grounded && !wasGrounded) {
+      if (-fall > LAND_ROLL && speed > 2) landHold = 0.75;
+      else if (!animator && -fall > LAND_CROUCH) landHold = 0.5;
+      if (!d.reduced && !firstPerson) {
+        dipV -= 31 * 0.16 * THREE.MathUtils.clamp((-fall - 2) / 8, 0, 1);
+        if (-fall > LAND_CROUCH) {
+          shakeT = LAND_SHAKE;
+          shakeK = 0.035 * THREE.MathUtils.clamp((-fall - LAND_CROUCH) / (LAND_ROLL - LAND_CROUCH), 0.3, 1);
+        }
+      }
+    }
     landHold = Math.max(0, landHold - dt);
 
     // Animation: the feet planted as he goes (locomotion.ts), then emotes, the gun and the head on top
@@ -1670,14 +1686,14 @@ export function createWalk(d: WalkDeps) {
       );
     }
     let drawFace = face;
-    const mocapOn = !!animator && grounded && landHold <= 0 && !combat.armed && !emote && !aim && !shooting;
+    const mocapOn = !!animator && landHold <= 0 && !combat.armed && !emote && !aim && !shooting;
     if (animator && anim) {
       // (a fresh start after a jump in place: walking started, a fast travel, the end of a ride)
       if ((mocapW < 0.01 && mocapOn) || lastPos.distanceToSquared(pos) > 4) animator.reset();
       mocapW = THREE.MathUtils.clamp(mocapW + (mocapOn ? dt / 0.18 : -dt / 0.12), 0, 1);
       if (mocapW > 0) {
         const w = mocapW * mocapW * (3 - 2 * mocapW);
-        animator.update({ dt, x: pos.x, y: pos.y, z: pos.z, move: ms, gx, gz, scale: SCALE, ground: groundAt, feet: feetAt, sprint: runAmt });
+        animator.update({ dt, x: pos.x, y: pos.y, z: pos.z, move: ms, gx, gz, scale: SCALE, ground: groundAt, feet: feetAt, sprint: runAmt, grounded, vy: grounded ? fall : vy, jump: JUMP, gravity: GRAVITY });
         anim.applyTo(hero.rig, animator.rot, animator.hips, w);
         anim.addLook(hero.rig, headYaw + lookAround, headPitch * 0.5, w);
       }
@@ -1713,6 +1729,13 @@ export function createWalk(d: WalkDeps) {
     const room = firstPerson ? 0 : cameraRoom(pivot, offset, want);
     camDist = room < camDist ? room : camDist + (room - camDist) * damp(4, dt);
     camera.position.copy(pivot).addScaledVector(offset, camDist);
+    if (shakeT > 0) {
+      shakeT = Math.max(0, shakeT - dt);
+      const k = shakeK * (shakeT / LAND_SHAKE) ** 2;
+      camera.position.x += Math.sin(shakeT * 71) * k * Math.cos(yaw);
+      camera.position.z -= Math.sin(shakeT * 71) * k * Math.sin(yaw);
+      camera.position.y += Math.sin(shakeT * 53 + 1) * k;
+    }
     if (firstPerson) camera.position.y += Math.sin(phase * 2) * 0.025 * stride * (1 - air) * (1 - combat.aimed * 0.8);
     view.set(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
     lookAt.copy(camera.position).sub(view);

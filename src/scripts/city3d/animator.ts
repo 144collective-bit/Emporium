@@ -16,13 +16,21 @@
  *    stairs); a foot left too far behind lets go and catches up smoothly;
  *    the hips come down when a leg can't reach.
  *
+ * Jumps, falls and landings (Phase 3): a jump starts from the take-off
+ * that best carries on from this frame (a running one off the right foot,
+ * a standing one off both), plays its flight as the game's own rise and
+ * fall go (its vertical speed, the ground coming up), holds the reach for
+ * the ground on a long fall with the arms coming up, and lands on the
+ * touchdown that carries on best (running on, or stopping), the hips
+ * taking a harder landing (`AIR`).
+ *
  * The result is each body bone's turn (`rot`, MOCAP_BONES' order) and the
  * hips' place (`hips`) in his own frame at scale 1, for walk.ts to put on
  * the figure.
  */
 import * as THREE from 'three';
 import { FOOT_BONES, MB, MOCAP_BONES, MOCAP_FPS, NB, type MoData, PARENT, type Posed, REST, TOE_BONES, newPosed, posed } from './mocap';
-import { angVel, createInertia, decay, expQ, logQ, wrap } from './inertia';
+import { angVel, createInertia, decay, expQ, logQ, rate as springRate, wrap } from './inertia';
 import { buildDatabase, cost, type Database, AHEAD, FEATURES, search, setTrajectory } from './motionmatch';
 import { ahead, type MoveState } from './movesim';
 import { ANKLE_H, SHIN_GROUND, THIGH, type Skeleton } from './skeleton';
@@ -44,6 +52,13 @@ export interface AnimInput {
   feet?: (x: number, z: number, y: number) => number;
   /** How far into a sprint (0 a run or slower, 1 flat out) */
   sprint: number;
+  /** On the ground (true if not given) */
+  grounded?: boolean;
+  /** His vertical speed (world, up +); on the frame he lands, the speed he landed at */
+  vy?: number;
+  /** The game's take-off speed and gravity (walk.ts's JUMP and GRAVITY) */
+  jump?: number;
+  gravity?: number;
 }
 
 /** How much faster or slower a clip may play to match his speed, and how much more flat out */
@@ -79,6 +94,21 @@ const LEG_REACH = (THIGH + Math.abs(SHIN_GROUND + ANKLE_H)) * 0.998;
 export const FACE = { slow: 0.22, fast: 0.07, at: 3, most: 0.9 };
 /** The inertialization's half-life */
 const BLEND = 0.09;
+/**
+ * In the air: a fall without a jump counts once he's `drop` over the ground
+ * (world) or `after` seconds up; a flight's last `lead` frames play as the
+ * ground comes up; it lands on its own touchdown unless another costs under
+ * `margin` of it; for `settle` seconds after, the landing plays on unless a
+ * search finds something under `margin` of it too. A landing faster than
+ * `crouch` (world speed) squashes the hips down, up to `squash` (rig
+ * numbers) at `hard`, the chest bowing `bow` radians a rig number of it; a
+ * long fall raises the arms up to `arms` radians over `armsIn` seconds,
+ * once the flight's frames have been used up for `armsAfter`
+ */
+export const AIR = { margin: 0.75, drop: 0.3, after: 0.18, lead: 4, settle: 0.3, crouch: 4.5, hard: 9.5, squash: 0.16, bow: 1.6, arms: 0.7, armsAfter: 0.15, armsIn: 0.6 };
+/** The game's jump and gravity, when the input doesn't say (walk.ts's) */
+const JUMP = 3.9;
+const GRAVITY = 11.5;
 
 const X = new THREE.Vector3(1, 0, 0);
 const Z = new THREE.Vector3(0, 0, 1);
@@ -215,6 +245,20 @@ export function createAnimator(data: MoData) {
   let face = 0;
   let lastCost = 0;
   let jumps = 0;
+  // In the air: the flight playing, the speed it maps onto, how long the flight's frames have been
+  // used up (a long fall); after landing, how long the landing still plays; the hips' squash
+  let inAir = false;
+  let flight = -1;
+  let v0 = JUMP;
+  let airT = 0;
+  let held = 0;
+  let settle = 0;
+  let squash = 0;
+  let squashV = 0;
+  let squashH = 0.12;
+  // Where a fall without a jump starts: each flight's top
+  const falls = new Uint8Array(db.count);
+  for (const f of db.flights) falls[db.start[f.clip] + Math.round((f.from + f.to) / 2)] = 1;
   const feet: Foot[] = [0, 1].map(() => ({ locked: false, wait: false, lock: new THREE.Vector3(), off: new THREE.Vector3(), offV: new THREE.Vector3(), slide: 0, drift: -1, held: new THREE.Vector3(), at: new THREE.Vector3(), rise: 0, riseV: 0, lockG: 0 }));
 
   // The middle of the run's swing, per swinging bone, for the sprint to push away from
@@ -331,17 +375,51 @@ export function createAnimator(data: MoData) {
       inertia.reset();
     }
 
-    // 1. Play on, matched to his speed
+    // 0. Into the air (a jump, or a fall off something higher than a kerb), and back down
+    const grounded = inp.grounded ?? true;
+    const vy = inp.vy ?? 0;
+    const jumpV = inp.jump ?? JUMP;
+    const over = grounded ? 0 : inp.y - inp.ground(inp.x, inp.z, inp.y + 0.3);
+    airT = grounded ? 0 : airT + dt;
+    if (!inAir && !grounded) {
+      const jumping = vy > jumpV * 0.4;
+      if (jumping || over > AIR.drop || airT > AIR.after) takeOff(jumping, vy, jumpV);
+    }
+    let landed = 0;
+    if (inAir && grounded) {
+      landed = Math.max(0, -vy);
+      land();
+    }
+
+    // 1. Play on: matched to his speed on the ground; in the air, as far through the flight as
+    // his rise and fall have gone (never backwards), its last frames as the ground comes up
     const g = at(clip, t);
     const animSpeed = db.speed[g];
     const simSpeed = Math.hypot(m.vx, m.vz) / inp.scale;
-    rate = animSpeed > 0.4 && simSpeed > 0.25 ? THREE.MathUtils.clamp(simSpeed / animSpeed, RATE.min, RATE.max + RATE.sprint * inp.sprint) : 1;
     const yaw0 = yawAt(clip, t);
-    t += dt * MOCAP_FPS * rate;
     let force = false;
-    if (t >= db.clips[clip].frames - 1) {
-      t = db.clips[clip].frames - 1;
-      force = true;
+    if (inAir) {
+      rate = 1;
+      const F = db.flights[flight];
+      const span = F.to - F.from;
+      let want = F.from + THREE.MathUtils.clamp(0.5 * (1 - vy / v0), 0, 1) * span;
+      const gr = inp.gravity ?? GRAVITY;
+      const tl = (vy + Math.sqrt(Math.max(0, vy * vy + 2 * gr * Math.max(0, over)))) / gr;
+      want = Math.min(want, F.to - AIR.lead);
+      if (vy < 0) want = Math.max(want, F.to - tl * MOCAP_FPS);
+      want = Math.min(want, F.to - 0.5);
+      held = want >= F.to - AIR.lead - 0.01 && tl * MOCAP_FPS > AIR.lead ? held + dt : Math.max(0, held - dt * 2);
+      t = Math.max(t, Math.min(want, t + dt * MOCAP_FPS * 3));
+    } else {
+      rate = animSpeed > 0.4 && simSpeed > 0.25 ? THREE.MathUtils.clamp(simSpeed / animSpeed, RATE.min, RATE.max + RATE.sprint * inp.sprint) : 1;
+      t += dt * MOCAP_FPS * rate;
+      held = 0;
+      if (t >= db.clips[clip].frames - 1) {
+        t = db.clips[clip].frames - 1;
+        force = true;
+      }
+      // (a ground clip never plays on into a jump: that's the air's to start)
+      if (db.flightOf[at(clip, t)] >= 0) force = true;
     }
     // The way he's shown facing turns as the clip turns (a plant and a turn, steps round on the
     // spot), pulled towards the springs' facing: gently when he's slow, firmly at a run, and
@@ -354,29 +432,25 @@ export function createAnimator(data: MoData) {
     if (Math.abs(left) > FACE.most) face = m.face - Math.sign(left) * FACE.most;
     face = wrap(face);
 
-    // 2. Search
-    still = Math.hypot(m.vx, m.vz) < STAND.speed && Math.hypot(inp.gx, inp.gz) < 0.01 ? still + dt : 0;
-    const stand = still > STAND.after;
+    // 2. Search (on the ground; while a landing plays out, only for something far better)
+    settle = Math.max(0, settle - dt);
+    // (standing: not in the air, nor while a landing plays out)
+    still = !inAir && Math.hypot(m.vx, m.vz) < STAND.speed && Math.hypot(inp.gx, inp.gz) < 0.01 ? still + dt : 0;
+    const stand = still > STAND.after && settle <= 0;
     // (settling: the first search standing still looks for the idle at once)
     if (stand && !standing[clip]) searchIn = 0;
     searchIn -= dt;
     const sharp = Math.hypot(inp.gx - lastGx, inp.gz - lastGz) > MATCH.sharp;
     lastGx = inp.gx;
     lastGz = inp.gz;
-    if (searchIn <= 0 || force || sharp) {
+    if (!inAir && (force || searchIn <= 0 || sharp)) {
       searchIn = MATCH.every;
       const cur = at(clip, t);
       const best = searchFor(false, cur, stand ? standing : undefined);
       const curCost = db.open[cur] && !force ? cost(db, q, cur) : Infinity;
       const near = db.clipOf[best] === clip && Math.abs(db.frameOf[best] - t) < 3;
-      if (best >= 0 && !near && (force || lastCost + (stand && standing[clip] ? STAND.margin : MATCH.margin) < curCost || (stand && !standing[clip]))) {
-        sample(clip, t, srcRot, srcHips, srcAv, srcHv);
-        clip = db.clipOf[best];
-        t = db.frameOf[best];
-        sample(clip, t, dstRot, dstHips, dstAv, dstHv);
-        inertia.jump(srcRot, srcAv, srcHips, srcHv, dstRot, dstAv, dstHips, dstHv);
-        jumps++;
-      }
+      const better = settle > 0 ? lastCost < curCost * AIR.margin : lastCost + (stand && standing[clip] ? STAND.margin : MATCH.margin) < curCost || (stand && !standing[clip]);
+      if (best >= 0 && !near && (force || better)) cut(best);
     }
 
     // The pose, with what's left of any jump
@@ -384,8 +458,16 @@ export function createAnimator(data: MoData) {
     inertia.step(dt);
     inertia.apply(rot, hips);
 
-    // 3. The sprint and the lean into bends
-    if (inp.sprint > 0) {
+    // The flight's own rise comes out: the game does the jump
+    {
+      const c0 = db.start[clip] + Math.min(db.clips[clip].frames - 1, Math.floor(t));
+      const c1 = db.start[clip] + Math.min(db.clips[clip].frames - 1, Math.floor(t) + 1);
+      const u = t - Math.floor(t);
+      hips.y -= db.bump[c0] + (db.bump[c1] - db.bump[c0]) * u;
+    }
+
+    // 3. The sprint and the lean into bends (on the ground)
+    if (inp.sprint > 0 && !inAir) {
       SWING.forEach((b, i) => {
         qa.fromArray(rot, b * 4).multiply(qb.copy(mean[i]).invert());
         logQ(qa, lv).multiplyScalar(1 + LAYERS.sprintSwing * inp.sprint);
@@ -400,7 +482,7 @@ export function createAnimator(data: MoData) {
     const c = Math.cos(-face);
     const s = Math.sin(-face);
     const pull = m.ax * c + m.az * s;
-    const want = THREE.MathUtils.clamp(-LAYERS.bank * pull, -LAYERS.bankMax, LAYERS.bankMax);
+    const want = inAir ? 0 : THREE.MathUtils.clamp(-LAYERS.bank * pull, -LAYERS.bankMax, LAYERS.bankMax);
     [bank, bankV] = decay(bank - want, bankV, 0.08, dt);
     bank += want;
     if (Math.abs(bank) > 1e-4) {
@@ -408,6 +490,36 @@ export function createAnimator(data: MoData) {
       hips.applyQuaternion(qa);
       qb.fromArray(rot, 0);
       qa.multiply(qb).toArray(rot, 0);
+    }
+
+    // A long fall: the flight's frames used up, the arms come up and out
+    const arms = AIR.arms * THREE.MathUtils.smoothstep(held, AIR.armsAfter, AIR.armsAfter + AIR.armsIn);
+    if (arms > 1e-3) {
+      posed(rot, 0, hips.x, hips.y, hips.z, P);
+      for (const [b, sgn] of [
+        [MB.armL, -1],
+        [MB.armR, 1],
+      ] as const) {
+        const pw = P.rot[PARENT[b]];
+        qa.setFromAxisAngle(Z, sgn * arms);
+        qb.copy(pw).invert().multiply(qa).multiply(pw).multiply(ql.fromArray(rot, b * 4));
+        qb.normalize().toArray(rot, b * 4);
+      }
+    }
+    // A hard landing: the hips squash down and the chest bows, then he comes back up
+    if (landed > AIR.crouch) {
+      const k = THREE.MathUtils.clamp((landed - AIR.crouch) / (AIR.hard - AIR.crouch), 0, 1);
+      squashH = 0.1 + 0.08 * k;
+      squashV = AIR.squash * (0.35 + 0.65 * k) * springRate(squashH) * Math.E;
+      squash = 0;
+    }
+    [squash, squashV] = decay(squash, squashV, squashH, dt);
+    // (the hips come down with the drop, below, once the feet are placed)
+    if (squash > 1e-4) {
+      for (const b of [MB.spine1, MB.spine2]) {
+        qa.setFromAxisAngle(X, (AIR.bow / 2) * squash).multiply(qb.fromArray(rot, b * 4));
+        qa.toArray(rot, b * 4);
+      }
     }
 
     // 4. The feet: each locked by the ball (its place on the ground); the ankle goes where the
@@ -418,7 +530,8 @@ export function createAnimator(data: MoData) {
     posed(rot, 0, hips.x, hips.y, hips.z, P);
     for (let i = 0; i < 2; i++) {
       const f = feet[i];
-      const cf = db.contacts[clip][Math.min(db.clips[clip].frames - 1, Math.round(t)) * 2 + i] === 1;
+      // (in the air nothing's held)
+      const cf = !inAir && db.contacts[clip][Math.min(db.clips[clip].frames - 1, Math.round(t)) * 2 + i] === 1;
       world(P.pos[FOOT_BONES[i]], inp, wv);
       world(P.pos[TOE_BONES[i]], inp, wb);
       // (held where the foot really is: the clip's, and what's left of catching up)
@@ -450,7 +563,8 @@ export function createAnimator(data: MoData) {
         for (const k of ['x', 'z'] as const) [f.off[k], f.offV[k]] = decay(f.off[k], f.offV[k], LOCK.catchUp, dt);
         const bx = wb.x + f.off.x;
         const bz = wb.z + f.off.z;
-        const ahead = Math.max(fg(bx, bz, inp.y + 0.3), fg(bx + m.vx * LOCK.look, bz + m.vz * LOCK.look, inp.y + 0.3)) - inp.y;
+        // (in the air the legs are the flight's: nothing reaches for the ground)
+        const ahead = inAir ? 0 : Math.max(fg(bx, bz, inp.y + 0.3), fg(bx + m.vx * LOCK.look, bz + m.vz * LOCK.look, inp.y + 0.3)) - inp.y;
         [f.rise, f.riseV] = decay(f.rise - ahead, f.riseV, ahead > f.rise ? 0.025 : 0.07, dt);
         f.rise += ahead;
         f.at.set(wv.x + f.off.x, wv.y + f.rise, wv.z + f.off.z);
@@ -460,7 +574,7 @@ export function createAnimator(data: MoData) {
     // foot it stands on (a kerb before he's up it, the treads of a flight drawn over the even
     // ramp he walks up): held feet count, a free one a little
     const wsum = feet.reduce((a, f) => a + (f.locked ? 1 : LIFT.free), 0);
-    const liftWant = THREE.MathUtils.clamp(feet.reduce((a, f) => a + f.rise * (f.locked ? 1 : LIFT.free), 0) / wsum, 0, LIFT.most) / inp.scale;
+    const liftWant = inAir ? 0 : THREE.MathUtils.clamp(feet.reduce((a, f) => a + f.rise * (f.locked ? 1 : LIFT.free), 0) / wsum, 0, LIFT.most) / inp.scale;
     [lift, liftV] = decay(lift - liftWant, liftV, 0.06, dt);
     lift += liftWant;
     if (lift > 1e-5) {
@@ -476,13 +590,14 @@ export function createAnimator(data: MoData) {
       world(P.pos[LEGS[i][0]], inp, hipW);
       // (the hips can come down as far as they went up, and LOCK.drop more)
       const most = (LOCK.drop + lift) * inp.scale;
-      let n = reachNeed(f.at, hipW, inp.scale);
+      let n = inAir ? 0 : reachNeed(f.at, hipW, inp.scale);
       if (f.locked && n > most) {
         f.locked = false;
         f.wait = true;
         f.off.set(f.lock.x - wb.x, 0, f.lock.z - wb.z);
         n = reachNeed(f.at, hipW, inp.scale);
       }
+      if (inAir) n = 0;
       need = Math.max(need, Math.min(n, most));
     }
     // (down when a leg needs it, back up gently)
@@ -490,8 +605,8 @@ export function createAnimator(data: MoData) {
     [drop, dropV] = decay(drop - dropWant, dropV, dropWant > drop ? 0.04 : 0.09, dt);
     drop += dropWant;
     drop = Math.max(0, drop);
-    if (drop > 1e-5) {
-      hips.y -= drop;
+    if (drop + Math.max(0, squash) > 1e-5) {
+      hips.y -= drop + Math.max(0, squash);
       posed(rot, 0, hips.x, hips.y, hips.z, P);
     }
     for (let i = 0; i < 2; i++) {
@@ -511,13 +626,52 @@ export function createAnimator(data: MoData) {
   }
 
   /** The query for here (the playing frame's pose with the springs' trajectory) and its best frame */
-  function searchFor(fresh: boolean, cur = 0, only?: Uint8Array) {
+  function searchFor(fresh: boolean, cur = 0, only?: Uint8Array, frames?: Uint8Array) {
     if (fresh) q.fill(0);
     else for (let k = 0; k < 15; k++) q[k] = db.feat[cur * FEATURES + k];
     setTrajectory(db, q, pts);
-    const r = search(db, q, only);
+    const r = search(db, q, only, frames);
     lastCost = r.cost;
     return r.g;
+  }
+  /** Over to frame `g`, what was showing inertialized away */
+  function cut(g: number) {
+    sample(clip, t, srcRot, srcHips, srcAv, srcHv);
+    // (the flight's rise is the game's: both sides without it)
+    srcHips.y -= db.bump[at(clip, t)];
+    clip = db.clipOf[g];
+    t = db.frameOf[g];
+    sample(clip, t, dstRot, dstHips, dstAv, dstHv);
+    dstHips.y -= db.bump[g];
+    inertia.jump(srcRot, srcAv, srcHips, srcHv, dstRot, dstAv, dstHips, dstHv);
+    jumps++;
+  }
+  /** Into the air: a jump from the take-off that carries on best from here; a fall from a flight's top */
+  function takeOff(jumping: boolean, vy: number, jumpV: number) {
+    const g = searchFor(false, at(clip, t), undefined, jumping ? db.takeoff : falls);
+    if (g < 0) return;
+    cut(g);
+    inAir = true;
+    flight = db.flightOf[g];
+    v0 = jumping ? Math.max(vy, jumpV * 0.5) : jumpV;
+    held = 0;
+    for (const f of feet) f.locked = f.wait = false;
+  }
+  /**
+   * Down: the flight's own touchdown, playing straight on, unless another
+   * carries on better by `AIR.margin` (stopping where it runs on, or running
+   * on where it stops)
+   */
+  function land() {
+    const F = db.flights[flight];
+    inAir = false;
+    flight = -1;
+    settle = AIR.settle;
+    searchIn = MATCH.every;
+    const g = searchFor(false, at(clip, t), undefined, db.touchdown);
+    const own = db.start[F.clip] + F.to;
+    if (g >= 0 && g !== own && lastCost < cost(db, q, own) * AIR.margin) cut(g);
+    else t = Math.max(t, F.to);
   }
 
   return {
@@ -540,12 +694,15 @@ export function createAnimator(data: MoData) {
         f.off.set(0, 0, 0);
         f.offV.set(0, 0, 0);
       }
-      drop = dropV = bank = bankV = lift = liftV = 0;
+      drop = dropV = bank = bankV = lift = liftV = squash = squashV = 0;
+      inAir = false;
+      flight = -1;
+      settle = held = airT = 0;
       for (const f of feet) f.rise = f.riseV = 0;
     },
     /** What it's doing, for the lab */
     get debug() {
-      return { clip: db.clips[clip].name, frame: t, rate, cost: lastCost, blend: inertia.left, jumps, drop, lift, bank };
+      return { clip: db.clips[clip].name, frame: t, rate, cost: lastCost, blend: inertia.left, jumps, drop, lift, bank, air: inAir, squash, arms: AIR.arms * THREE.MathUtils.smoothstep(held, AIR.armsAfter, AIR.armsAfter + AIR.armsIn) };
     },
   };
 }
