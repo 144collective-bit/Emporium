@@ -822,8 +822,8 @@ it and has been retired completely. Build only on what's here.
   neutral athletic) from motion capture, then turns, jumps, armed
   movement, peeking (Q / E), crouch, slide, vault and climb, contact, and
   everyone on the same clips. Build it one phase at a time with the
-  owner's sign-off. Phase 1 (run, sprint and momentum) is built, for the
-  player on foot:
+  owner's sign-off. Phase 1 (run, sprint and momentum) and Phase 2
+  (turning, terrain and transitions) are built, for the player on foot:
   - **The data** is CMU's motion capture (free for commercial use; the
     acknowledgment is in the start menu's Options > Credits, named, never
     linked): subject 143's takes in `assets/mocap/cmu/` (BVH, untouched),
@@ -853,11 +853,24 @@ it and has been retired completely. Build only on what's here.
     in (`mocapW`) on the ground, unarmed, not aiming or emoting, and not
     for a moment after a hard landing (the procedural crouch and roll);
     everywhere else, and for everyone else, it's `locomotion.ts` as before.
+  - **Phase 2:** more takes (running turns, a quick stop, walking into a
+    run, turning on the spot, standing and waiting: `assets/mocap/takes.json`
+    and `CREDITS.md`); his shown facing follows the clip's own turn, pulled
+    to the springs' (`FACE`, `animator.face`: place the figure with it);
+    standing still only the idle is searched (`STAND`), and frames near a
+    clip's end cost more (`ENDING`); a free foot clears the ground just
+    ahead of it (`LOCK.look`), a held one stands on the ground it was put
+    down on, the hips follow the feet above his ground (`LIFT`). The feet
+    can stand on something other than what he walks on (`AnimInput.feet`):
+    Liberty Bridge's treads as drawn (`stairTread()` in liberty.ts, the
+    drawing's `STAIR_BASE`) over the ramp walking follows, and walk.ts slows
+    him to a brisk climb on them (`CLIMB`).
   - **The lab** is `?anim` (`anim-lab.ts`, styles `animlab.css`): the new
     animation beside the old on an open floor, scripted moves or W A S D,
-    slow motion, cameras, foot traces and readouts (the clip, its rate, the
-    match, the blend left, the foot slide); `rec`, `prog`, `gait`, `cam`,
-    `zoom`, `compare=0` in the address set it up for recordings. Review
+    slow motion, cameras, floors (flat, kerbs, stairs), foot traces and
+    readouts (the clip, its rate, the match, the blend left, the foot
+    slide); `rec`, `prog`, `gait`, `cam`, `floor`, `zoom`, `compare=0` in
+    the address set it up for recordings. Review
     every animation change there, and run `tests/animator.test.ts`.
 - Every character is one shared Degen body (`src/scripts/city3d/character.ts`),
   sculpted after the brand art at human proportions (about 1.3 tall at

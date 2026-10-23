@@ -29,15 +29,50 @@ import { createPost } from './post';
 const SCALE = 0.85;
 /** One tile in centimetres, for the readouts */
 const CM = 180;
-type Prog = 'manual' | 'runstop' | 'turnback' | 'weave' | 'circle' | 'startstop' | 'idle';
+type Prog = 'manual' | 'runstop' | 'turnback' | 'weave' | 'circle' | 'startstop' | 'startback' | 'gaits' | 'idle';
 type Gait = 'walk' | 'run' | 'sprint';
 type Cam = 'side' | 'front' | 'back' | 'free';
+type Floor = 'flat' | 'kerbs' | 'stairs';
+
+/* ---------- The floors: flat, kerbs, stairs (along +z, the same for both figures) ---------- */
+
+/** Kerbs: a slab up every KERB.every tiles, KERB.long of them, at the city's heights (world.ts SLAB over the road) */
+const KERB = { every: 10, from: 4, long: 5, road: 0.035, slab: 0.15 };
+/** Stairs at Liberty Bridge's size (liberty.ts): 15 steps up, a landing, 15 down, flat between */
+const FLIGHT = { steps: 15, rise: 0.23, tread: 0.31, flat: 4, landing: 3 };
+const RUN_LEN = FLIGHT.steps * FLIGHT.tread;
+const TOP = FLIGHT.steps * FLIGHT.rise;
+const PERIOD = FLIGHT.flat * 2 + RUN_LEN * 2 + FLIGHT.landing;
+const mod = (a: number, n: number) => ((a % n) + n) % n;
+/** The ground he walks on (the stairs an even ramp, as the city's are) and what his feet stand on (their treads) */
+function floorAt(kind: Floor, z: number, feet: boolean) {
+  if (kind === 'kerbs') {
+    const u = mod(z, KERB.every);
+    return u >= KERB.from && u < KERB.from + KERB.long ? KERB.slab : KERB.road;
+  }
+  if (kind !== 'stairs') return 0;
+  const u = mod(z, PERIOD) - FLIGHT.flat;
+  const up = (v: number) => (feet ? Math.min(FLIGHT.steps, Math.floor(v / FLIGHT.tread) + 1) * FLIGHT.rise : (v / RUN_LEN) * TOP);
+  if (u < 0) return 0;
+  if (u < RUN_LEN) return up(u);
+  if (u < RUN_LEN + FLIGHT.landing) return TOP;
+  if (u < RUN_LEN * 2 + FLIGHT.landing) return up(RUN_LEN * 2 + FLIGHT.landing - u);
+  return 0;
+}
+/** On a flight of the stairs (walk.ts slows him to a brisk climb on Liberty Bridge's: the same here) */
+const onFlight = (kind: Floor, z: number) => {
+  const u = mod(z, PERIOD) - FLIGHT.flat;
+  return kind === 'stairs' && ((u >= 0 && u < RUN_LEN) || (u >= RUN_LEN + FLIGHT.landing && u < RUN_LEN * 2 + FLIGHT.landing));
+};
+const CLIMB = 1.75;
 const PROGS: [Prog, string][] = [
   ['runstop', 'Run & stop'],
   ['turnback', 'Turn back'],
   ['weave', 'Weave'],
   ['circle', 'Circle'],
   ['startstop', 'Start / stop'],
+  ['startback', 'Set off back'],
+  ['gaits', 'Gait changes'],
   ['idle', 'Stand'],
   ['manual', 'By hand'],
 ];
@@ -68,6 +103,14 @@ function program(p: Prog, t: number, speed: number): [number, number] {
       const u = cycle(3);
       return u < 1.6 ? [0, speed] : [0, 0];
     }
+    // Standing, then off the way he's facing away from: a plant and a turn
+    case 'startback': {
+      const u = cycle(8);
+      return u < 1.5 ? [0, 0] : u < 4 ? [0, -speed] : u < 5.5 ? [0, 0] : [0, speed];
+    }
+    // Walk, run, sprint, run, every two seconds (the gait buttons don't matter)
+    case 'gaits':
+      return [0, [GAITS.walk, GAITS.run, GAITS.sprint, GAITS.run][Math.floor(t / 2) % 4]];
     default:
       return [0, 0];
   }
@@ -85,6 +128,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       <div class="anim-lab-row" data-gaits></div>
       <div class="anim-lab-row" data-time></div>
       <div class="anim-lab-row" data-cams></div>
+      <div class="anim-lab-row" data-floors></div>
       <div class="anim-lab-row" data-toggles></div>
       <dl class="anim-lab-read" data-read></dl>
       <p class="anim-lab-hint">By hand: W A S D, Shift sprints, Caps Lock walks. P pauses, . steps.</p>
@@ -104,6 +148,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   const rec = q.has('rec');
   let compare = q.get('compare') !== '0';
   let traces = q.get('traces') !== '0';
+  let floorKind: Floor = (['flat', 'kerbs', 'stairs'] as Floor[]).find((f) => f === q.get('floor')) ?? 'flat';
   let paused = false;
   let stepOnce = false;
 
@@ -137,6 +182,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
     paints.push(button('time', label, () => speed === s && !paused, () => ((speed = s), (paused = false))));
   paints.push(button('time', 'Pause', () => paused, () => (paused = !paused)));
   paints.push(button('time', 'Step', () => false, () => ((paused = true), (stepOnce = true))));
+  for (const f of ['flat', 'kerbs', 'stairs'] as Floor[]) paints.push(button('floors', f[0].toUpperCase() + f.slice(1), () => floorKind === f, () => ((floorKind = f), buildFloor())));
   for (const c of ['side', 'front', 'back', 'free'] as Cam[]) paints.push(button('cams', c[0].toUpperCase() + c.slice(1), () => cam === c, () => (cam = c)));
   paints.push(button('toggles', 'Old beside', () => compare, () => (compare = !compare)));
   paints.push(button('toggles', 'Foot traces', () => traces, () => (traces = !traces)));
@@ -187,6 +233,30 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), toon('#ffffff', { map: floorTex }));
   floor.rotation.x = -Math.PI / 2;
   scene.add(floor);
+  // The kerbs' slabs or the stairs' steps, from z -40 to 400 (the floor's own markings stay under them)
+  const terrain = new THREE.Group();
+  scene.add(terrain);
+  const stone = toon('#a39ad8');
+  function buildFloor() {
+    for (const m of terrain.children) (m as THREE.Mesh).geometry.dispose();
+    terrain.clear();
+    const box = (z0: number, z1: number, h: number) => {
+      // (across both figures' lanes, clear of the cameras)
+      const m = new THREE.Mesh(new THREE.BoxGeometry(3, h, z1 - z0), stone);
+      m.position.set(0.6, h / 2, (z0 + z1) / 2);
+      terrain.add(m);
+    };
+    if (floorKind === 'kerbs') for (let z = -40; z < 400; z += KERB.every) box(z + KERB.from, z + KERB.from + KERB.long, KERB.slab);
+    if (floorKind === 'stairs')
+      for (let p = -3 * PERIOD; p < 400; p += PERIOD) {
+        const z0 = p + FLIGHT.flat;
+        for (let k = 0; k < FLIGHT.steps; k++) box(z0 + k * FLIGHT.tread, z0 + (k + 1) * FLIGHT.tread, (k + 1) * FLIGHT.rise);
+        box(z0 + RUN_LEN, z0 + RUN_LEN + FLIGHT.landing, TOP);
+        const z2 = z0 + RUN_LEN + FLIGHT.landing;
+        for (let k = 0; k < FLIGHT.steps; k++) box(z2 + k * FLIGHT.tread, z2 + (k + 1) * FLIGHT.tread, (FLIGHT.steps - k) * FLIGHT.rise);
+      }
+  }
+  buildFloor();
 
   const hero: Degen = createDegen(PLAYER);
   const old: Degen = createDegen(PLAYER);
@@ -274,7 +344,12 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   addEventListener('resize', size);
   size();
 
-  const ground = () => 0;
+  const ground = (_x: number, gz: number) => floorAt(floorKind, gz, false);
+  const feet = (_x: number, gz: number) => floorAt(floorKind, gz, true);
+  // (his height: up a kerb eased as walk.ts does it, otherwise on the ground)
+  let y = 0;
+  let oy = 0;
+  const climb = (now: number, g: number, dt: number) => (now < g - 0.05 ? now + (g - now) * (1 - Math.exp(-20 * dt)) : g);
   const beside = (): [number, number] => (cam === 'side' ? [0, -2.2] : [1.6, 0]);
   const look = new THREE.Vector3();
   const step = (dt: number) => {
@@ -289,23 +364,32 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       gx = (ix / n) * s;
       gz = (iz / n) * s;
     }
+    if (onFlight(floorKind, z)) {
+      const g = Math.hypot(gx, gz);
+      if (g > CLIMB) {
+        gx *= CLIMB / g;
+        gz *= CLIMB / g;
+      }
+    }
     stepMove(move, gx, gz, true, dt);
     x += move.vx * dt;
     z += move.vz * dt;
+    y = climb(y, ground(x, z), dt);
     const v = Math.hypot(move.vx, move.vz);
     const sprint = THREE.MathUtils.clamp((v - GAITS.run) / (GAITS.sprint - GAITS.run), 0, 1);
-    anim.update({ dt, x, y: 0, z, move, gx, gz, scale: SCALE, ground, sprint });
+    anim.update({ dt, x, y, z, move, gx, gz, scale: SCALE, ground, feet, sprint });
     hero.update();
     applyTo(hero.rig, anim.rot, anim.hips);
-    hero.g.position.set(x, 0, z);
-    hero.g.rotation.set(0, move.face, 0);
+    hero.g.position.set(x, y, z);
+    hero.g.rotation.set(0, anim.face, 0);
     hero.g.scale.setScalar(SCALE);
     // The old walk beside him, on the same movement (across the picture from him, whichever the camera)
     const [dx, dz] = beside();
-    loco.update({ dt, t: clock, x: x + dx, y: 0, z: z + dz, vx: move.vx, vz: move.vz, face: move.face, grounded: true, vy: 0, scale: SCALE, ground, armed: false });
+    oy = climb(oy, ground(x + dx, z + dz), dt);
+    loco.update({ dt, t: clock, x: x + dx, y: oy, z: z + dz, vx: move.vx, vz: move.vz, face: move.face, grounded: true, vy: 0, scale: SCALE, ground, armed: false });
     copyPose(loco.pose, old.pose);
     old.update();
-    placeRoot(old.g, x + dx, 0, z + dz, move.face, SCALE, loco.root);
+    placeRoot(old.g, x + dx, oy, z + dz, move.face, SCALE, loco.root);
     old.g.visible = compare;
     // Traces and the slide
     anim.feet.forEach((f, i) => {
@@ -329,7 +413,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   const target = (out: THREE.Vector3) => {
     const [dx, dz] = compare ? beside() : [0, 0];
     const clear = cam === 'side' && innerWidth > 600 ? 1.3 / near : 0;
-    return out.set(x + dx / 2, 0.62, z + dz / 2 + clear);
+    return out.set(x + dx / 2, y + 0.62, z + dz / 2 + clear);
   };
   const want = new THREE.Vector3();
   // (the camera keeps exactly with them: eased after a runner, it trails and the picture slides off the figures)

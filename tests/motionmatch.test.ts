@@ -26,7 +26,7 @@ test('a frame\'s own features find it', () => {
     if (!db.open[g]) continue;
     const q = db.feat.slice(g * FEATURES, (g + 1) * FEATURES);
     const r = search(db, q);
-    assert.ok(r.cost < 1e-9, `frame ${g}: ${r.cost}`);
+    assert.ok(r.cost <= db.bias[g] + 1e-9, `frame ${g}: ${r.cost}`);
   }
 });
 

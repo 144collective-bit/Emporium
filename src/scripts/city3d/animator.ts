@@ -40,6 +40,8 @@ export interface AnimInput {
   scale: number;
   /** The ground's height at (x, z), from about `y` */
   ground: (x: number, z: number, y: number) => number;
+  /** ...and what the feet stand on, where it's drawn differently (a flight's treads over its ramp; `ground` if not given) */
+  feet?: (x: number, z: number, y: number) => number;
   /** How far into a sprint (0 a run or slower, 1 flat out) */
   sprint: number;
 }
@@ -49,15 +51,32 @@ export const RATE = { min: 0.8, max: 1.15, sprint: 0.2 };
 /** Searching: how often, how much better a frame must be to take over, and how sharp a change of the stick searches at once */
 export const MATCH = { every: 0.1, margin: 0.02, sharp: 1.2 };
 /**
+ * Standing: once he's been still `after` seconds (going under `speed` tiles
+ * a second, nothing asked), only the standing clips are searched, so he
+ * settles into the long idle instead of the quiet frames before a take sets
+ * off (whose trajectory knows a run is coming); settled in it, a frame must
+ * be `margin` better to take over, so its weight shifts and shuffles play on
+ */
+export const STAND = { after: 0.35, speed: 0.08, clips: ['idle'], margin: 0.6 };
+/**
  * A locked foot lets go once the clip's foot is this far away (rig
  * numbers), or when holding it would bring the hips down more than `drop`;
- * it catches up with this half-life
+ * it catches up with this half-life; a free foot clears the ground `look`
+ * seconds ahead of it
  */
-export const LOCK = { release: 0.2, drop: 0.06, catchUp: 0.08 };
+export const LOCK = { release: 0.2, drop: 0.06, catchUp: 0.08, look: 0.12 };
 /** The lean into a bend (radians per tile a second², and at most), and the sprint's lean forward and extra swing */
 export const LAYERS = { bank: 0.025, bankMax: 0.12, sprintLean: 0.09, sprintSwing: 0.35 };
+/** The hips' lift with the feet: how much a free foot counts beside a held one, and the most (world numbers) */
+export const LIFT = { free: 0.25, most: 0.3 };
 /** The legs' reach, hip to ankle, at scale 1 */
 const LEG_REACH = (THIGH + Math.abs(SHIN_GROUND + ANKLE_H)) * 0.998;
+/**
+ * The shown facing: pulled towards the springs' with a half-life from
+ * `slow` (standing) to `fast` (at `at` rig numbers a second and over), never
+ * more than `most` radians from it
+ */
+export const FACE = { slow: 0.22, fast: 0.07, at: 3, most: 0.9 };
 /** The inertialization's half-life */
 const BLEND = 0.09;
 
@@ -87,6 +106,10 @@ interface Foot {
   held: THREE.Vector3;
   /** Where the ankle is asked to go (world) */
   at: THREE.Vector3;
+  /** The ground it's on, or clearing (over his own), and how fast that's moving; where it was held */
+  rise: number;
+  riseV: number;
+  lockG: number;
 }
 
 /* ---------- Two-bone IK ---------- */
@@ -173,6 +196,8 @@ export function createAnimator(data: MoData) {
   const hips = new THREE.Vector3();
   const P = newPosed();
   const q = new Float32Array(FEATURES);
+  const standing = Uint8Array.from(db.clips, (c) => (STAND.clips.includes(c.name.replace('~', '')) ? 1 : 0));
+  let still = 0;
   let clip = 0;
   let t = 0;
   let searchIn = 0;
@@ -183,10 +208,14 @@ export function createAnimator(data: MoData) {
   let bankV = 0;
   let drop = 0;
   let dropV = 0;
+  let lift = 0;
+  let liftV = 0;
   let rate = 1;
+  /** The way he's shown facing (the clip's turning, kept near the springs') */
+  let face = 0;
   let lastCost = 0;
   let jumps = 0;
-  const feet: Foot[] = [0, 1].map(() => ({ locked: false, wait: false, lock: new THREE.Vector3(), off: new THREE.Vector3(), offV: new THREE.Vector3(), slide: 0, drift: -1, held: new THREE.Vector3(), at: new THREE.Vector3() }));
+  const feet: Foot[] = [0, 1].map(() => ({ locked: false, wait: false, lock: new THREE.Vector3(), off: new THREE.Vector3(), offV: new THREE.Vector3(), slide: 0, drift: -1, held: new THREE.Vector3(), at: new THREE.Vector3(), rise: 0, riseV: 0, lockG: 0 }));
 
   // The middle of the run's swing, per swinging bone, for the sprint to push away from
   const mean = SWING.map(() => new THREE.Quaternion(0, 0, 0, 0));
@@ -244,31 +273,39 @@ export function createAnimator(data: MoData) {
       hv.set(c.hips[b * 3] - c.hips[a * 3], c.hips[b * 3 + 1] - c.hips[a * 3 + 1], c.hips[b * 3 + 2] - c.hips[a * 3 + 2]).multiplyScalar(1 / dt);
     }
   }
+  /** The root's heading in a clip at frame time `ft` (eased between frames) */
+  const yawAt = (ci: number, ft: number) => {
+    const c = db.clips[ci];
+    const f0 = Math.min(c.frames - 1, Math.max(0, Math.floor(ft)));
+    const f1 = Math.min(c.frames - 1, f0 + 1);
+    const y0 = c.root[f0 * 3 + 2];
+    return y0 + wrap(c.root[f1 * 3 + 2] - y0) * THREE.MathUtils.clamp(ft - f0, 0, 1);
+  };
   const at = (ci: number, ft: number) => db.start[ci] + Math.min(db.clips[ci].frames - 1, Math.max(0, Math.round(ft)));
 
   const pts = AHEAD.map(() => ({ x: 0, z: 0, face: 0 }));
   const ah = { x: 0, z: 0, face: 0 };
   function trajectory(inp: AnimInput) {
     const m = inp.move;
-    const c = Math.cos(-m.face);
-    const s = Math.sin(-m.face);
+    const c = Math.cos(-face);
+    const s = Math.sin(-face);
     AHEAD.forEach((k, i) => {
       ahead(m, inp.gx, inp.gz, k / MOCAP_FPS, ah);
       // Into his own frame (rig numbers)
       pts[i].x = (ah.x * c + ah.z * s) / inp.scale;
       pts[i].z = (-ah.x * s + ah.z * c) / inp.scale;
-      pts[i].face = wrap(ah.face - m.face);
+      pts[i].face = wrap(ah.face - face);
     });
   }
 
   const world = (p: THREE.Vector3, inp: AnimInput, out: THREE.Vector3) => {
-    const c = Math.cos(inp.move.face);
-    const s = Math.sin(inp.move.face);
+    const c = Math.cos(face);
+    const s = Math.sin(face);
     return out.set(inp.x + (p.x * c + p.z * s) * inp.scale, inp.y + p.y * inp.scale, inp.z + (-p.x * s + p.z * c) * inp.scale);
   };
   const local = (w: THREE.Vector3, inp: AnimInput, out: THREE.Vector3) => {
-    const c = Math.cos(-inp.move.face);
-    const s = Math.sin(-inp.move.face);
+    const c = Math.cos(-face);
+    const s = Math.sin(-face);
     const dx = (w.x - inp.x) / inp.scale;
     const dz = (w.z - inp.z) / inp.scale;
     return out.set(dx * c + dz * s, (w.y - inp.y) / inp.scale, -dx * s + dz * c);
@@ -282,6 +319,7 @@ export function createAnimator(data: MoData) {
   function update(inp: AnimInput) {
     const dt = Math.min(inp.dt, 0.1);
     const m = inp.move;
+    if (!started) face = m.face;
     trajectory(inp);
     if (!started) {
       // The first frame: whatever fits best, no blend
@@ -298,14 +336,29 @@ export function createAnimator(data: MoData) {
     const animSpeed = db.speed[g];
     const simSpeed = Math.hypot(m.vx, m.vz) / inp.scale;
     rate = animSpeed > 0.4 && simSpeed > 0.25 ? THREE.MathUtils.clamp(simSpeed / animSpeed, RATE.min, RATE.max + RATE.sprint * inp.sprint) : 1;
+    const yaw0 = yawAt(clip, t);
     t += dt * MOCAP_FPS * rate;
     let force = false;
     if (t >= db.clips[clip].frames - 1) {
       t = db.clips[clip].frames - 1;
       force = true;
     }
+    // The way he's shown facing turns as the clip turns (a plant and a turn, steps round on the
+    // spot), pulled towards the springs' facing: gently when he's slow, firmly at a run, and
+    // never further from it than FACE.most
+    face += wrap(yawAt(clip, t) - yaw0);
+    const err = wrap(m.face - face);
+    const h = THREE.MathUtils.lerp(FACE.slow, FACE.fast, THREE.MathUtils.clamp(simSpeed / FACE.at, 0, 1));
+    face += err * (1 - Math.exp((-Math.LN2 * dt) / h));
+    const left = wrap(m.face - face);
+    if (Math.abs(left) > FACE.most) face = m.face - Math.sign(left) * FACE.most;
+    face = wrap(face);
 
     // 2. Search
+    still = Math.hypot(m.vx, m.vz) < STAND.speed && Math.hypot(inp.gx, inp.gz) < 0.01 ? still + dt : 0;
+    const stand = still > STAND.after;
+    // (settling: the first search standing still looks for the idle at once)
+    if (stand && !standing[clip]) searchIn = 0;
     searchIn -= dt;
     const sharp = Math.hypot(inp.gx - lastGx, inp.gz - lastGz) > MATCH.sharp;
     lastGx = inp.gx;
@@ -313,10 +366,10 @@ export function createAnimator(data: MoData) {
     if (searchIn <= 0 || force || sharp) {
       searchIn = MATCH.every;
       const cur = at(clip, t);
-      const best = searchFor(false, cur);
+      const best = searchFor(false, cur, stand ? standing : undefined);
       const curCost = db.open[cur] && !force ? cost(db, q, cur) : Infinity;
       const near = db.clipOf[best] === clip && Math.abs(db.frameOf[best] - t) < 3;
-      if (best >= 0 && !near && (force || lastCost + MATCH.margin < curCost)) {
+      if (best >= 0 && !near && (force || lastCost + (stand && standing[clip] ? STAND.margin : MATCH.margin) < curCost || (stand && !standing[clip]))) {
         sample(clip, t, srcRot, srcHips, srcAv, srcHv);
         clip = db.clipOf[best];
         t = db.frameOf[best];
@@ -344,8 +397,8 @@ export function createAnimator(data: MoData) {
       }
     }
     // (sideways pull in his own frame: +x is his left)
-    const c = Math.cos(-m.face);
-    const s = Math.sin(-m.face);
+    const c = Math.cos(-face);
+    const s = Math.sin(-face);
     const pull = m.ax * c + m.az * s;
     const want = THREE.MathUtils.clamp(-LAYERS.bank * pull, -LAYERS.bankMax, LAYERS.bankMax);
     [bank, bankV] = decay(bank - want, bankV, 0.08, dt);
@@ -358,20 +411,22 @@ export function createAnimator(data: MoData) {
     }
 
     // 4. The feet: each locked by the ball (its place on the ground); the ankle goes where the
-    // clip has it round the ball, so the heel still rolls up off the ground at push-off
+    // clip has it round the ball, so the heel still rolls up off the ground at push-off. A held
+    // foot stands on the ground where it was put down; a free one clears the ground under it and
+    // just ahead of it (eased up quickly, down gently: over a kerb's edge or a step's nose)
+    const fg = inp.feet ?? inp.ground;
     posed(rot, 0, hips.x, hips.y, hips.z, P);
-    let need = 0;
     for (let i = 0; i < 2; i++) {
       const f = feet[i];
       const cf = db.contacts[clip][Math.min(db.clips[clip].frames - 1, Math.round(t)) * 2 + i] === 1;
       world(P.pos[FOOT_BONES[i]], inp, wv);
       world(P.pos[TOE_BONES[i]], inp, wb);
-      const rise = inp.ground(wb.x, wb.z, inp.y + 0.3) - inp.y;
       // (held where the foot really is: the clip's, and what's left of catching up)
       if (!cf || (f.wait && Math.hypot(f.off.x, f.off.z) < 0.01 * inp.scale)) f.wait = false;
       if (cf && !f.locked && !f.wait) {
         f.locked = true;
         f.lock.set(wb.x + f.off.x, wb.y, wb.z + f.off.z);
+        f.lockG = fg(f.lock.x, f.lock.z, inp.y + 0.3);
         f.off.set(0, 0, 0);
         f.offV.set(0, 0, 0);
       } else if (f.locked && (!cf || Math.hypot(f.lock.x - wb.x, f.lock.z - wb.z) > LOCK.release * inp.scale)) {
@@ -379,23 +434,56 @@ export function createAnimator(data: MoData) {
         f.wait = cf;
         f.off.set(f.lock.x - wb.x, 0, f.lock.z - wb.z);
       }
-      // (a held foot stands on the ground where it's held; a free one clears the ground under it)
-      if (f.locked) f.at.set(f.lock.x + wv.x - wb.x, wv.y + inp.ground(f.lock.x, f.lock.z, inp.y + 0.3) - inp.y, f.lock.z + wv.z - wb.z);
-      else {
+      if (f.locked) {
+        // (onto the ground it's held on: straight up onto it, never into it; down onto it
+        // quickly, since what it cleared in the air may have been higher)
+        const want = f.lockG - inp.y;
+        if (want >= f.rise) {
+          f.rise = want;
+          f.riseV = 0;
+        } else {
+          [f.rise, f.riseV] = decay(f.rise - want, f.riseV, 0.03, dt);
+          f.rise += want;
+        }
+        f.at.set(f.lock.x + wv.x - wb.x, wv.y + f.rise, f.lock.z + wv.z - wb.z);
+      } else {
         for (const k of ['x', 'z'] as const) [f.off[k], f.offV[k]] = decay(f.off[k], f.offV[k], LOCK.catchUp, dt);
-        f.at.set(wv.x + f.off.x, wv.y + rise, wv.z + f.off.z);
+        const bx = wb.x + f.off.x;
+        const bz = wb.z + f.off.z;
+        const ahead = Math.max(fg(bx, bz, inp.y + 0.3), fg(bx + m.vx * LOCK.look, bz + m.vz * LOCK.look, inp.y + 0.3)) - inp.y;
+        [f.rise, f.riseV] = decay(f.rise - ahead, f.riseV, ahead > f.rise ? 0.025 : 0.07, dt);
+        f.rise += ahead;
+        f.at.set(wv.x + f.off.x, wv.y + f.rise, wv.z + f.off.z);
       }
-      // How far the hips must come down for this leg to reach; a foot held further than they
-      // can come lets go and catches up instead
+    }
+    // The hips come up with the feet standing above his own ground, as a pelvis follows the
+    // foot it stands on (a kerb before he's up it, the treads of a flight drawn over the even
+    // ramp he walks up): held feet count, a free one a little
+    const wsum = feet.reduce((a, f) => a + (f.locked ? 1 : LIFT.free), 0);
+    const liftWant = THREE.MathUtils.clamp(feet.reduce((a, f) => a + f.rise * (f.locked ? 1 : LIFT.free), 0) / wsum, 0, LIFT.most) / inp.scale;
+    [lift, liftV] = decay(lift - liftWant, liftV, 0.06, dt);
+    lift += liftWant;
+    if (lift > 1e-5) {
+      hips.y += lift;
+      posed(rot, 0, hips.x, hips.y, hips.z, P);
+    }
+    // How far the hips must come down for each leg to reach; a foot held further than they can
+    // come lets go and catches up instead
+    let need = 0;
+    for (let i = 0; i < 2; i++) {
+      const f = feet[i];
+      world(P.pos[TOE_BONES[i]], inp, wb);
       world(P.pos[LEGS[i][0]], inp, hipW);
+      // (the hips can come down as far as they went up, and LOCK.drop more)
+      const most = (LOCK.drop + lift) * inp.scale;
       let n = reachNeed(f.at, hipW, inp.scale);
-      if (f.locked && n > LOCK.drop * inp.scale) {
+      if (f.locked && n > most) {
         f.locked = false;
         f.wait = true;
         f.off.set(f.lock.x - wb.x, 0, f.lock.z - wb.z);
         n = reachNeed(f.at, hipW, inp.scale);
       }
-      need = Math.max(need, Math.min(n, LOCK.drop * inp.scale));
+      need = Math.max(need, Math.min(n, most));
     }
     // (down when a leg needs it, back up gently)
     const dropWant = Math.max(0, need) / inp.scale;
@@ -423,11 +511,11 @@ export function createAnimator(data: MoData) {
   }
 
   /** The query for here (the playing frame's pose with the springs' trajectory) and its best frame */
-  function searchFor(fresh: boolean, cur = 0) {
+  function searchFor(fresh: boolean, cur = 0, only?: Uint8Array) {
     if (fresh) q.fill(0);
     else for (let k = 0; k < 15; k++) q[k] = db.feat[cur * FEATURES + k];
     setTrajectory(db, q, pts);
-    const r = search(db, q);
+    const r = search(db, q, only);
     lastCost = r.cost;
     return r.g;
   }
@@ -438,6 +526,10 @@ export function createAnimator(data: MoData) {
     db,
     feet,
     update,
+    /** The way he's shown facing (world yaw): place the figure with it */
+    get face() {
+      return face;
+    },
     /** Start again from scratch (walking starts, a teleport) */
     reset() {
       started = false;
@@ -448,11 +540,12 @@ export function createAnimator(data: MoData) {
         f.off.set(0, 0, 0);
         f.offV.set(0, 0, 0);
       }
-      drop = dropV = bank = bankV = 0;
+      drop = dropV = bank = bankV = lift = liftV = 0;
+      for (const f of feet) f.rise = f.riseV = 0;
     },
     /** What it's doing, for the lab */
     get debug() {
-      return { clip: db.clips[clip].name, frame: t, rate, cost: lastCost, blend: inertia.left, jumps, drop, bank };
+      return { clip: db.clips[clip].name, frame: t, rate, cost: lastCost, blend: inertia.left, jumps, drop, lift, bank };
     },
   };
 }

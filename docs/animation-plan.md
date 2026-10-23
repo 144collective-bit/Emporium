@@ -247,7 +247,7 @@ change.
 
 ## Build order
 
-### Phase 1: run, sprint and momentum (built, for the owner's sign-off)
+### Phase 1: run, sprint and momentum (built, signed off)
 
 What's in:
 
@@ -334,7 +334,52 @@ What's in:
    new: idle, walk, run, sprint, start, stop, a 180° turn, a curve) and the
    build to try.
 
-### Phase 2: turning, terrain and transitions
+### Phase 2: turning, terrain and transitions (built, for the owner's sign-off)
+
+What's in:
+
+- **More data** (all CMU, credited): running turns either way and a quick
+  stop into a run (subject 127, an athletic actor whose runs are a jog's
+  pace, so they also cover the speeds between walking and running), walking
+  into a run (127_04), turning on the spot in 90° steps (69_17) and nine
+  seconds of standing and waiting (137_28, a neutral idle: weight shifts,
+  a glance at the watch, hands on the hips). 14 clips, 76 s, 336 KB (gzip
+  only takes 20% off: frame-to-frame differences would take 30%, an option
+  if the download matters).
+- **Turns that come from the capture:** his shown facing follows the
+  clip's own turn and is pulled towards the springs' (`FACE`: gently when
+  he's slow, firmly at a run, never more than 0.9 rad off), so a turn round
+  from standing is the actor's plant and turn (143_42's 180° pivot), not a
+  spin on the spot. The figure is placed with `animator.face`.
+- **Standing settles:** still for a moment, only the idle is searched
+  (`STAND`), and once in it a frame must be much better to take over, so
+  its shifts play through (from 8 jumps a second in the quiet frames before
+  a take sets off to under one). Frames near a clip's end cost a little more
+  (`ENDING` in motionmatch.ts), so a long stretch of the right motion wins.
+- **Terrain:** a free foot clears the ground under it and just ahead
+  (`LOCK.look`), eased up quickly and down gently, so it never cuts a kerb
+  or a step's nose; a held foot goes straight up onto higher ground and
+  eases down; the hips follow the feet standing above his own ground, held
+  ones fully and the free one a quarter (`LIFT`), as a pelvis follows the
+  foot it stands on; the drop can undo the lift. Kerbs: no foot more than
+  a few millimetres into a slab at a walk, run or sprint.
+- **Liberty Bridge's stairs:** walking follows their even ramp as before,
+  but the feet stand on the treads as drawn (`stairTread()` in liberty.ts,
+  the animator's `feet` ground), and he climbs them at a brisk climb at
+  most (`CLIMB` 1.75 tiles a second in walk.ts): their steps are big for
+  his body (41 cm risers, 56 cm treads) and running up them with a flat
+  run's strides folded the knees. A held foot stands within about 20 cm of
+  its tread (most of that the heel and the ball rolling off at push-off).
+- **Measured** over every move the tests run: a held foot moves under
+  0.6 cm over the ground (1.6 cm turning straight back); no bone turns more
+  than 0.7 rad between frames (0.9 at a kerb's edge).
+- **The lab:** floors (flat, kerbs, stairs of Liberty Bridge's size) and
+  two more programs, setting off the way he faces away from, and gait
+  changes (walk, run, sprint, run).
+- Not yet: stairs from capture (none of CMU's fit steps this size); the
+  crowds and other figures (Phase 7).
+
+### Phase 2 as it was planned
 
 - More of the data: sharp pivots at every speed, plant-and-turn, running
   circles (leaning into curves from the trajectory), walk-run-sprint

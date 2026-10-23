@@ -64,7 +64,7 @@ import { CAMERA_GRID, DOORS, GARAGE_SITE, RACK, SOLIDS, SOLID_GRID, SOLID_GRIDS,
 import { BoxGrid } from './boxgrid';
 import { count } from './tycoon';
 import { NS_ROADS, RIVER, SLAB, WALK_W, type Tick } from './world';
-import { footbridgeWall, footbridgeY } from './liberty';
+import { footbridgeWall, footbridgeY, stairTread } from './liberty';
 import { WORLD_BOUNDS } from './layout';
 import { PLAN, inPoly, type Pt } from './streetplan';
 import { SPOTS, pointOn, ROUTES } from './routes';
@@ -86,6 +86,8 @@ const RADIUS = 0.22;
 /** His speeds (movesim.ts): a walk (Caps Lock), the run he goes at, the sprint (Shift), and walking while he aims */
 const { walk: WALK, run: RUN, sprint: SPRINT } = GAITS;
 const AIMING = 1.68;
+/** Up and down Liberty Bridge's stairs (big stone steps): a brisk climb at most */
+const CLIMB = 1.75;
 const JUMP = 3.9;
 const GRAVITY = 11.5;
 const SCALE = 0.85;
@@ -304,6 +306,8 @@ export function createWalk(d: WalkDeps) {
    * The ground under a point: a slab, or the street; Liberty Bridge's stairs, landings and walkway when
    * `yNow` is up there; at the kart park the circuit's own (its banks, the hill, the flyover's deck when `yNow` is up there)
    */
+  /** What the feet stand on: the stairs' treads as they're drawn (he walks up their even ramp), else the ground */
+  const feetAt = (x: number, z: number, yNow = 0) => stairTread(x, z, yNow) ?? groundAt(x, z, yNow);
   const groundAt = (x: number, z: number, yNow = 0) => {
     const slab = slabs.some((s) => inBox(s.box, x, z) && inPoly(s.poly, [x, z])) ? SLAB : 0.035;
     const base = Math.max(slab, footbridgeY(x, z, yNow) ?? 0);
@@ -1538,7 +1542,8 @@ export function createWalk(d: WalkDeps) {
     autoAdsT = combat.armed && autoFire ? AUTO_ADS_HOLD : Math.max(0, autoAdsT - dt);
     aimNow = aim || autoAdsT > 0;
     const shooting = combat.armed && (aimNow || combat.firing);
-    const top = shooting ? AIMING : sprint ? SPRINT : walkLock ? WALK : RUN;
+    const onStairs = stairTread(pos.x, pos.z, pos.y + 0.3) !== null;
+    const top = Math.min(shooting ? AIMING : sprint ? SPRINT : walkLock ? WALK : RUN, onStairs ? CLIMB : Infinity);
 
     // Towards it on the springs (movesim.ts; hardly any control in the air), facing where he's
     // going, or where you look when aiming / in first person
@@ -1646,6 +1651,7 @@ export function createWalk(d: WalkDeps) {
         () => (animLoading = false),
       );
     }
+    let drawFace = face;
     const mocapOn = !!animator && grounded && landHold <= 0 && !combat.armed && !emote && !aim && !shooting;
     if (animator && anim) {
       // (a fresh start after a jump in place: walking started, a fast travel, the end of a ride)
@@ -1653,16 +1659,18 @@ export function createWalk(d: WalkDeps) {
       mocapW = THREE.MathUtils.clamp(mocapW + (mocapOn ? dt / 0.18 : -dt / 0.12), 0, 1);
       if (mocapW > 0) {
         const w = mocapW * mocapW * (3 - 2 * mocapW);
-        animator.update({ dt, x: pos.x, y: pos.y, z: pos.z, move: ms, gx, gz, scale: SCALE, ground: groundAt, sprint: runAmt });
+        animator.update({ dt, x: pos.x, y: pos.y, z: pos.z, move: ms, gx, gz, scale: SCALE, ground: groundAt, feet: feetAt, sprint: runAmt });
         anim.applyTo(hero.rig, animator.rot, animator.hips, w);
         anim.addLook(hero.rig, headYaw + lookAround, headPitch * 0.5, w);
       }
+      // (shown facing the way the motion capture turns him)
+      drawFace = face + wrap(animator.face - face) * mocapW;
       root0.roll = loco.root.roll * (1 - mocapW);
       root0.pitch = loco.root.pitch * (1 - mocapW);
       root0.pivot = loco.root.pivot;
     }
     lastPos.copy(pos);
-    placeRoot(hero.g, pos.x, pos.y, pos.z, face, SCALE, animator ? root0 : loco.root);
+    placeRoot(hero.g, pos.x, pos.y, pos.z, animator ? drawFace : face, SCALE, animator ? root0 : loco.root);
     hero.ring.position.set(pos.x, ground + 0.02, pos.z);
     (hero.ring.material as THREE.MeshBasicMaterial).opacity = 0.55 * (1 - air * 0.6);
 

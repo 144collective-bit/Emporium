@@ -6,8 +6,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import * as THREE from 'three';
-import { createAnimator, twoBone } from '../src/scripts/city3d/animator';
+import { FACE, createAnimator, twoBone } from '../src/scripts/city3d/animator';
 import { MB, NB, TOE_BONES, decodeMocap, newPosed, posed } from '../src/scripts/city3d/mocap';
+import { wrap } from '../src/scripts/city3d/inertia';
 import { GAITS, newMove, stepMove } from '../src/scripts/city3d/movesim';
 
 const data = decodeMocap(readFileSync('src/data/mocap/clips.bin'));
@@ -58,9 +59,13 @@ const PROGS: Record<string, { go: Prog; drift: number }> = {
   stopAndGo: { go: (t) => (t % 3 < 1.6 ? [0, GAITS.run] : [0, 0]), drift: 3 },
   turnBack: { go: (t) => (t % 4 < 2 ? [0, GAITS.run] : [0, -GAITS.run]), drift: 3 },
   sprintStop: { go: (t) => (t % 3 < 1.6 ? [0, GAITS.sprint] : [0, 0]), drift: 3 },
+  // Phase 2: setting off the way he's facing away from, jogging between gaits, changing gait mid-stride
+  startBack: { go: (t) => (t % 4 < 1 ? [0, 0] : t % 8 < 4 ? [0, -GAITS.run] : [0, GAITS.run]), drift: 1.5 },
+  jog: { go: () => [0, 2], drift: 1 },
+  speedChange: { go: (t) => [0, [GAITS.walk, GAITS.run, GAITS.sprint, GAITS.run][Math.floor(t / 2) % 4]], drift: 1 },
 };
 
-function run(go: Prog, seconds: number, ground = (_x: number, _z: number) => 0) {
+function run(go: Prog, seconds: number, ground = (_x: number, _z: number) => 0, feetOn?: (x: number, z: number) => number) {
   const an = createAnimator(data);
   const m = newMove(0);
   let x = 0;
@@ -78,7 +83,7 @@ function run(go: Prog, seconds: number, ground = (_x: number, _z: number) => 0) 
     z += m.vz * DT;
     y = ground(x, z);
     const sprint = THREE.MathUtils.clamp((Math.hypot(m.vx, m.vz) - GAITS.run) / (GAITS.sprint - GAITS.run), 0, 1);
-    an.update({ dt: DT, x, y, z, move: m, gx, gz, scale: SCALE, ground: (px, pz) => ground(px, pz), sprint });
+    an.update({ dt: DT, x, y, z, move: m, gx, gz, scale: SCALE, ground: (px, pz) => ground(px, pz), feet: feetOn, sprint });
     out.frames.push(an.rot.slice());
     if (i > 60) {
       for (const f of an.feet)
@@ -94,8 +99,8 @@ function run(go: Prog, seconds: number, ground = (_x: number, _z: number) => 0) 
       an.feet.forEach((f, k) => {
         if (!f.locked || z < 3.5) return;
         const p = P.pos[TOE_BONES[k]];
-        const c = Math.cos(m.face);
-        const s = Math.sin(m.face);
+        const c = Math.cos(an.face);
+        const s = Math.sin(an.face);
         const wx = x + (p.x * c + p.z * s) * SCALE;
         const wz = z + (-p.x * s + p.z * c) * SCALE;
         out.onSlope = Math.max(out.onSlope, Math.abs(y + p.y * SCALE - ground(wx, wz)));
@@ -128,4 +133,125 @@ test('the same movement animates the same every time', () => {
   const a = run(PROGS.weave.go, 3).frames;
   const b = run(PROGS.weave.go, 3).frames;
   a.forEach((f, i) => assert.deepEqual(f, b[i]));
+});
+
+test('standing still he settles into the idle, and stays in it', () => {
+  const an = createAnimator(data);
+  const m = newMove(0);
+  let z = 0;
+  let idle = 0;
+  let jumps = 0;
+  for (let i = 0; i < 60 * 11; i++) {
+    const gz = i < 60 ? GAITS.run : 0;
+    stepMove(m, 0, gz, true, DT);
+    z += m.vz * DT;
+    an.update({ dt: DT, x: 0, y: 0, z, move: m, gx: 0, gz, scale: SCALE, ground: () => 0, sprint: 0 });
+    if (i === 60 * 2) jumps = an.debug.jumps;
+    if (i > 60 * 2 && an.debug.clip.startsWith('idle')) idle++;
+  }
+  assert.ok(idle > 60 * 8.5, `in the idle ${(idle / 60).toFixed(1)} s of 9`);
+  const rate = (an.debug.jumps - jumps) / 9;
+  assert.ok(rate < 1.5, `${rate.toFixed(1)} jumps a second standing`);
+});
+
+test('he\'s shown turning as the capture turns, never far from where the springs face', () => {
+  const an = createAnimator(data);
+  const m = newMove(0);
+  let x = 0;
+  let z = 0;
+  let worst = 0;
+  let behind = 0;
+  for (let i = 0; i < 60 * 8; i++) {
+    const t = i * DT;
+    const [gx, gz] = PROGS.startBack.go(t);
+    stepMove(m, gx, gz, true, DT);
+    x += m.vx * DT;
+    z += m.vz * DT;
+    an.update({ dt: DT, x, y: 0, z, move: m, gx, gz, scale: SCALE, ground: () => 0, sprint: 0 });
+    const off = Math.abs(wrap(an.face - m.face));
+    worst = Math.max(worst, off);
+    // Half a second into running one way, he faces it
+    if (t % 4 > 1.5 && t % 4 < 3.9) behind = Math.max(behind, off);
+  }
+  assert.ok(worst <= FACE.most + 1e-6, `at most ${worst.toFixed(2)} rad from the springs`);
+  assert.ok(behind < 0.08, `settled to within ${behind.toFixed(3)} rad`);
+});
+
+test('up and down kerbs the feet stand on the slab and the road, never in them', () => {
+  const kerbs = (_x: number, z: number) => (z > 4 && z < 9 ? 0.15 : 0.035);
+  for (const speed of [GAITS.walk, GAITS.run, GAITS.sprint]) {
+    const an = createAnimator(data);
+    const m = newMove(0);
+    let z = 0;
+    let y = 0.035;
+    let into = 0;
+    let step = 0;
+    const prev = new Float32Array(NB * 4);
+    const qa = new THREE.Quaternion();
+    const qb = new THREE.Quaternion();
+    const P = newPosed();
+    for (let i = 0; i < 60 * 4; i++) {
+      stepMove(m, 0, speed, true, DT);
+      z += m.vz * DT;
+      // (his height eased up a kerb, as walk.ts does)
+      const g = kerbs(0, z);
+      y = y < g - 0.05 ? y + (g - y) * (1 - Math.exp(-20 * DT)) : g;
+      an.update({ dt: DT, x: 0, y, z, move: m, gx: 0, gz: speed, scale: SCALE, ground: kerbs, sprint: THREE.MathUtils.clamp((speed - GAITS.run) / (GAITS.sprint - GAITS.run), 0, 1) });
+      posed(an.rot, 0, an.hips.x, an.hips.y, an.hips.z, P);
+      for (const k of [0, 1]) {
+        const p = P.pos[TOE_BONES[k]];
+        into = Math.max(into, kerbs(0, z + (-p.x * Math.sin(an.face) + p.z * Math.cos(an.face)) * SCALE) - (y + p.y * SCALE));
+      }
+      if (i > 30) for (let b = 0; b < NB; b++) step = Math.max(step, qa.fromArray(prev, b * 4).angleTo(qb.fromArray(an.rot, b * 4)));
+      prev.set(an.rot);
+    }
+    assert.ok(into < 0.03, `at ${speed}: the ball of a foot ${(into * CM).toFixed(1)} cm into the ground (its own height is up to 2 cm)`);
+    assert.ok(step < 0.9, `at ${speed}: the biggest turn between frames ${step.toFixed(2)} rad`);
+  }
+});
+
+test('up a flight of Liberty Bridge\'s size the feet climb the treads (he walks up its even ramp)', () => {
+  const RISE = 0.23;
+  const RUN = 0.31;
+  const N = 15;
+  const Z0 = 3;
+  const ramp = (_x: number, z: number) => THREE.MathUtils.clamp(((z - Z0) / (RUN * N)) * RISE * N, 0, RISE * N);
+  const tread = (_x: number, z: number) => (z < Z0 ? 0 : z >= Z0 + RUN * N ? RISE * N : (Math.floor((z - Z0) / RUN) + 1) * RISE);
+  for (const speed of [GAITS.walk, 1.75]) {
+    const an = createAnimator(data);
+    const m = newMove(0);
+    let z = 0;
+    let into = 0;
+    let step = 0;
+    const off: number[] = [];
+    const held = [0, 0];
+    const prev = new Float32Array(NB * 4);
+    const qa = new THREE.Quaternion();
+    const qb = new THREE.Quaternion();
+    const P = newPosed();
+    for (let i = 0; i < 60 * 5; i++) {
+      stepMove(m, 0, speed, true, DT);
+      z += m.vz * DT;
+      const y = ramp(0, z);
+      an.update({ dt: DT, x: 0, y, z, move: m, gx: 0, gz: speed, scale: SCALE, ground: ramp, feet: tread, sprint: 0 });
+      const on = z > Z0 + 0.5 && z < Z0 + RUN * N - 0.5;
+      if (on) for (let b = 0; b < NB; b++) step = Math.max(step, qa.fromArray(prev, b * 4).angleTo(qb.fromArray(an.rot, b * 4)));
+      prev.set(an.rot);
+      if (!on) continue;
+      posed(an.rot, 0, an.hips.x, an.hips.y, an.hips.z, P);
+      for (const k of [0, 1]) {
+        const p = P.pos[TOE_BONES[k]];
+        const wz = z + (-p.x * Math.sin(an.face) + p.z * Math.cos(an.face)) * SCALE;
+        const wy = y + p.y * SCALE;
+        into = Math.max(into, tread(0, wz) - wy);
+        held[k] = an.feet[k].locked ? held[k] + 1 : 0;
+        if (held[k] > 3) off.push(Math.abs(wy - an.feet[k].lockG));
+      }
+    }
+    off.sort((a, b) => a - b);
+    assert.ok(off.length > 40, `feet held on the treads (${off.length} frames)`);
+    assert.ok(off[Math.floor(off.length * 0.95)] < 0.21 / SCALE, `a held ball within ${(off[Math.floor(off.length * 0.95)] * CM).toFixed(1)} cm of its tread`);
+    assert.ok(into < 0.1, `at ${speed}: the ball of a foot ${(into * CM).toFixed(1)} cm into a step`);
+    assert.ok(step < 0.8, `at ${speed}: the biggest turn between frames ${step.toFixed(2)} rad`);
+  }
 });

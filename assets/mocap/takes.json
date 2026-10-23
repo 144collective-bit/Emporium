@@ -6,5 +6,11 @@
   { "file": "cmu/143_42.bvh", "name": "run-stop-run" },
   { "file": "cmu/143_32.bvh", "name": "walk" },
   { "file": "cmu/143_38.bvh", "name": "walk-eight" },
-  { "file": "cmu/143_29.bvh", "name": "pacing" }
+  { "file": "cmu/143_29.bvh", "name": "pacing" },
+  { "file": "cmu/127_15.bvh", "name": "run-turn-left" },
+  { "file": "cmu/127_16.bvh", "name": "run-turn-right" },
+  { "file": "cmu/127_19.bvh", "name": "run-quick-stop-run" },
+  { "file": "cmu/127_04.bvh", "name": "walk-to-run" },
+  { "file": "cmu/69_17.bvh", "name": "turn-on-spot" },
+  { "file": "cmu/137_28.bvh", "name": "idle", "to": 9 }
 ]

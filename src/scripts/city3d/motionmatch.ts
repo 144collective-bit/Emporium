@@ -31,6 +31,12 @@ export const GROUPS = [
 ];
 /** Frames at the end of each clip a search never lands on (room to play on) */
 const TAIL = 4;
+/**
+ * ...and a cost on the frames before them, up to `cost` at the last open
+ * one: a long stretch of the right motion (the idle when standing) wins
+ * over a few frames that end in a jump
+ */
+export const ENDING = { frames: 20, cost: 0.3 };
 
 export interface Database {
   clips: MoClip[];
@@ -47,6 +53,8 @@ export interface Database {
   scale: Float32Array;
   /** Whether a search may land on the frame */
   open: Uint8Array;
+  /** The cost of landing on it, near its clip's end */
+  bias: Float32Array;
   /** How fast the root moves at each frame (rig numbers a second) */
   speed: Float32Array;
 }
@@ -142,6 +150,7 @@ export function buildDatabase(data: MoData, mirror = true): Database {
   const clipOf = new Int32Array(count);
   const frameOf = new Int32Array(count);
   const open = new Uint8Array(count);
+  const bias = new Float32Array(count);
   const speed = new Float32Array(count);
   clips.forEach((c, ci) => {
     raw.set(rawFeatures(c), start[ci] * FEATURES);
@@ -150,6 +159,8 @@ export function buildDatabase(data: MoData, mirror = true): Database {
       clipOf[g] = ci;
       frameOf[g] = f;
       open[g] = f < c.frames - TAIL ? 1 : 0;
+      const soon = THREE.MathUtils.clamp(1 - (c.frames - TAIL - f) / ENDING.frames, 0, 1);
+      bias[g] = ENDING.cost * soon * soon;
       const a = Math.max(0, f - 1);
       const b = Math.min(c.frames - 1, f + 1);
       speed[g] = (Math.hypot(c.root[b * 3] - c.root[a * 3], c.root[b * 3 + 1] - c.root[a * 3 + 1]) * MOCAP_FPS) / Math.max(1, b - a);
@@ -167,7 +178,7 @@ export function buildDatabase(data: MoData, mirror = true): Database {
   }
   const feat = new Float32Array(count * FEATURES);
   for (let i = 0; i < count; i++) for (let k = 0; k < FEATURES; k++) feat[i * FEATURES + k] = (raw[i * FEATURES + k] - mean[k]) * scale[k];
-  return { clips, contacts: clips.map(contacts), start, count, clipOf, frameOf, feat, mean, scale, open, speed };
+  return { clips, contacts: clips.map(contacts), start, count, clipOf, frameOf, feat, mean, scale, open, bias, speed };
 }
 
 /**
@@ -186,7 +197,7 @@ export function setTrajectory(db: Database, q: Float32Array, pts: { x: number; z
 
 /** The cost of frame `g` for query `q` */
 export function cost(db: Database, q: Float32Array, g: number) {
-  let s = 0;
+  let s = db.bias[g];
   const o = g * FEATURES;
   for (let k = 0; k < FEATURES; k++) {
     const d = db.feat[o + k] - q[k];
@@ -195,14 +206,14 @@ export function cost(db: Database, q: Float32Array, g: number) {
   return s;
 }
 
-/** The nearest open frame to `q`, and its cost */
-export function search(db: Database, q: Float32Array) {
+/** The nearest open frame to `q`, and its cost (only in the clips `only` allows, when it's given) */
+export function search(db: Database, q: Float32Array, only?: Uint8Array) {
   let best = -1;
   let bestCost = Infinity;
   const F = db.feat;
   for (let g = 0; g < db.count; g++) {
-    if (!db.open[g]) continue;
-    let s = 0;
+    if (!db.open[g] || (only && !only[db.clipOf[g]])) continue;
+    let s = db.bias[g];
     const o = g * FEATURES;
     for (let k = 0; k < FEATURES && s < bestCost; k++) {
       const d = F[o + k] - q[k];
