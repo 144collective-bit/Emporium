@@ -81,8 +81,9 @@ gardens. Built in stages, each a PR for the owner's sign-off.
    are paved, a stone kerb along both sides (`KERBS`, `KERB`), cut where
    another path joins, at the jetty, the round places and the terraces;
    the gravel paths keep a flush stone edge (`EDGES`). A low stone wall
-   with a coping runs round the park and the strips (`WALLS`, `WALL`),
-   broken at the gates and wherever a path goes through. The formal
+   with a coping runs round the park (`WALLS`, `WALL`; round the strips
+   too until they became Uptown, `docs/finance-plan.md`), broken at the
+   gates and wherever a path goes through. The formal
    garden fills the stadium's old site (`GARDEN_SITE`) inside its own
    low wall (`GARDEN_WALLS`, open at the Mall, the cross walk and the
    garden walks): a cross walk (`garden-cross`) and two garden walks

@@ -38,7 +38,6 @@ import {
   PARK_LAMPS,
   PARK_TREES,
   PATHS,
-  STRIPS,
   TERRACES,
   TERRACE_STEPS,
   distToLine,
@@ -74,7 +73,7 @@ test('the main walks are kerbed both sides, the rest edged; neither ever runs ac
 });
 
 test('the park\'s wall: round the edge of every block, open at each gate and where every walk goes out, never on a path', () => {
-  assert.ok(WALLS.length >= BIG.length / 4 && WALLS.flat().length > 2000);
+  assert.ok(WALLS.length >= BIG.length / 4 && WALLS.flat().length > 1000);
   for (const run of WALLS)
     for (const p of run) {
       assert.ok(inPark(p, 0.3) && !inPark(p, 0.6), `the wall off the park's edge at ${p}`);
@@ -89,8 +88,6 @@ test('the park\'s wall: round the edge of every block, open at each gate and whe
   for (const q of PATHS)
     for (const e of [q.pts[0], q.pts.at(-1)!])
       if (!inPark(e, 1)) assert.ok(!WALLS.some((r) => r.some((p) => Math.hypot(p[0] - e[0], p[1] - e[1]) < q.half)), `${q.id} walled in at ${e}`);
-  // The strips walled too
-  for (const s of STRIPS) assert.ok(WALLS.some((r) => r.some((p) => p[1] > s.poly[0][1] && p[1] < s.poly[1][1])), `${s.id} unwalled`);
   assert.ok(WALL.h + 0.15 < 1 && WALL.h > 0.3, 'a low wall');
 });
 

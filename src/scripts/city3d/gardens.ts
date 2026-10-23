@@ -9,7 +9,7 @@
  *   are paved with raised stone kerbs along both edges (`KERBS`, `KERB`);
  *   every other path is gravel with a flush stone edge (`EDGES`, `EDGE_W`).
  *   Both break wherever another path, the jetty or a terrace meets them.
- * - **The park's edge** has a low stone wall round every block (`WALLS`,
+ * - **The park's edge** has a low stone wall round its block (`WALLS`,
  *   `WALL`), broken at the gates and wherever a walk goes out.
  * - **The formal garden** on the stadium's old site (`GARDEN_SITE`): a low
  *   stone wall round it (`GARDEN_WALLS`, open at the Mall, the cross walk
@@ -35,7 +35,6 @@ import {
   BENCHES,
   BIG,
   BOATHOUSE,
-  COURTS,
   GARDEN_SITE,
   GARDEN_XS,
   GARDEN_Z,
@@ -47,7 +46,6 @@ import {
   PARK_TREES,
   PATHS,
   PIER,
-  STRIPS,
   ZS,
   distToLine,
   inLake,
@@ -156,8 +154,8 @@ const inGate = (p: Pt) =>
     const [dx, dz] = [p[0] - g.at[0], p[1] - g.at[1]];
     return Math.abs(dx * across[0] + dz * across[1]) < g.half + 0.2 + PIER.w / 2 && Math.abs(dx * g.out[0] + dz * g.out[1]) < 1.5;
   });
-/** The wall's runs round every block of the park (the big one and the strips), broken at the gates and where a path goes out */
-export const WALLS: Pt[][] = [BIG, ...STRIPS.map((s) => s.poly)].flatMap((poly) => {
+/** The wall's runs round the park's block, broken at the gates and where a path goes out */
+export const WALLS: Pt[][] = [BIG].flatMap((poly) => {
   const line = dense(inset(poly, WALL.in), 0.5, true);
   return runs(line, (p) => !inGate(p) && !onPath(p, WALL.w / 2 + 0.25), true, 3);
 });
@@ -300,7 +298,7 @@ export const PLANTER = { h: 0.42, wall: 0.12 };
 function plantable(p: Pt, r: number, others: Pt[]) {
   if (onPath(p, r + 0.25)) return false;
   if (inLake(p[0], p[1], r + 0.5) || nearTerrace(p, r + 0.5)) return false;
-  if (inRect(GARDEN_SITE, p, r + 0.5) || inRect(BOATHOUSE.rect, p, r + 1) || COURTS.some((c) => inRect(c.rect, p, r + 1))) return false;
+  if (inRect(GARDEN_SITE, p, r + 0.5) || inRect(BOATHOUSE.rect, p, r + 1)) return false;
   if (PARK_LAMPS.some(([x, z]) => Math.hypot(x - p[0], z - p[1]) < r + 0.6)) return false;
   if (BENCHES.some((b) => hyp(b.at, p) < r + 1)) return false;
   if (PARK_TREES.some((t) => Math.hypot(t.x - p[0], t.z - p[1]) < r + 0.9)) return false;

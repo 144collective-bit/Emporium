@@ -5,7 +5,7 @@
  * same for everyone (and for the tests).
  *
  * - **Walkers, joggers and dog walkers** (`PARK_PEOPLE`) round the lake
- *   loop and the ring walk, up and down the Mall and along the strips: each
+ *   loop and the ring walk, up and down the Mall: each
  *   path in lanes (walkers near its middle, joggers by its edges, either
  *   way), everyone in a lane at its pace, spread evenly so nobody walks
  *   through anybody. A dog (`DOGS`) trots on its lead ahead of each dog
@@ -13,15 +13,12 @@
  * - **Sitting about:** people on some of the benches, and picnics on the
  *   lawns (`PICNICS`: a blanket in a glade, a basket, two or three sitting
  *   round it).
- * - **Sports on the strips** (westlake.ts `COURTS`): two games of tennis,
- *   a kickabout on the five-a-side pitch (keepers in the goals) and a game
- *   of two-on-two on the basketball court, each with its ball (`BALLS`).
  * - **Boats on the lake** (`BOATS`): rowing boats and swan pedalos going
  *   round in rings (each ring its own pace and way round, so none ever
  *   meet), people aboard, and two moored at the jetty.
  *
  * The view: the people are the city's crowd (life.ts), the dogs, boats,
- * oars, leads and balls are drawn by westlake3d.ts when the park's chunk
+ * oars and leads are drawn by westlake3d.ts when the park's chunk
  * is loaded.
  */
 import { offsetLine } from './streetplan';
@@ -30,20 +27,14 @@ const SLAB = 0.15;
 import {
   BENCHES,
   BIG,
-  COURTS,
-  HOOPS,
   JETTY,
   LOOP_OUT,
   MALL,
   PARK_TREES,
-  PATHS,
-  PITCH,
   RING_IN,
   GARDEN_SITE,
   BRIDGE_FOOT,
-  TENNIS,
   ZS,
-  courtMid,
   inLake,
   inPark,
   inset,
@@ -119,7 +110,6 @@ export interface Lane {
   count: number;
   dogs: number[];
 }
-const mid = (q: string) => PATHS.find((p) => p.id === q)!;
 /** A path both ways as one thin loop: out `off` to one side of its centre line and back on the other */
 const thin = (pts: Pt[], off: number): Pt[] => [...offsetLine(pts, off), ...offsetLine(pts, -off).reverse()];
 
@@ -136,12 +126,8 @@ export const LANES: Lane[] = (() => {
   lane('ring-out', inset(BIG, RING_IN - 0.35), -1, WALK_PACE, 4, [3]);
   lane('ring-jog-in', inset(BIG, RING_IN + 0.85), -1, JOG_PACE, 3);
   lane('ring-jog-out', inset(BIG, RING_IN - 0.85), 1, JOG_PACE, 2);
-  // The Mall, up one side and down the other, and each strip's walk the same
+  // The Mall, up one side and down the other
   lane('mall', thin([[MALL.x, ZS - 0.6], [MALL.x, BRIDGE_FOOT + 1.2]], 1.0), 1, WALK_PACE, 6, [3]);
-  // (the strips' turning short of their ends, where the walks meet the sidewalks)
-  const trim = (pts: Pt[]): Pt[] => [[pts[0][0] + 1.5, pts[0][1]], ...pts.slice(1, -1), [pts.at(-1)![0] - 1.5, pts.at(-1)![1]]];
-  for (const s of ['westlake-s0-walk', 'westlake-s1-walk', 'westlake-s2-walk']) lane(s, thin(trim(mid(s).pts), 0.4), 1, WALK_PACE, 3, s === 'westlake-s1-walk' ? [1] : []);
-  lane('s1-jog', thin(trim(mid('westlake-s1-walk').pts), 0.8), -1, JOG_PACE, 1);
   return out;
 })();
 
@@ -207,77 +193,6 @@ export const PICNICS: Picnic[] = (() => {
   }
   return out;
 })();
-
-/* ---------- The games ---------- */
-
-/** A smooth wander round a home spot: two slow waves, the speed and heading from their rate */
-function wander(home: Pt, amp: Pt, w: Pt, ph: Pt, t: number, out: Moment, faceTo?: Pt) {
-  out.x = home[0] + amp[0] * Math.sin(w[0] * t + ph[0]);
-  out.z = home[1] + amp[1] * Math.sin(w[1] * t + ph[1]);
-  const vx = amp[0] * w[0] * Math.cos(w[0] * t + ph[0]);
-  const vz = amp[1] * w[1] * Math.cos(w[1] * t + ph[1]);
-  out.speed = Math.hypot(vx, vz);
-  out.ry = out.speed > 0.35 || !faceTo ? Math.atan2(vx, vz) : Math.atan2(faceTo[0] - out.x, faceTo[1] - out.z);
-  out.clip = out.speed > 1.0 ? 'jog' : out.speed > 0.35 ? 'walk' : 'look';
-  out.y = SLAB;
-  return out;
-}
-
-/** A player: their own wander (or for a tennis player, side to side along the baseline) */
-interface Player {
-  id: string;
-  at(t: number, out: Moment): Moment;
-}
-const [FX, FZ] = courtMid(COURTS[1]);
-const [BX, BZ] = courtMid(COURTS[2]);
-/** The five-a-side: three a side out on the pitch and a keeper in each goal */
-const FOOTBALLERS: Player[] = [
-  ...[
-    [-5.5, -3],
-    [-3, 2.5],
-    [-1, -1],
-    [1.5, 3],
-    [3.5, -2.5],
-    [6, 1],
-  ].map(([hx, hz], i): Player => ({
-    id: `football-${i}`,
-    at: (t, out) => wander([FX + hx, FZ + hz], [2.6, 1.8], [0.42 + i * 0.05, 0.31 + i * 0.04], [i * 1.7, i * 2.3], t, out, [FX, FZ]),
-  })),
-  ...[-1, 1].map((side, i): Player => ({
-    id: `keeper-${i}`,
-    at: (t, out) => {
-      wander([FX + side * (PITCH.half[0] - 0.7), FZ], [0.15, 0.9], [0.5, 0.45 + i * 0.1], [i, i * 2], t, out);
-      out.ry = side > 0 ? -Math.PI / 2 : Math.PI / 2;
-      out.clip = 'idle';
-      return out;
-    },
-  })),
-];
-/** Tennis: one a side on each court, behind the baseline, side to side, facing the net */
-const TENNIS_PLAYERS: Player[] = TENNIS.mids.flatMap(([cx, cz], c) =>
-  [-1, 1].map((side, i): Player => ({
-    id: `tennis-${c}-${i}`,
-    at: (t, out) => {
-      out.x = cx + side * (TENNIS.half[0] + 0.5);
-      out.z = cz + 1.7 * Math.sin(0.8 * t + c * 2 + i * 1.3);
-      out.speed = Math.abs(1.7 * 0.8 * Math.cos(0.8 * t + c * 2 + i * 1.3));
-      out.ry = side > 0 ? -Math.PI / 2 : Math.PI / 2;
-      out.clip = 'idle';
-      out.y = SLAB;
-      return out;
-    },
-  }))
-);
-/** Two-on-two, one hoop each way */
-const BALLERS: Player[] = [
-  [-3.5, -1.5],
-  [-2, 2],
-  [2.5, -2],
-  [4, 1.5],
-].map(([hx, hz], i) => ({
-  id: `basketball-${i}`,
-  at: (t, out) => wander([BX + hx, BZ + hz], [2.4, 1.4], [0.5 + i * 0.06, 0.37 + i * 0.05], [i * 2.1, i * 1.4], t, out, [BX, BZ]),
-}));
 
 /* ---------- Boats ---------- */
 
@@ -358,7 +273,6 @@ export const PARK_PEOPLE: ParkPerson[] = (() => {
   PICNICS.forEach((p, i) =>
     p.people.forEach((q, k) => out.push({ id: `picnic-${i}-${k}`, trim: i % 2 === 1, at: (_, m) => Object.assign(m, { x: q.x, z: q.z, ry: q.ry, y: SLAB + 0.03, clip: 'picnic' as const, speed: 0 }) }))
   );
-  for (const p of [...FOOTBALLERS, ...TENNIS_PLAYERS, ...BALLERS]) out.push({ id: p.id, trim: false, at: p.at });
   // Aboard the boats (below): a rower facing the stern, two side by side in a swan
   BOATS.forEach((b, i) => {
     if (b.moored) return;
@@ -419,134 +333,3 @@ export const DOGS: Dog[] = (() => {
   });
   return out;
 })();
-
-/* ---------- The balls ---------- */
-
-export interface Ball {
-  kind: 'football' | 'tennis' | 'basketball';
-  /** Where it is (y over the court) */
-  at(t: number, out: { x: number; y: number; z: number }): { x: number; y: number; z: number };
-}
-export const BALL_R = { football: 0.12, tennis: 0.05, basketball: 0.13 };
-const tmpA = moment();
-const tmpB = moment();
-/** A seeded order of `n` players for round c of passes (each round passes the ball to everyone once) */
-function order(c: number, n: number, seed: number) {
-  const o = Array.from({ length: n }, (_, i) => i);
-  let s = (c * 7919 + seed * 104729 + 1) % 2147483647;
-  for (let i = n - 1; i > 0; i--) {
-    s = (s * 16807) % 2147483647;
-    const j = s % (i + 1);
-    [o[i], o[j]] = [o[j], o[i]];
-  }
-  return o;
-}
-/** Who has the ball at the start of pass k (never the same player twice running) */
-function holder(k: number, n: number, seed: number) {
-  const c = Math.floor(k / n);
-  const o = order(c, n, seed);
-  if (c > 0 && order(c - 1, n, seed)[n - 1] === o[0]) [o[0], o[1]] = [o[1], o[0]];
-  return o[k - c * n];
-}
-/**
- * A ball passed round players: each pass `flight` seconds, then held `hold` at the receiver's feet; with `shot`,
- * every so often a shot at the nearer hoop instead, the ball dropping through it and rolling to whoever's next
- */
-function passing(players: Player[], flight: number, hold: number, seed: number, hop: number, r: number, shot?: { every: number; hoops: Pt[]; rimY: number }): Ball['at'] {
-  const T = flight + hold;
-  const n = players.length;
-  return (t, out) => {
-    const k = Math.floor(t / T);
-    const f = t - k * T;
-    const from = holder(k, n, seed);
-    const to = holder(k + 1, n, seed);
-    if (shot && k % shot.every === shot.every - 1) {
-      players[from].at(k * T, tmpA);
-      const hoop = shot.hoops.reduce((a, b) => (Math.hypot(b[0] - tmpA.x, b[1] - tmpA.z) < Math.hypot(a[0] - tmpA.x, a[1] - tmpA.z) ? b : a));
-      if (f < flight) {
-        // Up from the shooter's hands in an arc to the rim
-        const u = f / flight;
-        out.x = tmpA.x + (hoop[0] - tmpA.x) * u;
-        out.z = tmpA.z + (hoop[1] - tmpA.z) * u;
-        out.y = 0.9 + (shot.rimY - 0.9) * u + 4 * 1.0 * u * (1 - u);
-        return out;
-      }
-      const u = (f - flight) / hold;
-      if (u < 0.35) {
-        // Down through the net to the floor, a bounce
-        const v = u / 0.35;
-        out.x = hoop[0];
-        out.z = hoop[1];
-        out.y = r + (shot.rimY - r) * (1 - v) * (1 - v) + 0.25 * Math.max(0, Math.sin(v * Math.PI * 1.6 - Math.PI * 0.6));
-        return out;
-      }
-      // ...and on along the floor to whoever has it next
-      players[to].at(t, tmpB);
-      const v = (u - 0.35) / 0.65;
-      out.x = hoop[0] + (tmpB.x + Math.sin(tmpB.ry) * 0.35 - hoop[0]) * v;
-      out.z = hoop[1] + (tmpB.z + Math.cos(tmpB.ry) * 0.35 - hoop[1]) * v;
-      out.y = r + 0.18 * Math.abs(Math.sin(v * Math.PI * 3)) * (1 - v);
-      return out;
-    }
-    if (f < flight) {
-      players[from].at(k * T, tmpA);
-      players[to].at(k * T + flight, tmpB);
-      const u = f / flight;
-      const ax = tmpA.x + Math.sin(tmpA.ry) * 0.35;
-      const az = tmpA.z + Math.cos(tmpA.ry) * 0.35;
-      const bx = tmpB.x + Math.sin(tmpB.ry) * 0.35;
-      const bz = tmpB.z + Math.cos(tmpB.ry) * 0.35;
-      out.x = ax + (bx - ax) * u;
-      out.z = az + (bz - az) * u;
-      out.y = r + 4 * hop * u * (1 - u);
-    } else {
-      // At the receiver's feet, a little in front of them
-      players[to].at(t, tmpB);
-      out.x = tmpB.x + Math.sin(tmpB.ry) * 0.35;
-      out.z = tmpB.z + Math.cos(tmpB.ry) * 0.35;
-      out.y = r;
-    }
-    return out;
-  };
-}
-/** A rally: across the net and back, a bounce on the far side of it each time */
-function rally(a: Player, b: Player, period: number): Ball['at'] {
-  return (t, out) => {
-    const k = Math.floor(t / period);
-    const u = t / period - k;
-    const [p, q] = k % 2 ? [b, a] : [a, b];
-    p.at(k * period, tmpA);
-    q.at((k + 1) * period, tmpB);
-    // From in front of the hitter to in front of the receiver, at waist height
-    const ax = tmpA.x + Math.sin(tmpA.ry) * 0.5;
-    const az = tmpA.z + Math.cos(tmpA.ry) * 0.5;
-    const bx = tmpB.x + Math.sin(tmpB.ry) * 0.5;
-    const bz = tmpB.z + Math.cos(tmpB.ry) * 0.5;
-    out.x = ax + (bx - ax) * u;
-    out.z = az + (bz - az) * u;
-    const BOUNCE = 0.68;
-    if (u < BOUNCE) {
-      const v = u / BOUNCE;
-      out.y = 0.55 * (1 - v) + 4 * 0.55 * v * (1 - v) + BALL_R.tennis;
-    } else {
-      const v = (u - BOUNCE) / (1 - BOUNCE);
-      out.y = 0.55 * v + 4 * 0.3 * v * (1 - v) + BALL_R.tennis;
-    }
-    return out;
-  };
-}
-export const BALLS: Ball[] = [
-  { kind: 'football', at: passing(FOOTBALLERS.slice(0, 6), 0.75, 1.6, 3, 0.35, BALL_R.football) },
-  ...TENNIS.mids.map((_, c): Ball => ({ kind: 'tennis', at: rally(TENNIS_PLAYERS[c * 2], TENNIS_PLAYERS[c * 2 + 1], 1.45 + c * 0.1) })),
-  {
-    kind: 'basketball',
-    at: passing(BALLERS, 0.7, 1.1, 7, 0.45, BALL_R.basketball, {
-      every: 4,
-      rimY: HOOPS.rimY,
-      hoops: [-1, 1].map((s): Pt => [BX + s * (HOOPS.half[0] - HOOPS.rim), BZ]),
-    }),
-  },
-];
-
-/** The players' courts (for the tests): which court each game's people stay on */
-export const GAMES = { football: FOOTBALLERS.map((p) => p.id), tennis: TENNIS_PLAYERS.map((p) => p.id), basketball: BALLERS.map((p) => p.id) };

@@ -2,8 +2,8 @@
  * Westlake Park (docs/growth-plan.md Phase 9b, the owner's call; DOM-free,
  * tested in tests/westlake.test.ts): the park district on the open land west
  * of town, north of the river, between the ring highway and the Parkway.
- * Step 1 is the land: its blocks (one big one north of the west ring avenue,
- * three strips between the avenues south of it), the lake, the paths, the
+ * Step 1 is the land: its block (north of the west ring avenue; the three
+ * strips south of it became Uptown, uptown.ts), the lake, the paths, the
  * gates, its trees, lamps and benches, and the site kept clear for the
  * stadium (step 2). The park's own life (boats, the boathouse, people) is
  * step 3.
@@ -11,8 +11,6 @@
  * - **The big block** (`BIG`): from the highway's west side (clear of its
  *   slip lanes) to the Parkway's west leg, and from the highway's north side
  *   (round its north-west bend) down to the west ring avenue.
- * - **The strips** (`STRIPS`): between the avenues that run west from town
- *   to the highway, as far east as the Parkway.
  * - **The lake** (`LAKE_C`, `lakeR()`): a smooth outline round a centre,
  *   its radius a sum of a few waves; `inLake()` keeps walkers and cars out.
  * - **The paths** (`PATHS`): a walk round the big block, a loop round the
@@ -43,10 +41,10 @@ export const X0 = -200.5;
 export const X1 = Math.min(...PARKWAY.map((p) => p[0])) - BEND_REACH - WALK_W - 0.05;
 /** The north edge: the highway's north side */
 export const Z0 = HZ0 + HIGHWAY_CLEAR;
-/** The west ring avenue and the avenues west of town (z), north to south: the big block is north of the first */
-const AVES = EW_ROADS.filter((r) => r.c < 70);
+/** The west ring avenue (z): the big block is north of it */
+const RING_AVE = EW_ROADS[0];
 /** The big block's south edge (inside its sidewalk) */
-export const ZS = AVES[0].c - AVES[0].half - WALK_W;
+export const ZS = RING_AVE.c - RING_AVE.half - WALK_W;
 
 /** The arc of the highway's bend between two angles, `n` points */
 const arc = (a0: number, a1: number, n: number): Pt[] => Array.from({ length: n + 1 }, (_, k) => [BEND_C[0] + Math.cos(a0 + ((a1 - a0) * k) / n) * BEND_IN, BEND_C[1] + Math.sin(a0 + ((a1 - a0) * k) / n) * BEND_IN] as Pt);
@@ -63,17 +61,10 @@ export interface ParkBlock {
   id: string;
   poly: Pt[];
 }
-/** The strips between the avenues south of the big block, west to east the whole way */
-export const STRIPS: ParkBlock[] = AVES.slice(0, -1).map((a, i) => {
-  const b = AVES[i + 1];
-  const z0 = a.c + a.half + WALK_W;
-  const z1 = b.c - b.half - WALK_W;
-  return { id: `westlake-s${i}`, poly: [[X0, z0], [X0, z1], [X1, z1], [X1, z0]] };
-});
-/** Every block of the park, for the street plan */
-export const WESTLAKE_BLOCKS: ParkBlock[] = [{ id: 'westlake-big', poly: BIG }, ...STRIPS];
+/** The park's block, for the street plan (the strips south of it are Uptown's, uptown.ts) */
+export const WESTLAKE_BLOCKS: ParkBlock[] = [{ id: 'westlake-big', poly: BIG }];
 /** The park's land, for the outskirts' trees to keep off (x0, z0, x1, z1) */
-export const WESTLAKE_RECT: Rect = [X0 - WALK_W, Z0 - WALK_W, X1 + WALK_W, AVES.at(-1)!.c - AVES.at(-1)!.half];
+export const WESTLAKE_RECT: Rect = [X0 - WALK_W, Z0 - WALK_W, X1 + WALK_W, RING_AVE.c - RING_AVE.half];
 
 /* ---------- The stadium's old site ---------- */
 
@@ -103,32 +94,7 @@ export function inLake(x: number, z: number, m = 0) {
 /** The stone rim round the water: how wide and how high above the lawn */
 export const RIM = { w: 0.35, h: 0.12 };
 
-/* ---------- What step 3 puts on the land: the courts and the boathouse ---------- */
-
-/** A court on a strip (x0, z0, x1, z1: with its run-off), its strip's walk bent round it along the strip's north edge */
-export interface Court {
-  id: string;
-  kind: 'tennis' | 'football' | 'basketball';
-  rect: Rect;
-  /** Which strip, and where its walk runs along it (z) */
-  strip: number;
-  walkZ: number;
-}
-/** Two tennis courts side by side on the first strip, a five-a-side pitch on the second (the deepest), a basketball court on the third */
-export const COURTS: Court[] = [
-  { id: 'tennis', kind: 'tennis', rect: [-136, 4.0, -98, 13.4], strip: 0, walkZ: 2.0 },
-  { id: 'football', kind: 'football', rect: [-128, 23.6, -106, 39.4], strip: 1, walkZ: 21.5 },
-  { id: 'basketball', kind: 'basketball', rect: [-96, 49.6, -79, 58.8], strip: 2, walkZ: 47.6 },
-];
-
-/** A court's middle */
-export const courtMid = (c: Court): Pt => [(c.rect[0] + c.rect[2]) / 2, (c.rect[1] + c.rect[3]) / 2];
-/** The tennis courts' middles (two, side by side along x), each's lines' half sizes (doubles) and its net's posts' half span */
-export const TENNIS = { half: [6.6, 3.05] as Pt, post: 3.6, netH: 0.5, mids: [0, 1].map((i): Pt => [COURTS[0].rect[0] + 9.5 + 19 * i, courtMid(COURTS[0])[1]]) };
-/** The pitch's lines' half sizes; each goal's mouth (half), height and depth, its line at x = mid ± half[0] */
-export const PITCH = { half: [9.5, 6.25] as Pt, goal: { half: 1.3, h: 1.1, d: 0.8 } };
-/** The basketball court's lines' half sizes; each hoop's rim in from the baseline, its height, the board's and the pole's */
-export const HOOPS = { half: [7.75, 4.15] as Pt, rim: 0.88, rimY: 1.69, board: 0.67, pole: 1.0 };
+/* ---------- What step 3 puts on the land: the boathouse ---------- */
 
 /** The lake loop's line, `out` beyond the water (as PATHS' loop, LOOP_OUT; declared below) */
 const loopZ = (x: number, out: number) => {
@@ -337,24 +303,6 @@ export const PATHS: ParkPath[] = [
   ...GARDEN_XS.map((x, i): ParkPath => ({ id: i ? 'garden-e' : 'garden-w', pts: [[x, ringNorthZ(x)], [x, GARDEN_SITE[3] - 0.5]], half: 1.1 })),
   // The south-west gate up to the ring walk
   { id: 'sw', pts: [[-182, ZS], [-182, ZS - RING_IN]], half: 1.1 },
-  // Each strip: one walk down its middle, end to end
-  // (bent round its court along the strip's north edge: step 3)
-  ...STRIPS.map((s, i): ParkPath => {
-    const z = (s.poly[0][1] + s.poly[1][1]) / 2;
-    const x0 = X0;
-    const c = COURTS.find((q) => q.strip === i);
-    if (!c) return { id: `${s.id}-walk`, pts: [[x0, z], [X1, z]], half: 1.1 };
-    // (eased over to the edge and back: no overshoot past it)
-    const ease = (a: number, b: number, x: number) => {
-      const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
-      return t * t * (3 - 2 * t);
-    };
-    const pts: Pt[] = [];
-    const [a0, a1, b0, b1] = [c.rect[0] - 9, c.rect[0] - 3, c.rect[2] + 3, c.rect[2] + 9];
-    for (const x of [x0, ...Array.from({ length: 13 }, (_, k) => a0 + ((a1 - a0) * k) / 12), ...Array.from({ length: 13 }, (_, k) => b0 + ((b1 - b0) * k) / 12), X1])
-      pts.push([x, z + (c.walkZ - z) * ease(a0, a1, x) * (1 - ease(b0, b1, x))]);
-    return { id: `${s.id}-walk`, pts, half: 1.1 };
-  }),
 ];
 
 /** How far a point is from a polyline (closed if `loop`) */
@@ -424,7 +372,7 @@ export interface ParkTree {
 
 /** Where a tree may stand: on the park, off the paths, the lake and its loop, the stadium's site and the gates */
 export const treeFree = (p: Pt) =>
-  inPark(p, 1.6) && !onPath(p, 1.4) && !inLake(p[0], p[1], LOOP_OUT + 2.6) && !inRect(GARDEN_SITE, p, 3) && !nearTerrace(p, 1.5) && !inRect(BRIDGE_PARK, p, 1.8) && !inRect(BOATHOUSE.rect, p, 2.2) && COURTS.every((c) => !inRect(c.rect, p, 1.6)) && GATES.every((g) => Math.hypot(p[0] - g.at[0], p[1] - g.at[1]) > 4);
+  inPark(p, 1.6) && !onPath(p, 1.4) && !inLake(p[0], p[1], LOOP_OUT + 2.6) && !inRect(GARDEN_SITE, p, 3) && !nearTerrace(p, 1.5) && !inRect(BRIDGE_PARK, p, 1.8) && !inRect(BOATHOUSE.rect, p, 2.2) && GATES.every((g) => Math.hypot(p[0] - g.at[0], p[1] - g.at[1]) > 4);
 
 export const PARK_TREES: ParkTree[] = (() => {
   const r = rng(808);
@@ -434,11 +382,6 @@ export const PARK_TREES: ParkTree[] = (() => {
   };
   // The Mall: an avenue of trees either side, evenly spaced
   for (let z = ZS - 3; z > GARDEN_SITE[3] + 6; z -= 4.5) for (const side of [-1, 1]) put(MALL.x + side * (MALL.half + 1.7), z, 1.05, false, false);
-  // The strips: a row along each side of the walk
-  for (const s of STRIPS) {
-    const z = (s.poly[0][1] + s.poly[1][1]) / 2;
-    for (let x = X0 + 4; x < X1 - 3; x += 6) for (const side of [-1, 1]) put(x + (side > 0 ? 3 : 0), z + side * 3.4, 0.95 + r() * 0.2, false, false);
-  }
   // The lawns: clumps where the noise is high, glades where it's low; pines towards the highway
   for (let x = X0; x < X1; x += 3.2)
     for (let z = Z0; z < ZS; z += 3.2) {
@@ -483,9 +426,9 @@ export const PARK_LAMPS: [number, number, number][] = (() => {
     else if (q.id === 'ring') along(q, 18, false);
     else along(q, 15, false);
   }
-  // Not on another path where paths meet, nor two on top of each other, nor on a court or by the boathouse and its jetty
+  // Not on another path where paths meet, nor two on top of each other, nor by the boathouse and its jetty
   // (and none in the formal garden, which has its own, nor on a terrace)
-  const clear = (l: [number, number, number]) => !inRect(GARDEN_SITE, [l[0], l[1]], 1) && !nearTerrace([l[0], l[1]], 0.6) && COURTS.every((c) => !inRect(c.rect, [l[0], l[1]], 0.6)) && !inRect(BOATHOUSE.rect, [l[0], l[1]], 0.8) && !inRect([JETTY.x - JETTY.half, JETTY.z0, JETTY.x + JETTY.half, JETTY.z1], [l[0], l[1]], 1.2);
+  const clear = (l: [number, number, number]) => !inRect(GARDEN_SITE, [l[0], l[1]], 1) && !nearTerrace([l[0], l[1]], 0.6) && !inRect(BOATHOUSE.rect, [l[0], l[1]], 0.8) && !inRect([JETTY.x - JETTY.half, JETTY.z0, JETTY.x + JETTY.half, JETTY.z1], [l[0], l[1]], 1.2);
   return out.filter((l, i) => clear(l) && !onPath([l[0], l[1]], 0.25) && out.slice(0, i).every((o) => Math.hypot(o[0] - l[0], o[1] - l[1]) > 3));
 })();
 
@@ -515,24 +458,13 @@ export const GATE_PIERS: [number, number, number, number, number][] = GATES.flat
     return [c[0] - PIER.w / 2, c[1] - PIER.w / 2, c[0] + PIER.w / 2, c[1] + PIER.w / 2, PIER.h] as [number, number, number, number, number];
   });
 });
-/** The posts and poles on the courts (step 3): the tennis nets' posts, the goals' posts, the hoops' poles */
-export const COURT_SOLIDS: [number, number, number, number, number][] = (() => {
-  const box = (x: number, z: number, r: number, h: number): [number, number, number, number, number] => [x - r, z - r, x + r, z + r, h];
-  const out: [number, number, number, number, number][] = [];
-  for (const [x, z] of TENNIS.mids) for (const sz of [-1, 1]) out.push(box(x, z + sz * TENNIS.post, 0.08, TENNIS.netH + 0.05));
-  const [fx, fz] = courtMid(COURTS[1]);
-  for (const sx of [-1, 1]) for (const sz of [-1, 1]) out.push(box(fx + sx * PITCH.half[0], fz + sz * PITCH.goal.half, 0.08, PITCH.goal.h));
-  const [bx, bz] = courtMid(COURTS[2]);
-  for (const sx of [-1, 1]) out.push(box(bx + sx * (HOOPS.half[0] + HOOPS.pole), bz, 0.14, HOOPS.rimY + 0.9));
-  return out;
-})();
 /** The boathouse to its ridge */
 export const BOATHOUSE_SOLID: [number, number, number, number, number] = [...BOATHOUSE.rect, BOATHOUSE.ridge];
 /**
- * What's solid in the park: the gates' piers, the boathouse, the courts' posts (the lake keeps walkers out through
- * `inLake()` but on the jetty, cars through `LAKE_WALLS`)
+ * What's solid in the park: the gates' piers, the boathouse (the lake keeps walkers out through `inLake()` but on the
+ * jetty, cars through `LAKE_WALLS`)
  */
-export const WESTLAKE_SOLIDS = [...GATE_PIERS, BOATHOUSE_SOLID, ...COURT_SOLIDS];
+export const WESTLAKE_SOLIDS = [...GATE_PIERS, BOATHOUSE_SOLID];
 
 /** The lake as walls for cars (drive-sim.ts): strips across it, a tile deep, each its width there */
 export const LAKE_WALLS: [number, number, number, number, number][] = (() => {

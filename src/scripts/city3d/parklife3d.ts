@@ -5,17 +5,14 @@
  * - **Sites** (tilework.ts): the boathouse on the lake's north shore (cream
  *   boards, a red roof, its boat bay open to the water, WESTLAKE BOATHOUSE
  *   over it between two lanterns), the jetty (planks on posts, mooring posts,
- *   a lamp at its end), the courts on the strips (two tennis courts with
- *   their nets, the five-a-side pitch striped with its goals, the
- *   basketball court with its keys and hoops) and the picnics' blankets and
- *   baskets (near only).
+ *   a lamp at its end) and the picnics' blankets and baskets (near only).
  * - **What moves** (on the main thread, a tick of its own): the boats
  *   (rowing boats in their colours with their oars sweeping, swan pedalos),
- *   the dogs trotting on their leads, and the balls. Each kind is one
+ *   and the dogs trotting on their leads. Each kind is one
  *   instanced mesh (the rowing boats' hulls take their colour per boat);
  *   none of it is drawn while the camera is far from the park.
  *
- * The people (walkers, joggers, picnickers, players, boaters) are the city's
+ * The people (walkers, joggers, picnickers, boaters) are the city's
  * crowd, placed by life.ts from parklife.ts.
  */
 import * as THREE from 'three';
@@ -23,8 +20,8 @@ import { Batch, FONT_DISPLAY, canvasTex, lit, neon, paintMat, siteMat, toon } fr
 import { SLAB, type Tick } from './world';
 import { site } from './tilework';
 import { CROWD_VIEW } from './character';
-import { BOATHOUSE, COURTS, HOOPS, JETTY, PITCH, TENNIS, WESTLAKE_RECT, courtMid, type Court } from './westlake';
-import { BALLS, BALL_R, BOATS, BOAT_Y, DOGS, HULL, PARK_PEOPLE, PICNICS, moment } from './parklife';
+import { BOATHOUSE, JETTY, WESTLAKE_RECT } from './westlake';
+import { BOATS, BOAT_Y, DOGS, HULL, PARK_PEOPLE, PICNICS, moment } from './parklife';
 
 const CREAM = toon('#ece4d0');
 const TRIM = toon('#2f6152');
@@ -35,36 +32,6 @@ const POST = toon('#5a4232');
 const IRON = toon('#1b1830');
 const WHITE = toon('#f2f0f8');
 const LAMP = neon('#ffe2a0', 0.6, 2.4);
-/** The courts lie this far over the lawn (as the paths: westlake3d.ts) and their lines a hair over them */
-const COURT_Y = SLAB + 0.012;
-const LINE_Y = COURT_Y + 0.006;
-
-/** A flat quad on the ground, x0..x1 by z0..z1 at y, facing up */
-const flat = (x0: number, z0: number, x1: number, z1: number, y: number) => new THREE.PlaneGeometry(x1 - x0, z1 - z0).rotateX(-Math.PI / 2).translate((x0 + x1) / 2, y, (z0 + z1) / 2);
-/** A line marking: from a to b, w wide */
-function line(b: Batch, a: [number, number], c: [number, number], w = 0.07, y = LINE_Y) {
-  const len = Math.hypot(c[0] - a[0], c[1] - a[1]);
-  const g = new THREE.PlaneGeometry(len + w, w)
-    .rotateX(-Math.PI / 2)
-    .rotateY(-Math.atan2(c[1] - a[1], c[0] - a[0]))
-    .translate((a[0] + c[0]) / 2, y, (a[1] + c[1]) / 2);
-  b.add(g, WHITE);
-}
-/** A rectangle's outline in lines */
-function outline(b: Batch, x0: number, z0: number, x1: number, z1: number, w = 0.07) {
-  line(b, [x0, z0], [x1, z0], w);
-  line(b, [x1, z0], [x1, z1], w);
-  line(b, [x1, z1], [x0, z1], w);
-  line(b, [x0, z1], [x0, z0], w);
-}
-/** A painted arc (or circle), radius r round c from a0 to a1 */
-function arc(b: Batch, c: [number, number], r: number, a0: number, a1: number, w = 0.07) {
-  const n = Math.max(6, Math.ceil(((a1 - a0) * r) / 0.4));
-  for (let i = 0; i < n; i++) {
-    const p = (a: number): [number, number] => [c[0] + Math.cos(a) * r, c[1] + Math.sin(a) * r];
-    line(b, p(a0 + ((a1 - a0) * i) / n), p(a0 + ((a1 - a0) * (i + 1)) / n), w);
-  }
-}
 const padded = (r: readonly number[], m: number): [number, number, number, number] => [r[0] - m, r[1] - m, r[2] + m, r[3] + m];
 
 /* ---------- The boathouse and the jetty ---------- */
@@ -180,94 +147,6 @@ function jetty(b: Batch) {
   });
 }
 
-/* ---------- The courts ---------- */
-
-function tennis(b: Batch, c: Court) {
-  const [x0, z0, x1, z1] = c.rect;
-  b.add(flat(x0, z0, x1, z1, COURT_Y), toon('#3f7d5a'));
-  for (const [cx, cz] of TENNIS.mids) {
-    const [hx, hz] = TENNIS.half;
-    b.add(flat(cx - hx, cz - hz, cx + hx, cz + hz, COURT_Y + 0.003), toon('#3a5fa8'));
-    outline(b, cx - hx, cz - hz, cx + hx, cz + hz);
-    // Singles sidelines, service lines (3.56 from the net) and the centre service line
-    const sz = hz * 0.75;
-    line(b, [cx - hx, cz - sz], [cx + hx, cz - sz]);
-    line(b, [cx - hx, cz + sz], [cx + hx, cz + sz]);
-    for (const s of [-1, 1]) line(b, [cx + s * 3.56, cz - sz], [cx + s * 3.56, cz + sz]);
-    line(b, [cx - 3.56, cz], [cx + 3.56, cz]);
-    // The net across the middle: posts, the net and its white tape
-    for (const s of [-1, 1]) b.box(cx - 0.05, COURT_Y, cz + s * TENNIS.post - 0.05, 0.1, TENNIS.netH + 0.05, 0.1, IRON);
-    b.box(cx - 0.012, COURT_Y + 0.08, cz - TENNIS.post, 0.024, TENNIS.netH - 0.12, TENNIS.post * 2, toon('#2c2a3a'));
-    b.box(cx - 0.02, COURT_Y + TENNIS.netH - 0.05, cz - TENNIS.post, 0.04, 0.05, TENNIS.post * 2, WHITE);
-  }
-}
-
-function football(b: Batch, c: Court) {
-  const [x0, z0, x1, z1] = c.rect;
-  const [cx, cz] = courtMid(c);
-  const [hx, hz] = PITCH.half;
-  // Stripes mown across it, two greens
-  const n = 8;
-  for (let i = 0; i < n; i++) {
-    const a = x0 + ((x1 - x0) * i) / n;
-    b.add(flat(a, z0, a + (x1 - x0) / n, z1, COURT_Y), toon(i % 2 ? '#3e8a4c' : '#46985a'));
-  }
-  outline(b, cx - hx, cz - hz, cx + hx, cz + hz, 0.08);
-  line(b, [cx, cz - hz], [cx, cz + hz], 0.08);
-  arc(b, [cx, cz], 1.9, 0, Math.PI * 2, 0.08);
-  for (const s of [-1, 1]) {
-    // The keeper's area, and the goal: posts, crossbar, a frame back and a net of strings (near only)
-    const gx = cx + s * hx;
-    outline(b, Math.min(gx, gx - s * 2.4), cz - 2.8, Math.max(gx, gx - s * 2.4), cz + 2.8, 0.08);
-    const { half, h, d } = PITCH.goal;
-    for (const sz of [-1, 1]) b.box(gx - 0.06, COURT_Y, cz + sz * half - 0.06, 0.12, h, 0.12, WHITE);
-    b.box(gx - 0.06, COURT_Y + h - 0.12, cz - half, 0.12, 0.12, half * 2, WHITE);
-    b.detail(() => {
-      const bx = gx + s * d;
-      for (const sz of [-1, 1]) {
-        b.box(Math.min(gx, bx), COURT_Y + h - 0.04, cz + sz * half - 0.02, d, 0.04, 0.04, toon('#d8d4e8'));
-        b.box(bx - 0.02, COURT_Y, cz + sz * half - 0.02, 0.04, h, 0.04, toon('#d8d4e8'));
-      }
-      b.box(bx - 0.02, COURT_Y, cz - half, 0.04, 0.04, half * 2, toon('#d8d4e8'));
-      // The net: strings down the back and across
-      for (let z = cz - half + 0.25; z < cz + half; z += 0.25) b.box(bx - 0.01, COURT_Y, z - 0.01, 0.02, h, 0.02, toon('#e8e4f8'));
-      for (let y = 0.25; y < h; y += 0.25) b.box(bx - 0.01, COURT_Y + y, cz - half, 0.02, 0.02, half * 2, toon('#e8e4f8'));
-    });
-  }
-}
-
-function basketball(b: Batch, c: Court) {
-  const [x0, z0, x1, z1] = c.rect;
-  const [cx, cz] = courtMid(c);
-  const [hx, hz] = HOOPS.half;
-  b.add(flat(x0, z0, x1, z1, COURT_Y), toon('#2c4f8c'));
-  b.add(flat(cx - hx, cz - hz, cx + hx, cz + hz, COURT_Y + 0.003), toon('#d0763a'));
-  outline(b, cx - hx, cz - hz, cx + hx, cz + hz);
-  line(b, [cx, cz - hz], [cx, cz + hz]);
-  arc(b, [cx, cz], 1.0, 0, Math.PI * 2);
-  for (const s of [-1, 1]) {
-    const bx = cx + s * hx;
-    const rim = bx - s * HOOPS.rim;
-    // The key (painted), its free-throw circle, the three-point arc
-    const kx = bx - s * 3.2;
-    b.add(flat(Math.min(bx, kx), cz - 1.35, Math.max(bx, kx), cz + 1.35, COURT_Y + 0.0045), toon('#2c4f8c'));
-    outline(b, Math.min(bx, kx), cz - 1.35, Math.max(bx, kx), cz + 1.35);
-    arc(b, [kx, cz], 1.0, s > 0 ? Math.PI / 2 : -Math.PI / 2, s > 0 ? (3 * Math.PI) / 2 : Math.PI / 2);
-    arc(b, [rim, cz], 3.75, s > 0 ? Math.PI / 2 + 0.25 : -Math.PI / 2 + 0.25, s > 0 ? (3 * Math.PI) / 2 - 0.25 : Math.PI / 2 - 0.25);
-    // The hoop: a pole behind the baseline, an arm over, the board, the rim and its net
-    const px = bx + s * HOOPS.pole;
-    b.box(px - 0.1, COURT_Y, cz - 0.1, 0.2, HOOPS.rimY + 0.9, 0.2, IRON);
-    const fx = bx - s * HOOPS.board;
-    b.box(Math.min(px, fx), COURT_Y + HOOPS.rimY + 0.35, cz - 0.06, Math.abs(px - fx), 0.12, 0.12, IRON);
-    b.box(fx - 0.03, COURT_Y + HOOPS.rimY - 0.15, cz - 0.9, 0.06, 1.05, 1.8, WHITE);
-    b.detail(() => {
-      b.box(fx - s * 0.035 - 0.01, COURT_Y + HOOPS.rimY + 0.02, cz - 0.3, 0.02, 0.4, 0.6, toon('#e2462f'));
-      b.add(new THREE.TorusGeometry(0.23, 0.025, 5, 16).rotateX(Math.PI / 2).translate(rim, COURT_Y + HOOPS.rimY, cz), toon('#e8742a'));
-      b.add(new THREE.CylinderGeometry(0.23, 0.15, 0.35, 10, 1, true).translate(rim, COURT_Y + HOOPS.rimY - 0.18, cz), toon('#f2f0f8'));
-    });
-  }
-}
-
 /* ---------- Picnics ---------- */
 
 const BLANKETS = ['#d93a4a', '#2aabee', '#ffd23f', '#8000ff', '#1fbf6b'];
@@ -308,13 +187,6 @@ export function registerParkSites() {
     jetty(b);
     b.build(into, { cast: true, receive: true });
   });
-  const draw = { tennis, football, basketball };
-  for (const c of COURTS)
-    site(`westlake court ${c.id}`, padded(c.rect, 1.5), (into) => {
-      const b = new Batch();
-      draw[c.kind](b, c);
-      b.build(into, { cast: true, receive: true });
-    });
   PICNICS.forEach((p, i) =>
     site(`westlake picnic ${i}`, [p.at[0] - 2, p.at[1] - 2, p.at[0] + 2, p.at[1] + 2], (into) => {
       const b = new Batch();
@@ -447,11 +319,7 @@ export function registerParkLife(scene: THREE.Scene, tick: (f: Tick) => void, lo
     dogsShown.length,
     vc
   );
-  // The balls (white, coloured per ball)
-  const balls = inst(shape((b) => b.add(new THREE.SphereGeometry(1, 10, 8), WHITE)), BALLS.length, vc, false);
-  const ballColour = { football: '#f4f2f8', tennis: '#d4ff3a', basketball: '#e8742a' };
   const c = new THREE.Color();
-  BALLS.forEach((b, i) => balls.setColorAt(i, c.set(ballColour[b.kind])));
   rows.forEach((b, i) => rowHull.setColorAt(i, c.set(b.colour)));
   dogsShown.forEach((d, i) => dogs.setColorAt(i, c.set(d.coat)));
   // The leads: a line from each walker's hand to their dog's collar
@@ -474,7 +342,6 @@ export function registerParkLife(scene: THREE.Scene, tick: (f: Tick) => void, lo
   const bp = { x: 0, z: 0, yaw: 0 };
   const dp = { x: 0, z: 0, ry: 0, speed: 0 };
   const wm = moment();
-  const ball = { x: 0, y: 0, z: 0 };
   const [px0, pz0, px1, pz1] = WESTLAKE_RECT;
   const update = (t: number) => {
     // Bob on the water, a little roll
@@ -513,13 +380,7 @@ export function registerParkLife(scene: THREE.Scene, tick: (f: Tick) => void, lo
       const [fx, fz] = [Math.sin(wm.ry), Math.cos(wm.ry)];
       leadPos.set([wm.x - fz * 0.2 + fx * 0.1, SLAB + 0.42, wm.z + fx * 0.2 + fz * 0.1, dp.x + Math.sin(dp.ry) * 0.17 * d.size, SLAB + 0.36 * d.size, dp.z + Math.cos(dp.ry) * 0.17 * d.size], k * 6);
     });
-    BALLS.forEach((b, k) => {
-      b.at(t, ball);
-      const r = BALL_R[b.kind];
-      m4.compose(v.set(ball.x, SLAB + 0.015 + ball.y, ball.z), q.identity(), sv.setScalar(r));
-      balls.setMatrixAt(k, m4);
-    });
-    for (const mesh of [rowHull, rowInside, swanMesh, oars, dogs, balls]) mesh.instanceMatrix.needsUpdate = true;
+    for (const mesh of [rowHull, rowInside, swanMesh, oars, dogs]) mesh.instanceMatrix.needsUpdate = true;
     leadGeo.attributes.position.needsUpdate = true;
   };
   update(0);

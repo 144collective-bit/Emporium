@@ -7,7 +7,7 @@ import { DOORS } from '../src/scripts/city3d/solids';
 import { EXT, RIVER, NS_ROADS } from '../src/scripts/city3d/layout';
 import { HIGHWAY_BOX } from '../src/scripts/city3d/highway';
 import { CLUB } from '../src/scripts/city3d/avenue';
-import { COURTS, LAKE_C, lakeR } from '../src/scripts/city3d/westlake';
+import { LAKE_C, lakeR } from '../src/scripts/city3d/westlake';
 
 test('every layer stays between 0 and 1 across the world', () => {
   for (let x = EXT[0]; x <= EXT[1]; x += 23)
@@ -43,14 +43,11 @@ test("Club PULSE's beat by its door on Trench Avenue, none across town", () => {
   assert.ok(ambienceAt(CLUB.spot.x, CLUB.spot.z, 120).club < 0.05, 'high over it, a wash');
 });
 
-test('Westlake Park: birds on its land, the lake lapping by the water, the games by the courts', () => {
+test('Westlake Park: birds on its land, the lake lapping by the water', () => {
   const mid = ambienceAt(LAKE_C[0] - 40, LAKE_C[1] - 30);
   assert.ok(mid.park > 0.95, 'birds in the park');
   assert.ok(ambienceAt(LAKE_C[0], LAKE_C[1] - lakeR(-Math.PI / 2) - 3).water > 0.7, 'the lake by its shore');
   assert.ok(ambienceAt(LAKE_C[0] - 60, LAKE_C[1] - 70).water < 0.1, 'none far from it');
-  const [x0, z0, x1, z1] = COURTS[1].rect;
-  assert.ok(ambienceAt((x0 + x1) / 2, (z0 + z1) / 2).sport === 1);
   const e = DOORS.find((d) => d.id === 'emporium')!;
   assert.equal(ambienceAt(e.x, e.z).park, 0);
-  assert.equal(ambienceAt(e.x, e.z).sport, 0);
 });

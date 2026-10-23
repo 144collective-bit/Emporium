@@ -25,6 +25,7 @@ import { siteMatOf } from './kit';
 import { takeSites } from './tilework';
 import { buildLamps, buildTrees, usePlaced, type Placed, type Tick } from './world';
 import { buildTrenches } from './trenches3d';
+import { buildUptownStreets } from './streets3d';
 import { buildProjects } from './projects3d';
 import { buildCommons } from './commons3d';
 import { buildGrit } from './grit3d';
@@ -77,6 +78,7 @@ export function serveSites(scope: Scope, init: SiteInit) {
   // (the parked cars go into the far cars' mesh, made first at the boot)
   initFarCars(scene, 400, init.low);
   buildTrenches();
+  buildUptownStreets();
   buildProjects(init.low);
   buildCommons(scene, [], { low: init.low });
   buildGrit(scene, [], { low: init.low });

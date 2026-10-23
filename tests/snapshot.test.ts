@@ -22,6 +22,7 @@ import { BAYS, CIRCUIT, HUT_DOOR, SITE as KART_SITE } from '../src/scripts/city3
 import { COUNTER, FIGHT_CLUB, FIGHT_SPAWN, OUT, RING, TRAINER } from '../src/scripts/city3d/fightsite';
 import { LIBERTY_SPAWN, SUPPORTS, TOWERS, WALKWAY } from '../src/scripts/city3d/liberty';
 import { GATES, GARDEN_SITE, LAKE_C, WESTLAKE_BLOCKS } from '../src/scripts/city3d/westlake';
+import { AXIS_X, PLAZA_BLOCK, UPTOWN_BLOCKS } from '../src/scripts/city3d/uptown';
 import { BLOCK as STADIUM_BLOCK, BRIDGE, CENTRE as STADIUM_CENTRE, LOOP as STADIUM_LOOP, ROAD as STADIUM_ROAD } from '../src/scripts/city3d/stadium';
 
 const FILE = join(process.cwd(), 'tests', 'fixtures', 'layout.json');
@@ -86,6 +87,7 @@ const layout = () =>
     fightClub: { lot: FIGHT_CLUB, ring: RING, counter: COUNTER, trainer: TRAINER, out: OUT },
     liberty: { x: FOOTBRIDGE_X, towers: TOWERS, walkway: WALKWAY, supports: SUPPORTS },
     westlake: { blocks: WESTLAKE_BLOCKS, lake: LAKE_C, gates: GATES, garden: GARDEN_SITE },
+    uptown: { blocks: UPTOWN_BLOCKS.map((b) => ({ id: b.id, rect: b.rect })), plaza: PLAZA_BLOCK, axis: AXIS_X },
     stadium: { block: STADIUM_BLOCK, centre: STADIUM_CENTRE, road: STADIUM_ROAD, loop: STADIUM_LOOP, bridge: { x: BRIDGE.x, deck: BRIDGE.deck } },
   }) as Record<string, unknown>;
 
