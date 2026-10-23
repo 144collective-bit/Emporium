@@ -17,6 +17,7 @@
 import { LANE, MEDIAN } from './layout';
 import { PLAN, distToStreet, offsetLine, type Street } from './streetplan';
 import { SLIP_CUT, cornerCurve } from './highway';
+import { baked } from './baked';
 
 export type Pt = [number, number];
 /** Which way traffic crosses a junction: along x, along z, or down a diagonal (each gets its own green) */
@@ -327,24 +328,31 @@ const NEAR: { half: number; segs: [Pt, Pt][] }[][] = JUNCTIONS.map((j) =>
 );
 /** How far q is from the nearest of some segments */
 function toSegs(segs: [Pt, Pt][], q: Pt) {
+  // (squared distances, rooted once: it runs hundreds of thousands of times as the routes are worked out)
   let best = Infinity;
   for (const [a, b] of segs) {
-    const v: Pt = [b[0] - a[0], b[1] - a[1]];
-    const l2 = v[0] * v[0] + v[1] * v[1];
-    const t = l2 ? Math.max(0, Math.min(1, ((q[0] - a[0]) * v[0] + (q[1] - a[1]) * v[1]) / l2)) : 0;
-    best = Math.min(best, Math.hypot(q[0] - (a[0] + v[0] * t), q[1] - (a[1] + v[1] * t)));
+    const vx = b[0] - a[0];
+    const vz = b[1] - a[1];
+    const l2 = vx * vx + vz * vz;
+    const t = l2 ? Math.max(0, Math.min(1, ((q[0] - a[0]) * vx + (q[1] - a[1]) * vz) / l2)) : 0;
+    const dx = q[0] - (a[0] + vx * t);
+    const dz = q[1] - (a[1] + vz * t);
+    const d2 = dx * dx + dz * dz;
+    if (d2 < best) best = d2;
   }
-  return best;
+  return Math.sqrt(best);
 }
 
 /** The junctions in cells of 12, for what's near a point (`junctionsNear()`: its cell and the eight round it) */
 const J_CELL = 12;
-let jGrid: Map<string, Junction[]> | null = null;
+let jGrid: Map<number, Junction[]> | null = null;
+/** A cell's key (a number: no string built per look-up) */
+const jKey = (cx: number, cz: number) => cx * 4096 + cz;
 function junctionsNear([x, z]: Pt): Junction[] {
   if (!jGrid) {
     jGrid = new Map();
     for (const j of JUNCTIONS) {
-      const key = `${Math.floor(j.at[0] / J_CELL)},${Math.floor(j.at[1] / J_CELL)}`;
+      const key = jKey(Math.floor(j.at[0] / J_CELL), Math.floor(j.at[1] / J_CELL));
       const l = jGrid.get(key);
       if (l) l.push(j);
       else jGrid.set(key, [j]);
@@ -352,13 +360,22 @@ function junctionsNear([x, z]: Pt): Junction[] {
   }
   const [cx, cz] = [Math.floor(x / J_CELL), Math.floor(z / J_CELL)];
   const out: Junction[] = [];
-  for (let i = -1; i <= 1; i++) for (let k = -1; k <= 1; k++) for (const j of jGrid.get(`${cx + i},${cz + k}`) ?? []) out.push(j);
+  for (let i = -1; i <= 1; i++)
+    for (let k = -1; k <= 1; k++) {
+      const l = jGrid.get(jKey(cx + i, cz + k));
+      if (l) for (const j of l) out.push(j);
+    }
   return out;
 }
 
-function makeRoute(pts: Pt[]): Route {
+/** How far along a line each of its points is */
+function cumOf(pts: Pt[]) {
   const cum = [0];
   for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+  return cum;
+}
+function makeRoute(pts: Pt[]): Route {
+  const cum = cumOf(pts);
   const route: Route = { pts, cum, len: cum.at(-1)!, stops: [] };
   // Where it crosses each junction: inside the asphalt of two of the streets meeting there. Coarsely first
   // (every half tile, which junctions it passes near), then finely round each pass
@@ -369,7 +386,11 @@ function makeRoute(pts: Pt[]): Route {
     seg = o.seg;
     coarse.push(o.at);
   }
-  const inside = (j: Junction, q: Pt) => NEAR[j.ix].filter((s) => toSegs(s.segs, q) < s.half + 0.2).length >= 2;
+  const inside = (j: Junction, q: Pt) => {
+    let n = 0;
+    for (const s of NEAR[j.ix]) if (toSegs(s.segs, q) < s.half + 0.2 && ++n >= 2) return true;
+    return false;
+  };
   // Which junctions each coarse point is within 12 of (through the junctions' grid, not every junction)
   const near = new Map<Junction, number[]>();
   coarse.forEach((q, k) => {
@@ -456,7 +477,18 @@ function highwayLoop(d: 1 | -1, off: number): Pt[] {
 /** How long a seeded drive goes before heading back */
 const DRIVE_MOVES = 9;
 
-export const ROUTES: Route[] = (() => {
+/** A route as plain data (its junctions by number), for the build to bake (baked.ts) */
+export type PackedRoute = { pts: Pt[]; stops: [number, number, number, Phase][] };
+export const packRoutes = (routes: Route[]): PackedRoute[] => routes.map((r) => ({ pts: r.pts, stops: r.stops.map((s): [number, number, number, Phase] => [s.j.ix, s.enter, s.exit, s.phase]) }));
+export const unpackRoutes = (packed: PackedRoute[]): Route[] =>
+  packed.map(({ pts, stops }) => {
+    const cum = cumOf(pts);
+    return { pts, cum, len: cum.at(-1)!, stops: stops.map(([ix, enter, exit, phase]) => ({ j: JUNCTIONS[ix], enter, exit, phase })) };
+  });
+
+/** Every route the traffic drives (worked out when the site is built: baked.ts) */
+export const ROUTES: Route[] = baked('routes', allRoutes, packRoutes, unpackRoutes);
+function allRoutes(): Route[] {
   const r = rng(7007);
   const routes: Pt[][] = [highwayLoop(1, IN), highwayLoop(1, OUT), highwayLoop(-1, IN), highwayLoop(-1, OUT)];
   // Every stretch that can be driven (some turn leads onto it: a one-way loop can leave a stretch nobody can
@@ -511,7 +543,7 @@ export const ROUTES: Route[] = (() => {
     routes.push(loopOf(legsOf(cycle, r)));
   }
   return routes.map(makeRoute);
-})();
+}
 
 /**
  * Spots along the routes, every few tiles: where a car can be put on the

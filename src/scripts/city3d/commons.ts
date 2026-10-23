@@ -31,6 +31,7 @@ import { TRENCH_BLOCKS, inTrenches } from './trenches';
 import { PILLARS } from './metro';
 import { WALK_W } from './layout';
 import { rng } from './recipes';
+import { baked } from './baked';
 
 export type AmenityKind = 'playground' | 'halfcourt' | 'soccer' | 'skate' | 'garden' | 'chess' | 'washing';
 /** Each kind's size (w along x before turning, d along z) */
@@ -116,7 +117,7 @@ export const REC_DOORS = {
 };
 
 /** The amenities, block by block */
-export const AMENITIES: Amenity[] = (() => {
+export const AMENITIES: Amenity[] = baked('amenities', () => {
   const out: Amenity[] = [];
   for (const blk of TRENCH_BLOCKS) {
     const mix = MIX[blk.id];
@@ -125,10 +126,14 @@ export const AMENITIES: Amenity[] = (() => {
     const towers = TOWERS.filter((t) => t.block === blk.id);
     const keep: Rect[] = [...towers.flatMap(towerRects).map((r) => grow(r, ROOM)), ...towers.map((t) => doorWay(t, b))];
     const [cx, cz] = [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2];
-    // Spots to try, nearest the lawn's middle first
-    const spots: Pt[] = [];
-    for (let x = b[0] + EDGE; x < b[2] - EDGE; x += 0.5) for (let z = b[1] + EDGE; z < b[3] - EDGE; z += 0.5) spots.push([x, z]);
-    spots.sort((p, q) => Math.hypot(p[0] - cx, p[1] - cz) - Math.hypot(q[0] - cx, q[1] - cz));
+    // Spots to try, nearest the lawn's middle first (each one's distance worked out once, not at every comparison)
+    const grid: Pt[] = [];
+    for (let x = b[0] + EDGE; x < b[2] - EDGE; x += 0.5) for (let z = b[1] + EDGE; z < b[3] - EDGE; z += 0.5) grid.push([x, z]);
+    const dist = Float64Array.from(grid, (p) => Math.hypot(p[0] - cx, p[1] - cz));
+    const spots = grid
+      .map((_, k) => k)
+      .sort((p, q) => dist[p] - dist[q])
+      .map((k) => grid[k]);
     mix.forEach((kind, i) => {
       const [w, d] = AMENITY_SIZE[kind];
       for (const turned of [false, true]) {
@@ -165,7 +170,7 @@ export const AMENITIES: Amenity[] = (() => {
     });
   }
   return out;
-})();
+});
 /** The way from an amenity out to its block's edge (a path; kept clear of bays and railings) */
 export function amenityWay(a: Amenity, half = 1): Rect {
   return wayOut(a.rect, a.opens, bounds(TRENCH_BLOCKS.find((o) => o.id === a.block)!.poly), half);

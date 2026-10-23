@@ -31,7 +31,13 @@ import { rng } from './recipes';
 
 const bounds = (poly: Pt[]): Rect => [Math.min(...poly.map((p) => p[0])), Math.min(...poly.map((p) => p[1])), Math.max(...poly.map((p) => p[0])), Math.max(...poly.map((p) => p[1]))];
 const grow = ([x0, z0, x1, z1]: Rect, m: number): Rect => [x0 - m, z0 - m, x1 + m, z1 + m];
-const rectOf = (id: string) => bounds(TRENCH_BLOCKS.find((b) => b.id === id)!.poly);
+/** A block's rectangle (each worked out once) */
+const RECTS = new Map<string, Rect>();
+const rectOf = (id: string): Rect => {
+  let r = RECTS.get(id);
+  if (!r) RECTS.set(id, (r = bounds(TRENCH_BLOCKS.find((b) => b.id === id)!.poly)));
+  return r;
+};
 
 /** The street walls' depth (the plot: the building and its front strip) */
 export const WALL_DEPTH = 4.4;
