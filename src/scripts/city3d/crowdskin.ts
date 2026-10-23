@@ -8,6 +8,13 @@
  * that draws a crowd: its colour, its shadow (`crowdDepth()`) and the ink
  * outlines' normal pass (post.ts), where anything else reads `crowdOn` 0
  * and is left as it is.
+ *
+ * Performance phase 3: a crowd is one mesh per outfit kind and material at
+ * each level, everyone of that kind sharing it. What a person wears and
+ * their colours are their row in the wardrobe (`crowdWardrobe`, one float
+ * texture for every crowd): a vertex carries the colour it takes and the
+ * item it's part of (`crowdSlot`), an instance its row (`crowdAnim.w`).
+ * Items a person doesn't wear fold to a point (nothing drawn) in every pass.
  */
 import * as THREE from 'three';
 import { CROWD_BONES, CROWD_ROWS, bakeCrowdClips } from './crowdclips';
@@ -23,12 +30,38 @@ export function crowdTexture() {
   return crowdBones.value;
 }
 
+/**
+ * The wardrobe's width in texels: a row is a person, its first texels their colours (rgb, by
+ * colour key), and each texel's alpha whether they wear the item that column stands for
+ */
+export const WARDROBE_W = 128;
+/** Every crowd's people, a row each (`addWardrobe()`) */
+export const crowdWardrobe: { value: THREE.DataTexture | null } = { value: null };
+let wardrobe = new Float32Array(0);
+let wardrobeRows = 0;
+/** Rows for more people (each `WARDROBE_W` * 4 floats): the first one's number */
+export function addWardrobe(rows: Float32Array[]) {
+  const first = wardrobeRows;
+  wardrobeRows += rows.length;
+  const next = new Float32Array(WARDROBE_W * 4 * wardrobeRows);
+  next.set(wardrobe);
+  rows.forEach((r, i) => next.set(r, (first + i) * WARDROBE_W * 4));
+  wardrobe = next;
+  crowdWardrobe.value?.dispose();
+  const t = new THREE.DataTexture(wardrobe, WARDROBE_W, wardrobeRows, THREE.RGBAFormat, THREE.FloatType);
+  t.needsUpdate = true;
+  crowdWardrobe.value = t;
+  return first;
+}
+
 const HEAD = /* glsl */ `
 uniform highp sampler2D crowdBones;
+uniform highp sampler2D crowdWardrobe;
 attribute float crowdOn;
 attribute vec4 crowdIdx;
 attribute vec4 crowdWt;
-attribute vec3 crowdAnim;
+attribute vec2 crowdSlot;
+attribute vec4 crowdAnim;
 mat4 crowdRow(int b, int row) {
   int x = b * 4;
   return mat4(texelFetch(crowdBones, ivec2(x, row), 0), texelFetch(crowdBones, ivec2(x + 1, row), 0), texelFetch(crowdBones, ivec2(x + 2, row), 0), texelFetch(crowdBones, ivec2(x + 3, row), 0));
@@ -47,10 +80,15 @@ mat4 crowdSkin() {
 /** Put the crowd's skinning into a shader (from a material's onBeforeCompile) */
 export function injectCrowdSkin(sh: { vertexShader: string; uniforms: Record<string, THREE.IUniform> }) {
   sh.uniforms.crowdBones = crowdBones;
+  sh.uniforms.crowdWardrobe = crowdWardrobe;
   sh.vertexShader =
     HEAD +
     sh.vertexShader
-      .replace('void main() {', 'void main() {\n  mat4 crowdM = crowdOn > 0.5 ? crowdSkin() : mat4(1.0);')
+      .replace(
+        'void main() {',
+        // (an item this person doesn't wear: every vertex to one point, so its triangles draw nothing)
+        'void main() {\n  mat4 crowdM = mat4(1.0);\n  if (crowdOn > 0.5) crowdM = texelFetch(crowdWardrobe, ivec2(int(crowdSlot.y + 0.5), int(crowdAnim.w + 0.5)), 0).a > 0.5 ? crowdSkin() : mat4(0.0);'
+      )
       .replace('#include <beginnormal_vertex>', '#include <beginnormal_vertex>\n  objectNormal = mat3(crowdM) * objectNormal;')
       .replace('#include <begin_vertex>', '#include <begin_vertex>\n  transformed = (crowdM * vec4(transformed, 1.0)).xyz;');
 }
@@ -62,6 +100,16 @@ export function crowdVersion<M extends THREE.Material>(base: M, key: string): M 
   m.onBeforeCompile = (sh, r) => {
     prev.call(m, sh, r);
     injectCrowdSkin(sh);
+    // The person's own colour for the parts that take one (crowdSlot.x -1: a fixed colour, left as it is)
+    sh.vertexShader = sh.vertexShader
+      .replace('void main() {', 'varying vec3 vCrowdTint;\nvoid main() {')
+      .replace(
+        '#include <begin_vertex>',
+        '#include <begin_vertex>\n  vCrowdTint = crowdSlot.x < -0.5 ? vec3(1.0) : texelFetch(crowdWardrobe, ivec2(int(crowdSlot.x + 0.5), int(crowdAnim.w + 0.5)), 0).rgb;'
+      );
+    sh.fragmentShader = sh.fragmentShader
+      .replace('void main() {', 'varying vec3 vCrowdTint;\nvoid main() {')
+      .replace('#include <color_fragment>', '#include <color_fragment>\n  diffuseColor.rgb *= vCrowdTint;');
   };
   const baseKey = base.customProgramCacheKey();
   m.customProgramCacheKey = () => `${baseKey}|crowd|${key}`;

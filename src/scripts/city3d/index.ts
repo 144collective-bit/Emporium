@@ -237,6 +237,18 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   };
 
   const post = createPost(renderer, scene, camera, { msaa: Q.msaa, bloomScale: Q.bloomScale, smaa: devicePixelRatio < 1.5 && tier !== 'low', bloomMips: tier === 'low' ? 3 : 5 });
+  /**
+   * Shaders compiled for where the city really draws: the post chain's target (linear colour), not the
+   * screen. Compiled for the screen, each material gets a program no frame uses, and the real one is
+   * compiled the first time it's drawn (a hitch, and twice the programs)
+   */
+  const compileFor = <T,>(o: THREE.Object3D, how: (o: THREE.Object3D) => T = (x) => renderer.compile(x, camera, scene) as T): T => {
+    const prev = renderer.getRenderTarget();
+    renderer.setRenderTarget(post.composer.renderTarget1);
+    const r = how(o);
+    renderer.setRenderTarget(prev);
+    return r;
+  };
 
   function resize() {
     const w = host.clientWidth;
@@ -286,7 +298,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // airport's grounds, the kart park's circuit), only those in the home view and the intro's are built now
   const works = createTileWork(scene, {
     budget: (Number(new URLSearchParams(location.search).get('budget')) || Q.nearBudget) * 2 ** 20,
-    compile: (meshes) => meshes.forEach((m) => renderer.compile(m, camera, scene)),
+    compile: (meshes) => meshes.forEach((m) => compileFor(m)),
   });
   const atBoot = works.boot([...new Set([...viewTiles(h0.pos, h0.target), ...viewTiles(introFrom(h0), h0.target)].map((t) => t.join()))].map((k) => k.split(',').map(Number) as [number, number]));
   const tiled = tileBatch(scene, [scene, ...['airport', 'kartpark'].flatMap((n) => scene.getObjectByName(n) ?? []), ...atBoot]);
@@ -301,10 +313,13 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     const g = farQueue.shift();
     if (!g) return;
     farForm(g);
+    // (its shader now, not the first time it's seen from far off)
+    compileFor(g);
     idle(nextFar);
   };
   bootAt.built = performance.now();
-  renderer.compile(scene, camera);
+  // (in parallel where the GPU can: the page stays free while they compile)
+  await compileFor(scene, (o) => renderer.compileAsync(o, camera));
   bootAt.compiled = performance.now();
   progress(1);
 
