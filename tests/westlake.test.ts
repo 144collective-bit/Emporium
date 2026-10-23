@@ -1,6 +1,6 @@
 // Westlake Park (westlake.ts, growth plan Phase 9b): its blocks west of town inside the ring highway, clear of the
 // highway and its slip lanes, the Parkway, the avenues and everything that was there; the lake, its loop, the paths,
-// the gates, trees, lamps and benches where they belong; the stadium's site kept clear.
+// the gates, trees, lamps and benches where they belong; the stadium's old site kept clear for the garden.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -14,7 +14,7 @@ import {
   PARK_LAMPS,
   PARK_TREES,
   PATHS,
-  STADIUM_SITE,
+  GARDEN_SITE,
   STRIPS,
   WESTLAKE_SOLIDS,
   WESTLAKE_BLOCKS,
@@ -93,15 +93,15 @@ test('the lake: inside the big block, its loop round it on the park, its walls c
   for (const w of LAKE_WALLS) assert.ok(!RIVER_WALLS.some((r) => r[1] < w[3] && r[3] > w[1] && r[0] < w[2] && r[2] > w[0]));
 });
 
-test('the paths: on the park, off the lake and the stadium\'s site (but its forecourt), each gate on one', () => {
+test('the paths: on the park, off the lake and the garden\'s site (but the Mall through it), each gate on one', () => {
   for (const q of PATHS) {
     const pts = q.loop ? [...q.pts, q.pts[0]] : q.pts;
     for (let i = 1; i < pts.length; i++)
       for (const p of along(pts[i - 1], pts[i], 1)) {
         assert.ok(inPark(p, -0.01), `${q.id} on the park at ${p}`);
         assert.ok(!inLake(p[0], p[1], q.half + 0.5), `${q.id} in the lake at ${p}`);
-        const [x0, z0, x1, z1] = STADIUM_SITE;
-        assert.ok(!(p[0] > x0 && p[0] < x1 && p[1] > z0 && p[1] < z1), `${q.id} on the stadium's site at ${p}`);
+        const [x0, z0, x1, z1] = GARDEN_SITE;
+        if (q.id !== 'mall') assert.ok(!(p[0] > x0 && p[0] < x1 && p[1] > z0 && p[1] < z1), `${q.id} on the garden's site at ${p}`);
       }
   }
   for (const g of GATES) assert.ok(onPath(g.at), `${g.id} on a path`);
@@ -111,17 +111,17 @@ test('the paths: on the park, off the lake and the stadium\'s site (but its fore
   for (const pr of GATE_PIERS) assert.ok(SOLIDS.some((s) => s.every((v, i) => v === pr[i])), 'the piers are solid');
 });
 
-test('trees, lamps and benches: on the park, off the paths, the water and the stadium\'s site', () => {
+test('trees, lamps and benches: on the park, off the paths, the water and the garden\'s site', () => {
   assert.ok(PARK_TREES.length > 300, `${PARK_TREES.length} trees`);
   assert.ok(PARK_TREES.filter((t) => t.clump).length > 150);
-  const [x0, z0, x1, z1] = STADIUM_SITE;
+  const [x0, z0, x1, z1] = GARDEN_SITE;
   const onSite = (p: Pt, m: number) => p[0] > x0 - m && p[0] < x1 + m && p[1] > z0 - m && p[1] < z1 + m;
   for (const t of PARK_TREES) {
     const p: Pt = [t.x, t.z];
     assert.ok(inPark(p, 1), `a tree off the park at ${p}`);
     assert.ok(!onPath(p, 1), `a tree on a path at ${p}`);
     assert.ok(!inLake(t.x, t.z, LOOP_OUT + 2), `a tree in the lake at ${p}`);
-    assert.ok(!onSite(p, 2), `a tree on the stadium's site at ${p}`);
+    assert.ok(!onSite(p, 2), `a tree on the garden's site at ${p}`);
   }
   for (let i = 0; i < PARK_TREES.length; i++)
     for (let j = i + 1; j < PARK_TREES.length; j++) assert.ok(Math.hypot(PARK_TREES[i].x - PARK_TREES[j].x, PARK_TREES[i].z - PARK_TREES[j].z) > 2, 'trees apart');

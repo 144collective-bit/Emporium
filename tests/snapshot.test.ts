@@ -21,7 +21,8 @@ import { GATE, KART_PARK, KART_SPAWN, SLIP_ROAD } from '../src/scripts/city3d/ka
 import { BAYS, CIRCUIT, HUT_DOOR, SITE as KART_SITE } from '../src/scripts/city3d/kartcircuit';
 import { COUNTER, FIGHT_CLUB, FIGHT_SPAWN, OUT, RING, TRAINER } from '../src/scripts/city3d/fightsite';
 import { LIBERTY_SPAWN, SUPPORTS, TOWERS, WALKWAY } from '../src/scripts/city3d/liberty';
-import { GATES, LAKE_C, STADIUM_SITE, WESTLAKE_BLOCKS } from '../src/scripts/city3d/westlake';
+import { GATES, GARDEN_SITE, LAKE_C, WESTLAKE_BLOCKS } from '../src/scripts/city3d/westlake';
+import { BLOCK as STADIUM_BLOCK, BRIDGE, CENTRE as STADIUM_CENTRE, LOOP as STADIUM_LOOP, ROAD as STADIUM_ROAD } from '../src/scripts/city3d/stadium';
 
 const FILE = join(process.cwd(), 'tests', 'fixtures', 'layout.json');
 
@@ -84,7 +85,8 @@ const layout = () =>
     karts: { park: KART_PARK, gate: GATE, slipRoad: SLIP_ROAD, site: KART_SITE, bays: BAYS, hutDoor: HUT_DOOR, circuit },
     fightClub: { lot: FIGHT_CLUB, ring: RING, counter: COUNTER, trainer: TRAINER, out: OUT },
     liberty: { x: FOOTBRIDGE_X, towers: TOWERS, walkway: WALKWAY, supports: SUPPORTS },
-    westlake: { blocks: WESTLAKE_BLOCKS, lake: LAKE_C, gates: GATES, stadium: STADIUM_SITE },
+    westlake: { blocks: WESTLAKE_BLOCKS, lake: LAKE_C, gates: GATES, garden: GARDEN_SITE },
+    stadium: { block: STADIUM_BLOCK, centre: STADIUM_CENTRE, road: STADIUM_ROAD, loop: STADIUM_LOOP, bridge: { x: BRIDGE.x, deck: BRIDGE.deck } },
   }) as Record<string, unknown>;
 
 // The streets, with the world's edge left open

@@ -77,3 +77,10 @@ export const PLACE_IDS = PLACES.map((p) => p.id);
 export const SEEN_R = 9;
 /** The places a walker at x, z has just reached */
 export const seen = (x: number, z: number) => PLACES.filter((p) => Math.hypot(p.at.x - x, p.at.z - z) < SEEN_R).map((p) => p.id);
+
+/** A place's name and a line under it: the copy on its pin (CityMap.astro's directory, found under `root`), or its own */
+export function placeName(root: ParentNode, p: Place) {
+  if (p.name) return { name: p.name, sub: p.kind === 'metro' ? 'Metro' : '' };
+  const a = root.querySelector(`[data-dir-spot="${p.spot}"]`);
+  return { name: a?.querySelector('span')?.textContent?.trim() ?? p.id, sub: a?.querySelector('small')?.textContent?.trim() ?? '' };
+}

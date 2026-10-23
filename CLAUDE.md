@@ -595,7 +595,7 @@ it and has been retired completely. Build only on what's here.
     (`GATE_PIERS`, `WESTLAKE_SOLIDS` in `SOLIDS`); `PARK_TREES` (the Mall's
     avenue, the strips' rows, clumps from a seeded noise; `clump` ones,
     every other, left out on phones), `PARK_LAMPS` and `BENCHES`;
-    `STADIUM_SITE` for the stadium; `CAR_PARK` on the first strip; step 3's
+    `GARDEN_SITE` (the stadium's old site, kept for the formal garden); step 3's
     land: the boathouse (`BOATHOUSE`, solid) and its jetty (`JETTY`,
     `onJetty()`: walk.ts lets you out along it, at its deck's height), the
     courts on the strips (`COURTS`, `TENNIS`, `PITCH`, `HOOPS`,
@@ -632,25 +632,51 @@ it and has been retired completely. Build only on what's here.
     while the camera is far from the park). Its sound: `park` (birds by
     day, an owl at night) and `sport` (a ball by the courts) in
     ambience.ts, the lake in `water`.
-  - **Sector 7 Stadium** (step 2) is `stadium.ts` (DOM-free, tested in
-    `tests/stadium.test.ts`) on `STADIUM_SITE` at the top of the Mall: a
-    soft-cornered oval bowl (`ovalAt()`, `oval()`, `inOval()`; `FACADE`),
-    two tiers of seats (`TIERS`) with a concourse between (`CONCOURSE`),
-    a roof ring over the upper tier (`ROOF`), the pitch (`PITCH`) and its
-    track (`TRACK`), four floodlight masts (`MASTS`, `MAST`; `TALLEST`
-    under the Emporium), the big screen over the north stand (`SCREEN`)
-    and the main gate in the south facade (`GATE`, under `NAME`, fixed
-    made-up copy), `STADIUM_SPAWN` on the forecourt; the car park's
-    `BAYS`, `ENTRANCES` and `PARKED` cars; `STADIUM_SOLIDS` (in `SOLIDS`:
+  - **Sector 7 Stadium** (step 2; moved north of the ring highway in the
+    north side's stage 1, `docs/north-plan.md`, the owner's call) is
+    `stadium.ts` (DOM-free, tested in `tests/stadium.test.ts`) on its own
+    block north of the highway (`BLOCK`, in the street plan as `stadium`),
+    in line with the Mall (`CENTRE`): a soft-cornered oval bowl (`ovalAt()`,
+    `oval()`, `inOval()`; `FACADE`), two tiers of seats (`TIERS`) with a
+    concourse between (`CONCOURSE`), a roof ring over the upper tier
+    (`ROOF`), the pitch (`PITCH`) and its track (`TRACK`), four floodlight
+    masts (`MASTS`, `MAST`; `TALLEST` under the Emporium), the big screen
+    over the north stand (`SCREEN`) and the main gate in the south facade
+    (`GATE`, under `NAME`, fixed made-up copy), `STADIUM_SPAWN` on the
+    forecourt. Stadium Road (`ROAD`) runs west off the north road (ns0) past
+    its front, and the car park (`CAR_PARK`, `BAY_ROWS`, `BAYS`, `PARKED`) is
+    inside a one-way loop off it east of the stadium (`LOOP`), as the
+    airport's is: `STADIUM_STREETS` / `STADIUM_CROSSINGS` in the street
+    plan, so traffic drives them, coming off the highway at ns0, whose outer
+    corners get slip lanes too (`OUTER_SLIPS` in streetplan.ts). The
+    footbridge (`BRIDGE`) carries the Mall from the park up over the ring
+    walk, the park's edge, the highway and Stadium Road and down to the
+    forecourt: walkable (`bridgeY()`, `bridgeWall()` in walk.ts, as Liberty
+    Bridge's), its piers (the middle one on the highway's median) and its
+    stairs past their first steps solid. `STADIUM_SOLIDS` (in `SOLIDS`):
     the facade all round, the gates shut until there are events, the masts,
-    the parked cars). Drawn by `stadium3d.ts` (`buildStadium()`, a place
-    built at the boot like the avenue's, not in the park's chunk): seats in
-    sections of magenta, purple and cyan, the roof's neon edge, lamp heads
-    on the masts and their pools of light on the pitch at night, the screen
-    and the name board from one small atlas, the parked cars. It's a
-    place: spot `stadium` (pin, directory entry, panel
+    the parked cars, the footbridge's piers and stairs; `STADIUM_LAMPS`,
+    `STADIUM_RECTS` (the outskirts' trees keep off; no highway lamp under
+    the bridge). The stadium is drawn by `stadium3d.ts` (`buildStadium()`, a
+    place built at the boot: seats in sections of magenta, purple and cyan,
+    the roof's neon edge, lamp heads on the masts and their pools of light
+    on the pitch at night, the screen and the name board from one small
+    atlas, the parked cars); its grounds (the road, the car park with its
+    bays, one-way arrows and P sign, the footbridge) by
+    `stadiumgrounds3d.ts`, loaded as you approach with the park's chunk
+    (`LAZY_DISTRICTS`: `westlake`, whose land covers it too).
+    It's a place: spot `stadium` (pin, directory entry, panel
     `data-panel-tpl="stadium"`: events coming soon, Walk in), the gate's
-    door prompt opens it, `PLACES` entry. Its sound waits for events.
+    door prompt opens it, `PLACES` entry. Its sound waits for events. Its
+    old site in the park (`GARDEN_SITE` in westlake.ts) is kept clear for
+    the formal garden (stage 3), the Mall running through it to the
+    footbridge's foot (`BRIDGE_FOOT`); the old car park on the first strip
+    went back to park.
+- **The north side** (the owner's call): the stadium and the kart park
+  moving north of the ring highway and Westlake Park's paths, kerbs, low
+  walls and gardens, planned in `docs/north-plan.md` in three stages, each
+  with the owner's sign-off; keep it up to date. Stage 1 (the stadium
+  north, above) is built.
 - **Districts loaded as you approach** (performance phase 4, item 10):
   a district's drawing is a module of its own (`LAZY_DISTRICTS` in
   `districts.ts`: an id, its land and `load()`, a dynamic import), a chunk
@@ -773,8 +799,11 @@ it and has been retired completely. Build only on what's here.
   - Features load when they're used, each its own chunk (`import()`):
     the fight (`fight.ts` and the figures' clips, when the trainer's menu
     first opens: `loadFight()` in `walk.ts`), the stage of the fitting room
-    and the character screen (`stage.ts`), SMAA (`post.ts`) and the fight
-    demo. New features that aren't needed until they're used come the same
+    and the character screen (`stage.ts`), SMAA (`post.ts`), the fight
+    demo, the benchmark (`?bench`, `bench.ts`), Drop 001's fitting room
+    (`fitting.ts`, when its panel first opens: `loadFitting()` in index.ts)
+    and the world map (`worldmap.ts`, when it first opens: `loadMap()` in
+    travel-ui.ts; `placeName()` is places.ts's). New features that aren't needed until they're used come the same
     way. three.js is a chunk of its own (`manualChunks` in
     `astro.config.mjs`), so a deploy that doesn't change it leaves it
     cached.
