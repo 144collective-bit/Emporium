@@ -198,7 +198,7 @@ it and has been retired completely. Build only on what's here.
   - City view pans round the built-up area (`bounds.ts`: `BUILT_UP` is the town, the airport and the kart park; `PAN_BOUNDS` reaches `PAN_MARGIN` (160) past it, never closer than 10 to where you can walk: today that's the whole world), and the Build overview frames the plots (`overviewFrame()`).
   - **The edge is data** (growth plan Phase 5): `EXT` is set in one place, and a test run can set another (`WORLD_EXT=x0,x1`, `npm run test:wide` at Phase 10's -680 to 720); both must pass. Nothing that exists reads the edge: the airport's `SITE` is fixed numbers, the river walls and their bridge gaps come from the street plan (`riverCrossings()` in `streetplan.ts`), flying turns back at whatever bounds it's given. Anything new written against the edge must work at both sizes.
   - **Growing the city** (many more buildings, then a bigger world) is planned in `docs/growth-plan.md`. Part A (Phases 0-4) makes size cheap: the measuring kit and a snapshot test that nothing moves, tiles and a collision grid, near and far building forms, building as you go, building kits. Part B (Phases 5-10) grows the world: the edge as data (the airport's site frozen, trees per tile), `EXT` out to about 880 across, roads to reach it (a ring highway, more bridges, traffic spent near you), getting about (a world map, waypoints, and the owner's pick of metro, taxis or fast travel), districts one at a time, then optionally about 1,400 across. Phases 0 (the measuring kit), 1 (tiles, the collision grid, the city's fixed geometry merged per tile, crowds and traffic culled for the shadow map), 2 (near and far forms: details near only, far forms for the places and the cars) 3 (building as you go: sites built round the home view at the boot and the rest after it, near forms let go past a budget), 4 (building kits: kits, recipes for blocks, a test district behind `?district=test`), 5 (the edge as data: `EXT` in one place, tests at both sizes) 6 (the edge moves out: `EXT` -420 to 460, the woods, the far plane and sky dome from the edge) 7 (roads to reach it: the ring highway, its bridges and slip lanes, routes generated from the street plan, traffic and boats spent near you) and 8 (getting about: the world map, waypoints, Bring my car, taxis, fast travel, the metro, sound by district) are built, and Phase 9's first district, **The Trenches**, is built (below); follow the rest one phase at a time with the owner's sign-off, and never add buildings in bulk outside the tiles (`tileBatch()`) or outside sites (`site()`).
-  - **Solid and fast first** (the owner's call): fixes and performance are planned in `docs/performance-plan.md` (where the time goes, what each phase measured, what's next); keep it up to date. Fix phase 1 (phones: the city builds behind the start menu and in spare frames, the outline pre-pass only as far as outlines reach, big textures at half size on phones), fix phase 2 (bugs and broken flows at every width), the trim, fix phase 3 (the code clean-up, the type check in the build) and performance phase 2 (data baked at build time, the 2D map held back, features loaded when used, a service worker, the phones' lighter glow, budgets in the build) are built; then the performance phases, with the foundations (sites built off the main thread, districts loaded as you approach, textures made at build time) **before any more districts**. On phones only, a softer neon glow and simpler far districts are allowed; desktop stays as it is.
+  - **Solid and fast first** (the owner's call): fixes and performance are planned in `docs/performance-plan.md` (where the time goes, what each phase measured, what's next); keep it up to date. Fix phase 1 (phones: the city builds behind the start menu and in spare frames, the outline pre-pass only as far as outlines reach, big textures at half size on phones), fix phase 2 (bugs and broken flows at every width), the trim, fix phase 3 (the code clean-up, the type check in the build) performance phase 2 (data baked at build time, the 2D map held back, features loaded when used, a service worker, the phones' lighter glow, budgets in the build) and performance phase 3 (the crowd in a few meshes, shaders compiled once for the right target; far-district impostors measured and left until the districts grow) are built; then the performance phases, with the foundations (sites built off the main thread, districts loaded as you approach, textures made at build time) **before any more districts**. On phones only, a softer neon glow and simpler far districts are allowed; desktop stays as it is.
 - **Getting about** (growth plan Phase 8; the owner picked taxis, fast
   travel and the metro):
   - **Places** are `places.ts` (DOM-free, tested in `tests/travel.test.ts`):
@@ -567,6 +567,12 @@ it and has been retired completely. Build only on what's here.
     built site only) keeps the files in `/_astro/` (named by their contents)
     on the device for return visits; pages always come from the network.
     `.htaccess` keeps `sw.js` itself uncached.
+  - Shaders are compiled for where the city draws, the post chain's
+    linear target (`compileFor()` in `index.ts`: at the boot, with
+    `compileAsync`, each site as it's built and each place's far form as
+    it's made). `renderer.compile()` with the screen as the target makes
+    sRGB programs no frame uses, and the real ones then compile the first
+    time they're drawn (a hitch): never call it bare.
   - **Budgets** (`scripts/budget.mjs`, `npm run budget` after a build; the
     "Build site" Action runs it): the homepage's HTML, the page's own
     script, the 3D city's boot code (its chunk and what it imports
@@ -870,10 +876,17 @@ it and has been retired completely. Build only on what's here.
     material swapped onto a figure (the hologram's `ShaderMaterial`, a
     fighter's hit flash) must handle skinning (three's skinning chunks).
     `createCrowd()` (pedestrians, soldiers) is the same skinned body
-    (`items(q, true)`) drawn instanced: an item's pieces of one colour and
-    material make one part (`crowdGeometry()`, its bones and weights as
-    `crowdIdx` / `crowdWt`, shared between crowds), one `InstancedMesh`
-    each, skinned on the GPU (`crowdskin.ts`: `injectCrowdSkin()` in every
+    (`items(q, true)`) drawn instanced (performance phase 3): at each level
+    everyone of one outfit kind (suits, hoodies, soldiers) shares one
+    `InstancedMesh` per material, holding every item anyone of that kind
+    wears (an item's pieces of one colour, `crowdGeometry()`, its bones and
+    weights as `crowdIdx` / `crowdWt`; each vertex's colour key and item as
+    `crowdSlot`). A person's row in the wardrobe (`crowdWardrobe`,
+    `addWardrobe()` in crowdskin.ts, one float texture for every crowd:
+    their colours by `COLOR_KEYS`, and in each item's column whether they
+    wear it; `crowdAnim.w` is the row) says what they wear: items they don't
+    fold to a point in every pass. Group by kind, never across kinds (a
+    hoodie would carry every suit's vertices). Skinned on the GPU (`crowdskin.ts`: `injectCrowdSkin()` in every
     pass that draws them: their materials (`crowdVersion()`), their
     shadows (`crowdDepth()`) and the ink outlines' normal pass in
     `post.ts`, where everything else reads `crowdOn` 0) from one float
@@ -887,8 +900,8 @@ it and has been retired completely. Build only on what's here.
     attention to the hand at the brow. Callers set each person's clip and
     how far through it they are (`set(i, x, y, z, yaw, scale, clip, u)`;
     `crowdFrame()` picks the two rows and the blend); the CPU never poses
-    a crowd. Every frame each person in view takes instances of only what
-    they wear, at their level: near within `CROWD_NEAR` (12, 8 on phones)
+    a crowd. Every frame each person in view takes one instance in each of
+    their kind's meshes (those with anything they wear), at their level: near within `CROWD_NEAR` (12, 8 on phones)
     of the camera, far beyond, and not at all out of the view or past
     `CROWD_FAR`. The city fills `CROWD_VIEW` (camera position and view,
     and the sun's shadow box, `sky.shadowFrustum()`) each frame in
