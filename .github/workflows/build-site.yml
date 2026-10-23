@@ -40,6 +40,8 @@ jobs:
       # them in the browser as before.
       - name: Make the textures
         timeout-minutes: 30
+        # (stopped by the timeout, the site still builds: its list goes into the page last)
+        continue-on-error: true
         run: |
           if command -v google-chrome >/dev/null; then export CHROMIUM_PATH="$(command -v google-chrome)"
           else npx playwright-core install --with-deps chromium; fi
