@@ -7,8 +7,9 @@
  *
  * - Moves: scripted programs (run and stop, turning back, weaving, a
  *   circle, starts and stops at a sprint, jumps running and standing,
- *   short hops...) or by hand (W A S D across the floor, Shift sprints,
- *   Caps Lock walks, Space jumps), with walk.ts's jump and gravity.
+ *   short hops, strafing the eight ways and aiming round, peeking...) or by
+ *   hand (W A S D across the floor, Shift sprints, Caps Lock walks, Space
+ *   jumps, Q / E peek), with walk.ts's jump and gravity.
  * - Time: full speed, a quarter, a tenth; P pauses, . steps a frame.
  * - Cameras: side on, front, behind, over his right shoulder (walk mode's, armed), free (drag to orbit, wheel to zoom).
  * - Foot traces (where each ball of the foot was held), and readouts:
@@ -17,16 +18,17 @@
  *   moved over the ground: now and the worst lately).
  * - Floors: flat, kerbs, stairs, and a ledge to run off (up a ramp, a drop
  *   of 1.6 tiles).
- * - Armed (animation Phase 8): any gun in his hands (stance.ts's hold, on
- *   the procedural walk, as in the city), aiming or not, the look swept up
- *   and down; markers at the gun's butt and his shoulder pocket.
+ * - Armed (animation Phases 4 and 8): any gun in his hands (stance.ts's
+ *   hold on the procedural pose, over the motion capture's legs, as in the
+ *   city), aiming or not, the look swept up and down; markers at the gun's
+ *   butt and his shoulder pocket. Aiming by hand, he faces +z.
  * - The address can set it all up for recordings: `prog`, `gait`, `cam`,
  *   `floor`, `speed`, `gun`, `aim=0`, `pitch`, `outfit`, `orbit`,
  *   `compare=0`, `traces=0`.
  */
 import * as THREE from 'three';
 import { PLAYER, SOLDIER, createDegen, type Degen } from './character';
-import { applyTo, createAnimator, type Animator } from './animator';
+import { addLean, applyTo, createAnimator, type Animator } from './animator';
 import { copyPose, createLocomotion, placeRoot } from './locomotion';
 import { loadMocap } from './mocap-load';
 import { GAITS, newMove, stepMove, type MoveState } from './movesim';
@@ -40,7 +42,7 @@ import { createPost } from './post';
 const SCALE = 0.85;
 /** One tile in centimetres, for the readouts */
 const CM = 180;
-type Prog = 'manual' | 'runstop' | 'turnback' | 'weave' | 'circle' | 'startstop' | 'startback' | 'gaits' | 'idle' | 'jumps' | 'standjump' | 'hops';
+type Prog = 'manual' | 'runstop' | 'turnback' | 'weave' | 'circle' | 'startstop' | 'startback' | 'gaits' | 'idle' | 'jumps' | 'standjump' | 'hops' | 'strafe' | 'aimturn' | 'peek';
 type Gait = 'walk' | 'run' | 'sprint';
 type Cam = 'side' | 'front' | 'back' | 'over' | 'free';
 type Floor = 'flat' | 'kerbs' | 'stairs' | 'ledge';
@@ -56,6 +58,7 @@ const RUN_LEN = FLIGHT.steps * FLIGHT.tread;
 const TOP = FLIGHT.steps * FLIGHT.rise;
 const PERIOD = FLIGHT.flat * 2 + RUN_LEN * 2 + FLIGHT.landing;
 const mod = (a: number, n: number) => ((a % n) + n) % n;
+const wrapA = (a: number) => mod(a + Math.PI, Math.PI * 2) - Math.PI;
 /** A ledge every LEDGE.every tiles: flat, a ramp up to `top`, a flat top, then a drop back down */
 const LEDGE = { every: 16, ramp: 4, up: 6, flat: 2, top: 1.6 };
 /** walk.ts's jump, gravity and the extra pull down when the jump is let go early */
@@ -87,6 +90,11 @@ const onFlight = (kind: Floor, z: number) => {
   return kind === 'stairs' && ((u >= 0 && u < RUN_LEN) || (u >= RUN_LEN + FLIGHT.landing && u < RUN_LEN * 2 + FLIGHT.landing));
 };
 const CLIMB = 1.75;
+/** walk.ts's speed while aiming, and the peek's lean */
+const AIMING = 1.4;
+const PEEK = { lean: 0.42, ease: 0.07, level: 0.85 };
+/** The programs that aim (+z, or round, for `aimturn`) while they move */
+const AIMS: Prog[] = ['strafe', 'aimturn', 'peek'];
 const PROGS: [Prog, string][] = [
   ['runstop', 'Run & stop'],
   ['turnback', 'Turn back'],
@@ -98,6 +106,9 @@ const PROGS: [Prog, string][] = [
   ['jumps', 'Run & jump'],
   ['standjump', 'Stand & jump'],
   ['hops', 'Short hops'],
+  ['strafe', 'Strafe 8 ways'],
+  ['aimturn', 'Aim round'],
+  ['peek', 'Peek'],
   ['idle', 'Stand'],
   ['manual', 'By hand'],
 ];
@@ -141,11 +152,31 @@ function program(p: Prog, t: number, speed: number): [number, number] {
       return [0, speed];
     case 'standjump':
       return [0, 0];
+    // Aiming down +z: each of the eight ways in turn for 1.6 s, a stop between
+    case 'strafe': {
+      const k = Math.floor(t / 2) % 8;
+      const a = (k * Math.PI) / 4;
+      return t % 2 < 1.6 ? [Math.sin(a) * AIMING, Math.cos(a) * AIMING] : [0, 0];
+    }
+    case 'aimturn':
+    case 'peek':
+      return [0, 0];
     default:
       return [0, 0];
   }
 }
 /** Whether a program presses Jump at `t` (once a cycle), and holds it: a full jump, or a short hop let go at once */
+/** Where a program aims (radians about up; 0 down +z), when it does */
+function aimOf(p: Prog, t: number) {
+  if (p === 'aimturn') return Math.floor(t / 2.5) % 2 ? -1.6 * Math.sin(t * 0.4) : Math.round(Math.sin(t * 0.7)) * 1.4;
+  return 0;
+}
+/** How far a program peeks (-1 his left, 1 his right): right, back, left, back */
+function peekOf(p: Prog, t: number) {
+  if (p !== 'peek') return 0;
+  const u = t % 6;
+  return u < 0.5 ? 0 : u < 2 ? 1 : u < 3 ? 0 : u < 4.5 ? -1 : 0;
+}
 function jumpOf(p: Prog, t: number, dt: number): { press: boolean; hold: boolean } {
   const len = p === 'hops' ? 1.4 : 2.4;
   const u = t % len;
@@ -160,7 +191,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   ui.innerHTML = `
     <canvas class="anim-lab-view" aria-hidden="true"></canvas>
     <div class="anim-lab-panel">
-      <div class="anim-lab-head"><span class="anim-lab-title">Animation lab</span><span class="anim-lab-note">?anim · Phases 1-3, 8</span><button class="anim-lab-close" type="button" aria-label="Close the lab">×</button></div>
+      <div class="anim-lab-head"><span class="anim-lab-title">Animation lab</span><span class="anim-lab-note">?anim · Phases 1-4, 8</span><button class="anim-lab-close" type="button" aria-label="Close the lab">×</button></div>
       <div class="anim-lab-row" data-progs></div>
       <div class="anim-lab-row" data-gaits></div>
       <div class="anim-lab-row" data-time></div>
@@ -169,7 +200,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       <div class="anim-lab-row" data-guns></div>
       <div class="anim-lab-row" data-toggles></div>
       <dl class="anim-lab-read" data-read></dl>
-      <p class="anim-lab-hint">By hand: W A S D, Shift sprints, Caps Lock walks, Space jumps. P pauses, . steps.</p>
+      <p class="anim-lab-hint">By hand: W A S D, Shift sprints, Caps Lock walks, Space jumps, Q / E peek (armed and aiming, he faces +z). P pauses, . steps.</p>
     </div>`;
   root.append(ui);
   const canvas = ui.querySelector<HTMLCanvasElement>('canvas')!;
@@ -395,6 +426,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   const them = body();
   let jumpHeld = false;
   let jumpPress = false;
+  let peek = 0;
 
   // By hand
   const keys = new Set<string>();
@@ -498,7 +530,9 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
         gz *= CLIMB / g;
       }
     }
-    stepMove(move, gx, gz, me.grounded, dt);
+    // (aiming: facing where the program aims, or +z by hand with a gun up)
+    const faceGoal = AIMS.includes(prog) ? aimOf(prog, clock) : prog === 'manual' && gun && aimOn ? 0 : undefined;
+    stepMove(move, gx, gz, me.grounded, dt, faceGoal);
     x += move.vx * dt;
     z += move.vz * dt;
     const j = prog === 'manual' ? { press: jumpPress, hold: keys.has('Space') } : jumpOf(prog, clock, dt);
@@ -506,9 +540,10 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
     y = fallTo(me, ground(x, z), dt, j.press, j.hold);
     const v = Math.hypot(move.vx, move.vz);
     const sprint = THREE.MathUtils.clamp((v - GAITS.run) / (GAITS.sprint - GAITS.run), 0, 1);
-    anim.update({ dt, x, y, z, move, gx, gz, scale: SCALE, ground, feet, sprint, grounded: me.grounded, vy: me.grounded ? me.fall : me.vy, jump: JUMP, gravity: GRAVITY });
+    anim.update({ dt, x, y, z, move, gx, gz, scale: SCALE, ground, feet, sprint, grounded: me.grounded, vy: me.grounded ? me.fall : me.vy, jump: JUMP, gravity: GRAVITY, faceGoal });
     if (gun) {
-      // (the procedural walk under the gun's hold, as walk.ts has it while armed)
+      // (the gun's hold over the motion capture's legs, as walk.ts has it: the procedural walk under the hold
+      // gives the upper body, turned back from the way the capture faces him to the springs')
       armedLoco.update({ dt, t: clock, x, y, z, vx: move.vx, vz: move.vz, face: move.face, grounded: me.grounded, vy: me.grounded ? me.fall : me.vy, scale: SCALE, ground, armed: true });
       copyPose(armedLoco.pose, hero.pose);
       lookPitch = sweep ? 0.5 * Math.sin(clock * 0.9) : (fixedPitch ?? 0);
@@ -518,14 +553,18 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       if (butt) buttDot.position.copy(butt);
       pocketDot.position.copy(POCKET);
       hero.update();
-      placeRoot(hero.g, x, y, z, move.face, SCALE, armedLoco.root);
+      applyTo(hero.rig, anim.rot, anim.hips, 1, 1, wrapA(move.face - anim.face));
     } else {
       hero.update();
       applyTo(hero.rig, anim.rot, anim.hips);
-      hero.g.position.set(x, y, z);
-      hero.g.rotation.set(0, anim.face, 0);
-      hero.g.scale.setScalar(SCALE);
     }
+    hero.g.position.set(x, y, z);
+    hero.g.rotation.set(0, anim.face, 0);
+    hero.g.scale.setScalar(SCALE);
+    // The peek: by the program, or Q / E by hand
+    const peekWant = prog === 'manual' ? (keys.has('KeyE') ? 1 : 0) - (keys.has('KeyQ') ? 1 : 0) : peekOf(prog, clock);
+    peek += (peekWant - peek) * (1 - Math.exp((-Math.LN2 * dt) / PEEK.ease));
+    addLean(hero.rig, peek * PEEK.lean, wrapA(move.face - anim.face), PEEK.level * (1 - (gun && aimOn ? 0.6 * stance.cheek : 0)));
     // The old walk beside him, on the same movement (across the picture from him, whichever the camera)
     const [dx, dz] = beside();
     oy = fallTo(them, ground(x + dx, z + dz), dt, j.press, j.hold);
@@ -588,6 +627,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       ['Hips down', `${(dbg.drop * SCALE * CM).toFixed(1)} cm`],
       ...(gun ? ([['Gun', `${gunId}${aimOn ? ' · aiming' : ' · ready'} · looking ${lookPitch > 0 ? 'down' : 'up'} ${Math.abs((lookPitch * 180) / Math.PI).toFixed(0)}°`]] as [string, string][]) : []),
       ['Air', dbg.air ? `in the air${jumpHeld ? ' · Jump held' : ''}${dbg.arms > 0.01 ? ` · arms up ${((dbg.arms * 180) / Math.PI).toFixed(0)}°` : ''}` : `on the ground${dbg.squash > 0.002 ? ` · landing ${(dbg.squash * SCALE * CM).toFixed(0)} cm down` : ''}`],
+      ...(AIMS.includes(prog) || peek ? ([['Aim', `legs ${((wrapA(anim.face - move.face) * 180) / Math.PI).toFixed(0)}° off the aim${Math.abs(peek) > 0.02 ? ` · peeking ${peek > 0 ? 'right' : 'left'} ${(Math.abs(peek) * 100).toFixed(0)}%` : ''}`]] as [string, string][]) : []),
       ['Feet', anim.feet.map((f) => (f.locked ? 'held' : 'free')).join(' · ')],
     ];
     read.innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');

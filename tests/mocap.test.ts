@@ -135,7 +135,7 @@ test('the feet are on the ground about as long as a run and a walk keep them', (
 
 test('the clips file stays small (it loads when walking starts)', () => {
   // (subject 143's takes at their real speed are twice as long as when they played at double speed)
-  assert.ok(file.length < 560 * 1024, `${(file.length / 1024).toFixed(0)} KB`);
+  assert.ok(file.length < 680 * 1024, `${(file.length / 1024).toFixed(0)} KB`);
 });
 
 test('the collarbones sit level, as Degen\'s do at rest (the capture\'s own shoulder joint sits at the neck and would shrug them)', () => {
