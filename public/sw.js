@@ -2,9 +2,10 @@
 // its contents, so never changed in place) are kept here once fetched, and a return visit takes
 // them from here, even after the browser's own cache has let them go. Pages and everything else
 // go to the network as usual, so a new upload shows straight away; files a new upload no longer
-// uses age out (only the newest KEEP are kept).
+// uses age out (only the newest KEEP are kept: room for two uploads' worth, the city's textures made
+// at build time included, a hundred or so of them a device).
 const CACHE = 'astro-v1';
-const KEEP = 120;
+const KEEP = 400;
 
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (e) => {
