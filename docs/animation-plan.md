@@ -45,9 +45,9 @@ stays the record of how the body was built.
   each phase.
 - **First phase:** run, sprint and momentum (the fastest visible fix),
   with the pipeline and the lab under it.
-- **The rifle** (added with Phase 3, as the final phase): aiming a rifle,
-  he holds it properly, the butt in his shoulder. Today it's held low in
-  front of his chest (Phase 8).
+- **The rifle** (added with Phase 3, as the final phase, then built next):
+  aiming a rifle, he holds it properly, the butt in his shoulder. It was
+  held low in front of his chest (Phase 8).
 - **Review since Phase 2:** no videos; straight to the merge.
 
 ## Where it starts from (why it looks the way it does)
@@ -513,9 +513,44 @@ What's in:
 - `locomotion.ts` retired once nothing uses it (its leg IK lives on in
   `reachLeg()`).
 
-### Phase 8: the rifle in his shoulder (the owner's call, the final phase)
+### Phase 8: the rifle in his shoulder (the owner's call; built first, after Phase 3, for the owner's sign-off)
 
-What's wrong today (the owner's screenshot, from behind while aiming):
+What's in:
+
+- **The butt in his shoulder:** every long gun has its butt pad's middle
+  (`butt` in `FIT`, gunfit.ts), and at the ready and aiming stance.ts
+  places the gun by it: the butt in the pocket of his right shoulder
+  (`POCKET`, just inside the joint and in front of it), the gun pivoting
+  there, a shot shoving it back along itself, a reload bringing it down
+  off the shoulder. At the ready the muzzle is down 0.3 rad (`LOW_READY`);
+  relaxed, the gun comes off the shoulder to the low carry across his body
+  as before.
+- **The cheek on the stock:** aiming, his head comes down onto it: pitched
+  and tilted (the neck and head together, `Pose.headRoll` new for the
+  tilt) so his right eye is on the sight's line, facing along the barrel
+  (`CHEEK`, solved in a few Newton steps from `eyeAt()`, which the tests
+  hold to the skeleton's own posing). His build (a big head, short arms)
+  puts his eye about 10 cm over the line a real stock rises, so the gun
+  also comes up and across to meet it, at most 6 cm (his shoulder rising
+  to it). A reload lifts the head off; walk.ts and remote.ts add the look
+  only the rest of the way (`Stance.cheek`).
+- **The body behind it:** side-on as far as the support hand needs to
+  reach the handguard (`MAX_TURN` now 1.2 rad; about 1 for the rifle, 0.7
+  the SMG, 0.35 the bullpup), and the spine taking 60% of the look up or
+  down (`SPINE_AIM`, 30% before), so the head and the stock stay together.
+- **Measured** (tests/gunfit.test.ts) for all six long guns looking from
+  0.5 rad up to 0.5 down: the butt within 6.5 cm of the shoulder's pocket
+  and on his right; the eye within 2.5 cm of the sight's line (4 cm looking
+  well down); both hands on the gun as before, through reloads and draws.
+- **The lab:** an armed mode (each gun, aiming or at the ready, the look
+  swept up and down or fixed with `pitch`), a camera over his right
+  shoulder like walk mode's, and markers at the gun's butt (yellow) and
+  his shoulder's pocket (cyan).
+- Not yet: armed movement from capture (Phase 4: today the procedural walk
+  is under the hold); the shooting elbow is reachArm()'s (down, a little
+  out), not raised.
+
+What was wrong (the owner's screenshot) (the owner's screenshot, from behind while aiming):
 the rifle is held low in front of his chest, the stock nowhere near his
 shoulder. `holdGun()` in `stance.ts` places the gun by its pistol grip
 (about 18 cm in front of the torso frame, on his middle, a little under
@@ -570,6 +605,5 @@ burst carbine, belt feeder; the revolver keeps its two-handed hold):
   roof, a wall top)?
 - Whether the crowds (Phase 7) get a little variety from other 100STYLE
   styles (still within "neutral athletic" for Degen himself).
-- The rifle (Phase 8): planned last, as the owner asked; it touches only
-  the gun hold (`stance.ts`, `gunfit.ts`), so it can come sooner, before
-  or alongside Phase 4's armed movement, if the owner wants it fixed first.
+- The rifle (Phase 8): planned last, then built straight after Phase 3
+  (the owner's call).

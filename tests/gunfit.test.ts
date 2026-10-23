@@ -1,12 +1,13 @@
 // Guns in Degen's hands (Phase 3 of the character rebuild): every gun's hand spots are reachable and the
 // hands land on them, ready, relaxed and aiming, through every reload, drawing and putting away; the reload
-// clips start and end at rest and never jump.
+// clips start and end at rest and never jump. Animation Phase 8: a long gun is shouldered, its butt in
+// his right shoulder and his eye on its sight's line.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { makeSkeleton, newPose, poseSkeleton, PALM_Y, PALM_Z, type Pose } from '../src/scripts/city3d/skeleton';
 import { FIT, GRIP, RELOAD_CUES, newReloadFrame, reloadAt } from '../src/scripts/city3d/gunfit';
-import { holdGun, newStance, STOWED, type HoldState } from '../src/scripts/city3d/stance';
+import { CHEEK, POCKET, eyeAt, holdGun, newStance, STOWED, type HoldState } from '../src/scripts/city3d/stance';
 import { WEAPONS, type WeaponId } from '../src/scripts/city3d/combat-sim';
 
 const IDS = Object.keys(WEAPONS) as WeaponId[];
@@ -53,7 +54,7 @@ test('both hands land on every gun: grip and front spot, ready, relaxed and aimi
               assert.ok(g.distanceTo(h.on(GRIP)) < 2e-3, `${at}: grip off by ${g.distanceTo(h.on(GRIP))}`);
               const two = FIT[id].carry === 'long' || Math.max(aim, ready) >= 0.8;
               if (two) assert.ok(f.distanceTo(h.on(FIT[id].hold)) < 2e-3, `${at}: front hand off by ${f.distanceTo(h.on(FIT[id].hold))}`);
-              assert.ok(h.st.turn <= 1.1 + 1e-9, `${at}: turned ${h.st.turn}`);
+              assert.ok(h.st.turn <= 1.2 + 1e-9, `${at}: turned ${h.st.turn}`);
               // Hands closed round it
               assert.ok(h.p.grip![0] > 0.8 && (!two || h.p.grip![1] > 0.6));
             }
@@ -63,7 +64,9 @@ test('aiming bends the spine a share of the way and keeps the head and the gun o
   for (const pitch of [-0.5, 0.5]) {
     const h = hold('rifle', { aim: 1, pitch });
     assert.ok(Math.sign(h.p.lean) === Math.sign(pitch) && Math.abs(h.p.lean) > 0.1, `lean ${h.p.lean}`);
-    assert.ok(Math.abs(h.p.lean + h.p.headPitch) < 1e-9, 'the head takes it back out');
+    // (the revolver's head takes the spine's bend back out; a long gun's is on its stock, below)
+    const r = hold('revolver', { aim: 1, pitch });
+    assert.ok(Math.abs(r.p.lean + r.p.headPitch) < 1e-9, 'the head takes it back out');
     // The barrel points where he looks, whatever the spine took
     const dir = new THREE.Vector3(0, 0, 1).applyQuaternion(h.pivot.quaternion);
     const chest = new THREE.Quaternion().setFromEuler(new THREE.Euler(h.p.lean, 0, 0));
@@ -80,7 +83,8 @@ test('relaxed: a long gun carried low across the body, the revolver in one hand 
   const low = hold('rifle', { ready: 0 });
   const muzzle = (h: ReturnType<typeof hold>) => h.on(FIT.rifle.muzzle);
   assert.ok(muzzle(low).y < muzzle(ready).y - 0.1, 'muzzle down');
-  assert.ok(muzzle(low).x > muzzle(ready).x + 0.05, 'across his body');
+  // (across to his left: at the ready he's turned side-on behind his shouldered gun, so it points across his chest too)
+  assert.ok(muzzle(low).x > 0.1 && low.st.turn < 0.05, 'across his body, square on');
   const pistol = hold('revolver', { ready: 0 });
   const walking = newPose().arms[1];
   assert.deepEqual([pistol.p.arms[1].fwd, pistol.p.arms[1].bend], [walking.fwd, walking.bend], 'the front hand left free');
@@ -151,8 +155,63 @@ test('drawing: the hand goes to where it is put away, then the gun comes round t
       const h = hold(id, { draw: d });
       const [gg] = palms(h.p);
       assert.ok(gg.distanceTo(h.on(GRIP)) < 2e-3, `${id} draw ${d}`);
-      assert.ok(h.pivot.position.distanceTo(last) < 0.07, `${id} draw ${d}: no jump`);
+      // (a step of the draw: a long gun swings round from his back to his shoulder, about half a metre, as he turns side-on)
+      assert.ok(h.pivot.position.distanceTo(last) < 0.12, `${id} draw ${d}: no jump`);
       last = h.pivot.position.clone();
     }
   }
+});
+
+const LONG = IDS.filter((id) => FIT[id].butt);
+/** His right eye, posed, in the torso frame */
+function eyeOf(p: Pose) {
+  poseSkeleton(sk, p);
+  sk.root.updateMatrixWorld(true);
+  inv.copy(sk.torso.matrixWorld).invert();
+  return CHEEK.eye.clone().applyMatrix4(sk.bones.head.matrixWorld).applyMatrix4(inv);
+}
+
+test('shouldered: aiming, a long gun\'s butt is in his right shoulder and his eye on its sight\'s line, looking up or down', () => {
+  assert.deepEqual(IDS.filter((id) => !FIT[id].butt), ['revolver'], 'every long gun has its butt');
+  for (const id of LONG)
+    for (const pitch of [-0.5, -0.25, 0, 0.3, 0.5]) {
+      const h = hold(id, { aim: 1, pitch });
+      const at = `${id} looking ${pitch}`;
+      // The butt in the shoulder's pocket (his shoulder risen to it a little, to meet his eye)
+      const butt = h.on(FIT[id].butt!);
+      assert.ok(butt.distanceTo(POCKET) < 0.065, `${at}: the butt ${(butt.distanceTo(POCKET) * 100).toFixed(1)} cm from his shoulder`);
+      assert.ok(butt.x < 0, `${at}: on his right`);
+      // His eye on the line through the sight along the barrel (within a few centimetres; looking well down a long gun most)
+      const e = eyeOf(h.p).sub(h.pivot.position).applyQuaternion(h.pivot.quaternion.clone().invert());
+      const off = Math.hypot(e.x - FIT[id].sight.at.x, e.y - FIT[id].sight.at.y);
+      assert.ok(off < (pitch > 0.35 ? 0.04 : 0.025), `${at}: the eye ${(off * 100).toFixed(1)} cm off the sight's line`);
+      assert.ok(e.z < FIT[id].sight.at.z, `${at}: behind the sight`);
+      assert.equal(h.st.cheek, 1);
+    }
+});
+
+test('the head on the stock is the skeleton\'s: eyeAt() is where posing puts his eye', () => {
+  for (const [hx, hy, hz] of [
+    [0, 0, 0],
+    [0.4, 0.9, 0.2],
+    [-0.2, -0.5, -0.1],
+  ]) {
+    const p = newPose();
+    p.headPitch = -hx;
+    p.headYaw = hy;
+    p.headRoll = hz;
+    assert.ok(eyeOf(p).distanceTo(eyeAt(hx, hy, hz)) < 1e-6);
+  }
+});
+
+test('shouldered at the ready too, muzzle down; the revolver isn\'t; a reload lifts his head off the stock', () => {
+  for (const id of LONG) {
+    const h = hold(id, { aim: 0, ready: 1 });
+    assert.ok(h.on(FIT[id].butt!).distanceTo(POCKET) < 1e-6, `${id}: the butt in his shoulder`);
+    assert.ok(h.on(FIT[id].muzzle).y < h.on(FIT[id].butt!).y - 0.1, `${id}: muzzle down`);
+    assert.equal(h.st.cheek, 0, 'his head his own');
+    const mid = hold(id, { aim: 1, reload: 0.4 });
+    assert.ok(mid.st.cheek < 0.2, `${id}: off the stock mid-reload (${mid.st.cheek})`);
+  }
+  assert.equal(hold('revolver', { aim: 1 }).st.cheek, 0);
 });

@@ -10,15 +10,18 @@
  *   short hops...) or by hand (W A S D across the floor, Shift sprints,
  *   Caps Lock walks, Space jumps), with walk.ts's jump and gravity.
  * - Time: full speed, a quarter, a tenth; P pauses, . steps a frame.
- * - Cameras: side on, front, behind, free (drag to orbit, wheel to zoom).
+ * - Cameras: side on, front, behind, over his right shoulder (walk mode's, armed), free (drag to orbit, wheel to zoom).
  * - Foot traces (where each ball of the foot was held), and readouts:
  *   speed, the clip and frame playing, its rate, the match's cost, the
  *   blend left, jumps a second, the foot slide (how far a held foot has
  *   moved over the ground: now and the worst lately).
  * - Floors: flat, kerbs, stairs, and a ledge to run off (up a ramp, a drop
  *   of 1.6 tiles).
+ * - Armed (animation Phase 8): any gun in his hands (stance.ts's hold, on
+ *   the procedural walk, as in the city), aiming or not, the look swept up
+ *   and down; markers at the gun's butt and his shoulder pocket.
  * - The address can set it all up for recordings: `prog`, `gait`, `cam`,
- *   `floor`, `speed`, `compare=0`, `traces=0`.
+ *   `floor`, `speed`, `gun`, `aim=0`, `pitch`, `compare=0`, `traces=0`.
  */
 import * as THREE from 'three';
 import { PLAYER, createDegen, type Degen } from './character';
@@ -27,6 +30,10 @@ import { copyPose, createLocomotion, placeRoot } from './locomotion';
 import { loadMocap } from './mocap-load';
 import { GAITS, newMove, stepMove, type MoveState } from './movesim';
 import { toon } from './kit';
+import { buildGun } from './guns';
+import { FIT } from './gunfit';
+import { POCKET, holdGun, newStance } from './stance';
+import type { WeaponId } from './combat-sim';
 import { createPost } from './post';
 
 const SCALE = 0.85;
@@ -34,7 +41,7 @@ const SCALE = 0.85;
 const CM = 180;
 type Prog = 'manual' | 'runstop' | 'turnback' | 'weave' | 'circle' | 'startstop' | 'startback' | 'gaits' | 'idle' | 'jumps' | 'standjump' | 'hops';
 type Gait = 'walk' | 'run' | 'sprint';
-type Cam = 'side' | 'front' | 'back' | 'free';
+type Cam = 'side' | 'front' | 'back' | 'over' | 'free';
 type Floor = 'flat' | 'kerbs' | 'stairs' | 'ledge';
 const FLOORS: Floor[] = ['flat', 'kerbs', 'stairs', 'ledge'];
 
@@ -152,12 +159,13 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   ui.innerHTML = `
     <canvas class="anim-lab-view" aria-hidden="true"></canvas>
     <div class="anim-lab-panel">
-      <div class="anim-lab-head"><span class="anim-lab-title">Animation lab</span><span class="anim-lab-note">?anim · Phase 3</span><button class="anim-lab-close" type="button" aria-label="Close the lab">×</button></div>
+      <div class="anim-lab-head"><span class="anim-lab-title">Animation lab</span><span class="anim-lab-note">?anim · Phases 1-3, 8</span><button class="anim-lab-close" type="button" aria-label="Close the lab">×</button></div>
       <div class="anim-lab-row" data-progs></div>
       <div class="anim-lab-row" data-gaits></div>
       <div class="anim-lab-row" data-time></div>
       <div class="anim-lab-row" data-cams></div>
       <div class="anim-lab-row" data-floors></div>
+      <div class="anim-lab-row" data-guns></div>
       <div class="anim-lab-row" data-toggles></div>
       <dl class="anim-lab-read" data-read></dl>
       <p class="anim-lab-hint">By hand: W A S D, Shift sprints, Caps Lock walks, Space jumps. P pauses, . steps.</p>
@@ -168,7 +176,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
 
   let prog: Prog = (PROGS.find(([p]) => p === q.get('prog'))?.[0] as Prog) ?? 'runstop';
   let gait: Gait = (['walk', 'run', 'sprint'] as Gait[]).find((g) => g === q.get('gait')) ?? 'run';
-  let cam: Cam = (['side', 'front', 'back', 'free'] as Cam[]).find((c) => c === q.get('cam')) ?? 'side';
+  let cam: Cam = (['side', 'front', 'back', 'over', 'free'] as Cam[]).find((c) => c === q.get('cam')) ?? 'side';
   let speed = Number(q.get('speed')) || 1;
   // (recordings: closer in, and the cheaper drawing)
   const near = Number(q.get('zoom')) || 1;
@@ -180,6 +188,20 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   let floorKind: Floor = FLOORS.find((f) => f === q.get('floor')) ?? 'flat';
   let paused = false;
   let stepOnce = false;
+  const GUNS: [WeaponId | 'none', string][] = [
+    ['none', 'Unarmed'],
+    ['rifle', 'Rifle'],
+    ['smg', 'SMG'],
+    ['shotgun', 'Shotgun'],
+    ['dmr', 'Marksman'],
+    ['burst', 'Burst'],
+    ['lmg', 'Belt feeder'],
+    ['revolver', 'Revolver'],
+  ];
+  let gunId: WeaponId | 'none' = (GUNS.find(([g]) => g === q.get('gun'))?.[0] as WeaponId) ?? 'none';
+  let aimOn = q.get('aim') !== '0';
+  const fixedPitch = q.has('pitch') ? Number(q.get('pitch')) : null;
+  let sweep = fixedPitch === null;
 
   const button = (row: string, label: string, on: () => boolean, act: () => void) => {
     const b = document.createElement('button');
@@ -212,9 +234,12 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   paints.push(button('time', 'Pause', () => paused, () => (paused = !paused)));
   paints.push(button('time', 'Step', () => false, () => ((paused = true), (stepOnce = true))));
   for (const f of FLOORS) paints.push(button('floors', f[0].toUpperCase() + f.slice(1), () => floorKind === f, () => ((floorKind = f), buildFloor())));
-  for (const c of ['side', 'front', 'back', 'free'] as Cam[]) paints.push(button('cams', c[0].toUpperCase() + c.slice(1), () => cam === c, () => (cam = c)));
+  for (const c of ['side', 'front', 'back', 'over', 'free'] as Cam[]) paints.push(button('cams', c === 'over' ? 'Shoulder' : c[0].toUpperCase() + c.slice(1), () => cam === c, () => (cam = c)));
   paints.push(button('toggles', 'Old beside', () => compare, () => (compare = !compare)));
   paints.push(button('toggles', 'Foot traces', () => traces, () => (traces = !traces)));
+  for (const [g, label] of GUNS) paints.push(button('guns', label, () => gunId === g, () => ((gunId = g), mount())));
+  paints.push(button('toggles', 'Aim', () => aimOn, () => (aimOn = !aimOn)));
+  paints.push(button('toggles', 'Sweep the look', () => sweep, () => (sweep = !sweep)));
   paint();
 
   // The scene
@@ -302,6 +327,36 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   const old: Degen = createDegen(PLAYER);
   scene.add(hero.g, old.g);
   const loco = createLocomotion();
+
+  // Armed: the gun in a pivot on his torso frame, posed by stance.ts on the procedural walk (as in the city)
+  const armedLoco = createLocomotion();
+  const pivot = new THREE.Group();
+  hero.torso.add(pivot);
+  const stance = newStance();
+  let gun: ReturnType<typeof buildGun> | null = null;
+  // (markers: the gun's butt, and his shooting shoulder's pocket)
+  const marker = (c: string) => {
+    const m = new THREE.Mesh(new THREE.SphereGeometry(0.018, 10, 8), new THREE.MeshBasicMaterial({ color: c, depthTest: false }));
+    m.renderOrder = 10;
+    return m;
+  };
+  const buttDot = marker('#ffd400');
+  const pocketDot = marker('#00eaff');
+  pivot.add(buttDot);
+  hero.torso.add(pocketDot);
+  function mount() {
+    if (gun) {
+      pivot.remove(gun.group);
+      gun.dispose();
+      gun = null;
+    }
+    if (gunId !== 'none') {
+      gun = buildGun(gunId, 'olive');
+      pivot.add(gun.group);
+    }
+    pivot.visible = pocketDot.visible = !!gun;
+  }
+  mount();
 
   // Foot traces: a dot where each ball of the foot was held
   const dots = new THREE.InstancedMesh(new THREE.CircleGeometry(0.035, 12).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#00eaff' }), 80);
@@ -399,6 +454,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   // (his height as walk.ts has it: gravity always, up a kerb eased, a jump pressed with Jump held or let go)
   let y = 0;
   let oy = 0;
+  let lookPitch = 0;
   const fallTo = (b: ReturnType<typeof body>, g: number, dt: number, press: boolean, hold: boolean) => {
     if (press && b.grounded) {
       b.vy = JUMP;
@@ -444,11 +500,25 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
     const v = Math.hypot(move.vx, move.vz);
     const sprint = THREE.MathUtils.clamp((v - GAITS.run) / (GAITS.sprint - GAITS.run), 0, 1);
     anim.update({ dt, x, y, z, move, gx, gz, scale: SCALE, ground, feet, sprint, grounded: me.grounded, vy: me.grounded ? me.fall : me.vy, jump: JUMP, gravity: GRAVITY });
-    hero.update();
-    applyTo(hero.rig, anim.rot, anim.hips);
-    hero.g.position.set(x, y, z);
-    hero.g.rotation.set(0, anim.face, 0);
-    hero.g.scale.setScalar(SCALE);
+    if (gun) {
+      // (the procedural walk under the gun's hold, as walk.ts has it while armed)
+      armedLoco.update({ dt, t: clock, x, y, z, vx: move.vx, vz: move.vz, face: move.face, grounded: me.grounded, vy: me.grounded ? me.fall : me.vy, scale: SCALE, ground, armed: true });
+      copyPose(armedLoco.pose, hero.pose);
+      lookPitch = sweep ? 0.5 * Math.sin(clock * 0.9) : (fixedPitch ?? 0);
+      holdGun(hero.pose, stance, pivot, gun, { aim: aimOn ? 1 : 0, ready: 1, pitch: lookPitch, recoil: 0, reload: 0, dt });
+      const butt = FIT[gun.id].butt;
+      buttDot.visible = !!butt;
+      if (butt) buttDot.position.copy(butt);
+      pocketDot.position.copy(POCKET);
+      hero.update();
+      placeRoot(hero.g, x, y, z, move.face, SCALE, armedLoco.root);
+    } else {
+      hero.update();
+      applyTo(hero.rig, anim.rot, anim.hips);
+      hero.g.position.set(x, y, z);
+      hero.g.rotation.set(0, anim.face, 0);
+      hero.g.scale.setScalar(SCALE);
+    }
     // The old walk beside him, on the same movement (across the picture from him, whichever the camera)
     const [dx, dz] = beside();
     oy = fallTo(them, ground(x + dx, z + dz), dt, j.press, j.hold);
@@ -457,7 +527,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
     copyPose(loco.pose, old.pose);
     old.update();
     placeRoot(old.g, x + dx, oy, z + dz, move.face, SCALE, loco.root);
-    old.g.visible = compare;
+    old.g.visible = compare && !gun;
     // Traces and the slide
     anim.feet.forEach((f, i) => {
       if (f.locked && !wasLocked[i] && traces) addDot(f.lock.x, f.lock.z);
@@ -489,6 +559,8 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
     if (cam === 'free') camera.position.set(look.x + Math.sin(orbit.yaw) * Math.cos(orbit.pitch) * orbit.dist, look.y + Math.sin(orbit.pitch) * orbit.dist, look.z + Math.cos(orbit.yaw) * Math.cos(orbit.pitch) * orbit.dist);
     else if (cam === 'side') camera.position.set(look.x + (compare ? 6 : 4.5) / near, look.y + 0.3, look.z);
     else if (cam === 'front') camera.position.set(look.x, look.y + 0.5, look.z + 5.5 / near);
+    // (over his right shoulder, as walk mode's camera is when armed)
+    else if (cam === 'over') camera.position.set(look.x - 0.9 / near, look.y + 0.45, look.z - 2.6 / near);
     else camera.position.set(look.x, look.y + 0.9, look.z - 5 / near);
     camera.lookAt(look);
   };
@@ -507,6 +579,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       ['Jumps', `${(jumpTimes.length / 2).toFixed(1)} a second`],
       ['Foot slide', `${(slideNow * CM).toFixed(1)} cm (worst lately ${(worst * CM).toFixed(1)} cm)`],
       ['Hips down', `${(dbg.drop * SCALE * CM).toFixed(1)} cm`],
+      ...(gun ? ([['Gun', `${gunId}${aimOn ? ' · aiming' : ' · ready'} · looking ${lookPitch > 0 ? 'down' : 'up'} ${Math.abs((lookPitch * 180) / Math.PI).toFixed(0)}°`]] as [string, string][]) : []),
       ['Air', dbg.air ? `in the air${jumpHeld ? ' · Jump held' : ''}${dbg.arms > 0.01 ? ` · arms up ${((dbg.arms * 180) / Math.PI).toFixed(0)}°` : ''}` : `on the ground${dbg.squash > 0.002 ? ` · landing ${(dbg.squash * SCALE * CM).toFixed(0)} cm down` : ''}`],
       ['Feet', anim.feet.map((f) => (f.locked ? 'held' : 'free')).join(' · ')],
     ];
