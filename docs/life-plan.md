@@ -165,31 +165,48 @@ through a handbrake slide by day, fading after.
    (`GEARS`), the revs climbing in each and dropping at the shift; the
    gear readout shows 1-4, R and N.
 
-### Phase 3: people who notice (S-M, zero memory)
+### Phase 3: people who notice (S-M, zero memory): built
 
-`life.ts`'s people tick; the crossing rules in `traffic.ts` beside the cars'
-(they read the same lights).
+The rules are `pedestrians.ts` (DOM-free, tested in
+`tests/pedestrians.test.ts`); `life.ts`'s people tick and `walk.ts` draw
+them. What it added: nothing drawn that wasn't (the crowd's instances
+change clip and place; a walker gone home or a sitter gone in is an
+instance not set that frame), one small table of crossings worked out at
+the boot from the street plan (44 today), a list of 53 benches. Checked
+in headless Chromium: walkers waiting at kerbs and crossing from their
+corners when the lights hold the cars (up to five at once), one stopping
+as Degen passed, Degen sitting on a square bench's free end beside its
+sitter and standing up at a touch of the stick.
 
-1. **Crossing with the lights.** At a block's corner next to a crossing,
-   a walker on the outside lane may step over to the next block's loop
-   while that street's cars have red (`lightState()`), waiting at the kerb
-   until they do. The crossings and the junctions are street-plan data
-   already. Cars already stop for red; walkers never meet them. Walkers
-   then wander the whole downtown, not one block each.
-2. **Stepping aside for you.** A walker within a tile of Degen (or your
-   car) stops, turns to look (the `look` clip) and carries on when you've
-   passed; someone sitting glances up. The crowd clip is swapped, nothing
-   posed on the CPU.
-3. **Hurrying in the rain.** Walkers' speed up by 40% (the walk clip's
-   stride keeps their feet planted), the benches' sitters go in (faded out,
-   back when it clears). Zero memory.
-4. **The hour.** Fewer walkers late at night and more around the square,
-   the market and the club in the evening (the same people, moved to lanes
-   where the life is; the count per tier is unchanged). Zero memory.
-5. **Sit down.** A "Sit" prompt at the benches (the square's, the parks',
-   the promenade's; the data exists where they're drawn) puts Degen on the
-   `sit` pose (poses.ts) with the camera eased back; any key stands him up.
-   The first thing to *do* in a hangout city that isn't shopping.
+1. **Crossing with the lights.** `crossingLinks()`: a walked block's
+   corner to another's across one street at a lit junction (the zebra),
+   never an avenue (`LINK_MAX`), never through a junction's middle; a
+   triangle's corner sits short of the junction, so its crossing is a
+   little skewed. A walker passing a corner with a crossing takes it by
+   their own pattern (`takesCrossing()`), stepping off only while the cars'
+   light is red with time to get over (`walkLight()`, `redLeft()`,
+   `CROSS_PACE`, `CROSS_MARGIN`), else waiting at the kerb (giving up after
+   25 s), then joining the other block's lane at the corner they arrive
+   at, the same way round. Downtown's twelve blocks all join up, so a
+   walker wanders the whole of it. What was learnt: a walker's side index
+   has to be right from the first frame, or the first frame reads as a
+   corner passed wherever they stand.
+2. **Stepping aside for you.** `noticing()`: a walker within `NOTICE` of
+   you (further for your car, `walker.r`) stops, turns to face you (the
+   `idle` clip) and carries on `NOTICE_HOLD` after you've passed; not in
+   the middle of a crossing. Sitters don't glance up: there's no clip for
+   it yet (a new row in `CLIP_DEFS` when wanted).
+3. **Hurrying in the rain.** `hurry()`: up to 40% quicker as the rain
+   comes on (the walk clip plays at its stride, so the feet stay planted);
+   the benches' sitters go in past 0.6 of rain.
+4. **The hour.** `Env.hour` now carries the city's hour (sky.ts).
+   `outAtNight()`: from 1 to 5 every other walker has gone home. The
+   evening's crowd gathering round the square and the club was left out:
+   the same count stays spread round the blocks.
+5. **Sit down.** `BENCHES` (the square's, the pocket parks', the outer
+   squares', The Block's) with `SEAT_H`; walk mode's "Sit" prompt at a free
+   seat (the middle or an end, clear of the crowd's sitters), `sitPose`
+   with the hips on the seat, "Stand up" or any move to get up.
 
 ### Phase 4: buses, boats and the weather's small reactions (S-M, small memory)
 
@@ -215,9 +232,8 @@ through a handbrake slide by day, fading after.
 
 ## Suggested order
 
-Phase 1 (built) → Phase 2 (built) → Phase 3 (the city noticing you) →
-Phase 4. 1b (rolling wheels) after Phase 3 if the owner wants it: it's the
-one shader change.
+Phase 1 (built) → Phase 2 (built) → Phase 3 (built) → Phase 4. 1b (rolling
+wheels) after Phase 4 if the owner wants it: it's the one shader change.
 
 ## What has to keep working
 

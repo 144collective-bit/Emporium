@@ -36,7 +36,7 @@ export const SLAB = 0.15;
 export const SKIRT = 80;
 export const CENTER = new THREE.Vector3(CENTER_XZ.x, 0, CENTER_XZ.z);
 
-export type Env = { t: number; dt: number; night: number; rain: number; day: number };
+export type Env = { t: number; dt: number; night: number; rain: number; day: number; /** The hour of the city's day, 0-24 (sky.ts) */ hour: number };
 export type Tick = (env: Env) => void;
 
 /* ---------- Trees and lamps are instanced: collect first, build once ---------- */

@@ -528,7 +528,19 @@ it and has been retired completely. Build only on what's here.
   `SKID_FADE`; none under reduced motion; multiply blending isn't honoured
   in the post chain, so don't use it for decals), the `tyres()` screech in
   sound.ts, and the headlights' pool and brake wash as two glow points
-  dark by day.
+  dark by day. Phase 3 (people who notice) is built: `pedestrians.ts`
+  (DOM-free, tested in `tests/pedestrians.test.ts`): `crossingLinks()`
+  (the walked blocks' corners across one street at a lit junction, never
+  an avenue or a junction's middle), `walkLight()` / `redLeft()` (red for
+  the cars with time to get over), `takesCrossing()`, `noticing()`
+  (`NOTICE`, `NOTICE_HOLD`), `hurry()` (the rain), `outAtNight()` (1 to 5,
+  `Env.hour` from sky.ts) and `BENCHES` / `SEAT_H`; life.ts's people tick
+  walks them (a walker on a crossing or waiting at a kerb, `Person.cross`
+  / `wait`, joins the other block's lane at the corner it arrives at;
+  stops and faces you within reach; sitters go in past 0.6 of rain); walk
+  mode's "Sit" prompt (`Near` 'sit') puts Degen on a free seat of a bench
+  (`sitPose`, the hips `SEAT_H` up less the hip drop), "Stand up" or any
+  move gets him up. Nothing new is drawn.
 - **Cars** are `src/scripts/city3d/cars.ts`: real-proportion cartoon models
   (City Hatch, Cruiser, Street GT coupe, Hauler pickup, Box Van, City Bus;
   made-up names, never a real make or badge), each a bevelled extruded
@@ -1390,6 +1402,9 @@ it and has been retired completely. Build only on what's here.
   `data-walk-*` element to exist.
 - Buildings only lift and glow on hover in City view; while walking nothing
   is hovered and nothing lifts (Degen stands on the same ground).
+- Standing by a bench with a free seat shows "Sit" (city life plan,
+  Phase 3): Degen sits facing the bench's way, the crowd's sitters keep
+  theirs; "Stand up", a move or a jump gets him up.
 - Esc frees the mouse first and only then stops walking. Door panels free
   the mouse so their links can be clicked.
 - While walking (`body.is-walking`, set in `index.ts`) the header drops the
@@ -1954,7 +1969,7 @@ it and has been retired completely. Build only on what's here.
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`),
-  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), how the traffic behaves (`traffic.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`),
+  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,

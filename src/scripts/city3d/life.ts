@@ -19,6 +19,7 @@ import { inTrenches } from './trenches';
 import { CROWD_VIEW, HIP_HEIGHT, cityOutfit, createCrowd } from './character';
 import { CLIP_SECONDS, WALK_STRIDE } from './crowdclips';
 import { blinkOn, bodyMotion, braking, hornDue, indicating, newBody, newHorn, pullAway, reactionOf, resetBody, turnsOf, type Body, type Horn, type Mover, type Turn } from './traffic';
+import { CROSS_PACE, crossingLinks, hurry, noticing, outAtNight, takesCrossing, walkLight, type Link } from './pedestrians';
 
 export interface LifeOpts {
   cars: number;
@@ -76,7 +77,8 @@ export const stoppers: { x: number; z: number; r: number; on: boolean }[] = [];
 /** Where the traffic and the people on the sidewalks are, so your car can bump them softly (drive.ts) */
 export const bodies = {
   cars: [] as { x: number; z: number; yaw: number; len: number; model: CarId }[],
-  people: [] as { x: number; z: number }[],
+  /** (`act`: what an idle person is doing, 'sit' on a bench: walk.ts leaves their bench alone) */
+  people: [] as { x: number; z: number; act?: string }[],
 };
 /**
  * The traffic and the boats are spent where you are (growth plan Phase 7): a car further than `POOL_R`
@@ -507,6 +509,9 @@ interface Loop {
   pts: Pt[];
   cum: number[];
   len: number;
+  /** The block it goes round (its number among the walks), and the crossings leaving from each corner (pedestrians.ts) */
+  block: number;
+  exits: Map<number, Link[]>;
 }
 interface Person {
   kind: 'walk' | 'idle';
@@ -531,6 +536,14 @@ interface Person {
   ry: number;
   /** Facing actually shown, eased towards ry so corners turn smoothly */
   face: number;
+  /** City life plan, Phase 3: on a crossing (from where to where, how far along), or waiting at the kerb for one */
+  cross?: { x0: number; z0: number; x1: number; z1: number; len: number; s: number; link: Link };
+  wait?: { link: Link; since: number };
+  /** How many crossings they've reached (whether they take one is their own pattern) */
+  crossed: number;
+  seed: number;
+  /** Noticing you: how long they keep looking */
+  notice: { hold: number };
 }
 
 /** Sidewalk lanes round the outside of a block: two each way, each at its own distance from the lot and its own pace */
@@ -557,6 +570,20 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
   walks.push(...PLAN.blocks.filter((b) => TRENCH_WALKS.includes(b.id)).map((b) => ({ poly: b.poly })));
   const walkers = Math.round((opts.walkers * walks.length) / town);
   const blocks = walks.map((w) => w.poly);
+  // The crossings between the blocks (pedestrians.ts): at the lit junctions, over one street (not from the bridge's walkway)
+  const links = crossingLinks(
+    walks.map((w) => (w.y === undefined ? w.poly : [])),
+    PLAN.streets
+  );
+  const nearestIdx = (pts: Pt[], at: Pt, tol: number) => {
+    let best = -1;
+    let bd = tol;
+    pts.forEach((q, i) => {
+      const d = Math.hypot(q[0] - at[0], q[1] - at[1]);
+      if (d < bd) [bd, best] = [d, i];
+    });
+    return best;
+  };
   const loops = new Map<string, Loop>();
   const loopOf = (b: number, inset: number) => {
     const key = `${b}:${inset}`;
@@ -565,7 +592,16 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
       const pts = outset(blocks[b], -inset);
       const cum = [0];
       for (let i = 1; i <= pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i % pts.length][0] - pts[i - 1][0], pts[i % pts.length][1] - pts[i - 1][1]));
-      loops.set(key, (l = { pts, cum, len: cum.at(-1)! }));
+      // Each crossing leaves from the lane's corner nearest the block's
+      const exits = new Map<number, Link[]>();
+      for (const link of links) {
+        if (link.a !== b) continue;
+        const k = nearestIdx(pts, link.from, 1.5);
+        if (k < 0) continue;
+        if (!exits.has(k)) exits.set(k, []);
+        exits.get(k)!.push(link);
+      }
+      loops.set(key, (l = { pts, cum, len: cum.at(-1)!, block: b, exits }));
     }
     return l;
   };
@@ -583,13 +619,17 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
     const loop = loopOf(b, lane.inset);
     const off = rand() * loop.len;
     members.forEach((_, k) => {
+      const u = (off + (k / members.length) * loop.len) % loop.len;
+      // (the side they start on, so the first frame doesn't read as a corner passed)
+      let seg = 0;
+      while (seg < loop.pts.length - 1 && loop.cum[seg + 1] < u) seg++;
       people.push({
         kind: 'walk',
         loop,
-        seg: 0,
+        seg,
         inset: lane.inset,
         y: walks[b].y,
-        u: (off + (k / members.length) * loop.len) % loop.len,
+        u,
         dir: lane.dir,
         speed: lane.speed,
         phase: rand() * 6,
@@ -598,6 +638,9 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
         ry: 0,
         face: NaN,
         walked: 0,
+        crossed: 0,
+        seed: rand(),
+        notice: { hold: 0 },
       });
     });
   }
@@ -606,7 +649,7 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
     inTrenches(c.x, c.z) || (c.x > -6 && c.x < DOWNTOWN + 6 && c.z > -6 && c.z < DOWNTOWN + 6) || (c.x > MARKET.ox - 2 && c.x < MARKET.ox + 11 && c.z > MARKET.oz - 2 && c.z < MARKET.oz + 11);
   let every = 0;
   const idlers = opts.light ? crowd.filter((c) => !busy(c) || every++ % 2 === 0) : crowd;
-  for (const c of idlers) people.push({ kind: 'idle', seg: 0, inset: 0, u: 0, dir: 1, speed: 0, phase: rand() * 6, x: c.x, z: c.z, y: c.y, act: c.act, scale: c.scale, ry: c.ry, face: c.ry, walked: 0 });
+  for (const c of idlers) people.push({ kind: 'idle', seg: 0, inset: 0, u: 0, dir: 1, speed: 0, phase: rand() * 6, x: c.x, z: c.z, y: c.y, act: c.act, scale: c.scale, ry: c.ry, face: c.ry, walked: 0, crossed: 0, seed: rand(), notice: { hold: 0 } });
   bodies.people = people;
 
   // Everyone is the shared Degen body in a city outfit: suits and hoodies, bags, headphones
@@ -615,11 +658,53 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
     people.map(() => cityOutfit(rand)),
     { light: opts.light }
   );
-  tick(({ t, dt }) => {
+  /** Start a walker over a crossing: from where they stand to the other block's lane corner */
+  const startCrossing = (p: Person, link: Link) => {
+    const to = loopOf(link.b, p.inset);
+    const kb = nearestIdx(to.pts, link.to, 1.5);
+    if (kb < 0) return false;
+    const [x1, z1] = to.pts[kb];
+    p.cross = { x0: p.x, z0: p.z, x1, z1, len: Math.hypot(x1 - p.x, z1 - p.z) || 0.01, s: 0, link };
+    p.wait = undefined;
+    return true;
+  };
+  tick(({ t, dt, rain, hour }) => {
+    const pace = hurry(rain);
     people.forEach((p, i) => {
-      if (p.kind === 'walk') {
+      // Late at night some have gone home; the benches' sitters go in out of the rain (city life plan, Phase 3)
+      if (p.kind === 'walk' && !outAtNight(i, hour)) return;
+      if (p.act === 'sit' && rain > 0.6) return;
+      // You, close by: a walker stops and watches you pass (not in the middle of the road)
+      const looking = p.kind === 'walk' && !p.cross && noticing(p.notice, Math.hypot(walker.x - p.x, walker.z - p.z), walker.r, walker.on, dt);
+      let standing = looking;
+      if (p.kind === 'walk' && looking) p.ry = Math.atan2(walker.x - p.x, walker.z - p.z);
+      else if (p.kind === 'walk' && p.cross) {
+        // Over the crossing, a little quicker than their stroll
+        const c = p.cross;
+        c.s = Math.min(c.len, c.s + p.speed * pace * CROSS_PACE * dt);
+        const f = c.s / c.len;
+        p.x = c.x0 + (c.x1 - c.x0) * f;
+        p.z = c.z0 + (c.z1 - c.z0) * f;
+        p.ry = Math.atan2(c.x1 - c.x0, c.z1 - c.z0);
+        p.walked += p.speed * pace * CROSS_PACE * dt;
+        if (c.s >= c.len) {
+          // Onto the other block's lane, at the corner they arrived at, the same way round
+          const to = loopOf(c.link.b, p.inset);
+          const kb = nearestIdx(to.pts, [c.x1, c.z1], 0.1);
+          p.loop = to;
+          p.seg = Math.max(0, kb);
+          p.u = to.cum[p.seg];
+          p.cross = undefined;
+        }
+      } else if (p.kind === 'walk' && p.wait) {
+        // At the kerb until the cars have red with time to get over; a long wait and they carry on round
+        if (walkLight(p.wait.link, t, p.speed * pace)) startCrossing(p, p.wait.link);
+        else if (t - p.wait.since > 25) p.wait = undefined;
+        else standing = true;
+      } else if (p.kind === 'walk') {
         const lp = p.loop!;
-        p.u = (p.u + p.dir * p.speed * dt + lp.len) % lp.len;
+        const was = p.seg;
+        p.u = (p.u + p.dir * p.speed * pace * dt + lp.len) % lp.len;
         // The side of the block they're on
         let k = p.seg;
         while (lp.cum[k + 1] < p.u) k++;
@@ -632,7 +717,21 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
         p.z = a[1] + (c[1] - a[1]) * f;
         // Facing along the side (reversed when walking the other way round)
         p.ry = Math.atan2(c[0] - a[0], c[1] - a[1]) + (p.dir === -1 ? Math.PI : 0);
-        p.walked += p.speed * dt;
+        p.walked += p.speed * pace * dt;
+        // Past a corner with a crossing (standing at it, not a jump of the side's index): some take it (their
+        // own pattern), waiting for the lights
+        if (k !== was) {
+          const corner = p.dir === 1 ? k : (k + 1) % lp.pts.length;
+          const exits = lp.exits.get(corner);
+          const at = lp.pts[corner];
+          if (exits?.length && Math.hypot(at[0] - p.x, at[1] - p.z) < 0.8) {
+            p.crossed++;
+            if (takesCrossing(p.seed, p.crossed)) {
+              const link = exits[p.crossed % exits.length];
+              if (!walkLight(link, t, p.speed * pace) || !startCrossing(p, link)) p.wait = { link, since: t };
+            }
+          }
+        }
       }
       // Each plays a baked clip (crowdclips.ts): the walk at its stride, so their feet stay put on the pavement;
       // the rest from where their own offset puts them in it
@@ -642,7 +741,8 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
       const turn = Math.atan2(Math.sin(p.ry - p.face), Math.cos(p.ry - p.face));
       p.face += turn * Math.min(1, dt * 9);
       const y = p.act === 'sit' ? (p.y ?? SLAB) - SEAT_DROP : (p.y ?? SLAB);
-      if (p.kind === 'walk') people3d.set(i, p.x, y, p.z, p.face, PERSON_SCALE, 'walk', p.walked / (WALK_STRIDE * PERSON_SCALE) + p.phase / 6);
+      if (p.kind === 'walk' && standing) people3d.set(i, p.x, y, p.z, p.face, PERSON_SCALE, looking ? 'idle' : 'look', loop);
+      else if (p.kind === 'walk') people3d.set(i, p.x, y, p.z, p.face, PERSON_SCALE, 'walk', p.walked / (WALK_STRIDE * PERSON_SCALE) + p.phase / 6);
       else people3d.set(i, p.x, y, p.z, p.face, p.scale ?? PERSON_SCALE, p.act === 'sit' ? 'sit' : p.act === 'chat' ? 'chat' : p.act === 'queue' ? 'idle' : 'look', loop);
     });
     people3d.commit();

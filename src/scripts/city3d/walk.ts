@@ -23,7 +23,7 @@
  */
 import * as THREE from 'three';
 import type { SpotId } from '../../lib/city';
-import { PLAYER, createDegen, emotePose, type Outfit } from './character';
+import { HIP_HEIGHT, PLAYER, createDegen, emotePose, sitPose, type Outfit } from './character';
 import { copyLeg, copyPose, createLocomotion, placeRoot } from './locomotion';
 import { createCombat, type Sfx } from './combat';
 import { WEAPON_IDS } from './combat-sim';
@@ -59,14 +59,15 @@ import { WORLD_BOUNDS } from './layout';
 import { PLAN, inPoly, type Pt } from './streetplan';
 import { SPOTS, pointOn, ROUTES } from './routes';
 import { bodies } from './life';
+import { BENCHES, SEAT_H } from './pedestrians';
 import type { GameDeps } from './ui';
 
 /** What a prompt can open: a landmark's door, or one of walk mode's own places and vehicles */
-type Near = SpotId | 'gear' | 'garage' | 'hangar' | 'car' | 'plane' | 'karts' | 'trainer' | `place:${string}`;
+type Near = SpotId | 'gear' | 'garage' | 'hangar' | 'car' | 'plane' | 'karts' | 'trainer' | 'sit' | `place:${string}`;
 /** Prompts that say their own label (the rest say "Enter ...") */
 /** The landmarks' doors and Trench Avenue's (their prompts open their panels) */
 const ALL_DOORS = [...DOORS, ...AVENUE_DOORS];
-const OWN_LABEL = new Set<string>(['gear', 'garage', 'hangar', 'car', 'plane', 'karts', 'trainer']);
+const OWN_LABEL = new Set<string>(['gear', 'garage', 'hangar', 'car', 'plane', 'karts', 'trainer', 'sit']);
 /** The hangar menu's shot: from the doors, looking in at your aircraft */
 const HANGAR_VIEW = { eye: new THREE.Vector3(HANGAR_SPOT.x - 6.5, 3.4, HANGAR_SPOT.z + 12.5), at: new THREE.Vector3(HANGAR_SPOT.x, 1.2, HANGAR_SPOT.z) };
 
@@ -258,9 +259,24 @@ export function createWalk(d: WalkDeps) {
   const joy = { x: 0, y: 0, id: -1 };
   const pad = { x: 0, y: 0, run: false, prev: [] as boolean[] };
   let near: { id: Near; label: string } | null = null;
+  /** Sitting on a bench (city life plan, Phase 3): where, and the way he faces; the bench by him he could sit on */
+  let sitting: { x: number; z: number; ry: number } | null = null;
+  let benchNear: { x: number; z: number; ry: number } | null = null;
+  const sitDown = () => {
+    if (!benchNear) return;
+    sitting = { ...benchNear };
+    pos.x = sitting.x;
+    pos.z = sitting.z;
+    vel.set(0, 0);
+    face = sitting.ry;
+  };
+  const standUp = () => {
+    sitting = null;
+  };
   const act = () => {
     if (!near) return;
-    if (near.id === 'gear') shop.show(near.label === ARMS.name ? ARMS.name : 'Armoury');
+    if (near.id === 'sit') (sitting ? standUp() : sitDown());
+    else if (near.id === 'gear') shop.show(near.label === ARMS.name ? ARMS.name : 'Armoury');
     else if (near.id === 'garage') garageUI.show();
     else if (near.id === 'hangar') hangarUI.show();
     else if (near.id === 'plane') (fly.active ? leavePlane() : board());
@@ -632,6 +648,7 @@ export function createWalk(d: WalkDeps) {
     vy = 0;
     yaw = out.yaw;
     face = yaw + Math.PI;
+    sitting = null;
     pitch = firstPerson ? -0.05 : 0.35;
     pivot.set(0, 0, 0);
     camDist = zoom;
@@ -688,6 +705,7 @@ export function createWalk(d: WalkDeps) {
     vy = 0;
     yaw = out.yaw;
     face = yaw + Math.PI;
+    sitting = null;
     pitch = firstPerson ? -0.05 : 0.35;
     pivot.set(0, 0, 0);
     camDist = zoom;
@@ -1512,6 +1530,14 @@ export function createWalk(d: WalkDeps) {
       run ||= Math.hypot(pad.x, pad.y) > 0.95;
     }
     const mag = Math.min(1, Math.hypot(ix, iz));
+    // On a bench: a move or a jump stands him up; till then he stays put
+    if (sitting && (mag > 0.05 || jumpBuffer > 0)) standUp();
+    if (sitting) {
+      vel.set(0, 0);
+      pos.x = sitting.x;
+      pos.z = sitting.z;
+      jumpBuffer = 0;
+    }
     const n = Math.hypot(ix, iz) || 1;
     const fx = -Math.sin(yaw);
     const fz = -Math.cos(yaw);
@@ -1539,7 +1565,8 @@ export function createWalk(d: WalkDeps) {
 
     // Face where you're going, or where you look when aiming / in first person
     const lookFace = yaw + Math.PI;
-    if (aim || firstPerson || shooting) face += wrap(lookFace - face) * damp(16, dt);
+    if (sitting) face = sitting.ry;
+    else if (aim || firstPerson || shooting) face += wrap(lookFace - face) * damp(16, dt);
     else if (speed > 0.25) face += wrap(Math.atan2(vel.x, vel.y) - face) * damp(12, dt);
 
     // Jumping: buffered presses, a little coyote time, release early for a short hop
@@ -1569,6 +1596,7 @@ export function createWalk(d: WalkDeps) {
     const stride = Math.min(1, speed / WALK);
     const P = hero.pose;
     copyPose(loco.pose, P);
+    if (sitting) sitPose(P, t, 0.3);
     speedNow = speed;
     if (emote) {
       emote.t += dt;
@@ -1609,7 +1637,8 @@ export function createWalk(d: WalkDeps) {
     P.headYaw += headYaw + lookAround;
     P.headPitch += headPitch;
     hero.update();
-    placeRoot(hero.g, pos.x, pos.y, pos.z, face, SCALE, loco.root);
+    // (seated: the hips on the bench's seat)
+    placeRoot(hero.g, pos.x, sitting ? pos.y + SEAT_H - (HIP_HEIGHT - 0.03) * SCALE : pos.y, pos.z, face, SCALE, loco.root);
     hero.ring.position.set(pos.x, ground + 0.02, pos.z);
     (hero.ring.material as THREE.MeshBasicMaterial).opacity = 0.55 * (1 - air * 0.6);
 
@@ -1636,7 +1665,7 @@ export function createWalk(d: WalkDeps) {
     camera.lookAt(lookAt);
     hero.g.visible = !firstPerson && camDist > 0.6;
     frameShowroom(dt);
-    hero.ring.visible = !firstPerson;
+    hero.ring.visible = !firstPerson && !sitting;
     combat.view(dt, t, { firstPerson, aim: aimNow, move: stride, phase, run: runAmt, air });
 
     // Field of view widens with speed, narrows when aiming
@@ -1682,6 +1711,32 @@ export function createWalk(d: WalkDeps) {
           best = { id: `place:${p.id}`, label: p.label };
           bestD = 0;
         }
+    // A seat on a bench (its middle or an end, whichever is free: the crowd's sitters keep theirs), or standing up
+    benchNear = null;
+    if (sitting) {
+      best = { id: 'sit', label: 'Stand up' };
+      bestD = 0;
+    } else if (!drive.active) {
+      let bd = 1.1;
+      for (const b of BENCHES) {
+        if (Math.abs(b.x - pos.x) > 2 || Math.abs(b.z - pos.z) > 2) continue;
+        // Along the bench, square to the way its sitter faces
+        const ax = Math.cos(b.ry);
+        const az = -Math.sin(b.ry);
+        for (const off of [0, -0.5, 0.5]) {
+          const seat = { x: b.x + ax * off, z: b.z + az * off, ry: b.ry };
+          const dd = Math.hypot(seat.x - pos.x, seat.z - pos.z);
+          if (dd < bd && !bodies.people.some((q) => q.act === 'sit' && Math.hypot(q.x - seat.x, q.z - seat.z) < 0.45)) {
+            bd = dd;
+            benchNear = seat;
+          }
+        }
+      }
+      if (benchNear) {
+        best = { id: 'sit', label: 'Sit' };
+        bestD = 0;
+      }
+    }
     // The hangar office's door at the airport
     if (Math.hypot(HANGAR_DOOR.x - pos.x, HANGAR_DOOR.z - pos.z) < 1.2) {
       best = { id: 'hangar', label: 'Hangar' };

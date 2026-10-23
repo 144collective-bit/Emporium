@@ -887,7 +887,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   /* ---------- Loop ---------- */
   const timer = new THREE.Timer();
   timer.connect(document);
-  const env: Env = { t: 0, dt: 0, night: 1, rain: 0, day: 0 };
+  const env: Env = { t: 0, dt: 0, night: 1, rain: 0, day: 0, hour: 12 };
   let running = true;
   let frames = 0;
   // Phones run the city at a steady 30fps while nobody is touching it, and at
@@ -1052,6 +1052,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     env.night = s.night;
     env.rain = s.rain;
     env.day = s.day;
+    env.hour = s.hour;
     // Crowds draw only the people in view, in detail near the camera (character.ts); a still city draws everyone once
     CROWD_VIEW.on = !reduced;
     camera.updateMatrixWorld();
