@@ -22,6 +22,9 @@ import { CLIP_SECONDS, JOG_STRIDE, WALK_STRIDE } from './crowdclips';
 import { PARK_PEOPLE, moment, type Moment, type ParkPerson } from './parklife';
 import { blinkOn, bodyMotion, braking, hornDue, indicating, newBody, newHorn, pullAway, reactionOf, resetBody, turnsOf, type Body, type Horn, type Mover, type Turn } from './traffic';
 import { CROSS_PACE, crossingLinks, hurry, noticing, outAtNight, takesCrossing, walkLight, type Link } from './pedestrians';
+import { busStep, newBus, pullIn, routeStops, type Bus, type RouteStop } from './transit';
+import { MOORED, cruise, hornDue as boatHornDue, newBoatHorn, wakeOf } from './boats';
+import { VENTS, VENT_N, puff, ventsNear, ventsOn } from './dusk';
 
 export interface LifeOpts {
   cars: number;
@@ -31,9 +34,10 @@ export interface LifeOpts {
   light?: boolean;
   /** How far from the camera a car is drawn in full (beyond, its far form: growth plan Phase 2) */
   far?: number;
-  /** A car's horn (sound.ts), `gain` by how far off it is */
-  horn?: (gain: number) => void;
+  /** The sounds the city's life makes (sound.ts): a car's horn, a bus's doors, a boat's horn; `gain` by how far off it is */
+  sfx?: (kind: LifeSfx, gain: number) => void;
 }
+export type LifeSfx = 'horn' | 'doors' | 'boatHorn';
 
 /* ======================================================================
    Traffic
@@ -68,6 +72,8 @@ interface Vehicle {
   /** Its brake lights, and which way it's indicating (what the lights showed this frame) */
   brake: boolean;
   turn: 'L' | 'R' | null;
+  /** A bus: its stops (transit.ts) */
+  bus: Bus | null;
 }
 
 const ROAD_Y = 0.035;
@@ -136,6 +142,13 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
     if (!t) turnsBy.set(r, (t = turnsOf(r.pts, r.cum)));
     return t;
   };
+  /** The bus stops along each route (transit.ts), worked out the first time a bus takes it */
+  const stopsBy = new Map<Route, RouteStop[]>();
+  const stopsFor = (r: Route) => {
+    let t = stopsBy.get(r);
+    if (!t) stopsBy.set(r, (t = routeStops(r)));
+    return t;
+  };
   // Every car starts somewhere round the home view, a little apart
   const start = spotsNear(CENTER.x, CENTER.z, POOL_R);
   for (let i = 0; i < total; i++) {
@@ -167,6 +180,7 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
       seed: (i * 0.7548776662) % 1,
       brake: false,
       turn: null,
+      bus: model === 'bus' ? newBus() : null,
     });
   }
   /** Put a car back on the road near x, z: out of sight, clear of the others; it keeps its speed */
@@ -184,6 +198,7 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
       v.route = ROUTES[s.r];
       v.p = s.p;
       v.seg = 0;
+      if (v.bus) Object.assign(v.bus, newBus());
       place(v);
       resetBody(v.body, v.v, v.yaw);
       return;
@@ -195,6 +210,14 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
     [v.x, v.z] = o.at;
     [v.fx, v.fz] = o.dir;
     v.yaw = Math.atan2(-v.fz, v.fx);
+    // A bus in the inner lane pulls in to the kerb for its stop and back out after (transit.ts)
+    if (v.bus) {
+      const k = pullIn(v.p + v.len / 2, v.route.len, stopsFor(v.route));
+      if (k) {
+        v.x -= v.fz * k;
+        v.z += v.fx * k;
+      }
+    }
   };
   vehicles.forEach(place);
   for (const v of vehicles) resetBody(v.body, 0, v.yaw);
@@ -366,6 +389,9 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
     return ahead > -0.2 - w.r && ahead < 4 && side < 1.0 + w.r * 0.6 ? Math.max(0, (ahead - 0.8) * 1.8) : Infinity;
   };
 
+  /** How far a car is from the camera (for how loud it is) */
+  const offEye = (v: { x: number; z: number }) => Math.hypot(v.x - CROWD_VIEW.eye.x, v.z - CROWD_VIEW.eye.z);
+
   tick(({ t, dt, night }) => {
     // Lamp states
     lamps.forEach((l, i) => {
@@ -405,9 +431,12 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
       target = Math.min(target, byYou);
       for (const w of stoppers) if (w.on) target = Math.min(target, shortOf(v, w));
       // Held up by you: a toot after a while (quieter the further off)
-      if (hornDue(v.horn, byYou < 0.1 && v.v < 0.1, dt, v.seed) && opts.horn) {
-        const off = Math.hypot(v.x - CROWD_VIEW.eye.x, v.z - CROWD_VIEW.eye.z);
-        opts.horn(Math.max(0, 1 - off / 45) * 0.9);
+      if (hornDue(v.horn, byYou < 0.1 && v.v < 0.1, dt, v.seed) && opts.sfx) opts.sfx('horn', Math.max(0, 1 - offEye(v) / 45) * 0.9);
+      // A bus stops at its stops (transit.ts): slowing in, standing with its doors open (the traffic behind waits), pulling away
+      if (v.bus) {
+        const bs = busStep(v.bus, v.p + v.len / 2, v.v, v.route.len, stopsFor(v.route), dt, v.seed);
+        target = Math.min(target, bs.cap);
+        if (bs.doors && opts.sfx) opts.sfx('doors', Math.max(0, 1 - offEye(v) / 40) * 0.8);
       }
       // Stopped, it waits its own reaction time before moving off (a queue peels from the front)
       v.mover.v = v.v;
@@ -774,16 +803,9 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
    River, sky traffic
    ====================================================================== */
 
-function buildBoats(scene: THREE.Scene, tick: (f: Tick) => void) {
-  const boats: { g: THREE.Group; x: number; lane: number; v: number; ph: number }[] = [];
-  const wakeMat = new THREE.MeshBasicMaterial({ color: '#cfefff', transparent: true, opacity: 0.35, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, map: glowTex });
-  const specs: [string, number, number][] = [
-    // Spread across the river, each down the middle of one of Liberty Bridge's arches (liberty.ts)
-    ['#f3f2f7', 0, 1.1],
-    ['#e23b3b', 2, -0.8],
-    ['#ffd23f', 1, 0.6],
-  ];
-  specs.forEach(([color, lane, v], i) => {
+function buildBoats(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => void) {
+  /** A boat's hull, bow and cabin (one mesh) with its lamp, and its wake (its own material: it trails the speed) */
+  const boat = (color: string, withWake: boolean) => {
     const g = new THREE.Group();
     const hull = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.28, 0.6), toon(color));
     hull.position.y = 0.1;
@@ -794,17 +816,41 @@ function buildBoats(scene: THREE.Scene, tick: (f: Tick) => void) {
     cabin.position.set(-0.2, 0.4, 0);
     const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 6), neon(PAL.warm, 0.5, 3));
     lamp.position.set(-0.2, 0.62, 0);
-    const wake = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 0.9), wakeMat);
-    wake.rotation.x = -Math.PI / 2;
-    wake.position.set(-1.4, 0.03, 0);
-    // The hull, bow and cabin are one mesh
-    g.add(mergeMeshes([hull, bow, cabin], { cast: true, receive: true }), fx(lamp), fx(wake));
+    g.add(mergeMeshes([hull, bow, cabin], { cast: true, receive: true }), fx(lamp));
+    let wake: THREE.Mesh | null = null;
+    if (withWake) {
+      const wakeMat = new THREE.MeshBasicMaterial({ color: '#cfefff', transparent: true, opacity: 0.35, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, map: glowTex });
+      wake = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), wakeMat);
+      wake.rotation.x = -Math.PI / 2;
+      wake.position.set(-1.4, 0.03, 0);
+      g.add(fx(wake));
+    }
     scene.add(g);
-    boats.push({ g, x: CENTER.x + (i - 1) * 25, lane, v, ph: rand() * 6 });
+    return { g, wake };
+  };
+  const boats: { g: THREE.Group; wake: THREE.Mesh; x: number; lane: number; v: number; ph: number; horn: ReturnType<typeof newBoatHorn> }[] = [];
+  const specs: [string, number, number][] = [
+    // Spread across the river, each down the middle of one of Liberty Bridge's arches (liberty.ts)
+    ['#f3f2f7', 0, 1.1],
+    ['#e23b3b', 2, -0.8],
+    ['#ffd23f', 1, 0.6],
+  ];
+  specs.forEach(([color, lane, v], i) => {
+    const { g, wake } = boat(color, true);
+    boats.push({ g, wake: wake!, x: CENTER.x + (i - 1) * 25, lane, v, ph: rand() * 6, horn: newBoatHorn() });
+  });
+  // The odd boat tied up at a jetty (boats.ts), riding the water
+  const moored = MOORED.map((m) => {
+    const { g } = boat(m.color, false);
+    g.position.set(m.x, 0.02, m.z);
+    g.rotation.y = m.yaw;
+    return { g, ph: m.x * 0.37 };
   });
   tick(({ t, dt }) => {
     for (const b of boats) {
-      b.x += b.v * dt;
+      // Cruising, the speed easing up and down (boats.ts); the wake trails it
+      const speed = cruise(b.v, t, b.ph);
+      b.x += speed * dt;
       // The whole river, but only round you: a boat drifting off one way comes back round from the other
       const f = CROWD_VIEW.on ? CROWD_VIEW.focus.x : CENTER.x;
       // (the south lane's boat keeps east of The Trenches' boardwalk: waterfront.ts)
@@ -814,12 +860,85 @@ function buildBoats(scene: THREE.Scene, tick: (f: Tick) => void) {
       if (!b.g.visible) continue;
       if (b.x > hi) b.x = lo + ((b.x - hi) % (hi - lo));
       if (b.x < lo) b.x = hi - ((lo - b.x) % (hi - lo));
+      // A horn coming up to each bridge (quieter the further off)
+      if (boatHornDue(b.horn, b.x, speed) && opts.sfx && dt > 0) opts.sfx('boatHorn', Math.max(0, 1 - Math.hypot(b.x - CROWD_VIEW.eye.x, boatZ(b.lane, b.x) - CROWD_VIEW.eye.z) / 90) * 0.7);
+      const w = wakeOf(speed, Math.abs(b.v));
+      b.wake.scale.set(w.len, w.width, 1);
+      b.wake.position.x = -(0.75 + w.len / 2);
+      (b.wake.material as THREE.MeshBasicMaterial).opacity = 0.35 * w.alpha;
       // ...and the middle lane's swings round Pier 7's head, turning into the swing
       const z = boatZ(b.lane, b.x);
       const slope = (boatZ(b.lane, b.x + 0.5) - boatZ(b.lane, b.x - 0.5)) * Math.sign(b.v);
       b.g.position.set(b.x, 0.02 + Math.sin(t * 1.6 + b.ph) * 0.03, z);
       b.g.rotation.set(0, (b.v < 0 ? Math.PI : 0) - Math.atan(slope), Math.sin(t * 1.2 + b.ph) * 0.03);
     }
+    for (const m of moored) {
+      m.g.position.y = 0.02 + Math.sin(t * 1.3 + m.ph) * 0.025;
+      m.g.rotation.z = Math.sin(t * 0.9 + m.ph) * 0.025;
+    }
+  });
+}
+
+/**
+ * Steam from the vents in The Trenches' streets at night (city life plan, Phase 4, dusk.ts): the few nearest the
+ * camera, each a soft sprite rising and fading, one mesh of points in the FX layer. None on phones.
+ */
+function buildSteam(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => void) {
+  if (opts.light || !VENTS.length) return;
+  const n = Math.min(VENT_N, VENTS.length);
+  const pos = new Float32Array(n * 3);
+  const alpha = new Float32Array(n);
+  const size = new Float32Array(n);
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3).setUsage(THREE.DynamicDrawUsage));
+  geo.setAttribute('alpha', new THREE.BufferAttribute(alpha, 1).setUsage(THREE.DynamicDrawUsage));
+  geo.setAttribute('psize', new THREE.BufferAttribute(size, 1).setUsage(THREE.DynamicDrawUsage));
+  const scale = { value: 1400 };
+  const mat = new THREE.ShaderMaterial({
+    uniforms: { map: { value: glowTex }, uScale: scale },
+    vertexShader: /* glsl */ `
+      attribute float alpha; attribute float psize; uniform float uScale; varying float vA;
+      void main() {
+        vA = alpha;
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        gl_PointSize = psize * uScale / max(1.0, -mv.z);
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: /* glsl */ `
+      uniform sampler2D map; varying float vA;
+      void main() {
+        float a = texture2D(map, gl_PointCoord).a * vA * 0.8;
+        gl_FragColor = vec4(vec3(0.78, 0.78, 0.86), a);
+      }`,
+    transparent: true,
+    depthWrite: false,
+    fog: false,
+  });
+  const pts = new THREE.Points(geo, mat);
+  pts.frustumCulled = false;
+  pts.visible = false;
+  // (a point's size on screen from its size in the world: the screen's height over the camera's field of view)
+  const sz = new THREE.Vector2();
+  pts.onBeforeRender = (r, _s, cam) => {
+    scale.value = (r.getDrawingBufferSize(sz).y * 0.5) / Math.tan(((cam as THREE.PerspectiveCamera).fov * Math.PI) / 360);
+  };
+  scene.add(fx(pts));
+  const seeds = VENTS.map((v) => (Math.abs(Math.sin(v[0] * 3.1 + v[1] * 1.7)) % 1));
+  tick(({ t, night }) => {
+    const eye = CROWD_VIEW.eye;
+    const near = ventsNear(eye.x, eye.z, n);
+    const d0 = Math.hypot(VENTS[near[0]][0] - eye.x, VENTS[near[0]][1] - eye.z);
+    pts.visible = ventsOn(night, d0);
+    if (!pts.visible) return;
+    near.forEach((vi, i) => {
+      const v = VENTS[vi];
+      const p = puff(t, seeds[vi]);
+      // Drifting a little as it rises
+      pos.set([v[0] + p.y * 0.18, 0.05 + p.y, v[1] + p.y * 0.1], i * 3);
+      alpha[i] = p.alpha * Math.max(0, 1 - Math.hypot(v[0] - eye.x, v[1] - eye.z) / 60);
+      size[i] = p.size;
+    });
+    for (const a of [geo.attributes.position, geo.attributes.alpha, geo.attributes.psize]) a.needsUpdate = true;
   });
 }
 
@@ -950,7 +1069,8 @@ function buildBirds(scene: THREE.Scene, tick: (f: Tick) => void) {
 export function buildLife(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f: Tick) => void) {
   buildTraffic(scene, opts, tick);
   buildPeople(scene, opts, crowd, tick);
-  buildBoats(scene, tick);
+  buildBoats(scene, opts, tick);
+  buildSteam(scene, opts, tick);
   buildDrones(scene, tick);
   buildBlimp(scene, tick);
   buildBirds(scene, tick);

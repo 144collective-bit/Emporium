@@ -9,7 +9,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { FX, OCC, SOLID } from './kit';
+import { FX, OCC, SOLID, injectWind } from './kit';
 
 const InkShader = {
   uniforms: {
@@ -89,9 +89,13 @@ export function createPost(renderer: THREE.WebGLRenderer, scene: THREE.Scene, ca
   depthTexture.type = THREE.UnsignedIntType;
   const normalTarget = new THREE.WebGLRenderTarget(size.x, size.y, { depthTexture, type: THREE.UnsignedByteType });
   const normalMat = new THREE.MeshNormalMaterial();
-  // The crowds are skinned on the GPU from their baked clips: their outlines follow (everything else reads crowdOn 0)
-  normalMat.onBeforeCompile = (sh) => injectCrowdSkin(sh);
-  normalMat.customProgramCacheKey = () => 'normal-crowd';
+  // The crowds are skinned on the GPU from their baked clips: their outlines follow (everything else reads crowdOn 0);
+  // so do the trees swaying in the wind (kit.ts `injectWind()`: everything else carries no sway)
+  normalMat.onBeforeCompile = (sh) => {
+    injectWind(sh);
+    injectCrowdSkin(sh);
+  };
+  normalMat.customProgramCacheKey = () => 'normal-crowd-wind';
 
   const target = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples: opts.msaa });
   const composer = new EffectComposer(renderer, target);
