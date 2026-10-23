@@ -441,12 +441,18 @@ it and has been retired completely. Build only on what's here.
     yard's piles, the car wash's posts and brushes, the docks, the cars.
     Some of the tenements' shops are shuttered too (grit's `shuttered()`).
   - **Trench Avenue's places** (the grit's step 3, the owner's call:
-    "a gun store, a bar, and a large neon nightclub" under the el) are
-    `avenue.ts` (DOM-free, tested in `tests/avenue.test.ts`) on row lots
+    "a gun store, a bar, and a large neon nightclub", first under the el)
+    are `avenue.ts` (DOM-free, tested in `tests/avenue.test.ts`) on row lots
     set aside in projects.ts (`AVENUE_LOTS`, `isAvenue()`: kept out of the
     rows' drawing, their solids and the shutters), drawn by `avenue3d.ts`
-    (`buildAvenue()`, at the boot, after The Block): **Club PULSE**
-    (`CLUB`, trench-a3's corner: a black box with neon tubes up its front
+    (`buildAvenue()`, at the boot, after The Block). **Turned to face the
+    river** (the owner's call): trench-a2 and trench-a3 are `TURNED` in
+    projects.ts (the recipe's rows mirrored north for south,
+    `turnRound()`), so these three, Block Bodega and Avenue Deli face north
+    across the bank avenue to the river; every number in avenue.ts and
+    avenue3d.ts follows the way a place faces (`face`, `out`, `wall`,
+    `street`), so keep new ones doing so. **Club PULSE**
+    (`CLUB`, trench-a3's corner on the cross street: a black box with neon tubes up its front
     throbbing with the beat and bulbs chasing round the marquee (four
     materials of their own driven by the tick, `userData.keep`; still under
     reduced motion), PULSE on a big board, the vertical blade on its corner
@@ -487,6 +493,11 @@ it and has been retired completely. Build only on what's here.
     Upgrade), the Vault's estate agent lists them, the market hall and the
     Post office take them, the Apartments hire for them, and walk mode
     prompts at each door ("Trench Mart · For sale").
+  - **The waterfront** (the owner's call, a proposal, nothing built):
+    `docs/waterfront-plan.md` holds what's on The Trenches' riverside
+    today, the choices, suggestions and the owner's open questions. Build
+    it one step at a time with the owner's sign-off; keep the plan up to
+    date.
   - **The Block** is a place (`theblock.ts`, built at the boot): spot
     `trenches` (pin over the court, directory entry, panel
     `data-panel-tpl="trenches"`: the storyline starts here, coming soon,
