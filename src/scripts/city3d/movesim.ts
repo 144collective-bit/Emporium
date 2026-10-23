@@ -65,3 +65,37 @@ export function ahead(s: MoveState, gx: number, gz: number, t: number, out: { x:
 
 /** The sideways pull of a bend (tiles a second²): speed times turn rate, for the lean into it */
 export const bendPull = (s: MoveState) => Math.hypot(s.vx, s.vz) * s.w;
+
+/**
+ * The slide (animation Phase 5: crouch while sprinting): from going at least
+ * `min` tiles a second, off at `start` times the speed he had, the way he
+ * was going, slowing by `friction` tiles a second² and steering at most
+ * `steer` radians a second towards the stick, until he's down to `end` or
+ * it's been `most` seconds
+ */
+export const SLIDE = { min: 3.4, start: 1.08, friction: 3.4, end: 1.5, most: 1.1, steer: 0.9 };
+export interface Slide {
+  /** Seconds since it started, how fast he's going and which way (yaw) */
+  t: number;
+  v: number;
+  dir: number;
+}
+/** Into a slide from the springs as they are, if he's going fast enough */
+export function startSlide(s: MoveState): Slide | null {
+  const v = Math.hypot(s.vx, s.vz);
+  return v < SLIDE.min ? null : { t: 0, v: v * SLIDE.start, dir: Math.atan2(s.vx, s.vz) };
+}
+/** One step of a slide, the springs carried along with it (so he runs or stops on from where it leaves him); false once it's over */
+export function stepSlide(sl: Slide, s: MoveState, gx: number, gz: number, dt: number) {
+  sl.t += dt;
+  sl.v = Math.max(0, sl.v - SLIDE.friction * dt);
+  if (gx * gx + gz * gz > 0.01) {
+    const turn = wrap(Math.atan2(gx, gz) - sl.dir);
+    sl.dir = wrap(sl.dir + Math.sign(turn) * Math.min(Math.abs(turn), SLIDE.steer * dt));
+  }
+  s.vx = Math.sin(sl.dir) * sl.v;
+  s.vz = Math.cos(sl.dir) * sl.v;
+  s.ax = s.az = s.w = 0;
+  s.face = sl.dir;
+  return sl.v > SLIDE.end && sl.t < SLIDE.most;
+}

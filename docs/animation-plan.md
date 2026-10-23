@@ -573,7 +573,67 @@ As it was planned:
   shifts with it (and stays out of walls, through `CAMERA_GRID`). Touch
   and pad as in "Controls".
 
-### Phase 5: crouch, slide, vault and climb
+### Phase 5: crouch, slide, vault and climb (built, for the owner's sign-off)
+
+What's in so far:
+
+- **More data** (CMU, credited): subject 136's crouched walks (136_10 and
+  136_09 forwards, 136_11 backwards, about 0.8 m/s, cut to their good
+  parts; `sink` in `takes.json` lowers 136_09 and 136_11 by 1.8 cm, where
+  the capture's planted feet stood high over the ankles' low point and
+  the contacts missed them). 31 clips, 153 s, 671 KB (the file's test
+  limit went to 720 KB).
+- **Crouch** (C toggles, B on a gamepad, the touch Crouch button over the
+  stick): moving crouched, only the crouched walks are searched (and
+  standing up, never them); standing still crouched, the idle plays with
+  the crouch laid over it (`CROUCH`: the hips 0.16 down, the legs' IK
+  bending the knees over planted feet, the spine 0.42 forward and the head
+  back up), eased in and out as the clip changes, so a crouched turn on
+  the spot is the turning take crouched. He goes at 0.55 tiles a second
+  (about 1 m/s), sprinting or jumping stands him up, and the camera comes
+  down 0.26. Armed, the hold keeps his upper body upright over the
+  crouched legs. Tested: crouched walking is on the crouched takes over
+  90% of the time, crouched standing on the idle with the hips well down,
+  standing up never a crouched take, the feet held to under 2.5 cm.
+- **Slide** (crouch while sprinting): `startSlide()` / `stepSlide()` in
+  movesim.ts (only from 3.4 tiles a second, off 8% faster, slowing by 3.4
+  tiles a second², steering 0.9 rad a second at most, over by 1.5 tiles a
+  second or 1.1 s: about 3 tiles, 5 m); its pose is keyed (`slidePose()`,
+  `SLIDE_POSE` in poses.ts: the hips 0.26 up, leant back, the leading leg
+  out on its heel, the other folded with its knee and shin on the ground,
+  an arm forward and the other back to the ground), the motion capture
+  stepping aside for it (in 0.06 s, back over 0.12). It ends in a run with
+  the stick pushed, a crouch without, a crouch against whatever it runs
+  into, or a jump; the camera comes down 0.42 during it.
+- **Vault and climb** (the owner's calls: low things only, over and down,
+  he never stands on top): no CMU take vaults or mantles (127_33-36 "Run
+  Over" step across a low box), so both are keyed (`vault.ts`). What
+  counts is a list made from the data with real heights, `LOW_THINGS`: The
+  Trenches' jersey barriers (0.55), yard kerbs (0.4) and dumpsters (1.0),
+  Westlake Park's walls and hedges (0.55), beds and planters (0.42), and
+  downtown's alley crates, pallets and bins; never a building, a car, a
+  kiosk or a stall, and nothing on top of anything. Jump while moving at
+  one within reach (0.85 tiles), 0.25 to 0.75 over his ground (a vault)
+  or up to 1.25 (a climb), at most 1.3 thick, come at squarely: he goes
+  over it to the far side if the landing is clear and within 0.45 of his
+  own ground and nothing but low things under the arc stands in the way;
+  otherwise it's a jump as before. The vault (about 0.9 s): up early, his
+  left hand planted on the top (the arm IK) and the tucked legs swung out
+  to his right, down and on at a run. The climb (about 1.1 s): up to the
+  face, both hands on the top, pulled up with the knees tucked, over and
+  down. Tested: his feet, shins and hips never more than 3 cm into the
+  thing, a hand on its top while planted, from where he set off to the
+  far side; every low thing is a solid walking meets and none is tall.
+  In the city: over a jersey barrier behind Bottom Street's car park.
+  Jumps now count the press down after looking at it (a slow frame lost
+  it before).
+- **The lab:** Crouch, Sprint & slide and Vault & climb programs (a walls
+  floor: a park wall's height, then a dumpster's), C and Jump by hand, a
+  Crouch readout.
+- **Controls:** the Controls panel and the gamepad and touch notes.
+
+As it was planned:
+
 
 - **Crouch / sneak** (C toggles): crouched idle, walk and turns; the
   camera lowers.

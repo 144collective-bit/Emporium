@@ -9,15 +9,16 @@
  *   circle, starts and stops at a sprint, jumps running and standing,
  *   short hops, strafing the eight ways and aiming round, peeking...) or by
  *   hand (W A S D across the floor, Shift sprints, Caps Lock walks, Space
- *   jumps, Q / E peek), with walk.ts's jump and gravity.
+ *   jumps, Q / E peek, C crouches or slides), with walk.ts's jump and gravity.
  * - Time: full speed, a quarter, a tenth; P pauses, . steps a frame.
  * - Cameras: side on, front, behind, over his right shoulder (walk mode's, armed), free (drag to orbit, wheel to zoom).
  * - Foot traces (where each ball of the foot was held), and readouts:
  *   speed, the clip and frame playing, its rate, the match's cost, the
  *   blend left, jumps a second, the foot slide (how far a held foot has
  *   moved over the ground: now and the worst lately).
- * - Floors: flat, kerbs, stairs, and a ledge to run off (up a ramp, a drop
- *   of 1.6 tiles).
+ * - Floors: flat, kerbs, stairs, a ledge to run off (up a ramp, a drop
+ *   of 1.6 tiles), and walls to vault and climb over (a park wall's height
+ *   and a dumpster's, Jump at them).
  * - Armed (animation Phases 4 and 8): any gun in his hands (stance.ts's
  *   hold on the procedural pose, over the motion capture's legs, as in the
  *   city), aiming or not, the look swept up and down; markers at the gun's
@@ -31,7 +32,10 @@ import { PLAYER, SOLDIER, createDegen, type Degen } from './character';
 import { addLean, applyTo, createAnimator, type Animator } from './animator';
 import { copyPose, createLocomotion, placeRoot } from './locomotion';
 import { loadMocap } from './mocap-load';
-import { GAITS, newMove, stepMove, type MoveState } from './movesim';
+import { GAITS, newMove, startSlide, stepMove, stepSlide, type MoveState, type Slide } from './movesim';
+import { slidePose } from './poses';
+import { overAhead, overAt, overPose, type Over } from './vault';
+import type { Box } from './solids';
 import { toon } from './kit';
 import { buildGun } from './guns';
 import { FIT } from './gunfit';
@@ -42,11 +46,11 @@ import { createPost } from './post';
 const SCALE = 0.85;
 /** One tile in centimetres, for the readouts */
 const CM = 180;
-type Prog = 'manual' | 'runstop' | 'turnback' | 'weave' | 'circle' | 'startstop' | 'startback' | 'gaits' | 'idle' | 'jumps' | 'standjump' | 'hops' | 'strafe' | 'aimturn' | 'peek';
+type Prog = 'manual' | 'runstop' | 'turnback' | 'weave' | 'circle' | 'startstop' | 'startback' | 'gaits' | 'idle' | 'jumps' | 'standjump' | 'hops' | 'strafe' | 'aimturn' | 'peek' | 'crouch' | 'slide' | 'over';
 type Gait = 'walk' | 'run' | 'sprint';
 type Cam = 'side' | 'front' | 'back' | 'over' | 'free';
-type Floor = 'flat' | 'kerbs' | 'stairs' | 'ledge';
-const FLOORS: Floor[] = ['flat', 'kerbs', 'stairs', 'ledge'];
+type Floor = 'flat' | 'kerbs' | 'stairs' | 'ledge' | 'walls';
+const FLOORS: Floor[] = ['flat', 'kerbs', 'stairs', 'ledge', 'walls'];
 
 /* ---------- The floors: flat, kerbs, stairs (along +z, the same for both figures) ---------- */
 
@@ -61,6 +65,17 @@ const mod = (a: number, n: number) => ((a % n) + n) % n;
 const wrapA = (a: number) => mod(a + Math.PI, Math.PI * 2) - Math.PI;
 /** A ledge every LEDGE.every tiles: flat, a ramp up to `top`, a flat top, then a drop back down */
 const LEDGE = { every: 16, ramp: 4, up: 6, flat: 2, top: 1.6 };
+/** Walls to go over (vault.ts): every `every` tiles along +z, a low one (a park wall's height) and then a high one (a dumpster's) */
+const WALLS = { every: 7, low: [0.55, 0.3], high: [1.0, 0.6] } as const;
+const wallBoxes = (): Box[] => {
+  const out: Box[] = [];
+  for (let k = 0; k < 60; k++) {
+    const [h, d] = k % 2 ? WALLS.high : WALLS.low;
+    const z0 = 4 + k * WALLS.every;
+    out.push([-0.9, z0, 2.1, z0 + d, h]);
+  }
+  return out;
+};
 /** walk.ts's jump, gravity and the extra pull down when the jump is let go early */
 const JUMP = 3.9;
 const GRAVITY = 11.5;
@@ -93,6 +108,8 @@ const CLIMB = 1.75;
 /** walk.ts's speed while aiming, and the peek's lean */
 const AIMING = 1.4;
 const PEEK = { lean: 0.42, ease: 0.07, level: 0.85 };
+/** walk.ts's crouched speed */
+const CROUCHED = 0.55;
 /** The programs that aim (+z, or round, for `aimturn`) while they move */
 const AIMS: Prog[] = ['strafe', 'aimturn', 'peek'];
 const PROGS: [Prog, string][] = [
@@ -109,6 +126,9 @@ const PROGS: [Prog, string][] = [
   ['strafe', 'Strafe 8 ways'],
   ['aimturn', 'Aim round'],
   ['peek', 'Peek'],
+  ['crouch', 'Crouch'],
+  ['slide', 'Sprint & slide'],
+  ['over', 'Vault & climb'],
   ['idle', 'Stand'],
   ['manual', 'By hand'],
 ];
@@ -161,6 +181,17 @@ function program(p: Prog, t: number, speed: number): [number, number] {
     case 'aimturn':
     case 'peek':
       return [0, 0];
+    // Crouched: still, on, still, back, round again
+    case 'crouch': {
+      const u = cycle(9);
+      return u < 1.5 ? [0, 0] : u < 4.5 ? [0, CROUCHED] : u < 5.5 ? [0, 0] : u < 8 ? [0, -CROUCHED] : [0, 0];
+    }
+    // A sprint, a slide at two seconds (slideOf), down in a crouch, up again
+    case 'slide':
+      return cycle(5) < 2.2 ? [0, GAITS.sprint] : [0, 0];
+    // On at a run over the walls (the walls floor)
+    case 'over':
+      return [0, GAITS.run];
     default:
       return [0, 0];
   }
@@ -177,6 +208,12 @@ function peekOf(p: Prog, t: number) {
   const u = t % 6;
   return u < 0.5 ? 0 : u < 2 ? 1 : u < 3 ? 0 : u < 4.5 ? -1 : 0;
 }
+/** Whether a program is crouched at `t`, and when it presses Crouch to slide */
+function crouchOf(p: Prog, t: number) {
+  if (p === 'crouch') return true;
+  return p === 'slide' && t % 5 > 2 && t % 5 < 4.4;
+}
+const slideOf = (p: Prog, t: number, dt: number) => p === 'slide' && t % 5 >= 2 && (t - dt) % 5 < 2;
 function jumpOf(p: Prog, t: number, dt: number): { press: boolean; hold: boolean } {
   const len = p === 'hops' ? 1.4 : 2.4;
   const u = t % len;
@@ -191,7 +228,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   ui.innerHTML = `
     <canvas class="anim-lab-view" aria-hidden="true"></canvas>
     <div class="anim-lab-panel">
-      <div class="anim-lab-head"><span class="anim-lab-title">Animation lab</span><span class="anim-lab-note">?anim · Phases 1-4, 8</span><button class="anim-lab-close" type="button" aria-label="Close the lab">×</button></div>
+      <div class="anim-lab-head"><span class="anim-lab-title">Animation lab</span><span class="anim-lab-note">?anim · Phases 1-5, 8</span><button class="anim-lab-close" type="button" aria-label="Close the lab">×</button></div>
       <div class="anim-lab-row" data-progs></div>
       <div class="anim-lab-row" data-gaits></div>
       <div class="anim-lab-row" data-time></div>
@@ -200,7 +237,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       <div class="anim-lab-row" data-guns></div>
       <div class="anim-lab-row" data-toggles></div>
       <dl class="anim-lab-read" data-read></dl>
-      <p class="anim-lab-hint">By hand: W A S D, Shift sprints, Caps Lock walks, Space jumps, Q / E peek (armed and aiming, he faces +z). P pauses, . steps.</p>
+      <p class="anim-lab-hint">By hand: W A S D, Shift sprints, Caps Lock walks, Space jumps, Q / E peek, C crouches (slides sprinting; armed and aiming, he faces +z). P pauses, . steps.</p>
     </div>`;
   root.append(ui);
   const canvas = ui.querySelector<HTMLCanvasElement>('canvas')!;
@@ -217,7 +254,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   const rec = q.has('rec');
   let compare = q.get('compare') !== '0';
   let traces = q.get('traces') !== '0';
-  let floorKind: Floor = FLOORS.find((f) => f === q.get('floor')) ?? 'flat';
+  let floorKind: Floor = FLOORS.find((f) => f === q.get('floor')) ?? (prog === 'over' ? 'walls' : 'flat');
   let paused = false;
   let stepOnce = false;
   const GUNS: [WeaponId | 'none', string][] = [
@@ -254,6 +291,8 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       button('progs', label, () => prog === p, () => {
         prog = p;
         clock = 0;
+        // (the walls to go over are a floor of their own)
+        if (p === 'over' && floorKind !== 'walls') (floorKind = 'walls'), buildFloor();
       }),
     );
   for (const g of ['walk', 'run', 'sprint'] as Gait[]) paints.push(button('gaits', g[0].toUpperCase() + g.slice(1), () => gait === g, () => (gait = g)));
@@ -341,6 +380,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
         const z2 = z0 + RUN_LEN + FLIGHT.landing;
         for (let k = 0; k < FLIGHT.steps; k++) box(z2 + k * FLIGHT.tread, z2 + (k + 1) * FLIGHT.tread, (FLIGHT.steps - k) * FLIGHT.rise);
       }
+    if (floorKind === 'walls') for (const b of wallBoxes()) box(b[1], b[3], b[4]);
     if (floorKind === 'ledge') {
       // (the ramp and the top as one side profile, across both lanes)
       const sh = new THREE.Shape();
@@ -427,6 +467,17 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   let jumpHeld = false;
   let jumpPress = false;
   let peek = 0;
+  // Crouched (by the program, or C by hand) and the slide (C sprinting)
+  let crouched = false;
+  let crouchAmt = 0;
+  let slide: Slide | null = null;
+  let slideAmt = 0;
+  let crouchPress = false;
+  // Going over a wall (Jump at it; by itself in the Vault & climb program)
+  let over: { o: Over; t: number } | null = null;
+  let overLast: Over | null = null;
+  let overAmt = 0;
+  const walls = wallBoxes();
 
   // By hand
   const keys = new Set<string>();
@@ -436,6 +487,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       if (e.code === 'KeyP') paused = !paused;
       else if (e.code === 'Period') (paused = true), (stepOnce = true);
       else if (e.code === 'CapsLock') walkLock = !walkLock;
+      else if (e.code === 'KeyC' && !e.repeat) crouchPress = true;
       else if (e.code === 'Escape') close();
       else if (e.code === 'Space' && !e.repeat) {
         jumpPress = true;
@@ -519,7 +571,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       const ix = (keys.has('KeyA') ? 1 : 0) - (keys.has('KeyD') ? 1 : 0);
       const iz = (keys.has('KeyW') ? 1 : 0) - (keys.has('KeyS') ? 1 : 0);
       const n = Math.hypot(ix, iz) || 1;
-      const s = keys.has('ShiftLeft') || keys.has('ShiftRight') ? GAITS.sprint : walkLock ? GAITS.walk : GAITS.run;
+      const s = keys.has('ShiftLeft') || keys.has('ShiftRight') ? GAITS.sprint : crouched ? CROUCHED : walkLock ? GAITS.walk : GAITS.run;
       gx = (ix / n) * s;
       gz = (iz / n) * s;
     }
@@ -532,15 +584,65 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
     }
     // (aiming: facing where the program aims, or +z by hand with a gun up)
     const faceGoal = AIMS.includes(prog) ? aimOf(prog, clock) : prog === 'manual' && gun && aimOn ? 0 : undefined;
-    stepMove(move, gx, gz, me.grounded, dt, faceGoal);
+    // Crouch and slide (walk.ts's way: C sprinting slides, else crouches or stands)
+    if (prog === 'manual') {
+      if (crouchPress && !slide) {
+        const sl = me.grounded ? startSlide(move) : null;
+        if (sl) slide = sl;
+        else crouched = !crouched;
+      }
+      if (crouched && (keys.has('ShiftLeft') || keys.has('ShiftRight'))) crouched = false;
+    } else {
+      if (slideOf(prog, clock, dt) && !slide) slide = startSlide(move);
+      if (!slide) crouched = crouchOf(prog, clock);
+    }
+    crouchPress = false;
+    // Over a wall: Jump at one by hand, or by itself when the program comes up to it
+    if (!over && floorKind === 'walls' && me.grounded && Math.hypot(gx, gz) > 0.1 && (prog === 'over' || (prog === 'manual' && jumpPress))) {
+      const o = overAhead(x, z, Math.atan2(gx, gz), ground(x, z), walls, 0.22, () => true);
+      if (o && (prog === 'manual' || o.near < 0.45)) {
+        over = { o, t: 0 };
+        jumpPress = false;
+      }
+    }
+    if (over) {
+      over.t += dt;
+      const u = Math.min(1, over.t / over.o.dur);
+      const at = overAt(over.o, u, 0, 0);
+      move.vx = (at.x - x) / dt;
+      move.vz = (at.z - z) / dt;
+      move.ax = move.az = move.w = 0;
+      move.face = over.o.dir;
+      if (u >= 1) {
+        move.vx = Math.sin(over.o.dir) * Math.min(Math.hypot(gx, gz), GAITS.run);
+        move.vz = Math.cos(over.o.dir) * Math.min(Math.hypot(gx, gz), GAITS.run);
+        overLast = over.o;
+        over = null;
+      }
+    } else if (slide) {
+      if (!stepSlide(slide, move, gx, gz, dt)) {
+        slide = null;
+        crouched = Math.hypot(gx, gz) < 0.01;
+      }
+    } else stepMove(move, gx, gz, me.grounded, dt, faceGoal);
+    crouchAmt += ((crouched ? 1 : 0) - crouchAmt) * (1 - Math.exp(-10 * dt));
+    slideAmt += ((slide ? 1 : 0) - slideAmt) * (1 - Math.exp(-(slide ? 18 : 9) * dt));
     x += move.vx * dt;
     z += move.vz * dt;
     const j = prog === 'manual' ? { press: jumpPress, hold: keys.has('Space') } : jumpOf(prog, clock, dt);
     jumpHeld = j.hold;
-    y = fallTo(me, ground(x, z), dt, j.press, j.hold);
+    if (over) {
+      const at = overAt(over.o, Math.min(1, over.t / over.o.dur), 0, 0);
+      x = at.x;
+      z = at.z;
+      y = me.y = at.y;
+      me.vy = 0;
+      me.grounded = at.y < 0.01;
+    } else y = fallTo(me, ground(x, z), dt, j.press, j.hold);
+    overAmt += ((over ? 1 : 0) - overAmt) * (1 - Math.exp(-(over ? 30 : 8) * dt));
     const v = Math.hypot(move.vx, move.vz);
     const sprint = THREE.MathUtils.clamp((v - GAITS.run) / (GAITS.sprint - GAITS.run), 0, 1);
-    anim.update({ dt, x, y, z, move, gx, gz, scale: SCALE, ground, feet, sprint, grounded: me.grounded, vy: me.grounded ? me.fall : me.vy, jump: JUMP, gravity: GRAVITY, faceGoal });
+    anim.update({ dt, x, y, z, move, gx, gz, scale: SCALE, ground, feet, sprint, grounded: me.grounded, vy: me.grounded ? me.fall : me.vy, jump: JUMP, gravity: GRAVITY, faceGoal, crouch: crouchAmt });
     if (gun) {
       // (the gun's hold over the motion capture's legs, as walk.ts has it: the procedural walk under the hold
       // gives the upper body, turned back from the way the capture faces him to the springs')
@@ -555,8 +657,13 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       hero.update();
       applyTo(hero.rig, anim.rot, anim.hips, 1, 1, wrapA(move.face - anim.face));
     } else {
+      // (the slide is a keyed pose over the last of the procedural walk, the motion capture stepping aside for it)
+      copyPose(loco.pose, hero.pose);
+      slidePose(hero.pose, slideAmt);
+      const ov = over?.o ?? overLast;
+      if (ov && overAmt > 0.01) overPose(hero.pose, ov, over ? Math.min(1, over.t / over.o.dur) : 1, overAmt, x, y, z, anim.face, SCALE);
       hero.update();
-      applyTo(hero.rig, anim.rot, anim.hips);
+      applyTo(hero.rig, anim.rot, anim.hips, 1 - Math.max(slideAmt, overAmt));
     }
     hero.g.position.set(x, y, z);
     hero.g.rotation.set(0, anim.face, 0);
@@ -627,6 +734,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       ['Hips down', `${(dbg.drop * SCALE * CM).toFixed(1)} cm`],
       ...(gun ? ([['Gun', `${gunId}${aimOn ? ' · aiming' : ' · ready'} · looking ${lookPitch > 0 ? 'down' : 'up'} ${Math.abs((lookPitch * 180) / Math.PI).toFixed(0)}°`]] as [string, string][]) : []),
       ['Air', dbg.air ? `in the air${jumpHeld ? ' · Jump held' : ''}${dbg.arms > 0.01 ? ` · arms up ${((dbg.arms * 180) / Math.PI).toFixed(0)}°` : ''}` : `on the ground${dbg.squash > 0.002 ? ` · landing ${(dbg.squash * SCALE * CM).toFixed(0)} cm down` : ''}`],
+      ...(crouchAmt > 0.02 || slideAmt > 0.02 ? ([['Crouch', `${slide ? `sliding at ${slide.v.toFixed(1)} tiles/s` : crouched ? 'crouched' : 'standing up'}${dbg.crouch > 0.02 ? ` · over the clip ${(dbg.crouch * 100).toFixed(0)}%` : ''}`]] as [string, string][]) : []),
       ...(AIMS.includes(prog) || peek ? ([['Aim', `legs ${((wrapA(anim.face - move.face) * 180) / Math.PI).toFixed(0)}° off the aim${Math.abs(peek) > 0.02 ? ` · peeking ${peek > 0 ? 'right' : 'left'} ${(Math.abs(peek) * 100).toFixed(0)}%` : ''}`]] as [string, string][]) : []),
       ['Feet', anim.feet.map((f) => (f.locked ? 'held' : 'free')).join(' · ')],
     ];
