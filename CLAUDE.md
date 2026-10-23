@@ -275,7 +275,7 @@ it and has been retired completely. Build only on what's here.
     hum, the river (and Westlake's lake), the traffic's rush (the highway,
     the avenues inside it), wind over open land, the Emporium's beat, The
     Trenches' own (`hood`, `boombox`: the grit step) and Westlake Park's
-    (`park`: birds by day, an owl at night; `sport`: a ball by the courts); `sound.update()` mixes its layers
+    (`park`: birds by day, an owl at night); `sound.update()` mixes its layers
     from it (and the el's rumble from `metro.rumbleAt()`), where you walk
     or where the City view looks.
 - **The Trenches** (growth plan Phase 9, the owner's call): a
@@ -581,59 +581,53 @@ it and has been retired completely. Build only on what's here.
   land west of town, north of the river, between the ring highway and the
   Parkway. Built in steps, each with the owner's sign-off: (1) the land,
   the lake and the paths (built); (2) the stadium (built); (3) the park's life
-  (boats, a boathouse, people, sports on the strips, its sound; built).
+  (boats, a boathouse, people, its sound; built). The three strips south
+  of the ring avenue (and their courts) became Uptown (below).
   - `westlake.ts` (DOM-free, tested in `tests/westlake.test.ts`): the big
     block (`BIG`: `X0` clear of the highway's slip lanes, `X1` its
     sidewalk alongside the Parkway's, `Z0` the highway's north side round
-    its north-west bend, `ZS` the west ring avenue) and the strips between
-    the avenues west of town (`STRIPS`), `WESTLAKE_BLOCKS` in the street
-    plan as parks, `WESTLAKE_RECT` (the outskirts' trees keep off it);
+    its north-west bend, `ZS` the west ring avenue), `WESTLAKE_BLOCKS` in
+    the street plan as a park, `WESTLAKE_RECT` (the outskirts' trees keep off it);
     the lake (`LAKE_C`, `lakeR()`, `lakeAt()`, `lakeLine()`, `inLake()`:
     walk.ts stops you on the lawn at its rim (`RIM`), cars stop at
     `LAKE_WALLS`, which drive-sim.ts adds near it); the paths (`PATHS`:
     `ring` round the big block, `loop` round the lake (`LOOP_OUT`), the
     Mall (`MALL`) from the south gate to the stadium's forecourt, the ways
-    in from `GATES`, a walk down each strip; `onPath()`); the gates' piers
+    in from `GATES`; `onPath()`); the gates' piers
     (`GATE_PIERS`, `WESTLAKE_SOLIDS` in `SOLIDS`); `PARK_TREES` (the Mall's
-    avenue, the strips' rows, clumps from a seeded noise; `clump` ones,
+    avenue, clumps from a seeded noise; `clump` ones,
     every other, left out on phones), `PARK_LAMPS` and `BENCHES`;
     `GARDEN_SITE` (the stadium's old site, kept for the formal garden); step 3's
     land: the boathouse (`BOATHOUSE`, solid) and its jetty (`JETTY`,
-    `onJetty()`: walk.ts lets you out along it, at its deck's height), the
-    courts on the strips (`COURTS`, `TENNIS`, `PITCH`, `HOOPS`,
-    `COURT_SOLIDS`), each strip's walk eased round its court. Its
+    `onJetty()`: walk.ts lets you out along it, at its deck's height). Its
     trees and lamps are placed
     at the boot with the town's (`addTree()` / `addLamp()` in index.ts).
-  - `westlake3d.ts` draws the rest as sites: the paths (pale gravel
-    ribbons a stretch a site), the lake's stone rim (in quarters), the
+  - `westlake3d.ts` draws the rest as sites: the paths (a stretch a
+    site: the main walks paved, the rest pale gravel), the lake's stone rim (in quarters), the
     gates (stone piers, caps, lanterns; the Mall's with iron posts, a beam
     and WESTLAKE PARK on a board both ways, one small texture), benches
     (near only); and on the main thread the lake's water (one mesh, the
     river's `waterMat`). It's the first district loaded as you approach
     (`districts.ts`, below). The world map draws its lawns, the lake and
-    its paths; the benchmark has a view over the lake (`park`). The car
-    park's asphalt, bays, ways in and P sign are its sites too.
+    its paths; the benchmark has a view over the lake (`park`).
   - **The park's life** (step 3) is `parklife.ts` (DOM-free, tested in
     `tests/parklife.test.ts`), everyone and everything a function of the
     time: walkers, joggers and dog walkers in lanes (`LANES`: walkers near
     a path's middle, joggers by its edges, either way, everyone in a lane
     at its pace and evenly spread) round the lake loop and the ring walk,
-    up and down the Mall and the strips (`PARK_PEOPLE`, `trim` ones left
+    up and down the Mall (`PARK_PEOPLE`, `trim` ones left
     out on phones), dogs on the lead ahead of their walkers (`DOGS`,
     `LEAD`), people on every third bench, picnics in the glades
-    (`PICNICS`), the games on the courts (players wandering, keepers, a
-    rally on each tennis court, passes and shots, `BALLS`, `GAMES`) and the
-    boats on the lake (`BOATS`: rowing boats and swan pedalos on rings
+    (`PICNICS`) and the boats on the lake (`BOATS`: rowing boats and swan pedalos on rings
     along the shore's normals, `ringLine()`, `RINGS`, each its own pace and
     way round so none meet; rowers and swan riders aboard; two moored at the
     jetty). The people are the crowd's (life.ts, kind `park`; clips `jog`
     and `picnic`); `parklife3d.ts` (the park's chunk) draws the boathouse,
-    the jetty, the courts and the picnics as sites and, on the main thread
+    the jetty and the picnics as sites and, on the main thread
     with the district's tick, the boats with their sweeping oars, the dogs
-    and their leads and the balls, an instanced mesh a kind (not drawn
+    and their leads, an instanced mesh a kind (not drawn
     while the camera is far from the park). Its sound: `park` (birds by
-    day, an owl at night) and `sport` (a ball by the courts) in
-    ambience.ts, the lake in `water`.
+    day, an owl at night) in ambience.ts, the lake in `water`.
   - **Sector 7 Stadium** (step 2; moved north of the ring highway in the
     north side's stage 1, `docs/north-plan.md`, the owner's call) is
     `stadium.ts` (DOM-free, tested in `tests/stadium.test.ts`) on its own
@@ -678,8 +672,93 @@ it and has been retired completely. Build only on what's here.
   moving north of the ring highway and Westlake Park's paths, kerbs, low
   walls and gardens, planned in `docs/north-plan.md` in three stages, each
   with the owner's sign-off; keep it up to date. Stage 1 (the stadium
-  north, above) and stage 2 (the kart park north, with its facility, below)
-  are built.
+  north, above), stage 2 (the kart park north, with its facility, below)
+  and stage 3 (the park's walks, walls and gardens) are built:
+  - `gardens.ts` (DOM-free, tested in `tests/gardens.test.ts`): the main
+    walks (`MAIN_WALKS`: the ring walk, the lake loop, the Mall) paved with
+    a raised stone kerb both sides (`KERBS`, `KERB`), the gravel paths with
+    a flush stone edge (`EDGES`), both cut where a path joins, at the
+    jetty, the round places and the terraces; the park's low stone wall
+    (`WALLS`, `WALL`), broken at the gates and the paths; the formal garden
+    on the stadium's old site (`GARDEN_SITE`) in its own wall
+    (`GARDEN_WALLS`): the cross walk and two garden walks (`garden-cross`,
+    `garden-w`, `garden-e` in westlake.ts's `PATHS`), two round places with
+    fountains (`ROUNDS`, `FOUNTAIN`), eight parterres (`PARTERRES`: hedge,
+    gravel border, flower bed, topiary cone), urns (`URNS`), benches
+    (`GARDEN_BENCHES`), lamps and people (`GARDEN_LAMPS`, `GARDEN_PEOPLE`,
+    placed at the boot in index.ts); planters (`MALL_BEDS` along the Mall,
+    round `PLANTERS` at junctions and along the ring walk and the loop);
+    `GARDEN_SOLIDS` (in `SOLIDS`: walls, hedges, fountains, urns,
+    planters). The lakeside terraces are westlake.ts's (`TERRACES`,
+    `TERRACE_STEPS`, `onTerrace()`, `terraceY()`): steps off the loop down
+    to just over the water, walkable (walk.ts, as the jetty), nothing on
+    them solid; the trees, lamps and benches keep off them.
+  - `gardens3d.ts` (the park's chunk, from westlake3d.ts's `register()`)
+    draws them as sites: kerbs, edges and walls a site per tile, the
+    garden one, the planters a site per tile, each terrace one; flowers,
+    benches and lanterns near only. The main walks' paving is
+    westlake3d.ts's (`PAVE_Y`, over the gravel's `PATH_Y`).
+- **Uptown, the financial centre** (the owner's call): Westlake Park's three
+  strips (x -200.5 to -43.3, z 0 to 60, the north bank avenue along the
+  river) becoming a waterfront boulevard and financial centre with
+  skyscrapers and a plaza, planned in `docs/finance-plan.md` in five
+  phases, each with the owner's sign-off; keep it up to date. Its name is
+  **Uptown**. Its towers may rise above the Emporium (the owner's call: the
+  tallest about 30 tiles, the rest 15 to 25; the Emporium stays the
+  tallest downtown and the most detailed, and "under the Emporium" holds
+  everywhere else); the flying traffic and your own aircraft clear them.
+  The strips' courts and their players are retired with it. Scenery first;
+  in Phase 5 the tallest tower becomes a place with a sky deck. Phases 1
+  (the land and the streets) and 2 (the towers) are built:
+  - `uptown.ts` (DOM-free, tested in `tests/uptown.test.ts`): three
+    north-south streets (`UPTOWN_STREETS`, `NS_X`: in line with The
+    Trenches' cross streets across the river) from the west ring avenue to
+    the north bank avenue, every junction lit (`UPTOWN_CROSSINGS`); twelve
+    blocks in rows n, m and s (`UPTOWN_BLOCKS`, ref `uptown` in the street
+    plan), the plaza's on the middle row (`PLAZA_BLOCK`, use `plaza`); the
+    Mall's axis carried on south from its gate (`AXIS_X`): walk-only lanes
+    through the blocks either side of the plaza (`UPTOWN_LANES`, alleys in
+    the plan) and zebras over the avenues and cross streets
+    (`AXIS_ZEBRAS`; the avenues' medians and lines break there,
+    `highwayGaps()` in world.ts); the hoardings round the empty lots
+    (`HOARDINGS`, `HOARDING`, open at each lot's gate, `HOARDING_GATES`,
+    and along the lanes), solid (`UPTOWN_SOLIDS`, in `SOLIDS`); lamps
+    along its avenues and cross streets (`UPTOWN_LAMPS`); the boulevard's
+    line (`BOULEVARD_X`: the town's promenade carried on west along the
+    north bank, its railings, trees, benches and lamps on the town's
+    rhythm, neighbourhoods.ts and world.ts); `UPTOWN_RECT` / `inUptown()`.
+  - Its streets are drawn at the boot by `streets3d.ts` (`drawStreets()`,
+    shared with The Trenches, clean here: no wear), its lots paved
+    (world.ts), and the rest is a district loaded as you approach from
+    well out (`uptown3d.ts`, `LAZY_DISTRICTS` id `uptown`, its land
+    widened by `UPTOWN_REACH`: the skyline is seen from across town): the
+    open lots (`OPEN_LOTS`: the plaza's block, the slivers west of the
+    lanes) bare earth behind hoardings (dark boards printed with UPTOWN and
+    COMING SOON from one small atlas, a header over each of the axis's
+    gates), the lanes' paving, and the towers.
+  - **The towers** (Phase 2) are `highrise.ts` (DOM-free, tested in
+    `tests/highrise.test.ts`): five designs (`Design`, `design()`: a glass
+    slab with its plant room set back, a stepped deco tower in stone and
+    gold, a round glass drum, twin towers with a skybridge, and the spire),
+    one to a block (`HIGHRISES`), laid by hand: the spire in the plaza's
+    block the tallest (`TALLEST`: roof 30, mast 36; `SPIRE_LOT`, no
+    podium), the rest 15 to 24 on podiums (`PODIUM`), each its skin
+    (`Skin`: blue, gold, black or silver glass, or deco stone) and front
+    (its lobby's `door`); parts (`Part`: box, drum or octagon) bottom up,
+    each tier on the one below and inside it; `HIGHRISE_SOLIDS` (in
+    `SOLIDS`) in strips no wider than `STRIP` (`partStrips()`: a car put
+    out of one is pushed only a little, inside the collision grid's
+    reach). They're drawn by `highrise3d.ts` (a site a tower): walls from
+    Uptown's own curtain-wall atlas (`ATLAS` there, `uptown-glass`: the
+    four glasses and the deco stone a floor to a row, windows lit at night
+    from its light map; the podium's lobby), stacked so a band never wraps
+    and in pieces no longer than `SPAN`; roofs and parapets on every tier;
+    the crowns (a slab's lit band, the deco's gold edges and pyramid, the
+    drum's neon ring and cap, the twins' skybridge, the spire's lantern);
+    a mast and a red warning light on every tip; a canopy over each lobby
+    door and a revolving door near. The airliners' westbound leg crosses
+    Uptown at 46 to 48 (airfield.ts), and the flight tests keep every
+    aircraft well over every tip.
 - **Districts loaded as you approach** (performance phase 4, item 10):
   a district's drawing is a module of its own (`LAZY_DISTRICTS` in
   `districts.ts`: an id, its land and `load()`, a dynamic import), a chunk
@@ -735,7 +814,36 @@ it and has been retired completely. Build only on what's here.
   seated state); life.ts's people tick walks them (a walker on a crossing
   or waiting at a kerb, `Person.cross` / `wait`, joins the other block's
   lane at the corner it arrives at; stops and faces you within reach;
-  sitters go in past 0.6 of rain). Nothing new is drawn. **Not character
+  sitters go in past 0.6 of rain). Nothing new is drawn. Phase 4 (buses,
+  boats and the weather's small reactions) is built: `transit.ts`
+  (DOM-free, tested in `tests/transit.test.ts`: `BUS_STOPS` from the
+  street plan, along every avenue in town each way, in the kerb lane,
+  clear of the crossings, the bridges and anything solid on the sidewalk;
+  `routeStops()`, `pullIn()` (a bus in the inner lane eases over to the
+  kerb and back), `busStep()` (slowing in, a `DWELL` with the brake
+  lights on and the doors' hiss, then on); the shelters are
+  `transit3d.ts`, a site each, near only, not solid, built in the worker
+  too), `boats.ts` (DOM-free, tested in `tests/boats.test.ts`: a horn
+  before every bridge (`hornDue()`), the speed easing (`cruise()`), the
+  wake by the speed (`wakeOf()`), two boats `MOORED` at jetties clear of
+  the lanes) and `dusk.ts` (DOM-free, tested in `tests/dusk.test.ts`: the
+  lamps coming on one by one at dusk with a flicker (`lampGlow()`, drawn
+  by `buildLamps()`'s tick on the halos' and pools' colours; the bulbs
+  come up with the night), thunder in heavy rain (`stormStep()`: a soft
+  brighten of the sky, never a hard flash, the rumble after; run by
+  sky.ts, off under reduced motion), the steam `VENTS` in The Trenches'
+  streets (`puff()`; six points near the camera at night, none on
+  phones) and the wind (`windStrength()`): the canopies' sway rides in
+  their uv (`SWAY`, `Batch.instances()`'s `sway`; the shared paint has no
+  texture: `Batch.add()` zeroes every shared geometry's uv, since an
+  extruded or lathed shape's uv is its own coordinates, and the canopies'
+  mark is `SWAY_MARK`, an exact value no shape lands on; Liberty Bridge's
+  arches once stretched across the river in the wind) and `injectWind()`
+  in kit.ts swings it in the paint's shader and the ink outlines' normal
+  pass (phones' canopies carry none; merging a tile re-normalises normals,
+  so never encode anything in their lengths)). The life's sounds go
+  through `LifeOpts.sfx` (`horn`,
+  `doors`, `boatHorn`; `thunder` from index.ts). **Not character
   animation** (the owner's call): this plan picks which existing clip a
   crowd person plays and where they stand, never a pose, clip or rig
   change on Degen; that's `docs/animation-plan.md`'s (sitting on a bench
@@ -755,6 +863,38 @@ it and has been retired completely. Build only on what's here.
   costs two draw calls a model. Parked cars use `parkedCars()`; give them a
   footprint in `solids.ts`. Keep a new model inside a 1.7-wide lane and in
   scale with Degen (a hatch's roof is about 0.95 tiles up).
+- **Live settings** (the owner's call): the owner switches parts of the
+  city from outside the code, in a private command center, through the
+  backend's public config (`LIVE_URL`, public settings only).
+  - The rules are `live.ts` (DOM-free, tested in `tests/live.test.ts`):
+    `readLive()` reads `place.<spot>` and `feature.<id>` ({ open, note }),
+    `banner.<id>` ({ text, place, from, until }) and `maintenance` ({ on,
+    message, eta }); anything unknown or wrong is left out, so no config,
+    a broken one or a backend that's down is the city as it is in the code.
+    `LIVE_PLACES` (every spot with a pin: keep it in step with `PLACES`, the
+    test checks) and `LIVE_FEATURES` (walk, build, drive, fly, karts,
+    fight, guns, taxi, metro, travel) are what can be switched; the command
+    center reads these lists from here, so a new place or feature is added
+    once, here.
+  - `live-client.ts` fetches it: once at the boot (the 3D city's boot waits
+    at most `LIVE_TIMEOUT` for it, while its code downloads), again every
+    `POLL_MS` while the tab is showing, the last copy kept in localStorage
+    (`degen-city-live-v1`); off under `?bake-textures` and `?bench`.
+    Everything gated asks `live` as it happens: a closed place's panel
+    (`open()` in index.ts) keeps its kicker and name and says it's closed
+    (`.live-closed`, its note or "closed for now"), nothing mounted in it;
+    a closed feature's way in toasts its closed line instead (`startWalking()`,
+    Build's `setBuild()`, walk mode's `act()` via `GATED` (getting into the
+    car or aircraft, never out), the metro's doors, the world map's taxi and
+    fast travel). A new way into a feature goes through `live.closed()`.
+  - The owner's notice is `[data-live-banner]`, first in `.city-hud` (in
+    `chrome`): one at a time, a Go to its place, its × hiding that notice
+    (id and words) for good (`degen-city-notices-v1`). Maintenance is
+    `[data-maint]` over everything, the start menu too: the city doesn't
+    boot behind it (`go3d()` waits), it stops a city that's running, and
+    the page reloads when it lifts. Styles in `src/styles/live.css`.
+  - Copy from the config is shown as text only (`textContent`), one line,
+    cut to `TEXT_MAX`.
 - Keep the city's motion optional: under `prefers-reduced-motion` the 3D
   city stands still (no fly-in, no traffic), CSS animations stop and the 2D
   map's SMIL traffic is paused. It's drawn only when something changes
@@ -1079,14 +1219,17 @@ it and has been retired completely. Build only on what's here.
   everyone on the same clips, and (Phase 8, the owner's call) the rifle
   held properly, its butt in his shoulder. Build it one phase at a time
   with the owner's sign-off. Phase 1 (run, sprint and momentum), Phase 2
-  (turning, terrain and transitions), Phase 3 (jumps, falls and landings)
-  and Phase 8 (the rifle shouldered, below under Target practice) are
-  built, for the player on foot:
+  (turning, terrain and transitions), Phase 3 (jumps, falls and landings),
+  Phase 4 (armed movement and peeking), Phase 5 (crouch, slide, vault and
+  climb) and Phase 8 (the rifle shouldered, below under
+  Target practice) are built, for the player on foot:
   - **The data** is CMU's motion capture (free for commercial use; the
     acknowledgment is in the start menu's Options > Credits, named, never
     linked): mostly subject 143's and 127's takes, in `assets/mocap/cmu/`
     (BVH, untouched), listed in `assets/mocap/takes.json` (a `loop` makes a seamless cycle,
-    `loopClip()`). `npm run mocap` (`scripts/mocap.mjs`) retargets them
+    `loopClip()`; `fps` where the file's frame rate is wrong: subject 143's
+    are 60, not the 120 cgspeed wrote, so he walked and ran at double speed
+    until it was fixed). `npm run mocap` (`scripts/mocap.mjs`) retargets them
     (`mocap-build.ts`: each target bone takes its source joint's turn
     since the T-pose, the feet and the collarbones kept level (CMU's
     shoulder joint sits at the neck: aligned to it, the collarbones held a
@@ -1099,20 +1242,29 @@ it and has been retired completely. Build only on what's here.
     chunk (`import('./animator')`).
   - **Moving** is `movesim.ts`: velocity and facing on critically damped
     springs (`MOVE` half-lives), `ahead()` the trajectory; `GAITS` walk
-    1.25, run 3.4 (the default), sprint 5 tiles a second.
+    0.78, run 2.8 (the default), sprint 4.2 tiles a second (about 1.4, 5 and
+    7.5 m/s, the owner's call: quick but believable).
   - **The animation** is `animator.ts`: motion matching (`motionmatch.ts`,
     Holden's 27 features, every clip and its mirror, a search about ten
     times a second) with inertialization (`inertia.ts`), playback warped
-    to his speed (`RATE`), the sprint's harder swing and lean and a lean
-    into bends (`LAYERS`), and the feet: each held by the ball of the foot
+    to his speed (`RATE`), and faster than the capture his steps lengthen
+    as a runner's do (`WARP`: his legs turn over only a little quicker; a
+    foot on the ground plays fast enough to stay put, the air slower for
+    more hang time, a swinging knee driving higher, and into a sprint a
+    longer reach once he's done speeding up: the owner's call, "his legs
+    move very fast when sprinting"), the sprint's harder swing and lean and
+    a lean into bends (`LAYERS`), and the feet (the ball never under the
+    ground, `BALL_UNDER`; a free foot no further down than a step,
+    `AIR.kerb`): each held by the ball of the foot
     where the clip has it down (`LOCK`), reached by a hinge-knee two-bone
     IK with a soft reach (`twoBone()`), on the ground under it, the hips
     coming down (at most `LOCK.drop`) when a leg can't reach. `applyTo()`
     puts it on the figure (`Degen.rig`) after its own `update()`, and
     `addLook()` turns the head where the camera looks. walk.ts blends it
-    in (`mocapW`) on foot, unarmed, not aiming or emoting, and not during
-    the roll on a very hard landing at a run (`LAND_ROLL`, the keyed one);
-    everywhere else, and for everyone else, it's `locomotion.ts` as before.
+    in (`mocapW`) on foot, not emoting, and not during the roll on a very
+    hard landing at a run (`LAND_ROLL`, the keyed one); armed or aiming,
+    only its legs and hips (Phase 4, below); everywhere else, and for
+    everyone else, it's `locomotion.ts` as before.
   - **Phase 2:** more takes (running turns, a quick stop, walking into a
     run, turning on the spot, standing and waiting: `assets/mocap/takes.json`
     and `CREDITS.md`); his shown facing follows the clip's own turn, pulled
@@ -1140,11 +1292,76 @@ it and has been retired completely. Build only on what's here.
     harder one squashes the hips and bows the chest (`squash`). walk.ts
     dips the camera on landings and shakes it on hard ones (`LAND_SHAKE`,
     not under reduced motion).
+  - **Phase 4:** strafing and backpedalling takes (subject 143's and
+    141's walking backwards and sideways, a side shuffle, a crossover
+    step); aiming (or peeking, or in first person) the springs turn him to
+    face where the camera looks (`AnimInput.faceGoal`, into the
+    trajectory's facing), so the matching picks the strafes and the way
+    back, the hips within `FACE.most` of the aim, stepping round past it
+    (standing, an aim further than `STAND.turn` off his hips searches past
+    the idle).
+    With the gun in his hands (or an arm out aiming) the animator gives
+    only the legs and hips: `applyTo(..., upper, yaw)` keeps the figure's
+    own upper body (locomotion.ts's pose with stance.ts's hold) and turns
+    the spine so the chest keeps the turn the pose gave it, `yaw` more
+    (walk.ts passes the springs' facing less the shown one), so the gun
+    points where you look over whatever the legs do; `upperW` eases the
+    mask in and out. Aiming he goes at `AIMING` (1.4). The **peek** (Q / E
+    held, LB / RB while aiming on a gamepad, on touch aiming by a corner:
+    `cornerSide()`, `CORNER`; `PEEK` in walk.ts) is `addLean()`: the spine
+    leant out over the hips about where the camera looks, the head turned
+    back level (less with his cheek on a stock), the feet where they are,
+    as far out as there's room (`cameraRoom()`); he slows (`PEEK.slow`),
+    faces the look, and the camera goes out with him (over his right
+    shoulder, or across to his left), never into a wall beside him (its
+    sideways shift clamped through `CAMERA_GRID` too); in first person the
+    eye shifts and the view tilts a little (not under reduced motion).
+  - **Phase 5 (crouch and slide):** subject 136's crouched walks
+    (`136_09` to `136_11`, `sink` in `takes.json` where the capture's feet
+    stand high); `AnimInput.crouch` (walk.ts eases it): crouched and moving
+    only `CROUCH.clips` are searched, standing up never them; standing
+    still crouched the idle plays with the crouch laid over it (`CROUCH`:
+    the hips down, the legs' IK bending the knees over planted feet, the
+    spine forward, the head back up), eased as the clip changes. walk.ts:
+    C toggles it (B on a gamepad, the touch **Crouch** button over the
+    stick, `[data-walk-crouch]`, aria-pressed; hidden wherever Sprint is),
+    `CROUCH.speed` 0.55, sprinting stands him up, a jump too, the camera
+    comes down (`CROUCH.cam`). Crouching while sprinting **slides**
+    (`SLIDE`, `startSlide()` / `stepSlide()` in movesim.ts, DOM-free: from
+    `SLIDE.min`, a little faster than he was going, slowing by its
+    friction, steering a little, about 3 tiles); its pose is keyed
+    (`slidePose()`, `SLIDE_POSE` in poses.ts: low, leant back, the lead
+    heel out, the other knee and shin on the ground, a hand back), the
+    motion capture stepping aside for it; it ends in a run with the stick
+    pushed, a crouch without, crouched against anything it runs into, or
+    up into a jump.
+  - **Phase 5 (vault and climb;** the owner's calls: low things only, over
+    and down, never standing on top**)** is `vault.ts` (DOM-free, tested in
+    `tests/vault.test.ts`): `LOW_THINGS` from the data that knows their
+    real heights (The Trenches' jersey barriers, yard kerbs and dumpsters,
+    Westlake's walls, hedges, beds and planters (`GARDEN_LOW` in
+    gardens.ts), downtown's alley props; never a building, car, kiosk or
+    stall), `isLow()` (matched by numbers: the grids hold their own copies
+    of the boxes), `overAhead()` (the nearest thing straight ahead in reach,
+    high enough, low enough, thin enough and come at squarely; `OVER`: a
+    vault to 0.75 over his ground, a climb to 1.25), `overAt()` (along the
+    way and up, his feet over the top) and `overPose()` (keyed: a speed
+    vault, his left hand planted and the legs swung out to his right; a
+    climb, both hands on the top, pulled up, over and down; the hands put
+    on the top by `reachArm()`). walk.ts (`tryOver()`): Jump while moving
+    at one goes over it instead of jumping, if the landing is clear and near
+    his own ground and nothing but low things under the arc is in the way
+    (`blocked()`'s `skip`); the motion capture steps aside for it, and he
+    runs on after with the stick pushed. The jump's press is counted down
+    after it's looked at, so a slow frame can't lose it.
   - **The lab** is `?anim` (`anim-lab.ts`, styles `animlab.css`): the new
     animation beside the old on an open floor, scripted moves or W A S D,
     slow motion, cameras (over his right shoulder too), floors (flat,
     kerbs, stairs, a ledge), any gun in his hands (`gun`, `aim`, `pitch`;
-    markers at the butt and his shoulder's pocket), any kind of top
+    markers at the butt and his shoulder's pocket; on the motion capture's
+    legs, as in the city), strafing, aiming round and peeking programs (Q / E
+    by hand), crouching and sprint-and-slide (C by hand), a walls floor and
+    a Vault & climb program (Jump at a wall by hand), any kind of top
     (`outfit`), the free camera placed with `orbit=yaw,pitch,dist`, jumps
     (programs and Space, walk.ts's jump and gravity), foot traces and
     readouts (the clip, its rate, the match, the blend left, the foot
@@ -1466,7 +1683,8 @@ it and has been retired completely. Build only on what's here.
   altitude and speed; hold; turn on the spot; lift); `poseAt()` turns the
   time into a pose, the same for everyone (the clock is `Date.now()`).
   Airliners push back, taxi out, take off east, climb round to the north,
-  cross the city high over downtown (above 38), come round the west and
+  cross the city high over downtown (above 38; 46 to 48 over Uptown's
+  towers, highrise.ts), come round the west and
   land, the prop plane flies a lower loop along the river, the helicopter
   circles the Emporium (above the hologram and the blimp). The tests check
   they stay in the world, high over the town, on the ground only at the
@@ -2130,7 +2348,8 @@ it and has been retired completely. Build only on what's here.
   buildings and on the ground. When dummies move, their footprints follow
   `DUMMIES` automatically.
 - Keys: click fires, right-click aims, R reloads, G holsters, X / 1-4 swap
-  guns (Q and E are kept for peeking, animation Phase 4); F does what the
+  guns, Q / E held peek round a corner (animation Phase 4), C crouches and
+  slides when sprinting (Phase 5); F does what the
   prompt says (the owner's call: every door, counter and getting in or
   out, and F closes those menus); Shift sprints, Caps Lock (not R) toggles
   walking, the touch Sprint button locks the sprint. Where the mouse can't be captured
@@ -2362,7 +2581,7 @@ it and has been retired completely. Build only on what's here.
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`),
-  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`), the kart park's facility (`kartfacility.ts`),
+  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`), the kart park's facility (`kartfacility.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,

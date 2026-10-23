@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { FX, canvasTex, fx, rand } from './kit';
 import { CENTER } from './world';
 import { SKY_RADIUS } from './bounds';
+import { newStorm, stormStep } from './dusk';
 
 export type TimeMode = 'live' | 'day' | 'sunset' | 'night';
 export type WeatherMode = 'auto' | 'clear' | 'rain';
@@ -17,13 +18,16 @@ const C = (h: string) => new THREE.Color(h);
 const NIGHT = { top: C('#05050a'), hor: C('#2a0f4d') };
 const DAY = { top: C('#3d8bff'), hor: C('#c4e4ff') };
 const DUSK = { top: C('#2b1055'), hor: C('#ff6a5a') };
+/** What the sky brightens towards in a flash of lightning (city life plan, Phase 4): pale, never white */
+const FLASH = C('#b9b0e8');
 
 const smooth = (a: number, b: number, x: number) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
   return t * t * (3 - 2 * t);
 };
 
-export function createSky(scene: THREE.Scene, opts: { shadows: number; rainDrops: number; clouds: number }) {
+/** `storms`: thunder now and then in heavy rain (dusk.ts; off under reduced motion) */
+export function createSky(scene: THREE.Scene, opts: { shadows: number; rainDrops: number; clouds: number; storms?: boolean }) {
   /* Dome */
   const domeMat = new THREE.ShaderMaterial({
     side: THREE.BackSide,
@@ -169,6 +173,7 @@ export function createSky(scene: THREE.Scene, opts: { shadows: number; rainDrops
   let rainTarget = rainAmt;
   let nextFlip = 60 + rand() * 120;
   let hourSmooth = currentHour();
+  const storm = newStorm(rand());
   const fog = new THREE.FogExp2('#2a0f4d', 0.012);
   scene.fog = fog;
   scene.background = NIGHT.hor.clone();
@@ -207,6 +212,12 @@ export function createSky(scene: THREE.Scene, opts: { shadows: number; rainDrops
     const grey = C('#4a4a66');
     tmpTop.lerp(grey, rainAmt * 0.45 * day);
     tmpHor.lerp(grey, rainAmt * 0.35);
+    // Thunder in heavy rain: the whole sky brightens softly for a moment (the fog and the water follow it), the rumble after
+    const st = opts.storms ? stormStep(storm, rainAmt, dt) : { flash: 0, rumble: 0 };
+    if (st.flash > 0) {
+      tmpTop.lerp(FLASH, st.flash);
+      tmpHor.lerp(FLASH, st.flash);
+    }
     domeMat.uniforms.top.value.copy(tmpTop);
     domeMat.uniforms.hor.value.copy(tmpHor);
     fog.color.copy(tmpHor);
@@ -242,7 +253,7 @@ export function createSky(scene: THREE.Scene, opts: { shadows: number; rainDrops
     // Moonlight is a touch stronger than the glow needs, so buildings keep their shape at night
     // By day the sun does more of the work than the sky light: clearer shadows, more contrast
     sun.intensity = night > 0.5 ? 0.72 : (0.6 + day * 2.5) * (1 - rainAmt * 0.45);
-    hemi.intensity = 0.5 + day * 0.32;
+    hemi.intensity = 0.5 + day * 0.32 + st.flash * 0.9;
     hemi.color.copy(C('#5a4a9a').lerp(C('#bcd4ff'), day));
     hemi.groundColor.copy(C('#1a1236').lerp(C('#3a5a3a'), day));
     starMat.opacity = night * (1 - rainAmt);
@@ -272,7 +283,8 @@ export function createSky(scene: THREE.Scene, opts: { shadows: number; rainDrops
       if (c.s.position.x > CENTER.x + 90) c.s.position.x = CENTER.x - 90;
     }
 
-    return { day, night, dusk, rain: rainAmt, hour: h };
+    // (`thunder`: the rumble's gain when one is due this frame, else 0)
+    return { day, night, dusk, rain: rainAmt, hour: h, thunder: st.rumble };
   }
 
   return {

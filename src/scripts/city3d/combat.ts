@@ -40,8 +40,8 @@ export { DUMMIES };
 export type Sfx =
   | 'shot' | 'shotSmg' | 'shotShotgun' | 'shotDmr' | 'shotRevolver' | 'shotBurst' | 'shotLmg'
   | 'empty' | 'magout' | 'magin' | 'bolt' | 'hit' | 'hitMetal' | 'down' | 'boom' | 'gear' | 'draw' | 'holster' | 'unlock' | 'bump' | 'door'
-  /** The traffic's horn (a car held up by you: life.ts, traffic.ts) */
-  | 'horn'
+  /** The traffic's horn (a car held up by you: life.ts, traffic.ts); a bus's doors, a boat's horn and thunder (city life plan, Phase 4) */
+  | 'horn' | 'doors' | 'boatHorn' | 'thunder'
   /** The city's game: buying, upgrading, levelling up, missions, the kart park's countdown and finish */
   | 'buy' | 'denied' | 'upgrade' | 'levelup' | 'mission' | 'countdown' | 'go' | 'finish'
   /** The kart park: boosts, hits taken and landed, the shield, the item roulette and a throw, drifts and their sparks, the jump, the shortcut's gravel, beating your ghost */

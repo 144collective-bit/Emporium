@@ -11,7 +11,7 @@
  * beat through its walls by the door (`club`); the el's rumble follows the
  * train itself (metro3d.ts `rumbleAt()`). In Westlake Park (step 3) the
  * park's own: birdsong by day and an owl at night (`park`), the lake
- * lapping (`water`), the games on the strips' courts (`sport`).
+ * lapping (`water`).
  */
 import { CITY_EXT, RIVER } from './layout';
 import { PLAN, distToStreet } from './streetplan';
@@ -20,7 +20,7 @@ import { DOORS } from './solids';
 import { TRENCH_RECT, inTrenches } from './trenches';
 import { BOOMBOXES } from './grit';
 import { CLUB } from './avenue';
-import { COURTS, LAKE_C, WESTLAKE_RECT, inPark, lakeR } from './westlake';
+import { LAKE_C, WESTLAKE_RECT, inPark, lakeR } from './westlake';
 
 export interface Ambience {
   /** The town's hum, 0-1 */
@@ -41,8 +41,6 @@ export interface Ambience {
   club: number;
   /** Westlake Park: birds by day, an owl at night, 0-1 */
   park: number;
-  /** The park's games: a ball's kicks, bounces and hits, 0-1 */
-  sport: number;
 }
 
 const smooth = (a: number, b: number, x: number) => {
@@ -79,14 +77,11 @@ export function ambienceAt(x: number, z: number, lift = 0): Ambience {
   for (const b of BOOMBOXES) box = Math.min(box, Math.hypot(x - b.x, z - b.z));
   const boombox = 1 - smooth(2, 20, box + lift * 0.5);
   const club = 1 - smooth(3, 32, Math.hypot(x - CLUB.door.x, z - CLUB.door.z) + lift * 0.5);
-  // Westlake Park: all of it on its land, fading out over 30 past it; the lake lapping close by; the courts' games
+  // Westlake Park: all of it on its land, fading out over 30 past it; the lake lapping close by
   const [wx0, wz0, wx1, wz1] = WESTLAKE_RECT;
   const fromPark = inPark([x, z]) ? 0 : Math.hypot(Math.max(wx0 - x, x - wx1, 0), Math.max(wz0 - z, z - wz1, 0)) + 4;
   const park = 1 - smooth(0, 30, fromPark);
   const fromLake = Math.max(0, Math.hypot(x - LAKE_C[0], z - LAKE_C[1]) - lakeR(Math.atan2(z - LAKE_C[1], x - LAKE_C[0])));
   const lake = 0.8 * (1 - smooth(2, 22, fromLake + lift * 0.4));
-  let court = Infinity;
-  for (const c of COURTS) court = Math.min(court, Math.hypot(Math.max(c.rect[0] - x, x - c.rect[2], 0), Math.max(c.rect[1] - z, z - c.rect[3], 0)));
-  const sport = 1 - smooth(3, 28, court + lift * 0.5);
-  return { city, water: Math.max(water, lake) * k, road: road * k, open: (1 - city) * k, beat, hood: hood * k, boombox, club, park: park * k, sport };
+  return { city, water: Math.max(water, lake) * k, road: road * k, open: (1 - city) * k, beat, hood: hood * k, boombox, club, park: park * k };
 }

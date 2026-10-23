@@ -95,6 +95,19 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
   {/* The start menu (the owner's call): over everything on every open, while the 3D city loads behind it.
       Single player enters the city; Multiplayer joins other Degens when there's a game server (coming soon
       without one); Options holds time, weather, sound and the 2D map. Nothing of the map shows until you pick. */}
+  {/* Maintenance (live settings, live.ts): over everything, the start menu too, while the owner has the city closed.
+      The city doesn't boot behind it; when it lifts the page reloads. */}
+  <div class="city-start city-maint" data-maint role="dialog" aria-modal="true" aria-labelledby="city-maint-title" hidden>
+    <div class="city-start-card">
+      <Picture src={logo} formats={['avif', 'webp']} fallbackFormat="webp" widths={[132, 264, 396]} sizes="132px" alt="" loading="eager" class="city-start-logo" />
+      <p class="city-start-kicker">Sector 7</p>
+      <p class="city-start-title" id="city-maint-title">Back <span class="hl">soon</span></p>
+      <p class="city-maint-text" data-maint-text></p>
+      <p class="city-maint-eta" data-maint-eta hidden></p>
+      <p class="city-maint-note">Your save is safe in this browser. This page opens the city by itself when it's back.</p>
+    </div>
+  </div>
+
   <div class="city-start" data-start role="dialog" aria-modal="true" aria-label="Sector 7">
     <div class="city-start-card">
       <Picture src={logo} formats={['avif', 'webp']} fallbackFormat="webp" widths={[132, 264, 396]} sizes="132px" alt="" loading="eager" class="city-start-logo" />
@@ -208,8 +221,10 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
             <dt><kbd>Mouse</kbd></dt><dd>Look around</dd>
             <dt><kbd>Shift</kbd></dt><dd>Sprint (hold)</dd>
             <dt><kbd>Caps&nbsp;Lock</kbd></dt><dd>Walk (toggle)</dd>
-            <dt><kbd>Space</kbd></dt><dd>Jump (hold for higher)</dd>
+            <dt><kbd>Space</kbd></dt><dd>Jump (hold for higher); going at a low wall or barrier, over it</dd>
             <dt><kbd>Right&nbsp;click</kbd></dt><dd>Aim (red dot sight)</dd>
+            <dt><kbd>Q</kbd> <kbd>E</kbd></dt><dd>Peek left / right round a corner (hold)</dd>
+            <dt><kbd>C</kbd></dt><dd>Crouch (toggle); while sprinting, slide</dd>
             <dt><kbd>V</kbd></dt><dd>First / third person</dd>
             <dt><kbd>Scroll</kbd></dt><dd>Camera distance</dd>
             <dt><kbd>F</kbd></dt><dd>Enter a door, open the gun store, the garage, the kart hut or the trainer, get in / out of your car</dd>
@@ -221,7 +236,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
             <dt><kbd>Esc</kbd></dt><dd>Free the mouse, then stop</dd>
           </dl>
           <p class="walk-pad">Driving: <kbd>W</kbd> / <kbd>S</kbd> gas and brake (hold to reverse), <kbd>A</kbd> / <kbd>D</kbd> steer, <kbd>Space</kbd> handbrake, <kbd>V</kbd> chase or roof camera. Your car waits on the turntable at the garage on the south bank. Gamepad: RT gas, LT brake, A handbrake, Y get out. Touch: the stick steers, with Gas and Brake buttons.</p>
-          <p class="walk-pad">Gear up at the gun store counter inside the Armoury. Gamepads work too: left stick moves, right stick looks, A jumps, LB sprints, LT aims, RT fires, X reloads, RB swaps guns. On a touch screen, drag the Fire button to aim while you shoot. Your look and rifle finish are in Profile.</p>
+          <p class="walk-pad">Gear up at the gun store counter inside the Armoury. Gamepads work too: left stick moves, right stick looks, A jumps, B crouches (slides when sprinting), LB sprints, LT aims (holding it, LB and RB peek left and right), RT fires, X reloads, RB swaps guns. On a touch screen, Crouch is over the stick (it slides you when sprinting), drag the Fire button to aim while you shoot; aiming by a corner leans you out round it. Your look and rifle finish are in Profile.</p>
         </div>
       </details>
       <details class="walk-pop walk-profile" data-pop data-profile>
@@ -752,6 +767,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     <button type="button" class="drive-pedal drive-gas" data-drive-gas aria-label="Gas">Gas</button>
     <div class="walk-stick" data-walk-stick aria-hidden="true"><span></span></div>
     <button type="button" class="walk-run" data-walk-run aria-pressed="false">Sprint</button>
+    <button type="button" class="walk-crouch" data-walk-crouch aria-pressed="false">Crouch</button>
     <button type="button" class="walk-fire" data-walk-fire>Fire</button>
     <button type="button" class="walk-reload" data-walk-reload>Reload</button>
     <button type="button" class="walk-aim" data-walk-aim aria-pressed="false">Aim</button>
@@ -1009,6 +1025,16 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
   </template>
 
   <div class="city-hud" data-city-hud>
+    {/* The owner's notice (live settings, live.ts): one at a time, from the command center; its × hides that one for good */}
+    <div class="city-banner" data-live-banner role="status" hidden>
+      <p class="kicker"><span class="kicker-num">GM</span></p>
+      <p class="city-banner-text" data-live-banner-text></p>
+      <button type="button" class="chip-link city-banner-go" data-live-banner-go hidden>Go</button>
+      <button type="button" class="city-card-close" data-live-banner-close aria-label="Hide this notice">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
+      </button>
+    </div>
+
     {/* First-visit tip under the header (closes for good with its ×; never on phones) */}
     <div class="city-card" id="city-card">
       <p class="kicker"><span class="kicker-num">GM</span></p>
@@ -1042,12 +1068,17 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
 </section>
 
 <script>
+  import { live } from '../scripts/city3d/live-client';
+  import { bannersAt, type Live } from '../scripts/city3d/live';
+
   const root = document.querySelector<HTMLElement>('[data-city-root]');
   const vp = document.querySelector<HTMLElement>('[data-city]');
   const tpl = vp?.querySelector<HTMLTemplateElement>('template[data-map-tpl]');
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   if (root && vp && tpl) {
+    // The owner's live settings (live.ts): asked for now; the 3D city's boot waits for them (briefly)
+    const liveFirst = live.start();
     // WebGL2 here? (the 3D city boots where it works; on the 2D map the buildings take you there)
     const gl = document.createElement('canvas').getContext('webgl2');
     gl?.getExtension('WEBGL_lose_context')?.loseContext();
@@ -1203,6 +1234,9 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
 
     async function go3d() {
       if (booting) return;
+      // (never behind the maintenance cover: the page reloads when it lifts)
+      await liveFirst;
+      if (live.now.maintenance) return;
       if (city) {
         city.start();
         root!.dataset.view = '3d';
@@ -1366,6 +1400,72 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       enter(true);
     });
     start.querySelector<HTMLButtonElement>('[data-start-single]')!.focus({ preventScroll: true });
+
+    /* ---------- Live settings: maintenance and the owner's notice ---------- */
+    const maint = root.querySelector<HTMLElement>('[data-maint]')!;
+    const banner = root.querySelector<HTMLElement>('[data-live-banner]')!;
+    const bannerText = banner.querySelector<HTMLElement>('[data-live-banner-text]')!;
+    const bannerGo = banner.querySelector<HTMLButtonElement>('[data-live-banner-go]')!;
+    const SEEN = 'degen-city-notices-v1';
+    let seen: string[] = [];
+    try {
+      seen = JSON.parse(localStorage.getItem(SEEN) ?? '[]');
+      if (!Array.isArray(seen)) seen = [];
+    } catch {}
+    /** A notice is hidden for good by its id and its words (new words under the same id show again) */
+    const noticeKey = (b: { id: string; text: string }) => `${b.id}:${b.text.length}:${[...b.text].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 7)}`;
+    let showing: ReturnType<typeof bannersAt>[number] | null = null;
+    function paintBanner(l: Live) {
+      showing = bannersAt(l, Date.now()).find((b) => !seen.includes(noticeKey(b))) ?? null;
+      banner.hidden = !showing;
+      if (!showing) return;
+      bannerText.textContent = showing.text;
+      bannerGo.hidden = !showing.place;
+    }
+    banner.querySelector('[data-live-banner-close]')!.addEventListener('click', () => {
+      if (!showing) return;
+      seen = [...seen.filter((k) => k !== noticeKey(showing!)), noticeKey(showing)].slice(-50);
+      try {
+        localStorage.setItem(SEEN, JSON.stringify(seen));
+      } catch {}
+      paintBanner(live.now);
+    });
+    bannerGo.addEventListener('click', async () => {
+      const place = showing?.place;
+      if (!place) return;
+      if (root!.dataset.view !== '3d' || !city) await go3d();
+      city?.open(place);
+    });
+    let maintShown = false;
+    function paintMaint(l: Live) {
+      const m = l.maintenance;
+      if (!m) {
+        // It's lifted: start again, into the city as it is now
+        if (maintShown) location.reload();
+        return;
+      }
+      maintShown = true;
+      maint.querySelector('[data-maint-text]')!.textContent = m.message;
+      const eta = maint.querySelector<HTMLElement>('[data-maint-eta]')!;
+      eta.hidden = !m.eta || m.eta < Date.now();
+      if (m.eta) eta.textContent = `Expected back ${new Date(m.eta).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })}`;
+      city?.stop();
+      maint.hidden = false;
+      root!.classList.add('has-maint');
+    }
+    let checked = false;
+    liveFirst.then(() => (checked = true));
+    const paintLive = (l: Live) => {
+      if (!checked) return paintBanner(l);
+      paintMaint(l);
+      paintBanner(l);
+    };
+    // (the cover waits for the first check, so an old copy never flashes it up)
+    paintBanner(live.now);
+    liveFirst.then(() => paintLive(live.now));
+    live.onChange(paintLive);
+    // (a notice's from and until come round on their own)
+    setInterval(() => paintBanner(live.now), 60_000);
     // ?bench (the benchmark, bench.ts): straight into the 3D city, no menu
     if (new URLSearchParams(location.search).has('bench') && gl) {
       view = '3d';

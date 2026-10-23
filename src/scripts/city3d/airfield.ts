@@ -424,8 +424,9 @@ function jet(stand: Pt, takeoff: number, id: string): Flight {
         w(cw + 8, R, 0, 0),
         w(158, R, 0, 26),
         w(226, R, 11, 30),
-        w(226, 28, 40, 33),
-        w(-152, 28, 42, 34),
+        // (high enough over Uptown's towers: highrise.ts, the spire's mast)
+        w(226, 28, 46, 33),
+        w(-152, 28, 48, 34),
         w(-152, R, 26, 30),
         // Over the avenue well clear of the traffic, then down onto the runway
         w(64, R, 6.5, 26),

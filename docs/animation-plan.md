@@ -200,7 +200,7 @@ Modules (DOM-free and tested unless marked):
 - Every hint, prompt and the Controls panel's key list (`CityMap.astro`)
   follow the new keys; CLAUDE.md gets them too.
 
-### Speeds (to be tuned in the lab)
+### Speeds (tuned: walk 0.78, run 2.8, sprint 4.2 tiles a second since the stride fix, below under "Fixes along the way"; the table is the first plan)
 
 Degen is about 1.1 tiles tall, a tile about 1.8 m; leg length about 0.95 m.
 
@@ -327,6 +327,32 @@ What's in:
   them under 0.3 rad). With it, the model's shoulders went natural
   athletic for every top (sloping trapezius, rounded deltoids: CLAUDE.md,
   the character section).
+
+- **Legs too fast when sprinting** (the owner: "his step size is small,
+  causing his legs to move very fast"): subject 143, whose run, walk,
+  starts and stops carry most of Phase 1, was captured at 60 frames a
+  second but the conversion marks it 120, so he played at double speed
+  (running at 5.7 steps a second, walking at 3.3; a real runner takes about
+  3, a walker about 2). His takes now say `"fps": 60` in `takes.json`. That
+  made his run a 3.4 m/s jog, so the owner picked: speeds a bit slower
+  (`GAITS`: walk 1.4, run 5, sprint 7.5 m/s), an athletic sprint, and the
+  difference made up the way a runner does (`WARP` in animator.ts): his legs
+  turn over only a little quicker (a power of 0.3 of the ratio), a foot on
+  the ground plays fast enough to stay put under him (a shorter contact,
+  no sliding, no hips dropping), the air plays slower (more hang time),
+  a swinging knee lifts higher, and into a sprint, once he's done speeding
+  up, he reaches up to 1.2 times further; the sprint's arm and knee drive
+  is a little stronger (`LAYERS.sprintSwing` 0.55). Measured: walking 2.1
+  steps a second of 0.66 m, running 3.3 of 1.55 m, sprinting 3.6 of 2.1 m
+  (it was 7.8 steps a second of 1.16 m). Other actors' runs were tried
+  for longer steps (127_07, 104_37, 78_06): one had a foot that flips in
+  the data, one quick short steps, one a dip on one side; subject 9's
+  (09_01) stayed. The clips file is 505 KB (it was 336 KB at double speed).
+  Along the way: the ball of a foot is never put under the ground (a blend
+  between two clips could put one's ankle with the other's tilt), a free
+  foot reaches no further down than a step (it reached off ledges), the
+  take-off's push plays at about its own speed, and the sprint's layers
+  ease out in the air.
 
 ### Phase 1 as it was planned
 
@@ -479,7 +505,63 @@ What's in:
   the run without a stop.
 - Camera: a small shake on hard landings (not under reduced motion).
 
-### Phase 4: armed movement and peeking
+### Phase 4: armed movement and peeking (built, for the owner's sign-off)
+
+What's in:
+
+- **More data** (CMU, credited): subject 143's walking backwards and
+  sideways (143_39, 143_40, at their real 60 frames a second, about 0.8
+  m/s), subject 141's quicker ones (141_31 backwards at a jog, about 2.4
+  m/s; 141_33 a side shuffle, about 1.3 m/s; 141_32 a crossover step on
+  the diagonal), cut to their good parts. 28 clips, 138 s, 605 KB (the
+  file's test limit went to 680 KB; it's fetched when walking starts, not
+  at the boot).
+- **Facing the aim:** aiming, peeking or in first person the springs turn
+  him to where the camera looks (as before), and now the trajectory the
+  matching looks for faces it too (`AnimInput.faceGoal`), so going
+  sideways or back finds the strafes and backpedals, never a run turned
+  round. Measured aiming down one way and going each of the eight ways
+  at the aiming speed and the walk: the hips within 4° of the aim, a held
+  foot sliding under 1 cm, the strafing takes playing sideways and back.
+  The hips stay within `FACE.most` of the aim; standing, turning the aim
+  further than `STAND.turn` (0.35 rad) from his hips lets the search past
+  the idle, so he steps round (the turn on the spot) instead of twisting
+  on his planted feet.
+- **The gun's hold over the capture's legs:** with the gun in his hands
+  (or an arm out aiming, unarmed) the animator gives only the legs and
+  the hips; the upper body is the procedural pose with `stance.ts`'s hold
+  on it, the spine turned so the chest keeps the turn that pose gave it
+  under the figure as it's drawn (`applyTo(..., upper, yaw)`), so the
+  gun points where you look whatever the legs do (the test holds the
+  chest and head to the pose's to 1e-4). The mask eases in and out
+  (`upperW`, 0.15 s). Sprinting armed, the hold relaxes the gun low
+  across him as before, over the capture's sprint.
+- **Aiming speed** 1.4 tiles a second (about 2.5 m/s, the plan's low end;
+  it was 1.68): the strafing takes go up to about 2.4 m/s.
+- **The peek** (`addLean()` in animator.ts, `PEEK` in walk.ts): Q / E held,
+  LB / RB while aiming on a gamepad, and on touch aiming by a corner (the
+  view ahead blocked within 1.4 tiles, clear for 3.5 from a lean out to
+  one side: `cornerSide()`, looked at five times a second). The spine leans
+  out 0.42 rad over the hips about where the camera looks, the head turned
+  back level (less with his cheek on a stock), the feet where they are; as
+  far as there's room beside him; he slows to 55%, faces the look, and the
+  camera goes out with him (over his right shoulder, or across to his
+  left), its sideways shift clamped through `CAMERA_GRID` so it never ends
+  in a wall (that clamp now holds the shoulder offset too, always). First
+  person: the eye shifts 0.3 and the view tilts 0.08 rad (not under
+  reduced motion).
+- **The inertialization** now moves each side at the speed it plays (the
+  clip being left at its rate, the next at its own), so a cut out of a
+  time-warped stride keeps its real speed (a sprint's take-off).
+- **The lab:** Strafe 8 ways, Aim round and Peek programs, Q / E by hand,
+  the armed mode on the capture's legs (as in the city), and an Aim
+  readout (how far the legs are off the aim, the peek).
+- **Controls:** the Controls panel lists Q / E, the gamepad and touch notes
+  say how to peek.
+- Not yet: other players and the crowds still walk procedurally armed
+  (Phase 7); jumping armed is the capture's jumps under the hold.
+
+As it was planned:
 
 - Strafing and backpedalling in eight directions from mocap while aiming
   (the body faces the aim, the legs the way he goes: the hips rotate within
@@ -491,7 +573,67 @@ What's in:
   shifts with it (and stays out of walls, through `CAMERA_GRID`). Touch
   and pad as in "Controls".
 
-### Phase 5: crouch, slide, vault and climb
+### Phase 5: crouch, slide, vault and climb (built, for the owner's sign-off)
+
+What's in so far:
+
+- **More data** (CMU, credited): subject 136's crouched walks (136_10 and
+  136_09 forwards, 136_11 backwards, about 0.8 m/s, cut to their good
+  parts; `sink` in `takes.json` lowers 136_09 and 136_11 by 1.8 cm, where
+  the capture's planted feet stood high over the ankles' low point and
+  the contacts missed them). 31 clips, 153 s, 671 KB (the file's test
+  limit went to 720 KB).
+- **Crouch** (C toggles, B on a gamepad, the touch Crouch button over the
+  stick): moving crouched, only the crouched walks are searched (and
+  standing up, never them); standing still crouched, the idle plays with
+  the crouch laid over it (`CROUCH`: the hips 0.16 down, the legs' IK
+  bending the knees over planted feet, the spine 0.42 forward and the head
+  back up), eased in and out as the clip changes, so a crouched turn on
+  the spot is the turning take crouched. He goes at 0.55 tiles a second
+  (about 1 m/s), sprinting or jumping stands him up, and the camera comes
+  down 0.26. Armed, the hold keeps his upper body upright over the
+  crouched legs. Tested: crouched walking is on the crouched takes over
+  90% of the time, crouched standing on the idle with the hips well down,
+  standing up never a crouched take, the feet held to under 2.5 cm.
+- **Slide** (crouch while sprinting): `startSlide()` / `stepSlide()` in
+  movesim.ts (only from 3.4 tiles a second, off 8% faster, slowing by 3.4
+  tiles a second², steering 0.9 rad a second at most, over by 1.5 tiles a
+  second or 1.1 s: about 3 tiles, 5 m); its pose is keyed (`slidePose()`,
+  `SLIDE_POSE` in poses.ts: the hips 0.26 up, leant back, the leading leg
+  out on its heel, the other folded with its knee and shin on the ground,
+  an arm forward and the other back to the ground), the motion capture
+  stepping aside for it (in 0.06 s, back over 0.12). It ends in a run with
+  the stick pushed, a crouch without, a crouch against whatever it runs
+  into, or a jump; the camera comes down 0.42 during it.
+- **Vault and climb** (the owner's calls: low things only, over and down,
+  he never stands on top): no CMU take vaults or mantles (127_33-36 "Run
+  Over" step across a low box), so both are keyed (`vault.ts`). What
+  counts is a list made from the data with real heights, `LOW_THINGS`: The
+  Trenches' jersey barriers (0.55), yard kerbs (0.4) and dumpsters (1.0),
+  Westlake Park's walls and hedges (0.55), beds and planters (0.42), and
+  downtown's alley crates, pallets and bins; never a building, a car, a
+  kiosk or a stall, and nothing on top of anything. Jump while moving at
+  one within reach (0.85 tiles), 0.25 to 0.75 over his ground (a vault)
+  or up to 1.25 (a climb), at most 1.3 thick, come at squarely: he goes
+  over it to the far side if the landing is clear and within 0.45 of his
+  own ground and nothing but low things under the arc stands in the way;
+  otherwise it's a jump as before. The vault (about 0.9 s): up early, his
+  left hand planted on the top (the arm IK) and the tucked legs swung out
+  to his right, down and on at a run. The climb (about 1.1 s): up to the
+  face, both hands on the top, pulled up with the knees tucked, over and
+  down. Tested: his feet, shins and hips never more than 3 cm into the
+  thing, a hand on its top while planted, from where he set off to the
+  far side; every low thing is a solid walking meets and none is tall.
+  In the city: over a jersey barrier behind Bottom Street's car park.
+  Jumps now count the press down after looking at it (a slow frame lost
+  it before).
+- **The lab:** Crouch, Sprint & slide and Vault & climb programs (a walls
+  floor: a park wall's height, then a dumpster's), C and Jump by hand, a
+  Crouch readout.
+- **Controls:** the Controls panel and the gamepad and touch notes.
+
+As it was planned:
+
 
 - **Crouch / sneak** (C toggles): crouched idle, walk and turns; the
   camera lowers.
@@ -558,8 +700,8 @@ What's in:
   swept up and down or fixed with `pitch`), a camera over his right
   shoulder like walk mode's, and markers at the gun's butt (yellow) and
   his shoulder's pocket (cyan).
-- Not yet: armed movement from capture (Phase 4: today the procedural walk
-  is under the hold); the shooting elbow is reachArm()'s (down, a little
+- Armed movement from capture came in Phase 4 (the hold over the
+  capture's legs). Not yet: the shooting elbow is reachArm()'s (down, a little
   out), not raised.
 
 What was wrong (the owner's screenshot) (the owner's screenshot, from behind while aiming):

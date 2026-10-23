@@ -27,8 +27,10 @@ import { SKYLINE } from './bounds';
 import { keyRect } from './tileplan';
 import { site } from './tilework';
 import { lampKind } from './trenches';
+import { AXIS_X, AXIS_ZEBRAS, BOULEVARD_X, LANE_HALF } from './uptown';
 import { WATERFRONT_RECT } from './waterfront';
 import { BRIDGE_RECT } from './stadium';
+import { SWAY, lampGlow, newLamp, type Lamp } from './dusk';
 
 export { BLOCKS, BS, CORE_ROADS, EW_ROADS, EXT, NS_ROADS, RIVER, SOUTH_ROAD, WALK_W, type Road };
 /** District blocks around the core: one large plot each (src/data/plots.ts). */
@@ -353,18 +355,21 @@ export const puddleMat = new THREE.MeshBasicMaterial({
 });
 
 /**
- * Where the highway, or a street of The Trenches (trenches.ts), meets road `i` (an east-west road's x, a north-south
- * road's z), each widened to the asphalt of the road that meets it: gaps in that road's median and lines
+ * Where the highway, or a street of The Trenches (trenches.ts) or Uptown (uptown.ts), meets road `i` (an east-west
+ * road's x, a north-south road's z), each widened to the asphalt of the road that meets it: gaps in that road's median
+ * and lines (and where Uptown's axis crosses it on foot, for its zebra)
  */
 function highwayGaps(axis: 'ew' | 'ns', i: number): [number, number][] {
   const road = `${axis}${i}`;
-  return PLAN.crossings
-    .filter((c) => c.streets.includes(road) && (c.streets.includes('highway') || c.streets.some((id) => id.startsWith('trench-'))))
-    .map((c) => {
+  const gaps = PLAN.crossings
+    .filter((c) => c.streets.includes(road) && (c.streets.includes('highway') || c.streets.some((id) => id.startsWith('trench-') || id.startsWith('uptown-'))))
+    .map((c): [number, number] => {
       const v = axis === 'ew' ? c.at[0] : c.at[1];
       const half = c.streets.includes('highway') ? HIGHWAY_HALF : PLAN.streets.find((s) => s.id === c.streets.find((id) => id !== road))!.half;
       return [v - half - 0.2, v + half + 0.2];
     });
+  if (axis === 'ew' && AXIS_ZEBRAS.some((z) => z.z === EW_ROADS[i].c)) gaps.push([AXIS_X - LANE_HALF - 0.2, AXIS_X + LANE_HALF + 0.2]);
+  return gaps;
 }
 
 /**
@@ -486,11 +491,13 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
     b.box(e0, 0, z0, L, 0.05, z1 - z0, promenade);
   // Lamps along the water, reaching out over the walk (clear of the bridges)
   const nearBridge = (x: number) => NS_ROADS.some((r) => Math.abs(x - r.c) < r.half + WALK_W + 0.9) || !offFootbridge(x, 0.6);
+  // (the north bank's carried on west along Uptown, the boulevard's line: uptown.ts)
   for (let x = PROMENADE.x[0]; x <= PROMENADE.x[1]; x += 6)
     if (!nearBridge(x)) {
       addLamp(x, RIVER[0] - 0.4, Math.PI / 2, 0.05);
       addLamp(x, RIVER[1] + 0.4, -Math.PI / 2, 0.05);
     }
+  for (let x = PROMENADE.x[0] - 6; x >= BOULEVARD_X[0] + 1; x -= 6) if (!nearBridge(x)) addLamp(x, RIVER[0] - 0.4, Math.PI / 2, 0.05);
 
   // Roads: asphalt, and down each avenue a raised median (broken at crossings and over the river)
   const asphalt = toon('#26243f');
@@ -564,7 +571,8 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
     }
     const kind: LotKind =
       lots[blk.id] ??
-      (blk.ref === 'garage' ? 'concrete' : blk.ref === 'market' || blk.ref === 'units' ? 'paving' : blk.use === 'park' ? 'grass' : blk.id.startsWith('dt-') ? 'paving' : 'grass');
+      // (Uptown's lots paved round its towers; its open lots' earth is uptown3d.ts's, behind their hoardings)
+      (blk.ref === 'garage' ? 'concrete' : blk.ref === 'market' || blk.ref === 'units' || blk.ref === 'uptown' ? 'paving' : blk.use === 'park' ? 'grass' : blk.id.startsWith('dt-') ? 'paving' : 'grass');
     if (isRect(slab) && !bigPoly(slab)) {
       const [x0, z0] = [Math.min(...slab.map((p) => p[0])), Math.min(...slab.map((p) => p[1]))];
       const [x1, z1] = [Math.max(...slab.map((p) => p[0])), Math.max(...slab.map((p) => p[1]))];
@@ -922,8 +930,9 @@ export function buildTrees(low = false) {
       const b = new Batch();
       if (low) b.lod = 'near';
       b.instances(trunkGeo, toon('#6b4630'), trunks);
-      greens.forEach((g, i) => b.instances(canopyGeo, toon(g), canopies[i]));
-      b.instances(coneGeo, toon('#1d7a55'), cones);
+      // The canopies sway in the wind (city life plan, Phase 4, dusk.ts): desktop only, the sway in their normals' lengths
+      greens.forEach((g, i) => b.instances(canopyGeo, toon(g), canopies[i], low ? 0 : SWAY));
+      b.instances(coneGeo, toon('#1d7a55'), cones, low ? 0 : SWAY * 0.6);
       if (low) {
         b.lod = 'far';
         const cards: THREE.Matrix4[][] = greens.map(() => []);
@@ -946,7 +955,12 @@ export function buildTrees(low = false) {
 type Tone = 'white' | 'sodium' | 'flickA' | 'flickB';
 const TONES: Tone[] = ['white', 'sodium', 'flickA', 'flickB'];
 const SODIUM = { bulb: '#ffb35c', halo: '#ffab55', pool: '#ff9a45' };
-export function buildLamps(scene: THREE.Scene, low = false) {
+/**
+ * `tick`: the lamps come on one by one at dusk (city life plan, Phase 4, dusk.ts): each halo and pool its own glow
+ * that frame, a colour per point and per instance over its tone's material (the bulbs, in the Batches' shared
+ * neon, come up with the night). Not under reduced motion (`reduced`: no tick runs after the first frame).
+ */
+export function buildLamps(scene: THREE.Scene, low = false, tick?: (f: Tick) => void, reduced = false) {
   const toneOf = lamps.map((l, i): Tone | 'dead' => {
     // (the waterfront's are all sodium, none flickering: it's kept up)
     const [wx0, wz0, wx1, wz1] = WATERFRONT_RECT;
@@ -982,7 +996,7 @@ export function buildLamps(scene: THREE.Scene, low = false) {
       const white = t === 'white';
       // (a flickering bulb keeps its own material, not the Batch's shared neon, so it goes out with its halo and pool)
       const bulb = white ? neon('#fff1c2', 0.6, 2.4) : flicker(t) ? siteMat(`lamp-bulb-${t}`, lit(new THREE.MeshBasicMaterial({ color: SODIUM.bulb, toneMapped: true }), 0.6, 2.4, flicker(t))) : neon(SODIUM.bulb, 0.6, 2.4);
-      const halo = lit(new THREE.PointsMaterial({ color: white ? '#ffe2a0' : SODIUM.halo, map: glowTex, size: 1.1, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }), 0, white ? 0.3 : 0.34, flicker(t));
+      const halo = lit(new THREE.PointsMaterial({ color: white ? '#ffe2a0' : SODIUM.halo, map: glowTex, size: 1.1, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, vertexColors: true }), 0, white ? 0.3 : 0.34, flicker(t));
       const pool = lit(glowMat(white ? '#ffd98a' : SODIUM.pool, 1), 0, white ? 0.26 : 0.3, flicker(t));
       if (flicker(t)) flickerTogether([bulb, halo, pool], t === 'flickA' ? 11 : 47);
       return [t, { bulb, halo, pool }];
@@ -1012,16 +1026,61 @@ export function buildLamps(scene: THREE.Scene, low = false) {
       }
       bulbB.build(into, { cast: false, receive: true });
     });
+  /** Each tone's halos and pools, and every lamp's switch: the pools' first `nHalo` are the lamps with halos, the rest the wall lamps' pools */
+  const switching: { halo: THREE.BufferAttribute | null; nHalo: number; pool: THREE.InstancedMesh | null; lamps: Lamp[]; seeds: number[]; glow: Float32Array }[] = [];
+  const seedAt = (x: number, z: number) => {
+    const v = Math.sin(x * 12.9898 + z * 78.233) * 43758.5453;
+    return v - Math.floor(v);
+  };
+  const black = new THREE.Color(0, 0, 0);
   for (const t of TONES) {
-    if (halos[t].length) {
+    const nHalo = halos[t].length / 3;
+    const seeds: number[] = [];
+    for (let i = 0; i < nHalo; i++) seeds.push(seedAt(halos[t][i * 3], halos[t][i * 3 + 2]));
+    let halo: THREE.BufferAttribute | null = null;
+    let pool: THREE.InstancedMesh | null = null;
+    if (nHalo) {
       const haloGeo = new THREE.BufferGeometry();
       haloGeo.setAttribute('position', new THREE.Float32BufferAttribute(halos[t], 3));
+      // (lit as the lamps come on; everything lit at once without the tick: reduced motion, the site worker)
+      halo = new THREE.BufferAttribute(new Float32Array(nHalo * 3).fill(tick && !reduced ? 0 : 1), 3);
+      halo.setUsage(THREE.DynamicDrawUsage);
+      haloGeo.setAttribute('color', halo);
       scene.add(fx(new THREE.Points(haloGeo, mats[t].halo)));
     }
     if (poolsOf[t].length) {
-      const pool = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), mats[t].pool, poolsOf[t].length);
-      poolsOf[t].forEach((m, i) => pool.setMatrixAt(i, m));
+      pool = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), mats[t].pool, poolsOf[t].length);
+      poolsOf[t].forEach((m, i) => {
+        pool!.setMatrixAt(i, m);
+        if (i >= nHalo) seeds.push(seedAt(m.elements[12], m.elements[14]));
+      });
+      if (tick && !reduced) {
+        poolsOf[t].forEach((_, i) => pool!.setColorAt(i, black));
+        pool.instanceColor!.setUsage(THREE.DynamicDrawUsage);
+      }
       scene.add(fx(pool));
     }
+    if (tick && !reduced && (halo || pool)) switching.push({ halo, nHalo, pool, lamps: seeds.map(newLamp), seeds, glow: new Float32Array(seeds.length).fill(-1) });
   }
+  if (!switching.length || !tick) return;
+  const c = new THREE.Color();
+  // The first frame sets every lamp as it stands (no trickle: a visit that starts at night finds them on)
+  let first = true;
+  tick(({ night, t }) => {
+    for (const s of switching) {
+      let changed = false;
+      for (let i = 0; i < s.lamps.length; i++) {
+        const g = lampGlow(s.lamps[i], night, s.seeds[i], t, !first);
+        if (g === s.glow[i]) continue;
+        s.glow[i] = g;
+        changed = true;
+        if (i < s.nHalo) s.halo!.setXYZ(i, g, g, g);
+        s.pool?.setColorAt(i, c.setScalar(g));
+      }
+      if (!changed) continue;
+      if (s.halo) s.halo.needsUpdate = true;
+      if (s.pool) s.pool.instanceColor!.needsUpdate = true;
+    }
+    first = false;
+  });
 }

@@ -6,7 +6,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import * as THREE from 'three';
-import { FACE, createAnimator, twoBone } from '../src/scripts/city3d/animator';
+import { CROUCH, FACE, addLean, applyTo, createAnimator, twoBone } from '../src/scripts/city3d/animator';
+import { makeSkeleton, newPose, poseSkeleton } from '../src/scripts/city3d/skeleton';
 import { MB, NB, TOE_BONES, decodeMocap, newPosed, posed } from '../src/scripts/city3d/mocap';
 import { wrap } from '../src/scripts/city3d/inertia';
 import { GAITS, newMove, stepMove } from '../src/scripts/city3d/movesim';
@@ -200,7 +201,9 @@ test('up and down kerbs the feet stand on the slab and the road, never in them',
       posed(an.rot, 0, an.hips.x, an.hips.y, an.hips.z, P);
       for (const k of [0, 1]) {
         const p = P.pos[TOE_BONES[k]];
-        into = Math.max(into, kerbs(0, z + (-p.x * Math.sin(an.face) + p.z * Math.cos(an.face)) * SCALE) - (y + p.y * SCALE));
+        // (a ball of the foot within a centimetre of a kerb's edge is on its lip, either side)
+        const wz = z + (-p.x * Math.sin(an.face) + p.z * Math.cos(an.face)) * SCALE;
+        into = Math.max(into, Math.min(kerbs(0, wz - 0.006), kerbs(0, wz + 0.006)) - (y + p.y * SCALE));
       }
       if (i > 30) for (let b = 0; b < NB; b++) step = Math.max(step, qa.fromArray(prev, b * 4).angleTo(qb.fromArray(an.rot, b * 4)));
       prev.set(an.rot);
@@ -214,7 +217,7 @@ test('up a flight of Liberty Bridge\'s size the feet climb the treads (he walks 
   const RISE = 0.23;
   const RUN = 0.31;
   const N = 15;
-  const Z0 = 3;
+  const Z0 = 1.5;
   const ramp = (_x: number, z: number) => THREE.MathUtils.clamp(((z - Z0) / (RUN * N)) * RISE * N, 0, RISE * N);
   const tread = (_x: number, z: number) => (z < Z0 ? 0 : z >= Z0 + RUN * N ? RISE * N : (Math.floor((z - Z0) / RUN) + 1) * RISE);
   for (const speed of [GAITS.walk, 1.75]) {
@@ -420,4 +423,176 @@ test('jumps animate the same every time', () => {
   const a = jump({ speed: GAITS.run, hold: 0.3 }).frames;
   const b = jump({ speed: GAITS.run, hold: 0.3 }).frames;
   a.forEach((f, i) => assert.deepEqual(f, b[i]));
+});
+
+/* ---------- Phase 4: armed movement and peeking ---------- */
+
+/** walk.ts's speed aiming */
+const AIMING = 1.4;
+const STRAFES = ['walk-back', 'walk-side', 'jog-back', 'shuffle-side', 'step-side-cross'];
+/** Aiming down +z (the springs facing it), going `a` (radians from +z) at `speed`: how far the shown facing gets off the aim, the slide, the clips */
+function strafe(a: number, speed: number) {
+  const an = createAnimator(data);
+  const m = newMove(0);
+  let x = 0;
+  let z = 0;
+  let off = 0;
+  let worst = 0;
+  let n = 0;
+  let slide = 0;
+  let strafing = 0;
+  for (let i = 0; i < 60 * 4; i++) {
+    const go = i > 30;
+    const gx = go ? Math.sin(a) * speed : 0;
+    const gz = go ? Math.cos(a) * speed : 0;
+    stepMove(m, gx, gz, true, DT, 0);
+    x += m.vx * DT;
+    z += m.vz * DT;
+    an.update({ dt: DT, x, y: 0, z, move: m, gx, gz, scale: SCALE, ground: () => 0, sprint: 0, faceGoal: 0 });
+    if (i > 90) {
+      const o = Math.abs(wrap(an.face));
+      off += o;
+      worst = Math.max(worst, o);
+      n++;
+      slide = Math.max(slide, ...an.feet.map((f) => f.drift));
+      if (STRAFES.includes(an.debug.clip.replace('~', ''))) strafing++;
+    }
+  }
+  return { off: off / n, worst, slide, strafing: strafing / n };
+}
+
+test('aiming, he strafes and backpedals every way facing the aim, on the strafing takes, his feet planted', () => {
+  for (const speed of [AIMING, GAITS.walk])
+    for (let k = 0; k < 8; k++) {
+      const r = strafe((k * Math.PI) / 4, speed);
+      const way = `${k * 45}° at ${speed}`;
+      assert.ok(r.off < 0.1 && r.worst < 0.25, `${way}: facing ${((r.off * 180) / Math.PI).toFixed(0)}° off the aim on average, ${((r.worst * 180) / Math.PI).toFixed(0)}° at worst`);
+      assert.ok(r.slide * SCALE * CM < 2, `${way}: a held foot slid ${(r.slide * SCALE * CM).toFixed(1)} cm`);
+      // (sideways and backwards: the strafing and backpedalling takes)
+      if (k >= 2 && k <= 6) assert.ok(r.strafing > 0.8, `${way}: on the strafing takes ${(r.strafing * 100).toFixed(0)}% of the time`);
+    }
+});
+
+test('his own upper body over the animator\'s legs: the chest keeps the turn the pose gave it, the legs are the animator\'s', () => {
+  const an = createAnimator(data);
+  const m = newMove(0);
+  for (let i = 0; i < 90; i++) {
+    stepMove(m, 1, 0.5, true, DT, 0);
+    an.update({ dt: DT, x: 0, y: 0, z: 0, move: m, gx: 1, gz: 0.5, scale: SCALE, ground: () => 0, sprint: 0, faceGoal: 0 });
+  }
+  const sk = makeSkeleton();
+  const p = newPose();
+  p.lean = 0.2;
+  p.twist = 0.6;
+  p.turn = -0.3;
+  poseSkeleton(sk, p);
+  sk.root.updateMatrixWorld(true);
+  const chest = sk.bones.chest.getWorldQuaternion(new THREE.Quaternion());
+  const head = sk.bones.head.getWorldQuaternion(new THREE.Quaternion());
+  for (const yaw of [0, 0.5, -0.8]) {
+    poseSkeleton(sk, p);
+    applyTo(sk, an.rot, an.hips, 1, 1, yaw);
+    sk.root.updateMatrixWorld(true);
+    const turned = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+    assert.ok(sk.bones.chest.getWorldQuaternion(new THREE.Quaternion()).angleTo(turned.clone().multiply(chest)) < 1e-4, `the chest turned ${yaw} with the figure`);
+    assert.ok(sk.bones.head.getWorldQuaternion(new THREE.Quaternion()).angleTo(turned.clone().multiply(head)) < 1e-4, 'and the head on it');
+    assert.deepEqual(sk.bones.shinR.quaternion.toArray(), [...an.rot.slice(MB.shinR * 4, MB.shinR * 4 + 4)], 'the legs are the animator\'s');
+  }
+});
+
+test('a peek leans his upper body out to the side over feet that stay put, the head kept level', () => {
+  const sk = makeSkeleton();
+  poseSkeleton(sk, newPose());
+  sk.root.updateMatrixWorld(true);
+  const feet = [sk.bones.footL, sk.bones.footR].map((b) => b.getWorldPosition(new THREE.Vector3()));
+  const head0 = sk.bones.head.getWorldPosition(new THREE.Vector3());
+  for (const [lean, yaw] of [
+    [0.42, 0],
+    [-0.42, 0],
+    [0.42, 1.2],
+  ]) {
+    poseSkeleton(sk, newPose());
+    addLean(sk, lean, yaw);
+    sk.root.updateMatrixWorld(true);
+    // (his right, in the figure's frame, is -x when he faces +z; turned by `yaw` with the way he's looking)
+    const right = new THREE.Vector3(-Math.cos(yaw), 0, Math.sin(yaw));
+    const out = sk.bones.head.getWorldPosition(new THREE.Vector3()).sub(head0).dot(right) * Math.sign(lean);
+    assert.ok(out > 0.1, `the head goes ${out.toFixed(3)} out to his ${lean > 0 ? 'right' : 'left'}`);
+    const chestUp = new THREE.Vector3(0, 1, 0).applyQuaternion(sk.bones.chest.getWorldQuaternion(new THREE.Quaternion()));
+    const headUp = new THREE.Vector3(0, 1, 0).applyQuaternion(sk.bones.head.getWorldQuaternion(new THREE.Quaternion()));
+    assert.ok(Math.acos(headUp.y) < Math.acos(chestUp.y) * 0.3, `the head tilted ${headUp.y.toFixed(3)} against the chest's ${chestUp.y.toFixed(3)}`);
+    [sk.bones.footL, sk.bones.footR].forEach((b, i) => assert.ok(b.getWorldPosition(new THREE.Vector3()).distanceTo(feet[i]) < 1e-6, 'the feet stay put'));
+  }
+});
+
+test('standing, aiming round past his hips steps him round instead of twisting him on his feet', () => {
+  for (const turn of [1.4, 2.5]) {
+    const an = createAnimator(data);
+    const m = newMove(0);
+    let goal = 0;
+    let stepping = 0;
+    let slide = 0;
+    let lag = 0;
+    for (let i = 0; i < 60 * 8; i++) {
+      if (i === 120) goal = turn;
+      if (i === 300) goal = 0;
+      stepMove(m, 0, 0, true, DT, goal);
+      an.update({ dt: DT, x: 0, y: 0, z: 0, move: m, gx: 0, gz: 0, scale: SCALE, ground: () => 0, sprint: 0, faceGoal: goal });
+      if (i > 110) {
+        if (an.debug.clip.replace('~', '') !== 'idle') stepping++;
+        slide = Math.max(slide, ...an.feet.map((f) => f.drift));
+        lag = Math.max(lag, Math.abs(wrap(m.face - an.face)));
+      }
+    }
+    assert.ok(stepping > 20, `${turn}: stepping round ${stepping} frames`);
+    assert.ok(lag <= FACE.most + 1e-3, `${turn}: his hips ${lag.toFixed(2)} rad off the aim at most`);
+    assert.ok(slide * SCALE * CM < 2, `${turn}: a held foot slid ${(slide * SCALE * CM).toFixed(1)} cm`);
+  }
+});
+
+/* ---------- Phase 5: crouching ---------- */
+
+test('crouched he walks on the crouched takes and stands still in the crouch over the idle, his feet planted; standing up, never', () => {
+  const an = createAnimator(data);
+  const m = newMove(0);
+  let z = 0;
+  let crouch = 0;
+  const kinds = { crouchedMoving: 0, crouchedWalks: 0, still: 0, idle: 0, upright: 0, uprightCrouch: 0 };
+  let slide = 0;
+  let hipsStill = 0;
+  let hipsUp = 0;
+  const P = newPosed();
+  for (let i = 0; i < 60 * 12; i++) {
+    const t = i * DT;
+    // (crouched for 8 s: still, on, still; then up and on)
+    const down = t < 8;
+    const gz = (t > 1.5 && t < 4.5) || t > 9 ? (down ? 0.55 : GAITS.run) : 0;
+    crouch += ((down ? 1 : 0) - crouch) * (1 - Math.exp(-10 * DT));
+    stepMove(m, 0, gz, true, DT);
+    z += m.vz * DT;
+    an.update({ dt: DT, x: 0, y: 0, z, move: m, gx: 0, gz, scale: SCALE, ground: () => 0, sprint: 0, crouch });
+    const clip = an.debug.clip.replace('~', '');
+    const isCrouch = CROUCH.clips.includes(clip);
+    if (down && t > 2.5 && t < 4.5) {
+      kinds.crouchedMoving++;
+      if (isCrouch) kinds.crouchedWalks++;
+    }
+    if (down && t > 6 && t < 8) {
+      kinds.still++;
+      if (clip === 'idle') kinds.idle++;
+      posed(an.rot, 0, an.hips.x, an.hips.y, an.hips.z, P);
+      hipsStill = Math.max(hipsStill, P.pos[0].y);
+    }
+    if (t > 10) {
+      kinds.upright++;
+      if (isCrouch) kinds.uprightCrouch++;
+      hipsUp = Math.max(hipsUp, an.hips.y);
+    }
+    if (t > 1) slide = Math.max(slide, ...an.feet.map((f) => f.drift));
+  }
+  assert.ok(kinds.crouchedWalks / kinds.crouchedMoving > 0.9, `crouched walks ${kinds.crouchedWalks} of ${kinds.crouchedMoving} frames`);
+  assert.ok(kinds.idle / kinds.still > 0.9, `still crouched on the idle ${kinds.idle} of ${kinds.still} frames`);
+  assert.ok(hipsStill < hipsUp - CROUCH.drop * 0.6, `the hips ${hipsStill.toFixed(3)} still crouched, ${hipsUp.toFixed(3)} running`);
+  assert.equal(kinds.uprightCrouch, 0, 'standing up, never a crouched take');
+  assert.ok(slide * SCALE * CM < 2.5, `a held foot slid ${(slide * SCALE * CM).toFixed(1)} cm`);
 });

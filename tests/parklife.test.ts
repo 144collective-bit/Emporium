@@ -1,22 +1,13 @@
-// Westlake Park's life (parklife.ts, step 3): walkers, joggers and dogs on the paths, picnics in the glades, the games
-// on their courts with their balls, boats on the lake that never meet; and the land it needed (westlake.ts): the
-// boathouse and its jetty on the lake's north shore, the courts on the strips with their walks bent round them.
+// Westlake Park's life (parklife.ts, step 3): walkers, joggers and dogs on the paths, picnics in the glades, boats on
+// the lake that never meet; and the land it needed (westlake.ts): the boathouse and its jetty on the lake's north
+// shore. (The courts on the strips went with the strips: Uptown, uptown.ts.)
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BALLS, BALL_R, BOATS, DOGS, GAMES, HULL, LANES, LEAD, PARK_PEOPLE, PICNICS, moment } from '../src/scripts/city3d/parklife';
-import { BOATHOUSE, COURTS, JETTY, PARK_TREES, PATHS, BENCHES, inLake, inPark, onJetty, onPath, distToLine, LOOP_OUT, lakeLine } from '../src/scripts/city3d/westlake';
+import { BOATS, DOGS, HULL, LANES, LEAD, PARK_PEOPLE, PICNICS, moment } from '../src/scripts/city3d/parklife';
+import { BOATHOUSE, JETTY, PARK_TREES, PATHS, BENCHES, inLake, inPark, onJetty, onPath, distToLine, LOOP_OUT, lakeLine } from '../src/scripts/city3d/westlake';
 import { SOLIDS } from '../src/scripts/city3d/solids';
 
 const TIMES = Array.from({ length: 160 }, (_, i) => i * 1.37 + 0.11);
-const inRect = (r: number[], x: number, z: number, m = 0) => x > r[0] - m && x < r[2] + m && z > r[1] - m && z < r[3] + m;
-
-test('the courts: on their strips, off every path, their walks bent round them on the park', () => {
-  for (const c of COURTS) {
-    for (const [x, z] of [[c.rect[0], c.rect[1]], [c.rect[2], c.rect[3]], [c.rect[0], c.rect[3]], [c.rect[2], c.rect[1]]]) assert.ok(inPark([x, z], 0.5), `${c.id}'s corner on the park`);
-    for (const q of PATHS) for (const p of q.pts) assert.ok(!inRect(c.rect, p[0], p[1], q.half + 0.3), `${q.id} across ${c.id}`);
-    for (const t of PARK_TREES) assert.ok(!inRect(c.rect, t.x, t.z, 1), `a tree on ${c.id}`);
-  }
-});
 
 test('the boathouse and its jetty: on the north shore, the jetty from the loop out over the water, walkable', () => {
   const [x0, z0, x1, z1] = BOATHOUSE.rect;
@@ -36,7 +27,7 @@ test('the boathouse and its jetty: on the north shore, the jetty from the loop o
 test('walkers, joggers and dog walkers: on their paths, never through each other in a lane', () => {
   const m = moment();
   const walkers = PARK_PEOPLE.filter((p) => LANES.some((l) => p.id.startsWith(`${l.id}-`)));
-  assert.ok(walkers.length >= 40, `${walkers.length} walkers`);
+  assert.ok(walkers.length >= 30, `${walkers.length} walkers`);
   for (const t of TIMES)
     for (const p of walkers) {
       p.at(t, m);
@@ -77,34 +68,6 @@ test('picnics: in the glades, off the paths, the water and the trees', () => {
     assert.ok(inPark(p.at, 3) && !onPath(p.at, 2.5) && !inLake(p.at[0], p.at[1], LOOP_OUT + 2));
     assert.ok(PARK_TREES.every((t) => Math.hypot(t.x - p.at[0], t.z - p.at[1]) > 2.5));
     assert.ok(p.people.length >= 2);
-  }
-});
-
-test('the games: every player stays on their court, every ball on (or over) it', () => {
-  const m = moment();
-  const courtOf = { football: COURTS[1], tennis: COURTS[0], basketball: COURTS[2] };
-  for (const [game, ids] of Object.entries(GAMES)) {
-    const c = courtOf[game as keyof typeof courtOf];
-    for (const id of ids) {
-      const p = PARK_PEOPLE.find((q) => q.id === id)!;
-      for (const t of TIMES) {
-        p.at(t, m);
-        assert.ok(inRect(c.rect, m.x, m.z, -0.2), `${id} off ${c.id} at ${m.x.toFixed(1)}, ${m.z.toFixed(1)}`);
-      }
-    }
-  }
-  const b = { x: 0, y: 0, z: 0 };
-  for (const ball of BALLS) {
-    const c = courtOf[ball.kind];
-    let last: typeof b | null = null;
-    for (let t = 0; t < 120; t += 1 / 30) {
-      ball.at(t, b);
-      assert.ok(inRect(c.rect, b.x, b.z, 0.2), `the ${ball.kind} off its court at ${b.x.toFixed(1)}, ${b.z.toFixed(1)} (t ${t.toFixed(2)})`);
-      assert.ok(b.y >= BALL_R[ball.kind] - 1e-6 && b.y < 3.5);
-      // It never jumps: at most a hard pass's distance in a frame
-      if (last) assert.ok(Math.hypot(b.x - last.x, b.z - last.z) < 1.2, `the ${ball.kind} jumped at t ${t.toFixed(2)}`);
-      last = { ...b };
-    }
   }
 });
 

@@ -11,6 +11,7 @@ import { BUILD_COSTS } from './catalog';
 import { PLOTS, PLOT_BY_ID, plotById, plotToward, type Design, type Plot, type PlotsApi } from './plots';
 import type { Store } from './store';
 import { D, esc, fmt, whyNot } from './ui';
+import { live } from './live-client';
 
 const defOf = (t: Design['type']) => BUILDINGS.find((b) => b.type === t)!;
 
@@ -356,6 +357,9 @@ export function createBuilderUI(root: HTMLElement, deps: Deps) {
 
   function setBuild(on: boolean) {
     if (building === on) return;
+    // (unless the owner has closed it for now: live settings)
+    const shut = on && live.closed('build');
+    if (shut) return toast(shut);
     building = on;
     root.dataset.mode = on ? 'build' : 'explore';
     toggle.setAttribute('aria-pressed', String(on));

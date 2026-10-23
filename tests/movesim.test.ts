@@ -2,7 +2,7 @@
 // Spider-Man middle (quick, with weight), never overshoot, and `ahead()` says where they'll take him.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { GAITS, ahead, newMove, stepMove } from '../src/scripts/city3d/movesim';
+import { GAITS, SLIDE, ahead, newMove, startSlide, stepMove, stepSlide } from '../src/scripts/city3d/movesim';
 import { wrap } from '../src/scripts/city3d/inertia';
 
 const DT = 1 / 60;
@@ -10,7 +10,8 @@ const speed = (s: { vx: number; vz: number }) => Math.hypot(s.vx, s.vz);
 
 test('the speeds: a walk, the run he goes at and a faster sprint', () => {
   assert.ok(GAITS.walk < GAITS.run && GAITS.run < GAITS.sprint);
-  assert.ok(Math.abs(GAITS.run - 3.4) < 0.3, 'the captured actor\'s run');
+  // (about 1.4, 5 and 7.5 m/s: a tile is about 1.8 m)
+  assert.ok(Math.abs(GAITS.walk * 1.8 - 1.4) < 0.15 && Math.abs(GAITS.run * 1.8 - 5) < 0.3 && Math.abs(GAITS.sprint * 1.8 - 7.5) < 0.3, 'a walk, a quick run and a sprint');
 });
 
 test('from standing he reaches his run in about a quarter of a second, and never overshoots', () => {
@@ -81,4 +82,30 @@ test('in the air there is hardly any control', () => {
   const s = newMove();
   for (let i = 0; i < 15; i++) stepMove(s, 0, GAITS.run, false, DT);
   assert.ok(speed(s) < GAITS.run * 0.4, `${speed(s).toFixed(2)} after a quarter second in the air`);
+});
+
+test('a slide: only from a sprint, off faster than he was going, slowing to its end in a few metres, steering only a little', () => {
+  const m = newMove(0);
+  for (let i = 0; i < 120; i++) stepMove(m, 0, GAITS.run, true, DT);
+  assert.equal(startSlide(m), null, 'not from a run');
+  for (let i = 0; i < 120; i++) stepMove(m, 0, GAITS.sprint, true, DT);
+  const sl = startSlide(m)!;
+  assert.ok(sl && sl.v > speed(m), 'off faster than the sprint');
+  let z = 0;
+  let x = 0;
+  let last = sl.v;
+  let t = 0;
+  // (the stick hard right the whole way)
+  while (stepSlide(sl, m, GAITS.run, 0, DT)) {
+    t += DT;
+    x += m.vx * DT;
+    z += m.vz * DT;
+    assert.ok(sl.v <= last + 1e-9, 'never speeding up');
+    last = sl.v;
+    assert.ok(Math.abs(wrap(m.face - sl.dir)) < 1e-9, 'facing the way he slides');
+  }
+  assert.ok(t <= SLIDE.most + DT && t > 0.5, `${t.toFixed(2)} s`);
+  assert.ok(z > 2 && z < 4.5, `${z.toFixed(2)} tiles on`);
+  assert.ok(Math.abs(sl.dir) <= SLIDE.steer * (t + DT) + 1e-9, `turned ${sl.dir.toFixed(2)} rad`);
+  assert.ok(x > 0, 'steered the way the stick asks');
 });

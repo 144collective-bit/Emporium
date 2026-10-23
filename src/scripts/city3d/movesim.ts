@@ -14,11 +14,13 @@ import { springAhead, springAngle, springVel, wrap } from './inertia';
 
 /**
  * His speeds (tiles a second; a tile is about 1.8 m, his hips 0.95 m up):
- * a walk (Caps Lock), the run he goes at by default and the sprint (Shift).
- * The walk and run are the captured actor's own; the sprint is the run
- * played faster with longer strides and harder drive (animator.ts).
+ * a walk (Caps Lock, about 1.4 m/s), the run he goes at by default (about
+ * 5 m/s) and the sprint (Shift, about 7.5 m/s). The captures run at 3-4 m/s;
+ * the animator (animator.ts) makes up the rest a little in cadence and
+ * mostly in longer strides, as a runner does (the owner's call, after the
+ * capture's double-speed timing was fixed: quick but believable).
  */
-export const GAITS = { walk: 1.25, run: 3.4, sprint: 5 };
+export const GAITS = { walk: 0.78, run: 2.8, sprint: 4.2 };
 
 /** The springs' half-lives (seconds): speeding up, slowing down, turning to face, and the little control there is in the air */
 export const MOVE = { accel: 0.11, stop: 0.1, face: 0.075, air: 0.9 };
@@ -63,3 +65,37 @@ export function ahead(s: MoveState, gx: number, gz: number, t: number, out: { x:
 
 /** The sideways pull of a bend (tiles a second²): speed times turn rate, for the lean into it */
 export const bendPull = (s: MoveState) => Math.hypot(s.vx, s.vz) * s.w;
+
+/**
+ * The slide (animation Phase 5: crouch while sprinting): from going at least
+ * `min` tiles a second, off at `start` times the speed he had, the way he
+ * was going, slowing by `friction` tiles a second² and steering at most
+ * `steer` radians a second towards the stick, until he's down to `end` or
+ * it's been `most` seconds
+ */
+export const SLIDE = { min: 3.4, start: 1.08, friction: 3.4, end: 1.5, most: 1.1, steer: 0.9 };
+export interface Slide {
+  /** Seconds since it started, how fast he's going and which way (yaw) */
+  t: number;
+  v: number;
+  dir: number;
+}
+/** Into a slide from the springs as they are, if he's going fast enough */
+export function startSlide(s: MoveState): Slide | null {
+  const v = Math.hypot(s.vx, s.vz);
+  return v < SLIDE.min ? null : { t: 0, v: v * SLIDE.start, dir: Math.atan2(s.vx, s.vz) };
+}
+/** One step of a slide, the springs carried along with it (so he runs or stops on from where it leaves him); false once it's over */
+export function stepSlide(sl: Slide, s: MoveState, gx: number, gz: number, dt: number) {
+  sl.t += dt;
+  sl.v = Math.max(0, sl.v - SLIDE.friction * dt);
+  if (gx * gx + gz * gz > 0.01) {
+    const turn = wrap(Math.atan2(gx, gz) - sl.dir);
+    sl.dir = wrap(sl.dir + Math.sign(turn) * Math.min(Math.abs(turn), SLIDE.steer * dt));
+  }
+  s.vx = Math.sin(sl.dir) * sl.v;
+  s.vz = Math.cos(sl.dir) * sl.v;
+  s.ax = s.az = s.w = 0;
+  s.face = sl.dir;
+  return sl.v > SLIDE.end && sl.t < SLIDE.most;
+}
