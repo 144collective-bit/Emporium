@@ -49,6 +49,8 @@ export interface TileWork {
   step(ms: number, x: number, y: number, z: number, dt: number, far: number, look?: readonly [number, number]): void;
   /** How many sites are still waiting to be built (cheap: every frame) */
   pending(): number;
+  /** Take on the sites registered since (a district loaded as you approach: districts.ts) */
+  adopt(): number;
   /** Build now everything waiting within `r` of a point (walking in, a fly-in's end) */
   want(x: number, z: number, r: number): void;
   /** Build now everything waiting in a view (the intro) */
@@ -248,6 +250,12 @@ export function createTileWork(
       }
     },
     pending: () => queue.length,
+    adopt() {
+      const more = SITES.splice(0);
+      for (const s of more) byId.set(s.id, s);
+      queue.push(...more);
+      return more.length;
+    },
     stats: () => ({ built, waiting: queue.length, atBoot, released: released.size, held: tiled?.heldBytes() ?? 0, budget: opts.budget, rebuilt, bootMs, laterMs, slowest, offMain }),
   };
 }

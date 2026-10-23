@@ -14,6 +14,7 @@
 import { EXT, RIVER } from './layout';
 import { PLAN, type Pt } from './streetplan';
 import { PLACES, type Place } from './places';
+import { PATHS, WESTLAKE_BLOCKS, lakeLine } from './westlake';
 import { TRACKS } from './metro';
 import { RUNWAY, SITE } from './airfield';
 import { CIRCUIT } from './kartcircuit';
@@ -50,6 +51,7 @@ const C = {
   river: '#1d4f7c',
   slab: '#262249',
   park: '#1d4e3a',
+  path: '#3f6f5a',
   road: '#3a3866',
   highway: '#4d4a86',
   airport: '#202c40',
@@ -153,6 +155,24 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
     }
     // The Trenches' boardwalk and Pier 7, out over the water
     for (const d of DECKS) rect(d, C.boardwalk);
+    // Westlake Park (westlake.ts): its lawns, the lake and its paths
+    for (const b of WESTLAKE_BLOCKS) {
+      poly(b.poly);
+      ctx.fill();
+    }
+    ctx.fillStyle = C.river;
+    poly(lakeLine(0, 72));
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = C.path;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    for (const q of PATHS) {
+      ctx.lineWidth = Math.max(1, q.half * 2 * view.s);
+      poly(q.pts);
+      if (q.loop) ctx.closePath();
+      ctx.stroke();
+    }
     // The roads, the highway widest, their real width (at least a hairline)
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
