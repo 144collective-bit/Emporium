@@ -72,9 +72,13 @@ import { PLAN, inPoly, type Pt } from './streetplan';
 import { SPOTS, pointOn, ROUTES } from './routes';
 import { bodies } from './life';
 import type { GameDeps } from './ui';
+import { live } from './live-client';
+import type { FeatureId } from './live';
 
 /** What a prompt can open: a landmark's door, or one of walk mode's own places and vehicles */
 type Near = SpotId | 'gear' | 'garage' | 'hangar' | 'car' | 'plane' | 'karts' | 'trainer' | `place:${string}`;
+/** The prompts the owner can close (live settings, live.ts) and the feature that closes each */
+const GATED: Partial<Record<Near, FeatureId>> = { gear: 'guns', garage: 'drive', hangar: 'fly', karts: 'karts', trainer: 'fight' };
 /** Prompts that say their own label (the rest say "Enter ...") */
 /** The landmarks' doors and Trench Avenue's (their prompts open their panels) */
 const ALL_DOORS = [...DOORS, ...AVENUE_DOORS, { id: 'stadium' as const, ...GATE.spot }];
@@ -298,6 +302,10 @@ export function createWalk(d: WalkDeps) {
   let near: { id: Near; label: string } | null = null;
   const act = () => {
     if (!near) return;
+    // Closed for now by the owner (live settings): getting into things, never out of them
+    const f = near.id === 'car' ? (drive.active ? null : 'drive') : near.id === 'plane' ? (fly.active ? null : 'fly') : GATED[near.id];
+    const shut = f && live.closed(f);
+    if (shut) return d.game.toast(shut, 3000);
     if (near.id === 'gear') shop.show(near.label === ARMS.name ? ARMS.name : 'Armoury');
     else if (near.id === 'garage') garageUI.show();
     else if (near.id === 'hangar') hangarUI.show();
