@@ -8,7 +8,7 @@ import { YACHTS } from '../src/scripts/city3d/boulevarddress';
 import { JETTIES } from '../src/scripts/city3d/outer';
 import { MOORED } from '../src/scripts/city3d/boats';
 import { riverBridges } from '../src/scripts/city3d/streetplan';
-import { BRIDGE_PIERS, PIER_HALF } from '../src/scripts/city3d/riverlife';
+import { BRIDGE_PIERS, PIER_HALF } from '../src/scripts/city3d/waterfront';
 import { STOPS } from '../src/scripts/city3d/riverbus';
 
 export type Rect = [number, number, number, number];

@@ -10,18 +10,31 @@
  * - the rowing eight: a long white shell, eight rowers and a cox, the oars
  *   sweeping together (one instanced mesh);
  * - the dinghies: white hulls, a mast, a coloured mainsail and a sailor,
- *   heeling into their turn.
+ *   heeling into their turn;
+ * - the river bus (step 4b, riverbus.ts): its two boats (a white hull with
+ *   cyan and magenta stripes, a cabin with a band of windows lit at night,
+ *   the wheelhouse, an open stern deck), the one you ride held where the
+ *   ride has it (`BUS_VIEW`).
  *
  * Each boat is a group of its own (its parts merged per material through a
  * Batch), placed every frame from the clock, the same for everyone; under
  * reduced motion they stand where they are at the start.
+ *
+ * The river bus's landings are sites (tilework.ts), registered in the site
+ * worker too: a pontoon on the water held by two piles, its fenders, rails
+ * and lanterns, the gangway down to it from the quay (South Row's from the
+ * end of a jetty out to the boardwalk's line), and a RIVER BUS board with the
+ * stop's name, both ways, from one small atlas.
  */
 import * as THREE from 'three';
-import { Batch, moving, neon, paintMat, toon } from './kit';
+import { Batch, FONT_DISPLAY, canvasTex, lit, moving, neon, paintMat, siteMat, toon } from './kit';
 import type { Tick } from './world';
 import { CROWD_VIEW } from './character';
 import { WATER_Y } from './river';
 import { CREW, CRUISE, DINGHIES, DINGHY, crewAt, cruiseAt, dinghyAt } from './riverlife';
+import { BUS, GANGWAY, LANDING, PONTOON_W, STOPS, type Stop } from './riverbus';
+import { BUSES, BUS_VIEW, busAt } from './riverroute';
+import { site } from './tilework';
 
 export const SELF = import.meta.url;
 
@@ -131,9 +144,160 @@ function dinghy(sail: string) {
   return group(b);
 }
 
+/* ---------- The river bus ---------- */
+
+const CYAN = toon('#1fb5d6');
+const MAGENTA = toon('#e2197a');
+const GREY = toon('#5b5f73');
+function busBoat() {
+  const b = new Batch();
+  const { len, beam, top } = BUS.hull;
+  const [h, w] = [len / 2, beam / 2];
+  solid(b, len, beam, 1, -0.3, 0.42, WHITE);
+  solid(b, len, beam, 1.012, 0.22, 0.32, CYAN);
+  solid(b, len, beam, 1.012, 0.08, 0.13, MAGENTA);
+  solid(b, len, beam, 0.97, 0.42, 0.44, GREY);
+  // The cabin: white below a band of windows, a dark roof overhanging it; the wheelhouse raised at its front
+  const [c0, c1] = [-h + 1.1, h - 1.25];
+  box(b, c0, 0.44, -w + 0.1, c1, 0.66, w - 0.1, WHITE);
+  box(b, c0, 0.66, -w + 0.12, c1, 1.0, w - 0.12, toon('#26304a'));
+  for (const e of [-1, 1]) box(b, c0 + 0.15, 0.7, e > 0 ? w - 0.12 : -w + 0.1, c1 - 0.15, 0.96, e > 0 ? w - 0.1 : -w + 0.12, WINDOW);
+  box(b, c0 - 0.05, 1.0, -w + 0.06, c1 + 0.08, 1.07, w - 0.06, NAVY);
+  box(b, c1 - 0.7, 1.07, -0.42, c1, top - 0.05, 0.42, WHITE);
+  box(b, c1 + 0.005, 1.1, -0.36, c1 + 0.02, top - 0.1, 0.36, WINDOW);
+  box(b, c1 - 0.75, top - 0.05, -0.47, c1 + 0.05, top, 0.47, NAVY);
+  // The open stern deck: a rail round it, a bench
+  for (const e of [-1, 1]) box(b, -h + 0.1, 0.44, e * (w - 0.1) - 0.02, c0, 0.82, e * (w - 0.1) + 0.02, INK);
+  box(b, -h + 0.08, 0.78, -w + 0.12, -h + 0.12, 0.82, w - 0.12, INK);
+  box(b, -h + 0.3, 0.44, -0.5, -h + 0.55, 0.6, 0.5, TEAK);
+  // Navigation lights and a mast on the wheelhouse
+  box(b, c1 - 0.4, top, -0.02, c1 - 0.36, top + 0.35, 0.02, INK);
+  box(b, c1 - 0.42, top + 0.33, -0.03, c1 - 0.34, top + 0.39, 0.03, BULB);
+  return group(b);
+}
+
+/* ---------- The landings (sites) ---------- */
+
+/** One small atlas: RIVER BUS over each stop's name, a row each */
+function landingSigns() {
+  const [W, H] = [512, 64 * STOPS.length];
+  const tex = canvasTex(W, H, (c) => {
+    STOPS.forEach((s, i) => {
+      const y = i * 64;
+      c.fillStyle = '#122a3e';
+      c.fillRect(0, y, W, 64);
+      c.strokeStyle = '#1fb5d6';
+      c.lineWidth = 4;
+      c.strokeRect(4, y + 4, W - 8, 56);
+      // A roundel: the river bus's mark
+      c.fillStyle = '#1fb5d6';
+      c.beginPath();
+      c.arc(40, y + 32, 20, 0, Math.PI * 2);
+      c.fill();
+      c.fillStyle = '#122a3e';
+      c.fillRect(24, y + 29, 32, 6);
+      c.fillStyle = '#f4f2fa';
+      c.textBaseline = 'middle';
+      c.font = `900 26px ${FONT_DISPLAY}`;
+      c.fillText('RIVER BUS', 74, y + 20);
+      c.font = `800 22px ${FONT_DISPLAY}`;
+      c.fillStyle = '#ffe2a0';
+      c.fillText(s.name.toUpperCase(), 74, y + 45);
+    });
+  });
+  return siteMat('river-bus-signs', lit(new THREE.MeshBasicMaterial({ map: tex, toneMapped: true }), 0.95, 1.15));
+}
+/** A board w x h from the atlas's row, its middle at (x, y, z), facing +z (or -z) */
+function board(row: number, w: number, h: number, x: number, y: number, z: number, toward: 1 | -1) {
+  const g = new THREE.PlaneGeometry(w, h);
+  const uv = g.attributes.uv as THREE.BufferAttribute;
+  const [v0, v1] = [1 - (row + 1) / STOPS.length, 1 - row / STOPS.length];
+  for (let i = 0; i < uv.count; i++) uv.setY(i, uv.getY(i) > 0.5 ? v1 - 0.004 : v0 + 0.004);
+  return (toward > 0 ? g : g.rotateY(Math.PI)).translate(x, y, z);
+}
+/** A sloping plank from (x, y0, z0) to (x, y1, z1), w wide and t thick (its top face along the line) */
+function slope(b: Batch, x: number, y0: number, z0: number, y1: number, z1: number, w: number, t: number, mat: THREE.Material) {
+  const len = Math.hypot(z1 - z0, y1 - y0);
+  const g = new THREE.BoxGeometry(w, t, len).translate(0, -t / 2, 0);
+  g.rotateX(-Math.atan2(y1 - y0, z1 - z0));
+  b.add(g.translate(x, (y0 + y1) / 2, (z0 + z1) / 2), mat);
+}
+const FLOAT = toon('#2c2f40');
+const RAIL = toon('#c9c4e6');
+function landing(b: Batch, s: Stop, row: number, sign: THREE.Material) {
+  // k: towards the water from the quay
+  const k = s.bank === 'north' ? 1 : -1;
+  const [x0, , x1] = s.landing;
+  const edge = k > 0 ? s.landing[3] : s.landing[1];
+  const inner = edge - k * PONTOON_W;
+  const head = edge - k * LANDING.out;
+  const top = WATER_Y + 0.32;
+  const [za, zb] = [Math.min(inner, edge), Math.max(inner, edge)];
+  // The pontoon: its float and deck
+  box(b, x0, WATER_Y - 0.25, za, x1, top - 0.05, zb, FLOAT);
+  box(b, x0 + 0.04, top - 0.05, za + 0.04, x1 - 0.04, top, zb - 0.04, TEAK);
+  // The piles that hold it, at its ends
+  for (const x of [x0 - 0.22, x1 + 0.22]) b.add(new THREE.CylinderGeometry(0.16, 0.16, s.y + 1.4 - (WATER_Y - 0.6), 10, 1, true).translate(x, (s.y + 1.4 + WATER_Y - 0.6) / 2, (za + zb) / 2), FLOAT);
+  for (const x of [x0 - 0.22, x1 + 0.22]) b.add(new THREE.CylinderGeometry(0.18, 0.18, 0.08, 10).translate(x, s.y + 1.44, (za + zb) / 2), CYAN);
+  // The gangway down from the quay (or the jetty's end) onto it, its handrails
+  const foot = inner + k * (GANGWAY.out - LANDING.out + PONTOON_W);
+  slope(b, s.door.x, s.y + 0.04, head, top + 0.04, foot, GANGWAY.half * 2, 0.06, TEAK);
+  for (const e of [-1, 1]) {
+    const x = s.door.x + e * (GANGWAY.half - 0.03);
+    slope(b, x, s.y + 0.62, head, top + 0.62, foot, 0.05, 0.05, RAIL);
+    for (const [y, z] of [[s.y, head], [top, foot]] as const) box(b, x - 0.025, y, z - 0.025, x + 0.025, y + 0.62, z + 0.025, RAIL);
+  }
+  // South Row's jetty out to the boardwalk's line, railed both sides
+  if (Math.abs(head - s.quay) > 0.1) {
+    const [ja, jb] = [Math.min(head, s.quay), Math.max(head, s.quay)];
+    const [xa, xb] = [s.door.x - GANGWAY.half - 0.15, s.door.x + GANGWAY.half + 0.15];
+    box(b, xa, s.y - 0.12, ja, xb, s.y + 0.03, jb, TEAK);
+    for (const x of [xa + 0.1, xb - 0.1]) b.add(new THREE.CylinderGeometry(0.07, 0.07, s.y - WATER_Y + 0.3, 6, 1, true).translate(x, (s.y + WATER_Y - 0.3) / 2, (ja + jb) / 2), FLOAT);
+    for (const x of [xa, xb]) {
+      box(b, x - 0.025, s.y + 0.55, ja, x + 0.025, s.y + 0.6, jb, RAIL);
+      for (let z = ja; z <= jb + 0.01; z += (jb - ja) / 2) box(b, x - 0.025, s.y + 0.03, z - 0.025, x + 0.025, s.y + 0.6, z + 0.025, RAIL);
+    }
+  }
+  // The pontoon's rails: along its quay side (open at the gangway's foot) and its ends; the boat side is open
+  const railY = top + 0.55;
+  const zq = inner + k * 0.05;
+  for (const [a, c] of [[x0 + 0.05, s.door.x - GANGWAY.half - 0.05], [s.door.x + GANGWAY.half + 0.05, x1 - 0.05]]) {
+    box(b, a, railY, zq - 0.025, c, railY + 0.05, zq + 0.025, RAIL);
+    for (let x = a; x <= c + 0.01; x += (c - a) / Math.max(1, Math.round((c - a) / 1.2))) box(b, x - 0.025, top, zq - 0.025, x + 0.025, railY, zq + 0.025, RAIL);
+  }
+  for (const x of [x0 + 0.05, x1 - 0.05]) {
+    box(b, x - 0.025, railY, za + 0.05, x + 0.025, railY + 0.05, zb - 0.05, RAIL);
+    for (const z of [za + 0.075, zb - 0.075]) box(b, x - 0.025, top, z - 0.025, x + 0.025, railY, z + 0.025, RAIL);
+  }
+  b.detail(() => {
+    // Fenders along the boat side
+    for (let x = x0 + 0.5; x < x1 - 0.3; x += 1.0) b.add(new THREE.CylinderGeometry(0.09, 0.09, 0.32, 8).translate(x, top - 0.18, edge + k * 0.06), INK);
+    // Lanterns at its ends, on posts
+    for (const x of [x0 + 0.3, x1 - 0.3]) {
+      box(b, x - 0.04, top, edge - k * 0.3 - 0.04, x + 0.04, top + 1.1, edge - k * 0.3 + 0.04, INK);
+      box(b, x - 0.08, top + 1.1, edge - k * 0.3 - 0.08, x + 0.08, top + 1.26, edge - k * 0.3 + 0.08, BULB);
+    }
+  });
+  // The RIVER BUS board on a post at the gangway's head, on the quay, facing the walk (and the river)
+  const bx = s.door.x + GANGWAY.half + 0.75;
+  const bz = s.quay - k * 0.3;
+  box(b, bx - 0.05, s.y, bz - 0.05, bx + 0.05, s.y + 1.6, bz + 0.05, INK);
+  box(b, bx - 0.68, s.y + 1.55, bz - 0.04, bx + 0.68, s.y + 1.95, bz + 0.04, toon('#122a3e'));
+  b.add(board(row, 1.28, 0.32, bx, s.y + 1.75, bz - k * 0.045, -k as 1 | -1), sign);
+  b.add(board(row, 1.28, 0.32, bx, s.y + 1.75, bz + k * 0.045, k as 1 | -1), sign);
+}
+
 /* ---------- Building it ---------- */
 
 export function register({ scene, tick, low }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
+  const sign = landingSigns();
+  STOPS.forEach((s, i) =>
+    site(`river bus ${s.id}`, [s.landing[0] - 2, Math.min(s.landing[1], s.quay) - 2, s.landing[2] + 2, Math.max(s.landing[3], s.quay) + 2], (into) => {
+      const b = new Batch();
+      landing(b, s, i, sign);
+      b.build(into, { cast: true, receive: true });
+    })
+  );
   if (!scene || !tick) return;
   const root = new THREE.Group();
   root.name = 'river-life';
@@ -141,7 +305,8 @@ export function register({ scene, tick, low }: { low: boolean; scene: THREE.Scen
   const cruise = cruiseBoat();
   const crew = crewBoat();
   const dinghies = DINGHIES.map((d) => dinghy(d.sail));
-  root.add(cruise, crew, ...dinghies);
+  const buses = Array.from({ length: BUSES }, busBoat);
+  root.add(cruise, crew, ...dinghies, ...buses);
   // The eight's oars: one instanced mesh, each oar pivoting at its rigger, sweeping together
   const oarGeo = new THREE.BoxGeometry(1.4, 0.025, 0.04).translate(0.7, 0, 0);
   const oars = new THREE.InstancedMesh(oarGeo, paintMat(), SEATS);
@@ -172,6 +337,7 @@ export function register({ scene, tick, low }: { low: boolean; scene: THREE.Scen
     if (!root.visible) return;
     place(cruise, cruiseAt(t), t);
     place(crew, crewAt(t), t);
+    buses.forEach((g, i) => place(g, i === 0 && BUS_VIEW.ride ? BUS_VIEW.ride : busAt(i, t + BUS_VIEW.offset), t));
     dinghies.forEach((g, i) => {
       const d = dinghyAt(i, t);
       // (heeling to the outside of its turn, away from the wind)

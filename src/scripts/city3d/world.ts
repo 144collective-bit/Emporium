@@ -28,11 +28,11 @@ import { keyRect } from './tileplan';
 import { site } from './tilework';
 import { lampKind } from './trenches';
 import { AXIS_X, AXIS_ZEBRAS, LANE_HALF } from './uptown';
-import { WATERFRONT_RECT } from './waterfront';
+import { BRIDGE_PIERS, PIER_HALF, WATERFRONT_RECT } from './waterfront';
 import { BRIDGE_RECT } from './stadium';
 import { SWAY, lampGlow, newLamp, type Lamp } from './dusk';
 import { WATER_Y, edgeSamples, edgesAt, pullAt, stretchAt, topsAt } from './river';
-import { BRIDGE_PIERS, PIER_HALF } from './riverlife';
+import { atGangway } from './riverbus';
 import { HALF as HARBOUR_HALF, HARBOUR_STREET, HX, Z0 as HZ0, Z1 as HZ1 } from './harbour';
 
 export { BLOCKS, BS, CORE_ROADS, EW_ROADS, EXT, NS_ROADS, RIVER, SOUTH_ROAD, WALK_W, type Road };
@@ -677,8 +677,9 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
   // (the north bank's carried on west along Uptown, the boulevard's line: uptown.ts)
   for (let x = PROMENADE.x[0]; x <= PROMENADE.x[1]; x += 6)
     if (!nearBridge(x)) {
-      addLamp(x, RIVER[0] - 0.4, Math.PI / 2, 0.05);
-      addLamp(x, RIVER[1] + 0.4, -Math.PI / 2, 0.05);
+      // (none in a river bus gangway's way, riverbus.ts)
+      if (!atGangway('north', x, 0.6)) addLamp(x, RIVER[0] - 0.4, Math.PI / 2, 0.05);
+      if (!atGangway('south', x, 0.6)) addLamp(x, RIVER[1] + 0.4, -Math.PI / 2, 0.05);
     }
 
   // Roads: asphalt, and down each avenue a raised median (broken at crossings and over the river)

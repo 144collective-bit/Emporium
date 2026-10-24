@@ -1,16 +1,17 @@
-// The river bus (riverbus.ts, river plan step 4b): two boats on a loop with four stops. The loop keeps to the water,
+// The river bus (riverbus.ts, riverroute.ts, river plan step 4b): two boats on a loop with four stops. The loop keeps to the water,
 // clear of everything on it (but its own landings, where it lies beside them), under Liberty Bridge with room to
 // spare; neither boat ever meets the tall ship, the cruise boat, the rowing eight or the other; the stops' prompts
 // stand on the quay; rides take a sensible time and end at the stop.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BUS, BUSES, CROSS, LINES, LOOP_T, ORDER, ROUTE, STOPS, STOP_S, busAt, gap, ride, rideAt, RIDE_MAX } from '../src/scripts/city3d/riverbus';
+import { BUS, GANGWAY, STOPS, atGangway } from '../src/scripts/city3d/riverbus';
+import { BUSES, CROSS, LINES, LOOP_T, ORDER, ROUTE, STOP_S, busAt, gap, offsetFor, ride, rideAt, RIDE_MAX } from '../src/scripts/city3d/riverroute';
 import { hullCorners, pointAlong, riverMovers } from '../src/scripts/city3d/riverlife';
 import { WATER_Y, inWater } from '../src/scripts/city3d/river';
 import { BOAT_LANES, BX, DECK_DEPTH, DECK_HALF, SHIP, lowY, shipAt } from '../src/scripts/city3d/liberty';
 import { HALF, HX } from '../src/scripts/city3d/harbour';
-import { boatZ, onDeck } from '../src/scripts/city3d/waterfront';
-import { onEsplanade } from '../src/scripts/city3d/boulevard';
+import { BENCHES, BOLLARDS, LAMPS, boatZ, onDeck } from '../src/scripts/city3d/waterfront';
+import { BENCH_XS, EDGE_LAMPS, ESPLANADE, WATER_TREES, onEsplanade } from '../src/scripts/city3d/boulevard';
 import { PROMENADE } from '../src/scripts/city3d/outer';
 import { OBSTACLES, inRect } from './water';
 
@@ -110,4 +111,21 @@ test('the timetable: smooth, waiting at each stop, the same for everyone', () =>
     assert.ok(Math.abs(waits - BUS.dwell * STOPS.length) < 1.5);
     assert.deepEqual(busAt(i, 77.7), busAt(i, 77.7 + LOOP_T));
   }
+});
+
+test('after a ride the boat you came on lies at your stop; nothing on the quay is in a gangway mouth', () => {
+  for (const s of STOPS)
+    for (const t of [0, 123.4, 99999.9]) {
+      const o = offsetFor(s.id, t);
+      assert.equal(busAt(0, t + o).at, s.id);
+      assert.equal(busAt(0, t + o - 0.1).at, null, 'it has just come in');
+    }
+  // Uptown's landing is off the esplanade's edge (boulevard.ts), its benches, lamps and trees clear of the gangway
+  const up = STOPS.find((s) => s.id === 'uptown')!;
+  assert.equal(up.quay, ESPLANADE[3]);
+  for (const x of [...BENCH_XS, ...EDGE_LAMPS.map((l) => l[0]), ...WATER_TREES.map((t) => t[0])]) assert.ok(Math.abs(x - up.door.x) > GANGWAY.half + 0.5, `something at ${x} in Uptown's gangway`);
+  // Pier 7's off the boardwalk: its lamps, benches and bollards clear of it
+  const p7 = STOPS.find((s) => s.id === 'pier7')!;
+  for (const x of [...LAMPS.map((l) => l[0]), ...BENCHES.filter((b) => b[1] < 130.5).map((b) => b[0]), ...BOLLARDS]) assert.ok(Math.abs(x - p7.door.x) > GANGWAY.half + 0.5, `something at ${x} in Pier 7's gangway`);
+  for (const s of STOPS) assert.ok(atGangway(s.bank, s.door.x) && !atGangway(s.bank, s.door.x + 1));
 });

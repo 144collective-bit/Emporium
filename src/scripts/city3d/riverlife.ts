@@ -21,6 +21,9 @@
  */
 import { laneAt } from './river';
 import { BOAT_LANES } from './liberty';
+import type { Hull } from './riverbus';
+
+export type { Hull };
 
 export type Pt = [number, number];
 
@@ -82,16 +85,6 @@ export function stadium(x0: number, x1: number, zn: number, zs: number, step = 0
   return pts;
 }
 
-/** The ring highway's bridges' piers across the river (z): half way between the boats' lanes; and their half depth (world.ts draws them) */
-export const BRIDGE_PIERS = [0, 1].map((k) => (BOAT_LANES[k] + BOAT_LANES[k + 1]) / 2);
-export const PIER_HALF = 0.9;
-
-/** A boat's size: its length, beam and how high its top stands over the water */
-export interface Hull {
-  len: number;
-  beam: number;
-  top: number;
-}
 
 /** The cruise boat: round the town's reach (eastward on the north line), its hull, its pace */
 export const CRUISE = { loop: loopOf(stadium(-105, 26, 87.7, 114.3)), hull: { len: 5.6, beam: 1.7, top: 1.65 } as Hull, v: 2.0, offset: 40 };

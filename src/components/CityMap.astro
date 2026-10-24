@@ -793,6 +793,22 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     <p class="taxi-text" data-metro-text></p>
     <button type="button" class="taxi-btn" data-metro-skip>Skip ride</button>
   </div>
+  {/* The river bus (riverbus-ui.ts, river plan step 4b): a pier's card with the other stops, and the bar while you ride */}
+  <section class="metro-card riverbus-card" data-riverbus hidden aria-labelledby="riverbus-title">
+    <div class="pop-head">
+      <p class="pop-title"><span class="metro-roundel riverbus-roundel" aria-hidden="true"></span> <span id="riverbus-title" data-riverbus-title>Pier</span></p>
+      <button type="button" class="pop-close" data-riverbus-close aria-label="Close the river bus card">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
+      </button>
+    </div>
+    <p class="metro-note">Sector 7 River Bus: pick a stop and ride. Free.</p>
+    <ul class="metro-list" data-riverbus-list></ul>
+  </section>
+  <div class="taxi-bar metro-bar riverbus-bar" data-riverbus-bar hidden aria-live="polite">
+    <span class="taxi-mark metro-mark riverbus-roundel" aria-hidden="true"></span>
+    <p class="taxi-text" data-riverbus-text></p>
+    <button type="button" class="taxi-btn" data-riverbus-skip>Skip ride</button>
+  </div>
   {/* The world map (worldmap.ts, growth plan Phase 8): the whole city drawn from the street plan, places,
       you, your car and aircraft and your waypoint; a card for what's tapped (waypoint, taxi, fast travel, bring my car) */}
   <section class="worldmap" data-worldmap hidden role="dialog" aria-modal="true" aria-labelledby="wm-title">

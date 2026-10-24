@@ -66,6 +66,9 @@ export const RAIL_GAPS: [number, number][] = [
   [PIER.neck[0], PIER.neck[2]],
   [MARKET_DECK[0], MARKET_DECK[2]],
 ];
+/** The ring highway's bridges' piers across the river (z): half way between the boats' lanes; and their half depth (world.ts draws them) */
+export const BRIDGE_PIERS = [0, 1].map((k) => (BOAT_LANES[k] + BOAT_LANES[k + 1]) / 2);
+export const PIER_HALF = 0.9;
 /** Is a point on a deck, `m` (a walker's radius) inside its edge */
 export const onDeck = (x: number, z: number, m = 0) => DECKS.some((r) => x > r[0] + m && x < r[2] - m && z > r[1] + m && z < r[3] - m);
 /** Over the water (past the river's wall): the deck that's drawn on piles */

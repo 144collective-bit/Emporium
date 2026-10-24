@@ -3,13 +3,13 @@
 // what's moored, and under the bridges with room to spare; a function of the clock.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BRIDGE_PIERS, CREW, CRUISE, DINGHIES, PIER_HALF, cruiseAt, hullCorners, loopOf, pointAlong, riverMovers, stadium, type Hull } from '../src/scripts/city3d/riverlife';
+import { CREW, CRUISE, DINGHIES, cruiseAt, hullCorners, loopOf, pointAlong, riverMovers, stadium, type Hull } from '../src/scripts/city3d/riverlife';
 import { WALK_W } from '../src/scripts/city3d/layout';
 import { LANDINGS, OBSTACLES, inRect } from './water';
 import { WATER_Y, inWater } from '../src/scripts/city3d/river';
 import { BOAT_LANES, BX, DECK_DEPTH, DECK_HALF, SHIP, lowY, shipAt } from '../src/scripts/city3d/liberty';
 import { DEPTH, HALF, HX, deckY } from '../src/scripts/city3d/harbour';
-import { boatZ } from '../src/scripts/city3d/waterfront';
+import { BRIDGE_PIERS, PIER_HALF, boatZ } from '../src/scripts/city3d/waterfront';
 import { riverBridges } from '../src/scripts/city3d/streetplan';
 
 test('loops: closed, smooth, and a point along them wraps', () => {

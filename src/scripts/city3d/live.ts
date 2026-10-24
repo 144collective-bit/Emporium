@@ -46,7 +46,7 @@ export const LIVE_PLACES = [
 ] as const satisfies readonly { id: string; name: string }[];
 export type LivePlaceId = (typeof LIVE_PLACES)[number]['id'];
 
-export type FeatureId = 'walk' | 'build' | 'drive' | 'fly' | 'karts' | 'fight' | 'guns' | 'taxi' | 'metro' | 'travel';
+export type FeatureId = 'walk' | 'build' | 'drive' | 'fly' | 'karts' | 'fight' | 'guns' | 'taxi' | 'metro' | 'riverbus' | 'travel';
 /** The features that can be closed, and what closing each one stops */
 export const LIVE_FEATURES: { id: FeatureId; name: string; stops: string }[] = [
   { id: 'walk', name: 'Walk mode', stops: 'Walking into the city (the Walk switch and every Walk in)' },
@@ -58,6 +58,7 @@ export const LIVE_FEATURES: { id: FeatureId; name: string; stops: string }[] = [
   { id: 'guns', name: 'Target practice', stops: 'The gun store counters' },
   { id: 'taxi', name: 'Taxis', stops: "The world map's Taxi here" },
   { id: 'metro', name: 'The metro', stops: 'The stations\' doors' },
+  { id: 'riverbus', name: 'The river bus', stops: 'Its piers\' gangways' },
   { id: 'travel', name: 'Fast travel', stops: "The world map's Fast travel" },
 ];
 
