@@ -128,11 +128,97 @@ them into the city.
      pill, mission tracker and guide step aside (`.is-econ-paused`), the
      business card and economy panels say online progress is coming.
      Builds without a game server leave all of it out.
-2. **Fight Club 1 v 1** with spectators and the queue.
-3. **The junkyard** with free for all and team deathmatch.
-4. **Kart races** online.
-5. **The online economy**: the online profile's Dorras, levels, shops and
-   missions run by the server.
+2. **Logging in** (A in "Profiles and logging in" below).
+3. **Settings and friends** (B below).
+4. **The online economy** (C below): the online profile's Dorras, levels,
+   shops and missions run by the server.
+5. **Fight Club 1 v 1** with spectators and the queue.
+6. **The junkyard** with free for all and team deathmatch.
+7. **Kart races** online.
+
+## Profiles and logging in
+
+The owner's picks (2026-10-24): a real login on the multiplayer server,
+built before the other modes, on the multiplayer branch and left unmerged
+until the owner picks multiplayer up again.
+
+### What the owner picked
+
+- **Three ways in, one profile**: a **username and password**, **Google**
+  or **Discord**, and a **wallet** (the login that exists today). Any of
+  them can be linked to the same profile from the profile card, so one
+  player logs in whichever way is to hand.
+- **Login required online**: multiplayer needs an account; single player
+  never asks for one. Guest play online is retired, and **everyone starts
+  fresh**: today's guest profiles aren't carried over. A wallet that
+  already has a profile keeps it (it's an account already) and is asked to
+  pick a username.
+- **Usernames are shown in game** (the owner's call, a change to "nothing a
+  player types ever shows": the username is the one thing, and it goes
+  through the filter below). The word-list names stay for the city's own
+  people and for an account whose name was removed.
+- **The username filter**: 3 to 16 letters, digits, `_` and `-`, unique
+  whatever the case; no rude words, links, wallet addresses or names that
+  pretend to be staff (admin, mod, official, Sector 7, Emporium...); and a
+  private blocked list held as a Cloudflare secret (`BLOCKED_NAMES`), so
+  the token's name is blocked without ever being written in the repo. The
+  server checks it on sign-up and rename; the browser checks it first to
+  say why.
+- **Forgot your password**: an email reset link. The email is asked for at
+  sign-up, kept private (never shown, never in a snapshot, only its owner
+  sees it on the profile card) and used for resets only. The sending
+  service is decided later: built for Resend's API behind a secret
+  (`EMAIL_API_KEY`); until one is added, "Forgot password" says it's coming
+  soon.
+- **The plan is Workers Paid** ($5 a month), so passwords are hashed
+  properly: PBKDF2-SHA256, 600,000 rounds, a salt each (Web Crypto, no
+  package).
+- **A profile carries**: name, look and score (today's profile), online
+  progress, settings and a friends list.
+
+### How it works
+
+- **Accounts** (the `Accounts` Durable Object, which already holds the
+  wallet logins and sessions) gains users: an id, the username, the
+  password's hash and salt, the email, and the ways in linked to it
+  (`pw:<username>`, `google:<id>`, `discord:<id>`, `wallet:<address>`).
+  Sessions stay as they are: a 30-day token, only its hash stored.
+- **Username and password**: `/auth/signup` (username, password, email),
+  `/auth/login`, `/auth/forgot` and `/auth/reset` (a one-time link for 30
+  minutes, `?reset=<token>` on the site opens a "New password" card). Five
+  wrong tries in 15 minutes locks that username and that address for a
+  while; the answer never says which of the two was wrong.
+- **Google and Discord**: the standard sign-in (OAuth 2 with PKCE): the
+  button goes to the provider, which comes back to
+  `/auth/google/callback` or `/auth/discord/callback`, checked against a
+  one-time `state`; only the provider's account id is kept (never their
+  name, picture or email). A first sign-in that way asks for a username.
+  Each needs an app registered with the provider (step-by-step
+  instructions in `server/README.md`) and its id and secret added in
+  Cloudflare (`GOOGLE_CLIENT_ID` / `_SECRET`, `DISCORD_CLIENT_ID` /
+  `_SECRET`).
+- **Wallet**: as today (one signed message, no transaction, no gas), now
+  a way into an account.
+- **Joining**: `/play` and `/games` refuse without a session; the room
+  opens the account's profile. The guest token is no longer sent.
+- **On screen**: the Multiplayer menu's first step, You, becomes Log in /
+  Sign up (username and password, Continue with Google, Continue with
+  Discord, Connect wallet) until you're logged in; then your username,
+  look and Log out. The header's Connect wallet button becomes **Log in**
+  and opens the same card, which also links the other ways in, changes
+  the username, password and email, and logs out. No outside links but
+  the providers' own sign-in pages.
+
+### Steps (each with the owner's sign-off)
+
+- **A. Logging in**: all of the above, login required online, the tests
+  (the filter, sessions, linking, the lock-out, the sign-in callbacks with
+  the providers faked).
+- **B. Settings and friends**: the Controls panel's settings, sound and
+  the view saved on the account; friends added from the players in your
+  game, a list showing who's online and in which game, with Join.
+- **C. Online progress**: the online economy (Dorras, levels, owned
+  things, missions) held by the server.
 
 ## Decisions
 
@@ -142,7 +228,7 @@ them into the city.
 | PvP places | Arena maps of their own (the junkyard first), walled off from the city; the Fight Club's ring. Never in the hangout city. |
 | PvP rules | 100 health, regen after a few seconds without damage, cartoon knock-out (no gore), respawn after 3 s with brief spawn protection, kill feed ("tagged"). |
 | Room size | Up to 16 players per city; more cities ("City 1", "City 2"…) open automatically. |
-| Identity | Generated player names (vetted word lists, rerollable). Guests keep a profile per browser; logging in with a wallet (one signed message, no gas) gives a profile per wallet that follows the player to any browser. A wallet's first login starts fresh. |
+| Identity | Until logging in (step 2) is built: generated player names (vetted word lists, rerollable), a guest profile per browser, or a profile per wallet. Then (the owner's call): an account is needed online, logged into with a username and password, Google, Discord or a wallet, all linkable to one profile; the username, filtered, is the name others see; everyone starts fresh. |
 | Chat | Emote wheel and fixed phrases only. Nothing typed ever appears in public. Players can mute others. |
 | What others see | Outfit and colours, the gun they carry and its finish, name tag, rank badge. |
 | Saved | Server-side player profiles (name, outfit, finish, lifetime score, rank), and the online profile's own progress, starting fresh (above); daily and weekly leaderboards (no prizes). |
@@ -222,10 +308,14 @@ Visitor's browser                         Cloudflare (server/)
 - Nothing confidential: no token name, ticker or launch details in names,
   phrases, server code, logs or commit messages.
 - Guest names come only from vetted word lists; phrases are a fixed list.
+  Once logging in is built, the username is the one thing a player types
+  that others see, and only through the filter (above).
 - Scores, ranks and finishes are cosmetic: no prizes or token tie-ins.
 
 ## Open questions (later)
 
 - Leaderboard reset time (UTC or owner's time zone).
 - The junkyard's look and layout (designed with the owner before step 3).
-- When the wallet arrives: how a guest profile links to a wallet.
+- Which email service sends the reset links (built for Resend's API).
+- Whether the email is required at sign-up or optional (without it a
+  forgotten password can only be reset through another linked way in).
