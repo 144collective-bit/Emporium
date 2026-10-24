@@ -103,13 +103,13 @@ test('each tier stands on the one below and inside it; the podium a double-heigh
     const pod = t.parts.find((p) => p.skin === 'podium');
     if (t.design === 'spire' || t.design === 'flatiron') assert.ok(!pod, `${t.id} stands without a podium`);
     else {
-      assert.ok(pod && pod.y0 === 0 && pod.y1 === PODIUM.h, `${t.id}'s podium`);
+      assert.ok(pod && pod.y0 === 0 && pod.y1 === (t.base?.h ?? PODIUM.h), `${t.id}'s podium (or its base)`);
       for (const s of shafts(t)) assert.ok(inside(s.rect, pod.rect, 0.5), `${t.id}'s shaft over its podium`);
     }
     if (t.design === 'twin') {
       const [a, b] = shafts(t);
       assert.ok(!overlap(a.rect, b.rect) && a.y0 === b.y0, 'two shafts side by side');
-      assert.ok(t.bridge && t.bridge.y0 > PODIUM.h + 4 && t.bridge.y1 < Math.min(a.y1, b.y1), 'a skybridge between them');
+      assert.ok(t.bridge && t.bridge.y0 > (t.base?.h ?? PODIUM.h) + 3 && t.bridge.y1 < Math.min(a.y1, b.y1), 'a skybridge between them, over the base');
       continue;
     }
     const sh = shafts(t);
@@ -230,4 +230,22 @@ test('the flying traffic keeps well over the towers', () => {
         if (d < REACH[f.kind] + 4) assert.ok(p.y > h.tip + 4, `${f.id} at ${p.y.toFixed(1)} over ${h.id} (its tip ${h.tip}) at t ${t}`);
       }
     }
+});
+
+test('the street wall (Phase 7): most towers on a mid-rise base of 6 to 12 in masonry, the shaft on its roof; the river row keeps its low podiums', () => {
+  const based = HIGHRISES.filter((t) => t.base);
+  assert.ok(based.length >= 14, `${based.length} on bases`);
+  for (const t of based) {
+    const pod = t.parts[0];
+    assert.equal(pod.skin, 'podium', `${t.id}'s base is its podium raised`);
+    assert.ok(t.base!.h >= 6 && t.base!.h <= 12, `${t.id}'s base ${t.base!.h} high`);
+    assert.ok(['limestone', 'brick', 'granite'].includes(t.base!.skin));
+    // The shafts start on its roof and rise well over it
+    for (const s of shafts(t)) assert.ok(s.y0 >= t.base!.h - 1e-9, `${t.id}'s shaft from the base's roof`);
+    assert.ok(t.roof >= t.base!.h + 9, `${t.id}: a tower over its base`);
+    assert.ok(!t.block.startsWith('uptown-s'), `${t.id}: the river row keeps its terraces`);
+  }
+  for (const t of HIGHRISES.filter((q) => q.design === 'spire' || q.design === 'flatiron' || q.block.startsWith('uptown-s'))) assert.ok(!t.base, `${t.id} stands as it is`);
+  // Bases of every masonry
+  assert.deepEqual([...new Set(based.map((t) => t.base!.skin))].sort(), ['brick', 'granite', 'limestone']);
 });

@@ -26,7 +26,7 @@ import * as THREE from 'three';
 import { Batch, FONT_DISPLAY, canvasTex, lit, neon, rng, shadeHex, siteMat, toon } from './kit';
 import { SLAB, type Tick } from './world';
 import { site } from './tilework';
-import { GROUND, HIGHRISES, OCT_CUT, PODIUM, ROOF_PAD, type Highrise, type Part, type Skin } from './highrise';
+import { GROUND, HIGHRISES, OCT_CUT, PODIUM, ROOF_PAD, type Highrise, type Masonry, type Part, type Skin } from './highrise';
 import { CORE, CORE_RECT, DECK, RIBS, SPIRE, VIEWERS } from './skydeck';
 import { OFFICE, OFFICE_GLSL, beaconOn, officeShare } from './skyline';
 import type { Pt, Rect } from './uptown';
@@ -124,6 +124,58 @@ function skinBand(c: CanvasRenderingContext2D, skin: Skin, y0: number, glow: boo
       c.fillRect(0, y, W_PX, 7);
       c.fillStyle = mullion;
       c.fillRect(0, y + 6, W_PX, 1.5);
+    }
+  }
+}
+
+/**
+ * The street wall's masonry (Phase 7): a floor to a row and a bay to a column as the skins, punched windows lit at
+ * night from the light map (switched with the offices'): pale limestone with sills and coursing, red brick with
+ * white frames and soldier courses, dark granite with tall bronze-framed windows
+ */
+const MASONRY: Masonry[] = ['limestone', 'brick', 'granite'];
+function masonryBand(c: CanvasRenderingContext2D, kind: Masonry, y0: number, glow: boolean, seed: number) {
+  const r = rng(seed);
+  const wall = kind === 'limestone' ? '#d9ccb0' : kind === 'brick' ? '#9a4a3c' : '#4a4658';
+  c.fillStyle = glow ? '#000' : wall;
+  c.fillRect(0, y0, W_PX, BAND_PX);
+  for (let row = 0; row < ROWS; row++) {
+    const y = y0 + row * PX_H;
+    if (!glow) {
+      // The coursing: stone joints, brick's mortar lines, granite's polished panels
+      c.fillStyle = kind === 'limestone' ? '#c6b796' : kind === 'brick' ? '#7d3a30' : '#3c3949';
+      if (kind === 'brick') for (let yy = y + 4; yy < y + PX_H; yy += 6) c.fillRect(0, yy, W_PX, 1);
+      else c.fillRect(0, y + PX_H - 3, W_PX, 2);
+      if (kind === 'limestone') for (let x = (row % 2) * 24; x < W_PX; x += 48) c.fillRect(x, y, 1, PX_H);
+    }
+    // A window to every bay
+    for (let col = 0; col < COLS; col++) {
+      const x = col * PX_W;
+      const [wx, wy, ww, wh] = kind === 'granite' ? [x + 9, y + 6, PX_W - 18, PX_H - 14] : [x + 11, y + 12, PX_W - 22, PX_H - 24];
+      const on = r() < 0.5 ? LIGHTS[Math.floor(r() * LIGHTS.length)] : null;
+      if (glow) {
+        if (on) {
+          c.fillStyle = on;
+          c.fillRect(wx + 2, wy + 2, ww - 4, wh - 4);
+        }
+        continue;
+      }
+      // Its frame, the glass with the sky down it, a mullion, the sill (the lintel over a brick one)
+      c.fillStyle = kind === 'limestone' ? '#8f8670' : kind === 'brick' ? '#f1ece2' : '#a8873a';
+      c.fillRect(wx, wy, ww, wh);
+      const g = c.createLinearGradient(0, wy, 0, wy + wh);
+      g.addColorStop(0, '#6f86b4');
+      g.addColorStop(1, '#2b3556');
+      c.fillStyle = g;
+      c.fillRect(wx + 2, wy + 2, ww - 4, wh - 4);
+      c.fillStyle = kind === 'limestone' ? '#8f8670' : kind === 'brick' ? '#f1ece2' : '#a8873a';
+      c.fillRect(wx + ww / 2 - 1, wy, 2, wh);
+      c.fillStyle = kind === 'brick' ? '#c9b48a' : shadeHex(wall, 0.12);
+      c.fillRect(wx - 3, wy + wh, ww + 6, 4);
+      if (kind === 'brick') {
+        c.fillStyle = '#6e3026';
+        c.fillRect(wx - 2, wy - 6, ww + 4, 5);
+      }
     }
   }
 }
@@ -299,7 +351,7 @@ function ribbonBand(c: CanvasRenderingContext2D, y0: number, glow: boolean) {
 }
 
 const ATLAS = (() => {
-  const rows: [string, number][] = [...SKINS.map((k): [string, number] => [k, BAND_PX]), ['atrium', PODIUM_PX], ['bronze', GROUND_PX], ['shops', GROUND_PX], ['service', PODIUM_PX], ['ribbon', RIBBON_PX]];
+  const rows: [string, number][] = [...SKINS.map((k): [string, number] => [k, BAND_PX]), ...MASONRY.map((k): [string, number] => [k, BAND_PX]), ['atrium', PODIUM_PX], ['bronze', GROUND_PX], ['shops', GROUND_PX], ['service', PODIUM_PX], ['ribbon', RIBBON_PX]];
   const tops: Record<string, number> = {};
   let H = 0;
   for (const [k, h] of rows) {
@@ -308,6 +360,7 @@ const ATLAS = (() => {
   }
   const draw = (glow: boolean) => (c: CanvasRenderingContext2D) => {
     SKINS.forEach((k, i) => skinBand(c, k, tops[k], glow, 900 + i));
+    MASONRY.forEach((k, i) => masonryBand(c, k, tops[k], glow, 950 + i));
     atriumBand(c, tops.atrium, glow);
     bronzeBand(c, tops.bronze, glow);
     shopsBand(c, tops.shops, glow);
@@ -323,9 +376,9 @@ const ATLAS = (() => {
   // (canvas textures are flipped: the canvas's top row is v = 1; each band keeps a pixel off its edges)
   const band = (top: number, h: number, tw: number, th: number): Band => ({ v0: 1 - (top + h - 1) / H, vh: (h - 2) / H, tw, th });
   const mat = siteMat('uptown-glass', lit(toon('#ffffff', { map, emissiveMap, emissive: '#ffffff' }), 0.12, 1));
-  // The offices' lights (skyline.ts): on the skins' bands only (the lobbies and shops stay lit), each section of a few
-  // bays a floor high on while its own number is under the hour's share
-  const skinV = 1 - (SKINS.length * BAND_PX) / H;
+  // The offices' lights (skyline.ts): on the skins' and the bases' bands only (the lobbies and shops stay lit), each
+  // section of a few bays a floor high on while its own number is under the hour's share
+  const skinV = 1 - ((SKINS.length + MASONRY.length) * BAND_PX) / H;
   mat.onBeforeCompile = (sh) => {
     sh.uniforms.uOffice = OFFICE_U;
     sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vOfficeW;').replace(
@@ -350,6 +403,7 @@ const ATLAS = (() => {
   return {
     mat,
     skin: Object.fromEntries(SKINS.map((k) => [k, band(tops[k], BAND_PX, BAY * COLS, FLOOR * ROWS)])) as Record<Skin, Band>,
+    masonry: Object.fromEntries(MASONRY.map((k) => [k, band(tops[k], BAND_PX, BAY * COLS, FLOOR * ROWS)])) as Record<Masonry, Band>,
     atrium: band(tops.atrium, PODIUM_PX, GROUND_W, PODIUM.h),
     bronze: band(tops.bronze, GROUND_PX, GROUND_W, GROUND.h),
     shops: band(tops.shops, GROUND_PX, GROUND_W, GROUND.h),
@@ -483,6 +537,8 @@ const PIER = toon('#3a364c');
 const PAD = toon('#2a2740');
 const PAD_MARK = toon('#f2c94c');
 const PAD_LIGHT = neon('#33ff88', 0.2, 1.6);
+/** The bases' string courses and cornices, a shade off their walls */
+const CORNICE: Record<Masonry, THREE.Material> = { limestone: toon('#efe6d0'), brick: toon('#d9ccb0'), granite: toon('#8f8aa3') };
 /** Lit trims: a slab's band, a deco tower's gold edges, a drum's ring, the spire's lantern; warning lights at the tips */
 const TRIM: Record<Skin, THREE.Material> = {
   // (lived-in night, the owner's pick: crowns in white and gold, cool white on blue and silver glass, warm on black)
@@ -590,7 +646,7 @@ function tower(b: Batch, t: Highrise, low: boolean) {
       if (shaftsR.some((q) => x > q[0] - 1.2 && x < q[2] + 1.2 && z > q[1] - 1.2 && z < q[3] + 1.2)) continue;
       // (nor on a restaurant terrace: boulevard.ts)
       if (ROOF_TERRACES.some(({ rect: q }) => x > q[0] - 0.8 && x < q[2] + 0.8 && z > q[1] - 0.8 && z < q[3] + 0.8)) continue;
-      b.box(x - 0.5, SLAB + PODIUM.h, z - 0.4, 1.0, 0.6, 0.8, STEEL);
+      b.box(x - 0.5, SLAB + pod.y1, z - 0.4, 1.0, 0.6, 0.8, STEEL);
     }
   });
 }
@@ -617,6 +673,16 @@ const normalOf = (a: Pt, c: Pt): Pt => {
 function podium(b: Batch, t: Highrise, p: Part) {
   const G = SLAB + GROUND.h;
   const H = SLAB + PODIUM.h;
+  // The street wall's base (Phase 7): its masonry from the podium's top to its own, a string course over the ground
+  // floors and a cornice round its top (the roof and parapet are every part's)
+  if (t.base) {
+    const top = SLAB + p.y1;
+    const line = outline(p);
+    walls(b, ATLAS.masonry[t.base.skin], line, H, top - 0.35);
+    walls(b, ATLAS.masonry[t.base.skin], shrink(line, -0.03), top - 0.35, top, 0.5);
+    rim(b, shrink(line, -0.1), H - 0.06, 0.2, 0.14, CORNICE[t.base.skin]);
+    rim(b, shrink(line, -0.16), top - 0.5, 0.32, 0.2, CORNICE[t.base.skin]);
+  }
   for (const { f, a, c } of sides(p.rect)) {
     if (f === OPPOSITE[t.front]) {
       wall(b, ATLAS.service, a, c, SLAB, H, 0);
