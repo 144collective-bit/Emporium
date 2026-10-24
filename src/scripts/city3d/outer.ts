@@ -344,7 +344,6 @@ export const PROMENADE = {
 export const JETTIES: { x: number; bank: 'north' | 'south' }[] = [
   { x: 31, bank: 'north' },
   { x: 92, bank: 'north' },
-  { x: -34, bank: 'south' },
   { x: 55, bank: 'south' },
 ];
 /** Off the bridges: a promenade feature at x is clear of every road crossing the river (layout.ts `BRIDGED_NS`: Harbour Bridge, its anchorages and its towers' piers, harbour.ts) */

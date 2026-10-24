@@ -64,7 +64,7 @@ export const MOOR_OFF = 0.55;
 /** The odd boat tied up: alongside a jetty's end, its bow upstream, clear of the lanes the river's boats run in */
 export const MOORED: Moored[] = [
   { x: 92, z: 0, yaw: 0, color: '#4fb0ff' },
-  { x: -34, z: 0, yaw: Math.PI, color: '#f3f2f7' },
+  { x: 55, z: 0, yaw: Math.PI, color: '#f3f2f7' },
 ].map((m) => {
   const j = JETTIES.find((q) => q.x === m.x)!;
   // The deck reaches 0.65 out from the promenade's rail (neighbourhoods.ts); the boat lies past its end

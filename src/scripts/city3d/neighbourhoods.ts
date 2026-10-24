@@ -13,6 +13,7 @@
 import * as THREE from 'three';
 import { Batch, PAL, neon, toon } from './kit';
 import { BENDS, BEND_REACH, JETTIES, LAWN_TREES, OUTER_PARKS, PROMENADE, SQUARE_LAYOUTS, offBridges, offFootbridge, type Pt, type SquareLayout } from './outer';
+import { atGangway } from './riverbus';
 import { EW_ROADS, LANE, NS_ROADS, RIVER } from './layout';
 import { WATER_Y, pullAt } from './river';
 import { BX as LIBERTY_X, DECK_HALF } from './liberty';
@@ -230,7 +231,8 @@ function promenade(b: Batch, low: boolean) {
     for (let x = x0; x <= x1 + 0.01; x += step) {
       // (none where the water pulls back from the quay line, river.ts: the cove's beach opens off the promenade)
       // (and open where Liberty Bridge's approaches land on the promenades)
-      const open = offBridges(x, 0.3) && Math.abs(x - LIBERTY_X) > DECK_HALF + 0.3 && !deckAt(x) && pullAt(bank, x) < 0.3;
+      // (and at the river bus's gangways, riverbus.ts)
+      const open = offBridges(x, 0.3) && Math.abs(x - LIBERTY_X) > DECK_HALF + 0.3 && !deckAt(x) && !atGangway(bank, x, 0.05) && pullAt(bank, x) < 0.3;
       if (open) {
         // (the posts near only: the rails still draw the line from far away)
         b.detail(() => box(b, x - 0.04, 0, edge - 0.04, x + 0.04, 0.55, edge + 0.04, rail));
@@ -246,13 +248,13 @@ function promenade(b: Batch, low: boolean) {
     }
     // Trees in planters and benches facing the water, between the lamps (which stand every 6 from x0)
     for (let x = x0 + 3; x < x1; x += 12) {
-      if (!offBridges(x, 1.2) || !offFootbridge(x, 1.2) || deckAt(x)) continue;
+      if (!offBridges(x, 1.2) || !offFootbridge(x, 1.2) || deckAt(x) || atGangway(bank, x, 1.4)) continue;
       const z = (inner + edge) / 2 - toWater * 0.15;
       cyl(b, 0.42, 0.4, x, 0, z, toon('#6e6a8c'), 10);
       addTree(x, z, 0.8, false, 0.4);
     }
     for (let x = x0 + 9; x < x1; x += 12) {
-      if (!offBridges(x, 1.2) || !offFootbridge(x, 1.2) || deckAt(x)) continue;
+      if (!offBridges(x, 1.2) || !offFootbridge(x, 1.2) || deckAt(x) || atGangway(bank, x, 1.4)) continue;
       bench(b, [x, edge - toWater * 0.75], toWater > 0 ? 0 : Math.PI, 0.02);
     }
     // Viewing decks out over the water, with a rail round them

@@ -74,7 +74,9 @@ import { JETTY, RIM, inLake, onJetty, onTerrace, terraceY } from './westlake';
 import { GATE, bridgeWall, bridgeY } from './stadium';
 import { skyDeckWall, skyDeckY, upOnDeck } from './skydeck';
 import { WORLD_BOUNDS } from './layout';
-import { inChannel, inWater, shoreY } from './river';
+import { WATER_Y, inChannel, inWater, shoreY } from './river';
+import { HIRE } from './riverbus';
+import type { Boat } from './boat';
 import { harbourY, onHarbour } from './harbour';
 import { PLAN, inPoly, type Pt } from './streetplan';
 import { SPOTS, pointOn, ROUTES } from './routes';
@@ -85,13 +87,13 @@ import { live } from './live-client';
 import type { FeatureId } from './live';
 
 /** What a prompt can open: a landmark's door, or one of walk mode's own places and vehicles */
-type Near = SpotId | 'gear' | 'garage' | 'hangar' | 'car' | 'plane' | 'karts' | 'trainer' | `place:${string}`;
+type Near = SpotId | 'gear' | 'garage' | 'hangar' | 'car' | 'plane' | 'boat' | 'karts' | 'trainer' | `place:${string}`;
 /** The prompts the owner can close (live settings, live.ts) and the feature that closes each */
-const GATED: Partial<Record<Near, FeatureId>> = { gear: 'guns', garage: 'drive', hangar: 'fly', karts: 'karts', trainer: 'fight' };
+const GATED: Partial<Record<Near, FeatureId>> = { gear: 'guns', garage: 'drive', hangar: 'fly', karts: 'karts', trainer: 'fight', boat: 'boat' };
 /** Prompts that say their own label (the rest say "Enter ...") */
 /** The landmarks' doors and Trench Avenue's (their prompts open their panels) */
 const ALL_DOORS = [...DOORS, ...AVENUE_DOORS, { id: 'stadium' as const, ...GATE.spot }];
-const OWN_LABEL = new Set<string>(['gear', 'garage', 'hangar', 'car', 'plane', 'karts', 'trainer']);
+const OWN_LABEL = new Set<string>(['gear', 'garage', 'hangar', 'car', 'plane', 'boat', 'karts', 'trainer']);
 /** The hangar menu's shot: from the doors, looking in at your aircraft */
 const HANGAR_VIEW = { eye: new THREE.Vector3(HANGAR_SPOT.x - 6.5, 3.4, HANGAR_SPOT.z + 12.5), at: new THREE.Vector3(HANGAR_SPOT.x, 1.2, HANGAR_SPOT.z) };
 
@@ -347,13 +349,14 @@ export function createWalk(d: WalkDeps) {
   const act = () => {
     if (!near) return;
     // Closed for now by the owner (live settings): getting into things, never out of them
-    const f = near.id === 'car' ? (drive.active ? null : 'drive') : near.id === 'plane' ? (fly.active ? null : 'fly') : GATED[near.id];
+    const f = near.id === 'car' ? (drive.active ? null : 'drive') : near.id === 'plane' ? (fly.active ? null : 'fly') : near.id === 'boat' ? (boating() ? null : 'boat') : GATED[near.id];
     const shut = f && live.closed(f);
     if (shut) return d.game.toast(shut, 3000);
     if (near.id === 'gear') shop.show(near.label === ARMS.name ? ARMS.name : 'Armoury');
     else if (near.id === 'garage') garageUI.show();
     else if (near.id === 'hangar') hangarUI.show();
     else if (near.id === 'plane') (fly.active ? leavePlane() : board());
+    else if (near.id === 'boat') (boating() ? leaveBoat() : takeBoat());
     else if (near.id === 'karts') void loadKarts().then(() => kartUI.show());
     else if (near.id === 'trainer') fightUI.show();
     else if (near.id === 'car') (drive.active ? getOut() : getIn());
@@ -624,6 +627,14 @@ export function createWalk(d: WalkDeps) {
       kartUI = makeKartUI(createKartUI);
       karts = makeKartRace(createKartRace);
     }));
+  /** Your hire boat (boat.ts, river plan step 4c): its own chunk, loaded the first time you take it */
+  let boat: Boat | null = null;
+  let boatLoad: Promise<Boat> | null = null;
+  const boating = () => !!boat?.active;
+  const loadBoat = () =>
+    (boatLoad ??= import('./boat').then(({ createBoat }) =>
+      (boat = createBoat({ scene: d.scene, camera, root, outfit: () => outfit, cameraRoom, lanes: () => bodies.boats, sfx: (k, g) => d.sfx(k, g), engine: (r) => d.engine(r), reduced: d.reduced }))
+    ));
   /** Near enough the park to fetch them (its land and a margin) */
   const nearKarts = (x: number, z: number) => x > KART_PARK.x0 - 80 && x < KART_PARK.x1 + 80 && z > KART_PARK.z0 - 80 && z < KART_PARK.z1 + 80;
   const makeKartUI = (createKartUI: typeof import('./kart-ui').createKartUI) => createKartUI(root, {
@@ -885,6 +896,35 @@ export function createWalk(d: WalkDeps) {
     }
     standAt(out);
   }
+  /** Down the ladder into the hire boat (the gun is holstered) */
+  function takeBoat() {
+    if (drive.active || karts.active || fly.active || ride) return;
+    void loadBoat()
+      .then((b) => {
+        if (!active || drive.active || fly.active || karts.active || ride || fighting()) return;
+        if (combat.armed) combat.toggleHolster();
+        if (!b.enter()) return;
+        keys.clear();
+        vel.set(0, 0);
+        jumpHeld = false;
+        setAim(false);
+        combat.trigger(false);
+        combat.trigger(false, true);
+        hero.g.visible = hero.ring.visible = false;
+        near = null;
+        d.touched();
+      })
+      .catch(() => d.game.toast('The boat hire is closed for a moment: try again', 2500));
+  }
+  /** Out of it: only alongside a landing (or at its mooring), stopped */
+  function leaveBoat() {
+    const out = boat?.exit();
+    if (!out) {
+      d.game.toast('Bring it alongside a landing and stop, then get out.', 2500);
+      return;
+    }
+    standAt(out);
+  }
   /** Degen steps out of a vehicle, looking the way it faces */
   function standAt(out: { x: number; z: number; yaw: number }) {
     pos.set(out.x, groundAt(out.x, out.z), out.z);
@@ -915,6 +955,11 @@ export function createWalk(d: WalkDeps) {
   /* ---------- Input ---------- */
 
   const look = (dx: number, dy: number, k: number) => {
+    if (boat?.active) {
+      boat.look(dx * k * settings.sens, dy * k * settings.sens * (settings.invert ? -1 : 1));
+      d.touched();
+      return;
+    }
     if (fly.active) {
       fly.look(dx * k * settings.sens, dy * k * settings.sens * (settings.invert ? -1 : 1));
       d.touched();
@@ -975,6 +1020,19 @@ export function createWalk(d: WalkDeps) {
         if (down && !e.repeat) fightBtns.dodge = true;
       } else if (c === 'ShiftLeft' || c === 'ShiftRight') fightBtns.block = down;
       else if (down && !e.repeat && c === 'KeyG') fightBtns.kick = true;
+      else if (MOVE.includes(c)) {
+        if (down) keys.add(c);
+        else keys.delete(c);
+      } else return false;
+      d.touched();
+      e.preventDefault();
+      return true;
+    }
+    // Boating: W / S ahead and astern, A / D steer, V swaps camera, H the horn, F gets out (alongside a landing)
+    if (boat?.active) {
+      if (down && !e.repeat && c === 'KeyF') act();
+      else if (down && !e.repeat && c === 'KeyV') boat.toggleView();
+      else if (down && !e.repeat && c === 'KeyH') boat.horn();
       else if (MOVE.includes(c)) {
         if (down) keys.add(c);
         else keys.delete(c);
@@ -1210,7 +1268,8 @@ export function createWalk(d: WalkDeps) {
   }
   // The horn while driving your car (city life plan, Phase 2)
   $('[data-drive-horn]').addEventListener('pointerdown', () => {
-    drive.horn();
+    if (boat?.active) boat.horn();
+    else drive.horn();
     d.touched();
   });
   // Touch while karting: Drift held, Item tapped (the stick steers, the pedals pedal)
@@ -1377,6 +1436,17 @@ export function createWalk(d: WalkDeps) {
       if (edge(0)) fightBtns.dodge = true;
       if (edge(9)) quitFight();
       if (pad.x || pad.y || b.some(Boolean)) d.touched();
+      pad.prev = b;
+      return;
+    }
+    // Boating: left stick steers, RT ahead, LT astern, Y gets out, View swaps camera, the left stick pressed is the horn
+    if (boat?.active) {
+      padDrive.steer = pad.x;
+      padDrive.throttle = (gp.buttons[7]?.value ?? 0) - (gp.buttons[6]?.value ?? 0);
+      if (edge(3)) act();
+      if (edge(8)) boat.toggleView();
+      if (edge(10)) boat.horn();
+      if (pad.x || padDrive.throttle || b.some(Boolean)) d.touched();
       pad.prev = b;
       return;
     }
@@ -1568,6 +1638,34 @@ export function createWalk(d: WalkDeps) {
     }
   }
 
+  /** On the water in the hire boat: steer and throttle as in the car; Get out once it lies stopped alongside a landing */
+  function boatFrame(dt: number, t: number) {
+    const k = (a: string, b: string) => (keys.has(a) || keys.has(b) ? 1 : 0);
+    let steer = k('KeyD', 'ArrowRight') - k('KeyA', 'ArrowLeft');
+    let throttle = k('KeyW', 'ArrowUp') - k('KeyS', 'ArrowDown');
+    if (joy.id >= 0) {
+      steer = joy.x;
+      if (!pedals.gas && !pedals.brake) throttle = -joy.y;
+    }
+    if (pedals.gas || pedals.brake) throttle = (pedals.gas ? 1 : 0) - (pedals.brake ? 1 : 0);
+    if (padDrive.steer) steer = padDrive.steer;
+    if (padDrive.throttle) throttle = padDrive.throttle;
+    const b = boat!;
+    b.update(dt, { throttle, steer });
+    const s = b.state;
+    pos.set(s.x, WATER_Y + 0.5, s.z);
+    speedNow = Math.hypot(s.vx, s.vz);
+    hero.g.visible = hero.ring.visible = false;
+    combat.update(dt, t, false);
+    combat.view(dt, t, { firstPerson: false, aim: false, move: 0, phase: 0, run: 0, air: 0 });
+    const want = b.canLeave ? { id: 'boat' as const, label: 'Get out' } : null;
+    if (near?.id !== want?.id) {
+      near = want;
+      prompt.hidden = !near;
+      if (near) prompt.querySelector('[data-walk-label]')!.textContent = near.label;
+    }
+  }
+
   /**
    * Riding (a taxi or the metro, growth plan Phase 8): the ride moves Degen (hidden in it) and its own
    * camera; the keys and the stick wait, the rest of the city carries on
@@ -1690,6 +1788,7 @@ export function createWalk(d: WalkDeps) {
     if (karts.active) return kartFrame(dt, t);
     if (!kartLoad && nearKarts(pos.x, pos.z)) void loadKarts();
     karts.idle(dt);
+    if (boat?.active) return boatFrame(dt, t);
     if (fly.active) return flyFrame(dt, t);
     fly.idle(dt);
     if (drive.active) return driveFrame(dt, t);
@@ -2048,6 +2147,11 @@ export function createWalk(d: WalkDeps) {
           best = { id: `place:${p.id}`, label: p.label };
           bestD = 0;
         }
+    // The hire boat's ladder by Downtown's landing (river plan step 4c)
+    if (!drive.active && Math.hypot(HIRE.door.x - pos.x, HIRE.door.z - pos.z) < 1) {
+      best = { id: 'boat', label: 'Take a boat' };
+      bestD = 0;
+    }
     // The hangar office's door at the airport
     if (Math.hypot(HANGAR_DOOR.x - pos.x, HANGAR_DOOR.z - pos.z) < 1.2) {
       best = { id: 'hangar', label: 'Hangar' };
@@ -2111,7 +2215,7 @@ export function createWalk(d: WalkDeps) {
     },
     /** On foot (not driving, flying, karting, fighting or riding): free to take a taxi or travel */
     get onFoot() {
-      return active && !drive.active && !fly.active && !karts.active && !fighting() && !ride;
+      return active && !drive.active && !fly.active && !boating() && !karts.active && !fighting() && !ride;
     },
     /** In a taxi or on the metro */
     get riding() {
@@ -2119,7 +2223,7 @@ export function createWalk(d: WalkDeps) {
     },
     /** Start a ride (on foot only: false otherwise), or end it (null: Degen stands where the ride left him) */
     setRide(r: Ride | null) {
-      if (r && (ride || drive.active || fly.active || karts.active || fighting())) return false;
+      if (r && (ride || drive.active || fly.active || boating() || karts.active || fighting())) return false;
       ride = r;
       keys.clear();
       jumpHeld = false;
@@ -2147,7 +2251,7 @@ export function createWalk(d: WalkDeps) {
     },
     /** Stand Degen somewhere else at once, looking the way he faces (fast travel, the end of a taxi or metro ride) */
     placeAt(at: { x: number; z: number; yaw: number; y?: number }) {
-      if (ride || drive.active || fly.active || karts.active || fighting()) return false;
+      if (ride || drive.active || fly.active || boating() || karts.active || fighting()) return false;
       // (`y`: up somewhere, the sky deck's floor over the slab: the lift)
       pos.set(at.x, groundAt(at.x, at.z, at.y === undefined ? 0 : SLAB + at.y), at.z);
       vel.set(0, 0);
@@ -2194,12 +2298,12 @@ export function createWalk(d: WalkDeps) {
     },
     /** What other players need to see of us, for the game server */
     netState() {
-      const mode: Mode = ride ? 'ride' : fly.active ? 'fly' : karts.active ? 'kart' : drive.active ? 'drive' : fighting() ? 'fight' : 'walk';
+      const mode: Mode = ride ? 'ride' : fly.active ? 'fly' : karts.active ? 'kart' : drive.active || boating() ? 'drive' : fighting() ? 'fight' : 'walk';
       return { pos, face, pitch, speed: speedNow, air: !grounded, run: runAmt > 0.5, aim: aimNow, mode };
     },
     /** The server put us back (we moved somewhere impossible); only on foot (a car, a kart, an aircraft or a ride says where Degen is) */
     fix(x: number, y: number, z: number) {
-      if (ride || drive.active || fly.active || karts.active || fighting()) return;
+      if (ride || drive.active || fly.active || boating() || karts.active || fighting()) return;
       pos.set(x, y, z);
       vel.set(0, 0);
     },
@@ -2251,6 +2355,8 @@ export function createWalk(d: WalkDeps) {
         else fly.abandon(loadPlane());
       }
       hangarUI.close();
+      // On the water: the hire boat goes home
+      boat?.abandon();
       // ...and a kart race is abandoned too
       if (karts.active) {
         kartUI.close();

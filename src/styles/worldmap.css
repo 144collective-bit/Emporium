@@ -576,6 +576,28 @@
 .metro-mark {
   padding: 0;
 }
+/* The river bus's mark: a cyan roundel with a bar across it (its boards' mark) */
+.riverbus-roundel {
+  position: relative;
+  background: #1fb5d6;
+}
+.riverbus-roundel::after {
+  content: "";
+  position: absolute;
+  left: 3px;
+  right: 3px;
+  top: 50%;
+  height: 4px;
+  margin-top: -2px;
+  border-radius: 1px;
+  background: #122a3e;
+}
+.riverbus-card,
+.metro-bar.riverbus-bar {
+  background:
+    linear-gradient(#100d1ef5, #100d1ef5) padding-box,
+    linear-gradient(135deg, #1fb5d6, #8000ff) border-box;
+}
 .metro-note {
   margin: 0;
   font-size: 12.5px;
