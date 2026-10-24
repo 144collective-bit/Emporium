@@ -55,7 +55,7 @@ const GLASS: Record<Skin, { wall: string; mullion: string }> = {
 /** Lights in the offices at night: warm white and cool white */
 const LIGHTS = ['#ffe6b0', '#ffe6b0', '#fff3d6', '#dff0ff'];
 
-interface Band {
+export interface Band {
   v0: number;
   vh: number;
   tw: number;
@@ -459,7 +459,7 @@ function ribbonBand(c: CanvasRenderingContext2D, y0: number, glow: boolean) {
   }
 }
 
-const ATLAS = (() => {
+export const ATLAS = (() => {
   const rows: [string, number][] = [...SKINS.map((k): [string, number] => [k, BAND_PX]), ...MASONRY.map((k): [string, number] => [k, BAND_PX]), ['atrium', PODIUM_PX], ['bronze', GROUND_PX], ['service', PODIUM_PX], ['ribbon', RIBBON_PX], ['luxe', GROUND_PX], ['dining', GROUND_PX], ['local', GROUND_PX], ['grand', PODIUM_PX]];
   const tops: Record<string, number> = {};
   let H = 0;
@@ -564,7 +564,7 @@ function outline(p: Part, sides = SIDES): Pt[] {
 }
 
 /** An upright wall from a to c, y0 to y1, facing out of an outline wound counter-clockwise, its band laid on from u0 */
-function wall(b: Batch, band: Band, a: Pt, c: Pt, y0: number, y1: number, u0: number) {
+export function wall(b: Batch, band: Band, a: Pt, c: Pt, y0: number, y1: number, u0: number) {
   const len = Math.hypot(c[0] - a[0], c[1] - a[1]);
   // Outward: along an outline wound as the blocks are ((x0, z0), (x0, z1), (x1, z1), ...) the inside is on the right
   const n: Pt = [-(c[1] - a[1]) / len, (c[0] - a[0]) / len];
@@ -590,7 +590,7 @@ function wall(b: Batch, band: Band, a: Pt, c: Pt, y0: number, y1: number, u0: nu
   }
 }
 /** Every wall round an outline, the band continuing round the corners */
-function walls(b: Batch, band: Band, line: Pt[], y0: number, y1: number, u0 = 0) {
+export function walls(b: Batch, band: Band, line: Pt[], y0: number, y1: number, u0 = 0) {
   let u = u0;
   line.forEach((a, i) => {
     const c = line[(i + 1) % line.length];
@@ -599,12 +599,12 @@ function walls(b: Batch, band: Band, line: Pt[], y0: number, y1: number, u0 = 0)
   });
 }
 /** A flat polygon at y facing up (a roof) */
-function flat(b: Batch, line: Pt[], y: number, mat: THREE.Material) {
+export function flat(b: Batch, line: Pt[], y: number, mat: THREE.Material) {
   const shape = new THREE.Shape(line.map(([x, z]) => new THREE.Vector2(x, -z)));
   b.add(new THREE.ShapeGeometry(shape).rotateX(-Math.PI / 2).translate(0, y, 0), mat);
 }
 /** An outline shrunk towards its middle by d */
-function shrink(line: Pt[], d: number): Pt[] {
+export function shrink(line: Pt[], d: number): Pt[] {
   const cx = line.reduce((a, p) => a + p[0], 0) / line.length;
   const cz = line.reduce((a, p) => a + p[1], 0) / line.length;
   return line.map(([x, z]) => {
@@ -613,7 +613,7 @@ function shrink(line: Pt[], d: number): Pt[] {
   });
 }
 /** A thin bar along an outline's edges at y (a parapet's cap, a lit band), `t` thick and `h` high */
-function rim(b: Batch, line: Pt[], y: number, t: number, h: number, mat: THREE.Material) {
+export function rim(b: Batch, line: Pt[], y: number, t: number, h: number, mat: THREE.Material) {
   line.forEach((a, i) => {
     const c = line[(i + 1) % line.length];
     const len = Math.hypot(c[0] - a[0], c[1] - a[1]);
@@ -778,7 +778,7 @@ function sides([x0, z0, x1, z1]: Rect): { f: Face; a: Pt; c: Pt }[] {
   ];
 }
 /** Its outward normal (a side wound as the blocks are) */
-const normalOf = (a: Pt, c: Pt): Pt => {
+export const normalOf = (a: Pt, c: Pt): Pt => {
   const l = Math.hypot(c[0] - a[0], c[1] - a[1]) || 1;
   return [-(c[1] - a[1]) / l, (c[0] - a[0]) / l];
 };

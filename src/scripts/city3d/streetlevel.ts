@@ -29,6 +29,7 @@ import { HIGHRISES, type Face, type Highrise } from './highrise';
 import { LAYBYS, UPTOWN_BLOCKS, UPTOWN_LANES, laybyRect, type Pt, type Rect } from './uptown';
 import { PLAN, distToStreet } from './streetplan';
 import { CHAIR, SEAT_Y, TERRACES } from './plaza';
+import { SITE_RECTS } from './uptownsites';
 
 export type Character = 'luxe' | 'dining' | 'local' | 'service';
 export type ShopCharacter = Exclude<Character, 'service'>;
@@ -95,7 +96,7 @@ function inPoly(poly: Pt[], p: Pt) {
   return inside;
 }
 /** What stops the margin in front of a wall: the lanes, the plaza's terraces, the lay-bys, the other towers' lots */
-const STOPS: Rect[] = [...UPTOWN_LANES, ...TERRACES, ...LAYBYS.map(laybyRect)];
+const STOPS: Rect[] = [...UPTOWN_LANES, ...TERRACES, ...LAYBYS.map(laybyRect), ...SITE_RECTS];
 
 /**
  * What a wall from a to c faces (outward along n): the first street a step out from its middle meets, and how deep
@@ -104,7 +105,7 @@ const STOPS: Rect[] = [...UPTOWN_LANES, ...TERRACES, ...LAYBYS.map(laybyRect)];
 export function frontage(t: Highrise, a: Pt, c: Pt, n: Pt): { street: string | null; char: Character; depth: number } {
   const blk = UPTOWN_BLOCKS.find((b) => b.id === t.block)!;
   const m: Pt = [(a[0] + c[0]) / 2, (a[1] + c[1]) / 2];
-  const others = HIGHRISES.filter((o) => o !== t).map((o) => o.lot);
+  const others = [...HIGHRISES.filter((o) => o !== t).map((o) => o.lot), ...SITE_RECTS];
   let depth = 0;
   for (let d = 0.05; d < 8; d += 0.05) {
     const p: Pt = [m[0] + n[0] * d, m[1] + n[1] * d];

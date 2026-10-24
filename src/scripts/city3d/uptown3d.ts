@@ -19,6 +19,7 @@ import { registerBoulevard } from './boulevard3d';
 import { registerKerbside } from './kerbside3d';
 import { registerUptownLife } from './uptownlife3d';
 import { registerStreetLevel } from './streetlevel3d';
+import { registerSites } from './uptownsites3d';
 
 /** Its own address, for the site worker (sitework.ts) */
 export const SELF = import.meta.url;
@@ -36,6 +37,8 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   registerKerbside(low, scene);
   // Its street level (Phase 7): the sidewalks' dressing, the grand lobbies' sculptures, the galleria over the lanes
   registerStreetLevel();
+  // ...and its new buildings on the free land: the theatre, the exchange, the hotel, a tower going up, the gardens
+  registerSites(low, scene, tick);
   // Its cyclists' bikes under their riders (Phase 6; the riders are the crowd's), on the main thread
   if (scene) registerUptownLife(scene, tick);
   // The axis's lanes, paved across their blocks
