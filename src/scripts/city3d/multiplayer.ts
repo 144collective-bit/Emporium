@@ -18,7 +18,7 @@
 import * as THREE from 'three';
 import { createNetClient, type NetState } from '../net/client';
 import { EMOTES, PHRASES, RANKS } from '../net/profile-data';
-import { FLAG, INPUT_HZ, v3, type OwnProfile, type ServerMsg } from '../net/protocol';
+import { FLAG, INPUT_HZ, modeBits, moveOk, v3, type Mode, type OwnProfile, type ServerMsg } from '../net/protocol';
 import type { Combat } from './combat';
 import type { ProfileUI } from './profile-ui';
 import { createRemotes } from './remote';
@@ -27,7 +27,7 @@ const r4 = (n: number) => Math.round(n * 10000) / 10000;
 
 interface Walker {
   readonly active: boolean;
-  netState(): { pos: THREE.Vector3; face: number; pitch: number; speed: number; air: boolean; run: boolean; aim: boolean };
+  netState(): { pos: THREE.Vector3; face: number; pitch: number; speed: number; air: boolean; run: boolean; aim: boolean; mode: Mode };
   fix(x: number, y: number, z: number): void;
   playEmote(id: string): void;
 }
@@ -72,6 +72,8 @@ export function createMultiplayer(d: MultiplayerDeps) {
   /** The city's switch is on Online: connected whenever walking */
   let enabled = d.enabled;
   const dir = new THREE.Vector3();
+  /** Where we were last sent from, and when (ms): a move further than the way we're going allows is a jump */
+  const sent = { x: 0, z: 0, at: 0 };
   const online = () => net.state === 'online' && myId > 0;
   const changed = () => d.changed({ state: net.state, room: online() ? room : '', players: online() ? remotes.list().length + 1 : 0 });
 
@@ -295,7 +297,16 @@ export function createMultiplayer(d: MultiplayerDeps) {
       sendAcc = 0;
       const s = walk.netState();
       camera.getWorldDirection(dir);
+      // Fast travel, the end of a ride or a race, a reset: say it's a jump, or the server puts us back
+      const now = performance.now();
+      const mode = modeBits(s.mode);
+      const warp = sent.at > 0 && !moveOk(sent, s.pos, (now - sent.at) / 1000, mode);
+      sent.x = s.pos.x;
+      sent.z = s.pos.z;
+      sent.at = now;
       const fl =
+        mode |
+        (warp ? FLAG.warp : 0) |
         (combat.armed ? FLAG.armed : 0) |
         (s.aim ? FLAG.aim : 0) |
         (combat.takePull() && combat.armed ? FLAG.fire : 0) |
