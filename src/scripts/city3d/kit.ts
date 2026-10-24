@@ -22,6 +22,19 @@ export function fx<T extends THREE.Object3D>(o: T): T {
   });
   return o;
 }
+/**
+ * Something that moves, for the shadows (shadows.ts): drawn into the moving shadow map every frame, never into
+ * the fixed one, which is only drawn again now and then. Skinned figures, instanced crowds and traffic (their
+ * instances moved every frame) and anything kept out of the far forms (`userData.keep`) count already.
+ */
+export function moving<T extends THREE.Object3D>(o: T): T {
+  o.userData.moving = true;
+  return o;
+}
+export function isMoving(o: THREE.Object3D) {
+  if (o.userData.moving || o.userData.keep || (o as THREE.SkinnedMesh).isSkinnedMesh) return true;
+  return !!(o as THREE.InstancedMesh).isInstancedMesh && (o as THREE.InstancedMesh).instanceMatrix.usage === THREE.DynamicDrawUsage;
+}
 
 /**
  * Give a cut-out sign (an FX plane with a transparent texture) a stand-in in
@@ -806,13 +819,14 @@ export class Batch {
   /** The geometry and material the last `add()` filed (for `instances()`) */
   private lastAdded: { geo: THREE.BufferGeometry; mat: THREE.Material } | null = null;
 
-  build(parent: THREE.Object3D, { cast = true, receive = true } = {}) {
+  /** `details`: whether the near-only details cast shadows too (they don't: small, and the shadow map's triangles are dear) */
+  build(parent: THREE.Object3D, { cast = true, receive = true, details = false } = {}) {
     for (const { mat, lod, geos } of this.parts.values()) {
       const merged = mergeGeometries(geos, false);
       if (!merged) continue;
       const mesh = new THREE.Mesh(merged, mat);
       if (lod !== 'all') mesh.userData.lod = lod;
-      mesh.castShadow = cast;
+      mesh.castShadow = cast && (lod !== 'near' || details);
       mesh.receiveShadow = receive;
       mesh.matrixAutoUpdate = false;
       mesh.updateMatrix();

@@ -79,6 +79,11 @@ export interface PostOpts {
   smaa: boolean;
   /** How many of the bloom's blur levels to draw (5, all of them, if not given): phones draw 3 */
   bloomMips?: number;
+  /**
+   * Draws the shadow maps itself (sky.ts: the fixed map now and then, the moving one every frame), given three's own
+   * drawing; without it three draws every shadow-casting light's map each frame
+   */
+  shadows?: { drawShadows(draw: (lights: THREE.Light[], root: THREE.Object3D, camera: THREE.Camera) => void, root: THREE.Scene, camera: THREE.Camera): void };
 }
 
 export function createPost(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.PerspectiveCamera, opts: PostOpts) {
@@ -140,9 +145,18 @@ export function createPost(renderer: THREE.WebGLRenderer, scene: THREE.Scene, ca
   const shadowStat = { calls: 0, tris: 0 };
   const shadowMap = renderer.shadowMap as THREE.WebGLShadowMap & { render: (...a: unknown[]) => void };
   const drawShadows = shadowMap.render.bind(shadowMap);
-  shadowMap.render = (...a: unknown[]) => {
-    const { calls, triangles } = renderer.info.render;
+  // (three's own, once asked: it draws nothing unless `needsUpdate` is set)
+  const draw = (...a: unknown[]) => {
+    shadowMap.needsUpdate = true;
     drawShadows(...a);
+  };
+  shadowMap.render = (...a: unknown[]) => {
+    // (every render of the frame asks; only the first, once `render()` has asked for it, draws)
+    if (!shadowMap.enabled || !shadowMap.needsUpdate) return;
+    const { calls, triangles } = renderer.info.render;
+    if (opts.shadows) opts.shadows.drawShadows(draw, a[1] as THREE.Scene, a[2] as THREE.Camera);
+    else drawShadows(...a);
+    shadowMap.needsUpdate = false;
     shadowStat.calls += renderer.info.render.calls - calls;
     shadowStat.tris += renderer.info.render.triangles - triangles;
   };

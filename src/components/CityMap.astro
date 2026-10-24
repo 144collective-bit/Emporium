@@ -132,8 +132,8 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
         <div class="city-start-row">
           <span class="city-start-label">Time</span>
           <div class="city-start-seg" role="group" aria-label="Time of day">
-            <button type="button" data-opt="time" data-val="live" aria-pressed="true">Live</button>
-            <button type="button" data-opt="time" data-val="day" aria-pressed="false">Day</button>
+            <button type="button" data-opt="time" data-val="live" aria-pressed="false">Live</button>
+            <button type="button" data-opt="time" data-val="day" aria-pressed="true">Day</button>
             <button type="button" data-opt="time" data-val="sunset" aria-pressed="false">Sunset</button>
             <button type="button" data-opt="time" data-val="night" aria-pressed="false">Night</button>
           </div>
@@ -141,8 +141,8 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
         <div class="city-start-row">
           <span class="city-start-label">Weather</span>
           <div class="city-start-seg" role="group" aria-label="Weather">
-            <button type="button" data-opt="weather" data-val="auto" aria-pressed="true">Auto</button>
-            <button type="button" data-opt="weather" data-val="clear" aria-pressed="false">Clear</button>
+            <button type="button" data-opt="weather" data-val="auto" aria-pressed="false">Auto</button>
+            <button type="button" data-opt="weather" data-val="clear" aria-pressed="true">Clear</button>
             <button type="button" data-opt="weather" data-val="rain" aria-pressed="false">Rain</button>
           </div>
         </div>
@@ -406,15 +406,15 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
           </div>
           <div class="seg" role="group" aria-label="Time of day">
             <span class="seg-label">Time</span>
-            <button type="button" data-time="live" aria-pressed="true">Live</button>
-            <button type="button" data-time="day" aria-pressed="false">Day</button>
+            <button type="button" data-time="live" aria-pressed="false">Live</button>
+            <button type="button" data-time="day" aria-pressed="true">Day</button>
             <button type="button" data-time="sunset" aria-pressed="false">Sunset</button>
             <button type="button" data-time="night" aria-pressed="false">Night</button>
           </div>
           <div class="seg" role="group" aria-label="Weather">
             <span class="seg-label">Sky</span>
-            <button type="button" data-weather="auto" aria-pressed="true">Auto</button>
-            <button type="button" data-weather="clear" aria-pressed="false">Clear</button>
+            <button type="button" data-weather="auto" aria-pressed="false">Auto</button>
+            <button type="button" data-weather="clear" aria-pressed="true">Clear</button>
             <button type="button" data-weather="rain" aria-pressed="false">Rain</button>
           </div>
           <div class="seg">

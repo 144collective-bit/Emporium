@@ -23,7 +23,7 @@
  *   your player profile when online).
  */
 import * as THREE from 'three';
-import { FONT_DISPLAY, fx, glowTex, liveTex, mergeMeshes, neon, PAL, sidesBox, toon } from './kit';
+import { FONT_DISPLAY, fx, glowTex, liveTex, mergeMeshes, moving, neon, PAL, sidesBox, toon } from './kit';
 import { type Tick } from './world';
 import { DRONES, DUMMIES, SWAP_TIME, WEAPONS, WEAPON_IDS, createSim, dronePose, weaponUnlocked, type SimEvent, type TargetKind, type WeaponId } from './combat-sim';
 import type { ClientMsg, MeRow, NetEvent } from '../net/protocol';
@@ -396,7 +396,7 @@ export function createCombat(d: CombatDeps) {
     g.rotation.y = ry;
     // The stand and post are one mesh; the card swings on its hinge
     const base = mergeMeshes([new THREE.Mesh(standGeo, toon('#3a3466')), new THREE.Mesh(postGeo, toon('#6b4a2e'))], { cast: true, receive: true });
-    const hinge = new THREE.Group();
+    const hinge = moving(new THREE.Group());
     hinge.position.y = 0.34;
     const card = new THREE.Mesh(cardGeo, [cardboard, edge]);
     hinge.add(card);
@@ -415,7 +415,7 @@ export function createCombat(d: CombatDeps) {
   // Spinning rotors read as blurred discs, all four one see-through mesh
   const blur = new THREE.MeshBasicMaterial({ color: '#14121f', transparent: true, opacity: 0.5, depthWrite: false });
   for (let i = 0; i < DRONES.length; i++) {
-    const g = new THREE.Group();
+    const g = moving(new THREE.Group());
     // The body, pod, arms and rotor hubs are one mesh
     const parts = [new THREE.Mesh(droneBody, toon('#4f5d31')), new THREE.Mesh(dronePod, toon(PAL.ink))];
     const discs: THREE.Mesh[] = [];

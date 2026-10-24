@@ -98,7 +98,7 @@ type Tier = 'high' | 'medium' | 'low';
 
 const TIERS = {
   high: { dpr: 2, shadows: 2048, msaa: 4, bloomScale: 0.5, cars: 38, buses: 3, walkers: 100, trees: 250, skyline: 70, rain: 6000, clouds: 12, far: 120, nearBudget: 96 },
-  medium: { dpr: 1.5, shadows: 1024, msaa: 0, bloomScale: 0.5, cars: 27, buses: 2, walkers: 62, trees: 150, skyline: 50, rain: 3500, clouds: 9, far: 110, nearBudget: 64 },
+  medium: { dpr: 1.5, shadows: 768, msaa: 0, bloomScale: 0.5, cars: 27, buses: 2, walkers: 62, trees: 150, skyline: 50, rain: 3500, clouds: 9, far: 110, nearBudget: 64 },
   low: { dpr: 1.25, shadows: 0, msaa: 0, bloomScale: 0.3, cars: 16, buses: 2, walkers: 15, trees: 90, skyline: 26, rain: 1200, clouds: 4, far: 90, nearBudget: 32 },
 };
 
@@ -277,7 +277,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // (the horns and the bus doors play through the sound, made with the controls below; one before then is dropped)
   let lifeSfx: ((kind: LifeSfx, gain: number) => void) | null = null;
   buildLife(scene, { cars: Q.cars, buses: Q.buses, walkers: Q.walkers, light: tier === 'low', far: Q.far, sfx: (k, g) => lifeSfx?.(k, g) }, crowd, tick);
-  const sky = createSky(scene, { shadows: Q.shadows, rainDrops: Q.rain, clouds: Q.clouds, storms: !reduced });
+  // (the medium tier's smaller shadow maps a touch softer: shadows.ts)
+  const sky = createSky(scene, { shadows: Q.shadows, shadowRadius: tier === 'medium' ? 1.6 : 1, rainDrops: Q.rain, clouds: Q.clouds, storms: !reduced });
   progress(0.85);
   await waited(nextFrame());
 
@@ -304,7 +305,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     return { pos: CENTER.clone().add(new THREE.Vector3(27, 31, 34).multiplyScalar(k)), target: CENTER.clone().add(new THREE.Vector3(0, 3.4, 1)) };
   };
 
-  const post = createPost(renderer, scene, camera, { msaa: Q.msaa, bloomScale: Q.bloomScale, smaa: devicePixelRatio < 1.5 && tier !== 'low', bloomMips: tier === 'low' ? 3 : 5 });
+  const post = createPost(renderer, scene, camera, { msaa: Q.msaa, bloomScale: Q.bloomScale, smaa: devicePixelRatio < 1.5 && tier !== 'low', bloomMips: tier === 'low' ? 3 : 5, shadows: sky });
   /**
    * Shaders compiled for where the city really draws: the post chain's target (linear colour), not the
    * screen. Compiled for the screen, each material gets a program no frame uses, and the real one is
@@ -1154,6 +1155,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     if (now - builtDrawn < 1000) return;
     builtDrawn = now;
     dirty = true;
+    // (what's just been built casts too: the fixed shadow map is drawn again)
+    sky.invalidateShadows();
   };
   /** A frame that draws nothing (a high refresh rate's in-between frames, a phone resting at 30fps): `ms` for building what's waiting */
   const spare = (ms: number) => {
@@ -1220,7 +1223,11 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     controls.target.x = THREE.MathUtils.clamp(controls.target.x, PAN_BOUNDS[0], PAN_BOUNDS[2]);
     controls.target.z = THREE.MathUtils.clamp(controls.target.z, PAN_BOUNDS[1], PAN_BOUNDS[3]);
 
-    const s = sky.update(reduced ? 0 : t, dt, controls.target, camera.position);
+    // Shadows only while walking or driving, never in the City view or up in an aircraft (shadows.ts, the owner's call),
+    // their box ahead of where the camera looks
+    camera.getWorldDirection(look);
+    sky.setShadows(walking && !walk.airborne);
+    const s = sky.update(reduced ? 0 : t, dt, controls.target, camera.position, look);
     env.t = reduced ? 0 : t;
     env.dt = reduced ? 0 : dt;
     env.night = s.night;
@@ -1233,8 +1240,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     CROWD_VIEW.eye.setFromMatrixPosition(camera.matrixWorld);
     CROWD_VIEW.frustum.setFromProjectionMatrix(viewProj.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
     CROWD_VIEW.shadowOn = renderer.shadowMap.enabled && sky.shadowFrustum(CROWD_VIEW.shadow);
-    // What the camera looks at on the ground (straight ahead a way when it looks level, walking)
-    camera.getWorldDirection(look);
+    // What the camera looks at on the ground (straight ahead a way when it looks level, walking; `look` from above)
     const reach = look.y < -0.02 ? THREE.MathUtils.clamp(CROWD_VIEW.eye.y / -look.y, 40, 250) : 60;
     CROWD_VIEW.focus.set(CROWD_VIEW.eye.x + look.x * reach, 0, CROWD_VIEW.eye.z + look.z * reach);
     // Building as you go (growth plan Phase 3): a few milliseconds a frame, nearest what the City view looks at

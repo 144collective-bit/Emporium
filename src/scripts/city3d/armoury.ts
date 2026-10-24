@@ -11,6 +11,7 @@ import {
   canvasTex,
   fx,
   lit,
+  moving,
   neon,
   place,
   plane,
@@ -217,7 +218,7 @@ export function armoury(scene: THREE.Scene, ctx: LandmarkCtx) {
         c.fillRect(k * 32, 0, 32, 16);
       }
     });
-    const pivot = new THREE.Group();
+    const pivot = moving(new THREE.Group());
     pivot.position.set(26.05, S + 0.62, 30.32);
     const arm = new THREE.Mesh(new THREE.BoxGeometry(2.15, 0.07, 0.07).translate(1.075, 0, 0), new THREE.MeshToonMaterial({ map: stripes }));
     arm.castShadow = true;

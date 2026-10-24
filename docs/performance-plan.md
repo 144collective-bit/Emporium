@@ -431,3 +431,46 @@ the simple far form even close up (blocky wheels, dark windows); the yards'
 edge a low worn concrete kerb with a gap at every way in; the gardens and
 the vacant lots open.
 
+## Shadows (the owner's call; done)
+
+"The shadows need repairing. There's a glitch that shows a rectangle box
+with the shadows only... how can we optimise shadows, is it a big tax on
+performance." It was: the sun's shadow map followed the view everywhere,
+a 60 x 60 tile box drawn again every frame (the whole city in it, a second
+time), and past its edge there were simply no shadows, a hard rectangle.
+The owner's picks:
+
+- **Near only:** shadows only while walking or driving (none in the City
+  view, none up in an aircraft), easing in and out; the box goes ahead of
+  the camera and the shadows fade out softly well inside it, so its edge
+  never shows (`shadows.ts`: the fade is worked out in every lit
+  material's shader, and nothing past it samples the maps).
+- **Redraw only when needed:** two maps. The city's fixed shadows are
+  drawn again only when the box has moved 2.5 tiles, the sun has turned,
+  something new was built or 2 s have gone by; what moves (people, cars,
+  Degen, boats, aircraft) has a map of its own drawn every frame.
+- **Small details don't cast:** a building's near-only details (bollards,
+  stoops, rooftop clutter, benches) are left out of the shadow map; the
+  street lamps keep theirs.
+- **Lighter on medium computers:** 768 maps (were 1024) with a softer
+  filter; high stays at 2048. Phones still draw none.
+- Every visit opens at Day and Clear (the owner's call); Live time and Auto
+  weather are a pick in Settings, for that visit only.
+
+### What it measured
+
+The medium tier (the test machine's software renderer, 1280 x 800, at
+midday), standing by the Emporium, the build before and after back to back:
+
+| | Before | After |
+|---|---|---|
+| City view: the shadow map, every frame | 118 draws, 0.25M triangles | **none** |
+| Walking: the shadow maps, every frame | 125 draws, 0.26M triangles | **37 draws, 0.13M** (what moves) |
+| Walking: the fixed map, when it's due | (every frame) | **79 draws, 0.07M** (about once a second or two at a run) |
+| City view: the whole frame | 456 draws, 0.81M triangles | **368 draws, 0.62M** |
+
+What moves is most of the moving map's triangles (the traffic and the
+crowd in the box), as before; the fixed map is smaller than the old one
+(a 48-tile box, no small details). Each lit pixel inside the fade samples
+two maps instead of one; outside it, none.
+

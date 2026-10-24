@@ -29,7 +29,7 @@
  */
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { fx, lit, mergeMeshes, toon } from './kit';
+import { fx, lit, mergeMeshes, moving, toon } from './kit';
 import { addLodSwitch } from './lod';
 
 import type { CarId } from './mycar';
@@ -1058,6 +1058,7 @@ export function initFarCars(scene: THREE.Scene, max = 400, parkedAlwaysFar = fal
   bm.castShadow = true;
   bm.receiveShadow = true;
   bm.name = 'far-cars';
+  moving(bm);
   scene.add(bm);
   const c = new THREE.Color();
   farCars = {
@@ -1132,7 +1133,7 @@ export function createCar(id: CarId, paint: string) {
   const g = carGeometry(id, { wheels: false });
   const s = g.spec;
   const { detail } = carMaterials();
-  const group = new THREE.Group();
+  const group = moving(new THREE.Group());
   const paintMat = toon(paint);
   const body = new THREE.Mesh(g.paint, paintMat);
   const trim = new THREE.Mesh(g.detail, detail);

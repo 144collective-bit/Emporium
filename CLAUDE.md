@@ -30,7 +30,8 @@ it and has been retired completely. Build only on what's here.
 - The homepage is Sector 7 in two layers, both in Degen's style (black ink
   outlines, flat cartoon shading, PulseChain neon):
   - **3D** (`src/scripts/city3d/`, three.js): toon materials, ink outlines
-    from a normal/depth post-pass, bloom, day/night from the visitor's clock,
+    from a normal/depth post-pass, bloom, day/night (midday by default,
+    the visitor's clock on Live),
     weather, traffic, people, optional synthesised sound. Clicking a
     building flies the camera in and opens a glass panel.
   - **2D** (`src/lib/city.ts`): the isometric SVG map. It's the loading
@@ -1210,6 +1211,29 @@ it and has been retired completely. Build only on what's here.
   far plane at the ink's `fadeFar`), so the far city is drawn once, not
   twice. A place's hover ring isn't drawn while it's faded out. Measure
   with `?fps` and `?bench` before and after.
+- **Shadows are near only** (the owner's call; `shadows.ts`, DOM-free,
+  tested in `tests/shadows.test.ts`): drawn only while walking or driving
+  (`sky.setShadows()`: not in the City view, not up in an aircraft), easing
+  in and out, the shadow box (`SHADOW.reach`) ahead of the camera
+  (`shadowCentre()`) and the shadows fading out well inside it
+  (`fade0` to `fade1`, round the same centre in every lit material's shader:
+  `SHADOW_GLSL`, patched into three's chunks by `patchShadowChunks()` before
+  anything compiles), so the box's edge never shows; nothing is sampled
+  past the fade. Two maps (`sky.ts`): the sun's holds the city's fixed
+  shadows and is drawn again only when it's due (`staticDue()`: the centre
+  moved `move`, the sun turned `turn`, `refresh` seconds, or something new
+  was built: `invalidateShadows()`), with everything that moves hidden from
+  it; a second light (black, lighting nothing, light 1) holds what moves,
+  drawn every frame from only those (`drawShadows()`, called by post.ts's
+  shadow hook). What moves is `isMoving()` in kit.ts: skinned figures,
+  instanced meshes whose instances move (`DynamicDrawUsage`), anything
+  with `userData.keep`, and what's tagged `moving()` (your car, karts, the
+  far cars, boats, the blimp, the drones, the dummies' cards, the
+  Armoury's barrier); a new thing that moves and casts gets tagged. A
+  Batch's near-only details cast no shadows (`build()`'s `details`: the
+  street lamps keep theirs). The medium tier's maps are 768 with a softer
+  filter (`shadowRadius`); phones draw none. Both maps are made (cleared)
+  before anything samples them, even in the City view.
 - **Near and far** (growth plan Phase 2): past the tier's `far` (`TIERS`:
   120 high, 110 medium, 90 low) from the camera, things are drawn in a far
   form; `isNear()` in `tiles.ts` decides, with a margin so nothing flickers
@@ -1723,7 +1747,9 @@ it and has been retired completely. Build only on what's here.
   `CityMap.astro` (styles `src/styles/start.css`) covers the whole page
   while the 3D city boots behind it, so the 2D map is never seen loading.
   Single player enters the city (the fly-in runs again, `city.intro()` in
-  `index.ts`); Multiplayer says "Coming soon" without `PUBLIC_GAME_SERVER`
+  `index.ts`); every visit opens at Day and Clear (the owner's call: Live
+  and Auto, or any other time or weather, are the visitor's to pick, for
+  that visit only); Multiplayer says "Coming soon" without `PUBLIC_GAME_SERVER`
   and flips the Online switch on and enters with one; Options holds Time,
   Weather, Sound and the view (3D city / 2D map), driving the header's own
   settings controls (pressed when the city is up, queued until then). The

@@ -21,7 +21,7 @@
 import * as THREE from 'three';
 import { carMaterials, wheelGeometry, type CarSpec } from './cars';
 import { HIP_HEIGHT, reachArm, torsoFrame, type Degen } from './character';
-import { FONT_DISPLAY, liveTex, mergeMeshes, neon, PAL, toon } from './kit';
+import { FONT_DISPLAY, liveTex, mergeMeshes, moving, neon, PAL, toon } from './kit';
 import { KART_L } from './kartpark';
 import type { KartId } from './mykart';
 
@@ -135,7 +135,7 @@ export interface Kart {
 export function createKart(id: KartId, paint: string, opts: { detail?: 0 | 1 | 2 } = {}): Kart {
   const s = SHAPES[id];
   const detail = opts.detail ?? 2;
-  const group = new THREE.Group();
+  const group = moving(new THREE.Group());
   const parts: THREE.Mesh[] = [];
   const temp: THREE.BufferGeometry[] = [];
   const add = (geo: THREE.BufferGeometry, color: string, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) => {
