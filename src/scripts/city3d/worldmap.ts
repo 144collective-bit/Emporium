@@ -8,10 +8,10 @@
  * pinch to zoom. Tapping a place opens a card: open its panel (City view),
  * set a waypoint, take a taxi there, or fast travel (places you've walked
  * to); tapping your car: bring it to you; tapping open ground: drop a
- * waypoint there. It isn't the 2D poster (src/lib/city.ts), which stays
- * downtown's. × or Esc closes it.
+ * waypoint there. × or Esc closes it.
  */
-import { EXT, RIVER } from './layout';
+import { EXT } from './layout';
+import { edgeSamples } from './river';
 import { PLAN, type Pt } from './streetplan';
 import { PLACES, placeName, type Place } from './places';
 import { PATHS, WESTLAKE_BLOCKS, lakeLine } from './westlake';
@@ -127,10 +127,18 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
     const [bx, by] = toScreen(EXT[1], EXT[1]);
     ctx.fillStyle = C.land;
     ctx.fillRect(ax, ay, bx - ax, by - ay);
-    const [, r0] = toScreen(0, RIVER[0]);
-    const [, r1] = toScreen(0, RIVER[1]);
+    // (its edges as they curve: river.ts)
+    const banks = edgeSamples(EXT[0], EXT[1], 4);
     ctx.fillStyle = C.river;
-    ctx.fillRect(ax, r0, bx - ax, r1 - r0);
+    ctx.beginPath();
+    banks.forEach((e, i) => {
+      const [sx, sy] = toScreen(e.x, e.n);
+      if (i) ctx.lineTo(sx, sy);
+      else ctx.moveTo(sx, sy);
+    });
+    for (let i = banks.length - 1; i >= 0; i--) ctx.lineTo(...toScreen(banks[i].x, banks[i].s));
+    ctx.closePath();
+    ctx.fill();
     // The airport and the kart park's grounds
     const rect = (r: number[], fill: string) => {
       const [x0, y0] = toScreen(r[0], r[1]);

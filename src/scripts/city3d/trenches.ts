@@ -23,7 +23,7 @@
  *   highway's bend is a block cut by it. Row W (the grit's step 2) is the
  *   strip between West Street and the highway.
  */
-import { EW_ROADS, LANE, NS_ROADS, WALK_W } from './layout';
+import { EW_ROADS, LANE, NS_ROADS, WALK_W, WIDEN, nsStreet } from './layout';
 import { HIGHWAY_BOX, HIGHWAY_HALF, HIGHWAY_R } from './highway';
 
 export type Pt = [number, number];
@@ -39,7 +39,7 @@ export const BEND_C: Pt = [HX0 + HIGHWAY_R, HZ1 - HIGHWAY_R];
 export const BEND_REACH = HIGHWAY_R - HIGHWAY_CLEAR;
 
 /** Trench Avenue's centre line (z), half width and lanes: an avenue like the ring's */
-export const AVENUE_Z = 130;
+export const AVENUE_Z = 130 + WIDEN;
 export const AVENUE_HALF = RING_W.half;
 /** Its west end: West Street */
 export const WEST_X = -188;
@@ -47,8 +47,8 @@ export const WEST_X = -188;
 export const NS_X = [WEST_X, -150, -112, -74, -36];
 export const STREET_HALF = LANE;
 /** The east-west streets through the projects and Bottom Street (z), north to south */
-export const EW_Z = [176, 216];
-export const BOTTOM_Z = 250;
+export const EW_Z = [176 + WIDEN, 216 + WIDEN];
+export const BOTTOM_Z = 250 + WIDEN;
 /** Where the cross streets north of Trench Avenue stop: the ones west of the south row's bend run up to the bank avenue */
 const NORTH_TO_BANK = (x: number) => x <= -74;
 
@@ -90,7 +90,7 @@ export const TRENCH_CROSSINGS: TrenchCrossing[] = (() => {
   for (const e of ew) {
     const z = e.pts[0][1];
     // Its east end on the west ring avenue (Trench Avenue's lit: two avenues meet)
-    out.push({ id: `${e.id}-ring`, at: [RING_W.c, z], streets: ['ns0', e.id], lights: e.kind === 'avenue' });
+    out.push({ id: `${e.id}-ring`, at: [RING_W.c, z], streets: [nsStreet(0, z), e.id], lights: e.kind === 'avenue' });
     for (const n of ns) {
       const x = n.pts[0][0];
       if (span(e.pts[0][0], e.pts[1][0], x) && span(n.pts[0][1], n.pts[1][1], z)) out.push({ id: `${n.id}-${e.id}`, at: [x, z], streets: [n.id, e.id], lights: e.kind === 'avenue' });

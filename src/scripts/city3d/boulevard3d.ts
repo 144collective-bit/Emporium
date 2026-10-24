@@ -28,6 +28,7 @@ import { Batch, FONT_DISPLAY, canvasTex, lit, neon, siteMat, toon } from './kit'
 import { SLAB } from './world';
 import { site } from './tilework';
 import { RIVER } from './layout';
+import { WATER_Y } from './river';
 import { PODIUM } from './highrise';
 import { DECK_Y } from './waterfront';
 import {
@@ -118,12 +119,12 @@ function railZ(b: Batch, a: number, c: number, x: number) {
 }
 /** A deck out over the water: its stone body from below the water to the top, its fascia, the granite, piles under its edge (near) */
 function waterDeck(b: Batch, r: Rect, piles: boolean) {
-  box(b, r, -0.3, TOP, STONE);
-  box(b, [r[0], r[3] - 0.03, r[2], r[3] + 0.004], -0.3, TOP - 0.02, FASCIA);
+  box(b, r, WATER_Y - 0.3, TOP, STONE);
+  box(b, [r[0], r[3] - 0.03, r[2], r[3] + 0.004], WATER_Y - 0.3, TOP - 0.02, FASCIA);
   b.add(quad(r, PAVE, GRANITE_TILE), granite);
   if (piles)
     b.detail(() => {
-      for (let x = r[0] + 0.6; x < r[2] - 0.3; x += 2.4) b.add(new THREE.CylinderGeometry(0.13, 0.13, 0.6, 8, 1, true).translate(x, -0.3, r[3] - 0.12), PILE);
+      for (let x = r[0] + 0.6; x < r[2] - 0.3; x += 2.4) b.add(new THREE.CylinderGeometry(0.13, 0.13, 0.6, 8, 1, true).translate(x, WATER_Y - 0.3, r[3] - 0.12), PILE);
     });
 }
 
@@ -213,7 +214,9 @@ function marina(b: Batch) {
     box(b, [a, PONTOON[1] - 0.03, c, PONTOON[1] + 0.06], TOP, TOP + 0.06, TIMBER_DARK);
     box(b, [a, PONTOON[3] - 0.06, c, PONTOON[3] + 0.03], TOP, TOP + 0.06, TIMBER_DARK);
   }
-  for (let x = PONTOON[0] + 0.5; x < PONTOON[2]; x += 2.2) box(b, [x - 0.4, PONTOON[1] + 0.06, x + 0.4, PONTOON[3] - 0.06], -0.18, TOP - 0.1, FLOAT);
+  // (on piles down into the water since river plan step 2: the water's under the streets, the yachts below the pontoon)
+  for (let x = PONTOON[0] + 0.5; x < PONTOON[2]; x += 2.2)
+    for (const z of [PONTOON[1] + 0.2, PONTOON[3] - 0.2]) b.add(new THREE.CylinderGeometry(0.12, 0.12, TOP - 0.1 - (WATER_Y - 0.3), 8, 1, true).translate(x, (TOP - 0.1 + WATER_Y - 0.3) / 2, z), PILE);
   b.detail(() => {
     for (let x = PONTOON[0] + 1.2; x < PONTOON[2]; x += 2.6) {
       b.box(x - 0.12, TOP + 0.06, PONTOON[3] - 0.16, 0.24, 0.05, 0.08, STEEL);
@@ -222,9 +225,9 @@ function marina(b: Batch) {
   });
   for (const y of YACHTS) yacht(b, y);
   for (const t of TENDERS) {
-    b.box(t.x - t.len / 2, -0.08, t.z - 0.27, t.len, 0.24, 0.54, FLOAT);
-    b.box(t.x - t.len / 2 + 0.1, 0.16, t.z - 0.22, t.len - 0.2, 0.02, 0.44, TEAK);
-    b.box(t.x - t.len / 2 - 0.06, 0.02, t.z - 0.1, 0.12, 0.2, 0.2, STEEL);
+    b.box(t.x - t.len / 2, WATER_Y - 0.08, t.z - 0.27, t.len, 0.24, 0.54, FLOAT);
+    b.box(t.x - t.len / 2 + 0.1, WATER_Y + 0.16, t.z - 0.22, t.len - 0.2, 0.02, 0.44, TEAK);
+    b.box(t.x - t.len / 2 - 0.06, WATER_Y + 0.02, t.z - 0.1, 0.12, 0.2, 0.2, STEEL);
   }
 }
 
@@ -232,6 +235,9 @@ function marina(b: Batch) {
 function yacht(b: Batch, y: Yacht) {
   const { x, z, len, beam } = y;
   const [h, hb] = [len / 2, beam / 2];
+  // (afloat on the water, under the streets since river plan step 2)
+  const W = WATER_Y;
+  const bx = (x0: number, y0: number, z0: number, w: number, hh: number, d: number, m: THREE.Material) => b.box(x0, y0 + W, z0, w, hh, d, m);
   const plan = (k: number) => {
     const s = new THREE.Shape();
     const [hx, hz] = [h * k, hb * k];
@@ -245,32 +251,32 @@ function yacht(b: Batch, y: Yacht) {
   };
   // (extruded up from y0 to y1, its plan in x and z)
   const solid = (k: number, y0: number, y1: number, mat: THREE.Material) =>
-    b.add(new THREE.ExtrudeGeometry(plan(k), { depth: y1 - y0, bevelEnabled: false, curveSegments: 6 }).rotateX(-Math.PI / 2).translate(x, y0, z), mat);
+    b.add(new THREE.ExtrudeGeometry(plan(k), { depth: y1 - y0, bevelEnabled: false, curveSegments: 6 }).rotateX(-Math.PI / 2).translate(x, y0 + W, z), mat);
   const HULL = toon(y.hull);
   solid(1, -0.12, 0.5, HULL);
   solid(1.012, 0.3, 0.38, toon(y.stripe));
   solid(0.94, 0.5, 0.505, TEAK);
   // The deck house over the rear half, its window band, a flybridge on the bigger ones
   const [d0, d1] = [x - h + 0.35, x + h * 0.25];
-  b.box(d0, 0.5, z - hb * 0.72, d1 - d0, 0.5, beam * 0.72, HULL);
-  b.box(d0 + 0.15, 0.68, z - hb * 0.72 - 0.006, d1 - d0 - 0.1, 0.18, beam * 0.72 + 0.012, WINDOW);
-  b.box(d1 - 0.02, 0.62, z - hb * 0.6, 0.03, 0.3, beam * 0.6, WINDOW);
+  bx(d0, 0.5, z - hb * 0.72, d1 - d0, 0.5, beam * 0.72, HULL);
+  bx(d0 + 0.15, 0.68, z - hb * 0.72 - 0.006, d1 - d0 - 0.1, 0.18, beam * 0.72 + 0.012, WINDOW);
+  bx(d1 - 0.02, 0.62, z - hb * 0.6, 0.03, 0.3, beam * 0.6, WINDOW);
   if (y.fly) {
-    b.box(d0 + 0.2, 1.0, z - hb * 0.6, (d1 - d0) * 0.6, 0.22, beam * 0.6, HULL);
-    b.box(d0 + 0.15, 1.42, z - hb * 0.62, (d1 - d0) * 0.62, 0.04, beam * 0.62, STEEL);
+    bx(d0 + 0.2, 1.0, z - hb * 0.6, (d1 - d0) * 0.6, 0.22, beam * 0.6, HULL);
+    bx(d0 + 0.15, 1.42, z - hb * 0.62, (d1 - d0) * 0.62, 0.04, beam * 0.62, STEEL);
     b.detail(() => {
-      for (const s of [-1, 1]) b.box(d0 + 0.2, 1.22, z + s * hb * 0.55 - 0.02, 0.04, 0.2, 0.04, STEEL);
+      for (const s of [-1, 1]) bx(d0 + 0.2, 1.22, z + s * hb * 0.55 - 0.02, 0.04, 0.2, 0.04, STEEL);
     });
   }
   b.detail(() => {
     // The mast and its radar, a rail round the bow, navigation lights (red to port, green to starboard)
     const mx = d0 + (d1 - d0) * 0.55;
     const top = y.fly ? 2.1 : 1.6;
-    b.box(mx - 0.03, y.fly ? 1.46 : 1.0, z - 0.03, 0.06, top - (y.fly ? 1.46 : 1.0), 0.06, STEEL);
-    b.box(mx - 0.22, top - 0.25, z - 0.04, 0.44, 0.05, 0.08, CAP);
-    for (const s of [-1, 1]) rod(b, [x + h * 0.3, 0.75, z + s * hb * 0.75], [x + h - 0.2, 0.75, z + s * 0.12], 0.03, STEEL);
-    b.box(x + h * 0.25 - 0.05, 0.55, z - hb * 0.8 - 0.05, 0.1, 0.07, 0.06, RED);
-    b.box(x + h * 0.25 - 0.05, 0.55, z + hb * 0.8 - 0.01, 0.1, 0.07, 0.06, GREEN);
+    bx(mx - 0.03, y.fly ? 1.46 : 1.0, z - 0.03, 0.06, top - (y.fly ? 1.46 : 1.0), 0.06, STEEL);
+    bx(mx - 0.22, top - 0.25, z - 0.04, 0.44, 0.05, 0.08, CAP);
+    for (const s of [-1, 1]) rod(b, [x + h * 0.3, W + 0.75, z + s * hb * 0.75], [x + h - 0.2, W + 0.75, z + s * 0.12], 0.03, STEEL);
+    bx(x + h * 0.25 - 0.05, 0.55, z - hb * 0.8 - 0.05, 0.1, 0.07, 0.06, RED);
+    bx(x + h * 0.25 - 0.05, 0.55, z + hb * 0.8 - 0.01, 0.1, 0.07, 0.06, GREEN);
   });
 }
 

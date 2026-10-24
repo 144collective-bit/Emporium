@@ -15,9 +15,9 @@
  *   meets the river and a smaller one in line with Uptown's east street; the
  *   marina at the west end (`PONTOON`, reached by `GANGWAYS`), its yachts
  *   moored along the pontoon's outer side.
- * - **The boats keep clear** (life.ts): the north lane's boats stay east of
- *   the esplanade (`NORTH_BOAT_EAST`); the middle lane passes outside the
- *   marina and the overlooks as it is (the tests hold every deck clear of it).
+ * - **The boats keep clear** (life.ts): since the river was widened again
+ *   (river plan step 1) every lane passes outside the marina, its yachts and
+ *   the overlooks as it is (the tests hold every deck clear of them).
  * - **Restaurant terraces** (`ROOF_TERRACES`) on the river row's podium roofs,
  *   wherever a podium's roof is clear of its shafts, with their tables.
  * - **People** (`BOULEVARD_PEOPLE`): on the benches, at the overlooks' rails,
@@ -58,8 +58,6 @@ export const ESPLANADE_DECKS: Rect[] = [
 ];
 /** Is a point on the esplanade's decks, `m` (a walker's radius) inside their edges */
 export const onEsplanade = (x: number, z: number, m = 0) => ESPLANADE_DECKS.some((r) => x > r[0] + m && x < r[2] - m && z > r[1] + m && z < r[3] - m);
-/** The north lane's boats keep east of it (life.ts) */
-export const NORTH_BOAT_EAST = X1 + 8;
 
 /** Where things stand along the water's edge: never in an overlook's or a gangway's mouth */
 export const clearOfMouths = (x: number, m: number) =>

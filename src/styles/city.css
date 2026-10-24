@@ -1,9 +1,9 @@
-/* The city page (CityMap.astro): the isometric 2D map and its overlay, pins, place panels,
+/* The city page (CityMap.astro): the overlay, pins, place panels,
    the mode header, Settings and the Menu, the wallet button and profile card. Split out of
    global.css; Base.astro imports it straight after, so the order rules apply in is the same. */
 
 /* ==========================================================================
-   City homepage: the isometric map (src/lib/city.ts) and its overlay
+   City homepage: the page, its no-3D card and the overlay
    ========================================================================== */
 body.full-bleed {
   height: 100dvh;
@@ -22,32 +22,57 @@ body.is-walking .nav {
      the page for the moment it's past the edge. */
   overflow-x: clip;
 }
-.city-viewport {
+/* No 3D here (CityMap.astro [data-no3d]: no WebGL 2, or the city couldn't start): the page says so */
+.city-no3d {
   position: absolute;
   inset: 0;
-  overflow: auto;
-  overscroll-behavior: contain;
-  scrollbar-width: none;
-  background: #0d2a2b;
-  cursor: grab;
+  display: grid;
+  place-items: center;
+  padding: calc(var(--head-h, 56px) + 16px) 16px 56px;
+  background:
+    radial-gradient(60% 50% at 50% 0%, #8000ff2e, #0000 70%),
+    radial-gradient(50% 40% at 85% 100%, #00eaff1f, #0000 70%),
+    radial-gradient(50% 40% at 10% 100%, #f10e7d1f, #0000 70%),
+    var(--ink, #05050a);
 }
-.city-viewport::-webkit-scrollbar {
+.city-no3d[hidden] {
   display: none;
 }
-.city-viewport:focus-visible {
-  outline-offset: -3px;
+.city-no3d-card {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  width: min(420px, 100%);
+  padding: 22px 20px;
+  border: 1px solid #0000;
+  border-radius: 10px;
+  background:
+    linear-gradient(#0b0a12f2, #0b0a12f2) padding-box,
+    var(--pulse) border-box;
+  box-shadow: 0 0 80px -24px #8000ffb3;
+  text-align: center;
 }
-.city-viewport.is-dragging,
-.city-viewport.is-dragging a {
-  cursor: grabbing;
+.city-no3d-card .kicker {
+  margin: 0;
 }
-.city-map {
-  display: block;
-  /* The map's viewBox is 6480 wide (city.ts VIEW): 1:1 at most, about half that on phones */
-  width: clamp(3430px, 330vw, 6480px);
-  height: auto;
-  -webkit-user-select: none;
-  user-select: none;
+.city-no3d-text {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(22px, 6vw, 28px);
+  font-weight: 800;
+  line-height: 1.1;
+  text-transform: uppercase;
+  color: #fff;
+}
+.city-no3d-note {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text-2);
+}
+/* (the welcome tip's how-to-move line is the 3D city's) */
+.city[data-view="none"] .city-hint {
+  display: none;
 }
 /* Night vignette around the edges of the screen */
 .city::after {
@@ -56,277 +81,6 @@ body.is-walking .nav {
   inset: 0;
   pointer-events: none;
   box-shadow: inset 0 0 140px 30px #05050ab3;
-}
-
-/* Inked shapes */
-.city-map .ink,
-.city-map .road {
-  stroke: var(--ink);
-  stroke-width: 3;
-  stroke-linejoin: round;
-  stroke-linecap: round;
-}
-.city-map .wins {
-  stroke: var(--ink);
-  stroke-width: 2;
-}
-.city-map text {
-  stroke: none;
-}
-.city-map .outlined {
-  stroke: var(--ink);
-  stroke-width: 5px;
-  stroke-linejoin: round;
-  paint-order: stroke;
-}
-.city-map .t-display {
-  font-family: var(--font-display);
-  font-weight: 900;
-}
-.city-map .t-mono {
-  font-family: var(--font-mono);
-}
-.city-map .neon {
-  filter: drop-shadow(0 0 2px #fff9) drop-shadow(0 0 7px currentColor);
-  color: #e219e5;
-  animation: neon 6s steps(1) infinite;
-}
-.city-map .spray {
-  stroke: var(--ink);
-  stroke-width: 4px;
-  paint-order: stroke;
-}
-.city-map .lot {
-  stroke: #0000004d;
-  stroke-width: 1;
-}
-.city-map .lane {
-  stroke: #f5d76e;
-  stroke-width: 2.5;
-  stroke-dasharray: 14 12;
-  opacity: 0.65;
-}
-.city-map .shimmer {
-  stroke: #4f9be6;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-dasharray: 30 70;
-  opacity: 0.55;
-  animation: shimmer 7s linear infinite;
-}
-.city-map .shimmer-1 {
-  stroke-dasharray: 16 90;
-  animation-direction: reverse;
-}
-.city-map .rail {
-  stroke-width: 2.5;
-}
-.city-map .leg {
-  stroke-width: 4;
-}
-.city-map .tw-leg {
-  stroke: var(--ink);
-  stroke-width: 8;
-  stroke-linecap: round;
-}
-.city-map .tw-white {
-  stroke: #f3f2f7;
-  stroke-width: 3.5;
-}
-.city-map .tw-stripe {
-  stroke: #e23b3b;
-  stroke-width: 3.5;
-  stroke-dasharray: 20 20;
-}
-.city-map .tw-brace {
-  stroke: var(--ink);
-  stroke-width: 2;
-}
-.city-map .lattice path {
-  fill: none;
-  stroke: var(--ink);
-  stroke-width: 1.5;
-}
-.city-map .ring {
-  fill: none;
-  stroke: var(--p-cyan);
-  stroke-width: 2.5;
-}
-.city-map .neon-strip {
-  filter: drop-shadow(0 0 6px #e219e5);
-}
-/* The Emporium arcade: equalizer edges and the rooftop hologram */
-.city-map .eq {
-  animation: eq 1s steps(4) infinite;
-}
-@keyframes eq {
-  0%,
-  100% {
-    opacity: 0.2;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-.city-map .holo {
-  opacity: 0.8;
-  filter: drop-shadow(0 0 6px #00eaff) drop-shadow(0 0 2px #ff6ad5);
-  animation: holo 3.2s steps(1) infinite;
-}
-@keyframes holo {
-  0%,
-  100% {
-    opacity: 0.8;
-  }
-  93% {
-    opacity: 0.35;
-  }
-  95% {
-    opacity: 0.75;
-  }
-}
-/* Ambient motion */
-.city-map .beacon,
-.city-map .lamp-glow,
-.city-map .logo-glow,
-.city-map .ripple,
-.city-map .spray,
-.city-map .spark {
-  transform-box: fill-box;
-  transform-origin: center;
-}
-.city-map .beacon {
-  animation: beacon 1.8s ease-in-out infinite;
-}
-.city-map .lamp-glow {
-  animation: lamp 3.5s ease-in-out infinite alternate;
-}
-.city-map .logo-glow {
-  animation: lamp 4s ease-in-out infinite alternate;
-}
-.city-map .flick {
-  animation: flick 9s steps(1) infinite;
-}
-.city-map .ripple {
-  animation: ripple 3s ease-out infinite;
-}
-.city-map .spray {
-  transform-origin: bottom;
-  animation: spray 1.1s ease-in-out infinite alternate;
-}
-.city-map .spark {
-  fill: #ffd27a;
-  animation: spark 1.4s ease-out infinite;
-}
-.city-map .search {
-  transform-box: view-box;
-  animation: sweep 9s ease-in-out infinite alternate;
-}
-.city-map .search-1 {
-  animation-delay: -4.5s;
-}
-.city-map .cloud {
-  opacity: 0.07;
-  animation: drift linear infinite;
-}
-.city-map .cloud ellipse {
-  fill: #c9b8ff;
-}
-@keyframes neon {
-  0%, 100% { opacity: 1; }
-  91% { opacity: 0.55; }
-  93% { opacity: 1; }
-  95% { opacity: 0.4; }
-}
-@keyframes shimmer {
-  to { stroke-dashoffset: -200; }
-}
-@keyframes beacon {
-  50% { opacity: 0.25; transform: scale(0.6); }
-}
-@keyframes lamp {
-  from { opacity: 0.75; }
-  to { opacity: 1; }
-}
-@keyframes flick {
-  0%, 100% { opacity: 1; }
-  40% { opacity: 0.15; }
-  44% { opacity: 1; }
-  70% { opacity: 0.2; }
-}
-@keyframes ripple {
-  from { transform: scale(0.4); opacity: 1; }
-  to { transform: scale(2.6); opacity: 0; }
-}
-@keyframes spray {
-  to { transform: scaleY(0.82); }
-}
-@keyframes spark {
-  from { transform: translate(0, 0); opacity: 1; }
-  to { transform: translate(var(--dx), var(--dy)); opacity: 0; }
-}
-@keyframes sweep {
-  from { transform: rotate(-24deg); }
-  to { transform: rotate(24deg); }
-}
-@keyframes drift {
-  to { transform: translateX(3800px); }
-}
-
-/* Buildings that link somewhere, and their pins */
-.city-map .spot {
-  cursor: pointer;
-  outline: none;
-}
-.city-map .lift {
-  transition: transform 0.35s var(--ease), filter 0.35s;
-}
-.city-map .spot.is-hot .lift,
-.city-map .spot:focus-visible .lift {
-  transform: translateY(-10px);
-  filter: drop-shadow(0 0 2px #00eaff) drop-shadow(0 0 16px #e219e5b3);
-}
-.city-map .pin {
-  cursor: pointer;
-}
-.city-map .pin-bob {
-  animation: bob 3s ease-in-out infinite;
-}
-.city-map .pin-stem {
-  stroke: #fff;
-  stroke-width: 2;
-}
-.city-map .pin-dot {
-  fill: var(--p-cyan);
-  stroke: var(--ink);
-  stroke-width: 2;
-}
-.city-map .pin-card {
-  fill: #0b0a12eb;
-  stroke: url(#pulseH);
-  stroke-width: 2.5;
-  transition: fill 0.2s;
-}
-.city-map .pin.is-hot .pin-card {
-  fill: #2a1d55;
-}
-.city-map .pin-title {
-  font-family: var(--font-display);
-  font-size: 22px;
-  font-weight: 900;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-  fill: #fff;
-}
-.city-map .pin-sub {
-  font-family: var(--font-mono);
-  font-size: 11.5px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  fill: var(--p-cyan);
-}
-@keyframes bob {
-  50% { transform: translateY(-8px); }
 }
 
 /* Overlay: the first-visit tip under the header, and the draft tag in the corner */
@@ -468,9 +222,6 @@ body.is-walking .nav {
   visibility: visible;
   transition: opacity 0.9s var(--ease);
 }
-.city[data-view="3d"] .city-viewport {
-  visibility: hidden;
-}
 .city-pins {
   position: absolute;
   inset: 0;
@@ -611,7 +362,6 @@ body.is-walking .nav {
 }
 
 .city-controls,
-.city-to3d,
 .city-panel {
   z-index: 4;
   border: 1px solid #0000;
@@ -711,23 +461,6 @@ body.is-walking .nav {
     var(--pulse) border-box;
   color: #fff;
 }
-.city-to3d {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  color: #fff;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  cursor: pointer;
-}
-.city-to3d span {
-  color: var(--p-cyan);
-}
-.city-to3d[hidden],
 .city-panel[hidden],
 .city-loader[hidden] {
   display: none;
@@ -801,13 +534,6 @@ body.is-walking .nav {
   align-items: center;
   gap: 10px;
   margin-top: 6px;
-}
-.city .hint-3d,
-.city[data-view="3d"] .hint-2d {
-  display: none;
-}
-.city[data-view="3d"] .hint-3d {
-  display: inline;
 }
 .city.has-panel .city-dir {
   visibility: hidden;

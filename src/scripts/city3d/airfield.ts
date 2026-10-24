@@ -10,7 +10,7 @@
  * time into a position, heading, pitch, bank, gear and power. It's a
  * function of the time only, the same for everyone. airport.ts draws it all.
  */
-import { NS_ROADS, RIVER, SEATS, SOUTH_SHIFT as D } from './layout';
+import { NS_ROADS, RIVER, SEATS, SOUTH_SHIFT as D, WIDEN } from './layout';
 import { ROOF_PAD } from './highrise';
 
 /** The middle of the river (the prop plane flies along it) */
@@ -28,7 +28,7 @@ const AVENUE = NS_ROADS.at(-1)!;
 /** The whole airport, landside and airside (no trees in here) */
 /* Written before the river was widened: every z south of it adds `D` (layout.ts SOUTH_SHIFT), so the airport kept its place past the Southside Loop.
    Fixed numbers, not the world's edge (growth plan Phase 5): when the edge moves out, the airport stays where it is */
-export const SITE: Rect = [AVENUE.c + AVENUE.half + 1.2, 112.5 + D, 234, 234];
+export const SITE: Rect = [AVENUE.c + AVENUE.half + 1.2, 112.5 + D, 234, 234 + WIDEN];
 
 /** The runway: east-west, landings and take-offs eastwards */
 export const RUNWAY = { x0: 92, x1: 232, z: 198 + D, half: 4 };
@@ -526,7 +526,7 @@ function exec(liftoff: number): Flight {
   const R = ROOF_PAD;
   const UP = 10;
   const OVER = R.y + 8;
-  const out: Way[] = [w(px, pz, UP, 0), w(px - 4, 122, 30, 14), w(150, 102, 36, 17), w(-40, 102, 36, 17), w(-104, 96, 40, 14), w(-104, 26, OVER, 10), w(R.x + 7, R.z, OVER, 5), w(R.x, R.z, OVER, 0)];
+  const out: Way[] = [w(px, pz, UP, 0), w(px - 4, 122 + WIDEN, 30, 14), w(150, 102 + WIDEN, 36, 17), w(-40, 102 + WIDEN, 36, 17), w(-104, 96 + WIDEN, 40, 14), w(-104, 26, OVER, 10), w(R.x + 7, R.z, OVER, 5), w(R.x, R.z, OVER, 0)];
   const acts: Act[] = [
     fly(out, 12),
     { kind: 'lift', dur: 7, to: R.y },
@@ -561,7 +561,7 @@ export const timetable = (tt: Timetable): Flight[] => [
   ...(tt.exec === undefined ? [] : [exec(tt.exec)]),
 ];
 /** Every aircraft flying today (the timetable keeps them apart: tests/airfield.test.ts checks) */
-export const FLIGHTS: Flight[] = timetable({ jetA: 0, prop: 50, jetB: 130, jetC: 185, heli: 0, exec: 30 });
+export const FLIGHTS: Flight[] = timetable({ jetA: 0, prop: 30, jetB: 150, jetC: 205, heli: 0, exec: 30 });
 
 /** Where a flight is at time `t` (seconds), or parked under reduced motion */
 export function poseAt(f: Flight, t: number): Pose {

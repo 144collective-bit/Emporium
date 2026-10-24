@@ -106,8 +106,9 @@ test('City view pans round the built-up area, never past the world, and the Buil
   // Since Phase 6 the world is bigger than that: the pan stops round the city, short of the edge (but to the north,
   // where the kart park moved past the ring highway: there it can reach the edge's margin)
   assert.ok(PAN_BOUNDS[0] > WORLD_BOUNDS[0] + 10 && PAN_BOUNDS[2] < WORLD_BOUNDS[2] - 10 && PAN_BOUNDS[3] < WORLD_BOUNDS[3] - 10);
-  // The Build overview: where it always looked from (the plots don't move)
+  // The Build overview: the plots' middle (the south row moved with the river's widening, river plan step 1)
   const f = overviewFrame();
-  assert.deepEqual(f.target, [20, 34]);
-  assert.equal(f.scale, 1);
+  assert.deepEqual(f.target, [20, 56.5]);
+  // ...standing further back for the plots spread across the wider river
+  assert.ok(Math.abs(f.scale - 168.5 / 123.5) < 1e-9);
 });

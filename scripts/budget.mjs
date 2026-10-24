@@ -8,7 +8,7 @@ import { gzipSync } from 'node:zlib';
 
 /** Kilobytes, gzipped (what goes over the wire) */
 const BUDGETS = {
-  /** The homepage's HTML (the 2D map waits in it, inert, for whoever picks it) */
+  /** The homepage's HTML */
   page: 110,
   /** The script the page starts with, and everything it imports straight away */
   pageJs: 8,
@@ -20,9 +20,15 @@ const BUDGETS = {
    * (4 KB), the lay-bys' cars and the alleys' solids (2 KB), its streets' asphalt and lamps at the boot (2 KB); and
    * from 654 for Phase 6, the owner's picks: Sector 7 Tower as a place (its spot, the lift and walking on the sky
    * deck), Uptown's joggers and cyclists in the crowd, its sound and the executive helicopter's flight (2 KB); the
-   * tower's drawing, the night lights and the bikes are Uptown's own chunk's)
+   * tower's drawing, the night lights and the bikes are Uptown's own chunk's; and from 658 for the river four times
+   * as wide, docs/river-plan.md step 1, the owner's call: its natural shape (river.ts), the water's mesh and its banks
+   * (world.ts), the walls the cars stop at and the traffic's new routes without the avenue bridges (3 KB): the water
+   * is seen from the home view, so it's drawn at the boot; and from 662 for step 2, the owner's design: Harbour
+   * Bridge as a place (its towers, deck, cables and stays, harbour3d.ts, 4 KB) and the water lowered under the
+   * streets (the banks' slopes and quay walls): a landmark seen from the home view, drawn at the boot as Liberty
+   * Bridge is)
    */
-  bootJs: 658,
+  bootJs: 666,
   /** Any one piece loaded later (a feature, when it's used) */
   lazyJs: 60,
   /** All the CSS */

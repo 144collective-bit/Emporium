@@ -2,12 +2,11 @@
 /*
  * The homepage: Sector 7.
  *
- * Two layers. The 2D isometric map (src/lib/city.ts) renders on the server:
- * it's the no-WebGL fallback and the "2D map" view (the start menu covers
- * it while the 3D city loads: the owner wants no map on loading). On
- * top of it the 3D city (src/scripts/city3d) boots where WebGL is available:
- * buildings you hover and click, a camera that flies in, glass panels with
- * each section, day/night, weather and optional sound.
+ * The 3D city (src/scripts/city3d) boots behind the start menu: buildings
+ * you hover and click, a camera that flies in, glass panels with each
+ * section, day/night, weather and optional sound. Where it can't run (no
+ * WebGL 2, or the boot fails) the page says the city needs 3D graphics
+ * (`[data-no3d]`); the 2D map it once fell back to was retired (the owner's call).
  *
  * All copy is DRAFT - see the note in the card and the panels.
  */
@@ -16,12 +15,11 @@ import degen from '../assets/degen.png';
 import logo from '../assets/logo.png';
 import pulsechain from '../assets/pulsechain.png';
 import flame from '../assets/liberty-flame.png';
-import { renderCity, VIEW, EMPORIUM_FOCUS, type Spot, type SpotId } from '../lib/city';
+import type { Spot, SpotId } from '../lib/city';
 import { X_URL, X_HANDLE, TELEGRAM_URL, SHOP_URL, SHOP_OPEN } from '../data/site';
 
-const [degenImg, logoImg, degenBig, logoBig, flameImg] = await Promise.all([
-  getImage({ src: degen, width: 160, format: 'webp' }),
-  getImage({ src: logo, width: 440, format: 'webp' }),
+// Art the 3D city loads (index.ts reads it from the root's data-degen, data-logo and data-flame)
+const [degenBig, logoBig, flameImg] = await Promise.all([
   getImage({ src: degen, width: 520, format: 'webp' }),
   getImage({ src: logo, width: 729, format: 'webp' }),
   // The Liberty flame on Liberty Bridge's crowns (libertybridge.ts)
@@ -29,49 +27,48 @@ const [degenImg, logoImg, degenBig, logoBig, flameImg] = await Promise.all([
 ]);
 
 // The buildings are places in the city's game (each opens its own panel in 3D); none of them
-// links off to the comic page or elsewhere. In the 2D map they point back to the city.
+// links off to the comic page or elsewhere.
 const spots: Record<SpotId, Spot> = {
-  emporium: { href: '#city-title', title: 'The Emporium', sub: 'Market hall', aria: 'The Emporium: the market hall' },
-  shop: { href: '#city-title', title: 'Drop 001', sub: 'Clothes · fitting room', aria: 'Drop 001: clothes and the fitting room' },
-  workshop: { href: '#city-title', title: 'The Workshop', sub: 'Factory', aria: 'The Workshop: the factory' },
-  vault: { href: '#city-title', title: 'The Vault', sub: 'Bank', aria: 'The Vault: the bank' },
-  plan: { href: '#city-title', title: 'The Armoury', sub: 'Guns & gear', aria: 'The Armoury: guns and gear' },
-  signal: { href: '#city-title', title: 'Signal tower', sub: 'News & contracts', aria: 'Signal tower: news and contracts' },
-  telegram: { href: '#city-title', title: 'Post office', sub: 'Couriers', aria: 'Post office: couriers' },
-  apartments: { href: '#city-title', title: 'Apartments', sub: 'Staff', aria: 'The Apartments: hire staff' },
-  karts: { href: '#city-title', title: 'Kart park', sub: 'Go-karts · races', aria: 'The kart park: go-kart races' },
-  airport: { href: '#city-title', title: 'Airport', sub: 'Hangar · fly', aria: 'Sector 7 Airport: fly your own aircraft' },
-  fightclub: { href: '#city-title', title: 'Fight Club', sub: 'Spar · bouts', aria: 'The Fight Club: spar and bouts' },
-  liberty: { href: '#city-title', title: 'Liberty Bridge', sub: 'Footbridge', aria: 'Liberty Bridge: a footbridge over the river' },
-  trenches: { href: '#city-title', title: 'The Block', sub: 'The Trenches', aria: 'The Block: the courtyard at the heart of The Trenches' },
-  club: { href: '#city-title', title: 'Club PULSE', sub: 'Nightclub · coming soon', aria: 'Club PULSE: a nightclub in The Trenches facing the river, coming soon' },
-  bar: { href: '#city-title', title: 'The Rusty Nail', sub: 'Bar · coming soon', aria: 'The Rusty Nail: a bar in The Trenches facing the river, coming soon' },
-  arms: { href: '#city-title', title: 'Trench Arms', sub: 'Guns & gear', aria: 'Trench Arms: guns and gear in The Trenches' },
-  pier: { href: '#city-title', title: 'Pier 7', sub: 'The waterfront', aria: 'Pier 7: the boardwalk and pier on The Trenches\' waterfront' },
-  nightmarket: { href: '#city-title', title: 'Night Market', sub: 'Street food', aria: 'The Night Market: food stalls on the waterfront by Harbor Stores' },
-  stadium: { href: '#city-title', title: 'Sector 7 Stadium', sub: 'Events · coming soon', aria: 'Sector 7 Stadium in Westlake Park: events coming soon' },
-  tower: { href: '#city-title', title: 'Sector 7 Tower', sub: 'Sky deck', aria: 'Sector 7 Tower in Uptown: a lift to the sky deck at the top' },
+  emporium: { title: 'The Emporium', sub: 'Market hall' },
+  shop: { title: 'Drop 001', sub: 'Clothes · fitting room' },
+  workshop: { title: 'The Workshop', sub: 'Factory' },
+  vault: { title: 'The Vault', sub: 'Bank' },
+  plan: { title: 'The Armoury', sub: 'Guns & gear' },
+  signal: { title: 'Signal tower', sub: 'News & contracts' },
+  telegram: { title: 'Post office', sub: 'Couriers' },
+  apartments: { title: 'Apartments', sub: 'Staff' },
+  karts: { title: 'Kart park', sub: 'Go-karts · races' },
+  airport: { title: 'Airport', sub: 'Hangar · fly' },
+  fightclub: { title: 'Fight Club', sub: 'Spar · bouts' },
+  liberty: { title: 'Liberty Bridge', sub: 'Footbridge' },
+  harbour: { title: 'Harbour Bridge', sub: 'The east avenue' },
+  trenches: { title: 'The Block', sub: 'The Trenches' },
+  club: { title: 'Club PULSE', sub: 'Nightclub · coming soon' },
+  bar: { title: 'The Rusty Nail', sub: 'Bar · coming soon' },
+  arms: { title: 'Trench Arms', sub: 'Guns & gear' },
+  pier: { title: 'Pier 7', sub: 'The waterfront' },
+  nightmarket: { title: 'Night Market', sub: 'Street food' },
+  stadium: { title: 'Sector 7 Stadium', sub: 'Events · coming soon' },
+  tower: { title: 'Sector 7 Tower', sub: 'Sky deck' },
 };
-const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'trenches', 'club', 'bar', 'arms', 'pier', 'nightmarket', 'stadium', 'tower'];
+const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'harbour', 'trenches', 'club', 'bar', 'arms', 'pier', 'nightmarket', 'stadium', 'tower'];
 const ext = { target: '_blank', rel: 'noopener noreferrer' };
 
-const map = renderCity({ spots, art: { degen: degenImg.src, logo: logoImg.src } });
-const focusX = +((EMPORIUM_FOCUS[0] - VIEW.x) / VIEW.w).toFixed(4);
-const focusY = +((EMPORIUM_FOCUS[1] - VIEW.y) / VIEW.h).toFixed(4);
 // The commit this was built from (set by the Worker's build in server/wrangler.jsonc)
 // Connect wallet (account-ui.ts): only when the site has a game server
 const server = !!import.meta.env.PUBLIC_GAME_SERVER;
 const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) ?? '';
 ---
 
-<section class="city has-start" aria-labelledby="city-title" data-city-root data-view="2d" data-mode="explore" data-degen={degenBig.src} data-logo={logoBig.src} data-flame={flameImg.src}>
-  <div class="city-viewport" data-city data-focus-x={focusX} data-focus-y={focusY} tabindex="0" role="region" aria-label="City map: scroll or drag to look around">
-    {/* Inert until the 2D map is shown (mountMap() below): the 3D city's boot never lays it out */}
-    <template data-map-tpl>
-      <svg class="city-map" viewBox={`${VIEW.x} ${VIEW.y} ${VIEW.w} ${VIEW.h}`} role="group" aria-label="Sector 7">
-        <g set:html={map} />
-      </svg>
-    </template>
+<section class="city has-start" aria-labelledby="city-title" data-city-root data-view="loading" data-mode="explore" data-degen={degenBig.src} data-logo={logoBig.src} data-flame={flameImg.src}>
+  {/* No 3D here (data-view="none": no WebGL 2, or the city couldn't start): the page says so.
+      The ☰ Menu still has the comic page and the links. */}
+  <div class="city-no3d" data-no3d hidden>
+    <div class="city-no3d-card" role="status">
+      <p class="kicker"><span class="kicker-num">3D</span> Sector 7</p>
+      <p class="city-no3d-text">Sector 7 needs a device with 3D graphics (WebGL&nbsp;2).</p>
+      <p class="city-no3d-note">Try another browser or device. The comic and the links are in the Menu.</p>
+    </div>
   </div>
 
   {/* The 3D city: canvas is added by the script; pins float over their buildings */}
@@ -95,7 +92,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
 
   {/* The start menu (the owner's call): over everything on every open, while the 3D city loads behind it.
       Single player enters the city; Multiplayer joins other Degens when there's a game server (coming soon
-      without one); Options holds time, weather, sound and the 2D map. Nothing of the map shows until you pick. */}
+      without one); Options holds time, weather and sound. Nothing of the city shows until you pick. */}
   {/* Maintenance (live settings, live.ts): over everything, the start menu too, while the owner has the city closed.
       The city doesn't boot behind it; when it lifts the page reloads. */}
   <div class="city-start city-maint" data-maint role="dialog" aria-modal="true" aria-labelledby="city-maint-title" hidden>
@@ -125,7 +122,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
         </button>
         <button type="button" class="city-start-btn" data-start-options aria-expanded="false">
           <span class="city-start-btn-name">Options</span>
-          <span class="city-start-btn-sub">Time, weather, sound, 2D map, credits</span>
+          <span class="city-start-btn-sub">Time, weather, sound, credits</span>
         </button>
       </div>
       <div class="city-start-options" data-start-pane hidden>
@@ -153,13 +150,6 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
             <button type="button" data-opt="sound" data-val="on" aria-pressed="false">On</button>
           </div>
         </div>
-        <div class="city-start-row">
-          <span class="city-start-label">View</span>
-          <div class="city-start-seg" role="group" aria-label="View">
-            <button type="button" data-opt="view" data-val="3d" aria-pressed="true">3D city</button>
-            <button type="button" data-opt="view" data-val="2d" aria-pressed="false">2D map</button>
-          </div>
-        </div>
         {/* The credits the city's borrowed work asks for (docs/animation-plan.md): named, never linked */}
         <details class="city-start-credits">
           <summary><span class="city-start-label">Credits</span></summary>
@@ -182,7 +172,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       <Picture src={logo} formats={['avif', 'webp']} fallbackFormat="webp" widths={[72, 144, 216]} sizes="72px" alt="" loading="eager" class="city-head-logo-img" />
     </a>
     <div class="city-head-id">
-      <p class="city-head-text"><b data-head-title>City map</b><small data-head-sub>2D view</small></p>
+      <p class="city-head-text"><b data-head-title>Sector 7</b><small data-head-sub>Loading the city</small></p>
     </div>
     <div class="walk-top">
       <details class="walk-settings walk-pop" data-pop>
@@ -329,9 +319,6 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       <button type="button" data-online-set="off" aria-pressed="false">Off<span class="city-online-long">line</span></button>
     </div>
     <div class="city-head-modes" role="group" aria-label="View mode">
-      <button type="button" class="city-to3d" data-view-toggle="3d" hidden>
-        <span aria-hidden="true">◆</span> Enter 3D city
-      </button>
       <button type="button" class="city-mode-btn" data-mode-city aria-pressed="true" hidden>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18M5 21V9l5-3v15M10 21V4l9 4v13M14 10h2M14 14h2M7 12h1M7 16h1" /></svg>
         <span class="city-mode-label">City</span>
@@ -423,7 +410,6 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
               <span data-sound-label>Sound off</span>
             </button>
             <button type="button" class="seg-wide" data-reset>Reset view</button>
-            <button type="button" class="seg-wide" data-view-toggle="2d">2D map</button>
           </div>
         </div>
       </details>
@@ -448,7 +434,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
               const s = spots[id];
               return (
                 <li>
-                  <a href={s.href} data-dir-spot={id}>
+                  <a href="#city-title" data-dir-spot={id}>
                     <span>{s.title}</span>
                     <small>{s.sub}</small>
                   </a>
@@ -978,8 +964,14 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
   <template data-panel-tpl="liberty">
     <p class="kicker"><span class="kicker-num">12</span> The river</p>
     <h2 id="city-panel-title" class="city-panel-title">Liberty Bridge</h2>
-    <p class="city-panel-text">Sector 7's stone footbridge, one of a kind. A gate tower stands on each bank beside West 3 and South 1, with stairs up both sides and the Liberty flame spiralling up from its roof. The walkway crosses on arches high over both river avenues and the wide river, with boats passing underneath and lanterns along the parapets at night. It's for people only: climb the stairs and walk across.</p>
+    <p class="city-panel-text">Sector 7's footbridge, one of a kind. Two sandstone gate towers stand in the river with the Liberty flame spiralling up from their roofs, and the approaches climb from the promenades, hung from pale blue chains. Across the middle the deck lifts in two halves when the tall ship sails through. Take the lift in either tower up to the high walkways and walk all the way round, with the river far below. It's for people only.</p>
     <button type="button" class="chip-link kart-walkin" data-liberty-walkin>Walk in</button>
+  </template>
+  <template data-panel-tpl="harbour">
+    <p class="kicker"><span class="kicker-num">12</span> The river</p>
+    <h2 id="city-panel-title" class="city-panel-title">Harbour Bridge</h2>
+    <p class="city-panel-text">Sector 7's suspension bridge, where the east avenue and the metro cross the river. Two stone towers stand in the water with great pointed arches, the cables swing over their tops from anchorages on the promenades, and a web of stays fans out from each. The deck rises over the middle so the boats pass under: two lanes each way, the metro on its raised level down the middle, and a footway along each edge through the towers' smaller arches, lanterns and a necklace of lights along the cables at night.</p>
+    <button type="button" class="chip-link kart-walkin" data-harbour-walkin>Walk in</button>
   </template>
   <template data-panel-tpl="trenches">
     <p class="kicker"><span class="kicker-num">13</span> The Trenches</p>
@@ -1047,7 +1039,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     <div class="city-card" id="city-card">
       <p class="kicker"><span class="kicker-num">GM</span></p>
       <h1 id="city-title" class="city-title">Welcome to <span class="hl">Sector&nbsp;7</span></h1>
-      <p class="city-hint"><span class="hint-2d">Drag to look around. Pick a lit-up building to go in.</span><span class="hint-3d">Drag to move, right-drag to turn, scroll to zoom. Click a building to go in.</span></p>
+      <p class="city-hint">Drag to move, right-drag to turn, scroll to zoom. Click a building to go in.</p>
       <p class="city-draft">Draft · v0</p>
       <button type="button" class="city-card-close" data-card-close aria-controls="city-card" aria-label="Hide the welcome tip">
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
@@ -1080,89 +1072,15 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
   import { bannersAt, type Live } from '../scripts/city3d/live';
 
   const root = document.querySelector<HTMLElement>('[data-city-root]');
-  const vp = document.querySelector<HTMLElement>('[data-city]');
-  const tpl = vp?.querySelector<HTMLTemplateElement>('template[data-map-tpl]');
-  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  if (root && vp && tpl) {
+  if (root) {
     // The owner's live settings (live.ts): asked for now; the 3D city's boot waits for them (briefly)
     const liveFirst = live.start();
-    // WebGL2 here? (the 3D city boots where it works; on the 2D map the buildings take you there)
+    // WebGL2 here? (the 3D city needs it; without it the page says so, [data-no3d])
     const gl = document.createElement('canvas').getContext('webgl2');
     gl?.getExtension('WEBGL_lose_context')?.loseContext();
-
-    /** The 2D map, put in the page the first time it's shown (it's big: nobody who stays in 3D pays for it) */
-    let svg: SVGSVGElement | null = null;
-    function mountMap(): SVGSVGElement {
-      if (svg) return svg;
-      vp!.append(tpl!.content);
-      svg = vp!.querySelector('svg')!;
-      // A building and its pin light up together
-      const hot = (id: string, on: boolean) =>
-        vp!.querySelectorAll(`[data-spot="${id}"]`).forEach((el) => el.classList.toggle('is-hot', on));
-      vp!.querySelectorAll<SVGElement>('[data-spot]').forEach((el) => {
-        const id = el.dataset.spot!;
-        el.addEventListener('pointerenter', () => hot(id, true));
-        el.addEventListener('pointerleave', () => hot(id, false));
-        el.addEventListener('focus', () => hot(id, true));
-        el.addEventListener('blur', () => hot(id, false));
-        // The buildings are places in the 3D city's game: on the 2D map they take you there
-        if (gl)
-          el.addEventListener('click', async (e) => {
-            e.preventDefault();
-            remember('3d');
-            await go3d();
-            if (root!.dataset.view === '3d') city?.open(id);
-          });
-      });
-      // SMIL animations (cars, rings, the plane) ignore CSS, so pause them here
-      if (reduced) svg.pauseAnimations();
-      // Open on the Emporium (once the map is showing: show2d() sets the view first)
-      requestAnimationFrame(() => {
-        vp!.scrollLeft = svg!.clientWidth * Number(vp!.dataset.focusX) - vp!.clientWidth / 2;
-        vp!.scrollTop = svg!.clientHeight * Number(vp!.dataset.focusY) - vp!.clientHeight / 2;
-      });
-      return svg;
-    }
-
-    // Drag to pan with a mouse; touch and trackpads scroll natively
-    let drag: { x: number; y: number; left: number; top: number } | null = null;
-    let moved = false;
-    vp.addEventListener('pointerdown', (e) => {
-      if (e.pointerType !== 'mouse' || e.button !== 0) return;
-      drag = { x: e.clientX, y: e.clientY, left: vp.scrollLeft, top: vp.scrollTop };
-      moved = false;
-    });
-    window.addEventListener('pointermove', (e) => {
-      if (!drag) return;
-      const dx = e.clientX - drag.x;
-      const dy = e.clientY - drag.y;
-      if (!moved && Math.hypot(dx, dy) > 5) {
-        moved = true;
-        vp.classList.add('is-dragging');
-      }
-      if (moved) {
-        vp.scrollLeft = drag.left - dx;
-        vp.scrollTop = drag.top - dy;
-      }
-    });
-    window.addEventListener('pointerup', () => {
-      drag = null;
-      vp.classList.remove('is-dragging');
-    });
-    // A drag that ends on a building is not a click
-    vp.addEventListener(
-      'click',
-      (e) => {
-        if (moved) {
-          e.preventDefault();
-          e.stopPropagation();
-          moved = false;
-        }
-      },
-      true
-    );
-    vp.addEventListener('dragstart', (e) => e.preventDefault());
+    // ?anim (the animation lab, anim-lab.ts) opens over the page with no city behind it: not a missing 3D
+    const lab = new URLSearchParams(location.search).has('anim');
 
     // Tablets and desktops: the welcome card can be closed, and stays closed on return
     document.querySelector('[data-card-close]')?.addEventListener('click', () => {
@@ -1171,7 +1089,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       try {
         localStorage.setItem('city-card', 'hidden');
       } catch {}
-      vp.focus({ preventScroll: true });
+      root.querySelector<HTMLElement>('[data-city3d] canvas')?.focus({ preventScroll: true });
     });
 
     // Drop-open menus (City settings, Directory, walk mode's panels) close with their ×, a tap
@@ -1202,7 +1120,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       openMenus().forEach((menu) => (menu.open = false));
     });
 
-    /* ---------- Connect wallet (works on the 2D map too; the 3D city plugs in when it starts) ---------- */
+    /* ---------- Connect wallet (made with the page; the 3D city plugs in when it starts) ---------- */
     const server = import.meta.env.PUBLIC_GAME_SERVER as string | undefined;
     const wallet = server
       ? Promise.all([import('../scripts/city3d/account'), import('../scripts/city3d/account-ui')]).then(([{ createAccount }, { createAccountUI }]) => {
@@ -1230,65 +1148,43 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       : Promise.resolve(null);
 
     /* ---------- The 3D city ---------- */
-    const controls = root.querySelector<HTMLDetailsElement>('[data-controls]')!;
-    const to3d = root.querySelector<HTMLButtonElement>('.city-to3d')!;
     let city: { stop(): void; start(): void; open(id: string): void; intro(): void } | null = null;
     let booting = false;
-    const remember = (v: string) => {
-      try {
-        localStorage.setItem('city-view', v);
-      } catch {}
-    };
+    const NO_3D = 'Sector 7 needs a device with 3D graphics (WebGL 2).';
+    /** No 3D here: the page says so, and so does the start menu (the header's Menu keeps the comic page and the links) */
+    function no3d() {
+      root!.dataset.view = 'none';
+      root!.querySelector<HTMLElement>('[data-no3d]')!.hidden = false;
+      // (the header's copy is head.ts's once the 3D city has started; before that, it's here)
+      const sub = root!.querySelector<HTMLElement>('[data-head-sub]');
+      if (sub) sub.textContent = 'Needs 3D graphics';
+      root!.querySelector<HTMLElement>('[data-start-status]')!.textContent = NO_3D;
+      root!.querySelector<HTMLElement>('[data-start-bar]')!.hidden = true;
+      root!.querySelector<HTMLElement>('[data-start-single] .city-start-btn-sub')!.textContent = 'Needs 3D graphics';
+    }
 
     async function go3d() {
-      if (booting) return;
+      if (booting || city) return;
+      if (!gl) return no3d();
       // (never behind the maintenance cover: the page reloads when it lifts)
       await liveFirst;
       if (live.now.maintenance) return;
-      if (city) {
-        city.start();
-        root!.dataset.view = '3d';
-      } else {
-        booting = true;
+      booting = true;
+      try {
         const { bootCity } = await import('../scripts/city3d/index');
         city = await bootCity(root!, await wallet);
-        booting = false;
-        if (!city) return show2d(false);
-        // Options picked in the start menu before the city was up
-        for (const apply of pendingOpts.splice(0)) apply();
+      } catch (err) {
+        console.error(err);
       }
-      svg?.pauseAnimations();
-      to3d.hidden = true;
+      booting = false;
+      if (!city) return lab ? undefined : no3d();
+      // Options picked in the start menu before the city was up
+      for (const apply of pendingOpts.splice(0)) apply();
     }
-    function show2d(offer: boolean) {
-      city?.stop();
-      root!.dataset.view = '2d';
-      to3d.hidden = !offer;
-      const map = mountMap();
-      if (!reduced) map.unpauseAnimations();
-    }
-    root.querySelectorAll<HTMLButtonElement>('[data-view-toggle]').forEach((b) =>
-      b.addEventListener('click', () => {
-        remember(b.dataset.viewToggle!);
-        if (b.dataset.viewToggle === '3d') go3d();
-        else show2d(true);
-      })
-    );
 
-    // Boot 3D where WebGL2 works, unless the visitor chose the 2D map
-    let saved: string | null = null;
-    try {
-      saved = localStorage.getItem('city-view');
-    } catch {}
-    /** Resolves once the first boot has settled (the 3D city is up, or it fell back to the map) */
-    let booted: Promise<unknown> = Promise.resolve();
-    let bootStarted = false;
-    if (!gl) to3d.remove();
-    else if (saved === '2d') to3d.hidden = false;
-    else {
-      bootStarted = true;
-      booted = go3d();
-    }
+    // Boot the 3D city straight away, behind the start menu
+    /** Resolves once the first boot has settled (the 3D city is up, or the page says it can't be) */
+    const booted: Promise<unknown> = go3d();
 
     /* ---------- The start menu ---------- */
     const start = root.querySelector<HTMLElement>('[data-start]')!;
@@ -1301,7 +1197,6 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     const loaderEl = root.querySelector<HTMLElement>('[data-loader]')!;
     /** Option choices made before the 3D city was up, applied when it is (its header controls do the work) */
     const pendingOpts: (() => void)[] = [];
-    let view = gl ? (saved === '2d' ? '2d' : '3d') : '2d';
     let entering = false;
     let closed = false;
 
@@ -1313,8 +1208,6 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
         if (!entering) status.textContent = 'The city is ready.';
       }
     }).observe(loaderEl, { attributes: true, attributeFilter: ['class'] });
-    if (!gl) status.textContent = '3D isn\'t available here: the 2D map it is.';
-    else if (saved === '2d') status.textContent = 'The 2D map is picked (Options to change it).';
 
     function paintOpt(opt: string, val: string) {
       start.querySelectorAll<HTMLButtonElement>(`[data-opt="${opt}"]`).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.val === val)));
@@ -1335,21 +1228,9 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
         const opt = b.dataset.opt!;
         const val = b.dataset.val!;
         paintOpt(opt, val);
-        if (opt === 'view') {
-          if (!gl && val === '3d') {
-            paintOpt('view', '2d');
-            status.textContent = '3D isn\'t available here: the 2D map it is.';
-            return;
-          }
-          view = val;
-          remember(val);
-          return;
-        }
         applyOpt(opt, val);
       })
     );
-    if (!gl) paintOpt('view', '2d');
-    else if (saved === '2d') paintOpt('view', '2d');
     // The header's sound button is the one that knows (it needs a tap to start): mirror it
     const headSound = root.querySelector<HTMLButtonElement>('[data-controls] [data-sound]');
     if (headSound) new MutationObserver(() => paintOpt('sound', headSound.getAttribute('aria-pressed') === 'true' ? 'on' : 'off')).observe(headSound, { attributes: true, attributeFilter: ['aria-pressed'] });
@@ -1377,25 +1258,15 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       start.setAttribute('aria-hidden', 'true');
       setTimeout(() => (start.hidden = true), 450);
     }
-    /** Into the city: the 3D one with its fly-in once it's up, or the 2D map */
+    /** Into the city with its fly-in once it's up; with no 3D here, onto the page that says so */
     async function enter(multi: boolean) {
       if (entering) return;
       entering = true;
-      status.textContent = 'Entering…';
-      if (view === '3d') {
-        if (!bootStarted) {
-          bootStarted = true;
-          booted = go3d();
-        }
-        await booted;
-      } else {
-        await booted;
-        show2d(gl !== null);
-      }
+      status.textContent = gl ? 'Entering…' : NO_3D;
+      await booted;
       if (multi && server && city) root!.querySelector<HTMLButtonElement>('[data-online-set="on"]')?.click();
       closeStart();
-      if (root!.dataset.view === '3d' && city) city.intro();
-      else vp!.focus({ preventScroll: true });
+      if (city) city.intro();
       entering = false;
     }
     start.querySelector('[data-start-single]')!.addEventListener('click', () => enter(false));
@@ -1441,7 +1312,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     bannerGo.addEventListener('click', async () => {
       const place = showing?.place;
       if (!place) return;
-      if (root!.dataset.view !== '3d' || !city) await go3d();
+      if (!city) await go3d();
       city?.open(place);
     });
     let maintShown = false;
@@ -1475,9 +1346,6 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     // (a notice's from and until come round on their own)
     setInterval(() => paintBanner(live.now), 60_000);
     // ?bench (the benchmark, bench.ts): straight into the 3D city, no menu
-    if (new URLSearchParams(location.search).has('bench') && gl) {
-      view = '3d';
-      enter(false);
-    }
+    if (new URLSearchParams(location.search).has('bench') && gl) enter(false);
   }
 </script>

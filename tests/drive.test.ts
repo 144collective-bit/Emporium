@@ -2,8 +2,9 @@
 // the garage's mods (catalog.ts, tycoon.ts) making a car faster through tune().
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { GEARS, RIVER_WALLS, SIGNAL_HOLD, SIGNAL_SPEED, carLights, circles, gearOf, newCar, newSignal, skidding, stepCar, tune, type CarState, type DriveInput, type DriveWorld } from '../src/scripts/city3d/drive-sim';
-import { EXT, NS_ROADS, RIVER, WALK_W, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
+import { GEARS, RIVER_WALLS, riverWallsNear, SIGNAL_HOLD, SIGNAL_SPEED, carLights, circles, gearOf, newCar, newSignal, skidding, stepCar, tune, type CarState, type DriveInput, type DriveWorld } from '../src/scripts/city3d/drive-sim';
+import { BRIDGED_NS, EXT, NS_ROADS, RIVER, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
+import { topsAt } from '../src/scripts/city3d/river';
 import { CARGO, DRIVE } from '../src/scripts/city3d/mycar';
 import { NO_CAR_MODS, carStats } from '../src/scripts/city3d/catalog';
 import { carStatsOf, cleanSave, modCar } from '../src/scripts/city3d/tycoon';
@@ -124,28 +125,43 @@ test('the river stops it except over the bridges', () => {
   const into = newCar(5, RIVER[0] - 5, -Math.PI / 2);
   run(into, GAS, 5);
   assert.ok(into.z < RIVER[0], 'drove into the river');
-  for (const r of NS_ROADS) {
-    // Down each lane of every bridge
+  NS_ROADS.forEach((r, i) => {
+    // Down every bridge (river plan step 1: only the east avenue keeps one; the others end at the bank avenue)
     const c = newCar(r.c + 0.85, RIVER[0] - 6, -Math.PI / 2);
-    run(c, GAS, 5);
-    assert.ok(c.z > RIVER[1] + 1, `blocked on the bridge at x ${r.c}`);
-  }
+    run(c, GAS, 9);
+    if (BRIDGED_NS.includes(i)) assert.ok(c.z > RIVER[1] + 1, `blocked on the bridge at x ${r.c}`);
+    else assert.ok(c.z < RIVER[0], `drove into the river at x ${r.c}`);
+  });
   // The ring highway's two bridges (growth plan Phase 7), down each of its lanes
   for (const b of riverBridges().filter((b) => b.street === 'highway'))
     for (const off of [-2.85, -1.15, 1.15, 2.85]) {
       const c = newCar(b.c + off, off > 0 ? RIVER[0] - 6 : RIVER[1] + 6, off > 0 ? -Math.PI / 2 : Math.PI / 2);
-      run(c, GAS, 5);
+      run(c, GAS, 9);
       assert.ok(off > 0 ? c.z > RIVER[1] + 1 : c.z < RIVER[0] - 1, `blocked on the highway's bridge at x ${b.c}`);
     }
-  // The gaps in the river walls are the bridges' width: the town's four and the highway's two
-  assert.equal(RIVER_WALLS.length, NS_ROADS.length + 2 + 1);
-  for (const r of NS_ROADS) assert.ok(!RIVER_WALLS.some((w) => w[0] < r.c + r.half && w[2] > r.c - r.half), `no gap at x ${r.c}`);
-  // From the street plan (growth plan Phase 5): the river runs edge to edge, and the walls are what they were
+  // The gaps in the river walls are the bridges' width (river plan step 1: the east avenue's and the highway's two)
+  const gaps = riverBridges().map((b) => [b.x0 + 0.1, b.x1 - 0.1]);
+  assert.equal(gaps.length, BRIDGED_NS.length + 2);
+  NS_ROADS.forEach((r, i) => {
+    const open = !RIVER_WALLS.some((w) => w[0] < r.c + r.half && w[2] > r.c - r.half);
+    assert.equal(open, BRIDGED_NS.includes(i), `x ${r.c}`);
+  });
+  // From the street plan (growth plan Phase 5): the river runs edge to edge, in order, broken only at the bridges
   assert.equal(RIVER_WALLS[0][0], EXT[0]);
   assert.equal(RIVER_WALLS.at(-1)![2], EXT[1]);
-  const gaps = riverBridges().map((b) => [b.x0 + 0.1, b.x1 - 0.1]);
-  for (const r of NS_ROADS) assert.ok(gaps.some((g) => Math.abs(g[0] - (r.c - r.half - WALK_W + 0.1)) < 1e-9 && Math.abs(g[1] - (r.c + r.half + WALK_W - 0.1)) < 1e-9), `the town's bridge at x ${r.c} is as it was`);
-  RIVER_WALLS.slice(1).forEach((w, i) => assert.ok(Math.abs(w[0] - gaps[i][1]) < 1e-9 && Math.abs(RIVER_WALLS[i][2] - gaps[i][0]) < 1e-9));
+  for (let i = 1; i < RIVER_WALLS.length; i++) {
+    const [p, q] = [RIVER_WALLS[i - 1], RIVER_WALLS[i]];
+    assert.ok(q[0] >= p[2] - 1e-9 && q[0] - p[2] < 30, 'in order');
+    if (q[0] - p[2] > 1e-6) assert.ok(gaps.some((g) => Math.abs(g[0] - p[2]) < 1e-9 && Math.abs(g[1] - q[0]) < 1e-9), `a gap at ${p[2]} that isn't a bridge`);
+  }
+  // ...and they cover the water and the banks' slopes down to it wherever they are (it curves: river.ts), never far
+  // onto the flat land
+  for (let x = EXT[0] + 1; x < EXT[1] - 1; x += 0.7) {
+    if (gaps.some((g) => x > g[0] - 0.2 && x < g[1] + 0.2)) continue;
+    const [n, sz] = topsAt(x);
+    const w = riverWallsNear(x, 0).find((b) => b[0] <= x && b[2] >= x)!;
+    assert.ok(w && w[1] <= n - 0.25 && w[3] >= sz + 0.25 && w[1] > n - 2 && w[3] < sz + 2, `the wall at x ${x.toFixed(1)}`);
+  }
 });
 
 test('people and other cars are soft: a bump, never driving through', () => {

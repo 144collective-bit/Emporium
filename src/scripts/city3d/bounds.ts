@@ -30,13 +30,14 @@ export const PAN_BOUNDS: Rect = [
 
 /** Every district plot, as one box */
 export const PLOTS_BOX: Rect = union(DISTRICTS.map((d): Rect => [d.ox, d.oz, d.ox + BS, d.oz + BS]));
-/** How wide that box is today: the Build overview's distance was set for it */
+/** How wide that box was before the river's widening (river plan step 1): the Build overview's distance was set for it */
 const PLOTS_SPAN = 123.5;
 
 /**
  * The Build overview: where it looks (a little north-west of the plots'
  * middle, since it looks from the south-east) and how far back it stands
- * (1 for today's plots)
+ * (1 for the plots as they were before the river's widening; further back
+ * since, the south row being 45 further south)
  */
 export function overviewFrame() {
   const span = Math.max(PLOTS_BOX[2] - PLOTS_BOX[0], PLOTS_BOX[3] - PLOTS_BOX[1]);

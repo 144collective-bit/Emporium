@@ -1,135 +1,209 @@
-// Liberty Bridge (liberty.ts): a footbridge raised over both river avenues and the widened river,
-// beside West 3 and South 1 (which stay on the market). The towers and stairs stand clear of the
-// plots and roads, the arches clear the traffic and the boats, and walking goes up the stairs,
-// along the walkway and down again without stepping off.
+// Liberty Bridge (liberty.ts, river plan step 3): a footbridge in the style of the old gate-tower bridges with
+// lifting leaves. Its towers stand in the river clear of the boats' lanes and under the Emporium, its approaches
+// rise from the promenades, the leaves lift for the tall ship (and only then) without touching the high level or the
+// ship, walking goes up the approaches, through the towers, over the leaves while they're down, and round the high
+// level from the lifts, without stepping off.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { EW_ROADS, NS_ROADS, RIVER, RIVER_W, RING_HI, SOUTH_ROAD, WALK_W } from '../src/scripts/city3d/layout';
-import { PADS, inside, OUTER_BLOCKS, offBridges, offFootbridge } from '../src/scripts/city3d/outer';
+import { RIVER } from '../src/scripts/city3d/layout';
+import { WATER_Y, edgesAt, inWater } from '../src/scripts/city3d/river';
+import { offFootbridge } from '../src/scripts/city3d/outer';
+import { outset } from '../src/scripts/city3d/streetplan';
+import { HX } from '../src/scripts/city3d/harbour';
+import { HIGHWAY_BOX } from '../src/scripts/city3d/highway';
+import { SOLIDS } from '../src/scripts/city3d/solids';
 import {
+  ABUTMENTS,
+  ANCHOR_X,
+  APPROACH,
   BOAT_LANES,
   BX,
+  CHAIN,
+  DECK_DEPTH,
   DECK_HALF,
   DECK_STROLLS,
-  DECK_Y,
+  FACES,
+  HIGH,
+  HIGH_Y,
+  LEAF,
   LIBERTY_RECTS,
   LIBERTY_SOLIDS,
   LIBERTY_SPAWN,
-  STAIR,
-  STAIR_BASE,
-  SUPPORTS,
+  LIFTS,
+  LOW_Y,
+  OUTER,
+  PROM_Y,
+  SHIP,
+  SHIP_TIMES,
+  SHUT_WINDOWS,
   TOWER,
   TOWERS,
-  WALKWAY,
   WALK_HALF,
-  archY,
+  ZC,
+  chainY,
   footbridgeWall,
   footbridgeY,
-  landingOf,
-  stairTread,
-  stairsOf,
+  leavesAt,
+  lowY,
+  onHigh,
+  onLeaves,
+  pointedArch,
+  shipAt,
 } from '../src/scripts/city3d/liberty';
-import { SOLIDS } from '../src/scripts/city3d/solids';
-import { DISTRICTS } from '../src/data/plots';
 
-const overlaps = (a: number[], b: number[]) => a[0] < b[2] && a[2] > b[0] && a[1] < b[3] && a[3] > b[1];
+/** The Emporium's roof: everything here stays under it */
+const EMPORIUM = 12.5;
+/** A boat on the river: its half width across the water and how high its cabin stands over the water (life.ts) */
+const BOAT = { half: 0.35, top: 0.75 };
+/** The leaf's far corners when it's up `a`: [z, y] of its tip's top and its tip's underside (the north leaf) */
+const leafTip = (a: number) => [
+  [FACES[0] + LEAF.len * Math.cos(a), LOW_Y + LEAF.len * Math.sin(a)],
+  [FACES[0] + LEAF.len * Math.cos(a) + LEAF.t * Math.sin(a), LOW_Y + LEAF.len * Math.sin(a) - LEAF.t * Math.cos(a)],
+];
 
-test('the river is five times as wide, and every plot is still on the market', () => {
-  assert.equal(RIVER_W, 15);
-  assert.equal(RIVER[1] - RIVER[0], 15);
-  assert.equal(DISTRICTS.length, 16);
-  assert.ok(DISTRICTS.some((d) => d.id === 'W3') && DISTRICTS.some((d) => d.id === 'S1'));
-});
-
-test('it stands on the lawns beside West 3 and South 1, clear of every plot, lot and road', () => {
-  for (const r of LIBERTY_RECTS) for (const p of PADS) assert.ok(!overlaps(r, p.rect), `${r} on ${p.id}`);
-  // Off the straight roads' asphalt and sidewalks, except where the walkway passes over the two river avenues
-  for (const r of NS_ROADS) for (const q of LIBERTY_RECTS) assert.ok(q[2] < r.c - r.half - WALK_W || q[0] > r.c + r.half + WALK_W);
-  const crossed = EW_ROADS.filter((r) => r.c > TOWERS[0] && r.c < TOWERS[1]).map((r) => r.c);
-  assert.deepEqual(crossed, [RING_HI, SOUTH_ROAD]);
-  // The towers are on their lawns (outer blocks), one each side of the river
-  TOWERS.forEach((z) => assert.ok(OUTER_BLOCKS.some((b) => inside(b.poly, [BX, z]) && inside(b.poly, [BX - TOWER.hx - STAIR.w, z]) && inside(b.poly, [BX + TOWER.hx + STAIR.w, z]))));
-  assert.ok(TOWERS[0] < RIVER[0] && TOWERS[1] > RIVER[1]);
-  // Promenade benches, trees and lamps keep off it; the road bridges are elsewhere
-  assert.ok(!offFootbridge(BX) && offBridges(BX));
-});
-
-test('the walkway: high over both avenues, on pillars you can walk between, piers in the water', () => {
-  for (const c of [RING_HI, SOUTH_ROAD]) {
-    const r = EW_ROADS.find((e) => e.c === c)!;
-    for (let z = r.c - r.half; z <= r.c + r.half; z += 0.1) assert.ok(archY(z)! > 2.4, `a bus fits under at z ${z.toFixed(1)}`);
-    // No support stands on an avenue
-    for (const s of SUPPORTS) assert.ok(Math.abs(s.z - r.c) > r.half + WALK_W);
-  }
-  const piers = SUPPORTS.filter((s) => s.kind === 'pier');
-  assert.equal(piers.length, 2);
-  for (const p of piers) assert.ok(p.z > RIVER[0] && p.z < RIVER[1]);
-  for (const s of SUPPORTS.filter((s) => s.kind === 'pillars')) assert.ok(s.z < RIVER[0] || s.z > RIVER[1], 'pillars on land');
-  // Boats pass down the middle of the three arches over the water, with room under them
-  assert.equal(BOAT_LANES.length, 3);
-  for (const z of BOAT_LANES) {
-    assert.ok(z > RIVER[0] && z < RIVER[1]);
-    assert.ok(archY(z)! > 2);
-  }
-  // Everything is under the Emporium's roof
-  assert.ok(TOWER.flame.base + TOWER.flame.h < 12.3);
-  for (const b of LIBERTY_SOLIDS) assert.ok(SOLIDS.includes(b));
-});
-
-test('walking: up the stairs, across the landing, along the walkway to the other side and down', () => {
-  // The foot of the north tower's east stairs, where Walk in starts
-  assert.equal(footbridgeY(LIBERTY_SPAWN.x, LIBERTY_SPAWN.z, 0.15), null, 'Walk in starts on the lawn');
-  assert.ok(!SOLIDS.some((b) => LIBERTY_SPAWN.x > b[0] - 0.3 && LIBERTY_SPAWN.x < b[2] + 0.3 && LIBERTY_SPAWN.z > b[1] - 0.3 && LIBERTY_SPAWN.z < b[3] + 0.3));
-  // Climb: the ground rises step by step under your feet
-  const x = LIBERTY_SPAWN.x;
-  const st = stairsOf(0);
-  let y = 0.15;
-  for (let z = st.z0 + 0.05; z <= st.z1; z += 0.1) {
-    const h = footbridgeY(x, z, y, 0.22);
-    assert.ok(h !== null, `on the stairs at z ${z.toFixed(2)}`);
-    assert.ok(h! >= y - 0.3 && h! <= y + 0.3);
-    y = h!;
-  }
-  assert.ok(Math.abs(y - DECK_Y) < 0.1);
-  // Across the landing to the walkway, and all the way over
-  const la = landingOf(0);
-  assert.equal(footbridgeY(x, (la.z0 + la.z1) / 2, y, 0.22), DECK_Y);
-  for (let z = WALKWAY[0]; z <= WALKWAY[1]; z += 0.25) assert.equal(footbridgeY(BX, z, DECK_Y, 0.22), DECK_Y);
-  // Down the south tower's west stairs
-  const s1 = stairsOf(1);
-  assert.ok(footbridgeY(BX - TOWER.hx - STAIR.tread / 2, s1.z1, DECK_Y)! > DECK_Y - 0.1);
-  assert.ok(footbridgeY(BX - TOWER.hx - STAIR.tread / 2, s1.z0, 0.2)! < 0.1);
-  // Not off the landing's far edge either, beside the walkway (a body's width short of it)
-  assert.ok(footbridgeWall(BX + TOWER.hx + STAIR.tread / 2, landingOf(0).z1 + 0.1, DECK_Y, 0.22));
-  // You can't step off: past the parapets up there is a wall
-  for (const z of [62, RIVER[0] + 3, 90]) {
-    assert.ok(footbridgeWall(BX + WALK_HALF + 0.1, z, DECK_Y));
-    assert.ok(footbridgeWall(BX - DECK_HALF + 0.05, z, DECK_Y));
-  }
-  // Walking under it on the promenade: on the ground, between the pillars, nothing in the way
-  const prom = SUPPORTS[2];
-  assert.equal(footbridgeY(BX, prom.z, 0.05), null);
-  assert.ok(!footbridgeWall(BX, prom.z, 0.05));
-  assert.ok(!SOLIDS.some((b) => BX > b[0] - 0.22 && BX < b[2] + 0.22 && prom.z > b[1] - 0.22 && prom.z < b[3] + 0.22));
-  // People stroll the walkway
-  for (const poly of DECK_STROLLS) for (const [px, pz] of poly) for (const d of [-0.65, 0.65]) assert.equal(footbridgeY(px + d, pz, DECK_Y), DECK_Y);
-});
-
-test('the stairs\' treads, as the feet stand on them: each step at its height, on or over the ramp he walks up', () => {
-  const rise = (DECK_Y - STAIR_BASE) / STAIR.steps;
-  for (const i of [0, 1] as const) {
-    const st = stairsOf(i);
-    const x = BX + TOWER.hx + STAIR.tread / 2;
-    for (let k = 0; k < STAIR.steps; k++) {
-      // The middle of step k
-      const z = st.z0 + ((st.z1 - st.z0) * (k + 0.5)) / STAIR.steps;
-      const tread = stairTread(x, z, 10);
-      assert.ok(tread !== null);
-      assert.ok(Math.abs(tread - (STAIR_BASE + (k + 1) * rise)) < 1e-9, `step ${k}`);
-      assert.ok(tread >= (footbridgeY(x, z, 10) ?? 0) - 1e-9, 'never under the ramp');
+test('its towers stand in the river either side of the middle, everything under the Emporium', () => {
+  assert.ok(Math.abs(TOWERS[0] + TOWERS[1] - 2 * ZC) < 1e-9);
+  for (const z of TOWERS) {
+    const reach = TOWER.pier.hx + TOWER.pier.cut;
+    for (const x of [BX - reach, BX, BX + reach]) {
+      const [n, s] = edgesAt(x);
+      assert.ok(z - TOWER.pier.hz > n + 5 && z + TOWER.pier.hz < s - 5, 'well out in the water');
+      assert.ok(inWater(x, z));
     }
-    // Off the stairs (beside them, or well below them: under the walkway) there's no tread
-    assert.equal(stairTread(BX, (st.z0 + st.z1) / 2, 10), null);
-    assert.equal(stairTread(x, (st.z0 + st.z1) / 2, -5), null);
   }
+  assert.ok(TOWER.pier.y < WATER_Y);
+  assert.ok(TOWER.flame.base + TOWER.flame.h < EMPORIUM);
+  assert.ok(TOWER.turret.top + TOWER.turret.dome + 0.45 < EMPORIUM, 'the turrets and finials');
+  assert.ok(HIGH_Y + HIGH.h + 0.1 < TOWER.cornice, 'the high level under the cornice');
+  // The arch through each tower clears the walk (a body and a bit) and stays under the high level
+  assert.ok(TOWER.arch.half >= WALK_HALF);
+  assert.ok(TOWER.arch.spring - LOW_Y > 1.8);
+  assert.ok(TOWER.arch.spring + pointedArch(TOWER.arch.half, 0) < HIGH_Y - 0.4);
+  // Clear of Harbour Bridge and the highway's bridges
+  assert.ok(Math.abs(BX - HX) > 40);
+});
+
+test('the approaches rise gently from the promenades, level through the towers and over the middle', () => {
+  assert.ok(APPROACH[0] < RIVER[0] && APPROACH[1] > RIVER[1], 'they start on the promenades');
+  assert.ok(Math.abs(lowY(APPROACH[0]) - PROM_Y) < 1e-9 && Math.abs(lowY(APPROACH[1]) - PROM_Y) < 1e-9);
+  let prev = lowY(APPROACH[0]);
+  for (let z = APPROACH[0]; z <= ZC; z += 0.25) {
+    const y = lowY(z);
+    assert.ok(y >= prev - 1e-9 && y - prev < 0.04, `a step at ${z}`);
+    assert.ok(Math.abs(y - lowY(2 * ZC - z)) < 1e-9, 'the same both ways');
+    prev = y;
+  }
+  for (let z = OUTER[0]; z <= OUTER[1]; z += 0.5) assert.equal(lowY(z), LOW_Y);
+  // The chains hang over the walk, from the abutments into the towers
+  for (let z = APPROACH[0]; z <= APPROACH[1]; z += 0.25) {
+    const c = chainY(z);
+    if (c !== null) assert.ok(c - 0.32 > lowY(z) + 0.3, `the chain's in the deck at ${z}`);
+  }
+  assert.ok(CHAIN.x < TOWER.hx && CHAIN.tower < TOWER.cornice);
+  for (const a of ABUTMENTS) assert.ok(CHAIN.x > a.x[0] && CHAIN.x < a.x[1] && CHAIN.abutment < a.top);
+});
+
+test('the boats keep their lanes: under the approaches and through the middle, clear of the piers', () => {
+  assert.deepEqual(BOAT_LANES, [80.75, 101, 121.25]);
+  for (const lane of BOAT_LANES) {
+    for (const t of TOWERS) assert.ok(Math.abs(lane - t) > TOWER.pier.hz + BOAT.half + 2, `lane ${lane} meets a pier`);
+    for (const a of ABUTMENTS) assert.ok(lane > a.z[1] + 2 || lane < a.z[0] - 2);
+    // Under the deck with room to spare (the leaves down)
+    for (const dz of [-BOAT.half, BOAT.half]) assert.ok(lowY(lane + dz) - DECK_DEPTH - (WATER_Y + BOAT.top) > 0.6, `lane ${lane} scrapes under the deck`);
+  }
+});
+
+test('the leaves lift for the tall ship, clear of it and of the high level, and only then', () => {
+  // Fully up, each leaf's tip stays under the high level's truss
+  for (const [, y] of leafTip(LEAF.max)) assert.ok(y < HIGH_Y - 0.45 - 0.1);
+  // The ship's masts under the high level, its hull and yards clear of the raised leaves and the piers
+  assert.ok(WATER_Y + SHIP.mast + 0.4 < HIGH_Y - 0.45);
+  const yard = SHIP.beam * 1.15 / 2 + 0.2;
+  for (let y = LOW_Y; y <= WATER_Y + SHIP.mast; y += 0.1) {
+    // (the north leaf's underside at height y, when it's up: the south one mirrors it)
+    const z = FACES[0] + (y - LOW_Y) / Math.tan(LEAF.max) + LEAF.t / Math.sin(LEAF.max);
+    assert.ok(SHIP.z - yard > z + 0.3 && SHIP.z + yard < 2 * ZC - z - 0.3, `the leaves catch the sails at ${y.toFixed(1)}`);
+  }
+  assert.ok(SHIP.z - SHIP.beam / 2 > TOWERS[0] + TOWER.pier.hz + 0.8 && SHIP.z + SHIP.beam / 2 < TOWERS[1] - TOWER.pier.hz - 0.8);
+  for (const lane of BOAT_LANES) assert.ok(Math.abs(lane - SHIP.z) > yard + BOAT.half + 0.3, 'the ship off the lanes');
+  // Its anchorages: between the highway's west bridge and Harbour Bridge, in the water
+  for (const x of ANCHOR_X) {
+    assert.ok(x - SHIP.len > HIGHWAY_BOX[0] + 30 && x + SHIP.len < HX - 15);
+    assert.ok(inWater(x - SHIP.len / 2, SHIP.z, 2) && inWater(x + SHIP.len / 2, SHIP.z, 2));
+  }
+  // Whenever any of it (its bowsprit too) is over the bridge's line, the leaves are fully up
+  let shut = 0;
+  const reach = SHIP.len / 2 + 1.7 + DECK_HALF;
+  for (let t = 0; t < SHIP_TIMES.period; t += 0.25) {
+    const s = shipAt(t);
+    const l = leavesAt(t);
+    if (Math.abs(s.x - BX) < reach) assert.ok(l.angle > LEAF.max - 1e-6, `the ship meets the leaves at ${t}`);
+    if (l.angle > 0) assert.ok(l.shut, 'the gates are shut while they move');
+    if (l.shut) shut += 0.25;
+    if (!l.shut) assert.equal(l.angle, 0);
+  }
+  assert.equal(SHUT_WINDOWS.length, 2);
+  assert.ok(shut < SHIP_TIMES.period * 0.3, 'shut a fifth of the time or so');
+  assert.ok(shut > 0);
+  // The ship's way round: still at its anchors, smooth under way, the same for everyone (a function of the time)
+  for (let t = 0; t < SHIP_TIMES.period; t += 0.5) {
+    const [a, b] = [shipAt(t), shipAt(t + 0.5)];
+    assert.ok(Math.abs(b.x - a.x) < SHIP_TIMES.v * 0.5 + 1e-6, `it jumps at ${t}`);
+    assert.equal(a.z, SHIP.z);
+  }
+  assert.deepEqual(shipAt(1234.5), shipAt(1234.5 + SHIP_TIMES.period));
+});
+
+test('walking: up the approach, through the tower, over the leaves while they are down', () => {
+  // Walk in starts on the promenade at the foot of the north approach
+  assert.ok(LIBERTY_SPAWN.z < RIVER[0]);
+  assert.ok(Math.abs(footbridgeY(LIBERTY_SPAWN.x, LIBERTY_SPAWN.z, 0.05)! - lowY(LIBERTY_SPAWN.z)) < 1e-9);
+  let y = PROM_Y;
+  for (let z = APPROACH[0] + 0.05; z <= APPROACH[1] - 0.05; z += 0.2) {
+    const g = footbridgeY(BX + 0.3, z, y, 0.22);
+    assert.ok(g !== null, `off the deck at ${z}`);
+    y = g!;
+    assert.ok(!footbridgeWall(BX + 0.3, z, y, 0.22));
+  }
+  // The leaves shut: no way on, a wall at the gates
+  const mid = ZC;
+  assert.equal(footbridgeY(BX, mid, LOW_Y, 0.22, false), null);
+  assert.ok(footbridgeWall(BX, FACES[0] + 0.1, LOW_Y, 0.22, false));
+  assert.ok(onLeaves(BX, mid) && !onLeaves(BX, FACES[0] - 0.5));
+  assert.ok(footbridgeY(BX, FACES[0] - 0.6, LOW_Y, 0.22, false) === LOW_Y, 'the tower side of the gate stays open');
+  // You can't step off the deck over the water
+  for (const z of [RIVER[0] + 5, ZC, RIVER[1] - 5]) assert.ok(footbridgeWall(BX + WALK_HALF + 0.05, z, LOW_Y, 0.22));
+  // Through the towers: nothing solid in the arch
+  for (const z of TOWERS) for (const x of [BX - WALK_HALF + 0.25, BX, BX + WALK_HALF - 0.25]) assert.ok(!SOLIDS.some((b) => x > b[0] - 0.22 && x < b[2] + 0.22 && z > b[1] - 0.22 && z < b[3] + 0.22));
+  for (const z of TOWERS) assert.ok(LIBERTY_SOLIDS.some((b) => BX + TOWER.hx - 0.1 > b[0] && BX + TOWER.hx - 0.1 < b[2] && z > b[1] && z < b[3]));
+});
+
+test('the high level: a walk all the way round from the lifts, railings at its edges', () => {
+  const [w0, w1] = HIGH.walk;
+  const m = 0.22;
+  for (let z = FACES[0] + m; z <= FACES[1] - m; z += 0.25) for (const e of [-1, 1]) assert.equal(footbridgeY(BX + (e * (w0 + w1)) / 2, z, HIGH_Y, m), HIGH_Y);
+  for (let x = -w1 + m; x <= w1 - m; x += 0.25) for (const z of [FACES[0] + HIGH.gallery / 2, FACES[1] - HIGH.gallery / 2]) assert.equal(footbridgeY(BX + x, z, HIGH_Y, m), HIGH_Y);
+  // Over the middle between the walkways, and outside them: a railing (you can't fall)
+  assert.ok(!onHigh(BX, ZC) && footbridgeWall(BX, ZC, HIGH_Y, m));
+  assert.ok(footbridgeWall(BX + w1 + 0.05, ZC, HIGH_Y, m) && footbridgeWall(BX + w1 + 0.05, FACES[0] + 0.5, HIGH_Y, m));
+  // Walking on the lower deck under it stays on the lower deck
+  assert.equal(footbridgeY(BX + 1.2, FACES[0] + 0.5, LOW_Y), LOW_Y);
+  // The lifts: a door on the lower deck in each tower's arch, one on each gallery, and where they let you out
+  for (const l of LIFTS) {
+    assert.equal(footbridgeY(l.low.x, l.low.z, LOW_Y), LOW_Y);
+    assert.equal(footbridgeY(l.down.x, l.down.z, LOW_Y), LOW_Y);
+    assert.equal(footbridgeY(l.up.x, l.up.z, HIGH_Y + 0.15, m), HIGH_Y);
+    assert.ok(onHigh(l.high.x, l.high.z));
+    assert.ok(Math.hypot(l.high.x - l.low.x, l.high.z - l.low.z) > 2, "the doors' prompts apart");
+  }
+  // The strollers' lanes (life.ts: 0.16 to 0.62 out from the outline) all on the high level
+  for (const poly of DECK_STROLLS)
+    for (const d of [0.16, 0.31, 0.47, 0.62])
+      for (const [x, z] of outset(poly, d)) assert.ok(onHigh(x, z, 0.15), `a stroller off the high level at ${x.toFixed(2)}, ${z.toFixed(2)}`);
+});
+
+test('the promenades keep their dressing off it; what covers it is in the water or on the deck', () => {
+  assert.ok(!offFootbridge(BX) && offFootbridge(BX + TOWER.pier.hx + TOWER.pier.cut + 2));
+  for (const r of LIBERTY_RECTS) assert.ok(r[0] < r[2] && r[1] < r[3]);
+  for (const b of LIBERTY_SOLIDS) assert.ok(SOLIDS.some((s) => s.every((v, i) => v === b[i])));
 });

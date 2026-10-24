@@ -2,8 +2,8 @@
  * The street plan as data: streets (centre lines with a kind and a width),
  * the crossings where they meet, the blocks between them as outlines, and
  * the plazas. DOM-free and scene-free, like layout.ts, so the 3D city, the
- * 2D map, traffic, pedestrians, collisions, the plots and the game server
- * can all read one plan.
+ * world map, traffic, pedestrians, collisions, the plots and the game
+ * server can all read one plan.
  *
  * `gridPlan()` describes the straight grid of layout.ts (edge-to-edge
  * streets, square blocks). `PLAN` is the city as built: the grid outside
@@ -14,11 +14,11 @@
  * Coordinates are world units on the ground: [x, z].
  */
 import { DISTRICTS } from '../../data/plots';
-import { BLOCKS, BS, CORE_ROADS, EW_ROADS, EXT, EXTRA_LOTS, GARAGE, LANE, MARKET, MEDIAN, NS_ROADS, RIVER, SEATS, UNITS, WALK_W, type Road } from './layout';
+import { BLOCKS, BRIDGED_NS, BS, CORE_ROADS, EW_ROADS, EXT, EXTRA_LOTS, GARAGE, LANE, MARKET, MEDIAN, NS_ROADS, RIVER, RING_HI, SEATS, SOUTH_ROAD, UNITS, WALK_W, nsStreet, type Road } from './layout';
 import { ALLEYS, BLOCKS_DT, DIAGONALS, LANES } from './downtown';
 import { BENDS, BEND_KERBS, OUTER_BLOCKS, OUTER_PARKS, OUTER_SQUARES, PADS } from './outer';
 import { AIRPORT_STREETS, ROAD } from './airfield';
-import { BX, TOWERS } from './liberty';
+import { HALF as HARBOUR_HALF, HARBOUR_STREET } from './harbour';
 import { HIGHWAY, HIGHWAY_HALF, insideHighway, outerLane, slipCurve } from './highway';
 import { TRENCH_BLOCKS, TRENCH_CROSSINGS, TRENCH_STREETS } from './trenches';
 import { WESTLAKE_BLOCKS } from './westlake';
@@ -257,11 +257,17 @@ const square = (ox: number, oz: number, w: number, d = w): Pt[] => [
 
 const kindOf = (r: Road): StreetKind => (r.lanes === 2 ? 'avenue' : 'street');
 
-/** The straight streets of layout.ts, every one edge to edge */
+/**
+ * The straight streets of layout.ts, every one edge to edge; but the north-south roads with no bridge (river plan
+ * step 1) stop at the bank avenues, a street each side of the river (`nsStreet()`)
+ */
 function gridStreets(): Street[] {
   const [e0, e1] = EXT;
   return [
-    ...NS_ROADS.map((r, i): Street => ({ id: `ns${i}`, kind: kindOf(r), pts: [[r.c, e0], [r.c, e1]], half: r.half, lanes: r.lanes })),
+    ...NS_ROADS.flatMap((r, i): Street[] => {
+      const s = (id: string, z0: number, z1: number): Street => ({ id, kind: kindOf(r), pts: [[r.c, z0], [r.c, z1]], half: r.half, lanes: r.lanes });
+      return BRIDGED_NS.includes(i) ? [s(`ns${i}`, e0, e1)] : [s(`ns${i}`, e0, RING_HI), s(`ns${i}s`, SOUTH_ROAD, e1)];
+    }),
     ...EW_ROADS.map((r, i): Street => ({ id: `ew${i}`, kind: kindOf(r), pts: [[e0, r.c], [e1, r.c]], half: r.half, lanes: r.lanes })),
   ];
 }
@@ -270,7 +276,7 @@ function gridStreets(): Street[] {
 function gridCrossings(): Crossing[] {
   const out: Crossing[] = [];
   NS_ROADS.forEach((nr, i) =>
-    EW_ROADS.forEach((er, j) => out.push({ id: `x${i}-${j}`, at: [nr.c, er.c], streets: [`ns${i}`, `ew${j}`], lights: CORE_ROADS.includes(nr.c) && CORE_ROADS.includes(er.c) }))
+    EW_ROADS.forEach((er, j) => out.push({ id: `x${i}-${j}`, at: [nr.c, er.c], streets: [nsStreet(i, er.c), `ew${j}`], lights: CORE_ROADS.includes(nr.c) && CORE_ROADS.includes(er.c) }))
   );
   return out;
 }
@@ -343,7 +349,7 @@ export function cityPlan(): StreetPlan {
   // The bending streets: a crossing (no lights) wherever one meets a straight road, ends included
   for (const b of BENDS) {
     streets.push({ id: b.id, kind: 'street', pts: b.pts, half: LANE, lanes: 1 });
-    NS_ROADS.forEach((r, i) => crossingsOf(b.pts, 0, r.c).forEach((at, k) => crossings.push({ id: `${b.id}-ns${i}-${k}`, at, streets: [`ns${i}`, b.id], lights: false })));
+    NS_ROADS.forEach((r, i) => crossingsOf(b.pts, 0, r.c).forEach((at, k) => crossings.push({ id: `${b.id}-ns${i}-${k}`, at, streets: [nsStreet(i, at[1]), b.id], lights: false })));
     EW_ROADS.forEach((r, i) => crossingsOf(b.pts, 1, r.c).forEach((at, k) => crossings.push({ id: `${b.id}-ew${i}-${k}`, at, streets: [`ew${i}`, b.id], lights: false })));
   }
   // The airport's access road off the east ring avenue, and the one-way loop round its car park
@@ -365,11 +371,11 @@ export function cityPlan(): StreetPlan {
   // side of each, slip lanes for the right turns on and off it (and on the outside too where an arterial past
   // it carries traffic: the north road to the stadium, `OUTER_SLIPS`)
   streets.push({ id: 'highway', kind: 'highway', pts: HIGHWAY, half: HIGHWAY_HALF, lanes: 2, loop: true });
-  const meets: { id: string; at: Pt; road: Road; along: 0 | 1 }[] = [];
-  NS_ROADS.forEach((r, i) => crossingsOf(HIGHWAY, 0, r.c).forEach((at, k) => meets.push({ id: `highway-ns${i}-${k}`, at, road: r, along: 1 })));
-  EW_ROADS.forEach((r, i) => crossingsOf(HIGHWAY, 1, r.c).forEach((at, k) => meets.push({ id: `highway-ew${i}-${k}`, at, road: r, along: 0 })));
+  const meets: { id: string; at: Pt; road: Road; street: string; along: 0 | 1 }[] = [];
+  NS_ROADS.forEach((r, i) => crossingsOf(HIGHWAY, 0, r.c).forEach((at, k) => meets.push({ id: `highway-ns${i}-${k}`, at, road: r, street: nsStreet(i, at[1]), along: 1 })));
+  EW_ROADS.forEach((r, i) => crossingsOf(HIGHWAY, 1, r.c).forEach((at, k) => meets.push({ id: `highway-ew${i}-${k}`, at, road: r, street: `ew${i}`, along: 0 })));
   for (const m of meets) {
-    crossings.push({ id: m.id, at: m.at, streets: [m.id.split('-')[1], 'highway'], lights: true });
+    crossings.push({ id: m.id, at: m.at, streets: [m.street, 'highway'], lights: true });
     // The arterial runs along z (along 1) or x; the highway, square to it there, the other way
     const ta: Pt = m.along === 1 ? [0, 1] : [1, 0];
     const th: Pt = m.along === 1 ? [1, 0] : [0, 1];
@@ -431,11 +437,9 @@ export function cityPlan(): StreetPlan {
       return { id: `dt-${b.id}`, poly: b.poly, use, places: places.length ? places : undefined, walk: WALK_W };
     }),
     // The outer blocks, named after their first plot (or lot), every pad on them listed
-    // (Liberty Bridge's towers stand on the two west of West 3 and South 1: their blocks list it)
     ...OUTER_BLOCKS.map((b): Block => {
       const plot = b.pads.find((id) => PADS.find((p) => p.id === id)!.kind === 'plot');
-      const places = TOWERS.some((z) => inPoly(b.poly, [BX, z])) ? ['liberty'] : undefined;
-      return { id: b.id, poly: b.poly, use: plot ? 'district' : 'lot', ref: plot ?? b.pads[0], pads: b.pads, places, walk: WALK_W };
+      return { id: b.id, poly: b.poly, use: plot ? 'district' : 'lot', ref: plot ?? b.pads[0], pads: b.pads, walk: WALK_W };
     }),
     // The Trenches' blocks (rows A, B and C), built on in the next steps
     ...TRENCH_BLOCKS.map((b): Block => ({ id: b.id, poly: b.poly, use: 'plain', ref: 'trenches', walk: WALK_W })),
@@ -481,7 +485,9 @@ export function riverBridges(plan: StreetPlan = PLAN) {
     for (let i = 1; i < s.pts.length; i++) {
       const [a, b] = [s.pts[i - 1], s.pts[i]];
       if (a[0] !== b[0] || Math.min(a[1], b[1]) >= RIVER[0] || Math.max(a[1], b[1]) <= RIVER[1]) continue;
-      out.push({ street: s.id, c: a[0], half: s.half, x0: a[0] - s.half - WALK_W, x1: a[0] + s.half + WALK_W });
+      // (Harbour Bridge is wider than its avenue: its footways along its outer edges, harbour.ts)
+      const w = s.id === HARBOUR_STREET ? HARBOUR_HALF : s.half + WALK_W;
+      out.push({ street: s.id, c: a[0], half: s.half, x0: a[0] - w, x1: a[0] + w });
     }
   }
   return out.sort((p, q) => p.x0 - q.x0);

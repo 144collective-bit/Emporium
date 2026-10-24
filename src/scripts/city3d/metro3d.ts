@@ -49,7 +49,7 @@ import {
   type Station,
   type TrackId,
 } from './metro';
-import { RIVER } from './layout';
+import { deckY, onHarbour } from './harbour';
 
 /** The platform's top and the train's floor */
 export const PLATFORM_Y = DECK_Y + 0.4;
@@ -206,9 +206,7 @@ export function buildMetro(scene: THREE.Scene, tick: (f: Tick) => void, opts: { 
           });
         }
         for (const s of [-1, 1]) f.box(0, DECK_Y, s * 0.5 - 0.04, l, 0.08, 0.08, steel);
-        // Over the river a deeper girder under it
-        const z = pointOn(t.id, a).at[1];
-        if (z > RIVER[0] - 3 && z < RIVER[1] + 3) f.box(0, DECK_Y - DECK_T - 0.7, -DECK_HALF + 0.2, l, 0.7, DECK_HALF * 2 - 0.4, concrete);
+        // Over the river it rides on Harbour Bridge (harbour.ts): its raised centre, on steel posts from the deck's median
         // Low parapets along both edges (none beside a platform, nor across the other track at the switch), the line's neon along each
         for (const side of [-1, 1]) {
           const mid = (a + c) / 2;
@@ -235,6 +233,19 @@ export function buildMetro(scene: THREE.Scene, tick: (f: Tick) => void, opts: { 
         for (const s of [-1, 1]) f.box(-0.04, DECK_Y - DECK_T - 0.75, s > 0 ? PILLAR_HALF - 0.03 : -0.6, 0.08, 0.45, 0.6 - PILLAR_HALF + 0.03, steel);
         f.box(-PILLAR_HALF - 0.01, y0, -PILLAR_HALF - 0.01, (PILLAR_HALF + 0.01) * 2, 0.04, (PILLAR_HALF + 0.01) * 2, steel);
       });
+      continue;
+    }
+    if (onHarbour(...p.at)) {
+      // On Harbour Bridge: a riveted steel post from the median's kerb on the deck, braced up into its hammerhead
+      const y0 = deckY(p.at[1]) + SLAB;
+      const h = DECK_Y - DECK_T - 0.3 - y0;
+      f.box(-PILLAR_HALF + 0.04, y0, -PILLAR_HALF + 0.04, (PILLAR_HALF - 0.04) * 2, h, (PILLAR_HALF - 0.04) * 2, steel);
+      f.box(-PILLAR_HALF - 0.02, y0, -PILLAR_HALF - 0.02, (PILLAR_HALF + 0.02) * 2, 0.06, (PILLAR_HALF + 0.02) * 2, steel);
+      for (const s of [-1, 1]) {
+        const g = new THREE.BoxGeometry(0.06, 0.06, Math.hypot(0.6, 0.55)).rotateX(s * Math.atan2(0.55, 0.6));
+        f.add(g, steel, 0, DECK_Y - DECK_T - 0.3 - 0.28, s * 0.3);
+      }
+      f.box(-0.45, DECK_Y - DECK_T - 0.3, -DECK_HALF + 0.15, 0.9, 0.3, DECK_HALF * 2 - 0.3, steel);
       continue;
     }
     f.box(-PILLAR_HALF, SLAB, -PILLAR_HALF, PILLAR_HALF * 2, DECK_Y - DECK_T - SLAB - 0.3, PILLAR_HALF * 2, pier);

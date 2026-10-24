@@ -68,12 +68,14 @@ import { abandonSeries, seriesNext } from './tycoon';
 import { CAMERA_GRID, DOORS, GARAGE_SITE, RACK, SOLIDS, SOLID_GRID, SOLID_GRIDS, TURNTABLE_BOX, WALK_SPAWN, rayBoxes, type Box } from './solids';
 import { BoxGrid } from './boxgrid';
 import { count } from './tycoon';
-import { NS_ROADS, RIVER, SLAB, WALK_W, type Tick } from './world';
-import { footbridgeWall, footbridgeY, stairTread } from './liberty';
+import { SLAB, type Tick } from './world';
+import { BX as LIBERTY_X, FACES, LIBERTY_CAMERA, LOW_Y, TO_MIDDLE, footbridgeWall, footbridgeY, leavesAt, onLeaves } from './liberty';
 import { JETTY, RIM, inLake, onJetty, onTerrace, terraceY } from './westlake';
 import { GATE, bridgeWall, bridgeY } from './stadium';
 import { skyDeckWall, skyDeckY, upOnDeck } from './skydeck';
 import { WORLD_BOUNDS } from './layout';
+import { inChannel, inWater, shoreY } from './river';
+import { harbourY, onHarbour } from './harbour';
 import { PLAN, inPoly, type Pt } from './streetplan';
 import { SPOTS, pointOn, ROUTES } from './routes';
 import { bodies } from './life';
@@ -119,8 +121,6 @@ const PEEK = { lean: 0.42, cam: 0.45, eye: 0.3, roll: 0.08, slow: 0.55, ease: 0.
  * looked at `every` seconds
  */
 const CORNER = { near: 1.4, far: 3.5, side: 0.55, every: 0.2 };
-/** Up and down Liberty Bridge's stairs (big stone steps): a brisk climb at most */
-const CLIMB = 1.75;
 const JUMP = 3.9;
 const GRAVITY = 11.5;
 /** How long a hard landing shakes the camera */
@@ -367,11 +367,18 @@ export function createWalk(d: WalkDeps) {
    * The ground under a point: a slab, or the street; Liberty Bridge's stairs, landings and walkway when
    * `yNow` is up there; at the kart park the circuit's own (its banks, the hill, the flyover's deck when `yNow` is up there)
    */
-  /** What the feet stand on: the stairs' treads as they're drawn (he walks up their even ramp), else the ground */
-  const feetAt = (x: number, z: number, yNow = 0) => stairTread(x, z, yNow) ?? groundAt(x, z, yNow);
+  /** Liberty Bridge's leaves are down and its gates open (liberty.ts: they lift for the tall ship; never under reduced motion) */
+  const leavesOpen = () => d.reduced || !leavesAt(Date.now() / 1000).shut;
   const groundAt = (x: number, z: number, yNow = 0) => {
     const slab = slabs.some((s) => inBox(s.box, x, z) && inPoly(s.poly, [x, z])) ? SLAB : onDeck(x, z) || onEsplanade(x, z) ? DECK_Y : 0.035;
-    const base = Math.max(slab, footbridgeY(x, z, yNow) ?? 0, bridgeY(x, z, yNow) ?? 0, onJetty(x, z) ? SLAB + JETTY.y : 0, SLAB + (terraceY(x, z) ?? -SLAB), SLAB + (skyDeckY(x, z, yNow - SLAB) ?? -SLAB));
+    // (Harbour Bridge's deck, humped over the river; the river's banks sloping down to the water, river plan step 2)
+    const hb = harbourY(x, z);
+    if (hb !== null) return Math.max(slab, hb + 0.035);
+    // (Liberty Bridge's decks, when `yNow` is up there)
+    const fb = footbridgeY(x, z, yNow, 0, leavesOpen());
+    if (fb !== null) return Math.max(slab, fb);
+    if (slab === 0.035 && inChannel(x, z)) return shoreY(x, z) + 0.035;
+    const base = Math.max(slab, bridgeY(x, z, yNow) ?? 0, onJetty(x, z) ? SLAB + JETTY.y : 0, SLAB + (terraceY(x, z) ?? -SLAB), SLAB + (skyDeckY(x, z, yNow - SLAB) ?? -SLAB));
     if (x < KART_PARK.x0 || x > KART_PARK.x1 || z < KART_PARK.z0 || z > KART_PARK.z1) return base;
     const t = trackSurfaceAt(x, z, yNow);
     // (and the spectators' grass banks round it, kartfacility.ts)
@@ -379,19 +386,20 @@ export function createWalk(d: WalkDeps) {
   };
   /** Scratch for the collision grid's answers */
   const nearBoxes: Box[] = [];
-  const onBridge = (x: number) => NS_ROADS.some((r) => Math.abs(x - r.c) < r.half + WALK_W - 0.15);
+  const onBridge = (x: number, z: number) => onHarbour(x, z, 0.15);
   /** `y`: how high Degen is (up on Liberty Bridge only its parapets stop you; under it, its pillars and stairs do) */
   function blocked(x: number, z: number, y = 0, skip?: (b: Box) => boolean) {
     if (x < BOUNDS[0] || x > BOUNDS[2] || z < BOUNDS[1] || z > BOUNDS[3]) return true;
-    if (footbridgeY(x, z, y, RADIUS) !== null) return false;
-    if (footbridgeWall(x, z, y, RADIUS)) return true;
+    const open = leavesOpen();
+    if (footbridgeY(x, z, y, RADIUS, open) !== null) return false;
+    if (footbridgeWall(x, z, y, RADIUS, open)) return true;
     // The stadium's footbridge over the highway (stadium.ts): up there only its parapets stop you
     if (bridgeY(x, z, y, RADIUS) !== null) return false;
     if (bridgeWall(x, z, y, RADIUS)) return true;
     // Sector 7 Tower's sky deck (skydeck.ts): up there only its rail, the lift house and the viewers stop you
     if (upOnDeck(x, z, y - SLAB)) return skyDeckWall(x, z, RADIUS);
-    // (the river is a wall but at the bridges, on The Trenches' boardwalk and pier and on Uptown's esplanade: their railings are the decks' edges)
-    if (z > RIVER[0] - 0.3 && z < RIVER[1] + 0.3 && !onBridge(x) && !onDeck(x, z, RADIUS) && !onEsplanade(x, z, RADIUS)) return true;
+    // (the river is a wall at its edges, wherever they curve (river.ts), but at the bridges, on The Trenches' boardwalk and pier and on Uptown's esplanade: their railings are the decks' edges)
+    if (inWater(x, z, -0.3) && !onBridge(x, z) && !onDeck(x, z, RADIUS) && !onEsplanade(x, z, RADIUS)) return true;
     // Westlake Park's lake (westlake.ts): you stop on the lawn at its stone rim, but out along the jetty (its edges stop you)
     if (inLake(x, z, RADIUS + RIM.w + 0.1) && !onJetty(x, z, RADIUS) && !onTerrace(x, z, RADIUS)) return true;
     if (SOLID_GRID.near(x, z, RADIUS, nearBoxes).some((b) => inBox(b, x, z, RADIUS) && !skip?.(b))) return true;
@@ -408,9 +416,10 @@ export function createWalk(d: WalkDeps) {
       t = Math.min(t, (from.y - floor) / -dir.y);
     }
     // Only the boxes under the camera's line can be in its way (padded as the test below pads them)
-    for (const b of [...CAMERA_GRID.alongRay(from, dir, t, 0.18, nearBoxes), ...d.plotSolids()]) {
+    // (and Liberty Bridge's towers over their arches and its walkways' roofs, which you walk under: a bottom, b[5])
+    for (const b of [...CAMERA_GRID.alongRay(from, dir, t, 0.18, nearBoxes), ...d.plotSolids(), ...LIBERTY_CAMERA] as number[][]) {
       if (b[4] < 0.5) continue;
-      const lo = [b[0] - 0.18, 0, b[1] - 0.18];
+      const lo = [b[0] - 0.18, b[5] ?? 0, b[1] - 0.18];
       const hi = [b[2] + 0.18, b[4] + 0.15, b[3] + 0.18];
       const o = [from.x, from.y, from.z];
       const v = [dir.x, dir.y, dir.z];
@@ -1684,6 +1693,13 @@ export function createWalk(d: WalkDeps) {
     if (fly.active) return flyFrame(dt, t);
     fly.idle(dt);
     if (drive.active) return driveFrame(dt, t);
+    // Liberty Bridge's gates shutting while he's out on its leaves: he's walked back through to the nearer tower
+    if (pos.y > LOW_Y - 0.4 && pos.y < LOW_Y + 1.5 && onLeaves(pos.x, pos.z) && !leavesOpen()) {
+      const i = pos.z < (FACES[0] + FACES[1]) / 2 ? 0 : 1;
+      pos.set(LIBERTY_X + THREE.MathUtils.clamp(pos.x - LIBERTY_X, -1.1, 1.1), LOW_Y + 0.035, FACES[i] - TO_MIDDLE[i] * 0.8);
+      vel.set(0, 0);
+      d.game.toast('Liberty Bridge · The leaves are lifting for the tall ship', 3500);
+    }
 
     // What the player wants, in camera space
     let ix = (keys.has('KeyD') || keys.has('ArrowRight') ? 1 : 0) - (keys.has('KeyA') || keys.has('ArrowLeft') ? 1 : 0);
@@ -1728,8 +1744,7 @@ export function createWalk(d: WalkDeps) {
     if (Math.abs(peek) < 1e-4) peek = 0;
     // (sprinting stands him up out of a crouch)
     if (crouched && sprint && mag > 0.1 && !slide) crouched = false;
-    const onStairs = stairTread(pos.x, pos.z, pos.y + 0.3) !== null;
-    const top = Math.min(shooting ? AIMING : sprint ? SPRINT : walkLock ? WALK : RUN, crouched ? CROUCH.speed : Infinity, onStairs ? CLIMB : Infinity) * (1 - (1 - PEEK.slow) * Math.abs(peek));
+    const top = Math.min(shooting ? AIMING : sprint ? SPRINT : walkLock ? WALK : RUN, crouched ? CROUCH.speed : Infinity) * (1 - (1 - PEEK.slow) * Math.abs(peek));
 
     // Towards it on the springs (movesim.ts; hardly any control in the air), facing where he's
     // going, or where you look when aiming / in first person
@@ -1921,7 +1936,7 @@ export function createWalk(d: WalkDeps) {
       if (mocapW > 0) {
         const w = mocapW * mocapW * (3 - 2 * mocapW);
         const u = upperW * upperW * (3 - 2 * upperW);
-        animator.update({ dt, x: pos.x, y: pos.y, z: pos.z, move: ms, gx, gz, scale: SCALE, ground: groundAt, feet: feetAt, sprint: runAmt, grounded, vy: grounded ? fall : vy, jump: JUMP, gravity: GRAVITY, faceGoal, crouch: crouchAmt });
+        animator.update({ dt, x: pos.x, y: pos.y, z: pos.z, move: ms, gx, gz, scale: SCALE, ground: groundAt, feet: groundAt, sprint: runAmt, grounded, vy: grounded ? fall : vy, jump: JUMP, gravity: GRAVITY, faceGoal, crouch: crouchAmt });
         // (shown facing the way the motion capture turns him; his own upper body turned back to the springs' facing)
         drawFace = face + wrap(animator.face - face) * mocapW;
         anim.applyTo(hero.rig, animator.rot, animator.hips, w, u, face - drawFace);

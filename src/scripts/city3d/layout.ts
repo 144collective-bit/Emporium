@@ -1,8 +1,7 @@
 /*
  * The city's street plan, in world units (1 = one map tile, about 1.8 m:
- * Degen is about one tile tall). Shared by the 3D city, the 2D map, the
- * builder's plots and the game server, so keep it free of the DOM and of
- * scene code.
+ * Degen is about one tile tall). Shared by the 3D city, the builder's
+ * plots and the game server, so keep it free of the DOM and of scene code.
  *
  * Streets are sized for real cars: lanes 1.7 wide (a car is about 1 wide
  * and 2.5 long), with a 0.8 sidewalk along every block.
@@ -67,8 +66,8 @@ export const RING_HI = CORE_END + AVENUE_GAP / 2;
 export const OUTER_LO = -AVENUE_GAP - BS; // -18
 export const OUTER_HI = CORE_END + AVENUE_GAP; // 69
 
-/** How wide the river runs (the owner had it widened five times over, from 3) */
-export const RIVER_W = 15;
+/** How wide the river runs (the owner had it widened five times over, from 3, then four times again, to 60: docs/river-plan.md) */
+export const RIVER_W = 60;
 /** The river, south of the north-bank avenue, with a 2-wide promenade either side */
 export const RIVER: [number, number] = [RING_HI + AVENUE_GAP / 2 + 2, RING_HI + AVENUE_GAP / 2 + 2 + RIVER_W]; // 71-86
 /**
@@ -77,6 +76,12 @@ export const RIVER: [number, number] = [RING_HI + AVENUE_GAP / 2 + 2, RING_HI + 
  * Club, South Square, the airport) add it, so they kept their place on the bank.
  */
 export const SOUTH_SHIFT = RIVER_W - 3;
+/**
+ * How far everything south of the river moved when it went from 15 to `RIVER_W` (the owner's call, four times as
+ * wide). Places south of it written in fixed numbers after the first widening (The Trenches, the metro's south
+ * end) add it; those from before add `SOUTH_SHIFT`, which carries both.
+ */
+export const WIDEN = RIVER_W - 15;
 /** The south bank avenue, past the river and its riverside walk */
 export const SOUTH_ROAD = RIVER[1] + 2.3 + AVENUE_GAP / 2 - WALK_W; // 92
 /** Where the south row of districts starts */
@@ -98,6 +103,14 @@ export const FOOTBRIDGE_X = OUTER_LO - 5.5; // -23.5
 
 /** Roads running north-south, at these x */
 export const NS_ROADS: Road[] = [avenue(RING_LO), ...CORE_ROADS.map(street), avenue(RING_HI)];
+/**
+ * The north-south roads that cross the river on a bridge (river plan step 1: only the east ring avenue, the metro's;
+ * the others end at the bank avenues). Each of the others is two streets in the plan: `ns<i>` north of the river and
+ * `ns<i>s` south of it (`nsStreet()`).
+ */
+export const BRIDGED_NS = [NS_ROADS.length - 1];
+/** The plan's id for north-south road `i` at z (its south half's, past the river, where it has no bridge) */
+export const nsStreet = (i: number, z: number) => (BRIDGED_NS.includes(i) || z < (RIVER[0] + RIVER[1]) / 2 ? `ns${i}` : `ns${i}s`);
 /** Roads running east-west, at these z (the south bank avenue only runs east-west) */
 export const EW_ROADS: Road[] = [avenue(RING_LO), ...CORE_ROADS.map(street), avenue(RING_HI), avenue(SOUTH_ROAD)];
 

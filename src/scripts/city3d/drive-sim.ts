@@ -17,6 +17,7 @@
  */
 import type { Box } from './solids';
 import { RIVER } from './layout';
+import { edgeSamples, topsAt } from './river';
 import { riverCrossings } from './streetplan';
 import { LAKE_C, LAKE_WALLS } from './westlake';
 
@@ -89,18 +90,46 @@ export const reachOf = (c: { speed: number }) => 8 + Math.abs(c.speed) * 0.05;
 
 export const newCar = (x: number, z: number, yaw: number): CarState => ({ x, z, yaw, speed: 0, vx: 0, vz: 0, steer: 0, yawRate: 0 });
 
-/** The river is a wall except where the bridges cross it (the river's run and its bridges from the street plan: growth plan Phase 5) */
+/** How long each piece of the river's wall is along x (it follows the water's edges: river.ts) */
+export const WALL_STEP = 2;
+/**
+ * The river is a wall except where the bridges cross it (the river's run and its bridges from the street plan:
+ * growth plan Phase 5): in pieces `WALL_STEP` long, west to east, each over the water there, the further of its
+ * edges along the piece and a little more (river plan step 1: the banks curve)
+ */
 export const RIVER_WALLS: Box[] = (() => {
   const { run, bridges } = riverCrossings();
   const out: Box[] = [];
+  const stretch = (a: number, b: number) => {
+    const k = Math.max(1, Math.ceil((b - a) / WALL_STEP));
+    for (let i = 0; i < k; i++) {
+      const [p0, p1] = [a + ((b - a) * i) / k, a + ((b - a) * (i + 1)) / k];
+      // (at the tops of the banks' slopes, where they slope down to the water: river plan step 2)
+      const e = edgeSamples(p0, p1, (p1 - p0) / 2).map((q) => topsAt(q.x));
+      out.push([p0, Math.min(...e.map((q) => q[0])) - 0.3, p1, Math.max(...e.map((q) => q[1])) + 0.3, 2]);
+    }
+  };
   let at = run[0];
   for (const [g0, g1] of bridges) {
-    out.push([at, RIVER[0] - 0.3, g0 + 0.1, RIVER[1] + 0.3, 2]);
+    stretch(at, g0 + 0.1);
     at = g1 - 0.1;
   }
-  out.push([at, RIVER[0] - 0.3, run[1], RIVER[1] + 0.3, 2]);
+  stretch(at, run[1]);
   return out;
 })();
+/** The river's walls a car at x might touch (`reach` either way): they're in order along x */
+export function riverWallsNear(x: number, reach: number): Box[] {
+  let lo = 0;
+  let hi = RIVER_WALLS.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (RIVER_WALLS[mid][2] < x - reach) lo = mid + 1;
+    else hi = mid;
+  }
+  const out: Box[] = [];
+  for (let i = lo; i < RIVER_WALLS.length && RIVER_WALLS[i][0] <= x + reach; i++) out.push(RIVER_WALLS[i]);
+  return out;
+}
 
 const approach = (v: number, target: number, step: number) => (v < target ? Math.min(target, v + step) : Math.max(target, v - step));
 
@@ -148,7 +177,7 @@ export function stepCar(c: CarState, inp: DriveInput, t: DriveTune, dt: number, 
   // Soft collisions: push each circle out of whatever it overlaps and lose the speed going into it
   let hit = 0;
   // (Westlake Park's lake only when the car's anywhere near it)
-  const walls = world.boxes.concat(RIVER_WALLS, Math.hypot(c.x - LAKE_C[0], c.z - LAKE_C[1]) < 50 ? LAKE_WALLS : []);
+  const walls = world.boxes.concat(c.z > RIVER[0] - 8 && c.z < RIVER[1] + 8 ? riverWallsNear(c.x, 6) : [], Math.hypot(c.x - LAKE_C[0], c.z - LAKE_C[1]) < 50 ? LAKE_WALLS : []);
   /** Move the car (and the circle being checked) out along n */
   const push = (cc: { x: number; z: number }, nx: number, nz: number, depth: number, soft: boolean) => {
     c.x += nx * depth;

@@ -1226,9 +1226,7 @@ a {
   .logo:hover .logo-img {
     transform: none;
   }
-  /* A still city: the script pauses the SMIL traffic too */
-  .city-map *,
-  .city-map .lift,
+  /* A still city */
   .city3d,
   .city-panel,
   .city-pin-card,

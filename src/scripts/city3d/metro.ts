@@ -30,7 +30,7 @@
  * Built over the avenues' medians and on open land clear of the pads and
  * the blocks, so nothing that exists moves.
  */
-import { MEDIAN, NS_ROADS, RIVER } from './layout';
+import { MEDIAN, NS_ROADS, RIVER, WIDEN } from './layout';
 import { PLAN, distToStreet, type Street } from './streetplan';
 import { AVENUE_Z } from './trenches';
 import type { Box } from './solids';
@@ -52,13 +52,13 @@ export const PLATFORM = { from: DECK_HALF, to: DECK_HALF + 2, half: 5.2 };
 export const PLATFORM_SIDE = -1;
 
 /** Where the line splits (z on the east avenue): the branch carries on south, the main line bends west */
-export const SWITCH_Z = 116;
+export const SWITCH_Z = 116 + WIDEN;
 /** The bend's radius: it comes out of it running west along Trench Avenue */
 export const BEND_R = AVENUE_Z - SWITCH_Z;
 /** The ends of the tracks: north, west (past The Trenches' station) and south (past the Airport's) */
 export const NORTH_END = -204;
 export const WEST_END = -103;
-export const AIRPORT_END = 136.4;
+export const AIRPORT_END = 136.4 + WIDEN;
 
 export interface Track {
   id: TrackId;
@@ -138,9 +138,9 @@ const trenchTower: Pick<Station, 'tower' | 'door' | 'face'> = { tower: [TRENCH_X
 export const STATIONS: Station[] = [
   { id: 'kart', name: 'Kart Park', track: 'main', s: -196 - NORTH_END, ...eastTower(-196) },
   { id: 'downtown', name: 'Downtown', track: 'main', s: 33 - NORTH_END, ...eastTower(37.5) },
-  { id: 'southbank', name: 'South Bank', track: 'main', s: 109 - NORTH_END, ...eastTower(109.5) },
+  { id: 'southbank', name: 'South Bank', track: 'main', s: 109 + WIDEN - NORTH_END, ...eastTower(109.5 + WIDEN) },
   { id: 'trenches', name: 'The Trenches', track: 'main', s: along('main', [TRENCH_X, AVENUE_Z]), ...trenchTower },
-  { id: 'airport', name: 'Airport', track: 'branch', s: 130.5 - SWITCH_Z, ...eastTower(130.5) },
+  { id: 'airport', name: 'Airport', track: 'branch', s: 130.5 + WIDEN - SWITCH_Z, ...eastTower(130.5 + WIDEN) },
 ];
 const station = (id: string) => STATIONS.find((s) => s.id === id)!;
 /** Where a station's platform is: its middle and the way its track runs there */
@@ -149,9 +149,12 @@ export const stationAt = (st: Station) => pointOn(st.track, st.s);
 /* ---------- Pillars ---------- */
 
 const ROADS = PLAN.streets.filter((s) => s.kind !== 'alley');
-/** Can a pillar stand here: in an avenue's median clear of every other road, or on open ground off every road; not in the river */
+/**
+ * Can a pillar stand here: in an avenue's median clear of every other road, or on open ground off every road; over
+ * the river only in the median of the bridge it crosses on (the east avenue's, river plan step 1)
+ */
 function clearFor(p: Pt) {
-  if (p[1] > RIVER[0] - 0.5 && p[1] < RIVER[1] + 0.5) return false;
+  const wet = p[1] > RIVER[0] - 0.5 && p[1] < RIVER[1] + 0.5;
   let median: Street | null = null;
   for (const s of ROADS) {
     const d = distToStreet(s, p);
@@ -163,7 +166,7 @@ function clearFor(p: Pt) {
     }
     return false;
   }
-  return true;
+  return !wet || median !== null;
 }
 /** Pillars down each track: at each end of every stretch they can stand on and evenly between, never more than 12 apart there */
 export const PILLARS: { track: TrackId; s: number; at: Pt }[] = (Object.values(TRACKS) as Track[]).flatMap((t) => {

@@ -1,6 +1,6 @@
 // The Sector 7 Metro (metro.ts, growth plan Phases 8 and 9): the line runs down the east ring avenue's median, bends
 // west to The Trenches over Trench Avenue's median, and the Airport's branch carries on south from the bend; its
-// pillars stand only in a median clear of the junctions, or on open ground, never in the river and never too far
+// pillars stand only in a median clear of the junctions, or on open ground, over the river only in its bridge's median, never too far
 // apart; its stations sit between junctions, their stair towers on open ground off every road, pad and solid; and the
 // train keeps to its tracks and its timetable, and every ride takes well under a minute.
 import { test } from 'node:test';
@@ -56,11 +56,11 @@ test('the line runs down the east ring avenue, bends west onto Trench Avenue, an
     }
 });
 
-test('the pillars stand in a median clear of every junction or on open ground, never in the river, never more than 18 apart', () => {
+test('the pillars stand in a median clear of every junction or on open ground, over the river only in its bridge\'s median, never more than 18 apart', () => {
   assert.ok(PILLAR_HALF < MEDIAN / 2);
   for (const p of PILLARS) {
     const [x, z] = p.at;
-    assert.ok(z < RIVER[0] - 0.5 || z > RIVER[1] + 0.5, `a pillar at ${x.toFixed(1)}, ${z.toFixed(1)} in the river`);
+    if (z > RIVER[0] - 0.5 && z < RIVER[1] + 0.5) assert.ok(Math.abs(x - LINE_X) + PILLAR_HALF <= MEDIAN / 2 + 1e-6, `a pillar at ${x.toFixed(1)}, ${z.toFixed(1)} in the river off the bridge's median`);
     const hits = roads.filter((s) => distToStreet(s, p.at) <= s.half + PILLAR_HALF + 0.2);
     // At most one road, an avenue, with the pillar inside its median
     assert.ok(hits.length <= 1, `a pillar at ${x.toFixed(1)}, ${z.toFixed(1)} in a junction (${hits.map((s) => s.id)})`);

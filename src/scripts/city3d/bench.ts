@@ -17,7 +17,7 @@
  */
 import * as THREE from 'three';
 import { mb, sceneMemory, type SceneMemory } from './perf';
-import { EXT } from './layout';
+import { EXT, WIDEN } from './layout';
 
 type V3 = [number, number, number];
 export interface BenchView {
@@ -32,11 +32,11 @@ export const BENCH_VIEWS: BenchView[] = [
   { id: 'home', name: 'Home view', pos: [0, 0, 0], target: [0, 0, 0] },
   { id: 'street', name: 'Downtown, street level', pos: [6, 2.2, 44.6], target: [40, 2.4, 43] },
   { id: 'square', name: 'The square and the Emporium', pos: [30, 6.5, 57], target: [30, 4.5, 38] },
-  { id: 'overview', name: 'Every district (Build overview)', pos: [75, 81, 105], target: [20, 0, 34] },
-  { id: 'airport', name: 'The airport', pos: [118, 22, 205], target: [140, 2, 160] },
+  { id: 'overview', name: 'Every district (Build overview)', pos: [75, 81, 105 + WIDEN / 2], target: [20, 0, 34 + WIDEN / 2] },
+  { id: 'airport', name: 'The airport', pos: [118, 22, 205 + WIDEN], target: [140, 2, 160 + WIDEN] },
   { id: 'karts', name: 'The kart park', pos: [169, 30, -186], target: [169, 0, -256] },
   { id: 'highway', name: 'The ring highway, a junction', pos: [0, 30, -120], target: [30, 0, -170] },
-  { id: 'trenches', name: 'The Trenches, round The Block', pos: [-60, 30, 120], target: [-100, 0, 175] },
+  { id: 'trenches', name: 'The Trenches, round The Block', pos: [-60, 30, 120 + WIDEN], target: [-100, 0, 175 + WIDEN] },
   { id: 'park', name: 'Westlake Park, over the lake', pos: [-48, 24, -12], target: [-100, 0, -62] },
   { id: 'uptown', name: 'Uptown, its towers from the river', pos: [-60, 16, 92], target: [-120, 12, 30] },
   { id: 'outskirts', name: 'Where the edge was, looking back', pos: [-180, 14, -180], target: [30, 0, 30] },

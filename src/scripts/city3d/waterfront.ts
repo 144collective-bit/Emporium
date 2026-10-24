@@ -23,14 +23,15 @@
  * It's a place (spot `pier`, its pin over the arch, `PIER_SPAWN`). Walking:
  * the decks are ground at `DECK_Y` (`onDeck()`: the river's wall stops you
  * everywhere else); the railing is the decks' edge. The boats keep clear:
- * the south lane's boat stays east of the boardwalk and the middle lane
- * swings north round the pier's head and the market's deck (`boatZ()`). What's solid is
+ * a lane coming near the pier's head or the market's deck swings north round
+ * it (`boatZ()`). What's solid is
  * `WATERFRONT_SOLIDS` (in SOLIDS): the crane's legs, the arch's posts, the
  * kiosk.
  */
 import type { Footprint, Pt, Rect } from './downtown';
 import { EW_ROADS, RIVER } from './layout';
 import { BOAT_LANES } from './liberty';
+import { laneAt } from './river';
 import { PIER_HOUSE, REFINERY, STORES } from './riverside';
 
 /** The south bank avenue: the boardwalk runs from its kerb to the water */
@@ -126,17 +127,16 @@ export const STROLL: Pt[] = [
 ];
 
 /**
- * The boats keep clear (life.ts): the south lane only east of the boardwalk; the middle lane swings north
- * round the pier's head and the market's deck, eased in and out
+ * The boats keep clear (life.ts): since the river was widened again (river plan step 1) every lane runs its whole
+ * length, following its curves (river.ts `laneAt()`); a lane coming near Pier 7's head or the market's deck swings
+ * north round it, eased in and out
  */
-export const BOAT_EAST = BX1 + 8;
 const SWINGS = [
   { c: PX, flat: PIER.head[2] - PX + 2.5, ease: 14, z: PIER.head[1] - 1.1 },
   { c: (MARKET_DECK[0] + MARKET_DECK[2]) / 2, flat: (MARKET_DECK[2] - MARKET_DECK[0]) / 2 + 2.5, ease: 14, z: MARKET_DECK[1] - 1.1 },
 ];
 export function boatZ(lane: number, x: number) {
-  const z = BOAT_LANES[lane];
-  if (lane !== 1) return z;
+  const z = laneAt(BOAT_LANES[lane], x);
   // (the furthest north any swing wants it here)
   let out = z;
   for (const w of SWINGS) {

@@ -9,9 +9,10 @@ import { CENTER, SLAB, type Tick } from './world';
 
 import { PLAN, distToStreet, outset, pointAt, streetLength } from './streetplan';
 import { DOWNTOWN, EXT, MARKET } from './layout';
-import { DECK_STROLLS, DECK_Y } from './liberty';
-import { BOAT_EAST, DECK_Y as BOARDWALK_Y, STROLL, boatZ } from './waterfront';
-import { NORTH_BOAT_EAST } from './boulevard';
+import { DECK_STROLLS, HIGH_Y as LIBERTY_HIGH } from './liberty';
+import { deckSlope, deckY, onHarbour } from './harbour';
+import { WATER_Y } from './river';
+import { DECK_Y as BOARDWALK_Y, STROLL, boatZ } from './waterfront';
 import { JUNCTIONS, ROUTES, SPOTS, lightState, phaseOf, pointOn, rightOf, type Junction, type Phase, type Pt, type Route } from './routes';
 import { CARS, PAINTS, carGeometry, carMaterials, theFarCars, type CarId } from './cars';
 import { isNear, tileKey, tileOf } from './tiles';
@@ -476,8 +477,11 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
       place(v);
       // The body nods under braking and leans out of a turn (traffic.ts), on top of its heading
       bodyMotion(v.body, v.v, v.yaw, dt);
-      q.setFromAxisAngle(up, v.yaw).multiply(q2.setFromEuler(lean.set(v.body.roll, 0, v.body.pitch)));
-      M.makeRotationFromQuaternion(q).setPosition(v.x, ROAD_Y, v.z);
+      // (over Harbour Bridge's hump: up it, its nose along the deck's slope; harbour.ts)
+      const hb = onHarbour(v.x, v.z) ? deckY(v.z) : 0;
+      const climb = hb ? Math.atan(-Math.sin(v.yaw) * deckSlope(v.z)) : 0;
+      q.setFromAxisAngle(up, v.yaw).multiply(q2.setFromEuler(lean.set(v.body.roll, 0, v.body.pitch + climb)));
+      M.makeRotationFromQuaternion(q).setPosition(v.x, ROAD_Y + hb, v.z);
       v.matrix.copy(M);
       v.near = !CROWD_VIEW.on || isNear(Math.hypot(v.x - CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, v.z - CROWD_VIEW.eye.z), farDist, v.near);
       farCars.show(v.far, !v.near);
@@ -596,10 +600,10 @@ const SEAT_DROP = (HIP_HEIGHT - 0.03) * PERSON_SCALE;
 function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f: Tick) => void) {
   const people: Person[] = [];
   // Round downtown's blocks (the square and the pocket parks too), and the south row's (the street life across the river),
-  // and up and down Liberty Bridge's walkway, up on its arches
+  // and round Liberty Bridge's high walkways and galleries, up between its towers
   const walks: { poly: Pt[]; y?: number }[] = [
     ...PLAN.blocks.filter((b) => b.id.startsWith('dt-') || (b.use === 'district' && b.ref!.startsWith('S'))).map((b) => ({ poly: b.poly })),
-    ...DECK_STROLLS.map((poly) => ({ poly, y: DECK_Y })),
+    ...DECK_STROLLS.map((poly) => ({ poly, y: LIBERTY_HIGH })),
   ];
   // ...and round The Trenches' blocks nearest The Block, with walkers of their own (so downtown keeps its crowd)
   const town = walks.length;
@@ -847,7 +851,7 @@ function buildBoats(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => void)
   // The odd boat tied up at a jetty (boats.ts), riding the water
   const moored = MOORED.map((m) => {
     const { g } = boat(m.color, false);
-    g.position.set(m.x, 0.02, m.z);
+    g.position.set(m.x, WATER_Y + 0.02, m.z);
     g.rotation.y = m.yaw;
     return { g, ph: m.x * 0.37 };
   });
@@ -858,8 +862,7 @@ function buildBoats(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => void)
       b.x += speed * dt;
       // The whole river, but only round you: a boat drifting off one way comes back round from the other
       const f = CROWD_VIEW.on ? CROWD_VIEW.focus.x : CENTER.x;
-      // (the south lane's boat keeps east of The Trenches' boardwalk, the north lane's east of Uptown's esplanade)
-      const lo = Math.max(EXT[0] + 6, f - BOAT_R, b.lane === 2 ? BOAT_EAST : b.lane === 0 ? NORTH_BOAT_EAST : -Infinity);
+      const lo = Math.max(EXT[0] + 6, f - BOAT_R);
       const hi = Math.min(EXT[1] - 6, f + BOAT_R);
       b.g.visible = hi - lo > 30;
       if (!b.g.visible) continue;
@@ -871,14 +874,14 @@ function buildBoats(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => void)
       b.wake.scale.set(w.len, w.width, 1);
       b.wake.position.x = -(0.75 + w.len / 2);
       (b.wake.material as THREE.MeshBasicMaterial).opacity = 0.35 * w.alpha;
-      // ...and the middle lane's swings round Pier 7's head, turning into the swing
+      // ...along the river's curves, swinging round Pier 7's head, turning into the swing
       const z = boatZ(b.lane, b.x);
       const slope = (boatZ(b.lane, b.x + 0.5) - boatZ(b.lane, b.x - 0.5)) * Math.sign(b.v);
-      b.g.position.set(b.x, 0.02 + Math.sin(t * 1.6 + b.ph) * 0.03, z);
+      b.g.position.set(b.x, WATER_Y + 0.02 + Math.sin(t * 1.6 + b.ph) * 0.03, z);
       b.g.rotation.set(0, (b.v < 0 ? Math.PI : 0) - Math.atan(slope), Math.sin(t * 1.2 + b.ph) * 0.03);
     }
     for (const m of moored) {
-      m.g.position.y = 0.02 + Math.sin(t * 1.3 + m.ph) * 0.025;
+      m.g.position.y = WATER_Y + 0.02 + Math.sin(t * 1.3 + m.ph) * 0.025;
       m.g.rotation.z = Math.sin(t * 0.9 + m.ph) * 0.025;
     }
   });

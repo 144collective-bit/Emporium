@@ -1,9 +1,11 @@
 /*
- * Sector 7 in 3D. Boots on top of the 2D map (which stays as the loading
- * poster and the fallback), then takes over: camera fly-in, buildings you can
- * hover and click, glass panels, time of day, weather and sound.
+ * Sector 7 in 3D. Boots behind the start menu (CityMap.astro), then takes
+ * over: camera fly-in, buildings you can hover and click, glass panels, time
+ * of day, weather and sound. Where it can't start, `bootCity()` returns null
+ * and the page says the city needs 3D graphics.
  */
 import * as THREE from 'three';
+import { WIDEN } from './layout';
 import { MapControls } from 'three/addons/controls/MapControls.js';
 import { BAKING_TEXTURES, PICK, builtTexturesDone, consolidate, loadBuiltTextures, loadImage, loadTex, updateLights, updateWind } from './kit';
 import { SWAY, windStrength } from './dusk';
@@ -58,8 +60,10 @@ import { buildKartPark } from './kartpark3d';
 import { KART_SPAWN } from './kartpark';
 import { AIR_SPAWN } from './airfield';
 import { FIGHT_SPAWN } from './fightsite';
-import { LIBERTY_SPAWN } from './liberty';
+import { HIGH_Y as LIBERTY_HIGH, LIBERTY_SPAWN, LIFTS as LIBERTY_LIFTS, LOW_Y as LIBERTY_LOW } from './liberty';
 import { buildLibertyBridge } from './libertybridge';
+import { buildHarbourBridge } from './harbour3d';
+import { HARBOUR_SPAWN } from './harbour';
 import { buildProjects } from './projects3d';
 import { buildCommons } from './commons3d';
 import { buildGrit } from './grit3d';
@@ -138,7 +142,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     return r;
   };
 
-  // Renderer first: if WebGL is missing, stay on the 2D map
+  // Renderer first: if WebGL is missing, give up (the page says the city needs 3D graphics)
   let renderer: THREE.WebGLRenderer;
   try {
     renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance', alpha: false });
@@ -212,7 +216,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const liberty = buildLibertyBridge(scene, { flame, tick, reduced, low: tier === 'low' });
   // The metro (growth plan Phase 8): the viaduct, its stations and the train
   const metro = buildMetro(scene, tick, { reduced, low: tier === 'low' });
-  spots.push(liberty.spot);
+  // Harbour Bridge: the east avenue's suspension bridge over the river, the metro down its middle (a place too)
+  const harbour = buildHarbourBridge(scene, { low: tier === 'low' });
+  spots.push(liberty.spot, harbour.spot);
   // ?fight: the sparring demo on the hangout square (the fight clips, before the Fight Club exists)
   const fightDemo = new URLSearchParams(location.search).has('fight') ? (await import('./fight-demo')).buildFightDemo({ scene, root, reduced, low: tier === 'low', tick }) : null;
   // The Trenches (growth plan Phase 9): its streets, built as you go (its blocks are the street plan's)
@@ -242,7 +248,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // Uptown's spire as a place, Sector 7 Tower (finance plan Phase 6): its spot only (the tower is Uptown's, drawn as a site)
   spots.push(buildTower(scene).spot);
   // ...and the metro's el where it crosses the open land south of the south row: no trees under it
-  keepTreesOff([-10, 125, 56, 135]);
+  keepTreesOff([-10, 125 + WIDEN, 56, 135 + WIDEN]);
   // Westlake Park (growth plan Phase 9b): its land is the street plan's; its trees and lamps stand with the town's
   // (from its data: phones leave out every other tree of its lawns' clumps, the trim); the rest of it is a chunk
   // of its own, loaded as you approach (districts.ts)
@@ -525,6 +531,12 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         close();
         startWalking(LIBERTY_SPAWN);
       });
+    // Harbour Bridge's panel: Walk in starts walk mode on its north end's east footway
+    if (id === 'harbour')
+      panelBody.querySelector('[data-harbour-walkin]')?.addEventListener('click', () => {
+        close();
+        startWalking(HARBOUR_SPAWN);
+      });
     // Trench Avenue's places: Walk in starts walk mode on the sidewalk in front
     if (id === 'club' || id === 'bar' || id === 'arms')
       panelBody.querySelector('[data-avenue-walkin]')?.addEventListener('click', () => {
@@ -626,13 +638,19 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     { id: 'lift:up', ...LIFT.lobby, label: 'Lift · Sky deck' },
     { id: 'lift:down', ...LIFT.deck, label: 'Lift · Lobby' },
   ];
+  // Liberty Bridge's lifts (liberty.ts): a door in each tower's arch on the lower deck, one on its gallery up top
+  const libertyDoors = () => {
+    const up = walk.position.y > (LIBERTY_LOW + LIBERTY_HIGH) / 2;
+    return LIBERTY_LIFTS.map((l, i) => (up ? { id: `liberty:down:${i}`, ...l.high, label: 'Lift · Deck' } : { id: `liberty:up:${i}`, ...l.low, label: 'Lift · High walkway' }));
+  };
   let lifting = false;
-  /** Up or down in the lift: a fade, then you step out at the other end (unless the owner has closed the tower for now) */
-  function ride(up: boolean) {
-    const gate = live.place('tower');
-    if (!gate.open) return tycoon?.toast(closedLine('Sector 7 Tower', gate), 3500);
+  /** Up or down in Sector 7 Tower's lift */
+  const ride = (up: boolean) => rideTo(up ? LIFT.up : LIFT.down, 'tower', 'Sector 7 Tower', up ? 'Sector 7 Tower · Sky deck' : 'Sector 7 Tower · Lobby');
+  /** Up or down in a lift: a fade, then you step out at the other end (unless the owner has closed the place for now) */
+  function rideTo(to: { x: number; z: number; y: number; yaw: number }, place: 'tower' | 'liberty', name: string, arrived: string) {
+    const gate = live.place(place);
+    if (!gate.open) return tycoon?.toast(closedLine(name, gate), 3500);
     if (lifting) return;
-    const to = up ? LIFT.up : LIFT.down;
     works.want(to.x, to.z, 40);
     lifting = true;
     root.classList.add('is-fading');
@@ -642,7 +660,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         walk.placeAt(to);
         lifting = false;
         requestAnimationFrame(() => root.classList.remove('is-fading'));
-        tycoon?.toast(up ? 'Sector 7 Tower · Sky deck' : 'Sector 7 Tower · Lobby');
+        tycoon?.toast(arrived);
       },
       reduced ? 0 : 520
     );
@@ -668,9 +686,14 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     engine: (revs) => sound.engine(revs),
     tyres: (level) => sound.tyres(level),
     // Your business's places, and the metro's station doors
-    places: () => [...(tycoon?.places() ?? []), ...(metroUI?.doors ?? []), ...LIFT_DOORS],
+    places: () => [...(tycoon?.places() ?? []), ...(metroUI?.doors ?? []), ...LIFT_DOORS, ...libertyDoors()],
     openPlace: (id) => {
       if (id === 'lift:up' || id === 'lift:down') return ride(id === 'lift:up');
+      if (id.startsWith('liberty:')) {
+        const [, way, i] = id.split(':');
+        const l = LIBERTY_LIFTS[Number(i)];
+        return rideTo(way === 'up' ? l.up : l.down, 'liberty', 'Liberty Bridge', way === 'up' ? 'Liberty Bridge · High walkway' : 'Liberty Bridge · Deck');
+      }
       if (!id.startsWith('metro:')) return tycoon?.openCard(id as 'stall');
       const shut = live.closed('metro');
       if (shut) tycoon?.toast(shut, 3500);
@@ -1478,7 +1501,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   loop();
 
   return {
-    /** Open a building's panel (the 2D map's buildings come here) */
+    /** Open a building's panel (the owner's notices' Go button comes here) */
     open(id: string) {
       open(id);
     },
