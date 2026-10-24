@@ -27,6 +27,9 @@ import {
   MASTS,
   PARKED,
   PARKED_JETS,
+  PARKED_FREIGHTERS,
+  CARGO_PEOPLE,
+  CARGO_ROAD,
   ROAD,
   RUNWAY,
   TOWER,
@@ -162,6 +165,10 @@ function hall(b: Batch, group: THREE.Group, crowd: Idle[], low: boolean) {
     crowd.push({ x, z, ry: r() < 0.5 ? Math.PI : (r() - 0.5) * 2, y: up ? DEPARTURES.y + 0.02 : TOP + 0.02, act: i % 3 === 0 ? 'chat' : i % 3 === 1 ? 'queue' : 'look' });
   }
   for (let i = 0; i < (low ? 2 : 5); i++) crowd.push({ x: RANK[RANK.length - 1][1] + 2.4 + i * 0.9, z: RANK[0][2] + 1.9, ry: -Math.PI / 2, y: TOP + 0.02, act: 'queue' });
+  // At work in the cargo area: at the docks, by the loader and the dollies (step 3)
+  CARGO_PEOPLE.forEach(([x, z, ry], i) => {
+    if (!low || i % 2 === 0) crowd.push({ x, z, ry, y: TOP + 0.02, act: i % 2 ? 'chat' : 'look' });
+  });
 }
 
 /* ---------- The tower, the hangar, the helipad ---------- */
@@ -315,14 +322,16 @@ function roadside(group: THREE.Group) {
   for (const [x, z, ry] of AIRPORT_LAMPS) addLamp(x, z, ry, 0);
   for (const [x, z, ry] of DECK_LAMPS) addLamp(x, z, ry, DEPARTURES.y);
   // An avenue of trees down the drive, behind its lamps
-  for (let z = ROAD.z0 + 17; z < ROAD.z1 - 14; z += 14) for (const s of [-1, 1]) if (s < 0 || z < HOTEL.rect[1] - 3 || z > HOTEL.rect[3] + 3) addTree(ROAD.x + s * (ROAD.half + 3.2), z, 0.95, false, 0);
+  for (let z = ROAD.z0 + 17; z < ROAD.z1 - 14; z += 14) for (const s of [-1, 1]) if ((s < 0 || z < HOTEL.rect[1] - 3 || z > HOTEL.rect[3] + 3) && Math.abs(z - CARGO_ROAD.z) > 8) addTree(ROAD.x + s * (ROAD.half + 3.2), z, 0.95, false, 0);
 }
 
 /* ---------- The flying traffic ---------- */
 
-const LIVERY: Record<AircraftKind, string[]> = {
-  // (the five flying airliners, then the parked ones: airfield.ts PARKED_JETS)
-  jet: ['#e219e5', '#00c2ff', '#8000ff', '#ff3b8a', '#00b8a9', '#00c2ff', '#e219e5', '#8000ff', '#ffb000'],
+const LIVERY: Record<AircraftKind | 'freighter', string[]> = {
+  // (the four flying airliners, then the parked ones: airfield.ts PARKED_JETS)
+  jet: ['#e219e5', '#00c2ff', '#ff3b8a', '#00b8a9', '#8000ff', '#00c2ff', '#e219e5', '#8000ff', '#ffb000'],
+  // (the freighter on the timetable, then the one parked at the cargo apron: DEGEN CARGO's orange)
+  freighter: ['#ff8a3d', '#ff8a3d'],
   prop: ['#ff3b8a'],
   // (the helicopter round the Emporium, and the executive one to Uptown's helipad in gold)
   heli: ['#00b0ff', '#c9a227'],
@@ -330,11 +339,14 @@ const LIVERY: Record<AircraftKind, string[]> = {
 
 /** Every aircraft on its timetable (the clock is the same for everyone), parked under reduced motion; the parked airliners at their stands */
 function flying(scene: THREE.Scene, tick: (f: Tick) => void, reduced: boolean) {
-  const kinds: AircraftKind[] = ['jet', 'prop', 'heli'];
+  const kinds: (AircraftKind | 'freighter')[] = ['jet', 'freighter', 'prop', 'heli'];
   const fleets = kinds.map((k) => {
     const f = createFleet(k, LIVERY[k]);
     scene.add(f.group);
-    return { kind: k, fleet: f, flights: FLIGHTS.filter((x) => x.kind === k), parked: k === 'jet' ? PARKED_JETS : [] };
+    // (the freighters are airliners on the timetable, drawn as a fleet of their own)
+    const kind: AircraftKind = k === 'freighter' ? 'jet' : k;
+    const flights = FLIGHTS.filter((x) => x.kind === kind && !!x.freight === (k === 'freighter'));
+    return { kind, fleet: f, flights, parked: k === 'jet' ? PARKED_JETS : k === 'freighter' ? PARKED_FREIGHTERS : [] };
   });
   const now = () => Date.now() / 1000;
   const current: { kind: AircraftKind; pose: Pose }[] = [];

@@ -58,6 +58,19 @@ import {
   departuresSurface,
   departuresWall,
   departuresY,
+  CARGO_APRON,
+  CARGO_KIT,
+  CARGO_OFFICE,
+  CARGO_ROAD,
+  CARGO_SHED,
+  CARGO_STANDS,
+  DOCKS,
+  LANDSIDE,
+  PARKED_FREIGHTERS,
+  RIG,
+  RIGS,
+  YARD,
+  rigRect,
   type Rect,
 } from '../src/scripts/city3d/airfield';
 import { SEATS, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
@@ -95,13 +108,15 @@ test('the airport: on open land inside the world, outside the ring highway and t
   for (const r of [AIRSIDE, ...AIRPORT_AREAS.filter((a) => a !== AIRPORT_AREAS[1])]) assert.ok(distToStreet(ew4, [(r[0] + r[2]) / 2, r[1]]) > ew4.half, 'the avenue runs over the airside');
   for (const p of PADS) for (const r of AIRPORT_AREAS) assert.ok(gap(r, p.rect) > 2, `the airport crowds ${p.id}`);
   // The runway, taxiways, aprons, buildings and pads are all airside, inside the fence
-  for (const r of [runway, taxiway, APRON, GA_APRON, rectOf(HANGAR), rectOf(MRO), rectOf(FIRE), ...CONCOURSES.map(rectOf)]) assert.ok(inside(AIRSIDE, r[0], r[1]) && inside(AIRSIDE, r[2], r[3]), `${r} is outside the fence`);
-  for (const p of [HELIPAD, EXEC_PAD, ...FUEL_TANKS]) assert.ok(inside(AIRSIDE, p.x, p.z, p.r));
+  for (const r of [runway, taxiway, APRON, GA_APRON, CARGO_APRON, rectOf(HANGAR), rectOf(MRO), rectOf(FIRE), ...CONCOURSES.map(rectOf)]) assert.ok(inside(AIRSIDE, r[0], r[1]) && inside(AIRSIDE, r[2], r[3]), `${r} is outside the fence`);
+  for (const p of [HELIPAD, EXEC_PAD]) assert.ok(inside(AIRSIDE, p.x, p.z, p.r));
+  // (the fuel farm landside, in its north-east corner: step 3 moved it for the cargo area)
+  for (const p of FUEL_TANKS) assert.ok(inside(LANDSIDE, p.x, p.z, p.r + 1));
   // About twice the old airport's: a runway of 300, eight stands
   assert.ok(RUNWAY.x1 - RUNWAY.x0 >= 300 && STANDS.length === 8);
   // Nothing taller than the Emporium's roof (about 12.5 up)
   assert.ok(TOWER.top < 12.5);
-  for (const f of [HALL, ...CONCOURSES, HANGAR, MRO, FIRE]) assert.ok(f[4] < 12.5);
+  for (const f of [HALL, ...CONCOURSES, HANGAR, MRO, FIRE, CARGO_SHED, CARGO_OFFICE]) assert.ok(f[4] < 12.5);
 });
 
 test('the stands: on the apron, an airbridge from the terminal to each, clear of each other, the taxilane behind them', () => {
@@ -130,8 +145,9 @@ test('the fence: round the airside, solid, with a gap to walk through to the ker
   const north = FENCE.filter(({ a, b }) => a[1] === AIRSIDE[1] && b[1] === AIRSIDE[1]).map(({ a, b }) => [Math.min(a[0], b[0]), Math.max(a[0], b[0])]).sort((p, q) => p[0] - q[0]);
   const gaps: number[][] = [];
   let at = AIRSIDE[0];
-  // (the hall stands in the fence's line: the fence runs round it)
-  for (const [x0, x1] of [...north, [HALL[0], HALL[2]]].sort((p, q) => p[0] - q[0])) {
+  // (the hall and the cargo shed with its office stand in the fence's line, across it: the fence runs to them)
+  for (const f of [CARGO_SHED, CARGO_OFFICE]) assert.ok(f[1] < AIRSIDE[1] && f[3] > AIRSIDE[1]);
+  for (const [x0, x1] of [...north, [HALL[0], HALL[2]], [CARGO_SHED[0], CARGO_SHED[2]], [CARGO_OFFICE[0], CARGO_OFFICE[2]]].sort((p, q) => p[0] - q[0])) {
     if (x0 > at + 0.01) gaps.push([at, x0]);
     at = Math.max(at, x1);
   }
@@ -225,6 +241,44 @@ test("every car the airport parks is one of the city's models", () => {
   for (const [m] of [...PARKED, ...RANK, ...MSCP_CARS.flatMap((l) => l.cars)]) assert.ok(m in CARS, `no car model ${m}`);
 });
 
+test('the cargo area: the shed on the fence line between the truck yard and the cargo apron, the freighters at its stands, the trucks at its docks', () => {
+  // The shed and its office straddle the fence: their docks landside onto the yard, their doors airside onto the apron
+  assert.ok(CARGO_SHED[2] === CARGO_OFFICE[0] && CARGO_SHED[1] < AIRSIDE[1] && CARGO_SHED[3] === CARGO_APRON[1]);
+  assert.ok(YARD[3] === CARGO_SHED[1] && inside(LANDSIDE, YARD[0], YARD[1]) && inside(LANDSIDE, YARD[2], YARD[3]));
+  for (const x of DOCKS) assert.ok(x > CARGO_SHED[0] + 1 && x < CARGO_SHED[2] - 1);
+  // Clear of the passenger apron's last stand and the fire station, the cargo stands on the cargo apron, nose in to
+  // the shed, a freighter's reach apart, the first flown from on the timetable, the second's freighter parked
+  assert.ok(gap(rectOf(FIRE), CARGO_APRON) < 0 && gap(rectOf(FIRE), [CARGO_STANDS[1][0] - REACH.jet, CARGO_STANDS[1][1] - REACH.jet, CARGO_STANDS[1][0] + REACH.jet, CARGO_STANDS[1][1] + REACH.jet]) > 2);
+  for (const [x, z] of CARGO_STANDS) {
+    assert.ok(inside(CARGO_APRON, x, z, 2) && z - REACH.jet > CARGO_SHED[3] && x - REACH.jet > STANDS.at(-1)![0] + REACH.jet, `the cargo stand at ${x} is off its apron`);
+  }
+  assert.ok(TAXILANE.x1 > CARGO_STANDS[0][0] && TAXIWAY.x1 > CARGO_STANDS[0][0], "the taxiways reach the freighter's stand");
+  assert.ok(CARGO_STANDS[1][0] - CARGO_STANDS[0][0] >= 2 * REACH.jet + 4);
+  const freighters = FLIGHTS.filter((f) => f.freight);
+  assert.equal(freighters.length, 1);
+  assert.ok(Math.hypot(freighters[0].parked.x - CARGO_STANDS[0][0], freighters[0].parked.z - CARGO_STANDS[0][1]) < 0.5);
+  assert.ok(PARKED_FREIGHTERS.length === 1 && PARKED_FREIGHTERS[0].x === CARGO_STANDS[1][0]);
+  // The kit on the apron and the people at work stand on the apron
+  for (const k of CARGO_KIT) assert.ok(inside(CARGO_APRON, k.at[0], k.at[1], 1));
+  // Cargo Road off the drive, the loop round the yard in the plan; the rigs in the yard, backed up to the docks or in rows inside the loop
+  for (const id of ['airport-cargo', 'airport-cargo-loop']) assert.ok(PLAN.streets.some((s) => s.id === id));
+  assert.ok(PLAN.streets.find((s) => s.id === 'airport-cargo-loop')!.oneway === -1);
+  const docked = RIGS.filter((r) => r.z === CARGO_SHED[1] - 0.1);
+  assert.ok(docked.length >= 3 && docked.every((r) => DOCKS.includes(r.x) && r.dir === -1));
+  assert.ok(RIGS.length >= 16);
+  for (const r of RIGS) {
+    const b = rigRect(r);
+    assert.ok(inside(YARD, b[0], b[1]) && inside(YARD, b[2], b[3]), `a truck off the yard at ${r.x}, ${r.z}`);
+    assert.ok(b[3] - b[1] >= RIG.trailer - 1e-9);
+  }
+  // A truck in the loop's rows is clear of the loop's lanes either side
+  const { loopX, x1, z, loopZ, half } = CARGO_ROAD;
+  for (const r of RIGS.filter((r) => !docked.includes(r))) {
+    const b = rigRect(r);
+    assert.ok(b[0] > loopX + half + 0.5 && b[2] < x1 - half - 0.5 && b[1] > z + half && b[3] < loopZ - half);
+  }
+});
+
 test('the multi-storey car park and the hotel: landside, off every road, clear of the highway, under the Emporium', () => {
   for (const r of [MSCP.rect, HOTEL.rect]) {
     for (const s of PLAN.streets) for (let x = r[0]; x <= r[2]; x += 1) for (let z = r[1]; z <= r[3]; z += 1) assert.ok(distToStreet(s, [x, z]) > s.half + 0.8, `${s.id} runs into ${r}`);
@@ -296,7 +350,7 @@ test('the aircraft never come near each other, in the air or on the ground, nor 
         assert.ok(d >= REACH[FLIGHTS[i].kind] + REACH[FLIGHTS[j].kind], `${FLIGHTS[i].id} and ${FLIGHTS[j].id} are ${d.toFixed(1)} apart at ${t}`);
       }
     poses.forEach((a, i) => {
-      for (const p of PARKED_JETS) {
+      for (const p of [...PARKED_JETS, ...PARKED_FREIGHTERS]) {
         const d = Math.hypot(a.x - p.x, a.y - p.y, a.z - p.z);
         assert.ok(d >= REACH[FLIGHTS[i].kind] + REACH.jet - 3, `${FLIGHTS[i].id} comes ${d.toFixed(1)} from a parked airliner at ${t}`);
       }

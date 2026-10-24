@@ -20,6 +20,9 @@
  *   short-stay car park; the departures deck (its slab on piers, lanes,
  *   kerb, parapets, ramps) with the arrivals level under it (the taxi rank,
  *   the bus bay and its shelter); the multi-storey car park; the hotel.
+ * - The cargo area (step 3): the cargo apron's stands, the shed and its office
+ *   on the fence line (docks landside, doors airside), the loader and the
+ *   dollies; Cargo Road, the truck yard and its loop, the trucks.
  */
 import * as THREE from 'three';
 import { Batch, FONT_DISPLAY, canvasTex, lit, siteMat, toon } from './kit';
@@ -31,6 +34,17 @@ import {
   APRON,
   APRON_KIT,
   BUS_BAY,
+  CARGO_APRON,
+  CARGO_KIT,
+  CARGO_OFFICE,
+  CARGO_ROAD,
+  CARGO_SHED,
+  CARGO_STANDS,
+  DOCKS,
+  RIG,
+  RIGS,
+  YARD,
+  rigRect,
   CAR_PARK,
   DEPARTURES,
   HOTEL,
@@ -90,10 +104,11 @@ const BRICK = toon('#8a4a52');
  * The atlas: 8 cells a row, 128 square, `ROWS` rows. Row 0: the stands' numbers (yellow paint); row 1: the
  * taxiway letters (location signs, yellow on black) A to D, the runway's hold-short sign (white on red, 09-27),
  * the runway's numbers 09 and 27 (white paint), TAXI; rows 2 on: the buildings' and the roads' signs, a row each
- * over the whole width (MAINTENANCE, FIRE STATION, DEPARTURES, ARRIVALS, RUNWAY HOTEL, PARKING, AIRPORT BUS)
+ * over the whole width (MAINTENANCE, FIRE STATION, DEPARTURES, ARRIVALS, RUNWAY HOTEL, PARKING, AIRPORT BUS, SECTOR 7
+ * CARGO); the last row cells again: the docks' numbers 1 to 6 (white on black) and the cargo stands' C1 and C2 (paint)
  */
 const CELL = 1 / 8;
-const ROWS = 9;
+const ROWS = 11;
 const ATLAS = (() => {
   const t = canvasTex(1024, ROWS * 128, (c) => {
     c.clearRect(0, 0, 1024, ROWS * 128);
@@ -132,6 +147,17 @@ const ATLAS = (() => {
     row(4, 'RUNWAY HOTEL', '#ff4fd8');
     row(5, 'P  PARKING', '#00eaff');
     row(6, 'AIRPORT BUS', '#7fe9ff');
+    row(7, 'SECTOR 7 CARGO', '#ff8a3d');
+    for (let k = 0; k < 8; k++) {
+      const y = 10 * 128;
+      if (k < 6) {
+        c.fillStyle = '#0b0a18';
+        c.fillRect(k * 128 + 4, y + 4, 120, 120);
+      }
+      c.font = `900 ${k < 6 ? 96 : 84}px ${FONT_DISPLAY}`;
+      c.fillStyle = k < 6 ? '#ffffff' : '#ffd23f';
+      c.fillText(k < 6 ? String(k + 1) : `C${k - 5}`, k * 128 + 64, y + 70);
+    }
   });
   return t;
 })();
@@ -293,7 +319,7 @@ function taxiways(b: Batch, sx0: number, sx1: number, low: boolean) {
 
 function aprons(b: Batch, sx0: number, sx1: number) {
   const inS = (x: number) => x >= sx0 && x < sx1;
-  for (const [x0, z0, x1, z1] of [APRON, GA_APRON]) {
+  for (const [x0, z0, x1, z1] of [APRON, GA_APRON, CARGO_APRON]) {
     for (let a = Math.max(x0, sx0); a < Math.min(x1, sx1); a += 15) box(b, a, G, z0, Math.min(a + 15, x1, sx1), TOP - 0.002, z1, CONCRETE);
     // Expansion joints every 6
     for (let x = Math.ceil(x0 / 6) * 6; x < x1; x += 6) if (inS(x)) mark(b, x - 0.03, z0, x + 0.03, z1, JOINT, TOP);
@@ -307,6 +333,16 @@ function aprons(b: Batch, sx0: number, sx1: number) {
     for (const s of [-1, 1]) mark(b, sx + s * 10.2 - 0.07, sz - 10.5, sx + s * 10.2 + 0.07, sz + 11, RED);
     decal(b, PAINT, cellUv(k, 0), sx + 3.2, MARK + 0.002, sz + 9, 2.6, 2.6, 0, true);
   });
+  // The cargo stands (step 3): the same, their lead-ins in from the taxiway, C1 and C2; the cargo lane the freighter is
+  // pushed back onto, across from the passenger apron
+  CARGO_STANDS.forEach(([sx, sz], k) => {
+    if (!inS(sx)) return;
+    for (let z = sz - 9.5; z < TAXIWAY.z - TAXIWAY.half - 0.01; z += 15) mark(b, sx - 0.09, z, sx + 0.09, Math.min(z + 15, TAXIWAY.z - TAXIWAY.half), YELLOW);
+    mark(b, sx - 1.2, sz - 9.9, sx + 1.2, sz - 9.6, YELLOW);
+    for (const s of [-1, 1]) mark(b, sx + s * 10.2 - 0.07, sz - 10.5, sx + s * 10.2 + 0.07, sz + 11, RED);
+    decal(b, PAINT, cellUv(6 + k, 10), sx + 3.2, MARK + 0.002, sz + 9, 2.6, 2.6, 0, true);
+  });
+  alongMark(b, sx0, sx1, CARGO_APRON[0], CARGO_STANDS[0][0], CARGO_STANDS[0][1] + 24 - 0.08, CARGO_STANDS[0][1] + 24 + 0.08, YELLOW);
   // The prop plane's line in from the taxilane
   if (inS(PROP_STAND[0])) mark(b, PROP_STAND[0] - 0.08, PROP_STAND[1], PROP_STAND[0] + 0.08, TAXILANE.z, YELLOW);
 }
@@ -813,6 +849,200 @@ function gaRoad(b: Batch) {
   box(b, AIRSIDE[0] - 0.08, FENCE_H + 0.3, GA_GATE.z0, AIRSIDE[0] + 0.08, FENCE_H + 0.4, GA_GATE.z1, YELLOW);
 }
 
+/* ---------- The cargo area (step 3) ---------- */
+
+const SHED = toon('#6b7aa8');
+const RIB = toon('#5d6b98');
+const SHUTTER = toon('#a8a4c2');
+const RUBBER = toon('#17151f');
+const YARD_CONCRETE = toon('#5d5a78');
+
+/**
+ * The cargo shed on the fence line and its office: ribbed cladding, a flat roof behind a parapet with rooflights and
+ * plant, the docks on the landside (each a shutter over a raised sill, its seal, bumpers, a lamp and its number, a
+ * canopy along them all), big doors on the airside with hazard-striped jambs, SECTOR 7 CARGO on both faces; the office
+ * glazed in bands, its sign facing the yard
+ */
+function cargoShed(b: Batch, low: boolean) {
+  const [x0, z0, x1, z1, H] = CARGO_SHED;
+  // (in pieces no longer than a tile: tileBatch())
+  boxes(b, x0, 0, z0, x1, H, z1, SHED);
+  // The roof (tucked in from the walls) inside a parapet
+  boxes(b, x0 + 0.006, H - 0.05, z0 + 0.006, x1 - 0.006, H + 0.04, z1 - 0.006, ROOF);
+  for (const [a, c, e, f] of [
+    [x0 - 0.1, z0 - 0.1, x1, z0 + 0.15],
+    [x0 - 0.1, z1 - 0.15, x1, z1 + 0.1],
+    [x0 - 0.1, z0 - 0.1, x0 + 0.15, z1 + 0.1],
+  ])
+    boxes(b, a, H, c, e, H + 0.5, f, PALE);
+  // Ribs down the long walls, every 1.5 (but over the docks' shutters)
+  b.detail(() => {
+    for (let x = x0 + 0.75; x < x1; x += 1.5)
+      for (const [z, d] of [
+        [z0, -1],
+        [z1, 1],
+      ] as const)
+        if (d > 0 || DOCKS.every((dx) => Math.abs(x - dx) > 1.45)) box(b, x - 0.06, d < 0 ? 3.4 : 4.9, Math.min(z, z + d * 0.08), x + 0.06, H, Math.max(z, z + d * 0.08), RIB);
+    for (let z = z0 + 0.75; z < z1; z += 1.5) box(b, x0 - 0.08, 0.9, z - 0.06, x0, H, z + 0.06, RIB);
+  });
+  // A plinth along the foot of its west end
+  box(b, x0 - 0.04, 0, z0, x0, 0.9, z1, toon('#4b4766'));
+  // Rooflights in a row and plant on the roof
+  for (let x = x0 + 4; x < x1 - 4; x += 6) box(b, x, H + 0.04, (z0 + z1) / 2 - 2.5, x + 3, H + 0.4, (z0 + z1) / 2 + 2.5, toon('#9fb6e8'));
+  if (!low) for (const x of [x0 + 6, x1 - 9]) box(b, x, H + 0.04, z0 + 3, x + 3, H + 1.4, z0 + 5.5, STEEL);
+  // The docks, landside (north): a raised sill, the shutter, a black seal round it, two bumpers, a lamp and the number
+  DOCKS.forEach((dx, k) => {
+    box(b, dx - 1.25, 0, z0 - 0.35, dx + 1.25, 0.7, z0, toon('#3a3658'));
+    box(b, dx - 1.0, 0.7, z0 - 0.05, dx + 1.0, 3.0, z0 + 0.02, SHUTTER);
+    b.detail(() => {
+      for (let y = 0.95; y < 3.0; y += 0.3) box(b, dx - 1.0, y, z0 - 0.07, dx + 1.0, y + 0.04, z0 - 0.05, toon('#8a86a8'));
+      box(b, dx - 1.3, 0.7, z0 - 0.3, dx - 1.05, 3.3, z0, RUBBER);
+      box(b, dx + 1.05, 0.7, z0 - 0.3, dx + 1.3, 3.3, z0, RUBBER);
+      box(b, dx - 1.3, 3.05, z0 - 0.3, dx + 1.3, 3.3, z0, RUBBER);
+      for (const s of [-1, 1]) box(b, dx + s * 0.8 - 0.18, 0.3, z0 - 0.5, dx + s * 0.8 + 0.18, 0.65, z0 - 0.35, RUBBER);
+    });
+    box(b, dx - 0.2, 3.5, z0 - 0.16, dx + 0.2, 3.6, z0 - 0.02, light('#fff1c8'));
+    decal(b, SIGN, cellUv(k, 10), dx, 3.95, z0 - 0.03, 0.6, 0.6, Math.PI, false);
+  });
+  // The canopy over the docks, on brackets, its edge lit
+  boxes(b, x0, 4.4, z0 - 2.2, x1, 4.6, z0, ROOF);
+  boxes(b, x0, 4.36, z0 - 2.24, x1, 4.4, z0 - 2.16, soft('#ff8a3d'));
+  for (let x = x0 + 3; x < x1; x += 6) box(b, x - 0.08, 3.9, z0 - 2.0, x + 0.08, 4.4, z0, STEEL);
+  // The airside (south): three big doors with hazard-striped jambs, the sign over them
+  const doorW = 7.6;
+  for (const cx of [x0 + 7, (x0 + x1) / 2, x1 - 7]) {
+    box(b, cx - doorW / 2, 0, z1, cx + doorW / 2, 4.6, z1 + 0.06, SHUTTER);
+    b.detail(() => {
+      for (let y = 0.3; y < 4.6; y += 0.32) box(b, cx - doorW / 2, y, z1 + 0.06, cx + doorW / 2, y + 0.04, z1 + 0.08, toon('#8a86a8'));
+      for (const s of [-1, 1])
+        for (let y = 0; y < 4.6; y += 0.6) box(b, cx + s * (doorW / 2 + 0.15) - 0.15, y, z1, cx + s * (doorW / 2 + 0.15) + 0.15, y + 0.3, z1 + 0.1, y % 1.2 < 0.3 ? YELLOW : INK);
+    });
+    box(b, cx - doorW / 2 - 0.3, 4.6, z1, cx + doorW / 2 + 0.3, 4.8, z1 + 0.12, INK);
+  }
+  box(b, (x0 + x1) / 2 - 9.4, H - 1.5, z1 + 0.04, (x0 + x1) / 2 + 9.4, H - 0.1, z1 + 0.14, INK);
+  decal(b, SIGN, rowUv(9), (x0 + x1) / 2, H - 0.8, z1 + 0.15, 18.4, 2.3, 0, false);
+  // The office: glazed bands between pale floor bands, a lit sign over the yard, a door on the yard
+  const [ox0, oz0, ox1, oz1, OH] = CARGO_OFFICE;
+  box(b, ox0 + 0.2, 0, oz0 + 0.2, ox1 - 0.2, OH, oz1 - 0.2, toon('#2b2848'));
+  for (let y = 0.4; y < OH - 1; y += 2.2) {
+    glazing(b, ox0 + 0.4, oz0 + 0.02, ox1 - 0.4, oz0 + 0.02, y, 1.7, 1);
+    glazing(b, ox1 - 0.02, oz0 + 0.4, ox1 - 0.02, oz1 - 0.4, y, 1.7, 1);
+    glazing(b, ox0 + 0.4, oz1 - 0.02, ox1 - 0.4, oz1 - 0.02, y, 1.7, -1);
+    box(b, ox0, y + 1.75, oz0, ox1, y + 2.2, oz1, PALE);
+  }
+  boxes(b, ox0, OH, oz0, ox1, OH + 0.4, oz1, PALE);
+  box(b, ox0 + 0.6, OH + 0.4, oz0 + 0.4, ox1 - 0.6, OH + 1.9, oz0 + 0.6, INK);
+  decal(b, SIGN, rowUv(9), (ox0 + ox1) / 2, OH + 1.15, oz0 + 0.38, 8.6, 1.08, Math.PI, false);
+  box(b, (ox0 + ox1) / 2 - 1, 0, oz0 - 0.06, (ox0 + ox1) / 2 + 1, 2.1, oz0 + 0.01, soft('#ffd36b'));
+}
+
+/** A rig, its trailer's back at (x, z), facing along z (`dir`), its tractor in front when it has one */
+function rig(b: Batch, r: (typeof RIGS)[number], low: boolean) {
+  const { w, trailer, gap, tractor, h } = RIG;
+  const d = r.dir;
+  const z = (u: number) => r.z + d * u;
+  const span = (u0: number, u1: number): [number, number] => [Math.min(z(u0), z(u1)), Math.max(z(u0), z(u1))];
+  const part = (x0: number, y0: number, u0: number, x1: number, y1: number, u1: number, m: THREE.Material) => {
+    const [a, c] = span(u0, u1);
+    box(b, r.x + x0, y0, a, r.x + x1, y1, c, m);
+  };
+  const hw = w / 2;
+  // (a wheel: its axle across the rig, along x)
+  const wheel = (x: number, zz: number, rr: number) => b.add(new THREE.CylinderGeometry(rr, rr, 0.24, 10).rotateZ(Math.PI / 2).translate(x, rr, zz), RUBBER);
+  // The trailer: its box on a dark chassis, landing legs at the front, three axles at the back
+  part(-hw, 0.75, 0.05, hw, h, trailer, toon(r.color));
+  part(-hw + 0.1, 0.45, 0.1, hw - 0.1, 0.75, trailer - 0.2, RUBBER);
+  part(-hw - 0.01, 0.95, 0.1, hw + 0.01, 1.05, trailer - 0.1, toon('#ff8a3d'));
+  if (!low)
+    b.detail(() => {
+      for (const u of [0.7, 1.5, 2.3]) for (const s of [-1, 1]) wheel(r.x + s * (hw - 0.1), z(u), 0.38);
+      for (const s of [-1, 1]) part(s * 0.5 - 0.06, 0, trailer - 1.6, s * 0.5 + 0.06, 0.5, trailer - 1.45, STEEL);
+      part(-hw + 0.05, 0.8, 0.0, hw - 0.05, h - 0.05, 0.05, toon('#c9c4e6'));
+    });
+  if (!r.cab) return;
+  // The tractor: the cab high at the front, its windscreen and grille, the chassis and wheels behind it
+  const t0 = trailer + gap;
+  part(-hw, 0.45, t0, hw, 0.85, t0 + tractor, RUBBER);
+  part(-hw, 0.85, t0 + tractor - 1.6, hw, 2.15, t0 + tractor, toon(r.color === '#f3f2f7' ? '#e23b3b' : '#f3f2f7'));
+  part(-hw + 0.08, 1.45, t0 + tractor - 0.01, hw - 0.08, 2.0, t0 + tractor + 0.02, toon('#26315f'));
+  part(-hw + 0.2, 0.55, t0 + tractor - 0.01, hw - 0.2, 1.3, t0 + tractor + 0.03, STEEL);
+  for (const s of [-1, 1]) part(s * (hw - 0.25) - 0.12, 0.9, t0 + tractor + 0.02, s * (hw - 0.25) + 0.12, 1.05, t0 + tractor + 0.05, light('#fff6c8'));
+  if (!low)
+    b.detail(() => {
+      for (const u of [t0 + 0.6, t0 + 1.4, t0 + tractor - 0.7]) for (const s of [-1, 1]) wheel(r.x + s * (hw - 0.1), z(u), 0.4);
+      for (const s of [-1, 1]) part(s * (hw + 0.02) - 0.02, 2.15, t0 + tractor - 1.3, s * (hw + 0.02) + 0.02, 2.6, t0 + tractor - 1.1, STEEL);
+    });
+}
+
+/** Cargo Road, the yard's loop and its paving (the trailers' bays, the docks' apron), the multi-storey's drive, the sign at the way in */
+function cargoYard(b: Batch) {
+  const { z, x1, loopX, loopZ, half: h } = CARGO_ROAD;
+  // The yard's concrete under it all, but the roads
+  boxes(b, YARD[0], G, z + h, loopX - h, TOP - 0.006, YARD[3], YARD_CONCRETE);
+  boxes(b, loopX + h, G, z + h, x1 - h, TOP - 0.006, loopZ - h, YARD_CONCRETE);
+  boxes(b, loopX - h, G, loopZ + h, YARD[2], TOP - 0.006, YARD[3], YARD_CONCRETE);
+  boxes(b, x1 + h, G, z + h, YARD[2], TOP - 0.006, loopZ - h, YARD_CONCRETE);
+  // Cargo Road from the drive's kerb, its centre line up to the loop; a sidewalk along its north side
+  boxes(b, ROAD.x + ROAD.half, G, z - h, x1 + h, TOP, z + h, TAR);
+  boxes(b, ROAD.x + ROAD.half, G, z - h - 0.8, x1 + h, TOP + 0.06, z - h, PAVING);
+  for (let x = ROAD.x + 6; x < loopX - 3; x += 3) mark(b, x, z - 0.07, x + 1.6, z + 0.07, WHITE);
+  // The loop: in at the road's end, south, west past the docks, north and back out
+  boxes(b, x1 - h, G, z + h, x1 + h, TOP, loopZ + h, TAR);
+  boxes(b, loopX - h, G, loopZ - h, x1 - h, TOP, loopZ + h, TAR);
+  boxes(b, loopX - h, G, z + h, loopX + h, TOP, loopZ - h, TAR);
+  arrow(b, x1, MARK, (z + loopZ) / 2, 0, 1);
+  for (let x = x1 - 10; x > loopX + 6; x -= 14) arrow(b, x, MARK, loopZ, -1, 0);
+  arrow(b, loopX, MARK, (z + loopZ) / 2, 0, -1);
+  // The trailers' bays inside the loop: a line between each, either row
+  for (const [a, c] of [
+    [z + h + 0.4, z + h + 8.2],
+    [loopZ - h - 8.2, loopZ - h - 0.4],
+  ])
+    for (let x = loopX + 2.8; x < x1 - 2; x += 2.4) mark(b, x - 0.04, a, x + 0.04, c, WHITE);
+  // The docks' apron: a yellow line where the trucks turn in, and each dock's guide lines
+  for (let x = loopX - h; x < YARD[2] - 0.6; x += 15) mark(b, x, loopZ + h + 0.3, Math.min(x + 15, YARD[2] - 0.5), loopZ + h + 0.42, YELLOW);
+  for (const dx of DOCKS) for (const s of [-1, 1]) mark(b, dx + s * 1.1 - 0.05, loopZ + h + 0.6, dx + s * 1.1 + 0.05, CARGO_SHED[1] - 0.4, YELLOW);
+  // The multi-storey's drive, off Cargo Road down its west side to its way in
+  const [mx0, , , mz1] = MSCP.rect;
+  boxes(b, mx0 - 4.6, G, z + h, mx0 - 1.6, TOP, (MSCP.rect[1] + mz1) / 2 + 2.2, TAR);
+  // SECTOR 7 CARGO at the way in, facing the drive
+  const gx = ROAD.x + ROAD.half + 3;
+  const gz = z - h - 2.2;
+  for (const dz of [-2.4, 2.4]) box(b, gx - 0.1, 0, gz + dz - 0.1, gx + 0.1, 2.6, gz + dz + 0.1, STEEL);
+  box(b, gx - 0.12, 1.6, gz - 2.7, gx + 0.12, 2.9, gz + 2.7, INK);
+  decal(b, SIGN, rowUv(9), gx - 0.13, 2.25, gz, 5.2, 0.65, -Math.PI / 2, false);
+}
+
+/** On the cargo apron: the high loader at the parked freighter's door, tugs and their dollies of containers */
+function cargoKit(b: Batch) {
+  for (const k of CARGO_KIT) {
+    const [x, z] = k.at;
+    const parts: [number, number, number, number, number, number, THREE.Material][] = [];
+    if (k.kind === 'loader') {
+      // A low chassis, scissor arms, the platform raised to the main deck door's sill, a cab at the back
+      parts.push([-1.8, 0.2, -1.0, 1.8, 0.6, 1.0, YELLOW], [-1.7, 2.3, -0.95, 1.7, 2.5, 0.95, YELLOW], [-1.8, 0.6, -0.9, -1.0, 1.9, 0.9, toon('#26315f')]);
+      b.add(new THREE.BoxGeometry(3.0, 0.12, 0.14).rotateZ(0.55).translate(0.2, 1.45, -0.8).rotateY(k.yaw).translate(x, 0, z), STEEL);
+      b.add(new THREE.BoxGeometry(3.0, 0.12, 0.14).rotateZ(-0.55).translate(0.2, 1.45, 0.8).rotateY(k.yaw).translate(x, 0, z), STEEL);
+    } else {
+      // A tug, then three dollies, each with a container (its lower side cut away: the contour that fits a hold)
+      parts.push([2.2, 0.2, -0.5, 3.4, 0.8, 0.5, YELLOW], [2.5, 0.8, -0.45, 3.2, 1.35, 0.45, INK]);
+      for (let c = 0; c < 3; c++) {
+        const u = 1.4 - c * 1.75;
+        parts.push([u - 0.75, 0.25, -0.65, u + 0.75, 0.4, 0.65, STEEL], [u - 0.7, 0.4, -0.55, u + 0.7, 1.55, 0.6, toon(['#c9c4e6', '#8a86a8', '#c9c4e6'][c])]);
+        b.add(new THREE.BoxGeometry(1.4, 0.5, 0.18).rotateX(-0.6).translate(u, 0.7, -0.62).rotateY(k.yaw).translate(x, 0, z), toon('#c9c4e6'));
+      }
+    }
+    for (const [a0, y0, c0, a1, y1, c1, m] of parts)
+      b.add(
+        new THREE.BoxGeometry(a1 - a0, y1 - y0, c1 - c0)
+          .translate((a0 + a1) / 2, (y0 + y1) / 2, (c0 + c1) / 2)
+          .rotateY(k.yaw)
+          .translate(x, 0, z),
+        m
+      );
+  }
+}
+
 /* ---------- Registering ---------- */
 
 const rectOf = (f: readonly number[], m = 1): Rect => [f[0] - m, f[1] - m, f[2] + m, f[3] + m];
@@ -880,4 +1110,26 @@ export function register({ low }: { low: boolean; scene: THREE.Scene | null; tic
     hotel(b);
     b.build(into);
   });
+  // The cargo area (step 3): the shed and its office, the apron's kit; Cargo Road and the yard; the trucks in it, a site a tile
+  site('airport cargo shed', [CARGO_SHED[0] - 1, CARGO_SHED[1] - 3, CARGO_OFFICE[2] + 1, CARGO_SHED[3] + 6], (into) => {
+    const b = new Batch();
+    cargoShed(b, low);
+    b.detail(() => cargoKit(b));
+    b.build(into);
+  });
+  site('airport cargo yard', [ROAD.x, CARGO_ROAD.z - 6, YARD[2], YARD[3]], (into) => {
+    const b = new Batch();
+    cargoYard(b);
+    b.build(into, { cast: false, receive: true });
+  });
+  for (let x = Math.floor(YARD[0] / 30) * 30; x < YARD[2]; x += 30)
+    for (let z = Math.floor(YARD[1] / 30) * 30; z < YARD[3]; z += 30) {
+      const here = RIGS.filter((r) => r.x >= x && r.x < x + 30 && r.z >= z && r.z < z + 30);
+      if (!here.length) continue;
+      site(`airport cargo trucks ${x},${z}`, here.map(rigRect).reduce((a, r): Rect => [Math.min(a[0], r[0]), Math.min(a[1], r[1]), Math.max(a[2], r[2]), Math.max(a[3], r[3])]), (into) => {
+        const b = new Batch();
+        for (const r of here) rig(b, r, low);
+        b.build(into);
+      });
+    }
 }
