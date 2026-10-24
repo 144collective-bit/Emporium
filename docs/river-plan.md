@@ -82,4 +82,30 @@ steps, each with the owner's sign-off; keep this plan up to date.
    and sails through between them; two enclosed walkways and a gallery on
    each tower make the high level, reached by a lift in each tower. The
    south bank's jetty that stood under the old bridge moved west.
-4. **River life:** more boats, perhaps islands and a ferry (to be asked).
+4. **River life** (the owner's picks: a river bus, more boats, and boating
+   yourself; no islands), in three parts:
+   - **4a, more boats:** two traffic boats to a lane (each lane's pair at one
+     pace, so they never close up), a police launch in the middle lane; a
+     sightseeing cruise boat on its own loop through the town's reach
+     (eastward north of Liberty's north pier, westward south of its south
+     pier, turning wide at each end); a rowing eight out and back west of
+     Pier 7; sailing dinghies tacking round the wide reach past the highway
+     out west. Everything new on a line of its own, clear of the lanes, the
+     tall ship, the piers, the decks and the bridges' undersides, a function
+     of the clock like the tall ship, drawn as a district loaded as you
+     approach the river. The highway's bridges' piers move between the
+     lanes (they stood in the middle one).
+   - **4b, the river bus:** two boats on a loop with four stops (Uptown's
+     esplanade, Downtown's promenade, South Row's promenade, by Pier 7),
+     each a landing on the water with a gangway down from the quay; at the
+     top of the gangway a "River bus" prompt opens the stop's card (the
+     other stops and how long each ride takes), the ride runs along the
+     route under a camera alongside, and you step off at the destination's
+     gangway, as the metro does. The stops are places on the map (fast
+     travel, taxis). South Row's stop takes the jetty that stood there.
+   - **4c, boating yourself:** a boat to hire at Downtown's landing
+     ("Take a boat"), driven like your car (arcade, soft bumps off
+     everything on the water, the banks, the piers and the decks; it passes
+     under the bridges), with its own chase camera, readout and engine;
+     you get out at any river bus landing and the boat goes back to its
+     berth.
