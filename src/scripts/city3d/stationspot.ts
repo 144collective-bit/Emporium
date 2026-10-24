@@ -34,5 +34,5 @@ export function buildStationSpot(scene: THREE.Scene): { spot: Spot } {
   ring.position.set(cx, SLAB + 0.05, cz);
   group.add(fx(ring));
   scene.add(group);
-  return { spot: { id: 'station', group, focus: new THREE.Vector3(cx - 20, 4, cz), size: 70, pin: new THREE.Vector3(cx, SLAB + TALLEST + 2.2, cz), ring } };
+  return { spot: { id: 'station', group, focus: new THREE.Vector3(cx - 10, 5, cz), size: 64, pin: new THREE.Vector3(cx, SLAB + TALLEST + 2.2, cz), ring } };
 }
