@@ -14,6 +14,7 @@ import { FIGHT_SPAWN } from './fightsite';
 import { LIBERTY_SPAWN } from './liberty';
 import { HARBOUR_SPAWN } from './harbour';
 import { STATIONS } from './metro';
+import { STOPS } from './riverbus';
 import { BLOCK_SPAWN } from './projects';
 import { AVENUE_SPAWNS } from './avenue';
 import { PIER_SPAWN } from './waterfront';
@@ -21,7 +22,7 @@ import { MARKET_SPAWN } from './nightmarket';
 import { STADIUM_SPAWN } from './stadium';
 import { TOWER_SPAWN } from './skydeck';
 
-export type PlaceKind = 'spot' | 'lot' | 'metro';
+export type PlaceKind = 'spot' | 'lot' | 'metro' | 'riverbus';
 export interface Place {
   id: string;
   kind: PlaceKind;
@@ -76,6 +77,8 @@ export const PLACES: Place[] = [
   { id: 'market', kind: 'lot', name: 'Market square', at: { x: STALL_SPOT.x, z: STALL_SPOT.z + 0.4, yaw: 0 } },
   // The metro's stations: on the sidewalk at the foot of each stair tower, facing its door
   ...STATIONS.map((s): Place => ({ id: `metro-${s.id}`, kind: 'metro', name: `${s.name} station`, at: { x: s.door.x + s.face[0] * 0.4, z: s.door.z + s.face[1] * 0.4, yaw: Math.atan2(s.face[0], s.face[1]) } })),
+  // The river bus's stops (river plan step 4b): at the top of each landing's gangway, facing the river
+  ...STOPS.map((s): Place => ({ id: `riverbus-${s.id}`, kind: 'riverbus', name: s.pier, at: s.arrive })),
 ];
 export const PLACE_IDS = PLACES.map((p) => p.id);
 
@@ -90,7 +93,7 @@ interface Copy {
 }
 /** A place's name and a line under it: the copy on its pin (CityMap.astro's directory, found under `root`), or its own */
 export function placeName(root: Copy, p: Place) {
-  if (p.name) return { name: p.name, sub: p.kind === 'metro' ? 'Metro' : '' };
+  if (p.name) return { name: p.name, sub: p.kind === 'metro' ? 'Metro' : p.kind === 'riverbus' ? 'River bus' : '' };
   const a = root.querySelector(`[data-dir-spot="${p.spot}"]`);
   return { name: a?.querySelector('span')?.textContent?.trim() ?? p.id, sub: a?.querySelector('small')?.textContent?.trim() ?? '' };
 }

@@ -5,8 +5,24 @@
    height over the ground, the throttle (or the rotor) and what it's doing. The hangar menu is
    the garage's panel with three cards in a row. */
 .fly-hint,
-.fly-hud {
+.fly-hud,
+.boat-hint {
   display: none;
+}
+/* Boating (boat.ts, river plan step 4c) sets is-boating on top of is-driving: the car's layout, its readout, its
+   horn; its own key hint */
+.city.is-boating .drive-hint {
+  display: none;
+}
+@media (pointer: fine) {
+  .city.is-driving.is-boating .walk-hint.boat-hint {
+    display: block;
+  }
+}
+@media (pointer: coarse) {
+  .city.is-driving.is-boating .drive-horn {
+    display: grid;
+  }
 }
 .city.is-flying .drive-hint,
 .city.is-flying .drive-hud {

@@ -82,4 +82,51 @@ steps, each with the owner's sign-off; keep this plan up to date.
    and sails through between them; two enclosed walkways and a gallery on
    each tower make the high level, reached by a lift in each tower. The
    south bank's jetty that stood under the old bridge moved west.
-4. **River life:** more boats, perhaps islands and a ferry (to be asked).
+4. **River life** (the owner's picks: a river bus, more boats, and boating
+   yourself; no islands), in three parts:
+   - **4a, more boats** (built): two traffic boats to a lane (each lane's pair at one
+     pace, so they never close up), a police launch in the middle lane; a
+     sightseeing cruise boat on its own loop through the town's reach
+     (eastward north of Liberty's north pier, westward south of its south
+     pier, turning wide at each end); a rowing eight out and back west of
+     Pier 7; sailing dinghies tacking round the wide reach past the highway
+     out west. Everything new on a line of its own, clear of the lanes, the
+     tall ship, the piers, the decks and the bridges' undersides, a function
+     of the clock like the tall ship, drawn as a district loaded as you
+     approach the river. The highway's bridges' piers move between the
+     lanes (they stood in the middle one).
+   - **4b, the river bus** (built): two boats on a loop with four stops
+     (Uptown's esplanade, Downtown's promenade, South Row's promenade, by
+     Pier 7), each a landing on the water (a pontoon on two piles, 3 out
+     from the quay) with a gangway down from the quay (South Row's from the
+     end of a jetty out to the boardwalk's line); the railings open at each
+     gangway and the lamps, benches and trees keep out of its way. The loop
+     keeps between the banks and the outer lanes, crossing the river only
+     east of the cruise boat's turn and west of the tall ship's anchorage,
+     under Liberty Bridge's approaches and never under Harbour Bridge. At
+     the top of the gangway a "River bus" prompt opens the stop's card
+     (the other stops and how long each ride takes), the ride runs straight
+     there along the loop the shorter way round (at most about 36 s) under
+     a camera alongside, out over the water, and you step off at the
+     destination's gangway, as the metro does; the boat you came on lies
+     there after. The stops are places on the map, the loop drawn dashed.
+     South Row's stop takes the jetty that stood there. Its stops are
+     `riverbus.ts` (the boot's), its loop, timetable and rides
+     `riverroute.ts`, its drawing the river's district (`riverlife3d.ts`)
+     and its card and ride `riverbus-ui.ts`, loaded when a card first
+     opens; the owner's live settings can close it (`riverbus`).
+   - **4c, boating yourself** (built): a boat to hire, moored along the
+     quay east of Downtown's landing with a ladder down to it ("Take a
+     boat"), driven like your car (arcade: thrust up to about 42 km/h, a
+     gentle astern, the rudder biting harder with speed, a slide through
+     the turns; soft bumps off the banks, the piers, the decks, the
+     landings, what's moored and every other boat). It passes under Liberty
+     Bridge and the middle of Harbour Bridge where there's room, never
+     under the ring highway's (their decks are too low), so it keeps to the
+     town's reach. Its own chase and helm cameras, the car's readout, the
+     car's engine and the boats' horn; Degen at the wheel. You get out
+     stopped alongside any river bus landing (at the top of its gangway)
+     or back at the mooring, and the boat goes home. The rules are
+     `boat-sim.ts`, the view `boat.ts` (loaded the first time you take
+     it), the model and the mooring `riverlife3d.ts`; `boat` in the live
+     settings closes it.

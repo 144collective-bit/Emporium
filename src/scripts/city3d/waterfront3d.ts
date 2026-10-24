@@ -30,8 +30,12 @@ import { WATER_Y } from './river';
 import type { Pt, Rect } from './downtown';
 import type { Idle, Spot } from './landmarks';
 import { ARCH, BARGE, BENCHES, BINOCULARS, BOARDWALK, BOLLARDS, CRANE, DECK_Y, FISHERS, KIOSK, LAMPS, PIER, PLANTERS, RAIL_GAPS, RINGS, WATERFRONT_RECT } from './waterfront';
+import { GANGWAY, STOPS } from './riverbus';
 import { PIER_HOUSE } from './riverside';
 import { SIGNS, archFrame, archPane, box, signPlane } from './riverside3d';
+
+/** The river bus's gangway off the boardwalk (riverbus.ts): its railing opens there */
+const BOARDWALK_GANGWAYS = STOPS.filter((s) => s.quay === BOARDWALK[1]).map((s): [number, number] => [s.door.x - GANGWAY.half - 0.05, s.door.x + GANGWAY.half + 0.05]);
 
 const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
 const DECK = toon('#6e5a4c');
@@ -111,7 +115,7 @@ function boardwalkPiece(b: Batch, xa: number, xb: number, low: boolean) {
   // The railing at the water, open where the pier's neck and the market's deck run on out from it
   const edge = BZ0 + 0.08;
   let runs: [number, number][] = [[xa, xb]];
-  for (const [g0, g1] of RAIL_GAPS) runs = runs.flatMap(([a, c]): [number, number][] => (c <= g0 || a >= g1 ? [[a, c]] : [...(a < g0 ? [[a, g0] as [number, number]] : []), ...(c > g1 ? [[g1, c] as [number, number]] : [])]));
+  for (const [g0, g1] of [...RAIL_GAPS, ...BOARDWALK_GANGWAYS]) runs = runs.flatMap(([a, c]): [number, number][] => (c <= g0 || a >= g1 ? [[a, c]] : [...(a < g0 ? [[a, g0] as [number, number]] : []), ...(c > g1 ? [[g1, c] as [number, number]] : [])]));
   for (const [a, c] of runs) railX(b, a, c, edge, low);
   // The ends of the boardwalk over the water closed off
   if (Math.abs(xa - BX0) < 1e-6) railZ(b, BZ0, RIVER[1], BX0 + 0.08, low);

@@ -26,9 +26,12 @@ const BUDGETS = {
    * is seen from the home view, so it's drawn at the boot; and from 662 for step 2, the owner's design: Harbour
    * Bridge as a place (its towers, deck, cables and stays, harbour3d.ts, 4 KB) and the water lowered under the
    * streets (the banks' slopes and quay walls): a landmark seen from the home view, drawn at the boot as Liberty
-   * Bridge is)
+   * Bridge is; and from 666 for step 4, the owner's picks: more boats (the lane boats doubled, the police launch, the
+   * river's life loaded as you approach) and the river bus's stops as places (their gangways' prompts, the railings
+   * and the promenades' lamps, trees and benches opening round them, the stops on the world map), 2 KB: the boats,
+   * the landings, the bus's loop, its timetable and its rides are their own chunks')
    */
-  bootJs: 666,
+  bootJs: 670,
   /** Any one piece loaded later (a feature, when it's used) */
   lazyJs: 60,
   /** All the CSS */

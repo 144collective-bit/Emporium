@@ -139,7 +139,7 @@ export function createTravelUI(d: TravelDeps) {
   let shown = '';
   /** Places just reached, for the toast: held while a menu, a panel or the metro's card is open (it'd sit on their header) */
   let reached: string[] = [];
-  const sheetOpen = () => root.classList.contains('is-shopping') || root.classList.contains('has-panel') || root.querySelector<HTMLElement>('[data-metro]')?.hidden === false;
+  const sheetOpen = () => root.classList.contains('is-shopping') || root.classList.contains('has-panel') || root.querySelector<HTMLElement>('[data-metro]')?.hidden === false || root.querySelector<HTMLElement>('[data-riverbus]')?.hidden === false;
   function update(dt: number) {
     if (!d.walking()) return;
     const p = walk.position;
