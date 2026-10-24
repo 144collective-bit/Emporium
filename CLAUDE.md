@@ -199,7 +199,7 @@ it and has been retired completely. Build only on what's here.
   - The river is `RIVER_W` (60) wide: five times what it was, then four times again (the owner's calls; the second is `docs/river-plan.md`, built in steps with the owner's sign-off: step 1, the river, is built). It widened southwards both times, so everything south of it moved: what's derived from `SOUTH_ROAD` / `SOUTH_ROW` moved by itself; the south bank's places written in fixed numbers before the first widening (the Fight Club in `fightsite.ts`, South Square and the south pocket parks in `outer.ts`, the airport and its timetable in `airfield.ts`) add `SOUTH_SHIFT` (57, both moves) to their z, and those written after it (The Trenches' streets in `trenches.ts`, the metro's south end in `metro.ts`, the airport's site's south edge and the executive helicopter's path, the benchmark's views) add `WIDEN` (45, the second). Keep doing that for anything new written in fixed numbers south of the river.
   - **The river's shape** is `river.ts` (DOM-free, tested in `tests/river.test.ts`; river plan step 1, the owner's call: natural, not a straight line): `RIVER` is the band between the quay lines, the bank avenues straight along it edge to edge; the water's edge keeps to the band where anything stands on the water (Uptown's esplanade and marina, the town's promenades and their jetties, The Trenches' boardwalk, Pier 7 and the Night Market, Liberty Bridge, every bridge) and pulls back from it on the stretches in `BANKS` (`pullAt()`, eased in and out, a smooth seeded wander between `min` and `max`): a sandy cove on the south bank below the south row (`beach`), grass banks east of the town's promenades, and past the ring highway, each bank on its own. `edgesAt()` / `inWater()` / `edgeSamples()` are what everything reads: the water's mesh (world.ts `riverWater()`: shallows by the natural banks, a `shore` attribute on the city's water shader) and its banks (`riverBanks()`: stone quay walls, a ribbon of sand or pebbles where it pulls back, the cove's beach back to the promenade, reeds in chunky clumps and rocks near only), walking (walk.ts), driving (`RIVER_WALLS` in drive-sim.ts, a piece every `WALL_STEP` over the water, `riverWallsNear()`), the boats (`laneAt()`, waterfront.ts `boatZ()`), the outskirts' trees (they grow on the banks it leaves: `treeSpot()`), the promenade's railing (open to the cove), the world map and the sound.
   - **The water lies under the streets** (river plan step 2, the owner's pick): `WATER_Y` (-1.5) in `river.ts`. Where it keeps to the quay line a stone quay wall drops to it; where it pulls back the bank slopes down to it (`SLOPE` wide at most, flat land left above it; the cove's beach all the way: `slopeAt()`, `topsAt()` the slopes' tops, `shoreY()` the ground's height, `inChannel()` the slopes and the water). The grass stops at the band (world.ts); `riverBanks()` draws the walls, the slopes, the sand or pebbles and the reeds down at the water, and walls the channel's ends at the world's edge. Walking follows `shoreY()` down a slope (walk.ts `groundAt()`), the cars stop at the slopes' tops (`RIVER_WALLS`), the trees keep off the channel. Everything afloat is at `WATER_Y` (the traffic's boats and the moored ones in life.ts, Uptown's yachts and tenders, the barge), and everything standing in the water reaches down to it (the decks' piles, the jetties' posts, Uptown's marina pontoon on piles, Liberty Bridge's piers, the highway's bridges' piers). Anything new on the water goes there too.
-  - **Bridges** (river plan step 1): the four avenue bridges were taken out. Only the east ring avenue keeps one (`BRIDGED_NS` in layout.ts: Harbour Bridge since step 2, below, the metro's; the el's posts stand on its median); the other north-south roads end at the bank avenues, each two streets in the plan (`ns<i>` north of the river, `ns<i>s` south of it, `nsStreet()`), and the ring highway keeps its two bridges far out of town. Liberty Bridge is redesigned in step 3.
+  - **Bridges** (river plan step 1): the four avenue bridges were taken out. Only the east ring avenue keeps one (`BRIDGED_NS` in layout.ts: Harbour Bridge since step 2, below, the metro's; the el's posts stand on its median); the other north-south roads end at the bank avenues, each two streets in the plan (`ns<i>` north of the river, `ns<i>s` south of it, `nsStreet()`), and the ring highway keeps its two bridges far out of town. Liberty Bridge, a footbridge, was rebuilt in step 3 (below).
   - `WORLD_BOUNDS` is how far you can walk or drive.
   - `CITY_EXT` (-80 to 140 + `SOUTH_SHIFT`) is the town past the Parkway (with the airport and the kart park it's `BUILT_UP`); the outskirts' tree belt fills a band round the town (outside the bends) and a lighter sprinkle covers the rest, seeded tile by tile at a density per area (`outskirtsTrees()` in `outskirts.ts`: `BELT_FREE` / `OPEN_FREE` are the land a tree could stand on in the world before Phase 6, so a bigger world gets more trees, never thinner ones, and a tile's trees are the same whatever the world's size; trees keep off land in `keepTreesOff()`). Pine woods stand in patches on the land well away from the city (`WOODS`, `inWoods()`: a smooth seeded noise, only past `WOODS.clear` from `BUILT_UP`, so none on the land the world had before Phase 6), their trees bigger than the town's.
   - The skyline ring stands just past `EXT` (`SKYLINE` in `bounds.ts`: `gap` to `gap` + `depth` past it), kept out of the haze (`fog = false`) so it reads as a far metropolis; as many towers as the ring had for its length before Phase 6 (`SKYLINE_REACH`), each from its own seeded numbers, on grass that carries on `SKIRT` (80) past the edge (the grass is a plane per tile).
@@ -1457,10 +1457,9 @@ it and has been retired completely. Build only on what's here.
     clip's end cost more (`ENDING`); a free foot clears the ground just
     ahead of it (`LOCK.look`), a held one stands on the ground it was put
     down on, the hips follow the feet above his ground (`LIFT`). The feet
-    can stand on something other than what he walks on (`AnimInput.feet`):
-    Liberty Bridge's treads as drawn (`stairTread()` in liberty.ts, the
-    drawing's `STAIR_BASE`) over the ramp walking follows, and walk.ts slows
-    him to a brisk climb on them (`CLIMB`).
+    can stand on something other than what he walks on (`AnimInput.feet`;
+    today walk.ts passes its own ground: Liberty Bridge's stairs, which
+    used it, went with its redesign).
   - **Phase 3:** jump takes (subject 127's running jumps, 143's standing
     ones; `JUMPS_ONLY` keeps the standing ones' wind-ups out of the
     ground's searches); motionmatch.ts finds each take's flights
@@ -1801,47 +1800,75 @@ it and has been retired completely. Build only on what's here.
 
 ## Liberty Bridge (the owner's call)
 
-- A one-of-a-kind landmark: a stone **footbridge** built up and over the
-  water, in the style of an old gate-tower bridge (the owner's photo:
-  sandstone, an arch through each tower, stairs up both sides, domed
-  turrets), with the Liberty flame (the owner's permission; the flame mark
-  only, `src/assets/liberty-flame.png`) as a 3D spiral on top of both
-  towers and as a crest on their faces. Name it "Liberty Bridge"; never
-  link it anywhere, and keep the flame the only outside mark on it. It's
-  for people only: no road, no cars (an earlier draft with Liberty Road and
-  traffic was dropped, and West 3 and South 1 stayed on the market).
+- A one-of-a-kind landmark: a **footbridge** in the style of the old
+  gate-tower bridges with lifting leaves (river plan step 3, the owner's
+  calls: its high walkways walked on, its lower deck's halves lifting),
+  sandstone towers and pale blue steelwork, with the Liberty flame (the
+  owner's permission; the flame mark only, `src/assets/liberty-flame.png`)
+  as a 3D spiral on top of both towers and as a crest on their outer faces.
+  Name it "Liberty Bridge"; never link it anywhere, and keep the flame the
+  only outside mark on it. It's for people only: no road, no cars.
 - **The numbers** are `liberty.ts` (DOM-free, tested in
-  `tests/liberty.test.ts`): on `FOOTBRIDGE_X` (`layout.ts`, x -23.5, just
-  west of the W3 and S1 pads, on their blocks' lawns), a gate tower on each
-  bank (`TOWERS`, level with the middle of W3 and of S1; `TOWER`: the
-  ground storey with its arch, the upper storey, roof, turrets, the flame's
-  drum and height, all under the Emporium), stairs beside each tower rising
-  towards the river (`STAIR`, `stairsOf()`), a landing at the tower's river
-  face (`landingOf()`), the walkway between them (`WALKWAY` at `DECK_Y`)
-  raised on round-topped arches (`SUPPORTS`: pairs of pillars on the lawns
-  and promenades you can walk between, two piers in the river; `SPANS`,
-  `archY()`) high over both river avenues, `BOAT_LANES` down the middle of
-  the river's three arches (life.ts's boats), `DECK_STROLLS` (life.ts
-  walks people along the walkway at `DECK_Y`), `LIBERTY_RECTS` (what it
-  covers: the lawns' trees and the promenade's benches and lamps keep off),
-  `LIBERTY_SOLIDS` (in `SOLIDS`: the towers either side of the arch, the
-  stairs past their first steps, the landings' posts, pillars, piers) and
-  `LIBERTY_SPAWN` (the foot of the north tower's east stairs).
-- **Walking on it:** `footbridgeY(x, z, y, m)` is the stairs, landings and
-  walkway as ground when you're up there (walking under them stays on the
-  ground), and `footbridgeWall()` the parapets (you can't step or fall
-  off); `walk.ts` passes Degen's height into `blocked()` and `groundAt()`.
-- **Drawn by** `libertybridge.ts`: the towers (arch and voussoir ring,
-  string course, lit arched windows, the crest and the LIBERTY BRIDGE
-  plaque, cornice, crenellations, four turrets with octagonal slate domes
-  and finials, the drum), the stairs (stepped stone flanks, outer walls,
-  newels, street lamps at their feet), the landings, the walkway (arches
-  with their rings, cutwater piers, parapets with coping, pilasters with
-  lanterns, pools of their light at night), paved aprons round the towers,
-  and `flameGeometry()`: the flame mark as a sculpture, a ribbon
-  spiralling up from violet through magenta into tongues of fire curling
-  to one side, coloured per vertex, turning slowly (still under reduced
-  motion). The whole bridge is the spot's group.
+  `tests/liberty.test.ts`) on `FOOTBRIDGE_X` (`layout.ts`, x -23.5):
+  - two gate towers standing in the river either side of its middle
+    (`TOWERS`, `FACES` their inner faces, `TOWER`: the pointed arch through
+    each for the lower deck, cornice, turrets, the flame's drum and height,
+    all under the Emporium; the pier under each with cutwaters, `pier`;
+    `pointedArch()`);
+  - the lower deck (`LOW_Y` over the middle): an approach from each bank's
+    promenade (`APPROACH`, rising to the towers' outer faces, `OUTER`;
+    `lowY()`), hung from chains between the tower and an abutment just off
+    the quay (`CHAIN`, `chainY()`, `ABUTMENTS`), through the towers, and
+    across the middle on two leaves (`LEAF`) hinged at the towers' faces;
+  - the leaves lift for the **tall ship** on a timetable, a function of the
+    clock the same for everyone (`leavesAt()`: the gates shut, the leaves
+    rise to `LEAF.max`, hold while it passes, come down, `LIFT_TIMES`,
+    `SHUT_WINDOWS`); the ship (`SHIP`, `shipAt()`, `SHIP_TIMES`) lies at
+    anchor west of the bridge and east of it in turn (`ANCHOR_X`: between
+    the highway's west bridge and Harbour Bridge, which it can't pass) on
+    its own line through the middle span, off the boats' lanes; the tests
+    hold the leaves fully up whenever any of it is over the bridge's line,
+    and clear of its sails and of the high level;
+  - the high level (`HIGH_Y`, `HIGH`): two walkways between the towers'
+    upper storeys and a gallery along each tower's inner face joining them
+    (`onHigh()`), reached by a lift in each tower (`LIFTS`: a door in the
+    arch on the lower deck and one on the gallery, where each lets you
+    out); `DECK_STROLLS` (life.ts walks people round it at `HIGH_Y`);
+  - `BOAT_LANES` (as before: under the north approach, through the middle,
+    under the south approach; boats.ts sounds a horn for it, `BOAT_HALF`),
+    `LIBERTY_RECTS` (what it covers: the promenades' dressing keeps off),
+    `LIBERTY_SOLIDS` (in `SOLIDS`: the towers either side of the arch, the
+    abutments), `LIBERTY_CAMERA` (what the walk camera can't pass that you
+    walk under: the towers over their arches, the walkways' roofs; boxes
+    with a bottom) and `LIBERTY_SPAWN` (the foot of the north approach).
+- **Walking on it:** `footbridgeY(x, z, y, m, open)` is the lower deck and
+  the high level as ground (by Degen's height), the leaves only while
+  they're down (`open`: walk.ts's `leavesOpen()`, always under reduced
+  motion), and `footbridgeWall()` its edges (you can't step or fall off,
+  but off the approaches' low first stretch onto the promenade). When the
+  gates shut with Degen out on the leaves, walk.ts walks him back to the
+  nearer tower with a toast. The lifts' doors are walk prompts
+  (`libertyDoors()` in index.ts, by his height: "Lift · High walkway",
+  "Lift · Deck"), a fade like Sector 7 Tower's (`rideTo()`), closed with
+  the place by the owner's live settings.
+- **Drawn by** `libertybridge.ts`: the towers (an outline with the arch
+  cut up into it, extruded; the pier with its cutwaters and a dark band at
+  the water; the ring of stones round the arch, lancet windows lit at
+  night, the crest and the LIBERTY BRIDGE plaque on the outer faces, the
+  lift's door on the inner, a string course, corbelled cornice,
+  crenellations, four turrets with octagonal slate domes and finials, the
+  drum), the approaches in pieces a tile long following their rise (paving
+  between pale blue lattice parapets with white handrails, iron lanterns
+  with pools of light), the chains and their hangers, the abutments with
+  their little slate roofs and lanterns, the high level (floors on a truss,
+  lattice sides, roofs, lamps under them, the galleries' railings), the
+  leaves and the boom gates (groups of their own, moved by the tick,
+  `userData.keep`), the tall ship (its own group on the water, not part of
+  the bridge's hover: hull, gold stripe, stern castle with lit windows,
+  three masts with square sails, a jib, a flag) and `flameGeometry()`: the
+  flame mark as a sculpture, coloured per vertex, turning slowly (still
+  under reduced motion). Under reduced motion the leaves stay down and the
+  ship at its west anchor. The whole bridge is the spot's group.
 - **The place:** spot `liberty` (after the Emporium in `spots`), its pin
   over the north tower's flame, directory entry and an info-only panel
   (`data-panel-tpl="liberty"`) with **Walk in**. No outside links.

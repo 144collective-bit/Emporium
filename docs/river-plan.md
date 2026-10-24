@@ -72,8 +72,14 @@ steps, each with the owner's sign-off; keep this plan up to date.
    (`harbour.ts`, `harbour3d.ts`). It's a place with a pin and a panel.
    The highway's two bridges got piers. The boot code's budget went from
    662 to 666 KB for it.
-3. **Liberty Bridge** in the style of Tower Bridge (to ask first: whether
-   its high walkways are climbed in walk mode, and whether the lower deck's
-   halves lift for tall boats). Until then it stretches over the wider water
-   on its old supports.
+3. **Liberty Bridge** (built; the owner's calls: the high walkways walked
+   on, the lower deck's halves lifting): rebuilt in the style of the old
+   gate-tower bridges. Two sandstone towers stand in the river on cutwater
+   piers; the approaches rise from the promenades, hung from pale blue
+   chains between the towers and abutments off the quays; the lower deck
+   crosses the middle on two leaves that lift on a timetable for a tall
+   ship, which lies at anchor west of the bridge and east of it in turn
+   and sails through between them; two enclosed walkways and a gallery on
+   each tower make the high level, reached by a lift in each tower. The
+   south bank's jetty that stood under the old bridge moved west.
 4. **River life:** more boats, perhaps islands and a ferry (to be asked).
