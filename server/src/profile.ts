@@ -8,7 +8,7 @@
  * profile-data.ts, so a profile can only ever hold allowed values.
  */
 import { DurableObject } from 'cloudflare:workers';
-import { DEFAULT_LOOK, IMPORT_CAP, cleanLook, guestName, rankFor, skinUnlocked, type Look, type SkinId } from '../../src/scripts/net/profile-data';
+import { DEFAULT_LOOK, cleanLook, guestName, rankFor, skinUnlocked, type Look, type SkinId } from '../../src/scripts/net/profile-data';
 import type { OwnProfile } from '../../src/scripts/net/protocol';
 import { weaponUnlocked, type WeaponId } from '../../src/scripts/city3d/combat-sim';
 import type { Env } from './index';
@@ -43,18 +43,14 @@ export class Profile extends DurableObject<Env> {
   }
 
   /**
-   * Load the profile, making it on first visit. A guest profile brings the
-   * browser's own score along (up to a cap); a wallet's profile starts fresh.
+   * Load the profile, making it on first visit. Every new profile starts
+   * fresh (the owner's call: the online profile is apart from the browser's
+   * solo save, and nothing from it comes along).
    */
-  async open(local?: { total?: unknown; skin?: unknown }, wallet?: string): Promise<OwnProfile> {
+  async open(wallet?: string): Promise<OwnProfile> {
     let p = await this.load();
     const now = Date.now();
-    if (!p) {
-      const t = Number(local?.total);
-      const total = Number.isFinite(t) ? Math.min(IMPORT_CAP, Math.max(0, Math.floor(t))) : 0;
-      const skin = typeof local?.skin === 'string' && skinUnlocked(local.skin as SkinId, total) ? (local.skin as SkinId) : 'olive';
-      p = wallet ? { name: guestName(Math.random), look: { ...DEFAULT_LOOK }, skin: 'olive', total: 0, wallet, created: now, seen: now } : { name: guestName(Math.random), look: { ...DEFAULT_LOOK }, skin, total, created: now, seen: now };
-    }
+    if (!p) p = { name: guestName(Math.random), look: { ...DEFAULT_LOOK }, skin: 'olive', total: 0, created: now, seen: now, ...(wallet ? { wallet } : {}) };
     p.seen = now;
     await this.save(p);
     return this.view(p);

@@ -1,5 +1,6 @@
 /*
- * A city: up to 16 players in one Durable Object.
+ * A game (games.ts: a hangout city, or a private game made from the
+ * Multiplayer menu): up to 16 players in one Durable Object.
  *
  * - Runs the shared combat rules (combat-sim.ts) at 60 Hz: it decides every
  *   hit on the dummies and drones, ammo, reloads, scores and streaks.
@@ -47,6 +48,7 @@ import {
 } from '../../src/scripts/net/protocol';
 import type { Env } from './index';
 import type { Profile } from './profile';
+import { cityName, cityId, type GameInfo } from '../../src/scripts/net/games';
 import { guestKey, walletKey } from './keys';
 
 const LOOP_HZ = 30;
@@ -98,7 +100,8 @@ const finite = (...n: unknown[]) => n.every((x) => typeof x === 'number' && Numb
 const triple = (v: unknown): v is [number, number, number] => Array.isArray(v) && v.length === 3 && finite(...v);
 
 export class Room extends DurableObject<Env> {
-  private name = 'City 1';
+  /** Which game this room is (the Worker says, from the Lobby) */
+  private game: GameInfo = { id: cityId(1), name: cityName(1), mode: 'hangout', map: 'sector7', private: false };
   private players = new Map<number, Player>();
   private sim = createSim({ ground: GROUND, rayWorld: (from, dir, max) => rayBoxes(from, dir, max) });
   private loop: ReturnType<typeof setInterval> | null = null;
@@ -109,7 +112,12 @@ export class Room extends DurableObject<Env> {
   private dir = new THREE.Vector3();
 
   async fetch(req: Request) {
-    this.name = req.headers.get('X-Room') ?? this.name;
+    try {
+      const g = JSON.parse(req.headers.get('X-Game') ?? 'null') as GameInfo | null;
+      if (g?.id) this.game = g;
+    } catch {
+      /* keep what it was */
+    }
     const [client, ws] = Object.values(new WebSocketPair());
     ws.accept();
     let player: Player | null = null;
@@ -159,7 +167,7 @@ export class Room extends DurableObject<Env> {
     const key = wallet ? await walletKey(wallet) : await guestKey(msg.token);
     if (!this.makeRoom(ws, key)) return null;
     const profile = this.env.PROFILES.get(this.env.PROFILES.idFromName(key));
-    const me = (await (wallet ? profile.open(undefined, wallet) : profile.open(msg.local))) as OwnProfile;
+    const me = (await profile.open(wallet ?? undefined)) as OwnProfile;
     if (ws.readyState !== 1) return null;
     // Checked again: someone (or this same person in another tab) may have joined while the profile loaded
     if (!this.makeRoom(ws, key)) return null;
@@ -190,7 +198,7 @@ export class Room extends DurableObject<Env> {
     this.players.set(id, p);
     // They carry the gun they picked last time once they gear up again
     this.sim.addPlayer(String(id)).weapon = me.weapon;
-    send(ws, { t: 'welcome', you: id, room: this.name, profile: me, players: [...this.players.values()].filter((o) => o !== p).map((o) => this.info(o)), pt: this.sim.poseNow });
+    send(ws, { t: 'welcome', you: id, room: this.game.name, game: this.game, profile: me, players: [...this.players.values()].filter((o) => o !== p).map((o) => this.info(o)), pt: this.sim.poseNow });
     this.broadcast({ t: 'join', p: this.info(p) }, id);
     this.report();
     this.start();
@@ -225,7 +233,7 @@ export class Room extends DurableObject<Env> {
 
   private report() {
     this.env.LOBBY.get(this.env.LOBBY.idFromName('main'))
-      .report(this.name, this.players.size)
+      .report(this.game.id, this.players.size)
       .catch(() => {});
   }
 

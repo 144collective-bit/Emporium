@@ -113,6 +113,16 @@ const nextFrame = () => new Promise((r) => requestAnimationFrame(() => r(null)))
 const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
 /** `wallet`: Connect wallet and the profile card, made with the page (CityMap.astro); the city plugs its parts into `hooks` */
+/** Where the Multiplayer menu can start a player (null: the Emporium, walk mode's own start; next to a friend once they're seen) */
+export type StartSpot = 'emporium' | 'trenches' | 'karts' | 'stadium' | 'friend';
+const START_SPOTS: Record<StartSpot, { x: number; z: number; yaw: number } | null> = {
+  emporium: null,
+  trenches: BLOCK_SPAWN,
+  karts: KART_SPAWN,
+  stadium: STADIUM_SPAWN,
+  friend: null,
+};
+
 export async function bootCity(root: HTMLElement, wallet?: { account: Account; hooks: AccountHooks; ui: AccountUI } | null) {
   const host = root.querySelector<HTMLElement>('[data-city3d]')!;
   const loader = root.querySelector<HTMLElement>('[data-loader]')!;
@@ -757,7 +767,11 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           profile: profileUI,
           enabled: onlineSwitch.on,
           setSwitch: (on) => onlineSwitch.set(on),
-          changed: (s) => onlineSwitch.status(s),
+          changed: (s) => {
+            onlineSwitch.status(s);
+            // In an online game the solo economy pauses (online progress is the server's, still to come)
+            tycoon?.setOnline(s.state === 'online');
+          },
           account: account!,
         })
       : null;
@@ -1460,5 +1474,31 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       running = true;
       loop();
     },
+    // Online play: only a site with a game server has it (left out of builds without one)
+    ...(import.meta.env.PUBLIC_GAME_SERVER
+      ? {
+          /**
+           * Multiplayer (the Multiplayer menu, mp-menu.ts): play a game (its id, or null for the first
+           * city with room), starting at one of the menu's spots (or next to the friend whose link it
+           * was), with the city's switch on Online. Walking already: on foot, moved to the spot.
+           */
+          play(c: { game: string | null; spot: StartSpot; friend: string | null }) {
+            if (!mp || !onlineSwitch) return;
+            const at = START_SPOTS[c.spot];
+            mp.join(c.game, c.spot === 'friend' ? c.friend : null);
+            if (!walking) startWalking(at ?? undefined);
+            else if (at) walk.placeAt(at);
+            onlineSwitch.set(true);
+          },
+          /** Leave online play: the city's switch to Offline */
+          leaveOnline() {
+            onlineSwitch?.set(false);
+          },
+          /** The online game this player is in, if any */
+          game() {
+            return mp?.game ?? null;
+          },
+        }
+      : {}),
   };
 }

@@ -290,6 +290,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
           <p class="walk-skins-head"><span>Multiplayer (beta)</span><span data-mp-ping></span></p>
           <p class="mp-status" data-mp-status>Walk the city with other Degens. Emotes and set phrases only, nothing typed.</p>
           <button type="button" class="walk-fp" data-mp-join>Go online</button>
+          <button type="button" class="walk-fp" data-mp-open>Find a game</button>
           <ul class="mp-list" data-mp-list></ul>
         </div>
       </details>
@@ -442,6 +443,12 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
             <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14" /></svg> World map</span>
             <small>Get about</small>
           </button>
+          {server && (
+            <button type="button" class="dir-map" data-mp-open>
+              <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3" /><circle cx="17" cy="9" r="2.5" /><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M15 14.5c3 0 6 2 6 5.5" /></svg> Multiplayer</span>
+              <small>Find a game</small>
+            </button>
+          )}
           <ul class="dir-places">
             {directory.map((id) => {
               const s = spots[id];
@@ -1070,6 +1077,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
 <script>
   import { live } from '../scripts/city3d/live-client';
   import { bannersAt, type Live } from '../scripts/city3d/live';
+  import type { MpChoice, MpMenu } from '../scripts/city3d/mp-menu';
 
   const root = document.querySelector<HTMLElement>('[data-city-root]');
   const vp = document.querySelector<HTMLElement>('[data-city]');
@@ -1224,7 +1232,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     /* ---------- The 3D city ---------- */
     const controls = root.querySelector<HTMLDetailsElement>('[data-controls]')!;
     const to3d = root.querySelector<HTMLButtonElement>('.city-to3d')!;
-    let city: { stop(): void; start(): void; open(id: string): void; intro(): void } | null = null;
+    let city: Awaited<ReturnType<typeof import('../scripts/city3d/index').bootCity>> | null = null;
     let booting = false;
     const remember = (v: string) => {
       try {
@@ -1369,8 +1377,11 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       start.setAttribute('aria-hidden', 'true');
       setTimeout(() => (start.hidden = true), 450);
     }
-    /** Into the city: the 3D one with its fly-in once it's up, or the 2D map */
-    async function enter(multi: boolean) {
+    /**
+     * Into the city: the 3D one with its fly-in once it's up, or the 2D map. Multiplayer (the
+     * Multiplayer menu's choice) goes straight into that game; single player is offline.
+     */
+    async function enter(multi: boolean, choice?: MpChoice) {
       if (entering) return;
       entering = true;
       status.textContent = 'Entering…';
@@ -1384,12 +1395,45 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
         await booted;
         show2d(gl !== null);
       }
-      if (multi && server && city) root!.querySelector<HTMLButtonElement>('[data-online-set="on"]')?.click();
+      if (server && city && !multi) root!.querySelector<HTMLButtonElement>('[data-online-set="off"]')?.click();
       closeStart();
-      if (root!.dataset.view === '3d' && city) city.intro();
+      if (root!.dataset.view === '3d' && city && multi && choice) city.play?.(choice);
+      else if (root!.dataset.view === '3d' && city) city.intro();
       else vp!.focus({ preventScroll: true });
       entering = false;
     }
+
+    /* ---------- The Multiplayer menu (mp-menu.ts: loaded when it's first opened) ---------- */
+    let mpMenu: Promise<MpMenu> | null = null;
+    const multiplayerMenu = () =>
+      (mpMenu ??= Promise.all([import('../scripts/city3d/mp-menu'), wallet]).then(([{ createMpMenu }, w]) =>
+        createMpMenu({
+          root: root!,
+          server: server!,
+          account: () => w?.account ?? null,
+          openAccount: () => w?.ui.open(),
+          // From the start menu, into the city; in the city, straight to the game
+          play: (c) => (closed && city ? city.play?.(c) : enter(true, c)),
+          current: () => (closed ? (city?.game?.() ?? null) : null),
+          leave: () => city?.leaveOnline?.(),
+        }),
+      ));
+    root.querySelectorAll<HTMLButtonElement>('[data-mp-open]').forEach((b) =>
+      b.addEventListener('click', async () => {
+        b.closest('details')?.removeAttribute('open');
+        (await multiplayerMenu()).open();
+      }),
+    );
+    // Opened from a friend's invite link: the menu on their game, the address tidied (a reload
+    // shouldn't join again)
+    if (server && gl && new URLSearchParams(location.search).has('game'))
+      import('../scripts/city3d/mp-menu').then(async ({ inviteInAddress }) => {
+        const invite = inviteInAddress();
+        history.replaceState(history.state, '', location.pathname + location.hash);
+        if (!invite) return;
+        view = '3d';
+        (await multiplayerMenu()).open(invite);
+      });
     start.querySelector('[data-start-single]')!.addEventListener('click', () => enter(false));
     start.querySelector<HTMLButtonElement>('[data-start-multi]')!.addEventListener('click', (e) => {
       if (!server) {
@@ -1397,7 +1441,13 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
         (e.currentTarget as HTMLElement).classList.add('is-nudged');
         return;
       }
-      enter(true);
+      // Multiplayer is walking in the 3D city
+      if (!gl) {
+        status.textContent = 'Multiplayer needs the 3D city, which isn\'t available here.';
+        return;
+      }
+      view = '3d';
+      multiplayerMenu().then((m) => m.open());
     });
     start.querySelector<HTMLButtonElement>('[data-start-single]')!.focus({ preventScroll: true });
 

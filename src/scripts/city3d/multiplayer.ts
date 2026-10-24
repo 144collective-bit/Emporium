@@ -13,12 +13,17 @@
  *   walk again and you rejoin). Go online / Leave in the Online panel flip
  *   the same switch.
  *
+ * - Which game: the Multiplayer menu (mp-menu.ts) picks one through `join()`
+ *   (a city, or a private game's link; null lets the server pick a city with
+ *   room) and can ask to start next to a friend.
+ *
  * Only built when the site has a server address (PUBLIC_GAME_SERVER).
  */
 import * as THREE from 'three';
 import { createNetClient, type NetState } from '../net/client';
 import { EMOTES, PHRASES, RANKS } from '../net/profile-data';
 import { FLAG, INPUT_HZ, modeBits, moveOk, v3, type Mode, type OwnProfile, type ServerMsg } from '../net/protocol';
+import type { GameInfo } from '../net/games';
 import type { Combat } from './combat';
 import type { ProfileUI } from './profile-ui';
 import { createRemotes } from './remote';
@@ -30,7 +35,11 @@ interface Walker {
   netState(): { pos: THREE.Vector3; face: number; pitch: number; speed: number; air: boolean; run: boolean; aim: boolean; mode: Mode };
   fix(x: number, y: number, z: number): void;
   playEmote(id: string): void;
+  /** Stand Degen somewhere else at once (false when he isn't on foot) */
+  placeAt(at: { x: number; z: number; yaw: number }): boolean;
 }
+/** How long to look for the friend whose link it was before giving up (ms) */
+const FRIEND_WAIT = 12_000;
 
 export interface MultiplayerDeps {
   url: string;
@@ -72,6 +81,12 @@ export function createMultiplayer(d: MultiplayerDeps) {
   /** The city's switch is on Online: connected whenever walking */
   let enabled = d.enabled;
   const dir = new THREE.Vector3();
+  /** The game to join (games.ts id; null: the server picks a city with room), and the one we're in */
+  let target: string | null = null;
+  let game: GameInfo | null = null;
+  /** Start next to this player (the friend whose link it was) once they're seen, until `friendBy` (ms) */
+  let friend: string | null = null;
+  let friendBy = 0;
   /** Where we were last sent from, and when (ms): a move further than the way we're going allows is a jump */
   const sent = { x: 0, z: 0, at: 0 };
   const online = () => net.state === 'online' && myId > 0;
@@ -137,6 +152,7 @@ export function createMultiplayer(d: MultiplayerDeps) {
 
   function goOffline() {
     myId = 0;
+    game = null;
     remotes.clear();
     combat.setNet(null);
     profile.setOnline(null);
@@ -152,6 +168,7 @@ export function createMultiplayer(d: MultiplayerDeps) {
       case 'welcome':
         myId = m.you;
         room = m.room;
+        game = m.game;
         remotes.clear();
         for (const p of m.players) remotes.add(p);
         combat.setNet({ send: (msg) => net.send(msg) }, (skin) => net.send({ t: 'skin', skin }));
@@ -183,6 +200,12 @@ export function createMultiplayer(d: MultiplayerDeps) {
         d.account.profileChanged(m.profile);
         break;
       case 'snap':
+        if (friend) {
+          const f = remotes.list().find((p) => p.name === friend);
+          const row = f && m.p.find((r) => r[0] === f.id);
+          if (row && walk.placeAt({ x: row[1] + 1.4, z: row[3] + 1.4, yaw: row[4] })) friend = null;
+          else if (performance.now() > friendBy) friend = null;
+        }
         remotes.snapshot(m.pt, m.p.filter((r) => r[0] !== myId));
         combat.netSnap(m.pt, m.tg, m.me);
         break;
@@ -204,7 +227,7 @@ export function createMultiplayer(d: MultiplayerDeps) {
   profile.onRename(() => online() && net.send({ t: 'rename' }));
 
   /* ----- Buttons ----- */
-  const connect = () => net.connect({ total: Math.floor(combat.lifetime), skin: combat.skin });
+  const connect = () => net.connect({ total: Math.floor(combat.lifetime), skin: combat.skin }, target);
   const idle = () => net.state === 'off' || net.state === 'full' || net.state === 'error';
   // Logged in or out while in a city: rejoin, so the right profile (wallet or guest) opens
   let token = d.account.token;
@@ -274,6 +297,23 @@ export function createMultiplayer(d: MultiplayerDeps) {
     walkChanged(walking: boolean) {
       if (walking && enabled && idle()) connect();
       else if (!walking && net.state !== 'off') net.disconnect();
+    },
+    /**
+     * Play this game next (null: the server picks a city with room), starting next to `near` (the
+     * friend whose link it was) if they're there. Already in another game: leave it and join this one.
+     */
+    join(id: string | null, near: string | null = null) {
+      target = id;
+      friend = near;
+      friendBy = performance.now() + FRIEND_WAIT;
+      if (net.state !== 'off' && game?.id !== id) {
+        net.disconnect();
+        if (enabled && walk.active) connect();
+      }
+    },
+    /** The game we're in, if any */
+    get game() {
+      return online() ? game : null;
     },
     /** A new player name through the room (everyone sees it); false when not in a city */
     rename() {

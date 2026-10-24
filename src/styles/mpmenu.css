@@ -1,0 +1,275 @@
+/*
+ * The Multiplayer menu (mp-menu.ts): You, Pick a mode, the mode's games, a
+ * private game's link and Where to start. Over the start menu or the city,
+ * in the start menu's own look (start.css: its buttons, segments and Back are
+ * reused): dark glass, the PulseChain gradient for the border and the title,
+ * gradient-bordered buttons with white text.
+ */
+.mpm {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  overflow: auto;
+  background: #05050ad9;
+  backdrop-filter: blur(6px);
+}
+.mpm[hidden] {
+  display: none;
+}
+.mpm-card {
+  position: relative;
+  display: grid;
+  gap: 10px;
+  width: min(460px, 100%);
+  max-height: calc(100dvh - 32px);
+  padding: 22px 22px 20px;
+  border: 1px solid #0000;
+  border-radius: 10px;
+  background:
+    linear-gradient(#0b0a12f7, #0b0a12f7) padding-box,
+    var(--pulse) border-box;
+  box-shadow: 0 0 80px -24px #8000ffb3;
+}
+.mpm-body {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  overflow: auto;
+  /* (room for the focus rings at the edges) */
+  padding: 2px;
+  margin: -2px;
+}
+.mpm-x {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #ffffff2b;
+  border-radius: 3px;
+  background: #ffffff0a;
+  color: #fff;
+  cursor: pointer;
+}
+.mpm-x:hover {
+  border-color: #ffffff59;
+}
+.mpm-x:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+.mpm-kicker,
+.mpm-label {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--p-cyan);
+}
+.mpm-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+}
+.mpm-title {
+  /* (the gradient spans the words, however short) */
+  justify-self: start;
+  max-width: calc(100% - 40px);
+  margin: 0 0 2px;
+  font-family: var(--font-display);
+  font-size: clamp(32px, 8vw, 42px);
+  font-weight: 900;
+  line-height: 0.95;
+  text-transform: uppercase;
+  background: var(--pulse);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.mpm-you {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid #ffffff1f;
+  border-radius: 4px;
+  background: #ffffff08;
+}
+.mpm-name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.05;
+  text-transform: uppercase;
+  color: #fff;
+  overflow-wrap: anywhere;
+}
+.mpm-line,
+.mpm-now,
+.mpm-note,
+.mpm-wait,
+.mpm-error {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #ffffffc7;
+  overflow-wrap: anywhere;
+}
+.mpm-note {
+  font-size: 12px;
+  color: #ffffff99;
+}
+.mpm-now b {
+  color: #fff;
+}
+.mpm-error {
+  color: #ff8fb8;
+}
+.mpm-pair {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.mpm-small {
+  justify-self: start;
+  padding: 9px 14px;
+  border: 1.5px solid #0000;
+  border-radius: 3px;
+  background:
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.mpm-small:hover {
+  background:
+    var(--pulse-wash) padding-box,
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
+}
+.mpm-small:focus-visible,
+.mpm-link:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+.mpm-small[disabled] {
+  opacity: 0.55;
+  cursor: wait;
+}
+.mpm-leave {
+  margin-top: 4px;
+}
+.mpm-link {
+  padding: 2px 4px;
+  border: 0;
+  background: none;
+  color: var(--p-cyan);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.mpm-list {
+  display: grid;
+  gap: 8px;
+}
+/* The modes' and spots' buttons are the start menu's, a little smaller */
+.mpm .city-start-btn {
+  padding: 11px 16px;
+}
+.mpm .city-start-btn-name {
+  font-size: 22px;
+}
+.mpm .city-start-btn-sub {
+  text-transform: none;
+  letter-spacing: 0.02em;
+  font-size: 11.5px;
+  line-height: 1.35;
+}
+.mpm-games {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.mpm-games li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 10px 9px 14px;
+  border: 1px solid #ffffff1f;
+  border-radius: 4px;
+  background: #ffffff08;
+}
+.mpm-game {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.mpm-game b {
+  font-size: 14px;
+  color: #fff;
+}
+.mpm-game small {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #ffffff99;
+}
+.mpm-linkbox {
+  width: 100%;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid #ffffff2b;
+  border-radius: 3px;
+  background: #ffffff0a;
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.mpm-linkbox:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+@media (max-width: 380px) {
+  .mpm {
+    padding: 10px;
+  }
+  .mpm-card {
+    padding: 18px 14px 16px;
+    max-height: calc(100dvh - 20px);
+  }
+  .mpm .city-start-btn-name {
+    font-size: 20px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mpm {
+    backdrop-filter: none;
+  }
+}
+
+/* In an online game the solo economy pauses (tycoon-ui.ts `setOnline()`): its readouts step aside */
+.is-econ-paused [data-dorras],
+.is-econ-paused [data-level],
+.is-econ-paused [data-missions-tracker],
+.is-econ-paused [data-guide] {
+  display: none !important;
+}

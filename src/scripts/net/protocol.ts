@@ -6,10 +6,12 @@
 import { MOD_LEVELS, type GunMods } from '../city3d/catalog';
 import { WEAPON_IDS, type WeaponId } from '../city3d/combat-sim';
 import { WORLD_BOUNDS } from '../city3d/layout';
+import { CITY_SIZE, type GameInfo } from './games';
 import type { EmoteId, Look, PublicProfile, SkinId } from './profile-data';
 
-export const PROTOCOL = 3;
-export const ROOM_SIZE = 16;
+export const PROTOCOL = 4;
+/** Most players in one room (a hangout city; games.ts says each mode's own) */
+export const ROOM_SIZE = CITY_SIZE;
 /** How often a browser sends its controls, and how often the room sends positions */
 export const INPUT_HZ = 20;
 export const SNAP_HZ = 15;
@@ -80,7 +82,10 @@ export const v3 = (v: { x: number; y: number; z: number }): V3 => [r2(v.x), r2(v
 /* ---------- Browser to server ---------- */
 
 export type ClientMsg =
-  /** First message: the browser's secret guest token (only its hash is stored), and the wallet login's session token if logged in */
+  /**
+   * First message: the browser's secret guest token (only its hash is stored), and the wallet login's session token if
+   * logged in. (`local`, the browser's own score, is no longer read: every online profile starts fresh.)
+   */
   | { t: 'hello'; v: number; token: string; auth?: string; local?: { total: number; skin: SkinId } }
   /** Controls, ~20 a second: position, facing, camera pitch, speed, flags (with the mode), and the shot ray */
   | { t: 'in'; p: V3; f: number; k: number; s: number; fl: number; o: V3; d: V3; pt: number }
@@ -140,7 +145,8 @@ export type NetEvent =
   | ['a', number, number];
 
 export type ServerMsg =
-  | { t: 'welcome'; you: number; room: string; profile: OwnProfile; players: PlayerInfo[]; pt: number }
+  /** `room`: the game's name ("City 1", "Private game"); `game`: which game it is (games.ts) */
+  | { t: 'welcome'; you: number; room: string; game: GameInfo; profile: OwnProfile; players: PlayerInfo[]; pt: number }
   | { t: 'join'; p: PlayerInfo }
   | { t: 'leave'; id: number }
   /** A player's name, look, finish or rank changed */

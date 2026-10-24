@@ -1620,8 +1620,9 @@ it and has been retired completely. Build only on what's here.
   `CityMap.astro` (styles `src/styles/start.css`) covers the whole page
   while the 3D city boots behind it, so the 2D map is never seen loading.
   Single player enters the city (the fly-in runs again, `city.intro()` in
-  `index.ts`); Multiplayer says "Coming soon" without `PUBLIC_GAME_SERVER`
-  and flips the Online switch on and enters with one; Options holds Time,
+  `index.ts`), offline; Multiplayer says "Coming soon" without
+  `PUBLIC_GAME_SERVER` and with one opens the Multiplayer menu
+  (`mp-menu.ts`, below under Multiplayer); Options holds Time,
   Weather, Sound and the view (3D city / 2D map), driving the header's own
   settings controls (pressed when the city is up, queued until then). The
   root carries `has-start` until a choice is made; the loader and the
@@ -2621,7 +2622,33 @@ it and has been retired completely. Build only on what's here.
   mode, Browse, Create a private game with a link, Where to start), the
   modes and the separate online profile are planned in
   `docs/multiplayer-plan.md` ("The Multiplayer menu and its games"), built
-  a step at a time with the owner's sign-off.
+  a step at a time with the owner's sign-off. Step 1 (the menus) is built:
+  - **The games** are `src/scripts/net/games.ts` (DOM-free, shared with the
+    server, tested in `tests/games.test.ts`): `GAME_MODES` (Hangout ready;
+    free for all, team deathmatch, kart race and Fight Club coming soon),
+    `MAP_NAMES`, the public cities (`city-N`) and private games (`p` and ten
+    letters or digits, too many to guess), and the Lobby's rules. The
+    server's `/games` lists a mode's games and makes private ones,
+    `/play?game=<id>` joins one, `/me` and `/me/rename` show and rename the
+    profile before joining. Every new online profile starts fresh.
+  - **The menu** is `mp-menu.ts` (its own chunk, loaded when first opened;
+    styles `src/styles/mpmenu.css`): You (name and New name, the look,
+    guest or Connect wallet), Pick a mode, the mode's open games (Join) and
+    Make a private game (its link, `?game=<id>&with=<name>`), Where to
+    start (the Emporium, The Trenches, the kart park, the stadium, next to
+    the friend whose link it was). From the start menu's Multiplayer, an
+    invite link, the ☰ Menu's Multiplayer (`[data-mp-open]`) and the walk
+    Online tab's Find a game. While it's open no other key handler hears
+    the keyboard. Its choice goes to the city's `play()` (only in builds
+    with a game server), `multiplayer.ts` `join()` moves between games.
+  - **Online pauses the solo economy** (`setOnline()` in tycoon-ui.ts):
+    the save is held as it was, anything done to it put back with a toast,
+    nothing ticks or is stored; the Dorras readout, level pill, mission
+    tracker and guide step aside (`.is-econ-paused`), and the business
+    card and economy panels say online progress is coming. Builds without
+    a game server leave it out (`PUBLIC_GAME_SERVER` checks the bundler
+    drops); the menu imports nothing of the connection's code, so the boot
+    stays within its budget.
 
 ## Tests
 
@@ -2638,7 +2665,7 @@ it and has been retired completely. Build only on what's here.
   (`highway.ts`), the traffic's routes and lights (`routes.ts`), collision data, doors, the gun counter, the garage
   and the spawn (`solids.ts`), the plots (`src/data/plots.ts`), your car
   (`mycar.ts`), the driving rules (`drive-sim.ts`), target practice
-  (`combat-sim.ts`), the multiplayer protocol's checks (`protocol.ts`), the economy (`tycoon.ts`, the market square in
+  (`combat-sim.ts`), the multiplayer protocol's checks and its games (`protocol.ts`, `games.ts`), the economy (`tycoon.ts`, the market square in
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`),

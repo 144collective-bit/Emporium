@@ -98,11 +98,36 @@ them into the city.
 
 ### Steps (each its own PR, with the owner's sign-off)
 
-1. **The menus** *(next)*: You, Pick a mode, Browse, Create a private game
+1. **The menus** *(built)*: You, Pick a mode, Browse, Create a private game
    with its link, Where to start, the ☰ Menu entry; Hangout playable,
    the other modes "coming soon"; online pauses the economy. On the server:
    the Lobby lists the open games and makes private ones (a game id that
    can't be guessed, in the link), and a player joins the game they chose.
+   - The games as data: `src/scripts/net/games.ts` (DOM-free, tested in
+     `tests/games.test.ts`): `GAME_MODES` (name, blurb, size, maps,
+     `ready`), `MAP_NAMES`, ids (`city-N` for the public cities, `p` and
+     ten letters or digits for private games, `privateId()`), and the
+     Lobby's rules (`pickCity()`, `listGames()`, `gameOf()`,
+     `privateAlive()`: a private game lasts a day after it was made or last
+     played in, `cleanCreate()`: only a ready mode on one of its maps).
+   - The server: `/games` (GET `?mode=` lists, POST makes a private game),
+     `/play?game=<id>` (a game that's gone gets a message and the socket
+     closes, 4006), `/me` and `/me/rename` (the profile before joining,
+     from the guest token or a wallet login). New profiles start fresh.
+   - The menu: `mp-menu.ts` (a chunk of its own, loaded when it's first
+     opened; styles `mpmenu.css`): from the start menu's Multiplayer, an
+     invite link (`?game=<id>&with=<name>`, tidied from the address once
+     read), the ☰ Menu's Multiplayer and the walk Online tab's Find a game.
+     Its choice goes to the city's `play()` (index.ts: the spot, the game,
+     the switch on Online; `multiplayer.ts` `join()` moves between games
+     and stands you next to the friend once they're seen). Single player
+     now turns the switch to Offline.
+   - The pause: `setOnline()` in tycoon-ui.ts holds the solo save as it was
+     while in an online game: anything a screen does to it is put back
+     with a toast, nothing ticks or is stored, the Dorras readout, level
+     pill, mission tracker and guide step aside (`.is-econ-paused`), the
+     business card and economy panels say online progress is coming.
+     Builds without a game server leave all of it out.
 2. **Fight Club 1 v 1** with spectators and the queue.
 3. **The junkyard** with free for all and team deathmatch.
 4. **Kart races** online.

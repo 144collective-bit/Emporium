@@ -312,6 +312,17 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
   let restoreAsk: Extract<ReadBackup, { ok: true }> | null = null;
   /** Set while a backup is being put back: nothing more is stored before the city starts again */
   let frozen = false;
+  /**
+   * In an online game (docs/multiplayer-plan.md: online progress is the server's, still to come):
+   * the solo save as it was when the game began. Nothing changes it until it's over: whatever a
+   * screen does to the save is put back, and nothing ticks or is stored.
+   */
+  let paused: string | null = null;
+  /** Only a site with a game server goes online (builds without one leave all of this out) */
+  const SERVER = !!import.meta.env.PUBLIC_GAME_SERVER;
+  let pausedToastAt = 0;
+  const PAUSED_NOTE = 'Online progress is coming soon. Nothing you earn or buy online is kept yet; your single player save is waiting for you.';
+  const pausedView = `<p class="shop-note econ-paused-note" role="status">${PAUSED_NOTE}</p>`;
 
   const store = () => {
     if (frozen) return;
@@ -903,6 +914,11 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
 
   function paintCard() {
     if (card.hidden) return;
+    if (SERVER && paused) {
+      repaint(cardBody, pausedView);
+      card.querySelector<HTMLElement>('[data-biz-balance]')!.textContent = 'Online';
+      return;
+    }
     const now = Date.now();
     tabsEl.querySelectorAll<HTMLButtonElement>('[data-tab]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tab === tab)));
     const view = tab === 'stall' ? stallView(now) : tab === 'units' ? unitView(now) : tab === 'workshop' ? workshopView() : carView(now);
@@ -1142,6 +1158,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
   /** Fill the building panel that's open */
   function paintPanel() {
     if (!panel) return;
+    if (SERVER && paused) return repaint(panel.el, pausedView);
     const now = Date.now();
     const noteHtml = note ? `<p class="shop-note" role="status">${esc(note)}</p>` : '';
     const toCard = (tabId: Tab) => `<div class="city-panel-actions"><button type="button" class="chip-link" data-tab="${tabId}">Your business</button></div>`;
@@ -1163,6 +1180,20 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
   /* ---------- Ticking ---------- */
   let lastShown = '';
   function changed() {
+    // Online: whatever was done to the save is put back (and said so, now and then)
+    if (SERVER && paused) {
+      if (JSON.stringify(save) !== paused) {
+        Object.assign(save, JSON.parse(paused));
+        if (Date.now() - pausedToastAt > 6000) {
+          pausedToastAt = Date.now();
+          toast(PAUSED_NOTE, 6000);
+        }
+      }
+      paintPill();
+      paintCard();
+      paintPanel();
+      return;
+    }
     // Badges and level-ups first, so their XP is in the save that's stored
     missions.onCommit();
     store();
@@ -1199,6 +1230,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     return `${parts.length ? `While you were away your business ${parts.join(', ')}.` : ''} ${extra}`.trim();
   }
   function tick() {
+    if (SERVER && paused) return;
     const sales = advance(save, Date.now(), serving() ?? false);
     // Back after a while: say what happened
     if (sales.away > 0) {
@@ -1226,6 +1258,29 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     /** A game screen changed the save with the rules: keep it, repaint everything */
     commit() {
       changed();
+    },
+    /**
+     * In an online game, or out of it: online the economy pauses (the save held as it is, its
+     * readouts hidden, its screens saying online progress is coming); back out, it carries on from
+     * where it was, catching up on the time that passed as after any time away.
+     */
+    setOnline(on: boolean) {
+      if (!SERVER || on === !!paused) return;
+      if (on) {
+        tick();
+        paused = JSON.stringify(save);
+      } else {
+        Object.assign(save, JSON.parse(paused!));
+        paused = null;
+      }
+      root.classList.toggle('is-econ-paused', on);
+      if (!on) tick();
+      paintPill();
+      paintCard();
+      paintPanel();
+    },
+    get paused() {
+      return !!paused;
     },
     toast,
     /** The mission board, level pill and badges (missions-ui.ts) */

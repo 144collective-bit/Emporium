@@ -7,14 +7,14 @@ bought with Dorras in the city's own game, in the browser.) The same Worker also
 
 | File | What it does |
 | --- | --- |
-| `src/index.ts` | The Worker: `/health`, and `/play` (WebSocket) which asks the Lobby for a city and hands the connection to it. Only pages in `ALLOWED_ORIGINS` (wrangler.jsonc) can connect. |
-| `src/lobby.ts` | One for the whole game: picks a city with a free spot (16 players each; "City 2" opens when "City 1" is full). |
-| `src/room.ts` | One per city: runs the shared combat rules (`src/scripts/city3d/combat-sim.ts`) at 60 Hz, checks movement and shots, sends positions 15 times a second, relays emotes and fixed phrases, banks points in profiles. |
-| `src/profile.ts` | One per player: player name, wardrobe look, rifle finish, lifetime score (rank comes from the score). Addressed by a hash of the browser's secret guest token, or of the wallet address once logged in (`src/keys.ts`). |
+| `src/index.ts` | The Worker: `/health`; `/play` (WebSocket) joins the game in `?game=` (a hangout city, or a private game's link) or, without it, asks the Lobby for a city with room, and hands the connection to that game's Room; `/games` (GET `?mode=`: a mode's public games for the Multiplayer menu's Browse; POST `{ mode, map }`: make a private game); `/me` (the player's own profile for the menu, from the `X-Guest` token or a wallet login's `X-Session`) and `/me/rename`. Only pages in `ALLOWED_ORIGINS` (wrangler.jsonc) can connect or ask. |
+| `src/lobby.ts` | One for the whole game: the Multiplayer menu's games (`src/scripts/net/games.ts`): the public hangout cities (16 players each; "City 2" opens when "City 1" is full) and the private games made from the menu, kept in storage until nobody has been in one for a day. |
+| `src/room.ts` | One per game (a city or a private game): runs the shared combat rules (`src/scripts/city3d/combat-sim.ts`) at 60 Hz, checks movement and shots, sends positions 15 times a second, relays emotes and fixed phrases, banks points in profiles. |
+| `src/profile.ts` | One per player: player name, wardrobe look, rifle finish, lifetime score (rank comes from the score); a new one starts fresh (nothing comes from the browser's solo save). Addressed by a hash of the browser's secret guest token, or of the wallet address once logged in (`src/keys.ts`). |
 | `src/accounts.ts` | One for the game: logging in with a wallet (`/auth/nonce`, `/auth/session`, `/auth/me`, `/auth/rename`, `/auth/logout`). The wallet signs a one-time message (no gas); the session token (30 days, only its hash stored) opens the wallet's profile in the rooms. |
 
-Shared with the site (bundled in): `src/scripts/net/` (protocol, names, ranks,
-wardrobe, emotes, phrases, the sign-in message), `src/scripts/city3d/combat-sim.ts`
+Shared with the site (bundled in): `src/scripts/net/` (protocol, the games and
+their modes, names, ranks, wardrobe, emotes, phrases, the sign-in message), `src/scripts/city3d/combat-sim.ts`
 and `src/scripts/city3d/solids.ts`. Keep those free of DOM and scene code.
 
 ## Deploying from GitHub through Cloudflare (Workers Builds)

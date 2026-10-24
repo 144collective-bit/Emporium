@@ -143,7 +143,7 @@ export class Accounts extends DurableObject<Env> {
   private async me(token: string | null) {
     const address = await this.check(token);
     if (!address) return fail(401, 'Log in with your wallet');
-    const profile = (await this.profile(address).then((p) => p.open(undefined, address))) as OwnProfile;
+    const profile = (await this.profile(address).then((p) => p.open(address))) as OwnProfile;
     const chain = Number(this.env.AUTH_CHAIN_ID) || 943;
     return json({ address, chain, profile } satisfies AccountMe);
   }
@@ -152,7 +152,7 @@ export class Accounts extends DurableObject<Env> {
     const address = await this.check(token);
     if (!address) return fail(401, 'Log in with your wallet');
     const p = await this.profile(address);
-    await p.open(undefined, address);
+    await p.open(address);
     const profile = (await p.rename()) as OwnProfile;
     return json({ profile });
   }

@@ -287,5 +287,3 @@ export interface PublicProfile {
   weapon: WeaponId;
 }
 
-/** A browser's own lifetime score counts once, up to this, when its first profile is made */
-export const IMPORT_CAP = 5000;

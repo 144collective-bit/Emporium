@@ -6,32 +6,14 @@
  */
 import type { SkinId } from './profile-data';
 import { PROTOCOL, type ClientMsg, type ServerMsg } from './protocol';
-
-const TOKEN_KEY = 'degen-city-player-v1';
-
-/** This browser's guest token, made on first use. Without storage it lasts for the visit. */
-function guestToken() {
-  try {
-    const saved = localStorage.getItem(TOKEN_KEY);
-    if (saved && /^[A-Za-z0-9_-]{32,128}$/.test(saved)) return saved;
-  } catch {
-    /* no storage: a fresh token each visit */
-  }
-  const bytes = crypto.getRandomValues(new Uint8Array(32));
-  const token = btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  try {
-    localStorage.setItem(TOKEN_KEY, token);
-  } catch {
-    /* fine */
-  }
-  return token;
-}
+import { guestToken } from './guest';
 
 /** Server close codes that mean "don't come straight back" (see server/src/room.ts) */
 const STOP: Record<number, string> = {
   4001: 'You went online in another tab or window. Go online here to play in this one instead.',
   4002: 'Disconnected for sending too many messages.',
   4004: 'Something went wrong with your guest pass. Reload the page and try again.',
+  4006: 'That game has ended. Pick another from the Multiplayer menu.',
 };
 
 export type NetState = 'off' | 'connecting' | 'online' | 'retrying' | 'full' | 'error';
@@ -40,7 +22,8 @@ export interface NetClient {
   readonly state: NetState;
   /** Round trip to the server in ms (0 until measured) */
   readonly ping: number;
-  connect(local: { total: number; skin: SkinId }): void;
+  /** Join a game: `game` is its id (games.ts), or null for the first city with room */
+  connect(local: { total: number; skin: SkinId }, game?: string | null): void;
   disconnect(): void;
   send(msg: ClientMsg): void;
   onMessage(fn: (msg: ServerMsg) => void): void;
@@ -50,7 +33,8 @@ export interface NetClient {
 /** `auth`: the wallet login's session token, if logged in (account.ts): the room then opens that wallet's profile */
 export function createNetClient(base: string, auth?: () => string | null): NetClient {
   // https:// or wss:// both work; a page on https can only open wss://
-  const url = base.replace(/\/$/, '').replace(/^http/, 'ws') + '/play';
+  const play = base.replace(/\/$/, '').replace(/^http/, 'ws') + '/play';
+  let url = play;
   let ws: WebSocket | null = null;
   let state: NetState = 'off';
   let want = false;
@@ -128,9 +112,10 @@ export function createNetClient(base: string, auth?: () => string | null): NetCl
     get ping() {
       return ping;
     },
-    connect(l) {
+    connect(l, game) {
       local = l;
       if (want) return;
+      url = game ? `${play}?game=${encodeURIComponent(game)}` : play;
       want = true;
       tries = 0;
       open();
