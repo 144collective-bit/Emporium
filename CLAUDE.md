@@ -278,8 +278,9 @@ it and has been retired completely. Build only on what's here.
     `tests/ambience.test.ts`): `ambienceAt(x, z, lift)` gives the town's
     hum, the river (and Westlake's lake), the traffic's rush (the highway,
     the avenues inside it), wind over open land, the Emporium's beat, The
-    Trenches' own (`hood`, `boombox`: the grit step) and Westlake Park's
-    (`park`: birds by day, an owl at night); `sound.update()` mixes its layers
+    Trenches' own (`hood`, `boombox`: the grit step), Westlake Park's
+    (`park`: birds by day, an owl at night) and Uptown's (a quieter hum, the
+    plaza's `fountain`, the circle's traffic); `sound.update()` mixes its layers
     from it (and the el's rumble from `metro.rumbleAt()`), where you walk
     or where the City view looks.
 - **The Trenches** (growth plan Phase 9, the owner's call): a
@@ -712,11 +713,11 @@ it and has been retired completely. Build only on what's here.
   stays the tallest downtown and the most detailed, and "under the
   Emporium" holds everywhere else); the flying traffic and your own
   aircraft clear them. The strips' courts and their players are retired
-  with it. Scenery first; in Phase 6 the spire becomes a place with a sky
-  deck reached by a lift. Phases 1 (the land and the streets), 2 (the
-  towers), 3 (the plaza), 4 (the waterfront boulevard) and 5 (the
-  redesign, the owner's call: slim towers, a varied street plan with
-  real-world features, the kerbside) are built:
+  with it. Phases 1 (the land and the streets), 2 (the towers), 3 (the
+  plaza), 4 (the waterfront boulevard), 5 (the redesign, the owner's call:
+  slim towers, a varied street plan with real-world features, the
+  kerbside) and 6 (night, life and the place: Sector 7 Tower and its sky
+  deck, below) are built:
   - `uptown.ts` (DOM-free, tested in `tests/uptown.test.ts`): its streets
     (`UPTOWN_STREETS`, in the street plan; Phase 5, the owner's picks):
     **Uptown Circle** (`CIRCLE`, a roundabout: a one-way loop, `loop` and
@@ -798,7 +799,8 @@ it and has been retired completely. Build only on what's here.
     and in pieces no longer than `SPAN`; roofs and parapets on every tier;
     the crowns (a slab's lit band, the deco's gold edges and pyramid, the
     drum's neon ring and cap, the twins' skybridge, the spire's lantern);
-    a mast and a red warning light on every tip. **The lobbies** (the
+    a mast and a red warning light on every tip (the helipad's tower: red
+    lights at its deck's corners instead). **The lobbies** (the
     owner's call: "more realistic ... not a plinth"; `Lobby`, `lobby` on
     each tower): a glass atrium with the lobby inside (pendants, a desk,
     plants, people on the atlas's light map), a glass vestibule, a glass
@@ -812,9 +814,50 @@ it and has been retired completely. Build only on what's here.
     pavilion. A podium's sides are shops or glass, its back a service wall
     (louvres, a steel door). **Facades** vary by tower (`facade()`): fins
     down the glass, ledges every four floors, or corner piers; the tallest
-    slab carries a helipad. Planters by every door (near). The airliners' westbound leg crosses
-    Uptown at 53 to 55 (airfield.ts), and the flight tests keep every
-    aircraft well over every tip.
+    slab carries the executive helicopter's helipad (`ROOF_PAD`: a steel
+    deck on legs over its plant room, its mast left off for it). Planters
+    by every door (near). The airliners' westbound leg crosses Uptown at 53
+    to 55 (airfield.ts), and the flight tests keep every aircraft well over
+    every tip (but the executive helicopter straight over its helipad).
+  - **At night** (Phase 6, the owner's pick: lived-in office lights) is
+    `skyline.ts` (DOM-free, tested in `tests/skyline.test.ts`): the curtain
+    walls' light map switched in sections a few bays wide and a floor high
+    (`OFFICE`, `officeHash()`, the same sum in the uptown-glass material's
+    shader, `OFFICE_GLSL`), each on while its number is under the hour's
+    share (`officeShare()`: all on by day and in the evening, thinning
+    after ten, about three in ten through the small hours); the skins'
+    bands only, so lobbies and shops stay lit; the hour comes on Uptown's
+    tick. Crowns in white and gold (`TRIM` in highrise3d.ts) with a neon
+    accent each (`ACCENTS`), and the warning lights one material of their
+    own flashing together (`beaconOn()`).
+  - **Sector 7 Tower** (Phase 6, the owner's name for the spire) is
+    `skydeck.ts` (DOM-free, tested in `tests/skydeck.test.ts`) and
+    `tower3d.ts`: a place (spot `tower`, its pin over the mast, directory
+    entry, panel `data-panel-tpl="tower"` with Walk in to `TOWER_SPAWN`,
+    `PLACES` and `LIVE_PLACES` entries) whose spot is only the spire's
+    tiers as plain shapes on the `PICK` layer (kit.ts: never drawn; the City
+    view's raycaster looks for them) and its hover ring, the tower being a
+    site in Uptown's chunk. **The lift** (`LIFT`): a door in the glass
+    pavilion at its foot and one at the lift house on the deck, walk
+    prompts ("Lift · Sky deck", "Lift · Lobby", walk `places` entries
+    `lift:up` / `lift:down`), a fade (`ride()` in index.ts) and
+    `walk.placeAt()` with the deck's height; a closed tower keeps it shut.
+    **The sky deck** (`DECK`, on the spire's roof): walkable inside its rail
+    (`skyDeckY()` in walk.ts's `groundAt()`, `skyDeckWall()` in `blocked()`:
+    you can't step or fall off), a glass rail at chest height, the glazed
+    lift house in the middle (`CORE`, `SKYDECK_SOLIDS` in `SOLIDS`), the
+    crown's steel ribs leaning in to a lit ring round the mast (`RIBS`, over
+    a walker's head) and four viewers (`VIEWERS`); drawn by highrise3d.ts
+    with the spire (`skyDeck()`).
+  - **Its life** (Phase 6) is `uptownlife.ts` (DOM-free, tested in
+    `tests/uptownlife.test.ts`): walkers round the blocks by the plaza and
+    the diagonal (`UPTOWN_WALKS`, life.ts), joggers out and back along the
+    esplanade (`JOG`), cyclists in the one-way pair's bike lanes the way each
+    street runs (`CYCLISTS`, `cyclistAt()`; the riders the crowd's, kind
+    `park` with the park's people; their bikes `uptownlife3d.ts`, one
+    instanced mesh on Uptown's tick); its sound in ambience.ts (a quieter
+    hum, `UPTOWN_HUSH`; the plaza's `fountain`; the circle's traffic); and
+    the executive helicopter (below, under the airport).
   - **The plaza** (Phase 3) is `plaza.ts` (DOM-free, tested in
     `tests/plaza.test.ts`; in the boot: its solids, trees, lamps and
     people) and `plazadress.ts` (what only the drawing needs: the
@@ -1787,12 +1830,14 @@ it and has been retired completely. Build only on what's here.
   `SITE`, the runway (east-west, take-offs and landings eastwards), taxiway
   and connectors, apron, `TERMINAL`, `STANDS` (nose-in, facing north),
   `TOWER` (under the Emporium's height), `HANGAR` (its east office is where
-  Phase 2's hangar menu will open), `PROP_STAND`, `HELIPAD`, masts, the
+  Phase 2's hangar menu will open), `PROP_STAND`, `HELIPAD`, `EXEC_PAD`, masts, the
   windsock, apron vehicles, airbridges, the parked cars, and
   `AIRPORT_SOLIDS` (in `SOLIDS`; the ground itself is open, at ground
   level, not a slab). The access road and the one-way loop round the car
   park are `AIRPORT_STREETS` in the street plan.
-- **The flying traffic:** three airliners, a prop plane and a helicopter on
+- **The flying traffic:** three airliners, a prop plane, a helicopter and
+  the executive helicopter (Uptown's Phase 6: `exec()`, `heli-x`, from
+  `EXEC_PAD` to Uptown's rooftop helipad `ROOF_PAD` and back, gold) on
   one timetable (`PERIOD`, four minutes; `timetable()`, `FLIGHTS`). A flight
   is a loop of acts (fly along waypoints with rounded corners, eased
   altitude and speed; hold; turn on the spot; lift); `poseAt()` turns the
@@ -2696,7 +2741,7 @@ it and has been retired completely. Build only on what's here.
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`),
-  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`, `boulevard.ts`, `boulevarddress.ts`, `kerbside.ts`, the town car in `cars.ts`), the kart park's facility (`kartfacility.ts`),
+  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`, `boulevard.ts`, `boulevarddress.ts`, `kerbside.ts`, `skydeck.ts`, `skyline.ts`, `uptownlife.ts`, the town car in `cars.ts`), the kart park's facility (`kartfacility.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,

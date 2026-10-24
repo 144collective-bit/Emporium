@@ -17,6 +17,7 @@ import { registerHighrises } from './highrise3d';
 import { registerPlaza } from './plaza3d';
 import { registerBoulevard } from './boulevard3d';
 import { registerKerbside } from './kerbside3d';
+import { registerUptownLife } from './uptownlife3d';
 
 /** Its own address, for the site worker (sitework.ts) */
 export const SELF = import.meta.url;
@@ -24,14 +25,16 @@ export const SELF = import.meta.url;
 const PAVING = toon('#b7b0cf');
 
 export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
-  // The towers (Phase 2): a site each
-  registerHighrises(low);
+  // The towers (Phase 2): a site each; their offices' lights and warning lights by the hour on the main thread's tick (Phase 6)
+  registerHighrises(low, tick);
   // The plaza and the café terraces (Phase 3); its falls and the LED ribbon move on the main thread's tick
   registerPlaza(low, tick);
   // The waterfront boulevard (Phase 4): the esplanade, its overlooks and the marina, the planted median, the terraces
   registerBoulevard();
   // The kerbside (Phase 5): the pair's bike lanes and signs, the circle and its monument, the bus lanes, the lay-bys and their cars, the service alleys
   registerKerbside(low, scene);
+  // Its cyclists' bikes under their riders (Phase 6; the riders are the crowd's), on the main thread
+  if (scene) registerUptownLife(scene, tick);
   // The axis's lanes, paved across their blocks
   UPTOWN_LANES.forEach(([x0, z0, x1, z1], i) =>
     site(`uptown lane ${i}`, [x0, z0, x1, z1], (into) => {

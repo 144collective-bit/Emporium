@@ -5,7 +5,7 @@
  */
 import * as THREE from 'three';
 import { MapControls } from 'three/addons/controls/MapControls.js';
-import { BAKING_TEXTURES, builtTexturesDone, consolidate, loadBuiltTextures, loadImage, loadTex, updateLights, updateWind } from './kit';
+import { BAKING_TEXTURES, PICK, builtTexturesDone, consolidate, loadBuiltTextures, loadImage, loadTex, updateLights, updateWind } from './kit';
 import { SWAY, windStrength } from './dusk';
 import { buildBusStops } from './transit3d';
 import type { LifeSfx } from './life';
@@ -18,6 +18,8 @@ import { BOULEVARD_PEOPLE, EDGE_LAMPS, LAND_TREES, WATER_TREES } from './bouleva
 import { DECK_Y as BOARDWALK_Y } from './waterfront';
 import { createDistricts } from './districts';
 import { buildStadium } from './stadium3d';
+import { buildTower } from './tower3d';
+import { LIFT, TOWER_SPAWN } from './skydeck';
 import { STADIUM_LAMPS, STADIUM_RECTS, STADIUM_SPAWN } from './stadium';
 import { buildLandmarks, type Spot } from './landmarks';
 import { buildInfill } from './infill';
@@ -237,6 +239,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   spots.push(buildNightMarket(scene, crowd, { tick, low: tier === 'low' }).spot);
   // Westlake Park's stadium (step 2): a place, built at the boot (the rest of the park is loaded as you approach)
   spots.push(buildStadium(scene, { low: tier === 'low' }).spot);
+  // Uptown's spire as a place, Sector 7 Tower (finance plan Phase 6): its spot only (the tower is Uptown's, drawn as a site)
+  spots.push(buildTower(scene).spot);
   // ...and the metro's el where it crosses the open land south of the south row: no trees under it
   keepTreesOff([-10, 125, 56, 135]);
   // Westlake Park (growth plan Phase 9b): its land is the street plan's; its trees and lamps stand with the town's
@@ -420,6 +424,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const pins = new Map<string, HTMLElement>();
   root.querySelectorAll<HTMLElement>('[data-pin]').forEach((el) => pins.set(el.dataset.pin!, el));
   const raycaster = new THREE.Raycaster();
+  // (and the shapes drawn nowhere that stand for a place drawn as a site: Sector 7 Tower)
+  raycaster.layers.enable(PICK);
   const ndc = new THREE.Vector2();
   let hovered: Spot | null = null;
   let active: Spot | null = null;
@@ -542,6 +548,12 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         close();
         startWalking(STADIUM_SPAWN);
       });
+    // Sector 7 Tower's panel: Walk in starts walk mode on the plaza in front of its pavilion, the lift inside
+    if (id === 'tower')
+      panelBody.querySelector('[data-tower-walkin]')?.addEventListener('click', () => {
+        close();
+        startWalking(TOWER_SPAWN);
+      });
     // The Block's panel: Walk in starts walk mode on its plaza by the metro's stairs
     if (id === 'trenches')
       panelBody.querySelector('[data-block-walkin]')?.addEventListener('click', () => {
@@ -608,6 +620,32 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   /* ---------- Walk mode ---------- */
   // The metro's station card and rides (made once walk mode exists; its doors are walk mode's prompts)
   let metroUI: MetroUI | null = null;
+  // Sector 7 Tower's lift (skydeck.ts): a door in the pavilion at its foot and one at the lift house on the sky deck
+  const LIFT_DOORS = [
+    { id: 'lift:up', ...LIFT.lobby, label: 'Lift · Sky deck' },
+    { id: 'lift:down', ...LIFT.deck, label: 'Lift · Lobby' },
+  ];
+  let lifting = false;
+  /** Up or down in the lift: a fade, then you step out at the other end (unless the owner has closed the tower for now) */
+  function ride(up: boolean) {
+    const gate = live.place('tower');
+    if (!gate.open) return tycoon?.toast(closedLine('Sector 7 Tower', gate), 3500);
+    if (lifting) return;
+    const to = up ? LIFT.up : LIFT.down;
+    works.want(to.x, to.z, 40);
+    lifting = true;
+    root.classList.add('is-fading');
+    sound.sfx('doors');
+    setTimeout(
+      () => {
+        walk.placeAt(to);
+        lifting = false;
+        requestAnimationFrame(() => root.classList.remove('is-fading'));
+        tycoon?.toast(up ? 'Sector 7 Tower · Sky deck' : 'Sector 7 Tower · Lobby');
+      },
+      reduced ? 0 : 520
+    );
+  }
   const walk = createWalk({
     scene,
     camera,
@@ -629,8 +667,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     engine: (revs) => sound.engine(revs),
     tyres: (level) => sound.tyres(level),
     // Your business's places, and the metro's station doors
-    places: () => [...(tycoon?.places() ?? []), ...(metroUI?.doors ?? [])],
+    places: () => [...(tycoon?.places() ?? []), ...(metroUI?.doors ?? []), ...LIFT_DOORS],
     openPlace: (id) => {
+      if (id === 'lift:up' || id === 'lift:down') return ride(id === 'lift:up');
       if (!id.startsWith('metro:')) return tycoon?.openCard(id as 'stall');
       const shut = live.closed('metro');
       if (shut) tycoon?.toast(shut, 3500);
