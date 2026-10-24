@@ -27,20 +27,25 @@ import { SLAB, addPool, type Tick } from './world';
 import { inTrenches } from './trenches';
 import { EL_SPANS, PLINTH } from './grit';
 import {
+  ARCH,
   DECK_HALF,
   DECK_T,
   DECK_Y,
+  HANGERS,
   PILLARS,
   PILLAR_HALF,
   PLATFORM,
-  PLATFORM_SIDE,
+  PORTAL,
+  PORTALS,
   ROUND_TRIP,
   STATIONS,
   SWITCH_S,
   TRACKS,
   TRAIN,
+  archY,
   carAt,
   pointOn,
+  sideAt,
   sideOf,
   stationAt,
   trainAt,
@@ -171,25 +176,41 @@ export function buildMetro(scene: THREE.Scene, tick: (f: Tick) => void, opts: { 
   const trim = neon(PAL.magenta, 0.9, 2.4);
   const lamp = neon('#fff1c9', 0.5, 1.3);
   const strip = lit(new THREE.MeshBasicMaterial({ color: '#9fd8ff', toneMapped: true }), 0.4, 1.15);
+  // (the arch to Uptown: crimson steel, white hangers, a line of lights along its ribs)
+  const archRed = toon('#b8322c');
+  const hanger = toon('#e9e7f2');
+  const archLight = neon('#fff1c9', 0.2, 2.4);
   const signs = signAtlas();
   const b = new Batch();
 
   /* ---------- The viaduct ---------- */
-  /** Is a distance along a track beside a station's platform, on its platform side */
-  const atPlatform = (id: TrackId, s: number) => STATIONS.some((st) => st.track === id && Math.abs(s - st.s) < PLATFORM.half);
+  /** Is a distance along a track beside a station's platform on this side */
+  const atPlatform = (id: TrackId, s: number, side: number) => STATIONS.some((st) => st.track === id && sideAt(st) === side && Math.abs(s - st.s) < PLATFORM.half);
+  /** Is a distance along the main line between the arch's feet (its deck hung from it) */
+  const [archS0, archS1] = [PORTALS[0].s, PORTALS[1].s];
+  const onArch = (id: TrackId, s: number) => id === 'main' && s > archS0 && s < archS1;
   /** Where the branch meets the main line: no parapet across the other's deck there */
   const atSwitch = (id: TrackId, s: number, side: number) => (id === 'main' ? s > SWITCH_S - 1 && s < SWITCH_S + 9 && side === -1 : s < 9 && side === 1);
   for (const t of Object.values(TRACKS)) {
-    // The deck in spans between its pillars (each a tile's worth or less), with the rails on it
-    const ps = PILLARS.filter((p) => p.track === t.id).map((p) => p.s);
-    const cuts = [0, ...ps.slice(t.id === 'branch' ? 0 : 1, -1), t.len];
+    // The deck in spans between its pillars, portals and hangers (each a tile's worth or less), with the rails on it
+    const ps = [...PILLARS, ...PORTALS].filter((p) => p.track === t.id).map((p) => p.s).concat(t.id === 'main' ? HANGERS : []).sort((x, y) => x - y);
+    const cuts = [0, ...ps.slice(t.id === 'branch' ? 0 : 1, -1), t.len].flatMap((c, i, all) => {
+      // (a long span with nothing under it is cut in pieces no longer than a tile's worth)
+      if (!i) return [c];
+      const n = Math.ceil((c - all[i - 1]) / 12);
+      return Array.from({ length: n }, (_, k) => all[i - 1] + ((c - all[i - 1]) * (k + 1)) / n);
+    });
     for (let i = 0; i < cuts.length - 1; i++)
       for (const [a, c] of piecesOf(t.id, cuts[i], cuts[i + 1])) {
         const f = trackFrame(b, t.id, a);
         const l = c - a + 0.02;
-        const el = inTrenches(...pointOn(t.id, (a + c) / 2).at);
+        const arch = onArch(t.id, (a + c) / 2);
+        const el = !arch && inTrenches(...pointOn(t.id, (a + c) / 2).at);
         f.box(0, DECK_Y - DECK_T, -DECK_HALF, l, DECK_T, DECK_HALF * 2, el ? grimy : concrete);
-        if (el) {
+        if (arch) {
+          // Hung from the arch: a steel box girder under each edge in the arch's red
+          for (const s of [-1, 1]) f.box(0, DECK_Y - DECK_T - 0.35, s > 0 ? DECK_HALF - 0.3 : -DECK_HALF, l, 0.35, 0.3, archRed);
+        } else if (el) {
           // Over The Trenches: deep plate girders under both edges, braced across near
           for (const s of [-1, 1]) {
             const zc = s * (DECK_HALF - 0.22);
@@ -210,7 +231,7 @@ export function buildMetro(scene: THREE.Scene, tick: (f: Tick) => void, opts: { 
         // Low parapets along both edges (none beside a platform, nor across the other track at the switch), the line's neon along each
         for (const side of [-1, 1]) {
           const mid = (a + c) / 2;
-          if ((side === PLATFORM_SIDE && atPlatform(t.id, mid)) || atSwitch(t.id, mid, side)) continue;
+          if (atPlatform(t.id, mid, side) || atSwitch(t.id, mid, side)) continue;
           f.box(0, DECK_Y, side > 0 ? DECK_HALF - 0.12 : -DECK_HALF, l, 0.4, 0.12, concrete);
           f.box(0, DECK_Y - 0.28, side > 0 ? DECK_HALF + 0.006 : -DECK_HALF - 0.036, l, 0.06, 0.03, trim);
         }
@@ -259,12 +280,68 @@ export function buildMetro(scene: THREE.Scene, tick: (f: Tick) => void, opts: { 
     addPool(sp.at[0], sp.at[1], 4.6, 0.03, true);
   }
 
+  /* ---------- Uptown's extension: portal frames and the arch ---------- */
+  // Portal frames: a leg each side of the street on the blocks' edges, a crossbeam under the deck (the arch's feet red)
+  PORTALS.forEach((p, i) => {
+    const f = trackFrame(b, p.track, p.s);
+    const mat = i < 2 ? archRed : steel;
+    const y1 = DECK_Y - DECK_T - 0.45;
+    for (const k of [-1, 1]) {
+      f.box(-PORTAL.leg, SLAB, k * PORTAL.half - PORTAL.leg, PORTAL.leg * 2, y1 - SLAB, PORTAL.leg * 2, mat);
+      f.box(-PORTAL.leg - 0.1, SLAB, k * PORTAL.half - PORTAL.leg - 0.1, PORTAL.leg * 2 + 0.2, 0.3, PORTAL.leg * 2 + 0.2, plinth);
+    }
+    f.box(-0.3, y1, -PORTAL.half - PORTAL.leg, 0.6, 0.45, (PORTAL.half + PORTAL.leg) * 2, mat);
+  });
+  // The arch: two crimson ribs either side of the deck, springing from the feet, braced across over the train
+  {
+    const { x, z0, z1, half, rib } = ARCH;
+    const D = 0.7;
+    const N = Math.ceil((z0 - z1) / 2);
+    const zAt = (k: number) => z0 + ((z1 - z0) * k) / N;
+    for (const k of [-1, 1]) {
+      const rx = x + k * half;
+      for (let i = 0; i < N; i++) {
+        const [za, zb] = [zAt(i), zAt(i + 1)];
+        const [ya, yb] = [archY(za), archY(zb)];
+        const len = Math.hypot(zb - za, yb - ya);
+        const g = new THREE.BoxGeometry(rib, D, len + 0.04).rotateX(Math.atan2(yb - ya, -(zb - za))).translate(rx, SLAB + (ya + yb) / 2 + D / 2, (za + zb) / 2);
+        b.add(g, archRed);
+        // The line of lights along its top
+        const gl = new THREE.BoxGeometry(0.06, 0.06, len).rotateX(Math.atan2(yb - ya, -(zb - za))).translate(rx, SLAB + (ya + yb) / 2 + D + 0.03, (za + zb) / 2);
+        b.add(gl, archLight);
+      }
+      // A stone block under each foot
+      for (const z of [z0, z1]) b.box(rx - 0.45, SLAB, z - 0.6, 0.9, 0.5, 1.2, plinth);
+    }
+    // Braces across between the ribs wherever they're well over the train, a cross between each pair
+    for (let i = 2; i < N - 1; i += 3) {
+      const z = zAt(i);
+      const y = SLAB + archY(z) + D / 2;
+      if (y < DECK_Y + 3.6) continue;
+      b.box(x - half, y - 0.15, z - 0.15, half * 2, 0.3, 0.3, archRed);
+    }
+    // The deck hung from it: a floor beam across under the deck at each hanger, a hanger up to each rib (or a post down
+    // to it where the rib's under the deck, near the feet)
+    for (const s of HANGERS) {
+      const p = pointOn('main', s);
+      const z = p.at[1];
+      const y = SLAB + archY(z);
+      const yb = DECK_Y - DECK_T - 0.35;
+      b.box(x - half - rib / 2, yb - 0.25, z - 0.12, half * 2 + rib, 0.25, 0.24, archRed);
+      for (const k of [-1, 1]) {
+        const rx = x + k * half;
+        if (y > yb + 0.3) b.add(new THREE.CylinderGeometry(0.04, 0.04, y - yb, 6, 1, true).translate(rx, (y + yb) / 2, z), hanger);
+        else if (y + 0.7 < yb - 0.25) b.box(rx - 0.12, y + 0.6, z - 0.12, 0.24, yb - 0.25 - (y + 0.6), 0.24, archRed);
+      }
+    }
+  }
+
   /* ---------- The stations ---------- */
   STATIONS.forEach((s, i) => station(s, i));
   function station(s: Station, i: number) {
     const mid = stationAt(s);
     // The station's frame: x along the track, z out to the platform's side (so the platform is at +z)
-    const out = sideOf(mid.dir, PLATFORM_SIDE);
+    const out = sideOf(mid.dir, sideAt(s));
     const f = frame(b, mid.at, mid.dir, out);
     const h = PLATFORM.half;
     const w = PLATFORM.to - PLATFORM.from;

@@ -18,6 +18,10 @@ import { registerPlaza } from './plaza3d';
 import { registerBoulevard } from './boulevard3d';
 import { registerKerbside } from './kerbside3d';
 import { registerUptownLife } from './uptownlife3d';
+import { registerStreetLevel } from './streetlevel3d';
+import { registerSites } from './uptownsites3d';
+import { registerStreetLife } from './streetlife3d';
+import { registerWheel } from './wheel3d';
 
 /** Its own address, for the site worker (sitework.ts) */
 export const SELF = import.meta.url;
@@ -33,6 +37,14 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   registerBoulevard();
   // The kerbside (Phase 5): the pair's bike lanes and signs, the circle and its monument, the bus lanes, the lay-bys and their cars, the service alleys
   registerKerbside(low, scene);
+  // Its street level (Phase 7): the sidewalks' dressing, the grand lobbies' sculptures, the galleria over the lanes
+  registerStreetLevel();
+  // ...and its new buildings on the free land: the theatre, the exchange, the hotel, a tower going up, the gardens
+  registerSites(low, scene, tick);
+  // ...and its street life: screens on the street wall, neon blades over the restaurants, the vendors' carts
+  registerStreetLife(tick);
+  // ...and the observation wheel on the esplanade, its rim and capsules turning on the main thread
+  registerWheel(scene, tick);
   // Its cyclists' bikes under their riders (Phase 6; the riders are the crowd's), on the main thread
   if (scene) registerUptownLife(scene, tick);
   // The axis's lanes, paved across their blocks

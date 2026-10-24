@@ -138,8 +138,12 @@ export const CARGO_STANDS: Pt[] = [
 /** The localizer's aerial array past the runway's far end (the landings line up on it), and the PAPI beside the touchdown zone */
 export const LOCALIZER = { x: 422, z: RUNWAY.z, w: 12, h: 1.3 };
 export const PAPI = { x: RUNWAY.x0 + 26, z: RUNWAY.z - RUNWAY.half - 4 };
-/** Floodlight masts along the terminal, between the stands' wingtips */
-export const MASTS: Pt[] = [209, 287, 365].map((x): Pt => [x, 376]);
+/**
+ * Floodlight masts along the terminal, between the stands' wingtips, and on the cargo apron (lighting phase): x, z and
+ * which way their lamps face (+1 south, -1 north); `MAST_POOLS` the pools of light they throw on the apron at night
+ */
+export const MASTS: [number, number, 1 | -1][] = [...[209, 287, 365].map((x): [number, number, 1] => [x, 376, 1]), [426.5, 368, -1], [398.5, 360, 1]];
+export const MAST_POOLS: [number, number, number][] = MASTS.flatMap(([x, z, f]): [number, number, number][] => [8, 16].map((d): [number, number, number] => [x, z + f * d, 13]));
 /** A windsock on the grass between the taxiway and the runway */
 export const WINDSOCK: Pt = [182, 432.5];
 /** The perimeter fence (round the airside, broken for the hall, the crew gate by it and the cargo shed) */
@@ -472,6 +476,80 @@ export const APRON_KIT: { kind: 'fuel' | 'tug' | 'stairs' | 'bus'; at: Pt; yaw: 
 ];
 const KIT_HALF = { fuel: [1.6, 0.6], tug: [2.4, 0.5], stairs: [1.3, 0.55], bus: [2.6, 0.75] } as const;
 
+/* ---------- Night lighting and the roadside (lighting and signs phase) ---------- */
+
+/**
+ * The stand guidance boards (VDGS): one on the building's face in line with each stand's lead-in (the terminal's
+ * airside face, the cargo shed's), at `y`, facing the stand; airport.ts lights each by what's on its stand (dim with
+ * none, amber while a jet rolls in, green once it's parked)
+ */
+export const VDGS: { x: number; z: number; y: number; stand: Pt }[] = [
+  ...STANDS.map((s): { x: number; z: number; y: number; stand: Pt } => ({ x: s[0], z: TERMINAL[3], y: 3.1, stand: s })),
+  ...CARGO_STANDS.map((s): { x: number; z: number; y: number; stand: Pt } => ({ x: s[0], z: CARGO_SHED[3], y: 3.5, stand: s })),
+];
+/** The approach lights' "rabbit": a strobe running in along the crossbars to the threshold, twice a second, at night */
+export const RABBIT = { x0: APPROACH.x0, x1: APPROACH.x1, every: 2, period: 0.5 };
+/** Centreline lights: the runway's white every `runway` (red and white towards its far end), the taxiway's green every `taxi` */
+export const CENTRE_LIGHTS = { runway: 8, taxi: 6, far: 90, end: 30 };
+
+/** A road sign: the board's middle (x, z) at the height `y`, facing the way `yaw` turns +z, `w` wide, which text, and on a single post or a gantry over the road */
+export type SignText = 'airport-r' | 'airport-l' | 'cargo' | 'terminal' | 'park' | 'ga';
+export interface RoadSign {
+  x: number;
+  z: number;
+  y: number;
+  yaw: number;
+  w: number;
+  text: SignText;
+  /** A post either side (`gantry`, over the road from `x0` to `x1`) or one post */
+  posts: number[];
+}
+export const ROAD_SIGNS: RoadSign[] = [
+  // On the south bank avenue's south verge: for the traffic each way, the airport's drive to the south
+  { x: 288, z: 144.2, y: 2.2, yaw: -Math.PI / 2, w: 3.4, text: 'airport-r', posts: [] },
+  { x: 314, z: 144.2, y: 2.2, yaw: Math.PI / 2, w: 3.4, text: 'airport-l', posts: [] },
+  // Over the drive coming south: Cargo Road and the multi-storey off to the left, the terminal straight on; then
+  // the forecourt's loop off to the left for departures and arrivals
+  { x: ROAD.x, z: CARGO_ROAD.z - 12, y: 4.3, yaw: Math.PI, w: 6.4, text: 'cargo', posts: [ROAD.x - ROAD.half - 1.6, ROAD.x + ROAD.half + 1.6] },
+  { x: ROAD.x, z: LOOP.out - 8, y: 4.3, yaw: Math.PI, w: 6.4, text: 'terminal', posts: [ROAD.x - ROAD.half - 1.6, ROAD.x + ROAD.half + 1.6] },
+  // On Cargo Road before the multi-storey's drive, for the traffic coming east
+  { x: MSCP.rect[0] - 9, z: CARGO_ROAD.z + CARGO_ROAD.half + 2.2, y: 2.0, yaw: -Math.PI / 2, w: 2.2, text: 'park', posts: [] },
+  // On the GA road's north verge past its loop's way in, facing the traffic off the avenue
+  { x: GA_ROAD.loopX + 8, z: GA_ROAD.z - GA_ROAD.half - 2.6, y: 2.0, yaw: -Math.PI / 2, w: 3.2, text: 'ga', posts: [] },
+];
+/** At the drive's way in off the avenue: a low stone wall with SECTOR 7 AIRPORT on it in a planted bed, flags across the drive */
+export const GATEWAY = { x0: ROAD.x - ROAD.half - 15, x1: ROAD.x - ROAD.half - 3.2, z: ROAD.z0 + 13, h: 2, bed: 1.6 };
+export const FLAGS: Pt[] = [0, 1, 2, 3, 4].map((k): Pt => [ROAD.x + ROAD.half + 3.4 + k * 2.4, ROAD.z0 + 13]);
+export const FLAG_H = 5.2;
+/**
+ * Planting: beds of flowers along the drive's verges between its trees (x, z), clipped hedges along the short-stay
+ * car park (x0, z0, x1, z1), and shrubs round the hotel and the multi-storey (x, z)
+ */
+export const BEDS: Pt[] = (() => {
+  const out: Pt[] = [];
+  for (let z = ROAD.z0 + 24; z < LOOP.out - 10; z += 14)
+    for (const s of [-1, 1]) {
+      const x = ROAD.x + s * (ROAD.half + 3.2);
+      // (clear of the junctions, the gantries and the hotel's front)
+      if (Math.abs(z - CARGO_ROAD.z) < 9 || ROAD_SIGNS.some((r) => r.posts.length && Math.abs(r.z - z) < 4)) continue;
+      if (s > 0 && z > HOTEL.rect[1] - 4 && z < HOTEL.rect[3] + 4) continue;
+      out.push([x, z]);
+    }
+  return out;
+})();
+export const HEDGES: Rect[] = [
+  [CAR_PARK[0] - 0.4, CAR_PARK[1] - 0.45, CAR_PARK[2] + 0.4, CAR_PARK[1] - 0.05],
+  [CAR_PARK[0] - 0.4, CAR_PARK[3] + 0.05, CAR_PARK[2] + 0.4, CAR_PARK[3] + 0.45],
+];
+export const SHRUBS: Pt[] = [
+  ...[0.15, 0.35, 0.65, 0.85].map((f): Pt => [HOTEL.rect[2] + 1.6, HOTEL.rect[1] + f * (HOTEL.rect[3] - HOTEL.rect[1])]),
+  ...[0.12, 0.3, 0.5, 0.7, 0.88].map((f): Pt => [MSCP.rect[0] + f * (MSCP.rect[2] - MSCP.rect[0]), MSCP.rect[1] - 1.8]),
+  ...[0.2, 0.5, 0.8].map((f): Pt => [MSCP.rect[2] + 1.8, MSCP.rect[1] + f * (MSCP.rect[3] - MSCP.rect[1])]),
+];
+/** Trees along Cargo Road's north side, between its lamps */
+export const CARGO_TREES: Pt[] = [];
+for (let x = ROAD.x + 22; x < CARGO_ROAD.x1 - 8; x += 16) CARGO_TREES.push([x, CARGO_ROAD.z - CARGO_ROAD.half - 2.6]);
+
 /** What's solid at the airport for walking and driving (the ground itself is open) */
 export const AIRPORT_SOLIDS: Footprint[] = [
   HALL,
@@ -504,6 +582,9 @@ export const AIRPORT_SOLIDS: Footprint[] = [
   [BUS_BAY.x - 2.9, BUS_BAY.z - 0.8, BUS_BAY.x + 2.9, BUS_BAY.z + 0.8, 2.1],
   [...MSCP.rect, MSCP.top],
   [...HOTEL.rect, HOTEL.top],
+  // The gateway's wall and the flagpoles
+  [GATEWAY.x0, GATEWAY.z - 0.35, GATEWAY.x1, GATEWAY.z + 0.35, GATEWAY.h],
+  ...FLAGS.map(([x, z]): Footprint => [x - 0.1, z - 0.1, x + 0.1, z + 0.1, FLAG_H]),
   // The cargo area: the shed and its office, the trucks, the loader and the dollies
   CARGO_SHED,
   CARGO_OFFICE,
