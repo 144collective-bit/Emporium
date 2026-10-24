@@ -30,6 +30,7 @@ import { bodies, buildLife, walker } from './life';
 import { createWalk } from './walk';
 import { buildGarage } from './garage';
 import { buildAirport } from './airport';
+import { AIRPORT_END, BRANCH, LINE_X } from './metro';
 import { CAMERA_FAR, PAN_BOUNDS, overviewFrame } from './bounds';
 import { loadCar } from './garage-ui';
 import { createProfileUI } from './profile-ui';
@@ -195,7 +196,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   buildNeighbourhoods(scene, crowd, tick, { low: tier === 'low', reduced });
   // The garage on the south bank, your saved car on its turntable
   const garage = buildGarage(scene, { tick, reduced, car: loadCar() });
-  // The airport south-east of the Southside Loop, and the aircraft flying its timetable
+  // The airport on the world's south edge, outside the ring highway, and the aircraft flying its timetable
   const airport = buildAirport(scene, crowd, tick, { reduced, low: tier === 'low' });
   const plots = createPlots(scene, { degen, tick, reduced });
   // The market square (your stall and the traders'): before the lamps and the crowd are made
@@ -251,6 +252,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   spots.push(buildTower(scene).spot);
   // ...and the metro's el where it crosses the open land south of the south row: no trees under it
   keepTreesOff([-10, 125 + WIDEN, 56, 135 + WIDEN]);
+  // (and its Airport branch, bending east off the avenue over the open land to the airport: docs/airport-plan.md Phase 3)
+  keepTreesOff([LINE_X - 6, BRANCH.south - 4, AIRPORT_END + 6, BRANCH.z + 6]);
   // Westlake Park (growth plan Phase 9b): its land is the street plan's; its trees and lamps stand with the town's
   // (from its data: phones leave out every other tree of its lawns' clumps, the trim); the rest of it is a chunk
   // of its own, loaded as you approach (districts.ts)

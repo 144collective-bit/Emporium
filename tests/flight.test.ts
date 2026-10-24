@@ -18,13 +18,15 @@ import {
   type FlyState,
   type FlyWorld,
 } from '../src/scripts/city3d/flight-sim';
-import { AIRPORT_SOLIDS, HANGAR, HANGAR_DOOR, HANGAR_ROOF, HANGAR_SPOT, PROP_STAND, RUNWAY, TERMINAL } from '../src/scripts/city3d/airfield';
+import { AIRPORT_SOLIDS, HANGAR, HANGAR_DOOR, HANGAR_ROOF, HANGAR_SPOT, PROP_STAND, RUNWAY, STANDS, TERMINAL } from '../src/scripts/city3d/airfield';
 import { DEFAULT_PLANE, PLAYER_AIRCRAFT, cleanPlane, type PlaneId } from '../src/scripts/city3d/myplane';
-import { SOUTH_SHIFT as D, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
+import { WORLD_BOUNDS } from '../src/scripts/city3d/layout';
 import { PLAN, onSlab } from '../src/scripts/city3d/streetplan';
 import { SOLIDS, type Box } from '../src/scripts/city3d/solids';
 
 const DT = 1 / 60;
+/** Between the two stands in the middle of the hall (its airside wall faces the apron) */
+const WALL_X = (STANDS[3][0] + STANDS[4][0]) / 2;
 const BOUNDS: Box = [...WORLD_BOUNDS, 0];
 const OPEN: FlyWorld = { boxes: [], ceilings: [], soft: [], ground: () => 0 };
 const CITY: FlyWorld = { boxes: SOLIDS, ceilings: [HANGAR_ROOF], soft: [], ground: (x, z) => (onSlab(PLAN, [x, z]) ? 0.15 : 0.035) };
@@ -180,20 +182,20 @@ test('the helicopter lands on a flat roof and lifts off it again', () => {
   assert.ok(!s.ground && s.y > top + 4);
 });
 
-// (The airport moved `D` south when the river was widened: these spots moved with it)
+// (Since docs/airport-plan.md Phase 3 the airport is on the world's south edge: the hall's airside wall faces the apron at z 372)
 test('buildings are soft: flying low into one slides off it, never through, and a plane keeps flying', () => {
-  // North from the apron, low, into the terminal's airside wall
-  const s = aloft('prop', 130, 162 + D, 1.6, Math.PI / 2, 0.7);
+  // North from the apron, low, between two stands, into the hall's airside wall
+  const s = aloft('prop', WALL_X, 386, 1.6, Math.PI / 2, 0.7);
   let away = 0;
   const hit = fly(s, 'prop', NONE, 6, CITY, (st) => {
     const b = inside(st, 'prop', CITY.boxes);
     assert.ok(!b, `the plane is inside ${b} at ${st.x.toFixed(1)}, ${st.z.toFixed(1)}`);
-    away = Math.max(away, Math.hypot(st.x - 130, st.z - 162 - D));
+    away = Math.max(away, Math.hypot(st.x - WALL_X, st.z - 386));
   });
   assert.ok(hit > 1, 'it never touched the terminal');
   assert.ok(away > 40 && s.speed >= TUNES.prop.minAir, 'it got stuck on the wall');
   // The helicopter flies into it and stops against it
-  const h = aloft('heli', 130, 152 + D, 1.2, Math.PI / 2, 1);
+  const h = aloft('heli', WALL_X, 378, 1.2, Math.PI / 2, 1);
   fly(h, 'heli', { throttle: 1, turn: 0, climb: 0 }, 4, CITY, (st) => assert.ok(!inside(st, 'heli', CITY.boxes)));
   assert.ok(h.z > TERMINAL[3] - 0.05, 'the helicopter went into the terminal');
   // Every hull has its spheres
@@ -223,7 +225,7 @@ test('whatever the stick does, every aircraft stays in the world, on or over the
   };
   for (const id of PLAYER_AIRCRAFT) {
     // Off the apron, round the airport and the town's south side
-    const s = newFlight(150, 166 + D, 0);
+    const s = newFlight(150, 390, 0);
     let inp: FlyInput = { throttle: 1, turn: 0, climb: 0 };
     let next = 0;
     fly(

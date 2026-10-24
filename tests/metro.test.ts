@@ -7,6 +7,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   AIRPORT_END,
+  BRANCH,
   BEND_R,
   DECK_HALF,
   LEGS,
@@ -32,6 +33,7 @@ import {
   trainAt,
 } from '../src/scripts/city3d/metro';
 import { PLAN, distToStreet } from '../src/scripts/city3d/streetplan';
+import { DEPARTURES, LOOP } from '../src/scripts/city3d/airfield';
 import { MEDIAN, RIVER } from '../src/scripts/city3d/layout';
 import { PADS } from '../src/scripts/city3d/outer';
 import { SOLIDS } from '../src/scripts/city3d/solids';
@@ -40,12 +42,23 @@ import { AVENUE_Z } from '../src/scripts/city3d/trenches';
 const roads = PLAN.streets.filter((s) => s.kind !== 'alley');
 const near = (a: [number, number], b: [number, number], e = 1e-6) => Math.hypot(a[0] - b[0], a[1] - b[1]) < e;
 
-test('the line runs down the east ring avenue, bends west onto Trench Avenue, and the Airport branch carries straight on', () => {
+test('the line runs down the east ring avenue, bends west onto Trench Avenue, and the Airport branch carries on south and out east to the terminal', () => {
   const { main, branch } = TRACKS;
   assert.ok(near(main.pts[0], [LINE_X, NORTH_END]));
   assert.ok(near(main.pts[main.pts.length - 1], [WEST_END, AVENUE_Z]));
   assert.ok(near(branch.pts[0], pointOn('main', SWITCH_S).at));
-  assert.ok(near(branch.pts[branch.pts.length - 1], [LINE_X, AIRPORT_END]));
+  assert.ok(near(branch.pts[branch.pts.length - 1], [AIRPORT_END, BRANCH.z]));
+  // (since docs/airport-plan.md Phase 3 step 2: down the avenue's median, a quarter bend east, over the old site and the
+  // highway's bend to the station by Airport Drive, just north of the terminal's forecourt; smooth all the way)
+  for (let i = 2; i < branch.pts.length; i++) {
+    const [a, b, c] = [branch.pts[i - 2], branch.pts[i - 1], branch.pts[i]];
+    const t = Math.atan2(c[1] - b[1], c[0] - b[0]) - Math.atan2(b[1] - a[1], b[0] - a[0]);
+    assert.ok(Math.abs(Math.atan2(Math.sin(t), Math.cos(t))) < 0.05, `the branch kinks at ${b}`);
+  }
+  // It reaches the terminal: its station by the drive north of the forecourt's loop, a short walk from the departures deck
+  const st = stationAt(STATIONS.find((s) => s.id === 'airport')!).at;
+  assert.ok(Math.hypot(st[0] - (DEPARTURES.x0 + DEPARTURES.x1) / 2, st[1] - DEPARTURES.z0) < 60);
+  assert.ok(st[1] < LOOP.out - LOOP.half - 3, 'the station stands over the loop');
   // The bend is a quarter circle: about BEND_R * pi / 2 long
   assert.ok(Math.abs(main.len - (SWITCH_S + (BEND_R * Math.PI) / 2 + (LINE_X - BEND_R - WEST_END))) < 0.05);
   // Every point on the line is over a road's median, or open ground, or the river (on the deck): never under a building's footprint
@@ -124,7 +137,7 @@ test('the train keeps to its tracks, stops at every station, and never jumps', (
   const pos = (t: ReturnType<typeof trainAt>) => pointOn(t.track, t.s).at;
   for (let t = 0; t <= ROUND_TRIP * 2; t += 0.05) {
     const p = trainAt(t);
-    assert.ok(p.speed <= TRAIN.speed + 1e-9);
+    assert.ok(p.speed <= Math.max(TRAIN.speed, TRAIN.express) + 1e-9);
     // Its cars are on the line too (past the ends of the line by no more than half a car)
     for (const off of [-TRAIN.len / 2, TRAIN.len / 2]) {
       const c = carAt(p, off).at;
@@ -136,7 +149,7 @@ test('the train keeps to its tracks, stops at every station, and never jumps', (
     }
     // Between one moment and the next it moves no further than it could (a dwell turns it round in place)
     const [a, b] = [pos(prev), pos(p)];
-    assert.ok(Math.hypot(a[0] - b[0], a[1] - b[1]) <= TRAIN.speed * 0.05 + 1e-6, `a jump at ${t.toFixed(2)}`);
+    assert.ok(Math.hypot(a[0] - b[0], a[1] - b[1]) <= TRAIN.express * 0.05 + 1e-6, `a jump at ${t.toFixed(2)}`);
     if (p.at) seen.add(p.at);
     prev = p;
   }
@@ -150,6 +163,8 @@ test('a ride goes there in well under a minute, and the timetable carries on fro
     for (const b of STATIONS) {
       if (a === b) continue;
       const r = rideAt(a.id, b.id, 0);
+      // (the longest, The Trenches to the Airport out on the world's south edge since docs/airport-plan.md Phase 3,
+      // turning round at South Bank: about 44.6 s, the express run out on the branch)
       assert.ok(r.total < 45, `${a.id} to ${b.id} takes ${r.total.toFixed(1)}`);
       assert.ok(near(pointOn(r.track, r.s).at, stationAt(a).at));
       const end = rideAt(a.id, b.id, r.total);
@@ -159,7 +174,7 @@ test('a ride goes there in well under a minute, and the timetable carries on fro
       for (let t = 0; t <= r.total; t += 0.05) {
         const p = rideAt(a.id, b.id, t);
         const q = pointOn(p.track, p.s).at;
-        assert.ok(Math.hypot(q[0] - last[0], q[1] - last[1]) <= TRAIN.speed * 0.05 + 1e-6, `${a.id} to ${b.id} jumps at ${t.toFixed(2)}`);
+        assert.ok(Math.hypot(q[0] - last[0], q[1] - last[1]) <= TRAIN.express * 0.05 + 1e-6, `${a.id} to ${b.id} jumps at ${t.toFixed(2)}`);
         last = q;
       }
       const lastRun = end.runs[end.runs.length - 1];

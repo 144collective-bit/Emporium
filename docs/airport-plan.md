@@ -1,8 +1,13 @@
 # Sector 7 Airport: the plan
 
 The owner asked for an airport with aircraft that fly, and for players to fly
-one themselves. Built in two phases, each signed off by the owner before the
-next starts.
+one themselves (Phases 1 and 2), then for it to be expanded, given a more
+realistic design and placed properly in the map (Phase 3). Each phase, and
+each of Phase 3's steps, is signed off by the owner before the next starts.
+
+Phases 1 and 2 below describe the first airport, inside the ring highway
+south-east of the Southside Loop. Phase 3 moved it (its section, at the end,
+is how it stands today; the numbers in Phases 1 and 2 are history).
 
 ## What the owner asked for
 
@@ -119,4 +124,124 @@ next starts.
      (fits, rolls out clear, the helicopter under the roof) and getting
      out.
 
-Each phase gets the owner's sign-off before the next one starts.
+3. **Expanded and moved** (Phase 3, the owner's call: "expand the airport
+   and give it a more realistic design ... place it correctly in the map").
+   The owner's picks: south-east, outside the ring highway, on the world's
+   south edge; about twice the size (a runway of about 300 tiles, eight
+   gates); a realistic airside and landside; the metro to the terminal; a
+   cargo area; the old site left as open land for later. In three steps:
+
+   - **Step 1 (built): the airport moved, the airside.** `airfield.ts` in
+     fixed numbers (nothing reads the edge, so both world sizes hold):
+     - **The land** (`AIRPORT_AREAS`): the airside (`AIRSIDE`, x 96-452,
+       z 331-451) south of the highway's south side, fenced (`FENCE`, the
+       crew gate west of the hall, the GA gate in the west side); the
+       landside (`LANDSIDE`, east of the highway, south of the river, kept
+       for step 2); the forecourt in front of the hall; general aviation's
+       way in west of the fence (`GA_LANDSIDE`). `SITE` is the box round
+       them. The highway no longer goes round the airport; the tests hold
+       all of it outside the highway and clear of it.
+     - **The runway** (`RUNWAY`, 300 long, 09/27, x 100-400 at z 442):
+       shoulders, edge lines, centre line, threshold bars, its numbers, the
+       touchdown zone and aiming points, edge, threshold and end lights,
+       approach lights past its west end, the PAPI, the localizer's aerials
+       past its east end. The parallel taxiway (`TAXIWAY`) and four
+       connectors (A-D, `CONNECTORS`) with hold-short bars and signs, the
+       taxilane across the aprons (`TAXILANE`), blue edge lights.
+     - **The terminal** (`TERMINAL`): the hall (`HALL`: two storeys of
+       glass, a wave roof with a canopy over the kerb, SECTOR 7 AIRPORT) and
+       two concourses (`CONCOURSES`), eight stands (`STANDS`) with an
+       airbridge each (`AIRBRIDGES`), lead-in lines, stop bars and numbers;
+       the control tower (`TOWER`); floodlight masts; apron vehicles.
+     - **General aviation** at the runway's west end: Hangar 1 and its
+       office (your aircraft and the hangar menu, as in Phase 2), the prop
+       plane's stand, the helipad and the executive helicopter's pad on the
+       GA apron (`GA_APRON`). Its road (`GA_ROAD`, off the east ring avenue
+       south of the highway, a one-way loop round a little car park) ends
+       by the fence's gate (`GA_GATE`); taxis and fast travel arrive there
+       (`AIR_ARRIVE`); the panel's Walk in starts at the hangar office.
+     - **The maintenance hangar** (`MRO`) with an airliner on its apron,
+       **the fire station** (`FIRE`) with its crash tender by the runway's
+       east end, **the fuel farm** (`FUEL_TANKS`) in its bund.
+     - **Landside:** Airport Drive (`ROAD`, south off the south bank avenue
+       east of the highway), the front road (one way, west) and the one-way
+       loop past the kerb round the short-stay car park (`CAR_PARK`). The
+       highway's junctions with the south bank avenue (east) and the east
+       ring avenue (south) got slip lanes on their outer corners
+       (`OUTER_SLIPS`); traffic drives it all.
+     - **The flights** (`FLIGHTS`): five airliners from five of the stands
+       (`FLYING_STANDS`; the other three and one at the maintenance hangar
+       stand parked, `PARKED_JETS`) push back, taxi to A, take off east,
+       turn north past the runway's east end, cross the city high, come
+       round the west and land over the threshold, off at C and back along
+       the taxiway; the prop plane and both helicopters as before from
+       their new spots. The tests hold them apart, clear of the parked
+       airliners, over the fence when low, and on the ground only airside.
+     - **Drawn:** the boot draws the hall (the place's spot), Hangar 1, the
+       tower, the windsock, the roadside and the aircraft (`airport.ts`,
+       shared paint in `airportkit.ts`); everything else is a district
+       loaded as you approach (`airportgrounds3d.ts`, `LAZY_DISTRICTS` id
+       `airport`): the field in strips 30 across, the concourses and
+       airbridges, the maintenance hangar, the fire station, the fuel farm,
+       landside and the GA road.
+     - **Round it:** the outskirts' trees keep off its land and the low end
+       of its approach (`treeSpot()`), the woods keep `WOODS.clear` from its
+       parts and from the land the old airport stood on (`WOODS_OFF`); the
+       skyline ring leaves out the towers within 80 of the runway's line;
+       the world map draws its land, aprons, taxiways, terminal and runway;
+       the benchmark's airport view looks over the apron.
+     - **The old site** (x 70-234, z 170-279, inside the highway) is open
+       land again, for later; the metro's Airport station still stands at
+       its edge until step 2.
+     - The traffic's routes are kept to the millimetre now (`mm()` in
+       routes.ts): the baked copy in the page is a third of its size, so the
+       boot's download went down (629.7 KB of 666 gzipped, from 665.9).
+   - **Step 2 (built): landside and the metro.** In `airfield.ts` unless
+     said:
+     - **The forecourt's loop** (`LOOP`, `airport-forecourt`, one way): off
+       Airport Drive's end east past the short-stay car park, down its east
+       side, west up the departures ramp onto the deck, round the hairpin by
+       the hall's west end, east along the hall's upper doors (the drop-off
+       on its right), down the other ramp, north and back west to the drive.
+       Traffic and taxis drive it, up and over the deck.
+     - **The departures deck** (`DEPARTURES`, 3.3 up, at the hall's upper
+       storey): its slab on piers (`PIERS`, off the lanes over them), two
+       lanes and a planted median, the kerb's paving up to the hall under
+       the wave roof's canopy, parapets, lamps, its two ramps (`RAMP_HALF`
+       bands, under 0.11 steep) on embankments. Walked on (walk.ts
+       `departuresY()` / `departuresWall()`, as Liberty Bridge's decks: by
+       your height, so you walk under it too), driven on (your car keeps to
+       its parapets, `DECK_WALLS`, while it's up, and its height through
+       `groundAt(x, z, y)`), the traffic and taxis riding it
+       (`departuresRoadY()`, `departuresSlope()`). The walk camera can't
+       pass up through its slab (`DECK_CAMERA`). Its solids
+       (`DECK_SOLIDS`: the piers, the embankments as low as a step) are
+       below anything up on it.
+     - **The arrivals level** under the deck: the hall's lower doors, the
+       taxi rank (`RANK`, Cruisers in taxi yellow and a queue), the airport
+       bus in its bay (`BUS_BAY`) with a shelter, ARRIVALS hung under the
+       deck's edge, lit soffit.
+     - **The multi-storey car park** (`MSCP`: four decks and a roof,
+       spandrels with a cyan band, two glazed stair towers, PARKING; cars on
+       every deck, `MSCP_CARS`), **the hotel** by the drive (`HOTEL`: a glass
+       lobby and nine floors of rooms, its canopy over the sidewalk, RUNWAY
+       HOTEL on its roof; made-up name), the short-stay car park in the
+       loop.
+     - **The metro to the terminal** (`metro.ts`): the Airport branch now
+       carries on south down the east ring avenue's median, bends east
+       (`BRANCH`) over the airport's old land and the highway's bend and
+       ends just past Airport Station by the drive north of the forecourt
+       (`AIRPORT_END`; its tower's door faces the track, a short walk to the
+       deck, and taxis stop for it on the drive). Runs on the branch go
+       faster (`TRAIN.express`, `speedOf()`): every ride stays under 45 s.
+       The old Airport station on the avenue is gone.
+     - Tests: the deck (its surface, ramps, edges, piers, what fits under
+       it), the loop in the plan, the multi-storey and the hotel off every
+       road, the cars' models, the metro's branch and station, the taxis'
+       longest drives (to the airport's metro station from the stadium,
+       about 72 s), the layout snapshot.
+   - **Step 3: the cargo area.** Cargo sheds, a cargo apron with its own
+     stands and freighters, and their trucks on the landside.
+
+Each phase (and each of Phase 3's steps) gets the owner's sign-off before the
+next one starts.

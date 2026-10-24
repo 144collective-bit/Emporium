@@ -163,7 +163,7 @@ it and has been retired completely. Build only on what's here.
   tested in `tests/highway.test.ts`): `HIGHWAY`, a closed centre line on
   a rounded box (`HIGHWAY_BOX` x -215 to 275, z -170 to 320 (its south
   side moved out 45 with the river's widening, docs/river-plan.md), corners
-  `HIGHWAY_R` 70) round the town, the kart park, the airport and The
+  `HIGHWAY_R` 70) round the town and The
   Trenches; two lanes each way with a median and a hard shoulder
   (`HIGHWAY_HALF`); `fromHighway()` / `insideHighway()` measure it
   exactly. In the street plan it's a street of kind `highway` (`loop`),
@@ -196,13 +196,13 @@ it and has been retired completely. Build only on what's here.
   grid, and change street sizes only in `layout.ts`.
 - **The world's size** is in `layout.ts` too:
   - `EXT` (-420 to 460, about 1.6 km across; growth plan Phase 6 moved it out from -200 to 240) is the ground, the river and every road, edge to edge (the far-off roads are plain continuations of today's, with no traffic). It's mostly open land, room to grow the city into. Build there only when the owner asks.
-  - The river is `RIVER_W` (60) wide: five times what it was, then four times again (the owner's calls; the second is `docs/river-plan.md`, built in steps with the owner's sign-off: all four are built, the river, Harbour Bridge, Liberty Bridge and the river's life). It widened southwards both times, so everything south of it moved: what's derived from `SOUTH_ROAD` / `SOUTH_ROW` moved by itself; the south bank's places written in fixed numbers before the first widening (the Fight Club in `fightsite.ts`, South Square and the south pocket parks in `outer.ts`, the airport and its timetable in `airfield.ts`) add `SOUTH_SHIFT` (57, both moves) to their z, and those written after it (The Trenches' streets in `trenches.ts`, the metro's south end in `metro.ts`, the airport's site's south edge and the executive helicopter's path, the benchmark's views) add `WIDEN` (45, the second). Keep doing that for anything new written in fixed numbers south of the river.
+  - The river is `RIVER_W` (60) wide: five times what it was, then four times again (the owner's calls; the second is `docs/river-plan.md`, built in steps with the owner's sign-off: all four are built, the river, Harbour Bridge, Liberty Bridge and the river's life). It widened southwards both times, so everything south of it moved: what's derived from `SOUTH_ROAD` / `SOUTH_ROW` moved by itself; the south bank's places written in fixed numbers before the first widening (the Fight Club in `fightsite.ts`, South Square and the south pocket parks in `outer.ts`, the airport before it moved out to the world's edge) add `SOUTH_SHIFT` (57, both moves) to their z, and those written after it (The Trenches' streets in `trenches.ts`, the metro's south end in `metro.ts`, the executive helicopter's path, the benchmark's views) add `WIDEN` (45, the second); the airport is written in today's world numbers since its Phase 3. Keep doing that for anything new written in fixed numbers south of the river.
   - **The river's shape** is `river.ts` (DOM-free, tested in `tests/river.test.ts`; river plan step 1, the owner's call: natural, not a straight line): `RIVER` is the band between the quay lines, the bank avenues straight along it edge to edge; the water's edge keeps to the band where anything stands on the water (Uptown's esplanade and marina, the town's promenades and their jetties, The Trenches' boardwalk, Pier 7 and the Night Market, Liberty Bridge, every bridge) and pulls back from it on the stretches in `BANKS` (`pullAt()`, eased in and out, a smooth seeded wander between `min` and `max`): a sandy cove on the south bank below the south row (`beach`), grass banks east of the town's promenades, and past the ring highway, each bank on its own. `edgesAt()` / `inWater()` / `edgeSamples()` are what everything reads: the water's mesh (world.ts `riverWater()`: shallows by the natural banks, a `shore` attribute on the city's water shader) and its banks (`riverBanks()`: stone quay walls, a ribbon of sand or pebbles where it pulls back, the cove's beach back to the promenade, reeds in chunky clumps and rocks near only), walking (walk.ts), driving (`RIVER_WALLS` in drive-sim.ts, a piece every `WALL_STEP` over the water, `riverWallsNear()`), the boats (`laneAt()`, waterfront.ts `boatZ()`), the outskirts' trees (they grow on the banks it leaves: `treeSpot()`), the promenade's railing (open to the cove), the world map and the sound.
   - **The water lies under the streets** (river plan step 2, the owner's pick): `WATER_Y` (-1.5) in `river.ts`. Where it keeps to the quay line a stone quay wall drops to it; where it pulls back the bank slopes down to it (`SLOPE` wide at most, flat land left above it; the cove's beach all the way: `slopeAt()`, `topsAt()` the slopes' tops, `shoreY()` the ground's height, `inChannel()` the slopes and the water). The grass stops at the band (world.ts); `riverBanks()` draws the walls, the slopes, the sand or pebbles and the reeds down at the water, and walls the channel's ends at the world's edge. Walking follows `shoreY()` down a slope (walk.ts `groundAt()`), the cars stop at the slopes' tops (`RIVER_WALLS`), the trees keep off the channel. Everything afloat is at `WATER_Y` (the traffic's boats and the moored ones in life.ts, Uptown's yachts and tenders, the barge), and everything standing in the water reaches down to it (the decks' piles, the jetties' posts, Uptown's marina pontoon on piles, Liberty Bridge's piers, the highway's bridges' piers). Anything new on the water goes there too.
   - **Bridges** (river plan step 1): the four avenue bridges were taken out. Only the east ring avenue keeps one (`BRIDGED_NS` in layout.ts: Harbour Bridge since step 2, below, the metro's; the el's posts stand on its median); the other north-south roads end at the bank avenues, each two streets in the plan (`ns<i>` north of the river, `ns<i>s` south of it, `nsStreet()`), and the ring highway keeps its two bridges far out of town. Liberty Bridge, a footbridge, was rebuilt in step 3 (below).
   - **River life** (river plan step 4, the owner's picks: more boats, the river bus, boating yourself; all three built). Everything on the water keeps to a line of its own, a function of the clock, and the tests hold each clear of everything else there (`tests/water.ts`: the piers, decks, moored boats and landings). 4a, more boats: two traffic boats to a lane and the police launch in the middle one (life.ts), and `riverlife.ts` (DOM-free, tested in `tests/riverlife.test.ts`): the cruise boat (`CRUISE`, round the town's reach), the rowing eight (`CREW`) and the dinghies out west (`DINGHIES`), drawn by `riverlife3d.ts`, a district loaded as you approach the river (`LAZY_DISTRICTS` id `river`). The highway's bridges' piers stand between the lanes (`BRIDGE_PIERS` in waterfront.ts). 4b, the river bus (below, under Getting about). 4c, boating yourself (below, after Driving your car).
   - `WORLD_BOUNDS` is how far you can walk or drive.
-  - `CITY_EXT` (-80 to 140 + `SOUTH_SHIFT`) is the town past the Parkway (with the airport and the kart park it's `BUILT_UP`); the outskirts' tree belt fills a band round the town (outside the bends) and a lighter sprinkle covers the rest, seeded tile by tile at a density per area (`outskirtsTrees()` in `outskirts.ts`: `BELT_FREE` / `OPEN_FREE` are the land a tree could stand on in the world before Phase 6, so a bigger world gets more trees, never thinner ones, and a tile's trees are the same whatever the world's size; trees keep off land in `keepTreesOff()`). Pine woods stand in patches on the land well away from the city (`WOODS`, `inWoods()`: a smooth seeded noise, only past `WOODS.clear` from `BUILT_UP`, so none on the land the world had before Phase 6), their trees bigger than the town's.
+  - `CITY_EXT` (-80 to 140 + `SOUTH_SHIFT`) is the town past the Parkway (with the airport and the kart park it's `BUILT_UP`); the outskirts' tree belt fills a band round the town (outside the bends) and a lighter sprinkle covers the rest, seeded tile by tile at a density per area (`outskirtsTrees()` in `outskirts.ts`: `BELT_FREE` / `OPEN_FREE` are the land a tree could stand on in the world before Phase 6, so a bigger world gets more trees, never thinner ones, and a tile's trees are the same whatever the world's size; trees keep off land in `keepTreesOff()`). Pine woods stand in patches on the land well away from the city (`WOODS`, `inWoods()`: a smooth seeded noise, only past `WOODS.clear` from `WOODS_OFF` (the town and the kart park with the airport's old land in one box, and the airport's parts), so none on the land the world had before Phase 6), their trees bigger than the town's.
   - The skyline ring stands just past `EXT` (`SKYLINE` in `bounds.ts`: `gap` to `gap` + `depth` past it), kept out of the haze (`fog = false`) so it reads as a far metropolis; as many towers as the ring had for its length before Phase 6 (`SKYLINE_REACH`), each from its own seeded numbers, on grass that carries on `SKIRT` (80) past the edge (the grass is a plane per tile).
   - The sky dome and stars travel with the camera at `SKY_RADIUS` (`bounds.ts`: far enough that the skyline's far side stands in front of it seen from downtown, about 720 today, never under 400), inside its far plane (`CAMERA_FAR`, 40 further), so everything in the world stays in front of the sky and the skyline stays on the horizon however far out the edge is.
   - City view pans round the built-up area (`bounds.ts`: `BUILT_UP` is the town, the airport and the kart park; `PAN_BOUNDS` reaches `PAN_MARGIN` (160) past it, never closer than 10 to where you can walk: today that's the whole world), and the Build overview frames the plots (`overviewFrame()`).
@@ -256,7 +256,10 @@ it and has been retired completely. Build only on what's here.
     median to the switch (`SWITCH_S`), a
     quarter-circle bend (`BEND_R`) and west over the open land south of the
     south row and Trench Avenue's median to The Trenches; `branch` straight
-    on from the switch to the Airport, Phase 9, the owner's call); a place
+    on from the switch down the avenue's median, then (since the airport's
+    Phase 3 step 2) a bend east (`BRANCH`) over the airport's old land and
+    the highway to Airport Station by Airport Drive, `AIRPORT_END`; runs on
+    the branch go faster, `TRAIN.express`, `speedOf()`); a place
     on them is a track and a distance (`pointOn()`, `along()`, `sideOf()`);
     pillars wherever the ground is clear (`PILLARS`: an avenue's median
     clear of its junctions, or open land off every road; over the river
@@ -1276,7 +1279,7 @@ it and has been retired completely. Build only on what's here.
   a function that draws a piece of the city from data into Batches only
   (no ticks, crowds, solids or pools of light; those stay with the boot),
   the same every time it runs. Today they're each tile's trees and lamps
-  (`world.ts`), the airport's runway and apron (`airport.ts`) and the
+  (`world.ts`), the airport's grounds (`airportgrounds3d.ts`, loaded as you approach) and the
   kart park's grounds and circuit (`kartgrounds3d.ts`); new districts and
   building kits come as sites.
   - The boot builds only the sites in the home view's and the intro's
@@ -1925,51 +1928,93 @@ it and has been retired completely. Build only on what's here.
 
 - The plan and its phases are `docs/airport-plan.md`; keep it up to date,
   one phase at a time with the owner's sign-off. Phase 1 (the airport and
-  its flying traffic) and Phase 2 (fly it yourself, from the hangar) are
-  built.
-- **Where:** south-east of the Southside Loop, east of the x = 64.5 avenue,
-  where no road runs (the north-south roads carry on south past the loop).
-  `airfield.ts` (DOM-free, tested in `tests/airfield.test.ts`) holds it all:
-  `SITE`, the runway (east-west, take-offs and landings eastwards), taxiway
-  and connectors, apron, `TERMINAL`, `STANDS` (nose-in, facing north),
-  `TOWER` (under the Emporium's height), `HANGAR` (its east office is where
-  Phase 2's hangar menu will open), `PROP_STAND`, `HELIPAD`, `EXEC_PAD`, masts, the
-  windsock, apron vehicles, airbridges, the parked cars, and
-  `AIRPORT_SOLIDS` (in `SOLIDS`; the ground itself is open, at ground
-  level, not a slab). The access road and the one-way loop round the car
-  park are `AIRPORT_STREETS` in the street plan.
-- **The flying traffic:** three airliners, a prop plane, a helicopter and
-  the executive helicopter (Uptown's Phase 6: `exec()`, `heli-x`, from
-  `EXEC_PAD` to Uptown's rooftop helipad `ROOF_PAD` and back, gold) on
-  one timetable (`PERIOD`, four minutes; `timetable()`, `FLIGHTS`). A flight
-  is a loop of acts (fly along waypoints with rounded corners, eased
-  altitude and speed; hold; turn on the spot; lift); `poseAt()` turns the
-  time into a pose, the same for everyone (the clock is `Date.now()`).
-  Airliners push back, taxi out, take off east, climb round to the north,
-  cross the city high over downtown (above 38; 46 to 48 over Uptown's
-  towers, highrise.ts), come round the west and
-  land, the prop plane flies a lower loop along the river, the helicopter
-  circles the Emporium (above the hologram and the blimp). The tests check
-  they stay in the world, high over the town, on the ground only at the
-  airport, never near each other (`REACH`) and clear of the solids. Change a
-  route or a take-off time only with the tests passing.
-- **Drawn by** `airport.ts` (runway markings and lights, approach lights,
-  PAPI, terminal with its glass front, wave roof, the SECTOR 7 AIRPORT
-  sign and airbridges, tower, hangar, helipad, masts, windsock, vehicles,
-  road, car park) and `aircraft.ts` (the models: a cartoon airliner in
-  DEGEN AIR colours, a made-up airline, never a real one, maker or badge;
-  a high-wing prop plane; a helicopter). Each model is a few parts by role
+  its flying traffic), Phase 2 (fly it yourself, from the hangar) and
+  Phase 3's steps 1 (the owner's call: expanded, more realistic, moved out
+  to the world's south edge) and 2 (landside and the metro to the
+  terminal) are built; step 3 (the cargo area) waits for the owner's
+  sign-off.
+- **Where:** on the world's south edge, outside the ring highway (it no
+  longer goes round the airport): the airside south of the highway's south
+  side, the landside east of the highway south of the river. Its old site
+  inside the highway is open land, kept for later. `airfield.ts` (DOM-free,
+  tested in `tests/airfield.test.ts`) holds it all, in fixed numbers:
+  `AIRPORT_AREAS` (`AIRSIDE` in its `FENCE` with a crew gate by the hall
+  and the GA gate, `GA_GATE`; `LANDSIDE`, for step 2; the forecourt;
+  `GA_LANDSIDE`), `SITE` the box round them, the runway (`RUNWAY`, 300
+  long, east-west, take-offs and landings eastwards), the parallel
+  taxiway, connectors A-D (`CONNECTORS`) and the taxilane, the aprons
+  (`APRON`, `GA_APRON`), `TERMINAL` (the `HALL` and two `CONCOURSES`),
+  eight `STANDS` (nose-in, facing north) with `AIRBRIDGES`, `TOWER` (under
+  the Emporium's height), `HANGAR` (Hangar 1, its east office the hangar
+  menu's), `PROP_STAND`, `HELIPAD`, `EXEC_PAD`, the maintenance hangar
+  (`MRO`), the fire station (`FIRE`), the fuel farm (`FUEL_TANKS`), the
+  localizer and PAPI, masts, the windsock, apron vehicles (`APRON_KIT`),
+  the parked cars, and `AIRPORT_SOLIDS` (in `SOLIDS`; the ground itself is
+  open, at ground level, not a slab). Airport Drive off the south bank
+  avenue, the front road and the one-way loop past the kerb round the
+  short-stay car park are `AIRPORT_STREETS`; general aviation's road off
+  the east ring avenue and its loop are `GA_STREETS` (`GA_ROAD`), both in
+  the street plan with traffic; the highway's junctions there have slip
+  lanes on their outer corners too (`OUTER_SLIPS`). You arrive (taxi, fast
+  travel, `PLACES`) at the GA car park by the gate (`AIR_ARRIVE`).
+- **Landside** (Phase 3 step 2): the forecourt's one-way loop
+  (`LOOP`, street `airport-forecourt`) up over **the departures deck**
+  (`DEPARTURES`, in front of the hall's upper storey, 3.3 up: its ramps,
+  lanes, kerb and parapets) and back; walking, driving, the traffic and
+  taxis all ride it (`departuresY()` / `departuresWall()` in walk.ts by
+  your height, as Liberty Bridge's decks; `groundAt(x, z, y)` and
+  `DECK_WALLS` for your car; `departuresRoadY()` / `departuresSlope()` in
+  life.ts and taxi.ts; `DECK_CAMERA`); under it the arrivals level (the
+  taxi rank `RANK`, the bus bay `BUS_BAY`, the hall's lower doors); the
+  short-stay car park in the loop, the multi-storey (`MSCP`, its cars
+  `MSCP_CARS`) and the hotel by the drive (`HOTEL`, RUNWAY HOTEL, made up).
+  What's solid under the deck (`DECK_SOLIDS`) is lower than anything up
+  on it; anything new on the deck goes through these.
+- **The flying traffic:** five airliners (from `FLYING_STANDS`; the other
+  stands and the maintenance hangar's apron have airliners parked,
+  `PARKED_JETS`), a prop plane, a helicopter and the executive helicopter
+  (Uptown's Phase 6: `exec()`, `heli-x`, from `EXEC_PAD` to Uptown's
+  rooftop helipad `ROOF_PAD` and back, gold) on one timetable (`PERIOD`,
+  four minutes; `timetable()`, `FLIGHTS`). A flight is a loop of acts (fly
+  along waypoints with rounded corners, eased altitude and speed; hold;
+  turn on the spot; lift); `poseAt()` turns the time into a pose, the same
+  for everyone (the clock is `Date.now()`). Airliners push back, taxi out
+  to A, take off east, turn north past the runway's east end, cross the
+  city high over downtown (above 38; 46 to 48 over Uptown's towers,
+  highrise.ts), come round the west and land over the fence and the
+  threshold, the prop plane flies a lower loop along the river, the
+  helicopter circles the Emporium (above the hologram and the blimp). The
+  tests check they stay in the world, high over the town, on the ground
+  only airside, never near each other (`REACH`) or the parked airliners,
+  and clear of the solids. Change a route or a take-off time only with the
+  tests passing.
+- **Drawn by** `airport.ts` at the boot (the hall, the place's spot: glass
+  front, wave roof and kerb canopy, the SECTOR 7 AIRPORT sign, doors on both
+  levels; the taxi rank, the bus and the multi-storey's cars; Hangar 1
+  and the tower in the `airport` group, the windsock, the roadside's
+  parked cars, lamps and trees, the aircraft; shared paint and glazing in
+  `airportkit.ts`) and as a district loaded as you approach
+  (`airportgrounds3d.ts`, `LAZY_DISTRICTS` id `airport`: the field in
+  strips 30 across (runway markings and lights, approach lights, PAPI,
+  localizer, taxiways and their signs, aprons, stands, the fence with its
+  chain-link in the FX layer, pads, apron vehicles, masts), the concourses
+  and airbridges, the maintenance hangar, the fire station and its crash
+  tender, the fuel farm, the forecourt, the departures deck and the
+  arrivals level, the multi-storey, the hotel and the GA road; one atlas of
+  fixed copy), and `aircraft.ts` (the models: a cartoon airliner in DEGEN AIR
+  colours, a made-up airline, never a real one, maker or badge; a
+  high-wing prop plane; a helicopter). Each model is a few parts by role
   (body, accent livery colour, neon nav lights, blinking strobe, gear that
   folds away, decal, spinning props and rotors with blur discs);
   `createFleet()` makes one instanced mesh per part for each kind, culled
   as a fleet. Under reduced motion every aircraft stands parked.
-- The skyline ring leaves out any tower within 150 of the airport (they'd
-  loom over the runway; since Phase 6 the ring stands far enough out that
-  none is); trees keep off the airport and the low end of the approach.
+- The skyline ring leaves out any tower within 80 of the runway's line
+  (60 past either end); the outskirts' trees keep off the airport's land
+  and the low end of the approach, and the woods keep clear of it
+  (`WOODS_OFF` in outskirts.ts).
 - **Flying it yourself** (Phase 2): the airport is a place (spot
-  `airport`, its pin over Hangar 1 (`spot.group` is the hangar, built in
-  its own Batch), directory entry, a panel with **Walk in** to
-  `AIR_SPAWN`). The hangar office's door (`HANGAR_DOOR`, the office
+  `airport`, its pin over the hall (`spot.group` is the hall), directory
+  entry, a panel with **Walk in** to `AIR_SPAWN`, by Hangar 1's office). The hangar office's door (`HANGAR_DOOR`, the office
   `HANGAR_OFFICE` is solid) opens the hangar menu (`hangar-ui.ts`, markup
   `data-hangar` in `CityMap.astro` on the garage's `.shop` panel and
   styles): the Sky Hopper (`prop`), the Neon Dart (`bizjet`, a small jet

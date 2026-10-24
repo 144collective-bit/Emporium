@@ -52,7 +52,7 @@ import type { Garage } from './garage';
 import { createDrive } from './drive';
 import { createFly } from './fly';
 import { createHangarUI, loadPlane } from './hangar-ui';
-import { HANGAR_DOOR, HANGAR_SPOT, type AircraftKind, type Pose } from './airfield';
+import { DECK_CAMERA, HANGAR_DOOR, HANGAR_SPOT, departuresWall, departuresY, type AircraftKind, type Pose } from './airfield';
 import { HUT_DOOR, circuitSurfaceAt as trackSurfaceAt } from './kartcircuit';
 import { KART_PARK } from './kartpark';
 import { bankY } from './kartfacility';
@@ -377,6 +377,9 @@ export function createWalk(d: WalkDeps) {
     // (Harbour Bridge's deck, humped over the river; the river's banks sloping down to the water, river plan step 2)
     const hb = harbourY(x, z);
     if (hb !== null) return Math.max(slab, hb + 0.035);
+    // (the airport's departures deck and its ramps, when `yNow` is up there: the arrivals level is under it; airfield.ts)
+    const dep = departuresY(x, z, yNow);
+    if (dep !== null) return Math.max(slab, dep + 0.035);
     // (Liberty Bridge's decks, when `yNow` is up there)
     const fb = footbridgeY(x, z, yNow, 0, leavesOpen());
     if (fb !== null) return Math.max(slab, fb);
@@ -396,6 +399,9 @@ export function createWalk(d: WalkDeps) {
     const open = leavesOpen();
     if (footbridgeY(x, z, y, RADIUS, open) !== null) return false;
     if (footbridgeWall(x, z, y, RADIUS, open)) return true;
+    // The airport's departures deck (airfield.ts): up there only its parapets, the hall's face and your car stop you
+    if (departuresY(x, z, y, RADIUS) !== null) return drive.blocks(x, z, RADIUS);
+    if (departuresWall(x, z, y, RADIUS)) return true;
     // The stadium's footbridge over the highway (stadium.ts): up there only its parapets stop you
     if (bridgeY(x, z, y, RADIUS) !== null) return false;
     if (bridgeWall(x, z, y, RADIUS)) return true;
@@ -420,7 +426,7 @@ export function createWalk(d: WalkDeps) {
     }
     // Only the boxes under the camera's line can be in its way (padded as the test below pads them)
     // (and Liberty Bridge's towers over their arches and its walkways' roofs, which you walk under: a bottom, b[5])
-    for (const b of [...CAMERA_GRID.alongRay(from, dir, t, 0.18, nearBoxes), ...d.plotSolids(), ...LIBERTY_CAMERA] as number[][]) {
+    for (const b of [...CAMERA_GRID.alongRay(from, dir, t, 0.18, nearBoxes), ...d.plotSolids(), ...LIBERTY_CAMERA, ...DECK_CAMERA] as number[][]) {
       if (b[4] < 0.5) continue;
       const lo = [b[0] - 0.18, b[5] ?? 0, b[1] - 0.18];
       const hi = [b[2] + 0.18, b[4] + 0.15, b[3] + 0.18];

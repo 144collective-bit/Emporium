@@ -9,7 +9,8 @@ import assert from 'node:assert/strict';
 import { JUNCTIONS, ROUTES, SPOTS, lightState, pointOn, type Phase, type Pt, type Route } from '../src/scripts/city3d/routes';
 import { PLAN, distToStreet, lanePaths, onSlab, streetLength } from '../src/scripts/city3d/streetplan';
 import { DIAGONALS } from '../src/scripts/city3d/downtown';
-import { HIGHWAY_HALF, fromHighway, insideHighway } from '../src/scripts/city3d/highway';
+import { HIGHWAY_BOX, HIGHWAY_HALF, fromHighway, insideHighway } from '../src/scripts/city3d/highway';
+import { GA_ROAD, LOOP as AIR_LOOP, ROAD as AIR_ROAD } from '../src/scripts/city3d/airfield';
 
 const roads = PLAN.streets.filter((s) => s.lanes > 0);
 /** Every point of a route, about every half tile */
@@ -43,6 +44,15 @@ const stadiumWay = (q: Pt) =>
   (q[0] > K_LOOP.x0 - 3 && q[0] < K_LOOP.x1 + 3 && q[1] > K_LOOP.z1 - 3 && q[1] < -165) ||
   (q[0] > K_ROAD.x0 - 12 && q[0] <= K_LOOP.x0 - 3 && q[1] > K_ROAD.z - 3 && q[1] < -165);
 
+/** The airport's drive off the south bank avenue east of the highway (and the slip lanes on that junction's outer corners), and its streets round the car park (airfield.ts) */
+const airportWay = (q: Pt) =>
+  (q[0] > HIGHWAY_BOX[2] && q[0] < AIR_ROAD.x + 3 && q[1] > AIR_ROAD.z0 - 14 && q[1] < AIR_LOOP.out) ||
+  // (its forecourt's loop, the departures deck's hairpin furthest west)
+  (q[0] > AIR_LOOP.west - 3 && q[0] < AIR_LOOP.x1 + 3 && q[1] > AIR_LOOP.out - 3 && q[1] < AIR_LOOP.kerb + 3) ||
+  // ...and general aviation's road off the east ring avenue south of the highway, round its car park
+  (q[0] > GA_ROAD.x0 - 14 && q[0] < GA_ROAD.x1 + 3 && q[1] > HIGHWAY_BOX[3] && q[1] < GA_ROAD.z + 3) ||
+  (q[0] > GA_ROAD.x0 + 4 && q[0] < GA_ROAD.x1 + 3 && q[1] > GA_ROAD.z && q[1] < GA_ROAD.loopZ + 3);
+
 test("every route stays on the asphalt, a car's width in from the kerb, off every slab, and inside the highway (or on the stadium's and the kart park's streets)", () => {
   for (const [i, r] of ROUTES.entries())
     for (const { at: q } of points(r)) {
@@ -51,7 +61,7 @@ test("every route stays on the asphalt, a car's width in from the kerb, off ever
         `route ${i} leaves the road at ${q.map((v) => v.toFixed(1))}`
       );
       assert.ok(!onSlab(PLAN, q), `route ${i} drives over a sidewalk at ${q.map((v) => v.toFixed(1))}`);
-      assert.ok(insideHighway(q[0], q[1]) || fromHighway(q[0], q[1]) < HIGHWAY_HALF || stadiumWay(q), `route ${i} goes out past the highway at ${q.map((v) => v.toFixed(1))}`);
+      assert.ok(insideHighway(q[0], q[1]) || fromHighway(q[0], q[1]) < HIGHWAY_HALF || stadiumWay(q) || airportWay(q), `route ${i} goes out past the highway at ${q.map((v) => v.toFixed(1))}`);
     }
 });
 
@@ -95,10 +105,8 @@ test('between them the routes drive every street that goes anywhere, each way (a
           run += l;
         }
         // Only where it goes anywhere (inside the highway, or out to the stadium) and away from the junctions, where cars turn
-        if (!insideHighway(at[0], at[1]) && fromHighway(at[0], at[1]) > 1 && !stadiumWay(at)) continue;
+        if (!insideHighway(at[0], at[1]) && fromHighway(at[0], at[1]) > 1 && !stadiumWay(at) && !airportWay(at)) continue;
         if (JUNCTIONS.some((j) => Math.hypot(at[0] - j.at[0], at[1] - j.at[1]) < 14)) continue;
-        // (westbound up the airport road from the far end of its one-way loop: nobody gets there without a U-turn)
-        if (s.id === 'airport-road' && lane.dir === -1 && at[0] > 98) continue;
         // (the same on Stadium Road east along the stadium's loop: its cars leave the loop at its east end)
         if (s.id === 'stadium-road' && lane.dir === -1 && at[0] < LOOP.x1) continue;
         // (and on Kart Road west along the kart park's loop: its cars leave the loop at its west end)

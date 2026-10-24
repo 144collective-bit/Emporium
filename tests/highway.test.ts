@@ -1,5 +1,5 @@
-// The ring highway (highway.ts, growth plan Phase 7): a closed loop well outside the town (the kart park is past it), the
-// airport and the test district, inside the world; a lit junction wherever it meets an arterial, two slip lanes
+// The ring highway (highway.ts, growth plan Phase 7): a closed loop well outside the town (the kart park and, since
+// docs/airport-plan.md Phase 3, the airport are past it), inside the world; a lit junction wherever it meets an arterial, two slip lanes
 // on the town side of each; a bridge each side over the river; and the trees keep off it.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -8,7 +8,7 @@ import { OUTER_SLIPS, PLAN, distToStreet, riverBridges, streetLength } from '../
 import { EW_ROADS, NS_ROADS, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
 import { PARKWAY, SOUTHSIDE } from '../src/scripts/city3d/outer';
 import { KART_PARK } from '../src/scripts/city3d/kartpark';
-import { SITE } from '../src/scripts/city3d/airfield';
+import { AIRPORT_AREAS } from '../src/scripts/city3d/airfield';
 import { outskirtsTrees } from '../src/scripts/city3d/outskirts';
 
 test('a closed loop, measured right, inside the world', () => {
@@ -25,7 +25,7 @@ test('a closed loop, measured right, inside the world', () => {
   assert.ok(insideHighway(30, 30) && !insideHighway(x0 - 10, 30));
 });
 
-test('well outside the town and the airport, and clear of the kart park north of it', () => {
+test('well outside the town, and clear of the kart park north of it and the airport south-east of it', () => {
   const clear = (x: number, z: number, m: number) => fromHighway(x, z) > HIGHWAY_HALF + m && insideHighway(x, z);
   for (const p of [...PARKWAY, ...SOUTHSIDE]) assert.ok(clear(p[0], p[1], 40), `the bends at ${p}`);
   // (the kart park moved past it in the north side's stage 2)
@@ -34,12 +34,10 @@ test('well outside the town and the airport, and clear of the kart park north of
     [KART_PARK.x1, KART_PARK.z1],
   ])
     assert.ok(!insideHighway(x, z) && fromHighway(x, z) > HIGHWAY_HALF + 8, `${x}, ${z}`);
-  for (const [x, z] of [
-    [SITE[2], SITE[3]],
-    [SITE[0], SITE[3]],
-    [SITE[2], SITE[1]],
-  ])
-    assert.ok(clear(x, z, 15), `${x}, ${z}`);
+  // (the airport moved out past it in docs/airport-plan.md Phase 3: none of its land inside it or near it)
+  for (const r of AIRPORT_AREAS)
+    for (let x = r[0]; x <= r[2]; x += 2)
+      for (let z = r[1]; z <= r[3]; z += 2) assert.ok(!insideHighway(x, z) && fromHighway(x, z) > HIGHWAY_HALF + 4, `the airport at ${x}, ${z}`);
 });
 
 test('a lit junction wherever it meets an arterial, two slip lanes on the town side of each (four where the road past it carries traffic)', () => {

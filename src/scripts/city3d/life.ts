@@ -11,6 +11,7 @@ import { PLAN, distToStreet, outset, pointAt, streetLength } from './streetplan'
 import { DOWNTOWN, EXT, MARKET } from './layout';
 import { DECK_STROLLS, HIGH_Y as LIBERTY_HIGH } from './liberty';
 import { deckSlope, deckY, onHarbour } from './harbour';
+import { departuresRoadY, departuresSlope } from './airfield';
 import { WATER_Y } from './river';
 import { DECK_Y as BOARDWALK_Y, STROLL, boatZ } from './waterfront';
 import { JUNCTIONS, ROUTES, SPOTS, lightState, phaseOf, pointOn, rightOf, type Junction, type Phase, type Pt, type Route } from './routes';
@@ -480,8 +481,9 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
       // The body nods under braking and leans out of a turn (traffic.ts), on top of its heading
       bodyMotion(v.body, v.v, v.yaw, dt);
       // (over Harbour Bridge's hump: up it, its nose along the deck's slope; harbour.ts)
-      const hb = onHarbour(v.x, v.z) ? deckY(v.z) : 0;
-      const climb = hb ? Math.atan(-Math.sin(v.yaw) * deckSlope(v.z)) : 0;
+      // (and up and down the airport's departures deck: its ramps climb along x; airfield.ts)
+      const hb = onHarbour(v.x, v.z) ? deckY(v.z) : departuresRoadY(v.x, v.z);
+      const climb = onHarbour(v.x, v.z) ? Math.atan(-Math.sin(v.yaw) * deckSlope(v.z)) : Math.atan(Math.cos(v.yaw) * departuresSlope(v.x, v.z));
       q.setFromAxisAngle(up, v.yaw).multiply(q2.setFromEuler(lean.set(v.body.roll, 0, v.body.pitch + climb)));
       M.makeRotationFromQuaternion(q).setPosition(v.x, ROAD_Y + hb, v.z);
       v.matrix.copy(M);

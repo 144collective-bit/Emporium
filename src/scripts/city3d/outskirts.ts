@@ -10,14 +10,14 @@
  * the kart park and its slip road, and any land kept clear (the test
  * district's).
  */
-import { EW_ROADS, EXT, NS_ROADS, RIVER } from './layout';
+import { CITY_EXT, EW_ROADS, EXT, NS_ROADS, RIVER } from './layout';
 import { inChannel } from './river';
 import { PARKWAY, PROMENADE, SOUTHSIDE, inTown } from './outer';
 import { KART_RECTS } from './kartfacility';
-import { RUNWAY, SITE } from './airfield';
+import { AIRPORT_AREAS, RUNWAY } from './airfield';
 import { TILE, tileKey, tilesIn } from './tiles';
 import { rng } from './recipes';
-import { BUILT_UP } from './bounds';
+import { KART_PARK } from './kartpark';
 import { HIGHWAY_HALF, fromHighway } from './highway';
 import { PLAN } from './streetplan';
 import type { Rect } from './downtown';
@@ -52,9 +52,9 @@ export function treeSpot(x: number, z: number, clear: readonly Rect[] = [], high
   if (KART_RECTS.some((r) => x > r[0] - 3 && x < r[2] + 3 && z > r[1] - 3 && z < r[3] + 3)) return false;
   // Clear of the town (inside the bends, the river and its banks) and of the bends themselves
   if (inTown([x, z], 1.2)) return false;
-  // Clear of the airport and of the low end of its approach
-  if (x > SITE[0] - 1 && x < SITE[2] + 1 && z > SITE[1] - 1 && z < SITE[3] + 1) return false;
-  if (x > -40 && x < SITE[0] && Math.abs(z - RUNWAY.z) < 12) return false;
+  // Clear of the airport (airside, landside, the forecourt) and of the low end of its approach, off the runway's west end
+  if (AIRPORT_AREAS.some((r) => x > r[0] - 1 && x < r[2] + 1 && z > r[1] - 1 && z < r[3] + 1)) return false;
+  if (x > RUNWAY.x0 - 200 && x < RUNWAY.x0 && Math.abs(z - RUNWAY.z) < 14) return false;
   if (EW_ROADS.some((r) => Math.abs(z - r.c) < r.half + 0.8) || NS_ROADS.some((r) => Math.abs(x - r.c) < r.half + 0.8)) return false;
   // Off the promenades along the quay lines, and the water wherever its edges curve (river.ts): trees grow on the banks it leaves
   if ((z > RIVER[0] - 2.8 && z < RIVER[0] + 0.5) || (z > RIVER[1] - 0.5 && z < RIVER[1] + 2.6) || inChannel(x, z, 0.8)) return false;
@@ -70,8 +70,18 @@ export function treeSpot(x: number, z: number, clear: readonly Rect[] = [], high
  */
 export const WOODS = { clear: 120, cell: 90, over: 0.66, density: 2.5, pine: 0.8 };
 
+/**
+ * What the woods keep `clear` of: the town and the kart park, with the land the airport stood on before it moved out
+ * to the world's south edge (docs/airport-plan.md Phase 3: open land, kept for later), all in one box as the built-up
+ * area was; and the airport where it is now, its parts each on their own (one box round them all would clear the
+ * whole east side)
+ */
+export const WOODS_OFF: Rect[] = [
+  [Math.min(CITY_EXT[0], KART_PARK.x0), Math.min(CITY_EXT[0], KART_PARK.z0), Math.max(CITY_EXT[1], KART_PARK.x1, 234), Math.max(CITY_EXT[1], KART_PARK.z1, 279)],
+  ...AIRPORT_AREAS,
+];
 /** How far a point is from the built-up area (0 inside it) */
-const fromCity = (x: number, z: number) => Math.hypot(Math.max(BUILT_UP[0] - x, 0, x - BUILT_UP[2]), Math.max(BUILT_UP[1] - z, 0, z - BUILT_UP[3]));
+const fromCity = (x: number, z: number) => Math.min(...WOODS_OFF.map((b) => Math.hypot(Math.max(b[0] - x, 0, x - b[2]), Math.max(b[1] - z, 0, z - b[3]))));
 /** A lattice point's own number, 0-1 */
 const corner = (i: number, j: number, k: number) => ((hash(`woods ${k} ${i},${j}`) >>> 0) % 10007) / 10007;
 /** Smooth noise on a lattice 1 apart, eased between its points (0-1) */

@@ -9,7 +9,7 @@
  */
 import { DOORS, GARAGE_SITE, SOLIDS, STALL_SPOT, WALK_SPAWN } from './solids';
 import { KART_SPAWN } from './kartpark';
-import { AIR_SPAWN } from './airfield';
+import { AIR_ARRIVE } from './airfield';
 import { FIGHT_SPAWN } from './fightsite';
 import { LIBERTY_SPAWN } from './liberty';
 import { HARBOUR_SPAWN } from './harbour';
@@ -55,7 +55,8 @@ export const PLACES: Place[] = [
   { id: 'emporium', kind: 'spot', spot: 'emporium', at: { x: WALK_SPAWN.x + Math.sin(WALK_SPAWN.yaw) * WALK_SPAWN.back, z: WALK_SPAWN.z + Math.cos(WALK_SPAWN.yaw) * WALK_SPAWN.back, yaw: WALK_SPAWN.yaw } },
   ...['shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments'].map((id): Place => ({ id, kind: 'spot', spot: id, at: atDoor(id) })),
   { id: 'karts', kind: 'spot', spot: 'karts', at: KART_SPAWN },
-  { id: 'airport', kind: 'spot', spot: 'airport', at: AIR_SPAWN },
+  // (on the GA car park's kerb by the fence's gate, the walk in to Hangar 1: the panel's Walk in starts at its door)
+  { id: 'airport', kind: 'spot', spot: 'airport', at: AIR_ARRIVE },
   { id: 'fightclub', kind: 'spot', spot: 'fightclub', at: FIGHT_SPAWN },
   { id: 'liberty', kind: 'spot', spot: 'liberty', at: LIBERTY_SPAWN },
   { id: 'harbour', kind: 'spot', spot: 'harbour', at: HARBOUR_SPAWN },

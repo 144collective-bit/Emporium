@@ -474,3 +474,17 @@ crowd in the box), as before; the fixed map is smaller than the old one
 (a 48-tile box, no small details). Each lit pixel inside the fade samples
 two maps instead of one; outside it, none.
 
+
+## The routes to the millimetre (with the airport's Phase 3)
+
+- The airport's move (docs/airport-plan.md Phase 3) added streets the
+  traffic drives (Airport Drive, the GA road, four slip lanes), and the
+  baked routes grew with them: the boot's download went to 674.1 KB
+  gzipped, over its 666 KB budget.
+- The routes' points and stops were baked at full precision (17 digits a
+  number). They're now kept to the millimetre (`mm()` in `routes.ts`, on
+  the routes as they're worked out, so the page's copy is still exactly
+  what the tests and the server work out: `tests/baked.test.ts`). The
+  boot's download is 629.7 KB gzipped, 36 KB under where it stood before
+  the airport moved; nothing the traffic does changed by more than a
+  millimetre.
