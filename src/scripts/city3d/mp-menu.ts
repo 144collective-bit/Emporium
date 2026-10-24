@@ -55,8 +55,6 @@ const SPOTS: { id: StartSpot; name: string; sub: string }[] = [
 ];
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
-/** Where the menu was when the player went to log in (Google and Discord leave the page): CityMap.astro carries on from it */
-const RESUME = 'degen-city-mp-resume';
 const LOOK_NAMES: Record<string, string> = { suit: 'a suit', hoodie: 'a hoodie', track: 'a track suit', varsity: 'a varsity jacket', puffer: 'a puffer jacket' };
 
 /** The invite link for a private game: the site's own address with the game's id and who shared it */
@@ -131,15 +129,8 @@ export function createMpMenu(d: MpMenuDeps) {
     }
     paint();
   }
-  /** Off to log in, the menu's place kept for after */
-  function login(view: 'login' | 'signup') {
-    try {
-      sessionStorage.setItem(RESUME, JSON.stringify({ game, friend }));
-    } catch {
-      /* fine: they pick the game again */
-    }
-    d.openAccount(view);
-  }
+  /** Off to log in (the account card over the menu; the menu carries on once logged in) */
+  const login = (view: 'login' | 'signup') => d.openAccount(view);
   async function loadGames() {
     games = null;
     gamesError = '';
@@ -183,7 +174,7 @@ export function createMpMenu(d: MpMenuDeps) {
         <button type="button" class="city-start-btn mpm-half" data-act="login"><span class="city-start-btn-name">Log in</span></button>
         <button type="button" class="city-start-btn mpm-half" data-act="signup"><span class="city-start-btn-name">Sign up</span></button>
       </div>
-      <p class="mpm-note">With a username and password, Google, Discord or a wallet. Single player never asks you to log in.</p>`
+      <p class="mpm-note">Just a username, your email and a password. Single player never asks you to log in.</p>`
           : me
             ? `<div class="mpm-you">
         <p class="mpm-name">${esc(me.name)}</p>

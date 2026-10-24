@@ -1,7 +1,6 @@
 /*
  * A player's profile: one Durable Object per account, named in the account
- * (accounts.ts: a hash of its id, or of its wallet's address for a wallet
- * that had a profile before accounts). Holds the player name (the account's
+ * (accounts.ts: a hash of its id). Holds the player name (the account's
  * username), wardrobe look, rifle finish and lifetime score; the rank comes
  * from the score.
  *

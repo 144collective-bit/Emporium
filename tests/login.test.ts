@@ -1,10 +1,10 @@
 // Logging in (docs/multiplayer-plan.md, "Profiles and logging in"): the username filter, passwords and
 // emails (net/auth.ts, the browser's and the server's), and the server's own helpers (server/src/login.ts):
-// password hashes, the lock-out after wrong tries, and signing in with Google or Discord.
+// password hashes, the lock-out after wrong tries, where a reset link opens and what its email says.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { blockedList, emailOk, nameKey, passwordProblem, usernameProblem, USERNAME_MAX } from '../src/scripts/net/auth';
-import { TRIES, authorizeUrl, backTo, checkPassword, discordId, googleId, hashPassword, lockedOut, pkce, sameHex, stale, tokenForm, wrongTry } from '../server/src/login';
+import { TRIES, backTo, checkPassword, hashPassword, lockedOut, resetEmail, sameHex, stale, wrongTry } from '../server/src/login';
 
 test('ordinary usernames pass', () => {
   for (const n of ['NeonGecko', 'big_dave', 'Degen-42', 'Pixel_Fox_9', 'Classic', 'Scrape', 'Cassandra', 'Torpedo', 'Booker', 'Dickens2', 'Peacock', 'Sussex', 'abc', 'x'.repeat(USERNAME_MAX)])
@@ -81,36 +81,13 @@ test('five wrong tries lock for a while; the window starts again after', () => {
   assert.equal(later.n, 1);
 });
 
-test('Google and Discord sign-ins: the URL, the code swap, the ids', async () => {
-  const { verifier, challenge } = await pkce();
-  assert.match(verifier, /^[A-Za-z0-9_-]{43}$/);
-  assert.notEqual(verifier, challenge);
-  const u = new URL(authorizeUrl('google', { clientId: 'cid', redirect: 'https://x.dev/auth/google/callback', state: 'st', challenge }));
-  assert.equal(u.origin, 'https://accounts.google.com');
-  assert.equal(u.searchParams.get('scope'), 'openid');
-  assert.equal(u.searchParams.get('state'), 'st');
-  assert.equal(u.searchParams.get('code_challenge_method'), 'S256');
-  assert.equal(new URL(authorizeUrl('discord', { clientId: 'd', redirect: 'r', state: 's', challenge })).searchParams.get('scope'), 'identify');
-  const form = tokenForm({ clientId: 'cid', secret: 'sec', redirect: 'r', code: 'c', verifier });
-  assert.equal(form.get('grant_type'), 'authorization_code');
-  assert.equal(form.get('code_verifier'), verifier);
-
-  const jwt = (claims: object) => `x.${btoa(JSON.stringify(claims)).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_')}.y`;
-  const now = Date.now();
-  const good = { iss: 'https://accounts.google.com', aud: 'cid', sub: '1234567890', exp: now / 1000 + 600 };
-  assert.equal(googleId(jwt(good), 'cid', now), '1234567890');
-  assert.equal(googleId(jwt({ ...good, aud: 'other' }), 'cid', now), null);
-  assert.equal(googleId(jwt({ ...good, iss: 'https://evil.example' }), 'cid', now), null);
-  assert.equal(googleId(jwt({ ...good, exp: now / 1000 - 1 }), 'cid', now), null);
-  assert.equal(googleId('nonsense', 'cid', now), null);
-  assert.equal(discordId({ id: '80351110224678912', username: 'x' }), '80351110224678912');
-  assert.equal(discordId({ id: 'abc' }), null);
-  assert.equal(discordId(null), null);
-});
-
-test('after a sign-in the player goes back only to an allowed page', () => {
+test('a reset link opens only an allowed page, and its email carries it', () => {
   const allowed = 'https://emporium.example.dev, http://localhost:4321';
   assert.equal(backTo('http://localhost:4321', allowed), 'http://localhost:4321');
   assert.equal(backTo('https://evil.example', allowed), 'https://emporium.example.dev');
   assert.equal(backTo(null, allowed), 'https://emporium.example.dev');
+  const mail = resetEmail('NeonGecko', 'https://emporium.example.dev/?reset=abc');
+  assert.match(mail.text, /NeonGecko/);
+  assert.match(mail.text, /\?reset=abc/);
+  assert.match(mail.subject, /Sector 7/);
 });

@@ -112,7 +112,7 @@ function pickTier(): Tier {
 const nextFrame = () => new Promise((r) => requestAnimationFrame(() => r(null)));
 const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
-/** `wallet`: Connect wallet and the profile card, made with the page (CityMap.astro); the city plugs its parts into `hooks` */
+/** `accountKit`: the account and its card, made with the page (CityMap.astro); the city plugs its parts into `hooks` */
 /** Where the Multiplayer menu can start a player (null: the Emporium, walk mode's own start; next to a friend once they're seen) */
 export type StartSpot = 'emporium' | 'trenches' | 'karts' | 'stadium' | 'friend';
 const START_SPOTS: Record<StartSpot, { x: number; z: number; yaw: number } | null> = {
@@ -123,7 +123,7 @@ const START_SPOTS: Record<StartSpot, { x: number; z: number; yaw: number } | nul
   friend: null,
 };
 
-export async function bootCity(root: HTMLElement, wallet?: { account: Account; hooks: AccountHooks; ui: AccountUI } | null) {
+export async function bootCity(root: HTMLElement, accountKit?: { account: Account; hooks: AccountHooks; ui: AccountUI } | null) {
   const host = root.querySelector<HTMLElement>('[data-city3d]')!;
   const loader = root.querySelector<HTMLElement>('[data-loader]')!;
   const bar = loader.querySelector<HTMLElement>('[data-loader-bar]')!;
@@ -612,7 +612,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const net = server ? await Promise.all([import('./multiplayer'), import('./online')]) : null;
   const onlineSwitch = net ? net[1].createOnlineSwitch(root) : null;
   // The account (account.ts): playing online needs one; it opens the player's online profile
-  const account = wallet?.account ?? null;
+  const account = accountKit?.account ?? null;
   const canvas = renderer.domElement;
 
   /* ---------- Walk mode ---------- */
@@ -776,9 +776,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           openAccount: () => accountUI?.open('login'),
         })
       : null;
-  const accountUI = wallet && onlineSwitch ? wallet.ui : null;
-  if (wallet && accountUI) {
-    wallet.hooks.opened = () => walking && walk.releaseMouse();
+  const accountUI = accountKit && onlineSwitch ? accountKit.ui : null;
+  if (accountKit && accountUI) {
+    accountKit.hooks.opened = () => walking && walk.releaseMouse();
     // The Profile tab's Change name: the account's username
     profileUI.onRename(() => accountUI.open());
   }

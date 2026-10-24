@@ -1204,17 +1204,10 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
 
     /* ---------- Your account (works on the 2D map too; the 3D city plugs in when it starts) ---------- */
     const server = import.meta.env.PUBLIC_GAME_SERVER as string | undefined;
-    const wallet = server
+    const accountKit = server
       ? Promise.all([import('../scripts/city3d/account'), import('../scripts/city3d/account-ui')]).then(([{ createAccount }, { createAccountUI }]) => {
           const account = createAccount(server);
-          const hooks = {
-            opened() {},
-            // Logged in from the Multiplayer menu (or back from Google or Discord): the menu carries on where it was
-            loggedIn() {
-              const resume = mpResume();
-              if (resume) openMenuFor(resume);
-            },
-          };
+          const hooks = { opened() {} };
           if (account.token) account.refresh();
           return { account, hooks, ui: createAccountUI(root, account, hooks) };
         })
@@ -1242,7 +1235,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       } else {
         booting = true;
         const { bootCity } = await import('../scripts/city3d/index');
-        city = await bootCity(root!, await wallet);
+        city = await bootCity(root!, await accountKit);
         booting = false;
         if (!city) return show2d(false);
         // Options picked in the start menu before the city was up
@@ -1397,7 +1390,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     /* ---------- The Multiplayer menu (mp-menu.ts: loaded when it's first opened) ---------- */
     let mpMenu: Promise<MpMenu> | null = null;
     const multiplayerMenu = () =>
-      (mpMenu ??= Promise.all([import('../scripts/city3d/mp-menu'), wallet]).then(([{ createMpMenu }, w]) =>
+      (mpMenu ??= Promise.all([import('../scripts/city3d/mp-menu'), accountKit]).then(([{ createMpMenu }, w]) =>
         createMpMenu({
           root: root!,
           server: server!,
@@ -1415,22 +1408,11 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
         (await multiplayerMenu()).open();
       }),
     );
-    /** The menu opened on a game (an invite link, or carrying on after logging in) */
+    /** The menu opened on a friend's game (an invite link) */
     async function openMenuFor(at: { game?: string; friend?: string | null }) {
       if (!gl) return;
       view = '3d';
       (await multiplayerMenu()).open(at);
-    }
-    // Logging in from the Multiplayer menu (Google and Discord leave the page): where it was, kept for this tab
-    const RESUME = 'degen-city-mp-resume';
-    function mpResume(): { game?: string; friend?: string | null } | null {
-      try {
-        const r = JSON.parse(sessionStorage.getItem(RESUME) || 'null');
-        sessionStorage.removeItem(RESUME);
-        return r && typeof r === 'object' ? { game: typeof r.game === 'string' ? r.game : undefined, friend: typeof r.friend === 'string' ? r.friend : null } : null;
-      } catch {
-        return null;
-      }
     }
     // Opened from a friend's invite link: the menu on their game, the address tidied (a reload
     // shouldn't join again)

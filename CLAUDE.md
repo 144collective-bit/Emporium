@@ -2539,12 +2539,11 @@ it and has been retired completely. Build only on what's here.
   ~11.9). Keep it that way when adding designs.
 - Visitors can't type text onto buildings: sign texts come from the fixed
   `SIGNS` list, so nothing unexpected (or confidential) appears in public.
-- **Logging in** (a username and password, Google, Discord or a wallet;
-  `account.ts`, `account-ui.ts`, `wallet.ts`; the server's `accounts.ts`;
-  below under Multiplayer) is part of multiplayer (being tested on
-  workers.dev only). A wallet never sends a transaction. No explorer or
-  wallet-brand links; only the confirmed links in `src/data/site.ts` and
-  the providers' own sign-in pages are linked.
+- **Logging in** (a username, an email and a password; `account.ts`,
+  `account-ui.ts`; the server's `accounts.ts`; below under Multiplayer) is
+  part of multiplayer (being tested on workers.dev only). There's no
+  wallet connect anywhere (the owner's call); only the confirmed links in
+  `src/data/site.ts` are linked.
 
 ## Multiplayer (beta, testing)
 
@@ -2589,21 +2588,19 @@ it and has been retired completely. Build only on what's here.
   talk). The server re-checks every value players send.
 - **Playing online needs an account** (the owner's call; single player
   never asks): docs/multiplayer-plan.md, "Profiles and logging in".
-  - Ways in, any of them linked to one account: a username and password
-    (with a private email, required, used only for reset links), Google,
-    Discord, or a wallet (it signs `signInMessage()` with a one-time nonce:
-    personal_sign, no transaction, no gas). A first sign-in with Google,
-    Discord or a wallet picks its username. The server is
-    `server/src/accounts.ts` (the `Accounts` Durable Object, `/auth/*`,
-    listed in `server/README.md`) and `server/src/login.ts` (DOM-free,
-    tested in `tests/login.test.ts`: PBKDF2 hashes, the lock-out, the OAuth
-    helpers). Google and Discord need their apps' secrets and reset emails
-    an email service's key (`server/README.md`); without them those parts
-    aren't offered. Only the provider's account id is kept.
+  - **Simple** (the owner's call): an account is a username, an email
+    (private, required, where a password reset link goes) and a password,
+    nothing else: no wallet connect, no Google or Discord. Log in with the
+    username or the email. The server is `server/src/accounts.ts` (the
+    `Accounts` Durable Object, `/auth/*`, listed in `server/README.md`) and
+    `server/src/login.ts` (DOM-free, tested in `tests/login.test.ts`:
+    PBKDF2 hashes, the lock-out, the reset link and email). Reset emails
+    need an email service's key (`EMAIL_API_KEY`, `server/README.md`);
+    without it "Forgot your password?" says it's coming soon.
   - A session token lasts 30 days (only its hash is stored; the browser
     keeps it as `degen-city-account-v1`); the room takes it in the `hello`
     and turns away anyone without one. Everyone started fresh (the guest
-    profiles were dropped; a wallet that had a profile keeps it).
+    and wallet profiles were dropped).
   - Each account has one player profile: its username, wardrobe look,
     rifle finish, lifetime score and rank, on the server
     (`server/src/profile.ts`). Offline, the Profile panel keeps the look and
@@ -2614,15 +2611,13 @@ it and has been retired completely. Build only on what's here.
     (`[data-account-open]`) and Change name, the Online pill's Log in, and
     the Multiplayer menu's You step all open the account card
     (`[data-account]`, `account-ui.ts`: Log in, Make an account, Forgot your
-    password, a reset link (`?reset=`), a first sign-in's username, and the
-    account: username, email, password, Google, Discord and wallet to add,
-    change or take off, Log out; it sits over the Multiplayer menu and the
-    start menu). The account and card are made with the page
+    password, a reset link's new password (`?reset=`), and the account:
+    username, email and password to change, Log out; it sits over the
+    Multiplayer menu and the start menu, and the menu carries on once
+    you're logged in). The account and card are made with the page
     (`CityMap.astro`), not with the 3D city, so they work on the 2D map
-    and before 3D has loaded. Google and Discord leave the page and come
-    back with `?login=<code>`; the menu carries on where it was
-    (`degen-city-mp-resume` for the tab). Only the player sees their email
-    and wallet; other players see the username.
+    and before 3D has loaded. Only the player sees their email; other
+    players see the username.
 - The site only shows the Online pill and the Online / Offline switch when
   built with `PUBLIC_GAME_SERVER` (set by the Worker's build). Only pages in
   `ALLOWED_ORIGINS`

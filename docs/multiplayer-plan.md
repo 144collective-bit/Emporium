@@ -45,10 +45,10 @@ them into the city.
 
 ### What the player sees
 
-1. **You** (before anything else): their player name (reroll it), their
-   Degen's look (changed at Drop 001 in the city), and how they play: as a
-   guest (kept for this browser) or logged in with a wallet (the same
-   profile in any browser). Guests are welcome everywhere.
+1. **You** (before anything else): Log in / Sign up (since step 2,
+   "Profiles and logging in" below, playing online needs an account);
+   logged in, their username, their Degen's look (changed at Drop 001 in
+   the city) and their account.
 2. **Pick a mode**: Hangout (the whole city, free roam), Free for all,
    Team deathmatch, Kart race and Fight Club. Modes not built yet are listed
    and say "coming soon".
@@ -112,8 +112,8 @@ them into the city.
      played in, `cleanCreate()`: only a ready mode on one of its maps).
    - The server: `/games` (GET `?mode=` lists, POST makes a private game),
      `/play?game=<id>` (a game that's gone gets a message and the socket
-     closes, 4006), `/me` and `/me/rename` (the profile before joining,
-     from the guest token or a wallet login). New profiles start fresh.
+     closes, 4006), `/me` (the profile before joining; since step 2 from
+     the account's session, `/me/rename` gone). New profiles start fresh.
    - The menu: `mp-menu.ts` (a chunk of its own, loaded when it's first
      opened; styles `mpmenu.css`): from the start menu's Multiplayer, an
      invite link (`?game=<id>&with=<name>`, tidied from the address once
@@ -144,19 +144,17 @@ until the owner picks multiplayer up again.
 
 ### What the owner picked
 
-- **Three ways in, one profile**: a **username and password**, **Google**
-  or **Discord**, and a **wallet** (the login that exists today). Any of
-  them can be linked to the same profile from the profile card, so one
-  player logs in whichever way is to hand.
+- **Simple** (the owner's call, 2026-10-24, after a first draft with
+  Google, Discord and wallets was built and taken out): an account is a
+  **username**, an **email** and a **password**, nothing else. No wallet
+  connect, no Google or Discord. Log in with the username or the email.
 - **Login required online**: multiplayer needs an account; single player
   never asks for one. Guest play online is retired, and **everyone starts
-  fresh**: today's guest profiles aren't carried over. A wallet that
-  already has a profile keeps it (it's an account already) and is asked to
-  pick a username.
+  fresh**: the guest and wallet profiles aren't carried over.
 - **Usernames are shown in game** (the owner's call, a change to "nothing a
   player types ever shows": the username is the one thing, and it goes
   through the filter below). The word-list names stay for the city's own
-  people and for an account whose name was removed.
+  people.
 - **The username filter**: 3 to 16 letters, digits, `_` and `-`, unique
   whatever the case; no rude words, links, wallet addresses or names that
   pretend to be staff (admin, mod, official, Sector 7, Emporium...); and a
@@ -164,13 +162,12 @@ until the owner picks multiplayer up again.
   the token's name is blocked without ever being written in the repo. The
   server checks it on sign-up and rename; the browser checks it first to
   say why.
-- **Forgot your password**: an email reset link. The email is required at
-  sign-up with a password (the owner's call; Google, Discord and wallet
-  sign-ups ask for it when they first set a password), kept private (never shown, never in a snapshot, only its owner
-  sees it on the profile card) and used for resets only. The sending
-  service is decided later: built for Resend's API behind a secret
-  (`EMAIL_API_KEY`); until one is added, "Forgot password" says it's coming
-  soon.
+- **Forgot your password**: a reset link sent to the account's email (the
+  email is required at sign-up, kept private: only its owner sees it, on
+  the account card, and it's used for resets only). The sending service
+  is decided later: built for Resend's API behind a secret
+  (`EMAIL_API_KEY`); until one is added, "Forgot your password?" says it's
+  coming soon.
 - **The plan is Workers Paid** ($5 a month), so passwords are hashed
   properly: PBKDF2-SHA256 with a salt each (Web Crypto, no package), at
   100,000 rounds, the most Cloudflare's Web Crypto takes (each hash keeps
@@ -180,36 +177,29 @@ until the owner picks multiplayer up again.
 
 ### How it works
 
-- **Accounts** (the `Accounts` Durable Object, which already holds the
-  wallet logins and sessions) gains users: an id, the username, the
-  password's hash and salt, the email, and the ways in linked to it
-  (`pw:<username>`, `google:<id>`, `discord:<id>`, `wallet:<address>`).
-  Sessions stay as they are: a 30-day token, only its hash stored.
-- **Username and password**: `/auth/signup` (username, password, email),
-  `/auth/login`, `/auth/forgot` and `/auth/reset` (a one-time link for 30
-  minutes, `?reset=<token>` on the site opens a "New password" card). Five
-  wrong tries in 15 minutes locks that username and that address for a
-  while; the answer never says which of the two was wrong.
-- **Google and Discord**: the standard sign-in (OAuth 2 with PKCE): the
-  button goes to the provider, which comes back to
-  `/auth/google/callback` or `/auth/discord/callback`, checked against a
-  one-time `state`; only the provider's account id is kept (never their
-  name, picture or email). A first sign-in that way asks for a username.
-  Each needs an app registered with the provider (step-by-step
-  instructions in `server/README.md`) and its id and secret added in
-  Cloudflare (`GOOGLE_CLIENT_ID` / `_SECRET`, `DISCORD_CLIENT_ID` /
-  `_SECRET`).
-- **Wallet**: as today (one signed message, no transaction, no gas), now
-  a way into an account.
-- **Joining**: `/play` and `/games` refuse without a session; the room
-  opens the account's profile. The guest token is no longer sent.
-- **On screen**: the Multiplayer menu's first step, You, becomes Log in /
-  Sign up (username and password, Continue with Google, Continue with
-  Discord, Connect wallet) until you're logged in; then your username,
-  look and Log out. The header's Connect wallet button becomes **Log in**
-  and opens the same card, which also links the other ways in, changes
-  the username, password and email, and logs out. No outside links but
-  the providers' own sign-in pages.
+- **Accounts** (the `Accounts` Durable Object): users (an id, the
+  username, the email, the password's hash and salt, the name of its
+  Profile), looked up by username or email; sessions are a 30-day token,
+  only its hash stored.
+- **The routes**: `/auth/signup` (username, email, password),
+  `/auth/login` (username or email, password), `/auth/forgot` and
+  `/auth/reset` (a one-time link for 30 minutes to the account's email;
+  `?reset=<token>` on the site opens a "Pick a new password" card),
+  `/auth/me`, `/auth/username`, `/auth/email` and `/auth/password` (the
+  last two need the current password), `/auth/logout`, `/auth/config`
+  (whether reset emails are set up). Five wrong tries in 15 minutes lock
+  that username for 15 minutes (an address after 25); the answer never
+  says which of the two was wrong, and "Forgot your password?" answers the
+  same whether or not the account exists.
+- **Joining**: `/play`, `/games` and `/me` refuse without a session; the
+  room opens the account's profile.
+- **On screen**: the Multiplayer menu's first step, You, is Log in / Sign
+  up until you're logged in; then your username, rank, look and Your
+  account. The header's **Log in** button (the username once logged in),
+  the walk Profile tab's Log in and Change name and the Online pill's Log
+  in open the same card: Log in, Make an account, Forgot your password, a
+  reset link's new password, and the account (username, email, password
+  to change, Log out).
 
 ### Steps (each with the owner's sign-off)
 
@@ -219,31 +209,24 @@ until the owner picks multiplayer up again.
     whole parts so "classic" and "scrape" pass, staff-like names, the
     owner's `blockedList()`), `passwordProblem()`, `emailOk()`, and the
     account API's shapes (`AuthConfig`, `AccountMe`, `AuthAnswer`).
-  - The server: `server/src/accounts.ts` (the routes under `/auth/`,
-    listed in `server/README.md`) and `server/src/login.ts` (what needs no
-    Cloudflare: PBKDF2-SHA256 at 100,000 rounds, the most Cloudflare's Web
-    Crypto takes, each hash keeping its count so a later raise re-hashes on
-    the next login; the lock-out, 5 wrong tries for a username and 25 for
-    an address; the OAuth helpers; the reset email). Google and Discord
-    come back to the Worker, which sends the player on to the site with a
-    one-time code (`?login=`), never a token in the address. Each account
+  - The server: `server/src/accounts.ts` (the routes above) and
+    `server/src/login.ts` (what needs no Cloudflare: the password hashes,
+    the lock-out, where a reset link opens, the reset email). Each account
     opens one Profile under its username; the room takes the session in
     the hello (`PROTOCOL` 5) and turns away anyone without one ("Log in to
-    play online", close 4005). The guest token is gone.
-  - The site: `account.ts` (the session, kept as `degen-city-account-v1`),
-    `account-ui.ts` (the card: Log in, Make an account, Forgot your
-    password, a reset link's new password, a first sign-in's username, and
-    the account with its ways in to add, change or take off; over the
-    Multiplayer menu), the Multiplayer menu's You step (Log in / Sign up
-    until logged in; where it was is kept for the tab while Google or
-    Discord have the page, `degen-city-mp-resume`), the header's Log in
-    button, the Profile tab's Change name, the Online pill's Log in.
+    play online", close 4005). The guest token, the wallet login and its
+    packages (WalletConnect, the signature library) are gone.
+  - The site: `account.ts` (the session, kept as `degen-city-account-v1`)
+    and `account-ui.ts` (the card, over the Multiplayer menu and the start
+    menu), the Multiplayer menu's You step, the header's Log in button, the
+    Profile tab's Change name, the Online pill's Log in.
   - Tested: `tests/login.test.ts` (the filter, passwords, emails, hashes,
-    the lock-out, the sign-in URLs and ids); the routes end to end against
-    `wrangler dev` (signing up, logging in by name or email, the lock-out,
-    renames, passwords, a wallet's first sign-in and linking, joining a
-    game with and without a session) and in a browser. Google's and
-    Discord's own round trips wait for their apps (`server/README.md`).
+    the lock-out, the reset link and email); the routes end to end against
+    `wrangler dev` (signing up, logging in by username or email, the
+    lock-out, renames, changing the email and password, a made-up reset
+    link, Forgot your password with and without an email key, joining a
+    game with and without a session) and in a browser. A real reset email
+    waits for the email service's key (`server/README.md`).
 - **B. Settings and friends**: the Controls panel's settings, sound and
   the view saved on the account; friends added from the players in your
   game, a list showing who's online and in which game, with Join.
@@ -258,7 +241,7 @@ until the owner picks multiplayer up again.
 | PvP places | Arena maps of their own (the junkyard first), walled off from the city; the Fight Club's ring. Never in the hangout city. |
 | PvP rules | 100 health, regen after a few seconds without damage, cartoon knock-out (no gore), respawn after 3 s with brief spawn protection, kill feed ("tagged"). |
 | Room size | Up to 16 players per city; more cities ("City 1", "City 2"…) open automatically. |
-| Identity | (The owner's call, built in step 2) An account is needed online, logged into with a username and password, Google, Discord or a wallet, all linkable to one profile; the username, filtered, is the name others see; everyone starts fresh. |
+| Identity | (The owner's call, built in step 2) An account is needed online: a username, an email and a password, nothing else; the username, filtered, is the name others see; a forgotten password is reset by a link to the email; everyone starts fresh. |
 | Chat | Emote wheel and fixed phrases only. Nothing typed ever appears in public. Players can mute others. |
 | What others see | Outfit and colours, the gun they carry and its finish, name tag, rank badge. |
 | Saved | Server-side player profiles (name, outfit, finish, lifetime score, rank), and the online profile's own progress, starting fresh (above); daily and weekly leaderboards (no prizes). |

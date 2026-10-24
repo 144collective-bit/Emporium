@@ -1,36 +1,16 @@
 /*
  * Logging in to an account (docs/multiplayer-plan.md, "Profiles and logging
  * in"), shared by the site and the game server: the rules for usernames,
- * passwords and emails, the shape of the server's account API, the
- * PulseChain networks a wallet can be on and the message a wallet signs.
- * No DOM or scene code (the server bundles this).
+ * passwords and emails, and the shape of the server's account API. No DOM
+ * or scene code (the server bundles this).
  *
- * An account is opened with a username and password, Google, Discord or a
- * wallet, any of them linked to the same profile. The username is the one
- * thing a player types that others see (the owner's call), so it goes
- * through `usernameProblem()` on the way in, in the browser and again on
- * the server; the email is private (its owner sees it, nobody else).
+ * An account is a username, an email and a password (the owner's call:
+ * simple, nothing else). The username is the one thing a player types that
+ * others see, so it goes through `usernameProblem()` on the way in, in the
+ * browser and again on the server; the email is private (its owner sees
+ * it, nobody else) and is where a password reset link goes.
  */
 import type { OwnProfile } from './protocol';
-
-export interface Chain {
-  id: number;
-  name: string;
-  /** Short label for the wallet chip */
-  short: string;
-  symbol: string;
-  rpc: string;
-  explorer: string;
-  testnet: boolean;
-}
-
-/** The networks the server can be set to (AUTH_CHAIN_ID) */
-export const CHAINS: Record<number, Chain> = {
-  369: { id: 369, name: 'PulseChain', short: 'PulseChain', symbol: 'PLS', rpc: 'https://rpc.pulsechain.com', explorer: 'https://scan.pulsechain.com', testnet: false },
-  943: { id: 943, name: 'PulseChain Testnet v4', short: 'Testnet', symbol: 'tPLS', rpc: 'https://rpc.v4.testnet.pulsechain.com', explorer: 'https://scan.v4.testnet.pulsechain.com', testnet: true },
-};
-
-export const isAddress = (s: unknown): s is string => typeof s === 'string' && /^0x[0-9a-fA-F]{40}$/.test(s);
 
 /* ---------- Usernames ---------- */
 
@@ -121,53 +101,20 @@ export const emailKey = (s: string) => s.trim().toLowerCase();
 
 /* ---------- The account API ---------- */
 
-/** The ways into an account */
-export const WAYS = ['password', 'google', 'discord', 'wallet'] as const;
-export type Way = (typeof WAYS)[number];
-/** The sign-in providers (OAuth) */
-export const PROVIDERS = ['google', 'discord'] as const;
-export type Provider = (typeof PROVIDERS)[number];
-export const PROVIDER_NAMES: Record<Provider, string> = { google: 'Google', discord: 'Discord' };
-
-/** What the server has set up (GET /auth/config): which buttons to show */
+/** What the server has set up (GET /auth/config) */
 export interface AuthConfig {
-  google: boolean;
-  discord: boolean;
   /** Reset links can be emailed (an email service's key is set) */
   email: boolean;
-  chain: number;
 }
 
 /** A logged-in account (GET /auth/me): only its owner ever sees this */
 export interface AccountMe {
   username: string;
-  email: string | null;
-  ways: { password: boolean; google: boolean; discord: boolean; wallet: string | null };
-  chain: number;
+  email: string;
   profile: OwnProfile;
 }
 
-/**
- * The answer to a way in: a session (`token`), or, for a first sign-in with
- * Google, Discord or a wallet, a short-lived `pending` pass to finish with a
- * username (POST /auth/finish).
- */
-export type AuthAnswer = { token: string } | { pending: string; way: Way };
-
-/** "0x1234…abcd" */
-export const shortAddr = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
-
-/** The message a visitor signs to log in with their wallet (no transaction, no gas) */
-export function signInMessage(o: { origin: string; address: string; chain: number; nonce: string; issued: string }) {
-  return [
-    'Sector 7 wants you to log in with your PulseChain wallet:',
-    o.address,
-    '',
-    'This only proves you hold this wallet: it logs you in to your player profile. It does not send a transaction or cost gas.',
-    '',
-    `URI: ${o.origin}`,
-    `Chain ID: ${o.chain}`,
-    `Nonce: ${o.nonce}`,
-    `Issued At: ${o.issued}`,
-  ].join('\n');
+/** Signing up, logging in or a reset link answered: a session */
+export interface AuthAnswer {
+  token: string;
 }

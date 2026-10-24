@@ -13,8 +13,8 @@
  *   Playing online needs an account: /play, /games and /me all want its
  *   session (`Authorization: Bearer <token>`; in the hello for /play).
  *
- * - /auth (HTTP, JSON): accounts and logging in (a username and password,
- *   Google, Discord or a wallet), see accounts.ts.
+ * - /auth (HTTP, JSON): accounts and logging in (a username, an email and a
+ *   password), see accounts.ts.
  * - Everything else: the website itself (static files built into ../dist).
  *
  * Only pages listed in ALLOWED_ORIGINS can connect.
@@ -36,18 +36,11 @@ export interface Env {
   /** The built website (wrangler.jsonc "assets") */
   ASSETS?: Fetcher;
   ALLOWED_ORIGINS: string;
-  /** The network wallets log in on: 943 (PulseChain Testnet v4) or 369 (PulseChain) */
-  AUTH_CHAIN_ID?: string;
   /**
-   * Secrets (server/README.md): Google's and Discord's sign-in apps, the email
-   * service's key and sender for reset links (Resend), and the owner's private
-   * list of names no username may hold (comma separated). Each one missing
-   * just leaves its part out.
+   * Secrets (server/README.md): the email service's key and sender for reset
+   * links (Resend), and the owner's private list of names no username may
+   * hold (comma separated). Without the key, resets say they're coming soon.
    */
-  GOOGLE_CLIENT_ID?: string;
-  GOOGLE_CLIENT_SECRET?: string;
-  DISCORD_CLIENT_ID?: string;
-  DISCORD_CLIENT_SECRET?: string;
   EMAIL_API_KEY?: string;
   EMAIL_FROM?: string;
   BLOCKED_NAMES?: string;
