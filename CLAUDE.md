@@ -27,23 +27,23 @@ it and has been retired completely. Build only on what's here.
 
 ## Design rules
 
-- The homepage is Sector 7 in two layers, both in Degen's style (black ink
-  outlines, flat cartoon shading, PulseChain neon):
+- The homepage is Sector 7 in 3D, in Degen's style (black ink outlines,
+  flat cartoon shading, PulseChain neon):
   - **3D** (`src/scripts/city3d/`, three.js): toon materials, ink outlines
     from a normal/depth post-pass, bloom, day/night (midday by default,
     the visitor's clock on Live),
     weather, traffic, people, optional synthesised sound. Clicking a
     building flies the camera in and opens a glass panel.
-  - **2D** (`src/lib/city.ts`): the isometric SVG map. It's the loading
-    poster, the fallback without WebGL, and the "2D map" view.
-  Both layers share downtown's layout (`streetplan.ts`, `downtown.ts`); keep
-  them in step when buildings change. The ring roads and plot districts exist
-  in 3D only (on the 2D map the diagonals simply run on out of town). Pin
-  copy and panel copy live in `src/components/CityMap.astro`.
+  - **The 2D map was retired** (the owner's call, river plan step 1): no
+    loading poster, no 2D view, no fallback. Where 3D can't run (no WebGL
+    2, or `bootCity()` returns null) the page shows a card saying Sector 7
+    needs a device with 3D graphics (`[data-no3d]`, `no3d()` in
+    `CityMap.astro`; `data-view` is `loading`, then `3d` or `none`).
+    `src/lib/city.ts` holds only the place ids (`SpotId`) and pin copy type.
+    Don't bring the 2D map back without the owner.
+  Pin copy and panel copy live in `src/components/CityMap.astro`.
 - **Buildings are places in the city's game** (the owner's call): each opens
-  its own panel (a game menu), never the comic page or an outside link. On
-  the 2D map a building takes you into the 3D city and opens its panel
-  (`city.open()`). The comic page (`/emporium`), the merch store and X /
+  its own panel (a game menu), never the comic page or an outside link. The comic page (`/emporium`), the merch store and X /
   Telegram live in the ☰ Menu only. Places not built yet say "coming soon"
   (the plan is `docs/tycoon-plan.md`).
 - **The redesign** (the owner's call): the city is moving from a grid to an
@@ -57,9 +57,8 @@ it and has been retired completely. Build only on what's here.
   tested in `tests/streetplan.test.ts`). Phases 2 (downtown) and 3 (the
   outer districts) are built; Phase 4 is polish. Prices of plots and lots
   don't change in the redesign.
-- **Downtown** is `downtown.ts` (DOM-free; the 3D city, the 2D map, the plan,
-  collisions and the server read it), drawn by `infill.ts` in 3D and by
-  `downtown()` in `city.ts` on the 2D map:
+- **Downtown** is `downtown.ts` (DOM-free; the 3D city, the plan,
+  collisions and the server read it), drawn by `infill.ts`:
   - 0-60 on both axes inside the ring, cut in thirds by the cross streets at
     17 and 43 (`CORE_ROADS`, lit junctions). Three diagonals (`DIAGONALS`)
     run in from the ring's north-west, north-east and south-west corners to
@@ -76,7 +75,7 @@ it and has been retired completely. Build only on what's here.
     does; dressed with a wall lamp and its pool of light (`ALLEY_LAMPS`,
     `addPool()` in `world.ts`), a drainpipe, and pallets, crates and a bin
     (`ALLEY_PROPS`, solid, against the walls so the middle stays clear)). Each building has a type (`InfillType`, drawn by `building()` in
-    `infill.ts` and `infill()` in `city.ts`): brownstone walk-ups (stoop,
+    `infill.ts`): brownstone walk-ups (stoop,
     bay window, bracketed cornice), shops (fascia sign, striped awning, blade
     sign, fire escapes), diners (rooftop sign, tables out front), lofts
     (roll-up doors, sawtooth roofs), offices (glass tower set back on a
@@ -180,7 +179,7 @@ it and has been retired completely. Build only on what's here.
   crosses them (`highwayGaps()`), and the outskirts' trees keep off it and
   its slips (`treeSpot()`).
 - **The street plan** is `src/scripts/city3d/layout.ts` (DOM-free; the 3D
-  city, the 2D map, the plots and the server all read it). 1 tile is about
+  city, the plots and the server all read it). 1 tile is about
   1.8 m and Degen is about one tile tall. Roads are sized for real-proportion
   cars: lanes 1.7 wide, a 0.8 sidewalk round every block and district.
   Downtown's cross streets (`CORE_ROADS`, at 17 and 43) and the diagonals
@@ -188,7 +187,7 @@ it and has been retired completely. Build only on what's here.
   9-wide avenues, two lanes each way with a median (`NS_ROADS`, `EW_ROADS`,
   `laneCentres()`). Districts and the extra lots sit on lines centred on
   downtown's thirds (`BLOCKS`). The landmarks, their collision boxes, doors,
-  dummies and the 2D buildings are still written on the old drawing grid
+  and dummies are still written on the old drawing grid
   (blocks at 0, 11, 22) and moved onto their lots with `design()` /
   `designBox()` / `seat()` (`SEATS`; in `landmarks.ts`, `onBlock()` does it
   for each block's scene objects; the Emporium is `emporium.ts`, the Armoury
@@ -228,7 +227,6 @@ it and has been retired completely. Build only on what's here.
     view); M, Esc or × close it. Tapping a place opens a card: Open and
     Walk here (City view), Set waypoint, Taxi here, Fast travel (on foot,
     places you've been); yourself: Bring my car; open ground: a waypoint.
-    It isn't the 2D poster (`city.ts`), which stays downtown's.
   - **Waypoints** (`travel-ui.ts`, which wires the map in): a magenta beam
     (`beacons.waypoint()`) and the compass in the walk HUD (`[data-compass]`,
     top right: an arrow, metres, the name, an ×), cleared when you're there.
@@ -1060,8 +1058,7 @@ it and has been retired completely. Build only on what's here.
   - Copy from the config is shown as text only (`textContent`), one line,
     cut to `TEXT_MAX`.
 - Keep the city's motion optional: under `prefers-reduced-motion` the 3D
-  city stands still (no fly-in, no traffic), CSS animations stop and the 2D
-  map's SMIL traffic is paused. It's drawn only when something changes
+  city stands still (no fly-in, no traffic) and CSS animations stop. It's drawn only when something changes
   (`dirty` in index.ts): what's built as you go asks for a frame at most
   once a second (`builtShows()`). Sound is always off until the visitor
   turns it on.
@@ -1084,10 +1081,7 @@ it and has been retired completely. Build only on what's here.
   atlases, the long signs) at half size, a quarter of the memory
   (`canvasTex()` in `kit.ts`; a draw function works in the numbers it
   asked for and never knows; a texture redrawn live in pixels afterwards
-  must stay under that size, and goes through `liveTex()`). The 2D map isn't in the page until it's
-  shown: it waits, inert, in a `<template data-map-tpl>` (`mountMap()` in
-  `CityMap.astro`, from `show2d()`), so the 3D city's boot never lays it
-  out. Phones draw the bloom at 3 of its 5 blur levels (`bloomMips` in
+  must stay under that size, and goes through `liveTex()`). Phones draw the bloom at 3 of its 5 blur levels (`bloomMips` in
   `post.ts`: a softer glow, 4 fewer passes a frame); desktop draws all 5.
 - **Start-up stays light** (performance phase 2,
   `docs/performance-plan.md`):
@@ -1369,15 +1363,14 @@ it and has been retired completely. Build only on what's here.
   (`tests/fixtures/layout.json`; a street's end at the world's edge is
   `'edge'`). Nothing that exists moves; only when the owner moves something
   on purpose, rewrite it with `UPDATE_SNAPSHOT=1 npm test -- snapshot`.
-- The Emporium arcade tower (`emporium()` in `emporium.ts`, and in
-  `city.ts` for the 2D map) is the centrepiece: keep it the tallest, most
+- The Emporium arcade tower (`emporium()` in `emporium.ts`) is the centrepiece: keep it the tallest, most
   detailed building. Its LED wall shows (`drawWall`), pixel font, ticker and
   signs use fixed copy only (Insert coin, Player 1, Game on, Hi score with
   made-up names, GM degens, Arcade, Prizes); never put token details on
   them. The rooftop hologram is `createDegen()` in hologram light. Its
   podium, claw machines and prize booth are mirrored in `walk.ts`
   (`SOLIDS`, `CAMERA_ONLY`).
-- The Armoury (`armoury()` in `armoury.ts` and `city.ts`) is a modern
+- The Armoury (`armoury()` in `armoury.ts`) is a modern
   military compound and the players' gun store, not a castle: blast walls
   with razor wire, steel watchtowers, a checkpoint (booth, boom barrier, sign
   gantry) and a flat-roofed concrete gun store with a shopfront, canopy sign
@@ -1750,13 +1743,13 @@ it and has been retired completely. Build only on what's here.
   always-visible city overlay to that list.
 - **The start menu** (the owner's call): on every open, `[data-start]` in
   `CityMap.astro` (styles `src/styles/start.css`) covers the whole page
-  while the 3D city boots behind it, so the 2D map is never seen loading.
+  while the 3D city boots behind it.
   Single player enters the city (the fly-in runs again, `city.intro()` in
   `index.ts`); every visit opens at Day and Clear (the owner's call: Live
   and Auto, or any other time or weather, are the visitor's to pick, for
   that visit only); Multiplayer says "Coming soon" without `PUBLIC_GAME_SERVER`
   and flips the Online switch on and enters with one; Options holds Time,
-  Weather, Sound and the view (3D city / 2D map), driving the header's own
+  Weather and Sound, driving the header's own
   settings controls (pressed when the city is up, queued until then). The
   root carries `has-start` until a choice is made; the loader and the
   welcome tip wait behind it. Gradient-bordered buttons, white text.
@@ -1764,13 +1757,13 @@ it and has been retired completely. Build only on what's here.
   `CityMap.astro`, copy in `head.ts`), slim dark glass. The site bar
   (`Nav.astro`) is left out there (`<Base nav={false}>`) and stays on the
   other pages. Left to right: the logo (home link), the mode title and
-  subtitle (City view, Walk mode, Build mode, City map (2D)), then on the
+  subtitle (City view, Walk mode, Build mode), then on the
   right (walk tabs, ammo and score while walking), the City / Walk / Build
   switch (the current mode lit with a glow and a gradient underline, the
   others dimmed), and the tools: in Build mode a Plots button
   (`[data-builder-bar]`, painted by `builder-ui.ts`: what you own, your
   Dorras and the next plot's price), a ⚙ Settings button (time, weather, sound, reset
-  view, 2D map; 3D only, not while walking; never open by default) and a
+  view; 3D only, not while walking; never open by default) and a
   ☰ Menu (the city's places, 3D only (`.dir-places`); then under "More" the
   Emporium comic page and the merch store (`.dir-links`); then PulseChain
   native, X and Telegram; not while walking). Left of them, in the 3D city
@@ -1795,7 +1788,7 @@ it and has been retired completely. Build only on what's here.
 - Check every change at 320, 375, 768, 1024 and 1440px wide: no sideways
   scroll, no text clipped by a slanted edge.
 - Styles: `global.css` (the site: tokens, the comic page, the nav, small
-  screens and reduced motion), `city.css` (the city page: the 2D map, pins,
+  screens and reduced motion), `city.css` (the city page: pins,
   panels, the mode header, Settings, the Menu), `walk.css` (walk mode, its
   HUD, the fitting room, the gun store, driving), `economy.css` (the business
   card, the market hall and the tycoon panels), then a file per game screen.
@@ -2127,7 +2120,7 @@ it and has been retired completely. Build only on what's here.
   localStorage needs its key in `BACKUP_KEYS` and a loader that cleans what
   it reads.
 - **The Apartments** (the tower in the north block, east of the Signal tower, `apartments()` in
-  `landmarks.ts` and `city.ts`) are a place since Phase 3: spot
+  `landmarks.ts`) are a place since Phase 3: spot
   `apartments`, its pin, door (`DOORS`) and panel. The Emporium stays first
   in the 3D `spots` list.
 
@@ -2733,7 +2726,7 @@ it and has been retired completely. Build only on what's here.
   "Connect" on phones) and in the walk Profile tab (`[data-account-open]`);
   both open the profile card (`[data-account]`). The account and card are
   made with the page (`CityMap.astro`), not with the 3D city, so they work
-  on the 2D map and before 3D has loaded; `bootCity()` gets them and fills
+  before 3D has loaded; `bootCity()` gets them and fills
   in their `hooks` (Online switch, rename, Build mode). The card shows:
   player name, rank, lifetime score, the wallet (short) and network, and the
   with New name and Log out. Only the visitor sees their own address; other

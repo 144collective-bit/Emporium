@@ -46,14 +46,22 @@ steps, each with the owner's sign-off; keep this plan up to date.
 
 ## Steps
 
-1. **The river** (this step): `RIVER_W` 60; the south bank, The Trenches,
+1. **The river** (built): `RIVER_W` 60; the south bank, The Trenches,
    the airport and the metro's south end move south (`WIDEN`); the highway's
    south side moves out; the river's natural shape (`river.ts`: its edges
    at any x, the quays, the coves and the banks), drawn with stone quays,
    grass banks, sand and reeds; walking, driving, boats, trees, the world
    map and the sound follow its edges; the four avenue bridges removed
    (traffic re-routes itself), the east avenue's crossing kept plain until
-   step 2; the 2D map removed.
-2. **The new bridge** on the east avenue, carrying the metro.
-3. **Liberty Bridge** in the style of Tower Bridge.
+   step 2 (the el's pillars on its median over the water); the 2D map
+   removed (a card says the city needs 3D graphics where it can't run).
+   The airliners were re-timed for their longer loop round the moved
+   airport, the outskirts' tree densities re-measured, and the boot code's
+   budget raised from 658 to 662 KB for the river (`scripts/budget.mjs`).
+2. **The new bridge** on the east avenue, carrying the metro (next; its
+   name is the owner's pick).
+3. **Liberty Bridge** in the style of Tower Bridge (to ask first: whether
+   its high walkways are climbed in walk mode, and whether the lower deck's
+   halves lift for tall boats). Until then it stretches over the wider water
+   on its old supports.
 4. **River life:** more boats, perhaps islands and a ferry (to be asked).

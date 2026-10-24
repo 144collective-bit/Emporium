@@ -922,7 +922,7 @@
   .city {
     --head-h: 48px;
   }
-  /* Two rows. City, Build and the 2D map: logo, title, settings and menu, then City / Walk / Build
+  /* Two rows. City and Build: logo, title, settings and menu, then City / Walk / Build
      across the width with their names. Walking: the title and the switch, then the walk tabs,
      ammo and score. */
   .city-head {

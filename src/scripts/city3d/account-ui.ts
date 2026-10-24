@@ -3,7 +3,7 @@
  * does the talking). Opened from the Connect wallet button in the site
  * header and from the Profile tab while walking; closes with its ×, a tap
  * outside or Esc. It's made with the page (CityMap.astro), not with the 3D
- * city, so it works on the 2D map too and before the 3D city has loaded;
+ * city, so it works before the 3D city has loaded;
  * the 3D city plugs its parts in through `hooks` once it's up (index.ts).
  *
  * The card shows the player name (from the word lists, never typed), rank

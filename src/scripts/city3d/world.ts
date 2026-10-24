@@ -2,7 +2,7 @@
  * The ground the city stands on: grass, roads with markings, the river and
  * its bridges, block slabs, trees, street lamps and a skyline in the haze.
  *
- * World units: 1 = one map tile. x and z match the 2D map's x and y; y is up.
+ * World units: 1 = one map tile (about 1.8 m); y is up.
  * The street plan is layout.ts and streetplan.ts (`PLAN`): downtown (0-60)
  * crossed by two cross streets each way and three diagonals, its blocks cut
  * into lots, triangles, pocket parks and the hangout square (downtown.ts);

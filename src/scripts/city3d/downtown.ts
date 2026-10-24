@@ -1,6 +1,6 @@
 /*
  * Downtown as data: what stands where inside the ring, DOM-free like
- * layout.ts, so the 3D city (infill.ts), the 2D map, collisions (solids.ts),
+ * layout.ts, so the 3D city (infill.ts), collisions (solids.ts),
  * the street plan (streetplan.ts) and the game server all read one layout.
  *
  * Downtown is 0-60 on both axes. Two straight streets each way cross it

@@ -1,9 +1,11 @@
 /*
- * Sector 7 in 3D. Boots on top of the 2D map (which stays as the loading
- * poster and the fallback), then takes over: camera fly-in, buildings you can
- * hover and click, glass panels, time of day, weather and sound.
+ * Sector 7 in 3D. Boots behind the start menu (CityMap.astro), then takes
+ * over: camera fly-in, buildings you can hover and click, glass panels, time
+ * of day, weather and sound. Where it can't start, `bootCity()` returns null
+ * and the page says the city needs 3D graphics.
  */
 import * as THREE from 'three';
+import { WIDEN } from './layout';
 import { MapControls } from 'three/addons/controls/MapControls.js';
 import { BAKING_TEXTURES, PICK, builtTexturesDone, consolidate, loadBuiltTextures, loadImage, loadTex, updateLights, updateWind } from './kit';
 import { SWAY, windStrength } from './dusk';
@@ -138,7 +140,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     return r;
   };
 
-  // Renderer first: if WebGL is missing, stay on the 2D map
+  // Renderer first: if WebGL is missing, give up (the page says the city needs 3D graphics)
   let renderer: THREE.WebGLRenderer;
   try {
     renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance', alpha: false });
@@ -242,7 +244,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // Uptown's spire as a place, Sector 7 Tower (finance plan Phase 6): its spot only (the tower is Uptown's, drawn as a site)
   spots.push(buildTower(scene).spot);
   // ...and the metro's el where it crosses the open land south of the south row: no trees under it
-  keepTreesOff([-10, 125, 56, 135]);
+  keepTreesOff([-10, 125 + WIDEN, 56, 135 + WIDEN]);
   // Westlake Park (growth plan Phase 9b): its land is the street plan's; its trees and lamps stand with the town's
   // (from its data: phones leave out every other tree of its lawns' clumps, the trim); the rest of it is a chunk
   // of its own, loaded as you approach (districts.ts)
@@ -1478,7 +1480,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   loop();
 
   return {
-    /** Open a building's panel (the 2D map's buildings come here) */
+    /** Open a building's panel (the owner's notices' Go button comes here) */
     open(id: string) {
       open(id);
     },

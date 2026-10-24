@@ -685,7 +685,7 @@ export function place(geo: THREE.BufferGeometry, x: number, y: number, z: number
   return g;
 }
 
-/** Box from its min corner (x, y, z) and size, like the 2D map's prisms. */
+/** Box from its min corner (x, y, z) and size. */
 export function boxAt(x: number, y: number, z: number, w: number, h: number, d: number) {
   return place(unitBox, x + w / 2, y + h / 2, z + d / 2, w, h, d);
 }
