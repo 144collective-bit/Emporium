@@ -20,7 +20,7 @@
  */
 import * as THREE from 'three';
 import { type Bvh, type BvhPose, poseBvh, jointIndex } from './bvh';
-import { MOCAP_FPS, NB, PARENT, type MoClip, type MoData } from './mocap';
+import { MB, MOCAP_FPS, NB, PARENT, type MoClip, type MoData } from './mocap';
 import { ANKLE_H, SHIN_GROUND, THIGH, WRIST_Y, WRIST_Z } from './skeleton';
 
 /** A take to use: the file, what to call the clip, and the seconds of it (after the T-pose) */
@@ -31,6 +31,8 @@ export interface Take {
   to?: number;
   /** Made into a seamless loop of the take's best cycle, this many times round (`loopClip()`) */
   loop?: number;
+  /** The loop's cycle, shortest and longest (seconds; a step's 0.5 to 1 if not said: standing still breathes slower) */
+  cycle?: [number, number];
   /**
    * The take's real frame rate, where its file says otherwise: cgspeed's
    * conversion writes 120 for every file, but subject 143 was captured at
@@ -73,7 +75,7 @@ function mapping(): Link[] {
     ['Right', -1],
     ['Left', 1],
   ] as const)
-    out.push([`${src}Shoulder`, `=${src}Arm`, v(s, 0, 0)], [`${src}Arm`, `${src}ForeArm`, v(0, -1, 0)], [`${src}ForeArm`, `${src}Hand`, v(0, WRIST_Y, WRIST_Z)], [`${src}Hand`, `${src}FingerBase`, v(0, -1, 0)]);
+    out.push([`${src}Shoulder`, `=${src}Arm`, v(s, 0, 0)], [`${src}Arm`, `${src}ForeArm`, v(0, -1, 0)], [`${src}ForeArm`, `${src}Hand`, v(0, WRIST_Y, WRIST_Z)], [`${src}Hand`, `${src}HandIndex1`, v(0, -1, 0)]);
   for (const [src] of [['Right'], ['Left']] as const)
     out.push([`${src}UpLeg`, `${src}Leg`, v(0, -1, 0)], [`${src}Leg`, `${src}Foot`, v(0, -1, 0)], [`${src}Foot`, `=${src}ToeBase`, v(0, 0, 1)], [`${src}ToeBase`, '', v(0, 0, 1)]);
   return out;
@@ -187,8 +189,94 @@ export function retarget(b: Bvh, take: Take): MoClip {
     d.toArray(hips, f * 3);
     qy.multiply(hipsR[f]).toArray(locals, f * NB * 4);
   }
+  despike(locals, n);
+  calmHands(locals, n);
+  calmToes(locals, n);
   const clip = { name: take.name, frames: n, root, hips, rot: locals };
-  return take.loop ? loopClip(clip, take.loop) : clip;
+  return take.loop ? loopClip(clip, take.loop, take.cycle) : clip;
+}
+
+/**
+ * The capture's hands: CMU's hand joint has few markers, so its turn about
+ * the forearm jumps about (up to 40° in one frame, 75° off the forearm in
+ * a walk). Each hand keeps `twist` of it and `bend` of the rest, smoothed
+ * over `sigma` seconds and held inside `most` radians: a relaxed hand that
+ * follows the forearm.
+ */
+export const HANDS = { twist: 0.35, bend: 0.6, sigma: 0.12, most: 0.4 };
+/**
+ * The capture's glitches: a bone that jumps away for a frame and straight
+ * back (`walk-eight`'s spine, chest and neck threw 24-49° for one frame) is
+ * put back between its neighbours. A frame is one when it's at least `jump`
+ * radians from both and they're within `back` of that of each other
+ */
+export const SPIKE = { jump: 0.14, back: 0.5 };
+/** The toes: CMU's toe markers are the noisiest, so the toes are smoothed over `sigma` seconds */
+export const TOES = { sigma: 0.03 };
+const qs1 = new THREE.Quaternion();
+const qs2 = new THREE.Quaternion();
+const qs3 = new THREE.Quaternion();
+function despike(rot: Float32Array, n: number) {
+  for (let pass = 0; pass < 2; pass++)
+    for (let b = 0; b < NB; b++)
+      for (let f = 1; f < n - 1; f++) {
+        qs1.fromArray(rot, ((f - 1) * NB + b) * 4);
+        qs2.fromArray(rot, (f * NB + b) * 4);
+        qs3.fromArray(rot, ((f + 1) * NB + b) * 4);
+        const a = qs1.angleTo(qs2);
+        const c = qs2.angleTo(qs3);
+        if (a > SPIKE.jump && c > SPIKE.jump && qs1.angleTo(qs3) < SPIKE.back * Math.min(a, c)) qs1.slerp(qs3, 0.5).toArray(rot, (f * NB + b) * 4);
+      }
+}
+function calmToes(rot: Float32Array, n: number) {
+  const s = TOES.sigma * MOCAP_FPS;
+  const q = new THREE.Quaternion();
+  for (const b of [MB.toeL, MB.toeR]) {
+    // (each frame's quaternion on the same side as the last, so the averages never cancel)
+    const ch = [[], [], [], []] as number[][];
+    let px = 0;
+    let py = 0;
+    let pz = 0;
+    let pw = 1;
+    for (let f = 0; f < n; f++) {
+      q.fromArray(rot, (f * NB + b) * 4);
+      if (q.x * px + q.y * py + q.z * pz + q.w * pw < 0) q.set(-q.x, -q.y, -q.z, -q.w);
+      ({ x: px, y: py, z: pz, w: pw } = q);
+      ch[0].push(q.x);
+      ch[1].push(q.y);
+      ch[2].push(q.z);
+      ch[3].push(q.w);
+    }
+    const [sx, sy, sz, sw] = ch.map((c) => gauss(c, s));
+    for (let f = 0; f < n; f++) q.set(sx[f], sy[f], sz[f], sw[f]).normalize().toArray(rot, (f * NB + b) * 4);
+  }
+}
+const HAND_BONES = [MB.handL, MB.handR];
+function calmHands(rot: Float32Array, n: number) {
+  const q = new THREE.Quaternion();
+  const e = new THREE.Euler();
+  for (const b of HAND_BONES) {
+    const xs: number[] = [];
+    const ys: number[] = [];
+    const zs: number[] = [];
+    for (let f = 0; f < n; f++) {
+      e.setFromQuaternion(q.fromArray(rot, (f * NB + b) * 4), 'YXZ');
+      xs.push(e.x);
+      // (unwrapped, so the smoothing never averages across ±π)
+      let y = e.y;
+      if (f) while (y - ys[f - 1] > Math.PI) y -= Math.PI * 2;
+      if (f) while (y - ys[f - 1] < -Math.PI) y += Math.PI * 2;
+      ys.push(y);
+      zs.push(e.z);
+    }
+    const s = HANDS.sigma * MOCAP_FPS;
+    const [sx, sy, sz] = [gauss(xs, s), gauss(ys, s), gauss(zs, s)];
+    const clamp = (a: number) => THREE.MathUtils.clamp(a, -HANDS.most, HANDS.most);
+    for (let f = 0; f < n; f++) {
+      e.set(clamp(sx[f] * HANDS.bend), clamp(sy[f] * HANDS.twist), clamp(sz[f] * HANDS.bend), 'YXZ');
+      q.setFromEuler(e).toArray(rot, (f * NB + b) * 4);
+    }
+  }
 }
 
 const qa = new THREE.Quaternion();
@@ -206,12 +294,13 @@ function poseGap(c: MoClip, a: number, b: number) {
 
 /**
  * The clip's best cycle (a and b alike, and the frames after them, so the
- * velocities match too; 0.5 to 1 s long), straightened onto +z at its
- * average speed, the seam's difference spread over the cycle, `times` round
+ * velocities match too; `cycle` seconds long), straightened onto +z at its
+ * average speed (standing still: facing +z as at its start), the seam's
+ * difference spread over the cycle, `times` round
  */
-export function loopClip(c: MoClip, times: number): MoClip {
-  const minLen = Math.round(0.5 * MOCAP_FPS);
-  const maxLen = Math.round(1 * MOCAP_FPS);
+export function loopClip(c: MoClip, times: number, cycle: [number, number] = [0.5, 1]): MoClip {
+  const minLen = Math.round(cycle[0] * MOCAP_FPS);
+  const maxLen = Math.round(cycle[1] * MOCAP_FPS);
   let best = [0, 0];
   let bestGap = Infinity;
   for (let a = 0; a + minLen < c.frames - 1; a++)
@@ -228,8 +317,9 @@ export function loopClip(c: MoClip, times: number): MoClip {
   const R = (y: number) => qa.setFromAxisAngle(UP, y);
   const ra = new THREE.Vector3(c.root[a * 3], 0, c.root[a * 3 + 1]);
   const along = new THREE.Vector3(c.root[b * 3], 0, c.root[b * 3 + 1]).sub(ra);
-  const theta = Math.atan2(along.x, along.z);
   const speed = along.length() / L;
+  // (standing still the way it goes is nowhere: the way it faces)
+  const theta = speed * MOCAP_FPS < 0.05 ? c.root[a * 3 + 2] : Math.atan2(along.x, along.z);
   const turnBack = new THREE.Quaternion().setFromAxisAngle(UP, -theta);
   const hipsAt: THREE.Vector3[] = [];
   const hipsRot: THREE.Quaternion[] = [];

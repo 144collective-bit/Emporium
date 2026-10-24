@@ -128,9 +128,10 @@ test('looks saved in older formats are upgraded', () => {
   const cross = cleanLook({ kind: 'suit', crossbody: '#8f3dff' });
   assert.equal(cross.bag, 'crossbody');
   assert.equal(cross.bagColor, '#8f3dff');
-  // Before `held`: `gummy: false` meant an empty hand
-  assert.equal(cleanLook({ kind: 'suit', gummy: false }).held, null);
-  assert.equal(cleanLook({ kind: 'suit' }).held, 'gummy');
+  // Empty-handed by default; the gummy bag was retired, so looks that held it come back empty
+  assert.equal(cleanLook({ kind: 'suit' }).held, null);
+  assert.equal(cleanLook({ kind: 'suit', held: 'gummy' }).held, null);
+  assert.equal(cleanLook({ kind: 'suit', held: 'coffee' }).held, 'coffee');
   // Older looks never had a watch
   assert.equal(capped.watch, false);
   // The fields a newer look carries win over the old ones

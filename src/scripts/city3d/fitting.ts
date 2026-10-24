@@ -273,7 +273,6 @@ const TABS: Tab[] = [
     id: 'hand',
     label: 'Hand',
     items: [
-      held('gummy', 'Gummy Bag', 'M7 7h10l-1 13H8z M9.5 7V4.5h5V7 M10 12h4'),
       held('coffee', 'Iced Coffee', 'M7 8h10l-1.5 13h-7z M6.5 8a5.5 3 0 0 1 11 0 M13 5l2-3 M8 13h8'),
       held('boombox', 'Boombox', 'M3 9h18v10H3z M8 9V6h8v3 M8 14m-2.5 0a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0 M16 14m-2.5 0a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0'),
       held('phone', 'Phone', 'M8 2h8a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z M10 18h4 M9 7l2 3 2-4 2 5', 'phone'),

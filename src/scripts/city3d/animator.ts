@@ -95,13 +95,16 @@ export const MATCH = { every: 0.1, margin: 0.02, sharp: 1.2 };
 /**
  * Standing: once he's been still `after` seconds (going under `speed` tiles
  * a second, nothing asked), only the standing clips are searched, so he
- * settles into the long idle instead of the quiet frames before a take sets
- * off (whose trajectory knows a run is coming); settled in it, a frame must
- * be `margin` better to take over, so its weight shifts and shuffles play on.
+ * settles into the idles (`clips`: calm loops of subject 143 standing; the
+ * old long idle turned round and round, so he cut back to its first second
+ * every 0.8 s with a snap of the head) instead of the quiet frames before a
+ * take sets off (whose trajectory knows a run is coming); settled in one, a
+ * frame must be `margin` better to take over, and the next is one of the
+ * others, so its weight shifts play out and the idles take turns.
  * Not while the springs turn him further than `turn` radians from the way
  * he's shown facing (aiming round: the turns on the spot are searched)
  */
-export const STAND = { after: 0.35, speed: 0.08, clips: ['idle'], margin: 0.6, turn: 0.35 };
+export const STAND = { after: 0.35, speed: 0.08, clips: ['idle', 'idle-2', 'idle-3'], margin: 0.6, turn: 0.35 };
 /**
  * A locked foot lets go once the clip's foot is this far away (rig
  * numbers), or when holding it would bring the hips down more than `drop`;
@@ -126,6 +129,14 @@ const BALL_UNDER = 0.012;
 /** The inertialization's half-life */
 const BLEND = 0.09;
 /**
+ * The legs' hand-over: when he leaves the ground the leg IK's hold on the
+ * feet comes off at once; what the legs showed the frame before eases into
+ * what they show now with this half-life, so a knee never snaps (it turned
+ * 0.8 rad in a frame taking off)
+ */
+const LEG_BLEND = 0.05;
+const LEG_BONES = [MB.legL, MB.shinL, MB.footL, MB.legR, MB.shinR, MB.footR];
+/**
  * A free foot reaches no further down than `kerb` (world: a step) under his
  * ground, over an edge or before it's a fall. In the air: a fall without a jump counts once he's `drop` over the ground
  * (world) or `after` seconds up; a flight's last `lead` frames play as the
@@ -147,6 +158,18 @@ export const AIR = { kerb: 0.3, margin: 0.75, drop: 0.3, after: 0.18, lead: 4, s
  * `ease` (a half-life) as the clip changes
  */
 export const CROUCH = { clips: ['crouch-walk', 'crouch-walk-2', 'crouch-back'], at: 0.5, drop: 0.16, lean: 0.42, ease: 0.1 };
+/**
+ * Standing up straight (the owner's call: the idle's actor stood with his
+ * knees bent 20-30°, leaning back, his head tilted): standing still, the
+ * hips rise (at most `most`, rig numbers) until the held legs reach `reach`
+ * of their length, the legs' IK softening only past `soft` of it, so the
+ * knees come nearly straight (the other leg keeps its bend: the weight on
+ * one); the spine comes `upright` of the way to over the hips, the head
+ * `level` of the way to level, the arms in `arms` radians to hang by his
+ * sides and the elbows `elbows` of the way straight (the idles' actor holds
+ * a runner's arms, bent 30-40°); eased in and out over `ease` (a half-life)
+ */
+export const STANCE = { most: 0.045, reach: 0.999, soft: 0.997, upright: 0.75, level: 0.75, arms: 0.07, elbows: 0.45, ease: 0.2 };
 /** The game's jump and gravity, when the input doesn't say (walk.ts's) */
 const JUMP = 3.9;
 const GRAVITY = 11.5;
@@ -201,8 +224,8 @@ const r0 = new THREE.Quaternion();
 const r1 = new THREE.Quaternion();
 const ql = new THREE.Quaternion();
 const acos = (x: number) => Math.acos(THREE.MathUtils.clamp(x, -1, 1));
-/** Where the legs' soft reach starts (a share of their full length) */
-const SOFT = 0.96;
+/** Where the legs' soft reach starts (a share of their full length; 0.96 held every planted knee bent 30°) */
+const SOFT = 0.98;
 
 /**
  * Bones a (hip), b (knee), c (ankle) reach for `t`, all in the figure's
@@ -210,9 +233,10 @@ const SOFT = 0.96;
  * brought up to date for them and the foot keeps its turn in the world.
  * The knee is a hinge (the thigh's own x axis, bending forward only: a
  * near-straight leg never flips backwards); the thigh then swings the
- * least it can to put the ankle on the target.
+ * least it can to put the ankle on the target. Past `softAt` of the leg's
+ * length the reach is soft.
  */
-export function twoBone(rot: Float32Array, P: Posed, a: number, b: number, c: number, t: THREE.Vector3) {
+export function twoBone(rot: Float32Array, P: Posed, a: number, b: number, c: number, t: THREE.Vector3, softAt = SOFT) {
   const A = P.pos[a];
   const B = P.pos[b];
   const C = P.pos[c];
@@ -221,7 +245,7 @@ export function twoBone(rot: Float32Array, P: Posed, a: number, b: number, c: nu
   // (soft at full stretch: past SOFT of the leg's length the ankle eases out towards the target,
   // so a target just out of reach never snaps the knee straight, nor back)
   const full = lab + lcb;
-  const soft = full * SOFT;
+  const soft = full * softAt;
   let lat = Math.max(Math.abs(lab - lcb) + 1e-4, vat.copy(t).sub(A).length());
   if (lat > soft) lat = soft + (full - soft) * (1 - Math.exp(-(lat - soft) / (full - soft)));
   lat = Math.min(lat, full * 0.9999);
@@ -270,11 +294,15 @@ export function createAnimator(data: MoData) {
   const P = newPosed();
   const q = new Float32Array(FEATURES);
   const standing = Uint8Array.from(db.clips, (c) => (STAND.clips.includes(c.name.replace('~', '')) ? 1 : 0));
+  /** Settled in a standing clip, the next is looked for among the others (each idle's own loop, then another: no one idle over and over) */
+  const standElse = db.clips.map((_, i) => (standing[i] ? standing.map((v, j) => (j === i ? 0 : v)) : standing));
   const crouching = Uint8Array.from(db.clips, (c) => (CROUCH.clips.includes(c.name.replace('~', '')) ? 1 : 0));
   const upright = crouching.map((v) => 1 - v);
   /** Crouched (past CROUCH.at), and how much of the crouch is laid over a clip that isn't one */
   let crouched = false;
   let crouchW = 0;
+  /** How far into standing up straight he is (STANCE, eased) */
+  let tallW = 0;
   let still = 0;
   let clip = 0;
   let t = 0;
@@ -441,6 +469,20 @@ export function createAnimator(data: MoData) {
   }
   const lt = new THREE.Vector3();
   const hipW = new THREE.Vector3();
+  const hu = new THREE.Vector3();
+  /** The legs' hand-over: what they showed last frame, and the offsets easing away (LEG_BLEND) */
+  const legOut = new Float32Array(LEG_BONES.length * 4);
+  const legOff = LEG_BONES.map(() => new THREE.Vector3());
+  const legOffV = LEG_BONES.map(() => new THREE.Vector3());
+  let legShown = false;
+  let legAirWas = false;
+  /** Turn bone `b` by `pitch` (forward, about his x) and `roll` (about his z) in his own frame, whatever its parent's turn */
+  function turnWorld(b: number, pitch: number, roll: number) {
+    const pw = P.rot[PARENT[b]];
+    qa.setFromAxisAngle(X, pitch).multiply(qb.setFromAxisAngle(Z, roll));
+    qb.copy(pw).invert().multiply(qa).multiply(pw).multiply(ql.fromArray(rot, b * 4));
+    qb.normalize().toArray(rot, b * 4);
+  }
   const wb = new THREE.Vector3();
 
   function update(inp: AnimInput) {
@@ -565,7 +607,7 @@ export function createAnimator(data: MoData) {
     if (!inAir && (force || searchIn <= 0 || sharp)) {
       searchIn = MATCH.every;
       const cur = at(clip, t);
-      const best = searchFor(false, cur, stand ? standing : crouched ? crouching : upright);
+      const best = searchFor(false, cur, stand ? standElse[clip] : crouched ? crouching : upright);
       const curCost = db.open[cur] && !force ? cost(db, q, cur) : Infinity;
       const near = db.clipOf[best] === clip && Math.abs(db.frameOf[best] - t) < 3;
       const better = wrongKind || (settle > 0 ? lastCost < curCost * AIR.margin : lastCost + (stand && standing[clip] ? STAND.margin : MATCH.margin) < curCost || (stand && !standing[clip]));
@@ -767,10 +809,39 @@ export function createAnimator(data: MoData) {
       hips.y -= drop + Math.max(0, squash);
       posed(rot, 0, hips.x, hips.y, hips.z, P);
     }
+    // Standing still: up straight (STANCE)
+    tallW += ((stand && !crouched && !inAir && squash < 1e-3 && feet[0].locked && feet[1].locked ? 1 : 0) - tallW) * (1 - Math.exp((-Math.LN2 * dt) / STANCE.ease));
+    if (tallW > 1e-3) {
+      // (the hips up as far as the held legs let them: neither leg past `reach`)
+      const reach = (LEG_REACH / 0.998) * STANCE.reach * inp.scale;
+      let up = STANCE.most * inp.scale;
+      for (let i = 0; i < 2; i++) {
+        world(P.pos[LEGS[i][0]], inp, hipW);
+        const at = feet[i].at;
+        const h2 = reach * reach - (at.x - hipW.x) ** 2 - (at.z - hipW.z) ** 2;
+        up = Math.min(up, h2 > 0 ? Math.sqrt(h2) - (hipW.y - at.y) : 0);
+      }
+      hips.y += (Math.max(0, up) * tallW) / inp.scale;
+      // (the spine over the hips, then the head level: each turned about his own axes, in the world)
+      posed(rot, 0, hips.x, hips.y, hips.z, P);
+      const n = P.pos[MB.neck];
+      const lean = Math.atan2(n.z - P.pos[0].z, n.y - P.pos[0].y);
+      const side = Math.atan2(n.x - P.pos[0].x, n.y - P.pos[0].y);
+      for (const b of [MB.spine1, MB.spine2]) turnWorld(b, (-lean / 2) * STANCE.upright * tallW, (side / 2) * STANCE.upright * tallW);
+      posed(rot, 0, hips.x, hips.y, hips.z, P);
+      hu.set(0, 1, 0).applyQuaternion(P.rot[MB.head]);
+      turnWorld(MB.head, -Math.atan2(hu.z, hu.y) * STANCE.level * tallW, Math.atan2(hu.x, hu.y) * STANCE.level * tallW);
+      // (L is his -x side: its arm comes in towards +x)
+      turnWorld(MB.armL, 0, STANCE.arms * tallW);
+      turnWorld(MB.armR, 0, -STANCE.arms * tallW);
+      for (const b of [MB.foreL, MB.foreR]) ql.fromArray(rot, b * 4).slerp(qi.identity(), STANCE.elbows * tallW).toArray(rot, b * 4);
+      posed(rot, 0, hips.x, hips.y, hips.z, P);
+    }
+    const softAt = SOFT + (STANCE.soft - SOFT) * tallW;
     for (let i = 0; i < 2; i++) {
       const f = feet[i];
       local(f.at, inp, lt);
-      twoBone(rot, P, LEGS[i][0], LEGS[i][1], LEGS[i][2], lt);
+      twoBone(rot, P, LEGS[i][0], LEGS[i][1], LEGS[i][2], lt, softAt);
       // (the toe follows the foot)
       P.pos[TOE_BONES[i]].copy(REST[TOE_BONES[i]]).applyQuaternion(P.rot[LEGS[i][2]]).add(P.pos[LEGS[i][2]]);
       world(P.pos[TOE_BONES[i]], inp, wb);
@@ -781,6 +852,22 @@ export function createAnimator(data: MoData) {
         f.drift = 0;
       } else f.drift = Math.hypot(wb.x - f.held.x, wb.z - f.held.z);
     }
+    // The legs' hand-over (LEG_BLEND): from what they showed last frame
+    // (taking off only: landing, the feet must meet the ground at once, and on the ground a foot's
+    // let-go is gentle already: easing it as well stalls the legs every step)
+    const handOver = legShown && inAir && !legAirWas;
+    LEG_BONES.forEach((b, k) => {
+      if (handOver) {
+        qa.fromArray(legOut, k * 4).multiply(qb.fromArray(rot, b * 4).invert());
+        logQ(qa, legOff[k]);
+        legOffV[k].set(0, 0, 0);
+      } else
+        for (const c of ['x', 'y', 'z'] as const) [legOff[k][c], legOffV[k][c]] = decay(legOff[k][c], legOffV[k][c], LEG_BLEND, dt);
+      if (legOff[k].lengthSq() > 1e-10) expQ(legOff[k], qa).multiply(qb.fromArray(rot, b * 4)).normalize().toArray(rot, b * 4);
+      legOut.set(rot.subarray(b * 4, b * 4 + 4), k * 4);
+    });
+    legShown = true;
+    legAirWas = inAir;
   }
 
   /** The query for here (the playing frame's pose with the springs' trajectory) and its best frame */
@@ -862,6 +949,9 @@ export function createAnimator(data: MoData) {
         f.offV.set(0, 0, 0);
       }
       drop = dropV = bank = bankV = lift = liftV = squash = squashV = 0;
+      tallW = 0;
+      legShown = legAirWas = false;
+      for (const v of [...legOff, ...legOffV]) v.set(0, 0, 0);
       warp = faster = turnLately = airK = 1;
       sprintW = crouchW = 0;
       inAir = false;
@@ -986,3 +1076,40 @@ export function addLook(sk: Skeleton, yaw: number, pitch: number, w = 1) {
   }
 }
 const UPV = new THREE.Vector3(0, 1, 0);
+
+/**
+ * Something carried in his right hand (a coffee, a phone): the arm `out`
+ * radians from his side and the forearm turned about its length so the
+ * thumb leads, so it's held in front of the hand, clear of his leg (the
+ * capture's hands hang thumbs in, which put it into his thigh); `w` of
+ * the way. On top of the pose, after `applyTo()`.
+ */
+export const CARRY = { out: 0.12, most: 1.4 };
+const cr = new THREE.Quaternion();
+const cp = new THREE.Quaternion();
+const cu = new THREE.Vector3();
+const cv = new THREE.Vector3();
+const cf = new THREE.Vector3();
+const cx = new THREE.Vector3();
+export function addCarry(sk: Skeleton, w = 1) {
+  if (w < 1e-3) return;
+  const arm = sk.bones.armR;
+  const fore = sk.bones.foreR;
+  sk.root.updateMatrixWorld(true);
+  // (turns in his own frame: the root's taken out)
+  const rootInv = sk.root.getWorldQuaternion(cr).invert();
+  const pw = arm.parent!.getWorldQuaternion(cp).premultiply(rootInv);
+  qt.setFromAxisAngle(Z, CARRY.out * w);
+  arm.quaternion.premultiply(qw.copy(pw).invert().multiply(qt).multiply(pw)).normalize();
+  arm.updateMatrixWorld(true);
+  const fw = fore.getWorldQuaternion(cp).premultiply(rootInv);
+  const hw = sk.bones.handR.getWorldQuaternion(qw).premultiply(rootInv);
+  // (the thumb's way and his forward, both across the forearm)
+  cu.set(0, 1, 0).applyQuaternion(fw);
+  cv.set(0, 0, 1).applyQuaternion(hw);
+  cv.addScaledVector(cu, -cv.dot(cu));
+  cf.set(0, 0, 1).addScaledVector(cu, -cu.z);
+  if (cv.lengthSq() < 1e-6 || cf.lengthSq() < 1e-6) return;
+  const turn = THREE.MathUtils.clamp(Math.atan2(cx.crossVectors(cv, cf).dot(cu), cv.dot(cf)), -CARRY.most, CARRY.most);
+  fore.quaternion.multiply(qt.setFromAxisAngle(UPV, turn * w)).normalize();
+}

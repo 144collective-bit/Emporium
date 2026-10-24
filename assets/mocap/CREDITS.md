@@ -13,7 +13,9 @@ The files in `cmu/` are copied unchanged.
   standing jumps for distance and height), subject 69 (`69_17`: turning on the
   spot), subject 143's and 141's walking backwards and sideways (`143_39`,
   `143_40`, `141_31` to `141_33`: strafing and backpedalling), subject 136's walking crouched forwards and
-  backwards (`136_09` to `136_11`) and subject 137 (`137_28`, its first 9 s: standing, waiting), in
+  backwards (`136_09` to `136_11`); standing still is subject 143 standing
+  before setting off (the first seconds of `143_03`, `143_04` and `143_42`,
+  looped), in
   Bruce Hahne's 2010 BVH conversion (cgspeed), from the
   una-dinosauria/cmu-mocap copy on GitHub. The conversion marks every file
   120 frames a second; subject 143's were captured at 60 (played at 120 he

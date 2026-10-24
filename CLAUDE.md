@@ -1416,14 +1416,17 @@ it and has been retired completely. Build only on what's here.
     acknowledgment is in the start menu's Options > Credits, named, never
     linked): mostly subject 143's and 127's takes, in `assets/mocap/cmu/`
     (BVH, untouched), listed in `assets/mocap/takes.json` (a `loop` makes a seamless cycle,
-    `loopClip()`; `fps` where the file's frame rate is wrong: subject 143's
+    `loopClip()`, `cycle` its length where it's longer than a step; `fps` where the file's frame rate is wrong: subject 143's
     are 60, not the 120 cgspeed wrote, so he walked and ran at double speed
     until it was fixed). `npm run mocap` (`scripts/mocap.mjs`) retargets them
     (`mocap-build.ts`: each target bone takes its source joint's turn
     since the T-pose, the feet and the collarbones kept level (CMU's
     shoulder joint sits at the neck: aligned to it, the collarbones held a
-    37° shrug), the floor from the ankles, the root smoothed from the
-    hips) into `src/data/mocap/clips.bin`
+    37° shrug), the hands aimed at the index knuckle (CMU's finger base
+    sits on the wrist: aimed at it, every hand stood out 80° from its
+    forearm) and calmed (`HANDS`), one-frame glitches put back between their
+    neighbours (`SPIKE`) and the toes smoothed (`TOES`), the floor from the
+    ankles, the root smoothed from the hips) into `src/data/mocap/clips.bin`
     (`mocap.ts`: 22 body bones at `MOCAP_FPS` 30, turns in 16 bits;
     `mirrorClip()`, `posed()`, `contacts()`); `tests/mocap.test.ts` holds
     the file to exactly what the pipeline makes. It's fetched when walking
@@ -1458,13 +1461,25 @@ it and has been retired completely. Build only on what's here.
     run, turning on the spot, standing and waiting: `assets/mocap/takes.json`
     and `CREDITS.md`); his shown facing follows the clip's own turn, pulled
     to the springs' (`FACE`, `animator.face`: place the figure with it);
-    standing still only the idle is searched (`STAND`), and frames near a
+    standing still only the idles are searched (`STAND.clips`: three calm
+    loops of subject 143 standing, taking turns; the old idle turned round
+    and snapped his head every 0.8 s), and frames near a
     clip's end cost more (`ENDING`); a free foot clears the ground just
     ahead of it (`LOCK.look`), a held one stands on the ground it was put
     down on, the hips follow the feet above his ground (`LIFT`). The feet
     can stand on something other than what he walks on (`AnimInput.feet`;
     today walk.ts passes its own ground: Liberty Bridge's stairs, which
     used it, went with its redesign).
+  - **Posture, hands and twitching** (the owner's call, from a screenshot:
+    `docs/animation-plan.md`, "Fixes along the way"): the leg IK softens
+    only past 98% of the reach (`SOFT`: 96% held every planted knee at 30°);
+    standing still he stands up straight (`STANCE`: the hips up until a
+    held leg is nearly straight, the spine and head upright, the arms by
+    his sides, the elbows easier); taking off the legs ease from what they
+    showed (`LEG_BLEND`); in walk.ts the motion capture eases back in over
+    a quarter second; something carried in his right hand is held in front
+    of it (`addCarry()`: the arm out a touch, the thumb leading). Review
+    in the lab (`held=` puts something in his hand).
   - **Phase 3:** jump takes (subject 127's running jumps, 143's standing
     ones; `JUMPS_ONLY` keeps the standing ones' wind-ups out of the
     ground's searches); motionmatch.ts finds each take's flights
@@ -1593,8 +1608,12 @@ it and has been retired completely. Build only on what's here.
     chin and the neck tube down into the collar; `headFront()` lays the eye
     opening, its knit rim and the shades onto it) and the hands
     (`handParts()`: wrist, palm, thumb pad, four fingers and a thumb, each
-    vertex weighted; `bakedHand()` sets one solid at a grip, for the
-    first-person hands in `viewmodel.ts`).
+    vertex weighted, sized by `HAND` in skeleton.ts: a tenth of his height
+    wrist to fingertip, the palm a hand's thickness; relaxed, the fingers
+    curl a little, `RELAXED`; `bakedHand()` sets one solid at a grip, for
+    the first-person hands in `viewmodel.ts`). His hands are empty by
+    default (the gummy bag was retired, the owner's call; saved looks that
+    held it come back empty).
   - **Walking and running** are `locomotion.ts` (DOM-free, tested in
     `tests/locomotion.test.ts`), for your Degen in walk mode
     (`createLocomotion()`; walk.ts feeds it his position, velocity,
@@ -1628,15 +1647,16 @@ it and has been retired completely. Build only on what's here.
     (the dance has its own).
   - **Shoulders: natural athletic** (the owner's call): every top's
     cross-sections slope from the neck down to the shoulder (the
-    trapezius, no padded shelf) and the sleeve's cap is a low rounded
-    deltoid running down into the arm (`SUIT`, `HOODIE`, `UPPER_S`; the
-    rest grow from them). Check new tops from the front and back running
+    trapezius, no padded shelf), the body stopping short of the arm's
+    outside, and the sleeve's cap is a low rounded deltoid running down
+    into the arm, round over the outside of the shoulder (`SUIT`, `HOODIE`,
+    `UPPER_S`; the rest grow from them). Check new tops from the front and back running
     in the lab (`?anim&outfit=hoodie`, ...).
   - Shapes are built from cross-sections (`loft()`, superellipse rings) and
     flat details laid onto them (`onBody()` with `surface()`: lapels, the
     shirt V, the tie, zips, pockets). Shoes are side profiles (`profile()`).
   - The wardrobe is `items()`: each item (`head`, `cap`, `suit`, `hoodie`,
-    `joggers`, `backpack`, `gummy`...) has a `when` rule on the `Outfit` and
+    `joggers`, `backpack`, `coffee`...) has a `when` rule on the `Outfit` and
     pieces on joints, each a fixed colour or an outfit colour (`shade`
     darkens or lightens it: lapels, ribbing). New clothes are new items.
   - Three detail levels (`Detail`): 2 for single figures (`createDegen()`:

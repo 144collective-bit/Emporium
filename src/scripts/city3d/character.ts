@@ -96,8 +96,8 @@ export interface Outfit {
   necklace?: boolean;
   /** Gold watch on the left wrist (premium) */
   watch?: boolean;
-  /** In the right hand: the Gas Fee Gummy Bears bag, an iced coffee, a boombox, a phone or a briefcase */
-  held?: 'gummy' | 'coffee' | 'boombox' | 'phone' | 'briefcase';
+  /** In the right hand: an iced coffee, a boombox, a phone or a briefcase (empty-handed by default) */
+  held?: 'coffee' | 'boombox' | 'phone' | 'briefcase';
   /** Which hand carries a rifle (soldiers) */
   rifle?: 'left' | 'right';
   /** Both hands closed into fists (fighting; the open hands are left off) */
@@ -123,7 +123,6 @@ export const PLAYER: Outfit = {
   tie: '#1f9d55',
   cap: '#d8312f',
   chain: true,
-  held: 'gummy',
 };
 export const SOLDIER: Outfit = {
   kind: 'soldier',
@@ -451,13 +450,13 @@ type ColorKey = 'top' | 'bottom' | 'shoes' | 'tie' | 'cap' | 'beanie' | 'bucket'
 /** Every outfit colour a piece can take (the crowd works each figure's out once) */
 const COLOR_KEYS: ColorKey[] = ['top', 'bottom', 'shoes', 'tie', 'cap', 'beanie', 'bucket', 'cowboy', 'tophat', 'backpack', 'crossbody', 'board', 'duffel', 'wings', 'headphones', 'lens', 'ink'];
 /**
- * Pieces with a material of their own: the shades' lenses, the cap patch, the
- * gummy bag, the raised hood (both sides drawn), neon (unlit, coloured per
+ * Pieces with a material of their own: the shades' lenses, the cap patch,
+ * the raised hood (both sides drawn), neon (unlit, coloured per
  * vertex, brighter at night through `neon()`), and on single figures the
  * merch: marks printed from the logo atlas (`logo`, in the outfit's ink)
  * and the top's all-over print (`pattern`, chosen in createDegen)
  */
-type Mat = 'lens' | 'patch' | 'gummy' | 'double' | 'neon' | 'logo' | 'pattern';
+type Mat = 'lens' | 'patch' | 'double' | 'neon' | 'logo' | 'pattern';
 /** Which mark a logo piece prints: the top's, the hat's, the sneakers', or the varsity's badge (the top's chest mark, or the diamond) */
 type LogoOf = 'top' | 'hat' | 'shoe' | 'badge';
 interface Piece {
@@ -497,7 +496,7 @@ const SHIRT = '#cfcedb';
 const GOLD = '#e2b04a';
 
 const itemsCache: Partial<Record<string, Item[]>> = {};
-const texCache: { patch?: THREE.Texture; gummy?: THREE.Texture } = {};
+const texCache: { patch?: THREE.Texture } = {};
 
 /**
  * The wardrobe at a detail level. `hero` is the skinned body's (createDegen):
@@ -780,12 +779,13 @@ function items(q: Detail, hero = false): Item[] {
     [-0.02, 0.138, 0.092, 0],
     [0.1, 0.127, 0.088, 0.002],
     [0.2, 0.148, 0.1, 0.006],
-    [0.29, 0.165, 0.1, 0.004],
-    // (natural athletic shoulders: rounded into the arm, the trapezius sloping up to the neck, no padded shelf)
-    [0.33, 0.166, 0.092, 0.002],
-    [0.355, 0.156, 0.085, 0],
-    [0.378, 0.134, 0.076, -0.003],
-    [0.397, 0.104, 0.068, -0.005],
+    [0.29, 0.16, 0.1, 0.004],
+    // (natural athletic shoulders: rounded into the arm, the trapezius sloping up to the neck, no padded shelf;
+    // the body stops short of the arm's outside, so the sleeve's rounded cap is the shoulder, not a square corner)
+    [0.33, 0.152, 0.092, 0.002],
+    [0.355, 0.138, 0.085, 0],
+    [0.378, 0.118, 0.076, -0.003],
+    [0.397, 0.096, 0.068, -0.005],
     [0.41, 0.076, 0.06, -0.006],
     [0.42, 0.058, 0.054, -0.006],
   ];
@@ -874,12 +874,12 @@ function items(q: Detail, hero = false): Item[] {
     [0.0, 0.15, 0.102, 0],
     [0.12, 0.148, 0.1, 0.002],
     [0.23, 0.162, 0.108, 0.006],
-    [0.31, 0.177, 0.104, 0.004],
+    [0.31, 0.171, 0.104, 0.004],
     // (the same sloping shoulders as the suit, a little looser)
-    [0.34, 0.174, 0.097, 0.002],
-    [0.362, 0.163, 0.089, 0],
-    [0.383, 0.14, 0.08, -0.003],
-    [0.4, 0.108, 0.071, -0.005],
+    [0.34, 0.161, 0.097, 0.002],
+    [0.362, 0.146, 0.089, 0],
+    [0.383, 0.124, 0.08, -0.003],
+    [0.4, 0.1, 0.071, -0.005],
     [0.412, 0.08, 0.062, -0.006],
     [0.422, 0.06, 0.056, -0.006],
   ];
@@ -1099,12 +1099,15 @@ function items(q: Detail, hero = false): Item[] {
 
   /* ----- Arms and hands ----- */
   const UPPER_S: Sec[] = [
-    // (the deltoid: a low rounded cap that runs down into the arm, not a ball on top of it)
-    [0.014, 0.02, 0.028, 0],
-    [0.006, 0.042, 0.05, 0],
-    [-0.012, 0.053, 0.057, 0.002],
-    [-0.04, 0.054, 0.055, 0.002],
-    [-0.08, 0.05, 0.051, 0],
+    // (the deltoid: a low rounded cap that runs down into the arm, not a ball on top of it, and round over
+    // the outside of the shoulder, its widest a little under the joint, tapering to the elbow)
+    [0.02, 0.014, 0.02, 0],
+    [0.014, 0.034, 0.04, 0],
+    [0.004, 0.046, 0.051, 0.001],
+    [-0.01, 0.053, 0.056, 0.002],
+    [-0.032, 0.055, 0.056, 0.002],
+    [-0.06, 0.052, 0.053, 0.001],
+    [-0.1, 0.048, 0.049, 0],
     [-0.16, 0.044, 0.046, 0],
     [-0.215, 0.04, 0.042, 0],
     [-0.236, 0.024, 0.026, 0],
@@ -1277,13 +1280,14 @@ function items(q: Detail, hero = false): Item[] {
   );
 
   /* ----- Held things ----- */
-  // In the hand's own space (the socket in the palm)
-  const gummy = rb(0.1, 0.13, 0.04, 0.012, 0, -0.03, 0.04);
-  const cup = new THREE.CylinderGeometry(0.034, 0.027, 0.11, R(14)).translate(0, -0.03, 0.05);
-  const cupSleeve = new THREE.CylinderGeometry(0.0335, 0.0305, 0.04, R(14)).translate(0, -0.035, 0.05);
+  // In the hand's own space (the socket in the palm; the palm is the right hand's -x side, facing his thigh,
+  // the thumb +z): the cup forward of the palm, in the fingers' curl (on the palm side it sank into his leg)
+  const CUP: [number, number, number] = [-0.006, -0.042, 0.044];
+  const cup = new THREE.CylinderGeometry(0.034, 0.027, 0.11, R(14)).translate(...CUP);
+  const cupSleeve = new THREE.CylinderGeometry(0.0335, 0.0305, 0.04, R(14)).translate(CUP[0], CUP[1] - 0.005, CUP[2]);
   const cupTop = [
-    new THREE.SphereGeometry(0.035, R(12), R(6), 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.45, 1).translate(0, 0.025, 0.05),
-    new THREE.CylinderGeometry(0.004, 0.004, 0.07, 6).rotateZ(0.2).translate(0.006, 0.06, 0.05),
+    new THREE.SphereGeometry(0.035, R(12), R(6), 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.45, 1).translate(CUP[0], CUP[1] + 0.055, CUP[2]),
+    new THREE.CylinderGeometry(0.004, 0.004, 0.07, 6).rotateZ(0.2).translate(CUP[0] + 0.006, CUP[1] + 0.09, CUP[2]),
   ];
   const boombox = [rb(0.085, 0.15, 0.27, 0.018, 0, -0.11, 0.03), new THREE.TorusGeometry(0.06, 0.009, 6, R(12), Math.PI).rotateY(Math.PI / 2).translate(0, -0.035, 0.03)];
   const speakers = [-0.045, 0.045].flatMap((x) => [-0.045, 0.105].map((z) => new THREE.CylinderGeometry(0.046, 0.046, 0.012, R(16)).rotateZ(Math.PI / 2).translate(x, -0.115, z)));
@@ -1546,11 +1550,11 @@ function items(q: Detail, hero = false): Item[] {
   // The phone: a slim slab in the hand, tilted up so he can see the screen (the screen glows)
   const phoneBody = rb(0.046, 0.09, 0.008, 0.004)
     .rotateX(-0.35)
-    .translate(0, -0.035, 0.05);
+    .translate(-0.004, -0.045, 0.046);
   const phoneScreen = new THREE.PlaneGeometry(0.038, 0.074)
     .translate(0, 0, 0.0045)
     .rotateX(-0.35)
-    .translate(0, -0.035, 0.05);
+    .translate(-0.004, -0.045, 0.046);
   // The briefcase: a boxy leather case hanging from the right hand by its handle, gold clasps on top
   const briefcaseBody = rb(0.05, 0.17, 0.24, 0.01, 0.024, -0.152, 0.03);
   const briefcaseHandle = tube(
@@ -1812,12 +1816,6 @@ function items(q: Detail, hero = false): Item[] {
       pieces: [P('handR', rifle, '#2b2a33')],
     },
     {
-      id: 'gummy',
-      held: true,
-      when: (o) => o.held === 'gummy',
-      pieces: [P('handR', gummy, '#ffffff', { mat: 'gummy' })],
-    },
-    {
       id: 'coffee',
       held: true,
       when: (o) => o.held === 'coffee',
@@ -2064,18 +2062,6 @@ function textures() {
     c.lineTo(76, 22);
     c.stroke();
   });
-  texCache.gummy ??= liveTex(128, 160, (c) => {
-    c.fillStyle = '#d8312f';
-    c.fillRect(0, 0, 128, 160);
-    c.fillStyle = '#c99a4a';
-    c.fillRect(0, 0, 128, 22);
-    c.font = '900 34px Impact, "Arial Narrow", sans-serif';
-    c.textAlign = 'center';
-    c.fillStyle = '#ffffff';
-    c.fillText('GAS FEE', 64, 82);
-    c.font = '900 22px Impact, "Arial Narrow", sans-serif';
-    c.fillText('GUMMY BEARS', 64, 112);
-  });
   return texCache as Required<typeof texCache>;
 }
 /** The material for a piece: plain pieces are coloured per vertex (and per instance in a crowd) */
@@ -2094,7 +2080,6 @@ function material(m: Mat | undefined, o?: Outfit): THREE.Material {
   if (m === 'patch') return new THREE.MeshToonMaterial({ map: textures().patch });
   // Every mark from one atlas, in the outfit's ink (per vertex); its cut-out edge from the alpha
   if (m === 'logo') return (logoMat ??= new THREE.MeshToonMaterial({ map: logoAtlas(), vertexColors: true, alphaTest: 0.5 }));
-  if (m === 'gummy') return new THREE.MeshToonMaterial({ map: textures().gummy });
   if (m === 'double')
     return (doubleMat ??= toon('#ffffff', {
       side: THREE.DoubleSide,
@@ -2131,7 +2116,8 @@ export interface Degen {
 }
 
 /** Each hand's grip when the pose doesn't set one: relaxed, closed on what's held, or fists for fighting */
-const RELAXED = 0.2;
+// (relaxed: the fingers curled a little, as a hand hangs, not held out straight)
+const RELAXED = 0.3;
 const HOLDING = 0.62;
 
 /** A piece in the figure's own space, with each vertex's bones */
@@ -2181,8 +2167,8 @@ function atlasUV(geo: THREE.BufferGeometry, id: MarkId) {
  * One figure: the skinned body (skeleton.ts) with everything it wears as
  * one mesh coloured per vertex, plus one each for the lenses, the cap
  * patch, the raised hood (both sides drawn) and any neon, so a figure is
- * about four draw calls whatever he wears. Things in the hand (the gummy
- * bag, a rifle) ride the hand bone unbent.
+ * about four draw calls whatever he wears. Things in the hand (a coffee, a
+ * rifle) ride the hand bone unbent.
  */
 export function createDegen(o: Outfit = PLAYER, q: Detail = 2): Degen {
   const sk = makeSkeleton();

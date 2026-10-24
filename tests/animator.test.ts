@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import * as THREE from 'three';
-import { CROUCH, FACE, addLean, applyTo, createAnimator, twoBone } from '../src/scripts/city3d/animator';
+import { CROUCH, FACE, STAND, addLean, applyTo, createAnimator, twoBone } from '../src/scripts/city3d/animator';
 import { makeSkeleton, newPose, poseSkeleton } from '../src/scripts/city3d/skeleton';
 import { MB, NB, TOE_BONES, decodeMocap, newPosed, posed } from '../src/scripts/city3d/mocap';
 import { wrap } from '../src/scripts/city3d/inertia';
@@ -579,7 +579,7 @@ test('crouched he walks on the crouched takes and stands still in the crouch ove
     }
     if (down && t > 6 && t < 8) {
       kinds.still++;
-      if (clip === 'idle') kinds.idle++;
+      if (STAND.clips.includes(clip)) kinds.idle++;
       posed(an.rot, 0, an.hips.x, an.hips.y, an.hips.z, P);
       hipsStill = Math.max(hipsStill, P.pos[0].y);
     }
@@ -595,4 +595,46 @@ test('crouched he walks on the crouched takes and stands still in the crouch ove
   assert.ok(hipsStill < hipsUp - CROUCH.drop * 0.6, `the hips ${hipsStill.toFixed(3)} still crouched, ${hipsUp.toFixed(3)} running`);
   assert.equal(kinds.uprightCrouch, 0, 'standing up, never a crouched take');
   assert.ok(slide * SCALE * CM < 2.5, `a held foot slid ${(slide * SCALE * CM).toFixed(1)} cm`);
+});
+
+test('standing still he stands up straight, calm, the idles taking turns (no snap of the head every 0.8 s)', () => {
+  const an = createAnimator(data);
+  const m = newMove(0);
+  const sk = makeSkeleton();
+  const prev = new Float32Array(NB * 4);
+  const qa = new THREE.Quaternion();
+  const qb = new THREE.Quaternion();
+  const a = new THREE.Vector3();
+  const b = new THREE.Vector3();
+  const P = (n: string) => sk.bones[n as keyof typeof sk.bones].getWorldPosition(new THREE.Vector3());
+  const clips = new Set<string>();
+  let most = 0;
+  let straightest = Infinity;
+  let bentest = 0;
+  let lean = 0;
+  for (let i = 0; i < 40 * 60; i++) {
+    stepMove(m, 0, 0, true, DT);
+    an.update({ dt: DT, x: 0, y: 0, z: 0, move: m, gx: 0, gz: 0, scale: SCALE, ground: () => 0, sprint: 0 });
+    if (i > 60) {
+      clips.add(an.debug.clip.replace('~', ''));
+      for (let k = 0; k < NB; k++) most = Math.max(most, qa.fromArray(prev, k * 4).angleTo(qb.fromArray(an.rot, k * 4)));
+      applyTo(sk, an.rot, an.hips, 1, 0, 0);
+      sk.root.updateMatrixWorld(true);
+      const knees = (['L', 'R'] as const).map((s) => Math.PI - a.subVectors(P(`leg${s}`), P(`shin${s}`)).angleTo(b.subVectors(P(`foot${s}`), P(`shin${s}`))));
+      straightest = Math.min(straightest, Math.min(...knees));
+      bentest = Math.max(bentest, Math.max(...knees));
+      const h = P('hips');
+      const n = P('neck');
+      lean = Math.max(lean, Math.abs(Math.atan2(n.z - h.z, n.y - h.y)));
+    }
+    prev.set(an.rot);
+  }
+  const deg = (r: number) => `${((r * 180) / Math.PI).toFixed(1)}°`;
+  // (his weight on one leg, nearly straight; the other easier: never the capture's 30-35° crouch)
+  assert.ok(straightest < 0.17, `a leg nearly straight (the straighter knee at best ${deg(straightest)})`);
+  assert.ok(bentest < 0.44, `no knee bent past 25°, the easy leg's most (${deg(bentest)})`);
+  assert.ok(lean < 0.06, `upright (leaning ${deg(lean)})`);
+  // (calm: nothing turns more than 3° in a frame; the old idle's head snapped 3.5° once every 0.8 s)
+  assert.ok(most < 0.05, `the most any bone turned in a frame: ${deg(most)}`);
+  assert.ok(clips.size >= 2, `the idles take turns (${[...clips].join(', ')})`);
 });

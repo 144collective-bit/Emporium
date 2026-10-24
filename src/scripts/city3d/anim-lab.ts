@@ -24,12 +24,12 @@
  *   city), aiming or not, the look swept up and down; markers at the gun's
  *   butt and his shoulder pocket. Aiming by hand, he faces +z.
  * - The address can set it all up for recordings: `prog`, `gait`, `cam`,
- *   `floor`, `speed`, `gun`, `aim=0`, `pitch`, `outfit`, `orbit`,
+ *   `floor`, `speed`, `gun`, `aim=0`, `pitch`, `outfit`, `held`, `orbit`,
  *   `compare=0`, `traces=0`.
  */
 import * as THREE from 'three';
 import { PLAYER, SOLDIER, createDegen, type Degen } from './character';
-import { addLean, applyTo, createAnimator, type Animator } from './animator';
+import { addCarry, addLean, applyTo, createAnimator, type Animator } from './animator';
 import { copyPose, createLocomotion, placeRoot } from './locomotion';
 import { loadMocap } from './mocap-load';
 import { GAITS, newMove, startSlide, stepMove, stepSlide, type MoveState, type Slide } from './movesim';
@@ -396,8 +396,10 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   buildFloor();
 
   // (`outfit=hoodie|track|varsity|puffer|soldier` in the address: the player's look in another kind of top)
+  // (`held=coffee|boombox|phone|briefcase`: something in his right hand)
   const kind = (['suit', 'hoodie', 'track', 'varsity', 'puffer', 'soldier'] as const).find((k) => k === q.get('outfit'));
-  const outfit = kind === 'soldier' ? SOLDIER : kind ? { ...PLAYER, kind } : PLAYER;
+  const held = (['coffee', 'boombox', 'phone', 'briefcase'] as const).find((h) => h === q.get('held'));
+  const outfit = { ...(kind === 'soldier' ? SOLDIER : kind ? { ...PLAYER, kind } : PLAYER), held };
   const hero: Degen = createDegen(outfit);
   const old: Degen = createDegen(outfit);
   scene.add(hero.g, old.g);
@@ -664,6 +666,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       if (ov && overAmt > 0.01) overPose(hero.pose, ov, over ? Math.min(1, over.t / over.o.dur) : 1, overAmt, x, y, z, anim.face, SCALE);
       hero.update();
       applyTo(hero.rig, anim.rot, anim.hips, 1 - Math.max(slideAmt, overAmt));
+      if (hero.held?.visible) addCarry(hero.rig, 1 - Math.max(slideAmt, overAmt));
     }
     hero.g.position.set(x, y, z);
     hero.g.rotation.set(0, anim.face, 0);

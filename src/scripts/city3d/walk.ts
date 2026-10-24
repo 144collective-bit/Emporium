@@ -2037,7 +2037,8 @@ export function createWalk(d: WalkDeps) {
     if (animator && anim) {
       // (a fresh start after a jump in place: walking started, a fast travel, the end of a ride)
       if ((mocapW < 0.01 && mocapOn) || lastPos.distanceToSquared(pos) > 4) animator.reset();
-      mocapW = THREE.MathUtils.clamp(mocapW + (mocapOn ? dt / 0.18 : -dt / 0.12), 0, 1);
+      // (over a quarter second back in, less going out so a slide or an emote still answers at once: quicker, the two poses swapped with a jolt)
+      mocapW = THREE.MathUtils.clamp(mocapW + (mocapOn ? dt / 0.25 : -dt / 0.15), 0, 1);
       if (mocapW > 0) {
         const w = mocapW * mocapW * (3 - 2 * mocapW);
         const u = upperW * upperW * (3 - 2 * upperW);
@@ -2046,6 +2047,8 @@ export function createWalk(d: WalkDeps) {
         drawFace = face + wrap(animator.face - face) * mocapW;
         anim.applyTo(hero.rig, animator.rot, animator.hips, w, u, face - drawFace);
         anim.addLook(hero.rig, headYaw + lookAround, headPitch * 0.5, w * (1 - u));
+        // (anything in his hand held out in front of it, clear of his leg)
+        if (hero.held?.visible) anim.addCarry(hero.rig, w * (1 - u));
       }
       root0.roll = loco.root.roll * (1 - mocapW);
       root0.pitch = loco.root.pitch * (1 - mocapW);

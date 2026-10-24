@@ -177,9 +177,10 @@ export function handParts(side: -1 | 1, seg: number): SkinnedPart[] {
   };
   // (closed, and its top just inside the cuff, so no open rim shows up the sleeve)
   rigid(new THREE.CylinderGeometry(0.023, 0.026, 0.026, seg + 2, 2).translate(0, 0.041, -0.002), true);
-  rigid(new RoundedBoxGeometry(0.035, 0.066, 0.064, 2, 0.013).translate(s * 0.003, 0.009, -0.001));
+  // (the palm a hand's thickness, not a block: down to just past the knuckles)
+  rigid(new RoundedBoxGeometry(0.028, 0.074, 0.064, 2, 0.011).translate(s * 0.002, 0.006, -0.001));
   // The pad at the root of the thumb, on the palm side
-  rigid(new THREE.SphereGeometry(0.016, seg, Math.max(4, seg - 2)).scale(0.62, 1.15, 0.9).translate(-s * 0.009, 0.012, 0.018));
+  rigid(new THREE.SphereGeometry(0.016, seg, Math.max(4, seg - 2)).scale(0.6, 1.2, 0.9).translate(-s * 0.007, 0.01, 0.018));
   const { knuckleY, fingers, mid, thumb } = HAND;
   fingers.forEach((f, i) => {
     const at = f.len * mid;
