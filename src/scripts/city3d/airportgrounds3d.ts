@@ -25,7 +25,7 @@
  *   dollies; Cargo Road, the truck yard and its loop, the trucks.
  */
 import * as THREE from 'three';
-import { Batch, FONT_DISPLAY, canvasTex, lit, siteMat, toon } from './kit';
+import { Batch, FONT_DISPLAY, canvasTex, lit, rng, siteMat, toon } from './kit';
 import { site } from './tilework';
 import {
   AIRBRIDGES,
@@ -57,7 +57,16 @@ import {
   RANK_Z,
   CONCOURSES,
   CONNECTORS,
+  CENTRE_LIGHTS,
   EXEC_PAD,
+  FLAGS,
+  FLAG_H,
+  GATEWAY,
+  HEDGES,
+  BEDS,
+  ROAD_SIGNS,
+  SHRUBS,
+  type SignText,
   FENCE,
   FENCE_H,
   FIRE,
@@ -239,6 +248,15 @@ function runway(b: Batch, sx0: number, sx1: number, low: boolean) {
     box(b, x - 0.1, 0.18, zz - 0.1, x + 0.1, 0.3, zz + 0.1, light(c));
   };
   for (let x = x0 + 2; x <= x1 - 2; x += low ? 12 : 8) if (inS(x)) for (const s of [-1, 1]) bulb(x, z + s * (half + 0.5), '#fff6c8');
+  // Centreline lights set flush in the asphalt, either side of the painted dashes: white, then red and white in turn
+  // towards the far (east) end, red over the last stretch
+  const C = CENTRE_LIGHTS;
+  for (let x = x0 + 6, k = 0; x <= x1 - 4; x += C.runway, k++) {
+    if (!inS(x)) continue;
+    const left = x1 - x;
+    const c = left < C.end ? '#ff2b2b' : left < C.far && k % 2 ? '#ff2b2b' : '#fff6c8';
+    flush(b, x, z + 0.42, c);
+  }
   for (let k = -half + 0.5; k <= half - 0.5; k += 1) {
     if (inS(x0 - 0.5)) bulb(x0 - 0.5, z + k, '#2bff88');
     if (inS(x1 + 0.5)) bulb(x1 + 0.5, z + k, '#ff2b2b');
@@ -271,10 +289,27 @@ function runway(b: Batch, sx0: number, sx1: number, low: boolean) {
   }
 }
 
+/** A light set flush in the pavement: a low steel rim and the lens */
+function flush(b: Batch, x: number, z: number, c: string) {
+  box(b, x - 0.1, TOP - 0.004, z - 0.1, x + 0.1, TOP + 0.03, z + 0.1, STEEL);
+  box(b, x - 0.06, TOP + 0.03, z - 0.06, x + 0.06, TOP + 0.06, z + 0.06, light(c));
+}
+
 function taxiways(b: Batch, sx0: number, sx1: number, low: boolean) {
   const inS = (x: number) => x >= sx0 && x < sx1;
   const T = TAXIWAY;
   const R = RUNWAY;
+  // Green centreline lights along the taxiway (just off its painted line), and on the connectors down to the runway
+  // green and amber in turn (they cross the runway's protected area); a red stop bar across each at the hold line
+  const C = CENTRE_LIGHTS;
+  for (let x = T.x0 + 3; x <= T.x1 - 2; x += low ? C.taxi * 2 : C.taxi) if (inS(x)) flush(b, x, T.z + 0.3, '#2bff88');
+  CONNECTORS.forEach((cx, i) => {
+    if (!inS(cx)) return;
+    const from = i === 0 ? TAXILANE.z : T.z;
+    let k = 0;
+    for (let zz = from + 3; zz < R.z - R.half - 0.5; zz += 3, k++) flush(b, cx + 0.3, zz, k % 2 ? '#ffb000' : '#2bff88');
+    for (let dx = -T.half + 0.5; dx <= T.half - 0.4; dx += 0.7) flush(b, cx + dx, R.z - R.half - 4.6, '#ff2b2b');
+  });
   for (let a = Math.max(T.x0 - T.half, sx0); a < Math.min(T.x1 + T.half, sx1); a += 15)
     box(b, a, G, T.z - T.half, Math.min(a + 15, T.x1 + T.half, sx1), TOP, T.z + T.half, TAXI_ASPHALT);
   alongMark(b, sx0, sx1, T.x0, T.x1, T.z - 0.08, T.z + 0.08, YELLOW);
@@ -399,11 +434,12 @@ function apronKit(b: Batch, sx0: number, sx1: number) {
           toon('#17151f')
         );
   }
-  for (const [x, z] of MASTS) {
+  for (const [x, z, f] of MASTS) {
     if (!inS(x)) continue;
     cyl(b, 0.16, 8, x, 0, z, STEEL, 8, 0.22);
     box(b, x - 1.2, 8, z - 0.25, x + 1.2, 8.5, z + 0.25, INK);
-    for (const dx of [-0.8, 0, 0.8]) box(b, x + dx - 0.22, 7.95, z + 0.05, x + dx + 0.22, 8.05, z + 0.4, light('#fff6c8'));
+    // (the lamps on the side the mast lights)
+    for (const dx of [-0.8, 0, 0.8]) box(b, x + dx - 0.22, 7.95, z + Math.min(f * 0.05, f * 0.4), x + dx + 0.22, 8.05, z + Math.max(f * 0.05, f * 0.4), light('#fff6c8'));
   }
 }
 
@@ -1043,6 +1079,180 @@ function cargoKit(b: Batch) {
   }
 }
 
+/* ---------- The roadside: signs, the gateway, flags, planting (lighting and signs phase) ---------- */
+
+/**
+ * The road signs' atlas, a row each (`SIGN_ROWS`): white on blue with a white border, arrows and the plane drawn as
+ * shapes; the gateway's lettering last, white on stone. Fixed made-up copy
+ */
+type Part = string | 'left' | 'right' | 'up' | 'down' | 'plane';
+const SIGN_ROWS: Record<SignText | 'gateway', Part[]> = {
+  'airport-r': ['plane', 'AIRPORT', 'right'],
+  'airport-l': ['left', 'AIRPORT', 'plane'],
+  cargo: ['left', 'CARGO · P', '   ', 'TERMINAL', 'up'],
+  terminal: ['left', 'DEPARTURES · ARRIVALS'],
+  park: ['P', 'right'],
+  ga: ['HANGAR 1 · GA', 'up'],
+  gateway: ['SECTOR 7 AIRPORT'],
+};
+const ROW_KEYS = Object.keys(SIGN_ROWS) as (SignText | 'gateway')[];
+const ROAD_ATLAS = canvasTex(1024, ROW_KEYS.length * 128, (c) => {
+  c.textBaseline = 'middle';
+  ROW_KEYS.forEach((key, r) => {
+    const y0 = r * 128;
+    const stone = key === 'gateway';
+    c.fillStyle = stone ? '#3a3658' : '#1f4fb3';
+    c.fillRect(0, y0, 1024, 128);
+    if (!stone) {
+      c.strokeStyle = '#ffffff';
+      c.lineWidth = 6;
+      c.strokeRect(8, y0 + 8, 1008, 112);
+    }
+    c.font = `900 ${stone ? 92 : 78}px ${FONT_DISPLAY}`;
+    const parts = SIGN_ROWS[key];
+    const glyph = 74;
+    const widthOf = (p: Part) => (p === 'left' || p === 'right' || p === 'up' || p === 'down' || p === 'plane' ? glyph : c.measureText(p).width);
+    const gap = 22;
+    const total = parts.reduce((a, p) => a + widthOf(p), 0) + gap * (parts.length - 1);
+    let x = 512 - total / 2;
+    const cy = y0 + 66;
+    c.fillStyle = '#ffffff';
+    for (const p of parts) {
+      const w = widthOf(p);
+      if (p === 'left' || p === 'right' || p === 'up' || p === 'down') {
+        // An arrow: a shaft and a head, turned the way it points
+        const a = { right: 0, down: Math.PI / 2, left: Math.PI, up: -Math.PI / 2 }[p];
+        c.save();
+        c.translate(x + w / 2, cy);
+        c.rotate(a);
+        c.beginPath();
+        c.moveTo(-30, -9);
+        c.lineTo(6, -9);
+        c.lineTo(6, -26);
+        c.lineTo(34, 0);
+        c.lineTo(6, 26);
+        c.lineTo(6, 9);
+        c.lineTo(-30, 9);
+        c.closePath();
+        c.fill();
+        c.restore();
+      } else if (p === 'plane') {
+        // A plane seen from above, nose up
+        c.save();
+        c.translate(x + w / 2, cy);
+        c.beginPath();
+        c.ellipse(0, 0, 7, 32, 0, 0, Math.PI * 2);
+        c.fill();
+        c.beginPath();
+        c.moveTo(-34, 6);
+        c.lineTo(0, -10);
+        c.lineTo(34, 6);
+        c.lineTo(34, 13);
+        c.lineTo(0, 4);
+        c.lineTo(-34, 13);
+        c.closePath();
+        c.fill();
+        c.beginPath();
+        c.moveTo(-14, 30);
+        c.lineTo(0, 22);
+        c.lineTo(14, 30);
+        c.lineTo(14, 35);
+        c.lineTo(-14, 35);
+        c.closePath();
+        c.fill();
+        c.restore();
+      } else {
+        c.fillStyle = stone ? '#f3f0ff' : '#ffffff';
+        c.fillText(p, x, cy + 4);
+      }
+      x += w + gap;
+    }
+  });
+});
+const ROAD_SIGN = siteMat('airport-road-signs', lit(new THREE.MeshBasicMaterial({ map: ROAD_ATLAS }), 0.95, 1.1));
+const roadUv = (key: SignText | 'gateway'): [number, number, number, number] => {
+  const r = ROW_KEYS.indexOf(key);
+  const n = ROW_KEYS.length;
+  return [0, 1 - (r + 1) / n, 1, 1 - r / n];
+};
+
+const HEDGE = toon('#2f6b45');
+const SOIL = toon('#4a3a32');
+const BLOOMS = ['#ff4fd8', '#ffd23f', '#ff8a3d', '#e9e6f5', '#b07bff'].map((c) => toon(c));
+const FLAG_COLOURS = ['#e219e5', '#8000ff', '#037dff', '#00eaff', '#ff3b8a'];
+
+/** A bed's planting: a low clipped mound of green and, near only, flowers dotted over it (seeded by where it is) */
+function plants(b: Batch, x0: number, z0: number, x1: number, z1: number, y: number, low: boolean) {
+  box(b, x0, y - 0.01, z0, x1, y + 0.16, z1, HEDGE);
+  b.detail(() => {
+    const r = rng(Math.round(x0 * 7 + z0 * 13));
+    const n = Math.round(((x1 - x0) * (z1 - z0)) / (low ? 0.5 : 0.2));
+    for (let k = 0; k < n; k++) {
+      const fx = x0 + 0.08 + r() * (x1 - x0 - 0.16);
+      const fz = z0 + 0.08 + r() * (z1 - z0 - 0.16);
+      const h = 0.04 + r() * 0.06;
+      box(b, fx - 0.07, y + 0.15, fz - 0.07, fx + 0.07, y + 0.16 + h, fz + 0.07, BLOOMS[Math.floor(r() * BLOOMS.length)]);
+    }
+  });
+}
+
+/** The road signs (on a post, or a gantry over the road), the gateway, the flags, the beds, hedges and shrubs */
+function roadside(b: Batch, low: boolean) {
+  for (const sgn of ROAD_SIGNS) {
+    const h = sgn.w / 8;
+    const along = Math.abs(Math.sin(sgn.yaw)) < 0.5;
+    // (the board's plane runs across its facing; its back a dark box a hair behind the face)
+    const [nx, nz] = [Math.sin(sgn.yaw), Math.cos(sgn.yaw)];
+    const [hx, hz] = along ? [sgn.w / 2, 0.06] : [0.06, sgn.w / 2];
+    box(b, sgn.x - hx - nx * 0.06, sgn.y - h / 2 - 0.05, sgn.z - hz - nz * 0.06, sgn.x + hx - nx * 0.06, sgn.y + h / 2 + 0.05, sgn.z + hz - nz * 0.06, INK);
+    decal(b, ROAD_SIGN, roadUv(sgn.text), sgn.x + nx * 0.005, sgn.y, sgn.z + nz * 0.005, sgn.w, h, sgn.yaw, false);
+    if (sgn.posts.length) {
+      // A gantry: posts either side of the road and a beam across over the board
+      for (const px of sgn.posts) box(b, px - 0.1, 0, sgn.z - 0.1, px + 0.1, sgn.y + h / 2 + 0.25, sgn.z + 0.1, STEEL);
+      box(b, sgn.posts[0], sgn.y + h / 2 + 0.05, sgn.z - 0.12, sgn.posts[1], sgn.y + h / 2 + 0.25, sgn.z + 0.12, STEEL);
+    } else {
+      const off = sgn.w / 2 - 0.4;
+      for (const s of [-1, 1]) {
+        const [px, pz] = along ? [sgn.x + s * off, sgn.z] : [sgn.x, sgn.z + s * off];
+        box(b, px - 0.05 - nx * 0.15, 0, pz - 0.05 - nz * 0.15, px + 0.05 - nx * 0.15, sgn.y + h / 2, pz + 0.05 - nz * 0.15, STEEL);
+      }
+    }
+  }
+  // The gateway: a low stone wall with a cap, its lettering facing the avenue, a bed of flowers in front of it
+  const G0 = GATEWAY;
+  box(b, G0.x0, 0, G0.z - 0.35, G0.x1, G0.h, G0.z + 0.35, PALE);
+  box(b, G0.x0 - 0.1, G0.h, G0.z - 0.45, G0.x1 + 0.1, G0.h + 0.15, G0.z + 0.45, WHITE);
+  // (the row's middle 80%, where the lettering is)
+  const [u0, v0, u1, v1] = roadUv('gateway');
+  const lw = (G0.x1 - G0.x0) * 0.82;
+  decal(b, ROAD_SIGN, [u0 + 0.1, v0, u1 - 0.1, v1], (G0.x1 + G0.x0) / 2, G0.h * 0.6, G0.z - 0.355, lw, (lw / 6.4) * 0.92, Math.PI, false);
+  box(b, G0.x0, 0, G0.z - 0.35 - G0.bed, G0.x1, 0.22, G0.z - 0.35, SOIL);
+  plants(b, G0.x0 + 0.7, G0.z - 0.35 - G0.bed + 0.6, G0.x1 - 0.7, G0.z - 0.55, 0.22, low);
+  b.detail(() => {
+    // Uplights at the bed's corners
+    for (const x of [G0.x0 + 0.4, G0.x1 - 0.4]) {
+      box(b, x - 0.12, 0.22, G0.z - 0.35 - G0.bed + 0.15, x + 0.12, 0.34, G0.z - 0.35 - G0.bed + 0.39, STEEL);
+      box(b, x - 0.08, 0.34, G0.z - 0.35 - G0.bed + 0.19, x + 0.08, 0.38, G0.z - 0.35 - G0.bed + 0.35, light('#fff1c8'));
+    }
+  });
+  // The flags across the drive from it: poles, a gilded cap, each flag in one of the brand's colours
+  FLAGS.forEach(([x, z], k) => {
+    cyl(b, 0.07, FLAG_H, x, 0, z, WHITE, 8, 0.09);
+    b.add(new THREE.SphereGeometry(0.12, 8, 6).translate(x, FLAG_H + 0.08, z), YELLOW);
+    box(b, x + 0.08, FLAG_H - 1.1, z - 0.02, x + 1.8, FLAG_H - 0.1, z + 0.02, toon(FLAG_COLOURS[k % FLAG_COLOURS.length]));
+  });
+  // Flower beds along the drive's verges between its trees, clipped hedges round the car parks, shrubs round the
+  // hotel and the multi-storey
+  for (const [x, z] of BEDS) {
+    box(b, x - 0.45, 0, z - 1.1, x + 0.45, 0.16, z + 1.1, SOIL);
+    plants(b, x - 0.3, z - 0.95, x + 0.3, z + 0.95, 0.16, low);
+  }
+  for (const [x0, z0, x1, z1] of HEDGES) boxes(b, x0, 0, z0, x1, 0.7, z1, HEDGE);
+  b.detail(() => {
+    for (const [x, z] of SHRUBS) b.add(new THREE.DodecahedronGeometry(0.75, 0).translate(x, 0.6, z), HEDGE);
+  });
+}
+
 /* ---------- Registering ---------- */
 
 const rectOf = (f: readonly number[], m = 1): Rect => [f[0] - m, f[1] - m, f[2] + m, f[3] + m];
@@ -1108,6 +1318,12 @@ export function register({ low }: { low: boolean; scene: THREE.Scene | null; tic
   site('airport hotel', [ROAD.x, HOTEL.rect[1] - 1, HOTEL.rect[2] + 1, HOTEL.rect[3] + 1], (into) => {
     const b = new Batch();
     hotel(b);
+    b.build(into);
+  });
+  // The roadside: the signs, the gateway and its flags, the beds, hedges and shrubs (lighting and signs phase)
+  site('airport roadside', [GA_ROAD.x0 - 2, ROAD.z0 - 2, CARGO_ROAD.x1, LOOP.kerb], (into) => {
+    const b = new Batch();
+    roadside(b, low);
     b.build(into);
   });
   // The cargo area (step 3): the shed and its office, the apron's kit; Cargo Road and the yard; the trucks in it, a site a tile

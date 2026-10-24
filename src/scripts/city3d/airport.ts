@@ -9,7 +9,7 @@
  * the fence, the roads) is airportgrounds3d.ts, loaded as you approach.
  */
 import * as THREE from 'three';
-import { Batch, canvasTex, FONT_DISPLAY, fx, glowMat, lit, neon, PAL, plane, rng, toon } from './kit';
+import { Batch, canvasTex, FONT_DISPLAY, fx, glowMat, lit, moving, neon, PAL, plane, rng, toon } from './kit';
 import { INK, PALE, ROOF, STEEL, TOP, YELLOW, box, cyl, glazing, soft } from './airportkit';
 import {
   AIRPORT_LAMPS,
@@ -24,7 +24,11 @@ import {
   HANGAR_DOOR,
   HANGAR_OFFICE,
   HOTEL,
-  MASTS,
+  MAST_POOLS,
+  CARGO_TREES,
+  RABBIT,
+  VDGS,
+  APPROACH,
   PARKED,
   PARKED_JETS,
   PARKED_FREIGHTERS,
@@ -68,8 +72,12 @@ export function buildAirport(scene: THREE.Scene, crowd: Idle[], tick: (f: Tick) 
   windsock(group, tick, opts.reduced);
   roadside(group);
   // (the floodlights' pools of light go with the lamps', at the boot)
-  for (const [x, z] of MASTS) for (const dz of [8, 16]) addPool(x, z + dz, 13, 0);
+  for (const [x, z, size] of MAST_POOLS) addPool(x, z, size, 0);
   const traffic = flying(scene, tick, opts.reduced);
+  const gb = new Batch();
+  guidance(gb, group, tick, traffic);
+  gb.build(group);
+  rabbit(group, tick, opts.reduced);
   const ring = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.64, 48), glowMat(PAL.cyan, 0, null));
   ring.rotation.x = -Math.PI / 2;
   ring.position.set(HANGAR_DOOR.x, 0.05, HANGAR_DOOR.z);
@@ -321,8 +329,104 @@ function roadside(group: THREE.Group) {
   for (const { y, cars } of MSCP_CARS) parkedCars(group, y + 0.035, cars.map(([m, x, z, ry, c]) => [m as CarId, x, z, ry, c]));
   for (const [x, z, ry] of AIRPORT_LAMPS) addLamp(x, z, ry, 0);
   for (const [x, z, ry] of DECK_LAMPS) addLamp(x, z, ry, DEPARTURES.y);
+  for (const [x, z] of CARGO_TREES) addTree(x, z, 0.9, false, 0);
   // An avenue of trees down the drive, behind its lamps
   for (let z = ROAD.z0 + 17; z < ROAD.z1 - 14; z += 14) for (const s of [-1, 1]) if ((s < 0 || z < HOTEL.rect[1] - 3 || z > HOTEL.rect[3] + 3) && Math.abs(z - CARGO_ROAD.z) > 8) addTree(ROAD.x + s * (ROAD.half + 3.2), z, 0.95, false, 0);
+}
+
+/* ---------- Night lighting: the stand guidance boards and the approach's rabbit ---------- */
+
+/** The boards' screen: a lead-in line and chevrons pointing in, white on black (tinted per board by what's on its stand) */
+const VDGS_TEX = canvasTex(128, 160, (c) => {
+  c.fillStyle = '#05040c';
+  c.fillRect(0, 0, 128, 160);
+  c.fillStyle = '#ffffff';
+  c.fillRect(60, 14, 8, 132);
+  for (let k = 0; k < 3; k++) {
+    const y = 34 + k * 38;
+    c.beginPath();
+    c.moveTo(18, y);
+    c.lineTo(64, y + 26);
+    c.lineTo(110, y);
+    c.lineTo(110, y + 12);
+    c.lineTo(64, y + 38);
+    c.lineTo(18, y + 12);
+    c.closePath();
+    c.fill();
+  }
+});
+/** What a board shows: nothing on its stand (dim), a jet rolling in (amber), parked (green) */
+const VDGS_DIM = new THREE.Color(0.1, 0.1, 0.14);
+const VDGS_IN = new THREE.Color(1, 0.62, 0.08);
+const VDGS_OK = new THREE.Color(0.12, 1, 0.42);
+/** How near a jet has to be to its stand for the board to see it, and to count as parked */
+const VDGS_SEE = 32;
+const VDGS_AT = 1.2;
+
+/**
+ * The stand guidance boards (VDGS): a dark box on a bracket off the building's face in line with each stand, its
+ * screen one instanced plane tinted per board: amber while a jet closes on the stand, green once it's stopped there
+ */
+function guidance(b: Batch, group: THREE.Group, tick: (f: Tick) => void, traffic: () => { kind: AircraftKind; pose: Pose }[]) {
+  const W = 1.1;
+  const H = 1.4;
+  for (const { x, z, y } of VDGS) {
+    box(b, x - 0.1, y + H / 2 - 0.1, z + 0.08, x + 0.1, y + H / 2 + 0.1, z + 0.3, STEEL);
+    box(b, x - W / 2 - 0.08, y - H / 2 - 0.08, z + 0.3, x + W / 2 + 0.08, y + H / 2 + 0.08, z + 0.5, INK);
+  }
+  const screens = new THREE.InstancedMesh(new THREE.PlaneGeometry(W, H), new THREE.MeshBasicMaterial({ map: VDGS_TEX, toneMapped: true }), VDGS.length);
+  screens.name = 'vdgs';
+  const m = new THREE.Matrix4();
+  VDGS.forEach(({ x, z, y }, i) => {
+    screens.setMatrixAt(i, m.makeTranslation(x, y, z + 0.506));
+    screens.setColorAt(i, VDGS_DIM);
+  });
+  screens.userData.keep = true;
+  group.add(screens);
+  const last = VDGS.map(() => Infinity);
+  const shown = VDGS.map(() => VDGS_DIM);
+  tick(() => {
+    const now = traffic();
+    let changed = false;
+    VDGS.forEach(({ stand: [sx, sz] }, i) => {
+      let d = Infinity;
+      let still = false;
+      for (const { kind, pose } of now) {
+        if (kind !== 'jet' || !pose.ground) continue;
+        const e = Math.hypot(pose.x - sx, pose.z - sz);
+        if (e < d) {
+          d = e;
+          still = pose.v < 0.05;
+        }
+      }
+      const c = d < VDGS_AT && still ? VDGS_OK : d < VDGS_SEE && d < last[i] - 1e-4 ? VDGS_IN : d < VDGS_AT ? shown[i] : VDGS_DIM;
+      last[i] = d;
+      if (c !== shown[i]) {
+        shown[i] = c;
+        screens.setColorAt(i, c);
+        changed = true;
+      }
+    });
+    if (changed && screens.instanceColor) screens.instanceColor.needsUpdate = true;
+  });
+}
+
+/** The approach lights' rabbit: a strobe running in along the crossbars towards the threshold, at night only */
+function rabbit(group: THREE.Group, tick: (f: Tick) => void, reduced: boolean) {
+  const bars: number[] = [];
+  for (let x = RABBIT.x0; x <= RABBIT.x1; x += RABBIT.every) bars.push(x);
+  const flash = moving(new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.16, 0.6), neon('#eef6ff', 0, 2.6)));
+  flash.name = 'approach-rabbit';
+  flash.visible = false;
+  group.add(flash);
+  tick(({ t, night }) => {
+    const on = !reduced && night > 0.25;
+    flash.visible = on;
+    if (!on) return;
+    const k = Math.min(bars.length - 1, Math.floor(((t % RABBIT.period) / RABBIT.period) * bars.length));
+    const x = bars[k];
+    flash.position.set(x, 0.35 + (APPROACH.x1 - x) * 0.04 + 0.26, APPROACH.z);
+  });
 }
 
 /* ---------- The flying traffic ---------- */

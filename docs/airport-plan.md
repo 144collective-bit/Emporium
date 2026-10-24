@@ -274,6 +274,35 @@ is how it stands today; the numbers in Phases 1 and 2 are history).
        the stands, the freighter's flight and the parked one, the trucks in
        the yard off the lanes, Cargo Road in the plan (traffic drives it),
        the timetable's separations, the layout snapshot.
+   - **Detail (built): night lighting, signs and planting** (the owner's
+     picks, one PR; in `airfield.ts` unless said):
+     - **Night lighting**: centreline lights set flush in the runway (white,
+       red and white towards the far end, red over the last 30:
+       `CENTRE_LIGHTS`) and the taxiway (green), green and amber down the
+       connectors with a red stop bar before the runway
+       (`airportgrounds3d.ts`); a stand guidance board (`VDGS`) on the
+       building's face in line with every stand, dim with nothing there,
+       amber while a jet closes on it, green once it's stopped (one
+       instanced screen tinted per board, `guidance()` in `airport.ts`); the
+       apron masts' pools of light on the side each mast faces
+       (`MASTS` carry their facing, `MAST_POOLS`); the approach lights'
+       "rabbit", a strobe running in along the crossbars twice a second at
+       night (`RABBIT`, `rabbit()`; not under reduced motion).
+     - **Signs and planting**: blue road signs with white arrows and a
+       plane from one small atlas (`ROAD_SIGNS`: AIRPORT both ways on the
+       south bank avenue's verge, gantries over the drive for CARGO · P /
+       TERMINAL and DEPARTURES · ARRIVALS, P on Cargo Road, HANGAR 1 · GA on
+       the GA road), the SECTOR 7 AIRPORT gateway wall at the drive's way in
+       in a planted bed with uplights (`GATEWAY`) and five flags across from
+       it (`FLAGS`), flower beds between the drive's trees (`BEDS`), hedges
+       along the short-stay car park (`HEDGES`), shrubs round the hotel and
+       the multi-storey (`SHRUBS`), trees along Cargo Road (`CARGO_TREES`).
+       Drawn as one site (`roadside()` in `airportgrounds3d.ts`).
+     - Not done: roundabouts on the drive (they'd change its junctions and
+       the traffic's routes; a later step if wanted).
+     - Tests: everything on the roadside off every street, its sidewalk and
+       the highway, out of the car parks and buildings; a board for every
+       stand on the face it noses up to; the masts' pools on the airside.
 
 Each phase (and each of Phase 3's steps) gets the owner's sign-off before the
 next one starts.
