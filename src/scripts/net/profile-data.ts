@@ -71,12 +71,12 @@ export const skinUnlocked = (id: SkinId, total: number) => total >= (SKINS.find(
  */
 export type Hat = 'cap' | 'backcap' | 'beanie' | 'bucket' | 'crown' | 'cowboy' | 'tophat' | 'halo';
 export type Bag = 'backpack' | 'crossbody' | 'board' | 'duffel' | 'wings';
-export type Held = 'gummy' | 'coffee' | 'boombox' | 'phone' | 'briefcase';
+export type Held = 'coffee' | 'boombox' | 'phone' | 'briefcase';
 export type LookKind = 'suit' | 'hoodie' | 'track' | 'varsity' | 'puffer';
 export const KINDS: LookKind[] = ['suit', 'hoodie', 'track', 'varsity', 'puffer'];
 export const HATS: Hat[] = ['cap', 'backcap', 'beanie', 'bucket', 'crown', 'cowboy', 'tophat', 'halo'];
 export const BAGS: Bag[] = ['backpack', 'crossbody', 'board', 'duffel', 'wings'];
-export const HELD: Held[] = ['gummy', 'coffee', 'boombox', 'phone', 'briefcase'];
+export const HELD: Held[] = ['coffee', 'boombox', 'phone', 'briefcase'];
 
 /*
  * Merch (character rebuild Phase 4): made-up marks for the clothes, drawn in
@@ -195,7 +195,7 @@ export const DEFAULT_LOOK: Look = {
   lens: '#22d07a',
   bag: null,
   bagColor: '#00b8d8',
-  held: 'gummy',
+  held: null,
   headphones: null,
   chain: true,
   necklace: false,
@@ -222,7 +222,6 @@ export function cleanLook(raw: unknown): Look {
     o.bag = typeof o.backpack === 'string' ? 'backpack' : 'crossbody';
     o.bagColor = o.backpack ?? o.crossbody;
   }
-  if (o.held === undefined && o.gummy === false) o.held = null;
   const kind = from(o.kind, KINDS, DEFAULT_LOOK.kind);
   return {
     kind,

@@ -149,3 +149,45 @@ test('the collarbones sit level, as Degen\'s do at rest (the capture\'s own shou
       assert.ok(most < 0.35, `${c.name}: a collarbone turned ${most.toFixed(2)} rad`);
     }
 });
+
+test('the hands carry on from the forearms, calm (the capture\'s finger base sits on the wrist, so the hand is aimed at the index knuckle)', () => {
+  const q = new THREE.Quaternion();
+  const e = new THREE.Euler();
+  for (const c of data.clips)
+    for (const b of [MB.handL, MB.handR]) {
+      let side = 0;
+      let most = 0;
+      let step = 0;
+      const prev = new THREE.Quaternion();
+      for (let f = 0; f < c.frames; f++) {
+        q.fromArray(c.rot, (f * NB + b) * 4);
+        if (f) step = Math.max(step, prev.angleTo(q));
+        prev.copy(q);
+        e.setFromQuaternion(q, 'YXZ');
+        side = Math.max(side, Math.abs(e.z));
+        most = Math.max(most, q.angleTo(new THREE.Quaternion()));
+      }
+      // (a wrist bends sideways about 20-30 degrees at most; the hand once stood out 80 degrees from every forearm)
+      assert.ok(side < 0.45, `${c.name}: a hand bent ${(side * 57.3).toFixed(0)}° sideways at the wrist`);
+      assert.ok(most < 0.6, `${c.name}: a hand turned ${(most * 57.3).toFixed(0)}° from its forearm`);
+      // (calmed: the capture's hand once jumped 40° in a frame)
+      assert.ok(step < 0.07, `${c.name}: a hand jumped ${(step * 57.3).toFixed(1)}° in a frame`);
+    }
+});
+
+test('no bone jumps away for a frame and straight back (the capture\'s glitches are put back between their neighbours)', () => {
+  const a = new THREE.Quaternion();
+  const b = new THREE.Quaternion();
+  const c = new THREE.Quaternion();
+  for (const clip of data.clips)
+    for (let k = 0; k < NB; k++)
+      for (let f = 1; f < clip.frames - 1; f++) {
+        a.fromArray(clip.rot, ((f - 1) * NB + k) * 4);
+        b.fromArray(clip.rot, (f * NB + k) * 4);
+        c.fromArray(clip.rot, ((f + 1) * NB + k) * 4);
+        const there = a.angleTo(b);
+        const back = b.angleTo(c);
+        // (walk-eight's spine, chest and neck once threw 24-49° for a single frame)
+        assert.ok(!(there > 0.14 && back > 0.14 && a.angleTo(c) < 0.5 * Math.min(there, back)), `${clip.name}: bone ${k} jumps away and back at frame ${f}`);
+      }
+});

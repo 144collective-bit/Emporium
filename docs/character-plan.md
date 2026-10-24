@@ -130,7 +130,8 @@ The plan as it was:
   hands with fingers, feet with ankles and toes.
 - Every wardrobe piece rebuilt on it: the suit, hoodie, track, varsity,
   puffer and soldier fits; caps, beanie, cowboy hat, top hat, halo; the
-  backpack, duffel and wings; phone, briefcase, gummy bag; the watch; the
+  backpack, duffel and wings; phone, briefcase (the gummy bag was retired:
+  the owner's call, his hands empty); the watch; the
   colour packs. Same names, same colours, same save values.
 - `createDegen()` on the new body for you, other players, the fitting room
   and the hologram; the first-person hands (`viewmodel.ts`) re-made to

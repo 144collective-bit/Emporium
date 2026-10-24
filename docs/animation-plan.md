@@ -354,6 +354,50 @@ What's in:
   take-off's push plays at about its own speed, and the sprint's layers
   ease out in the air.
 
+- **Posture, hands and twitching** (the owner, from a screenshot of him
+  standing in the city: "his posture is strange, his hand is not right, he
+  twitches and his animation needs improvement"; and his hands empty, the
+  gummy bag retired). Measured first, frame by frame, then fixed:
+  - *The hands stood out 80° from the forearms in every clip.* CMU's
+    `FingerBase` joint sits on the wrist (offset 0 0 0), so the hand was
+    aimed along a zero-length segment. It's aimed at `HandIndex1` now; and
+    since the capture's hand turn is noisy (up to 40° in a frame), each
+    hand keeps a smoothed share of it (`HANDS`, `calmHands()` in
+    mocap-build.ts). Tests: no hand over 25° sideways or 0.07 rad a frame.
+  - *He stood in a half crouch* (knees 33-37°, leaning back 5°, head
+    tilted). The leg IK softened past 96% of the leg's reach, which holds a
+    planted knee at about 30°; it's 98% now (`SOFT`). The standing takes
+    are a runner's ready stance, so standing still he stands up straight
+    (`STANCE` in animator.ts: the hips rise until a held leg is nearly
+    straight, the other easier, the spine and head come upright, the arms
+    hang by his sides and the elbows ease straighter; eased in and out).
+    Measured: knees 6° and 13°, upright within 1°.
+  - *His head snapped every 0.8 s standing.* The old idle (137_28) turned
+    right round within its first second, so the search kept cutting back to
+    its start with a 3.5° snap of the head. Standing still is now three calm
+    loops of subject 143 standing before setting off (`idle`, `idle-2`,
+    `idle-3`; `cycle` in takes.json for a loop longer than a step, and a
+    still take's loop faces the way it faces), taking turns (`standElse`).
+    A test holds 40 s of standing to under 3° a frame on any bone.
+  - *Glitches in the capture*: a bone thrown 24-49° for a single frame and
+    back (`walk-eight`'s spine, chest and neck) is put back between its
+    neighbours (`SPIKE`, `despike()`), and the toes, the noisiest markers,
+    are smoothed (`TOES`). A test holds every clip free of them.
+  - *A knee snapping on take-off* (0.8 rad in a frame, the leg IK's hold let
+    go at once): the legs ease from what they showed over `LEG_BLEND`.
+  - In the city the motion capture eases in over a quarter second after an
+    emote, a slide or a vault (it was 0.18 s, a jolt), out over 0.15.
+  - *The hands themselves* (skeleton.ts `HAND`, body.ts): a tenth of his
+    height wrist to fingertip, the palm a hand's thickness, not a block,
+    longer fingers, a relaxed curl (`RELAXED` 0.3). Carried things (coffee,
+    phone) are held in front of the hand: `addCarry()` eases the arm out
+    and turns the forearm so the thumb leads (the capture's hands hang
+    thumbs in, which put them into his leg).
+  - The shoulders: the body stops short of the arm's outside and the
+    sleeve's cap is rounder, so the shoulder is the deltoid, not a square
+    corner (every top).
+  - The lab takes `held=coffee|boombox|phone|briefcase`.
+
 ### Phase 1 as it was planned
 
 1. **Licences confirmed** (100STYLE's official terms; CMU's), the takes

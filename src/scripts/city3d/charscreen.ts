@@ -30,7 +30,7 @@ const LIGHTS: { id: StageLight; name: string }[] = [
 const FITS: Record<Look['kind'], string> = { suit: 'Classic Suit', hoodie: 'Drop Hoodie', track: 'Track Suit', varsity: 'Varsity Jacket', puffer: 'Puffer Jacket' };
 const HATS: Record<NonNullable<Look['hat']>, string> = { cap: 'Diamond Cap', backcap: 'Backwards Cap', beanie: 'Street Beanie', bucket: 'Bucket Hat', crown: 'Gold Crown', cowboy: 'Cowboy Hat', tophat: 'Top Hat', halo: 'Neon Halo' };
 const BAGS: Record<NonNullable<Look['bag']>, string> = { backpack: 'Backpack', crossbody: 'Crossbody', board: 'Skate Deck', duffel: 'Duffel Bag', wings: 'Neon Wings' };
-const HELD: Record<NonNullable<Look['held']>, string> = { gummy: 'Gummy Bag', coffee: 'Iced Coffee', boombox: 'Boombox', phone: 'Phone', briefcase: 'Briefcase' };
+const HELD: Record<NonNullable<Look['held']>, string> = { coffee: 'Iced Coffee', boombox: 'Boombox', phone: 'Phone', briefcase: 'Briefcase' };
 const markName = (id: MarkId) => MARKS.find((m) => m.id === id)?.name ?? id;
 
 /** What he's wearing, a row a part: [label, what, colours] */

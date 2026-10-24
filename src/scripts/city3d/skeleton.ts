@@ -143,18 +143,20 @@ export const BONES: BoneName[] = ['hips', 'spine1', 'spine2', 'chest', 'neck', '
 export const BONE_INDEX = Object.fromEntries(BONES.map((b, i) => [b, i])) as Record<BoneName, number>;
 
 /** The hand's own numbers: the knuckles' line, the fingers' joints, the thumb's root (`x` towards the palm) */
+// (a hand about a tenth of his height, wrist to fingertip, as a person's: the fingers were short and
+// the palm a thick block, so the hand read as a mitten)
 export const HAND = {
-  knuckleY: -0.016,
+  knuckleY: -0.022,
   /** Index, middle, ring and little finger across the hand (z, front to back), their radii and lengths */
   fingers: [
-    { z: 0.019, r: 0.0079, len: 0.044 },
-    { z: 0.006, r: 0.0082, len: 0.048 },
-    { z: -0.007, r: 0.0077, len: 0.045 },
-    { z: -0.02, r: 0.0068, len: 0.036 },
+    { z: 0.019, r: 0.0073, len: 0.051 },
+    { z: 0.006, r: 0.0076, len: 0.056 },
+    { z: -0.007, r: 0.0071, len: 0.052 },
+    { z: -0.019, r: 0.0063, len: 0.042 },
   ],
   /** The first finger joint, as a share of the finger's length */
   mid: 0.56,
-  thumb: { x: 0.008, y: 0.014, z: 0.03, r: 0.0098, len: 0.046, mid: 0.52 },
+  thumb: { x: 0.007, y: 0.012, z: 0.029, r: 0.0088, len: 0.05, mid: 0.52 },
 };
 /** The thumb's turn at rest (on the palm side, pointing down and forward): x, then z towards the palm (times -side) */
 export const THUMB_REST = { x: -0.62, z: 0.3 };
