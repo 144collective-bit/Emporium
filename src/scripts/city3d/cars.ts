@@ -101,6 +101,7 @@ export const PAINTS: Record<CarId, string[]> = {
   muscle: ['#e23b3b', '#14121f', '#ff8a3d', '#8000ff'],
   suv: ['#2a3b66', '#1f6b4a', '#14121f', '#f3f2f7'],
   super: ['#00eaff', '#e219e5', '#ffd23f', '#f3f2f7'],
+  exec: ['#14121f', '#14121f', '#1c1d2e'],
 };
 
 /* ---------- Models ---------- */
@@ -551,6 +552,53 @@ export const CARS: Record<CarId, CarSpec> = {
       p.detail(box(0.16, 0.025, s.W + 0.08, half + 0.04, s.clr + 0.02, 0), BLACKOUT);
       for (const z of [-1, 1]) p.detail(box(0.12, 0.015, 0.1, half - 0.05, 0.22, z * (s.W / 2 + 0.04)), BLACKOUT);
       for (const z of [-0.3, -0.1, 0.1, 0.3]) p.detail(box(0.2, 0.08, 0.015, -half, 0.13, z * s.W * 0.9), BLACKOUT);
+    },
+  },
+  // Uptown's (finance plan Phase 4): a long black executive saloon, traffic only (never in the garage)
+  exec: {
+    id: 'exec',
+    name: 'Midnight Exec',
+    L: 3.0,
+    W: 1.06,
+    r: 0.2,
+    tw: 0.2,
+    axles: [-0.98, 1.0],
+    clr: 0.1,
+    top: [
+      [1.5, 0.42],
+      [1.4, 0.53],
+      [0.72, 0.57],
+      [-1.0, 0.59],
+      [-1.45, 0.57],
+      [-1.5, 0.46],
+    ],
+    cabin: [
+      [-1.05, 0.58],
+      [-0.62, 0.9],
+      [0.32, 0.9],
+      [0.74, 0.56],
+    ],
+    cabinW: 0.86,
+    panes: [
+      [-1.0, -0.45],
+      [-0.38, 0.12],
+      [0.18, 0.68],
+    ],
+    rearGlass: true,
+    lightY: 0.44,
+    lamp: 'slim',
+    seams: [-1.06, -0.42, 0.15, 0.74],
+    handles: [-0.92, -0.3, 0.3],
+    exhaust: [0.3, -0.3],
+    extra(p, s) {
+      const half = s.L / 2;
+      // Chrome along the window line and the sills, a tall chrome grille, a little ornament on the bonnet
+      for (const z of [-1, 1]) {
+        p.detail(box(1.76, 0.022, 0.012, -0.15, 0.6, z * (s.W * 0.43 + 0.006)), CHROME);
+        p.detail(box(2.1, 0.03, 0.012, 0.05, s.clr + 0.12, z * (s.W / 2 + 0.006)), CHROME);
+      }
+      p.detail(box(0.02, 0.16, s.W * 0.42, half + 0.006, 0.4, 0), CHROME);
+      p.detail(box(0.06, 0.06, 0.02, half - 0.08, topAt(s, half - 0.08) + 0.03, 0), CHROME);
     },
   },
 };

@@ -10,7 +10,7 @@
  * game server can check a car the same way later.
  */
 /** Every car model (cars.ts draws them; here so the shared, DOM-free code can name them) */
-export type CarId = 'hatch' | 'sedan' | 'coupe' | 'pickup' | 'van' | 'bus' | 'muscle' | 'suv' | 'super';
+export type CarId = 'hatch' | 'sedan' | 'coupe' | 'pickup' | 'van' | 'bus' | 'muscle' | 'suv' | 'super' | 'exec';
 
 /** The cars a player can pick (the bus is for the city only): the five starters, then the ones the garage sells (catalog.ts) */
 export const PLAYER_CARS = ['hatch', 'sedan', 'coupe', 'pickup', 'van', 'muscle', 'suv', 'super'] as const satisfies readonly CarId[];

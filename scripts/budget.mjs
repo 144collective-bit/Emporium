@@ -12,8 +12,12 @@ const BUDGETS = {
   page: 110,
   /** The script the page starts with, and everything it imports straight away */
   pageJs: 8,
-  /** The 3D city's code before it's up: its chunk and everything that chunk imports straight away */
-  bootJs: 640,
+  /**
+   * The 3D city's code before it's up: its chunk and everything that chunk imports straight away (raised from 640
+   * on purpose for Uptown's plaza, finance plan Phase 3: its solids, trees, lamps and people must be there at the
+   * boot; its drawing and drawing-only data are Uptown's own chunk's)
+   */
+  bootJs: 642,
   /** Any one piece loaded later (a feature, when it's used) */
   lazyJs: 60,
   /** All the CSS */

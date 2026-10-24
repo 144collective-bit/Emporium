@@ -12,7 +12,6 @@
  */
 import * as THREE from 'three';
 import { Batch, PAL, neon, toon } from './kit';
-import { BOULEVARD_X } from './uptown';
 import { BENDS, BEND_REACH, JETTIES, LAWN_TREES, OUTER_PARKS, PROMENADE, SQUARE_LAYOUTS, offBridges, offFootbridge, type Pt, type SquareLayout } from './outer';
 import { EW_ROADS, LANE, NS_ROADS, RIVER } from './layout';
 import { SLAB as S, addLamp, addTree, lotMat, waterMat, type Tick } from './world';
@@ -218,17 +217,15 @@ function promenade(b: Batch, low: boolean) {
   const rail = toon('#c9c4e6');
   const step = low ? 3 : 1.5;
   for (const bank of ['north', 'south'] as const) {
-    // (the north bank's carried on west along Uptown to its edge, the boulevard's line: uptown.ts)
-    const [x0, x1] = bank === 'north' ? [BOULEVARD_X[0], PROMENADE.x[1]] : PROMENADE.x;
-    /** The first x from x0 on the town's rhythm (`off` past its start, every `every`), so the town's posts, trees and benches stay where they were */
-    const from = (off: number, every: number) => PROMENADE.x[0] + off - every * Math.floor((PROMENADE.x[0] + off - x0) / every);
+    // (west of the town Uptown's esplanade carries it on: boulevard.ts)
+    const [x0, x1] = PROMENADE.x;
     const edge = bank === 'north' ? RIVER[0] - 0.3 : RIVER[1] + 0.3;
     const inner = bank === 'north' ? PROMENADE.north[0] : PROMENADE.south[1];
     const toWater = bank === 'north' ? 1 : -1;
     // A railing along the water, broken at the bridges and the decks
     let run: number | null = null;
     const deckAt = (x: number) => JETTIES.some((j) => j.bank === bank && Math.abs(x - j.x) < 1.2);
-    for (let x = from(0, step); x <= x1 + 0.01; x += step) {
+    for (let x = x0; x <= x1 + 0.01; x += step) {
       const open = offBridges(x, 0.3) && !deckAt(x);
       if (open) {
         // (the posts near only: the rails still draw the line from far away)
@@ -244,13 +241,13 @@ function promenade(b: Batch, low: boolean) {
       }
     }
     // Trees in planters and benches facing the water, between the lamps (which stand every 6 from x0)
-    for (let x = from(3, 12); x < x1; x += 12) {
+    for (let x = x0 + 3; x < x1; x += 12) {
       if (!offBridges(x, 1.2) || !offFootbridge(x, 1.2) || deckAt(x)) continue;
       const z = (inner + edge) / 2 - toWater * 0.15;
       cyl(b, 0.42, 0.4, x, 0, z, toon('#6e6a8c'), 10);
       addTree(x, z, 0.8, false, 0.4);
     }
-    for (let x = from(9, 12); x < x1; x += 12) {
+    for (let x = x0 + 9; x < x1; x += 12) {
       if (!offBridges(x, 1.2) || !offFootbridge(x, 1.2) || deckAt(x)) continue;
       bench(b, [x, edge - toWater * 0.75], toWater > 0 ? 0 : Math.PI, 0.02);
     }

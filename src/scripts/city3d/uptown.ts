@@ -4,8 +4,9 @@
  * the west ring avenue and the river, from the ring highway to the Parkway
  * (Westlake Park's three strips until Phase 1), becoming a waterfront
  * boulevard and a financial centre with skyscrapers and a plaza. Phase 1 is
- * the land and its streets (this file); the towers, the plaza, the boulevard
- * and the life come in the next phases.
+ * the land and its streets (this file); the towers are highrise.ts (Phase 2),
+ * the plaza plaza.ts (Phase 3), the waterfront boulevard boulevard.ts
+ * (Phase 4); the life comes next.
  *
  * - **Its streets** (`UPTOWN_STREETS`): three north-south streets (one lane
  *   each way) from the west ring avenue down to the north bank avenue, in
@@ -14,17 +15,17 @@
  *   (`UPTOWN_CROSSINGS`).
  * - **Its blocks** (`UPTOWN_BLOCKS`): the land between them, in three rows
  *   (n: by the ring avenue, m: the middle, s: on the river), four to a row;
- *   `PLAZA_BLOCK` is set aside for the plaza (Phase 3).
+ *   `PLAZA_BLOCK` is the plaza's (plaza.ts).
  * - **The axis** (`AXIS_X`): Westlake Park's Mall carried on south from its
  *   gate through Uptown to the river, a walk-only lane through the blocks
  *   either side of the plaza (`UPTOWN_LANES`) and zebra crossings over the
  *   streets (`AXIS_ZEBRAS`).
- * - **The open lots** (`OPEN_LOTS`): the plaza's block (Phase 3) and the
- *   slivers west of the axis's lanes stay behind hoardings (`HOARDINGS`,
- *   open at the axis's gates, `HOARDING_GATES`), solid (`UPTOWN_SOLIDS`);
- *   every other lot is a tower's (highrise.ts, Phase 2).
- * - **The boulevard's line** (`BOULEVARD_X`): the town's promenade carried
- *   on west along the north bank to the highway.
+ * - **The lots:** the plaza's block and the slivers west of the axis's
+ *   lanes are the plaza's (plaza.ts, Phase 3); every other lot is a
+ *   tower's (highrise.ts, Phase 2).
+ * - **The boulevard's line** (`BOULEVARD_X`): the north bank from Uptown's
+ *   west edge to where the town's promenade begins, the esplanade's
+ *   (boulevard.ts).
  */
 import { EW_ROADS, LANE, RIVER, WALK_W } from './layout';
 import { NS_X as TRENCH_X } from './trenches';
@@ -118,56 +119,9 @@ export const UPTOWN_LANES: Rect[] = UPTOWN_BLOCKS.filter((b) => b.rect[0] < AXIS
 /** Zebra crossings where the axis crosses each avenue and cross street: the road's centre line (z) and half width */
 export const AXIS_ZEBRAS: { z: number; half: number }[] = ROWS_Z.map((r) => ({ z: r.c, half: r.half }));
 
-/* ---------- The open lots: hoarded until their phase ---------- */
-
-/**
- * The land that stays open until its phase, behind hoardings: the plaza's block (Phase 3; the spire stands in it,
- * highrise.ts) and the slivers west of the axis's lanes; each with its gates (where the axis comes in)
- */
-export interface OpenLot {
-  id: string;
-  rect: Rect;
-  gates: Pt[];
-}
-/** The hoardings: how far in from the lot's edge, how tall, how thick; a gate's half width */
-export const HOARDING = { in: 0.5, h: 2.2, t: 0.12, gate: 2.2 };
-export const OPEN_LOTS: OpenLot[] = [
-  (() => {
-    const [x0, z0, x1, z1] = UPTOWN_BLOCKS.find((b) => b.id === PLAZA_BLOCK)!.rect;
-    return { id: 'plaza', rect: [x0, z0, x1, z1] as Rect, gates: [[AXIS_X, z0 + HOARDING.in], [AXIS_X, z1 - HOARDING.in]] as Pt[] };
-  })(),
-  ...UPTOWN_LANES.map((l): OpenLot => {
-    const b = UPTOWN_BLOCKS.find((q) => q.rect[1] === l[1] && q.rect[0] < l[0] && q.rect[2] > l[2])!;
-    return { id: `${b.id}-west`, rect: [b.rect[0], b.rect[1], l[0], b.rect[3]], gates: [] };
-  }),
-];
-export const HOARDING_GATES: Pt[] = OPEN_LOTS.flatMap((o) => o.gates);
-/** The hoardings' runs, straight lines along each open lot's edges `HOARDING.in` inside it, broken at its gates; [x0, z0, x1, z1] */
-export const HOARDINGS: Rect[] = OPEN_LOTS.flatMap((o) => {
-  const [x0, z0, x1, z1] = o.rect;
-  const m = HOARDING.in;
-  /** A side along x at z, cut by its gates */
-  const along = (z: number): Rect[] => {
-    const out: Rect[] = [];
-    let at = x0 + m;
-    for (const [gx] of o.gates.filter((g) => Math.abs(g[1] - z) < 0.01).sort((p, q) => p[0] - q[0])) {
-      if (gx - HOARDING.gate > at + 0.3) out.push([at, z, gx - HOARDING.gate, z]);
-      at = gx + HOARDING.gate;
-    }
-    if (x1 - m > at + 0.3) out.push([at, z, x1 - m, z]);
-    return out;
-  };
-  return [...along(z0 + m), ...along(z1 - m), [x0 + m, z0 + m, x0 + m, z1 - m], [x1 - m, z0 + m, x1 - m, z1 - m]];
-});
-/** What's solid: the hoardings, a thin box each */
-export const UPTOWN_SOLIDS: [number, number, number, number, number][] = HOARDINGS.map(([x0, z0, x1, z1]) => {
-  const t = HOARDING.t / 2;
-  return [Math.min(x0, x1) - t, Math.min(z0, z1) - t, Math.max(x0, x1) + t, Math.max(z0, z1) + t, 0.15 + HOARDING.h];
-});
-
 /* ---------- Its lamps and the boulevard's line ---------- */
 
-/** The town's promenade carried on west along the north bank: from Uptown's west edge to where the town's begins */
+/** The north bank along Uptown, the esplanade's (boulevard.ts): from Uptown's west edge to where the town's promenade begins */
 export const BOULEVARD_X: [number, number] = [W, PROMENADE.x[0]];
 
 /**

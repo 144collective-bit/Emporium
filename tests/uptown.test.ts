@@ -1,17 +1,13 @@
 // Uptown, the financial centre (uptown.ts, docs/finance-plan.md Phase 1): its streets in line with The Trenches' across
 // the river, every junction lit, its twelve blocks off the asphalt and clear of the park, the plaza's block on the
-// Mall's axis, the axis's lanes, the hoardings round the empty lots (solid, open at their gates and the lanes), the
-// lamps on the sidewalks, traffic down its streets, and the promenade's line carried on west; the open lots (the
-// plaza's block and the slivers by the lanes) behind their hoardings until their phase.
+// Mall's axis, the axis's lanes, the lamps on the sidewalks, traffic down its streets, and the promenade's line carried
+// on west. The plaza on its block and the café terraces by the lanes are tests/plaza.test.ts's.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   AXIS_X,
   BOULEVARD_X,
   E,
-  HOARDINGS,
-  HOARDING_GATES,
-  OPEN_LOTS,
   NS_X,
   PLAZA_BLOCK,
   ROWS_Z,
@@ -20,7 +16,6 @@ import {
   UPTOWN_LAMPS,
   UPTOWN_LANES,
   UPTOWN_RECT,
-  UPTOWN_SOLIDS,
   UPTOWN_STREETS,
   W,
   inUptown,
@@ -29,7 +24,6 @@ import { NS_X as TRENCH_X } from '../src/scripts/city3d/trenches';
 import { BIG, GATES, MALL, inPark } from '../src/scripts/city3d/westlake';
 import { PLAN, type Street } from '../src/scripts/city3d/streetplan';
 import { ROUTES } from '../src/scripts/city3d/routes';
-import { SOLIDS } from '../src/scripts/city3d/solids';
 import { PROMENADE } from '../src/scripts/city3d/outer';
 import { RIVER, WALK_W } from '../src/scripts/city3d/layout';
 import { insideHighway, fromHighway, HIGHWAY_HALF } from '../src/scripts/city3d/highway';
@@ -46,7 +40,6 @@ function distToStreet(s: Street, p: Pt) {
   }
   return best;
 }
-const inRect = (r: readonly number[], p: Pt, m = 0) => p[0] > r[0] - m && p[0] < r[2] + m && p[1] > r[1] - m && p[1] < r[3] + m;
 
 test('its streets: three, in line with The Trenches\' across the river, from the ring avenue to the bank avenue, every junction lit', () => {
   assert.equal(NS_X.length, 3);
@@ -113,29 +106,6 @@ test('the axis: the Mall carried on from its gate through the plaza\'s block to 
   }
 });
 
-test('the open lots: the plaza\'s block and the slivers by the lanes, hoarded, open at the axis\'s gates, solid, never on a street', () => {
-  assert.deepEqual(
-    OPEN_LOTS.map((o) => o.id),
-    ['plaza', 'uptown-n1-west', 'uptown-s1-west']
-  );
-  const plaza = UPTOWN_BLOCKS.find((b) => b.id === PLAZA_BLOCK)!;
-  assert.deepEqual(OPEN_LOTS[0].rect, plaza.rect);
-  for (const [gx] of HOARDING_GATES) assert.equal(gx, AXIS_X, 'the gates are where the axis comes in');
-  for (const h of HOARDINGS) {
-    const [x0, z0, x1, z1] = h;
-    assert.ok(x0 === x1 || z0 === z1, 'straight');
-    const mid: Pt = [(x0 + x1) / 2, (z0 + z1) / 2];
-    assert.ok(OPEN_LOTS.some((o) => inRect(o.rect, mid, -0.2)), `a hoarding off its lot at ${mid}`);
-    for (const s of PLAN.streets) if (s.kind !== 'alley') assert.ok(distToStreet(s, mid) > s.half + WALK_W, `a hoarding on ${s.id}`);
-    // Never across a lane
-    for (const l of UPTOWN_LANES) assert.ok(!(z0 === z1 && Math.min(x0, x1) < l[2] && Math.max(x0, x1) > l[0] && z0 > l[1] - 0.5 && z0 < l[3] + 0.5), 'across a lane');
-  }
-  // Each gate open: no hoarding through it
-  for (const [gx, gz] of HOARDING_GATES)
-    assert.ok(!HOARDINGS.some(([x0, z0, x1, z1]) => z0 === z1 && Math.abs(z0 - gz) < 0.01 && Math.min(x0, x1) < gx && Math.max(x0, x1) > gx), `the gate at ${gx}, ${gz} is shut`);
-  for (const b of UPTOWN_SOLIDS) assert.ok(SOLIDS.some((s) => s.every((v, i) => v === b[i])), 'the hoardings are solid');
-});
-
 test('its lamps: on the sidewalks, off the asphalt, out of the junctions', () => {
   assert.ok(UPTOWN_LAMPS.length > 40, `${UPTOWN_LAMPS.length} lamps`);
   for (const [x, z] of UPTOWN_LAMPS) {
@@ -144,7 +114,7 @@ test('its lamps: on the sidewalks, off the asphalt, out of the junctions', () =>
   }
 });
 
-test('the boulevard\'s line and its land: the promenade carried on west from Uptown\'s edge, the trees kept off', () => {
+test('the boulevard\'s line and its land: from Uptown\'s edge to the town\'s promenade, the trees kept off', () => {
   assert.equal(BOULEVARD_X[0], W);
   assert.equal(BOULEVARD_X[1], PROMENADE.x[0]);
   assert.ok(UPTOWN_RECT[3] === RIVER[0] && UPTOWN_RECT[0] < W && UPTOWN_RECT[2] > E);
