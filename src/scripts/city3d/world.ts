@@ -27,7 +27,7 @@ import { SKYLINE } from './bounds';
 import { keyRect } from './tileplan';
 import { site } from './tilework';
 import { lampKind } from './trenches';
-import { AXIS_X, AXIS_ZEBRAS, BOULEVARD_X, LANE_HALF } from './uptown';
+import { AXIS_X, AXIS_ZEBRAS, LANE_HALF } from './uptown';
 import { WATERFRONT_RECT } from './waterfront';
 import { BRIDGE_RECT } from './stadium';
 import { SWAY, lampGlow, newLamp, type Lamp } from './dusk';
@@ -497,7 +497,6 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
       addLamp(x, RIVER[0] - 0.4, Math.PI / 2, 0.05);
       addLamp(x, RIVER[1] + 0.4, -Math.PI / 2, 0.05);
     }
-  for (let x = PROMENADE.x[0] - 6; x >= BOULEVARD_X[0] + 1; x -= 6) if (!nearBridge(x)) addLamp(x, RIVER[0] - 0.4, Math.PI / 2, 0.05);
 
   // Roads: asphalt, and down each avenue a raised median (broken at crossings and over the river)
   const asphalt = toon('#26243f');

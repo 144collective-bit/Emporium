@@ -11,6 +11,7 @@ import { PLAN, distToStreet, outset, pointAt, streetLength } from './streetplan'
 import { DOWNTOWN, EXT, MARKET } from './layout';
 import { DECK_STROLLS, DECK_Y } from './liberty';
 import { BOAT_EAST, DECK_Y as BOARDWALK_Y, STROLL, boatZ } from './waterfront';
+import { NORTH_BOAT_EAST } from './boulevard';
 import { JUNCTIONS, ROUTES, SPOTS, lightState, phaseOf, pointOn, rightOf, type Junction, type Phase, type Pt, type Route } from './routes';
 import { CARS, PAINTS, carGeometry, carMaterials, theFarCars, type CarId } from './cars';
 import { isNear, tileKey, tileOf } from './tiles';
@@ -125,7 +126,7 @@ function spotsNear(x: number, z: number, r: number) {
 }
 
 /** The traffic's mix of cars, repeated (buses come first, as many as the quality tier allows) */
-const MIX: CarId[] = ['hatch', 'sedan', 'van', 'hatch', 'pickup', 'sedan', 'coupe', 'hatch', 'sedan', 'van', 'pickup'];
+const MIX: CarId[] = ['hatch', 'sedan', 'van', 'hatch', 'pickup', 'sedan', 'coupe', 'hatch', 'sedan', 'van', 'pickup', 'exec'];
 
 function lightBox(w: number, h: number, d: number) {
   return new THREE.BoxGeometry(w, h, d);
@@ -853,8 +854,8 @@ function buildBoats(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => void)
       b.x += speed * dt;
       // The whole river, but only round you: a boat drifting off one way comes back round from the other
       const f = CROWD_VIEW.on ? CROWD_VIEW.focus.x : CENTER.x;
-      // (the south lane's boat keeps east of The Trenches' boardwalk: waterfront.ts)
-      const lo = Math.max(EXT[0] + 6, f - BOAT_R, b.lane === 2 ? BOAT_EAST : -Infinity);
+      // (the south lane's boat keeps east of The Trenches' boardwalk, the north lane's east of Uptown's esplanade)
+      const lo = Math.max(EXT[0] + 6, f - BOAT_R, b.lane === 2 ? BOAT_EAST : b.lane === 0 ? NORTH_BOAT_EAST : -Infinity);
       const hi = Math.min(EXT[1] - 6, f + BOAT_R);
       b.g.visible = hi - lo > 30;
       if (!b.g.visible) continue;

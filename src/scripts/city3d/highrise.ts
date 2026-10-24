@@ -138,7 +138,7 @@ export function design(id: string, block: string, kind: Design, lot: Rect, h: nu
 }
 
 const block = (id: string) => UPTOWN_BLOCKS.find((b) => b.id === id)!;
-/** The part of a block east of the axis's lane through it (the sliver west of it stays open: `OPEN_LOTS` in uptown.ts) */
+/** The part of a block east of the axis's lane through it (the sliver west of it is a café terrace: `TERRACES` in plaza.ts) */
 const eastOfLane = (id: string): Rect => {
   const b = block(id);
   const lane = UPTOWN_LANES.find((l) => l[1] === b.rect[1] && l[0] > b.rect[0] && l[2] < b.rect[2])!;

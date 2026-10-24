@@ -28,6 +28,7 @@ import { SLAB } from './world';
 import { site } from './tilework';
 import { HIGHRISES, PODIUM, type Highrise, type Part, type Skin } from './highrise';
 import type { Pt, Rect } from './uptown';
+import { ROOF_TERRACES } from './boulevard';
 
 /* ---------- The atlas ---------- */
 
@@ -375,6 +376,8 @@ function tower(b: Batch, t: Highrise, low: boolean) {
         const x = px0 + 0.8 + r() * (px1 - px0 - 1.6);
         const z = pz0 + 0.8 + r() * (pz1 - pz0 - 1.6);
         if (shaftsR.some((q) => x > q[0] - 1.2 && x < q[2] + 1.2 && z > q[1] - 1.2 && z < q[3] + 1.2)) continue;
+        // (nor on a restaurant terrace: boulevard.ts)
+        if (ROOF_TERRACES.some(({ rect: q }) => x > q[0] - 0.8 && x < q[2] + 0.8 && z > q[1] - 0.8 && z < q[3] + 0.8)) continue;
         b.box(x - 0.5, SLAB + PODIUM.h, z - 0.4, 1.0, 0.6, 0.8, STEEL);
       }
     }
