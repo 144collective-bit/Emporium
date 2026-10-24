@@ -21,6 +21,7 @@ import { CIRCUIT } from './kartcircuit';
 import { KART_PARK } from './kartpark';
 import { BX, WALKWAY } from './liberty';
 import { DECKS } from './waterfront';
+import { ESPLANADE_DECKS } from './boulevard';
 import { HIGHWAY_BOX } from './highway';
 import { STADIUM_AREA } from './stadium';
 
@@ -149,8 +150,9 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
       poly(p.poly);
       ctx.fill();
     }
-    // The Trenches' boardwalk and Pier 7, out over the water
+    // The Trenches' boardwalk and Pier 7 out over the water, and Uptown's esplanade, its overlooks and marina (boulevard.ts)
     for (const d of DECKS) rect(d, C.boardwalk);
+    for (const d of ESPLANADE_DECKS) rect(d, C.slab);
     // Westlake Park (westlake.ts): its lawns, the lake and its paths
     for (const b of WESTLAKE_BLOCKS) {
       poly(b.poly);

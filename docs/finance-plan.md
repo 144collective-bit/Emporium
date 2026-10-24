@@ -44,7 +44,7 @@ sign-off. Keep this plan up to date as each phase lands.
     at both world sizes.
   - Nothing that exists moves unless the owner says so: the snapshot is
     rewritten only for what the owner moves (the courts).
-- **The budget:** the boot's code is at 640.2 of 642 KB (raised from 640
+- **The budget:** the boot's code is at 641.5 of 642 KB (raised from 640
   on purpose in Phase 3: the plaza's solids, trees, lamps and people must be
   there at the boot). Everything drawn
   goes in the district's own chunk; what the boot must hold (solids,
@@ -125,7 +125,7 @@ sign-off. Keep this plan up to date as each phase lands.
    - **Moving signs:** an LED ribbon round a podium with made-up words
      only, no numbers.
    - **Footprints:** in `SOLIDS`.
-4. **The waterfront boulevard.**
+4. **The waterfront boulevard** (built: see "Phase 4 as built" below).
    - **The esplanade:** along the north bank from the Parkway to the
      highway, wide paving, a double row of trees, lamps, benches and
      railings at the water. It's open at the bridges and links east to
@@ -134,7 +134,9 @@ sign-off. Keep this plan up to date as each phase lands.
      boat model), the river's boats kept clear (as `waterfront.ts` does).
    - **The south row:** restaurant terraces in the river-facing podiums.
    - **The avenue:** a planted median.
-   - **At the lobbies:** valet bays with parked cars (`parkedCars()`).
+   - **At the lobbies:** valet bays with parked cars (`parkedCars()`). Not
+     built: there's no room without cutting into the podiums (see "Phase 4
+     as built").
    - **On the move:** a black town car among the traffic's models,
      following the cars' rules (a lane's width, two draws a model).
 5. **Night, life and the place.**
@@ -275,3 +277,65 @@ owner's sign-off.
   was raised on purpose from 640 to 642: the plaza's people, trees, lamps
   and solids have to be in the boot, and everything drawing-only was moved
   out to `plazadress.ts`.
+
+## Phase 4 as built
+
+- **The data:** `boulevard.ts` (DOM-free, tested in
+  `tests/boulevard.test.ts`) is what the boot needs: the decks you walk on,
+  the boats' limit, the trees, lamps and people, the terraces.
+  `boulevarddress.ts` (DOM-free, tested there too) is what only the drawing
+  needs, kept in Uptown's chunk: the yachts, the planted median, the
+  terraces' names.
+- **The esplanade:**
+  - a paved deck along the north bank from Uptown's west edge to where the
+    town's promenade begins, from the bank avenue's kerb out 3 over the
+    water (about 5.8 across), at the boardwalk's height;
+  - the plaza's granite, darker bands along the tree rows;
+  - a double row of trees in round stone planters (every 6 by the avenue,
+    every 12 by the water), lamps at the water's edge every 12, benches
+    facing the river between them;
+  - a glass rail with a steel top along the water and across its ends.
+  - It replaces the stretch of the town's promenade that Phase 1 carried
+    west (its railings, planters, benches and lamps).
+- **Over the water:**
+  - the axis's overlook where the Mall's line meets the river (8 wide, two
+    flagpoles with pennants, coin binoculars) and a smaller one in line
+    with Uptown's east street;
+  - the marina at the west end: a timber pontoon on floats reached by two
+    gangways, five yachts moored along its river side (a new boat model: a
+    pointed hull with a sheer stripe, a teak deck, a deck house with a dark
+    window band, a flybridge on the bigger ones, a mast and navigation
+    lights), two tenders inside it.
+- **The boats keep clear:** the north lane's boats stay east of the
+  esplanade, as the south lane's do at the boardwalk. The middle lane runs
+  as it did; the tests keep every deck and yacht at least 0.8 clear of its
+  boats.
+- **Walking:** the decks are ground at the boardwalk's height; their rails
+  are their edges. Nothing on the esplanade is solid, as on the town's
+  promenade.
+- **Restaurant terraces:** on the river row's podium roofs wherever a roof
+  is clear of its shafts (five: two on the west slab's podium, one between
+  the twins, two on the deco tower's), with timber decking, a glass
+  balustrade over the parapet, tables under umbrellas, planters, string
+  lights, and the name on a lit board facing the river (HARBOUR & VINE, THE
+  LANTERN ROOM, SKY GARDEN, RIVERLIGHT, THE GILDED FORK; made up). The
+  sidewalk in front of the podiums is only 0.8 deep, so the roofs are where
+  there's room. The podiums' rooftop plant keeps off them.
+- **The planted median:** a clipped hedge along the bank avenue's median
+  through Uptown, broken well short of every junction and the axis's
+  zebra, slim columnar trees every 8 along it.
+- **The town car:** the Midnight Exec (`exec` in `cars.ts`, made up), a
+  long black executive saloon with chrome trim, one in twelve of the
+  traffic's cars, everywhere in the city. Traffic only, never in the
+  garage.
+- **People:** 53 (half on phones): on every other bench, at the overlooks'
+  rails, a pair on the pontoon, and dining on the terraces.
+- **Not built: valet bays at the lobbies.** Every lobby door sits 0.2 from
+  the sidewalk, and the podiums fill their lots to 0.8 from the edge, so a
+  parked car would stand on the sidewalk or in a traffic lane. Doing it
+  properly means cutting a covered drop-off into some podiums, which moves
+  the towers' footprints. It's the owner's call whether to do that in
+  Phase 5.
+- **The budget:** the boot's code went from 640.2 to 641.5 of 642 KB (the
+  town car's model and the boulevard's people, trees and lamps); the
+  drawing is in Uptown's chunk.

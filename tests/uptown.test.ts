@@ -114,7 +114,7 @@ test('its lamps: on the sidewalks, off the asphalt, out of the junctions', () =>
   }
 });
 
-test('the boulevard\'s line and its land: the promenade carried on west from Uptown\'s edge, the trees kept off', () => {
+test('the boulevard\'s line and its land: from Uptown\'s edge to the town\'s promenade, the trees kept off', () => {
   assert.equal(BOULEVARD_X[0], W);
   assert.equal(BOULEVARD_X[1], PROMENADE.x[0]);
   assert.ok(UPTOWN_RECT[3] === RIVER[0] && UPTOWN_RECT[0] < W && UPTOWN_RECT[2] > E);

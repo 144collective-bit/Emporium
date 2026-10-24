@@ -75,8 +75,8 @@ const BULB = neon('#ffd98a', 0.6, 2.4);
 const GOLD = siteMat('plaza-gold', lit(new THREE.MeshToonMaterial({ color: '#d8ae48', emissive: '#ffcf70' }), 0, 0.32));
 
 /** The granite: big slabs, two to a texture's side, laid on every 4 tiles */
-const GRANITE_TILE = 4;
-const granite = siteMat(
+export const GRANITE_TILE = 4;
+export const granite = siteMat(
   'plaza-granite',
   (() => {
     const tex = canvasTex(256, 256, (c) => {
@@ -170,8 +170,8 @@ const RIBBON_MAT = siteMat('plaza-ribbon', lit(new THREE.MeshBasicMaterial({ map
 
 /* ---------- Helpers ---------- */
 
-/** A flat quad over a rect at y, its uv in world units / `scale` */
-function quad(r: Rect, y: number, scale = 1) {
+/** A flat quad over a rect at y, its uv in world units / `scale` (the boulevard's too, boulevard3d.ts) */
+export function quad(r: Rect, y: number, scale = 1) {
   const [x0, z0, x1, z1] = r;
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute([x0, y, z0, x0, y, z1, x1, y, z1, x1, y, z0], 3));
@@ -180,9 +180,9 @@ function quad(r: Rect, y: number, scale = 1) {
   g.setIndex([0, 1, 2, 0, 2, 3]);
   return g;
 }
-const box = (b: Batch, [x0, z0, x1, z1]: Rect, y0: number, y1: number, mat: THREE.Material) => b.box(x0, y0, z0, x1 - x0, y1 - y0, z1 - z0, mat);
+export const box = (b: Batch, [x0, z0, x1, z1]: Rect, y0: number, y1: number, mat: THREE.Material) => b.box(x0, y0, z0, x1 - x0, y1 - y0, z1 - z0, mat);
 /** A thin box from a to b (points in x, y, z, along a line with x fixed or changing) */
-function rod(b: Batch, a: number[], c: number[], w: number, mat: THREE.Material) {
+export function rod(b: Batch, a: number[], c: number[], w: number, mat: THREE.Material) {
   const [dx, dy, dz] = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
   const len = Math.hypot(dx, dy, dz);
   const g = new THREE.BoxGeometry(w, w, len);
@@ -191,9 +191,9 @@ function rod(b: Batch, a: number[], c: number[], w: number, mat: THREE.Material)
   b.add(g.translate((a[0] + c[0]) / 2, (a[1] + c[1]) / 2, (a[2] + c[2]) / 2), mat);
 }
 
-/** A bench, the sitter facing ry, its seat at SEAT_Y (near only) */
-function bench(b: Batch, at: Pt, ry: number) {
-  const g = (w: number, h: number, d: number, x: number, y: number, z: number) => new THREE.BoxGeometry(w, h, d).translate(x, y + h / 2, z).rotateY(ry).translate(at[0], PAVE, at[1]);
+/** A bench standing at y, the sitter facing ry, its seat SEAT_Y up (near only) */
+export function bench(b: Batch, at: Pt, ry: number, y0 = PAVE) {
+  const g = (w: number, h: number, d: number, x: number, y: number, z: number) => new THREE.BoxGeometry(w, h, d).translate(x, y + h / 2, z).rotateY(ry).translate(at[0], y0, at[1]);
   b.detail(() => {
     b.add(g(1.5, 0.06, 0.36, 0, SEAT_Y - 0.06, 0), WOOD);
     b.add(g(1.5, 0.32, 0.05, 0, SEAT_Y + 0.02, -0.18), WOOD);
@@ -201,23 +201,25 @@ function bench(b: Batch, at: Pt, ry: number) {
   });
 }
 
-/** A café table with a chair either side along z (near only), an umbrella over it on the terraces */
-function table(b: Batch, [x, z]: Pt, umbrella: THREE.Material | null) {
+/** A café table standing at y with a chair either side along z (along x: `alongX`) (near only), an umbrella over it on the terraces */
+export function table(b: Batch, [x, z]: Pt, umbrella: THREE.Material | null, y = PAVE, alongX = false) {
+  const PAVE = y;
   b.detail(() => {
     b.add(new THREE.CylinderGeometry(0.38, 0.38, 0.04, 14).translate(x, PAVE + 0.55, z), TABLE);
     b.add(new THREE.CylinderGeometry(0.035, 0.035, 0.53, 6, 1, true).translate(x, PAVE + 0.27, z), IRON);
     b.add(new THREE.CylinderGeometry(0.2, 0.2, 0.02, 10).translate(x, PAVE + 0.01, z), IRON);
     for (const s of [-1, 1]) {
-      const cz = z + s * CHAIR;
-      b.box(x - 0.2, PAVE + SEAT_Y - 0.04, cz - 0.2, 0.4, 0.04, 0.4, IRON);
-      b.box(x - 0.2, PAVE + SEAT_Y, cz + s * 0.18, 0.4, 0.34, 0.04, IRON);
+      const [cx, cz] = alongX ? [x + s * CHAIR, z] : [x, z + s * CHAIR];
+      b.box(cx - 0.2, PAVE + SEAT_Y - 0.04, cz - 0.2, 0.4, 0.04, 0.4, IRON);
+      if (alongX) b.box(cx + s * 0.18, PAVE + SEAT_Y, cz - 0.2, 0.04, 0.34, 0.4, IRON);
+      else b.box(cx - 0.2, PAVE + SEAT_Y, cz + s * 0.18, 0.4, 0.34, 0.04, IRON);
       for (const [lx, lz] of [
         [-0.17, -0.17],
         [0.17, -0.17],
         [-0.17, 0.17],
         [0.17, 0.17],
       ])
-        b.box(x + lx - 0.015, PAVE, cz + lz - 0.015, 0.03, SEAT_Y - 0.04, 0.03, IRON);
+        b.box(cx + lx - 0.015, PAVE, cz + lz - 0.015, 0.03, SEAT_Y - 0.04, 0.03, IRON);
     }
   });
   if (umbrella) {

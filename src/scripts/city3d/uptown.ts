@@ -5,7 +5,8 @@
  * (Westlake Park's three strips until Phase 1), becoming a waterfront
  * boulevard and a financial centre with skyscrapers and a plaza. Phase 1 is
  * the land and its streets (this file); the towers are highrise.ts (Phase 2),
- * the plaza plaza.ts (Phase 3); the boulevard and the life come next.
+ * the plaza plaza.ts (Phase 3), the waterfront boulevard boulevard.ts
+ * (Phase 4); the life comes next.
  *
  * - **Its streets** (`UPTOWN_STREETS`): three north-south streets (one lane
  *   each way) from the west ring avenue down to the north bank avenue, in
@@ -22,8 +23,9 @@
  * - **The lots:** the plaza's block and the slivers west of the axis's
  *   lanes are the plaza's (plaza.ts, Phase 3); every other lot is a
  *   tower's (highrise.ts, Phase 2).
- * - **The boulevard's line** (`BOULEVARD_X`): the town's promenade carried
- *   on west along the north bank to the highway.
+ * - **The boulevard's line** (`BOULEVARD_X`): the north bank from Uptown's
+ *   west edge to where the town's promenade begins, the esplanade's
+ *   (boulevard.ts).
  */
 import { EW_ROADS, LANE, RIVER, WALK_W } from './layout';
 import { NS_X as TRENCH_X } from './trenches';
@@ -119,7 +121,7 @@ export const AXIS_ZEBRAS: { z: number; half: number }[] = ROWS_Z.map((r) => ({ z
 
 /* ---------- Its lamps and the boulevard's line ---------- */
 
-/** The town's promenade carried on west along the north bank: from Uptown's west edge to where the town's begins */
+/** The north bank along Uptown, the esplanade's (boulevard.ts): from Uptown's west edge to where the town's promenade begins */
 export const BOULEVARD_X: [number, number] = [W, PROMENADE.x[0]];
 
 /**

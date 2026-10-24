@@ -709,7 +709,8 @@ it and has been retired completely. Build only on what's here.
   everywhere else); the flying traffic and your own aircraft clear them.
   The strips' courts and their players are retired with it. Scenery first;
   in Phase 5 the tallest tower becomes a place with a sky deck. Phases 1
-  (the land and the streets), 2 (the towers) and 3 (the plaza) are built:
+  (the land and the streets), 2 (the towers), 3 (the plaza) and 4 (the
+  waterfront boulevard) are built:
   - `uptown.ts` (DOM-free, tested in `tests/uptown.test.ts`): three
     north-south streets (`UPTOWN_STREETS`, `NS_X`: in line with The
     Trenches' cross streets across the river) from the west ring avenue to
@@ -722,9 +723,8 @@ it and has been retired completely. Build only on what's here.
     (`AXIS_ZEBRAS`; the avenues' medians and lines break there,
     `highwayGaps()` in world.ts); lamps
     along its avenues and cross streets (`UPTOWN_LAMPS`); the boulevard's
-    line (`BOULEVARD_X`: the town's promenade carried on west along the
-    north bank, its railings, trees, benches and lamps on the town's
-    rhythm, neighbourhoods.ts and world.ts); `UPTOWN_RECT` / `inUptown()`.
+    line (`BOULEVARD_X`: the north bank from Uptown's west edge to the
+    town's promenade, the esplanade's); `UPTOWN_RECT` / `inUptown()`.
   - Its streets are drawn at the boot by `streets3d.ts` (`drawStreets()`,
     shared with The Trenches, clean here: no wear), its lots paved
     (world.ts), and the rest is a district loaded as you approach from
@@ -783,6 +783,36 @@ it and has been retired completely. Build only on what's here.
     would stripe its gold); the water wall's falls a streaked texture its
     tick scrolls, the ribbon's words another; the kiosks' names one small
     atlas). The hoardings came down with it.
+  - **The waterfront boulevard** (Phase 4) is `boulevard.ts` (DOM-free,
+    tested in `tests/boulevard.test.ts`; in the boot: the decks, the
+    boats' limit, trees, lamps, people, the terraces) and
+    `boulevarddress.ts` (the yachts, the planted median, the terraces'
+    names; Uptown's chunk): the esplanade (`ESPLANADE`: the north bank from
+    Uptown's west edge to the town's promenade, from the bank avenue's kerb
+    out `OUT` over the water, at the boardwalk's `DECK_Y`; a double row of
+    trees in planters, `LAND_TREES` / `WATER_TREES`, lamps at the water's
+    edge, `EDGE_LAMPS`, benches facing the river, `BENCH_XS`), the
+    overlooks (`OVERLOOKS`: the axis's, with flagpoles, and one in line
+    with the east street), the marina (`PONTOON`, `GANGWAYS`; `YACHTS`, a
+    new boat model, and `TENDERS`); walking: `ESPLANADE_DECKS`,
+    `onEsplanade()` in walk.ts beside the boardwalk's `onDeck()`, nothing
+    on it solid. The north lane's boats stay east of it (`NORTH_BOAT_EAST`,
+    life.ts), the middle lane passes outside every deck and yacht (the
+    tests hold 0.8 clear). Restaurant terraces on the river row's podium
+    roofs wherever they're clear of the shafts (`ROOF_TERRACES`, their
+    tables; `TERRACE_NAMES`, made up; the podiums' rooftop plant keeps off
+    them); a planted median along the bank avenue (`MEDIAN_RUNS`,
+    `MEDIAN_TREES`, `HEDGE`: a clipped hedge and columnar trees, well short
+    of the junctions and the axis's zebra); people (`BOULEVARD_PEOPLE`:
+    benches, rails, the pontoon, the terraces; half on phones). It
+    replaces the stretch of the town's promenade that Phase 1 carried west.
+    Drawn by `boulevard3d.ts` (sites: the esplanade in stretches with the
+    plaza's granite (`granite`, `quad()`, `bench()`, `table()` are
+    plaza3d.ts's), a glass rail broken at the overlooks' and gangways'
+    mouths, piles; the overlooks; the marina and its yachts; the median a
+    run a site; each terrace a site, its name from one small atlas). Valet
+    bays at the lobbies weren't built (no room without cutting into the
+    podiums; the owner's call for Phase 5).
 - **Districts loaded as you approach** (performance phase 4, item 10):
   a district's drawing is a module of its own (`LAZY_DISTRICTS` in
   `districts.ts`: an id, its land and `load()`, a dynamic import), a chunk
@@ -873,7 +903,8 @@ it and has been retired completely. Build only on what's here.
   change on Degen; that's `docs/animation-plan.md`'s (sitting on a bench
   waits for it).
 - **Cars** are `src/scripts/city3d/cars.ts`: real-proportion cartoon models
-  (City Hatch, Cruiser, Street GT coupe, Hauler pickup, Box Van, City Bus;
+  (City Hatch, Cruiser, Street GT coupe, Hauler pickup, Box Van, City Bus,
+  and Uptown's Midnight Exec, a long black saloon in the traffic only;
   made-up names, never a real make or badge), each a bevelled extruded
   body and cabin with blacked-out window frames and glass, light clusters
   (lamp shape `lamp`) with bezels and indicators, a grille, door seams and
@@ -2591,7 +2622,7 @@ it and has been retired completely. Build only on what's here.
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`),
-  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`), the kart park's facility (`kartfacility.ts`),
+  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`, `boulevard.ts`, `boulevarddress.ts`, the town car in `cars.ts`), the kart park's facility (`kartfacility.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,
