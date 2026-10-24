@@ -22,13 +22,10 @@ import * as THREE from 'three';
 import { Batch, canvasTex, FONT_DISPLAY, lit, siteMat, toon } from './kit';
 import { METAL, ROOF, glow } from './infill';
 import { drawLot } from './kits3d';
-import { SLAB as S, addTree } from './world';
+import { SLAB as S } from './world';
 import { site } from './tilework';
-import { parkedCars, type CarId } from './cars';
-import { TRENCH_BLOCKS } from './trenches';
-import { LOWRISE, LOWRISE_NAMES, LOW_CARS, TENEMENTS, VACANT, lowFrame, type LowLot, type Vacant } from './streetwall';
+import { LOWRISE, LOWRISE_NAMES, TENEMENTS, VACANT, lowFrame, type LowLot, type Vacant } from './streetwall';
 import { buildFx, poster, tag, atlasQuad } from './grime';
-import type { Idle } from './landmarks';
 import type { Pt, Rect } from './downtown';
 
 /** The low lots' signs (made-up names), one row each, and the vacant lots' billboards */
@@ -298,8 +295,8 @@ function vacantDraw(b: Batch, fxb: Batch, v: Vacant, i: number, low: boolean) {
   }
 }
 
-export function buildStreetWalls(scene: THREE.Scene, crowd: Idle[], opts: { low: boolean }) {
-  const low = opts.low;
+/** The street walls' sites (the cars on the aprons, the trees behind the strip and the people at work are placed at the boot: trenches-place.ts) */
+export function registerStreetWalls(low: boolean) {
   // The tenements, two to a site (none takes long to build), block by block
   const byBlock = new Map<string, typeof TENEMENTS>();
   for (const t of TENEMENTS) byBlock.set(t.block, [...(byBlock.get(t.block) ?? []), t]);
@@ -331,17 +328,4 @@ export function buildStreetWalls(scene: THREE.Scene, crowd: Idle[], opts: { low:
       b.build(into);
       buildFx(fxb, into);
     });
-  // The cars on the aprons and in the car wash; trees along the highway behind the strip; people at work
-  parkedCars(scene, S, LOW_CARS as [CarId, number, number, number, string][]);
-  const w = TRENCH_BLOCKS.find((b) => b.row === 'W')!;
-  const [x0, z0, , z1] = [Math.min(...w.poly.map((p) => p[0])), Math.min(...w.poly.map((p) => p[1])), Math.max(...w.poly.map((p) => p[0])), Math.max(...w.poly.map((p) => p[1]))];
-  for (let z = z0 + 1.5; z < z1 - 1; z += 3.4) if (hash(z, 7) < 0.8) addTree(x0 + 1.2, z, 0.9 + hash(z, 3) * 0.35, hash(z, 11) < 0.4);
-  for (const l of LOWRISE) {
-    if (l.kind === 'lockups' || l.kind === 'warehouse') continue;
-    const F = lowFrame(l);
-    const [u, v] = l.kind === 'carwash' ? [F.W - 1.2, 0.9] : l.kind === 'scrap' ? [F.W - 2.1, 3.3] : [F.W * 0.55, 2.7];
-    const [x, z] = F.at(u, v);
-    const n = OUT[l.face];
-    crowd.push({ x, z, ry: Math.atan2(n[0], n[1]), act: 'look' });
-  }
 }

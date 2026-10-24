@@ -245,7 +245,8 @@ Nothing looks or plays differently.
   browser as before; `?textures=0` paints them anyway, to compare.
 - **Districts loaded as you approach (10): built with the next district,
   Westlake Park** (the owner's call). The Trenches costs about 0.2 s of a
-  13 s phone start, so it stayed as it is. How it works (`districts.ts`):
+  13 s phone start, so it stayed in the boot until the boot's code budget
+  ran out (below, 7). How it works (`districts.ts`):
   1. A district's drawing is a module of its own (`westlake3d.ts`), a
      chunk the boot never downloads. What the rest of the city needs (its
      blocks in the street plan, its solids, the lake that keeps walkers
@@ -273,6 +274,23 @@ Nothing looks or plays differently.
      is a chunk of its own fetched when Degen comes near or asks at the
      hut. With the facility added the boot's code went from 638.5 to
      628.9 KB of 640.
+  7. **The Trenches is the fourth** (2026-10, the owner's call: the
+     boot's code had reached 639.5 KB of its 640). Its drawing
+     (`trenches3d.ts`: the streets, the towers and rows, the commons, the
+     grit, the street walls, the riverside's landmarks, the boardwalk) is
+     its chunk, 21.7 KB gzipped; what the boot needs of it (its lamps,
+     trees, parked cars and people) `placeTrenches()` puts in the city's
+     lists from the same data, and its places stay in the boot. It loads
+     at once from the home view (its land is within reach), so the only
+     difference is that its pieces come a moment after the boot's. At the
+     same time the baked data's numbers were cut to 3 decimals
+     (`rounded()` in `baked.ts`: the routes' coordinates were written at
+     full double precision, 70 KB gzipped on their own); the baked chunk
+     went from 95 to 47 KB. Together the boot's code went from 639.5 to
+     572.2 KB of 640. Next in line if it fills again: the screens that
+     open on demand (the business card and market hall, the fight,
+     missions, Build, garage and hangar menus, about 30 KB), then walk
+     mode itself (about 27 KB, woven through the boot).
 
 ### What phase 4 measured
 

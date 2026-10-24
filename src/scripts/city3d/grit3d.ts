@@ -10,7 +10,7 @@
 import * as THREE from 'three';
 import { Batch, toon } from './kit';
 import { INK, METAL, frameOf, kit, soft } from './infill';
-import { SLAB as S, addTree, flatPoly } from './world';
+import { SLAB as S, flatPoly } from './world';
 import { site } from './tilework';
 import { SHOP_H, type Infill, type Pt, type Rect } from './downtown';
 import { ROW_BLOCKS, rows } from './projects';
@@ -19,7 +19,6 @@ import { BARRIERS, BOOMBOXES, CAR_PARKS, DUMPSTER, DUMPSTERS, EL_PILLARS, JERSEY
 import { buildFx, poster, tag } from './grime';
 import { TENEMENTS } from './streetwall';
 import type { Lot } from './kits';
-import type { Idle } from './landmarks';
 
 const PATCH = { grass: toon('#5f7f3f'), dirt: toon('#6b5848'), lawn: toon('#4c7d47') };
 const SOIL = toon('#3b2f2a');
@@ -123,9 +122,8 @@ function chair(b: Batch, x: number, z: number, ry: number, paint: THREE.Material
   }
 }
 
-export function buildGrit(scene: THREE.Scene, crowd: Idle[], opts: { low: boolean }) {
-  const low = opts.low;
-  void scene;
+/** The grit's sites (the yards' trees and the people round the boomboxes are placed at the boot: trenches-place.ts) */
+export function registerGrit(low: boolean) {
   // Each yard: its worn patches, tree pits, dumpsters, trash, boombox corner
   for (const blk of YARDS) {
     const xs = blk.poly.map((p) => p[0]);
@@ -157,13 +155,6 @@ export function buildGrit(scene: THREE.Scene, crowd: Idle[], opts: { low: boolea
       buildFx(fxb, into);
     });
   }
-  // The yards' trees (pits or patches of grass) and the people round the boombox
-  for (const t of YARD_TREES) addTree(t.x, t.z, t.s, false);
-  for (const bx of BOOMBOXES) {
-    for (const [x, z, ry] of bx.chairs) crowd.push({ x, z, ry, act: 'sit', y: S + 0.42 });
-    for (const [x, z, ry] of bx.standing) crowd.push({ x, z, ry, act: 'chat' });
-  }
-
   // The jersey barriers along the back of Bottom Street's car parks, some tagged
   for (const cp of CAR_PARKS) {
     const mine = BARRIERS.filter((j) => j.x > cp[0] - 1 && j.x < cp[2] + 1 && Math.abs(j.z - (cp[3] + 0.45)) < 0.01);

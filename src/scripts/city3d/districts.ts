@@ -23,6 +23,8 @@ import { WESTLAKE_RECT } from './westlake';
 import { STADIUM_AREA } from './stadium';
 import { KART_AREA } from './kartfacility';
 import { UPTOWN_RECT } from './uptown';
+import { TRENCH_RECT } from './trenches';
+import { WATERFRONT_RECT } from './waterfront';
 
 /** How much further out than its land Uptown loads (its towers stand over the whole town) */
 const UPTOWN_REACH = 240;
@@ -36,6 +38,9 @@ export interface LazyDistrict {
 
 const union = (a: Rect, b: Rect): Rect => [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[2], b[2]), Math.max(a[3], b[3])];
 export const LAZY_DISTRICTS: LazyDistrict[] = [
+  // The Trenches (growth plan Phase 9, with its riverside and waterfront): its streets, towers, rows, commons, grit,
+  // street walls, the riverside's landmarks and the boardwalk (trenches3d.ts); its places are built at the boot
+  { id: 'trenches', rect: union(TRENCH_RECT, WATERFRONT_RECT), load: () => import('./trenches3d') },
   // (with the stadium's grounds north of the highway beside it: its road, car park and footbridge, stadiumgrounds3d.ts)
   { id: 'westlake', rect: union(WESTLAKE_RECT, STADIUM_AREA), load: () => import('./westlake3d') },
   // The kart park's grounds north of the highway: the circuit, trackside, the paddock, Kart Road and the car park (kartgrounds3d.ts)

@@ -26,7 +26,7 @@ import * as THREE from 'three';
 import { BONES, makeSkeleton, newPose, poseSkeleton, type Limb, type Pose } from './skeleton';
 import { copyPose, createLocomotion } from './locomotion';
 import { attentionPose, chatPose, idlePose, lookPose, picnicPose, set, sitPose } from './poses';
-import { baked as atBuild } from './baked';
+import { baked as atBuild, rounded } from './baked';
 
 export type CrowdClip = 'walk' | 'jog' | 'march' | 'idle' | 'look' | 'chat' | 'sit' | 'picnic' | 'salute';
 
@@ -123,7 +123,8 @@ function recordWalk(speed: number, frames: number) {
     while (loco.cycle < f / frames && guard++ < 2400) step();
     const p = fresh();
     copyPose(loco.pose, p);
-    out.push(p);
+    // (cut to 3 decimals, within 0.03° and half a millimetre: the page carries them, baked.ts)
+    out.push(rounded(p));
   }
   // On round to the next wrap: the whole cycle's distance
   last = loco.cycle;

@@ -24,14 +24,7 @@ import { initFarCars } from './cars';
 import { siteMatOf } from './kit';
 import { takeSites } from './tilework';
 import { buildLamps, buildTrees, usePlaced, type Placed, type Tick } from './world';
-import { buildTrenches } from './trenches3d';
 import { buildUptownStreets } from './streets3d';
-import { buildProjects } from './projects3d';
-import { buildCommons } from './commons3d';
-import { buildGrit } from './grit3d';
-import { buildStreetWalls } from './streetwall3d';
-import { buildRiverside } from './riverside3d';
-import { buildWaterfront } from './waterfront3d';
 import { buildBusStops } from './transit3d';
 
 export interface SiteInit {
@@ -73,18 +66,11 @@ export interface DistrictModule {
 
 /** In the worker: register the sites, then build each one when it's asked for */
 export function serveSites(scope: Scope, init: SiteInit) {
-  // The boot's own builders, in its order (what they make besides sites stays here, unused)
+  // The boot's own builders, in its order (The Trenches' come with its chunk, below, like every district's)
   const scene = new THREE.Scene();
   // (the parked cars go into the far cars' mesh, made first at the boot)
   initFarCars(scene, 400, init.low);
-  buildTrenches();
   buildUptownStreets();
-  buildProjects(init.low);
-  buildCommons(scene, [], { low: init.low });
-  buildGrit(scene, [], { low: init.low });
-  buildStreetWalls(scene, [], { low: init.low });
-  buildRiverside(init.low);
-  buildWaterfront(init.low);
   // (the trees and lamps every builder placed: the main thread's list, not these builders' few)
   usePlaced(init.placed);
   buildTrees(init.low);

@@ -28,7 +28,7 @@ import type { Pt } from './downtown';
 import type { Idle, Spot } from './landmarks';
 import { DINERS, FLOOR_Y as T, GANTRY, HEATERS, MARKET_RAILS, MX, POLES, QUEUE, STALLS, STALL_NAMES, STRINGS, TABLE, TABLES, TRUCK, VENDORS, type Stall } from './nightmarket';
 import { BOARDWALK, MARKET_DECK } from './waterfront';
-import { box } from './riverside3d';
+import { box } from './riversidekit';
 import { deck, railX, railZ } from './waterfront3d';
 
 const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);

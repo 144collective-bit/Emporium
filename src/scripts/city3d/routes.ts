@@ -17,7 +17,7 @@
 import { LANE, MEDIAN } from './layout';
 import { PLAN, distToStreet, offsetLine, type Street } from './streetplan';
 import { SLIP_CUT, cornerCurve } from './highway';
-import { baked } from './baked';
+import { baked, rounded } from './baked';
 
 export type Pt = [number, number];
 /** Which way traffic crosses a junction: along x, along z, or down a diagonal (each gets its own green) */
@@ -542,7 +542,8 @@ function allRoutes(): Route[] {
     });
     routes.push(loopOf(legsOf(cycle, r)));
   }
-  return routes.map(makeRoute);
+  // (the points cut to 3 decimals, within 2 mm: the page carries them, baked.ts)
+  return routes.map((pts) => makeRoute(rounded(pts)));
 }
 
 /**

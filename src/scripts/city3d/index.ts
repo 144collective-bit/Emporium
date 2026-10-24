@@ -55,14 +55,10 @@ import { AIR_SPAWN } from './airfield';
 import { FIGHT_SPAWN } from './fightsite';
 import { LIBERTY_SPAWN } from './liberty';
 import { buildLibertyBridge } from './libertybridge';
-import { buildProjects } from './projects3d';
-import { buildCommons } from './commons3d';
-import { buildGrit } from './grit3d';
-import { buildStreetWalls } from './streetwall3d';
 import { buildTheBlock } from './theblock';
 import { buildAvenue } from './avenue3d';
-import { buildRiverside } from './riverside3d';
-import { buildPier, buildWaterfront } from './waterfront3d';
+import { buildPier } from './waterfront3d';
+import { placeTrenches } from './trenches-place';
 import { PIER_SPAWN } from './waterfront';
 import { buildNightMarket } from './nightmarket3d';
 import { MARKET_SPAWN } from './nightmarket';
@@ -82,7 +78,6 @@ import { tileBatch } from './tilebatch';
 import { createTileWork } from './tilework';
 // (the site worker imports this module, the city's chunk, and starts with sitework.ts's `serveSites()`)
 import { meshesOf, startSiteWorker } from './sitework';
-import { buildTrenches } from './trenches3d';
 import { buildUptownStreets } from './streets3d';
 import { tilesInView, type Plane } from './tiles';
 import { farForm, farLods, updateLods } from './lod';
@@ -210,25 +205,17 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   spots.push(liberty.spot);
   // ?fight: the sparring demo on the hangout square (the fight clips, before the Fight Club exists)
   const fightDemo = new URLSearchParams(location.search).has('fight') ? (await import('./fight-demo')).buildFightDemo({ scene, root, reduced, low: tier === 'low', tick }) : null;
-  // The Trenches (growth plan Phase 9): its streets, built as you go (its blocks are the street plan's)
-  buildTrenches();
+  // The Trenches (growth plan Phase 9): its drawing (streets, towers, rows, commons, grit, street walls, the riverside's
+  // landmarks, the boardwalk) is a chunk loaded as you approach (trenches3d.ts, districts.ts); what the boot needs of it
+  // (its lamps, trees, parked cars and people, in the city's own lists) is placed here
+  placeTrenches(scene, crowd, tier === 'low');
   buildUptownStreets();
-  // ...its towers, lawns and rows (sites too), and The Block, a place (its pin and panel) with its people
-  buildProjects(tier === 'low');
-  // ...the lawns' communal areas, the rec block, parking bays and railings (the redesign's step B), and the people out there
-  buildCommons(scene, crowd, { low: tier === 'low' });
-  // ...and its grit (the owner's call): worn yards, tree pits, dumpsters, trash, barriers, shutters, tags and bills
-  buildGrit(scene, crowd, { low: tier === 'low' });
-  // ...and built up (the grit's step 2): tenement street walls, vacant lots, low commercial along Bottom Street and West Street
-  buildStreetWalls(scene, crowd, { low: tier === 'low' });
+  // ...and The Block, a place (its pin and panel) with its people
   const theBlock = buildTheBlock(scene, crowd, { tick, reduced, low: tier === 'low' });
   spots.push(theBlock.spot);
-  // ...and its three places on the riverside (the grit's step 3): Club PULSE, The Rusty Nail, Trench Arms
+  // ...its three places on the riverside (the grit's step 3): Club PULSE, The Rusty Nail, Trench Arms
   spots.push(...buildAvenue(scene, crowd, { tick, reduced, low: tier === 'low' }).spots);
-  // ...and the riverside (the owner's call): the Wharf, the Refinery and Harbor Stores (sites), the boardwalk out over
-  // the water and the old docks (sites), and Pier 7 with the Pier House at its head, a place (its pin and panel)
-  buildRiverside(tier === 'low');
-  buildWaterfront(tier === 'low');
+  // ...and Pier 7 with the Pier House at its head, a place (its pin and panel)
   spots.push(buildPier(scene, crowd, { tick, low: tier === 'low' }).spot);
   // The Night Market on its deck in front of Harbor Stores, a place
   spots.push(buildNightMarket(scene, crowd, { tick, low: tier === 'low' }).spot);

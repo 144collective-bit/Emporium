@@ -301,10 +301,20 @@ it and has been retired completely. Build only on what's here.
     West Street and the highway) join the street plan
     (`cityPlan()`), so traffic, taxis, walking (the slabs), the world map
     and the sound read them; `TRENCH_RECT` / `inTrenches()`.
-  - `trenches3d.ts` draws its streets as sites (asphalt, Trench Avenue's
-    median, lane lines, zebras on every arm, lamps along both sides); its
-    blocks' slabs and lawns are the street plan's (`world.ts`), and the
-    avenues it meets break their medians and lines there (`highwayGaps()`).
+  - **Its drawing is a district loaded as you approach** (`trenches3d.ts`,
+    `LAZY_DISTRICTS` id `trenches`, its land `TRENCH_RECT` with the
+    waterfront's; it loads straight away from the home view): its
+    `register()` draws its streets as sites (`streets3d.ts`: asphalt,
+    Trench Avenue's median, lane lines, zebras on every arm) and registers
+    the towers', commons', grit's, street walls', riverside landmarks' and
+    boardwalk's sites (`registerProjects()` and the rest, below). What the
+    boot needs of it, its lamps, trees, parked cars and people in the
+    city's own lists, is placed at the boot by `placeTrenches()`
+    (`trenches-place.ts`, from the same DOM-free data); its places (The
+    Block, the avenue's three, Pier 7, the Night Market, the corner shops)
+    are built at the boot too. Its blocks' slabs and lawns are the street
+    plan's (`world.ts`), and the avenues it meets break their medians and
+    lines there (`highwayGaps()`).
   - `projects.ts` (DOM-free, tested in `tests/projects.test.ts`) is what
     stands on its blocks: the Trench Houses (`TOWERS`, numbered; the
     redesign, the owner's call: each block of row B laid out by hand in
@@ -523,10 +533,12 @@ it and has been retired completely. Build only on what's here.
     tower on Pier 7's line with a dial on each face, the belfry and the
     copper cupola), The Rusty Nail and Club PULSE; every top under the
     Emporium (`TALLEST`). `RIVERSIDE_SOLIDS` (in `SOLIDS`). Drawn by
-    `riverside3d.ts` (`buildRiverside()`: the Wharf, the Refinery and
-    Harbor Stores as sites, walls from the wall atlas, arches as flat
-    shapes with extruded frames (`archPane()`, `archFrame()`), the
-    riverside's sign atlas `SIGNS` / `signPlane()` with fixed made-up copy).
+    `riverside3d.ts` (`registerRiverside()`, in The Trenches' chunk: the
+    Wharf, the Refinery and Harbor Stores as sites, walls from the wall
+    atlas) with the riverside's kit, `riversidekit.ts` (in the boot: arches
+    as flat shapes with extruded frames (`archPane()`, `archFrame()`), the
+    riverside's sign atlas `SIGNS` / `signPlane()` with fixed made-up copy;
+    Pier 7 and the Night Market draw with it too).
   - **The waterfront** (the owner's pick: a boardwalk over the water and a
     pier; the plan and what's next: `docs/waterfront-plan.md`) is
     `waterfront.ts` (DOM-free, tested in `tests/waterfront.test.ts`): the
@@ -542,8 +554,10 @@ it and has been retired completely. Build only on what's here.
     wall only onto them; their edge is the railing). The boats keep clear:
     the south lane's boat stays east of it (`BOAT_EAST`), the middle lane
     swings north round the pier's head (`boatZ()`). Drawn by
-    `waterfront3d.ts`: the boardwalk in sites a tile long and the docks a
-    site (`buildWaterfront()`), and Pier 7 with the Pier House a place at
+    `boardwalk3d.ts` (in The Trenches' chunk: the boardwalk in sites a tile
+    long and the docks a site, `registerBoardwalk()`) with the deck, railing
+    and bench pieces of `waterfront3d.ts`, which draws Pier 7 with the Pier
+    House, a place at
     the boot (`buildPier()`: spot `pier`, its pin over the arch, panel
     `data-panel-tpl="pier"` with Walk in to `PIER_SPAWN`, a `PLACES` entry;
     the clock's hands keep the visitor's time). On the world map the decks
@@ -773,7 +787,9 @@ it and has been retired completely. Build only on what's here.
   in the street plan, its solids, where its trees and lamps stand, its
   places) is DOM-free data in the boot, so nothing waits on the chunk.
   `?bench` loads every district before it starts. A new district comes
-  the same way.
+  the same way. Today: The Trenches (`trenches3d.ts`, with its riverside
+  and waterfront), Westlake Park with the stadium's grounds, the kart
+  park's grounds and Uptown.
 - **City life** (behaviour and animation of the traffic, the people and
   your car at no cost in memory: the owner's brief, 2026-10) is planned in
   `docs/life-plan.md`; keep it up to date, one phase at a time with the
@@ -939,6 +955,9 @@ it and has been retired completely. Build only on what's here.
     `bake.mjs` and in `tests/baked.test.ts`, which holds every key to
     exactly what `make()` makes. Baked data must be plain (numbers,
     strings, arrays, objects): anything with references packs and unpacks.
+    Numbers are cut to 3 decimals in `make()` (`rounded()` in `baked.ts`:
+    within 2 mm, or 0.03°), never in `pack`: the page then holds exactly
+    what `make()` makes, at under half the size of full precision.
   - Features load when they're used, each its own chunk (`import()`):
     the fight (`fight.ts` and the figures' clips, when the trainer's menu
     first opens: `loadFight()` in `walk.ts`), the stage of the fitting room

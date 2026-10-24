@@ -33,32 +33,27 @@ import { Batch, canvasTex, FONT_DISPLAY, lit, siteMat, toon } from './kit';
 import { ATLAS, CREAM, INK, LEAF, METAL, ROOF, STONE, WOOD, glow, kit, type Frame } from './infill';
 import { buildFx, chainMesh, tag } from './grime';
 import { EDGES, EDGE_H, EDGE_W } from './streetwall';
-import { SLAB as S, addLamp } from './world';
+import { SLAB as S } from './world';
 import { site } from './tilework';
-import { parkedCars, type CarId } from './cars';
 import { towerShell } from './projects';
 import { TRENCH_BLOCKS } from './trenches';
 import {
   AMENITIES,
   BAYS,
-  BAY_CARS,
   HYDRANTS,
   REC,
   REC_DOORS,
   SPACE,
   amenityWay,
-  commonsPeople,
   gardenGrills,
   overlaps,
   pavilionPosts,
   washingPoles,
   type Amenity,
 } from './commons';
-import type { Idle } from './landmarks';
 import type { Pt, Rect } from './downtown';
 
 const WORLD: Frame = { M: new THREE.Matrix4(), w: 0, d: 0, L: [0, 0], t: [1, 0], n: [0, 1] };
-const KID = 0.44;
 const box = (b: Batch, x0: number, y0: number, z0: number, x1: number, y1: number, z1: number, mat: THREE.Material) => b.box(Math.min(x0, x1), y0, Math.min(z0, z1), Math.abs(x1 - x0), y1 - y0, Math.abs(z1 - z0), mat);
 const flat = (b: Batch, [x0, z0, x1, z1]: Rect, y: number, mat: THREE.Material) => b.add(new THREE.PlaneGeometry(x1 - x0, z1 - z0).rotateX(-Math.PI / 2).translate((x0 + x1) / 2, S + y, (z0 + z1) / 2), mat);
 const cyl = (b: Batch, r: number, h: number, x: number, y: number, z: number, mat: THREE.Material, seg = 8) => b.add(new THREE.CylinderGeometry(r, r, h, seg).translate(x, y + h / 2, z), mat);
@@ -541,8 +536,8 @@ function hydrant(b: Batch, [x, z]: Pt) {
   b.detail(() => b.add(new THREE.CylinderGeometry(0.04, 0.04, 0.3, 6).rotateZ(Math.PI / 2).translate(x, S + 0.28, z), RED));
 }
 
-/** The commons: their sites, and at the boot the parked cars, the rec block's trees and lamps, and the people */
-export function buildCommons(scene: THREE.Scene, crowd: Idle[], opts: { low: boolean }) {
+/** The commons: their sites (the parked cars, the rec block's lamps and the people are placed at the boot: trenches-place.ts) */
+export function registerCommons(low: boolean) {
   const pad = (r: Rect, m: number): Rect => [r[0] - m, r[1] - m, r[2] + m, r[3] + m];
   for (const a of AMENITIES)
     site(`trench ${a.kind} ${a.id}`, pad(a.rect, 1), (into) => {
@@ -577,19 +572,4 @@ export function buildCommons(scene: THREE.Scene, crowd: Idle[], opts: { low: boo
     });
   }
 
-  // The parked cars, a lot to a block (each swaps to its far form on its own)
-  const byBlock = new Map<string, [CarId, number, number, number, string][]>();
-  for (const { bay: id, car } of BAY_CARS) {
-    const block = BAYS.find((y) => y.id === id)!.block;
-    byBlock.set(block, [...(byBlock.get(block) ?? []), car as [CarId, number, number, number, string]]);
-  }
-  for (const list of byBlock.values()) parkedCars(scene, S, list);
-
-  // The rec block's lamps (its trees are the yards', grit3d.ts)
-  for (const d of Object.values(REC_DOORS)) addLamp(d.x + 2.2, d.z + 1.8, 0);
-  addLamp(REC.path[0] - 0.6, REC.rect[3] - 6, Math.PI / 2);
-  addLamp(REC.path[0] - 0.6, (REC.pavilion[1] + REC.pavilion[3]) / 2 - 4, Math.PI / 2);
-
-  // The people out on the lawns (kids smaller)
-  for (const p of commonsPeople(opts.low)) crowd.push({ x: p.x, z: p.z, ry: p.ry, act: p.act, y: p.seat !== undefined ? S + p.seat : undefined, scale: p.kid ? KID : undefined });
 }

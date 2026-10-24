@@ -21,7 +21,7 @@ import * as THREE from 'three';
 import { Batch, canvasTex, FONT_DISPLAY, lit, PAL, roundRect, siteMat, toon } from './kit';
 import { ATLAS, INK, METAL, ROOF, STONE, CREAM, WOOD, acUnit, glow, kit, planter, tank, type Frame } from './infill';
 import { drawLot } from './kits3d';
-import { SLAB as S, addLamp, addTree } from './world';
+import { SLAB as S } from './world';
 import { site } from './tilework';
 import { boarded } from './grit';
 import { buildFx, tag } from './grime';
@@ -404,8 +404,8 @@ function lawn(b: Batch, towers: Tower[], blk: Rect) {
   }
 }
 
-/** The Trenches' buildings, each a site; their lawns' trees and lamps placed in the city's lists (before the boot builds those) */
-export function buildProjects(low: boolean) {
+/** The Trenches' buildings, each a site (their doors' lamps and the trees along the highway are placed at the boot: trenches-place.ts) */
+export function registerProjects(low: boolean) {
   const byBlock = new Map<string, Tower[]>();
   for (const t of TOWERS) byBlock.set(t.block, [...(byBlock.get(t.block) ?? []), t]);
   for (const t of TOWERS) {
@@ -433,11 +433,6 @@ export function buildProjects(low: boolean) {
       lawn(b, towers, rect);
       b.build(into, { cast: false, receive: true });
     });
-    // A lamp by each door's path; trees round the lawn, clear of the towers and the paths
-    for (const t of towers) {
-      const n = FACE_N[t.door.face];
-      addLamp(t.door.x + n[0] * 1.6 + n[1] * 1.1, t.door.z + n[1] * 1.6 - n[0] * 1.1, Math.atan2(-n[1], n[0]));
-    }
   }
 
   // The rows: their buildings a few at a time, their alleys with each block
@@ -475,7 +470,7 @@ export function buildProjects(low: boolean) {
     }
   });
 
-  // Behind Bottom Street's row: a car park, and trees along the highway
+  // Behind Bottom Street's row: a car park (the trees along the highway are placed at the boot)
   for (const blk of TRENCH_BLOCKS.filter((o) => o.row === 'C')) {
     const xs = blk.poly.map((p) => p[0]);
     const zs = blk.poly.map((p) => p[1]);
@@ -491,8 +486,6 @@ export function buildProjects(low: boolean) {
         for (let x = px0 + 0.4; x < x1 - 1.4; x += 1.25) k.lbox(x, x + 0.06, S, S + 0.02, pz0 + 0.3, pz0 + 2.3, CREAM);
         b.build(into, { cast: false, receive: true });
       });
-    const r = rng(x0 * 3 + 11);
-    for (let x = px0 + 1; x < x1 - 1; x += 3.2) if (r() < 0.8) addTree(x, z1 - 1.2, 0.9 + r() * 0.4, r() < 0.35);
   }
 }
 
