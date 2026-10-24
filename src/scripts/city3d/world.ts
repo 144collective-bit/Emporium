@@ -19,7 +19,7 @@ import { BLOCKS, BRIDGED_NS, BS, CENTER_XZ, CORE_ROADS, DOWNTOWN, EW_ROADS, EXT,
 import { PLAN, offsetLine, pointAt, riverBridges, streetLength, type Pt, type Street } from './streetplan';
 import { HIGHWAY, HIGHWAY_HALF } from './highway';
 import { DIAGONALS, DIAGONAL_LAMPS } from './downtown';
-import { BENDS, BEND_REACH, KERB_RUNS, OUTSIDE, PADS, PROMENADE, offFootbridge } from './outer';
+import { BENDS, BEND_REACH, KERB_RUNS, OUTSIDE, PADS, PROMENADE, offBridges, offFootbridge } from './outer';
 import { SITE } from './airfield';
 import { TILE, tileKey, tileOf, tilesIn } from './tiles';
 import { outskirtsTrees } from './outskirts';
@@ -31,7 +31,8 @@ import { AXIS_X, AXIS_ZEBRAS, LANE_HALF } from './uptown';
 import { WATERFRONT_RECT } from './waterfront';
 import { BRIDGE_RECT } from './stadium';
 import { SWAY, lampGlow, newLamp, type Lamp } from './dusk';
-import { edgeSamples, pullAt, stretchAt } from './river';
+import { WATER_Y, edgeSamples, edgesAt, pullAt, stretchAt, topsAt } from './river';
+import { HALF as HARBOUR_HALF, HARBOUR_STREET, HX, Z0 as HZ0, Z1 as HZ1 } from './harbour';
 
 export { BLOCKS, BS, CORE_ROADS, EW_ROADS, EXT, NS_ROADS, RIVER, SOUTH_ROAD, WALK_W, type Road };
 /** District blocks around the core: one large plot each (src/data/plots.ts). */
@@ -503,7 +504,7 @@ function riverWater(e0: number, e1: number) {
       [s - SHALLOWS, 1],
       [s, qs],
     ]) {
-      pos.push(x, 0.01, z);
+      pos.push(x, WATER_Y, z);
       shore.push(q);
     }
     if (i > 0) {
@@ -521,70 +522,111 @@ function riverWater(e0: number, e1: number) {
   return new THREE.Mesh(g, riverMat);
 }
 
-/** A flat quad on the ground (y) through four corners, two triangles, facing up */
-function groundQuad(p: [number, number][], y: number) {
+/** A quad through four corners (x, y, z), two triangles, turned to face `toward` (its normal's side) */
+function quad3(p: [number, number, number][], toward: [number, number, number]) {
   const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.Float32BufferAttribute(p.flatMap(([x, z]) => [x, y, z]), 3));
-  const up = (p[1][0] - p[0][0]) * (p[2][1] - p[0][1]) - (p[1][1] - p[0][1]) * (p[2][0] - p[0][0]) < 0;
-  g.setIndex(up ? [0, 1, 2, 0, 2, 3] : [0, 2, 1, 0, 3, 2]);
+  g.setAttribute('position', new THREE.Float32BufferAttribute(p.flat(), 3));
+  const [a, b, c] = p.map((v) => new THREE.Vector3(...v));
+  const n = b.clone().sub(a).cross(c.clone().sub(a));
+  g.setIndex(n.dot(new THREE.Vector3(...toward)) >= 0 ? [0, 1, 2, 0, 2, 3] : [0, 2, 1, 0, 3, 2]);
   g.computeVertexNormals();
   return g;
 }
 
 /**
- * The river's banks (river.ts), a piece every 2 along each: a low stone quay wall where the water keeps to the quay
- * line; where it pulls back, a ribbon of sand or pebbles along the water (the cove's beach all the way back to the
- * promenade), and near only, reeds and rocks at the water's edge (none on the beach). The trees on the grass banks
- * are the outskirts' (outskirts.ts `treeSpot()`).
+ * The river's banks (river.ts), a piece every 2 along each, from the quay line down to the water (`WATER_Y`, river
+ * plan step 2): a stone quay wall where the water keeps to the quay line (its coping on top, its face down into the
+ * water); where it pulls back, flat grass to the top of the bank's slope (`topsAt()`), the slope down in grass with a
+ * ribbon of sand or pebbles at the water (the cove's beach sand all the way), and near only, reeds and rocks at the
+ * water's edge (none on the beach). The trees on the grass are the outskirts' (outskirts.ts `treeSpot()`); the ends
+ * of the channel at the world's edge are walled.
  */
 function riverBanks(b: Batch, e0: number, e1: number) {
   const stone = toon('#6b6790');
+  const wall = toon('#57537a');
+  const grass = toon('#245c45');
+  const bankGrass = toon('#2c6a4b');
   const sand = toon('#cdbb8e');
   const pebbles = toon('#8f8a80');
   const reedMats = [toon('#6f9a45'), toon('#88a854'), toon('#5c8a3e')];
   const rock = toon('#77738a');
   const pts = edgeSamples(e0, e1, 2);
+  const W = WATER_Y;
+  const UNDER = W - 0.25;
   for (const bank of ['north', 'south'] as const) {
     const sign = bank === 'north' ? -1 : 1;
+    /** Out towards the water from this bank */
+    const out = -sign;
     const quayLine = bank === 'north' ? RIVER[0] : RIVER[1];
     const r = rng(bank === 'north' ? 7301 : 7319);
+    const at = (x: number) => {
+      const e = edgesAt(x)[bank === 'north' ? 0 : 1];
+      const top = topsAt(x)[bank === 'north' ? 0 : 1];
+      return { e, top };
+    };
     for (let i = 1; i < pts.length; i++) {
-      const [p, q] = [pts[i - 1], pts[i]];
-      const [zp, zq] = bank === 'north' ? [p.n, q.n] : [p.s, q.s];
-      const pull = Math.max(pullAt(bank, p.x), pullAt(bank, q.x));
-      const st = stretchAt(bank, (p.x + q.x) / 2);
-      if (pull < 0.4) {
-        // The quay: a low stone wall on the land side of the edge
-        b.box(p.x, 0, Math.min(zp, zq) + (sign < 0 ? -0.25 : 0), q.x - p.x, 0.12, 0.25 + Math.abs(zq - zp), stone);
+      const [x0, x1] = [pts[i - 1].x, pts[i].x];
+      const [p, q] = [at(x0), at(x1)];
+      const slope = Math.max(Math.abs(p.e - p.top), Math.abs(q.e - q.top));
+      const st = stretchAt(bank, (x0 + x1) / 2);
+      // Flat land from the quay line to the slope's top (or to the wall)
+      if (Math.abs(p.top - quayLine) > 0.01 || Math.abs(q.top - quayLine) > 0.01)
+        b.add(quad3([[x0, 0, quayLine], [x1, 0, quayLine], [x1, 0, q.top], [x0, 0, p.top]], [0, 1, 0]), grass);
+      if (slope < 0.35) {
+        // The quay: its coping on the land side of the edge, its face straight down into the water
+        b.box(x0, 0, Math.min(p.e, q.e) + (sign < 0 ? -0.25 : 0), x1 - x0, 0.12, 0.25 + Math.abs(q.e - p.e), stone);
+        b.add(quad3([[x0, 0, p.e], [x1, 0, q.e], [x1, UNDER, q.e], [x0, UNDER, p.e]], [0, 0, out]), wall);
         continue;
       }
-      // A ribbon of sand (pebbles on some stretches out of town) from just under the water back onto the land:
-      // the cove's beach fills back to the promenade
+      // The slope: grass down to a ribbon of sand or pebbles at the water (the cove's beach sand all the way)
       const beach = !!st?.beach;
-      const pebbly = !beach && Math.sin(p.x / 23 + (bank === 'north' ? 0 : 2)) > 0.35;
-      const back = (z: number) => (beach ? quayLine + sign * 0.25 : z + sign * (1.1 + 0.4 * Math.sin(z * 0.7 + p.x * 0.31)));
-      b.add(groundQuad([[p.x, zp - sign * 0.3], [q.x, zq - sign * 0.3], [q.x, back(zq)], [p.x, back(zp)]], 0.006), pebbly ? pebbles : sand);
+      const pebbly = !beach && Math.sin(x0 / 23 + (bank === 'north' ? 0 : 2)) > 0.35;
+      const lerpZ = (v: { e: number; top: number }, t: number) => v.top + (v.e - v.top) * t;
+      const k = beach ? 0 : 0.55;
+      if (k > 0) b.add(quad3([[x0, 0, p.top], [x1, 0, q.top], [x1, W * k, lerpZ(q, k)], [x0, W * k, lerpZ(p, k)]], [0, 1, 0]), bankGrass);
+      b.add(
+        quad3(
+          [
+            [x0, W * k, lerpZ(p, k)],
+            [x1, W * k, lerpZ(q, k)],
+            [x1, UNDER, q.e + out * 0.5],
+            [x0, UNDER, p.e + out * 0.5],
+          ],
+          [0, 1, 0]
+        ),
+        pebbly ? pebbles : sand
+      );
       if (beach) continue;
       // Near only: reeds in clumps at the water's edge, and the odd rock
       b.detail(() => {
-        for (let k = 0; k < 2; k++) {
-          const x = p.x + (q.x - p.x) * (0.25 + 0.5 * k);
-          const z = zp + (zq - zp) * (0.25 + 0.5 * k);
+        for (let j = 0; j < 2; j++) {
+          const t = 0.25 + 0.5 * j;
+          const x = x0 + (x1 - x0) * t;
+          const z = p.e + (q.e - p.e) * t;
           if (r() < 0.45) {
             // (chunky clumps, not single stems: thin ones are all ink outline)
             const n = 2 + Math.floor(r() * 2);
-            for (let j = 0; j < n; j++) {
+            for (let m = 0; m < n; m++) {
               const h = 0.5 + r() * 0.4;
               const g = new THREE.ConeGeometry(0.13 + r() * 0.06, h, 5, 1, true).rotateZ((r() - 0.5) * 0.25).rotateX((r() - 0.5) * 0.25);
-              b.add(g.translate(x + (r() - 0.5) * 0.8, h / 2, z + sign * (0.15 + r() * 0.45)), reedMats[j % 3]);
+              b.add(g.translate(x + (r() - 0.5) * 0.8, W + h / 2, z + sign * (0.05 + r() * 0.35)), reedMats[m % 3]);
             }
           } else if (r() < 0.15) {
-            const s = 0.18 + r() * 0.25;
-            b.add(new THREE.DodecahedronGeometry(s, 0).scale(1.3, 0.6, 1).rotateY(r() * 3).translate(x, s * 0.25, z + sign * 0.2), rock);
+            const sz = 0.18 + r() * 0.25;
+            b.add(new THREE.DodecahedronGeometry(sz, 0).scale(1.3, 0.6, 1).rotateY(r() * 3).translate(x, W + sz * 0.25, z + sign * 0.1), rock);
           }
         }
       });
     }
+  }
+  // The channel's ends at the world's edge, walled
+  for (const [x, face] of [
+    [e0, 1],
+    [e1, -1],
+  ] as const) {
+    const [n, s] = edgesAt(x);
+    const [tn, ts] = topsAt(x);
+    b.add(quad3([[x, 0, tn], [x, 0, ts], [x, UNDER, s], [x, UNDER, n]], [face, 0, 0]), wall);
   }
 }
 
@@ -603,23 +645,34 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
   const [g0, g1] = [e0 - SKIRT, e1 + SKIRT];
   for (const [i, j] of tilesIn(g0, g0, g1 - 1e-6, g1 - 1e-6)) {
     const [x0, z0, x1, z1] = [Math.max(g0, i * TILE), Math.max(g0, j * TILE), Math.min(g1, (i + 1) * TILE), Math.min(g1, (j + 1) * TILE)];
-    b.add(new THREE.PlaneGeometry(x1 - x0, z1 - z0).rotateX(-Math.PI / 2).translate((x0 + x1) / 2, 0, (z0 + z1) / 2), grass);
+    // (none over the river's band: its banks are riverBanks()'s, down to the water under the streets)
+    for (const [a, c] of [
+      [z0, Math.min(z1, RIVER[0])],
+      [Math.max(z0, RIVER[1]), z1],
+    ])
+      if (c > a) b.add(new THREE.PlaneGeometry(x1 - x0, c - a).rotateX(-Math.PI / 2).translate((x0 + x1) / 2, 0, (a + c) / 2), grass);
   }
   // The river between its edges (river.ts: straight quays, banks it pulls back from), and its banks
-  scene.add(riverWater(e0, e1));
-  riverBanks(b, e0, e1);
+  // (on past the edge with the grass, walled at its ends)
+  scene.add(riverWater(g0, g1));
+  riverBanks(b, g0, g1);
 
   // A promenade on each bank: between the north-bank avenue and the water, and the water and the south bank avenue
   const northBank = EW_ROADS.filter((r) => r.c < RIVER[0]).at(-1)!;
   const southBank = EW_ROADS.find((r) => r.c === SOUTH_ROAD)!;
   const promenade = toon('#4a4388');
+  // (broken under Harbour Bridge's deck and its anchorages, harbour.ts)
   for (const [z0, z1] of [
     [northBank.c + northBank.half, RIVER[0] - 0.25],
     [RIVER[1] + 0.25, southBank.c - southBank.half],
   ])
-    b.box(e0, 0, z0, L, 0.05, z1 - z0, promenade);
+    for (const [x0, x1] of [
+      [e0, HX - HARBOUR_HALF],
+      [HX + HARBOUR_HALF, e1],
+    ])
+      b.box(x0, 0, z0, x1 - x0, 0.05, z1 - z0, promenade);
   // Lamps along the water, reaching out over the walk (clear of the bridges)
-  const nearBridge = (x: number) => BRIDGED_NS.some((i) => Math.abs(x - NS_ROADS[i].c) < NS_ROADS[i].half + WALK_W + 0.9) || !offFootbridge(x, 0.6);
+  const nearBridge = (x: number) => !offBridges(x, 0.9) || !offFootbridge(x, 0.6);
   // (the north bank's carried on west along Uptown, the boulevard's line: uptown.ts)
   for (let x = PROMENADE.x[0]; x <= PROMENADE.x[1]; x += 6)
     if (!nearBridge(x)) {
@@ -633,8 +686,11 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
   // (the north-south roads with no bridge end at the bank avenues: river plan step 1)
   const bridged = (r: Road) => BRIDGED_NS.includes(NS_ROADS.indexOf(r));
   for (const r of NS_ROADS)
-    if (bridged(r)) b.box(r.c - r.half, 0.002, e0, r.half * 2, 0.03, L, asphalt);
-    else {
+    if (bridged(r)) {
+      // (but over Harbour Bridge, whose deck is its own: harbour3d.ts)
+      b.box(r.c - r.half, 0.002, e0, r.half * 2, 0.03, HZ0 - e0, asphalt);
+      b.box(r.c - r.half, 0.002, HZ1, r.half * 2, 0.03, e1 - HZ1, asphalt);
+    } else {
       b.box(r.c - r.half, 0.002, e0, r.half * 2, 0.03, RING_HI - e0, asphalt);
       b.box(r.c - r.half, 0.002, SOUTH_ROAD, r.half * 2, 0.03, e1 - SOUTH_ROAD, asphalt);
     }
@@ -652,9 +708,9 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
     if (at < e1) runs.push([at, e1]);
     return runs;
   };
-  // Over the river: no road at all where there's no bridge; the east avenue's (the metro's, until its own bridge in
-  // step 2) keeps its median, the el's pillars stand on it
-  const river = (r: Road): [number, number][] => (bridged(r) ? [] : [[RING_HI, SOUTH_ROAD]]);
+  // Over the river: no road at all where there's no bridge; the east avenue's is Harbour Bridge (harbour3d.ts draws
+  // its median and lines, the el's posts stand on it)
+  const river = (r: Road): [number, number][] => (bridged(r) ? [[HZ0, HZ1]] : [[RING_HI, SOUTH_ROAD]]);
   for (const r of EW_ROADS)
     if (r.lanes === 2)
       for (const [a0, a1] of runsBetween(NS_ROADS, highwayGaps('ew', EW_ROADS.indexOf(r)))) {
@@ -668,19 +724,36 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
         b.box(r.c - MEDIAN / 2 + 0.06, SLAB, a0, MEDIAN - 0.12, 0.005, a1 - a0, median);
       }
 
-  // Bridges over the river: the road and its sidewalks, with rails
+  // Bridges over the river: the road and its sidewalks, with rails, on a concrete deck over piers down into the water
+  // (river plan step 2: the water lies WATER_Y under the streets). The ring highway's two; Harbour Bridge, the east
+  // avenue's, is a landmark of its own (harbour3d.ts). In stretches, none longer than a tile's share (tileBatch).
   const rail = toon('#c9c4e6');
-  const span = RIVER[1] - RIVER[0] + 1.2;
-  // Every road that crosses the river (the highway too: streetplan.ts riverBridges())
+  const deck = toon('#8a879c');
+  const pier = toon('#77748a');
+  const [bz0, bz1] = [RIVER[0] - 0.6, RIVER[1] + 0.6];
+  const STRETCH = 10;
   for (const r of riverBridges()) {
+    if (r.street === HARBOUR_STREET) continue;
     const w = r.half + WALK_W;
-    b.box(r.c - w, 0, RIVER[0] - 0.6, w * 2, 0.06, span, toon('#34314f'));
-    b.box(r.c - w, 0.06, RIVER[0] - 0.6, WALK_W, SLAB - 0.06, span, kerbTop);
-    b.box(r.c + r.half, 0.06, RIVER[0] - 0.6, WALK_W, SLAB - 0.06, span, kerbTop);
-    for (const side of [r.c - w - 0.05, r.c + w - 0.05]) {
-      b.box(side, SLAB, RIVER[0] - 0.6, 0.1, 0.08, span, rail);
-      for (let z = RIVER[0] - 0.6; z <= RIVER[1] + 0.6; z += 0.75) b.box(side, SLAB, z, 0.1, 0.45, 0.1, rail);
-      b.box(side, SLAB + 0.45, RIVER[0] - 0.6, 0.1, 0.06, span, rail);
+    for (let z0 = bz0; z0 < bz1 - 1e-6; z0 += STRETCH) {
+      const z1 = Math.min(bz1, z0 + STRETCH);
+      b.box(r.c - w, 0, z0, w * 2, 0.06, z1 - z0, toon('#34314f'));
+      b.box(r.c - w, 0.06, z0, WALK_W, SLAB - 0.06, z1 - z0, kerbTop);
+      b.box(r.c + r.half, 0.06, z0, WALK_W, SLAB - 0.06, z1 - z0, kerbTop);
+      // (the deck's underside, its edge a hair outside the road's)
+      b.box(r.c - w - 0.01, -0.7, z0, w * 2 + 0.02, 0.7 - 0.006, z1 - z0, deck);
+      for (const side of [r.c - w - 0.05, r.c + w - 0.05]) {
+        b.box(side, SLAB, z0, 0.1, 0.08, z1 - z0, rail);
+        b.box(side, SLAB + 0.45, z0, 0.1, 0.06, z1 - z0, rail);
+      }
+    }
+    for (const side of [r.c - w - 0.05, r.c + w - 0.05])
+      for (let z = bz0; z <= bz1; z += 0.75) b.box(side, SLAB, z, 0.1, 0.45, 0.1, rail);
+    // Piers, a pair under each side every so often across the water
+    const n = 4;
+    for (let k = 1; k < n; k++) {
+      const z = RIVER[0] + ((RIVER[1] - RIVER[0]) * k) / n;
+      b.box(r.c - w + 0.4, WATER_Y - 0.3, z - 0.9, w * 2 - 0.8, -0.7 - (WATER_Y - 0.3) - 0.01, 1.8, pier);
     }
   }
 

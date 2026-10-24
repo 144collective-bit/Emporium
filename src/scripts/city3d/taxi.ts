@@ -14,6 +14,7 @@ import { createCar } from './cars';
 import { PAL, fx, glowMat } from './kit';
 import { SPOTS, lightState, pathBetween, pointOn, type Route } from './routes';
 import { bodies, stoppers } from './life';
+import { deckSlope, deckY, onHarbour } from './harbour';
 import type { Place } from './places';
 import type { Ride } from './walk';
 
@@ -121,10 +122,12 @@ export function createTaxis(root: HTMLElement, d: TaxiDeps) {
     if (!route || !car) return;
     const o = pointOn(route, Math.min(p, route.len), seg);
     seg = o.seg;
-    pos.set(o.at[0], ROAD_Y, o.at[1]);
+    // (over Harbour Bridge's hump, its nose along the deck: harbour.ts)
+    const hb = onHarbour(o.at[0], o.at[1]) ? deckY(o.at[1]) : 0;
+    pos.set(o.at[0], ROAD_Y + hb, o.at[1]);
     fwd.set(o.dir[0], o.dir[1]);
     car.group.position.copy(pos);
-    car.group.rotation.y = Math.atan2(-o.dir[1], o.dir[0]);
+    car.group.rotation.set(0, Math.atan2(-o.dir[1], o.dir[0]), hb ? Math.atan(o.dir[1] * deckSlope(o.at[1])) : 0, 'YXZ');
   }
   /** Drive on along the route, for the lights and the traffic ahead, easing to a stop at its end */
   function drive(dt: number, t: number) {

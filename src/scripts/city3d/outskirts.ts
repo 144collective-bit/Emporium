@@ -11,7 +11,7 @@
  * district's).
  */
 import { EW_ROADS, EXT, NS_ROADS, RIVER } from './layout';
-import { inWater } from './river';
+import { inChannel } from './river';
 import { PARKWAY, PROMENADE, SOUTHSIDE, inTown } from './outer';
 import { KART_RECTS } from './kartfacility';
 import { RUNWAY, SITE } from './airfield';
@@ -57,7 +57,7 @@ export function treeSpot(x: number, z: number, clear: readonly Rect[] = [], high
   if (x > -40 && x < SITE[0] && Math.abs(z - RUNWAY.z) < 12) return false;
   if (EW_ROADS.some((r) => Math.abs(z - r.c) < r.half + 0.8) || NS_ROADS.some((r) => Math.abs(x - r.c) < r.half + 0.8)) return false;
   // Off the promenades along the quay lines, and the water wherever its edges curve (river.ts): trees grow on the banks it leaves
-  if ((z > RIVER[0] - 2.8 && z < RIVER[0] + 0.5) || (z > RIVER[1] - 0.5 && z < RIVER[1] + 2.6) || inWater(x, z, -1.2)) return false;
+  if ((z > RIVER[0] - 2.8 && z < RIVER[0] + 0.5) || (z > RIVER[1] - 0.5 && z < RIVER[1] + 2.6) || inChannel(x, z, 0.8)) return false;
   return true;
 }
 

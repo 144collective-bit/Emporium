@@ -11,8 +11,10 @@
  * bridge) and pulls back from it on the stretches in `BANKS`: a sandy cove
  * on the south bank below the south row, grass banks east of the town's
  * promenades, and past the ring highway it wanders freely, each bank on its
- * own. It never reaches past the band. Everything that reads the water
- * reads these edges (`edgesAt()`): the water and its banks (world.ts),
+ * own. It never reaches past the band. Since step 2 the water lies
+ * `WATER_Y` below the streets: quay walls drop to it, and the banks it pulls
+ * back from slope down to it (`topsAt()`, `shoreY()`). Everything that reads
+ * the water reads these edges (`edgesAt()`): the water and its banks (world.ts),
  * walking (walk.ts), driving (`RIVER_WALLS` in drive-sim.ts), the boats
  * (`boatZ()` in waterfront.ts), the trees, the world map, the sound.
  */
@@ -87,6 +89,40 @@ export function inWater(x: number, z: number, m = 0) {
   if (z <= RIVER[0] + m || z >= RIVER[1] - m) return false;
   const [n, s] = edgesAt(x);
   return z > n + m && z < s - m;
+}
+/**
+ * The water's height (river plan step 2, the owner's pick: the water a little lower, Harbour Bridge a little
+ * higher, so boats pass under it): 1.5 below the streets, between stone quay walls where it keeps to the quay line,
+ * and down grass or sand slopes where it pulls back
+ */
+export const WATER_Y = -1.5;
+/** The widest a bank's slope gets (where it pulls back further, flat land is left above it); the cove's is its whole beach */
+export const SLOPE = 2.6;
+/** How wide a bank's slope is at x: none on a quay (a wall), the whole pull on the cove's beach */
+export function slopeAt(bank: Bank, x: number) {
+  const p = pullAt(bank, x);
+  return stretchAt(bank, x)?.beach ? p : Math.min(p, SLOPE);
+}
+/** The tops of the banks' slopes at x (north, south): beyond them the land is flat at the street's height */
+export function topsAt(x: number): [number, number] {
+  const [n, s] = edgesAt(x);
+  return [n - slopeAt('north', x), s + slopeAt('south', x)];
+}
+/** The ground's height at x, z over the river's band: the street's (0) on the flat, down a bank's slope, the water's below */
+export function shoreY(x: number, z: number) {
+  if (z <= RIVER[0] || z >= RIVER[1]) return 0;
+  const [n, s] = edgesAt(x);
+  const [tn, ts] = topsAt(x);
+  if (z <= tn || z >= ts) return 0;
+  if (z >= n && z <= s) return WATER_Y;
+  const t = z < n ? (z - tn) / Math.max(1e-6, n - tn) : (ts - z) / Math.max(1e-6, ts - s);
+  return WATER_Y * t;
+}
+/** Is x, z on the river's slopes or in its water (`m` out past the slopes' tops): no car, no tree */
+export function inChannel(x: number, z: number, m = 0) {
+  if (z <= RIVER[0] - m || z >= RIVER[1] + m) return false;
+  const [tn, ts] = topsAt(x);
+  return z > tn - m && z < ts + m;
 }
 /** The narrowest the river gets (tests/river.test.ts holds it) */
 export const MIN_WIDTH = RIVER_W - 2 * 9;

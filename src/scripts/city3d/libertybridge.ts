@@ -27,6 +27,7 @@ import * as THREE from 'three';
 import { Batch, FONT_DISPLAY, PAL, canvasTex, fx, glowMat, glowTex, lit, neon, roundRect, toon } from './kit';
 import { SLAB, addLamp, addPool, flatPoly, lotMat, type Tick } from './world';
 import { RIVER } from './layout';
+import { WATER_Y } from './river';
 import { BX, DECK_HALF, DECK_UNDER, DECK_Y, LIBERTY_RECTS, PARAPET_H, PIER_HALF, PILLAR, SPANS, STAIR, STAIR_BASE, SUPPORTS, TOWER, TOWERS, TO_RIVER, WALKWAY, WALK_HALF, archY, landingOf, stairsOf } from './liberty';
 import type { Spot } from './landmarks';
 
@@ -449,8 +450,10 @@ function walkway(b: Batch, low: boolean) {
   for (const p of SUPPORTS) {
     const ground = p.z > RIVER[0] - 3 && p.z < RIVER[1] + 3 ? 0.05 : SLAB;
     if (p.kind === 'pier') {
-      b.box(BX - DECK_HALF, -0.6, p.z - PIER_HALF, DECK_HALF * 2, p.y + 0.6, PIER_HALF * 2, STONE);
-      for (const e of [-1, 1]) b.add(new THREE.BoxGeometry(PIER_HALF * 1.42, p.y + 0.6, PIER_HALF * 1.42).rotateY(Math.PI / 4).translate(BX + e * DECK_HALF, (p.y - 0.6) / 2, p.z), STONE);
+      // (down into the water, under the streets since river plan step 2)
+      const foot = WATER_Y - 0.3;
+      b.box(BX - DECK_HALF, foot, p.z - PIER_HALF, DECK_HALF * 2, p.y - foot, PIER_HALF * 2, STONE);
+      for (const e of [-1, 1]) b.add(new THREE.BoxGeometry(PIER_HALF * 1.42, p.y - foot, PIER_HALF * 1.42).rotateY(Math.PI / 4).translate(BX + e * DECK_HALF, (p.y + foot) / 2, p.z), STONE);
       b.box(BX - DECK_HALF - 0.08, p.y - 0.14, p.z - PIER_HALF - 0.08, DECK_HALF * 2 + 0.16, 0.14, PIER_HALF * 2 + 0.16, TRIM);
       continue;
     }

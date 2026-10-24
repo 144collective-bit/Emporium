@@ -26,6 +26,7 @@ import { INK, METAL, WOOD, glow, soft } from './infill';
 import { SLAB as S, addLamp, addPool, addTree, keepTreesOff, type Tick } from './world';
 import { site } from './tilework';
 import { RIVER } from './layout';
+import { WATER_Y } from './river';
 import type { Pt, Rect } from './downtown';
 import type { Idle, Spot } from './landmarks';
 import { ARCH, BARGE, BENCHES, BINOCULARS, BOARDWALK, BOLLARDS, CRANE, DECK_Y, FISHERS, KIOSK, LAMPS, PIER, PLANTERS, RAIL_GAPS, RINGS, WATERFRONT_RECT } from './waterfront';
@@ -91,10 +92,10 @@ export function deck(b: Batch, r: Rect, low: boolean, seamsAlongX = true) {
   // (the fascia and piles only where it's over the water)
   if (z0 < wz) {
     box(b, x0, T - 0.32, z0 - 0.02, x1, T - 0.06, z0 + 0.06, FASCIA);
-    b.detail(() => {
-      const step = low ? 2.4 : 1.6;
-      for (let x = x0 + 0.3; x < x1; x += step) for (let z = z0 + 0.25; z < wz - 0.2; z += 1.9) b.add(new THREE.CylinderGeometry(0.11, 0.12, 0.7, 6, 1, true).translate(x, T - 0.43, z), PILE);
-    });
+    // (down into the water, under the streets since river plan step 2: at every distance, or the deck floats far off)
+    const step = low ? 2.4 : 1.6;
+    const ph = T - 0.08 - (WATER_Y - 0.3);
+    for (let x = x0 + 0.3; x < x1; x += step) for (let z = z0 + 0.25; z < wz - 0.2; z += 1.9) b.add(new THREE.CylinderGeometry(0.11, 0.12, ph, 6, 1, true).translate(x, T - 0.08 - ph / 2, z), PILE);
   }
   b.detail(() => {
     const s = low ? 1 : 0.5;
@@ -212,27 +213,29 @@ function drawDocks(b: Batch, low: boolean) {
 
   // The barge: a hull low in the water, its deck, containers, a little wheelhouse at the stern
   const [gx0, gz0, gx1, gz1] = BARGE;
-  box(b, gx0, -0.25, gz0, gx1, 0.32, gz1, HULL);
-  box(b, gx0 + 0.1, 0.32, gz0 + 0.1, gx1 - 0.1, 0.36, gz1 - 0.1, toon('#4a4a5a'));
-  box(b, gx0 - 0.04, 0.22, gz0 - 0.04, gx1 + 0.04, 0.3, gz1 + 0.04, toon('#e8e2f0'));
+  // (on the water, under the streets since river plan step 2)
+  const W = WATER_Y;
+  box(b, gx0, W - 0.25, gz0, gx1, W + 0.32, gz1, HULL);
+  box(b, gx0 + 0.1, W + 0.32, gz0 + 0.1, gx1 - 0.1, W + 0.36, gz1 - 0.1, toon('#4a4a5a'));
+  box(b, gx0 - 0.04, W + 0.22, gz0 - 0.04, gx1 + 0.04, W + 0.3, gz1 + 0.04, toon('#e8e2f0'));
   const cont = [toon('#2f6b8a'), toon('#9a3b24'), toon('#d9a23a'), toon('#3e7a4a')];
   const cw = 2.6;
   for (let i = 0; i < 3; i++) {
     const x = gx0 + 0.5 + i * (cw + 0.2);
-    box(b, x, 0.36, gz0 + 0.4, x + cw, 1.36, gz1 - 0.4, cont[i]);
-    if (i !== 1) box(b, x + 0.1, 1.36, gz0 + 0.5, x + cw - 0.1, 2.3, gz1 - 0.5, cont[(i + 3) % 4]);
+    box(b, x, W + 0.36, gz0 + 0.4, x + cw, W + 1.36, gz1 - 0.4, cont[i]);
+    if (i !== 1) box(b, x + 0.1, W + 1.36, gz0 + 0.5, x + cw - 0.1, W + 2.3, gz1 - 0.5, cont[(i + 3) % 4]);
     b.detail(() => {
-      for (let u = x + 0.2; u < x + cw - 0.1; u += 0.22) box(b, u - 0.02, 0.4, gz0 + 0.39, u + 0.02, 1.32, gz0 + 0.4, INK);
+      for (let u = x + 0.2; u < x + cw - 0.1; u += 0.22) box(b, u - 0.02, W + 0.4, gz0 + 0.39, u + 0.02, W + 1.32, gz0 + 0.4, INK);
     });
   }
-  box(b, gx1 - 1.6, 0.36, gz0 + 0.5, gx1 - 0.3, 1.5, gz1 - 0.5, toon('#e8e2f0'));
-  box(b, gx1 - 1.55, 1.0, gz0 + 0.48, gx1 - 0.35, 1.35, gz0 + 0.5, WARM_WIN);
-  box(b, gx1 - 1.7, 1.5, gz0 + 0.4, gx1 - 0.2, 1.6, gz1 - 0.4, INK);
+  box(b, gx1 - 1.6, W + 0.36, gz0 + 0.5, gx1 - 0.3, W + 1.5, gz1 - 0.5, toon('#e8e2f0'));
+  box(b, gx1 - 1.55, W + 1.0, gz0 + 0.48, gx1 - 0.35, W + 1.35, gz0 + 0.5, WARM_WIN);
+  box(b, gx1 - 1.7, W + 1.5, gz0 + 0.4, gx1 - 0.2, W + 1.6, gz1 - 0.4, INK);
   // Tyres along its side as fenders, ropes to the boardwalk's bollards
   b.detail(() => {
-    for (let x = gx0 + 1; x < gx1 - 0.5; x += 1.6) b.add(new THREE.TorusGeometry(0.16, 0.07, 6, 10).translate(x, 0.12, gz1 + 0.05), INK);
+    for (let x = gx0 + 1; x < gx1 - 0.5; x += 1.6) b.add(new THREE.TorusGeometry(0.16, 0.07, 6, 10).translate(x, W + 0.12, gz1 + 0.05), INK);
     for (const x of [gx0 + 0.6, gx1 - 0.6]) {
-      const a = V(x, 0.36, gz1 - 0.2);
+      const a = V(x, W + 0.36, gz1 - 0.2);
       const c = V(x, T + 0.3, BZ0 + 0.35);
       const e = c.clone().sub(a);
       const g = new THREE.CylinderGeometry(0.02, 0.02, e.length(), 4).applyQuaternion(new THREE.Quaternion().setFromUnitVectors(V(0, 1, 0), e.clone().normalize()));

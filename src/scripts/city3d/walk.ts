@@ -68,13 +68,14 @@ import { abandonSeries, seriesNext } from './tycoon';
 import { CAMERA_GRID, DOORS, GARAGE_SITE, RACK, SOLIDS, SOLID_GRID, SOLID_GRIDS, TURNTABLE_BOX, WALK_SPAWN, rayBoxes, type Box } from './solids';
 import { BoxGrid } from './boxgrid';
 import { count } from './tycoon';
-import { NS_ROADS, SLAB, WALK_W, type Tick } from './world';
+import { SLAB, type Tick } from './world';
 import { footbridgeWall, footbridgeY, stairTread } from './liberty';
 import { JETTY, RIM, inLake, onJetty, onTerrace, terraceY } from './westlake';
 import { GATE, bridgeWall, bridgeY } from './stadium';
 import { skyDeckWall, skyDeckY, upOnDeck } from './skydeck';
-import { BRIDGED_NS, WORLD_BOUNDS } from './layout';
-import { inWater } from './river';
+import { WORLD_BOUNDS } from './layout';
+import { inChannel, inWater, shoreY } from './river';
+import { harbourY, onHarbour } from './harbour';
 import { PLAN, inPoly, type Pt } from './streetplan';
 import { SPOTS, pointOn, ROUTES } from './routes';
 import { bodies } from './life';
@@ -372,6 +373,10 @@ export function createWalk(d: WalkDeps) {
   const feetAt = (x: number, z: number, yNow = 0) => stairTread(x, z, yNow) ?? groundAt(x, z, yNow);
   const groundAt = (x: number, z: number, yNow = 0) => {
     const slab = slabs.some((s) => inBox(s.box, x, z) && inPoly(s.poly, [x, z])) ? SLAB : onDeck(x, z) || onEsplanade(x, z) ? DECK_Y : 0.035;
+    // (Harbour Bridge's deck, humped over the river; the river's banks sloping down to the water, river plan step 2)
+    const hb = harbourY(x, z);
+    if (hb !== null) return Math.max(slab, hb + 0.035);
+    if (slab === 0.035 && inChannel(x, z)) return shoreY(x, z) + 0.035;
     const base = Math.max(slab, footbridgeY(x, z, yNow) ?? 0, bridgeY(x, z, yNow) ?? 0, onJetty(x, z) ? SLAB + JETTY.y : 0, SLAB + (terraceY(x, z) ?? -SLAB), SLAB + (skyDeckY(x, z, yNow - SLAB) ?? -SLAB));
     if (x < KART_PARK.x0 || x > KART_PARK.x1 || z < KART_PARK.z0 || z > KART_PARK.z1) return base;
     const t = trackSurfaceAt(x, z, yNow);
@@ -380,7 +385,7 @@ export function createWalk(d: WalkDeps) {
   };
   /** Scratch for the collision grid's answers */
   const nearBoxes: Box[] = [];
-  const onBridge = (x: number) => BRIDGED_NS.some((i) => Math.abs(x - NS_ROADS[i].c) < NS_ROADS[i].half + WALK_W - 0.15);
+  const onBridge = (x: number, z: number) => onHarbour(x, z, 0.15);
   /** `y`: how high Degen is (up on Liberty Bridge only its parapets stop you; under it, its pillars and stairs do) */
   function blocked(x: number, z: number, y = 0, skip?: (b: Box) => boolean) {
     if (x < BOUNDS[0] || x > BOUNDS[2] || z < BOUNDS[1] || z > BOUNDS[3]) return true;
@@ -392,7 +397,7 @@ export function createWalk(d: WalkDeps) {
     // Sector 7 Tower's sky deck (skydeck.ts): up there only its rail, the lift house and the viewers stop you
     if (upOnDeck(x, z, y - SLAB)) return skyDeckWall(x, z, RADIUS);
     // (the river is a wall at its edges, wherever they curve (river.ts), but at the bridges, on The Trenches' boardwalk and pier and on Uptown's esplanade: their railings are the decks' edges)
-    if (inWater(x, z, -0.3) && !onBridge(x) && !onDeck(x, z, RADIUS) && !onEsplanade(x, z, RADIUS)) return true;
+    if (inWater(x, z, -0.3) && !onBridge(x, z) && !onDeck(x, z, RADIUS) && !onEsplanade(x, z, RADIUS)) return true;
     // Westlake Park's lake (westlake.ts): you stop on the lawn at its stone rim, but out along the jetty (its edges stop you)
     if (inLake(x, z, RADIUS + RIM.w + 0.1) && !onJetty(x, z, RADIUS) && !onTerrace(x, z, RADIUS)) return true;
     if (SOLID_GRID.near(x, z, RADIUS, nearBoxes).some((b) => inBox(b, x, z, RADIUS) && !skip?.(b))) return true;

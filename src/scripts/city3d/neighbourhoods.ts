@@ -14,7 +14,7 @@ import * as THREE from 'three';
 import { Batch, PAL, neon, toon } from './kit';
 import { BENDS, BEND_REACH, JETTIES, LAWN_TREES, OUTER_PARKS, PROMENADE, SQUARE_LAYOUTS, offBridges, offFootbridge, type Pt, type SquareLayout } from './outer';
 import { EW_ROADS, LANE, NS_ROADS, RIVER } from './layout';
-import { pullAt } from './river';
+import { WATER_Y, pullAt } from './river';
 import { SLAB as S, addLamp, addTree, lotMat, waterMat, type Tick } from './world';
 import type { Idle } from './landmarks';
 
@@ -257,7 +257,7 @@ function promenade(b: Batch, low: boolean) {
     for (const j of JETTIES.filter((q) => q.bank === bank)) {
       const out = edge + toWater * 0.65;
       box(b, j.x - 1.1, 0.06, Math.min(edge, out), j.x + 1.1, 0.14, Math.max(edge, out), WOOD);
-      for (const px of [j.x - 1.0, j.x + 1.0]) cyl(b, 0.06, 0.5, px, -0.4, out - toWater * 0.06, METAL, 6);
+      for (const px of [j.x - 1.0, j.x + 1.0]) cyl(b, 0.06, 0.4 - WATER_Y, px, WATER_Y - 0.3, out - toWater * 0.06, METAL, 6);
       box(b, j.x - 1.1, 0.5, out - 0.03, j.x + 1.1, 0.56, out + 0.03, rail);
       for (const px of [j.x - 1.07, j.x + 1.07]) box(b, px - 0.03, 0.5, Math.min(edge, out), px + 0.03, 0.56, Math.max(edge, out), rail);
       for (const px of [j.x - 1.07, j.x, j.x + 1.07]) box(b, px - 0.03, 0.14, out - 0.03, px + 0.03, 0.56, out + 0.03, rail);

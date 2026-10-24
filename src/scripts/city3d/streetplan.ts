@@ -19,6 +19,7 @@ import { ALLEYS, BLOCKS_DT, DIAGONALS, LANES } from './downtown';
 import { BENDS, BEND_KERBS, OUTER_BLOCKS, OUTER_PARKS, OUTER_SQUARES, PADS } from './outer';
 import { AIRPORT_STREETS, ROAD } from './airfield';
 import { BX, TOWERS } from './liberty';
+import { HALF as HARBOUR_HALF, HARBOUR_STREET } from './harbour';
 import { HIGHWAY, HIGHWAY_HALF, insideHighway, outerLane, slipCurve } from './highway';
 import { TRENCH_BLOCKS, TRENCH_CROSSINGS, TRENCH_STREETS } from './trenches';
 import { WESTLAKE_BLOCKS } from './westlake';
@@ -487,7 +488,9 @@ export function riverBridges(plan: StreetPlan = PLAN) {
     for (let i = 1; i < s.pts.length; i++) {
       const [a, b] = [s.pts[i - 1], s.pts[i]];
       if (a[0] !== b[0] || Math.min(a[1], b[1]) >= RIVER[0] || Math.max(a[1], b[1]) <= RIVER[1]) continue;
-      out.push({ street: s.id, c: a[0], half: s.half, x0: a[0] - s.half - WALK_W, x1: a[0] + s.half + WALK_W });
+      // (Harbour Bridge is wider than its avenue: its footways along its outer edges, harbour.ts)
+      const w = s.id === HARBOUR_STREET ? HARBOUR_HALF : s.half + WALK_W;
+      out.push({ street: s.id, c: a[0], half: s.half, x0: a[0] - w, x1: a[0] + w });
     }
   }
   return out.sort((p, q) => p.x0 - q.x0);

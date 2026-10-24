@@ -17,7 +17,7 @@
  */
 import type { Box } from './solids';
 import { RIVER } from './layout';
-import { edgeSamples } from './river';
+import { edgeSamples, topsAt } from './river';
 import { riverCrossings } from './streetplan';
 import { LAKE_C, LAKE_WALLS } from './westlake';
 
@@ -104,8 +104,9 @@ export const RIVER_WALLS: Box[] = (() => {
     const k = Math.max(1, Math.ceil((b - a) / WALL_STEP));
     for (let i = 0; i < k; i++) {
       const [p0, p1] = [a + ((b - a) * i) / k, a + ((b - a) * (i + 1)) / k];
-      const e = edgeSamples(p0, p1, (p1 - p0) / 2);
-      out.push([p0, Math.min(...e.map((q) => q.n)) - 0.3, p1, Math.max(...e.map((q) => q.s)) + 0.3, 2]);
+      // (at the tops of the banks' slopes, where they slope down to the water: river plan step 2)
+      const e = edgeSamples(p0, p1, (p1 - p0) / 2).map((q) => topsAt(q.x));
+      out.push([p0, Math.min(...e.map((q) => q[0])) - 0.3, p1, Math.max(...e.map((q) => q[1])) + 0.3, 2]);
     }
   };
   let at = run[0];

@@ -62,6 +62,8 @@ import { AIR_SPAWN } from './airfield';
 import { FIGHT_SPAWN } from './fightsite';
 import { LIBERTY_SPAWN } from './liberty';
 import { buildLibertyBridge } from './libertybridge';
+import { buildHarbourBridge } from './harbour3d';
+import { HARBOUR_SPAWN } from './harbour';
 import { buildProjects } from './projects3d';
 import { buildCommons } from './commons3d';
 import { buildGrit } from './grit3d';
@@ -214,7 +216,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const liberty = buildLibertyBridge(scene, { flame, tick, reduced, low: tier === 'low' });
   // The metro (growth plan Phase 8): the viaduct, its stations and the train
   const metro = buildMetro(scene, tick, { reduced, low: tier === 'low' });
-  spots.push(liberty.spot);
+  // Harbour Bridge: the east avenue's suspension bridge over the river, the metro down its middle (a place too)
+  const harbour = buildHarbourBridge(scene, { low: tier === 'low' });
+  spots.push(liberty.spot, harbour.spot);
   // ?fight: the sparring demo on the hangout square (the fight clips, before the Fight Club exists)
   const fightDemo = new URLSearchParams(location.search).has('fight') ? (await import('./fight-demo')).buildFightDemo({ scene, root, reduced, low: tier === 'low', tick }) : null;
   // The Trenches (growth plan Phase 9): its streets, built as you go (its blocks are the street plan's)
@@ -526,6 +530,12 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       panelBody.querySelector('[data-liberty-walkin]')?.addEventListener('click', () => {
         close();
         startWalking(LIBERTY_SPAWN);
+      });
+    // Harbour Bridge's panel: Walk in starts walk mode on its north end's east footway
+    if (id === 'harbour')
+      panelBody.querySelector('[data-harbour-walkin]')?.addEventListener('click', () => {
+        close();
+        startWalking(HARBOUR_SPAWN);
       });
     // Trench Avenue's places: Walk in starts walk mode on the sidewalk in front
     if (id === 'club' || id === 'bar' || id === 'arms')

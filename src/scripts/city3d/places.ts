@@ -12,6 +12,7 @@ import { KART_SPAWN } from './kartpark';
 import { AIR_SPAWN } from './airfield';
 import { FIGHT_SPAWN } from './fightsite';
 import { LIBERTY_SPAWN } from './liberty';
+import { HARBOUR_SPAWN } from './harbour';
 import { STATIONS } from './metro';
 import { BLOCK_SPAWN } from './projects';
 import { AVENUE_SPAWNS } from './avenue';
@@ -56,6 +57,7 @@ export const PLACES: Place[] = [
   { id: 'airport', kind: 'spot', spot: 'airport', at: AIR_SPAWN },
   { id: 'fightclub', kind: 'spot', spot: 'fightclub', at: FIGHT_SPAWN },
   { id: 'liberty', kind: 'spot', spot: 'liberty', at: LIBERTY_SPAWN },
+  { id: 'harbour', kind: 'spot', spot: 'harbour', at: HARBOUR_SPAWN },
   { id: 'trenches', kind: 'spot', spot: 'trenches', at: BLOCK_SPAWN },
   // Trench Avenue's places: on the sidewalk in front
   { id: 'club', kind: 'spot', spot: 'club', at: AVENUE_SPAWNS.club },

@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { GEARS, RIVER_WALLS, riverWallsNear, SIGNAL_HOLD, SIGNAL_SPEED, carLights, circles, gearOf, newCar, newSignal, skidding, stepCar, tune, type CarState, type DriveInput, type DriveWorld } from '../src/scripts/city3d/drive-sim';
 import { BRIDGED_NS, EXT, NS_ROADS, RIVER, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
-import { edgesAt } from '../src/scripts/city3d/river';
+import { topsAt } from '../src/scripts/city3d/river';
 import { CARGO, DRIVE } from '../src/scripts/city3d/mycar';
 import { NO_CAR_MODS, carStats } from '../src/scripts/city3d/catalog';
 import { carStatsOf, cleanSave, modCar } from '../src/scripts/city3d/tycoon';
@@ -154,10 +154,11 @@ test('the river stops it except over the bridges', () => {
     assert.ok(q[0] >= p[2] - 1e-9 && q[0] - p[2] < 30, 'in order');
     if (q[0] - p[2] > 1e-6) assert.ok(gaps.some((g) => Math.abs(g[0] - p[2]) < 1e-9 && Math.abs(g[1] - q[0]) < 1e-9), `a gap at ${p[2]} that isn't a bridge`);
   }
-  // ...and they cover the water wherever it is (it curves: river.ts), never far onto the banks
+  // ...and they cover the water and the banks' slopes down to it wherever they are (it curves: river.ts), never far
+  // onto the flat land
   for (let x = EXT[0] + 1; x < EXT[1] - 1; x += 0.7) {
     if (gaps.some((g) => x > g[0] - 0.2 && x < g[1] + 0.2)) continue;
-    const [n, sz] = edgesAt(x);
+    const [n, sz] = topsAt(x);
     const w = riverWallsNear(x, 0).find((b) => b[0] <= x && b[2] >= x)!;
     assert.ok(w && w[1] <= n - 0.25 && w[3] >= sz + 0.25 && w[1] > n - 2 && w[3] < sz + 2, `the wall at x ${x.toFixed(1)}`);
   }

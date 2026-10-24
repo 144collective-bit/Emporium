@@ -10,6 +10,8 @@ import { CENTER, SLAB, type Tick } from './world';
 import { PLAN, distToStreet, outset, pointAt, streetLength } from './streetplan';
 import { DOWNTOWN, EXT, MARKET } from './layout';
 import { DECK_STROLLS, DECK_Y } from './liberty';
+import { deckSlope, deckY, onHarbour } from './harbour';
+import { WATER_Y } from './river';
 import { DECK_Y as BOARDWALK_Y, STROLL, boatZ } from './waterfront';
 import { JUNCTIONS, ROUTES, SPOTS, lightState, phaseOf, pointOn, rightOf, type Junction, type Phase, type Pt, type Route } from './routes';
 import { CARS, PAINTS, carGeometry, carMaterials, theFarCars, type CarId } from './cars';
@@ -475,8 +477,11 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
       place(v);
       // The body nods under braking and leans out of a turn (traffic.ts), on top of its heading
       bodyMotion(v.body, v.v, v.yaw, dt);
-      q.setFromAxisAngle(up, v.yaw).multiply(q2.setFromEuler(lean.set(v.body.roll, 0, v.body.pitch)));
-      M.makeRotationFromQuaternion(q).setPosition(v.x, ROAD_Y, v.z);
+      // (over Harbour Bridge's hump: up it, its nose along the deck's slope; harbour.ts)
+      const hb = onHarbour(v.x, v.z) ? deckY(v.z) : 0;
+      const climb = hb ? Math.atan(-Math.sin(v.yaw) * deckSlope(v.z)) : 0;
+      q.setFromAxisAngle(up, v.yaw).multiply(q2.setFromEuler(lean.set(v.body.roll, 0, v.body.pitch + climb)));
+      M.makeRotationFromQuaternion(q).setPosition(v.x, ROAD_Y + hb, v.z);
       v.matrix.copy(M);
       v.near = !CROWD_VIEW.on || isNear(Math.hypot(v.x - CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, v.z - CROWD_VIEW.eye.z), farDist, v.near);
       farCars.show(v.far, !v.near);
@@ -846,7 +851,7 @@ function buildBoats(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => void)
   // The odd boat tied up at a jetty (boats.ts), riding the water
   const moored = MOORED.map((m) => {
     const { g } = boat(m.color, false);
-    g.position.set(m.x, 0.02, m.z);
+    g.position.set(m.x, WATER_Y + 0.02, m.z);
     g.rotation.y = m.yaw;
     return { g, ph: m.x * 0.37 };
   });
@@ -872,11 +877,11 @@ function buildBoats(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => void)
       // ...along the river's curves, swinging round Pier 7's head, turning into the swing
       const z = boatZ(b.lane, b.x);
       const slope = (boatZ(b.lane, b.x + 0.5) - boatZ(b.lane, b.x - 0.5)) * Math.sign(b.v);
-      b.g.position.set(b.x, 0.02 + Math.sin(t * 1.6 + b.ph) * 0.03, z);
+      b.g.position.set(b.x, WATER_Y + 0.02 + Math.sin(t * 1.6 + b.ph) * 0.03, z);
       b.g.rotation.set(0, (b.v < 0 ? Math.PI : 0) - Math.atan(slope), Math.sin(t * 1.2 + b.ph) * 0.03);
     }
     for (const m of moored) {
-      m.g.position.y = 0.02 + Math.sin(t * 1.3 + m.ph) * 0.025;
+      m.g.position.y = WATER_Y + 0.02 + Math.sin(t * 1.3 + m.ph) * 0.025;
       m.g.rotation.z = Math.sin(t * 0.9 + m.ph) * 0.025;
     }
   });

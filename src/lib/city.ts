@@ -5,7 +5,7 @@
  */
 
 /** The places with a pin */
-export type SpotId = 'emporium' | 'shop' | 'workshop' | 'vault' | 'signal' | 'telegram' | 'plan' | 'apartments' | 'karts' | 'airport' | 'fightclub' | 'liberty' | 'trenches' | 'club' | 'bar' | 'arms' | 'pier' | 'stadium' | 'nightmarket' | 'tower';
+export type SpotId = 'emporium' | 'shop' | 'workshop' | 'vault' | 'signal' | 'telegram' | 'plan' | 'apartments' | 'karts' | 'airport' | 'fightclub' | 'liberty' | 'harbour' | 'trenches' | 'club' | 'bar' | 'arms' | 'pier' | 'stadium' | 'nightmarket' | 'tower';
 
 export interface Spot {
   /** Pin title and subline */

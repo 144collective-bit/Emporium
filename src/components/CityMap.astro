@@ -41,6 +41,7 @@ const spots: Record<SpotId, Spot> = {
   airport: { title: 'Airport', sub: 'Hangar · fly' },
   fightclub: { title: 'Fight Club', sub: 'Spar · bouts' },
   liberty: { title: 'Liberty Bridge', sub: 'Footbridge' },
+  harbour: { title: 'Harbour Bridge', sub: 'The east avenue' },
   trenches: { title: 'The Block', sub: 'The Trenches' },
   club: { title: 'Club PULSE', sub: 'Nightclub · coming soon' },
   bar: { title: 'The Rusty Nail', sub: 'Bar · coming soon' },
@@ -50,7 +51,7 @@ const spots: Record<SpotId, Spot> = {
   stadium: { title: 'Sector 7 Stadium', sub: 'Events · coming soon' },
   tower: { title: 'Sector 7 Tower', sub: 'Sky deck' },
 };
-const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'trenches', 'club', 'bar', 'arms', 'pier', 'nightmarket', 'stadium', 'tower'];
+const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'harbour', 'trenches', 'club', 'bar', 'arms', 'pier', 'nightmarket', 'stadium', 'tower'];
 const ext = { target: '_blank', rel: 'noopener noreferrer' };
 
 // The commit this was built from (set by the Worker's build in server/wrangler.jsonc)
@@ -965,6 +966,12 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     <h2 id="city-panel-title" class="city-panel-title">Liberty Bridge</h2>
     <p class="city-panel-text">Sector 7's stone footbridge, one of a kind. A gate tower stands on each bank beside West 3 and South 1, with stairs up both sides and the Liberty flame spiralling up from its roof. The walkway crosses on arches high over both river avenues and the wide river, with boats passing underneath and lanterns along the parapets at night. It's for people only: climb the stairs and walk across.</p>
     <button type="button" class="chip-link kart-walkin" data-liberty-walkin>Walk in</button>
+  </template>
+  <template data-panel-tpl="harbour">
+    <p class="kicker"><span class="kicker-num">12</span> The river</p>
+    <h2 id="city-panel-title" class="city-panel-title">Harbour Bridge</h2>
+    <p class="city-panel-text">Sector 7's suspension bridge, where the east avenue and the metro cross the river. Two stone towers stand in the water with great pointed arches, the cables swing over their tops from anchorages on the promenades, and a web of stays fans out from each. The deck rises over the middle so the boats pass under: two lanes each way, the metro on its raised level down the middle, and a footway along each edge through the towers' smaller arches, lanterns and a necklace of lights along the cables at night.</p>
+    <button type="button" class="chip-link kart-walkin" data-harbour-walkin>Walk in</button>
   </template>
   <template data-panel-tpl="trenches">
     <p class="kicker"><span class="kicker-num">13</span> The Trenches</p>

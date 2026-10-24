@@ -34,6 +34,7 @@ export const LIVE_PLACES = [
   { id: 'airport', name: 'Airport' },
   { id: 'fightclub', name: 'Fight Club' },
   { id: 'liberty', name: 'Liberty Bridge' },
+  { id: 'harbour', name: 'Harbour Bridge' },
   { id: 'trenches', name: 'The Block' },
   { id: 'club', name: 'Club PULSE' },
   { id: 'bar', name: 'The Rusty Nail' },
