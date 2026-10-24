@@ -90,6 +90,8 @@ export const bodies = {
   cars: [] as { x: number; z: number; yaw: number; len: number; model: CarId }[],
   /** (`act`: what an idle person is doing, 'sit' on a bench: walk.ts leaves their bench alone) */
   people: [] as { x: number; z: number; act?: string }[],
+  /** The traffic's boats in the lanes (your hire boat bumps softly off them, boat.ts) */
+  boats: [] as { x: number; z: number; yaw: number; len: number; beam: number }[],
 };
 /**
  * The traffic and the boats are spent where you are (growth plan Phase 7): a car further than `POOL_R`
@@ -837,17 +839,36 @@ function buildBoats(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => void)
     scene.add(g);
     return { g, wake };
   };
-  const boats: { g: THREE.Group; wake: THREE.Mesh; x: number; lane: number; v: number; ph: number; horn: ReturnType<typeof newBoatHorn> }[] = [];
-  const specs: [string, number, number][] = [
-    // Spread across the river, each down the middle of one of Liberty Bridge's arches (liberty.ts)
-    ['#f3f2f7', 0, 1.1],
-    ['#e23b3b', 2, -0.8],
-    ['#ffd23f', 1, 0.6],
+  const boats: { g: THREE.Group; wake: THREE.Mesh; x: number; lane: number; v: number; ph: number; horn: ReturnType<typeof newBoatHorn>; lights?: THREE.Mesh[] }[] = [];
+  // Two to a lane (river plan step 4a), spread across the river, each lane one way; a lane's two keep one pace (the
+  // same phase in cruise(), boats.ts), half the window apart, so they never close up. The middle lane's second is the
+  // police launch, its light bar flashing blue and red
+  const specs: [string, number, number, number, boolean][] = [
+    ['#f3f2f7', 0, 1.1, -25, false],
+    ['#4fb0ff', 0, 1.1, BOAT_R - 25, false],
+    ['#e23b3b', 2, -0.8, 25, false],
+    ['#2fae6b', 2, -0.8, 25 + BOAT_R, false],
+    ['#ffd23f', 1, 0.6, 0, false],
+    ['#23305e', 1, 0.6, BOAT_R, true],
   ];
-  specs.forEach(([color, lane, v], i) => {
+  const phases = [rand() * 6, rand() * 6, rand() * 6];
+  for (const [color, lane, v, off, police] of specs) {
     const { g, wake } = boat(color, true);
-    boats.push({ g, wake: wake!, x: CENTER.x + (i - 1) * 25, lane, v, ph: rand() * 6, horn: newBoatHorn() });
-  });
+    let lights: THREE.Mesh[] | undefined;
+    if (police) {
+      // A white band along the hull, a light bar on the cabin (blue and red, flashing in turn)
+      const band = new THREE.Mesh(new THREE.BoxGeometry(1.52, 0.06, 0.62), toon('#f3f2f7'));
+      band.position.set(0, 0.18, 0);
+      g.add(band);
+      lights = ['#3d6bff', '#ff2d3d'].map((c, k) => {
+        const m = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.07, 0.18), neon(c, 1.2, 2.4));
+        m.position.set(-0.2, 0.6, k ? 0.11 : -0.11);
+        g.add(fx(m));
+        return m;
+      });
+    }
+    boats.push({ g, wake: wake!, x: CENTER.x + off, lane, v, ph: phases[lane], horn: newBoatHorn(), lights });
+  }
   // The odd boat tied up at a jetty (boats.ts), riding the water
   const moored = MOORED.map((m) => {
     const { g } = boat(m.color, false);
@@ -855,8 +876,10 @@ function buildBoats(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => void)
     g.rotation.y = m.yaw;
     return { g, ph: m.x * 0.37 };
   });
+  const shared = boats.map(() => ({ x: 0, z: 0, yaw: 0, len: 2, beam: 0.6 }));
   tick(({ t, dt }) => {
-    for (const b of boats) {
+    bodies.boats.length = 0;
+    for (const [i, b] of boats.entries()) {
       // Cruising, the speed easing up and down (boats.ts); the wake trails it
       const speed = cruise(b.v, t, b.ph);
       b.x += speed * dt;
@@ -879,6 +902,12 @@ function buildBoats(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => void)
       const slope = (boatZ(b.lane, b.x + 0.5) - boatZ(b.lane, b.x - 0.5)) * Math.sign(b.v);
       b.g.position.set(b.x, WATER_Y + 0.02 + Math.sin(t * 1.6 + b.ph) * 0.03, z);
       b.g.rotation.set(0, (b.v < 0 ? Math.PI : 0) - Math.atan(slope), Math.sin(t * 1.2 + b.ph) * 0.03);
+      Object.assign(shared[i], { x: b.x, z, yaw: b.g.rotation.y });
+      bodies.boats.push(shared[i]);
+      if (b.lights) {
+        const on = Math.floor(t * 3) % 2;
+        b.lights.forEach((m, k) => (m.visible = on === k));
+      }
     }
     for (const m of moored) {
       m.g.position.y = WATER_Y + 0.02 + Math.sin(t * 1.3 + m.ph) * 0.025;
