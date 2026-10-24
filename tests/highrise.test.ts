@@ -5,7 +5,7 @@
 // on open ground, solid in strips, and the flying traffic well over them.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { HIGHRISES, HIGHRISE_SOLIDS, PODIUM, PROW, SPIRE_LOT, STRIP, TALLEST, partBox, partStrips, type Highrise } from '../src/scripts/city3d/highrise';
+import { GROUND, HIGHRISES, HIGHRISE_SOLIDS, PODIUM, PROW, SPIRE_LOT, STRIP, TALLEST, partBox, partStrips, type Highrise } from '../src/scripts/city3d/highrise';
 import { AXIS_X, LANE_HALF, PLAZA_BLOCK, UPTOWN_BLOCKS, UPTOWN_LANES } from '../src/scripts/city3d/uptown';
 import { EMPORIUM_ROOF } from '../src/scripts/city3d/projects';
 import { PLAN, polyArea, type Street } from '../src/scripts/city3d/streetplan';
@@ -177,7 +177,25 @@ test('solid in strips no wider than STRIP, covering every part to its top', () =
       const area = strips.reduce((a, s) => a + (s[2] - s[0]) * (s[3] - s[1]), 0);
       assert.ok(Math.abs(area - (box[2] - box[0]) * (box[3] - box[1])) < 1e-6, 'the strips cover the part');
     }
-  assert.equal(HIGHRISE_SOLIDS.length, HIGHRISES.flatMap((t) => t.parts.flatMap(partStrips)).length);
+  assert.equal(HIGHRISE_SOLIDS.length, HIGHRISES.flatMap((t) => t.parts.flatMap(partStrips)).length + HIGHRISES.reduce((n, t) => n + t.columns.length, 0));
+});
+
+test('the lobbies: every design, a colonnade\'s or an arcade\'s ground floor set back behind its columns (walkable under the storey over it)', () => {
+  assert.deepEqual([...new Set(HIGHRISES.map((t) => t.lobby))].sort(), ['arcade', 'atrium', 'colonnade', 'pavilion', 'retail']);
+  for (const t of HIGHRISES) {
+    const pod = t.parts[0];
+    if (t.lobby === 'colonnade' || t.lobby === 'arcade') {
+      assert.ok(pod.skin === 'podium' && pod.foot, `${t.id}'s ground floor set back`);
+      const f = pod.foot!;
+      const back = t.front === 'n' ? f[1] - pod.rect[1] : t.front === 's' ? pod.rect[3] - f[3] : t.front === 'w' ? f[0] - pod.rect[0] : pod.rect[2] - f[2];
+      assert.ok(Math.abs(back - GROUND.recess) < 1e-9, `${t.id} set back on its front`);
+      assert.ok(t.columns.length >= 3, `${t.id}'s columns`);
+      // The columns on the podium's front line, inside it, a walker's width and more apart
+      for (const [x, z] of t.columns) assert.ok(inside([x - GROUND.col / 2, z - GROUND.col / 2, x + GROUND.col / 2, z + GROUND.col / 2], pod.rect, 0), `${t.id}'s column off its podium`);
+      for (let i = 1; i < t.columns.length; i++) assert.ok(Math.hypot(t.columns[i][0] - t.columns[i - 1][0], t.columns[i][1] - t.columns[i - 1][1]) - GROUND.col > 0.9);
+    } else assert.equal(t.columns.length, 0);
+    assert.ok(GROUND.h < PODIUM.h - 0.5, 'a storey over the ground floor');
+  }
 });
 
 test('the flying traffic keeps well over the towers', () => {

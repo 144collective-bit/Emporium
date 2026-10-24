@@ -798,8 +798,21 @@ it and has been retired completely. Build only on what's here.
     and in pieces no longer than `SPAN`; roofs and parapets on every tier;
     the crowns (a slab's lit band, the deco's gold edges and pyramid, the
     drum's neon ring and cap, the twins' skybridge, the spire's lantern);
-    a mast and a red warning light on every tip; a canopy over each lobby
-    door and a revolving door near. The airliners' westbound leg crosses
+    a mast and a red warning light on every tip. **The lobbies** (the
+    owner's call: "more realistic ... not a plinth"; `Lobby`, `lobby` on
+    each tower): a glass atrium with the lobby inside (pendants, a desk,
+    plants, people on the atlas's light map), a glass vestibule, a glass
+    canopy and flags; a colonnade (deco towers) or an arcade (drums), the
+    ground floor set back `GROUND.recess` behind square stone columns with
+    gold capitals or round ones (`columns`, solid; `foot` on the podium is
+    what's solid under the storey over it, so you walk under it), bronze
+    doors, a lit soffit, lanterns; retail (shopfronts from the atlas either
+    side of a narrow lobby door, awnings and names from `SHOP_NAMES`, made
+    up), the flatiron's shops all round its foot, and the spire's glass
+    pavilion. A podium's sides are shops or glass, its back a service wall
+    (louvres, a steel door). **Facades** vary by tower (`facade()`): fins
+    down the glass, ledges every four floors, or corner piers; the tallest
+    slab carries a helipad. Planters by every door (near). The airliners' westbound leg crosses
     Uptown at 53 to 55 (airfield.ts), and the flight tests keep every
     aircraft well over every tip.
   - **The plaza** (Phase 3) is `plaza.ts` (DOM-free, tested in

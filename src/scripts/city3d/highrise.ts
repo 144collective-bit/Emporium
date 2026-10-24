@@ -38,6 +38,8 @@ export interface Part {
   shape: Shape;
   /** Its bounds (a prism's too) */
   rect: Rect;
+  /** A podium's ground floor where it stands back from the storey over it (what's solid down there) */
+  foot?: Rect;
   /** A prism's outline, counter-clockwise as the blocks' */
   poly?: Pt[];
   y0: number;
@@ -62,7 +64,21 @@ export interface Highrise {
   tip: number;
   /** The twins' skybridge: its box and height */
   bridge?: { rect: Rect; y0: number; y1: number };
+  /** Its lobby's design (`Lobby`), and the columns standing along its front where the ground floor is set back (x, z) */
+  lobby: Lobby;
+  columns: Pt[];
 }
+
+/**
+ * The lobbies (the owner's call: "more realistic ... not a plinth"): a glass atrium (double-height glazing, a
+ * vestibule, a canopy), a colonnade (the ground floor set back behind stone columns, bronze doors), an arcade (set
+ * back behind round columns), retail (shopfronts either side of a narrow lobby door, awnings, signs) and the
+ * spire's pavilion (a glass entrance pavilion at its foot). The podium's other sides are shops where they face a
+ * street, its back a service wall
+ */
+export type Lobby = 'atrium' | 'colonnade' | 'arcade' | 'retail' | 'pavilion';
+/** The ground floor's height under the podium's top storey, and how far a colonnade's or arcade's front stands back */
+export const GROUND = { h: 2.3, recess: 1.1, col: 0.36, every: 1.7 };
 
 /** The podium's height (a double-height lobby and a floor over it) and how far in from the lot it stands */
 export const PODIUM = { h: 3.2, in: 0.8 };
@@ -78,6 +94,26 @@ const square = ([x, z]: Pt, s: number, t = s): Rect => [x - s / 2, z - t / 2, x 
 function doorOf(r: Rect, f: Face, out = 0.6): Pt {
   const [x, z] = mid(r);
   return f === 'n' ? [x, r[1] - out] : f === 's' ? [x, r[3] + out] : f === 'w' ? [r[0] - out, z] : [r[2] + out, z];
+}
+
+/** Each design's lobby (the slabs alternate between a glass atrium and shops, by their name) */
+const lobbyOf = (id: string, kind: Design): Lobby =>
+  kind === 'deco' ? 'colonnade' : kind === 'round' ? 'arcade' : kind === 'twin' ? 'atrium' : kind === 'spire' ? 'pavilion' : kind === 'flatiron' ? 'retail' : (id.charCodeAt(1) + id.charCodeAt(2)) % 2 ? 'retail' : 'atrium';
+/** A podium's ground floor set back along its front, and the columns left standing along the front's line */
+function setBack(pod: Rect, front: Face): { foot: Rect; columns: Pt[] } {
+  const r = GROUND.recess;
+  const foot: Rect = front === 'n' ? [pod[0], pod[1] + r, pod[2], pod[3]] : front === 's' ? [pod[0], pod[1], pod[2], pod[3] - r] : front === 'w' ? [pod[0] + r, pod[1], pod[2], pod[3]] : [pod[0], pod[1], pod[2] - r, pod[3]];
+  const along = front === 'n' || front === 's';
+  const [a, b] = along ? [pod[0], pod[2]] : [pod[1], pod[3]];
+  const line = front === 'n' ? pod[1] : front === 's' ? pod[3] : front === 'w' ? pod[0] : pod[2];
+  const inward = front === 'n' || front === 'w' ? 1 : -1;
+  const n = Math.max(2, Math.round((b - a - 0.5) / GROUND.every) + 1);
+  const columns = Array.from({ length: n }, (_, i): Pt => {
+    const v = a + 0.25 + ((b - a - 0.5) * i) / (n - 1);
+    const w = line + inward * (GROUND.col / 2 + 0.02);
+    return along ? [v, w] : [w, v];
+  });
+  return { foot, columns };
 }
 
 /** A shaft's outline pushed to one side of its podium (`back`), 1 in from it, the rest of the podium's roof left open */
@@ -98,8 +134,10 @@ export function design(id: string, block: string, kind: Design, lot: Rect, h: nu
   const { back, depth = Infinity, ratio = 1.7 } = o;
   const pod = inset(lot, PODIUM.in);
   const [pw, pd] = [pod[2] - pod[0], pod[3] - pod[1]];
-  const podium: Part = { shape: 'box', rect: pod, y0: 0, y1: PODIUM.h, skin: 'podium' };
-  const base = { id, block, design: kind, skin, lot, front, door: doorOf(pod, front) };
+  const lobby = lobbyOf(id, kind);
+  const back_ = lobby === 'colonnade' || lobby === 'arcade' ? setBack(pod, front) : null;
+  const podium: Part = { shape: 'box', rect: pod, y0: 0, y1: PODIUM.h, skin: 'podium', ...(back_ ? { foot: back_.foot } : {}) };
+  const base = { id, block, design: kind, skin, lot, front, door: doorOf(pod, front), lobby, columns: back_?.columns ?? [] };
   const P = PODIUM.h;
   // (the shaft's own room on the podium: all of it, or a depth at the back)
   const room: Rect = !back || !Number.isFinite(depth) ? pod : back === 'n' ? [pod[0], pod[1], pod[2], pod[1] + depth + 2] : back === 's' ? [pod[0], pod[3] - depth - 2, pod[2], pod[3]] : back === 'w' ? [pod[0], pod[1], pod[0] + depth + 2, pod[3]] : [pod[2] - depth - 2, pod[1], pod[2], pod[3]];
@@ -232,7 +270,7 @@ function flatiron(id: string, block: string, h: number, front: Face, inset = 0.6
     { shape: 'prism', poly: crown, rect: boundsOf(crown), y0: h - 2, y1: h, skin: 'stone' },
   ];
   const door: Pt = front === 'n' ? [(lot[0] + lot[2]) / 2 + 2, lot[1] - 0.4] : [(lot[0] + lot[2]) / 2 + 2, lot[3] + 0.4];
-  return { id, block, design: 'flatiron', skin: 'stone', lot: [lot[0] - 0.5, lot[1] - 0.5, lot[2] + 0.5, lot[3] + 0.5], front, door, parts, roof: h, tip: h + 1.2 };
+  return { id, block, design: 'flatiron', skin: 'stone', lot: [lot[0] - 0.5, lot[1] - 0.5, lot[2] + 0.5, lot[3] + 0.5], front, door, parts, roof: h, tip: h + 1.2, lobby: 'retail', columns: [] };
 }
 
 /** The spire's lot in the plaza's block: a square east of the axis, the plaza round it */
@@ -287,7 +325,8 @@ export const HIGHRISES: Highrise[] = [
 
 /** A part's box for what's solid: a drum's and an octagon's drawn in a little at the corners */
 export function partBox(p: Part): [number, number, number, number, number] {
-  const [x0, z0, x1, z1] = p.rect;
+  // (a podium set back over its ground floor: what's solid is its ground floor's)
+  const [x0, z0, x1, z1] = p.foot ?? p.rect;
   const m = p.shape === 'drum' ? Math.min(x1 - x0, z1 - z0) * 0.08 : p.shape === 'oct' ? Math.min(x1 - x0, z1 - z0) * 0.04 : 0;
   return [x0 + m, z0 + m, x1 - m, z1 - m, p.y1];
 }
@@ -317,4 +356,8 @@ export function partStrips(p: Part): [number, number, number, number, number][] 
     return alongX ? [a, z0, b, z1, h] : [x0, a, x1, b, h];
   });
 }
-export const HIGHRISE_SOLIDS: [number, number, number, number, number][] = HIGHRISES.flatMap((t) => t.parts.flatMap(partStrips));
+export const HIGHRISE_SOLIDS: [number, number, number, number, number][] = [
+  ...HIGHRISES.flatMap((t) => t.parts.flatMap(partStrips)),
+  // (the columns along a set-back front, to the podium's top storey)
+  ...HIGHRISES.flatMap((t) => t.columns.map(([x, z]): [number, number, number, number, number] => [x - GROUND.col / 2, z - GROUND.col / 2, x + GROUND.col / 2, z + GROUND.col / 2, GROUND.h])),
+];

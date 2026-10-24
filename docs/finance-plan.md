@@ -411,6 +411,27 @@ owner's sign-off.
   filling the diagonal's sharp corner, its prow blunt (`PROW`), a gold line
   under its heavy cornice, solid in thin strips along it (a prism part,
   `poly`). The airliners' westbound leg was raised from 46-48 to 53-55.
+- **The lobbies** (the owner's call after the first look: "more realistic
+  ... they look like a plinth the building is on"), each tower's `lobby`:
+  - **atrium** (the twins and half the slabs): the podium glazed full height
+    with the lobby visible inside (pendants, a reception desk, plants,
+    people; lit at night), a glass vestibule with the revolving door, a
+    glass canopy on steel, three flags;
+  - **colonnade** (the deco towers) and **arcade** (the drums): the ground
+    floor set back 1.1 behind square stone columns with gold capitals or
+    round ones, bronze doors and glazing, a lit soffit with downlights,
+    bronze lanterns; solid only where it stands (`foot`, the columns), so
+    you walk under the storey over it;
+  - **retail** (the other slabs and the flatiron): shopfronts either side
+    of a narrow lobby door, each with an awning and a made-up name
+    (`SHOP_NAMES`), a ribbon of windows over them;
+  - **pavilion** (the spire): a glass entrance pavilion at its foot under a
+    flat roof lit along its edge.
+  - A podium's sides are shops (or glass for an atrium or arcade), its back a
+    service wall with louvres and a steel door; planters by every way in.
+- **Facades:** each tower its own (fins down the glass, ledges every four
+  floors, or corner piers), drums ringed with ledges, the tallest slab a
+  helipad on its plant room.
 - **The kerbside** (`LAYBYS` in uptown.ts, `kerbside.ts`, tested in
   `tests/kerbside.test.ts`; drawn by `kerbside3d.ts`):
   - **Lay-bys** cut into the blocks off the kerb (the sidewalk runs round
