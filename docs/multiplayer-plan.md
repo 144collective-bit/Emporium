@@ -164,15 +164,17 @@ until the owner picks multiplayer up again.
   the token's name is blocked without ever being written in the repo. The
   server checks it on sign-up and rename; the browser checks it first to
   say why.
-- **Forgot your password**: an email reset link. The email is asked for at
-  sign-up, kept private (never shown, never in a snapshot, only its owner
+- **Forgot your password**: an email reset link. The email is required at
+  sign-up with a password (the owner's call; Google, Discord and wallet
+  sign-ups ask for it when they first set a password), kept private (never shown, never in a snapshot, only its owner
   sees it on the profile card) and used for resets only. The sending
   service is decided later: built for Resend's API behind a secret
   (`EMAIL_API_KEY`); until one is added, "Forgot password" says it's coming
   soon.
 - **The plan is Workers Paid** ($5 a month), so passwords are hashed
-  properly: PBKDF2-SHA256, 600,000 rounds, a salt each (Web Crypto, no
-  package).
+  properly: PBKDF2-SHA256 with a salt each (Web Crypto, no package), at
+  100,000 rounds, the most Cloudflare's Web Crypto takes (each hash keeps
+  its count, so a later raise re-hashes on the next login).
 - **A profile carries**: name, look and score (today's profile), online
   progress, settings and a friends list.
 
