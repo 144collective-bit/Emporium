@@ -11,6 +11,7 @@ import { EMPORIUM_ROOF } from '../src/scripts/city3d/projects';
 import { PLAN, polyArea, type Street } from '../src/scripts/city3d/streetplan';
 import { SOLIDS } from '../src/scripts/city3d/solids';
 import { FLIGHTS, PERIOD, REACH, poseAt } from '../src/scripts/city3d/airfield';
+import { ROOF_PAD } from '../src/scripts/city3d/highrise';
 import { WALK_W } from '../src/scripts/city3d/layout';
 
 type Pt = [number, number];
@@ -198,10 +199,31 @@ test('the lobbies: every design, a colonnade\'s or an arcade\'s ground floor set
   }
 });
 
+test('the helipad: on the tallest slab, over its plant room, as wide as its shaft; the executive helicopter lands on it', () => {
+  const t = HIGHRISES.find((h) => h.id === ROOF_PAD.tower)!;
+  assert.equal(t, HIGHRISES.filter((h) => h.design === 'slab').sort((p, q) => q.roof - p.roof)[0]);
+  assert.ok(ROOF_PAD.y > t.roof + 0.15 && ROOF_PAD.y < t.roof + 1);
+  const [x0, z0, x1, z1] = t.parts[1].rect;
+  assert.ok(Math.abs(ROOF_PAD.x - (x0 + x1) / 2) < 1e-9 && Math.abs(ROOF_PAD.z - (z0 + z1) / 2) < 1e-9);
+  assert.ok(ROOF_PAD.half * 2 >= REACH.heli * 1.6, 'room for its skids and more');
+  const f = FLIGHTS.find((q) => q.id === 'heli-x')!;
+  let on = 0;
+  for (let s = 0; s < PERIOD; s += 0.5) {
+    const p = poseAt(f, s);
+    if (Math.hypot(p.x - ROOF_PAD.x, p.z - ROOF_PAD.z) < 0.1 && Math.abs(p.y - ROOF_PAD.y) < 1e-6) on++;
+  }
+  assert.ok(on * 0.5 > 30, `on the roof for ${on * 0.5} s`);
+});
+
 test('the flying traffic keeps well over the towers', () => {
   for (let t = 0; t < PERIOD; t += 0.25)
     for (const f of FLIGHTS) {
       const p = poseAt(f, t);
+      // (but the executive helicopter straight over its own helipad, coming down onto it or lifting off: airfield.ts)
+      if (f.id === 'heli-x' && Math.hypot(p.x - ROOF_PAD.x, p.z - ROOF_PAD.z) < 0.5) {
+        assert.ok(p.y >= ROOF_PAD.y - 1e-6, 'down onto the helipad, never through it');
+        continue;
+      }
       for (const h of HIGHRISES) {
         const [x0, z0, x1, z1] = h.lot;
         const d = Math.hypot(Math.max(x0 - p.x, 0, p.x - x1), Math.max(z0 - p.z, 0, p.z - z1));

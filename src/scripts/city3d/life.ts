@@ -17,6 +17,7 @@ import { CARS, PAINTS, carGeometry, carMaterials, theFarCars, type CarId } from 
 import { isNear, tileKey, tileOf } from './tiles';
 import type { Idle } from './landmarks';
 import { TRENCH_WALKS } from './projects';
+import { UPTOWN_PEOPLE, UPTOWN_WALKS } from './uptownlife';
 import { inTrenches } from './trenches';
 import { CROWD_VIEW, HIP_HEIGHT, cityOutfit, createCrowd } from './character';
 import { CLIP_SECONDS, JOG_STRIDE, WALK_STRIDE } from './crowdclips';
@@ -603,6 +604,8 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
   // ...and round The Trenches' blocks nearest The Block, with walkers of their own (so downtown keeps its crowd)
   const town = walks.length;
   walks.push(...PLAN.blocks.filter((b) => TRENCH_WALKS.includes(b.id)).map((b) => ({ poly: b.poly })));
+  // ...and round Uptown's blocks by the plaza and the diagonal (finance plan Phase 6)
+  walks.push(...PLAN.blocks.filter((b) => UPTOWN_WALKS.includes(b.id)).map((b) => ({ poly: b.poly })));
   // ...and up and down the waterfront's boardwalk
   walks.push({ poly: STROLL, y: BOARDWALK_Y });
   const walkers = Math.round((opts.walkers * walks.length) / town);
@@ -688,7 +691,8 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
   const idlers = opts.light ? crowd.filter((c) => !busy(c) || every++ % 2 === 0) : crowd;
   for (const c of idlers) people.push({ kind: 'idle', seg: 0, inset: 0, u: 0, dir: 1, speed: 0, phase: rand() * 6, x: c.x, z: c.z, y: c.y, act: c.act, scale: c.scale, ry: c.ry, face: c.ry, walked: 0, crossed: 0, seed: rand(), notice: { hold: 0 } });
   // Westlake Park's walkers, joggers, dog walkers, picnics, players and boaters (phones: half of them, the trim)
-  for (const pp of PARK_PEOPLE) if (!(opts.light && pp.trim)) people.push({ kind: 'park', park: pp, m: moment(), seg: 0, inset: 0, u: 0, dir: 1, speed: 0, phase: rand() * 6, x: 0, z: 0, ry: 0, face: NaN, walked: 0, crossed: 0, seed: rand(), notice: { hold: 0 } });
+  // ...and Uptown's joggers on the esplanade and cyclists in the bike lanes (uptownlife.ts), the same way
+  for (const pp of [...PARK_PEOPLE, ...UPTOWN_PEOPLE]) if (!(opts.light && pp.trim)) people.push({ kind: 'park', park: pp, m: moment(), seg: 0, inset: 0, u: 0, dir: 1, speed: 0, phase: rand() * 6, x: 0, z: 0, ry: 0, face: NaN, walked: 0, crossed: 0, seed: rand(), notice: { hold: 0 } });
   bodies.people = people;
 
   // Everyone is the shared Degen body in a city outfit: suits and hoodies, bags, headphones

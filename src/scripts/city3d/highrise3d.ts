@@ -8,7 +8,7 @@
  *   podium's lobby), laid on in world units, stacked so a band never wraps,
  *   in pieces no longer than `SPAN` (nothing fixed much longer than a tile);
  *   their windows lit at night from its light map (offices: about half lit).
- *   Drums in `SIDES` facets, octagons with their corners cut (`CUT`).
+ *   Drums in `SIDES` facets, octagons with their corners cut (`OCT_CUT` in highrise.ts).
  * - **Roofs** on every part (the setbacks' terraces too), a parapet round
  *   each.
  * - **Crowns:** a slab's lit band round its shaft's top; a deco tower's gold
@@ -24,9 +24,11 @@
  */
 import * as THREE from 'three';
 import { Batch, FONT_DISPLAY, canvasTex, lit, neon, rng, shadeHex, siteMat, toon } from './kit';
-import { SLAB } from './world';
+import { SLAB, type Tick } from './world';
 import { site } from './tilework';
-import { GROUND, HIGHRISES, PODIUM, type Highrise, type Part, type Skin } from './highrise';
+import { GROUND, HIGHRISES, OCT_CUT, PODIUM, ROOF_PAD, type Highrise, type Part, type Skin } from './highrise';
+import { CORE, CORE_RECT, DECK, RIBS, SPIRE, VIEWERS } from './skydeck';
+import { OFFICE, OFFICE_GLSL, beaconOn, officeShare } from './skyline';
 import type { Pt, Rect } from './uptown';
 import { ROOF_TERRACES } from './boulevard';
 
@@ -320,8 +322,33 @@ const ATLAS = (() => {
   for (const t of [map, emissiveMap]) t.wrapS = THREE.RepeatWrapping;
   // (canvas textures are flipped: the canvas's top row is v = 1; each band keeps a pixel off its edges)
   const band = (top: number, h: number, tw: number, th: number): Band => ({ v0: 1 - (top + h - 1) / H, vh: (h - 2) / H, tw, th });
+  const mat = siteMat('uptown-glass', lit(toon('#ffffff', { map, emissiveMap, emissive: '#ffffff' }), 0.12, 1));
+  // The offices' lights (skyline.ts): on the skins' bands only (the lobbies and shops stay lit), each section of a few
+  // bays a floor high on while its own number is under the hour's share
+  const skinV = 1 - (SKINS.length * BAND_PX) / H;
+  mat.onBeforeCompile = (sh) => {
+    sh.uniforms.uOffice = OFFICE_U;
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vOfficeW;').replace(
+      '#include <project_vertex>',
+      `#include <project_vertex>
+      vec4 officeW = vec4(transformed, 1.0);
+      #ifdef USE_BATCHING
+      officeW = batchingMatrix * officeW;
+      #endif
+      vOfficeW = (modelMatrix * officeW).xyz;`
+    );
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>\nvarying vec3 vOfficeW;\nuniform float uOffice;\n${OFFICE_GLSL}`).replace(
+      '#include <emissivemap_fragment>',
+      `#include <emissivemap_fragment>
+      if (vEmissiveMapUv.y > ${skinV.toFixed(5)}) {
+        vec3 cell = floor(vec3(vOfficeW.x / ${OFFICE.w.toFixed(2)}, (vOfficeW.y - ${SLAB.toFixed(3)}) / ${OFFICE.h.toFixed(2)}, vOfficeW.z / ${OFFICE.w.toFixed(2)}));
+        totalEmissiveRadiance *= step(officeHash(cell), uOffice);
+      }`
+    );
+  };
+  mat.customProgramCacheKey = () => 'uptown-office';
   return {
-    mat: siteMat('uptown-glass', lit(toon('#ffffff', { map, emissiveMap, emissive: '#ffffff' }), 0.12, 1)),
+    mat,
     skin: Object.fromEntries(SKINS.map((k) => [k, band(tops[k], BAND_PX, BAY * COLS, FLOOR * ROWS)])) as Record<Skin, Band>,
     atrium: band(tops.atrium, PODIUM_PX, GROUND_W, PODIUM.h),
     bronze: band(tops.bronze, GROUND_PX, GROUND_W, GROUND.h),
@@ -337,7 +364,6 @@ const ATLAS = (() => {
 const SPAN = 12;
 /** A drum's facets, an octagon's corner cut (a share of its side) */
 const SIDES = 20;
-const CUT = 0.22;
 
 /** A part's outline, counter-clockwise from above (+y) */
 function outline(p: Part, sides = SIDES): Pt[] {
@@ -357,7 +383,7 @@ function outline(p: Part, sides = SIDES): Pt[] {
       return [cx + Math.cos(a) * r, cz + Math.sin(a) * r] as Pt;
     });
   }
-  const c = Math.min(x1 - x0, z1 - z0) * CUT;
+  const c = Math.min(x1 - x0, z1 - z0) * OCT_CUT;
   return [
     [x0 + c, z0],
     [x0, z0 + c],
@@ -459,13 +485,19 @@ const PAD_MARK = toon('#f2c94c');
 const PAD_LIGHT = neon('#33ff88', 0.2, 1.6);
 /** Lit trims: a slab's band, a deco tower's gold edges, a drum's ring, the spire's lantern; warning lights at the tips */
 const TRIM: Record<Skin, THREE.Material> = {
-  blue: neon('#5fd4ff', 0.15, 2.4),
+  // (lived-in night, the owner's pick: crowns in white and gold, cool white on blue and silver glass, warm on black)
+  blue: neon('#eef4ff', 0.15, 2.0),
   gold: neon('#ffd27a', 0.15, 2.4),
-  black: neon('#ff4fd8', 0.15, 2.4),
-  silver: neon('#b4a8ff', 0.15, 2.4),
+  black: neon('#fff1d6', 0.15, 2.0),
+  silver: neon('#f4f1ff', 0.15, 2.0),
   stone: neon('#ffd27a', 0.15, 2.4),
 };
-const WARNING = neon('#ff2a2a', 0.3, 2.4);
+/** ...and each tower a neon accent of its own, a thin line under its crown: magenta, cyan or purple, by its name */
+const ACCENTS = [neon('#ff4fd8', 0.1, 2.4), neon('#4fe3ff', 0.1, 2.4), neon('#b46bff', 0.1, 2.4)];
+const accentOf = (t: Highrise) => ACCENTS[(t.id.charCodeAt(0) + t.id.charCodeAt(1) * 3 + t.id.length) % ACCENTS.length];
+/** The warning lights on every tip: one material of their own, flashing together (skyline.ts), on the tick */
+const RED = new THREE.Color('#ff2a2a');
+const WARNING = siteMat('uptown-beacon', new THREE.MeshBasicMaterial({ color: RED.clone().multiplyScalar(0.3), toneMapped: true }));
 
 /** A tower: its parts' walls and roofs, its crown, its mast and light, its lobby */
 function tower(b: Batch, t: Highrise, low: boolean) {
@@ -518,25 +550,29 @@ function tower(b: Batch, t: Highrise, low: boolean) {
       for (const s of shafts) rim(b, shrink(outline(s), -0.03), SLAB + s.y1 - 0.5, 0.08, 0.08, trim);
     }
     if (t.design === 'spire') {
-      // A glass lantern on the top tier, lit edges up it, then the mast
-      const s = Math.min(x1 - x0, z1 - z0);
-      b.add(new THREE.CylinderGeometry(s * 0.18, s * 0.42, 3.2, 8, 1, true).rotateY(Math.PI / 8).translate(cx, R + 1.6 + 0.28, cz), STEEL);
+      // Lit edges up it, and on the roof Sector 7 Tower's sky deck (skydeck.ts), its crown's ribs leaning in to the mast
       rim(b, shrink(outline(top), -0.03), R - 0.45, 0.08, 0.08, trim);
       for (const p of shafts) rim(b, shrink(outline(p), -0.03), SLAB + p.y1 - 0.45, 0.08, 0.08, trim);
+      skyDeck(b, outline(top), low);
     }
     if (t.design === 'flatiron') {
       // A gold line under the cornice, and the cornice's heavy lip round the top
       rim(b, shrink(outline(shafts[0]), -0.03), SLAB + shafts[0].y1 - 0.45, 0.08, 0.08, trim);
       rim(b, shrink(outline(shafts[1]), -0.12), SLAB + shafts[1].y1 - 0.3, 0.3, 0.3, PARAPET);
     }
-    // The mast to the tip, a red light at its top
-    const mastFrom = t.design === 'deco' ? R + 4.5 : t.design === 'spire' ? R + 3.3 : R + 0.28;
-    const tip = SLAB + t.tip;
-    b.add(new THREE.CylinderGeometry(0.06, 0.14, tip - mastFrom, 6, 1, true).translate(cx, (mastFrom + tip) / 2, cz), STEEL);
-    b.add(new THREE.OctahedronGeometry(0.16, 0).translate(cx, tip + 0.08, cz), WARNING);
-    // Each tower its own facade: fins, ledges or piers on its glass, a helipad on the tallest slab
+    // The neon accent under the crown: round the top shaft, a little below its lit trim (the flatiron's under its cornice)
+    const crown = shafts.filter((p) => p.y1 - p.y0 > 1.5).at(-1)!;
+    rim(b, shrink(outline(crown, low ? 14 : SIDES), -0.04), SLAB + crown.y1 - 1.05, 0.05, 0.05, accentOf(t));
+    // The mast to the tip, a red light at its top (the helipad's tower has none: red lights at its deck's corners)
+    if (t.id === ROOF_PAD.tower) helipad(b, shafts[0]);
+    else {
+      const mastFrom = t.design === 'deco' ? R + 4.5 : t.design === 'spire' ? SLAB + DECK.y + CORE.h + 0.08 : R + 0.28;
+      const tip = SLAB + t.tip;
+      b.add(new THREE.CylinderGeometry(0.06, 0.14, tip - mastFrom, 6, 1, true).translate(cx, (mastFrom + tip) / 2, cz), STEEL);
+      b.add(new THREE.OctahedronGeometry(0.16, 0).translate(cx, tip + 0.08, cz), WARNING);
+    }
+    // Each tower its own facade: fins, ledges or piers on its glass
     facade(b, t, low);
-    if (t === HELIPAD) helipad(b, shafts.at(-1)!);
   }, 'all');
 
   // The lobby's door and what stands round it; the plant on the podium's roof
@@ -754,10 +790,72 @@ function entrance(b: Batch, t: Highrise, low: boolean) {
   });
 }
 
+/* ---------- Sector 7 Tower's sky deck ---------- */
+
+const DECKING = toon('#9a8f7c');
+const RAIL_GLASS = toon('#a9dcef');
+const VIEWER = toon('#3a3f5c');
+const LIFT_DOOR = toon('#c8cce0');
+/** A thin bar from a to c (x, y, z), w thick */
+function strut(b: Batch, a: THREE.Vector3, c: THREE.Vector3, w: number, mat: THREE.Material) {
+  const len = a.distanceTo(c);
+  const g = new THREE.BoxGeometry(w, len, w);
+  const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), c.clone().sub(a).normalize());
+  g.applyQuaternion(q).translate((a.x + c.x) / 2, (a.y + c.y) / 2, (a.z + c.z) / 2);
+  b.add(g, mat);
+}
+/**
+ * The deck on the spire's top tier (`line`, its octagon): decking inside the parapet, a glass rail over the parapet
+ * with a steel top rail, the glazed lift house in the middle (the lobby's lit interior from the atlas, its doors on
+ * the west), the crown's steel ribs from the rail's corners leaning in to a lit ring round the mast, and near, the
+ * rail's posts and the four viewers
+ */
+function skyDeck(b: Batch, line: Pt[], low: boolean) {
+  const F = SLAB + DECK.y;
+  flat(b, shrink(line, 0.16), F, DECKING);
+  // (the glass from the parapet's cap up, its steel top rail)
+  rim(b, shrink(line, 0.08), SLAB + SPIRE.roof + 0.29, 0.04, F + DECK.rail - (SLAB + SPIRE.roof + 0.29), RAIL_GLASS);
+  rim(b, shrink(line, 0.08), F + DECK.rail, 0.07, 0.05, STEEL);
+  // The lift house
+  const [cx0, cz0, cx1, cz1] = CORE_RECT;
+  const core: Pt[] = [
+    [cx0, cz0],
+    [cx0, cz1],
+    [cx1, cz1],
+    [cx1, cz0],
+  ];
+  walls(b, ATLAS.atrium, core, F, F + CORE.h);
+  flat(b, shrink(core, 0.006), F + CORE.h, ROOF);
+  rim(b, shrink(core, -0.02), F + CORE.h - 0.02, 0.1, 0.1, STEEL);
+  // (its doors: brushed steel leaves a hand's breadth proud of the glass, a lit strip over them)
+  b.box(cx0 - 0.03, F, DECK.z - 0.5, 0.03, 2.05, 1.0, LIFT_DOOR);
+  b.box(cx0 - 0.05, F + 2.12, DECK.z - 0.55, 0.05, 0.06, 1.1, TRIM.silver);
+  // The crown: a rib from each of the rail's corners to a lit ring round the mast
+  const top = new THREE.Vector3(DECK.x, F + RIBS.top, DECK.z);
+  for (const [x, z] of shrink(line, 0.08)) {
+    const a = new THREE.Vector3(x, F + DECK.rail + 0.05, z);
+    const d = new THREE.Vector3(top.x - x, 0, top.z - z).normalize().multiplyScalar(RIBS.r);
+    strut(b, a, top.clone().sub(d), 0.09, STEEL);
+  }
+  b.add(new THREE.TorusGeometry(RIBS.r + 0.04, 0.05, 4, 16).rotateX(Math.PI / 2).translate(top.x, top.y, top.z), TRIM.silver);
+  b.detail(() => {
+    // The rail's posts at the corners
+    for (const [x, z] of shrink(line, 0.08)) b.box(x - 0.04, F, z - 0.04, 0.08, DECK.rail + 0.04, 0.08, STEEL);
+    // The viewers: a post, a yoke and the binocular head looking out (walk.ts's yaw: it looks along -sin, -cos)
+    for (const [x, z, yaw] of VIEWERS) {
+      b.add(new THREE.CylinderGeometry(0.05, 0.09, 0.84, low ? 5 : 8, 1, true).translate(x, F + 0.42, z), VIEWER);
+      const head = new THREE.BoxGeometry(0.22, 0.2, 0.36).rotateX(-0.18).rotateY(yaw).translate(x - Math.sin(yaw) * 0.05, F + 0.96, z - Math.cos(yaw) * 0.05);
+      b.add(head, VIEWER);
+      for (const s of [-1, 1]) {
+        const [ex, ez] = [x - Math.sin(yaw) * 0.22 + Math.cos(yaw) * 0.06 * s, z - Math.cos(yaw) * 0.22 - Math.sin(yaw) * 0.06 * s];
+        b.add(new THREE.CylinderGeometry(0.045, 0.045, 0.08, 8).rotateX(Math.PI / 2).rotateY(yaw).translate(ex, F + 0.98, ez), STEEL);
+      }
+    }
+  });
+}
+
 /* ---------- Each tower its own facade ---------- */
 
-/** The tallest slab carries a helipad on its plant room */
-const HELIPAD = HIGHRISES.filter((t) => t.design === 'slab').sort((p, q) => q.roof - p.roof)[0];
 /** Fins, ledges or piers on a tower's glass: which, by its name (the deco's stone and the flatiron keep their own) */
 function facade(b: Batch, t: Highrise, low: boolean) {
   const kind = (t.id.charCodeAt(1) * 7 + t.id.charCodeAt(2) * 3) % 3;
@@ -793,19 +891,29 @@ function facade(b: Batch, t: Highrise, low: boolean) {
   }
 }
 /** A helipad on a slab's plant room: a marked square, its lit edge */
-function helipad(b: Batch, top: Part) {
-  const [x0, z0, x1, z1] = top.rect;
-  const [cx, cz] = [(x0 + x1) / 2, (z0 + z1) / 2];
-  const s = Math.min(x1 - x0, z1 - z0) / 2 - 0.15;
-  const y = SLAB + top.y1 + 0.06;
-  b.box(cx - s, y - 0.06, cz - s, s * 2, 0.06, s * 2, PAD);
-  b.add(new THREE.RingGeometry(s * 0.62, s * 0.72, 24).rotateX(-Math.PI / 2).translate(cx, y + 0.004, cz), PAD_MARK);
-  for (const [w, d, ox] of [[0.14, s * 0.7, -s * 0.22], [0.14, s * 0.7, s * 0.22], [s * 0.44, 0.14, 0]] as [number, number, number][]) b.box(cx + ox - w / 2, y, cz - d / 2, w, 0.005, d, PAD_MARK);
-  rim(b, [[cx - s, cz - s], [cx - s, cz + s], [cx + s, cz + s], [cx + s, cz - s]], y - 0.02, 0.06, 0.05, PAD_LIGHT);
+/**
+ * The helipad (highrise.ts `ROOF_PAD`, the executive helicopter's): a steel deck on legs from the shaft's roof, over
+ * its plant room, the H and the ring in yellow, green lights round its edge and the warning lights at its corners
+ */
+function helipad(b: Batch, shaft: Part) {
+  const { x: cx, z: cz, half: s, y } = ROOF_PAD;
+  const R = SLAB + shaft.y1;
+  b.box(cx - s, y - 0.12, cz - s, s * 2, 0.12, s * 2, PAD);
+  for (const [lx, lz] of [[-1, -1], [-1, 1], [1, -1], [1, 1], [0, -1], [0, 1], [-1, 0], [1, 0]] as Pt[]) b.box(cx + lx * (s - 0.3) - 0.07, R, cz + lz * (s - 0.3) - 0.07, 0.14, y - 0.12 - R, 0.14, STEEL);
+  b.add(new THREE.RingGeometry(s * 0.62, s * 0.72, 24).rotateX(-Math.PI / 2).translate(cx, y + 0.006, cz), PAD_MARK);
+  for (const [w, d, ox] of [[0.16, s * 0.7, -s * 0.22], [0.16, s * 0.7, s * 0.22], [s * 0.44, 0.16, 0]] as [number, number, number][]) b.box(cx + ox - w / 2, y, cz - d / 2, w, 0.007, d, PAD_MARK);
+  rim(b, [[cx - s, cz - s], [cx - s, cz + s], [cx + s, cz + s], [cx + s, cz - s]], y - 0.04, 0.06, 0.06, PAD_LIGHT);
+  for (const [lx, lz] of [[-1, -1], [-1, 1], [1, -1], [1, 1]] as Pt[]) b.add(new THREE.OctahedronGeometry(0.13, 0).translate(cx + lx * (s - 0.05), y + 0.16, cz + lz * (s - 0.05)), WARNING);
 }
 
 /** Each tower a site (its lot) */
-export function registerHighrises(low: boolean) {
+/** The share of the offices' lights on now (skyline.ts), the hour's; and the warning lights' flash */
+const OFFICE_U = { value: officeShare(new Date().getHours() + new Date().getMinutes() / 60) };
+export function registerHighrises(low: boolean, tick?: (f: Tick) => void) {
+  tick?.((env) => {
+    OFFICE_U.value = officeShare(env.hour);
+    WARNING.color.copy(RED).multiplyScalar((0.3 + 2.1 * env.night) * (beaconOn(env.t) ? 1 : 0.06));
+  });
   for (const t of HIGHRISES) {
     const [x0, z0, x1, z1]: Rect = t.lot;
     site(`uptown tower ${t.id}`, [x0 - 1, z0 - 1, x1 + 1, z1 + 1], (into) => {

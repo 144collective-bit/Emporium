@@ -51,3 +51,23 @@ test('Westlake Park: birds on its land, the lake lapping by the water', () => {
   const e = DOORS.find((d) => d.id === 'emporium')!;
   assert.equal(ambienceAt(e.x, e.z).park, 0);
 });
+
+test('Uptown: a quieter hum, the plaza\'s fountain by its pool and water wall, the circle\'s traffic round it', async () => {
+  const { CENTRE, POOL, WATER_WALL, WALL_RUNS } = await import('../src/scripts/city3d/plaza');
+  const { CIRCLE, UPTOWN_RECT } = await import('../src/scripts/city3d/uptown');
+  const { UPTOWN_HUSH } = await import('../src/scripts/city3d/ambience');
+  const pool = ambienceAt(CENTRE[0] + POOL.r + 1, CENTRE[1]);
+  assert.ok(pool.fountain > 0.95, `${pool.fountain}`);
+  const wall = ambienceAt(WATER_WALL.x - 1, (WALL_RUNS[0][0] + WALL_RUNS[0][1]) / 2);
+  assert.ok(wall.fountain > 0.9);
+  // None across Uptown, and none from the City view high over the plaza
+  assert.equal(ambienceAt(UPTOWN_RECT[0] + 3, UPTOWN_RECT[1] + 3).fountain, 0);
+  assert.equal(ambienceAt(CENTRE[0], CENTRE[1], 60).fountain, 0);
+  // The hum: quieter deep in Uptown than in town
+  const deep = ambienceAt(CIRCLE.x + 12, CIRCLE.z - 12);
+  assert.ok(deep.city <= 1 - UPTOWN_HUSH + 1e-9);
+  const e = DOORS.find((d) => d.id === 'emporium')!;
+  assert.equal(ambienceAt(e.x, e.z + 2).city, 1);
+  // The circle: its traffic by its ring
+  assert.ok(ambienceAt(CIRCLE.x + CIRCLE.r + 1, CIRCLE.z).road >= 0.5);
+});

@@ -87,6 +87,15 @@ date as each phase lands.
    - **Kerbside:** lobby drop-offs (porte-cochères with valets, a taxi
      rank), service alleys, parking bays and a bus lane (and bike lanes),
      turn arrows and planted medians.
+7. **Phase 6** (the owner's picks):
+   - **The spire's name:** Sector 7 Tower.
+   - **At night:** lived-in office lights (most floors lit in the evening,
+     fewer late, by each section's own number), crowns in white and gold
+     with a neon accent, red warning lights flashing.
+   - **The sky deck:** an open deck behind a glass rail with viewers.
+   - **The helicopter:** a second, executive one on the airport's
+     timetable, to a helipad on Uptown's tallest slab and back; the one
+     round the Emporium stays.
 
 ## Phases
 
@@ -161,7 +170,7 @@ date as each phase lands.
      following the cars' rules (a lane's width, two draws a model).
 5. **The redesign: the streets, slim towers and the kerbside** (built: see
    "Phase 5 as built" below; decision 6).
-6. **Night, life and the place.**
+6. **Night, life and the place** (built: see "Phase 6 as built" below).
    - **The skyline at night:** crowns, beacons and lit floors.
    - **Life:**
      - the district's sound in `ambience.ts` (fountains, a quieter hum,
@@ -460,3 +469,64 @@ owner's sign-off.
 - **The budget:** the boot's code went from 641.5 to 652.5 (raised to 654
   on purpose; see above).
 
+## Phase 6 as built
+
+- **Sector 7 Tower** (the spire, a place): `skydeck.ts` (DOM-free, tested in
+  `tests/skydeck.test.ts`) and `tower3d.ts` (its spot at the boot).
+  - **The place:** spot `tower`, its pin over the mast, a directory entry,
+    the panel (`data-panel-tpl="tower"`: the sky deck, more coming soon,
+    Walk in to `TOWER_SPAWN` on the plaza in front of the pavilion), a
+    `PLACES` entry and a live setting (`LIVE_PLACES`). The tower itself is
+    drawn with the rest as a site in Uptown's chunk, so its spot is only
+    the spire's tiers as plain shapes on the `PICK` layer (kit.ts: never
+    drawn, the City view's click and hover look for them) and the hover
+    ring round its foot.
+  - **The lift:** a door in the glass pavilion at its foot and one at the
+    lift house on the deck (`LIFT`), each a walk prompt ("Lift · Sky deck",
+    "Lift · Lobby"); a fade and you step out at the other end
+    (`walk.placeAt()` takes the deck's height). A closed tower (live
+    settings) keeps the lift shut.
+  - **The sky deck** on the spire's roof (`DECK`, 40 up): walkable inside
+    its rail (`skyDeckY()`, `skyDeckWall()` in walk.ts's ground and
+    collisions; you can't step or fall off), a glass rail at chest height
+    over the parapet with a steel top rail, the glazed lift house in the
+    middle (`CORE`, solid for the camera and bullets: `SKYDECK_SOLIDS`), the
+    crown's eight steel ribs leaning in from the rail's corners to a lit
+    ring round the mast (`RIBS`, well over a walker's head), and four
+    viewers (`VIEWERS`, free telescopes on the straight sides).
+- **The skyline at night** (`skyline.ts`, tested in `tests/skyline.test.ts`):
+  - **Lived-in offices:** the curtain walls' light map is switched in
+    sections a few bays wide and a floor high (`OFFICE`, `officeHash()`,
+    the same sum in the shader), each on while its number is under the
+    hour's share (`officeShare()`: all on through the day and the evening,
+    thinning after ten, about three in ten through the small hours, back
+    on from five); only the skins' bands, so lobbies and shops stay lit.
+  - **Crowns** in white and gold (cool white on blue and silver glass, warm
+    on black, gold on gold and stone), each tower a thin neon accent under
+    its crown in magenta, cyan or purple.
+  - **Warning lights** on every mast and the helipad's corners: one
+    material of their own flashing together on the tick (`beaconOn()`).
+- **Life:**
+  - **Sound** (ambience.ts): a quieter hum on Uptown's land
+    (`UPTOWN_HUSH`), the plaza's pool and water wall splashing
+    (`fountain`, a layer of its own in sound.ts), the circle's traffic
+    round it.
+  - **People** (`uptownlife.ts`, tested in `tests/uptownlife.test.ts`):
+    walkers round the blocks by the plaza and the diagonal
+    (`UPTOWN_WALKS`, crossing at the lit junctions), joggers out and back
+    along the esplanade's open walk (`JOG`, never meeting), and cyclists in
+    the one-way pair's bike lanes the way each street runs (`CYCLISTS`,
+    riders in the crowd, their bikes `uptownlife3d.ts`, one instanced
+    mesh).
+  - **The executive helicopter** (airfield.ts `exec()`, the `heli-x`
+    flight): from its own pad on the airport's apron (`EXEC_PAD`) north,
+    west at 36 over the south row, up the diagonal's side of Uptown at 40
+    and down onto the helipad (highrise.ts `ROOF_PAD`: a steel deck on legs
+    over the tallest slab's plant room, its mast left off for it, red
+    lights at its corners), 30 s there with the rotor stopped, then back;
+    its livery gold. The tests keep it clear of every other aircraft and
+    every tower but the one it lands on.
+- **The world map** draws the towers' footprints (and Westlake Park's
+  lawns in green again).
+- **The budget:** the boot's code went from 653.1 to 655.6 (raised to 658
+  on purpose).

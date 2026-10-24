@@ -28,6 +28,7 @@ export function createSound() {
   let beatGain: GainNode;
   let humGain: GainNode;
   let waterGain: GainNode;
+  let fountainGain: GainNode;
   let roadGain: GainNode;
   let windGain: GainNode;
   /** The Trenches: the el's rumble and screech, the boombox, the hood's own (sirens, dogs) */
@@ -134,6 +135,8 @@ export function createSound() {
       return g;
     };
     waterGain = layer('lowpass', 520, 0.7, 0.45, 0.17, true);
+    // Uptown's plaza: the pool's jets and the water wall, a bright splash swaying quickly
+    fountainGain = layer('bandpass', 2300, 0.7, 0.25, 0.8);
     roadGain = layer('bandpass', 700, 0.6, 0.35, 0.09);
     windGain = layer('bandpass', 380, 1.4, 0.6, 0.06, true);
 
@@ -924,6 +927,7 @@ export function createSound() {
       beatGain.gain.setTargetAtTime(0.06 * a.city + a.beat * 0.5, t, 0.3);
       humGain.gain.setTargetAtTime(0.15 + 0.35 * a.city, t, 1);
       waterGain.gain.setTargetAtTime(a.water * 0.22, t, 1);
+      fountainGain.gain.setTargetAtTime(a.fountain * 0.07, t, 0.6);
       roadGain.gain.setTargetAtTime(a.road * 0.09, t, 1);
       windGain.gain.setTargetAtTime(a.open * 0.16 * (1 + rain * 0.5), t, 1.5);
     },

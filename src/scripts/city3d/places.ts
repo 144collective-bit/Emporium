@@ -18,6 +18,7 @@ import { AVENUE_SPAWNS } from './avenue';
 import { PIER_SPAWN } from './waterfront';
 import { MARKET_SPAWN } from './nightmarket';
 import { STADIUM_SPAWN } from './stadium';
+import { TOWER_SPAWN } from './skydeck';
 
 export type PlaceKind = 'spot' | 'lot' | 'metro';
 export interface Place {
@@ -64,6 +65,8 @@ export const PLACES: Place[] = [
   { id: 'nightmarket', kind: 'spot', spot: 'nightmarket', at: MARKET_SPAWN },
   // Westlake Park's stadium: on its forecourt, facing the gate
   { id: 'stadium', kind: 'spot', spot: 'stadium', at: STADIUM_SPAWN },
+  // Uptown's Sector 7 Tower: on the plaza in front of its pavilion, facing it (the lift to the sky deck inside)
+  { id: 'tower', kind: 'spot', spot: 'tower', at: TOWER_SPAWN },
   // The garage's forecourt, facing its office door; the market square, at your stall
   // (its office door faces north, onto the forecourt)
   { id: 'garage', kind: 'lot', name: 'Garage', at: { x: GARAGE_SITE.door.x - 1, z: GARAGE_SITE.door.z - 1.8, yaw: Math.atan2(-1, -1.8) } },

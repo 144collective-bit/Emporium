@@ -11,7 +11,9 @@
  * beat through its walls by the door (`club`); the el's rumble follows the
  * train itself (metro3d.ts `rumbleAt()`). In Westlake Park (step 3) the
  * park's own: birdsong by day and an owl at night (`park`), the lake
- * lapping (`water`).
+ * lapping (`water`). In Uptown (finance plan Phase 6) the hum is quieter
+ * (`UPTOWN_HUSH`), the plaza's pool and water wall splash (`fountain`) and the
+ * circle's traffic comes round it (`road`).
  */
 import { CITY_EXT, RIVER } from './layout';
 import { PLAN, distToStreet } from './streetplan';
@@ -21,6 +23,8 @@ import { TRENCH_RECT, inTrenches } from './trenches';
 import { BOOMBOXES } from './grit';
 import { CLUB } from './avenue';
 import { LAKE_C, WESTLAKE_RECT, inPark, lakeR } from './westlake';
+import { CIRCLE, UPTOWN_RECT, inUptown } from './uptown';
+import { CENTRE, POOL, WALL_RUNS, WATER_WALL } from './plaza';
 
 export interface Ambience {
   /** The town's hum, 0-1 */
@@ -41,7 +45,11 @@ export interface Ambience {
   club: number;
   /** Westlake Park: birds by day, an owl at night, 0-1 */
   park: number;
+  /** Uptown's plaza: its pool's jets and the water wall, 0-1 */
+  fountain: number;
 }
+/** How much quieter the town's hum is deep in Uptown (its offices, glass and the river) */
+export const UPTOWN_HUSH = 0.35;
 
 const smooth = (a: number, b: number, x: number) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
@@ -83,5 +91,14 @@ export function ambienceAt(x: number, z: number, lift = 0): Ambience {
   const park = 1 - smooth(0, 30, fromPark);
   const fromLake = Math.max(0, Math.hypot(x - LAKE_C[0], z - LAKE_C[1]) - lakeR(Math.atan2(z - LAKE_C[1], x - LAKE_C[0])));
   const lake = 0.8 * (1 - smooth(2, 22, fromLake + lift * 0.4));
-  return { city, water: Math.max(water, lake) * k, road: road * k, open: (1 - city) * k, beat, hood: hood * k, boombox, club, park: park * k };
+  // Uptown: a quieter hum on its land (fading in over 20 from its edge), the circle's traffic round it, the plaza's water
+  const [ux0, uz0, ux1, uz1] = UPTOWN_RECT;
+  const fromUptown = inUptown(x, z) ? 0 : Math.hypot(Math.max(ux0 - x, x - ux1, 0), Math.max(uz0 - z, z - uz1, 0));
+  const hush = 1 - UPTOWN_HUSH * (1 - smooth(0, 20, fromUptown));
+  const circle = 0.55 * (1 - smooth(2, 18, Math.abs(Math.hypot(x - CIRCLE.x, z - CIRCLE.z) - CIRCLE.r)));
+  let wall = Infinity;
+  for (const [a, c] of WALL_RUNS) wall = Math.min(wall, Math.hypot(x - WATER_WALL.x, z - Math.min(c, Math.max(a, z))));
+  const pool = Math.max(0, Math.hypot(x - CENTRE[0], z - CENTRE[1]) - POOL.r);
+  const fountain = 1 - smooth(1.5, 18, Math.min(pool, wall) + lift * 0.5);
+  return { city: city * hush, water: Math.max(water, lake) * k, road: Math.max(road, circle) * k, open: (1 - city) * k, beat, hood: hood * k, boombox, club, park: park * k, fountain };
 }

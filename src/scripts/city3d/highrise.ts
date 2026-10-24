@@ -84,6 +84,8 @@ export const GROUND = { h: 2.3, recess: 1.1, col: 0.36, every: 1.7 };
 export const PODIUM = { h: 3.2, in: 0.8 };
 /** How high the tallest reaches: its roof and the tip of its mast */
 export const TALLEST = { roof: 40, tip: 45 };
+/** How much of an octagon's side its corners cut (highrise3d.ts draws them so; the sky deck's outline, skydeck.ts) */
+export const OCT_CUT = 0.22;
 
 const inset = ([x0, z0, x1, z1]: Rect, ax: number, az = ax): Rect => [x0 + ax, z0 + az, x1 - ax, z1 - az];
 const mid = ([x0, z0, x1, z1]: Rect): Pt => [(x0 + x1) / 2, (z0 + z1) / 2];
@@ -322,6 +324,18 @@ export const HIGHRISES: Highrise[] = [
   design('s3a', 'uptown-s3', 'round', [-71, 46.3, -62.5, 58.5], 18, 'gold', 's', { back: 'n', depth: 6 }),
   design('s4a', 'uptown-s4', 'slab', [-53, 46.3, -44.2, 59], 17, 'blue', 's', { back: 'n', depth: 5.6 }),
 ];
+
+/**
+ * The helipad (finance plan Phase 6, the executive helicopter's: airfield.ts): a steel deck raised over the tallest
+ * slab's plant room, as wide as its shaft (its mast left off for it, red lights at the deck's corners instead); `y`
+ * is its deck's top over the ground (the slab's 0.15 under the towers, world.ts's SLAB, and the deck's legs)
+ */
+export const ROOF_PAD = (() => {
+  const t = HIGHRISES.filter((h) => h.design === 'slab').sort((p, q) => q.roof - p.roof)[0];
+  const shaft = t.parts[1];
+  const [x0, z0, x1, z1] = shaft.rect;
+  return { tower: t.id, x: (x0 + x1) / 2, z: (z0 + z1) / 2, half: Math.min(x1 - x0, z1 - z0) / 2 + 0.1, y: 0.15 + t.roof + 0.55 };
+})();
 
 /** A part's box for what's solid: a drum's and an octagon's drawn in a little at the corners */
 export function partBox(p: Part): [number, number, number, number, number] {
