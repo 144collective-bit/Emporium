@@ -1,13 +1,17 @@
 /*
  * Sky and weather: a gradient dome with stars, the sun or moon (with
  * shadows), drifting clouds, fog, and rain that comes and goes.
- * The time of day follows the visitor's clock unless they pick one.
+ * Every visit opens at midday in clear weather; Live follows the visitor's clock, Auto brings rain now and then.
  */
 import * as THREE from 'three';
-import { FX, canvasTex, fx, rand } from './kit';
+import { FX, canvasTex, fx, isMoving, rand } from './kit';
 import { CENTER } from './world';
 import { SKY_RADIUS } from './bounds';
 import { newStorm, stormStep } from './dusk';
+import { SHADOW, markDrawn, newFixedMap, patchShadowChunks, shadowCentre, staticDue } from './shadows';
+
+// The near-only shadows' fade and the moving map, in every lit material (shadows.ts): before anything compiles
+patchShadowChunks(THREE.ShaderChunk as unknown as Record<string, string>);
 
 export type TimeMode = 'live' | 'day' | 'sunset' | 'night';
 export type WeatherMode = 'auto' | 'clear' | 'rain';
@@ -26,8 +30,14 @@ const smooth = (a: number, b: number, x: number) => {
   return t * t * (3 - 2 * t);
 };
 
-/** `storms`: thunder now and then in heavy rain (dusk.ts; off under reduced motion) */
-export function createSky(scene: THREE.Scene, opts: { shadows: number; rainDrops: number; clouds: number; storms?: boolean }) {
+/** What draws a shadow map: three's own, given the lights to draw, the root to draw from and the camera */
+export type DrawShadows = (lights: THREE.Light[], root: THREE.Object3D, camera: THREE.Camera) => void;
+
+/**
+ * `shadows`: the shadow maps' size (0: none), `shadowRadius` their filter's (softer on the medium tier);
+ * `storms`: thunder now and then in heavy rain (dusk.ts; off under reduced motion)
+ */
+export function createSky(scene: THREE.Scene, opts: { shadows: number; shadowRadius?: number; rainDrops: number; clouds: number; storms?: boolean }) {
   /* Dome */
   const domeMat = new THREE.ShaderMaterial({
     side: THREE.BackSide,
@@ -77,25 +87,33 @@ export function createSky(scene: THREE.Scene, opts: { shadows: number; rainDrops
   const hemi = new THREE.HemisphereLight('#bcd4ff', '#2a2050', 1);
   const sun = new THREE.DirectionalLight('#ffffff', 2);
   sun.target.position.copy(CENTER);
-  /** The shadow camera's reach either way, and one texel of its map, in world units */
-  const SHADOW_REACH = 30;
-  const texel = opts.shadows ? (SHADOW_REACH * 2) / opts.shadows : 0;
-  if (opts.shadows) {
-    sun.castShadow = true;
-    sun.shadow.mapSize.set(opts.shadows, opts.shadows);
-    const cam = sun.shadow.camera;
-    cam.left = -SHADOW_REACH;
-    cam.right = SHADOW_REACH;
-    cam.top = SHADOW_REACH;
-    cam.bottom = -SHADOW_REACH;
+  // The shadows (shadows.ts, near only): the sun's own map holds the city's fixed shadows, drawn again only when
+  // it's due; a second light, lighting nothing (black, after the sun so it's light 1), holds what moves, drawn every frame
+  const movers = new THREE.DirectionalLight('#000000', 0);
+  movers.target.position.copy(CENTER);
+  /** One texel of a shadow map, in world units */
+  const texel = opts.shadows ? (SHADOW.reach * 2) / opts.shadows : 0;
+  for (const light of opts.shadows ? [sun, movers] : []) {
+    light.castShadow = true;
+    light.shadow.mapSize.set(opts.shadows, opts.shadows);
+    const cam = light.shadow.camera;
+    cam.left = -SHADOW.reach;
+    cam.right = SHADOW.reach;
+    cam.top = SHADOW.reach;
+    cam.bottom = -SHADOW.reach;
     cam.near = 1;
     cam.far = 140;
-    sun.shadow.bias = -0.0006;
+    light.shadow.bias = -0.0006;
     // Pushed out along the normal by two and a half texels, so a lit face never shades itself in stripes
     // (shadow acne; it showed most on pale stone, like Liberty Bridge's, in the low evening sun)
-    sun.shadow.normalBias = texel * 2.5;
+    light.shadow.normalBias = texel * 2.5;
+    light.shadow.radius = opts.shadowRadius ?? 1;
+    // (the sun's is how much shadow there is at all: none until walking, shadows.ts)
+    light.shadow.intensity = 0;
   }
   scene.add(hemi, sun, sun.target);
+  // (phones draw no shadows: no second light to work through either)
+  if (opts.shadows) scene.add(movers, movers.target);
 
   /* Clouds */
   const cloudTex = canvasTex(256, 128, (c) => {
@@ -166,13 +184,14 @@ export function createSky(scene: THREE.Scene, opts: { shadows: number; rainDrops
   scene.add(fx(rain));
 
   /* State */
-  let timeMode: TimeMode = 'live';
-  let weatherMode: WeatherMode = 'auto';
+  // Every visit opens at midday in clear weather (the owner's call); Live time and Auto weather are the visitor's to pick
+  let timeMode: TimeMode = 'day';
+  let weatherMode: WeatherMode = 'clear';
   // Every visit starts dry (it always did: this used to be a draw from the city's seeded numbers that came out dry); in auto, rain comes and goes after
   let rainAmt = 0;
   let rainTarget = rainAmt;
   let nextFlip = 60 + rand() * 120;
-  let hourSmooth = currentHour();
+  let hourSmooth = PRESET.day;
   const storm = newStorm(rand());
   const fog = new THREE.FogExp2('#2a0f4d', 0.012);
   scene.fog = fog;
@@ -189,7 +208,29 @@ export function createSky(scene: THREE.Scene, opts: { shadows: number; rainDrops
   const UP = new THREE.Vector3(0, 1, 0);
   const shadowX = new THREE.Vector3();
   const shadowY = new THREE.Vector3();
-  function update(t: number, dt: number, focus: THREE.Vector3, eye: THREE.Vector3) {
+  /** A shadow light's box over (x, y, z), moved in whole texels of its map (across the light) so the shadows' edges don't crawl */
+  function placeShadow(light: THREE.DirectionalLight, dir: THREE.Vector3, x: number, y: number, z: number) {
+    const p = light.target.position.set(x, y, z);
+    shadowX.crossVectors(UP, dir).normalize();
+    shadowY.crossVectors(dir, shadowX);
+    const [a, b, c] = [p.dot(shadowX), p.dot(shadowY), p.dot(dir)];
+    p.copy(shadowX)
+      .multiplyScalar(Math.round(a / texel) * texel)
+      .addScaledVector(shadowY, Math.round(b / texel) * texel)
+      .addScaledVector(dir, c);
+    light.position.copy(p).addScaledVector(dir, 70);
+  }
+  /** Shadows wanted (walking, on the ground), how much there is (easing in and out), the fixed map, where the box is */
+  let shadowsWanted = false;
+  let shadowAmt = 0;
+  const fixed = newFixedMap();
+  let fixedDue = false;
+  const centre = { x: 0, z: 0 };
+  const sunDir: [number, number, number] = [0, 1, 0];
+  /**
+   * `look`: the way the camera looks (the shadow box goes ahead of it, shadows.ts); `eye` is where it is
+   */
+  function update(t: number, dt: number, focus: THREE.Vector3, eye: THREE.Vector3, look: THREE.Vector3 = UP) {
     dome.position.copy(eye);
     stars.position.copy(eye);
     // Time of day: ease towards the target hour so switching modes glides
@@ -231,20 +272,32 @@ export function createSky(scene: THREE.Scene, opts: { shadows: number; rainDrops
     const az = ang * 0.5 + 0.6;
     const lightElev = night > 0.5 ? 0.75 : Math.max(0.12, elev);
     const dir = new THREE.Vector3(Math.cos(az) * Math.cos(lightElev), Math.sin(lightElev), Math.sin(az) * Math.cos(lightElev)).normalize();
-    // The sun (and its shadow camera) follows the view, so districts get shadows too, moving in whole
-    // texels of its map (across the light), so the shadows' edges don't crawl as the view moves
-    sun.target.position.set(focus.x, 0, focus.z);
-    if (texel) {
-      shadowX.crossVectors(UP, dir).normalize();
-      shadowY.crossVectors(dir, shadowX);
-      const p = sun.target.position;
-      const [a, b, c] = [p.dot(shadowX), p.dot(shadowY), p.dot(dir)];
-      p.copy(shadowX)
-        .multiplyScalar(Math.round(a / texel) * texel)
-        .addScaledVector(shadowY, Math.round(b / texel) * texel)
-        .addScaledVector(dir, c);
+    // The shadows (shadows.ts): only while walking, coming and going softly, their box ahead of the camera. The moving
+    // map's light follows it every frame; the sun's (the fixed map) only when its map is due to be drawn again
+    shadowAmt += ((shadowsWanted ? 1 : 0) - shadowAmt) * Math.min(1, dt * SHADOW.ease);
+    if (!shadowsWanted && shadowAmt < 0.01) shadowAmt = 0;
+    if (texel && shadowAmt > 0) {
+      shadowCentre(eye, look, centre);
+      const y = Math.max(0, eye.y - 2);
+      placeShadow(movers, dir, centre.x, y, centre.z);
+      const p = movers.target.position;
+      sunDir[0] = dir.x;
+      sunDir[1] = dir.y;
+      sunDir[2] = dir.z;
+      const now = performance.now() / 1000;
+      if (staticDue(fixed, p.x, p.y, p.z, sunDir, now)) {
+        sun.target.position.copy(p);
+        sun.position.copy(movers.position);
+        markDrawn(fixed, p.x, p.y, p.z, sunDir, now);
+        fixedDue = true;
+      }
+    } else {
+      // (no shadows: the light from the sky's way over the view, and the fixed map drawn afresh when they're back)
+      sun.target.position.set(focus.x, 0, focus.z);
+      sun.position.copy(sun.target.position).addScaledVector(dir, 70);
+      fixed.drawn = false;
     }
-    sun.position.copy(sun.target.position).addScaledVector(dir, 70);
+    sun.shadow.intensity = shadowAmt;
     domeMat.uniforms.sunDir.value.copy(dir);
     domeMat.uniforms.sunAmt.value = (1 - night) * (1 - rainAmt * 0.8);
     const sunCol = C('#fff3dc').lerp(C('#ff9a5a'), dusk);
@@ -287,18 +340,81 @@ export function createSky(scene: THREE.Scene, opts: { shadows: number; rainDrops
     return { day, night, dusk, rain: rainAmt, hour: h, thunder: st.rumble };
   }
 
+  /** What moves (kit.ts `isMoving()`): found again every so often and whenever the fixed map is drawn */
+  const movingRoots: THREE.Object3D[] = [];
+  const findMoving = (o: THREE.Object3D) => {
+    for (const c of o.children) {
+      if (isMoving(c)) movingRoots.push(c);
+      else findMoving(c);
+    }
+  };
+  /** Shown, all the way up to the scene */
+  const shown = (o: THREE.Object3D | null) => {
+    for (; o; o = o.parent) {
+      if (!o.visible) return false;
+      if (o === scene) return true;
+    }
+    return false;
+  };
+  /** The moving map is drawn from this: its children only lent to it for the pass (never parented here) */
+  const moversRoot = new THREE.Group();
+  const lent: THREE.Object3D[] = [];
+  const hidden: boolean[] = [];
+  let frames = 0;
+  let found = -Infinity;
+
   return {
     update,
+    /** Shadows on (walking, on the ground) or off (the City view, up in an aircraft); they ease in and out */
+    setShadows(on: boolean) {
+      shadowsWanted = on && !!opts.shadows;
+    },
+    /** Something fixed changed (built as you go): the fixed map is drawn again */
+    invalidateShadows() {
+      fixed.drawn = false;
+    },
     /**
-     * Where the sun's shadow box is this frame (after `update()`), into `out`: only what's in it can
-     * cast a shadow, so the crowds and the traffic leave the rest out of the shadow map. False without shadows.
+     * Draw the shadow maps (post.ts, once a frame): the fixed map when it's due, with everything that moves left out
+     * of it, and the moving map every frame with only what moves in it. Nothing while there are no shadows.
+     */
+    drawShadows(draw: DrawShadows, root: THREE.Scene, camera: THREE.Camera) {
+      if (!opts.shadows) return;
+      // Both maps made (and cleared: drawn from nothing) before anything samples them, so every material
+      // finds a shadow map in its slots even in the City view, where neither is drawn
+      if (!sun.shadow.map || !movers.shadow.map) draw([sun, movers], moversRoot, camera);
+      if (shadowAmt <= 0) return;
+      frames++;
+      if (fixedDue || frames - found > 15) {
+        movingRoots.length = 0;
+        findMoving(root);
+        found = frames;
+      }
+      if (fixedDue) {
+        fixedDue = false;
+        hidden.length = 0;
+        for (const o of movingRoots) {
+          hidden.push(o.visible);
+          o.visible = false;
+        }
+        draw([sun], root, camera);
+        movingRoots.forEach((o, i) => (o.visible = hidden[i]));
+      }
+      lent.length = 0;
+      for (const o of movingRoots) if (shown(o)) lent.push(o);
+      moversRoot.children = lent;
+      draw([movers], moversRoot, camera);
+      moversRoot.children = [];
+    },
+    /**
+     * Where the shadow box is this frame (after `update()`), into `out`: only what's in it can cast a shadow, so
+     * the crowds and the traffic leave the rest out of the moving map. False while there are no shadows.
      */
     shadowFrustum(out: THREE.Frustum) {
-      if (!opts.shadows) return false;
-      sun.updateMatrixWorld();
-      sun.target.updateMatrixWorld();
-      sun.shadow.updateMatrices(sun);
-      out.copy(sun.shadow.getFrustum());
+      if (!opts.shadows || shadowAmt <= 0) return false;
+      movers.updateMatrixWorld();
+      movers.target.updateMatrixWorld();
+      movers.shadow.updateMatrices(movers);
+      out.copy(movers.shadow.getFrustum());
       return true;
     },
     setTime(m: TimeMode) {

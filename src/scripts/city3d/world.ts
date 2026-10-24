@@ -1031,7 +1031,7 @@ export function buildLamps(scene: THREE.Scene, low = false, tick?: (f: Tick) => 
       const lampB = new Batch();
       lampB.lod = 'near';
       lampB.instances(poleGeo, toon('#1b1830'), pick(poles)).instances(armGeo, toon('#1b1830'), pick(arms));
-      lampB.build(into, { cast: true, receive: true });
+      lampB.build(into, { cast: true, receive: true, details: true });
       // (the bulbs cast no shadow)
       const bulbB = new Batch();
       bulbB.lod = 'near';

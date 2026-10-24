@@ -29,7 +29,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { rifleGeometry } from './guns';
 import { MARK_IDS, type Look, type MarkId, type MarkSlot, type PatternId } from '../net/profile-data';
 import { ATLAS_COLS, ATLAS_ROWS, MARK_ART } from './marks';
-import { lit, liveTex, neon, toon } from './kit';
+import { lit, liveTex, moving, neon, toon } from './kit';
 import { EYE_Y as HERO_EYE_Y, handParts, headFront, headGeometry } from './body';
 import { crowdFrame, type CrowdClip } from './crowdclips';
 import { WARDROBE_W, addWardrobe, crowdDepth, crowdTexture, crowdVersion } from './crowdskin';
@@ -2258,6 +2258,8 @@ export function createDegen(o: Outfit = PLAYER, q: Detail = 2): Degen {
     poseSkeleton(sk, pose, grip);
   };
   update();
+  // (it moves: the moving shadow map's, shadows.ts)
+  moving(sk.root);
   return {
     g: sk.root,
     pose,

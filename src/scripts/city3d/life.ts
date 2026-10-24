@@ -4,7 +4,7 @@
  * Vehicles and people are instanced, so a crowd costs a handful of draw calls.
  */
 import * as THREE from 'three';
-import { FONT_DISPLAY, PAL, canvasTex, fx, glowTex, lit, mergeMeshes, neon, rand, toon } from './kit';
+import { FONT_DISPLAY, PAL, canvasTex, fx, glowTex, lit, mergeMeshes, moving, neon, rand, toon } from './kit';
 import { CENTER, SLAB, type Tick } from './world';
 
 import { PLAN, distToStreet, outset, pointAt, streetLength } from './streetplan';
@@ -811,7 +811,7 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
 function buildBoats(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => void) {
   /** A boat's hull, bow and cabin (one mesh) with its lamp, and its wake (its own material: it trails the speed) */
   const boat = (color: string, withWake: boolean) => {
-    const g = new THREE.Group();
+    const g = moving(new THREE.Group());
     const hull = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.28, 0.6), toon(color));
     hull.position.y = 0.1;
     const bow = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.5, 4).rotateZ(-Math.PI / 2).rotateX(Math.PI / 4), toon(color));
@@ -987,7 +987,7 @@ function buildDrones(scene: THREE.Scene, tick: (f: Tick) => void) {
 }
 
 function buildBlimp(scene: THREE.Scene, tick: (f: Tick) => void) {
-  const g = new THREE.Group();
+  const g = moving(new THREE.Group());
   const hull = new THREE.Mesh(new THREE.SphereGeometry(1, 28, 16), toon('#cfc8f0'));
   hull.scale.set(3.6, 1.05, 1.05);
   hull.castShadow = true;
