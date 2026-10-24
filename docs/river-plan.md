@@ -115,9 +115,18 @@ steps, each with the owner's sign-off; keep this plan up to date.
      `riverroute.ts`, its drawing the river's district (`riverlife3d.ts`)
      and its card and ride `riverbus-ui.ts`, loaded when a card first
      opens; the owner's live settings can close it (`riverbus`).
-   - **4c, boating yourself:** a boat to hire at Downtown's landing
-     ("Take a boat"), driven like your car (arcade, soft bumps off
-     everything on the water, the banks, the piers and the decks; it passes
-     under the bridges), with its own chase camera, readout and engine;
-     you get out at any river bus landing and the boat goes back to its
-     berth.
+   - **4c, boating yourself** (built): a boat to hire, moored along the
+     quay east of Downtown's landing with a ladder down to it ("Take a
+     boat"), driven like your car (arcade: thrust up to about 42 km/h, a
+     gentle astern, the rudder biting harder with speed, a slide through
+     the turns; soft bumps off the banks, the piers, the decks, the
+     landings, what's moored and every other boat). It passes under Liberty
+     Bridge and the middle of Harbour Bridge where there's room, never
+     under the ring highway's (their decks are too low), so it keeps to the
+     town's reach. Its own chase and helm cameras, the car's readout, the
+     car's engine and the boats' horn; Degen at the wheel. You get out
+     stopped alongside any river bus landing (at the top of its gangway)
+     or back at the mooring, and the boat goes home. The rules are
+     `boat-sim.ts`, the view `boat.ts` (loaded the first time you take
+     it), the model and the mooring `riverlife3d.ts`; `boat` in the live
+     settings closes it.

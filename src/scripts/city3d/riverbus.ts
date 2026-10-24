@@ -83,7 +83,16 @@ export const STOPS: Stop[] = [
   stop('pier7', 'Pier 7', 'south', -74.3, BOARDWALK[1], DECK_Y),
 ];
 /**
- * Is x on a bank's quay (or deck) in a gangway's mouth, or within `m` of it: the railings open there (neighbourhoods.ts,
- * boulevard.ts, waterfront3d.ts), and nothing stands in the way
+ * The boat for hire (river plan step 4c, boat-sim.ts): moored along the quay east of Downtown's landing, bow east, a
+ * ladder down the quay wall to it; its "Take a boat" prompt at the top of the ladder (`door`)
  */
-export const atGangway = (bank: 'north' | 'south', x: number, m = 0) => STOPS.some((s) => s.bank === bank && Math.abs(x - s.door.x) < GANGWAY.half + m);
+export const HIRE = (() => {
+  const x = 14.5;
+  return { bank: 'north' as const, x, z: RIVER[0] + 0.85, yaw: 0, door: { x, z: RIVER[0] - 0.6 }, ladder: 0.45 };
+})();
+/**
+ * Is x on a bank's quay (or deck) in a gangway's mouth (or the hire boat's ladder's), or within `m` of it: the railings
+ * open there (neighbourhoods.ts, boulevard.ts, waterfront3d.ts), and nothing stands in the way
+ */
+export const atGangway = (bank: 'north' | 'south', x: number, m = 0) =>
+  STOPS.some((s) => s.bank === bank && Math.abs(x - s.door.x) < GANGWAY.half + m) || (bank === HIRE.bank && Math.abs(x - HIRE.door.x) < HIRE.ladder + m);

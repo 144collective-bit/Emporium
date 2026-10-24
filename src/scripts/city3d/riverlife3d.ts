@@ -24,7 +24,12 @@
  * worker too: a pontoon on the water held by two piles, its fenders, rails
  * and lanterns, the gangway down to it from the quay (South Row's from the
  * end of a jetty out to the boardwalk's line), and a RIVER BUS board with the
- * stop's name, both ways, from one small atlas.
+ * stop's name, both ways, from one small atlas. The boat for hire (step 4c,
+ * boat-sim.ts) is moored east of Downtown's landing, a ladder down the quay
+ * wall to it and a BOAT HIRE board (`hireBoat()` is its model, for boat.ts
+ * too: a white runabout with a cyan stripe, a wooden deck inside its rim, a
+ * console with its windscreen and wheel, a bench, the outboard and a flag);
+ * it's hidden while you're out in it (`HIRE_VIEW`).
  */
 import * as THREE from 'three';
 import { Batch, FONT_DISPLAY, canvasTex, lit, moving, neon, paintMat, siteMat, toon } from './kit';
@@ -32,7 +37,8 @@ import type { Tick } from './world';
 import { CROWD_VIEW } from './character';
 import { WATER_Y } from './river';
 import { CREW, CRUISE, DINGHIES, DINGHY, crewAt, cruiseAt, dinghyAt } from './riverlife';
-import { BUS, GANGWAY, LANDING, PONTOON_W, STOPS, type Stop } from './riverbus';
+import { BUS, GANGWAY, HIRE, LANDING, PONTOON_W, STOPS, type Stop } from './riverbus';
+import { BOAT, HIRE_VIEW } from './boat-sim';
 import { BUSES, BUS_VIEW, busAt } from './riverroute';
 import { site } from './tilework';
 
@@ -178,11 +184,13 @@ function busBoat() {
 
 /* ---------- The landings (sites) ---------- */
 
-/** One small atlas: RIVER BUS over each stop's name, a row each */
+/** The atlas's rows: RIVER BUS over each stop's name, then BOAT HIRE */
+const SIGN_ROWS: [string, string][] = [...STOPS.map((s): [string, string] => ['RIVER BUS', s.name.toUpperCase()]), ['BOAT HIRE', 'TAKE A BOAT']];
+/** One small atlas, a row each (`SIGN_ROWS`) */
 function landingSigns() {
-  const [W, H] = [512, 64 * STOPS.length];
+  const [W, H] = [512, 64 * SIGN_ROWS.length];
   const tex = canvasTex(W, H, (c) => {
-    STOPS.forEach((s, i) => {
+    SIGN_ROWS.forEach(([top, name], i) => {
       const y = i * 64;
       c.fillStyle = '#122a3e';
       c.fillRect(0, y, W, 64);
@@ -199,10 +207,10 @@ function landingSigns() {
       c.fillStyle = '#f4f2fa';
       c.textBaseline = 'middle';
       c.font = `900 26px ${FONT_DISPLAY}`;
-      c.fillText('RIVER BUS', 74, y + 20);
+      c.fillText(top, 74, y + 20);
       c.font = `800 22px ${FONT_DISPLAY}`;
       c.fillStyle = '#ffe2a0';
-      c.fillText(s.name.toUpperCase(), 74, y + 45);
+      c.fillText(name, 74, y + 45);
     });
   });
   return siteMat('river-bus-signs', lit(new THREE.MeshBasicMaterial({ map: tex, toneMapped: true }), 0.95, 1.15));
@@ -211,7 +219,7 @@ function landingSigns() {
 function board(row: number, w: number, h: number, x: number, y: number, z: number, toward: 1 | -1) {
   const g = new THREE.PlaneGeometry(w, h);
   const uv = g.attributes.uv as THREE.BufferAttribute;
-  const [v0, v1] = [1 - (row + 1) / STOPS.length, 1 - row / STOPS.length];
+  const [v0, v1] = [1 - (row + 1) / SIGN_ROWS.length, 1 - row / SIGN_ROWS.length];
   for (let i = 0; i < uv.count; i++) uv.setY(i, uv.getY(i) > 0.5 ? v1 - 0.004 : v0 + 0.004);
   return (toward > 0 ? g : g.rotateY(Math.PI)).translate(x, y, z);
 }
@@ -287,6 +295,55 @@ function landing(b: Batch, s: Stop, row: number, sign: THREE.Material) {
   b.add(board(row, 1.28, 0.32, bx, s.y + 1.75, bz + k * 0.045, k as 1 | -1), sign);
 }
 
+/* ---------- The boat for hire ---------- */
+
+/** The hull's plan with a hole: its rim (the gunwale) round the open cockpit */
+function rim(len: number, beam: number, y0: number, y1: number) {
+  const outer = plan(len, beam, 1);
+  outer.holes.push(new THREE.Path(plan(len - 0.3, beam - 0.2, 1).getPoints(8).reverse()));
+  return new THREE.ExtrudeGeometry(outer, { depth: y1 - y0, bevelEnabled: false, curveSegments: 6 }).rotateX(-Math.PI / 2).translate(0, y0, 0);
+}
+/** The hire boat: its model (bow +x, the waterline at 0), where the driver's hips go and the wheel's middle */
+export function hireBoat() {
+  const b = new Batch();
+  const { len, beam } = BOAT;
+  const h = len / 2;
+  solid(b, len, beam, 1, -0.22, 0.3, WHITE);
+  solid(b, len, beam, 1.012, 0.16, 0.23, CYAN);
+  solid(b, len - 0.3, beam - 0.2, 1, 0.3, 0.32, TEAK);
+  b.add(rim(len, beam, 0.3, 0.46), WHITE);
+  // The console with its windscreen, the wheel on its face; the bench behind it
+  box(b, 0.2, 0.32, -0.3, 0.55, 0.72, 0.3, WHITE);
+  const screen = new THREE.PlaneGeometry(0.62, 0.26).rotateY(-Math.PI / 2).rotateZ(-0.5).translate(0.6, 0.83, 0);
+  b.add(screen, toon('#26304a'));
+  b.add(new THREE.TorusGeometry(0.11, 0.018, 6, 14).rotateY(Math.PI / 2).rotateZ(0.5).translate(0.14, 0.74, 0), INK);
+  box(b, -0.5, 0.32, -0.42, -0.12, 0.5, 0.42, toon('#c03a3a'));
+  box(b, -0.52, 0.5, -0.42, -0.44, 0.66, 0.42, toon('#c03a3a'));
+  // The outboard on the transom, its leg down into the water
+  box(b, -h - 0.28, 0.28, -0.16, -h + 0.02, 0.72, 0.16, toon('#2c2f40'));
+  box(b, -h - 0.2, -0.32, -0.05, -h - 0.08, 0.3, 0.05, toon('#2c2f40'));
+  box(b, -h - 0.26, 0.6, -0.17, -h + 0.03, 0.66, 0.17, CYAN);
+  // A flag at the stern, a light on the bow
+  box(b, -h + 0.18, 0.46, 0.38, -h + 0.21, 1.1, 0.41, INK);
+  box(b, -h - 0.2, 0.86, 0.39, -h + 0.19, 1.08, 0.4, toon('#1fb5d6'));
+  box(b, h - 0.35, 0.46, -0.03, h - 0.29, 0.52, 0.03, BULB);
+  return { group: group(b), seat: new THREE.Vector3(-0.3, 0.5, 0), wheel: new THREE.Vector3(0.14, 0.74, 0) };
+}
+/** Its ladder down the quay wall and its board */
+function hireBerth(b: Batch, sign: THREE.Material) {
+  const { x } = HIRE.door;
+  const q = HIRE.z - BOAT.beam / 2 - 0.3;
+  for (const e of [-1, 1]) box(b, x + e * HIRE.ladder - 0.03, WATER_Y - 0.2, q + 0.02, x + e * HIRE.ladder + 0.03, 0.75, q + 0.08, RAIL);
+  for (let y = WATER_Y + 0.1; y < 0; y += 0.3) box(b, x - HIRE.ladder, y, q + 0.03, x + HIRE.ladder, y + 0.04, q + 0.07, RAIL);
+  const bx = x + HIRE.ladder + 0.75;
+  const bz = q - 0.3;
+  box(b, bx - 0.05, 0.05, bz - 0.05, bx + 0.05, 1.65, bz + 0.05, INK);
+  box(b, bx - 0.68, 1.6, bz - 0.04, bx + 0.68, 2.0, bz + 0.04, toon('#122a3e'));
+  const row = SIGN_ROWS.length - 1;
+  b.add(board(row, 1.28, 0.32, bx, 1.8, bz - 0.045, -1), sign);
+  b.add(board(row, 1.28, 0.32, bx, 1.8, bz + 0.045, 1), sign);
+}
+
 /* ---------- Building it ---------- */
 
 export function register({ scene, tick, low }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
@@ -298,6 +355,11 @@ export function register({ scene, tick, low }: { low: boolean; scene: THREE.Scen
       b.build(into, { cast: true, receive: true });
     })
   );
+  site('river bus hire', [HIRE.x - 4, HIRE.door.z - 2, HIRE.x + 4, HIRE.z + 2], (into) => {
+    const b = new Batch();
+    hireBerth(b, sign);
+    b.build(into, { cast: true, receive: true });
+  });
   if (!scene || !tick) return;
   const root = new THREE.Group();
   root.name = 'river-life';
@@ -306,7 +368,9 @@ export function register({ scene, tick, low }: { low: boolean; scene: THREE.Scen
   const crew = crewBoat();
   const dinghies = DINGHIES.map((d) => dinghy(d.sail));
   const buses = Array.from({ length: BUSES }, busBoat);
-  root.add(cruise, crew, ...dinghies, ...buses);
+  // The boat for hire at its mooring (hidden while you're out in it: boat.ts draws that one)
+  const hire = hireBoat().group;
+  root.add(cruise, crew, ...dinghies, ...buses, hire);
   // The eight's oars: one instanced mesh, each oar pivoting at its rigger, sweeping together
   const oarGeo = new THREE.BoxGeometry(1.4, 0.025, 0.04).translate(0.7, 0, 0);
   const oars = new THREE.InstancedMesh(oarGeo, paintMat(), SEATS);
@@ -338,6 +402,8 @@ export function register({ scene, tick, low }: { low: boolean; scene: THREE.Scen
     place(cruise, cruiseAt(t), t);
     place(crew, crewAt(t), t);
     buses.forEach((g, i) => place(g, i === 0 && BUS_VIEW.ride ? BUS_VIEW.ride : busAt(i, t + BUS_VIEW.offset), t));
+    hire.visible = !HIRE_VIEW.out;
+    if (hire.visible) place(hire, HIRE, t);
     dinghies.forEach((g, i) => {
       const d = dinghyAt(i, t);
       // (heeling to the outside of its turn, away from the wind)

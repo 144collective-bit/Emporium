@@ -742,6 +742,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       <b data-drive-speed>0</b><small>km/h</small><span class="drive-gear" data-drive-gear>N</span>
     </div>
     {/* Flying your aircraft (fly.ts): speed, height over the ground, the throttle (or the rotor) and what it's doing */}
+    <p class="walk-hint boat-hint"><kbd>W</kbd><kbd>S</kbd> ahead / astern · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>H</kbd> horn · <kbd>V</kbd> camera · <kbd>F</kbd> get out at a landing</p>
     <p class="walk-hint fly-hint"><kbd>W</kbd><kbd>S</kbd> faster / slower · <kbd>A</kbd><kbd>D</kbd> turn · <kbd>↑</kbd><kbd>↓</kbd> or <kbd>Space</kbd><kbd>Shift</kbd> climb / dive · <kbd>V</kbd> camera · <kbd>F</kbd> get out</p>
     <div class="fly-hud" data-fly-hud hidden aria-hidden="true">
       <span class="fly-read"><b data-fly-speed>0</b><small>km/h</small></span>
