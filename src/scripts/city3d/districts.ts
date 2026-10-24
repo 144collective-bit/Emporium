@@ -25,6 +25,7 @@ import { KART_AREA } from './kartfacility';
 import { UPTOWN_RECT } from './uptown';
 import { SITE } from './airfield';
 import { EXT, RIVER } from './layout';
+import { STATION_AREA } from './station';
 
 /** How much further out than its land Uptown loads (its towers stand over the whole town) */
 const UPTOWN_REACH = 240;
@@ -50,6 +51,9 @@ export const LAZY_DISTRICTS: LazyDistrict[] = [
   { id: 'uptown', rect: [UPTOWN_RECT[0] - UPTOWN_REACH, UPTOWN_RECT[1] - UPTOWN_REACH, UPTOWN_RECT[2] + UPTOWN_REACH, UPTOWN_RECT[3] + UPTOWN_REACH], load: () => import('./uptown3d') },
   // The river's life (river plan step 4a, riverlife.ts): the cruise boat, the rowing eight and the dinghies (riverlife3d.ts)
   { id: 'river', rect: [EXT[0], RIVER[0], EXT[1], RIVER[1]], load: () => import('./riverlife3d') },
+  // Sector 7 Central, the grand station west of the highway (station.ts, docs/station-plan.md): the hall, the shed, the
+  // platforms and tracks, the forecourt and the car park (station3d.ts)
+  { id: 'station', rect: STATION_AREA, load: () => import('./station3d') },
 ];
 
 

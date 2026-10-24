@@ -2,6 +2,7 @@
 // is a closed loop that stays on the asphalt and off the sidewalks, inside the ring highway; between them they
 // drive every lane of every street that goes anywhere, the highway all the way round, and every slip lane;
 // the diagonals' routes turn in and out at both ends; and the lights never show two ways green at once.
+import { LOOP as ST_LOOP } from '../src/scripts/city3d/station';
 import { test } from 'node:test';
 import { LOOP, ROAD } from '../src/scripts/city3d/stadium';
 import { LOOP as K_LOOP, ROAD as K_ROAD } from '../src/scripts/city3d/kartpark';
@@ -55,6 +56,9 @@ const airportWay = (q: Pt) =>
   (q[0] > GA_ROAD.x0 - 14 && q[0] < GA_ROAD.x1 + 3 && q[1] > HIGHWAY_BOX[3] && q[1] < GA_ROAD.z + 3) ||
   (q[0] > GA_ROAD.x0 + 4 && q[0] < GA_ROAD.x1 + 3 && q[1] > GA_ROAD.z && q[1] < GA_ROAD.loopZ + 3);
 
+/** The grand station's forecourt loop off the park's avenue west of the highway, the avenue out to it and the slip lanes there (station.ts) */
+const stationWay = (q: Pt) => q[0] > ST_LOOP.x0 - 3 && q[0] < HIGHWAY_BOX[0] && q[1] > ST_LOOP.z1 - 3 && q[1] < 9;
+
 test("every route stays on the asphalt, a car's width in from the kerb, off every slab, and inside the highway (or on the stadium's and the kart park's streets)", () => {
   for (const [i, r] of ROUTES.entries())
     for (const { at: q } of points(r)) {
@@ -63,7 +67,7 @@ test("every route stays on the asphalt, a car's width in from the kerb, off ever
         `route ${i} leaves the road at ${q.map((v) => v.toFixed(1))}`
       );
       assert.ok(!onSlab(PLAN, q), `route ${i} drives over a sidewalk at ${q.map((v) => v.toFixed(1))}`);
-      assert.ok(insideHighway(q[0], q[1]) || fromHighway(q[0], q[1]) < HIGHWAY_HALF || stadiumWay(q) || airportWay(q), `route ${i} goes out past the highway at ${q.map((v) => v.toFixed(1))}`);
+      assert.ok(insideHighway(q[0], q[1]) || fromHighway(q[0], q[1]) < HIGHWAY_HALF || stadiumWay(q) || airportWay(q) || stationWay(q), `route ${i} goes out past the highway at ${q.map((v) => v.toFixed(1))}`);
     }
 });
 
