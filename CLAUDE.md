@@ -2614,8 +2614,14 @@ it and has been retired completely. Build only on what's here.
   unreachable. It reads "On / Off" up to 900px wide; up to 420px only the
   current side shows (a tap flips it) and City / Walk / Build are icons, so
   the mode header keeps the title.
-- PvP will only ever happen across the river (south bank), in the Fight
-  Club's ring; the city north of the bridges stays a safe hangout.
+- PvP only ever happens in arena maps of their own (walled off from the
+  city, the junkyard first) and the Fight Club's ring (the owner's call:
+  free for all and team deathmatch, cartoon knock-outs); the hangout city
+  stays safe, with no shooting online. The Multiplayer menu (You, Pick a
+  mode, Browse, Create a private game with a link, Where to start), the
+  modes and the separate online profile are planned in
+  `docs/multiplayer-plan.md` ("The Multiplayer menu and its games"), built
+  a step at a time with the owner's sign-off.
 
 ## Tests
 
