@@ -84,7 +84,8 @@ test('the marina: yachts moored along the pontoon, none overlapping, tenders ins
 });
 
 test('the trees, lamps and benches: on the esplanade, in their rows, apart, out of the overlooks\' mouths', () => {
-  assert.ok(LAND_TREES.length > 15 && WATER_TREES.length > 6 && EDGE_LAMPS.length > 10 && BENCH_XS.length > 15);
+  // (fewer by the water where the observation wheel stands, wheel.test.ts)
+  assert.ok(LAND_TREES.length > 15 && WATER_TREES.length > 4 && EDGE_LAMPS.length > 10 && BENCH_XS.length > 15);
   const all: [string, number, number][] = [
     ...LAND_TREES.map(([x, z]): [string, number, number] => ['tree', x, z]),
     ...WATER_TREES.map(([x, z]): [string, number, number] => ['tree', x, z]),

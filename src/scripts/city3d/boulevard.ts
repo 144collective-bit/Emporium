@@ -32,6 +32,7 @@ import { AXIS_X, BOULEVARD_X, EAST_X, ROWS_Z, STREET_HALF, crossingsOn, type Pt,
 import { HIGHRISES, PODIUM } from './highrise';
 import { DECK_Y } from './waterfront';
 import { atGangway } from './riverbus';
+import { WHEEL_RECT } from './wheel';
 
 /** The bank avenue the esplanade runs along */
 const BANK = ROWS_Z[ROWS_Z.length - 1];
@@ -65,21 +66,23 @@ export const clearOfMouths = (x: number, m: number) =>
   OVERLOOKS.every((o) => Math.abs(x - o.x) > o.w / 2 + m) && GANGWAYS.every((g) => Math.abs(x - g) > GANGWAY_HALF + m) && !atGangway('north', x, m);
 /** ...and by the avenue, never where people come over from the junctions and the axis's zebra */
 const clearOfCrossings = (x: number, m: number) => [...crossingsOn(BANK), AXIS_X].every((c) => Math.abs(x - c) > STREET_HALF + m);
+/** ...and the observation wheel's along the water's edge (wheel.ts): the walk passes it on the avenue's side */
+const clearOfWheel = (x: number, m: number) => x < WHEEL_RECT[0] - m || x > WHEEL_RECT[2] + m;
 
 /** Lamps at the water's edge, their arms reaching in over the walk (x, z, ry), and two at each overlook's outer corners */
 export const EDGE_LAMPS: [number, number, number][] = [];
-for (let x = X0 + 2; x < X1 - 1; x += 12) if (clearOfMouths(x, 1)) EDGE_LAMPS.push([x, Z1 - 0.4, Math.PI / 2]);
+for (let x = X0 + 2; x < X1 - 1; x += 12) if (clearOfMouths(x, 1) && clearOfWheel(x, 0.5)) EDGE_LAMPS.push([x, Z1 - 0.4, Math.PI / 2]);
 for (const o of OVERLOOKS) for (const s of [-1, 1]) EDGE_LAMPS.push([o.x + s * (o.w / 2 - 0.4), o.rect[3] - 0.4, Math.PI / 2]);
 /** The double row of trees in planters: every 6 along the avenue's side, every 12 along the water's (between the lamps) */
 export const PLANTER_R = 0.45;
 export const LAND_TREES: Pt[] = [];
 for (let x = X0 + 2; x < X1 - 1; x += 6) if (clearOfCrossings(x, 1.5)) LAND_TREES.push([x, Z0 + 0.95]);
 export const WATER_TREES: Pt[] = [];
-for (let x = X0 + 8; x < X1 - 1; x += 12) if (clearOfMouths(x, 1.4)) WATER_TREES.push([x, Z1 - 1.55]);
+for (let x = X0 + 8; x < X1 - 1; x += 12) if (clearOfMouths(x, 1.4) && clearOfWheel(x, 0.5)) WATER_TREES.push([x, Z1 - 1.55]);
 /** Benches facing the water between the trees and the lamps (the drawing's; their sitters are here) */
 export const BENCH_Z = Z1 - 0.95;
 export const BENCH_XS: number[] = [];
-for (let x = X0 + 5; x < X1 - 1; x += 6) if (clearOfMouths(x, 1.2)) BENCH_XS.push(x);
+for (let x = X0 + 5; x < X1 - 1; x += 6) if (clearOfMouths(x, 1.2) && clearOfWheel(x, 0.5)) BENCH_XS.push(x);
 
 /* ---------- The restaurant terraces ---------- */
 

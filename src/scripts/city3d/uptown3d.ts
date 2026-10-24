@@ -20,6 +20,8 @@ import { registerKerbside } from './kerbside3d';
 import { registerUptownLife } from './uptownlife3d';
 import { registerStreetLevel } from './streetlevel3d';
 import { registerSites } from './uptownsites3d';
+import { registerStreetLife } from './streetlife3d';
+import { registerWheel } from './wheel3d';
 
 /** Its own address, for the site worker (sitework.ts) */
 export const SELF = import.meta.url;
@@ -39,6 +41,10 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   registerStreetLevel();
   // ...and its new buildings on the free land: the theatre, the exchange, the hotel, a tower going up, the gardens
   registerSites(low, scene, tick);
+  // ...and its street life: screens on the street wall, neon blades over the restaurants, the vendors' carts
+  registerStreetLife(tick);
+  // ...and the observation wheel on the esplanade, its rim and capsules turning on the main thread
+  registerWheel(scene, tick);
   // Its cyclists' bikes under their riders (Phase 6; the riders are the crowd's), on the main thread
   if (scene) registerUptownLife(scene, tick);
   // The axis's lanes, paved across their blocks

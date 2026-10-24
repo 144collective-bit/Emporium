@@ -18,6 +18,7 @@ import { GARDEN_LAMPS, GARDEN_PEOPLE } from './gardens';
 import { LAMPS as PLAZA_LAMPS, PLAZA_PEOPLE, TERRACE_LAMPS, TERRACE_TREES, TREES as PLAZA_TREES } from './plaza';
 import { BOULEVARD_PEOPLE, EDGE_LAMPS, LAND_TREES, WATER_TREES } from './boulevard';
 import { STREET_PEOPLE } from './streetlevel';
+import { STREETLIFE_PEOPLE } from './streetlife';
 import { GARDEN_TREES as UPTOWN_GARDEN_TREES, SITE_PEOPLE } from './uptownsites';
 import { DECK_Y as BOARDWALK_Y } from './waterfront';
 import { createDistricts } from './districts';
@@ -278,6 +279,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   STREET_PEOPLE.forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push({ x: p.x, z: p.z, y: SLAB + p.y, ry: p.ry, act: p.act }));
   // ...its new buildings' (the theatre's queue, the hotel's doorman and pool deck) and its pocket gardens' trees
   for (const p of SITE_PEOPLE) crowd.push({ x: p.x, z: p.z, y: SLAB + p.y, ry: p.ry, act: p.act });
+  // ...the vendors at their carts and their customers
+  for (const p of STREETLIFE_PEOPLE) crowd.push({ x: p.x, z: p.z, y: SLAB, ry: p.ry, act: p.act });
   for (const [x, z] of UPTOWN_GARDEN_TREES) addTree(x, z, 0.8, false);
   // ...and the stadium's, north of the highway (stadium.ts): no trees on its block, its road and car park or under its footbridge
   for (const r of STADIUM_RECTS) keepTreesOff(r);
