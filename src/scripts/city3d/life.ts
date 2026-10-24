@@ -9,7 +9,7 @@ import { CENTER, SLAB, type Tick } from './world';
 
 import { PLAN, distToStreet, outset, pointAt, streetLength } from './streetplan';
 import { DOWNTOWN, EXT, MARKET } from './layout';
-import { DECK_STROLLS, DECK_Y } from './liberty';
+import { DECK_STROLLS, HIGH_Y as LIBERTY_HIGH } from './liberty';
 import { deckSlope, deckY, onHarbour } from './harbour';
 import { WATER_Y } from './river';
 import { DECK_Y as BOARDWALK_Y, STROLL, boatZ } from './waterfront';
@@ -600,10 +600,10 @@ const SEAT_DROP = (HIP_HEIGHT - 0.03) * PERSON_SCALE;
 function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f: Tick) => void) {
   const people: Person[] = [];
   // Round downtown's blocks (the square and the pocket parks too), and the south row's (the street life across the river),
-  // and up and down Liberty Bridge's walkway, up on its arches
+  // and round Liberty Bridge's high walkways and galleries, up between its towers
   const walks: { poly: Pt[]; y?: number }[] = [
     ...PLAN.blocks.filter((b) => b.id.startsWith('dt-') || (b.use === 'district' && b.ref!.startsWith('S'))).map((b) => ({ poly: b.poly })),
-    ...DECK_STROLLS.map((poly) => ({ poly, y: DECK_Y })),
+    ...DECK_STROLLS.map((poly) => ({ poly, y: LIBERTY_HIGH })),
   ];
   // ...and round The Trenches' blocks nearest The Block, with walkers of their own (so downtown keeps its crowd)
   const town = walks.length;

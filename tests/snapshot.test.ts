@@ -20,7 +20,7 @@ import * as AIR from '../src/scripts/city3d/airfield';
 import { GATE, KART_PARK, KART_SPAWN, LOOP as KART_LOOP, ROAD as KART_ROAD } from '../src/scripts/city3d/kartpark';
 import { BAYS, CIRCUIT, HUT_DOOR, SITE as KART_SITE } from '../src/scripts/city3d/kartcircuit';
 import { COUNTER, FIGHT_CLUB, FIGHT_SPAWN, OUT, RING, TRAINER } from '../src/scripts/city3d/fightsite';
-import { LIBERTY_SPAWN, SUPPORTS, TOWERS, WALKWAY } from '../src/scripts/city3d/liberty';
+import { ABUTMENTS, LIBERTY_SPAWN, TOWERS, WALKWAY } from '../src/scripts/city3d/liberty';
 import { GATES, GARDEN_SITE, LAKE_C, WESTLAKE_BLOCKS } from '../src/scripts/city3d/westlake';
 import { AXIS_X, PLAZA_BLOCK, UPTOWN_BLOCKS } from '../src/scripts/city3d/uptown';
 import { HIGHRISES } from '../src/scripts/city3d/highrise';
@@ -86,7 +86,7 @@ const layout = () =>
     },
     karts: { park: KART_PARK, gate: GATE, road: KART_ROAD, loop: KART_LOOP, site: KART_SITE, bays: BAYS, hutDoor: HUT_DOOR, circuit },
     fightClub: { lot: FIGHT_CLUB, ring: RING, counter: COUNTER, trainer: TRAINER, out: OUT },
-    liberty: { x: FOOTBRIDGE_X, towers: TOWERS, walkway: WALKWAY, supports: SUPPORTS },
+    liberty: { x: FOOTBRIDGE_X, towers: TOWERS, walkway: WALKWAY, abutments: ABUTMENTS },
     westlake: { blocks: WESTLAKE_BLOCKS, lake: LAKE_C, gates: GATES, garden: GARDEN_SITE },
     uptown: { blocks: UPTOWN_BLOCKS.map((b) => ({ id: b.id, rect: b.rect })), plaza: PLAZA_BLOCK, axis: AXIS_X, towers: HIGHRISES.map((t) => ({ id: t.id, design: t.design, lot: t.lot, roof: t.roof, tip: t.tip, door: t.door })) },
     stadium: { block: STADIUM_BLOCK, centre: STADIUM_CENTRE, road: STADIUM_ROAD, loop: STADIUM_LOOP, bridge: { x: BRIDGE.x, deck: BRIDGE.deck } },

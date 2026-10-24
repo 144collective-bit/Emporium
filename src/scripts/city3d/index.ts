@@ -60,7 +60,7 @@ import { buildKartPark } from './kartpark3d';
 import { KART_SPAWN } from './kartpark';
 import { AIR_SPAWN } from './airfield';
 import { FIGHT_SPAWN } from './fightsite';
-import { LIBERTY_SPAWN } from './liberty';
+import { HIGH_Y as LIBERTY_HIGH, LIBERTY_SPAWN, LIFTS as LIBERTY_LIFTS, LOW_Y as LIBERTY_LOW } from './liberty';
 import { buildLibertyBridge } from './libertybridge';
 import { buildHarbourBridge } from './harbour3d';
 import { HARBOUR_SPAWN } from './harbour';
@@ -638,13 +638,19 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     { id: 'lift:up', ...LIFT.lobby, label: 'Lift · Sky deck' },
     { id: 'lift:down', ...LIFT.deck, label: 'Lift · Lobby' },
   ];
+  // Liberty Bridge's lifts (liberty.ts): a door in each tower's arch on the lower deck, one on its gallery up top
+  const libertyDoors = () => {
+    const up = walk.position.y > (LIBERTY_LOW + LIBERTY_HIGH) / 2;
+    return LIBERTY_LIFTS.map((l, i) => (up ? { id: `liberty:down:${i}`, ...l.high, label: 'Lift · Deck' } : { id: `liberty:up:${i}`, ...l.low, label: 'Lift · High walkway' }));
+  };
   let lifting = false;
-  /** Up or down in the lift: a fade, then you step out at the other end (unless the owner has closed the tower for now) */
-  function ride(up: boolean) {
-    const gate = live.place('tower');
-    if (!gate.open) return tycoon?.toast(closedLine('Sector 7 Tower', gate), 3500);
+  /** Up or down in Sector 7 Tower's lift */
+  const ride = (up: boolean) => rideTo(up ? LIFT.up : LIFT.down, 'tower', 'Sector 7 Tower', up ? 'Sector 7 Tower · Sky deck' : 'Sector 7 Tower · Lobby');
+  /** Up or down in a lift: a fade, then you step out at the other end (unless the owner has closed the place for now) */
+  function rideTo(to: { x: number; z: number; y: number; yaw: number }, place: 'tower' | 'liberty', name: string, arrived: string) {
+    const gate = live.place(place);
+    if (!gate.open) return tycoon?.toast(closedLine(name, gate), 3500);
     if (lifting) return;
-    const to = up ? LIFT.up : LIFT.down;
     works.want(to.x, to.z, 40);
     lifting = true;
     root.classList.add('is-fading');
@@ -654,7 +660,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         walk.placeAt(to);
         lifting = false;
         requestAnimationFrame(() => root.classList.remove('is-fading'));
-        tycoon?.toast(up ? 'Sector 7 Tower · Sky deck' : 'Sector 7 Tower · Lobby');
+        tycoon?.toast(arrived);
       },
       reduced ? 0 : 520
     );
@@ -680,9 +686,14 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     engine: (revs) => sound.engine(revs),
     tyres: (level) => sound.tyres(level),
     // Your business's places, and the metro's station doors
-    places: () => [...(tycoon?.places() ?? []), ...(metroUI?.doors ?? []), ...LIFT_DOORS],
+    places: () => [...(tycoon?.places() ?? []), ...(metroUI?.doors ?? []), ...LIFT_DOORS, ...libertyDoors()],
     openPlace: (id) => {
       if (id === 'lift:up' || id === 'lift:down') return ride(id === 'lift:up');
+      if (id.startsWith('liberty:')) {
+        const [, way, i] = id.split(':');
+        const l = LIBERTY_LIFTS[Number(i)];
+        return rideTo(way === 'up' ? l.up : l.down, 'liberty', 'Liberty Bridge', way === 'up' ? 'Liberty Bridge · High walkway' : 'Liberty Bridge · Deck');
+      }
       if (!id.startsWith('metro:')) return tycoon?.openCard(id as 'stall');
       const shut = live.closed('metro');
       if (shut) tycoon?.toast(shut, 3500);

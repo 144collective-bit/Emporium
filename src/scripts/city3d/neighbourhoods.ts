@@ -15,6 +15,7 @@ import { Batch, PAL, neon, toon } from './kit';
 import { BENDS, BEND_REACH, JETTIES, LAWN_TREES, OUTER_PARKS, PROMENADE, SQUARE_LAYOUTS, offBridges, offFootbridge, type Pt, type SquareLayout } from './outer';
 import { EW_ROADS, LANE, NS_ROADS, RIVER } from './layout';
 import { WATER_Y, pullAt } from './river';
+import { BX as LIBERTY_X, DECK_HALF } from './liberty';
 import { SLAB as S, addLamp, addTree, lotMat, waterMat, type Tick } from './world';
 import type { Idle } from './landmarks';
 
@@ -228,7 +229,8 @@ function promenade(b: Batch, low: boolean) {
     const deckAt = (x: number) => JETTIES.some((j) => j.bank === bank && Math.abs(x - j.x) < 1.2);
     for (let x = x0; x <= x1 + 0.01; x += step) {
       // (none where the water pulls back from the quay line, river.ts: the cove's beach opens off the promenade)
-      const open = offBridges(x, 0.3) && !deckAt(x) && pullAt(bank, x) < 0.3;
+      // (and open where Liberty Bridge's approaches land on the promenades)
+      const open = offBridges(x, 0.3) && Math.abs(x - LIBERTY_X) > DECK_HALF + 0.3 && !deckAt(x) && pullAt(bank, x) < 0.3;
       if (open) {
         // (the posts near only: the rails still draw the line from far away)
         b.detail(() => box(b, x - 0.04, 0, edge - 0.04, x + 0.04, 0.55, edge + 0.04, rail));

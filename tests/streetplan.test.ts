@@ -93,7 +93,7 @@ test('the city\'s blocks: downtown\'s outlines, every district and lot, off the 
   }
   // Every landmark has its block
   const places = p.blocks.flatMap((b) => b.places ?? []);
-  assert.deepEqual([...places].sort(), ['apartments', 'emporium', 'liberty', 'liberty', 'plan', 'shop', 'signal', 'telegram', 'vault', 'workshop'], 'Liberty Bridge on both banks');
+  assert.deepEqual([...places].sort(), ['apartments', 'emporium', 'plan', 'shop', 'signal', 'telegram', 'vault', 'workshop']);
   assert.ok(blockAt(p, [30, 36])?.places?.includes('emporium'));
   // The hangout square is the block south of the Emporium's, and there are pocket parks
   assert.ok(p.plazas.some((q) => q.kind === 'hangout' && inPoly(q.poly, [30, 52])));

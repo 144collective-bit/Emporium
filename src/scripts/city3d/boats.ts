@@ -12,10 +12,10 @@
 import { RIVER, WALK_W } from './layout';
 import { riverBridges } from './streetplan';
 import { JETTIES } from './outer';
-import { BOAT_LANES } from './liberty';
+import { BOAT_HALF, BOAT_LANES, BX as LIBERTY_X } from './liberty';
 
-/** Every bridge over the river: its centre (x) and how far either side of it a boat counts as under it */
-export const BRIDGES: { c: number; half: number }[] = riverBridges().map((b) => ({ c: b.c, half: b.half + WALK_W + 2.5 }));
+/** Every bridge over the river (Liberty Bridge too): its centre (x) and how far either side of it a boat counts as under it */
+export const BRIDGES: { c: number; half: number }[] = [...riverBridges().map((b) => ({ c: b.c, half: b.half + WALK_W + 2.5 })), { c: LIBERTY_X, half: BOAT_HALF }].sort((p, q) => p.c - q.c);
 
 /** A boat sounds its horn this far before a bridge */
 export const HORN_AHEAD = 10;
@@ -64,7 +64,7 @@ export const MOOR_OFF = 0.55;
 /** The odd boat tied up: alongside a jetty's end, its bow upstream, clear of the lanes the river's boats run in */
 export const MOORED: Moored[] = [
   { x: 92, z: 0, yaw: 0, color: '#4fb0ff' },
-  { x: -24, z: 0, yaw: Math.PI, color: '#f3f2f7' },
+  { x: -34, z: 0, yaw: Math.PI, color: '#f3f2f7' },
 ].map((m) => {
   const j = JETTIES.find((q) => q.x === m.x)!;
   // The deck reaches 0.65 out from the promenade's rail (neighbourhoods.ts); the boat lies past its end

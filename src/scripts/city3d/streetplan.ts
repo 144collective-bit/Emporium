@@ -18,7 +18,6 @@ import { BLOCKS, BRIDGED_NS, BS, CORE_ROADS, EW_ROADS, EXT, EXTRA_LOTS, GARAGE, 
 import { ALLEYS, BLOCKS_DT, DIAGONALS, LANES } from './downtown';
 import { BENDS, BEND_KERBS, OUTER_BLOCKS, OUTER_PARKS, OUTER_SQUARES, PADS } from './outer';
 import { AIRPORT_STREETS, ROAD } from './airfield';
-import { BX, TOWERS } from './liberty';
 import { HALF as HARBOUR_HALF, HARBOUR_STREET } from './harbour';
 import { HIGHWAY, HIGHWAY_HALF, insideHighway, outerLane, slipCurve } from './highway';
 import { TRENCH_BLOCKS, TRENCH_CROSSINGS, TRENCH_STREETS } from './trenches';
@@ -438,11 +437,9 @@ export function cityPlan(): StreetPlan {
       return { id: `dt-${b.id}`, poly: b.poly, use, places: places.length ? places : undefined, walk: WALK_W };
     }),
     // The outer blocks, named after their first plot (or lot), every pad on them listed
-    // (Liberty Bridge's towers stand on the two west of West 3 and South 1: their blocks list it)
     ...OUTER_BLOCKS.map((b): Block => {
       const plot = b.pads.find((id) => PADS.find((p) => p.id === id)!.kind === 'plot');
-      const places = TOWERS.some((z) => inPoly(b.poly, [BX, z])) ? ['liberty'] : undefined;
-      return { id: b.id, poly: b.poly, use: plot ? 'district' : 'lot', ref: plot ?? b.pads[0], pads: b.pads, places, walk: WALK_W };
+      return { id: b.id, poly: b.poly, use: plot ? 'district' : 'lot', ref: plot ?? b.pads[0], pads: b.pads, walk: WALK_W };
     }),
     // The Trenches' blocks (rows A, B and C), built on in the next steps
     ...TRENCH_BLOCKS.map((b): Block => ({ id: b.id, poly: b.poly, use: 'plain', ref: 'trenches', walk: WALK_W })),
