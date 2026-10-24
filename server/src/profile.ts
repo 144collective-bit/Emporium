@@ -1,14 +1,15 @@
 /*
- * A player's profile: one Durable Object per player, addressed by the hash of
- * their browser's secret guest token, or of their wallet address once they
- * log in with a wallet (keys.ts). Holds the player name, wardrobe look,
- * rifle finish and lifetime score; the rank comes from the score.
+ * A player's profile: one Durable Object per account, named in the account
+ * (accounts.ts: a hash of its id, or of its wallet's address for a wallet
+ * that had a profile before accounts). Holds the player name (the account's
+ * username), wardrobe look, rifle finish and lifetime score; the rank comes
+ * from the score.
  *
  * Everything that comes in is checked against the shared lists in
  * profile-data.ts, so a profile can only ever hold allowed values.
  */
 import { DurableObject } from 'cloudflare:workers';
-import { DEFAULT_LOOK, cleanLook, guestName, rankFor, skinUnlocked, type Look, type SkinId } from '../../src/scripts/net/profile-data';
+import { DEFAULT_LOOK, cleanLook, rankFor, skinUnlocked, type Look, type SkinId } from '../../src/scripts/net/profile-data';
 import type { OwnProfile } from '../../src/scripts/net/protocol';
 import { weaponUnlocked, type WeaponId } from '../../src/scripts/city3d/combat-sim';
 import type { Env } from './index';
@@ -19,8 +20,6 @@ interface Stored {
   skin: SkinId;
   total: number;
   weapon?: WeaponId;
-  /** The wallet this profile belongs to (wallet profiles only) */
-  wallet?: string;
   created: number;
   seen: number;
 }
@@ -39,18 +38,19 @@ export class Profile extends DurableObject<Env> {
   private view(p: Stored): OwnProfile {
     const weapon = weaponUnlocked(p.weapon, p.total) ? p.weapon! : 'rifle';
     // Cleaned on the way out too: looks saved by an older version get today's fields
-    return { name: p.name, look: cleanLook(p.look), skin: p.skin, total: Math.floor(p.total), rank: rankFor(p.total).id, weapon, wallet: p.wallet, since: p.created };
+    return { name: p.name, look: cleanLook(p.look), skin: p.skin, total: Math.floor(p.total), rank: rankFor(p.total).id, weapon, since: p.created };
   }
 
   /**
-   * Load the profile, making it on first visit. Every new profile starts
-   * fresh (the owner's call: the online profile is apart from the browser's
-   * solo save, and nothing from it comes along).
+   * Load the profile under the account's username, making it on first visit.
+   * Every new profile starts fresh (the owner's call: the online profile is
+   * apart from the browser's solo save, and nothing from it comes along).
    */
-  async open(wallet?: string): Promise<OwnProfile> {
+  async open(name: string): Promise<OwnProfile> {
     let p = await this.load();
     const now = Date.now();
-    if (!p) p = { name: guestName(Math.random), look: { ...DEFAULT_LOOK }, skin: 'olive', total: 0, created: now, seen: now, ...(wallet ? { wallet } : {}) };
+    if (!p) p = { name, look: { ...DEFAULT_LOOK }, skin: 'olive', total: 0, created: now, seen: now };
+    p.name = name;
     p.seen = now;
     await this.save(p);
     return this.view(p);
@@ -74,13 +74,6 @@ export class Profile extends DurableObject<Env> {
   async setWeapon(w: unknown) {
     const p = (await this.load())!;
     if (weaponUnlocked(w, p.total)) p.weapon = w as WeaponId;
-    await this.save(p);
-    return this.view(p);
-  }
-
-  async rename() {
-    const p = (await this.load())!;
-    p.name = guestName(Math.random);
     await this.save(p);
     return this.view(p);
   }

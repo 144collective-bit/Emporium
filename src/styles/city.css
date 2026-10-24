@@ -1423,9 +1423,10 @@ body.is-walking .nav {
 .builder-modal-body {
   display: contents;
 }
-/* The profile card (account-ui.ts) */
+/* The account card (account-ui.ts): over everything, the Multiplayer menu and the start menu too */
 .account-modal {
-  z-index: 9;
+  position: fixed;
+  z-index: 41;
 }
 .account-name {
   overflow-wrap: anywhere;
@@ -1437,10 +1438,172 @@ body.is-walking .nav {
   font-family: var(--font-mono);
   font-size: 13px;
 }
-.account-error {
+.account-error,
+.account-note {
   margin: 0;
   font-size: 13px;
   color: #ff8a8a;
+}
+.account-note {
+  color: var(--p-cyan);
+}
+/* Its forms: a label over each field, a hint under it */
+.acct-form {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+}
+.acct-field {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+.acct-field > span {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--p-cyan);
+}
+.acct-field input {
+  width: 100%;
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid #ffffff2b;
+  border-radius: 3px;
+  background: #ffffff0a;
+  color: #fff;
+  /* 16px: phones don't zoom into the field */
+  font: 16px/1.2 var(--font-body);
+}
+.acct-field input:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 1px;
+  border-color: #ffffff59;
+}
+.acct-field small {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+.acct-field small.is-bad {
+  color: #ff8a8a;
+}
+.acct-submit {
+  justify-self: start;
+}
+.acct-link {
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--p-cyan);
+  font: inherit;
+  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.acct-link:focus-visible,
+.acct-way:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+/* "or" between the password and the other ways in */
+.acct-or {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.acct-or::before,
+.acct-or::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #ffffff1f;
+}
+.acct-ways {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+}
+.acct-way {
+  padding: 11px 14px;
+  border: 1.5px solid #0000;
+  border-radius: 3px;
+  background:
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.acct-way:hover {
+  background:
+    var(--pulse-wash) padding-box,
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
+}
+.acct-way:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+/* The logged-in account: a row a detail, its actions at the end */
+.acct-rows {
+  display: grid;
+  gap: 0;
+  width: 100%;
+  margin: 0;
+}
+.acct-row {
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  gap: 10px;
+  align-items: baseline;
+  padding: 9px 0;
+  border-top: 1px solid #ffffff14;
+}
+.acct-row dt {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--p-cyan);
+}
+.acct-row dd {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+  min-width: 0;
+  margin: 0;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.acct-acts {
+  display: flex;
+  gap: 12px;
+}
+.acct-dim {
+  color: var(--muted);
+}
+@media (max-width: 380px) {
+  .acct-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
 }
 .account-modal .builder-modal-card {
   max-height: calc(100% - 32px);

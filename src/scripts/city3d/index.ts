@@ -611,7 +611,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const server = import.meta.env.PUBLIC_GAME_SERVER as string | undefined;
   const net = server ? await Promise.all([import('./multiplayer'), import('./online')]) : null;
   const onlineSwitch = net ? net[1].createOnlineSwitch(root) : null;
-  // Logging in with a wallet (account.ts): the player's online profile
+  // The account (account.ts): playing online needs one; it opens the player's online profile
   const account = wallet?.account ?? null;
   const canvas = renderer.domElement;
 
@@ -773,16 +773,15 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
             tycoon?.setOnline(s.state === 'online');
           },
           account: account!,
+          openAccount: () => accountUI?.open('login'),
         })
       : null;
   const accountUI = wallet && onlineSwitch ? wallet.ui : null;
-  if (wallet && onlineSwitch && account)
-    Object.assign(wallet.hooks, {
-      online: () => onlineSwitch.on,
-      goOnline: () => onlineSwitch.set(true),
-      rename: () => (mp?.rename() ? undefined : account.rename()),
-      opened: () => walking && walk.releaseMouse(),
-    } satisfies AccountHooks);
+  if (wallet && accountUI) {
+    wallet.hooks.opened = () => walking && walk.releaseMouse();
+    // The Profile tab's Change name: the account's username
+    profileUI.onRename(() => accountUI.open());
+  }
   onlineSwitch?.onChange((on) => {
     mp?.setEnabled(on);
     accountUI?.refresh();

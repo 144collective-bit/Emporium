@@ -9,7 +9,7 @@ import { WORLD_BOUNDS } from '../city3d/layout';
 import { CITY_SIZE, type GameInfo } from './games';
 import type { EmoteId, Look, PublicProfile, SkinId } from './profile-data';
 
-export const PROTOCOL = 4;
+export const PROTOCOL = 5;
 /** Most players in one room (a hangout city; games.ts says each mode's own) */
 export const ROOM_SIZE = CITY_SIZE;
 /** How often a browser sends its controls, and how often the room sends positions */
@@ -82,11 +82,8 @@ export const v3 = (v: { x: number; y: number; z: number }): V3 => [r2(v.x), r2(v
 /* ---------- Browser to server ---------- */
 
 export type ClientMsg =
-  /**
-   * First message: the browser's secret guest token (only its hash is stored), and the wallet login's session token if
-   * logged in. (`local`, the browser's own score, is no longer read: every online profile starts fresh.)
-   */
-  | { t: 'hello'; v: number; token: string; auth?: string; local?: { total: number; skin: SkinId } }
+  /** First message: the account's session token (accounts.ts): playing online needs an account */
+  | { t: 'hello'; v: number; auth: string }
   /** Controls, ~20 a second: position, facing, camera pitch, speed, flags (with the mode), and the shot ray */
   | { t: 'in'; p: V3; f: number; k: number; s: number; fl: number; o: V3; d: V3; pt: number }
   /** Take a gun at a store counter, the Armoury's or Trench Arms' (refills every gun); `m`: the mods on each of your guns */
@@ -100,8 +97,8 @@ export type ClientMsg =
   | { t: 'say'; i: number }
   | { t: 'look'; look: Look }
   | { t: 'skin'; skin: SkinId }
-  /** Pick a new guest name */
-  | { t: 'rename' }
+  /** The account's username changed (accounts.ts): show the new one (`auth`: its session, which says what it is now) */
+  | { t: 'rename'; auth: string }
   | { t: 'ping'; c: number };
 
 /* ---------- Server to browser ---------- */
@@ -115,8 +112,8 @@ export interface PlayerInfo {
   /** The gun they carry (or last took from the store) */
   weapon: WeaponId;
 }
-/** `wallet`: logged in with this wallet (wallet profiles only); `since`: when the profile was made (ms) */
-export type OwnProfile = PublicProfile & { rank: string; wallet?: string; since?: number };
+/** `since`: when the profile was made (ms) */
+export type OwnProfile = PublicProfile & { rank: string; since?: number };
 
 /** id, x, y, z, facing, camera pitch, speed, flags */
 export type SnapRow = [number, number, number, number, number, number, number, number];

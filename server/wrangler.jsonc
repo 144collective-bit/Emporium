@@ -12,7 +12,7 @@
     "directory": "../dist",
     "binding": "ASSETS",
     "not_found_handling": "404-page",
-    "run_worker_first": ["/play", "/health", "/auth/*", "/games", "/me", "/me/*"]
+    "run_worker_first": ["/play", "/health", "/auth/*", "/games", "/me"]
   },
   "build": {
     // Installs the website's packages first if the build machine hasn't (Cloudflare's build may only install server/'s)
@@ -34,7 +34,9 @@
     { "tag": "v4", "deleted_classes": ["Land"] }
   ],
   "vars": {
-    // Pages allowed to connect (other sites can't embed the game)
+    // Pages allowed to connect (other sites can't embed the game), and where a Google or Discord sign-in comes back to
+    // (the first is the default). Secrets (README.md): GOOGLE_CLIENT_ID / _SECRET, DISCORD_CLIENT_ID / _SECRET,
+    // EMAIL_API_KEY (Resend), BLOCKED_NAMES; EMAIL_FROM can go here or be a secret.
     "ALLOWED_ORIGINS": "https://emporium.144collective.workers.dev,http://localhost:4321",
     // The network wallets log in on. 943 = PulseChain Testnet v4, 369 = PulseChain mainnet.
     "AUTH_CHAIN_ID": "943"

@@ -55,8 +55,10 @@ export interface MultiplayerDeps {
   setSwitch(online: boolean): void;
   /** Connection, room or player count changed (the switch's status) */
   changed(s: { state: NetState; room: string; players: number }): void;
-  /** Logged in with a wallet (account.ts): its session token, sent when joining so the wallet's profile opens */
-  account: { readonly token: string | null; subscribe(f: () => void): void; profileChanged(p: OwnProfile): void };
+  /** The account (account.ts): playing online needs one; its session opens its profile */
+  account: { readonly token: string | null; readonly me: { username: string } | null; subscribe(f: () => void): void; profileChanged(p: OwnProfile): void };
+  /** Open the account card (Log in) */
+  openAccount(): void;
 }
 
 export function createMultiplayer(d: MultiplayerDeps) {
@@ -134,7 +136,8 @@ export function createMultiplayer(d: MultiplayerDeps) {
     root.classList.toggle('is-online', s === 'online');
     emotes.hidden = s !== 'online';
     if (s !== 'online') emotes.open = false;
-    joinBtn.textContent = s === 'off' || s === 'full' || s === 'error' ? 'Go online' : 'Leave';
+    const out = !d.account.token;
+    joinBtn.textContent = s === 'off' || s === 'full' || s === 'error' ? (out ? 'Log in' : 'Go online') : 'Leave';
     if (s === 'online') return paintList();
     label.textContent = s === 'connecting' || s === 'retrying' ? 'Joining…' : 'Go online';
     status.textContent =
@@ -146,7 +149,9 @@ export function createMultiplayer(d: MultiplayerDeps) {
             ? 'Every city is full right now. Try again in a minute.'
             : s === 'error'
               ? (detail ?? 'Something went wrong.')
-              : 'Walk the city with other Degens. Emotes and set phrases only, nothing typed.';
+              : out
+                ? 'Log in to play online: walk the city with other Degens. Emotes and set phrases only.'
+                : 'Walk the city with other Degens. Emotes and set phrases only.';
     changed();
   }
 
@@ -224,22 +229,30 @@ export function createMultiplayer(d: MultiplayerDeps) {
     }
   });
   profile.onLookChange((look) => online() && net.send({ t: 'look', look }));
-  profile.onRename(() => online() && net.send({ t: 'rename' }));
 
   /* ----- Buttons ----- */
-  const connect = () => net.connect({ total: Math.floor(combat.lifetime), skin: combat.skin }, target);
+  const connect = () => net.connect(target);
   const idle = () => net.state === 'off' || net.state === 'full' || net.state === 'error';
-  // Logged in or out while in a city: rejoin, so the right profile (wallet or guest) opens
+  // Logged in or out: rejoin (or join, or leave), so the right profile opens; a new username: the room shows it
   let token = d.account.token;
+  let username = d.account.me?.username;
   d.account.subscribe(() => {
-    if (d.account.token === token) return;
+    const name = d.account.me?.username;
+    if (d.account.token === token) {
+      if (name && name !== username && online() && token) net.send({ t: 'rename', auth: token });
+      username = name ?? username;
+      if (net.state === 'off') paintState('off');
+      return;
+    }
     token = d.account.token;
-    if (idle()) return;
-    net.disconnect();
-    if (enabled && walk.active) connect();
+    username = name;
+    if (!idle()) net.disconnect();
+    if (enabled && walk.active && token) connect();
+    else paintState('off');
   });
   joinBtn.addEventListener('click', () => {
-    if (!idle()) d.setSwitch(false);
+    if (!d.account.token && idle()) d.openAccount();
+    else if (!idle()) d.setSwitch(false);
     else if (!enabled) d.setSwitch(true);
     // Already Online but the last try failed (a full city, an error): try again
     else connect();
@@ -314,12 +327,6 @@ export function createMultiplayer(d: MultiplayerDeps) {
     /** The game we're in, if any */
     get game() {
       return online() ? game : null;
-    },
-    /** A new player name through the room (everyone sees it); false when not in a city */
-    rename() {
-      if (!online()) return false;
-      net.send({ t: 'rename' });
-      return true;
     },
     /** The Online / Offline switch moved */
     setEnabled(on: boolean) {

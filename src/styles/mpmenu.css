@@ -173,6 +173,10 @@
 .mpm-leave {
   margin-top: 4px;
 }
+/* Log in and Sign up side by side */
+.mpm-half {
+  flex: 1 1 140px;
+}
 .mpm-link {
   padding: 2px 4px;
   border: 0;

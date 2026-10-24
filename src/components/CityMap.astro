@@ -58,7 +58,7 @@ const map = renderCity({ spots, art: { degen: degenImg.src, logo: logoImg.src } 
 const focusX = +((EMPORIUM_FOCUS[0] - VIEW.x) / VIEW.w).toFixed(4);
 const focusY = +((EMPORIUM_FOCUS[1] - VIEW.y) / VIEW.h).toFixed(4);
 // The commit this was built from (set by the Worker's build in server/wrangler.jsonc)
-// Connect wallet (account-ui.ts): only when the site has a game server
+// Log in (account-ui.ts): only when the site has a game server
 const server = !!import.meta.env.PUBLIC_GAME_SERVER;
 const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) ?? '';
 ---
@@ -253,8 +253,8 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
           </div>
           <div class="profile-head">
             <p class="profile-name"><b data-profile-name>Degen</b> <span class="mp-rank" data-profile-rank data-rank="rookie">Rookie</span></p>
-            <button type="button" class="walk-fp" data-profile-rename hidden>New name</button>
-            <button type="button" class="walk-fp" data-account-open hidden>Log in with wallet</button>
+            <button type="button" class="walk-fp" data-profile-rename hidden>Change name</button>
+            <button type="button" class="walk-fp" data-account-open hidden>Log in</button>
             <p class="walk-pad" data-profile-note>Go online to get your player name. Your look and rifle finish are saved in this browser.</p>
           </div>
           <div class="walk-skins" data-skins>
@@ -345,7 +345,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
         <span class="city-mode-label" data-build-label>Build</span>
       </button>
     </div>
-    {/* Settings and the menu (directory, PulseChain native, X, Telegram), and Connect wallet when there's a game server */}
+    {/* Settings and the menu (directory, PulseChain native, X, Telegram), and Log in when there's a game server */}
     <div class="city-head-tools">
       {/* Your Dorras (tycoon-ui.ts): opens your stall's card; a dot when the till has takings */}
       <button type="button" class="dorras-pill" data-dorras aria-label="Dorras: open your stall">
@@ -370,9 +370,9 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
         </div>
       </details>
       {server && (
-        <button type="button" class="nav-account" data-account-nav aria-label="Connect your wallet" onclick="this.dataset.wanted='1'">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H18v4" /><path d="M3 7.5v10A2.5 2.5 0 0 0 5.5 20H20V9H5.5A2.5 2.5 0 0 1 3 7.5z" /><circle cx="16" cy="14.5" r="1.2" /></svg>
-          <span class="nav-account-label" data-account-label>Connect<span class="nav-account-more"> wallet</span></span>
+        <button type="button" class="nav-account" data-account-nav aria-label="Log in or make an account" onclick="this.dataset.wanted='1'">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6" /></svg>
+          <span class="nav-account-label" data-account-label>Log in</span>
         </button>
       )}
       {/* Build mode: your plots (what you own, your Dorras, the next plot's price), painted by builder-ui.ts */}
@@ -848,7 +848,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     {/* Painted by builder-ui.ts */}
     <p class="city-draft" data-plot-note>Plots are game property: Dorras only, never real money</p>
   </aside>
-  {/* Log in with a wallet and the basic profile (account-ui.ts) */}
+  {/* Your account: log in, sign up and its ways in (account-ui.ts) */}
   <div class="builder-modal account-modal" data-account hidden>
     <div class="builder-modal-card" role="dialog" aria-modal="true" aria-labelledby="account-title">
       <button type="button" class="city-panel-close" data-account-close aria-label="Close">
@@ -1202,29 +1202,20 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       openMenus().forEach((menu) => (menu.open = false));
     });
 
-    /* ---------- Connect wallet (works on the 2D map too; the 3D city plugs in when it starts) ---------- */
+    /* ---------- Your account (works on the 2D map too; the 3D city plugs in when it starts) ---------- */
     const server = import.meta.env.PUBLIC_GAME_SERVER as string | undefined;
     const wallet = server
       ? Promise.all([import('../scripts/city3d/account'), import('../scripts/city3d/account-ui')]).then(([{ createAccount }, { createAccountUI }]) => {
           const account = createAccount(server);
-          const online = () => {
-            try {
-              return localStorage.getItem('degen-city-online-v1') !== 'off';
-            } catch {
-              return true;
-            }
-          };
           const hooks = {
-            online,
-            goOnline() {
-              try {
-                localStorage.setItem('degen-city-online-v1', 'on');
-              } catch {}
-            },
-            rename: () => account.rename(),
             opened() {},
+            // Logged in from the Multiplayer menu (or back from Google or Discord): the menu carries on where it was
+            loggedIn() {
+              const resume = mpResume();
+              if (resume) openMenuFor(resume);
+            },
           };
-          if (account.address && online()) account.refresh();
+          if (account.token) account.refresh();
           return { account, hooks, ui: createAccountUI(root, account, hooks) };
         })
       : Promise.resolve(null);
@@ -1411,7 +1402,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
           root: root!,
           server: server!,
           account: () => w?.account ?? null,
-          openAccount: () => w?.ui.open(),
+          openAccount: (v) => w?.ui.open(v),
           // From the start menu, into the city; in the city, straight to the game
           play: (c) => (closed && city ? city.play?.(c) : enter(true, c)),
           current: () => (closed ? (city?.game?.() ?? null) : null),
@@ -1424,15 +1415,33 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
         (await multiplayerMenu()).open();
       }),
     );
+    /** The menu opened on a game (an invite link, or carrying on after logging in) */
+    async function openMenuFor(at: { game?: string; friend?: string | null }) {
+      if (!gl) return;
+      view = '3d';
+      (await multiplayerMenu()).open(at);
+    }
+    // Logging in from the Multiplayer menu (Google and Discord leave the page): where it was, kept for this tab
+    const RESUME = 'degen-city-mp-resume';
+    function mpResume(): { game?: string; friend?: string | null } | null {
+      try {
+        const r = JSON.parse(sessionStorage.getItem(RESUME) || 'null');
+        sessionStorage.removeItem(RESUME);
+        return r && typeof r === 'object' ? { game: typeof r.game === 'string' ? r.game : undefined, friend: typeof r.friend === 'string' ? r.friend : null } : null;
+      } catch {
+        return null;
+      }
+    }
     // Opened from a friend's invite link: the menu on their game, the address tidied (a reload
     // shouldn't join again)
     if (server && gl && new URLSearchParams(location.search).has('game'))
       import('../scripts/city3d/mp-menu').then(async ({ inviteInAddress }) => {
         const invite = inviteInAddress();
-        history.replaceState(history.state, '', location.pathname + location.hash);
-        if (!invite) return;
-        view = '3d';
-        (await multiplayerMenu()).open(invite);
+        const q = new URLSearchParams(location.search);
+        q.delete('game');
+        q.delete('with');
+        history.replaceState(history.state, '', location.pathname + (q.size ? `?${q}` : '') + location.hash);
+        if (invite) openMenuFor(invite);
       });
     start.querySelector('[data-start-single]')!.addEventListener('click', () => enter(false));
     start.querySelector<HTMLButtonElement>('[data-start-multi]')!.addEventListener('click', (e) => {

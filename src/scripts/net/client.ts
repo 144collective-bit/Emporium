@@ -1,18 +1,15 @@
 /*
  * The browser's connection to the game server: one WebSocket, reconnecting
- * with a growing delay if it drops, and the guest token that ties this
- * browser to its player profile (a random secret kept in localStorage; the
- * server only ever stores its hash).
+ * with a growing delay if it drops. Playing online needs an account: the
+ * hello carries its session token (account.ts), which opens its profile.
  */
-import type { SkinId } from './profile-data';
 import { PROTOCOL, type ClientMsg, type ServerMsg } from './protocol';
-import { guestToken } from './guest';
 
 /** Server close codes that mean "don't come straight back" (see server/src/room.ts) */
 const STOP: Record<number, string> = {
   4001: 'You went online in another tab or window. Go online here to play in this one instead.',
   4002: 'Disconnected for sending too many messages.',
-  4004: 'Something went wrong with your guest pass. Reload the page and try again.',
+  4005: 'Log in to play online.',
   4006: 'That game has ended. Pick another from the Multiplayer menu.',
 };
 
@@ -22,16 +19,16 @@ export interface NetClient {
   readonly state: NetState;
   /** Round trip to the server in ms (0 until measured) */
   readonly ping: number;
-  /** Join a game: `game` is its id (games.ts), or null for the first city with room */
-  connect(local: { total: number; skin: SkinId }, game?: string | null): void;
+  /** Join a game: `game` is its id (games.ts), or null for the first city with room. Not logged in: says so. */
+  connect(game?: string | null): void;
   disconnect(): void;
   send(msg: ClientMsg): void;
   onMessage(fn: (msg: ServerMsg) => void): void;
   onState(fn: (state: NetState, detail?: string) => void): void;
 }
 
-/** `auth`: the wallet login's session token, if logged in (account.ts): the room then opens that wallet's profile */
-export function createNetClient(base: string, auth?: () => string | null): NetClient {
+/** `auth`: the account's session token (account.ts), null when not logged in */
+export function createNetClient(base: string, auth: () => string | null): NetClient {
   // https:// or wss:// both work; a page on https can only open wss://
   const play = base.replace(/\/$/, '').replace(/^http/, 'ws') + '/play';
   let url = play;
@@ -42,7 +39,6 @@ export function createNetClient(base: string, auth?: () => string | null): NetCl
   let retry = 0;
   let pinger = 0;
   let ping = 0;
-  let local: { total: number; skin: SkinId } = { total: 0, skin: 'olive' };
   const onMsg: ((m: ServerMsg) => void)[] = [];
   const onSt: ((s: NetState, d?: string) => void)[] = [];
   const set = (s: NetState, d?: string) => {
@@ -61,7 +57,9 @@ export function createNetClient(base: string, auth?: () => string | null): NetCl
     }
     ws = sock;
     sock.onopen = () => {
-      sock.send(JSON.stringify({ t: 'hello', v: PROTOCOL, token: guestToken(), auth: auth?.() ?? undefined, local } satisfies ClientMsg));
+      const token = auth();
+      if (token) sock.send(JSON.stringify({ t: 'hello', v: PROTOCOL, auth: token } satisfies ClientMsg));
+      else sock.close();
     };
     sock.onmessage = (ev) => {
       let m: ServerMsg;
@@ -112,9 +110,9 @@ export function createNetClient(base: string, auth?: () => string | null): NetCl
     get ping() {
       return ping;
     },
-    connect(l, game) {
-      local = l;
+    connect(game) {
       if (want) return;
+      if (!auth()) return set('error', STOP[4005]);
       url = game ? `${play}?game=${encodeURIComponent(game)}` : play;
       want = true;
       tries = 0;

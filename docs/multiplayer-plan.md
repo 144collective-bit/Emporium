@@ -128,7 +128,7 @@ them into the city.
      pill, mission tracker and guide step aside (`.is-econ-paused`), the
      business card and economy panels say online progress is coming.
      Builds without a game server leave all of it out.
-2. **Logging in** (A in "Profiles and logging in" below).
+2. **Logging in** *(built)*: A in "Profiles and logging in" below.
 3. **Settings and friends** (B below).
 4. **The online economy** (C below): the online profile's Dorras, levels,
    shops and missions run by the server.
@@ -211,9 +211,37 @@ until the owner picks multiplayer up again.
 
 ### Steps (each with the owner's sign-off)
 
-- **A. Logging in**: all of the above, login required online, the tests
-  (the filter, sessions, linking, the lock-out, the sign-in callbacks with
-  the providers faked).
+- **A. Logging in** *(built)*: all of the above, login required online.
+  - The rules both sides share are `src/scripts/net/auth.ts`:
+    `usernameProblem()` (the filter: whole stems anywhere, short words as
+    whole parts so "classic" and "scrape" pass, staff-like names, the
+    owner's `blockedList()`), `passwordProblem()`, `emailOk()`, and the
+    account API's shapes (`AuthConfig`, `AccountMe`, `AuthAnswer`).
+  - The server: `server/src/accounts.ts` (the routes under `/auth/`,
+    listed in `server/README.md`) and `server/src/login.ts` (what needs no
+    Cloudflare: PBKDF2-SHA256 at 100,000 rounds, the most Cloudflare's Web
+    Crypto takes, each hash keeping its count so a later raise re-hashes on
+    the next login; the lock-out, 5 wrong tries for a username and 25 for
+    an address; the OAuth helpers; the reset email). Google and Discord
+    come back to the Worker, which sends the player on to the site with a
+    one-time code (`?login=`), never a token in the address. Each account
+    opens one Profile under its username; the room takes the session in
+    the hello (`PROTOCOL` 5) and turns away anyone without one ("Log in to
+    play online", close 4005). The guest token is gone.
+  - The site: `account.ts` (the session, kept as `degen-city-account-v1`),
+    `account-ui.ts` (the card: Log in, Make an account, Forgot your
+    password, a reset link's new password, a first sign-in's username, and
+    the account with its ways in to add, change or take off; over the
+    Multiplayer menu), the Multiplayer menu's You step (Log in / Sign up
+    until logged in; where it was is kept for the tab while Google or
+    Discord have the page, `degen-city-mp-resume`), the header's Log in
+    button, the Profile tab's Change name, the Online pill's Log in.
+  - Tested: `tests/login.test.ts` (the filter, passwords, emails, hashes,
+    the lock-out, the sign-in URLs and ids); the routes end to end against
+    `wrangler dev` (signing up, logging in by name or email, the lock-out,
+    renames, passwords, a wallet's first sign-in and linking, joining a
+    game with and without a session) and in a browser. Google's and
+    Discord's own round trips wait for their apps (`server/README.md`).
 - **B. Settings and friends**: the Controls panel's settings, sound and
   the view saved on the account; friends added from the players in your
   game, a list showing who's online and in which game, with Join.
@@ -228,7 +256,7 @@ until the owner picks multiplayer up again.
 | PvP places | Arena maps of their own (the junkyard first), walled off from the city; the Fight Club's ring. Never in the hangout city. |
 | PvP rules | 100 health, regen after a few seconds without damage, cartoon knock-out (no gore), respawn after 3 s with brief spawn protection, kill feed ("tagged"). |
 | Room size | Up to 16 players per city; more cities ("City 1", "City 2"…) open automatically. |
-| Identity | Until logging in (step 2) is built: generated player names (vetted word lists, rerollable), a guest profile per browser, or a profile per wallet. Then (the owner's call): an account is needed online, logged into with a username and password, Google, Discord or a wallet, all linkable to one profile; the username, filtered, is the name others see; everyone starts fresh. |
+| Identity | (The owner's call, built in step 2) An account is needed online, logged into with a username and password, Google, Discord or a wallet, all linkable to one profile; the username, filtered, is the name others see; everyone starts fresh. |
 | Chat | Emote wheel and fixed phrases only. Nothing typed ever appears in public. Players can mute others. |
 | What others see | Outfit and colours, the gun they carry and its finish, name tag, rank badge. |
 | Saved | Server-side player profiles (name, outfit, finish, lifetime score, rank), and the online profile's own progress, starting fresh (above); daily and weekly leaderboards (no prizes). |
@@ -266,8 +294,8 @@ Visitor's browser                         Cloudflare (server/)
   between two messages still fires; the server lets go of the trigger when
   controls stop arriving (hidden tab). After gearing up or swapping guns the
   browser keeps its own gun state until a snapshot agrees.
-- Guest identity is a random secret kept in the browser
-  (`degen-city-player-v1`); the server only stores its hash.
+- Identity is the account's session token (account.ts, kept as
+  `degen-city-account-v1`); the server only stores its hash.
 - The site build reads the server address from `PUBLIC_GAME_SERVER` (a
   GitHub repo variable). Without it, the Multiplayer button stays hidden.
 

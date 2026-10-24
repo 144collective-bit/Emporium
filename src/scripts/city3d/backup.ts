@@ -5,9 +5,9 @@
  * read back from one. Free of the DOM; the Vault's panel (tycoon-ui.ts)
  * does the downloading and the loading.
  *
- * - Only the city's own saves go in. The guest and wallet login tokens stay
- *   out (they're keys to a profile on the game server, not progress), and so
- *   do screen preferences.
+ * - Only the city's own saves go in. The account's login token stays out
+ *   (it's a key to an account on the game server, not progress), and so do
+ *   screen preferences.
  * - A file is checked before anything is written: it has to be a Sector 7
  *   backup with the city's game in it, every value has to be readable, and
  *   the city's game goes through `cleanSave()` like any save loaded.

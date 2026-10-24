@@ -9,22 +9,22 @@
  *   the game's Room, which runs it and talks to each player's Profile.
  * - /games (HTTP, JSON): GET `?mode=` lists a mode's public games for the
  *   Multiplayer menu's Browse; POST { mode, map } makes a private game.
- * - /me (HTTP, JSON): the player's own profile for the menu, before joining
- *   (`X-Guest`: the browser's guest token, or `X-Session`: a wallet login);
- *   POST /me/rename picks a new name.
+ * - /me (HTTP, JSON): the player's own profile for the menu, before joining.
+ *   Playing online needs an account: /play, /games and /me all want its
+ *   session (`Authorization: Bearer <token>`; in the hello for /play).
  *
- * - /auth (HTTP, JSON): logging in with a wallet and its basic profile, see accounts.ts.
+ * - /auth (HTTP, JSON): accounts and logging in (a username and password,
+ *   Google, Discord or a wallet), see accounts.ts.
  * - Everything else: the website itself (static files built into ../dist).
  *
  * Only pages listed in ALLOWED_ORIGINS can connect.
  */
-import { Accounts } from './accounts';
+import { Accounts, type Who } from './accounts';
 import { Lobby } from './lobby';
 import { Profile } from './profile';
 import { Room } from './room';
 import { GAME_MODES, gameIdOk, type GameMode } from '../../src/scripts/net/games';
 import type { ServerMsg } from '../../src/scripts/net/protocol';
-import { guestKey, walletKey } from './keys';
 
 export { Accounts, Lobby, Profile, Room };
 
@@ -38,6 +38,19 @@ export interface Env {
   ALLOWED_ORIGINS: string;
   /** The network wallets log in on: 943 (PulseChain Testnet v4) or 369 (PulseChain) */
   AUTH_CHAIN_ID?: string;
+  /**
+   * Secrets (server/README.md): Google's and Discord's sign-in apps, the email
+   * service's key and sender for reset links (Resend), and the owner's private
+   * list of names no username may hold (comma separated). Each one missing
+   * just leaves its part out.
+   */
+  GOOGLE_CLIENT_ID?: string;
+  GOOGLE_CLIENT_SECRET?: string;
+  DISCORD_CLIENT_ID?: string;
+  DISCORD_CLIENT_SECRET?: string;
+  EMAIL_API_KEY?: string;
+  EMAIL_FROM?: string;
+  BLOCKED_NAMES?: string;
 }
 
 const allowed = (origin: string | null, env: Env) => !!origin && env.ALLOWED_ORIGINS.split(',').map((s) => s.trim()).includes(origin);
@@ -54,7 +67,7 @@ function corsFor(req: Request, env: Env): Record<string, string> | null {
     ? {
         'Access-Control-Allow-Origin': origin,
         'Access-Control-Allow-Methods': 'GET, POST',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Guest, X-Session',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         'Access-Control-Max-Age': '600',
         Vary: 'Origin',
       }
@@ -72,14 +85,10 @@ function refuse(m: string) {
   return new Response(null, { status: 101, webSocket: client });
 }
 
-/** The player's Profile from the menu's headers: a wallet login's, or this browser's guest one */
-async function profileOf(req: Request, env: Env) {
-  const session = req.headers.get('X-Session');
-  const wallet = session ? ((await env.ACCOUNTS.get(env.ACCOUNTS.idFromName('main')).check(session)) as string | null) : null;
-  const token = req.headers.get('X-Guest');
-  if (!wallet && (typeof token !== 'string' || !/^[A-Za-z0-9_-]{32,128}$/.test(token))) return null;
-  const key = wallet ? await walletKey(wallet) : await guestKey(token!);
-  return { stub: env.PROFILES.get(env.PROFILES.idFromName(key)), wallet };
+/** The logged-in account from the menu's request (its session token), or null */
+function accountOf(req: Request, env: Env) {
+  const token = /^Bearer ([0-9a-f]{64})$/.exec(req.headers.get('Authorization') ?? '')?.[1];
+  return token ? (env.ACCOUNTS.get(env.ACCOUNTS.idFromName('main')).check(token) as Promise<Who | null>) : Promise.resolve(null);
 }
 
 export default {
@@ -101,6 +110,7 @@ export default {
       const cors = corsFor(req, env);
       if (!cors) return new Response('Forbidden', { status: 403 });
       if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
+      if (!(await accountOf(req, env))) return json({ error: 'Log in to play online' }, cors, 401);
       const lobby = env.LOBBY.get(env.LOBBY.idFromName('main'));
       if (req.method === 'GET') {
         const mode = url.searchParams.get('mode') ?? 'hangout';
@@ -111,18 +121,13 @@ export default {
       const game = await lobby.create(await req.json().catch(() => null));
       return game ? json({ game }, cors) : json({ error: "That game can't be made yet" }, cors, 400);
     }
-    if (url.pathname === '/me' || url.pathname === '/me/rename') {
+    if (url.pathname === '/me') {
       const cors = corsFor(req, env);
       if (!cors) return new Response('Forbidden', { status: 403 });
       if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
-      const who = await profileOf(req, env);
-      if (!who) return json({ error: 'No guest pass' }, cors, 401);
-      if (url.pathname === '/me/rename') {
-        if (req.method !== 'POST') return json({ error: 'POST' }, cors, 405);
-        await who.stub.open(who.wallet ?? undefined);
-        return json({ profile: await who.stub.rename() }, cors);
-      }
-      return json({ profile: await who.stub.open(who.wallet ?? undefined) }, cors);
+      const who = await accountOf(req, env);
+      if (!who) return json({ error: 'Log in to play online' }, cors, 401);
+      return json({ profile: await env.PROFILES.get(env.PROFILES.idFromName(who.profile)).open(who.username) }, cors);
     }
     if (url.pathname.startsWith('/auth/')) {
       const origin = req.headers.get('Origin');

@@ -1982,7 +1982,7 @@ it and has been retired completely. Build only on what's here.
   steps still count.
 - **Your save as a file:** everything the city keeps in this browser goes
   in one backup (`backup.ts`, DOM-free, tested: `BACKUP_KEYS`,
-  `packBackup()`, `readBackup()`; never the guest or wallet login tokens or
+  `packBackup()`, `readBackup()`; never the account's login token or
   screen preferences). The Vault's panel ("Your save" in `bankView()`)
   downloads it (`sector-7-save-<date>.json`) and loads one: the file is
   checked and the city's game cleaned with `cleanSave()` first, a confirm
@@ -2539,11 +2539,12 @@ it and has been retired completely. Build only on what's here.
   ~11.9). Keep it that way when adding designs.
 - Visitors can't type text onto buildings: sign texts come from the fixed
   `SIGNS` list, so nothing unexpected (or confidential) appears in public.
-- **Logging in with a wallet** (`wallet.ts`, `account.ts`, `account-ui.ts`;
-  the server's `accounts.ts`, the sign-in message in `src/scripts/net/auth.ts`)
-  is part of multiplayer (being tested on workers.dev only): a player profile that follows the
-  wallet. It never sends a transaction. No explorer or wallet-brand links;
-  only the confirmed links in `src/data/site.ts` are linked.
+- **Logging in** (a username and password, Google, Discord or a wallet;
+  `account.ts`, `account-ui.ts`, `wallet.ts`; the server's `accounts.ts`;
+  below under Multiplayer) is part of multiplayer (being tested on
+  workers.dev only). A wallet never sends a transaction. No explorer or
+  wallet-brand links; only the confirmed links in `src/data/site.ts` and
+  the providers' own sign-in pages are linked.
 
 ## Multiplayer (beta, testing)
 
@@ -2567,41 +2568,61 @@ it and has been retired completely. Build only on what's here.
   date. Phase 1 (hangout, player profiles, shared target practice) is built;
   leaderboards and south-bank PvP come next.
 - The game server lives in `server/` (Cloudflare Worker + Durable Objects:
-  Lobby, Room per city of 16, Profile per player, Accounts for wallet
-  logins). See `server/README.md`.
+  Lobby, Room per game, Profile per account, Accounts for the accounts and
+  logging in). See `server/README.md`.
   The server decides hits, scores and profiles; browsers only predict their
   own shots. New rules go in `combat-sim.ts` (shared), never only in the view.
 - Shared code the server bundles must stay free of DOM and scene code:
   `src/scripts/net/*` (except `client.ts`), `combat-sim.ts`, `solids.ts`.
   `src/scripts/net/protocol.ts` is the wire format; bump `PROTOCOL` when it
   changes incompatibly.
-- Nothing typed by players ever shows: guest names come from the word lists
-  and emotes / phrases from the fixed lists in `profile-data.ts`. Review any
-  new words or phrases for the content rules below (no token details, no
-  financial talk). The server re-checks every value players send.
-- Player profiles: player name (from the word lists, reroll), wardrobe look,
-  rifle finish, lifetime score and rank, stored on the server against a hash
-  of the browser's guest token (`degen-city-player-v1`), or of the wallet
-  address once logged in (`server/src/keys.ts`). Offline, the Profile panel
-  keeps the look and finish in the browser.
-- **Log in with a wallet** (`account.ts`, `account-ui.ts`; server
-  `server/src/accounts.ts`, the `Accounts` Durable Object, `/auth/*`): the
-  wallet signs `signInMessage()` with a one-time nonce (personal_sign, no
-  transaction, no gas); the server recovers the signer and issues a 30-day
-  session token (only its hash is stored; the browser keeps it as
-  `degen-city-account-v1`). One login covers everything: the room opens the
-  wallet's own profile (the token rides in `hello`). A wallet's first login starts a fresh profile (no guest score,
-  name or look carried over), and its look never overwrites the browser's
-  own guest look. The **Connect wallet** button sits in the header's tools (`.nav-account`,
-  rendered by `CityMap.astro` when there's a game server,
-  "Connect" on phones) and in the walk Profile tab (`[data-account-open]`);
-  both open the profile card (`[data-account]`). The account and card are
-  made with the page (`CityMap.astro`), not with the 3D city, so they work
-  on the 2D map and before 3D has loaded; `bootCity()` gets them and fills
-  in their `hooks` (Online switch, rename, Build mode). The card shows:
-  player name, rank, lifetime score, the wallet (short) and network, and the
-  with New name and Log out. Only the visitor sees their own address; other
-  players only see the player name. Logging in needs the city Online.
+- The only thing a player types that others see is their **username**
+  (the owner's call), and only through the filter: `usernameProblem()` in
+  `src/scripts/net/auth.ts` (3 to 16 letters, digits, `_` and `-`; no rude
+  words, links, wallet addresses or names that pass for staff, case, `_`,
+  `-` and digits for letters don't get round it; plus the owner's private
+  `BLOCKED_NAMES` secret, so the token's name is blocked without being in
+  the code), checked as it's typed and again by the server. Emotes and
+  phrases come from the fixed lists in `profile-data.ts`; the word-list
+  names are left for the city's own people. Review any new words or
+  phrases for the content rules below (no token details, no financial
+  talk). The server re-checks every value players send.
+- **Playing online needs an account** (the owner's call; single player
+  never asks): docs/multiplayer-plan.md, "Profiles and logging in".
+  - Ways in, any of them linked to one account: a username and password
+    (with a private email, required, used only for reset links), Google,
+    Discord, or a wallet (it signs `signInMessage()` with a one-time nonce:
+    personal_sign, no transaction, no gas). A first sign-in with Google,
+    Discord or a wallet picks its username. The server is
+    `server/src/accounts.ts` (the `Accounts` Durable Object, `/auth/*`,
+    listed in `server/README.md`) and `server/src/login.ts` (DOM-free,
+    tested in `tests/login.test.ts`: PBKDF2 hashes, the lock-out, the OAuth
+    helpers). Google and Discord need their apps' secrets and reset emails
+    an email service's key (`server/README.md`); without them those parts
+    aren't offered. Only the provider's account id is kept.
+  - A session token lasts 30 days (only its hash is stored; the browser
+    keeps it as `degen-city-account-v1`); the room takes it in the `hello`
+    and turns away anyone without one. Everyone started fresh (the guest
+    profiles were dropped; a wallet that had a profile keeps it).
+  - Each account has one player profile: its username, wardrobe look,
+    rifle finish, lifetime score and rank, on the server
+    (`server/src/profile.ts`). Offline, the Profile panel keeps the look and
+    finish in the browser; online the account's look comes from the server
+    and never overwrites the browser's own.
+  - On screen: the **Log in** button in the header's tools (`.nav-account`,
+    its label the username once logged in), the walk Profile tab's Log in
+    (`[data-account-open]`) and Change name, the Online pill's Log in, and
+    the Multiplayer menu's You step all open the account card
+    (`[data-account]`, `account-ui.ts`: Log in, Make an account, Forgot your
+    password, a reset link (`?reset=`), a first sign-in's username, and the
+    account: username, email, password, Google, Discord and wallet to add,
+    change or take off, Log out; it sits over the Multiplayer menu and the
+    start menu). The account and card are made with the page
+    (`CityMap.astro`), not with the 3D city, so they work on the 2D map
+    and before 3D has loaded. Google and Discord leave the page and come
+    back with `?login=<code>`; the menu carries on where it was
+    (`degen-city-mp-resume` for the tab). Only the player sees their email
+    and wallet; other players see the username.
 - The site only shows the Online pill and the Online / Offline switch when
   built with `PUBLIC_GAME_SERVER` (set by the Worker's build). Only pages in
   `ALLOWED_ORIGINS`
@@ -2629,11 +2650,12 @@ it and has been retired completely. Build only on what's here.
     `MAP_NAMES`, the public cities (`city-N`) and private games (`p` and ten
     letters or digits, too many to guess), and the Lobby's rules. The
     server's `/games` lists a mode's games and makes private ones,
-    `/play?game=<id>` joins one, `/me` and `/me/rename` show and rename the
-    profile before joining. Every new online profile starts fresh.
+    `/play?game=<id>` joins one, `/me` shows the profile before joining
+    (all three need the account's session). Every new online profile
+    starts fresh.
   - **The menu** is `mp-menu.ts` (its own chunk, loaded when first opened;
-    styles `src/styles/mpmenu.css`): You (name and New name, the look,
-    guest or Connect wallet), Pick a mode, the mode's open games (Join) and
+    styles `src/styles/mpmenu.css`): You (Log in / Sign up until logged in;
+    then the username, rank, look and Your account), Pick a mode, the mode's open games (Join) and
     Make a private game (its link, `?game=<id>&with=<name>`), Where to
     start (the Emporium, The Trenches, the kart park, the stadium, next to
     the friend whose link it was). From the start menu's Multiplayer, an
@@ -2665,7 +2687,7 @@ it and has been retired completely. Build only on what's here.
   (`highway.ts`), the traffic's routes and lights (`routes.ts`), collision data, doors, the gun counter, the garage
   and the spawn (`solids.ts`), the plots (`src/data/plots.ts`), your car
   (`mycar.ts`), the driving rules (`drive-sim.ts`), target practice
-  (`combat-sim.ts`), the multiplayer protocol's checks and its games (`protocol.ts`, `games.ts`), the economy (`tycoon.ts`, the market square in
+  (`combat-sim.ts`), the multiplayer protocol's checks and its games (`protocol.ts`, `games.ts`), logging in (`auth.ts`, `server/src/login.ts`), the economy (`tycoon.ts`, the market square in
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`),
@@ -2697,7 +2719,7 @@ it and has been retired completely. Build only on what's here.
 - **No multiplayer on degenemporium.com** (the owner's call): the "Build
   site" Action builds without `PUBLIC_GAME_SERVER`, so the city runs on its
   own there: the whole city game in the browser's save, no Online switch,
-  multiplayer or Connect wallet. Don't set it in that Action.
+  multiplayer or Log in. Don't set it in that Action.
 - **Multiplayer lives on workers.dev only**: the `server/` Worker (emporium
   on https://emporium.144collective.workers.dev, deployed by Cloudflare's
   Workers Builds from `main`) serves the game server and its own copy of

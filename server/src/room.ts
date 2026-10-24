@@ -47,9 +47,9 @@ import {
   type TargetRow,
 } from '../../src/scripts/net/protocol';
 import type { Env } from './index';
+import type { Who } from './accounts';
 import type { Profile } from './profile';
 import { cityName, cityId, type GameInfo } from '../../src/scripts/net/games';
-import { guestKey, walletKey } from './keys';
 
 const LOOP_HZ = 30;
 /** Silent this long: left out of snapshots, and free to reappear anywhere */
@@ -63,7 +63,9 @@ const COUNTERS = [RACK, ARMS.counter];
 interface Player {
   id: number;
   ws: WebSocket;
-  /** Hash of the guest token */
+  /** Their account's id (accounts.ts) */
+  user: string;
+  /** Their profile's name: one connection per profile */
   key: string;
   profile: DurableObjectStub<Profile>;
   me: OwnProfile;
@@ -147,6 +149,10 @@ export class Room extends DurableObject<Env> {
 
   /* ---------- Joining and leaving ---------- */
 
+  private accounts() {
+    return this.env.ACCOUNTS.get(this.env.ACCOUNTS.idFromName('main'));
+  }
+
   private info(p: Player): PlayerInfo {
     const weapon = this.sim.players.get(String(p.id))?.weapon ?? p.me.weapon;
     return { id: p.id, name: p.me.name, look: p.me.look, skin: p.me.skin, rank: p.me.rank, weapon };
@@ -158,16 +164,17 @@ export class Room extends DurableObject<Env> {
       ws.close(4000, 'Old version');
       return null;
     }
-    if (typeof msg.token !== 'string' || !/^[A-Za-z0-9_-]{32,128}$/.test(msg.token)) {
-      ws.close(4004, 'Bad token');
+    // Playing online needs an account: its session opens its profile
+    const who = (await this.accounts().check(msg.auth)) as Who | null;
+    if (!who) {
+      send(ws, { t: 'error', m: 'Log in to play online.' });
+      ws.close(4005, 'Not logged in');
       return null;
     }
-    // Logged in with a wallet: that wallet's profile; otherwise this browser's guest profile
-    const wallet = msg.auth ? ((await this.env.ACCOUNTS.get(this.env.ACCOUNTS.idFromName('main')).check(msg.auth)) as string | null) : null;
-    const key = wallet ? await walletKey(wallet) : await guestKey(msg.token);
+    const key = who.profile;
     if (!this.makeRoom(ws, key)) return null;
     const profile = this.env.PROFILES.get(this.env.PROFILES.idFromName(key));
-    const me = (await profile.open(wallet ?? undefined)) as OwnProfile;
+    const me = (await profile.open(who.username)) as OwnProfile;
     if (ws.readyState !== 1) return null;
     // Checked again: someone (or this same person in another tab) may have joined while the profile loaded
     if (!this.makeRoom(ws, key)) return null;
@@ -177,6 +184,7 @@ export class Room extends DurableObject<Env> {
     const p: Player = {
       id,
       ws,
+      user: who.id,
       key,
       profile,
       me,
@@ -317,7 +325,13 @@ export class Room extends DurableObject<Env> {
         this.soon(p, 'skin', 400, () => this.changed(p, p.profile.setSkin(m.skin) as Promise<OwnProfile>));
         break;
       case 'rename':
-        if (this.allow(p, 'rename', 2500)) this.changed(p, p.profile.rename() as Promise<OwnProfile>);
+        // The account's username changed (it's the account's to say what it is now)
+        if (this.allow(p, 'rename', 2500))
+          this.accounts()
+            .check(m.auth)
+            .then((who) => {
+              if (who?.id === p.user) this.changed(p, p.profile.open(who.username) as Promise<OwnProfile>);
+            });
         break;
       case 'ping':
         send(p.ws, { t: 'pong', c: Number(m.c) || 0 });

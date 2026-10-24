@@ -2,9 +2,9 @@
  * The Multiplayer menu (docs/multiplayer-plan.md, "The Multiplayer menu and
  * its games"): helps a player find the game and the mode they want.
  *
- * 1. You: the online profile's name (New name), the look that comes along,
- *    and playing as a guest or with a wallet (Connect wallet opens the
- *    account card).
+ * 1. You: playing online needs an account (Log in / Make an account open
+ *    the account card, account-ui.ts); logged in, the profile: its name (the
+ *    username), rank and look, and Your account.
  * 2. Pick a mode: Hangout, and the modes still to come (they say so).
  * 3. Find a game: Browse the mode's open games, or make a private one and
  *    share its link (whoever opens it lands here, on that game).
@@ -14,11 +14,10 @@
  * Opened from the start menu's Multiplayer, an invite link, the city's ☰ Menu
  * and walk mode's Online tab; `play()` hands the choice to the city. Loaded
  * only when it's first opened, and only on a site built with a game server.
- * Nothing typed by players appears anywhere: names come from the server's
- * word lists, games are listed by mode and map.
+ * The only thing players type that others see is their username (filtered,
+ * net/auth.ts); games are listed by mode and map.
  */
 import { GAME_MODES, GAME_MODE_IDS, MAP_NAMES, gameIdOk, isPrivateId, type GameInfo, type GameMode, type MapId } from '../net/games';
-import { guestToken } from '../net/guest';
 import { RANKS } from '../net/profile-data';
 import type { OwnProfile } from '../net/protocol';
 import type { StartSpot } from './index';
@@ -35,10 +34,10 @@ export interface MpMenuDeps {
   root: HTMLElement;
   /** The game server's address (PUBLIC_GAME_SERVER) */
   server: string;
-  /** The wallet login (account.ts), null until it's loaded */
-  account(): { readonly token: string | null; readonly address: string | null; subscribe(f: () => void): void } | null;
-  /** Open the wallet login's card (Connect wallet) */
-  openAccount(): void;
+  /** The account (account.ts), null until it's loaded */
+  account(): { readonly token: string | null; subscribe(f: () => void): void } | null;
+  /** Open the account card: on Log in, Make an account, or the account itself */
+  openAccount(view?: 'login' | 'signup'): void;
   /** Play the chosen game */
   play(c: MpChoice): void;
   /** In the city: the game this player is in now (null: not online), and leaving online play */
@@ -56,7 +55,8 @@ const SPOTS: { id: StartSpot; name: string; sub: string }[] = [
 ];
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
-const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
+/** Where the menu was when the player went to log in (Google and Discord leave the page): CityMap.astro carries on from it */
+const RESUME = 'degen-city-mp-resume';
 const LOOK_NAMES: Record<string, string> = { suit: 'a suit', hoodie: 'a hoodie', track: 'a track suit', varsity: 'a varsity jacket', puffer: 'a puffer jacket' };
 
 /** The invite link for a private game: the site's own address with the game's id and who shared it */
@@ -108,38 +108,37 @@ export function createMpMenu(d: MpMenuDeps) {
 
   const base = d.server.replace(/\/$/, '').replace(/^ws/, 'http');
   function headers(): Record<string, string> {
-    const h: Record<string, string> = { 'X-Guest': guestToken() };
     const t = d.account()?.token;
-    if (t) h['X-Session'] = t;
-    return h;
+    return t ? { Authorization: `Bearer ${t}` } : {};
   }
   async function call<T>(path: string, init?: RequestInit): Promise<T> {
     const res = await fetch(base + path, { ...init, headers: { ...headers(), ...(init?.body ? { 'Content-Type': 'application/json' } : {}) } });
     const json = (await res.json().catch(() => ({}))) as T & { error?: string };
-    if (!res.ok) throw new Error(json.error ?? `The game server said ${res.status}`);
+    if (!res.ok) throw Object.assign(new Error(json.error ?? `The game server said ${res.status}`), { status: res.status });
     return json;
   }
 
   async function loadMe() {
     meError = '';
+    me = null;
+    if (!d.account()?.token) return paint();
+    paint();
     try {
       me = (await call<{ profile: OwnProfile }>('/me')).profile;
-    } catch {
-      meError = "Can't reach the game server right now.";
+    } catch (e) {
+      // (logged out elsewhere: the account card's own check forgets the token, and this asks to log in)
+      if ((e as { status?: number }).status !== 401) meError = "Can't reach the game server right now.";
     }
     paint();
   }
-  async function rename() {
-    if (busy) return;
-    busy = true;
-    paint();
+  /** Off to log in, the menu's place kept for after */
+  function login(view: 'login' | 'signup') {
     try {
-      me = (await call<{ profile: OwnProfile }>('/me/rename', { method: 'POST' })).profile;
+      sessionStorage.setItem(RESUME, JSON.stringify({ game, friend }));
     } catch {
-      meError = "Couldn't change the name. Try again.";
+      /* fine: they pick the game again */
     }
-    busy = false;
-    paint();
+    d.openAccount(view);
   }
   async function loadGames() {
     games = null;
@@ -172,27 +171,32 @@ export function createMpMenu(d: MpMenuDeps) {
 
   function youView() {
     const rank = me ? (RANKS.find((r) => r.id === me!.rank) ?? RANKS[0]).name : '';
-    const address = d.account()?.address;
-    const how = address ? `Logged in with your wallet · ${esc(short(address))}` : 'Playing as a guest · kept for this browser';
     const look = me ? (LOOK_NAMES[me.look.kind] ?? 'your look') : '';
     const where = d.current();
+    const loggedIn = !!d.account()?.token;
     return `<h2 class="mpm-title" id="mpm-title">You</h2>
       ${where ? `<p class="mpm-now">You're in <b>${esc(where.name)}</b>.</p>` : ''}
       ${
-        me
-          ? `<div class="mpm-you">
+        !loggedIn
+          ? `<p class="mpm-line">Playing online needs an account: your username is the name other players see, and your profile follows you to any browser you log in from.</p>
+      <div class="mpm-pair">
+        <button type="button" class="city-start-btn mpm-half" data-act="login"><span class="city-start-btn-name">Log in</span></button>
+        <button type="button" class="city-start-btn mpm-half" data-act="signup"><span class="city-start-btn-name">Sign up</span></button>
+      </div>
+      <p class="mpm-note">With a username and password, Google, Discord or a wallet. Single player never asks you to log in.</p>`
+          : me
+            ? `<div class="mpm-you">
         <p class="mpm-name">${esc(me.name)}</p>
-        <p class="mpm-line">${esc(rank)} · ${how}</p>
+        <p class="mpm-line">${esc(rank)} · your account's profile</p>
         <p class="mpm-line">Wearing ${esc(look)}: change your look at Drop 001 in the city.</p>
       </div>
       <div class="mpm-pair">
-        <button type="button" class="mpm-small" data-act="rename" ${busy ? 'disabled' : ''}>New name</button>
-        <button type="button" class="mpm-small" data-act="wallet">${address ? 'Your wallet' : 'Connect wallet'}</button>
+        <button type="button" class="mpm-small" data-act="account">Your account</button>
       </div>
       <p class="mpm-note">Online progress is its own: your single player save stays as it is.</p>`
-          : meError
-            ? `<p class="mpm-error">${esc(meError)}</p><button type="button" class="mpm-small" data-act="retry-me">Try again</button>`
-            : '<p class="mpm-wait">Finding your profile…</p>'
+            : meError
+              ? `<p class="mpm-error">${esc(meError)}</p><button type="button" class="mpm-small" data-act="retry-me">Try again</button>`
+              : '<p class="mpm-wait">Finding your profile…</p>'
       }
       ${
         me
@@ -293,11 +297,12 @@ export function createMpMenu(d: MpMenuDeps) {
     switch (b.dataset.act) {
       case 'close':
         return close();
-      case 'rename':
-        return rename();
+      case 'login':
+      case 'signup':
+        return login(b.dataset.act as 'login' | 'signup');
       case 'retry-me':
         return loadMe();
-      case 'wallet':
+      case 'account':
         return d.openAccount();
       case 'leave':
         d.leave?.();
@@ -372,8 +377,14 @@ export function createMpMenu(d: MpMenuDeps) {
     el.hidden = true;
     back?.focus?.({ preventScroll: true });
   }
-  // Logging in or out with a wallet changes whose profile this is
-  d.account()?.subscribe(() => !el.hidden && loadMe());
+  // Logging in or out changes whose profile this is
+  let token = d.account()?.token ?? null;
+  d.account()?.subscribe(() => {
+    const t = d.account()?.token ?? null;
+    if (t === token) return;
+    token = t;
+    if (!el.hidden) loadMe();
+  });
 
   return {
     open,
