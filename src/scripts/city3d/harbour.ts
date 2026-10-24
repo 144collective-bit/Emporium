@@ -144,7 +144,7 @@ export const STAYS = { n: 6, from: 2.8, step: 2.2 };
 export const MEDIAN_HALF = MEDIAN / 2;
 
 /** A spot on the north end's east footway, looking south over the bridge */
-export const HARBOUR_SPAWN = { x: HX + (FOOTWAY[0] + FOOTWAY[1]) / 2, z: Z0 + 2.6, yaw: 0 };
+export const HARBOUR_SPAWN = { x: HX + (FOOTWAY[0] + FOOTWAY[1]) / 2, z: Z0 + 2.6, yaw: Math.PI };
 
 /** What's solid: the towers above and below the deck (but the roadway's and the footways' ways through), the girders over the water, the anchorages */
 export const HARBOUR_SOLIDS: Box[] = [

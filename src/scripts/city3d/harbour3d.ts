@@ -303,7 +303,7 @@ function cables(b: Batch, low: boolean) {
     for (let i = 1; i < zs.length; i++) rod(b, V(HX + u, cableY(zs[i - 1]), zs[i - 1]), V(HX + u, cableY(zs[i]), zs[i]), 0.14, CABLE_C);
     // The necklace of bulbs along the outer cables
     if (Math.abs(u) > GIRDER.inner[1])
-      for (let z = a + 2; z < c - 1; z += 2) if (TOWERS.every((t) => Math.abs(z - t) > TOWER.hz + 0.4)) box(b, HX + u - 0.06, cableY(z) - 0.18, z - 0.06, HX + u + 0.06, cableY(z) - 0.06, z + 0.06, BULB);
+      for (let z = a + 2; z < c - 1; z += 2) if (TOWERS.every((t) => Math.abs(z - t) > TOWER.hz + 0.4)) box(b, HX + u - 0.08, cableY(z) - 0.22, z - 0.08, HX + u + 0.08, cableY(z) - 0.06, z + 0.08, BULB);
   }
   // Suspenders from each cable to its girder's top
   const step = low ? SUSPENDER * 2 : SUSPENDER;

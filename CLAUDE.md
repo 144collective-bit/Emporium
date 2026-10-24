@@ -172,8 +172,9 @@ it and has been retired completely. Build only on what's here.
   the corners for the right turns on and off it, `slipCurve()`); it
   crosses the river on two bridges (`riverBridges()` in `streetplan.ts`,
   every road crossing the river: they're drawn, and they're the gaps in
-  `RIVER_WALLS`). It's all at ground level: nothing to climb, nothing
-  solid. Drawn in `world.ts` (the asphalt, the median broken at the
+  `RIVER_WALLS`; plain concrete decks on piers down into the lowered
+  water, river plan step 2). It's all at street level: nothing to climb,
+  nothing solid. Drawn in `world.ts` (the asphalt, the median broken at the
   junctions and over the river, lane dashes and edge lines, lamps along
   both verges, the slips); the arterials' medians and lines break where it
   crosses them (`highwayGaps()`), and the outskirts' trees keep off it and
@@ -197,7 +198,8 @@ it and has been retired completely. Build only on what's here.
   - `EXT` (-420 to 460, about 1.6 km across; growth plan Phase 6 moved it out from -200 to 240) is the ground, the river and every road, edge to edge (the far-off roads are plain continuations of today's, with no traffic). It's mostly open land, room to grow the city into. Build there only when the owner asks.
   - The river is `RIVER_W` (60) wide: five times what it was, then four times again (the owner's calls; the second is `docs/river-plan.md`, built in steps with the owner's sign-off: step 1, the river, is built). It widened southwards both times, so everything south of it moved: what's derived from `SOUTH_ROAD` / `SOUTH_ROW` moved by itself; the south bank's places written in fixed numbers before the first widening (the Fight Club in `fightsite.ts`, South Square and the south pocket parks in `outer.ts`, the airport and its timetable in `airfield.ts`) add `SOUTH_SHIFT` (57, both moves) to their z, and those written after it (The Trenches' streets in `trenches.ts`, the metro's south end in `metro.ts`, the airport's site's south edge and the executive helicopter's path, the benchmark's views) add `WIDEN` (45, the second). Keep doing that for anything new written in fixed numbers south of the river.
   - **The river's shape** is `river.ts` (DOM-free, tested in `tests/river.test.ts`; river plan step 1, the owner's call: natural, not a straight line): `RIVER` is the band between the quay lines, the bank avenues straight along it edge to edge; the water's edge keeps to the band where anything stands on the water (Uptown's esplanade and marina, the town's promenades and their jetties, The Trenches' boardwalk, Pier 7 and the Night Market, Liberty Bridge, every bridge) and pulls back from it on the stretches in `BANKS` (`pullAt()`, eased in and out, a smooth seeded wander between `min` and `max`): a sandy cove on the south bank below the south row (`beach`), grass banks east of the town's promenades, and past the ring highway, each bank on its own. `edgesAt()` / `inWater()` / `edgeSamples()` are what everything reads: the water's mesh (world.ts `riverWater()`: shallows by the natural banks, a `shore` attribute on the city's water shader) and its banks (`riverBanks()`: stone quay walls, a ribbon of sand or pebbles where it pulls back, the cove's beach back to the promenade, reeds in chunky clumps and rocks near only), walking (walk.ts), driving (`RIVER_WALLS` in drive-sim.ts, a piece every `WALL_STEP` over the water, `riverWallsNear()`), the boats (`laneAt()`, waterfront.ts `boatZ()`), the outskirts' trees (they grow on the banks it leaves: `treeSpot()`), the promenade's railing (open to the cove), the world map and the sound.
-  - **Bridges** (river plan step 1): the four avenue bridges were taken out. Only the east ring avenue keeps one (`BRIDGED_NS` in layout.ts: the metro's, plain until its own bridge in step 2; the el's pillars stand on its median over the water); the other north-south roads end at the bank avenues, each two streets in the plan (`ns<i>` north of the river, `ns<i>s` south of it, `nsStreet()`), and the ring highway keeps its two bridges far out of town. Liberty Bridge is redesigned in step 3.
+  - **The water lies under the streets** (river plan step 2, the owner's pick): `WATER_Y` (-1.5) in `river.ts`. Where it keeps to the quay line a stone quay wall drops to it; where it pulls back the bank slopes down to it (`SLOPE` wide at most, flat land left above it; the cove's beach all the way: `slopeAt()`, `topsAt()` the slopes' tops, `shoreY()` the ground's height, `inChannel()` the slopes and the water). The grass stops at the band (world.ts); `riverBanks()` draws the walls, the slopes, the sand or pebbles and the reeds down at the water, and walls the channel's ends at the world's edge. Walking follows `shoreY()` down a slope (walk.ts `groundAt()`), the cars stop at the slopes' tops (`RIVER_WALLS`), the trees keep off the channel. Everything afloat is at `WATER_Y` (the traffic's boats and the moored ones in life.ts, Uptown's yachts and tenders, the barge), and everything standing in the water reaches down to it (the decks' piles, the jetties' posts, Uptown's marina pontoon on piles, Liberty Bridge's piers, the highway's bridges' piers). Anything new on the water goes there too.
+  - **Bridges** (river plan step 1): the four avenue bridges were taken out. Only the east ring avenue keeps one (`BRIDGED_NS` in layout.ts: Harbour Bridge since step 2, below, the metro's; the el's posts stand on its median); the other north-south roads end at the bank avenues, each two streets in the plan (`ns<i>` north of the river, `ns<i>s` south of it, `nsStreet()`), and the ring highway keeps its two bridges far out of town. Liberty Bridge is redesigned in step 3.
   - `WORLD_BOUNDS` is how far you can walk or drive.
   - `CITY_EXT` (-80 to 140 + `SOUTH_SHIFT`) is the town past the Parkway (with the airport and the kart park it's `BUILT_UP`); the outskirts' tree belt fills a band round the town (outside the bends) and a lighter sprinkle covers the rest, seeded tile by tile at a density per area (`outskirtsTrees()` in `outskirts.ts`: `BELT_FREE` / `OPEN_FREE` are the land a tree could stand on in the world before Phase 6, so a bigger world gets more trees, never thinner ones, and a tile's trees are the same whatever the world's size; trees keep off land in `keepTreesOff()`). Pine woods stand in patches on the land well away from the city (`WOODS`, `inWoods()`: a smooth seeded noise, only past `WOODS.clear` from `BUILT_UP`, so none on the land the world had before Phase 6), their trees bigger than the town's.
   - The skyline ring stands just past `EXT` (`SKYLINE` in `bounds.ts`: `gap` to `gap` + `depth` past it), kept out of the haze (`fog = false`) so it reads as a far metropolis; as many towers as the ring had for its length before Phase 6 (`SKYLINE_REACH`), each from its own seeded numbers, on grass that carries on `SKIRT` (80) past the edge (the grass is a plane per tile).
@@ -256,7 +258,8 @@ it and has been retired completely. Build only on what's here.
     on them is a track and a distance (`pointOn()`, `along()`, `sideOf()`);
     pillars wherever the ground is clear (`PILLARS`: an avenue's median
     clear of its junctions, or open land off every road; over the river
-    only on the east avenue's bridge's median, river plan step 1);
+    only on Harbour Bridge's median, where they're steel posts from its
+    deck, river plan step 2);
     five stations (`STATIONS`: Kart Park, Downtown, South Bank, The
     Trenches, Airport; each a track and distance, a platform on the track's
     left (`PLATFORM_SIDE`), a stair tower with its door at street level and
@@ -269,7 +272,8 @@ it and has been retired completely. Build only on what's here.
     South Bank between The Trenches and the Airport; at most about 40 s)
     and back on the timetable after (`timetableAt()`). Drawn by `metro3d.ts`
     (the deck in short straight pieces between its pillars, rails, parapets
-    with magenta neon, hammerhead pillars, a girder over the river; each
+    with magenta neon, hammerhead pillars (on Harbour Bridge, steel posts
+    from its deck, `onHarbour()`); each
     station in its own frame along its track: platform, canopy with the
     station names from one sign atlas, skybridge, tower with an M roundel
     over the door, totem; two cars, `userData.keep`). Its rides are
@@ -1842,6 +1846,52 @@ it and has been retired completely. Build only on what's here.
   over the north tower's flame, directory entry and an info-only panel
   (`data-panel-tpl="liberty"`) with **Walk in**. No outside links.
 
+## Harbour Bridge (river plan step 2, the owner's design)
+
+- The east ring avenue's bridge over the river, where the metro crosses, in
+  the style of the old suspension bridges; the owner's name. A landmark and
+  a place (spot `harbour`, its pin over the north tower, directory entry,
+  panel `data-panel-tpl="harbour"` with **Walk in** to `HARBOUR_SPAWN`, a
+  `PLACES` and `LIVE_PLACES` entry). Its name is made up; no outside marks.
+- **The numbers** are `harbour.ts` (DOM-free, tested in
+  `tests/harbour.test.ts`; across the bridge an offset `u` from `HX`, the
+  avenue's centre line): the deck from the north bank avenue's kerb (`Z0`)
+  to the south one's (`Z1`), humped `RISE` (2.4) over the middle in one
+  smooth rise and fall (`deckY()`, `deckSlope()`) so the boats pass under
+  (the water lies `WATER_Y` under the streets); the avenue's own two lanes
+  each way and its median (`ROADWAY`: the traffic runs on as before), a
+  lattice girder each side of the roadway and along each outer edge
+  (`GIRDER`), a timber footway between them (`FOOTWAY`, `FOOT_H` up);
+  two stone towers in the river either side of the middle (`TOWERS`,
+  `TOWER`: the great pointed arch over the roadway and the metro, a smaller
+  pointed arch through each leg for the footway (`foot`), the cornice, top
+  and the saddles' housings, all under the Emporium; the pier under each
+  with cutwaters up and down the river, `base`; `pointedArch()`, `CROWN`);
+  four main cables over the inner piers and the outer legs (`CABLE_U`,
+  `CABLE`, `cableY()`: from the anchorages on the promenades, `ANCHORS`,
+  over the saddles, down to the middle), suspenders every `SUSPENDER`, the
+  stays fanning from each tower's top (`STAYS`). The metro rides its raised
+  centre at the el's height (metro.ts `DECK_Y`), on posts on the median.
+  `onHarbour()` / `harbourY()` are its ground (walk.ts `groundAt()`, and
+  so your car's), `HARBOUR_SOLIDS` (in `SOLIDS`: the towers' piers and
+  legs, the girders, the anchorages; the roadway and the footways through
+  the towers are clear), `HARBOUR_RECT` (the promenades' railings, lamps
+  and benches keep off), `HARBOUR_STREET` (its street in the plan:
+  `riverBridges()` gives its full width, so the river walls' gap is the
+  deck's).
+- **Drawn by** `harbour3d.ts` (`buildHarbourBridge()`, at the boot): the
+  towers (an outline with the arches cut up into it, extruded; rings of
+  stones round the arches, a blind lancet up each leg, a string course,
+  cornice, parapet, the saddles' housings, HARBOUR BRIDGE on a plaque over
+  the great arch on both faces), the deck in pieces a tile long following
+  the hump (`onDeck()`: the steel body, asphalt, lines, the median's kerb,
+  the footways' boards, the girders' chords and posts, near only their
+  diagonals), iron lanterns on the outer girders with halos and pools of
+  light, the cables, suspenders, stays and anchorages, and a necklace of
+  bulbs along the outer cables. world.ts leaves the avenue's asphalt,
+  median, lines and the promenades out from under it. The traffic and the
+  taxi ride its hump (`deckY()`, nose along `deckSlope()`).
+
 ## Sector 7 Airport (`docs/airport-plan.md`)
 
 - The plan and its phases are `docs/airport-plan.md`; keep it up to date,
@@ -2765,7 +2815,7 @@ it and has been retired completely. Build only on what's here.
   (`combat-sim.ts`), the multiplayer protocol's checks (`protocol.ts`), the economy (`tycoon.ts`, the market square in
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
-  the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`),
+  the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`), Harbour Bridge (`harbour.ts`),
   getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), the river's shape (`river.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`, `boulevard.ts`, `boulevarddress.ts`, `kerbside.ts`, `skydeck.ts`, `skyline.ts`, `uptownlife.ts`, the town car in `cars.ts`), the kart park's facility (`kartfacility.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,

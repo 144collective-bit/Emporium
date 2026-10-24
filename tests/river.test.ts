@@ -3,7 +3,7 @@
 // banks east of town, free past the highway), smooth, never too narrow.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BANKS, MIN_WIDTH, edgeSamples, edgesAt, inWater, laneAt, pullAt } from '../src/scripts/city3d/river';
+import { BANKS, MIN_WIDTH, SLOPE, WATER_Y, edgeSamples, edgesAt, inChannel, inWater, laneAt, pullAt, shoreY, stretchAt, topsAt } from '../src/scripts/city3d/river';
 import { EXT, RIVER, RIVER_W, WIDEN } from '../src/scripts/city3d/layout';
 import { JETTIES, PROMENADE } from '../src/scripts/city3d/outer';
 import { ESPLANADE } from '../src/scripts/city3d/boulevard';
@@ -80,4 +80,29 @@ test('a boat lane keeps its place across the water as the banks curve', () => {
     }
   }
   assert.equal(laneAt(80, -100), 80, 'on the quays, where it always ran');
+});
+
+test('the water lies WATER_Y under the streets: walls at the quays, slopes down to it where it pulls back (step 2)', () => {
+  assert.ok(WATER_Y < -1);
+  for (let x = EXT[0]; x <= EXT[1]; x += 0.5) {
+    const [n, s] = edgesAt(x);
+    const [tn, ts] = topsAt(x);
+    // The slopes' tops: on the quay line where it keeps to it (a wall), back on the land where it pulls back
+    assert.ok(tn >= RIVER[0] - 1e-9 && tn <= n && ts <= RIVER[1] + 1e-9 && ts >= s);
+    for (const [bank, top, e] of [['north', tn, n], ['south', ts, s]] as const) {
+      const w = Math.abs(e - top);
+      if (pullAt(bank, x) === 0) assert.equal(w, 0);
+      else if (!stretchAt(bank, x)?.beach) assert.ok(w <= SLOPE + 1e-9);
+    }
+    // The ground: the street's on the flat, the water's in the water, sloping down between, never above the street
+    assert.equal(shoreY(x, (n + s) / 2), WATER_Y);
+    assert.equal(shoreY(x, RIVER[0] - 0.5), 0);
+    let prev = 0;
+    for (let z = RIVER[0]; z <= (n + s) / 2; z += 0.25) {
+      const y = shoreY(x, z);
+      assert.ok(y <= prev + 1e-9 && y >= WATER_Y && y <= 0, `the north bank climbs at ${x}, ${z}`);
+      prev = y;
+    }
+    assert.ok(inChannel(x, (n + s) / 2) && !inChannel(x, RIVER[0] - 0.1) && !inChannel(x, RIVER[1] + 0.1));
+  }
 });

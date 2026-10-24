@@ -23,9 +23,12 @@ const BUDGETS = {
    * tower's drawing, the night lights and the bikes are Uptown's own chunk's; and from 658 for the river four times
    * as wide, docs/river-plan.md step 1, the owner's call: its natural shape (river.ts), the water's mesh and its banks
    * (world.ts), the walls the cars stop at and the traffic's new routes without the avenue bridges (3 KB): the water
-   * is seen from the home view, so it's drawn at the boot)
+   * is seen from the home view, so it's drawn at the boot; and from 662 for step 2, the owner's design: Harbour
+   * Bridge as a place (its towers, deck, cables and stays, harbour3d.ts, 4 KB) and the water lowered under the
+   * streets (the banks' slopes and quay walls): a landmark seen from the home view, drawn at the boot as Liberty
+   * Bridge is)
    */
-  bootJs: 662,
+  bootJs: 666,
   /** Any one piece loaded later (a feature, when it's used) */
   lazyJs: 60,
   /** All the CSS */

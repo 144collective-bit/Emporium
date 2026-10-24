@@ -58,8 +58,20 @@ steps, each with the owner's sign-off; keep this plan up to date.
    The airliners were re-timed for their longer loop round the moved
    airport, the outskirts' tree densities re-measured, and the boot code's
    budget raised from 658 to 662 KB for the river (`scripts/budget.mjs`).
-2. **The new bridge** on the east avenue, carrying the metro (next; its
-   name is the owner's pick).
+2. **Harbour Bridge** (built; the owner's name and design, option 3 for
+   its height): the water lowered 1.5 under the streets (`WATER_Y` in
+   `river.ts`: stone quay walls down to it, the natural banks sloping down,
+   everything afloat on it and the piles, posts and piers reaching down to
+   it); on the east avenue, two stone towers with pointed arches standing
+   in the river, four suspension cables with suspenders and a web of stays,
+   the deck humped 2.4 over the middle from the bank avenues' kerbs so the
+   boats pass under (about 1 to 3 clear), two lanes each way, the metro
+   down the middle on its raised level at the el's height (posts on the
+   median), a footway along each outer edge through the towers' smaller
+   arches, lanterns and a necklace of bulbs on the cables at night
+   (`harbour.ts`, `harbour3d.ts`). It's a place with a pin and a panel.
+   The highway's two bridges got piers. The boot code's budget went from
+   662 to 666 KB for it.
 3. **Liberty Bridge** in the style of Tower Bridge (to ask first: whether
    its high walkways are climbed in walk mode, and whether the lower deck's
    halves lift for tall boats). Until then it stretches over the wider water
