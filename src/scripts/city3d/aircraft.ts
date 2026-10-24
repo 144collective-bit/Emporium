@@ -23,8 +23,8 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { FONT_DISPLAY, canvasTex, fx, glowTex, neon, paintMat, sharedFor, toon } from './kit';
 import type { AircraftKind, Pose } from './airfield';
 
-/** Every model: the airport's three kinds and the players' small jet (Phase 2) */
-export type ModelKind = AircraftKind | 'bizjet';
+/** Every model: the airport's three kinds, the freighter (an airliner in cargo trim) and the players' small jet (Phase 2) */
+export type ModelKind = AircraftKind | 'bizjet' | 'freighter';
 
 type Role = 'body' | 'accent' | 'neon' | 'strobe' | 'gear' | 'decal';
 interface Spinner {
@@ -207,7 +207,7 @@ function navLights(P: Parts, tipX: number, tipY: number, tipZ: number, tail: [nu
 
 /* ---------- The airliner ---------- */
 
-function airliner(): AircraftModel {
+function airliner(freight = false): AircraftModel {
   const P = new Parts();
   const H = 2.75;
   const R = 1.3;
@@ -243,7 +243,12 @@ function airliner(): AircraftModel {
       loft(st.slice(2, 10), (x) => pulseAt((8.6 - x) / 16), { seg: 60, from, to, out: 0.014 })
     );
   // Windows: a row each side, the cockpit's panes, doors
-  for (let x = -5.6; x <= 6.2; x += 0.56) for (const a of [0.045, 0.455]) onBody(P, 'body', INK, st, x, a, 0.24, 0.3);
+  // (a freighter has no cabin windows: a big main deck door forward on its left instead)
+  if (!freight) for (let x = -5.6; x <= 6.2; x += 0.56) for (const a of [0.045, 0.455]) onBody(P, 'body', INK, st, x, a, 0.24, 0.3);
+  else {
+    onBody(P, 'body', GREY, st, 5.1, 0.47, 2.7, 1.5);
+    onBody(P, 'body', INK, st, 5.1, 0.468, 2.5, 0.06);
+  }
   for (const [x, a, w] of [
     [9.15, 0.08, 0.5],
     [9.15, 0.42, 0.5],
@@ -352,17 +357,17 @@ function airliner(): AircraftModel {
   P.add('strobe', new THREE.SphereGeometry(0.16, 8, 6).translate(-1, H + R + 0.05, 0), red);
   P.add('strobe', new THREE.SphereGeometry(0.16, 8, 6).translate(-1, H - R - 0.05, 0), red);
 
-  // DEGEN AIR above the windows, both sides
+  // DEGEN AIR above the windows, both sides (a freighter's DEGEN CARGO further aft, clear of its door)
   for (const s of [1, -1]) {
     const a = 0.1;
-    const p = surface(st, 2.6, s > 0 ? a : 0.5 - a, 0.03);
+    const p = surface(st, freight ? 0.9 : 2.6, s > 0 ? a : 0.5 - a, 0.03);
     const g = new THREE.PlaneGeometry(4.6, 0.62);
     g.rotateX(-a * Math.PI * 2);
     if (s < 0) g.rotateY(Math.PI);
     g.translate(p.x, p.y, p.z);
     P.add('decal', g);
   }
-  return P.model('jet', 20.4, 18.6);
+  return P.model(freight ? 'freighter' : 'jet', 20.4, 18.6);
 }
 
 /* ---------- The prop plane ---------- */
@@ -655,25 +660,27 @@ function bizjet(): AircraftModel {
 
 const MODELS: Partial<Record<ModelKind, AircraftModel>> = {};
 export function aircraftModel(kind: ModelKind) {
-  return (MODELS[kind] ??= kind === 'jet' ? airliner() : kind === 'prop' ? propPlane() : kind === 'bizjet' ? bizjet() : helicopter());
+  return (MODELS[kind] ??= kind === 'jet' || kind === 'freighter' ? airliner(kind === 'freighter') : kind === 'prop' ? propPlane() : kind === 'bizjet' ? bizjet() : helicopter());
 }
 
 /* ---------- Materials ---------- */
 
-let mats: Record<Role, THREE.Material> & { blur: THREE.Material; shadow: THREE.Material } = null!;
+let mats: Record<Role, THREE.Material> & { blur: THREE.Material; shadow: THREE.Material; cargo: THREE.Material } = null!;
 function materials() {
   if (mats) return mats;
-  const titles = canvasTex(1024, 140, (c) => {
-    c.clearRect(0, 0, 1024, 140);
-    c.font = `900 118px ${FONT_DISPLAY}`;
-    c.textAlign = 'center';
-    c.textBaseline = 'middle';
-    c.lineWidth = 10;
-    c.strokeStyle = '#eceaf6';
-    c.strokeText('DEGEN AIR', 512, 76);
-    c.fillStyle = '#2c1f68';
-    c.fillText('DEGEN AIR', 512, 76);
-  });
+  const titlesOf = (text: string, size: number) =>
+    canvasTex(1024, 140, (c) => {
+      c.clearRect(0, 0, 1024, 140);
+      c.font = `900 ${size}px ${FONT_DISPLAY}`;
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      c.lineWidth = 10;
+      c.strokeStyle = '#eceaf6';
+      c.strokeText(text, 512, 76);
+      c.fillStyle = '#2c1f68';
+      c.fillText(text, 512, 76);
+    });
+  const titles = titlesOf('DEGEN AIR', 118);
   const lights = sharedFor(neon('#ffffff', 0.35, 2.4))!.mat;
   mats = {
     body: paintMat(),
@@ -682,6 +689,8 @@ function materials() {
     strobe: sharedFor(neon('#ff2b2b', 0.6, 2.4))!.mat,
     gear: paintMat(),
     decal: toon('#ffffff', { map: titles, alphaTest: 0.5 }),
+    // (the freighters' titles: DEGEN CARGO, a made-up airline's cargo arm)
+    cargo: toon('#ffffff', { map: titlesOf('DEGEN CARGO', 104), alphaTest: 0.5 }),
     blur: new THREE.MeshBasicMaterial({ color: '#c9c4e6', transparent: true, opacity: 0.32, depthWrite: false, side: THREE.DoubleSide }),
     shadow: new THREE.MeshBasicMaterial({ color: '#000000', map: glowTex, transparent: true, opacity: 0.4, depthWrite: false }),
   };
@@ -730,7 +739,7 @@ export function createFleet(kind: ModelKind, liveries: string[]) {
     return im;
   };
   const parts = model.parts.map((p) => {
-    const im = inst(p.geo, m[p.role], p.role === 'body' || p.role === 'accent' || p.role === 'gear');
+    const im = inst(p.geo, p.role === 'decal' && kind === 'freighter' ? m.cargo : m[p.role], p.role === 'body' || p.role === 'accent' || p.role === 'gear');
     if (p.role === 'neon' || p.role === 'strobe' || p.role === 'decal') fx(im);
     if (p.role === 'accent') liveries.forEach((c, i) => im.setColorAt(i, new THREE.Color(c)));
     return { role: p.role, im };

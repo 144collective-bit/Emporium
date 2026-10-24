@@ -170,7 +170,8 @@ is how it stands today; the numbers in Phases 1 and 2 are history).
        ring avenue (south) got slip lanes on their outer corners
        (`OUTER_SLIPS`); traffic drives it all.
      - **The flights** (`FLIGHTS`): five airliners from five of the stands
-       (`FLYING_STANDS`; the other three and one at the maintenance hangar
+       (four since step 3, below, the freighter taking one's slot;
+       `FLYING_STANDS`; the other three and one at the maintenance hangar
        stand parked, `PARKED_JETS`) push back, taxi to A, take off east,
        turn north past the runway's east end, cross the city high, come
        round the west and land over the threshold, off at C and back along
@@ -240,8 +241,39 @@ is how it stands today; the numbers in Phases 1 and 2 are history).
        road, the cars' models, the metro's branch and station, the taxis'
        longest drives (to the airport's metro station from the stadium,
        about 72 s), the layout snapshot.
-   - **Step 3: the cargo area.** Cargo sheds, a cargo apron with its own
-     stands and freighters, and their trucks on the landside.
+   - **Step 3 (built): the cargo area.** At the airside's east end, past
+     the passenger apron (the only airside land the taxiways reach); in
+     `airfield.ts` unless said:
+     - **The cargo shed** (`CARGO_SHED`) and its office (`CARGO_OFFICE`)
+       stand in the fence's line, as the hall does: six docks on the
+       landside (`DOCKS`: shutters over raised sills, seals, bumpers, lamps,
+       their numbers, a canopy along them), three big doors on the airside,
+       SECTOR 7 CARGO on both faces (made up), the office glazed.
+     - **The cargo apron** (`CARGO_APRON`) with two stands (`CARGO_STANDS`,
+       C1 and C2), a high loader at the parked freighter's door and tugs
+       with dollies of containers (`CARGO_KIT`), people at work
+       (`CARGO_PEOPLE`).
+     - **The freighters**: the airliner in cargo trim (`aircraft.ts` model
+       `freighter`: no cabin windows, a main deck door forward, DEGEN CARGO
+       titles, orange), a fleet of their own. One flies on the timetable
+       (`freighter()`: pushed back 24 onto a lane across the apron, round
+       onto the taxilane, the airliners' way round (`jetFlight()`), back
+       along the taxiway; its taxi brisker, `FREIGHT_TAXI` 9, to fit the
+       period), taking stand 5's airliner's slot (now four airliners fly and
+       stand 5 has one parked); the other parked (`PARKED_FREIGHTERS`). The
+       taxiway and taxilane reach on to its stand.
+     - **Landside**: Cargo Road (`CARGO_ROAD`, `airport-cargo`) east off
+       Airport Drive, a one-way loop round the truck yard
+       (`airport-cargo-loop`, in at the road's end, west past the docks);
+       the yard (`YARD`) and its trucks (`RIGS`: tractors and trailers backed
+       up to the docks, rows of trailers inside the loop; solid), lamps.
+     - **Moved to make room**: the multi-storey a block north (`MSCP`, its
+       drive off Cargo Road), the fire station to the cargo apron's corner,
+       the fuel farm landside in its north-east corner.
+     - Tests: the shed in the fence's line between the yard and the apron,
+       the stands, the freighter's flight and the parked one, the trucks in
+       the yard off the lanes, Cargo Road in the plan (traffic drives it),
+       the timetable's separations, the layout snapshot.
 
 Each phase (and each of Phase 3's steps) gets the owner's sign-off before the
 next one starts.

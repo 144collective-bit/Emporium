@@ -10,7 +10,7 @@ import { JUNCTIONS, ROUTES, SPOTS, lightState, pointOn, type Phase, type Pt, typ
 import { PLAN, distToStreet, lanePaths, onSlab, streetLength } from '../src/scripts/city3d/streetplan';
 import { DIAGONALS } from '../src/scripts/city3d/downtown';
 import { HIGHWAY_BOX, HIGHWAY_HALF, fromHighway, insideHighway } from '../src/scripts/city3d/highway';
-import { GA_ROAD, LOOP as AIR_LOOP, ROAD as AIR_ROAD } from '../src/scripts/city3d/airfield';
+import { CARGO_ROAD, GA_ROAD, LOOP as AIR_LOOP, ROAD as AIR_ROAD } from '../src/scripts/city3d/airfield';
 
 const roads = PLAN.streets.filter((s) => s.lanes > 0);
 /** Every point of a route, about every half tile */
@@ -47,6 +47,8 @@ const stadiumWay = (q: Pt) =>
 /** The airport's drive off the south bank avenue east of the highway (and the slip lanes on that junction's outer corners), and its streets round the car park (airfield.ts) */
 const airportWay = (q: Pt) =>
   (q[0] > HIGHWAY_BOX[2] && q[0] < AIR_ROAD.x + 3 && q[1] > AIR_ROAD.z0 - 14 && q[1] < AIR_LOOP.out) ||
+  // (Cargo Road off it and the truck yard's loop: step 3)
+  (q[0] > AIR_ROAD.x - 3 && q[0] < CARGO_ROAD.x1 + 3 && q[1] > CARGO_ROAD.z - 3 && q[1] < CARGO_ROAD.loopZ + 3) ||
   // (its forecourt's loop, the departures deck's hairpin furthest west)
   (q[0] > AIR_LOOP.west - 3 && q[0] < AIR_LOOP.x1 + 3 && q[1] > AIR_LOOP.out - 3 && q[1] < AIR_LOOP.kerb + 3) ||
   // ...and general aviation's road off the east ring avenue south of the highway, round its car park
@@ -111,6 +113,8 @@ test('between them the routes drive every street that goes anywhere, each way (a
         if (s.id === 'stadium-road' && lane.dir === -1 && at[0] < LOOP.x1) continue;
         // (and on Kart Road west along the kart park's loop: its cars leave the loop at its west end)
         if (s.id === 'kart-road' && lane.dir === -1 && at[0] > K_LOOP.x0) continue;
+        // (and on Cargo Road west along the truck yard's loop: its cars leave the loop at its west end)
+        if (s.id === 'airport-cargo' && lane.dir === -1 && at[0] > CARGO_ROAD.loopX) continue;
         checked++;
         // (an avenue's either lane that way: the lane a car keeps to depends on its next turn)
         assert.ok(driven(at, u) || (s.lanes === 2 && drivenSide(at, u)), `nobody drives ${s.id} (${lane.dir === 1 ? 'with' : 'against'} its points) at ${at.map((v) => v.toFixed(1))}`);

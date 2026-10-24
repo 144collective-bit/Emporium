@@ -16,7 +16,7 @@ import { PLAN, type Pt } from './streetplan';
 import { PLACES, placeName, type Place } from './places';
 import { PATHS, WESTLAKE_BLOCKS, lakeLine } from './westlake';
 import { TRACKS } from './metro';
-import { AIRPORT_AREAS, APRON, CONCOURSES, CONNECTORS, DEPARTURES, GA_APRON, HALL, HOTEL, MSCP, RUNWAY, TAXILANE, TAXIWAY } from './airfield';
+import { AIRPORT_AREAS, APRON, CARGO_APRON, CARGO_OFFICE, CARGO_SHED, CONCOURSES, CONNECTORS, DEPARTURES, GA_APRON, HALL, HOTEL, MSCP, RUNWAY, TAXILANE, TAXIWAY, YARD } from './airfield';
 import { ROUTE } from './riverroute';
 import { CIRCUIT } from './kartcircuit';
 import { KART_PARK } from './kartpark';
@@ -150,11 +150,11 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
     };
     // The airport (docs/airport-plan.md Phase 3): its grounds, the aprons and taxiways, the terminal, the runway
     for (const r of AIRPORT_AREAS) rect(r, C.airport);
-    for (const r of [APRON, GA_APRON]) rect(r, C.slab);
+    for (const r of [APRON, GA_APRON, CARGO_APRON, YARD]) rect(r, C.slab);
     rect([TAXIWAY.x0, TAXIWAY.z - TAXIWAY.half, TAXIWAY.x1, TAXIWAY.z + TAXIWAY.half], C.road);
     rect([TAXILANE.x0, TAXILANE.z - TAXILANE.half, TAXILANE.x1, TAXILANE.z + TAXILANE.half], C.road);
     for (const x of CONNECTORS) rect([x - TAXIWAY.half, TAXILANE.z, x + TAXIWAY.half, RUNWAY.z], C.road);
-    for (const f of [HALL, ...CONCOURSES, MSCP.rect, HOTEL.rect]) rect(f, C.tower);
+    for (const f of [HALL, ...CONCOURSES, MSCP.rect, HOTEL.rect, CARGO_SHED, CARGO_OFFICE]) rect(f, C.tower);
     rect([DEPARTURES.x0, DEPARTURES.z0, DEPARTURES.x1, DEPARTURES.z1], C.slab);
     rect([RUNWAY.x0, RUNWAY.z - RUNWAY.half, RUNWAY.x1, RUNWAY.z + RUNWAY.half], C.runway);
     rect([KART_PARK.x0, KART_PARK.z0, KART_PARK.x1, KART_PARK.z1], C.airport);

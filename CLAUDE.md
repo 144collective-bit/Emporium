@@ -1930,9 +1930,8 @@ it and has been retired completely. Build only on what's here.
   one phase at a time with the owner's sign-off. Phase 1 (the airport and
   its flying traffic), Phase 2 (fly it yourself, from the hangar) and
   Phase 3's steps 1 (the owner's call: expanded, more realistic, moved out
-  to the world's south edge) and 2 (landside and the metro to the
-  terminal) are built; step 3 (the cargo area) waits for the owner's
-  sign-off.
+  to the world's south edge), 2 (landside and the metro to the terminal)
+  and 3 (the cargo area) are built.
 - **Where:** on the world's south edge, outside the ring highway (it no
   longer goes round the airport): the airside south of the highway's south
   side, the landside east of the highway south of the river. Its old site
@@ -1970,9 +1969,28 @@ it and has been retired completely. Build only on what's here.
   `MSCP_CARS`) and the hotel by the drive (`HOTEL`, RUNWAY HOTEL, made up).
   What's solid under the deck (`DECK_SOLIDS`) is lower than anything up
   on it; anything new on the deck goes through these.
-- **The flying traffic:** five airliners (from `FLYING_STANDS`; the other
+- **Cargo** (Phase 3 step 3), at the airside's east end: the cargo shed
+  and its office standing in the fence's line as the hall does
+  (`CARGO_SHED`, `CARGO_OFFICE`: docks landside, `DOCKS`; big doors
+  airside, SECTOR 7 CARGO), the cargo apron (`CARGO_APRON`) with two
+  stands (`CARGO_STANDS`: the freighter on the timetable flies from the
+  first, `freighter()` (pushed back onto a lane across the apron, its taxi
+  brisker, `FREIGHT_TAXI`, the airliners' way round, `jetFlight()`), the
+  second's parked, `PARKED_FREIGHTERS`), the loader and dollies
+  (`CARGO_KIT`), people at work (`CARGO_PEOPLE`); landside Cargo Road off
+  Airport Drive and the one-way loop round the truck yard (`CARGO_ROAD`,
+  streets `airport-cargo` and `airport-cargo-loop`, traffic drives them),
+  the yard (`YARD`) and its trucks (`RIGS`, `RIG`, `rigRect()`: backed up to
+  the docks, in rows inside the loop, solid). Making room moved the
+  multi-storey a block north (its drive off Cargo Road), the fire station
+  to the cargo apron's corner and the fuel farm landside (its north-east
+  corner); the taxiway and taxilane reach on to the freighter's stand. The
+  freighters are the airliner in cargo trim (`aircraft.ts` model
+  `freighter`: no cabin windows, a main deck door, DEGEN CARGO titles (made
+  up), DEGEN CARGO's orange), a fleet of their own (`Flight.freight`).
+- **The flying traffic:** four airliners (from `FLYING_STANDS`; the other
   stands and the maintenance hangar's apron have airliners parked,
-  `PARKED_JETS`), a prop plane, a helicopter and the executive helicopter
+  `PARKED_JETS`), the freighter (step 3 gave it stand 5's slot), a prop plane, a helicopter and the executive helicopter
   (Uptown's Phase 6: `exec()`, `heli-x`, from `EXEC_PAD` to Uptown's
   rooftop helipad `ROOF_PAD` and back, gold) on one timetable (`PERIOD`,
   four minutes; `timetable()`, `FLIGHTS`). A flight is a loop of acts (fly
@@ -2000,8 +2018,9 @@ it and has been retired completely. Build only on what's here.
   chain-link in the FX layer, pads, apron vehicles, masts), the concourses
   and airbridges, the maintenance hangar, the fire station and its crash
   tender, the fuel farm, the forecourt, the departures deck and the
-  arrivals level, the multi-storey, the hotel and the GA road; one atlas of
-  fixed copy), and `aircraft.ts` (the models: a cartoon airliner in DEGEN AIR
+  arrivals level, the multi-storey, the hotel, the GA road, the cargo shed
+  and its office, Cargo Road, the truck yard and its trucks a site a tile;
+  one atlas of fixed copy), and `aircraft.ts` (the models: a cartoon airliner in DEGEN AIR
   colours, a made-up airline, never a real one, maker or badge; a
   high-wing prop plane; a helicopter). Each model is a few parts by role
   (body, accent livery colour, neon nav lights, blinking strobe, gear that

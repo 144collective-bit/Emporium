@@ -50,14 +50,15 @@ export const AIRPORT_AREAS: Rect[] = [AIRSIDE, LANDSIDE, FORECOURT, DEPARTURES_L
 /** The runway, 09/27: east-west along the south edge, take-offs and landings eastwards */
 export const RUNWAY = { x0: 100, x1: 400, z: 442, half: 5 };
 /** The parallel taxiway, and the apron's taxilane (the edge of the stands, where the airliners push back to) */
-export const TAXIWAY = { x0: 108, x1: 396, z: 422, half: 2.8 };
-export const TAXILANE = { x0: 108, x1: 392, z: 405, half: 2.5 };
+export const TAXIWAY = { x0: 108, x1: 420, z: 422, half: 2.8 };
+export const TAXILANE = { x0: 108, x1: 430, z: 405, half: 2.5 };
 /**
  * Connectors down to the runway (A to D, west to east): A from the taxilane at the west end, where departures
  * hold short (`HOLD`), C the rapid exit the landings take, D the east end's
  */
 export const CONNECTORS = [108, 240, 330, 392];
 export const CONNECTOR_NAMES = ['A', 'B', 'C', 'D'];
+/** (both reach on past the passenger apron to the cargo apron's stands: step 3) */
 /** Where departures wait short of the runway on A (clear of a landing over the threshold) */
 export const HOLD = { x: CONNECTORS[0], z: 420 };
 /** The apron in front of the terminal, and the general aviation apron at the west end (both run down to the taxiway) */
@@ -81,8 +82,8 @@ export const TERMINAL: Footprint = [CONCOURSES[0][0], HALL[1], CONCOURSES[1][2],
 export const STANDS: Pt[] = [0, 1, 2, 3, 4, 5, 6, 7].map((k): Pt => [196 + k * 26, 383.5]);
 /** Airbridges: from the terminal's airside to each jet's front left door */
 export const AIRBRIDGES: { x: number; z0: number; z1: number }[] = STANDS.map(([x, z]) => ({ x: x - 3.2, z0: HALL[3], z1: z - 7.3 }));
-/** Which stands the flying airliners use (the others hold parked ones, `PARKED_JETS`) */
-export const FLYING_STANDS = [0, 2, 4, 5, 7];
+/** Which stands the flying airliners use (the others hold parked ones, `PARKED_JETS`; step 3 gave stand 5's slot on the timetable to the freighter) */
+export const FLYING_STANDS = [0, 2, 5, 7];
 /** The control tower, behind the west concourse: kept under the Emporium's height */
 export const TOWER = { x: 222, z: 342, r: 1.5, cab: 9, top: 11.6 };
 
@@ -111,9 +112,29 @@ export const EXEC_PAD = { x: 104, z: 390, r: 3.6 };
 
 /* Round the field */
 
-/** The fire station by the runway's east end, its doors to the runway; the fuel farm behind it, by the fence */
-export const FIRE: Footprint = [414, 372, 440, 390, 3.8];
-export const FUEL_TANKS: { x: number; z: number; r: number; h: number }[] = [410, 425, 440].map((x) => ({ x, z: 343, r: 5, h: 3.6 }));
+/** The fire station by the runway's east end, in the cargo apron's corner, its doors to the runway; the fuel farm landside, in its north-east corner (step 3 moved both for the cargo area) */
+export const FIRE: Footprint = [428, 372, 450, 388, 3.8];
+export const FUEL_TANKS: { x: number; z: number; r: number; h: number }[] = [414, 428, 442].map((x) => ({ x, z: 168, r: 5, h: 3.6 }));
+/* The cargo area (step 3): at the airside's east end, past the passenger apron */
+
+/**
+ * The cargo shed on the fence's line (it stands in it as the hall does): its docks on the landside, north, onto the
+ * truck yard (`DOCKS`, its doors' x); its doors on the airside, south, onto the cargo apron; the office block at its
+ * east end, a storey taller, SECTOR 7 CARGO on its face
+ */
+export const CARGO_SHED: Footprint = [402, 314, 440, 340, 6.4];
+export const CARGO_OFFICE: Footprint = [440, 312, 450, 340, 8.6];
+export const DOCKS: number[] = [407, 413, 419, 425, 431, 437];
+/** The cargo apron, from the shed's airside doors down to the taxiway, the passenger apron's east end to the fence */
+export const CARGO_APRON: Rect = [396, CARGO_SHED[3], AIRSIDE[2] - 1, TAXIWAY.z - TAXIWAY.half];
+/**
+ * Its two stands, nose in to the shed (facing north, as the passenger stands): the first the freighter on the
+ * timetable flies from (pushed back onto the taxilane as the airliners are), the second's freighter parked
+ */
+export const CARGO_STANDS: Pt[] = [
+  [414, 356],
+  [439, 356],
+];
 /** The localizer's aerial array past the runway's far end (the landings line up on it), and the PAPI beside the touchdown zone */
 export const LOCALIZER = { x: 422, z: RUNWAY.z, w: 12, h: 1.3 };
 export const PAPI = { x: RUNWAY.x0 + 26, z: RUNWAY.z - RUNWAY.half - 4 };
@@ -121,14 +142,16 @@ export const PAPI = { x: RUNWAY.x0 + 26, z: RUNWAY.z - RUNWAY.half - 4 };
 export const MASTS: Pt[] = [209, 287, 365].map((x): Pt => [x, 376]);
 /** A windsock on the grass between the taxiway and the runway */
 export const WINDSOCK: Pt = [182, 432.5];
-/** The perimeter fence (round the airside, broken for the hall, the crew gate by it and the fire station's road) */
+/** The perimeter fence (round the airside, broken for the hall, the crew gate by it and the cargo shed) */
 export const FENCE: { a: Pt; b: Pt }[] = [
   { a: [AIRSIDE[0], AIRSIDE[1]], b: [255, AIRSIDE[1]] },
   // (the crew gate: from the kerb past the hall's west end onto the airside)
   { a: [259, AIRSIDE[1]], b: [HALL[0], AIRSIDE[1]] },
   { a: [HALL[0], AIRSIDE[1]], b: [HALL[0], HALL[1]] },
   { a: [HALL[2], HALL[1]], b: [HALL[2], AIRSIDE[1]] },
-  { a: [HALL[2], AIRSIDE[1]], b: [AIRSIDE[2], AIRSIDE[1]] },
+  // (the cargo shed and its office stand in the line too: step 3)
+  { a: [HALL[2], AIRSIDE[1]], b: [CARGO_SHED[0], AIRSIDE[1]] },
+  { a: [CARGO_OFFICE[2], AIRSIDE[1]], b: [AIRSIDE[2], AIRSIDE[1]] },
   { a: [AIRSIDE[2], AIRSIDE[1]], b: [AIRSIDE[2], AIRSIDE[3]] },
   { a: [AIRSIDE[2], AIRSIDE[3]], b: [AIRSIDE[0], AIRSIDE[3]] },
   // (the west side, broken for the GA gate)
@@ -224,6 +247,12 @@ export const DECK_SOLIDS: Footprint[] = (() => {
 /** The deck's slab for the walk camera: it can't pass up through it from under the deck (a box with a bottom) */
 export const DECK_CAMERA: number[][] = [[DEPARTURES.x0, DEPARTURES.z0, DEPARTURES.x1, DEPARTURES.z1, DEPARTURES.y, DEPARTURES.y - DEPARTURES.slab]];
 
+/**
+ * Cargo Road (step 3): east off Airport Drive north of the multi-storey to the cargo yard, and the one-way loop round
+ * the yard (as the GA car park's: in at the road's end, south, west past the shed's docks along `loopZ`, north up
+ * `loopX` and back onto the road)
+ */
+export const CARGO_ROAD = { z: 244, x1: 448, loopX: 404, loopZ: 300, half: 1.7 };
 export const AIRPORT_STREETS: { id: string; pts: Pt[]; oneway?: 1 | -1 }[] = [
   {
     id: 'airport-drive',
@@ -246,12 +275,32 @@ export const AIRPORT_STREETS: { id: string; pts: Pt[]; oneway?: 1 | -1 }[] = [
     ],
     oneway: 1,
   },
+  {
+    id: 'airport-cargo',
+    pts: [
+      [ROAD.x, CARGO_ROAD.z],
+      [CARGO_ROAD.x1, CARGO_ROAD.z],
+    ],
+  },
+  {
+    id: 'airport-cargo-loop',
+    pts: [
+      [CARGO_ROAD.loopX, CARGO_ROAD.z],
+      [CARGO_ROAD.loopX, CARGO_ROAD.loopZ],
+      [CARGO_ROAD.x1, CARGO_ROAD.loopZ],
+      [CARGO_ROAD.x1, CARGO_ROAD.z],
+    ],
+    oneway: -1,
+  },
 ];
 /** Where they meet the south bank avenue and each other (no lights) */
 export const AIRPORT_CROSSINGS: { id: string; at: Pt; streets: string[] }[] = [
   { id: 'airport-in', at: [ROAD.x, ROAD.z0], streets: ['ew4', 'airport-drive'] },
   { id: 'airport-forecourt-in', at: [ROAD.x, LOOP.z0], streets: ['airport-drive', 'airport-forecourt'] },
   { id: 'airport-forecourt-out', at: [ROAD.x, LOOP.out], streets: ['airport-drive', 'airport-forecourt'] },
+  { id: 'airport-cargo-in', at: [ROAD.x, CARGO_ROAD.z], streets: ['airport-drive', 'airport-cargo'] },
+  { id: 'airport-cargo-w', at: [CARGO_ROAD.loopX, CARGO_ROAD.z], streets: ['airport-cargo', 'airport-cargo-loop'] },
+  { id: 'airport-cargo-e', at: [CARGO_ROAD.x1, CARGO_ROAD.z], streets: ['airport-cargo', 'airport-cargo-loop'] },
 ];
 
 /** The arrivals level under the deck: the taxi rank's Cruisers in taxi yellow waiting nose to tail, and the airport bus in its bay */
@@ -259,10 +308,11 @@ export const RANK_Z = (RAMPS[0][1] + RAMPS[1][0]) / 2 + 2.9;
 export const RANK: [string, number, number, number, string][] = [276, 280.5, 285, 289.5, 294].map((x): [string, number, number, number, string] => ['sedan', x, RANK_Z, 0, '#ffd23f']);
 export const BUS_BAY = { x: 312, z: RANK_Z };
 /**
- * The multi-storey car park east of the loop (`MSCP`: its decks `levels` apart, the roof's parapet `top`), its
- * entrance off the loop's east side; the hotel by the drive (`HOTEL`, its front on the drive's east sidewalk)
+ * The multi-storey car park north of the loop (`MSCP`: its decks `levels` apart, the roof's parapet `top`; step 3
+ * moved it a block north for the cargo yard), its entrance on the west off a drive from Cargo Road; the hotel by the
+ * drive (`HOTEL`, its front on the drive's east sidewalk)
  */
-export const MSCP = { rect: [402, 296, 446, 328] as Rect, levels: 2.6, decks: 4, top: 10.9 };
+export const MSCP = { rect: [344, 252, 388, 284] as Rect, levels: 2.6, decks: 4, top: 10.9 };
 export const HOTEL = { rect: [308, 198, 340, 226] as Rect, top: 10.6, floors: 9 };
 /** Cars on the multi-storey's decks (and its roof), along its open north and south sides: about two in three bays taken */
 export const MSCP_CARS: { y: number; cars: [string, number, number, number, string][] }[] = Array.from({ length: MSCP.decks }, (_, k) => {
@@ -287,6 +337,59 @@ export const DECK_LAMPS: [number, number, number][] = [
   ...[276, 300, 324].map((x): [number, number, number] => [x, DEPARTURES.z0 + 0.4, -Math.PI / 2]),
   [DEPARTURES.x0 + 0.4, (LOOP.up + LOOP.kerb) / 2, 0],
 ];
+/** The truck yard: paved from the loop's west side to the fence, from Cargo Road down to the shed's docks */
+export const YARD: Rect = [CARGO_ROAD.loopX - CARGO_ROAD.half - 1.2, CARGO_ROAD.z + CARGO_ROAD.half, AIRSIDE[2], CARGO_SHED[1]];
+/**
+ * The cargo's trucks: a trailer with its back at (x, z), facing along z (`dir`: -1 north, +1 south), `cab` with its
+ * tractor unit in front; backed up to the shed's docks, and parked in rows inside the loop, about half the bays taken
+ * (the same ones every visit). `RIG` their sizes (a trailer about 13 m long, its tractor 6)
+ */
+export interface Rig {
+  x: number;
+  z: number;
+  dir: 1 | -1;
+  cab: boolean;
+  color: string;
+}
+export const RIG = { w: 1.4, trailer: 7.2, gap: 0.3, tractor: 3.2, h: 2.3 };
+export const RIGS: Rig[] = (() => {
+  const colours = ['#f3f2f7', '#2aabee', '#e23b3b', '#c9c4e6', '#ffd23f', '#1fbf6b', '#ff8a3d'];
+  const out: Rig[] = [];
+  let k = 0;
+  for (const i of [0, 1, 3, 4]) out.push({ x: DOCKS[i], z: CARGO_SHED[1] - 0.1, dir: -1, cab: i !== 3, color: colours[k++ % colours.length] });
+  const { loopX, x1, z, loopZ, half } = CARGO_ROAD;
+  for (const [back, dir] of [
+    [z + half + 0.7, 1],
+    [loopZ - half - 0.7, -1],
+  ] as const)
+    for (let x = loopX + 4; x <= x1 - 4; x += 2.4) {
+      if (Math.abs(Math.sin(x * 7.13 + dir * 3.7) * 9137.31) % 1 < 0.45) continue;
+      out.push({ x, z: back, dir, cab: k % 3 === 0, color: colours[k++ % colours.length] });
+    }
+  return out;
+})();
+/** A rig's footprint (x0, z0, x1, z1): its trailer, and its tractor when it has one */
+export function rigRect(r: Rig): Rect {
+  const len = RIG.trailer + (r.cab ? RIG.gap + RIG.tractor : 0);
+  const [a, b] = [r.z, r.z + r.dir * len];
+  return [r.x - RIG.w / 2, Math.min(a, b), r.x + RIG.w / 2, Math.max(a, b)];
+}
+/** On the cargo apron: a high loader at the parked freighter's main deck door (forward, on its left), tugs and their dollies of containers along the shed */
+export const CARGO_KIT: { kind: 'loader' | 'dollies'; at: Pt; yaw: number }[] = [
+  { kind: 'loader', at: [CARGO_STANDS[1][0] - 4.4, CARGO_STANDS[1][1] - 5.4], yaw: 0 },
+  { kind: 'dollies', at: [426, 343.6], yaw: Math.PI },
+  { kind: 'dollies', at: [CARGO_STANDS[0][0] - 9, 343.6], yaw: 0 },
+];
+const CARGO_KIT_HALF = { loader: [1.8, 1.0], dollies: [3.6, 0.7] } as const;
+/** People at work: at the docks, by the loader and the dollies (x, z, facing) */
+export const CARGO_PEOPLE: [number, number, number][] = [
+  [DOCKS[2] + 0.6, CARGO_SHED[1] - 1.2, Math.PI],
+  [DOCKS[5] - 0.8, CARGO_SHED[1] - 1.6, 0.4],
+  [CARGO_STANDS[1][0] - 6.8, CARGO_STANDS[1][1] - 3.6, -Math.PI / 2],
+  [CARGO_STANDS[1][0] - 7.4, CARGO_STANDS[1][1] - 7.2, 2.4],
+  [423.5, 346, Math.PI],
+];
+
 /**
  * General aviation's way in: a short road east off the east ring avenue south of the highway to a little car park
  * by the fence's west gate, the walk in to Hangar 1 (a one-way loop round the car park, as the kart park's is:
@@ -352,6 +455,9 @@ export const AIRPORT_LAMPS: [number, number, number][] = (() => {
   // (round the loop's street-level stretches: along its north side and its east sides)
   for (let x = ROAD.x + 12; x < LOOP.east - 4; x += 14) out.push([x, LOOP.out - o, -Math.PI / 2]);
   for (const z of [LOOP.out + 4, LOOP.z0 + 12]) out.push([LOOP.x1 + o, z, 0]);
+  // ...along Cargo Road and round the truck yard's loop
+  for (let x = ROAD.x + 14; x < CARGO_ROAD.x1 - 4; x += 16) out.push([x, CARGO_ROAD.z - o, -Math.PI / 2]);
+  for (const z of [CARGO_ROAD.z + 16, CARGO_ROAD.z + 40]) out.push([CARGO_ROAD.x1 + o, z, 0], [CARGO_ROAD.loopX - o, z, Math.PI]);
   // ...and along the GA road, and by the gate
   out.push([GA_ROAD.x0 + 14, GA_ROAD.z - o, -Math.PI / 2], [GA_ROAD.x1 + o, GA_ROAD.loopZ - 2, 0]);
   return out;
@@ -398,6 +504,15 @@ export const AIRPORT_SOLIDS: Footprint[] = [
   [BUS_BAY.x - 2.9, BUS_BAY.z - 0.8, BUS_BAY.x + 2.9, BUS_BAY.z + 0.8, 2.1],
   [...MSCP.rect, MSCP.top],
   [...HOTEL.rect, HOTEL.top],
+  // The cargo area: the shed and its office, the trucks, the loader and the dollies
+  CARGO_SHED,
+  CARGO_OFFICE,
+  ...RIGS.map((r): Footprint => [...rigRect(r), RIG.h]),
+  ...CARGO_KIT.map(({ kind, at: [x, z], yaw }): Footprint => {
+    const [l, w] = CARGO_KIT_HALF[kind];
+    const along = Math.abs(Math.cos(yaw)) > 0.5;
+    return along ? [x - l, z - w, x + l, z + w, kind === 'loader' ? 2.6 : 1.6] : [x - w, z - l, x + w, z + l, kind === 'loader' ? 2.6 : 1.6];
+  }),
   // The fence, a thin wall each run
   ...FENCE.map(({ a, b }): Footprint => [Math.min(a[0], b[0]) - 0.1, Math.min(a[1], b[1]) - 0.1, Math.max(a[0], b[0]) + 0.1, Math.max(a[1], b[1]) + 0.1, FENCE_H]),
 ];
@@ -566,6 +681,8 @@ export interface Flight {
   offset: number;
   /** Where it stands under reduced motion */
   parked: Pose;
+  /** A freighter (an airliner in cargo colours, from a cargo stand: step 3) */
+  freight?: boolean;
 }
 
 const yawOf = (d: Pt) => Math.atan2(-d[1], d[0]);
@@ -670,6 +787,28 @@ const EAST = 442;
 const NORTH = -40;
 const WEST = -385;
 
+/** An airliner's (and the freighter's) way round: from holding short on A, take off east, the climbing turn north, west high over the town, down the west side, the approach from the west, landing east */
+const jetFlight = (): Act =>
+  fly(
+    [
+      w(HOLD.x, HOLD.z, 0, 0),
+      w(CA, R, 0, 3),
+      w(CA + 16, R, 0, 9),
+      w(235, R, 0, 26),
+      w(330, R, 9, 30),
+      w(EAST, R, 16, 32),
+      w(EAST, NORTH, 50, 34),
+      w(WEST, NORTH, 54, 34),
+      w(WEST, R, 28, 30),
+      w(20, R, 9, 26),
+      // (over the fence and the threshold at a few tiles, down on the touchdown zone)
+      w(RUNWAY.x0 - 6, R, 4, 25),
+      w(RUNWAY.x0 + 22, R, 0, 24),
+      w(300, R, 0, 6),
+    ],
+    32
+  );
+
 /**
  * An airliner: pushed back off its stand onto the taxilane, taxi west to hold short on A, onto the runway and away
  * east, a climbing turn north up the east side, west high over the north of the town, down the west side, round onto
@@ -685,30 +824,38 @@ function jet(stand: Pt, takeoff: number, id: string): Flight {
     fly([w(sx + 12, TL, 0, 0), w(sx + 6, TL, 0, TAXI), w(CA, TL, 0, TAXI), w(HOLD.x, HOLD.z - 5, 0, 3), w(HOLD.x, HOLD.z, 0, 0)], 7),
     { kind: 'hold', dur: 6 },
     // Onto the runway, take off east, the climbing turn north, west over the town, down the west side and in to land
-    fly(
-      [
-        w(HOLD.x, HOLD.z, 0, 0),
-        w(CA, R, 0, 3),
-        w(CA + 16, R, 0, 9),
-        w(235, R, 0, 26),
-        w(330, R, 9, 30),
-        w(EAST, R, 16, 32),
-        w(EAST, NORTH, 50, 34),
-        w(WEST, NORTH, 54, 34),
-        w(WEST, R, 28, 30),
-        w(20, R, 9, 26),
-        // (over the fence and the threshold at a few tiles, down on the touchdown zone)
-        w(RUNWAY.x0 - 6, R, 4, 25),
-        w(RUNWAY.x0 + 22, R, 0, 24),
-        w(300, R, 0, 6),
-      ],
-      32
-    ),
+    jetFlight(),
     // Off at C, back along the taxiway and into the stand
     fly([w(300, R, 0, 6), w(CC, R, 0, TAXI), w(CC, TZ, 0, TAXI), w(sx, TZ, 0, TAXI), w(sx, sz + 7, 0, 2.5), w(sx, sz, 0, 0)], 7),
     { kind: 'hold', dur: 0 },
   ];
   return flight(id, 'jet', acts, { fill: acts.length - 1, cycle: PERIOD, at: 4, when: takeoff, parked: acts.length - 1 });
+}
+
+/**
+ * The freighter (step 3): an airliner's flight from a cargo stand, its stand further from the taxilane, so pushed back
+ * onto a lane across the cargo apron (`CARGO_LANE` back, tail swinging west, clear of the fire station), round onto
+ * the taxilane and west to A; its taxiing brisker (`FREIGHT_TAXI`) to keep to the same period as the airliners
+ */
+const CARGO_LANE = 24;
+const FREIGHT_TAXI = 9;
+function freighter(stand: Pt, takeoff: number, id: string): Flight {
+  const [sx, sz] = stand;
+  const cz = sz + CARGO_LANE;
+  const T = FREIGHT_TAXI;
+  const acts: Act[] = [
+    fly([w(sx, sz, 0, 0), w(sx, cz, 0, PUSH), w(sx - 12, cz, 0, 0)], 8, true),
+    { kind: 'hold', dur: 4 },
+    fly([w(sx - 12, cz, 0, 0), w(sx - 4, cz, 0, 3), w(sx, cz, 0, 4), w(sx, TL, 0, T), w(sx - 8, TL, 0, T), w(CA, TL, 0, T), w(HOLD.x, HOLD.z - 5, 0, 3), w(HOLD.x, HOLD.z, 0, 0)], 7),
+    { kind: 'hold', dur: 6 },
+    // The airliners' way round, the same act
+    jetFlight(),
+    fly([w(300, R, 0, 6), w(CC, R, 0, T), w(CC, TZ, 0, T), w(sx, TZ, 0, T), w(sx, sz + 7, 0, 2.5), w(sx, sz, 0, 0)], 7),
+    { kind: 'hold', dur: 0 },
+  ];
+  const f = flight(id, 'jet', acts, { fill: acts.length - 1, cycle: PERIOD, at: 4, when: takeoff, parked: acts.length - 1 });
+  f.freight = true;
+  return f;
 }
 
 /** The prop plane: from its stand by Hangar 1 out to the runway, a lower loop up the east side and back along the river, home */
@@ -826,22 +973,26 @@ function exec(liftoff: number): Flight {
   return flight('heli-x', 'heli', acts, { fill: 11, cycle: PERIOD, at: 0, when: liftoff, parked: 11 });
 }
 
-/** When each one takes off, seconds into the period: the airliners in `FLYING_STANDS`' order */
-export type Timetable = { jets: number[]; prop: number; heli: number; exec?: number };
+/** When each one takes off, seconds into the period: the airliners in `FLYING_STANDS`' order, the freighter from the first cargo stand */
+export type Timetable = { jets: number[]; prop: number; heli: number; exec?: number; cargo?: number };
 export const timetable = (tt: Timetable): Flight[] => [
   ...FLYING_STANDS.map((k, i) => jet(STANDS[k], tt.jets[i], `jet-${'abcde'[i]}`)),
   prop(tt.prop),
   heli(tt.heli),
   ...(tt.exec === undefined ? [] : [exec(tt.exec)]),
+  ...(tt.cargo === undefined ? [] : [freighter(CARGO_STANDS[0], tt.cargo, 'cargo-a')]),
 ];
 /** Every aircraft flying today (the timetable keeps them apart: tests/airfield.test.ts checks) */
-export const FLIGHTS: Flight[] = timetable({ jets: [0, 32, 81, 159, 195], prop: 126, heli: 91, exec: 68 });
+export const FLIGHTS: Flight[] = timetable({ jets: [0, 32, 159, 195], prop: 126, heli: 91, exec: 68, cargo: 98 });
 
 /** Airliners standing at the other stands and on the maintenance hangar's apron (drawn with the flying ones, never moving) */
 export const PARKED_JETS: Pose[] = [
   ...STANDS.filter((_, k) => !FLYING_STANDS.includes(k)).map(([x, z]): Pose => ({ x, y: 0, z, yaw: Math.PI / 2, pitch: 0, roll: 0, v: 0, ground: true, gear: true, power: 0 })),
   { x: (MRO[0] + MRO[2]) / 2, y: 0, z: MRO[3] + 14, yaw: Math.PI / 2, pitch: 0, roll: 0, v: 0, ground: true, gear: true, power: 0 },
 ];
+
+/** Freighters parked at the cargo stands the timetable leaves (the second) */
+export const PARKED_FREIGHTERS: Pose[] = CARGO_STANDS.slice(1).map(([x, z]): Pose => ({ x, y: 0, z, yaw: Math.PI / 2, pitch: 0, roll: 0, v: 0, ground: true, gear: true, power: 0 }));
 
 /** Where a flight is at time `t` (seconds), or parked under reduced motion */
 export function poseAt(f: Flight, t: number): Pose {
