@@ -14,6 +14,8 @@ export const SOLID = 0;
 export const FX = 1;
 /** Stand-ins that only exist in the ink pre-pass, so a floating sign hides the outlines behind it. */
 export const OCC = 2;
+/** Shapes only the City view's click and hover look for (never drawn): a place drawn as a site elsewhere (Sector 7 Tower) */
+export const PICK = 3;
 export function fx<T extends THREE.Object3D>(o: T): T {
   o.traverse((c) => {
     if (c.layers.mask !== 1 << OCC) c.layers.set(FX);

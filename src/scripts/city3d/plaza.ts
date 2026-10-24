@@ -3,9 +3,9 @@
  * tested in tests/plaza.test.ts): the plaza's block round the spire, and the
  * two slivers west of the axis's lanes as café terraces.
  *
- * - **The forecourt** (`FORECOURT`): the block west of the spire, where the
- *   Mall's axis (north-south) meets the line from the tower across the
- *   street's lobby to the spire's (east-west) at `CENTRE`.
+ * - **The forecourt**: the block west of the spire, where the Mall's axis
+ *   (north-south) meets the line from Uptown Circle down Circle Street to
+ *   the spire's lobby (east-west, uptown.ts) at `CENTRE`.
  * - **The cross** (the owner's pick): a tall gold cross on a stepped stone
  *   plinth (`CROSS`) in a round pool (`POOL`) at the centre, its arms across
  *   the axis so it faces the Mall and the river.
@@ -30,7 +30,7 @@ type Box = [number, number, number, number, number];
 const block = UPTOWN_BLOCKS.find((b) => b.id === PLAZA_BLOCK)!;
 const [X0, Z0, , Z1] = block.rect;
 
-/** Where the axis meets the line between the lobbies: the pool and the cross */
+/** Where the axis meets Circle Street's line from the circle to the spire's lobby: the pool and the cross */
 export const CENTRE: Pt = [AXIS_X, (Z0 + Z1) / 2];
 const [CX, CZ] = CENTRE;
 

@@ -28,7 +28,7 @@
  * town's promenade).
  */
 import { RIVER } from './layout';
-import { AXIS_X, BOULEVARD_X, NS_X, ROWS_Z, STREET_HALF, type Pt, type Rect } from './uptown';
+import { AXIS_X, BOULEVARD_X, EAST_X, ROWS_Z, STREET_HALF, crossingsOn, type Pt, type Rect } from './uptown';
 import { HIGHRISES, PODIUM } from './highrise';
 import { DECK_Y } from './waterfront';
 
@@ -43,7 +43,7 @@ const [X0, Z0, X1, Z1] = ESPLANADE;
 /** The overlooks out over the water: the axis's broad one, a smaller one in line with Uptown's east street (x, width, how far out) */
 export const OVERLOOKS = [
   { x: AXIS_X, w: 8, out: 2 },
-  { x: NS_X[NS_X.length - 1], w: 6, out: 1.6 },
+  { x: EAST_X, w: 6, out: 1.6 },
 ].map((o) => ({ ...o, rect: [o.x - o.w / 2, Z1 - 0.8, o.x + o.w / 2, Z1 + o.out] as Rect }));
 /** The marina's pontoon, along the water a little out from the esplanade at its west end, and the gangways out to it (their middles, x) */
 export const PONTOON: Rect = [X0 + 2, Z1 + 0.8, X0 + 37, Z1 + 1.9];
@@ -65,7 +65,7 @@ export const NORTH_BOAT_EAST = X1 + 8;
 export const clearOfMouths = (x: number, m: number) =>
   OVERLOOKS.every((o) => Math.abs(x - o.x) > o.w / 2 + m) && GANGWAYS.every((g) => Math.abs(x - g) > GANGWAY_HALF + m);
 /** ...and by the avenue, never where people come over from the junctions and the axis's zebra */
-const clearOfCrossings = (x: number, m: number) => [...NS_X, AXIS_X].every((c) => Math.abs(x - c) > STREET_HALF + m);
+const clearOfCrossings = (x: number, m: number) => [...crossingsOn(BANK), AXIS_X].every((c) => Math.abs(x - c) > STREET_HALF + m);
 
 /** Lamps at the water's edge, their arms reaching in over the walk (x, z, ry), and two at each overlook's outer corners */
 export const EDGE_LAMPS: [number, number, number][] = [];
@@ -85,10 +85,10 @@ for (let x = X0 + 5; x < X1 - 1; x += 6) if (clearOfMouths(x, 1.2)) BENCH_XS.pus
 /* ---------- The restaurant terraces ---------- */
 
 /** The river row's towers (their podiums' south faces look over the avenue to the water) */
-const RIVER_ROW = HIGHRISES.filter((t) => t.block.startsWith('uptown-s'));
+const RIVER_ROW = HIGHRISES.filter((t) => t.block.startsWith('uptown-s') && t.parts[0].skin === 'podium');
 export interface RoofTerrace {
   tower: string;
-  /** On the podium's roof, clear of the shafts */
+  /** On the podium's roof, in front of the shafts (the river row's stand at the back of their podiums: highrise.ts) */
   rect: Rect;
   /** Its tables (each a chair either side along x) */
   tables: Pt[];
@@ -97,21 +97,14 @@ export interface RoofTerrace {
 export const TERRACE_Y = PODIUM.h;
 export const ROOF_TERRACES: RoofTerrace[] = RIVER_ROW.flatMap((t) => {
   const pod = t.parts[0].rect;
-  const shafts = t.parts.filter((p) => p.y0 === PODIUM.h).map((p) => [p.rect[0] - 0.6, p.rect[2] + 0.6]).sort((a, b) => a[0] - b[0]);
-  // The stretches of the podium's roof along x that no shaft stands on, 4 or wider
-  const free: [number, number][] = [];
-  let at = pod[0] + 0.5;
-  for (const [a, b] of shafts) {
-    if (a - at >= 4) free.push([at, a]);
-    at = Math.max(at, b);
-  }
-  if (pod[2] - 0.5 - at >= 4) free.push([at, pod[2] - 0.5]);
-  return free.map(([a, b]): RoofTerrace => {
-    const rect: Rect = [a, pod[1] + 0.6, b, pod[3] - 0.5];
-    const tables: Pt[] = [];
-    for (const z of [rect[3] - 1.3, rect[3] - 3.5]) for (let x = a + 1.4; x <= b - 1.4; x += 2.6) tables.push([x, z]);
-    return { tower: t.id, rect, tables };
-  });
+  const back = Math.max(...t.parts.filter((p) => p.y0 === PODIUM.h).map((p) => p.rect[3]));
+  // From a step off the shafts to the podium's front, if it's deep enough for a row of tables
+  const rect: Rect = [pod[0] + 0.5, back + 0.7, pod[2] - 0.5, pod[3] - 0.5];
+  if (rect[3] - rect[1] < 2.2 || rect[2] - rect[0] < 4) return [];
+  const tables: Pt[] = [];
+  const z = (rect[1] + rect[3]) / 2;
+  for (let x = rect[0] + 1.1; x <= rect[2] - 1.1 + 1e-6; x += 2.4) tables.push([x, z]);
+  return [{ tower: t.id, rect, tables }];
 });
 
 /* ---------- People ---------- */

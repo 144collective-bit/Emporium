@@ -116,7 +116,8 @@ test('the restaurant terraces: on the river row\'s podium roofs, clear of every 
     const pod = tower.parts[0];
     assert.equal(pod.skin, 'podium');
     assert.ok(t.rect[0] >= pod.rect[0] && t.rect[2] <= pod.rect[2] && t.rect[1] >= pod.rect[1] && t.rect[3] <= pod.rect[3], 'on the podium');
-    for (const p of tower.parts.filter((q) => q.y0 === PODIUM.h)) assert.ok(t.rect[2] <= p.rect[0] || t.rect[0] >= p.rect[2], `${t.tower}'s terrace under a shaft`);
+    // (in front of its shafts: the river row's stand at the back of their podiums)
+    for (const p of tower.parts.filter((q) => q.y0 === PODIUM.h)) assert.ok(t.rect[1] >= p.rect[3] + 0.5 || t.rect[2] <= p.rect[0] || t.rect[0] >= p.rect[2], `${t.tower}'s terrace under a shaft`);
     assert.ok(t.tables.length >= 2);
     for (const [x, z] of t.tables) assert.ok(inRect(t.rect, x - CHAIR_OFF - 0.25, z, 0) && inRect(t.rect, x + CHAIR_OFF + 0.25, z, 0), 'a table off its terrace');
   }

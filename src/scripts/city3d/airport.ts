@@ -20,6 +20,7 @@ import {
   HANGAR,
   HANGAR_DOOR,
   HANGAR_OFFICE,
+  EXEC_PAD,
   HELIPAD,
   MASTS,
   PARKED,
@@ -95,6 +96,7 @@ export function buildAirport(scene: THREE.Scene, crowd: Idle[], tick: (f: Tick) 
   site('airport apron', SITE, (into) => {
     const sb = new Batch();
     helipad(sb);
+    helipad(sb, EXEC_PAD);
     apronKit(sb);
     sb.build(into);
   });
@@ -504,8 +506,8 @@ function inward(g: THREE.BufferGeometry) {
   return n;
 }
 
-function helipad(b: Batch) {
-  const { x, z, r } = HELIPAD;
+/** A pad on the apron: the helipad, and the executive helicopter's (finance plan Phase 6) */
+function helipad(b: Batch, { x, z, r } = HELIPAD) {
   b.add(new THREE.CylinderGeometry(r, r, 0.04, 32).translate(x, TOP + 0.01, z), toon('#3a3658'));
   b.add(new THREE.RingGeometry(r - 0.45, r - 0.25, 32).rotateX(-Math.PI / 2).translate(x, TOP + 0.035, z), WHITE);
   for (const s of [-1, 1]) mark(b, x + s * 0.9 - 0.18, z - 1.3, x + s * 0.9 + 0.18, z + 1.3, YELLOW, TOP + 0.036);
@@ -639,7 +641,8 @@ function roadside(group: THREE.Group) {
 const LIVERY: Record<AircraftKind, string[]> = {
   jet: ['#e219e5', '#00c2ff', '#8000ff'],
   prop: ['#ff3b8a'],
-  heli: ['#00b0ff'],
+  // (the helicopter round the Emporium, and the executive one to Uptown's helipad in gold)
+  heli: ['#00b0ff', '#c9a227'],
 };
 
 /** Every aircraft on its timetable (the clock is the same for everyone); parked under reduced motion */

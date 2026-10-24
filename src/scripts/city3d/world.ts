@@ -363,10 +363,26 @@ function highwayGaps(axis: 'ew' | 'ns', i: number): [number, number][] {
   const road = `${axis}${i}`;
   const gaps = PLAN.crossings
     .filter((c) => c.streets.includes(road) && (c.streets.includes('highway') || c.streets.some((id) => id.startsWith('trench-') || id.startsWith('uptown-'))))
-    .map((c): [number, number] => {
+    .flatMap((c): [number, number][] => {
       const v = axis === 'ew' ? c.at[0] : c.at[1];
-      const half = c.streets.includes('highway') ? HIGHWAY_HALF : PLAN.streets.find((s) => s.id === c.streets.find((id) => id !== road))!.half;
-      return [v - half - 0.2, v + half + 0.2];
+      if (c.streets.includes('highway')) return [[v - HIGHWAY_HALF - 0.2, v + HIGHWAY_HALF + 0.2]];
+      const across = (axis === 'ew' ? EW_ROADS : NS_ROADS)[i].half;
+      // Each street meeting it (a diagonal's asphalt slants across it: as far along it as it reaches)
+      return c.streets
+        .filter((id) => id !== road)
+        .map((id): [number, number] => {
+          const s = PLAN.streets.find((q) => q.id === id)!;
+          const k = s.pts.findIndex((p) => Math.hypot(p[0] - c.at[0], p[1] - c.at[1]) < 1e-6);
+          const [a, b] = k < 0 ? [s.pts[0], s.pts[1]] : k < s.pts.length - 1 ? [s.pts[k], s.pts[k + 1]] : [s.pts[k - 1], s.pts[k]];
+          const l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+          const [along, cross] = axis === 'ew' ? [Math.abs(b[0] - a[0]) / l, Math.abs(b[1] - a[1]) / l] : [Math.abs(b[1] - a[1]) / l, Math.abs(b[0] - a[0]) / l];
+          const reach = s.half / Math.max(0.35, cross) + (across * along) / Math.max(0.35, cross);
+          // (a street that only leaves on one side, as the diagonal does: its slant that way only)
+          const dir = Math.sign((axis === 'ew' ? b[0] - a[0] : b[1] - a[1]) * (k === 0 ? 1 : -1)) || 0;
+          if (along < 0.05) return [v - s.half - 0.2, v + s.half + 0.2];
+          if (k === 0 || k === s.pts.length - 1) return dir > 0 ? [v - s.half - 0.2, v + reach + 0.2] : [v - reach - 0.2, v + s.half + 0.2];
+          return [v - reach - 0.2, v + reach + 0.2];
+        });
     });
   if (axis === 'ew' && AXIS_ZEBRAS.some((z) => z.z === EW_ROADS[i].c)) gaps.push([AXIS_X - LANE_HALF - 0.2, AXIS_X + LANE_HALF + 0.2]);
   return gaps;

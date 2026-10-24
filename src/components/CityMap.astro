@@ -50,8 +50,9 @@ const spots: Record<SpotId, Spot> = {
   pier: { href: '#city-title', title: 'Pier 7', sub: 'The waterfront', aria: 'Pier 7: the boardwalk and pier on The Trenches\' waterfront' },
   nightmarket: { href: '#city-title', title: 'Night Market', sub: 'Street food', aria: 'The Night Market: food stalls on the waterfront by Harbor Stores' },
   stadium: { href: '#city-title', title: 'Sector 7 Stadium', sub: 'Events · coming soon', aria: 'Sector 7 Stadium in Westlake Park: events coming soon' },
+  tower: { href: '#city-title', title: 'Sector 7 Tower', sub: 'Sky deck', aria: 'Sector 7 Tower in Uptown: a lift to the sky deck at the top' },
 };
-const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'trenches', 'club', 'bar', 'arms', 'pier', 'nightmarket', 'stadium'];
+const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'trenches', 'club', 'bar', 'arms', 'pier', 'nightmarket', 'stadium', 'tower'];
 const ext = { target: '_blank', rel: 'noopener noreferrer' };
 
 const map = renderCity({ spots, art: { degen: degenImg.src, logo: logoImg.src } });
@@ -1029,6 +1030,13 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     <h2 id="city-panel-title" class="city-panel-title">Sector 7 Stadium</h2>
     <p class="city-panel-text">The bowl at the top of the Mall in Westlake Park, west of town: two tiers of stands round the pitch and the track, floodlights on four masts and the big screen over the north stand. The car park is across the avenue from the park's south gate. The gates open for events later: coming soon.</p>
     <button type="button" class="chip-link kart-walkin" data-stadium-walkin>Walk in</button>
+  </template>
+
+  <template data-panel-tpl="tower">
+    <p class="kicker"><span class="kicker-num">18</span> Uptown</p>
+    <h2 id="city-panel-title" class="city-panel-title">Sector 7 Tower</h2>
+    <p class="city-panel-text">The spire over Uptown's plaza, the tallest tower in the city. Take the lift in the glass pavilion at its foot up to the sky deck: an open roof behind a glass rail, with viewers looking out over the city, Westlake Park and the river. More up there coming soon.</p>
+    <button type="button" class="chip-link kart-walkin" data-tower-walkin>Walk in</button>
   </template>
 
   <div class="city-hud" data-city-hud>

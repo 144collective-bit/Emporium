@@ -22,6 +22,7 @@ import { KART_PARK } from './kartpark';
 import { BX, WALKWAY } from './liberty';
 import { DECKS } from './waterfront';
 import { ESPLANADE_DECKS } from './boulevard';
+import { HIGHRISES } from './highrise';
 import { HIGHWAY_BOX } from './highway';
 import { STADIUM_AREA } from './stadium';
 
@@ -52,6 +53,7 @@ const C = {
   edge: '#0a0a14',
   river: '#1d4f7c',
   slab: '#262249',
+  tower: '#4a4580',
   park: '#1d4e3a',
   path: '#3f6f5a',
   road: '#3a3866',
@@ -153,6 +155,16 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
     // The Trenches' boardwalk and Pier 7 out over the water, and Uptown's esplanade, its overlooks and marina (boulevard.ts)
     for (const d of DECKS) rect(d, C.boardwalk);
     for (const d of ESPLANADE_DECKS) rect(d, C.slab);
+    // Uptown's towers (highrise.ts): each one's footprint, Sector 7 Tower's too
+    ctx.fillStyle = C.tower;
+    for (const t of HIGHRISES) {
+      const p = t.parts[0];
+      if (p.poly) {
+        poly(p.poly);
+        ctx.fill();
+      } else rect(p.rect, C.tower);
+    }
+    ctx.fillStyle = C.park;
     // Westlake Park (westlake.ts): its lawns, the lake and its paths
     for (const b of WESTLAKE_BLOCKS) {
       poly(b.poly);

@@ -24,7 +24,7 @@ import * as THREE from 'three';
 import { Batch, FONT_DISPLAY, FONT_MONO, canvasTex, lit, neon, siteMat, toon } from './kit';
 import { SLAB, type Tick } from './world';
 import { site } from './tilework';
-import { PLAZA_BLOCK, UPTOWN_BLOCKS, type Pt, type Rect } from './uptown';
+import { LAYBYS, PLAZA_BLOCK, UPTOWN_BLOCKS, type Pt, type Rect } from './uptown';
 import { SPIRE_LOT } from './highrise';
 import {
   BENCHES,
@@ -234,7 +234,10 @@ function ground(b: Batch) {
   const [x0, z0, x1, z1] = UPTOWN_BLOCKS.find((q) => q.id === PLAZA_BLOCK)!.rect;
   // Granite, in two pieces (nothing much longer than a tile), and on the terraces
   const xm = SPIRE_LOT[0];
-  for (const r of [[x0, z0, xm, z1], [xm, z0, x1, z1], ...TERRACES] as Rect[]) b.add(quad(r, PAVE, GRANITE_TILE), granite);
+  // (the taxi rank's bay cut into its east side, behind the spire: uptown.ts LAYBYS)
+  const rank = LAYBYS.filter((l) => l.block === PLAZA_BLOCK && l.side === 'e').map((l) => [l.from, l.to, x1 - l.depth] as const)[0];
+  const east: Rect[] = rank ? [[xm, z0, x1, rank[0]], [xm, rank[0], rank[2], rank[1]], [xm, rank[1], x1, z1]] : [[xm, z0, x1, z1]];
+  for (const r of [[x0, z0, xm, z1], ...east, ...TERRACES] as Rect[]) b.add(quad(r, PAVE, GRANITE_TILE), granite);
   // Darker inlays along both axes and a ring round the pool
   const [cx, cz] = CENTRE;
   const rr = POOL.r + POOL.w;

@@ -11,6 +11,7 @@
  * function of the time only, the same for everyone. airport.ts draws it all.
  */
 import { NS_ROADS, RIVER, SEATS, SOUTH_SHIFT as D } from './layout';
+import { ROOF_PAD } from './highrise';
 
 /** The middle of the river (the prop plane flies along it) */
 const RIVER_MID = (RIVER[0] + RIVER[1]) / 2;
@@ -62,6 +63,8 @@ export const AIR_SPAWN = (() => {
 })();
 /** The helipad at the apron's east end */
 export const HELIPAD = { x: 208, z: 154 + D, r: 4.5 };
+/** The executive helicopter's pad (finance plan Phase 6): on the apron west of the helipad, clear of the hangar's door */
+export const EXEC_PAD = { x: 196, z: 154 + D, r: 3.6 };
 /** Floodlight masts along the terminal, between the stands' wingtips */
 export const MASTS: Pt[] = [
   [118.5, 145.5 + D],
@@ -425,8 +428,8 @@ function jet(stand: Pt, takeoff: number, id: string): Flight {
         w(158, R, 0, 26),
         w(226, R, 11, 30),
         // (high enough over Uptown's towers: highrise.ts, the spire's mast)
-        w(226, 28, 46, 33),
-        w(-152, 28, 48, 34),
+        w(226, 28, 53, 33),
+        w(-152, 28, 55, 34),
         w(-152, R, 26, 30),
         // Over the avenue well clear of the traffic, then down onto the runway
         w(64, R, 6.5, 26),
@@ -513,17 +516,52 @@ function heli(liftoff: number): Flight {
   return flight('heli', 'heli', acts, { fill: 4, cycle: PERIOD / 2, at: 0, when: liftoff, parked: 4 });
 }
 
+/**
+ * The executive helicopter (finance plan Phase 6, the owner's pick): from its pad at the airport up and north, west
+ * high over the south row, up the east side of the spire to Uptown's tallest slab, down onto its rooftop helipad
+ * (highrise.ts `ROOF_PAD`); a wait there, rotor stopped, then back the same way and down onto its pad
+ */
+function exec(liftoff: number): Flight {
+  const { x: px, z: pz } = EXEC_PAD;
+  const R = ROOF_PAD;
+  const UP = 10;
+  const OVER = R.y + 8;
+  const out: Way[] = [w(px, pz, UP, 0), w(px - 4, 122, 30, 14), w(150, 102, 36, 17), w(-40, 102, 36, 17), w(-104, 96, 40, 14), w(-104, 26, OVER, 10), w(R.x + 7, R.z, OVER, 5), w(R.x, R.z, OVER, 0)];
+  const acts: Act[] = [
+    fly(out, 12),
+    { kind: 'lift', dur: 7, to: R.y },
+    { kind: 'hold', dur: 3, power: [1, 0] },
+    // Waiting on the roof, rotor stopped
+    { kind: 'hold', dur: 30, power: [0, 0] },
+    { kind: 'hold', dur: 4, power: [0, 1] },
+    { kind: 'lift', dur: 6, to: OVER },
+    // Turn over the roof to face the way back
+    { kind: 'turn', dur: 4, to: 0 },
+    fly([...out].reverse(), 12),
+    { kind: 'turn', dur: 4, to: Math.PI },
+    { kind: 'lift', dur: 6, to: 0 },
+    { kind: 'hold', dur: 4, power: [1, 0] },
+    { kind: 'hold', dur: 0, power: [0, 0] },
+    { kind: 'hold', dur: 5, power: [0, 1] },
+    { kind: 'lift', dur: 6, to: UP },
+    // Turn to face the way out
+    { kind: 'turn', dur: 4, to: yawOf([out[1].at[0] - px, out[1].at[1] - pz]) },
+  ];
+  return flight('heli-x', 'heli', acts, { fill: 11, cycle: PERIOD, at: 0, when: liftoff, parked: 11 });
+}
+
 /** When each one takes off, seconds into the period */
-export type Timetable = { jetA: number; prop: number; jetB: number; jetC: number; heli: number };
+export type Timetable = { jetA: number; prop: number; jetB: number; jetC: number; heli: number; exec?: number };
 export const timetable = (tt: Timetable): Flight[] => [
   jet(STANDS[0], tt.jetA, 'jet-a'),
   prop(tt.prop),
   jet(STANDS[1], tt.jetB, 'jet-b'),
   jet(STANDS[2], tt.jetC, 'jet-c'),
   heli(tt.heli),
+  ...(tt.exec === undefined ? [] : [exec(tt.exec)]),
 ];
 /** Every aircraft flying today (the timetable keeps them apart: tests/airfield.test.ts checks) */
-export const FLIGHTS: Flight[] = timetable({ jetA: 0, prop: 50, jetB: 130, jetC: 185, heli: 0 });
+export const FLIGHTS: Flight[] = timetable({ jetA: 0, prop: 50, jetB: 130, jetC: 185, heli: 0, exec: 30 });
 
 /** Where a flight is at time `t` (seconds), or parked under reduced motion */
 export function poseAt(f: Flight, t: number): Pose {
