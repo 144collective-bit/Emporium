@@ -255,30 +255,45 @@ it and has been retired completely. Build only on what's here.
     crosses the highway's junction on a span) down the east ring avenue's
     median to the switch (`SWITCH_S`), a
     quarter-circle bend (`BEND_R`) and west over the open land south of the
-    south row and Trench Avenue's median to The Trenches; `branch` straight
+    south row and Trench Avenue's median to The Trenches, and on (Uptown's
+    Phase 7, `docs/finance-plan.md`) to `WEST_END`, a tight bend (`UP_R`)
+    into the cross street at `UP_X` (x -150), north on portal frames
+    (`PORTALS`, `PORTAL`: a leg each side on the blocks' edges, none on a
+    road or its sidewalk), over the river on a steel arch with nothing in
+    the water (`ARCH`, `archY()`: its ribs springing from the block edges
+    in The Trenches and from Uptown's esplanade, its crown 16 over the
+    ground, well under the prop plane's turn; the deck hung from it,
+    `HANGERS`; no pillar under it) and up the one-way pair's northbound
+    street to Uptown station, `UP_END`; `branch` straight
     on from the switch down the avenue's median, then (since the airport's
     Phase 3 step 2) a bend east (`BRANCH`) over the airport's old land and
     the highway to Airport Station by Airport Drive, `AIRPORT_END`; runs on
-    the branch go faster, `TRAIN.express`, `speedOf()`); a place
+    the branch and out to Uptown go faster, `TRAIN.express`, `speedOf()`); a place
     on them is a track and a distance (`pointOn()`, `along()`, `sideOf()`);
     pillars wherever the ground is clear (`PILLARS`: an avenue's median
     clear of its junctions, or open land off every road; over the river
     only on Harbour Bridge's median, where they're steel posts from its
     deck, river plan step 2);
-    five stations (`STATIONS`: Kart Park, Downtown, South Bank, The
-    Trenches, Airport; each a track and distance, a platform on the track's
-    left (`PLATFORM_SIDE`), a stair tower with its door at street level and
-    the way out of it, `face`), `METRO_SOLIDS` (in `SOLIDS`), the train
+    six stations (`STATIONS`: Kart Park, Downtown, South Bank, The
+    Trenches, Airport, Uptown; each a track and distance, a platform on the
+    track's left (`PLATFORM_SIDE`; Uptown's on its right, `side`,
+    `sideAt()`), a stair tower with its door at street level and the way
+    out of it, `face`; Uptown's on the plaza's café terrace), `METRO_SOLIDS`
+    (in `SOLIDS`: pillars, portal legs, towers), the train
     (`TRAIN`, two cars) on a timetable from the clock (`trainAt()`, `LEGS`:
-    down to South Bank, out to The Trenches and back, out to the Airport and
-    back, up again; `ROUND_TRIP`), runs as pieces of track (`runsBetween()`,
+    down to South Bank, out through The Trenches to Uptown and back, out to
+    the Airport and back, up again; `ROUND_TRIP`), runs as pieces of track (`runsBetween()`,
     `placeOn()`, `carAt()`: each car on the track where it is, round the
     bend), rides straight between stations (`rideAt()`, turning round at
-    South Bank between The Trenches and the Airport; at most about 40 s)
+    South Bank between the west and the Airport; at most about 51 s, Uptown
+    to the Airport)
     and back on the timetable after (`timetableAt()`). Drawn by `metro3d.ts`
-    (the deck in short straight pieces between its pillars, rails, parapets
+    (the deck in short straight pieces between its pillars, portals and
+    hangers, rails, parapets
     with magenta neon, hammerhead pillars (on Harbour Bridge, steel posts
-    from its deck, `onHarbour()`); each
+    from its deck, `onHarbour()`); the portal frames, and the arch in
+    crimson steel (ribs braced across over the train, white hangers to
+    floor beams under the deck, a line of lights along the ribs); each
     station in its own frame along its track: platform, canopy with the
     station names from one sign atlas, skybridge, tower with an M roundel
     over the door, totem; two cars, `userData.keep`). Its rides are
@@ -720,18 +735,21 @@ it and has been retired completely. Build only on what's here.
 - **Uptown, the financial centre** (the owner's call): Westlake Park's three
   strips (x -200.5 to -43.3, z 0 to 60, the north bank avenue along the
   river) becoming a waterfront boulevard and financial centre with
-  skyscrapers and a plaza, planned in `docs/finance-plan.md` in six
+  skyscrapers and a plaza, planned in `docs/finance-plan.md` in seven
   phases, each with the owner's sign-off; keep it up to date. Its name is
   **Uptown**. Its towers may rise above the Emporium (the owner's call: the
-  spire about 40 tiles since the redesign, the rest 14 to 32; the Emporium
+  spire about 40 tiles since the redesign, the rest 14 to 32; the Sky Wheel
+  about 22; the Emporium
   stays the tallest downtown and the most detailed, and "under the
   Emporium" holds everywhere else); the flying traffic and your own
   aircraft clear them. The strips' courts and their players are retired
   with it. Phases 1 (the land and the streets), 2 (the towers), 3 (the
   plaza), 4 (the waterfront boulevard), 5 (the redesign, the owner's call:
   slim towers, a varied street plan with real-world features, the
-  kerbside) and 6 (night, life and the place: Sector 7 Tower and its sky
-  deck, below) are built:
+  kerbside), 6 (night, life and the place: Sector 7 Tower and its sky
+  deck, below) and 7 (street level, more city, landmarks and the metro,
+  the owner's picks: scenery only but the metro's station; below) are
+  built:
   - `uptown.ts` (DOM-free, tested in `tests/uptown.test.ts`): its streets
     (`UPTOWN_STREETS`, in the street plan; Phase 5, the owner's picks):
     **Uptown Circle** (`CIRCLE`, a roundabout: a one-way loop, `loop` and
@@ -863,6 +881,63 @@ it and has been retired completely. Build only on what's here.
     crown's steel ribs leaning in to a lit ring round the mast (`RIBS`, over
     a walker's head) and four viewers (`VIEWERS`); drawn by highrise3d.ts
     with the spire (`skyDeck()`).
+  - **The street wall** (Phase 7) is highrise.ts's: most towers stand on a
+    mid-rise masonry base (`base`: 6 to 12 high, limestone, brick or
+    granite, `Masonry`, its band in Uptown's atlas), the shaft rising from
+    its roof; the river row, the spire and the flatiron as they were. A base
+    side can be an arcade (`arcades`: the ground floor set back behind
+    columns, Circle Street's), and the tallest have **grand lobbies**
+    (`lobby: 'grand'`: a double-height stone portal, revolving doors).
+  - **Street level** (Phase 7) is `streetlevel.ts` (DOM-free, tested in
+    `tests/streetlevel.test.ts`; in the boot: its solids and people) and
+    `streetlevel3d.ts` (Uptown's chunk): each base side facing a street
+    takes its character (`characterOf()`, `frontage()`: `luxe` the avenues,
+    `dining` the cross streets, Circle Street, the diagonal and the lanes,
+    `local` the one-way pair, the east street, the crescent and the
+    circle's street, `service` the rest), shop units `UNIT` wide with
+    made-up names (`SHOP_NAMES`, one sign atlas a character, drawn by
+    highrise3d.ts's `shopfront()`), the margins' dressing by character
+    (`DRESSING`: café tables and umbrellas, menu boards, planters, a
+    florist's buckets, crates, newspaper boxes, bike racks), a sculpture by
+    each grand lobby (`SCULPTURES`), the galleria over the axis's lanes
+    (`GALLERIAS`: a glass barrel on slim columns), diners and doormen
+    (`STREET_PEOPLE`), `STREETLEVEL_SOLIDS` (in `SOLIDS`).
+  - **The free land** (Phase 7) is `uptownsites.ts` (DOM-free, tested in
+    `tests/uptownsites.test.ts`) and `uptownsites3d.ts` (Uptown's chunk):
+    the **Circle Theatre** on the circle's west land (`THEATRE`: its front
+    curved round the circle, a marquee with chasing bulbs (`MARQUEE`, three
+    materials lit in turn), posters for made-up films (`FILMS`), a fly
+    tower, a CIRCLE blade); **the Exchange** east of the diagonal facing the
+    park (`EXCHANGE`: steps, a portico and pediment, a ticker of fixed
+    made-up words, never a number, `TICKER_WORDS`, its texture scrolled);
+    **The Aurelian** hotel west of the diagonal (`HOTEL`, `HOTEL_NAME`: a
+    porte-cochère, a HOTEL blade, its name on the roof, a pool deck with
+    loungers and a glass penthouse); **a tower going up** (`WORKS`:
+    hoardings with made-up developer copy, `HOARDING_COPY`, floors round a
+    concrete core, the crane's jib turning on the main thread); **pocket
+    gardens** by the circle (`GARDENS`, their trees and fountains);
+    `SITE_RECTS`, `UPTOWN_SITE_SOLIDS` (in `SOLIDS`), `SITE_PEOPLE`. None of
+    them is a place.
+  - **Street life** (Phase 7) is `streetlife.ts` (DOM-free, tested in
+    `tests/streetlife.test.ts`) and `streetlife3d.ts` (Uptown's chunk): big
+    LED screens on the bases along the north cross street and round the
+    plaza (`SCREENS`, slides of fixed made-up words, `SLIDES`, stepping on
+    together every `SLIDE_SECONDS`), neon blades on the restaurant fronts
+    (`BLADES`, `BLADE_WORDS`), and a cart in each margin deep enough (`CARTS`:
+    coffee, hot dogs, flowers, a newsstand, in turn, clear of the dressing,
+    the doors and everything solid, the sidewalk left clear) with their
+    vendors and customers (`STREETLIFE_PEOPLE`); `STREETLIFE_SOLIDS`.
+  - **The Sky Wheel** (Phase 7) is `wheel.ts` (DOM-free, tested in
+    `tests/wheel.test.ts`) and `wheel3d.ts` (Uptown's chunk): an
+    observation wheel on the esplanade by the water between the axis's
+    overlook and the one-way pair's crossing, its rim along the river on
+    two A-frames, capsules hanging level (`capsuleAt()`, `wheelAngle()`: a
+    function of the clock, a turn every `WHEEL.period`, the same for
+    everyone, so it stands where it should under reduced motion, still), lit
+    at night; the walk and the joggers pass on its avenue side
+    (`WALK_PAST`); the ticket booth by the kerb; `WHEEL_RECT` (the
+    boulevard's trees, benches and lamps keep off), `WHEEL_SOLIDS`; well
+    under what flies over (the test).
   - **Its life** (Phase 6) is `uptownlife.ts` (DOM-free, tested in
     `tests/uptownlife.test.ts`): walkers round the blocks by the plaza and
     the diagonal (`UPTOWN_WALKS`, life.ts), joggers out and back along the
@@ -2926,7 +3001,7 @@ it and has been retired completely. Build only on what's here.
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`), Harbour Bridge (`harbour.ts`),
-  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), the river's shape (`river.ts`), the river's life, the river bus and boating (`riverlife.ts`, `riverbus.ts`, `riverroute.ts`, `boat-sim.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`, `boulevard.ts`, `boulevarddress.ts`, `kerbside.ts`, `skydeck.ts`, `skyline.ts`, `uptownlife.ts`, the town car in `cars.ts`), the kart park's facility (`kartfacility.ts`),
+  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), the river's shape (`river.ts`), the river's life, the river bus and boating (`riverlife.ts`, `riverbus.ts`, `riverroute.ts`, `boat-sim.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`, `boulevard.ts`, `boulevarddress.ts`, `kerbside.ts`, `skydeck.ts`, `skyline.ts`, `uptownlife.ts`, `streetlevel.ts`, `uptownsites.ts`, `streetlife.ts`, `wheel.ts`, the town car in `cars.ts`), the kart park's facility (`kartfacility.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,

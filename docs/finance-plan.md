@@ -552,7 +552,7 @@ owner's sign-off.
 - **The budget:** the boot's code went from 653.1 to 655.6 (raised to 658
   on purpose).
 
-## Phase 7: street level, more city, landmarks and the metro (planned)
+## Phase 7: street level, more city, landmarks and the metro (planned, built: see "Phase 7 as built" below)
 
 The owner's picks are decision 8. One PR, built in this order:
 
@@ -599,3 +599,55 @@ The owner's picks are decision 8. One PR, built in this order:
    northbound street to **Uptown station** by the plaza's café terrace and
    the axis. Rides and the timetable take it in; the world map, the sound
    and the places pick it up.
+
+## Phase 7 as built
+
+All six steps, one commit each, in one PR:
+
+1. **The street wall** (`highrise.ts`, `highrise3d.ts`): seventeen towers
+   stand on masonry bases 6 to 12 high (`base`: limestone, brick or
+   granite, each a band in Uptown's atlas with lit windows by the hour),
+   string courses and a cornice on top, the shaft rising from the base's
+   roof on the same footprint; the river row (its restaurant terraces), the
+   spire and the flatiron keep their podiums. Grand lobbies on four towers
+   (`lobby: 'grand'`), arcades along Circle Street (`arcades`).
+2. **Ground floors by street** (`streetlevel.ts`, `streetlevel3d.ts`):
+   every base side facing a street takes its character (`luxe`, `dining`,
+   `local`; `service` facing none), shop units with made-up names from one
+   sign atlas a character (36 names); the margins dressed by character;
+   sculptures by the grand lobbies whose margin is deep enough; the
+   galleria's glass barrel over both of the axis's lanes; diners and
+   doormen.
+3. **The free land** (`uptownsites.ts`, `uptownsites3d.ts`): the Circle
+   Theatre on the circle's west land, the Exchange on the triangle east of
+   the diagonal (its portico facing the park), The Aurelian on the
+   diagonal's west band with a tower going up north of it (its crane's jib
+   turning), and two pocket gardens by the circle. Nothing in a lot, a
+   lane, a lay-by or on a sidewalk moved: the snapshot is unchanged.
+4. **Street life** (`streetlife.ts`, `streetlife3d.ts`): six LED screens
+   (the north cross street and round the plaza), thirteen neon blades,
+   seven carts (coffee, hot dogs, flowers, a newsstand) with their vendors
+   and customers.
+5. **The Sky Wheel** (`wheel.ts`, `wheel3d.ts`): on the esplanade by the
+   water between the axis's overlook and the one-way pair's crossing (x
+   -123), a 10 radius rim on two A-frames, twenty capsules, a turn every
+   six minutes from the clock; its top about 22 over the deck, so it rises
+   over the Emporium as Uptown's towers do. The esplanade's joggers'
+   lanes and walk pass on its avenue side; its trees, benches and lamps
+   by the water keep off it.
+6. **The metro to Uptown** (`metro.ts`, `metro3d.ts`): as planned, the
+   bend's radius 8, portal frames where the line runs over the cross
+   street and the pair's street (legs on the blocks' edges, never on a
+   sidewalk), and the arch's crown 16 over the ground (the prop plane
+   turns south over it at about 24). Uptown station's platform is east of
+   the track (a station's `side`): its tower stands on the café terrace
+   north of the kiosk, the door facing the cross street. Runs out to
+   Uptown go express; the longest ride, Uptown to the Airport, is about
+   51 s. Two knock-ons: The Trenches gets one more parking bay under the
+   el (commons.ts's rule, two tree pits fewer), and the esplanade's trees,
+   lamps and benches keep off the arch's north feet (with the wheel: two
+   trees, five benches and three lamps fewer by the water).
+
+Checks: `npm test` and `npm run test:wide` (634 passing), the type check,
+the build and the budget (boot 644 of 670 KB), browser shots by day and
+night of each step.
