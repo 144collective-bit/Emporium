@@ -5,35 +5,12 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { BRIDGE_PIERS, CREW, CRUISE, DINGHIES, PIER_HALF, cruiseAt, hullCorners, loopOf, pointAlong, riverMovers, stadium, type Hull } from '../src/scripts/city3d/riverlife';
 import { WALK_W } from '../src/scripts/city3d/layout';
+import { LANDINGS, OBSTACLES, inRect } from './water';
 import { WATER_Y, inWater } from '../src/scripts/city3d/river';
-import { BOAT_LANES, BX, DECK_DEPTH, DECK_HALF, LIBERTY_RECTS, SHIP, lowY, shipAt } from '../src/scripts/city3d/liberty';
-import { DEPTH, HALF, HX, TOWER, TOWERS, deckY } from '../src/scripts/city3d/harbour';
-import { BARGE, DECKS, boatZ } from '../src/scripts/city3d/waterfront';
-import { ESPLANADE_DECKS, OVERLOOKS, PONTOON } from '../src/scripts/city3d/boulevard';
-import { YACHTS } from '../src/scripts/city3d/boulevarddress';
-import { JETTIES } from '../src/scripts/city3d/outer';
-import { MOORED } from '../src/scripts/city3d/boats';
+import { BOAT_LANES, BX, DECK_DEPTH, DECK_HALF, SHIP, lowY, shipAt } from '../src/scripts/city3d/liberty';
+import { DEPTH, HALF, HX, deckY } from '../src/scripts/city3d/harbour';
+import { boatZ } from '../src/scripts/city3d/waterfront';
 import { riverBridges } from '../src/scripts/city3d/streetplan';
-import { RIVER } from '../src/scripts/city3d/layout';
-
-type Rect = [number, number, number, number];
-/** Everything standing on (or in) the water a boat must keep off */
-const OBSTACLES: [string, Rect][] = [
-  ...LIBERTY_RECTS.slice(1).map((r): [string, Rect] => ['Liberty Bridge', r]),
-  ...TOWERS.map((z): [string, Rect] => ['Harbour Bridge', [HX - TOWER.base.hu - TOWER.base.cut, z - TOWER.base.hz, HX + TOWER.base.hu + TOWER.base.cut, z + TOWER.base.hz]]),
-  ...riverBridges()
-    .filter((b) => b.street === 'highway')
-    .flatMap((b) => BRIDGE_PIERS.map((z): [string, Rect] => ['a highway pier', [b.x0, z - PIER_HALF, b.x1, z + PIER_HALF]])),
-  ...DECKS.map((r): [string, Rect] => ['a deck', r]),
-  ...ESPLANADE_DECKS.map((r): [string, Rect] => ['the esplanade', r]),
-  ...OVERLOOKS.map((o): [string, Rect] => ['an overlook', o.rect as Rect]),
-  ['the pontoon', PONTOON as Rect],
-  ...YACHTS.map((y): [string, Rect] => ['a yacht', [y.x - y.len / 2, y.z - y.beam / 2, y.x + y.len / 2, y.z + y.beam / 2]]),
-  ['the barge', BARGE as Rect],
-  ...MOORED.map((m): [string, Rect] => ['a moored boat', [m.x - 0.8, m.z - 0.35, m.x + 0.8, m.z + 0.35]]),
-  ...JETTIES.map((j): [string, Rect] => ['a jetty', [j.x - 1.1, j.bank === 'north' ? RIVER[0] - 0.1 : RIVER[1] - 0.75, j.x + 1.1, j.bank === 'north' ? RIVER[0] + 0.75 : RIVER[1] + 0.1]]),
-];
-const inRect = ([x, z]: [number, number], r: Rect, m: number) => x > r[0] - m && x < r[2] + m && z > r[1] - m && z < r[3] + m;
 
 test('loops: closed, smooth, and a point along them wraps', () => {
   const l = loopOf(stadium(0, 10, 0, 4));
@@ -55,7 +32,7 @@ test('every new boat stays in the water, clear of everything on it', () => {
       const c = hullCorners(m.x, m.z, m.yaw, m.hull);
       for (const p of c) {
         assert.ok(inWater(p[0], p[1], 0.4), `${m.id} on the bank at ${p.map((v) => v.toFixed(1))} (t ${t})`);
-        for (const [what, r] of OBSTACLES) assert.ok(!inRect(p, r, 0.3), `${m.id} meets ${what} at ${p.map((v) => v.toFixed(1))} (t ${t})`);
+        for (const [what, r] of [...OBSTACLES, ...LANDINGS]) assert.ok(!inRect(p, r, 0.3), `${m.id} meets ${what} at ${p.map((v) => v.toFixed(1))} (t ${t})`);
       }
       // Clear of the tall ship (its bowsprit too)
       const sx = [Math.min(...shipCorners.map((q) => q[0])), Math.max(...shipCorners.map((q) => q[0]))];
