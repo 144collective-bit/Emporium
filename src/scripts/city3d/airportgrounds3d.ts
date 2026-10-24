@@ -384,6 +384,29 @@ function fence(b: Batch, fxb: Batch, sx0: number, sx1: number) {
   }
 }
 
+/**
+ * A shallow barrel roof: an arc `rise` high over a span `W`, running `len` along x or z from its middle, its
+ * springing line at `y`, and the ends closed with the arc's segment
+ */
+function barrel(b: Batch, cx: number, cz: number, along: 'x' | 'z', len: number, W: number, rise: number, y: number, mat: THREE.Material) {
+  const R = (W * W) / (8 * rise) + rise / 2;
+  const half = Math.asin(W / 2 / R);
+  // Around y, centred on +x (the arc's top after the turn), then laid along x or z
+  const arc = new THREE.CylinderGeometry(R, R, len, 20, 1, true, Math.PI / 2 - half, 2 * half);
+  arc.rotateZ(Math.PI / 2).translate(0, y + rise - R, 0);
+  const seg = new THREE.Shape();
+  for (let k = 0; k <= 16; k++) {
+    const a = -half + (2 * half * k) / 16;
+    seg[k ? 'lineTo' : 'moveTo'](Math.sin(a) * R, y + rise - R + Math.cos(a) * R);
+  }
+  // (the segment in x, y: turned to face along x it spans z)
+  const end = (sx: number) => new THREE.ShapeGeometry(seg).rotateY(sx > 0 ? Math.PI / 2 : -Math.PI / 2).translate((sx * len) / 2, 0, 0);
+  for (const g of [arc, end(1), end(-1)]) {
+    if (along === 'z') g.rotateY(Math.PI / 2);
+    b.add(g.translate(cx, 0, cz), mat);
+  }
+}
+
 /* ---------- The concourses and airbridges ---------- */
 
 function concourses(b: Batch, low: boolean) {
@@ -396,10 +419,7 @@ function concourses(b: Batch, low: boolean) {
     for (let x = x0; x <= x1; x += 13) box(b, Math.min(x, x1 - 0.6), 0, z1 - 0.4, Math.min(x, x1 - 0.6) + 0.6, H - 0.3, z1 + 0.06, PALE);
     for (const x of [x0, x1 - 0.6]) box(b, x, 0, z0, x + 0.6, H - 0.3, z1, PALE);
     // A shallow barrel roof with a lit edge on the airside
-    const W = z1 - z0;
-    const arch = new THREE.CylinderGeometry(W * 0.75, W * 0.75, x1 - x0 + 0.6, 20, 1, false, -0.73, 1.46);
-    arch.rotateZ(Math.PI / 2).translate((x0 + x1) / 2, H - 0.35 - W * 0.75 * Math.cos(0.73), (z0 + z1) / 2);
-    b.add(arch, ROOF);
+    barrel(b, (x0 + x1) / 2, (z0 + z1) / 2, 'x', x1 - x0 + 0.6, z1 - z0, 1.7, H - 0.4, ROOF);
     box(b, x0 - 0.2, H - 0.42, z1 + 0.05, x1 + 0.2, H - 0.34, z1 + 0.12, soft('#00eaff'));
     if (!low) for (let x = x0 + 6; x < x1 - 4; x += 16) box(b, x, H + 0.6, (z0 + z1) / 2 - 1, x + 2.4, H + 1.2, (z0 + z1) / 2 + 1, STEEL);
   }
@@ -433,10 +453,7 @@ function mro(b: Batch) {
   // Ribbed cladding: a rib every 2
   for (let z = z0 + 1; z < z1; z += 2) for (const x of [x0 - 0.06, x1 - 0.02]) box(b, x, 0, z - 0.06, x + 0.08, wallH, z + 0.06, toon('#4f6398'));
   // A low curved roof
-  const W = x1 - x0;
-  const roof = new THREE.CylinderGeometry(W * 0.9, W * 0.9, z1 - z0 + 0.6, 24, 1, false, -0.59, 1.18).rotateX(Math.PI / 2);
-  roof.translate((x0 + x1) / 2, wallH - W * 0.9 * Math.cos(0.59), (z0 + z1) / 2);
-  b.add(roof, toon('#d6d2ea'));
+  barrel(b, (x0 + x1) / 2, (z0 + z1) / 2, 'z', z1 - z0 + 0.6, x1 - x0, 2.4, wallH, toon('#d6d2ea'));
   // The doors on the south: panels with a band of windows, a yellow stripe over them, the sign
   const doorTop = wallH - 0.9;
   box(b, x0 + 1, 0, z1 - 0.02, x1 - 1, doorTop, z1 + 0.12, toon('#8a86a8'));
