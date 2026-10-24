@@ -44,6 +44,20 @@ import {
   TERMINAL,
   TOWER,
   poseAt,
+  BUS_BAY,
+  DECK_SOLIDS,
+  DECK_WALLS,
+  DEPARTURES,
+  HOTEL,
+  LOOP,
+  MSCP,
+  MSCP_CARS,
+  PIERS,
+  RANK,
+  departuresRoadY,
+  departuresSurface,
+  departuresWall,
+  departuresY,
   type Rect,
 } from '../src/scripts/city3d/airfield';
 import { SEATS, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
@@ -51,6 +65,7 @@ import { PADS, inTown } from '../src/scripts/city3d/outer';
 import { PLAN, distToStreet, onSlab } from '../src/scripts/city3d/streetplan';
 import { fromHighway, HIGHWAY_HALF, insideHighway } from '../src/scripts/city3d/highway';
 import { SOLIDS } from '../src/scripts/city3d/solids';
+import { CARS } from '../src/scripts/city3d/cars';
 
 const inside = (r: Rect, x: number, z: number, m = 0) => x >= r[0] + m && x <= r[2] - m && z >= r[1] + m && z <= r[3] - m;
 const gap = (a: Rect, b: Rect) => Math.max(a[0] - b[2], b[0] - a[2], a[1] - b[3], b[1] - a[3]);
@@ -139,9 +154,12 @@ test('Airport Drive off the south bank avenue and the GA road off the east ring 
   assert.deepEqual(way.at, [ROAD.x, ROAD.z0]);
   assert.ok(PLAN.crossings.some((c) => c.streets.includes('ew4') && c.streets.includes('airport-drive') && c.at[0] === ROAD.x));
   assert.ok(!insideHighway(ROAD.x, ROAD.z0) && fromHighway(ROAD.x, ROAD.z0) > 20, 'the way in is clear of the highway junction');
-  // Nothing solid on the asphalt
+  // Nothing solid on the asphalt (but under the departures deck and its ramps, lower than the road over it: the piers,
+  // the ramps' embankments, the taxi rank and the bus bay)
   const roads = PLAN.streets.filter((s) => s.id.startsWith('airport'));
+  const under = (b: number[]) => [b[0], b[2]].every((x) => [b[1], b[3]].every((z) => departuresSurface(x, z) !== null && b[4] <= departuresSurface(x, z)! + 1e-9));
   for (const s of AIRPORT_SOLIDS) {
+    if (under(s)) continue;
     const box: Rect = [s[0], s[1], s[2], s[3]];
     for (const r of roads)
       for (let x = box[0]; x <= box[2]; x += 0.2)
@@ -152,6 +170,72 @@ test('Airport Drive off the south bank avenue and the GA road off the east ring 
   // The airport is solid for walking and driving, and on no slab
   for (const s of AIRPORT_SOLIDS) assert.ok(SOLIDS.includes(s));
   assert.ok(!onSlab(PLAN, [TERMINAL[0] - 2, TERMINAL[1] - 2]));
+});
+
+test("the departures deck: up its ramp from the loop, along the hall's upper storey and down again; walked and driven on, the arrivals level under it", () => {
+  const D = DEPARTURES;
+  // In front of the hall's upper storey (its floor band is at half the hall's height), its ramps gentle enough
+  assert.ok(D.z1 === HALL[1] && D.y < HALL[4] / 2 && D.y > HALL[4] / 2 - 0.6);
+  assert.ok(D.y / (D.foot - D.x1) < 0.12);
+  // The loop's lanes: up the ramp westwards along `up`, back along `kerb`: at the street at the ramps' feet, on the deck west of them
+  const lane = PLAN.streets.find((s) => s.id === 'airport-forecourt')!;
+  assert.ok(lane.oneway === 1 && lane.lanes === 1);
+  for (const z of [LOOP.up, LOOP.kerb]) {
+    assert.ok(Math.abs(departuresRoadY(D.foot + 0.01, z)) < 1e-9 && Math.abs(departuresRoadY(D.foot, z)) < 1e-9);
+    assert.equal(departuresRoadY(D.x1, z), D.y);
+    assert.equal(departuresRoadY((D.x0 + D.x1) / 2, z), D.y);
+    // Smooth all the way: no step bigger than a kerb
+    for (let x = D.foot + 4; x > LOOP.west; x -= 0.25) assert.ok(Math.abs(departuresRoadY(x, z) - departuresRoadY(x + 0.25, z)) < 0.05, `a step at ${x}`);
+  }
+  // Off the loop's other stretches it's the street
+  for (const [x, z] of [
+    [ROAD.x, LOOP.out],
+    [LOOP.east, (LOOP.z0 + LOOP.up) / 2],
+    [LOOP.x1, (LOOP.out + LOOP.kerb) / 2],
+  ])
+    assert.equal(departuresRoadY(x, z), 0);
+  // Walking: up there you stand on it and can't step off its edge (but at a ramp's foot), down below you walk under it
+  const mid = (D.x0 + D.x1) / 2;
+  assert.equal(departuresY(mid, LOOP.kerb, D.y), D.y);
+  assert.equal(departuresY(mid, LOOP.kerb, 0.035), null);
+  assert.ok(departuresWall(mid, D.z0 - 0.2, D.y, 0.3), 'you could step off the north edge');
+  assert.ok(departuresWall(D.x0 - 0.2, LOOP.up, D.y, 0.3), 'or off the hairpin');
+  assert.ok(!departuresWall(mid, D.z0 - 0.2, 0.035, 0.3), 'down below its edge is no wall');
+  assert.ok(departuresWall(D.x1 + 10, (LOOP.up + LOOP.kerb) / 2, departuresSurface(D.x1 + 10, LOOP.up)!, 0.3), 'or between the ramps');
+  assert.equal(departuresY(D.foot - 0.5, LOOP.up, 0.035), departuresSurface(D.foot - 0.5, LOOP.up), 'you step onto a ramp at its foot');
+  // Its piers stand off the lanes over them (in the open below the deck) and hold it up; the walls for a car up there stand beside the lanes
+  for (const [x, z] of PIERS) {
+    assert.ok(departuresSurface(x, z) === D.y);
+    for (const c of [LOOP.up, LOOP.kerb]) assert.ok(Math.abs(z - c) > LOOP.half + 0.32, `a pier under the lane at ${x}, ${z}`);
+  }
+  const lanes: Rect[] = [
+    [LOOP.west - LOOP.half, LOOP.up - LOOP.half, D.foot, LOOP.up + LOOP.half],
+    [LOOP.west - LOOP.half, LOOP.kerb - LOOP.half, D.foot, LOOP.kerb + LOOP.half],
+    [LOOP.west - LOOP.half, LOOP.up, LOOP.west + LOOP.half, LOOP.kerb],
+  ];
+  for (const w of DECK_WALLS) for (const l of lanes) assert.ok(gap([w[0], w[1], w[2], w[3]], l) >= 0, `a parapet on the lane at ${w}`);
+  // What's under it fits under it: the taxis, the bus, the piers; the embankments stay under the ramps' surface
+  for (const b of DECK_SOLIDS) assert.ok(b[4] <= departuresSurface(b[2], b[1])! + 1e-9 && b[4] <= departuresSurface(b[2], b[3])! + 1e-9);
+  for (const [, x, z] of RANK) assert.equal(departuresSurface(x, z), D.y);
+  assert.equal(departuresSurface(BUS_BAY.x, BUS_BAY.z), D.y);
+  assert.ok(D.y - D.slab > 2.4, 'room for the bus under it');
+});
+
+test("every car the airport parks is one of the city's models", () => {
+  for (const [m] of [...PARKED, ...RANK, ...MSCP_CARS.flatMap((l) => l.cars)]) assert.ok(m in CARS, `no car model ${m}`);
+});
+
+test('the multi-storey car park and the hotel: landside, off every road, clear of the highway, under the Emporium', () => {
+  for (const r of [MSCP.rect, HOTEL.rect]) {
+    for (const s of PLAN.streets) for (let x = r[0]; x <= r[2]; x += 1) for (let z = r[1]; z <= r[3]; z += 1) assert.ok(distToStreet(s, [x, z]) > s.half + 0.8, `${s.id} runs into ${r}`);
+    for (const [x, z] of [
+      [r[0], r[1]],
+      [r[2], r[3]],
+    ])
+      assert.ok(!insideHighway(x, z) && fromHighway(x, z) > HIGHWAY_HALF + 4);
+  }
+  assert.ok(MSCP.top < 12.5 && HOTEL.top < 12.5);
+  assert.ok(Math.abs(MSCP.levels * MSCP.decks - MSCP.top) < 1);
 });
 
 test('every aircraft keeps to its timetable: smooth, inside the world, never on the ground outside the airport', () => {

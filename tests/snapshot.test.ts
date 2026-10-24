@@ -90,6 +90,8 @@ const layout = () =>
       mro: AIR.MRO,
       fire: AIR.FIRE,
       ga: { road: AIR.GA_ROAD, gate: AIR.GA_GATE, carPark: AIR.GA_CAR_PARK, arrive: AIR.AIR_ARRIVE },
+      // (its landside, Phase 3 step 2: the forecourt's loop, the departures deck, the multi-storey and the hotel)
+      landside: { loop: AIR.LOOP, departures: AIR.DEPARTURES, mscp: AIR.MSCP, hotel: AIR.HOTEL },
     },
     karts: { park: KART_PARK, gate: GATE, road: KART_ROAD, loop: KART_LOOP, site: KART_SITE, bays: BAYS, hutDoor: HUT_DOOR, circuit },
     fightClub: { lot: FIGHT_CLUB, ring: RING, counter: COUNTER, trainer: TRAINER, out: OUT },

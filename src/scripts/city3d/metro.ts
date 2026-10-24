@@ -58,7 +58,14 @@ export const BEND_R = AVENUE_Z - SWITCH_Z;
 /** The ends of the tracks: north, west (past The Trenches' station) and south (past the Airport's) */
 export const NORTH_END = -204;
 export const WEST_END = -103;
-export const AIRPORT_END = 136.4 + WIDEN;
+/**
+ * The Airport's branch (since the airport moved out to the world's south edge, docs/airport-plan.md Phase 3 step 2):
+ * straight on south from the switch down the avenue's median to `BRANCH.south`, a quarter bend east (`BRANCH.r`),
+ * and east along `BRANCH.z` over the airport's old land and the highway's bend, over Airport Drive, to the station
+ * by the drive just north of the terminal's forecourt, the line's end at `AIRPORT_END` (x)
+ */
+export const BRANCH = { south: 256, r: 20, z: 276 };
+export const AIRPORT_END = 324;
 
 export interface Track {
   id: TrackId;
@@ -77,9 +84,15 @@ const BEND: Pt[] = Array.from({ length: 45 }, (_, k): Pt => {
   const a = ((k + 1) / 45) * (Math.PI / 2);
   return [LINE_X - BEND_R + BEND_R * Math.cos(a), SWITCH_Z + BEND_R * Math.sin(a)];
 });
+/** A quarter circle about (cx, cz) from angle a0 to a1, about every half tile, its first point left out */
+const arc = (cx: number, cz: number, r: number, a0: number, a1: number): Pt[] =>
+  Array.from({ length: 45 }, (_, k): Pt => {
+    const a = a0 + ((k + 1) / 45) * (a1 - a0);
+    return [cx + r * Math.cos(a), cz + r * Math.sin(a)];
+  });
 export const TRACKS: Record<TrackId, Track> = {
   main: track('main', [[LINE_X, NORTH_END], [LINE_X, SWITCH_Z], ...BEND, [WEST_END, AVENUE_Z]]),
-  branch: track('branch', [[LINE_X, SWITCH_Z], [LINE_X, AIRPORT_END]]),
+  branch: track('branch', [[LINE_X, SWITCH_Z], [LINE_X, BRANCH.south], ...arc(LINE_X + BRANCH.r, BRANCH.south, BRANCH.r, Math.PI, Math.PI / 2), [AIRPORT_END, BRANCH.z]]),
 };
 /** The switch: how far along the main line the branch leaves it (the branch starts there, at its 0) */
 export const SWITCH_S = SWITCH_Z - NORTH_END;
@@ -130,6 +143,8 @@ export interface Station {
   face: Pt;
 }
 /** A stair tower 2.4 by 2.5 beside the east avenue, its west face at x 69.6, centred on z; its door facing west */
+/** The Airport's station's middle along its track (east of Airport Drive) */
+const AIRPORT_STATION_X = 312;
 const eastTower = (z: number): Pick<Station, 'tower' | 'door' | 'face'> => ({ tower: [69.6, z - 1.25, 72, z + 1.25], door: { x: 69.2, z }, face: [-1, 0] });
 /** The Trenches' station on Trench Avenue: its platform south of the track, the tower on the block's sidewalk edge, its door facing north */
 const TRENCH_X = -93;
@@ -140,7 +155,9 @@ export const STATIONS: Station[] = [
   { id: 'downtown', name: 'Downtown', track: 'main', s: 33 - NORTH_END, ...eastTower(37.5) },
   { id: 'southbank', name: 'South Bank', track: 'main', s: 109 + WIDEN - NORTH_END, ...eastTower(109.5 + WIDEN) },
   { id: 'trenches', name: 'The Trenches', track: 'main', s: along('main', [TRENCH_X, AVENUE_Z]), ...trenchTower },
-  { id: 'airport', name: 'Airport', track: 'branch', s: 130.5 + WIDEN - SWITCH_Z, ...eastTower(130.5 + WIDEN) },
+  // (by Airport Drive just north of the terminal's forecourt: its platform north of the track (running east), its tower
+  // north of that, the door facing the track and the forecourt; taxis stop for it on the drive)
+  { id: 'airport', name: 'Airport', track: 'branch', s: along('branch', [AIRPORT_STATION_X, BRANCH.z]), tower: [AIRPORT_STATION_X - 1.25, BRANCH.z - 7.5, AIRPORT_STATION_X + 1.25, BRANCH.z - 5.1], door: { x: AIRPORT_STATION_X, z: BRANCH.z - 4.7 }, face: [0, 1] },
 ];
 const station = (id: string) => STATIONS.find((s) => s.id === id)!;
 /** Where a station's platform is: its middle and the way its track runs there */
@@ -197,8 +214,11 @@ export const METRO_SOLIDS: Box[] = [
 
 /* ---------- The train and its timetable ---------- */
 
-/** The train: its length (two cars), top speed, how hard it pulls away and brakes, how long it waits at a station */
-export const TRAIN = { len: 10, speed: 14, accel: 2.5, dwell: 8 };
+/**
+ * The train: its length (two cars), top speed, how hard it pulls away and brakes, how long it waits at a station;
+ * on the runs out to the Airport and back, the long way out to the world's south edge, it goes faster (`express`)
+ */
+export const TRAIN = { len: 10, speed: 14, accel: 2.5, dwell: 8, express: 24 };
 /** How long it stops to turn round at South Bank on a ride from The Trenches to the Airport */
 export const TURN_STOP = 2;
 
@@ -206,9 +226,9 @@ export const TURN_STOP = 2;
  * A run from one distance to another (either way): how far along it is t
  * seconds in (0 to its length), easing out of one station and into the next
  */
-export function runAt(dist: number, t: number) {
+export function runAt(dist: number, t: number, v = TRAIN.speed) {
   const d = Math.abs(dist);
-  const { speed: v, accel: a } = TRAIN;
+  const { accel: a } = TRAIN;
   // Long enough to reach full speed, or a triangle profile
   const ta = Math.min(v / a, Math.sqrt(d / a));
   const vmax = a * ta;
@@ -224,6 +244,9 @@ export function runAt(dist: number, t: number) {
   })();
   return { s, total, speed: t > 0 && t < total ? (t < ta ? a * t : t < ta + cruise ? vmax : a * (total - t)) : 0 };
 }
+
+/** How fast a run goes: the express out on the Airport's branch */
+export const speedOf = (run: { pieces: { track: TrackId }[] }) => (run.pieces.some((p) => p.track === 'branch') ? TRAIN.express : TRAIN.speed);
 
 /** A piece of a run: along one track from one distance to another */
 export interface Piece {
@@ -275,7 +298,7 @@ export function placeOn(run: Run, d: number): { track: TrackId; s: number; dir: 
 const STOPS = ['kart', 'downtown', 'southbank', 'trenches', 'southbank', 'airport', 'southbank', 'downtown'];
 export const LEGS = STOPS.map((from, i) => {
   const run = runsBetween(from, STOPS[(i + 1) % STOPS.length])[0];
-  return { run, time: runAt(run.len, 0).total };
+  return { run, time: runAt(run.len, 0, speedOf(run)).total };
 });
 /** One round trip, in seconds */
 export const ROUND_TRIP = LEGS.reduce((a, l) => a + TRAIN.dwell + l.time, 0);
@@ -299,7 +322,7 @@ export function trainAt(t: number): TrainAt {
     if (k < TRAIN.dwell) return { run: l.run, d: 0, ...placeOn(l.run, 0), speed: 0, at: l.run.from };
     k -= TRAIN.dwell;
     if (k < l.time) {
-      const r = runAt(l.run.len, k);
+      const r = runAt(l.run.len, k, speedOf(l.run));
       return { run: l.run, d: r.s, ...placeOn(l.run, r.s), speed: r.speed, at: null };
     }
     k -= l.time;
@@ -337,13 +360,13 @@ export function timetableAt(stationId: string, last: Piece) {
 /** A ride from one station to another: its runs (with a stop to turn round between two), how long it takes, and where the train is t seconds in */
 export function rideAt(from: string, to: string, t: number) {
   const runs = runsBetween(from, to);
-  const times = runs.map((r) => runAt(r.len, 0).total);
+  const times = runs.map((r) => runAt(r.len, 0, speedOf(r)).total);
   const total = times.reduce((a, b) => a + b, 0) + TURN_STOP * (runs.length - 1);
   let k = Math.max(0, t);
   for (let i = 0; i < runs.length; i++) {
     const run = runs[i];
     if (k <= times[i] || i === runs.length - 1) {
-      const r = runAt(run.len, Math.min(k, times[i]));
+      const r = runAt(run.len, Math.min(k, times[i]), speedOf(run));
       return { run, d: r.s, ...placeOn(run, r.s), speed: r.speed, total, runs };
     }
     k -= times[i];

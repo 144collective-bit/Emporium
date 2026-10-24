@@ -356,8 +356,8 @@ export function cityPlan(): StreetPlan {
     NS_ROADS.forEach((r, i) => crossingsOf(b.pts, 0, r.c).forEach((at, k) => crossings.push({ id: `${b.id}-ns${i}-${k}`, at, streets: [nsStreet(i, at[1]), b.id], lights: false })));
     EW_ROADS.forEach((r, i) => crossingsOf(b.pts, 1, r.c).forEach((at, k) => crossings.push({ id: `${b.id}-ew${i}-${k}`, at, streets: [`ew${i}`, b.id], lights: false })));
   }
-  // The airport's drive off the south bank avenue east of the highway, the road across the forecourt and the one-way loop
-  // past the terminal's kerb (driven against its points: down the west side, east along the kerb, up the east side)
+  // The airport's drive off the south bank avenue east of the highway, and the forecourt's one-way loop off its end, up
+  // over the departures deck and back (airfield.ts)
   for (const a of AIRPORT_STREETS) streets.push({ id: a.id, kind: 'street', pts: a.pts, half: ROAD.half, lanes: 1, ...(a.oneway ? { oneway: a.oneway } : {}) });
   for (const c of AIRPORT_CROSSINGS) crossings.push({ ...c, lights: false });
   for (const a of GA_STREETS) streets.push({ id: a.id, kind: 'street', pts: a.pts, half: GA_ROAD.half, lanes: 1, ...(a.oneway ? { oneway: a.oneway } : {}) });

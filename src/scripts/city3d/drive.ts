@@ -27,6 +27,7 @@ import type { Sfx } from './combat';
 import { CARS } from './cars';
 import { carLights, circles, gearOf, newCar, newSignal, reachOf, skidding, stepCar, tune, type CarState, type DriveInput, type DriveTune, type TurnSignal } from './drive-sim';
 import { blinkOn } from './traffic';
+import { DECK_WALLS, departuresSurface } from './airfield';
 import { fx, glowTex, lit } from './kit';
 import type { Garage } from './garage';
 import type { Kart } from './karts';
@@ -59,7 +60,8 @@ export interface DriveDeps {
   /** The solid boxes within `reach` of a point (the collision grid's answer; everything the car could touch this step) */
   solids(x: number, z: number, reach: number): Box[];
   /** The ground's height (the raised blocks and sidewalks) */
-  groundAt(x: number, z: number): number;
+  /** The ground under a point (`y`: how high the car is, for ground with a level over another: the airport's deck) */
+  groundAt(x: number, z: number, y?: number): number;
   /** How far the camera can sit from a point along a direction before something's in the way */
   cameraRoom(from: THREE.Vector3, dir: THREE.Vector3, want: number): number;
   /** Is a spot free for Degen to stand on (getting out)? */
@@ -514,6 +516,8 @@ export function createDrive(d: DriveDeps) {
       // What it could touch this step: its length, how far it goes and a push or two
       const near = d.solids(s.x, s.z, reachOf(s));
       const boxes = v.y > 0.5 ? near.filter((b) => b[4] > v.y + 0.2) : near;
+      // Up on the airport's departures deck or its ramps, its parapets (down below they'd be walls in the open)
+      if (v.y > 0.5 && departuresSurface(s.x, s.z) !== null) boxes.push(...DECK_WALLS);
       if (frozen) inp = { throttle: 0, steer: 0, handbrake: true };
       const px = s.x;
       const pz = s.z;
@@ -543,7 +547,7 @@ export function createDrive(d: DriveDeps) {
             const last = marks[w];
             if (!last) marks[w] = [wx, wz];
             else if (Math.hypot(wx - last[0], wz - last[1]) > 0.15) {
-              skids.add(last[0], last[1], wx, wz, d.groundAt(wx, wz) + 0.046, clock);
+              skids.add(last[0], last[1], wx, wz, d.groundAt(wx, wz, v.y) + 0.046, clock);
               marks[w] = [wx, wz];
             }
           } else marks[w] = null;
@@ -553,7 +557,7 @@ export function createDrive(d: DriveDeps) {
 
       // The body: up the kerbs smoothly (and the kart track's ramps, decks and banking), leans into turns and squats under gas or brakes
       const track = d.track(s.x, s.z, v.y);
-      v.y += (Math.max(d.groundAt(s.x, s.z), track?.y ?? -Infinity) - v.y) * damp(14, dt);
+      v.y += (Math.max(d.groundAt(s.x, s.z, v.y), track?.y ?? -Infinity) - v.y) * damp(14, dt);
       v.bank += (-Math.atan(track?.roll ?? 0) - v.bank) * damp(8, dt);
       const accel = (s.speed - lastSpeed) / Math.max(dt, 1e-3);
       lastSpeed = s.speed;

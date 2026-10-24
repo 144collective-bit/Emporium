@@ -196,10 +196,50 @@ is how it stands today; the numbers in Phases 1 and 2 are history).
      - The traffic's routes are kept to the millimetre now (`mm()` in
        routes.ts): the baked copy in the page is a third of its size, so the
        boot's download went down (629.7 KB of 666 gzipped, from 665.9).
-   - **Step 2: landside and the metro.** The raised departures road over
-     the kerb, a multi-storey car park, the taxi rank and bus stops, a hotel
-     on the landside, and the metro's Airport branch carried on to a station
-     at the terminal.
+   - **Step 2 (built): landside and the metro.** In `airfield.ts` unless
+     said:
+     - **The forecourt's loop** (`LOOP`, `airport-forecourt`, one way): off
+       Airport Drive's end east past the short-stay car park, down its east
+       side, west up the departures ramp onto the deck, round the hairpin by
+       the hall's west end, east along the hall's upper doors (the drop-off
+       on its right), down the other ramp, north and back west to the drive.
+       Traffic and taxis drive it, up and over the deck.
+     - **The departures deck** (`DEPARTURES`, 3.3 up, at the hall's upper
+       storey): its slab on piers (`PIERS`, off the lanes over them), two
+       lanes and a planted median, the kerb's paving up to the hall under
+       the wave roof's canopy, parapets, lamps, its two ramps (`RAMP_HALF`
+       bands, under 0.11 steep) on embankments. Walked on (walk.ts
+       `departuresY()` / `departuresWall()`, as Liberty Bridge's decks: by
+       your height, so you walk under it too), driven on (your car keeps to
+       its parapets, `DECK_WALLS`, while it's up, and its height through
+       `groundAt(x, z, y)`), the traffic and taxis riding it
+       (`departuresRoadY()`, `departuresSlope()`). The walk camera can't
+       pass up through its slab (`DECK_CAMERA`). Its solids
+       (`DECK_SOLIDS`: the piers, the embankments as low as a step) are
+       below anything up on it.
+     - **The arrivals level** under the deck: the hall's lower doors, the
+       taxi rank (`RANK`, Cruisers in taxi yellow and a queue), the airport
+       bus in its bay (`BUS_BAY`) with a shelter, ARRIVALS hung under the
+       deck's edge, lit soffit.
+     - **The multi-storey car park** (`MSCP`: four decks and a roof,
+       spandrels with a cyan band, two glazed stair towers, PARKING; cars on
+       every deck, `MSCP_CARS`), **the hotel** by the drive (`HOTEL`: a glass
+       lobby and nine floors of rooms, its canopy over the sidewalk, RUNWAY
+       HOTEL on its roof; made-up name), the short-stay car park in the
+       loop.
+     - **The metro to the terminal** (`metro.ts`): the Airport branch now
+       carries on south down the east ring avenue's median, bends east
+       (`BRANCH`) over the airport's old land and the highway's bend and
+       ends just past Airport Station by the drive north of the forecourt
+       (`AIRPORT_END`; its tower's door faces the track, a short walk to the
+       deck, and taxis stop for it on the drive). Runs on the branch go
+       faster (`TRAIN.express`, `speedOf()`): every ride stays under 45 s.
+       The old Airport station on the avenue is gone.
+     - Tests: the deck (its surface, ramps, edges, piers, what fits under
+       it), the loop in the plan, the multi-storey and the hotel off every
+       road, the cars' models, the metro's branch and station, the taxis'
+       longest drives (to the airport's metro station from the stadium,
+       about 72 s), the layout snapshot.
    - **Step 3: the cargo area.** Cargo sheds, a cargo apron with its own
      stands and freighters, and their trucks on the landside.
 

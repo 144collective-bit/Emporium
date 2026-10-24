@@ -37,14 +37,15 @@ export type Footprint = [number, number, number, number, number];
 export const AIRSIDE: Rect = [96, 331, 452, 451];
 /** Landside: east of the highway, from the south bank avenue down to the airside's fence (Airport Drive, step 2's car parks) */
 export const LANDSIDE: Rect = [290, 147, 452, 331];
-/** The terminal's forecourt: the kerb's loop round the short-stay car park, in front of the hall */
-export const FORECOURT: Rect = [266, 306, 336, 336];
+/** The terminal's forecourt: its loop round the short-stay car park and the deck's ramps, and the deck in front of the hall (west of the loop's land: the highway's bend is close) */
+export const FORECOURT: Rect = [296, 288, 400, 337];
+export const DEPARTURES_LAND: Rect = [261, 317, 296, 337];
 /** The whole airport (no trees in its parts: `AIRPORT_AREAS`) */
 export const SITE: Rect = [AIRSIDE[0], LANDSIDE[1], AIRSIDE[2], AIRSIDE[3]];
 /** General aviation's way in, west of the fence (its road and car park, `GA_ROAD`), and the fence's west gate opposite it */
 export const GA_LANDSIDE: Rect = [70.5, 338, AIRSIDE[0], 360];
 export const GA_GATE = { z0: 345, z1: 349 };
-export const AIRPORT_AREAS: Rect[] = [AIRSIDE, LANDSIDE, FORECOURT, GA_LANDSIDE];
+export const AIRPORT_AREAS: Rect[] = [AIRSIDE, LANDSIDE, FORECOURT, DEPARTURES_LAND, GA_LANDSIDE];
 
 /** The runway, 09/27: east-west along the south edge, take-offs and landings eastwards */
 export const RUNWAY = { x0: 100, x1: 400, z: 442, half: 5 };
@@ -136,11 +137,94 @@ export const FENCE: { a: Pt; b: Pt }[] = [
 ];
 export const FENCE_H = 2.2;
 
-/* Landside: Airport Drive off the south bank avenue, the kerb's loop round the short-stay car park */
+/* ---------- Landside (Phase 3 step 2): Airport Drive, the forecourt's loop, the departures deck ---------- */
 
-/** The drive: south from the south bank avenue to the forecourt; the front road across it, and the one-way loop past the kerb */
-export const ROAD = { x: 300, z0: 137, z1: 312, x0: 272, x1: 330, kerb: 330, half: 1.7 };
-export const AIRPORT_STREETS: { id: string; pts: Pt[]; oneway?: -1 }[] = [
+/** Airport Drive: south off the south bank avenue (east of the highway) to the forecourt */
+export const ROAD = { x: 300, z0: 137, z1: 300, half: 1.7 };
+/**
+ * The forecourt's one-way loop, off the drive's end and back onto it a little north: east along `z0`, south down
+ * `east`, west along `up` (up the departures ramp onto the deck), round the hairpin at `west`, east along `kerb` past
+ * the hall's upper doors (the drop-off on its right, down the other ramp), north up `x1` and west along `out` to the drive
+ */
+export const LOOP = { z0: ROAD.z1, out: 292, east: 388, x1: 396, west: 266, up: 320.5, kerb: 328, half: 1.7 };
+/**
+ * The departures deck in front of the hall's upper storey (`y` its top, `slab` thick): from `x0` to the ramps' tops
+ * at `x1`, from `z0` to the hall's face; the up and down ramps run east from it to their feet at `foot`, each in a
+ * band either side of its lane (`RAMP_HALF`): up along `up`, down along `kerb`. Under it, at street level, the arrivals kerb, the taxi rank and the
+ * bus bay; its piers in rows (`PIERS`, off the lanes above them)
+ */
+export const DEPARTURES = { y: 3.3, slab: 0.45, x0: 262.5, x1: 338, z0: LOOP.up - 2.6, z1: HALL[1], foot: 370 };
+export const RAMP_HALF = 2;
+const RAMPS: [number, number][] = [LOOP.up, LOOP.kerb].map((c): [number, number] => [c - RAMP_HALF, c + RAMP_HALF]);
+/** How far up or down a step onto it reaches (as Liberty Bridge's) */
+const DECK_STEP = 0.55;
+/** Its piers: along the deck's north edge and down the median between the lanes, every 12 */
+export const PIERS: Pt[] = [DEPARTURES.z0 + 0.35, (RAMPS[0][1] + RAMPS[1][0]) / 2].flatMap((z) => [270, 282, 294, 306, 318, 330].map((x): Pt => [x, z]));
+export const PIER = 0.32;
+
+/**
+ * The walking and driving surface of the deck and its ramps at x, z (`m` in from its edges), or null off it: the
+ * deck flat at `y`, each ramp falling to the street from the deck's edge to its foot. Between the ramps' bands
+ * the deck's east edge is its edge
+ */
+export function departuresSurface(x: number, z: number, m = 0): number | null {
+  const D = DEPARTURES;
+  const inBand = RAMPS.find(([a, b]) => z >= a + m && z <= b - m);
+  if (x >= D.x0 + m && x <= (inBand ? D.x1 : D.x1 - m) && z >= D.z0 + m && z <= D.z1 - m) return D.y;
+  if (inBand && x > D.x1 && x <= D.foot) return (D.y * (D.foot - x)) / (D.foot - D.x1);
+  return null;
+}
+/** The deck under you: its surface when you're up there (or near enough to step onto it), else null */
+export function departuresY(x: number, z: number, y: number, m = 0): number | null {
+  const s = departuresSurface(x, z, m);
+  return s !== null && y >= s - DECK_STEP ? s : null;
+}
+/** Up on the deck, off its surface (or `m` short of its edge): its parapets, the hall's face (you can't step or fall off) */
+export function departuresWall(x: number, z: number, y: number, m = 0) {
+  if (departuresY(x, z, y, m) !== null) return false;
+  if (y < DECK_STEP + 0.05) return false;
+  const D = DEPARTURES;
+  return x >= D.x0 - m - 0.05 && x <= D.foot + m && z >= D.z0 - m - 0.05 && z <= D.z1 + m;
+}
+/** The height the traffic drives at here: the deck and its ramps (nothing drives under them), else the street */
+export const departuresRoadY = (x: number, z: number) => departuresSurface(x, z) ?? 0;
+/** How steeply the road climbs eastwards here (dy / dx): on a ramp, falling to its foot; else flat */
+export function departuresSlope(x: number, z: number) {
+  const D = DEPARTURES;
+  return x > D.x1 && x <= D.foot && RAMPS.some(([a, b]) => z >= a && z <= b) ? -D.y / (D.foot - D.x1) : 0;
+}
+/** Its parapets, for a car up on it (drive.ts adds them while the car is up: down below they'd be walls in the open) */
+export const DECK_WALLS: Footprint[] = (() => {
+  const D = DEPARTURES;
+  const top = D.y + 1;
+  const t = 0.15;
+  return [
+    // The north edge and the hairpin's west end
+    [D.x0, D.z0 - t, D.x1, D.z0, top],
+    [D.x0 - t, D.z0, D.x0, D.z1, top],
+    // The deck's east edge between the ramps
+    [D.x1, RAMPS[0][1], D.x1 + t, RAMPS[1][0], top],
+    // Each ramp's sides
+    ...RAMPS.flatMap(([a, b]): Footprint[] => [
+      [D.x1, a - t, D.foot, a, top],
+      [D.x1, b, D.foot, b + t, top],
+    ]),
+  ];
+})();
+/**
+ * What's solid down at street level: the piers, and under each ramp its embankment where the ramp's higher than a
+ * step (its foot you walk onto), one box only as high as that step (so a car up on the ramp, over it, never meets
+ * it: drive.ts drops what's under it; one box, not pieces: a car pushed out of one piece would land in the next)
+ */
+export const DECK_SOLIDS: Footprint[] = (() => {
+  const D = DEPARTURES;
+  const steep = D.foot - (DECK_STEP * (D.foot - D.x1)) / D.y;
+  return [...PIERS.map(([x, z]): Footprint => [x - PIER, z - PIER, x + PIER, z + PIER, D.y - D.slab]), ...RAMPS.map(([a, b]): Footprint => [D.x1, a, steep, b, DECK_STEP])];
+})();
+/** The deck's slab for the walk camera: it can't pass up through it from under the deck (a box with a bottom) */
+export const DECK_CAMERA: number[][] = [[DEPARTURES.x0, DEPARTURES.z0, DEPARTURES.x1, DEPARTURES.z1, DEPARTURES.y, DEPARTURES.y - DEPARTURES.slab]];
+
+export const AIRPORT_STREETS: { id: string; pts: Pt[]; oneway?: 1 | -1 }[] = [
   {
     id: 'airport-drive',
     pts: [
@@ -148,33 +232,60 @@ export const AIRPORT_STREETS: { id: string; pts: Pt[]; oneway?: -1 }[] = [
       [ROAD.x, ROAD.z1],
     ],
   },
-  // (one way, west: off the drive into the loop at its west end, and from the loop's east end back past the drive)
   {
-    id: 'airport-front',
+    id: 'airport-forecourt',
     pts: [
-      [ROAD.x0, ROAD.z1],
-      [ROAD.x1, ROAD.z1],
+      [ROAD.x, LOOP.z0],
+      [LOOP.east, LOOP.z0],
+      [LOOP.east, LOOP.up],
+      [LOOP.west, LOOP.up],
+      [LOOP.west, LOOP.kerb],
+      [LOOP.x1, LOOP.kerb],
+      [LOOP.x1, LOOP.out],
+      [ROAD.x, LOOP.out],
     ],
-    oneway: -1,
-  },
-  // (driven against its points: down the west side, east along the kerb with the hall on the right, up the east side)
-  {
-    id: 'airport-loop',
-    pts: [
-      [ROAD.x1, ROAD.z1],
-      [ROAD.x1, ROAD.kerb],
-      [ROAD.x0, ROAD.kerb],
-      [ROAD.x0, ROAD.z1],
-    ],
-    oneway: -1,
+    oneway: 1,
   },
 ];
 /** Where they meet the south bank avenue and each other (no lights) */
 export const AIRPORT_CROSSINGS: { id: string; at: Pt; streets: string[] }[] = [
   { id: 'airport-in', at: [ROAD.x, ROAD.z0], streets: ['ew4', 'airport-drive'] },
-  { id: 'airport-front', at: [ROAD.x, ROAD.z1], streets: ['airport-drive', 'airport-front'] },
-  { id: 'airport-loop-w', at: [ROAD.x0, ROAD.z1], streets: ['airport-front', 'airport-loop'] },
-  { id: 'airport-loop-e', at: [ROAD.x1, ROAD.z1], streets: ['airport-front', 'airport-loop'] },
+  { id: 'airport-forecourt-in', at: [ROAD.x, LOOP.z0], streets: ['airport-drive', 'airport-forecourt'] },
+  { id: 'airport-forecourt-out', at: [ROAD.x, LOOP.out], streets: ['airport-drive', 'airport-forecourt'] },
+];
+
+/** The arrivals level under the deck: the taxi rank's Cruisers in taxi yellow waiting nose to tail, and the airport bus in its bay */
+export const RANK_Z = (RAMPS[0][1] + RAMPS[1][0]) / 2 + 2.9;
+export const RANK: [string, number, number, number, string][] = [276, 280.5, 285, 289.5, 294].map((x): [string, number, number, number, string] => ['sedan', x, RANK_Z, 0, '#ffd23f']);
+export const BUS_BAY = { x: 312, z: RANK_Z };
+/**
+ * The multi-storey car park east of the loop (`MSCP`: its decks `levels` apart, the roof's parapet `top`), its
+ * entrance off the loop's east side; the hotel by the drive (`HOTEL`, its front on the drive's east sidewalk)
+ */
+export const MSCP = { rect: [402, 296, 446, 328] as Rect, levels: 2.6, decks: 4, top: 10.9 };
+export const HOTEL = { rect: [308, 198, 340, 226] as Rect, top: 10.6, floors: 9 };
+/** Cars on the multi-storey's decks (and its roof), along its open north and south sides: about two in three bays taken */
+export const MSCP_CARS: { y: number; cars: [string, number, number, number, string][] }[] = Array.from({ length: MSCP.decks }, (_, k) => {
+  const [x0, z0, x1, z1] = MSCP.rect;
+  const models = ['hatch', 'sedan', 'coupe', 'pickup', 'van', 'hatch'];
+  const colours = ['#f3f2f7', '#2b2d3a', '#e23b3b', '#2aabee', '#8a86a8', '#ffd23f', '#1fbf6b'];
+  const cars: [string, number, number, number, string][] = [];
+  let n = k * 7;
+  for (let x = x0 + 2.2; x < x1 - 2; x += 1.9)
+    for (const [z, yaw] of [
+      [z0 + 2.2, Math.PI / 2],
+      [z1 - 2.2, -Math.PI / 2],
+    ] as const) {
+      if (Math.abs(Math.sin(x * 4.7 + k * 9.1 + z) * 9137.31) % 1 < 0.35) continue;
+      cars.push([models[n % models.length], x, z, yaw, colours[n % colours.length]]);
+      n++;
+    }
+  return { y: (k + 1) * MSCP.levels, cars };
+});
+/** Lamps up on the deck, along its north parapet and by the hairpin (x, z, the way the arm reaches) */
+export const DECK_LAMPS: [number, number, number][] = [
+  ...[276, 300, 324].map((x): [number, number, number] => [x, DEPARTURES.z0 + 0.4, -Math.PI / 2]),
+  [DEPARTURES.x0 + 0.4, (LOOP.up + LOOP.kerb) / 2, 0],
 ];
 /**
  * General aviation's way in: a short road east off the east ring avenue south of the highway to a little car park
@@ -209,8 +320,8 @@ export const GA_CROSSINGS: { id: string; at: Pt; streets: string[] }[] = [
 /** Where you arrive at the airport (by taxi, on fast travel, `PLACES`): on the GA car park's kerb, facing the gate */
 export const AIR_ARRIVE = { x: GA_ROAD.x1 + GA_ROAD.half + 1.6, z: (GA_GATE.z0 + GA_GATE.z1) / 2, yaw: -Math.PI / 2 };
 
-/** The short-stay car park inside the loop: two rows of bays, nose to nose */
-export const CAR_PARK: Rect = [ROAD.x0 + ROAD.half + 0.6, ROAD.z1 + ROAD.half + 0.4, ROAD.x1 - ROAD.half - 0.6, ROAD.kerb - ROAD.half - 0.4];
+/** The short-stay car park inside the loop, north of the deck and its ramp: two rows of bays */
+export const CAR_PARK: Rect = [ROAD.x + 2.6, LOOP.z0 + LOOP.half + 0.6, LOOP.east - LOOP.half - 0.6, DEPARTURES.z0 - 0.5];
 /** The GA car park inside its loop */
 export const GA_CAR_PARK: Rect = [GA_ROAD.loopX + GA_ROAD.half + 0.6, GA_ROAD.z + GA_ROAD.half + 0.4, GA_ROAD.x1 - GA_ROAD.half - 0.6, GA_ROAD.loopZ - GA_ROAD.half - 0.4];
 /** Parked cars: model, x, z, heading (yaw, as cars.ts turns them), colour */
@@ -237,8 +348,10 @@ const CAR_HALF = { l: 1.35, w: 0.6 };
 export const AIRPORT_LAMPS: [number, number, number][] = (() => {
   const out: [number, number, number][] = [];
   const o = ROAD.half + 0.6;
-  for (let z = ROAD.z0 + 10; z < ROAD.z1 - 6; z += 14) out.push([ROAD.x - o, z, Math.PI], [ROAD.x + o, z + 7, 0]);
-  for (let z = ROAD.z1 + 4; z < ROAD.kerb; z += 9) out.push([ROAD.x0 - o, z, Math.PI], [ROAD.x1 + o, z, 0]);
+  for (let z = ROAD.z0 + 10; z < LOOP.out - 6; z += 14) out.push([ROAD.x - o, z, Math.PI], [ROAD.x + o, z + 7, 0]);
+  // (round the loop's street-level stretches: along its north side and its east sides)
+  for (let x = ROAD.x + 12; x < LOOP.east - 4; x += 14) out.push([x, LOOP.out - o, -Math.PI / 2]);
+  for (const z of [LOOP.out + 4, LOOP.z0 + 12]) out.push([LOOP.x1 + o, z, 0]);
   // ...and along the GA road, and by the gate
   out.push([GA_ROAD.x0 + 14, GA_ROAD.z - o, -Math.PI / 2], [GA_ROAD.x1 + o, GA_ROAD.loopZ - 2, 0]);
   return out;
@@ -278,6 +391,13 @@ export const AIRPORT_SOLIDS: Footprint[] = [
     return along ? [x - l, z - w, x + l, z + w, 1.6] : [x - w, z - l, x + w, z + l, 1.6];
   }),
   ...PARKED.map(([, x, z]): Footprint => [x - CAR_HALF.w, z - CAR_HALF.l, x + CAR_HALF.w, z + CAR_HALF.l, 1.2]),
+  // The forecourt: the deck's piers and its ramps' embankments, the taxis on the rank and the bus in its bay under the
+  // deck, the multi-storey car park and the hotel
+  ...DECK_SOLIDS,
+  ...RANK.map(([, x, z]): Footprint => [x - CAR_HALF.l, z - CAR_HALF.w, x + CAR_HALF.l, z + CAR_HALF.w, 1.2]),
+  [BUS_BAY.x - 2.9, BUS_BAY.z - 0.8, BUS_BAY.x + 2.9, BUS_BAY.z + 0.8, 2.1],
+  [...MSCP.rect, MSCP.top],
+  [...HOTEL.rect, HOTEL.top],
   // The fence, a thin wall each run
   ...FENCE.map(({ a, b }): Footprint => [Math.min(a[0], b[0]) - 0.1, Math.min(a[1], b[1]) - 0.1, Math.max(a[0], b[0]) + 0.1, Math.max(a[1], b[1]) + 0.1, FENCE_H]),
 ];

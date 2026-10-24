@@ -59,8 +59,10 @@ test('a taxi drives from any place to any other along the streets, to the kerb n
       const end = r!.pts[r!.pts.length - 1];
       const nearest = Math.min(...roads.filter((s) => s.kind !== 'slip').map((s) => distToStreet(s, [b.at.x, b.at.z])));
       assert.ok(Math.hypot(end[0] - b.at.x, end[1] - b.at.z) < nearest + 4, `${a.id} to ${b.id} stops ${Math.hypot(end[0] - b.at.x, end[1] - b.at.z).toFixed(1)} away`);
-      // (the longest, from the airport to the stadium, corner to corner of the city, is about 64 s since the airport
-      // moved out to the world's south edge: docs/airport-plan.md Phase 3)
-      assert.ok(r!.len / TAXI_SPEED < 66, `${a.id} to ${b.id}: ${r!.len.toFixed(0)}`);
+      // (the longest in town, from The Trenches to Westlake Park's stadium, is about 59 s since the river was widened;
+      // to or from the airport, out on the world's south edge since docs/airport-plan.md Phase 3, the longest is the
+      // stadium to the airport's metro station by the terminal, corner to corner of the city, about 72 s)
+      const airport = [a.id, b.id].some((id) => id === 'airport' || id === 'metro-airport');
+      assert.ok(r!.len / TAXI_SPEED < (airport ? 74 : 62), `${a.id} to ${b.id}: ${r!.len.toFixed(0)}`);
     }
 });

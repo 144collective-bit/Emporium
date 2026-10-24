@@ -13,11 +13,17 @@ import { Batch, canvasTex, FONT_DISPLAY, fx, glowMat, lit, neon, PAL, plane, rng
 import { INK, PALE, ROOF, STEEL, TOP, YELLOW, box, cyl, glazing, soft } from './airportkit';
 import {
   AIRPORT_LAMPS,
+  BUS_BAY,
+  DECK_LAMPS,
+  DEPARTURES,
   FLIGHTS,
+  MSCP_CARS,
+  RANK,
   HALL,
   HANGAR,
   HANGAR_DOOR,
   HANGAR_OFFICE,
+  HOTEL,
   MASTS,
   PARKED,
   PARKED_JETS,
@@ -96,12 +102,13 @@ function hall(b: Batch, group: THREE.Group, crowd: Idle[], low: boolean) {
   for (const zz of [z0, z1]) box(b, x0 + 1.6, H / 2 - 0.25, zz - 0.05, x1 - 1.6, H / 2 + 0.15, zz + 0.05, PALE);
   glazing(b, x0 + 1.6, z0 + 0.15, x1 - 1.6, z0 + 0.15, 0.05, H - 0.45, 1);
   glazing(b, x0 + 1.6, z1 - 0.15, x1 - 1.6, z1 - 0.15, 0.05, H - 0.45, -1);
-  // Entrance doors on the landside, under the canopy
-  for (let x = x0 + 8; x < x1 - 6; x += 12) {
-    box(b, x - 1.3, 0, z0 - 0.1, x + 1.3, 2, z0 + 0.05, toon('#14102a'));
-    box(b, x - 1.2, 0, z0 - 0.12, x + 1.2, 1.9, z0 - 0.08, soft('#ffd36b'));
-    box(b, x - 0.04, 0, z0 - 0.14, x + 0.04, 1.9, z0 - 0.1, INK);
-  }
+  // Doors on the landside: arrivals down at the street under the departures deck, departures up on it
+  for (const y of [0, DEPARTURES.y])
+    for (let x = x0 + 8; x < x1 - 6; x += 12) {
+      box(b, x - 1.3, y, z0 - 0.1, x + 1.3, y + 2, z0 + 0.05, toon('#14102a'));
+      box(b, x - 1.2, y, z0 - 0.12, x + 1.2, y + 1.9, z0 - 0.08, soft('#ffd36b'));
+      box(b, x - 0.04, y, z0 - 0.14, x + 0.04, y + 1.9, z0 - 0.1, INK);
+    }
   // The wave roof: a long arch over the hall, overhanging the kerb as a canopy
   const roof = new THREE.Shape();
   const profile: [number, number][] = [];
@@ -145,14 +152,16 @@ function hall(b: Batch, group: THREE.Group, crowd: Idle[], low: boolean) {
   board.rotation.y = Math.PI;
   group.add(fx(board));
 
-  // People at the doors: arriving, waiting, chatting
+  // People at the doors: up on the departures kerb, saying goodbye; down at arrivals, waiting and queueing for a taxi
   const r = rng(31);
   const n = low ? 6 : 14;
   for (let i = 0; i < n; i++) {
     const x = x0 + 4 + r() * (x1 - x0 - 8);
     const z = z0 - 1.2 - r() * 1.6;
-    crowd.push({ x, z, ry: r() < 0.5 ? Math.PI : (r() - 0.5) * 2, y: TOP + 0.02, act: i % 3 === 0 ? 'chat' : i % 3 === 1 ? 'queue' : 'look' });
+    const up = i % 2 === 0;
+    crowd.push({ x, z, ry: r() < 0.5 ? Math.PI : (r() - 0.5) * 2, y: up ? DEPARTURES.y + 0.02 : TOP + 0.02, act: i % 3 === 0 ? 'chat' : i % 3 === 1 ? 'queue' : 'look' });
   }
+  for (let i = 0; i < (low ? 2 : 5); i++) crowd.push({ x: RANK[RANK.length - 1][1] + 2.4 + i * 0.9, z: RANK[0][2] + 1.9, ry: -Math.PI / 2, y: TOP + 0.02, act: 'queue' });
 }
 
 /* ---------- The tower, the hangar, the helipad ---------- */
@@ -300,9 +309,13 @@ function roadside(group: THREE.Group) {
     0.035,
     PARKED.map(([m, x, z, ry, c]) => [m as CarId, x, z, ry, c])
   );
+  // ...the taxi rank and the airport bus under the departures deck, the multi-storey's decks
+  parkedCars(group, 0.035, [...RANK, ['bus', BUS_BAY.x, BUS_BAY.z, 0, '#2aabee']].map(([m, x, z, ry, c]) => [m as CarId, x as number, z as number, ry as number, c as string]));
+  for (const { y, cars } of MSCP_CARS) parkedCars(group, y + 0.035, cars.map(([m, x, z, ry, c]) => [m as CarId, x, z, ry, c]));
   for (const [x, z, ry] of AIRPORT_LAMPS) addLamp(x, z, ry, 0);
+  for (const [x, z, ry] of DECK_LAMPS) addLamp(x, z, ry, DEPARTURES.y);
   // An avenue of trees down the drive, behind its lamps
-  for (let z = ROAD.z0 + 17; z < ROAD.z1 - 6; z += 14) for (const s of [-1, 1]) addTree(ROAD.x + s * (ROAD.half + 3.2), z, 0.95, false, 0);
+  for (let z = ROAD.z0 + 17; z < ROAD.z1 - 14; z += 14) for (const s of [-1, 1]) if (s < 0 || z < HOTEL.rect[1] - 3 || z > HOTEL.rect[3] + 3) addTree(ROAD.x + s * (ROAD.half + 3.2), z, 0.95, false, 0);
 }
 
 /* ---------- The flying traffic ---------- */

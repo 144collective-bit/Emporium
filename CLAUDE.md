@@ -256,7 +256,10 @@ it and has been retired completely. Build only on what's here.
     median to the switch (`SWITCH_S`), a
     quarter-circle bend (`BEND_R`) and west over the open land south of the
     south row and Trench Avenue's median to The Trenches; `branch` straight
-    on from the switch to the Airport, Phase 9, the owner's call); a place
+    on from the switch down the avenue's median, then (since the airport's
+    Phase 3 step 2) a bend east (`BRANCH`) over the airport's old land and
+    the highway to Airport Station by Airport Drive, `AIRPORT_END`; runs on
+    the branch go faster, `TRAIN.express`, `speedOf()`); a place
     on them is a track and a distance (`pointOn()`, `along()`, `sideOf()`);
     pillars wherever the ground is clear (`PILLARS`: an avenue's median
     clear of its junctions, or open land off every road; over the river
@@ -1926,9 +1929,10 @@ it and has been retired completely. Build only on what's here.
 - The plan and its phases are `docs/airport-plan.md`; keep it up to date,
   one phase at a time with the owner's sign-off. Phase 1 (the airport and
   its flying traffic), Phase 2 (fly it yourself, from the hangar) and
-  Phase 3's step 1 (the owner's call: expanded, more realistic, moved out
-  to the world's south edge) are built; step 2 (landside and the metro to
-  the terminal) and step 3 (the cargo area) wait for the owner's sign-off.
+  Phase 3's steps 1 (the owner's call: expanded, more realistic, moved out
+  to the world's south edge) and 2 (landside and the metro to the
+  terminal) are built; step 3 (the cargo area) waits for the owner's
+  sign-off.
 - **Where:** on the world's south edge, outside the ring highway (it no
   longer goes round the airport): the airside south of the highway's south
   side, the landside east of the highway south of the river. Its old site
@@ -1953,6 +1957,19 @@ it and has been retired completely. Build only on what's here.
   the street plan with traffic; the highway's junctions there have slip
   lanes on their outer corners too (`OUTER_SLIPS`). You arrive (taxi, fast
   travel, `PLACES`) at the GA car park by the gate (`AIR_ARRIVE`).
+- **Landside** (Phase 3 step 2): the forecourt's one-way loop
+  (`LOOP`, street `airport-forecourt`) up over **the departures deck**
+  (`DEPARTURES`, in front of the hall's upper storey, 3.3 up: its ramps,
+  lanes, kerb and parapets) and back; walking, driving, the traffic and
+  taxis all ride it (`departuresY()` / `departuresWall()` in walk.ts by
+  your height, as Liberty Bridge's decks; `groundAt(x, z, y)` and
+  `DECK_WALLS` for your car; `departuresRoadY()` / `departuresSlope()` in
+  life.ts and taxi.ts; `DECK_CAMERA`); under it the arrivals level (the
+  taxi rank `RANK`, the bus bay `BUS_BAY`, the hall's lower doors); the
+  short-stay car park in the loop, the multi-storey (`MSCP`, its cars
+  `MSCP_CARS`) and the hotel by the drive (`HOTEL`, RUNWAY HOTEL, made up).
+  What's solid under the deck (`DECK_SOLIDS`) is lower than anything up
+  on it; anything new on the deck goes through these.
 - **The flying traffic:** five airliners (from `FLYING_STANDS`; the other
   stands and the maintenance hangar's apron have airliners parked,
   `PARKED_JETS`), a prop plane, a helicopter and the executive helicopter
@@ -1972,7 +1989,8 @@ it and has been retired completely. Build only on what's here.
   and clear of the solids. Change a route or a take-off time only with the
   tests passing.
 - **Drawn by** `airport.ts` at the boot (the hall, the place's spot: glass
-  front, wave roof and kerb canopy, the SECTOR 7 AIRPORT sign; Hangar 1
+  front, wave roof and kerb canopy, the SECTOR 7 AIRPORT sign, doors on both
+  levels; the taxi rank, the bus and the multi-storey's cars; Hangar 1
   and the tower in the `airport` group, the windsock, the roadside's
   parked cars, lamps and trees, the aircraft; shared paint and glazing in
   `airportkit.ts`) and as a district loaded as you approach
@@ -1981,8 +1999,9 @@ it and has been retired completely. Build only on what's here.
   localizer, taxiways and their signs, aprons, stands, the fence with its
   chain-link in the FX layer, pads, apron vehicles, masts), the concourses
   and airbridges, the maintenance hangar, the fire station and its crash
-  tender, the fuel farm, landside and the GA road; one atlas of fixed
-  copy), and `aircraft.ts` (the models: a cartoon airliner in DEGEN AIR
+  tender, the fuel farm, the forecourt, the departures deck and the
+  arrivals level, the multi-storey, the hotel and the GA road; one atlas of
+  fixed copy), and `aircraft.ts` (the models: a cartoon airliner in DEGEN AIR
   colours, a made-up airline, never a real one, maker or badge; a
   high-wing prop plane; a helicopter). Each model is a few parts by role
   (body, accent livery colour, neon nav lights, blinking strobe, gear that
