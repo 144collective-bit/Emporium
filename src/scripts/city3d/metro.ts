@@ -4,8 +4,9 @@
  * in the north, down the east ring avenue's median over downtown's east side
  * and the river to South Bank; there it bends west (the owner's call, with
  * The Trenches) and runs south of the town's south row and on over Trench
- * Avenue's median to The Trenches. The Airport's branch carries straight on
- * south from the bend.
+ * Avenue's median to The Trenches, and on (docs/finance-plan.md Phase 7)
+ * round a tight bend north, over the river on a steel arch, to Uptown. The
+ * Airport's branch carries straight on south from the bend.
  *
  * - **Tracks** (`TRACKS`): centre lines on the ground plan, `main` (north to
  *   south, then round the bend and west) and `branch` (from the switch,
@@ -19,20 +20,23 @@
  * - **Pillars** (`PILLARS`): along the tracks wherever the ground under them
  *   is clear: an avenue's median (clear of its junctions), or open land off
  *   every road; never in the river; never more than 12 apart where they can
- *   stand.
+ *   stand. Where the line runs over a street with no median, portal frames
+ *   (`PORTALS`: a leg each side, on the blocks' edges), and over the river to
+ *   Uptown the arch (`ARCH`), its deck hung from it (`HANGERS`).
  * - **The train** shuttles on a timetable from the clock (`trainAt()`, the
- *   same for everyone): Kart Park, Downtown, South Bank, The Trenches, back
- *   to South Bank, out to the Airport, back, and up to the Kart Park. A ride
- *   (`rideAt()`) goes straight to the station you pick (from The Trenches to
- *   the Airport it turns round at South Bank), and the train carries on its
- *   timetable from there (`timetableAt()`).
+ *   same for everyone): Kart Park, Downtown, South Bank, The Trenches,
+ *   Uptown, back through The Trenches to South Bank, out to the Airport,
+ *   back, and up to the Kart Park. A ride (`rideAt()`) goes straight to the
+ *   station you pick (from the west to the Airport it turns round at South
+ *   Bank), and the train carries on its timetable from there
+ *   (`timetableAt()`).
  *
  * Built over the avenues' medians and on open land clear of the pads and
  * the blocks, so nothing that exists moves.
  */
 import { MEDIAN, NS_ROADS, RIVER, WIDEN } from './layout';
 import { PLAN, distToStreet, type Street } from './streetplan';
-import { AVENUE_Z } from './trenches';
+import { AVENUE_Z, NS_X } from './trenches';
 import type { Box } from './solids';
 
 export type Pt = [number, number];
@@ -55,9 +59,18 @@ export const PLATFORM_SIDE = -1;
 export const SWITCH_Z = 116 + WIDEN;
 /** The bend's radius: it comes out of it running west along Trench Avenue */
 export const BEND_R = AVENUE_Z - SWITCH_Z;
-/** The ends of the tracks: north, west (past The Trenches' station) and south (past the Airport's) */
+/** The north end of the main line (past the Kart Park's station) */
 export const NORTH_END = -204;
-export const WEST_END = -103;
+/**
+ * Uptown's extension (docs/finance-plan.md Phase 7 step 6, the owner's pick): on west past The Trenches along Trench
+ * Avenue's median to `WEST_END`, round a tight bend (`UP_R`) into the cross street at `UP_X` (in line with the one-way
+ * pair's northbound street), north up it on portal frames (`PORTALS`), over the river on a steel arch with nothing in
+ * the water (`ARCH`), and up the pair's street to Uptown station, the line's end at `UP_END` (z)
+ */
+export const UP_X = NS_X[1];
+export const UP_R = 8;
+export const WEST_END = UP_X + UP_R;
+export const UP_END = 46;
 /**
  * The Airport's branch (since the airport moved out to the world's south edge, docs/airport-plan.md Phase 3 step 2):
  * straight on south from the switch down the avenue's median to `BRANCH.south`, a quarter bend east (`BRANCH.r`),
@@ -91,7 +104,7 @@ const arc = (cx: number, cz: number, r: number, a0: number, a1: number): Pt[] =>
     return [cx + r * Math.cos(a), cz + r * Math.sin(a)];
   });
 export const TRACKS: Record<TrackId, Track> = {
-  main: track('main', [[LINE_X, NORTH_END], [LINE_X, SWITCH_Z], ...BEND, [WEST_END, AVENUE_Z]]),
+  main: track('main', [[LINE_X, NORTH_END], [LINE_X, SWITCH_Z], ...BEND, [WEST_END, AVENUE_Z], ...arc(WEST_END, AVENUE_Z - UP_R, UP_R, Math.PI / 2, Math.PI), [UP_X, UP_END]]),
   branch: track('branch', [[LINE_X, SWITCH_Z], [LINE_X, BRANCH.south], ...arc(LINE_X + BRANCH.r, BRANCH.south, BRANCH.r, Math.PI, Math.PI / 2), [AIRPORT_END, BRANCH.z]]),
 };
 /** The switch: how far along the main line the branch leaves it (the branch starts there, at its 0) */
@@ -141,11 +154,15 @@ export interface Station {
   door: { x: number; z: number };
   /** The way you face walking out of the door (unit, on the ground) */
   face: Pt;
+  /** Which side of the track its platform is on (`PLATFORM_SIDE` but where the ground's only clear on the other) */
+  side?: 1 | -1;
 }
 /** A stair tower 2.4 by 2.5 beside the east avenue, its west face at x 69.6, centred on z; its door facing west */
 /** The Airport's station's middle along its track (east of Airport Drive) */
 const AIRPORT_STATION_X = 312;
 const eastTower = (z: number): Pick<Station, 'tower' | 'door' | 'face'> => ({ tower: [69.6, z - 1.25, 72, z + 1.25], door: { x: 69.2, z }, face: [-1, 0] });
+/** Uptown station's middle (z, over the pair's street at `UP_X`) */
+const UPTOWN_Z = 52.5;
 /** The Trenches' station on Trench Avenue: its platform south of the track, the tower on the block's sidewalk edge, its door facing north */
 const TRENCH_X = -93;
 const trenchTower: Pick<Station, 'tower' | 'door' | 'face'> = { tower: [TRENCH_X - 1.2, AVENUE_Z + 5.3, TRENCH_X + 1.2, AVENUE_Z + 7.8], door: { x: TRENCH_X, z: AVENUE_Z + 4.9 }, face: [0, -1] };
@@ -158,19 +175,53 @@ export const STATIONS: Station[] = [
   // (by Airport Drive just north of the terminal's forecourt: its platform north of the track (running east), its tower
   // north of that, the door facing the track and the forecourt; taxis stop for it on the drive)
   { id: 'airport', name: 'Airport', track: 'branch', s: along('branch', [AIRPORT_STATION_X, BRANCH.z]), tower: [AIRPORT_STATION_X - 1.25, BRANCH.z - 7.5, AIRPORT_STATION_X + 1.25, BRANCH.z - 5.1], door: { x: AIRPORT_STATION_X, z: BRANCH.z - 4.7 }, face: [0, 1] },
+  // (over the one-way pair's northbound street by the plaza's café terrace: its platform east of the track, over the
+  // street's sidewalk, its tower on the terrace north of the café's kiosk, the door facing the cross street)
+  { id: 'uptown', name: 'Uptown', track: 'main', s: along('main', [UP_X, UPTOWN_Z]), tower: [UP_X + 2.85, UPTOWN_Z - 4.9, UP_X + 5.25, UPTOWN_Z - 2.4], door: { x: UP_X + 4.05, z: UPTOWN_Z - 5.3 }, face: [0, -1], side: 1 },
 ];
 const station = (id: string) => STATIONS.find((s) => s.id === id)!;
 /** Where a station's platform is: its middle and the way its track runs there */
 export const stationAt = (st: Station) => pointOn(st.track, st.s);
+/** Which side of its track a station's platform is on */
+export const sideAt = (st: Station) => st.side ?? PLATFORM_SIDE;
+
+/* ---------- Uptown's extension: portal frames and the arch ---------- */
+
+/**
+ * The steel arch over the river, nothing standing in the water: two ribs either side of the deck (`half` off the
+ * track), springing from the ground at `z0` (south, in the cross street's block edges in The Trenches) and `z1` (north,
+ * on Uptown's esplanade, between the avenue and the joggers' lane), its crown `top` over the ground (well under what flies over: the prop plane turns south over
+ * it), the deck hung from it on hangers every `hang`
+ */
+export const ARCH = { x: UP_X, z0: 163.5, z1: 69.35, half: 2.75, top: 16, hang: 4, rib: 0.35 };
+/** The ribs' height over the ground at z (0 at the feet) */
+export const archY = (z: number) => {
+  const u = (ARCH.z0 - z) / (ARCH.z0 - ARCH.z1);
+  return u <= 0 || u >= 1 ? 0 : ARCH.top * 4 * u * (1 - u);
+};
+/** Portal frames holding the deck where the line runs over a street with no median: two legs `half` off the track */
+export const PORTAL = { half: ARCH.half, leg: 0.25 };
+export const PORTALS: { track: TrackId; s: number; at: Pt }[] = [ARCH.z0, ARCH.z1, 58.6, UP_END + 0.4].map((z) => {
+  const s = along('main', [UP_X, z]);
+  return { track: 'main', s, at: pointOn('main', s).at };
+});
+/** Where the arch holds the deck up between its feet (on hangers, or on posts from the ribs near the feet) */
+export const HANGERS: number[] = (() => {
+  const [a, b] = [along('main', [UP_X, ARCH.z0]), along('main', [UP_X, ARCH.z1])];
+  const n = Math.ceil((b - a) / ARCH.hang);
+  return Array.from({ length: n - 1 }, (_, i) => a + ((b - a) * (i + 1)) / n);
+})();
 
 /* ---------- Pillars ---------- */
 
 const ROADS = PLAN.streets.filter((s) => s.kind !== 'alley');
 /**
  * Can a pillar stand here: in an avenue's median clear of every other road, or on open ground off every road; over
- * the river only in the median of the bridge it crosses on (the east avenue's, river plan step 1)
+ * the river only in the median of the bridge it crosses on (the east avenue's, river plan step 1); never under the arch
  */
 function clearFor(p: Pt) {
+  // (between the arch's feet its deck hangs from it: nothing stands under it)
+  if (Math.abs(p[0] - ARCH.x) < 0.5 && p[1] > ARCH.z1 - 1 && p[1] < ARCH.z0 + 1) return false;
   const wet = p[1] > RIVER[0] - 0.5 && p[1] < RIVER[1] + 0.5;
   let median: Street | null = null;
   for (const s of ROADS) {
@@ -206,9 +257,10 @@ export const PILLARS: { track: TrackId; s: number; at: Pt }[] = (Object.values(T
   });
 });
 
-/** What's solid: the pillars and the stair towers (the deck is overhead) */
+/** What's solid: the pillars, the portals' legs (the arch's feet among them) and the stair towers (the deck is overhead) */
 export const METRO_SOLIDS: Box[] = [
   ...PILLARS.map(({ at: [x, z] }): Box => [x - PILLAR_HALF, z - PILLAR_HALF, x + PILLAR_HALF, z + PILLAR_HALF, DECK_Y]),
+  ...PORTALS.flatMap(({ at: [x, z] }) => [-1, 1].map((k): Box => [x + k * PORTAL.half - PORTAL.leg, z - PORTAL.leg, x + k * PORTAL.half + PORTAL.leg, z + PORTAL.leg, DECK_Y])),
   ...STATIONS.map((s): Box => [...s.tower, DECK_Y + 2.2]),
 ];
 
@@ -245,8 +297,11 @@ export function runAt(dist: number, t: number, v = TRAIN.speed) {
   return { s, total, speed: t > 0 && t < total ? (t < ta ? a * t : t < ta + cruise ? vmax : a * (total - t)) : 0 };
 }
 
-/** How fast a run goes: the express out on the Airport's branch */
-export const speedOf = (run: { pieces: { track: TrackId }[] }) => (run.pieces.some((p) => p.track === 'branch') ? TRAIN.express : TRAIN.speed);
+/** Where Uptown's extension begins along the main line (past The Trenches' station) */
+const WEST_S = along('main', [TRENCH_X, AVENUE_Z]) + 1;
+/** How fast a run goes: the express out on the Airport's branch and out to Uptown */
+export const speedOf = (run: { pieces: { track: TrackId; s0: number; s1: number }[] }) =>
+  run.pieces.some((p) => p.track === 'branch' || (p.track === 'main' && Math.max(p.s0, p.s1) > WEST_S)) ? TRAIN.express : TRAIN.speed;
 
 /** A piece of a run: along one track from one distance to another */
 export interface Piece {
@@ -294,8 +349,8 @@ export function placeOn(run: Run, d: number): { track: TrackId; s: number; dir: 
   return { track: p.track, s: p.s0, dir: p.s1 >= p.s0 ? 1 : -1 };
 }
 
-/** The timetable's stops: down to South Bank, out to The Trenches and back, out to the Airport and back, and up again */
-const STOPS = ['kart', 'downtown', 'southbank', 'trenches', 'southbank', 'airport', 'southbank', 'downtown'];
+/** The timetable's stops: down to South Bank, out through The Trenches to Uptown and back, out to the Airport and back, and up again */
+const STOPS = ['kart', 'downtown', 'southbank', 'trenches', 'uptown', 'trenches', 'southbank', 'airport', 'southbank', 'downtown'];
 export const LEGS = STOPS.map((from, i) => {
   const run = runsBetween(from, STOPS[(i + 1) % STOPS.length])[0];
   return { run, time: runAt(run.len, 0, speedOf(run)).total };

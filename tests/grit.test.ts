@@ -73,7 +73,8 @@ test('the yards: worn patches on the concrete, clear of everything on them', () 
 
 test('trees in pits along the yards\' street sides (and on the worn grass), clear of the ways in and the kerb', () => {
   const pits = YARD_TREES.filter((t) => t.pit);
-  assert.ok(pits.length >= 40, `${pits.length} in pits`);
+  // (two fewer since the el went on to Uptown: a bay under it, commons.ts)
+  assert.ok(pits.length >= 38, `${pits.length} in pits`);
   assert.ok(YARD_TREES.some((t) => !t.pit && t.block === REC.block), 'some on the rec block\'s lawn');
   for (const t of YARD_TREES) {
     const b = blockRect(t.block);
