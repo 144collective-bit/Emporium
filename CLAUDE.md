@@ -162,7 +162,8 @@ it and has been retired completely. Build only on what's here.
   Bridge's walkway. Tested in `tests/routes.test.ts`.
 - **The ring highway** (growth plan Phase 7) is `highway.ts` (DOM-free,
   tested in `tests/highway.test.ts`): `HIGHWAY`, a closed centre line on
-  a rounded box (`HIGHWAY_BOX` x -215 to 275, z -170 to 275, corners
+  a rounded box (`HIGHWAY_BOX` x -215 to 275, z -170 to 320 (its south
+  side moved out 45 with the river's widening, docs/river-plan.md), corners
   `HIGHWAY_R` 70) round the town, the kart park, the airport and The
   Trenches; two lanes each way with a median and a hard shoulder
   (`HIGHWAY_HALF`); `fromHighway()` / `insideHighway()` measure it
@@ -195,9 +196,11 @@ it and has been retired completely. Build only on what's here.
   grid, and change street sizes only in `layout.ts`.
 - **The world's size** is in `layout.ts` too:
   - `EXT` (-420 to 460, about 1.6 km across; growth plan Phase 6 moved it out from -200 to 240) is the ground, the river and every road, edge to edge (the far-off roads are plain continuations of today's, with no traffic). It's mostly open land, room to grow the city into. Build there only when the owner asks.
-  - The river is `RIVER_W` (15) wide, five times what it was (the owner's call). It widened southwards, so everything south of it moved `SOUTH_SHIFT` (12) south: what's derived from `SOUTH_ROAD` / `SOUTH_ROW` moved by itself, and the south bank's places written in fixed numbers (the Fight Club in `fightsite.ts`, South Square and the south pocket parks in `outer.ts`, the airport and its timetable in `airfield.ts`) add `SOUTH_SHIFT` to their z. Keep doing that for anything new written in fixed numbers south of the river.
+  - The river is `RIVER_W` (60) wide: five times what it was, then four times again (the owner's calls; the second is `docs/river-plan.md`, built in steps with the owner's sign-off: step 1, the river, is built). It widened southwards both times, so everything south of it moved: what's derived from `SOUTH_ROAD` / `SOUTH_ROW` moved by itself; the south bank's places written in fixed numbers before the first widening (the Fight Club in `fightsite.ts`, South Square and the south pocket parks in `outer.ts`, the airport and its timetable in `airfield.ts`) add `SOUTH_SHIFT` (57, both moves) to their z, and those written after it (The Trenches' streets in `trenches.ts`, the metro's south end in `metro.ts`, the airport's site's south edge and the executive helicopter's path, the benchmark's views) add `WIDEN` (45, the second). Keep doing that for anything new written in fixed numbers south of the river.
+  - **The river's shape** is `river.ts` (DOM-free, tested in `tests/river.test.ts`; river plan step 1, the owner's call: natural, not a straight line): `RIVER` is the band between the quay lines, the bank avenues straight along it edge to edge; the water's edge keeps to the band where anything stands on the water (Uptown's esplanade and marina, the town's promenades and their jetties, The Trenches' boardwalk, Pier 7 and the Night Market, Liberty Bridge, every bridge) and pulls back from it on the stretches in `BANKS` (`pullAt()`, eased in and out, a smooth seeded wander between `min` and `max`): a sandy cove on the south bank below the south row (`beach`), grass banks east of the town's promenades, and past the ring highway, each bank on its own. `edgesAt()` / `inWater()` / `edgeSamples()` are what everything reads: the water's mesh (world.ts `riverWater()`: shallows by the natural banks, a `shore` attribute on the city's water shader) and its banks (`riverBanks()`: stone quay walls, a ribbon of sand or pebbles where it pulls back, the cove's beach back to the promenade, reeds in chunky clumps and rocks near only), walking (walk.ts), driving (`RIVER_WALLS` in drive-sim.ts, a piece every `WALL_STEP` over the water, `riverWallsNear()`), the boats (`laneAt()`, waterfront.ts `boatZ()`), the outskirts' trees (they grow on the banks it leaves: `treeSpot()`), the promenade's railing (open to the cove), the world map and the sound.
+  - **Bridges** (river plan step 1): the four avenue bridges were taken out. Only the east ring avenue keeps one (`BRIDGED_NS` in layout.ts: the metro's, plain until its own bridge in step 2; the el's pillars stand on its median over the water); the other north-south roads end at the bank avenues, each two streets in the plan (`ns<i>` north of the river, `ns<i>s` south of it, `nsStreet()`), and the ring highway keeps its two bridges far out of town. Liberty Bridge is redesigned in step 3.
   - `WORLD_BOUNDS` is how far you can walk or drive.
-  - `CITY_EXT` (-80 to 140) is the town past the Parkway (with the airport and the kart park it's `BUILT_UP`); the outskirts' tree belt fills a band round the town (outside the bends) and a lighter sprinkle covers the rest, seeded tile by tile at a density per area (`outskirtsTrees()` in `outskirts.ts`: `BELT_FREE` / `OPEN_FREE` are the land a tree could stand on in the world before Phase 6, so a bigger world gets more trees, never thinner ones, and a tile's trees are the same whatever the world's size; trees keep off land in `keepTreesOff()`). Pine woods stand in patches on the land well away from the city (`WOODS`, `inWoods()`: a smooth seeded noise, only past `WOODS.clear` from `BUILT_UP`, so none on the land the world had before Phase 6), their trees bigger than the town's.
+  - `CITY_EXT` (-80 to 140 + `SOUTH_SHIFT`) is the town past the Parkway (with the airport and the kart park it's `BUILT_UP`); the outskirts' tree belt fills a band round the town (outside the bends) and a lighter sprinkle covers the rest, seeded tile by tile at a density per area (`outskirtsTrees()` in `outskirts.ts`: `BELT_FREE` / `OPEN_FREE` are the land a tree could stand on in the world before Phase 6, so a bigger world gets more trees, never thinner ones, and a tile's trees are the same whatever the world's size; trees keep off land in `keepTreesOff()`). Pine woods stand in patches on the land well away from the city (`WOODS`, `inWoods()`: a smooth seeded noise, only past `WOODS.clear` from `BUILT_UP`, so none on the land the world had before Phase 6), their trees bigger than the town's.
   - The skyline ring stands just past `EXT` (`SKYLINE` in `bounds.ts`: `gap` to `gap` + `depth` past it), kept out of the haze (`fog = false`) so it reads as a far metropolis; as many towers as the ring had for its length before Phase 6 (`SKYLINE_REACH`), each from its own seeded numbers, on grass that carries on `SKIRT` (80) past the edge (the grass is a plane per tile).
   - The sky dome and stars travel with the camera at `SKY_RADIUS` (`bounds.ts`: far enough that the skyline's far side stands in front of it seen from downtown, about 720 today, never under 400), inside its far plane (`CAMERA_FAR`, 40 further), so everything in the world stays in front of the sky and the skyline stays on the horizon however far out the edge is.
   - City view pans round the built-up area (`bounds.ts`: `BUILT_UP` is the town, the airport and the kart park; `PAN_BOUNDS` reaches `PAN_MARGIN` (160) past it, never closer than 10 to where you can walk: today that's the whole world), and the Build overview frames the plots (`overviewFrame()`).
@@ -254,7 +257,8 @@ it and has been retired completely. Build only on what's here.
     on from the switch to the Airport, Phase 9, the owner's call); a place
     on them is a track and a distance (`pointOn()`, `along()`, `sideOf()`);
     pillars wherever the ground is clear (`PILLARS`: an avenue's median
-    clear of its junctions, or open land off every road; never the river);
+    clear of its junctions, or open land off every road; over the river
+    only on the east avenue's bridge's median, river plan step 1);
     five stations (`STATIONS`: Kart Park, Downtown, South Bank, The
     Trenches, Airport; each a track and distance, a platform on the track's
     left (`PLATFORM_SIDE`), a stair tower with its door at street level and
@@ -546,8 +550,10 @@ it and has been retired completely. Build only on what's here.
     crane's legs, the arch's posts, the kiosk). Walking: the decks are
     ground at `DECK_Y` (`DECKS`, `onDeck()`: walk.ts lets you off the river's
     wall only onto them; their edge is the railing). The boats keep clear:
-    the south lane's boat stays east of it (`BOAT_EAST`), the middle lane
-    swings north round the pier's head (`boatZ()`). Drawn by
+    since the river was widened again every lane runs its whole length,
+    following its curves (`boatZ()`, river.ts `laneAt()`), and a lane
+    coming near the pier's head or the market's deck swings north round it.
+    Drawn by
     `waterfront3d.ts`: the boardwalk in sites a tile long and the docks a
     site (`buildWaterfront()`), and Pier 7 with the Pier House a place at
     the boot (`buildPier()`: spot `pier`, its pin over the arch, panel
@@ -901,9 +907,8 @@ it and has been retired completely. Build only on what's here.
     with the east street), the marina (`PONTOON`, `GANGWAYS`; `YACHTS`, a
     new boat model, and `TENDERS`); walking: `ESPLANADE_DECKS`,
     `onEsplanade()` in walk.ts beside the boardwalk's `onDeck()`, nothing
-    on it solid. The north lane's boats stay east of it (`NORTH_BOAT_EAST`,
-    life.ts), the middle lane passes outside every deck and yacht (the
-    tests hold 0.8 clear). Restaurant terraces on the river row's podium
+    on it solid. Since the river was widened again the north lane passes
+    outside every deck and yacht (the tests hold 0.8 clear). Restaurant terraces on the river row's podium
     roofs in front of the shafts (`ROOF_TERRACES`, their
     tables; `TERRACE_NAMES`, made up; the podiums' rooftop plant keeps off
     them); a planted median along the bank avenue (`MEDIAN_RUNS`,
@@ -2645,7 +2650,8 @@ it and has been retired completely. Build only on what's here.
   merged into one): North 1-5, West 1-3, East 1-3, and the South row (S1-5)
   across the river. The south bank has its own east-west road
   (`SOUTH_ROAD`, so roads are split into `NS_ROADS` / `EW_ROADS` in
-  `world.ts`), a lamp-lit riverside walk, traffic over the four bridges and
+  `world.ts`), a lamp-lit riverside walk, traffic over the east avenue's
+  bridge and the highway's (river plan step 1) and
   pedestrians round the south row (`DISTRICTS`, `BUILDINGS`, `cleanDesign()` in
   `src/data/plots.ts`, DOM-free). Plot grid, overlay and building
   generators are in `plots.ts`, the interface in `builder-ui.ts`. The core
@@ -2767,7 +2773,7 @@ it and has been retired completely. Build only on what's here.
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`),
-  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`, `boulevard.ts`, `boulevarddress.ts`, `kerbside.ts`, `skydeck.ts`, `skyline.ts`, `uptownlife.ts`, the town car in `cars.ts`), the kart park's facility (`kartfacility.ts`),
+  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), the river's shape (`river.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`, `boulevard.ts`, `boulevarddress.ts`, `kerbside.ts`, `skydeck.ts`, `skyline.ts`, `uptownlife.ts`, the town car in `cars.ts`), the kart park's facility (`kartfacility.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,

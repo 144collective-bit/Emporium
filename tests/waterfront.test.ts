@@ -9,7 +9,6 @@ import {
   BENCHES,
   BINOCULARS,
   BOARDWALK,
-  BOAT_EAST,
   BOLLARDS,
   CRANE,
   DECKS,
@@ -17,6 +16,7 @@ import {
   FISHERS,
   KIOSK,
   LAMPS,
+  MARKET_DECK,
   OUT,
   PIER,
   PIER_SPAWN,
@@ -27,6 +27,7 @@ import {
   onDeck,
 } from '../src/scripts/city3d/waterfront';
 import { EW_ROADS, RIVER } from '../src/scripts/city3d/layout';
+import { inWater } from '../src/scripts/city3d/river';
 import { BOAT_LANES, LIBERTY_RECTS } from '../src/scripts/city3d/liberty';
 import { PROMENADE } from '../src/scripts/city3d/outer';
 import { SOLIDS } from '../src/scripts/city3d/solids';
@@ -73,18 +74,19 @@ test('walkable end to end: along the boardwalk, out along the pier, round its he
   assert.ok(DECKS.length === 4 && DECK_Y > 0.035 && DECK_Y < 0.2);
 });
 
-test('the boats keep clear: the south lane east of the boardwalk, the middle lane round the head, the lanes apart', () => {
-  assert.ok(BOAT_LANES[2] + BEAM > BZ0 && BOAT_EAST > BX1, 'the south lane would hit the boardwalk: its boat keeps east');
+test('the boats keep clear: every lane in the water, the lanes apart, the south lane round the head and the market, off the boardwalk', () => {
   for (let x = -420; x <= 460; x += 0.5) {
     const z = [0, 1, 2].map((l) => boatZ(l, x));
-    assert.ok(z[0] === BOAT_LANES[0] && z[2] === BOAT_LANES[2]);
-    assert.ok(z[1] - z[0] > 2 * BEAM + 1, `the middle lane on the north lane at ${x}`);
+    for (const q of z) assert.ok(inWater(x, q, BEAM + 0.5), `a lane out of the water at ${x}`);
+    assert.ok(z[1] - z[0] > 2 * BEAM + 1 && z[2] - z[1] > 2 * BEAM + 1, `the lanes on each other at ${x}`);
     if (x > BX0 - 2 && x < BX1 + 2) {
-      assert.ok(z[1] + BEAM < BZ0 - 1, `the middle lane on the boardwalk at ${x}`);
-      if (x > PIER.head[0] - 2 && x < PIER.head[2] + 2) assert.ok(z[1] + BEAM < PIER.head[1] - 0.5, `the middle lane on the pier at ${x}`);
-      if (x > BARGE[0] - 2 && x < BARGE[2] + 2) assert.ok(z[1] + BEAM < BARGE[1] - 0.5, `the middle lane on the barge at ${x}`);
+      assert.ok(z[2] + BEAM < BZ0 - 1, `the south lane on the boardwalk at ${x}`);
+      if (x > PIER.head[0] - 2 && x < PIER.head[2] + 2) assert.ok(z[2] + BEAM < PIER.head[1] - 0.5, `the south lane on the pier at ${x}`);
+      if (x > BARGE[0] - 2 && x < BARGE[2] + 2) assert.ok(z[2] + BEAM < BARGE[1] - 0.5, `the south lane on the barge at ${x}`);
+      if (x > MARKET_DECK[0] - 2 && x < MARKET_DECK[2] + 2) assert.ok(z[2] + BEAM < MARKET_DECK[1] - 0.5, `the south lane on the market at ${x}`);
     }
-    if (x > -40 && x < 0) assert.equal(z[1], BOAT_LANES[1], "through Liberty Bridge's arch");
+    // (straight under Liberty Bridge, through its arches)
+    if (x > -40 && x < -13) assert.deepEqual(z, BOAT_LANES, "through Liberty Bridge's arches");
   }
 });
 

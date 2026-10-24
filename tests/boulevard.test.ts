@@ -14,7 +14,6 @@ import {
   ESPLANADE_DECKS,
   GANGWAYS,
   LAND_TREES,
-  NORTH_BOAT_EAST,
   OVERLOOKS,
   PONTOON,
   ROOF_TERRACES,
@@ -24,7 +23,6 @@ import {
 import { HEDGE, MEDIAN_RUNS, MEDIAN_TREES, MEDIAN_Z, TENDERS, TERRACE_NAMES, YACHTS } from '../src/scripts/city3d/boulevarddress';
 import { AXIS_X, BOULEVARD_X, E, NS_X, ROWS_Z, W } from '../src/scripts/city3d/uptown';
 import { HIGHRISES, PODIUM } from '../src/scripts/city3d/highrise';
-import { BOAT_LANES } from '../src/scripts/city3d/liberty';
 import { DECKS, boatZ } from '../src/scripts/city3d/waterfront';
 import { PROMENADE } from '../src/scripts/city3d/outer';
 import { LANE, MEDIAN, RIVER } from '../src/scripts/city3d/layout';
@@ -40,7 +38,7 @@ const inRect = (r: readonly number[], x: number, z: number, m = 0) => x > r[0] +
 /** The furthest south the middle lane's boat comes over x0..x1 */
 const laneNorth = (x0: number, x1: number) => {
   let z = Infinity;
-  for (let x = x0 - 2; x <= x1 + 2; x += 0.25) z = Math.min(z, boatZ(1, x) - BOAT_HALF);
+  for (let x = x0 - 2; x <= x1 + 2; x += 0.25) z = Math.min(z, boatZ(0, x) - BOAT_HALF);
   return z;
 };
 
@@ -54,12 +52,10 @@ test('the esplanade: from Uptown\'s edge to the town\'s promenade, from the aven
   assert.ok(Z1 - Z0 >= 5);
 });
 
-test('the boats keep clear: the north lane east of it, the middle lane outside every deck and yacht', () => {
-  assert.ok(NORTH_BOAT_EAST > X1 + 4);
-  assert.ok(BOAT_LANES[0] - BOAT_HALF < Z1, 'the north lane would run into it');
-  for (const d of ESPLANADE_DECKS) assert.ok(d[3] + GAP < laneNorth(d[0], d[2]), `a deck at ${d} in the middle lane`);
-  for (const y of YACHTS) assert.ok(y.z + y.beam / 2 + GAP < laneNorth(y.x - y.len / 2, y.x + y.len / 2), `a yacht at ${y.x} in the middle lane`);
-  // And never across the river to the south bank's boardwalk, pier and market: the middle lane's water left between them
+test('the boats keep clear: since the river was widened again, the north lane passes outside every deck and yacht', () => {
+  for (const d of ESPLANADE_DECKS) assert.ok(d[3] + GAP < laneNorth(d[0], d[2]), `a deck at ${d} in the north lane`);
+  for (const y of YACHTS) assert.ok(y.z + y.beam / 2 + GAP < laneNorth(y.x - y.len / 2, y.x + y.len / 2), `a yacht at ${y.x} in the north lane`);
+  // And never across the river to the south bank's boardwalk, pier and market: the lanes' water left between them
   for (const d of ESPLANADE_DECKS) for (const s of DECKS) if (d[0] < s[2] && s[0] < d[2]) assert.ok(d[3] < s[1] - 2, `${d} too near ${s}`);
 });
 

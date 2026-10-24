@@ -8,7 +8,8 @@ import { JETTIES } from '../src/scripts/city3d/outer';
 import { riverBridges } from '../src/scripts/city3d/streetplan';
 
 test('a boat sounds its horn once coming up to each bridge, either way, in the approach to it and never under or past it', () => {
-  assert.ok(BRIDGES.length >= 5);
+  // (river plan step 1: the east avenue's bridge and the highway's two)
+  assert.ok(BRIDGES.length >= 3);
   const n = riverBridges().length;
   for (const way of [1, -1] as const) {
     const h = newBoatHorn();

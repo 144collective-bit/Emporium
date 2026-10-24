@@ -7,19 +7,24 @@ import { UPTOWN_BLOCKS } from '../src/scripts/city3d/uptown';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { PLAN, blockAt, cityPlan, distToStreet, gridPlan, inPoly, lanePaths, offsetLine, onSlab, outset, pointAt, polyArea, polyCentre, streetLength, type Pt, type Street } from '../src/scripts/city3d/streetplan';
-import { BLOCKS, BS, CORE_ROADS, EW_ROADS, EXT, EXTRA_LOTS, NS_ROADS, RING_HI, RING_LO, WALK_W, laneCentres } from '../src/scripts/city3d/layout';
+import { BLOCKS, BRIDGED_NS, BS, CORE_ROADS, EW_ROADS, EXT, EXTRA_LOTS, NS_ROADS, RING_HI, RING_LO, SOUTH_ROAD, WALK_W, laneCentres } from '../src/scripts/city3d/layout';
 import { BLOCKS_DT, DIAGONALS } from '../src/scripts/city3d/downtown';
 import { BEND_KERBS, OUTER_BLOCKS } from '../src/scripts/city3d/outer';
 import { DISTRICTS } from '../src/data/plots';
 
 const near = (a: number, b: number, eps = 1e-6) => Math.abs(a - b) < eps;
 
-test('the grid plan has every road of layout.ts, edge to edge', () => {
+test('the grid plan has every road of layout.ts, edge to edge (but those with no bridge stop at the bank avenues)', () => {
   const p = gridPlan();
-  assert.equal(p.streets.length, NS_ROADS.length + EW_ROADS.length);
+  const halves = NS_ROADS.length - BRIDGED_NS.length;
+  assert.equal(p.streets.length, NS_ROADS.length + halves + EW_ROADS.length);
   for (const r of NS_ROADS) assert.ok(p.streets.some((s) => s.pts[0][0] === r.c && s.pts.at(-1)![0] === r.c && s.half === r.half && s.lanes === r.lanes), `north-south road at x ${r.c}`);
   for (const r of EW_ROADS) assert.ok(p.streets.some((s) => s.pts[0][1] === r.c && s.pts.at(-1)![1] === r.c && s.half === r.half && s.lanes === r.lanes), `east-west road at z ${r.c}`);
-  for (const s of p.streets) assert.ok(near(streetLength(s), EXT[1] - EXT[0]), `${s.id} runs edge to edge`);
+  for (const s of p.streets) {
+    const i = NS_ROADS.findIndex((r) => s.pts[0][0] === r.c && s.pts.at(-1)![0] === r.c);
+    if (i < 0 || BRIDGED_NS.includes(i)) assert.ok(near(streetLength(s), EXT[1] - EXT[0]), `${s.id} runs edge to edge`);
+    else assert.ok(near(streetLength(s), s.id.endsWith('s') ? EXT[1] - SOUTH_ROAD : RING_HI - EXT[0]), `${s.id} runs from the edge to its bank avenue`);
+  }
   assert.ok(p.streets.every((s) => s.kind !== 'alley'), 'no alleys yet');
 });
 

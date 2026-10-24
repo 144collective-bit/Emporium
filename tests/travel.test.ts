@@ -1,6 +1,6 @@
 // Getting about (growth plan Phase 8): every place on the map has a spot you can arrive at and stand on; walking
 // there counts it as visited (for fast travel, kept in the save); and a taxi can drive from any place to any
-// other along the streets, to the kerb nearest it, in well under a minute.
+// other along the streets, to the kerb nearest it, in about a minute at most.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { PLACES, PLACE_IDS, SEEN_R, seen } from '../src/scripts/city3d/places';
@@ -42,7 +42,7 @@ test("walking to a place counts it as visited, kept in the save, and fast travel
   assert.deepEqual(cleanSave(old, 0).visited, []);
 });
 
-test('a taxi drives from any place to any other along the streets, to the kerb nearest it, in well under a minute', () => {
+test('a taxi drives from any place to any other along the streets, to the kerb nearest it, in about a minute at most', () => {
   const roads = PLAN.streets.filter((s) => s.lanes > 0);
   const TAXI_SPEED = 12;
   for (const a of PLACES)
@@ -58,7 +58,8 @@ test('a taxi drives from any place to any other along the streets, to the kerb n
       const end = r!.pts[r!.pts.length - 1];
       const nearest = Math.min(...roads.filter((s) => s.kind !== 'slip').map((s) => distToStreet(s, [b.at.x, b.at.z])));
       assert.ok(Math.hypot(end[0] - b.at.x, end[1] - b.at.z) < nearest + 4, `${a.id} to ${b.id} stops ${Math.hypot(end[0] - b.at.x, end[1] - b.at.z).toFixed(1)} away`);
-      // (the longest, between the airport and Westlake Park's stadium, corner to corner of the map, is about 50 s)
-      assert.ok(r!.len / TAXI_SPEED < 55, `${a.id} to ${b.id}: ${r!.len.toFixed(0)}`);
+      // (the longest, from The Trenches to Westlake Park's stadium, is about 59 s since the river was widened and its
+      // town bridges but the east avenue's taken out: river plan step 1)
+      assert.ok(r!.len / TAXI_SPEED < 62, `${a.id} to ${b.id}: ${r!.len.toFixed(0)}`);
     }
 });

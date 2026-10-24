@@ -24,7 +24,7 @@ import {
   poseAt,
   type Rect,
 } from '../src/scripts/city3d/airfield';
-import { EW_ROADS, NS_ROADS, SEATS, WALK_W, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
+import { EW_ROADS, NS_ROADS, SEATS, WALK_W, WIDEN, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
 import { BENDS, BEND_REACH, PADS, inTown } from '../src/scripts/city3d/outer';
 import { PLAN, distToStreet, onSlab, type Street } from '../src/scripts/city3d/streetplan';
 import { SOLIDS } from '../src/scripts/city3d/solids';
@@ -88,7 +88,7 @@ test('every aircraft keeps to its timetable: smooth, inside the world, never on 
     poses.forEach((p, i) => {
       const f = FLIGHTS[i];
       for (const v of [p.x, p.y, p.z, p.yaw, p.pitch, p.roll]) assert.ok(Number.isFinite(v), `${f.id} at ${t}`);
-      assert.ok(p.x > -200 && p.x < 236 && p.z > -200 && p.z < 236, `${f.id} leaves the world at ${t}`);
+      assert.ok(p.x > -200 && p.x < 236 && p.z > -200 && p.z < 236 + WIDEN, `${f.id} leaves the world at ${t}`);
       assert.ok(p.y >= 0 && p.y < 60);
       if (p.y < 0.5) assert.ok(inside(SITE, p.x, p.z), `${f.id} is down outside the airport at ${p.x.toFixed(0)}, ${p.z.toFixed(0)}`);
       // No jumps: never further in a quarter second than its top speed allows

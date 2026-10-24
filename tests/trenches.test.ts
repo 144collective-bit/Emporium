@@ -44,7 +44,7 @@ test('its streets: south of the river, inside the highway and clear of it, every
   assert.equal(ave.kind, 'avenue');
   assert.ok(ave.pts.every((p) => p[1] === AVENUE_Z));
   assert.ok(TRENCH_CROSSINGS.some((c) => c.streets.includes(`ew${PLAN.streets.filter((s) => s.id.startsWith('ew')).length - 1}`)));
-  assert.ok(TRENCH_CROSSINGS.some((c) => c.streets.includes('ns0') && c.at[0] === RING_W.c));
+  assert.ok(TRENCH_CROSSINGS.some((c) => c.streets.includes('ns0s') && c.at[0] === RING_W.c));
 });
 
 test('its blocks: between its streets and off them, clear of the highway, the town and everything that stands', () => {

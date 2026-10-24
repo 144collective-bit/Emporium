@@ -11,6 +11,7 @@
  * district's).
  */
 import { EW_ROADS, EXT, NS_ROADS, RIVER } from './layout';
+import { inWater } from './river';
 import { PARKWAY, PROMENADE, SOUTHSIDE, inTown } from './outer';
 import { KART_RECTS } from './kartfacility';
 import { RUNWAY, SITE } from './airfield';
@@ -31,10 +32,10 @@ export const BELT: Rect = [PROMENADE.x[0] - 24, PARKWAY_TOP - 24, PROMENADE.x[1]
  * 240: the belt's, and the open land's past it to 4 in from that edge): the
  * densities are worked out from these, so that world kept the trees it had
  * (`count` in the belt, `count` x `sparse` past it); the tests check they're
- * still right
+ * still right (measured again when the river was widened, river plan step 1)
  */
-export const BELT_FREE = 11570;
-export const OPEN_FREE = 98100;
+export const BELT_FREE = 11790;
+export const OPEN_FREE = 86920;
 
 /** Where the highway meets the arterials (its slip lanes are round them) */
 const MEETS = PLAN.crossings.filter((c) => c.streets.includes('highway')).map((c) => c.at);
@@ -55,7 +56,8 @@ export function treeSpot(x: number, z: number, clear: readonly Rect[] = [], high
   if (x > SITE[0] - 1 && x < SITE[2] + 1 && z > SITE[1] - 1 && z < SITE[3] + 1) return false;
   if (x > -40 && x < SITE[0] && Math.abs(z - RUNWAY.z) < 12) return false;
   if (EW_ROADS.some((r) => Math.abs(z - r.c) < r.half + 0.8) || NS_ROADS.some((r) => Math.abs(x - r.c) < r.half + 0.8)) return false;
-  if (z > RIVER[0] - 1 && z < RIVER[1] + 0.8) return false;
+  // Off the promenades along the quay lines, and the water wherever its edges curve (river.ts): trees grow on the banks it leaves
+  if ((z > RIVER[0] - 2.8 && z < RIVER[0] + 0.5) || (z > RIVER[1] - 0.5 && z < RIVER[1] + 2.6) || inWater(x, z, -1.2)) return false;
   return true;
 }
 

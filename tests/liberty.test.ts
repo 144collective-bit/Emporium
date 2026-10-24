@@ -34,9 +34,9 @@ import { DISTRICTS } from '../src/data/plots';
 
 const overlaps = (a: number[], b: number[]) => a[0] < b[2] && a[2] > b[0] && a[1] < b[3] && a[3] > b[1];
 
-test('the river is five times as wide, and every plot is still on the market', () => {
-  assert.equal(RIVER_W, 15);
-  assert.equal(RIVER[1] - RIVER[0], 15);
+test('the river is five times as wide, then four times again (river plan), and every plot is still on the market', () => {
+  assert.equal(RIVER_W, 60);
+  assert.equal(RIVER[1] - RIVER[0], 60);
   assert.equal(DISTRICTS.length, 16);
   assert.ok(DISTRICTS.some((d) => d.id === 'W3') && DISTRICTS.some((d) => d.id === 'S1'));
 });

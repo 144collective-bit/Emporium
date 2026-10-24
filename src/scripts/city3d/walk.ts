@@ -68,12 +68,13 @@ import { abandonSeries, seriesNext } from './tycoon';
 import { CAMERA_GRID, DOORS, GARAGE_SITE, RACK, SOLIDS, SOLID_GRID, SOLID_GRIDS, TURNTABLE_BOX, WALK_SPAWN, rayBoxes, type Box } from './solids';
 import { BoxGrid } from './boxgrid';
 import { count } from './tycoon';
-import { NS_ROADS, RIVER, SLAB, WALK_W, type Tick } from './world';
+import { NS_ROADS, SLAB, WALK_W, type Tick } from './world';
 import { footbridgeWall, footbridgeY, stairTread } from './liberty';
 import { JETTY, RIM, inLake, onJetty, onTerrace, terraceY } from './westlake';
 import { GATE, bridgeWall, bridgeY } from './stadium';
 import { skyDeckWall, skyDeckY, upOnDeck } from './skydeck';
-import { WORLD_BOUNDS } from './layout';
+import { BRIDGED_NS, WORLD_BOUNDS } from './layout';
+import { inWater } from './river';
 import { PLAN, inPoly, type Pt } from './streetplan';
 import { SPOTS, pointOn, ROUTES } from './routes';
 import { bodies } from './life';
@@ -379,7 +380,7 @@ export function createWalk(d: WalkDeps) {
   };
   /** Scratch for the collision grid's answers */
   const nearBoxes: Box[] = [];
-  const onBridge = (x: number) => NS_ROADS.some((r) => Math.abs(x - r.c) < r.half + WALK_W - 0.15);
+  const onBridge = (x: number) => BRIDGED_NS.some((i) => Math.abs(x - NS_ROADS[i].c) < NS_ROADS[i].half + WALK_W - 0.15);
   /** `y`: how high Degen is (up on Liberty Bridge only its parapets stop you; under it, its pillars and stairs do) */
   function blocked(x: number, z: number, y = 0, skip?: (b: Box) => boolean) {
     if (x < BOUNDS[0] || x > BOUNDS[2] || z < BOUNDS[1] || z > BOUNDS[3]) return true;
@@ -390,8 +391,8 @@ export function createWalk(d: WalkDeps) {
     if (bridgeWall(x, z, y, RADIUS)) return true;
     // Sector 7 Tower's sky deck (skydeck.ts): up there only its rail, the lift house and the viewers stop you
     if (upOnDeck(x, z, y - SLAB)) return skyDeckWall(x, z, RADIUS);
-    // (the river is a wall but at the bridges, on The Trenches' boardwalk and pier and on Uptown's esplanade: their railings are the decks' edges)
-    if (z > RIVER[0] - 0.3 && z < RIVER[1] + 0.3 && !onBridge(x) && !onDeck(x, z, RADIUS) && !onEsplanade(x, z, RADIUS)) return true;
+    // (the river is a wall at its edges, wherever they curve (river.ts), but at the bridges, on The Trenches' boardwalk and pier and on Uptown's esplanade: their railings are the decks' edges)
+    if (inWater(x, z, -0.3) && !onBridge(x) && !onDeck(x, z, RADIUS) && !onEsplanade(x, z, RADIUS)) return true;
     // Westlake Park's lake (westlake.ts): you stop on the lawn at its stone rim, but out along the jetty (its edges stop you)
     if (inLake(x, z, RADIUS + RIM.w + 0.1) && !onJetty(x, z, RADIUS) && !onTerrace(x, z, RADIUS)) return true;
     if (SOLID_GRID.near(x, z, RADIUS, nearBoxes).some((b) => inBox(b, x, z, RADIUS) && !skip?.(b))) return true;

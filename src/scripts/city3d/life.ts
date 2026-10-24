@@ -10,8 +10,7 @@ import { CENTER, SLAB, type Tick } from './world';
 import { PLAN, distToStreet, outset, pointAt, streetLength } from './streetplan';
 import { DOWNTOWN, EXT, MARKET } from './layout';
 import { DECK_STROLLS, DECK_Y } from './liberty';
-import { BOAT_EAST, DECK_Y as BOARDWALK_Y, STROLL, boatZ } from './waterfront';
-import { NORTH_BOAT_EAST } from './boulevard';
+import { DECK_Y as BOARDWALK_Y, STROLL, boatZ } from './waterfront';
 import { JUNCTIONS, ROUTES, SPOTS, lightState, phaseOf, pointOn, rightOf, type Junction, type Phase, type Pt, type Route } from './routes';
 import { CARS, PAINTS, carGeometry, carMaterials, theFarCars, type CarId } from './cars';
 import { isNear, tileKey, tileOf } from './tiles';
@@ -858,8 +857,7 @@ function buildBoats(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => void)
       b.x += speed * dt;
       // The whole river, but only round you: a boat drifting off one way comes back round from the other
       const f = CROWD_VIEW.on ? CROWD_VIEW.focus.x : CENTER.x;
-      // (the south lane's boat keeps east of The Trenches' boardwalk, the north lane's east of Uptown's esplanade)
-      const lo = Math.max(EXT[0] + 6, f - BOAT_R, b.lane === 2 ? BOAT_EAST : b.lane === 0 ? NORTH_BOAT_EAST : -Infinity);
+      const lo = Math.max(EXT[0] + 6, f - BOAT_R);
       const hi = Math.min(EXT[1] - 6, f + BOAT_R);
       b.g.visible = hi - lo > 30;
       if (!b.g.visible) continue;
@@ -871,7 +869,7 @@ function buildBoats(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => void)
       b.wake.scale.set(w.len, w.width, 1);
       b.wake.position.x = -(0.75 + w.len / 2);
       (b.wake.material as THREE.MeshBasicMaterial).opacity = 0.35 * w.alpha;
-      // ...and the middle lane's swings round Pier 7's head, turning into the swing
+      // ...along the river's curves, swinging round Pier 7's head, turning into the swing
       const z = boatZ(b.lane, b.x);
       const slope = (boatZ(b.lane, b.x + 0.5) - boatZ(b.lane, b.x - 0.5)) * Math.sign(b.v);
       b.g.position.set(b.x, 0.02 + Math.sin(t * 1.6 + b.ph) * 0.03, z);

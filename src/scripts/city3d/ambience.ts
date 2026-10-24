@@ -15,7 +15,8 @@
  * (`UPTOWN_HUSH`), the plaza's pool and water wall splash (`fountain`) and the
  * circle's traffic comes round it (`road`).
  */
-import { CITY_EXT, RIVER } from './layout';
+import { CITY_EXT } from './layout';
+import { edgesAt } from './river';
 import { PLAN, distToStreet } from './streetplan';
 import { fromHighway, insideHighway } from './highway';
 import { DOORS } from './solids';
@@ -69,7 +70,9 @@ export function ambienceAt(x: number, z: number, lift = 0): Ambience {
   const oz = Math.max(CITY_EXT[0] - z, z - CITY_EXT[1], 0);
   const out = Math.hypot(ox, oz);
   const city = 1 - smooth(0, 70, out);
-  const river = Math.max(RIVER[0] - z, z - RIVER[1], 0);
+  // (to the water's edges as they curve: river.ts)
+  const [rn, rs] = edgesAt(x);
+  const river = Math.max(rn - z, z - rs, 0);
   const water = 1 - smooth(3, 28, river);
   // The highway carries traffic all the way round; the avenues only inside it (out past it they're empty)
   let avenue = Infinity;

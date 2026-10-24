@@ -19,7 +19,7 @@
  * Coordinates are world units on the ground: [x, z].
  */
 import { DISTRICTS } from '../../data/plots';
-import { BIG_LOTS, BS, EW_ROADS, GARAGE, LANE, MARKET, NS_ROADS, RIVER, RING_HI, SOUTH_ROAD, SOUTH_SHIFT as D, UNITS, WALK_W, type Road } from './layout';
+import { BIG_LOTS, BRIDGED_NS, BS, EW_ROADS, GARAGE, LANE, MARKET, NS_ROADS, RIVER, RING_HI, SOUTH_ROAD, SOUTH_SHIFT as D, UNITS, WALK_W, type Road } from './layout';
 import { LIBERTY_RECTS } from './liberty';
 import { FIGHT_CLUB } from './fightsite';
 
@@ -346,8 +346,8 @@ export const JETTIES: { x: number; bank: 'north' | 'south' }[] = [
   { x: -24, bank: 'south' },
   { x: 55, bank: 'south' },
 ];
-/** Off the bridges: a promenade feature at x is clear of every road crossing the river */
-export const offBridges = (x: number, m = 0.8) => NS_ROADS.every((r) => Math.abs(x - r.c) > r.half + WALK_W + m);
+/** Off the bridges: a promenade feature at x is clear of every road crossing the river (layout.ts `BRIDGED_NS`) */
+export const offBridges = (x: number, m = 0.8) => BRIDGED_NS.every((i) => Math.abs(x - NS_ROADS[i].c) > NS_ROADS[i].half + WALK_W + m);
 /** Clear of Liberty Bridge's supports on the promenades (liberty.ts): benches, trees in planters and lamps keep off */
 export const offFootbridge = (x: number, m = 0.8) => LIBERTY_RECTS.every((r) => x < r[0] - m || x > r[2] + m);
 

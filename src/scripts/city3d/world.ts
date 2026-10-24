@@ -15,7 +15,7 @@
 import * as THREE from 'three';
 import { DISTRICTS } from '../../data/plots';
 import { Batch, canvasTex, facadeMat, flickerTogether, fx, glowMat, glowTex, lit, neon, PAL, rand, rng, sidesBox, siteMat, toon } from './kit';
-import { BLOCKS, BS, CENTER_XZ, CORE_ROADS, DOWNTOWN, EW_ROADS, EXT, LANE, MEDIAN, NS_ROADS, RIVER, SEATS, SOUTH_ROAD, WALK_W, type Road } from './layout';
+import { BLOCKS, BRIDGED_NS, BS, CENTER_XZ, CORE_ROADS, DOWNTOWN, EW_ROADS, EXT, LANE, MEDIAN, NS_ROADS, RING_HI, RIVER, SEATS, SOUTH_ROAD, WALK_W, type Road } from './layout';
 import { PLAN, offsetLine, pointAt, riverBridges, streetLength, type Pt, type Street } from './streetplan';
 import { HIGHWAY, HIGHWAY_HALF } from './highway';
 import { DIAGONALS, DIAGONAL_LAMPS } from './downtown';
@@ -31,6 +31,7 @@ import { AXIS_X, AXIS_ZEBRAS, LANE_HALF } from './uptown';
 import { WATERFRONT_RECT } from './waterfront';
 import { BRIDGE_RECT } from './stadium';
 import { SWAY, lampGlow, newLamp, type Lamp } from './dusk';
+import { edgeSamples, pullAt, stretchAt } from './river';
 
 export { BLOCKS, BS, CORE_ROADS, EW_ROADS, EXT, NS_ROADS, RIVER, SOUTH_ROAD, WALK_W, type Road };
 /** District blocks around the core: one large plot each (src/data/plots.ts). */
@@ -471,13 +472,129 @@ function along(pts: Pt[], every: number, put: (x: number, z: number, q: THREE.Qu
 }
 
 /**
+ * The river's water: shallower by its natural banks (the `shore` attribute: 0 at a bank's edge, 1 out in the stream
+ * and all along the quays), the same shader and uniforms as the rest of the city's water (`waterMat`)
+ */
+const riverMat = new THREE.ShaderMaterial({
+  uniforms: waterMat.uniforms,
+  vertexShader: /* glsl */ `
+    attribute float shore;
+    varying vec3 vPos;
+    varying float vShore;
+    void main() { vShore = shore; vPos = (modelMatrix * vec4(position, 1.0)).xyz; gl_Position = projectionMatrix * viewMatrix * vec4(vPos, 1.0); }
+  `,
+  fragmentShader: waterMat.fragmentShader
+    .replace('varying vec3 vPos;', 'varying vec3 vPos;\n    varying float vShore;')
+    .replace('gl_FragColor = vec4(col, 1.0);', 'col = mix(mix(vec3(0.33, 0.6, 0.58), vec3(0.06, 0.19, 0.26), night), col, smoothstep(0.0, 1.0, vShore));\n      gl_FragColor = vec4(col, 1.0);'),
+});
+/** How far out from a natural bank the shallows reach */
+const SHALLOWS = 2.4;
+function riverWater(e0: number, e1: number) {
+  const pos: number[] = [];
+  const shore: number[] = [];
+  const idx: number[] = [];
+  const pts = edgeSamples(e0, e1, 2);
+  pts.forEach(({ x, n, s }, i) => {
+    const [qn, qs] = [1 - Math.min(1, pullAt('north', x) / 1.2), 1 - Math.min(1, pullAt('south', x) / 1.2)];
+    // Four rows across: the north edge, the shallows' end, the shallows' end, the south edge
+    for (const [z, q] of [
+      [n, qn],
+      [n + SHALLOWS, 1],
+      [s - SHALLOWS, 1],
+      [s, qs],
+    ]) {
+      pos.push(x, 0.01, z);
+      shore.push(q);
+    }
+    if (i > 0) {
+      const a = (i - 1) * 4;
+      const c = i * 4;
+      for (let r = 0; r < 3; r++) idx.push(a + r, a + r + 1, c + r, c + r, a + r + 1, c + r + 1);
+    }
+  });
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('shore', new THREE.Float32BufferAttribute(shore, 1));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  g.computeBoundingSphere();
+  return new THREE.Mesh(g, riverMat);
+}
+
+/** A flat quad on the ground (y) through four corners, two triangles, facing up */
+function groundQuad(p: [number, number][], y: number) {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(p.flatMap(([x, z]) => [x, y, z]), 3));
+  const up = (p[1][0] - p[0][0]) * (p[2][1] - p[0][1]) - (p[1][1] - p[0][1]) * (p[2][0] - p[0][0]) < 0;
+  g.setIndex(up ? [0, 1, 2, 0, 2, 3] : [0, 2, 1, 0, 3, 2]);
+  g.computeVertexNormals();
+  return g;
+}
+
+/**
+ * The river's banks (river.ts), a piece every 2 along each: a low stone quay wall where the water keeps to the quay
+ * line; where it pulls back, a ribbon of sand or pebbles along the water (the cove's beach all the way back to the
+ * promenade), and near only, reeds and rocks at the water's edge (none on the beach). The trees on the grass banks
+ * are the outskirts' (outskirts.ts `treeSpot()`).
+ */
+function riverBanks(b: Batch, e0: number, e1: number) {
+  const stone = toon('#6b6790');
+  const sand = toon('#cdbb8e');
+  const pebbles = toon('#8f8a80');
+  const reedMats = [toon('#6f9a45'), toon('#88a854'), toon('#5c8a3e')];
+  const rock = toon('#77738a');
+  const pts = edgeSamples(e0, e1, 2);
+  for (const bank of ['north', 'south'] as const) {
+    const sign = bank === 'north' ? -1 : 1;
+    const quayLine = bank === 'north' ? RIVER[0] : RIVER[1];
+    const r = rng(bank === 'north' ? 7301 : 7319);
+    for (let i = 1; i < pts.length; i++) {
+      const [p, q] = [pts[i - 1], pts[i]];
+      const [zp, zq] = bank === 'north' ? [p.n, q.n] : [p.s, q.s];
+      const pull = Math.max(pullAt(bank, p.x), pullAt(bank, q.x));
+      const st = stretchAt(bank, (p.x + q.x) / 2);
+      if (pull < 0.4) {
+        // The quay: a low stone wall on the land side of the edge
+        b.box(p.x, 0, Math.min(zp, zq) + (sign < 0 ? -0.25 : 0), q.x - p.x, 0.12, 0.25 + Math.abs(zq - zp), stone);
+        continue;
+      }
+      // A ribbon of sand (pebbles on some stretches out of town) from just under the water back onto the land:
+      // the cove's beach fills back to the promenade
+      const beach = !!st?.beach;
+      const pebbly = !beach && Math.sin(p.x / 23 + (bank === 'north' ? 0 : 2)) > 0.35;
+      const back = (z: number) => (beach ? quayLine + sign * 0.25 : z + sign * (1.1 + 0.4 * Math.sin(z * 0.7 + p.x * 0.31)));
+      b.add(groundQuad([[p.x, zp - sign * 0.3], [q.x, zq - sign * 0.3], [q.x, back(zq)], [p.x, back(zp)]], 0.006), pebbly ? pebbles : sand);
+      if (beach) continue;
+      // Near only: reeds in clumps at the water's edge, and the odd rock
+      b.detail(() => {
+        for (let k = 0; k < 2; k++) {
+          const x = p.x + (q.x - p.x) * (0.25 + 0.5 * k);
+          const z = zp + (zq - zp) * (0.25 + 0.5 * k);
+          if (r() < 0.45) {
+            // (chunky clumps, not single stems: thin ones are all ink outline)
+            const n = 2 + Math.floor(r() * 2);
+            for (let j = 0; j < n; j++) {
+              const h = 0.5 + r() * 0.4;
+              const g = new THREE.ConeGeometry(0.13 + r() * 0.06, h, 5, 1, true).rotateZ((r() - 0.5) * 0.25).rotateX((r() - 0.5) * 0.25);
+              b.add(g.translate(x + (r() - 0.5) * 0.8, h / 2, z + sign * (0.15 + r() * 0.45)), reedMats[j % 3]);
+            }
+          } else if (r() < 0.15) {
+            const s = 0.18 + r() * 0.25;
+            b.add(new THREE.DodecahedronGeometry(s, 0).scale(1.3, 0.6, 1).rotateY(r() * 3).translate(x, s * 0.25, z + sign * 0.2), rock);
+          }
+        }
+      });
+    }
+  }
+}
+
+/**
  * The ground. `lots` picks a surface for a block (by its plan id, like 'dt-c' or
  * 'district-N1') or for a landmark's own lot inside its block (by its old block, layout.ts SEATS).
  */
 export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
   const [e0, e1] = EXT;
   const L = e1 - e0;
-  const mid = (e0 + e1) / 2;
   const b = new Batch();
 
   // Grass everywhere, a tile at a time (growth plan Phase 5), and on past the edge under the skyline's towers
@@ -488,13 +605,9 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
     const [x0, z0, x1, z1] = [Math.max(g0, i * TILE), Math.max(g0, j * TILE), Math.min(g1, (i + 1) * TILE), Math.min(g1, (j + 1) * TILE)];
     b.add(new THREE.PlaneGeometry(x1 - x0, z1 - z0).rotateX(-Math.PI / 2).translate((x0 + x1) / 2, 0, (z0 + z1) / 2), grass);
   }
-  const water = new THREE.Mesh(new THREE.PlaneGeometry(L, RIVER[1] - RIVER[0]), waterMat);
-  water.rotation.x = -Math.PI / 2;
-  water.position.set(mid, 0.01, (RIVER[0] + RIVER[1]) / 2);
-  scene.add(water);
-  const stone = toon('#6b6790');
-  b.box(e0, 0, RIVER[0] - 0.25, L, 0.12, 0.25, stone);
-  b.box(e0, 0, RIVER[1], L, 0.12, 0.25, stone);
+  // The river between its edges (river.ts: straight quays, banks it pulls back from), and its banks
+  scene.add(riverWater(e0, e1));
+  riverBanks(b, e0, e1);
 
   // A promenade on each bank: between the north-bank avenue and the water, and the water and the south bank avenue
   const northBank = EW_ROADS.filter((r) => r.c < RIVER[0]).at(-1)!;
@@ -506,7 +619,7 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
   ])
     b.box(e0, 0, z0, L, 0.05, z1 - z0, promenade);
   // Lamps along the water, reaching out over the walk (clear of the bridges)
-  const nearBridge = (x: number) => NS_ROADS.some((r) => Math.abs(x - r.c) < r.half + WALK_W + 0.9) || !offFootbridge(x, 0.6);
+  const nearBridge = (x: number) => BRIDGED_NS.some((i) => Math.abs(x - NS_ROADS[i].c) < NS_ROADS[i].half + WALK_W + 0.9) || !offFootbridge(x, 0.6);
   // (the north bank's carried on west along Uptown, the boulevard's line: uptown.ts)
   for (let x = PROMENADE.x[0]; x <= PROMENADE.x[1]; x += 6)
     if (!nearBridge(x)) {
@@ -517,7 +630,14 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
   // Roads: asphalt, and down each avenue a raised median (broken at crossings and over the river)
   const asphalt = toon('#26243f');
   for (const r of EW_ROADS) b.box(e0, 0, r.c - r.half, L, 0.03, r.half * 2, asphalt);
-  for (const r of NS_ROADS) b.box(r.c - r.half, 0.002, e0, r.half * 2, 0.03, L, asphalt);
+  // (the north-south roads with no bridge end at the bank avenues: river plan step 1)
+  const bridged = (r: Road) => BRIDGED_NS.includes(NS_ROADS.indexOf(r));
+  for (const r of NS_ROADS)
+    if (bridged(r)) b.box(r.c - r.half, 0.002, e0, r.half * 2, 0.03, L, asphalt);
+    else {
+      b.box(r.c - r.half, 0.002, e0, r.half * 2, 0.03, RING_HI - e0, asphalt);
+      b.box(r.c - r.half, 0.002, SOUTH_ROAD, r.half * 2, 0.03, e1 - SOUTH_ROAD, asphalt);
+    }
   const median = toon('#3f5a4a');
   const kerbTop = toon('#5a5290');
   /** Stretches of a road between the roads crossing it (and any other gaps, like the river) */
@@ -532,7 +652,9 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
     if (at < e1) runs.push([at, e1]);
     return runs;
   };
-  const river: [number, number] = [RIVER[0] - 0.7, RIVER[1] + 0.7];
+  // Over the river: no road at all where there's no bridge; the east avenue's (the metro's, until its own bridge in
+  // step 2) keeps its median, the el's pillars stand on it
+  const river = (r: Road): [number, number][] => (bridged(r) ? [] : [[RING_HI, SOUTH_ROAD]]);
   for (const r of EW_ROADS)
     if (r.lanes === 2)
       for (const [a0, a1] of runsBetween(NS_ROADS, highwayGaps('ew', EW_ROADS.indexOf(r)))) {
@@ -541,7 +663,7 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
       }
   for (const r of NS_ROADS)
     if (r.lanes === 2)
-      for (const [a0, a1] of runsBetween(EW_ROADS, [river, ...highwayGaps('ns', NS_ROADS.indexOf(r))])) {
+      for (const [a0, a1] of runsBetween(EW_ROADS, [...river(r), ...highwayGaps('ns', NS_ROADS.indexOf(r))])) {
         b.box(r.c - MEDIAN / 2, 0, a0, MEDIAN, SLAB, a1 - a0, kerbTop);
         b.box(r.c - MEDIAN / 2 + 0.06, SLAB, a0, MEDIAN - 0.12, 0.005, a1 - a0, median);
       }
@@ -716,7 +838,7 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
         for (let p = a0 + 0.4; p < a1 - 0.3; p += 1.1) (yellow ? dashes : whites).push(m.clone().compose(new THREE.Vector3(p, 0.036, r.c + off), q0, new THREE.Vector3(0.55, 0.01, 0.07)));
   for (const r of NS_ROADS)
     for (const { off, yellow } of lines(r))
-      for (const [a0, a1] of runsBetween(EW_ROADS, [river, ...highwayGaps('ns', NS_ROADS.indexOf(r))]))
+      for (const [a0, a1] of runsBetween(EW_ROADS, [...river(r), ...highwayGaps('ns', NS_ROADS.indexOf(r))]))
         for (let p = a0 + 0.4; p < a1 - 0.3; p += 1.1) (yellow ? dashes : whites).push(m.clone().compose(new THREE.Vector3(r.c + off, 0.038, p), q0, new THREE.Vector3(0.07, 0.01, 0.55)));
   for (const nr of NS_ROADS)
     for (const er of EW_ROADS) {
@@ -728,9 +850,10 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
       for (const side of [-1, 1])
         if (side !== sx)
           for (let k = er.c - er.half + 0.16; k < er.c + er.half - 0.1; k += 0.32) zebra.push(m.clone().compose(new THREE.Vector3(nr.c + side * (nr.half + 0.45), 0.04, k), q0, new THREE.Vector3(0.55, 0.01, 0.17)));
-      // Across the north-south road
+      // Across the north-south road (where it carries on: not over the river where there's no bridge)
+      const ends = bridged(nr) ? 0 : er.c === RING_HI ? 1 : er.c === SOUTH_ROAD ? -1 : 0;
       for (const side of [-1, 1])
-        if (side !== sz)
+        if (side !== sz && side !== ends)
           for (let k = nr.c - nr.half + 0.16; k < nr.c + nr.half - 0.1; k += 0.32) zebra.push(m.clone().compose(new THREE.Vector3(k, 0.042, er.c + side * (er.half + 0.45)), q0, new THREE.Vector3(0.17, 0.01, 0.55)));
     }
   // A dashed centre line round each bend, clear of the roads it crosses
