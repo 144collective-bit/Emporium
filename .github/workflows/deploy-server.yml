@@ -1,5 +1,9 @@
-# Deploys the multiplayer game server (server/) to Cloudflare Workers whenever
-# it, or the code it shares with the site, changes on main (or on demand).
+# Deploys the multiplayer game server (server/) to Cloudflare Workers on
+# every push to main (or on demand). The Worker also serves its own copy of
+# the site (built with PUBLIC_GAME_SERVER), so any change to the site
+# redeploys it too. This is the only thing that should deploy it: Cloudflare's
+# own Git build (Workers Builds) is disconnected, since it published the site
+# without the game server.
 #
 # Needs two repository secrets (see server/README.md):
 #   CLOUDFLARE_API_TOKEN  - an API token with the "Edit Cloudflare Workers" template
@@ -10,12 +14,6 @@ name: Deploy game server
 on:
   push:
     branches: [main]
-    paths:
-      - server/**
-      - src/scripts/net/**
-      - src/scripts/city3d/combat-sim.ts
-      - src/scripts/city3d/solids.ts
-      - .github/workflows/deploy-server.yml
   workflow_dispatch:
 
 permissions:

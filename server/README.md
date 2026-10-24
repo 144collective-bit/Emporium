@@ -18,30 +18,24 @@ Shared with the site (bundled in): `src/scripts/net/` (protocol, the games and
 their modes, the username filter and the account API, names, ranks, wardrobe, emotes, phrases), `src/scripts/city3d/combat-sim.ts`
 and `src/scripts/city3d/solids.ts`. Keep those free of DOM and scene code.
 
-## Deploying from GitHub through Cloudflare (Workers Builds)
+## Deploying: the GitHub Action, only
 
-The Worker is called **emporium** (it must match `"name"` in `wrangler.jsonc`)
-and is connected to this GitHub repository in Cloudflare, so Cloudflare builds
-and deploys it on every push to `main`. It serves the game server **and the
-whole website** at https://emporium.144collective.workers.dev:
-`wrangler deploy` runs the site build first (`build` in `wrangler.jsonc`) and
-publishes `../dist` as static assets. Its build settings (*Workers & Pages* →
-**emporium** → *Settings* → *Build*):
+The Worker is called **emporium** (it must match `"name"` in `wrangler.jsonc`).
+It serves the game server **and its own copy of the whole website** at
+https://emporium.144collective.workers.dev: `wrangler deploy` runs the site
+build first (`build` in `wrangler.jsonc`, with `PUBLIC_GAME_SERVER`) and
+publishes `../dist` as static assets.
 
-| Setting | Value |
-| --- | --- |
-| Git branch | `main` |
-| Root directory | `server` |
-| Build command | `cd .. && npm ci && cd server && npm ci` (the server bundles shared code from `src/`, which needs the site's three.js) |
-| Deploy command | `npx wrangler deploy` |
-| Build watch paths | leave empty (the Worker carries the website now, so every change should redeploy it) |
+The **Deploy game server** Action (`.github/workflows/deploy-server.yml`)
+deploys it on every push to `main`, and on demand (*Actions* → **Deploy
+game server** → *Run workflow*). It's the only thing that should: Cloudflare's
+own Git build (Workers Builds) must stay **disconnected** (*Workers & Pages*
+→ **emporium** → *Settings* → *Build* → *Disconnect*). Left connected, it
+published the site on its own, without the game server, over the Action's
+deploy: every game route (`/health`, `/play`, `/auth/*`) answered an empty
+404 and nobody could connect.
 
-The server and the site live at `https://emporium.144collective.workers.dev`;
-the site is built against that address. With this
-in place, the GitHub Action route below isn't needed (leave its secrets unset
-so only one system deploys).
-
-## One-time setup with GitHub Actions instead (the owner)
+## One-time setup (the owner)
 
 1. **Create a Cloudflare account** (free) at https://dash.cloudflare.com/sign-up.
 2. **Pick your workers.dev subdomain**: in the dashboard open *Workers & Pages*.
@@ -66,7 +60,7 @@ so only one system deploys).
    change both if your subdomain differs. The site is published with the
    Worker, so the **Online** pill appears in walk mode straight away.
 
-After that, every push to `main` that touches the server redeploys it
+After that, every push to `main` redeploys it
 automatically.
 
 ## Logging in: the secrets (the owner)

@@ -2716,8 +2716,10 @@ it and has been retired completely. Build only on what's here.
   own there: the whole city game in the browser's save, no Online switch,
   multiplayer or Log in. Don't set it in that Action.
 - **Multiplayer lives on workers.dev only**: the `server/` Worker (emporium
-  on https://emporium.144collective.workers.dev, deployed by Cloudflare's
-  Workers Builds from `main`) serves the game server and its own copy of
+  on https://emporium.144collective.workers.dev, deployed by the "Deploy
+  game server" Action on every push to `main`; Cloudflare's own Git build
+  stays disconnected, it published the site without the game server)
+  serves the game server and its own copy of
   the site, built against itself (`build` in `wrangler.jsonc`).
 
 ## Content guardrails
