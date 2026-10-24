@@ -2600,14 +2600,28 @@ it and has been retired completely. Build only on what's here.
   `SIGNS` list, so nothing unexpected (or confidential) appears in public.
 - **Logging in with a wallet** (`wallet.ts`, `account.ts`, `account-ui.ts`;
   the server's `accounts.ts`, the sign-in message in `src/scripts/net/auth.ts`)
-  is part of the paused multiplayer: a player profile that follows the
+  is part of multiplayer (being tested on workers.dev only): a player profile that follows the
   wallet. It never sends a transaction. No explorer or wallet-brand links;
   only the confirmed links in `src/data/site.ts` are linked.
 
-## Multiplayer (beta, paused)
+## Multiplayer (beta, testing)
 
-- **Paused by the owner**: the live site is built without a game server
-  (see Hosting). The notes below describe the parked code.
+- **Being tested on workers.dev only** (the owner's call): multiplayer runs
+  only on https://emporium.144collective.workers.dev, the Worker in
+  `server/` that serves its own copy of the site, built with
+  `PUBLIC_GAME_SERVER`. degenemporium.com (Hostinger) stays single-player,
+  built without it (see Hosting). Getting it fit for today's city is
+  `docs/multiplayer-plan.md`'s "Testing on workers.dev".
+- **Movement checks** (`protocol.ts`, tested in `tests/protocol.test.ts`):
+  the world is `WORLD_BOUNDS`; the 'in' message's flags carry how you're
+  getting about (`MODES`, `modeBits()` / `modeOf()`: walk, drive, kart,
+  fly, ride, fight; from `walk.netState()`) and each has its top speed
+  (`SPEEDS`, `moveOk()`); a jump the browser sees itself make (fast travel,
+  the end of a ride or a race) goes with `FLAG.warp`, which the server
+  takes once every `WARP_GAP`. A snap-back (`fix`) only moves Degen on
+  foot. Gearing up works at either gun store's counter (the Armoury's
+  `RACK`, Trench Arms' `ARMS.counter`), and `equip` / `swap` carry the
+  mods on your guns (`cleanMods()`: the save is the browser's).
 - The plan and decisions are in `docs/multiplayer-plan.md`; keep it up to
   date. Phase 1 (hangout, player profiles, shared target practice) is built;
   leaderboards and south-bank PvP come next.
@@ -2678,7 +2692,7 @@ it and has been retired completely. Build only on what's here.
   (`highway.ts`), the traffic's routes and lights (`routes.ts`), collision data, doors, the gun counter, the garage
   and the spawn (`solids.ts`), the plots (`src/data/plots.ts`), your car
   (`mycar.ts`), the driving rules (`drive-sim.ts`), target practice
-  (`combat-sim.ts`), the economy (`tycoon.ts`, the market square in
+  (`combat-sim.ts`), the multiplayer protocol's checks (`protocol.ts`), the economy (`tycoon.ts`, the market square in
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`),
@@ -2707,15 +2721,14 @@ it and has been retired completely. Build only on what's here.
   `degenemporium-site`).
 - Keep the site fully static (no server routes) and keep `public/.htaccess`
   in the build.
-- **Multiplayer is paused** (the owner's call): the "Build site" Action
-  builds without `PUBLIC_GAME_SERVER`, so the city runs on its own: the
-  whole city game in the browser's save, no Online switch, multiplayer or
-  Connect wallet. Keep that code working
-  (it's all behind `PUBLIC_GAME_SERVER`), but don't develop it further
-  until the owner resumes it.
-- **Ignore Cloudflare** for now: the `server/` Worker (emporium on
-  workers.dev, which also builds a copy of the site) is parked. Don't spend
-  time on its deploys unless the owner brings it back.
+- **No multiplayer on degenemporium.com** (the owner's call): the "Build
+  site" Action builds without `PUBLIC_GAME_SERVER`, so the city runs on its
+  own there: the whole city game in the browser's save, no Online switch,
+  multiplayer or Connect wallet. Don't set it in that Action.
+- **Multiplayer lives on workers.dev only**: the `server/` Worker (emporium
+  on https://emporium.144collective.workers.dev, deployed by Cloudflare's
+  Workers Builds from `main`) serves the game server and its own copy of
+  the site, built against itself (`build` in `wrangler.jsonc`).
 
 ## Content guardrails
 

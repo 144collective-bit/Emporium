@@ -3,9 +3,39 @@
 Agreed with the owner. Multiplayer ships in phases, each as a public beta,
 clearly labelled. This file is the reference; update it as decisions change.
 
-**Status: paused** (owner's call). The site is built without the game
-server and runs single-player; the server code stays in `server/` for when
-it resumes.
+**Status: testing on workers.dev** (owner's call). Multiplayer runs only on
+https://emporium.144collective.workers.dev (the Worker in `server/`, which
+serves its own copy of the site). degenemporium.com on Hostinger is built
+without the game server and stays single-player.
+
+## Testing on workers.dev
+
+The server was parked while the city grew. Getting it fit for today's city:
+
+1. **The server fits today's city** *(built)*:
+   - The world is the walkable world (`WORLD_BOUNDS`), not the old
+     downtown box: players in The Trenches, Westlake Park, the airport or
+     the kart park were dropped without a word.
+   - How you're getting about rides in the controls' flags (`MODES`: walk,
+     drive, kart, fly, ride, fight), each with its own top speed (`SPEEDS`),
+     so driving, karting, flying and rides aren't snapped back. A jump the
+     browser makes itself (fast travel, the end of a ride or a race) is
+     flagged (`FLAG.warp`) and let through once a second at most; a jump
+     isn't checked against where it lands (a hangout: nothing to gain).
+     A snap-back only moves Degen on foot.
+   - Gearing up works at Trench Arms' hatch as well as the Armoury, and
+     the Armoury's mods on your guns go with `equip` / `swap` (the save
+     and its Dorras are the browser's, so the server takes the levels it's
+     told, cleaned to whole levels 0-3).
+   - The server's type check passes again (`CarId` lives in `mycar.ts`).
+   - `PROTOCOL` 3: tabs on the old version are told to reload.
+2. **What others see** *(next)*: other players driving, karting, flying or
+   riding (the mode is in each snapshot row's flags already, `modeOf()`),
+   and jumps drawn as jumps rather than slides.
+3. **The owner's test** on workers.dev: two browsers (one private, since
+   each browser is its own guest), walk mode, Online on; see each other
+   downtown and in The Trenches, emotes and phrases, the same dummies, and
+   driving and fast travel with no snap-backs.
 
 ## Decisions
 

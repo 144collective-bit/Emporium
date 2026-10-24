@@ -30,9 +30,10 @@ jobs:
       # The street plan, collisions, plots, driving and target practice rules (tests/).
       # A failing test stops the build, so a broken city never reaches the zip.
       - run: npm test
-      # Multiplayer is paused: built without a game server, so the city runs on its
-      # own (the whole city game in this browser's save).
-      # To bring it back, set PUBLIC_GAME_SERVER here (see server/README.md).
+      # No multiplayer on degenemporium.com (the owner's call): built without a game server,
+      # so the city runs on its own (the whole city game in this browser's save).
+      # Multiplayer runs only on the workers.dev copy of the site (server/README.md): don't
+      # set PUBLIC_GAME_SERVER here.
       - run: npm run build
       # The city's textures made ahead and GPU-compressed (scripts/bake-textures.mjs): painted in a
       # headless Chromium from the built site, then written into dist/. Playwright's own Chromium (the
