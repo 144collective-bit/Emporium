@@ -1988,6 +1988,17 @@ it and has been retired completely. Build only on what's here.
   freighters are the airliner in cargo trim (`aircraft.ts` model
   `freighter`: no cabin windows, a main deck door, DEGEN CARGO titles (made
   up), DEGEN CARGO's orange), a fleet of their own (`Flight.freight`).
+- **Night lighting and the roadside** (the detail pass, the owner's picks):
+  flush centreline lights on the runway and the taxiway, the connectors'
+  green and amber and red stop bars (`CENTRE_LIGHTS`, `flush()` in
+  `airportgrounds3d.ts`); a stand guidance board for every stand (`VDGS`,
+  `guidance()` in `airport.ts`: amber while a jet closes in, green parked,
+  one instanced screen); the masts' pools on the side each faces
+  (`MAST_POOLS`); the approach's rabbit at night (`RABBIT`, `rabbit()`, not
+  under reduced motion); road signs from one atlas (`ROAD_SIGNS`, fixed
+  copy), the SECTOR 7 AIRPORT gateway wall and its flags (`GATEWAY`,
+  `FLAGS`, solid), flower beds, hedges, shrubs (`BEDS`, `HEDGES`, `SHRUBS`;
+  `roadside()`, a site) and trees along Cargo Road (`CARGO_TREES`).
 - **The flying traffic:** four airliners (from `FLYING_STANDS`; the other
   stands and the maintenance hangar's apron have airliners parked,
   `PARKED_JETS`), the freighter (step 3 gave it stand 5's slot), a prop plane, a helicopter and the executive helicopter

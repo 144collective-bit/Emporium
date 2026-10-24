@@ -72,6 +72,16 @@ import {
   YARD,
   rigRect,
   type Rect,
+  BEDS,
+  CARGO_TREES,
+  FLAGS,
+  GATEWAY,
+  HEDGES,
+  MASTS,
+  MAST_POOLS,
+  ROAD_SIGNS,
+  SHRUBS,
+  VDGS,
 } from '../src/scripts/city3d/airfield';
 import { SEATS, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
 import { PADS, inTown } from '../src/scripts/city3d/outer';
@@ -290,6 +300,48 @@ test('the multi-storey car park and the hotel: landside, off every road, clear o
   }
   assert.ok(MSCP.top < 12.5 && HOTEL.top < 12.5);
   assert.ok(Math.abs(MSCP.levels * MSCP.decks - MSCP.top) < 1);
+});
+
+test('the roadside: its signs, the gateway, the flags and the planting off every street and its sidewalk, clear of the highway', () => {
+  // Points that must stand off the streets: by how much past a street's half width
+  const pts: [number, number, number, string][] = [];
+  for (const g of ROAD_SIGNS) {
+    if (g.posts.length) {
+      // (a gantry's board is over the road; its posts are off it)
+      for (const px of g.posts) pts.push([px, g.z, 0.8, `the ${g.text} gantry's post`]);
+      assert.ok(g.posts[0] < g.x - g.w / 2 && g.posts[1] > g.x + g.w / 2, `the ${g.text} gantry's posts are either side of its board`);
+    } else {
+      const along = Math.abs(Math.sin(g.yaw)) < 0.5;
+      for (const s of [-1, 1]) pts.push([g.x + (along ? (s * g.w) / 2 : 0), g.z + (along ? 0 : (s * g.w) / 2), 0.8, `the ${g.text} sign`]);
+    }
+    assert.ok(g.y - g.w / 16 > (g.posts.length ? 3.6 : 1.2), `the ${g.text} sign is up where it can be read (and driven under)`);
+  }
+  for (let x = GATEWAY.x0; x <= GATEWAY.x1; x += 0.5) pts.push([x, GATEWAY.z - 0.35 - GATEWAY.bed, 0.8, 'the gateway']);
+  for (const [x, z] of FLAGS) pts.push([x, z, 0.8, 'a flagpole'], [x + 1.8, z, 0.8, 'a flag']);
+  for (const [x, z] of BEDS) for (const [dx, dz] of [[-0.45, -1.1], [0.45, 1.1], [-0.45, 1.1], [0.45, -1.1]]) pts.push([x + dx, z + dz, 0.8, 'a flower bed']);
+  for (const [x0, z0, x1, z1] of HEDGES) for (let x = x0; x <= x1; x += 1) for (const z of [z0, z1]) pts.push([x, z, 0, 'a hedge']);
+  for (const [x, z] of SHRUBS) pts.push([x, z, 1.6, 'a shrub']);
+  for (const [x, z] of CARGO_TREES) pts.push([x, z, 1.2, 'a tree on Cargo Road']);
+  for (const [x, z, m, what] of pts) {
+    for (const s of PLAN.streets) assert.ok(distToStreet(s, [x, z]) > s.half + m, `${what} at ${x.toFixed(1)}, ${z.toFixed(1)} is on ${s.id}`);
+    assert.ok(fromHighway(x, z) > HIGHWAY_HALF + 2, `${what} at ${x}, ${z} is by the highway`);
+  }
+  // Nothing of it in the multi-storey, the hotel or the car parks' bays
+  for (const [x, z, , what] of pts.filter((p) => p[3] !== 'a hedge' && p[3] !== 'a shrub'))
+    for (const r of [MSCP.rect, HOTEL.rect, CAR_PARK, GA_CAR_PARK]) assert.ok(!(x > r[0] && x < r[2] && z > r[1] && z < r[3]), `${what} at ${x}, ${z} is in ${r}`);
+});
+
+test('the night lighting: a guidance board for every stand on the building it noses up to, the masts lighting the apron', () => {
+  assert.equal(VDGS.length, STANDS.length + CARGO_STANDS.length);
+  for (const { x, z, y, stand } of VDGS) {
+    assert.equal(x, stand[0]);
+    assert.ok(stand[1] - z > 10 && stand[1] - z < 20, `the board for the stand at ${stand} is on the face in front of its nose`);
+    const face = [HALL, ...CONCOURSES, CARGO_SHED].find((r) => x > r[0] + 0.8 && x < r[2] - 0.8 && Math.abs(r[3] - z) < 1e-9);
+    assert.ok(face && y + 0.8 < face[4], `the board at ${x}, ${z} is on a building's face, under its roof`);
+  }
+  assert.equal(MAST_POOLS.length, MASTS.length * 2);
+  // (each mast's pools on the side it faces, on the airside)
+  for (const [x, z] of MAST_POOLS) assert.ok(x > AIRSIDE[0] && x < AIRSIDE[2] && z > AIRSIDE[1] && z < AIRSIDE[3], `a mast's pool of light at ${x}, ${z} is off the airside`);
 });
 
 test('every aircraft keeps to its timetable: smooth, inside the world, never on the ground outside the airport', () => {
