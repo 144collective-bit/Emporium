@@ -143,8 +143,12 @@ it and has been retired completely. Build only on what's here.
   driven and every slip lane taken; plus the ring highway all the way
   round, both ways, in both lanes. Turns are rounded off (`cornerCurve()`
   in `highway.ts`: tighter for right turns, through the slip lanes where
-  the highway meets an arterial), an avenue's lane picked for the next
-  turn. Junctions where a diagonal comes in run three light phases (x, z,
+  the highway meets an arterial; `joinLegs()` joins the curve onto the next
+  street from where it ends, so no car runs back to the junction after it),
+  an avenue's lane picked for the next turn (a street with a planted
+  `median` keeps its lanes either side of it; a one-way street's one lane
+  down its middle; a loop, Uptown's circle, round one way). Junctions where
+  a diagonal comes in (downtown's, Uptown's) run three light phases (x, z,
   diagonal). Cars drive round and round and follow whoever is ahead going
   the same way on any route; they're **spent where you are** (`life.ts`):
   a car further than `POOL_R` from what the camera looks at
@@ -701,22 +705,40 @@ it and has been retired completely. Build only on what's here.
 - **Uptown, the financial centre** (the owner's call): Westlake Park's three
   strips (x -200.5 to -43.3, z 0 to 60, the north bank avenue along the
   river) becoming a waterfront boulevard and financial centre with
-  skyscrapers and a plaza, planned in `docs/finance-plan.md` in five
+  skyscrapers and a plaza, planned in `docs/finance-plan.md` in six
   phases, each with the owner's sign-off; keep it up to date. Its name is
   **Uptown**. Its towers may rise above the Emporium (the owner's call: the
-  tallest about 30 tiles, the rest 15 to 25; the Emporium stays the
-  tallest downtown and the most detailed, and "under the Emporium" holds
-  everywhere else); the flying traffic and your own aircraft clear them.
-  The strips' courts and their players are retired with it. Scenery first;
-  in Phase 5 the tallest tower becomes a place with a sky deck. Phases 1
-  (the land and the streets), 2 (the towers), 3 (the plaza) and 4 (the
-  waterfront boulevard) are built:
-  - `uptown.ts` (DOM-free, tested in `tests/uptown.test.ts`): three
-    north-south streets (`UPTOWN_STREETS`, `NS_X`: in line with The
-    Trenches' cross streets across the river) from the west ring avenue to
-    the north bank avenue, every junction lit (`UPTOWN_CROSSINGS`); twelve
-    blocks in rows n, m and s (`UPTOWN_BLOCKS`, ref `uptown` in the street
-    plan), the plaza's on the middle row (`PLAZA_BLOCK`, use `plaza`); the
+  spire about 40 tiles since the redesign, the rest 14 to 32; the Emporium
+  stays the tallest downtown and the most detailed, and "under the
+  Emporium" holds everywhere else); the flying traffic and your own
+  aircraft clear them. The strips' courts and their players are retired
+  with it. Scenery first; in Phase 6 the spire becomes a place with a sky
+  deck reached by a lift. Phases 1 (the land and the streets), 2 (the
+  towers), 3 (the plaza), 4 (the waterfront boulevard) and 5 (the
+  redesign, the owner's call: slim towers, a varied street plan with
+  real-world features, the kerbside) are built:
+  - `uptown.ts` (DOM-free, tested in `tests/uptown.test.ts`): its streets
+    (`UPTOWN_STREETS`, in the street plan; Phase 5, the owner's picks):
+    **Uptown Circle** (`CIRCLE`, a roundabout: a one-way loop, `loop` and
+    `oneway` in the plan, its traffic giving way at unlit crossings) on the
+    circle's street (x -176) with **Circle Street** (`circle-e`) east from
+    it to the plaza's middle (the cross at the end of its vista); **the
+    one-way pair** (`COUPLET`: x -150 northbound, x -112 southbound, in line
+    with The Trenches' cross streets, a bike lane each, `BIKE`); **the
+    diagonal** (`DIAG`, from the ring avenue at the pair's southbound street
+    to the south cross street at the east street, `EAST_X`; three light
+    phases where it comes in, `three` in routes.ts); **the crescent**
+    (`CRESCENT`, `crescentX()`, bowing east between the east street and the
+    Parkway); the diagonal and Circle Street carry a planted median
+    (`STREET_MEDIAN`: `median` on a plan street, its lanes either side),
+    every other junction lit (`UPTOWN_CROSSINGS`, `crossingsOn()`). The
+    blocks (`UPTOWN_BLOCKS`, ref `uptown` in the street plan) are polygons
+    in rows n, m and s, cut round the circle, along the diagonal (a pocket
+    park, the flatiron's wedge) and the crescent, each with its `use`
+    (towers, the plaza, the park, the circle's island), the plaza's on the
+    middle row (`PLAZA_BLOCK`, use `plaza`); **lay-bys** (`LAYBYS`,
+    `laybyRect()`: parking, the taxi rank, valets, loading) cut into the
+    blocks off the kerb, the sidewalk round behind them; the
     Mall's axis carried on south from its gate (`AXIS_X`): walk-only lanes
     through the blocks either side of the plaza (`UPTOWN_LANES`, alleys in
     the plan) and zebras over the avenues and cross streets
@@ -725,22 +747,48 @@ it and has been retired completely. Build only on what's here.
     along its avenues and cross streets (`UPTOWN_LAMPS`); the boulevard's
     line (`BOULEVARD_X`: the north bank from Uptown's west edge to the
     town's promenade, the esplanade's); `UPTOWN_RECT` / `inUptown()`.
-  - Its streets are drawn at the boot by `streets3d.ts` (`drawStreets()`,
-    shared with The Trenches, clean here: no wear), its lots paved
+  - Its streets are drawn at the boot by `streets3d.ts` (`drawUptown()`:
+    asphalt along any line, the circle's ring, planted medians, centre
+    lines, zebras on every arm of every lit junction, the lay-bys' asphalt,
+    lamps along them and round the circle; clean: no wear), its lots paved
     (world.ts), and the rest is a district loaded as you approach from
     well out (`uptown3d.ts`, `LAZY_DISTRICTS` id `uptown`, its land
     widened by `UPTOWN_REACH`: the skyline is seen from across town): the
-    lanes' paving, the towers and the plaza.
+    lanes' paving, the towers, the plaza, the boulevard and the kerbside.
+  - **The kerbside** (Phase 5) is `kerbside.ts` (DOM-free, tested in
+    `tests/kerbside.test.ts`; in the boot: what's solid) and
+    `kerbside3d.ts` (Uptown's chunk): the cars in the lay-bys
+    (`LAYBY_CARS`: parked the traffic's way, the rank's Cruisers in taxi
+    yellow, the valets' Midnight Execs and coupes, a box van at the loading
+    bay; `parkedCars()` on the main thread), the **porte-cochères** over the
+    lobbies behind the valets' bays (a glass roof on steel posts, lit along
+    its edge, a VALET stand), the **service alleys** between towers side by
+    side (`SERVICE_ALLEYS`: two bollards at each mouth, a walker passes and
+    no car, `ALLEY_DUMPSTERS`, roll-up doors with lamps), **the monument**
+    on the circle's island (`MONUMENT`: a granite plinth and column, a
+    gilded globe; made up), and the paint and signs (one small atlas each,
+    fixed copy): the pair's bike lanes, arrows and ONE WAY signs, give-way
+    teeth and yield signs round the circle and arrows round it, the bank
+    avenue's red bus lanes with BUS, turn arrows in the avenues' lanes
+    coming up to Uptown's junctions, TAXI and LOADING in their bays.
+    `KERBSIDE_SOLIDS` (in `SOLIDS`). The avenues' medians and lines break
+    as far as a slanting street's asphalt reaches (`highwayGaps()`).
   - **The towers** (Phase 2) are `highrise.ts` (DOM-free, tested in
-    `tests/highrise.test.ts`): five designs (`Design`, `design()`: a glass
+    `tests/highrise.test.ts`): six designs (`Design`, `design()`: a glass
     slab with its plant room set back, a stepped deco tower in stone and
-    gold, a round glass drum, twin towers with a skybridge, and the spire),
-    one to a block (`HIGHRISES`), laid by hand: the spire in the plaza's
-    block the tallest (`TALLEST`: roof 30, mast 36; `SPIRE_LOT`, no
-    podium), the rest 15 to 24 on podiums (`PODIUM`), each its skin
+    gold, a round glass drum, twin towers with a skybridge, the spire, and
+    `flatiron()`: a stone wedge filling the diagonal's sharp corner, its
+    prow blunt, `PROW`), slim since Phase 5 (the owner's call: shafts 5 to
+    10 across, at least 2.5 times as tall as wide, two or three to a block
+    on their own lots, 29 in all; `HIGHRISES`), laid by hand: the spire in
+    the plaza's block the tallest (`TALLEST`: roof 40, mast 45;
+    `SPIRE_LOT`, 12 across, no podium), the rest 16 to 32 on podiums
+    (`PODIUM`; the river row's shafts at the back of theirs, `back` and
+    `depth`, the front of the roof a restaurant terrace), each its skin
     (`Skin`: blue, gold, black or silver glass, or deco stone) and front
-    (its lobby's `door`); parts (`Part`: box, drum or octagon) bottom up,
-    each tier on the one below and inside it; `HIGHRISE_SOLIDS` (in
+    (its lobby's `door`); parts (`Part`: box, drum, octagon or prism, its
+    outline `poly`) bottom up, each tier on the one below and inside it;
+    `HIGHRISE_SOLIDS` (in
     `SOLIDS`) in strips no wider than `STRIP` (`partStrips()`: a car put
     out of one is pushed only a little, inside the collision grid's
     reach). They're drawn by `highrise3d.ts` (a site a tower): walls from
@@ -750,9 +798,22 @@ it and has been retired completely. Build only on what's here.
     and in pieces no longer than `SPAN`; roofs and parapets on every tier;
     the crowns (a slab's lit band, the deco's gold edges and pyramid, the
     drum's neon ring and cap, the twins' skybridge, the spire's lantern);
-    a mast and a red warning light on every tip; a canopy over each lobby
-    door and a revolving door near. The airliners' westbound leg crosses
-    Uptown at 46 to 48 (airfield.ts), and the flight tests keep every
+    a mast and a red warning light on every tip. **The lobbies** (the
+    owner's call: "more realistic ... not a plinth"; `Lobby`, `lobby` on
+    each tower): a glass atrium with the lobby inside (pendants, a desk,
+    plants, people on the atlas's light map), a glass vestibule, a glass
+    canopy and flags; a colonnade (deco towers) or an arcade (drums), the
+    ground floor set back `GROUND.recess` behind square stone columns with
+    gold capitals or round ones (`columns`, solid; `foot` on the podium is
+    what's solid under the storey over it, so you walk under it), bronze
+    doors, a lit soffit, lanterns; retail (shopfronts from the atlas either
+    side of a narrow lobby door, awnings and names from `SHOP_NAMES`, made
+    up), the flatiron's shops all round its foot, and the spire's glass
+    pavilion. A podium's sides are shops or glass, its back a service wall
+    (louvres, a steel door). **Facades** vary by tower (`facade()`): fins
+    down the glass, ledges every four floors, or corner piers; the tallest
+    slab carries a helipad. Planters by every door (near). The airliners' westbound leg crosses
+    Uptown at 53 to 55 (airfield.ts), and the flight tests keep every
     aircraft well over every tip.
   - **The plaza** (Phase 3) is `plaza.ts` (DOM-free, tested in
     `tests/plaza.test.ts`; in the boot: its solids, trees, lamps and
@@ -760,7 +821,7 @@ it and has been retired completely. Build only on what's here.
     canopies, the kiosks' names, the LED ribbon; Uptown's chunk): the
     plaza's block round the spire and the slivers west of the axis's lanes
     as café terraces (`TERRACES`). Where the Mall's axis meets the line
-    between the spire's lobby and the lobby across the street (`CENTRE`)
+    from Uptown Circle down Circle Street to the spire's lobby (`CENTRE`)
     stands **the cross** (the owner's pick): gold, on a stepped stone
     plinth in a round pool (`CROSS`, `POOL`), its arms across the axis,
     glowing softly at night as if floodlit, the tallest thing in the plaza
@@ -772,7 +833,7 @@ it and has been retired completely. Build only on what's here.
     pool (`BENCHES`), lamps (`LAMPS`), planters by the spire (`PLANTERS`);
     on each terrace a café kiosk (`KIOSKS`, `KIOSK_NAMES`: MARBLE CAFÉ,
     SKYLINE DELI, made up) with tables under umbrellas; an LED ribbon round
-    the podium across the street (`RIBBON`, `RIBBON_WORDS`: fixed made-up
+    the podium across the east street (`RIBBON`, `RIBBON_WORDS`: fixed made-up
     words, never a number); people at lunch (`PLAZA_PEOPLE`: at the tables,
     on the benches, chatting, looking up at the cross, queueing; half on
     phones); `PLAZA_SOLIDS` (in `SOLIDS`: the pool in boxes with their
@@ -799,7 +860,7 @@ it and has been retired completely. Build only on what's here.
     on it solid. The north lane's boats stay east of it (`NORTH_BOAT_EAST`,
     life.ts), the middle lane passes outside every deck and yacht (the
     tests hold 0.8 clear). Restaurant terraces on the river row's podium
-    roofs wherever they're clear of the shafts (`ROOF_TERRACES`, their
+    roofs in front of the shafts (`ROOF_TERRACES`, their
     tables; `TERRACE_NAMES`, made up; the podiums' rooftop plant keeps off
     them); a planted median along the bank avenue (`MEDIAN_RUNS`,
     `MEDIAN_TREES`, `HEDGE`: a clipped hedge and columnar trees, well short
@@ -810,9 +871,8 @@ it and has been retired completely. Build only on what's here.
     plaza's granite (`granite`, `quad()`, `bench()`, `table()` are
     plaza3d.ts's), a glass rail broken at the overlooks' and gangways'
     mouths, piles; the overlooks; the marina and its yachts; the median a
-    run a site; each terrace a site, its name from one small atlas). Valet
-    bays at the lobbies weren't built (no room without cutting into the
-    podiums; the owner's call for Phase 5).
+    run a site; each terrace a site, its name from one small atlas). The
+    valets' bays came in Phase 5 (the kerbside, above).
 - **Districts loaded as you approach** (performance phase 4, item 10):
   a district's drawing is a module of its own (`LAZY_DISTRICTS` in
   `districts.ts`: an id, its land and `load()`, a dynamic import), a chunk
@@ -2636,7 +2696,7 @@ it and has been retired completely. Build only on what's here.
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`),
-  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`, `boulevard.ts`, `boulevarddress.ts`, the town car in `cars.ts`), the kart park's facility (`kartfacility.ts`),
+  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`, `boulevard.ts`, `boulevarddress.ts`, `kerbside.ts`, the town car in `cars.ts`), the kart park's facility (`kartfacility.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,

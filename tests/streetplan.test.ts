@@ -66,8 +66,8 @@ test('the city as built: the grid\'s roads, three diagonals from the ring\'s cor
   assert.ok(alleys.length >= 5, 'downtown has its alleys and lanes');
   for (const a of alleys) assert.deepEqual(lanePaths(a), [], 'no cars down an alley');
   // Lights where downtown's cross streets meet, where the highway meets an arterial, along Trench Avenue (trenches.ts) and
-  // at every junction in Uptown (uptown.ts), and nowhere else
-  for (const c of p.crossings) assert.equal(c.lights, (CORE_ROADS.includes(c.at[0]) && CORE_ROADS.includes(c.at[1])) || c.streets.includes('highway') || c.streets.includes('trench-ave') || c.streets.some((id) => id.startsWith('uptown-')));
+  // at every junction in Uptown (uptown.ts) but round its circle (its traffic gives way), and nowhere else
+  for (const c of p.crossings) assert.equal(c.lights, (CORE_ROADS.includes(c.at[0]) && CORE_ROADS.includes(c.at[1])) || c.streets.includes('highway') || c.streets.includes('trench-ave') || (c.streets.some((id) => id.startsWith('uptown-')) && !c.streets.includes('uptown-circle')));
 });
 
 test('the city\'s blocks: downtown\'s outlines, every district and lot, off the asphalt, the landmarks on theirs', () => {
@@ -82,8 +82,9 @@ test('the city\'s blocks: downtown\'s outlines, every district and lot, off the 
   const roads = p.streets.filter((s) => s.kind !== 'alley');
   for (const b of p.blocks) {
     assert.ok(polyArea(b.poly) > 0, `${b.id} runs counter-clockwise`);
-    // Every corner, with its sidewalk round it, stays off every road's asphalt
-    for (const s of roads) for (const q of b.poly) assert.ok(distToStreet(s, q) >= s.half + b.walk - 1e-6, `${b.id} corner ${q} on ${s.id}`);
+    // Every corner, with its sidewalk round it, stays off every road's asphalt (Uptown's circle's island: off its
+    // carriageway, which its streets join at its middle)
+    for (const s of roads) if (b.id !== 'uptown-circle' || s.id === 'uptown-circle') for (const q of b.poly) assert.ok(distToStreet(s, q) >= s.half + b.walk - 1e-6, `${b.id} corner ${q} on ${s.id}`);
   }
   // Every landmark has its block
   const places = p.blocks.flatMap((b) => b.places ?? []);

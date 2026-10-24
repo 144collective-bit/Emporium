@@ -2,8 +2,10 @@
 
 The owner wants the land of Westlake Park's three strips turned into a
 waterfront boulevard and financial centre: skyscrapers, a plaza, the
-city's wealth on show. Built in five phases, each a PR for the owner's
-sign-off. Keep this plan up to date as each phase lands.
+city's wealth on show. Built in six phases, each a PR for the owner's
+sign-off (the redesign, the owner's call after Phase 4, became Phase 5;
+the night, the life and the place moved to Phase 6). Keep this plan up to
+date as each phase lands.
 
 ## The site today
 
@@ -44,9 +46,11 @@ sign-off. Keep this plan up to date as each phase lands.
     at both world sizes.
   - Nothing that exists moves unless the owner says so: the snapshot is
     rewritten only for what the owner moves (the courts).
-- **The budget:** the boot's code is at 641.5 of 642 KB (raised from 640
+- **The budget:** the boot's code is at 652.5 of 654 KB (raised from 640
   on purpose in Phase 3: the plaza's solids, trees, lamps and people must be
-  there at the boot). Everything drawn
+  there at the boot; and from 642 in Phase 5: the redesign's street plan,
+  slim towers, kerbside solids, its streets' drawing and the traffic's
+  routes round them, baked). Everything drawn
   goes in the district's own chunk; what the boot must hold (solids,
   places, the street plan's blocks) is kept small. The towers' far forms
   are made from data, not shipped as geometry.
@@ -54,7 +58,10 @@ sign-off. Keep this plan up to date as each phase lands.
 ## The owner's decisions
 
 1. **Height: the district rises above the Emporium** (the owner's call).
-   - The tallest tower is about 30 tiles, the rest 15 to 25.
+   - The tallest tower is about 30 tiles, the rest 15 to 25. In Phase 5
+     (the owner's call: slim towers, "a bit taller") the spire is 40 and
+     the rest 14 to 32, and the airliners' westbound leg over Uptown was
+     raised to 53-55.
    - The Emporium stays the tallest building downtown and the most detailed
      in the city. The "under the Emporium" rule holds everywhere else.
    - The flying traffic's routes (the prop plane's low loop along the
@@ -63,10 +70,23 @@ sign-off. Keep this plan up to date as each phase lands.
 2. **The courts are retired**, with the people playing on them (tennis,
    football, basketball, their balls and their sound).
 3. **The name is Uptown.**
-4. **Scenery through Phases 1-4.** In Phase 5 the tallest tower becomes a
-   place (pin, panel, "coming soon"), with a walkable sky deck at the top.
+4. **Scenery through Phases 1-5.** In Phase 6 the tallest tower becomes a
+   place (pin, panel, "coming soon"), with a walkable sky deck at the top,
+   reached by a lift from its lobby (the owner's pick: a lift door in the
+   lobby, a fade, the deck; the lift back down).
 5. **The plaza's centrepiece is a Christian cross** (the owner's pick, in
    Phase 3).
+6. **The redesign** (the owner's call after Phase 4: "buildings with a
+   smaller footprint so they look more realistic as skyscrapers ... a more
+   varied road system ... real-world features in the street plan"), the
+   owner's picks:
+   - **Towers:** slim, a bit taller (shafts 5 to 10 across, two or three
+     to a block, the spire about 40).
+   - **Streets:** a diagonal with a flatiron on its sharp corner, a
+     roundabout, a one-way pair, a curved crescent.
+   - **Kerbside:** lobby drop-offs (porte-cochères with valets, a taxi
+     rank), service alleys, parking bays and a bus lane (and bike lanes),
+     turn arrows and planted medians.
 
 ## Phases
 
@@ -139,17 +159,21 @@ sign-off. Keep this plan up to date as each phase lands.
      as built").
    - **On the move:** a black town car among the traffic's models,
      following the cars' rules (a lane's width, two draws a model).
-5. **Night, life and the place.**
+5. **The redesign: the streets, slim towers and the kerbside** (built: see
+   "Phase 5 as built" below; decision 6).
+6. **Night, life and the place.**
    - **The skyline at night:** crowns, beacons and lit floors.
    - **Life:**
      - the district's sound in `ambience.ts` (fountains, a quieter hum,
-       the river);
-     - people (suits, couriers, joggers on the esplanade);
+       the river, the circle's traffic);
+     - people (suits, couriers, joggers on the esplanade, cyclists in the
+       bike lanes);
      - a helicopter to a tower's helipad on the airport's timetable.
    - **The place:**
      - spot, pin, directory entry, panel ("coming soon", Walk in) and a
-       `PLACES` entry for the tallest tower;
-     - its sky deck walkable if the owner wants it;
+       `PLACES` entry for the spire;
+     - its sky deck walkable, reached by a lift door in the lobby (fade,
+       up, the deck with a glass rail; the lift back down);
      - the world map draws the district.
    - **The pass:** the phone pass and the bench before and after.
      CLAUDE.md is updated.
@@ -339,3 +363,100 @@ owner's sign-off.
 - **The budget:** the boot's code went from 640.2 to 641.5 of 642 KB (the
   town car's model and the boulevard's people, trees and lamps); the
   drawing is in Uptown's chunk.
+
+## Phase 5 as built
+
+- **The streets** (`uptown.ts`, tested in `tests/uptown.test.ts`), all in
+  the street plan, so traffic, taxis, walking and the world map read them:
+  - **Uptown Circle** (`CIRCLE`): a roundabout west of the plaza, one lane
+    wide (3 tiles), one way round (anticlockwise seen from above with north
+    up: keep right), its traffic giving way (unlit crossings) where its
+    three streets join it: the circle's street north and south of it
+    (x -176, ring avenue to bank avenue) and **Circle Street**
+    (`circle-e`), with a planted median, east to the one-way pair at the
+    plaza's middle, so the cross stands at the end of its vista. On its
+    island, **the monument** (`MONUMENT` in `kerbside.ts`: a stepped granite
+    plinth, a column, a gilded globe; made up), flowers and uplights.
+  - **The one-way pair** (`COUPLET`): the plaza's two side streets, in
+    line with The Trenches' (x -150 northbound, x -112 southbound), each
+    with a green bike lane on its kerb side (`BIKE`), arrows and ONE WAY
+    signs.
+  - **The diagonal** (`DIAG`): from where the ring avenue meets the pair's
+    southbound street to where the south cross street meets the east street
+    (x -74), about 39 degrees off north-south, one lane each way either side
+    of a planted median (`STREET_MEDIAN`; `median` on a street in the plan,
+    its lanes either side, routes.ts), its junctions on three light phases.
+    It cuts a pocket park (`uptown-n2w`) and **the flatiron's wedge**
+    (`uptown-m2e`) out of the blocks either side of the north cross street.
+  - **The crescent** (`CRESCENT`, `crescentX()`): a street bowing six tiles
+    east between the east street and the Parkway, ring avenue to bank
+    avenue.
+  - Every other junction lit. The blocks are polygons (`UptownBlock.use`:
+    towers, the plaza, the pocket park, the circle's island), cut round the
+    circle, along the diagonal and the crescent.
+- **The traffic:** routes.ts joins a turn's curve onto the next street
+  from where the curve ends (not only past what's near the corner): a lane
+  well off its street's line, or a street bending round the circle, used to
+  run back to the junction after the curve (266 such steps backwards in the
+  routes before, none now), and three light phases wherever the diagonal
+  comes in.
+- **The towers** (`highrise.ts`, tested in `tests/highrise.test.ts`): 29,
+  two or three to a block (the old 12 had a block each), shafts 5 to 10
+  across, every one at least 2.5 times as tall as it's wide: the spire 40
+  (tip 45, 12 across, no podium) in the plaza, the rest 16 to 32 stepping
+  down to the edges; the river row's shafts at the back of their podiums
+  (`back`, `depth`), the front of the roof a restaurant terrace
+  (`ROOF_TERRACES` in boulevard.ts, now in front of the shafts: ten names);
+  and **the flatiron** (`flatiron()`, design `flatiron`): a stone wedge
+  filling the diagonal's sharp corner, its prow blunt (`PROW`), a gold line
+  under its heavy cornice, solid in thin strips along it (a prism part,
+  `poly`). The airliners' westbound leg was raised from 46-48 to 53-55.
+- **The lobbies** (the owner's call after the first look: "more realistic
+  ... they look like a plinth the building is on"), each tower's `lobby`:
+  - **atrium** (the twins and half the slabs): the podium glazed full height
+    with the lobby visible inside (pendants, a reception desk, plants,
+    people; lit at night), a glass vestibule with the revolving door, a
+    glass canopy on steel, three flags;
+  - **colonnade** (the deco towers) and **arcade** (the drums): the ground
+    floor set back 1.1 behind square stone columns with gold capitals or
+    round ones, bronze doors and glazing, a lit soffit with downlights,
+    bronze lanterns; solid only where it stands (`foot`, the columns), so
+    you walk under the storey over it;
+  - **retail** (the other slabs and the flatiron): shopfronts either side
+    of a narrow lobby door, each with an awning and a made-up name
+    (`SHOP_NAMES`), a ribbon of windows over them;
+  - **pavilion** (the spire): a glass entrance pavilion at its foot under a
+    flat roof lit along its edge.
+  - A podium's sides are shops (or glass for an atrium or arcade), its back a
+    service wall with louvres and a steel door; planters by every way in.
+- **Facades:** each tower its own (fins down the glass, ledges every four
+  floors, or corner piers), drums ringed with ledges, the tallest slab a
+  helipad on its plant room.
+- **The kerbside** (`LAYBYS` in uptown.ts, `kerbside.ts`, tested in
+  `tests/kerbside.test.ts`; drawn by `kerbside3d.ts`):
+  - **Lay-bys** cut into the blocks off the kerb (the sidewalk runs round
+    behind them): parking bays along the circle's street north and south
+    of it, the taxi rank behind the spire on the pair's southbound street
+    (Cruisers in taxi yellow, a TAXI sign), valets' bays at the lobbies
+    either side of the plaza (the north row's on the north cross street, the
+    river row's on the bank avenue) under **porte-cochères** (a glass roof
+    from the podium over the sidewalk to the bay on steel posts, lit along
+    its edge, a VALET stand, Midnight Execs and coupes), and a loading bay
+    with a box van. The cars are `LAYBY_CARS`, solid, facing the traffic's
+    way.
+  - **Service alleys** (`SERVICE_ALLEYS`): between the towers that stand
+    side by side, through the block, two bollards at each mouth (a walker
+    passes, no car), a dumpster, roll-up doors with lamps, crates.
+  - **Paint:** the bank avenue's kerb lanes a red bus lane with BUS on it,
+    turn arrows in the avenues' lanes coming up to Uptown's junctions (left
+    from the inner lane, straight or right from the outer), give-way teeth
+    and yield signs round the circle, arrows round it.
+  - The avenues' medians and lines break as far as a slanting street's
+    asphalt reaches (`highwayGaps()` in world.ts).
+- **Drawn:** the streets' asphalt along any line, the circle's ring, the
+  planted medians, centre lines, zebras on every arm of every lit junction
+  and lamps along the new streets are the boot's (`drawUptown()` in
+  streets3d.ts); the kerbside is Uptown's chunk's.
+- **The budget:** the boot's code went from 641.5 to 652.5 (raised to 654
+  on purpose; see above).
+

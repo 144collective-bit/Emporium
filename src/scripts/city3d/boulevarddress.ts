@@ -12,7 +12,7 @@
  * - **The terraces' names** (`TERRACE_NAMES`): made up, one to a terrace.
  */
 import { MEDIAN } from './layout';
-import { AXIS_X, E, LANE_HALF, NS_X, ROWS_Z, STREET_HALF, W } from './uptown';
+import { AXIS_X, E, LANE_HALF, ROWS_Z, W, crossingsOn } from './uptown';
 import { ESPLANADE, GANGWAYS, PONTOON, ROOF_TERRACES } from './boulevard';
 
 export interface Yacht {
@@ -60,7 +60,8 @@ export const HEDGE = { w: MEDIAN - 0.22, h: 0.36 };
 /** The bank avenue's median through Uptown in runs (x0, x1), well short of the junctions (their asphalt and more) and the axis's zebra; its z */
 export const MEDIAN_Z = BANK.c;
 export const MEDIAN_RUNS: [number, number][] = (() => {
-  const cuts = [...NS_X.map((x): [number, number] => [x - STREET_HALF - 1.6, x + STREET_HALF + 1.6]), [AXIS_X - LANE_HALF - 1.8, AXIS_X + LANE_HALF + 1.8] as [number, number]].sort((a, b) => a[0] - b[0]);
+  // (the crossing streets' widest half is the diagonal's, with its median: 2.3)
+  const cuts = [...crossingsOn(BANK).map((x): [number, number] => [x - 2.3 - 1.6, x + 2.3 + 1.6]), [AXIS_X - LANE_HALF - 1.8, AXIS_X + LANE_HALF + 1.8] as [number, number]].sort((a, b) => a[0] - b[0]);
   const runs: [number, number][] = [];
   let at = W + 3;
   for (const [a, b] of cuts) {
@@ -84,4 +85,4 @@ export const MEDIAN_TREES: number[] = MEDIAN_RUNS.flatMap(([a, b]) => {
 /* ---------- The terraces' names ---------- */
 
 /** One to a terrace, made up (never a real restaurant) */
-export const TERRACE_NAMES = ['HARBOUR & VINE', 'THE LANTERN ROOM', 'SKY GARDEN', 'RIVERLIGHT', 'THE GILDED FORK', 'BLUE HOUR'].slice(0, ROOF_TERRACES.length);
+export const TERRACE_NAMES = ['HARBOUR & VINE', 'THE LANTERN ROOM', 'SKY GARDEN', 'RIVERLIGHT', 'THE GILDED FORK', 'BLUE HOUR', 'THE QUAYSIDE', 'TIDE & THYME', 'MOONDECK', 'COPPER & COAL'].slice(0, ROOF_TERRACES.length);
