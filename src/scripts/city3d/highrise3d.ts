@@ -185,6 +185,7 @@ const CUT = 0.22;
 
 /** A part's outline, counter-clockwise from above (+y) */
 function outline(p: Part, sides = SIDES): Pt[] {
+  if (p.poly) return p.poly;
   const [x0, z0, x1, z1] = p.rect;
   if (p.shape === 'box')
     return [
@@ -307,7 +308,8 @@ function tower(b: Batch, t: Highrise, low: boolean) {
     });
     const top = t.parts.filter((p) => p.y1 === t.roof).at(-1)!;
     const [x0, z0, x1, z1] = top.rect;
-    const [cx, cz] = [(x0 + x1) / 2, (z0 + z1) / 2];
+    // (a prism's middle is its outline's, not its bounds')
+    const [cx, cz] = top.poly ? [top.poly.reduce((a, p) => a + p[0], 0) / top.poly.length, top.poly.reduce((a, p) => a + p[1], 0) / top.poly.length] : [(x0 + x1) / 2, (z0 + z1) / 2];
     const R = SLAB + t.roof;
     const shafts = t.parts.filter((p) => p.skin !== 'podium');
     if (t.design === 'slab') {
@@ -343,6 +345,11 @@ function tower(b: Batch, t: Highrise, low: boolean) {
       rim(b, shrink(outline(top), -0.03), R - 0.45, 0.08, 0.08, trim);
       for (const p of shafts) rim(b, shrink(outline(p), -0.03), SLAB + p.y1 - 0.45, 0.08, 0.08, trim);
     }
+    if (t.design === 'flatiron') {
+      // A gold line under the cornice, and the cornice's heavy lip round the top
+      rim(b, shrink(outline(shafts[0]), -0.03), SLAB + shafts[0].y1 - 0.45, 0.08, 0.08, trim);
+      rim(b, shrink(outline(shafts[1]), -0.12), SLAB + shafts[1].y1 - 0.3, 0.3, 0.3, PARAPET);
+    }
     // The mast to the tip, a red light at its top
     const mastFrom = t.design === 'deco' ? R + 4.5 : t.design === 'spire' ? R + 3.3 : R + 0.28;
     const tip = SLAB + t.tip;
@@ -368,7 +375,7 @@ function tower(b: Batch, t: Highrise, low: boolean) {
     b.add(new THREE.CylinderGeometry(0.68, 0.68, 0.12, 12).translate(rx, SLAB + 2.16, rz), GOLD);
     if (low) return;
     // Plant on the roofs: a few boxes on the podium's roof round the shaft
-    if (t.design !== 'spire') {
+    if (t.design !== 'spire' && t.design !== 'flatiron') {
       const r = rng(t.id.charCodeAt(0) * 31 + t.id.charCodeAt(1));
       const [px0, pz0, px1, pz1] = pod.rect;
       const shaftsR = t.parts.slice(1).map((p) => p.rect);

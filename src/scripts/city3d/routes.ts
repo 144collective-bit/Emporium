@@ -67,7 +67,8 @@ export const JUNCTIONS: Junction[] = PLAN.crossings.map((c, ix) => ({
   at: c.at,
   streets: c.streets.map((id) => PLAN.streets.find((s) => s.id === id)!),
   lit: c.lights,
-  three: c.streets.some((id) => id.startsWith('diag')),
+  // (downtown's diagonals and Uptown's: uptown.ts)
+  three: c.streets.some((id) => id.startsWith('diag') || id === 'uptown-diag'),
   highway: c.streets.includes('highway'),
 }));
 
@@ -239,11 +240,13 @@ function joinLegs(list: Leg[]): Pt[] {
     const P: Pt = [a0[0] + uA[0] * t, a0[1] + uA[1] * t];
     // Right turns (from the kerb-side lane) turn tight round the corner, or wide through a slip lane; left turns sweep wider
     const cut = list[i - 1].slip ? SLIP_CUT : den > 0 ? 1.4 : 2.6;
-    const near = (q: Pt) => Math.hypot(q[0] - P[0], q[1] - P[1]) < cut;
-    // Round the corner: drop what's within `cut` of it either side, and curve from a little before it to a little after
-    while (A.length > 1 && near(A[A.length - 1])) A.pop();
+    // Round the corner: drop what's past where the curve starts coming in and short of where it ends going out (not
+    // only what's near the corner: a lane well off its street's line, or a street bending round a circle, would
+    // otherwise run back to its junction after the curve), and curve from a little before it to a little after
+    const along = (q: Pt, u: Pt) => (q[0] - P[0]) * u[0] + (q[1] - P[1]) * u[1];
+    while (A.length > 1 && along(A[A.length - 1], uA) > -cut) A.pop();
     let k0 = 0;
-    while (k0 < B.length - 1 && near(B[k0])) k0++;
+    while (k0 < B.length - 1 && along(B[k0], uB) < cut) k0++;
     A.push(...cornerCurve(P, uA, uB, cut));
     out = [...A, ...B.slice(k0)];
   }
@@ -274,7 +277,7 @@ function legsOf(cycle: { from: State; turn: Turn }[], r: () => number): Leg[] {
     const way = WAYS[l.first.w];
     l.pts = between(way, way.stations[l.first.i].along, way.stations[next(l.last)!].along, l.first.d);
     // An avenue's lane: the outer one into a right turn or out of a slip lane, the inner one into a left turn
-    l.off = way.s.lanes === 2 ? (l.turn === 'right' || l.inSlip ? OUT : l.turn === 'left' ? IN : r() < 0.5 ? IN : OUT) : ST;
+    l.off = way.s.lanes === 2 ? (l.turn === 'right' || l.inSlip ? OUT : l.turn === 'left' ? IN : r() < 0.5 ? IN : OUT) : ST + (way.s.median ?? 0) / 2;
     if (way.s.oneway) l.off = 0;
   }
   return legs;
@@ -705,7 +708,7 @@ export function pathBetween(a: Pt, b: Pt): Route | null {
   legs.forEach((l, k) => {
     const way = WAYS[runs[k].w];
     const inSlip = k > 0 && legs[k - 1].slip;
-    l.off = way.s.oneway ? 0 : way.s.lanes === 2 ? (l.turn === 'right' || inSlip || k === legs.length - 1 ? OUT : l.turn === 'left' ? IN : OUT) : ST;
+    l.off = way.s.oneway ? 0 : way.s.lanes === 2 ? (l.turn === 'right' || inSlip || k === legs.length - 1 ? OUT : l.turn === 'left' ? IN : OUT) : ST + (way.s.median ?? 0) / 2;
   });
   // (a leg too short to draw is dropped: the corners round over it)
   const kept = legs.filter((l) => Math.hypot(l.pts[0][0] - l.pts[l.pts.length - 1][0], l.pts[0][1] - l.pts[l.pts.length - 1][1]) > 0.05);

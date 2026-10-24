@@ -26,7 +26,7 @@ import {
   WATER_WALL,
 } from '../src/scripts/city3d/plaza';
 import { CANOPIES, KIOSK_NAMES, POSTS, RIBBON_TOWER, RIBBON_WORDS } from '../src/scripts/city3d/plazadress';
-import { AXIS_X, LANE_HALF, PLAZA_BLOCK, UPTOWN_BLOCKS, UPTOWN_LANES } from '../src/scripts/city3d/uptown';
+import { AXIS_X, CIRCLE, COUPLET, LANE_HALF, PLAZA_BLOCK, UPTOWN_BLOCKS, UPTOWN_LANES, UPTOWN_STREETS } from '../src/scripts/city3d/uptown';
 import { HIGHRISES, SPIRE_LOT } from '../src/scripts/city3d/highrise';
 import { EMPORIUM_ROOF } from '../src/scripts/city3d/projects';
 import { SOLIDS } from '../src/scripts/city3d/solids';
@@ -45,13 +45,18 @@ const [CX, CZ] = CENTRE;
 const FORECOURT: Rect = [block[0], block[1], SPIRE_LOT[0], block[3]];
 const ring = POOL.r + POOL.w;
 
-test('the cross: in its pool where the axis meets the line between the lobbies, the tallest thing in the plaza, under the spire and the Emporium', () => {
+test('the cross: in its pool where the axis meets the line from the circle to the spire\'s lobby, the tallest thing in the plaza, under the spire and the Emporium', () => {
   assert.equal(CX, AXIS_X, 'on the Mall\'s axis');
   assert.ok(Math.abs(CZ - spire.door[1]) < 1e-6, 'in line with the spire\'s lobby');
   assert.equal(spire.front, 'w', 'the spire\'s lobby faces the plaza');
+  // Circle Street runs from the circle straight at the way in (uptown.ts, Phase 5)
+  assert.equal(CIRCLE.z, CZ, 'down Circle Street from the circle');
+  const circleSt = UPTOWN_STREETS.find((s) => s.id === 'uptown-circle-e')!;
+  assert.ok(circleSt.pts.every((p) => p[1] === CZ) && circleSt.pts.at(-1)![0] === COUPLET.north, 'to the plaza\'s street');
+  // The ribbon's tower across the one-way pair's east street, its lobby facing the plaza
   const across = HIGHRISES.find((t) => t.id === RIBBON_TOWER.id)!;
-  assert.equal(across.front, 'e');
-  assert.ok(Math.abs(across.door[1] - CZ) < 1e-6, 'the tower across the street\'s lobby faces it through the way in');
+  assert.equal(across.front, 'w');
+  assert.ok(across.lot[0] > COUPLET.south && across.lot[1] < CZ + 10 && across.lot[3] > CZ - 10, 'across the street from the plaza');
   assert.ok(inRect(FORECOURT, CENTRE, ring + 1), 'the pool on the forecourt with room round it');
   // The plinth steps up inside the pool, each narrower; the arms across the axis, under the shaft's top
   let side = Infinity;

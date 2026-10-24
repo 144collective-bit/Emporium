@@ -15,9 +15,11 @@ const BUDGETS = {
   /**
    * The 3D city's code before it's up: its chunk and everything that chunk imports straight away (raised from 640
    * on purpose for Uptown's plaza, finance plan Phase 3: its solids, trees, lamps and people must be there at the
-   * boot; its drawing and drawing-only data are Uptown's own chunk's)
+   * boot; its drawing and drawing-only data are Uptown's own chunk's; and from 642 for Uptown's redesign, Phase 5,
+   * the owner's call: the traffic's routes round its new streets (baked, 5 KB), the street plan and the slim towers
+   * (4 KB), the lay-bys' cars and the alleys' solids (2 KB), its streets' asphalt and lamps at the boot (2 KB))
    */
-  bootJs: 642,
+  bootJs: 654,
   /** Any one piece loaded later (a feature, when it's used) */
   lazyJs: 60,
   /** All the CSS */

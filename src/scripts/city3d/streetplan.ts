@@ -22,7 +22,7 @@ import { BX, TOWERS } from './liberty';
 import { HIGHWAY, HIGHWAY_HALF, insideHighway, outerLane, slipCurve } from './highway';
 import { TRENCH_BLOCKS, TRENCH_CROSSINGS, TRENCH_STREETS } from './trenches';
 import { WESTLAKE_BLOCKS } from './westlake';
-import { PLAZA_BLOCK, UPTOWN_BLOCKS, UPTOWN_CROSSINGS, UPTOWN_LANES, UPTOWN_STREETS } from './uptown';
+import { UPTOWN_BLOCKS, UPTOWN_CROSSINGS, UPTOWN_LANES, UPTOWN_STREETS } from './uptown';
 import { BLOCK as STADIUM_BLOCK, STADIUM_CROSSINGS, STADIUM_STREETS } from './stadium';
 import { KART_CROSSINGS, KART_STREETS } from './kartpark';
 
@@ -50,6 +50,8 @@ export interface Street {
   loop?: boolean;
   /** Traffic runs one way only: along its points (1) or against them (-1); it then has one lane, down its middle */
   oneway?: 1 | -1;
+  /** A street's planted median (its width): its one lane each way runs either side of it */
+  median?: number;
 }
 
 export interface Crossing {
@@ -386,9 +388,11 @@ export function cityPlan(): StreetPlan {
   // The Trenches (trenches.ts, growth plan Phase 9): Trench Avenue, its cross streets and Bottom Street, south-west of town
   for (const t of TRENCH_STREETS) streets.push({ id: t.id, kind: t.kind, pts: t.pts, half: t.half, lanes: t.lanes });
   for (const c of TRENCH_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: c.streets, lights: c.lights });
-  // Uptown (uptown.ts, the financial centre): its north-south streets between the ring avenue and the bank avenue,
-  // every junction lit; the Mall's axis through its blocks as walk-only lanes
-  for (const t of UPTOWN_STREETS) streets.push({ id: t.id, kind: t.kind, pts: t.pts, half: t.half, lanes: t.lanes });
+  // Uptown (uptown.ts, the financial centre, redesigned in Phase 5): the circle and its streets, the one-way pair,
+  // the diagonal, the east street and the crescent, every junction lit but the circle's; the Mall's axis through its
+  // blocks as walk-only lanes
+  for (const t of UPTOWN_STREETS)
+    streets.push({ id: t.id, kind: t.kind, pts: t.pts, half: t.half, lanes: t.lanes, ...(t.oneway ? { oneway: t.oneway } : {}), ...(t.loop ? { loop: true } : {}), ...(t.median ? { median: t.median } : {}) });
   for (const c of UPTOWN_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: c.lights });
   UPTOWN_LANES.forEach(([x0, z0, x1, z1], i) =>
     streets.push({
@@ -438,7 +442,7 @@ export function cityPlan(): StreetPlan {
     // Westlake Park's block (westlake.ts, growth plan Phase 9b), west of town
     ...WESTLAKE_BLOCKS.map((b): Block => ({ id: b.id, poly: b.poly, use: 'park', ref: 'westlake', walk: WALK_W })),
     // Uptown's blocks (uptown.ts) south of it, the plaza's among them
-    ...UPTOWN_BLOCKS.map((b): Block => ({ id: b.id, poly: b.poly, use: b.id === PLAZA_BLOCK ? 'plaza' : 'plain', ref: 'uptown', walk: WALK_W })),
+    ...UPTOWN_BLOCKS.map((b): Block => ({ id: b.id, poly: b.poly, use: b.use === 'plaza' ? 'plaza' : b.use === 'park' || b.use === 'island' ? 'park' : 'plain', ref: 'uptown', walk: WALK_W })),
     // The stadium's block north of the highway (stadium.ts, the north side's stage 1)
     { id: 'stadium', poly: square(STADIUM_BLOCK[0], STADIUM_BLOCK[1], STADIUM_BLOCK[2] - STADIUM_BLOCK[0], STADIUM_BLOCK[3] - STADIUM_BLOCK[1]), use: 'plain', ref: 'stadium', walk: WALK_W },
     // The bends' outer sidewalks (their own outline is the sidewalk)
