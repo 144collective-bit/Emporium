@@ -32,6 +32,7 @@ import { WATERFRONT_RECT } from './waterfront';
 import { BRIDGE_RECT } from './stadium';
 import { SWAY, lampGlow, newLamp, type Lamp } from './dusk';
 import { WATER_Y, edgeSamples, edgesAt, pullAt, stretchAt, topsAt } from './river';
+import { BRIDGE_PIERS, PIER_HALF } from './riverlife';
 import { HALF as HARBOUR_HALF, HARBOUR_STREET, HX, Z0 as HZ0, Z1 as HZ1 } from './harbour';
 
 export { BLOCKS, BS, CORE_ROADS, EW_ROADS, EXT, NS_ROADS, RIVER, SOUTH_ROAD, WALK_W, type Road };
@@ -749,12 +750,8 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
     }
     for (const side of [r.c - w - 0.05, r.c + w - 0.05])
       for (let z = bz0; z <= bz1; z += 0.75) b.box(side, SLAB, z, 0.1, 0.45, 0.1, rail);
-    // Piers, a pair under each side every so often across the water
-    const n = 4;
-    for (let k = 1; k < n; k++) {
-      const z = RIVER[0] + ((RIVER[1] - RIVER[0]) * k) / n;
-      b.box(r.c - w + 0.4, WATER_Y - 0.3, z - 0.9, w * 2 - 0.8, -0.7 - (WATER_Y - 0.3) - 0.01, 1.8, pier);
-    }
+    // Piers under it between the boats' lanes (liberty.ts BOAT_LANES), clear of them
+    for (const z of BRIDGE_PIERS) b.box(r.c - w + 0.4, WATER_Y - 0.3, z - PIER_HALF, w * 2 - 0.8, -0.7 - (WATER_Y - 0.3) - 0.01, PIER_HALF * 2, pier);
   }
 
   // Diagonals: asphalt wide enough to fill the corners where their sidewalks meet the cross streets' (the kerbs cover the rest)
