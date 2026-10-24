@@ -423,7 +423,7 @@ function makeRoute(pts: Pt[]): Route {
       }
       if (enter >= 0) {
         const a = pointOn(route, enter, 0).dir;
-        route.stops.push({ j, enter, exit, phase: phaseOf(a[0], a[1]) });
+        route.stops.push({ j, enter: mm(enter), exit: mm(exit), phase: phaseOf(a[0], a[1]) });
       }
     }
   }
@@ -476,6 +476,9 @@ function highwayLoop(d: 1 | -1, off: number): Pt[] {
   lane[lane.length - 1] = [...lane[0]];
   return lane;
 }
+
+/** A number to the millimetre (the routes' points and stops) */
+const mm = (v: number) => Math.round(v * 1000) / 1000 + 0;
 
 /** How long a seeded drive goes before heading back */
 const DRIVE_MOVES = 9;
@@ -545,7 +548,8 @@ function allRoutes(): Route[] {
     });
     routes.push(loopOf(legsOf(cycle, r)));
   }
-  return routes.map(makeRoute);
+  // (to the millimetre: the baked copy in the page is a third the size, and still exactly what's worked out here)
+  return routes.map((pts) => makeRoute(pts.map(([x, z]): Pt => [mm(x), mm(z)])));
 }
 
 /**

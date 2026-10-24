@@ -20,7 +20,7 @@ import { PLAN, offsetLine, pointAt, riverBridges, streetLength, type Pt, type St
 import { HIGHWAY, HIGHWAY_HALF } from './highway';
 import { DIAGONALS, DIAGONAL_LAMPS } from './downtown';
 import { BENDS, BEND_REACH, KERB_RUNS, OUTSIDE, PADS, PROMENADE, offBridges, offFootbridge } from './outer';
-import { SITE } from './airfield';
+import { RUNWAY } from './airfield';
 import { TILE, tileKey, tileOf, tilesIn } from './tiles';
 import { outskirtsTrees } from './outskirts';
 import { SKYLINE } from './bounds';
@@ -1036,10 +1036,11 @@ export function buildSkyline(scene: THREE.Scene, count: number, tick: (f: Tick) 
     const rr = reach / Math.max(Math.abs(Math.cos(a)), Math.abs(Math.sin(a))) + SKYLINE.gap + r() * SKYLINE.depth;
     const x = (EXT[0] + EXT[1]) / 2 + Math.cos(a) * rr;
     const z = (EXT[0] + EXT[1]) / 2 + Math.sin(a) * rr;
-    // None by the airport: they'd loom over the runway (since Phase 6 the ring stands far enough out that none is)
+    // None by the airport (on the world's south edge since docs/airport-plan.md Phase 3): none within 80 of the
+    // runway's line, 60 past either end, so nothing tall stands off its ends or beyond it
     const w = 7 + r() * 9;
     const h = 22 + r() * 50;
-    if (Math.hypot(x - (SITE[0] + SITE[2]) / 2, z - (SITE[1] + SITE[3]) / 2) < 150) continue;
+    if (Math.hypot(x - Math.min(RUNWAY.x1 + 60, Math.max(RUNWAY.x0 - 60, x)), z - RUNWAY.z) < 80) continue;
     const mat = mats[i % mats.length];
     const mesh = new THREE.Mesh(sidesBox(w, h, w), [mat, roof]);
     mesh.position.set(x, h / 2, z);

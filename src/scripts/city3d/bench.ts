@@ -33,7 +33,7 @@ export const BENCH_VIEWS: BenchView[] = [
   { id: 'street', name: 'Downtown, street level', pos: [6, 2.2, 44.6], target: [40, 2.4, 43] },
   { id: 'square', name: 'The square and the Emporium', pos: [30, 6.5, 57], target: [30, 4.5, 38] },
   { id: 'overview', name: 'Every district (Build overview)', pos: [75, 81, 105 + WIDEN / 2], target: [20, 0, 34 + WIDEN / 2] },
-  { id: 'airport', name: 'The airport', pos: [118, 22, 205 + WIDEN], target: [140, 2, 160 + WIDEN] },
+  { id: 'airport', name: 'The airport', pos: [250, 26, 300], target: [270, 2, 395] },
   { id: 'karts', name: 'The kart park', pos: [169, 30, -186], target: [169, 0, -256] },
   { id: 'highway', name: 'The ring highway, a junction', pos: [0, 30, -120], target: [30, 0, -170] },
   { id: 'trenches', name: 'The Trenches, round The Block', pos: [-60, 30, 120 + WIDEN], target: [-100, 0, 175 + WIDEN] },

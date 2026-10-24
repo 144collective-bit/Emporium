@@ -17,7 +17,7 @@ import { DISTRICTS } from '../../data/plots';
 import { BLOCKS, BRIDGED_NS, BS, CORE_ROADS, EW_ROADS, EXT, EXTRA_LOTS, GARAGE, LANE, MARKET, MEDIAN, NS_ROADS, RIVER, RING_HI, SEATS, SOUTH_ROAD, UNITS, WALK_W, nsStreet, type Road } from './layout';
 import { ALLEYS, BLOCKS_DT, DIAGONALS, LANES } from './downtown';
 import { BENDS, BEND_KERBS, OUTER_BLOCKS, OUTER_PARKS, OUTER_SQUARES, PADS } from './outer';
-import { AIRPORT_STREETS, ROAD } from './airfield';
+import { AIRPORT_CROSSINGS, AIRPORT_STREETS, GA_CROSSINGS, GA_ROAD, GA_STREETS, ROAD } from './airfield';
 import { HALF as HARBOUR_HALF, HARBOUR_STREET } from './harbour';
 import { HIGHWAY, HIGHWAY_HALF, insideHighway, outerLane, slipCurve } from './highway';
 import { TRENCH_BLOCKS, TRENCH_CROSSINGS, TRENCH_STREETS } from './trenches';
@@ -335,8 +335,12 @@ function crossingsOf(pts: Pt[], axis: 0 | 1, c: number): Pt[] {
  * the Southside Loop, the landscaped blocks round the plots and lots, their
  * squares and pocket parks.
  */
-/** The highway's junctions whose outer corners get slip lanes too: where an arterial past it carries traffic (the north roads to the stadium and the kart park) */
-export const OUTER_SLIPS = ['highway-ns0-1', 'highway-ns3-0'];
+/**
+ * The highway's junctions whose outer corners get slip lanes too: where an arterial past it carries traffic (the north
+ * roads to the stadium and the kart park, and to the airport since docs/airport-plan.md Phase 3: the south bank avenue
+ * east to Airport Drive, the east ring avenue south to the GA road)
+ */
+export const OUTER_SLIPS = ['highway-ns0-1', 'highway-ns3-0', 'highway-ns3-1', 'highway-ew4-0'];
 
 export function cityPlan(): StreetPlan {
   const streets = gridStreets();
@@ -352,15 +356,12 @@ export function cityPlan(): StreetPlan {
     NS_ROADS.forEach((r, i) => crossingsOf(b.pts, 0, r.c).forEach((at, k) => crossings.push({ id: `${b.id}-ns${i}-${k}`, at, streets: [nsStreet(i, at[1]), b.id], lights: false })));
     EW_ROADS.forEach((r, i) => crossingsOf(b.pts, 1, r.c).forEach((at, k) => crossings.push({ id: `${b.id}-ew${i}-${k}`, at, streets: [`ew${i}`, b.id], lights: false })));
   }
-  // The airport's access road off the east ring avenue, and the one-way loop round its car park
-  // (driven against its points: north up the east side, west, south down the west side)
-  for (const a of AIRPORT_STREETS) streets.push({ id: a.id, kind: 'street', pts: a.pts, half: ROAD.half, lanes: 1, ...(a.id === 'airport-loop' ? { oneway: -1 as const } : {}) });
-  const avenue = `ns${NS_ROADS.length - 1}`;
-  crossings.push(
-    { id: 'airport-in', at: [ROAD.x0, ROAD.z], streets: [avenue, 'airport-road'], lights: false },
-    { id: 'airport-loop-w', at: [ROAD.loopX, ROAD.z], streets: ['airport-road', 'airport-loop'], lights: false },
-    { id: 'airport-loop-e', at: [ROAD.x1, ROAD.z], streets: ['airport-road', 'airport-loop'], lights: false }
-  );
+  // The airport's drive off the south bank avenue east of the highway, the road across the forecourt and the one-way loop
+  // past the terminal's kerb (driven against its points: down the west side, east along the kerb, up the east side)
+  for (const a of AIRPORT_STREETS) streets.push({ id: a.id, kind: 'street', pts: a.pts, half: ROAD.half, lanes: 1, ...(a.oneway ? { oneway: a.oneway } : {}) });
+  for (const c of AIRPORT_CROSSINGS) crossings.push({ ...c, lights: false });
+  for (const a of GA_STREETS) streets.push({ id: a.id, kind: 'street', pts: a.pts, half: GA_ROAD.half, lanes: 1, ...(a.oneway ? { oneway: a.oneway } : {}) });
+  for (const c of GA_CROSSINGS) crossings.push({ ...c, lights: false });
   // Stadium Road off the north road past the highway, and the one-way loop round the stadium's car park (stadium.ts)
   for (const t of STADIUM_STREETS) streets.push({ id: t.id, kind: 'street', pts: t.pts, half: t.half, lanes: 1, ...(t.oneway ? { oneway: t.oneway } : {}) });
   for (const c of STADIUM_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: false });

@@ -83,6 +83,13 @@ const layout = () =>
       helipad: AIR.HELIPAD,
       road: AIR.ROAD,
       carPark: AIR.CAR_PARK,
+      // (moved out to the world's south edge and doubled in docs/airport-plan.md Phase 3)
+      airside: AIR.AIRSIDE,
+      hall: AIR.HALL,
+      concourses: AIR.CONCOURSES,
+      mro: AIR.MRO,
+      fire: AIR.FIRE,
+      ga: { road: AIR.GA_ROAD, gate: AIR.GA_GATE, carPark: AIR.GA_CAR_PARK, arrive: AIR.AIR_ARRIVE },
     },
     karts: { park: KART_PARK, gate: GATE, road: KART_ROAD, loop: KART_LOOP, site: KART_SITE, bays: BAYS, hutDoor: HUT_DOOR, circuit },
     fightClub: { lot: FIGHT_CLUB, ring: RING, counter: COUNTER, trainer: TRAINER, out: OUT },

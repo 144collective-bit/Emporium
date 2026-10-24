@@ -1,16 +1,26 @@
 /*
- * Sector 7 Airport, DOM-free like the street plan: where everything is
- * (south-east of the Southside Loop, east of the x = 64.5 avenue, where no
- * road runs), what's solid for walking and driving, the access road and its
- * loop round the car park, and every aircraft's schedule.
+ * Sector 7 Airport, DOM-free like the street plan (docs/airport-plan.md): where
+ * everything is, what's solid for walking and driving, its roads in the
+ * street plan, and every aircraft's schedule.
+ *
+ * Since the plan's Phase 3 (the owner's call: bigger, more realistic, out
+ * of town) it stands past the ring highway's south-east bend, as a city's
+ * airport does: airside (`AIRSIDE`, inside the perimeter fence) on the
+ * land between the highway and the world's south edge, landside
+ * (`LANDSIDE`) on the land east of the highway south of the river, where
+ * Airport Drive comes down from the south bank avenue to the terminal's
+ * kerb. The runway (09/27) runs east-west along the south edge; take-offs
+ * and landings are eastwards, the departures turning north up the east
+ * side and the arrivals coming in from the west over open land.
  *
  * A flight is a loop of acts: rolling or flying along waypoints (corners
  * rounded off, altitude and speed eased between them), holding still,
  * turning on the spot, or lifting straight up or down. `poseAt()` turns the
  * time into a position, heading, pitch, bank, gear and power. It's a
- * function of the time only, the same for everyone. airport.ts draws it all.
+ * function of the time only, the same for everyone. airport.ts and
+ * airportgrounds3d.ts draw it all.
  */
-import { NS_ROADS, RIVER, SEATS, SOUTH_SHIFT as D, WIDEN } from './layout';
+import { RIVER, SEATS, WIDEN } from './layout';
 import { ROOF_PAD } from './highrise';
 
 /** The middle of the river (the prop plane flies along it) */
@@ -21,38 +31,69 @@ export type Rect = [number, number, number, number];
 /** x0, z0, x1, z1, height (solids.ts `Box`) */
 export type Footprint = [number, number, number, number, number];
 
-/* ---------- The layout ---------- */
+/* ---------- The layout (fixed numbers, not the world's edge: growth plan Phase 5) ---------- */
 
-/** The east ring avenue the access road leaves from */
-const AVENUE = NS_ROADS.at(-1)!;
-/** The whole airport, landside and airside (no trees in here) */
-/* Written before the river was widened: every z south of it adds `D` (layout.ts SOUTH_SHIFT), so the airport kept its place past the Southside Loop.
-   Fixed numbers, not the world's edge (growth plan Phase 5): when the edge moves out, the airport stays where it is */
-export const SITE: Rect = [AVENUE.c + AVENUE.half + 1.2, 112.5 + D, 234, 234 + WIDEN];
+/** Airside, inside the perimeter fence: from the highway's south verge to the world's south edge */
+export const AIRSIDE: Rect = [96, 331, 452, 451];
+/** Landside: east of the highway, from the south bank avenue down to the airside's fence (Airport Drive, step 2's car parks) */
+export const LANDSIDE: Rect = [290, 147, 452, 331];
+/** The terminal's forecourt: the kerb's loop round the short-stay car park, in front of the hall */
+export const FORECOURT: Rect = [266, 306, 336, 336];
+/** The whole airport (no trees in its parts: `AIRPORT_AREAS`) */
+export const SITE: Rect = [AIRSIDE[0], LANDSIDE[1], AIRSIDE[2], AIRSIDE[3]];
+/** General aviation's way in, west of the fence (its road and car park, `GA_ROAD`), and the fence's west gate opposite it */
+export const GA_LANDSIDE: Rect = [70.5, 338, AIRSIDE[0], 360];
+export const GA_GATE = { z0: 345, z1: 349 };
+export const AIRPORT_AREAS: Rect[] = [AIRSIDE, LANDSIDE, FORECOURT, GA_LANDSIDE];
 
-/** The runway: east-west, landings and take-offs eastwards */
-export const RUNWAY = { x0: 92, x1: 232, z: 198 + D, half: 4 };
-/** The parallel taxiway and the connectors down to the runway at both ends */
-export const TAXIWAY = { x0: 93.5, x1: 222.5, z: 176 + D, half: 2.5 };
-export const CONNECTORS = [96, 220];
-/** The apron between the terminal and the taxiway */
-export const APRON: Rect = [94, 143 + D, 218, TAXIWAY.z - TAXIWAY.half];
+/** The runway, 09/27: east-west along the south edge, take-offs and landings eastwards */
+export const RUNWAY = { x0: 100, x1: 400, z: 442, half: 5 };
+/** The parallel taxiway, and the apron's taxilane (the edge of the stands, where the airliners push back to) */
+export const TAXIWAY = { x0: 108, x1: 396, z: 422, half: 2.8 };
+export const TAXILANE = { x0: 108, x1: 392, z: 405, half: 2.5 };
+/**
+ * Connectors down to the runway (A to D, west to east): A from the taxilane at the west end, where departures
+ * hold short (`HOLD`), C the rapid exit the landings take, D the east end's
+ */
+export const CONNECTORS = [108, 240, 330, 392];
+export const CONNECTOR_NAMES = ['A', 'B', 'C', 'D'];
+/** Where departures wait short of the runway on A (clear of a landing over the threshold) */
+export const HOLD = { x: CONNECTORS[0], z: 420 };
+/** The apron in front of the terminal, and the general aviation apron at the west end (both run down to the taxiway) */
+export const APRON: Rect = [180, 372, 396, TAXIWAY.z - TAXIWAY.half];
+export const GA_APRON: Rect = [98, 355, 182, TAXIWAY.z - TAXIWAY.half];
 /** Approach lights out past the runway's west end */
-export const APPROACH = { x0: 74, x1: RUNWAY.x0 - 1.5, z: RUNWAY.z };
+export const APPROACH = { x0: 74, x1: RUNWAY.x0 - 2.5, z: RUNWAY.z };
 
-/** The terminal: glass front to the road, airbridges to the stands behind */
-export const TERMINAL: Footprint = [95, 131 + D, 165, 143 + D, 5.6];
-/** Jet stands, nose in to the terminal (facing north, -z) */
-export const STANDS: Pt[] = [107, 130, 153].map((x): Pt => [x, 154.5 + D]);
-/** The control tower, east of the terminal: kept under the Emporium's height */
-export const TOWER = { x: 171, z: 136 + D, r: 1.5, cab: 9, top: 11.6 };
-/** The hangar: opens south onto the apron, the prop plane's stand in front of its west half */
-export const HANGAR: Footprint = [178, 126 + D, 198, 145 + D, 7.4];
-export const PROP_STAND: Pt = [181.5, 155 + D];
+/**
+ * The terminal: the hall (two storeys, its landside face to the kerb, three gates on its airside) and a concourse
+ * either side of it, the stands along their airside face, nose in (facing north, -z)
+ */
+export const HALL: Footprint = [264, 336, 336, 372, 7.2];
+export const CONCOURSES: Footprint[] = [
+  [184, 356, 264, 372, 5.2],
+  [336, 356, 392, 372, 5.2],
+];
+/** The whole terminal's outline (hall and concourses), for what's checked against it */
+export const TERMINAL: Footprint = [CONCOURSES[0][0], HALL[1], CONCOURSES[1][2], HALL[3], HALL[4]];
+/** The eight gates' stands, nose to the terminal (facing north) */
+export const STANDS: Pt[] = [0, 1, 2, 3, 4, 5, 6, 7].map((k): Pt => [196 + k * 26, 383.5]);
+/** Airbridges: from the terminal's airside to each jet's front left door */
+export const AIRBRIDGES: { x: number; z0: number; z1: number }[] = STANDS.map(([x, z]) => ({ x: x - 3.2, z0: HALL[3], z1: z - 7.3 }));
+/** Which stands the flying airliners use (the others hold parked ones, `PARKED_JETS`) */
+export const FLYING_STANDS = [0, 2, 4, 5, 7];
+/** The control tower, behind the west concourse: kept under the Emporium's height */
+export const TOWER = { x: 222, z: 342, r: 1.5, cab: 9, top: 11.6 };
+
+/* General aviation, at the west end: Hangar 1 (your aircraft's), the maintenance hangar, the helipads */
+
+/** Hangar 1: opens south onto the GA apron, the prop plane's stand in front of its west half */
+export const HANGAR: Footprint = [112, 336, 132, 355, 7.4];
+export const PROP_STAND: Pt = [HANGAR[0] + 3.5, HANGAR[3] + 10];
 /** Under the hangar's arched roof (from the top of its walls): what flies in or out keeps under it */
 export const HANGAR_ROOF: Footprint = [HANGAR[0], HANGAR[1], HANGAR[2], HANGAR[3], 4.2];
 /** Your own aircraft (Phase 2) stands in the hangar's east half, nose to the doors, clear of the prop plane's stand */
-export const HANGAR_SPOT = { x: 192.8, z: 136 + D, yaw: -Math.PI / 2 };
+export const HANGAR_SPOT = { x: HANGAR[0] + 14.8, z: HANGAR[1] + 10, yaw: -Math.PI / 2 };
 /** The hangar office on its east side; its door opens the hangar menu */
 export const HANGAR_OFFICE: Footprint = [HANGAR[2], HANGAR[3] - 5, HANGAR[2] + 3.2, HANGAR[3], 2.6];
 export const HANGAR_DOOR = { x: HANGAR[2] + 1.4, z: HANGAR[3] + 0.55 };
@@ -61,81 +102,172 @@ export const AIR_SPAWN = (() => {
   const [x, z] = [HANGAR_DOOR.x - 0.6, HANGAR_DOOR.z + 2.4];
   return { x, z, yaw: Math.atan2(-(HANGAR_SPOT.x - x), -(HANGAR_SPOT.z - z)) };
 })();
-/** The helipad at the apron's east end */
-export const HELIPAD = { x: 208, z: 154 + D, r: 4.5 };
-/** The executive helicopter's pad (finance plan Phase 6): on the apron west of the helipad, clear of the hangar's door */
-export const EXEC_PAD = { x: 196, z: 154 + D, r: 3.6 };
-/** Floodlight masts along the terminal, between the stands' wingtips */
-export const MASTS: Pt[] = [
-  [118.5, 145.5 + D],
-  [141.5, 145.5 + D],
-  [166.5, 162 + D],
-];
-/** A windsock on the grass between the taxiway and the runway */
-export const WINDSOCK: Pt = [104, 186 + D];
+/** The maintenance hangar, big enough for an airliner: doors shut, one parked on its apron (`PARKED_JETS`) */
+export const MRO: Footprint = [140, 334, 178, 358, 8.6];
+/** The helipad and the executive helicopter's pad (finance plan Phase 6), on the GA apron's west side */
+export const HELIPAD = { x: 104, z: 372, r: 4.5 };
+export const EXEC_PAD = { x: 104, z: 390, r: 3.6 };
 
-/** The access road: east off the avenue along the terminal's front, round a one-way loop that holds the car park */
-export const ROAD = { z: 127 + D, x0: AVENUE.c, x1: 168, loopZ: 115 + D, loopX: 98, half: 1.7 };
-export const AIRPORT_STREETS: { id: string; pts: Pt[] }[] = [
+/* Round the field */
+
+/** The fire station by the runway's east end, its doors to the runway; the fuel farm behind it, by the fence */
+export const FIRE: Footprint = [414, 372, 440, 390, 3.8];
+export const FUEL_TANKS: { x: number; z: number; r: number; h: number }[] = [410, 425, 440].map((x) => ({ x, z: 343, r: 5, h: 3.6 }));
+/** The localizer's aerial array past the runway's far end (the landings line up on it), and the PAPI beside the touchdown zone */
+export const LOCALIZER = { x: 422, z: RUNWAY.z, w: 12, h: 1.3 };
+export const PAPI = { x: RUNWAY.x0 + 26, z: RUNWAY.z - RUNWAY.half - 4 };
+/** Floodlight masts along the terminal, between the stands' wingtips */
+export const MASTS: Pt[] = [209, 287, 365].map((x): Pt => [x, 376]);
+/** A windsock on the grass between the taxiway and the runway */
+export const WINDSOCK: Pt = [182, 432.5];
+/** The perimeter fence (round the airside, broken for the hall, the crew gate by it and the fire station's road) */
+export const FENCE: { a: Pt; b: Pt }[] = [
+  { a: [AIRSIDE[0], AIRSIDE[1]], b: [255, AIRSIDE[1]] },
+  // (the crew gate: from the kerb past the hall's west end onto the airside)
+  { a: [259, AIRSIDE[1]], b: [HALL[0], AIRSIDE[1]] },
+  { a: [HALL[0], AIRSIDE[1]], b: [HALL[0], HALL[1]] },
+  { a: [HALL[2], HALL[1]], b: [HALL[2], AIRSIDE[1]] },
+  { a: [HALL[2], AIRSIDE[1]], b: [AIRSIDE[2], AIRSIDE[1]] },
+  { a: [AIRSIDE[2], AIRSIDE[1]], b: [AIRSIDE[2], AIRSIDE[3]] },
+  { a: [AIRSIDE[2], AIRSIDE[3]], b: [AIRSIDE[0], AIRSIDE[3]] },
+  // (the west side, broken for the GA gate)
+  { a: [AIRSIDE[0], AIRSIDE[3]], b: [AIRSIDE[0], GA_GATE.z1] },
+  { a: [AIRSIDE[0], GA_GATE.z0], b: [AIRSIDE[0], AIRSIDE[1]] },
+];
+export const FENCE_H = 2.2;
+
+/* Landside: Airport Drive off the south bank avenue, the kerb's loop round the short-stay car park */
+
+/** The drive: south from the south bank avenue to the forecourt; the front road across it, and the one-way loop past the kerb */
+export const ROAD = { x: 300, z0: 137, z1: 312, x0: 272, x1: 330, kerb: 330, half: 1.7 };
+export const AIRPORT_STREETS: { id: string; pts: Pt[]; oneway?: -1 }[] = [
   {
-    id: 'airport-road',
+    id: 'airport-drive',
     pts: [
-      [ROAD.x0, ROAD.z],
-      [ROAD.x1, ROAD.z],
+      [ROAD.x, ROAD.z0],
+      [ROAD.x, ROAD.z1],
     ],
   },
+  // (one way, west: off the drive into the loop at its west end, and from the loop's east end back past the drive)
+  {
+    id: 'airport-front',
+    pts: [
+      [ROAD.x0, ROAD.z1],
+      [ROAD.x1, ROAD.z1],
+    ],
+    oneway: -1,
+  },
+  // (driven against its points: down the west side, east along the kerb with the hall on the right, up the east side)
   {
     id: 'airport-loop',
     pts: [
-      [ROAD.loopX, ROAD.z],
-      [ROAD.loopX, ROAD.loopZ],
-      [ROAD.x1, ROAD.loopZ],
-      [ROAD.x1, ROAD.z],
+      [ROAD.x1, ROAD.z1],
+      [ROAD.x1, ROAD.kerb],
+      [ROAD.x0, ROAD.kerb],
+      [ROAD.x0, ROAD.z1],
     ],
+    oneway: -1,
   },
 ];
-/** The car park inside the loop: two rows of bays, nose to nose */
-export const CAR_PARK: Rect = [ROAD.loopX + ROAD.half + 0.6, ROAD.loopZ + ROAD.half + 0.4, ROAD.x1 - ROAD.half - 0.6, ROAD.z - ROAD.half - 0.4];
+/** Where they meet the south bank avenue and each other (no lights) */
+export const AIRPORT_CROSSINGS: { id: string; at: Pt; streets: string[] }[] = [
+  { id: 'airport-in', at: [ROAD.x, ROAD.z0], streets: ['ew4', 'airport-drive'] },
+  { id: 'airport-front', at: [ROAD.x, ROAD.z1], streets: ['airport-drive', 'airport-front'] },
+  { id: 'airport-loop-w', at: [ROAD.x0, ROAD.z1], streets: ['airport-front', 'airport-loop'] },
+  { id: 'airport-loop-e', at: [ROAD.x1, ROAD.z1], streets: ['airport-front', 'airport-loop'] },
+];
+/**
+ * General aviation's way in: a short road east off the east ring avenue south of the highway to a little car park
+ * by the fence's west gate, the walk in to Hangar 1 (a one-way loop round the car park, as the kart park's is:
+ * in from the road's end, back out at its west end)
+ */
+export const GA_ROAD = { z: 342, x0: 64.5, x1: 90, loopX: 72, loopZ: 356, half: 1.7 };
+export const GA_STREETS: { id: string; pts: Pt[]; oneway?: -1 }[] = [
+  {
+    id: 'airport-ga',
+    pts: [
+      [GA_ROAD.x0, GA_ROAD.z],
+      [GA_ROAD.x1, GA_ROAD.z],
+    ],
+  },
+  {
+    id: 'airport-ga-loop',
+    pts: [
+      [GA_ROAD.loopX, GA_ROAD.z],
+      [GA_ROAD.loopX, GA_ROAD.loopZ],
+      [GA_ROAD.x1, GA_ROAD.loopZ],
+      [GA_ROAD.x1, GA_ROAD.z],
+    ],
+    oneway: -1,
+  },
+];
+export const GA_CROSSINGS: { id: string; at: Pt; streets: string[] }[] = [
+  { id: 'airport-ga-in', at: [GA_ROAD.x0, GA_ROAD.z], streets: ['ns3', 'airport-ga'] },
+  { id: 'airport-ga-w', at: [GA_ROAD.loopX, GA_ROAD.z], streets: ['airport-ga', 'airport-ga-loop'] },
+  { id: 'airport-ga-e', at: [GA_ROAD.x1, GA_ROAD.z], streets: ['airport-ga', 'airport-ga-loop'] },
+];
+/** Where you arrive at the airport (by taxi, on fast travel, `PLACES`): on the GA car park's kerb, facing the gate */
+export const AIR_ARRIVE = { x: GA_ROAD.x1 + GA_ROAD.half + 1.6, z: (GA_GATE.z0 + GA_GATE.z1) / 2, yaw: -Math.PI / 2 };
+
+/** The short-stay car park inside the loop: two rows of bays, nose to nose */
+export const CAR_PARK: Rect = [ROAD.x0 + ROAD.half + 0.6, ROAD.z1 + ROAD.half + 0.4, ROAD.x1 - ROAD.half - 0.6, ROAD.kerb - ROAD.half - 0.4];
+/** The GA car park inside its loop */
+export const GA_CAR_PARK: Rect = [GA_ROAD.loopX + GA_ROAD.half + 0.6, GA_ROAD.z + GA_ROAD.half + 0.4, GA_ROAD.x1 - GA_ROAD.half - 0.6, GA_ROAD.loopZ - GA_ROAD.half - 0.4];
 /** Parked cars: model, x, z, heading (yaw, as cars.ts turns them), colour */
 export const PARKED: [string, number, number, number, string][] = (() => {
   const out: [string, number, number, number, string][] = [];
   const models = ['hatch', 'sedan', 'pickup', 'hatch', 'coupe', 'van', 'sedan'];
   const colours = ['#e23b3b', '#2aabee', '#ffd23f', '#f3f2f7', '#8000ff', '#1fbf6b', '#ff8a3d', '#2b2d3a'];
-  const [x0, z0, x1, z1] = CAR_PARK;
-  const rows = [z0 + 1.6, z1 - 1.6];
   let k = 0;
-  for (let x = x0 + 1.2; x < x1 - 1; x += 1.7)
-    rows.forEach((z, r) => {
-      // About half the bays taken, the same ones every visit
-      if (Math.abs(Math.sin(x * 12.9898 + r * 78.233) * 43758.5453) % 1 < 0.45) return;
-      out.push([models[k % models.length], x, z, r === 0 ? Math.PI / 2 : -Math.PI / 2, colours[k % colours.length]]);
-      k++;
-    });
+  for (const [x0, z0, x1, z1] of [CAR_PARK, GA_CAR_PARK]) {
+    const rows = [z0 + 1.6, z1 - 1.6];
+    for (let x = x0 + 1.2; x < x1 - 1; x += 1.7)
+      rows.forEach((z, r) => {
+        // About half the bays taken, the same ones every visit
+        if (Math.abs(Math.sin(x * 12.9898 + r * 78.233) * 43758.5453) % 1 < 0.45) return;
+        out.push([models[k % models.length], x, z, r === 0 ? Math.PI / 2 : -Math.PI / 2, colours[k % colours.length]]);
+        k++;
+      });
+  }
   return out;
 })();
 /** How big a parked car's footprint is (the longest model, either way round) */
 const CAR_HALF = { l: 1.35, w: 0.6 };
+/** Lamps along the drive and round the loop: x, z, which way the arm reaches */
+export const AIRPORT_LAMPS: [number, number, number][] = (() => {
+  const out: [number, number, number][] = [];
+  const o = ROAD.half + 0.6;
+  for (let z = ROAD.z0 + 10; z < ROAD.z1 - 6; z += 14) out.push([ROAD.x - o, z, Math.PI], [ROAD.x + o, z + 7, 0]);
+  for (let z = ROAD.z1 + 4; z < ROAD.kerb; z += 9) out.push([ROAD.x0 - o, z, Math.PI], [ROAD.x1 + o, z, 0]);
+  // ...and along the GA road, and by the gate
+  out.push([GA_ROAD.x0 + 14, GA_ROAD.z - o, -Math.PI / 2], [GA_ROAD.x1 + o, GA_ROAD.loopZ - 2, 0]);
+  return out;
+})();
 
-/** Ground vehicles parked on the apron: a fuel truck, a baggage tug and carts, a stairs truck */
-export const APRON_KIT: { kind: 'fuel' | 'tug' | 'stairs'; at: Pt; yaw: number }[] = [
-  { kind: 'fuel', at: [119, 168 + D], yaw: 0 },
-  { kind: 'tug', at: [142, 168.5 + D], yaw: Math.PI },
-  { kind: 'stairs', at: [174, 166 + D], yaw: Math.PI / 2 },
+/** Ground vehicles parked on the apron between the stands: a fuel truck, a baggage tug and carts, a stairs truck, a bus */
+export const APRON_KIT: { kind: 'fuel' | 'tug' | 'stairs' | 'bus'; at: Pt; yaw: number }[] = [
+  { kind: 'fuel', at: [235, 381], yaw: Math.PI / 2 },
+  { kind: 'tug', at: [261, 381], yaw: Math.PI / 2 },
+  { kind: 'bus', at: [313, 381], yaw: Math.PI / 2 },
+  { kind: 'stairs', at: [339, 381], yaw: Math.PI / 2 },
 ];
-const KIT_HALF = { fuel: [1.6, 0.6], tug: [2.4, 0.5], stairs: [1.3, 0.55] } as const;
-
-/** Airbridges: from the terminal's airside to each jet's front left door */
-export const AIRBRIDGES: { x: number; z0: number; z1: number }[] = STANDS.map(([x]) => ({ x: x - 3.2, z0: TERMINAL[3], z1: STANDS[0][1] - 7.3 }));
+const KIT_HALF = { fuel: [1.6, 0.6], tug: [2.4, 0.5], stairs: [1.3, 0.55], bus: [2.6, 0.75] } as const;
 
 /** What's solid at the airport for walking and driving (the ground itself is open) */
 export const AIRPORT_SOLIDS: Footprint[] = [
-  TERMINAL,
+  HALL,
+  ...CONCOURSES,
+  [TOWER.x - 2.6, TOWER.z - 2.4, TOWER.x + 2.6, TOWER.z + 2.4, 2.6],
   [TOWER.x - TOWER.r, TOWER.z - TOWER.r, TOWER.x + TOWER.r, TOWER.z + TOWER.r, TOWER.top],
-  // The hangar's walls and back (its front stands open)
+  // Hangar 1's walls and back (its front stands open)
   [HANGAR[0], HANGAR[1], HANGAR[0] + 0.4, HANGAR[3], HANGAR[4]],
   [HANGAR[2] - 0.4, HANGAR[1], HANGAR[2], HANGAR[3], HANGAR[4]],
   [HANGAR[0], HANGAR[1], HANGAR[2], HANGAR[1] + 0.4, HANGAR[4]],
   HANGAR_OFFICE,
+  MRO,
+  FIRE,
+  ...FUEL_TANKS.map(({ x, z, r, h }): Footprint => [x - r, z - r, x + r, z + r, h]),
+  [LOCALIZER.x - 0.4, LOCALIZER.z - LOCALIZER.w / 2, LOCALIZER.x + 0.4, LOCALIZER.z + LOCALIZER.w / 2, LOCALIZER.h],
   ...MASTS.map(([x, z]): Footprint => [x - 0.2, z - 0.2, x + 0.2, z + 0.2, 8]),
   [WINDSOCK[0] - 0.1, WINDSOCK[1] - 0.1, WINDSOCK[0] + 0.1, WINDSOCK[1] + 0.1, 3],
   // Each airbridge's wheeled leg
@@ -146,6 +278,8 @@ export const AIRPORT_SOLIDS: Footprint[] = [
     return along ? [x - l, z - w, x + l, z + w, 1.6] : [x - w, z - l, x + w, z + l, 1.6];
   }),
   ...PARKED.map(([, x, z]): Footprint => [x - CAR_HALF.w, z - CAR_HALF.l, x + CAR_HALF.w, z + CAR_HALF.l, 1.2]),
+  // The fence, a thin wall each run
+  ...FENCE.map(({ a, b }): Footprint => [Math.min(a[0], b[0]) - 0.1, Math.min(a[1], b[1]) - 0.1, Math.max(a[0], b[0]) + 0.1, Math.max(a[1], b[1]) + 0.1, FENCE_H]),
 ];
 
 /** The Emporium, which the helicopter circles */
@@ -405,90 +539,103 @@ const fly = (ways: Way[], r: number, reverse = false): Act => {
 const w = (x: number, z: number, y: number, v: number): Way => ({ at: [x, z], y, v });
 
 /* Speeds, tiles a second (a tile is about 1.8 m) */
-const TAXI = 4.5;
+const TAXI = 6;
 const PUSH = 2.5;
+const R = RUNWAY.z;
+const TZ = TAXIWAY.z;
+const TL = TAXILANE.z;
+const [CA, , CC] = CONNECTORS;
+/** The departures' climb-out turn at the east end and their downwind leg over the north of the town (high: Uptown's spire is 45) */
+const EAST = 442;
+const NORTH = -40;
+const WEST = -385;
 
-/** An airliner: push back, taxi out, take off east, round the north over downtown, back round the west, land east, taxi in */
+/**
+ * An airliner: pushed back off its stand onto the taxilane, taxi west to hold short on A, onto the runway and away
+ * east, a climbing turn north up the east side, west high over the north of the town, down the west side, round onto
+ * the approach from the west, land east, off at C and back along the taxiway to its stand
+ */
 function jet(stand: Pt, takeoff: number, id: string): Flight {
   const [sx, sz] = stand;
-  const R = RUNWAY.z;
-  const TZ = TAXIWAY.z;
-  const [cw, ce] = CONNECTORS;
   const acts: Act[] = [
-    // Pushed back off the stand onto the taxiway, tail swinging east, nose ending up pointing west along it
-    fly([w(sx, sz, 0, 0), w(sx, TZ, 0, PUSH), w(sx + 12, TZ, 0, 0)], 8, true),
+    // Pushed back off the stand onto the taxilane, tail swinging east, nose ending up pointing west along it
+    fly([w(sx, sz, 0, 0), w(sx, TL, 0, PUSH), w(sx + 12, TL, 0, 0)], 8, true),
     { kind: 'hold', dur: 4 },
-    // Taxi west and down the west connector, line up on the runway
-    fly([w(sx + 12, TZ, 0, 0), w(cw, TZ, 0, TAXI), w(cw, R, 0, 3), w(cw + 8, R, 0, 0)], 7),
-    { kind: 'hold', dur: 4 },
-    // Take off east, climb round to the north, cross the city high over downtown, round the west, down to land
+    // Taxi west along the taxilane and down A, holding short of the runway
+    fly([w(sx + 12, TL, 0, 0), w(sx + 6, TL, 0, TAXI), w(CA, TL, 0, TAXI), w(HOLD.x, HOLD.z - 5, 0, 3), w(HOLD.x, HOLD.z, 0, 0)], 7),
+    { kind: 'hold', dur: 6 },
+    // Onto the runway, take off east, the climbing turn north, west over the town, down the west side and in to land
     fly(
       [
-        w(cw + 8, R, 0, 0),
-        w(158, R, 0, 26),
-        w(226, R, 11, 30),
-        // (high enough over Uptown's towers: highrise.ts, the spire's mast)
-        w(226, 28, 53, 33),
-        w(-152, 28, 55, 34),
-        w(-152, R, 26, 30),
-        // Over the avenue well clear of the traffic, then down onto the runway
-        w(64, R, 6.5, 26),
-        w(RUNWAY.x0 + 20, R, 0, 24),
-        w(206, R, 0, 6),
+        w(HOLD.x, HOLD.z, 0, 0),
+        w(CA, R, 0, 3),
+        w(CA + 16, R, 0, 9),
+        w(235, R, 0, 26),
+        w(330, R, 9, 30),
+        w(EAST, R, 16, 32),
+        w(EAST, NORTH, 50, 34),
+        w(WEST, NORTH, 54, 34),
+        w(WEST, R, 28, 30),
+        w(20, R, 9, 26),
+        // (over the fence and the threshold at a few tiles, down on the touchdown zone)
+        w(RUNWAY.x0 - 6, R, 4, 25),
+        w(RUNWAY.x0 + 22, R, 0, 24),
+        w(300, R, 0, 6),
       ],
       32
     ),
-    // Off at the east connector, back along the taxiway and into the stand
-    fly([w(206, R, 0, 6), w(ce, R, 0, TAXI), w(ce, TZ, 0, TAXI), w(sx, TZ, 0, TAXI), w(sx, sz, 0, 0)], 7),
+    // Off at C, back along the taxiway and into the stand
+    fly([w(300, R, 0, 6), w(CC, R, 0, TAXI), w(CC, TZ, 0, TAXI), w(sx, TZ, 0, TAXI), w(sx, sz + 7, 0, 2.5), w(sx, sz, 0, 0)], 7),
     { kind: 'hold', dur: 0 },
   ];
   return flight(id, 'jet', acts, { fill: acts.length - 1, cycle: PERIOD, at: 4, when: takeoff, parked: acts.length - 1 });
 }
 
-/** The prop plane: from the hangar's stand to the runway, a lower loop along the river, back to the hangar */
+/** The prop plane: from its stand by Hangar 1 out to the runway, a lower loop up the east side and back along the river, home */
 function prop(takeoff: number): Flight {
   const [px, pz] = PROP_STAND;
-  const R = RUNWAY.z;
-  const TZ = TAXIWAY.z;
-  const [cw, ce] = CONNECTORS;
   const acts: Act[] = [
-    // Taxi out (it turned round on its stand first), west along the taxiway, line up
-    fly([w(px, pz, 0, 0), w(px, TZ, 0, 3.5), w(cw, TZ, 0, TAXI), w(cw, R, 0, 3), w(cw + 6, R, 0, 0)], 6),
-    { kind: 'hold', dur: 3 },
-    // A short run, climb round to the north, west along the river, back round to land
+    // Taxi out (it turned round on its stand first), along the taxilane, holding short on A
+    fly([w(px, pz, 0, 0), w(px, pz + 5, 0, 3.5), w(px, TL, 0, 3.5), w(CA, TL, 0, 3.5), w(HOLD.x, HOLD.z - 5, 0, 3), w(HOLD.x, HOLD.z, 0, 0)], 6),
+    { kind: 'hold', dur: 4 },
+    // A short run, climb round to the north, west along the river, round to land
     fly(
       [
-        w(cw + 6, R, 0, 0),
-        w(130, R, 0, 15),
-        w(224, R, 8, 18),
-        w(224, RIVER_MID, 20, 20),
-        w(-90, RIVER_MID, 22, 20),
-        w(-90, R, 16, 18),
-        w(64, R, 5, 14),
-        w(RUNWAY.x0 + 18, R, 0, 12),
-        w(206, R, 0, 5),
+        w(HOLD.x, HOLD.z, 0, 0),
+        w(CA, R, 0, 3),
+        w(CA + 12, R, 0, 6),
+        w(200, R, 0, 15),
+        w(300, R, 8, 18),
+        w(EAST, R, 12, 20),
+        w(EAST, RIVER_MID, 22, 24),
+        w(-150, RIVER_MID, 24, 24),
+        w(-150, R, 16, 20),
+        w(30, R, 6, 14),
+        w(RUNWAY.x0 - 6, R, 3.6, 13),
+        w(RUNWAY.x0 + 16, R, 0, 12),
+        w(300, R, 0, 5),
       ],
       20
     ),
-    // Off at the east connector, along the taxiway and onto its stand
-    fly([w(206, R, 0, 5), w(ce, R, 0, TAXI), w(ce, TZ, 0, TAXI), w(px, TZ, 0, TAXI), w(px, pz, 0, 0)], 6),
+    // Off at C, along the taxiway and onto its stand
+    fly([w(300, R, 0, 5), w(CC, R, 0, TAXI), w(CC, TZ, 0, TAXI), w(px, TZ, 0, TAXI), w(px, pz + 6, 0, 2.5), w(px, pz, 0, 0)], 6),
     { kind: 'hold', dur: 3, power: [1, 0] },
     { kind: 'hold', dur: 0, power: [0, 0] },
     { kind: 'hold', dur: 3, power: [0, 1] },
-    // Turn round on the spot to face the taxiway
+    // Turn round on the spot to face the taxilane
     { kind: 'turn', dur: 4, to: -Math.PI / 2 },
   ];
   return flight('prop', 'prop', acts, { fill: acts.length - 3, cycle: PERIOD, at: 2, when: takeoff, parked: acts.length - 3 });
 }
 
-/** The helicopter: up off its pad, round the Emporium high above the hologram and the blimp, and back */
+/** The helicopter: up off its pad, over the highway and round the Emporium high above the hologram and the blimp, and back */
 function heli(liftoff: number): Flight {
   const { x: hx, z: hz } = HELIPAD;
   const [ex, ez] = EMPORIUM;
   const ORBIT = 24;
   const H = 25;
-  const via: Pt = [120, 102 + D];
-  // Straight up off the pad to clear the hangar before heading off
+  const via: Pt = [80, 230];
+  // Straight up off the pad to clear the hangars before heading off
   const UP = 10;
   // Round the Emporium one and a half times, joining the circle as it comes in and leaving it heading back
   const inDir: Pt = [ex - via[0], ez - via[1]];
@@ -501,9 +648,9 @@ function heli(liftoff: number): Flight {
     ring.push(w(ex + Math.cos(a) * ORBIT, ez + Math.sin(a) * ORBIT, H, 10));
   }
   const acts: Act[] = [
-    fly([w(hx, hz, UP, 0), w(via[0], via[1], 22, 13), ...ring, w(via[0], via[1], 22, 13), w(hx, hz, UP, 0)], 10),
-    // Hover over the pad, turn to face the hangar, settle down, rotor winds down
-    { kind: 'turn', dur: 4, to: Math.PI },
+    fly([w(hx, hz, UP, 0), w(via[0], via[1], 24, 16), ...ring, w(via[0], via[1], 24, 16), w(hx, hz, UP, 0)], 10),
+    // Hover over the pad, turn to face the field, settle down, rotor winds down
+    { kind: 'turn', dur: 4, to: 0 },
     { kind: 'lift', dur: 6, to: 0 },
     { kind: 'hold', dur: 4, power: [1, 0] },
     { kind: 'hold', dur: 0, power: [0, 0] },
@@ -517,8 +664,8 @@ function heli(liftoff: number): Flight {
 }
 
 /**
- * The executive helicopter (finance plan Phase 6, the owner's pick): from its pad at the airport up and north, west
- * high over the south row, up the east side of the spire to Uptown's tallest slab, down onto its rooftop helipad
+ * The executive helicopter (finance plan Phase 6, the owner's pick): from its pad at the airport up over the highway,
+ * west high over the south row, up the east side of the spire to Uptown's tallest slab, down onto its rooftop helipad
  * (highrise.ts `ROOF_PAD`); a wait there, rotor stopped, then back the same way and down onto its pad
  */
 function exec(liftoff: number): Flight {
@@ -526,7 +673,16 @@ function exec(liftoff: number): Flight {
   const R = ROOF_PAD;
   const UP = 10;
   const OVER = R.y + 8;
-  const out: Way[] = [w(px, pz, UP, 0), w(px - 4, 122 + WIDEN, 30, 14), w(150, 102 + WIDEN, 36, 17), w(-40, 102 + WIDEN, 36, 17), w(-104, 96 + WIDEN, 40, 14), w(-104, 26, OVER, 10), w(R.x + 7, R.z, OVER, 5), w(R.x, R.z, OVER, 0)];
+  const out: Way[] = [
+    w(px, pz, UP, 0),
+    w(px - 6, 330, 30, 15),
+    w(60, 190 + WIDEN / 4, 36, 17),
+    w(-40, 102 + WIDEN, 36, 17),
+    w(-104, 96 + WIDEN, 40, 14),
+    w(-104, 26, OVER, 10),
+    w(R.x + 7, R.z, OVER, 5),
+    w(R.x, R.z, OVER, 0),
+  ];
   const acts: Act[] = [
     fly(out, 12),
     { kind: 'lift', dur: 7, to: R.y },
@@ -538,7 +694,7 @@ function exec(liftoff: number): Flight {
     // Turn over the roof to face the way back
     { kind: 'turn', dur: 4, to: 0 },
     fly([...out].reverse(), 12),
-    { kind: 'turn', dur: 4, to: Math.PI },
+    { kind: 'turn', dur: 4, to: 0 },
     { kind: 'lift', dur: 6, to: 0 },
     { kind: 'hold', dur: 4, power: [1, 0] },
     { kind: 'hold', dur: 0, power: [0, 0] },
@@ -550,18 +706,22 @@ function exec(liftoff: number): Flight {
   return flight('heli-x', 'heli', acts, { fill: 11, cycle: PERIOD, at: 0, when: liftoff, parked: 11 });
 }
 
-/** When each one takes off, seconds into the period */
-export type Timetable = { jetA: number; prop: number; jetB: number; jetC: number; heli: number; exec?: number };
+/** When each one takes off, seconds into the period: the airliners in `FLYING_STANDS`' order */
+export type Timetable = { jets: number[]; prop: number; heli: number; exec?: number };
 export const timetable = (tt: Timetable): Flight[] => [
-  jet(STANDS[0], tt.jetA, 'jet-a'),
+  ...FLYING_STANDS.map((k, i) => jet(STANDS[k], tt.jets[i], `jet-${'abcde'[i]}`)),
   prop(tt.prop),
-  jet(STANDS[1], tt.jetB, 'jet-b'),
-  jet(STANDS[2], tt.jetC, 'jet-c'),
   heli(tt.heli),
   ...(tt.exec === undefined ? [] : [exec(tt.exec)]),
 ];
 /** Every aircraft flying today (the timetable keeps them apart: tests/airfield.test.ts checks) */
-export const FLIGHTS: Flight[] = timetable({ jetA: 0, prop: 30, jetB: 150, jetC: 205, heli: 0, exec: 30 });
+export const FLIGHTS: Flight[] = timetable({ jets: [0, 32, 81, 159, 195], prop: 126, heli: 91, exec: 68 });
+
+/** Airliners standing at the other stands and on the maintenance hangar's apron (drawn with the flying ones, never moving) */
+export const PARKED_JETS: Pose[] = [
+  ...STANDS.filter((_, k) => !FLYING_STANDS.includes(k)).map(([x, z]): Pose => ({ x, y: 0, z, yaw: Math.PI / 2, pitch: 0, roll: 0, v: 0, ground: true, gear: true, power: 0 })),
+  { x: (MRO[0] + MRO[2]) / 2, y: 0, z: MRO[3] + 14, yaw: Math.PI / 2, pitch: 0, roll: 0, v: 0, ground: true, gear: true, power: 0 },
+];
 
 /** Where a flight is at time `t` (seconds), or parked under reduced motion */
 export function poseAt(f: Flight, t: number): Pose {

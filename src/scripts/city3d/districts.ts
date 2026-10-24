@@ -23,6 +23,7 @@ import { WESTLAKE_RECT } from './westlake';
 import { STADIUM_AREA } from './stadium';
 import { KART_AREA } from './kartfacility';
 import { UPTOWN_RECT } from './uptown';
+import { SITE } from './airfield';
 
 /** How much further out than its land Uptown loads (its towers stand over the whole town) */
 const UPTOWN_REACH = 240;
@@ -40,6 +41,9 @@ export const LAZY_DISTRICTS: LazyDistrict[] = [
   { id: 'westlake', rect: union(WESTLAKE_RECT, STADIUM_AREA), load: () => import('./westlake3d') },
   // The kart park's grounds north of the highway: the circuit, trackside, the paddock, Kart Road and the car park (kartgrounds3d.ts)
   { id: 'karts', rect: KART_AREA, load: () => import('./kartgrounds3d') },
+  // The airport's grounds on the world's south edge (airportgrounds3d.ts): the runway, taxiways and aprons, the
+  // concourses and airbridges, the maintenance hangar, the fire station, the fuel farm, the fence and the landside roads
+  { id: 'airport', rect: SITE, load: () => import('./airportgrounds3d') },
   // Uptown, the financial centre west of town (uptown.ts, highrise.ts): its towers, open lots and lanes (uptown3d.ts),
   // loaded from well out (`UPTOWN_REACH`): its skyline is seen from across town
   { id: 'uptown', rect: [UPTOWN_RECT[0] - UPTOWN_REACH, UPTOWN_RECT[1] - UPTOWN_REACH, UPTOWN_RECT[2] + UPTOWN_REACH, UPTOWN_RECT[3] + UPTOWN_REACH], load: () => import('./uptown3d') },

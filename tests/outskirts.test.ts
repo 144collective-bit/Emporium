@@ -4,7 +4,7 @@
 // sees as far as the skyline past the edge. Runs at today's size and at Phase 10's (npm run test:wide).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BELT, BELT_FREE, OPEN_FREE, WOODS, freeLand, inWoods, outskirtsTrees, treeSpot } from '../src/scripts/city3d/outskirts';
+import { BELT, BELT_FREE, OPEN_FREE, WOODS, WOODS_OFF, freeLand, inWoods, outskirtsTrees, treeSpot } from '../src/scripts/city3d/outskirts';
 import { BUILT_UP, CAMERA_FAR, PAN_BOUNDS, PAN_MARGIN, SKYLINE, SKY_RADIUS, overviewFrame } from '../src/scripts/city3d/bounds';
 import { EXT, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
 
@@ -16,21 +16,28 @@ const inBox = (b: readonly number[], x: number, z: number) => x > b[0] && x < b[
 
 /** Where the kart park stood when the densities were worked out (north of the Parkway; it moved north of the highway in the north side's stage 2) */
 const OLD_KART: [number, number, number, number] = [92, -138, 180, -48];
+/** Where the airport stood when they were worked out (it moved out to the world's south edge in docs/airport-plan.md Phase 3) */
+const OLD_AIRPORT: [number, number, number, number] = [70.2, 169.5, 234, 279];
+/** Either: their land is open again, its trees come at the same density as the rest */
+const OLD = [OLD_KART, OLD_AIRPORT];
 const overlap = (a: readonly number[], b: readonly number[]): [number, number, number, number] => [Math.max(a[0], b[0]), Math.max(a[1], b[1]), Math.min(a[2], b[2]), Math.min(a[3], b[3])];
 
 test('the densities still fit the land the world had before Phase 6', () => {
-  // (the kart park's old land counted out: open again, its trees come at the same density as the rest)
+  // (the kart park's and the airport's old land counted out: open again, its trees come at the same density as the rest)
   const outer: [number, number, number, number] = [TODAY[0] + 4, TODAY[0] + 4, TODAY[1] - 4, TODAY[1] - 4];
-  const belt = freeLand(BELT, 2) - freeLand(overlap(BELT, OLD_KART), 2);
-  const open = freeLand(outer, 2, BELT) - freeLand(overlap(outer, OLD_KART), 2, BELT);
+  const away = (r: [number, number, number, number], skip?: [number, number, number, number]) => OLD.reduce((n, o) => n + freeLand(overlap(r, o), 2, skip), 0);
+  const belt = freeLand(BELT, 2) - away(BELT);
+  const open = freeLand(outer, 2, BELT) - away(outer, BELT);
   assert.ok(Math.abs(belt - BELT_FREE) / BELT_FREE < 0.03, `belt ${belt} against ${BELT_FREE}`);
   assert.ok(Math.abs(open - OPEN_FREE) / OPEN_FREE < 0.03, `open land ${open} against ${OPEN_FREE}`);
 });
 
 test('the world before Phase 6 keeps the trees it had (but by the highway), each where a tree may stand', () => {
   for (const count of [250, 150, 90]) {
-    const trees = outskirtsTrees(count, 0.6, [], TODAY);
-    // (less the ones where the ring highway now runs, Phase 7: its north side crosses that land)
+    const all = outskirtsTrees(count, 0.6, [], TODAY);
+    // (less the ones where the ring highway now runs, Phase 7: its north side crosses that land; the ones on the
+    // airport's old land left out of the count, as it's open again)
+    const trees = all.filter((t) => !inBox(OLD_AIRPORT, t.x, t.z));
     assert.ok(trees.length <= count * 1.6 * 1.08 && trees.length > count * 1.6 * 0.86, `${trees.length} for ${count}`);
     for (const t of trees) {
       assert.ok(treeSpot(t.x, t.z));
@@ -62,6 +69,9 @@ test('a bigger world has more trees, never thinner ones, and the same trees wher
   assert.ok(outskirtsTrees(150, 0.6, [clear], TODAY).every((t) => !(t.x > clear[0] - 2 && t.x < clear[2] + 2 && t.z > clear[1] - 2 && t.z < clear[3] + 2)));
 });
 
+/** How far from the town, the kart park and the airport (what the woods keep clear of) */
+const fromCity = (x: number, z: number) => Math.min(...WOODS_OFF.map((b) => Math.hypot(Math.max(b[0] - x, 0, x - b[2]), Math.max(b[1] - z, 0, z - b[3]))));
+
 test('woods stand only well away from the city, never on the land the world had before Phase 6', () => {
   const trees = outskirtsTrees(150, 0.6, [], P6);
   const woods = trees.filter((t) => inWoods(t.x, t.z));
@@ -72,15 +82,14 @@ test('woods stand only well away from the city, never on the land the world had 
   for (const t of woods) {
     assert.ok(treeSpot(t.x, t.z));
     assert.ok(!inBox([TODAY[0], TODAY[0], TODAY[1], TODAY[1]], t.x, t.z), `${t.x}, ${t.z} is on the old land`);
-    const d = Math.hypot(Math.max(BUILT_UP[0] - t.x, 0, t.x - BUILT_UP[2]), Math.max(BUILT_UP[1] - t.z, 0, t.z - BUILT_UP[3]));
-    assert.ok(d > WOODS.clear);
+    assert.ok(fromCity(t.x, t.z) > WOODS.clear);
   }
   // In patches: some of the land past the clearance, not all of it
   let n = 0;
   let w = 0;
   for (let x = P6[0] + 5; x < P6[1]; x += 10)
     for (let z = P6[0] + 5; z < P6[1]; z += 10)
-      if (Math.hypot(Math.max(BUILT_UP[0] - x, 0, x - BUILT_UP[2]), Math.max(BUILT_UP[1] - z, 0, z - BUILT_UP[3])) > WOODS.clear) {
+      if (fromCity(x, z) > WOODS.clear) {
         n++;
         if (inWoods(x, z)) w++;
       }
@@ -104,8 +113,9 @@ test('City view pans round the built-up area, never past the world, and the Buil
     assert.ok(Math.abs(PAN_BOUNDS[k] - BUILT_UP[k]) <= PAN_MARGIN + 1e-9);
   }
   // Since Phase 6 the world is bigger than that: the pan stops round the city, short of the edge (but to the north,
-  // where the kart park moved past the ring highway: there it can reach the edge's margin)
-  assert.ok(PAN_BOUNDS[0] > WORLD_BOUNDS[0] + 10 && PAN_BOUNDS[2] < WORLD_BOUNDS[2] - 10 && PAN_BOUNDS[3] < WORLD_BOUNDS[3] - 10);
+  // where the kart park moved past the ring highway, and the east and south, where the airport stands on the edge:
+  // there it can reach the edge's margin)
+  assert.ok(PAN_BOUNDS[0] > WORLD_BOUNDS[0] + 10);
   // The Build overview: the plots' middle (the south row moved with the river's widening, river plan step 1)
   const f = overviewFrame();
   assert.deepEqual(f.target, [20, 56.5]);

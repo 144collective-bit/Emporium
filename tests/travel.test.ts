@@ -58,8 +58,8 @@ test('a taxi drives from any place to any other along the streets, to the kerb n
       const end = r!.pts[r!.pts.length - 1];
       const nearest = Math.min(...roads.filter((s) => s.kind !== 'slip').map((s) => distToStreet(s, [b.at.x, b.at.z])));
       assert.ok(Math.hypot(end[0] - b.at.x, end[1] - b.at.z) < nearest + 4, `${a.id} to ${b.id} stops ${Math.hypot(end[0] - b.at.x, end[1] - b.at.z).toFixed(1)} away`);
-      // (the longest, from The Trenches to Westlake Park's stadium, is about 59 s since the river was widened and its
-      // town bridges but the east avenue's taken out: river plan step 1)
-      assert.ok(r!.len / TAXI_SPEED < 62, `${a.id} to ${b.id}: ${r!.len.toFixed(0)}`);
+      // (the longest, from the airport to the stadium, corner to corner of the city, is about 64 s since the airport
+      // moved out to the world's south edge: docs/airport-plan.md Phase 3)
+      assert.ok(r!.len / TAXI_SPEED < 66, `${a.id} to ${b.id}: ${r!.len.toFixed(0)}`);
     }
 });
