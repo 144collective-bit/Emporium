@@ -1063,6 +1063,8 @@ export function initFarCars(scene: THREE.Scene, max = 400, parkedAlwaysFar = fal
   const c = new THREE.Color();
   farCars = {
     add(model, paint, at) {
+      // (a district loaded as you approach brings its parked cars: the mesh grows when it's full)
+      if (bm.instanceCount >= bm.maxInstanceCount) bm.setInstanceCount(bm.maxInstanceCount + 64);
       const id = bm.addInstance(ids.get(model)!);
       bm.setColorAt(id, c.set(paint));
       if (at) bm.setMatrixAt(id, at);

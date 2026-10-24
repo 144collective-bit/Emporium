@@ -24,6 +24,8 @@ import { DECK_Y as BOARDWALK_Y } from './waterfront';
 import { createDistricts } from './districts';
 import { buildStadium } from './stadium3d';
 import { buildTower } from './tower3d';
+import { buildStationSpot } from './stationspot';
+import { BOULEVARD_TREES as STATION_TREES, PLAZA_TREES as STATION_PLAZA_TREES, STATION_LAMPS, STATION_PEOPLE, STATION_RECTS, STATION_SPAWN } from './station';
 import { LIFT, TOWER_SPAWN } from './skydeck';
 import { STADIUM_LAMPS, STADIUM_RECTS, STADIUM_SPAWN } from './stadium';
 import { buildLandmarks, type Spot } from './landmarks';
@@ -253,6 +255,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   spots.push(buildStadium(scene, { low: tier === 'low' }).spot);
   // Uptown's spire as a place, Sector 7 Tower (finance plan Phase 6): its spot only (the tower is Uptown's, drawn as a site)
   spots.push(buildTower(scene).spot);
+  // ...and Sector 7 Central, the grand station west of the highway: its spot (the station is drawn in its own chunk)
+  spots.push(buildStationSpot(scene).spot);
   // ...and the metro's el where it crosses the open land south of the south row: no trees under it
   keepTreesOff([-10, 125 + WIDEN, 56, 135 + WIDEN]);
   // (and its Airport branch, bending east off the avenue over the open land to the airport: docs/airport-plan.md Phase 3)
@@ -285,6 +289,12 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // ...and the stadium's, north of the highway (stadium.ts): no trees on its block, its road and car park or under its footbridge
   for (const r of STADIUM_RECTS) keepTreesOff(r);
   for (const [x, z, ry, y] of STADIUM_LAMPS) addLamp(x, z, ry, y);
+  // ...and the grand station's (station.ts): its boulevard's trees, the forecourt's, its lamps, its people
+  for (const r of STATION_RECTS) keepTreesOff(r);
+  for (const [x, z] of STATION_TREES) addTree(x, z, 0.85, false, 0.02);
+  for (const [x, z] of STATION_PLAZA_TREES) addTree(x, z, 0.8, false);
+  for (const [x, z, ry, y] of STATION_LAMPS) addLamp(x, z, ry, y);
+  STATION_PEOPLE.forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push({ x: p.x, z: p.z, y: Math.max(SLAB, p.y), ry: p.ry, act: p.act }));
   progress(0.55);
   await waited(nextFrame());
   // (phones keep half of them: the trim)
@@ -581,6 +591,12 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       panelBody.querySelector('[data-tower-walkin]')?.addEventListener('click', () => {
         close();
         startWalking(TOWER_SPAWN);
+      });
+    // Sector 7 Central's panel: Walk in starts walk mode on its forecourt, facing the doors
+    if (id === 'station')
+      panelBody.querySelector('[data-station-walkin]')?.addEventListener('click', () => {
+        close();
+        startWalking(STATION_SPAWN);
       });
     // The Block's panel: Walk in starts walk mode on its plaza by the metro's stairs
     if (id === 'trenches')
@@ -1166,9 +1182,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     };
   }
   if (statsEl) {
-    // For the headless checks (scratch scripts): the scene, renderer and camera on the page; opening a place
+    // For the headless checks (scratch scripts): the scene, renderer and camera on the page; opening a place, building what waits round a spot,
     // and walking in somewhere without a click through the city
-    (window as unknown as { __city?: unknown }).__city = { scene, renderer, camera, controls, traffic: bodies, view: CROWD_VIEW, open, startWalking, walk, sky };
+    (window as unknown as { __city?: unknown }).__city = { scene, renderer, camera, controls, traffic: bodies, view: CROWD_VIEW, open, startWalking, walk, sky, works };
     statsEl.className = 'city-stats';
     statsEl.setAttribute('aria-hidden', 'true');
     host.append(statsEl);

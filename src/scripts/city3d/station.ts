@@ -52,7 +52,7 @@ export const LOOP = { x0: -252, x1: -236, z1: -60, half: 1.7 };
 /* ---------- The station's block: the hall and the shed ---------- */
 
 /** The hall: its walls' outside (x0 west, x1 the front on the forecourt), the roof's eaves and crown over the ground */
-export const HALL = { x0: -284, x1: -256, z0: -61, z1: -11, eave: 7, crown: 12, wall: 0.3 };
+export const HALL = { x0: -284, x1: -256, z0: -61, z1: -11, eave: 7, crown: 11.6, wall: 0.3 };
 /** The shed behind it: from its west end to the hall, between its glazed sides; the roof's arches spring at `eave` and rise to `crown` */
 export const SHED = { x0: -404, x1: HALL.x0, z0: -59, z1: -13, eave: 4.5, crown: 11, wall: 0.3 };
 /** The ramp up from the doors to the concourse, inside the front wall (x from `x0` up to the front) */
@@ -93,7 +93,7 @@ export const STATION_BLOCK: Rect = [SHED.x0 - 1, HALL.z0 - 1.5, LOOP.x0 - LOOP.h
 /* ---------- Inside the hall ---------- */
 
 /** The departures board over the platforms' ends, facing the doors: its middle (z), width, bottom and top */
-export const BOARD = { x: HALL.x0 + 1.2, z: (HALL.z0 + HALL.z1) / 2, w: 16, y0: 4.2, y1: 6.6 };
+export const BOARD = { x: HALL.x0 + 1.2, z: (HALL.z0 + HALL.z1) / 2, w: 10, y0: 4.2, y1: 6.6 };
 /** The ticket hall along the north wall: the counter's windows (x middles), its depth from the wall */
 export const COUNTERS = { z: HALL.z0 + HALL.wall, depth: 1.4, xs: [-278, -275, -272, -269, -266, -263], h: 1.1 };
 export type ShopKind = 'cafe' | 'news' | 'bakery' | 'flowers';
@@ -309,7 +309,7 @@ export const STATION_PEOPLE: StationPerson[] = (() => {
 /* ---------- The place ---------- */
 
 /** Walk in: on the plaza between the fountains, facing the hall's doors */
-export const STATION_SPAWN = { x: (PLAZA[0] + PLAZA[2]) / 2, z: -37, yaw: -Math.PI / 2 };
+export const STATION_SPAWN = { x: (PLAZA[0] + PLAZA[2]) / 2, z: -37, yaw: Math.PI / 2 };
 /** What the outskirts' trees keep off (the block, the plaza, the car park, the loop and the boulevard's verge), and all of it for loading */
 export const STATION_RECTS: Rect[] = [
   [STATION_BLOCK[0] - 2, STATION_BLOCK[1] - 2, STATION_BLOCK[2] + 1, STATION_BLOCK[3] + 1],
@@ -320,5 +320,5 @@ export const STATION_RECTS: Rect[] = [
   [EXT[0] - 2, SHED.z0 - 1, SHED.x0, SHED.z1 + 1],
 ];
 export const STATION_AREA: Rect = [Math.min(...STATION_RECTS.map((r) => r[0])), Math.min(...STATION_RECTS.map((r) => r[1])), Math.max(...STATION_RECTS.map((r) => r[2])), Math.max(...STATION_RECTS.map((r) => r[3]))];
-/** The tallest anything stands (the hall's crown), under the Emporium's roof (about 12.5) */
-export const TALLEST = Math.max(HALL.crown, SHED.crown);
+/** The tallest anything stands (the hall's crown and the ribs over it), under the Emporium's roof (about 12.5) */
+export const TALLEST = Math.max(HALL.crown, SHED.crown) + 0.5;

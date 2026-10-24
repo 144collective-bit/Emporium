@@ -43,6 +43,7 @@ export const LIVE_PLACES = [
   { id: 'nightmarket', name: 'Night Market' },
   { id: 'stadium', name: 'Sector 7 Stadium' },
   { id: 'tower', name: 'Sector 7 Tower' },
+  { id: 'station', name: 'Sector 7 Central' },
 ] as const satisfies readonly { id: string; name: string }[];
 export type LivePlaceId = (typeof LIVE_PLACES)[number]['id'];
 

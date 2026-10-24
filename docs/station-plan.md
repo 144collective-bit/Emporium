@@ -68,3 +68,29 @@ highway and Uptown, its tracks running west to the world's edge.
    to confirm) to a smaller station on the far side; rides on it (about a
    minute), its stations as places.
 4. **The metro:** carried on from Uptown station to the grand station.
+
+## As built
+
+**Step 1 (built, waiting on the owner's sign-off):**
+
+- **Its data** is `station.ts` (DOM-free, tested in `tests/station.test.ts`).
+- **The hall** (`HALL`, 28 x 50, crown 11.6) faces east onto the forecourt's loop.
+  - Its front is one arched glass gable with three doors (`DOORS`), and SECTOR 7 CENTRAL sits over the middle one.
+  - Its vault runs out 2.2 over the pavement.
+  - Inside, the concourse (`CONCOURSE`) is at the platforms' height (`PLAT_Y`, 0.6), up a ramp from the doors (`RAMP`).
+  - Under the hanging four-faced clock (`CLOCK`, on the visitor's time) are the departures board (`BOARD`), the ticket counter (`COUNTERS`), four kiosks and the café (`SHOPS`, `CAFE_TABLES`), benches back to back (`BENCHES`) and pendant lights.
+  - The board shows the ten platforms and made-up places (`DESTINATIONS`) with ON TIME or BOARDING. It shows no times.
+- **The shed** (`SHED`, 120 long behind the hall) has a glazed vault on steel arches every 8 (`ARCHES`) and glazed sides, plus a glass lunette over its west end.
+  - It holds five island platforms (`ISLANDS`) between ten tracks (`TRACKS`, numbered 1 to 10 from the south), with numbered signs hanging over them.
+  - The buffers are at the hall (`BUFFERS_X`). The tracks run on west to the world's edge.
+  - Walking (`stationY()` in walk.ts's `groundAt()`): the concourse and the platforms are floor. The track beds, the platforms' far ends, the walls and everything standing are solid (`STATION_SOLIDS`).
+- **The forecourt:**
+  - The two-way loop (`LOOP`, street `station-loop`, traffic drives it) has its zebras to the doors.
+  - The plaza (`PLAZA`) has two fountains, benches and trees in grates.
+  - The taxi rank (`RANK`) has three cabs waiting, and the bus bays (`BUS_BAYS`) have their shelters.
+  - The car park (`CAR_PARK`) is north of the loop, about two bays in three taken.
+- **The boulevard and the junction:** trees along the avenue's south side from the highway out past the station (`BOULEVARD_TREES`) and lamps along it and round the loop. The highway's junction with the avenue has slip lanes on its outer corners too.
+- **Drawing:**
+  - `station3d.ts` is a district loaded as you approach (`LAZY_DISTRICTS` id `station`), made of sites, with the clock's hands and the cars on the main thread.
+  - The place is `stationspot.ts` (spot `station`: its pin, panel, Walk in to `STATION_SPAWN`, directory entry, a `PLACES` and `LIVE_PLACES` entry).
+- Everything stands under the Emporium (`TALLEST`).

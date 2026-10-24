@@ -21,6 +21,7 @@ import { PIER_SPAWN } from './waterfront';
 import { MARKET_SPAWN } from './nightmarket';
 import { STADIUM_SPAWN } from './stadium';
 import { TOWER_SPAWN } from './skydeck';
+import { STATION_SPAWN } from './station';
 
 export type PlaceKind = 'spot' | 'lot' | 'metro' | 'riverbus';
 export interface Place {
@@ -71,6 +72,8 @@ export const PLACES: Place[] = [
   { id: 'stadium', kind: 'spot', spot: 'stadium', at: STADIUM_SPAWN },
   // Uptown's Sector 7 Tower: on the plaza in front of its pavilion, facing it (the lift to the sky deck inside)
   { id: 'tower', kind: 'spot', spot: 'tower', at: TOWER_SPAWN },
+  // Sector 7 Central, the grand station: on its forecourt between the fountains, facing the hall's doors
+  { id: 'station', kind: 'spot', spot: 'station', at: STATION_SPAWN },
   // The garage's forecourt, facing its office door; the market square, at your stall
   // (its office door faces north, onto the forecourt)
   { id: 'garage', kind: 'lot', name: 'Garage', at: { x: GARAGE_SITE.door.x - 1, z: GARAGE_SITE.door.z - 1.8, yaw: Math.atan2(-1, -1.8) } },

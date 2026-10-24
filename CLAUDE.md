@@ -1004,6 +1004,48 @@ it and has been retired completely. Build only on what's here.
     mouths, piles; the overlooks; the marina and its yachts; the median a
     run a site; each terrace a site, its name from one small atlas). The
     valets' bays came in Phase 5 (the kerbside, above).
+- **Sector 7 Central, the grand station** (the owner's call): a terminus
+  west of the ring highway on the park's avenue (ew0), planned in
+  `docs/station-plan.md` in four steps, each with the owner's sign-off
+  (1 the station and its grounds, 2 the trains, 3 a line round the city to
+  a second station, its route the owner's to confirm, 4 the metro); keep
+  it up to date. Modern glass with a sweeping curved roof; made-up names
+  only; under the Emporium (`TALLEST`). Step 1 is built:
+  - `station.ts` (DOM-free, tested in `tests/station.test.ts`): the hall
+    (`HALL`: a glass vault facing east onto the forecourt, three doors,
+    `DOORS`; the concourse at the platforms' height, `PLAT_Y`, up a ramp
+    from the doors, `RAMP`, `CONCOURSE`; the departures board `BOARD` with
+    made-up `DESTINATIONS`, platforms and ON TIME / BOARDING, never a
+    time; the ticket counter `COUNTERS`, kiosks and the café `SHOPS`,
+    `CAFE_TABLES`, `BENCHES`, the clock `CLOCK`), the shed behind it
+    (`SHED`, 120 long, arches every 8, `ARCHES`) over five island
+    platforms (`ISLANDS`) between ten tracks (`TRACKS`, numbered from the
+    south; they run on west to the world's edge, buffers at `BUFFERS_X`),
+    the forecourt's two-way loop (`LOOP`, `STATION_STREETS` /
+    `STATION_CROSSINGS` in the street plan: traffic drives it; the
+    highway's junction with the avenue gets outer slips, `OUTER_SLIPS`),
+    the plaza (`PLAZA`: `FOUNTAINS`, `PLAZA_BENCHES`, `PLAZA_TREES`), the
+    taxi rank (`RANK`, `RANK_CABS`), the bus bays (`BUS_BAYS`,
+    `BUS_SHELTERS`), the car park (`CAR_PARK`, `BAYS`, `PARKED`), the
+    boulevard's trees (`BOULEVARD_TREES`) and lamps (`STATION_LAMPS`), its
+    blocks in the street plan (`STATION_BLOCK`, ref `station`),
+    `STATION_SOLIDS` (in `SOLIDS`: the walls but the doors, the shed's
+    sides, the track beds, the platforms' far ends, what stands), its
+    people (`STATION_PEOPLE`), `STATION_RECTS` (the outskirts' trees keep
+    off, the tracks' way west too) and `stationY()`, the floor walk.ts's
+    `groundAt()` reads.
+  - `station3d.ts` draws it, a district loaded as you approach
+    (`LAZY_DISTRICTS` id `station`): the hall and the shed as sites (glass
+    walls and gables in one double-sided glass material, `station-glass`,
+    the vaults' glazing `station-roof`, ribs over them, the cyan line
+    along the hall's front edge, SECTOR 7 CENTRAL over the doors, the
+    board and one sign atlas of fixed copy), the platforms, tracks and
+    buffers, the loop, plaza, rank, shelters and car park; on the main
+    thread the clock's hands and the cabs and parked cars. It's a place
+    (`stationspot.ts`: spot `station`, its pin, directory entry, panel
+    `data-panel-tpl="station"` with Walk in to `STATION_SPAWN`, `PLACES`
+    and `LIVE_PLACES` entries). The far cars' mesh grows when a district's
+    parked cars fill it (`initFarCars()`).
 - **Districts loaded as you approach** (performance phase 4, item 10):
   a district's drawing is a module of its own (`LAZY_DISTRICTS` in
   `districts.ts`: an id, its land and `load()`, a dynamic import), a chunk
@@ -3021,7 +3063,7 @@ it and has been retired completely. Build only on what's here.
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`), Harbour Bridge (`harbour.ts`),
-  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), the river's shape (`river.ts`), the river's life, the river bus and boating (`riverlife.ts`, `riverbus.ts`, `riverroute.ts`, `boat-sim.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`, `boulevard.ts`, `boulevarddress.ts`, `kerbside.ts`, `skydeck.ts`, `skyline.ts`, `uptownlife.ts`, `streetlevel.ts`, `uptownsites.ts`, `streetlife.ts`, `wheel.ts`, the town car in `cars.ts`), the kart park's facility (`kartfacility.ts`),
+  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), the river's shape (`river.ts`), the river's life, the river bus and boating (`riverlife.ts`, `riverbus.ts`, `riverroute.ts`, `boat-sim.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`, `boulevard.ts`, `boulevarddress.ts`, `kerbside.ts`, `skydeck.ts`, `skyline.ts`, `uptownlife.ts`, `streetlevel.ts`, `uptownsites.ts`, `streetlife.ts`, `wheel.ts`, the town car in `cars.ts`), the kart park's facility (`kartfacility.ts`), the grand station (`station.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,
