@@ -25,6 +25,7 @@ import { WESTLAKE_BLOCKS } from './westlake';
 import { UPTOWN_BLOCKS, UPTOWN_CROSSINGS, UPTOWN_LANES, UPTOWN_STREETS } from './uptown';
 import { BLOCK as STADIUM_BLOCK, STADIUM_CROSSINGS, STADIUM_STREETS } from './stadium';
 import { KART_CROSSINGS, KART_STREETS } from './kartpark';
+import { CAR_PARK as STATION_PARK, PLAZA as STATION_PLAZA, STATION_BLOCK, STATION_CROSSINGS, STATION_STREETS } from './station';
 
 export type Pt = [number, number];
 
@@ -340,7 +341,7 @@ function crossingsOf(pts: Pt[], axis: 0 | 1, c: number): Pt[] {
  * roads to the stadium and the kart park, and to the airport since docs/airport-plan.md Phase 3: the south bank avenue
  * east to Airport Drive, the east ring avenue south to the GA road)
  */
-export const OUTER_SLIPS = ['highway-ns0-1', 'highway-ns3-0', 'highway-ns3-1', 'highway-ew4-0'];
+export const OUTER_SLIPS = ['highway-ns0-1', 'highway-ns3-0', 'highway-ns3-1', 'highway-ew4-0', 'highway-ew0-1'];
 
 export function cityPlan(): StreetPlan {
   const streets = gridStreets();
@@ -367,7 +368,10 @@ export function cityPlan(): StreetPlan {
   for (const c of STADIUM_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: false });
   // Kart Road off the east ring avenue past the highway, and the one-way loop round the kart park's car park (kartpark.ts)
   for (const t of KART_STREETS) streets.push({ id: t.id, kind: 'street', pts: t.pts, half: t.half, lanes: 1, ...(t.oneway ? { oneway: t.oneway } : {}) });
+  // The grand station's forecourt loop off the park's avenue west of the highway (station.ts, docs/station-plan.md)
+  for (const t of STATION_STREETS) streets.push({ id: t.id, kind: 'street', pts: t.pts, half: t.half, lanes: 1, ...(t.oneway ? { oneway: t.oneway } : {}) });
   for (const c of KART_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: false });
+  for (const c of STATION_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: false });
   // The ring highway (highway.ts): a lit junction wherever it meets a straight arterial, and on the town
   // side of each, slip lanes for the right turns on and off it (and on the outside too where an arterial past
   // it carries traffic: the north road to the stadium, `OUTER_SLIPS`)
@@ -450,6 +454,10 @@ export function cityPlan(): StreetPlan {
     ...UPTOWN_BLOCKS.map((b): Block => ({ id: b.id, poly: b.poly, use: b.use === 'plaza' ? 'plaza' : b.use === 'park' || b.use === 'island' ? 'park' : 'plain', ref: 'uptown', walk: WALK_W })),
     // The stadium's block north of the highway (stadium.ts, the north side's stage 1)
     { id: 'stadium', poly: square(STADIUM_BLOCK[0], STADIUM_BLOCK[1], STADIUM_BLOCK[2] - STADIUM_BLOCK[0], STADIUM_BLOCK[3] - STADIUM_BLOCK[1]), use: 'plain', ref: 'stadium', walk: WALK_W },
+    // The grand station's block, its forecourt's plaza and its car park, west of the highway (station.ts)
+    { id: 'station', poly: square(STATION_BLOCK[0], STATION_BLOCK[1], STATION_BLOCK[2] - STATION_BLOCK[0], STATION_BLOCK[3] - STATION_BLOCK[1]), use: 'plain', ref: 'station', walk: WALK_W },
+    { id: 'station-plaza', poly: square(STATION_PLAZA[0], STATION_PLAZA[1], STATION_PLAZA[2] - STATION_PLAZA[0], STATION_PLAZA[3] - STATION_PLAZA[1]), use: 'plaza', ref: 'station', walk: WALK_W },
+    { id: 'station-park', poly: square(STATION_PARK[0], STATION_PARK[1], STATION_PARK[2] - STATION_PARK[0], STATION_PARK[3] - STATION_PARK[1]), use: 'lot', ref: 'station', walk: WALK_W },
     // The bends' outer sidewalks (their own outline is the sidewalk)
     ...BEND_KERBS.map((poly, i): Block => ({ id: `kerb-${i}`, poly, use: 'plain', walk: 0 })),
   ];

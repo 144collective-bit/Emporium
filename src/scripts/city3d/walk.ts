@@ -73,6 +73,7 @@ import { BX as LIBERTY_X, FACES, LIBERTY_CAMERA, LOW_Y, TO_MIDDLE, footbridgeWal
 import { JETTY, RIM, inLake, onJetty, onTerrace, terraceY } from './westlake';
 import { GATE, bridgeWall, bridgeY } from './stadium';
 import { skyDeckWall, skyDeckY, upOnDeck } from './skydeck';
+import { stationY } from './station';
 import { WORLD_BOUNDS } from './layout';
 import { WATER_Y, inChannel, inWater, shoreY } from './river';
 import { HIRE } from './riverbus';
@@ -384,7 +385,7 @@ export function createWalk(d: WalkDeps) {
     const fb = footbridgeY(x, z, yNow, 0, leavesOpen());
     if (fb !== null) return Math.max(slab, fb);
     if (slab === 0.035 && inChannel(x, z)) return shoreY(x, z) + 0.035;
-    const base = Math.max(slab, bridgeY(x, z, yNow) ?? 0, onJetty(x, z) ? SLAB + JETTY.y : 0, SLAB + (terraceY(x, z) ?? -SLAB), SLAB + (skyDeckY(x, z, yNow - SLAB) ?? -SLAB));
+    const base = Math.max(slab, bridgeY(x, z, yNow) ?? 0, onJetty(x, z) ? SLAB + JETTY.y : 0, SLAB + (terraceY(x, z) ?? -SLAB), SLAB + (skyDeckY(x, z, yNow - SLAB) ?? -SLAB), stationY(x, z) ?? 0);
     if (x < KART_PARK.x0 || x > KART_PARK.x1 || z < KART_PARK.z0 || z > KART_PARK.z1) return base;
     const t = trackSurfaceAt(x, z, yNow);
     // (and the spectators' grass banks round it, kartfacility.ts)

@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { BLOCKS, BS, CITY_EXT, CORE_ROADS, DOWNTOWN, EW_ROADS, EXT, GARAGE, LANE, MEDIAN, NS_ROADS, RING_HI, RING_LO, RIVER, SEATS, SOUTH_ROAD, THIRDS, WALK_W, WORLD_BOUNDS, design, designBox, laneCentres, seat } from '../src/scripts/city3d/layout';
 import { SLABS, bounds, inside, overlaps, polysOverlap } from './world';
+import { PLAN } from '../src/scripts/city3d/streetplan';
 
 test('downtown is 60 across, cut in thirds by two cross streets, inside the ring', () => {
   assert.equal(BS, 9);
@@ -93,7 +94,8 @@ test('the world reaches well past the city, with room to build', () => {
   assert.ok(inside(WORLD_BOUNDS, world), 'you can walk or drive off the edge');
   assert.ok(CITY_EXT[0] >= EXT[0] && CITY_EXT[1] <= EXT[1]);
   for (const s of SLABS.map(bounds)) assert.ok(inside(s, WORLD_BOUNDS), 'a block or district is out of reach');
-  // At least a hundred tiles of open land on every side of what's built
-  const built = SLABS.map(bounds).reduce((b, s) => [Math.min(b[0], s[0]), Math.min(b[1], s[1]), Math.max(b[2], s[2]), Math.max(b[3], s[3])], [Infinity, Infinity, -Infinity, -Infinity]);
+  // At least a hundred tiles of open land on every side of what's built (but the grand station, whose tracks run out
+  // to the world's edge: the owner's call, docs/station-plan.md)
+  const built = SLABS.filter((_, i) => PLAN.blocks[i].ref !== 'station').map(bounds).reduce((b, s) => [Math.min(b[0], s[0]), Math.min(b[1], s[1]), Math.max(b[2], s[2]), Math.max(b[3], s[3])], [Infinity, Infinity, -Infinity, -Infinity]);
   assert.ok(built[0] - WORLD_BOUNDS[0] >= 100 && built[1] - WORLD_BOUNDS[1] >= 100 && WORLD_BOUNDS[2] - built[2] >= 100 && WORLD_BOUNDS[3] - built[3] >= 100);
 });
