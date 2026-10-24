@@ -75,6 +75,8 @@ export interface Highrise {
    * flatiron stand as they are)
    */
   base?: { h: number; skin: Masonry };
+  /** Sides of its base whose ground floor stands back behind round columns over the sidewalk (Phase 7's arcades) */
+  arcades?: Face[];
 }
 
 /**
@@ -84,7 +86,7 @@ export interface Highrise {
  * spire's pavilion (a glass entrance pavilion at its foot). The podium's other sides are shops where they face a
  * street, its back a service wall
  */
-export type Lobby = 'atrium' | 'colonnade' | 'arcade' | 'retail' | 'pavilion';
+export type Lobby = 'atrium' | 'colonnade' | 'arcade' | 'retail' | 'pavilion' | 'grand';
 /** The ground floor's height under the podium's top storey, and how far a colonnade's or arcade's front stands back */
 export const GROUND = { h: 2.3, recess: 1.1, col: 0.36, every: 1.7 };
 
@@ -109,21 +111,25 @@ function doorOf(r: Rect, f: Face, out = 0.6): Pt {
 /** Each design's lobby (the slabs alternate between a glass atrium and shops, by their name) */
 const lobbyOf = (id: string, kind: Design): Lobby =>
   kind === 'deco' ? 'colonnade' : kind === 'round' ? 'arcade' : kind === 'twin' ? 'atrium' : kind === 'spire' ? 'pavilion' : kind === 'flatiron' ? 'retail' : (id.charCodeAt(1) + id.charCodeAt(2)) % 2 ? 'retail' : 'atrium';
-/** A podium's ground floor set back along its front, and the columns left standing along the front's line */
-function setBack(pod: Rect, front: Face): { foot: Rect; columns: Pt[] } {
+/** A podium's ground floor set back along its front (and any arcaded sides), and the columns left standing along their lines */
+function setBack(pod: Rect, front: Face, more: Face[] = []): { foot: Rect; columns: Pt[] } {
   const r = GROUND.recess;
-  const foot: Rect = front === 'n' ? [pod[0], pod[1] + r, pod[2], pod[3]] : front === 's' ? [pod[0], pod[1], pod[2], pod[3] - r] : front === 'w' ? [pod[0] + r, pod[1], pod[2], pod[3]] : [pod[0], pod[1], pod[2] - r, pod[3]];
+  let foot: Rect = [...pod];
+  for (const f of [front, ...more]) foot = f === 'n' ? [foot[0], foot[1] + r, foot[2], foot[3]] : f === 's' ? [foot[0], foot[1], foot[2], foot[3] - r] : f === 'w' ? [foot[0] + r, foot[1], foot[2], foot[3]] : [foot[0], foot[1], foot[2] - r, foot[3]];
+  return { foot, columns: [front, ...more].flatMap((f) => columnsAlong(pod, f)) };
+}
+/** The columns along one side's line */
+function columnsAlong(pod: Rect, front: Face): Pt[] {
   const along = front === 'n' || front === 's';
   const [a, b] = along ? [pod[0], pod[2]] : [pod[1], pod[3]];
   const line = front === 'n' ? pod[1] : front === 's' ? pod[3] : front === 'w' ? pod[0] : pod[2];
   const inward = front === 'n' || front === 'w' ? 1 : -1;
   const n = Math.max(2, Math.round((b - a - 0.5) / GROUND.every) + 1);
-  const columns = Array.from({ length: n }, (_, i): Pt => {
+  return Array.from({ length: n }, (_, i): Pt => {
     const v = a + 0.25 + ((b - a - 0.5) * i) / (n - 1);
     const w = line + inward * (GROUND.col / 2 + 0.02);
     return along ? [v, w] : [w, v];
   });
-  return { foot, columns };
 }
 
 /** A shaft's outline pushed to one side of its podium (`back`), 1 in from it, the rest of the podium's roof left open */
@@ -140,17 +146,18 @@ function toBack(r: Rect, pod: Rect, back?: Face): Rect {
  * A tower of a design on a lot, `h` its roof; `back` pushes its shaft to that side of its podium and `depth` caps the
  * shaft's depth there, and `ratio` is how long its shaft may be against its depth (a slab's)
  */
-export function design(id: string, block: string, kind: Design, lot: Rect, h: number, skin: Skin, front: Face, o: { back?: Face; depth?: number; ratio?: number; base?: [number, Masonry] } = {}): Highrise {
+export function design(id: string, block: string, kind: Design, lot: Rect, h: number, skin: Skin, front: Face, o: { back?: Face; depth?: number; ratio?: number; base?: [number, Masonry]; lobby?: Lobby; arcades?: Face[] } = {}): Highrise {
   const { back, depth = Infinity, ratio = 1.7 } = o;
   const baseOf = o.base ? { h: o.base[0], skin: o.base[1] } : undefined;
   const pod = inset(lot, PODIUM.in);
   const [pw, pd] = [pod[2] - pod[0], pod[3] - pod[1]];
-  const lobby = lobbyOf(id, kind);
-  const back_ = lobby === 'colonnade' || lobby === 'arcade' ? setBack(pod, front) : null;
+  const lobby = o.lobby ?? lobbyOf(id, kind);
+  const arcades = o.arcades ?? [];
+  const back_ = lobby === 'colonnade' || lobby === 'arcade' ? setBack(pod, front, arcades) : arcades.length ? { foot: setBack(pod, arcades[0], arcades.slice(1)).foot, columns: arcades.flatMap((f) => columnsAlong(pod, f)) } : null;
   // (the podium, or the street wall's base on the same footprint: the shaft starts on its roof)
   const P = baseOf?.h ?? PODIUM.h;
   const podium: Part = { shape: 'box', rect: pod, y0: 0, y1: P, skin: 'podium', ...(back_ ? { foot: back_.foot } : {}) };
-  const base = { id, block, design: kind, skin, lot, front, door: doorOf(pod, front), lobby, columns: back_?.columns ?? [], ...(baseOf ? { base: baseOf } : {}) };
+  const base = { id, block, design: kind, skin, lot, front, door: doorOf(pod, front), lobby, columns: back_?.columns ?? [], ...(baseOf ? { base: baseOf } : {}), ...(arcades.length ? { arcades } : {}) };
   // (the shaft's own room on the podium: all of it, or a depth at the back)
   const room: Rect = !back || !Number.isFinite(depth) ? pod : back === 'n' ? [pod[0], pod[1], pod[2], pod[1] + depth + 2] : back === 's' ? [pod[0], pod[3] - depth - 2, pod[2], pod[3]] : back === 'w' ? [pod[0], pod[1], pod[0] + depth + 2, pod[3]] : [pod[2] - depth - 2, pod[1], pod[2], pod[3]];
   const [rw, rd] = [room[2] - room[0], room[3] - room[1]];
@@ -304,10 +311,10 @@ export const HIGHRISES: Highrise[] = [
   design('n0a', 'uptown-n0w', 'round', [-199.5, 1.5, -191.5, 13], 21, 'silver', 'n', { base: [8, 'limestone'] }),
   design('n0b', 'uptown-n0w', 'slab', [-189.5, 1.5, -181, 13], 25, 'blue', 'e', { base: [10, 'granite'] }),
   design('n0c', 'uptown-n0e', 'deco', [-171, 1.5, -163.5, 13], 24, 'stone', 'w', { base: [7, 'brick'] }),
-  design('n0d', 'uptown-n0e', 'slab', [-161.5, 1.5, -153.5, 13], 28, 'black', 'e', { base: [11, 'limestone'] }),
+  design('n0d', 'uptown-n0e', 'slab', [-161.5, 1.5, -153.5, 13], 28, 'black', 'e', { base: [11, 'limestone'], lobby: 'grand' }),
   design('m0a', 'uptown-m0w', 'twin', [-199.5, 20.5, -189.5, 39.5], 27, 'gold', 'w', { base: [8, 'limestone'] }),
-  design('m0b', 'uptown-m0n', 'slab', [-167.5, 19.6, -153.3, 26.8], 16, 'silver', 'n', { ratio: 2.2, base: [6, 'brick'] }),
-  design('m0c', 'uptown-m0s', 'slab', [-167.5, 33.2, -153.3, 40.4], 17, 'blue', 's', { ratio: 2.2, base: [6, 'brick'] }),
+  design('m0b', 'uptown-m0n', 'slab', [-167.5, 19.6, -153.3, 26.8], 16, 'silver', 'n', { ratio: 2.2, base: [6, 'brick'], arcades: ['s'] }),
+  design('m0c', 'uptown-m0s', 'slab', [-167.5, 33.2, -153.3, 40.4], 17, 'blue', 's', { ratio: 2.2, base: [6, 'brick'], arcades: ['n'] }),
   design('s0a', 'uptown-s0w', 'round', [-199.5, 46.3, -191.5, 59.2], 20, 'blue', 's', { back: 'n', depth: 7 }),
   design('s0b', 'uptown-s0w', 'deco', [-189.5, 46.3, -181, 59.2], 22, 'stone', 's', { back: 'n', depth: 7 }),
   design('s0c', 'uptown-s0e', 'slab', [-171, 46.3, -163.5, 59.2], 24, 'silver', 's', { back: 'n', depth: 6.5 }),
@@ -315,14 +322,14 @@ export const HIGHRISES: Highrise[] = [
   // (Phase 7, the street wall: most stand on a mid-rise base, `base`; the river row keeps its low podiums)
   // Between the one-way pair: either side of the plaza, east of the axis's lanes (the slivers west of them are café terraces)
   design('n1a', 'uptown-n1', 'deco', [-136.5, 1, -127, 12.2], 30, 'stone', 's', { base: [10, 'limestone'] }),
-  design('n1b', 'uptown-n1', 'slab', [-125, 1, -115.5, 12.2], 32, 'blue', 's', { base: [12, 'granite'] }),
+  design('n1b', 'uptown-n1', 'slab', [-125, 1, -115.5, 12.2], 32, 'blue', 's', { base: [12, 'granite'], lobby: 'grand' }),
   design('m1', PLAZA_BLOCK, 'spire', SPIRE_LOT, TALLEST.roof, 'silver', 'w'),
-  design('s1a', 'uptown-s1', 'slab', [-136.5, 46.3, -127, 57.8], 29, 'black', 's', { back: 'n', depth: 5.5 }),
+  design('s1a', 'uptown-s1', 'slab', [-136.5, 46.3, -127, 57.8], 29, 'black', 's', { back: 'n', depth: 5.5, lobby: 'grand' }),
   design('s1b', 'uptown-s1', 'round', [-125, 46.3, -115.5, 57.8], 27, 'gold', 's', { back: 'n', depth: 5.5 }),
   // Either side of the diagonal: the flatiron in its wedge
   design('n2a', 'uptown-n2e', 'deco', [-90.5, 1.5, -79, 13], 26, 'stone', 'n', { base: [9, 'brick'] }),
   design('m2a', 'uptown-m2w', 'round', [-108.5, 20.5, -99, 30], 25, 'blue', 'w', { base: [8, 'granite'] }),
-  design('m2b', 'uptown-m2w', 'slab', [-107, 31.6, -93.5, 39.6], 22, 'gold', 's', { base: [7, 'limestone'] }),
+  design('m2b', 'uptown-m2w', 'slab', [-107, 31.6, -93.5, 39.6], 22, 'gold', 's', { base: [7, 'limestone'], lobby: 'grand' }),
   flatiron('m2c', 'uptown-m2e', 22, 'n'),
   design('s2a', 'uptown-s2', 'twin', [-108.5, 46.3, -88, 59.2], 26, 'silver', 's', { back: 'n', depth: 7.2 }),
   design('s2b', 'uptown-s2', 'slab', [-86, 46.3, -77.5, 59.2], 23, 'black', 's', { back: 'n', depth: 6.5 }),

@@ -31,6 +31,7 @@ import { CORE, CORE_RECT, DECK, RIBS, SPIRE, VIEWERS } from './skydeck';
 import { OFFICE, OFFICE_GLSL, beaconOn, officeShare } from './skyline';
 import type { Pt, Rect } from './uptown';
 import { ROOF_TERRACES } from './boulevard';
+import { FRONTAGES, SHOP_NAMES, UNIT, type ShopCharacter } from './streetlevel';
 
 /* ---------- The atlas ---------- */
 
@@ -262,50 +263,158 @@ function bronzeBand(c: CanvasRenderingContext2D, y0: number, glow: boolean) {
   c.fillRect(0, y0 + 22, W_PX, 3);
   c.fillRect(0, y0 + GROUND_PX - 4, W_PX, 4);
 }
-/** Shopfronts, the ground floor's height: two shops to a repeat, each a stone riser, a lit window of things, a door and a dark fascia */
-function shopsBand(c: CanvasRenderingContext2D, y0: number, glow: boolean) {
-  const r = rng(313);
+/**
+ * Phase 7's ground floors by street (streetlevel.ts), two shops to a repeat each: boutiques (luxe: stone piers, a
+ * dark fascia with a gold line, a tall lit window of things on plinths under spotlights, a glass door), restaurants
+ * (dining: a coloured fascia, the room behind the glass, tables, people, pendants, warm light) and everyday shops
+ * (local: a bright fascia, shelves of goods under cool light, posters on the door)
+ */
+const FASCIAS = { luxe: ['#16141f', '#1d1a28', '#232030'], dining: ['#5a1f2e', '#1f4a3a', '#1c2a55', '#5a3a1c'], local: ['#f1ece2', '#2a6fb0', '#2f8a5a', '#e0b54a'] };
+function storeBand(c: CanvasRenderingContext2D, kind: 'luxe' | 'dining' | 'local', y0: number, glow: boolean, seed: number) {
+  const r = rng(seed);
   const shop = W_PX / 2;
-  const goods = ['#e85d75', '#f2c94c', '#6fcf97', '#56ccf2', '#bb6bd9', '#f2994a', '#f3f2f7'];
   c.fillStyle = '#000';
   c.fillRect(0, y0, W_PX, GROUND_PX);
   for (let k = 0; k < 2; k++) {
     const x = k * shop;
-    const win: [number, number, number, number] = [x + 10, y0 + 20, shop - 52, GROUND_PX - 34];
+    const win: [number, number, number, number] = [x + 12, y0 + 22, shop - 52, GROUND_PX - 32];
+    const door: [number, number, number, number] = [x + shop - 36, y0 + 22, 26, GROUND_PX - 22];
     if (glow) {
-      c.fillStyle = '#ffe9c2';
+      c.fillStyle = kind === 'local' ? '#e8f4ff' : kind === 'dining' ? '#ffcf8a' : '#fff1d6';
       c.fillRect(...win);
-      c.fillStyle = 'rgba(255,233,194,0.6)';
-      c.fillRect(x + shop - 38, y0 + 22, 26, GROUND_PX - 24);
+      c.fillStyle = kind === 'dining' ? 'rgba(255,190,120,0.7)' : 'rgba(255,240,215,0.6)';
+      c.fillRect(door[0] + 2, door[1] + 2, door[2] - 4, door[3] - 2);
       continue;
     }
-    // The fascia (the sign is laid over it), the pier between shops
-    c.fillStyle = '#1e1b2c';
-    c.fillRect(x, y0, shop, 18);
-    c.fillStyle = '#6e6880';
-    c.fillRect(x, y0, 6, GROUND_PX);
-    // The window: a lit display, things on stands, the glass over it
-    c.fillStyle = '#efe4cf';
-    c.fillRect(...win);
-    for (let i = 0; i < 6; i++) {
-      c.fillStyle = goods[Math.floor(r() * goods.length)];
-      const gx = win[0] + 8 + i * ((win[2] - 20) / 6);
-      const gh = 10 + r() * 18;
-      c.fillRect(gx, win[1] + win[3] - 8 - gh, 12, gh);
+    // Piers either side, the fascia (the name is laid over it), a riser under the window
+    c.fillStyle = kind === 'luxe' ? '#d8ccb0' : kind === 'dining' ? '#3a2a24' : '#8a8598';
+    c.fillRect(x, y0, 8, GROUND_PX);
+    const fascia = FASCIAS[kind][(k + Math.floor(r() * 3)) % FASCIAS[kind].length];
+    c.fillStyle = fascia;
+    c.fillRect(x + 8, y0, shop - 8, 18);
+    if (kind === 'luxe') {
+      c.fillStyle = '#c9a24a';
+      c.fillRect(x + 8, y0 + 16, shop - 8, 2);
     }
-    c.fillStyle = '#b8a07a';
-    c.fillRect(win[0], win[1] + win[3] - 8, win[2], 8);
+    // The window: what's in it by kind
+    c.fillStyle = kind === 'luxe' ? '#efe6d6' : kind === 'dining' ? '#4a3026' : '#f4f2ee';
+    c.fillRect(...win);
+    if (kind === 'luxe') {
+      // Spotlights, two plinths with things on them, a figure in a coat
+      c.fillStyle = '#fff6dc';
+      for (let i = 0; i < 4; i++) c.fillRect(win[0] + 10 + i * 34, win[1] + 2, 6, 3);
+      c.fillStyle = '#cfc4ae';
+      c.fillRect(win[0] + 14, win[1] + win[3] - 18, 26, 18);
+      c.fillRect(win[0] + win[2] - 44, win[1] + win[3] - 14, 30, 14);
+      c.fillStyle = ['#b8892e', '#7a1f3a', '#1c2a55', '#2b2a33'][Math.floor(r() * 4)];
+      c.fillRect(win[0] + 18, win[1] + win[3] - 30, 18, 12);
+      c.fillRect(win[0] + win[2] - 38, win[1] + win[3] - 24, 18, 10);
+      c.fillStyle = '#2b2a33';
+      const mx = win[0] + win[2] / 2;
+      c.fillRect(mx - 7, win[1] + 18, 14, 32);
+      c.beginPath();
+      c.arc(mx, win[1] + 13, 6, 0, Math.PI * 2);
+      c.fill();
+    } else if (kind === 'dining') {
+      // The room: pendants, a bar along the back, tables and the people at them
+      c.fillStyle = '#6a4232';
+      c.fillRect(win[0], win[1] + win[3] - 26, win[2], 10);
+      c.fillStyle = '#ffd98a';
+      for (let i = 0; i < 4; i++) {
+        c.fillRect(win[0] + 12 + i * 34, win[1], 1, 10);
+        c.fillRect(win[0] + 8 + i * 34, win[1] + 10, 9, 5);
+      }
+      c.fillStyle = '#c9b48a';
+      for (let i = 0; i < 3; i++) c.fillRect(win[0] + 10 + i * 46, win[1] + win[3] - 12, 26, 4);
+      c.fillStyle = '#1a1626';
+      for (let i = 0; i < 4; i++) {
+        const px = win[0] + 8 + i * 34 + r() * 8;
+        c.fillRect(px, win[1] + win[3] - 24, 7, 14);
+        c.beginPath();
+        c.arc(px + 3.5, win[1] + win[3] - 27, 4, 0, Math.PI * 2);
+        c.fill();
+      }
+    } else {
+      // Shelves of goods
+      for (let row = 0; row < 3; row++) {
+        const sy = win[1] + 8 + row * 16;
+        c.fillStyle = '#b8b2c4';
+        c.fillRect(win[0] + 4, sy + 10, win[2] - 8, 2);
+        for (let i = 0; i < 12; i++) {
+          c.fillStyle = ['#e85d75', '#f2c94c', '#6fcf97', '#56ccf2', '#bb6bd9', '#f2994a', '#3a6fb0'][Math.floor(r() * 7)];
+          c.fillRect(win[0] + 6 + i * 11, sy + 2 + r() * 2, 8, 8);
+        }
+      }
+    }
     glaze(c, ...win);
-    // The riser under it, the door beside it
-    c.fillStyle = '#4a4660';
-    c.fillRect(x + 6, y0 + GROUND_PX - 14, shop - 44, 14);
-    c.fillStyle = '#2a2436';
-    c.fillRect(x + shop - 38, y0 + 22, 26, GROUND_PX - 22);
-    glaze(c, x + shop - 36, y0 + 24, 22, GROUND_PX - 26);
-    c.fillStyle = '#c9b48a';
-    c.fillRect(x + shop - 18, y0 + 52, 3, 14);
+    c.fillStyle = kind === 'luxe' ? '#cfc4ae' : '#4a4660';
+    c.fillRect(x + 8, y0 + GROUND_PX - 10, shop - 44, 10);
+    // The door: a frame, its glass, a handle (gold for the boutiques), a poster or a menu on a shop's
+    c.fillStyle = kind === 'luxe' ? '#2a2436' : '#3a364c';
+    c.fillRect(...door);
+    glaze(c, door[0] + 2, door[1] + 2, door[2] - 4, door[3] - 2);
+    c.fillStyle = kind === 'luxe' ? '#e0b54a' : '#c8cce0';
+    c.fillRect(door[0] + door[2] - 7, door[1] + 30, 3, 16);
+    if (kind !== 'luxe') {
+      c.fillStyle = kind === 'dining' ? '#f3e2b0' : ['#ff4fd8', '#4fe3ff', '#f2c94c'][Math.floor(r() * 3)];
+      c.fillRect(door[0] + 6, door[1] + 10, 12, 16);
+    }
   }
 }
+/** A grand lobby's portal, the podium's height: marble and gold inside, a chandelier, a pair of doors, warm light */
+function grandBand(c: CanvasRenderingContext2D, y0: number, glow: boolean) {
+  c.fillStyle = '#000';
+  c.fillRect(0, y0, W_PX, PODIUM_PX);
+  if (glow) {
+    c.fillStyle = 'rgba(255,224,160,0.65)';
+    c.fillRect(0, y0, W_PX, PODIUM_PX);
+    c.fillStyle = '#fff3d0';
+    for (const cx of [W_PX * 0.25, W_PX * 0.75]) {
+      c.beginPath();
+      c.arc(cx, y0 + 34, 16, 0, Math.PI * 2);
+      c.fill();
+    }
+    return;
+  }
+  // Marble walls with veins, a dark stone floor, gold columns at the back, two chandeliers, the reception's desk
+  const g = c.createLinearGradient(0, y0, 0, y0 + PODIUM_PX);
+  g.addColorStop(0, '#e9e1d2');
+  g.addColorStop(1, '#cbbfa8');
+  c.fillStyle = g;
+  c.fillRect(0, y0, W_PX, PODIUM_PX);
+  c.strokeStyle = 'rgba(140,120,100,0.35)';
+  c.lineWidth = 1;
+  for (let i = 0; i < 9; i++) {
+    c.beginPath();
+    c.moveTo(i * 44, y0 + 10);
+    c.bezierCurveTo(i * 44 + 30, y0 + 40, i * 44 - 10, y0 + 70, i * 44 + 24, y0 + PODIUM_PX - 20);
+    c.stroke();
+  }
+  c.fillStyle = '#3a3346';
+  c.fillRect(0, y0 + PODIUM_PX - 14, W_PX, 14);
+  c.fillStyle = '#c9a24a';
+  for (const x of [40, 150, 234, 344]) c.fillRect(x, y0 + 20, 8, PODIUM_PX - 34);
+  c.fillStyle = '#6a4a2a';
+  c.fillRect(W_PX / 2 - 50, y0 + PODIUM_PX - 34, 100, 20);
+  c.fillStyle = '#c9a24a';
+  c.fillRect(W_PX / 2 - 52, y0 + PODIUM_PX - 36, 104, 3);
+  for (const cx of [W_PX * 0.25, W_PX * 0.75]) {
+    c.fillStyle = '#c9a24a';
+    c.fillRect(cx - 1, y0, 2, 22);
+    c.beginPath();
+    c.ellipse(cx, y0 + 34, 18, 9, 0, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = '#fff6dc';
+    for (let k = -2; k <= 2; k++) c.fillRect(cx + k * 7 - 1, y0 + 40, 2, 6);
+  }
+  glaze(c, 0, y0, W_PX, PODIUM_PX);
+  // The glazing's bronze frame: a transom and mullions
+  c.fillStyle = '#8a6a3c';
+  c.fillRect(0, y0, W_PX, 5);
+  c.fillRect(0, y0 + 50, W_PX, 4);
+  for (let x = 0; x < W_PX; x += W_PX / 6) c.fillRect(x, y0, 4, PODIUM_PX);
+}
+
 /** A service wall, the podium's whole height: stone panels, louvres, a steel door with a lamp over it */
 function serviceBand(c: CanvasRenderingContext2D, y0: number, glow: boolean) {
   c.fillStyle = glow ? '#000' : '#6e6880';
@@ -351,7 +460,7 @@ function ribbonBand(c: CanvasRenderingContext2D, y0: number, glow: boolean) {
 }
 
 const ATLAS = (() => {
-  const rows: [string, number][] = [...SKINS.map((k): [string, number] => [k, BAND_PX]), ...MASONRY.map((k): [string, number] => [k, BAND_PX]), ['atrium', PODIUM_PX], ['bronze', GROUND_PX], ['shops', GROUND_PX], ['service', PODIUM_PX], ['ribbon', RIBBON_PX]];
+  const rows: [string, number][] = [...SKINS.map((k): [string, number] => [k, BAND_PX]), ...MASONRY.map((k): [string, number] => [k, BAND_PX]), ['atrium', PODIUM_PX], ['bronze', GROUND_PX], ['service', PODIUM_PX], ['ribbon', RIBBON_PX], ['luxe', GROUND_PX], ['dining', GROUND_PX], ['local', GROUND_PX], ['grand', PODIUM_PX]];
   const tops: Record<string, number> = {};
   let H = 0;
   for (const [k, h] of rows) {
@@ -363,9 +472,12 @@ const ATLAS = (() => {
     MASONRY.forEach((k, i) => masonryBand(c, k, tops[k], glow, 950 + i));
     atriumBand(c, tops.atrium, glow);
     bronzeBand(c, tops.bronze, glow);
-    shopsBand(c, tops.shops, glow);
     serviceBand(c, tops.service, glow);
     ribbonBand(c, tops.ribbon, glow);
+    storeBand(c, 'luxe', tops.luxe, glow, 61);
+    storeBand(c, 'dining', tops.dining, glow, 62);
+    storeBand(c, 'local', tops.local, glow, 63);
+    grandBand(c, tops.grand, glow);
   };
   const map = canvasTex(W_PX, H, draw(false));
   const emissiveMap = canvasTex(W_PX / 2, H / 2, (c) => {
@@ -406,9 +518,10 @@ const ATLAS = (() => {
     masonry: Object.fromEntries(MASONRY.map((k) => [k, band(tops[k], BAND_PX, BAY * COLS, FLOOR * ROWS)])) as Record<Masonry, Band>,
     atrium: band(tops.atrium, PODIUM_PX, GROUND_W, PODIUM.h),
     bronze: band(tops.bronze, GROUND_PX, GROUND_W, GROUND.h),
-    shops: band(tops.shops, GROUND_PX, GROUND_W, GROUND.h),
     service: band(tops.service, PODIUM_PX, GROUND_W, PODIUM.h),
     ribbon: band(tops.ribbon, RIBBON_PX, GROUND_W, PODIUM.h - GROUND.h),
+    store: { luxe: band(tops.luxe, GROUND_PX, GROUND_W, GROUND.h), dining: band(tops.dining, GROUND_PX, GROUND_W, GROUND.h), local: band(tops.local, GROUND_PX, GROUND_W, GROUND.h) },
+    grand: band(tops.grand, PODIUM_PX, GROUND_W, PODIUM.h),
   };
 })();
 
@@ -565,7 +678,7 @@ function tower(b: Batch, t: Highrise, low: boolean) {
       else if (i === 0 && (t.design === 'flatiron' || t.design === 'spire')) {
         // A ground floor of its own: the flatiron's shops (a storey over them in its stone), the spire's glazed foot
         const g = t.design === 'flatiron' ? GROUND.h : PODIUM.h;
-        walls(b, t.design === 'flatiron' ? ATLAS.shops : ATLAS.atrium, line, SLAB, SLAB + g);
+        walls(b, t.design === 'flatiron' ? ATLAS.store.luxe : ATLAS.atrium, line, SLAB, SLAB + g);
         walls(b, ATLAS.skin[p.skin as Skin], line, SLAB + g, SLAB + p.y1, i * 0.37);
       } else walls(b, ATLAS.skin[p.skin as Skin], line, SLAB + p.y0, SLAB + p.y1, i * 0.37);
       // The roof tucked just under the parapet's cap, the parapet round it
@@ -669,7 +782,27 @@ const normalOf = (a: Pt, c: Pt): Pt => {
   const l = Math.hypot(c[0] - a[0], c[1] - a[1]) || 1;
   return [-(c[1] - a[1]) / l, (c[0] - a[0]) / l];
 };
-/** What a podium's side is: its lobby's front, its back (service), or a side (shops, or glass with an atrium) */
+/** A point a along a wall from a to c, and the wall's direction */
+const along = (a: Pt, c: Pt, d: number): Pt => {
+  const len = Math.hypot(c[0] - a[0], c[1] - a[1]);
+  return [a[0] + ((c[0] - a[0]) / len) * d, a[1] + ((c[1] - a[1]) / len) * d];
+};
+/** How far along a wall from a to c a point's foot is */
+const offsetOn = (a: Pt, c: Pt, p: Pt) => {
+  const len = Math.hypot(c[0] - a[0], c[1] - a[1]);
+  return ((p[0] - a[0]) * (c[0] - a[0]) + (p[1] - a[1]) * (c[1] - a[1])) / len;
+};
+/** A ground floor of shops of a character and the dark band of the storey over it */
+function shopsWall(b: Batch, char: ShopCharacter, a: Pt, c: Pt, u0 = 0) {
+  wall(b, ATLAS.store[char], a, c, SLAB, SLAB + GROUND.h, u0);
+  wall(b, ATLAS.ribbon, a, c, SLAB + GROUND.h, SLAB + PODIUM.h, u0);
+}
+
+/**
+ * What a podium's (or base's) side is, by the street it faces (streetlevel.ts): its lobby's front, its back
+ * (service), or a side of shops of its street's character (glass round an atrium where it faces a luxe street; a
+ * service wall where it faces no street); an arcaded side's ground floor stands back behind round columns
+ */
 function podium(b: Batch, t: Highrise, p: Part) {
   const G = SLAB + GROUND.h;
   const H = SLAB + PODIUM.h;
@@ -683,95 +816,128 @@ function podium(b: Batch, t: Highrise, p: Part) {
     rim(b, shrink(line, -0.1), H - 0.06, 0.2, 0.14, CORNICE[t.base.skin]);
     rim(b, shrink(line, -0.16), top - 0.5, 0.32, 0.2, CORNICE[t.base.skin]);
   }
+  const set = (f: Face) => f === t.front ? t.lobby === 'colonnade' || t.lobby === 'arcade' : (t.arcades ?? []).includes(f);
   for (const { f, a, c } of sides(p.rect)) {
-    if (f === OPPOSITE[t.front]) {
+    if (f === OPPOSITE[t.front] && !set(f)) {
       wall(b, ATLAS.service, a, c, SLAB, H, 0);
       continue;
     }
+    const fr = FRONTAGES.find((q) => q.tower === t.id && q.side === f);
+    const char = fr?.char ?? 'service';
+    if (set(f)) {
+      // A colonnade or an arcade: the ground floor set back behind its columns, the storey over it on the side's line
+      const foot = sides(p.foot!).find((q) => q.f === f)!;
+      if (f === t.front) wall(b, ATLAS.bronze, foot.a, foot.c, SLAB, G, 0);
+      else wall(b, ATLAS.store[char === 'service' ? 'local' : char], foot.a, foot.c, SLAB, G, 0);
+      wall(b, ATLAS.ribbon, a, c, G, H, 0);
+      // The soffit over the walk, lit by downlights
+      const [x0, z0, x1, z1] = [Math.min(a[0], c[0], foot.a[0], foot.c[0]), Math.min(a[1], c[1], foot.a[1], foot.c[1]), Math.max(a[0], c[0], foot.a[0], foot.c[0]), Math.max(a[1], c[1], foot.a[1], foot.c[1])];
+      b.box(x0, G - 0.06, z0, x1 - x0, 0.06, z1 - z0, SOFFIT);
+      b.detail(() => {
+        const n = normalOf(a, c);
+        const len = Math.hypot(c[0] - a[0], c[1] - a[1]);
+        const mid: Pt = [(a[0] + foot.a[0]) / 2, (a[1] + foot.a[1]) / 2];
+        for (let d = 0.9; d < len - 0.5; d += 1.7) {
+          const u: Pt = [(c[0] - a[0]) / len, (c[1] - a[1]) / len];
+          const [x, z] = [mid[0] + u[0] * d - n[0] * 0.05, mid[1] + u[1] * d - n[1] * 0.05];
+          b.box(x - 0.12, G - 0.075, z - 0.12, 0.24, 0.015, 0.24, DOWNLIGHT);
+        }
+      });
+      continue;
+    }
     if (f !== t.front) {
-      if (t.lobby === 'atrium' || t.lobby === 'arcade') wall(b, ATLAS.atrium, a, c, SLAB, H, 0);
-      else {
-        wall(b, ATLAS.shops, a, c, SLAB, G, 0);
-        wall(b, ATLAS.ribbon, a, c, G, H, 0);
-      }
+      if (char === 'service') wall(b, ATLAS.service, a, c, SLAB, H, 0);
+      else if (char === 'luxe' && (t.lobby === 'atrium' || t.lobby === 'arcade' || t.lobby === 'grand')) wall(b, ATLAS.atrium, a, c, SLAB, H, 0);
+      else shopsWall(b, char, a, c);
       continue;
     }
     if (t.lobby === 'atrium') {
       wall(b, ATLAS.atrium, a, c, SLAB, H, 0);
       continue;
     }
+    const front = char === 'service' ? 'luxe' : char;
     if (t.lobby === 'retail') {
-      wall(b, ATLAS.shops, a, c, SLAB, G, 0);
-      wall(b, ATLAS.ribbon, a, c, G, H, 0);
+      shopsWall(b, front, a, c);
       continue;
     }
-    // A colonnade or an arcade: the ground floor set back behind its columns, the storey over it on the front's line
-    const foot = sides(p.foot!).find((q) => q.f === f)!;
-    wall(b, ATLAS.bronze, foot.a, foot.c, SLAB, G, 0);
-    wall(b, ATLAS.ribbon, a, c, G, H, 0);
-    // The soffit over the walk, lit by downlights
-    const [x0, z0, x1, z1] = [Math.min(a[0], c[0], foot.a[0], foot.c[0]), Math.min(a[1], c[1], foot.a[1], foot.c[1]), Math.max(a[0], c[0], foot.a[0], foot.c[0]), Math.max(a[1], c[1], foot.a[1], foot.c[1])];
-    b.box(x0, G - 0.06, z0, x1 - x0, 0.06, z1 - z0, SOFFIT);
-    // The columns: square stone ones with gold capitals for a colonnade, round ones for an arcade
-    for (const [x, z] of t.columns) {
-      const w = GROUND.col;
-      if (t.lobby === 'colonnade') {
-        b.box(x - w / 2, SLAB, z - w / 2, w, GROUND.h - 0.06, w, STONE_COL);
-        b.box(x - w / 2 - 0.05, SLAB, z - w / 2 - 0.05, w + 0.1, 0.18, w + 0.1, STONE_DARK);
-        b.box(x - w / 2 - 0.06, G - 0.24, z - w / 2 - 0.06, w + 0.12, 0.16, w + 0.12, GOLD);
-      } else b.add(new THREE.CylinderGeometry(w / 2, w / 2, GROUND.h - 0.06, 12, 1, true).translate(x, SLAB + (GROUND.h - 0.06) / 2, z), STONE_COL);
-    }
-    b.detail(() => {
-      const n = normalOf(a, c);
-      const len = Math.hypot(c[0] - a[0], c[1] - a[1]);
-      const mid: Pt = [(a[0] + foot.a[0]) / 2, (a[1] + foot.a[1]) / 2];
-      for (let d = 0.9; d < len - 0.5; d += 1.7) {
-        const u: Pt = [(c[0] - a[0]) / len, (c[1] - a[1]) / len];
-        const [x, z] = [mid[0] + u[0] * d - n[0] * 0.05, mid[1] + u[1] * d - n[1] * 0.05];
-        b.box(x - 0.12, G - 0.075, z - 0.12, 0.24, 0.015, 0.24, DOWNLIGHT);
-      }
-    });
+    // A grand lobby: its portal (the marble and the chandeliers through the glass, the podium's height) either side
+    // of the door, the street's shops beyond it
+    const d = offsetOn(a, c, t.door);
+    const len = Math.hypot(c[0] - a[0], c[1] - a[1]);
+    const [p1, p2] = [along(a, c, d - PORTAL), along(a, c, d + PORTAL)];
+    shopsWall(b, front, a, p1);
+    wall(b, ATLAS.grand, p1, p2, SLAB, H, 0);
+    shopsWall(b, front, p2, c, (d + PORTAL) / GROUND_W);
+    void len;
+  }
+  // The columns along every set-back side: square stone ones with gold capitals for a colonnade, round ones otherwise
+  for (const [x, z] of t.columns) {
+    const w = GROUND.col;
+    if (t.lobby === 'colonnade') {
+      b.box(x - w / 2, SLAB, z - w / 2, w, GROUND.h - 0.06, w, STONE_COL);
+      b.box(x - w / 2 - 0.05, SLAB, z - w / 2 - 0.05, w + 0.1, 0.18, w + 0.1, STONE_DARK);
+      b.box(x - w / 2 - 0.06, G - 0.24, z - w / 2 - 0.06, w + 0.12, 0.16, w + 0.12, GOLD);
+    } else b.add(new THREE.CylinderGeometry(w / 2, w / 2, GROUND.h - 0.06, 12, 1, true).translate(x, SLAB + (GROUND.h - 0.06) / 2, z), STONE_COL);
   }
 }
+/** Half a grand lobby's portal along its front */
+const PORTAL = 2.3;
 
-/** The shops' names: one small atlas, a row each (fixed made-up copy) */
-const SHOP_NAMES = ['ATELIER NOIR', 'NORTH & PINE', 'GILT', 'MAISON LUNE', 'BREW BAR', 'PAPER & INK', 'BLOOM', 'THE TAILOR', 'OPTIKA', 'TIDE WINES', 'SALT BAKERY', 'CASHMERE CO'];
+/** The shops' names: one atlas, a row each, the luxe, then the dining, then the local (fixed made-up copy) */
+const CHARS: ShopCharacter[] = ['luxe', 'dining', 'local'];
+const NAME_ROWS = CHARS.flatMap((ch) => SHOP_NAMES[ch].map((n) => [ch, n] as const));
 const SHOP_SIGNS = (() => {
-  const tex = canvasTex(256, 32 * SHOP_NAMES.length, (c) => {
-    SHOP_NAMES.forEach((n, i) => {
+  const tex = canvasTex(256, 32 * NAME_ROWS.length, (c) => {
+    NAME_ROWS.forEach(([ch, n], i) => {
       const y = i * 32;
-      c.fillStyle = '#14121f';
+      c.fillStyle = ch === 'luxe' ? '#14121f' : ch === 'dining' ? FASCIAS.dining[i % FASCIAS.dining.length] : FASCIAS.local[i % FASCIAS.local.length];
       c.fillRect(0, y, 256, 32);
-      c.fillStyle = ['#f3e2b0', '#ffffff', '#9fe8ff', '#ffc9e4'][i % 4];
-      c.font = `700 20px ${FONT_DISPLAY}`;
+      c.fillStyle = ch === 'luxe' ? '#e8c977' : ch === 'dining' ? ['#fff3d6', '#f3e2b0', '#ffc9e4'][i % 3] : i % FASCIAS.local.length === 0 || i % FASCIAS.local.length === 3 ? '#1c1a28' : '#ffffff';
+      c.font = `${ch === 'luxe' ? 600 : 700} ${ch === 'luxe' ? 18 : 20}px ${FONT_DISPLAY}`;
       c.textAlign = 'center';
       c.textBaseline = 'middle';
+      if (ch === 'luxe') (c as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = '3px';
       c.fillText(n, 128, y + 17);
+      (c as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = '0px';
     });
   });
   return siteMat('uptown-shops', lit(new THREE.MeshBasicMaterial({ map: tex, color: '#ffffff' }), 0.9, 1.25));
 })();
+const rowOf = (ch: ShopCharacter, name: number) => CHARS.slice(0, CHARS.indexOf(ch)).reduce((a, k) => a + SHOP_NAMES[k].length, 0) + name;
 const AWNINGS = [toon('#1c2a55'), toon('#5a1f2e'), toon('#2b4a3a'), toon('#3a364c'), toon('#8a6a3c')];
+const STRIPE = toon('#f1ece2');
+const BLADE = toon('#1b1830');
+/** The dining street's neon blades: one material a colour, steady */
+const BLADE_NEON = [neon('#ff4fd8', 0.2, 2.2), neon('#4fe3ff', 0.2, 2.2), neon('#ffd27a', 0.2, 2.2)];
 
-/** Each shop along a wall of shops (the band's two to a repeat, from the wall's start): its awning and its name over the window (near) */
-function shopfronts(b: Batch, a: Pt, c: Pt, seed: number, skip?: Pt) {
-  const len = Math.hypot(c[0] - a[0], c[1] - a[1]);
-  const u: Pt = [(c[0] - a[0]) / len, (c[1] - a[1]) / len];
-  const n = normalOf(a, c);
-  const shop = GROUND_W / 2;
+/** One shop's name on its fascia and what hangs over its window, by its street's character (near) */
+function shopfront(b: Batch, ch: ShopCharacter, name: number, at: Pt, n: Pt, k: number) {
+  const [x, z] = at;
   const ry = Math.atan2(n[0], n[1]);
-  for (let i = 0; (i + 1) * shop <= len + 0.01; i++) {
-    const d = i * shop + 1.0;
-    const [x, z] = [a[0] + u[0] * d, a[1] + u[1] * d];
-    if (skip && Math.hypot(x - skip[0], z - skip[1]) < 1.9) continue;
-    const k = (seed + i * 7) % SHOP_NAMES.length;
-    // The name on the fascia
-    const g = new THREE.PlaneGeometry(1.7, 0.28);
-    const uv = g.attributes.uv;
-    for (let v = 0; v < uv.count; v++) uv.setY(v, 1 - (k + 1 - uv.getY(v)) / SHOP_NAMES.length);
-    b.add(g.rotateY(ry).translate(x + n[0] * 0.012, SLAB + GROUND.h - 0.2, z + n[1] * 0.012), SHOP_SIGNS);
-    // A sloping awning over the window
-    b.add(new THREE.BoxGeometry(1.8, 0.035, 0.75).rotateX(0.32).rotateY(ry).translate(x + n[0] * 0.36, SLAB + GROUND.h - 0.48, z + n[1] * 0.36), AWNINGS[(seed + i) % AWNINGS.length]);
+  // The name on the fascia
+  const g = new THREE.PlaneGeometry(1.7, 0.28);
+  const uv = g.attributes.uv;
+  const row = rowOf(ch, name);
+  for (let v = 0; v < uv.count; v++) uv.setY(v, 1 - (row + 1 - uv.getY(v)) / NAME_ROWS.length);
+  b.add(g.rotateY(ry).translate(x + n[0] * 0.012, SLAB + GROUND.h - 0.2, z + n[1] * 0.012), SHOP_SIGNS);
+  if (ch === 'luxe') {
+    // A flat black canopy with a gold edge
+    b.add(new THREE.BoxGeometry(1.9, 0.05, 0.5).rotateY(ry).translate(x + n[0] * 0.26, SLAB + GROUND.h - 0.42, z + n[1] * 0.26), BLADE);
+    b.add(new THREE.BoxGeometry(1.92, 0.025, 0.03).rotateY(ry).translate(x + n[0] * 0.5, SLAB + GROUND.h - 0.42, z + n[1] * 0.5), GOLD);
+    return;
+  }
+  // A sloping awning (striped over the restaurants), its colour by the shop
+  const awn = AWNINGS[(name + k) % AWNINGS.length];
+  b.add(new THREE.BoxGeometry(1.8, 0.035, 0.75).rotateX(0.32).rotateY(ry).translate(x + n[0] * 0.36, SLAB + GROUND.h - 0.48, z + n[1] * 0.36), awn);
+  if (ch === 'dining') {
+    for (const s of [-0.6, 0, 0.6]) b.add(new THREE.BoxGeometry(0.22, 0.04, 0.76).rotateX(0.32).rotateY(ry).translate(x + Math.cos(ry) * s + n[0] * 0.36, SLAB + GROUND.h - 0.475, z - Math.sin(ry) * s + n[1] * 0.36), STRIPE);
+    // Every third a neon blade out from the wall over the awning
+    if (k % 3 === 0) {
+      const [bx, bz] = [x + Math.cos(ry) * 1.05 + n[0] * 0.32, z - Math.sin(ry) * 1.05 + n[1] * 0.32];
+      b.add(new THREE.BoxGeometry(0.06, 0.8, 0.5).rotateY(ry + Math.PI / 2).rotateY(-Math.PI / 2).translate(bx, SLAB + 2.75, bz), BLADE);
+      b.add(new THREE.BoxGeometry(0.075, 0.7, 0.04).rotateY(ry).translate(bx + n[0] * 0.24, SLAB + 2.75, bz + n[1] * 0.24), BLADE_NEON[(name + k) % BLADE_NEON.length]);
+      b.add(new THREE.BoxGeometry(0.075, 0.04, 0.42).rotateY(ry).translate(bx, SLAB + 3.12, bz), BLADE_NEON[(name + k) % BLADE_NEON.length]);
+    }
   }
 }
 
@@ -788,8 +954,8 @@ function entrance(b: Batch, t: Highrise, low: boolean) {
     const [p, q] = [at(Math.min(o0, o1), Math.min(a0, a1)), at(Math.max(o0, o1), Math.max(a0, a1))];
     b.box(Math.min(p[0], q[0]), y0, Math.min(p[1], q[1]), Math.abs(q[0] - p[0]) || 0.01, y1 - y0, Math.abs(q[1] - p[1]) || 0.01, mat);
   };
-  const revolving = (o: number) => {
-    const [rx, rz] = at(o);
+  const revolving = (o: number, a = 0) => {
+    const [rx, rz] = at(o, a);
     b.add(new THREE.CylinderGeometry(0.62, 0.62, 2.1, 12, 1, true).translate(rx, SLAB + 1.05, rz), DOOR_GLASS);
     b.add(new THREE.CylinderGeometry(0.68, 0.68, 0.12, 12).translate(rx, SLAB + 2.16, rz), GOLD);
   };
@@ -804,6 +970,17 @@ function entrance(b: Batch, t: Highrise, low: boolean) {
       // A narrow canopy over the lobby's door between the shops
       boxAt(0, 1.5, -1.4, 1.4, SLAB + 2.38, SLAB + 2.5, CANOPY);
       boxAt(1.44, 1.5, -1.4, 1.4, SLAB + 2.35, SLAB + 2.39, TRIM[t.skin]);
+    } else if (t.lobby === 'grand') {
+      // The portal: stone pilasters either side, an entablature over them with a gold band, a bronze canopy
+      const stone = t.base?.skin === 'granite' ? STONE_DARK : STONE_COL;
+      for (const s of [-1, 1]) {
+        boxAt(0, 0.22, s * PORTAL - 0.28, s * PORTAL + 0.28, SLAB, SLAB + PODIUM.h + 0.1, stone);
+        boxAt(0, 0.28, s * PORTAL - 0.34, s * PORTAL + 0.34, SLAB, SLAB + 0.3, STONE_DARK);
+      }
+      boxAt(0, 0.3, -PORTAL - 0.4, PORTAL + 0.4, SLAB + PODIUM.h + 0.1, SLAB + PODIUM.h + 0.55, stone);
+      boxAt(0.3, 0.32, -PORTAL - 0.4, PORTAL + 0.4, SLAB + PODIUM.h + 0.2, SLAB + PODIUM.h + 0.3, GOLD);
+      boxAt(0, 1.3, -1.9, 1.9, SLAB + 2.55, SLAB + 2.67, CANOPY);
+      boxAt(1.26, 1.3, -1.9, 1.9, SLAB + 2.52, SLAB + 2.56, TRIM[t.skin]);
     } else if (t.lobby === 'pavilion') {
       // The spire's glass pavilion out from its foot, a flat roof over it lit along its edge
       const line: Pt[] = [at(0, -2.6), at(2.4, -2.6), at(2.4, 2.6), at(0, 2.6)];
@@ -816,19 +993,23 @@ function entrance(b: Batch, t: Highrise, low: boolean) {
     }
   }, 'all');
   b.detail(() => {
-    // The revolving door: in the vestibule's front, the pavilion's or the shops' door (a colonnade's doors are its bronze ones)
-    if (t.lobby !== 'colonnade' && t.lobby !== 'arcade') revolving(t.lobby === 'atrium' ? 0.7 : t.lobby === 'pavilion' ? 2.4 : 0.62);
-    // Bronze lanterns either side of a colonnade's doors, on the wall behind the columns
+    // The revolving door: in the vestibule's front, the pavilion's or the shops' door; a grand lobby's two (a
+    // colonnade's doors are its bronze ones)
+    if (t.lobby === 'grand') for (const s of [-1, 1]) revolving(0.62, s * 0.95);
+    else if (t.lobby !== 'colonnade' && t.lobby !== 'arcade') revolving(t.lobby === 'atrium' ? 0.7 : t.lobby === 'pavilion' ? 2.4 : 0.62);
+    // Bronze lanterns either side of a colonnade's doors, on the wall behind the columns (on a grand portal's pilasters)
     else for (const s of [-1, 1]) boxAt(-GROUND.recess + 0.01, -GROUND.recess + 0.2, s * 1.2 - 0.1, s * 1.2 + 0.1, SLAB + 1.6, SLAB + 1.95, LANTERN);
+    if (t.lobby === 'grand') for (const s of [-1, 1]) boxAt(0.22, 0.42, s * PORTAL - 0.1, s * PORTAL + 0.1, SLAB + 1.7, SLAB + 2.1, LANTERN);
     if (low) return;
-    // Planters either side of the way in, clipped shrubs in them
+    // Planters either side of the way in, clipped shrubs in them (a grand lobby has its sculpture: streetlevel.ts)
     const half = t.lobby === 'pavilion' ? 3.4 : 2.2;
-    for (const s of [-1, 1]) {
-      const o = t.lobby === 'pavilion' ? 1.2 : 0.9;
-      boxAt(o - 0.35, o + 0.35, s * half - 0.45, s * half + 0.45, SLAB, SLAB + 0.5, PLANTER);
-      const [px, pz] = at(o, s * half);
-      b.add(new THREE.IcosahedronGeometry(0.42, 0).scale(1, 0.8, 1).translate(px, SLAB + 0.78, pz), SHRUB);
-    }
+    if (t.lobby !== 'grand')
+      for (const s of [-1, 1]) {
+        const o = t.lobby === 'pavilion' ? 1.2 : 0.9;
+        boxAt(o - 0.35, o + 0.35, s * half - 0.45, s * half + 0.45, SLAB, SLAB + 0.5, PLANTER);
+        const [px, pz] = at(o, s * half);
+        b.add(new THREE.IcosahedronGeometry(0.42, 0).scale(1, 0.8, 1).translate(px, SLAB + 0.78, pz), SHRUB);
+      }
     // Flags out front of an atrium tower
     if (t.lobby === 'atrium')
       for (const k of [-1, 0, 1]) {
@@ -837,20 +1018,34 @@ function entrance(b: Batch, t: Highrise, low: boolean) {
         const flag = new THREE.BoxGeometry(0.9, 0.55, 0.02).translate(0.47, 0, 0);
         b.add(flag.rotateY(across ? 0 : Math.PI / 2).translate(fx, SLAB + 3.75, fz), FLAGS[(k + 1 + t.id.length) % FLAGS.length]);
       }
-    // Shops: their awnings and names (the podium's sides with shops, and its front if it's retail)
-    const pod = t.parts[0];
-    if (pod.skin === 'podium' && (t.lobby === 'retail' || t.lobby === 'colonnade'))
-      for (const { f, a, c } of sides(pod.rect)) {
-        if (f === OPPOSITE[t.front]) continue;
-        if (f === t.front && t.lobby !== 'retail') continue;
-        shopfronts(b, a, c, t.id.charCodeAt(1) + t.id.charCodeAt(2) * 3 + f.charCodeAt(0), f === t.front ? t.door : undefined);
-      }
+    // The shops along its sides: their names and what hangs over their windows (streetlevel.ts's units)
+    for (const fr of FRONTAGES.filter((q) => q.tower === t.id && q.char !== 'service')) {
+      const foot = (t.arcades ?? []).includes(fr.side) && t.parts[0].foot;
+      fr.units.forEach((un, k) => {
+        // (under an arcade the names go on the ground floor set back behind the columns, no awnings)
+        if (foot) {
+          const [x, z] = [un.at[0] - fr.n[0] * GROUND.recess, un.at[1] - fr.n[1] * GROUND.recess];
+          const g = new THREE.PlaneGeometry(1.7, 0.28);
+          const uv = g.attributes.uv;
+          const row = rowOf(fr.char as ShopCharacter, un.name);
+          for (let v = 0; v < uv.count; v++) uv.setY(v, 1 - (row + 1 - uv.getY(v)) / NAME_ROWS.length);
+          b.add(g.rotateY(Math.atan2(fr.n[0], fr.n[1])).translate(x + fr.n[0] * 0.012, SLAB + GROUND.h - 0.32, z + fr.n[1] * 0.012), SHOP_SIGNS);
+        } else shopfront(b, fr.char as ShopCharacter, un.name, un.at, fr.n, k);
+      });
+    }
     // The flatiron's shops all round its foot
     if (t.design === 'flatiron') {
       const line = t.parts[0].poly!;
       line.forEach((a, i) => {
         const c = line[(i + 1) % line.length];
-        if (Math.hypot(c[0] - a[0], c[1] - a[1]) > 3) shopfronts(b, a, c, i * 5 + 3, t.door);
+        const len = Math.hypot(c[0] - a[0], c[1] - a[1]);
+        if (len <= 3) return;
+        const n = normalOf(a, c);
+        for (let k = 0; (k + 1) * UNIT <= len + 0.01; k++) {
+          const p = along(a, c, k * UNIT + UNIT / 2);
+          if (Math.hypot(p[0] - t.door[0], p[1] - t.door[1]) < 1.9) continue;
+          shopfront(b, 'luxe', (i * 5 + k * 7 + 3) % SHOP_NAMES.luxe.length, p, n, k);
+        }
       });
     }
   });

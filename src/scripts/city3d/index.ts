@@ -17,6 +17,7 @@ import { PARK_LAMPS, PARK_TREES, WESTLAKE_RECT } from './westlake';
 import { GARDEN_LAMPS, GARDEN_PEOPLE } from './gardens';
 import { LAMPS as PLAZA_LAMPS, PLAZA_PEOPLE, TERRACE_LAMPS, TERRACE_TREES, TREES as PLAZA_TREES } from './plaza';
 import { BOULEVARD_PEOPLE, EDGE_LAMPS, LAND_TREES, WATER_TREES } from './boulevard';
+import { STREET_PEOPLE } from './streetlevel';
 import { DECK_Y as BOARDWALK_Y } from './waterfront';
 import { createDistricts } from './districts';
 import { buildStadium } from './stadium3d';
@@ -272,6 +273,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   for (const [x, z] of [...LAND_TREES, ...WATER_TREES]) addTree(x, z, 0.8, false, BOARDWALK_Y + 0.42);
   for (const [x, z, ry] of EDGE_LAMPS) addLamp(x, z, ry, BOARDWALK_Y);
   BOULEVARD_PEOPLE.forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push({ x: p.x, z: p.z, y: (p.roof ? SLAB : 0) + p.y, ry: p.ry, act: p.act }));
+  // ...and at Uptown's café tables and its grand lobbies' doors (Phase 7)
+  STREET_PEOPLE.forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push({ x: p.x, z: p.z, y: SLAB + p.y, ry: p.ry, act: p.act }));
   // ...and the stadium's, north of the highway (stadium.ts): no trees on its block, its road and car park or under its footbridge
   for (const r of STADIUM_RECTS) keepTreesOff(r);
   for (const [x, z, ry, y] of STADIUM_LAMPS) addLamp(x, z, ry, y);

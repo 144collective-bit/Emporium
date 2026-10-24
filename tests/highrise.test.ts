@@ -182,7 +182,7 @@ test('solid in strips no wider than STRIP, covering every part to its top', () =
 });
 
 test('the lobbies: every design, a colonnade\'s or an arcade\'s ground floor set back behind its columns (walkable under the storey over it)', () => {
-  assert.deepEqual([...new Set(HIGHRISES.map((t) => t.lobby))].sort(), ['arcade', 'atrium', 'colonnade', 'pavilion', 'retail']);
+  assert.deepEqual([...new Set(HIGHRISES.map((t) => t.lobby))].sort(), ['arcade', 'atrium', 'colonnade', 'grand', 'pavilion', 'retail']);
   for (const t of HIGHRISES) {
     const pod = t.parts[0];
     if (t.lobby === 'colonnade' || t.lobby === 'arcade') {
@@ -194,7 +194,14 @@ test('the lobbies: every design, a colonnade\'s or an arcade\'s ground floor set
       // The columns on the podium's front line, inside it, a walker's width and more apart
       for (const [x, z] of t.columns) assert.ok(inside([x - GROUND.col / 2, z - GROUND.col / 2, x + GROUND.col / 2, z + GROUND.col / 2], pod.rect, 0), `${t.id}'s column off its podium`);
       for (let i = 1; i < t.columns.length; i++) assert.ok(Math.hypot(t.columns[i][0] - t.columns[i - 1][0], t.columns[i][1] - t.columns[i - 1][1]) - GROUND.col > 0.9);
-    } else assert.equal(t.columns.length, 0);
+    } else if (!t.arcades) assert.equal(t.columns.length, 0);
+    // Phase 7's arcaded sides: set back on each, round columns along its line
+    for (const f of t.arcades ?? []) {
+      const ft = pod.foot!;
+      const back = f === 'n' ? ft[1] - pod.rect[1] : f === 's' ? pod.rect[3] - ft[3] : f === 'w' ? ft[0] - pod.rect[0] : pod.rect[2] - ft[2];
+      assert.ok(Math.abs(back - GROUND.recess) < 1e-9, `${t.id} set back on its ${f} side`);
+      assert.ok(t.columns.length >= 3);
+    }
     assert.ok(GROUND.h < PODIUM.h - 0.5, 'a storey over the ground floor');
   }
 });
