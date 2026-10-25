@@ -34,6 +34,7 @@ import { SWAY, lampGlow, newLamp, type Lamp } from './dusk';
 import { WATER_Y, edgeSamples, edgesAt, stretchAt, topsAt } from './river';
 import { BED, SHALLOWS, riverRows, swashAt } from './riverwater';
 import { TINT, type WaterLight } from './waterlights';
+import { FULL, KELVIN, REST, WAKES } from './wakes';
 import { atGangway } from './riverbus';
 import { HALF as HARBOUR_HALF, HARBOUR_STREET, HX, Z0 as HZ0, Z1 as HZ1 } from './harbour';
 
@@ -347,6 +348,13 @@ export const WATER_UNIFORMS = {
   underInfo: { value: new THREE.Vector3(0.1, 145, 0) },
   /** One over the size of the frame in pixels (to find a pixel in `under`) */
   screen: { value: new THREE.Vector2(1, 1) },
+  /**
+   * The boats' wakes (wakes.ts, index.ts fills them each frame): where each boat is and the way its bow points
+   * (x, z, cos, sin), its speed, half its length, half its beam and how far its wake trails; how many there are
+   */
+  wakeA: { value: Array.from({ length: WAKES.most }, () => new THREE.Vector4()) },
+  wakeB: { value: Array.from({ length: WAKES.most }, () => new THREE.Vector4()) },
+  wakeN: { value: 0 },
 };
 
 const WATER_VERT = /* glsl */ `
@@ -417,6 +425,57 @@ const WATER_FRAG = /* glsl */ `
     h += a * sin(ph);
     g += a * w.z * cos(ph) * w.xy;
   }
+  #ifdef WAKES
+  uniform vec4 wakeA[${WAKES.most}];
+  uniform vec4 wakeB[${WAKES.most}];
+  uniform float wakeN;
+  // The boats' wakes (wakes.ts): a V of foam lines behind each at the Kelvin angle and the churned water down its middle,
+  // broken up further back; the bow wave peeling off along its sides; rings round a boat at rest
+  float wakeFoam(vec2 p) {
+    float f = 0.0;
+    for (int i = 0; i < ${WAKES.most}; i++) {
+      if (float(i) >= wakeN) break;
+      vec4 a = wakeA[i];
+      vec4 b = wakeB[i];
+      vec2 d = p - a.xy;
+      float reach = b.w + b.y + 2.5;
+      if (dot(d, d) > reach * reach) continue;
+      // Into the boat's own frame: u along it (the bow ahead), v across
+      float u = d.x * a.z - d.y * a.w;
+      float v = d.x * a.w + d.y * a.z;
+      float hl = b.y;
+      float hb = b.z;
+      float s = clamp(b.x / ${FULL.toFixed(1)}, 0.0, 1.0);
+      float seed = float(i) * 7.31;
+      // The hull as a capsule: how far from it
+      float hull = length(vec2(max(abs(u) - max(hl - hb, 0.0), 0.0), v)) - hb;
+      // A thin line hugging it, wider the faster it goes
+      f = max(f, (1.0 - band(hull, 0.05 + 0.1 * s)) * step(-0.02, hull) * (0.45 + 0.55 * s));
+      if (b.x > ${REST.toFixed(2)}) {
+        // (a slow boat's wake still shows, fainter)
+        float m = 0.4 + 0.6 * s;
+        // The bow wave: peeling off the bow along both sides, wider aft, strongest at the bow
+        float side = hb + max(0.0, hl - u) * 0.14;
+        float bow = (1.0 - band(abs(abs(v) - side), 0.04 + 0.05 * s)) * step(-hl, u) * step(u, hl + 0.3);
+        f = max(f, bow * m * (0.35 + 0.65 * smoothstep(-hl, hl, u)));
+        // Behind the stern: the V's arms at the Kelvin angle and the churned water between
+        float back = -u - hl + hb * 0.5;
+        if (back > 0.0 && back < b.w) {
+          float k = back / b.w;
+          float arm = hb * 0.9 + back * ${KELVIN.toFixed(3)};
+          float arms = (1.0 - band(abs(abs(v) - arm), 0.05 + back * 0.02)) * band(vnoise(vec2(back * 1.4 - time * 0.6, abs(v) * 2.0) + seed), 0.2 + 0.55 * k);
+          float churn = (1.0 - band(abs(v), hb * (0.75 + back * 0.08))) * band(vnoise(vec2(back * 2.2 + time * 1.4, v * 3.1) + seed), 0.3 + 0.6 * k);
+          f = max(f, max(arms, churn * 0.85) * m * (1.0 - k));
+        }
+      } else if (hull > 0.0) {
+        // At rest: rings spreading out round it, fading as they go
+        float rr = fract(hull * 0.75 - time * 0.3 + h2(vec2(seed, 1.0)));
+        f = max(f, (1.0 - band(abs(rr - 0.5), 0.045)) * (1.0 - smoothstep(0.2, 2.2, hull)) * 0.45);
+      }
+    }
+    return f;
+  }
+  #endif
   void main() {
     vec2 p = vPos.xz;
     #ifdef FLOW
@@ -497,6 +556,9 @@ const WATER_FRAG = /* glsl */ `
       }
     }
     #endif
+    #ifdef WAKES
+    foam = max(foam, wakeFoam(p));
+    #endif
     col = mix(col, foamColour(), clamp(foam, 0.0, 1.0) * 0.9);
 
     gl_FragColor = vec4(col, 1.0);
@@ -509,10 +571,10 @@ const waterShader = (defines: Record<string, string>, frag = WATER_FRAG, extra: 
   new THREE.ShaderMaterial({ uniforms: WATER_UNIFORMS, defines, vertexShader: WATER_VERT, fragmentShader: frag, fog: true, ...extra });
 /** The fountains' and ponds' water: still, nothing else */
 export const waterMat = waterShader({});
-/** The lake's: still, its rim's foam from its rings (`lakeRings()`) */
-export const lakeMat = waterShader({ BANKED: '' });
-/** The river's: flowing, its banks' foam and waves, the foam round what stands in it */
-const riverMat = waterShader({ BANKED: '', FLOW: '', DEPTH_FOAM: '' });
+/** The lake's: still, its rim's foam from its rings (`lakeRings()`), its boats' wakes */
+export const lakeMat = waterShader({ BANKED: '', WAKES: '' });
+/** The river's: flowing, its banks' foam and waves, the foam round what stands in it, the boats' wakes */
+const riverMat = waterShader({ BANKED: '', FLOW: '', DEPTH_FOAM: '', WAKES: '' });
 /** The cove's swash: the waves running up the sand, the wet band they leave (over the sand, see-through) */
 const swashMat = waterShader(
   { SWASH: '' },

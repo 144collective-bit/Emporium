@@ -14,6 +14,7 @@ import { deckSlope, deckY, onHarbour } from './harbour';
 import { departuresRoadY, departuresSlope } from './airfield';
 import { WATER_Y } from './river';
 import { TINT, boatLamp, onBoat, setMovingLights, type WaterLight } from './waterlights';
+import { setWakes, type Wake } from './wakes';
 import { DECK_Y as BOARDWALK_Y, STROLL, boatZ } from './waterfront';
 import { JUNCTIONS, ROUTES, SPOTS, lightState, phaseOf, pointOn, rightOf, type Junction, type Phase, type Pt, type Route } from './routes';
 import { CARS, PAINTS, carGeometry, carMaterials, theFarCars, type CarId } from './cars';
@@ -28,7 +29,7 @@ import { PARK_PEOPLE, moment, type Moment, type ParkPerson } from './parklife';
 import { blinkOn, bodyMotion, braking, hornDue, indicating, newBody, newHorn, pullAway, reactionOf, resetBody, turnsOf, type Body, type Horn, type Mover, type Turn } from './traffic';
 import { CROSS_PACE, crossingLinks, hurry, noticing, outAtNight, takesCrossing, walkLight, type Link } from './pedestrians';
 import { busStep, newBus, pullIn, routeStops, type Bus, type RouteStop } from './transit';
-import { MOORED, cruise, hornDue as boatHornDue, newBoatHorn, wakeOf } from './boats';
+import { MOORED, cruise, hornDue as boatHornDue, newBoatHorn } from './boats';
 import { VENTS, VENT_N, puff, ventsNear, ventsOn } from './dusk';
 
 export interface LifeOpts {
@@ -818,8 +819,8 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
    ====================================================================== */
 
 function buildBoats(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => void) {
-  /** A boat's hull, bow and cabin (one mesh) with its lamp, and its wake (its own material: it trails the speed) */
-  const boat = (color: string, withWake: boolean) => {
+  /** A boat's hull, bow and cabin (one mesh) with its lamp (its wake is the water's: wakes.ts) */
+  const boat = (color: string) => {
     const g = moving(new THREE.Group());
     const hull = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.28, 0.6), toon(color));
     hull.position.y = 0.1;
@@ -831,18 +832,10 @@ function buildBoats(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => void)
     const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 6), neon(PAL.warm, 0.5, 3));
     lamp.position.set(-0.2, 0.62, 0);
     g.add(mergeMeshes([hull, bow, cabin], { cast: true, receive: true }), fx(lamp));
-    let wake: THREE.Mesh | null = null;
-    if (withWake) {
-      const wakeMat = new THREE.MeshBasicMaterial({ color: '#cfefff', transparent: true, opacity: 0.35, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, map: glowTex });
-      wake = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), wakeMat);
-      wake.rotation.x = -Math.PI / 2;
-      wake.position.set(-1.4, 0.03, 0);
-      g.add(fx(wake));
-    }
     scene.add(g);
-    return { g, wake };
+    return g;
   };
-  const boats: { g: THREE.Group; wake: THREE.Mesh; x: number; lane: number; v: number; ph: number; horn: ReturnType<typeof newBoatHorn>; lights?: THREE.Mesh[] }[] = [];
+  const boats: { g: THREE.Group; x: number; lane: number; v: number; ph: number; horn: ReturnType<typeof newBoatHorn>; lights?: THREE.Mesh[] }[] = [];
   // Two to a lane (river plan step 4a), spread across the river, each lane one way; a lane's two keep one pace (the
   // same phase in cruise(), boats.ts), half the window apart, so they never close up. The middle lane's second is the
   // police launch, its light bar flashing blue and red
@@ -856,7 +849,7 @@ function buildBoats(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => void)
   ];
   const phases = [rand() * 6, rand() * 6, rand() * 6];
   for (const [color, lane, v, off, police] of specs) {
-    const { g, wake } = boat(color, true);
+    const g = boat(color);
     let lights: THREE.Mesh[] | undefined;
     if (police) {
       // A white band along the hull, a light bar on the cabin (blue and red, flashing in turn)
@@ -870,11 +863,11 @@ function buildBoats(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => void)
         return m;
       });
     }
-    boats.push({ g, wake: wake!, x: CENTER.x + off, lane, v, ph: phases[lane], horn: newBoatHorn(), lights });
+    boats.push({ g, x: CENTER.x + off, lane, v, ph: phases[lane], horn: newBoatHorn(), lights });
   }
   // The odd boat tied up at a jetty (boats.ts), riding the water
   const moored = MOORED.map((m) => {
-    const { g } = boat(m.color, false);
+    const g = boat(m.color);
     g.position.set(m.x, WATER_Y + 0.02, m.z);
     g.rotation.y = m.yaw;
     return { g, ph: m.x * 0.37 };
@@ -882,9 +875,15 @@ function buildBoats(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => void)
   const shared = boats.map(() => ({ x: 0, z: 0, yaw: 0, len: 2, beam: 0.6 }));
   /** Their lamps (and the police launch's light bar), for the reflections in the water (reflections.ts) */
   const lamps: WaterLight[] = [];
+  /** And their wakes (the water's shader draws them, wakes.ts): the moored ones at rest */
+  const wakes: Wake[] = [];
+  const BOAT_LEN = 2;
+  const BOAT_BEAM = 0.6;
   tick(({ t, dt }) => {
     bodies.boats.length = 0;
     lamps.length = 0;
+    wakes.length = 0;
+    for (const m of MOORED) wakes.push({ x: m.x, z: m.z, yaw: m.yaw, speed: 0, len: BOAT_LEN, beam: BOAT_BEAM });
     for (const [i, b] of boats.entries()) {
       // Cruising, the speed easing up and down (boats.ts); the wake trails it
       const speed = cruise(b.v, t, b.ph);
@@ -899,10 +898,6 @@ function buildBoats(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => void)
       if (b.x < lo) b.x = hi - ((lo - b.x) % (hi - lo));
       // A horn coming up to each bridge (quieter the further off)
       if (boatHornDue(b.horn, b.x, speed) && opts.sfx && dt > 0) opts.sfx('boatHorn', Math.max(0, 1 - Math.hypot(b.x - CROWD_VIEW.eye.x, boatZ(b.lane, b.x) - CROWD_VIEW.eye.z) / 90) * 0.7);
-      const w = wakeOf(speed, Math.abs(b.v));
-      b.wake.scale.set(w.len, w.width, 1);
-      b.wake.position.x = -(0.75 + w.len / 2);
-      (b.wake.material as THREE.MeshBasicMaterial).opacity = 0.35 * w.alpha;
       // ...along the river's curves, swinging round Pier 7's head, turning into the swing
       const z = boatZ(b.lane, b.x);
       const slope = (boatZ(b.lane, b.x + 0.5) - boatZ(b.lane, b.x - 0.5)) * Math.sign(b.v);
@@ -911,6 +906,7 @@ function buildBoats(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => void)
       Object.assign(shared[i], { x: b.x, z, yaw: b.g.rotation.y });
       bodies.boats.push(shared[i]);
       lamps.push(boatLamp(b.x, z, b.g.rotation.y));
+      wakes.push({ x: b.x, z, yaw: b.g.rotation.y, speed: Math.abs(speed), len: BOAT_LEN, beam: BOAT_BEAM });
       if (b.lights) {
         const on = Math.floor(t * 3) % 2;
         b.lights.forEach((m, k) => (m.visible = on === k));
@@ -918,6 +914,7 @@ function buildBoats(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => void)
       }
     }
     setMovingLights('traffic-boats', lamps);
+    setWakes('traffic-boats', wakes);
     for (const m of moored) {
       m.g.position.y = WATER_Y + 0.02 + Math.sin(t * 1.3 + m.ph) * 0.025;
       m.g.rotation.z = Math.sin(t * 0.9 + m.ph) * 0.025;

@@ -40,7 +40,8 @@ steps, each with the owner's sign-off; keep this plan up to date.
 - **Haze:** none: it's a `ShaderMaterial` without the fog chunks, so the
   far river stays as bright as the near.
 - **The wakes:** an additive glow sprite stretched behind each traffic
-  boat (`life.ts`, `wakeOf()` in `boats.ts`).
+  boat (`life.ts`, `wakeOf()` in `boats.ts`) and the hire boat (`boat.ts`);
+  none behind the river's own boats or the lake's.
 - **The river's mesh:** four rows of vertices across (`riverWater()`), so
   it's flat and cheap. That stays: everything below is shader work, not
   geometry.
@@ -126,7 +127,7 @@ steps, each with the owner's sign-off; keep this plan up to date.
    - **What's drawn, in the water's shader:**
      - a V of white toon foam lines spreading behind each boat at the
        wake's angle, longer and whiter the faster it goes, fading out
-       behind it (`wakeOf()` sets the length);
+       behind it (`trailOf()` sets the length);
      - a curl at the bow;
      - for a boat at rest, a few rings.
    - **What goes:** the glow sprites behind the traffic boats.
@@ -260,3 +261,42 @@ steps, each with the owner's sign-off; keep this plan up to date.
   cove: columns under every lamp and lantern, none on the land (the cove's
   sand right at the water line takes a hair of it). With the budgets (boot
   code 654.9 of 670 KB) and both test runs.
+
+**Step 3 (built, waiting on the owner's sign-off):**
+
+- **The rules** are `wakes.ts` (DOM-free, tested in `tests/wakes.test.ts`).
+  - How long a wake trails (`trailOf()`: longer the faster and the longer
+    the boat, never past 16) and how strong it is (`strengthOf()`, full
+    from `FULL`); under `REST` a boat is at rest.
+  - Each drawing hands over its boats while it draws them (`setWakes()`):
+    - life.ts: the traffic's boats and the police launch, and the moored
+      ones at rest;
+    - riverlife3d.ts: the cruise boat, the rowing eight, the dinghies, the
+      river buses, and the hire boat at its mooring;
+    - libertybridge.ts: the tall ship;
+    - boat.ts: your hire boat while it's out;
+    - parklife3d.ts: the lake's rowing boats and swans, and the two moored
+      at the jetty.
+  - A speed a drawing doesn't know is measured from where the boat was
+    (`speedTracker()`, eased, a jump never shows).
+  - The nearest boats go to the shader (`nearestWakes()`): 12 at most, 6
+    on phones, none past `WAKES.far` (120).
+- **The drawing** is the river's and the lake's own shader (`wakeFoam()` in
+  world.ts, `WAKES` define), so a wake costs no draw.
+  - `wakeLook()` in index.ts fills `wakeA` / `wakeB` each frame after the
+    ticks.
+  - In each boat's own frame:
+    - a thin foam line round the hull, wider the faster it goes;
+    - the bow wave peeling off along both sides;
+    - behind the stern, the V's arms at the Kelvin angle (`KELVIN`, about
+      19.5°) and the churned water down its middle, both broken up and
+      fading further back;
+    - round a boat at rest, rings spreading out.
+  - A slow boat's wake still shows, fainter.
+- **What went:** the glow sprites behind the traffic's boats (life.ts) and
+  the hire boat (boat.ts), and `wakeOf()` in boats.ts.
+- **Checked** by day from the promenade (the river bus's V, its bow wave
+  and churn; the tall ship's line at anchor), at night (the ship's rings)
+  and at the lake (a rowing boat's faint trail). With both test runs and
+  the budgets (boot code 656.3 of 670 KB).
+

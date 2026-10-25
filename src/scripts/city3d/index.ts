@@ -73,6 +73,7 @@ import { buildLibertyBridge } from './libertybridge';
 import { buildHarbourBridge } from './harbour3d';
 import { buildReflections } from './reflections';
 import { handedLights, landmarkLights } from './waterlights';
+import { WAKES, nearestWakes, trailOf, type Wake } from './wakes';
 import { HARBOUR_SPAWN } from './harbour';
 import { buildProjects } from './projects3d';
 import { buildCommons } from './commons3d';
@@ -353,6 +354,16 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const WATER_DUSK = new THREE.Color('#6a4a7a');
   const MOON = new THREE.Color('#c9d4ff');
   const W = WATER_UNIFORMS;
+  /** The boats' wakes (wakes.ts): the nearest the camera, after the ticks have said where every boat is (phones: fewer) */
+  const wakeList: Wake[] = [];
+  function wakeLook() {
+    const near = nearestWakes(camera.position.x, camera.position.z, tier === 'low' ? WAKES.phones : WAKES.most, wakeList);
+    near.forEach((w, i) => {
+      W.wakeA.value[i].set(w.x, w.z, Math.cos(w.yaw), Math.sin(w.yaw));
+      W.wakeB.value[i].set(w.speed, w.len / 2, w.beam / 2, trailOf(w.speed, w.len));
+    });
+    W.wakeN.value = near.length;
+  }
   function waterLook(s: ReturnType<typeof sky.update>, t: number) {
     W.time.value = t;
     W.night.value = s.night;
@@ -1384,6 +1395,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     updateLods(CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, CROWD_VIEW.eye.z, Q.far);
     if (!reduced || frames === 0) for (const f of ticks) f(env);
     reflections.update();
+    wakeLook();
     updateLights(s.night, env.t);
     // The wind in the trees (desktop; phones carry no sway) and the thunder's rumble when one is due (city life plan, Phase 4)
     updateWind(env.t, windStrength(s.rain), tier === 'low' ? 0 : SWAY);

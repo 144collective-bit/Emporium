@@ -2,7 +2,7 @@
 // the wake, the moored boats clear of the lanes.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BRIDGES, HORN_AHEAD, LANES, MOORED, cruise, hornDue, newBoatHorn, wakeOf } from '../src/scripts/city3d/boats';
+import { BRIDGES, HORN_AHEAD, LANES, MOORED, cruise, hornDue, newBoatHorn } from '../src/scripts/city3d/boats';
 import { RIVER } from '../src/scripts/city3d/layout';
 import { JETTIES } from '../src/scripts/city3d/outer';
 import { riverBridges } from '../src/scripts/city3d/streetplan';
@@ -34,7 +34,7 @@ test('a boat sounds its horn once coming up to each bridge, either way, in the a
   assert.ok(!hornDue(h, x + 2, 1));
 });
 
-test('the cruising speed eases between about 0.55 and 1 of the base; the wake trails the speed', () => {
+test('the cruising speed eases between about 0.55 and 1 of the base', () => {
   let lo = Infinity;
   let hi = -Infinity;
   for (let t = 0; t < 200; t += 0.5) {
@@ -44,11 +44,6 @@ test('the cruising speed eases between about 0.55 and 1 of the base; the wake tr
   }
   assert.ok(lo > 0.5 && lo < 0.6, `slowest ${lo}`);
   assert.ok(hi > 0.95 && hi <= 1.0001, `fastest ${hi}`);
-  const slow = wakeOf(0.3, 1);
-  const fast = wakeOf(1, 1);
-  assert.ok(fast.len > slow.len && fast.width > slow.width && fast.alpha > slow.alpha);
-  assert.ok(wakeOf(-1, 1).len === fast.len, 'the same going the other way');
-  assert.ok(wakeOf(0, 1).alpha >= 0.5 && wakeOf(2, 1).alpha <= 1);
 });
 
 test('the moored boats lie in the river beside their jetties, off the deck and clear of the lanes and the bridges', () => {

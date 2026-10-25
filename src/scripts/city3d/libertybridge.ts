@@ -55,6 +55,7 @@ import {
 } from './liberty';
 import { WATER_Y } from './river';
 import { TINT, addWaterLights, onBoat, setMovingLights } from './waterlights';
+import { setWakes, speedTracker, type Wake } from './wakes';
 import type { Spot } from './landmarks';
 
 const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
@@ -732,8 +733,13 @@ export function buildLibertyBridge(scene: THREE.Scene, opts: { flame: HTMLImageE
     // (its stern lantern shows in the water: reflections.ts)
     stern[0] = onBoat(sp.x, sp.z, sp.yaw, -SHIP.len / 2 + 0.68, 1.35, TINT.white, 0.2);
     setMovingLights('tall-ship', stern);
+    // (and its wake is the water's: wakes.ts)
+    hull[0] = { x: sp.x, z: sp.z, yaw: sp.yaw, speed: shipSpeed('ship', sp.x, sp.z, now), len: SHIP.len, beam: SHIP.beam };
+    setWakes('tall-ship', hull);
   };
   const stern = [onBoat(0, 0, 0, 0, 0, TINT.white, 0)];
+  const shipSpeed = speedTracker();
+  const hull: Wake[] = [{ x: 0, z: 0, yaw: 0, speed: 0, len: SHIP.len, beam: SHIP.beam }];
   for (const gt of gates) gt.arm.rotation.z = Math.PI / 2;
   place();
   opts.tick(({ t, dt }) => {

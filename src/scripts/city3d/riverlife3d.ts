@@ -42,6 +42,7 @@ import { BOAT, HIRE_VIEW } from './boat-sim';
 import { BUSES, BUS_VIEW, busAt } from './riverroute';
 import { site } from './tilework';
 import { TINT, onBoat, setMovingLights, type WaterLight } from './waterlights';
+import { setWakes, speedTracker, type Wake } from './wakes';
 
 export const SELF = import.meta.url;
 
@@ -395,30 +396,45 @@ export function register({ scene, tick, low }: { low: boolean; scene: THREE.Scen
     g.rotation.set(roll, p.yaw, Math.sin(t * 1.1 + p.z) * 0.02, 'YXZ');
   };
   const lights: WaterLight[] = [];
+  /** Their wakes (the water's shader draws them, wakes.ts), each boat's speed from where it was */
+  const wakes: Wake[] = [];
+  const speed = speedTracker();
+  const wake = (id: string, p: { x: number; z: number; yaw: number }, h: { len: number; beam: number }, t: number) =>
+    wakes.push({ x: p.x, z: p.z, yaw: p.yaw, speed: speed(id, p.x, p.z, t), len: h.len, beam: h.beam });
   tick(() => {
     const t = reduced ? t0 : Date.now() / 1000;
     // (only while the camera's near the river: nothing out there is seen from far off anyway)
     const e = CROWD_VIEW.eye;
     root.visible = e.z > 71 - 220 && e.z < 131 + 220;
     lights.length = 0;
+    wakes.length = 0;
     setMovingLights('river-boats', lights);
+    setWakes('river-boats', wakes);
     if (!root.visible) return;
     const cp = cruiseAt(t);
+    const rp = crewAt(t);
     place(cruise, cp, t);
-    place(crew, crewAt(t), t);
+    place(crew, rp, t);
+    wake('cruise', cp, CRUISE.hull, t);
+    wake('crew', rp, CREW.hull, t);
     // (the cruise boat's lit windows and the river buses' show in the water: reflections.ts)
     for (const u of [-1.6, 0, 1.6]) lights.push(onBoat(cp.x, cp.z, cp.yaw, u, 1.0, TINT.warm, 0.3));
     buses.forEach((g, i) => {
       const bp = i === 0 && BUS_VIEW.ride ? BUS_VIEW.ride : busAt(i, t + BUS_VIEW.offset);
       place(g, bp, t);
       for (const u of [-1.2, 1.2]) lights.push(onBoat(bp.x, bp.z, bp.yaw, u, 0.9, TINT.warm, 0.28));
+      wake(`bus${i}`, bp, BUS.hull, t);
     });
     hire.visible = !HIRE_VIEW.out;
-    if (hire.visible) place(hire, HIRE, t);
+    if (hire.visible) {
+      place(hire, HIRE, t);
+      wakes.push({ x: HIRE.x, z: HIRE.z, yaw: HIRE.yaw, speed: 0, len: BOAT.len, beam: BOAT.beam });
+    }
     dinghies.forEach((g, i) => {
       const d = dinghyAt(i, t);
       // (heeling to the outside of its turn, away from the wind)
       place(g, d, t, d.heel * -DINGHIES[i].way);
+      if (g.visible) wake(`dinghy${i}`, d, DINGHY, t);
     });
     // The stroke: the oars sweep back in the water and come forward feathered over it
     const stroke = reduced ? 0 : t * 2.2;
