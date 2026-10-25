@@ -22,7 +22,11 @@ import {
   MALL_SOLIDS,
   MALL_SPAWN,
   MSCP,
-  PALMS,
+  COURT_TREES,
+  ISLANDS,
+  MALL_TREES,
+  PLANTERS,
+  PAY_STATIONS,
   PARKED,
   PARK_BLOCK,
   PORCH,
@@ -81,7 +85,7 @@ test("Palm Court: two rows facing across the promenade, open to the park's gates
     assert.ok(s.rect[1] > CINEMA.rect[3] && s.rect[3] < ARCH.z, 'between the cinema and the arch');
     assert.ok(!/\d/.test(s.name), 'made-up names, no numbers');
   }
-  for (const [x, z] of PALMS) assert.ok(x > PROM[0] && x < PROM[1] && Math.hypot(x - FOUNTAIN.x, z - FOUNTAIN.z) > FOUNTAIN.r + 1);
+  for (const [x, z] of COURT_TREES) assert.ok(x > PROM[0] && x < PROM[1] && Math.hypot(x - FOUNTAIN.x, z - FOUNTAIN.z) > FOUNTAIN.r + 1);
 });
 
 test('the mall: the anchors at the hall\'s ends, the porch on its front, the car parks inside the loop', () => {
@@ -91,6 +95,18 @@ test('the mall: the anchors at the hall\'s ends, the porch on its front, the car
   assert.ok(inBox(PARK_BLOCK, MSCP.rect[0], MSCP.rect[1], 1e-6) && inBox(PARK_BLOCK, MSCP.rect[2], MSCP.rect[3], 1e-6));
   for (const b of BAYS) assert.ok(inBox(PARK_BLOCK, b.x, b.z) && !inBox(MSCP.rect, b.x, b.z, 2));
   assert.ok(RANK_CABS.length >= 2 && PARKED.length > BAYS.length / 2);
+  // The planted islands between the groups of bays: inside the car park, no bay on one, each with its trees
+  assert.ok(ISLANDS.length >= 4);
+  for (const r of ISLANDS) {
+    assert.ok(inBox(PARK_BLOCK, r[0], r[1]) && inBox(PARK_BLOCK, r[2], r[3]));
+    for (const b of BAYS) assert.ok(!inBox(r, b.x, b.z, 0.3), `a bay on an island at ${b.x}, ${b.z}`);
+    assert.equal(MALL_TREES.filter(([x, z]) => inBox(r, x, z)).length, 2);
+  }
+  // The forecourt's planters and pay stations clear of the porch's way in and the anchors' doors
+  for (const [x] of [...PLANTERS, ...PAY_STATIONS]) {
+    assert.ok(x < PORCH.rect[0] - 0.5 || x > PORCH.rect[2] + 0.5);
+    for (const a of ANCHORS) assert.ok(Math.abs(x - (a.rect[0] + a.rect[2]) / 2) > 3.8, `in front of ${a.name}'s doors`);
+  }
 });
 
 test('what\'s solid is off every street, and the lamps', () => {

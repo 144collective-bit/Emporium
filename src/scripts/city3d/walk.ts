@@ -74,6 +74,7 @@ import { JETTY, RIM, inLake, onJetty, onTerrace, terraceY } from './westlake';
 import { GATE, bridgeWall, bridgeY } from './stadium';
 import { skyDeckWall, skyDeckY, upOnDeck } from './skydeck';
 import { stationY } from './station';
+import { MALL_CAMERA, mallFloor, mallWall } from './mallinside';
 import { WORLD_BOUNDS } from './layout';
 import { WATER_Y, inChannel, inWater, shoreY } from './river';
 import { HIRE } from './riverbus';
@@ -384,6 +385,9 @@ export function createWalk(d: WalkDeps) {
     // (Liberty Bridge's decks, when `yNow` is up there)
     const fb = footbridgeY(x, z, yNow, 0, leavesOpen());
     if (fb !== null) return Math.max(slab, fb);
+    // (inside Starlight Mall: its two floors and the escalators between them, by `yNow`; mallinside.ts)
+    const mall = mallFloor(x, z, yNow);
+    if (mall !== null) return mall;
     if (slab === 0.035 && inChannel(x, z)) return shoreY(x, z) + 0.035;
     const base = Math.max(slab, bridgeY(x, z, yNow) ?? 0, onJetty(x, z) ? SLAB + JETTY.y : 0, SLAB + (terraceY(x, z) ?? -SLAB), SLAB + (skyDeckY(x, z, yNow - SLAB) ?? -SLAB), stationY(x, z) ?? 0);
     if (x < KART_PARK.x0 || x > KART_PARK.x1 || z < KART_PARK.z0 || z > KART_PARK.z1) return base;
@@ -408,6 +412,8 @@ export function createWalk(d: WalkDeps) {
     if (bridgeWall(x, z, y, RADIUS)) return true;
     // Sector 7 Tower's sky deck (skydeck.ts): up there only its rail, the lift house and the viewers stop you
     if (upOnDeck(x, z, y - SLAB)) return skyDeckWall(x, z, RADIUS);
+    // Inside Starlight Mall (mallinside.ts): the upper floor's edges and what stands on your floor
+    if (mallWall(x, z, y, RADIUS)) return true;
     // (the river is a wall at its edges, wherever they curve (river.ts), but at the bridges, on The Trenches' boardwalk and pier and on Uptown's esplanade: their railings are the decks' edges)
     if (inWater(x, z, -0.3) && !onBridge(x, z) && !onDeck(x, z, RADIUS) && !onEsplanade(x, z, RADIUS)) return true;
     // Westlake Park's lake (westlake.ts): you stop on the lawn at its stone rim, but out along the jetty (its edges stop you)
@@ -427,7 +433,7 @@ export function createWalk(d: WalkDeps) {
     }
     // Only the boxes under the camera's line can be in its way (padded as the test below pads them)
     // (and Liberty Bridge's towers over their arches and its walkways' roofs, which you walk under: a bottom, b[5])
-    for (const b of [...CAMERA_GRID.alongRay(from, dir, t, 0.18, nearBoxes), ...d.plotSolids(), ...LIBERTY_CAMERA, ...DECK_CAMERA] as number[][]) {
+    for (const b of [...CAMERA_GRID.alongRay(from, dir, t, 0.18, nearBoxes), ...d.plotSolids(), ...LIBERTY_CAMERA, ...DECK_CAMERA, ...MALL_CAMERA] as number[][]) {
       if (b[4] < 0.5) continue;
       const lo = [b[0] - 0.18, b[5] ?? 0, b[1] - 0.18];
       const hi = [b[2] + 0.18, b[4] + 0.15, b[3] + 0.18];
