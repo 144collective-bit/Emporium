@@ -1,4 +1,4 @@
-# The shopping plaza and the mall (the owner's call, planned)
+# The shopping plaza and the mall (the owner's call; step 1 built)
 
 The owner asked for "a shopping plaza and mall in the space next to the park
 and the north of the center between the highways": the open land between the
@@ -54,7 +54,10 @@ prices on any sign.
 
 ## Steps (each with the owner's sign-off)
 
-1. **The plaza and the mall from outside:** everything above, as scenery.
+1. **The plaza and the mall from outside** (built): everything above, as
+   scenery. The data is `mall.ts` (tested in `tests/mall.test.ts`), the
+   drawing `mall3d.ts` (a district loaded as you approach), the places
+   `mallspot.ts`.
    - Palm Court's shops, the cinema, the fountain, palms and the arch.
    - The mall, its anchors, the pylon, the loop with its traffic, the car
      parks, cars, people and lamps.
