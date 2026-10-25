@@ -35,6 +35,7 @@ import { PLAYER, createDegen, emotePose, type Outfit } from './character';
 import { LAND_CROUCH, LAND_ROLL, copyLeg, copyPose, createLocomotion, placeRoot, type Root } from './locomotion';
 import type { Animator } from './animator';
 import { loadMocap } from './mocap-load';
+import { createGaze, type Interest } from './gaze';
 import { GAITS, newMove, startSlide, stepMove, stepSlide, type Slide } from './movesim';
 import { slidePose } from './poses';
 import { OVER, isLow, overAhead, overAt, overPose, type Over } from './vault';
@@ -271,6 +272,10 @@ export function createWalk(d: WalkDeps) {
   /** Seconds since the camera last turned (a while standing still, he looks round by himself) */
   let camStill = 0;
   let lookAround = 0;
+  let gazePitch = 0;
+  // The gaze (gaze.ts): what his head is drawn to, on top of the pose
+  const gaze = createGaze(11);
+  const interests: Interest[] = [];
   let lastYaw = 0;
   let headYaw = 0;
   let headPitch = 0;
@@ -2009,15 +2014,22 @@ export function createWalk(d: WalkDeps) {
     const lookYaw = THREE.MathUtils.clamp(wrap(lookFace - face), -0.9, 0.9);
     headYaw += ((speed < 0.25 || aim ? lookYaw : 0) - headYaw) * damp(8, dt);
     headPitch += (THREE.MathUtils.clamp((0.35 - pitch) * 0.6, -0.45, 0.55) - headPitch) * damp(8, dt);
-    // Standing a while with the camera still, he looks round by himself
+    // The gaze: his head drawn to people passing, cars going by and the way he's about to turn, and a
+    // look round by himself standing (gaze.ts); the camera's own look wins over it standing or aiming
     camStill = Math.abs(wrap(yaw - lastYaw)) > 0.002 ? 0 : camStill + dt;
     lastYaw = yaw;
-    lookAround += ((camStill > 3 && !combat.armed ? loco.look : 0) - lookAround) * damp(2, dt);
+    interests.length = 0;
+    for (const p of bodies.people) if (Math.abs(p.x - pos.x) < 8 && Math.abs(p.z - pos.z) < 8) interests.push({ x: p.x, z: p.z, y: pos.y + 1.1 * SCALE, kind: 'person', moving: p.act === undefined, id: `p${p.x.toFixed(1)},${p.z.toFixed(1)}` });
+    for (const c of bodies.cars) if (Math.abs(c.x - pos.x) < 8 && Math.abs(c.z - pos.z) < 8) interests.push({ x: c.x, z: c.z, y: pos.y + 0.6, kind: 'car', weight: 0.7, moving: true, id: `c${c.model}${Math.round(c.x)},${Math.round(c.z)}` });
+    const gaz = gaze.update({ dt, x: pos.x, y: pos.y + 1.1 * SCALE, z: pos.z, face: animator ? animator.face : face, ahead: face, speed, interests });
+    const gazeW = combat.armed || aim ? 0 : speed < 0.25 ? 1 - Math.min(1, Math.abs(lookYaw) / 0.35) : 1;
+    lookAround += (gaz.yaw * gazeW - lookAround) * damp(10, dt);
+    gazePitch += (gaz.pitch * gazeW - gazePitch) * damp(10, dt);
     // (on top of the locomotion's own: the head kept steady while the body turns and leans under it;
     // with his cheek on a rifle's stock the head is the gun's)
     const free = gunInHand ? 1 - combat.cheek : 1;
     P.headYaw += (headYaw + lookAround) * free;
-    P.headPitch += headPitch * free;
+    P.headPitch += (headPitch + gazePitch) * free;
     hero.update();
     // On foot, unarmed and not showing off, the motion capture: blended in and out over a moment
     if (!animator && !animLoading) {
@@ -2047,7 +2059,7 @@ export function createWalk(d: WalkDeps) {
         // (shown facing the way the motion capture turns him; his own upper body turned back to the springs' facing)
         drawFace = face + wrap(animator.face - face) * mocapW;
         anim.applyTo(hero.rig, animator.rot, animator.hips, w, u, face - drawFace);
-        anim.addLook(hero.rig, headYaw + lookAround, headPitch * 0.5, w * (1 - u));
+        anim.addLook(hero.rig, headYaw + lookAround, headPitch * 0.5 + gazePitch, w * (1 - u));
         // (anything in his hand held out in front of it, clear of his leg)
         if (hero.held?.visible) anim.addCarry(hero.rig, w * (1 - u));
       }

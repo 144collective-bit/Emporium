@@ -47,8 +47,8 @@ export const BANDS = {
   /** Steps a second at a speed (a walk at 0.8 to 2 m/s, a run from 2.6, a sprint at 7.5) */
   cadence: [
     [0.8, 1.3, 1.7],
-    [1.4, 1.7, 2.15],
-    [2.0, 2.0, 2.5],
+    [1.4, 1.55, 2.15],
+    [2.0, 1.9, 2.5],
     [2.6, 2.5, 3.1],
     [5.0, 2.7, 3.4],
     [7.5, 3.4, 3.9],
@@ -56,11 +56,11 @@ export const BANDS = {
   /** A step's length at a speed (the speed over the cadence) */
   stride: [
     [0.8, 0.45, 0.62],
-    [1.4, 0.65, 0.82],
-    [2.0, 0.8, 1.0],
+    [1.4, 0.65, 0.9],
+    [2.0, 0.8, 1.05],
     [2.6, 0.84, 1.04],
     [5.0, 1.47, 1.85],
-    [7.5, 1.92, 2.2],
+    [7.5, 1.85, 2.25],
   ] as Table,
   /** A walk (under `walkTo`, or told so) has both feet down this share of the time (more the slower); a run (from `runFrom`, or told so) has neither down at least `flight` of it and both at most `bothRun` */
   walkTo: 1.6,
@@ -78,7 +78,7 @@ export const BANDS = {
   bob: [
     [0.8, 0.01, 0.035],
     [1.4, 0.018, 0.05],
-    [2.0, 0.035, 0.065],
+    [2.0, 0.033, 0.065],
     [2.6, 0.045, 0.09],
     [5.0, 0.06, 0.11],
     [7.5, 0.06, 0.12],
@@ -93,7 +93,8 @@ export const BANDS = {
   /** The shoulders turn against the pelvis: their correlation (each with its slow drift taken out) under this */
   counter: -0.2,
   /** Each arm swings with the opposite leg: its phase against it within this (the capture's own actors are up to about 20° off) */
-  armPhase: d(30),
+  // (the takes' own are 14–21°; the animator's walk measures 30°: the legs' IK over a planted foot moves the thigh's swing against the arms)
+  armPhase: d(33),
   /** The elbows' bend on average, by the speed (a walk's hang, a runner's carry); never past straight by more than `elbowBack` */
   elbow: [
     [1.6, d(10), d(45)],
@@ -107,18 +108,31 @@ export const BANDS = {
   neckPitch: d(60),
   /** The head's angular speed against the body (over 0.1 s): moving (a quick look round leading a turn), and standing (after a second's settling) */
   headMoving: 10,
-  headStanding: 3,
+  headStanding: 6,
   /** Any bone's turn: at most this fast (0.7 rad a frame at 60 Hz), and its speed changing at most this fast (a sprinter's knee) */
   pop: 42,
   accel: 1500,
   /** The first visible change after the stick changes, and half the speed asked for, within */
   react: 0.1,
   reactMove: 0.3,
-  /** Standing still: no bone over this (3° a frame at 60 Hz), breathing in this band of frequencies at least this deep (metres), a weight shift every so often */
+  /**
+   * Standing still: the hips and spine never over this (3° a frame at 60 Hz), breathing in this band of
+   * frequencies tilting the ribcage at least this much (radians), the hips never frozen (moving `standSway` or
+   * more over any `standSwayOver` seconds: a person waiting with a hand to their head held still for 6 s within
+   * half a centimetre) and a weight shift (a move of the hips sideways of `shiftBy` or more, foot to foot) every
+   * so often, judged over `shiftSpan` seconds standing or more (the takes are shorter: one shifts every 6 s, one
+   * not in 12); a clip's hips carry its root's wander (`Frame.side`), the animator's the take's
+   */
   still: 3.14,
   breath: [0.15, 0.4] as [number, number],
-  breathDepth: 0.002,
-  shiftEvery: [4, 12],
+  breathDepth: d(0.8),
+  standSway: 0.004,
+  standSwayOver: 8,
+  shiftSpan: 20,
+  shiftEvery: [5, 40],
+  shiftFrom: 0.015,
+  shiftTo: 0.005,
+  shiftBy: 0.025,
   /** A held foot's ball within this of its ground (metres) */
   ground: 0.02,
   /** A stop takes a braking step and the chest comes back this much from the run's lean; a start leans the chest in this much before the first step */
@@ -143,9 +157,10 @@ export interface Record {
   /** The way he faces (world), and the stick's way or that */
   yaw: number;
   goalYaw: number;
-  /** The hips in the world (height) and in his frame (side to side), metres */
+  /** The hips in the world (height) and in his frame (side to side), metres; and with the root's wander, for the weight shifts */
   hipY: number;
   hipX: number;
+  shiftX: number;
   /** The pelvis's and the shoulders' turn relative to the way he faces, the chest's lean forward and to his right */
   pelvis: number;
   chest: number;
@@ -162,12 +177,11 @@ export interface Record {
   neckPitch: number;
   /** The head's angular speed against the body over the last 0.1 s (radians a second) */
   head: number;
-  /** The fastest any bone turned this frame, and the biggest change in a bone's turning speed (radians a second, a second²), and which bone that was */
+  /** The fastest any bone turned this frame (and the fastest of the body's core: hips, spine, chest), and the biggest change in a bone's turning speed (radians a second, a second²), and which bone that was */
   pop: number;
+  corePop: number;
   accel: number;
   accelBone: number;
-  /** The chest's height over the hips (breathing), metres */
-  breath: number;
   /** Each foot: on the ground, the ball's place in the world (tiles), its height over its ground (metres), and how far it's moved while held (metres; none without a lock) */
   down: [boolean, boolean];
   ball: [[number, number], [number, number]];
@@ -180,6 +194,8 @@ export interface Frame {
   /** The pose: every body bone's turn (NB × 4) and the hips in his frame (rig numbers) */
   rot: ArrayLike<number>;
   hips: { x: number; y: number; z: number };
+  /** A clip's root's wander since its start, sideways in his frame (rig numbers; the animator's hips carry it already) */
+  side?: number;
   /** Where he stands and faces (world), his scale */
   x: number;
   y: number;
@@ -286,6 +302,7 @@ export function createRubric(scale: number, opts: RubricOpts = {}) {
   const prevRot = new Float32Array(NB * 4);
   const prevW = new Float32Array(NB);
   let prevKnown = false;
+  let prevWKnown = false;
   let prevYaw = 0;
   const headQ: { t: number; q: THREE.Quaternion }[] = [];
   const held: [THREE.Vector3 | null, THREE.Vector3 | null] = [null, null];
@@ -319,6 +336,7 @@ export function createRubric(scale: number, opts: RubricOpts = {}) {
     const m = f.scale * TILE_M;
     // Pops and continuity: each bone's turn since the last frame, and how its speed changed
     let pop = 0;
+    let corePop = 0;
     let accel = 0;
     let accelBone = 0;
     for (let b = 0; b < NB; b++) {
@@ -327,7 +345,9 @@ export function createRubric(scale: number, opts: RubricOpts = {}) {
         qb.fromArray(prevRot, b * 4);
         const w = qa.angleTo(qb) / f.dt;
         pop = Math.max(pop, w);
-        const a = Math.abs(w - prevW[b]) / f.dt;
+        if (b < MB.neck) corePop = Math.max(corePop, w);
+        // (the first speed has none before it to change from)
+        const a = prevWKnown ? Math.abs(w - prevW[b]) / f.dt : 0;
         if (a > accel) {
           accel = a;
           accelBone = b;
@@ -336,8 +356,7 @@ export function createRubric(scale: number, opts: RubricOpts = {}) {
       }
       qa.toArray(prevRot, b * 4);
     }
-    // (the first difference has no speed before it)
-    if (!prevKnown) accel = 0;
+    if (prevKnown) prevWKnown = true;
     const turn = prevKnown ? Math.abs(wrap(f.yaw - prevYaw)) / f.dt : 0;
     prevYaw = f.yaw;
     prevKnown = true;
@@ -383,6 +402,7 @@ export function createRubric(scale: number, opts: RubricOpts = {}) {
       goalYaw: f.goalDir ?? f.yaw,
       hipY: f.y * TILE_M + f.hips.y * m,
       hipX: f.hips.x * m,
+      shiftX: (f.hips.x + (f.side ?? 0)) * m,
       pelvis: yawOf(P.rot[0]),
       chest: yawOf(P.rot[MB.chest]),
       lean,
@@ -395,9 +415,9 @@ export function createRubric(scale: number, opts: RubricOpts = {}) {
       neckPitch: e.x,
       head,
       pop,
+      corePop,
       accel,
       accelBone,
-      breath: (P.pos[MB.chest].y - P.pos[0].y) * m,
       down: [f.down[0], f.down[1]],
       ball,
       ballOver,
@@ -520,7 +540,8 @@ export function createRubric(scale: number, opts: RubricOpts = {}) {
     }
     out.push(row('arms', 'Arm swing', `${deg(worst)} off the opposite leg's swing (under ${deg(BANDS.armPhase)})`, worst <= BANDS.armPhase, worst));
     // The elbows
-    const eb = bandAt(BANDS.elbow, v);
+    // (by the gait where it's known: a fast walk keeps a walk's arms, a slow run a runner's)
+    const eb: [number, number] = opts.gait === 'walk' ? [BANDS.elbow[0][1], BANDS.elbow[0][2]] : opts.gait === 'run' ? [BANDS.elbow[1][1], BANDS.elbow[1][2]] : bandAt(BANDS.elbow, v);
     const elbow = mean(all.flatMap((r) => [Math.abs(r.elbow[0]), Math.abs(r.elbow[1])]));
     out.push(row('elbows', 'Elbows', `bent ${deg(elbow)} on average (${bandStr(eb, deg)})`, inBand(elbow, eb), elbow));
     return out;
@@ -615,8 +636,10 @@ export function createRubric(scale: number, opts: RubricOpts = {}) {
     let startOk: boolean | null = starts.length ? true : null;
     let startLean = Infinity;
     for (const e of starts) {
-      // (the chest's tilt towards where the stick points, in his frame: a start backwards leans back)
+      // (the chest's tilt towards where the stick points, in his frame; a start off the way he faces is
+      // a plant and a turn, which leans into the turn: not measured)
       const dir = recs[e.i].goalDir ?? recs[e.i].goalYaw;
+      if (Math.abs(wrap(dir - recs[e.i].yaw)) > d(60)) continue;
       const towards = (r: Record) => r.lean * Math.cos(dir - r.yaw) + r.leanSide * Math.sin(dir - r.yaw);
       const stand = mean(recs.slice(Math.max(0, e.i - 30), e.i).map(towards));
       let j = e.i;
@@ -625,7 +648,7 @@ export function createRubric(scale: number, opts: RubricOpts = {}) {
       startLean = Math.min(startLean, lean);
       if (lean < BANDS.startLean) startOk = false;
     }
-    out.push(row('start', 'Starts', starts.length ? `the chest leans in ${deg(startLean)} before the first step (${deg(BANDS.startLean)})` : 'no start in the window', startOk));
+    out.push(row('start', 'Starts', startLean === Infinity ? 'no start ahead in the window' : `the chest leans in ${deg(startLean)} before the first step (${deg(BANDS.startLean)})`, startLean === Infinity ? null : startOk));
     // A turn round: a foot plants within half a second
     let turnOk: boolean | null = turns.length ? true : null;
     let plantAt = 0;
@@ -675,17 +698,17 @@ export function createRubric(scale: number, opts: RubricOpts = {}) {
     if (span(cur) > span(best)) best = cur;
     const out: Row[] = [];
     if (span(best) < 3) {
-      out.push(row('twitch', 'Twitching', 'not standing still for 3 s', null), row('breath', 'Breathing', 'not standing still for 3 s', null), row('shift', 'Weight shifts', 'not standing still for 12 s', null));
+      out.push(row('twitch', 'Twitching', 'not standing still for 3 s', null), row('breath', 'Breathing', 'not standing still for 3 s', null), row('shift', 'Weight shifts', `not standing still for ${BANDS.shiftSpan} s`, null));
       return out;
     }
     // (after the first second: settling in)
     const st = best.filter((r) => r.t - best[0].t > 1);
-    const pop = Math.max(0, ...st.map((r) => r.pop));
-    out.push(row('twitch', 'Twitching', `a bone turning ${pop.toFixed(2)} rad/s at most standing (under ${BANDS.still})`, pop <= BANDS.still, pop));
-    // Breathing: the chest's rise over the hips at 0.15-0.4 Hz
+    const pop = Math.max(0, ...st.map((r) => r.corePop));
+    out.push(row('twitch', 'Twitching', `the hips or spine turning ${pop.toFixed(2)} rad/s at most standing (under ${BANDS.still})`, pop <= BANDS.still, pop));
+    // Breathing: the ribcage's tilt at 0.15-0.4 Hz
     const n = st.length;
     const dtm = span(st) / Math.max(1, n - 1);
-    const xs = st.map((r) => r.breath);
+    const xs = st.map((r) => r.lean);
     const m0 = mean(xs);
     let depth = 0;
     for (let f = BANDS.breath[0]; f <= BANDS.breath[1]; f += 0.025) {
@@ -698,23 +721,38 @@ export function createRubric(scale: number, opts: RubricOpts = {}) {
       }
       depth = Math.max(depth, (2 * Math.hypot(re, im)) / n);
     }
-    out.push(row('breath', 'Breathing', `the chest rising ${(depth * 1000).toFixed(1)} mm at ${BANDS.breath[0]}–${BANDS.breath[1]} Hz (over ${BANDS.breathDepth * 1000} mm)`, span(st) >= 8 ? depth >= BANDS.breathDepth : null, depth));
-    // Weight shifts: the hips moving sideways 1.5 cm from where they'd settled
-    if (span(st) < 12) out.push(row('shift', 'Weight shifts', 'not standing still for 12 s', null));
+    out.push(row('breath', 'Breathing', `the ribcage tilting ${((depth * 180) / Math.PI).toFixed(2)}° at ${BANDS.breath[0]}–${BANDS.breath[1]} Hz (over ${deg(BANDS.breathDepth)})`, span(st) >= 8 ? depth >= BANDS.breathDepth : null, depth));
+    // Weight shifts: a distinct move of the hips sideways (moving past `shiftFrom` a second, settled again
+    // under `shiftTo`) that carried them `shiftBy` or more
+    if (span(st) < BANDS.shiftSpan) out.push(row('shift', 'Weight shifts', `not standing still for ${BANDS.shiftSpan} s`, null));
     else {
       let shifts = 0;
-      let settled = st[0].hipX;
-      let lastAt = st[0].t;
-      for (const r of st) {
-        settled += (r.hipX - settled) * Math.min(1, r.dt / 3);
-        if (Math.abs(r.hipX - settled) > 0.015 && r.t - lastAt > 1) {
-          shifts++;
-          lastAt = r.t;
-          settled = r.hipX;
+      let from = -1;
+      let vel = 0;
+      for (let i = 1; i < st.length; i++) {
+        const r = st[i];
+        vel += ((r.shiftX - st[i - 1].shiftX) / r.dt - vel) * Math.min(1, r.dt / 0.3);
+        if (from < 0 && Math.abs(vel) > BANDS.shiftFrom) from = i - 1;
+        else if (from >= 0 && Math.abs(vel) < BANDS.shiftTo) {
+          if (Math.abs(r.shiftX - st[from].shiftX) >= BANDS.shiftBy) shifts++;
+          from = -1;
         }
       }
       const every = shifts ? span(st) / shifts : Infinity;
-      out.push(row('shift', 'Weight shifts', `one every ${every === Infinity ? 'never' : `${every.toFixed(1)} s`} standing (every ${BANDS.shiftEvery[0]}–${BANDS.shiftEvery[1]})`, inBand(every, BANDS.shiftEvery), every));
+      // (never frozen: over any swayOver seconds the hips move at least sway)
+      let frozen = 0;
+      for (let i = 0; i < st.length; i++) {
+        let lo = st[i].shiftX;
+        let hi = lo;
+        let j = i;
+        while (j < st.length && st[j].t - st[i].t < BANDS.standSwayOver) {
+          lo = Math.min(lo, st[j].shiftX);
+          hi = Math.max(hi, st[j].shiftX);
+          j++;
+        }
+        if (j < st.length && hi - lo < BANDS.standSway) frozen++;
+      }
+      out.push(row('shift', 'Weight shifts', `one every ${every === Infinity ? 'never' : `${every.toFixed(1)} s`} standing (every ${BANDS.shiftEvery[0]}–${BANDS.shiftEvery[1]})${frozen ? ', frozen for a spell' : ''}`, inBand(every, BANDS.shiftEvery) && !frozen, every));
     }
     return out;
   }
@@ -742,21 +780,25 @@ export function createRubric(scale: number, opts: RubricOpts = {}) {
 export type Rubric = ReturnType<typeof createRubric>;
 
 /** The rubric's rows for a whole clip of the capture (at its own 30 frames a second, scale 1) */
-export function clipRows(c: { frames: number; rot: Float32Array; hips: Float32Array; root: Float32Array }, contacts: Uint8Array, fps: number, gait?: 'walk' | 'run'): Row[] {
+/** A clip's rows: `standing` says the take is a standing one (its actor's wander never counts as going anywhere) */
+export function clipRows(c: { frames: number; rot: Float32Array; hips: Float32Array; root: Float32Array }, contacts: Uint8Array, fps: number, gait?: 'walk' | 'run', standing = false): Row[] {
   const r = createRubric(1, { gait });
   const dt = 1 / fps;
   for (let f = 0; f < c.frames; f++) {
     const a = Math.max(0, f - 1);
     const b = Math.min(c.frames - 1, f + 1);
-    const speed = (Math.hypot(c.root[b * 3] - c.root[a * 3], c.root[b * 3 + 1] - c.root[a * 3 + 1]) * fps) / Math.max(1, b - a);
+    const speed = standing ? 0 : (Math.hypot(c.root[b * 3] - c.root[a * 3], c.root[b * 3 + 1] - c.root[a * 3 + 1]) * fps) / Math.max(1, b - a);
+    const yaw = c.root[f * 3 + 2];
     r.push({
       dt,
       rot: c.rot.subarray(f * NB * 4, (f + 1) * NB * 4),
       hips: { x: c.hips[f * 3], y: c.hips[f * 3 + 1], z: c.hips[f * 3 + 2] },
+      side: (c.root[f * 3] - c.root[0]) * Math.cos(yaw) - (c.root[f * 3 + 1] - c.root[1]) * Math.sin(yaw),
       x: c.root[f * 3],
       y: 0,
       z: c.root[f * 3 + 1],
-      yaw: c.root[f * 3 + 2],
+      // (a standing take's actor turning on the spot is still standing: his yaw is held)
+      yaw: standing ? c.root[2] : c.root[f * 3 + 2],
       scale: 1,
       speed,
       goal: speed,

@@ -138,7 +138,9 @@ test('the feet are on the ground about as long as a run and a walk keep them', (
 test('the clips file stays small (it loads when walking starts)', () => {
   // (subject 143's takes at their real speed are twice as long as when they played at double speed;
   // delta-coded since the revamp's Phase 1: 495 KB where plain 16-bit numbers made 703)
-  assert.ok(file.length < 520 * 1024, `${(file.length / 1024).toFixed(0)} KB`);
+  // (the revamp's Phase 2: three standing takes and a fast walk in, the three looped idles out, 538 KB; the limit raised
+  // on purpose, with room for the stairs takes to come)
+  assert.ok(file.length < 640 * 1024, `${(file.length / 1024).toFixed(0)} KB`);
 });
 
 test('every clip carries its tags, marks and pack, through the file and its mirror image', () => {

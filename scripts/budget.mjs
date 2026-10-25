@@ -47,7 +47,7 @@ const BUDGETS = {
    * compress it). Delta-coded since the revamp's Phase 1 (docs/animation-revamp-plan.md): 495 KB where plain
    * 16-bit numbers made 703; room for Phase 2's takes
    */
-  mocap: 560,
+  mocap: 660,
 };
 
 const dist = process.argv[2] ?? 'dist';

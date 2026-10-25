@@ -23,17 +23,7 @@ const report = !!process.env.HUMAN_REPORT;
  */
 const HELD_BACK: Record<string, Record<string, string>> = {
   // Subject 9's run (09_01): the one take whose shoulders don't turn against the pelvis (every other is -0.5 to -0.9)
-  'the capture: run-long-2': { counter: 'Phase 2: another run, or this take dropped' },
-  // The walk at 1.4 m/s: the arms slip against the legs (36°; the take's own 21°)
-  'the animator: walk': { arms: 'Phase 2: walks' },
-  // A hard stop from a run or a sprint: a held foot gives 1.7-2 cm; a start leans the chest in about 1°, not a person's 2° or more
-  'the animator: stopAndGo': { slide: 'Phase 2: the stop with a settle', start: 'Phase 2: starts from capture' },
-  'the animator: sprintStop': { slide: 'Phase 2: the stop with a settle' },
-  'the animator: startBack': { start: 'Phase 2: starts from capture' },
-  // The pivot: the planted right shin's speed changes 1590 rad/s² as the lock holds the foot through the turn
-  'the animator: turnBack': { continuity: 'Phase 2: turns' },
-  // Standing still: no breathing, no weight shifts (the idles are the actor's quiet seconds before setting off)
-  'the animator: stand': { breath: 'Phase 2: idle life', shift: 'Phase 2: idle life' },
+  'the capture: run-long-2': { counter: 'Phase 5: another run, or this take dropped' },
   // At a small scale the animator stretches the strides instead of quickening the steps (WARP keeps the clip's turnover)
   'the animator: run at scale 0.6': { cadence: 'Phase 5: the scale rule' },
 };
@@ -65,7 +55,7 @@ function check(what: string, rows: Row[], skip = new Set<string>()) {
 }
 
 test('the bands: between the table\'s rows in proportion, scaled the way dynamics scale', () => {
-  assert.deepEqual(bandAt(BANDS.cadence, 1.4), [1.7, 2.15]);
+  assert.deepEqual(bandAt(BANDS.cadence, 1.4), [1.55, 2.15]);
   assert.deepEqual(bandAt(BANDS.cadence, 7.5), [3.4, 3.9]);
   assert.deepEqual(bandAt(BANDS.cadence, 9), [3.4, 3.9]);
   assert.deepEqual(bandAt(BANDS.cadence, 0.5), [1.3, 1.7]);
@@ -80,7 +70,7 @@ test('the bands: between the table\'s rows in proportion, scaled the way dynamic
 for (const c of data.clips)
   test(`the capture: ${c.name}`, () => {
     const gait = tagged(c, 'walk') && !tagged(c, 'run') ? 'walk' : tagged(c, 'run') ? 'run' : undefined;
-    check(`the capture: ${c.name}`, clipRows(c, contacts(c), data.fps, gait), skipFor([...c.tags, 'clip']));
+    check(`the capture: ${c.name}`, clipRows(c, contacts(c), data.fps, gait, tagged(c, 'stand')), skipFor([...c.tags, 'clip']));
   });
 
 test('a mirrored clip measures as its original', () => {

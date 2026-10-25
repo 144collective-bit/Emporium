@@ -287,28 +287,125 @@ What the audit found (held back, by the phase that owns it):
 - **Not measurable yet:** hands on things wait for Phase 4's marks; the
   inventory's situations with no animation are listed above.
 
-### Phase 2: the player, finished on foot
+### Phase 2: the player, finished on foot (built, for the owner's sign-off)
+
+What was planned (and what came of each):
 
 - **Idle life** from capture: three or four more standing takes with real
   weight shifts, a look round, a hand to the face or a pocket, taking
-  turns at random intervals (never the same order); breathing laid on
-  every idle (the chest and shoulders, 0.25 Hz, a few millimetres).
-- **The gaze** (`gaze.ts`): the head and eyes drawn to what's interesting
-  within a few tiles (a person passing, a car going by, a sign, the way the
-  stick is about to turn him), with a dwell and a return, limited by the
-  neck's bands; standing still he looks round the way people do (a glance,
-  a hold, back). Other figures get it in Phase 5.
-- **Walks**: a stroll and a purposeful walk (Caps Lock), the matching
-  picking by speed and how long he's been walking; starts and stops at a
-  walk from capture (today's are the run's, slowed).
-- **Stairs and steps**: a step up and a step down from capture (candidates
-  below), the foot lock reading the treads as it does on Liberty Bridge,
-  for every stair in the city (Liberty Bridge, the footbridge, the lakeside
-  terraces, the stations' towers, the stoops). If no take fits, a keyed
-  step on the bone pose, measured by the rubric like any clip.
-- **The stop with a settle**: a run's stop ends in a settle (a half step,
-  the weight back) before the idle, not a cut.
-- Measured by the rubric; the lab's Idle, Walks and Stairs programs.
+  turns; breathing laid on every idle.
+- **The gaze** (`gaze.ts`): the head drawn to what's interesting nearby,
+  with a dwell and a return, within the neck's bands; standing still he
+  looks round the way people do.
+- **Walks**: a stroll and a purposeful walk, starts and stops at a walk
+  from capture.
+- **Stairs and steps**: a step up and a step down from capture, or a keyed
+  step.
+- **The stop with a settle**: a run's stop ends in a settle before the idle.
+
+What's in:
+
+- **The idles** are three stretches of subject 137 waiting (137_41 at
+  3–16, 35–42.5 and 19.5–24 s: `idle-wait`, `idle-wait-2`, `idle-wait-3`
+  in `assets/mocap/takes.json`; a hand to the head, a look round, the
+  weight moved foot to foot, a foot shifted, a slouch 13° back that the
+  stance mostly takes out), in place of subject 143's three looped quiet
+  seconds (frozen: the audit's finding). A stretch of 137_32 was in for a
+  while and measured well on every row until its lean was read: its actor
+  is bent 50–60° forward the whole time (leaning on something), and the
+  stance's 75% correction was hiding it. Standing takes are now read for
+  their lean before they're used. Standing, a take plays through to its end
+  (`STAND.margin`), its actor's own wander carried into the hips
+  (`WANDER` in animator.ts: the take's root since it took over, in his
+  frame; folded into the blend at a cut), and the next take is the one
+  least recently played, never the same take or its mirror
+  (`standNext()`), cut into near its start (`LATE` in motionmatch.ts: a
+  standing take's frames cost more the further in; the nearest pose was
+  its tail). Between two standing takes the blend is slower
+  (`STAND_BLEND`: a change of stance, not a flinch). The stance (`STANCE`)
+  no longer needs both feet held (the actor shifting a foot let it go,
+  and easing it out popped every bone) and lifts the hips through an
+  eased value (`upEase`: a foot let go of changed what the legs allowed
+  at once, and the hips jumping snapped the other knee). The old idles'
+  rows (knees under 25°, lean under 3.4°) gave way to a person's: the easy
+  leg rests up to 45°.
+- **Breathing** (`BREATH`): the ribcage tilting back and up and settling,
+  0.24 breaths a second wandering ±15%, the head kept level; measured by
+  the rubric's Breathing row (1 to 4° at 0.15–0.4 Hz).
+- **The gaze** is `gaze.ts` (DOM-free, tested in `tests/gaze.test.ts`):
+  interests within `reach` and the cone he could turn his head to (people
+  passing, cars going by: `walk.ts` feeds `bodies.people` and
+  `bodies.cars`), each scoring by weight, nearness and motion, one looked
+  at lately scoring nothing for `cooldown`; a glance every so often for a
+  dwell, then back ahead; standing with nothing to see a look round
+  (`lookRound`); the head leading a turn (`lead`); the turn on springs
+  within the neck's reach (under 6 rad/s); seeded. `walk.ts` lays it on
+  with `addLook()` (the camera's own look wins standing or aiming); the
+  lab has a Gaze toggle and readout.
+- **Walks**: the walk at Caps Lock is subject 143's walk (1.4 m/s) and
+  `walk-fast` (subject 132 setting off into a brisk walk, 2.0 m/s) is
+  there for the start and the stretch between a walk and a run. The
+  stroll candidate (132_40) measured as not a person's walk (its shoulders
+  turn with the pelvis, +0.45; a 0.72 m stride at 1.0 m/s; 1 cm of bob)
+  and was dropped; the brisk walks 104_20/21 were jogs (both feet never
+  down) and went too. No slow stroll was found among the subjects
+  reachable (102–144): the owner's call whether to look further.
+  Matching: a frame's features are normalised over the frames on the move
+  (`MOVING` in motionmatch.ts: the long standing takes shrank the spreads
+  until a walk matched a jog), and a clip's last 30 frames cost up to 0.6
+  (`ENDING`: at 0.3 the walk flipped between the short fast walk and its
+  mirror every half cycle rather than leave it).
+- **Starts, stops and turns**: a sharp change of the stick searches every
+  frame for `MATCH.after` (a poor first match at a pivot is left at once);
+  how hard he's speeding up (`starting`) steers the lock: at a start the
+  hips come down at once (`LOCK.downStart`), so a held foot gives under a
+  centimetre where it gave 1.7–2 cm (a set-off drives from low hips, the
+  take's own crouch and the lock's drop: the animator test's floor for the
+  hips came down from 0.49 to 0.47); the head and neck
+  blend 2.5 times slower at a cut (`HEAD_BLEND` on `Inertia.slow`: a
+  60° head turn from a standing take into a set-off whipped the head at
+  10 rad/s). The rows the audit held back for this phase pass: the stop's
+  foot slide (0.4–0.8 cm), the start's lean, the pivot's continuity.
+- **The rubric** grew with the data: the capture's own standing takes are
+  measured as standing (their actor's wander never counts as going
+  anywhere, `clipRows(..., standing)`), a weight shift reads the hips with
+  the root's wander (`Frame.side`), a weight shift is a settled move of
+  2.5 cm or more (the actor's: 2.6–3.7 cm, every 7.5 s over the stand
+  program), the frozen test is a person's (half a centimetre over 8 s: the
+  actor waiting with a hand to his head), the head standing may turn
+  6 rad/s (a real glance in the capture: 5.4),
+  the bob band at 2 m/s starts at 3.3 cm (the fast walk's 3.4), the
+  elbows are judged by the gait where it's known, the arm phase band is
+  33° (the takes' own are 14–21°; the animator's walk measures 30°: the
+  legs' IK over a planted foot moves the thigh's swing against the arms;
+  to look at in Phase 8), and the first speed of a recording has nothing
+  to change from (a sprint's first record read 1500 rad/s² from nothing).
+  `HELD_BACK` is down to two rows: subject 9's run's counter-rotation and
+  the kid-sized figure's cadence (Phase 5).
+- **Budgets**: the clips file is 538 KB (three standing takes and a fast
+  walk in, three looped idles and a stroll out): the test's limit 640 KB
+  and the budget's 660 KB, raised on purpose for the takes still to come
+  (stairs).
+
+What's not in, and why:
+
+- **Stairs and steps.** Subject 122's "walk up stairs" takes (122_31,
+  122_32, 122_35: a 1.2 m approach, three steps up, the hands on a rail)
+  are on disk and read cleanly, but the pipeline can't take them yet: it
+  finds one floor for a take from the ankles, and a stair take's floor
+  rises 55 cm. Using them needs (1) a per-contact floor in
+  `mocap-build.ts` (each planted foot's height is its step; the hips kept
+  relative to a ramp through them), (2) a `stairs` tag searched only when
+  the ground ahead rises (as `crouch` is searched only crouched), and (3)
+  a ground-rise feature or the lock reading the treads (`inp.feet`) for
+  where each foot lands. Until then stairs are as they were: he walks up
+  the even ramp with the feet on the treads (`tests/animator.test.ts`'
+  Liberty flight). No "walk down stairs" take was found. This is the
+  phase's open item for the owner: build it next, or take the keyed step.
+- **The stop with a settle** is the capture's own stops (`run-stop`,
+  `run-jump-stop`, the walk's) rather than a separate settle: the rubric's
+  Stops row (the chest coming back from the run's lean, a touchdown before
+  he's still) passes on every program, so nothing was added.
 
 ### Phase 3: contact (the old Phase 6)
 
@@ -473,3 +570,13 @@ the owner allows `zenodo.org` for 100STYLE.
 - **The crowd's variety:** the same neutral style for everyone, or a few
   characters (a hurried walk, a slouch, a swagger for the bouncers) from
   other actors?
+- **Stairs** (Phase 2's open item): build the pipeline's stair floor so
+  subject 122's "walk up stairs" takes can be used (a day's work: the
+  per-contact floor, a `stairs` tag searched only where the ground rises,
+  the lock reading the treads), or take the keyed step? And is walking
+  down stairs wanted from capture too (no take was found: the keyed step
+  would cover it)?
+- **A stroll:** the only slow walk among the reachable subjects (132_40)
+  isn't a person's walk by the rubric. Look further (the subjects under
+  100 need the CMU site, unreachable from here), allow another host, or
+  leave the walk at Caps Lock as the one walk?

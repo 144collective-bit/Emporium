@@ -85,17 +85,20 @@ const qa = new THREE.Quaternion();
 const qb = new THREE.Quaternion();
 
 /**
- * Offsets for `n` bones and the hips' place, decaying with `halflife`.
- * `jump()` when the animation changes frame; `step()` each frame;
- * `apply()` puts the offsets on the animation's pose.
+ * Offsets for `n` bones and the hips' place, decaying with `halflife`
+ * (a bone's own times `slow[b]`: the head and neck take longer, so a cut
+ * never whips the head). `jump()` when the animation changes frame;
+ * `step()` each frame; `apply()` puts the offsets on the animation's pose.
  */
 export function createInertia(n: number, halflife = 0.1) {
   const rot = Array.from({ length: n }, () => new THREE.Vector3());
   const av = Array.from({ length: n }, () => new THREE.Vector3());
   const pos = new THREE.Vector3();
   const vel = new THREE.Vector3();
+  const slow = new Float32Array(n).fill(1);
   return {
     halflife,
+    slow,
     rot,
     pos,
     /**
@@ -115,10 +118,11 @@ export function createInertia(n: number, halflife = 0.1) {
       vel.add(srcHipsVel).sub(dstHipsVel);
     },
     step(dt: number) {
-      const h = this.halflife;
+      const h0 = this.halflife;
       for (let b = 0; b < n; b++) {
         const r = rot[b];
         const w = av[b];
+        const h = h0 * slow[b];
         let x: number;
         let v: number;
         [x, v] = decay(r.x, w.x, h, dt);
@@ -132,7 +136,7 @@ export function createInertia(n: number, halflife = 0.1) {
         w.z = v;
       }
       for (const k of ['x', 'y', 'z'] as const) {
-        const [x, v] = decay(pos[k], vel[k], h, dt);
+        const [x, v] = decay(pos[k], vel[k], h0, dt);
         pos[k] = x;
         vel[k] = v;
       }

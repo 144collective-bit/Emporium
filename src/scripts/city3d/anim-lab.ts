@@ -32,8 +32,9 @@
  */
 import * as THREE from 'three';
 import { PLAYER, SOLDIER, createDegen, type Degen } from './character';
-import { addCarry, addLean, applyTo, createAnimator, type Animator } from './animator';
+import { addCarry, addLean, addLook, applyTo, createAnimator, type Animator } from './animator';
 import { createRubric, type Row } from './human';
+import { createGaze } from './gaze';
 import { copyPose, createLocomotion, placeRoot } from './locomotion';
 import { loadMocap } from './mocap-load';
 import { GAITS, newMove, startSlide, stepMove, stepSlide, type MoveState, type Slide } from './movesim';
@@ -347,6 +348,10 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   paints.push(button('toggles', 'Old beside', () => compare, () => (compare = !compare)));
   paints.push(button('toggles', 'Foot traces', () => traces, () => (traces = !traces)));
   paints.push(button('toggles', 'Scorecard', () => scorecard, () => (scorecard = !scorecard)));
+  // The gaze (gaze.ts): a look round standing, the head leading a turn (the floor has nothing else to look at)
+  const gaze = createGaze(7);
+  let gazeOn = q.get('gaze') !== '0';
+  paints.push(button('toggles', 'Gaze', () => gazeOn, () => (gazeOn = !gazeOn)));
   for (const [g, label] of GUNS) paints.push(button('guns', label, () => gunId === g, () => ((gunId = g), mount())));
   paints.push(button('toggles', 'Aim', () => aimOn, () => (aimOn = !aimOn)));
   paints.push(button('toggles', 'Sweep the look', () => sweep, () => (sweep = !sweep)));
@@ -722,6 +727,8 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       hero.update();
       applyTo(hero.rig, anim.rot, anim.hips, 1 - Math.max(slideAmt, overAmt));
       if (hero.held?.visible) addCarry(hero.rig, 1 - Math.max(slideAmt, overAmt));
+      const gz = gaze.update({ dt, x, y: y + 1.1 * SCALE, z, face: anim.face, ahead: move.face, speed: v, interests: [] });
+      if (gazeOn) addLook(hero.rig, gz.yaw, gz.pitch, 1 - Math.max(slideAmt, overAmt));
     }
     hero.g.position.set(x, y, z);
     hero.g.rotation.set(0, anim.face, 0);
@@ -797,6 +804,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       ...(crouchAmt > 0.02 || slideAmt > 0.02 ? ([['Crouch', `${slide ? `sliding at ${slide.v.toFixed(1)} tiles/s` : crouched ? 'crouched' : 'standing up'}${dbg.crouch > 0.02 ? ` · over the clip ${(dbg.crouch * 100).toFixed(0)}%` : ''}`]] as [string, string][]) : []),
       ...(AIMS.includes(prog) || peek ? ([['Aim', `legs ${((wrapA(anim.face - move.face) * 180) / Math.PI).toFixed(0)}° off the aim${Math.abs(peek) > 0.02 ? ` · peeking ${peek > 0 ? 'right' : 'left'} ${(Math.abs(peek) * 100).toFixed(0)}%` : ''}`]] as [string, string][]) : []),
       ['Feet', anim.feet.map((f) => (f.locked ? 'held' : 'free')).join(' · ')],
+      ['Gaze', gazeOn ? (gaze.target ? `looking ${((gaze.yaw * 180) / Math.PI).toFixed(0)}° round` : 'ahead') : 'off'],
     ];
     read.innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
   };
