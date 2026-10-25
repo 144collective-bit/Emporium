@@ -25,6 +25,8 @@ import { createDistricts } from './districts';
 import { buildStadium } from './stadium3d';
 import { buildTower } from './tower3d';
 import { buildStationSpot } from './stationspot';
+import { buildMallSpots } from './mallspot';
+import { COURT_SPAWN, MALL_LAMPS, MALL_PEOPLE, MALL_SPAWN } from './mall';
 import { BOULEVARD_TREES as STATION_TREES, PLAZA_TREES as STATION_PLAZA_TREES, STATION_LAMPS, STATION_PEOPLE, STATION_RECTS, STATION_SPAWN } from './station';
 import { LIFT, TOWER_SPAWN } from './skydeck';
 import { STADIUM_LAMPS, STADIUM_RECTS, STADIUM_SPAWN } from './stadium';
@@ -257,6 +259,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   spots.push(buildTower(scene).spot);
   // ...and Sector 7 Central, the grand station west of the highway: its spot (the station is drawn in its own chunk)
   spots.push(buildStationSpot(scene).spot);
+  // ...and Palm Court and Starlight Mall north of downtown: their spots (they're drawn in their own chunk)
+  spots.push(...buildMallSpots(scene));
   // ...and the metro's el where it crosses the open land south of the south row: no trees under it
   keepTreesOff([-10, 125 + WIDEN, 56, 135 + WIDEN]);
   // (and its Airport branch, bending east off the avenue over the open land to the airport: docs/airport-plan.md Phase 3)
@@ -295,6 +299,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   for (const [x, z] of STATION_PLAZA_TREES) addTree(x, z, 0.8, false);
   for (const [x, z, ry, y] of STATION_LAMPS) addLamp(x, z, ry, y);
   STATION_PEOPLE.forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push({ x: p.x, z: p.z, y: Math.max(SLAB, p.y), ry: p.ry, act: p.act }));
+  // ...and Palm Court's and the mall's (mall.ts; the outskirts' trees keep off their land already)
+  for (const [x, z, ry, y] of MALL_LAMPS) addLamp(x, z, ry, y);
+  MALL_PEOPLE.forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push({ x: p.x, z: p.z, y: SLAB + p.y, ry: p.ry, act: p.act }));
   progress(0.55);
   await waited(nextFrame());
   // (phones keep half of them: the trim)
@@ -591,6 +598,17 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       panelBody.querySelector('[data-tower-walkin]')?.addEventListener('click', () => {
         close();
         startWalking(TOWER_SPAWN);
+      });
+    // Palm Court's and the mall's panels: Walk in under the court's arch, or in front of the mall's porch
+    if (id === 'palmcourt')
+      panelBody.querySelector('[data-palmcourt-walkin]')?.addEventListener('click', () => {
+        close();
+        startWalking(COURT_SPAWN);
+      });
+    if (id === 'mall')
+      panelBody.querySelector('[data-mall-walkin]')?.addEventListener('click', () => {
+        close();
+        startWalking(MALL_SPAWN);
       });
     // Sector 7 Central's panel: Walk in starts walk mode on its forecourt, facing the doors
     if (id === 'station')

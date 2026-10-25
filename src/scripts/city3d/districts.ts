@@ -26,6 +26,7 @@ import { UPTOWN_RECT } from './uptown';
 import { SITE } from './airfield';
 import { EXT, RIVER } from './layout';
 import { STATION_AREA } from './station';
+import { MALL_AREA } from './mall';
 
 /** How much further out than its land Uptown loads (its towers stand over the whole town) */
 const UPTOWN_REACH = 240;
@@ -54,6 +55,9 @@ export const LAZY_DISTRICTS: LazyDistrict[] = [
   // Sector 7 Central, the grand station west of the highway (station.ts, docs/station-plan.md): the hall, the shed, the
   // platforms and tracks, the forecourt and the car park (station3d.ts)
   { id: 'station', rect: STATION_AREA, load: () => import('./station3d') },
+  // Palm Court and Starlight Mall north of downtown (mall.ts, docs/mall-plan.md): the shops, the cinema, the mall, the
+  // loop, the car parks (mall3d.ts)
+  { id: 'mall', rect: MALL_AREA, load: () => import('./mall3d') },
 ];
 
 
