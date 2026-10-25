@@ -14,8 +14,9 @@
  * - benches round the lake and along the Mall (near only).
  */
 import * as THREE from 'three';
-import { Batch, FONT_DISPLAY, canvasTex, lit, neon, siteMat, toon } from './kit';
-import { SLAB, flatPoly, waterMat, type Tick } from './world';
+import { Batch, FONT_DISPLAY, WATER, canvasTex, lit, neon, siteMat, toon } from './kit';
+import { SLAB, lakeMat, type Tick } from './world';
+import { LAKE_INSETS, LAKE_MIDDLE, lakeRings } from './riverwater';
 import { registerParkLife, registerParkSites } from './parklife3d';
 import { register as registerGrounds } from './stadiumgrounds3d';
 import { site } from './tilework';
@@ -232,11 +233,52 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
     });
   }
 
-  // The water: on the main thread only (the river's shader, one mesh, never in the tile meshes)
-  if (scene) {
-    const water = new THREE.Mesh(flatPoly(lakeLine(0.02, 120), SLAB + 0.04), waterMat);
-    water.name = 'westlake-water';
-    water.receiveShadow = false;
-    scene.add(water);
+  // The water: on the main thread only (the water's shader, one mesh, never in the tile meshes)
+  if (scene) scene.add(lakeWater());
+}
+
+/**
+ * The lake's water (world.ts `lakeMat`): rings in from its edge (riverwater.ts `lakeRings()`) and its middle, each
+ * carrying how far in it is (`bank`: edge, as the river's), for the foam at its rim; on the water's own layer
+ */
+function lakeWater() {
+  const n = 120;
+  const rings = LAKE_INSETS.length;
+  const pos: number[] = [];
+  const bank: number[] = [];
+  const idx: number[] = [];
+  const y = SLAB + 0.04;
+  for (let k = 0; k < n; k++)
+    for (const [x, z, d] of lakeRings((-2 * Math.PI * k) / n)) {
+      pos.push(x, y, z);
+      bank.push(d, 1, 0, 0);
+    }
+  const mid = pos.length / 3;
+  pos.push(LAKE_C[0], y, LAKE_C[1]);
+  bank.push(LAKE_MIDDLE, 1, 0, 0);
+  /** A triangle, wound to face up */
+  const tri = (a: number, b: number, c: number) => {
+    const [ax, az, bx, bz, cx, cz] = [pos[a * 3], pos[a * 3 + 2], pos[b * 3], pos[b * 3 + 2], pos[c * 3], pos[c * 3 + 2]];
+    if ((bz - az) * (cx - ax) - (bx - ax) * (cz - az) >= 0) idx.push(a, b, c);
+    else idx.push(a, c, b);
+  };
+  for (let k = 0; k < n; k++) {
+    const [a, b] = [k * rings, ((k + 1) % n) * rings];
+    for (let r = 0; r < rings - 1; r++) {
+      tri(a + r, b + r, a + r + 1);
+      tri(a + r + 1, b + r, b + r + 1);
+    }
+    tri(a + rings - 1, b + rings - 1, mid);
   }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('bank', new THREE.Float32BufferAttribute(bank, 4));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  g.computeBoundingSphere();
+  const water = new THREE.Mesh(g, lakeMat);
+  water.name = 'westlake-water';
+  water.receiveShadow = false;
+  water.layers.set(WATER);
+  return water;
 }

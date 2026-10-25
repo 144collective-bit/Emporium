@@ -16,6 +16,11 @@ export const FX = 1;
 export const OCC = 2;
 /** Shapes only the City view's click and hover look for (never drawn): a place drawn as a site elsewhere (Sector 7 Tower) */
 export const PICK = 3;
+/**
+ * The river and the lake (world.ts `riverWater()`, westlake3d.ts): drawn as usual, and into the ink pre-pass only
+ * after it has taken the depth of what stands in them (post.ts `under`), which their foam reads
+ */
+export const WATER = 4;
 export function fx<T extends THREE.Object3D>(o: T): T {
   o.traverse((c) => {
     if (c.layers.mask !== 1 << OCC) c.layers.set(FX);
