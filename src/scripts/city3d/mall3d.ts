@@ -341,7 +341,7 @@ function centre(b: Batch) {
   b.add(new THREE.TorusGeometry(0.95, 0.09, 8, 32).translate(x, Y + 1.5, z), LIGHT);
   for (let k = 0; k < 8; k++) {
     const a = (k / 8) * Math.PI * 2;
-    b.add(new THREE.ConeGeometry(0.06, 0.9, 6, 1, true).translate(x + Math.cos(a) * (r - 0.6), Y + 0.8, z + Math.sin(a) * (r - 0.6)), SPRAY);
+    b.add(new THREE.CylinderGeometry(0.014, 0.035, 1.0, 5, 1, true).translate(0, 0.5, 0).rotateZ(0.35).rotateY(-a).translate(x + Math.cos(a) * (r - 0.6), Y + 0.38, z + Math.sin(a) * (r - 0.6)), SPRAY);
   }
   b.add(new THREE.TorusGeometry(r - 0.02, 0.025, 4, 40).rotateX(Math.PI / 2).translate(x, Y + 0.47, z), LED);
   // Benches: timber slats on concrete plinths

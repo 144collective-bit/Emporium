@@ -229,7 +229,7 @@ function atrium(b: Batch) {
   cyl(b, 0.4, 0.5, x, Y + 0.2, z, CHARCOAL, 16);
   for (let k = 0; k < 8; k++) {
     const a = (k / 8) * Math.PI * 2;
-    b.add(new THREE.ConeGeometry(0.05, 0.9, 6, 1, true).translate(x + Math.cos(a) * (r - 0.55), Y + 0.83, z + Math.sin(a) * (r - 0.55)), SPRAY);
+    b.add(new THREE.CylinderGeometry(0.012, 0.03, 0.9, 5, 1, true).translate(0, 0.45, 0).rotateZ(0.35).rotateY(-a).translate(x + Math.cos(a) * (r - 0.55), Y + 0.38, z + Math.sin(a) * (r - 0.55)), SPRAY);
   }
   cyl(b, 0.03, 1.1, x, Y + 0.7, z, SPRAY, 6, 0.07);
   // Benches either side of it: timber on steel, a back away from it
