@@ -35,6 +35,7 @@ import { WATER_Y, edgeSamples, edgesAt, stretchAt, topsAt } from './river';
 import { BED, SHALLOWS, riverRows, swashAt } from './riverwater';
 import { TINT, type WaterLight } from './waterlights';
 import { FULL, KELVIN, REST, WAKES } from './wakes';
+import { CAPS, FLASH, MIST, SPLASH } from './waterweather';
 import { atGangway } from './riverbus';
 import { HALF as HARBOUR_HALF, HARBOUR_STREET, HX, Z0 as HZ0, Z1 as HZ1 } from './harbour';
 
@@ -355,6 +356,9 @@ export const WATER_UNIFORMS = {
   wakeA: { value: Array.from({ length: WAKES.most }, () => new THREE.Vector4()) },
   wakeB: { value: Array.from({ length: WAKES.most }, () => new THREE.Vector4()) },
   wakeN: { value: 0 },
+  /** The weather (waterweather.ts): the thunder's brighten (0..1) and how thick the mist over the water is */
+  flash: { value: 0 },
+  mist: { value: 0 },
 };
 
 const WATER_VERT = /* glsl */ `
@@ -367,9 +371,16 @@ const WATER_VERT = /* glsl */ `
   attribute vec2 run;
   varying vec2 vRun;
   #endif
+  #ifdef MIST
+  attribute float layer;
+  varying float vLayer;
+  #endif
   varying vec3 vPos;
   varying float vViewZ;
   void main() {
+    #ifdef MIST
+    vLayer = layer;
+    #endif
     #ifdef BANKED
     vBank = bank;
     #endif
@@ -392,6 +403,7 @@ const WATER_COMMON = /* glsl */ `
   uniform vec3 deep; uniform vec3 mid; uniform vec3 light; uniform vec3 sky;
   uniform vec3 sunDir; uniform vec3 sunCol; uniform float glint;
   uniform sampler2D under; uniform vec3 underInfo; uniform vec2 screen;
+  uniform float flash; uniform float mist;
   varying vec3 vPos;
   varying float vViewZ;
   float h2(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -400,6 +412,19 @@ const WATER_COMMON = /* glsl */ `
     vec2 f = fract(p);
     vec2 u = f * f * (3.0 - 2.0 * f);
     return mix(mix(h2(i), h2(i + vec2(1.0, 0.0)), u.x), mix(h2(i + vec2(0.0, 1.0)), h2(i + vec2(1.0, 1.0)), u.x), u.y);
+  }
+  // A raindrop's splash in a cell (some cells, the harder it rains): a ring spreading from its own spot at its own moment
+  float splash(vec2 q, float seed) {
+    vec2 i = floor(q);
+    vec2 f = fract(q);
+    float r1 = h2(i + seed);
+    if (r1 > rain * ${SPLASH.share.toFixed(2)}) return 0.0;
+    float r2 = h2(i + seed + 17.0);
+    float r3 = h2(i + seed + 31.0);
+    float life = fract(time * (0.9 + 0.6 * r2) + r3);
+    float d = length(f - (vec2(0.3) + 0.4 * vec2(r2, r3)));
+    float w = max(fwidth(d), 0.015);
+    return (1.0 - smoothstep(w, 2.0 * w, abs(d - life * 0.28))) * (1.0 - life);
   }
   // A crisp edge at e, as soft as a pixel (no shimmer at a distance)
   float band(float x, float e) { float w = max(fwidth(x), 1e-4); return smoothstep(e - w, e + w, x); }
@@ -524,12 +549,16 @@ const WATER_FRAG = /* glsl */ `
     float sd = dot(reflect(-V, N), sunDir);
     col = mix(col, sunCol, band(sd, mix(0.9965, 0.987, dusk)) * glint);
 
-    // The rain's rings (step 4 makes them splashes; the lights in the water are reflections.ts's)
-    float ring = smoothstep(0.96, 1.0, sin(length(fract(vPos.xz * 0.8) - 0.5) * 40.0 - time * 8.0));
-    col += ring * rain * 0.2;
+    // The thunder's soft brighten
+    col += vec3(0.75, 0.8, 1.0) * flash * ${FLASH.toFixed(2)};
+    // The rain: splashes at random spots and times, a ring spreading from each (two grids at odd sizes, offset)
+    if (rain > 0.02 && vViewZ < ${SPLASH.far.toFixed(1)}) {
+      float sp = max(splash(p * ${SPLASH.cells[0].toFixed(2)}, 0.0), splash(p * ${SPLASH.cells[1].toFixed(2)} + 0.5, 9.0));
+      col = mix(col, foamColour(), sp * 0.45 * (1.0 - smoothstep(${SPLASH.near.toFixed(1)}, ${SPLASH.far.toFixed(1)}, vViewZ)));
+    }
 
-    // Foam
-    float foam = 0.0;
+    // Foam: whitecaps on the highest crests as the wind gets up
+    float foam = band(hn, 0.72) * band(vnoise(q * 1.9 + time * 0.2), 0.7) * 0.85 * smoothstep(${CAPS.from.toFixed(3)}, ${CAPS.to.toFixed(3)}, wind);
     #ifdef BANKED
     float nz = vnoise(p * 1.7 + vec2(time * 0.3, 0.0));
     // A broken line hugging the bank, a second lapping out and back off the quays
@@ -601,6 +630,70 @@ const swashMat = waterShader(
 `,
   { transparent: true, depthWrite: false }
 );
+
+/**
+ * The mist over the water (waterweather.ts `mistAt()`): cartoon wisps in two thin layers just over it, drifting, off
+ * the banks (`bank`'s edge), thinning near the camera so you never see a sheet's edge, soft where it meets what stands
+ * in the water (the depth under it, desktops); see-through, never inked, hidden when there's none (`waterLook()`)
+ */
+export const mistMat = waterShader(
+  { BANKED: '', MIST: '' },
+  /* glsl */ `
+  ${WATER_COMMON}
+  varying vec4 vBank;
+  varying float vLayer;
+  void main() {
+    vec2 p = vPos.xz;
+    // (long wisps along the water, drifting)
+    float n = 0.6 * vnoise(p * vec2(0.035, 0.11) + vec2(time * (0.03 + 0.02 * vLayer), time * 0.01) + vLayer * 7.0)
+      + 0.4 * vnoise(p * vec2(0.1, 0.3) - vec2(time * 0.02, 0.0));
+    float a = (band(n, 0.52) * 0.55 + band(n, 0.68) * 0.45) * mist * (0.42 - 0.14 * vLayer);
+    // (off the banks; thin near the camera, thicker into the distance)
+    a *= smoothstep(0.0, 2.0, vBank.x) * smoothstep(3.0, 40.0, vViewZ);
+    if (underInfo.z > 0.5 && vViewZ < underInfo.y - 10.0) {
+      float sz = -perspectiveDepthToViewZ(texture2D(under, gl_FragCoord.xy * screen).x, underInfo.x, underInfo.y);
+      a *= smoothstep(0.0, 0.8, sz - vViewZ);
+    }
+    if (a < 0.004) discard;
+    vec3 col = mix(mix(sky, vec3(0.88, 0.88, 0.94), 0.55), vec3(0.18, 0.2, 0.32), night * 0.75);
+    gl_FragColor = vec4(col, a);
+    #include <colorspace_fragment>
+    #include <fog_fragment>
+  }
+`,
+  { transparent: true, depthWrite: false }
+);
+mistMat.name = 'water-mist';
+/**
+ * A mist's mesh: a water mesh's positions and `bank` (rows across the river, rings round the lake) laid twice, at
+ * `MIST.low` and `MIST.high` over the water (`layer` 0 and 1), never inked
+ */
+export function mistOver(water: THREE.BufferGeometry) {
+  const pos = water.getAttribute('position');
+  const bank = water.getAttribute('bank');
+  const idx = water.getIndex()!;
+  const n = pos.count;
+  const g = new THREE.BufferGeometry();
+  const p = new Float32Array(n * 6);
+  const b = new Float32Array(n * 8);
+  const layer = new Float32Array(n * 2);
+  for (const [k, lift] of [MIST.low, MIST.high].entries())
+    for (let i = 0; i < n; i++) {
+      p.set([pos.getX(i), pos.getY(i) + lift, pos.getZ(i)], (k * n + i) * 3);
+      b.set([bank.getX(i), bank.getY(i), bank.getZ(i), bank.getW(i)], (k * n + i) * 4);
+      layer[k * n + i] = k;
+    }
+  const ix = Array.from(idx.array);
+  g.setAttribute('position', new THREE.BufferAttribute(p, 3));
+  g.setAttribute('bank', new THREE.BufferAttribute(b, 4));
+  g.setAttribute('layer', new THREE.BufferAttribute(layer, 1));
+  g.setIndex([...ix, ...ix.map((i) => i + n)]);
+  g.computeBoundingSphere();
+  const mesh = new THREE.Mesh(g, mistMat);
+  mesh.name = 'water-mist';
+  mesh.renderOrder = 2;
+  return fx(mesh);
+}
 
 /** Wet-road sheen: neon streaks that show on the asphalt when it rains (driven by the rain level). */
 export const puddleMat = new THREE.MeshBasicMaterial({
@@ -933,7 +1026,8 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
   }
   // The river between its edges (river.ts: straight quays, banks it pulls back from), and its banks
   // (on past the edge with the grass, walled at its ends)
-  scene.add(riverWater(g0, g1), beachSwash(g0, g1));
+  const water = riverWater(g0, g1);
+  scene.add(water, beachSwash(g0, g1), mistOver(water.geometry));
   riverBanks(b, g0, g1);
 
   // A promenade on each bank: between the north-bank avenue and the water, and the water and the south bank avenue

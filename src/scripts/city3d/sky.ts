@@ -338,7 +338,8 @@ export function createSky(scene: THREE.Scene, opts: { shadows: number; shadowRad
 
     // (`thunder`: the rumble's gain when one is due this frame, else 0)
     // (`sun`: the way to the sun, or the moon at night; `sunCol` its colour by day)
-    return { day, night, dusk, rain: rainAmt, hour: h, thunder: st.rumble, sun: dir, sunCol };
+    // (`flash`: the thunder's soft brighten this frame, 0..1, for the water)
+    return { day, night, dusk, rain: rainAmt, hour: h, thunder: st.rumble, flash: st.flash, sun: dir, sunCol };
   }
 
   /** What moves (kit.ts `isMoving()`): found again every so often and whenever the fixed map is drawn */

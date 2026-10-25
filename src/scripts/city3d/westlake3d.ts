@@ -15,7 +15,7 @@
  */
 import * as THREE from 'three';
 import { Batch, FONT_DISPLAY, WATER, canvasTex, lit, neon, siteMat, toon } from './kit';
-import { SLAB, lakeMat, type Tick } from './world';
+import { SLAB, lakeMat, mistOver, type Tick } from './world';
 import { LAKE_INSETS, LAKE_MIDDLE, LAKE_Y, lakeRings } from './riverwater';
 import { registerParkLife, registerParkSites } from './parklife3d';
 import { register as registerGrounds } from './stadiumgrounds3d';
@@ -234,7 +234,11 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   }
 
   // The water: on the main thread only (the water's shader, one mesh, never in the tile meshes)
-  if (scene) scene.add(lakeWater());
+  if (scene) {
+    const lake = lakeWater();
+    // (and the mist over it at dawn, at night and in the rain: world.ts mistOver())
+    scene.add(lake, mistOver(lake.geometry));
+  }
 }
 
 /**

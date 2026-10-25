@@ -300,3 +300,42 @@ steps, each with the owner's sign-off; keep this plan up to date.
   and at the lake (a rowing boat's faint trail). With both test runs and
   the budgets (boot code 656.3 of 670 KB).
 
+**Step 4 (built, waiting on the owner's sign-off):**
+
+- **The rules** are `waterweather.ts` (DOM-free, tested in
+  `tests/waterweather.test.ts`). `waterLook()` in index.ts feeds them each
+  frame; the water's shader and the mist (world.ts) draw them.
+- **Rain:** splashes at random spots and times (`SPLASH`).
+  - Two grids of cells at odd sizes, offset, each cell's splash its own
+    spot, pace and moment; a share of them falling the harder it rains.
+  - Each is a ring spreading from where it hit and fading, left out past
+    35 from the camera (too fine to see).
+  - The old grid of rings is gone.
+- **Wind:** the waves were already taller and quicker in it (step 1's
+  chop). From `CAPS.from` the highest crests break into whitecaps, all of
+  them by `CAPS.to` (a storm's wind, dusk.ts `windStrength()`).
+- **Heavy rain** takes the water half way to the storm's grey
+  (`RAIN_DARK`), and the thunder's soft brighten lights it (`FLASH`, sky.ts
+  `flash`; off under reduced motion, as the storms are).
+- **Mist** (`mistAt()`): thickest at dawn (about 6, the visitor's clock on
+  Live), lighter at night (`MIST.night`) and in the rain (`MIST.rain`), none
+  on a clear day.
+  - Drawn by `mistOver()` (world.ts, `mistMat`): the river's and the lake's
+    meshes laid twice, at `MIST.low` and `MIST.high` over the water.
+  - Cartoon wisps in two bands of see-through white, long along the water
+    and drifting, off the banks.
+  - Thin near the camera and thicker into the distance, so you never see a
+    sheet's edge; soft where it meets what stands in the water (the depth
+    under it, desktops).
+  - Grey-violet at night; hidden when there's none (`mistMat.visible`).
+  - Two draws while it shows (the river's and the lake's), none when it
+    doesn't.
+- **Checked:**
+  - Rain by day and at night: sparse rings near the camera, fading out.
+  - The mist forced on by day and at night, with a local-only change, not
+    committed. Pinning the browser's clock at dawn froze the sky's own
+    clock, so the real dawn wasn't shot.
+  - Both test runs and the budgets (boot code 657.4 of 670 KB).
+
+All four steps are built.
+
