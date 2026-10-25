@@ -1566,7 +1566,16 @@ it and has been retired completely. Build only on what's here.
   (turning, terrain and transitions), Phase 3 (jumps, falls and landings),
   Phase 4 (armed movement and peeking), Phase 5 (crouch, slide, vault and
   climb) and Phase 8 (the rifle shouldered, below under
-  Target practice) are built, for the player on foot:
+  Target practice) are built, for the player on foot. **The revamp**
+  (the owner's call, 2026-10: every character's movements made to suit
+  the game and realistically human) is planned in
+  `docs/animation-revamp-plan.md`: a measured rubric (`tests/human.test.ts`),
+  the player finished on foot (idle life, the gaze, walks, stairs),
+  contact, the game's moments (doors, counters, getting in and out,
+  benches, rides seen, carrying), everyone on the same captured motion
+  (other players, the crowd's rows, the emotes), the crowd's acts, the
+  Fight Club and polish; one phase at a time with the owner's sign-off;
+  keep it up to date:
   - **The data** is CMU's motion capture (free for commercial use; the
     acknowledgment is in the start menu's Options > Credits, named, never
     linked): mostly subject 143's and 127's takes, in `assets/mocap/cmu/`
