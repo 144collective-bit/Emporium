@@ -22,7 +22,7 @@
  * (`takeoff`), through the air, to a touchdown (`touchdown`).
  */
 import * as THREE from 'three';
-import { FOOT_BONES, MOCAP_FPS, type MoClip, type MoData, contacts, mirrorClip, newPosed, posedFrame } from './mocap';
+import { FOOT_BONES, MOCAP_FPS, type MoClip, type MoData, contacts, mirrorClip, newPosed, posedFrame, tagged } from './mocap';
 
 export const FEATURES = 27;
 /** The trajectory's points ahead (frames at MOCAP_FPS) */
@@ -47,8 +47,8 @@ export const ENDING = { frames: 20, cost: 0.3 };
 export const FLIGHT = { frames: 6, rise: 0.06 };
 /** How many frames before leaving the ground a take-off starts (the push off the toes) */
 export const TAKEOFF = 3;
-/** Takes that are only their jumps (standing jumps, their wind-ups no way to stand or walk): shut to the ground's searches */
-export const JUMPS_ONLY = ['jump-far', 'jump-high'];
+/** The tag of a take that's only its jump (a standing jump, its wind-up no way to stand or walk): shut to the ground's searches */
+export const JUMPS_ONLY = 'jumps-only';
 
 /** One jump in a clip: the first frame in the air and the first back on the ground */
 export interface Flight {
@@ -208,7 +208,7 @@ export function buildDatabase(data: MoData, mirror = true): Database {
       const g = start[ci] + f;
       clipOf[g] = ci;
       frameOf[g] = f;
-      open[g] = f < c.frames - TAIL && !JUMPS_ONLY.includes(c.name.replace('~', '')) ? 1 : 0;
+      open[g] = f < c.frames - TAIL && !tagged(c, JUMPS_ONLY) ? 1 : 0;
       const soon = THREE.MathUtils.clamp(1 - (c.frames - TAIL - f) / ENDING.frames, 0, 1);
       bias[g] = ENDING.cost * soon * soon;
       const a = Math.max(0, f - 1);

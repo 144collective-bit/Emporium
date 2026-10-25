@@ -34,7 +34,7 @@
  * the figure.
  */
 import * as THREE from 'three';
-import { FOOT_BONES, MB, MOCAP_BONES, MOCAP_FPS, NB, type MoData, PARENT, type Posed, REST, TOE_BONES, newPosed, posed } from './mocap';
+import { FOOT_BONES, MB, MOCAP_BONES, MOCAP_FPS, NB, type MoData, PARENT, type Posed, REST, TOE_BONES, newPosed, posed, tagged } from './mocap';
 import { angVel, createInertia, decay, expQ, logQ, rate as springRate, wrap } from './inertia';
 import { buildDatabase, cost, type Database, AHEAD, FEATURES, search, setTrajectory } from './motionmatch';
 import { ahead, type MoveState } from './movesim';
@@ -104,7 +104,7 @@ export const MATCH = { every: 0.1, margin: 0.02, sharp: 1.2 };
  * Not while the springs turn him further than `turn` radians from the way
  * he's shown facing (aiming round: the turns on the spot are searched)
  */
-export const STAND = { after: 0.35, speed: 0.08, clips: ['idle', 'idle-2', 'idle-3'], margin: 0.6, turn: 0.35 };
+export const STAND = { after: 0.35, speed: 0.08, tag: 'stand', margin: 0.6, turn: 0.35 };
 /**
  * A locked foot lets go once the clip's foot is this far away (rig
  * numbers), or when holding it would bring the hips down more than `drop`;
@@ -151,13 +151,13 @@ const LEG_BONES = [MB.legL, MB.shinL, MB.footL, MB.legR, MB.shinR, MB.footR];
 export const AIR = { kerb: 0.3, margin: 0.75, drop: 0.3, after: 0.18, lead: 4, settle: 0.3, crouch: 4.5, hard: 9.5, squash: 0.16, bow: 1.6, arms: 0.7, armsAfter: 0.15, armsIn: 0.6 };
 /**
  * Crouching (Phase 5): past `at` of the way into a crouch, moving, only the
- * crouched walks are searched (`clips`), and standing up, never them;
+ * crouched walks are searched (the takes tagged `tag`), and standing up, never them;
  * standing still crouched, the idle plays with the crouch laid over it: the
  * hips `drop` lower (the legs' IK bends the knees, the feet stay put), the
  * spine leant `lean` forward and the head back up, eased in and out over
  * `ease` (a half-life) as the clip changes
  */
-export const CROUCH = { clips: ['crouch-walk', 'crouch-walk-2', 'crouch-back'], at: 0.5, drop: 0.16, lean: 0.42, ease: 0.1 };
+export const CROUCH = { tag: 'crouch', at: 0.5, drop: 0.16, lean: 0.42, ease: 0.1 };
 /**
  * Standing up straight (the owner's call: the idle's actor stood with his
  * knees bent 20-30°, leaning back, his head tilted): standing still, the
@@ -293,10 +293,10 @@ export function createAnimator(data: MoData) {
   const hips = new THREE.Vector3();
   const P = newPosed();
   const q = new Float32Array(FEATURES);
-  const standing = Uint8Array.from(db.clips, (c) => (STAND.clips.includes(c.name.replace('~', '')) ? 1 : 0));
+  const standing = Uint8Array.from(db.clips, (c) => (tagged(c, STAND.tag) ? 1 : 0));
   /** Settled in a standing clip, the next is looked for among the others (each idle's own loop, then another: no one idle over and over) */
   const standElse = db.clips.map((_, i) => (standing[i] ? standing.map((v, j) => (j === i ? 0 : v)) : standing));
-  const crouching = Uint8Array.from(db.clips, (c) => (CROUCH.clips.includes(c.name.replace('~', '')) ? 1 : 0));
+  const crouching = Uint8Array.from(db.clips, (c) => (tagged(c, CROUCH.tag) ? 1 : 0));
   const upright = crouching.map((v) => 1 - v);
   /** Crouched (past CROUCH.at), and how much of the crouch is laid over a clip that isn't one */
   let crouched = false;

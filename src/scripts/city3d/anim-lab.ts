@@ -23,13 +23,17 @@
  *   hold on the procedural pose, over the motion capture's legs, as in the
  *   city), aiming or not, the look swept up and down; markers at the gun's
  *   butt and his shoulder pocket. Aiming by hand, he faces +z.
- * - The address can set it all up for recordings: `prog`, `gait`, `cam`,
- *   `floor`, `speed`, `gun`, `aim=0`, `pitch`, `outfit`, `held`, `orbit`,
- *   `compare=0`, `traces=0`.
+ * - The scorecard (the revamp's Phase 1, human.ts): the rubric's rows over
+ *   the last eight seconds, red where one fails; and the Reel, every
+ *   program in turn (REEL), for a recording in one take.
+ * - The address can set it all up for recordings: `prog` (`reel` for the
+ *   reel), `gait`, `cam`, `floor`, `speed`, `gun`, `aim=0`, `pitch`,
+ *   `outfit`, `held`, `orbit`, `compare=0`, `traces=0`, `score=0`.
  */
 import * as THREE from 'three';
 import { PLAYER, SOLDIER, createDegen, type Degen } from './character';
 import { addCarry, addLean, applyTo, createAnimator, type Animator } from './animator';
+import { createRubric, type Row } from './human';
 import { copyPose, createLocomotion, placeRoot } from './locomotion';
 import { loadMocap } from './mocap-load';
 import { GAITS, newMove, startSlide, stepMove, stepSlide, type MoveState, type Slide } from './movesim';
@@ -46,7 +50,7 @@ import { createPost } from './post';
 const SCALE = 0.85;
 /** One tile in centimetres, for the readouts */
 const CM = 180;
-type Prog = 'manual' | 'runstop' | 'turnback' | 'weave' | 'circle' | 'startstop' | 'startback' | 'gaits' | 'idle' | 'jumps' | 'standjump' | 'hops' | 'strafe' | 'aimturn' | 'peek' | 'crouch' | 'slide' | 'over';
+type Prog = 'manual' | 'runstop' | 'turnback' | 'weave' | 'circle' | 'startstop' | 'startback' | 'gaits' | 'idle' | 'jumps' | 'standjump' | 'hops' | 'strafe' | 'aimturn' | 'peek' | 'crouch' | 'slide' | 'over' | 'reel';
 type Gait = 'walk' | 'run' | 'sprint';
 type Cam = 'side' | 'front' | 'back' | 'over' | 'free';
 type Floor = 'flat' | 'kerbs' | 'stairs' | 'ledge' | 'walls';
@@ -130,8 +134,39 @@ const PROGS: [Prog, string][] = [
   ['slide', 'Sprint & slide'],
   ['over', 'Vault & climb'],
   ['idle', 'Stand'],
+  ['reel', 'Reel'],
   ['manual', 'By hand'],
 ];
+/** The reel (the revamp's Phase 1): every program in turn, for a recording in one take; a program and how long it plays */
+const REEL: [Prog, number][] = [
+  ['runstop', 8],
+  ['turnback', 8],
+  ['weave', 6],
+  ['circle', 6],
+  ['startstop', 6],
+  ['startback', 8],
+  ['gaits', 8],
+  ['jumps', 5],
+  ['standjump', 5],
+  ['hops', 4],
+  ['strafe', 8],
+  ['aimturn', 6],
+  ['peek', 6],
+  ['crouch', 9],
+  ['slide', 5],
+  ['over', 7],
+  ['idle', 14],
+];
+const REEL_LENGTH = REEL.reduce((n, [, s]) => n + s, 0);
+/** Where the reel is at `t`: the program playing and the time into it */
+function reelAt(t: number): { prog: Prog; t: number; label: string } {
+  let u = t % REEL_LENGTH;
+  for (const [p, len] of REEL) {
+    if (u < len) return { prog: p, t: u, label: PROGS.find(([q]) => q === p)![1] };
+    u -= len;
+  }
+  return { prog: 'idle', t: 0, label: 'Stand' };
+}
 
 /** The goal velocity a program asks for at time `t` (tiles a second), and whether it's sprinting */
 function program(p: Prog, t: number, speed: number): [number, number] {
@@ -228,7 +263,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   ui.innerHTML = `
     <canvas class="anim-lab-view" aria-hidden="true"></canvas>
     <div class="anim-lab-panel">
-      <div class="anim-lab-head"><span class="anim-lab-title">Animation lab</span><span class="anim-lab-note">?anim · Phases 1-5, 8</span><button class="anim-lab-close" type="button" aria-label="Close the lab">×</button></div>
+      <div class="anim-lab-head"><span class="anim-lab-title">Animation lab</span><span class="anim-lab-note">?anim · the rubric</span><button class="anim-lab-close" type="button" aria-label="Close the lab">×</button></div>
       <div class="anim-lab-row" data-progs></div>
       <div class="anim-lab-row" data-gaits></div>
       <div class="anim-lab-row" data-time></div>
@@ -237,11 +272,13 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       <div class="anim-lab-row" data-guns></div>
       <div class="anim-lab-row" data-toggles></div>
       <dl class="anim-lab-read" data-read></dl>
+      <dl class="anim-lab-score" data-score></dl>
       <p class="anim-lab-hint">By hand: W A S D, Shift sprints, Caps Lock walks, Space jumps, Q / E peek, C crouches (slides sprinting; armed and aiming, he faces +z). P pauses, . steps.</p>
     </div>`;
   root.append(ui);
   const canvas = ui.querySelector<HTMLCanvasElement>('canvas')!;
   const read = ui.querySelector<HTMLElement>('[data-read]')!;
+  const score = ui.querySelector<HTMLElement>('[data-score]')!;
 
   let prog: Prog = (PROGS.find(([p]) => p === q.get('prog'))?.[0] as Prog) ?? 'runstop';
   let gait: Gait = (['walk', 'run', 'sprint'] as Gait[]).find((g) => g === q.get('gait')) ?? 'run';
@@ -254,6 +291,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   const rec = q.has('rec');
   let compare = q.get('compare') !== '0';
   let traces = q.get('traces') !== '0';
+  let scorecard = q.get('score') !== '0';
   let floorKind: Floor = FLOORS.find((f) => f === q.get('floor')) ?? (prog === 'over' ? 'walls' : 'flat');
   let paused = false;
   let stepOnce = false;
@@ -308,6 +346,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   for (const c of ['side', 'front', 'back', 'over', 'free'] as Cam[]) paints.push(button('cams', c === 'over' ? 'Shoulder' : c[0].toUpperCase() + c.slice(1), () => cam === c, () => (cam = c)));
   paints.push(button('toggles', 'Old beside', () => compare, () => (compare = !compare)));
   paints.push(button('toggles', 'Foot traces', () => traces, () => (traces = !traces)));
+  paints.push(button('toggles', 'Scorecard', () => scorecard, () => (scorecard = !scorecard)));
   for (const [g, label] of GUNS) paints.push(button('guns', label, () => gunId === g, () => ((gunId = g), mount())));
   paints.push(button('toggles', 'Aim', () => aimOn, () => (aimOn = !aimOn)));
   paints.push(button('toggles', 'Sweep the look', () => sweep, () => (sweep = !sweep)));
@@ -454,6 +493,8 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   const data = await loadMocap();
   const anim: Animator = createAnimator(data);
   const move: MoveState = newMove(0);
+  // The scorecard (human.ts): the rubric's rows over the last eight seconds
+  const rubric = createRubric(SCALE, { seconds: 8 });
   let x = 0;
   let z = 0;
   let clock = 0;
@@ -565,11 +606,21 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   };
   const beside = (): [number, number] => (cam === 'side' ? [0, -2.2] : [1.6, 0]);
   const look = new THREE.Vector3();
+  let reelProg: Prog = 'runstop';
   const step = (dt: number) => {
     clock += dt;
     const top = GAITS[gait];
-    let [gx, gz] = program(prog, clock, top);
-    if (prog === 'manual') {
+    // (the reel: each program in turn, its own clock; the walls for going over)
+    const reel = prog === 'reel' ? reelAt(clock) : null;
+    const p: Prog = reel ? reel.prog : prog;
+    const pt = reel ? reel.t : clock;
+    if (reel && reel.prog !== reelProg) {
+      reelProg = reel.prog;
+      const want: Floor = reel.prog === 'over' ? 'walls' : 'flat';
+      if (floorKind !== want) (floorKind = want), buildFloor();
+    }
+    let [gx, gz] = program(p, pt, top);
+    if (p === 'manual') {
       const ix = (keys.has('KeyA') ? 1 : 0) - (keys.has('KeyD') ? 1 : 0);
       const iz = (keys.has('KeyW') ? 1 : 0) - (keys.has('KeyS') ? 1 : 0);
       const n = Math.hypot(ix, iz) || 1;
@@ -585,9 +636,9 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       }
     }
     // (aiming: facing where the program aims, or +z by hand with a gun up)
-    const faceGoal = AIMS.includes(prog) ? aimOf(prog, clock) : prog === 'manual' && gun && aimOn ? 0 : undefined;
+    const faceGoal = AIMS.includes(p) ? aimOf(p, pt) : p === 'manual' && gun && aimOn ? 0 : undefined;
     // Crouch and slide (walk.ts's way: C sprinting slides, else crouches or stands)
-    if (prog === 'manual') {
+    if (p === 'manual') {
       if (crouchPress && !slide) {
         const sl = me.grounded ? startSlide(move) : null;
         if (sl) slide = sl;
@@ -595,14 +646,14 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       }
       if (crouched && (keys.has('ShiftLeft') || keys.has('ShiftRight'))) crouched = false;
     } else {
-      if (slideOf(prog, clock, dt) && !slide) slide = startSlide(move);
-      if (!slide) crouched = crouchOf(prog, clock);
+      if (slideOf(p, pt, dt) && !slide) slide = startSlide(move);
+      if (!slide) crouched = crouchOf(p, pt);
     }
     crouchPress = false;
     // Over a wall: Jump at one by hand, or by itself when the program comes up to it
-    if (!over && floorKind === 'walls' && me.grounded && Math.hypot(gx, gz) > 0.1 && (prog === 'over' || (prog === 'manual' && jumpPress))) {
+    if (!over && floorKind === 'walls' && me.grounded && Math.hypot(gx, gz) > 0.1 && (p === 'over' || (p === 'manual' && jumpPress))) {
       const o = overAhead(x, z, Math.atan2(gx, gz), ground(x, z), walls, 0.22, () => true);
-      if (o && (prog === 'manual' || o.near < 0.45)) {
+      if (o && (p === 'manual' || o.near < 0.45)) {
         over = { o, t: 0 };
         jumpPress = false;
       }
@@ -631,7 +682,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
     slideAmt += ((slide ? 1 : 0) - slideAmt) * (1 - Math.exp(-(slide ? 18 : 9) * dt));
     x += move.vx * dt;
     z += move.vz * dt;
-    const j = prog === 'manual' ? { press: jumpPress, hold: keys.has('Space') } : jumpOf(prog, clock, dt);
+    const j = p === 'manual' ? { press: jumpPress, hold: keys.has('Space') } : jumpOf(p, pt, dt);
     jumpHeld = j.hold;
     if (over) {
       const at = overAt(over.o, Math.min(1, over.t / over.o.dur), 0, 0);
@@ -645,6 +696,10 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
     const v = Math.hypot(move.vx, move.vz);
     const sprint = THREE.MathUtils.clamp((v - GAITS.run) / (GAITS.sprint - GAITS.run), 0, 1);
     anim.update({ dt, x, y, z, move, gx, gz, scale: SCALE, ground, feet, sprint, grounded: me.grounded, vy: me.grounded ? me.fall : me.vy, jump: JUMP, gravity: GRAVITY, faceGoal, crouch: crouchAmt });
+    {
+      const goal = Math.hypot(gx, gz);
+      rubric.push({ dt, rot: anim.rot, hips: anim.hips, x, y, z, yaw: anim.face, scale: SCALE, speed: v, goal, goalDir: goal > 0.3 ? Math.atan2(gx, gz) : null, down: [anim.feet[0].locked, anim.feet[1].locked], drift: [anim.feet[0].drift, anim.feet[1].drift], ground });
+    }
     if (gun) {
       // (the gun's hold over the motion capture's legs, as walk.ts has it: the procedural walk under the hold
       // gives the upper body, turned back from the way the capture faces him to the springs')
@@ -672,7 +727,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
     hero.g.rotation.set(0, anim.face, 0);
     hero.g.scale.setScalar(SCALE);
     // The peek: by the program, or Q / E by hand
-    const peekWant = prog === 'manual' ? (keys.has('KeyE') ? 1 : 0) - (keys.has('KeyQ') ? 1 : 0) : peekOf(prog, clock);
+    const peekWant = p === 'manual' ? (keys.has('KeyE') ? 1 : 0) - (keys.has('KeyQ') ? 1 : 0) : peekOf(p, pt);
     peek += (peekWant - peek) * (1 - Math.exp((-Math.LN2 * dt) / PEEK.ease));
     addLean(hero.rig, peek * PEEK.lean, wrapA(move.face - anim.face), PEEK.level * (1 - (gun && aimOn ? 0.6 * stance.cheek : 0)));
     // The old walk beside him, on the same movement (across the picture from him, whichever the camera)
@@ -725,7 +780,9 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
     const dbg = anim.debug;
     const v = Math.hypot(move.vx, move.vz);
     const slideNow = Math.max(0, ...anim.feet.map((f) => f.drift));
+    const reel = prog === 'reel' ? reelAt(clock) : null;
     const rows: [string, string][] = [
+      ...(reel ? ([['Reel', `${reel.label} · ${reel.t.toFixed(1)} s (${(clock % REEL_LENGTH).toFixed(0)} of ${REEL_LENGTH} s)`]] as [string, string][]) : []),
       ...(compare ? ([['Beside', cam === 'back' ? 'new right · old left' : cam === 'free' ? 'the old walk is the other one' : 'new left · old right']] as [string, string][]) : []),
       ['Speed', `${v.toFixed(2)} tiles/s · ${(v * 1.8).toFixed(1)} m/s`],
       ['Clip', `${dbg.clip} @ ${dbg.frame.toFixed(1)}`],
@@ -742,6 +799,17 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       ['Feet', anim.feet.map((f) => (f.locked ? 'held' : 'free')).join(' · ')],
     ];
     read.innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
+  };
+  /** The scorecard: every rubric row over the last eight seconds, red where it fails */
+  let scoreIn = 0;
+  const paintScore = (real: number) => {
+    score.hidden = !scorecard;
+    if (!scorecard) return;
+    scoreIn -= real;
+    if (scoreIn > 0) return;
+    scoreIn = 0.5;
+    const rows: Row[] = rubric.rows();
+    score.innerHTML = rows.map((r) => `<dt class="${r.ok === null ? 'is-na' : r.ok ? 'is-ok' : 'is-fail'}">${r.name}</dt><dd>${r.value}</dd>`).join('');
   };
 
   let raf = 0;
@@ -769,6 +837,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       readIn = 0.1;
       paintRead();
     }
+    paintScore(real);
   };
   const close = () => {
     cancelAnimationFrame(raf);
@@ -786,6 +855,10 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   (window as unknown as { __animLab: unknown }).__animLab = {
     anim,
     move,
+    /** The scorecard's rows (the rubric over the last eight seconds) */
+    get rows() {
+      return rubric.rows();
+    },
     get worst() {
       return worst;
     },
@@ -807,6 +880,8 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       view();
       post.render();
       paintRead();
+      scoreIn = 0;
+      paintScore(0);
     },
   };
   if (rec) return;

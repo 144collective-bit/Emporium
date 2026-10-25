@@ -79,24 +79,28 @@ his cartoon build differs (a big head, short arms) the band says so.
 
 | Rule | What's measured | The band |
 |---|---|---|
-| Cadence | steps a second at each speed | walk 1.7-2.1 (at 1.4 m/s), run 2.6-3.3 (5 m/s), sprint 3.4-3.9 (7.5 m/s) |
-| Stride | step length at each speed | walk 0.6-0.8 m, run 1.4-1.7, sprint 1.9-2.2 (what Phase 1's fix measured, kept) |
-| Support | both feet down (walking) / neither (running) | a walk has double support 10-25% of a cycle; a run has flight; never the other way |
-| Foot slide | a held foot's movement over the ground | under 1.5 cm (the AAA bar); today 0.6 |
-| Bob and sway | the hips' rise and fall and side-to-side a cycle | walk 3-5 cm up and down, 2-4 cm sideways; run 6-10 cm |
-| Counter-rotation | pelvis against the shoulders, arms against the legs | the shoulders turn against the pelvis; each arm swings with the opposite leg, within 15° of anti-phase |
-| Elbows | the elbow's bend with speed | walking 10-30°, running 60-90°, never backwards |
-| Knees and neck | joint limits | a knee never past straight; the neck within ±70° yaw, ±45° pitch of the chest |
-| The head | the head's angular speed | under 3 rad/s walking and running (a person's gaze is stable), under 1.5 standing |
-| Pops | any bone's turn between frames | under 0.7 rad (today's bar), and its angular velocity continuous through every transition (no step over 10 rad/s²-equivalent in a frame) |
-| Weight | a stop, a start, a turn | a stop from a run takes at least one braking step with the chest back; a start leans in before the first step; a turn round from standing plants a foot |
-| Reaction | from the input to the body | the first visible change within 0.1 s, the new motion within 0.3 s |
-| Stillness | standing still | never frozen (breathing 0.2-0.3 Hz, a weight shift every 4-12 s), never twitchy (no bone over 3° a frame) |
-| Variety | the crowd | no two people within 0.1 of a cycle in step; three idles at least, taking turns |
-| Contact | hands and feet on what they touch | a hand on a thing within 1.5 cm of its surface; feet on the ground; nothing through a wall |
-| Scale | kids, fighters, the crowd | the same rules hold at every `scale` (the clips play at the stride for the scale) |
+| Cadence | steps a second at each speed | 1.3-1.7 at 0.8 m/s, 1.7-2.15 at 1.4 (a walk), 2.0-2.5 at 2.0, 2.5-3.1 at 2.6 (a run), 2.7-3.4 at 5, 3.4-3.9 at 7.5 (a sprint); between them in proportion |
+| Stride | step length at each speed | the speed over the cadence: 0.45-0.62 m at 0.8 m/s, 0.65-0.82 at 1.4, 0.84-1.04 at 2.6, 1.47-1.85 at 5, 1.92-2.2 at 7.5 |
+| Support | both feet down (walking) / neither (running) | a walk has both down 20-45% of the time at 0.8 m/s, 12-32% at 1.4, 5-25% at 2 (and never neither); a run has neither down 5% or more and both under 3% |
+| Foot slide | a held foot's movement over the ground | under 1.5 cm (the AAA bar); today 0 running and walking, 1.5 turning back, 2 in a hard stop |
+| Bob and sway | the hips' rise and fall and side to side a cycle, peak to peak | bob 1-3.5 cm at 0.8 m/s, 1.8-5 at 1.4, 4.5-9 at 2.6, 6-11 at 5, 6-12 at 7.5; sway 0.8-3 cm at 0.8, 1-4 at 1.4, 0.5-4 running |
+| Counter-rotation | the shoulders' turn against the pelvis's, each with its drift over a cycle taken out | correlation under -0.2 (the capture's actors are -0.5 to -0.9) |
+| Arm swing | each arm's phase against the opposite leg's swing | within 30° (the capture's actors are up to about 20° off) |
+| Elbows | the elbows' bend on average | walking 10-45°, running 60-115° (a runner's carry), never past straight by more than 2° |
+| Knees and neck | joint limits | a knee never more than 5° past straight; the head within ±80° yaw, ±60° pitch of the chest |
+| The head | the head's angular speed against the body, over 0.1 s | under 10 rad/s moving (a quick look round leading a turn), under 3 standing (after a second's settling) |
+| Pops | any bone's turn between frames | under 42 rad/s (0.7 rad a frame at 60 Hz), and its speed changing under 1500 rad/s² (a sprinter's knee) |
+| Weight | a stop, a start, a turn | a stop from a run takes at least one braking step with the chest coming back 2° or more; a start leans the chest 2° or more towards the stick before the first step; a turn round plants a foot within 0.5 s |
+| Reaction | from the input to the body | the first visible change within 0.1 s, half the speed asked for within 0.3 s |
+| Stillness | standing still | never twitchy (no bone over 3° a frame, 3.14 rad/s), never frozen (breathing at 0.15-0.4 Hz at least 2 mm deep, a weight shift every 4-12 s) |
+| Variety | the crowd | walkers at seeded phases spread over the cycle, three idles at least, taking turns |
+| Contact | hands and feet on what they touch | a hand on a thing within 1.5 cm of its surface (from Phase 4's marks); a foot down never more than 2 cm into its ground |
+| Scale | kids, fighters, the crowd | the same bands at every `scale`, scaled the way dynamics scale (Froude: a smaller figure at the same speed steps quicker by the square root of the legs' ratio) |
 
-Every band is a test. A clip or a move that fails a band is fixed in the
+The bands were first drafted from the literature and then calibrated in
+Phase 1's audit against the capture, which is real people: a band the
+capture itself fails is wrong about people, unless the pipeline damaged
+the take (the knees were, and are fixed in it). From here on, Every band is a test. A clip or a move that fails a band is fixed in the
 data (another take, a cleaner cut), the pipeline (a filter) or the layer
 on top, never by widening the band; the band moves only on the owner's
 call, written here.
@@ -193,20 +197,95 @@ be. The phases below work through it.
 
 ## Build order
 
-### Phase 1: the audit and the rubric
+### Phase 1: the audit and the rubric (built, for the owner's sign-off)
 
-- `tests/human.test.ts` with every rubric row, run over every clip in the
-  database and the animator on every lab program; the lab's scorecard and
-  reel.
-- The audit: every band that fails today, every situation in the
-  inventory, with a screenshot or a lab recording each, written here under
-  "What the audit found". Quick fixes that are a number or a filter (a
-  cadence off, a noisy hand, a head too quick) go in with the phase;
-  anything bigger is placed in the phase below that owns it.
-- The data packs and delta coding (`mocap-build.ts`, `mocap-load.ts`,
-  `tests/mocap.test.ts`, the budgets), so the phases after have room.
-- Tags and marks in `takes.json`.
-- For the sign-off: the scorecard before and after, the reel.
+What's in:
+
+- **The rubric** is `human.ts` (DOM-free): `BANDS` (the table above),
+  `createRubric(scale, { seconds, gait })` takes a figure's frames (the
+  pose, where it stands and faces, its speed and what the stick asks,
+  which feet are down, the lock's drift) and `rows()` measures the 25 rows
+  over its window; `clipRows()` runs a clip of the capture through it as
+  itself. The steady rows (cadence to the elbows) are measured on
+  contiguous stretches of going steadily (moving, not turning, at one
+  speed), so a stop between two runs is never a stride; the head is
+  measured against the body (a pivot turns the head with it); a start's
+  lean is towards the stick (a start backwards leans back). The bands'
+  calibration is above.
+- **`tests/human.test.ts`**: 46 tests: every clip of the capture (its own
+  contacts and root motion, at scale 1) and the animator on nine programs
+  (run, walk, sprint, a circle, stop and go at a run and a sprint, turning
+  back, setting off backwards, standing 40 s), 381 measurements, plus the
+  same run at a kid's scale. Rows that don't apply are skipped by tag (a
+  strafe, a crouched walk, a turn on the spot and a jump have gaits of
+  their own; a clip has no lock, so its feet on the ground are Phase 5's).
+  Rows that fail today are `HELD_BACK` with the phase that owns them, and
+  the test holds that they still fail, so an entry comes out when its phase
+  fixes it. `HUMAN_REPORT=1 npm test -- human` prints every row.
+- **The lab** (`?anim`): a **Scorecard** (every row over the last eight
+  seconds, red where it fails, dim where there's nothing to measure; the
+  `Scorecard` toggle, `score=0` in the address) and a **Reel** program
+  (`prog=reel`: every program in turn, 119 s, the walls floor coming in
+  for the vault, its readout saying which plays), for a recording in one
+  take.
+- **The data**: `clips.bin` is format 2 (`mocap.ts`): every take's `tags`
+  (`stand`, `crouch`, `jumps-only` are what the searches read, through
+  `tagged()`; `STAND.tag`, `CROUCH.tag` and `JUMPS_ONLY` replace the name
+  lists in code), `marks` (a hand's meeting with a thing, for Phase 4) and
+  `pack` (the file it comes in: `CORE_PACK` fetched when walking starts,
+  `clips-<pack>.bin` on first use, `loadMocap(pack)`; `npm run mocap`
+  writes one file a pack), the hips and turns delta-coded as varints: 495
+  KB where plain 16-bit numbers made 703 (389 KB gzipped, 522 before). A
+  `mocap` row in `scripts/budget.mjs` (560 KB raw, room for Phase 2's
+  takes); `.htaccess` compresses and caches `.bin` files like the rest.
+- **A quick fix**: the capture's knees. CMU's knee joint sits a little off
+  the rig's hinge, so a straight leg came through bent back up to 12°
+  (subject 141's side steps, 8° in the shuffle, 3° in subject 9's run);
+  `straightenKnees()` in the pipeline brings a knee past straight back to
+  straight about its hinge. Every clip is now under the 5° a person's goes.
+- **Measured today** (the animator, the player's scale): running at 5 m/s
+  3.21 steps a second of 1.57 m, in the air 52% of the time, the hips
+  bobbing 8.1 cm and swaying 2.5, the shoulders against the pelvis (-0.83),
+  the arms 10° off the opposite leg, the elbows at 107°, no foot slide, no
+  bone over 15 rad/s; walking at 1.4 m/s 2.01 steps a second of 0.72 m,
+  both feet down 23%, bobbing 3.4 cm, the elbows at 30°; sprinting at
+  7.6 m/s 3.61 steps a second of 2.10 m; a stop from a run takes a braking
+  step with the chest coming back 4° (12° from a sprint); the first visible
+  change 33 ms after the stick, half the speed in 133 ms; turning round
+  plants a foot within 0.12 s; standing still no bone over 1.47 rad/s.
+
+What the audit found (held back, by the phase that owns it):
+
+- **Phase 2, idle life:** standing 40 s, no breathing (the chest rises
+  0.0 mm at 0.15-0.4 Hz) and never a weight shift: the idles are the
+  actor's quiet seconds before a take sets off.
+- **Phase 2, walks:** walking, the arms slip 36° against the legs where the
+  take's own actor is 21° off (the walk's clips cut between takes and the
+  playback's rate).
+- **Phase 2, the stop with a settle:** in a hard stop a held foot gives
+  2.0 cm from a run and 1.7 from a sprint (the bar is 1.5; the walk and the
+  run are at 0).
+- **Phase 2, starts from capture:** a start from standing, and from a plant
+  and turn, leans the chest in only 1° before the first step (a sprint's
+  start leans 8°).
+- **Phase 2, turns:** at the pivot the planted right shin's speed changes
+  1590 rad/s² (the bound is 1500) as the lock holds the foot through the
+  turn.
+- **Phase 2, runs:** subject 9's run (`run-long-2`, 09_01) is the one take
+  whose shoulders don't turn against the pelvis (0.03; every other is
+  -0.5 to -0.9): another run, or the take dropped.
+- **Phase 5, the scale rule:** at a kid's scale (0.6) running at the run's
+  speed, the figure steps 2.78 times a second where its legs call for
+  2.98-3.6: the animator keeps the clip's turnover and stretches the
+  strides (`WARP`); the crowd's rows at a kid's scale need the rule.
+- **Phase 5, the feet on the ground:** the capture's feet sink 2-6 cm under
+  the floor through their contacts in 13 clips (the floor is found from the
+  ankles' low point); the lock corrects it for the player, and the crowd's
+  rows baked from the clips will need the same.
+- **Phase 5, the crowd's variety:** one idle row in `CLIP_DEFS` (the band
+  asks three, taking turns); the capture has three to bake them from.
+- **Not measurable yet:** hands on things wait for Phase 4's marks; the
+  inventory's situations with no animation are listed above.
 
 ### Phase 2: the player, finished on foot
 

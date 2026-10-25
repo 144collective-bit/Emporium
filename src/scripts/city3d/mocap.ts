@@ -10,8 +10,11 @@
  *   stay the figure's own grip).
  * - The file (`src/data/mocap/clips.bin`, made by `encodeMocap()`, read by
  *   `decodeMocap()`): turns as three 16-bit numbers (the fourth, kept
- *   positive, is worked out), the hips' place in 16 bits, the root in
- *   32-bit floats.
+ *   positive, is worked out), the hips' place in 16 bits, each frame's as
+ *   the difference from the frame before in varints (version 2), the root
+ *   in 32-bit floats; each clip's `tags` (what a search may reach, what
+ *   the rubric measures it as), `marks` and `pack` (the file it comes in:
+ *   `CORE_PACK` with walking, the rest on first use).
  * - `mirrorClip()` makes a clip's mirror image (left for right), so every
  *   turn is in the data both ways at no cost to the download.
  * - `posed()` runs a frame through the skeleton (forward kinematics) for
@@ -66,8 +69,28 @@ export const REST: THREE.Vector3[] = (() => {
 /** The mirror image of each bone (L for R) */
 export const MIRROR: number[] = MOCAP_BONES.map((n) => MOCAP_BONES.indexOf((n.endsWith('L') ? `${n.slice(0, -1)}R` : n.endsWith('R') ? `${n.slice(0, -1)}L` : n) as BoneName));
 
+/**
+ * A mark in a clip (the revamp's Phase 4, the moments): the frame a hand
+ * meets the thing, and where the thing is in the clip's frame (rig numbers)
+ */
+export interface Mark {
+  name: string;
+  frame: number;
+  at: [number, number, number];
+}
+
 export interface MoClip {
   name: string;
+  /**
+   * What it is, for the searches that may reach it (`tagged()`): `stand`
+   * (the idles), `crouch` (the crouched walks), `jumps-only` (a take that's
+   * only its jump: shut to the ground's searches), and the rest for the
+   * rubric and the lab (walk, run, start, stop, turn, strafe, jump...)
+   */
+  tags: string[];
+  marks: Mark[];
+  /** The pack it's in (`CORE_PACK` fetched when walking starts; others on first use) */
+  pack?: string;
   frames: number;
   /** x, z and the way it faces (0 = +z), a frame at a time */
   root: Float32Array;
@@ -87,68 +110,187 @@ export interface MoData {
 /* ---------- The file ---------- */
 
 const MAGIC = 0x434d3753; // "S7MC"
-const VERSION = 1;
+/** Version 2 (the revamp's Phase 1): tags, marks and packs, the numbers delta-coded */
+const VERSION = 2;
 /** The hips' place is kept to 1/8192 of a rig unit (±4) */
 const HIPS_Q = 8192;
 const ROT_Q = 32767;
+/** The pack a take is in when it doesn't say */
+export const CORE_PACK = 'core';
 
+/** Each frame's quantised numbers: the hips (3) and the turns (3 a bone, the fourth worked out) */
+const INTS = 3 + NB * 3;
+function quantise(c: MoClip, f: number, out: Int32Array) {
+  for (let k = 0; k < 3; k++) out[k] = Math.round(THREE.MathUtils.clamp(c.hips[f * 3 + k] * HIPS_Q, -32767, 32767));
+  for (let b = 0; b < NB; b++) {
+    const q = f * NB * 4 + b * 4;
+    const s = c.rot[q + 3] < 0 ? -1 : 1;
+    for (let k = 0; k < 3; k++) out[3 + b * 3 + k] = Math.round(THREE.MathUtils.clamp(c.rot[q + k] * s, -1, 1) * ROT_Q);
+  }
+}
+
+/** A growing byte buffer with varints (zigzag, seven bits a byte: a small difference is one byte) */
+class Bytes {
+  buf = new Uint8Array(1 << 16);
+  n = 0;
+  private room(k: number) {
+    if (this.n + k <= this.buf.length) return;
+    const b = new Uint8Array(Math.max(this.buf.length * 2, this.n + k));
+    b.set(this.buf);
+    this.buf = b;
+  }
+  u8(x: number) {
+    this.room(1);
+    this.buf[this.n++] = x & 255;
+  }
+  u16(x: number) {
+    this.u8(x);
+    this.u8(x >>> 8);
+  }
+  u32(x: number) {
+    this.u16(x & 0xffff);
+    this.u16(x >>> 16);
+  }
+  f32(x: number) {
+    this.room(4);
+    new DataView(this.buf.buffer).setFloat32(this.n, x, true);
+    this.n += 4;
+  }
+  str(s: string) {
+    if (s.length > 255) throw new Error(`Too long: ${s}`);
+    this.u8(s.length);
+    for (let i = 0; i < s.length; i++) this.u8(s.charCodeAt(i));
+  }
+  /** A signed number as a varint */
+  int(x: number) {
+    let z = ((x << 1) ^ (x >> 31)) >>> 0;
+    this.room(5);
+    while (z >= 128) {
+      this.buf[this.n++] = (z & 127) | 128;
+      z >>>= 7;
+    }
+    this.buf[this.n++] = z;
+  }
+  out() {
+    return this.buf.slice(0, this.n);
+  }
+}
+class Reader {
+  o = 0;
+  v: DataView;
+  constructor(public u8: Uint8Array) {
+    this.v = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
+  }
+  byte() {
+    return this.u8[this.o++];
+  }
+  u16() {
+    const x = this.v.getUint16(this.o, true);
+    this.o += 2;
+    return x;
+  }
+  u32() {
+    const x = this.v.getUint32(this.o, true);
+    this.o += 4;
+    return x;
+  }
+  f32() {
+    const x = this.v.getFloat32(this.o, true);
+    this.o += 4;
+    return x;
+  }
+  str() {
+    const n = this.byte();
+    let s = '';
+    for (let i = 0; i < n; i++) s += String.fromCharCode(this.byte());
+    return s;
+  }
+  int() {
+    let z = 0;
+    let shift = 0;
+    for (;;) {
+      const b = this.byte();
+      z |= (b & 127) << shift;
+      if (b < 128) break;
+      shift += 7;
+    }
+    z >>>= 0;
+    return (z >>> 1) ^ -(z & 1);
+  }
+}
+
+/**
+ * The clips as bytes: the header (with the pack's name), then each clip's
+ * name, tags, marks and frame count, its root (floats), and its hips and turns quantised, each
+ * frame's as the difference from the frame before, as varints (most
+ * differences are a byte: the file is about half what plain 16-bit numbers
+ * made, and gzip takes it down again)
+ */
 export function encodeMocap(d: MoData): Uint8Array {
-  let size = 12;
-  for (const c of d.clips) size += 1 + c.name.length + 4 + c.frames * (12 + 6 + NB * 6);
-  const buf = new ArrayBuffer(size);
-  const v = new DataView(buf);
-  let o = 0;
-  v.setUint32(o, MAGIC, true);
-  v.setUint16(o + 4, VERSION, true);
-  v.setUint16(o + 6, d.fps, true);
-  v.setUint16(o + 8, NB, true);
-  v.setUint16(o + 10, d.clips.length, true);
-  o = 12;
+  const w = new Bytes();
+  w.u32(MAGIC);
+  w.u16(VERSION);
+  w.u16(d.fps);
+  w.u16(NB);
+  w.u16(d.clips.length);
+  // (a file is one pack: its clips' own, or the core's)
+  const pack = d.clips[0]?.pack ?? CORE_PACK;
+  if (d.clips.some((c) => (c.pack ?? CORE_PACK) !== pack)) throw new Error('A mocap file holds one pack');
+  w.str(pack);
+  const now = new Int32Array(INTS);
+  const prev = new Int32Array(INTS);
   for (const c of d.clips) {
-    v.setUint8(o++, c.name.length);
-    for (let i = 0; i < c.name.length; i++) v.setUint8(o++, c.name.charCodeAt(i));
-    v.setUint32(o, c.frames, true);
-    o += 4;
+    w.str(c.name);
+    w.u8(c.tags.length);
+    for (const t of c.tags) w.str(t);
+    w.u8(c.marks.length);
+    for (const m of c.marks) {
+      w.str(m.name);
+      w.u32(m.frame);
+      for (const x of m.at) w.f32(x);
+    }
+    w.u32(c.frames);
+    for (let f = 0; f < c.frames; f++) for (let k = 0; k < 3; k++) w.f32(c.root[f * 3 + k]);
+    prev.fill(0);
     for (let f = 0; f < c.frames; f++) {
-      for (let k = 0; k < 3; k++, o += 4) v.setFloat32(o, c.root[f * 3 + k], true);
-      for (let k = 0; k < 3; k++, o += 2) v.setInt16(o, Math.round(THREE.MathUtils.clamp(c.hips[f * 3 + k] * HIPS_Q, -32767, 32767)), true);
-      for (let b = 0; b < NB; b++) {
-        const q = f * NB * 4 + b * 4;
-        const s = c.rot[q + 3] < 0 ? -1 : 1;
-        for (let k = 0; k < 3; k++, o += 2) v.setInt16(o, Math.round(THREE.MathUtils.clamp(c.rot[q + k] * s, -1, 1) * ROT_Q), true);
-      }
+      quantise(c, f, now);
+      for (let k = 0; k < INTS; k++) w.int(now[k] - prev[k]);
+      prev.set(now);
     }
   }
-  return new Uint8Array(buf);
+  return w.out();
 }
 
 export function decodeMocap(buf: ArrayBuffer | Uint8Array): MoData {
-  const u8 = buf instanceof Uint8Array ? buf : new Uint8Array(buf);
-  const v = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
-  if (v.getUint32(0, true) !== MAGIC) throw new Error('Not a mocap file');
-  if (v.getUint16(4, true) !== VERSION) throw new Error('Unknown mocap version');
-  const fps = v.getUint16(6, true);
-  if (v.getUint16(8, true) !== NB) throw new Error('Mocap bones changed');
-  const count = v.getUint16(10, true);
-  let o = 12;
+  const r = new Reader(buf instanceof Uint8Array ? buf : new Uint8Array(buf));
+  if (r.u32() !== MAGIC) throw new Error('Not a mocap file');
+  if (r.u16() !== VERSION) throw new Error('Unknown mocap version');
+  const fps = r.u16();
+  if (r.u16() !== NB) throw new Error('Mocap bones changed');
+  const count = r.u16();
+  const pack = r.str();
   const clips: MoClip[] = [];
+  const now = new Int32Array(INTS);
   for (let n = 0; n < count; n++) {
-    const len = v.getUint8(o++);
-    let name = '';
-    for (let i = 0; i < len; i++) name += String.fromCharCode(v.getUint8(o++));
-    const frames = v.getUint32(o, true);
-    o += 4;
+    const name = r.str();
+    const tags: string[] = [];
+    for (let i = r.byte(); i > 0; i--) tags.push(r.str());
+    const marks: Mark[] = [];
+    for (let i = r.byte(); i > 0; i--) marks.push({ name: r.str(), frame: r.u32(), at: [r.f32(), r.f32(), r.f32()] });
+    const frames = r.u32();
     const root = new Float32Array(frames * 3);
     const hips = new Float32Array(frames * 3);
     const rot = new Float32Array(frames * NB * 4);
+    for (let i = 0; i < frames * 3; i++) root[i] = r.f32();
+    now.fill(0);
     for (let f = 0; f < frames; f++) {
-      for (let k = 0; k < 3; k++, o += 4) root[f * 3 + k] = v.getFloat32(o, true);
-      for (let k = 0; k < 3; k++, o += 2) hips[f * 3 + k] = v.getInt16(o, true) / HIPS_Q;
+      for (let k = 0; k < INTS; k++) now[k] += r.int();
+      for (let k = 0; k < 3; k++) hips[f * 3 + k] = now[k] / HIPS_Q;
       for (let b = 0; b < NB; b++) {
         const q = f * NB * 4 + b * 4;
         let ss = 0;
-        for (let k = 0; k < 3; k++, o += 2) {
-          const x = v.getInt16(o, true) / ROT_Q;
+        for (let k = 0; k < 3; k++) {
+          const x = now[3 + b * 3 + k] / ROT_Q;
           rot[q + k] = x;
           ss += x * x;
         }
@@ -158,10 +300,13 @@ export function decodeMocap(buf: ArrayBuffer | Uint8Array): MoData {
         for (let k = 0; k < 4; k++) rot[q + k] /= l;
       }
     }
-    clips.push({ name, frames, root, hips, rot });
+    clips.push({ name, tags, marks, pack, frames, root, hips, rot });
   }
   return { fps, clips };
 }
+
+/** Whether a clip (or its mirror) carries a tag */
+export const tagged = (c: MoClip, tag: string) => c.tags.includes(tag);
 
 /** The clip's mirror image: left for right, across the figure's middle (x) */
 export function mirrorClip(c: MoClip): MoClip {
@@ -185,7 +330,7 @@ export function mirrorClip(c: MoClip): MoClip {
       rot[to + 3] = c.rot[from + 3];
     }
   }
-  return { name: `${c.name}~`, frames: c.frames, root, hips, rot, mirrored: !c.mirrored };
+  return { name: `${c.name}~`, tags: c.tags, marks: c.marks.map((m) => ({ ...m, at: [-m.at[0], m.at[1], m.at[2]] })), pack: c.pack, frames: c.frames, root, hips, rot, mirrored: !c.mirrored };
 }
 
 /* ---------- Posing a frame ---------- */

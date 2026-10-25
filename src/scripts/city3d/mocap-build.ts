@@ -20,7 +20,7 @@
  */
 import * as THREE from 'three';
 import { type Bvh, type BvhPose, poseBvh, jointIndex } from './bvh';
-import { MB, MOCAP_FPS, NB, PARENT, type MoClip, type MoData } from './mocap';
+import { CORE_PACK, MB, MOCAP_FPS, NB, PARENT, type MoClip, type MoData, newPosed, posed } from './mocap';
 import { ANKLE_H, SHIN_GROUND, THIGH, WRIST_Y, WRIST_Z } from './skeleton';
 
 /** A take to use: the file, what to call the clip, and the seconds of it (after the T-pose) */
@@ -45,6 +45,12 @@ export interface Take {
    * low point (subject 136's), so the feet are found on the ground
    */
   sink?: number;
+  /** What it is (mocap.ts `MoClip.tags`): which searches may reach it, what the rubric measures it as */
+  tags?: string[];
+  /** The moments' marks (mocap.ts `Mark`), in the clip's seconds (after `from`) */
+  marks?: { name: string; at: number; x: number; y: number; z: number }[];
+  /** The file it goes in (mocap.ts `CORE_PACK` if not said) */
+  pack?: string;
 }
 
 const UP = new THREE.Vector3(0, 1, 0);
@@ -192,7 +198,8 @@ export function retarget(b: Bvh, take: Take): MoClip {
   despike(locals, n);
   calmHands(locals, n);
   calmToes(locals, n);
-  const clip = { name: take.name, frames: n, root, hips, rot: locals };
+  straightenKnees(locals, hips, n);
+  const clip: MoClip = { name: take.name, tags: take.tags ?? [], marks: (take.marks ?? []).map((m) => ({ name: m.name, frame: Math.round(m.at * MOCAP_FPS), at: [m.x, m.y, m.z] })), pack: take.pack ?? CORE_PACK, frames: n, root, hips, rot: locals };
   return take.loop ? loopClip(clip, take.loop, take.cycle) : clip;
 }
 
@@ -279,6 +286,40 @@ function calmHands(rot: Float32Array, n: number) {
   }
 }
 
+/**
+ * The capture's knees (the revamp's audit): CMU's knee joint sits a little
+ * off the rig's hinge, so a straight leg came through bent back up to 12°
+ * (a person's knee goes 5° at most). A knee past straight is brought back
+ * to straight about its hinge (the thigh's x axis, as twoBone() bends it).
+ */
+const KNEE_LEGS = [
+  [MB.legL, MB.shinL, MB.footL],
+  [MB.legR, MB.shinR, MB.footR],
+] as const;
+function straightenKnees(rot: Float32Array, hips: Float32Array, n: number) {
+  const P = newPosed();
+  const X = new THREE.Vector3(1, 0, 0);
+  const ab = new THREE.Vector3();
+  const bc = new THREE.Vector3();
+  const ax = new THREE.Vector3();
+  const cr = new THREE.Vector3();
+  const q = new THREE.Quaternion();
+  const fix = new THREE.Quaternion();
+  for (let f = 0; f < n; f++) {
+    posed(rot, f * NB * 4, hips[f * 3], hips[f * 3 + 1], hips[f * 3 + 2], P);
+    for (const [a, b, c] of KNEE_LEGS) {
+      ab.copy(P.pos[b]).sub(P.pos[a]).normalize();
+      bc.copy(P.pos[c]).sub(P.pos[b]).normalize();
+      ax.copy(X).applyQuaternion(P.rot[a]);
+      const flex = Math.atan2(cr.copy(ab).cross(bc).dot(ax), ab.dot(bc));
+      if (flex >= 0) continue;
+      // (the shin's own turn is in the thigh's frame, whose x axis is the hinge)
+      q.fromArray(rot, (f * NB + b) * 4);
+      fix.setFromAxisAngle(X, -flex).multiply(q).normalize().toArray(rot, (f * NB + b) * 4);
+    }
+  }
+}
+
 const qa = new THREE.Quaternion();
 const qb = new THREE.Quaternion();
 /** How far apart two frames' poses are: every bone's turn (radians²) and the hips' height */
@@ -356,10 +397,16 @@ export function loopClip(c: MoClip, times: number, cycle: [number, number] = [0.
       ramp.multiply(q).normalize().toArray(rot, (k * NB + n) * 4);
     }
   }
-  return { name: c.name, frames, root, hips, rot };
+  return { name: c.name, tags: c.tags, marks: [], pack: c.pack, frames, root, hips, rot };
 }
 
 /** Every take, read by `read(file)` */
 export function buildMocap(takes: Take[], read: (file: string) => Bvh): MoData {
   return { fps: MOCAP_FPS, clips: takes.map((t) => retarget(read(t.file), t)) };
+}
+
+/** The data split by pack: the file each goes in (`clips.bin` the core, `clips-<pack>.bin` the rest) */
+export function packs(d: MoData): { pack: string; file: string; data: MoData }[] {
+  const names = [...new Set(d.clips.map((c) => c.pack ?? CORE_PACK))];
+  return names.map((pack) => ({ pack, file: pack === CORE_PACK ? 'clips.bin' : `clips-${pack}.bin`, data: { fps: d.fps, clips: d.clips.filter((c) => (c.pack ?? CORE_PACK) === pack) } }));
 }

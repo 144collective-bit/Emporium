@@ -8,11 +8,13 @@ import { readFileSync } from 'node:fs';
 import * as THREE from 'three';
 import { CROUCH, FACE, STAND, addLean, applyTo, createAnimator, twoBone } from '../src/scripts/city3d/animator';
 import { makeSkeleton, newPose, poseSkeleton } from '../src/scripts/city3d/skeleton';
-import { MB, NB, TOE_BONES, decodeMocap, newPosed, posed } from '../src/scripts/city3d/mocap';
+import { MB, NB, TOE_BONES, decodeMocap, newPosed, posed, tagged } from '../src/scripts/city3d/mocap';
 import { wrap } from '../src/scripts/city3d/inertia';
 import { GAITS, newMove, stepMove } from '../src/scripts/city3d/movesim';
 
 const data = decodeMocap(readFileSync('src/data/mocap/clips.bin'));
+/** Whether the clip of that name (the animator's `debug.clip`) carries a tag */
+const tagOf = (name: string, tag: string) => tagged(data.clips.find((c) => c.name === name.replace('~', ''))!, tag);
 const SCALE = 0.85;
 const DT = 1 / 60;
 /** A tile in centimetres */
@@ -572,14 +574,14 @@ test('crouched he walks on the crouched takes and stands still in the crouch ove
     z += m.vz * DT;
     an.update({ dt: DT, x: 0, y: 0, z, move: m, gx: 0, gz, scale: SCALE, ground: () => 0, sprint: 0, crouch });
     const clip = an.debug.clip.replace('~', '');
-    const isCrouch = CROUCH.clips.includes(clip);
+    const isCrouch = tagOf(clip, CROUCH.tag);
     if (down && t > 2.5 && t < 4.5) {
       kinds.crouchedMoving++;
       if (isCrouch) kinds.crouchedWalks++;
     }
     if (down && t > 6 && t < 8) {
       kinds.still++;
-      if (STAND.clips.includes(clip)) kinds.idle++;
+      if (tagOf(clip, STAND.tag)) kinds.idle++;
       posed(an.rot, 0, an.hips.x, an.hips.y, an.hips.z, P);
       hipsStill = Math.max(hipsStill, P.pos[0].y);
     }

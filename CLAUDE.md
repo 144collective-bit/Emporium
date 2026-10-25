@@ -1575,7 +1575,12 @@ it and has been retired completely. Build only on what's here.
   benches, rides seen, carrying), everyone on the same captured motion
   (other players, the crowd's rows, the emotes), the crowd's acts, the
   Fight Club and polish; one phase at a time with the owner's sign-off;
-  keep it up to date:
+  keep it up to date. Phase 1 is built: the rubric is `human.ts`
+  (DOM-free: `BANDS`, `createRubric()` over a figure's frames,
+  `clipRows()` over a clip; `tests/human.test.ts` holds every clip and
+  the animator's programs to it, rows that fail today `HELD_BACK` with
+  their phase), the lab's Scorecard and Reel, the clips' format 2 with
+  tags, marks and packs (below), a `mocap` budget row:
   - **The data** is CMU's motion capture (free for commercial use; the
     acknowledgment is in the start menu's Options > Credits, named, never
     linked): mostly subject 143's and 127's takes, in `assets/mocap/cmu/`
@@ -1590,8 +1595,17 @@ it and has been retired completely. Build only on what's here.
     sits on the wrist: aimed at it, every hand stood out 80° from its
     forearm) and calmed (`HANDS`), one-frame glitches put back between their
     neighbours (`SPIKE`) and the toes smoothed (`TOES`), the floor from the
-    ankles, the root smoothed from the hips) into `src/data/mocap/clips.bin`
-    (`mocap.ts`: 22 body bones at `MOCAP_FPS` 30, turns in 16 bits;
+    ankles, the root smoothed from the hips, the knees straightened where
+    the capture bent them back (`straightenKnees()`)) into
+    `src/data/mocap/clips.bin` (`mocap.ts`: 22 body bones at `MOCAP_FPS`
+    30, turns in 16 bits, each frame's as the difference from the frame
+    before in varints (format 2, the revamp's Phase 1: 495 KB where plain
+    numbers made 703); each take's `tags` (`stand`, `crouch` and
+    `jumps-only` are what the searches read through `tagged()`:
+    `STAND.tag`, `CROUCH.tag`, `JUMPS_ONLY`; the rest say what it is for
+    the rubric), `marks` (a hand's meeting with a thing, for the moments)
+    and `pack` (`CORE_PACK` fetched when walking starts, another pack on
+    first use, `loadMocap(pack)`; `npm run mocap` writes one file a pack);
     `mirrorClip()`, `posed()`, `contacts()`); `tests/mocap.test.ts` holds
     the file to exactly what the pipeline makes. It's fetched when walking
     starts (`mocap-load.ts`, a hashed asset), with the animator's own
@@ -1723,6 +1737,8 @@ it and has been retired completely. Build only on what's here.
     after it's looked at, so a slow frame can't lose it.
   - **The lab** is `?anim` (`anim-lab.ts`, styles `animlab.css`): the new
     animation beside the old on an open floor, scripted moves or W A S D,
+    the Reel (every program in turn, `prog=reel`) and the Scorecard (the
+    rubric's rows over the last eight seconds, red where one fails),
     slow motion, cameras (over his right shoulder too), floors (flat,
     kerbs, stairs, a ledge), any gun in his hands (`gun`, `aim`, `pitch`;
     markers at the butt and his shoulder's pocket; on the motion capture's
@@ -3115,7 +3131,7 @@ it and has been retired completely. Build only on what's here.
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,
   in `tests/merch.test.ts`), the crowd's baked clips (`crowdclips.ts`) and Degen's skeleton, weights, head and hands
-  (`skeleton.ts`, `body.ts`), his walking (`locomotion.ts`), the motion capture and its animation (`bvh.ts`, `mocap-build.ts`, `mocap.ts`, `movesim.ts`, `inertia.ts`, `motionmatch.ts`, `animator.ts`) and the guns in his hands (`gunfit.ts`, `stance.ts`). Modules that touch the DOM or `kit.ts` (canvas
+  (`skeleton.ts`, `body.ts`), his walking (`locomotion.ts`), the motion capture and its animation (`bvh.ts`, `mocap-build.ts`, `mocap.ts`, `movesim.ts`, `inertia.ts`, `motionmatch.ts`, `animator.ts`), the rubric of human movement over every clip and program (`human.ts`, `tests/human.test.ts`) and the guns in his hands (`gunfit.ts`, `stance.ts`). Modules that touch the DOM or `kit.ts` (canvas
   textures) can't load in Node; keep data a test needs in the DOM-free
   files.
 - When you change a rule or move something in the city, run the tests and

@@ -6,8 +6,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import * as THREE from 'three';
 import { parseBvh, poseBvh, jointIndex } from '../src/scripts/city3d/bvh';
-import { buildMocap, type Take } from '../src/scripts/city3d/mocap-build';
-import { MB, MOCAP_BONES, MOCAP_FPS, NB, PARENT, contacts, decodeMocap, encodeMocap, mirrorClip, newPosed, posedFrame } from '../src/scripts/city3d/mocap';
+import { buildMocap, packs, type Take } from '../src/scripts/city3d/mocap-build';
+import { CORE_PACK, MB, MOCAP_BONES, MOCAP_FPS, NB, PARENT, contacts, decodeMocap, encodeMocap, mirrorClip, newPosed, posedFrame, tagged } from '../src/scripts/city3d/mocap';
 import { ANKLE_H, BONES } from '../src/scripts/city3d/skeleton';
 
 const takes: Take[] = JSON.parse(readFileSync('assets/mocap/takes.json', 'utf8'));
@@ -136,8 +136,27 @@ test('the feet are on the ground about as long as a run and a walk keep them', (
 });
 
 test('the clips file stays small (it loads when walking starts)', () => {
-  // (subject 143's takes at their real speed are twice as long as when they played at double speed)
-  assert.ok(file.length < 720 * 1024, `${(file.length / 1024).toFixed(0)} KB`);
+  // (subject 143's takes at their real speed are twice as long as when they played at double speed;
+  // delta-coded since the revamp's Phase 1: 495 KB where plain 16-bit numbers made 703)
+  assert.ok(file.length < 520 * 1024, `${(file.length / 1024).toFixed(0)} KB`);
+});
+
+test('every clip carries its tags, marks and pack, through the file and its mirror image', () => {
+  for (const c of data.clips) {
+    const t = takes.find((k) => k.name === c.name)!;
+    assert.deepEqual(c.tags, t.tags ?? [], `${c.name}: its tags`);
+    assert.equal(c.pack, t.pack ?? CORE_PACK);
+    assert.deepEqual(mirrorClip(c).tags, c.tags);
+  }
+  assert.ok(data.clips.filter((c) => tagged(c, 'stand')).length >= 3, 'the idles are tagged stand');
+  assert.ok(data.clips.filter((c) => tagged(c, 'crouch')).length === 3, 'the crouched walks are tagged crouch');
+  // A mark survives the file, mirrored across the middle
+  const d = { fps: data.fps, clips: [{ ...data.clips[0], marks: [{ name: 'hand', frame: 12, at: [0.25, 0.5, 0.375] as [number, number, number] }] }] };
+  const back = decodeMocap(encodeMocap(d));
+  assert.deepEqual(back.clips[0].marks, d.clips[0].marks);
+  assert.deepEqual(mirrorClip(back.clips[0]).marks[0].at, [-0.25, 0.5, 0.375]);
+  // The packs: everything is the core's today (one file)
+  assert.deepEqual(packs(data).map((p) => [p.pack, p.file, p.data.clips.length]), [[CORE_PACK, 'clips.bin', data.clips.length]]);
 });
 
 test('the collarbones sit level, as Degen\'s do at rest (the capture\'s own shoulder joint sits at the neck and would shrug them)', () => {

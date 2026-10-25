@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { decodeMocap } from '../src/scripts/city3d/mocap';
+import { decodeMocap, tagged } from '../src/scripts/city3d/mocap';
 import { AHEAD, FEATURES, JUMPS_ONLY, TAKEOFF, buildDatabase, search, setTrajectory } from '../src/scripts/city3d/motionmatch';
 import { MOCAP_FPS } from '../src/scripts/city3d/mocap';
 
@@ -84,6 +84,6 @@ test('on the ground a search never lands in a jump, nor in the standing jumps\' 
     if (!db.open[g]) continue;
     const r = search(db, db.feat.slice(g * FEATURES, (g + 1) * FEATURES));
     assert.equal(db.flightOf[r.g], -1);
-    assert.ok(!JUMPS_ONLY.includes(db.clips[db.clipOf[r.g]].name.replace('~', '')));
+    assert.ok(!tagged(db.clips[db.clipOf[r.g]], JUMPS_ONLY));
   }
 });
