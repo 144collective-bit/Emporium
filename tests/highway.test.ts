@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { HIGHWAY, HIGHWAY_BOX, HIGHWAY_HALF, fromHighway, insideHighway } from '../src/scripts/city3d/highway';
 import { OUTER_SLIPS, PLAN, distToStreet, riverBridges, streetLength } from '../src/scripts/city3d/streetplan';
-import { EW_ROADS, NS_ROADS, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
+import { EW_ROADS, NS_ROADS, SHORT_NS, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
 import { PARKWAY, SOUTHSIDE } from '../src/scripts/city3d/outer';
 import { KART_PARK } from '../src/scripts/city3d/kartpark';
 import { AIRPORT_AREAS } from '../src/scripts/city3d/airfield';
@@ -42,7 +42,8 @@ test('well outside the town, and clear of the kart park north of it and the airp
 
 test('a lit junction wherever it meets an arterial, two slip lanes on the town side of each (four where the road past it carries traffic)', () => {
   const meets = PLAN.crossings.filter((c) => c.streets.includes('highway'));
-  assert.equal(meets.length, (NS_ROADS.length + EW_ROADS.length) * 2);
+  // (but the short north-south streets stop at the Parkway: no junction on the highway's north side, docs/mall-plan.md)
+  assert.equal(meets.length, (NS_ROADS.length + EW_ROADS.length) * 2 - Object.keys(SHORT_NS).length);
   for (const c of meets) {
     assert.ok(c.lights);
     assert.ok(fromHighway(c.at[0], c.at[1]) < 1e-6);

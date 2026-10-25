@@ -9,7 +9,7 @@ import { test } from 'node:test';
 import { BRIDGE_RECT, CAR_PARK, STADIUM_SOLIDS } from '../src/scripts/city3d/stadium';
 import assert from 'node:assert/strict';
 import { CAMERA_ONLY, DOORS, FIGHTCLUB_SITE, GARAGE_SITE, MARKET_SITE, RACK, SHOT_SOLIDS, SOLIDS, STALL_SPOT, TURNTABLE_BOX, UNIT_SITE, UNIT_SIZE, WALK_SPAWN, LOT_SITE, lotSolids, rayBoxes, unitSolids } from '../src/scripts/city3d/solids';
-import { BIG_LOTS, EW_ROADS, GARAGE, BS, LANE, MARKET, NS_ROADS, UNITS } from '../src/scripts/city3d/layout';
+import { BIG_LOTS, EW_ROADS, GARAGE, BS, LANE, MARKET, NS_ROADS, UNITS, nsRuns } from '../src/scripts/city3d/layout';
 import { CIRCUIT_SOLIDS as KART_SOLIDS } from '../src/scripts/city3d/kartcircuit';
 import { FACILITY_SOLIDS } from '../src/scripts/city3d/kartfacility';
 import { CORNERS, FIGHT_CLUB, FIGHT_SPAWN, OUT, RING, RING_HALF, TRAINER, inRing } from '../src/scripts/city3d/fightsite';
@@ -33,7 +33,8 @@ test('every solid box stands on a block, district or the garage lot (the kart pa
 test('no solid box sits on a road (but the metro\'s pillars in an avenue\'s median, metro.test.ts)', () => {
   for (const b of SOLIDS) {
     if (METRO_SOLIDS.includes(b)) continue;
-    for (const r of NS_ROADS) assert.ok(b[2] <= r.c - r.half || b[0] >= r.c + r.half, `box ${b.join(', ')} on the road at x ${r.c}`);
+    // (the short north-south streets only from the Parkway south: the mall's land past it, docs/mall-plan.md)
+    NS_ROADS.forEach((r, i) => assert.ok(b[2] <= r.c - r.half || b[0] >= r.c + r.half || !nsRuns(i, b[3]), `box ${b.join(', ')} on the road at x ${r.c}`));
     for (const r of EW_ROADS) assert.ok(b[3] <= r.c - r.half || b[1] >= r.c + r.half, `box ${b.join(', ')} on the road at z ${r.c}`);
   }
 });

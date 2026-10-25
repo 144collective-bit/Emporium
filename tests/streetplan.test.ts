@@ -7,7 +7,7 @@ import { UPTOWN_BLOCKS } from '../src/scripts/city3d/uptown';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { PLAN, blockAt, cityPlan, distToStreet, gridPlan, inPoly, lanePaths, offsetLine, onSlab, outset, pointAt, polyArea, polyCentre, streetLength, type Pt, type Street } from '../src/scripts/city3d/streetplan';
-import { BLOCKS, BRIDGED_NS, BS, CORE_ROADS, EW_ROADS, EXT, EXTRA_LOTS, NS_ROADS, RING_HI, RING_LO, SOUTH_ROAD, WALK_W, laneCentres } from '../src/scripts/city3d/layout';
+import { BLOCKS, BRIDGED_NS, BS, CORE_ROADS, EW_ROADS, EXT, EXTRA_LOTS, NS_ROADS, RING_HI, RING_LO, SHORT_NS, SOUTH_ROAD, WALK_W, laneCentres } from '../src/scripts/city3d/layout';
 import { BLOCKS_DT, DIAGONALS } from '../src/scripts/city3d/downtown';
 import { BEND_KERBS, OUTER_BLOCKS } from '../src/scripts/city3d/outer';
 import { DISTRICTS } from '../src/data/plots';
@@ -23,7 +23,9 @@ test('the grid plan has every road of layout.ts, edge to edge (but those with no
   for (const s of p.streets) {
     const i = NS_ROADS.findIndex((r) => s.pts[0][0] === r.c && s.pts.at(-1)![0] === r.c);
     if (i < 0 || BRIDGED_NS.includes(i)) assert.ok(near(streetLength(s), EXT[1] - EXT[0]), `${s.id} runs edge to edge`);
-    else assert.ok(near(streetLength(s), s.id.endsWith('s') ? EXT[1] - SOUTH_ROAD : RING_HI - EXT[0]), `${s.id} runs from the edge to its bank avenue`);
+    else if (s.id.endsWith('s') || !(i in SHORT_NS)) assert.ok(near(streetLength(s), s.id.endsWith('s') ? EXT[1] - SOUTH_ROAD : RING_HI - EXT[0]), `${s.id} runs from the edge to its bank avenue`);
+    // (the short ones from the Parkway: the mall's land past it, docs/mall-plan.md)
+    else assert.ok(s.pts[0][1] < SHORT_NS[i] && s.pts[0][1] > SHORT_NS[i] - 1 && s.pts.at(-1)![1] === RING_HI, `${s.id} runs from the Parkway to its bank avenue`);
   }
   assert.ok(p.streets.every((s) => s.kind !== 'alley'), 'no alleys yet');
 });
@@ -78,7 +80,7 @@ test('the city as built: the grid\'s roads, three diagonals from the ring\'s cor
 test('the city\'s blocks: downtown\'s outlines, every district and lot, off the asphalt, the landmarks on theirs', () => {
   const p = cityPlan();
   // (and the stadium's, north of the highway)
-  assert.equal(p.blocks.length, BLOCKS_DT.length + OUTER_BLOCKS.length + BEND_KERBS.length + TRENCH_BLOCKS.length + WESTLAKE_BLOCKS.length + UPTOWN_BLOCKS.length + 1 + 3);
+  assert.equal(p.blocks.length, BLOCKS_DT.length + OUTER_BLOCKS.length + BEND_KERBS.length + TRENCH_BLOCKS.length + WESTLAKE_BLOCKS.length + UPTOWN_BLOCKS.length + 1 + 3 + 3);
   // (the stadium's, and the grand station's three: its hall and shed, its forecourt's plaza, its car park)
   // Every plot and every lot sits on an outer block
   for (const d of DISTRICTS) assert.equal(p.blocks.filter((b) => b.pads?.includes(d.id)).length, 1, `plot ${d.id}`);
