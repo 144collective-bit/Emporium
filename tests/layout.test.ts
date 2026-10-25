@@ -2,7 +2,7 @@
 // lanes, the river, and the landmarks' old drawing grid with their seats today.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BLOCKS, BS, CITY_EXT, CORE_ROADS, DOWNTOWN, EW_ROADS, EXT, GARAGE, LANE, MEDIAN, NS_ROADS, RING_HI, RING_LO, RIVER, SEATS, SOUTH_ROAD, THIRDS, WALK_W, WORLD_BOUNDS, design, designBox, laneCentres, seat } from '../src/scripts/city3d/layout';
+import { BLOCKS, BS, CITY_EXT, CORE_ROADS, DOWNTOWN, EW_ROADS, EXT, GARAGE, LANE, MEDIAN, NS_ROADS, RING_HI, RING_LO, RIVER, SEATS, SOUTH_ROAD, THIRDS, WALK_W, WORLD_BOUNDS, design, designBox, laneCentres, nsRuns, seat } from '../src/scripts/city3d/layout';
 import { SLABS, bounds, inside, overlaps, polysOverlap } from './world';
 import { PLAN } from '../src/scripts/city3d/streetplan';
 
@@ -23,7 +23,10 @@ test('downtown is 60 across, cut in thirds by two cross streets, inside the ring
 });
 
 test('no road runs over a slab (a block, district or lot, with its sidewalk)', () => {
-  for (const r of NS_ROADS) for (const s of SLABS) assert.ok(s.every((p) => p[0] <= r.c - r.half + 1e-6) || s.every((p) => p[0] >= r.c + r.half - 1e-6), `north-south road at x ${r.c} crosses a slab at ${bounds(s)}`);
+  // (the short north-south streets only from the Parkway south: docs/mall-plan.md)
+  NS_ROADS.forEach((r, i) => {
+    for (const s of SLABS) assert.ok(s.every((p) => p[0] <= r.c - r.half + 1e-6) || s.every((p) => p[0] >= r.c + r.half - 1e-6) || s.every((p) => !nsRuns(i, p[1])), `north-south road at x ${r.c} crosses a slab at ${bounds(s)}`);
+  });
   for (const r of EW_ROADS) for (const s of SLABS) assert.ok(s.every((p) => p[1] <= r.c - r.half + 1e-6) || s.every((p) => p[1] >= r.c + r.half - 1e-6), `east-west road at z ${r.c} crosses a slab at ${bounds(s)}`);
 });
 

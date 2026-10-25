@@ -19,7 +19,7 @@
  * Coordinates are world units on the ground: [x, z].
  */
 import { DISTRICTS } from '../../data/plots';
-import { BIG_LOTS, BS, EW_ROADS, GARAGE, LANE, MARKET, NS_ROADS, RIVER, RING_HI, SOUTH_ROAD, SOUTH_SHIFT as D, UNITS, WALK_W, type Road } from './layout';
+import { BIG_LOTS, BS, EW_ROADS, GARAGE, LANE, MARKET, NS_ROADS, RIVER, RING_HI, SOUTH_ROAD, SOUTH_SHIFT as D, UNITS, WALK_W, nsRuns, type Road } from './layout';
 import { LIBERTY_RECTS } from './liberty';
 import { HARBOUR_RECT } from './harbour';
 import { FIGHT_CLUB } from './fightsite';
@@ -295,7 +295,7 @@ export const LAWN_TREES: Pt[] = OUTER_BLOCKS.flatMap((b, i) => {
 
 /** Is a point on (or by) a straight road's asphalt and sidewalk */
 const onRoad = ([x, z]: Pt) =>
-  NS_ROADS.some((r) => Math.abs(x - r.c) < r.half + WALK_W) ||
+  NS_ROADS.some((r, i) => Math.abs(x - r.c) < r.half + WALK_W && nsRuns(i, z)) ||
   EW_ROADS.some((r) => Math.abs(z - r.c) < r.half + WALK_W);
 /** Which segments of each bend have their outer sidewalk (the rest cross a road): one flag per segment */
 export const KERB_RUNS: boolean[][] = BENDS.map((b) =>

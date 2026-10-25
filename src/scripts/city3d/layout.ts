@@ -109,6 +109,14 @@ export const NS_ROADS: Road[] = [avenue(RING_LO), ...CORE_ROADS.map(street), ave
  * `ns<i>s` south of it (`nsStreet()`).
  */
 export const BRIDGED_NS = [NS_ROADS.length - 1];
+/**
+ * The north-south streets that stop at the Parkway (the owner's call: the mall's land north of downtown,
+ * docs/mall-plan.md): road i's north end, a hair inside the Parkway's line (streetplan.ts ends each exactly at its
+ * crossing). The others run on to the world's edge.
+ */
+export const SHORT_NS: Record<number, number> = { 1: -39, 2: -39 };
+/** Does north-south road `i` run at z (the short ones not north of the Parkway) */
+export const nsRuns = (i: number, z: number) => !(i in SHORT_NS) || z > SHORT_NS[i];
 /** The plan's id for north-south road `i` at z (its south half's, past the river, where it has no bridge) */
 export const nsStreet = (i: number, z: number) => (BRIDGED_NS.includes(i) || z < (RIVER[0] + RIVER[1]) / 2 ? `ns${i}` : `ns${i}s`);
 /** Roads running east-west, at these z (the south bank avenue only runs east-west) */

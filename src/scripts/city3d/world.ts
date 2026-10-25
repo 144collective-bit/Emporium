@@ -15,7 +15,8 @@
 import * as THREE from 'three';
 import { DISTRICTS } from '../../data/plots';
 import { Batch, canvasTex, facadeMat, flickerTogether, fx, glowMat, glowTex, lit, neon, PAL, rand, rng, sidesBox, siteMat, toon } from './kit';
-import { BLOCKS, BRIDGED_NS, BS, CENTER_XZ, CORE_ROADS, DOWNTOWN, EW_ROADS, EXT, LANE, MEDIAN, NS_ROADS, RING_HI, RIVER, SEATS, SOUTH_ROAD, WALK_W, type Road } from './layout';
+import { ZEBRA as MALL_ZEBRA } from './mall';
+import { BLOCKS, BRIDGED_NS, BS, CENTER_XZ, CORE_ROADS, DOWNTOWN, EW_ROADS, EXT, LANE, MEDIAN, NS_ROADS, RING_HI, RIVER, SEATS, SHORT_NS, SOUTH_ROAD, WALK_W, type Road } from './layout';
 import { PLAN, offsetLine, pointAt, riverBridges, streetLength, type Pt, type Street } from './streetplan';
 import { HIGHWAY, HIGHWAY_HALF } from './highway';
 import { DIAGONALS, DIAGONAL_LAMPS } from './downtown';
@@ -365,7 +366,7 @@ export const puddleMat = new THREE.MeshBasicMaterial({
 function highwayGaps(axis: 'ew' | 'ns', i: number): [number, number][] {
   const road = `${axis}${i}`;
   const gaps = PLAN.crossings
-    .filter((c) => c.streets.includes(road) && (c.streets.includes('highway') || c.streets.some((id) => id.startsWith('trench-') || id.startsWith('uptown-') || id.startsWith('station-'))))
+    .filter((c) => c.streets.includes(road) && (c.streets.includes('highway') || c.streets.some((id) => id.startsWith('trench-') || id.startsWith('uptown-') || id.startsWith('station-') || id.startsWith('mall-'))))
     .flatMap((c): [number, number][] => {
       const v = axis === 'ew' ? c.at[0] : c.at[1];
       if (c.streets.includes('highway')) return [[v - HIGHWAY_HALF - 0.2, v + HIGHWAY_HALF + 0.2]];
@@ -388,6 +389,8 @@ function highwayGaps(axis: 'ew' | 'ns', i: number): [number, number][] {
         });
     });
   if (axis === 'ew' && AXIS_ZEBRAS.some((z) => z.z === EW_ROADS[i].c)) gaps.push([AXIS_X - LANE_HALF - 0.2, AXIS_X + LANE_HALF + 0.2]);
+  // (and the zebra over the north avenue from Palm Court to the mall: mall.ts)
+  if (axis === 'ns' && i === 0) gaps.push([MALL_ZEBRA.z - MALL_ZEBRA.half - 0.2, MALL_ZEBRA.z + MALL_ZEBRA.half + 0.2]);
   return gaps;
 }
 
@@ -693,7 +696,9 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
       b.box(r.c - r.half, 0.002, e0, r.half * 2, 0.03, HZ0 - e0, asphalt);
       b.box(r.c - r.half, 0.002, HZ1, r.half * 2, 0.03, e1 - HZ1, asphalt);
     } else {
-      b.box(r.c - r.half, 0.002, e0, r.half * 2, 0.03, RING_HI - e0, asphalt);
+      // (the short ones from the Parkway: docs/mall-plan.md)
+      const top = SHORT_NS[NS_ROADS.indexOf(r)] ?? e0;
+      b.box(r.c - r.half, 0.002, top, r.half * 2, 0.03, RING_HI - top, asphalt);
       b.box(r.c - r.half, 0.002, SOUTH_ROAD, r.half * 2, 0.03, e1 - SOUTH_ROAD, asphalt);
     }
   const median = toon('#3f5a4a');
@@ -712,7 +717,7 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
   };
   // Over the river: no road at all where there's no bridge; the east avenue's is Harbour Bridge (harbour3d.ts draws
   // its median and lines, the el's posts stand on it)
-  const river = (r: Road): [number, number][] => (bridged(r) ? [[HZ0, HZ1]] : [[RING_HI, SOUTH_ROAD]]);
+  const river = (r: Road): [number, number][] => [...(bridged(r) ? [[HZ0, HZ1] as [number, number]] : [[RING_HI, SOUTH_ROAD] as [number, number]]), ...(NS_ROADS.indexOf(r) in SHORT_NS ? [[e0, SHORT_NS[NS_ROADS.indexOf(r)] + 2] as [number, number]] : [])];
   for (const r of EW_ROADS)
     if (r.lanes === 2)
       for (const [a0, a1] of runsBetween(NS_ROADS, highwayGaps('ew', EW_ROADS.indexOf(r)))) {
@@ -780,7 +785,7 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
     const kind: LotKind =
       lots[blk.id] ??
       // (Uptown's lots paved round its towers; its open lots' earth is uptown3d.ts's, behind their hoardings)
-      (blk.ref === 'garage' || blk.id === 'station-park' ? 'concrete' : blk.ref === 'station' || blk.ref === 'market' || blk.ref === 'units' || blk.ref === 'uptown' ? 'paving' : blk.use === 'park' ? 'grass' : blk.id.startsWith('dt-') ? 'paving' : 'grass');
+      (blk.ref === 'garage' || blk.id === 'station-park' || blk.id === 'mall-park' ? 'concrete' : blk.ref === 'station' || blk.ref === 'mall' || blk.ref === 'market' || blk.ref === 'units' || blk.ref === 'uptown' ? 'paving' : blk.use === 'park' ? 'grass' : blk.id.startsWith('dt-') ? 'paving' : 'grass');
     if (isRect(slab) && !bigPoly(slab)) {
       const [x0, z0] = [Math.min(...slab.map((p) => p[0])), Math.min(...slab.map((p) => p[1]))];
       const [x1, z1] = [Math.max(...slab.map((p) => p[0])), Math.max(...slab.map((p) => p[1]))];

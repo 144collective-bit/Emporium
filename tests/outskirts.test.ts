@@ -6,7 +6,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { BELT, BELT_FREE, OPEN_FREE, WOODS, WOODS_OFF, freeLand, inWoods, outskirtsTrees, treeSpot } from '../src/scripts/city3d/outskirts';
 import { BUILT_UP, CAMERA_FAR, PAN_BOUNDS, PAN_MARGIN, SKYLINE, SKY_RADIUS, overviewFrame } from '../src/scripts/city3d/bounds';
-import { EXT, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
+import { EXT, NS_ROADS, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
+import { MALL_AREA } from '../src/scripts/city3d/mall';
+import { HIGHWAY_BOX } from '../src/scripts/city3d/highway';
 
 /** The world before Phase 6 (the densities were worked out on it), Phase 6's and Phase 10's */
 const TODAY: [number, number] = [-200, 240];
@@ -20,14 +22,29 @@ const OLD_KART: [number, number, number, number] = [92, -138, 180, -48];
 const OLD_AIRPORT: [number, number, number, number] = [70.2, 169.5, 234, 279];
 /** Either: their land is open again, its trees come at the same density as the rest */
 const OLD = [OLD_KART, OLD_AIRPORT];
+/** The land a tree could stand on in the mall's land before it was built (step 2, as freeLand counts): off the north-south roads and the highway's junctions */
+function mallWas(r: readonly number[], skip?: readonly number[]) {
+  const o = overlap(r, MALL_AREA);
+  let n = 0;
+  for (let x = o[0] + 1; x < o[2]; x += 2)
+    for (let z = o[1] + 1; z < o[3]; z += 2) {
+      if (skip && inBox(skip, x, z)) continue;
+      if (NS_ROADS.some((q) => Math.abs(x - q.c) < q.half + 0.8)) continue;
+      if (NS_ROADS.some((q) => Math.abs(x - q.c) < 17 && Math.abs(z - HIGHWAY_BOX[1]) < 17)) continue;
+      n++;
+    }
+  return n * 4;
+}
 const overlap = (a: readonly number[], b: readonly number[]): [number, number, number, number] => [Math.max(a[0], b[0]), Math.max(a[1], b[1]), Math.min(a[2], b[2]), Math.min(a[3], b[3])];
 
 test('the densities still fit the land the world had before Phase 6', () => {
   // (the kart park's and the airport's old land counted out: open again, its trees come at the same density as the rest)
   const outer: [number, number, number, number] = [TODAY[0] + 4, TODAY[0] + 4, TODAY[1] - 4, TODAY[1] - 4];
   const away = (r: [number, number, number, number], skip?: [number, number, number, number]) => OLD.reduce((n, o) => n + freeLand(overlap(r, o), 2, skip), 0);
-  const belt = freeLand(BELT, 2) - away(BELT);
-  const open = freeLand(outer, 2, BELT) - away(outer, BELT);
+  // (and the mall's land added back: built on since, docs/mall-plan.md; it was free but for the roads across it and
+  // the highway's junctions)
+  const belt = freeLand(BELT, 2) - away(BELT) + mallWas(BELT);
+  const open = freeLand(outer, 2, BELT) - away(outer, BELT) + mallWas(outer, BELT);
   assert.ok(Math.abs(belt - BELT_FREE) / BELT_FREE < 0.03, `belt ${belt} against ${BELT_FREE}`);
   assert.ok(Math.abs(open - OPEN_FREE) / OPEN_FREE < 0.03, `open land ${open} against ${OPEN_FREE}`);
 });

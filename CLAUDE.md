@@ -1046,6 +1046,44 @@ it and has been retired completely. Build only on what's here.
     `data-panel-tpl="station"` with Walk in to `STATION_SPAWN`, `PLACES`
     and `LIVE_PLACES` entries). The far cars' mesh grows when a district's
     parked cars fill it (`initFarCars()`).
+- **Palm Court and Starlight Mall** (the owner's call): a shopping plaza and
+  a mall on the land between the Parkway and the ring highway's north side,
+  east of Westlake Park, planned in `docs/mall-plan.md` in steps, each with
+  the owner's sign-off (1 both from outside, built; 2 the mall's walk-in
+  interior; 3 maybe shops run with Dorras); keep it up to date. Retro neon
+  80s (the owner's pick): pastel, chrome, neon, checkered paving, palms;
+  made-up names only, no prices on any sign; under the Emporium (`TALLEST`).
+  - The two small north-south streets stop at the Parkway (`SHORT_NS`,
+    `nsRuns()` in layout.ts: streetplan.ts ends each at its crossing, their
+    junctions on the highway's north side and their slips went; world.ts,
+    outer.ts's kerbs and the outskirts' trees honour it).
+  - `mall.ts` (DOM-free, tested in `tests/mall.test.ts`): Palm Court
+    (`COURT`, block `palm-court`, by the north avenue: the promenade
+    `PROM`, two rows of shops facing across it, `SHOPS` from `SHOP_NAMES`,
+    the west row open to the park's east gates `GATE_GAPS`, the east row to
+    the zebra over the avenue `ZEBRA` (the avenue's median breaks there,
+    `highwayGaps()`), Paradise Cinema across the north end `CINEMA`, the
+    `FOUNTAIN`, `BENCHES`, `PALMS`, the PALM COURT `ARCH`); Starlight Mall
+    (`MALL_BLOCK`, block `mall`: the `HALL`, its `PORCH`, the `ANCHORS`
+    Maxwell's and Bright & Co., the `PYLON`, the bus `SHELTER`); the
+    two-way loop off the north avenue (`LOOP`, `MALL_STREETS` /
+    `MALL_CROSSINGS`: traffic drives it) round the car parks (`PARK_BLOCK`,
+    block `mall-park`: `CAR_PARK`, `BAYS`, `PARKED`, the taxi rank
+    `RANK_CABS`, the multi-storey `MSCP` and its cars `MSCP_CARS`);
+    `MALL_SOLIDS` (in `SOLIDS`), `MALL_LAMPS`, `MALL_PEOPLE`, `COURT_SPAWN`,
+    `MALL_SPAWN`, `MALL_AREA` (the outskirts' trees keep off, `treeSpot()`).
+  - `mall3d.ts` draws them, a district loaded as you approach
+    (`LAZY_DISTRICTS` id `mall`): sites (the shops with lit fronts, fascias,
+    neon roof lines and near-only awnings; the cinema with its marquee,
+    bulbs and posters for made-up films (uptownsites.ts `FILMS`); the
+    fountain, benches, palms, the arch; the anchors, the hall with its glass
+    vault, the porch, the pylon with its star, the shelter; the loop, the
+    zebra, the bays and TAXI board, the multi-storey's decks), one sign atlas
+    (`mall-signs`), and on the main thread the parked cars and cabs. The
+    places are `mallspot.ts` (spots `palmcourt` and `mall`: pins, directory
+    entries, panels `data-panel-tpl="palmcourt"` / `"mall"` with Walk in,
+    `PLACES` and `LIVE_PLACES` entries); the world map draws their
+    footprints.
 - **Districts loaded as you approach** (performance phase 4, item 10):
   a district's drawing is a module of its own (`LAZY_DISTRICTS` in
   `districts.ts`: an id, its land and `load()`, a dynamic import), a chunk
@@ -3063,7 +3101,7 @@ it and has been retired completely. Build only on what's here.
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`), Harbour Bridge (`harbour.ts`),
-  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), the river's shape (`river.ts`), the river's life, the river bus and boating (`riverlife.ts`, `riverbus.ts`, `riverroute.ts`, `boat-sim.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`, `boulevard.ts`, `boulevarddress.ts`, `kerbside.ts`, `skydeck.ts`, `skyline.ts`, `uptownlife.ts`, `streetlevel.ts`, `uptownsites.ts`, `streetlife.ts`, `wheel.ts`, the town car in `cars.ts`), the kart park's facility (`kartfacility.ts`), the grand station (`station.ts`),
+  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), the river's shape (`river.ts`), the river's life, the river bus and boating (`riverlife.ts`, `riverbus.ts`, `riverroute.ts`, `boat-sim.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`, `boulevard.ts`, `boulevarddress.ts`, `kerbside.ts`, `skydeck.ts`, `skyline.ts`, `uptownlife.ts`, `streetlevel.ts`, `uptownsites.ts`, `streetlife.ts`, `wheel.ts`, the town car in `cars.ts`), the kart park's facility (`kartfacility.ts`), the grand station (`station.ts`), Palm Court and the mall (`mall.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,
