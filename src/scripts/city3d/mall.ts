@@ -1,0 +1,309 @@
+/*
+ * The shopping plaza and the mall north of downtown (docs/mall-plan.md step 1,
+ * the owner's call; DOM-free, tested in tests/mall.test.ts), drawn by
+ * mall3d.ts, a district loaded as you approach. On the land between the
+ * Parkway and the ring highway's north side, east of Westlake Park; retro neon
+ * 80s, made-up names only, everything under the Emporium (`TALLEST`).
+ *
+ * - **Palm Court** (`COURT`): the open-air plaza between the park and the
+ *   north avenue (ns0). A promenade (`PROM`) runs north to south between two
+ *   rows of shops facing each other across it (`SHOPS`). The west row is
+ *   broken where the park's east gates open (`GATE_GAPS`); the east row is
+ *   broken at the passage to the zebra over the avenue (`ZEBRA`). Paradise
+ *   Cinema (`CINEMA`) stands across the north end; the fountain (`FOUNTAIN`)
+ *   is in the middle, with palms in planters (`PALMS`), benches and the PALM
+ *   COURT arch at the south end (`ARCH`).
+ * - **Starlight Mall** (`MALL_BLOCK`): the mall's hall (`HALL`) with its
+ *   entrance porch (`PORCH`), the two anchors at its ends (`ANCHORS`) and the
+ *   neon pylon by the loop (`PYLON`).
+ * - **The loop** (`LOOP`): two-way, off the north avenue (`MALL_STREETS` /
+ *   `MALL_CROSSINGS` in the street plan, so traffic drives it). Inside it
+ *   (`PARK_BLOCK`) are the surface car park (`CAR_PARK`, `BAYS`, `PARKED`,
+ *   cabs at the rank in its first row, `RANK_CABS`) and the multi-storey
+ *   (`MSCP`, its cars `MSCP_CARS`).
+ *
+ * `MALL_SOLIDS` (in `SOLIDS`) are the buildings, the arch's posts, the
+ * fountain, the pylon and the parked cars. The trees keep off `MALL_AREA`.
+ */
+import { NS_ROADS, WALK_W } from './layout';
+import { GATES, WESTLAKE_RECT } from './westlake';
+
+export type Pt = [number, number];
+export type Rect = [number, number, number, number];
+type Box = [number, number, number, number, number];
+
+const NS0 = NS_ROADS[0];
+const NS3 = NS_ROADS[NS_ROADS.length - 1];
+/** The blocks' north edge (clear of the highway's slip lanes) and the land's south edge (clear of the Parkway's outer sidewalk) */
+export const NORTH_Z = -155;
+export const SOUTH_Z = -43.2;
+
+/* ---------- Palm Court ---------- */
+
+/** The plaza's block: from the park's sidewalk to the north avenue's */
+export const COURT: Rect = [WESTLAKE_RECT[2] + WALK_W, NORTH_Z, NS0.c - NS0.half - WALK_W, -42];
+/** How deep the shops are, and the promenade between the two rows (x0, x1) */
+const ROW_D = 10;
+export const PROM: [number, number] = [COURT[0] + 0.5 + ROW_D, COURT[2] - 0.5 - ROW_D];
+export const PROM_X = (PROM[0] + PROM[1]) / 2;
+/** Paradise Cinema across the north end, facing south down the promenade: its footprint and height */
+export const CINEMA = { rect: [COURT[0] + 1, NORTH_Z + 1, COURT[2] - 1, -136] as Rect, h: 9, name: 'PARADISE CINEMA' };
+/** The park's east gates the west row opens onto (z), and the gaps left for them */
+export const GATE_GAPS: Pt[] = GATES.filter((g) => g.out[0] === 1 && g.at[1] < COURT[3] && g.at[1] > COURT[1]).map((g): Pt => [g.at[1] - 3, g.at[1] + 3]);
+/** The zebra over the north avenue from the east row's passage to the mall's forecourt (its middle, z) */
+export const ZEBRA = { z: -112, half: 1.6 };
+/** The south end's arch over the promenade (z), and the fountain in the middle */
+export const ARCH = { z: -45, h: 5.2 };
+export const FOUNTAIN = { x: PROM_X, z: ZEBRA.z, r: 2.4 };
+
+export type ShopKind = 'records' | 'arcade' | 'surf' | 'nails' | 'toys' | 'juice' | 'shades' | 'video' | 'pizza' | 'sneakers' | 'gifts' | 'diner';
+/** The shops' made-up names, in turn along the rows, and their kinds */
+export const SHOP_NAMES: { name: string; kind: ShopKind }[] = [
+  { name: 'RAD RECORDS', kind: 'records' },
+  { name: 'PIXEL PALACE', kind: 'arcade' },
+  { name: 'SURF SHACK', kind: 'surf' },
+  { name: 'NEON NAILS', kind: 'nails' },
+  { name: 'TOTALLY TOYS', kind: 'toys' },
+  { name: 'JUICE JUNCTION', kind: 'juice' },
+  { name: 'SUNSET SHADES', kind: 'shades' },
+  { name: 'VIDEO VORTEX', kind: 'video' },
+  { name: 'SLICE CITY', kind: 'pizza' },
+  { name: 'KICK FLIP', kind: 'sneakers' },
+  { name: 'GIFT GALAXY', kind: 'gifts' },
+  { name: 'DOO-WOP DINER', kind: 'diner' },
+];
+/** The pastel walls the shops take in turn */
+export const PASTELS = ['#ff9ec7', '#7fe0d0', '#c7a6ff', '#ffc48c', '#8fd3ff', '#f7e27a'];
+
+export interface Shop {
+  /** Its footprint (x0, z0, x1, z1) */
+  rect: Rect;
+  /** Which way its front faces (+1 east, the west row; -1 west, the east row) */
+  face: 1 | -1;
+  name: string;
+  kind: ShopKind;
+  wall: string;
+  h: number;
+}
+
+/** A row's runs along z between its gaps (z0, z1 pairs) */
+function runs(z0: number, z1: number, gaps: Pt[]): Pt[] {
+  const out: Pt[] = [];
+  let at = z0;
+  for (const [g0, g1] of [...gaps].sort((a, b) => a[0] - b[0])) {
+    if (g1 <= at || g0 >= z1) continue;
+    if (g0 > at) out.push([at, g0]);
+    at = Math.max(at, g1);
+  }
+  if (at < z1) out.push([at, z1]);
+  return out;
+}
+
+/** The two rows: from the cinema's square to the arch, cut into shops about 7 long */
+export const SHOPS: Shop[] = (() => {
+  const out: Shop[] = [];
+  const start = CINEMA.rect[3] + 4;
+  const end = ARCH.z - 1.5;
+  const rows: { x0: number; x1: number; face: 1 | -1; gaps: Pt[] }[] = [
+    { x0: COURT[0] + 0.5, x1: PROM[0], face: 1, gaps: GATE_GAPS },
+    { x0: PROM[1], x1: COURT[2] - 0.5, face: -1, gaps: [[ZEBRA.z - 3, ZEBRA.z + 3]] },
+  ];
+  let k = 0;
+  for (const row of rows)
+    for (const [a, b] of runs(start, end, row.gaps)) {
+      // (no sliver of a shop where a gap comes close to the row's end)
+      if (b - a < 4) continue;
+      const n = Math.max(1, Math.round((b - a) / 7));
+      for (let i = 0; i < n; i++) {
+        const s = SHOP_NAMES[k % SHOP_NAMES.length];
+        out.push({ rect: [row.x0, a + ((b - a) * i) / n + 0.1, row.x1, a + ((b - a) * (i + 1)) / n - 0.1], face: row.face, name: s.name, kind: s.kind, wall: PASTELS[k % PASTELS.length], h: k % 3 === 1 ? 6.2 : 4 });
+        k++;
+      }
+    }
+  return out;
+})();
+/** Palms in planters down the promenade's edges, clear of the shops' doors' middles and the fountain */
+export const PALMS: Pt[] = (() => {
+  const out: Pt[] = [];
+  for (let z = CINEMA.rect[3] + 6; z < ARCH.z - 2; z += 9) {
+    if (Math.abs(z - FOUNTAIN.z) < FOUNTAIN.r + 2.5) continue;
+    out.push([PROM[0] + 1.4, z], [PROM[1] - 1.4, z]);
+  }
+  return out;
+})();
+/** Benches facing the fountain (x, z, facing: 0 is +z) */
+export const BENCHES: { x: number; z: number; ry: number }[] = [
+  { x: FOUNTAIN.x, z: FOUNTAIN.z - FOUNTAIN.r - 1.6, ry: 0 },
+  { x: FOUNTAIN.x, z: FOUNTAIN.z + FOUNTAIN.r + 1.6, ry: Math.PI },
+];
+
+/* ---------- Starlight Mall and the loop ---------- */
+
+/** The loop: its north and south legs (z) off the north avenue, its east leg (x), the half width */
+export const LOOP = { zN: -107, zS: -50, xE: 55, half: 1.7 };
+/** The mall's block, north of the loop */
+export const MALL_BLOCK: Rect = [NS0.c + NS0.half + WALK_W, NORTH_Z, NS3.c - NS3.half - WALK_W, LOOP.zN - LOOP.half - WALK_W];
+/** Inside the loop: the car parks */
+export const PARK_BLOCK: Rect = [NS0.c + NS0.half + WALK_W, LOOP.zN + LOOP.half + WALK_W, LOOP.xE - LOOP.half - WALK_W, LOOP.zS - LOOP.half - WALK_W];
+export const MALL_NAME = 'STARLIGHT MALL';
+/** The two department stores at the mall's ends (made-up names): footprint, height, front wall colour */
+export const ANCHORS: { name: string; rect: Rect; h: number; wall: string }[] = [
+  { name: "MAXWELL'S", rect: [MALL_BLOCK[0] + 1, NORTH_Z + 2, MALL_BLOCK[0] + 16, -114], h: 7.6, wall: '#ff9ec7' },
+  { name: 'BRIGHT & CO.', rect: [MALL_BLOCK[2] - 16, NORTH_Z + 2, MALL_BLOCK[2] - 1, -114], h: 7.6, wall: '#7fe0d0' },
+];
+/** The mall's own hall between the anchors (two storeys, a skylit roof), its entrance porch on the south front */
+export const HALL = { rect: [ANCHORS[0].rect[2], NORTH_Z + 6, ANCHORS[1].rect[0], -118] as Rect, h: 6.4 };
+export const PORCH = { rect: [(HALL.rect[0] + HALL.rect[2]) / 2 - 5, HALL.rect[3], (HALL.rect[0] + HALL.rect[2]) / 2 + 5, -114.5] as Rect, h: 4.6 };
+/** The neon pylon at the block's corner by the loop's junction: its middle, size and height */
+export const PYLON = { x: MALL_BLOCK[0] + 1.6, z: MALL_BLOCK[3] - 1.4, w: 1.8, d: 0.8, h: 11.2 };
+/** The bus shelter on the forecourt in front of the east anchor */
+export const SHELTER: Rect = [ANCHORS[1].rect[0] + 3, MALL_BLOCK[3] - 1.8, ANCHORS[1].rect[0] + 6.2, MALL_BLOCK[3] - 0.6];
+
+/** The multi-storey in the loop's east side: footprint, its decks' spacing and how many over the ground */
+export const MSCP = { rect: [PARK_BLOCK[2] - 16, PARK_BLOCK[1] + 2, PARK_BLOCK[2] - 0.5, LOOP.zS - 22] as Rect, deck: 2.3, decks: 3 };
+/** The surface car park west of it */
+export const CAR_PARK: Rect = [PARK_BLOCK[0] + 0.6, PARK_BLOCK[1] + 0.6, MSCP.rect[0] - 2, PARK_BLOCK[3] - 0.6];
+export const BAY = { w: 2.6, d: 4.4 };
+/** Rows of bays across it, noses in, aisles between (z middles, facing) */
+export const BAY_ROWS: { z: number; yaw: number }[] = (() => {
+  const [, z0, , z1] = CAR_PARK;
+  const out: { z: number; yaw: number }[] = [];
+  for (let z = z0; z + BAY.d * 2 <= z1 + 0.01; z += BAY.d * 2 + 5.2) {
+    out.push({ z: z + BAY.d / 2, yaw: Math.PI / 2 }, { z: z + BAY.d * 1.5, yaw: -Math.PI / 2 });
+  }
+  return out;
+})();
+export const BAYS: { x: number; z: number; yaw: number }[] = (() => {
+  const [x0, , x1] = CAR_PARK;
+  const n = Math.floor((x1 - x0) / BAY.w);
+  return BAY_ROWS.flatMap((row) => Array.from({ length: n }, (_, i) => ({ x: x0 + (i + 0.5) * BAY.w, z: row.z, yaw: row.yaw })));
+})();
+/** The taxi rank: the first row's bays nearest the mall's porch */
+export const RANK_CABS: { x: number; z: number; yaw: number }[] = BAYS.filter((b) => b.z === BAY_ROWS[0].z && Math.abs(b.x - (PORCH.rect[0] + PORCH.rect[2]) / 2) < 5);
+const MODELS = ['hatch', 'sedan', 'pickup', 'van', 'coupe', 'suv'];
+const COLOURS = ['#e23b3b', '#2aabee', '#ffd23f', '#f3f2f7', '#8000ff', '#1fbf6b', '#ff8a3d', '#2b2d3a', '#e219e5', '#7fe0d0'];
+const seeded = (seed: number) => {
+  let s = seed;
+  return () => ((s = (s * 16807) % 2147483647) - 1) / 2147483646;
+};
+/** The cars parked (model, x, z, yaw, colour): about two bays in three, seeded; the rank's bays are the cabs' */
+export const PARKED: [string, number, number, number, string][] = (() => {
+  const r = seeded(7311);
+  return BAYS.filter((b) => !RANK_CABS.includes(b)).flatMap((b): [string, number, number, number, string][] => (r() > 0.68 ? [] : [[MODELS[Math.floor(r() * MODELS.length)], b.x, b.z, b.yaw + (r() < 0.15 ? Math.PI : 0), COLOURS[Math.floor(r() * COLOURS.length)]]]));
+})();
+/** The multi-storey's cars on each deck (model, x, z, yaw, colour, deck height over the ground) */
+export const MSCP_CARS: [string, number, number, number, string, number][] = (() => {
+  const r = seeded(9157);
+  const [x0, z0, x1, z1] = MSCP.rect;
+  const out: [string, number, number, number, string, number][] = [];
+  for (let d = 0; d <= MSCP.decks; d++)
+    for (const [x, yaw] of [
+      [x0 + 2.4, Math.PI / 2],
+      [x1 - 2.4, -Math.PI / 2],
+    ] as const)
+      for (let z = z0 + 2; z < z1 - 1.5; z += BAY.w) if (r() < 0.6) out.push([MODELS[Math.floor(r() * MODELS.length)], x, z, yaw, COLOURS[Math.floor(r() * COLOURS.length)], d * MSCP.deck]);
+  return out;
+})();
+const CAR_HALF = { l: 1.5, w: 0.62 };
+
+/* ---------- The streets ---------- */
+
+export const MALL_STREETS: { id: string; pts: Pt[]; half: number }[] = [
+  {
+    id: 'mall-loop',
+    pts: [
+      [NS0.c, LOOP.zN],
+      [LOOP.xE, LOOP.zN],
+      [LOOP.xE, LOOP.zS],
+      [NS0.c, LOOP.zS],
+    ],
+    half: LOOP.half,
+  },
+];
+export const MALL_CROSSINGS: { id: string; at: Pt; streets: string[] }[] = [
+  { id: 'mall-loop-n', at: [NS0.c, LOOP.zN], streets: ['ns0', 'mall-loop'] },
+  { id: 'mall-loop-s', at: [NS0.c, LOOP.zS], streets: ['ns0', 'mall-loop'] },
+];
+
+/* ---------- Lamps ---------- */
+
+/** Lamps round the loop, outside it and on its car park's side, and down the promenade (x, z, arm's facing, ground's height) */
+export const MALL_LAMPS: [number, number, number, number][] = (() => {
+  const out: [number, number, number, number][] = [];
+  const SLAB_Y = 0.15;
+  for (let x = 6; x < LOOP.xE - 4; x += 12) out.push([x, LOOP.zN + LOOP.half + 0.45, Math.PI, SLAB_Y], [x, LOOP.zS - LOOP.half - 0.45, 0, 0.02]);
+  for (let z = LOOP.zN + 8; z < LOOP.zS - 4; z += 12) out.push([LOOP.xE + LOOP.half + 0.45, z, -Math.PI / 2, 0.02]);
+  for (let z = CINEMA.rect[3] + 10; z < ARCH.z - 2; z += 18) if (Math.abs(z - FOUNTAIN.z) > FOUNTAIN.r + 2) out.push([PROM[0] + 0.5, z, Math.PI / 2, SLAB_Y], [PROM[1] - 0.5, z + 9, -Math.PI / 2, SLAB_Y]);
+  return out;
+})();
+
+/* ---------- What's solid ---------- */
+
+const box = (r: Rect, h: number): Box => [r[0], r[1], r[2], r[3], h];
+const carBox = (x: number, z: number, yaw: number, h = 1.3): Box => {
+  const along = Math.abs(Math.cos(yaw)) > 0.5;
+  const [hx, hz] = along ? [CAR_HALF.l, CAR_HALF.w] : [CAR_HALF.w, CAR_HALF.l];
+  return [x - hx, z - hz, x + hx, z + hz, h];
+};
+/** The arch's two posts either side of the promenade */
+export const ARCH_POSTS: Rect[] = [
+  [PROM[0] + 0.3, ARCH.z - 0.4, PROM[0] + 1.1, ARCH.z + 0.4],
+  [PROM[1] - 1.1, ARCH.z - 0.4, PROM[1] - 0.3, ARCH.z + 0.4],
+];
+export const MALL_SOLIDS: Box[] = [
+  ...SHOPS.map((s) => box(s.rect, s.h)),
+  box(CINEMA.rect, CINEMA.h),
+  ...ARCH_POSTS.map((r) => box(r, ARCH.h)),
+  [FOUNTAIN.x - FOUNTAIN.r * 0.85, FOUNTAIN.z - FOUNTAIN.r * 0.85, FOUNTAIN.x + FOUNTAIN.r * 0.85, FOUNTAIN.z + FOUNTAIN.r * 0.85, 0.6],
+  ...ANCHORS.map((a) => box(a.rect, a.h)),
+  box(HALL.rect, HALL.h),
+  // (the porch's posts at its two front corners: you walk in under it)
+  [PORCH.rect[0], PORCH.rect[3] - 0.4, PORCH.rect[0] + 0.4, PORCH.rect[3], PORCH.h],
+  [PORCH.rect[2] - 0.4, PORCH.rect[3] - 0.4, PORCH.rect[2], PORCH.rect[3], PORCH.h],
+  [PYLON.x - PYLON.w / 2, PYLON.z - PYLON.d / 2, PYLON.x + PYLON.w / 2, PYLON.z + PYLON.d / 2, PYLON.h],
+  box([SHELTER[0], SHELTER[1], SHELTER[2], SHELTER[1] + 0.25], 2.4),
+  box(MSCP.rect, MSCP.deck * (MSCP.decks + 1) + 0.9),
+  ...[...RANK_CABS.map((c) => carBox(c.x, c.z, c.yaw)), ...PARKED.map(([, x, z, yaw]) => carBox(x, z, yaw))],
+];
+
+/* ---------- People ---------- */
+
+export interface MallPerson {
+  x: number;
+  z: number;
+  ry: number;
+  act: 'look' | 'chat' | 'sit';
+  /** Over the slab (a seat's height for those sitting) */
+  y: number;
+}
+export const MALL_PEOPLE: MallPerson[] = (() => {
+  const out: MallPerson[] = [];
+  // Window-shopping down the promenade, at the shops' fronts
+  SHOPS.forEach((s, i) => {
+    if (i % 2) return;
+    const x = s.face === 1 ? s.rect[2] + 1.2 : s.rect[0] - 1.2;
+    out.push({ x, z: (s.rect[1] + s.rect[3]) / 2, ry: s.face === 1 ? -Math.PI / 2 : Math.PI / 2, act: 'look', y: 0 });
+  });
+  // Chatting in twos on the promenade
+  for (let z = CINEMA.rect[3] + 12; z < ARCH.z - 6; z += 16)
+    if (Math.abs(z - FOUNTAIN.z) > FOUNTAIN.r + 3) out.push({ x: PROM_X - 0.5, z, ry: Math.PI / 2, act: 'chat', y: 0 }, { x: PROM_X + 0.5, z: z + 0.2, ry: -Math.PI / 2, act: 'chat', y: 0 });
+  // The cinema's queue
+  for (let i = 0; i < 5; i++) out.push({ x: PROM_X - 3 + i * 0.8, z: CINEMA.rect[3] + 1.6, ry: Math.PI, act: 'look', y: 0 });
+  // On the benches by the fountain
+  for (const b of BENCHES) out.push({ x: b.x - 0.4, z: b.z + (b.ry === 0 ? 0.05 : -0.05), ry: b.ry, act: 'sit', y: 0.32 });
+  // At the mall's porch and the bus shelter
+  const px = (PORCH.rect[0] + PORCH.rect[2]) / 2;
+  out.push({ x: px - 2.2, z: PORCH.rect[3] + 1.4, ry: Math.PI, act: 'chat', y: 0 }, { x: px - 1.4, z: PORCH.rect[3] + 1.6, ry: Math.PI, act: 'chat', y: 0 }, { x: px + 2.5, z: PORCH.rect[3] + 2, ry: Math.PI, act: 'look', y: 0 });
+  out.push({ x: (SHELTER[0] + SHELTER[2]) / 2, z: SHELTER[3] + 0.6, ry: 0, act: 'look', y: 0 });
+  return out;
+})();
+
+/* ---------- The places ---------- */
+
+/** Walk in: at the promenade's south end facing up it (walk mode faces (-sin yaw, -cos yaw)), and in front of the mall's porch facing it */
+export const COURT_SPAWN = { x: PROM_X, z: ARCH.z + 1.2, yaw: 0 };
+export const MALL_SPAWN = { x: (PORCH.rect[0] + PORCH.rect[2]) / 2, z: MALL_BLOCK[3] - 1, yaw: 0 };
+/** All of the land (the outskirts' trees keep off; loaded as you approach) */
+export const MALL_AREA: Rect = [COURT[0] - 1, NORTH_Z - 1.5, NS3.c - NS3.half - 0.2, SOUTH_Z + 1];
+/** The tallest anything stands (the pylon), under the Emporium's roof (about 12.5) */
+export const TALLEST = Math.max(PYLON.h, CINEMA.h, ...ANCHORS.map((a) => a.h), HALL.h + 2.2, MSCP.deck * (MSCP.decks + 1) + 1.2);

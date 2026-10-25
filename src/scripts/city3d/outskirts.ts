@@ -10,7 +10,8 @@
  * the kart park and its slip road, and any land kept clear (the test
  * district's).
  */
-import { CITY_EXT, EW_ROADS, EXT, NS_ROADS, RIVER } from './layout';
+import { MALL_AREA } from './mall';
+import { CITY_EXT, EW_ROADS, EXT, NS_ROADS, RIVER, nsRuns } from './layout';
 import { inChannel } from './river';
 import { PARKWAY, PROMENADE, SOUTHSIDE, inTown } from './outer';
 import { KART_RECTS } from './kartfacility';
@@ -48,6 +49,8 @@ export function treeSpot(x: number, z: number, clear: readonly Rect[] = [], high
   if (clear.some((c) => x > c[0] - 2 && x < c[2] + 2 && z > c[1] - 2 && z < c[3] + 2)) return false;
   // Off the ring highway, its verges and the slip lanes at its junctions (highway.ts)
   if (highway && (fromHighway(x, z) < HIGHWAY_HALF + 1.5 || MEETS.some((m) => Math.abs(x - m[0]) < 17 && Math.abs(z - m[1]) < 17))) return false;
+  // The shopping plaza, the mall and its loop and car parks (mall.ts)
+  if (x > MALL_AREA[0] && x < MALL_AREA[2] && z > MALL_AREA[1] && z < MALL_AREA[3]) return false;
   // The kart park, Kart Road and the car park (kartfacility.ts)
   if (KART_RECTS.some((r) => x > r[0] - 3 && x < r[2] + 3 && z > r[1] - 3 && z < r[3] + 3)) return false;
   // Clear of the town (inside the bends, the river and its banks) and of the bends themselves
@@ -55,7 +58,7 @@ export function treeSpot(x: number, z: number, clear: readonly Rect[] = [], high
   // Clear of the airport (airside, landside, the forecourt) and of the low end of its approach, off the runway's west end
   if (AIRPORT_AREAS.some((r) => x > r[0] - 1 && x < r[2] + 1 && z > r[1] - 1 && z < r[3] + 1)) return false;
   if (x > RUNWAY.x0 - 200 && x < RUNWAY.x0 && Math.abs(z - RUNWAY.z) < 14) return false;
-  if (EW_ROADS.some((r) => Math.abs(z - r.c) < r.half + 0.8) || NS_ROADS.some((r) => Math.abs(x - r.c) < r.half + 0.8)) return false;
+  if (EW_ROADS.some((r) => Math.abs(z - r.c) < r.half + 0.8) || NS_ROADS.some((r, i) => Math.abs(x - r.c) < r.half + 0.8 && nsRuns(i, z))) return false;
   // Off the promenades along the quay lines, and the water wherever its edges curve (river.ts): trees grow on the banks it leaves
   if ((z > RIVER[0] - 2.8 && z < RIVER[0] + 0.5) || (z > RIVER[1] - 0.5 && z < RIVER[1] + 2.6) || inChannel(x, z, 0.8)) return false;
   return true;
