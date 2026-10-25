@@ -145,7 +145,9 @@ test('flying: an aircraft only given the boxes near it flies exactly as it would
   for (const id of ['prop', 'bizjet', 'heli'] as const) {
     const T = TUNES[id];
     for (let run = 0; run < 25; run++) {
-      const [x, z] = spot();
+      // (it starts outside every building, as the cars do)
+      let [x, z] = spot();
+      while (CAR.some((q) => inBox(q, x, z))) [x, z] = spot();
       const yaw = r() * Math.PI * 2;
       const y = 1 + r() * 10;
       const mk = () => {

@@ -1050,8 +1050,10 @@ it and has been retired completely. Build only on what's here.
   a mall on the land between the Parkway and the ring highway's north side,
   east of Westlake Park, planned in `docs/mall-plan.md` in steps, each with
   the owner's sign-off (1 both from outside, built; 2 the mall's walk-in
-  interior, built; 3 maybe shops run with Dorras); keep it up to date. Retro neon
-  80s (the owner's pick): pastel, chrome, neon, checkered paving, palms;
+  interior, built; 3 maybe shops run with Dorras); keep it up to date. A
+  modern mall (the redesign, the owner's call; it was retro neon 80s):
+  white and light-grey cladding, glass curtain walls in black steel, timber
+  slats and soffits, stone paving, warm white light, inside and out;
   made-up names only, no prices on any sign; under the Emporium (`TALLEST`).
   - The two small north-south streets stop at the Parkway (`SHORT_NS`,
     `nsRuns()` in layout.ts: streetplan.ts ends each at its crossing, their
@@ -1059,32 +1061,43 @@ it and has been retired completely. Build only on what's here.
     outer.ts's kerbs and the outskirts' trees honour it).
   - `mall.ts` (DOM-free, tested in `tests/mall.test.ts`): Palm Court
     (`COURT`, block `palm-court`, by the north avenue: the promenade
-    `PROM`, two rows of shops facing across it, `SHOPS` from `SHOP_NAMES`,
+    `PROM`, two rows of shops facing across it, `SHOPS` from `SHOP_NAMES`, each its `style` (`ShopStyle`: glass, render,
+    clad, timber), a third two storeys,
     the west row open to the park's east gates `GATE_GAPS`, the east row to
     the zebra over the avenue `ZEBRA` (the avenue's median breaks there,
     `highwayGaps()`), Paradise Cinema across the north end `CINEMA`, the
-    `FOUNTAIN`, `BENCHES`, `PALMS`, the PALM COURT `ARCH`); Starlight Mall
+    `FOUNTAIN`, `BENCHES`, the trees' planters `COURT_TREES`, the PALM COURT
+    `ARCH`); Starlight Mall
     (`MALL_BLOCK`, block `mall`: the `HALL`, its `PORCH`, the `ANCHORS`
-    Maxwell's and Bright & Co., the `PYLON`, the bus `SHELTER`); the
+    Maxwell's (light) and Bright & Co. (dark), the totem `PYLON`, the bus
+    `SHELTER`, the forecourt's `PLANTERS` and `PAY_STATIONS`); the
     two-way loop off the north avenue (`LOOP`, `MALL_STREETS` /
     `MALL_CROSSINGS`: traffic drives it) round the car parks (`PARK_BLOCK`,
-    block `mall-park`: `CAR_PARK`, `BAYS`, `PARKED`, the taxi rank
+    block `mall-park`: `CAR_PARK`, `BAYS` in groups of four with planted
+    `ISLANDS` between, `PARKED`, the zebra to the porch `LOOP_ZEBRA`, the taxi rank
     `RANK_CABS`, the multi-storey `MSCP` and its cars `MSCP_CARS`);
-    `MALL_SOLIDS` (in `SOLIDS`), `MALL_LAMPS`, `MALL_PEOPLE`, `COURT_SPAWN`,
+    `MALL_SOLIDS` (in `SOLIDS`), `MALL_LAMPS`, `MALL_TREES` (placed at the
+    boot with the town's, on the planters and islands), `MALL_PEOPLE`, `COURT_SPAWN`,
     `MALL_SPAWN`, `MALL_AREA` (the outskirts' trees keep off, `treeSpot()`).
   - `mall3d.ts` draws them, a district loaded as you approach
-    (`LAZY_DISTRICTS` id `mall`): sites (the shops with lit fronts, fascias,
-    neon roof lines and near-only awnings; the cinema with its marquee,
-    bulbs and posters for made-up films (uptownsites.ts `FILMS`); the
-    fountain, benches, palms, the arch; the anchors, the hall with its glass
-    vault, the porch, the pylon with its star, the shelter; the loop, the
-    zebra, the bays and TAXI board, the multi-storey's decks), one sign atlas
-    (`mall-signs`), and on the main thread the parked cars and cabs. The
+    (`LAZY_DISTRICTS` id `mall`): sites (the shops by style, lit windows,
+    signs, canopies with LED edges, rooftop plant; festoon lights across the
+    promenade; the cinema, dark-clad with a glazed lobby, a canopy and
+    poster lightboxes for made-up films (uptownsites.ts `FILMS`); the water
+    feature, benches, planters, the gateway; the anchors with their fronts,
+    side signs and loading docks; the hall's curtain wall, its glass vault
+    on black ribs; the porch's feature wall, canopy and open doors; the
+    totem, the shelter, the forecourt; the loop, its zebras, the bays,
+    islands and trolley shelters, the TAXI board, the multi-storey behind
+    perforated screens), one sign atlas (`mall-signs`), and on the main thread the parked cars and cabs. The
     places are `mallspot.ts` (spots `palmcourt` and `mall`: pins, directory
     entries, panels `data-panel-tpl="palmcourt"` / `"mall"` with Walk in,
     `PLACES` and `LIVE_PLACES` entries); the world map draws their
-    footprints. The shared paint, the sign atlases (`signAtlas()`) and the
-    helpers are `mallkit.ts`.
+    footprints. The shared paint, the surfaces laid on in world units
+    (`worldUV`: `CURTAIN`, `CLAD`, `CLAD_DARK`, `RENDER`, `TIMBER`, `PAVING`,
+    `FLOOR`, `PERF`; `face()`, `flat()`), the sign atlases (`signAtlas()`,
+    32 cells, a `light` set in charcoal on white) and the helpers are
+    `mallkit.ts`.
   - **Inside the mall** (step 2, built) is `mallinside.ts` (DOM-free,
     tested in `tests/mallinside.test.ts`): the hall is hollow (`WALLS`, the
     doors open behind the porch, `DOOR`, with `BOLLARDS` across them: a
@@ -1093,7 +1106,11 @@ it and has been retired completely. Build only on what's here.
     (`VOID`) under the vault; sixteen units, four a side on each floor
     (`UNITS`, made-up `UNIT_NAMES`); two escalators side by side up to the
     terrace (`ESCALATORS`, `escalatorY()`); the food court on the terrace
-    (`FOOD_STALLS`, `TABLES`); the fountain, benches, palms and columns;
+    (`FOOD_STALLS`, `TABLES`); the fountain, benches, trees and columns;
+    two kiosks in the atrium (`KIOSKS`); the glass lift by the east gallery
+    (`LIFT_SHAFT`, `MALL_LIFT`: walk prompts "Lift · Upper floor" / "Lift ·
+    Ground floor", `mall-lift:up` / `:down`, a fade through `rideTo()` in
+    index.ts, closed with the place);
     downstairs under the terrace the kiddie rides, the information desk and
     the photo booth (`GROUND_THINGS`), the anchors' doors; the directory
     boards in the lobby. Walking: `mallFloor()` (the floor by Degen's
@@ -1104,11 +1121,12 @@ it and has been retired completely. Build only on what's here.
     `MALL_INSIDE_PEOPLE`, `INSIDE_SPAWN` (the panel's Walk in). Drawn by
     `mallinside3d.ts` (`registerInside()`, from mall3d.ts's `register()`;
     near only, no shadows: the hall's shell casts none, so the day comes
-    in as through the skylight): terrazzo with 80s confetti, the slabs
-    with neon edges and light panels, the shopfronts, glass balustrades,
-    the escalators (their steps run on the main thread's tick, still under
-    reduced motion), the food court, neon stars, one sign atlas
-    (`mall-signs-in`).
+    in as through the skylight): pale stone floors, white slabs with warm
+    LED edges and timber soffits with slots of light, white and black-steel
+    shopfronts, glass balustrades, the escalators (their steps run on the
+    main thread's tick, still under reduced motion), the timber food court,
+    the kiosks, the glass lift, a ring of light over the fountain, one sign
+    atlas (`mall-signs-in`).
 - **Districts loaded as you approach** (performance phase 4, item 10):
   a district's drawing is a module of its own (`LAZY_DISTRICTS` in
   `districts.ts`: an id, its land and `load()`, a dynamic import), a chunk

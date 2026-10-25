@@ -82,22 +82,22 @@ export const escalatorY = (z: number) => Math.min(1, Math.max(0, (FOOT_Z - z) / 
 
 /** The shops' made-up names: the ground floor's eight then the upper floor's (west then east, north to south) */
 export const UNIT_NAMES = [
-  'TAPE DECK',
-  'NEON THREADS',
-  'SWEET TOOTH',
-  'HIGH SCORE',
-  'GLITTER & GLAM',
-  'COMIC VAULT',
-  'SNEAKER STREET',
-  'GADGET GARAGE',
-  'BOOMBOX BEATS',
-  'STARGAZER BOOKS',
-  'HAIR WAVE',
-  'FUN FOTO',
-  'RADICAL RIDES',
-  'PERFUME PARLOUR',
-  'SUNNY SPORTS',
-  'LASER LANES',
+  'LINEN & LOOM',
+  'NORTH PEAK',
+  'CACAO HOUSE',
+  'LENS & FRAME',
+  'VERDANT',
+  'CHAPTER ONE',
+  'STRIDE LAB',
+  'HOMEWARD',
+  'AURORA BEAUTY',
+  'ECHO AUDIO',
+  'MAPLE KIDS',
+  'TAILOR & TWINE',
+  'SUMMIT SPORTS',
+  'GILDED',
+  'PRISM TECH',
+  'FIELD & FERN',
 ];
 export interface Unit {
   /** Its footprint (x0, z0, x1, z1) */
@@ -107,7 +107,7 @@ export interface Unit {
   /** Which way its front faces (+1 east: the west side's; -1 west) */
   face: 1 | -1;
   name: string;
-  /** Its wall colour (mall.ts `PASTELS`, in turn) */
+  /** Its place in the list (its front's style comes from it, mallinside3d.ts) */
   k: number;
 }
 export const UNITS: Unit[] = (() => {
@@ -123,7 +123,7 @@ export const UNITS: Unit[] = (() => {
   return out;
 })();
 /** The food court's stalls along the north wall, upstairs (made-up names), facing south */
-export const FOOD_NAMES = ['TACO TWIST', 'NOODLE NOVA', 'BURGER BLAST', 'PRETZEL PARADISE', 'SUSHI SPIN', 'COSMIC CONES'];
+export const FOOD_NAMES = ['TACO VERDE', 'NOODLE BAR', 'BURGER CO.', 'GREEN BOWL', 'SUSHI GO ROUND', 'GELATO LAB'];
 export const FOOD_STALLS: { x0: number; x1: number; name: string }[] = FOOD_NAMES.map((name, i) => {
   const w = (IN[2] - IN[0]) / FOOD_NAMES.length;
   return { x0: IN[0] + i * w, x1: IN[0] + (i + 1) * w, name };
@@ -145,12 +145,26 @@ export const BENCHES_IN: { x: number; z: number; ry: number }[] = [
   { x: XM - 3.4, z: FOUNTAIN_IN.z, ry: Math.PI / 2 },
   { x: XM + 3.4, z: FOUNTAIN_IN.z, ry: -Math.PI / 2 },
 ];
-/** Palms in planters in the atrium's corners (x, z) */
+/** Trees in big planters in the atrium (x, z): three corners, the fourth is the lift's */
 export const PALMS_IN: [number, number][] = [
   [VOID[0] + 1.3, FOOT_Z + 2],
   [VOID[2] - 1.3, FOOT_Z + 2],
   [VOID[0] + 1.3, LOBBY_Z - 1.4],
-  [VOID[2] - 1.3, LOBBY_Z - 1.4],
+];
+/** The glass lift in the atrium's south-east corner, against the east gallery: its shaft, the door downstairs (west of it) and upstairs (on the gallery) */
+export const LIFT_SHAFT: Rect = [VOID[2] - 1.9, LOBBY_Z - 3.4, VOID[2] - 0.1, LOBBY_Z - 1.4];
+const LIFT_Z = (LIFT_SHAFT[1] + LIFT_SHAFT[3]) / 2;
+export const MALL_LIFT = {
+  /** The doors' prompts (x, z), and where each lets you out at the other end (facing away from the shaft; walk mode faces (-sin yaw, -cos yaw); y over the slab) */
+  low: { x: LIFT_SHAFT[0] - 0.75, z: LIFT_Z },
+  high: { x: LIFT_SHAFT[2] + 0.85, z: LIFT_Z },
+  up: { x: LIFT_SHAFT[2] + 0.85, z: LIFT_Z, y: UP, yaw: -Math.PI / 2 },
+  down: { x: LIFT_SHAFT[0] - 0.75, z: LIFT_Z, y: 0, yaw: Math.PI / 2 },
+};
+/** Kiosks in the atrium either side of the escalators (their footprints; made-up names) */
+export const KIOSKS: { rect: Rect; name: string }[] = [
+  { rect: [VOID[0] + 0.9, TERRACE_Z + 1.8, VOID[0] + 2.7, TERRACE_Z + 3.4], name: 'COFFEE CART' },
+  { rect: [VOID[2] - 2.7, TERRACE_Z + 1.8, VOID[2] - 0.9, TERRACE_Z + 3.4], name: 'SUN & SHADE' },
 ];
 export const PALM_R = 0.5;
 /** The columns under the galleries' and the terrace's edges (x, z), round, `COLUMN_R` */
@@ -219,6 +233,8 @@ export const MALL_INSIDE_SOLIDS: Box[] = [
   ...PALMS_IN.map(([x, z]) => sq(x, z, PALM_R, 0.6)),
   ...BENCHES_IN.map((b): Box => [b.x - 0.25, b.z - 1.05, b.x + 0.25, b.z + 1.05, 0.9]),
   ...DIRECTORY.map(([x, z]): Box => [x - 0.9, z - 0.15, x + 0.9, z + 0.15, 2.2]),
+  [...LIFT_SHAFT, HALL.h] as Box,
+  ...KIOSKS.map((k): Box => [...k.rect, 2.4] as Box),
   ...BOLLARDS.map(([x, z]) => sq(x, z, BOLLARD, 0.9)),
 ];
 /** What stands on one floor only, with a floor over or under it (x0, z0, x1, z1, level) */
@@ -313,6 +329,8 @@ export const MALL_INSIDE_PEOPLE: InsidePerson[] = (() => {
   });
   // Leaning on the balustrades, looking down into the atrium
   out.push({ x: VOID[0] - 0.45, z: TERRACE_Z + 9, ry: -Math.PI / 2, act: 'look', y: UP }, { x: VOID[2] + 0.45, z: TERRACE_Z + 3.2, ry: Math.PI / 2, act: 'look', y: UP });
+  // At the kiosks
+  for (const k of KIOSKS) out.push({ x: (k.rect[0] + k.rect[2]) / 2, z: k.rect[3] + 0.55, ry: 0, act: 'look', y: 0 });
   // At the information desk
   const desk = GROUND_THINGS.find((t) => t.kind === 'desk')!.rect;
   out.push({ x: XM, z: desk[3] + 0.7, ry: Math.PI, act: 'chat', y: 0 });

@@ -4,6 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  BALUSTRADE,
   BOLLARDS,
   BOLLARD,
   DOOR,
@@ -13,6 +14,9 @@ import {
   IN,
   INSIDE_SPAWN,
   INSIDE_TALLEST,
+  KIOSKS,
+  LIFT_SHAFT,
+  MALL_LIFT,
   LEVEL_SOLIDS,
   LOBBY_Z,
   MALL_INSIDE_PEOPLE,
@@ -149,5 +153,19 @@ test('walking in at the doors, round the ground floor, up an escalator to the fo
     const [a, c] = s.split(',').map(Number);
     const [x, z] = at(a, c);
     assert.ok(!inBox(VOID, x, z, -0.01) || ESCALATORS.some((e) => x > e.x0 && x < e.x1), `upstairs over the atrium at ${x}, ${z}`);
+  }
+});
+
+test('the glass lift: a door on each floor, clear of everything, its stops on their floors; the kiosks clear of the way round', () => {
+  const clear = (x: number, z: number) => !SOLIDS.some((b) => inBox(b, x, z, R));
+  assert.ok(clear(MALL_LIFT.low.x, MALL_LIFT.low.z) && clear(MALL_LIFT.high.x, MALL_LIFT.high.z));
+  assert.equal(mallFloor(MALL_LIFT.up.x, MALL_LIFT.up.z, SLAB + MALL_LIFT.up.y + 0.3), SLAB + UP);
+  assert.ok(!mallWall(MALL_LIFT.up.x, MALL_LIFT.up.z, SLAB + UP, R), 'the upper stop on the gallery');
+  assert.ok(!mallWall(MALL_LIFT.down.x, MALL_LIFT.down.z, SLAB, R), 'the lower stop on the ground floor');
+  assert.ok(inBox(VOID, LIFT_SHAFT[0], LIFT_SHAFT[1]) && inBox(VOID, LIFT_SHAFT[2], LIFT_SHAFT[3]), 'the shaft in the atrium');
+  for (const k of KIOSKS) {
+    assert.ok(inBox(VOID, k.rect[0], k.rect[1]) && inBox(VOID, k.rect[2], k.rect[3]));
+    assert.ok(!/\d/.test(k.name));
+    for (const e of ESCALATORS) assert.ok(k.rect[2] < e.x0 - BALUSTRADE - 0.8 || k.rect[0] > e.x1 + BALUSTRADE + 0.8, 'room between a kiosk and an escalator');
   }
 });
