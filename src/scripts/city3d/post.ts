@@ -9,7 +9,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { FX, OCC, SOLID, injectWind } from './kit';
+import { FX, OCC, SOLID, WATER, injectWind } from './kit';
 
 const InkShader = {
   uniforms: {
@@ -84,6 +84,11 @@ export interface PostOpts {
    * drawing; without it three draws every shadow-casting light's map each frame
    */
   shadows?: { drawShadows(draw: (lights: THREE.Light[], root: THREE.Object3D, camera: THREE.Camera) => void, root: THREE.Scene, camera: THREE.Camera): void };
+  /**
+   * Keep the depth of what stands in the water (`under`) for the water's foam (world.ts): copied from the pre-pass
+   * before the water is drawn into it. Not on phones (a frame-sized target more)
+   */
+  underwater?: boolean;
 }
 
 export function createPost(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.PerspectiveCamera, opts: PostOpts) {
@@ -101,6 +106,14 @@ export function createPost(renderer: THREE.WebGLRenderer, scene: THREE.Scene, ca
     injectCrowdSkin(sh);
   };
   normalMat.customProgramCacheKey = () => 'normal-crowd-wind';
+
+  // The depth of the solid city without the water (the pre-pass's, copied before the water is drawn into it): the
+  // water's foam is wherever something stands in it, a little way under the surface (world.ts)
+  const under = opts.underwater
+    ? new THREE.WebGLRenderTarget(size.x, size.y, { depthTexture: new THREE.DepthTexture(size.x, size.y, THREE.UnsignedIntType), format: THREE.RedFormat, type: THREE.UnsignedByteType })
+    : null;
+  /** What the water reads: the depth (null on phones), the pre-pass camera's near and far, one over the frame's size */
+  const water = { depth: under?.depthTexture ?? null, near: 0.1, far: 145, screen: new THREE.Vector2(1 / size.x, 1 / size.y) };
 
   const target = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples: opts.msaa });
   const composer = new EffectComposer(renderer, target);
@@ -131,6 +144,8 @@ export function createPost(renderer: THREE.WebGLRenderer, scene: THREE.Scene, ca
     const W = Math.floor(w * pr);
     const H = Math.floor(h * pr);
     normalTarget.setSize(W, H);
+    under?.setSize(W, H);
+    water.screen.set(1 / W, 1 / H);
     bloom.resolution.set(W * opts.bloomScale, H * opts.bloomScale);
     bloom.setSize(W * opts.bloomScale, H * opts.bloomScale);
     ink.uniforms.texel.value.set(1 / W, 1 / H);
@@ -175,6 +190,8 @@ export function createPost(renderer: THREE.WebGLRenderer, scene: THREE.Scene, ca
     pre.matrixWorldInverse.copy(camera.matrixWorldInverse);
     ink.uniforms.cameraNear.value = pre.near;
     ink.uniforms.cameraFar.value = pre.far;
+    water.near = pre.near;
+    water.far = pre.far;
 
     const bg = scene.background;
     const fog = scene.fog;
@@ -182,17 +199,27 @@ export function createPost(renderer: THREE.WebGLRenderer, scene: THREE.Scene, ca
     scene.fog = null;
     scene.overrideMaterial = normalMat;
     pre.layers.set(SOLID);
+    // (phones keep no depth for the water: it's drawn with the rest)
+    if (!under) pre.layers.enable(WATER);
     renderer.getClearColor(clear);
     const alpha = renderer.getClearAlpha();
     renderer.setRenderTarget(normalTarget);
     renderer.setClearColor(0x8080ff, 1);
     renderer.clear();
     renderer.render(scene, pre);
+    const autoClear = renderer.autoClear;
+    renderer.autoClear = false;
+    // The depth of what stands in the water, kept for its foam; then the water, so its outlines are as they were
+    if (under) {
+      renderer.initRenderTarget(under);
+      renderer.copyTextureToTexture(depthTexture, under.depthTexture!);
+      renderer.setRenderTarget(normalTarget);
+      pre.layers.set(WATER);
+      renderer.render(scene, pre);
+    }
     // Cut-out signs: their stand-ins mask the outlines behind them
     scene.overrideMaterial = null;
     pre.layers.set(OCC);
-    const autoClear = renderer.autoClear;
-    renderer.autoClear = false;
     renderer.render(scene, pre);
     renderer.autoClear = autoClear;
     renderer.setClearColor(clear, alpha);
@@ -201,10 +228,11 @@ export function createPost(renderer: THREE.WebGLRenderer, scene: THREE.Scene, ca
     scene.fog = fog;
     camera.layers.set(SOLID);
     camera.layers.enable(FX);
+    camera.layers.enable(WATER);
     renderer.setRenderTarget(null);
 
     composer.render();
   }
 
-  return { composer, bloom, ink, render, setSize, shadowStat };
+  return { composer, bloom, ink, render, setSize, shadowStat, water };
 }

@@ -14,7 +14,7 @@
  */
 import * as THREE from 'three';
 import { DISTRICTS } from '../../data/plots';
-import { Batch, canvasTex, facadeMat, flickerTogether, fx, glowMat, glowTex, lit, neon, PAL, rand, rng, sidesBox, siteMat, toon } from './kit';
+import { Batch, WATER, canvasTex, facadeMat, flickerTogether, fx, glowMat, glowTex, lit, neon, PAL, rand, rng, sidesBox, siteMat, toon } from './kit';
 import { ZEBRA as MALL_ZEBRA } from './mall';
 import { BLOCKS, BRIDGED_NS, BS, CENTER_XZ, CORE_ROADS, DOWNTOWN, EW_ROADS, EXT, LANE, MEDIAN, NS_ROADS, RING_HI, RIVER, SEATS, SHORT_NS, SOUTH_ROAD, WALK_W, type Road } from './layout';
 import { PLAN, offsetLine, pointAt, riverBridges, streetLength, type Pt, type Street } from './streetplan';
@@ -32,7 +32,11 @@ import { AXIS_X, AXIS_ZEBRAS, LANE_HALF } from './uptown';
 import { BRIDGE_PIERS, PIER_HALF, WATERFRONT_RECT } from './waterfront';
 import { BRIDGE_RECT } from './stadium';
 import { SWAY, lampGlow, newLamp, type Lamp } from './dusk';
-import { WATER_Y, edgeSamples, edgesAt, pullAt, stretchAt, topsAt } from './river';
+import { WATER_Y, edgeSamples, edgesAt, stretchAt, topsAt } from './river';
+import { BED, SHALLOWS, riverRows, swashAt } from './riverwater';
+import { TINT, type WaterLight } from './waterlights';
+import { FULL, KELVIN, REST, WAKES } from './wakes';
+import { CAPS, FLASH, MIST, SPLASH } from './waterweather';
 import { atGangway } from './riverbus';
 import { HALF as HARBOUR_HALF, HARBOUR_STREET, HX, Z0 as HZ0, Z1 as HZ1 } from './harbour';
 
@@ -305,42 +309,392 @@ function tiledSlab(poly: Pt[], h: number): THREE.BufferGeometry[] {
 }
 const isRect = (poly: Pt[]) => poly.length === 4 && poly.every((p, i) => { const q = poly[(i + 1) % 4]; return p[0] === q[0] || p[1] === q[1]; });
 
-/** Water: deep colour with drifting highlights and, at night, neon streaks. */
-export const waterMat = new THREE.ShaderMaterial({
-  uniforms: {
-    time: { value: 0 },
-    night: { value: 1 },
-    rain: { value: 0 },
-    deep: { value: new THREE.Color('#123a6b') },
-    sky: { value: new THREE.Color('#5fb0ff') },
-  },
-  vertexShader: /* glsl */ `
-    varying vec3 vPos;
-    void main() { vPos = (modelMatrix * vec4(position, 1.0)).xyz; gl_Position = projectionMatrix * viewMatrix * vec4(vPos, 1.0); }
-  `,
-  fragmentShader: /* glsl */ `
-    uniform float time; uniform float night; uniform float rain; uniform vec3 deep; uniform vec3 sky;
-    varying vec3 vPos;
-    float h(float n) { return fract(sin(n) * 43758.5453); }
-    void main() {
-      float wave = sin(vPos.x * 0.9 + time * 1.3) * sin(vPos.z * 2.7 - time * 0.8);
-      vec3 col = mix(deep, sky, 0.18 + 0.12 * wave);
-      // Highlights drifting downstream
-      float lane = floor(vPos.z * 3.0);
-      float streak = smoothstep(0.92, 1.0, sin(vPos.x * 0.35 + time * (0.6 + h(lane) * 0.8) + h(lane) * 40.0));
-      col += streak * mix(vec3(0.35), vec3(0.0), night) * 0.6;
-      // Neon reflections at night
-      vec3 neonCol = mix(vec3(1.0, 0.25, 0.85), vec3(0.0, 0.9, 1.0), h(lane + 3.0));
-      float ref = smoothstep(0.75, 1.0, sin(vPos.x * 0.12 + h(lane) * 30.0)) * (0.5 + 0.5 * sin(time * 2.0 + vPos.x));
-      col += neonCol * ref * night * 0.55;
-      // Rain rings
-      float ring = smoothstep(0.96, 1.0, sin(length(fract(vPos.xz * 0.8) - 0.5) * 40.0 - time * 8.0));
-      col += ring * rain * 0.25;
-      gl_FragColor = vec4(col, 1.0);
-      #include <colorspace_fragment>
+/*
+ * The water (docs/water-plan.md, step 1, the owner's picks: stylised cartoon water in a deep navy). One shader for all
+ * of it, three materials on the same uniforms (index.ts sets them each frame from the sky): the river (`riverMat`:
+ * flowing downstream, its banks' foam and waves from the rows riverwater.ts lays, and the foam round everything
+ * standing in it from the ink pre-pass's depth, post.ts `under`), the lake (`lakeMat`: still, its rim's foam from its
+ * rings) and the fountains and ponds (`waterMat`: still, nothing else).
+ *
+ * - **Waves:** five trains at odd angles and lengths (no two in step, so no stripes) on a slow swell of noise, their
+ *   crests drawn as two flat bands of lighter blue, fading out with the distance (the far water is its colours only).
+ * - **Colour:** deep navy out in the stream, lighter by the banks and teal over a natural bank's shallows; the sky's
+ *   own colour in two bands towards the horizon (by the angle, the cartoon way); the sun's glint where its reflection
+ *   falls (a longer path at sunset) and the moon's path at night. Nothing passes the bloom's threshold.
+ * - **Foam:** a broken white line hugging the quays, a second one lapping out and back, the waves rolling in over a
+ *   natural bank's shallows (bigger on the cove's beach, `beachSwash()` runs them up the sand); round piers, piles,
+ *   posts and moored hulls from the depth of what stands in the water (not on phones: `UNDER` off).
+ * - **Haze:** the city's fog over it. Under reduced motion the clock stands still, and so does the water.
+ */
+const fogU = THREE.UniformsUtils.clone(THREE.UniformsLib.fog);
+export const WATER_UNIFORMS = {
+  ...fogU,
+  time: { value: 0 },
+  night: { value: 1 },
+  dusk: { value: 0 },
+  rain: { value: 0 },
+  /** How much the wind whips the waves up (dusk.ts `windStrength()`) */
+  wind: { value: 0.05 },
+  /** The stream's colours: out in the middle, nearer the banks, the waves' crests (index.ts, by the time of day) */
+  deep: { value: new THREE.Color('#0b2350') },
+  mid: { value: new THREE.Color('#15396b') },
+  light: { value: new THREE.Color('#2c62a0') },
+  /** The sky at the horizon (the scene's background) */
+  sky: { value: new THREE.Color('#5fb0ff') },
+  /** Where the sun is (or the moon, at night), its colour and how strongly it glints */
+  sunDir: { value: new THREE.Vector3(0, 1, 0) },
+  sunCol: { value: new THREE.Color('#fff3dc') },
+  glint: { value: 0 },
+  /** The depth of what stands in the water (post.ts `under`), its camera's near and far, and whether it's there (1) */
+  under: { value: null as THREE.Texture | null },
+  underInfo: { value: new THREE.Vector3(0.1, 145, 0) },
+  /** One over the size of the frame in pixels (to find a pixel in `under`) */
+  screen: { value: new THREE.Vector2(1, 1) },
+  /**
+   * The boats' wakes (wakes.ts, index.ts fills them each frame): where each boat is and the way its bow points
+   * (x, z, cos, sin), its speed, half its length, half its beam and how far its wake trails; how many there are
+   */
+  wakeA: { value: Array.from({ length: WAKES.most }, () => new THREE.Vector4()) },
+  wakeB: { value: Array.from({ length: WAKES.most }, () => new THREE.Vector4()) },
+  wakeN: { value: 0 },
+  /** The weather (waterweather.ts): the thunder's brighten (0..1) and how thick the mist over the water is */
+  flash: { value: 0 },
+  mist: { value: 0 },
+};
+
+const WATER_VERT = /* glsl */ `
+  #include <fog_pars_vertex>
+  #ifdef BANKED
+  attribute vec4 bank;
+  varying vec4 vBank;
+  #endif
+  #ifdef SWASH
+  attribute vec2 run;
+  varying vec2 vRun;
+  #endif
+  #ifdef MIST
+  attribute float layer;
+  varying float vLayer;
+  #endif
+  varying vec3 vPos;
+  varying float vViewZ;
+  void main() {
+    #ifdef MIST
+    vLayer = layer;
+    #endif
+    #ifdef BANKED
+    vBank = bank;
+    #endif
+    #ifdef SWASH
+    vRun = run;
+    #endif
+    vPos = (modelMatrix * vec4(position, 1.0)).xyz;
+    vec4 mvPosition = viewMatrix * vec4(vPos, 1.0);
+    vViewZ = -mvPosition.z;
+    gl_Position = projectionMatrix * mvPosition;
+    #include <fog_vertex>
+  }
+`;
+
+/** What every water shader shares: the uniforms, noise, the AA'd band and the waves' clock */
+const WATER_COMMON = /* glsl */ `
+  #include <packing>
+  #include <fog_pars_fragment>
+  uniform float time; uniform float night; uniform float dusk; uniform float rain; uniform float wind;
+  uniform vec3 deep; uniform vec3 mid; uniform vec3 light; uniform vec3 sky;
+  uniform vec3 sunDir; uniform vec3 sunCol; uniform float glint;
+  uniform sampler2D under; uniform vec3 underInfo; uniform vec2 screen;
+  uniform float flash; uniform float mist;
+  varying vec3 vPos;
+  varying float vViewZ;
+  float h2(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+  float vnoise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    vec2 u = f * f * (3.0 - 2.0 * f);
+    return mix(mix(h2(i), h2(i + vec2(1.0, 0.0)), u.x), mix(h2(i + vec2(0.0, 1.0)), h2(i + vec2(1.0, 1.0)), u.x), u.y);
+  }
+  // A raindrop's splash in a cell (some cells, the harder it rains): a ring spreading from its own spot at its own moment
+  float splash(vec2 q, float seed) {
+    vec2 i = floor(q);
+    vec2 f = fract(q);
+    float r1 = h2(i + seed);
+    if (r1 > rain * ${SPLASH.share.toFixed(2)}) return 0.0;
+    float r2 = h2(i + seed + 17.0);
+    float r3 = h2(i + seed + 31.0);
+    float life = fract(time * (0.9 + 0.6 * r2) + r3);
+    float d = length(f - (vec2(0.3) + 0.4 * vec2(r2, r3)));
+    float w = max(fwidth(d), 0.015);
+    return (1.0 - smoothstep(w, 2.0 * w, abs(d - life * 0.28))) * (1.0 - life);
+  }
+  // A crisp edge at e, as soft as a pixel (no shimmer at a distance)
+  float band(float x, float e) { float w = max(fwidth(x), 1e-4); return smoothstep(e - w, e + w, x); }
+  // The waves rolling in over a bank's shallows: 0 as one sets out from the shallows' end, 1 as it reaches the water line
+  float rollIn(vec2 p) { return fract(time * 0.16 + vnoise(p * 0.08) * 0.6); }
+  vec3 foamColour() { return mix(vec3(0.82, 0.9, 0.96), vec3(0.3, 0.36, 0.54), night * 0.8) * (1.0 - rain * 0.15); }
+`;
+
+const WATER_FRAG = /* glsl */ `
+  ${WATER_COMMON}
+  #ifdef BANKED
+  varying vec4 vBank;
+  #endif
+  const float SHALLOWS = ${SHALLOWS.toFixed(2)};
+  // Five wave trains: direction (x, z), wave number, speed
+  const vec4 W0 = vec4(0.97, 0.25, 1.31, 0.9);
+  const vec4 W1 = vec4(0.83, -0.56, 1.77, 1.1);
+  const vec4 W2 = vec4(0.27, 0.96, 2.41, 1.5);
+  const vec4 W3 = vec4(-0.59, 0.81, 0.77, 0.6);
+  const vec4 W4 = vec4(-0.33, -0.94, 3.71, 2.1);
+  void wave(vec4 w, float a, float k, vec2 p, inout float h, inout vec2 g) {
+    float ph = w.z * dot(w.xy, p) - w.w * time + k;
+    h += a * sin(ph);
+    g += a * w.z * cos(ph) * w.xy;
+  }
+  #ifdef WAKES
+  uniform vec4 wakeA[${WAKES.most}];
+  uniform vec4 wakeB[${WAKES.most}];
+  uniform float wakeN;
+  // The boats' wakes (wakes.ts): a V of foam lines behind each at the Kelvin angle and the churned water down its middle,
+  // broken up further back; the bow wave peeling off along its sides; rings round a boat at rest
+  float wakeFoam(vec2 p) {
+    float f = 0.0;
+    for (int i = 0; i < ${WAKES.most}; i++) {
+      if (float(i) >= wakeN) break;
+      vec4 a = wakeA[i];
+      vec4 b = wakeB[i];
+      vec2 d = p - a.xy;
+      float reach = b.w + b.y + 2.5;
+      if (dot(d, d) > reach * reach) continue;
+      // Into the boat's own frame: u along it (the bow ahead), v across
+      float u = d.x * a.z - d.y * a.w;
+      float v = d.x * a.w + d.y * a.z;
+      float hl = b.y;
+      float hb = b.z;
+      float s = clamp(b.x / ${FULL.toFixed(1)}, 0.0, 1.0);
+      float seed = float(i) * 7.31;
+      // The hull as a capsule: how far from it
+      float hull = length(vec2(max(abs(u) - max(hl - hb, 0.0), 0.0), v)) - hb;
+      // A thin line hugging it, wider the faster it goes
+      f = max(f, (1.0 - band(hull, 0.05 + 0.1 * s)) * step(-0.02, hull) * (0.45 + 0.55 * s));
+      if (b.x > ${REST.toFixed(2)}) {
+        // (a slow boat's wake still shows, fainter)
+        float m = 0.4 + 0.6 * s;
+        // The bow wave: peeling off the bow along both sides, wider aft, strongest at the bow
+        float side = hb + max(0.0, hl - u) * 0.14;
+        float bow = (1.0 - band(abs(abs(v) - side), 0.04 + 0.05 * s)) * step(-hl, u) * step(u, hl + 0.3);
+        f = max(f, bow * m * (0.35 + 0.65 * smoothstep(-hl, hl, u)));
+        // Behind the stern: the V's arms at the Kelvin angle and the churned water between
+        float back = -u - hl + hb * 0.5;
+        if (back > 0.0 && back < b.w) {
+          float k = back / b.w;
+          float arm = hb * 0.9 + back * ${KELVIN.toFixed(3)};
+          float arms = (1.0 - band(abs(abs(v) - arm), 0.05 + back * 0.02)) * band(vnoise(vec2(back * 1.4 - time * 0.6, abs(v) * 2.0) + seed), 0.2 + 0.55 * k);
+          float churn = (1.0 - band(abs(v), hb * (0.75 + back * 0.08))) * band(vnoise(vec2(back * 2.2 + time * 1.4, v * 3.1) + seed), 0.3 + 0.6 * k);
+          f = max(f, max(arms, churn * 0.85) * m * (1.0 - k));
+        }
+      } else if (hull > 0.0) {
+        // At rest: rings spreading out round it, fading as they go
+        float rr = fract(hull * 0.75 - time * 0.3 + h2(vec2(seed, 1.0)));
+        f = max(f, (1.0 - band(abs(rr - 0.5), 0.045)) * (1.0 - smoothstep(0.2, 2.2, hull)) * 0.45);
+      }
     }
-  `,
-});
+    return f;
+  }
+  #endif
+  void main() {
+    vec2 p = vPos.xz;
+    #ifdef FLOW
+    vec2 drift = vec2(time * 0.45, 0.0);
+    #else
+    vec2 drift = vec2(0.0);
+    #endif
+    vec2 q = p - drift;
+    // The waves, on a slow swell, whipped up by the wind; the detail fades out with the distance
+    float h = 0.0;
+    vec2 g = vec2(0.0);
+    wave(W0, 0.30, 0.0, q, h, g);
+    wave(W1, 0.22, 1.7, q, h, g);
+    wave(W2, 0.16, 3.1, q, h, g);
+    wave(W3, 0.34, 4.4, q, h, g);
+    wave(W4, 0.08, 5.9, q, h, g);
+    float swell = 0.5 + vnoise(q * 0.06 + time * 0.03);
+    float chop = (1.0 + wind * 4.0) * swell * (1.0 - smoothstep(45.0, 150.0, vViewZ));
+    float hn = h * chop / 1.1;
+    vec3 N = normalize(vec3(-g.x * 0.16 * chop, 1.0, -g.y * 0.16 * chop));
+
+    #ifdef BANKED
+    float edge = vBank.x;
+    float shore = vBank.y;
+    float wash = vBank.z;
+    float beach = vBank.w;
+    #else
+    float edge = 40.0;
+    float shore = 1.0;
+    float wash = 0.0;
+    float beach = 0.0;
+    #endif
+
+    // Deep navy out in the stream, the highest crests a lighter band with a pale line along their tops, teal over a
+    // natural bank's shallows
+    vec3 col = mix(mid, deep, smoothstep(1.0, 9.0, edge));
+    col = mix(col, mix(col, light, 0.5), band(hn, 0.5));
+    col = mix(col, light, band(hn, 0.78) * 0.55);
+    vec3 shallow = mix(vec3(0.13, 0.33, 0.38), vec3(0.035, 0.1, 0.15), night);
+    col = mix(shallow, col, smoothstep(0.0, 1.0, shore));
+    // The sky, in two bands towards the horizon
+    vec3 V = normalize(cameraPosition - vPos);
+    float fres = 1.0 - clamp(dot(N, V), 0.0, 1.0);
+    col = mix(col, sky, band(fres, 0.84) * 0.18 + band(fres, 0.95) * 0.2);
+    // The sun's glint (a longer path at sunset), the moon's at night
+    float sd = dot(reflect(-V, N), sunDir);
+    col = mix(col, sunCol, band(sd, mix(0.9965, 0.987, dusk)) * glint);
+
+    // The thunder's soft brighten
+    col += vec3(0.75, 0.8, 1.0) * flash * ${FLASH.toFixed(2)};
+    // The rain: splashes at random spots and times, a ring spreading from each (two grids at odd sizes, offset)
+    if (rain > 0.02 && vViewZ < ${SPLASH.far.toFixed(1)}) {
+      float sp = max(splash(p * ${SPLASH.cells[0].toFixed(2)}, 0.0), splash(p * ${SPLASH.cells[1].toFixed(2)} + 0.5, 9.0));
+      col = mix(col, foamColour(), sp * 0.45 * (1.0 - smoothstep(${SPLASH.near.toFixed(1)}, ${SPLASH.far.toFixed(1)}, vViewZ)));
+    }
+
+    // Foam: whitecaps on the highest crests as the wind gets up
+    float foam = band(hn, 0.72) * band(vnoise(q * 1.9 + time * 0.2), 0.7) * 0.85 * smoothstep(${CAPS.from.toFixed(3)}, ${CAPS.to.toFixed(3)}, wind);
+    #ifdef BANKED
+    float nz = vnoise(p * 1.7 + vec2(time * 0.3, 0.0));
+    // A broken line hugging the bank, a second lapping out and back off the quays
+    foam = max(foam, 1.0 - band(edge, 0.16 + 0.12 * nz + 0.08 * wash));
+    float lap = 0.5 + 0.5 * sin(time * 1.4 + p.x * 0.37 + p.y * 0.21);
+    foam = max(foam, (1.0 - band(abs(edge - 0.32 - lap * 0.3), 0.045)) * (0.6 - 0.45 * wash) * band(nz, 0.4));
+    // The waves rolling in over a natural bank's shallows, bigger on the beach
+    float cyc = rollIn(p);
+    float front = SHALLOWS * (1.0 - cyc);
+    float roll = (1.0 - band(abs(edge - front), 0.05 + 0.1 * cyc * (0.5 + beach))) * smoothstep(0.0, 0.2, cyc);
+    foam = max(foam, roll * wash * band(vnoise(p * vec2(0.6, 1.4) + time * 0.08), 0.32 - 0.12 * beach) * (0.55 + 0.45 * beach));
+    #endif
+    #ifdef DEPTH_FOAM
+    // Round everything standing in the water: how much water there is in front of what's under it here
+    if (underInfo.z > 0.5 && vViewZ < underInfo.y - 10.0) {
+      float sz = -perspectiveDepthToViewZ(texture2D(under, gl_FragCoord.xy * screen).x, underInfo.x, underInfo.y);
+      float th = sz - vViewZ;
+      if (th > -0.05) {
+        float nz2 = vnoise(p * 2.3 + time * 0.4);
+        float f1 = 1.0 - band(th, 0.14 + 0.2 * nz2);
+        float pulse = fract(time * 0.5 + nz2 * 0.7);
+        float f2 = (1.0 - band(abs(th - 0.14 - pulse * 0.34), 0.035)) * (1.0 - pulse);
+        foam = max(foam, max(f1, f2 * 0.75) * (1.0 - smoothstep(40.0, 90.0, vViewZ)));
+      }
+    }
+    #endif
+    #ifdef WAKES
+    foam = max(foam, wakeFoam(p));
+    #endif
+    col = mix(col, foamColour(), clamp(foam, 0.0, 1.0) * 0.9);
+
+    gl_FragColor = vec4(col, 1.0);
+    #include <colorspace_fragment>
+    #include <fog_fragment>
+  }
+`;
+
+const waterShader = (defines: Record<string, string>, frag = WATER_FRAG, extra: Partial<THREE.ShaderMaterialParameters> = {}) =>
+  new THREE.ShaderMaterial({ uniforms: WATER_UNIFORMS, defines, vertexShader: WATER_VERT, fragmentShader: frag, fog: true, ...extra });
+/** The fountains' and ponds' water: still, nothing else */
+export const waterMat = waterShader({});
+/** The lake's: still, its rim's foam from its rings (`lakeRings()`), its boats' wakes */
+export const lakeMat = waterShader({ BANKED: '', WAKES: '' });
+/** The river's: flowing, its banks' foam and waves, the foam round what stands in it, the boats' wakes */
+const riverMat = waterShader({ BANKED: '', FLOW: '', DEPTH_FOAM: '', WAKES: '' });
+/** The cove's swash: the waves running up the sand, the wet band they leave (over the sand, see-through) */
+const swashMat = waterShader(
+  { SWASH: '' },
+  /* glsl */ `
+  ${WATER_COMMON}
+  varying vec2 vRun;
+  void main() {
+    // (in step with the waves rolling in: each runs up as it reaches the water line, and slides back)
+    float cyc = rollIn(vPos.xz);
+    float up = cyc < 0.3 ? sin(cyc / 0.3 * 1.5708) : max(0.0, 1.0 - (cyc - 0.3) / 0.5);
+    float reach = up * (0.55 + 0.4 * vnoise(vec2(vPos.x * 0.35, floor(time * 0.16 + vnoise(vPos.xz * 0.08) * 0.6))));
+    float r = vRun.x;
+    float nz = vnoise(vPos.xz * 2.1 + time * 0.2);
+    float front = (1.0 - band(abs(r - reach), 0.035 + 0.03 * nz)) * step(0.03, reach);
+    float sheet = (1.0 - band(r, reach)) * 0.35;
+    float wet = 1.0 - band(r, max(0.5, reach) + 0.08 * nz);
+    float foam = max(front, sheet) * band(nz, 0.25);
+    vec3 col = mix(vec3(0.16, 0.12, 0.08) * (1.0 - night * 0.7), foamColour(), foam > 0.01 ? 1.0 : 0.0);
+    float a = max(foam * 0.85, wet * 0.3) * vRun.y;
+    gl_FragColor = vec4(col, a);
+    #include <colorspace_fragment>
+    #include <fog_fragment>
+  }
+`,
+  { transparent: true, depthWrite: false }
+);
+
+/**
+ * The mist over the water (waterweather.ts `mistAt()`): cartoon wisps in two thin layers just over it, drifting, off
+ * the banks (`bank`'s edge), thinning near the camera so you never see a sheet's edge, soft where it meets what stands
+ * in the water (the depth under it, desktops); see-through, never inked, hidden when there's none (`waterLook()`)
+ */
+export const mistMat = waterShader(
+  { BANKED: '', MIST: '' },
+  /* glsl */ `
+  ${WATER_COMMON}
+  varying vec4 vBank;
+  varying float vLayer;
+  void main() {
+    vec2 p = vPos.xz;
+    // (long wisps along the water, drifting)
+    float n = 0.6 * vnoise(p * vec2(0.035, 0.11) + vec2(time * (0.03 + 0.02 * vLayer), time * 0.01) + vLayer * 7.0)
+      + 0.4 * vnoise(p * vec2(0.1, 0.3) - vec2(time * 0.02, 0.0));
+    float a = (band(n, 0.52) * 0.55 + band(n, 0.68) * 0.45) * mist * (0.42 - 0.14 * vLayer);
+    // (off the banks; thin near the camera, thicker into the distance)
+    a *= smoothstep(0.0, 2.0, vBank.x) * smoothstep(3.0, 40.0, vViewZ);
+    if (underInfo.z > 0.5 && vViewZ < underInfo.y - 10.0) {
+      float sz = -perspectiveDepthToViewZ(texture2D(under, gl_FragCoord.xy * screen).x, underInfo.x, underInfo.y);
+      a *= smoothstep(0.0, 0.8, sz - vViewZ);
+    }
+    if (a < 0.004) discard;
+    vec3 col = mix(mix(sky, vec3(0.88, 0.88, 0.94), 0.55), vec3(0.18, 0.2, 0.32), night * 0.75);
+    gl_FragColor = vec4(col, a);
+    #include <colorspace_fragment>
+    #include <fog_fragment>
+  }
+`,
+  { transparent: true, depthWrite: false }
+);
+mistMat.name = 'water-mist';
+/**
+ * A mist's mesh: a water mesh's positions and `bank` (rows across the river, rings round the lake) laid twice, at
+ * `MIST.low` and `MIST.high` over the water (`layer` 0 and 1), never inked
+ */
+export function mistOver(water: THREE.BufferGeometry) {
+  const pos = water.getAttribute('position');
+  const bank = water.getAttribute('bank');
+  const idx = water.getIndex()!;
+  const n = pos.count;
+  const g = new THREE.BufferGeometry();
+  const p = new Float32Array(n * 6);
+  const b = new Float32Array(n * 8);
+  const layer = new Float32Array(n * 2);
+  for (const [k, lift] of [MIST.low, MIST.high].entries())
+    for (let i = 0; i < n; i++) {
+      p.set([pos.getX(i), pos.getY(i) + lift, pos.getZ(i)], (k * n + i) * 3);
+      b.set([bank.getX(i), bank.getY(i), bank.getZ(i), bank.getW(i)], (k * n + i) * 4);
+      layer[k * n + i] = k;
+    }
+  const ix = Array.from(idx.array);
+  g.setAttribute('position', new THREE.BufferAttribute(p, 3));
+  g.setAttribute('bank', new THREE.BufferAttribute(b, 4));
+  g.setAttribute('layer', new THREE.BufferAttribute(layer, 1));
+  g.setIndex([...ix, ...ix.map((i) => i + n)]);
+  g.computeBoundingSphere();
+  const mesh = new THREE.Mesh(g, mistMat);
+  mesh.name = 'water-mist';
+  mesh.renderOrder = 2;
+  return fx(mesh);
+}
 
 /** Wet-road sheen: neon streaks that show on the asphalt when it rains (driven by the rain level). */
 export const puddleMat = new THREE.MeshBasicMaterial({
@@ -477,53 +831,70 @@ function along(pts: Pt[], every: number, put: (x: number, z: number, q: THREE.Qu
 }
 
 /**
- * The river's water: shallower by its natural banks (the `shore` attribute: 0 at a bank's edge, 1 out in the stream
- * and all along the quays), the same shader and uniforms as the rest of the city's water (`waterMat`)
+ * The river's water (the water's shader, `riverMat`): rows across it every 2 along it (riverwater.ts `riverRows()`),
+ * each carrying how far it is from the nearer bank and how the bank is (`bank`: edge, shore, wash, beach). Drawn on
+ * the water's own layer (kit.ts `WATER`): the ink pre-pass draws it after taking the depth of what stands in it.
  */
-const riverMat = new THREE.ShaderMaterial({
-  uniforms: waterMat.uniforms,
-  vertexShader: /* glsl */ `
-    attribute float shore;
-    varying vec3 vPos;
-    varying float vShore;
-    void main() { vShore = shore; vPos = (modelMatrix * vec4(position, 1.0)).xyz; gl_Position = projectionMatrix * viewMatrix * vec4(vPos, 1.0); }
-  `,
-  fragmentShader: waterMat.fragmentShader
-    .replace('varying vec3 vPos;', 'varying vec3 vPos;\n    varying float vShore;')
-    .replace('gl_FragColor = vec4(col, 1.0);', 'col = mix(mix(vec3(0.33, 0.6, 0.58), vec3(0.06, 0.19, 0.26), night), col, smoothstep(0.0, 1.0, vShore));\n      gl_FragColor = vec4(col, 1.0);'),
-});
-/** How far out from a natural bank the shallows reach */
-const SHALLOWS = 2.4;
 function riverWater(e0: number, e1: number) {
   const pos: number[] = [];
-  const shore: number[] = [];
+  const bank: number[] = [];
   const idx: number[] = [];
   const pts = edgeSamples(e0, e1, 2);
-  pts.forEach(({ x, n, s }, i) => {
-    const [qn, qs] = [1 - Math.min(1, pullAt('north', x) / 1.2), 1 - Math.min(1, pullAt('south', x) / 1.2)];
-    // Four rows across: the north edge, the shallows' end, the shallows' end, the south edge
-    for (const [z, q] of [
-      [n, qn],
-      [n + SHALLOWS, 1],
-      [s - SHALLOWS, 1],
-      [s, qs],
-    ]) {
-      pos.push(x, WATER_Y, z);
-      shore.push(q);
+  let rows = 0;
+  pts.forEach(({ x }, i) => {
+    const across = riverRows(x);
+    rows = across.length;
+    for (const r of across) {
+      pos.push(x, WATER_Y, r.z);
+      bank.push(r.edge, r.shore, r.wash, r.beach);
     }
     if (i > 0) {
-      const a = (i - 1) * 4;
-      const c = i * 4;
-      for (let r = 0; r < 3; r++) idx.push(a + r, a + r + 1, c + r, c + r, a + r + 1, c + r + 1);
+      const a = (i - 1) * rows;
+      const c = i * rows;
+      for (let r = 0; r < rows - 1; r++) idx.push(a + r, a + r + 1, c + r, c + r, a + r + 1, c + r + 1);
     }
   });
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-  g.setAttribute('shore', new THREE.Float32BufferAttribute(shore, 1));
+  g.setAttribute('bank', new THREE.Float32BufferAttribute(bank, 4));
   g.setIndex(idx);
   g.computeVertexNormals();
   g.computeBoundingSphere();
-  return new THREE.Mesh(g, riverMat);
+  const mesh = new THREE.Mesh(g, riverMat);
+  mesh.name = 'river-water';
+  mesh.layers.set(WATER);
+  return mesh;
+}
+
+/**
+ * The cove's swash (riverwater.ts `swashAt()`): a strip on the beach's sand from the water line up the slope, where
+ * the waves run up and the sand is left wet (`swashMat`, see-through, never inked)
+ */
+function beachSwash(e0: number, e1: number) {
+  const pos: number[] = [];
+  const run: number[] = [];
+  const idx: number[] = [];
+  let prev = -1;
+  for (const { x } of edgeSamples(e0, e1, 1)) {
+    const w = swashAt(x);
+    if (!w) {
+      prev = -1;
+      continue;
+    }
+    const k = pos.length / 3;
+    pos.push(x, w.lo[1], w.lo[0], x, w.hi[1], w.hi[0]);
+    run.push(0, w.fade, 1, w.fade);
+    if (prev >= 0) idx.push(prev, k, prev + 1, prev + 1, k, k + 1);
+    prev = k;
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('run', new THREE.Float32BufferAttribute(run, 2));
+  g.setIndex(idx);
+  g.computeBoundingSphere();
+  const mesh = new THREE.Mesh(g, swashMat);
+  mesh.name = 'beach-swash';
+  return fx(mesh);
 }
 
 /** A quad through four corners (x, y, z), two triangles, turned to face `toward` (its normal's side) */
@@ -556,7 +927,7 @@ function riverBanks(b: Batch, e0: number, e1: number) {
   const rock = toon('#77738a');
   const pts = edgeSamples(e0, e1, 2);
   const W = WATER_Y;
-  const UNDER = W - 0.25;
+  const UNDER = BED;
   for (const bank of ['north', 'south'] as const) {
     const sign = bank === 'north' ? -1 : 1;
     /** Out towards the water from this bank */
@@ -658,7 +1029,8 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
   }
   // The river between its edges (river.ts: straight quays, banks it pulls back from), and its banks
   // (on past the edge with the grass, walled at its ends)
-  scene.add(riverWater(g0, g1));
+  const water = riverWater(g0, g1);
+  scene.add(water, beachSwash(g0, g1), mistOver(water.geometry));
   riverBanks(b, g0, g1);
 
   // A promenade on each bank: between the north-bank avenue and the water, and the water and the south bank avenue
@@ -1175,13 +1547,26 @@ const SODIUM = { bulb: '#ffb35c', halo: '#ffab55', pool: '#ff9a45' };
  * that frame, a colour per point and per instance over its tone's material (the bulbs, in the Batches' shared
  * neon, come up with the night). Not under reduced motion (`reduced`: no tick runs after the first frame).
  */
-export function buildLamps(scene: THREE.Scene, low = false, tick?: (f: Tick) => void, reduced = false) {
-  const toneOf = lamps.map((l, i): Tone | 'dead' => {
-    // (the waterfront's are all sodium, none flickering: it's kept up)
-    const [wx0, wz0, wx1, wz1] = WATERFRONT_RECT;
-    const k = l.x > wx0 && l.x < wx1 && l.z > wz0 && l.z < wz1 ? 'sodium' : lampKind(l.x, l.z);
-    return k === null ? 'white' : k === 'sodium' ? 'sodium' : k === 'dead' ? 'dead' : i % 2 ? 'flickA' : 'flickB';
+function lampTone(l: Lamp3, i: number): Tone | 'dead' {
+  // (the waterfront's are all sodium, none flickering: it's kept up)
+  const [wx0, wz0, wx1, wz1] = WATERFRONT_RECT;
+  const k = l.x > wx0 && l.x < wx1 && l.z > wz0 && l.z < wz1 ? 'sodium' : lampKind(l.x, l.z);
+  return k === null ? 'white' : k === 'sodium' ? 'sodium' : k === 'dead' ? 'dead' : i % 2 ? 'flickA' : 'flickB';
+}
+type Lamp3 = (typeof lamps)[number];
+/** Where a lamp's bulb is: out along its arm (as `buildLamps()` hangs it) */
+const bulbAt = (l: Lamp3): [number, number, number] => [l.x + 0.4 * Math.cos(l.ry), l.y + 1.53, l.z - 0.4 * Math.sin(l.ry)];
+/** Every lit lamp's bulb as a light, for the reflections in the water (waterlights.ts, reflections.ts) */
+export function lampLights(): WaterLight[] {
+  return lamps.flatMap((l, i) => {
+    const tone = lampTone(l, i);
+    if (tone === 'dead') return [];
+    const [x, y, z] = bulbAt(l);
+    return [{ x, y, z, color: tone === 'white' ? TINT.white : TINT.sodium, size: 0.22 }];
   });
+}
+export function buildLamps(scene: THREE.Scene, low = false, tick?: (f: Tick) => void, reduced = false) {
+  const toneOf = lamps.map(lampTone);
   // The lamps themselves are merged with the city's fixed geometry (split by tile: tileBatch() in kit.ts)
   const poles: THREE.Matrix4[] = [];
   const arms: THREE.Matrix4[] = [];

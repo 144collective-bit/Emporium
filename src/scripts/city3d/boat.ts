@@ -11,7 +11,7 @@
  *   mouse, a drag or the right stick; it settles back) and one at the helm.
  * - The car's readout (`data-drive-hud`): speed, and F / N / R; its pedals read
  *   Ahead and Astern.
- * - It rises at the bow with speed, leans into its turns and trails a wake.
+ * - It rises at the bow with speed, leans into its turns and trails a wake (the water's: wakes.ts).
  * - Its engine is the car's voice (sound.ts), its horn the boats' (H).
  * - It bumps softly off everything (boat-sim.ts), with a knock.
  */
@@ -21,7 +21,7 @@ import { BOAT, HIRE_VIEW, TUNE, WATER_SOLIDS, aheadOf, leaveAt, moversAt, newBoa
 import { HIRE } from './riverbus';
 import { WATER_Y } from './river';
 import { hireBoat } from './riverlife3d';
-import { fx, glowMat } from './kit';
+import { setWakes, type Wake } from './wakes';
 import type { Sfx } from './combat';
 
 export interface BoatDeps {
@@ -57,11 +57,8 @@ export function createBoat(d: BoatDeps) {
   const boat = model.group;
   boat.visible = false;
   d.scene.add(boat);
-  // The wake: a soft streak of foam behind it, longer and brighter with speed (the FX layer, like the lane boats')
-  const wakeMat = glowMat('#dff4ff', 0);
-  const wake = fx(new THREE.Mesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), wakeMat));
-  wake.position.y = 0.04;
-  boat.add(wake);
+  // Its wake is the water's (wakes.ts): handed over while it's out
+  const wake: Wake[] = [{ x: 0, z: 0, yaw: 0, speed: 0, len: BOAT.len, beam: BOAT.beam }];
 
   let s = newBoat();
   let active = false;
@@ -151,6 +148,7 @@ export function createBoat(d: BoatDeps) {
     d.engine(-1);
     boat.visible = false;
     HIRE_VIEW.out = false;
+    setWakes('hire-boat', []);
     if (driver) {
       driver.g.removeFromParent();
       driver.dispose();
@@ -164,11 +162,8 @@ export function createBoat(d: BoatDeps) {
     const swell = d.reduced ? 0 : Math.sin(clock * 1.6) * 0.03;
     boat.position.set(s.x, WATER_Y + 0.02 + swell + Math.max(0, ahead) * 0.012, s.z);
     boat.rotation.set(-s.r * 0.12 + (d.reduced ? 0 : Math.sin(clock * 1.1) * 0.015), s.yaw, Math.min(0.11, Math.max(-0.03, (ahead / TUNE.top) * 0.11)), 'YXZ');
-    const k = Math.min(1, speedOf(s) / TUNE.top);
-    wake.visible = k > 0.08;
-    wake.scale.set(1.5 + k * 5, 1, 0.8 + k * 1.2);
-    wake.position.x = -BOAT.len / 2 - (1.5 + k * 5) / 2 + 0.2;
-    wakeMat.opacity = 0.45 * k;
+    Object.assign(wake[0], { x: s.x, z: s.z, yaw: s.yaw, speed: speedOf(s) });
+    setWakes('hire-boat', wake);
   }
 
   /** The other boats about as circles: the lane boats (two each, the length of them) and everything else on the water */

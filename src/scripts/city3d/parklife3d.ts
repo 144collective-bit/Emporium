@@ -22,6 +22,7 @@ import { site } from './tilework';
 import { CROWD_VIEW } from './character';
 import { BOATHOUSE, JETTY, WESTLAKE_RECT } from './westlake';
 import { BOATS, BOAT_Y, DOGS, HULL, PARK_PEOPLE, PICNICS, moment } from './parklife';
+import { setWakes, type Wake } from './wakes';
 
 const CREAM = toon('#ece4d0');
 const TRIM = toon('#2f6152');
@@ -343,10 +344,19 @@ export function registerParkLife(scene: THREE.Scene, tick: (f: Tick) => void, lo
   const dp = { x: 0, z: 0, ry: 0, speed: 0 };
   const wm = moment();
   const [px0, pz0, px1, pz1] = WESTLAKE_RECT;
+  /** The boats' wakes (the water's shader draws them, wakes.ts): moving round their rings, or at rest at the jetty */
+  const wakes: Wake[] = BOATS.map((b) => ({ x: 0, z: 0, yaw: 0, speed: 0, len: HULL[b.kind].l, beam: HULL[b.kind].w }));
   const update = (t: number) => {
     // Bob on the water, a little roll
     const boat = (b: (typeof BOATS)[number], i: number, mesh: THREE.InstancedMesh, k: number) => {
       b.at(t, bp);
+      // (its speed from where it was a moment ago)
+      const w = wakes[i];
+      const [px, pz] = [bp.x, bp.z];
+      b.at(t - 0.25, bp);
+      Object.assign(w, { speed: b.moored ? 0 : Math.hypot(px - bp.x, pz - bp.z) / 0.25 });
+      b.at(t, bp);
+      Object.assign(w, { x: bp.x, z: bp.z, yaw: bp.yaw });
       e.set(Math.sin(t * 1.3 + i) * 0.03, bp.yaw, Math.sin(t * 1.1 + i * 2) * 0.02, 'YXZ');
       m4.compose(v.set(bp.x, BOAT_Y + Math.sin(t * 1.6 + i) * 0.015, bp.z), q.setFromEuler(e), one);
       mesh.setMatrixAt(k, m4);
@@ -381,6 +391,7 @@ export function registerParkLife(scene: THREE.Scene, tick: (f: Tick) => void, lo
       leadPos.set([wm.x - fz * 0.2 + fx * 0.1, SLAB + 0.42, wm.z + fx * 0.2 + fz * 0.1, dp.x + Math.sin(dp.ry) * 0.17 * d.size, SLAB + 0.36 * d.size, dp.z + Math.cos(dp.ry) * 0.17 * d.size], k * 6);
     });
     for (const mesh of [rowHull, rowInside, swanMesh, oars, dogs]) mesh.instanceMatrix.needsUpdate = true;
+    setWakes('lake-boats', wakes);
     leadGeo.attributes.position.needsUpdate = true;
   };
   update(0);
@@ -391,5 +402,6 @@ export function registerParkLife(scene: THREE.Scene, tick: (f: Tick) => void, lo
     const d = Math.hypot(Math.max(px0 - ex, ex - px1, 0), Math.max(pz0 - ez, ez - pz1, 0));
     group.visible = d < 200;
     if (group.visible) update(t);
+    else setWakes('lake-boats', []);
   });
 }

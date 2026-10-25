@@ -260,8 +260,10 @@ still; the steam's points in place by the vent.
    street plan) and `hornDue()`: once a bridge, `HORN_AHEAD` (10) before
    it, either way (`boatHorn` in sound.ts, quieter the further off).
    `cruise()` eases each boat's speed between about 0.55 and 1 of its
-   own, and `wakeOf()` trails the wake by it (longer, wider and brighter
-   the faster; each wake its own material now, no new draws). `MOORED`:
+   own, and `wakeOf()` trailed the wake by it (longer, wider and brighter
+   the faster; each wake its own material). Since the water plan's step 3
+   the wakes are the water's own (`wakes.ts`, `docs/water-plan.md`) and
+   `wakeOf()` is gone. `MOORED`:
    two boats tied up past a jetty's end (one on each bank), riding the
    water, clear of the three lanes the others run in.
 3. **Lamps that come on one by one.** `lampGlow()`: each lamp has its

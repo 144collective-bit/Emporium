@@ -49,6 +49,7 @@ import {
 } from './harbour';
 import { LANE } from './layout';
 import { WATER_Y } from './river';
+import { TINT, addWaterLights } from './waterlights';
 import type { Spot } from './landmarks';
 
 const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
@@ -303,7 +304,12 @@ function cables(b: Batch, low: boolean) {
     for (let i = 1; i < zs.length; i++) rod(b, V(HX + u, cableY(zs[i - 1]), zs[i - 1]), V(HX + u, cableY(zs[i]), zs[i]), 0.14, CABLE_C);
     // The necklace of bulbs along the outer cables
     if (Math.abs(u) > GIRDER.inner[1])
-      for (let z = a + 2; z < c - 1; z += 2) if (TOWERS.every((t) => Math.abs(z - t) > TOWER.hz + 0.4)) box(b, HX + u - 0.08, cableY(z) - 0.22, z - 0.08, HX + u + 0.08, cableY(z) - 0.06, z + 0.08, BULB);
+      for (let z = a + 2; z < c - 1; z += 2)
+        if (TOWERS.every((t) => Math.abs(z - t) > TOWER.hz + 0.4)) {
+          box(b, HX + u - 0.08, cableY(z) - 0.22, z - 0.08, HX + u + 0.08, cableY(z) - 0.06, z + 0.08, BULB);
+          // (every other one shows in the water: reflections.ts)
+          if (Math.round(z - a) % 4 === 2) addWaterLights([{ x: HX + u, y: cableY(z) - 0.14, z, color: TINT.white, size: 0.14 }]);
+        }
   }
   // Suspenders from each cable to its girder's top
   const step = low ? SUSPENDER * 2 : SUSPENDER;
@@ -341,6 +347,7 @@ export function buildHarbourBridge(scene: THREE.Scene, opts: { low: boolean }): 
   const name = lit(new THREE.MeshBasicMaterial({ map: nameTex(), toneMapped: true }), 0.95, 1.2);
   for (const z of TOWERS) tower(b, plaques, z, name);
   const lanterns = deck(b, opts.low);
+  addWaterLights(lanterns.map((v) => ({ x: v.x, y: v.y, z: v.z, color: TINT.white, size: 0.18 })));
   cables(b, opts.low);
   b.build(group);
   plaques.build(group, { cast: false, receive: false });

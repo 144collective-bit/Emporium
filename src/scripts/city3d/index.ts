@@ -12,7 +12,7 @@ import { SWAY, windStrength } from './dusk';
 import { buildBusStops } from './transit3d';
 import type { LifeSfx } from './life';
 import { createPost } from './post';
-import { CENTER, SLAB, addLamp, addTree, buildGround, buildLamps, buildSkyline, buildTrees, placed as everyPlaced, puddleMat, keepTreesOff, scatterOutskirts, waterMat, type Env, type Tick } from './world';
+import { CENTER, SLAB, WATER_UNIFORMS, addLamp, lampLights, mistMat, addTree, buildGround, buildLamps, buildSkyline, buildTrees, placed as everyPlaced, puddleMat, keepTreesOff, scatterOutskirts, type Env, type Tick } from './world';
 import { PARK_LAMPS, PARK_TREES, WESTLAKE_RECT } from './westlake';
 import { GARDEN_LAMPS, GARDEN_PEOPLE } from './gardens';
 import { LAMPS as PLAZA_LAMPS, PLAZA_PEOPLE, TERRACE_LAMPS, TERRACE_TREES, TREES as PLAZA_TREES } from './plaza';
@@ -73,6 +73,10 @@ import { FIGHT_SPAWN } from './fightsite';
 import { HIGH_Y as LIBERTY_HIGH, LIBERTY_SPAWN, LIFTS as LIBERTY_LIFTS, LOW_Y as LIBERTY_LOW } from './liberty';
 import { buildLibertyBridge } from './libertybridge';
 import { buildHarbourBridge } from './harbour3d';
+import { buildReflections } from './reflections';
+import { handedLights, landmarkLights } from './waterlights';
+import { WAKES, nearestWakes, trailOf, type Wake } from './wakes';
+import { RAIN_DARK, mistAt } from './waterweather';
 import { HARBOUR_SPAWN } from './harbour';
 import { buildProjects } from './projects3d';
 import { buildCommons } from './commons3d';
@@ -309,6 +313,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   buildSkyline(scene, Q.skyline, tick);
   buildTrees(tier === 'low');
   buildLamps(scene, tier === 'low', tick, reduced);
+  // The lights in the water (docs/water-plan.md step 2): every lamp, lantern and lit landmark near it, laid as the
+  // camera sees them; the boats' lamps each frame after the ticks
+  const reflections = buildReflections(scene, [...lampLights(), ...handedLights(), ...landmarkLights()]);
   buildBusStops(tier === 'low');
   progress(0.7);
   await waited(nextFrame());
@@ -343,7 +350,48 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     return { pos: CENTER.clone().add(new THREE.Vector3(27, 31, 34).multiplyScalar(k)), target: CENTER.clone().add(new THREE.Vector3(0, 3.4, 1)) };
   };
 
-  const post = createPost(renderer, scene, camera, { msaa: Q.msaa, bloomScale: Q.bloomScale, smaa: devicePixelRatio < 1.5 && tier !== 'low', bloomMips: tier === 'low' ? 3 : 5, shadows: sky });
+  const post = createPost(renderer, scene, camera, { msaa: Q.msaa, bloomScale: Q.bloomScale, smaa: devicePixelRatio < 1.5 && tier !== 'low', bloomMips: tier === 'low' ? 3 : 5, shadows: sky, underwater: tier !== 'low' });
+  /**
+   * The water's look each frame (world.ts `WATER_UNIFORMS`, docs/water-plan.md): its navy by the time of day (greyer
+   * in the rain, a little warmer at dusk), the sky's colour, the sun's glint (the moon's at night), the wind, and the
+   * depth of what stands in it (post.ts `water`: laptops and desktops only)
+   */
+  const WATER_DAY = { deep: new THREE.Color('#0b2350'), mid: new THREE.Color('#15396b'), light: new THREE.Color('#2c62a0') };
+  const WATER_NIGHT = { deep: new THREE.Color('#050a1f'), mid: new THREE.Color('#0a1734'), light: new THREE.Color('#18305c') };
+  const WATER_RAIN = new THREE.Color('#283246');
+  const WATER_DUSK = new THREE.Color('#6a4a7a');
+  const MOON = new THREE.Color('#c9d4ff');
+  const W = WATER_UNIFORMS;
+  /** The boats' wakes (wakes.ts): the nearest the camera, after the ticks have said where every boat is (phones: fewer) */
+  const wakeList: Wake[] = [];
+  function wakeLook() {
+    const near = nearestWakes(camera.position.x, camera.position.z, tier === 'low' ? WAKES.phones : WAKES.most, wakeList);
+    near.forEach((w, i) => {
+      W.wakeA.value[i].set(w.x, w.z, Math.cos(w.yaw), Math.sin(w.yaw));
+      W.wakeB.value[i].set(w.speed, w.len / 2, w.beam / 2, trailOf(w.speed, w.len));
+    });
+    W.wakeN.value = near.length;
+  }
+  function waterLook(s: ReturnType<typeof sky.update>, t: number) {
+    W.time.value = t;
+    W.night.value = s.night;
+    W.dusk.value = s.dusk;
+    W.rain.value = s.rain;
+    W.wind.value = windStrength(s.rain);
+    for (const k of ['deep', 'mid', 'light'] as const) W[k].value.copy(WATER_NIGHT[k]).lerp(WATER_DAY[k], 1 - s.night).lerp(WATER_RAIN, s.rain * RAIN_DARK);
+    W.light.value.lerp(WATER_DUSK, s.dusk * 0.35);
+    W.sky.value.copy(scene.background as THREE.Color);
+    W.sunDir.value.copy(s.sun);
+    W.sunCol.value.copy(s.sunCol).lerp(MOON, s.night);
+    W.glint.value = (1 - s.night) * (1 - s.rain * 0.85) * 0.9 + s.night * (1 - s.rain) * 0.5;
+    // The weather on it (waterweather.ts): the thunder's brighten, the mist (none drawn when there's none)
+    W.flash.value = s.flash;
+    W.mist.value = mistAt(s.hour, s.night, s.rain);
+    mistMat.visible = W.mist.value > 0.01;
+    W.under.value = post.water.depth;
+    W.underInfo.value.set(post.water.near, post.water.far, post.water.depth ? 1 : 0);
+    W.screen.value.copy(post.water.screen);
+  }
   /**
    * Shaders compiled for where the city really draws: the post chain's target (linear colour), not the
    * screen. Compiled for the screen, each material gets a program no frame uses, and the real one is
@@ -1369,14 +1417,13 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     tiled.update(CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, CROWD_VIEW.eye.z, Q.far);
     updateLods(CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, CROWD_VIEW.eye.z, Q.far);
     if (!reduced || frames === 0) for (const f of ticks) f(env);
+    reflections.update();
+    wakeLook();
     updateLights(s.night, env.t);
     // The wind in the trees (desktop; phones carry no sway) and the thunder's rumble when one is due (city life plan, Phase 4)
     updateWind(env.t, windStrength(s.rain), tier === 'low' ? 0 : SWAY);
     if (s.thunder) sound.sfx('thunder', s.thunder);
-    waterMat.uniforms.time.value = env.t;
-    waterMat.uniforms.night.value = s.night;
-    waterMat.uniforms.rain.value = s.rain;
-    (waterMat.uniforms.sky.value as THREE.Color).copy(scene.background as THREE.Color);
+    waterLook(s, env.t);
     puddleMat.color.setScalar(s.rain * (0.12 + s.night * 0.6));
     streaks.visible = s.rain > 0.01;
     // Minimal bloom (the owner's call: nothing may wash out). Only small, very bright

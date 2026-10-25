@@ -4,8 +4,8 @@
  *
  * - A boat sounds its horn coming up to a bridge (`hornDue()`: once a
  *   bridge, `HORN_AHEAD` before it).
- * - It cruises at a speed that eases up and down (`cruise()`), and its
- *   wake trails it by its speed (`wakeOf()`).
+ * - It cruises at a speed that eases up and down (`cruise()`); its wake
+ *   is the water's (wakes.ts).
  * - The odd boat is moored at a jetty (`MOORED`): alongside the deck's
  *   downstream end, clear of the lanes the others run in.
  */
@@ -45,12 +45,6 @@ export function hornDue(h: BoatHorn, x: number, v: number): boolean {
 
 /** A boat's speed this moment: its cruising speed easing up and down, never under 0.55 of it */
 export const cruise = (base: number, t: number, ph: number) => base * (0.775 + 0.225 * Math.sin(t * 0.09 + ph));
-
-/** The wake behind a boat, by its speed: how long it trails (tiles), how wide, how bright (0..1) */
-export function wakeOf(v: number, vmax: number) {
-  const k = Math.min(1, Math.abs(v) / Math.max(0.01, vmax));
-  return { len: 1.2 + 2.2 * k, width: 0.7 + 0.4 * k, alpha: 0.5 + 0.5 * k };
-}
 
 /** A boat moored at a jetty: where, which way it faces (yaw, +x is 0) and its paint */
 export interface Moored {
