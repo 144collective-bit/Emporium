@@ -41,6 +41,7 @@ import { BUS, GANGWAY, HIRE, LANDING, PONTOON_W, STOPS, type Stop } from './rive
 import { BOAT, HIRE_VIEW } from './boat-sim';
 import { BUSES, BUS_VIEW, busAt } from './riverroute';
 import { site } from './tilework';
+import { TINT, onBoat, setMovingLights, type WaterLight } from './waterlights';
 
 export const SELF = import.meta.url;
 
@@ -393,15 +394,25 @@ export function register({ scene, tick, low }: { low: boolean; scene: THREE.Scen
     g.position.set(p.x, WATER_Y + 0.02 + Math.sin(t * 1.3 + p.x * 0.1) * 0.025, p.z);
     g.rotation.set(roll, p.yaw, Math.sin(t * 1.1 + p.z) * 0.02, 'YXZ');
   };
+  const lights: WaterLight[] = [];
   tick(() => {
     const t = reduced ? t0 : Date.now() / 1000;
     // (only while the camera's near the river: nothing out there is seen from far off anyway)
     const e = CROWD_VIEW.eye;
     root.visible = e.z > 71 - 220 && e.z < 131 + 220;
+    lights.length = 0;
+    setMovingLights('river-boats', lights);
     if (!root.visible) return;
-    place(cruise, cruiseAt(t), t);
+    const cp = cruiseAt(t);
+    place(cruise, cp, t);
     place(crew, crewAt(t), t);
-    buses.forEach((g, i) => place(g, i === 0 && BUS_VIEW.ride ? BUS_VIEW.ride : busAt(i, t + BUS_VIEW.offset), t));
+    // (the cruise boat's lit windows and the river buses' show in the water: reflections.ts)
+    for (const u of [-1.6, 0, 1.6]) lights.push(onBoat(cp.x, cp.z, cp.yaw, u, 1.0, TINT.warm, 0.3));
+    buses.forEach((g, i) => {
+      const bp = i === 0 && BUS_VIEW.ride ? BUS_VIEW.ride : busAt(i, t + BUS_VIEW.offset);
+      place(g, bp, t);
+      for (const u of [-1.2, 1.2]) lights.push(onBoat(bp.x, bp.z, bp.yaw, u, 0.9, TINT.warm, 0.28));
+    });
     hire.visible = !HIRE_VIEW.out;
     if (hire.visible) place(hire, HIRE, t);
     dinghies.forEach((g, i) => {

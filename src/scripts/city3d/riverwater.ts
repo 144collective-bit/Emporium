@@ -98,3 +98,5 @@ export function lakeRings(a: number): [number, number, number][] {
 }
 /** How far in the lake's middle is (its narrowest half-width, so the middle is never nearer the edge than it says) */
 export const LAKE_MIDDLE = Math.min(...Array.from({ length: 360 }, (_, k) => lakeR((k / 360) * Math.PI * 2)));
+/** The lake's water's height: on the park's lawn (world.ts `SLAB`, 0.15), a hair over it */
+export const LAKE_Y = 0.15 + 0.04;

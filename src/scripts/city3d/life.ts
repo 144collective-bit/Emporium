@@ -13,6 +13,7 @@ import { DECK_STROLLS, HIGH_Y as LIBERTY_HIGH } from './liberty';
 import { deckSlope, deckY, onHarbour } from './harbour';
 import { departuresRoadY, departuresSlope } from './airfield';
 import { WATER_Y } from './river';
+import { TINT, boatLamp, onBoat, setMovingLights, type WaterLight } from './waterlights';
 import { DECK_Y as BOARDWALK_Y, STROLL, boatZ } from './waterfront';
 import { JUNCTIONS, ROUTES, SPOTS, lightState, phaseOf, pointOn, rightOf, type Junction, type Phase, type Pt, type Route } from './routes';
 import { CARS, PAINTS, carGeometry, carMaterials, theFarCars, type CarId } from './cars';
@@ -879,8 +880,11 @@ function buildBoats(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => void)
     return { g, ph: m.x * 0.37 };
   });
   const shared = boats.map(() => ({ x: 0, z: 0, yaw: 0, len: 2, beam: 0.6 }));
+  /** Their lamps (and the police launch's light bar), for the reflections in the water (reflections.ts) */
+  const lamps: WaterLight[] = [];
   tick(({ t, dt }) => {
     bodies.boats.length = 0;
+    lamps.length = 0;
     for (const [i, b] of boats.entries()) {
       // Cruising, the speed easing up and down (boats.ts); the wake trails it
       const speed = cruise(b.v, t, b.ph);
@@ -906,11 +910,14 @@ function buildBoats(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => void)
       b.g.rotation.set(0, (b.v < 0 ? Math.PI : 0) - Math.atan(slope), Math.sin(t * 1.2 + b.ph) * 0.03);
       Object.assign(shared[i], { x: b.x, z, yaw: b.g.rotation.y });
       bodies.boats.push(shared[i]);
+      lamps.push(boatLamp(b.x, z, b.g.rotation.y));
       if (b.lights) {
         const on = Math.floor(t * 3) % 2;
         b.lights.forEach((m, k) => (m.visible = on === k));
+        lamps.push(onBoat(b.x, z, b.g.rotation.y, -0.2, 0.62, on ? TINT.red : 0x3d6bff, 0.25));
       }
     }
+    setMovingLights('traffic-boats', lamps);
     for (const m of moored) {
       m.g.position.y = WATER_Y + 0.02 + Math.sin(t * 1.3 + m.ph) * 0.025;
       m.g.rotation.z = Math.sin(t * 0.9 + m.ph) * 0.025;

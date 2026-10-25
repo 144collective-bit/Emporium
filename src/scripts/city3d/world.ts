@@ -33,6 +33,7 @@ import { BRIDGE_RECT } from './stadium';
 import { SWAY, lampGlow, newLamp, type Lamp } from './dusk';
 import { WATER_Y, edgeSamples, edgesAt, stretchAt, topsAt } from './river';
 import { BED, SHALLOWS, riverRows, swashAt } from './riverwater';
+import { TINT, type WaterLight } from './waterlights';
 import { atGangway } from './riverbus';
 import { HALF as HARBOUR_HALF, HARBOUR_STREET, HX, Z0 as HZ0, Z1 as HZ1 } from './harbour';
 
@@ -385,7 +386,6 @@ const WATER_COMMON = /* glsl */ `
   uniform sampler2D under; uniform vec3 underInfo; uniform vec2 screen;
   varying vec3 vPos;
   varying float vViewZ;
-  float h1(float n) { return fract(sin(n) * 43758.5453); }
   float h2(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
   float vnoise(vec2 p) {
     vec2 i = floor(p);
@@ -465,11 +465,7 @@ const WATER_FRAG = /* glsl */ `
     float sd = dot(reflect(-V, N), sunDir);
     col = mix(col, sunCol, band(sd, mix(0.9965, 0.987, dusk)) * glint);
 
-    // Neon streaks at night, the rain's rings (step 2 puts the city's own lights in the water; step 4 the rain)
-    float lane = floor(vPos.z * 3.0);
-    vec3 neonCol = mix(vec3(1.0, 0.25, 0.85), vec3(0.0, 0.9, 1.0), h1(lane + 3.0));
-    float ref = smoothstep(0.75, 1.0, sin(vPos.x * 0.12 + h1(lane) * 30.0)) * (0.5 + 0.5 * sin(time * 2.0 + vPos.x));
-    col += neonCol * ref * night * 0.2;
+    // The rain's rings (step 4 makes them splashes; the lights in the water are reflections.ts's)
     float ring = smoothstep(0.96, 1.0, sin(length(fract(vPos.xz * 0.8) - 0.5) * 40.0 - time * 8.0));
     col += ring * rain * 0.2;
 
@@ -1390,13 +1386,26 @@ const SODIUM = { bulb: '#ffb35c', halo: '#ffab55', pool: '#ff9a45' };
  * that frame, a colour per point and per instance over its tone's material (the bulbs, in the Batches' shared
  * neon, come up with the night). Not under reduced motion (`reduced`: no tick runs after the first frame).
  */
-export function buildLamps(scene: THREE.Scene, low = false, tick?: (f: Tick) => void, reduced = false) {
-  const toneOf = lamps.map((l, i): Tone | 'dead' => {
-    // (the waterfront's are all sodium, none flickering: it's kept up)
-    const [wx0, wz0, wx1, wz1] = WATERFRONT_RECT;
-    const k = l.x > wx0 && l.x < wx1 && l.z > wz0 && l.z < wz1 ? 'sodium' : lampKind(l.x, l.z);
-    return k === null ? 'white' : k === 'sodium' ? 'sodium' : k === 'dead' ? 'dead' : i % 2 ? 'flickA' : 'flickB';
+function lampTone(l: Lamp3, i: number): Tone | 'dead' {
+  // (the waterfront's are all sodium, none flickering: it's kept up)
+  const [wx0, wz0, wx1, wz1] = WATERFRONT_RECT;
+  const k = l.x > wx0 && l.x < wx1 && l.z > wz0 && l.z < wz1 ? 'sodium' : lampKind(l.x, l.z);
+  return k === null ? 'white' : k === 'sodium' ? 'sodium' : k === 'dead' ? 'dead' : i % 2 ? 'flickA' : 'flickB';
+}
+type Lamp3 = (typeof lamps)[number];
+/** Where a lamp's bulb is: out along its arm (as `buildLamps()` hangs it) */
+const bulbAt = (l: Lamp3): [number, number, number] => [l.x + 0.4 * Math.cos(l.ry), l.y + 1.53, l.z - 0.4 * Math.sin(l.ry)];
+/** Every lit lamp's bulb as a light, for the reflections in the water (waterlights.ts, reflections.ts) */
+export function lampLights(): WaterLight[] {
+  return lamps.flatMap((l, i) => {
+    const tone = lampTone(l, i);
+    if (tone === 'dead') return [];
+    const [x, y, z] = bulbAt(l);
+    return [{ x, y, z, color: tone === 'white' ? TINT.white : TINT.sodium, size: 0.22 }];
   });
+}
+export function buildLamps(scene: THREE.Scene, low = false, tick?: (f: Tick) => void, reduced = false) {
+  const toneOf = lamps.map(lampTone);
   // The lamps themselves are merged with the city's fixed geometry (split by tile: tileBatch() in kit.ts)
   const poles: THREE.Matrix4[] = [];
   const arms: THREE.Matrix4[] = [];

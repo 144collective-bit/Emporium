@@ -16,7 +16,7 @@
 import * as THREE from 'three';
 import { Batch, FONT_DISPLAY, WATER, canvasTex, lit, neon, siteMat, toon } from './kit';
 import { SLAB, lakeMat, type Tick } from './world';
-import { LAKE_INSETS, LAKE_MIDDLE, lakeRings } from './riverwater';
+import { LAKE_INSETS, LAKE_MIDDLE, LAKE_Y, lakeRings } from './riverwater';
 import { registerParkLife, registerParkSites } from './parklife3d';
 import { register as registerGrounds } from './stadiumgrounds3d';
 import { site } from './tilework';
@@ -247,7 +247,7 @@ function lakeWater() {
   const pos: number[] = [];
   const bank: number[] = [];
   const idx: number[] = [];
-  const y = SLAB + 0.04;
+  const y = LAKE_Y;
   for (let k = 0; k < n; k++)
     for (const [x, z, d] of lakeRings((-2 * Math.PI * k) / n)) {
       pos.push(x, y, z);

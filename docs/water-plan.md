@@ -215,3 +215,48 @@ steps, each with the owner's sign-off; keep this plan up to date.
   Bridge's piers, the cove and the lake. Real-device `?bench` numbers are
   still to take.
 
+**Step 2 (built, waiting on the owner's sign-off):**
+
+- **Which lights** are in `waterlights.ts` (DOM-free, tested in
+  `tests/waterlights.test.ts`). A light shows when it stands near enough
+  to the water for its reflection to land on it (`waterUnder()`): within
+  `REACH` of the river or the lake, further back the higher it is. It gets
+  the water's height under it, the river's or the lake's.
+  - The street lamps by the water: world.ts `lampLights()`, each lamp's
+    bulb in its tone (white or sodium, the dead left out, the same rule as
+    `buildLamps()`).
+  - The bridges' lanterns: Liberty Bridge's approaches, abutments and high
+    level, Harbour Bridge's girders and every other bulb on its cables.
+    Each drawing hands them over (`addWaterLights()`), since it works them
+    out as it draws.
+  - What the data knows (`landmarkLights()`): Club PULSE's fins (magenta
+    and cyan) and its pylon, the Night Market's stalls and poles, Pier 7's
+    kiosk, the Sky Wheel's rim, Uptown's towers' crowns and red warning
+    lights, and the moored boats' lamps.
+  - The moving lights (`setMovingLights()`): the traffic's boats' cabin
+    lamps and the police launch's flashing bar (life.ts), the cruise boat's
+    and the river buses' windows (riverlife3d.ts, only while that district
+    is drawing them), and the tall ship's stern lantern (libertybridge.ts).
+- **How they're drawn** (`reflections.ts`): one instanced quad a light, in
+  two draws (the fixed lights, built once after the lamps; the moving
+  ones, at most `MOVING`, refreshed every frame after the ticks).
+  - The vertex shader lays each quad where the light's mirror image meets
+    the water as the camera sees it, its long side towards the camera,
+    longer the higher the light, the lower the eye and the stronger the
+    wind. No work a frame on the CPU for the fixed ones.
+  - The fragment shader draws a stack of short ripple strokes, each its
+    own width and a little to one side, fuller in the middle, drifting
+    with the waves.
+  - The depth test hides any of it under the land (the water lies under
+    the streets); the lake's are clipped to its shore (`lakeR()` in the
+    shader).
+  - They come up with the night, fade into the haze and are left out past
+    `FAR` (240). Additive, at most 0.6 of the light's colour: under the
+    bloom.
+- The random neon streaks are gone from the water's shader.
+- **Not done:** lit windows facing the river (left for later: the
+  landmarks and the lamps carry it), the hire boat's lights.
+- **Checked** at night from the promenade, by Liberty Bridge and at the
+  cove: columns under every lamp and lantern, none on the land (the cove's
+  sand right at the water line takes a hair of it). With the budgets (boot
+  code 654.9 of 670 KB) and both test runs.

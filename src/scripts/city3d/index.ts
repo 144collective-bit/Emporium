@@ -12,7 +12,7 @@ import { SWAY, windStrength } from './dusk';
 import { buildBusStops } from './transit3d';
 import type { LifeSfx } from './life';
 import { createPost } from './post';
-import { CENTER, SLAB, WATER_UNIFORMS, addLamp, addTree, buildGround, buildLamps, buildSkyline, buildTrees, placed as everyPlaced, puddleMat, keepTreesOff, scatterOutskirts, type Env, type Tick } from './world';
+import { CENTER, SLAB, WATER_UNIFORMS, addLamp, lampLights, addTree, buildGround, buildLamps, buildSkyline, buildTrees, placed as everyPlaced, puddleMat, keepTreesOff, scatterOutskirts, type Env, type Tick } from './world';
 import { PARK_LAMPS, PARK_TREES, WESTLAKE_RECT } from './westlake';
 import { GARDEN_LAMPS, GARDEN_PEOPLE } from './gardens';
 import { LAMPS as PLAZA_LAMPS, PLAZA_PEOPLE, TERRACE_LAMPS, TERRACE_TREES, TREES as PLAZA_TREES } from './plaza';
@@ -71,6 +71,8 @@ import { FIGHT_SPAWN } from './fightsite';
 import { HIGH_Y as LIBERTY_HIGH, LIBERTY_SPAWN, LIFTS as LIBERTY_LIFTS, LOW_Y as LIBERTY_LOW } from './liberty';
 import { buildLibertyBridge } from './libertybridge';
 import { buildHarbourBridge } from './harbour3d';
+import { buildReflections } from './reflections';
+import { handedLights, landmarkLights } from './waterlights';
 import { HARBOUR_SPAWN } from './harbour';
 import { buildProjects } from './projects3d';
 import { buildCommons } from './commons3d';
@@ -302,6 +304,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   buildSkyline(scene, Q.skyline, tick);
   buildTrees(tier === 'low');
   buildLamps(scene, tier === 'low', tick, reduced);
+  // The lights in the water (docs/water-plan.md step 2): every lamp, lantern and lit landmark near it, laid as the
+  // camera sees them; the boats' lamps each frame after the ticks
+  const reflections = buildReflections(scene, [...lampLights(), ...handedLights(), ...landmarkLights()]);
   buildBusStops(tier === 'low');
   progress(0.7);
   await waited(nextFrame());
@@ -1378,6 +1383,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     tiled.update(CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, CROWD_VIEW.eye.z, Q.far);
     updateLods(CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, CROWD_VIEW.eye.z, Q.far);
     if (!reduced || frames === 0) for (const f of ticks) f(env);
+    reflections.update();
     updateLights(s.night, env.t);
     // The wind in the trees (desktop; phones carry no sway) and the thunder's rumble when one is due (city life plan, Phase 4)
     updateWind(env.t, windStrength(s.rain), tier === 'low' ? 0 : SWAY);
