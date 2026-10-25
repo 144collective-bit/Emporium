@@ -24,6 +24,7 @@
  *
  * `MALL_SOLIDS` (in `SOLIDS`) are the buildings, the arch's posts, the
  * fountain, the pylon and the parked cars. The trees keep off `MALL_AREA`.
+ * Inside the hall (step 2) is mallinside.ts.
  */
 import { NS_ROADS, WALK_W } from './layout';
 import { GATES, WESTLAKE_RECT } from './westlake';
@@ -256,7 +257,7 @@ export const MALL_SOLIDS: Box[] = [
   ...ARCH_POSTS.map((r) => box(r, ARCH.h)),
   [FOUNTAIN.x - FOUNTAIN.r * 0.85, FOUNTAIN.z - FOUNTAIN.r * 0.85, FOUNTAIN.x + FOUNTAIN.r * 0.85, FOUNTAIN.z + FOUNTAIN.r * 0.85, 0.6],
   ...ANCHORS.map((a) => box(a.rect, a.h)),
-  box(HALL.rect, HALL.h),
+  // (the hall is hollow since step 2: its walls and what's inside are mallinside.ts's)
   // (the porch's posts at its two front corners: you walk in under it)
   [PORCH.rect[0], PORCH.rect[3] - 0.4, PORCH.rect[0] + 0.4, PORCH.rect[3], PORCH.h],
   [PORCH.rect[2] - 0.4, PORCH.rect[3] - 0.4, PORCH.rect[2], PORCH.rect[3], PORCH.h],

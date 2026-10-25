@@ -19,14 +19,49 @@
  * - **On the main thread:** the parked cars and the cabs.
  */
 import * as THREE from 'three';
-import { Batch, FONT_DISPLAY, canvasTex, lit, neon, siteMat, toon } from './kit';
+import { Batch } from './kit';
 import type { Tick } from './world';
-import { SLAB } from './world';
 import { site } from './tilework';
 import { NS_ROADS } from './layout';
 import { parkedCars, type CarId } from './cars';
 import { TAXI_YELLOW } from './kerbside';
 import { FILMS } from './uptownsites';
+import {
+  ASPHALT,
+  BULB,
+  CHROME,
+  CONCRETE,
+  CYAN_NEON,
+  DARK,
+  GLASS,
+  INK,
+  LILAC,
+  NAVY,
+  NEONS,
+  PAINT,
+  PEACH,
+  PINK_NEON,
+  PYLON_FACE,
+  SKY,
+  SPRAY,
+  TEAL,
+  TILES,
+  WATER,
+  WHITE,
+  WOOD,
+  Y,
+  YELLOW,
+  YELLOW_NEON,
+  box,
+  cyl,
+  flat,
+  glassX,
+  glassZ,
+  palm,
+  poster,
+  sign,
+  wallOf,
+} from './mallkit';
 import {
   ANCHORS,
   ARCH,
@@ -51,260 +86,13 @@ import {
   RANK_CABS,
   SHELTER,
   SHOPS,
-  SHOP_NAMES,
   ZEBRA,
   type Shop,
 } from './mall';
+import { BOLLARD, BOLLARDS, DOOR, WALL, WALLS } from './mallinside';
+import { registerInside } from './mallinside3d';
 
 export const SELF = import.meta.url;
-
-/* ---------- Paint ---------- */
-
-const CHROME = toon('#d9dee8');
-const WHITE = toon('#f6f3fb');
-const DARK = toon('#2a2740');
-const INK = toon('#1b1830');
-const NAVY = toon('#241a4d');
-const LILAC = toon('#c7a6ff');
-const TEAL = toon('#5fd6c4');
-const PEACH = toon('#ffc48c');
-const CONCRETE = toon('#b9b4c9');
-const ASPHALT = toon('#2c2a44');
-const PAINT = toon('#e8e4f8');
-const YELLOW = toon('#ffd23f');
-const WATER = toon('#62c6ea');
-const SPRAY = toon('#dff6ff');
-const TRUNK = toon('#9a7350');
-const FROND = toon('#2fbf71');
-const POT = toon('#ff9ec7');
-const WOOD = toon('#a8743f');
-const PINK_NEON = neon('#ff4fd8', 0.3, 2.4);
-const CYAN_NEON = neon('#4fe3ff', 0.3, 2.4);
-const YELLOW_NEON = neon('#ffd23f', 0.3, 2.4);
-const PURPLE_NEON = neon('#9d5cff', 0.3, 2.4);
-const NEONS = [PINK_NEON, CYAN_NEON, YELLOW_NEON, PURPLE_NEON];
-const BULB = neon('#ffe9a8', 0.3, 2.4);
-const SKY = lit(toon('#9fd8f0'), 0.15, 1.1);
-const pastel = new Map<string, THREE.Material>();
-const wallOf = (c: string) => pastel.get(c) ?? (pastel.set(c, toon(c)), pastel.get(c)!);
-
-/** Shop windows: displays behind glass in a chrome frame, lit warm at night (a pattern every 4 tiles) */
-const FRONT = (() => {
-  const draw = (on: boolean) => (c: CanvasRenderingContext2D) => {
-    c.fillStyle = on ? '#000' : '#d9dee8';
-    c.fillRect(0, 0, 256, 128);
-    for (const x of [6, 134]) {
-      if (on) {
-        c.fillStyle = '#ffd99a';
-        c.fillRect(x, 6, 116, 116);
-        c.fillStyle = '#ff9ec7';
-        c.fillRect(x + 10, 70, 96, 10);
-        continue;
-      }
-      const g = c.createLinearGradient(x, 6, x + 116, 122);
-      g.addColorStop(0, '#9fe8ff');
-      g.addColorStop(0.6, '#6a7fd0');
-      g.addColorStop(1, '#4b3b8f');
-      c.fillStyle = g;
-      c.fillRect(x, 6, 116, 116);
-      // (shelves and goods behind the glass)
-      c.fillStyle = 'rgba(255,255,255,0.35)';
-      c.fillRect(x + 10, 70, 96, 6);
-      c.fillRect(x + 10, 100, 96, 6);
-      c.fillStyle = 'rgba(255,158,199,0.55)';
-      for (let i = 0; i < 5; i++) c.fillRect(x + 14 + i * 19, 56, 12, 14);
-    }
-  };
-  const map = canvasTex(256, 128, draw(false));
-  const emissiveMap = canvasTex(128, 64, (c) => {
-    c.scale(0.5, 0.5);
-    draw(true)(c);
-  });
-  for (const t of [map, emissiveMap]) t.wrapS = THREE.RepeatWrapping;
-  return siteMat('mall-front', lit(toon('#ffffff', { map, emissiveMap, emissive: '#ffffff' }), 0.06, 1.05));
-})();
-/** The promenade's checkered paving (pink and white, a tile a square) */
-const TILES = (() => {
-  const map = canvasTex(128, 128, (c) => {
-    for (let i = 0; i < 2; i++)
-      for (let j = 0; j < 2; j++) {
-        c.fillStyle = (i + j) % 2 ? '#f6f3fb' : '#ffb3d6';
-        c.fillRect(i * 64, j * 64, 64, 64);
-      }
-  });
-  map.wrapS = map.wrapT = THREE.RepeatWrapping;
-  return siteMat('mall-tiles', toon('#ffffff', { map }));
-})();
-
-/** One atlas for every sign (4 x 8 cells of 256 x 64): the shops, the anchors, the cinema, the mall, the court, and the rest */
-const CELLS = [...SHOP_NAMES.map((s) => s.name), ...ANCHORS.map((a) => a.name), CINEMA.name, 'NOW SHOWING', MALL_NAME, 'PALM COURT', 'TAXI', 'BUS', 'P', 'ENTRANCE'];
-const CELL_INK = ['#ff4fd8', '#4fe3ff', '#ffd23f', '#9dffb0', '#c7a6ff'];
-const SIGNS = siteMat(
-  'mall-signs',
-  lit(
-    new THREE.MeshBasicMaterial({
-      map: canvasTex(1024, 512, (c) => {
-        c.textAlign = 'center';
-        c.textBaseline = 'middle';
-        CELLS.forEach((text, k) => {
-          const [x, y] = [(k % 4) * 256, Math.floor(k / 4) * 64];
-          const taxi = text === 'TAXI';
-          c.fillStyle = taxi ? '#ffc23d' : text === 'P' ? '#2a62d8' : '#160f2e';
-          c.fillRect(x + 2, y + 2, 252, 60);
-          const ink = taxi ? '#1b1830' : text === 'P' ? '#ffffff' : CELL_INK[k % CELL_INK.length];
-          c.font = `800 ${text.length > 12 ? 30 : 38}px ${FONT_DISPLAY}`;
-          c.shadowColor = ink;
-          c.shadowBlur = taxi || text === 'P' ? 0 : 12;
-          c.fillStyle = ink;
-          c.fillText(text, x + 128, y + 34);
-          c.shadowBlur = 0;
-          c.fillStyle = '#ffffff';
-          c.globalAlpha = taxi || text === 'P' ? 0 : 0.55;
-          c.fillText(text, x + 128, y + 34);
-          c.globalAlpha = 1;
-        });
-      }),
-    }),
-    0.95,
-    1.4
-  )
-);
-/** A sign from the atlas: w x h, its middle at (x, y, z), facing the way `ry` turns +z */
-function sign(b: Batch, text: string, x: number, y: number, z: number, w: number, h: number, ry: number) {
-  const k = CELLS.indexOf(text);
-  const g = new THREE.PlaneGeometry(w, h);
-  const uv = g.attributes.uv;
-  const [u0, v1] = [(k % 4) / 4 + 0.003, 1 - Math.floor(k / 4) / 8 - 0.004];
-  for (let i = 0; i < uv.count; i++) uv.setXY(i, u0 + uv.getX(i) * (0.25 - 0.006), v1 - (1 - uv.getY(i)) * (0.125 - 0.008));
-  b.add(g.rotateY(ry).translate(x, y, z), SIGNS);
-}
-/** The cinema's posters for made-up films, four to a row, two rows */
-const POSTERS = siteMat(
-  'mall-posters',
-  lit(
-    new THREE.MeshBasicMaterial({
-      map: canvasTex(512, 512, (c) => {
-        const tops = ['#ff4fd8', '#4fe3ff', '#ffd23f', '#9d5cff', '#ff8a3d', '#5fd6c4'];
-        FILMS.forEach((name, k) => {
-          const [x, y] = [(k % 4) * 128, Math.floor(k / 4) * 256];
-          const g = c.createLinearGradient(0, y, 0, y + 256);
-          g.addColorStop(0, tops[k % tops.length]);
-          g.addColorStop(1, '#160f2e');
-          c.fillStyle = g;
-          c.fillRect(x + 4, y + 4, 120, 248);
-          // (a sun over a horizon, the 80s way)
-          c.fillStyle = '#ffd23f';
-          c.beginPath();
-          c.arc(x + 64, y + 120, 30, Math.PI, 0);
-          c.fill();
-          c.fillStyle = '#160f2e';
-          for (let i = 0; i < 4; i++) c.fillRect(x + 30, y + 100 + i * 6, 68, 2);
-          c.fillStyle = '#ffffff';
-          c.textAlign = 'center';
-          c.font = `800 17px ${FONT_DISPLAY}`;
-          const [a, ...rest] = name.split(' ');
-          c.fillText(a, x + 64, y + 186);
-          c.fillText(rest.join(' '), x + 64, y + 208);
-        });
-      }),
-    }),
-    0.95,
-    1.2
-  )
-);
-function poster(b: Batch, k: number, x: number, y: number, z: number, ry: number) {
-  const g = new THREE.PlaneGeometry(1.1, 2.2);
-  const uv = g.attributes.uv;
-  const [u0, v1] = [(k % 4) / 4 + 0.004, 1 - Math.floor(k / 4) / 2 - 0.004];
-  for (let i = 0; i < uv.count; i++) uv.setXY(i, u0 + uv.getX(i) * (0.25 - 0.008), v1 - (1 - uv.getY(i)) * (0.5 - 0.008));
-  b.add(g.rotateY(ry).translate(x, y, z), POSTERS);
-}
-/** The pylon's faces: STARLIGHT MALL down its length */
-const PYLON_FACE = siteMat(
-  'mall-pylon',
-  lit(
-    new THREE.MeshBasicMaterial({
-      map: canvasTex(128, 512, (c) => {
-        c.fillStyle = '#160f2e';
-        c.fillRect(0, 0, 128, 512);
-        c.strokeStyle = '#4fe3ff';
-        c.lineWidth = 6;
-        c.strokeRect(6, 6, 116, 500);
-        c.save();
-        c.translate(64, 256);
-        c.rotate(-Math.PI / 2);
-        c.textAlign = 'center';
-        c.textBaseline = 'middle';
-        c.font = `800 64px ${FONT_DISPLAY}`;
-        c.shadowColor = '#ff4fd8';
-        c.shadowBlur = 16;
-        c.fillStyle = '#ff4fd8';
-        c.fillText(MALL_NAME, 0, 4);
-        c.shadowBlur = 0;
-        c.fillStyle = '#ffffff';
-        c.globalAlpha = 0.55;
-        c.fillText(MALL_NAME, 0, 4);
-        c.restore();
-      }),
-    }),
-    0.95,
-    1.4
-  )
-);
-
-/* ---------- Helpers ---------- */
-
-const Y = SLAB;
-const box = (b: Batch, x0: number, y0: number, z0: number, x1: number, y1: number, z1: number, mat: THREE.Material) => b.box(x0, y0, z0, x1 - x0, y1 - y0, z1 - z0, mat);
-const cyl = (b: Batch, r: number, h: number, x: number, y: number, z: number, mat: THREE.Material, seg = 10, r0 = r, open = false) => b.add(new THREE.CylinderGeometry(r, r0, h, seg, 1, open).translate(x, y + h / 2, z), mat);
-/** A flat rectangle at y, in pieces no longer than `len` */
-function flat(b: Batch, x0: number, z0: number, x1: number, z1: number, y: number, mat: THREE.Material, len = 14) {
-  const nx = Math.max(1, Math.ceil((x1 - x0) / len));
-  const nz = Math.max(1, Math.ceil((z1 - z0) / len));
-  for (let i = 0; i < nx; i++)
-    for (let j = 0; j < nz; j++) {
-      const [a0, a1] = [x0 + ((x1 - x0) * i) / nx, x0 + ((x1 - x0) * (i + 1)) / nx];
-      const [c0, c1] = [z0 + ((z1 - z0) * j) / nz, z0 + ((z1 - z0) * (j + 1)) / nz];
-      const g = new THREE.PlaneGeometry(a1 - a0, c1 - c0).rotateX(-Math.PI / 2).translate((a0 + a1) / 2, y, (c0 + c1) / 2);
-      if (mat === TILES) {
-        const uv = g.attributes.uv;
-        const pos = g.attributes.position;
-        for (let k = 0; k < uv.count; k++) uv.setXY(k, pos.getX(k) / 2, pos.getZ(k) / 2);
-      }
-      b.add(g, mat);
-    }
-}
-/** A shopfront's glass on a wall facing +x (face 1) or -x at x, from z0 to z1, y0 to y1 */
-function glassX(b: Batch, x: number, face: 1 | -1, z0: number, z1: number, y0: number, y1: number) {
-  const g = new THREE.PlaneGeometry(z1 - z0, y1 - y0);
-  const uv = g.attributes.uv;
-  for (let k = 0; k < uv.count; k++) uv.setX(k, (uv.getX(k) * (z1 - z0)) / 4);
-  b.add(g.rotateY(face * (Math.PI / 2)).translate(x + face * 0.012, (y0 + y1) / 2, (z0 + z1) / 2), FRONT);
-}
-/** The same facing +z (face 1) or -z */
-function glassZ(b: Batch, z: number, face: 1 | -1, x0: number, x1: number, y0: number, y1: number) {
-  const g = new THREE.PlaneGeometry(x1 - x0, y1 - y0);
-  const uv = g.attributes.uv;
-  for (let k = 0; k < uv.count; k++) uv.setX(k, (uv.getX(k) * (x1 - x0)) / 4);
-  b.add(g.rotateY(face === 1 ? 0 : Math.PI).translate((x0 + x1) / 2, (y0 + y1) / 2, z + face * 0.012), FRONT);
-}
-/** A palm in its planter */
-function palm(b: Batch, x: number, z: number, y = Y, s = 1) {
-  cyl(b, 0.42 * s, 0.5, x, y, z, POT, 8, 0.5 * s);
-  // (the trunk in three leaning pieces)
-  let [px, py] = [x, y + 0.45];
-  for (let i = 0; i < 3; i++) {
-    const nx = px + 0.08 * s;
-    cyl(b, 0.09 * s, 1.15 * s, (px + nx) / 2, py, z, TRUNK, 6, 0.12 * s, true);
-    [px, py] = [nx, py + 1.12 * s];
-  }
-  // (fronds drooping all round)
-  for (let k = 0; k < 7; k++) {
-    const a = (k / 7) * Math.PI * 2;
-    const g = new THREE.ConeGeometry(0.22 * s, 1.7 * s, 4).scale(1, 1, 0.25).rotateZ(-Math.PI / 2 - 0.45).rotateY(a).translate(px + Math.cos(a) * 0.7 * s, py - 0.25 * s, z - Math.sin(a) * 0.7 * s);
-    b.add(g, FROND);
-  }
-}
 
 /* ---------- Palm Court ---------- */
 
@@ -439,10 +227,30 @@ function anchor(b: Batch, k: number) {
 function hall(b: Batch) {
   const [x0, z0, x1, z1] = HALL.rect;
   const h = HALL.h;
-  box(b, x0, Y, z0, x1, Y + h, z1, LILAC);
+  // Its walls (hollow since step 2: mallinside3d.ts draws inside), open at the doors behind the porch, a wall over them
+  for (const [a0, c0, a1, c1] of WALLS) box(b, a0, Y, c0, a1, Y + h, c1, LILAC);
+  box(b, DOOR.x0, Y + DOOR.h, z1 - WALL, DOOR.x1, Y + h, z1, LILAC);
   // Neon bands round it, a white cornice, glass-block corners
   box(b, x0, Y + 3.15, z1, x1, Y + 3.25, z1 + 0.06, CYAN_NEON);
-  box(b, x0 - 0.06, Y + h, z0 - 0.06, x1 + 0.06, Y + h + 0.3, z1 + 0.06, WHITE);
+  const zc = (z0 + z1) / 2;
+  const [vx0, vx1, vz0, vz1] = [x0 + 3.5, x1 - 3.5, zc - 4.2, zc + 4.2];
+  // The roof: a slab round the skylight's opening, the cornice round its edge
+  // (between the walls, not flush with their faces)
+  const [i0, j0, i1, j1] = [x0 + WALL, z0 + WALL, x1 - WALL, z1 - WALL];
+  for (const [a0, c0, a1, c1] of [
+    [i0, j0, i1, vz0],
+    [i0, vz1, i1, j1],
+    [i0, vz0, vx0, vz1],
+    [vx1, vz0, i1, vz1],
+  ])
+    box(b, a0, Y + h - 0.25, c0, a1, Y + h, c1, WHITE);
+  for (const [a0, c0, a1, c1] of [
+    [x0 - 0.06, z0 - 0.06, x1 + 0.06, z0 + 0.5],
+    [x0 - 0.06, z1 - 0.5, x1 + 0.06, z1 + 0.06],
+    [x0 - 0.06, z0 + 0.5, x0 + 0.5, z1 - 0.5],
+    [x1 - 0.5, z0 + 0.5, x1 + 0.06, z1 - 0.5],
+  ])
+    box(b, a0, Y + h, c0, a1, Y + h + 0.3, c1, WHITE);
   box(b, x0, Y + h - 0.15, z1 + 0.06, x1, Y + h - 0.07, z1 + 0.12, PINK_NEON);
   for (const cx of [x0 + 0.4, x1 - 2.4]) box(b, cx, Y, z1, cx + 2, Y + h - 0.4, z1 + 0.05, SKY);
   // Windows along the front, both storeys
@@ -454,17 +262,28 @@ function hall(b: Batch) {
     glassZ(b, z1, 1, a, c, Y + 0.4, Y + 2.7);
     glassZ(b, z1, 1, a, c, Y + 3.6, Y + 5.6);
   }
-  // The skylit roof: a glass vault along it on a white curb
-  box(b, x0 + 3, Y + h + 0.3, (z0 + z1) / 2 - 4.6, x1 - 3, Y + h + 0.6, (z0 + z1) / 2 + 4.6, WHITE);
-  const vault = new THREE.CylinderGeometry(4.2, 4.2, x1 - x0 - 7, 16, 1, false, 0, Math.PI).rotateZ(Math.PI / 2).rotateX(-Math.PI / 2).scale(1, 0.45, 1);
-  b.add(vault.translate((x0 + x1) / 2, Y + h + 0.6, (z0 + z1) / 2), SKY);
+  // The skylight: a glass vault over the opening on a white curb, white ribs over it
+  for (const [a0, c0, a1, c1] of [
+    [vx0 - 0.5, vz0 - 0.4, vx1 + 0.5, vz0],
+    [vx0 - 0.5, vz1, vx1 + 0.5, vz1 + 0.4],
+    [vx0 - 0.5, vz0, vx0, vz1],
+    [vx1, vz0, vx1 + 0.5, vz1],
+  ])
+    box(b, a0, Y + h, c0, a1, Y + h + 0.6, c1, WHITE);
+  const vault = new THREE.CylinderGeometry(4.2, 4.2, vx1 - vx0, 16, 1, true, 0, Math.PI).rotateZ(Math.PI / 2).rotateX(-Math.PI / 2).scale(1, 0.45, 1);
+  b.add(vault.translate((x0 + x1) / 2, Y + h + 0.6, zc), GLASS);
   for (let x = x0 + 4; x < x1 - 3; x += 3.5) {
     const ribs: THREE.Vector3[] = [];
     for (let k = 0; k <= 10; k++) {
       const t = (k / 10) * Math.PI;
-      ribs.push(new THREE.Vector3(x, Y + h + 0.6 + Math.sin(t) * 4.2 * 0.45 + 0.03, (z0 + z1) / 2 + Math.cos(t) * 4.2));
+      ribs.push(new THREE.Vector3(x, Y + h + 0.6 + Math.sin(t) * 4.2 * 0.45 + 0.03, zc + Math.cos(t) * 4.2));
     }
     b.add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(ribs), 12, 0.05, 4, false), WHITE);
+  }
+  // The vault's two gable ends, glass too
+  for (const x of [vx0, vx1]) {
+    const g = new THREE.CircleGeometry(4.2, 16, 0, Math.PI).scale(1, 0.45, 1).rotateY(Math.PI / 2);
+    b.add(g.translate(x, Y + h + 0.6, zc), GLASS);
   }
 }
 
@@ -479,9 +298,21 @@ function porch(b: Batch) {
   b.add(new THREE.ExtrudeGeometry(tri, { depth: 0.3, bevelEnabled: false }).translate(xm, Y + PORCH.h + 0.35, z1 - 0.3), wallOf('#ff9ec7'));
   box(b, xm - 3.6, Y + PORCH.h + 0.55, z1 + 0.01, xm + 3.6, Y + PORCH.h + 1.35, z1 + 0.05, INK);
   sign(b, MALL_NAME, xm, Y + PORCH.h + 0.95, z1 + 0.06, 7, 0.75, 0);
-  // Its doors at the back, under the canopy
-  glassZ(b, z0, 1, x0 + 1, x1 - 1, Y, Y + 3.2);
+  // The doors at its back, open: a chrome frame, the glass leaves slid aside, ENTRANCE over them
+  box(b, DOOR.x0 - 0.15, Y, z0, DOOR.x0, Y + DOOR.h + 0.15, z0 + 0.08, CHROME);
+  box(b, DOOR.x1, Y, z0, DOOR.x1 + 0.15, Y + DOOR.h + 0.15, z0 + 0.08, CHROME);
+  box(b, DOOR.x0 - 0.15, Y + DOOR.h, z0, DOOR.x1 + 0.15, Y + DOOR.h + 0.15, z0 + 0.08, CHROME);
+  for (const [a, c] of [
+    [DOOR.x0, DOOR.x0 + 1.1],
+    [DOOR.x1 - 1.1, DOOR.x1],
+  ])
+    b.add(new THREE.PlaneGeometry(c - a, DOOR.h - 0.1).translate((a + c) / 2, Y + DOOR.h / 2, z0 - 0.12), GLASS);
   sign(b, 'ENTRANCE', xm, Y + 3.6, z0 + 0.03, 2.6, 0.5, 0);
+  // The bollards across the doors (a walker gets through, no car does): chrome, a neon cap
+  for (const [bx, bz] of BOLLARDS) {
+    cyl(b, BOLLARD, 0.85, bx, Y, bz, CHROME, 10);
+    cyl(b, BOLLARD + 0.01, 0.06, bx, Y + 0.85, bz, PINK_NEON, 10);
+  }
 }
 
 function pylon(b: Batch) {
@@ -573,7 +404,7 @@ function multiStorey(b: Batch) {
 
 /* ---------- Registering ---------- */
 
-export function register({ scene }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
+export function register({ scene, tick }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
   const build = (draw: (b: Batch) => void, cast = true) => (into: THREE.Object3D) => {
     const b = new Batch();
     draw(b);
@@ -589,7 +420,8 @@ export function register({ scene }: { low: boolean; scene: THREE.Scene | null; t
   site('mall arch', [PROM[0], ARCH.z - 1, PROM[1], ARCH.z + 1], build(arch));
   // Starlight Mall: each anchor, the hall, the porch, the pylon and the shelter
   ANCHORS.forEach((a, k) => site(`mall anchor ${k}`, [a.rect[0] - 0.5, a.rect[1], a.rect[2] + 0.5, a.rect[3] + 2], build((b) => anchor(b, k))));
-  site('mall hall', [HALL.rect[0], HALL.rect[1], HALL.rect[2], HALL.rect[3] + 0.5], build(hall));
+  // (its shell casts no shadow: inside, the day comes in as through the skylight)
+  site('mall hall', [HALL.rect[0], HALL.rect[1], HALL.rect[2], HALL.rect[3] + 0.5], build(hall, false));
   site('mall porch', [PORCH.rect[0], PORCH.rect[1], PORCH.rect[2], PORCH.rect[3]], build((b) => (porch(b), pylon(b), shelter(b))));
   // The loop, the car parks (in pieces), the multi-storey
   site('mall loop', [NS0.c, LOOP.zN - LOOP.half, LOOP.xE + LOOP.half, LOOP.zS + LOOP.half], build(loopRoad, false));
@@ -598,6 +430,8 @@ export function register({ scene }: { low: boolean; scene: THREE.Scene | null; t
     site(`mall car park ${Math.round(x)}`, [x, LOOP.zN, x1, LOOP.zS], build((b) => carPark(b, x, x1), false));
   }
   site('mall multi-storey', MSCP.rect, build(multiStorey));
+  // Inside the hall (step 2: near only)
+  registerInside({ tick });
   if (!scene) return;
   // The cabs at the rank, the cars in the car park and on the multi-storey's decks
   type Car = [CarId, number, number, number, string];

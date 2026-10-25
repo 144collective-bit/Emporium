@@ -1,4 +1,4 @@
-# The shopping plaza and the mall (the owner's call; step 1 built)
+# The shopping plaza and the mall (the owner's call; steps 1 and 2 built)
 
 The owner asked for "a shopping plaza and mall in the space next to the park
 and the north of the center between the highways": the open land between the
@@ -63,7 +63,25 @@ prices on any sign.
      parks, cars, people and lamps.
    - Both as places (pins, panels, Walk in), on the world map, and with the
      owner's live switches.
-2. **The mall's interior:** a walk-in concourse (shopfronts on two levels,
-   escalators, a food court, a fountain, crowds).
+2. **The mall's interior** (built): a walk-in concourse in the hall, which
+   is hollow now (`mallinside.ts`, tested in `tests/mallinside.test.ts`;
+   drawn by `mallinside3d.ts` in the mall's chunk, near only):
+   - the doors open behind the porch, with bollards across them (a walker
+     gets through, no car does), and a double-height entrance lobby with a
+     directory board either side
+   - sixteen shops with made-up names, four a side on each floor, their
+     fronts on the concourse and on the upper galleries
+   - the atrium, open to the glass vault: a fountain, benches, palms,
+     chrome columns, neon stars hung from the roof
+   - two escalators side by side (up and down, the steps running) to the
+     terrace across the north end, walkable both ways
+   - the food court on the terrace: six stalls (made-up names, menu boards
+     with no prices), tables and stools, cooks and diners
+   - under the terrace: a rocket and a car ride, the information desk, a
+     photo booth, and the department stores' doors
+   - walking: `mallFloor()` gives the floor by Degen's height and
+     `mallWall()` stops him at the upper floor's edges (glass balustrades)
+     and at what stands on his floor
+   - the panel's Walk in starts in the lobby
 3. **Later, if the owner wants:** shops to buy and run with Dorras, like the
    corner shops, and events at the cinema.

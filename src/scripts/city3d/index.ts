@@ -26,7 +26,8 @@ import { buildStadium } from './stadium3d';
 import { buildTower } from './tower3d';
 import { buildStationSpot } from './stationspot';
 import { buildMallSpots } from './mallspot';
-import { COURT_SPAWN, MALL_LAMPS, MALL_PEOPLE, MALL_SPAWN } from './mall';
+import { COURT_SPAWN, MALL_LAMPS, MALL_PEOPLE } from './mall';
+import { INSIDE_SPAWN, MALL_INSIDE_PEOPLE } from './mallinside';
 import { BOULEVARD_TREES as STATION_TREES, PLAZA_TREES as STATION_PLAZA_TREES, STATION_LAMPS, STATION_PEOPLE, STATION_RECTS, STATION_SPAWN } from './station';
 import { LIFT, TOWER_SPAWN } from './skydeck';
 import { STADIUM_LAMPS, STADIUM_RECTS, STADIUM_SPAWN } from './stadium';
@@ -301,7 +302,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   STATION_PEOPLE.forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push({ x: p.x, z: p.z, y: Math.max(SLAB, p.y), ry: p.ry, act: p.act }));
   // ...and Palm Court's and the mall's (mall.ts; the outskirts' trees keep off their land already)
   for (const [x, z, ry, y] of MALL_LAMPS) addLamp(x, z, ry, y);
-  MALL_PEOPLE.forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push({ x: p.x, z: p.z, y: SLAB + p.y, ry: p.ry, act: p.act }));
+  [...MALL_PEOPLE, ...MALL_INSIDE_PEOPLE].forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push({ x: p.x, z: p.z, y: SLAB + p.y, ry: p.ry, act: p.act }));
   progress(0.55);
   await waited(nextFrame());
   // (phones keep half of them: the trim)
@@ -599,7 +600,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         close();
         startWalking(TOWER_SPAWN);
       });
-    // Palm Court's and the mall's panels: Walk in under the court's arch, or in front of the mall's porch
+    // Palm Court's and the mall's panels: Walk in under the court's arch, or inside the mall's lobby
     if (id === 'palmcourt')
       panelBody.querySelector('[data-palmcourt-walkin]')?.addEventListener('click', () => {
         close();
@@ -608,7 +609,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     if (id === 'mall')
       panelBody.querySelector('[data-mall-walkin]')?.addEventListener('click', () => {
         close();
-        startWalking(MALL_SPAWN);
+        startWalking(INSIDE_SPAWN);
       });
     // Sector 7 Central's panel: Walk in starts walk mode on its forecourt, facing the doors
     if (id === 'station')
