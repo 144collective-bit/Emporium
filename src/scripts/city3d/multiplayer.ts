@@ -21,12 +21,14 @@ import { EMOTES, PHRASES, RANKS } from '../net/profile-data';
 import { FLAG, INPUT_HZ, modeBits, moveOk, v3, type Mode, type OwnProfile, type ServerMsg } from '../net/protocol';
 import type { Combat } from './combat';
 import type { ProfileUI } from './profile-ui';
-import { createRemotes } from './remote';
+import { createRemotes, type Motion } from './remote';
 
 const r4 = (n: number) => Math.round(n * 10000) / 10000;
 
 interface Walker {
   readonly active: boolean;
+  /** The motion capture and its animator, once walking has them (the animation revamp's Phase 5: other players move on it too) */
+  readonly motion: Motion | null;
   netState(): { pos: THREE.Vector3; face: number; pitch: number; speed: number; air: boolean; run: boolean; aim: boolean; mode: Mode };
   fix(x: number, y: number, z: number): void;
   playEmote(id: string): void;
@@ -65,7 +67,7 @@ export function createMultiplayer(d: MultiplayerDeps) {
   panel.hidden = false;
 
   const net = createNetClient(d.url, () => d.account.token);
-  const remotes = createRemotes(d.scene, camera, $('[data-mp-tags]'));
+  const remotes = createRemotes(d.scene, camera, $('[data-mp-tags]'), () => walk.motion);
   let myId = 0;
   let room = '';
   let sendAcc = 0;
@@ -270,6 +272,10 @@ export function createMultiplayer(d: MultiplayerDeps) {
 
   /* ----- Every frame ----- */
   return {
+    /** The other players (for the headless checks: `?fps` puts the city on the page) */
+    get remotes() {
+      return remotes;
+    },
     /** Walking started or stopped: connected only while walking with the switch on Online */
     walkChanged(walking: boolean) {
       if (walking && enabled && idle()) connect();

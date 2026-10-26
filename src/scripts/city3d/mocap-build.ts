@@ -20,7 +20,7 @@
  */
 import * as THREE from 'three';
 import { type Bvh, type BvhPose, poseBvh, jointIndex } from './bvh';
-import { MB, MOCAP_FPS, NB, PARENT, type MoClip, type MoData } from './mocap';
+import { CORE_PACK, MB, MOCAP_FPS, NB, PARENT, type MoClip, type MoData, newPosed, posed } from './mocap';
 import { ANKLE_H, SHIN_GROUND, THIGH, WRIST_Y, WRIST_Z } from './skeleton';
 
 /** A take to use: the file, what to call the clip, and the seconds of it (after the T-pose) */
@@ -45,6 +45,65 @@ export interface Take {
    * low point (subject 136's), so the feet are found on the ground
    */
   sink?: number;
+  /** What it is (mocap.ts `MoClip.tags`): which searches may reach it, what the rubric measures it as */
+  tags?: string[];
+  /** The moments' marks (mocap.ts `Mark`), in the clip's seconds (after `from`) */
+  marks?: { name: string; at: number; x: number; y: number; z: number }[];
+  /** The file it goes in (mocap.ts `CORE_PACK` if not said) */
+  pack?: string;
+  /**
+   * A stairs take (the revamp's Phase 2): the floor is tracked through the planted feet (each stretch a
+   * foot stands still is a step at its height, the floor between them a straight line), the hips kept
+   * relative to it so the clip reads as level ground, and the contacts stored (mocap.ts `MoClip.floor`,
+   * `contact`); a flat take's floor is one height, found low among the ankles
+   */
+  stairs?: boolean;
+}
+
+/**
+ * A planted foot (a stairs take): the ankle moving under `speed` along the ground and `vspeed` up or
+ * down (rig numbers a second) for `min` frames or more
+ */
+export const PLANT = { speed: 0.5, vspeed: 0.6, min: 5 };
+/**
+ * The floor through a stairs take: each foot's planted stretches, the floor at each the ankle's low point
+ * there, straight lines between them in time (and level before the first and after the last); the contacts
+ * are the stretches (bit 0 the left, bit 1 the right)
+ */
+export function stairFloor(ankleY: [number[], number[]], ankleSpeed: [number[], number[]], ankleVSpeed: [number[], number[]], n: number): { floor: number[]; contact: Uint8Array } {
+  const contact = new Uint8Array(n);
+  const samples: [number, number][] = [];
+  for (let s = 0; s < 2; s++) {
+    let f = 0;
+    while (f < n) {
+      if (ankleSpeed[s][f] < PLANT.speed && Math.abs(ankleVSpeed[s][f]) < PLANT.vspeed) {
+        let g = f;
+        while (g < n && ankleSpeed[s][g] < PLANT.speed && Math.abs(ankleVSpeed[s][g]) < PLANT.vspeed) g++;
+        if (g - f >= PLANT.min) {
+          let low = Infinity;
+          for (let i = f; i < g; i++) low = Math.min(low, ankleY[s][i]);
+          for (let i = f; i < g; i++) contact[i] |= 1 << s;
+          samples.push([(f + g - 1) / 2, low]);
+        }
+        f = g;
+      } else f++;
+    }
+  }
+  samples.sort((a, b) => a[0] - b[0]);
+  if (!samples.length) throw new Error('A stairs take with no planted foot');
+  const floor: number[] = [];
+  for (let f = 0; f < n; f++) {
+    if (f <= samples[0][0]) floor.push(samples[0][1]);
+    else if (f >= samples[samples.length - 1][0]) floor.push(samples[samples.length - 1][1]);
+    else {
+      let i = 1;
+      while (samples[i][0] < f) i++;
+      const [f0, y0] = samples[i - 1];
+      const [f1, y1] = samples[i];
+      floor.push(y0 + ((y1 - y0) * (f - f0)) / (f1 - f0));
+    }
+  }
+  return { floor, contact };
 }
 
 const UP = new THREE.Vector3(0, 1, 0);
@@ -141,9 +200,29 @@ export function retarget(b: Bvh, take: Take): MoClip {
 
   // Every source frame we keep, posed and turned
   const poses = picks.map((f) => turn(poseBvh(b, f)));
-  // The floor: low down among the ankles, where the rig's ankles stand ANKLE_H over the ground
+  // The floor: low down among the ankles, where the rig's ankles stand ANKLE_H over the ground; a stairs
+  // take's tracked through its planted feet (`stairFloor()`)
   const lows = poses.map((p) => Math.min(p.pos[ankles[0]].y, p.pos[ankles[1]].y)).sort((a, c) => a - c);
-  const floor = lows[Math.floor(lows.length * 0.03)];
+  const flat = lows[Math.floor(lows.length * 0.03)];
+  let floorAt: number[] = poses.map(() => flat);
+  let contact: Uint8Array | undefined;
+  if (take.stairs) {
+    const ay: [number[], number[]] = [[], []];
+    const as: [number[], number[]] = [[], []];
+    const av: [number[], number[]] = [[], []];
+    for (let s = 0; s < 2; s++)
+      for (let f = 0; f < n; f++) {
+        const a = poses[Math.max(0, f - 1)].pos[ankles[s]];
+        const c = poses[Math.min(n - 1, f + 1)].pos[ankles[s]];
+        const dt = (Math.min(n - 1, f + 1) - Math.max(0, f - 1)) / MOCAP_FPS || 1;
+        ay[s].push(poses[f].pos[ankles[s]].y);
+        as[s].push((Math.hypot(c.x - a.x, c.z - a.z) * k) / dt);
+        av[s].push(((c.y - a.y) * k) / dt);
+      }
+    const sf = stairFloor(ay, as, av, n);
+    floorAt = sf.floor;
+    contact = sf.contact;
+  }
 
   const G = map.map(() => new THREE.Quaternion());
   const hipsW: THREE.Vector3[] = [];
@@ -158,7 +237,7 @@ export function retarget(b: Bvh, take: Take): MoClip {
     }
     hipsR.push(G[0].clone());
     const mid = p.pos[ul[0]].clone().add(p.pos[ul[1]]).multiplyScalar(0.5);
-    hipsW.push(new THREE.Vector3(mid.x * k, (mid.y - floor) * k + ANKLE_H - (take.sink ?? 0), mid.z * k));
+    hipsW.push(new THREE.Vector3(mid.x * k, (mid.y - floorAt[f]) * k + ANKLE_H - (take.sink ?? 0), mid.z * k));
   }
   // The root: the hips on the ground, smoothed; facing where the hips face, smoothed more
   const sig = (s: number) => s * MOCAP_FPS;
@@ -192,7 +271,12 @@ export function retarget(b: Bvh, take: Take): MoClip {
   despike(locals, n);
   calmHands(locals, n);
   calmToes(locals, n);
-  const clip = { name: take.name, frames: n, root, hips, rot: locals };
+  straightenKnees(locals, hips, n);
+  const clip: MoClip = { name: take.name, tags: take.tags ?? [], marks: (take.marks ?? []).map((m) => ({ name: m.name, frame: Math.round(m.at * MOCAP_FPS), at: [m.x, m.y, m.z] })), pack: take.pack ?? CORE_PACK, frames: n, root, hips, rot: locals };
+  if (take.stairs) {
+    clip.floor = Float32Array.from(floorAt, (y) => (y - floorAt[0]) * k);
+    clip.contact = contact;
+  }
   return take.loop ? loopClip(clip, take.loop, take.cycle) : clip;
 }
 
@@ -208,7 +292,9 @@ export const HANDS = { twist: 0.35, bend: 0.6, sigma: 0.12, most: 0.4 };
  * The capture's glitches: a bone that jumps away for a frame and straight
  * back (`walk-eight`'s spine, chest and neck threw 24-49° for one frame) is
  * put back between its neighbours. A frame is one when it's at least `jump`
- * radians from both and they're within `back` of that of each other
+ * radians from both and they're within `back` of that of each other. (Longer
+ * glitches are a take's to lose: two of subject 122's climbs flipped an ankle
+ * for two frames, and mending runs of frames broke the jumps' take-offs.)
  */
 export const SPIKE = { jump: 0.14, back: 0.5 };
 /** The toes: CMU's toe markers are the noisiest, so the toes are smoothed over `sigma` seconds */
@@ -275,6 +361,40 @@ function calmHands(rot: Float32Array, n: number) {
     for (let f = 0; f < n; f++) {
       e.set(clamp(sx[f] * HANDS.bend), clamp(sy[f] * HANDS.twist), clamp(sz[f] * HANDS.bend), 'YXZ');
       q.setFromEuler(e).toArray(rot, (f * NB + b) * 4);
+    }
+  }
+}
+
+/**
+ * The capture's knees (the revamp's audit): CMU's knee joint sits a little
+ * off the rig's hinge, so a straight leg came through bent back up to 12°
+ * (a person's knee goes 5° at most). A knee past straight is brought back
+ * to straight about its hinge (the thigh's x axis, as twoBone() bends it).
+ */
+const KNEE_LEGS = [
+  [MB.legL, MB.shinL, MB.footL],
+  [MB.legR, MB.shinR, MB.footR],
+] as const;
+function straightenKnees(rot: Float32Array, hips: Float32Array, n: number) {
+  const P = newPosed();
+  const X = new THREE.Vector3(1, 0, 0);
+  const ab = new THREE.Vector3();
+  const bc = new THREE.Vector3();
+  const ax = new THREE.Vector3();
+  const cr = new THREE.Vector3();
+  const q = new THREE.Quaternion();
+  const fix = new THREE.Quaternion();
+  for (let f = 0; f < n; f++) {
+    posed(rot, f * NB * 4, hips[f * 3], hips[f * 3 + 1], hips[f * 3 + 2], P);
+    for (const [a, b, c] of KNEE_LEGS) {
+      ab.copy(P.pos[b]).sub(P.pos[a]).normalize();
+      bc.copy(P.pos[c]).sub(P.pos[b]).normalize();
+      ax.copy(X).applyQuaternion(P.rot[a]);
+      const flex = Math.atan2(cr.copy(ab).cross(bc).dot(ax), ab.dot(bc));
+      if (flex >= 0) continue;
+      // (the shin's own turn is in the thigh's frame, whose x axis is the hinge)
+      q.fromArray(rot, (f * NB + b) * 4);
+      fix.setFromAxisAngle(X, -flex).multiply(q).normalize().toArray(rot, (f * NB + b) * 4);
     }
   }
 }
@@ -356,10 +476,16 @@ export function loopClip(c: MoClip, times: number, cycle: [number, number] = [0.
       ramp.multiply(q).normalize().toArray(rot, (k * NB + n) * 4);
     }
   }
-  return { name: c.name, frames, root, hips, rot };
+  return { name: c.name, tags: c.tags, marks: [], pack: c.pack, frames, root, hips, rot };
 }
 
 /** Every take, read by `read(file)` */
 export function buildMocap(takes: Take[], read: (file: string) => Bvh): MoData {
   return { fps: MOCAP_FPS, clips: takes.map((t) => retarget(read(t.file), t)) };
+}
+
+/** The data split by pack: the file each goes in (`clips.bin` the core, `clips-<pack>.bin` the rest) */
+export function packs(d: MoData): { pack: string; file: string; data: MoData }[] {
+  const names = [...new Set(d.clips.map((c) => c.pack ?? CORE_PACK))];
+  return names.map((pack) => ({ pack, file: pack === CORE_PACK ? 'clips.bin' : `clips-${pack}.bin`, data: { fps: d.fps, clips: d.clips.filter((c) => (c.pack ?? CORE_PACK) === pack) } }));
 }

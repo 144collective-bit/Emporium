@@ -1358,7 +1358,12 @@ it and has been retired completely. Build only on what's here.
     strings, arrays, objects): anything with references packs and unpacks.
   - Features load when they're used, each its own chunk (`import()`):
     the fight (`fight.ts` and the figures' clips, when the trainer's menu
-    first opens: `loadFight()` in `walk.ts`), the stage of the fitting room
+    first opens: `loadFight()` in `walk.ts`), the animator with the motion
+    capture and the on-foot extras (`onfoot.ts`: the emotes, the gaze, the
+    vault and the moments' keyed poses, `momentposes.ts`, one chunk
+    fetched when walking starts; until it's in an emote is skipped, the
+    gaze still, nothing vaulted and a moment plays no pose; the hologram
+    fetches the emotes on its own after the boot), the stage of the fitting room
     and the character screen (`stage.ts`), SMAA (`post.ts`), the fight
     demo, the benchmark (`?bench`, `bench.ts`), Drop 001's fitting room
     (`fitting.ts`, when its panel first opens: `loadFitting()` in index.ts)
@@ -1661,10 +1666,140 @@ it and has been retired completely. Build only on what's here.
   (turning, terrain and transitions), Phase 3 (jumps, falls and landings),
   Phase 4 (armed movement and peeking), Phase 5 (crouch, slide, vault and
   climb) and Phase 8 (the rifle shouldered, below under
-  Target practice) are built, for the player on foot:
+  Target practice) are built, for the player on foot. **The revamp**
+  (the owner's call, 2026-10: every character's movements made to suit
+  the game and realistically human) is planned in
+  `docs/animation-revamp-plan.md`: a measured rubric (`tests/human.test.ts`),
+  the player finished on foot (idle life, the gaze, walks, stairs),
+  contact, the game's moments (doors, counters, getting in and out,
+  benches, rides seen, carrying), everyone on the same captured motion
+  (other players, the crowd's rows, the emotes), the crowd's acts, the
+  Fight Club and polish; one phase at a time with the owner's sign-off;
+  keep it up to date. Phase 1 is built: the rubric is `human.ts`
+  (DOM-free: `BANDS`, `createRubric()` over a figure's frames,
+  `clipRows()` over a clip; `tests/human.test.ts` holds every clip and
+  the animator's programs to it, rows that fail today `HELD_BACK` with
+  their phase), the lab's Scorecard and Reel, the clips' format 2 with
+  tags, marks and packs (below), a `mocap` budget row. Phase 2 (the player finished on foot) is built: the idles are three stretches of subject 137 waiting
+  (`idle-wait`, `-2`, `-3`: real weight shifts, a hand to the head, a look
+  round; the looped quiet seconds of 143 went; read a standing take's
+  lean before using it: one was bent double), played through to the end
+  (`STAND.margin`), the take's own wander carried into the hips (`WANDER`),
+  the next take the least recently played (`standNext()`, cut into near
+  its start: `LATE` in motionmatch.ts), a slower blend between them
+  (`STAND_BLEND`), the stance's lift of the hips eased (`STANCE.upEase`)
+  and kept while a foot shifts; breathing (`BREATH`); the gaze (`gaze.ts`,
+  DOM-free, tested: people and cars nearby, a look round standing, the
+  head leading a turn; `walk.ts` lays it on, the lab's Gaze toggle); the
+  walk is 143's (1.4 m/s) with 132's fast walk for starts (`walk-fast`);
+  starts and pivots through `MATCH.after`, `starting` (`LOCK.downStart`)
+  and the head's slower blend (`HEAD_BLEND`, `Inertia.slow`);
+  the matching normalised over frames on the move (`MOVING`) and a clip's end dearer (`ENDING`); stairs up from capture (122's climb, `stairs-up`: the pipeline tracks a stairs take's floor through its planted feet, `stairFloor()`, `stairs: true` in takes.json, format 3's `floor` / `contact`; the animator searches its climbing frames only while climbing, `climbAhead()` and `STAIRS` in movesim.ts, which walk mode also uses to slow a climb; the lab's Stairs program; down is the walks with the lock). The rubric reads the capture's standing takes as
+  standing (`clipRows(..., standing)`, `Frame.side`); `HELD_BACK` is two
+  rows. Phase 3 (contact) is built: `contact.ts` (DOM-free, tested in
+  `tests/contact.test.ts`) is a layer on the animator's pose from what's
+  near him (`ContactInput`: the collision grid's boxes within
+  `CONTACT.reach`, the crowd's people, where he can't step, a move stopped
+  this frame and how fast), laid on by `applyContact()` after
+  `animator.update()` and before `applyTo()` in walk.ts (not with a gun in
+  his hands): brushing a wall or a person the shoulder gives and the step
+  hitches (`give`, `hitch`: 30% off his top speed for a moment; the crowd's
+  person steps aside and back, `bump` / `BUMP` in life.ts); stopped at a
+  wall a hand goes onto it at shoulder height, walking slowly along one it
+  trails along it at hip height (`reachArmBones()`, the arm's two-bone IK;
+  a hand on stays put until it's let go; the test holds it within 1.5 cm);
+  standing a while at an edge nothing solid explains (a quay, a railing)
+  he leans on the rail with both hands; into a wall at a sprint he
+  staggers (`stagger`: the chest back, a hand up, carried back on the
+  springs, a small camera shake); a gap narrower than `squeeze` turns the
+  shoulders. Phones (`createContact({ hands: false })`) leave out the
+  hands and the lean. The lab's Contact program and floor show it all.
+  Phase 4 (the game's moments) step 1 is built: `moments.ts` (DOM-free,
+  tested in `tests/moments.test.ts`): a `Mark` (`doorMark()`,
+  `counterMark()`, `benchMark()`: where he stands, his facing, the hands'
+  targets or the seat), `createMoment()` with the phases approach → play
+  → (hold → back) → done (`update()` gives walk.ts the approach's goal:
+  the walk's own last steps onto the mark, or `timeout`; `skip()` on F
+  again; `release()` when the menu closes or to stand up; `cancel()`),
+  and `momentPose()` (in `momentposes.ts`, walk mode's on-foot chunk),
+  keyed on the `Pose` rig as the vault's (the hands
+  on the thing by `reachArm()`, within 1.5 cm in the test). Doors (every
+  landmark's, Trench Avenue's, the stadium's gate, the garage, hangar and
+  kart hut, the lifts and stations): a push, the panel opening as the
+  hand lands; counters (the gun stores', the trainer's): a lean with both
+  hands on the top while the menu is open; benches: "Sit" at a free bench
+  (`BENCHES`, no crowd sitter on it), the root down onto the seat
+  (`momentDy`), "Stand up". walk.ts's `markFor()` / `act()` start them;
+  the keys wait while one is on, the motion capture steps aside for the
+  keyed pose (`momentAmt`), the contact layer too. Step 2 is built:
+  **getting in and out** (`boardMark()` / `alightMark()`, `Vehicle`: car,
+  kart, plane, boat; walk.ts's `sideMark()` from `drive.doorOf()` /
+  `fly.doorOf()` / `HIRE.door`: he comes at the vehicle's side nearest
+  him, the hands land (the car's handle, the kart's pod rim, the
+  aircraft's door frame, the boat's rails), a leg lifts over and the body
+  folds onto the seat, the root going to it, and the vehicle takes him at
+  `board.fireAt` (`enter()` as before; the moment dropped); out plays at
+  once from the seat (`from` on each `exit()`) to the step-out spot; the
+  taxi through `TaxiDeps.approach` → `walk.boardAt()`), **the lifts**
+  (`liftMark()`: walked in through the door and turned to face out, then
+  the fade), and **carrying** (`crateMark()` `pick` / `put`, `crateAt()`,
+  `carriedAt()`, `carryPose()`: the business card's Load / Unload on foot
+  with the car parked by the place go through `TycoonHooks.carry` →
+  `walk.carry()`: a crate squatted to and lifted at the place, carried in
+  both hands (the upper-body mask, a run capped at `crate.slow`), set
+  down at the car's boot (`PUT_R`, "Load the car") or the place ("Unload
+  here"), when `done` moves the goods; "Put it down" elsewhere moves
+  nothing; a vehicle, a ride, a fast travel or walk mode ending puts it
+  away). The rides seen (the metro's, taxi's and river bus's seated
+  figure) are held back, in the plan. Phase 5 (everyone on the same
+  motion) is built; step 1: **the crowd on the capture**: six takes in
+  their own pack (`pack: "crowd"` in takes.json → `clips-crowd.bin`, 56 KB,
+  `CROWD_PACK` in mocap-load.ts; the core pack untouched), fetched at the
+  boot and swapped into every crowd's rows as it comes in
+  (`setCrowdCapture()` in crowdclips.ts, `refreshCrowdTexture()` in
+  crowdskin.ts; the rows' layout is fixed whatever the capture holds, the
+  recorded walk and the formula idle stand in until then): `walk` /
+  `walk2` (two cycles of 143's walk) and `jog` (his run) resampled to
+  their rows with the hips in place, `idle` / `idle2` / `idle3` (three
+  stretches of 137 waiting, each looped with its tail crossfaded into its
+  head, `captureRow()`, at its own length, `secondsOf()`); `march` is the
+  recorded walk still and `look`, `chat`, `sit`, `picnic`, `salute` the
+  formulas (no such takes). Every person has their own walk and idle
+  (`walkFor()` / `idleFor()` by a number of theirs, life.ts), the strides
+  are live (`STRIDE`, `strideOf()`), and the scale rule is tested at the
+  city's scales (`tests/crowdclips.test.ts`). A budget row (`mocapCrowd`)
+  holds the pack under 80 KB. Step 2 is built: **other players on the
+  animator** (`remote.ts`): once walking has the capture and the animator
+  module (walk.ts's `motion`, through the multiplayer's `Walker`), each
+  player within `ANIM_FAR` of the camera gets an animator of their own fed
+  from where they're drawn (their own springs following the velocity seen
+  between frames and the facing sent; every frame within `ANIM_NEAR`,
+  at `FAR_DT` beyond; a jump between frames starts it afresh), blended in
+  as the player's (`mocapW`), the gun hold over its legs and hips
+  (`upperW`, `applyTo(..., upper, yaw)`), the look through `addLook()`,
+  the emotes and the air on the planted-feet walk as before; tested as a
+  fed remote in `tests/animator.test.ts`. Step 3 is built: **the emotes
+  re-keyed** (`emotes.ts`, DOM-free, tested in `tests/emotes.test.ts`):
+  the wave, the cheer, the salute and the dance as keyed clips on the
+  `Pose` rig (keys in seconds with eases, `EMOTE_CLIPS`, `emotePose(p, id,
+  t, amt, base)`, `emoteSeconds()` / `emoteOver()`, `emoteUpper()`). The
+  wave, the cheer and the salute own only the upper body (the arms, the
+  spine's lean and twist, the head): in walk mode and on other players
+  they play over the animator's captured legs and hips through the gun's
+  upper mask (`upperW`), so an emote never jolts him off his feet; the
+  dance owns the whole body (the capture steps aside, `mocapW`), its feet
+  keyed as planted spots (`feet`) the legs reach through `reachLeg()` so
+  they stay put, flat and headed his way while the hips bounce and sway
+  on a 120 bpm step-touch (a lifted foot eases off and onto its spot), two
+  bars long (`DANCE_SECONDS`). The stage (`stage.ts`, over its idle: `base`)
+  and the hologram (`dancePose()`) play the same clips; the lab's Emotes
+  program plays them in turn (emotes.ts is walk mode's chunk, `onfoot.ts`,
+  not the boot's). No CMU take in the repository is a dance:
+  one from capture is a data step for the owner. The clips file's limits are 640 KB (test) and 660 KB (budget),
+  raised for the takes on purpose:
   - **The data** is CMU's motion capture (free for commercial use; the
     acknowledgment is in the start menu's Options > Credits, named, never
-    linked): mostly subject 143's and 127's takes, in `assets/mocap/cmu/`
+    linked): mostly subject 143's and 127's takes (137's idles, 132's fast walk, 122's climb, 136's crouched walks, 141's strafes), in `assets/mocap/cmu/`
     (BVH, untouched), listed in `assets/mocap/takes.json` (a `loop` makes a seamless cycle,
     `loopClip()`, `cycle` its length where it's longer than a step; `fps` where the file's frame rate is wrong: subject 143's
     are 60, not the 120 cgspeed wrote, so he walked and ran at double speed
@@ -1676,8 +1811,17 @@ it and has been retired completely. Build only on what's here.
     sits on the wrist: aimed at it, every hand stood out 80° from its
     forearm) and calmed (`HANDS`), one-frame glitches put back between their
     neighbours (`SPIKE`) and the toes smoothed (`TOES`), the floor from the
-    ankles, the root smoothed from the hips) into `src/data/mocap/clips.bin`
-    (`mocap.ts`: 22 body bones at `MOCAP_FPS` 30, turns in 16 bits;
+    ankles, the root smoothed from the hips, the knees straightened where
+    the capture bent them back (`straightenKnees()`)) into
+    `src/data/mocap/clips.bin` (`mocap.ts`: 22 body bones at `MOCAP_FPS`
+    30, turns in 16 bits, each frame's as the difference from the frame
+    before in varints (format 2, the revamp's Phase 1: 495 KB where plain
+    numbers made 703); each take's `tags` (`stand`, `crouch` and
+    `jumps-only` are what the searches read through `tagged()`:
+    `STAND.tag`, `CROUCH.tag`, `JUMPS_ONLY`; the rest say what it is for
+    the rubric), `marks` (a hand's meeting with a thing, for the moments)
+    and `pack` (`CORE_PACK` fetched when walking starts, another pack on
+    first use, `loadMocap(pack)`; `npm run mocap` writes one file a pack);
     `mirrorClip()`, `posed()`, `contacts()`); `tests/mocap.test.ts` holds
     the file to exactly what the pipeline makes. It's fetched when walking
     starts (`mocap-load.ts`, a hashed asset), with the animator's own
@@ -1809,6 +1953,8 @@ it and has been retired completely. Build only on what's here.
     after it's looked at, so a slow frame can't lose it.
   - **The lab** is `?anim` (`anim-lab.ts`, styles `animlab.css`): the new
     animation beside the old on an open floor, scripted moves or W A S D,
+    the Reel (every program in turn, `prog=reel`) and the Scorecard (the
+    rubric's rows over the last eight seconds, red where one fails),
     slow motion, cameras (over his right shoulder too), floors (flat,
     kerbs, stairs, a ledge), any gun in his hands (`gun`, `aim`, `pitch`;
     markers at the butt and his shoulder's pocket; on the motion capture's
@@ -3201,7 +3347,7 @@ it and has been retired completely. Build only on what's here.
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,
   in `tests/merch.test.ts`), the crowd's baked clips (`crowdclips.ts`) and Degen's skeleton, weights, head and hands
-  (`skeleton.ts`, `body.ts`), his walking (`locomotion.ts`), the motion capture and its animation (`bvh.ts`, `mocap-build.ts`, `mocap.ts`, `movesim.ts`, `inertia.ts`, `motionmatch.ts`, `animator.ts`) and the guns in his hands (`gunfit.ts`, `stance.ts`). Modules that touch the DOM or `kit.ts` (canvas
+  (`skeleton.ts`, `body.ts`), his walking (`locomotion.ts`), the motion capture and its animation (`bvh.ts`, `mocap-build.ts`, `mocap.ts`, `movesim.ts`, `inertia.ts`, `motionmatch.ts`, `animator.ts`), the rubric of human movement over every clip and program (`human.ts`, `tests/human.test.ts`), what his body does about what he touches (`contact.ts`), the game's moments (`moments.ts`) and the guns in his hands (`gunfit.ts`, `stance.ts`). Modules that touch the DOM or `kit.ts` (canvas
   textures) can't load in Node; keep data a test needs in the DOM-free
   files.
 - When you change a rule or move something in the city, run the tests and

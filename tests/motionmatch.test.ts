@@ -4,19 +4,24 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { decodeMocap } from '../src/scripts/city3d/mocap';
-import { AHEAD, FEATURES, JUMPS_ONLY, TAKEOFF, buildDatabase, search, setTrajectory } from '../src/scripts/city3d/motionmatch';
+import { decodeMocap, tagged } from '../src/scripts/city3d/mocap';
+import { AHEAD, FEATURES, JUMPS_ONLY, MOVING, OWN_KIND, TAKEOFF, buildDatabase, search, setTrajectory } from '../src/scripts/city3d/motionmatch';
 import { MOCAP_FPS } from '../src/scripts/city3d/mocap';
 
 const data = decodeMocap(readFileSync('src/data/mocap/clips.bin'));
 const db = buildDatabase(data);
 
-test('the database: every clip and its mirror image, features scaled round zero', () => {
+test('the database: every clip and its mirror image, features scaled round zero over the frames on the move', () => {
   assert.equal(db.clips.length, data.clips.length * 2);
   assert.equal(db.count, data.clips.reduce((n, c) => n + c.frames, 0) * 2);
+  // (over the frames on the move, and never a take of a kind of its own: the climb's)
+  const counts = (g: number) => db.speed[g] > MOVING && !OWN_KIND.some((t) => tagged(db.clips[db.clipOf[g]], t));
+  let n = 0;
+  for (let g = 0; g < db.count; g++) if (counts(g)) n++;
+  assert.ok(n > db.count / 2, 'most frames are on the move');
   for (let k = 0; k < FEATURES; k++) {
     let m = 0;
-    for (let g = 0; g < db.count; g++) m += db.feat[g * FEATURES + k] / db.count;
+    for (let g = 0; g < db.count; g++) if (counts(g)) m += db.feat[g * FEATURES + k] / n;
     assert.ok(Math.abs(m) < 1e-3, `feature ${k} averages ${m.toFixed(5)}`);
   }
 });
@@ -84,6 +89,6 @@ test('on the ground a search never lands in a jump, nor in the standing jumps\' 
     if (!db.open[g]) continue;
     const r = search(db, db.feat.slice(g * FEATURES, (g + 1) * FEATURES));
     assert.equal(db.flightOf[r.g], -1);
-    assert.ok(!JUMPS_ONLY.includes(db.clips[db.clipOf[r.g]].name.replace('~', '')));
+    assert.ok(!tagged(db.clips[db.clipOf[r.g]], JUMPS_ONLY));
   }
 });

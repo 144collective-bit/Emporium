@@ -6,18 +6,28 @@
  * frame, each row every bone's matrix (posed world x the bind pose's
  * inverse) in the figure's own space at scale 1.
  *
- * - **walk**, **jog** and **march** are the planted-feet walk (locomotion.ts)
- *   recorded over one full cycle at a steady pace: a person plays it at the
- *   rate their own speed calls for (`WALK_STRIDE` / `JOG_STRIDE` /
- *   `MARCH_STRIDE` is the distance one cycle covers at scale 1), so their
- *   feet stay put on the pavement. The jog is Westlake Park's joggers'.
- *   The march keeps the rifle arm still and the free arm swinging straight.
- * - **idle**, **look**, **chat**, **sit** and **picnic** (sitting on the
- *   ground, legs out) are the pose formulas (poses.ts)
- *   over a few seconds, the last part eased into the first so the loop has
- *   no seam.
+ * - **walk**, **walk2** and **jog** are captured (the animation revamp's
+ *   Phase 5, docs/animation-revamp-plan.md): one seamless cycle each of
+ *   subject 143's walk (two different cycles) and run, the crowd pack
+ *   (`clips-crowd.bin`, takes.json's `pack: "crowd"`, fetched at the boot:
+ *   `setCrowdCapture()`; until it's in, and without it, the planted-feet
+ *   walk (locomotion.ts) recorded over one cycle stands in). A person plays
+ *   a walk at the rate their own speed calls for (`strideOf()`: the distance
+ *   one cycle covers at scale 1), so their feet stay put on the pavement.
+ *   **march** is the recorded walk still (no march was captured), the rifle
+ *   arm kept still and the free arm swinging straight.
+ * - **idle**, **idle2** and **idle3** are three captured stretches of subject
+ *   137 waiting (real weight shifts, a look round), each looped with its tail
+ *   crossfaded into its head; a person is given one (`idleFor()`) and plays
+ *   it at its own length (`secondsOf()`). The formula idle stands in.
+ * - **look**, **chat**, **sit** and **picnic** (sitting on the ground, legs
+ *   out) are the pose formulas (poses.ts) over a few seconds, the last part
+ *   eased into the first so the loop has no seam.
  * - **salute** isn't a loop: its frames go from attention (0) to the hand at
  *   the brow (1).
+ *
+ * The rows' layout is fixed whatever the capture holds (each clip's frames
+ * below), so the texture is swapped in place when the pack arrives.
  *
  * A person's clip and how far through it they are (`u`, 0..1) is all the
  * CPU works out each frame (`crowdFrame()`); 34 bones each is the GPU's.
@@ -27,17 +37,42 @@ import { BONES, makeSkeleton, newPose, poseSkeleton, type Limb, type Pose } from
 import { copyPose, createLocomotion } from './locomotion';
 import { attentionPose, chatPose, idlePose, lookPose, picnicPose, set, sitPose } from './poses';
 import { baked as atBuild } from './baked';
+import { MOCAP_BONES, MOCAP_FPS, NB, type MoClip, type MoData } from './mocap';
 
-export type CrowdClip = 'walk' | 'jog' | 'march' | 'idle' | 'look' | 'chat' | 'sit' | 'picnic' | 'salute';
+export type CrowdClip = 'walk' | 'walk2' | 'jog' | 'march' | 'idle' | 'idle2' | 'idle3' | 'look' | 'chat' | 'sit' | 'picnic' | 'salute';
 
 interface ClipDef {
   frames: number;
   loop: boolean;
   /** How closed the hands are (a soldier's round his rifle) */
   grip: number;
-  /** The pose `u` (0..1) of the way through */
+  /** The pose `u` (0..1) of the way through (the fallback, where there's a capture) */
   sample(u: number, out: Pose): void;
+  /** From the crowd pack: the take (a loop take plays whole; an idle's `tail` seconds are crossfaded into its head) */
+  capture?: { take: string; tail?: number };
 }
+
+/* ---------- The capture ---------- */
+
+/** The crowd pack's clips (mocap-load.ts `loadMocap('crowd')`), once they're in */
+let capture: MoData | null = null;
+/** The crowd pack arrived (or went): the rows are baked again from it (`bakeCrowdClips()`; crowdskin.ts swaps the texture) */
+export function setCrowdCapture(d: MoData | null) {
+  capture = d;
+  baked = null;
+  for (const id of CLIP_IDS) {
+    const c = captureOf(id);
+    if (!c) continue;
+    const d = CLIP_DEFS[id];
+    if (d.capture?.tail !== undefined) SECONDS[id] = (c.frames - Math.round(d.capture.tail * MOCAP_FPS)) / MOCAP_FPS;
+    else if (id in STRIDE) STRIDE[id as keyof typeof STRIDE] = (c.root[4] - c.root[1]) * c.frames;
+  }
+}
+export const crowdCaptured = () => !!capture;
+const captureOf = (id: CrowdClip): MoClip | null => {
+  const t = CLIP_DEFS[id].capture?.take;
+  return t ? (capture?.clips.find((c) => c.name === t) ?? null) : null;
+};
 
 /** Hands at rest, and round a rifle */
 const RELAXED = 0.2;
@@ -153,9 +188,12 @@ const recorded = (poses: Pose[], after?: (p: Pose) => void): ClipDef['sample'] =
   after?.(out);
 };
 
+/** A captured idle: its last `IDLE_TAIL` seconds crossfaded into its first, so it loops */
+const IDLE_TAIL = 0.8;
 export const CLIP_DEFS: Record<CrowdClip, ClipDef> = {
-  walk: { frames: walk.poses.length, loop: true, grip: RELAXED, sample: recorded(walk.poses) },
-  jog: { frames: jog.poses.length, loop: true, grip: 0.5, sample: recorded(jog.poses) },
+  walk: { frames: 30, loop: true, grip: RELAXED, sample: recorded(walk.poses), capture: { take: 'crowd-walk' } },
+  walk2: { frames: 30, loop: true, grip: RELAXED, sample: recorded(walk.poses), capture: { take: 'crowd-walk-2' } },
+  jog: { frames: 24, loop: true, grip: 0.5, sample: recorded(jog.poses), capture: { take: 'crowd-run' } },
   // On parade: the rifle arm (right) still, the free arm swinging straight
   march: {
     frames: march.poses.length,
@@ -168,7 +206,9 @@ export const CLIP_DEFS: Record<CrowdClip, ClipDef> = {
       p.turn = (p.turn ?? 0) * 0.4;
     }),
   },
-  idle: { frames: 192, loop: true, grip: RELAXED, sample: looped((p, t) => idlePose(p, t)) },
+  idle: { frames: 80, loop: true, grip: RELAXED, sample: looped((p, t) => idlePose(p, t)), capture: { take: 'crowd-idle', tail: IDLE_TAIL } },
+  idle2: { frames: 60, loop: true, grip: RELAXED, sample: looped((p, t) => idlePose(p, t + 8)), capture: { take: 'crowd-idle-2', tail: IDLE_TAIL } },
+  idle3: { frames: 45, loop: true, grip: RELAXED, sample: looped((p, t) => idlePose(p, t + 16)), capture: { take: 'crowd-idle-3', tail: IDLE_TAIL } },
   look: { frames: 192, loop: true, grip: RELAXED, sample: looped((p, t) => lookPose(p, t)) },
   chat: { frames: 192, loop: true, grip: RELAXED, sample: looped((p, t) => chatPose(p, t)) },
   sit: { frames: 144, loop: true, grip: RELAXED, sample: looped((p, t) => sitPose(p, t)) },
@@ -177,6 +217,19 @@ export const CLIP_DEFS: Record<CrowdClip, ClipDef> = {
   salute: { frames: 9, loop: false, grip: RIFLE, sample: (u, p) => attentionPose(p, u, 'left') },
 };
 export const CLIP_IDS = Object.keys(CLIP_DEFS) as CrowdClip[];
+
+/**
+ * How far one cycle of each walk goes at scale 1 (the capture's once it's in, the recording's before): a
+ * person at scale s and speed v plays v / (strideOf(c) s) cycles a second, so their feet stay put
+ */
+export const STRIDE: Record<'walk' | 'walk2' | 'jog' | 'march', number> = { walk: walk.stride, walk2: walk.stride, jog: jog.stride, march: march.stride };
+export const strideOf = (c: CrowdClip) => (c in STRIDE ? STRIDE[c as keyof typeof STRIDE] : 1);
+/** How long each loop is (seconds): a person plays `t / secondsOf(c)` (plus their own offset) */
+const SECONDS: Partial<Record<CrowdClip, number>> = {};
+export const secondsOf = (c: CrowdClip) => SECONDS[c] ?? CLIP_SECONDS;
+/** A person's own walk and idle (by a number of theirs, 0..1), so no two are in step or alike */
+export const walkFor = (seed: number): CrowdClip => (seed < 0.5 ? 'walk' : 'walk2');
+export const idleFor = (seed: number): CrowdClip => (seed < 1 / 3 ? 'idle' : seed < 2 / 3 ? 'idle2' : 'idle3');
 
 /** Each clip's first row in the texture */
 export const CLIP_ROWS = {} as Record<CrowdClip, number>;
@@ -221,9 +274,52 @@ export function crowdFrame(clip: CrowdClip, u: number, out: [number, number, num
 /* ---------- Baking ---------- */
 
 let baked: Float32Array | null = null;
+
+/** A captured frame: the hips' place and every body bone's turn */
+interface Sample {
+  hips: THREE.Vector3;
+  rot: THREE.Quaternion[];
+}
+const newSample = (): Sample => ({ hips: new THREE.Vector3(), rot: Array.from({ length: NB }, () => new THREE.Quaternion()) });
+const qa = new THREE.Quaternion();
+const qb = new THREE.Quaternion();
+/** The clip at frame `t` (fractional; a loop wraps), between its two frames */
+function sampleAt(c: MoClip, t: number, loop: boolean, out: Sample) {
+  const n = c.frames;
+  const f0 = Math.floor(t);
+  const k = t - f0;
+  const a = loop ? ((f0 % n) + n) % n : Math.min(n - 1, Math.max(0, f0));
+  const b = loop ? (a + 1) % n : Math.min(n - 1, a + 1);
+  out.hips.set(c.hips[a * 3], c.hips[a * 3 + 1], c.hips[a * 3 + 2]).lerp(vb.set(c.hips[b * 3], c.hips[b * 3 + 1], c.hips[b * 3 + 2]), k);
+  for (let i = 0; i < NB; i++) {
+    qa.fromArray(c.rot, (a * NB + i) * 4);
+    qb.fromArray(c.rot, (b * NB + i) * 4);
+    out.rot[i].copy(qa).slerp(qb, k);
+  }
+}
+const vb = new THREE.Vector3();
+const blendA = newSample();
+const blendB = newSample();
+/** Row `f` of `frames` of a captured clip: a loop take whole; an idle over its loop with the tail crossfaded into the head */
+export function captureRow(c: MoClip, frames: number, f: number, tail: number | undefined, out: Sample) {
+  if (tail === undefined) return sampleAt(c, (f / frames) * c.frames, true, out);
+  const T = Math.round(tail * MOCAP_FPS);
+  const L = c.frames - T;
+  const t = (f / frames) * L;
+  if (t >= T) return sampleAt(c, t, false, out);
+  // (the head: from where the take's tail had got to, into the take's own start)
+  sampleAt(c, t + L, false, blendA);
+  sampleAt(c, t, false, blendB);
+  const k = THREE.MathUtils.smoothstep(t / T, 0, 1);
+  out.hips.copy(blendA.hips).lerp(blendB.hips, k);
+  for (let i = 0; i < NB; i++) out.rot[i].copy(blendA.rot[i]).slerp(blendB.rot[i], k);
+  return out;
+}
+
 /**
  * Every clip's frames as bone matrices: `CROWD_ROWS` rows of `CROWD_BONES`
- * matrices, column by column (RGBA texels, four a bone). Baked once.
+ * matrices, column by column (RGBA texels, four a bone). Baked once (again
+ * when the crowd pack comes in).
  */
 export function bakeCrowdClips(): Float32Array {
   if (baked) return baked;
@@ -233,11 +329,21 @@ export function bakeCrowdClips(): Float32Array {
   const data = new Float32Array(CROWD_ROWS * CROWD_BONES * 16);
   const m = new THREE.Matrix4();
   const p = fresh();
+  const smp = newSample();
   for (const id of CLIP_IDS) {
     const d = CLIP_DEFS[id];
+    const c = captureOf(id);
     for (let f = 0; f < d.frames; f++) {
-      clipPose(id, f, p);
-      poseSkeleton(sk, p, [d.grip, d.grip]);
+      if (c) {
+        // (the body's bones from the capture, over the rest pose's hands)
+        poseSkeleton(sk, fresh(), [d.grip, d.grip]);
+        captureRow(c, d.frames, f, d.capture!.tail, smp);
+        for (let i = 0; i < NB; i++) sk.bones[MOCAP_BONES[i]].quaternion.copy(smp.rot[i]);
+        sk.bones.hips.position.copy(smp.hips);
+      } else {
+        clipPose(id, f, p);
+        poseSkeleton(sk, p, [d.grip, d.grip]);
+      }
       sk.root.updateMatrixWorld(true);
       const row = CLIP_ROWS[id] + f;
       sk.list.forEach((b, i) => {

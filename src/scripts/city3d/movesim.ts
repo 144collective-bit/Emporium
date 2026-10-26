@@ -99,3 +99,27 @@ export function stepSlide(sl: Slide, s: MoveState, gx: number, gz: number, dt: n
   s.face = sl.dir;
   return sl.v > SLIDE.end && sl.t < SLIDE.most;
 }
+
+/**
+ * Stairs (the revamp's Phase 2): the takes tagged `tag` (subject 122 walking up three steps) are searched
+ * only while climbing: the ground `ahead` tiles on (scaled) is `rise` or more higher than here and still
+ * rising at twice that (a kerb is one step and then flat), going slower than `fast` tiles a second (walk
+ * mode's climbing pace, `walk`, is under it; a brisk climb or a run up stairs keeps the run, the lock
+ * putting its feet on the treads as before: faster than the takes' climb a held foot stretched and
+ * snapped); never otherwise. Their climbing frames are those whose floor rises `step` (rig numbers)
+ * over the next `look` frames or rose over the last `back`; once on one the search needs `margin`
+ * better to leave it (the climbs are short: at the usual margin a take flipped to its mirror every
+ * half second). Walk mode slows a climb to `walk` tiles a second walking and `run` running (a brisk
+ * climb: nobody runs up stairs flat out).
+ */
+export const STAIRS = { tag: 'stairs', ahead: 0.6, rise: 0.08, fast: 0.6, look: 12, back: 6, step: 0.03, margin: 0.6, walk: 0.45, run: 1.6 };
+/** Whether the ground ahead along (dx, dz) climbs like stairs from (x, z) at height y (STAIRS) */
+export function climbAhead(ground: (x: number, z: number, y: number) => number, x: number, z: number, y: number, dx: number, dz: number, scale: number) {
+  const l = Math.hypot(dx, dz) || 1;
+  const ux = (dx / l) * STAIRS.ahead * scale;
+  const uz = (dz / l) * STAIRS.ahead * scale;
+  const g0 = ground(x, z, y + 0.3);
+  const g1 = ground(x + ux, z + uz, y + 0.3);
+  const g2 = ground(x + ux * 2, z + uz * 2, y + 0.3);
+  return g1 - g0 >= STAIRS.rise * scale && g2 - g0 >= STAIRS.rise * scale * 1.5;
+}

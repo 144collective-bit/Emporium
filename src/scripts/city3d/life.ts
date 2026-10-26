@@ -22,7 +22,7 @@ import { TRENCH_WALKS } from './projects';
 import { UPTOWN_PEOPLE, UPTOWN_WALKS } from './uptownlife';
 import { inTrenches } from './trenches';
 import { CROWD_VIEW, HIP_HEIGHT, cityOutfit, createCrowd } from './character';
-import { CLIP_SECONDS, JOG_STRIDE, WALK_STRIDE } from './crowdclips';
+import { type CrowdClip, idleFor, secondsOf, strideOf, walkFor } from './crowdclips';
 import { PARK_PEOPLE, moment, type Moment, type ParkPerson } from './parklife';
 import { blinkOn, bodyMotion, braking, hornDue, indicating, newBody, newHorn, pullAway, reactionOf, resetBody, turnsOf, type Body, type Horn, type Mover, type Turn } from './traffic';
 import { CROSS_PACE, crossingLinks, hurry, noticing, outAtNight, takesCrossing, walkLight, type Link } from './pedestrians';
@@ -588,7 +588,11 @@ interface Person {
   seed: number;
   /** Noticing you: how long they keep looking */
   notice: { hold: number };
+  /** Brushed by you (the revamp's Phase 3): a step aside, out and back over `BUMP.t` */
+  bump?: { x: number; z: number; t: number };
 }
+/** The bump: within `r` (plus the walker's reach) of you going by, they step `out` aside and back over `t` seconds */
+const BUMP = { r: 0.42, out: 0.14, t: 0.45 };
 
 /** Sidewalk lanes round the outside of a block: two each way, each at its own distance from the lot and its own pace */
 const WALK_LANES: { inset: number; dir: 1 | -1; speed: number }[] = [
@@ -719,8 +723,18 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
     p.wait = undefined;
     return true;
   };
+  // (how fast you're going: from where you were; a jump is a fast travel, not a run)
+  let walkerX = 0;
+  let walkerZ = 0;
+  let walkerV = 0;
   tick(({ t, dt, rain, hour }) => {
     const pace = hurry(rain);
+    {
+      const dj = Math.hypot(walker.x - walkerX, walker.z - walkerZ);
+      walkerV = walker.on && dj < 2 ? dj / Math.max(dt, 1e-3) : 0;
+      walkerX = walker.x;
+      walkerZ = walker.z;
+    }
     people.forEach((p, i) => {
       // Late at night some have gone home; the benches' sitters go in out of the rain (city life plan, Phase 3)
       if (p.kind === 'walk' && !outAtNight(i, hour)) return;
@@ -728,6 +742,14 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
       // You, close by: a walker stops and watches you pass (not in the middle of the road)
       const looking = p.kind === 'walk' && !p.cross && noticing(p.notice, Math.hypot(walker.x - p.x, walker.z - p.z), walker.r, walker.on, dt);
       let standing = looking;
+      // Brushed by you going past: a step aside and back (the look is noticing()'s)
+      if (p.kind !== 'park' && p.act !== 'sit' && walker.on && walkerV > 0.5 && !p.bump) {
+        const dx = p.x - walker.x;
+        const dz = p.z - walker.z;
+        const dd = Math.hypot(dx, dz);
+        if (dd < BUMP.r + walker.r && dd > 1e-3) p.bump = { x: dx / dd, z: dz / dd, t: BUMP.t };
+      }
+      if (p.bump && (p.bump.t -= dt) <= 0) p.bump = undefined;
       if (p.kind === 'walk' && looking) p.ry = Math.atan2(walker.x - p.x, walker.z - p.z);
       else if (p.kind === 'walk' && p.cross) {
         // Over the crossing, a little quicker than their stroll
@@ -790,23 +812,33 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
         p.ry = m.ry;
         p.walked += m.speed * dt;
       }
-      // Each plays a baked clip (crowdclips.ts): the walk at its stride, so their feet stay put on the pavement;
-      // the rest from where their own offset puts them in it
-      const loop = t / CLIP_SECONDS + p.phase / 6;
+      // Each plays a baked clip (crowdclips.ts): their own walk at its stride, so their feet stay put on the
+      // pavement; their own idle; the rest from where their own offset puts them in it
+      const seed = p.phase / 6;
+      const walkClip = walkFor(seed);
+      const idleClip = idleFor(seed);
+      const playAt = (c: CrowdClip) => t / secondsOf(c) + seed;
       // Turn corners over a few frames instead of snapping
       if (Number.isNaN(p.face)) p.face = p.ry;
       const turn = Math.atan2(Math.sin(p.ry - p.face), Math.cos(p.ry - p.face));
       p.face += turn * Math.min(1, dt * 9);
       const y = p.act === 'sit' ? (p.y ?? SLAB) - SEAT_DROP : (p.y ?? SLAB);
+      const bk = p.bump ? BUMP.out * Math.sin(Math.PI * (1 - p.bump.t / BUMP.t)) : 0;
+      const bx = p.x + (p.bump?.x ?? 0) * bk;
+      const bz = p.z + (p.bump?.z ?? 0) * bk;
       if (p.kind === 'park') {
         const m = p.m!;
         const c = m.clip;
         const py = c === 'sit' || c === 'picnic' ? m.y - SEAT_DROP : m.y;
-        const u = c === 'walk' ? p.walked / (WALK_STRIDE * PERSON_SCALE) + p.phase / 6 : c === 'jog' ? p.walked / (JOG_STRIDE * PERSON_SCALE) + p.phase / 6 : loop;
-        people3d.set(i, p.x, py, p.z, p.face, PERSON_SCALE, c, u);
-      } else if (p.kind === 'walk' && standing) people3d.set(i, p.x, y, p.z, p.face, PERSON_SCALE, looking ? 'idle' : 'look', loop);
-      else if (p.kind === 'walk') people3d.set(i, p.x, y, p.z, p.face, PERSON_SCALE, 'walk', p.walked / (WALK_STRIDE * PERSON_SCALE) + p.phase / 6);
-      else people3d.set(i, p.x, y, p.z, p.face, p.scale ?? PERSON_SCALE, p.act === 'sit' ? 'sit' : p.act === 'chat' ? 'chat' : p.act === 'queue' ? 'idle' : 'look', loop);
+        const clip = c === 'walk' ? walkClip : c === 'idle' ? idleClip : c;
+        const u = c === 'walk' || c === 'jog' ? p.walked / (strideOf(clip) * PERSON_SCALE) + seed : playAt(clip);
+        people3d.set(i, p.x, py, p.z, p.face, PERSON_SCALE, clip, u);
+      } else if (p.kind === 'walk' && standing) people3d.set(i, bx, y, bz, p.face, PERSON_SCALE, looking ? idleClip : 'look', playAt(looking ? idleClip : 'look'));
+      else if (p.kind === 'walk') people3d.set(i, bx, y, bz, p.face, PERSON_SCALE, walkClip, p.walked / (strideOf(walkClip) * PERSON_SCALE) + seed);
+      else {
+        const clip: CrowdClip = p.act === 'sit' ? 'sit' : p.act === 'chat' ? 'chat' : p.act === 'queue' ? idleClip : 'look';
+        people3d.set(i, bx, y, bz, p.face, p.scale ?? PERSON_SCALE, clip, playAt(clip));
+      }
     });
     people3d.commit();
   });

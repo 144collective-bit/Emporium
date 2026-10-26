@@ -8,6 +8,10 @@ import * as THREE from 'three';
 import { WIDEN } from './layout';
 import { MapControls } from 'three/addons/controls/MapControls.js';
 import { BAKING_TEXTURES, PICK, builtTexturesDone, consolidate, loadBuiltTextures, loadImage, loadTex, updateLights, updateWind } from './kit';
+import { CROWD_PACK, loadMocap } from './mocap-load';
+import type { MoData } from './mocap';
+import { setCrowdCapture } from './crowdclips';
+import { refreshCrowdTexture } from './crowdskin';
 import { SWAY, windStrength } from './dusk';
 import { buildBusStops } from './transit3d';
 import { buildOuterDress } from './outerdress3d';
@@ -175,6 +179,30 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // Textures made at build time (kit.ts): the atlases made as the modules loaded start downloading now,
   // the rest once the builders below have asked for theirs; the boot waits for them before it's ready
   void loadBuiltTextures(renderer);
+  // The crowd's captured moves (crowdclips.ts, the animation revamp's Phase 5): a small pack, swapped into
+  // every crowd's rows as it comes in (the recorded walk and the formula idle stand in until then)
+  // (it usually lands while the boot is still building: it's applied once the city draws, below)
+  let crowdPack: MoData | null = null;
+  let crowdPackOn = false;
+  const applyCrowdPack = () => {
+    if (!crowdPack || crowdPackOn) return;
+    crowdPackOn = true;
+    setCrowdCapture(crowdPack);
+    refreshCrowdTexture();
+  };
+  if (!BAKING_TEXTURES)
+    loadMocap(CROWD_PACK).then(
+      (d) => {
+        crowdPack = d;
+        if (crowdPackLate) {
+          applyCrowdPack();
+          crowdPackLate();
+        }
+      },
+      () => {},
+    );
+  /** Set once the city draws: a pack arriving after that asks for a frame itself */
+  let crowdPackLate: (() => void) | null = null;
 
   // Fonts and art for the signs
   // (the build's own run for the textures never paints with stand-in fonts: scripts/bake-textures.mjs)
@@ -442,6 +470,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // (on a very slow connection the boot goes on without them: they appear as they come in)
   await waited(Promise.race([loadBuiltTextures(renderer), new Promise((r) => setTimeout(r, 8000))]));
   builtTexturesDone();
+  // The crowd's captured moves, if they're in (else as they come)
+  applyCrowdPack();
+  crowdPackLate = () => (dirty = true);
   progress(1);
 
   /* ---------- Fly-to ---------- */
@@ -824,6 +855,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       return c ? { ...c, name: CARS[c.model as keyof typeof CARS]?.name ?? 'Your car' } : null;
     },
     openMarket: () => open('emporium'),
+    carry: (dir, at, done) => walking && walk.carry(dir, at, done),
     stock: (s) => {
       market.show(s.stall.slots, s.stall.level);
       units.show(s);
@@ -1101,6 +1133,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       works.want(p.at.x, p.at.z, 70);
       walk.placeAt(p.at);
     },
+    approach: (at, go) => walk.boardAt(at, go),
     want: (x, z, r) => works.want(x, z, r),
     name: (p) => placeName(root, p).name,
     toast: (text) => game.toast(text),
@@ -1213,7 +1246,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   if (statsEl) {
     // For the headless checks (scratch scripts): the scene, renderer and camera on the page; opening a place, building what waits round a spot,
     // and walking in somewhere without a click through the city
-    (window as unknown as { __city?: unknown }).__city = { scene, renderer, camera, controls, traffic: bodies, view: CROWD_VIEW, open, startWalking, walk, sky, works };
+    (window as unknown as { __city?: unknown }).__city = { scene, renderer, camera, controls, traffic: bodies, view: CROWD_VIEW, open, startWalking, walk, sky, works, mp };
     statsEl.className = 'city-stats';
     statsEl.setAttribute('aria-hidden', 'true');
     host.append(statsEl);

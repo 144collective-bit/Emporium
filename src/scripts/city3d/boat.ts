@@ -223,7 +223,8 @@ export function createBoat(d: BoatDeps) {
       d.sfx('door');
       // (a heading, 0 east: facing the water from the bank he's on)
       const north = (at.stop?.bank ?? HIRE.bank) === 'north';
-      return { x: at.at.x, z: at.at.z, yaw: north ? -Math.PI / 2 : Math.PI / 2 };
+      // (`from`: where it lies, for the climb up, moments.ts)
+      return { x: at.at.x, z: at.at.z, yaw: north ? -Math.PI / 2 : Math.PI / 2, from: { x: s.x, z: s.z } };
     },
     /** Walk mode ended on the water: the boat goes home */
     abandon() {

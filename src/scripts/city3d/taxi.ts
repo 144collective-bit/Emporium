@@ -10,7 +10,7 @@
  * at once and the ride is a cut.
  */
 import * as THREE from 'three';
-import { createCar } from './cars';
+import { CARS, createCar } from './cars';
 import { PAL, fx, glowMat } from './kit';
 import { SPOTS, lightState, pathBetween, pointOn, type Route } from './routes';
 import { bodies, stoppers } from './life';
@@ -41,6 +41,8 @@ export interface TaxiDeps {
   setRide(r: Ride | null): boolean;
   /** Stand Degen at the place's spot */
   arrive(p: Place): void;
+  /** Walk him up to the taxi's door and in (moments.ts), then `go`; false if he can't right now (it's taken at once) */
+  approach?(at: { x: number; z: number; yaw: number; W: number }, go: () => void): boolean;
   /** Build what's waiting round a spot first */
   want(x: number, z: number, r: number): void;
   name(p: Place): string;
@@ -238,8 +240,17 @@ export function createTaxis(root: HTMLElement, d: TaxiDeps) {
   /** The drive there, kept while it comes for you */
   let pending: Route | null = null;
 
-  function board() {
+  /** The walk up to its door is under way (moments.ts) */
+  let boarding = false;
+  function board(now = false) {
     if (state !== 'waiting' || !pending || !d.free()) return;
+    if (!now && d.approach) {
+      if (boarding) return;
+      boarding = true;
+      if (d.approach({ x: pos.x, z: pos.z, yaw: Math.atan2(-fwd.y, fwd.x), W: CARS.sedan.W }, () => board(true))) return;
+      boarding = false;
+    }
+    boarding = false;
     if (!d.setRide(ride)) return;
     d.sfx('door');
     route = pending;
@@ -270,12 +281,13 @@ export function createTaxis(root: HTMLElement, d: TaxiDeps) {
   }
   function stop() {
     state = 'idle';
+    boarding = false;
     route = pending = null;
     dest = null;
     if (car) car.group.visible = false;
     hide();
   }
-  getIn.addEventListener('click', board);
+  getIn.addEventListener('click', () => board());
   skip.addEventListener('click', () => finish());
   cancelBtn.addEventListener('click', () => {
     stop();

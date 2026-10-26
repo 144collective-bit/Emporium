@@ -22,7 +22,7 @@
  * (`takeoff`), through the air, to a touchdown (`touchdown`).
  */
 import * as THREE from 'three';
-import { FOOT_BONES, MOCAP_FPS, type MoClip, type MoData, contacts, mirrorClip, newPosed, posedFrame } from './mocap';
+import { FOOT_BONES, MOCAP_FPS, type MoClip, type MoData, contacts, mirrorClip, newPosed, posedFrame, tagged } from './mocap';
 
 export const FEATURES = 27;
 /** The trajectory's points ahead (frames at MOCAP_FPS) */
@@ -42,13 +42,22 @@ const TAIL = 4;
  * one: a long stretch of the right motion (the idle when standing) wins
  * over a few frames that end in a jump
  */
-export const ENDING = { frames: 20, cost: 0.3 };
+export const ENDING = { frames: 30, cost: 0.6 };
+/**
+ * A standing take's frames cost more the further in they are (the revamp's Phase 2), so a cut into one lands
+ * near its start and the whole take plays, its weight shifts and gestures with it (the nearest pose was its tail)
+ */
+export const LATE = { tag: 'stand', cost: 0.6 };
 /** A jump: both feet off the ground at least `frames`, the hips rising at least `rise` (a run's own flights are shorter and flatter) */
 export const FLIGHT = { frames: 6, rise: 0.06 };
+/** A frame counts as on the move for the features' statistics past this root speed (rig numbers a second) */
+export const MOVING = 0.3;
+/** Takes of a kind of their own (the stairs: searched only climbing) shape no statistics */
+export const OWN_KIND = ['stairs'];
 /** How many frames before leaving the ground a take-off starts (the push off the toes) */
 export const TAKEOFF = 3;
-/** Takes that are only their jumps (standing jumps, their wind-ups no way to stand or walk): shut to the ground's searches */
-export const JUMPS_ONLY = ['jump-far', 'jump-high'];
+/** The tag of a take that's only its jump (a standing jump, its wind-up no way to stand or walk): shut to the ground's searches */
+export const JUMPS_ONLY = 'jumps-only';
 
 /** One jump in a clip: the first frame in the air and the first back on the ground */
 export interface Flight {
@@ -208,9 +217,9 @@ export function buildDatabase(data: MoData, mirror = true): Database {
       const g = start[ci] + f;
       clipOf[g] = ci;
       frameOf[g] = f;
-      open[g] = f < c.frames - TAIL && !JUMPS_ONLY.includes(c.name.replace('~', '')) ? 1 : 0;
+      open[g] = f < c.frames - TAIL && !tagged(c, JUMPS_ONLY) ? 1 : 0;
       const soon = THREE.MathUtils.clamp(1 - (c.frames - TAIL - f) / ENDING.frames, 0, 1);
-      bias[g] = ENDING.cost * soon * soon;
+      bias[g] = ENDING.cost * soon * soon + (tagged(c, LATE.tag) ? (LATE.cost * f) / c.frames : 0);
       const a = Math.max(0, f - 1);
       const b = Math.min(c.frames - 1, f + 1);
       speed[g] = (Math.hypot(c.root[b * 3] - c.root[a * 3], c.root[b * 3 + 1] - c.root[a * 3 + 1]) * MOCAP_FPS) / Math.max(1, b - a);
@@ -235,14 +244,26 @@ export function buildDatabase(data: MoData, mirror = true): Database {
       touchdown[s0 + to] = 1;
     }
   });
-  // Each number's mean; each group's spread (one for the group, so its numbers keep their proportions)
+  // Each number's mean; each group's spread (one for the group, so its numbers keep their proportions),
+  // over the frames on the move (the revamp's Phase 2: the standing takes are long and still, and
+  // counted they shrank the spreads until a walk matched a jog)
   const mean = new Float32Array(FEATURES);
   const scale = new Float32Array(FEATURES);
-  for (let i = 0; i < count; i++) for (let k = 0; k < FEATURES; k++) mean[k] += raw[i * FEATURES + k] / count;
+  // (and never from a take of a kind of its own, searched only in its own situation: the climb's frames moved
+  // the means enough to change a pivot's picks)
+  const own = new Uint8Array(count);
+  clips.forEach((c, ci) => {
+    if (OWN_KIND.some((t) => tagged(c, t))) own.fill(1, start[ci], start[ci] + c.frames);
+  });
+  const counts = (i: number) => speed[i] > MOVING && !own[i];
+  let moving = 0;
+  for (let i = 0; i < count; i++) if (counts(i)) moving++;
+  const n = moving || count;
+  for (let i = 0; i < count; i++) if (!moving || counts(i)) for (let k = 0; k < FEATURES; k++) mean[k] += raw[i * FEATURES + k] / n;
   for (const g of GROUPS) {
     let s = 0;
-    for (let i = 0; i < count; i++) for (let k = g.at; k < g.at + g.n; k++) s += (raw[i * FEATURES + k] - mean[k]) ** 2;
-    const sd = Math.sqrt(s / (count * g.n)) || 1;
+    for (let i = 0; i < count; i++) if (!moving || counts(i)) for (let k = g.at; k < g.at + g.n; k++) s += (raw[i * FEATURES + k] - mean[k]) ** 2;
+    const sd = Math.sqrt(s / (n * g.n)) || 1;
     for (let k = g.at; k < g.at + g.n; k++) scale[k] = g.w / sd;
   }
   const feat = new Float32Array(count * FEATURES);

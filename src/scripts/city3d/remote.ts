@@ -4,10 +4,24 @@
  * in the past so there's always a snapshot either side), with walk, run,
  * jump, gun and emote poses, and a name tag with their rank badge that
  * shows emote and phrase bubbles.
+ *
+ * The animation revamp's Phase 5: once walk mode has the motion capture and
+ * its animator (`Motion`, walk.ts's), each player near enough moves on an
+ * animator of their own (animator.ts), fed from where they're drawn: their
+ * own movement springs follow the velocity seen between frames and the
+ * facing the server sends, as the stick drives the player's. The gun hold
+ * and the emotes go on top as before (with a gun in hand the animator gives
+ * only the legs and hips). Near players run it every frame, further ones at
+ * `FAR_DT`, and past `ANIM_FAR` (or in the air, or emoting) the planted-feet
+ * walk (locomotion.ts) carries on as before.
  */
 import * as THREE from 'three';
-import { createDegen, emotePose, lookOutfit, type Degen } from './character';
-import { copyLeg, copyPose, createLocomotion, placeRoot, type Locomotion } from './locomotion';
+import { createDegen, lookOutfit, type Degen } from './character';
+import { copyPose, createLocomotion, placeRoot, type Locomotion, type Root } from './locomotion';
+import type { Animator } from './animator';
+import type { MoData } from './mocap';
+import { newMove, stepMove, type MoveState } from './movesim';
+import { wrap } from './inertia';
 import { buildGun, gunSpec, type Gun } from './guns';
 import { holdGun, newStance, type Stance } from './stance';
 import { WEAPONS } from './combat-sim';
@@ -17,6 +31,20 @@ import { FLAG, INTERP_DELAY, type PlayerInfo, type SnapRow } from '../net/protoc
 /** Same size as the walker */
 const SCALE = 0.85;
 const TAG_RANGE = 30;
+/** The motion capture and its animator module, once walk mode has them */
+export interface Motion {
+  anim: typeof import('./animator');
+  data: MoData;
+  /** The emotes (and the gaze and the vault, walk mode's), loaded with it */
+  onFoot: typeof import('./onfoot');
+}
+/** Within this of the camera a player's animator runs every frame, to `ANIM_FAR` at `FAR_DT`, beyond it not at all */
+const ANIM_NEAR = 25;
+const ANIM_FAR = 70;
+const FAR_DT = 1 / 30;
+/** A move between frames further than this is a jump (a warp, a fast travel): the animator starts afresh */
+const JUMP = 2;
+const smooth = (x: number) => x * x * (3 - 2 * x);
 
 interface Sample {
   t: number;
@@ -48,6 +76,14 @@ interface Remote {
   /** 0 put away .. 1 in hand */
   draw: number;
   emote: { id: string; t: number } | null;
+  /** Their animator on the motion capture, once it's in and they're near enough; how much of it shows, and how much the upper body is their own (the gun's) */
+  anim: Animator | null;
+  move: MoveState;
+  mocapW: number;
+  upperW: number;
+  /** Time since their animator last stepped (far ones step less often) */
+  animDt: number;
+  root0: Root;
   tag: HTMLElement;
   bubble: HTMLElement;
   bubbleT: number;
@@ -56,7 +92,7 @@ interface Remote {
 
 const lerpAngle = (a: number, b: number, k: number) => a + Math.atan2(Math.sin(b - a), Math.cos(b - a)) * k;
 
-export function createRemotes(scene: THREE.Scene, camera: THREE.PerspectiveCamera, layer: HTMLElement) {
+export function createRemotes(scene: THREE.Scene, camera: THREE.PerspectiveCamera, layer: HTMLElement, motion: () => Motion | null = () => null) {
   const players = new Map<number, Remote>();
   /** Local clock minus the server's clock, smoothed */
   let offset: number | null = null;
@@ -126,6 +162,12 @@ export function createRemotes(scene: THREE.Scene, camera: THREE.PerspectiveCamer
         reload: 0,
         draw: 0,
         emote: null,
+        anim: null,
+        move: newMove(0),
+        mocapW: 0,
+        upperW: 0,
+        animDt: 0,
+        root0: { roll: 0, pitch: 0, pivot: 0 },
         tag,
         bubble: tag.querySelector('em')!,
         bubbleT: 0,
@@ -237,19 +279,42 @@ export function createRemotes(scene: THREE.Scene, camera: THREE.PerspectiveCamer
         // Pose: their walk or run with planted feet (locomotion.ts, from how they're moving as drawn), the gun, an emote
         const P = r.fig.pose;
         const run = THREE.MathUtils.clamp((speed - 2.4) / 3, 0, 1);
-        const vx = r.last && dt > 0 ? (x - r.last.x) / dt : 0;
-        const vz = r.last && dt > 0 ? (z - r.last.z) / dt : 0;
+        // (a jump between frames is a warp: no velocity from it, and the animator starts afresh)
+        const jumped = !!r.last && Math.hypot(x - r.last.x, z - r.last.z) > JUMP;
+        const vx = r.last && dt > 0 && !jumped ? (x - r.last.x) / dt : 0;
+        const vz = r.last && dt > 0 && !jumped ? (z - r.last.z) / dt : 0;
         r.last = { x, z };
         const air = (flags & FLAG.air) !== 0;
         r.loco.update({ dt, t, x, y, z, vx, vz, face, grounded: !air, vy: 0, scale: SCALE, ground: () => y, armed });
         copyPose(r.loco.pose, P);
+        // The motion capture (animator.ts), near enough: their springs follow the velocity seen and the facing sent
+        head.set(x, y, z);
+        const dist = head.distanceTo(camera.position);
+        const mo = motion();
+        if (mo && dist < ANIM_FAR && !r.anim) {
+          r.anim = mo.anim.createAnimator(mo.data);
+          r.move = newMove(face);
+        }
+        // (an upper-body emote plays over the animator's legs through the upper mask, as the gun does; the dance takes everything)
+        const dancing = !!r.emote && !!mo && !mo.onFoot.emoteUpper(r.emote.id);
+        const mocapOn = !!mo && !!r.anim && dist < ANIM_FAR && !dancing && !air;
+        r.mocapW = THREE.MathUtils.clamp(r.mocapW + (mocapOn ? dt / 0.25 : -dt / 0.15), 0, 1);
+        if (r.anim && r.mocapW > 0) {
+          if (jumped) {
+            r.anim.reset();
+            r.move = newMove(face);
+          }
+          r.animDt += dt;
+          if (dist < ANIM_NEAR || r.animDt >= FAR_DT) {
+            stepMove(r.move, vx, vz, !air, r.animDt, face);
+            r.anim.update({ dt: r.animDt, x, y, z, move: r.move, gx: vx, gz: vz, scale: SCALE, ground: () => y, sprint: run, grounded: !air, vy: 0, faceGoal: face });
+            r.animDt = 0;
+          }
+        }
         if (r.emote) {
           r.emote.t += dt;
-          if (r.emote.t > 3 || speed > 0.6) r.emote = null;
-          else {
-            emotePose(P, r.emote.id, r.emote.t);
-            if (r.emote.id !== 'dance') for (let i = 0; i < 2; i++) copyLeg(r.loco.pose.legs[i], P.legs[i]);
-          }
+          if (!mo || mo.onFoot.emoteOver(r.emote.id, r.emote.t) || speed > 0.6) r.emote = null;
+          else mo.onFoot.emotePose(P, r.emote.id, r.emote.t);
         }
         r.aim += (((flags & (FLAG.aim | FLAG.fire)) !== 0 ? 1 : 0) - r.aim) * Math.min(1, dt * 14);
         r.reload = flags & FLAG.reload ? (r.reload + dt / WEAPONS[r.gun.id].reload) % 1 : 0;
@@ -262,17 +327,28 @@ export function createRemotes(scene: THREE.Scene, camera: THREE.PerspectiveCamer
         const holding = r.draw > 0 && !r.emote;
         if (holding) holdGun(P, r.stance, r.pivot, r.gun, { aim: r.aim, ready: 1 - run, draw: r.draw, pitch, recoil: 0, reload: r.reload, dt });
         // (the head looks where they look, unless it's down on a rifle's stock)
-        const free = holding ? 1 - r.stance.cheek : 1;
-        P.headPitch = THREE.MathUtils.lerp(P.headPitch, THREE.MathUtils.clamp((0.35 - pitch) * 0.6, -0.45, 0.55), free);
+        const free = holding ? 1 - r.stance.cheek : r.emote ? 0 : 1;
+        const look = THREE.MathUtils.clamp((0.35 - pitch) * 0.6, -0.45, 0.55);
+        P.headPitch = THREE.MathUtils.lerp(P.headPitch, look, free);
         P.headYaw *= 1 - free;
         r.fig.update();
-        placeRoot(r.fig.g, x, y, z, face, SCALE, r.loco.root);
+        // ...with a gun in hand the animator gives only the legs and hips: their own upper body over them, as the player's
+        r.upperW = THREE.MathUtils.clamp(r.upperW + (holding || (r.emote && !dancing) ? dt / 0.15 : -dt / 0.15), 0, 1);
+        if (mo && r.anim && r.mocapW > 0) {
+          const w = smooth(r.mocapW);
+          const u = smooth(r.upperW);
+          mo.anim.applyTo(r.fig.rig, r.anim.rot, r.anim.hips, w, u, face - r.anim.face);
+          mo.anim.addLook(r.fig.rig, 0, look * 0.5 * free, w * (1 - u));
+          r.root0.roll = r.loco.root.roll * (1 - w);
+          r.root0.pitch = r.loco.root.pitch * (1 - w);
+          r.root0.pivot = r.loco.root.pivot;
+          placeRoot(r.fig.g, x, y, z, face + wrap(r.anim.face - face) * w, SCALE, r.root0);
+        } else placeRoot(r.fig.g, x, y, z, face, SCALE, r.loco.root);
 
         // Name tag over the head (hidden far away or behind the camera)
         r.bubbleT -= dt;
         if (r.bubbleT <= 0) r.bubble.hidden = true;
         head.set(x, y + 1.3 * SCALE, z);
-        const dist = head.distanceTo(camera.position);
         scr.copy(head).project(camera);
         const show = dist < TAG_RANGE && scr.z < 1 && Math.abs(scr.x) < 1.1 && Math.abs(scr.y) < 1.1;
         r.tag.hidden = !show;

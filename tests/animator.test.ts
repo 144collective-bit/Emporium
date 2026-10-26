@@ -8,11 +8,13 @@ import { readFileSync } from 'node:fs';
 import * as THREE from 'three';
 import { CROUCH, FACE, STAND, addLean, applyTo, createAnimator, twoBone } from '../src/scripts/city3d/animator';
 import { makeSkeleton, newPose, poseSkeleton } from '../src/scripts/city3d/skeleton';
-import { MB, NB, TOE_BONES, decodeMocap, newPosed, posed } from '../src/scripts/city3d/mocap';
+import { MB, NB, TOE_BONES, decodeMocap, newPosed, posed, tagged } from '../src/scripts/city3d/mocap';
 import { wrap } from '../src/scripts/city3d/inertia';
-import { GAITS, newMove, stepMove } from '../src/scripts/city3d/movesim';
+import { GAITS, newMove, stepMove, STAIRS } from '../src/scripts/city3d/movesim';
 
 const data = decodeMocap(readFileSync('src/data/mocap/clips.bin'));
+/** Whether the clip of that name (the animator's `debug.clip`) carries a tag */
+const tagOf = (name: string, tag: string) => tagged(data.clips.find((c) => c.name === name.replace('~', ''))!, tag);
 const SCALE = 0.85;
 const DT = 1 / 60;
 /** A tile in centimetres */
@@ -119,7 +121,8 @@ for (const [name, p] of Object.entries(PROGS))
     assert.ok(r.drift * CM < p.drift, `a held foot moved ${(r.drift * CM).toFixed(2)} cm over the ground (under ${p.drift})`);
     // At 60 frames a second no bone turns more than this between frames (a hard stop's knee at most)
     assert.ok(r.step < 0.7, `the biggest turn between frames ${r.step.toFixed(2)} rad`);
-    assert.ok(r.hipsLo > 0.49 && r.hipsHi < 0.64, `the hips between ${r.hipsLo.toFixed(3)} and ${r.hipsHi.toFixed(3)}`);
+    // (a set-off into a run or a sprint drives from low hips: the take's own crouch and the lock's drop, about 5 cm at this scale)
+    assert.ok(r.hipsLo > 0.47 && r.hipsHi < 0.64, `the hips between ${r.hipsLo.toFixed(3)} and ${r.hipsHi.toFixed(3)}`);
   });
 
 test('up a slope the held feet stand on it, as they do on the flat', () => {
@@ -213,14 +216,15 @@ test('up and down kerbs the feet stand on the slab and the road, never in them',
   }
 });
 
-test('up a flight of Liberty Bridge\'s size the feet climb the treads (he walks up its even ramp)', () => {
-  const RISE = 0.23;
-  const RUN = 0.31;
-  const N = 15;
+test('up a flight of the stadium footbridge\'s size the feet climb the treads (he walks up its even ramp; the stairs take at a climb\'s pace)', () => {
+  // (stadium.ts BRIDGE: 18 steps of 0.194 up, 0.42 deep; the city's stairs since Liberty Bridge's went)
+  const RISE = 0.194;
+  const RUN = 0.42;
+  const N = 18;
   const Z0 = 1.5;
   const ramp = (_x: number, z: number) => THREE.MathUtils.clamp(((z - Z0) / (RUN * N)) * RISE * N, 0, RISE * N);
   const tread = (_x: number, z: number) => (z < Z0 ? 0 : z >= Z0 + RUN * N ? RISE * N : (Math.floor((z - Z0) / RUN) + 1) * RISE);
-  for (const speed of [GAITS.walk, 1.75]) {
+  for (const speed of [STAIRS.walk, GAITS.walk, STAIRS.run]) {
     const an = createAnimator(data);
     const m = newMove(0);
     let z = 0;
@@ -228,16 +232,23 @@ test('up a flight of Liberty Bridge\'s size the feet climb the treads (he walks 
     let step = 0;
     const off: number[] = [];
     const held = [0, 0];
+    let onFlight = 0;
+    let onStairs = 0;
     const prev = new Float32Array(NB * 4);
     const qa = new THREE.Quaternion();
     const qb = new THREE.Quaternion();
     const P = newPosed();
-    for (let i = 0; i < 60 * 5; i++) {
+    // (to the top of the flight: longer at a climb's pace)
+    for (let i = 0; i < 60 * 12 && z < Z0 + RUN * N + 0.5; i++) {
       stepMove(m, 0, speed, true, DT);
       z += m.vz * DT;
       const y = ramp(0, z);
       an.update({ dt: DT, x: 0, y, z, move: m, gx: 0, gz: speed, scale: SCALE, ground: ramp, feet: tread, sprint: 0 });
       const on = z > Z0 + 0.5 && z < Z0 + RUN * N - 0.5;
+      if (on) {
+        onFlight++;
+        if (an.debug.clip.startsWith('stairs')) onStairs++;
+      }
       if (on) for (let b = 0; b < NB; b++) step = Math.max(step, qa.fromArray(prev, b * 4).angleTo(qb.fromArray(an.rot, b * 4)));
       prev.set(an.rot);
       if (!on) continue;
@@ -252,6 +263,8 @@ test('up a flight of Liberty Bridge\'s size the feet climb the treads (he walks 
       }
     }
     off.sort((a, b) => a - b);
+    // (the revamp's Phase 2: walking up, the stairs takes climb; a brisk climb keeps the run)
+    assert.ok(speed === STAIRS.walk ? onStairs / onFlight > 0.7 : onStairs === 0, `at ${speed}: the stairs takes playing ${((100 * onStairs) / Math.max(1, onFlight)).toFixed(0)}% of the flight`);
     assert.ok(off.length > 40, `feet held on the treads (${off.length} frames)`);
     assert.ok(off[Math.floor(off.length * 0.95)] < 0.21 / SCALE, `a held ball within ${(off[Math.floor(off.length * 0.95)] * CM).toFixed(1)} cm of its tread`);
     assert.ok(into < 0.1, `at ${speed}: the ball of a foot ${(into * CM).toFixed(1)} cm into a step`);
@@ -572,14 +585,14 @@ test('crouched he walks on the crouched takes and stands still in the crouch ove
     z += m.vz * DT;
     an.update({ dt: DT, x: 0, y: 0, z, move: m, gx: 0, gz, scale: SCALE, ground: () => 0, sprint: 0, crouch });
     const clip = an.debug.clip.replace('~', '');
-    const isCrouch = CROUCH.clips.includes(clip);
+    const isCrouch = tagOf(clip, CROUCH.tag);
     if (down && t > 2.5 && t < 4.5) {
       kinds.crouchedMoving++;
       if (isCrouch) kinds.crouchedWalks++;
     }
     if (down && t > 6 && t < 8) {
       kinds.still++;
-      if (STAND.clips.includes(clip)) kinds.idle++;
+      if (tagOf(clip, STAND.tag)) kinds.idle++;
       posed(an.rot, 0, an.hips.x, an.hips.y, an.hips.z, P);
       hipsStill = Math.max(hipsStill, P.pos[0].y);
     }
@@ -611,11 +624,14 @@ test('standing still he stands up straight, calm, the idles taking turns (no sna
   let most = 0;
   let straightest = Infinity;
   let bentest = 0;
+  let bentFrames = 0;
+  let frames = 0;
   let lean = 0;
   for (let i = 0; i < 40 * 60; i++) {
     stepMove(m, 0, 0, true, DT);
     an.update({ dt: DT, x: 0, y: 0, z: 0, move: m, gx: 0, gz: 0, scale: SCALE, ground: () => 0, sprint: 0 });
-    if (i > 60) {
+    // (after two seconds: the stance settles in over the first)
+    if (i > 120) {
       clips.add(an.debug.clip.replace('~', ''));
       for (let k = 0; k < NB; k++) most = Math.max(most, qa.fromArray(prev, k * 4).angleTo(qb.fromArray(an.rot, k * 4)));
       applyTo(sk, an.rot, an.hips, 1, 0, 0);
@@ -623,6 +639,8 @@ test('standing still he stands up straight, calm, the idles taking turns (no sna
       const knees = (['L', 'R'] as const).map((s) => Math.PI - a.subVectors(P(`leg${s}`), P(`shin${s}`)).angleTo(b.subVectors(P(`foot${s}`), P(`shin${s}`))));
       straightest = Math.min(straightest, Math.min(...knees));
       bentest = Math.max(bentest, Math.max(...knees));
+      frames++;
+      if (Math.max(...knees) > 0.8) bentFrames++;
       const h = P('hips');
       const n = P('neck');
       lean = Math.max(lean, Math.abs(Math.atan2(n.z - h.z, n.y - h.y)));
@@ -632,9 +650,79 @@ test('standing still he stands up straight, calm, the idles taking turns (no sna
   const deg = (r: number) => `${((r * 180) / Math.PI).toFixed(1)}°`;
   // (his weight on one leg, nearly straight; the other easier: never the capture's 30-35° crouch)
   assert.ok(straightest < 0.17, `a leg nearly straight (the straighter knee at best ${deg(straightest)})`);
-  assert.ok(bentest < 0.44, `no knee bent past 25°, the easy leg's most (${deg(bentest)})`);
-  assert.ok(lean < 0.06, `upright (leaning ${deg(lean)})`);
+  // (the easy leg bends up to 45°: the standing takes' actor rests a foot forward with his weight on the other;
+  // further only for a moment, moving a foot, never a crouch)
+  assert.ok(bentFrames / frames < 0.1, `a knee bent past 45° for ${((100 * bentFrames) / frames).toFixed(0)}% of the time (the most ${deg(bentest)})`);
+  // (the takes' actor slouches 13-15° back; the stance takes most of it out, a person's few degrees stay)
+  assert.ok(lean < 0.12, `upright (leaning ${deg(lean)})`);
   // (calm: nothing turns more than 3° in a frame; the old idle's head snapped 3.5° once every 0.8 s)
   assert.ok(most < 0.05, `the most any bone turned in a frame: ${deg(most)}`);
   assert.ok(clips.size >= 2, `the idles take turns (${[...clips].join(', ')})`);
+});
+
+test('fed as another player (the revamp\'s Phase 5: positions between snapshots, the springs following what is seen): held feet stay put, nothing pops', () => {
+  // The sender: a walker on the springs at a walk, then a run, turning; snapshots of where they are 20 times a second
+  const sender = newMove(0);
+  let sx = 0;
+  let sz = 0;
+  const snaps: { t: number; x: number; z: number; face: number }[] = [];
+  for (let i = 0; i < 12 * 60; i++) {
+    const t = i * DT;
+    const v = t < 4 ? GAITS.walk : GAITS.run;
+    const a = t > 8 ? (t - 8) * 0.5 : 0;
+    stepMove(sender, Math.sin(a) * v, Math.cos(a) * v, true, DT);
+    sx += sender.vx * DT;
+    sz += sender.vz * DT;
+    if (i % 3 === 0) snaps.push({ t, x: sx, z: sz, face: sender.face });
+  }
+  // The receiver: drawn a little behind, between the two snapshots either side (remote.ts), its own springs
+  // chasing the velocity seen between frames and the facing sent, its animator fed from that
+  const an = createAnimator(data);
+  const m = newMove(0);
+  const prev = new Float32Array(NB * 4);
+  const qa = new THREE.Quaternion();
+  const qb = new THREE.Quaternion();
+  let last: { x: number; z: number } | null = null;
+  let held = 0;
+  let drift = 0;
+  let step = 0;
+  let hipsLo = Infinity;
+  let hipsHi = 0;
+  for (let i = 0; i < 12 * 60; i++) {
+    const at = i * DT - 0.11;
+    let a = snaps[0];
+    let b = snaps[snaps.length - 1];
+    for (let k = 0; k < snaps.length - 1; k++)
+      if (snaps[k].t <= at && snaps[k + 1].t >= at) {
+        a = snaps[k];
+        b = snaps[k + 1];
+        break;
+      }
+    const k = b.t > a.t ? THREE.MathUtils.clamp((at - a.t) / (b.t - a.t), 0, 1) : 1;
+    const x = a.x + (b.x - a.x) * k;
+    const z = a.z + (b.z - a.z) * k;
+    const face = a.face + wrap(b.face - a.face) * k;
+    const vx = last ? (x - last.x) / DT : 0;
+    const vz = last ? (z - last.z) / DT : 0;
+    last = { x, z };
+    stepMove(m, vx, vz, true, DT, face);
+    an.update({ dt: DT, x, y: 0, z, move: m, gx: vx, gz: vz, scale: SCALE, ground: () => 0, sprint: 0, grounded: true, vy: 0, faceGoal: face });
+    if (i > 60) {
+      for (const f of an.feet)
+        if (f.locked) {
+          drift = Math.max(drift, f.drift);
+          held++;
+        }
+      for (let bn = 0; bn < NB; bn++) step = Math.max(step, qa.fromArray(prev, bn * 4).angleTo(qb.fromArray(an.rot, bn * 4)));
+      hipsLo = Math.min(hipsLo, an.hips.y);
+      hipsHi = Math.max(hipsHi, an.hips.y);
+      // (shown facing within reach of the facing sent)
+      assert.ok(Math.abs(wrap(an.face - face)) < FACE.most + 0.6, `faces the way sent (${wrap(an.face - face).toFixed(2)})`);
+    }
+    prev.set(an.rot);
+  }
+  assert.ok(held > 200, `feet held (${held} frames)`);
+  assert.ok(drift * CM < 3, `a held foot moved ${(drift * CM).toFixed(2)} cm over the ground`);
+  assert.ok(step < 0.7, `the biggest turn between frames ${step.toFixed(2)} rad`);
+  assert.ok(hipsLo > 0.47 && hipsHi < 0.64, `the hips between ${hipsLo.toFixed(3)} and ${hipsHi.toFixed(3)}`);
 });

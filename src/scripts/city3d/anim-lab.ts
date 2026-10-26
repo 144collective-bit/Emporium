@@ -7,7 +7,8 @@
  *
  * - Moves: scripted programs (run and stop, turning back, weaving, a
  *   circle, starts and stops at a sprint, jumps running and standing,
- *   short hops, strafing the eight ways and aiming round, peeking...) or by
+ *   short hops, strafing the eight ways and aiming round, peeking, the
+ *   emotes in turn...) or by
  *   hand (W A S D across the floor, Shift sprints, Caps Lock walks, Space
  *   jumps, Q / E peek, C crouches or slides), with walk.ts's jump and gravity.
  * - Time: full speed, a quarter, a tenth; P pauses, . steps a frame.
@@ -23,18 +24,26 @@
  *   hold on the procedural pose, over the motion capture's legs, as in the
  *   city), aiming or not, the look swept up and down; markers at the gun's
  *   butt and his shoulder pocket. Aiming by hand, he faces +z.
- * - The address can set it all up for recordings: `prog`, `gait`, `cam`,
- *   `floor`, `speed`, `gun`, `aim=0`, `pitch`, `outfit`, `held`, `orbit`,
- *   `compare=0`, `traces=0`.
+ * - The scorecard (the revamp's Phase 1, human.ts): the rubric's rows over
+ *   the last eight seconds, red where one fails; and the Reel, every
+ *   program in turn (REEL), for a recording in one take.
+ * - The address can set it all up for recordings: `prog` (`reel` for the
+ *   reel), `gait`, `cam`, `floor`, `speed`, `gun`, `aim=0`, `pitch`,
+ *   `outfit`, `held`, `orbit`, `compare=0`, `traces=0`, `score=0`.
  */
 import * as THREE from 'three';
 import { PLAYER, SOLDIER, createDegen, type Degen } from './character';
-import { addCarry, addLean, applyTo, createAnimator, type Animator } from './animator';
+import { addCarry, addLean, addLook, applyTo, createAnimator, type Animator } from './animator';
+import { createRubric, type Row } from './human';
+import { createGaze } from './gaze';
 import { copyPose, createLocomotion, placeRoot } from './locomotion';
 import { loadMocap } from './mocap-load';
-import { GAITS, newMove, startSlide, stepMove, stepSlide, type MoveState, type Slide } from './movesim';
+import { NB } from './mocap';
+import { GAITS, newMove, startSlide, stepMove, stepSlide, type MoveState, type Slide, STAIRS, climbAhead } from './movesim';
 import { slidePose } from './poses';
+import { emotePose, emoteSeconds, emoteUpper, type EmoteId } from './emotes';
 import { overAhead, overAt, overPose, type Over } from './vault';
+import { CONTACT, applyContact, createContact } from './contact';
 import type { Box } from './solids';
 import { toon } from './kit';
 import { buildGun } from './guns';
@@ -46,18 +55,18 @@ import { createPost } from './post';
 const SCALE = 0.85;
 /** One tile in centimetres, for the readouts */
 const CM = 180;
-type Prog = 'manual' | 'runstop' | 'turnback' | 'weave' | 'circle' | 'startstop' | 'startback' | 'gaits' | 'idle' | 'jumps' | 'standjump' | 'hops' | 'strafe' | 'aimturn' | 'peek' | 'crouch' | 'slide' | 'over';
+type Prog = 'manual' | 'runstop' | 'turnback' | 'weave' | 'circle' | 'startstop' | 'startback' | 'gaits' | 'idle' | 'jumps' | 'standjump' | 'hops' | 'strafe' | 'aimturn' | 'peek' | 'crouch' | 'slide' | 'over' | 'stairs' | 'contact' | 'emotes' | 'reel';
 type Gait = 'walk' | 'run' | 'sprint';
 type Cam = 'side' | 'front' | 'back' | 'over' | 'free';
-type Floor = 'flat' | 'kerbs' | 'stairs' | 'ledge' | 'walls';
-const FLOORS: Floor[] = ['flat', 'kerbs', 'stairs', 'ledge', 'walls'];
+type Floor = 'flat' | 'kerbs' | 'stairs' | 'ledge' | 'walls' | 'contact';
+const FLOORS: Floor[] = ['flat', 'kerbs', 'stairs', 'ledge', 'walls', 'contact'];
 
 /* ---------- The floors: flat, kerbs, stairs (along +z, the same for both figures) ---------- */
 
 /** Kerbs: a slab up every KERB.every tiles, KERB.long of them, at the city's heights (world.ts SLAB over the road) */
 const KERB = { every: 10, from: 4, long: 5, road: 0.035, slab: 0.15 };
-/** Stairs at Liberty Bridge's size (liberty.ts): 15 steps up, a landing, 15 down, flat between */
-const FLIGHT = { steps: 15, rise: 0.23, tread: 0.31, flat: 4, landing: 3 };
+/** Stairs at the stadium footbridge's size (stadium.ts BRIDGE, the city's stairs): 18 steps up, a landing, 18 down, flat between */
+const FLIGHT = { steps: 18, rise: 0.194, tread: 0.42, flat: 4, landing: 3 };
 const RUN_LEN = FLIGHT.steps * FLIGHT.tread;
 const TOP = FLIGHT.steps * FLIGHT.rise;
 const PERIOD = FLIGHT.flat * 2 + RUN_LEN * 2 + FLIGHT.landing;
@@ -76,6 +85,23 @@ const wallBoxes = (): Box[] => {
   }
   return out;
 };
+/**
+ * The contact floor (the revamp's Phase 3, contact.ts): a wall along his right to trail a hand on at a walk, a
+ * narrow gap to squeeze through, a wall across the way to run into at a sprint and stand at, and a rail at the
+ * start (an edge nothing solid explains) to lean on; he can't walk through any of it
+ */
+const CONTACT_FLOOR = {
+  side: [0.3, 0.5, 1.3, 3.2, 1.2] as Box,
+  gap: [
+    [-2.5, 4.5, -0.3, 6, 1.2],
+    [0.3, 4.5, 2.5, 6, 1.2],
+  ] as Box[],
+  wall: [-2.5, 12.5, 2.5, 13.5, 2] as Box,
+  rail: -0.3,
+};
+const contactBoxes = (): Box[] => [CONTACT_FLOOR.side, ...CONTACT_FLOOR.gap, CONTACT_FLOOR.wall];
+const RADIUS = 0.22;
+const contactBlocked = (bx: number, bz: number) => bz < CONTACT_FLOOR.rail + RADIUS || contactBoxes().some((b) => bx > b[0] - RADIUS && bx < b[2] + RADIUS && bz > b[1] - RADIUS && bz < b[3] + RADIUS);
 /** walk.ts's jump, gravity and the extra pull down when the jump is let go early */
 const JUMP = 3.9;
 const GRAVITY = 11.5;
@@ -99,12 +125,6 @@ function floorAt(kind: Floor, z: number, feet: boolean) {
   if (u < RUN_LEN * 2 + FLIGHT.landing) return up(RUN_LEN * 2 + FLIGHT.landing - u);
   return 0;
 }
-/** On a flight of the stairs (walk.ts slows him to a brisk climb on Liberty Bridge's: the same here) */
-const onFlight = (kind: Floor, z: number) => {
-  const u = mod(z, PERIOD) - FLIGHT.flat;
-  return kind === 'stairs' && ((u >= 0 && u < RUN_LEN) || (u >= RUN_LEN + FLIGHT.landing && u < RUN_LEN * 2 + FLIGHT.landing));
-};
-const CLIMB = 1.75;
 /** walk.ts's speed while aiming, and the peek's lean */
 const AIMING = 1.4;
 const PEEK = { lean: 0.42, ease: 0.07, level: 0.85 };
@@ -129,9 +149,59 @@ const PROGS: [Prog, string][] = [
   ['crouch', 'Crouch'],
   ['slide', 'Sprint & slide'],
   ['over', 'Vault & climb'],
+  ['stairs', 'Stairs'],
+  ['contact', 'Contact'],
+  ['emotes', 'Emotes'],
   ['idle', 'Stand'],
+  ['reel', 'Reel'],
   ['manual', 'By hand'],
 ];
+/** The emotes program: each emote in turn, standing, a second's rest between (the layering walk.ts has) */
+const EMOTE_ORDER: EmoteId[] = ['wave', 'cheer', 'salute', 'dance'];
+const EMOTE_REST = 1;
+const EMOTE_CYCLE = EMOTE_ORDER.reduce((n, id) => n + emoteSeconds(id) + EMOTE_REST, 0);
+function emoteAt(t: number): { id: EmoteId; t: number } | null {
+  let u = t % EMOTE_CYCLE;
+  for (const id of EMOTE_ORDER) {
+    if (u < emoteSeconds(id)) return { id, t: u };
+    u -= emoteSeconds(id) + EMOTE_REST;
+    if (u < 0) return null;
+  }
+  return null;
+}
+/** The reel (the revamp's Phase 1): every program in turn, for a recording in one take; a program and how long it plays */
+const REEL: [Prog, number][] = [
+  ['runstop', 8],
+  ['turnback', 8],
+  ['weave', 6],
+  ['circle', 6],
+  ['startstop', 6],
+  ['startback', 8],
+  ['gaits', 8],
+  ['jumps', 5],
+  ['standjump', 5],
+  ['hops', 4],
+  ['strafe', 8],
+  ['aimturn', 6],
+  ['peek', 6],
+  ['crouch', 9],
+  ['slide', 5],
+  ['over', 7],
+  ['stairs', 12],
+  ['contact', 20],
+  ['emotes', EMOTE_CYCLE],
+  ['idle', 14],
+];
+const REEL_LENGTH = REEL.reduce((n, [, s]) => n + s, 0);
+/** Where the reel is at `t`: the program playing and the time into it */
+function reelAt(t: number): { prog: Prog; t: number; label: string } {
+  let u = t % REEL_LENGTH;
+  for (const [p, len] of REEL) {
+    if (u < len) return { prog: p, t: u, label: PROGS.find(([q]) => q === p)![1] };
+    u -= len;
+  }
+  return { prog: 'idle', t: 0, label: 'Stand' };
+}
 
 /** The goal velocity a program asks for at time `t` (tiles a second), and whether it's sprinting */
 function program(p: Prog, t: number, speed: number): [number, number] {
@@ -192,6 +262,15 @@ function program(p: Prog, t: number, speed: number): [number, number] {
     // On at a run over the walls (the walls floor)
     case 'over':
       return [0, GAITS.run];
+    // Up and down the stairs floor's flights at a walk (the stairs takes climbing)
+    case 'stairs':
+      return [0, GAITS.walk];
+    // The contact floor: a walk along the side wall, a run through the gap, a sprint into the wall across, up to
+    // it at a walk and a stand at it, a run back, a walk up to the rail and a stand facing it
+    case 'contact': {
+      const u = cycle(20);
+      return u < 4 ? [0, GAITS.walk] : u < 6 ? [0, GAITS.run] : u < 8 ? [0, GAITS.sprint] : u < 10 ? [0, GAITS.walk] : u < 11.5 ? [0, 0] : u < 16 ? [0, -GAITS.run] : u < 17 ? [0, -GAITS.walk] : [0, 0];
+    }
     default:
       return [0, 0];
   }
@@ -228,7 +307,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   ui.innerHTML = `
     <canvas class="anim-lab-view" aria-hidden="true"></canvas>
     <div class="anim-lab-panel">
-      <div class="anim-lab-head"><span class="anim-lab-title">Animation lab</span><span class="anim-lab-note">?anim · Phases 1-5, 8</span><button class="anim-lab-close" type="button" aria-label="Close the lab">×</button></div>
+      <div class="anim-lab-head"><span class="anim-lab-title">Animation lab</span><span class="anim-lab-note">?anim · the rubric</span><button class="anim-lab-close" type="button" aria-label="Close the lab">×</button></div>
       <div class="anim-lab-row" data-progs></div>
       <div class="anim-lab-row" data-gaits></div>
       <div class="anim-lab-row" data-time></div>
@@ -237,11 +316,13 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       <div class="anim-lab-row" data-guns></div>
       <div class="anim-lab-row" data-toggles></div>
       <dl class="anim-lab-read" data-read></dl>
+      <dl class="anim-lab-score" data-score></dl>
       <p class="anim-lab-hint">By hand: W A S D, Shift sprints, Caps Lock walks, Space jumps, Q / E peek, C crouches (slides sprinting; armed and aiming, he faces +z). P pauses, . steps.</p>
     </div>`;
   root.append(ui);
   const canvas = ui.querySelector<HTMLCanvasElement>('canvas')!;
   const read = ui.querySelector<HTMLElement>('[data-read]')!;
+  const score = ui.querySelector<HTMLElement>('[data-score]')!;
 
   let prog: Prog = (PROGS.find(([p]) => p === q.get('prog'))?.[0] as Prog) ?? 'runstop';
   let gait: Gait = (['walk', 'run', 'sprint'] as Gait[]).find((g) => g === q.get('gait')) ?? 'run';
@@ -254,7 +335,8 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   const rec = q.has('rec');
   let compare = q.get('compare') !== '0';
   let traces = q.get('traces') !== '0';
-  let floorKind: Floor = FLOORS.find((f) => f === q.get('floor')) ?? (prog === 'over' ? 'walls' : 'flat');
+  let scorecard = q.get('score') !== '0';
+  let floorKind: Floor = FLOORS.find((f) => f === q.get('floor')) ?? (prog === 'over' ? 'walls' : prog === 'stairs' ? 'stairs' : prog === 'contact' ? 'contact' : 'flat');
   let paused = false;
   let stepOnce = false;
   const GUNS: [WeaponId | 'none', string][] = [
@@ -293,6 +375,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
         clock = 0;
         // (the walls to go over are a floor of their own)
         if (p === 'over' && floorKind !== 'walls') (floorKind = 'walls'), buildFloor();
+        if (p === 'contact' && floorKind !== 'contact') (floorKind = 'contact'), buildFloor();
       }),
     );
   for (const g of ['walk', 'run', 'sprint'] as Gait[]) paints.push(button('gaits', g[0].toUpperCase() + g.slice(1), () => gait === g, () => (gait = g)));
@@ -308,6 +391,11 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   for (const c of ['side', 'front', 'back', 'over', 'free'] as Cam[]) paints.push(button('cams', c === 'over' ? 'Shoulder' : c[0].toUpperCase() + c.slice(1), () => cam === c, () => (cam = c)));
   paints.push(button('toggles', 'Old beside', () => compare, () => (compare = !compare)));
   paints.push(button('toggles', 'Foot traces', () => traces, () => (traces = !traces)));
+  paints.push(button('toggles', 'Scorecard', () => scorecard, () => (scorecard = !scorecard)));
+  // The gaze (gaze.ts): a look round standing, the head leading a turn (the floor has nothing else to look at)
+  const gaze = createGaze(7);
+  let gazeOn = q.get('gaze') !== '0';
+  paints.push(button('toggles', 'Gaze', () => gazeOn, () => (gazeOn = !gazeOn)));
   for (const [g, label] of GUNS) paints.push(button('guns', label, () => gunId === g, () => ((gunId = g), mount())));
   paints.push(button('toggles', 'Aim', () => aimOn, () => (aimOn = !aimOn)));
   paints.push(button('toggles', 'Sweep the look', () => sweep, () => (sweep = !sweep)));
@@ -381,6 +469,22 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
         for (let k = 0; k < FLIGHT.steps; k++) box(z2 + k * FLIGHT.tread, z2 + (k + 1) * FLIGHT.tread, (FLIGHT.steps - k) * FLIGHT.rise);
       }
     if (floorKind === 'walls') for (const b of wallBoxes()) box(b[1], b[3], b[4]);
+    if (floorKind === 'contact') {
+      for (const b of contactBoxes()) {
+        const m = new THREE.Mesh(new THREE.BoxGeometry(b[2] - b[0], b[4], b[3] - b[1]), stone);
+        m.position.set((b[0] + b[2]) / 2, b[4] / 2, (b[1] + b[3]) / 2);
+        terrain.add(m);
+      }
+      // (the rail: a bar on two posts at the edge)
+      const bar = new THREE.Mesh(new THREE.BoxGeometry(3, 0.05, 0.05), stone);
+      bar.position.set(0, CONTACT.railH * SCALE, CONTACT_FLOOR.rail - 0.03);
+      terrain.add(bar);
+      for (const px of [-1.4, 1.4]) {
+        const post = new THREE.Mesh(new THREE.BoxGeometry(0.05, CONTACT.railH * SCALE, 0.05), stone);
+        post.position.set(px, (CONTACT.railH * SCALE) / 2, CONTACT_FLOOR.rail - 0.03);
+        terrain.add(post);
+      }
+    }
     if (floorKind === 'ledge') {
       // (the ramp and the top as one side profile, across both lanes)
       const sh = new THREE.Shape();
@@ -454,6 +558,8 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   const data = await loadMocap();
   const anim: Animator = createAnimator(data);
   const move: MoveState = newMove(0);
+  // The scorecard (human.ts): the rubric's rows over the last eight seconds
+  const rubric = createRubric(SCALE, { seconds: 8 });
   let x = 0;
   let z = 0;
   let clock = 0;
@@ -479,7 +585,13 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   let over: { o: Over; t: number } | null = null;
   let overLast: Over | null = null;
   let overAmt = 0;
+  /** An upper-body emote over the capture's legs (the upper mask), and the dance in place of the capture */
+  let emoteAmt = 0;
+  let danceAmt = 0;
   const walls = wallBoxes();
+  // The contact layer (contact.ts) on the pose, from the contact floor's walls and rail
+  const contact = createContact();
+  const contactRot = new Float32Array(NB * 4);
 
   // By hand
   const keys = new Set<string>();
@@ -565,11 +677,21 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   };
   const beside = (): [number, number] => (cam === 'side' ? [0, -2.2] : [1.6, 0]);
   const look = new THREE.Vector3();
+  let reelProg: Prog = 'runstop';
   const step = (dt: number) => {
     clock += dt;
     const top = GAITS[gait];
-    let [gx, gz] = program(prog, clock, top);
-    if (prog === 'manual') {
+    // (the reel: each program in turn, its own clock; the walls for going over)
+    const reel = prog === 'reel' ? reelAt(clock) : null;
+    const p: Prog = reel ? reel.prog : prog;
+    const pt = reel ? reel.t : clock;
+    if (reel && reel.prog !== reelProg) {
+      reelProg = reel.prog;
+      const want: Floor = reel.prog === 'over' ? 'walls' : reel.prog === 'stairs' ? 'stairs' : reel.prog === 'contact' ? 'contact' : 'flat';
+      if (floorKind !== want) (floorKind = want), buildFloor();
+    }
+    let [gx, gz] = program(p, pt, top);
+    if (p === 'manual') {
       const ix = (keys.has('KeyA') ? 1 : 0) - (keys.has('KeyD') ? 1 : 0);
       const iz = (keys.has('KeyW') ? 1 : 0) - (keys.has('KeyS') ? 1 : 0);
       const n = Math.hypot(ix, iz) || 1;
@@ -577,17 +699,21 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       gx = (ix / n) * s;
       gz = (iz / n) * s;
     }
-    if (onFlight(floorKind, z)) {
+    // (up a flight a climb's pace, as walk.ts: the stairs takes' walking, a brisk climb running; movesim.ts STAIRS)
+    {
       const g = Math.hypot(gx, gz);
-      if (g > CLIMB) {
-        gx *= CLIMB / g;
-        gz *= CLIMB / g;
+      if (g > 0.1 && climbAhead(ground, x, z, y, gx, gz, SCALE)) {
+        const cap = g <= GAITS.walk + 0.01 ? STAIRS.walk : STAIRS.run;
+        if (g > cap) {
+          gx *= cap / g;
+          gz *= cap / g;
+        }
       }
     }
     // (aiming: facing where the program aims, or +z by hand with a gun up)
-    const faceGoal = AIMS.includes(prog) ? aimOf(prog, clock) : prog === 'manual' && gun && aimOn ? 0 : undefined;
+    const faceGoal = AIMS.includes(p) ? aimOf(p, pt) : p === 'manual' && gun && aimOn ? 0 : undefined;
     // Crouch and slide (walk.ts's way: C sprinting slides, else crouches or stands)
-    if (prog === 'manual') {
+    if (p === 'manual') {
       if (crouchPress && !slide) {
         const sl = me.grounded ? startSlide(move) : null;
         if (sl) slide = sl;
@@ -595,14 +721,14 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       }
       if (crouched && (keys.has('ShiftLeft') || keys.has('ShiftRight'))) crouched = false;
     } else {
-      if (slideOf(prog, clock, dt) && !slide) slide = startSlide(move);
-      if (!slide) crouched = crouchOf(prog, clock);
+      if (slideOf(p, pt, dt) && !slide) slide = startSlide(move);
+      if (!slide) crouched = crouchOf(p, pt);
     }
     crouchPress = false;
     // Over a wall: Jump at one by hand, or by itself when the program comes up to it
-    if (!over && floorKind === 'walls' && me.grounded && Math.hypot(gx, gz) > 0.1 && (prog === 'over' || (prog === 'manual' && jumpPress))) {
+    if (!over && floorKind === 'walls' && me.grounded && Math.hypot(gx, gz) > 0.1 && (p === 'over' || (p === 'manual' && jumpPress))) {
       const o = overAhead(x, z, Math.atan2(gx, gz), ground(x, z), walls, 0.22, () => true);
-      if (o && (prog === 'manual' || o.near < 0.45)) {
+      if (o && (p === 'manual' || o.near < 0.45)) {
         over = { o, t: 0 };
         jumpPress = false;
       }
@@ -626,12 +752,32 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
         slide = null;
         crouched = Math.hypot(gx, gz) < 0.01;
       }
-    } else stepMove(move, gx, gz, me.grounded, dt, faceGoal);
+    } else {
+      const stag = contact.state.stagger;
+      stepMove(move, stag ? 0 : gx, stag ? 0 : gz, me.grounded, dt, faceGoal);
+      if (stag) {
+        const v = (CONTACT.stagger.back / CONTACT.stagger.t) * (Math.PI / 2) * Math.sin(Math.PI * stag.t);
+        move.vx = stag.hand.nx * v;
+        move.vz = stag.hand.nz * v;
+      }
+    }
     crouchAmt += ((crouched ? 1 : 0) - crouchAmt) * (1 - Math.exp(-10 * dt));
     slideAmt += ((slide ? 1 : 0) - slideAmt) * (1 - Math.exp(-(slide ? 18 : 9) * dt));
-    x += move.vx * dt;
-    z += move.vz * dt;
-    const j = prog === 'manual' ? { press: jumpPress, hold: keys.has('Space') } : jumpOf(prog, clock, dt);
+    // (on the contact floor he can't walk through its walls, and a sprint into one staggers him)
+    let hit = false;
+    const v0 = Math.hypot(move.vx, move.vz);
+    if (floorKind === 'contact') {
+      const nx = x + move.vx * dt;
+      if (contactBlocked(nx, z)) (move.vx = 0), (hit = true);
+      else x = nx;
+      const nz = z + move.vz * dt;
+      if (contactBlocked(x, nz)) (move.vz = 0), (hit = true);
+      else z = nz;
+    } else {
+      x += move.vx * dt;
+      z += move.vz * dt;
+    }
+    const j = p === 'manual' ? { press: jumpPress, hold: keys.has('Space') } : jumpOf(p, pt, dt);
     jumpHeld = j.hold;
     if (over) {
       const at = overAt(over.o, Math.min(1, over.t / over.o.dur), 0, 0);
@@ -645,6 +791,16 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
     const v = Math.hypot(move.vx, move.vz);
     const sprint = THREE.MathUtils.clamp((v - GAITS.run) / (GAITS.sprint - GAITS.run), 0, 1);
     anim.update({ dt, x, y, z, move, gx, gz, scale: SCALE, ground, feet, sprint, grounded: me.grounded, vy: me.grounded ? me.fall : me.vy, jump: JUMP, gravity: GRAVITY, faceGoal, crouch: crouchAmt });
+    const cst = contact.update({ dt, x, y, z, face: anim.face, scale: SCALE, speed: v, moving: Math.hypot(gx, gz) > 0.1, walls: floorKind === 'contact' ? contactBoxes() : [], people: [], blocked: floorKind === 'contact' ? contactBlocked : undefined, hit, hitSpeed: v0 });
+    const contacting = !!(cst.hand || cst.lean || cst.stagger || cst.give.w > 1e-3 || cst.squeeze.w > 1e-3);
+    if (contacting) {
+      contactRot.set(anim.rot);
+      applyContact(contactRot, anim.hips, cst, x, y, z, anim.face, SCALE);
+    }
+    {
+      const goal = Math.hypot(gx, gz);
+      rubric.push({ dt, rot: anim.rot, hips: anim.hips, x, y, z, yaw: anim.face, scale: SCALE, speed: v, goal, goalDir: goal > 0.3 ? Math.atan2(gx, gz) : null, down: [anim.feet[0].locked, anim.feet[1].locked], drift: [anim.feet[0].drift, anim.feet[1].drift], ground });
+    }
     if (gun) {
       // (the gun's hold over the motion capture's legs, as walk.ts has it: the procedural walk under the hold
       // gives the upper body, turned back from the way the capture faces him to the springs')
@@ -661,18 +817,28 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
     } else {
       // (the slide is a keyed pose over the last of the procedural walk, the motion capture stepping aside for it)
       copyPose(loco.pose, hero.pose);
+      // The emotes program (emotes.ts): the wave, the cheer and the salute over the capture's legs and hips through
+      // the upper mask, as a gun's hold is; the dance takes the whole body, the capture stepping aside
+      const em = p === 'emotes' ? emoteAt(pt) : null;
+      emoteAmt = THREE.MathUtils.clamp(emoteAmt + (em && emoteUpper(em.id) ? dt / 0.15 : -dt / 0.15), 0, 1);
+      danceAmt = THREE.MathUtils.clamp(danceAmt + (em && !emoteUpper(em.id) ? dt / 0.15 : -dt / 0.25), 0, 1);
+      if (em) emotePose(hero.pose, em.id, em.t);
       slidePose(hero.pose, slideAmt);
       const ov = over?.o ?? overLast;
       if (ov && overAmt > 0.01) overPose(hero.pose, ov, over ? Math.min(1, over.t / over.o.dur) : 1, overAmt, x, y, z, anim.face, SCALE);
       hero.update();
-      applyTo(hero.rig, anim.rot, anim.hips, 1 - Math.max(slideAmt, overAmt));
-      if (hero.held?.visible) addCarry(hero.rig, 1 - Math.max(slideAmt, overAmt));
+      const capW = 1 - Math.max(slideAmt, overAmt, danceAmt * danceAmt * (3 - 2 * danceAmt));
+      const upW = emoteAmt * emoteAmt * (3 - 2 * emoteAmt);
+      applyTo(hero.rig, contacting ? contactRot : anim.rot, anim.hips, capW, upW);
+      if (hero.held?.visible) addCarry(hero.rig, capW * (1 - upW));
+      const gz = gaze.update({ dt, x, y: y + 1.1 * SCALE, z, face: anim.face, ahead: move.face, speed: v, interests: [] });
+      if (gazeOn) addLook(hero.rig, gz.yaw, gz.pitch, capW * (1 - upW));
     }
     hero.g.position.set(x, y, z);
     hero.g.rotation.set(0, anim.face, 0);
     hero.g.scale.setScalar(SCALE);
     // The peek: by the program, or Q / E by hand
-    const peekWant = prog === 'manual' ? (keys.has('KeyE') ? 1 : 0) - (keys.has('KeyQ') ? 1 : 0) : peekOf(prog, clock);
+    const peekWant = p === 'manual' ? (keys.has('KeyE') ? 1 : 0) - (keys.has('KeyQ') ? 1 : 0) : peekOf(p, pt);
     peek += (peekWant - peek) * (1 - Math.exp((-Math.LN2 * dt) / PEEK.ease));
     addLean(hero.rig, peek * PEEK.lean, wrapA(move.face - anim.face), PEEK.level * (1 - (gun && aimOn ? 0.6 * stance.cheek : 0)));
     // The old walk beside him, on the same movement (across the picture from him, whichever the camera)
@@ -725,8 +891,11 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
     const dbg = anim.debug;
     const v = Math.hypot(move.vx, move.vz);
     const slideNow = Math.max(0, ...anim.feet.map((f) => f.drift));
+    const reel = prog === 'reel' ? reelAt(clock) : null;
     const rows: [string, string][] = [
+      ...(reel ? ([['Reel', `${reel.label} · ${reel.t.toFixed(1)} s (${(clock % REEL_LENGTH).toFixed(0)} of ${REEL_LENGTH} s)`]] as [string, string][]) : []),
       ...(compare ? ([['Beside', cam === 'back' ? 'new right · old left' : cam === 'free' ? 'the old walk is the other one' : 'new left · old right']] as [string, string][]) : []),
+      ...((p0) => (p0 ? ([['Emote', `${p0.id} · ${p0.t.toFixed(1)} s${emoteUpper(p0.id) ? ' · upper body over the capture' : ' · the whole body, keyed'}`]] as [string, string][]) : []))((reel ? reel.prog : prog) === 'emotes' ? emoteAt(reel ? reel.t : clock) : null),
       ['Speed', `${v.toFixed(2)} tiles/s · ${(v * 1.8).toFixed(1)} m/s`],
       ['Clip', `${dbg.clip} @ ${dbg.frame.toFixed(1)}`],
       ['Rate', dbg.rate.toFixed(2)],
@@ -737,11 +906,42 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       ['Hips down', `${(dbg.drop * SCALE * CM).toFixed(1)} cm`],
       ...(gun ? ([['Gun', `${gunId}${aimOn ? ' · aiming' : ' · ready'} · looking ${lookPitch > 0 ? 'down' : 'up'} ${Math.abs((lookPitch * 180) / Math.PI).toFixed(0)}°`]] as [string, string][]) : []),
       ['Air', dbg.air ? `in the air${jumpHeld ? ' · Jump held' : ''}${dbg.arms > 0.01 ? ` · arms up ${((dbg.arms * 180) / Math.PI).toFixed(0)}°` : ''}` : `on the ground${dbg.squash > 0.002 ? ` · landing ${(dbg.squash * SCALE * CM).toFixed(0)} cm down` : ''}`],
+      ...(contact.state.hand || contact.state.lean || contact.state.stagger || contact.state.give.w > 0.02 || contact.state.squeeze.w > 0.02
+        ? ([
+            [
+              'Contact',
+              [
+                contact.state.stagger ? `staggering ${(contact.state.stagger.t * 100).toFixed(0)}%` : '',
+                contact.state.hand ? `${contact.state.hand.side ? 'left' : 'right'} hand on the wall ${(contact.state.hand.w * 100).toFixed(0)}%` : '',
+                contact.state.lean ? `leaning on the rail ${(contact.state.lean.w * 100).toFixed(0)}%` : '',
+                contact.state.give.w > 0.02 ? `${contact.state.give.side < 0 ? 'right' : 'left'} shoulder gives ${(contact.state.give.w * 100).toFixed(0)}%` : '',
+                contact.state.squeeze.w > 0.02 ? `squeezing ${((contact.state.squeeze.turn * 180) / Math.PI).toFixed(0)}°` : '',
+              ]
+                .filter(Boolean)
+                .join(' · '),
+            ],
+          ] as [string, string][])
+        : []),
       ...(crouchAmt > 0.02 || slideAmt > 0.02 ? ([['Crouch', `${slide ? `sliding at ${slide.v.toFixed(1)} tiles/s` : crouched ? 'crouched' : 'standing up'}${dbg.crouch > 0.02 ? ` · over the clip ${(dbg.crouch * 100).toFixed(0)}%` : ''}`]] as [string, string][]) : []),
       ...(AIMS.includes(prog) || peek ? ([['Aim', `legs ${((wrapA(anim.face - move.face) * 180) / Math.PI).toFixed(0)}° off the aim${Math.abs(peek) > 0.02 ? ` · peeking ${peek > 0 ? 'right' : 'left'} ${(Math.abs(peek) * 100).toFixed(0)}%` : ''}`]] as [string, string][]) : []),
       ['Feet', anim.feet.map((f) => (f.locked ? 'held' : 'free')).join(' · ')],
+      ['Gaze', gazeOn ? (gaze.target ? `looking ${((gaze.yaw * 180) / Math.PI).toFixed(0)}° round` : 'ahead') : 'off'],
     ];
     read.innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
+  };
+  /** The scorecard: every rubric row over the last eight seconds, red where it fails */
+  let scoreIn = 0;
+  const paintScore = (real: number) => {
+    score.hidden = !scorecard;
+    if (!scorecard) return;
+    scoreIn -= real;
+    if (scoreIn > 0) return;
+    scoreIn = 0.5;
+    // (climbing stairs the steady rows don't apply: a climb isn't a level walk, as tests/human.test.ts has it)
+    const steady = new Set(['cadence', 'stride', 'support', 'bob', 'sway', 'counter', 'arms', 'elbows']);
+    const climbing = anim.debug.climbing;
+    const rows: Row[] = rubric.rows();
+    score.innerHTML = rows.map((r) => `<dt class="${r.ok === null || (climbing && steady.has(r.id)) ? 'is-na' : r.ok ? 'is-ok' : 'is-fail'}">${r.name}</dt><dd>${r.value}</dd>`).join('');
   };
 
   let raf = 0;
@@ -769,6 +969,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       readIn = 0.1;
       paintRead();
     }
+    paintScore(real);
   };
   const close = () => {
     cancelAnimationFrame(raf);
@@ -786,6 +987,10 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   (window as unknown as { __animLab: unknown }).__animLab = {
     anim,
     move,
+    /** The scorecard's rows (the rubric over the last eight seconds) */
+    get rows() {
+      return rubric.rows();
+    },
     get worst() {
       return worst;
     },
@@ -807,6 +1012,8 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       view();
       post.render();
       paintRead();
+      scoreIn = 0;
+      paintScore(0);
     },
   };
   if (rec) return;

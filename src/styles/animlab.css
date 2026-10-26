@@ -97,3 +97,31 @@
     max-height: 46vh;
   }
 }
+
+/* The scorecard: the rubric's rows (human.ts), red where one fails, dim where there's nothing to measure */
+.anim-lab-score {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 1px 10px;
+  margin: 8px 0 0;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  font: 10.5px/1.3 'JetBrains Mono', monospace;
+}
+.anim-lab-score dt {
+  color: var(--p-cyan, #00eaff);
+}
+.anim-lab-score dt.is-fail {
+  color: #ff5a7a;
+}
+.anim-lab-score dt.is-na,
+.anim-lab-score dt.is-na + dd {
+  color: rgba(255, 255, 255, 0.35);
+}
+.anim-lab-score dd {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.8);
+}
+.anim-lab-score[hidden] {
+  display: none;
+}

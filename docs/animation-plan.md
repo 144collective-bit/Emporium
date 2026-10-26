@@ -5,7 +5,10 @@ starting with the run, which "looks unnatural and clunky". This is the plan
 and its phases; build it one phase at a time with the owner's sign-off, and
 keep this file up to date as each one lands. It follows on from
 `docs/character-plan.md` (the body, the bones, the planted-feet walk), which
-stays the record of how the body was built.
+stays the record of how the body was built. **What comes next** (the
+owner's call, October 2026: the characters' movements made to suit the
+game and realistically human, for everyone) is planned in
+`docs/animation-revamp-plan.md`; Phases 6 and 7 below are folded into it.
 
 ## What the owner asked for
 

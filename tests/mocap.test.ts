@@ -6,8 +6,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import * as THREE from 'three';
 import { parseBvh, poseBvh, jointIndex } from '../src/scripts/city3d/bvh';
-import { buildMocap, type Take } from '../src/scripts/city3d/mocap-build';
-import { MB, MOCAP_BONES, MOCAP_FPS, NB, PARENT, contacts, decodeMocap, encodeMocap, mirrorClip, newPosed, posedFrame } from '../src/scripts/city3d/mocap';
+import { buildMocap, packs, type Take } from '../src/scripts/city3d/mocap-build';
+import { CORE_PACK, MB, MOCAP_BONES, MOCAP_FPS, NB, PARENT, contacts, decodeMocap, encodeMocap, mirrorClip, newPosed, posedFrame, tagged } from '../src/scripts/city3d/mocap';
 import { ANKLE_H, BONES } from '../src/scripts/city3d/skeleton';
 
 const takes: Take[] = JSON.parse(readFileSync('assets/mocap/takes.json', 'utf8'));
@@ -29,7 +29,8 @@ test('the BVH reader: the skeleton, the frames, the T-pose first', () => {
 });
 
 test('the clips file is exactly what the pipeline makes from the takes (npm run mocap)', () => {
-  const made = encodeMocap(buildMocap(takes, read));
+  // (the core pack: the crowd's takes go in their own file, checked below)
+  const made = encodeMocap(packs(buildMocap(takes, read))[0].data);
   assert.equal(made.length, file.length, 'same size');
   assert.ok(Buffer.from(made).equals(file), 'same bytes: run `npm run mocap` after changing a take or the pipeline');
 });
@@ -39,7 +40,8 @@ test('every clip carries the body bones, parents first, turns kept to their 16 b
   for (const b of MOCAP_BONES) assert.ok(BONES.includes(b), b);
   PARENT.forEach((p, i) => assert.ok(p < i, `${MOCAP_BONES[i]}'s parent comes first`));
   assert.equal(data.fps, MOCAP_FPS);
-  assert.equal(data.clips.length, takes.length);
+  // (the core file: the crowd's takes are in their own pack)
+  assert.equal(data.clips.length, takes.filter((t) => !t.pack || t.pack === CORE_PACK).length);
   // Round trip: what's decoded re-encodes to the same file
   assert.ok(Buffer.from(encodeMocap(data)).equals(file));
   for (const c of data.clips)
@@ -67,8 +69,10 @@ test('the clips stand on the ground: ankles at their height, the balls of the fe
       down++;
     }
     hips /= down;
-    assert.ok(Math.abs(ankle - ANKLE_H) < 0.02, `${c.name}: the lowest ankle ${ankle.toFixed(3)}`);
-    assert.ok(ball > -0.035 && ball < 0.02, `${c.name}: the lowest ball of a foot ${ball.toFixed(3)}`);
+    // (a stairs clip's hips are kept over a line through its steps: a planted foot sits up to half a step either side)
+    const stairs = tagged(c, 'stairs');
+    assert.ok(stairs ? ankle > ANKLE_H - 0.08 && ankle < ANKLE_H + 0.02 : Math.abs(ankle - ANKLE_H) < 0.02, `${c.name}: the lowest ankle ${ankle.toFixed(3)}`);
+    assert.ok(ball > (stairs ? -0.09 : -0.035) && ball < 0.02, `${c.name}: the lowest ball of a foot ${ball.toFixed(3)}`);
     // (lower crouched: subject 136's crouched walks)
     const [lo, hi] = c.name.startsWith('crouch') ? [0.44, 0.56] : [0.5, 0.63];
     assert.ok(hips > lo && hips < hi, `${c.name}: the hips ${hips.toFixed(3)} up on average`);
@@ -136,8 +140,44 @@ test('the feet are on the ground about as long as a run and a walk keep them', (
 });
 
 test('the clips file stays small (it loads when walking starts)', () => {
-  // (subject 143's takes at their real speed are twice as long as when they played at double speed)
-  assert.ok(file.length < 720 * 1024, `${(file.length / 1024).toFixed(0)} KB`);
+  // (subject 143's takes at their real speed are twice as long as when they played at double speed;
+  // delta-coded since the revamp's Phase 1: 495 KB where plain 16-bit numbers made 703)  // (the revamp's Phase 2: three standing takes, a fast walk and the climb in, the three looped idles out, 558 KB; the
+  // limit raised on purpose)
+  assert.ok(file.length < 640 * 1024, `${(file.length / 1024).toFixed(0)} KB`);
+});
+
+test('every clip carries its tags, marks and pack, through the file and its mirror image', () => {
+  for (const c of data.clips) {
+    const t = takes.find((k) => k.name === c.name)!;
+    assert.deepEqual(c.tags, t.tags ?? [], `${c.name}: its tags`);
+    assert.equal(c.pack, t.pack ?? CORE_PACK);
+    assert.deepEqual(mirrorClip(c).tags, c.tags);
+  }
+  assert.ok(data.clips.filter((c) => tagged(c, 'stand')).length >= 3, 'the idles are tagged stand');
+  assert.ok(data.clips.filter((c) => tagged(c, 'crouch')).length === 3, 'the crouched walks are tagged crouch');
+  // A mark survives the file, mirrored across the middle
+  const d = { fps: data.fps, clips: [{ ...data.clips[0], marks: [{ name: 'hand', frame: 12, at: [0.25, 0.5, 0.375] as [number, number, number] }] }] };
+  const back = decodeMocap(encodeMocap(d));
+  assert.deepEqual(back.clips[0].marks, d.clips[0].marks);
+  assert.deepEqual(mirrorClip(back.clips[0]).marks[0].at, [-0.25, 0.5, 0.375]);
+  // A stairs take's floor and contacts survive the file; mirrored, the floor is the floor and the contacts swap sides
+  const st = data.clips.find((c) => tagged(c, 'stairs'))!;
+  assert.ok(st.floor && st.contact, 'a stairs clip carries its floor and contacts');
+  const sb = decodeMocap(encodeMocap({ fps: data.fps, clips: [st] })).clips[0];
+  assert.deepEqual(Array.from(sb.floor!), Array.from(st.floor!));
+  assert.deepEqual(Array.from(sb.contact!), Array.from(st.contact!));
+  const sm = mirrorClip(st);
+  assert.deepEqual(Array.from(sm.floor!), Array.from(st.floor!));
+  assert.ok(Array.from(st.contact!).every((b, f) => sm.contact![f] === (((b & 1) << 1) | ((b >> 1) & 1))), 'the mirror\'s contacts swap sides');
+  assert.equal(data.clips.find((c) => !tagged(c, 'stairs'))!.floor, undefined, 'a flat clip has no floor of its own');
+  // The packs: the core (this file) and the crowd's (crowdclips.ts), each its own file, and the crowd's is what the pipeline makes too
+  const all = buildMocap(takes, read);
+  const split = packs(all);
+  assert.deepEqual(split.map((p) => [p.pack, p.file]), [[CORE_PACK, 'clips.bin'], ['crowd', 'clips-crowd.bin']]);
+  assert.equal(split[0].data.clips.length, data.clips.length);
+  const crowdFile = readFileSync('src/data/mocap/clips-crowd.bin');
+  assert.ok(Buffer.from(encodeMocap(split[1].data)).equals(crowdFile), 'the crowd pack is what the pipeline makes: run `npm run mocap`');
+  assert.ok(crowdFile.length < 80 * 1024, `the crowd pack stays small: ${(crowdFile.length / 1024).toFixed(0)} KB`);
 });
 
 test('the collarbones sit level, as Degen\'s do at rest (the capture\'s own shoulder joint sits at the neck and would shrug them)', () => {
@@ -190,4 +230,36 @@ test('no bone jumps away for a frame and straight back (the capture\'s glitches 
         // (walk-eight's spine, chest and neck once threw 24-49° for a single frame)
         assert.ok(!(there > 0.14 && back > 0.14 && a.angleTo(c) < 0.5 * Math.min(there, back)), `${clip.name}: bone ${k} jumps away and back at frame ${f}`);
       }
+});
+
+test('the stairs take: the floor climbs three steps, the hips stay level over it, the feet take turns on the steps', () => {
+  // (one take, 122_32: 122_31 and 122_35 flipped an ankle for two frames each, a marker swap, and went)
+  const st = data.clips.filter((c) => tagged(c, 'stairs'));
+  assert.equal(st.length, 1);
+  for (const c of st) {
+    const floor = c.floor!;
+    const rise = floor[c.frames - 1] - floor[0];
+    assert.ok(rise > 0.3 && rise < 0.42, `${c.name}: climbs ${rise.toFixed(3)} (three steps of about 0.12)`);
+    assert.ok(floor.every((y, f) => f === 0 || y >= floor[f - 1] - 0.02), `${c.name}: the floor never drops`);
+    // (the hips over the floor as a level walk's: never the climb's 0.35 in them)
+    let lo = Infinity;
+    let hi = 0;
+    for (let f = 0; f < c.frames; f++) {
+      lo = Math.min(lo, c.hips[f * 3 + 1]);
+      hi = Math.max(hi, c.hips[f * 3 + 1]);
+    }
+    assert.ok(hi - lo < 0.12 && lo > 0.5, `${c.name}: the hips ${lo.toFixed(3)}..${hi.toFixed(3)} over the floor`);
+    // The contacts: planted stretches that take turns, at least five of them through the climb
+    const on = contacts(c);
+    let stretches = 0;
+    let last = -1;
+    for (let f = 1; f < c.frames; f++)
+      for (let s = 0; s < 2; s++)
+        if (on[f * 2 + s] && !on[(f - 1) * 2 + s]) {
+          assert.notEqual(s, last, `${c.name}: the feet take turns (frame ${f})`);
+          last = s;
+          stretches++;
+        }
+    assert.ok(stretches >= 5, `${c.name}: ${stretches} steps`);
+  }
 });
