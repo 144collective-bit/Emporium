@@ -1613,7 +1613,24 @@ it and has been retired completely. Build only on what's here.
   staggers (`stagger`: the chest back, a hand up, carried back on the
   springs, a small camera shake); a gap narrower than `squeeze` turns the
   shoulders. Phones (`createContact({ hands: false })`) leave out the
-  hands and the lean. The lab's Contact program and floor show it all. The clips file's limits are 640 KB (test) and 660 KB (budget),
+  hands and the lean. The lab's Contact program and floor show it all.
+  Phase 4 (the game's moments) step 1 is built: `moments.ts` (DOM-free,
+  tested in `tests/moments.test.ts`): a `Mark` (`doorMark()`,
+  `counterMark()`, `benchMark()`: where he stands, his facing, the hands'
+  targets or the seat), `createMoment()` with the phases approach → play
+  → (hold → back) → done (`update()` gives walk.ts the approach's goal:
+  the walk's own last steps onto the mark, or `timeout`; `skip()` on F
+  again; `release()` when the menu closes or to stand up; `cancel()`),
+  and `momentPose()`, keyed on the `Pose` rig as the vault's (the hands
+  on the thing by `reachArm()`, within 1.5 cm in the test). Doors (every
+  landmark's, Trench Avenue's, the stadium's gate, the garage, hangar and
+  kart hut, the lifts and stations): a push, the panel opening as the
+  hand lands; counters (the gun stores', the trainer's): a lean with both
+  hands on the top while the menu is open; benches: "Sit" at a free bench
+  (`BENCHES`, no crowd sitter on it), the root down onto the seat
+  (`momentDy`), "Stand up". walk.ts's `markFor()` / `act()` start them;
+  the keys wait while one is on, the motion capture steps aside for the
+  keyed pose (`momentAmt`), the contact layer too. The clips file's limits are 640 KB (test) and 660 KB (budget),
   raised for the takes on purpose:
   - **The data** is CMU's motion capture (free for commercial use; the
     acknowledgment is in the start menu's Options > Credits, named, never
@@ -3165,7 +3182,7 @@ it and has been retired completely. Build only on what's here.
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,
   in `tests/merch.test.ts`), the crowd's baked clips (`crowdclips.ts`) and Degen's skeleton, weights, head and hands
-  (`skeleton.ts`, `body.ts`), his walking (`locomotion.ts`), the motion capture and its animation (`bvh.ts`, `mocap-build.ts`, `mocap.ts`, `movesim.ts`, `inertia.ts`, `motionmatch.ts`, `animator.ts`), the rubric of human movement over every clip and program (`human.ts`, `tests/human.test.ts`), what his body does about what he touches (`contact.ts`) and the guns in his hands (`gunfit.ts`, `stance.ts`). Modules that touch the DOM or `kit.ts` (canvas
+  (`skeleton.ts`, `body.ts`), his walking (`locomotion.ts`), the motion capture and its animation (`bvh.ts`, `mocap-build.ts`, `mocap.ts`, `movesim.ts`, `inertia.ts`, `motionmatch.ts`, `animator.ts`), the rubric of human movement over every clip and program (`human.ts`, `tests/human.test.ts`), what his body does about what he touches (`contact.ts`), the game's moments (`moments.ts`) and the guns in his hands (`gunfit.ts`, `stance.ts`). Modules that touch the DOM or `kit.ts` (canvas
   textures) can't load in Node; keep data a test needs in the DOM-free
   files.
 - When you change a rule or move something in the city, run the tests and

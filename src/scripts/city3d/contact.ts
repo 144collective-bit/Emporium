@@ -115,7 +115,7 @@ export function nearestOn(b: Box, x: number, z: number): { px: number; pz: numbe
 }
 
 export interface Hand {
-  /** 0 the left, 1 the right */
+  /** 0 the rig's -x arm (his right, facing +z), 1 the +x arm (his left) */
   side: 0 | 1;
   /** Where the palm goes (world) and the wall's outward normal there */
   x: number;
@@ -127,7 +127,7 @@ export interface Hand {
 }
 
 export interface ContactState {
-  /** The shoulder's give: which side (-1 his left, 1 his right) and how much */
+  /** The shoulder's give: which side (-1 the rig's -x, his right facing +z; 1 the +x) and how much */
   give: { side: -1 | 1; w: number };
   /** The step's hitch (0 to 1: the caller slows him by `CONTACT.hitch` of it) */
   hitch: number;

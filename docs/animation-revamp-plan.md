@@ -501,19 +501,92 @@ What's not in, and why:
 - Walk mode's hard stop against a wall at a walk is still the collision's
   (a hand goes onto it); only a sprint staggers.
 
-### Phase 4: the game's moments
+### Phase 4: the game's moments (step 1 built, for the owner's sign-off)
 
-- `moments.ts` (DOM-free, tested): a moment is a mark (a spot, a facing,
+Built in two steps: **step 1** (the framework, doors, counters and benches:
+built, below) and step 2 (getting in and out, rides seen, carrying).
+
+What step 1 built (and how it differs from the plan):
+
+- **The framework** is `moments.ts` (DOM-free, tested in
+  `tests/moments.test.ts`): a `Mark` (where he stands, his facing, the
+  hands' targets: a door's handle, a counter's two points; a bench's seat),
+  made by `doorMark()` (he comes at a door from where he is and stands
+  `stand.door` short of it facing it, the handle `handleSide` to his right
+  at `handleY`; a stand spot he can't stand on keeps him where he is),
+  `counterMark()` (`stand.counter` short of the counter's point, both hands
+  on its top) and `benchMark()` (in front of the seat with his back to it).
+  `createMoment()` runs the phases `approach` → `play` → (`hold` →
+  `back`) → `done`: `update()` gives walk.ts the approach's goal each frame
+  (the way to the mark, slowing in over `slowIn`, turning to its facing
+  within `turnIn`; done within `at` of it and `faceAt` of its facing, or on
+  `timeout`, never stuck; from further than `max` no approach), `skip()`
+  (F again) cuts an approach or a door short and opens at once,
+  `release()` brings a counter's lean back or stands him up, `cancel()`
+  drops it (a fast travel, walk mode ending). `amount()` is the keyed
+  pose's share, `root()` where the root is while seated. The clips are
+  keyed on the `Pose` rig as the vault's are (`momentPose()`, the hands put
+  on the thing by `reachArm()`, the test holding each within 1.5 cm of its
+  target); no capture was used for these: a push, a lean and a sit are
+  short and the rig's reach does the meeting.
+- **Doors**: a step up (the approach) and a push: a little lean, the
+  right hand to the handle pushing it in `push` as it lands, the panel
+  opening at `door.open` of the push (`fire()`, once). Every landmark's
+  door, Trench Avenue's, the stadium's gate, the garage and hangar
+  offices, the kart hut and the lifts' and stations' doors (the `place:`
+  prompts `lift:` and `metro:`). The garage, hangar and kart hut are doors
+  rather than counters (the plan listed them as counters): their menus
+  open at a door, and the garage's and hangar's cameras look at the
+  showroom, not at him.
+- **Counters**: the gun stores' (the Armoury's `RACK_TOP`, Trench Arms'
+  hatch at `ARMS.street`) and the trainer's (`TRAINER_TOP`): the lean in
+  (`counter.in`) with both hands on the top and the menu opening at
+  `counter.open` of it, held while the menu is open, back (`counter.out`)
+  when it closes (`shop.onClose`, `fightUI.onClose` → `release()`). The
+  units', the stall's and the corner shops' prompts open at once as
+  before (the plan's kiosks come with step 2's carrying).
+- **Benches**: a "Sit" prompt at the nearest bench nobody is sitting on
+  (`BENCHES` in pedestrians.ts; a crowd sitter within 0.45 takes it; most
+  of the square's and the parks' first benches are taken), F sits him
+  down (`bench.down`: the root comes down and back onto the seat so his
+  hips sit on it as the crowd's do, the legs folding into poses.ts's
+  `sitPose`, which breathes and looks round), "Stand up" (F, or the stick)
+  stands him up (`bench.up`) back onto the stand spot.
+- **walk.ts**: `markFor()` turns a prompt into its mark; `act()` starts
+  the moment and hands it what the prompt opens; the keys wait while a
+  moment is on (seated, the stick stands him up); the approach's goal
+  replaces the stick's; the keyed pose comes in over the motion capture
+  (`momentAmt`, the mocap stepping aside as for the slide and the vault);
+  the root and the camera's eye drop with the seat (`momentDy`); the
+  contact layer stands aside while a moment is on. Sitting down he turns
+  his back to the bench, where the camera was: it comes round to a
+  three-quarter view from whichever side of him has the room
+  (`pickBenchYaw()`, `cameraRoom()` with the bench's back and anything
+  else that low left out of the way, `skipUnder`), and is yours again
+  once he's seated; seated he shows even with the camera close.
+
+What's not in, and why:
+
+- **The prompts' own moments for the units, the stall, the corner shops,
+  the river bus and the kiosks**: step 2's (carrying and rides).
+- **A moment while armed or aiming**: the gun's hold has the arms; a door
+  pressed with a gun in his hands still plays the push on the legs and
+  hips only (the hand stays on the gun). The polish phase can add a
+  one-handed push.
+- **The second press to skip** is in; a tap on the prompt button does the
+  same.
+
   what's there), an approach (motion matching to a trajectory ending on
   the mark, facing it: the walk's own last steps, never a slide into
   place), a clip (from capture or keyed, with its `marks` so the hand
   meets the thing), and a hand-back (into the idle, the seat or the
   panel). The prompts stay what they are (F); a moment plays between the
   press and what it opens.
-- **Doors**: a step up and a push (the Emporium, the club, the bar, the
+- **Doors** (built, step 1): a step up and a push (the Emporium, the club, the bar, the
   stations, the lifts), a hand to the handle; the panel opens as the hand
   lands.
-- **Counters**: a lean on the counter while the menu is open (the gun
+- **Counters** (built, step 1: the gun stores and the trainer; the kart
+  hut, the garage and hangar offices are doors): a lean on the counter while the menu is open (the gun
   stores, the kart hut, the trainer, the garage office, the hangar
   office, the kiosks), and standing back up when it closes.
 - **Getting in and out**: the car's door opened, a duck in and the seat on
@@ -521,7 +594,7 @@ What's not in, and why:
   (`seat()` re-posed on the bones); the boat's ladder climbed down to the
   helm and up; the aircraft's step up. The seats stay where they are
   (karts.ts, boat.ts, drive.ts); the moment is what gets him there.
-- **Benches** (the life plan's item 5): F at a free bench (the benches'
+- **Benches** (the life plan's item 5; built, step 1): F at a free bench (the benches'
   data and `SEAT_H` are in `pedestrians.ts`) sits him down (a sit-down
   clip), seated he breathes and looks round (the gaze), F stands him up;
   the crowd's sitters get the same rows in Phase 5.

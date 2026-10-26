@@ -883,9 +883,9 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
               'Contact',
               [
                 contact.state.stagger ? `staggering ${(contact.state.stagger.t * 100).toFixed(0)}%` : '',
-                contact.state.hand ? `${contact.state.hand.side ? 'right' : 'left'} hand on the wall ${(contact.state.hand.w * 100).toFixed(0)}%` : '',
+                contact.state.hand ? `${contact.state.hand.side ? 'left' : 'right'} hand on the wall ${(contact.state.hand.w * 100).toFixed(0)}%` : '',
                 contact.state.lean ? `leaning on the rail ${(contact.state.lean.w * 100).toFixed(0)}%` : '',
-                contact.state.give.w > 0.02 ? `${contact.state.give.side < 0 ? 'left' : 'right'} shoulder gives ${(contact.state.give.w * 100).toFixed(0)}%` : '',
+                contact.state.give.w > 0.02 ? `${contact.state.give.side < 0 ? 'right' : 'left'} shoulder gives ${(contact.state.give.w * 100).toFixed(0)}%` : '',
                 contact.state.squeeze.w > 0.02 ? `squeezing ${((contact.state.squeeze.turn * 180) / Math.PI).toFixed(0)}°` : '',
               ]
                 .filter(Boolean)

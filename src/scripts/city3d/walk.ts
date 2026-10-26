@@ -61,7 +61,9 @@ import { bankY } from './kartfacility';
 import type { RaceStart } from './kart-types';
 import type { Cond } from './kartcircuit';
 import { createFightUI } from './fight-ui';
-import { TRAINER } from './fightsite';
+import { COUNTER, TRAINER } from './fightsite';
+import { type Moment, benchMark, counterMark, createMoment, doorMark, momentPose } from './moments';
+import { BENCHES } from './pedestrians';
 import type { Fight, FightClub, FightInput } from './fight-types';
 import type { KartPark, KartRace, KartUI } from './kart-types';
 import { CUPS } from './kart-sim';
@@ -76,7 +78,7 @@ import { JETTY, RIM, inLake, onJetty, onTerrace, terraceY } from './westlake';
 import { GATE, bridgeWall, bridgeY } from './stadium';
 import { skyDeckWall, skyDeckY, upOnDeck } from './skydeck';
 import { stationY } from './station';
-import { WORLD_BOUNDS } from './layout';
+import { WORLD_BOUNDS, design } from './layout';
 import { WATER_Y, inChannel, inWater, shoreY } from './river';
 import { HIRE } from './riverbus';
 import type { Boat } from './boat';
@@ -90,13 +92,19 @@ import { live } from './live-client';
 import type { FeatureId } from './live';
 
 /** What a prompt can open: a landmark's door, or one of walk mode's own places and vehicles */
-type Near = SpotId | 'gear' | 'garage' | 'hangar' | 'car' | 'plane' | 'boat' | 'karts' | 'trainer' | `place:${string}`;
+type Near = SpotId | 'gear' | 'garage' | 'hangar' | 'car' | 'plane' | 'boat' | 'karts' | 'trainer' | 'bench' | 'stand' | `place:${string}`;
 /** The prompts the owner can close (live settings, live.ts) and the feature that closes each */
 const GATED: Partial<Record<Near, FeatureId>> = { gear: 'guns', garage: 'drive', hangar: 'fly', karts: 'karts', trainer: 'fight', boat: 'boat' };
 /** Prompts that say their own label (the rest say "Enter ...") */
 /** The landmarks' doors and Trench Avenue's (their prompts open their panels) */
 const ALL_DOORS = [...DOORS, ...AVENUE_DOORS, { id: 'stadium' as const, ...GATE.spot }];
-const OWN_LABEL = new Set<string>(['gear', 'garage', 'hangar', 'car', 'plane', 'boat', 'karts', 'trainer']);
+const OWN_LABEL = new Set<string>(['gear', 'garage', 'hangar', 'car', 'plane', 'boat', 'karts', 'trainer', 'bench', 'stand']);
+/** The Armoury's counter top (its drawing grid: the counter's box, a little in from its front edge) and height over the slab */
+const RACK_TOP = (([x, z]) => ({ x, z }))(design(24.7, 27.4));
+const RACK_TOP_H = 0.6;
+/** The trainer's counter top (its near edge, a little in) and height */
+const TRAINER_TOP = { x: TRAINER.x, z: COUNTER.z1 - 0.1 };
+const TRAINER_TOP_H = 0.56;
 /** The hangar menu's shot: from the doors, looking in at your aircraft */
 const HANGAR_VIEW = { eye: new THREE.Vector3(HANGAR_SPOT.x - 6.5, 3.4, HANGAR_SPOT.z + 12.5), at: new THREE.Vector3(HANGAR_SPOT.x, 1.2, HANGAR_SPOT.z) };
 
@@ -367,24 +375,101 @@ export function createWalk(d: WalkDeps) {
   const joy = { x: 0, y: 0, id: -1 };
   const pad = { x: 0, y: 0, run: false, prev: [] as boolean[] };
   let near: { id: Near; label: string } | null = null;
+  /**
+   * The game's moments (moments.ts, the revamp's Phase 4): a door's push, a lean on a counter, a sit on a bench,
+   * played between the prompt's press and what it opens; walk.ts walks him onto the mark, then its keyed pose
+   * takes over from the motion capture (`momentAmt`), the root shifted onto a seat (`momentDy`)
+   */
+  const moments: Moment = createMoment();
+  moments.scale = SCALE;
+  let momentAmt = 0;
+  let momentDy = 0;
+  /** Sitting down, where the camera goes: a three-quarter view from whichever side of him has the room */
+  let benchYaw = 0;
+  const benchEye = new THREE.Vector3();
+  const benchDir = new THREE.Vector3();
+  function pickBenchYaw(mk: { face: number; y: number; seat?: { x: number; z: number } }) {
+    if (!mk.seat) return;
+    let best = -1;
+    for (const side of [1, -1]) {
+      const y = mk.face + Math.PI + side;
+      benchEye.set(mk.seat.x, mk.y + 0.7, mk.seat.z);
+      benchDir.set(Math.sin(y) * Math.cos(0.35), Math.sin(0.35), Math.cos(y) * Math.cos(0.35));
+      const room = cameraRoom(benchEye, benchDir, zoom, 0.35, 0.9);
+      if (room > best) (best = room), (benchYaw = y);
+    }
+  }
+  /** What a prompt is a moment at: its mark, or null to open at once */
+  const markFor = (n: { id: Near; label: string }) => {
+    const y = groundAt(pos.x, pos.z, pos.y);
+    const door = (at: { x: number; z: number }) => doorMark(at, pos.x, pos.z, y, (bx, bz) => blocked(bx, bz, pos.y));
+    if (n.id === 'gear') return n.label === ARMS.name ? counterMark({ x: ARMS.counter.x, z: ARMS.street }, y + ARMS.hatch.y, y, pos.x, pos.z) : counterMark(RACK_TOP, y + RACK_TOP_H, y, pos.x, pos.z);
+    if (n.id === 'trainer') return counterMark(TRAINER_TOP, y + TRAINER_TOP_H, y, pos.x, pos.z);
+    if (n.id === 'garage') return door(GARAGE_SITE.door);
+    if (n.id === 'hangar') return door(HANGAR_DOOR);
+    if (n.id === 'karts') return door(HUT_DOOR);
+    if (n.id === 'bench') {
+      const b = nearestBench();
+      return b ? benchMark(b, groundAt(b.x, b.z, pos.y)) : null;
+    }
+    if (n.id.startsWith('place:')) {
+      const id = n.id.slice(6);
+      if (!(id.startsWith('lift:') || id.startsWith('metro:'))) return null;
+      const pl = d.places().find((q) => q.id === id);
+      return pl ? door(pl) : null;
+    }
+    const dr = ALL_DOORS.find((q) => q.id === n.id);
+    return dr ? door(dr) : null;
+  };
+  /** The nearest bench nobody's sitting on, within reach */
+  const nearestBench = () => {
+    let best: { x: number; z: number; ry: number } | null = null;
+    let bd = 0.95;
+    for (const b of BENCHES) {
+      const dd = Math.hypot(b.x - pos.x, b.z - pos.z);
+      if (dd >= bd) continue;
+      if (bodies.people.some((q) => q.act === 'sit' && Math.hypot(q.x - b.x, q.z - b.z) < 0.45)) continue;
+      best = b;
+      bd = dd;
+    }
+    return best;
+  };
+  const seated = () => moments.active && moments.mark?.kind === 'bench' && moments.phase !== 'approach';
   const act = () => {
+    // A moment under way: F again cuts the approach or a door short; seated, it stands him up
+    if (moments.active) {
+      if (moments.phase === 'hold' && moments.mark?.kind === 'bench') moments.release();
+      else moments.skip();
+      return;
+    }
     if (!near) return;
     // Closed for now by the owner (live settings): getting into things, never out of them
     const f = near.id === 'car' ? (drive.active ? null : 'drive') : near.id === 'plane' ? (fly.active ? null : 'fly') : near.id === 'boat' ? (boating() ? null : 'boat') : GATED[near.id];
     const shut = f && live.closed(f);
     if (shut) return d.game.toast(shut, 3000);
-    if (near.id === 'gear') shop.show(near.label === ARMS.name ? ARMS.name : 'Armoury');
-    else if (near.id === 'garage') garageUI.show();
-    else if (near.id === 'hangar') hangarUI.show();
-    else if (near.id === 'plane') (fly.active ? leavePlane() : board());
-    else if (near.id === 'boat') (boating() ? leaveBoat() : takeBoat());
-    else if (near.id === 'karts') void loadKarts().then(() => kartUI.show());
-    else if (near.id === 'trainer') fightUI.show();
-    else if (near.id === 'car') (drive.active ? getOut() : getIn());
-    else if (near.id.startsWith('place:')) {
-      if (document.pointerLockElement === canvas) document.exitPointerLock();
-      d.openPlace(near.id.slice(6));
-    } else openSpot(near.id as SpotId);
+    const n = near;
+    const open = () => {
+      if (n.id === 'gear') shop.show(n.label === ARMS.name ? ARMS.name : 'Armoury');
+      else if (n.id === 'garage') garageUI.show();
+      else if (n.id === 'hangar') hangarUI.show();
+      else if (n.id === 'plane') (fly.active ? leavePlane() : board());
+      else if (n.id === 'boat') (boating() ? leaveBoat() : takeBoat());
+      else if (n.id === 'karts') void loadKarts().then(() => kartUI.show());
+      else if (n.id === 'trainer') fightUI.show();
+      else if (n.id === 'car') (drive.active ? getOut() : getIn());
+      else if (n.id === 'bench' || n.id === 'stand') return;
+      else if (n.id.startsWith('place:')) {
+        if (document.pointerLockElement === canvas) document.exitPointerLock();
+        d.openPlace(n.id.slice(6));
+      } else openSpot(n.id as SpotId);
+    };
+    // (on foot and not in the middle of something: the moment first, then what it opens as the hand lands)
+    const mk = !drive.active && !over && !slide && !emote ? markFor(n) : null;
+    if (mk) {
+      contact?.reset();
+      pickBenchYaw(mk);
+      moments.start(mk, open, pos.x, pos.z);
+    } else open();
   };
 
   /**
@@ -440,7 +525,7 @@ export function createWalk(d: WalkDeps) {
   const contactBlocked = (bx: number, bz: number) => blocked(bx, bz, pos.y);
 
   /** How far the camera can sit from the pivot along `dir` before something's in the way. */
-  function cameraRoom(from: THREE.Vector3, dir: THREE.Vector3, want: number, min = 0.35) {
+  function cameraRoom(from: THREE.Vector3, dir: THREE.Vector3, want: number, min = 0.35, skipUnder = 0.5) {
     let t = want;
     // Ground (and kerb) below
     if (dir.y < 0) {
@@ -450,7 +535,7 @@ export function createWalk(d: WalkDeps) {
     // Only the boxes under the camera's line can be in its way (padded as the test below pads them)
     // (and Liberty Bridge's towers over their arches and its walkways' roofs, which you walk under: a bottom, b[5])
     for (const b of [...CAMERA_GRID.alongRay(from, dir, t, 0.18, nearBoxes), ...d.plotSolids(), ...LIBERTY_CAMERA, ...DECK_CAMERA] as number[][]) {
-      if (b[4] < 0.5) continue;
+      if (b[4] < skipUnder) continue;
       const lo = [b[0] - 0.18, b[5] ?? 0, b[1] - 0.18];
       const hi = [b[2] + 0.18, b[4] + 0.15, b[3] + 0.18];
       const o = [from.x, from.y, from.z];
@@ -509,7 +594,10 @@ export function createWalk(d: WalkDeps) {
       combat.trigger(false, true);
       if (document.pointerLockElement === canvas) document.exitPointerLock();
     },
-    onClose: () => canvas.focus({ preventScroll: true }),
+    onClose: () => {
+      moments.release();
+      canvas.focus({ preventScroll: true });
+    },
   });
   combat.onLifetime(() => shop.refresh());
   // The garage menu: like the store it frees the mouse and pauses walking; the camera goes to the
@@ -735,6 +823,7 @@ export function createWalk(d: WalkDeps) {
       void loadFight();
     },
     onClose() {
+      moments.release();
       // The bout card closed: out of the ring
       if (fighting() && (fightDone || fightOver())) leaveFight();
       canvas.focus({ preventScroll: true });
@@ -1842,6 +1931,11 @@ export function createWalk(d: WalkDeps) {
       iz = -pad.y;
       sprint ||= Math.hypot(pad.x, pad.y) > 0.95;
     }
+    // (a moment under way: the keys wait; seated, pushing the stick stands him up)
+    if (moments.active) {
+      if (moments.phase === 'hold' && moments.mark?.kind === 'bench' && Math.hypot(ix, iz) > 0.3) moments.release();
+      ix = iz = 0;
+    }
     const mag = Math.min(1, Math.hypot(ix, iz));
     const n = Math.hypot(ix, iz) || 1;
     const fx = -Math.sin(yaw);
@@ -1879,11 +1973,15 @@ export function createWalk(d: WalkDeps) {
     const top = Math.min(shooting ? AIMING : sprint ? SPRINT : walkLock ? WALK : RUN, crouched ? CROUCH.speed : Infinity, climbing ? (walkLock ? STAIRS.walk : STAIRS.run) : Infinity) * (1 - (1 - PEEK.slow) * Math.abs(peek)) * (1 - hitch);
 
     // Towards it on the springs (movesim.ts; hardly any control in the air), facing where he's
-    // going, or where you look when aiming / in first person
-    const gx = dirX * top;
-    const gz = dirZ * top;
+    // going, or where you look when aiming / in first person; a moment's approach walks him onto its mark
+    const mg = moments.update({ dt, x: pos.x, z: pos.z, face, speed: vel.length() });
+    // (sitting down he turns his back to the bench, where the camera would be: it comes round to his front-left,
+    // a three-quarter view of him on the bench, and is yours again once he's seated)
+    if (moments.active && moments.mark?.kind === 'bench' && (moments.phase === 'approach' || moments.phase === 'play')) yaw += wrap(benchYaw - yaw) * damp(4, dt);
+    const gx = mg ? mg.dx * mg.speed : dirX * top;
+    const gz = mg ? mg.dz * mg.speed : dirZ * top;
     const lookFace = yaw + Math.PI;
-    const faceGoal = aim || firstPerson || shooting || peekWant ? lookFace : undefined;
+    const faceGoal = mg ? (mg.face ?? undefined) : aim || firstPerson || shooting || peekWant ? lookFace : undefined;
     ms.vx = vel.x;
     ms.vz = vel.y;
     ms.face = face;
@@ -1947,6 +2045,17 @@ export function createWalk(d: WalkDeps) {
     const speed = vel.length();
 
     face = ms.face;
+    // Seated (moments.ts): the root on the seat, down to it
+    {
+      const rs = moments.root();
+      if (rs) {
+        pos.x = rs.x;
+        pos.z = rs.z;
+        vel.set(0, 0);
+        ms.vx = ms.vz = 0;
+        momentDy = rs.y - pos.y;
+      } else momentDy = 0;
+    }
 
     // Jumping: buffered presses, a little coyote time, release early for a short hop
     coyote = grounded ? 0.12 : coyote - dt;
@@ -2034,6 +2143,9 @@ export function createWalk(d: WalkDeps) {
     overAmt += ((over ? 1 : 0) - overAmt) * damp(over ? 30 : 8, dt);
     const ov = over?.o ?? overLast;
     if (ov && overAmt > 0.01) overPose(P, ov, over ? Math.min(1, over.t / over.o.dur) : 1, overAmt, pos.x, pos.y, pos.z, face, SCALE);
+    // ...and a moment's keyed pose (the door push, the lean on the counter, the sit), the motion capture stepping aside
+    momentAmt += ((moments.posing ? 1 : 0) - momentAmt) * damp(moments.posing ? 12 : 8, dt);
+    if (momentAmt > 0.01) momentPose(P, moments, momentAmt, pos.x, pos.y + momentDy, pos.z, face, SCALE, t);
     // Recoil kicks the view up a touch; the rifle rides the shoulder
     const kick = combat.update(dt, t, aimNow);
     if (kick) {
@@ -2084,7 +2196,7 @@ export function createWalk(d: WalkDeps) {
     }
     let drawFace = face;
     // ...with a gun in his hands or an arm out aiming, only its legs and hips: his own pose over them
-    const mocapOn = !!animator && landHold <= 0 && !emote && !slide && !over;
+    const mocapOn = !!animator && landHold <= 0 && !emote && !slide && !over && !moments.posing;
     upperW = THREE.MathUtils.clamp(upperW + (gunInHand || aim ? dt / 0.15 : -dt / 0.15), 0, 1);
     if (animator && anim) {
       // (a fresh start after a jump in place: walking started, a fast travel, the end of a ride)
@@ -2102,7 +2214,7 @@ export function createWalk(d: WalkDeps) {
         drawFace = face + wrap(animator.face - face) * mocapW;
         // Contact (contact.ts): on the pose before the figure takes it, not with a gun in his hands (the hold has the arms)
         let rot: Float32Array = animator.rot;
-        if (contact && contactMod && contactRot) {
+        if (contact && contactMod && contactRot && !moments.active) {
           contactBoxes.length = 0;
           SOLID_GRID.near(pos.x, pos.z, 1.2, contactBoxes);
           for (const b of d.plotSolids()) if (b[0] - 1.2 < pos.x && pos.x < b[2] + 1.2 && b[1] - 1.2 < pos.z && pos.z < b[3] + 1.2) contactBoxes.push(b);
@@ -2133,7 +2245,7 @@ export function createWalk(d: WalkDeps) {
     // The peek: the upper body out over the hips towards where you look, the head kept level (less so with his cheek on a stock)
     if (peek && anim) anim.addLean(hero.rig, peek * PEEK.lean, wrap(lookFace - drawFace), PEEK.level * (1 - 0.6 * (gunInHand ? combat.cheek : 0)));
     lastPos.copy(pos);
-    placeRoot(hero.g, pos.x, pos.y, pos.z, animator ? drawFace : face, SCALE, animator ? root0 : loco.root);
+    placeRoot(hero.g, pos.x, pos.y + momentDy, pos.z, animator ? drawFace : face, SCALE, animator ? root0 : loco.root);
     hero.ring.position.set(pos.x, ground + 0.02, pos.z);
     (hero.ring.material as THREE.MeshBasicMaterial).opacity = 0.55 * (1 - air * 0.6);
 
@@ -2144,7 +2256,7 @@ export function createWalk(d: WalkDeps) {
     // (a peek takes it out with him: further over his right shoulder, or across to his left; never into a wall beside him)
     let lateral = firstPerson ? peek * PEEK.eye : shoulder + peek * (peek > 0 ? PEEK.cam : 2 * shoulder + PEEK.cam);
     // (lower crouched, lower still sliding)
-    const eyeY = pos.y + ((firstPerson ? 1.2 : 1.0) - crouchAmt * CROUCH.cam - slideAmt * CROUCH.slideCam) * SCALE + 0.05;
+    const eyeY = pos.y + momentDy + ((firstPerson ? 1.2 : 1.0) - crouchAmt * CROUCH.cam - slideAmt * CROUCH.slideCam) * SCALE + 0.05;
     if (Math.abs(lateral) > 0.01) {
       const sgn = Math.sign(lateral);
       headAt.set(pos.x, eyeY, pos.z);
@@ -2165,7 +2277,8 @@ export function createWalk(d: WalkDeps) {
     const camPitch = firstPerson ? pitch : Math.max(pitch, -0.12);
     offset.set(Math.sin(yaw) * Math.cos(camPitch), Math.sin(camPitch), Math.cos(yaw) * Math.cos(camPitch));
     const want = firstPerson ? 0 : zoom * (aimNow ? 0.62 : 1);
-    const room = firstPerson ? 0 : cameraRoom(pivot, offset, want);
+    // (seated, a bench's back or anything else that low doesn't pull the camera in onto him)
+    const room = firstPerson ? 0 : cameraRoom(pivot, offset, want, 0.35, seated() ? 0.9 : 0.5);
     camDist = room < camDist ? room : camDist + (room - camDist) * damp(4, dt);
     camera.position.copy(pivot).addScaledVector(offset, camDist);
     if (shakeT > 0) {
@@ -2181,7 +2294,8 @@ export function createWalk(d: WalkDeps) {
     camera.lookAt(lookAt);
     // (leaning out in first person, the view tilts with his head a little)
     if (firstPerson && peek && !d.reduced) camera.rotateZ(-peek * PEEK.roll);
-    hero.g.visible = !firstPerson && camDist > 0.6;
+    // (seated, the bench and what's round it may keep the camera close: he still shows)
+    hero.g.visible = !firstPerson && camDist > (seated() ? 0.3 : 0.6);
     frameShowroom(dt);
     hero.ring.visible = !firstPerson;
     combat.view(dt, t, { firstPerson, aim: aimNow, move: stride, phase, run: runAmt, air });
@@ -2253,6 +2367,9 @@ export function createWalk(d: WalkDeps) {
         best = { id: door.id, label: root.querySelector(`[data-pin="${door.id}"] .city-pin-title`)?.textContent ?? door.id };
       }
     }
+    // A free bench to sit on (moments.ts); seated, standing up
+    if (seated()) best = { id: 'stand', label: 'Stand up' };
+    else if (!best && !drive.active && nearestBench()) best = { id: 'bench', label: 'Sit' };
     if (best?.id !== near?.id || best?.label !== near?.label) {
       near = best;
       prompt.hidden = !near;
@@ -2340,6 +2457,8 @@ export function createWalk(d: WalkDeps) {
       vy = 0;
       grounded = true;
       over = slide = null;
+      moments.cancel();
+      momentAmt = momentDy = 0;
       yaw = at.yaw;
       face = yaw + Math.PI;
       pitch = firstPerson ? -0.05 : 0.35;
@@ -2402,6 +2521,8 @@ export function createWalk(d: WalkDeps) {
       crouched = false;
       slide = null;
       over = null;
+      moments.cancel();
+      momentAmt = momentDy = 0;
       // ?spawn=x,z[,yaw] in the address: start walking somewhere else (for checking a place on real devices)
       const at = new URLSearchParams(location.search).get('spawn')?.split(',').map(Number);
       if (at && at.length >= 2 && at.every(Number.isFinite)) {
@@ -2452,6 +2573,8 @@ export function createWalk(d: WalkDeps) {
       }
       fightUI.close();
       active = false;
+      moments.cancel();
+      momentAmt = momentDy = 0;
       root.classList.remove('is-fp');
       keys.clear();
       jumpHeld = mouseL = mouseR = false;
