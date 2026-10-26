@@ -33,5 +33,11 @@
   {"file": "cmu/127_21.bvh", "name": "run-jump-stop", "to": 2.4, "tags": ["run", "jump", "stop"]},
   {"file": "cmu/127_22.bvh", "name": "run-jump-stop-2", "to": 2.4, "tags": ["run", "jump", "stop"]},
   {"file": "cmu/143_05.bvh", "name": "jump-far", "from": 1.2, "fps": 60, "tags": ["jump", "jumps-only"]},
-  {"file": "cmu/143_06.bvh", "name": "jump-high", "from": 2.0, "fps": 60, "tags": ["jump", "jumps-only"]}
+  {"file": "cmu/143_06.bvh", "name": "jump-high", "from": 2.0, "fps": 60, "tags": ["jump", "jumps-only"]},
+  {"file": "cmu/143_32.bvh", "name": "crowd-walk", "from": 1.0, "to": 6.0, "loop": 1, "fps": 60, "pack": "crowd", "tags": ["walk", "crowd"]},
+  {"file": "cmu/143_32.bvh", "name": "crowd-walk-2", "from": 7.0, "to": 12.5, "loop": 1, "fps": 60, "pack": "crowd", "tags": ["walk", "crowd"]},
+  {"file": "cmu/143_01.bvh", "name": "crowd-run", "loop": 1, "fps": 60, "pack": "crowd", "tags": ["run", "crowd"]},
+  {"file": "cmu/137_41.bvh", "name": "crowd-idle", "from": 3.0, "to": 11.0, "pack": "crowd", "tags": ["stand", "crowd"]},
+  {"file": "cmu/137_41.bvh", "name": "crowd-idle-2", "from": 35.0, "to": 41.0, "pack": "crowd", "tags": ["stand", "crowd"]},
+  {"file": "cmu/137_41.bvh", "name": "crowd-idle-3", "from": 19.5, "to": 24.0, "pack": "crowd", "tags": ["stand", "crowd"]}
 ]

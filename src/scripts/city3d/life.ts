@@ -22,7 +22,7 @@ import { TRENCH_WALKS } from './projects';
 import { UPTOWN_PEOPLE, UPTOWN_WALKS } from './uptownlife';
 import { inTrenches } from './trenches';
 import { CROWD_VIEW, HIP_HEIGHT, cityOutfit, createCrowd } from './character';
-import { CLIP_SECONDS, JOG_STRIDE, WALK_STRIDE } from './crowdclips';
+import { type CrowdClip, idleFor, secondsOf, strideOf, walkFor } from './crowdclips';
 import { PARK_PEOPLE, moment, type Moment, type ParkPerson } from './parklife';
 import { blinkOn, bodyMotion, braking, hornDue, indicating, newBody, newHorn, pullAway, reactionOf, resetBody, turnsOf, type Body, type Horn, type Mover, type Turn } from './traffic';
 import { CROSS_PACE, crossingLinks, hurry, noticing, outAtNight, takesCrossing, walkLight, type Link } from './pedestrians';
@@ -812,9 +812,12 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
         p.ry = m.ry;
         p.walked += m.speed * dt;
       }
-      // Each plays a baked clip (crowdclips.ts): the walk at its stride, so their feet stay put on the pavement;
-      // the rest from where their own offset puts them in it
-      const loop = t / CLIP_SECONDS + p.phase / 6;
+      // Each plays a baked clip (crowdclips.ts): their own walk at its stride, so their feet stay put on the
+      // pavement; their own idle; the rest from where their own offset puts them in it
+      const seed = p.phase / 6;
+      const walkClip = walkFor(seed);
+      const idleClip = idleFor(seed);
+      const playAt = (c: CrowdClip) => t / secondsOf(c) + seed;
       // Turn corners over a few frames instead of snapping
       if (Number.isNaN(p.face)) p.face = p.ry;
       const turn = Math.atan2(Math.sin(p.ry - p.face), Math.cos(p.ry - p.face));
@@ -827,11 +830,15 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
         const m = p.m!;
         const c = m.clip;
         const py = c === 'sit' || c === 'picnic' ? m.y - SEAT_DROP : m.y;
-        const u = c === 'walk' ? p.walked / (WALK_STRIDE * PERSON_SCALE) + p.phase / 6 : c === 'jog' ? p.walked / (JOG_STRIDE * PERSON_SCALE) + p.phase / 6 : loop;
-        people3d.set(i, p.x, py, p.z, p.face, PERSON_SCALE, c, u);
-      } else if (p.kind === 'walk' && standing) people3d.set(i, bx, y, bz, p.face, PERSON_SCALE, looking ? 'idle' : 'look', loop);
-      else if (p.kind === 'walk') people3d.set(i, bx, y, bz, p.face, PERSON_SCALE, 'walk', p.walked / (WALK_STRIDE * PERSON_SCALE) + p.phase / 6);
-      else people3d.set(i, bx, y, bz, p.face, p.scale ?? PERSON_SCALE, p.act === 'sit' ? 'sit' : p.act === 'chat' ? 'chat' : p.act === 'queue' ? 'idle' : 'look', loop);
+        const clip = c === 'walk' ? walkClip : c === 'idle' ? idleClip : c;
+        const u = c === 'walk' || c === 'jog' ? p.walked / (strideOf(clip) * PERSON_SCALE) + seed : playAt(clip);
+        people3d.set(i, p.x, py, p.z, p.face, PERSON_SCALE, clip, u);
+      } else if (p.kind === 'walk' && standing) people3d.set(i, bx, y, bz, p.face, PERSON_SCALE, looking ? idleClip : 'look', playAt(looking ? idleClip : 'look'));
+      else if (p.kind === 'walk') people3d.set(i, bx, y, bz, p.face, PERSON_SCALE, walkClip, p.walked / (strideOf(walkClip) * PERSON_SCALE) + seed);
+      else {
+        const clip: CrowdClip = p.act === 'sit' ? 'sit' : p.act === 'chat' ? 'chat' : p.act === 'queue' ? idleClip : 'look';
+        people3d.set(i, bx, y, bz, p.face, p.scale ?? PERSON_SCALE, clip, playAt(clip));
+      }
     });
     people3d.commit();
   });

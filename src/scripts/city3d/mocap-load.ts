@@ -5,13 +5,17 @@
  * (`CORE_PACK`: standing, walking, running, turns, strafes, jumps, the
  * crouch) is what walking needs; another pack (the moments', the fight's)
  * is fetched the first time it's used, through `loadMocap(pack)`, and a new
- * one is a take with `pack` in takes.json and a line in `PACKS` here.
+ * one is a take with `pack` in takes.json and a line in `PACKS` here. The
+ * crowd pack (`CROWD_PACK`: the crowd's walks, run and idles, small) is
+ * fetched at the boot.
  */
 import clipsUrl from '../../data/mocap/clips.bin?url';
+import crowdUrl from '../../data/mocap/clips-crowd.bin?url';
 import { CORE_PACK, decodeMocap, type MoData } from './mocap';
 
-/** Each pack's file (written by `npm run mocap`) */
-const PACKS: Record<string, string> = { [CORE_PACK]: clipsUrl };
+/** Each pack's file (written by `npm run mocap`): the core, and the crowd's (crowdclips.ts, fetched at the boot) */
+export const CROWD_PACK = 'crowd';
+const PACKS: Record<string, string> = { [CORE_PACK]: clipsUrl, [CROWD_PACK]: crowdUrl };
 
 const loading = new Map<string, Promise<MoData>>();
 export function loadMocap(pack = CORE_PACK): Promise<MoData> {

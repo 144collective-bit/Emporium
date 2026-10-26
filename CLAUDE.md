@@ -1650,7 +1650,24 @@ it and has been retired completely. Build only on what's here.
   here"), when `done` moves the goods; "Put it down" elsewhere moves
   nothing; a vehicle, a ride, a fast travel or walk mode ending puts it
   away). The rides seen (the metro's, taxi's and river bus's seated
-  figure) are held back, in the plan. The clips file's limits are 640 KB (test) and 660 KB (budget),
+  figure) are held back, in the plan. Phase 5 (everyone on the same
+  motion) step 1 is built: **the crowd on the capture**: six takes in
+  their own pack (`pack: "crowd"` in takes.json → `clips-crowd.bin`, 56 KB,
+  `CROWD_PACK` in mocap-load.ts; the core pack untouched), fetched at the
+  boot and swapped into every crowd's rows as it comes in
+  (`setCrowdCapture()` in crowdclips.ts, `refreshCrowdTexture()` in
+  crowdskin.ts; the rows' layout is fixed whatever the capture holds, the
+  recorded walk and the formula idle stand in until then): `walk` /
+  `walk2` (two cycles of 143's walk) and `jog` (his run) resampled to
+  their rows with the hips in place, `idle` / `idle2` / `idle3` (three
+  stretches of 137 waiting, each looped with its tail crossfaded into its
+  head, `captureRow()`, at its own length, `secondsOf()`); `march` is the
+  recorded walk still and `look`, `chat`, `sit`, `picnic`, `salute` the
+  formulas (no such takes). Every person has their own walk and idle
+  (`walkFor()` / `idleFor()` by a number of theirs, life.ts), the strides
+  are live (`STRIDE`, `strideOf()`), and the scale rule is tested at the
+  city's scales (`tests/crowdclips.test.ts`). A budget row (`mocapCrowd`)
+  holds the pack under 80 KB. The clips file's limits are 640 KB (test) and 660 KB (budget),
   raised for the takes on purpose:
   - **The data** is CMU's motion capture (free for commercial use; the
     acknowledgment is in the start menu's Options > Credits, named, never

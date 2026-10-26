@@ -48,6 +48,8 @@ const BUDGETS = {
    * 16-bit numbers made 703; room for Phase 2's takes
    */
   mocap: 660,
+  /** The crowd's pack (`clips-crowd.bin`, fetched at the boot and swapped into the crowd's rows: crowdclips.ts) */
+  mocapCrowd: 80,
 };
 
 const dist = process.argv[2] ?? 'dist';
@@ -100,11 +102,13 @@ if (tex) {
 // The motion capture's core pack (named by its contents), raw: any other pack is fetched on first use
 const mocap = files.filter((f) => /^clips\.[\w-]+\.bin$/.test(f));
 if (mocap.length) rows.push(['mocap', mocap.reduce((s, f) => s + readFileSync(join(astro, f)).length, 0) / 1024, `${mocap.join(' ')} (${mocap.map((f) => gz(join(astro, f)).toFixed(0)).join(' ')} KB gz)`]);
+const crowdPack = files.filter((f) => /^clips-crowd\.[\w-]+\.bin$/.test(f));
+if (crowdPack.length) rows.push(['mocapCrowd', crowdPack.reduce((s, f) => s + readFileSync(join(astro, f)).length, 0) / 1024, `${crowdPack.join(' ')} (${crowdPack.map((f) => gz(join(astro, f)).toFixed(0)).join(' ')} KB gz)`]);
 let failed = false;
 for (const [key, kb, what] of rows) {
   const over = kb > BUDGETS[key];
   failed ||= over;
-  console.log(`${over ? 'OVER' : 'ok  '} ${key.padEnd(10)} ${kb.toFixed(1).padStart(7)} KB of ${String(BUDGETS[key]).padStart(4)} KB${key.startsWith('tex') || key === 'mocap' ? '   ' : ' gz'}  ${what}`);
+  console.log(`${over ? 'OVER' : 'ok  '} ${key.padEnd(10)} ${kb.toFixed(1).padStart(7)} KB of ${String(BUDGETS[key]).padStart(4)} KB${key.startsWith('tex') || key.startsWith('mocap') ? '   ' : ' gz'}  ${what}`);
 }
 if (failed) {
   console.error('A budget is blown (scripts/budget.mjs): make the start lighter, or load the new part when it is used.');

@@ -667,21 +667,75 @@ What's not in, and why:
 - Everything in walk.ts stays where it is; the moments are called from
   the prompts' `act()` and hand back to what it did.
 
-### Phase 5: everyone on the same motion
+### Phase 5: everyone on the same motion (step 1 built, for the owner's sign-off)
+
+Built in steps: **step 1** (the crowd's rows from the capture, the scale
+rule: built, below), step 2 (other players on the animator) and step 3
+(the emotes re-keyed).
+
+What step 1 built (and how it differs from the plan):
+
+- **The crowd pack**: six takes in their own pack (`pack: "crowd"` in
+  takes.json, `clips-crowd.bin`, 56 KB, `CROWD_PACK` in mocap-load.ts):
+  two seamless cycles of subject 143's walk (two different stretches of the
+  take, so the two walks differ), one of his run, and three stretches of
+  subject 137 waiting (8, 6 and 4.5 s). The core pack is untouched. It's
+  fetched at the boot (index.ts, right after the textures start) and
+  swapped into every crowd's rows as it comes in (`setCrowdCapture()`,
+  `refreshCrowdTexture()`): the rows' layout is fixed whatever the capture
+  holds (each clip's frames in `CLIP_DEFS`), so the texture is replaced in
+  place; until it's in, and without it, the recorded walk and the formula
+  idle stand in. Not baked at build time as the plan said: the rows as
+  numbers in the page would blow the boot's budget (8 KB of headroom), and
+  a 56 KB fetch after the boot costs the start nothing.
+- **The rows** (`crowdclips.ts`): `walk`, `walk2` and `jog` are the captured
+  cycles resampled to their rows (the hips in place, the stride the take's
+  root motion); `idle`, `idle2` and `idle3` are the captured stretches, each
+  looped with its last `IDLE_TAIL` (0.8 s) crossfaded into its head
+  (`captureRow()`), at ten rows a second (an idle is slow), each at its own
+  length (`secondsOf()`). The body's bones come from the capture over the
+  rest pose's hands. `march` stays the recorded walk (no march was
+  captured), `look`, `chat`, `sit`, `picnic` and `salute` the formulas.
+- **Who plays what** (`life.ts`): every person is given their own walk
+  (`walkFor()`) and idle (`idleFor()`) by a number of their own, so no two
+  are in step or alike; the standing walkers, the queues and the park's
+  walkers use them. The strides are live (`STRIDE`, `strideOf()`: the
+  recording's until the pack is in, then the capture's), so a walk always
+  plays at the rate its own cycle covers.
+- **The scale rule**, tested (`tests/crowdclips.test.ts`): at scales 1,
+  0.85, 0.66 (the pedestrians) and 0.5 (the kids) a walk played at
+  v / (stride · scale) keeps its planted foot still through the stance
+  (less the landing and the lift-off: a captured heel comes down still
+  moving, so the test reads a stance as the longest run of frames down).
+- **Measured**: the texture went from 961 to 982 rows (2.0 MB, the same),
+  the crowd's draws and memory are unchanged (the rows are the same size
+  and the GPU does the same work), and the boot fetches 56 KB more after
+  it's up (a budget row, `mocapCrowd`, holds it under 80 KB).
+
+What's not in, and why:
+
+- **Two chats, the sit, the sit-down and stand-up, the march from capture**:
+  the CMU takes in the repository have no chatting, sitting or marching.
+  Picking them (a conversation take, a sit-down, a parade march) is a data
+  step for the owner to sign off (the `docs` of the data below say what's
+  there); the formulas stay until then.
+- **Other players** (step 2) and **the emotes** (step 3).
+
+The plan as it was:
 
 - **Other players** (`remote.ts`) on the animator, fed from the
   interpolated position, speed and facing the server already sends; the
   gun hold, the emotes and the gaze on top; far ones at the far rate.
-- **The crowd's rows re-baked** from the captured clips (`crowdclips.ts`
-  samples the database at build time through `baked()`): two or three
-  walks and the jog, three idles, two chats, the sit (and the sit-down and
-  stand-up as non-loop rows), the picnic, the march and the salute;
-  `life.ts` keeps picking by its rules, with a per-person pick of which
-  walk and which idle (seeded), so no two people are in step or alike.
-  The soldiers' march from capture.
+- **The crowd's rows re-baked** from the captured clips (built, step 1,
+  above: from the crowd pack fetched at the boot, not at build time): two
+  walks and the jog, three idles (built); two chats, the sit (and the sit-down and
+  stand-up as non-loop rows), the picnic, the march and the salute (held
+  back: no takes); `life.ts` keeps picking by its rules, with a per-person
+  pick of which walk and which idle (seeded), so no two people are in step
+  or alike (built). The soldiers' march from capture (held back).
 - **The emotes** re-keyed on the bone pose (and the dance from capture if
   a take fits; the hologram and the fitting room's stage play the same).
-- **The scale rule**: every row plays at its stride for the person's scale
+- **The scale rule** (built, step 1): every row plays at its stride for the person's scale
   (as today's walk does), tested for kids' and fighters' scales.
 - Measured on a phone (`?bench`, `?fps`: the crowd texture's size, draws,
   memory) before it merges.

@@ -29,7 +29,8 @@ test('the BVH reader: the skeleton, the frames, the T-pose first', () => {
 });
 
 test('the clips file is exactly what the pipeline makes from the takes (npm run mocap)', () => {
-  const made = encodeMocap(buildMocap(takes, read));
+  // (the core pack: the crowd's takes go in their own file, checked below)
+  const made = encodeMocap(packs(buildMocap(takes, read))[0].data);
   assert.equal(made.length, file.length, 'same size');
   assert.ok(Buffer.from(made).equals(file), 'same bytes: run `npm run mocap` after changing a take or the pipeline');
 });
@@ -39,7 +40,8 @@ test('every clip carries the body bones, parents first, turns kept to their 16 b
   for (const b of MOCAP_BONES) assert.ok(BONES.includes(b), b);
   PARENT.forEach((p, i) => assert.ok(p < i, `${MOCAP_BONES[i]}'s parent comes first`));
   assert.equal(data.fps, MOCAP_FPS);
-  assert.equal(data.clips.length, takes.length);
+  // (the core file: the crowd's takes are in their own pack)
+  assert.equal(data.clips.length, takes.filter((t) => !t.pack || t.pack === CORE_PACK).length);
   // Round trip: what's decoded re-encodes to the same file
   assert.ok(Buffer.from(encodeMocap(data)).equals(file));
   for (const c of data.clips)
@@ -168,8 +170,14 @@ test('every clip carries its tags, marks and pack, through the file and its mirr
   assert.deepEqual(Array.from(sm.floor!), Array.from(st.floor!));
   assert.ok(Array.from(st.contact!).every((b, f) => sm.contact![f] === (((b & 1) << 1) | ((b >> 1) & 1))), 'the mirror\'s contacts swap sides');
   assert.equal(data.clips.find((c) => !tagged(c, 'stairs'))!.floor, undefined, 'a flat clip has no floor of its own');
-  // The packs: everything is the core's today (one file)
-  assert.deepEqual(packs(data).map((p) => [p.pack, p.file, p.data.clips.length]), [[CORE_PACK, 'clips.bin', data.clips.length]]);
+  // The packs: the core (this file) and the crowd's (crowdclips.ts), each its own file, and the crowd's is what the pipeline makes too
+  const all = buildMocap(takes, read);
+  const split = packs(all);
+  assert.deepEqual(split.map((p) => [p.pack, p.file]), [[CORE_PACK, 'clips.bin'], ['crowd', 'clips-crowd.bin']]);
+  assert.equal(split[0].data.clips.length, data.clips.length);
+  const crowdFile = readFileSync('src/data/mocap/clips-crowd.bin');
+  assert.ok(Buffer.from(encodeMocap(split[1].data)).equals(crowdFile), 'the crowd pack is what the pipeline makes: run `npm run mocap`');
+  assert.ok(crowdFile.length < 80 * 1024, `the crowd pack stays small: ${(crowdFile.length / 1024).toFixed(0)} KB`);
 });
 
 test('the collarbones sit level, as Degen\'s do at rest (the capture\'s own shoulder joint sits at the neck and would shrug them)', () => {
