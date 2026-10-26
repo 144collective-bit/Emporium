@@ -34,6 +34,7 @@ import type { SpotId } from '../../lib/city';
 import { PLAYER, createDegen, emotePose, type Outfit } from './character';
 import { LAND_CROUCH, LAND_ROLL, copyLeg, copyPose, createLocomotion, placeRoot, type Root } from './locomotion';
 import type { Animator } from './animator';
+import type { Contact } from './contact';
 import { loadMocap } from './mocap-load';
 import { createGaze, type Interest } from './gaze';
 import { GAITS, STAIRS, climbAhead, newMove, startSlide, stepMove, stepSlide, type Slide } from './movesim';
@@ -242,6 +243,20 @@ export function createWalk(d: WalkDeps) {
   let mocapW = 0;
   /** How much of his upper body is his own pose over the motion capture's legs (the gun's hold, an arm out aiming) */
   let upperW = 0;
+  /**
+   * Contact (contact.ts, the revamp's Phase 3): what his body does about what he touches (a hand on a wall, the
+   * shoulder's give brushing past, a stagger into one at a sprint, a squeeze, a lean on a rail), a layer on the
+   * motion capture's pose; its code comes with the animator's. Phones leave out the hands and the lean.
+   */
+  let contactMod: typeof import('./contact') | null = null;
+  let contact: Contact | null = null;
+  let contactRot: Float32Array | null = null;
+  const contactBoxes: Box[] = [];
+  const contactPeople: { x: number; z: number }[] = [];
+  /** This frame his move was stopped by something, and how fast he was going into it */
+  let hitWall = false;
+  let hitSpeed = 0;
+  let staggering = false;
   /** The peek: how far he's leaning (-1 his left to 1 his right), eased; the gamepad's lean, the touch corner's, and when it was looked for */
   let peek = 0;
   let padLean = 0;
@@ -421,6 +436,8 @@ export function createWalk(d: WalkDeps) {
     if (drive.blocks(x, z, RADIUS) || fly.blocks(x, z, RADIUS)) return true;
     return d.plotSolids().some((b) => inBox(b, x, z, RADIUS));
   }
+  /** Where he can't step at his own height (contact.ts asks, for a rail: an edge nothing solid explains) */
+  const contactBlocked = (bx: number, bz: number) => blocked(bx, bz, pos.y);
 
   /** How far the camera can sit from the pivot along `dir` before something's in the way. */
   function cameraRoom(from: THREE.Vector3, dir: THREE.Vector3, want: number, min = 0.35) {
@@ -1857,7 +1874,9 @@ export function createWalk(d: WalkDeps) {
     if (crouched && sprint && mag > 0.1 && !slide) crouched = false;
     // (up stairs a climb's pace: the stairs takes' walking, a brisk climb running; movesim.ts STAIRS)
     const climbing = mag > 0.1 && climbAhead(groundAt, pos.x, pos.z, pos.y, dirX, dirZ, SCALE);
-    const top = Math.min(shooting ? AIMING : sprint ? SPRINT : walkLock ? WALK : RUN, crouched ? CROUCH.speed : Infinity, climbing ? (walkLock ? STAIRS.walk : STAIRS.run) : Infinity) * (1 - (1 - PEEK.slow) * Math.abs(peek));
+    // (brushing something the step hitches: contact.ts)
+    const hitch = contact && contactMod ? contactMod.CONTACT.hitch * contact.state.hitch : 0;
+    const top = Math.min(shooting ? AIMING : sprint ? SPRINT : walkLock ? WALK : RUN, crouched ? CROUCH.speed : Infinity, climbing ? (walkLock ? STAIRS.walk : STAIRS.run) : Infinity) * (1 - (1 - PEEK.slow) * Math.abs(peek)) * (1 - hitch);
 
     // Towards it on the springs (movesim.ts; hardly any control in the air), facing where he's
     // going, or where you look when aiming / in first person
@@ -1868,6 +1887,8 @@ export function createWalk(d: WalkDeps) {
     ms.vx = vel.x;
     ms.vz = vel.y;
     ms.face = face;
+    hitWall = false;
+    hitSpeed = 0;
     if (over) {
       // Over something low: along the way over, his feet over its top (vault.ts), the springs carried along
       over.t += dt;
@@ -1895,8 +1916,19 @@ export function createWalk(d: WalkDeps) {
           slide = null;
           crouched = Math.hypot(gx, gz) < 0.01;
         }
-      } else stepMove(ms, gx, gz, grounded, dt, faceGoal);
+      } else {
+        // (a stagger (contact.ts): thrown back from the wall over its time, the stick waiting)
+        const stag = contact?.state.stagger;
+        stepMove(ms, stag ? 0 : gx, stag ? 0 : gz, grounded, dt, faceGoal);
+        if (stag && contactMod) {
+          const k = contactMod.CONTACT.stagger;
+          const v = (k.back / k.t) * (Math.PI / 2) * Math.sin(Math.PI * stag.t);
+          ms.vx = stag.hand.nx * v;
+          ms.vz = stag.hand.nz * v;
+        }
+      }
       vel.set(ms.vx, ms.vz);
+      const v0 = vel.length();
       const stuck = blocked(pos.x, pos.z, pos.y);
       const nx = pos.x + vel.x * dt;
       if (stuck || !blocked(nx, pos.z, pos.y)) pos.x = nx;
@@ -1904,6 +1936,8 @@ export function createWalk(d: WalkDeps) {
       const nz = pos.z + vel.y * dt;
       if (stuck || !blocked(pos.x, nz, pos.y)) pos.z = nz;
       else vel.y = 0;
+      hitWall = !slide && grounded && (vel.x !== ms.vx || vel.y !== ms.vz);
+      hitSpeed = hitWall ? v0 : 0;
       // (a slide into something stops there, crouched)
       if (slide && (vel.x !== ms.vx || vel.y !== ms.vz)) {
         slide = null;
@@ -2036,10 +2070,13 @@ export function createWalk(d: WalkDeps) {
     // On foot, unarmed and not showing off, the motion capture: blended in and out over a moment
     if (!animator && !animLoading) {
       animLoading = true;
-      Promise.all([import('./animator'), loadMocap()]).then(
-        ([m, data]) => {
+      Promise.all([import('./animator'), import('./contact'), loadMocap()]).then(
+        ([m, cm, data]) => {
           anim = m;
           animator = m.createAnimator(data);
+          contactMod = cm;
+          contact = cm.createContact({ hands: !d.low });
+          contactRot = new Float32Array(animator.rot.length);
         },
         // (it can be tried again: the procedural walk carries on meanwhile)
         () => (animLoading = false),
@@ -2051,7 +2088,10 @@ export function createWalk(d: WalkDeps) {
     upperW = THREE.MathUtils.clamp(upperW + (gunInHand || aim ? dt / 0.15 : -dt / 0.15), 0, 1);
     if (animator && anim) {
       // (a fresh start after a jump in place: walking started, a fast travel, the end of a ride)
-      if ((mocapW < 0.01 && mocapOn) || lastPos.distanceToSquared(pos) > 4) animator.reset();
+      if ((mocapW < 0.01 && mocapOn) || lastPos.distanceToSquared(pos) > 4) {
+        animator.reset();
+        contact?.reset();
+      }
       // (over a quarter second back in, less going out so a slide or an emote still answers at once: quicker, the two poses swapped with a jolt)
       mocapW = THREE.MathUtils.clamp(mocapW + (mocapOn ? dt / 0.25 : -dt / 0.15), 0, 1);
       if (mocapW > 0) {
@@ -2060,7 +2100,28 @@ export function createWalk(d: WalkDeps) {
         animator.update({ dt, x: pos.x, y: pos.y, z: pos.z, move: ms, gx, gz, scale: SCALE, ground: groundAt, feet: groundAt, sprint: runAmt, grounded, vy: grounded ? fall : vy, jump: JUMP, gravity: GRAVITY, faceGoal, crouch: crouchAmt });
         // (shown facing the way the motion capture turns him; his own upper body turned back to the springs' facing)
         drawFace = face + wrap(animator.face - face) * mocapW;
-        anim.applyTo(hero.rig, animator.rot, animator.hips, w, u, face - drawFace);
+        // Contact (contact.ts): on the pose before the figure takes it, not with a gun in his hands (the hold has the arms)
+        let rot: Float32Array = animator.rot;
+        if (contact && contactMod && contactRot) {
+          contactBoxes.length = 0;
+          SOLID_GRID.near(pos.x, pos.z, 1.2, contactBoxes);
+          for (const b of d.plotSolids()) if (b[0] - 1.2 < pos.x && pos.x < b[2] + 1.2 && b[1] - 1.2 < pos.z && pos.z < b[3] + 1.2) contactBoxes.push(b);
+          contactPeople.length = 0;
+          for (const p of bodies.people) if (p.act === undefined && Math.abs(p.x - pos.x) < 1.5 && Math.abs(p.z - pos.z) < 1.5) contactPeople.push(p);
+          const st = contact.update({ dt, x: pos.x, y: pos.y, z: pos.z, face: drawFace, scale: SCALE, speed, moving: mag > 0.1, walls: contactBoxes, people: contactPeople, blocked: contactBlocked, hit: hitWall, hitSpeed });
+          if (u < 0.5 && (st.hand || st.lean || st.stagger || st.give.w > 1e-3 || st.squeeze.w > 1e-3)) {
+            contactRot.set(animator.rot);
+            contactMod.applyContact(contactRot, animator.hips, st, pos.x, pos.y, pos.z, drawFace, SCALE);
+            rot = contactRot;
+          }
+          // (a small shake as a stagger starts)
+          if (st.stagger && !staggering && !d.reduced && !firstPerson) {
+            shakeT = LAND_SHAKE;
+            shakeK = 0.018;
+          }
+          staggering = !!st.stagger;
+        }
+        anim.applyTo(hero.rig, rot, animator.hips, w, u, face - drawFace);
         anim.addLook(hero.rig, headYaw + lookAround, headPitch * 0.5 + gazePitch, w * (1 - u));
         // (anything in his hand held out in front of it, clear of his leg)
         if (hero.held?.visible) anim.addCarry(hero.rig, w * (1 - u));

@@ -417,8 +417,8 @@ What's in:
   before. **Open:** the hips still bounce about a third of a tile a step on
   the city's double-size steps (the lift following a foot up its tread and
   the drop when the other can't reach, over the even ramp the tests walk;
-  in the city the ground is the treads themselves, eased); that's the
-  contact phase's.
+  in the city the ground is the treads themselves, eased); handed to the
+  contact phase, which left it for the polish phase.
 
 What's not in, and why:
 
@@ -427,19 +427,79 @@ What's not in, and why:
   Stops row (the chest coming back from the run's lean, a touchdown before
   he's still) passes on every program, so nothing was added.
 
-### Phase 3: contact (the old Phase 6)
+### Phase 3: contact (the old Phase 6; built, for the owner's sign-off)
 
-- Brushing a wall or a person: the shoulder gives and the step hitches (an
-  additive layer, `contact.ts`); the crowd's person reacts too (a `bump`
-  row, picked by the life rules, life.ts).
-- Stopping close to a wall: a hand goes onto it (the arm IK, as the vault's
-  hand plant); walking along a railing, a hand on it; standing at a rail
-  (the promenades, the boardwalk, the sky deck), a lean on it.
-- Running into a wall at a sprint: a stagger (a keyed clip, two steps back
-  and a hand up), not a stop dead; the camera's small shake.
-- Doorways and alleys: the shoulders turn a little through a narrow gap
-  (the bollards, the lanes).
-- On phones this layer steps down first.
+What was planned (and what came of each):
+
+- **Brushing a wall or a person**: the shoulder gives and the step hitches
+  (an additive layer, `contact.ts`); the crowd's person reacts too (a
+  `bump` row, picked by the life rules, life.ts). **Built.** `contact.ts`
+  (DOM-free, tested in `tests/contact.test.ts`) is a layer on the
+  animator's pose: `createContact().update()` reads what's near him each
+  frame (`ContactInput`: the collision grid's boxes within `CONTACT.reach`,
+  the crowd's people, where he can't step, and whether his move was stopped
+  this frame and how fast he was going) and `applyContact()` lays its
+  state on the pose before the figure takes it (walk.ts: after
+  `animator.update()`, before `applyTo()`; not with a gun in his hands, the
+  hold has the arms). Moving past a wall or a person within `brush` /
+  `person` at his side, that collarbone is pulled back and the chest
+  turned a touch (`give`, `giveChest`), eased in and out (`ease`,
+  `easeOut`), and the step hitches once (`hitch`: walk.ts takes 30% off
+  his top speed, over `hitchT`). The crowd's person: `bump` on a `Person`
+  in life.ts, a step `BUMP.out` aside and back over `BUMP.t` when you go
+  past within `BUMP.r` faster than a stroll (sitters and the park's people
+  left alone); the look is `noticing()`'s as before.
+- **Stopping close to a wall: a hand goes onto it; walking along a
+  railing, a hand on it; standing at a rail, a lean on it.** **Built.**
+  Stopped (under `still`) with a wall within `handStop` ahead (within
+  `handCone` of straight ahead), a hand goes onto it at `handHigh` in
+  front of its own shoulder (`shoulder` out from his middle, `palm` off the
+  surface); walking slowly (under `slow`) with one within `handAlong` at
+  his side, that hand trails along it at `handLow`. The hand reaches
+  through a two-bone arm IK (`reachArmBones()`: the animator's leg IK with
+  the elbow bending the other way, the hand keeping its turn), eased on
+  over `handEase` as a smoothstep (a reach, not a snap), and once on it
+  stays where it is (never slides to a new spot, never swaps hands) until
+  it's let go, when the spot comes with him in his own frame so the hand
+  only eases back to the pose. The rubric's Contact row (a hand within
+  1.5 cm of the thing it's on) is held by the test, at every distance in
+  reach. Standing still (`railDwell`) facing an edge he can't step over
+  with nothing solid within reach of it (`blocked` with no box near: the
+  quays, the promenades' railings, the boardwalk, the sky deck) he leans on
+  the rail: both hands on it at `railH`, `railSpread` apart, the spine
+  forward `lean` and the head back up.
+- **Running into a wall at a sprint: a stagger, not a stop dead; the
+  camera's small shake.** **Built**, not as a keyed clip: into a wall
+  faster than `stagger.speed` (walk.ts's `hitWall` / `hitSpeed`: his move
+  stopped by something this frame) the chest and head pitch back
+  (`stagger.pitch`, a bell over `stagger.t`), the near hand goes up to the
+  wall (`stagger.hand`), and walk.ts carries him `stagger.back` tiles back
+  from it on the springs with the stick waiting (the capture's backpedals
+  give the feet) and shakes the camera a little; nothing else of the pose
+  is touched.
+- **Doorways and alleys: the shoulders turn a little through a narrow
+  gap.** **Built.** Walls close on both sides with less than `squeeze`
+  between them turn the spine and chest `squeezeTurn` (more the narrower)
+  and bring the arms in `squeezeArms`; the give stands down in a gap.
+- **On phones this layer steps down first.** **Built:** `createContact({
+  hands: false })` on the low tier leaves out the hands and the lean (the
+  give, the hitch, the squeeze and the stagger stay: they're a few turns).
+- The lab's **Contact** program and floor (`?anim&prog=contact`): a wall
+  along his right to trail a hand on at a walk, a narrow gap, a wall
+  across the way to sprint into and stand at, a run back and a rail to
+  lean on; he can't walk through any of it. In the reel. A Contact readout
+  says what the layer is doing.
+
+What's not in, and why:
+
+- **The hand's own turn**: a hand on a wall keeps the pose's turn (its
+  fingers down along the wall), not a palm laid flat; the polish phase's,
+  with the fingers.
+- **The stairs' hips bounce** (Phase 2's open item, handed here) isn't
+  fixed: it's the lock's lift and drop over a double-size tread, nothing
+  to do with contact; it goes to the polish phase with the stairs' review.
+- Walk mode's hard stop against a wall at a walk is still the collision's
+  (a hand goes onto it); only a sprint staggers.
 
 ### Phase 4: the game's moments
 

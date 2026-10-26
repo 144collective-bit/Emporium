@@ -1596,7 +1596,24 @@ it and has been retired completely. Build only on what's here.
   and the head's slower blend (`HEAD_BLEND`, `Inertia.slow`);
   the matching normalised over frames on the move (`MOVING`) and a clip's end dearer (`ENDING`); stairs up from capture (122's climb, `stairs-up`: the pipeline tracks a stairs take's floor through its planted feet, `stairFloor()`, `stairs: true` in takes.json, format 3's `floor` / `contact`; the animator searches its climbing frames only while climbing, `climbAhead()` and `STAIRS` in movesim.ts, which walk mode also uses to slow a climb; the lab's Stairs program; down is the walks with the lock). The rubric reads the capture's standing takes as
   standing (`clipRows(..., standing)`, `Frame.side`); `HELD_BACK` is two
-  rows. The clips file's limits are 640 KB (test) and 660 KB (budget),
+  rows. Phase 3 (contact) is built: `contact.ts` (DOM-free, tested in
+  `tests/contact.test.ts`) is a layer on the animator's pose from what's
+  near him (`ContactInput`: the collision grid's boxes within
+  `CONTACT.reach`, the crowd's people, where he can't step, a move stopped
+  this frame and how fast), laid on by `applyContact()` after
+  `animator.update()` and before `applyTo()` in walk.ts (not with a gun in
+  his hands): brushing a wall or a person the shoulder gives and the step
+  hitches (`give`, `hitch`: 30% off his top speed for a moment; the crowd's
+  person steps aside and back, `bump` / `BUMP` in life.ts); stopped at a
+  wall a hand goes onto it at shoulder height, walking slowly along one it
+  trails along it at hip height (`reachArmBones()`, the arm's two-bone IK;
+  a hand on stays put until it's let go; the test holds it within 1.5 cm);
+  standing a while at an edge nothing solid explains (a quay, a railing)
+  he leans on the rail with both hands; into a wall at a sprint he
+  staggers (`stagger`: the chest back, a hand up, carried back on the
+  springs, a small camera shake); a gap narrower than `squeeze` turns the
+  shoulders. Phones (`createContact({ hands: false })`) leave out the
+  hands and the lean. The lab's Contact program and floor show it all. The clips file's limits are 640 KB (test) and 660 KB (budget),
   raised for the takes on purpose:
   - **The data** is CMU's motion capture (free for commercial use; the
     acknowledgment is in the start menu's Options > Credits, named, never
@@ -3148,7 +3165,7 @@ it and has been retired completely. Build only on what's here.
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,
   in `tests/merch.test.ts`), the crowd's baked clips (`crowdclips.ts`) and Degen's skeleton, weights, head and hands
-  (`skeleton.ts`, `body.ts`), his walking (`locomotion.ts`), the motion capture and its animation (`bvh.ts`, `mocap-build.ts`, `mocap.ts`, `movesim.ts`, `inertia.ts`, `motionmatch.ts`, `animator.ts`), the rubric of human movement over every clip and program (`human.ts`, `tests/human.test.ts`) and the guns in his hands (`gunfit.ts`, `stance.ts`). Modules that touch the DOM or `kit.ts` (canvas
+  (`skeleton.ts`, `body.ts`), his walking (`locomotion.ts`), the motion capture and its animation (`bvh.ts`, `mocap-build.ts`, `mocap.ts`, `movesim.ts`, `inertia.ts`, `motionmatch.ts`, `animator.ts`), the rubric of human movement over every clip and program (`human.ts`, `tests/human.test.ts`), what his body does about what he touches (`contact.ts`) and the guns in his hands (`gunfit.ts`, `stance.ts`). Modules that touch the DOM or `kit.ts` (canvas
   textures) can't load in Node; keep data a test needs in the DOM-free
   files.
 - When you change a rule or move something in the city, run the tests and

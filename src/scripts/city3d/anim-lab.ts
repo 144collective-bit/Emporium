@@ -37,9 +37,11 @@ import { createRubric, type Row } from './human';
 import { createGaze } from './gaze';
 import { copyPose, createLocomotion, placeRoot } from './locomotion';
 import { loadMocap } from './mocap-load';
+import { NB } from './mocap';
 import { GAITS, newMove, startSlide, stepMove, stepSlide, type MoveState, type Slide, STAIRS, climbAhead } from './movesim';
 import { slidePose } from './poses';
 import { overAhead, overAt, overPose, type Over } from './vault';
+import { CONTACT, applyContact, createContact } from './contact';
 import type { Box } from './solids';
 import { toon } from './kit';
 import { buildGun } from './guns';
@@ -51,11 +53,11 @@ import { createPost } from './post';
 const SCALE = 0.85;
 /** One tile in centimetres, for the readouts */
 const CM = 180;
-type Prog = 'manual' | 'runstop' | 'turnback' | 'weave' | 'circle' | 'startstop' | 'startback' | 'gaits' | 'idle' | 'jumps' | 'standjump' | 'hops' | 'strafe' | 'aimturn' | 'peek' | 'crouch' | 'slide' | 'over' | 'stairs' | 'reel';
+type Prog = 'manual' | 'runstop' | 'turnback' | 'weave' | 'circle' | 'startstop' | 'startback' | 'gaits' | 'idle' | 'jumps' | 'standjump' | 'hops' | 'strafe' | 'aimturn' | 'peek' | 'crouch' | 'slide' | 'over' | 'stairs' | 'contact' | 'reel';
 type Gait = 'walk' | 'run' | 'sprint';
 type Cam = 'side' | 'front' | 'back' | 'over' | 'free';
-type Floor = 'flat' | 'kerbs' | 'stairs' | 'ledge' | 'walls';
-const FLOORS: Floor[] = ['flat', 'kerbs', 'stairs', 'ledge', 'walls'];
+type Floor = 'flat' | 'kerbs' | 'stairs' | 'ledge' | 'walls' | 'contact';
+const FLOORS: Floor[] = ['flat', 'kerbs', 'stairs', 'ledge', 'walls', 'contact'];
 
 /* ---------- The floors: flat, kerbs, stairs (along +z, the same for both figures) ---------- */
 
@@ -81,6 +83,23 @@ const wallBoxes = (): Box[] => {
   }
   return out;
 };
+/**
+ * The contact floor (the revamp's Phase 3, contact.ts): a wall along his right to trail a hand on at a walk, a
+ * narrow gap to squeeze through, a wall across the way to run into at a sprint and stand at, and a rail at the
+ * start (an edge nothing solid explains) to lean on; he can't walk through any of it
+ */
+const CONTACT_FLOOR = {
+  side: [0.3, 0.5, 1.3, 3.2, 1.2] as Box,
+  gap: [
+    [-2.5, 4.5, -0.3, 6, 1.2],
+    [0.3, 4.5, 2.5, 6, 1.2],
+  ] as Box[],
+  wall: [-2.5, 12.5, 2.5, 13.5, 2] as Box,
+  rail: -0.3,
+};
+const contactBoxes = (): Box[] => [CONTACT_FLOOR.side, ...CONTACT_FLOOR.gap, CONTACT_FLOOR.wall];
+const RADIUS = 0.22;
+const contactBlocked = (bx: number, bz: number) => bz < CONTACT_FLOOR.rail + RADIUS || contactBoxes().some((b) => bx > b[0] - RADIUS && bx < b[2] + RADIUS && bz > b[1] - RADIUS && bz < b[3] + RADIUS);
 /** walk.ts's jump, gravity and the extra pull down when the jump is let go early */
 const JUMP = 3.9;
 const GRAVITY = 11.5;
@@ -129,6 +148,7 @@ const PROGS: [Prog, string][] = [
   ['slide', 'Sprint & slide'],
   ['over', 'Vault & climb'],
   ['stairs', 'Stairs'],
+  ['contact', 'Contact'],
   ['idle', 'Stand'],
   ['reel', 'Reel'],
   ['manual', 'By hand'],
@@ -152,6 +172,7 @@ const REEL: [Prog, number][] = [
   ['slide', 5],
   ['over', 7],
   ['stairs', 12],
+  ['contact', 20],
   ['idle', 14],
 ];
 const REEL_LENGTH = REEL.reduce((n, [, s]) => n + s, 0);
@@ -227,6 +248,12 @@ function program(p: Prog, t: number, speed: number): [number, number] {
     // Up and down the stairs floor's flights at a walk (the stairs takes climbing)
     case 'stairs':
       return [0, GAITS.walk];
+    // The contact floor: a walk along the side wall, a run through the gap, a sprint into the wall across, up to
+    // it at a walk and a stand at it, a run back, a walk up to the rail and a stand facing it
+    case 'contact': {
+      const u = cycle(20);
+      return u < 4 ? [0, GAITS.walk] : u < 6 ? [0, GAITS.run] : u < 8 ? [0, GAITS.sprint] : u < 10 ? [0, GAITS.walk] : u < 11.5 ? [0, 0] : u < 16 ? [0, -GAITS.run] : u < 17 ? [0, -GAITS.walk] : [0, 0];
+    }
     default:
       return [0, 0];
   }
@@ -292,7 +319,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   let compare = q.get('compare') !== '0';
   let traces = q.get('traces') !== '0';
   let scorecard = q.get('score') !== '0';
-  let floorKind: Floor = FLOORS.find((f) => f === q.get('floor')) ?? (prog === 'over' ? 'walls' : prog === 'stairs' ? 'stairs' : 'flat');
+  let floorKind: Floor = FLOORS.find((f) => f === q.get('floor')) ?? (prog === 'over' ? 'walls' : prog === 'stairs' ? 'stairs' : prog === 'contact' ? 'contact' : 'flat');
   let paused = false;
   let stepOnce = false;
   const GUNS: [WeaponId | 'none', string][] = [
@@ -331,6 +358,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
         clock = 0;
         // (the walls to go over are a floor of their own)
         if (p === 'over' && floorKind !== 'walls') (floorKind = 'walls'), buildFloor();
+        if (p === 'contact' && floorKind !== 'contact') (floorKind = 'contact'), buildFloor();
       }),
     );
   for (const g of ['walk', 'run', 'sprint'] as Gait[]) paints.push(button('gaits', g[0].toUpperCase() + g.slice(1), () => gait === g, () => (gait = g)));
@@ -424,6 +452,22 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
         for (let k = 0; k < FLIGHT.steps; k++) box(z2 + k * FLIGHT.tread, z2 + (k + 1) * FLIGHT.tread, (FLIGHT.steps - k) * FLIGHT.rise);
       }
     if (floorKind === 'walls') for (const b of wallBoxes()) box(b[1], b[3], b[4]);
+    if (floorKind === 'contact') {
+      for (const b of contactBoxes()) {
+        const m = new THREE.Mesh(new THREE.BoxGeometry(b[2] - b[0], b[4], b[3] - b[1]), stone);
+        m.position.set((b[0] + b[2]) / 2, b[4] / 2, (b[1] + b[3]) / 2);
+        terrain.add(m);
+      }
+      // (the rail: a bar on two posts at the edge)
+      const bar = new THREE.Mesh(new THREE.BoxGeometry(3, 0.05, 0.05), stone);
+      bar.position.set(0, CONTACT.railH * SCALE, CONTACT_FLOOR.rail - 0.03);
+      terrain.add(bar);
+      for (const px of [-1.4, 1.4]) {
+        const post = new THREE.Mesh(new THREE.BoxGeometry(0.05, CONTACT.railH * SCALE, 0.05), stone);
+        post.position.set(px, (CONTACT.railH * SCALE) / 2, CONTACT_FLOOR.rail - 0.03);
+        terrain.add(post);
+      }
+    }
     if (floorKind === 'ledge') {
       // (the ramp and the top as one side profile, across both lanes)
       const sh = new THREE.Shape();
@@ -525,6 +569,9 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   let overLast: Over | null = null;
   let overAmt = 0;
   const walls = wallBoxes();
+  // The contact layer (contact.ts) on the pose, from the contact floor's walls and rail
+  const contact = createContact();
+  const contactRot = new Float32Array(NB * 4);
 
   // By hand
   const keys = new Set<string>();
@@ -620,7 +667,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
     const pt = reel ? reel.t : clock;
     if (reel && reel.prog !== reelProg) {
       reelProg = reel.prog;
-      const want: Floor = reel.prog === 'over' ? 'walls' : reel.prog === 'stairs' ? 'stairs' : 'flat';
+      const want: Floor = reel.prog === 'over' ? 'walls' : reel.prog === 'stairs' ? 'stairs' : reel.prog === 'contact' ? 'contact' : 'flat';
       if (floorKind !== want) (floorKind = want), buildFloor();
     }
     let [gx, gz] = program(p, pt, top);
@@ -685,11 +732,31 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
         slide = null;
         crouched = Math.hypot(gx, gz) < 0.01;
       }
-    } else stepMove(move, gx, gz, me.grounded, dt, faceGoal);
+    } else {
+      const stag = contact.state.stagger;
+      stepMove(move, stag ? 0 : gx, stag ? 0 : gz, me.grounded, dt, faceGoal);
+      if (stag) {
+        const v = (CONTACT.stagger.back / CONTACT.stagger.t) * (Math.PI / 2) * Math.sin(Math.PI * stag.t);
+        move.vx = stag.hand.nx * v;
+        move.vz = stag.hand.nz * v;
+      }
+    }
     crouchAmt += ((crouched ? 1 : 0) - crouchAmt) * (1 - Math.exp(-10 * dt));
     slideAmt += ((slide ? 1 : 0) - slideAmt) * (1 - Math.exp(-(slide ? 18 : 9) * dt));
-    x += move.vx * dt;
-    z += move.vz * dt;
+    // (on the contact floor he can't walk through its walls, and a sprint into one staggers him)
+    let hit = false;
+    const v0 = Math.hypot(move.vx, move.vz);
+    if (floorKind === 'contact') {
+      const nx = x + move.vx * dt;
+      if (contactBlocked(nx, z)) (move.vx = 0), (hit = true);
+      else x = nx;
+      const nz = z + move.vz * dt;
+      if (contactBlocked(x, nz)) (move.vz = 0), (hit = true);
+      else z = nz;
+    } else {
+      x += move.vx * dt;
+      z += move.vz * dt;
+    }
     const j = p === 'manual' ? { press: jumpPress, hold: keys.has('Space') } : jumpOf(p, pt, dt);
     jumpHeld = j.hold;
     if (over) {
@@ -704,6 +771,12 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
     const v = Math.hypot(move.vx, move.vz);
     const sprint = THREE.MathUtils.clamp((v - GAITS.run) / (GAITS.sprint - GAITS.run), 0, 1);
     anim.update({ dt, x, y, z, move, gx, gz, scale: SCALE, ground, feet, sprint, grounded: me.grounded, vy: me.grounded ? me.fall : me.vy, jump: JUMP, gravity: GRAVITY, faceGoal, crouch: crouchAmt });
+    const cst = contact.update({ dt, x, y, z, face: anim.face, scale: SCALE, speed: v, moving: Math.hypot(gx, gz) > 0.1, walls: floorKind === 'contact' ? contactBoxes() : [], people: [], blocked: floorKind === 'contact' ? contactBlocked : undefined, hit, hitSpeed: v0 });
+    const contacting = !!(cst.hand || cst.lean || cst.stagger || cst.give.w > 1e-3 || cst.squeeze.w > 1e-3);
+    if (contacting) {
+      contactRot.set(anim.rot);
+      applyContact(contactRot, anim.hips, cst, x, y, z, anim.face, SCALE);
+    }
     {
       const goal = Math.hypot(gx, gz);
       rubric.push({ dt, rot: anim.rot, hips: anim.hips, x, y, z, yaw: anim.face, scale: SCALE, speed: v, goal, goalDir: goal > 0.3 ? Math.atan2(gx, gz) : null, down: [anim.feet[0].locked, anim.feet[1].locked], drift: [anim.feet[0].drift, anim.feet[1].drift], ground });
@@ -728,7 +801,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       const ov = over?.o ?? overLast;
       if (ov && overAmt > 0.01) overPose(hero.pose, ov, over ? Math.min(1, over.t / over.o.dur) : 1, overAmt, x, y, z, anim.face, SCALE);
       hero.update();
-      applyTo(hero.rig, anim.rot, anim.hips, 1 - Math.max(slideAmt, overAmt));
+      applyTo(hero.rig, contacting ? contactRot : anim.rot, anim.hips, 1 - Math.max(slideAmt, overAmt));
       if (hero.held?.visible) addCarry(hero.rig, 1 - Math.max(slideAmt, overAmt));
       const gz = gaze.update({ dt, x, y: y + 1.1 * SCALE, z, face: anim.face, ahead: move.face, speed: v, interests: [] });
       if (gazeOn) addLook(hero.rig, gz.yaw, gz.pitch, 1 - Math.max(slideAmt, overAmt));
@@ -804,6 +877,22 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       ['Hips down', `${(dbg.drop * SCALE * CM).toFixed(1)} cm`],
       ...(gun ? ([['Gun', `${gunId}${aimOn ? ' · aiming' : ' · ready'} · looking ${lookPitch > 0 ? 'down' : 'up'} ${Math.abs((lookPitch * 180) / Math.PI).toFixed(0)}°`]] as [string, string][]) : []),
       ['Air', dbg.air ? `in the air${jumpHeld ? ' · Jump held' : ''}${dbg.arms > 0.01 ? ` · arms up ${((dbg.arms * 180) / Math.PI).toFixed(0)}°` : ''}` : `on the ground${dbg.squash > 0.002 ? ` · landing ${(dbg.squash * SCALE * CM).toFixed(0)} cm down` : ''}`],
+      ...(contact.state.hand || contact.state.lean || contact.state.stagger || contact.state.give.w > 0.02 || contact.state.squeeze.w > 0.02
+        ? ([
+            [
+              'Contact',
+              [
+                contact.state.stagger ? `staggering ${(contact.state.stagger.t * 100).toFixed(0)}%` : '',
+                contact.state.hand ? `${contact.state.hand.side ? 'right' : 'left'} hand on the wall ${(contact.state.hand.w * 100).toFixed(0)}%` : '',
+                contact.state.lean ? `leaning on the rail ${(contact.state.lean.w * 100).toFixed(0)}%` : '',
+                contact.state.give.w > 0.02 ? `${contact.state.give.side < 0 ? 'left' : 'right'} shoulder gives ${(contact.state.give.w * 100).toFixed(0)}%` : '',
+                contact.state.squeeze.w > 0.02 ? `squeezing ${((contact.state.squeeze.turn * 180) / Math.PI).toFixed(0)}°` : '',
+              ]
+                .filter(Boolean)
+                .join(' · '),
+            ],
+          ] as [string, string][])
+        : []),
       ...(crouchAmt > 0.02 || slideAmt > 0.02 ? ([['Crouch', `${slide ? `sliding at ${slide.v.toFixed(1)} tiles/s` : crouched ? 'crouched' : 'standing up'}${dbg.crouch > 0.02 ? ` · over the clip ${(dbg.crouch * 100).toFixed(0)}%` : ''}`]] as [string, string][]) : []),
       ...(AIMS.includes(prog) || peek ? ([['Aim', `legs ${((wrapA(anim.face - move.face) * 180) / Math.PI).toFixed(0)}° off the aim${Math.abs(peek) > 0.02 ? ` · peeking ${peek > 0 ? 'right' : 'left'} ${(Math.abs(peek) * 100).toFixed(0)}%` : ''}`]] as [string, string][]) : []),
       ['Feet', anim.feet.map((f) => (f.locked ? 'held' : 'free')).join(' · ')],
