@@ -32,18 +32,22 @@ prices on any sign.
 ## Where it goes, exactly
 
 - **The land:** from Westlake Park's east sidewalk (x -42.55) to the east
-  avenue's west kerb (x 60.8), and from the ring highway's north side (clear
+  avenue's west kerb (x 60.8), and since Palm Court moved, on across the
+  avenue to x 101.75 (the land west of the north avenue is Uptown North's), and from the ring highway's north side (clear
   of its slip lanes, z -155) to the Parkway's outer sidewalk (z -43).
 - **The streets:** ns1 and ns2 end at their crossings with the Parkway
   (`SHORT_NS` in layout.ts). With them go:
   - their stretches to the world's edge
   - their two junctions on the highway's north side and those junctions'
     slip lanes
-- **Palm Court** (the plaza) sits west of the north avenue:
+- **Palm Court** (the plaza) sits east of the mall, across the east ring
+  avenue (ns3; moved there from the park's side, the owner's call: see
+  "Palm Court moves east" below):
   - a promenade running north to south
   - two rows of shops facing each other across it
-  - passages through the west row to the park's gates (gate-e2, gate-e3)
-  - a passage through the east row to a zebra over the north avenue
+  - a passage through the west row to a zebra over the east ring avenue to
+    the mall's forecourt, and one through the east row across from it to
+    the open land
   - Paradise Cinema across its north end, a fountain in the middle, and the
     PALM COURT arch at its south end
 - **Starlight Mall** sits east of the north avenue:
@@ -126,3 +130,31 @@ prices on any sign.
    thin cables read as thick black ropes).
 3. **Later, if the owner wants:** shops to buy and run with Dorras, like the
    corner shops, and events at the cinema.
+
+## Palm Court moves east (the owner's call, built)
+
+The owner asked for the promenade "on the other side of the mall" and for
+"more large sky scrapers that match Uptown's" (their picks: Palm Court,
+east of the mall across the east ring avenue; towers like Uptown's on its
+old land).
+
+- **Palm Court** (`COURT` in mall.ts) is the same plaza, as wide as it was
+  (`COURT_W`), from the east ring avenue's sidewalk east, its south end
+  clear of the Parkway's outer sidewalk (`SOUTH_Z`), on the open land the
+  kart park left. The west row opens at the zebra over the avenue to the
+  mall's forecourt (`ZEBRA`, the avenue's median broken there, clear of
+  the el's pillars); the east row across from it to the open land
+  (`EAST_GAP`). Everything else (the shops, the cinema, the fountain, the
+  arch, the festoons, the trees, the lamps, the people) follows it.
+- **Uptown North** (uptownnorth.ts) takes the old land: seven towers of
+  Uptown's designs (highrise.ts, 22 to 31 high) in two columns either side
+  of a service way, the park's east gates carried through to the north
+  avenue, and a square in the middle with a pool and a steel sculpture,
+  where the zebra over the north avenue to the mall's forecourt
+  (`TOWER_ZEBRA`) lands. See docs/finance-plan.md.
+- `MALL_AREA` (the district's land, the outskirts' trees kept off) reaches
+  from Uptown North's block to Palm Court.
+
+Checks: `npm test` and `npm run test:wide` (664 passing), the type check,
+the build and the budget (boot 661.8 of 670 KB), browser shots by day and
+night and on a phone.

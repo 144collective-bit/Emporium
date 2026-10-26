@@ -761,7 +761,7 @@ it and has been retired completely. Build only on what's here.
   spire about 40 tiles since the redesign, the rest 14 to 32; the Sky Wheel
   about 22; the Emporium
   stays the tallest downtown and the most detailed, and "under the
-  Emporium" holds everywhere else); the flying traffic and your own
+  Emporium" holds everywhere else but Uptown North, below); the flying traffic and your own
   aircraft clear them. The strips' courts and their players are retired
   with it. Phases 1 (the land and the streets), 2 (the towers), 3 (the
   plaza), 4 (the waterfront boulevard), 5 (the redesign, the owner's call:
@@ -1024,6 +1024,28 @@ it and has been retired completely. Build only on what's here.
     mouths, piles; the overlooks; the marina and its yachts; the median a
     run a site; each terrace a site, its name from one small atlas). The
     valets' bays came in Phase 5 (the kerbside, above).
+- **Uptown North** (the owner's call: Palm Court moved across the east ring
+  avenue and "more large skyscrapers that match Uptown's" on its old land;
+  scenery only) is `uptownnorth.ts` (DOM-free, tested in
+  `tests/uptownnorth.test.ts`): the block between Westlake Park's east
+  sidewalk and the north avenue (ns0), from the highway's slip lanes to the
+  Parkway (`NORTH_RECT`, `NORTH_BLOCK`, id `uptown-north`, ref `uptown` in
+  the street plan: paved), two columns of lots (`WEST_COL`, `EAST_COL`)
+  either side of a service way (`SERVICE_WAY`), the park's two east gates
+  carried through to the avenue (`GATE_WALKS`) and the square at its heart
+  (`NORTH_SQUARE`: a round pool with a twisting steel sculpture, `POOL`,
+  trees in grates, `SQUARE_TREES` / `NORTH_TREES`, benches facing it,
+  `SQUARE_BENCHES`, lamps, `NORTH_LAMPS`, people, `NORTH_PEOPLE`), where
+  the zebra over the avenue to the mall's forecourt lands (`TOWER_ZEBRA` in
+  mall.ts); `NORTH_SOLIDS` (in `SOLIDS`: the pool). Its seven towers are
+  highrise.ts's (`un-*` in `HIGHRISES`, block `uptown-north`, 22 to 31, a
+  twin, round, slab and deco mix on masonry bases; the west column's lobbies
+  on the park, the east column's on the avenue; `TOWER_BLOCKS` is every
+  block towers stand on), drawn with Uptown's in its chunk (it loads from
+  well out anyway); streetlevel.ts gives their sides on the square and the
+  gates' walks dining (`NORTH_OPEN`) and the north avenue luxe. The square
+  and the walks' granite are `uptownnorth3d.ts` (`registerNorth()`, from
+  uptown3d.ts). The flying traffic clears them (the highrise test).
 - **Sector 7 Central, the grand station** (the owner's call): a terminus
   west of the ring highway on the park's avenue (ew0), planned in
   `docs/station-plan.md` in four steps, each with the owner's sign-off
@@ -1068,7 +1090,8 @@ it and has been retired completely. Build only on what's here.
     parked cars fill it (`initFarCars()`).
 - **Palm Court and Starlight Mall** (the owner's call): a shopping plaza and
   a mall on the land between the Parkway and the ring highway's north side,
-  east of Westlake Park, planned in `docs/mall-plan.md` in steps, each with
+  the mall east of Uptown North and Palm Court across the east ring avenue
+  from it, planned in `docs/mall-plan.md` in steps, each with
   the owner's sign-off (1 both from outside, built; 2 the mall's walk-in
   interior, built; 3 maybe shops run with Dorras); keep it up to date. A
   modern mall (the redesign, the owner's call; it was retro neon 80s):
@@ -1080,11 +1103,15 @@ it and has been retired completely. Build only on what's here.
     junctions on the highway's north side and their slips went; world.ts,
     outer.ts's kerbs and the outskirts' trees honour it).
   - `mall.ts` (DOM-free, tested in `tests/mall.test.ts`): Palm Court
-    (`COURT`, block `palm-court`, by the north avenue: the promenade
+    (`COURT`, block `palm-court`, east of the mall across the east ring
+    avenue (ns3; moved there from the park's side, the owner's call, its old
+    land Uptown North's, below), as wide as it was (`COURT_W`): the promenade
     `PROM`, two rows of shops facing across it, `SHOPS` from `SHOP_NAMES`, each its `style` (`ShopStyle`: glass, render,
     clad, timber), a third two storeys,
-    the west row open to the park's east gates `GATE_GAPS`, the east row to
-    the zebra over the avenue `ZEBRA` (the avenue's median breaks there,
+    the west row open to the zebra over the avenue to the mall's forecourt
+    `ZEBRA`, the east row across from it to the open land `EAST_GAP`
+    (`TOWER_ZEBRA` crosses the north avenue from Uptown North's square to
+    the forecourt's other end; both avenues' medians break at their zebras,
     `highwayGaps()`), festoon lights across the promenade (in the FX layer),
     Paradise Cinema across the north end `CINEMA`, the
     `FOUNTAIN`, `BENCHES`, the trees' planters `COURT_TREES`, the PALM COURT
@@ -1103,7 +1130,7 @@ it and has been retired completely. Build only on what's here.
     `RANK_CABS`, the multi-storey `MSCP` and its cars `MSCP_CARS`);
     `MALL_SOLIDS` (in `SOLIDS`), `MALL_LAMPS`, `MALL_TREES` (placed at the
     boot with the town's, on the planters and islands), `MALL_PEOPLE`, `COURT_SPAWN`,
-    `MALL_SPAWN`, `MALL_AREA` (the outskirts' trees keep off, `treeSpot()`).
+    `MALL_SPAWN`, `MALL_AREA` (Uptown North's block to Palm Court: the outskirts' trees keep off, `treeSpot()`).
   - `mall3d.ts` draws them, a district loaded as you approach
     (`LAZY_DISTRICTS` id `mall`): sites (the shops by style, lit windows,
     signs, canopies with LED edges, rooftop plant; festoon lights across the
@@ -3169,7 +3196,7 @@ it and has been retired completely. Build only on what's here.
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`), Harbour Bridge (`harbour.ts`),
-  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), the river's shape (`river.ts`), the river's life, the river bus and boating (`riverlife.ts`, `riverbus.ts`, `riverroute.ts`, `boat-sim.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`, `boulevard.ts`, `boulevarddress.ts`, `kerbside.ts`, `skydeck.ts`, `skyline.ts`, `uptownlife.ts`, `streetlevel.ts`, `uptownsites.ts`, `streetlife.ts`, `wheel.ts`, the town car in `cars.ts`), the kart park's facility (`kartfacility.ts`), the grand station (`station.ts`), Palm Court and the mall (`mall.ts`, `mallinside.ts`),
+  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), the river's shape (`river.ts`), the river's life, the river bus and boating (`riverlife.ts`, `riverbus.ts`, `riverroute.ts`, `boat-sim.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`, `boulevard.ts`, `boulevarddress.ts`, `kerbside.ts`, `skydeck.ts`, `skyline.ts`, `uptownlife.ts`, `streetlevel.ts`, `uptownsites.ts`, `streetlife.ts`, `wheel.ts`, Uptown North in `uptownnorth.ts`, the town car in `cars.ts`), the kart park's facility (`kartfacility.ts`), the grand station (`station.ts`), Palm Court and the mall (`mall.ts`, `mallinside.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,

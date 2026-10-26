@@ -15,7 +15,7 @@
 import * as THREE from 'three';
 import { DISTRICTS } from '../../data/plots';
 import { Batch, canvasTex, facadeMat, flickerTogether, fx, glowMat, glowTex, lit, neon, PAL, rand, rng, sidesBox, siteMat, toon } from './kit';
-import { ZEBRA as MALL_ZEBRA } from './mall';
+import { TOWER_ZEBRA, ZEBRA as COURT_ZEBRA } from './mall';
 import { BLOCKS, BRIDGED_NS, BS, CENTER_XZ, CORE_ROADS, DOWNTOWN, EW_ROADS, EXT, LANE, MEDIAN, NS_ROADS, RING_HI, RIVER, SEATS, SHORT_NS, SOUTH_ROAD, WALK_W, type Road } from './layout';
 import { PLAN, offsetLine, pointAt, riverBridges, streetLength, type Pt, type Street } from './streetplan';
 import { HIGHWAY, HIGHWAY_HALF } from './highway';
@@ -389,8 +389,9 @@ function highwayGaps(axis: 'ew' | 'ns', i: number): [number, number][] {
         });
     });
   if (axis === 'ew' && AXIS_ZEBRAS.some((z) => z.z === EW_ROADS[i].c)) gaps.push([AXIS_X - LANE_HALF - 0.2, AXIS_X + LANE_HALF + 0.2]);
-  // (and the zebra over the north avenue from Palm Court to the mall: mall.ts)
-  if (axis === 'ns' && i === 0) gaps.push([MALL_ZEBRA.z - MALL_ZEBRA.half - 0.2, MALL_ZEBRA.z + MALL_ZEBRA.half + 0.2]);
+  // (the zebras over the north avenue and the east ring avenue to the mall's forecourt, mall.ts)
+  if (axis === 'ns' && i === 0) gaps.push([TOWER_ZEBRA.z - TOWER_ZEBRA.half - 0.2, TOWER_ZEBRA.z + TOWER_ZEBRA.half + 0.2]);
+  if (axis === 'ns' && i === NS_ROADS.length - 1) gaps.push([COURT_ZEBRA.z - COURT_ZEBRA.half - 0.2, COURT_ZEBRA.z + COURT_ZEBRA.half + 0.2]);
   return gaps;
 }
 
