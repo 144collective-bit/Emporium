@@ -1810,7 +1810,18 @@ it and has been retired completely. Build only on what's here.
   the `hurry` row (the captured walk with the chest forward, the head down
   and the arms held in, `HURRY`; from `HURRY_RAIN`, `hurrying()`, every
   walker's walk). The brisk crossing step stays the walk at `CROSS_PACE`
-  (no take in the repository is a brisk straight walk: a data step). The clips file's limits are 640 KB (test) and 660 KB (budget),
+  (no take in the repository is a brisk straight walk: a data step). Step
+  2 is built: the phone in the hand (`PHONE` in pedestrians.ts: the right
+  hand brought to a spot in the torso frame by `reachArm()`, the wrist
+  turned so the screen faces the eyes, the head down at it): the `phone`
+  row (the third captured idle with the hand and head keyed over it,
+  `arms: 'right'`, `head: true` (the pose's head in place of the take's),
+  a grip a hand, and a glance up once a loop, `phoneGlance()`) and
+  `phonewalk` (the captured walk, the head down less, the other arm as
+  captured, at the walk's stride); about one walker in seven (`onPhone()`)
+  walks reading and keeps reading at a kerb, an idle with `act: 'phone'`
+  stands reading (the plaza, the boulevard's overlooks, Uptown North's
+  square), each with `held: 'phone'` in the crowd's wardrobe. The clips file's limits are 640 KB (test) and 660 KB (budget),
   raised for the takes on purpose:
   - **The data** is CMU's motion capture (free for commercial use; the
     acknowledgment is in the start menu's Options > Credits, named, never

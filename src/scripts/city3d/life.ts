@@ -25,7 +25,7 @@ import { CROWD_VIEW, HIP_HEIGHT, cityOutfit, createCrowd } from './character';
 import { type CrowdClip, idleFor, secondsOf, strideOf, walkFor } from './crowdclips';
 import { PARK_PEOPLE, moment, type Moment, type ParkPerson } from './parklife';
 import { blinkOn, bodyMotion, braking, hornDue, indicating, newBody, newHorn, pullAway, reactionOf, resetBody, turnsOf, type Body, type Horn, type Mover, type Turn } from './traffic';
-import { CROSS_PACE, crossingLinks, hurry, hurrying, noticing, outAtNight, takesCrossing, walkLight, type Link } from './pedestrians';
+import { CROSS_PACE, crossingLinks, hurry, hurrying, noticing, onPhone, outAtNight, takesCrossing, walkLight, type Link } from './pedestrians';
 import { busStep, newBus, pullIn, routeStops, type Bus, type RouteStop } from './transit';
 import { MOORED, cruise, hornDue as boatHornDue, newBoatHorn, wakeOf } from './boats';
 import { VENTS, VENT_N, puff, ventsNear, ventsOn } from './dusk';
@@ -707,10 +707,12 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
   for (const pp of [...PARK_PEOPLE, ...UPTOWN_PEOPLE]) if (!(opts.light && pp.trim)) people.push({ kind: 'park', park: pp, m: moment(), seg: 0, inset: 0, u: 0, dir: 1, speed: 0, phase: rand() * 6, x: 0, z: 0, ry: 0, face: NaN, walked: 0, crossed: 0, seed: rand(), notice: { hold: 0 } });
   bodies.people = people;
 
-  // Everyone is the shared Degen body in a city outfit: suits and hoodies, bags, headphones
+  // Everyone is the shared Degen body in a city outfit: suits and hoodies, bags, headphones; a phone in the hand
+  // of those reading one (the revamp's Phase 6: an idle whose act is 'phone', and one walker in seven)
+  const phoneOf = (p: Person) => (p.kind === 'idle' ? p.act === 'phone' : p.kind === 'walk' && onPhone(p.phase / 6));
   const people3d = createCrowd(
     scene,
-    people.map(() => cityOutfit(rand)),
+    people.map((p) => ({ ...cityOutfit(rand), ...(phoneOf(p) ? { held: 'phone' as const } : {}) })),
     { light: opts.light }
   );
   /** Start a walker over a crossing: from where they stand to the other block's lane corner */
@@ -819,8 +821,10 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
       // Each plays a baked clip (crowdclips.ts): their own walk at its stride, so their feet stay put on the
       // pavement; their own idle; the rest from where their own offset puts them in it
       const seed = p.phase / 6;
-      // (in the rain everyone hurries: the walk with the head down and the arms in, the revamp's Phase 6)
-      const walkClip: CrowdClip = hurrying(rain) ? 'hurry' : walkFor(seed);
+      // (in the rain everyone hurries: the walk with the head down and the arms in, the revamp's Phase 6; one in
+      // seven walks reading their phone, and keeps reading at a kerb instead of looking both ways)
+      const phone = p.kind === 'walk' && onPhone(seed);
+      const walkClip: CrowdClip = hurrying(rain) ? 'hurry' : phone ? 'phonewalk' : walkFor(seed);
       const idleClip = idleFor(seed);
       const playAt = (c: CrowdClip) => t / secondsOf(c) + seed;
       // Turn corners over a few frames instead of snapping
@@ -840,12 +844,12 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
         people3d.set(i, p.x, py, p.z, p.face, PERSON_SCALE, clip, u);
       } else if (p.kind === 'walk' && standing) {
         // Stopped: watching you go by, or at a kerb (the `wait` row from the moment they stopped: a look both ways)
-        const c: CrowdClip = looking ? idleClip : p.wait ? 'wait' : 'look';
+        const c: CrowdClip = looking ? idleClip : p.wait ? (phone ? 'phone' : 'wait') : 'look';
         people3d.set(i, bx, y, bz, p.face, PERSON_SCALE, c, c === 'wait' ? (t - p.wait!.since) / secondsOf('wait') : playAt(c));
       }
       else if (p.kind === 'walk') people3d.set(i, bx, y, bz, p.face, PERSON_SCALE, walkClip, p.walked / (strideOf(walkClip) * PERSON_SCALE) + seed);
       else {
-        const clip: CrowdClip = p.act === 'sit' ? 'sit' : p.act === 'chat' ? 'chat' : p.act === 'queue' ? idleClip : 'look';
+        const clip: CrowdClip = p.act === 'sit' ? 'sit' : p.act === 'chat' ? 'chat' : p.act === 'phone' ? 'phone' : p.act === 'queue' ? idleClip : 'look';
         people3d.set(i, bx, y, bz, p.face, p.scale ?? PERSON_SCALE, clip, playAt(clip));
       }
     });

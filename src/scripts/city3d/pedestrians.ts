@@ -12,6 +12,10 @@
  *   stops and looks until you've passed, then carries on (`noticing()`).
  * - The rain hurries them (`hurry()`); late at night fewer are out
  *   (`outAtNight()`).
+ * - The revamp's Phase 6: the look both ways at a kerb (`kerbLook()`),
+ *   the hurry's shape in the rain (`HURRY`, `hurrying()`) and the phone
+ *   in the hand (`PHONE`, `onPhone()`, `phoneGlance()`), each a rule the
+ *   crowd's rows are keyed from (crowdclips.ts).
  * - `BENCHES`: every bench on the map with the way its sitter faces, the
  *   seat `SEAT_H` above the ground there.
  */
@@ -150,8 +154,9 @@ export const KERB_LOOK: [number, number][] = [
   [3.45, 0.45],
   [3.9, 0],
 ];
-export function kerbLook(w: number): number {
-  const k = KERB_LOOK;
+export const kerbLook = (w: number) => keyed(KERB_LOOK, w);
+/** Keys [second, value] eased smoothly from one to the next, held at either end */
+function keyed(k: [number, number][], w: number): number {
   if (w <= k[0][0]) return k[0][1];
   for (let i = 1; i < k.length; i++) {
     if (w <= k[i][0]) {
@@ -162,6 +167,31 @@ export function kerbLook(w: number): number {
   }
   return k[k.length - 1][1];
 }
+
+/**
+ * On the phone (the revamp's Phase 6): about one walker in seven (`onPhone()`, by the number that picks their
+ * walk and idle) walks reading a phone, and an idle whose `act` is 'phone' stands reading one (crowdclips.ts's
+ * `phonewalk` and `phone` rows, keyed over the captured walk and the third idle). `PHONE`: the right hand
+ * brought to `at` in the torso frame (reachArm()), the `wrist` turned so the screen faces the eyes, the head
+ * down at it (`headPitch`; `walkPitch` on the move: less, to see the way), the hand closed on it (`grip`); the
+ * other arm stays the capture's. The person's outfit carries the phone (`held: 'phone'`).
+ */
+export const PHONE = { share: 0.14, at: [0.05, 0.26, 0.2] as const, wrist: { roll: -0.3, bend: -0.3 }, headPitch: -0.72, walkPitch: -0.5, grip: 0.62 };
+/** Is this walker (their number, 0 to 1) on their phone? (hashed off the number, so it's independent of which walk and idle it picks) */
+export const onPhone = (seed: number) => (seed * 7.3 + 0.41) % 1 < PHONE.share;
+/**
+ * Standing reading, a glance up and round once a loop: 0 is the head down at the phone, 1 up and ahead (turned
+ * `PHONE_GLANCE_YAW` to the left), `w` seconds into the `phone` row, down again well inside its loop (3.7 s)
+ */
+export const PHONE_GLANCE: [number, number][] = [
+  [0, 0],
+  [2.0, 0],
+  [2.45, 1],
+  [2.95, 1],
+  [3.45, 0],
+];
+export const PHONE_GLANCE_YAW = 0.35;
+export const phoneGlance = (w: number) => keyed(PHONE_GLANCE, w);
 
 /** Is the nth walker out at this hour? Late at night (1 to 5) every other one has gone home. */
 export const outAtNight = (n: number, hour: number) => !(hour >= 1 && hour < 5 && n % 2 === 1);

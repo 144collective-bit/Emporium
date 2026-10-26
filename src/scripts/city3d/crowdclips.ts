@@ -33,32 +33,36 @@
  * CPU works out each frame (`crowdFrame()`); 34 bones each is the GPU's.
  */
 import * as THREE from 'three';
-import { BONES, NECK_SHARE, SPINE_SHARE, makeSkeleton, newPose, poseSkeleton, type Limb, type Pose, type Skeleton } from './skeleton';
-import { HURRY, kerbLook } from './pedestrians';
+import { BONES, NECK_SHARE, SPINE_SHARE, makeSkeleton, newPose, poseSkeleton, reachArm, type Limb, type Pose, type Skeleton } from './skeleton';
+import { HURRY, PHONE, PHONE_GLANCE_YAW, kerbLook, phoneGlance } from './pedestrians';
 import { copyPose, createLocomotion } from './locomotion';
 import { attentionPose, chatPose, idlePose, lookPose, picnicPose, set, sitPose } from './poses';
 import { baked as atBuild } from './baked';
 import { MOCAP_BONES, MOCAP_FPS, NB, type MoClip, type MoData } from './mocap';
 
-export type CrowdClip = 'walk' | 'walk2' | 'jog' | 'march' | 'hurry' | 'idle' | 'idle2' | 'idle3' | 'wait' | 'look' | 'chat' | 'sit' | 'picnic' | 'salute';
+export type CrowdClip = 'walk' | 'walk2' | 'jog' | 'march' | 'hurry' | 'phonewalk' | 'idle' | 'idle2' | 'idle3' | 'wait' | 'phone' | 'look' | 'chat' | 'sit' | 'picnic' | 'salute';
 
 interface ClipDef {
   frames: number;
   loop: boolean;
-  /** How closed the hands are (a soldier's round his rifle) */
-  grip: number;
+  /** How closed the hands are (a soldier's round his rifle), or each hand's (arms[0]'s, arms[1]'s) */
+  grip: number | [number, number];
   /** The pose `u` (0..1) of the way through (the fallback, where there's a capture) */
   sample(u: number, out: Pose): void;
   /** From the crowd pack: the take (a loop take plays whole; an idle's `tail` seconds are crossfaded into its head) */
   capture?: { take: string; tail?: number };
   /**
    * Keyed over the row (the revamp's Phase 6): `sec` seconds into the loop, what the pose adds (the head's yaw and
-   * pitch, the spine's lean, and the arms where `arms` is set: they replace the row's), over the capture's bones
-   * as over the formula's
+   * pitch, the spine's lean, and the arms where `arms` is set (both, or the right one, arms[1]): they replace the
+   * row's), over the capture's bones as over the formula's; with `head` the pose's head replaces the row's
+   * instead of turning it further (someone reading a phone keeps it there whatever the take looked at)
    */
   over?: (sec: number, p: Pose) => void;
-  arms?: boolean;
+  arms?: 'both' | 'right';
+  head?: boolean;
 }
+/** A row's grip for each hand */
+const grips = (g: number | [number, number]): [number, number] => (typeof g === 'number' ? [g, g] : g);
 
 /* ---------- The capture ---------- */
 
@@ -211,6 +215,15 @@ function hurryOver(_sec: number, p: Pose) {
     a.reach = undefined;
   }
 }
+/** The phone in the right hand (pedestrians.ts `PHONE`): the hand brought to it, the head down at it; standing, a glance up and round once a loop */
+const PHONE_AT = new THREE.Vector3(...PHONE.at);
+function phoneOver(sec: number, p: Pose, walking: boolean) {
+  const up = walking ? 0 : phoneGlance(sec);
+  p.headPitch = (walking ? PHONE.walkPitch : PHONE.headPitch) * (1 - up);
+  p.headYaw = PHONE_GLANCE_YAW * up;
+  reachArm(p, 1, PHONE_AT);
+  p.arms[1].wrist = { ...PHONE.wrist };
+}
 export const CLIP_DEFS: Record<CrowdClip, ClipDef> = {
   walk: { frames: 30, loop: true, grip: RELAXED, sample: recorded(walk.poses), capture: { take: 'crowd-walk' } },
   walk2: { frames: 30, loop: true, grip: RELAXED, sample: recorded(walk.poses), capture: { take: 'crowd-walk-2' } },
@@ -228,12 +241,16 @@ export const CLIP_DEFS: Record<CrowdClip, ClipDef> = {
     }),
   },
   // The rain's hurry (pedestrians.ts `HURRY`): the walk with the head down, the shoulders in and the arms tucked
-  hurry: { frames: 30, loop: true, grip: HURRY.grip, sample: recorded(walk.poses), capture: { take: 'crowd-walk' }, over: hurryOver, arms: true },
+  hurry: { frames: 30, loop: true, grip: HURRY.grip, sample: recorded(walk.poses), capture: { take: 'crowd-walk' }, over: hurryOver, arms: 'both' },
+  // Walking reading a phone (pedestrians.ts `PHONE`): the walk with the right hand at the phone and the head down at it
+  phonewalk: { frames: 30, loop: true, grip: [RELAXED, PHONE.grip], sample: recorded(walk.poses), capture: { take: 'crowd-walk' }, over: (sec, p) => phoneOver(sec, p, true), arms: 'right', head: true },
   idle: { frames: 80, loop: true, grip: RELAXED, sample: looped((p, t) => idlePose(p, t)), capture: { take: 'crowd-idle', tail: IDLE_TAIL } },
   idle2: { frames: 60, loop: true, grip: RELAXED, sample: looped((p, t) => idlePose(p, t + 8)), capture: { take: 'crowd-idle-2', tail: IDLE_TAIL } },
   idle3: { frames: 45, loop: true, grip: RELAXED, sample: looped((p, t) => idlePose(p, t + 16)), capture: { take: 'crowd-idle-3', tail: IDLE_TAIL } },
   // Waiting at a kerb: the second idle with a look both ways keyed over it (pedestrians.ts `kerbLook()`)
   wait: { frames: 60, loop: true, grip: RELAXED, sample: looped((p, t) => idlePose(p, t + 8)), capture: { take: 'crowd-idle-2', tail: IDLE_TAIL }, over: (sec, p) => (p.headYaw += kerbLook(sec)) },
+  // Standing reading a phone: the third idle (its hands still) with the phone hand and the head keyed over it, a glance up once a loop
+  phone: { frames: 45, loop: true, grip: [RELAXED, PHONE.grip], sample: looped((p, t) => idlePose(p, t + 16)), capture: { take: 'crowd-idle-3', tail: IDLE_TAIL }, over: (sec, p) => phoneOver(sec, p, false), arms: 'right', head: true },
   look: { frames: 192, loop: true, grip: RELAXED, sample: looped((p, t) => lookPose(p, t)) },
   chat: { frames: 192, loop: true, grip: RELAXED, sample: looped((p, t) => chatPose(p, t)) },
   sit: { frames: 144, loop: true, grip: RELAXED, sample: looped((p, t) => sitPose(p, t)) },
@@ -247,7 +264,7 @@ export const CLIP_IDS = Object.keys(CLIP_DEFS) as CrowdClip[];
  * How far one cycle of each walk goes at scale 1 (the capture's once it's in, the recording's before): a
  * person at scale s and speed v plays v / (strideOf(c) s) cycles a second, so their feet stay put
  */
-export const STRIDE: Record<'walk' | 'walk2' | 'jog' | 'march' | 'hurry', number> = { walk: walk.stride, walk2: walk.stride, jog: jog.stride, march: march.stride, hurry: walk.stride };
+export const STRIDE: Record<'walk' | 'walk2' | 'jog' | 'march' | 'hurry' | 'phonewalk', number> = { walk: walk.stride, walk2: walk.stride, jog: jog.stride, march: march.stride, hurry: walk.stride, phonewalk: walk.stride };
 export const strideOf = (c: CrowdClip) => (c in STRIDE ? STRIDE[c as keyof typeof STRIDE] : 1);
 /** How long each loop is (seconds): a person plays `t / secondsOf(c)` (plus their own offset) */
 const SECONDS: Partial<Record<CrowdClip, number>> = {};
@@ -343,21 +360,26 @@ export function captureRow(c: MoClip, frames: number, f: number, tail: number | 
 
 const qo = new THREE.Quaternion();
 const eo = new THREE.Euler();
-const ARM_BONES = ['clavL', 'armL', 'foreL', 'handL', 'clavR', 'armR', 'foreR', 'handR'] as const;
+const ARM_BONES_R = ['clavR', 'armR', 'foreR', 'handR'] as const;
+const ARM_BONES = ['clavL', 'armL', 'foreL', 'handL', ...ARM_BONES_R] as const;
 /**
  * A pose's additions laid over a captured row (as poseSkeleton() shares them): the head's yaw and pitch down the
- * neck and head, the lean down the spine, and with `sk2` the arms replaced by the pose's own
+ * neck and head (or, `head`, the pose's own head in place of the row's), the lean down the spine, and the arms
+ * (`arms`: both, or the right) replaced by the pose's own
  */
-function overlay(smp: Sample, o: Pose, sk2: Skeleton | null, grip: number) {
+function overlay(smp: Sample, o: Pose, d: ClipDef, sk2: Skeleton) {
   // (each turn in its bone's parent's frame, before the bone's own, as a pose's rotation.set() is)
-  const hx = -o.headPitch;
-  const hy = o.headYaw;
-  smp.rot[MOCAP_BONES.indexOf('neck')].premultiply(qo.setFromEuler(eo.set(hx * NECK_SHARE, hy * NECK_SHARE, 0)));
-  smp.rot[MOCAP_BONES.indexOf('head')].premultiply(qo.setFromEuler(eo.set(hx * (1 - NECK_SHARE), hy * (1 - NECK_SHARE), 0)));
+  if (!d.head) {
+    const hx = -o.headPitch;
+    const hy = o.headYaw;
+    smp.rot[MOCAP_BONES.indexOf('neck')].premultiply(qo.setFromEuler(eo.set(hx * NECK_SHARE, hy * NECK_SHARE, 0)));
+    smp.rot[MOCAP_BONES.indexOf('head')].premultiply(qo.setFromEuler(eo.set(hx * (1 - NECK_SHARE), hy * (1 - NECK_SHARE), 0)));
+  }
   for (const [i, n] of (['spine1', 'spine2', 'chest'] as const).entries()) smp.rot[MOCAP_BONES.indexOf(n)].premultiply(qo.setFromEuler(eo.set(o.lean * SPINE_SHARE[i], 0, 0)));
-  if (!sk2) return;
-  poseSkeleton(sk2, o, [grip, grip]);
-  for (const n of ARM_BONES) smp.rot[MOCAP_BONES.indexOf(n)].copy(sk2.bones[n].quaternion);
+  if (!d.arms && !d.head) return;
+  poseSkeleton(sk2, o, grips(d.grip));
+  if (d.head) for (const n of ['neck', 'head'] as const) smp.rot[MOCAP_BONES.indexOf(n)].copy(sk2.bones[n].quaternion);
+  if (d.arms) for (const n of d.arms === 'both' ? ARM_BONES : ARM_BONES_R) smp.rot[MOCAP_BONES.indexOf(n)].copy(sk2.bones[n].quaternion);
 }
 
 /**
@@ -383,20 +405,20 @@ export function bakeCrowdClips(): Float32Array {
       const sec = (f / d.frames) * secondsOf(id);
       if (c) {
         // (the body's bones from the capture, over the rest pose's hands)
-        poseSkeleton(sk, fresh(), [d.grip, d.grip]);
+        poseSkeleton(sk, fresh(), grips(d.grip));
         captureRow(c, d.frames, f, d.capture!.tail, smp);
         if (d.over) {
           // What's keyed over it: the head's turn and the spine's lean on the capture's bones, the arms replaced
           copyPose(fresh(), over);
           d.over(sec, over);
-          overlay(smp, over, d.arms ? sk2 : null, d.grip);
+          overlay(smp, over, d, sk2);
         }
         for (let i = 0; i < NB; i++) sk.bones[MOCAP_BONES[i]].quaternion.copy(smp.rot[i]);
         sk.bones.hips.position.copy(smp.hips);
       } else {
         clipPose(id, f, p);
         d.over?.(sec, p);
-        poseSkeleton(sk, p, [d.grip, d.grip]);
+        poseSkeleton(sk, p, grips(d.grip));
       }
       sk.root.updateMatrixWorld(true);
       const row = CLIP_ROWS[id] + f;

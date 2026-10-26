@@ -86,16 +86,16 @@ export interface NorthPerson {
   x: number;
   z: number;
   ry: number;
-  act: 'look' | 'chat' | 'sit';
+  act: 'look' | 'chat' | 'sit' | 'phone';
   y: number;
 }
-/** People at lunch: on the benches, chatting in twos and threes, looking up at the towers */
+/** People at lunch: on the benches, chatting in twos and threes, looking up at the towers, one on their phone */
 export const NORTH_PEOPLE: NorthPerson[] = (() => {
   const out: NorthPerson[] = [];
   for (const b of SQUARE_BENCHES) out.push({ x: b.x + Math.cos(b.ry) * 0.4, z: b.z - Math.sin(b.ry) * 0.4, ry: b.ry, act: 'sit', y: 0.32 });
   const [x0, z0, x1] = NORTH_SQUARE;
   out.push({ x: x0 + 5, z: z0 + 8, ry: Math.PI / 2, act: 'chat', y: 0 }, { x: x0 + 6, z: z0 + 8.2, ry: -Math.PI / 2, act: 'chat', y: 0 }, { x: x0 + 5.5, z: z0 + 9, ry: Math.PI, act: 'chat', y: 0 });
-  out.push({ x: x1 - 6, z: POOL.z + 5.5, ry: 0, act: 'look', y: 0 }, { x: x1 - 5, z: POOL.z - 6, ry: Math.PI / 2, act: 'chat', y: 0 }, { x: x1 - 4, z: POOL.z - 6.1, ry: -Math.PI / 2, act: 'chat', y: 0 });
+  out.push({ x: x1 - 6, z: POOL.z + 5.5, ry: 0, act: 'phone', y: 0 }, { x: x1 - 5, z: POOL.z - 6, ry: Math.PI / 2, act: 'chat', y: 0 }, { x: x1 - 4, z: POOL.z - 6.1, ry: -Math.PI / 2, act: 'chat', y: 0 });
   for (const [, a, , b] of GATE_WALKS) out.push({ x: (NORTH_RECT[0] + NORTH_RECT[2]) / 2 - 3, z: (a + b) / 2, ry: Math.PI / 2, act: 'chat', y: 0 }, { x: (NORTH_RECT[0] + NORTH_RECT[2]) / 2 - 2, z: (a + b) / 2 + 0.2, ry: -Math.PI / 2, act: 'chat', y: 0 });
   return out;
 })();

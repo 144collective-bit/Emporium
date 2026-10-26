@@ -9,6 +9,7 @@ import { readFileSync } from 'node:fs';
 import * as THREE from 'three';
 import { CLIP_DEFS, CLIP_IDS, CLIP_ROWS, CROWD_BONES, CROWD_ROWS, JOG_STRIDE, MARCH_STRIDE, WALK_STRIDE, bakeCrowdClips, crowdCaptured, crowdFrame, idleFor, secondsOf, setCrowdCapture, strideOf, walkFor, type CrowdClip } from '../src/scripts/city3d/crowdclips';
 import { BONE_INDEX, makeSkeleton } from '../src/scripts/city3d/skeleton';
+import { PHONE } from '../src/scripts/city3d/pedestrians';
 import { decodeMocap } from '../src/scripts/city3d/mocap';
 
 // (the stand-ins first: the recorded walk and the formula idle, as a visitor sees them until the pack is in)
@@ -102,6 +103,7 @@ test('played at its stride, the walk keeps a planted foot planted (and so do the
     ['jog', strideOf('jog')],
     ['march', MARCH_STRIDE],
     ['hurry', strideOf('hurry')],
+    ['phonewalk', strideOf('phonewalk')],
   ] as [CrowdClip, number][]) {
     assert.ok(stride > 0.2 && stride < (id === 'jog' ? 3 : 1.5), `${id} stride ${stride}`);
     const n = CLIP_DEFS[id].frames;
@@ -262,5 +264,53 @@ test('the kerb wait: the captured idle with a look both ways over it; the hurry:
       assert.ok(hp.y > joint(wk + f, hand).y + 0.1 && hp.y > joint(h + f, BONE_INDEX.hips).y, `frame ${f}: a hand up at the chest (${hp.y.toFixed(2)})`);
     }
   }
+});
+
+/** The head's pitch down about the chest (the rig faces +z), and its yaw to the left */
+const headAt = (row: number) => {
+  const chest = new THREE.Quaternion().setFromRotationMatrix(mat(row, BONE_INDEX.chest));
+  const head = new THREE.Quaternion().setFromRotationMatrix(mat(row, BONE_INDEX.head));
+  const fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(chest.invert().multiply(head));
+  return { down: Math.asin(-fwd.y), yaw: Math.atan2(fwd.x, fwd.z) };
+};
+
+test('the phone: standing (over the third idle) and walking (over the walk), the right hand at the chest, the head down at it, the other arm the take\'s', () => {
+  const phoneRow = (id: 'phone' | 'phonewalk', over: 'idle3' | 'walk', pitch: number) => {
+    const r = CLIP_ROWS[id];
+    const o = CLIP_ROWS[over];
+    const n = CLIP_DEFS[id].frames;
+    assert.equal(n, CLIP_DEFS[over].frames);
+    assert.ok(Math.abs(secondsOf(id) - secondsOf(over)) < 1e-9);
+    const downs: number[] = [];
+    for (let f = 0; f < n; f++) {
+      // The take under it: the hips, the feet and the left hand where the take has them
+      for (const b of [BONE_INDEX.hips, BONE_INDEX.footL, BONE_INDEX.footR, BONE_INDEX.handL]) assert.ok(joint(r + f, b).distanceTo(joint(o + f, b)) < 1e-6, `${id} frame ${f}: bone ${b} is the take's`);
+      // The right hand in front of the chest, between the chest and the chin, in from the shoulder
+      const hand = joint(r + f, BONE_INDEX.handR);
+      const chest = joint(r + f, BONE_INDEX.chest);
+      const head = joint(r + f, BONE_INDEX.head);
+      assert.ok(hand.z > chest.z + 0.12 && hand.z < chest.z + 0.3, `${id} frame ${f}: the hand in front of the chest (${(hand.z - chest.z).toFixed(2)})`);
+      assert.ok(hand.y > chest.y - 0.02 && hand.y < head.y - 0.04, `${id} frame ${f}: the hand between the chest and the chin (${hand.y.toFixed(2)}, chest ${chest.y.toFixed(2)}, head ${head.y.toFixed(2)})`);
+      assert.ok(Math.abs(hand.x - chest.x) < 0.1, `${id} frame ${f}: the hand in from the shoulder`);
+      assert.ok(hand.y > joint(o + f, BONE_INDEX.handR).y + 0.2, `${id} frame ${f}: the hand up from where the take has it`);
+      downs.push(headAt(r + f).down);
+    }
+    // The head down at the phone by the rule's pitch (in place of the take's, which looks about), more than the take's ever is
+    const most = Math.max(...downs);
+    assert.ok(Math.abs(most - pitch) < 0.05, `${id}: the head down ${most.toFixed(2)}, the rule's ${pitch}`);
+    for (let f = 0; f < n; f++) assert.ok(most > headAt(o + f).down + 0.15, `${id}: further down than the take's head at frame ${f}`);
+    return downs;
+  };
+  const standing = phoneRow('phone', 'idle3', -PHONE.headPitch);
+  // Standing: a glance up (and a touch to the left) partway through, down again by the loop
+  const least = Math.min(...standing);
+  const most = Math.max(...standing);
+  assert.ok(least < most - 0.4, `a glance up: from ${most.toFixed(2)} down to ${least.toFixed(2)}`);
+  assert.ok(standing[0] > most - 0.05 && standing[standing.length - 1] > most - 0.08, 'reading at both ends of the loop');
+  const upAt = standing.indexOf(least);
+  assert.ok(headAt(CLIP_ROWS.phone + upAt).yaw > 0.15, 'the glance turns a little to the left');
+  const walking = phoneRow('phonewalk', 'walk', -PHONE.walkPitch);
+  assert.ok(Math.max(...walking) - Math.min(...walking) < 0.1, 'walking, no glance: the head stays on the phone');
+  assert.equal(strideOf('phonewalk'), strideOf('walk'));
 });
 

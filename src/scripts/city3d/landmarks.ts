@@ -58,8 +58,8 @@ export interface Idle {
   ry: number;
   /** Standing height, or for `sit` the seat height */
   y?: number;
-  /** What they're doing: looking around (default), chatting, sitting, queueing */
-  act?: 'look' | 'chat' | 'sit' | 'queue';
+  /** What they're doing: looking around (default), chatting, sitting, queueing, reading their phone */
+  act?: 'look' | 'chat' | 'sit' | 'queue' | 'phone';
   /** How big (a grown-up by default; kids at play are smaller) */
   scale?: number;
 }

@@ -809,10 +809,11 @@ The plan as it was:
 - Measured on a phone (`?bench`, `?fps`: the crowd texture's size, draws,
   memory) before it merges.
 
-### Phase 6: the crowd's acts that suit the city (step 1 built, for the owner's sign-off)
+### Phase 6: the crowd's acts that suit the city (steps 1 and 2 built, for the owner's sign-off)
 
 Built in steps: **step 1** (the kerb, the crossing and the rain: built,
-below), then the phone in the hand, the workers' rows, and the kids.
+below), **step 2** (the phone in the hand: built, below), then the
+workers' rows, and the kids.
 
 What step 1 built:
 
@@ -850,14 +851,47 @@ What step 1 built:
   the crowd's draws unchanged; no download added (the rows are keyed over
   takes already in the pack).
 
+What step 2 built:
+
+- **The overlay, finished** (`crowdclips.ts`): a row's `arms` can be
+  `'both'` or `'right'` (the phone hand alone, the other arm staying the
+  take's), its `grip` one number or one a hand, and with `head` set the
+  pose's head replaces the take's instead of turning it further (someone
+  reading keeps their head on the phone whatever the take looked at; the
+  third idle looks to the right for most of its loop).
+- **The phone in the hand** (`PHONE` in pedestrians.ts): the right hand
+  brought to a spot in front of the chest in the torso frame by
+  `reachArm()`, the wrist turned so the screen faces the eyes (measured:
+  the screen's normal within a degree of the line to the eyes, the look
+  within 7° of the phone), the hand closed on it, the head down at it.
+  The `phone` row is the third captured idle (its hands still, its weight
+  shift kept) with the hand and head keyed over it and a glance up and a
+  touch to the left once a loop (`phoneGlance()`, `PHONE_GLANCE`: up for
+  half a second, down again well inside the 3.7 s loop); `phonewalk` is
+  the captured walk with the hand at the phone and the head down less
+  (`walkPitch`: they watch the way a little), the left arm swinging as
+  captured, at the walk's own stride.
+- **Who** (life.ts): about one walker in seven (`onPhone()`, hashed off
+  the number that picks their walk and idle) walks reading, and at a kerb
+  keeps reading instead of looking both ways (they look up when you come
+  close, as everyone does); an idle whose `act` is `'phone'` stands
+  reading: two by the plaza's pool, one at each of the boulevard's
+  overlooks, one on Uptown North's square. Each carries the phone in the
+  crowd's wardrobe (`held: 'phone'`: the item was the player's, drawn
+  instanced on the hand bone like any held thing, its screen in the
+  crowd's neon). The plan's note that the crowd "already has `phone`
+  people" read the trim's "half on phones" (the phone tier) as a phone in
+  the hand: there were none; now there are.
+- Measured: two rows more (92 rows); the crowd's draws unchanged (the
+  phone's two pieces join the kind's meshes); no download added.
+
 The plan as it was (the rules stay life.ts's and pedestrians.ts's; this
 phase only gives them the moves):
 
 - Waiting at a kerb (a weight shift and a look both ways), the brisk
   crossing step, the hurry in the rain (built, step 1, above; the brisk
   step waits for a take).
-- A phone in the hand (standing, walking: the crowd already has `phone`
-  people on the plaza and the boulevard).
+- A phone in the hand (standing, walking: built, step 2, above).
 - Traders handing over, diners eating, cooks at the stalls, vendors at
   the carts, fishers casting on Pier 7, rowers at the oars (the park's
   boats) and the swan riders, the bouncers with arms folded, chess at the
