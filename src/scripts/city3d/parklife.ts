@@ -44,7 +44,7 @@ import {
 } from './westlake';
 
 /** What a person in the park is doing at a moment: where, facing (0 is +z), standing (or seat) height, the crowd clip, how fast */
-export type ParkClip = 'walk' | 'jog' | 'look' | 'idle' | 'chat' | 'sit' | 'picnic';
+export type ParkClip = 'walk' | 'jog' | 'look' | 'idle' | 'chat' | 'sit' | 'picnic' | 'row' | 'pedal';
 export interface Moment {
   x: number;
   z: number;
@@ -273,7 +273,7 @@ export const PARK_PEOPLE: ParkPerson[] = (() => {
   PICNICS.forEach((p, i) =>
     p.people.forEach((q, k) => out.push({ id: `picnic-${i}-${k}`, trim: i % 2 === 1, at: (_, m) => Object.assign(m, { x: q.x, z: q.z, ry: q.ry, y: SLAB + 0.03, clip: 'picnic' as const, speed: 0 }) }))
   );
-  // Aboard the boats (below): a rower facing the stern, two side by side in a swan
+  // Aboard the boats (below): a rower facing the stern at the oars, two side by side in a swan at the pedals
   BOATS.forEach((b, i) => {
     if (b.moored) return;
     const seats: [number, number, number][] = b.kind === 'row' ? [[0.05, 0, Math.PI]] : [[-0.05, -0.24, 0], [-0.05, 0.24, 0]];
@@ -290,7 +290,7 @@ export const PARK_PEOPLE: ParkPerson[] = (() => {
           m.z = bp.z + fz0 * fx + rz * sx;
           m.ry = Math.atan2(fx0, fz0) + turn;
           m.y = BOAT_Y + BOAT_SEAT;
-          m.clip = 'sit';
+          m.clip = b.kind === 'row' ? 'row' : 'pedal';
           m.speed = 0;
           return m;
         },

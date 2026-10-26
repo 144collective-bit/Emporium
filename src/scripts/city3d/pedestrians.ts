@@ -24,6 +24,7 @@ import { distToStreet, pointAt, streetLength, type Street } from './streetplan';
 import { PARKS, SQUARE } from './downtown';
 import { OUTER_PARKS, SQUARE_LAYOUTS } from './outer';
 import { THE_BLOCK } from './projects';
+import { keyed } from './acts';
 
 /** A way across a street for walkers: from block `a`'s corner `from` to block `b`'s corner `to` */
 export interface Link {
@@ -155,18 +156,6 @@ export const KERB_LOOK: [number, number][] = [
   [3.9, 0],
 ];
 export const kerbLook = (w: number) => keyed(KERB_LOOK, w);
-/** Keys [second, value] eased smoothly from one to the next, held at either end */
-function keyed(k: [number, number][], w: number): number {
-  if (w <= k[0][0]) return k[0][1];
-  for (let i = 1; i < k.length; i++) {
-    if (w <= k[i][0]) {
-      const u = (w - k[i - 1][0]) / (k[i][0] - k[i - 1][0]);
-      const e = u * u * (3 - 2 * u);
-      return k[i - 1][1] + (k[i][1] - k[i - 1][1]) * e;
-    }
-  }
-  return k[k.length - 1][1];
-}
 
 /**
  * On the phone (the revamp's Phase 6): about one walker in seven (`onPhone()`, by the number that picks their

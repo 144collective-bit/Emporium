@@ -277,7 +277,7 @@ export interface StationPerson {
   /** Their floor's height over the ground (the concourse and the platforms' PLAT_Y, the plaza's 0) */
   y: number;
   ry: number;
-  act: 'sit' | 'look' | 'chat';
+  act: 'sit' | 'eat' | 'look' | 'chat';
 }
 export const STATION_PEOPLE: StationPerson[] = (() => {
   const out: StationPerson[] = [];
@@ -291,7 +291,7 @@ export const STATION_PEOPLE: StationPerson[] = (() => {
   for (const dz of [-5, -2, 1.5, 4.5]) out.push({ x: BOARD.x + 3 + Math.abs(dz) * 0.3, z: BOARD.z + dz, y: PLAT_Y, ry: -Math.PI / 2, act: 'look' });
   // On every other bench, at the café's tables
   BENCHES.forEach((b, i) => i % 3 === 0 && out.push({ x: b.x - 0.4, z: b.z + (b.ry === 0 ? 0.05 : -0.05), y: PLAT_Y + 0.32, ry: b.ry, act: 'sit' }));
-  CAFE_TABLES.forEach(([x, z], i) => i % 2 === 0 && out.push({ x: x - 0.6, z, y: PLAT_Y + 0.32, ry: Math.PI / 2, act: 'sit' }));
+  CAFE_TABLES.forEach(([x, z], i) => i % 2 === 0 && out.push({ x: x - 0.6, z, y: PLAT_Y + 0.32, ry: Math.PI / 2, act: 'eat' }));
   // Waiting on the platforms, in twos and threes
   ISLANDS.forEach(([z0, z1], i) => {
     const zm = (z0 + z1) / 2;

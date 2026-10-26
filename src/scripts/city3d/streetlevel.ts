@@ -248,7 +248,7 @@ export interface StreetPerson {
   /** A seat's height for those sitting */
   y: number;
   ry: number;
-  act: 'sit' | 'look' | 'chat';
+  act: 'sit' | 'eat' | 'look' | 'chat';
 }
 export const STREET_PEOPLE: StreetPerson[] = (() => {
   const out: StreetPerson[] = [];
@@ -256,7 +256,7 @@ export const STREET_PEOPLE: StreetPerson[] = (() => {
   DRESSING.filter((d) => d.kind === 'table' || d.kind === 'umbrella').forEach((d, i) => {
     if (i % 3 === 2) return;
     const [ux, uz] = [Math.cos(d.ry), -Math.sin(d.ry)];
-    for (const s of [-1, 1]) out.push({ x: d.x + ux * s * TABLE.chair, z: d.z + uz * s * TABLE.chair, y: SEAT_Y, ry: d.ry - (s * Math.PI) / 2, act: 'sit' });
+    for (const s of [-1, 1]) out.push({ x: d.x + ux * s * TABLE.chair, z: d.z + uz * s * TABLE.chair, y: SEAT_Y, ry: d.ry - (s * Math.PI) / 2, act: 'eat' });
   });
   // A doorman by each grand lobby's door, facing the street
   for (const t of HIGHRISES.filter((h) => h.lobby === 'grand')) {

@@ -22,7 +22,7 @@ import { TRENCH_WALKS } from './projects';
 import { UPTOWN_PEOPLE, UPTOWN_WALKS } from './uptownlife';
 import { inTrenches } from './trenches';
 import { CROWD_VIEW, HIP_HEIGHT, cityOutfit, createCrowd } from './character';
-import { type CrowdClip, idleFor, secondsOf, strideOf, walkFor } from './crowdclips';
+import { type CrowdClip, idleFor, secondsOf, strideOf, walkFor, seated, type IdleAct } from './crowdclips';
 import { PARK_PEOPLE, moment, type Moment, type ParkPerson } from './parklife';
 import { blinkOn, bodyMotion, braking, hornDue, indicating, newBody, newHorn, pullAway, reactionOf, resetBody, turnsOf, type Body, type Horn, type Mover, type Turn } from './traffic';
 import { CROSS_PACE, crossingLinks, hurry, hurrying, noticing, onPhone, outAtNight, takesCrossing, walkLight, type Link } from './pedestrians';
@@ -591,6 +591,8 @@ interface Person {
   /** Brushed by you (the revamp's Phase 3): a step aside, out and back over `BUMP.t` */
   bump?: { x: number; z: number; t: number };
 }
+/** The row an idle person's act plays (a queue stands in their own idle) */
+const clipOf = (act: IdleAct, idle: CrowdClip): CrowdClip => (act === 'queue' ? idle : act);
 /** The bump: within `r` (plus the walker's reach) of you going by, they step `out` aside and back over `t` seconds */
 const BUMP = { r: 0.42, out: 0.14, t: 0.45 };
 
@@ -740,12 +742,12 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
     people.forEach((p, i) => {
       // Late at night some have gone home; the benches' sitters go in out of the rain (city life plan, Phase 3)
       if (p.kind === 'walk' && !outAtNight(i, hour)) return;
-      if (p.act === 'sit' && rain > 0.6) return;
+      if (p.act && seated(clipOf(p.act, 'idle')) && rain > 0.6) return;
       // You, close by: a walker stops and watches you pass (not in the middle of the road)
       const looking = p.kind === 'walk' && !p.cross && noticing(p.notice, Math.hypot(walker.x - p.x, walker.z - p.z), walker.r, walker.on, dt);
       let standing = looking;
       // Brushed by you going past: a step aside and back (the look is noticing()'s)
-      if (p.kind !== 'park' && p.act !== 'sit' && walker.on && walkerV > 0.5 && !p.bump) {
+      if (p.kind !== 'park' && !(p.act && seated(clipOf(p.act, 'idle'))) && walker.on && walkerV > 0.5 && !p.bump) {
         const dx = p.x - walker.x;
         const dz = p.z - walker.z;
         const dd = Math.hypot(dx, dz);
@@ -831,14 +833,14 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
       if (Number.isNaN(p.face)) p.face = p.ry;
       const turn = Math.atan2(Math.sin(p.ry - p.face), Math.cos(p.ry - p.face));
       p.face += turn * Math.min(1, dt * 9);
-      const y = p.act === 'sit' ? (p.y ?? SLAB) - SEAT_DROP : (p.y ?? SLAB);
+      const y = p.act && seated(clipOf(p.act, 'idle')) ? (p.y ?? SLAB) - SEAT_DROP : (p.y ?? SLAB);
       const bk = p.bump ? BUMP.out * Math.sin(Math.PI * (1 - p.bump.t / BUMP.t)) : 0;
       const bx = p.x + (p.bump?.x ?? 0) * bk;
       const bz = p.z + (p.bump?.z ?? 0) * bk;
       if (p.kind === 'park') {
         const m = p.m!;
         const c = m.clip;
-        const py = c === 'sit' || c === 'picnic' ? m.y - SEAT_DROP : m.y;
+        const py = seated(c) ? m.y - SEAT_DROP : m.y;
         const clip = c === 'walk' ? walkClip : c === 'idle' ? idleClip : c;
         const u = c === 'walk' || c === 'jog' ? p.walked / (strideOf(clip) * PERSON_SCALE) + seed : playAt(clip);
         people3d.set(i, p.x, py, p.z, p.face, PERSON_SCALE, clip, u);
@@ -849,7 +851,7 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
       }
       else if (p.kind === 'walk') people3d.set(i, bx, y, bz, p.face, PERSON_SCALE, walkClip, p.walked / (strideOf(walkClip) * PERSON_SCALE) + seed);
       else {
-        const clip: CrowdClip = p.act === 'sit' ? 'sit' : p.act === 'chat' ? 'chat' : p.act === 'phone' ? 'phone' : p.act === 'queue' ? idleClip : 'look';
+        const clip = clipOf(p.act ?? 'look', idleClip);
         people3d.set(i, bx, y, bz, p.face, p.scale ?? PERSON_SCALE, clip, playAt(clip));
       }
     });

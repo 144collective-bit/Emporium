@@ -410,7 +410,7 @@ export interface CommonsPerson {
   x: number;
   z: number;
   ry: number;
-  act: 'look' | 'chat' | 'sit';
+  act: 'look' | 'chat' | 'sit' | 'chess';
   /** Seat height over the slab, for sitters */
   seat?: number;
   kid?: boolean;
@@ -436,7 +436,7 @@ export function commonsPeople(low: boolean): CommonsPerson[] {
       // Two at each grill, chatting
       for (const [gx, gz] of gardenGrills(a).slice(0, low ? 1 : 2)) out.push({ x: gx + 0.8, z: gz, ry: -Math.PI / 2, act: 'chat' }, { x: gx, z: gz + 0.8 * (gz < cz ? 1 : -1), ry: gz < cz ? Math.PI : 0, act: 'chat' });
     } else if (a.kind === 'chess') {
-      for (const s of [-1, 1].slice(0, low ? 1 : 2) as number[]) out.push({ x: cx - 1.2 + s * 0.55, z: cz, ry: s < 0 ? Math.PI / 2 : -Math.PI / 2, act: 'sit', seat: 0.42 });
+      for (const s of [-1, 1].slice(0, low ? 1 : 2) as number[]) out.push({ x: cx - 1.2 + s * 0.55, z: cz, ry: s < 0 ? Math.PI / 2 : -Math.PI / 2, act: 'chess', seat: 0.42 });
     } else if (a.kind === 'washing' && r() < 0.6) out.push({ x: cx, z: cz, ry: a.turned ? Math.PI / 2 : 0, act: 'look' });
   }
   // Under the pavilion and by the rec centre's doors

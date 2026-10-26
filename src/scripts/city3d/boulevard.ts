@@ -114,7 +114,7 @@ export const ROOF_TERRACES: RoofTerrace[] = RIVER_ROW.flatMap((t) => {
 
 /* ---------- People ---------- */
 
-export type BoulevardAct = 'sit' | 'chat' | 'look' | 'phone';
+export type BoulevardAct = 'sit' | 'eat' | 'chat' | 'look' | 'phone';
 export interface BoulevardPerson {
   x: number;
   z: number;
@@ -139,8 +139,8 @@ export const BOULEVARD_PEOPLE: BoulevardPerson[] = (() => {
   for (const t of ROOF_TERRACES)
     t.tables.forEach(([x, z], i) => {
       if (i % 3 === 2) return;
-      add(x - CHAIR_OFF, z, TERRACE_Y + SEAT, Math.PI / 2, 'sit', true);
-      add(x + CHAIR_OFF, z, TERRACE_Y + SEAT, -Math.PI / 2, 'sit', true);
+      add(x - CHAIR_OFF, z, TERRACE_Y + SEAT, Math.PI / 2, 'eat', true);
+      add(x + CHAIR_OFF, z, TERRACE_Y + SEAT, -Math.PI / 2, 'eat', true);
     });
   return out;
 })();

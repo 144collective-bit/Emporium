@@ -1821,7 +1821,19 @@ it and has been retired completely. Build only on what's here.
   captured, at the walk's stride); about one walker in seven (`onPhone()`)
   walks reading and keeps reading at a kerb, an idle with `act: 'phone'`
   stands reading (the plaza, the boulevard's overlooks, Uptown North's
-  square), each with `held: 'phone'` in the crowd's wardrobe. The clips file's limits are 640 KB (test) and 660 KB (budget),
+  square), each with `held: 'phone'` in the crowd's wardrobe. Step 3 is
+  built: the workers' rows (`acts.ts`, DOM-free, keyed; tested through
+  `tests/crowdclips.test.ts`): standing over the captured idles `serve`
+  (the market's traders, the carts' vendors: a hand-over once a loop),
+  `cook` (the Night Market's cooks), `fish` (Pier 7's fishers: a cast once
+  a loop) and `guard` (the club's bouncers, arms folded, a look each way);
+  seated over the sit pose on their own loops (`ClipDef.seconds`) `eat`
+  (the diners at every table: a bite every four seconds), `chess` (The
+  Trenches' chess tables), `lounge` (the boombox corners' chairs), `row`
+  and `pedal` (the park's boats). `IdleAct` (crowdclips.ts) is what an
+  idle person does, life.ts plays the row of that name (`clipOf()`), and
+  `SEATED` / `seated()` say which rows sit (their root dropped by the
+  seat); benches keep `sit`. The clips file's limits are 640 KB (test) and 660 KB (budget),
   raised for the takes on purpose:
   - **The data** is CMU's motion capture (free for commercial use; the
     acknowledgment is in the start menu's Options > Credits, named, never

@@ -75,7 +75,7 @@ test('the grand lobbies: a doorman at each, a sculpture beside most; the galleri
   assert.ok(grand.length >= 3);
   assert.ok(SCULPTURES.length >= 2);
   assert.ok(STREET_PEOPLE.filter((p) => p.act === 'look').length >= grand.length);
-  assert.ok(STREET_PEOPLE.filter((p) => p.act === 'sit').length > 10, 'diners');
+  assert.ok(STREET_PEOPLE.filter((p) => p.act === 'eat').length > 10, 'diners eating');
   assert.equal(GALLERIAS.length, UPTOWN_LANES.length);
   for (const g of GALLERIAS) for (const [x] of g.columns) assert.ok(x - g.rect[0] < 0.3 || g.rect[2] - x < 0.3, 'columns at the lane\'s edges');
   assert.ok(GALLERY.y > 3.5, 'over a walker');

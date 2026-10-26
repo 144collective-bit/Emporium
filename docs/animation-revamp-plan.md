@@ -809,11 +809,11 @@ The plan as it was:
 - Measured on a phone (`?bench`, `?fps`: the crowd texture's size, draws,
   memory) before it merges.
 
-### Phase 6: the crowd's acts that suit the city (steps 1 and 2 built, for the owner's sign-off)
+### Phase 6: the crowd's acts that suit the city (steps 1 to 3 built, for the owner's sign-off)
 
 Built in steps: **step 1** (the kerb, the crossing and the rain: built,
-below), **step 2** (the phone in the hand: built, below), then the
-workers' rows, and the kids.
+below), **step 2** (the phone in the hand: built, below), **step 3** (the
+workers' rows: built, below), then the kids.
 
 What step 1 built:
 
@@ -885,6 +885,45 @@ What step 2 built:
 - Measured: two rows more (92 rows); the crowd's draws unchanged (the
   phone's two pieces join the kind's meshes); no download added.
 
+What step 3 built (`acts.ts`, DOM-free, tested through
+`tests/crowdclips.test.ts`; every row keyed, no take in the repository
+does any of these):
+
+- **Standing, over the captured idles** (the arms and head replacing the
+  take's, its weight shifts kept): `serve` (the market's traders and the
+  carts' vendors: hands on the counter at waist height, the right handing
+  something over once a loop with a nod, `HAND_OVER`), `cook` (the Night
+  Market's cooks: the left hand on the pan, the right stirring in a small
+  circle then chopping, the head down at the work), `fish` (Pier 7's
+  fishers: the rod held out, a cast once a loop (`CAST`: both hands up
+  over the right shoulder, whipped forward, home again), the head
+  following the rod) and `guard` (Club PULSE's bouncers: arms folded
+  across the chest, a slow look each way, `GUARD_LOOK`, the chin up).
+- **Seated, formulas over the sit pose, each on its own loop**
+  (`ClipDef.seconds`; `SEATED` / `seated()` say which rows life.ts drops
+  onto the seat): `eat` (the Night Market's diners, the plaza's and the
+  boulevard terraces' tables, Uptown's café tables, the station's café:
+  hands on the table, a bite every four seconds (`BITE`: the right hand to
+  the mouth within 4 cm, the head down to meet it), chewing after),
+  `chess` (The Trenches' chess tables: leant in, the chin on the left
+  hand, the right out over the board to move a piece once a loop (`MOVE`),
+  a glance up at the opponent after), `lounge` (the boombox corners'
+  folding chairs: leant back, legs out, a hand on the knee, the head
+  nodding at 90 to the minute), `row` (the park's rowing boats: the stroke
+  every 2.4 s, forward to the catch with the arms out, back to the finish
+  with the hands at the chest) and `pedal` (the swan pedalos: hands on the
+  bar, the knees pumping in turn every 1.2 s).
+- **Who**: `IdleAct` (crowdclips.ts) names what an idle person does and
+  life.ts plays the row of that name (`clipOf()`); the places' people
+  lists carry the new acts (market.ts, streetlife.ts, nightmarket3d.ts,
+  waterfront3d.ts, avenue3d.ts, commons.ts, grit3d.ts, plaza.ts,
+  boulevard.ts, streetlevel.ts, station.ts; parklife.ts's boat seats
+  `row` / `pedal`). Benches keep `sit` (walk.ts looks for it to leave a
+  sitter's bench alone).
+- Measured: 464 frames more in the crowd texture (about 1 MB; the seated
+  rows are short loops, 18 to 72 frames, not 24 s windows); the crowd's
+  draws unchanged; no download added.
+
 The plan as it was (the rules stay life.ts's and pedestrians.ts's; this
 phase only gives them the moves):
 
@@ -895,7 +934,7 @@ phase only gives them the moves):
 - Traders handing over, diners eating, cooks at the stalls, vendors at
   the carts, fishers casting on Pier 7, rowers at the oars (the park's
   boats) and the swan riders, the bouncers with arms folded, chess at the
-  pavilion, the boombox corner's chairs.
+  pavilion, the boombox corner's chairs (built, step 3, above).
 - Kids at play: running (the jog at a small scale), a ball game, the swings.
 - Each row from capture where a take fits, keyed where none does; no row
   threatening, none explicit (the content rules).

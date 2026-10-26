@@ -35,12 +35,43 @@
 import * as THREE from 'three';
 import { BONES, NECK_SHARE, SPINE_SHARE, makeSkeleton, newPose, poseSkeleton, reachArm, type Limb, type Pose, type Skeleton } from './skeleton';
 import { HURRY, PHONE, PHONE_GLANCE_YAW, kerbLook, phoneGlance } from './pedestrians';
+import { CHESS, CHESS_SECONDS, COOK, EAT, EAT_SECONDS, FISH, GUARD, LOUNGE_SECONDS, PEDAL, PEDAL_SECONDS, ROW, ROW_SECONDS, SERVE, chessPose, cookOver, eatPose, fishOver, guardOver, loungePose, pedalPose, rowPose, serveOver } from './acts';
 import { copyPose, createLocomotion } from './locomotion';
 import { attentionPose, chatPose, idlePose, lookPose, picnicPose, set, sitPose } from './poses';
 import { baked as atBuild } from './baked';
 import { MOCAP_BONES, MOCAP_FPS, NB, type MoClip, type MoData } from './mocap';
 
-export type CrowdClip = 'walk' | 'walk2' | 'jog' | 'march' | 'hurry' | 'phonewalk' | 'idle' | 'idle2' | 'idle3' | 'wait' | 'phone' | 'look' | 'chat' | 'sit' | 'picnic' | 'salute';
+export type CrowdClip =
+  | 'walk'
+  | 'walk2'
+  | 'jog'
+  | 'march'
+  | 'hurry'
+  | 'phonewalk'
+  | 'idle'
+  | 'idle2'
+  | 'idle3'
+  | 'wait'
+  | 'phone'
+  | 'serve'
+  | 'cook'
+  | 'fish'
+  | 'guard'
+  | 'look'
+  | 'chat'
+  | 'sit'
+  | 'picnic'
+  | 'eat'
+  | 'chess'
+  | 'lounge'
+  | 'row'
+  | 'pedal'
+  | 'salute';
+/** What an idle person in the city is doing (life.ts picks their row from it; 'queue' is their own idle) */
+export type IdleAct = 'look' | 'chat' | 'sit' | 'queue' | 'phone' | 'serve' | 'cook' | 'fish' | 'guard' | 'eat' | 'chess' | 'lounge';
+/** The rows played sitting down (life.ts drops their root by the seat) */
+export const SEATED: ReadonlySet<CrowdClip> = new Set<CrowdClip>(['sit', 'picnic', 'eat', 'chess', 'lounge', 'row', 'pedal']);
+export const seated = (c: CrowdClip) => SEATED.has(c);
 
 interface ClipDef {
   frames: number;
@@ -49,6 +80,8 @@ interface ClipDef {
   grip: number | [number, number];
   /** The pose `u` (0..1) of the way through (the fallback, where there's a capture) */
   sample(u: number, out: Pose): void;
+  /** A formula row's own loop (seconds; `CLIP_SECONDS` otherwise) */
+  seconds?: number;
   /** From the crowd pack: the take (a loop take plays whole; an idle's `tail` seconds are crossfaded into its head) */
   capture?: { take: string; tail?: number };
   /**
@@ -126,11 +159,11 @@ const fresh = () => {
 };
 
 /** A formula over `WINDOW` seconds whose end eases into its start: seamless as a loop */
-function looped(f: (p: Pose, t: number) => void): ClipDef['sample'] {
+function looped(f: (p: Pose, t: number) => void, seconds = WINDOW): ClipDef['sample'] {
   const a = fresh();
   const b = fresh();
   return (u, out) => {
-    const t = u * WINDOW;
+    const t = u * seconds;
     f(a, t);
     const k = THREE.MathUtils.smoothstep(u, 1 - SEAM, 1);
     if (k <= 0) return copyPose(a, out);
@@ -251,10 +284,21 @@ export const CLIP_DEFS: Record<CrowdClip, ClipDef> = {
   wait: { frames: 60, loop: true, grip: RELAXED, sample: looped((p, t) => idlePose(p, t + 8)), capture: { take: 'crowd-idle-2', tail: IDLE_TAIL }, over: (sec, p) => (p.headYaw += kerbLook(sec)) },
   // Standing reading a phone: the third idle (its hands still) with the phone hand and the head keyed over it, a glance up once a loop
   phone: { frames: 45, loop: true, grip: [RELAXED, PHONE.grip], sample: looped((p, t) => idlePose(p, t + 16)), capture: { take: 'crowd-idle-3', tail: IDLE_TAIL }, over: (sec, p) => phoneOver(sec, p, false), arms: 'right', head: true },
+  // The workers (acts.ts, the revamp's Phase 6 step 3): their arms and head keyed over a captured idle's weight shifts
+  serve: { frames: 45, loop: true, grip: SERVE.grip, sample: looped((p, t) => idlePose(p, t + 16)), capture: { take: 'crowd-idle-3', tail: IDLE_TAIL }, over: serveOver, arms: 'both', head: true },
+  cook: { frames: 45, loop: true, grip: COOK.grip, sample: looped((p, t) => idlePose(p, t + 16)), capture: { take: 'crowd-idle-3', tail: IDLE_TAIL }, over: cookOver, arms: 'both', head: true },
+  fish: { frames: 80, loop: true, grip: FISH.grip, sample: looped((p, t) => idlePose(p, t)), capture: { take: 'crowd-idle', tail: IDLE_TAIL }, over: fishOver, arms: 'both', head: true },
+  guard: { frames: 60, loop: true, grip: GUARD.grip, sample: looped((p, t) => idlePose(p, t + 8)), capture: { take: 'crowd-idle-2', tail: IDLE_TAIL }, over: guardOver, arms: 'both', head: true },
   look: { frames: 192, loop: true, grip: RELAXED, sample: looped((p, t) => lookPose(p, t)) },
   chat: { frames: 192, loop: true, grip: RELAXED, sample: looped((p, t) => chatPose(p, t)) },
   sit: { frames: 144, loop: true, grip: RELAXED, sample: looped((p, t) => sitPose(p, t)) },
   picnic: { frames: 144, loop: true, grip: RELAXED, sample: looped((p, t) => picnicPose(p, t)) },
+  // Seated acts (acts.ts), each on its own loop
+  eat: { frames: 72, loop: true, grip: EAT.grip, sample: looped(eatPose, EAT_SECONDS), seconds: EAT_SECONDS },
+  chess: { frames: 72, loop: true, grip: CHESS.grip, sample: looped(chessPose, CHESS_SECONDS), seconds: CHESS_SECONDS },
+  lounge: { frames: 48, loop: true, grip: RELAXED, sample: looped(loungePose, LOUNGE_SECONDS), seconds: LOUNGE_SECONDS },
+  row: { frames: 24, loop: true, grip: ROW.grip, sample: looped(rowPose, ROW_SECONDS), seconds: ROW_SECONDS },
+  pedal: { frames: 18, loop: true, grip: PEDAL.grip, sample: looped(pedalPose, PEDAL_SECONDS), seconds: PEDAL_SECONDS },
   // Attention (0) to the free hand at the brow (1), the rifle in the left hand
   salute: { frames: 9, loop: false, grip: RIFLE, sample: (u, p) => attentionPose(p, u, 'left') },
 };
@@ -268,6 +312,7 @@ export const STRIDE: Record<'walk' | 'walk2' | 'jog' | 'march' | 'hurry' | 'phon
 export const strideOf = (c: CrowdClip) => (c in STRIDE ? STRIDE[c as keyof typeof STRIDE] : 1);
 /** How long each loop is (seconds): a person plays `t / secondsOf(c)` (plus their own offset) */
 const SECONDS: Partial<Record<CrowdClip, number>> = {};
+for (const id of CLIP_IDS) if (CLIP_DEFS[id].seconds) SECONDS[id] = CLIP_DEFS[id].seconds;
 export const secondsOf = (c: CrowdClip) => SECONDS[c] ?? CLIP_SECONDS;
 /** A person's own walk and idle (by a number of theirs, 0..1), so no two are in step or alike */
 export const walkFor = (seed: number): CrowdClip => (seed < 0.5 ? 'walk' : 'walk2');

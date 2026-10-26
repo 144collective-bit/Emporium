@@ -451,7 +451,7 @@ function drawClub(b: Batch, parts: Map<THREE.Material, THREE.BufferGeometry[]>, 
     }
   }
   for (const q of CLUB.queue.slice(0, low ? 6 : CLUB.queue.length)) crowd.push({ x: q.x, z: q.z, ry: q.yaw, act: 'queue' });
-  for (const q of CLUB.bouncers) crowd.push({ x: q.x, z: q.z, ry: q.yaw, scale: 1.1 });
+  for (const q of CLUB.bouncers) crowd.push({ x: q.x, z: q.z, ry: q.yaw, act: 'guard', scale: 1.1 });
 }
 
 /** The searchlights' beams: long soft cones from the drums, sweeping the sky at night (their own material; still under reduced motion) */

@@ -352,10 +352,10 @@ export function buildNightMarket(scene: THREE.Scene, crowd: Idle[], opts: { tick
   b.build(group);
   addPool(GANTRY.x, GANTRY.z, 4, T + 0.02);
   // The people: the cooks, the queues, the diners (every other one on phones), a few standing about under the gantry
-  for (const v of VENDORS) crowd.push({ x: v.x, z: v.z, y: T + v.y, ry: v.yaw, act: 'chat' });
+  for (const v of VENDORS) crowd.push({ x: v.x, z: v.z, y: T + v.y, ry: v.yaw, act: 'cook' });
   for (const q of QUEUE) crowd.push({ x: q.x, z: q.z, y: T, ry: q.yaw, act: 'queue' });
   DINERS.forEach((d, i) => {
-    if (!low || i % 2 === 0) crowd.push({ x: d.x, z: d.z, y: T + 0.3, ry: d.yaw, act: 'sit' });
+    if (!low || i % 2 === 0) crowd.push({ x: d.x, z: d.z, y: T + 0.3, ry: d.yaw, act: 'eat' });
   });
   for (const [dx, dz, ry] of [
     [-2.2, 0.4, 0.6],

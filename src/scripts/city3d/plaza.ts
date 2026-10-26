@@ -108,7 +108,7 @@ export const TERRACE_LAMPS: [number, number, number][] = TERRACES.map(([x0, z0, 
 
 /* ---------- People ---------- */
 
-export type PlazaAct = 'sit' | 'chat' | 'look' | 'queue' | 'phone';
+export type PlazaAct = 'sit' | 'eat' | 'chat' | 'look' | 'queue' | 'phone';
 export interface PlazaPerson {
   x: number;
   z: number;
@@ -124,8 +124,8 @@ export const PLAZA_PEOPLE: PlazaPerson[] = (() => {
   const add = (x: number, z: number, ry: number, act: PlazaAct, y = 0) => out.push({ x, z, y, ry, act });
   // (a chair each side along z, facing the table; one in three tables a single diner)
   [...TABLES, ...TERRACE_TABLES].forEach(([x, z], i) => {
-    add(x, z - CHAIR, 0, 'sit', SEAT_Y);
-    if (i % 3 !== 1) add(x, z + CHAIR, Math.PI, 'sit', SEAT_Y);
+    add(x, z - CHAIR, 0, 'eat', SEAT_Y);
+    if (i % 3 !== 1) add(x, z + CHAIR, Math.PI, 'eat', SEAT_Y);
   });
   BENCHES.forEach(({ at, ry }, i) => add(at[0] + Math.cos(ry) * (i % 2 ? 0.3 : -0.3), at[1] - Math.sin(ry) * (i % 2 ? 0.3 : -0.3), ry, 'sit', SEAT_Y));
   // Two pairs chatting by the spire's lobby, someone looking up at the cross from the axis either side of the pool,
