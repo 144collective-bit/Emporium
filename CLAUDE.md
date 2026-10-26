@@ -1630,7 +1630,27 @@ it and has been retired completely. Build only on what's here.
   (`BENCHES`, no crowd sitter on it), the root down onto the seat
   (`momentDy`), "Stand up". walk.ts's `markFor()` / `act()` start them;
   the keys wait while one is on, the motion capture steps aside for the
-  keyed pose (`momentAmt`), the contact layer too. The clips file's limits are 640 KB (test) and 660 KB (budget),
+  keyed pose (`momentAmt`), the contact layer too. Step 2 is built:
+  **getting in and out** (`boardMark()` / `alightMark()`, `Vehicle`: car,
+  kart, plane, boat; walk.ts's `sideMark()` from `drive.doorOf()` /
+  `fly.doorOf()` / `HIRE.door`: he comes at the vehicle's side nearest
+  him, the hands land (the car's handle, the kart's pod rim, the
+  aircraft's door frame, the boat's rails), a leg lifts over and the body
+  folds onto the seat, the root going to it, and the vehicle takes him at
+  `board.fireAt` (`enter()` as before; the moment dropped); out plays at
+  once from the seat (`from` on each `exit()`) to the step-out spot; the
+  taxi through `TaxiDeps.approach` → `walk.boardAt()`), **the lifts**
+  (`liftMark()`: walked in through the door and turned to face out, then
+  the fade), and **carrying** (`crateMark()` `pick` / `put`, `crateAt()`,
+  `carriedAt()`, `carryPose()`: the business card's Load / Unload on foot
+  with the car parked by the place go through `TycoonHooks.carry` →
+  `walk.carry()`: a crate squatted to and lifted at the place, carried in
+  both hands (the upper-body mask, a run capped at `crate.slow`), set
+  down at the car's boot (`PUT_R`, "Load the car") or the place ("Unload
+  here"), when `done` moves the goods; "Put it down" elsewhere moves
+  nothing; a vehicle, a ride, a fast travel or walk mode ending puts it
+  away). The rides seen (the metro's, taxi's and river bus's seated
+  figure) are held back, in the plan. The clips file's limits are 640 KB (test) and 660 KB (budget),
   raised for the takes on purpose:
   - **The data** is CMU's motion capture (free for commercial use; the
     acknowledgment is in the start menu's Options > Credits, named, never

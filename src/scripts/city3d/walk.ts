@@ -62,7 +62,9 @@ import type { RaceStart } from './kart-types';
 import type { Cond } from './kartcircuit';
 import { createFightUI } from './fight-ui';
 import { COUNTER, TRAINER } from './fightsite';
-import { type Moment, benchMark, counterMark, createMoment, doorMark, momentPose } from './moments';
+import { MOMENT, type Mark, type Moment, type Vehicle, alightMark, benchMark, boardMark, carriedAt, carryPose, counterMark, crateAt, crateMark, createMoment, doorMark, liftMark, momentPose } from './moments';
+import { CARS } from './cars';
+import { toon } from './kit';
 import { BENCHES } from './pedestrians';
 import type { Fight, FightClub, FightInput } from './fight-types';
 import type { KartPark, KartRace, KartUI } from './kart-types';
@@ -92,13 +94,13 @@ import { live } from './live-client';
 import type { FeatureId } from './live';
 
 /** What a prompt can open: a landmark's door, or one of walk mode's own places and vehicles */
-type Near = SpotId | 'gear' | 'garage' | 'hangar' | 'car' | 'plane' | 'boat' | 'karts' | 'trainer' | 'bench' | 'stand' | `place:${string}`;
+type Near = SpotId | 'gear' | 'garage' | 'hangar' | 'car' | 'plane' | 'boat' | 'karts' | 'trainer' | 'bench' | 'stand' | 'put' | `place:${string}`;
 /** The prompts the owner can close (live settings, live.ts) and the feature that closes each */
 const GATED: Partial<Record<Near, FeatureId>> = { gear: 'guns', garage: 'drive', hangar: 'fly', karts: 'karts', trainer: 'fight', boat: 'boat' };
 /** Prompts that say their own label (the rest say "Enter ...") */
 /** The landmarks' doors and Trench Avenue's (their prompts open their panels) */
 const ALL_DOORS = [...DOORS, ...AVENUE_DOORS, { id: 'stadium' as const, ...GATE.spot }];
-const OWN_LABEL = new Set<string>(['gear', 'garage', 'hangar', 'car', 'plane', 'boat', 'karts', 'trainer', 'bench', 'stand']);
+const OWN_LABEL = new Set<string>(['gear', 'garage', 'hangar', 'car', 'plane', 'boat', 'karts', 'trainer', 'bench', 'stand', 'put']);
 /** The Armoury's counter top (its drawing grid: the counter's box, a little in from its front edge) and height over the slab */
 const RACK_TOP = (([x, z]) => ({ x, z }))(design(24.7, 27.4));
 const RACK_TOP_H = 0.6;
@@ -114,6 +116,8 @@ const RADIUS = 0.22;
 /** His speeds (movesim.ts): a walk (Caps Lock), the run he goes at, the sprint (Shift), and walking while he aims */
 const { walk: WALK, run: RUN, sprint: SPRINT } = GAITS;
 const AIMING = 1.4;
+/** Carrying a crate: how near its destination (the car's boot, the place) counts as there */
+const PUT_R = 1.8;
 /**
  * Crouched (animation Phase 5: C toggles, B on a gamepad, the touch Crouch
  * button; crouching while sprinting slides): how fast he goes, and how far
@@ -241,6 +245,24 @@ export function createWalk(d: WalkDeps) {
   hero.g.scale.setScalar(SCALE);
   hero.g.visible = hero.ring.visible = false;
   d.scene.add(hero.g, hero.ring);
+  /**
+   * Carrying (moments.ts, the revamp's Phase 4 step 2): a crate of goods picked up at one of your places and
+   * carried to your car's boot (or the other way), for the business card's Load / Unload; `done` moves the goods
+   * once it's set down where it's going
+   */
+  let carrying: { dir: 'load' | 'unload'; to: { x: number; z: number }; stage: 'pick' | 'carry' | 'put'; done: () => void } | null = null;
+  /** The crate is in his hands (between the pick's lift and the put's set-down) */
+  let crateUp = false;
+  let carryAmt = 0;
+  const crate = new THREE.Mesh(new THREE.BoxGeometry(MOMENT.crate.w, MOMENT.crate.h, MOMENT.crate.d), toon('#b9874a'));
+  crate.visible = false;
+  d.scene.add(crate);
+  /** The crate put away (walk mode ending, a ride, a vehicle): nothing moved */
+  const dropCrate = () => {
+    carrying = null;
+    crateUp = false;
+    crate.visible = false;
+  };
   /** His feet and body on the move (locomotion.ts): planted feet, gaits, landings, the idle */
   const loco = createLocomotion();
   /** ...and the motion capture over it on foot (animator.ts), once its clips are in; how much of it shows */
@@ -408,6 +430,17 @@ export function createWalk(d: WalkDeps) {
     if (n.id === 'garage') return door(GARAGE_SITE.door);
     if (n.id === 'hangar') return door(HANGAR_DOOR);
     if (n.id === 'karts') return door(HUT_DOOR);
+    // Getting in (step 2): the car's or the kart's side nearest him, the aircraft's door, the hire boat's ladder
+    if (n.id === 'car') {
+      const v = drive.doorOf(pos.x, pos.z);
+      return v ? sideMark(v.kind, v, MOMENT[v.kind].seat) : null;
+    }
+    if (n.id === 'plane') {
+      if (fly.active) return null;
+      const p = fly.doorOf();
+      return sideMark('plane', { x: p.x, z: p.z, yaw: p.yaw, W: p.side * 2 }, MOMENT.plane.sill, p.u);
+    }
+    if (n.id === 'boat') return boating() ? null : boardMark('boat', HIRE.door, { x: HIRE.x, z: HIRE.z, y: y + MOMENT.boat.deck }, pos.x, pos.z, y, (bx, bz) => blocked(bx, bz, pos.y));
     if (n.id === 'bench') {
       const b = nearestBench();
       return b ? benchMark(b, groundAt(b.x, b.z, pos.y)) : null;
@@ -416,10 +449,40 @@ export function createWalk(d: WalkDeps) {
       const id = n.id.slice(6);
       if (!(id.startsWith('lift:') || id.startsWith('metro:'))) return null;
       const pl = d.places().find((q) => q.id === id);
-      return pl ? door(pl) : null;
+      if (!pl) return null;
+      // (a lift: walked into, turned to face out, then the fade; a station's door is pushed)
+      return id.startsWith('lift:') ? liftMark(pl, pos.x, pos.z, y) : door(pl);
     }
     const dr = ALL_DOORS.find((q) => q.id === n.id);
     return dr ? door(dr) : null;
+  };
+  /** Getting into a vehicle (moments.ts): the mark at the side of its body nearest him, the seat `seatY` up in its middle (`along` its length) */
+  const sideMark = (v: Vehicle, b: { x: number; z: number; yaw: number; W: number }, seatY: number, along = 0): Mark => {
+    const y = groundAt(pos.x, pos.z, pos.y);
+    const fx = Math.cos(b.yaw);
+    const fz = -Math.sin(b.yaw);
+    const rx = Math.sin(b.yaw);
+    const rz = Math.cos(b.yaw);
+    const cx = b.x + fx * along;
+    const cz = b.z + fz * along;
+    const side = (pos.x - cx) * rx + (pos.z - cz) * rz >= 0 ? 1 : -1;
+    return boardMark(v, { x: cx + rx * side * (b.W / 2), z: cz + rz * side * (b.W / 2) }, { x: cx, z: cz, y: y + seatY }, pos.x, pos.z, y, (bx, bz) => blocked(bx, bz, pos.y));
+  };
+  /** Out of a vehicle (moments.ts): from its seat (`from`, `seatY` up) to where he stands, the vehicle giving him back as he steps down */
+  const alight = (v: Vehicle, from: { x: number; z: number }, out: { x: number; z: number }, seatY: number) => {
+    const y = groundAt(out.x, out.z, pos.y);
+    moments.start(alightMark(v, { x: from.x, z: from.z, y: y + seatY }, out, y, face), undefined, out.x, out.z);
+  };
+  /** Carrying: the crate set down (where it's going, the goods move; anywhere else, nothing does) */
+  const putDown = () => {
+    if (!carrying || carrying.stage !== 'carry' || moments.active) return;
+    const c = carrying;
+    const here = Math.hypot(c.to.x - pos.x, c.to.z - pos.z) < PUT_R;
+    const at = here ? c.to : { x: pos.x + Math.sin(face) * 0.6, z: pos.z + Math.cos(face) * 0.6 };
+    if (!here) c.done = () => d.game.toast('Put down. Nothing moved.', 2500);
+    c.stage = 'put';
+    contact?.reset();
+    moments.start(crateMark('put', at, pos.x, pos.z, groundAt(at.x, at.z, pos.y), (bx, bz) => blocked(bx, bz, pos.y)), () => (crateUp = false), pos.x, pos.z);
   };
   /** The nearest bench nobody's sitting on, within reach */
   const nearestBench = () => {
@@ -457,6 +520,7 @@ export function createWalk(d: WalkDeps) {
       else if (n.id === 'karts') void loadKarts().then(() => kartUI.show());
       else if (n.id === 'trainer') fightUI.show();
       else if (n.id === 'car') (drive.active ? getOut() : getIn());
+      else if (n.id === 'put') putDown();
       else if (n.id === 'bench' || n.id === 'stand') return;
       else if (n.id.startsWith('place:')) {
         if (document.pointerLockElement === canvas) document.exitPointerLock();
@@ -464,7 +528,7 @@ export function createWalk(d: WalkDeps) {
       } else openSpot(n.id as SpotId);
     };
     // (on foot and not in the middle of something: the moment first, then what it opens as the hand lands)
-    const mk = !drive.active && !over && !slide && !emote ? markFor(n) : null;
+    const mk = !drive.active && !over && !slide && !emote && !carrying ? markFor(n) : null;
     if (mk) {
       contact?.reset();
       pickBenchYaw(mk);
@@ -984,11 +1048,16 @@ export function createWalk(d: WalkDeps) {
     combat.trigger(false, true);
     hero.g.visible = hero.ring.visible = false;
     near = null;
+    // (the vehicle has him: the moment that got him in is over, and a crate is put away)
+    moments.cancel();
+    dropCrate();
     d.touched();
   }
   function getOut() {
     const out = drive.exit();
-    if (out) standAt(out);
+    if (!out) return;
+    standAt(out);
+    alight(out.kind, out.from, out, MOMENT[out.kind].seat);
   }
   /** Into your aircraft (the gun is holstered) */
   function board() {
@@ -1003,6 +1072,8 @@ export function createWalk(d: WalkDeps) {
     combat.trigger(false, true);
     hero.g.visible = hero.ring.visible = false;
     near = null;
+    moments.cancel();
+    dropCrate();
     d.touched();
   }
   /** Out of it: only on the ground and stopped */
@@ -1013,6 +1084,7 @@ export function createWalk(d: WalkDeps) {
       return;
     }
     standAt(out);
+    alight('plane', out.from, out, MOMENT.plane.sill);
   }
   /** Down the ladder into the hire boat (the gun is holstered) */
   function takeBoat() {
@@ -1030,6 +1102,8 @@ export function createWalk(d: WalkDeps) {
         combat.trigger(false, true);
         hero.g.visible = hero.ring.visible = false;
         near = null;
+        moments.cancel();
+        dropCrate();
         d.touched();
       })
       .catch(() => d.game.toast('The boat hire is closed for a moment: try again', 2500));
@@ -1042,6 +1116,7 @@ export function createWalk(d: WalkDeps) {
       return;
     }
     standAt(out);
+    alight('boat', out.from, out, MOMENT.boat.deck);
   }
   /** Degen steps out of a vehicle, looking the way it faces */
   function standAt(out: { x: number; z: number; yaw: number }) {
@@ -1970,7 +2045,7 @@ export function createWalk(d: WalkDeps) {
     const climbing = mag > 0.1 && climbAhead(groundAt, pos.x, pos.z, pos.y, dirX, dirZ, SCALE);
     // (brushing something the step hitches: contact.ts)
     const hitch = contact && contactMod ? contactMod.CONTACT.hitch * contact.state.hitch : 0;
-    const top = Math.min(shooting ? AIMING : sprint ? SPRINT : walkLock ? WALK : RUN, crouched ? CROUCH.speed : Infinity, climbing ? (walkLock ? STAIRS.walk : STAIRS.run) : Infinity) * (1 - (1 - PEEK.slow) * Math.abs(peek)) * (1 - hitch);
+    const top = Math.min(shooting ? AIMING : sprint ? SPRINT : walkLock ? WALK : RUN, crouched ? CROUCH.speed : Infinity, climbing ? (walkLock ? STAIRS.walk : STAIRS.run) : Infinity, carrying ? RUN * MOMENT.crate.slow : Infinity) * (1 - (1 - PEEK.slow) * Math.abs(peek)) * (1 - hitch);
 
     // Towards it on the springs (movesim.ts; hardly any control in the air), facing where he's
     // going, or where you look when aiming / in first person; a moment's approach walks him onto its mark
@@ -2146,6 +2221,26 @@ export function createWalk(d: WalkDeps) {
     // ...and a moment's keyed pose (the door push, the lean on the counter, the sit), the motion capture stepping aside
     momentAmt += ((moments.posing ? 1 : 0) - momentAmt) * damp(moments.posing ? 12 : 8, dt);
     if (momentAmt > 0.01) momentPose(P, moments, momentAmt, pos.x, pos.y + momentDy, pos.z, face, SCALE, t);
+    // ...and a crate in both hands on the walk between a pick and a put (the hold has the arms, as a gun does)
+    carryAmt += ((carrying && crateUp && !moments.posing ? 1 : 0) - carryAmt) * damp(10, dt);
+    if (carryAmt > 0.01) carryPose(P, carryAmt, pos.x, pos.y, pos.z, face, SCALE);
+    // The crate itself: on the ground at the mark, in his hands, or on its way between
+    if (carrying) {
+      const mk = moments.mark;
+      const inMoment = moments.active && (mk?.kind === 'pick' || mk?.kind === 'put');
+      const c = inMoment ? crateAt(moments, pos.x, pos.y, pos.z, face, SCALE) : crateUp ? carriedAt(pos.x, pos.y, pos.z, face, SCALE) : null;
+      crate.visible = !!c;
+      if (c) {
+        crate.position.set(c.x, c.y, c.z);
+        crate.rotation.y = inMoment ? mk!.face : face;
+      }
+      if (carrying.stage === 'pick' && crateUp) carrying.stage = 'carry';
+      else if (carrying.stage === 'put' && !moments.active) {
+        const done = carrying.done;
+        dropCrate();
+        done();
+      }
+    }
     // Recoil kicks the view up a touch; the rifle rides the shoulder
     const kick = combat.update(dt, t, aimNow);
     if (kick) {
@@ -2154,10 +2249,10 @@ export function createWalk(d: WalkDeps) {
     }
     recoil = Math.max(0, recoil - dt * 0.35);
     aimAmt += ((shooting ? 1 : 0) - aimAmt) * damp(14, dt);
-    if (hero.held) hero.held.visible = !combat.armed;
+    if (hero.held) hero.held.visible = !combat.armed && !carrying;
     // Both hands on the gun (after walking and jumping have posed the arms)
     const gunInHand = combat.geared && combat.poseGun(P, { aim: aimAmt, pitch, recoil, run: runAmt, dt });
-    if (!gunInHand && aim) Object.assign(P.arms[1], { fwd: 1.45, out: 0.05, bend: 0.15, twist: 0 });
+    if (!gunInHand && aim && !carrying) Object.assign(P.arms[1], { fwd: 1.45, out: 0.05, bend: 0.15, twist: 0 });
     // The head follows the camera: turns towards where you look, tilts up and down
     const lookYaw = THREE.MathUtils.clamp(wrap(lookFace - face), -0.9, 0.9);
     headYaw += ((speed < 0.25 || aim ? lookYaw : 0) - headYaw) * damp(8, dt);
@@ -2197,7 +2292,7 @@ export function createWalk(d: WalkDeps) {
     let drawFace = face;
     // ...with a gun in his hands or an arm out aiming, only its legs and hips: his own pose over them
     const mocapOn = !!animator && landHold <= 0 && !emote && !slide && !over && !moments.posing;
-    upperW = THREE.MathUtils.clamp(upperW + (gunInHand || aim ? dt / 0.15 : -dt / 0.15), 0, 1);
+    upperW = THREE.MathUtils.clamp(upperW + (gunInHand || aim || carryAmt > 0.01 ? dt / 0.15 : -dt / 0.15), 0, 1);
     if (animator && anim) {
       // (a fresh start after a jump in place: walking started, a fast travel, the end of a ride)
       if ((mocapW < 0.01 && mocapOn) || lastPos.distanceToSquared(pos) > 4) {
@@ -2214,7 +2309,7 @@ export function createWalk(d: WalkDeps) {
         drawFace = face + wrap(animator.face - face) * mocapW;
         // Contact (contact.ts): on the pose before the figure takes it, not with a gun in his hands (the hold has the arms)
         let rot: Float32Array = animator.rot;
-        if (contact && contactMod && contactRot && !moments.active) {
+        if (contact && contactMod && contactRot && !moments.active && !carrying) {
           contactBoxes.length = 0;
           SOLID_GRID.near(pos.x, pos.z, 1.2, contactBoxes);
           for (const b of d.plotSolids()) if (b[0] - 1.2 < pos.x && pos.x < b[2] + 1.2 && b[1] - 1.2 < pos.z && pos.z < b[3] + 1.2) contactBoxes.push(b);
@@ -2370,6 +2465,8 @@ export function createWalk(d: WalkDeps) {
     // A free bench to sit on (moments.ts); seated, standing up
     if (seated()) best = { id: 'stand', label: 'Stand up' };
     else if (!best && !drive.active && nearestBench()) best = { id: 'bench', label: 'Sit' };
+    // Carrying a crate: set it down (where it's going, or anywhere)
+    if (carrying) best = carrying.stage === 'carry' ? { id: 'put', label: Math.hypot(carrying.to.x - pos.x, carrying.to.z - pos.z) < PUT_R ? (carrying.dir === 'load' ? 'Load the car' : 'Unload here') : 'Put it down' } : null;
     if (best?.id !== near?.id || best?.label !== near?.label) {
       near = best;
       prompt.hidden = !near;
@@ -2427,6 +2524,11 @@ export function createWalk(d: WalkDeps) {
       keys.clear();
       jumpHeld = false;
       setAim(false);
+      if (r) {
+        // (the ride has him: the moment that got him in is over, and a crate is put away)
+        moments.cancel();
+        dropCrate();
+      }
       if (r && locked()) document.exitPointerLock();
       root.classList.toggle('is-riding', !!r);
       if (!r) hero.g.visible = hero.ring.visible = !firstPerson;
@@ -2458,6 +2560,7 @@ export function createWalk(d: WalkDeps) {
       grounded = true;
       over = slide = null;
       moments.cancel();
+      dropCrate();
       momentAmt = momentDy = 0;
       yaw = at.yaw;
       face = yaw + Math.PI;
@@ -2473,7 +2576,34 @@ export function createWalk(d: WalkDeps) {
     /** Your car, if it's out of the garage: where it is, its model, and whether you're in it */
     get car() {
       const st = drive.carState;
-      return st ? { x: st.x, z: st.z, model: drive.model, driving: drive.inCar, speed: st.speed } : null;
+      return st ? { x: st.x, z: st.z, yaw: st.yaw, model: drive.model, driving: drive.inCar, speed: st.speed } : null;
+    },
+    /** A taxi at the kerb (taxi.ts): walk him up to its door and in (moments.ts), then `go` (the ride) */
+    boardAt(v: { x: number; z: number; yaw: number; W: number }, go: () => void) {
+      if (!active || drive.active || fly.active || boating() || karts.active || fighting() || ride || moments.active || over || slide || emote || carrying) return false;
+      contact?.reset();
+      moments.start(sideMark('car', v, MOMENT.car.seat), go, pos.x, pos.z);
+      return true;
+    },
+    /**
+     * Carry a crate of goods (the business card's Load / Unload, moments.ts): from one of your places (`at`) to
+     * your car's boot, or the other way; `done` moves the goods once it's set down there. False if he can't now.
+     */
+    carry(dir: 'load' | 'unload', at: { x: number; z: number }, done: () => void) {
+      const c = drive.carState;
+      if (!c || !active || drive.active || fly.active || boating() || karts.active || fighting() || ride || moments.active || over || slide || emote || carrying) return false;
+      if (combat.armed) combat.toggleHolster();
+      const fx = Math.cos(c.yaw);
+      const fz = -Math.sin(c.yaw);
+      const back = CARS[drive.model].L / 2 + 0.35;
+      const boot = { x: c.x - fx * back, z: c.z - fz * back };
+      let from = dir === 'load' ? at : boot;
+      // (standing on the spot already: the crate just ahead of him)
+      if (Math.hypot(from.x - pos.x, from.z - pos.z) < 0.6) from = { x: pos.x + Math.sin(face) * 0.6, z: pos.z + Math.cos(face) * 0.6 };
+      carrying = { dir, to: dir === 'load' ? boot : at, stage: 'pick', done };
+      contact?.reset();
+      moments.start(crateMark('pick', from, pos.x, pos.z, groundAt(from.x, from.z, pos.y), (bx, bz) => blocked(bx, bz, pos.y)), () => (crateUp = true), pos.x, pos.z);
+      return true;
     },
     onKey,
     update,
@@ -2522,6 +2652,7 @@ export function createWalk(d: WalkDeps) {
       slide = null;
       over = null;
       moments.cancel();
+      dropCrate();
       momentAmt = momentDy = 0;
       // ?spawn=x,z[,yaw] in the address: start walking somewhere else (for checking a place on real devices)
       const at = new URLSearchParams(location.search).get('spawn')?.split(',').map(Number);
@@ -2574,6 +2705,7 @@ export function createWalk(d: WalkDeps) {
       fightUI.close();
       active = false;
       moments.cancel();
+      dropCrate();
       momentAmt = momentDy = 0;
       root.classList.remove('is-fp');
       keys.clear();

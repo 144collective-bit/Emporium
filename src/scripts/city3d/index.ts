@@ -813,6 +813,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       return c ? { ...c, name: CARS[c.model as keyof typeof CARS]?.name ?? 'Your car' } : null;
     },
     openMarket: () => open('emporium'),
+    carry: (dir, at, done) => walking && walk.carry(dir, at, done),
     stock: (s) => {
       market.show(s.stall.slots, s.stall.level);
       units.show(s);
@@ -1090,6 +1091,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       works.want(p.at.x, p.at.z, 70);
       walk.placeAt(p.at);
     },
+    approach: (at, go) => walk.boardAt(at, go),
     want: (x, z, r) => works.want(x, z, r),
     name: (p) => placeName(root, p).name,
     toast: (text) => game.toast(text),

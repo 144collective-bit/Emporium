@@ -501,10 +501,11 @@ What's not in, and why:
 - Walk mode's hard stop against a wall at a walk is still the collision's
   (a hand goes onto it); only a sprint staggers.
 
-### Phase 4: the game's moments (step 1 built, for the owner's sign-off)
+### Phase 4: the game's moments (built, for the owner's sign-off)
 
-Built in two steps: **step 1** (the framework, doors, counters and benches:
-built, below) and step 2 (getting in and out, rides seen, carrying).
+Built in two steps: **step 1** (the framework, doors, counters and benches)
+and **step 2** (getting in and out, the lifts, carrying; the rides seen
+held back, below).
 
 What step 1 built (and how it differs from the plan):
 
@@ -565,10 +566,67 @@ What step 1 built (and how it differs from the plan):
   else that low left out of the way, `skipUnder`), and is yours again
   once he's seated; seated he shows even with the camera close.
 
+What step 2 built (and how it differs from the plan):
+
+- **Getting in and out** (`boardMark()`, `alightMark()`, `boardPose()`;
+  `Vehicle`: car, kart, plane, boat). Getting in: he comes at the
+  vehicle's side nearest him (`sideMark()` in walk.ts: the car's or the
+  kart's body at the middle of its length, `drive.doorOf()`; the aircraft's
+  door along it, `fly.doorOf()`; the hire boat's ladder, `HIRE.door`),
+  stands `board.stand` short of it facing it, the hands land over the first
+  half of the clip (the car's handle `car.handle` up, both hands on the
+  kart's pod rim `kart.pod`, on the aircraft's door frame `plane.frame`, on
+  the boat's rails `boat.rail` either side of the ladder), the near leg
+  lifts over (`STEP`, his left: the rig's +x) and the body folds down onto
+  the seat over the second half (`sitPose`'s legs), the root going to the
+  seat (`car.seat`, `kart.seat`, the aircraft's `plane.sill`, the boat's
+  deck `boat.deck` under the quay: the climb down) so the vehicle takes
+  him at `board.fireAt` of the clip with him in it (`drive.enter()`,
+  `fly.enter()`, `boat.enter()` as before: the kart's and the boat's seated
+  Degen, the car's hidden); the moment is dropped once it has him. Getting
+  out plays at once (no approach) from the seat (`from` on each `exit()`)
+  to where he steps out (`standAt()`'s spot as before), the body unfolding
+  and a leg stepping out, the root rising back to his feet (the boat: up
+  the ladder) over `board.out`. The taxi too: `TaxiDeps.approach`
+  (`walk.boardAt()`) walks him up to its door and in before the ride
+  (`board(true)` after the moment takes him), so the auto-board when you
+  come near and the Get in button both play it.
+- **The lifts** (`liftMark()`): the approach walks him in through the lift
+  door (`lift.inside` past it) and turns him to face out, a beat
+  (`lift.t`), then the fade at `lift.fireAt` (index.ts's `rideTo()` as
+  before). Sector 7 Tower's and Liberty Bridge's; the stations' doors stay
+  pushes.
+- **Carrying** (`crateMark()`, `crateAt()`, `carriedAt()`, `carryPose()`;
+  a crate `crate.w` × `crate.h` × `crate.d`): the business card's Load
+  and Unload, standing at one of your places on foot with the car parked
+  by it (`TycoonHooks.carry` → `walk.carry()`; the card closes for it;
+  the goods move when the crate is set down where it's going, `done`,
+  and the note shows then): a `pick` at the place (a crate on the ground
+  at its spot, or just ahead of him if he's on it: he stands `crate.stand`
+  short of it, squats to it (`crate.squat`, `crate.bend`), both hands on
+  its sides within 1.5 cm, lifts it at `crate.fireAt` into his hands),
+  the walk with it (both hands on it out in front at the hips,
+  `crate.out` / `crate.up`, the upper-body mask as for a gun so the
+  capture keeps the legs; a run capped at `crate.slow`; a little lean
+  back), and a `put` where it's going (the car's boot, `PUT_R` of the
+  spot behind it, "Load the car"; or the place, "Unload here"): the
+  squat again, the crate set down and the hands coming off. "Put it
+  down" anywhere else sets it down and nothing moves (a toast). A
+  vehicle, a ride, a fast travel or walk mode ending puts the crate away
+  (nothing moves).
+
 What's not in, and why:
 
-- **The prompts' own moments for the units, the stall, the corner shops,
-  the river bus and the kiosks**: step 2's (carrying and rides).
+- **Rides seen** (the metro, the taxi and the river bus showing him
+  riding): held back. The taxi's cab and the river bus's cabin have
+  opaque bodies and the metro's cars tinted glass; showing him seated in
+  them means a seat on each model and a ride camera that frames him,
+  which is the ride's own look, not the animator's. The getting in is
+  what step 2 adds (the taxi's door); the rides keep today's camera. The
+  owner can ask for the seated figure in the polish phase.
+- **The kiosks' and the stall's own moments**: the units', the stall's
+  and the corner shops' prompts open their cards at once as before; the
+  carry is their moment (Load / Unload).
 - **A moment while armed or aiming**: the gun's hold has the arms; a door
   pressed with a gun in his hands still plays the push on the legs and
   hips only (the hand stays on the gun). The polish phase can add a
@@ -589,7 +647,7 @@ What's not in, and why:
   hut, the garage and hangar offices are doors): a lean on the counter while the menu is open (the gun
   stores, the kart hut, the trainer, the garage office, the hangar
   office, the kiosks), and standing back up when it closes.
-- **Getting in and out**: the car's door opened, a duck in and the seat on
+- **Getting in and out** (built, step 2): the car's door opened, a duck in and the seat on
   the bones (and out: a foot out first); the kart stepped into and sat
   (`seat()` re-posed on the bones); the boat's ladder climbed down to the
   helm and up; the aircraft's step up. The seats stay where they are
@@ -598,11 +656,11 @@ What's not in, and why:
   data and `SEAT_H` are in `pedestrians.ts`) sits him down (a sit-down
   clip), seated he breathes and looks round (the gaze), F stands him up;
   the crowd's sitters get the same rows in Phase 5.
-- **Rides seen**: the metro, the taxi and the river bus show him riding
+- **Rides seen** (held back in step 2, above; the lifts built): the metro, the taxi and the river bus show him riding
   (standing holding a rail in the metro car, seated in the cab and on the
   bus, looking out), the ride's camera as today; the lifts show him step
   in and turn to face the door before the fade.
-- **Carrying**: a crate lifted at the market hall or a unit and set down
+- **Carrying** (built, step 2): a crate lifted at the market hall or a unit and set down
   (the Car tab's load and unload play it by the boot), a walk with a
   weight (the arm layer eased by what's carried), the coffee and the
   phone as today.

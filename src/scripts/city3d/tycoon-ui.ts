@@ -225,6 +225,8 @@ export interface TycoonHooks {
   car(): { x: number; z: number; model: string; name: string; speed: number } | null;
   /** Open the Emporium's market hall */
   openMarket(): void;
+  /** Walking: carry a crate between the place (`at`) and your car's boot (moments.ts), then `done` moves the goods; false if he can't now (they move at once) */
+  carry?(dir: 'load' | 'unload', at: { x: number; z: number }, done: () => void): boolean;
   /** Something the city shows changed (the stall's crates, the units, where contracts go) */
   stock(s: TycoonSave): void;
   /** The card opened (walk mode frees the mouse) */
@@ -1034,15 +1036,24 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
       const p = carAt();
       if (!c || !p) note = 'Park your car here first.';
       else {
-        const r = load(save, p, ds.load as GoodId, Number(ds.n), cargoCap(c.model));
-        note = r.ok ? `Loaded ${r.qty} ${good(ds.load as GoodId).name}.` : r.why === 'room' ? 'Your car is full.' : why(r, ds.load as GoodId, p);
+        const run = () => {
+          const r = load(save, p, ds.load as GoodId, Number(ds.n), cargoCap(c.model));
+          return r.ok ? `Loaded ${r.qty} ${good(ds.load as GoodId).name}.` : r.why === 'room' ? 'Your car is full.' : why(r, ds.load as GoodId, p);
+        };
+        // (on foot, the crate is carried to the car first: moments.ts)
+        if (carried('load', p, run)) return;
+        note = run();
       }
     } else if (ds.unload) {
       const p = carAt();
       if (!p) note = 'Park your car at one of your places first.';
       else {
-        const r = unload(save, p, ds.unload as GoodId, Number(ds.n), now);
-        note = r.ok ? `Unloaded ${r.qty} ${good(ds.unload as GoodId).name}${r.dorras ? `: ${fmt.format(r.dorras)} Dorras delivery bonus` : ''}.` : why(r, ds.unload as GoodId, p);
+        const run = () => {
+          const r = unload(save, p, ds.unload as GoodId, Number(ds.n), now);
+          return r.ok ? `Unloaded ${r.qty} ${good(ds.unload as GoodId).name}${r.dorras ? `: ${fmt.format(r.dorras)} Dorras delivery bonus` : ''}.` : why(r, ds.unload as GoodId, p);
+        };
+        if (carried('unload', p, run)) return;
+        note = run();
       }
     } else if (ds.buy) {
       const c = h.car();
@@ -1076,6 +1087,17 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
       note = 'Let go.';
     } else return;
     changed();
+  }
+  /** Walking at the place with the car parked by it: the goods go by hand (the card closes for the carry; `run` is the move, its note shown after) */
+  function carried(dir: 'load' | 'unload', p: PlaceId, run: () => string) {
+    const at = STAND[p];
+    if (!at || !h.walker() || !h.carry?.(dir, at, () => {
+      note = run();
+      changed();
+    }))
+      return false;
+    closeCard();
+    return true;
   }
   const onClick = (e: Event) => {
     const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('button');
