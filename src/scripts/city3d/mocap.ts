@@ -98,6 +98,13 @@ export interface MoClip {
   hips: Float32Array;
   /** Every bone's turn (x, y, z, w) in its parent's frame (the hips' in the root's), a frame at a time */
   rot: Float32Array;
+  /**
+   * A stairs take (the revamp's Phase 2): the take's floor under the hips, a frame at a time, from where it
+   * started (rig numbers; the hips are kept relative to it, so the clip reads as level ground), and which
+   * feet the pipeline found planted (bit 0 the left, bit 1 the right: `contacts()` reads it instead of looking)
+   */
+  floor?: Float32Array;
+  contact?: Uint8Array;
   /** Whether it's the mirror image of the take */
   mirrored?: boolean;
 }
@@ -110,8 +117,8 @@ export interface MoData {
 /* ---------- The file ---------- */
 
 const MAGIC = 0x434d3753; // "S7MC"
-/** Version 2 (the revamp's Phase 1): tags, marks and packs, the numbers delta-coded */
-const VERSION = 2;
+/** Version 2 (the revamp's Phase 1): tags, marks and packs, the numbers delta-coded; 3 (Phase 2): a stairs take's floor and contacts */
+const VERSION = 3;
 /** The hips' place is kept to 1/8192 of a rig unit (±4) */
 const HIPS_Q = 8192;
 const ROT_Q = 32767;
@@ -251,6 +258,10 @@ export function encodeMocap(d: MoData): Uint8Array {
     }
     w.u32(c.frames);
     for (let f = 0; f < c.frames; f++) for (let k = 0; k < 3; k++) w.f32(c.root[f * 3 + k]);
+    // (a stairs take: its floor and its contacts)
+    w.u8((c.floor ? 1 : 0) | (c.contact ? 2 : 0));
+    if (c.floor) for (let f = 0; f < c.frames; f++) w.f32(c.floor[f]);
+    if (c.contact) for (let f = 0; f < c.frames; f++) w.u8(c.contact[f]);
     prev.fill(0);
     for (let f = 0; f < c.frames; f++) {
       quantise(c, f, now);
@@ -282,6 +293,11 @@ export function decodeMocap(buf: ArrayBuffer | Uint8Array): MoData {
     const hips = new Float32Array(frames * 3);
     const rot = new Float32Array(frames * NB * 4);
     for (let i = 0; i < frames * 3; i++) root[i] = r.f32();
+    const flags = r.byte();
+    const floor = flags & 1 ? new Float32Array(frames) : undefined;
+    if (floor) for (let f = 0; f < frames; f++) floor[f] = r.f32();
+    const contact = flags & 2 ? new Uint8Array(frames) : undefined;
+    if (contact) for (let f = 0; f < frames; f++) contact[f] = r.byte();
     now.fill(0);
     for (let f = 0; f < frames; f++) {
       for (let k = 0; k < INTS; k++) now[k] += r.int();
@@ -300,7 +316,7 @@ export function decodeMocap(buf: ArrayBuffer | Uint8Array): MoData {
         for (let k = 0; k < 4; k++) rot[q + k] /= l;
       }
     }
-    clips.push({ name, tags, marks, pack, frames, root, hips, rot });
+    clips.push({ name, tags, marks, pack, frames, root, hips, rot, ...(floor ? { floor } : {}), ...(contact ? { contact } : {}) });
   }
   return { fps, clips };
 }
@@ -330,7 +346,9 @@ export function mirrorClip(c: MoClip): MoClip {
       rot[to + 3] = c.rot[from + 3];
     }
   }
-  return { name: `${c.name}~`, tags: c.tags, marks: c.marks.map((m) => ({ ...m, at: [-m.at[0], m.at[1], m.at[2]] })), pack: c.pack, frames: c.frames, root, hips, rot, mirrored: !c.mirrored };
+  // (the floor is the floor; the contacts swap sides)
+  const contact = c.contact ? c.contact.map((b) => ((b & 1) << 1) | ((b >> 1) & 1)) : undefined;
+  return { name: `${c.name}~`, tags: c.tags, marks: c.marks.map((m) => ({ ...m, at: [-m.at[0], m.at[1], m.at[2]] })), pack: c.pack, frames: c.frames, root, hips, rot, ...(c.floor ? { floor: c.floor } : {}), ...(contact ? { contact } : {}), mirrored: !c.mirrored };
 }
 
 /* ---------- Posing a frame ---------- */
@@ -380,6 +398,14 @@ export function rootAt(c: MoClip, f: number) {
 export const CONTACT = { heelY: 0.1, ballY: 0.04, heelSpeed: 0.8, ballSpeed: 1.3 };
 export function contacts(c: MoClip): Uint8Array {
   const out = new Uint8Array(c.frames * 2);
+  // (a stairs take: the pipeline's, found on its steps)
+  if (c.contact) {
+    for (let f = 0; f < c.frames; f++) {
+      out[f * 2] = c.contact[f] & 1;
+      out[f * 2 + 1] = (c.contact[f] >> 1) & 1;
+    }
+    return out;
+  }
   const P = newPosed();
   const heel: THREE.Vector3[][] = [[], []];
   const ball: THREE.Vector3[][] = [[], []];

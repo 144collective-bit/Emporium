@@ -10,7 +10,7 @@ import { CROUCH, FACE, STAND, addLean, applyTo, createAnimator, twoBone } from '
 import { makeSkeleton, newPose, poseSkeleton } from '../src/scripts/city3d/skeleton';
 import { MB, NB, TOE_BONES, decodeMocap, newPosed, posed, tagged } from '../src/scripts/city3d/mocap';
 import { wrap } from '../src/scripts/city3d/inertia';
-import { GAITS, newMove, stepMove } from '../src/scripts/city3d/movesim';
+import { GAITS, newMove, stepMove, STAIRS } from '../src/scripts/city3d/movesim';
 
 const data = decodeMocap(readFileSync('src/data/mocap/clips.bin'));
 /** Whether the clip of that name (the animator's `debug.clip`) carries a tag */
@@ -216,14 +216,15 @@ test('up and down kerbs the feet stand on the slab and the road, never in them',
   }
 });
 
-test('up a flight of Liberty Bridge\'s size the feet climb the treads (he walks up its even ramp)', () => {
-  const RISE = 0.23;
-  const RUN = 0.31;
-  const N = 15;
+test('up a flight of the stadium footbridge\'s size the feet climb the treads (he walks up its even ramp; the stairs take at a climb\'s pace)', () => {
+  // (stadium.ts BRIDGE: 18 steps of 0.194 up, 0.42 deep; the city's stairs since Liberty Bridge's went)
+  const RISE = 0.194;
+  const RUN = 0.42;
+  const N = 18;
   const Z0 = 1.5;
   const ramp = (_x: number, z: number) => THREE.MathUtils.clamp(((z - Z0) / (RUN * N)) * RISE * N, 0, RISE * N);
   const tread = (_x: number, z: number) => (z < Z0 ? 0 : z >= Z0 + RUN * N ? RISE * N : (Math.floor((z - Z0) / RUN) + 1) * RISE);
-  for (const speed of [GAITS.walk, 1.75]) {
+  for (const speed of [STAIRS.walk, GAITS.walk, STAIRS.run]) {
     const an = createAnimator(data);
     const m = newMove(0);
     let z = 0;
@@ -231,16 +232,23 @@ test('up a flight of Liberty Bridge\'s size the feet climb the treads (he walks 
     let step = 0;
     const off: number[] = [];
     const held = [0, 0];
+    let onFlight = 0;
+    let onStairs = 0;
     const prev = new Float32Array(NB * 4);
     const qa = new THREE.Quaternion();
     const qb = new THREE.Quaternion();
     const P = newPosed();
-    for (let i = 0; i < 60 * 5; i++) {
+    // (to the top of the flight: longer at a climb's pace)
+    for (let i = 0; i < 60 * 12 && z < Z0 + RUN * N + 0.5; i++) {
       stepMove(m, 0, speed, true, DT);
       z += m.vz * DT;
       const y = ramp(0, z);
       an.update({ dt: DT, x: 0, y, z, move: m, gx: 0, gz: speed, scale: SCALE, ground: ramp, feet: tread, sprint: 0 });
       const on = z > Z0 + 0.5 && z < Z0 + RUN * N - 0.5;
+      if (on) {
+        onFlight++;
+        if (an.debug.clip.startsWith('stairs')) onStairs++;
+      }
       if (on) for (let b = 0; b < NB; b++) step = Math.max(step, qa.fromArray(prev, b * 4).angleTo(qb.fromArray(an.rot, b * 4)));
       prev.set(an.rot);
       if (!on) continue;
@@ -255,6 +263,8 @@ test('up a flight of Liberty Bridge\'s size the feet climb the treads (he walks 
       }
     }
     off.sort((a, b) => a - b);
+    // (the revamp's Phase 2: walking up, the stairs takes climb; a brisk climb keeps the run)
+    assert.ok(speed === STAIRS.walk ? onStairs / onFlight > 0.7 : onStairs === 0, `at ${speed}: the stairs takes playing ${((100 * onStairs) / Math.max(1, onFlight)).toFixed(0)}% of the flight`);
     assert.ok(off.length > 40, `feet held on the treads (${off.length} frames)`);
     assert.ok(off[Math.floor(off.length * 0.95)] < 0.21 / SCALE, `a held ball within ${(off[Math.floor(off.length * 0.95)] * CM).toFixed(1)} cm of its tread`);
     assert.ok(into < 0.1, `at ${speed}: the ball of a foot ${(into * CM).toFixed(1)} cm into a step`);

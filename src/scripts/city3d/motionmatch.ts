@@ -52,6 +52,8 @@ export const LATE = { tag: 'stand', cost: 0.6 };
 export const FLIGHT = { frames: 6, rise: 0.06 };
 /** A frame counts as on the move for the features' statistics past this root speed (rig numbers a second) */
 export const MOVING = 0.3;
+/** Takes of a kind of their own (the stairs: searched only climbing) shape no statistics */
+export const OWN_KIND = ['stairs'];
 /** How many frames before leaving the ground a take-off starts (the push off the toes) */
 export const TAKEOFF = 3;
 /** The tag of a take that's only its jump (a standing jump, its wind-up no way to stand or walk): shut to the ground's searches */
@@ -247,13 +249,20 @@ export function buildDatabase(data: MoData, mirror = true): Database {
   // counted they shrank the spreads until a walk matched a jog)
   const mean = new Float32Array(FEATURES);
   const scale = new Float32Array(FEATURES);
+  // (and never from a take of a kind of its own, searched only in its own situation: the climb's frames moved
+  // the means enough to change a pivot's picks)
+  const own = new Uint8Array(count);
+  clips.forEach((c, ci) => {
+    if (OWN_KIND.some((t) => tagged(c, t))) own.fill(1, start[ci], start[ci] + c.frames);
+  });
+  const counts = (i: number) => speed[i] > MOVING && !own[i];
   let moving = 0;
-  for (let i = 0; i < count; i++) if (speed[i] > MOVING) moving++;
+  for (let i = 0; i < count; i++) if (counts(i)) moving++;
   const n = moving || count;
-  for (let i = 0; i < count; i++) if (!moving || speed[i] > MOVING) for (let k = 0; k < FEATURES; k++) mean[k] += raw[i * FEATURES + k] / n;
+  for (let i = 0; i < count; i++) if (!moving || counts(i)) for (let k = 0; k < FEATURES; k++) mean[k] += raw[i * FEATURES + k] / n;
   for (const g of GROUPS) {
     let s = 0;
-    for (let i = 0; i < count; i++) if (!moving || speed[i] > MOVING) for (let k = g.at; k < g.at + g.n; k++) s += (raw[i * FEATURES + k] - mean[k]) ** 2;
+    for (let i = 0; i < count; i++) if (!moving || counts(i)) for (let k = g.at; k < g.at + g.n; k++) s += (raw[i * FEATURES + k] - mean[k]) ** 2;
     const sd = Math.sqrt(s / (n * g.n)) || 1;
     for (let k = g.at; k < g.at + g.n; k++) scale[k] = g.w / sd;
   }

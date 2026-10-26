@@ -67,8 +67,10 @@ test('the clips stand on the ground: ankles at their height, the balls of the fe
       down++;
     }
     hips /= down;
-    assert.ok(Math.abs(ankle - ANKLE_H) < 0.02, `${c.name}: the lowest ankle ${ankle.toFixed(3)}`);
-    assert.ok(ball > -0.035 && ball < 0.02, `${c.name}: the lowest ball of a foot ${ball.toFixed(3)}`);
+    // (a stairs clip's hips are kept over a line through its steps: a planted foot sits up to half a step either side)
+    const stairs = tagged(c, 'stairs');
+    assert.ok(stairs ? ankle > ANKLE_H - 0.08 && ankle < ANKLE_H + 0.02 : Math.abs(ankle - ANKLE_H) < 0.02, `${c.name}: the lowest ankle ${ankle.toFixed(3)}`);
+    assert.ok(ball > (stairs ? -0.09 : -0.035) && ball < 0.02, `${c.name}: the lowest ball of a foot ${ball.toFixed(3)}`);
     // (lower crouched: subject 136's crouched walks)
     const [lo, hi] = c.name.startsWith('crouch') ? [0.44, 0.56] : [0.5, 0.63];
     assert.ok(hips > lo && hips < hi, `${c.name}: the hips ${hips.toFixed(3)} up on average`);
@@ -137,9 +139,8 @@ test('the feet are on the ground about as long as a run and a walk keep them', (
 
 test('the clips file stays small (it loads when walking starts)', () => {
   // (subject 143's takes at their real speed are twice as long as when they played at double speed;
-  // delta-coded since the revamp's Phase 1: 495 KB where plain 16-bit numbers made 703)
-  // (the revamp's Phase 2: three standing takes and a fast walk in, the three looped idles out, 538 KB; the limit raised
-  // on purpose, with room for the stairs takes to come)
+  // delta-coded since the revamp's Phase 1: 495 KB where plain 16-bit numbers made 703)  // (the revamp's Phase 2: three standing takes, a fast walk and the climb in, the three looped idles out, 558 KB; the
+  // limit raised on purpose)
   assert.ok(file.length < 640 * 1024, `${(file.length / 1024).toFixed(0)} KB`);
 });
 
@@ -157,6 +158,16 @@ test('every clip carries its tags, marks and pack, through the file and its mirr
   const back = decodeMocap(encodeMocap(d));
   assert.deepEqual(back.clips[0].marks, d.clips[0].marks);
   assert.deepEqual(mirrorClip(back.clips[0]).marks[0].at, [-0.25, 0.5, 0.375]);
+  // A stairs take's floor and contacts survive the file; mirrored, the floor is the floor and the contacts swap sides
+  const st = data.clips.find((c) => tagged(c, 'stairs'))!;
+  assert.ok(st.floor && st.contact, 'a stairs clip carries its floor and contacts');
+  const sb = decodeMocap(encodeMocap({ fps: data.fps, clips: [st] })).clips[0];
+  assert.deepEqual(Array.from(sb.floor!), Array.from(st.floor!));
+  assert.deepEqual(Array.from(sb.contact!), Array.from(st.contact!));
+  const sm = mirrorClip(st);
+  assert.deepEqual(Array.from(sm.floor!), Array.from(st.floor!));
+  assert.ok(Array.from(st.contact!).every((b, f) => sm.contact![f] === (((b & 1) << 1) | ((b >> 1) & 1))), 'the mirror\'s contacts swap sides');
+  assert.equal(data.clips.find((c) => !tagged(c, 'stairs'))!.floor, undefined, 'a flat clip has no floor of its own');
   // The packs: everything is the core's today (one file)
   assert.deepEqual(packs(data).map((p) => [p.pack, p.file, p.data.clips.length]), [[CORE_PACK, 'clips.bin', data.clips.length]]);
 });
@@ -211,4 +222,36 @@ test('no bone jumps away for a frame and straight back (the capture\'s glitches 
         // (walk-eight's spine, chest and neck once threw 24-49° for a single frame)
         assert.ok(!(there > 0.14 && back > 0.14 && a.angleTo(c) < 0.5 * Math.min(there, back)), `${clip.name}: bone ${k} jumps away and back at frame ${f}`);
       }
+});
+
+test('the stairs take: the floor climbs three steps, the hips stay level over it, the feet take turns on the steps', () => {
+  // (one take, 122_32: 122_31 and 122_35 flipped an ankle for two frames each, a marker swap, and went)
+  const st = data.clips.filter((c) => tagged(c, 'stairs'));
+  assert.equal(st.length, 1);
+  for (const c of st) {
+    const floor = c.floor!;
+    const rise = floor[c.frames - 1] - floor[0];
+    assert.ok(rise > 0.3 && rise < 0.42, `${c.name}: climbs ${rise.toFixed(3)} (three steps of about 0.12)`);
+    assert.ok(floor.every((y, f) => f === 0 || y >= floor[f - 1] - 0.02), `${c.name}: the floor never drops`);
+    // (the hips over the floor as a level walk's: never the climb's 0.35 in them)
+    let lo = Infinity;
+    let hi = 0;
+    for (let f = 0; f < c.frames; f++) {
+      lo = Math.min(lo, c.hips[f * 3 + 1]);
+      hi = Math.max(hi, c.hips[f * 3 + 1]);
+    }
+    assert.ok(hi - lo < 0.12 && lo > 0.5, `${c.name}: the hips ${lo.toFixed(3)}..${hi.toFixed(3)} over the floor`);
+    // The contacts: planted stretches that take turns, at least five of them through the climb
+    const on = contacts(c);
+    let stretches = 0;
+    let last = -1;
+    for (let f = 1; f < c.frames; f++)
+      for (let s = 0; s < 2; s++)
+        if (on[f * 2 + s] && !on[(f - 1) * 2 + s]) {
+          assert.notEqual(s, last, `${c.name}: the feet take turns (frame ${f})`);
+          last = s;
+          stretches++;
+        }
+    assert.ok(stretches >= 5, `${c.name}: ${stretches} steps`);
+  }
 });

@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { decodeMocap, tagged } from '../src/scripts/city3d/mocap';
-import { AHEAD, FEATURES, JUMPS_ONLY, MOVING, TAKEOFF, buildDatabase, search, setTrajectory } from '../src/scripts/city3d/motionmatch';
+import { AHEAD, FEATURES, JUMPS_ONLY, MOVING, OWN_KIND, TAKEOFF, buildDatabase, search, setTrajectory } from '../src/scripts/city3d/motionmatch';
 import { MOCAP_FPS } from '../src/scripts/city3d/mocap';
 
 const data = decodeMocap(readFileSync('src/data/mocap/clips.bin'));
@@ -14,12 +14,14 @@ const db = buildDatabase(data);
 test('the database: every clip and its mirror image, features scaled round zero over the frames on the move', () => {
   assert.equal(db.clips.length, data.clips.length * 2);
   assert.equal(db.count, data.clips.reduce((n, c) => n + c.frames, 0) * 2);
+  // (over the frames on the move, and never a take of a kind of its own: the climb's)
+  const counts = (g: number) => db.speed[g] > MOVING && !OWN_KIND.some((t) => tagged(db.clips[db.clipOf[g]], t));
   let n = 0;
-  for (let g = 0; g < db.count; g++) if (db.speed[g] > MOVING) n++;
+  for (let g = 0; g < db.count; g++) if (counts(g)) n++;
   assert.ok(n > db.count / 2, 'most frames are on the move');
   for (let k = 0; k < FEATURES; k++) {
     let m = 0;
-    for (let g = 0; g < db.count; g++) if (db.speed[g] > MOVING) m += db.feat[g * FEATURES + k] / n;
+    for (let g = 0; g < db.count; g++) if (counts(g)) m += db.feat[g * FEATURES + k] / n;
     assert.ok(Math.abs(m) < 1e-3, `feature ${k} averages ${m.toFixed(5)}`);
   }
 });

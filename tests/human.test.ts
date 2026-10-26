@@ -10,7 +10,7 @@ import * as THREE from 'three';
 import { createAnimator } from '../src/scripts/city3d/animator';
 import { BANDS, bandAt, clipRows, createRubric, froudeRate, froudeSpeed, type Row } from '../src/scripts/city3d/human';
 import { contacts, decodeMocap, mirrorClip, tagged } from '../src/scripts/city3d/mocap';
-import { GAITS, newMove, stepMove } from '../src/scripts/city3d/movesim';
+import { GAITS, STAIRS, newMove, stepMove } from '../src/scripts/city3d/movesim';
 
 const data = decodeMocap(readFileSync('src/data/mocap/clips.bin'));
 const SCALE = 0.85;
@@ -39,7 +39,7 @@ const print = (what: string, rows: Row[], skip: Set<string>) => {
  * is the lock's to keep (a clip has none: the capture's feet sink, the audit's Phase 5 item)
  */
 const STEADY = ['cadence', 'stride', 'support', 'bob', 'sway', 'counter', 'arms', 'elbows'];
-const SKIP: Record<string, string[]> = { jump: STEADY, strafe: STEADY, crouch: STEADY, spot: STEADY, clip: ['ground'] };
+const SKIP: Record<string, string[]> = { jump: STEADY, strafe: STEADY, crouch: STEADY, spot: STEADY, stairs: STEADY, clip: ['ground'] };
 const skipFor = (tags: string[]) => new Set(tags.flatMap((t) => SKIP[t] ?? []));
 
 /** Every row inside its band, but those held back (which must still fail) */
@@ -85,7 +85,11 @@ test('a mirrored clip measures as its original', () => {
 
 type Prog = (t: number) => [number, number];
 type Gait = 'walk' | 'run';
-const PROGS: Record<string, { go: Prog; seconds: number; gait?: Gait }> = {
+/** A flight of the stadium footbridge's size from z 1.5: the even ramp he walks on and the treads his feet stand on (as the animator test's) */
+const FLIGHT = { rise: 0.194, run: 0.42, steps: 18, z0: 1.5 };
+const ramp = (_x: number, z: number) => THREE.MathUtils.clamp(((z - FLIGHT.z0) / (FLIGHT.run * FLIGHT.steps)) * FLIGHT.rise * FLIGHT.steps, 0, FLIGHT.rise * FLIGHT.steps);
+const tread = (_x: number, z: number) => (z < FLIGHT.z0 ? 0 : z >= FLIGHT.z0 + FLIGHT.run * FLIGHT.steps ? FLIGHT.rise * FLIGHT.steps : (Math.floor((z - FLIGHT.z0) / FLIGHT.run) + 1) * FLIGHT.rise);
+const PROGS: Record<string, { go: Prog; seconds: number; gait?: Gait; ground?: (x: number, z: number) => number; feet?: (x: number, z: number) => number }> = {
   run: { go: () => [0, GAITS.run], seconds: 10, gait: 'run' },
   walk: { go: () => [0, GAITS.walk], seconds: 12, gait: 'walk' },
   sprint: { go: () => [0, GAITS.sprint], seconds: 10, gait: 'run' },
@@ -95,10 +99,12 @@ const PROGS: Record<string, { go: Prog; seconds: number; gait?: Gait }> = {
   turnBack: { go: (t) => (t % 4 < 2 ? [0, GAITS.run] : [0, -GAITS.run]), seconds: 12, gait: 'run' },
   startBack: { go: (t) => (t % 4 < 1 ? [0, 0] : t % 8 < 4 ? [0, -GAITS.run] : [0, GAITS.run]), seconds: 16, gait: 'run' },
   stand: { go: (t) => (t < 1 ? [0, GAITS.run] : [0, 0]), seconds: 40 },
+  // Up a flight at a climb's pace (the stairs takes; the steady rows don't apply: a climb isn't a level walk)
+  stairs: { go: () => [0, STAIRS.walk], seconds: 10, ground: ramp, feet: tread },
 };
 
 /** The animator through a program, every frame measured by the rubric */
-function measure(go: Prog, seconds: number, scale = SCALE, gait?: Gait) {
+function measure(go: Prog, seconds: number, scale = SCALE, gait?: Gait, ground: (x: number, z: number) => number = () => 0, feet = ground) {
   const an = createAnimator(data);
   const m = newMove(0);
   const rb = createRubric(scale, { gait });
@@ -110,18 +116,19 @@ function measure(go: Prog, seconds: number, scale = SCALE, gait?: Gait) {
     x += m.vx * DT;
     z += m.vz * DT;
     const sprint = THREE.MathUtils.clamp((Math.hypot(m.vx, m.vz) - GAITS.run) / (GAITS.sprint - GAITS.run), 0, 1);
-    an.update({ dt: DT, x, y: 0, z, move: m, gx, gz, scale, ground: () => 0, sprint });
+    const y = ground(x, z);
+    an.update({ dt: DT, x, y, z, move: m, gx, gz, scale, ground, feet, sprint });
     // (the first second is the start-up: the rubric measures from there)
     if (i < 60) continue;
     const goal = Math.hypot(gx, gz);
-    rb.push({ dt: DT, rot: an.rot, hips: an.hips, x, y: 0, z, yaw: an.face, scale, speed: Math.hypot(m.vx, m.vz), goal, goalDir: goal > 0.3 ? Math.atan2(gx, gz) : null, down: [an.feet[0].locked, an.feet[1].locked], drift: [an.feet[0].drift, an.feet[1].drift], ground: () => 0 });
+    rb.push({ dt: DT, rot: an.rot, hips: an.hips, x, y, z, yaw: an.face, scale, speed: Math.hypot(m.vx, m.vz), goal, goalDir: goal > 0.3 ? Math.atan2(gx, gz) : null, down: [an.feet[0].locked, an.feet[1].locked], drift: [an.feet[0].drift, an.feet[1].drift], ground: feet });
   }
   return rb.rows();
 }
 
 for (const [name, p] of Object.entries(PROGS))
   test(`the animator: ${name}`, () => {
-    check(`the animator: ${name}`, measure(p.go, p.seconds, SCALE, p.gait));
+    check(`the animator: ${name}`, measure(p.go, p.seconds, SCALE, p.gait, p.ground, p.feet), p.ground ? new Set(STEADY) : undefined);
   });
 
 test('the same rules hold at another scale: a kid-sized figure running keeps a person\'s cadence and stride for its legs', () => {

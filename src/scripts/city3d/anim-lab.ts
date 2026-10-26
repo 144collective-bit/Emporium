@@ -37,7 +37,7 @@ import { createRubric, type Row } from './human';
 import { createGaze } from './gaze';
 import { copyPose, createLocomotion, placeRoot } from './locomotion';
 import { loadMocap } from './mocap-load';
-import { GAITS, newMove, startSlide, stepMove, stepSlide, type MoveState, type Slide } from './movesim';
+import { GAITS, newMove, startSlide, stepMove, stepSlide, type MoveState, type Slide, STAIRS, climbAhead } from './movesim';
 import { slidePose } from './poses';
 import { overAhead, overAt, overPose, type Over } from './vault';
 import type { Box } from './solids';
@@ -51,7 +51,7 @@ import { createPost } from './post';
 const SCALE = 0.85;
 /** One tile in centimetres, for the readouts */
 const CM = 180;
-type Prog = 'manual' | 'runstop' | 'turnback' | 'weave' | 'circle' | 'startstop' | 'startback' | 'gaits' | 'idle' | 'jumps' | 'standjump' | 'hops' | 'strafe' | 'aimturn' | 'peek' | 'crouch' | 'slide' | 'over' | 'reel';
+type Prog = 'manual' | 'runstop' | 'turnback' | 'weave' | 'circle' | 'startstop' | 'startback' | 'gaits' | 'idle' | 'jumps' | 'standjump' | 'hops' | 'strafe' | 'aimturn' | 'peek' | 'crouch' | 'slide' | 'over' | 'stairs' | 'reel';
 type Gait = 'walk' | 'run' | 'sprint';
 type Cam = 'side' | 'front' | 'back' | 'over' | 'free';
 type Floor = 'flat' | 'kerbs' | 'stairs' | 'ledge' | 'walls';
@@ -61,8 +61,8 @@ const FLOORS: Floor[] = ['flat', 'kerbs', 'stairs', 'ledge', 'walls'];
 
 /** Kerbs: a slab up every KERB.every tiles, KERB.long of them, at the city's heights (world.ts SLAB over the road) */
 const KERB = { every: 10, from: 4, long: 5, road: 0.035, slab: 0.15 };
-/** Stairs at Liberty Bridge's size (liberty.ts): 15 steps up, a landing, 15 down, flat between */
-const FLIGHT = { steps: 15, rise: 0.23, tread: 0.31, flat: 4, landing: 3 };
+/** Stairs at the stadium footbridge's size (stadium.ts BRIDGE, the city's stairs): 18 steps up, a landing, 18 down, flat between */
+const FLIGHT = { steps: 18, rise: 0.194, tread: 0.42, flat: 4, landing: 3 };
 const RUN_LEN = FLIGHT.steps * FLIGHT.tread;
 const TOP = FLIGHT.steps * FLIGHT.rise;
 const PERIOD = FLIGHT.flat * 2 + RUN_LEN * 2 + FLIGHT.landing;
@@ -104,12 +104,6 @@ function floorAt(kind: Floor, z: number, feet: boolean) {
   if (u < RUN_LEN * 2 + FLIGHT.landing) return up(RUN_LEN * 2 + FLIGHT.landing - u);
   return 0;
 }
-/** On a flight of the stairs (walk.ts slows him to a brisk climb on Liberty Bridge's: the same here) */
-const onFlight = (kind: Floor, z: number) => {
-  const u = mod(z, PERIOD) - FLIGHT.flat;
-  return kind === 'stairs' && ((u >= 0 && u < RUN_LEN) || (u >= RUN_LEN + FLIGHT.landing && u < RUN_LEN * 2 + FLIGHT.landing));
-};
-const CLIMB = 1.75;
 /** walk.ts's speed while aiming, and the peek's lean */
 const AIMING = 1.4;
 const PEEK = { lean: 0.42, ease: 0.07, level: 0.85 };
@@ -134,6 +128,7 @@ const PROGS: [Prog, string][] = [
   ['crouch', 'Crouch'],
   ['slide', 'Sprint & slide'],
   ['over', 'Vault & climb'],
+  ['stairs', 'Stairs'],
   ['idle', 'Stand'],
   ['reel', 'Reel'],
   ['manual', 'By hand'],
@@ -156,6 +151,7 @@ const REEL: [Prog, number][] = [
   ['crouch', 9],
   ['slide', 5],
   ['over', 7],
+  ['stairs', 12],
   ['idle', 14],
 ];
 const REEL_LENGTH = REEL.reduce((n, [, s]) => n + s, 0);
@@ -228,6 +224,9 @@ function program(p: Prog, t: number, speed: number): [number, number] {
     // On at a run over the walls (the walls floor)
     case 'over':
       return [0, GAITS.run];
+    // Up and down the stairs floor's flights at a walk (the stairs takes climbing)
+    case 'stairs':
+      return [0, GAITS.walk];
     default:
       return [0, 0];
   }
@@ -293,7 +292,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   let compare = q.get('compare') !== '0';
   let traces = q.get('traces') !== '0';
   let scorecard = q.get('score') !== '0';
-  let floorKind: Floor = FLOORS.find((f) => f === q.get('floor')) ?? (prog === 'over' ? 'walls' : 'flat');
+  let floorKind: Floor = FLOORS.find((f) => f === q.get('floor')) ?? (prog === 'over' ? 'walls' : prog === 'stairs' ? 'stairs' : 'flat');
   let paused = false;
   let stepOnce = false;
   const GUNS: [WeaponId | 'none', string][] = [
@@ -621,7 +620,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
     const pt = reel ? reel.t : clock;
     if (reel && reel.prog !== reelProg) {
       reelProg = reel.prog;
-      const want: Floor = reel.prog === 'over' ? 'walls' : 'flat';
+      const want: Floor = reel.prog === 'over' ? 'walls' : reel.prog === 'stairs' ? 'stairs' : 'flat';
       if (floorKind !== want) (floorKind = want), buildFloor();
     }
     let [gx, gz] = program(p, pt, top);
@@ -633,11 +632,15 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       gx = (ix / n) * s;
       gz = (iz / n) * s;
     }
-    if (onFlight(floorKind, z)) {
+    // (up a flight a climb's pace, as walk.ts: the stairs takes' walking, a brisk climb running; movesim.ts STAIRS)
+    {
       const g = Math.hypot(gx, gz);
-      if (g > CLIMB) {
-        gx *= CLIMB / g;
-        gz *= CLIMB / g;
+      if (g > 0.1 && climbAhead(ground, x, z, y, gx, gz, SCALE)) {
+        const cap = g <= GAITS.walk + 0.01 ? STAIRS.walk : STAIRS.run;
+        if (g > cap) {
+          gx *= cap / g;
+          gz *= cap / g;
+        }
       }
     }
     // (aiming: facing where the program aims, or +z by hand with a gun up)
@@ -816,8 +819,11 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
     scoreIn -= real;
     if (scoreIn > 0) return;
     scoreIn = 0.5;
+    // (climbing stairs the steady rows don't apply: a climb isn't a level walk, as tests/human.test.ts has it)
+    const steady = new Set(['cadence', 'stride', 'support', 'bob', 'sway', 'counter', 'arms', 'elbows']);
+    const climbing = anim.debug.climbing;
     const rows: Row[] = rubric.rows();
-    score.innerHTML = rows.map((r) => `<dt class="${r.ok === null ? 'is-na' : r.ok ? 'is-ok' : 'is-fail'}">${r.name}</dt><dd>${r.value}</dd>`).join('');
+    score.innerHTML = rows.map((r) => `<dt class="${r.ok === null || (climbing && steady.has(r.id)) ? 'is-na' : r.ok ? 'is-ok' : 'is-fail'}">${r.name}</dt><dd>${r.value}</dd>`).join('');
   };
 
   let raf = 0;

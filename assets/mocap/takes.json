@@ -7,6 +7,7 @@
   {"file": "cmu/143_42.bvh", "name": "run-stop-run", "fps": 60, "tags": ["run", "stop", "start"]},
   {"file": "cmu/143_32.bvh", "name": "walk", "fps": 60, "tags": ["walk"]},
   {"file": "cmu/132_18.bvh", "name": "walk-fast", "tags": ["walk", "start"]},
+  {"file": "cmu/122_32.bvh", "name": "stairs-up", "from": 1.5, "to": 7.6, "tags": ["stairs"], "stairs": true},
   {"file": "cmu/143_38.bvh", "name": "walk-eight", "fps": 60, "to": 11, "tags": ["walk", "turn"]},
   {"file": "cmu/143_29.bvh", "name": "pacing", "fps": 60, "to": 9, "tags": ["walk", "turn"]},
   {"file": "cmu/127_15.bvh", "name": "run-turn-left", "tags": ["run", "turn"]},

@@ -382,26 +382,46 @@ What's in:
   to change from (a sprint's first record read 1500 rad/s² from nothing).
   `HELD_BACK` is down to two rows: subject 9's run's counter-rotation and
   the kid-sized figure's cadence (Phase 5).
-- **Budgets**: the clips file is 538 KB (three standing takes and a fast
-  walk in, three looped idles and a stroll out): the test's limit 640 KB
-  and the budget's 660 KB, raised on purpose for the takes still to come
-  (stairs).
+- **Budgets**: the clips file is 558 KB (three standing takes, a fast walk
+  and the climb in, three looped idles and a stroll out): the test's limit
+  640 KB and the budget's 660 KB, raised on purpose.
+
+- **Stairs** (the owner's call, built second): walking up stairs is subject
+  122's climb (`stairs-up`, 122_32: a short approach and three steps up).
+  The pipeline tracks a stairs take's floor through its planted feet
+  (`stairFloor()` in mocap-build.ts, `stairs: true` in takes.json: each
+  stretch a foot stands still is a step at its height, the floor a straight
+  line between them in time; the hips kept relative to it so the clip reads
+  as level ground, the contacts stored), and the clips file carries the
+  floor and the contacts (format 3, `MoClip.floor` / `contact`;
+  `contacts()` reads them). The animator searches only the take's climbing
+  frames (`climbFrames`: where its floor rises over the next `STAIRS.look`
+  frames) and only while climbing (`climbAhead()` in movesim.ts: the ground
+  `ahead` is a step higher and still rising, so a kerb isn't stairs) at a
+  climb's pace (under `STAIRS.fast`); once on one, `STAIRS.margin` keeps it
+  (at the usual margin the take flipped to its mirror every half second),
+  and a frame past the climb is the wrong kind (played on into the take's
+  standing tail while he climbed, the held feet stretched a leg until it
+  snapped); the feet land on the real treads through the lock as before.
+  The climb's frames shape none of the matching's statistics (`OWN_KIND`
+  in motionmatch.ts: counted, they moved the means enough to change a
+  pivot's picks). Walk mode
+  slows a climb (`STAIRS.walk` walking, `STAIRS.run` a brisk climb running:
+  faster than the take's climb a held foot stretched and snapped). The lab
+  has a Stairs program and its flight is the stadium footbridge's size now
+  (Liberty Bridge's stairs went with its redesign), as the tests' flights
+  are. Two more climbs (122_31, 122_35) flipped an ankle 75–90° for two
+  frames each (a marker swap) and went; a repair of runs of frames broke the
+  jumps' take-offs, so the one-frame repair stays and glitchy takes lose.
+  No "walk down stairs" take was found: down is the walks with the lock, as
+  before. **Open:** the hips still bounce about a third of a tile a step on
+  the city's double-size steps (the lift following a foot up its tread and
+  the drop when the other can't reach, over the even ramp the tests walk;
+  in the city the ground is the treads themselves, eased); that's the
+  contact phase's.
 
 What's not in, and why:
 
-- **Stairs and steps.** Subject 122's "walk up stairs" takes (122_31,
-  122_32, 122_35: a 1.2 m approach, three steps up, the hands on a rail)
-  are on disk and read cleanly, but the pipeline can't take them yet: it
-  finds one floor for a take from the ankles, and a stair take's floor
-  rises 55 cm. Using them needs (1) a per-contact floor in
-  `mocap-build.ts` (each planted foot's height is its step; the hips kept
-  relative to a ramp through them), (2) a `stairs` tag searched only when
-  the ground ahead rises (as `crouch` is searched only crouched), and (3)
-  a ground-rise feature or the lock reading the treads (`inp.feet`) for
-  where each foot lands. Until then stairs are as they were: he walks up
-  the even ramp with the feet on the treads (`tests/animator.test.ts`'
-  Liberty flight). No "walk down stairs" take was found. This is the
-  phase's open item for the owner: build it next, or take the keyed step.
 - **The stop with a settle** is the capture's own stops (`run-stop`,
   `run-jump-stop`, the walk's) rather than a separate settle: the rubric's
   Stops row (the chest coming back from the run's lean, a touchdown before
@@ -570,12 +590,9 @@ the owner allows `zenodo.org` for 100STYLE.
 - **The crowd's variety:** the same neutral style for everyone, or a few
   characters (a hurried walk, a slouch, a swagger for the bouncers) from
   other actors?
-- **Stairs** (Phase 2's open item): build the pipeline's stair floor so
-  subject 122's "walk up stairs" takes can be used (a day's work: the
-  per-contact floor, a `stairs` tag searched only where the ground rises,
-  the lock reading the treads), or take the keyed step? And is walking
-  down stairs wanted from capture too (no take was found: the keyed step
-  would cover it)?
+- **Stairs down:** walking up stairs is from capture now; down is the
+  walks with the lock. Is a keyed step down wanted, or another search for a
+  take?
 - **A stroll:** the only slow walk among the reachable subjects (132_40)
   isn't a person's walk by the rubric. Look further (the subjects under
   100 need the CMU site, unreachable from here), allow another host, or

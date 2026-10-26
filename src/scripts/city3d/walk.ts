@@ -36,7 +36,7 @@ import { LAND_CROUCH, LAND_ROLL, copyLeg, copyPose, createLocomotion, placeRoot,
 import type { Animator } from './animator';
 import { loadMocap } from './mocap-load';
 import { createGaze, type Interest } from './gaze';
-import { GAITS, newMove, startSlide, stepMove, stepSlide, type Slide } from './movesim';
+import { GAITS, STAIRS, climbAhead, newMove, startSlide, stepMove, stepSlide, type Slide } from './movesim';
 import { slidePose } from './poses';
 import { OVER, isLow, overAhead, overAt, overPose, type Over } from './vault';
 import { springVel } from './inertia';
@@ -1855,7 +1855,9 @@ export function createWalk(d: WalkDeps) {
     if (Math.abs(peek) < 1e-4) peek = 0;
     // (sprinting stands him up out of a crouch)
     if (crouched && sprint && mag > 0.1 && !slide) crouched = false;
-    const top = Math.min(shooting ? AIMING : sprint ? SPRINT : walkLock ? WALK : RUN, crouched ? CROUCH.speed : Infinity) * (1 - (1 - PEEK.slow) * Math.abs(peek));
+    // (up stairs a climb's pace: the stairs takes' walking, a brisk climb running; movesim.ts STAIRS)
+    const climbing = mag > 0.1 && climbAhead(groundAt, pos.x, pos.z, pos.y, dirX, dirZ, SCALE);
+    const top = Math.min(shooting ? AIMING : sprint ? SPRINT : walkLock ? WALK : RUN, crouched ? CROUCH.speed : Infinity, climbing ? (walkLock ? STAIRS.walk : STAIRS.run) : Infinity) * (1 - (1 - PEEK.slow) * Math.abs(peek));
 
     // Towards it on the springs (movesim.ts; hardly any control in the air), facing where he's
     // going, or where you look when aiming / in first person

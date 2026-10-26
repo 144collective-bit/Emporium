@@ -1580,9 +1580,7 @@ it and has been retired completely. Build only on what's here.
   `clipRows()` over a clip; `tests/human.test.ts` holds every clip and
   the animator's programs to it, rows that fail today `HELD_BACK` with
   their phase), the lab's Scorecard and Reel, the clips' format 2 with
-  tags, marks and packs (below), a `mocap` budget row. Phase 2 (the
-  player finished on foot) is built but its stairs (the plan says what
-  they need): the idles are three stretches of subject 137 waiting
+  tags, marks and packs (below), a `mocap` budget row. Phase 2 (the player finished on foot) is built: the idles are three stretches of subject 137 waiting
   (`idle-wait`, `-2`, `-3`: real weight shifts, a hand to the head, a look
   round; the looped quiet seconds of 143 went; read a standing take's
   lean before using it: one was bent double), played through to the end
@@ -1596,15 +1594,13 @@ it and has been retired completely. Build only on what's here.
   walk is 143's (1.4 m/s) with 132's fast walk for starts (`walk-fast`);
   starts and pivots through `MATCH.after`, `starting` (`LOCK.downStart`)
   and the head's slower blend (`HEAD_BLEND`, `Inertia.slow`);
-  the matching normalised over frames on the move (`MOVING`) and a clip's
-  end dearer (`ENDING`). The rubric reads the capture's standing takes as
+  the matching normalised over frames on the move (`MOVING`) and a clip's end dearer (`ENDING`); stairs up from capture (122's climb, `stairs-up`: the pipeline tracks a stairs take's floor through its planted feet, `stairFloor()`, `stairs: true` in takes.json, format 3's `floor` / `contact`; the animator searches its climbing frames only while climbing, `climbAhead()` and `STAIRS` in movesim.ts, which walk mode also uses to slow a climb; the lab's Stairs program; down is the walks with the lock). The rubric reads the capture's standing takes as
   standing (`clipRows(..., standing)`, `Frame.side`); `HELD_BACK` is two
   rows. The clips file's limits are 640 KB (test) and 660 KB (budget),
   raised for the takes on purpose:
   - **The data** is CMU's motion capture (free for commercial use; the
     acknowledgment is in the start menu's Options > Credits, named, never
-    linked): mostly subject 143's and 127's takes (137's idles, 132's
-    fast walk, 136's crouched walks, 141's strafes), in `assets/mocap/cmu/`
+    linked): mostly subject 143's and 127's takes (137's idles, 132's fast walk, 122's climb, 136's crouched walks, 141's strafes), in `assets/mocap/cmu/`
     (BVH, untouched), listed in `assets/mocap/takes.json` (a `loop` makes a seamless cycle,
     `loopClip()`, `cycle` its length where it's longer than a step; `fps` where the file's frame rate is wrong: subject 143's
     are 60, not the 120 cgspeed wrote, so he walked and ran at double speed

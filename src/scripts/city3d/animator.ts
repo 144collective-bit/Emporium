@@ -37,7 +37,7 @@ import * as THREE from 'three';
 import { FOOT_BONES, MB, MOCAP_BONES, MOCAP_FPS, NB, type MoData, PARENT, type Posed, REST, TOE_BONES, newPosed, posed, rootAt, tagged } from './mocap';
 import { angVel, createInertia, decay, expQ, logQ, rate as springRate, wrap } from './inertia';
 import { buildDatabase, cost, type Database, AHEAD, FEATURES, search, setTrajectory } from './motionmatch';
-import { ahead, type MoveState } from './movesim';
+import { ahead, type MoveState, STAIRS, climbAhead } from './movesim';
 import { ANKLE_H, SHIN_GROUND, THIGH, type Skeleton } from './skeleton';
 
 export interface AnimInput {
@@ -114,7 +114,7 @@ export const STAND = { after: 0.35, speed: 0.08, tag: 'stand', margin: 1e9, turn
  * the half-life `down` (`downStart` speeding up hard: at a start the body
  * pulls away from the planted foot faster than the take's does, and a slow
  * answer let the foot slide 2 cm; at a pivot a quick one jerked the knee)
- * and back up with `up`
+ * and back up with `up`; a free foot clears the ground `look` seconds ahead along his way
  */
 export const LOCK = { release: 0.2, drop: 0.06, catchUp: 0.08, look: 0.12, down: 0.04, downStart: 0.015, up: 0.09 };
 /** The lean into a bend (radians per tile a second², and at most), and the sprint's lean forward and extra swing */
@@ -334,7 +334,24 @@ export function createAnimator(data: MoData) {
     return standing.map((v, j) => (v && takeIdx[j] !== takeIdx[clip] && takeStamp[takeIdx[j]] === best ? 1 : 0));
   }
   const crouching = Uint8Array.from(db.clips, (c) => (tagged(c, CROUCH.tag) ? 1 : 0));
-  const upright = crouching.map((v) => 1 - v);
+  const stairs = Uint8Array.from(db.clips, (c) => (tagged(c, STAIRS.tag) ? 1 : 0));
+  const upright = crouching.map((v, i) => (v || stairs[i] ? 0 : 1));
+  /**
+   * Climbing stairs (STAIRS): only the stairs takes' climbing frames are searched (where the take's floor
+   * rises over the next `STAIRS.look` frames, or rose over the last few: its approach on the level is the
+   * walks' to do), and nothing else
+   */
+  let climbing = false;
+  const climbFrames = new Uint8Array(db.count);
+  db.clips.forEach((c, ci) => {
+    if (!stairs[ci] || !c.floor) return;
+    for (let f = 0; f < c.frames; f++) {
+      const g = db.start[ci] + f;
+      const soon = c.floor[Math.min(c.frames - 1, f + STAIRS.look)] - c.floor[f];
+      const lately = c.floor[f] - c.floor[Math.max(0, f - STAIRS.back)];
+      climbFrames[g] = db.open[g] && (soon > STAIRS.step || lately > STAIRS.step) ? 1 : 0;
+    }
+  });
   /** Crouched (past CROUCH.at), and how much of the crouch is laid over a clip that isn't one */
   let crouched = false;
   let crouchW = 0;
@@ -663,7 +680,14 @@ export function createAnimator(data: MoData) {
     if (stand && !standing[clip]) searchIn = 0;
     // (crouching or standing up on the move: over to the other kind of walk at once)
     crouched = (inp.crouch ?? 0) > CROUCH.at;
-    const wrongKind = !stand && !inAir && (crouched ? !crouching[clip] : crouching[clip] === 1);
+    {
+      const dx = Math.abs(m.vx) + Math.abs(m.vz) > 0.05 ? m.vx : Math.sin(face);
+      const dz = Math.abs(m.vx) + Math.abs(m.vz) > 0.05 ? m.vz : Math.cos(face);
+      climbing = !inAir && !crouched && simSpeed * inp.scale < STAIRS.fast && Math.hypot(inp.gx, inp.gz) > 0.1 && climbAhead(inp.ground, inp.x, inp.z, inp.y, dx, dz, inp.scale);
+    }
+    // (climbing, a stairs take's frames past its climb are the wrong kind too: played on into its standing tail
+    // while he climbed, the held feet stretched the legs until they snapped)
+    const wrongKind = !stand && !inAir && (crouched ? !crouching[clip] : climbing ? !climbFrames[at(clip, t)] : crouching[clip] === 1 || stairs[clip] === 1);
     if (wrongKind) searchIn = 0;
     searchIn -= dt;
     const sharp = Math.hypot(inp.gx - lastGx, inp.gz - lastGz) > MATCH.sharp;
@@ -674,10 +698,10 @@ export function createAnimator(data: MoData) {
     if (!inAir && (force || searchIn <= 0 || sharp || sharpLeft > 0)) {
       searchIn = MATCH.every;
       const cur = at(clip, t);
-      const best = searchFor(false, cur, stand ? standNext() : crouched ? crouching : upright);
+      const best = climbing && !stand ? searchFor(false, cur, undefined, climbFrames) : searchFor(false, cur, stand ? standNext() : crouched ? crouching : upright);
       const curCost = db.open[cur] && !force ? cost(db, q, cur) : Infinity;
       const near = db.clipOf[best] === clip && Math.abs(db.frameOf[best] - t) < 3;
-      const better = wrongKind || (settle > 0 ? lastCost < curCost * AIR.margin : lastCost + (stand && standing[clip] ? STAND.margin : MATCH.margin) < curCost || (stand && !standing[clip]));
+      const better = wrongKind || (settle > 0 ? lastCost < curCost * AIR.margin : lastCost + (stand && standing[clip] ? STAND.margin : climbing && stairs[clip] ? STAIRS.margin : MATCH.margin) < curCost || (stand && !standing[clip]));
       if (best >= 0 && !near && (force || better)) cut(best);
     }
 
@@ -1080,7 +1104,7 @@ export function createAnimator(data: MoData) {
     },
     /** What it's doing, for the lab */
     get debug() {
-      return { clip: db.clips[clip].name, frame: t, rate, warp, cost: lastCost, blend: inertia.left, jumps, drop, lift, bank, air: inAir, crouch: crouchW, squash, tall: tallW, up: stanceUp, arms: AIR.arms * THREE.MathUtils.smoothstep(held, AIR.armsAfter, AIR.armsAfter + AIR.armsIn) };
+      return { clip: db.clips[clip].name, frame: t, rate, warp, cost: lastCost, blend: inertia.left, jumps, drop, lift, bank, air: inAir, crouch: crouchW, squash, tall: tallW, up: stanceUp, climbing, arms: AIR.arms * THREE.MathUtils.smoothstep(held, AIR.armsAfter, AIR.armsAfter + AIR.armsIn) };
     },
   };
 }
