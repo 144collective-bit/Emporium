@@ -1,32 +1,78 @@
 /*
- * Palm Court and Starlight Mall on screen (docs/mall-plan.md step 1; the
- * numbers are mall.ts), a district loaded as you approach (`LAZY_DISTRICTS`
- * id `mall` in districts.ts); the site worker loads it too. Retro neon 80s:
- * pastel walls, chrome trim, neon tubes along the rooflines, checkered
- * paving, palms in planters; every name made up, from one sign atlas.
+ * Palm Court and Starlight Mall on screen (docs/mall-plan.md; the numbers are
+ * mall.ts), a district loaded as you approach (`LAZY_DISTRICTS` id `mall` in
+ * districts.ts); the site worker loads it too. A modern mall and lifestyle
+ * centre (the owner's call): white and grey cladding, glass curtain walls in
+ * black steel, timber soffits, stone paving, warm white light; every name
+ * made up, from one sign atlas. The paint and the surfaces are mallkit.ts's.
  *
- * - **Palm Court** (sites): the promenade's checkered paving, the shops (a
- *   pastel box each, a lit shopfront, a fascia with its name, a neon line
- *   along the roof, a striped awning near only; the taller ones with an upper
- *   window band and a triangle on the parapet), Paradise Cinema (its marquee
- *   with bulbs, its name and the posters for made-up films), the fountain,
- *   benches, palms and the PALM COURT arch.
- * - **Starlight Mall** (sites): the hall (glass-block corners, neon bands,
- *   the skylit roof), its porch (chrome posts under a triangle with the
- *   mall's name), the two anchors with their names, the pylon, the bus
- *   shelter; the loop's asphalt and lines, the zebra over the north avenue,
- *   the car park's bays and TAXI board, the multi-storey's decks.
+ * - **Palm Court** (sites): stone paving; the shops, each its own front
+ *   (`style`: a glass box in black steel under a timber canopy, white render
+ *   round a deep window, cladding with fins over the glass, timber over the
+ *   glass), two storeys every third; Paradise Cinema (a dark clad box, a
+ *   double-height glazed lobby under a canopy, poster lightboxes); the water
+ *   feature with its steel ring, benches, trees in planters (the trees
+ *   themselves are the city's, mall.ts `MALL_TREES`), festoon lights across
+ *   the promenade and the PALM COURT gateway.
+ * - **Starlight Mall** (sites): the hall's curtain wall between clad piers,
+ *   the entrance's dark feature wall with the mall's name and its star, the
+ *   cantilevered canopy with a timber soffit, the doors open behind bollards;
+ *   the glass vault and the rooftop plant; Maxwell's (light panels, black fins,
+ *   a glazed ground floor) and Bright & Co. (dark panels, a double-height glass
+ *   front, a timber band), each with its loading dock at the back; the totem,
+ *   the bus shelter, the forecourt's paving, planters and pay stations; the
+ *   loop, its zebras, the car park's islands with trolley shelters, the
+ *   multi-storey behind perforated metal screens.
  * - **On the main thread:** the parked cars and the cabs.
  */
 import * as THREE from 'three';
-import { Batch, FONT_DISPLAY, canvasTex, lit, neon, siteMat, toon } from './kit';
+import { Batch, canvasTex, fx, lit, siteMat, toon } from './kit';
 import type { Tick } from './world';
-import { SLAB } from './world';
 import { site } from './tilework';
 import { NS_ROADS } from './layout';
 import { parkedCars, type CarId } from './cars';
 import { TAXI_YELLOW } from './kerbside';
 import { FILMS } from './uptownsites';
+import {
+  ASPHALT,
+  BULB,
+  CHARCOAL,
+  CLAD,
+  CLAD_DARK,
+  CONCRETE,
+  CURTAIN,
+  DARK,
+  GLASS,
+  GOLD,
+  GREY,
+  LED,
+  LIGHT,
+  MID,
+  PAINT,
+  PANEL,
+  PAVING,
+  PERF,
+  RENDER,
+  SHRUB,
+  SOIL,
+  SPRAY,
+  STEEL,
+  STONE,
+  TEAL_LED,
+  TIMBER,
+  WATER,
+  WHITE,
+  WOOD,
+  Y,
+  box,
+  cyl,
+  face,
+  flat,
+  glassX,
+  glassZ,
+  planter,
+  signAtlas,
+} from './mallkit';
 import {
   ANCHORS,
   ARCH,
@@ -36,15 +82,22 @@ import {
   BENCHES,
   CINEMA,
   COURT,
+  COURT_TREES,
   FOUNTAIN,
   HALL,
+  ISLANDS,
+  ISLAND_WALK,
   LOOP,
+  LOOP_ZEBRA,
+  TOWER_ZEBRA,
   MALL_BLOCK,
   MALL_NAME,
   MSCP,
   MSCP_CARS,
-  PALMS,
   PARKED,
+  PAY_STATIONS,
+  PLANTER,
+  PLANTERS,
   PORCH,
   PROM,
   PYLON,
@@ -53,163 +106,62 @@ import {
   SHOPS,
   SHOP_NAMES,
   ZEBRA,
+  type Rect,
   type Shop,
 } from './mall';
+import { BOLLARD, BOLLARDS, DOOR, WALL, WALLS } from './mallinside';
+import { registerInside } from './mallinside3d';
 
 export const SELF = import.meta.url;
 
-/* ---------- Paint ---------- */
+/* ---------- Signs ---------- */
 
-const CHROME = toon('#d9dee8');
-const WHITE = toon('#f6f3fb');
-const DARK = toon('#2a2740');
-const INK = toon('#1b1830');
-const NAVY = toon('#241a4d');
-const LILAC = toon('#c7a6ff');
-const TEAL = toon('#5fd6c4');
-const PEACH = toon('#ffc48c');
-const CONCRETE = toon('#b9b4c9');
-const ASPHALT = toon('#2c2a44');
-const PAINT = toon('#e8e4f8');
-const YELLOW = toon('#ffd23f');
-const WATER = toon('#62c6ea');
-const SPRAY = toon('#dff6ff');
-const TRUNK = toon('#9a7350');
-const FROND = toon('#2fbf71');
-const POT = toon('#ff9ec7');
-const WOOD = toon('#a8743f');
-const PINK_NEON = neon('#ff4fd8', 0.3, 2.4);
-const CYAN_NEON = neon('#4fe3ff', 0.3, 2.4);
-const YELLOW_NEON = neon('#ffd23f', 0.3, 2.4);
-const PURPLE_NEON = neon('#9d5cff', 0.3, 2.4);
-const NEONS = [PINK_NEON, CYAN_NEON, YELLOW_NEON, PURPLE_NEON];
-const BULB = neon('#ffe9a8', 0.3, 2.4);
-const SKY = lit(toon('#9fd8f0'), 0.15, 1.1);
-const pastel = new Map<string, THREE.Material>();
-const wallOf = (c: string) => pastel.get(c) ?? (pastel.set(c, toon(c)), pastel.get(c)!);
-
-/** Shop windows: displays behind glass in a chrome frame, lit warm at night (a pattern every 4 tiles) */
-const FRONT = (() => {
-  const draw = (on: boolean) => (c: CanvasRenderingContext2D) => {
-    c.fillStyle = on ? '#000' : '#d9dee8';
-    c.fillRect(0, 0, 256, 128);
-    for (const x of [6, 134]) {
-      if (on) {
-        c.fillStyle = '#ffd99a';
-        c.fillRect(x, 6, 116, 116);
-        c.fillStyle = '#ff9ec7';
-        c.fillRect(x + 10, 70, 96, 10);
-        continue;
-      }
-      const g = c.createLinearGradient(x, 6, x + 116, 122);
-      g.addColorStop(0, '#9fe8ff');
-      g.addColorStop(0.6, '#6a7fd0');
-      g.addColorStop(1, '#4b3b8f');
-      c.fillStyle = g;
-      c.fillRect(x, 6, 116, 116);
-      // (shelves and goods behind the glass)
-      c.fillStyle = 'rgba(255,255,255,0.35)';
-      c.fillRect(x + 10, 70, 96, 6);
-      c.fillRect(x + 10, 100, 96, 6);
-      c.fillStyle = 'rgba(255,158,199,0.55)';
-      for (let i = 0; i < 5; i++) c.fillRect(x + 14 + i * 19, 56, 12, 14);
-    }
-  };
-  const map = canvasTex(256, 128, draw(false));
-  const emissiveMap = canvasTex(128, 64, (c) => {
-    c.scale(0.5, 0.5);
-    draw(true)(c);
-  });
-  for (const t of [map, emissiveMap]) t.wrapS = THREE.RepeatWrapping;
-  return siteMat('mall-front', lit(toon('#ffffff', { map, emissiveMap, emissive: '#ffffff' }), 0.06, 1.05));
-})();
-/** The promenade's checkered paving (pink and white, a tile a square) */
-const TILES = (() => {
-  const map = canvasTex(128, 128, (c) => {
-    for (let i = 0; i < 2; i++)
-      for (let j = 0; j < 2; j++) {
-        c.fillStyle = (i + j) % 2 ? '#f6f3fb' : '#ffb3d6';
-        c.fillRect(i * 64, j * 64, 64, 64);
-      }
-  });
-  map.wrapS = map.wrapT = THREE.RepeatWrapping;
-  return siteMat('mall-tiles', toon('#ffffff', { map }));
-})();
-
-/** One atlas for every sign (4 x 8 cells of 256 x 64): the shops, the anchors, the cinema, the mall, the court, and the rest */
+/** The outside's signs (4 x 8, full): the shops, the anchors, the cinema, the mall, the court, and the rest */
 const CELLS = [...SHOP_NAMES.map((s) => s.name), ...ANCHORS.map((a) => a.name), CINEMA.name, 'NOW SHOWING', MALL_NAME, 'PALM COURT', 'TAXI', 'BUS', 'P', 'ENTRANCE'];
-const CELL_INK = ['#ff4fd8', '#4fe3ff', '#ffd23f', '#9dffb0', '#c7a6ff'];
-const SIGNS = siteMat(
-  'mall-signs',
-  lit(
-    new THREE.MeshBasicMaterial({
-      map: canvasTex(1024, 512, (c) => {
-        c.textAlign = 'center';
-        c.textBaseline = 'middle';
-        CELLS.forEach((text, k) => {
-          const [x, y] = [(k % 4) * 256, Math.floor(k / 4) * 64];
-          const taxi = text === 'TAXI';
-          c.fillStyle = taxi ? '#ffc23d' : text === 'P' ? '#2a62d8' : '#160f2e';
-          c.fillRect(x + 2, y + 2, 252, 60);
-          const ink = taxi ? '#1b1830' : text === 'P' ? '#ffffff' : CELL_INK[k % CELL_INK.length];
-          c.font = `800 ${text.length > 12 ? 30 : 38}px ${FONT_DISPLAY}`;
-          c.shadowColor = ink;
-          c.shadowBlur = taxi || text === 'P' ? 0 : 12;
-          c.fillStyle = ink;
-          c.fillText(text, x + 128, y + 34);
-          c.shadowBlur = 0;
-          c.fillStyle = '#ffffff';
-          c.globalAlpha = taxi || text === 'P' ? 0 : 0.55;
-          c.fillText(text, x + 128, y + 34);
-          c.globalAlpha = 1;
-        });
-      }),
-    }),
-    0.95,
-    1.4
-  )
-);
-/** A sign from the atlas: w x h, its middle at (x, y, z), facing the way `ry` turns +z */
-function sign(b: Batch, text: string, x: number, y: number, z: number, w: number, h: number, ry: number) {
-  const k = CELLS.indexOf(text);
-  const g = new THREE.PlaneGeometry(w, h);
-  const uv = g.attributes.uv;
-  const [u0, v1] = [(k % 4) / 4 + 0.003, 1 - Math.floor(k / 4) / 8 - 0.004];
-  for (let i = 0; i < uv.count; i++) uv.setXY(i, u0 + uv.getX(i) * (0.25 - 0.006), v1 - (1 - uv.getY(i)) * (0.125 - 0.008));
-  b.add(g.rotateY(ry).translate(x, y, z), SIGNS);
-}
-/** The cinema's posters for made-up films, four to a row, two rows */
+/** Charcoal letters on white for the rendered and timber shops' signs and Bright & Co. (on its dark panels) */
+const LIGHT_SIGNS = new Set([...SHOPS.filter((s) => s.style === 'render' || s.style === 'timber').map((s) => s.name), ANCHORS[1].name]);
+const sign = signAtlas('mall-signs', CELLS, LIGHT_SIGNS);
+
+/** The cinema's poster lightboxes: made-up films, four to a row, two rows */
 const POSTERS = siteMat(
   'mall-posters',
   lit(
     new THREE.MeshBasicMaterial({
       map: canvasTex(512, 512, (c) => {
-        const tops = ['#ff4fd8', '#4fe3ff', '#ffd23f', '#9d5cff', '#ff8a3d', '#5fd6c4'];
+        const tops = ['#1f3b57', '#5a2a3c', '#2d4a3a', '#3d2f5c', '#5c3b1f', '#1f4d4f'];
+        const marks = ['#f2c12e', '#e4775a', '#9fd3c7', '#c9b6f2', '#f0a14a', '#7fd0e0'];
         FILMS.forEach((name, k) => {
           const [x, y] = [(k % 4) * 128, Math.floor(k / 4) * 256];
           const g = c.createLinearGradient(0, y, 0, y + 256);
           g.addColorStop(0, tops[k % tops.length]);
-          g.addColorStop(1, '#160f2e');
+          g.addColorStop(1, '#111216');
           c.fillStyle = g;
           c.fillRect(x + 4, y + 4, 120, 248);
-          // (a sun over a horizon, the 80s way)
-          c.fillStyle = '#ffd23f';
-          c.beginPath();
-          c.arc(x + 64, y + 120, 30, Math.PI, 0);
-          c.fill();
-          c.fillStyle = '#160f2e';
-          for (let i = 0; i < 4; i++) c.fillRect(x + 30, y + 100 + i * 6, 68, 2);
+          // (one bold shape: a disc, a slash or a band)
+          c.fillStyle = marks[k % marks.length];
+          if (k % 3 === 0) {
+            c.beginPath();
+            c.arc(x + 64, y + 96, 34, 0, Math.PI * 2);
+            c.fill();
+          } else if (k % 3 === 1) {
+            c.beginPath();
+            c.moveTo(x + 24, y + 150);
+            c.lineTo(x + 104, y + 40);
+            c.lineTo(x + 112, y + 52);
+            c.lineTo(x + 32, y + 162);
+            c.fill();
+          } else c.fillRect(x + 4, y + 84, 120, 22);
           c.fillStyle = '#ffffff';
           c.textAlign = 'center';
-          c.font = `800 17px ${FONT_DISPLAY}`;
+          c.font = '700 15px Inter, "Helvetica Neue", Arial, sans-serif';
           const [a, ...rest] = name.split(' ');
-          c.fillText(a, x + 64, y + 186);
-          c.fillText(rest.join(' '), x + 64, y + 208);
+          c.fillText(a, x + 64, y + 196);
+          c.fillText(rest.join(' '), x + 64, y + 216);
         });
       }),
     }),
     0.95,
-    1.2
+    1.15
   )
 );
 function poster(b: Batch, k: number, x: number, y: number, z: number, ry: number) {
@@ -219,196 +171,244 @@ function poster(b: Batch, k: number, x: number, y: number, z: number, ry: number
   for (let i = 0; i < uv.count; i++) uv.setXY(i, u0 + uv.getX(i) * (0.25 - 0.008), v1 - (1 - uv.getY(i)) * (0.5 - 0.008));
   b.add(g.rotateY(ry).translate(x, y, z), POSTERS);
 }
-/** The pylon's faces: STARLIGHT MALL down its length */
-const PYLON_FACE = siteMat(
-  'mall-pylon',
+/** The totem's faces: the mall's star and name on a white panel, its tenants on charcoal strips under it */
+const TOTEM = siteMat(
+  'mall-totem',
   lit(
     new THREE.MeshBasicMaterial({
       map: canvasTex(128, 512, (c) => {
-        c.fillStyle = '#160f2e';
+        c.fillStyle = '#26282c';
         c.fillRect(0, 0, 128, 512);
-        c.strokeStyle = '#4fe3ff';
-        c.lineWidth = 6;
-        c.strokeRect(6, 6, 116, 500);
-        c.save();
-        c.translate(64, 256);
-        c.rotate(-Math.PI / 2);
+        c.fillStyle = '#f1f1ee';
+        c.fillRect(8, 8, 112, 150);
+        // (the star)
+        c.fillStyle = '#d9a94a';
+        c.beginPath();
+        for (let k = 0; k < 10; k++) {
+          const a = (k / 10) * Math.PI * 2 - Math.PI / 2;
+          const r = k % 2 ? 11 : 26;
+          c.lineTo(64 + Math.cos(a) * r, 52 + Math.sin(a) * r);
+        }
+        c.fill();
+        c.fillStyle = '#26282c';
         c.textAlign = 'center';
-        c.textBaseline = 'middle';
-        c.font = `800 64px ${FONT_DISPLAY}`;
-        c.shadowColor = '#ff4fd8';
-        c.shadowBlur = 16;
-        c.fillStyle = '#ff4fd8';
-        c.fillText(MALL_NAME, 0, 4);
-        c.shadowBlur = 0;
-        c.fillStyle = '#ffffff';
-        c.globalAlpha = 0.55;
-        c.fillText(MALL_NAME, 0, 4);
-        c.restore();
+        c.font = '700 21px Inter, "Helvetica Neue", Arial, sans-serif';
+        c.fillText('STARLIGHT', 64, 112);
+        c.font = '600 18px Inter, "Helvetica Neue", Arial, sans-serif';
+        c.fillText('MALL', 64, 138);
+        const tenants = ["MAXWELL'S", 'BRIGHT & CO.', 'FOOD COURT', 'CINEMA', 'PALM COURT'];
+        tenants.forEach((t, i) => {
+          const y = 176 + i * 62;
+          c.fillStyle = '#3a3d42';
+          c.fillRect(8, y, 112, 54);
+          c.fillStyle = '#fff3df';
+          c.font = '600 14px Inter, "Helvetica Neue", Arial, sans-serif';
+          c.fillText(t, 64, y + 32);
+        });
       }),
     }),
     0.95,
-    1.4
+    1.2
   )
 );
 
 /* ---------- Helpers ---------- */
 
-const Y = SLAB;
-const box = (b: Batch, x0: number, y0: number, z0: number, x1: number, y1: number, z1: number, mat: THREE.Material) => b.box(x0, y0, z0, x1 - x0, y1 - y0, z1 - z0, mat);
-const cyl = (b: Batch, r: number, h: number, x: number, y: number, z: number, mat: THREE.Material, seg = 10, r0 = r, open = false) => b.add(new THREE.CylinderGeometry(r, r0, h, seg, 1, open).translate(x, y + h / 2, z), mat);
-/** A flat rectangle at y, in pieces no longer than `len` */
-function flat(b: Batch, x0: number, z0: number, x1: number, z1: number, y: number, mat: THREE.Material, len = 14) {
-  const nx = Math.max(1, Math.ceil((x1 - x0) / len));
-  const nz = Math.max(1, Math.ceil((z1 - z0) / len));
-  for (let i = 0; i < nx; i++)
-    for (let j = 0; j < nz; j++) {
-      const [a0, a1] = [x0 + ((x1 - x0) * i) / nx, x0 + ((x1 - x0) * (i + 1)) / nx];
-      const [c0, c1] = [z0 + ((z1 - z0) * j) / nz, z0 + ((z1 - z0) * (j + 1)) / nz];
-      const g = new THREE.PlaneGeometry(a1 - a0, c1 - c0).rotateX(-Math.PI / 2).translate((a0 + a1) / 2, y, (c0 + c1) / 2);
-      if (mat === TILES) {
-        const uv = g.attributes.uv;
-        const pos = g.attributes.position;
-        for (let k = 0; k < uv.count; k++) uv.setXY(k, pos.getX(k) / 2, pos.getZ(k) / 2);
-      }
-      b.add(g, mat);
-    }
-}
-/** A shopfront's glass on a wall facing +x (face 1) or -x at x, from z0 to z1, y0 to y1 */
-function glassX(b: Batch, x: number, face: 1 | -1, z0: number, z1: number, y0: number, y1: number) {
-  const g = new THREE.PlaneGeometry(z1 - z0, y1 - y0);
-  const uv = g.attributes.uv;
-  for (let k = 0; k < uv.count; k++) uv.setX(k, (uv.getX(k) * (z1 - z0)) / 4);
-  b.add(g.rotateY(face * (Math.PI / 2)).translate(x + face * 0.012, (y0 + y1) / 2, (z0 + z1) / 2), FRONT);
-}
-/** The same facing +z (face 1) or -z */
-function glassZ(b: Batch, z: number, face: 1 | -1, x0: number, x1: number, y0: number, y1: number) {
-  const g = new THREE.PlaneGeometry(x1 - x0, y1 - y0);
-  const uv = g.attributes.uv;
-  for (let k = 0; k < uv.count; k++) uv.setX(k, (uv.getX(k) * (x1 - x0)) / 4);
-  b.add(g.rotateY(face === 1 ? 0 : Math.PI).translate((x0 + x1) / 2, (y0 + y1) / 2, z + face * 0.012), FRONT);
-}
-/** A palm in its planter */
-function palm(b: Batch, x: number, z: number, y = Y, s = 1) {
-  cyl(b, 0.42 * s, 0.5, x, y, z, POT, 8, 0.5 * s);
-  // (the trunk in three leaning pieces)
-  let [px, py] = [x, y + 0.45];
-  for (let i = 0; i < 3; i++) {
-    const nx = px + 0.08 * s;
-    cyl(b, 0.09 * s, 1.15 * s, (px + nx) / 2, py, z, TRUNK, 6, 0.12 * s, true);
-    [px, py] = [nx, py + 1.12 * s];
+/** The islands' grass, hedges, grasses, flowers, and the EV bays' paint */
+const LAWN = toon('#6f9a4e');
+const HEDGE = toon('#2f6430');
+const GRASS = toon('#b9b06a');
+const FLOWERS = [toon('#e58fb3'), toon('#f3f1ea'), toon('#9d7ad6'), toon('#f2c14e')];
+const EV_GREEN = toon('#3f8f5a');
+
+const PX: [number, number] = [1, 0];
+const NX: [number, number] = [-1, 0];
+const PZ: [number, number] = [0, 1];
+const NZ: [number, number] = [0, -1];
+/** A ceiling or soffit facing down at y (a surface laid on in world units keeps its pattern) */
+function under(b: Batch, x0: number, z0: number, x1: number, z1: number, y: number, mat: THREE.Material) {
+  const rep = mat.userData.worldUV as [number, number] | undefined;
+  const g = new THREE.PlaneGeometry(x1 - x0, z1 - z0).rotateX(Math.PI / 2).translate((x0 + x1) / 2, y, (z0 + z1) / 2);
+  if (rep) {
+    const uv = g.attributes.uv;
+    const pos = g.attributes.position;
+    for (let k = 0; k < uv.count; k++) uv.setXY(k, pos.getX(k) / rep[0], pos.getZ(k) / rep[1]);
   }
-  // (fronds drooping all round)
-  for (let k = 0; k < 7; k++) {
-    const a = (k / 7) * Math.PI * 2;
-    const g = new THREE.ConeGeometry(0.22 * s, 1.7 * s, 4).scale(1, 1, 0.25).rotateZ(-Math.PI / 2 - 0.45).rotateY(a).translate(px + Math.cos(a) * 0.7 * s, py - 0.25 * s, z - Math.sin(a) * 0.7 * s);
-    b.add(g, FROND);
-  }
+  b.add(g, mat);
+}
+/** Rooftop plant: an air handler (a box with a fan grille) and a louvred screen beside it (near only) */
+function plant(b: Batch, x: number, z: number, y: number) {
+  b.detail(() => {
+    box(b, x - 1, y, z - 0.6, x + 1, y + 0.9, z + 0.6, GREY);
+    for (const dx of [-0.5, 0.5]) b.add(new THREE.CircleGeometry(0.32, 12).rotateX(-Math.PI / 2).translate(x + dx, y + 0.905, z), STEEL);
+    for (let i = 0; i < 6; i++) box(b, x + 1.3 + i * 0.25, y, z - 0.7, x + 1.36 + i * 0.25, y + 1.1, z + 0.7, MID);
+  });
+}
+/** A parapet's metal coping round a roof (x0, z0, x1, z1) at its top y */
+function coping(b: Batch, x0: number, z0: number, x1: number, z1: number, y: number) {
+  const t = 0.12;
+  box(b, x0 - 0.04, y, z0 - 0.04, x1 + 0.04, y + t, z0 + 0.25, MID);
+  box(b, x0 - 0.04, y, z1 - 0.25, x1 + 0.04, y + t, z1 + 0.04, MID);
+  box(b, x0 - 0.04, y, z0 + 0.25, x0 + 0.25, y + t, z1 - 0.25, MID);
+  box(b, x1 - 0.25, y, z0 + 0.25, x1 + 0.04, y + t, z1 - 0.25, MID);
 }
 
 /* ---------- Palm Court ---------- */
 
 function shop(b: Batch, s: Shop, i: number) {
   const [x0, z0, x1, z1] = s.rect;
-  const fx = s.face === 1 ? x1 : x0;
-  const wall = wallOf(s.wall);
-  box(b, x0, Y, z0, x1, Y + s.h, z1, wall);
-  // A white cornice over the roof's edge, a neon line along the front
-  box(b, x0 - 0.06, Y + s.h, z0 - 0.06, x1 + 0.06, Y + s.h + 0.25, z1 + 0.06, WHITE);
-  box(b, fx - (s.face === 1 ? 0.02 : -0.02) - 0.04, Y + s.h - 0.12, z0 + 0.2, fx - (s.face === 1 ? 0.02 : -0.02) + 0.04, Y + s.h - 0.04, z1 - 0.2, NEONS[i % NEONS.length]);
-  // The shopfront: chrome frame, the glass, a dark door in the middle, the fascia with its name
-  box(b, fx - 0.08, Y, z0 + 0.3, fx + 0.08, Y + 3.05, z1 - 0.3, CHROME);
-  glassX(b, fx + s.face * 0.08, s.face, z0 + 0.45, z1 - 0.45, Y + 0.35, Y + 2.6);
+  const f = s.face;
+  const fx = f === 1 ? x1 : x0;
+  const n: [number, number] = f === 1 ? PX : NX;
+  const h = s.h;
+  const tall = h > 6;
   const zm = (z0 + z1) / 2;
-  box(b, fx + s.face * 0.085 - 0.01, Y, zm - 0.6, fx + s.face * 0.085 + 0.01, Y + 2.3, zm + 0.6, DARK);
-  box(b, fx - 0.1 + s.face * 0.06, Y + 2.75, z0 + 0.25, fx + 0.1 + s.face * 0.06, Y + 3.45, z1 - 0.25, NAVY);
-  sign(b, s.name, fx + s.face * 0.17, Y + 3.1, zm, Math.min(4.2, z1 - z0 - 0.8), 0.62, s.face * (Math.PI / 2));
-  // The taller ones: a band of windows upstairs and a triangle on the parapet
-  if (s.h > 5) {
-    glassX(b, fx + s.face * 0.005, s.face, z0 + 0.6, z1 - 0.6, Y + 4.1, Y + 5.4);
-    const tri = new THREE.CylinderGeometry(0.01, 1.1, 1.0, 3).rotateY(Math.PI / 2).translate(fx - s.face * 0.6, Y + s.h + 0.75, zm);
-    b.add(tri, i % 2 ? TEAL : PEACH);
+  const w = z1 - z0;
+  /** A box out from the front by d0..d1 */
+  const out = (d0: number, d1: number, y0: number, y1: number, za: number, zb: number, mat: THREE.Material) => box(b, Math.min(fx + f * d0, fx + f * d1), y0, za, Math.max(fx + f * d0, fx + f * d1), y1, zb, mat);
+  const body = s.style === 'render' ? WHITE : s.style === 'clad' ? LIGHT : CHARCOAL;
+  box(b, x0, Y, z0, x1, Y + h, z1, body);
+  coping(b, x0, z0, x1, z1, Y + h);
+  if (i % 2 === 0) plant(b, (x0 + x1) / 2 - f * 1.5, zm, Y + h);
+  // Each style's front (the shop window on the ground floor, its frame, the sign, the door)
+  const gw = [z0 + 0.5, z1 - 0.5];
+  if (s.style === 'glass') {
+    // a glass box in black steel: shop window below, curtain wall above, a timber canopy between with a LED edge
+    glassX(b, fx, f, gw[0], gw[1], Y + 0.1, Y + 3.0);
+    if (tall) face(b, CURTAIN, fx, z0 + 0.3, fx, z1 - 0.3, Y + 3.7, Y + h - 0.3, n);
+    for (const z of [z0 + 0.3, zm - 0.04, z1 - 0.38]) out(0, 0.1, Y, Y + h - 0.2, z, z + 0.08, STEEL);
+    out(0, 1.3, Y + 3.0, Y + 3.25, z0 + 0.2, z1 - 0.2, STEEL);
+    b.add(new THREE.PlaneGeometry(1.3, w - 0.4).rotateX(Math.PI / 2).translate(fx + f * 0.65, Y + 2.995, zm), WOOD);
+    out(1.28, 1.33, Y + 3.05, Y + 3.12, z0 + 0.25, z1 - 0.25, LED);
+    out(0.02, 0.06, Y + 3.3, Y + 3.68, z0 + 0.6, z1 - 0.6, DARK);
+    sign(b, s.name, fx + f * 0.065, Y + 3.49, zm, Math.min(4.6, w - 1.4), 0.34, f * (Math.PI / 2));
+  } else if (s.style === 'render') {
+    // white render round a deep window: the frame stands out, the sign on the render over it, lamps either side
+    face(b, RENDER, fx, z0, fx, z1, Y, Y + h, n);
+    glassX(b, fx, f, gw[0] + 0.3, gw[1] - 0.3, Y + 0.1, Y + 2.9);
+    out(0, 0.45, Y + 2.9, Y + 3.2, gw[0], gw[1], WHITE);
+    out(0, 0.45, Y, Y + 3.2, gw[0], gw[0] + 0.3, WHITE);
+    out(0, 0.45, Y, Y + 3.2, gw[1] - 0.3, gw[1], WHITE);
+    sign(b, s.name, fx + f * 0.02, Y + 3.75, zm, Math.min(4.2, w - 1.6), 0.5, f * (Math.PI / 2));
+    if (tall) for (const z of [zm - 1.6, zm + 0.4]) glassX(b, fx + f * 0.005, f, z, z + 1.2, Y + 4.6, Y + 6.2, CURTAIN);
+    b.detail(() => {
+      for (const z of [gw[0] - 0.15, gw[1] + 0.15]) out(0, 0.18, Y + 2.3, Y + 2.6, z - 0.08, z + 0.08, STEEL);
+    });
+  } else if (s.style === 'clad') {
+    // cladding panels, the glass across the ground floor in a black frame, a charcoal fascia, fins upstairs
+    face(b, CLAD, fx, z0, fx, z1, Y + 3.4, Y + h, n);
+    glassX(b, fx, f, z0 + 0.2, z1 - 0.2, Y + 0.1, Y + 2.85);
+    out(0, 0.12, Y + 2.85, Y + 3.4, z0 + 0.1, z1 - 0.1, CHARCOAL);
+    sign(b, s.name, fx + f * 0.125, Y + 3.12, zm, Math.min(4.6, w - 1.2), 0.42, f * (Math.PI / 2));
+    out(0, 0.08, Y, Y + 2.85, z0 + 0.1, z0 + 0.22, STEEL);
+    out(0, 0.08, Y, Y + 2.85, z1 - 0.22, z1 - 0.1, STEEL);
+    if (tall) for (let z = z0 + 0.5; z < z1 - 0.3; z += 0.8) out(0, 0.3, Y + 3.6, Y + h - 0.4, z, z + 0.07, STEEL);
+  } else {
+    // timber over glass: a black steel canopy box, the sign on a white panel on the timber
+    face(b, TIMBER, fx, z0, fx, z1, Y + 3.0, Y + h, n);
+    glassX(b, fx, f, z0 + 0.25, z1 - 0.25, Y + 0.1, Y + 2.9);
+    out(0, 1.1, Y + 2.9, Y + 3.15, z0 + 0.1, z1 - 0.1, STEEL);
+    out(1.08, 1.12, Y + 2.95, Y + 3.02, z0 + 0.15, z1 - 0.15, LED);
+    sign(b, s.name, fx + f * 0.02, Y + 3.7, zm, Math.min(3.8, w - 1.8), 0.46, f * (Math.PI / 2));
+    if (tall) glassX(b, fx + f * 0.005, f, zm - 1.4, zm + 1.4, Y + 4.7, Y + 6.3, CURTAIN);
   }
-  // A striped awning over the window (near only)
-  b.detail(() => {
-    const n = Math.max(3, Math.round((z1 - z0 - 1) / 0.55));
-    for (let k = 0; k < n; k++) {
-      const [a, c] = [z0 + 0.5 + ((z1 - z0 - 1) * k) / n, z0 + 0.5 + ((z1 - z0 - 1) * (k + 1)) / n];
-      const g = new THREE.BoxGeometry(1.1, 0.05, c - a).rotateZ(s.face * -0.35).translate(fx + s.face * 0.55, Y + 2.62, (a + c) / 2);
-      b.add(g, k % 2 ? WHITE : wallOf(s.wall === '#f7e27a' ? '#ff9ec7' : '#ff4f8b'));
+  // The door in the middle (glass in a black frame, a steel pull)
+  out(0.014, 0.03, Y, Y + 2.4, zm - 0.7, zm + 0.7, DARK);
+  b.detail(() => out(0.03, 0.08, Y + 0.9, Y + 1.6, zm + 0.45, zm + 0.5, GREY));
+}
+
+function court(b: Batch, z0: number, z1: number, f: Batch) {
+  // Stone paving across the court, the shops in this stretch, the trees' planters, festoon lights over the promenade
+  flat(b, COURT[0], Math.max(z0, CINEMA.rect[3]), COURT[2], Math.min(z1, COURT[3] - 0.2), Y + 0.006, PAVING, 12);
+  SHOPS.forEach((s, i) => s.rect[1] >= z0 && s.rect[1] < z1 && shop(b, s, i));
+  for (const [x, z] of COURT_TREES) if (z >= z0 && z < z1) planter(b, x, z, Y, 1.4, 0.5);
+  // (the festoons in the FX layer: a thin cable and its bulbs drawn with ink outlines read as thick black ropes)
+  f.detail(() => {
+    for (let z = CINEMA.rect[3] + 8; z < ARCH.z - 4; z += 12) {
+      if (z < z0 || z >= z1 || Math.abs(z - FOUNTAIN.z) < 6) continue;
+      const hold = (x: number, zz: number) => SHOPS.some((s) => zz > s.rect[1] && zz < s.rect[3] && (x === PROM[0] ? s.face === 1 : s.face === -1));
+      if (!hold(PROM[0], z) || !hold(PROM[1], z + 5)) continue;
+      // a sagging line from one row to the other, bulbs along it
+      const pts: THREE.Vector3[] = [];
+      for (let k = 0; k <= 12; k++) {
+        const t = k / 12;
+        pts.push(new THREE.Vector3(PROM[0] + (PROM[1] - PROM[0]) * t, Y + 4.4 - Math.sin(Math.PI * t) * 0.9, z + 5 * t));
+      }
+      f.add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 16, 0.012, 3, false), MID);
+      for (let k = 1; k < 12; k++) f.add(new THREE.SphereGeometry(0.06, 6, 4).translate(pts[k].x, pts[k].y - 0.08, pts[k].z), BULB);
     }
   });
+}
+
+function centre(b: Batch) {
+  // The water feature: a round pool in a stone rim, a steel ring standing in it, jets round it
+  const { x, z, r } = FOUNTAIN;
+  cyl(b, r, 0.45, x, Y, z, STONE, 32);
+  box(b, x - r + 0.05, Y + 0.45, z - 0.02, x + r - 0.05, Y + 0.46, z + 0.02, STONE);
+  b.add(new THREE.CircleGeometry(r - 0.2, 32).rotateX(-Math.PI / 2).translate(x, Y + 0.38, z), WATER);
+  box(b, x - 0.3, Y + 0.3, z - 0.3, x + 0.3, Y + 0.55, z + 0.3, CHARCOAL);
+  b.add(new THREE.TorusGeometry(0.95, 0.09, 8, 32).translate(x, Y + 1.5, z), LIGHT);
+  for (let k = 0; k < 8; k++) {
+    const a = (k / 8) * Math.PI * 2;
+    b.add(new THREE.CylinderGeometry(0.014, 0.035, 1.0, 5, 1, true).translate(0, 0.5, 0).rotateZ(0.35).rotateY(-a).translate(x + Math.cos(a) * (r - 0.6), Y + 0.38, z + Math.sin(a) * (r - 0.6)), SPRAY);
+  }
+  b.add(new THREE.TorusGeometry(r - 0.02, 0.025, 4, 40).rotateX(Math.PI / 2).translate(x, Y + 0.47, z), LED);
+  // Benches: timber slats on concrete plinths
+  for (const s of BENCHES) {
+    for (const sd of [-1, 1]) box(b, s.x + sd * 0.85 - 0.18, Y, s.z - 0.25, s.x + sd * 0.85 + 0.18, Y + 0.4, s.z + 0.25, CONCRETE);
+    box(b, s.x - 1.15, Y + 0.4, s.z - 0.28, s.x + 1.15, Y + 0.48, s.z + 0.28, WOOD);
+  }
+}
+
+function arch(b: Batch) {
+  // The gateway: two stone pylons, a black steel beam across with PALM COURT on a lit panel both ways
+  for (const [x0, z0, x1, z1] of ARCH_POSTS) {
+    box(b, x0, Y, z0, x1, Y + ARCH.h + 0.4, z1, STONE);
+    box(b, x0 - 0.04, Y + ARCH.h + 0.4, z0 - 0.04, x1 + 0.04, Y + ARCH.h + 0.5, z1 + 0.04, MID);
+    box(b, x0 - 0.02, Y + 0.3, z1, x1 + 0.02, Y + 0.36, z1 + 0.03, LED);
+  }
+  const [a, c] = [ARCH_POSTS[0][2], ARCH_POSTS[1][0]];
+  box(b, a, Y + ARCH.h - 0.6, ARCH.z - 0.2, c, Y + ARCH.h, ARCH.z + 0.2, STEEL);
+  for (const s of [1, -1]) sign(b, 'PALM COURT', (a + c) / 2, Y + ARCH.h - 0.3, ARCH.z + s * 0.205, Math.min(4.4, c - a - 1), 0.42, s === 1 ? 0 : Math.PI);
+  box(b, a, Y + ARCH.h - 0.66, ARCH.z - 0.16, c, Y + ARCH.h - 0.6, ARCH.z + 0.16, LED);
 }
 
 function cinema(b: Batch) {
   const [x0, z0, x1, z1] = CINEMA.rect;
   const xm = (x0 + x1) / 2;
-  box(b, x0, Y, z0, x1, Y + CINEMA.h, z1, NAVY);
-  // Pastel bands across its front and a neon line along its roof
-  box(b, x0 - 0.04, Y + 6.2, z1 - 0.02, x1 + 0.04, Y + 6.6, z1 + 0.04, wallOf('#ff9ec7'));
-  box(b, x0 - 0.04, Y + 6.8, z1 - 0.02, x1 + 0.04, Y + 7.0, z1 + 0.04, TEAL);
-  box(b, x0 - 0.04, Y + CINEMA.h, z0 - 0.04, x1 + 0.04, Y + CINEMA.h + 0.3, z1 + 0.04, WHITE);
-  box(b, x0, Y + CINEMA.h - 0.15, z1 + 0.05, x1, Y + CINEMA.h - 0.07, z1 + 0.12, PINK_NEON);
-  // The name, big over the marquee
-  box(b, xm - 7.6, Y + 4.7, z1, xm + 7.6, Y + 6.1, z1 + 0.12, INK);
-  sign(b, CINEMA.name, xm, Y + 5.4, z1 + 0.13, 14.6, 1.2, 0);
-  // The marquee out over the square: its box, NOW SHOWING both ways, a row of bulbs round its edge
-  box(b, xm - 6, Y + 3.3, z1, xm + 6, Y + 4.3, z1 + 2.6, WHITE);
-  sign(b, 'NOW SHOWING', xm, Y + 3.8, z1 + 2.61, 6, 0.75, 0);
-  for (let x = xm - 5.8; x <= xm + 5.8; x += 0.5) b.add(new THREE.SphereGeometry(0.07, 6, 4).translate(x, Y + 3.3, z1 + 2.64), BULB);
-  for (let x = xm - 5.8; x <= xm + 5.8; x += 0.5) b.add(new THREE.SphereGeometry(0.07, 6, 4).translate(x, Y + 4.3, z1 + 2.64), BULB);
-  // Glass doors under it, posters either side
-  glassZ(b, z1, 1, xm - 4.5, xm + 4.5, Y, Y + 3.0);
+  const h = CINEMA.h;
+  box(b, x0, Y, z0, x1, Y + h, z1, CHARCOAL);
+  coping(b, x0, z0, x1, z1, Y + h);
+  for (const [ax, az, bx, bz, n] of [
+    [x0, z0, x1, z0, NZ],
+    [x0, z0, x0, z1, NX],
+    [x1, z0, x1, z1, PX],
+  ] as const)
+    face(b, CLAD_DARK, ax, az, bx, bz, Y, Y + h, n as [number, number]);
+  // The front: dark panels either side, the double-height glazed lobby, the canopy over its doors
+  face(b, CLAD_DARK, x0, z1, xm - 7, z1, Y, Y + h, PZ);
+  face(b, CLAD_DARK, xm + 7, z1, x1, z1, Y, Y + h, PZ);
+  face(b, CLAD_DARK, xm - 7, z1, xm + 7, z1, Y + 6.2, Y + h, PZ);
+  face(b, CURTAIN, xm - 7, z1, xm + 7, z1, Y, Y + 6.2, PZ);
+  for (let x = xm - 7; x <= xm + 7.01; x += 3.5) box(b, x - 0.06, Y, z1, x + 0.06, Y + 6.2, z1 + 0.25, STEEL);
+  glassZ(b, z1 + 0.25, 1, xm - 3, xm + 3, Y, Y + 2.6, GLASS);
+  // (the canopy: steel, a timber soffit, LED along its edge)
+  box(b, xm - 8, Y + 3.9, z1, xm + 8, Y + 4.25, z1 + 3, STEEL);
+  under(b, xm - 8, z1, xm + 8, z1 + 3, Y + 3.895, TIMBER);
+  box(b, xm - 8, Y + 3.95, z1 + 2.98, xm + 8, Y + 4.05, z1 + 3.03, LED);
+  b.detail(() => {
+    for (let x = xm - 7; x < xm + 7.5; x += 2) b.add(new THREE.CircleGeometry(0.16, 10).rotateX(Math.PI / 2).translate(x, Y + 3.885, z1 + 1.5), PANEL);
+  });
+  // The name in lit letters on the band over the glass; NOW SHOWING over the canopy
+  sign(b, CINEMA.name, xm, Y + 7.4, z1 + 0.03, 12, 1.1, 0);
+  sign(b, 'NOW SHOWING', xm, Y + 4.7, z1 + 0.03, 4.6, 0.55, 0);
+  // Poster lightboxes either side of the lobby
   for (let k = 0; k < FILMS.length; k++) {
     const side = k < 3 ? -1 : 1;
-    const x = xm + side * (6.6 + (k % 3) * 2.2);
-    box(b, x - 0.68, Y + 0.6, z1, x + 0.68, Y + 3.4, z1 + 0.08, CHROME);
-    poster(b, k, x, Y + 2.0, z1 + 0.09, 0);
+    const x = xm + side * (8.4 + (k % 3) * 1.9);
+    box(b, x - 0.68, Y + 0.6, z1, x + 0.68, Y + 3.3, z1 + 0.12, STEEL);
+    poster(b, k, x, Y + 1.95, z1 + 0.13, 0);
   }
-}
-
-function court(b: Batch, z0: number, z1: number) {
-  // The promenade's checkered paving, the rows' shops in this stretch
-  flat(b, PROM[0], Math.max(z0, CINEMA.rect[3]), PROM[1], Math.min(z1, COURT[3] - 0.2), Y + 0.006, TILES, 10);
-  SHOPS.forEach((s, i) => s.rect[1] >= z0 && s.rect[1] < z1 && shop(b, s, i));
-  for (const [x, z] of PALMS) if (z >= z0 && z < z1) palm(b, x, z);
-}
-
-function centre(b: Batch) {
-  // The fountain: a pastel basin, its water, a column with a bowl and the jet
-  const { x, z, r } = FOUNTAIN;
-  cyl(b, r, 0.55, x, Y, z, wallOf('#7fe0d0'), 28);
-  box(b, x - r, Y + 0.55, z - 0.04, x + r, Y + 0.6, z + 0.04, PINK_NEON);
-  b.add(new THREE.CircleGeometry(r - 0.25, 28).rotateX(-Math.PI / 2).translate(x, Y + 0.47, z), WATER);
-  cyl(b, 0.22, 1.3, x, Y + 0.4, z, WHITE, 10);
-  cyl(b, 0.9, 0.18, x, Y + 1.6, z, wallOf('#ff9ec7'), 18, 0.3);
-  b.add(new THREE.CircleGeometry(0.8, 18).rotateX(-Math.PI / 2).translate(x, Y + 1.77, z), WATER);
-  cyl(b, 0.05, 1.2, x, Y + 1.78, z, SPRAY, 6, 0.1);
-  b.add(new THREE.ConeGeometry(0.75, 0.8, 12, 1, true).rotateX(Math.PI).translate(x, Y + 2.6, z), SPRAY);
-  for (const s of BENCHES) {
-    const back = s.ry === 0 ? -1 : 1;
-    box(b, s.x - 1.1, Y + 0.38, s.z - 0.22, s.x + 1.1, Y + 0.45, s.z + 0.22, WOOD);
-    box(b, s.x - 1.1, Y + 0.45, s.z + back * 0.2 - 0.03, s.x + 1.1, Y + 0.9, s.z + back * 0.2 + 0.03, wallOf('#ff9ec7'));
-    for (const sd of [-1, 1]) box(b, s.x + sd * 0.95 - 0.04, Y, s.z - 0.18, s.x + sd * 0.95 + 0.04, Y + 0.38, s.z + 0.18, CHROME);
-  }
-}
-
-function arch(b: Batch) {
-  // Two chrome posts, the beam between them with PALM COURT both ways, a neon arc over it
-  for (const [x0, z0, x1, z1] of ARCH_POSTS) {
-    box(b, x0, Y, z0, x1, Y + ARCH.h, z1, CHROME);
-    box(b, x0 - 0.05, Y + ARCH.h, z0 - 0.05, x1 + 0.05, Y + ARCH.h + 0.12, z1 + 0.05, PINK_NEON);
-  }
-  const [a, c] = [ARCH_POSTS[0][2], ARCH_POSTS[1][0]];
-  box(b, a, Y + ARCH.h - 1.3, ARCH.z - 0.25, c, Y + ARCH.h - 0.3, ARCH.z + 0.25, NAVY);
-  sign(b, 'PALM COURT', (a + c) / 2, Y + ARCH.h - 0.8, ARCH.z + 0.26, Math.min(8, c - a - 0.4), 0.85, 0);
-  sign(b, 'PALM COURT', (a + c) / 2, Y + ARCH.h - 0.8, ARCH.z - 0.26, Math.min(8, c - a - 0.4), 0.85, Math.PI);
-  const pts: THREE.Vector3[] = [];
-  for (let k = 0; k <= 16; k++) {
-    const t = k / 16;
-    pts.push(new THREE.Vector3(a + (c - a) * t, Y + ARCH.h + Math.sin(Math.PI * t) * 1.4, ARCH.z));
-  }
-  b.add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 24, 0.06, 4, false), CYAN_NEON);
 }
 
 /* ---------- Starlight Mall ---------- */
@@ -417,96 +417,197 @@ function anchor(b: Batch, k: number) {
   const a = ANCHORS[k];
   const [x0, z0, x1, z1] = a.rect;
   const xm = (x0 + x1) / 2;
-  box(b, x0, Y, z0, x1, Y + a.h, z1, wallOf(a.wall));
-  // A white band at the top, a neon line under it, chrome stripes down the front
-  box(b, x0 - 0.06, Y + a.h - 0.9, z0 - 0.06, x1 + 0.06, Y + a.h + 0.2, z1 + 0.06, WHITE);
-  box(b, x0, Y + a.h - 1.05, z1 + 0.06, x1, Y + a.h - 0.97, z1 + 0.12, k ? CYAN_NEON : PINK_NEON);
-  for (const sx of [x0 + 1.2, x1 - 1.4]) box(b, sx, Y, z1, sx + 0.2, Y + a.h - 1.1, z1 + 0.06, CHROME);
-  // The name, big, on its front and on the side it shows to its avenue
-  box(b, xm - 5.6, Y + 4.4, z1, xm + 5.6, Y + 5.8, z1 + 0.1, INK);
-  sign(b, a.name, xm, Y + 5.1, z1 + 0.11, 10.8, 1.25, 0);
-  const sideX = k ? x1 : x0;
-  const sd = k ? 1 : -1;
-  box(b, sideX + (k ? 0 : -0.1), Y + 4.4, (z0 + z1) / 2 - 8, sideX + (k ? 0.1 : 0), Y + 5.8, (z0 + z1) / 2 + 8, INK);
-  sign(b, a.name, sideX + sd * 0.11, Y + 5.1, (z0 + z1) / 2, 15.6, 1.25, sd * (Math.PI / 2));
-  // Its doors under a canopy, glass either side
-  glassZ(b, z1, 1, xm - 3, xm + 3, Y, Y + 3);
-  box(b, xm - 3.5, Y + 3.1, z1, xm + 3.5, Y + 3.35, z1 + 1.6, CHROME);
-  glassZ(b, z1, 1, x0 + 1.6, xm - 3.4, Y + 0.6, Y + 2.8);
-  glassZ(b, z1, 1, xm + 3.4, x1 - 1.6, Y + 0.6, Y + 2.8);
+  const h = a.h;
+  const dark = a.wall === 'dark';
+  const clad = dark ? CLAD_DARK : CLAD;
+  box(b, x0, Y, z0, x1, Y + h, z1, dark ? CHARCOAL : LIGHT);
+  coping(b, x0, z0, x1, z1, Y + h);
+  plant(b, xm - 3, (z0 + z1) / 2, Y + h);
+  plant(b, xm + 2, z0 + 6, Y + h);
+  // The sides: panels all round (above the hall on its inner side), its avenue side with its name
+  const outer = k ? x1 : x0;
+  const on: [number, number] = k ? PX : NX;
+  face(b, clad, outer, z0, outer, z1, Y, Y + h, on);
+  face(b, clad, k ? x0 : x1, z0, k ? x0 : x1, z1, Y + HALL.h, Y + h, k ? NX : PX);
+  sign(b, a.name, outer + on[0] * 0.03, Y + h - 1.4, (z0 + z1) / 2 + 4, 9, 0.95, on[0] * (Math.PI / 2));
+  face(b, CURTAIN, outer, (z0 + z1) / 2 - 8, outer, (z0 + z1) / 2 - 4.8, Y + 0.6, Y + h - 0.8, on, 0.014);
+  // The back: panels, the loading dock (two roller doors, bumpers, a canopy)
+  face(b, clad, x0, z0, x1, z0, Y, Y + h, NZ);
+  for (const dx of [-3.4, 0.6]) {
+    box(b, xm + dx, Y, z0 - 0.05, xm + dx + 2.8, Y + 3.2, z0, GREY);
+    b.detail(() => {
+      for (let y = 0.3; y < 3.1; y += 0.3) box(b, xm + dx, Y + y, z0 - 0.07, xm + dx + 2.8, Y + y + 0.03, z0 - 0.05, MID);
+      for (const bx of [xm + dx + 0.2, xm + dx + 2.4]) box(b, bx, Y + 0.6, z0 - 0.25, bx + 0.2, Y + 1.1, z0, DARK);
+    });
+  }
+  box(b, xm - 4, Y + 3.5, z0 - 1.6, xm + 4, Y + 3.7, z0, STEEL);
+  // The front
+  if (!dark) {
+    // Maxwell's: light panels, a glazed ground floor in a black frame, black fins upstairs either side of its name
+    face(b, CLAD, x0, z1, x1, z1, Y + 3.9, Y + h, PZ);
+    glassZ(b, z1, 1, x0 + 0.5, x1 - 0.5, Y + 0.15, Y + 3.5);
+    box(b, x0 + 0.3, Y + 3.5, z1, x1 - 0.3, Y + 3.9, z1 + 0.12, STEEL);
+    for (const x of [x0 + 0.3, xm - 3.05, xm + 2.95, x1 - 0.4]) box(b, x, Y, z1, x + 0.1, Y + 3.5, z1 + 0.1, STEEL);
+    for (let x = x0 + 0.8; x < x1 - 0.5; x += 0.9) if (Math.abs(x - xm) > 5) box(b, x, Y + 4.2, z1, x + 0.08, Y + h - 0.3, z1 + 0.35, STEEL);
+    box(b, xm - 4.8, Y + 4.6, z1, xm + 4.8, Y + 6.4, z1 + 0.1, CHARCOAL);
+    sign(b, a.name, xm, Y + 5.5, z1 + 0.11, 8.8, 1.05, 0);
+    glassZ(b, z1 + 0.13, 1, xm - 2.8, xm + 2.8, Y, Y + 3.0, GLASS);
+    box(b, xm - 3.4, Y + 3.3, z1, xm + 3.4, Y + 3.5, z1 + 1.8, STEEL);
+    box(b, xm - 3.4, Y + 3.32, z1 + 1.78, xm + 3.4, Y + 3.38, z1 + 1.82, LED);
+  } else {
+    // Bright & Co.: dark panels, a double-height glass front in the middle under a timber band, its name on a white panel
+    face(b, CLAD_DARK, x0, z1, xm - 4.5, z1, Y, Y + h, PZ);
+    face(b, CLAD_DARK, xm + 4.5, z1, x1, z1, Y, Y + h, PZ);
+    face(b, CURTAIN, xm - 4.5, z1, xm + 4.5, z1, Y, Y + h - 1.4, PZ);
+    face(b, TIMBER, xm - 4.5, z1, xm + 4.5, z1, Y + h - 1.4, Y + h, PZ);
+    for (let x = xm - 4.5; x <= xm + 4.51; x += 1.5) box(b, x - 0.05, Y, z1, x + 0.05, Y + h - 1.4, z1 + 0.22, STEEL);
+    sign(b, a.name, xm, Y + h - 0.7, z1 + 0.03, 6.4, 0.85, 0);
+    for (const sx of [x0 + 0.6, xm + 5.1]) glassZ(b, z1, 1, sx, sx + (xm - 4.5 - x0 - 1.2), Y + 0.15, Y + 3.0);
+    glassZ(b, z1 + 0.23, 1, xm - 2.5, xm + 2.5, Y, Y + 3.0, GLASS);
+    box(b, xm - 5, Y + 3.4, z1, xm + 5, Y + 3.6, z1 + 2, STEEL);
+    under(b, xm - 5, z1, xm + 5, z1 + 2, Y + 3.395, TIMBER);
+    box(b, xm - 5, Y + 3.42, z1 + 1.98, xm + 5, Y + 3.48, z1 + 2.02, LED);
+  }
 }
 
 function hall(b: Batch) {
   const [x0, z0, x1, z1] = HALL.rect;
   const h = HALL.h;
-  box(b, x0, Y, z0, x1, Y + h, z1, LILAC);
-  // Neon bands round it, a white cornice, glass-block corners
-  box(b, x0, Y + 3.15, z1, x1, Y + 3.25, z1 + 0.06, CYAN_NEON);
-  box(b, x0 - 0.06, Y + h, z0 - 0.06, x1 + 0.06, Y + h + 0.3, z1 + 0.06, WHITE);
-  box(b, x0, Y + h - 0.15, z1 + 0.06, x1, Y + h - 0.07, z1 + 0.12, PINK_NEON);
-  for (const cx of [x0 + 0.4, x1 - 2.4]) box(b, cx, Y, z1, cx + 2, Y + h - 0.4, z1 + 0.05, SKY);
-  // Windows along the front, both storeys
-  const [p0, p1] = [PORCH.rect[0], PORCH.rect[2]];
-  for (const [a, c] of [
-    [x0 + 2.8, p0 - 0.6],
-    [p1 + 0.6, x1 - 2.8],
-  ]) {
-    glassZ(b, z1, 1, a, c, Y + 0.4, Y + 2.7);
-    glassZ(b, z1, 1, a, c, Y + 3.6, Y + 5.6);
-  }
-  // The skylit roof: a glass vault along it on a white curb
-  box(b, x0 + 3, Y + h + 0.3, (z0 + z1) / 2 - 4.6, x1 - 3, Y + h + 0.6, (z0 + z1) / 2 + 4.6, WHITE);
-  const vault = new THREE.CylinderGeometry(4.2, 4.2, x1 - x0 - 7, 16, 1, false, 0, Math.PI).rotateZ(Math.PI / 2).rotateX(-Math.PI / 2).scale(1, 0.45, 1);
-  b.add(vault.translate((x0 + x1) / 2, Y + h + 0.6, (z0 + z1) / 2), SKY);
-  for (let x = x0 + 4; x < x1 - 3; x += 3.5) {
+  // Its walls (hollow: mallinside3d.ts draws inside), open at the doors behind the porch, a wall over them
+  for (const [a0, c0, a1, c1] of WALLS) box(b, a0, Y, c0, a1, Y + h, c1, LIGHT);
+  box(b, DOOR.x0, Y + DOOR.h, z1 - WALL, DOOR.x1, Y + h, z1, LIGHT);
+  // The front: clad piers at the ends, the curtain wall between, a floor band across it, a dark band at the top
+  const [p0, p1] = [x0 + 2.2, x1 - 2.2];
+  face(b, CLAD, x0, z1, p0, z1, Y, Y + h, PZ);
+  face(b, CLAD, p1, z1, x1, z1, Y, Y + h, PZ);
+  face(b, CURTAIN, p0, z1, DOOR.x0, z1, Y, Y + h - 0.9, PZ);
+  face(b, CURTAIN, DOOR.x1, z1, p1, z1, Y, Y + h - 0.9, PZ);
+  face(b, CURTAIN, DOOR.x0, z1, DOOR.x1, z1, Y + DOOR.h, Y + h - 0.9, PZ);
+  face(b, CLAD_DARK, p0, z1, p1, z1, Y + h - 0.9, Y + h, PZ, 0.02);
+  box(b, p0, Y + 3.0, z1, p1, Y + 3.45, z1 + 0.06, LIGHT);
+  b.detail(() => {
+    for (let x = p0 + 3.2; x < p1 - 0.5; x += 3.2) if (x < DOOR.x0 - 0.2 || x > DOOR.x1 + 0.2) box(b, x - 0.04, Y, z1, x + 0.04, Y + h - 0.9, z1 + 0.22, STEEL);
+  });
+  // The back: panels, a service door
+  face(b, CLAD, x0, z0, x1, z0, Y, Y + h, NZ);
+  box(b, (x0 + x1) / 2 - 0.7, Y, z0 - 0.04, (x0 + x1) / 2 + 0.7, Y + 2.3, z0, MID);
+  // The roof: a membrane round the skylight's opening, the coping, the plant
+  const zc = (z0 + z1) / 2;
+  const [vx0, vx1, vz0, vz1] = [x0 + 3.5, x1 - 3.5, zc - 4.2, zc + 4.2];
+  const [i0, j0, i1, j1] = [x0 + WALL, z0 + WALL, x1 - WALL, z1 - WALL];
+  for (const [a0, c0, a1, c1] of [
+    [i0, j0, i1, vz0],
+    [i0, vz1, i1, j1],
+    [i0, vz0, vx0, vz1],
+    [vx1, vz0, i1, vz1],
+  ])
+    box(b, a0, Y + h - 0.25, c0, a1, Y + h - 0.006, c1, GREY);
+  coping(b, x0, z0, x1, z1, Y + h);
+  plant(b, x0 + 4, z0 + 2, Y + h);
+  plant(b, x1 - 6, z0 + 2, Y + h);
+  // The skylight: a glass vault over the opening on a grey curb, black steel ribs over it
+  for (const [a0, c0, a1, c1] of [
+    [vx0 - 0.5, vz0 - 0.4, vx1 + 0.5, vz0],
+    [vx0 - 0.5, vz1, vx1 + 0.5, vz1 + 0.4],
+    [vx0 - 0.5, vz0, vx0, vz1],
+    [vx1, vz0, vx1 + 0.5, vz1],
+  ])
+    box(b, a0, Y + h, c0, a1, Y + h + 0.5, c1, GREY);
+  const vault = new THREE.CylinderGeometry(4.2, 4.2, vx1 - vx0, 16, 1, true, 0, Math.PI).rotateZ(Math.PI / 2).rotateX(-Math.PI / 2).scale(1, 0.45, 1);
+  b.add(vault.translate((x0 + x1) / 2, Y + h + 0.5, zc), GLASS);
+  for (let x = vx0; x <= vx1 + 0.01; x += (vx1 - vx0) / 6) {
     const ribs: THREE.Vector3[] = [];
     for (let k = 0; k <= 10; k++) {
       const t = (k / 10) * Math.PI;
-      ribs.push(new THREE.Vector3(x, Y + h + 0.6 + Math.sin(t) * 4.2 * 0.45 + 0.03, (z0 + z1) / 2 + Math.cos(t) * 4.2));
+      ribs.push(new THREE.Vector3(x, Y + h + 0.5 + Math.sin(t) * 4.2 * 0.45 + 0.03, zc + Math.cos(t) * 4.2));
     }
-    b.add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(ribs), 12, 0.05, 4, false), WHITE);
+    b.add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(ribs), 12, 0.05, 4, false), STEEL);
   }
+  box(b, vx0, Y + h + 0.5 + 4.2 * 0.45, zc - 0.05, vx1, Y + h + 0.5 + 4.2 * 0.45 + 0.08, zc + 0.05, STEEL);
+  for (const x of [vx0, vx1]) b.add(new THREE.CircleGeometry(4.2, 16, 0, Math.PI).scale(1, 0.45, 1).rotateY(Math.PI / 2).translate(x, Y + h + 0.5, zc), GLASS);
 }
 
 function porch(b: Batch) {
   const [x0, z0, x1, z1] = PORCH.rect;
   const xm = (x0 + x1) / 2;
-  // Chrome posts at the front corners, the canopy, the triangle over it with the mall's name
-  for (const x of [x0 + 0.2, x1 - 0.2]) cyl(b, 0.2, PORCH.h, x, Y, z1 - 0.2, CHROME, 10);
-  box(b, x0, Y + PORCH.h, z0, x1, Y + PORCH.h + 0.35, z1, WHITE);
-  box(b, x0, Y + PORCH.h - 0.08, z1 - 0.02, x1, Y + PORCH.h, z1 + 0.04, YELLOW_NEON);
-  const tri = new THREE.Shape([new THREE.Vector2(-5, 0), new THREE.Vector2(5, 0), new THREE.Vector2(0, 2.6)]);
-  b.add(new THREE.ExtrudeGeometry(tri, { depth: 0.3, bevelEnabled: false }).translate(xm, Y + PORCH.h + 0.35, z1 - 0.3), wallOf('#ff9ec7'));
-  box(b, xm - 3.6, Y + PORCH.h + 0.55, z1 + 0.01, xm + 3.6, Y + PORCH.h + 1.35, z1 + 0.05, INK);
-  sign(b, MALL_NAME, xm, Y + PORCH.h + 0.95, z1 + 0.06, 7, 0.75, 0);
-  // Its doors at the back, under the canopy
-  glassZ(b, z0, 1, x0 + 1, x1 - 1, Y, Y + 3.2);
-  sign(b, 'ENTRANCE', xm, Y + 3.6, z0 + 0.03, 2.6, 0.5, 0);
+  // The entrance's feature wall over the porch: dark panels standing proud, the mall's name, its gold star
+  const [fx0, fx1] = [x0 - 0.5, x1 + 0.5];
+  box(b, fx0, Y + 4.6, z0, fx1, Y + 8, z0 + 0.3, CHARCOAL);
+  face(b, CLAD_DARK, fx0, z0 + 0.3, fx1, z0 + 0.3, Y + 4.6, Y + 8, PZ);
+  coping(b, fx0, z0, fx1, z0 + 0.3, Y + 8);
+  sign(b, MALL_NAME, xm + 0.6, Y + 6.3, z0 + 0.32, 8, 0.95, 0);
+  const star = new THREE.Shape();
+  for (let k = 0; k < 10; k++) {
+    const a = (k / 10) * Math.PI * 2 + Math.PI / 2;
+    const r = k % 2 ? 0.2 : 0.48;
+    if (k) star.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+    else star.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+  }
+  b.add(new THREE.ExtrudeGeometry(star, { depth: 0.08, bevelEnabled: false }).translate(xm - 4.3, Y + 6.3, z0 + 0.3), GOLD);
+  box(b, fx0, Y + 7.3, z0 + 0.3, fx1, Y + 7.36, z0 + 0.34, LED);
+  // The cantilevered canopy: white edges, a timber soffit with downlights, a LED line along its front; two black columns
+  box(b, x0 - 1, Y + PORCH.h, z0, x1 + 1, Y + PORCH.h + 0.35, z1, WHITE);
+  under(b, x0 - 1, z0, x1 + 1, z1, Y + PORCH.h - 0.005, TIMBER);
+  box(b, x0 - 1, Y + PORCH.h + 0.05, z1, x1 + 1, Y + PORCH.h + 0.12, z1 + 0.04, LED);
+  for (const x of [x0 + 0.2, x1 - 0.2]) cyl(b, 0.16, PORCH.h, x, Y, z1 - 0.2, STEEL, 12);
+  b.detail(() => {
+    for (let x = x0; x <= x1; x += 2.5) b.add(new THREE.CircleGeometry(0.14, 10).rotateX(Math.PI / 2).translate(x, Y + PORCH.h - 0.012, (z0 + z1) / 2), PANEL);
+  });
+  // The doors, open: a black frame, the glass leaves slid aside, ENTRANCE over them
+  box(b, DOOR.x0 - 0.15, Y, z0, DOOR.x0, Y + DOOR.h + 0.15, z0 + 0.08, STEEL);
+  box(b, DOOR.x1, Y, z0, DOOR.x1 + 0.15, Y + DOOR.h + 0.15, z0 + 0.08, STEEL);
+  box(b, DOOR.x0 - 0.15, Y + DOOR.h, z0, DOOR.x1 + 0.15, Y + DOOR.h + 0.15, z0 + 0.08, STEEL);
+  for (const [a, c] of [
+    [DOOR.x0, DOOR.x0 + 1.1],
+    [DOOR.x1 - 1.1, DOOR.x1],
+  ])
+    b.add(new THREE.PlaneGeometry(c - a, DOOR.h - 0.1).translate((a + c) / 2, Y + DOOR.h / 2, z0 - 0.12), GLASS);
+  sign(b, 'ENTRANCE', xm, Y + 3.75, z0 + 0.03, 2.2, 0.42, 0);
+  // The bollards across the doors: brushed steel, a LED ring near the top
+  for (const [bx, bz] of BOLLARDS) {
+    cyl(b, BOLLARD, 0.85, bx, Y, bz, GREY, 12);
+    cyl(b, BOLLARD + 0.006, 0.04, bx, Y + 0.72, bz, LED, 12);
+  }
+}
+
+function forecourt(b: Batch) {
+  // Paving along the front and in front of the hall, the planters (their trees are the city's), the pay stations, bike racks
+  flat(b, MALL_BLOCK[0], ANCHORS[0].rect[3], MALL_BLOCK[2], MALL_BLOCK[3] - 0.05, Y + 0.006, PAVING, 12);
+  flat(b, ANCHORS[0].rect[2], HALL.rect[3], ANCHORS[1].rect[0], ANCHORS[0].rect[3], Y + 0.006, PAVING, 12);
+  for (const [x, z] of PLANTERS) planter(b, x, z, Y, PLANTER, 0.55);
+  for (const [x, z] of PAY_STATIONS) {
+    box(b, x - 0.35, Y, z - 0.25, x + 0.35, Y + 1.6, z + 0.25, STEEL);
+    box(b, x - 0.25, Y + 1.05, z + 0.25, x + 0.25, Y + 1.4, z + 0.27, PANEL);
+    sign(b, 'P', x, Y + 1.75, z + 0.02, 0.3, 0.3, 0);
+    box(b, x - 0.12, Y + 1.6, z - 0.01, x + 0.12, Y + 1.9, z + 0.01, STEEL);
+  }
+  b.detail(() => {
+    for (let i = 0; i < 4; i++) {
+      const x = PORCH.rect[0] - 6.5 + i * 0.8;
+      const z = MALL_BLOCK[3] - 1.3;
+      b.add(new THREE.TorusGeometry(0.32, 0.025, 4, 12, Math.PI).translate(x, Y + 0.02, z), STEEL);
+    }
+  });
 }
 
 function pylon(b: Batch) {
   const { x, z, w, d, h } = PYLON;
-  box(b, x - w / 2 - 0.2, Y, z - d / 2 - 0.2, x + w / 2 + 0.2, Y + 0.8, z + d / 2 + 0.2, CHROME);
-  box(b, x - w / 2, Y + 0.8, z - d / 2, x + w / 2, Y + h, z + d / 2, INK);
-  for (const s of [-1, 1]) b.add(new THREE.PlaneGeometry(w - 0.2, h - 1.4).rotateY(s === 1 ? 0 : Math.PI).translate(x, Y + 0.8 + (h - 0.8) / 2, z + s * (d / 2 + 0.01)), PYLON_FACE);
-  // The star on top
-  const star = new THREE.Shape();
-  for (let k = 0; k < 10; k++) {
-    const a = (k / 10) * Math.PI * 2 + Math.PI / 2;
-    const r = k % 2 ? 0.28 : 0.65;
-    if (k) star.lineTo(Math.cos(a) * r, Math.sin(a) * r);
-    else star.moveTo(Math.cos(a) * r, Math.sin(a) * r);
-  }
-  b.add(new THREE.ExtrudeGeometry(star, { depth: 0.16, bevelEnabled: false }).translate(x, Y + h - 0.05, z - 0.08), YELLOW_NEON);
+  box(b, x - w / 2 - 0.2, Y, z - d / 2 - 0.2, x + w / 2 + 0.2, Y + 0.4, z + d / 2 + 0.2, STONE);
+  box(b, x - w / 2, Y + 0.4, z - d / 2, x + w / 2, Y + h, z + d / 2, CHARCOAL);
+  for (const s of [-1, 1]) b.add(new THREE.PlaneGeometry(w - 0.2, h - 1.2).rotateY(s === 1 ? 0 : Math.PI).translate(x, Y + 0.4 + (h - 0.4) / 2 + 0.2, z + s * (d / 2 + 0.01)), TOTEM);
+  for (const sx of [-1, 1]) box(b, x + sx * (w / 2) - 0.02, Y + 0.4, z - d / 2 - 0.02, x + sx * (w / 2) + 0.02, Y + h, z + d / 2 + 0.02, LED);
+  box(b, x - w / 2 - 0.05, Y + h, z - d / 2 - 0.05, x + w / 2 + 0.05, Y + h + 0.12, z + d / 2 + 0.05, MID);
 }
 
 function shelter(b: Batch) {
   const [x0, z0, x1, z1] = SHELTER;
-  box(b, x0, Y, z0, x1, Y + 2.2, z0 + 0.06, SKY);
-  for (const x of [x0, x1 - 0.08]) box(b, x, Y, z0, x + 0.08, Y + 2.3, z1, CHROME);
-  box(b, x0 - 0.1, Y + 2.3, z0 - 0.1, x1 + 0.1, Y + 2.42, z1 + 0.15, TEAL);
+  // A black steel frame, glass back and roof, a timber bench, a lit ad panel at its end, the BUS sign on a post
+  for (const x of [x0, x1 - 0.08]) box(b, x, Y, z0, x + 0.08, Y + 2.3, z1, STEEL);
+  b.add(new THREE.PlaneGeometry(x1 - x0, 2.1).translate((x0 + x1) / 2, Y + 1.1, z0 + 0.04), GLASS);
+  box(b, x0 - 0.1, Y + 2.3, z0 - 0.1, x1 + 0.1, Y + 2.38, z1 + 0.15, STEEL);
   box(b, x0 + 0.2, Y + 0.42, z0 + 0.1, x1 - 0.2, Y + 0.48, z0 + 0.5, WOOD);
-  box(b, x1 + 0.3, Y, z1 - 0.05, x1 + 0.38, Y + 2.5, z1 + 0.03, DARK);
+  box(b, x1 - 0.06, Y + 0.3, z0 + 0.1, x1 - 0.02, Y + 2.1, z1 - 0.1, PANEL);
+  box(b, x1 + 0.3, Y, z1 - 0.05, x1 + 0.38, Y + 2.5, z1 + 0.03, STEEL);
   sign(b, 'BUS', x1 + 0.34, Y + 2.65, z1 + 0.04, 0.6, 0.3, 0);
 }
 
@@ -515,6 +616,12 @@ function shelter(b: Batch) {
 const ROAD_Y = 0.036;
 const PAINT_Y = 0.046;
 const NS0 = NS_ROADS[0];
+const NS3 = NS_ROADS[NS_ROADS.length - 1];
+
+/** A zebra across a north-south avenue at z */
+function zebraOver(b: Batch, road: { c: number; half: number }, at: { z: number; half: number }) {
+  for (let x = road.c - road.half + 0.3; x < road.c + road.half - 0.2; x += 0.85) b.add(new THREE.PlaneGeometry(0.45, at.half * 2).rotateX(-Math.PI / 2).translate(x + 0.22, PAINT_Y, at.z), PAINT);
+}
 
 function loopRoad(b: Batch) {
   const { zN, zS, xE, half } = LOOP;
@@ -523,26 +630,113 @@ function loopRoad(b: Batch) {
   flat(b, xw, zS - half, xE + half, zS + half, ROAD_Y, ASPHALT);
   flat(b, xE - half, zN + half, xE + half, zS - half, ROAD_Y, ASPHALT);
   b.detail(() => {
-    // A dashed centre line round it (two-way)
-    for (let x = xw + 1; x < xE - half - 0.4; x += 1.3) for (const z of [zN, zS]) box(b, x, PAINT_Y - 0.002, z - 0.04, x + 0.6, PAINT_Y, z + 0.04, YELLOW);
-    for (let z = zN + half + 0.6; z < zS - half - 0.4; z += 1.3) box(b, xE - 0.04, PAINT_Y - 0.002, z, xE + 0.04, PAINT_Y, z + 0.6, YELLOW);
-    // The zebra over the north avenue from Palm Court's passage
-    for (let x = NS0.c - NS0.half + 0.3; x < NS0.c + NS0.half - 0.2; x += 0.85) b.add(new THREE.PlaneGeometry(0.45, ZEBRA.half * 2).rotateX(-Math.PI / 2).translate(x + 0.22, PAINT_Y, ZEBRA.z), PAINT);
+    // A dashed white centre line round it (two-way)
+    for (let x = xw + 1; x < xE - half - 0.4; x += 1.3) for (const z of [zN, zS]) if (Math.abs(x - LOOP_ZEBRA.x) > LOOP_ZEBRA.half + 0.4) box(b, x, PAINT_Y - 0.002, z - 0.04, x + 0.6, PAINT_Y, z + 0.04, PAINT);
+    for (let z = zN + half + 0.6; z < zS - half - 0.4; z += 1.3) box(b, xE - 0.04, PAINT_Y - 0.002, z, xE + 0.04, PAINT_Y, z + 0.6, PAINT);
+    // The zebras: over the north avenue from Uptown North's square, and over the loop from the car park to the porch
+    zebraOver(b, NS0, TOWER_ZEBRA);
+    for (let z = zN - half + 0.2; z < zN + half - 0.2; z += 0.85) b.add(new THREE.PlaneGeometry(LOOP_ZEBRA.half * 2, 0.45).rotateX(-Math.PI / 2).translate(LOOP_ZEBRA.x, PAINT_Y, z + 0.22), PAINT);
+  });
+}
+
+/**
+ * A car park island: a granite kerb round a lawn, a paved walk down the middle with low light bollards at its
+ * ends, either side a bed of mulch with a clipped hedge along the bays, flowering shrubs, grasses and a boulder
+ * round the trees (the city's, mall.ts `islandTrees()`); every other island has EV chargers at its ends with
+ * their bays painted green, the rest a trolley shelter.
+ */
+function island(b: Batch, [ix0, iz0, ix1, iz1]: Rect, i: number) {
+  const xm = (ix0 + ix1) / 2;
+  const zm = (iz0 + iz1) / 2;
+  const top = Y + 0.22;
+  const hw = ISLAND_WALK / 2;
+  box(b, ix0, Y, iz0, ix1, top, iz1, STONE);
+  b.add(new THREE.PlaneGeometry(ix1 - ix0 - 0.3, iz1 - iz0 - 0.3).rotateX(-Math.PI / 2).translate(xm, top + 0.006, zm), LAWN);
+  // The walk: paving across, a dark granite edge either side
+  flat(b, xm - hw, iz0 + 0.02, xm + hw, iz1 - 0.02, top + 0.012, PAVING);
+  for (const s of [-1, 1]) box(b, xm + s * hw - 0.06, top, iz0 + 0.02, xm + s * hw + 0.06, top + 0.03, iz1 - 0.02, CHARCOAL);
+  // The beds either side: mulch round the trees
+  const half = (ix1 - ix0) / 2;
+  const bedW = half - hw - 1.3;
+  for (const s of [-1, 1]) {
+    const bx = xm + s * (hw + 0.5 + bedW / 2);
+    b.add(new THREE.PlaneGeometry(bedW, iz1 - iz0 - 1.6).rotateX(-Math.PI / 2).translate(bx, top + 0.01, zm), SOIL);
+  }
+  b.detail(() => {
+    // Light bollards at the walk's ends
+    for (const z of [iz0 + 0.35, iz1 - 0.35])
+      for (const s of [-1, 1]) {
+        cyl(b, 0.09, 0.75, xm + s * (hw + 0.2), top, z, STEEL, 8);
+        cyl(b, 0.095, 0.08, xm + s * (hw + 0.2), top + 0.6, z, LED, 8);
+      }
+    for (const s of [-1, 1]) {
+      const edge = s === -1 ? ix0 : ix1;
+      const bx = xm + s * (hw + 0.5 + bedW / 2);
+      // a clipped hedge along the bays at the island's end, broken where a charger stands
+      const ev = i % 2 === 0;
+      const cuts = ev ? [iz0 + 2, iz1 - 2] : [];
+      let z0h = iz0 + 0.5;
+      for (const c of [...cuts, iz1 - 0.5 + 0.45]) {
+        const z1h = c - 0.45;
+        if (z1h - z0h > 0.3) box(b, Math.min(edge - s * 0.75, edge - s * 0.3), top, z0h, Math.max(edge - s * 0.75, edge - s * 0.3), top + 0.6, z1h, HEDGE);
+        z0h = c + 0.45;
+      }
+      // flowering shrubs and grasses in drifts along the bed, a boulder
+      let k = 0;
+      for (let z = iz0 + 1.1; z < iz1 - 1; z += 0.62, k++) {
+        const dx = ((k * 7) % 5) / 5 - 0.4;
+        const flower = k % 3 === 1;
+        b.add(new THREE.IcosahedronGeometry(flower ? 0.24 : 0.3, 0).scale(1, 0.75, 1).translate(bx + dx * bedW * 0.6, top + 0.22, z), flower ? FLOWERS[(i + k + (s > 0 ? 1 : 0)) % FLOWERS.length] : SHRUB);
+        if (k % 4 === 2) b.add(new THREE.ConeGeometry(0.22, 0.75, 5, 1, true).translate(bx - dx * bedW * 0.5, top + 0.37, z + 0.25), GRASS);
+      }
+      b.add(new THREE.DodecahedronGeometry(0.32, 0).scale(1.3, 0.7, 1).translate(bx + s * bedW * 0.25, top + 0.12, zm), CONCRETE);
+    }
+    if (i % 2 === 0) {
+      // EV chargers at both ends of both rows, facing the end bays, those bays painted green
+      for (const s of [-1, 1])
+        for (const zr of [iz0 + 2, iz1 - 2]) {
+          const edge = s === -1 ? ix0 : ix1;
+          const cx = edge - s * 0.45;
+          box(b, cx - 0.14, top, zr - 0.2, cx + 0.14, top + 1.35, zr + 0.2, WHITE);
+          box(b, cx + s * 0.14, top + 0.75, zr - 0.13, cx + s * 0.15, top + 1.15, zr + 0.13, PANEL);
+          box(b, cx + s * 0.145, top + 1.2, zr - 0.15, cx + s * 0.155, top + 1.28, zr + 0.15, TEAL_LED);
+          box(b, cx - 0.16, top + 1.35, zr - 0.22, cx + 0.16, top + 1.4, zr + 0.22, CHARCOAL);
+          // the cable coiled on its hook
+          b.add(new THREE.TorusGeometry(0.12, 0.022, 4, 10).rotateY(Math.PI / 2).translate(cx + s * 0.16, top + 0.55, zr), DARK);
+          const bay = BAYS.find((q) => Math.abs(q.z - zr) < 0.05 && Math.abs(q.x - (edge + s * (BAY.w / 2 + 0.15))) < 0.3);
+          if (bay) b.add(new THREE.PlaneGeometry(BAY.w - 0.2, BAY.d - 0.3).rotateX(-Math.PI / 2).translate(bay.x, Y + 0.01, bay.z), EV_GREEN);
+        }
+    } else {
+      // a trolley shelter on the lawn by the walk: a steel frame, a glass roof, the trolleys
+      const [sx, sz] = [xm + hw + 1.3, zm];
+      for (const dz of [-1, 1]) box(b, sx - 0.65, top, sz + dz * 1.1 - 0.04, sx - 0.57, top + 1.8, sz + dz * 1.1 + 0.04, STEEL);
+      box(b, sx - 0.75, top + 1.8, sz - 1.25, sx + 0.75, top + 1.86, sz + 1.25, STEEL);
+      b.add(new THREE.PlaneGeometry(1.5, 2.5).rotateX(-Math.PI / 2).translate(sx, top + 1.87, sz), GLASS);
+      for (let t = 0; t < 4; t++) box(b, sx - 0.3, top + 0.08, sz - 0.8 + t * 0.4, sx + 0.3, top + 0.8, sz - 0.62 + t * 0.4, GREY);
+    }
   });
 }
 
 function carPark(b: Batch, x0: number, x1: number) {
+  // Asphalt over the car park in this stretch, the bays' lines, the islands (a kerb, planting, a trolley shelter on some)
+  const [, cz0, , cz1] = [0, BAYS[0].z - BAY.d / 2 - 0.4, 0, BAYS[BAYS.length - 1].z + BAY.d / 2 + 0.4];
+  flat(b, x0, cz0, x1, cz1, Y + 0.006, ASPHALT, 12);
   b.detail(() => {
     for (const bay of BAYS) {
       if (bay.x < x0 || bay.x >= x1) continue;
-      for (const s of [-1, 1]) b.add(new THREE.PlaneGeometry(0.08, BAY.d).rotateX(-Math.PI / 2).translate(bay.x + (s * BAY.w) / 2, Y + 0.006, bay.z), PAINT);
+      for (const s of [-1, 1]) b.add(new THREE.PlaneGeometry(0.08, BAY.d).rotateX(-Math.PI / 2).translate(bay.x + (s * BAY.w) / 2, Y + 0.012, bay.z), PAINT);
     }
+  });
+  ISLANDS.forEach((r, i) => {
+    const xm = (r[0] + r[2]) / 2;
+    if (xm < x0 || xm >= x1) return;
+    island(b, r, i);
   });
   // The rank's board by its bays
   const cab = RANK_CABS.find((c) => c.x >= x0 && c.x < x1);
   if (cab) {
     const [rx, rz] = [Math.min(...RANK_CABS.map((c) => c.x)) - BAY.w / 2 - 0.3, cab.z - BAY.d / 2 - 0.2];
-    box(b, rx - 0.05, Y, rz - 0.05, rx + 0.05, Y + 2.4, rz + 0.05, DARK);
+    box(b, rx - 0.05, Y, rz - 0.05, rx + 0.05, Y + 2.4, rz + 0.05, STEEL);
     sign(b, 'TAXI', rx, Y + 2.25, rz - 0.06, 1, 0.25, Math.PI);
     sign(b, 'TAXI', rx, Y + 2.25, rz + 0.06, 1, 0.25, 0);
   }
@@ -551,20 +745,33 @@ function carPark(b: Batch, x0: number, x1: number) {
 function multiStorey(b: Batch) {
   const [x0, z0, x1, z1] = MSCP.rect;
   const { deck, decks } = MSCP;
-  // Its decks on columns, an open parapet round each with a neon line, the stair tower with the P sign
-  for (let d = 1; d <= decks + 1; d++) {
-    const y = Y + d * deck;
-    box(b, x0, y - 0.3, z0, x1, y, z1, CONCRETE);
-    box(b, x0 - 0.02, y, z0 - 0.02, x1 + 0.02, y + 0.75, z0 + 0.15, wallOf('#ffc48c'));
-    box(b, x0 - 0.02, y, z1 - 0.15, x1 + 0.02, y + 0.75, z1 + 0.02, wallOf('#ffc48c'));
-    box(b, x0 - 0.02, y, z0, x0 + 0.15, y + 0.75, z1, wallOf('#ffc48c'));
-    box(b, x1 - 0.15, y, z0, x1 + 0.02, y + 0.75, z1, wallOf('#ffc48c'));
-    box(b, x0 - 0.06, y + 0.6, z0, x0 - 0.02, y + 0.68, z1, d % 2 ? CYAN_NEON : PINK_NEON);
+  const top = Y + deck * (decks + 1);
+  // Its decks on columns, a barrier round the roof, perforated metal screens in panels round each level
+  for (let d = 1; d <= decks + 1; d++) box(b, x0, Y + d * deck - 0.3, z0, x1, Y + d * deck, z1, CONCRETE);
+  box(b, x0, top, z0, x1, top + 0.9, z0 + 0.12, MID);
+  box(b, x0, top, z1 - 0.12, x1, top + 0.9, z1, MID);
+  box(b, x0, top, z0, x0 + 0.12, top + 0.9, z1, MID);
+  box(b, x1 - 0.12, top, z0, x1, top + 0.9, z1, MID);
+  for (let x = x0 + 0.2; x < x1; x += (x1 - x0 - 0.6) / 3) for (let z = z0 + 0.2; z < z1; z += (z1 - z0 - 0.6) / 5) box(b, x, Y, z, x + 0.4, top - 0.3, z + 0.4, CONCRETE);
+  for (let d = 0; d <= decks; d++) {
+    const [ya, yb] = [Y + d * deck + 0.5, Y + (d + 1) * deck - 0.35];
+    for (let x = x0 + 0.4; x + 2.4 < x1; x += 3.4) {
+      face(b, PERF, x, z1, x + 2.4, z1, ya, yb, PZ, 0.2);
+      face(b, PERF, x, z0, x + 2.4, z0, ya, yb, NZ, 0.2);
+    }
+    for (let z = z0 + 0.4; z + 2.4 < z1; z += 3.4) {
+      face(b, PERF, x1, z, x1, z + 2.4, ya, yb, PX, 0.2);
+      if (z < z1 - 3.4) face(b, PERF, x0, z, x0, z + 2.4, ya, yb, NX, 0.2);
+    }
   }
-  for (let x = x0 + 0.2; x < x1; x += (x1 - x0 - 0.6) / 3) for (let z = z0 + 0.2; z < z1; z += (z1 - z0 - 0.6) / 5) box(b, x, Y, z, x + 0.4, Y + deck * (decks + 1) - 0.3, z + 0.4, CONCRETE);
-  box(b, x0 - 0.3, Y, z1 - 3.2, x0 + 2.4, Y + deck * (decks + 1) + 1.1, z1 - 0.2, TEAL);
-  box(b, x0 - 0.32, Y + deck * (decks + 1) - 0.2, z1 - 2.6, x0 - 0.3, Y + deck * (decks + 1) + 0.8, z1 - 0.8, wallOf('#2a62d8'));
-  sign(b, 'P', x0 - 0.34, Y + deck * (decks + 1) + 0.3, z1 - 1.7, 1.4, 0.35, -Math.PI / 2);
+  // The stair and lift core, glazed, the P sign on it
+  const [cx0, cz0, cx1, cz1] = [x0 - 0.3, z1 - 3.2, x0 + 2.4, z1 - 0.2];
+  box(b, cx0, Y, cz0, cx1, top + 1.4, cz1, CHARCOAL);
+  face(b, CURTAIN, cx0, cz1, cx1, cz1, Y, top + 1.4, PZ);
+  face(b, CURTAIN, cx0, cz0, cx0, cz1, Y, top + 1.4, NX);
+  coping(b, cx0, cz0, cx1, cz1, top + 1.4);
+  box(b, cx0 - 0.04, top + 0.1, cz0 + 0.4, cx0, top + 1.2, cz1 - 0.4, STEEL);
+  sign(b, 'P', cx0 - 0.05, top + 0.65, (cz0 + cz1) / 2, 1, 1, -Math.PI / 2);
   // The ground's bays' lines
   b.detail(() => {
     for (const x of [x0 + 0.4, x1 - 4.4]) for (let z = z0 + 0.7; z < z1 - 1; z += BAY.w) box(b, x, Y + 0.004, z, x + 4, Y + 0.01, z + 0.08, PAINT);
@@ -573,24 +780,34 @@ function multiStorey(b: Batch) {
 
 /* ---------- Registering ---------- */
 
-export function register({ scene }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
-  const build = (draw: (b: Batch) => void, cast = true) => (into: THREE.Object3D) => {
+export function register({ scene, tick }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
+  const build = (draw: (b: Batch, f: Batch) => void, cast = true) => (into: THREE.Object3D) => {
     const b = new Batch();
-    draw(b);
+    const f = new Batch();
+    draw(b, f);
     b.build(into, { cast, receive: true });
+    // (what the ink pass mustn't outline, in the FX layer)
+    const g = new THREE.Group();
+    f.build(g, { cast: false, receive: false });
+    fx(g);
+    for (const c of [...g.children]) into.add(c);
   };
-  // Palm Court: the cinema, the rows in stretches, the fountain and the arch
+  // Palm Court: the cinema, the rows in stretches, the water feature and the gateway
   site('mall cinema', [CINEMA.rect[0] - 1, CINEMA.rect[1] - 1, CINEMA.rect[2] + 1, CINEMA.rect[3] + 3], build(cinema));
   for (let z = CINEMA.rect[3]; z < COURT[3]; z += 24) {
     const z1 = Math.min(COURT[3], z + 24);
-    site(`mall court ${Math.round(z)}`, [COURT[0], z, COURT[2], z1], build((b) => court(b, z, z1)));
+    site(`mall court ${Math.round(z)}`, [COURT[0], z, COURT[2], z1], build((b, f) => court(b, z, z1, f)));
   }
   site('mall fountain', [FOUNTAIN.x - 4, FOUNTAIN.z - 5, FOUNTAIN.x + 4, FOUNTAIN.z + 5], build(centre));
   site('mall arch', [PROM[0], ARCH.z - 1, PROM[1], ARCH.z + 1], build(arch));
-  // Starlight Mall: each anchor, the hall, the porch, the pylon and the shelter
-  ANCHORS.forEach((a, k) => site(`mall anchor ${k}`, [a.rect[0] - 0.5, a.rect[1], a.rect[2] + 0.5, a.rect[3] + 2], build((b) => anchor(b, k))));
-  site('mall hall', [HALL.rect[0], HALL.rect[1], HALL.rect[2], HALL.rect[3] + 0.5], build(hall));
+  // (the zebra over the east ring avenue from its west row's passage to the mall's forecourt)
+  site('mall court zebra', [NS3.c - NS3.half, ZEBRA.z - ZEBRA.half, NS3.c + NS3.half, ZEBRA.z + ZEBRA.half], build((b) => b.detail(() => zebraOver(b, NS3, ZEBRA)), false));
+  // Starlight Mall: each anchor, the hall, the porch, the forecourt, the totem and the shelter
+  ANCHORS.forEach((a, k) => site(`mall anchor ${k}`, [a.rect[0] - 0.5, a.rect[1] - 2, a.rect[2] + 0.5, a.rect[3] + 2], build((b) => anchor(b, k))));
+  // (its shell casts no shadow: inside, the day comes in as through the skylight)
+  site('mall hall', [HALL.rect[0], HALL.rect[1], HALL.rect[2], HALL.rect[3] + 0.5], build(hall, false));
   site('mall porch', [PORCH.rect[0], PORCH.rect[1], PORCH.rect[2], PORCH.rect[3]], build((b) => (porch(b), pylon(b), shelter(b))));
+  site('mall forecourt', [MALL_BLOCK[0], HALL.rect[3], MALL_BLOCK[2], MALL_BLOCK[3]], build(forecourt, false));
   // The loop, the car parks (in pieces), the multi-storey
   site('mall loop', [NS0.c, LOOP.zN - LOOP.half, LOOP.xE + LOOP.half, LOOP.zS + LOOP.half], build(loopRoad, false));
   for (let x = MALL_BLOCK[0]; x < MSCP.rect[0]; x += 18) {
@@ -598,6 +815,8 @@ export function register({ scene }: { low: boolean; scene: THREE.Scene | null; t
     site(`mall car park ${Math.round(x)}`, [x, LOOP.zN, x1, LOOP.zS], build((b) => carPark(b, x, x1), false));
   }
   site('mall multi-storey', MSCP.rect, build(multiStorey));
+  // Inside the hall (step 2: near only)
+  registerInside({ tick });
   if (!scene) return;
   // The cabs at the rank, the cars in the car park and on the multi-storey's decks
   type Car = [CarId, number, number, number, string];

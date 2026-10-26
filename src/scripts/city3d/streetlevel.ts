@@ -25,8 +25,9 @@
  * - **What's solid** (`STREETLEVEL_SOLIDS`): the tables, planters, crates,
  *   racks, boxes, plinths and the galleria's columns.
  */
-import { HIGHRISES, type Face, type Highrise } from './highrise';
-import { LAYBYS, UPTOWN_BLOCKS, UPTOWN_LANES, laybyRect, type Pt, type Rect } from './uptown';
+import { HIGHRISES, TOWER_BLOCKS, type Face, type Highrise } from './highrise';
+import { NORTH_OPEN } from './uptownnorth';
+import { LAYBYS, UPTOWN_LANES, laybyRect, type Pt, type Rect } from './uptown';
 import { PLAN, distToStreet } from './streetplan';
 import { CHAIR, SEAT_Y, TERRACES } from './plaza';
 import { SITE_RECTS } from './uptownsites';
@@ -38,7 +39,8 @@ export type ShopCharacter = Exclude<Character, 'service'>;
 export function characterOf(id: string, kind: string): Character {
   if (kind === 'alley') return 'dining';
   if (kind === 'highway' || kind === 'slip') return 'service';
-  if (id === 'ew0' || id === 'ew3') return 'luxe';
+  // (and the north avenue past Uptown North, across from the mall)
+  if (id === 'ew0' || id === 'ew3' || id === 'ns0') return 'luxe';
   if (id === 'ew1' || id === 'ew2' || id === 'uptown-circle-e' || id === 'uptown-diag') return 'dining';
   return 'local';
 }
@@ -103,7 +105,7 @@ const STOPS: Rect[] = [...UPTOWN_LANES, ...TERRACES, ...LAYBYS.map(laybyRect), .
  * the margin is before anything (the block's edge, a lane, a terrace, a lay-by, another tower's lot)
  */
 export function frontage(t: Highrise, a: Pt, c: Pt, n: Pt): { street: string | null; char: Character; depth: number } {
-  const blk = UPTOWN_BLOCKS.find((b) => b.id === t.block)!;
+  const blk = TOWER_BLOCKS.find((b) => b.id === t.block)!;
   const m: Pt = [(a[0] + c[0]) / 2, (a[1] + c[1]) / 2];
   const others = [...HIGHRISES.filter((o) => o !== t).map((o) => o.lot), ...SITE_RECTS];
   let depth = 0;
@@ -112,6 +114,8 @@ export function frontage(t: Highrise, a: Pt, c: Pt, n: Pt): { street: string | n
     if (!inPoly(blk.poly, p) || STOPS.some((r) => inRect(p, r)) || others.some((r) => inRect(p, r))) break;
     depth = d;
   }
+  // (Uptown North's square and the park's gates' walks through it: open ground, its ground floors dining)
+  for (let d = 0.3; d <= depth + 0.3; d += 0.3) if (NORTH_OPEN.some((r) => inRect([m[0] + n[0] * d, m[1] + n[1] * d], r))) return { street: 'square', char: 'dining', depth };
   for (let d = depth; d < depth + 4; d += 0.1) {
     const p: Pt = [m[0] + n[0] * d, m[1] + n[1] * d];
     if (others.some((r) => inRect(p, r))) break;
@@ -188,7 +192,8 @@ export const DRESSING: Dress[] = FRONTAGES.flatMap((fr) => {
       }
     } else if (fr.char === 'luxe' && fr.depth >= 0.9 && k % 2 === 1) {
       const [x, z] = at(un.at, 0.45, UNIT / 2);
-      out.push({ kind: 'planter', x, z, ry: R });
+      // (stepped along to the unit's edge: kept off the door's way all the same)
+      if (Math.hypot(x - t.door[0], z - t.door[1]) > 2.5) out.push({ kind: 'planter', x, z, ry: R });
     } else if (fr.char === 'local' && fr.depth >= 0.9) {
       const kind = (['buckets', 'crates', 'newsbox', 'bikes'] as const)[(un.name + k) % 4];
       // (a bike rack along the wall: it needs the margin's depth only for its width)

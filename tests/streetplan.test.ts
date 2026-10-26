@@ -80,7 +80,8 @@ test('the city as built: the grid\'s roads, three diagonals from the ring\'s cor
 test('the city\'s blocks: downtown\'s outlines, every district and lot, off the asphalt, the landmarks on theirs', () => {
   const p = cityPlan();
   // (and the stadium's, north of the highway)
-  assert.equal(p.blocks.length, BLOCKS_DT.length + OUTER_BLOCKS.length + BEND_KERBS.length + TRENCH_BLOCKS.length + WESTLAKE_BLOCKS.length + UPTOWN_BLOCKS.length + 1 + 3 + 3);
+  assert.equal(p.blocks.length, BLOCKS_DT.length + OUTER_BLOCKS.length + BEND_KERBS.length + TRENCH_BLOCKS.length + WESTLAKE_BLOCKS.length + UPTOWN_BLOCKS.length + 1 + 1 + 3 + 3);
+  // (Uptown North's block too, on Palm Court's old land)
   // (the stadium's, and the grand station's three: its hall and shed, its forecourt's plaza, its car park)
   // Every plot and every lot sits on an outer block
   for (const d of DISTRICTS) assert.equal(p.blocks.filter((b) => b.pads?.includes(d.id)).length, 1, `plot ${d.id}`);

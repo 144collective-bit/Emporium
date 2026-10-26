@@ -14,6 +14,7 @@ import { setCrowdCapture } from './crowdclips';
 import { refreshCrowdTexture } from './crowdskin';
 import { SWAY, windStrength } from './dusk';
 import { buildBusStops } from './transit3d';
+import { buildOuterDress } from './outerdress3d';
 import type { LifeSfx } from './life';
 import { createPost } from './post';
 import { CENTER, SLAB, addLamp, addTree, buildGround, buildLamps, buildSkyline, buildTrees, placed as everyPlaced, puddleMat, keepTreesOff, scatterOutskirts, waterMat, type Env, type Tick } from './world';
@@ -30,7 +31,9 @@ import { buildStadium } from './stadium3d';
 import { buildTower } from './tower3d';
 import { buildStationSpot } from './stationspot';
 import { buildMallSpots } from './mallspot';
-import { COURT_SPAWN, MALL_LAMPS, MALL_PEOPLE, MALL_SPAWN } from './mall';
+import { COURT_SPAWN, MALL_LAMPS, MALL_PEOPLE, MALL_TREES } from './mall';
+import { NORTH_LAMPS, NORTH_PEOPLE, NORTH_TREES } from './uptownnorth';
+import { INSIDE_SPAWN, MALL_INSIDE_PEOPLE, MALL_LIFT, UP as MALL_UP } from './mallinside';
 import { BOULEVARD_TREES as STATION_TREES, PLAZA_TREES as STATION_PLAZA_TREES, STATION_LAMPS, STATION_PEOPLE, STATION_RECTS, STATION_SPAWN } from './station';
 import { LIFT, TOWER_SPAWN } from './skydeck';
 import { STADIUM_LAMPS, STADIUM_RECTS, STADIUM_SPAWN } from './stadium';
@@ -328,8 +331,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   for (const [x, z, ry, y] of STATION_LAMPS) addLamp(x, z, ry, y);
   STATION_PEOPLE.forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push({ x: p.x, z: p.z, y: Math.max(SLAB, p.y), ry: p.ry, act: p.act }));
   // ...and Palm Court's and the mall's (mall.ts; the outskirts' trees keep off their land already)
-  for (const [x, z, ry, y] of MALL_LAMPS) addLamp(x, z, ry, y);
-  MALL_PEOPLE.forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push({ x: p.x, z: p.z, y: SLAB + p.y, ry: p.ry, act: p.act }));
+  for (const [x, z, ry, y] of [...MALL_LAMPS, ...NORTH_LAMPS]) addLamp(x, z, ry, y);
+  for (const [x, z, y] of [...MALL_TREES, ...NORTH_TREES]) addTree(x, z, undefined, false, SLAB + y);
+  [...MALL_PEOPLE, ...MALL_INSIDE_PEOPLE, ...NORTH_PEOPLE].forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push({ x: p.x, z: p.z, y: SLAB + p.y, ry: p.ry, act: p.act }));
   progress(0.55);
   await waited(nextFrame());
   // (phones keep half of them: the trim)
@@ -338,6 +342,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   buildTrees(tier === 'low');
   buildLamps(scene, tier === 'low', tick, reduced);
   buildBusStops(tier === 'low');
+  buildOuterDress(tier === 'low');
   progress(0.7);
   await waited(nextFrame());
   // (the horns and the bus doors play through the sound, made with the controls below; one before then is dropped)
@@ -630,7 +635,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         close();
         startWalking(TOWER_SPAWN);
       });
-    // Palm Court's and the mall's panels: Walk in under the court's arch, or in front of the mall's porch
+    // Palm Court's and the mall's panels: Walk in under the court's arch, or inside the mall's lobby
     if (id === 'palmcourt')
       panelBody.querySelector('[data-palmcourt-walkin]')?.addEventListener('click', () => {
         close();
@@ -639,7 +644,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     if (id === 'mall')
       panelBody.querySelector('[data-mall-walkin]')?.addEventListener('click', () => {
         close();
-        startWalking(MALL_SPAWN);
+        startWalking(INSIDE_SPAWN);
       });
     // Sector 7 Central's panel: Walk in starts walk mode on its forecourt, facing the doors
     if (id === 'station')
@@ -749,11 +754,13 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     const up = walk.position.y > (LIBERTY_LOW + LIBERTY_HIGH) / 2;
     return LIBERTY_LIFTS.map((l, i) => (up ? { id: `liberty:down:${i}`, ...l.high, label: 'Lift · Deck' } : { id: `liberty:up:${i}`, ...l.low, label: 'Lift · High walkway' }));
   };
+  // Starlight Mall's glass lift (mallinside.ts): a door on the ground floor and one on the east gallery
+  const mallDoors = () => (walk.position.y > SLAB + MALL_UP / 2 ? [{ id: 'mall-lift:down', ...MALL_LIFT.high, label: 'Lift · Ground floor' }] : [{ id: 'mall-lift:up', ...MALL_LIFT.low, label: 'Lift · Upper floor' }]);
   let lifting = false;
   /** Up or down in Sector 7 Tower's lift */
   const ride = (up: boolean) => rideTo(up ? LIFT.up : LIFT.down, 'tower', 'Sector 7 Tower', up ? 'Sector 7 Tower · Sky deck' : 'Sector 7 Tower · Lobby');
   /** Up or down in a lift: a fade, then you step out at the other end (unless the owner has closed the place for now) */
-  function rideTo(to: { x: number; z: number; y: number; yaw: number }, place: 'tower' | 'liberty', name: string, arrived: string) {
+  function rideTo(to: { x: number; z: number; y: number; yaw: number }, place: 'tower' | 'liberty' | 'mall', name: string, arrived: string) {
     const gate = live.place(place);
     if (!gate.open) return tycoon?.toast(closedLine(name, gate), 3500);
     if (lifting) return;
@@ -792,9 +799,13 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     engine: (revs) => sound.engine(revs),
     tyres: (level) => sound.tyres(level),
     // Your business's places, and the metro's station doors
-    places: () => [...(tycoon?.places() ?? []), ...(metroUI?.doors ?? []), ...RIVER_BUS_DOORS, ...LIFT_DOORS, ...libertyDoors()],
+    places: () => [...(tycoon?.places() ?? []), ...(metroUI?.doors ?? []), ...RIVER_BUS_DOORS, ...LIFT_DOORS, ...libertyDoors(), ...mallDoors()],
     openPlace: (id) => {
       if (id === 'lift:up' || id === 'lift:down') return ride(id === 'lift:up');
+      if (id === 'mall-lift:up' || id === 'mall-lift:down') {
+        const up = id === 'mall-lift:up';
+        return rideTo(up ? MALL_LIFT.up : MALL_LIFT.down, 'mall', 'Starlight Mall', up ? 'Starlight Mall · Upper floor' : 'Starlight Mall · Ground floor');
+      }
       if (id.startsWith('liberty:')) {
         const [, way, i] = id.split(':');
         const l = LIBERTY_LIFTS[Number(i)];

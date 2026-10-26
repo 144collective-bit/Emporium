@@ -118,7 +118,10 @@ test('driving: a car only given the boxes near it ends every step exactly where 
   const T = tune(DRIVE.super, { L: 2.5, W: 1.05, wheelbase: 1.55 });
   let bumps = 0;
   for (let run = 0; run < 60; run++) {
-    const [x, z] = spot();
+    // (a car starts outside every building, as in the city: started inside a stack of a tower's footprints
+    // it's pushed out further in one step than the boxes near where it started reach)
+    let [x, z] = spot();
+    while (CAR.some((q) => inBox(q, x, z))) [x, z] = spot();
     const yaw = r() * Math.PI * 2;
     const a = newCar(x, z, yaw);
     const b = newCar(x, z, yaw);
@@ -141,8 +144,11 @@ test('flying: an aircraft only given the boxes near it flies exactly as it would
   let bumps = 0;
   for (const id of ['prop', 'bizjet', 'heli'] as const) {
     const T = TUNES[id];
-    for (let run = 0; run < 25; run++) {
-      const [x, z] = spot();
+    for (let run = 0; run < 40; run++) {
+      // (it starts with its hull clear of every building, as an aircraft does: started against a tall stack of a
+      // tower's footprints it's pushed further in one step than the boxes near where it started reach)
+      let [x, z] = spot();
+      while (CAR.some((q) => inBox(q, x, z, 4.5))) [x, z] = spot();
       const yaw = r() * Math.PI * 2;
       const y = 1 + r() * 10;
       const mk = () => {
