@@ -7,15 +7,17 @@
  * timber, black steel, warm white light), made-up names only, everything under
  * the Emporium (`TALLEST`).
  *
- * - **Palm Court** (`COURT`): the open-air plaza between the park and the
- *   north avenue (ns0). A promenade (`PROM`) runs north to south between two
- *   rows of shops facing each other across it (`SHOPS`). The west row is
- *   broken where the park's east gates open (`GATE_GAPS`); the east row is
- *   broken at the passage to the zebra over the avenue (`ZEBRA`). Paradise
- *   Cinema (`CINEMA`) stands across the north end; the fountain (`FOUNTAIN`)
- *   is in the middle, with trees in planters (`COURT_TREES`), benches and the
- *   PALM COURT gateway at the south end (`ARCH`). Each shop has its own front
- *   (`style`: glass, render, cladding or timber).
+ * - **Palm Court** (`COURT`): the open-air plaza east of the mall, across the
+ *   east ring avenue (ns3; moved there from the park's side, the owner's
+ *   call, its old land Uptown North's: uptownnorth.ts). A promenade (`PROM`)
+ *   runs north to south between two rows of shops facing each other across it
+ *   (`SHOPS`). The west row is broken at the passage to the zebra over the
+ *   avenue to the mall's forecourt (`ZEBRA`); the east row across from it,
+ *   at the way out east (`EAST_GAP`). Paradise Cinema (`CINEMA`) stands
+ *   across the north end; the fountain (`FOUNTAIN`) is in the middle, with
+ *   trees in planters (`COURT_TREES`), benches and the PALM COURT gateway at
+ *   the south end (`ARCH`). Each shop has its own front (`style`: glass,
+ *   render, cladding or timber).
  * - **Starlight Mall** (`MALL_BLOCK`): the mall's hall (`HALL`) with its
  *   entrance porch (`PORCH`), the two anchors at its ends (`ANCHORS`) and the
  *   totem by the loop (`PYLON`).
@@ -34,7 +36,6 @@
  * Inside the hall (step 2) is mallinside.ts.
  */
 import { NS_ROADS, WALK_W } from './layout';
-import { GATES, WESTLAKE_RECT } from './westlake';
 
 export type Pt = [number, number];
 export type Rect = [number, number, number, number];
@@ -48,20 +49,22 @@ export const SOUTH_Z = -43.2;
 
 /* ---------- Palm Court ---------- */
 
-/** The plaza's block: from the park's sidewalk to the north avenue's */
-export const COURT: Rect = [WESTLAKE_RECT[2] + WALK_W, NORTH_Z, NS0.c - NS0.half - WALK_W, -42];
+/** The plaza's block: from the east ring avenue's sidewalk east, as wide as it was by the park, its south end clear of the Parkway's outer sidewalk */
+export const COURT_W = 32.75;
+export const COURT: Rect = [NS3.c + NS3.half + WALK_W, NORTH_Z, NS3.c + NS3.half + WALK_W + COURT_W, SOUTH_Z];
 /** How deep the shops are, and the promenade between the two rows (x0, x1) */
 const ROW_D = 10;
 export const PROM: [number, number] = [COURT[0] + 0.5 + ROW_D, COURT[2] - 0.5 - ROW_D];
 export const PROM_X = (PROM[0] + PROM[1]) / 2;
 /** Paradise Cinema across the north end, facing south down the promenade: its footprint and height */
 export const CINEMA = { rect: [COURT[0] + 1, NORTH_Z + 1, COURT[2] - 1, -136] as Rect, h: 9, name: 'PARADISE CINEMA' };
-/** The park's east gates the west row opens onto (z), and the gaps left for them */
-export const GATE_GAPS: Pt[] = GATES.filter((g) => g.out[0] === 1 && g.at[1] < COURT[3] && g.at[1] > COURT[1]).map((g): Pt => [g.at[1] - 3, g.at[1] + 3]);
-/** The zebra over the north avenue from the east row's passage to the mall's forecourt (its middle, z) */
+/** The zebra over the east ring avenue from the west row's passage to the mall's forecourt (its middle, z), and the one over the north avenue from Uptown North's square to the forecourt's other end */
 export const ZEBRA = { z: -112, half: 1.6 };
+export const TOWER_ZEBRA = { z: -112, half: 1.6 };
+/** The east row's gap across from the passage: the way out east onto the open land (z0, z1) */
+export const EAST_GAP: Pt = [ZEBRA.z - 3, ZEBRA.z + 3];
 /** The south end's arch over the promenade (z), and the fountain in the middle */
-export const ARCH = { z: -45, h: 5.2 };
+export const ARCH = { z: COURT[3] - 3, h: 5.2 };
 export const FOUNTAIN = { x: PROM_X, z: ZEBRA.z, r: 2.4 };
 
 export type ShopKind = 'cafe' | 'fashion' | 'books' | 'home' | 'beauty' | 'sports' | 'bakery' | 'shoes' | 'gifts' | 'tech' | 'kids' | 'restaurant';
@@ -125,8 +128,8 @@ export const SHOPS: Shop[] = (() => {
   const start = CINEMA.rect[3] + 4;
   const end = ARCH.z - 1.5;
   const rows: { x0: number; x1: number; face: 1 | -1; gaps: Pt[] }[] = [
-    { x0: COURT[0] + 0.5, x1: PROM[0], face: 1, gaps: GATE_GAPS },
-    { x0: PROM[1], x1: COURT[2] - 0.5, face: -1, gaps: [[ZEBRA.z - 3, ZEBRA.z + 3]] },
+    { x0: COURT[0] + 0.5, x1: PROM[0], face: 1, gaps: [[ZEBRA.z - 3, ZEBRA.z + 3]] },
+    { x0: PROM[1], x1: COURT[2] - 0.5, face: -1, gaps: [EAST_GAP] },
   ];
   let k = 0;
   for (const row of rows)
@@ -366,7 +369,7 @@ export const MALL_PEOPLE: MallPerson[] = (() => {
 /** Walk in: at the promenade's south end facing up it (walk mode faces (-sin yaw, -cos yaw)), and in front of the mall's porch facing it */
 export const COURT_SPAWN = { x: PROM_X, z: ARCH.z + 1.2, yaw: 0 };
 export const MALL_SPAWN = { x: (PORCH.rect[0] + PORCH.rect[2]) / 2, z: MALL_BLOCK[3] - 1, yaw: 0 };
-/** All of the land (the outskirts' trees keep off; loaded as you approach) */
-export const MALL_AREA: Rect = [COURT[0] - 1, NORTH_Z - 1.5, NS3.c - NS3.half - 0.2, SOUTH_Z + 1];
+/** All of the land, Uptown North's block west of it to Palm Court east of the east ring avenue (the outskirts' trees keep off; loaded as you approach) */
+export const MALL_AREA: Rect = [NS0.c - NS0.half - 34.5, NORTH_Z - 1.5, COURT[2] + 1, SOUTH_Z + 1];
 /** The tallest anything stands (the pylon), under the Emporium's roof (about 12.5) */
 export const TALLEST = Math.max(PYLON.h, CINEMA.h, ...ANCHORS.map((a) => a.h), HALL.h + 2.2, MSCP.deck * (MSCP.decks + 1) + 1.2);

@@ -89,6 +89,7 @@ import {
   ISLAND_WALK,
   LOOP,
   LOOP_ZEBRA,
+  TOWER_ZEBRA,
   MALL_BLOCK,
   MALL_NAME,
   MSCP,
@@ -615,6 +616,12 @@ function shelter(b: Batch) {
 const ROAD_Y = 0.036;
 const PAINT_Y = 0.046;
 const NS0 = NS_ROADS[0];
+const NS3 = NS_ROADS[NS_ROADS.length - 1];
+
+/** A zebra across a north-south avenue at z */
+function zebraOver(b: Batch, road: { c: number; half: number }, at: { z: number; half: number }) {
+  for (let x = road.c - road.half + 0.3; x < road.c + road.half - 0.2; x += 0.85) b.add(new THREE.PlaneGeometry(0.45, at.half * 2).rotateX(-Math.PI / 2).translate(x + 0.22, PAINT_Y, at.z), PAINT);
+}
 
 function loopRoad(b: Batch) {
   const { zN, zS, xE, half } = LOOP;
@@ -626,8 +633,8 @@ function loopRoad(b: Batch) {
     // A dashed white centre line round it (two-way)
     for (let x = xw + 1; x < xE - half - 0.4; x += 1.3) for (const z of [zN, zS]) if (Math.abs(x - LOOP_ZEBRA.x) > LOOP_ZEBRA.half + 0.4) box(b, x, PAINT_Y - 0.002, z - 0.04, x + 0.6, PAINT_Y, z + 0.04, PAINT);
     for (let z = zN + half + 0.6; z < zS - half - 0.4; z += 1.3) box(b, xE - 0.04, PAINT_Y - 0.002, z, xE + 0.04, PAINT_Y, z + 0.6, PAINT);
-    // The zebras: over the north avenue from Palm Court's passage, and over the loop from the car park to the porch
-    for (let x = NS0.c - NS0.half + 0.3; x < NS0.c + NS0.half - 0.2; x += 0.85) b.add(new THREE.PlaneGeometry(0.45, ZEBRA.half * 2).rotateX(-Math.PI / 2).translate(x + 0.22, PAINT_Y, ZEBRA.z), PAINT);
+    // The zebras: over the north avenue from Uptown North's square, and over the loop from the car park to the porch
+    zebraOver(b, NS0, TOWER_ZEBRA);
     for (let z = zN - half + 0.2; z < zN + half - 0.2; z += 0.85) b.add(new THREE.PlaneGeometry(LOOP_ZEBRA.half * 2, 0.45).rotateX(-Math.PI / 2).translate(LOOP_ZEBRA.x, PAINT_Y, z + 0.22), PAINT);
   });
 }
@@ -793,6 +800,8 @@ export function register({ scene, tick }: { low: boolean; scene: THREE.Scene | n
   }
   site('mall fountain', [FOUNTAIN.x - 4, FOUNTAIN.z - 5, FOUNTAIN.x + 4, FOUNTAIN.z + 5], build(centre));
   site('mall arch', [PROM[0], ARCH.z - 1, PROM[1], ARCH.z + 1], build(arch));
+  // (the zebra over the east ring avenue from its west row's passage to the mall's forecourt)
+  site('mall court zebra', [NS3.c - NS3.half, ZEBRA.z - ZEBRA.half, NS3.c + NS3.half, ZEBRA.z + ZEBRA.half], build((b) => b.detail(() => zebraOver(b, NS3, ZEBRA)), false));
   // Starlight Mall: each anchor, the hall, the porch, the forecourt, the totem and the shelter
   ANCHORS.forEach((a, k) => site(`mall anchor ${k}`, [a.rect[0] - 0.5, a.rect[1] - 2, a.rect[2] + 0.5, a.rect[3] + 2], build((b) => anchor(b, k))));
   // (its shell casts no shadow: inside, the day comes in as through the skylight)

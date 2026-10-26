@@ -22,6 +22,7 @@ import { registerStreetLevel } from './streetlevel3d';
 import { registerSites } from './uptownsites3d';
 import { registerStreetLife } from './streetlife3d';
 import { registerWheel } from './wheel3d';
+import { registerNorth } from './uptownnorth3d';
 
 /** Its own address, for the site worker (sitework.ts) */
 export const SELF = import.meta.url;
@@ -47,6 +48,8 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   registerWheel(scene, tick);
   // Its cyclists' bikes under their riders (Phase 6; the riders are the crowd's), on the main thread
   if (scene) registerUptownLife(scene, tick);
+  // Uptown North's square and the park's gates' walks through its block (its towers are among the rest)
+  registerNorth();
   // The axis's lanes, paved across their blocks
   UPTOWN_LANES.forEach(([x0, z0, x1, z1], i) =>
     site(`uptown lane ${i}`, [x0, z0, x1, z1], (into) => {

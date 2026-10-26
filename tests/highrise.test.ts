@@ -5,7 +5,7 @@
 // on open ground, solid in strips, and the flying traffic well over them.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { GROUND, HIGHRISES, HIGHRISE_SOLIDS, PODIUM, PROW, SPIRE_LOT, STRIP, TALLEST, partBox, partStrips, type Highrise } from '../src/scripts/city3d/highrise';
+import { GROUND, HIGHRISES, HIGHRISE_SOLIDS, PODIUM, PROW, SPIRE_LOT, STRIP, TALLEST, TOWER_BLOCKS, partBox, partStrips, type Highrise } from '../src/scripts/city3d/highrise';
 import { AXIS_X, LANE_HALF, PLAZA_BLOCK, UPTOWN_BLOCKS, UPTOWN_LANES } from '../src/scripts/city3d/uptown';
 import { EMPORIUM_ROOF } from '../src/scripts/city3d/projects';
 import { PLAN, polyArea, type Street } from '../src/scripts/city3d/streetplan';
@@ -56,7 +56,7 @@ test('slim towers, two or three to a block, the spire in the plaza the tallest, 
     if (b.use !== 'towers') assert.ok(b.id === PLAZA_BLOCK ? n === 1 : n === 0, `${b.id} is a ${b.use}`);
   }
   for (const t of HIGHRISES) {
-    assert.ok(UPTOWN_BLOCKS.some((b) => b.id === t.block), `${t.id}'s block`);
+    assert.ok(TOWER_BLOCKS.some((b) => b.id === t.block), `${t.id}'s block`);
     assert.ok(t.roof > EMPORIUM_ROOF, `${t.id} over the Emporium (the owner's call)`);
     if (t !== spire) {
       assert.ok(t.roof >= 14 && t.roof <= 32, `${t.id} at ${t.roof}`);
@@ -75,7 +75,7 @@ test('slim towers, two or three to a block, the spire in the plaza the tallest, 
 
 test('every part inside its lot and its lot inside its block, off every street and its sidewalk, clear of the lanes, apart from the next', () => {
   for (const t of HIGHRISES) {
-    const blk = UPTOWN_BLOCKS.find((b) => b.id === t.block)!;
+    const blk = TOWER_BLOCKS.find((b) => b.id === t.block)!;
     // (the flatiron's lot is its wedge's bounds: its parts' corners are its own, below)
     if (t.design !== 'flatiron') for (const c of corners(t.lot)) assert.ok(inPoly(blk.poly, c) || distToLine(blk.poly, c, true) < 0.6, `${t.id}'s lot off its block at ${c}`);
     for (const l of UPTOWN_LANES) assert.ok(!overlap(t.lot, l), `${t.id}'s lot on a lane`);
