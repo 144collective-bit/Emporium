@@ -16,8 +16,7 @@
  * walk (locomotion.ts) carries on as before.
  */
 import * as THREE from 'three';
-import { createDegen, emotePose, lookOutfit, type Degen } from './character';
-import { emoteOver, emoteUpper } from './emotes';
+import { createDegen, lookOutfit, type Degen } from './character';
 import { copyPose, createLocomotion, placeRoot, type Locomotion, type Root } from './locomotion';
 import type { Animator } from './animator';
 import type { MoData } from './mocap';
@@ -36,6 +35,8 @@ const TAG_RANGE = 30;
 export interface Motion {
   anim: typeof import('./animator');
   data: MoData;
+  /** The emotes (and the gaze and the vault, walk mode's), loaded with it */
+  onFoot: typeof import('./onfoot');
 }
 /** Within this of the camera a player's animator runs every frame, to `ANIM_FAR` at `FAR_DT`, beyond it not at all */
 const ANIM_NEAR = 25;
@@ -295,7 +296,7 @@ export function createRemotes(scene: THREE.Scene, camera: THREE.PerspectiveCamer
           r.move = newMove(face);
         }
         // (an upper-body emote plays over the animator's legs through the upper mask, as the gun does; the dance takes everything)
-        const dancing = !!r.emote && !emoteUpper(r.emote.id);
+        const dancing = !!r.emote && !!mo && !mo.onFoot.emoteUpper(r.emote.id);
         const mocapOn = !!mo && !!r.anim && dist < ANIM_FAR && !dancing && !air;
         r.mocapW = THREE.MathUtils.clamp(r.mocapW + (mocapOn ? dt / 0.25 : -dt / 0.15), 0, 1);
         if (r.anim && r.mocapW > 0) {
@@ -312,8 +313,8 @@ export function createRemotes(scene: THREE.Scene, camera: THREE.PerspectiveCamer
         }
         if (r.emote) {
           r.emote.t += dt;
-          if (emoteOver(r.emote.id, r.emote.t) || speed > 0.6) r.emote = null;
-          else emotePose(P, r.emote.id, r.emote.t);
+          if (!mo || mo.onFoot.emoteOver(r.emote.id, r.emote.t) || speed > 0.6) r.emote = null;
+          else mo.onFoot.emotePose(P, r.emote.id, r.emote.t);
         }
         r.aim += (((flags & (FLAG.aim | FLAG.fire)) !== 0 ? 1 : 0) - r.aim) * Math.min(1, dt * 14);
         r.reload = flags & FLAG.reload ? (r.reload + dt / WEAPONS[r.gun.id].reload) % 1 : 0;

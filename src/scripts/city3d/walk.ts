@@ -31,16 +31,15 @@
  */
 import * as THREE from 'three';
 import type { SpotId } from '../../lib/city';
-import { PLAYER, createDegen, emotePose, type Outfit } from './character';
-import { emoteOver, emoteUpper } from './emotes';
+import { PLAYER, createDegen, type Outfit } from './character';
 import { LAND_CROUCH, LAND_ROLL, copyPose, createLocomotion, placeRoot, type Root } from './locomotion';
 import type { Animator } from './animator';
 import type { Contact } from './contact';
 import { loadMocap } from './mocap-load';
-import { createGaze, type Interest } from './gaze';
+import type { Interest } from './gaze';
 import { GAITS, STAIRS, climbAhead, newMove, startSlide, stepMove, stepSlide, type Slide } from './movesim';
 import { slidePose } from './poses';
-import { OVER, isLow, overAhead, overAt, overPose, type Over } from './vault';
+import type { Over } from './vault';
 import { springVel } from './inertia';
 import type { MoData } from './mocap';
 import { createCombat, type Sfx } from './combat';
@@ -64,7 +63,7 @@ import type { RaceStart } from './kart-types';
 import type { Cond } from './kartcircuit';
 import { createFightUI } from './fight-ui';
 import { COUNTER, TRAINER } from './fightsite';
-import { MOMENT, type Mark, type Moment, type Vehicle, alightMark, benchMark, boardMark, carriedAt, carryPose, counterMark, crateAt, crateMark, createMoment, doorMark, liftMark, momentPose } from './moments';
+import { MOMENT, type Mark, type Moment, type Vehicle, alightMark, benchMark, boardMark, counterMark, crateMark, createMoment, doorMark, liftMark } from './moments';
 import { CARS } from './cars';
 import { toon } from './kit';
 import { BENCHES } from './pedestrians';
@@ -145,6 +144,8 @@ const JUMP = 3.9;
 const GRAVITY = 11.5;
 /** How long a hard landing shakes the camera */
 const LAND_SHAKE = 0.3;
+/** The gaze before its module is in: straight ahead */
+const STILL_GAZE = { yaw: 0, pitch: 0 };
 const SCALE = 0.85;
 /** How far you can go: the world's edge */
 const BOUNDS = WORLD_BOUNDS;
@@ -272,6 +273,8 @@ export function createWalk(d: WalkDeps) {
   let animator: Animator | null = null;
   /** ...its code (its own chunk, fetched with the clips the first time he walks) */
   let anim: typeof import('./animator') | null = null;
+  /** The emotes, the gaze and the vault (onfoot.ts), loaded with the animator: until then none of them plays */
+  let onFoot: typeof import('./onfoot') | null = null;
   /** ...and the clips it plays (other players' animators play the same: `motion`) */
   let mocapData: MoData | null = null;
   let animLoading = false;
@@ -324,7 +327,7 @@ export function createWalk(d: WalkDeps) {
   let lookAround = 0;
   let gazePitch = 0;
   // The gaze (gaze.ts): what his head is drawn to, on top of the pose
-  const gaze = createGaze(11);
+  let gaze: ReturnType<typeof import('./gaze').createGaze> | null = null;
   const interests: Interest[] = [];
   let lastYaw = 0;
   let headYaw = 0;
@@ -1727,13 +1730,14 @@ export function createWalk(d: WalkDeps) {
   function tryOver(dir: number) {
     const g0 = groundAt(pos.x, pos.z, pos.y + 0.3);
     const ahead = SOLID_GRID.near(pos.x + Math.sin(dir) * 1.1, pos.z + Math.cos(dir) * 1.1, 1.5, []);
-    const o = overAhead(pos.x, pos.z, dir, g0, ahead, RADIUS);
+    if (!onFoot) return null;
+    const o = onFoot.overAhead(pos.x, pos.z, dir, g0, ahead, RADIUS);
     if (!o) return null;
     const g1 = groundAt(o.x1, o.z1, g0 + 0.3);
-    if (Math.abs(g1 - g0) > OVER.drop || blocked(o.x1, o.z1, g1)) return null;
+    if (Math.abs(g1 - g0) > onFoot.OVER.drop || blocked(o.x1, o.z1, g1)) return null;
     for (let k = 1; k < 10; k++) {
-      const at = overAt(o, k / 10, g0, g1);
-      if (blocked(at.x, at.z, at.y, (b) => isLow(b) && b[4] <= o.top + 0.02)) return null;
+      const at = onFoot.overAt(o, k / 10, g0, g1);
+      if (blocked(at.x, at.z, at.y, (b) => onFoot!.isLow(b) && b[4] <= o.top + 0.02)) return null;
     }
     return { o, t: 0, g0, g1, v: speedNow };
   }
@@ -2076,7 +2080,7 @@ export function createWalk(d: WalkDeps) {
       // Over something low: along the way over, his feet over its top (vault.ts), the springs carried along
       over.t += dt;
       const u = Math.min(1, over.t / over.o.dur);
-      const at = overAt(over.o, u, over.g0, over.g1);
+      const at = onFoot!.overAt(over.o, u, over.g0, over.g1);
       vel.set((at.x - pos.x) / dt, (at.z - pos.z) / dt);
       pos.set(at.x, at.y, at.z);
       ms.vx = vel.x;
@@ -2206,12 +2210,12 @@ export function createWalk(d: WalkDeps) {
     speedNow = speed;
     if (emote) {
       emote.t += dt;
-      if (emoteOver(emote.id, emote.t) || speed > 0.6) emote = null;
+      if (!onFoot || onFoot.emoteOver(emote.id, emote.t) || speed > 0.6) emote = null;
       // (emotes.ts: the wave, the cheer and the salute take only his upper body, over the captured legs and hips
       // through the upper mask below; the dance takes everything, the motion capture stepping aside)
-      else if (!combat.armed) emotePose(P, emote.id, emote.t);
+      else if (!combat.armed) onFoot.emotePose(P, emote.id, emote.t);
     }
-    const dancing = !!emote && !combat.armed && !emoteUpper(emote.id);
+    const dancing = !!emote && !!onFoot && !combat.armed && !onFoot.emoteUpper(emote.id);
     const emoting = !!emote && !combat.armed && !dancing;
     // The slide's pose, blended in quickly and out a little slower (the motion capture steps aside for it)
     slideAmt += ((slide ? 1 : 0) - slideAmt) * damp(slide ? 18 : 9, dt);
@@ -2221,18 +2225,18 @@ export function createWalk(d: WalkDeps) {
     // ...and going over something low, its keyed pose with the hands planted on its top (blended out from its end)
     overAmt += ((over ? 1 : 0) - overAmt) * damp(over ? 30 : 8, dt);
     const ov = over?.o ?? overLast;
-    if (ov && overAmt > 0.01) overPose(P, ov, over ? Math.min(1, over.t / over.o.dur) : 1, overAmt, pos.x, pos.y, pos.z, face, SCALE);
+    if (ov && onFoot && overAmt > 0.01) onFoot.overPose(P, ov, over ? Math.min(1, over.t / over.o.dur) : 1, overAmt, pos.x, pos.y, pos.z, face, SCALE);
     // ...and a moment's keyed pose (the door push, the lean on the counter, the sit), the motion capture stepping aside
     momentAmt += ((moments.posing ? 1 : 0) - momentAmt) * damp(moments.posing ? 12 : 8, dt);
-    if (momentAmt > 0.01) momentPose(P, moments, momentAmt, pos.x, pos.y + momentDy, pos.z, face, SCALE, t);
+    if (momentAmt > 0.01 && onFoot) onFoot.momentPose(P, moments, momentAmt, pos.x, pos.y + momentDy, pos.z, face, SCALE, t);
     // ...and a crate in both hands on the walk between a pick and a put (the hold has the arms, as a gun does)
     carryAmt += ((carrying && crateUp && !moments.posing ? 1 : 0) - carryAmt) * damp(10, dt);
-    if (carryAmt > 0.01) carryPose(P, carryAmt, pos.x, pos.y, pos.z, face, SCALE);
+    if (carryAmt > 0.01 && onFoot) onFoot.carryPose(P, carryAmt, pos.x, pos.y, pos.z, face, SCALE);
     // The crate itself: on the ground at the mark, in his hands, or on its way between
     if (carrying) {
       const mk = moments.mark;
       const inMoment = moments.active && (mk?.kind === 'pick' || mk?.kind === 'put');
-      const c = inMoment ? crateAt(moments, pos.x, pos.y, pos.z, face, SCALE) : crateUp ? carriedAt(pos.x, pos.y, pos.z, face, SCALE) : null;
+      const c = !onFoot ? null : inMoment ? onFoot.crateAt(moments, pos.x, pos.y, pos.z, face, SCALE) : crateUp ? onFoot.carriedAt(pos.x, pos.y, pos.z, face, SCALE) : null;
       crate.visible = !!c;
       if (c) {
         crate.position.set(c.x, c.y, c.z);
@@ -2268,7 +2272,7 @@ export function createWalk(d: WalkDeps) {
     interests.length = 0;
     for (const p of bodies.people) if (Math.abs(p.x - pos.x) < 8 && Math.abs(p.z - pos.z) < 8) interests.push({ x: p.x, z: p.z, y: pos.y + 1.1 * SCALE, kind: 'person', moving: p.act === undefined, id: `p${p.x.toFixed(1)},${p.z.toFixed(1)}` });
     for (const c of bodies.cars) if (Math.abs(c.x - pos.x) < 8 && Math.abs(c.z - pos.z) < 8) interests.push({ x: c.x, z: c.z, y: pos.y + 0.6, kind: 'car', weight: 0.7, moving: true, id: `c${c.model}${Math.round(c.x)},${Math.round(c.z)}` });
-    const gaz = gaze.update({ dt, x: pos.x, y: pos.y + 1.1 * SCALE, z: pos.z, face: animator ? animator.face : face, ahead: face, speed, interests });
+    const gaz = gaze ? gaze.update({ dt, x: pos.x, y: pos.y + 1.1 * SCALE, z: pos.z, face: animator ? animator.face : face, ahead: face, speed, interests }) : STILL_GAZE;
     const gazeW = combat.armed || aim ? 0 : speed < 0.25 ? 1 - Math.min(1, Math.abs(lookYaw) / 0.35) : 1;
     lookAround += (gaz.yaw * gazeW - lookAround) * damp(10, dt);
     gazePitch += (gaz.pitch * gazeW - gazePitch) * damp(10, dt);
@@ -2281,9 +2285,11 @@ export function createWalk(d: WalkDeps) {
     // On foot, unarmed and not showing off, the motion capture: blended in and out over a moment
     if (!animator && !animLoading) {
       animLoading = true;
-      Promise.all([import('./animator'), import('./contact'), loadMocap()]).then(
-        ([m, cm, data]) => {
+      Promise.all([import('./animator'), import('./contact'), loadMocap(), import('./onfoot')]).then(
+        ([m, cm, data, of]) => {
           anim = m;
+          onFoot = of;
+          gaze ??= of.createGaze(11);
           mocapData = data;
           animator = m.createAnimator(data);
           contactMod = cm;
@@ -2634,7 +2640,7 @@ export function createWalk(d: WalkDeps) {
     },
     /** The motion capture and its animator module, once they're in (remote.ts: other players move on it too) */
     get motion() {
-      return anim && mocapData ? { anim, data: mocapData } : null;
+      return anim && mocapData && onFoot ? { anim, data: mocapData, onFoot } : null;
     },
     /** What other players need to see of us, for the game server */
     netState() {

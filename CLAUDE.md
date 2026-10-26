@@ -1358,7 +1358,12 @@ it and has been retired completely. Build only on what's here.
     strings, arrays, objects): anything with references packs and unpacks.
   - Features load when they're used, each its own chunk (`import()`):
     the fight (`fight.ts` and the figures' clips, when the trainer's menu
-    first opens: `loadFight()` in `walk.ts`), the stage of the fitting room
+    first opens: `loadFight()` in `walk.ts`), the animator with the motion
+    capture and the on-foot extras (`onfoot.ts`: the emotes, the gaze, the
+    vault and the moments' keyed poses, `momentposes.ts`, one chunk
+    fetched when walking starts; until it's in an emote is skipped, the
+    gaze still, nothing vaulted and a moment plays no pose; the hologram
+    fetches the emotes on its own after the boot), the stage of the fitting room
     and the character screen (`stage.ts`), SMAA (`post.ts`), the fight
     demo, the benchmark (`?bench`, `bench.ts`), Drop 001's fitting room
     (`fitting.ts`, when its panel first opens: `loadFitting()` in index.ts)
@@ -1716,7 +1721,8 @@ it and has been retired completely. Build only on what's here.
   → (hold → back) → done (`update()` gives walk.ts the approach's goal:
   the walk's own last steps onto the mark, or `timeout`; `skip()` on F
   again; `release()` when the menu closes or to stand up; `cancel()`),
-  and `momentPose()`, keyed on the `Pose` rig as the vault's (the hands
+  and `momentPose()` (in `momentposes.ts`, walk mode's on-foot chunk),
+  keyed on the `Pose` rig as the vault's (the hands
   on the thing by `reachArm()`, within 1.5 cm in the test). Doors (every
   landmark's, Trench Avenue's, the stadium's gate, the garage, hangar and
   kart hut, the lifts and stations): a push, the panel opening as the
@@ -1787,7 +1793,8 @@ it and has been retired completely. Build only on what's here.
   on a 120 bpm step-touch (a lifted foot eases off and onto its spot), two
   bars long (`DANCE_SECONDS`). The stage (`stage.ts`, over its idle: `base`)
   and the hologram (`dancePose()`) play the same clips; the lab's Emotes
-  program plays them in turn. No CMU take in the repository is a dance:
+  program plays them in turn (emotes.ts is walk mode's chunk, `onfoot.ts`,
+  not the boot's). No CMU take in the repository is a dance:
   one from capture is a data step for the owner. The clips file's limits are 640 KB (test) and 660 KB (budget),
   raised for the takes on purpose:
   - **The data** is CMU's motion capture (free for commercial use; the

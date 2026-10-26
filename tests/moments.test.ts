@@ -9,7 +9,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { MOMENT, type Phase, type Vehicle, alightMark, benchMark, boardMark, carriedAt, carryPose, counterMark, crateAt, crateMark, createMoment, doorMark, liftMark, momentPose } from '../src/scripts/city3d/moments';
+import { MOMENT, type Phase, type Vehicle, alightMark, benchMark, boardMark, counterMark, crateMark, createMoment, doorMark, liftMark } from '../src/scripts/city3d/moments';
+import { carriedAt, carryPose, crateAt, momentPose } from '../src/scripts/city3d/momentposes';
 import { HIP_HEIGHT, makeSkeleton, newPose, poseSkeleton } from '../src/scripts/city3d/skeleton';
 import { idlePose } from '../src/scripts/city3d/poses';
 import { SEAT_H } from '../src/scripts/city3d/pedestrians';

@@ -6,7 +6,7 @@
 import * as THREE from 'three';
 import { Batch, canvasTex, fx, glowMat, lit, liveTex, neonSign, occlude, PAL, place, rng, toon } from './kit';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { PLAYER, createDegen, dancePose } from './character';
+import { PLAYER, createDegen, idlePose } from './character';
 import { SLAB as S, addLamp, addTree } from './world';
 import type { Idle, LandmarkCtx } from './landmarks';
 import { V, cylAt, sign, signMat, spot, unitBox, unitPlane } from './landmark-kit';
@@ -592,6 +592,10 @@ export function emporium(scene: THREE.Scene, ctx: LandmarkCtx, crowd: Idle[]) {
       }
     });
     holo.g.position.set(CX, holoBase, CZ);
+    // The dance is the emotes' keyed clip (emotes.ts), fetched after the boot (it's walk mode's chunk, not the boot's):
+    // the hologram stands until it's in
+    let dance: ((p: typeof holo.pose, t: number) => void) | null = null;
+    import('./emotes').then((m) => (dance = m.dancePose), () => {});
     g.add(fx(holo.g));
     const cone = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 0.6, 3.6, 24, 1, true), lit(glowMat('#00eaff', 1, null), 0.03, 0.08));
     cone.position.set(CX, holoBase + 1.8, CZ);
@@ -602,7 +606,8 @@ export function emporium(scene: THREE.Scene, ctx: LandmarkCtx, crowd: Idle[]) {
       mat.uniforms.power.value = (1.7 - night * 0.4) * (glitch ? 0.4 + Math.random() * 0.6 : 1);
       holo.g.rotation.y = t * 0.45;
       holo.g.position.x = CX + glitch * (Math.random() - 0.5) * 0.25;
-      dancePose(holo.pose, t);
+      if (dance) dance(holo.pose, t);
+      else idlePose(holo.pose, t);
       holo.update();
     });
   }

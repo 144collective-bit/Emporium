@@ -11,8 +11,8 @@
  */
 import * as THREE from 'three';
 import type { Look } from '../net/profile-data';
-import { createDegen, emotePose, idlePose, lookOutfit, walkPose, type Degen } from './character';
-import { emoteSeconds } from './emotes';
+import { createDegen, idlePose, lookOutfit, walkPose, type Degen } from './character';
+import { emotePose, emoteSeconds } from './emotes';
 import { newFightPose, sampleClip } from './fight-anim';
 import { lit, liveTex, toon } from './kit';
 import { createPost } from './post';
