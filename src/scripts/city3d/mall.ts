@@ -212,13 +212,21 @@ const GROUPS: [number, number][] = (() => {
   return Array.from({ length: n }, (_, i): [number, number] => [x0 + i * (GROUP * BAY.w + island), x0 + i * (GROUP * BAY.w + island) + GROUP * BAY.w]);
 })();
 export const BAYS: { x: number; z: number; yaw: number }[] = BAY_ROWS.flatMap((row) => GROUPS.flatMap(([g0]) => Array.from({ length: GROUP }, (_, i) => ({ x: g0 + (i + 0.5) * BAY.w, z: row.z, yaw: row.yaw }))));
-/** The planted islands between the groups, across both rows of each pair (a kerb, shrubs, trees, a lamp) */
+/** The planted islands between the groups, across both rows of each pair: a kerb, a paved walk down the middle (`ISLAND_WALK` wide), planting either side with two trees each, a lamp by the walk, EV chargers on every other one */
 export const ISLANDS: Rect[] = (() => {
   const out: Rect[] = [];
   for (let r = 0; r + 1 < BAY_ROWS.length; r += 2)
     for (let g = 0; g + 1 < GROUPS.length; g++) out.push([GROUPS[g][1] + 0.15, BAY_ROWS[r].z - BAY.d / 2 + 0.2, GROUPS[g + 1][0] - 0.15, BAY_ROWS[r + 1].z + BAY.d / 2 - 0.2]);
   return out;
 })();
+/** The islands' walk down their middle (its width) */
+export const ISLAND_WALK = 1.6;
+/** The trees on an island: two either side of its walk */
+export function islandTrees([x0, z0, x1, z1]: Rect): Pt[] {
+  const xm = (x0 + x1) / 2;
+  const off = ISLAND_WALK / 2 + ((x1 - x0) / 2 - ISLAND_WALK / 2) / 2;
+  return [-1, 1].flatMap((s) => [z0 + 2.2, z1 - 2.2].map((z): Pt => [xm + s * off, z]));
+}
 /** The taxi rank: the first row's bays nearest the mall's porch */
 export const RANK_CABS: { x: number; z: number; yaw: number }[] = BAYS.filter((b) => b.z === BAY_ROWS[0].z && Math.abs(b.x - (PORCH.rect[0] + PORCH.rect[2]) / 2) < 5);
 const MODELS = ['hatch', 'sedan', 'pickup', 'van', 'coupe', 'suv'];
@@ -275,8 +283,8 @@ export const MALL_LAMPS: [number, number, number, number][] = (() => {
   for (let x = 6; x < LOOP.xE - 4; x += 12) out.push([x, LOOP.zN + LOOP.half + 0.45, Math.PI, SLAB_Y], [x, LOOP.zS - LOOP.half - 0.45, 0, 0.02]);
   for (let z = LOOP.zN + 8; z < LOOP.zS - 4; z += 12) out.push([LOOP.xE + LOOP.half + 0.45, z, -Math.PI / 2, 0.02]);
   for (let z = CINEMA.rect[3] + 10; z < ARCH.z - 2; z += 18) if (Math.abs(z - FOUNTAIN.z) > FOUNTAIN.r + 2) out.push([PROM[0] + 0.5, z, Math.PI / 2, SLAB_Y], [PROM[1] - 0.5, z + 9, -Math.PI / 2, SLAB_Y]);
-  // (a light in the middle of every car park island)
-  for (const [x0, z0, x1, z1] of ISLANDS) out.push([(x0 + x1) / 2, (z0 + z1) / 2, 0, SLAB_Y]);
+  // (a light beside the walk down every car park island)
+  for (const [x0, z0, x1, z1] of ISLANDS) out.push([(x0 + x1) / 2 + ISLAND_WALK / 2 + 0.35, (z0 + z1) / 2, 0, SLAB_Y]);
   return out;
 })();
 
@@ -286,10 +294,7 @@ export const MALL_LAMPS: [number, number, number, number][] = (() => {
 export const MALL_TREES: [number, number, number][] = [
   ...COURT_TREES.map(([x, z]): [number, number, number] => [x, z, 0.5]),
   ...PLANTERS.map(([x, z]): [number, number, number] => [x, z, 0.5]),
-  ...ISLANDS.flatMap(([x0, z0, x1, z1]): [number, number, number][] => [
-    [(x0 + x1) / 2, z0 + (z1 - z0) * 0.22, 0.25],
-    [(x0 + x1) / 2, z0 + (z1 - z0) * 0.78, 0.25],
-  ]),
+  ...ISLANDS.flatMap((r) => islandTrees(r).map(([x, z]): [number, number, number] => [x, z, 0.25])),
 ];
 
 /* ---------- What's solid ---------- */

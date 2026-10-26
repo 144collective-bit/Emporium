@@ -10,6 +10,7 @@ import { MapControls } from 'three/addons/controls/MapControls.js';
 import { BAKING_TEXTURES, PICK, builtTexturesDone, consolidate, loadBuiltTextures, loadImage, loadTex, updateLights, updateWind } from './kit';
 import { SWAY, windStrength } from './dusk';
 import { buildBusStops } from './transit3d';
+import { buildOuterDress } from './outerdress3d';
 import type { LifeSfx } from './life';
 import { createPost } from './post';
 import { CENTER, SLAB, addLamp, addTree, buildGround, buildLamps, buildSkyline, buildTrees, placed as everyPlaced, puddleMat, keepTreesOff, scatterOutskirts, waterMat, type Env, type Tick } from './world';
@@ -312,6 +313,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   buildTrees(tier === 'low');
   buildLamps(scene, tier === 'low', tick, reduced);
   buildBusStops(tier === 'low');
+  buildOuterDress(tier === 'low');
   progress(0.7);
   await waited(nextFrame());
   // (the horns and the bus doors play through the sound, made with the controls below; one before then is dropped)

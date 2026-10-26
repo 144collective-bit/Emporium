@@ -24,6 +24,7 @@ import {
   MSCP,
   COURT_TREES,
   ISLANDS,
+  ISLAND_WALK,
   MALL_TREES,
   PLANTERS,
   PAY_STATIONS,
@@ -100,7 +101,9 @@ test('the mall: the anchors at the hall\'s ends, the porch on its front, the car
   for (const r of ISLANDS) {
     assert.ok(inBox(PARK_BLOCK, r[0], r[1]) && inBox(PARK_BLOCK, r[2], r[3]));
     for (const b of BAYS) assert.ok(!inBox(r, b.x, b.z, 0.3), `a bay on an island at ${b.x}, ${b.z}`);
-    assert.equal(MALL_TREES.filter(([x, z]) => inBox(r, x, z)).length, 2);
+    assert.equal(MALL_TREES.filter(([x, z]) => inBox(r, x, z)).length, 4);
+    // (none on the walk down its middle)
+    for (const [x, z] of MALL_TREES) if (inBox(r, x, z)) assert.ok(Math.abs(x - (r[0] + r[2]) / 2) > ISLAND_WALK / 2 + 0.8);
   }
   // The forecourt's planters and pay stations clear of the porch's way in and the anchors' doors
   for (const [x] of [...PLANTERS, ...PAY_STATIONS]) {

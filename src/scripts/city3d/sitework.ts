@@ -33,6 +33,7 @@ import { buildStreetWalls } from './streetwall3d';
 import { buildRiverside } from './riverside3d';
 import { buildWaterfront } from './waterfront3d';
 import { buildBusStops } from './transit3d';
+import { buildOuterDress } from './outerdress3d';
 
 export interface SiteInit {
   low: boolean;
@@ -90,6 +91,7 @@ export function serveSites(scope: Scope, init: SiteInit) {
   buildTrees(init.low);
   buildLamps(scene, init.low);
   buildBusStops(init.low);
+  buildOuterDress(init.low);
   const sites = new Map(takeSites().map((s) => [s.id, s]));
   scope.onmessage = (e) => {
     // A district loaded as you approach (districts.ts): its module, and the sites it registers

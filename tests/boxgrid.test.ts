@@ -144,10 +144,11 @@ test('flying: an aircraft only given the boxes near it flies exactly as it would
   let bumps = 0;
   for (const id of ['prop', 'bizjet', 'heli'] as const) {
     const T = TUNES[id];
-    for (let run = 0; run < 25; run++) {
-      // (it starts outside every building, as the cars do)
+    for (let run = 0; run < 40; run++) {
+      // (it starts with its hull clear of every building, as an aircraft does: started against a tall stack of a
+      // tower's footprints it's pushed further in one step than the boxes near where it started reach)
       let [x, z] = spot();
-      while (CAR.some((q) => inBox(q, x, z))) [x, z] = spot();
+      while (CAR.some((q) => inBox(q, x, z, 4.5))) [x, z] = spot();
       const yaw = r() * Math.PI * 2;
       const y = 1 + r() * 10;
       const mk = () => {

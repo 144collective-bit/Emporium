@@ -117,5 +117,12 @@ prices on any sign.
      and a glass lift by the east gallery (`LIFT_SHAFT`, `MALL_LIFT`: "Lift ·
      Upper floor" / "Lift · Ground floor", a fade as Sector 7 Tower's).
    - New made-up names for the shops, the units and the food stalls.
+   **The polish pass** (the owner's call: "fix all rough spots"): the car
+   park's islands each a small garden (a paved walk down the middle with
+   light bollards, beds with clipped hedges, flowering shrubs, grasses and a
+   boulder, four trees, the lamp by the walk; EV chargers with their bays
+   painted green on every other island, a trolley shelter on the rest), and
+   Palm Court's festoon lights in the FX layer (drawn with ink outlines the
+   thin cables read as thick black ropes).
 3. **Later, if the owner wants:** shops to buy and run with Dorras, like the
    corner shops, and events at the cinema.
