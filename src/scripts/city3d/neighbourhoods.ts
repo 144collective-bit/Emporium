@@ -11,14 +11,15 @@
  * are SQUARE_SOLIDS (outer.ts, used by solids.ts).
  */
 import * as THREE from 'three';
-import { Batch, PAL, neon, toon } from './kit';
-import { BENDS, BEND_REACH, JETTIES, LAWN_TREES, OUTER_PARKS, PROMENADE, SQUARE_LAYOUTS, offBridges, offFootbridge, type Pt, type SquareLayout } from './outer';
+import { Batch, PAL, fx, neon, toon } from './kit';
+import { BENDS, BEND_REACH, JETTIES, OUTER_PARKS, PROMENADE, SQUARE_LAYOUTS, offBridges, offFootbridge, type Pt, type SquareLayout } from './outer';
 import { atGangway } from './riverbus';
 import { EW_ROADS, LANE, NS_ROADS, RIVER } from './layout';
 import { WATER_Y, pullAt } from './river';
 import { BX as LIBERTY_X, DECK_HALF } from './liberty';
 import { SLAB as S, addLamp, addTree, lotMat, waterMat, type Tick } from './world';
 import type { Idle } from './landmarks';
+import { DRESS } from './outerdress3d';
 
 const INK = toon('#1b1830');
 const STONE = toon('#8f8ab0');
@@ -26,6 +27,12 @@ const WOOD = toon('#8a5a3c');
 const METAL = toon('#2a2b38');
 const HEDGE = toon('#2a8a55');
 const glow = (c: string) => neon(c, 0.6, 2.4);
+const INLAY = toon('#b9b3d6');
+const COPING = toon('#a9a3bf');
+const BIN = toon('#2f4b3c');
+const RING_ORANGE = toon('#ff7a2e');
+const BULB = neon('#ffe2a8', 0.3, 2.4);
+const FLOWERS = [toon('#ff6fa8'), toon('#ffd23f'), toon('#9d7ad6'), toon('#f3f1ea')];
 const soft = (c: string) => neon(c, 0.5, 1.3);
 const SEAT = S + 0.3;
 
@@ -131,7 +138,68 @@ function square(b: Batch, scene: THREE.Scene, l: SquareLayout, crowd: Idle[], ti
   // Paving with a border, the centrepiece, trees in the corners, benches round it, a kiosk, lamps
   box(b, x0, S, z0, x1, S + 0.012, z1, toon('#4b4766'));
   b.box(x0 + 0.25, S, z0 + 0.25, x1 - x0 - 0.5, 0.016, z1 - z0 - 0.5, lotMat('paving'));
+  // Inlays in a paler stone: a ring round the centrepiece and bands out from it along both axes to the edges
+  {
+    const [cx, cz] = l.centre;
+    const r = l.feature.half + 1.05;
+    b.add(new THREE.RingGeometry(r - 0.22, r, 40).rotateX(-Math.PI / 2).translate(cx, S + 0.022, cz), INLAY);
+    for (const [ax, az, bx, bz] of [
+      [x0 + 0.25, cz - 0.15, cx - r, cz + 0.15],
+      [cx + r, cz - 0.15, x1 - 0.25, cz + 0.15],
+      [cx - 0.15, z0 + 0.25, cx + 0.15, cz - r],
+      [cx - 0.15, cz + r, cx + 0.15, z1 - 0.25],
+    ])
+      if (bx - ax > 0.2 && bz - az > 0.2) b.add(new THREE.PlaneGeometry(bx - ax, bz - az).rotateX(-Math.PI / 2).translate((ax + bx) / 2, S + 0.022, (az + bz) / 2), INLAY);
+  }
   centrepiece(b, scene, l, tick, reduced);
+  // Flower troughs along the sides
+  l.troughs.forEach(([tx0, tz0, tx1, tz1], k) => {
+    box(b, tx0, S, tz0, tx1, S + 0.4, tz1, toon('#6e6a8c'));
+    box(b, tx0 - 0.03, S + 0.4, tz0 - 0.03, tx1 + 0.03, S + 0.45, tz1 + 0.03, toon('#8f8ab0'));
+    box(b, tx0 + 0.06, S + 0.4, tz0 + 0.06, tx1 - 0.06, S + 0.43, tz1 - 0.06, toon('#3b2a22'));
+    b.detail(() => {
+      for (let z = tz0 + 0.18; z < tz1 - 0.1; z += 0.26)
+        b.add(new THREE.IcosahedronGeometry(0.13, 0).translate((tx0 + tx1) / 2 + (Math.round(z * 10) % 2 ? 0.08 : -0.08), S + 0.53, z), FLOWERS[(((k + Math.round(z * 4)) % FLOWERS.length) + FLOWERS.length) % FLOWERS.length]);
+    });
+  });
+  // Café tables by the kiosk: a round top on a stem, two chairs (near only)
+  b.detail(() => {
+    for (const [x, z] of l.cafe) {
+      cyl(b, 0.38, 0.04, x, S + 0.62, z, toon('#e8e4f4'), 14);
+      cyl(b, 0.04, 0.62, x, S, z, METAL, 6);
+      for (const s of [-1, 1]) {
+        box(b, x + s * 0.62 - 0.18, S + 0.36, z - 0.18, x + s * 0.62 + 0.18, S + 0.4, z + 0.18, WOOD);
+        box(b, x + s * 0.8 - 0.03, S + 0.4, z - 0.18, x + s * 0.8 + 0.03, S + 0.75, z + 0.18, WOOD);
+        for (const dz of [-0.14, 0.14]) box(b, x + s * 0.62 - 0.02, S, z + dz - 0.02, x + s * 0.62 + 0.02, S + 0.36, z + dz + 0.02, METAL);
+      }
+    }
+  });
+  // Poles at the corners and string lights along the long sides between them, in the FX layer (outlines would ink them black)
+  {
+    const f = new Batch();
+    for (const [x, z] of l.poles) cyl(b, 0.05, 3.4, x, S, z, METAL, 6);
+    f.detail(() => {
+      const [a, c, d, e] = l.poles;
+      for (const [p, q] of [
+        [a, c],
+        [d, e],
+        [a, e],
+        [c, d],
+      ] as const) {
+        const pts: THREE.Vector3[] = [];
+        for (let k = 0; k <= 10; k++) {
+          const t = k / 10;
+          pts.push(new THREE.Vector3(p[0] + (q[0] - p[0]) * t, S + 3.3 - Math.sin(Math.PI * t) * 0.55, p[1] + (q[1] - p[1]) * t));
+        }
+        f.add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 12, 0.012, 3, false), METAL);
+        for (let k = 1; k < 10; k++) f.add(new THREE.SphereGeometry(0.06, 6, 4).translate(pts[k].x, pts[k].y - 0.08, pts[k].z), BULB);
+      }
+    });
+    const g = new THREE.Group();
+    f.build(g, { cast: false, receive: false });
+    fx(g);
+    scene.add(g);
+  }
   for (const [x, z] of l.planters) {
     box(b, x - 0.45, S, z - 0.45, x + 0.45, S + 0.5, z + 0.45, toon('#6e6a8c'));
     box(b, x - 0.38, S + 0.5, z - 0.38, x + 0.38, S + 0.52, z + 0.38, toon('#3b2a22'));
@@ -195,8 +263,8 @@ function parks(b: Batch, crowd: Idle[], low: boolean) {
     });
     addLamp(cx, cz, 0);
   }
-  // Phones plant every other one
-  LAWN_TREES.forEach(([x, z], i) => (!low || i % 2 === 0) && addTree(x, z, 0.85 + ((i * 53) % 10) / 22, i % 3 === 0));
+  // Phones plant every other one (the lawn trees kept off the walks, beds and benches: outerdress.ts)
+  DRESS.trees.forEach(([x, z], i) => (!low || i % 2 === 0) && addTree(x, z, 0.85 + ((i * 53) % 10) / 22, i % 3 === 0));
 }
 
 /** Lamps along the town side of each bend, every so often, clear of the roads it crosses */
@@ -246,17 +314,51 @@ function promenade(b: Batch, low: boolean) {
         run = long ? x : null;
       }
     }
+    // A pale stone coping along the water's edge, in runs between the gaps (pieces no longer than 24)
+    const clearAt = (x: number) => offBridges(x, 0.3) && Math.abs(x - LIBERTY_X) > DECK_HALF + 0.3 && !atGangway(bank, x, 0.05) && pullAt(bank, x) < 0.3;
+    let from: number | null = null;
+    for (let x = x0; x <= x1 + 0.01; x += 1.5) {
+      const ok = clearAt(x) && x + 1.5 <= x1 + 0.01;
+      if (ok && from === null) from = x;
+      if (from !== null && (!ok || x - from >= 24)) {
+        const to = ok ? x : x - 1.5;
+        if (to > from) box(b, from, 0.05, Math.min(edge, edge - toWater * 0.55), to, 0.062, Math.max(edge, edge - toWater * 0.55), COPING);
+        from = ok ? x : null;
+      }
+    }
     // Trees in planters and benches facing the water, between the lamps (which stand every 6 from x0)
     for (let x = x0 + 3; x < x1; x += 12) {
       if (!offBridges(x, 1.2) || !offFootbridge(x, 1.2) || deckAt(x) || atGangway(bank, x, 1.4)) continue;
       const z = (inner + edge) / 2 - toWater * 0.15;
       cyl(b, 0.42, 0.4, x, 0, z, toon('#6e6a8c'), 10);
       addTree(x, z, 0.8, false, 0.4);
+      // (flowers round the trunk, near only)
+      b.detail(() => {
+        for (let k = 0; k < 7; k++) {
+          const a = (k / 7) * Math.PI * 2;
+          b.add(new THREE.IcosahedronGeometry(0.1, 0).translate(x + Math.cos(a) * 0.28, 0.45, z + Math.sin(a) * 0.28), FLOWERS[(((k + Math.round(x)) % FLOWERS.length) + FLOWERS.length) % FLOWERS.length]);
+        }
+      });
     }
     for (let x = x0 + 9; x < x1; x += 12) {
       if (!offBridges(x, 1.2) || !offFootbridge(x, 1.2) || deckAt(x) || atGangway(bank, x, 1.4)) continue;
       bench(b, [x, edge - toWater * 0.75], toWater > 0 ? 0 : Math.PI, 0.02);
+      // a bin beside it (near only)
+      b.detail(() => {
+        const bz = edge - toWater * 0.75;
+        cyl(b, 0.15, 0.58, x + 0.75, 0, bz, BIN, 8, 0.13);
+        cyl(b, 0.17, 0.05, x + 0.75, 0.58, bz, METAL, 8);
+      });
     }
+    // A life ring on a post at the railing every so often (near only)
+    b.detail(() => {
+      for (let x = x0 + 15.75; x < x1; x += 24) {
+        if (!clearAt(x) || !clearAt(x - 0.5) || !clearAt(x + 0.5) || deckAt(x)) continue;
+        const z = edge - toWater * 0.18;
+        box(b, x - 0.04, 0, z - 0.04, x + 0.04, 1.1, z + 0.04, METAL);
+        b.add(new THREE.TorusGeometry(0.2, 0.06, 6, 14).translate(x, 0.8, z - toWater * 0.06), RING_ORANGE);
+      }
+    });
     // Viewing decks out over the water, with a rail round them
     for (const j of JETTIES.filter((q) => q.bank === bank)) {
       const out = edge + toWater * 0.65;
@@ -265,6 +367,12 @@ function promenade(b: Batch, low: boolean) {
       box(b, j.x - 1.1, 0.5, out - 0.03, j.x + 1.1, 0.56, out + 0.03, rail);
       for (const px of [j.x - 1.07, j.x + 1.07]) box(b, px - 0.03, 0.5, Math.min(edge, out), px + 0.03, 0.56, Math.max(edge, out), rail);
       for (const px of [j.x - 1.07, j.x, j.x + 1.07]) box(b, px - 0.03, 0.14, out - 0.03, px + 0.03, 0.56, out + 0.03, rail);
+      // a viewing telescope at the deck's end (near only)
+      b.detail(() => {
+        const tz = out - toWater * 0.25;
+        cyl(b, 0.05, 0.75, j.x + 0.55, 0.14, tz, METAL, 8);
+        b.add(new THREE.CylinderGeometry(0.07, 0.1, 0.4, 8).rotateX(Math.PI / 2).translate(j.x + 0.55, 0.98, tz + toWater * 0.05), toon('#2a8a8f'));
+      });
     }
   }
 }

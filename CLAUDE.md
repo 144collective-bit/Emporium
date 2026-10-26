@@ -125,12 +125,32 @@ it and has been retired completely. Build only on what's here.
     (fountain, kiosk), West Green (a plinth with the Emporium diamond
     turning in neon), East Square (a bandstand) and South Square (a clock
     tower, kiosk); benches, corner planters, lamps, light bollards at the
-    ways in, uplights round the centrepiece and a few people.
+    ways in, uplights round the centrepiece and a few people; paler stone
+    inlays (a ring round the centrepiece, bands out to the edges), flower
+    troughs along the sides (`troughs`, solid), café tables by the kiosk
+    (`cafe`) and string lights round the edge on corner poles (`poles`, the
+    lights in the FX layer so the ink doesn't draw them as black ropes).
     Footprints are `SQUARE_SOLIDS`. Four pocket parks (`OUTER_PARKS`).
+  - **The lawns dressed** (the polish pass, the owner's call: "add detail to
+    low grade parts") are `outerdress.ts` (DOM-free, tested in
+    `tests/outerdress.test.ts`; `dressing()`, given a test for what's solid):
+    a paved walk from each plot's pad, each square's ways in and each pocket
+    park out to its block's sidewalk the shortest clear way (`PATH_W`), round
+    flower beds with a stone kerb in the blocks' corners and either side of
+    each walk's mouth, benches either side of a walk's middle facing it with a
+    bin (`BENCH_OUT`), a picnic table on each block's biggest clearing, and
+    `LAWN_TREES` kept off them all (`trees`). Nothing of it is solid. Drawn
+    by `outerdress3d.ts` (`buildOuterDress()`, a site a block, in the worker
+    too; `DRESS`, worked out once with `SOLID_GRID`, also gives
+    neighbourhoods.ts its lawn trees), shrubs at the feet of every third lawn
+    tree (every sixth on phones).
   - The waterfront promenade (`PROMENADE`) along both banks: railings at
     the water (open at the bridges), trees in planters and benches between
-    the lamps, and viewing decks over the water (`JETTIES`). It's at
-    ground level, not a slab: nothing on it is solid.
+    the lamps, and viewing decks over the water (`JETTIES`); a pale stone
+    coping along the water's edge, flowers round the planters' trunks, a bin
+    by each bench, life rings on posts by the railing and a telescope on
+    each deck (near only). It's at ground level, not a slab: nothing on it
+    is solid.
   - `inTown()` keeps the outskirts' trees out of all this. Tested in
     `tests/outer.test.ts`.
 - **Traffic** follows `routes.ts` (DOM-free), generated from the street
@@ -1065,7 +1085,8 @@ it and has been retired completely. Build only on what's here.
     clad, timber), a third two storeys,
     the west row open to the park's east gates `GATE_GAPS`, the east row to
     the zebra over the avenue `ZEBRA` (the avenue's median breaks there,
-    `highwayGaps()`), Paradise Cinema across the north end `CINEMA`, the
+    `highwayGaps()`), festoon lights across the promenade (in the FX layer),
+    Paradise Cinema across the north end `CINEMA`, the
     `FOUNTAIN`, `BENCHES`, the trees' planters `COURT_TREES`, the PALM COURT
     `ARCH`); Starlight Mall
     (`MALL_BLOCK`, block `mall`: the `HALL`, its `PORCH`, the `ANCHORS`
@@ -1074,7 +1095,11 @@ it and has been retired completely. Build only on what's here.
     two-way loop off the north avenue (`LOOP`, `MALL_STREETS` /
     `MALL_CROSSINGS`: traffic drives it) round the car parks (`PARK_BLOCK`,
     block `mall-park`: `CAR_PARK`, `BAYS` in groups of four with planted
-    `ISLANDS` between, `PARKED`, the zebra to the porch `LOOP_ZEBRA`, the taxi rank
+    `ISLANDS` between (a stone kerb, a paved walk down the middle,
+    `ISLAND_WALK`, with light bollards, beds with hedges, flowering shrubs and
+    grasses, four trees each from `islandTrees()`, a lamp by the walk; EV
+    chargers with their bays painted green on every other one, a trolley
+    shelter on the rest), `PARKED`, the zebra to the porch `LOOP_ZEBRA`, the taxi rank
     `RANK_CABS`, the multi-storey `MSCP` and its cars `MSCP_CARS`);
     `MALL_SOLIDS` (in `SOLIDS`), `MALL_LAMPS`, `MALL_TREES` (placed at the
     boot with the town's, on the planters and islands), `MALL_PEOPLE`, `COURT_SPAWN`,

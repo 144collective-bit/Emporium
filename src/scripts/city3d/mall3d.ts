@@ -26,7 +26,7 @@
  * - **On the main thread:** the parked cars and the cabs.
  */
 import * as THREE from 'three';
-import { Batch, canvasTex, lit, siteMat, toon } from './kit';
+import { Batch, canvasTex, fx, lit, siteMat, toon } from './kit';
 import type { Tick } from './world';
 import { site } from './tilework';
 import { NS_ROADS } from './layout';
@@ -58,6 +58,7 @@ import {
   SPRAY,
   STEEL,
   STONE,
+  TEAL_LED,
   TIMBER,
   WATER,
   WHITE,
@@ -85,6 +86,7 @@ import {
   FOUNTAIN,
   HALL,
   ISLANDS,
+  ISLAND_WALK,
   LOOP,
   LOOP_ZEBRA,
   MALL_BLOCK,
@@ -103,6 +105,7 @@ import {
   SHOPS,
   SHOP_NAMES,
   ZEBRA,
+  type Rect,
   type Shop,
 } from './mall';
 import { BOLLARD, BOLLARDS, DOOR, WALL, WALLS } from './mallinside';
@@ -210,8 +213,12 @@ const TOTEM = siteMat(
 
 /* ---------- Helpers ---------- */
 
-/** The islands' grass */
+/** The islands' grass, hedges, grasses, flowers, and the EV bays' paint */
 const LAWN = toon('#6f9a4e');
+const HEDGE = toon('#2f6430');
+const GRASS = toon('#b9b06a');
+const FLOWERS = [toon('#e58fb3'), toon('#f3f1ea'), toon('#9d7ad6'), toon('#f2c14e')];
+const EV_GREEN = toon('#3f8f5a');
 
 const PX: [number, number] = [1, 0];
 const NX: [number, number] = [-1, 0];
@@ -309,12 +316,13 @@ function shop(b: Batch, s: Shop, i: number) {
   b.detail(() => out(0.03, 0.08, Y + 0.9, Y + 1.6, zm + 0.45, zm + 0.5, GREY));
 }
 
-function court(b: Batch, z0: number, z1: number) {
+function court(b: Batch, z0: number, z1: number, f: Batch) {
   // Stone paving across the court, the shops in this stretch, the trees' planters, festoon lights over the promenade
   flat(b, COURT[0], Math.max(z0, CINEMA.rect[3]), COURT[2], Math.min(z1, COURT[3] - 0.2), Y + 0.006, PAVING, 12);
   SHOPS.forEach((s, i) => s.rect[1] >= z0 && s.rect[1] < z1 && shop(b, s, i));
   for (const [x, z] of COURT_TREES) if (z >= z0 && z < z1) planter(b, x, z, Y, 1.4, 0.5);
-  b.detail(() => {
+  // (the festoons in the FX layer: a thin cable and its bulbs drawn with ink outlines read as thick black ropes)
+  f.detail(() => {
     for (let z = CINEMA.rect[3] + 8; z < ARCH.z - 4; z += 12) {
       if (z < z0 || z >= z1 || Math.abs(z - FOUNTAIN.z) < 6) continue;
       const hold = (x: number, zz: number) => SHOPS.some((s) => zz > s.rect[1] && zz < s.rect[3] && (x === PROM[0] ? s.face === 1 : s.face === -1));
@@ -325,8 +333,8 @@ function court(b: Batch, z0: number, z1: number) {
         const t = k / 12;
         pts.push(new THREE.Vector3(PROM[0] + (PROM[1] - PROM[0]) * t, Y + 4.4 - Math.sin(Math.PI * t) * 0.9, z + 5 * t));
       }
-      b.add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 16, 0.012, 3, false), STEEL);
-      for (let k = 1; k < 12; k++) b.add(new THREE.SphereGeometry(0.06, 6, 4).translate(pts[k].x, pts[k].y - 0.08, pts[k].z), BULB);
+      f.add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 16, 0.012, 3, false), MID);
+      for (let k = 1; k < 12; k++) f.add(new THREE.SphereGeometry(0.06, 6, 4).translate(pts[k].x, pts[k].y - 0.08, pts[k].z), BULB);
     }
   });
 }
@@ -624,6 +632,84 @@ function loopRoad(b: Batch) {
   });
 }
 
+/**
+ * A car park island: a granite kerb round a lawn, a paved walk down the middle with low light bollards at its
+ * ends, either side a bed of mulch with a clipped hedge along the bays, flowering shrubs, grasses and a boulder
+ * round the trees (the city's, mall.ts `islandTrees()`); every other island has EV chargers at its ends with
+ * their bays painted green, the rest a trolley shelter.
+ */
+function island(b: Batch, [ix0, iz0, ix1, iz1]: Rect, i: number) {
+  const xm = (ix0 + ix1) / 2;
+  const zm = (iz0 + iz1) / 2;
+  const top = Y + 0.22;
+  const hw = ISLAND_WALK / 2;
+  box(b, ix0, Y, iz0, ix1, top, iz1, STONE);
+  b.add(new THREE.PlaneGeometry(ix1 - ix0 - 0.3, iz1 - iz0 - 0.3).rotateX(-Math.PI / 2).translate(xm, top + 0.006, zm), LAWN);
+  // The walk: paving across, a dark granite edge either side
+  flat(b, xm - hw, iz0 + 0.02, xm + hw, iz1 - 0.02, top + 0.012, PAVING);
+  for (const s of [-1, 1]) box(b, xm + s * hw - 0.06, top, iz0 + 0.02, xm + s * hw + 0.06, top + 0.03, iz1 - 0.02, CHARCOAL);
+  // The beds either side: mulch round the trees
+  const half = (ix1 - ix0) / 2;
+  const bedW = half - hw - 1.3;
+  for (const s of [-1, 1]) {
+    const bx = xm + s * (hw + 0.5 + bedW / 2);
+    b.add(new THREE.PlaneGeometry(bedW, iz1 - iz0 - 1.6).rotateX(-Math.PI / 2).translate(bx, top + 0.01, zm), SOIL);
+  }
+  b.detail(() => {
+    // Light bollards at the walk's ends
+    for (const z of [iz0 + 0.35, iz1 - 0.35])
+      for (const s of [-1, 1]) {
+        cyl(b, 0.09, 0.75, xm + s * (hw + 0.2), top, z, STEEL, 8);
+        cyl(b, 0.095, 0.08, xm + s * (hw + 0.2), top + 0.6, z, LED, 8);
+      }
+    for (const s of [-1, 1]) {
+      const edge = s === -1 ? ix0 : ix1;
+      const bx = xm + s * (hw + 0.5 + bedW / 2);
+      // a clipped hedge along the bays at the island's end, broken where a charger stands
+      const ev = i % 2 === 0;
+      const cuts = ev ? [iz0 + 2, iz1 - 2] : [];
+      let z0h = iz0 + 0.5;
+      for (const c of [...cuts, iz1 - 0.5 + 0.45]) {
+        const z1h = c - 0.45;
+        if (z1h - z0h > 0.3) box(b, Math.min(edge - s * 0.75, edge - s * 0.3), top, z0h, Math.max(edge - s * 0.75, edge - s * 0.3), top + 0.6, z1h, HEDGE);
+        z0h = c + 0.45;
+      }
+      // flowering shrubs and grasses in drifts along the bed, a boulder
+      let k = 0;
+      for (let z = iz0 + 1.1; z < iz1 - 1; z += 0.62, k++) {
+        const dx = ((k * 7) % 5) / 5 - 0.4;
+        const flower = k % 3 === 1;
+        b.add(new THREE.IcosahedronGeometry(flower ? 0.24 : 0.3, 0).scale(1, 0.75, 1).translate(bx + dx * bedW * 0.6, top + 0.22, z), flower ? FLOWERS[(i + k + (s > 0 ? 1 : 0)) % FLOWERS.length] : SHRUB);
+        if (k % 4 === 2) b.add(new THREE.ConeGeometry(0.22, 0.75, 5, 1, true).translate(bx - dx * bedW * 0.5, top + 0.37, z + 0.25), GRASS);
+      }
+      b.add(new THREE.DodecahedronGeometry(0.32, 0).scale(1.3, 0.7, 1).translate(bx + s * bedW * 0.25, top + 0.12, zm), CONCRETE);
+    }
+    if (i % 2 === 0) {
+      // EV chargers at both ends of both rows, facing the end bays, those bays painted green
+      for (const s of [-1, 1])
+        for (const zr of [iz0 + 2, iz1 - 2]) {
+          const edge = s === -1 ? ix0 : ix1;
+          const cx = edge - s * 0.45;
+          box(b, cx - 0.14, top, zr - 0.2, cx + 0.14, top + 1.35, zr + 0.2, WHITE);
+          box(b, cx + s * 0.14, top + 0.75, zr - 0.13, cx + s * 0.15, top + 1.15, zr + 0.13, PANEL);
+          box(b, cx + s * 0.145, top + 1.2, zr - 0.15, cx + s * 0.155, top + 1.28, zr + 0.15, TEAL_LED);
+          box(b, cx - 0.16, top + 1.35, zr - 0.22, cx + 0.16, top + 1.4, zr + 0.22, CHARCOAL);
+          // the cable coiled on its hook
+          b.add(new THREE.TorusGeometry(0.12, 0.022, 4, 10).rotateY(Math.PI / 2).translate(cx + s * 0.16, top + 0.55, zr), DARK);
+          const bay = BAYS.find((q) => Math.abs(q.z - zr) < 0.05 && Math.abs(q.x - (edge + s * (BAY.w / 2 + 0.15))) < 0.3);
+          if (bay) b.add(new THREE.PlaneGeometry(BAY.w - 0.2, BAY.d - 0.3).rotateX(-Math.PI / 2).translate(bay.x, Y + 0.01, bay.z), EV_GREEN);
+        }
+    } else {
+      // a trolley shelter on the lawn by the walk: a steel frame, a glass roof, the trolleys
+      const [sx, sz] = [xm + hw + 1.3, zm];
+      for (const dz of [-1, 1]) box(b, sx - 0.65, top, sz + dz * 1.1 - 0.04, sx - 0.57, top + 1.8, sz + dz * 1.1 + 0.04, STEEL);
+      box(b, sx - 0.75, top + 1.8, sz - 1.25, sx + 0.75, top + 1.86, sz + 1.25, STEEL);
+      b.add(new THREE.PlaneGeometry(1.5, 2.5).rotateX(-Math.PI / 2).translate(sx, top + 1.87, sz), GLASS);
+      for (let t = 0; t < 4; t++) box(b, sx - 0.3, top + 0.08, sz - 0.8 + t * 0.4, sx + 0.3, top + 0.8, sz - 0.62 + t * 0.4, GREY);
+    }
+  });
+}
+
 function carPark(b: Batch, x0: number, x1: number) {
   // Asphalt over the car park in this stretch, the bays' lines, the islands (a kerb, planting, a trolley shelter on some)
   const [, cz0, , cz1] = [0, BAYS[0].z - BAY.d / 2 - 0.4, 0, BAYS[BAYS.length - 1].z + BAY.d / 2 + 0.4];
@@ -634,24 +720,10 @@ function carPark(b: Batch, x0: number, x1: number) {
       for (const s of [-1, 1]) b.add(new THREE.PlaneGeometry(0.08, BAY.d).rotateX(-Math.PI / 2).translate(bay.x + (s * BAY.w) / 2, Y + 0.012, bay.z), PAINT);
     }
   });
-  ISLANDS.forEach(([ix0, iz0, ix1, iz1], i) => {
-    const xm = (ix0 + ix1) / 2;
+  ISLANDS.forEach((r, i) => {
+    const xm = (r[0] + r[2]) / 2;
     if (xm < x0 || xm >= x1) return;
-    box(b, ix0, Y, iz0, ix1, Y + 0.22, iz1, CONCRETE);
-    b.add(new THREE.PlaneGeometry(ix1 - ix0 - 0.3, iz1 - iz0 - 0.3).rotateX(-Math.PI / 2).translate(xm, Y + 0.225, (iz0 + iz1) / 2), LAWN);
-    // (a bed of shrubs along its middle, mulch under them)
-    b.add(new THREE.PlaneGeometry(Math.min(1.2, ix1 - ix0 - 0.8), iz1 - iz0 - 1.2).rotateX(-Math.PI / 2).translate(xm, Y + 0.23, (iz0 + iz1) / 2), SOIL);
-    b.detail(() => {
-      for (let z = iz0 + 0.8; z < iz1 - 0.5; z += 0.7) b.add(new THREE.IcosahedronGeometry(0.28, 0).scale(1, 0.7, 1).translate(xm + (Math.round(z / 0.7) % 2 ? 0.22 : -0.22), Y + 0.33, z), SHRUB);
-      if (i % 3 === 1) {
-        // a trolley shelter: a steel frame, a glass roof, the trolleys
-        const z = (iz0 + iz1) / 2 + 2.2;
-        for (const dx of [-0.6, 0.6]) box(b, xm + dx - 0.04, Y + 0.22, z - 1, xm + dx + 0.04, Y + 2, z - 0.92, STEEL);
-        box(b, xm - 0.7, Y + 2, z - 1.2, xm + 0.7, Y + 2.06, z + 1.2, STEEL);
-        b.add(new THREE.PlaneGeometry(1.4, 2.4).rotateX(-Math.PI / 2).translate(xm, Y + 2.07, z), GLASS);
-        for (let t = 0; t < 4; t++) box(b, xm - 0.3, Y + 0.3, z - 0.6 + t * 0.35, xm + 0.3, Y + 1.0, z - 0.45 + t * 0.35, GREY);
-      }
-    });
+    island(b, r, i);
   });
   // The rank's board by its bays
   const cab = RANK_CABS.find((c) => c.x >= x0 && c.x < x1);
@@ -702,16 +774,22 @@ function multiStorey(b: Batch) {
 /* ---------- Registering ---------- */
 
 export function register({ scene, tick }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
-  const build = (draw: (b: Batch) => void, cast = true) => (into: THREE.Object3D) => {
+  const build = (draw: (b: Batch, f: Batch) => void, cast = true) => (into: THREE.Object3D) => {
     const b = new Batch();
-    draw(b);
+    const f = new Batch();
+    draw(b, f);
     b.build(into, { cast, receive: true });
+    // (what the ink pass mustn't outline, in the FX layer)
+    const g = new THREE.Group();
+    f.build(g, { cast: false, receive: false });
+    fx(g);
+    for (const c of [...g.children]) into.add(c);
   };
   // Palm Court: the cinema, the rows in stretches, the water feature and the gateway
   site('mall cinema', [CINEMA.rect[0] - 1, CINEMA.rect[1] - 1, CINEMA.rect[2] + 1, CINEMA.rect[3] + 3], build(cinema));
   for (let z = CINEMA.rect[3]; z < COURT[3]; z += 24) {
     const z1 = Math.min(COURT[3], z + 24);
-    site(`mall court ${Math.round(z)}`, [COURT[0], z, COURT[2], z1], build((b) => court(b, z, z1)));
+    site(`mall court ${Math.round(z)}`, [COURT[0], z, COURT[2], z1], build((b, f) => court(b, z, z1, f)));
   }
   site('mall fountain', [FOUNTAIN.x - 4, FOUNTAIN.z - 5, FOUNTAIN.x + 4, FOUNTAIN.z + 5], build(centre));
   site('mall arch', [PROM[0], ARCH.z - 1, PROM[1], ARCH.z + 1], build(arch));

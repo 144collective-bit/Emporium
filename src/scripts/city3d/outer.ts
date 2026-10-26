@@ -386,6 +386,12 @@ export interface SquareLayout {
   bollards: Pt[];
   /** Flush uplights in a ring round the centrepiece, lit at night */
   uplights: Pt[];
+  /** Flower troughs along the east and west sides, clear of the lamps and the kiosk (x0, z0, x1, z1) */
+  troughs: Rect[];
+  /** Café tables by the kiosk (their middles) */
+  cafe: Pt[];
+  /** Slim poles at the corners carrying string lights along the sides */
+  poles: Pt[];
 }
 const FEATURE: Record<SquareFeature, { half: number; h: number }> = {
   fountain: { half: 1.4, h: 0.55 },
@@ -414,14 +420,24 @@ export const SQUARE_LAYOUTS: SquareLayout[] = OUTER_SQUARES.map((sq) => {
   const bollards: Pt[] = [z0 + 0.35, z1 - 0.35].flatMap((z) => [-0.9, 0.9].map((dx): Pt => [centre[0] + dx, z]));
   const up = feature.half + 0.45;
   const uplights = Array.from({ length: 8 }, (_, i): Pt => [centre[0] + Math.sin((i * Math.PI) / 4 + Math.PI / 8) * up, centre[1] + Math.cos((i * Math.PI) / 4 + Math.PI / 8) * up]);
-  return { square: sq, centre, feature, planters, benches, kiosk, lamps, bollards, uplights };
+  const clear = (r: Rect) => [...lamps, ...planters].every(([x, z]) => x < r[0] - 0.6 || x > r[2] + 0.6 || z < r[1] - 0.6 || z > r[3] + 0.6) && (!kiosk || r[2] < kiosk[0] - 0.4 || r[0] > kiosk[2] + 0.4 || r[3] < kiosk[1] - 0.4 || r[1] > kiosk[3] + 0.4);
+  const troughs = [x0 + 0.3, x1 - 0.8].flatMap((x) => [z0 + 2.6, z1 - 2.6].map((z): Rect => [x, z - 0.7, x + 0.5, z + 0.7])).filter(clear);
+  const cafe: Pt[] = kiosk ? [-1.9, 1.9].map((dz): Pt => [kiosk[2] + 1.8, centre[1] + dz]) : [];
+  const poles: Pt[] = [
+    [x0 + 0.2, z0 + 0.2],
+    [x1 - 0.2, z0 + 0.2],
+    [x1 - 0.2, z1 - 0.2],
+    [x0 + 0.2, z1 - 0.2],
+  ];
+  return { square: sq, centre, feature, planters, benches, kiosk, lamps, bollards, uplights, troughs, cafe, poles };
 });
-/** What's solid on the outer squares: each centrepiece, the corner planters, the kiosks and the light bollards */
+/** What's solid on the outer squares: each centrepiece, the corner planters, the kiosks, the light bollards and the flower troughs */
 export const SQUARE_SOLIDS: Footprint[] = SQUARE_LAYOUTS.flatMap((l) => [
   [l.centre[0] - l.feature.half, l.centre[1] - l.feature.half, l.centre[0] + l.feature.half, l.centre[1] + l.feature.half, l.feature.h] as Footprint,
   ...l.planters.map(([x, z]): Footprint => [x - 0.45, z - 0.45, x + 0.45, z + 0.45, 0.5]),
   ...(l.kiosk ? [[...l.kiosk, 2.1] as Footprint] : []),
   ...l.bollards.map(([x, z]): Footprint => [x - 0.09, z - 0.09, x + 0.09, z + 0.09, 0.55]),
+  ...l.troughs.map((r): Footprint => [...r, 0.45]),
 ]);
 /** x0, z0, x1, z1, height (solids.ts `Box`) */
 export type Footprint = [number, number, number, number, number];
