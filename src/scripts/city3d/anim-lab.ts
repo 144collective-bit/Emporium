@@ -7,7 +7,8 @@
  *
  * - Moves: scripted programs (run and stop, turning back, weaving, a
  *   circle, starts and stops at a sprint, jumps running and standing,
- *   short hops, strafing the eight ways and aiming round, peeking...) or by
+ *   short hops, strafing the eight ways and aiming round, peeking, the
+ *   emotes in turn...) or by
  *   hand (W A S D across the floor, Shift sprints, Caps Lock walks, Space
  *   jumps, Q / E peek, C crouches or slides), with walk.ts's jump and gravity.
  * - Time: full speed, a quarter, a tenth; P pauses, . steps a frame.
@@ -40,6 +41,7 @@ import { loadMocap } from './mocap-load';
 import { NB } from './mocap';
 import { GAITS, newMove, startSlide, stepMove, stepSlide, type MoveState, type Slide, STAIRS, climbAhead } from './movesim';
 import { slidePose } from './poses';
+import { emotePose, emoteSeconds, emoteUpper, type EmoteId } from './emotes';
 import { overAhead, overAt, overPose, type Over } from './vault';
 import { CONTACT, applyContact, createContact } from './contact';
 import type { Box } from './solids';
@@ -53,7 +55,7 @@ import { createPost } from './post';
 const SCALE = 0.85;
 /** One tile in centimetres, for the readouts */
 const CM = 180;
-type Prog = 'manual' | 'runstop' | 'turnback' | 'weave' | 'circle' | 'startstop' | 'startback' | 'gaits' | 'idle' | 'jumps' | 'standjump' | 'hops' | 'strafe' | 'aimturn' | 'peek' | 'crouch' | 'slide' | 'over' | 'stairs' | 'contact' | 'reel';
+type Prog = 'manual' | 'runstop' | 'turnback' | 'weave' | 'circle' | 'startstop' | 'startback' | 'gaits' | 'idle' | 'jumps' | 'standjump' | 'hops' | 'strafe' | 'aimturn' | 'peek' | 'crouch' | 'slide' | 'over' | 'stairs' | 'contact' | 'emotes' | 'reel';
 type Gait = 'walk' | 'run' | 'sprint';
 type Cam = 'side' | 'front' | 'back' | 'over' | 'free';
 type Floor = 'flat' | 'kerbs' | 'stairs' | 'ledge' | 'walls' | 'contact';
@@ -149,10 +151,24 @@ const PROGS: [Prog, string][] = [
   ['over', 'Vault & climb'],
   ['stairs', 'Stairs'],
   ['contact', 'Contact'],
+  ['emotes', 'Emotes'],
   ['idle', 'Stand'],
   ['reel', 'Reel'],
   ['manual', 'By hand'],
 ];
+/** The emotes program: each emote in turn, standing, a second's rest between (the layering walk.ts has) */
+const EMOTE_ORDER: EmoteId[] = ['wave', 'cheer', 'salute', 'dance'];
+const EMOTE_REST = 1;
+const EMOTE_CYCLE = EMOTE_ORDER.reduce((n, id) => n + emoteSeconds(id) + EMOTE_REST, 0);
+function emoteAt(t: number): { id: EmoteId; t: number } | null {
+  let u = t % EMOTE_CYCLE;
+  for (const id of EMOTE_ORDER) {
+    if (u < emoteSeconds(id)) return { id, t: u };
+    u -= emoteSeconds(id) + EMOTE_REST;
+    if (u < 0) return null;
+  }
+  return null;
+}
 /** The reel (the revamp's Phase 1): every program in turn, for a recording in one take; a program and how long it plays */
 const REEL: [Prog, number][] = [
   ['runstop', 8],
@@ -173,6 +189,7 @@ const REEL: [Prog, number][] = [
   ['over', 7],
   ['stairs', 12],
   ['contact', 20],
+  ['emotes', EMOTE_CYCLE],
   ['idle', 14],
 ];
 const REEL_LENGTH = REEL.reduce((n, [, s]) => n + s, 0);
@@ -568,6 +585,9 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   let over: { o: Over; t: number } | null = null;
   let overLast: Over | null = null;
   let overAmt = 0;
+  /** An upper-body emote over the capture's legs (the upper mask), and the dance in place of the capture */
+  let emoteAmt = 0;
+  let danceAmt = 0;
   const walls = wallBoxes();
   // The contact layer (contact.ts) on the pose, from the contact floor's walls and rail
   const contact = createContact();
@@ -797,14 +817,22 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
     } else {
       // (the slide is a keyed pose over the last of the procedural walk, the motion capture stepping aside for it)
       copyPose(loco.pose, hero.pose);
+      // The emotes program (emotes.ts): the wave, the cheer and the salute over the capture's legs and hips through
+      // the upper mask, as a gun's hold is; the dance takes the whole body, the capture stepping aside
+      const em = p === 'emotes' ? emoteAt(pt) : null;
+      emoteAmt = THREE.MathUtils.clamp(emoteAmt + (em && emoteUpper(em.id) ? dt / 0.15 : -dt / 0.15), 0, 1);
+      danceAmt = THREE.MathUtils.clamp(danceAmt + (em && !emoteUpper(em.id) ? dt / 0.15 : -dt / 0.25), 0, 1);
+      if (em) emotePose(hero.pose, em.id, em.t);
       slidePose(hero.pose, slideAmt);
       const ov = over?.o ?? overLast;
       if (ov && overAmt > 0.01) overPose(hero.pose, ov, over ? Math.min(1, over.t / over.o.dur) : 1, overAmt, x, y, z, anim.face, SCALE);
       hero.update();
-      applyTo(hero.rig, contacting ? contactRot : anim.rot, anim.hips, 1 - Math.max(slideAmt, overAmt));
-      if (hero.held?.visible) addCarry(hero.rig, 1 - Math.max(slideAmt, overAmt));
+      const capW = 1 - Math.max(slideAmt, overAmt, danceAmt * danceAmt * (3 - 2 * danceAmt));
+      const upW = emoteAmt * emoteAmt * (3 - 2 * emoteAmt);
+      applyTo(hero.rig, contacting ? contactRot : anim.rot, anim.hips, capW, upW);
+      if (hero.held?.visible) addCarry(hero.rig, capW * (1 - upW));
       const gz = gaze.update({ dt, x, y: y + 1.1 * SCALE, z, face: anim.face, ahead: move.face, speed: v, interests: [] });
-      if (gazeOn) addLook(hero.rig, gz.yaw, gz.pitch, 1 - Math.max(slideAmt, overAmt));
+      if (gazeOn) addLook(hero.rig, gz.yaw, gz.pitch, capW * (1 - upW));
     }
     hero.g.position.set(x, y, z);
     hero.g.rotation.set(0, anim.face, 0);
@@ -867,6 +895,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
     const rows: [string, string][] = [
       ...(reel ? ([['Reel', `${reel.label} · ${reel.t.toFixed(1)} s (${(clock % REEL_LENGTH).toFixed(0)} of ${REEL_LENGTH} s)`]] as [string, string][]) : []),
       ...(compare ? ([['Beside', cam === 'back' ? 'new right · old left' : cam === 'free' ? 'the old walk is the other one' : 'new left · old right']] as [string, string][]) : []),
+      ...((p0) => (p0 ? ([['Emote', `${p0.id} · ${p0.t.toFixed(1)} s${emoteUpper(p0.id) ? ' · upper body over the capture' : ' · the whole body, keyed'}`]] as [string, string][]) : []))((reel ? reel.prog : prog) === 'emotes' ? emoteAt(reel ? reel.t : clock) : null),
       ['Speed', `${v.toFixed(2)} tiles/s · ${(v * 1.8).toFixed(1)} m/s`],
       ['Clip', `${dbg.clip} @ ${dbg.frame.toFixed(1)}`],
       ['Rate', dbg.rate.toFixed(2)],

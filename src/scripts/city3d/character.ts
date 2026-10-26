@@ -134,7 +134,8 @@ export const SOLDIER: Outfit = {
 
 /* ---------- Poses (poses.ts) ---------- */
 
-export { walkPose, idlePose, lookPose, chatPose, sitPose, airPose, marchPose, attentionPose, dancePose, emotePose } from './poses';
+export { walkPose, idlePose, lookPose, chatPose, sitPose, airPose, marchPose, attentionPose } from './poses';
+export { dancePose, emotePose } from './emotes';
 
 /** A player's wardrobe choices as a Degen outfit */
 export function lookOutfit(l: Look): Outfit {

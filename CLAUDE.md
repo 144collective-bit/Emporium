@@ -1651,7 +1651,7 @@ it and has been retired completely. Build only on what's here.
   nothing; a vehicle, a ride, a fast travel or walk mode ending puts it
   away). The rides seen (the metro's, taxi's and river bus's seated
   figure) are held back, in the plan. Phase 5 (everyone on the same
-  motion) step 1 is built: **the crowd on the capture**: six takes in
+  motion) is built; step 1: **the crowd on the capture**: six takes in
   their own pack (`pack: "crowd"` in takes.json → `clips-crowd.bin`, 56 KB,
   `CROWD_PACK` in mocap-load.ts; the core pack untouched), fetched at the
   boot and swapped into every crowd's rows as it comes in
@@ -1677,7 +1677,23 @@ it and has been retired completely. Build only on what's here.
   as the player's (`mocapW`), the gun hold over its legs and hips
   (`upperW`, `applyTo(..., upper, yaw)`), the look through `addLook()`,
   the emotes and the air on the planted-feet walk as before; tested as a
-  fed remote in `tests/animator.test.ts`. The clips file's limits are 640 KB (test) and 660 KB (budget),
+  fed remote in `tests/animator.test.ts`. Step 3 is built: **the emotes
+  re-keyed** (`emotes.ts`, DOM-free, tested in `tests/emotes.test.ts`):
+  the wave, the cheer, the salute and the dance as keyed clips on the
+  `Pose` rig (keys in seconds with eases, `EMOTE_CLIPS`, `emotePose(p, id,
+  t, amt, base)`, `emoteSeconds()` / `emoteOver()`, `emoteUpper()`). The
+  wave, the cheer and the salute own only the upper body (the arms, the
+  spine's lean and twist, the head): in walk mode and on other players
+  they play over the animator's captured legs and hips through the gun's
+  upper mask (`upperW`), so an emote never jolts him off his feet; the
+  dance owns the whole body (the capture steps aside, `mocapW`), its feet
+  keyed as planted spots (`feet`) the legs reach through `reachLeg()` so
+  they stay put, flat and headed his way while the hips bounce and sway
+  on a 120 bpm step-touch (a lifted foot eases off and onto its spot), two
+  bars long (`DANCE_SECONDS`). The stage (`stage.ts`, over its idle: `base`)
+  and the hologram (`dancePose()`) play the same clips; the lab's Emotes
+  program plays them in turn. No CMU take in the repository is a dance:
+  one from capture is a data step for the owner. The clips file's limits are 640 KB (test) and 660 KB (budget),
   raised for the takes on purpose:
   - **The data** is CMU's motion capture (free for commercial use; the
     acknowledgment is in the start menu's Options > Credits, named, never

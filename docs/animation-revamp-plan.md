@@ -124,7 +124,7 @@ be. The phases below work through it.
 | A bench | none (held back by the life plan) | sit down (F), sit (breathing, looking), stand up (Phase 4) |
 | The metro, the taxi, the river bus | hidden for the ride | seen riding: standing holding a rail or seated, looking out (Phase 4) |
 | The market, your units, the Car tab | buttons | a crate lifted into the boot, a crate set on the stand (Phase 4) |
-| Emotes (wave, dance, salute, cheer) | keyed sine poses | re-keyed on the bone pose, or from capture where one fits (Phase 5) |
+| Emotes (wave, dance, salute, cheer) | keyed sine poses | re-keyed on the bone pose, or from capture where one fits (Phase 5: built, keyed clips in emotes.ts, the dance on planted feet) |
 | Other players | the procedural walk | the animator, fed from what the server sends (Phase 5) |
 | The fighters round the ring | procedural legs under the guard | the animator's legs under the guard; the fight clips measured by the rubric (Phase 7) |
 | The crowd walking | one recorded walk, one jog | two or three walks and the jog from capture; nobody in step (Phase 5) |
@@ -133,7 +133,7 @@ be. The phases below work through it.
 | Traders, diners, cooks, vendors, fishers, rowers, the bouncers, the chess players | the chat or idle rows | a row each (handing over, eating, stirring, a cast, the oars, arms folded, a move on the board) (Phase 6) |
 | Kids at play | the idle at a smaller scale | running and a game (a smaller scale, the stride for it) (Phase 6) |
 | Soldiers | the march and salute formulas | a march from capture, the salute re-keyed (Phase 5) |
-| The hologram and the fitting room | the dance and emote formulas | the same clips everyone plays (Phase 5) |
+| The hologram and the fitting room | the dance and emote formulas | the same clips everyone plays (Phase 5: built) |
 
 ## How it's built
 
@@ -667,11 +667,11 @@ What's not in, and why:
 - Everything in walk.ts stays where it is; the moments are called from
   the prompts' `act()` and hand back to what it did.
 
-### Phase 5: everyone on the same motion (steps 1 and 2 built, for the owner's sign-off)
+### Phase 5: everyone on the same motion (built, for the owner's sign-off)
 
 Built in steps: **step 1** (the crowd's rows from the capture, the scale
 rule: built, below), **step 2** (other players on the animator: built,
-below) and step 3 (the emotes re-keyed).
+below) and **step 3** (the emotes re-keyed: built, below).
 
 What step 1 built (and how it differs from the plan):
 
@@ -747,7 +747,46 @@ What's not in, and why:
   Picking them (a conversation take, a sit-down, a parade march) is a data
   step for the owner to sign off (the `docs` of the data below say what's
   there); the formulas stay until then.
-- **The emotes** (step 3).
+What step 3 built:
+
+- **The emotes as keyed clips** (`emotes.ts`, tested in
+  `tests/emotes.test.ts`): the wave, the cheer, the salute and the dance
+  keyed on the `Pose` rig in seconds with eases (`EMOTE_CLIPS`), everyone
+  playing the same clips: the player (walk.ts), other players (remote.ts),
+  the fitting room's stage and the character screen (stage.ts, over the
+  idle) and the Emporium's rooftop hologram (`dancePose()`). The sine
+  formulas in poses.ts went.
+- **Upper body over the capture**: the wave, the cheer and the salute own
+  only the arms, the spine's lean and twist and the head. In walk mode and
+  on other players they play over the animator's captured legs and hips
+  through the gun's upper mask (`upperW` in walk.ts and remote.ts, the
+  same `applyTo(..., upper)`), so the captured idle carries on under them
+  and an emote never swaps his legs for the formula walk's (before, the
+  capture stepped aside for every emote: a jolt in and out). The wave
+  comes up elbow first, waves three times from the elbow with a tilt of
+  the head and the shoulders turned towards it; the cheer throws both
+  arms up with the chest up and the head back and pumps the elbows
+  twice; the salute snaps the hand to the brow (the old numbers: the
+  hand lands where it did), holds, and snaps down. Each starts and ends
+  at rest (the test holds it) and nothing moves more than a snap in a
+  frame.
+- **The dance on planted feet**: a step-touch on a 120 bpm groove (step
+  right, touch left, step left, touch right, a bar every two seconds, two
+  bars an emote: `DANCE_SECONDS`): the weight over the stepping foot
+  (`sway`, `side`), the hips down on every beat, the shoulders turned
+  against the hips, the elbows pumping in time, the head nodding. Its feet
+  are keyed as spots on the ground (`feet`), not angles: the legs reach
+  them through locomotion.ts's `reachLeg()` every frame, so a planted foot
+  stays put (the test holds it to 4 mm, no slide at all) and flat, headed
+  his way, however the hips move; a foot lifting or landing eases between
+  the reach and its keyed swing; the hips come down if a spot is out of
+  reach. The capture steps aside for it (`mocapW`), as for the slide.
+- **The lab**: an Emotes program (each in turn, a second's rest between,
+  in the reel too), layered as walk mode layers them, with a readout.
+- **Not from capture**: no CMU take in the repository is a dance (or a
+  wave, a cheer or a salute); the plan's "if a take fits" found none. A
+  danced take is a data step for the owner (CMU's dance takes, subjects
+  5, 55, 93 and 94, say what's there); the keyed dance stays until then.
 
 The plan as it was:
 
@@ -763,7 +802,8 @@ The plan as it was:
   pick of which walk and which idle (seeded), so no two people are in step
   or alike (built). The soldiers' march from capture (held back).
 - **The emotes** re-keyed on the bone pose (and the dance from capture if
-  a take fits; the hologram and the fitting room's stage play the same).
+  a take fits; the hologram and the fitting room's stage play the same)
+  (built, step 3, above; no take fits, the dance keyed).
 - **The scale rule** (built, step 1): every row plays at its stride for the person's scale
   (as today's walk does), tested for kids' and fighters' scales.
 - Measured on a phone (`?bench`, `?fps`: the crowd texture's size, draws,

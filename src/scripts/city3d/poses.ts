@@ -1,8 +1,8 @@
 /*
  * The pose helpers (DOM-free, so the crowd's clips can be baked and tested in
  * Node): walking and running by formula, idling, looking round, chatting,
- * sitting, in the air, marching, standing to attention and saluting, the
- * hologram's dance and the multiplayer emotes. Each writes a `Pose`
+ * sitting, in the air, marching, standing to attention and saluting (the
+ * emotes and the hologram's dance are keyed clips in emotes.ts). Each writes a `Pose`
  * (skeleton.ts). Your own Degen walks with locomotion.ts instead; the
  * crowds play these (and the locomotion's walk) baked into clips
  * (crowdclips.ts).
@@ -188,37 +188,3 @@ export function attentionPose(p: Pose, salute: number, rifle: 'left' | 'right') 
   free.twist = (rifle === 'left' ? -0.8 : 0.8) * salute;
   p.headPitch = salute * 0.05;
 }
-
-/** A dance for the rooftop hologram, on a two-beats-a-second groove. */
-export function dancePose(p: Pose, t: number) {
-  const b = t * Math.PI * 2;
-  const beat = Math.pow(1 - ((t * 2) % 1), 3);
-  p.bob = -beat * 0.05;
-  p.lean = 0.05 + beat * 0.06;
-  p.twist = Math.sin(b * 0.5) * 0.35;
-  p.side = Math.sin(b * 0.5) * 0.06;
-  set(p.arms[0], 2.4 + Math.sin(b) * 0.4, 0.4, 0.4);
-  set(p.arms[1], 2.4 - Math.sin(b) * 0.4, 0.4, 0.4);
-  set(p.legs[0], 0.1 + Math.max(0, Math.sin(b)) * 0.4, 0.12, 0.25 + beat * 0.3 + Math.max(0, Math.sin(b)) * 0.6);
-  set(p.legs[1], 0.1 + Math.max(0, -Math.sin(b)) * 0.4, 0.12, 0.25 + beat * 0.3 + Math.max(0, -Math.sin(b)) * 0.6);
-  p.headPitch = -beat * 0.15;
-  p.headYaw = Math.sin(b * 0.5) * 0.2;
-}
-
-/** Multiplayer emotes (ids from EMOTES in profile-data.ts); `t` is seconds since it started */
-export function emotePose(p: Pose, id: string, t: number) {
-  if (id === 'dance') return dancePose(p, t);
-  if (id === 'salute') return attentionPose(p, Math.min(1, t * 4), 'right');
-  idlePose(p, t);
-  if (id === 'wave') {
-    set(p.arms[0], 2.55, 0.3 + Math.sin(t * 10) * 0.28, 0.55);
-    p.headPitch = -0.08;
-  } else if (id === 'cheer') {
-    const hop = Math.abs(Math.sin(t * 7));
-    p.bob = hop * 0.04;
-    set(p.arms[0], 2.75, 0.32, 0.25 + hop * 0.3);
-    set(p.arms[1], 2.75, 0.32, 0.25 + hop * 0.3);
-    p.headPitch = -0.15;
-  }
-}
-

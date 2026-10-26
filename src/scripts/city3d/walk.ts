@@ -32,7 +32,8 @@
 import * as THREE from 'three';
 import type { SpotId } from '../../lib/city';
 import { PLAYER, createDegen, emotePose, type Outfit } from './character';
-import { LAND_CROUCH, LAND_ROLL, copyLeg, copyPose, createLocomotion, placeRoot, type Root } from './locomotion';
+import { emoteOver, emoteUpper } from './emotes';
+import { LAND_CROUCH, LAND_ROLL, copyPose, createLocomotion, placeRoot, type Root } from './locomotion';
 import type { Animator } from './animator';
 import type { Contact } from './contact';
 import { loadMocap } from './mocap-load';
@@ -2199,19 +2200,13 @@ export function createWalk(d: WalkDeps) {
     speedNow = speed;
     if (emote) {
       emote.t += dt;
-      if (emote.t > 3 || speed > 0.6) emote = null;
-      else if (!combat.armed) {
-        emotePose(P, emote.id, emote.t);
-        // Every emote but the dance keeps his feet where they're planted
-        if (emote.id !== 'dance') {
-          for (let i = 0; i < 2; i++) copyLeg(loco.pose.legs[i], P.legs[i]);
-          P.bob = loco.pose.bob;
-          P.side = loco.pose.side;
-          P.sway = loco.pose.sway;
-          P.turn = loco.pose.turn;
-        } else for (const l of P.legs) l.foot = undefined;
-      }
+      if (emoteOver(emote.id, emote.t) || speed > 0.6) emote = null;
+      // (emotes.ts: the wave, the cheer and the salute take only his upper body, over the captured legs and hips
+      // through the upper mask below; the dance takes everything, the motion capture stepping aside)
+      else if (!combat.armed) emotePose(P, emote.id, emote.t);
     }
+    const dancing = !!emote && !combat.armed && !emoteUpper(emote.id);
+    const emoting = !!emote && !combat.armed && !dancing;
     // The slide's pose, blended in quickly and out a little slower (the motion capture steps aside for it)
     slideAmt += ((slide ? 1 : 0) - slideAmt) * damp(slide ? 18 : 9, dt);
     crouchAmt += ((crouched ? 1 : 0) - crouchAmt) * damp(10, dt);
@@ -2295,8 +2290,8 @@ export function createWalk(d: WalkDeps) {
     }
     let drawFace = face;
     // ...with a gun in his hands or an arm out aiming, only its legs and hips: his own pose over them
-    const mocapOn = !!animator && landHold <= 0 && !emote && !slide && !over && !moments.posing;
-    upperW = THREE.MathUtils.clamp(upperW + (gunInHand || aim || carryAmt > 0.01 ? dt / 0.15 : -dt / 0.15), 0, 1);
+    const mocapOn = !!animator && landHold <= 0 && !dancing && !slide && !over && !moments.posing;
+    upperW = THREE.MathUtils.clamp(upperW + (gunInHand || aim || carryAmt > 0.01 || emoting ? dt / 0.15 : -dt / 0.15), 0, 1);
     if (animator && anim) {
       // (a fresh start after a jump in place: walking started, a fast travel, the end of a ride)
       if ((mocapW < 0.01 && mocapOn) || lastPos.distanceToSquared(pos) > 4) {

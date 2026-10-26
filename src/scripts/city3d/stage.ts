@@ -12,6 +12,7 @@
 import * as THREE from 'three';
 import type { Look } from '../net/profile-data';
 import { createDegen, emotePose, idlePose, lookOutfit, walkPose, type Degen } from './character';
+import { emoteSeconds } from './emotes';
 import { newFightPose, sampleClip } from './fight-anim';
 import { lit, liveTex, toon } from './kit';
 import { createPost } from './post';
@@ -149,7 +150,7 @@ export function createStage(d: { reduced: boolean; low: boolean }, opts: { zoom?
 
   function posed() {
     const P = fig!.pose;
-    if (cheer >= 0) return emotePose(P, 'cheer', cheer);
+    if (cheer >= 0) return emotePose(P, 'cheer', cheer, 1, true);
     if (pose === 'idle') return idlePose(P, t);
     if (pose === 'walk') {
       idlePose(P, t);
@@ -166,8 +167,8 @@ export function createStage(d: { reduced: boolean; low: boolean }, opts: { zoom?
       P.grip = [1, 1];
       return;
     }
-    // The emotes loop
-    emotePose(P, pose, pose === 'dance' ? t : t % 3);
+    // The emotes loop (a one-shot rests a moment between plays; emotes.ts's clips, over the idle)
+    emotePose(P, pose, pose === 'dance' ? t : t % (emoteSeconds(pose) + 0.6), 1, true);
   }
 
   function frame() {
@@ -197,7 +198,7 @@ export function createStage(d: { reduced: boolean; low: boolean }, opts: { zoom?
     zoom += (zoomTo - zoom) * Math.min(1, dt * 6);
     if (cheer >= 0) {
       cheer += dt;
-      if (cheer > 1.1) cheer = -1;
+      if (cheer > emoteSeconds('cheer')) cheer = -1;
     }
     frame();
   }

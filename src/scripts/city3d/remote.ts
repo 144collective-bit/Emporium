@@ -17,7 +17,8 @@
  */
 import * as THREE from 'three';
 import { createDegen, emotePose, lookOutfit, type Degen } from './character';
-import { copyLeg, copyPose, createLocomotion, placeRoot, type Locomotion, type Root } from './locomotion';
+import { emoteOver, emoteUpper } from './emotes';
+import { copyPose, createLocomotion, placeRoot, type Locomotion, type Root } from './locomotion';
 import type { Animator } from './animator';
 import type { MoData } from './mocap';
 import { newMove, stepMove, type MoveState } from './movesim';
@@ -293,7 +294,9 @@ export function createRemotes(scene: THREE.Scene, camera: THREE.PerspectiveCamer
           r.anim = mo.anim.createAnimator(mo.data);
           r.move = newMove(face);
         }
-        const mocapOn = !!mo && !!r.anim && dist < ANIM_FAR && !r.emote && !air;
+        // (an upper-body emote plays over the animator's legs through the upper mask, as the gun does; the dance takes everything)
+        const dancing = !!r.emote && !emoteUpper(r.emote.id);
+        const mocapOn = !!mo && !!r.anim && dist < ANIM_FAR && !dancing && !air;
         r.mocapW = THREE.MathUtils.clamp(r.mocapW + (mocapOn ? dt / 0.25 : -dt / 0.15), 0, 1);
         if (r.anim && r.mocapW > 0) {
           if (jumped) {
@@ -309,11 +312,8 @@ export function createRemotes(scene: THREE.Scene, camera: THREE.PerspectiveCamer
         }
         if (r.emote) {
           r.emote.t += dt;
-          if (r.emote.t > 3 || speed > 0.6) r.emote = null;
-          else {
-            emotePose(P, r.emote.id, r.emote.t);
-            if (r.emote.id !== 'dance') for (let i = 0; i < 2; i++) copyLeg(r.loco.pose.legs[i], P.legs[i]);
-          }
+          if (emoteOver(r.emote.id, r.emote.t) || speed > 0.6) r.emote = null;
+          else emotePose(P, r.emote.id, r.emote.t);
         }
         r.aim += (((flags & (FLAG.aim | FLAG.fire)) !== 0 ? 1 : 0) - r.aim) * Math.min(1, dt * 14);
         r.reload = flags & FLAG.reload ? (r.reload + dt / WEAPONS[r.gun.id].reload) % 1 : 0;
@@ -326,13 +326,13 @@ export function createRemotes(scene: THREE.Scene, camera: THREE.PerspectiveCamer
         const holding = r.draw > 0 && !r.emote;
         if (holding) holdGun(P, r.stance, r.pivot, r.gun, { aim: r.aim, ready: 1 - run, draw: r.draw, pitch, recoil: 0, reload: r.reload, dt });
         // (the head looks where they look, unless it's down on a rifle's stock)
-        const free = holding ? 1 - r.stance.cheek : 1;
+        const free = holding ? 1 - r.stance.cheek : r.emote ? 0 : 1;
         const look = THREE.MathUtils.clamp((0.35 - pitch) * 0.6, -0.45, 0.55);
         P.headPitch = THREE.MathUtils.lerp(P.headPitch, look, free);
         P.headYaw *= 1 - free;
         r.fig.update();
         // ...with a gun in hand the animator gives only the legs and hips: their own upper body over them, as the player's
-        r.upperW = THREE.MathUtils.clamp(r.upperW + (holding ? dt / 0.15 : -dt / 0.15), 0, 1);
+        r.upperW = THREE.MathUtils.clamp(r.upperW + (holding || (r.emote && !dancing) ? dt / 0.15 : -dt / 0.15), 0, 1);
         if (mo && r.anim && r.mocapW > 0) {
           const w = smooth(r.mocapW);
           const u = smooth(r.upperW);
