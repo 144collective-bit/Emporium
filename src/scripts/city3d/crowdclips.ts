@@ -35,7 +35,7 @@
 import * as THREE from 'three';
 import { BONES, NECK_SHARE, SPINE_SHARE, makeSkeleton, newPose, poseSkeleton, reachArm, type Limb, type Pose, type Skeleton } from './skeleton';
 import { HURRY, PHONE, PHONE_GLANCE_YAW, kerbLook, phoneGlance } from './pedestrians';
-import { CHESS, CHESS_SECONDS, COOK, EAT, EAT_SECONDS, FISH, GUARD, LOUNGE_SECONDS, PEDAL, PEDAL_SECONDS, ROW, ROW_SECONDS, SERVE, chessPose, cookOver, eatPose, fishOver, guardOver, loungePose, pedalPose, rowPose, serveOver } from './acts';
+import { CHESS, CHESS_SECONDS, COOK, EAT, EAT_SECONDS, FISH, GUARD, LOUNGE_SECONDS, PEDAL, PEDAL_SECONDS, ROW, ROW_SECONDS, SERVE, SHOOT, SWING, SWING_SECONDS, chessPose, cookOver, eatPose, fishOver, guardOver, loungePose, pedalPose, rowPose, serveOver, shootOver, swingPose } from './acts';
 import { copyPose, createLocomotion } from './locomotion';
 import { attentionPose, chatPose, idlePose, lookPose, picnicPose, set, sitPose } from './poses';
 import { baked as atBuild } from './baked';
@@ -66,11 +66,13 @@ export type CrowdClip =
   | 'lounge'
   | 'row'
   | 'pedal'
+  | 'shoot'
+  | 'swing'
   | 'salute';
 /** What an idle person in the city is doing (life.ts picks their row from it; 'queue' is their own idle) */
 export type IdleAct = 'look' | 'chat' | 'sit' | 'queue' | 'phone' | 'serve' | 'cook' | 'fish' | 'guard' | 'eat' | 'chess' | 'lounge';
 /** The rows played sitting down (life.ts drops their root by the seat) */
-export const SEATED: ReadonlySet<CrowdClip> = new Set<CrowdClip>(['sit', 'picnic', 'eat', 'chess', 'lounge', 'row', 'pedal']);
+export const SEATED: ReadonlySet<CrowdClip> = new Set<CrowdClip>(['sit', 'picnic', 'eat', 'chess', 'lounge', 'row', 'pedal', 'swing']);
 export const seated = (c: CrowdClip) => SEATED.has(c);
 
 interface ClipDef {
@@ -167,8 +169,8 @@ function looped(f: (p: Pose, t: number) => void, seconds = WINDOW): ClipDef['sam
     f(a, t);
     const k = THREE.MathUtils.smoothstep(u, 1 - SEAM, 1);
     if (k <= 0) return copyPose(a, out);
-    // Towards where the loop starts again: the same formula one window earlier
-    f(b, t - WINDOW);
+    // Towards where the loop starts again: the same formula one loop earlier
+    f(b, t - seconds);
     lerpPose(a, b, k, out);
   };
 }
@@ -289,6 +291,8 @@ export const CLIP_DEFS: Record<CrowdClip, ClipDef> = {
   cook: { frames: 45, loop: true, grip: COOK.grip, sample: looped((p, t) => idlePose(p, t + 16)), capture: { take: 'crowd-idle-3', tail: IDLE_TAIL }, over: cookOver, arms: 'both', head: true },
   fish: { frames: 80, loop: true, grip: FISH.grip, sample: looped((p, t) => idlePose(p, t)), capture: { take: 'crowd-idle', tail: IDLE_TAIL }, over: fishOver, arms: 'both', head: true },
   guard: { frames: 60, loop: true, grip: GUARD.grip, sample: looped((p, t) => idlePose(p, t + 8)), capture: { take: 'crowd-idle-2', tail: IDLE_TAIL }, over: guardOver, arms: 'both', head: true },
+  // A set shot at the hoop (step 4, the kids at play; The Block's grown-ups too)
+  shoot: { frames: 45, loop: true, grip: SHOOT.grip, sample: looped((p, t) => idlePose(p, t + 16)), capture: { take: 'crowd-idle-3', tail: IDLE_TAIL }, over: shootOver, arms: 'both', head: true },
   look: { frames: 192, loop: true, grip: RELAXED, sample: looped((p, t) => lookPose(p, t)) },
   chat: { frames: 192, loop: true, grip: RELAXED, sample: looped((p, t) => chatPose(p, t)) },
   sit: { frames: 144, loop: true, grip: RELAXED, sample: looped((p, t) => sitPose(p, t)) },
@@ -299,6 +303,8 @@ export const CLIP_DEFS: Record<CrowdClip, ClipDef> = {
   lounge: { frames: 48, loop: true, grip: RELAXED, sample: looped(loungePose, LOUNGE_SECONDS), seconds: LOUNGE_SECONDS },
   row: { frames: 24, loop: true, grip: ROW.grip, sample: looped(rowPose, ROW_SECONDS), seconds: ROW_SECONDS },
   pedal: { frames: 18, loop: true, grip: PEDAL.grip, sample: looped(pedalPose, PEDAL_SECONDS), seconds: PEDAL_SECONDS },
+  // A kid on a swing (step 4)
+  swing: { frames: 26, loop: true, grip: SWING.grip, sample: looped(swingPose, SWING_SECONDS), seconds: SWING_SECONDS },
   // Attention (0) to the free hand at the brow (1), the rifle in the left hand
   salute: { frames: 9, loop: false, grip: RIFLE, sample: (u, p) => attentionPose(p, u, 'left') },
 };

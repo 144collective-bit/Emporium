@@ -44,7 +44,7 @@ import {
 } from './westlake';
 
 /** What a person in the park is doing at a moment: where, facing (0 is +z), standing (or seat) height, the crowd clip, how fast */
-export type ParkClip = 'walk' | 'jog' | 'look' | 'idle' | 'chat' | 'sit' | 'picnic' | 'row' | 'pedal';
+export type ParkClip = 'walk' | 'jog' | 'look' | 'idle' | 'chat' | 'sit' | 'picnic' | 'row' | 'pedal' | 'shoot' | 'swing';
 export interface Moment {
   x: number;
   z: number;
@@ -59,6 +59,8 @@ export interface ParkPerson {
   id: string;
   /** Left out on phones (the trim: half the park's people) */
   trim: boolean;
+  /** How big (the crowd's own size unless set: kids, play.ts) */
+  scale?: number;
   at(t: number, out: Moment): Moment;
 }
 export const moment = (): Moment => ({ x: 0, z: 0, ry: 0, y: SLAB, clip: 'look', speed: 0 });

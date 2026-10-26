@@ -24,6 +24,7 @@ import { inTrenches } from './trenches';
 import { CROWD_VIEW, HIP_HEIGHT, cityOutfit, createCrowd } from './character';
 import { type CrowdClip, idleFor, secondsOf, strideOf, walkFor, seated, type IdleAct } from './crowdclips';
 import { PARK_PEOPLE, moment, type Moment, type ParkPerson } from './parklife';
+import { PLAY_PEOPLE } from './play';
 import { blinkOn, bodyMotion, braking, hornDue, indicating, newBody, newHorn, pullAway, reactionOf, resetBody, turnsOf, type Body, type Horn, type Mover, type Turn } from './traffic';
 import { CROSS_PACE, crossingLinks, hurry, hurrying, noticing, onPhone, outAtNight, takesCrossing, walkLight, type Link } from './pedestrians';
 import { busStep, newBus, pullIn, routeStops, type Bus, type RouteStop } from './transit';
@@ -705,8 +706,9 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
   const idlers = opts.light ? crowd.filter((c) => !busy(c) || every++ % 2 === 0) : crowd;
   for (const c of idlers) people.push({ kind: 'idle', seg: 0, inset: 0, u: 0, dir: 1, speed: 0, phase: rand() * 6, x: c.x, z: c.z, y: c.y, act: c.act, scale: c.scale, ry: c.ry, face: c.ry, walked: 0, crossed: 0, seed: rand(), notice: { hold: 0 } });
   // Westlake Park's walkers, joggers, dog walkers, picnics, players and boaters (phones: half of them, the trim)
-  // ...and Uptown's joggers on the esplanade and cyclists in the bike lanes (uptownlife.ts), the same way
-  for (const pp of [...PARK_PEOPLE, ...UPTOWN_PEOPLE]) if (!(opts.light && pp.trim)) people.push({ kind: 'park', park: pp, m: moment(), seg: 0, inset: 0, u: 0, dir: 1, speed: 0, phase: rand() * 6, x: 0, z: 0, ry: 0, face: NaN, walked: 0, crossed: 0, seed: rand(), notice: { hold: 0 } });
+  // ...and Uptown's joggers on the esplanade and cyclists in the bike lanes (uptownlife.ts), and the kids at play
+  // on The Trenches' courts and swings (play.ts, at their own size), the same way
+  for (const pp of [...PARK_PEOPLE, ...UPTOWN_PEOPLE, ...PLAY_PEOPLE]) if (!(opts.light && pp.trim)) people.push({ kind: 'park', park: pp, m: moment(), seg: 0, inset: 0, u: 0, dir: 1, speed: 0, phase: rand() * 6, x: 0, z: 0, ry: 0, face: NaN, walked: 0, crossed: 0, seed: rand(), notice: { hold: 0 } });
   bodies.people = people;
 
   // Everyone is the shared Degen body in a city outfit: suits and hoodies, bags, headphones; a phone in the hand
@@ -840,10 +842,11 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
       if (p.kind === 'park') {
         const m = p.m!;
         const c = m.clip;
-        const py = seated(c) ? m.y - SEAT_DROP : m.y;
+        const sc = p.park!.scale ?? PERSON_SCALE;
+        const py = seated(c) ? m.y - (HIP_HEIGHT - 0.03) * sc : m.y;
         const clip = c === 'walk' ? walkClip : c === 'idle' ? idleClip : c;
-        const u = c === 'walk' || c === 'jog' ? p.walked / (strideOf(clip) * PERSON_SCALE) + seed : playAt(clip);
-        people3d.set(i, p.x, py, p.z, p.face, PERSON_SCALE, clip, u);
+        const u = c === 'walk' || c === 'jog' ? p.walked / (strideOf(clip) * sc) + seed : playAt(clip);
+        people3d.set(i, p.x, py, p.z, p.face, sc, clip, u);
       } else if (p.kind === 'walk' && standing) {
         // Stopped: watching you go by, or at a kerb (the `wait` row from the moment they stopped: a look both ways)
         const c: CrowdClip = looking ? idleClip : p.wait ? (phone ? 'phone' : 'wait') : 'look';

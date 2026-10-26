@@ -809,11 +809,12 @@ The plan as it was:
 - Measured on a phone (`?bench`, `?fps`: the crowd texture's size, draws,
   memory) before it merges.
 
-### Phase 6: the crowd's acts that suit the city (steps 1 to 3 built, for the owner's sign-off)
+### Phase 6: the crowd's acts that suit the city (built, for the owner's sign-off)
 
 Built in steps: **step 1** (the kerb, the crossing and the rain: built,
 below), **step 2** (the phone in the hand: built, below), **step 3** (the
-workers' rows: built, below), then the kids.
+workers' rows: built, below) and **step 4** (the kids at play: built,
+below). What's left before it merges: the measurement on a phone.
 
 What step 1 built:
 
@@ -924,6 +925,35 @@ does any of these):
   rows are short loops, 18 to 72 frames, not 24 s windows); the crowd's
   draws unchanged; no download added.
 
+What step 4 built (`play.ts`, DOM-free, tested in `tests/play.test.ts`;
+the rows in `acts.ts`):
+
+- **Kids that move**: everyone at play is a function of the time, as the
+  park's people are (parklife.ts `ParkPerson`, now with a `scale`: a kid
+  is `KID`, 0.44), so life.ts moves them with the crowd it already has
+  and plays the jog row at their size (the stride rule) and drops a
+  seated kid onto the seat by their own size. On every basketball
+  half-court in The Trenches two kids run a loop round the inside of the
+  court (`loopOf()`: a rounded rectangle `LOOP_IN` in from the fence, at
+  `KID_RUN`) while one at the free-throw spot takes set shots at the hoop
+  (`shoot`: the ball at the chest, up over the head and let go with the
+  arms following, the chin up at the hoop, `SHOT`); in the soccer cage
+  three run the loop and a keeper stands in each goalmouth; on The
+  Block's court the two on two are grown-ups (two running, one shooting at
+  the north hoop, one waiting). The rings of kids standing round the
+  courts went (they stood inside the courts); the playground's and the
+  skate spot's stay.
+- **The swings**: a kid on each seat of every playground's swings and of
+  The Block's (`swingsOf()`, where commons3d hangs them), facing along the
+  swing, playing `swing` (seated, hands up on the chains, the legs
+  pumping together, the body rocking with them). The seat itself stays
+  put: the swings are fixed geometry, so it's a gentle swing, not an arc.
+- A formula row's loop now eases towards its own start (the loop helper
+  looked one 24 s window back, which only loops a row whose length
+  divides 24: the swing's 2.6 s showed the seam).
+- Measured: two rows more (71 frames); no download added; the second
+  kid on each court, cage and swing is trimmed on phones.
+
 The plan as it was (the rules stay life.ts's and pedestrians.ts's; this
 phase only gives them the moves):
 
@@ -935,7 +965,8 @@ phase only gives them the moves):
   the carts, fishers casting on Pier 7, rowers at the oars (the park's
   boats) and the swan riders, the bouncers with arms folded, chess at the
   pavilion, the boombox corner's chairs (built, step 3, above).
-- Kids at play: running (the jog at a small scale), a ball game, the swings.
+- Kids at play: running (the jog at a small scale), a ball game, the swings
+  (built, step 4, above).
 - Each row from capture where a take fits, keyed where none does; no row
   threatening, none explicit (the content rules).
 

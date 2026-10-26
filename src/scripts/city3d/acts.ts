@@ -244,3 +244,51 @@ export function pedalPose(p: Pose, t: number) {
   p.headPitch = 0.04;
   p.headYaw = Math.sin(t * 0.3) * 0.3;
 }
+
+/* ---------- Kids at play (step 4) ---------- */
+
+/** A set shot at the hoop: the ball held at the chest, brought up over the head and let go with the arms following it (`SHOT`: 0 at the chest, 1 over the head, 2 released and following), looking up at the hoop */
+export const SHOOT = {
+  chest: [V(-0.1, 0.2, 0.22), V(0.1, 0.2, 0.22)],
+  up: [V(-0.08, 0.5, 0.12), V(0.08, 0.5, 0.12)],
+  release: [V(-0.07, 0.56, 0.26), V(0.07, 0.56, 0.26)],
+  headPitch: 0.3,
+  grip: 0.5,
+};
+export const SHOT: [number, number][] = [
+  [0, 0],
+  [0.8, 0],
+  [1.3, 1],
+  [1.45, 1],
+  [1.65, 2],
+  [2.2, 2],
+  [2.9, 0],
+];
+export function shootOver(sec: number, p: Pose) {
+  const c = keyed(SHOT, sec);
+  for (const i of [0, 1] as const) {
+    if (c <= 1) hand(p, i, SHOOT.chest[i], SHOOT.up[i], c);
+    else hand(p, i, SHOOT.up[i], SHOOT.release[i], c - 1);
+  }
+  // Eyes on the hoop throughout, the chin up more as the ball goes up
+  p.headPitch = SHOOT.headPitch * (0.5 + 0.5 * Math.min(1, c));
+  p.headYaw = 0;
+  p.lean += 0.04 * Math.min(1, c);
+}
+
+export const SWING_SECONDS = 2.6;
+/** On a swing: the hands up on the chains, the legs pumping together (out in front as the body leans back, tucked under as it comes forward); the seat stays put, so it's a gentle swing */
+export const SWING = { chains: [V(-0.17, 0.3, 0.02), V(0.17, 0.3, 0.02)], legs: { fwd: 1.25, swing: 0.3, out: 0.1, bend: 0.9, kick: 0.75 }, lean: -0.08, rock: 0.14, grip: 0.8 };
+export function swingPose(p: Pose, t: number) {
+  const w = t % SWING_SECONDS;
+  sitPose(p, 0);
+  const a = (w / SWING_SECONDS) * Math.PI * 2;
+  const s = Math.sin(a);
+  for (const i of [0, 1] as const) {
+    hand(p, i, SWING.chains[i], SWING.chains[i], 0);
+    set(p.legs[i], SWING.legs.fwd + SWING.legs.swing * s, SWING.legs.out, SWING.legs.bend - SWING.legs.kick * Math.max(0, s));
+  }
+  p.lean = SWING.lean - SWING.rock * s;
+  p.headPitch = 0.08 + 0.1 * s;
+  p.headYaw = 0;
+}

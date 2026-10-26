@@ -1833,7 +1833,17 @@ it and has been retired completely. Build only on what's here.
   and `pedal` (the park's boats). `IdleAct` (crowdclips.ts) is what an
   idle person does, life.ts plays the row of that name (`clipOf()`), and
   `SEATED` / `seated()` say which rows sit (their root dropped by the
-  seat); benches keep `sit`. The clips file's limits are 640 KB (test) and 660 KB (budget),
+  seat); benches keep `sit`. Step 4 is built: the kids at play
+  (`play.ts`, DOM-free, tested in `tests/play.test.ts`): `PLAY_PEOPLE`
+  are park-style people (parklife.ts `ParkPerson`, with a `scale`: kids
+  are `KID`) life.ts moves with the park's: on every half-court two kids
+  run a loop round the inside (`loopOf()`, `LOOP_IN`, `KID_RUN`, the jog
+  row at their size) and one takes set shots at the hoop (`shoot` in
+  acts.ts, over the third idle), the cage's three runners and two
+  keepers, The Block's two on two (grown-ups), and a kid on every swing
+  seat (`swingsOf()`, the `swing` row, seated); the commons' rings on the
+  courts went, the playground's and skate spot's stay. A formula row's
+  loop eases towards its own start (`looped(f, seconds)`). The clips file's limits are 640 KB (test) and 660 KB (budget),
   raised for the takes on purpose:
   - **The data** is CMU's motion capture (free for commercial use; the
     acknowledgment is in the start menu's Options > Credits, named, never

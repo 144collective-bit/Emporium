@@ -405,7 +405,7 @@ export const COMMONS_SOLIDS: Footprint[] = [
   }),
 ];
 
-/** Who's out on the lawns: kids at play, neighbours at the grills and the chess tables, someone at the washing (x, z, facing, what they're doing, how big) */
+/** Who's out on the lawns: kids by the playground and the skate spot, neighbours at the grills and the chess tables, someone at the washing (x, z, facing, what they're doing, how big); the kids playing on the courts and the swings are play.ts's */
 export interface CommonsPerson {
   x: number;
   z: number;
@@ -429,8 +429,8 @@ export function commonsPeople(low: boolean): CommonsPerson[] {
         out.push({ x, z, ry: face(x, z, cx, cz), act, kid });
       }
     };
+    // (the kids on the courts, in the cage and on the swings are play.ts's: they move)
     if (a.kind === 'playground') ring(low ? 2 : 4, 2.2, true, 'look');
-    else if (a.kind === 'halfcourt' || a.kind === 'soccer') ring(low ? 2 : a.kind === 'soccer' ? 6 : 3, a.kind === 'soccer' ? 3 : 2, true, 'look');
     else if (a.kind === 'skate') ring(low ? 1 : 3, 2.4, true, 'look');
     else if (a.kind === 'garden') {
       // Two at each grill, chatting

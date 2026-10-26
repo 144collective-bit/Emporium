@@ -10,7 +10,7 @@ import * as THREE from 'three';
 import { CLIP_DEFS, CLIP_IDS, CLIP_ROWS, CROWD_BONES, CROWD_ROWS, JOG_STRIDE, MARCH_STRIDE, SEATED, WALK_STRIDE, bakeCrowdClips, crowdCaptured, crowdFrame, idleFor, seated, secondsOf, setCrowdCapture, strideOf, walkFor, type CrowdClip } from '../src/scripts/city3d/crowdclips';
 import { BONE_INDEX, makeSkeleton } from '../src/scripts/city3d/skeleton';
 import { PHONE } from '../src/scripts/city3d/pedestrians';
-import { CAST, GUARD_LOOK, HAND_OVER, MOVE, keyed } from '../src/scripts/city3d/acts';
+import { CAST, GUARD_LOOK, HAND_OVER, MOVE, SHOT, keyed } from '../src/scripts/city3d/acts';
 import { decodeMocap } from '../src/scripts/city3d/mocap';
 
 // (the stand-ins first: the recorded walk and the formula idle, as a visitor sees them until the pack is in)
@@ -428,4 +428,30 @@ test('the workers seated: eating, chess, lounging, rowing and pedalling, each on
   for (const r of pedal) for (const h of [BONE_INDEX.handL, BONE_INDEX.handR]) assert.ok(rel(r, h).z > 0.2 && rel(r, h).y > 0.05, 'pedal: the hands on the bar');
   const diff = pedal.map((r) => rel(r, BONE_INDEX.footL).z - rel(r, BONE_INDEX.footR).z);
   assert.ok(Math.max(...diff) > 0.1 && Math.min(...diff) < -0.1, `pedal: the feet in turn (${Math.min(...diff).toFixed(2)} to ${Math.max(...diff).toFixed(2)})`);
+});
+
+test('kids at play (step 4): the set shot over the third idle, the swing seated with the legs pumping', () => {
+  const rel = (row: number, bone: number) => joint(row, bone).sub(joint(row, BONE_INDEX.hips));
+  // The shot: the take's body; the hands together at the chest, then up over the head and out, the chin up at the hoop
+  const shoot = framesOf('shoot');
+  assert.equal(CLIP_DEFS.shoot.frames, CLIP_DEFS.idle3.frames);
+  for (let f = 0; f < shoot.length; f += 4) for (const b of [BONE_INDEX.hips, BONE_INDEX.footL, BONE_INDEX.footR]) assert.ok(joint(shoot[f], b).distanceTo(joint(CLIP_ROWS.idle3 + f, b)) < 1e-6, 'shoot: the take\'s body');
+  const chest0 = rel(shoot[0], BONE_INDEX.handR);
+  assert.ok(chest0.y > 0.1 && chest0.y < 0.3 && chest0.z > 0.12, `shoot: the ball at the chest to start (${chest0.y.toFixed(2)}, ${chest0.z.toFixed(2)})`);
+  const top = shoot.reduce((a, b) => (rel(b, BONE_INDEX.handR).y > rel(a, BONE_INDEX.handR).y ? b : a));
+  for (const h of [BONE_INDEX.handL, BONE_INDEX.handR]) assert.ok(rel(top, h).y > rel(top, BONE_INDEX.head).y + 0.05 && rel(top, h).z > 0.08, 'shoot: both hands up over the head and out');
+  // (the take's chest turns a little under the keyed arms)
+  assert.ok(Math.abs(rel(top, BONE_INDEX.handL).x + rel(top, BONE_INDEX.handR).x) < 0.1, 'shoot: the hands together on the ball');
+  assert.ok(headAt(top).down < headAt(shoot[0]).down - 0.1 && headAt(top).down < -0.15, 'shoot: looking up at the hoop');
+  assert.ok(keyed(SHOT, 1.37) === 1 && keyed(SHOT, 1.9) === 2 && keyed(SHOT, 3.5) === 0);
+  // The swing: seated (the hips as the sit row's), the hands up on the chains either side, the legs out and back together
+  const swing = framesOf('swing');
+  assert.ok(seated('swing'));
+  for (const r of swing) {
+    assert.ok(Math.abs(joint(r, BONE_INDEX.hips).y - joint(CLIP_ROWS.sit, BONE_INDEX.hips).y) < 0.01, 'swing: the hips on the seat');
+    for (const h of [BONE_INDEX.handL, BONE_INDEX.handR]) assert.ok(rel(r, h).y > 0.2 && Math.abs(Math.abs(rel(r, h).x) - 0.17) < 0.06, 'swing: the hands up on the chains');
+    assert.ok(Math.abs(rel(r, BONE_INDEX.footL).z - rel(r, BONE_INDEX.footR).z) < 0.03, 'swing: the legs together');
+  }
+  const [back, fore] = span(swing, BONE_INDEX.footL, 'z');
+  assert.ok(fore > back + 0.2, `swing: the legs kick out (${back.toFixed(2)} to ${fore.toFixed(2)})`);
 });
