@@ -101,6 +101,7 @@ test('played at its stride, the walk keeps a planted foot planted (and so do the
     ['walk2', strideOf('walk2')],
     ['jog', strideOf('jog')],
     ['march', MARCH_STRIDE],
+    ['hurry', strideOf('hurry')],
   ] as [CrowdClip, number][]) {
     assert.ok(stride > 0.2 && stride < (id === 'jog' ? 3 : 1.5), `${id} stride ${stride}`);
     const n = CLIP_DEFS[id].frames;
@@ -215,3 +216,51 @@ test('the scale rule: a person at any scale plays a walk at v / (stride · scale
     }
   }
 });
+
+test('the kerb wait: the captured idle with a look both ways over it; the hurry: the walk with the head down and the arms in', () => {
+  // The wait row stands like the idle it's keyed over (the same hips), the head turned left then right about the chest
+  const w = CLIP_ROWS.wait;
+  const i2 = CLIP_ROWS.idle2;
+  const n = CLIP_DEFS.wait.frames;
+  assert.equal(n, CLIP_DEFS.idle2.frames);
+  assert.ok(Math.abs(secondsOf('wait') - secondsOf('idle2')) < 1e-9);
+  const yawAt = (row: number) => {
+    const chest = new THREE.Quaternion().setFromRotationMatrix(mat(row, BONE_INDEX.chest));
+    const head = new THREE.Quaternion().setFromRotationMatrix(mat(row, BONE_INDEX.head));
+    const rel = chest.invert().multiply(head);
+    const fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(rel);
+    return Math.atan2(fwd.x, fwd.z);
+  };
+  let left = 0;
+  let right = 0;
+  for (let f = 0; f < n; f++) {
+    const hips = joint(w + f, BONE_INDEX.hips);
+    assert.ok(hips.distanceTo(joint(i2 + f, BONE_INDEX.hips)) < 1e-6, `frame ${f}: the hips are the idle's`);
+    for (const foot of [BONE_INDEX.footL, BONE_INDEX.footR]) assert.ok(joint(w + f, foot).distanceTo(joint(i2 + f, foot)) < 1e-6, `frame ${f}: the feet are the idle's`);
+    const y = yawAt(w + f) - yawAt(i2 + f);
+    if (y > 0.7) left++;
+    if (y < -0.7) right++;
+  }
+  assert.ok(left >= 4 && right >= 4, `the head turned both ways: ${left} left, ${right} right of ${n}`);
+  assert.ok(Math.abs(yawAt(w) - yawAt(i2)) < 0.05 && Math.abs(yawAt(w + n - 1) - yawAt(i2 + n - 1)) < 0.05, 'ahead at the loop');
+  // The hurry: the walk's legs and stride, the head lower and the hands up in front of the chest
+  const h = CLIP_ROWS.hurry;
+  const wk = CLIP_ROWS.walk;
+  assert.equal(strideOf('hurry'), strideOf('walk'));
+  for (let f = 0; f < CLIP_DEFS.hurry.frames; f += 5) {
+    for (const foot of [BONE_INDEX.footL, BONE_INDEX.footR]) assert.ok(joint(h + f, foot).distanceTo(joint(wk + f, foot)) < 1e-6, `frame ${f}: the feet are the walk's`);
+    // (the head pitched down about the hips (the rig faces +z), the chest forward of them)
+    const pitchDown = (row: number) => {
+      const hips = new THREE.Quaternion().setFromRotationMatrix(mat(row, BONE_INDEX.hips));
+      const head = new THREE.Quaternion().setFromRotationMatrix(mat(row, BONE_INDEX.head));
+      return Math.asin(-new THREE.Vector3(0, 0, 1).applyQuaternion(hips.invert().multiply(head)).y);
+    };
+    assert.ok(pitchDown(h + f) > pitchDown(wk + f) + 0.25, `frame ${f}: the head down (${pitchDown(h + f).toFixed(2)} vs ${pitchDown(wk + f).toFixed(2)})`);
+    assert.ok(joint(h + f, BONE_INDEX.chest).z - joint(h + f, BONE_INDEX.hips).z > joint(wk + f, BONE_INDEX.chest).z - joint(wk + f, BONE_INDEX.hips).z + 0.01, `frame ${f}: the chest forward`);
+    for (const hand of [BONE_INDEX.handL, BONE_INDEX.handR]) {
+      const hp = joint(h + f, hand);
+      assert.ok(hp.y > joint(wk + f, hand).y + 0.1 && hp.y > joint(h + f, BONE_INDEX.hips).y, `frame ${f}: a hand up at the chest (${hp.y.toFixed(2)})`);
+    }
+  }
+});
+

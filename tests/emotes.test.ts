@@ -103,6 +103,7 @@ test('the hands: the wave above his head on his right, the cheer both high, the 
   for (let i = 2; i < xs.length; i++) if ((xs[i] - xs[i - 1]) * (xs[i - 1] - xs[i - 2]) < 0) swings++;
   assert.ok(swings >= 4, `wave: ${swings} swings`);
   emotePose(p, 'cheer', 0.8, 1, true);
+  assert.ok(p.headPitch > 0.15, `the cheer looks up (${p.headPitch})`);
   const h2 = at(p, 'head');
   for (const b of ['handL', 'handR']) assert.ok(at(p, b).y > h2.y + 0.25, `cheer: ${b}`);
   emotePose(p, 'salute', 1.0, 1, true);

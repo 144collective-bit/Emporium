@@ -251,7 +251,7 @@ export function makeSkeleton(): Skeleton {
 }
 
 /** How the spine shares the lean, twist and the hips' counter-tilt (spine1, spine2, chest) */
-const SPINE_SHARE = [0.3, 0.35, 0.35];
+export const SPINE_SHARE = [0.3, 0.35, 0.35];
 /** How much of the head's turn the neck takes */
 export const NECK_SHARE = 0.35;
 /** An arm raised past this (radians from hanging down) starts lifting its collarbone, by this much of the extra */

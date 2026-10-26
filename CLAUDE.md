@@ -1368,7 +1368,12 @@ it and has been retired completely. Build only on what's here.
     demo, the benchmark (`?bench`, `bench.ts`), Drop 001's fitting room
     (`fitting.ts`, when its panel first opens: `loadFitting()` in index.ts)
     the world map (`worldmap.ts`, when it first opens: `loadMap()` in
-    travel-ui.ts; `placeName()` is places.ts's) and the kart park's game
+    travel-ui.ts; `placeName()` is places.ts's), the gun store, the
+    garage's and the hangar's menus (`gunshop.ts`, `garage-ui.ts`,
+    `hangar-ui.ts`: each loads the first time its door or counter opens
+    it, `lazyMenu()` in walk.ts; the saved car and aircraft are read by
+    `loadCar()` in mycar.ts and `loadPlane()` in myplane.ts, in the boot)
+    and the kart park's game
     (the hut's menu and the race, `kartgame.ts`: `loadKarts()` in walk.ts,
     when Degen comes near the park or asks at the hut; idle stand-ins until
     then; the City-view panel's records are `kart-records.ts`, at the boot). New features that aren't needed until they're used come the same
@@ -1795,7 +1800,17 @@ it and has been retired completely. Build only on what's here.
   and the hologram (`dancePose()`) play the same clips; the lab's Emotes
   program plays them in turn (emotes.ts is walk mode's chunk, `onfoot.ts`,
   not the boot's). No CMU take in the repository is a dance:
-  one from capture is a data step for the owner. The clips file's limits are 640 KB (test) and 660 KB (budget),
+  one from capture is a data step for the owner. Phase 6 (the crowd's acts
+  that suit the city) step 1 is built: a crowd row can carry a keyed
+  overlay (`ClipDef.over` in crowdclips.ts: the head's yaw and pitch, the
+  spine's lean, the arms where `arms` is set, laid on the capture's bones
+  at the bake, `overlay()`): the `wait` row (the second captured idle with
+  a look both ways, `kerbLook()` / `KERB_LOOK` in pedestrians.ts; a walker
+  at a kerb faces across and plays it from the moment they stopped) and
+  the `hurry` row (the captured walk with the chest forward, the head down
+  and the arms held in, `HURRY`; from `HURRY_RAIN`, `hurrying()`, every
+  walker's walk). The brisk crossing step stays the walk at `CROSS_PACE`
+  (no take in the repository is a brisk straight walk: a data step). The clips file's limits are 640 KB (test) and 660 KB (budget),
   raised for the takes on purpose:
   - **The data** is CMU's motion capture (free for commercial use; the
     acknowledgment is in the start menu's Options > Credits, named, never

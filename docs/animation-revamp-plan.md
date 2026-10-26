@@ -809,13 +809,53 @@ The plan as it was:
 - Measured on a phone (`?bench`, `?fps`: the crowd texture's size, draws,
   memory) before it merges.
 
-### Phase 6: the crowd's acts that suit the city
+### Phase 6: the crowd's acts that suit the city (step 1 built, for the owner's sign-off)
 
-Rows the life plan's rules can pick (the rules stay life.ts's and
-pedestrians.ts's; this phase only gives them the moves):
+Built in steps: **step 1** (the kerb, the crossing and the rain: built,
+below), then the phone in the hand, the workers' rows, and the kids.
+
+What step 1 built:
+
+- **Keyed over a captured row** (`crowdclips.ts`): a `ClipDef` can carry
+  an `over` (seconds into the loop, what the pose adds: the head's yaw
+  and pitch down the neck and head, the lean down the spine, and the arms
+  replacing the row's where `arms` is set), laid on the capture's bones at
+  the bake as poseSkeleton() shares them (`overlay()`), and on the
+  formula's stand-in the same way. Every later act over an idle or a walk
+  comes the same way, so the capture's weight shifts and steps stay under
+  it.
+- **Waiting at a kerb**: the `wait` row is the second captured idle with
+  a look both ways over it (`kerbLook()` in pedestrians.ts: to the
+  traffic's side, across, a glance back, then ahead, at most 3.9 rad/s,
+  ahead again well before the row loops). A walker who reaches a crossing
+  on red faces across it and plays the row from the moment they stopped
+  (life.ts, `p.wait.since`), so everyone at a kerb looks when they get
+  there, not in step. The captured idle's own weight shift carries on
+  under the look.
+- **The hurry in the rain**: from half rain (`hurrying()`, `HURRY_RAIN`)
+  every walker plays `hurry`: the captured walk with the chest forward,
+  the head down and both arms held in at the chest, the hands closed
+  (`HURRY` in pedestrians.ts), at the walk's own stride (the feet stay
+  put; the rain's quicker pace was already `hurry()`'s). The park's
+  walkers too.
+- **Not from capture, and not changed**: no take in the repository is a
+  brisk straight walk (the figure-eight's brisk stretch straightens to a
+  slow cycle with a 26° wobble; the fast walk take is a start that never
+  gets going), so the brisk crossing step stays the walk cycle at the
+  crossing's pace (`CROSS_PACE`, the feet planted by the stride rule). A
+  brisk walk take is a data step for the owner (CMU's subject 143 and
+  others have walks at speed), and then it's one line in takes.json and a
+  row.
+- Measured: two rows more (90 rows, about 200 KB in the crowd texture);
+  the crowd's draws unchanged; no download added (the rows are keyed over
+  takes already in the pack).
+
+The plan as it was (the rules stay life.ts's and pedestrians.ts's; this
+phase only gives them the moves):
 
 - Waiting at a kerb (a weight shift and a look both ways), the brisk
-  crossing step, the hurry in the rain.
+  crossing step, the hurry in the rain (built, step 1, above; the brisk
+  step waits for a take).
 - A phone in the hand (standing, walking: the crowd already has `phone`
   people on the plaza and the boulevard).
 - Traders handing over, diners eating, cooks at the stalls, vendors at

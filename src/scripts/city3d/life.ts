@@ -25,7 +25,7 @@ import { CROWD_VIEW, HIP_HEIGHT, cityOutfit, createCrowd } from './character';
 import { type CrowdClip, idleFor, secondsOf, strideOf, walkFor } from './crowdclips';
 import { PARK_PEOPLE, moment, type Moment, type ParkPerson } from './parklife';
 import { blinkOn, bodyMotion, braking, hornDue, indicating, newBody, newHorn, pullAway, reactionOf, resetBody, turnsOf, type Body, type Horn, type Mover, type Turn } from './traffic';
-import { CROSS_PACE, crossingLinks, hurry, noticing, outAtNight, takesCrossing, walkLight, type Link } from './pedestrians';
+import { CROSS_PACE, crossingLinks, hurry, hurrying, noticing, outAtNight, takesCrossing, walkLight, type Link } from './pedestrians';
 import { busStep, newBus, pullIn, routeStops, type Bus, type RouteStop } from './transit';
 import { MOORED, cruise, hornDue as boatHornDue, newBoatHorn, wakeOf } from './boats';
 import { VENTS, VENT_N, puff, ventsNear, ventsOn } from './dusk';
@@ -773,7 +773,11 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
         // At the kerb until the cars have red with time to get over; a long wait and they carry on round
         if (walkLight(p.wait.link, t, p.speed * pace)) startCrossing(p, p.wait.link);
         else if (t - p.wait.since > 25) p.wait = undefined;
-        else standing = true;
+        else {
+          // (facing across, the `wait` row below: a look both ways)
+          standing = true;
+          p.ry = Math.atan2(p.wait.link.to[0] - p.x, p.wait.link.to[1] - p.z);
+        }
       } else if (p.kind === 'walk') {
         const lp = p.loop!;
         const was = p.seg;
@@ -815,7 +819,8 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
       // Each plays a baked clip (crowdclips.ts): their own walk at its stride, so their feet stay put on the
       // pavement; their own idle; the rest from where their own offset puts them in it
       const seed = p.phase / 6;
-      const walkClip = walkFor(seed);
+      // (in the rain everyone hurries: the walk with the head down and the arms in, the revamp's Phase 6)
+      const walkClip: CrowdClip = hurrying(rain) ? 'hurry' : walkFor(seed);
       const idleClip = idleFor(seed);
       const playAt = (c: CrowdClip) => t / secondsOf(c) + seed;
       // Turn corners over a few frames instead of snapping
@@ -833,7 +838,11 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
         const clip = c === 'walk' ? walkClip : c === 'idle' ? idleClip : c;
         const u = c === 'walk' || c === 'jog' ? p.walked / (strideOf(clip) * PERSON_SCALE) + seed : playAt(clip);
         people3d.set(i, p.x, py, p.z, p.face, PERSON_SCALE, clip, u);
-      } else if (p.kind === 'walk' && standing) people3d.set(i, bx, y, bz, p.face, PERSON_SCALE, looking ? idleClip : 'look', playAt(looking ? idleClip : 'look'));
+      } else if (p.kind === 'walk' && standing) {
+        // Stopped: watching you go by, or at a kerb (the `wait` row from the moment they stopped: a look both ways)
+        const c: CrowdClip = looking ? idleClip : p.wait ? 'wait' : 'look';
+        people3d.set(i, bx, y, bz, p.face, PERSON_SCALE, c, c === 'wait' ? (t - p.wait!.since) / secondsOf('wait') : playAt(c));
+      }
       else if (p.kind === 'walk') people3d.set(i, bx, y, bz, p.face, PERSON_SCALE, walkClip, p.walked / (strideOf(walkClip) * PERSON_SCALE) + seed);
       else {
         const clip: CrowdClip = p.act === 'sit' ? 'sit' : p.act === 'chat' ? 'chat' : p.act === 'queue' ? idleClip : 'look';

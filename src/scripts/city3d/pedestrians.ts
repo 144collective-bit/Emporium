@@ -125,6 +125,43 @@ export function noticing(state: { hold: number }, dist: number, r: number, on: b
 
 /** The walkers' pace in the rain (0 dry to 1 pouring): up to 40% quicker */
 export const hurry = (rain: number) => 1 + 0.4 * Math.max(0, Math.min(1, rain));
+/**
+ * The hurry (the revamp's Phase 6): from this much rain the walkers play the `hurry` row (crowdclips.ts: their walk
+ * with the head down, the shoulders in and the arms tucked, `HURRY`), not their stroll
+ */
+export const HURRY_RAIN = 0.5;
+export const hurrying = (rain: number) => rain >= HURRY_RAIN;
+/** The hurry's shape over the walk: the chest forward (`lean`), the head down (a negative `headPitch`: positive is up), the arms held in (both the same), the hands closed */
+export const HURRY = { lean: 0.14, headPitch: -0.3, arm: { fwd: 0.4, out: -0.02, bend: 1.55 }, grip: 0.7 };
+
+/**
+ * Waiting at a kerb (the revamp's Phase 6): a look both ways, the head's yaw (radians, positive to the left) `w`
+ * seconds into the wait: to the left (the traffic's side first), across to the right, a glance back left, then
+ * ahead; then still (the `wait` row loops on the captured idle, so the look comes round again with the row).
+ */
+export const KERB_LOOK: [number, number][] = [
+  [0, 0],
+  [0.25, 0],
+  [0.8, 0.95],
+  [1.35, 0.95],
+  [2.1, -0.95],
+  [2.6, -0.95],
+  [3.1, 0.45],
+  [3.45, 0.45],
+  [3.9, 0],
+];
+export function kerbLook(w: number): number {
+  const k = KERB_LOOK;
+  if (w <= k[0][0]) return k[0][1];
+  for (let i = 1; i < k.length; i++) {
+    if (w <= k[i][0]) {
+      const u = (w - k[i - 1][0]) / (k[i][0] - k[i - 1][0]);
+      const e = u * u * (3 - 2 * u);
+      return k[i - 1][1] + (k[i][1] - k[i - 1][1]) * e;
+    }
+  }
+  return k[k.length - 1][1];
+}
 
 /** Is the nth walker out at this hour? Late at night (1 to 5) every other one has gone home. */
 export const outAtNight = (n: number, hour: number) => !(hour >= 1 && hour < 5 && n % 2 === 1);

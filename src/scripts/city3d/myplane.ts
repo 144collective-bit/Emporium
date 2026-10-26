@@ -35,3 +35,14 @@ export function cleanPlane(v: unknown): MyPlane {
   const paint = PLANE_PAINTS.find((p) => p.id === o.paint)?.id ?? DEFAULT_PLANE.paint;
   return { model, paint };
 }
+
+/** Where the browser keeps it (backup.ts lists the key too) */
+export const PLANE_KEY = 'degen-city-plane-v1';
+/** Your saved aircraft (or the default); hangar-ui.ts saves it */
+export function loadPlane(): MyPlane {
+  try {
+    return cleanPlane(JSON.parse(localStorage.getItem(PLANE_KEY) ?? 'null'));
+  } catch {
+    return { ...DEFAULT_PLANE };
+  }
+}
