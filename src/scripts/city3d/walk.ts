@@ -41,6 +41,7 @@ import { GAITS, STAIRS, climbAhead, newMove, startSlide, stepMove, stepSlide, ty
 import { slidePose } from './poses';
 import { OVER, isLow, overAhead, overAt, overPose, type Over } from './vault';
 import { springVel } from './inertia';
+import type { MoData } from './mocap';
 import { createCombat, type Sfx } from './combat';
 import { WEAPON_IDS } from './combat-sim';
 import { createGunShop } from './gunshop';
@@ -269,6 +270,8 @@ export function createWalk(d: WalkDeps) {
   let animator: Animator | null = null;
   /** ...its code (its own chunk, fetched with the clips the first time he walks) */
   let anim: typeof import('./animator') | null = null;
+  /** ...and the clips it plays (other players' animators play the same: `motion`) */
+  let mocapData: MoData | null = null;
   let animLoading = false;
   let mocapW = 0;
   /** How much of his upper body is his own pose over the motion capture's legs (the gun's hold, an arm out aiming) */
@@ -2280,6 +2283,7 @@ export function createWalk(d: WalkDeps) {
       Promise.all([import('./animator'), import('./contact'), loadMocap()]).then(
         ([m, cm, data]) => {
           anim = m;
+          mocapData = data;
           animator = m.createAnimator(data);
           contactMod = cm;
           contact = cm.createContact({ hands: !d.low });
@@ -2626,6 +2630,10 @@ export function createWalk(d: WalkDeps) {
     },
     playEmote(id: string) {
       emote = { id, t: 0 };
+    },
+    /** The motion capture and its animator module, once they're in (remote.ts: other players move on it too) */
+    get motion() {
+      return anim && mocapData ? { anim, data: mocapData } : null;
     },
     /** What other players need to see of us, for the game server */
     netState() {

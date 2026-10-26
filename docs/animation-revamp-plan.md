@@ -667,11 +667,11 @@ What's not in, and why:
 - Everything in walk.ts stays where it is; the moments are called from
   the prompts' `act()` and hand back to what it did.
 
-### Phase 5: everyone on the same motion (step 1 built, for the owner's sign-off)
+### Phase 5: everyone on the same motion (steps 1 and 2 built, for the owner's sign-off)
 
 Built in steps: **step 1** (the crowd's rows from the capture, the scale
-rule: built, below), step 2 (other players on the animator) and step 3
-(the emotes re-keyed).
+rule: built, below), **step 2** (other players on the animator: built,
+below) and step 3 (the emotes re-keyed).
 
 What step 1 built (and how it differs from the plan):
 
@@ -712,20 +712,49 @@ What step 1 built (and how it differs from the plan):
   and the GPU does the same work), and the boot fetches 56 KB more after
   it's up (a budget row, `mocapCrowd`, holds it under 80 KB).
 
+What step 2 built:
+
+- **Other players on the animator** (`remote.ts`): once walk mode has the
+  motion capture and its animator module (walk.ts's `motion`, through the
+  multiplayer's `Walker`), every player within `ANIM_FAR` (70) of the
+  camera gets an animator of their own (animator.ts, the same clips), fed
+  from where they're drawn: their own movement springs (`movesim.ts`)
+  follow the velocity seen between frames and the facing the server sends
+  (as the stick drives the player's), and the animator plays from that
+  (`faceGoal` the facing sent, `sprint` from the speed sent). Within
+  `ANIM_NEAR` (25) it steps every frame, further out at `FAR_DT` (30 a
+  second), and past `ANIM_FAR`, in the air or emoting the planted-feet walk
+  (locomotion.ts) carries on as before (the blend `mocapW` as the
+  player's). A jump between frames (a warp, a fast travel) starts it afresh
+  and gives no velocity. The gun hold goes on top as the player's: with a
+  gun in hand (`upperW`) the animator gives only the legs and hips and
+  their own upper body (the hold, the aim, the reload, the cheek on the
+  stock) sits over them (`applyTo(..., upper, yaw)`); the head's look at
+  the camera pitch sent comes through `addLook()`; the emotes keep the
+  planted legs as before (the capture steps aside while one plays). Tested
+  (`tests/animator.test.ts`): fed as another player (positions between
+  snapshots 20 a second, drawn a little behind, the springs chasing what's
+  seen) the held feet stay put, nothing pops, the hips stay up and he faces
+  the way sent.
+
 What's not in, and why:
 
+- **The gaze for other players** (people and cars drawing their eyes): the
+  gaze needs each player's own interests and costs a little each; the
+  polish phase can add it for the nearest few.
 - **Two chats, the sit, the sit-down and stand-up, the march from capture**:
   the CMU takes in the repository have no chatting, sitting or marching.
   Picking them (a conversation take, a sit-down, a parade march) is a data
   step for the owner to sign off (the `docs` of the data below say what's
   there); the formulas stay until then.
-- **Other players** (step 2) and **the emotes** (step 3).
+- **The emotes** (step 3).
 
 The plan as it was:
 
 - **Other players** (`remote.ts`) on the animator, fed from the
   interpolated position, speed and facing the server already sends; the
-  gun hold, the emotes and the gaze on top; far ones at the far rate.
+  gun hold, the emotes and the gaze on top; far ones at the far rate
+  (built, step 2, above; the gaze held back).
 - **The crowd's rows re-baked** from the captured clips (built, step 1,
   above: from the crowd pack fetched at the boot, not at build time): two
   walks and the jog, three idles (built); two chats, the sit (and the sit-down and

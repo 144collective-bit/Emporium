@@ -1667,7 +1667,17 @@ it and has been retired completely. Build only on what's here.
   (`walkFor()` / `idleFor()` by a number of theirs, life.ts), the strides
   are live (`STRIDE`, `strideOf()`), and the scale rule is tested at the
   city's scales (`tests/crowdclips.test.ts`). A budget row (`mocapCrowd`)
-  holds the pack under 80 KB. The clips file's limits are 640 KB (test) and 660 KB (budget),
+  holds the pack under 80 KB. Step 2 is built: **other players on the
+  animator** (`remote.ts`): once walking has the capture and the animator
+  module (walk.ts's `motion`, through the multiplayer's `Walker`), each
+  player within `ANIM_FAR` of the camera gets an animator of their own fed
+  from where they're drawn (their own springs following the velocity seen
+  between frames and the facing sent; every frame within `ANIM_NEAR`,
+  at `FAR_DT` beyond; a jump between frames starts it afresh), blended in
+  as the player's (`mocapW`), the gun hold over its legs and hips
+  (`upperW`, `applyTo(..., upper, yaw)`), the look through `addLook()`,
+  the emotes and the air on the planted-feet walk as before; tested as a
+  fed remote in `tests/animator.test.ts`. The clips file's limits are 640 KB (test) and 660 KB (budget),
   raised for the takes on purpose:
   - **The data** is CMU's motion capture (free for commercial use; the
     acknowledgment is in the start menu's Options > Credits, named, never

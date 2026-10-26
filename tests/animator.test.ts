@@ -659,3 +659,70 @@ test('standing still he stands up straight, calm, the idles taking turns (no sna
   assert.ok(most < 0.05, `the most any bone turned in a frame: ${deg(most)}`);
   assert.ok(clips.size >= 2, `the idles take turns (${[...clips].join(', ')})`);
 });
+
+test('fed as another player (the revamp\'s Phase 5: positions between snapshots, the springs following what is seen): held feet stay put, nothing pops', () => {
+  // The sender: a walker on the springs at a walk, then a run, turning; snapshots of where they are 20 times a second
+  const sender = newMove(0);
+  let sx = 0;
+  let sz = 0;
+  const snaps: { t: number; x: number; z: number; face: number }[] = [];
+  for (let i = 0; i < 12 * 60; i++) {
+    const t = i * DT;
+    const v = t < 4 ? GAITS.walk : GAITS.run;
+    const a = t > 8 ? (t - 8) * 0.5 : 0;
+    stepMove(sender, Math.sin(a) * v, Math.cos(a) * v, true, DT);
+    sx += sender.vx * DT;
+    sz += sender.vz * DT;
+    if (i % 3 === 0) snaps.push({ t, x: sx, z: sz, face: sender.face });
+  }
+  // The receiver: drawn a little behind, between the two snapshots either side (remote.ts), its own springs
+  // chasing the velocity seen between frames and the facing sent, its animator fed from that
+  const an = createAnimator(data);
+  const m = newMove(0);
+  const prev = new Float32Array(NB * 4);
+  const qa = new THREE.Quaternion();
+  const qb = new THREE.Quaternion();
+  let last: { x: number; z: number } | null = null;
+  let held = 0;
+  let drift = 0;
+  let step = 0;
+  let hipsLo = Infinity;
+  let hipsHi = 0;
+  for (let i = 0; i < 12 * 60; i++) {
+    const at = i * DT - 0.11;
+    let a = snaps[0];
+    let b = snaps[snaps.length - 1];
+    for (let k = 0; k < snaps.length - 1; k++)
+      if (snaps[k].t <= at && snaps[k + 1].t >= at) {
+        a = snaps[k];
+        b = snaps[k + 1];
+        break;
+      }
+    const k = b.t > a.t ? THREE.MathUtils.clamp((at - a.t) / (b.t - a.t), 0, 1) : 1;
+    const x = a.x + (b.x - a.x) * k;
+    const z = a.z + (b.z - a.z) * k;
+    const face = a.face + wrap(b.face - a.face) * k;
+    const vx = last ? (x - last.x) / DT : 0;
+    const vz = last ? (z - last.z) / DT : 0;
+    last = { x, z };
+    stepMove(m, vx, vz, true, DT, face);
+    an.update({ dt: DT, x, y: 0, z, move: m, gx: vx, gz: vz, scale: SCALE, ground: () => 0, sprint: 0, grounded: true, vy: 0, faceGoal: face });
+    if (i > 60) {
+      for (const f of an.feet)
+        if (f.locked) {
+          drift = Math.max(drift, f.drift);
+          held++;
+        }
+      for (let bn = 0; bn < NB; bn++) step = Math.max(step, qa.fromArray(prev, bn * 4).angleTo(qb.fromArray(an.rot, bn * 4)));
+      hipsLo = Math.min(hipsLo, an.hips.y);
+      hipsHi = Math.max(hipsHi, an.hips.y);
+      // (shown facing within reach of the facing sent)
+      assert.ok(Math.abs(wrap(an.face - face)) < FACE.most + 0.6, `faces the way sent (${wrap(an.face - face).toFixed(2)})`);
+    }
+    prev.set(an.rot);
+  }
+  assert.ok(held > 200, `feet held (${held} frames)`);
+  assert.ok(drift * CM < 3, `a held foot moved ${(drift * CM).toFixed(2)} cm over the ground`);
+  assert.ok(step < 0.7, `the biggest turn between frames ${step.toFixed(2)} rad`);
+  assert.ok(hipsLo > 0.47 && hipsHi < 0.64, `the hips between ${hipsLo.toFixed(3)} and ${hipsHi.toFixed(3)}`);
+});

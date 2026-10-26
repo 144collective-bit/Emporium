@@ -1235,7 +1235,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   if (statsEl) {
     // For the headless checks (scratch scripts): the scene, renderer and camera on the page; opening a place, building what waits round a spot,
     // and walking in somewhere without a click through the city
-    (window as unknown as { __city?: unknown }).__city = { scene, renderer, camera, controls, traffic: bodies, view: CROWD_VIEW, open, startWalking, walk, sky, works };
+    (window as unknown as { __city?: unknown }).__city = { scene, renderer, camera, controls, traffic: bodies, view: CROWD_VIEW, open, startWalking, walk, sky, works, mp };
     statsEl.className = 'city-stats';
     statsEl.setAttribute('aria-hidden', 'true');
     host.append(statsEl);
