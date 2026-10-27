@@ -11,7 +11,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { Look, MarkId, MarkSlot, PatternId } from '../net/profile-data';
 import { EYE_Y as HERO_EYE_Y, handParts, headFront, headGeometry } from './body';
-import { HIP_Y, LEG_X, THIGH, WRIST_Y, WRIST_Z, weigh, type BoneName, type Influence, type Joint, type Region } from './skeleton';
+import { HEAD_Y, HIP_Y, LEG_X, THIGH, WRIST_Y, WRIST_Z, weigh, type BoneName, type Influence, type Joint, type Region } from './skeleton';
 
 /* ---------- Outfits ---------- */
 
@@ -210,8 +210,12 @@ function onBody(pts: [number, number][] | THREE.Shape, depth: number, surf: (x: 
     p.setZ(i, surf(x, y) + side * (lift + p.getZ(i)));
   }
   if (side < 0) flipFaces(g);
-  g.computeVertexNormals();
-  return g;
+  // Smooth: shaded a triangle at a time, a lapel bent over the chest looked crumpled
+  g.deleteAttribute('normal');
+  const out = mergeVertices(g, 1e-5);
+  g.dispose();
+  out.computeVertexNormals();
+  return out;
 }
 /** Where the side of a loft is at (z, y): its +x side (a sleeve's outside) */
 function sideSurface(secs: Sec[], n = 2) {
@@ -562,6 +566,8 @@ export function items(q: Detail, hero = false): Item[] {
     extra: Partial<Piece> = {}
   ): Piece[] => (['L', 'R'] as const).map((s, i) => P(`${kind}${s}`, Array.isArray(geo) ? geo[i] : geo, color, extra));
 
+  /** Rings through the hips (`fine()`) where the clipping would show: not on the far crowd, a few pixels tall */
+  const hips = (secs: Sec[]) => (far ? secs : fine(secs));
   /** Shoes ride the feet; bags and boards sit unbending on the chest (both on the skinned body only) */
   const SHOE: Partial<Piece> = { region: 'shoe' };
   const CHEST: Partial<Piece> = { bone: 'chest' };
@@ -656,23 +662,6 @@ export function items(q: Detail, hero = false): Item[] {
       s,
       0.003
     )
-  );
-  // The gold chain from the shades' arms, under the chin and round the neck
-  const chain = tube(
-    [
-      [-0.094, EYE_Y + 0.006, 0.03],
-      [-0.1, 0.06, 0.04],
-      [-0.085, -0.02, 0.07],
-      [-0.045, -0.07, 0.1],
-      [0, -0.085, 0.112],
-      [0.045, -0.07, 0.1],
-      [0.085, -0.02, 0.07],
-      [0.1, 0.06, 0.04],
-      [0.094, EYE_Y + 0.006, 0.03],
-    ],
-    0.0035,
-    R(36),
-    4
   );
 
   /* ----- Hats ----- */
@@ -842,7 +831,7 @@ export function items(q: Detail, hero = false): Item[] {
     [-0.128, 0.326],
     [-0.12, 0.372],
   ];
-  const jacket = loft(fine(SUIT), R(22), SN);
+  const jacket = loft(hips(SUIT), R(22), SN);
   const lapels = [onBody(lapelPts, 0.009, suitFront, 0.003), onBody(mirror(lapelPts), 0.009, suitFront, 0.003)];
   const flaps = [-1, 1].map((s) =>
     onBody(
@@ -927,7 +916,7 @@ export function items(q: Detail, hero = false): Item[] {
   ];
   const HN2 = 2.2;
   const hoodieFront = surface(HOODIE, HN2);
-  const hoodieBody = loft(fine(HOODIE), R(22), HN2);
+  const hoodieBody = loft(hips(HOODIE), R(22), HN2);
   const hem = loft(
     [
       [-0.095, 0.152, 0.104, 0],
@@ -966,7 +955,7 @@ export function items(q: Detail, hero = false): Item[] {
   );
   const TRACK = grow(HOODIE, 0.96);
   const trackFront = surface(TRACK, HN2);
-  const trackBody = loft(fine(TRACK), R(22), HN2);
+  const trackBody = loft(hips(TRACK), R(22), HN2);
   const trackCollar = new THREE.CylinderGeometry(0.06, 0.066, 0.05, R(16), 1, true).translate(0, 0.42, -0.004);
   const zip = [
     onBody(
@@ -984,7 +973,7 @@ export function items(q: Detail, hero = false): Item[] {
   ];
 
   const FATIGUES = grow(SUIT, 1.03);
-  const fatigues = loft(fine(FATIGUES), R(22), 2.8);
+  const fatigues = loft(hips(FATIGUES), R(22), 2.8);
   const VEST: Sec[] = [
     [0.05, 0.155, 0.11, 0],
     [0.2, 0.168, 0.118, 0.006],
@@ -1089,7 +1078,7 @@ export function items(q: Detail, hero = false): Item[] {
   ];
   const onShin = (secs: Sec[]): Sec[] => secs.map(([y, hw, hd, z = 0]) => [y - THIGH, hw, hd, z]);
   const LEG_S: Sec[] = [[-0.12, 0.061, 0.065, 0.001], [-0.15, 0.058, 0.062, 0.002], [-0.21, 0.054, 0.058, 0.001], ...knee(0.049, 0.052), ...onShin(SHIN_S)];
-  const trouserLegs = trousers(fine(SEAT), LEG_S, R(20));
+  const trouserLegs = trousers(hips(SEAT), LEG_S, R(20));
   const crease =
     q === 2
       ? onBody(
@@ -1116,7 +1105,7 @@ export function items(q: Detail, hero = false): Item[] {
     [-0.2, 0.043, 0.046, 0],
     [-0.235, 0.039, 0.042, 0],
   ];
-  const joggers = trousers(fine(SEAT), [...JOG_THIGH, ...knee(0.053, 0.057), ...onShin(JOG_SHIN)], R(20));
+  const joggers = trousers(hips(SEAT), [...JOG_THIGH, ...knee(0.053, 0.057), ...onShin(JOG_SHIN)], R(20));
   const joggerCuff = loft(
     [
       [-0.258, 0.042, 0.045, 0.002],
@@ -1126,7 +1115,7 @@ export function items(q: Detail, hero = false): Item[] {
   );
   // Fatigues: fuller still, into the boots
   const cargo = trousers(
-    fine(grow(SEAT, 1.02)),
+    hips(grow(SEAT, 1.02)),
     [
       [-0.12, 0.066, 0.071, 0.001],
       [-0.15, 0.066, 0.071, 0.002],
@@ -1185,38 +1174,37 @@ export function items(q: Detail, hero = false): Item[] {
     ],
     R(14)
   );
-  // Two stripes down the outside of each sleeve and trouser leg (track suits)
-  const stripe = (secs: Sec[], s: number, from: number, to: number) => {
-    const w = 0.009;
-    const pts = sorted(secs).filter(([y]) => y <= from + 1e-6 && y >= to - 1e-6);
-    return [-w, w].map((dz) =>
-      tube(
-        pts.map(([y, hw]): [number, number, number] => [s * (hw + 0.002), y, dz]),
-        0.0045,
-        pts.length * 2,
-        4
-      )
-    );
+  // Two stripes down the outside of each sleeve and trouser leg (track suits): flat tape lying on the cloth
+  // (`side` of the loft it's on, `n` its squareness), bending with it
+  const stripe = (secs: Sec[], s: number, from: number, to: number, n = 2) => {
+    const W = 0.0035;
+    const side = sideSurface(secs, n);
+    const ys: number[] = [];
+    for (let y = from; y > to + 1e-6; y -= 0.01) ys.push(y);
+    ys.push(to);
+    return [-0.009, 0.009].map((dz) => {
+      const pos: number[] = [];
+      const idx: number[] = [];
+      ys.forEach((y, k) => {
+        const z0 = secAt(secs, y)[3] ?? 0;
+        for (const dw of [-W, W]) pos.push(s * (side(dz + dw, y) + 0.003), y, z0 + dz + dw);
+        const a = (k - 1) * 2;
+        if (k) idx.push(...(s > 0 ? [a, a + 1, a + 2, a + 1, a + 3, a + 2] : [a, a + 2, a + 1, a + 1, a + 2, a + 3]));
+      });
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      g.setIndex(idx);
+      g.computeVertexNormals();
+      return plain(g);
+    });
   };
-  const sleeveStripes = (secs: Sec[]) => [-1, 1].map((s) => mergeGeometries(stripe(grow(secs, 1.14), s, 0.0, -0.2).map(plain))!);
-  const upperStripes = sleeveStripes(UPPER_S);
-  const foreStripes = sleeveStripes(FORE_S);
-  const thighStripes = [-1, 1].map((s) => mergeGeometries(stripe([...JOG_THIGH, ...knee(0.053, 0.057)], s, -0.12, -0.265).map(plain))!);
-  const shinStripes = [-1, 1].map(
-    (s) =>
-      mergeGeometries(
-        stripe(
-          [
-            [0.012, 0.05, 0.054, 0],
-            [-0.11, 0.052, 0.056, 0],
-            [-0.2, 0.043, 0.046, 0],
-          ],
-          s,
-          0.012,
-          -0.2
-        ).map(plain)
-      )!
-  );
+  const sleeveStripes = (secs: Sec[], to: number) => [-1, 1].map((s) => mergeGeometries(stripe(grow(secs, 1.14), s, 0.0, to))!);
+  const upperStripes = sleeveStripes(UPPER_S, -0.2);
+  // (stopping short of the cuff, which is narrower than the sleeve)
+  const foreStripes = sleeveStripes(FORE_S, -0.172);
+  const thighStripes = [-1, 1].map((s) => mergeGeometries(stripe([...JOG_THIGH, ...knee(0.053, 0.057)], s, -0.12, -0.265, 2.2))!);
+  const jogShinS: Sec[] = [...knee(0.053, 0.057).map(([y, ...rest]): Sec => [y + THIGH, ...rest]), ...JOG_SHIN];
+  const shinStripes = [-1, 1].map((s) => mergeGeometries(stripe(jogShinS, s, 0.025, -0.2, 2.2))!);
   // A hand at rest: palm towards the leg, fingers curled, the thumb along the front.
   // Drawn in the forearm's numbers and moved into the wrist's space (`onWrist`), so the wrist turns it
   const onWrist = (list: THREE.BufferGeometry[]) => list.map((g) => g.translate(0, -WRIST_Y, -WRIST_Z));
@@ -1347,17 +1335,17 @@ export function items(q: Detail, hero = false): Item[] {
    * pinched in halfway between every `step`, so the stacked rounded sections
    * read as the ridges of a puffer
    */
-  const quilt = (secs: Sec[], from: number, to: number, step: number, fat: number, pinch = 0.9): Sec[] => {
+  const quilt = (secs: Sec[], from: number, to: number, step: number, fat: number, pinch = 0.92): Sec[] => {
+    // Each baffle a rounded pillow from seam to seam, four sections across it (two made a sawtooth)
     const out: Sec[] = [];
-    for (let y = from; y <= to + 1e-6; y += step) {
+    for (let y = from; y < to - 1e-6; y += step / 4) {
+      const t = ((y - from) / step) % 1;
+      const k = fat * (pinch + (1 - pinch) * Math.sin(Math.PI * t));
       const [, hw, hd, z = 0] = secAt(secs, y);
-      out.push([y, hw * fat, hd * fat, z]);
-      const y2 = y + step / 2;
-      if (y2 < to - 1e-6) {
-        const [, hw2, hd2, z2 = 0] = secAt(secs, y2);
-        out.push([y2, hw2 * fat * pinch, hd2 * fat * pinch, z2]);
-      }
+      out.push([y, hw * k, hd * k, z]);
     }
+    const [, hw, hd, z = 0] = secAt(secs, to);
+    out.push([to, hw * fat * pinch, hd * fat * pinch, z]);
     return out;
   };
   /** A ribbed band (hem, collar, cuff) with a stripe round its middle, standing a touch proud */
@@ -1386,7 +1374,7 @@ export function items(q: Detail, hero = false): Item[] {
   // Varsity: the suit's body without lapels, cream sleeves, ribbed striped hem, collar and cuffs, snaps and the diamond patch
   const VARSITY = grow(SUIT, 1.02);
   const varsityFront = surface(VARSITY, SN);
-  const varsityBody = loft(fine(VARSITY), R(22), SN);
+  const varsityBody = loft(hips(VARSITY), R(22), SN);
   const varsityHem = ribBand(-0.098, -0.046, 0.149, 0.099, 0, R(22), SN);
   const varsityCollar = ribBand(0.4, 0.446, 0.066, 0.06, -0.004, R(16));
   const varsityCuff = ribBand(-0.21, -0.176, 0.039, 0.041, 0.001, R(14));
@@ -1416,7 +1404,7 @@ export function items(q: Detail, hero = false): Item[] {
   const pufferBody = loft(
     [
       [-0.1, 0.168, 0.116, 0],
-      ...quilt(HOODIE, -0.08, 0.36, 0.064, 1.18, 0.9),
+      ...quilt(HOODIE, -0.08, 0.36, 0.064, 1.18),
       [0.392, 0.168, 0.1, 0],
       [0.415, 0.104, 0.088, -0.004],
       [0.425, 0.08, 0.072, -0.005],
@@ -1424,17 +1412,14 @@ export function items(q: Detail, hero = false): Item[] {
     R(22),
     HN2
   );
-  const pufferCollar = loft(
-    [
-      [0.395, 0.1, 0.094, -0.004],
-      [0.43, 0.103, 0.097, -0.004],
-      [0.462, 0.096, 0.09, -0.005],
-      [0.48, 0.078, 0.074, -0.006],
-      [0.486, 0.06, 0.058, -0.006],
-    ],
-    R(18),
-    2.2
-  );
+  const PUFFER_COLLAR: Sec[] = [
+    [0.395, 0.1, 0.094, -0.004],
+    [0.43, 0.103, 0.097, -0.004],
+    [0.462, 0.096, 0.09, -0.005],
+    [0.48, 0.078, 0.074, -0.006],
+    [0.486, 0.06, 0.058, -0.006],
+  ];
+  const pufferCollar = loft(PUFFER_COLLAR, R(18), 2.2);
   const PUFFER_S: Sec[] = [
     [-0.1, 0.168, 0.116, 0],
     ...quilt(HOODIE, -0.08, 0.36, 0.064, 1.18, 1),
@@ -1455,8 +1440,8 @@ export function items(q: Detail, hero = false): Item[] {
     ),
     new THREE.BoxGeometry(0.018, 0.026, 0.008).translate(0, 0.36, pufferFront(0, 0.36) + 0.008),
   ];
-  const pufferUpper = loft([[-0.24, 0.03, 0.032, 0], ...quilt(UPPER_S, -0.22, 0.0, 0.055, 1.4, 0.9), [0.036, 0.026, 0.028, 0]], R(14));
-  const pufferFore = loft([[-0.2, 0.04, 0.042, 0], ...quilt(FORE_S, -0.19, 0.0, 0.055, 1.35, 0.9), [0.03, 0.026, 0.028, 0]], R(14));
+  const pufferUpper = loft([[-0.24, 0.03, 0.032, 0], ...quilt(UPPER_S, -0.22, 0.0, 0.055, 1.4), [0.036, 0.026, 0.028, 0]], R(14));
+  const pufferFore = loft([[-0.2, 0.04, 0.042, 0], ...quilt(FORE_S, -0.19, 0.0, 0.055, 1.35), [0.03, 0.026, 0.028, 0]], R(14));
   const pufferCuff = loft(
     [
       [-0.212, 0.038, 0.04, 0.001],
@@ -1464,6 +1449,32 @@ export function items(q: Detail, hero = false): Item[] {
     ],
     R(14)
   );
+
+  // The gold chain from the shades' arms, down past the jaw and over the collar onto the chest, lying on the top
+  // he wears (`front`: its front, in the torso's numbers), clear of the tie, zip or snaps down its middle and of
+  // whatever else is laid on it (`over`: the suit's lapels and collar stand 0.012 proud)
+  const chainOn = (front: (x: number, y: number) => number, over = 0) => {
+    const lift = (x: number) => Math.max(over + 0.004, 0.006 + 0.01 * Math.max(0, 1 - Math.abs(x) / 0.035));
+    const on = (x: number, y: number): [number, number, number] => [x, y - HEAD_Y, front(x, y) + lift(x)];
+    const side = (s: number): [number, number, number][] => [
+      [s * 0.094, EYE_Y + 0.006, 0.03],
+      [s * 0.1, 0.06, 0.035],
+      [s * 0.085, -0.01, 0.03],
+      on(s * 0.072, 0.405),
+      on(s * 0.055, 0.375),
+      on(s * 0.03, 0.35),
+    ];
+    return tube([...side(-1), on(0, 0.34), ...side(1).reverse()], 0.0035, R(40), 4);
+  };
+  const collarFront = surface(PUFFER_COLLAR, 2.2);
+  const CHAINS: [OutfitKind, THREE.BufferGeometry][] = [
+    ['suit', chainOn(suitFront, 0.012)],
+    ['hoodie', chainOn(hoodieFront)],
+    ['track', chainOn(trackFront)],
+    ['varsity', chainOn(varsityFront)],
+    // (over the puffer's high collar where it stands)
+    ['puffer', chainOn((x, y) => Math.max(pufferFront(x, y), y >= 0.395 ? collarFront(x, y) : 0))],
+  ];
 
   // Cowboy hat: a wide brim curled up at the sides, a crown with a crease down the middle, a band with a buckle
   const COWBOY: Sec[] = [
@@ -1655,11 +1666,11 @@ export function items(q: Detail, hero = false): Item[] {
         P('head', one(lenses), '#ffffff', { mat: 'lens' }),
       ],
     },
-    {
-      id: 'chain',
-      when: (o) => !!o.chain,
-      pieces: [P('head', chain, GOLD, { detail: true })],
-    },
+    ...CHAINS.map(([kind, geo]): Item => ({
+      id: `chain-${kind}`,
+      when: (o) => !!o.chain && o.kind === kind,
+      pieces: [P('head', geo, GOLD, { detail: true })],
+    })),
     {
       id: 'cap',
       when: (o) => hasCap(o) && !o.capBack,

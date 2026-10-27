@@ -74,10 +74,11 @@ waving.
   the shirt under the jacket, the jacket under the bags and the chain). An
   outer layer, where it covers an inner one, is weighted the same as the
   inner one under it, so they move together, and stays a fixed gap
-  outside it.
-- **The garments' shapes as data** in a DOM-free module (`garments.ts`:
-  the cross-sections, their layers, the gaps), read by `items()`, so the
-  tests can pose the figure and check it.
+  outside it. (As built: over the trunk every layer is weighted by where
+  it is alone, one field, `trunk()` in skeleton.ts.)
+- **The garments' shapes as data** in a DOM-free module (as built,
+  `wardrobe.ts`: the outfits, the shapes and `items()` moved out of
+  character.ts whole), so the tests can dress, pose and check the figure.
 - **A clipping check** (`tests/clothing.test.ts`): the skinned figure's
   vertices posed on the CPU through the poses the game plays (the rubric's
   programs, the crouch, the slide, the emotes, the seats, the fight's
@@ -102,6 +103,61 @@ waving.
      puffer's edge smooth (its baffles kept as lines across it).
    - Every outfit checked in the lab and in the city: nothing comes
      through, nothing else moves.
+
+   **Built** (27 October 2026):
+   - `wardrobe.ts` (DOM-free): the outfits, `lookOutfit()`, the shapes
+     and `items()`, out of character.ts (which keeps the materials, the
+     figure, the crowd, and the soldiers' rifle, as guns.ts can't load in
+     Node); `restSkin()` is a piece at rest with its bones, what the
+     figure and the crowd are skinned with and what the test poses.
+   - **The trunk's weights** (`trunk()` in skeleton.ts): the torso, the
+     pelvis and the legs down to `LEG_FREE` (0.17 under the hips) are
+     weighted by where a point is, whatever it's part of. From 0.12 over
+     the hips to 0.08 under, the waist goes partly with the hips and half
+     with the legs; under the hems (from `HEM_Y`, a hair under the
+     longest) all of it the legs'. The share is the same all the way
+     across the body (a share that changed across it bent each layer by
+     where its own vertices happened to be), and the legs share it across
+     the middle over 10 cm (wider than any layer's vertices are apart),
+     each leg's own under the hems. What the test found on the way, worst
+     depth through the top: the old weights, 4.9 cm; one field, 2 cm;
+     trousers in one piece, 2 cm (the jacket's sparse rings); rings every
+     2 cm, 1 cm; the gentler ramp and the wider split, under 2 mm.
+   - **Trousers in one piece** (`trousers()`): the trousers, the joggers
+     and the fatigues each a seat from the waist to the crotch (`SEAT`,
+     inside every top's hips with 5 mm or more to spare), the crotch
+     where the legs' inner halves meet, and both legs to the cuff through
+     a knee of close sections; every point the legs share one vertex. The
+     tops and the seat carry a ring every 2 cm through the hips (`fine()`;
+     not on the far crowd).
+   - **The details:** laid-on pieces (`onBody()`: lapels, pockets, the
+     shirt, zips) shade smooth (they looked crumpled, a flat triangle at a
+     time); the track's stripes are flat tape lying on the sleeves and
+     legs (`stripe()`), ending short of the cuff; the puffer's baffles are
+     rounded pillows from seam to seam (`quilt()`, four sections a baffle:
+     two made the sawtooth); the shades' chain runs from the ears past the
+     jaw over the collar onto the chest of whatever top he wears, clear
+     of the lapels, tie, zip and snaps (`chainOn()`, an item a top).
+   - **The check:** `tests/clothing.test.ts` with `tests/dress.ts` (the
+     figure dressed and posed on the CPU the way the GPU skins it): every
+     outfit through 40 keyed poses (walk and run cycles, sitting, the
+     slide, a deep crouch, high knee, lunge, kick, side step, twist, side
+     bend), the emotes, every fight clip and the animator walking,
+     running, sprinting, stopping and crouching; the trousers stay inside
+     the top (coming out under the hem is only the trousers showing) and
+     the top outside them, within 2 mm (2.8 mm at full size).
+     `CLOTHING_REPORT=1` prints the worst and where it was at rest.
+   - **The lab:** `?anim&clip` dresses him in colours far apart.
+   - **Cost**, triangles a figure, before and after (single figure / near
+     crowd / far crowd): suit 14.6k → 15.5k / 7.9k → 8.5k / 3.0k → 3.2k;
+     hoodie 12.9k → 13.7k / 8.2k → 8.9k / 3.1k → 3.2k; track 15.0k →
+     15.4k / 9.1k → 9.2k / 4.1k → 3.7k; varsity 13.2k → 14.1k; puffer
+     14.5k → 16.5k (its rounded baffles; no crowd wears one). Draw calls
+     unchanged. The boot's code grew 1.5 KB gzipped (669.8 of its 670).
+   - **Left for later phases:** a speck of the jacket can show at the top
+     of the shirt's V with an arm raised high (Phase 3 rebuilds the
+     collar); the test holds the trousers and the top, not yet the sleeves
+     over the hands or the collar round the neck.
 2. **Bottoms and shoes, smoother.** The desktop level first (it's what the
    rest builds on). Trousers and joggers: rounder sections, the seat and
    the knee, the break over the shoe, the joggers' cuff gathered. Shoes:

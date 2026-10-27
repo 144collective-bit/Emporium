@@ -29,7 +29,9 @@
  *   program in turn (REEL), for a recording in one take.
  * - The address can set it all up for recordings: `prog` (`reel` for the
  *   reel), `gait`, `cam`, `floor`, `speed`, `gun`, `aim=0`, `pitch`,
- *   `outfit`, `held`, `orbit`, `compare=0`, `traces=0`, `score=0`.
+ *   `outfit`, `held`, `orbit`, `compare=0`, `traces=0`, `score=0`, and
+ *   `clip`, the clipping view (the top, trousers and shoes in colours far
+ *   apart: docs/clothing-plan.md).
  */
 import * as THREE from 'three';
 import { PLAYER, SOLDIER, createDegen, type Degen } from './character';
@@ -503,7 +505,10 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   // (`held=coffee|boombox|phone|briefcase`: something in his right hand)
   const kind = (['suit', 'hoodie', 'track', 'varsity', 'puffer', 'soldier'] as const).find((k) => k === q.get('outfit'));
   const held = (['coffee', 'boombox', 'phone', 'briefcase'] as const).find((h) => h === q.get('held'));
-  const outfit = { ...(kind === 'soldier' ? SOLDIER : kind ? { ...PLAYER, kind } : PLAYER), held };
+  // (`clip`: the clipping view, docs/clothing-plan.md: the top, the trousers and the shoes in colours far apart, so a
+  // layer coming through another shows at a glance)
+  const clip = q.has('clip') ? { top: '#d0463e', bottom: '#3f73c8', shoes: '#ece9e0', tie: '#f2c230' } : {};
+  const outfit = { ...(kind === 'soldier' ? SOLDIER : kind ? { ...PLAYER, kind } : PLAYER), held, ...clip };
   const hero: Degen = createDegen(outfit);
   const old: Degen = createDegen(outfit);
   scene.add(hero.g, old.g);
