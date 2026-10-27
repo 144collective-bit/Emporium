@@ -31,6 +31,7 @@ import {
   SNAP_HZ,
   SPEEDS,
   WARP_GAP,
+  cleanKit,
   cleanMods,
   inWorld,
   modeOf,
@@ -268,6 +269,9 @@ export class Room extends DurableObject<Env> {
         if (!COUNTERS.some((c) => Math.hypot(p.pos.x - c.x, p.pos.z - c.z) <= RACK_REACH) || !weaponUnlocked(m.w, p.me.total)) break;
         const changed = this.sim.players.get(id)?.weapon !== m.w;
         this.mods(id, m.m);
+        // The loadout is picked at the counter too (the gun taken is in it)
+        const kit = cleanKit(m.l);
+        if (kit && kit.includes(m.w) && kit.every((w) => weaponUnlocked(w, p.me.total))) this.sim.setKit(id, kit);
         this.sim.equip(id, m.w as WeaponId);
         if (changed)
           this.soon(p, 'weapon', 300, () => {
@@ -278,8 +282,31 @@ export class Room extends DurableObject<Env> {
           });
         break;
       }
+      case 'kit': {
+        // Drawing from the loadout anywhere: the first time (not geared up yet) it gears up with that gun, full.
+        // The loadout itself only changes at a counter, so a different one from a geared-up player is ignored.
+        const kit = cleanKit(m.l);
+        const sp = this.sim.players.get(id);
+        if (!sp || !kit || !kit.includes(m.w) || !kit.every((w) => weaponUnlocked(w, p.me.total)) || !this.allow(p, 'swap', 150)) break;
+        const same = sp.kit.length === kit.length && kit.every((w) => sp.kit.includes(w));
+        if (sp.geared && !same) break;
+        this.mods(id, m.m);
+        this.sim.setKit(id, kit);
+        const changed = sp.weapon !== m.w;
+        if (!sp.geared) this.sim.equip(id, m.w);
+        else if (changed) this.sim.swap(id, m.w);
+        this.sim.setArmed(id, true);
+        if (changed)
+          this.soon(p, 'weapon', 300, () => {
+            const w = this.sim.players.get(id)?.weapon;
+            if (!w) return;
+            this.broadcast({ t: 'info', p: this.info(p) }, p.id);
+            p.profile.setWeapon(w).catch(() => {});
+          });
+        break;
+      }
       case 'swap':
-        // Anywhere, but only between guns this player's lifetime score has unlocked
+        // Anywhere, but only between guns this player's lifetime score has unlocked (and in their loadout: the sim checks)
         if (!weaponUnlocked(m.w, p.me.total) || !this.allow(p, 'swap', 150)) break;
         this.mods(id, m.m);
         if (this.sim.swap(id, m.w as WeaponId))

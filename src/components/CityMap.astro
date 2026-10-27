@@ -220,17 +220,18 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
             <dt><kbd>Q</kbd> <kbd>E</kbd></dt><dd>Peek left / right round a corner (hold)</dd>
             <dt><kbd>C</kbd></dt><dd>Crouch (toggle); while sprinting, slide</dd>
             <dt><kbd>V</kbd></dt><dd>First / third person</dd>
-            <dt><kbd>Scroll</kbd></dt><dd>Camera distance</dd>
+            <dt><kbd>Scroll</kbd></dt><dd>Next / previous slot (mouse captured), camera distance (mouse free)</dd>
             <dt><kbd>F</kbd></dt><dd>Enter a door, open the gun store, the garage, the kart hut or the trainer, get in / out of your car</dd>
-            <dt><kbd>Click</kbd></dt><dd>Fire (once geared up)</dd>
+            <dt><kbd>Click</kbd></dt><dd>Fire (with a gun out)</dd>
             <dt><kbd>R</kbd></dt><dd>Reload</dd>
-            <dt><kbd>X</kbd> <kbd>1</kbd>–<kbd>7</kbd></dt><dd>Swap gun (next, or by number)</dd>
+            <dt><kbd>1</kbd>–<kbd>7</kbd></dt><dd>Hotbar: fists, gun 1, gun 2, what's in your hand, snacks</dd>
+            <dt><kbd>X</kbd></dt><dd>Next of the fists and your guns</dd>
             <dt><kbd>G</kbd></dt><dd>Holster / draw</dd>
             <dt><kbd>T</kbd></dt><dd>Emotes and phrases (online)</dd>
             <dt><kbd>Esc</kbd></dt><dd>Free the mouse, then stop</dd>
           </dl>
           <p class="walk-pad">Driving: <kbd>W</kbd> / <kbd>S</kbd> gas and brake (hold to reverse), <kbd>A</kbd> / <kbd>D</kbd> steer, <kbd>Space</kbd> handbrake, <kbd>V</kbd> chase or roof camera. Your car waits on the turntable at the garage on the south bank. Gamepad: RT gas, LT brake, A handbrake, Y get out. Touch: the stick steers, with Gas and Brake buttons.</p>
-          <p class="walk-pad">Gear up at the gun store counter inside the Armoury. Gamepads work too: left stick moves, right stick looks, A jumps, B crouches (slides when sprinting), LB sprints, LT aims (holding it, LB and RB peek left and right), RT fires, X reloads, RB swaps guns. On a touch screen, Crouch is over the stick (it slides you when sprinting), drag the Fire button to aim while you shoot; aiming by a corner leans you out round it. Your look and rifle finish are in Profile.</p>
+          <p class="walk-pad">You carry two guns, drawn anywhere from the hotbar; pick them (and refill) at the gun store counter inside the Armoury or Trench Arms' hatch. Gamepads work too: left stick moves, right stick looks, A jumps, B crouches (slides when sprinting), LB sprints, LT aims (holding it, LB and RB peek left and right), RT fires, X reloads, RB and the D-pad step through the hotbar. On a touch screen, Crouch is over the stick (it slides you when sprinting), drag the Fire button to aim while you shoot; aiming by a corner leans you out round it. Your look and rifle finish are in Profile.</p>
         </div>
       </details>
       <details class="walk-pop walk-profile" data-pop data-profile>
@@ -267,6 +268,22 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
           </div>
           {/* Level, XP and badges (missions-ui.ts) */}
           <div class="walk-badges" data-badges></div>
+        </div>
+      </details>
+      {/* What he carries (inventory-ui.ts): the loadout, the locker, the thing in his hand, the snacks */}
+      <details class="walk-pop walk-bag" data-pop data-bag>
+        <summary aria-label="Bag">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8h14l-1 12H6z M9 8V6a3 3 0 0 1 6 0v2" /></svg>
+          <span class="walk-pill-text">Bag</span>
+        </summary>
+        <div class="walk-settings-body">
+          <div class="pop-head">
+            <p class="pop-title">Bag</p>
+            <button type="button" class="pop-close" data-pop-close aria-label="Close the bag">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
+            </button>
+          </div>
+          <div class="bag" data-bag-body></div>
         </div>
       </details>
       <details class="walk-pop walk-online" data-pop data-mp hidden>
@@ -485,6 +502,8 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     <p class="mp-toast" data-mp-toast hidden></p>
     <p class="walk-look">Click the city to look around</p>
     <span class="walk-crosshair" aria-hidden="true"></span>
+    {/* The hotbar (inventory-ui.ts): fists, gun 1, gun 2, the thing in his hand, the snacks; 1-7 pick, a tap picks */}
+    <div class="hotbar" data-hotbar role="toolbar" aria-label="Hotbar"></div>
     <div class="combat-hud">
       <div class="combat-cross" data-cross aria-hidden="true"><i></i><i></i><i></i><i></i></div>
       <div class="combat-hit" data-hitmark aria-hidden="true"></div>
@@ -542,10 +561,12 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
         </button>
       </header>
+      {/* The loadout (inventory.ts): the two guns he carries, drawn anywhere from the hotbar; the rest wait in the locker here */}
+      <div class="shop-loadout" data-shop-loadout role="group" aria-label="Loadout"></div>
       <div class="shop-list" data-shop-list role="listbox" aria-label="Guns"></div>
       <div class="shop-detail" data-shop-detail></div>
       <section class="bench" data-shop-bench aria-label="Workbench" hidden></section>
-      <p class="shop-foot">The starters are free and unlock with your score; the rest cost Dorras you earn in the city. Nothing here is real money.</p>
+      <p class="shop-foot">The starters are free and unlock with your score; the rest cost Dorras you earn in the city. Ammo is free: the counter refills every gun. Nothing here is real money.</p>
     </section>
     {/* The garage on the south bank (garage-ui.ts): the dealership and tuning shop. The five starters are free, the rest
         cost Dorras earned in the city (catalog.ts); the stat bars, the deal (Buy, or the Tune section) and the balance
@@ -938,7 +959,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
   <template data-panel-tpl="plan">
     <p class="kicker"><span class="kicker-num">05</span> The Armoury</p>
     <h2 id="city-panel-title" class="city-panel-title">Guns &amp; gear</h2>
-    <p class="city-panel-text">Walk in and gear up at the gun store counter for target practice. Better guns unlock with your score.</p>
+    <p class="city-panel-text">Walk in to pick the two guns you carry (and refill them) at the gun store counter, then draw them anywhere from the hotbar. Better guns unlock with your score.</p>
   </template>
   <template data-panel-tpl="signal">
     <p class="kicker"><span class="kicker-num">06</span> Signal tower</p>

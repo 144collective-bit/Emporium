@@ -1,8 +1,10 @@
 /*
  * The Armoury's store and workbench, at the gun store counter: browse the
- * guns, compare them, take one (full of ammo), buy the ones for sale, and
- * upgrade a gun you own at the workbench (the barrel, an extended mag, the
- * grip & stock, three levels each).
+ * guns, compare them, pick the loadout of two Degen carries (the Loadout row:
+ * tap a slot, then a gun; or a gun's "Carry as gun 1 / 2"; the rest wait in
+ * the locker here), refill and draw, buy the ones for sale, and upgrade a gun
+ * you own at the workbench (the barrel, an extended mag, the grip & stock,
+ * three levels each).
  *
  * The starters are free and unlock with lifetime score. The rest cost Dorras
  * earned in the city: the prices and levels are catalog.ts, the save and the
@@ -17,22 +19,9 @@
 import { WEAPONS, WEAPON_IDS, type Weapon, type WeaponId } from './combat-sim';
 import { GUN_CATALOG, GUN_MODS, GUN_MOD_IDS, MOD_LEVELS, applyGunMods, type GunModId } from './catalog';
 import { buyGun, gunModCost, gunMods, level, modGun, ownsGun } from './tycoon';
+import { carryGun } from './inventory';
 import { D, LV, esc, fmt, repaint, whyNot, type GameDeps } from './ui';
-
-/** Small side-on silhouettes for the cards (SVG paths, 120 x 40) */
-const ART: Record<WeaponId, string> = {
-  rifle:
-    'M6 18h18v-3h4v-3h22v3h44v4h20v5H90v4H62l-4 2-2 9h-8l1-10h-8l-6 6h-6v-6H24v3H6z M44 10h12v-4h-12z',
-  smg: 'M20 16h12v-4h16v4h30v3h12v5H80v3H62v12h-7V27h-6l-3 10h-7l2-11h-6v4h-8v-4H20z M48 9h10v-3H48z',
-  shotgun: 'M4 20h14l10-6h20v3h66v4H48v4h36v4H48l-6 3-2 7h-8l1-9H26l-8 4H4z M50 13h3v-2h-3z',
-  dmr: 'M2 18h20l4-4h28v-5h30v5h6v5h28v4H84v4H64l-4 2-2 9h-8l1-10h-6l-5 6h-6v-6H22l-4 3H2z M58 7h22v-4H58z',
-  // The Hand Cannon: frame and long barrel, the cylinder, the hammer, the lug under the barrel, the front blade
-  revolver: 'M26 12h78v7H52v3h-6l-5 3-2 10h-9l2-11-5-4-1-8z M34 10h12v12H34z M22 8h5v6h-5z M52 19h30v3H52z M100 9h3v3h-3z',
-  // The Tri-Tap: a bullpup body with the magazine behind the grip, a short barrel, the carry handle and its sight
-  burst: 'M8 15h64v2h26v-1h8v6h-8v-1H72v2H56l-2 11h-8l1-11h-9v10h-9V23H8z M26 9h32v3h-4v3H30v-3h-4z M38 4h8v5h-8z',
-  // The Belt Feeder: stock, long receiver under its cover, finned barrel, the belt box under it, the bipod folded back
-  lmg: 'M2 15h20v-3h48v3h34v-1h8v6h-8v-1H70v3H48l-3 11h-8l2-11h-9l-4 4h-4l-8 4H6l-4-3z M24 9h42v3H24z M50 22h20v10H50z M78 19h28l-2 3H80z M80 13h3v8h-3z M88 13h3v8h-3z M96 13h3v8h-3z',
-};
+import { ART } from './gunart';
 
 /** How each gun compares (0..1) for the stat bars (of the stock gun, or the gun with its mods on) */
 const STATS: { key: string; label: string; of: (w: Weapon) => number }[] = [
@@ -51,6 +40,10 @@ export interface ShopDeps {
   geared(): boolean;
   /** Take a gun (and its ammo); false if he may not have it */
   equip(id: WeaponId): boolean;
+  /** May he carry this gun: a starter his score unlocked, or one he bought */
+  may(id: WeaponId): boolean;
+  /** The loadout changed in the save: the rules read it again */
+  loadoutChanged(): void;
   /** Opening frees the mouse; closing hands control back */
   onOpen(): void;
   onClose(): void;
@@ -67,8 +60,14 @@ export function createGunShop(root: HTMLElement, d: ShopDeps) {
   const score = el.querySelector<HTMLElement>('[data-shop-score]')!;
   const detail = el.querySelector<HTMLElement>('[data-shop-detail]')!;
   const bench = el.querySelector<HTMLElement>('[data-shop-bench]')!;
+  const loadout = el.querySelector<HTMLElement>('[data-shop-loadout]')!;
   let open = false;
   let pick: WeaponId = 'rifle';
+  /** Picking a gun for one of the loadout's slots (the next ready gun tapped goes there) */
+  let choosing: 0 | 1 | null = null;
+  const guns = () => d.game.save().inventory.guns;
+  /** Which loadout slot carries this gun (-1: in the locker) */
+  const slotOf = (id: WeaponId) => guns().indexOf(id);
   /** The buy step is showing for the picked gun */
   let confirming = false;
   let timer = 0;
@@ -88,9 +87,11 @@ export function createGunShop(root: HTMLElement, d: ShopDeps) {
       unlocked,
       /** Not for sale to you yet (a premium gun above your level) */
       lowLevel: premium && !owned && lv < c.level,
-      /** Yours to take at the counter */
+      /** Yours to carry */
       ready: owned && unlocked,
       carrying: d.geared() && d.weapon() === id,
+      /** In the loadout (0 gun 1, 1 gun 2) or the locker (-1) */
+      slot: slotOf(id),
       mods: gunMods(save, id),
       lv,
       c,
@@ -102,9 +103,11 @@ export function createGunShop(root: HTMLElement, d: ShopDeps) {
       const w = WEAPONS[id];
       const s = stateOf(id);
       const locked = s.premium ? s.lowLevel : !s.unlocked;
-      const state = s.carrying
-        ? 'Carrying'
-        : s.premium
+      const state = s.slot >= 0
+        ? `Gun ${s.slot + 1}`
+        : s.ready
+          ? 'In the locker'
+          : s.premium
           ? s.owned
             ? 'Yours'
             : `<span class="shop-sale-word">For sale · </span>${D(s.c.price)}`
@@ -112,7 +115,7 @@ export function createGunShop(root: HTMLElement, d: ShopDeps) {
             ? 'Ready'
             : `${pts(w.need)} pts`;
       const tag = s.premium && !s.owned ? LV(s.c.level) : '';
-      return `<button type="button" class="shop-card${locked ? ' is-locked' : ''}${s.premium && !s.owned ? ' is-sale' : ''}" data-gun="${id}" role="option" aria-selected="${id === pick}">` + `<svg viewBox="0 0 120 40" aria-hidden="true"><path d="${ART[id]}"/></svg><b>${esc(w.name)}</b><small>${state}</small>${tag}</button>`;
+      return `<button type="button" class="shop-card${locked ? ' is-locked' : ''}${s.premium && !s.owned ? ' is-sale' : ''}${choosing !== null && s.ready ? ' is-choice' : ''}${s.slot >= 0 ? ' is-carried' : ''}" data-gun="${id}" role="option" aria-selected="${id === pick}">` + `<svg viewBox="0 0 120 40" aria-hidden="true"><path d="${ART[id]}"/></svg><b>${esc(w.name)}</b><small>${state}</small>${tag}</button>`;
     }).join('');
     repaint(list, html);
   }
@@ -130,8 +133,12 @@ export function createGunShop(root: HTMLElement, d: ShopDeps) {
     }).join('');
     let action: string;
     let note = '';
-    if (s.ready) {
-      action = `<button type="button" class="shop-take" data-act="take">${s.carrying ? 'Refill ammo' : 'Take it &amp; gear up'}</button>`;
+    if (s.ready && s.slot >= 0) {
+      action = `<button type="button" class="shop-take" data-act="take">${s.carrying ? 'Refill ammo' : 'Refill &amp; draw'}</button>`;
+      note = s.slot === 0 && !guns()[1] ? 'Carry a second gun: tap Gun 2 above, then a gun you own.' : '';
+    } else if (s.ready) {
+      action = `<div class="shop-confirm-row"><button type="button" class="shop-take" data-act="carry0">Carry as gun 1</button><button type="button" class="shop-take" data-act="carry1">Carry as gun 2</button></div>`;
+      note = 'In the locker. Carry it and draw it anywhere from the hotbar.';
     } else if (s.premium) {
       if (confirming) {
         action = `<div class="shop-confirm"><p>Buy the ${esc(w.name)} for ${D(s.c.price)}?</p><div class="shop-confirm-row"><button type="button" class="shop-take" data-act="confirm">Buy it</button><button type="button" class="shop-cancel" data-act="cancel">Not now</button></div></div>`;
@@ -170,18 +177,50 @@ export function createGunShop(root: HTMLElement, d: ShopDeps) {
     repaint(bench, `<h3 class="bench-title">Workbench <span>· ${esc(WEAPONS[pick].name)}</span></h3><div class="bench-rows">${rows}</div>`);
   }
 
+  /** The Loadout row: the two guns he carries, each a slot to tap and fill */
+  function paintLoadout() {
+    const [a, b] = guns();
+    const slot = (i: 0 | 1, id: WeaponId | null) =>
+      `<button type="button" class="shop-slot${choosing === i ? ' is-on' : ''}${id ? '' : ' is-empty'}" data-slot="${i}" aria-pressed="${choosing === i}">` +
+      `<small>Gun ${i + 1}</small>${id ? `<svg viewBox="0 0 120 40" aria-hidden="true"><path d="${ART[id]}"/></svg><b>${esc(WEAPONS[id].short)}</b>` : '<b>Empty</b>'}</button>`;
+    const hint =
+      choosing === null
+        ? '<p class="shop-loadout-hint">Tap a slot, then a gun you own. Draw them anywhere from the hotbar.</p>'
+        : `<p class="shop-loadout-hint is-on">Pick a gun for gun ${choosing + 1}.${choosing === 1 && b ? ' <button type="button" class="chip-link" data-act="empty">Leave it empty</button>' : ''} <button type="button" class="chip-link" data-act="unchoose">Cancel</button></p>`;
+    repaint(loadout, `<span class="shop-loadout-label">Loadout</span><div class="shop-slots">${slot(0, a)}${slot(1, b)}</div>${hint}`);
+  }
+
   function paint() {
     const save = d.game.save();
     dorras.innerHTML = D(save.dorras);
     score.textContent = pts(d.lifetime());
+    paintLoadout();
     paintList();
     paintDetail();
     paintBench();
   }
 
+  /** Carry a gun in a loadout slot (null leaves gun 2 empty): he's geared up with gun 1, every gun full */
+  function carry(i: 0 | 1, id: WeaponId | null) {
+    choosing = null;
+    const r = carryGun(d.game.save(), i, id, d.may);
+    if (!r.ok) {
+      d.game.toast(r.why === 'owned' ? 'Gun 1 is never empty: put another gun there first.' : whyNot('place'));
+      d.game.sfx('denied');
+      paint();
+      return;
+    }
+    d.game.commit();
+    d.loadoutChanged();
+    d.equip(guns()[0]);
+    d.game.toast(id ? `The ${WEAPONS[id].name} is gun ${i + 1}. Draw it anywhere from the hotbar.` : 'Gun 2 is empty: the rest wait in the locker here.');
+    paint();
+  }
   function select(id: WeaponId) {
     if (id !== pick) confirming = false;
     pick = id;
+    // Picking a gun for a loadout slot: a ready one goes straight in
+    if (choosing !== null && stateOf(id).ready) return carry(choosing, id);
     paint();
   }
   /** Buy the picked gun (after the confirmation step) */
@@ -195,7 +234,7 @@ export function createGunShop(root: HTMLElement, d: ShopDeps) {
     } else {
       d.game.commit();
       d.game.sfx('buy');
-      d.game.toast(`The ${WEAPONS[pick].name} is yours. Take it at the counter.`);
+      d.game.toast(`The ${WEAPONS[pick].name} is yours. Carry it as gun 1 or gun 2.`);
     }
     paint();
   }
@@ -214,12 +253,14 @@ export function createGunShop(root: HTMLElement, d: ShopDeps) {
     d.game.toast(`${GUN_MODS[mod].name} level ${gunMods(save, pick)[mod]} fitted to the ${WEAPONS[pick].name}.`);
     paint();
   }
-  /** The picked gun's main action: take it, or start (and then confirm) buying it */
+  /** The picked gun's main action: refill and draw it, carry it (as gun 2, or gun 1 when that's free), or start (and then confirm) buying it */
   function take() {
     const s = stateOf(pick);
-    if (s.ready) {
+    if (s.ready && s.slot >= 0) {
       if (!d.equip(pick)) return;
       close();
+    } else if (s.ready) {
+      carry(1, pick);
     } else if (s.premium) {
       if (confirming) buy();
       else {
@@ -239,6 +280,7 @@ export function createGunShop(root: HTMLElement, d: ShopDeps) {
     closeBtn?.setAttribute('aria-label', `Close ${name === 'Armoury' ? 'the Armoury' : name}`);
     pick = d.weapon();
     confirming = false;
+    choosing = null;
     paint();
     el.hidden = false;
     root.classList.add('is-shopping');
@@ -252,6 +294,7 @@ export function createGunShop(root: HTMLElement, d: ShopDeps) {
     if (!open) return false;
     open = false;
     confirming = false;
+    choosing = null;
     el.hidden = true;
     root.classList.remove('is-shopping');
     clearInterval(timer);
@@ -271,7 +314,26 @@ export function createGunShop(root: HTMLElement, d: ShopDeps) {
     if (card) return select(card.dataset.gun as WeaponId);
     if (t.closest('[data-shop-close]')) return void close();
     const act = t.closest<HTMLElement>('[data-act]')?.dataset.act;
+    const slot = t.closest<HTMLElement>('[data-slot]')?.dataset.slot;
+    if (slot) {
+      const i = Number(slot) as 0 | 1;
+      choosing = choosing === i ? null : i;
+      // (the gun already there is picked, for its details and mods)
+      const g = guns()[i];
+      if (g) pick = g;
+      confirming = false;
+      paint();
+      return;
+    }
     if (act === 'take') return take();
+    if (act === 'carry0') return carry(0, pick);
+    if (act === 'carry1') return carry(1, pick);
+    if (act === 'empty') return carry(1, null);
+    if (act === 'unchoose') {
+      choosing = null;
+      paint();
+      return;
+    }
     if (act === 'buy') return take();
     if (act === 'confirm') return buy();
     if (act === 'cancel') {

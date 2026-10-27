@@ -134,7 +134,7 @@ brawlsite.ts      the sparring partners' spots (DOM-free, tested)
 
 ## Phases (each with the owner's sign-off)
 
-1. **The inventory.** `inventory.ts` and its tests, the save's
+1. **The inventory** (built; as built below). `inventory.ts` and its tests, the save's
    `inventory` (v11), the loadout picked at the counters, the hotbar in
    the walk HUD (1-7 in his order, X / Q / the mouse wheel step, the
    Swap button and the d-pad), the Bag tab in the walk pop, the Bag on
@@ -156,6 +156,61 @@ brawlsite.ts      the sparring partners' spots (DOM-free, tested)
 4. **Online.** When the owner resumes multiplayer: the guard and the
    swings seen by other players, PvP on the south bank (fight plan
    Phase 4).
+
+## Phase 1, as built
+
+- **Modules.** `inventory.ts` (DOM-free, tested in `tests/inventory.test.ts`):
+  the hotbar (`slots()`, `slotKey()`, `pickSlot()`, `stepKey()`,
+  `SLOTS_MAX`), the loadout (`setLoadout()`, `carryGun()`: a gun already
+  in the other slot trades places; gun 1 is never empty), `buyItem()` /
+  `useItem()` and `SNACK_BARS`. The save's side is `inventory-save.ts`
+  (the `Inventory` type, `emptyInventory()`, `cleanInventory()` for
+  `cleanSave()`, `setHeld()`): the boot needs only that, so the rest
+  loads with the hotbar and the gun store (the boot's budget had 1.7 KB
+  left; it now has 0.1 KB). `inventory-ui.ts` (its own chunk, fetched
+  when walking starts or the business card's Bag opens) draws the hotbar,
+  the Bag and `bagHtml()`; `gunart.ts` holds the guns' silhouettes for
+  the store and the hotbar.
+- **The save** (v11): `inventory` { guns, held, items }. A v10 save
+  carries the rifle and the first premium gun it bought (catalog order);
+  the score-unlocked starters aren't in the save's reach (the browser's
+  combat profile knows the score), so they go in at the counter.
+- **The hand.** The look's `held` is kept in the save by `setHeld()` (at
+  the boot and on every look change, index.ts). Which of fists or the
+  thing in his hand is out is the hotbar's (not saved): walking starts
+  with the thing in his hand out, as before.
+- **Combat** (`combat.ts`): the loadout from the save is the sim's `kit`
+  (`setKit()` in combat-sim.ts: a swap goes only within it, a gun put
+  back in the locker gives up its ammo, a gun in hand that's no longer
+  carried is swapped for gun 1). `draw(id)` gears up anywhere the first
+  time (full, as at the counter) and swaps and draws after; `holster()`;
+  `ammo(id)` for the hotbar and the Bag; G draws from the loadout when
+  he isn't geared up yet.
+- **Keys.** 1-7 pick a slot, X steps (Q is the peek since animation
+  Phase 4, so it isn't a step), the touch Swap button, RB and the d-pad
+  step. **The wheel** wasn't free (it set the camera's distance): with
+  the mouse captured it steps the hotbar, with the mouse free it still
+  zooms. The owner can reverse this.
+- **Where it sits.** Desktops: the bottom-right corner, each slot with
+  its name (under the ammo, as planned, is where the compass and the
+  pops are). Touch screens: square slots over the right-hand buttons
+  upright (the door prompt goes above them), low between the stick and
+  the buttons on their side.
+- **The store.** A Loadout row over the cards (tap a slot, then a gun;
+  "Leave it empty" for gun 2), "Carry as gun 1 / gun 2" on a gun in the
+  locker, "Refill & draw" on one carried. Picking gears him up with gun
+  1, every gun full.
+- **Snacks.** 500 Dorras, five at most (the open question's
+  assumptions), ledger line `items` ("Snacks"); not counted as a thing
+  bought (three snacks aren't the Fleet mission's three buys). Sold at
+  the downtown diners' doors and every Night Market stall's counter,
+  a walk prompt each ("Starlite Diner · Snack"), bought there and then.
+  Use (the Bag, the hotbar) says it's for a spar.
+- **Online.** `PROTOCOL` 4: `equip` carries the loadout (`l`), the new
+  `kit` message draws from it anywhere (it gears up a player who isn't
+  yet; the loadout itself changes only at a counter), `cleanKit()`; the
+  server's swap stays within the loadout through the sim. Not yet tried
+  on workers.dev.
 
 ## Open questions (small; the owner can answer as they come)
 

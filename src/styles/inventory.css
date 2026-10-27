@@ -1,0 +1,329 @@
+/* inventory: the hotbar in the walk HUD and the Bag (inventory-ui.ts, `data-hotbar` and `data-bag` in
+   CityMap.astro; the business card's Bag tab draws the same list). Desktops: the bar in the bottom-right
+   corner, each slot with its name. Touch screens: a row of square slots over the right-hand buttons,
+   upright; on their side, low between the stick and the buttons. */
+.hotbar {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  z-index: 4;
+  display: none;
+  gap: 5px;
+}
+.city[data-view="3d"][data-mode="walk"] .hotbar {
+  display: flex;
+}
+/* Not on foot, or a menu or card is open: out of the way */
+.city.is-driving .hotbar,
+.city.is-karting .hotbar,
+.city.is-fighting .hotbar,
+.city.is-riding .hotbar,
+.city.is-shopping .hotbar {
+  display: none;
+}
+.hb-slot {
+  position: relative;
+  display: grid;
+  grid-template-rows: 22px auto;
+  justify-items: center;
+  align-content: center;
+  gap: 2px;
+  width: 58px;
+  height: 54px;
+  padding: 5px 3px 4px;
+  border: 1px solid #ffffff2e;
+  border-radius: 10px;
+  background: #0b0a12d9;
+  color: #fff;
+  font-family: var(--font-mono);
+  cursor: pointer;
+}
+.hb-slot[aria-pressed="true"] {
+  border-color: #0000;
+  background:
+    var(--pulse-wash) padding-box,
+    linear-gradient(#14102a, #14102a) padding-box,
+    var(--pulse) border-box;
+  box-shadow: 0 0 18px -6px #00eaffaa;
+}
+.hb-slot.is-empty {
+  border-style: dashed;
+  color: var(--muted);
+}
+.hb-art {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 22px;
+}
+.hb-art svg {
+  width: 22px;
+  height: 22px;
+  color: #fff;
+}
+.hb-art .hb-gun {
+  width: 50px;
+  height: 17px;
+  fill: #c9c6d6;
+  stroke: #05050a;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+.hb-name {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+/* Ammo in the gun's magazine, or how many snacks */
+.hb-count {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 8.5px;
+  font-weight: 700;
+  color: var(--p-cyan);
+}
+.hotbar .hb-key {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  font-size: 8.5px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.hb-slot[aria-pressed="true"] .hb-key {
+  color: #fff;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .hb-slot {
+    transition: transform 0.15s var(--ease);
+  }
+  .hb-slot:active {
+    transform: scale(0.94);
+  }
+}
+/* Touch screens: square slots without names (the number and the art), over the right-hand buttons */
+@media (pointer: coarse) {
+  .hotbar {
+    right: 12px;
+    bottom: 262px;
+    gap: 4px;
+  }
+  .hb-slot {
+    grid-template-rows: 22px;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    touch-action: manipulation;
+  }
+  .hb-name {
+    display: none;
+  }
+  .hb-art .hb-gun {
+    width: 38px;
+    height: 13px;
+  }
+  .hb-count,
+  .hotbar .hb-key {
+    font-size: 8px;
+  }
+  /* (on foot the door prompt goes above it) */
+  .city[data-mode="walk"]:not(.is-driving):not(.is-fighting) .walk-prompt {
+    bottom: 318px;
+  }
+}
+/* Narrow phones: tighter slots */
+@media (pointer: coarse) and (max-width: 360px) {
+  .hb-slot {
+    width: 42px;
+    height: 42px;
+  }
+}
+/* Phones on their side: low, between the stick and the right-hand buttons */
+@media (pointer: coarse) and (max-height: 500px) {
+  .hotbar {
+    right: auto;
+    bottom: 10px;
+    left: calc(50% - 19px);
+    transform: translateX(-50%);
+  }
+  .city[data-mode="walk"]:not(.is-driving):not(.is-fighting) .walk-prompt {
+    bottom: 150px;
+  }
+}
+
+/* ---------- The Bag (the walk pop's tab, the business card's Bag tab) ---------- */
+.walk-bag .walk-settings-body {
+  width: 300px;
+}
+.bag-head {
+  margin: 4px 0 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--p-cyan);
+}
+.bag-head:first-child {
+  margin-top: 0;
+}
+.bag-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.bag-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 7px 10px;
+  border: 1px solid #ffffff1a;
+  border-radius: 10px;
+  background: #ffffff05;
+}
+.bag-row.is-empty {
+  border-style: dashed;
+}
+.bag-art {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 22px;
+}
+.bag-art .hb-gun {
+  width: 52px;
+  height: 18px;
+  fill: #c9c6d6;
+  stroke: #05050a;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+.bag-icon svg {
+  width: 22px;
+  height: 22px;
+  color: #fff;
+}
+.bag-info {
+  flex: 1 1 auto;
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.bag-info b {
+  overflow: hidden;
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1.05;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: #fff;
+}
+.bag-info small {
+  font-size: 11px;
+  line-height: 1.3;
+  color: var(--muted);
+}
+.bag-info small .dorra {
+  width: 11px;
+  height: 11px;
+  vertical-align: -1px;
+}
+.bag-info small b {
+  font-family: inherit;
+  font-size: inherit;
+  text-transform: none;
+}
+.bag-count {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+.bag-count b {
+  font-family: var(--font-display);
+  font-size: 18px;
+  color: #fff;
+}
+.bag-row .chip-link {
+  flex: none;
+  cursor: pointer;
+}
+.bag-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.bag-chips li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid #ffffff24;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #fff;
+}
+.bag-chips .hb-gun {
+  width: 36px;
+  height: 12px;
+  fill: #c9c6d6;
+  stroke: #05050a;
+  stroke-width: 1.5;
+}
+.bag-ways {
+  margin-top: 4px;
+}
+.bag-ways .chip-link {
+  cursor: pointer;
+}
+/* The business card's Bag: its rows on the card's own spacing */
+[data-biz] .bag-head {
+  margin-top: 10px;
+}
+[data-biz] .walk-pad {
+  margin: 6px 0 0;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+/* Phones on their side: the Bag made the walk tabs four; tighter tabs and ammo boxes keep the title clear of them */
+@media (pointer: coarse) and (max-height: 500px) and (min-width: 641px) {
+  .city[data-mode="walk"] .walk-top {
+    gap: 4px;
+  }
+  .city[data-mode="walk"] .walk-top .walk-pop summary,
+  .city[data-mode="walk"] .walk-top .walk-map-tab {
+    padding: 8px 9px;
+  }
+  .city[data-mode="walk"] .city-head-stats {
+    gap: 4px;
+  }
+  .city[data-mode="walk"] .combat-ammo,
+  .city[data-mode="walk"] .combat-score {
+    padding: 4px 8px;
+  }
+}

@@ -85,7 +85,19 @@
 .biz-tabs {
   grid-area: tabs;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+/* Phones: the five tabs in two rows, three and two */
+@media (max-width: 640px) {
+  .biz-tabs {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+  .biz-tabs button {
+    grid-column: span 2;
+  }
+  .biz-tabs button:nth-child(n + 4) {
+    grid-column: span 3;
+  }
 }
 .biz-tabs button {
   justify-content: center;

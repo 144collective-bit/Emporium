@@ -328,6 +328,26 @@ export const markItem = (id: MarkId): string | null => (id === 'diamond' || id =
 export const patternItem = (id: PatternId): string | null => (id === 'plain' ? null : `pattern-${id}`);
 export const wardrobeEntry = (id: string) => WARDROBE_CATALOG.find((w) => w.id === id) ?? null;
 
+/* ---------- Consumables (the inventory, docs/inventory-plan.md) ---------- */
+
+/** Things Degen carries a few of and uses up: the snack first, more to follow */
+export type ItemId = 'snack';
+export interface ItemEntry {
+  name: string;
+  price: number;
+  level: number;
+  /** One line for the Bag */
+  blurb: string;
+  /** Where it's sold (the Bag says so) */
+  where: string;
+}
+export const ITEM_CATALOG: Record<ItemId, ItemEntry> = {
+  snack: { name: 'Snack', price: 500, level: 1, blurb: 'A bite to eat. Restores health in a spar.', where: 'the diners and the Night Market' },
+};
+export const ITEM_IDS = Object.keys(ITEM_CATALOG) as ItemId[];
+/** How many of each he can carry */
+export const ITEM_MAX = 5;
+
 /* ---------- Property ---------- */
 
 /** A district plot, bought with Dorras (the top of the property ladder) */

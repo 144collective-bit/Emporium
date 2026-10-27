@@ -4,7 +4,7 @@
  * - The Dorras readout in the mode header (`[data-dorras]`): your balance,
  *   with a dot when the till has takings to collect. It opens your business.
  * - Your business card (`[data-biz]`, on the gun store's `.shop` panel): the
- *   till and Collect on top, then four tabs:
+ *   till and Collect on top, then five tabs:
  *   - Stall: its shelves, prices (Low / Fair / High), pace and upgrade;
  *   - Units: Makers' Row's four units: buy one, build it as a garden, shop or
  *     warehouse, then run it (a garden's crop and bins, a shop's shelves, a
@@ -12,7 +12,9 @@
  *   - Workshop: its bay (raw goods in, products out), the job running, and
  *     what it can make;
  *   - Car: what's in your car, and Load / Unload when it's parked at one of
- *     your places.
+ *     your places;
+ *   - Bag: what Degen carries (inventory-ui.ts's `bagHtml()`), read-only,
+ *     with the Armoury and the Night Market as ways in from the City view.
  *   It opens from the readout anywhere, and at your stall or a unit in walk
  *   mode (on that place).
  * - The market hall, inside the Emporium's panel (`[data-market]`): every
@@ -157,6 +159,8 @@ import { BUILDINGS, DISTRICTS, PLOT_IDS } from '../../data/plots';
 import { PLACE_LEVELS, PLOT_LEVEL, PLOT_REFUND } from './catalog';
 import { LV, whyNot } from './ui';
 import type { Sfx } from './combat';
+import type { WeaponId } from './combat-sim';
+import type { SpotId } from '../../lib/city';
 import { createMissionsUI } from './missions-ui';
 import { guideAt, type GuideStep } from './guide';
 import { BACKUP_KEYS, TYCOON_KEY as KEY, backupName, packBackup, readBackup, type ReadBackup } from './backup';
@@ -186,12 +190,13 @@ const CORNER_IDS = ['c0', 'c1', 'c2', 'c3'] as const;
 const cornerName = (i: number) => CORNER_SHOPS[i].name.toLowerCase().replace(/(^|\s)\S/g, (c) => c.toUpperCase());
 const LETTER = 'ABC';
 const PRODUCT_LIST = GOODS.filter((g) => !g.raw).map((g) => g.id);
-type Tab = 'stall' | 'units' | 'workshop' | 'car';
+type Tab = 'stall' | 'units' | 'workshop' | 'car' | 'bag';
 const TABS: { id: Tab; label: string }[] = [
   { id: 'stall', label: 'Stall' },
   { id: 'units', label: 'Units' },
   { id: 'workshop', label: 'Workshop' },
   { id: 'car', label: 'Car' },
+  { id: 'bag', label: 'Bag' },
 ];
 const KIND_BLURB: Record<UnitKind | LotKind, string> = {
   garden: 'Grows sugar, coffee beans or cotton for the Workshop.',
@@ -239,6 +244,10 @@ export interface TycoonHooks {
   sfx(kind: Sfx, gain?: number): void;
   /** Getting started's way in from the City view: open a building's panel or start walking there */
   guideGo(g: GuideStep): void;
+  /** The Bag's ways in from the City view: a building's panel (the Armoury, the Night Market) */
+  openSpot(id: SpotId): void;
+  /** May he carry this gun (a starter his score unlocked, or one he bought): the Bag's locker */
+  mayCarry(id: WeaponId): boolean;
 }
 
 /** Make `to` match `from` in place: same elements kept, only what differs is changed */
@@ -907,7 +916,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     if (card.hidden) return;
     const now = Date.now();
     tabsEl.querySelectorAll<HTMLButtonElement>('[data-tab]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tab === tab)));
-    const view = tab === 'stall' ? stallView(now) : tab === 'units' ? unitView(now) : tab === 'workshop' ? workshopView() : carView(now);
+    const view = tab === 'stall' ? stallView(now) : tab === 'units' ? unitView(now) : tab === 'workshop' ? workshopView() : tab === 'car' ? carView(now) : bagView();
     repaint(
       cardBody,
       `<div class="stall-till">
@@ -919,9 +928,19 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     );
     card.querySelector<HTMLElement>('[data-biz-balance]')!.innerHTML = D(save.dorras);
   }
+  /** The Bag tab: inventory-ui.ts's list, its chunk fetched the first time (walking fetches it too) */
+  let inv: typeof import('./inventory-ui') | null = null;
+  function bagView() {
+    if (inv) return inv.bagHtml(save, { may: h.mayCarry, live: false, ways: !h.walker() });
+    void import('./inventory-ui').then((m) => {
+      inv = m;
+      paintCard();
+    });
+    return '<p class="stall-empty">Opening your bag…</p>';
+  }
   /** Open the card on a tab, or on a place (a unit opens the Units tab on it) */
   function openCard(at?: PlaceId | Tab) {
-    if (at === 'stall' || at === 'units' || at === 'workshop' || at === 'car') tab = at;
+    if (at === 'stall' || at === 'units' || at === 'workshop' || at === 'car' || at === 'bag') tab = at;
     else if (at?.startsWith('u') || at?.startsWith('l')) {
       tab = 'units';
       unitSel = ROW_IDS.indexOf(at);
@@ -952,6 +971,11 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     note = '';
     if ('bizClose' in ds) return void closeCard();
     if (ds.tab) return void openCard(ds.tab as Tab);
+    if (ds.bagGo) {
+      closeCard();
+      h.openSpot(ds.bagGo as SpotId);
+      return;
+    }
     if ('openStall' in ds) return void openCard(marketAt === 'car' ? 'car' : marketAt);
     if ('toMarket' in ds) {
       marketAt = at;

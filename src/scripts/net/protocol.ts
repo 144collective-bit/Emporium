@@ -8,7 +8,7 @@ import { WEAPON_IDS, type WeaponId } from '../city3d/combat-sim';
 import { WORLD_BOUNDS } from '../city3d/layout';
 import type { EmoteId, Look, PublicProfile, SkinId } from './profile-data';
 
-export const PROTOCOL = 3;
+export const PROTOCOL = 4;
 export const ROOM_SIZE = 16;
 /** How often a browser sends its controls, and how often the room sends positions */
 export const INPUT_HZ = 20;
@@ -68,6 +68,13 @@ export function cleanMods(raw: unknown): Partial<Record<WeaponId, GunMods>> {
   }
   return out;
 }
+/** A loadout a browser sends (docs/inventory-plan.md): up to two guns, known ones, never one twice; null if there's none */
+export function cleanKit(raw: unknown): WeaponId[] | null {
+  if (!Array.isArray(raw)) return null;
+  const out: WeaponId[] = [];
+  for (const w of raw.slice(0, 2)) if (typeof w === 'string' && (WEAPON_IDS as string[]).includes(w) && !out.includes(w as WeaponId)) out.push(w as WeaponId);
+  return out.length ? out : null;
+}
 /** Height of the ground the city stands on (SLAB in world.ts) */
 export const GROUND = 0.15;
 /** How close you must be to a gun store counter (the Armoury's, Trench Arms' hatch) to gear up */
@@ -84,9 +91,17 @@ export type ClientMsg =
   | { t: 'hello'; v: number; token: string; auth?: string; local?: { total: number; skin: SkinId } }
   /** Controls, ~20 a second: position, facing, camera pitch, speed, flags (with the mode), and the shot ray */
   | { t: 'in'; p: V3; f: number; k: number; s: number; fl: number; o: V3; d: V3; pt: number }
-  /** Take a gun at a store counter, the Armoury's or Trench Arms' (refills every gun); `m`: the mods on each of your guns */
-  | { t: 'equip'; w: WeaponId; m?: Partial<Record<WeaponId, GunMods>> }
-  /** Swap to another unlocked gun in the field (once geared up at the counter) */
+  /**
+   * Take a gun at a store counter, the Armoury's or Trench Arms' (refills every gun); `m`: the mods on each of
+   * your guns; `l`: the loadout picked there (the two guns carried, the only ones a swap goes to)
+   */
+  | { t: 'equip'; w: WeaponId; m?: Partial<Record<WeaponId, GunMods>>; l?: WeaponId[] }
+  /**
+   * Draw a gun from your loadout anywhere (the hotbar): `l` the loadout you picked at a counter before, `w` the gun.
+   * Not geared up yet (just joined), it gears you up with it, full; the loadout itself only changes at a counter.
+   */
+  | { t: 'kit'; l: WeaponId[]; w: WeaponId; m?: Partial<Record<WeaponId, GunMods>> }
+  /** Swap to another gun in your loadout in the field (once geared up) */
   | { t: 'swap'; w: WeaponId; m?: Partial<Record<WeaponId, GunMods>> }
   | { t: 'arm'; on: boolean }
   | { t: 'reload' }

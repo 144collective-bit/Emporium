@@ -181,6 +181,8 @@ export interface SimPlayer {
   burst: number;
   /** The Armoury's mods on each of this player's guns (none set: the stock gun) */
   mods: Partial<Record<WeaponId, GunMods>>;
+  /** The loadout (docs/inventory-plan.md): the guns they carry, the only ones a swap goes to (empty: any) */
+  kit: WeaponId[];
   input: SimInput;
 }
 
@@ -471,6 +473,7 @@ export function createSim(o: SimOptions) {
         held: false,
         burst: 0,
         mods: {},
+        kit: [],
         input: { fire: false, aim: false, assist: false, origin: new THREE.Vector3(), dir: new THREE.Vector3(0, 0, -1) },
       };
       players.set(id, p);
@@ -523,7 +526,7 @@ export function createSim(o: SimOptions) {
      */
     swap(id: string, weapon: WeaponId) {
       const p = player(id);
-      if (!p.geared || !(weapon in WEAPONS) || weapon === p.weapon) return false;
+      if (!p.geared || !(weapon in WEAPONS) || weapon === p.weapon || (p.kit.length && !p.kit.includes(weapon))) return false;
       p.stash[p.weapon] = [p.mag, p.reserve];
       const W = weaponFor(p, weapon);
       [p.mag, p.reserve] = p.stash[weapon] ?? [W.mag, W.reserve];
@@ -537,6 +540,31 @@ export function createSim(o: SimOptions) {
       events.push({ type: 'swap', player: id, weapon });
       setArmed(id, true);
       return true;
+    },
+    /**
+     * The loadout a player carries (picked at a counter): a swap goes only to these. Ammo
+     * kept for a gun put back in the locker is dropped (it comes back full), and a gun in
+     * hand that's no longer carried is swapped for the first one carried.
+     */
+    setKit(id: string, guns: WeaponId[]) {
+      const p = player(id);
+      const kit = [...new Set(guns.filter((w) => w in WEAPONS))];
+      p.kit = kit;
+      for (const w of Object.keys(p.stash) as WeaponId[]) if (kit.length && !kit.includes(w)) delete p.stash[w];
+      if (p.geared && kit.length && !kit.includes(p.weapon)) {
+        const armed = p.armed;
+        // (as a swap, without the gun in hand going into the stash)
+        const W = weaponFor(p, kit[0]);
+        [p.mag, p.reserve] = p.stash[kit[0]] ?? [W.mag, W.reserve];
+        delete p.stash[kit[0]];
+        p.weapon = kit[0];
+        p.reload = 0;
+        p.cooldown = SWAP_TIME;
+        p.spread = 0;
+        p.burst = 0;
+        events.push({ type: 'swap', player: id, weapon: kit[0] });
+        setArmed(id, armed);
+      }
     },
     setArmed,
     reload(id: string) {

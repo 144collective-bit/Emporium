@@ -29,6 +29,8 @@
  *   has the prices and curves; missions.ts the board).
  * - Phase 9 (The Trenches, save v10): four corner shops (`c0`-`c3`), bought
  *   with Dorras from level 5, a shop from the day they're bought.
+ * - The inventory (save v11, docs/inventory-plan.md): what Degen carries, its
+ *   rules in inventory.ts.
  */
 import { cleanDesign, type Design } from '../../data/plots';
 import { DOORS, GARAGE_SITE, LOT_SITE, STALL_SPOT, UNIT_SITE } from './solids';
@@ -40,6 +42,7 @@ import { STYLES, type StyleId } from './fight-sim';
 import { COURSE_IDS } from './kartcircuit';
 import { PLACE_IDS as MAP_PLACES } from './places';
 import { CORNER_SHOPS, type CornerId } from './projects';
+import { cleanInventory, emptyInventory, type Inventory } from './inventory-save';
 import {
   BOT_LEVELS,
   FIGHT_BOTS,
@@ -282,6 +285,7 @@ export const ENTRIES = {
   fighting: { name: 'Fight purses', in: true },
   gear: { name: 'Guns', in: false },
   clothes: { name: 'Clothes', in: false },
+  items: { name: 'Snacks', in: false },
   staff: { name: 'Staff', in: false },
   couriers: { name: 'Couriers', in: false },
   repaid: { name: 'Loans repaid', in: false },
@@ -399,7 +403,7 @@ export const recordKey = (course: string, cls: string) => `${course}:${cls}`;
 export const emptyKarts = (): KartSave => ({ model: DEFAULT_KART.model, paint: DEFAULT_KART.paint, owned: [], mods: {}, records: {}, boards: {}, series: null, trophies: {}, challenge: null, parBeaten: [], old: {} });
 
 export interface TycoonSave {
-  v: 10;
+  v: 11;
   dorras: number;
   till: number;
   /** When it was last brought up to date (ms since 1970) */
@@ -447,13 +451,15 @@ export interface TycoonSave {
   backup: number;
   /** The places you've walked to (places.ts), where fast travel can take you */
   visited: string[];
+  /** What Degen carries (inventory.ts, save v11): his loadout of two guns, the thing in his hand, his consumables */
+  inventory: Inventory;
 }
 /** How many steps Getting started has (guide.ts's GUIDE) */
 export const GUIDE_STEPS = 7;
 
 export function newSave(now: number): TycoonSave {
   return {
-    v: 10,
+    v: 11,
     dorras: START_DORRAS,
     till: 0,
     at: now,
@@ -484,6 +490,7 @@ export function newSave(now: number): TycoonSave {
     guide: { step: 0, hidden: false },
     backup: 0,
     visited: [],
+    inventory: emptyInventory(),
   };
 }
 const emptyLot = (): Lot => ({ kind: null, stock: {}, slots: [], job: null });
@@ -556,7 +563,7 @@ export function cleanSave(raw: unknown, now: number): TycoonSave {
   }
   const mul = (p: PlaceId) => LEVEL_CAPACITY[(levels[p] ?? 1) - 1];
   const s: TycoonSave = {
-    v: 10,
+    v: 11,
     dorras: Math.floor(num(o.dorras, 0, 1e12, START_DORRAS)),
     till: Math.floor(num(o.till, 0, 1e12, 0)),
     at: num(o.at, 0, now, now),
@@ -599,8 +606,11 @@ export function cleanSave(raw: unknown, now: number): TycoonSave {
     guide: { step: 0, hidden: false },
     backup: 0,
     visited: [],
+    inventory: emptyInventory(),
   };
   cleanGame(s, o, now);
+  // (v11: a save from before the inventory carries the rifle and the first gun it bought)
+  s.inventory = cleanInventory(o.inventory, s);
   // Phase 3: staff only where there's a job for them; couriers and contracts checked against the rules
   const places = (v: unknown) => PLACE_IDS.find((p) => p === v);
   s.staff = [...new Set((Array.isArray(o.staff) ? o.staff : []).map(places).filter((p): p is PlaceId => !!p && !!roleAt(s, p)))];
@@ -1487,7 +1497,7 @@ export function takedown(s: TycoonSave, kind: 'dummy' | 'drone') {
 
 export type BuyResult = { ok: true; dorras: number } | { ok: false; why: 'money' | 'level' | 'owned' | 'max' | 'place' | 'stock' };
 /** Pay for something (a level is checked first, then the money) */
-function pay(s: TycoonSave, price: number, need: number, entry: Entry): BuyResult {
+export function pay(s: TycoonSave, price: number, need: number, entry: Entry): BuyResult {
   if (level(s) < need) return { ok: false, why: 'level' };
   if (s.dorras < price) return { ok: false, why: 'money' };
   s.dorras -= price;

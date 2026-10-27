@@ -71,6 +71,8 @@ import { buildMetro } from './metro3d';
 import { createMetroUI, type MetroUI } from './metro-ui';
 import type { RiverBusUI } from './riverbus-ui';
 import { STOPS as BUS_STOPS_RIVER } from './riverbus';
+import { setHeld } from './inventory-save';
+import type { Held } from '../net/profile-data';
 import { PLACES } from './places';
 import { placeName } from './places';
 import { buildKartPark } from './kartpark3d';
@@ -749,6 +751,20 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     { id: 'lift:up', ...LIFT.lobby, label: 'Lift · Sky deck' },
     { id: 'lift:down', ...LIFT.deck, label: 'Lift · Lobby' },
   ];
+  // Snacks (inventory.ts, walk mode's chunk): at the diners' doors downtown and the Night Market's stalls, bought
+  // there and then; the doors come with the chunk, the first time walk mode asks for its places
+  let snackBars: typeof import('./inventory').SNACK_BARS | null = null;
+  let snackDoors: { id: string; x: number; z: number; label: string }[] | null = null;
+  const snacks = () => {
+    if (!snackDoors) {
+      snackDoors = [];
+      void import('./inventory').then((m) => {
+        snackBars = m.SNACK_BARS;
+        snackDoors = snackBars.map((b) => ({ id: `snack:${b.id}`, x: b.x, z: b.z, label: `${b.name} · Snack` }));
+      });
+    }
+    return snackDoors;
+  };
   // Liberty Bridge's lifts (liberty.ts): a door in each tower's arch on the lower deck, one on its gallery up top
   const libertyDoors = () => {
     const up = walk.position.y > (LIBERTY_LOW + LIBERTY_HIGH) / 2;
@@ -799,8 +815,13 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     engine: (revs) => sound.engine(revs),
     tyres: (level) => sound.tyres(level),
     // Your business's places, and the metro's station doors
-    places: () => [...(tycoon?.places() ?? []), ...(metroUI?.doors ?? []), ...RIVER_BUS_DOORS, ...LIFT_DOORS, ...libertyDoors(), ...mallDoors()],
+    places: () => [...(tycoon?.places() ?? []), ...(metroUI?.doors ?? []), ...RIVER_BUS_DOORS, ...LIFT_DOORS, ...libertyDoors(), ...mallDoors(), ...snacks()],
     openPlace: (id) => {
+      if (id.startsWith('snack:')) {
+        const bar = snackBars?.find((b) => b.id === id.slice(6));
+        if (bar) void import('./inventory-ui').then(({ buySnack }) => buySnack(game, bar.name));
+        return;
+      }
       if (id === 'lift:up' || id === 'lift:down') return ride(id === 'lift:up');
       if (id === 'mall-lift:up' || id === 'mall-lift:down') {
         const up = id === 'mall-lift:up';
@@ -878,6 +899,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     plotsChanged: () => builder?.refresh(),
     sfx: (kind, gain) => sound.sfx(kind, gain),
     guideGo: (g) => ('open' in g.go ? open(g.go.open) : startWalking(g.go.walk)),
+    openSpot: (id) => open(id),
+    mayCarry: (id) => walk.combat.canTake(id),
   });
   // Build mode: the plots, over the economy's save
   const builder = createBuilderUI(root, {
@@ -913,6 +936,12 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     openFitting: () => open('shop', true),
     openChar: () => charScreen.open(),
   });
+  // The thing in his hand is a hotbar slot: the save's inventory keeps in step with the look (inventory.ts)
+  const syncHeld = (l: { held: Held | null }) => {
+    if (setHeld(game.save(), l.held)) game.commit();
+  };
+  syncHeld(profileUI.look);
+  profileUI.onChange(syncHeld);
   const charScreen = createCharScreen({
     root,
     look: () => profileUI.look,
@@ -1279,7 +1308,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // Walk / Build pills never sit on top of a building's name. Re-read a few
   // times a second (they open, close and move with the layout)
   // The header, its open drop-downs (settings, menu), the welcome card, the guide and the kart, flight, drive and fight HUDs
-  const chrome = [...root.querySelectorAll<HTMLElement>('.city-head, .head-panel, .city-banner, .city-card, .city-guide, .kart-hud, .fly-hud, .drive-hud, .fight-demo, [data-fight-hud], .wm-compass')];
+  const chrome = [...root.querySelectorAll<HTMLElement>('.city-head, .head-panel, .city-banner, .city-card, .city-guide, .kart-hud, .fly-hud, .drive-hud, .fight-demo, [data-fight-hud], .wm-compass, .hotbar')];
   const chromeRects: { x: number; y: number; w: number; h: number }[] = [];
   const readChrome = () => {
     const o = host.getBoundingClientRect();

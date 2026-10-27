@@ -43,7 +43,7 @@ import type { Over } from './vault';
 import { springVel } from './inertia';
 import type { MoData } from './mocap';
 import { createCombat, type Sfx } from './combat';
-import { WEAPON_IDS } from './combat-sim';
+import type { Hotbar } from './inventory-ui';
 import type { GunShop } from './gunshop';
 import { ARMS, AVENUE_DOORS } from './avenue';
 import { DECK_Y, onDeck } from './waterfront';
@@ -552,7 +552,8 @@ export function createWalk(d: WalkDeps) {
       else if (n.id === 'put') putDown();
       else if (n.id === 'bench' || n.id === 'stand') return;
       else if (n.id.startsWith('place:')) {
-        if (document.pointerLockElement === canvas) document.exitPointerLock();
+        // (a snack is bought there and then: the mouse stays captured)
+        if (document.pointerLockElement === canvas && !n.id.startsWith('place:snack:')) document.exitPointerLock();
         d.openPlace(n.id.slice(6));
       } else openSpot(n.id as SpotId);
     };
@@ -682,6 +683,8 @@ export function createWalk(d: WalkDeps) {
     weapon: () => combat.weapon,
     geared: () => combat.geared,
     equip: (id) => combat.equip(id),
+    may: (id) => combat.canTake(id),
+    loadoutChanged: () => combat.setLoadout(),
     game: d.game,
     setMods: (id) => combat.setMods(id),
     onOpen() {
@@ -698,6 +701,21 @@ export function createWalk(d: WalkDeps) {
     },
   }));
   combat.onLifetime(() => shop.refresh());
+  // The inventory's hotbar and the Bag tab (inventory-ui.ts, a chunk of its own fetched when walking starts): fists,
+  // his loadout, the thing in his hand, his snacks. A key pressed before it's in waits for it.
+  let hotbar: Hotbar | null = null;
+  let hotbarLoad: Promise<void> | null = null;
+  const loadHotbar = () =>
+    (hotbarLoad ??= import('./inventory-ui')
+      .then(({ createHotbar }) => {
+        hotbar = createHotbar(root, { game: d.game, combat, touched: d.touched });
+      })
+      .catch(() => {
+        hotbarLoad = null;
+      }));
+  /** Pick a hotbar slot (0-6), or step through the fists and the guns */
+  const pickSlot = (n: number) => (hotbar ? hotbar.pick(n) : void loadHotbar().then(() => hotbar?.pick(n)));
+  const stepSlot = (dir: 1 | -1) => (hotbar ? hotbar.step(dir) : void loadHotbar().then(() => hotbar?.step(dir)));
   // The garage menu: like the store it frees the mouse and pauses walking; the camera goes to the
   // turntable (from over the shoulder, so the first-person hands stay out of the shot)
   let fpBeforeGarage = false;
@@ -1313,15 +1331,15 @@ export function createWalk(d: WalkDeps) {
     else if (down && !e.repeat && c === 'CapsLock') walkLock = !walkLock;
     else if (down && !e.repeat && c === 'KeyR') combat.reload();
     else if (down && !e.repeat && c === 'KeyG') combat.toggleHolster();
-    else if (down && !e.repeat && c === 'KeyX') combat.swap(1);
+    else if (down && !e.repeat && c === 'KeyX') stepSlot(1);
     else if (down && !e.repeat && c === 'KeyC') crouchPress();
     // Q / E held: peek left and right
     else if (c === 'KeyQ' || c === 'KeyE') {
       if (down) keys.add(c);
       else keys.delete(c);
     }
-    // 1-4 pick a gun (unless the emote panel has them)
-    else if (down && !e.repeat && /^Digit[1-7]$/.test(c) && !root.querySelector('[data-emotes][open]')) combat.swap(WEAPON_IDS[Number(c.slice(5)) - 1]);
+    // 1-7 pick a hotbar slot (unless the emote panel has them)
+    else if (down && !e.repeat && /^Digit[1-7]$/.test(c) && !root.querySelector('[data-emotes][open]')) pickSlot(Number(c.slice(5)) - 1);
     else if (c === 'Space') {
       if (down && !e.repeat) tryJump();
       jumpHeld = down;
@@ -1423,10 +1441,24 @@ export function createWalk(d: WalkDeps) {
     window.addEventListener(ev, (e) => {
       if (drag && e.pointerId === drag.id) drag = null;
     });
+  /** One step a notch, at most one every 120 ms (a trackpad sends a stream of small ones) */
+  let wheelAt = 0;
+  const wheelSteps = (dir: 1 | -1) => {
+    const now = performance.now();
+    if (now - wheelAt < 120) return;
+    wheelAt = now;
+    stepSlot(dir);
+  };
   canvas.addEventListener(
     'wheel',
     (e) => {
       if (!active || drive.active || fly.active) return;
+      // With the mouse captured the wheel steps the hotbar (as a shooter's does); free, it sets the camera's distance
+      if (locked() && !boating() && !karts.active && !fighting()) {
+        if (e.deltaY) wheelSteps(Math.sign(e.deltaY) as 1 | -1);
+        e.preventDefault();
+        return;
+      }
       zoom = THREE.MathUtils.clamp(zoom * (1 + Math.sign(e.deltaY) * 0.12), 0.8, 16);
       if (zoom < 1.2 && !firstPerson) setFirstPerson(true);
       else if (zoom >= 1.2 && firstPerson && e.deltaY > 0) setFirstPerson(false);
@@ -1569,8 +1601,9 @@ export function createWalk(d: WalkDeps) {
       combat.trigger(false, true);
     });
   $('[data-walk-reload]').addEventListener('click', () => combat.reload());
+  // (the hotbar's step: through the fists and the guns)
   $('[data-walk-swap]').addEventListener('click', () => {
-    combat.swap(1);
+    stepSlot(1);
     d.touched();
   });
   // Touch: Aim toggles the sight (one thumb can't hold Aim and Fire)
@@ -1585,7 +1618,7 @@ export function createWalk(d: WalkDeps) {
   });
 
   // Gamepad: left stick move, right stick look, A jump, LB / L3 run, Y enter, View first person,
-  // RT fire, LT aim, X reload, D-pad up holster, RB / D-pad left-right swap guns
+  // RT fire, LT aim, X reload, D-pad up holster, RB / D-pad left-right step the hotbar (the fists and the guns)
   function pollPad(dt: number) {
     const gp = Array.from(navigator.getGamepads?.() ?? []).find((p) => p && p.connected);
     if (!gp) {
@@ -1734,9 +1767,9 @@ export function createWalk(d: WalkDeps) {
     if (b[7] !== !!pad.prev[7]) combat.trigger(!!b[7]);
     if (edge(2)) combat.reload();
     if (edge(12)) combat.toggleHolster();
-    // RB or D-pad right: next gun; D-pad left: previous
-    if ((edge(5) && !b[6]) || edge(15)) combat.swap(1);
-    if (edge(14)) combat.swap(-1);
+    // RB or D-pad right: the hotbar's next slot of the fists and the guns; D-pad left: the one before
+    if ((edge(5) && !b[6]) || edge(15)) stepSlot(1);
+    if (edge(14)) stepSlot(-1);
     if (pad.x || pad.y || b.some(Boolean)) d.touched();
     pad.prev = b;
   }
@@ -2278,7 +2311,8 @@ export function createWalk(d: WalkDeps) {
     }
     recoil = Math.max(0, recoil - dt * 0.35);
     aimAmt += ((shooting ? 1 : 0) - aimAmt) * damp(14, dt);
-    if (hero.held) hero.held.visible = !combat.armed && !carrying;
+    if (hero.held) hero.held.visible = (hotbar ? hotbar.heldOut : !combat.armed) && !carrying;
+    hotbar?.update();
     // Both hands on the gun (after walking and jumping have posed the arms)
     const gunInHand = combat.geared && combat.poseGun(P, { aim: aimAmt, pitch, recoil, run: runAmt, dt });
     if (!gunInHand && aim && !carrying) Object.assign(P.arms[1], { fwd: 1.45, out: 0.05, bend: 0.15, twist: 0 });
@@ -2708,6 +2742,8 @@ export function createWalk(d: WalkDeps) {
       baseFov = camera.fov;
       fov = camera.fov;
       hero.g.visible = hero.ring.visible = true;
+      hotbar?.reset();
+      void loadHotbar();
       root.dataset.mode = 'walk';
     },
     exit() {
