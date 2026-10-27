@@ -1661,6 +1661,14 @@ it and has been retired completely. Build only on what's here.
   character screen) and Phase 5 (the crowds and soldiers on the new body,
   skinned on the GPU from baked clips; fighters and other players stepping
   with planted feet) are built: every figure in the city is the one body.
+- **The clothes** (the owner's call: higher quality, no clipping) are
+  planned in `docs/clothing-plan.md`: layers that move together (an outer
+  garment weighted as what's under it, a gap held), the trousers as one
+  piece, the garments' shapes as DOM-free data with a clipping check in
+  the tests and a clipping view in the lab, then smoother shapes (bottoms
+  and shoes, the suit, the casual tops, the accessories) on a desktop
+  detail level, phones and crowds as they are. One phase at a time with
+  the owner's sign-off; keep it up to date. Nothing is built yet.
 - **The animation rebuild** (the owner's call, critical) is planned in
   `docs/animation-plan.md`: AAA movement (Spider-Man / Ratchet feel,
   neutral athletic) from motion capture, then turns, jumps, armed
