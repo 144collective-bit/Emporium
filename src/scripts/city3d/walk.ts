@@ -44,6 +44,7 @@ import { springVel } from './inertia';
 import type { MoData } from './mocap';
 import { createCombat, type Sfx } from './combat';
 import type { Hotbar } from './inventory-ui';
+import type { Held } from '../net/profile-data';
 import type { GunShop } from './gunshop';
 import { ARMS, AVENUE_DOORS } from './avenue';
 import { DECK_Y, onDeck } from './waterfront';
@@ -240,6 +241,8 @@ export interface WalkDeps {
   places(): { id: string; x: number; z: number; label: string }[];
   /** Open one of them (tycoon-ui.ts) */
   openPlace(id: string): void;
+  /** Put a thing in Degen's hand from the inventory (the look's `held`: profile-ui.ts wears it, the save follows) */
+  hold(held: Held): void;
   /** The economy, for the shops in walk mode (buying, mods) */
   game: GameDeps;
   /** The kart park in the north-east (its hut door opens the kart menu; races run on its track) */
@@ -551,9 +554,10 @@ export function createWalk(d: WalkDeps) {
       else if (n.id === 'car') (drive.active ? getOut() : getIn());
       else if (n.id === 'put') putDown();
       else if (n.id === 'bench' || n.id === 'stand') return;
+      // (a snack is bought there and then: the mouse stays captured)
+      else if (n.id.startsWith('place:snack:')) hotbar?.snack(n.id.slice(12));
       else if (n.id.startsWith('place:')) {
-        // (a snack is bought there and then: the mouse stays captured)
-        if (document.pointerLockElement === canvas && !n.id.startsWith('place:snack:')) document.exitPointerLock();
+        if (document.pointerLockElement === canvas) document.exitPointerLock();
         d.openPlace(n.id.slice(6));
       } else openSpot(n.id as SpotId);
     };
@@ -677,6 +681,19 @@ export function createWalk(d: WalkDeps) {
       d.game.commit();
     },
   });
+  /**
+   * A menu opened, a race or a fight begun, a vehicle taken: walking's keys let go, Degen stood still,
+   * the trigger and the sight down, and (`free`) the mouse freed
+   */
+  function still(free = true) {
+    keys.clear();
+    jumpHeld = false;
+    vel.set(0, 0);
+    setAim(false);
+    combat.trigger(false);
+    combat.trigger(false, true);
+    if (free && document.pointerLockElement === canvas) document.exitPointerLock();
+  }
   // The Armoury's store and workbench at its counter: frees the mouse and pauses walking while it's open
   const shop = lazyMenu<GunShop>(['show', 'take'], async () => (await import('./gunshop')).createGunShop(root, {
     lifetime: () => combat.lifetime,
@@ -688,12 +705,7 @@ export function createWalk(d: WalkDeps) {
     game: d.game,
     setMods: (id) => combat.setMods(id),
     onOpen() {
-      keys.clear();
-      jumpHeld = false;
-      setAim(false);
-      combat.trigger(false);
-      combat.trigger(false, true);
-      if (document.pointerLockElement === canvas) document.exitPointerLock();
+      still();
     },
     onClose: () => {
       moments.release();
@@ -708,13 +720,25 @@ export function createWalk(d: WalkDeps) {
   const loadHotbar = () =>
     (hotbarLoad ??= import('./inventory-ui')
       .then(({ createHotbar }) => {
-        hotbar = createHotbar(root, { game: d.game, combat, touched: d.touched });
+        hotbar = createHotbar(root, {
+          game: d.game,
+          combat,
+          touched: d.touched,
+          hold: d.hold,
+          // The inventory (Tab): the mouse freed for dragging, Degen stood still, as at a counter
+          opened() {
+            still();
+          },
+          closed: () => canvas.focus({ preventScroll: true }),
+        });
       })
       .catch(() => {
         hotbarLoad = null;
       }));
   /** Pick a hotbar slot (0-6), or step through the fists and the guns */
   const pickSlot = (n: number) => (hotbar ? hotbar.pick(n) : void loadHotbar().then(() => hotbar?.pick(n)));
+  /** Open or close the inventory (Tab, the Bag button, View on a gamepad) */
+  const toggleInv = () => (hotbar ? hotbar.toggle() : void loadHotbar().then(() => hotbar?.toggle()));
   const stepSlot = (dir: 1 | -1) => (hotbar ? hotbar.step(dir) : void loadHotbar().then(() => hotbar?.step(dir)));
   // The garage menu: like the store it frees the mouse and pauses walking; the camera goes to the
   // turntable (from over the shoulder, so the first-person hands stay out of the shot)
@@ -733,13 +757,7 @@ export function createWalk(d: WalkDeps) {
     away: () => drive.away,
     game: d.game,
     onOpen() {
-      keys.clear();
-      jumpHeld = false;
-      vel.set(0, 0);
-      setAim(false);
-      combat.trigger(false);
-      combat.trigger(false, true);
-      if (document.pointerLockElement === canvas) document.exitPointerLock();
+      still();
       fpBeforeGarage = firstPerson;
       if (firstPerson) setFirstPerson(false);
       d.garage.spin(true);
@@ -821,13 +839,7 @@ export function createWalk(d: WalkDeps) {
     cancel: (saved) => fly.cancel(saved),
     away: () => fly.away,
     onOpen() {
-      keys.clear();
-      jumpHeld = false;
-      vel.set(0, 0);
-      setAim(false);
-      combat.trigger(false);
-      combat.trigger(false, true);
-      if (document.pointerLockElement === canvas) document.exitPointerLock();
+      still();
       fpBeforeHangar = firstPerson;
       if (firstPerson) setFirstPerson(false);
     },
@@ -890,15 +902,9 @@ export function createWalk(d: WalkDeps) {
     },
     preview: (k) => karts.preview(k),
     onOpen() {
-      keys.clear();
-      jumpHeld = false;
       pedals.gas = pedals.brake = false;
       kartBtns.drift = false;
-      vel.set(0, 0);
-      setAim(false);
-      combat.trigger(false);
-      combat.trigger(false, true);
-      if (document.pointerLockElement === canvas) document.exitPointerLock();
+      still();
     },
     onClose() {
       // The results card closed: out of the kart
@@ -927,15 +933,9 @@ export function createWalk(d: WalkDeps) {
     game: d.game,
     start: (setup) => startFight(setup),
     onOpen() {
-      keys.clear();
-      jumpHeld = false;
       pedals.gas = pedals.brake = false;
       fightBtns.block = false;
-      vel.set(0, 0);
-      setAim(false);
-      combat.trigger(false);
-      combat.trigger(false, true);
-      if (document.pointerLockElement === canvas) document.exitPointerLock();
+      still();
       void loadFight();
     },
     onClose() {
@@ -982,14 +982,8 @@ export function createWalk(d: WalkDeps) {
     fightUI.close();
     if (drive.active) getOut();
     if (combat.armed) combat.toggleHolster();
-    keys.clear();
-    vel.set(0, 0);
-    jumpHeld = false;
     fightBtns.punch = fightBtns.kick = fightBtns.block = fightBtns.dodge = false;
-    setAim(false);
-    combat.trigger(false);
-    combat.trigger(false, true);
-    if (document.pointerLockElement === canvas) document.exitPointerLock();
+    still();
     hero.g.visible = hero.ring.visible = false;
     near = null;
     prompt.hidden = true;
@@ -1040,14 +1034,8 @@ export function createWalk(d: WalkDeps) {
     if (drive.active) getOut();
     drive.recallKart();
     if (combat.armed) combat.toggleHolster();
-    keys.clear();
-    vel.set(0, 0);
-    jumpHeld = false;
     kartBtns.drift = false;
-    setAim(false);
-    combat.trigger(false);
-    combat.trigger(false, true);
-    if (document.pointerLockElement === canvas) document.exitPointerLock();
+    still();
     hero.g.visible = hero.ring.visible = false;
     near = null;
     prompt.hidden = true;
@@ -1092,12 +1080,7 @@ export function createWalk(d: WalkDeps) {
   function getIn() {
     if (combat.armed) combat.toggleHolster();
     if (!drive.enter(pos.x, pos.z)) return;
-    keys.clear();
-    vel.set(0, 0);
-    jumpHeld = false;
-    setAim(false);
-    combat.trigger(false);
-    combat.trigger(false, true);
+    still(false);
     hero.g.visible = hero.ring.visible = false;
     near = null;
     // (the vehicle has him: the moment that got him in is over, and a crate is put away)
@@ -1116,12 +1099,7 @@ export function createWalk(d: WalkDeps) {
     if (drive.active || karts.active) return;
     if (combat.armed) combat.toggleHolster();
     if (!fly.enter()) return;
-    keys.clear();
-    vel.set(0, 0);
-    jumpHeld = false;
-    setAim(false);
-    combat.trigger(false);
-    combat.trigger(false, true);
+    still(false);
     hero.g.visible = hero.ring.visible = false;
     near = null;
     moments.cancel();
@@ -1146,12 +1124,7 @@ export function createWalk(d: WalkDeps) {
         if (!active || drive.active || fly.active || karts.active || ride || fighting()) return;
         if (combat.armed) combat.toggleHolster();
         if (!b.enter()) return;
-        keys.clear();
-        vel.set(0, 0);
-        jumpHeld = false;
-        setAim(false);
-        combat.trigger(false);
-        combat.trigger(false, true);
+        still(false);
         hero.g.visible = hero.ring.visible = false;
         near = null;
         moments.cancel();
@@ -1254,6 +1227,8 @@ export function createWalk(d: WalkDeps) {
     const c = e.code;
     // (a peek key let go anywhere is let go: it may have been held into a car or a menu)
     if (!down && (c === 'KeyQ' || c === 'KeyE')) keys.delete(c);
+    // The inventory open: its keys (Tab closes it; Esc too, index.ts), and walking keys wait
+    if (hotbar?.open) return hotbar.key(e, down);
     // While the store, the garage, the hangar, the kart hut's or the trainer's menu is open, F closes it and walking keys wait
     if (shop.open || garageUI.open || hangarUI.open || kartUI.open || fightUI.open) {
       if (down && !e.repeat && c === 'KeyF') (shop.open ? shop.close() : garageUI.open ? garageUI.close() : hangarUI.open ? hangarUI.close() : kartUI.open ? kartUI.close() : fightUI.close());
@@ -1327,7 +1302,10 @@ export function createWalk(d: WalkDeps) {
       return true;
     }
     if (down && c === 'KeyF' && near) act();
-    else if (down && !e.repeat && c === 'KeyV') setFirstPerson(!firstPerson);
+    // Tab: the inventory (on foot, not in the middle of a moment)
+    else if (c === 'Tab') {
+      if (down && !e.repeat && !moments.active) toggleInv();
+    } else if (down && !e.repeat && c === 'KeyV') setFirstPerson(!firstPerson);
     else if (down && !e.repeat && c === 'CapsLock') walkLock = !walkLock;
     else if (down && !e.repeat && c === 'KeyR') combat.reload();
     else if (down && !e.repeat && c === 'KeyG') combat.toggleHolster();
@@ -1441,21 +1419,13 @@ export function createWalk(d: WalkDeps) {
     window.addEventListener(ev, (e) => {
       if (drag && e.pointerId === drag.id) drag = null;
     });
-  /** One step a notch, at most one every 120 ms (a trackpad sends a stream of small ones) */
-  let wheelAt = 0;
-  const wheelSteps = (dir: 1 | -1) => {
-    const now = performance.now();
-    if (now - wheelAt < 120) return;
-    wheelAt = now;
-    stepSlot(dir);
-  };
   canvas.addEventListener(
     'wheel',
     (e) => {
       if (!active || drive.active || fly.active) return;
       // With the mouse captured the wheel steps the hotbar (as a shooter's does); free, it sets the camera's distance
       if (locked() && !boating() && !karts.active && !fighting()) {
-        if (e.deltaY) wheelSteps(Math.sign(e.deltaY) as 1 | -1);
+        if (e.deltaY) hotbar?.wheel(Math.sign(e.deltaY) as 1 | -1);
         e.preventDefault();
         return;
       }
@@ -1617,8 +1587,8 @@ export function createWalk(d: WalkDeps) {
     d.touched();
   });
 
-  // Gamepad: left stick move, right stick look, A jump, LB / L3 run, Y enter, View first person,
-  // RT fire, LT aim, X reload, D-pad up holster, RB / D-pad left-right step the hotbar (the fists and the guns)
+  // Gamepad: left stick move, right stick look, A jump, LB / L3 run, Y enter, View the inventory, R3 first person,
+  // RT fire, LT aim, X reload, D-pad up holster, RB / D-pad left-right step the hotbar (the weapons and empty hands)
   function pollPad(dt: number) {
     const gp = Array.from(navigator.getGamepads?.() ?? []).find((p) => p && p.connected);
     if (!gp) {
@@ -1643,6 +1613,13 @@ export function createWalk(d: WalkDeps) {
     if (rx || ry) look(rx * 2.8 * dt, ry * 2 * dt, 1);
     const b = gp.buttons.map((x) => x.pressed);
     const edge = (i: number) => b[i] && !pad.prev[i];
+    // The inventory: the D-pad moves round it, A does the selected thing, B or View closes
+    if (hotbar?.open) {
+      hotbar.pad(edge);
+      pad.x = pad.y = 0;
+      pad.prev = b;
+      return;
+    }
     // The store: D-pad picks, A takes, B (or Y again) closes
     if (shop.open) {
       if (edge(14) || edge(12)) shop.step(-1);
@@ -1763,7 +1740,9 @@ export function createWalk(d: WalkDeps) {
     aim = aim || !!b[6];
     if (!b[6] && pad.prev[6]) setAim(false);
     if (edge(3)) act();
-    if (edge(8)) setFirstPerson(!firstPerson);
+    // View opens the inventory; the right stick pressed swaps first and third person
+    if (edge(8) && !moments.active) toggleInv();
+    if (edge(11)) setFirstPerson(!firstPerson);
     if (b[7] !== !!pad.prev[7]) combat.trigger(!!b[7]);
     if (edge(2)) combat.reload();
     if (edge(12)) combat.toggleHolster();
@@ -2499,7 +2478,8 @@ export function createWalk(d: WalkDeps) {
       bestD = 0;
     }
     if (!drive.active)
-      for (const p of d.places())
+      // (and the snack bars, the inventory chunk's)
+      for (const p of hotbar ? [...d.places(), ...hotbar.doors] : d.places())
         if (Math.hypot(p.x - pos.x, p.z - pos.z) < 1) {
           best = { id: `place:${p.id}`, label: p.label };
           bestD = 0;
@@ -2785,6 +2765,7 @@ export function createWalk(d: WalkDeps) {
       setAim(false);
       shop.close();
       garageUI.close();
+      hotbar?.close();
       combat.exit();
       joy.id = -1;
       joy.x = joy.y = 0;
@@ -2799,7 +2780,7 @@ export function createWalk(d: WalkDeps) {
     },
     /** Esc: close the gun store, the garage, the kart or fight menu if one is open, or abandon a kart race or a fight (true if it did) */
     closeShop() {
-      return shop.close() || garageUI.close() || hangarUI.close() || kartUI.close() || abandonKart() || fightUI.close() || quitFight();
+      return !!hotbar?.close() || shop.close() || garageUI.close() || hangarUI.close() || kartUI.close() || abandonKart() || fightUI.close() || quitFight();
     },
     /** True if Esc was used to free the mouse (so it shouldn't also stop walking). */
     releaseMouse() {

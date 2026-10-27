@@ -25,6 +25,16 @@ time, each with the owner's sign-off; keep this up to date.
 | Other players | Not yet: no guard flag in the protocol before PvP lands. |
 | Order | **Inventory first**, fists after. |
 
+### The controls (the owner's, after Phase 1)
+
+| Topic | Decision |
+| --- | --- |
+| The inventory | **Tab opens a 4 x 4 grid of 16 spaces and two weapon slots**, replacing the walk pop's Bag list (the hotbar stays). The grid holds **everything he carries**: the guns not in a weapon slot, the held things, the snacks stacked. Opens **anywhere**; open, **the mouse is freed and Degen stops**. |
+| Equipping | **Drag and drop, and tap**: drag a gun onto a weapon slot (what was there takes its space) or a weapon back into the grid; a tap selects and shows the actions, a double tap (double click, Enter) does the first. |
+| Keys | **1 and 2 draw the weapons; empty hands are the fists** (no fists slot). The drawn weapon's key again puts it away. A weapon can go back into the bag from its slot. Either weapon slot may be empty. |
+| Touch and pad | **The Bag button** in the walk tabs opens it; on a gamepad **View**, with first person moved to the right stick's click. |
+| Free play | **Every item free while testing** (a test switch: every price 0, no level or score needed), on the preview only, off before going live. |
+
 ## What's already there
 
 - **Switching guns exists, without a screen.** Once geared up at a
@@ -144,7 +154,7 @@ brawlsite.ts      the sparring partners' spots (DOM-free, tested)
    picked, the fists slot holstering the gun (the guard comes in Phase
    2). Checked at 320, 375, 768, 1024 and 1440 wide, upright and on
    their side; the protocol bumped and tested on workers.dev.
-2. **Fists on the street.** `brawl.ts`: the guard up from slot 1, the
+2. **Fists on the street.** `brawl.ts`: the guard up with empty hands, the
    moves over the walk, the controls above, the dummies and drones as
    melee targets with takedowns, the crowd stepping aside, the sounds,
    the lab's Brawl program and the rubric's rows. The missions and
@@ -211,6 +221,51 @@ brawlsite.ts      the sparring partners' spots (DOM-free, tested)
   yet; the loadout itself changes only at a counter), `cleanKit()`; the
   server's swap stays within the loadout through the sim. Not yet tried
   on workers.dev.
+
+## The controls and the grid, as built
+
+- **The weapon slots.** `inventory.guns` is two slots, either may be
+  empty (`cleanInventory()` keeps an empty slot 1 that was saved so).
+  The hotbar is the slots in order: 1-2 the weapons (empty ones shown),
+  3 the thing in his hand, then the snacks; no fists slot. `pickSlot()`
+  on the drawn weapon puts it away (`'empty'`), on an empty slot it puts
+  the gun away too, so empty hands are the fists. X, the wheel, RB and
+  the d-pad step through the weapons carried and empty hands
+  (`stepKey()`).
+- **The grid** (`inventory.ts`): `carried()` (the guns he owns and may
+  carry that aren't in a slot, the held things he owns, the snacks he
+  has), `layout()` (16 spaces; what was where stays there, the save's
+  `inventory.grid`, keys `gun:` / `held:` / `item:`; anything new takes
+  the first free space), `moveCell()`, `equipCell()` (a gun onto a slot,
+  what was there takes its space), `unequip()` (a weapon back to a space
+  or the first free one; onto another gun they trade, onto anything else
+  `'room'`), `swapSlots()`.
+- **The panel** (`inventory-ui.ts`, `[data-inv]` in `CityMap.astro`,
+  styles in `inventory.css`): Tab or the Bag tab (`[data-inv-open]`, on
+  a gamepad View) opens and closes it, as do Esc and ×. Open, the walk
+  stops (`still()` in walk.ts), the mouse is freed, the HUD's buttons,
+  the hotbar and the prompt step aside (`.city.is-inv`) and the keys are
+  the panel's: arrows (the d-pad) move, Enter (A) does the first action,
+  1 / 2 still draw. Dragging is pointer events with a ghost under the
+  finger (a move of 6 px makes it a drag); the bar under the grid names
+  the selection with its actions (Draw / Put away, Back in bag, To /
+  Swap slot 1 or 2, Hold it, Use). The business card's Bag tab shows the
+  same grid, read-only (`bagHtml()`). Desktops: a card in the middle;
+  phones upright: a sheet over the bottom (flatter spaces on short ones);
+  on their side: the weapons beside the grid. Checked at 320, 375, 740 x
+  360, 768, 1024 and 1440, with a finger's drag too.
+- **The sim** (`combat-sim.ts`): `kit` `null` is any gun (an older
+  browser), `[]` none: `setKit()` with an empty kit holsters him. The
+  `kit` message's gun (`w`) is optional and the loadout may change
+  anywhere now (the server takes it and keeps the swap within it).
+- **First person** moved off the gamepad's View to the right stick's
+  click (R3).
+- **Free play** (`freeplay.ts`, `FREE_PLAY`): built with
+  `PUBLIC_FREE_PLAY=1` (set only on the Vercel preview project), every
+  price in `catalog.ts` and `tycoon.ts` is 0, every level 1, the guns'
+  and finishes' scores 0 and `pay()` always pays. The "Build site" Action
+  and the Worker's build leave it unset, so the live site folds it away;
+  take it off the preview before anything goes live from there.
 
 ## Open questions (small; the owner can answer as they come)
 

@@ -68,12 +68,12 @@ export function cleanMods(raw: unknown): Partial<Record<WeaponId, GunMods>> {
   }
   return out;
 }
-/** A loadout a browser sends (docs/inventory-plan.md): up to two guns, known ones, never one twice; null if there's none */
+/** The weapon slots a browser sends (docs/inventory-plan.md): up to two guns, known ones, never one twice (none: empty hands); null if it isn't a list */
 export function cleanKit(raw: unknown): WeaponId[] | null {
   if (!Array.isArray(raw)) return null;
   const out: WeaponId[] = [];
   for (const w of raw.slice(0, 2)) if (typeof w === 'string' && (WEAPON_IDS as string[]).includes(w) && !out.includes(w as WeaponId)) out.push(w as WeaponId);
-  return out.length ? out : null;
+  return out;
 }
 /** Height of the ground the city stands on (SLAB in world.ts) */
 export const GROUND = 0.15;
@@ -97,10 +97,10 @@ export type ClientMsg =
    */
   | { t: 'equip'; w: WeaponId; m?: Partial<Record<WeaponId, GunMods>>; l?: WeaponId[] }
   /**
-   * Draw a gun from your loadout anywhere (the hotbar): `l` the loadout you picked at a counter before, `w` the gun.
-   * Not geared up yet (just joined), it gears you up with it, full; the loadout itself only changes at a counter.
+   * Your weapon slots, changed anywhere (the inventory's grid), and `w` a gun drawn from them (the hotbar). Not
+   * geared up yet (just joined), drawing gears you up with it, full; a gun in hand no longer carried is put away.
    */
-  | { t: 'kit'; l: WeaponId[]; w: WeaponId; m?: Partial<Record<WeaponId, GunMods>> }
+  | { t: 'kit'; l: WeaponId[]; w?: WeaponId; m?: Partial<Record<WeaponId, GunMods>> }
   /** Swap to another gun in your loadout in the field (once geared up) */
   | { t: 'swap'; w: WeaponId; m?: Partial<Record<WeaponId, GunMods>> }
   | { t: 'arm'; on: boolean }

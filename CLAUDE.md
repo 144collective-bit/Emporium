@@ -3079,15 +3079,21 @@ it and has been retired completely. Build only on what's here.
 - The plan and its phases are `docs/inventory-plan.md` (the owner's call:
   an inventory, switching weapons, then fists on the street); keep it up to
   date, one phase at a time with the owner's sign-off. Phase 1 (the
-  inventory) is built: what Degen carries is the save's `inventory` (v11:
-  his loadout of two guns, `guns`, gun 1 never empty; the thing in his
-  hand, `held`, kept in step with the look by `setHeld()`; his consumables,
-  `items`), its shape and cleaning in `inventory-save.ts` (the boot's) and
-  its rules in `inventory.ts` (DOM-free, tested in
+  inventory) and the controls after it (the owner's call: Tab opens a 4 x 4
+  grid with two weapon slots) are built: what Degen carries is the save's
+  `inventory` (v11: two weapon slots, `guns`, either may be empty; the
+  thing in his hand, `held`, kept in step with the look by `setHeld()`; his
+  consumables, `items`; where each thing lies in the grid, `grid`), its
+  shape and cleaning in `inventory-save.ts` (the boot's; `GRID_SIZE` 16,
+  `GRID_COLS` 4) and its rules in `inventory.ts` (DOM-free, tested in
   `tests/inventory.test.ts`, loaded with the hotbar and the gun store):
-  the hotbar's slots in his order (`slots()`: fists, gun 1, gun 2, the
-  thing in his hand, the consumables he has; `pickSlot()`, `stepKey()`
-  through the fists and the guns), the loadout (`setLoadout()`,
+  the hotbar's slots in his order (`slots()`: weapon 1, weapon 2, the
+  thing in his hand, the consumables he has; no fists slot: empty hands
+  are the fists; `pickSlot()` (the drawn weapon's key again puts it away),
+  `stepKey()` through the weapons and empty hands), the grid (`carried()`,
+  `layout()`: what was where stays there, the new in the first free
+  space; `moveCell()`, `equipCell()` (what was in the slot takes its
+  space), `unequip()`, `swapSlots()`), the loadout (`setLoadout()`,
   `carryGun()`), the snack (`ITEM_CATALOG` in catalog.ts, 500 Dorras,
   `ITEM_MAX` five; `buyItem()`, ledger `items`, not counted as a thing
   bought; `useItem()` only in a spar, which comes with the fight plan's
@@ -3095,27 +3101,46 @@ it and has been retired completely. Build only on what's here.
   doors and the Night Market's stalls, walk prompts `snack:<id>` that buy
   one there and then).
 - On screen (`inventory-ui.ts`, a chunk of its own fetched when walking
-  starts; styles `src/styles/inventory.css`): the hotbar (`[data-hotbar]`,
+  starts, with the inventory's keys, the pad, the wheel and the snack
+  doors; styles `src/styles/inventory.css`): the hotbar (`[data-hotbar]`,
   bottom-right on desktops with the slots' names; square slots over the
   right-hand buttons on touch screens upright, the door prompt above them,
-  low between the stick and the buttons on their side; in `chrome`), the
-  Bag tab in the walk pop (`[data-bag]`: the loadout with ammo and mods,
-  the locker, the thing in his hand, the snacks with Use) and `bagHtml()`
-  for the business card's Bag tab (read-only; the Armoury and the Night
-  Market as ways in from the City view). 1-7 pick a slot, X, the touch
-  Swap button, RB and the d-pad step, and the wheel steps while the mouse
-  is captured (free, it still sets the camera's distance). Fists put the
-  gun away with his hands free (the guard is Phase 2), the thing in his
-  hand puts it away and takes that out; which is out isn't saved (walking
-  starts with the thing in his hand out).
-- The loadout is picked at the gun store's Loadout row (gunshop.ts: tap a
-  slot, then a gun; "Carry as gun 1 / gun 2"; picking gears him up with gun
-  1, all full); the guns not carried wait in the locker there. Ammo stays
-  free. Either gun is drawn anywhere (`combat.draw()`: the first time it
-  gears him up, full; G draws too), and a swap goes only within the
-  loadout (`kit` in combat-sim.ts, `setKit()`; online the `equip`
-  message's `l` and the `kit` message, `cleanKit()`, `PROTOCOL` 4). The
-  guns' silhouettes are `gunart.ts`.
+  low between the stick and the buttons on their side; in `chrome`), **the
+  inventory** (`[data-inv]`: Tab, the walk tabs' Bag button
+  `[data-inv-open]` or the gamepad's View open and close it, Esc and × close
+  it; open, Degen stops, the mouse is freed and `.city.is-inv` hides the
+  HUD's buttons, the hotbar and the prompt; the two weapon slots over the
+  4 x 4 grid, dragged between with pointer events and a ghost, a tap
+  selecting with the actions in the bar under it, a double tap, double
+  click or Enter the first; arrows or the d-pad move round it; a card in
+  the middle on desktops, a sheet over the bottom on phones upright, the
+  weapons beside the grid on their side) and `bagHtml()` for the business
+  card's Bag tab (the same grid, read-only; the Armoury and the Night
+  Market as ways in from the City view). 1 / 2 draw a weapon (again puts
+  it away), 3-7 the rest, X, the touch Swap button, RB and the d-pad
+  step, and the wheel steps while the mouse is captured (free, it still
+  sets the camera's distance); first person is the gamepad's right stick
+  click. The thing in his hand puts the gun away and takes that out;
+  which is out isn't saved (walking starts with the thing in his hand
+  out).
+- The loadout is picked in the inventory or at the gun store's Loadout row
+  (gunshop.ts: tap a slot, then a gun, or "Leave it empty"; picking
+  gears him up with the first weapon, all full); the guns
+  not carried wait in the bag. Ammo stays free. Either gun is drawn
+  anywhere (`combat.draw()`: the first time it gears him up, full; G draws
+  too), and a swap goes only within the loadout (`kit` in combat-sim.ts,
+  `setKit()`: `null` any gun (an older browser), `[]` none, which holsters
+  him; online the `equip` message's `l` and the `kit` message (its gun `w`
+  optional, taken anywhere), `cleanKit()`, `PROTOCOL` 4). The guns'
+  silhouettes are `gunart.ts`.
+- **Free play** (a test switch, the owner's call: everything free to
+  check it all works): `freeplay.ts` (`FREE_PLAY`, Vite's `__FREE_PLAY__`
+  from `PUBLIC_FREE_PLAY=1` in `astro.config.mjs`) makes every price in
+  `catalog.ts` and `tycoon.ts` 0, every level 1, the guns' and finishes'
+  scores 0, and `pay()` always pay. It's set only on the Vercel preview
+  project (emporium-preview); never set it in the "Build site" Action or
+  the Worker's build, and take it off the preview before anything goes
+  live from there. Unset, its branches fold away.
 
 ## Target practice (3D walk mode)
 

@@ -298,9 +298,9 @@ export function createCombat(d: CombatDeps) {
     const save = d.game.save();
     for (const id of WEAPON_IDS) sim.setMods(ME, id, gunMods(save, id));
     const k = kit();
-    sim.setKit(ME, k.length ? k : ['rifle']);
-    // The gun remembered from last time may have been bought on another save, or put back in the locker
-    if (!me.geared && !me.kit.includes(me.weapon)) me.weapon = me.kit[0];
+    sim.setKit(ME, k);
+    // The gun remembered from last time may have been bought on another save, or put back in the bag
+    if (!me.geared && k.length && !k.includes(me.weapon)) me.weapon = k[0];
   };
 
   /** The mods on each of his guns, for the server's copy of the rules (they're in this browser's save) */
@@ -535,10 +535,10 @@ export function createCombat(d: CombatDeps) {
   // Takedown and streak call-outs near the crosshair
   const pops: { el: HTMLElement; t: number }[] = [];
   const STREAKS = ['', '', 'Double', 'Triple', 'Quad', 'Rampage'];
-  /** The guns he carries and swaps between: his loadout */
+  /** The guns he carries and swaps between: his weapon slots */
   const guns = () => {
     applyMods();
-    return me.kit;
+    return me.kit ?? [];
   };
   const popup = (big: string, label: string, kind = '') => {
     const el = document.createElement('div');
@@ -785,10 +785,10 @@ export function createCombat(d: CombatDeps) {
    */
   function draw(id: WeaponId) {
     applyMods();
-    if (!me.kit.includes(id) || !owns(id)) return false;
+    if (!guns().includes(id) || !owns(id)) return false;
     if (!me.geared) {
       sim.equip(ME, id);
-      net?.send({ t: 'kit', l: me.kit, w: id, m: netMods() });
+      net?.send({ t: 'kit', l: guns(), w: id, m: netMods() });
     } else {
       if (me.weapon !== id) {
         sim.swap(ME, id);
@@ -875,7 +875,7 @@ export function createCombat(d: CombatDeps) {
       if (!owns(id)) return false;
       applyMods();
       sim.equip(ME, id);
-      net?.send({ t: 'equip', w: id, m: netMods(), l: me.kit });
+      net?.send({ t: 'equip', w: id, m: netMods(), l: guns() });
       hold();
       profile.weapon = id;
       saveProfile();
@@ -891,6 +891,10 @@ export function createCombat(d: CombatDeps) {
      */
     setLoadout() {
       modsFresh = false;
+      applyMods();
+      // Online: the server hears the new weapon slots at once (a gun in hand no longer carried is put away there too)
+      if (me.geared) net?.send({ t: 'kit', l: guns(), m: netMods() });
+      hold();
     },
     draw,
     holster,
@@ -928,8 +932,14 @@ export function createCombat(d: CombatDeps) {
     toggleHolster() {
       applyMods();
       // Not geared up yet: G draws from the loadout (the gun he carried last, or gun 1)
+      const k = guns();
       if (!me.geared) {
-        draw(me.kit.includes(me.weapon) ? me.weapon : me.kit[0]);
+        if (k.length) draw(k.includes(me.weapon) ? me.weapon : k[0]);
+        return;
+      }
+      // (both weapon slots empty: nothing to draw)
+      if (!me.armed && !k.includes(me.weapon)) {
+        if (k.length) draw(k[0]);
         return;
       }
       sim.setArmed(ME, !me.armed);

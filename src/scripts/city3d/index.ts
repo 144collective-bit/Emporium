@@ -751,20 +751,6 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     { id: 'lift:up', ...LIFT.lobby, label: 'Lift · Sky deck' },
     { id: 'lift:down', ...LIFT.deck, label: 'Lift · Lobby' },
   ];
-  // Snacks (inventory.ts, walk mode's chunk): at the diners' doors downtown and the Night Market's stalls, bought
-  // there and then; the doors come with the chunk, the first time walk mode asks for its places
-  let snackBars: typeof import('./inventory').SNACK_BARS | null = null;
-  let snackDoors: { id: string; x: number; z: number; label: string }[] | null = null;
-  const snacks = () => {
-    if (!snackDoors) {
-      snackDoors = [];
-      void import('./inventory').then((m) => {
-        snackBars = m.SNACK_BARS;
-        snackDoors = snackBars.map((b) => ({ id: `snack:${b.id}`, x: b.x, z: b.z, label: `${b.name} · Snack` }));
-      });
-    }
-    return snackDoors;
-  };
   // Liberty Bridge's lifts (liberty.ts): a door in each tower's arch on the lower deck, one on its gallery up top
   const libertyDoors = () => {
     const up = walk.position.y > (LIBERTY_LOW + LIBERTY_HIGH) / 2;
@@ -815,13 +801,10 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     engine: (revs) => sound.engine(revs),
     tyres: (level) => sound.tyres(level),
     // Your business's places, and the metro's station doors
-    places: () => [...(tycoon?.places() ?? []), ...(metroUI?.doors ?? []), ...RIVER_BUS_DOORS, ...LIFT_DOORS, ...libertyDoors(), ...mallDoors(), ...snacks()],
+    places: () => [...(tycoon?.places() ?? []), ...(metroUI?.doors ?? []), ...RIVER_BUS_DOORS, ...LIFT_DOORS, ...libertyDoors(), ...mallDoors()],
+    // The inventory's "Hold it": the thing goes in his hand on the look (the save's inventory follows it, syncHeld)
+    hold: (held) => profileUI.wear({ ...profileUI.look, held }),
     openPlace: (id) => {
-      if (id.startsWith('snack:')) {
-        const bar = snackBars?.find((b) => b.id === id.slice(6));
-        if (bar) void import('./inventory-ui').then(({ buySnack }) => buySnack(game, bar.name));
-        return;
-      }
       if (id === 'lift:up' || id === 'lift:down') return ride(id === 'lift:up');
       if (id === 'mall-lift:up' || id === 'mall-lift:down') {
         const up = id === 'mall-lift:up';

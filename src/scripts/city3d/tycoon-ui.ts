@@ -931,7 +931,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
   /** The Bag tab: inventory-ui.ts's list, its chunk fetched the first time (walking fetches it too) */
   let inv: typeof import('./inventory-ui') | null = null;
   function bagView() {
-    if (inv) return inv.bagHtml(save, { may: h.mayCarry, live: false, ways: !h.walker() });
+    if (inv) return inv.bagHtml(save, { may: h.mayCarry, ways: !h.walker() });
     void import('./inventory-ui').then((m) => {
       inv = m;
       paintCard();

@@ -283,19 +283,19 @@ export class Room extends DurableObject<Env> {
         break;
       }
       case 'kit': {
-        // Drawing from the loadout anywhere: the first time (not geared up yet) it gears up with that gun, full.
-        // The loadout itself only changes at a counter, so a different one from a geared-up player is ignored.
+        // The weapon slots, changed anywhere (the inventory's grid), and maybe a gun drawn from them; the first draw
+        // (not geared up yet) gears up with it, full. Only guns this player's lifetime score has unlocked.
         const kit = cleanKit(m.l);
         const sp = this.sim.players.get(id);
-        if (!sp || !kit || !kit.includes(m.w) || !kit.every((w) => weaponUnlocked(w, p.me.total)) || !this.allow(p, 'swap', 150)) break;
-        const same = sp.kit.length === kit.length && kit.every((w) => sp.kit.includes(w));
-        if (sp.geared && !same) break;
+        if (!sp || !kit || !kit.every((w) => weaponUnlocked(w, p.me.total)) || (m.w && !kit.includes(m.w)) || !this.allow(p, 'swap', 150)) break;
         this.mods(id, m.m);
         this.sim.setKit(id, kit);
-        const changed = sp.weapon !== m.w;
-        if (!sp.geared) this.sim.equip(id, m.w);
-        else if (changed) this.sim.swap(id, m.w);
-        this.sim.setArmed(id, true);
+        const changed = !!m.w && sp.weapon !== m.w;
+        if (m.w) {
+          if (!sp.geared) this.sim.equip(id, m.w);
+          else if (changed) this.sim.swap(id, m.w);
+          this.sim.setArmed(id, true);
+        }
         if (changed)
           this.soon(p, 'weapon', 300, () => {
             const w = this.sim.players.get(id)?.weapon;

@@ -22,6 +22,7 @@ import * as THREE from 'three';
 import { CORE_ROADS, NS_ROADS, design } from './layout';
 import { PRACTICE } from './downtown';
 import { applyGunMods, type GunMods } from './catalog';
+import { FREE_PLAY } from './freeplay';
 
 export const TICK = 1 / 60;
 
@@ -73,6 +74,8 @@ export const WEAPONS: Record<WeaponId, Weapon> = {
   burst: { ...BASE, id: 'burst', name: 'Tri-Tap', short: 'Tri-Tap', blurb: 'Carbine that fires tight three-round bursts. Precise at range.', need: 0, mag: 36, reserve: 144, rate: 14, auto: false, burst: 3, damage: 22, reload: 1.8, range: 85, spreadHip: 0.01, spreadAim: 0.002, bloom: 0.004, bloomMax: 0.03, kick: 0.01, zoom: 24 },
   lmg: { ...BASE, id: 'lmg', name: 'Belt Feeder', short: 'Belt', blurb: 'A hundred-round belt and a bipod. Spray and keep spraying.', need: 0, mag: 100, reserve: 200, rate: 11, damage: 20, reload: 3.6, range: 65, spreadHip: 0.03, spreadAim: 0.012, bloom: 0.003, bloomMax: 0.06, bloomDecay: 0.18, kick: 0.016, zoom: 16 },
 };
+// Free play (freeplay.ts): no gun waits on a score
+if (FREE_PLAY) for (const w of Object.values(WEAPONS)) w.need = 0;
 /** Store order, and each gun's number on the wire */
 export const WEAPON_IDS: WeaponId[] = ['rifle', 'smg', 'shotgun', 'dmr', 'revolver', 'burst', 'lmg'];
 export const weaponUnlocked = (id: unknown, total: number) => typeof id === 'string' && id in WEAPONS && total >= WEAPONS[id as WeaponId].need;
@@ -181,8 +184,8 @@ export interface SimPlayer {
   burst: number;
   /** The Armoury's mods on each of this player's guns (none set: the stock gun) */
   mods: Partial<Record<WeaponId, GunMods>>;
-  /** The loadout (docs/inventory-plan.md): the guns they carry, the only ones a swap goes to (empty: any) */
-  kit: WeaponId[];
+  /** The weapon slots (docs/inventory-plan.md): the guns they carry, the only ones a swap goes to (null: any, an old client) */
+  kit: WeaponId[] | null;
   input: SimInput;
 }
 
@@ -473,7 +476,7 @@ export function createSim(o: SimOptions) {
         held: false,
         burst: 0,
         mods: {},
-        kit: [],
+        kit: null,
         input: { fire: false, aim: false, assist: false, origin: new THREE.Vector3(), dir: new THREE.Vector3(0, 0, -1) },
       };
       players.set(id, p);
@@ -526,7 +529,7 @@ export function createSim(o: SimOptions) {
      */
     swap(id: string, weapon: WeaponId) {
       const p = player(id);
-      if (!p.geared || !(weapon in WEAPONS) || weapon === p.weapon || (p.kit.length && !p.kit.includes(weapon))) return false;
+      if (!p.geared || !(weapon in WEAPONS) || weapon === p.weapon || (p.kit && !p.kit.includes(weapon))) return false;
       p.stash[p.weapon] = [p.mag, p.reserve];
       const W = weaponFor(p, weapon);
       [p.mag, p.reserve] = p.stash[weapon] ?? [W.mag, W.reserve];
@@ -542,16 +545,18 @@ export function createSim(o: SimOptions) {
       return true;
     },
     /**
-     * The loadout a player carries (picked at a counter): a swap goes only to these. Ammo
-     * kept for a gun put back in the locker is dropped (it comes back full), and a gun in
-     * hand that's no longer carried is swapped for the first one carried.
+     * The guns a player carries in their weapon slots: a swap goes only to these. Ammo
+     * kept for a gun put back in the bag is dropped (it comes back full), a gun in hand
+     * that's no longer carried is swapped for the first one carried, or put away when
+     * none is (empty hands).
      */
     setKit(id: string, guns: WeaponId[]) {
       const p = player(id);
       const kit = [...new Set(guns.filter((w) => w in WEAPONS))];
       p.kit = kit;
-      for (const w of Object.keys(p.stash) as WeaponId[]) if (kit.length && !kit.includes(w)) delete p.stash[w];
-      if (p.geared && kit.length && !kit.includes(p.weapon)) {
+      for (const w of Object.keys(p.stash) as WeaponId[]) if (!kit.includes(w)) delete p.stash[w];
+      if (p.geared && !kit.length) setArmed(id, false);
+      else if (p.geared && !kit.includes(p.weapon)) {
         const armed = p.armed;
         // (as a swap, without the gun in hand going into the stash)
         const W = weaponFor(p, kit[0]);
