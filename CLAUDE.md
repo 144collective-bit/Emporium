@@ -3111,8 +3111,11 @@ it and has been retired completely. Build only on what's here.
   it; open, Degen stops, the mouse is freed and `.city.is-inv` hides the
   HUD's buttons, the hotbar and the prompt; the two weapon slots over the
   4 x 4 grid, dragged between with pointer events and a ghost, a tap
-  selecting with the actions in the bar under it, a double tap, double
-  click or Enter the first; arrows or the d-pad move round it; a card in
+  selecting with the actions and a gun's stat bars (`STATS` in gunart.ts)
+  in the bar under it, a double tap, double click or Enter the first; with
+  a mouse a tip on hover (`.inv-tip`) and a right-click's quick move;
+  what's dropped settles with a bounce (`is-landed`) and the panel rises
+  in, neither under reduced motion; arrows or the d-pad move round it; a card in
   the middle on desktops, a sheet over the bottom on phones upright, the
   weapons beside the grid on their side) and `bagHtml()` for the business
   card's Bag tab (the same grid, read-only; the Armoury and the Night

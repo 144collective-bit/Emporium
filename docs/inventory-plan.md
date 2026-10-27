@@ -249,7 +249,15 @@ brawlsite.ts      the sparring partners' spots (DOM-free, tested)
   1 / 2 still draw. Dragging is pointer events with a ghost under the
   finger (a move of 6 px makes it a drag); the bar under the grid names
   the selection with its actions (Draw / Put away, Back in bag, To /
-  Swap slot 1 or 2, Hold it, Use). The business card's Bag tab shows the
+  Swap slot 1 or 2, Hold it, Use) and a gun's stat bars (damage, fire
+  rate, range with its mods on; `STATS` in gunart.ts, the gun store's).
+  **The polish** (the owner left it to me): with a mouse, hovering shows
+  the same in a tip (`.inv-tip`) and a right-click does the quick move (a
+  gun to a weapon slot, a weapon back in the bag, the rest their first
+  action); what's dropped settles with a small bounce and the selection
+  goes with it (`is-landed`); the panel rises in (neither under reduced
+  motion); a key for an empty weapon slot puts the gun away (empty
+  hands). The business card's Bag tab shows the
   same grid, read-only (`bagHtml()`). Desktops: a card in the middle;
   phones upright: a sheet over the bottom (flatter spaces on short ones);
   on their side: the weapons beside the grid. Checked at 320, 375, 740 x

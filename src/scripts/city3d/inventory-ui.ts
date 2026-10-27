@@ -14,8 +14,12 @@
  *   slot (what was there takes its space), a weapon back into the grid,
  *   one slot onto the other. A tap selects and the bar under the grid says
  *   what it is with its actions (To / Swap slot 1 or 2, Draw, Back in bag, Hold,
- *   Use); a double tap, a double click or Enter does the first. Arrow keys
- *   (the d-pad) move round it; Tab, Esc or × close it.
+ *   Use) and a gun's stat bars; a double tap, a double click or Enter does
+ *   the first. With a mouse, hovering shows the same in a tip and a
+ *   right-click does the quick move (a gun to a weapon slot, a weapon back
+ *   in the bag, the rest their first action). What's dropped settles with a
+ *   small bounce and the panel rises in (neither under reduced motion).
+ *   Arrow keys (the d-pad) move round it; Tab, Esc or × close it.
  * - `bagHtml()`: the weapons and the grid for the business card's Bag tab
  *   (tycoon-ui.ts), read-only, with the Armoury and the Night Market as
  *   ways in from the City view.
@@ -26,8 +30,8 @@
  * what he carries, not what's out.
  */
 import { GUN_MODS, GUN_MOD_IDS, ITEM_CATALOG, ITEM_MAX, applyGunMods, type ItemId } from './catalog';
-import { WEAPONS, type WeaponId } from './combat-sim';
-import { ART } from './gunart';
+import { WEAPONS, type Weapon, type WeaponId } from './combat-sim';
+import { ART, STATS } from './gunart';
 import {
   GRID_COLS,
   GRID_SIZE,
@@ -70,6 +74,12 @@ function modLine(save: TycoonSave, id: WeaponId) {
   const on = GUN_MOD_IDS.filter((k) => m[k] > 0).map((k) => `${GUN_MODS[k].name} ${m[k]}`);
   return on.length ? on.join(' · ') : 'Stock';
 }
+/** A gun's first three stat bars with its mods on (damage, fire rate, range) */
+function statBars(w: Weapon) {
+  return `<dl class="inv-stats">${STATS.slice(0, 3)
+    .map((st) => `<div><dt>${st.label}</dt><dd><i style="--v:${Math.max(0.06, st.of(w)).toFixed(3)}"></i></dd></div>`)
+    .join('')}</dl>`;
+}
 /** The name a hotbar slot goes by */
 function slotName(x: Slot) {
   if (x.kind === 'gun') return x.weapon ? WEAPONS[x.weapon].short : 'Empty';
@@ -83,7 +93,7 @@ function thing(save: TycoonSave, key: string, ammo?: (id: WeaponId) => [number, 
   if (it.kind === 'gun') {
     const w = applyGunMods(WEAPONS[it.weapon], gunMods(save, it.weapon));
     const [mag, res] = ammo?.(it.weapon) ?? [w.mag, w.reserve];
-    return { art: gunArt(it.weapon), name: WEAPONS[it.weapon].name, short: WEAPONS[it.weapon].short, count: String(mag), about: `${modLine(save, it.weapon)} · ${mag} / ${res}`, it };
+    return { art: gunArt(it.weapon), name: WEAPONS[it.weapon].name, short: WEAPONS[it.weapon].short, count: String(mag), about: `${modLine(save, it.weapon)} · ${mag} / ${res}`, stats: statBars(w), it };
   }
   if (it.kind === 'held') return { art: icon(HELD_ICONS[it.held]), name: HELD_NAMES[it.held], short: HELD_NAMES[it.held], count: '', about: 'For your hand: hold it out walking about.', it };
   const n = save.inventory.items[it.item] ?? 0;
@@ -104,6 +114,8 @@ export interface GridOpts {
   sel?: number | null;
   /** The weapon slot whose gun is out, and whether the thing in his hand is out */
   out?: { slot: 0 | 1 | null; held: boolean };
+  /** Where something was just dropped (it settles with a bounce) */
+  land?: number | null;
 }
 /** The two weapon slots, then the 4 x 4 grid, as two strings of markup */
 export function gridParts(save: TycoonSave, o: GridOpts) {
@@ -116,7 +128,7 @@ export function gridParts(save: TycoonSave, o: GridOpts) {
       const on = o.sel === -1 - i;
       const out = o.out?.slot === i;
       return (
-        `<${tag} class="inv-slot${t ? '' : ' is-empty'}${on ? ' is-sel' : ''}${out ? ' is-out' : ''}" data-slot="${i}"${o.live ? ` aria-pressed="${on}"` : ''} aria-label="Weapon slot ${i + 1}: ${t ? esc(t.name) : 'empty'}">` +
+        `<${tag} class="inv-slot${t ? '' : ' is-empty'}${on ? ' is-sel' : ''}${out ? ' is-out' : ''}${o.land === -1 - i ? ' is-landed' : ''}" data-slot="${i}"${o.live ? ` aria-pressed="${on}"` : ''} aria-label="Weapon slot ${i + 1}: ${t ? esc(t.name) : 'empty'}">` +
         `<span class="inv-key">${i + 1}</span>${t ? `<span class="inv-art">${t.art}</span><span class="inv-name">${esc(t.short)}</span><span class="inv-count">${t.count}</span>` : '<span class="inv-name">Empty</span>'}` +
         `${out ? '<span class="inv-badge">Out</span>' : ''}</${end}>`
       );
@@ -128,7 +140,7 @@ export function gridParts(save: TycoonSave, o: GridOpts) {
       const on = o.sel === i;
       const out = !!t && t.it.kind === 'held' && o.out?.held && save.inventory.held === t.it.held;
       return (
-        `<${tag} class="inv-cell${t ? '' : ' is-empty'}${on ? ' is-sel' : ''}${out ? ' is-out' : ''}" data-cell="${i}"${o.live ? ` aria-pressed="${on}"` : ''} aria-label="${t ? esc(t.name) : `Space ${i + 1}: empty`}">` +
+        `<${tag} class="inv-cell${t ? '' : ' is-empty'}${on ? ' is-sel' : ''}${out ? ' is-out' : ''}${o.land === i ? ' is-landed' : ''}" data-cell="${i}"${o.live ? ` aria-pressed="${on}"` : ''} aria-label="${t ? esc(t.name) : `Space ${i + 1}: empty`}">` +
         (t ? `<span class="inv-art">${t.art}</span><span class="inv-name">${esc(t.short)}</span>${t.count ? `<span class="inv-count">${t.count}</span>` : ''}${out ? '<span class="inv-badge">Out</span>' : ''}` : '') +
         `</${end}>`
       );
@@ -201,6 +213,8 @@ const DOUBLE = 380;
 const DRAG = 6;
 /** The mouse wheel steps the hotbar at most this often (ms) */
 const WHEEL_GAP = 120;
+/** How long what's dropped keeps its settling bounce (ms; the animation's own length is in inventory.css) */
+const LAND_MS = 400;
 
 export function createHotbar(root: HTMLElement, d: HotbarDeps) {
   const bar = root.querySelector<HTMLElement>('[data-hotbar]')!;
@@ -216,6 +230,10 @@ export function createHotbar(root: HTMLElement, d: HotbarDeps) {
   let sel: number | null = null;
   let tapped = { at: -99, t: 0 };
   let wheelAt = 0;
+  /** Where something was just dropped, and when */
+  let land = { at: null as number | null, t: 0 };
+  /** A mouse that hovers: the tip and the right-click */
+  const fine = matchMedia('(hover: hover) and (pointer: fine)');
 
   const save = () => d.game.save();
   const may = (id: WeaponId) => d.combat.canTake(id);
@@ -258,7 +276,9 @@ export function createHotbar(root: HTMLElement, d: HotbarDeps) {
         else holdOut(a.held);
         break;
       case 'empty':
-        d.game.toast(`Weapon slot ${x.kind === 'gun' ? x.i + 1 : ''} is empty: press Tab (or Bag) and drag a gun into it.`);
+        // (empty hands are his fists: the gun out goes away)
+        hands();
+        d.game.toast(`Weapon slot ${x.kind === 'gun' ? x.i + 1 : ''} is empty, so your hands are free. Press Tab (or Bag) and drag a gun into it.`);
         break;
       case 'use':
         useOne(d.game, a.item);
@@ -296,15 +316,22 @@ export function createHotbar(root: HTMLElement, d: HotbarDeps) {
     paint();
     return true;
   }
+  /** Something just landed at `i`: it settles with a bounce, and the selection goes with it */
+  function landed(i: number) {
+    land = { at: i, t: performance.now() };
+    sel = i;
+    paint();
+  }
   /** Drop what was dragged from `from` onto `to` (grid spaces 0-15, weapon slots -1 and -2) */
   function drop(from: number, to: number) {
     if (from === to) return;
     const s = save();
-    if (from >= 0 && to >= 0) return void done(moveCell(s, from, to, may), false);
-    if (from >= 0) return void done(equipCell(s, from, (-1 - to) as 0 | 1, may));
-    if (to >= 0) return void done(unequip(s, (-1 - from) as 0 | 1, to, may));
-    swapSlots(s);
-    done({ ok: true });
+    let r: InvResult = { ok: true };
+    if (from >= 0 && to >= 0) r = moveCell(s, from, to, may);
+    else if (from >= 0) r = equipCell(s, from, (-1 - to) as 0 | 1, may);
+    else if (to >= 0) r = unequip(s, (-1 - from) as 0 | 1, to, may);
+    else swapSlots(s);
+    if (done(r, !(from >= 0 && to >= 0))) landed(to);
   }
   /** What's at a selection: its key and the thing */
   function at(i: number | null) {
@@ -330,13 +357,24 @@ export function createHotbar(root: HTMLElement, d: HotbarDeps) {
     if (t.it.kind === 'held') return [current() === 'held' && save().inventory.held === t.it.held ? { id: 'away', label: 'Put away' } : { id: 'hold', label: 'Hold it' }];
     return [{ id: 'use', label: 'Use' }];
   }
+  /** A right-click's quick move: a weapon back in the bag, the rest their first action */
+  const quick = (i: number) => (i < 0 ? (at(i) ? { id: 'unequip', label: 'Back in bag' } : undefined) : actions(i)[0]);
   function act(id: string, i: number | null = sel) {
     const t = at(i);
     if (!t || i === null) return;
     d.touched();
-    if (id === 'slot0' || id === 'slot1') return void done(equipCell(save(), i, id === 'slot0' ? 0 : 1, may));
+    if (id === 'slot0' || id === 'slot1') {
+      const k = id === 'slot0' ? 0 : 1;
+      if (done(equipCell(save(), i, k, may))) landed(-1 - k);
+      return;
+    }
     if (id === 'unequip') {
-      if (done(unequip(save(), (-1 - i) as 0 | 1, undefined, may))) sel = null;
+      const key = t.it.kind === 'gun' ? `gun:${t.it.weapon}` : '';
+      if (done(unequip(save(), (-1 - i) as 0 | 1, undefined, may))) {
+        const to = layout(save(), may).indexOf(key);
+        if (to >= 0) landed(to);
+        else sel = null;
+      }
       return paint();
     }
     if (id === 'draw' && t.it.kind === 'gun') drawGun(t.it.weapon);
@@ -380,18 +418,55 @@ export function createHotbar(root: HTMLElement, d: HotbarDeps) {
     }
     if (!open) return;
     const out = { slot: outSlot(), held: now === 'held' };
-    const { weapons, cells } = gridParts(s, { ammo: (w) => d.combat.ammo(w), may, live: true, sel, out });
+    const landing = land.at !== null && performance.now() - land.t < LAND_MS ? land.at : null;
+    const { weapons, cells } = gridParts(s, { ammo: (w) => d.combat.ammo(w), may, live: true, sel, out, land: landing });
     repaint(weaponsEl, weapons);
     repaint(gridEl, cells);
     const t = at(sel);
     repaint(
       infoEl,
       t
-        ? `<div class="inv-about"><b>${esc(t.name)}</b><small>${esc(t.about)}</small></div><div class="inv-acts">${actions(sel)
+        ? `<div class="inv-about"><b>${esc(t.name)}</b><small>${esc(t.about)}</small>${t.stats ?? ''}</div><div class="inv-acts">${actions(sel)
             .map((a) => `<button type="button" class="chip-link" data-inv-act="${a.id}">${a.label}</button>`)
             .join('')}</div>`
-        : `<div class="inv-about"><b>Your bag</b><small>Drag a gun onto weapon slot 1 or 2, and back. Tap anything to see what it does; double tap to use it.</small></div>`
+        : `<div class="inv-about"><b>Your bag</b><small>${
+            fine.matches
+              ? 'Drag a gun onto weapon slot 1 or 2, and back. Click anything to see what it does; double click or right-click to use it.'
+              : 'Drag a gun onto weapon slot 1 or 2, and back. Tap anything to see what it does; double tap to use it.'
+          }</small></div>`
     );
+    // (the tip follows what it shows: ammo after a reload, a space emptied under it)
+    if (tipAt !== null) tipFor(tipAt);
+  }
+
+  /* The tip under a mouse: what's hovered, its stats and its right-click */
+  let tip: HTMLElement | null = null;
+  let tipAt: number | null = null;
+  function tipFor(i: number | null, el?: Element) {
+    const t = i === null || drag?.moved ? null : at(i);
+    if (!t || i === null) {
+      tip?.remove();
+      tip = null;
+      tipAt = null;
+      return;
+    }
+    tipAt = i;
+    if (!tip) {
+      tip = document.createElement('div');
+      tip.className = 'inv-tip';
+      tip.setAttribute('role', 'tooltip');
+      document.body.append(tip);
+    }
+    const q = quick(i);
+    repaint(tip, `<b>${esc(t.name)}</b><small>${esc(t.about)}</small>${t.stats ?? ''}${q ? `<span class="inv-tip-hint">Right-click · ${q.label}</span>` : ''}`);
+    if (!el) return;
+    // Over the thing if there's room, under it if not, inside the window
+    const r = el.getBoundingClientRect();
+    const w = tip.offsetWidth;
+    const h = tip.offsetHeight;
+    const top = r.top - h - 8 >= 8 ? r.top - h - 8 : r.bottom + 8;
+    tip.style.left = `${Math.round(Math.min(innerWidth - w - 8, Math.max(8, r.left + r.width / 2 - w / 2)))}px`;
+    tip.style.top = `${Math.round(top)}px`;
   }
 
   function show() {
@@ -412,6 +487,7 @@ export function createHotbar(root: HTMLElement, d: HotbarDeps) {
     ghost?.remove();
     ghost = null;
     panel.hidden = true;
+    tipFor(null);
     root.classList.remove('is-inv');
     d.closed();
     return true;
@@ -443,6 +519,7 @@ export function createHotbar(root: HTMLElement, d: HotbarDeps) {
       ghost.innerHTML = src?.querySelector('.inv-art')?.outerHTML ?? '';
       document.body.append(ghost);
       src?.classList.add('is-lifted');
+      tipFor(null);
     }
     if (!drag.moved || !ghost) return;
     e.preventDefault();
@@ -484,6 +561,23 @@ export function createHotbar(root: HTMLElement, d: HotbarDeps) {
   };
   window.addEventListener('pointerup', endDrag);
   window.addEventListener('pointercancel', endDrag);
+  // A mouse: the tip over what's hovered, and the right-click's quick move
+  panel.addEventListener('pointerover', (e) => {
+    if (e.pointerType !== 'mouse' || !fine.matches || drag?.moved) return;
+    const el = (e.target as Element).closest('[data-cell], [data-slot]');
+    const i = targetOf(el);
+    if (i !== tipAt) tipFor(i, el ?? undefined);
+  });
+  panel.addEventListener('pointerleave', () => tipFor(null));
+  panel.addEventListener('contextmenu', (e) => {
+    const i = targetOf(e.target as Element);
+    if (i === null) return;
+    e.preventDefault();
+    const q = quick(i);
+    if (!q) return;
+    sel = i;
+    act(q.id, i);
+  });
   panel.addEventListener('click', (e) => {
     const t = e.target as HTMLElement;
     if (t.closest('[data-inv-close]')) return void close();

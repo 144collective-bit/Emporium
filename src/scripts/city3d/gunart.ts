@@ -1,9 +1,19 @@
 /*
  * The guns' small side-on silhouettes (SVG paths in a 120 x 40 box), shared by
  * the gun store's cards (gunshop.ts) and the inventory's hotbar and Bag
- * (inventory-ui.ts), so the hotbar doesn't pull the store into the boot.
+ * (inventory-ui.ts), so the hotbar doesn't pull the store into the boot,
+ * and how the guns compare for their stat bars.
  */
-import type { WeaponId } from './combat-sim';
+import type { Weapon, WeaponId } from './combat-sim';
+
+/** How each gun compares (0..1) for the stat bars (of the stock gun, or the gun with its mods on); the inventory shows the first three */
+export const STATS: { key: string; label: string; of: (w: Weapon) => number }[] = [
+  { key: 'dmg', label: 'Damage', of: (w) => Math.min(1, (w.damage * w.pellets) / 90) },
+  { key: 'rate', label: 'Fire rate', of: (w) => Math.min(1, w.rate / 15) },
+  { key: 'range', label: 'Range', of: (w) => Math.min(1, w.range / 120) },
+  { key: 'acc', label: 'Accuracy', of: (w) => 1 - Math.min(1, w.spreadAim / 0.05) * 0.9 },
+  { key: 'mag', label: 'Magazine', of: (w) => Math.min(1, w.mag / 40) },
+];
 
 /** Small side-on silhouettes for the cards (SVG paths, 120 x 40) */
 export const ART: Record<WeaponId, string> = {

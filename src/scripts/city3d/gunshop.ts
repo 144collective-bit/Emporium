@@ -16,21 +16,12 @@
  * closes. The views are patched in place (repaint), so a button never changes
  * under a finger.
  */
-import { WEAPONS, WEAPON_IDS, type Weapon, type WeaponId } from './combat-sim';
+import { WEAPONS, WEAPON_IDS, type WeaponId } from './combat-sim';
 import { GUN_CATALOG, GUN_MODS, GUN_MOD_IDS, MOD_LEVELS, applyGunMods, type GunModId } from './catalog';
 import { buyGun, gunModCost, gunMods, level, modGun, ownsGun } from './tycoon';
 import { carryGun } from './inventory';
 import { D, LV, esc, fmt, repaint, whyNot, type GameDeps } from './ui';
-import { ART } from './gunart';
-
-/** How each gun compares (0..1) for the stat bars (of the stock gun, or the gun with its mods on) */
-const STATS: { key: string; label: string; of: (w: Weapon) => number }[] = [
-  { key: 'dmg', label: 'Damage', of: (w) => Math.min(1, (w.damage * w.pellets) / 90) },
-  { key: 'rate', label: 'Fire rate', of: (w) => Math.min(1, w.rate / 15) },
-  { key: 'range', label: 'Range', of: (w) => Math.min(1, w.range / 120) },
-  { key: 'acc', label: 'Accuracy', of: (w) => 1 - Math.min(1, w.spreadAim / 0.05) * 0.9 },
-  { key: 'mag', label: 'Magazine', of: (w) => Math.min(1, w.mag / 40) },
-];
+import { ART, STATS } from './gunart';
 
 export interface ShopDeps {
   /** Lifetime score (decides which starters are unlocked) */

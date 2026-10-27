@@ -416,6 +416,117 @@ button.inv-cell {
 .inv-acts .chip-link {
   cursor: pointer;
 }
+/* A gun's stat bars (damage, fire rate, range; its mods on) */
+.inv-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin: 4px 0 0;
+}
+.inv-stats > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.inv-stats dt {
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  letter-spacing: 0.08em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--muted);
+}
+.inv-stats dd {
+  height: 4px;
+  margin: 0;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #ffffff14;
+}
+.inv-stats i {
+  display: block;
+  width: calc(var(--v, 0) * 100%);
+  height: 100%;
+  border-radius: inherit;
+  background: var(--pulse);
+}
+/* A mouse hovering: a tip over the thing with what it is, its stats and its right-click */
+.inv-tip {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 50;
+  display: grid;
+  gap: 3px;
+  width: 220px;
+  padding: 9px 11px;
+  border: 1px solid #0000;
+  border-radius: 10px;
+  background:
+    linear-gradient(#0b0a12f5, #0b0a12f5) padding-box,
+    var(--pulse) border-box;
+  box-shadow: 0 12px 30px -12px #000c;
+  pointer-events: none;
+}
+.inv-tip b {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1.05;
+  text-transform: uppercase;
+  color: #fff;
+}
+.inv-tip small {
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--muted);
+}
+.inv-tip-hint {
+  margin-top: 3px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--p-cyan, #00eaff);
+}
+/* The panel rises in, and what's dropped settles with a small bounce */
+@media (prefers-reduced-motion: no-preference) {
+  .inv:not([hidden]) {
+    animation: inv-in 0.18s var(--ease) both;
+  }
+  .inv-slot.is-landed,
+  .inv-cell.is-landed {
+    animation: inv-land 0.32s var(--ease);
+  }
+  .inv-tip {
+    animation: inv-tip 0.12s ease-out both;
+  }
+}
+@keyframes inv-in {
+  from {
+    opacity: 0;
+    translate: 0 14px;
+  }
+}
+@keyframes inv-land {
+  0% {
+    scale: 0.88;
+  }
+  60% {
+    scale: 1.05;
+  }
+  100% {
+    scale: 1;
+  }
+}
+@keyframes inv-tip {
+  from {
+    opacity: 0;
+  }
+}
 /* The inventory open: the walk HUD's buttons, the hotbar and the door prompt step aside */
 .city.is-inv .hotbar,
 .city.is-inv .walk-prompt,
@@ -486,6 +597,9 @@ button.inv-cell {
   .inv .inv-label:nth-of-type(2) {
     align-self: end;
   }
+  .inv .inv-stats {
+    display: none;
+  }
   .inv-slot {
     min-height: 50px;
   }
@@ -494,8 +608,11 @@ button.inv-cell {
     height: 52px;
   }
 }
-/* Short phones upright (320 x 568): flatter cells, so the grid and the info fit without scrolling */
+/* Short phones upright (320 x 568): flatter cells, so the grid and the info fit without scrolling (the stat bars are the gun store's there) */
 @media (max-width: 640px) and (max-height: 640px) {
+  .inv .inv-stats {
+    display: none;
+  }
   .inv {
     gap: 6px;
     padding: 10px 12px;
