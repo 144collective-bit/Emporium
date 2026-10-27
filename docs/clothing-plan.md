@@ -163,6 +163,48 @@ waving.
    the knee, the break over the shoe, the joggers' cuff gathered. Shoes:
    the dress shoe and the sneaker re-profiled (a rounded toe box, the
    heel, the sole's curve), the boots.
+
+   **Built** (27 October 2026):
+   - **The desktop level** (`Detail` 3 in wardrobe.ts): single figures on
+     the high and medium tiers (`figureDetail()` in character.ts, set by
+     index.ts from the tier; phones keep 2). Rings half as many again
+     (`R()`), laid-on details bent over 2 cm, and `curve()`: sections
+     every 2 cm (1.5 cm on a shoe) on a smooth Catmull-Rom curve through a
+     shape's own, so a silhouette bends instead of breaking at each
+     section. The lab builds it by default (`detail=2` for the phone's;
+     `at` sets the height the camera looks at, 0.08 for the shoes).
+   - **Trousers and joggers:** the legs curved from the upper thigh down
+     (the rows under the crotch stay as they are: the top's hem swings
+     over them); the break, the cuff cut on a slant (`trousers()`'s `hem`:
+     longer at the back, over the heel) over a soft fold just above the
+     shoe; the crease laid on the leg as it's built; the joggers gathered
+     at the cuff (a fuller shin pulled into the ribbing), their stripes on
+     the same sections.
+   - **Shoes:** each a loft along its length (`shoe()`, `ShoeSec`: a
+     section's half-width, bottom and top), in place of the extruded side
+     profiles: the heel and collar, the instep, a rounded toe box
+     (`toe()`: an ellipse's share of the last section, rising a little),
+     on a sole worked out from the upper (`sole()`: wider, from the ground
+     to over the upper's edge, past heel and toe; the dress shoe's lifted
+     in front of its heel block). The sneaker's laces and stripe lie on
+     its top and side. The boots the same way, taller.
+   - **What the test found:** finer tops over the hips met the trousers'
+     crotch at a sprint (the extra vertices of the hem fell between the
+     trousers' own), so on the desktop the tops' bodies keep the phone's
+     ring count until Phases 3 and 4 smooth them (`TR()`) and the trousers
+     take 28 (`LEGS`); every outfit holds within 2 mm at both levels.
+   - **Cost**, triangles a figure, before and after (single figure on a
+     phone / on a desktop / near crowd / far crowd): suit 15.5k → 14.8k /
+     25.8k / 8.5k → 8.2k / 3.2k → 3.3k; hoodie 13.7k → 13.9k / 22.8k /
+     8.9k → 8.6k / 3.2k → 3.4k; track 15.4k → 15.6k / 23.6k / 9.2k → 8.9k /
+     3.7k → 3.9k; varsity 14.1k → 14.2k / 23.8k; puffer 16.5k → 16.7k /
+     25.5k (the crowd's shoes take every other section, the far crowd's
+     every fourth). Draw calls unchanged.
+   - **The boot's code:** the new shapes cost 0.4 KB gzipped; the fight's
+     rules came out of the boot (the moves and styles moved to
+     `fight-moves.ts`, which the screens and the save read; fight-sim.ts
+     loads with the fight), 4.3 KB, so it's 665.9 of its 670 (669.8
+     before).
 3. **The suit, smoother.** The jacket's shoulders, chest and waist taper,
    the hem's curve, the sleeves' taper to the cuff, the lapels and collar
    lying flat on a smooth chest, the shirt and tie.

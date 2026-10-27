@@ -20,7 +20,7 @@ export interface Dressed {
 }
 
 /** Everything an outfit wears on the single figure (detail 2, the skinned body), at rest */
-export function dress(o: Outfit, q: 0 | 1 | 2 = 2): Dressed {
+export function dress(o: Outfit, q: 0 | 1 | 2 | 3 = 2): Dressed {
   const sk = makeSkeleton();
   sk.root.updateMatrixWorld(true);
   const worn: Worn[] = [];

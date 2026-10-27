@@ -29,9 +29,10 @@
  *   program in turn (REEL), for a recording in one take.
  * - The address can set it all up for recordings: `prog` (`reel` for the
  *   reel), `gait`, `cam`, `floor`, `speed`, `gun`, `aim=0`, `pitch`,
- *   `outfit`, `held`, `orbit`, `compare=0`, `traces=0`, `score=0`, and
- *   `clip`, the clipping view (the top, trousers and shoes in colours far
- *   apart: docs/clothing-plan.md).
+ *   `outfit`, `held`, `orbit`, `compare=0`, `traces=0`, `score=0`,
+ *   `at`, `clip`, the clipping view (the top, trousers and shoes in colours far
+ *   apart: docs/clothing-plan.md), and `detail=2`, the clothes as a phone
+ *   builds them (the desktop's, 3, by default).
  */
 import * as THREE from 'three';
 import { PLAYER, SOLDIER, createDegen, type Degen } from './character';
@@ -332,6 +333,8 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   let speed = Number(q.get('speed')) || 1;
   // (recordings: closer in, and the cheaper drawing)
   const near = Number(q.get('zoom')) || 1;
+  // (`at`: the height the camera looks at, the hips by default; 0.08 for the shoes)
+  const lookY = q.has('at') ? Number(q.get('at')) : 0.62;
   if (q.has('low')) d = { ...d, low: true };
   // (`rec`: recordings draw a frame only when asked, with the outlines but none of the costly finish)
   const rec = q.has('rec');
@@ -509,8 +512,9 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   // layer coming through another shows at a glance)
   const clip = q.has('clip') ? { top: '#d0463e', bottom: '#3f73c8', shoes: '#ece9e0', tie: '#f2c230' } : {};
   const outfit = { ...(kind === 'soldier' ? SOLDIER : kind ? { ...PLAYER, kind } : PLAYER), held, ...clip };
-  const hero: Degen = createDegen(outfit);
-  const old: Degen = createDegen(outfit);
+  const detail = q.get('detail') === '2' ? 2 : 3;
+  const hero: Degen = createDegen(outfit, detail);
+  const old: Degen = createDegen(outfit, detail);
   scene.add(hero.g, old.g);
   const loco = createLocomotion();
 
@@ -877,7 +881,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   const target = (out: THREE.Vector3) => {
     const [dx, dz] = compare ? beside() : [0, 0];
     const clear = cam === 'side' && innerWidth > 600 ? 1.3 / near : 0;
-    return out.set(x + dx / 2, y + 0.62, z + dz / 2 + clear);
+    return out.set(x + dx / 2, y + lookY, z + dz / 2 + clear);
   };
   const want = new THREE.Vector3();
   // (the camera keeps exactly with them: eased after a runner, it trails and the picture slides off the figures)

@@ -113,9 +113,11 @@ function each(d: Dressed, fn: (name: string) => void) {
   }
 }
 
+// (both single figures: a phone's, detail 2, and a desktop's, 3)
+for (const q of [2, 3] as const)
 for (const o of OUTFITS)
-  test(`clothes: the ${o.kind}'s trousers stay under the top`, () => {
-    const d = dress(o);
+  test(`clothes: the ${o.kind}'s trousers stay under the top (detail ${q})`, () => {
+    const d = dress(o, q);
     const rest = atRest(d, 'bottom', 'top');
     assert.ok(
       rest.covered.flat().some(Boolean),
@@ -129,6 +131,6 @@ for (const o of OUTFITS)
       const where = (p?: number[]) => (p ? ` at ${p.map((k) => k.toFixed(3)).join(',')}` : '');
       if (r.outN || r.sunkN) bad.push(`${name}: ${r.outN} out (${(r.out * 1000).toFixed(1)}${where(r.outAt)}), ${r.sunkN} sunk (${(r.sunk * 1000).toFixed(1)}${where(r.sunkAt)})`);
     });
-    if (report) console.log(`${o.kind}: worst out ${(worst.out * 1000).toFixed(1)}, sunk ${(worst.sunk * 1000).toFixed(1)} (thousandths)\n  ${bad.join('\n  ')}`);
+    if (report) console.log(`${o.kind} q${q}: worst out ${(worst.out * 1000).toFixed(1)}, sunk ${(worst.sunk * 1000).toFixed(1)} (thousandths)\n  ${bad.join('\n  ')}`);
     assert.deepEqual(bad, [], `${o.kind}: the trousers come through the top`);
   });

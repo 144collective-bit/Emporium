@@ -326,7 +326,11 @@ function atlasUV(geo: THREE.BufferGeometry, id: MarkId) {
  * about four draw calls whatever he wears. Things in the hand (a coffee, a
  * rifle) ride the hand bone unbent.
  */
-export function createDegen(o: Outfit = PLAYER, q: Detail = 2): Degen {
+/** A single figure's detail where its caller doesn't say: 2 on phones, 3 on desktops (the city sets it by its tier) */
+let figure: Detail = 2;
+export const figureDetail = (q: Detail) => void (figure = q);
+
+export function createDegen(o: Outfit = PLAYER, q: Detail = figure): Degen {
   const sk = makeSkeleton();
   sk.root.updateMatrixWorld(true);
   const skeleton = new THREE.Skeleton(sk.list);

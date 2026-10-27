@@ -133,8 +133,12 @@ export function lookOutfit(l: Look): Outfit {
 
 /* ---------- Shapes ---------- */
 
-/** Detail level: 0 the light (phone) crowd, 1 the crowd, 2 a single figure (the player, the hologram) */
-export type Detail = 0 | 1 | 2;
+/**
+ * Detail level: 0 the light (phone) crowd, 1 the crowd, 2 a single figure (the player, the hologram) on a
+ * phone, 3 a single figure on a desktop (docs/clothing-plan.md: finer rings, smoother curves, finer laid-on
+ * details; `figureDetail()` in character.ts picks 2 or 3 by the city's tier)
+ */
+export type Detail = 0 | 1 | 2 | 3;
 
 /** A cross-section: height, half-width, half-depth and how far forward its middle sits */
 type Sec = [y: number, hw: number, hd: number, z?: number];
@@ -333,28 +337,6 @@ function roundRect(w: number, h: number, n = 4, pts = 24, squeeze = 0, cy = 0) {
   return s;
 }
 
-/**
- * A side profile (forward, up) turned into a solid `w` wide, rounded at the
- * edges (shoes). The first two points are the flat bottom; the rest is a
- * smooth curve over the toe, the top and the heel.
- */
-function profile(pts: [number, number][], w: number, round: number, curve = 6) {
-  const v = pts.map(([u, y]) => new THREE.Vector2(u, y));
-  const s = new THREE.Shape().moveTo(v[0].x, v[0].y).lineTo(v[1].x, v[1].y);
-  s.splineThru(v.slice(2).concat([v[0]]));
-  const g = new THREE.ExtrudeGeometry(s, {
-    depth: w - round * 2,
-    bevelEnabled: round > 0,
-    bevelThickness: round,
-    bevelSize: round,
-    bevelOffset: -round,
-    bevelSegments: 2,
-    curveSegments: curve,
-  });
-  g.translate(0, 0, -(w - round * 2) / 2);
-  return g.rotateY(-Math.PI / 2);
-}
-
 const tube = (pts: [number, number, number][], r: number, seg: number, rad = 5) =>
   new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts.map(([x, y, z]) => new THREE.Vector3(x, y, z))), seg, r, rad);
 
@@ -402,6 +384,35 @@ const fine = (secs: Sec[], from = -0.095, to = 0.14, step = 0.02): Sec[] => {
 };
 
 /**
+ * The same shape with sections every `step` between its own, on a smooth
+ * curve through them (Catmull-Rom on the widths, depths and middles), so its
+ * silhouette bends instead of breaking at every section: the desktop's finer
+ * clothes
+ */
+function curve(secs: Sec[], step: number): Sec[] {
+  const ss = sorted(secs);
+  const c = new THREE.CatmullRomCurve3(ss.map(([, hw, hd, z = 0]) => new THREE.Vector3(hw, hd, z)), false, 'catmullrom');
+  return ss.flatMap(([y], i): Sec[] => {
+    const y1 = ss[i + 1]?.[0];
+    if (y1 === undefined) return [ss[i]];
+    const n = Math.max(1, Math.round((y1 - y) / step));
+    return Array.from({ length: n }, (_, k) => {
+      const v = c.getPoint((i + k / n) / (ss.length - 1));
+      return [y + ((y1 - y) * k) / n, v.x, v.y, v.z];
+    });
+  });
+}
+
+/** A shoe's section along its length: u forward from the ankle, its half-width, and its bottom and top */
+type ShoeSec = [u: number, hw: number, bottom: number, top: number];
+/** A shoe or its sole as a loft along its length (in the shin's numbers), rounded across (`n`) */
+function shoe(secs: ShoeSec[], seg: number, n = 2.6, step = 0) {
+  const s: Sec[] = secs.map(([u, hw, b, t]) => [u, hw, (t - b) / 2, -(t + b) / 2]);
+  // (lofted along y, turned so its length runs forward and its sections stand up)
+  return loft(step ? curve(s, step) : s, seg, n).rotateX(Math.PI / 2);
+}
+
+/**
  * Trousers in one piece (docs/clothing-plan.md), in the hips' numbers: the
  * seat from the waist down to the crotch (`seat`: sections of the whole hips,
  * round the middle), then each leg down to the cuff (`leg`: sections round the
@@ -410,9 +421,10 @@ const fine = (secs: Sec[], from = -0.095, to = 0.14, step = 0.02): Sec[] => {
  * half runs straight down the middle (where the two halves meet: not drawn);
  * from the crotch down the inner halves are the insides of the legs, meeting
  * along the seam. A point both legs share is one vertex, so the seams shade
- * and bend as one.
+ * and bend as one. `hem`: the cuff cut on a slant, longer at the back by
+ * that much over the shoe (the break), its last two sections.
  */
-function trousers(seat: Sec[], leg: Sec[], seg: number, n = 2.2) {
+function trousers(seat: Sec[], leg: Sec[], seg: number, n = 2.2, hem = 0) {
   const N = Math.max(8, seg + (seg % 2));
   const H = N / 2;
   const se = (c: number) => Math.sign(c) * Math.abs(c) ** (2 / n);
@@ -425,10 +437,19 @@ function trousers(seat: Sec[], leg: Sec[], seg: number, n = 2.2) {
     if (half && j > H) return [0, y, z + hd * (-1 + (2 * (j - H)) / H)];
     return [s * ((half ? 0 : LEG_X) + se(Math.cos(a)) * hw), y, z + se(Math.sin(a)) * hd];
   };
+  const last = rows.length - 1;
   const tri = (s: number, a: number, b: number, c: number) => (s > 0 ? idx.push(a, b, c) : idx.push(a, c, b));
   for (const s of [-1, 1]) {
     const base = pos.length / 3;
-    for (const { s: sec, half } of rows) for (let j = 0; j < N; j++) pos.push(...at(s, sec, half, j));
+    rows.forEach(({ s: sec, half }, r) => {
+      // (the break: the last sections slanting down to the back, half as much on the one before)
+      const k = r === last ? 1 : r === last - 1 ? 0.5 : 0;
+      for (let j = 0; j < N; j++) {
+        const p = at(s, sec, half, j);
+        if (k) p[1] += k * hem * (0.67 * Math.cos((j / N) * Math.PI * 2) - 0.33);
+        pos.push(...p);
+      }
+    });
     const v = (r: number, j: number) => base + r * N + (j % N);
     for (let r = 0; r < rows.length - 1; r++)
       for (let j = 0; j < N; j++) {
@@ -441,7 +462,6 @@ function trousers(seat: Sec[], leg: Sec[], seg: number, n = 2.2) {
     const [yb, , , zb = 0] = rows[rows.length - 1].s;
     const ct = pos.length / 3;
     pos.push(s * hwt * 0.4, yt, zt, s * LEG_X, yb, zb);
-    const last = rows.length - 1;
     for (let j = 0; j < N; j++) {
       tri(s, ct, v(0, j), v(0, j + 1));
       tri(s, ct + 1, v(last, j + 1), v(last, j));
@@ -550,13 +570,18 @@ export function items(q: Detail, hero = false): Item[] {
   const key = `${q}${hero ? 'h' : ''}`;
   if (itemsCache[key]) return itemsCache[key]!;
   /** Ring segments at this detail level */
-  const R = (n: number) => Math.max(5, Math.round(n * [0.36, 0.7, 1][q]));
-  const L = (s: number) => (q === 2 ? s : Math.max(2, Math.round(s * 0.6)));
-  bend = q === 2 ? 0.03 : 0;
+  const R = (n: number) => Math.max(5, Math.round(n * [0.36, 0.7, 1, 1.5][q]));
+  bend = q === 3 ? 0.02 : q === 2 ? 0.03 : 0;
+  /**
+   * The tops' bodies keep the phone's rings on the desktop until their own phases (3 and 4) smooth them,
+   * and the trousers take 28: the counts the clipping test holds (finer tops over the hips met the
+   * trousers' crotch at a sprint)
+   */
+  const TR = (n: number) => (q === 3 ? n : R(n));
+  const LEGS = q === 3 ? 28 : R(20);
   /** People far from the camera: plain boxes for rounded ones, shoes without rounded edges */
   const far = q === 0;
   const rb = (w: number, h: number, d: number, r: number, x = 0, y = 0, z = 0) => (far ? new THREE.BoxGeometry(w, h, d).translate(x, y, z) : rbox(w, h, d, r, x, y, z));
-  const prof = (pts: [number, number][], w: number, round: number, curve = 6) => (far ? profile(pts, w, 0, 1) : profile(pts, w, round, curve));
   const P = (joint: Joint, geo: THREE.BufferGeometry, color: string | ColorKey, extra: Partial<Piece> = {}): Piece => ({ joint, geo, color, ...extra });
   /** The same piece on both sides (one geometry, or one per side for things that sit on the outside) */
   const both = (
@@ -831,7 +856,7 @@ export function items(q: Detail, hero = false): Item[] {
     [-0.128, 0.326],
     [-0.12, 0.372],
   ];
-  const jacket = loft(hips(SUIT), R(22), SN);
+  const jacket = loft(hips(SUIT), TR(22), SN);
   const lapels = [onBody(lapelPts, 0.009, suitFront, 0.003), onBody(mirror(lapelPts), 0.009, suitFront, 0.003)];
   const flaps = [-1, 1].map((s) =>
     onBody(
@@ -916,13 +941,13 @@ export function items(q: Detail, hero = false): Item[] {
   ];
   const HN2 = 2.2;
   const hoodieFront = surface(HOODIE, HN2);
-  const hoodieBody = loft(hips(HOODIE), R(22), HN2);
+  const hoodieBody = loft(hips(HOODIE), TR(22), HN2);
   const hem = loft(
     [
       [-0.095, 0.152, 0.104, 0],
       [-0.05, 0.155, 0.106, 0],
     ],
-    R(22),
+    TR(22),
     HN2
   );
   const pouch = onBody(
@@ -955,7 +980,7 @@ export function items(q: Detail, hero = false): Item[] {
   );
   const TRACK = grow(HOODIE, 0.96);
   const trackFront = surface(TRACK, HN2);
-  const trackBody = loft(hips(TRACK), R(22), HN2);
+  const trackBody = loft(hips(TRACK), TR(22), HN2);
   const trackCollar = new THREE.CylinderGeometry(0.06, 0.066, 0.05, R(16), 1, true).translate(0, 0.42, -0.004);
   const zip = [
     onBody(
@@ -973,7 +998,7 @@ export function items(q: Detail, hero = false): Item[] {
   ];
 
   const FATIGUES = grow(SUIT, 1.03);
-  const fatigues = loft(hips(FATIGUES), R(22), 2.8);
+  const fatigues = loft(hips(FATIGUES), TR(22), 2.8);
   const VEST: Sec[] = [
     [0.05, 0.155, 0.11, 0],
     [0.2, 0.168, 0.118, 0.006],
@@ -1068,32 +1093,38 @@ export function items(q: Detail, hero = false): Item[] {
     [-0.28, hw * 0.98, hd * 0.98, 0.002],
     [-0.295, hw, hd, 0.001],
   ];
-  // (the shin's sections, in its own numbers: the crease lies on them)
+  // The desktop's legs: a section every 2 cm on a smooth curve through these
+  // (from the upper thigh down: the rows under the crotch stay as they are, where the top's hem swings over them)
+  const legs = (secs: Sec[]) => (q === 3 ? [...secs.filter(([y]) => y > -0.2), ...curve(secs.filter(([y]) => y < -0.2), 0.02)] : secs);
+  const onShin = (secs: Sec[]): Sec[] => secs.map(([y, hw, hd, z = 0]) => [y - THIGH, hw, hd, z]);
+  const offShin = (secs: Sec[]): Sec[] => secs.map(([y, hw, hd, z = 0]) => [y + THIGH, hw, hd, z]);
+  // (the shin, in its own numbers: a fold of the break just over the shoe)
   const SHIN_S: Sec[] = [
     [-0.02, 0.049, 0.053, 0],
     [-0.11, 0.05, 0.055, -0.004],
     [-0.21, 0.046, 0.05, 0],
-    [-0.27, 0.051, 0.057, 0.004],
-    [-0.285, 0.051, 0.057, 0.004],
+    [-0.25, 0.05, 0.056, 0.004],
+    [-0.27, 0.052, 0.058, 0.005],
+    [-0.285, 0.051, 0.057, 0.005],
   ];
-  const onShin = (secs: Sec[]): Sec[] => secs.map(([y, hw, hd, z = 0]) => [y - THIGH, hw, hd, z]);
-  const LEG_S: Sec[] = [[-0.12, 0.061, 0.065, 0.001], [-0.15, 0.058, 0.062, 0.002], [-0.21, 0.054, 0.058, 0.001], ...knee(0.049, 0.052), ...onShin(SHIN_S)];
-  const trouserLegs = trousers(hips(SEAT), LEG_S, R(20));
+  const LEG_S = legs([[-0.12, 0.061, 0.065, 0.001], [-0.15, 0.058, 0.062, 0.002], [-0.21, 0.054, 0.058, 0.001], ...knee(0.049, 0.052), ...onShin(SHIN_S)]);
+  const trouserLegs = trousers(hips(SEAT), LEG_S, LEGS, 2.2, 0.012);
+  // The crease down the front of the shin, on the leg as it's built
   const crease =
-    q === 2
+    q >= 2
       ? onBody(
           [
-            [-0.002, -0.27],
-            [0.002, -0.27],
+            [-0.002, -0.25],
+            [0.002, -0.25],
             [0.002, -0.02],
             [-0.002, -0.02],
           ],
           0.002,
-          surface(SHIN_S),
+          surface(offShin(LEG_S)),
           0.0005
         )
       : null;
-  // Joggers: looser over the thigh (narrower right under the hems), tapering into the cuff
+  // Joggers: looser over the thigh (narrower right under the hems), tapering and gathered into the cuff
   const JOG_THIGH: Sec[] = [
     [-0.12, 0.062, 0.064, 0.002],
     [-0.15, 0.064, 0.066, 0.003],
@@ -1102,10 +1133,13 @@ export function items(q: Detail, hero = false): Item[] {
   const JOG_SHIN: Sec[] = [
     [-0.02, 0.053, 0.057, 0],
     [-0.11, 0.052, 0.056, -0.004],
-    [-0.2, 0.043, 0.046, 0],
+    [-0.18, 0.046, 0.049, 0],
+    [-0.2, 0.047, 0.05, 0.001],
+    [-0.215, 0.046, 0.049, 0.001],
     [-0.235, 0.039, 0.042, 0],
   ];
-  const joggers = trousers(hips(SEAT), [...JOG_THIGH, ...knee(0.053, 0.057), ...onShin(JOG_SHIN)], R(20));
+  const JOG_S = legs([...JOG_THIGH, ...knee(0.053, 0.057), ...onShin(JOG_SHIN)]);
+  const joggers = trousers(hips(SEAT), JOG_S, LEGS);
   const joggerCuff = loft(
     [
       [-0.258, 0.042, 0.045, 0.002],
@@ -1116,7 +1150,7 @@ export function items(q: Detail, hero = false): Item[] {
   // Fatigues: fuller still, into the boots
   const cargo = trousers(
     hips(grow(SEAT, 1.02)),
-    [
+    legs([
       [-0.12, 0.066, 0.071, 0.001],
       [-0.15, 0.066, 0.071, 0.002],
       [-0.21, 0.062, 0.066, 0.001],
@@ -1126,7 +1160,7 @@ export function items(q: Detail, hero = false): Item[] {
         [-0.12, 0.054, 0.058, -0.004],
         [-0.2, 0.05, 0.054, 0],
       ]),
-    ],
+    ]),
     R(20)
   );
   // Cargo pockets on the outside of each thigh
@@ -1202,9 +1236,8 @@ export function items(q: Detail, hero = false): Item[] {
   const upperStripes = sleeveStripes(UPPER_S, -0.2);
   // (stopping short of the cuff, which is narrower than the sleeve)
   const foreStripes = sleeveStripes(FORE_S, -0.172);
-  const thighStripes = [-1, 1].map((s) => mergeGeometries(stripe([...JOG_THIGH, ...knee(0.053, 0.057)], s, -0.12, -0.265, 2.2))!);
-  const jogShinS: Sec[] = [...knee(0.053, 0.057).map(([y, ...rest]): Sec => [y + THIGH, ...rest]), ...JOG_SHIN];
-  const shinStripes = [-1, 1].map((s) => mergeGeometries(stripe(jogShinS, s, 0.025, -0.2, 2.2))!);
+  const thighStripes = [-1, 1].map((s) => mergeGeometries(stripe(JOG_S, s, -0.12, -0.265, 2.2))!);
+  const shinStripes = [-1, 1].map((s) => mergeGeometries(stripe(offShin(JOG_S), s, 0.025, -0.2, 2.2))!);
   // A hand at rest: palm towards the leg, fingers curled, the thumb along the front.
   // Drawn in the forearm's numbers and moved into the wrist's space (`onWrist`), so the wrist turns it
   const onWrist = (list: THREE.BufferGeometry[]) => list.map((g) => g.translate(0, -WRIST_Y, -WRIST_Z));
@@ -1229,90 +1262,74 @@ export function items(q: Detail, hero = false): Item[] {
         ]
   );
 
-  /* ----- Shoes (in the shin's space: the sole is on the ground at -0.33) ----- */
+  /* ----- Shoes (in the shin's space: the sole is on the ground at -0.33): each a loft along its length, a rounded
+     toe box, the heel, the collar where the leg goes in, on a sole whose toe curves up off the ground ----- */
   const G = -(HIP_Y - THIGH);
-  const sneaker = prof(
-    [
-      [-0.062, G + 0.012],
-      [0.15, G + 0.012],
-      [0.172, G + 0.03],
-      [0.15, G + 0.052],
-      [0.08, G + 0.068],
-      [0.03, G + 0.098],
-      [-0.03, G + 0.1],
-      [-0.066, G + 0.06],
-    ],
-    0.088,
-    0.014,
-    L(6)
-  );
-  const sneakerSole = prof(
-    [
-      [-0.064, G],
-      [0.146, G],
-      [0.166, G + 0.012],
-      [0.158, G + 0.022],
-      [-0.066, G + 0.022],
-    ],
-    0.09,
-    0.008,
-    L(4)
-  );
-  const laces = q === 0 ? [] : [0.03, 0.06, 0.09].map((u) => new THREE.BoxGeometry(0.05, 0.005, 0.008).rotateX(0.5).translate(0, G + 0.098 - u * 0.33, 0.035 + u * 0.55));
-  const swoop = [-1, 1].map((s) => new THREE.BoxGeometry(0.004, 0.012, 0.11).rotateX(-0.2).translate(s * 0.046, G + 0.05, 0.05));
-  const dress = prof(
-    [
-      [-0.058, G + 0.01],
-      [0.15, G + 0.01],
-      [0.172, G + 0.03],
-      [0.13, G + 0.058],
-      [0.05, G + 0.075],
-      [-0.035, G + 0.078],
-      [-0.062, G + 0.045],
-    ],
-    0.078,
-    0.012,
-    L(6)
-  );
-  const dressSole = prof(
-    [
-      [-0.062, G],
-      [0.152, G],
-      [0.176, G + 0.012],
-      [0.12, G + 0.013],
-      [-0.064, G + 0.012],
-    ],
-    0.08,
-    0.004,
-    L(4)
-  );
-  const boot = prof(
-    [
-      [-0.064, G + 0.02],
-      [0.15, G + 0.02],
-      [0.168, G + 0.045],
-      [0.11, G + 0.07],
-      [0.055, G + 0.1],
-      [0.05, G + 0.15],
-      [-0.06, G + 0.15],
-      [-0.068, G + 0.06],
-    ],
-    0.094,
-    0.014,
-    L(6)
-  );
-  const bootSole = prof(
-    [
-      [-0.07, G],
-      [0.152, G],
-      [0.168, G + 0.014],
-      [0.16, G + 0.026],
-      [-0.072, G + 0.026],
-    ],
-    0.098,
-    0.006,
-    L(4)
-  );
+  const SG = R(16);
+  // (the desktop's: a section every 1.5 cm on a smooth curve through these)
+  const SS = q === 3 ? 0.015 : 0;
+  // (the crowd's: every other section and the toe, the far crowd's every fourth: about the triangles of their old shoes)
+  const every = [4, 2][q] ?? 1;
+  const up = (secs: ShoeSec[]): ShoeSec[] => secs.filter((_, i) => i % every === 0 || i === secs.length - 1).map(([u, hw, b, t]) => [u, hw, G + b, G + t]);
+  /** A rounded toe from `u0` to the tip `L` on: each section an ellipse's share of the last, its middle rising `spring` */
+  const toe = (u0: number, L: number, [hw, b, t]: [number, number, number], spring = 0): ShoeSec[] =>
+    [0.35, 0.6, 0.78, 0.9, 0.97, 1].map((k) => {
+      const f = Math.max(0.15, Math.sqrt(1 - k * k));
+      const mid = (b + t) / 2 + spring * k * k;
+      return [u0 + k * L, hw * f, mid - ((t - b) / 2) * f, mid + ((t - b) / 2) * f];
+    });
+  /**
+   * The sole under an upper: `out` wider, from the ground (its toe curving up with the upper's) to `thick` over
+   * the upper's bottom, `ext` past its heel and toe; `arch` lifts it off the ground in front of the heel block
+   */
+  const sole = (secs: ShoeSec[], out: number, thick: number, ext: number, arch = 0): ShoeSec[] => {
+    const lift = secs[0][2] - G;
+    return secs.map(([u, hw, b], i) => [
+      u + (i === 0 ? -ext : i === secs.length - 1 ? ext : 0),
+      hw + out,
+      b - lift + (u > -0.015 ? arch * Math.max(0, Math.min(1, (0.12 - u) / 0.13)) : 0),
+      b + thick,
+    ]);
+  };
+  const SNEAKER: ShoeSec[] = up([
+    [-0.065, 0.026, 0.015, 0.075],
+    [-0.058, 0.038, 0.015, 0.095],
+    [-0.03, 0.042, 0.015, 0.102],
+    [0.0, 0.043, 0.015, 0.1],
+    [0.035, 0.044, 0.015, 0.088],
+    [0.07, 0.045, 0.016, 0.072],
+    [0.105, 0.044, 0.017, 0.058],
+    ...toe(0.105, 0.065, [0.044, 0.017, 0.058], 0.004),
+  ]);
+  const sneaker = shoe(SNEAKER, SG, 2.6, SS);
+  const sneakerSole = shoe(sole(SNEAKER, 0.003, 0.009, 0.006), SG, 3, SS);
+  // (the laces lie on its top, the stripe on its side)
+  const laces = q === 0 ? [] : [0.03, 0.055, 0.08].map((u) => new THREE.BoxGeometry(0.05, 0.005, 0.008).rotateX(0.4).translate(0, secAt(SNEAKER, u)[3]! + 0.001, u));
+  const swoop = [-1, 1].map((s) => new THREE.BoxGeometry(0.004, 0.012, 0.11).rotateX(-0.2).translate(s * (secAt(SNEAKER, 0.05)[1] + 0.002), G + 0.05, 0.05));
+  const DRESS: ShoeSec[] = up([
+    [-0.062, 0.026, 0.016, 0.062],
+    [-0.055, 0.034, 0.016, 0.077],
+    [-0.02, 0.036, 0.016, 0.08],
+    [0.02, 0.037, 0.016, 0.074],
+    [0.06, 0.038, 0.016, 0.06],
+    [0.1, 0.038, 0.016, 0.05],
+    [0.13, 0.036, 0.016, 0.046],
+    ...toe(0.13, 0.044, [0.036, 0.016, 0.046], 0.003),
+  ]);
+  const dress = shoe(DRESS, SG, 2.4, SS);
+  const dressSole = shoe(sole(DRESS, 0.002, 0.004, 0.005, 0.01), SG, 3, SS);
+  const BOOT: ShoeSec[] = up([
+    [-0.068, 0.03, 0.02, 0.13],
+    [-0.06, 0.042, 0.02, 0.15],
+    [-0.02, 0.046, 0.02, 0.152],
+    [0.02, 0.047, 0.02, 0.15],
+    [0.05, 0.048, 0.02, 0.118],
+    [0.09, 0.048, 0.02, 0.09],
+    [0.125, 0.046, 0.021, 0.078],
+    ...toe(0.125, 0.049, [0.046, 0.021, 0.078], 0.004),
+  ]);
+  const boot = shoe(BOOT, SG, 2.8, SS);
+  const bootSole = shoe(sole(BOOT, 0.004, 0.008, 0.007), SG, 3.2, SS);
 
   /* ----- Held things ----- */
   // In the hand's own space (the socket in the palm; the palm is the right hand's -x side, facing his thigh,
@@ -1374,8 +1391,8 @@ export function items(q: Detail, hero = false): Item[] {
   // Varsity: the suit's body without lapels, cream sleeves, ribbed striped hem, collar and cuffs, snaps and the diamond patch
   const VARSITY = grow(SUIT, 1.02);
   const varsityFront = surface(VARSITY, SN);
-  const varsityBody = loft(hips(VARSITY), R(22), SN);
-  const varsityHem = ribBand(-0.098, -0.046, 0.149, 0.099, 0, R(22), SN);
+  const varsityBody = loft(hips(VARSITY), TR(22), SN);
+  const varsityHem = ribBand(-0.098, -0.046, 0.149, 0.099, 0, TR(22), SN);
   const varsityCollar = ribBand(0.4, 0.446, 0.066, 0.06, -0.004, R(16));
   const varsityCuff = ribBand(-0.21, -0.176, 0.039, 0.041, 0.001, R(14));
   const placket = onBody(
@@ -1409,7 +1426,7 @@ export function items(q: Detail, hero = false): Item[] {
       [0.415, 0.104, 0.088, -0.004],
       [0.425, 0.08, 0.072, -0.005],
     ],
-    R(22),
+    TR(22),
     HN2
   );
   const PUFFER_COLLAR: Sec[] = [

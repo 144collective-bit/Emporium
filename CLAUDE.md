@@ -1668,8 +1668,8 @@ it and has been retired completely. Build only on what's here.
   the tests and a clipping view in the lab, then smoother shapes (bottoms
   and shoes, the suit, the casual tops, the accessories) on a desktop
   detail level, phones and crowds as they are. One phase at a time with
-  the owner's sign-off; keep it up to date. Phase 1 (no clipping) is
-  built:
+  the owner's sign-off; keep it up to date. Phase 1 (no clipping) and
+  Phase 2 (bottoms and shoes, smoother) are built:
   - The wardrobe is data: `wardrobe.ts` (DOM-free: the outfits,
     `lookOutfit()`, the shapes and `items()`; `restSkin()` is a piece at
     rest with its bones, what `createDegen()` and the crowd skin with);
@@ -1697,6 +1697,21 @@ it and has been retired completely. Build only on what's here.
     crouching; `CLOTHING_REPORT=1` prints the worst. Shells it checks are
     pieces with `shell` (`top`, `bottom`). The lab's clipping view is
     `?anim&clip` (the top, trousers and shoes in colours far apart).
+  - The desktop level (Phase 2): `Detail` 3, single figures on the high
+    and medium tiers (`figureDetail()` in character.ts, set from the tier
+    in index.ts; phones keep 2): more ring segments, and `curve()`
+    (sections every 2 cm on a smooth curve through a shape's own) on the
+    legs from the upper thigh down and the shoes. The tops' bodies keep the
+    phone's rings there (`TR()`) and the trousers take 28 (`LEGS`) until
+    Phases 3 and 4: finer tops met the crotch at a sprint. The test checks
+    both levels; the lab builds 3 (`detail=2` the phone's, `at` the height
+    the camera looks at).
+  - Trousers end in a break (`trousers()`'s `hem`: the cuff on a slant,
+    longer at the back, over a soft fold); the joggers gather into the
+    cuff. Shoes are lofts along their length (`shoe()`, `ShoeSec`), a
+    rounded toe box (`toe()`), on a sole worked out from the upper
+    (`sole()`); the crowd's take every other section, the far crowd's
+    every fourth (`up()`).
 - **The animation rebuild** (the owner's call, critical) is planned in
   `docs/animation-plan.md`: AAA movement (Spider-Man / Ratchet feel,
   neutral athletic) from motion capture, then turns, jumps, armed
@@ -2140,9 +2155,10 @@ it and has been retired completely. Build only on what's here.
     `joggers`, `backpack`, `coffee`...) has a `when` rule on the `Outfit` and
     pieces on joints, each a fixed colour or an outfit colour (`shade`
     darkens or lightens it: lapels, ribbing). New clothes are new items.
-  - Three detail levels (`Detail`): 2 for single figures (`createDegen()`:
-    the player, other players, the fitting room, the hologram; about 13-15k
-    triangles), 1 for crowd people near the camera (the new head, fingers
+  - Four detail levels (`Detail`): 3 for single figures on desktops and 2
+    on phones (`createDegen()`: the player, other players, the fitting
+    room, the hologram; about 23-26k triangles at 3, 14-17k at 2;
+    `figureDetail()` sets which), 1 for crowd people near the camera (the new head, fingers
     and shoes at a crowd's detail, about 7-9k; the phones' `light` crowd
     leaves out the `detail` pieces), 0 for crowd people further away (`far`:
     plain boxes for rounded ones, the head coarser, block hands instead of
@@ -3229,7 +3245,10 @@ it and has been retired completely. Build only on what's here.
   (DOM-free, seeded, 60 Hz, tested in `tests/fight.test.ts`: `MOVES` with
   start-up / active / recovery frames, reach and arc, the jab-cross-hook-
   uppercut chain and the kicks, block and the parry window, dodge, stamina,
-  stagger and knockdowns, `STYLES`, bots via `think()`, spars and bouts;
+  stagger and knockdowns, `STYLES` (the moves and styles are data in
+  `fight-moves.ts`, re-exported: the screens and the save read them there,
+  so the fight's rules load with the fight, not at the boot), bots via
+  `think()`, spars and bouts;
   a fighter faces along (sin yaw, cos yaw); a press is kept `T.buffer`
   frames so it fires when it can, a strike from just out of reach steps in
   (`T.stepIn`), the facing turns at `T.turn` and a move's lock-on snaps at
