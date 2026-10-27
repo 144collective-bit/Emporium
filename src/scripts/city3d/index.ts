@@ -46,7 +46,7 @@ import { buildGarage } from './garage';
 import { buildAirport } from './airport';
 import { AIRPORT_END, BRANCH, LINE_X } from './metro';
 import { CAMERA_FAR, PAN_BOUNDS, overviewFrame } from './bounds';
-import { loadCar } from './garage-ui';
+import { loadCar } from './mycar';
 import { createProfileUI } from './profile-ui';
 import { createCharScreen } from './charscreen';
 import { createSky, type TimeMode, type WeatherMode } from './sky';

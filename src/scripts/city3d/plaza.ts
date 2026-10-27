@@ -108,7 +108,7 @@ export const TERRACE_LAMPS: [number, number, number][] = TERRACES.map(([x0, z0, 
 
 /* ---------- People ---------- */
 
-export type PlazaAct = 'sit' | 'chat' | 'look' | 'queue';
+export type PlazaAct = 'sit' | 'eat' | 'chat' | 'look' | 'queue' | 'phone';
 export interface PlazaPerson {
   x: number;
   z: number;
@@ -118,20 +118,22 @@ export interface PlazaPerson {
   act: PlazaAct;
 }
 export const SEAT_Y = 0.32;
-/** People at lunch: at the tables (most chairs), on the benches, chatting in the forecourt, looking at the cross, at the kiosks */
+/** People at lunch: at the tables (most chairs), on the benches, chatting in the forecourt, looking at the cross, on their phones by the pool, at the kiosks */
 export const PLAZA_PEOPLE: PlazaPerson[] = (() => {
   const out: PlazaPerson[] = [];
   const add = (x: number, z: number, ry: number, act: PlazaAct, y = 0) => out.push({ x, z, y, ry, act });
   // (a chair each side along z, facing the table; one in three tables a single diner)
   [...TABLES, ...TERRACE_TABLES].forEach(([x, z], i) => {
-    add(x, z - CHAIR, 0, 'sit', SEAT_Y);
-    if (i % 3 !== 1) add(x, z + CHAIR, Math.PI, 'sit', SEAT_Y);
+    add(x, z - CHAIR, 0, 'eat', SEAT_Y);
+    if (i % 3 !== 1) add(x, z + CHAIR, Math.PI, 'eat', SEAT_Y);
   });
   BENCHES.forEach(({ at, ry }, i) => add(at[0] + Math.cos(ry) * (i % 2 ? 0.3 : -0.3), at[1] - Math.sin(ry) * (i % 2 ? 0.3 : -0.3), ry, 'sit', SEAT_Y));
   // Two pairs chatting by the spire's lobby, someone looking up at the cross from the axis either side of the pool,
   // two queueing at each kiosk
   for (const dz of [-1.6, 1.6]) for (const s of [-1, 1]) add(SPIRE_LOT[0] - 4.2 + s * 0.45, CZ + dz, (-s * Math.PI) / 2, 'chat');
   for (const s of [-1, 1]) add(CX + (s + 1) * 0.3, CZ + s * (POOL.r + POOL.w + 1.4), s < 0 ? 0 : Math.PI, 'look');
+  // (two reading their phones a step off the axis, half turned from the pool)
+  for (const s of [-1, 1]) add(CX + s * 1.4, CZ + s * (POOL.r + POOL.w + 2.4), s < 0 ? 0.7 : Math.PI - 0.7, 'phone');
   for (const { counter: [x, z] } of KIOSKS) for (const d of [0, 0.75]) add(x + d, z, -Math.PI / 2, 'queue');
   return out;
 })();

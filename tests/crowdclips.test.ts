@@ -7,8 +7,10 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import * as THREE from 'three';
-import { CLIP_DEFS, CLIP_IDS, CLIP_ROWS, CROWD_BONES, CROWD_ROWS, JOG_STRIDE, MARCH_STRIDE, WALK_STRIDE, bakeCrowdClips, crowdCaptured, crowdFrame, idleFor, secondsOf, setCrowdCapture, strideOf, walkFor, type CrowdClip } from '../src/scripts/city3d/crowdclips';
+import { CLIP_DEFS, CLIP_IDS, CLIP_ROWS, CROWD_BONES, CROWD_ROWS, JOG_STRIDE, MARCH_STRIDE, SEATED, WALK_STRIDE, bakeCrowdClips, crowdCaptured, crowdFrame, idleFor, seated, secondsOf, setCrowdCapture, strideOf, walkFor, type CrowdClip } from '../src/scripts/city3d/crowdclips';
 import { BONE_INDEX, makeSkeleton } from '../src/scripts/city3d/skeleton';
+import { PHONE } from '../src/scripts/city3d/pedestrians';
+import { CAST, GUARD_LOOK, HAND_OVER, MOVE, SHOT, keyed } from '../src/scripts/city3d/acts';
 import { decodeMocap } from '../src/scripts/city3d/mocap';
 
 // (the stand-ins first: the recorded walk and the formula idle, as a visitor sees them until the pack is in)
@@ -101,6 +103,8 @@ test('played at its stride, the walk keeps a planted foot planted (and so do the
     ['walk2', strideOf('walk2')],
     ['jog', strideOf('jog')],
     ['march', MARCH_STRIDE],
+    ['hurry', strideOf('hurry')],
+    ['phonewalk', strideOf('phonewalk')],
   ] as [CrowdClip, number][]) {
     assert.ok(stride > 0.2 && stride < (id === 'jog' ? 3 : 1.5), `${id} stride ${stride}`);
     const n = CLIP_DEFS[id].frames;
@@ -214,4 +218,240 @@ test('the scale rule: a person at any scale plays a walk at v / (stride · scale
       }
     }
   }
+});
+
+test('the kerb wait: the captured idle with a look both ways over it; the hurry: the walk with the head down and the arms in', () => {
+  // The wait row stands like the idle it's keyed over (the same hips), the head turned left then right about the chest
+  const w = CLIP_ROWS.wait;
+  const i2 = CLIP_ROWS.idle2;
+  const n = CLIP_DEFS.wait.frames;
+  assert.equal(n, CLIP_DEFS.idle2.frames);
+  assert.ok(Math.abs(secondsOf('wait') - secondsOf('idle2')) < 1e-9);
+  const yawAt = (row: number) => {
+    const chest = new THREE.Quaternion().setFromRotationMatrix(mat(row, BONE_INDEX.chest));
+    const head = new THREE.Quaternion().setFromRotationMatrix(mat(row, BONE_INDEX.head));
+    const rel = chest.invert().multiply(head);
+    const fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(rel);
+    return Math.atan2(fwd.x, fwd.z);
+  };
+  let left = 0;
+  let right = 0;
+  for (let f = 0; f < n; f++) {
+    const hips = joint(w + f, BONE_INDEX.hips);
+    assert.ok(hips.distanceTo(joint(i2 + f, BONE_INDEX.hips)) < 1e-6, `frame ${f}: the hips are the idle's`);
+    for (const foot of [BONE_INDEX.footL, BONE_INDEX.footR]) assert.ok(joint(w + f, foot).distanceTo(joint(i2 + f, foot)) < 1e-6, `frame ${f}: the feet are the idle's`);
+    const y = yawAt(w + f) - yawAt(i2 + f);
+    if (y > 0.7) left++;
+    if (y < -0.7) right++;
+  }
+  assert.ok(left >= 4 && right >= 4, `the head turned both ways: ${left} left, ${right} right of ${n}`);
+  assert.ok(Math.abs(yawAt(w) - yawAt(i2)) < 0.05 && Math.abs(yawAt(w + n - 1) - yawAt(i2 + n - 1)) < 0.05, 'ahead at the loop');
+  // The hurry: the walk's legs and stride, the head lower and the hands up in front of the chest
+  const h = CLIP_ROWS.hurry;
+  const wk = CLIP_ROWS.walk;
+  assert.equal(strideOf('hurry'), strideOf('walk'));
+  for (let f = 0; f < CLIP_DEFS.hurry.frames; f += 5) {
+    for (const foot of [BONE_INDEX.footL, BONE_INDEX.footR]) assert.ok(joint(h + f, foot).distanceTo(joint(wk + f, foot)) < 1e-6, `frame ${f}: the feet are the walk's`);
+    // (the head pitched down about the hips (the rig faces +z), the chest forward of them)
+    const pitchDown = (row: number) => {
+      const hips = new THREE.Quaternion().setFromRotationMatrix(mat(row, BONE_INDEX.hips));
+      const head = new THREE.Quaternion().setFromRotationMatrix(mat(row, BONE_INDEX.head));
+      return Math.asin(-new THREE.Vector3(0, 0, 1).applyQuaternion(hips.invert().multiply(head)).y);
+    };
+    assert.ok(pitchDown(h + f) > pitchDown(wk + f) + 0.25, `frame ${f}: the head down (${pitchDown(h + f).toFixed(2)} vs ${pitchDown(wk + f).toFixed(2)})`);
+    assert.ok(joint(h + f, BONE_INDEX.chest).z - joint(h + f, BONE_INDEX.hips).z > joint(wk + f, BONE_INDEX.chest).z - joint(wk + f, BONE_INDEX.hips).z + 0.01, `frame ${f}: the chest forward`);
+    for (const hand of [BONE_INDEX.handL, BONE_INDEX.handR]) {
+      const hp = joint(h + f, hand);
+      assert.ok(hp.y > joint(wk + f, hand).y + 0.1 && hp.y > joint(h + f, BONE_INDEX.hips).y, `frame ${f}: a hand up at the chest (${hp.y.toFixed(2)})`);
+    }
+  }
+});
+
+/** The head's pitch down about the chest (the rig faces +z), and its yaw to the left */
+const headAt = (row: number) => {
+  const chest = new THREE.Quaternion().setFromRotationMatrix(mat(row, BONE_INDEX.chest));
+  const head = new THREE.Quaternion().setFromRotationMatrix(mat(row, BONE_INDEX.head));
+  const fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(chest.invert().multiply(head));
+  return { down: Math.asin(-fwd.y), yaw: Math.atan2(fwd.x, fwd.z) };
+};
+
+test('the phone: standing (over the third idle) and walking (over the walk), the right hand at the chest, the head down at it, the other arm the take\'s', () => {
+  const phoneRow = (id: 'phone' | 'phonewalk', over: 'idle3' | 'walk', pitch: number) => {
+    const r = CLIP_ROWS[id];
+    const o = CLIP_ROWS[over];
+    const n = CLIP_DEFS[id].frames;
+    assert.equal(n, CLIP_DEFS[over].frames);
+    assert.ok(Math.abs(secondsOf(id) - secondsOf(over)) < 1e-9);
+    const downs: number[] = [];
+    for (let f = 0; f < n; f++) {
+      // The take under it: the hips, the feet and the left hand where the take has them
+      for (const b of [BONE_INDEX.hips, BONE_INDEX.footL, BONE_INDEX.footR, BONE_INDEX.handL]) assert.ok(joint(r + f, b).distanceTo(joint(o + f, b)) < 1e-6, `${id} frame ${f}: bone ${b} is the take's`);
+      // The right hand in front of the chest, between the chest and the chin, in from the shoulder
+      const hand = joint(r + f, BONE_INDEX.handR);
+      const chest = joint(r + f, BONE_INDEX.chest);
+      const head = joint(r + f, BONE_INDEX.head);
+      assert.ok(hand.z > chest.z + 0.12 && hand.z < chest.z + 0.3, `${id} frame ${f}: the hand in front of the chest (${(hand.z - chest.z).toFixed(2)})`);
+      assert.ok(hand.y > chest.y - 0.02 && hand.y < head.y - 0.04, `${id} frame ${f}: the hand between the chest and the chin (${hand.y.toFixed(2)}, chest ${chest.y.toFixed(2)}, head ${head.y.toFixed(2)})`);
+      assert.ok(Math.abs(hand.x - chest.x) < 0.1, `${id} frame ${f}: the hand in from the shoulder`);
+      assert.ok(hand.y > joint(o + f, BONE_INDEX.handR).y + 0.2, `${id} frame ${f}: the hand up from where the take has it`);
+      downs.push(headAt(r + f).down);
+    }
+    // The head down at the phone by the rule's pitch (in place of the take's, which looks about), more than the take's ever is
+    const most = Math.max(...downs);
+    assert.ok(Math.abs(most - pitch) < 0.05, `${id}: the head down ${most.toFixed(2)}, the rule's ${pitch}`);
+    for (let f = 0; f < n; f++) assert.ok(most > headAt(o + f).down + 0.15, `${id}: further down than the take's head at frame ${f}`);
+    return downs;
+  };
+  const standing = phoneRow('phone', 'idle3', -PHONE.headPitch);
+  // Standing: a glance up (and a touch to the left) partway through, down again by the loop
+  const least = Math.min(...standing);
+  const most = Math.max(...standing);
+  assert.ok(least < most - 0.4, `a glance up: from ${most.toFixed(2)} down to ${least.toFixed(2)}`);
+  assert.ok(standing[0] > most - 0.05 && standing[standing.length - 1] > most - 0.08, 'reading at both ends of the loop');
+  const upAt = standing.indexOf(least);
+  assert.ok(headAt(CLIP_ROWS.phone + upAt).yaw > 0.15, 'the glance turns a little to the left');
+  const walking = phoneRow('phonewalk', 'walk', -PHONE.walkPitch);
+  assert.ok(Math.max(...walking) - Math.min(...walking) < 0.1, 'walking, no glance: the head stays on the phone');
+  assert.equal(strideOf('phonewalk'), strideOf('walk'));
+});
+
+
+/** A row's frames as the joints' positions */
+const framesOf = (id: keyof typeof CLIP_ROWS) => Array.from({ length: CLIP_DEFS[id].frames }, (_, f) => CLIP_ROWS[id] + f);
+const span = (rows: number[], bone: number, axis: 'x' | 'y' | 'z') => {
+  const v = rows.map((r) => joint(r, bone)[axis]);
+  return [Math.min(...v), Math.max(...v)] as const;
+};
+
+test('the workers standing (the revamp\'s Phase 6 step 3): serving, cooking, fishing and the bouncer, over the captured idles', () => {
+  // Over a take: the hips and feet the take's, the head and both arms keyed
+  const over = (id: 'serve' | 'cook' | 'fish' | 'guard', take: 'idle' | 'idle2' | 'idle3') => {
+    assert.equal(CLIP_DEFS[id].frames, CLIP_DEFS[take].frames);
+    for (let f = 0; f < CLIP_DEFS[id].frames; f += 4) for (const b of [BONE_INDEX.hips, BONE_INDEX.footL, BONE_INDEX.footR]) assert.ok(joint(CLIP_ROWS[id] + f, b).distanceTo(joint(CLIP_ROWS[take] + f, b)) < 1e-6, `${id} frame ${f}: the take's body`);
+    return framesOf(id);
+  };
+  const rel = (row: number, bone: number) => joint(row, bone).sub(joint(row, BONE_INDEX.hips));
+  // Serving: both hands on the counter at waist height in front; the right goes out further once a loop, the head comes up
+  const serve = over('serve', 'idle3');
+  for (const r of serve) for (const h of [BONE_INDEX.handL, BONE_INDEX.handR]) assert.ok(rel(r, h).z > 0.2 && Math.abs(rel(r, h).y) < 0.2, `serve: a hand at the counter`);
+  const [outMin, outMax] = span(serve, BONE_INDEX.handR, 'z');
+  assert.ok(outMax > outMin + 0.07, `serve: the hand goes out (${outMin.toFixed(2)} to ${outMax.toFixed(2)})`);
+  assert.ok(keyed(HAND_OVER, 0) === 0 && keyed(HAND_OVER, 1.9) === 1 && keyed(HAND_OVER, 3.5) === 0);
+  // Cooking: both hands low in front, the right working (moving about), the head down
+  const cook = over('cook', 'idle3');
+  // (the take's chest leans and straightens under them, so the hands ride up and down a little)
+  for (const r of cook) for (const h of [BONE_INDEX.handL, BONE_INDEX.handR]) assert.ok(rel(r, h).z > 0.2 && Math.abs(rel(r, h).y) < 0.16, `cook: the hands at the counter (${rel(r, h).y.toFixed(2)})`);
+  const [lx0, lx1] = span(cook, BONE_INDEX.handL, 'x');
+  const [rx0, rx1] = span(cook, BONE_INDEX.handR, 'x');
+  assert.ok(lx1 - lx0 < 0.03 && rx1 - rx0 > 0.04, `cook: the left hand steady (${(lx1 - lx0).toFixed(3)}), the right working (${(rx1 - rx0).toFixed(3)})`);
+  assert.ok(cook.every((r) => headAt(r).down > 0.25), 'cook: the head down at the work');
+  // Fishing: the rod held out (one hand forward, one at the hip), a cast: both hands up over the shoulder, then forward
+  const fish = over('fish', 'idle');
+  const restRow = fish[0];
+  // (the take stands leant back a little, so the rod hand sits a touch higher and further out than keyed)
+  assert.ok(rel(restRow, BONE_INDEX.handL).z > 0.25 && rel(restRow, BONE_INDEX.handR).z < 0.3 && rel(restRow, BONE_INDEX.handR).y < rel(restRow, BONE_INDEX.handL).y - 0.15, 'fish: holding the rod');
+  const [, upL] = span(fish, BONE_INDEX.handL, 'y');
+  const [, upR] = span(fish, BONE_INDEX.handR, 'y');
+  const head = rel(restRow, BONE_INDEX.head).y;
+  assert.ok(upL > head && upR > head - 0.06, `fish: the hands up over the shoulder in the cast (${upL.toFixed(2)}, ${upR.toFixed(2)}, the head ${head.toFixed(2)})`);
+  const backRow = fish.find((r) => rel(r, BONE_INDEX.handR).z < -0.05);
+  assert.ok(backRow !== undefined, 'fish: the hands go back');
+  // (whipped forward: the hands still up but out in front, not behind)
+  const foreRow = fish.slice(fish.indexOf(backRow!) + 1).reduce((a, b) => (rel(b, BONE_INDEX.handL).z > rel(a, BONE_INDEX.handL).z ? b : a));
+  assert.ok(rel(foreRow, BONE_INDEX.handL).y > 0.38 && rel(foreRow, BONE_INDEX.handL).z > 0.2, 'fish: then whipped forward');
+  assert.ok(headAt(backRow!).down < headAt(restRow).down - 0.15 && headAt(foreRow!).down > headAt(restRow).down, 'fish: the head follows the rod');
+  assert.ok(keyed(CAST, 3.6) === 1 && keyed(CAST, 4.2) === 2 && keyed(CAST, 6) === 3);
+  // (and the hands come straight home from the cast, not back over the shoulder again)
+  const after = fish.filter((_, i) => i > fish.indexOf(foreRow!));
+  assert.ok(after.every((r) => rel(r, BONE_INDEX.handR).z > -0.02), 'fish: home from the cast');
+  // The bouncer: arms folded (each hand across on the other side at the chest), a look each way
+  const guard = over('guard', 'idle2');
+  for (const r of guard) {
+    const l = rel(r, BONE_INDEX.handL);
+    const rr = rel(r, BONE_INDEX.handR);
+    assert.ok(l.x > 0.06 && rr.x < -0.06 && l.y > 0.1 && rr.y > 0.1 && l.y < 0.3, 'guard: the arms folded across the chest');
+  }
+  const yaws = guard.map((r) => headAt(r).yaw);
+  assert.ok(Math.max(...yaws) > 0.4 && Math.min(...yaws) < -0.3, `guard: a look each way (${Math.min(...yaws).toFixed(2)} to ${Math.max(...yaws).toFixed(2)})`);
+  assert.equal(GUARD_LOOK[GUARD_LOOK.length - 1][1], 0);
+});
+
+test('the workers seated: eating, chess, lounging, rowing and pedalling, each on its own loop, the hips where the sit row has them', () => {
+  for (const id of ['eat', 'chess', 'lounge', 'row', 'pedal'] as const) {
+    assert.ok(seated(id) && SEATED.has(id));
+    assert.ok(secondsOf(id) < 24 && secondsOf(id) === CLIP_DEFS[id].seconds, `${id}: its own loop`);
+    for (const r of framesOf(id)) assert.ok(Math.abs(joint(r, BONE_INDEX.hips).y - joint(CLIP_ROWS.sit, BONE_INDEX.hips).y) < 0.01, `${id}: the hips at the seat`);
+  }
+  assert.ok(!seated('serve') && !seated('look'));
+  const rel = (row: number, bone: number) => joint(row, bone).sub(joint(row, BONE_INDEX.hips));
+  /** How far forward of the hips the head's joint is: the spine's lean */
+  const leanAt = (r: number) => rel(r, BONE_INDEX.head).z;
+  const sitLean = leanAt(CLIP_ROWS.sit);
+  // Eating: the hands on the table in front; the right rises to the mouth once in a while, the head coming down to it
+  const eat = framesOf('eat');
+  const mouthOf = (r: number) => {
+    const head = new THREE.Quaternion().setFromRotationMatrix(mat(r, BONE_INDEX.head));
+    return joint(r, BONE_INDEX.head).add(new THREE.Vector3(0, 0.03, 0.075).applyQuaternion(head));
+  };
+  const bites = eat.filter((r) => joint(r, BONE_INDEX.handR).distanceTo(mouthOf(r)) < 0.06);
+  assert.ok(bites.length >= 3 && bites.length < eat.length / 3, `eat: ${bites.length} frames with the hand at the mouth of ${eat.length}`);
+  for (const r of eat) assert.ok(rel(r, BONE_INDEX.handL).z > 0.2 && rel(r, BONE_INDEX.handL).y > 0.1, 'eat: the left hand on the table');
+  assert.ok(headAt(bites[0]).down > headAt(eat[0]).down + 0.12, 'eat: the head down to the bite');
+  // Chess: leant in over the board, the chin on the left hand, the right out over the board once a loop
+  const chess = framesOf('chess');
+  for (const r of chess) {
+    assert.ok(leanAt(r) > sitLean + 0.04, `chess: leaning in (${leanAt(r).toFixed(3)} vs ${sitLean.toFixed(3)})`);
+    assert.ok(joint(r, BONE_INDEX.handL).distanceTo(mouthOf(r)) < 0.12, 'chess: the chin on the hand');
+  }
+  const [near, far] = span(chess, BONE_INDEX.handR, 'z');
+  assert.ok(far > near + 0.12, `chess: a piece moved (${near.toFixed(2)} to ${far.toFixed(2)})`);
+  assert.ok(keyed(MOVE, 6.6) === 1 && keyed(MOVE, 0) === 0);
+  // Lounging: leant back with the legs out further than a sitter's, the head nodding
+  const lounge = framesOf('lounge');
+  const sitFoot = rel(CLIP_ROWS.sit, BONE_INDEX.footL).z;
+  for (const r of lounge) {
+    assert.ok(leanAt(r) < sitLean - 0.04, `lounge: leant back (${leanAt(r).toFixed(3)})`);
+    assert.ok(rel(r, BONE_INDEX.footL).z > sitFoot + 0.08, 'lounge: the legs out');
+  }
+  const [nodMin, nodMax] = [Math.min(...lounge.map((r) => headAt(r).down)), Math.max(...lounge.map((r) => headAt(r).down))];
+  assert.ok(nodMax - nodMin > 0.04, `lounge: the head nods (${(nodMax - nodMin).toFixed(3)})`);
+  // Rowing: the hands out to the catch and back to the chest, the body rocking with them
+  const row = framesOf('row');
+  const [pullIn, reach] = span(row, BONE_INDEX.handR, 'z');
+  assert.ok(reach > pullIn + 0.25, `row: a stroke of ${(reach - pullIn).toFixed(2)}`);
+  const catchRow = row.reduce((a, b) => (rel(b, BONE_INDEX.handR).z > rel(a, BONE_INDEX.handR).z ? b : a));
+  const finishRow = row.reduce((a, b) => (rel(b, BONE_INDEX.handR).z < rel(a, BONE_INDEX.handR).z ? b : a));
+  assert.ok(leanAt(catchRow) > leanAt(finishRow) + 0.08, 'row: forward at the catch, back at the finish');
+  for (const r of row) assert.ok(Math.abs(rel(r, BONE_INDEX.handL).x + rel(r, BONE_INDEX.handR).x) < 0.03, 'row: both hands together');
+  // Pedalling: the hands on the bar, the feet going round in turn
+  const pedal = framesOf('pedal');
+  for (const r of pedal) for (const h of [BONE_INDEX.handL, BONE_INDEX.handR]) assert.ok(rel(r, h).z > 0.2 && rel(r, h).y > 0.05, 'pedal: the hands on the bar');
+  const diff = pedal.map((r) => rel(r, BONE_INDEX.footL).z - rel(r, BONE_INDEX.footR).z);
+  assert.ok(Math.max(...diff) > 0.1 && Math.min(...diff) < -0.1, `pedal: the feet in turn (${Math.min(...diff).toFixed(2)} to ${Math.max(...diff).toFixed(2)})`);
+});
+
+test('kids at play (step 4): the set shot over the third idle, the swing seated with the legs pumping', () => {
+  const rel = (row: number, bone: number) => joint(row, bone).sub(joint(row, BONE_INDEX.hips));
+  // The shot: the take's body; the hands together at the chest, then up over the head and out, the chin up at the hoop
+  const shoot = framesOf('shoot');
+  assert.equal(CLIP_DEFS.shoot.frames, CLIP_DEFS.idle3.frames);
+  for (let f = 0; f < shoot.length; f += 4) for (const b of [BONE_INDEX.hips, BONE_INDEX.footL, BONE_INDEX.footR]) assert.ok(joint(shoot[f], b).distanceTo(joint(CLIP_ROWS.idle3 + f, b)) < 1e-6, 'shoot: the take\'s body');
+  const chest0 = rel(shoot[0], BONE_INDEX.handR);
+  assert.ok(chest0.y > 0.1 && chest0.y < 0.3 && chest0.z > 0.12, `shoot: the ball at the chest to start (${chest0.y.toFixed(2)}, ${chest0.z.toFixed(2)})`);
+  const top = shoot.reduce((a, b) => (rel(b, BONE_INDEX.handR).y > rel(a, BONE_INDEX.handR).y ? b : a));
+  for (const h of [BONE_INDEX.handL, BONE_INDEX.handR]) assert.ok(rel(top, h).y > rel(top, BONE_INDEX.head).y + 0.05 && rel(top, h).z > 0.08, 'shoot: both hands up over the head and out');
+  // (the take's chest turns a little under the keyed arms)
+  assert.ok(Math.abs(rel(top, BONE_INDEX.handL).x + rel(top, BONE_INDEX.handR).x) < 0.1, 'shoot: the hands together on the ball');
+  assert.ok(headAt(top).down < headAt(shoot[0]).down - 0.1 && headAt(top).down < -0.15, 'shoot: looking up at the hoop');
+  assert.ok(keyed(SHOT, 1.37) === 1 && keyed(SHOT, 1.9) === 2 && keyed(SHOT, 3.5) === 0);
+  // The swing: seated (the hips as the sit row's), the hands up on the chains either side, the legs out and back together
+  const swing = framesOf('swing');
+  assert.ok(seated('swing'));
+  for (const r of swing) {
+    assert.ok(Math.abs(joint(r, BONE_INDEX.hips).y - joint(CLIP_ROWS.sit, BONE_INDEX.hips).y) < 0.01, 'swing: the hips on the seat');
+    for (const h of [BONE_INDEX.handL, BONE_INDEX.handR]) assert.ok(rel(r, h).y > 0.2 && Math.abs(Math.abs(rel(r, h).x) - 0.17) < 0.06, 'swing: the hands up on the chains');
+    assert.ok(Math.abs(rel(r, BONE_INDEX.footL).z - rel(r, BONE_INDEX.footR).z) < 0.03, 'swing: the legs together');
+  }
+  const [back, fore] = span(swing, BONE_INDEX.footL, 'z');
+  assert.ok(fore > back + 0.2, `swing: the legs kick out (${back.toFixed(2)} to ${fore.toFixed(2)})`);
 });

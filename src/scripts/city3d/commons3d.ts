@@ -34,6 +34,7 @@ import { ATLAS, CREAM, INK, LEAF, METAL, ROOF, STONE, WOOD, glow, kit, type Fram
 import { buildFx, chainMesh, tag } from './grime';
 import { EDGES, EDGE_H, EDGE_W } from './streetwall';
 import { SLAB as S, addLamp } from './world';
+import { KID } from './play';
 import { site } from './tilework';
 import { parkedCars, type CarId } from './cars';
 import { towerShell } from './projects';
@@ -58,7 +59,6 @@ import type { Idle } from './landmarks';
 import type { Pt, Rect } from './downtown';
 
 const WORLD: Frame = { M: new THREE.Matrix4(), w: 0, d: 0, L: [0, 0], t: [1, 0], n: [0, 1] };
-const KID = 0.44;
 const box = (b: Batch, x0: number, y0: number, z0: number, x1: number, y1: number, z1: number, mat: THREE.Material) => b.box(Math.min(x0, x1), y0, Math.min(z0, z1), Math.abs(x1 - x0), y1 - y0, Math.abs(z1 - z0), mat);
 const flat = (b: Batch, [x0, z0, x1, z1]: Rect, y: number, mat: THREE.Material) => b.add(new THREE.PlaneGeometry(x1 - x0, z1 - z0).rotateX(-Math.PI / 2).translate((x0 + x1) / 2, S + y, (z0 + z1) / 2), mat);
 const cyl = (b: Batch, r: number, h: number, x: number, y: number, z: number, mat: THREE.Material, seg = 8) => b.add(new THREE.CylinderGeometry(r, r, h, seg).translate(x, y + h / 2, z), mat);

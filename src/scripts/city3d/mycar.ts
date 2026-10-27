@@ -63,3 +63,14 @@ export function cleanCar(v: unknown): MyCar {
 }
 
 export const paintHex = (id: PaintId) => CAR_PAINTS.find((p) => p.id === id)!.hex;
+
+/** Where the browser keeps it (backup.ts lists the key too) */
+export const CAR_KEY = 'degen-city-car-v1';
+/** Your saved car (or the default); garage-ui.ts saves it */
+export function loadCar(): MyCar {
+  try {
+    return cleanCar(JSON.parse(localStorage.getItem(CAR_KEY) ?? 'null'));
+  } catch {
+    return { ...DEFAULT_CAR };
+  }
+}

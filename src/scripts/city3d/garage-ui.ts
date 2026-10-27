@@ -29,23 +29,13 @@
  */
 import { CAR_CATALOG, CAR_MODS, CAR_MOD_IDS, MOD_LEVELS, type CarModId } from './catalog';
 import { CARS } from './cars';
-import { CAR_PAINTS, CARGO, DEFAULT_CAR, DRIVE, PLAYER_CARS, cleanCar, type MyCar, type PaintId, type PlayerCar } from './mycar';
+import { CAR_KEY, CAR_PAINTS, CARGO, DRIVE, PLAYER_CARS, loadCar, type MyCar, type PaintId, type PlayerCar } from './mycar';
 import { buyCar, carModCost, carMods, carStatsOf, level, modCar, ownsCar } from './tycoon';
 import { COIN, D, LV, esc, fmt, repaint, whyNot, type GameDeps } from './ui';
 
-const KEY = 'degen-city-car-v1';
-
-/** Your saved car (or the default) */
-export function loadCar(): MyCar {
-  try {
-    return cleanCar(JSON.parse(localStorage.getItem(KEY) ?? 'null'));
-  } catch {
-    return { ...DEFAULT_CAR };
-  }
-}
 function saveCar(c: MyCar) {
   try {
-    localStorage.setItem(KEY, JSON.stringify(c));
+    localStorage.setItem(CAR_KEY, JSON.stringify(c));
   } catch {
     /* fine: the car just won't stick */
   }

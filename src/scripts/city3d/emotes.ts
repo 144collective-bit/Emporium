@@ -25,7 +25,9 @@
  *   upper-body emote first (the stage, which has nothing else).
  *
  * The rig's sides: `arms[0]` and `legs[0]` are his right (the rig's -x);
- * the DSL names them `armR` / `legR`.
+ * the DSL names them `armR` / `legR`. The rig faces +z: a positive
+ * `headPitch` is up, a positive `headYaw` to his left, a positive `lean`
+ * forward.
  */
 import * as THREE from 'three';
 import { ANKLE_H, HIP_Y, LEG_X, type Limb, type Pose, type Wrist } from './skeleton';
@@ -119,16 +121,16 @@ const WAVE: EmoteClip = {
   upper: true,
   keys: [
     key(0, {}),
-    key(0.2, { armR: arm(1.4, 0.3, 1.9, -0.2), armL: arm(0.08, 0.1, 0.25), lean: -0.01, twist: -0.04, headPitch: -0.03 }, 'out'),
-    key(0.42, { armR: wave(0.3), armL: arm(0.08, 0.1, 0.25), lean: -0.02, twist: -0.08, headPitch: -0.06, headYaw: -0.1, headRoll: 0.05 }, 'out'),
-    key(0.6, { armR: wave(0.6), armL: arm(0.08, 0.1, 0.25), lean: -0.02, twist: -0.08, headPitch: -0.06, headYaw: -0.1, headRoll: 0.05 }),
-    key(0.78, { armR: wave(0.1), armL: arm(0.08, 0.1, 0.25), lean: -0.02, twist: -0.08, headPitch: -0.06, headYaw: -0.1, headRoll: 0.05 }),
-    key(0.96, { armR: wave(0.6), armL: arm(0.08, 0.1, 0.25), lean: -0.02, twist: -0.08, headPitch: -0.06, headYaw: -0.1, headRoll: 0.05 }),
-    key(1.14, { armR: wave(0.1), armL: arm(0.08, 0.1, 0.25), lean: -0.02, twist: -0.08, headPitch: -0.06, headYaw: -0.1, headRoll: 0.05 }),
-    key(1.32, { armR: wave(0.6), armL: arm(0.08, 0.1, 0.25), lean: -0.02, twist: -0.08, headPitch: -0.06, headYaw: -0.1, headRoll: 0.05 }),
-    key(1.5, { armR: wave(0.1), armL: arm(0.08, 0.1, 0.25), lean: -0.02, twist: -0.08, headPitch: -0.06, headYaw: -0.1, headRoll: 0.05 }),
-    key(1.7, { armR: wave(0.45), armL: arm(0.08, 0.1, 0.25), lean: -0.02, twist: -0.07, headPitch: -0.05, headYaw: -0.08, headRoll: 0.04 }),
-    key(1.95, { armR: arm(2.2, 0.35, 0.8, -0.3), armL: arm(0.06, 0.1, 0.22), lean: -0.01, twist: -0.04, headPitch: -0.03, headYaw: -0.04, headRoll: 0.02 }),
+    key(0.2, { armR: arm(1.4, 0.3, 1.9, -0.2), armL: arm(0.08, 0.1, 0.25), lean: -0.01, twist: -0.04, headPitch: 0.03 }, 'out'),
+    key(0.42, { armR: wave(0.3), armL: arm(0.08, 0.1, 0.25), lean: -0.02, twist: -0.08, headPitch: 0.06, headYaw: -0.1, headRoll: 0.05 }, 'out'),
+    key(0.6, { armR: wave(0.6), armL: arm(0.08, 0.1, 0.25), lean: -0.02, twist: -0.08, headPitch: 0.06, headYaw: -0.1, headRoll: 0.05 }),
+    key(0.78, { armR: wave(0.1), armL: arm(0.08, 0.1, 0.25), lean: -0.02, twist: -0.08, headPitch: 0.06, headYaw: -0.1, headRoll: 0.05 }),
+    key(0.96, { armR: wave(0.6), armL: arm(0.08, 0.1, 0.25), lean: -0.02, twist: -0.08, headPitch: 0.06, headYaw: -0.1, headRoll: 0.05 }),
+    key(1.14, { armR: wave(0.1), armL: arm(0.08, 0.1, 0.25), lean: -0.02, twist: -0.08, headPitch: 0.06, headYaw: -0.1, headRoll: 0.05 }),
+    key(1.32, { armR: wave(0.6), armL: arm(0.08, 0.1, 0.25), lean: -0.02, twist: -0.08, headPitch: 0.06, headYaw: -0.1, headRoll: 0.05 }),
+    key(1.5, { armR: wave(0.1), armL: arm(0.08, 0.1, 0.25), lean: -0.02, twist: -0.08, headPitch: 0.06, headYaw: -0.1, headRoll: 0.05 }),
+    key(1.7, { armR: wave(0.45), armL: arm(0.08, 0.1, 0.25), lean: -0.02, twist: -0.07, headPitch: 0.05, headYaw: -0.08, headRoll: 0.04 }),
+    key(1.95, { armR: arm(2.2, 0.35, 0.8, -0.3), armL: arm(0.06, 0.1, 0.22), lean: -0.01, twist: -0.04, headPitch: 0.03, headYaw: -0.04, headRoll: 0.02 }),
     key(2.25, { armR: arm(1.1, 0.25, 1.4, -0.1), armL: arm(0.04, 0.09, 0.2) }),
     key(2.6, {}, 'out'),
   ],
@@ -143,14 +145,14 @@ const CHEER: EmoteClip = {
   upper: true,
   keys: [
     key(0, {}),
-    key(0.14, { armR: arm(1.2, 0.3, 1.9), armL: arm(1.2, 0.3, 1.9), lean: -0.03, headPitch: -0.08 }, 'out'),
-    key(0.34, { armR: UP(0.3), armL: UP(0.3), lean: -0.1, headPitch: -0.25 }, 'out'),
-    key(0.56, { armR: UP(0.95), armL: UP(0.95), lean: -0.06, headPitch: -0.16 }),
-    key(0.78, { armR: UP(0.25), armL: UP(0.25), lean: -0.12, headPitch: -0.28 }),
-    key(1.0, { armR: UP(0.95), armL: UP(0.95), lean: -0.06, headPitch: -0.16 }),
-    key(1.22, { armR: UP(0.25), armL: UP(0.25), lean: -0.12, headPitch: -0.28 }),
-    key(1.55, { armR: UP(0.4, 0.1), armL: UP(0.4, -0.1), lean: -0.09, headPitch: -0.22, twist: 0.06 }),
-    key(1.95, { armR: arm(1.3, 0.3, 1.4), armL: arm(1.3, 0.3, 1.4), lean: -0.03, headPitch: -0.08 }),
+    key(0.14, { armR: arm(1.2, 0.3, 1.9), armL: arm(1.2, 0.3, 1.9), lean: -0.03, headPitch: 0.08 }, 'out'),
+    key(0.34, { armR: UP(0.3), armL: UP(0.3), lean: -0.1, headPitch: 0.25 }, 'out'),
+    key(0.56, { armR: UP(0.95), armL: UP(0.95), lean: -0.06, headPitch: 0.16 }),
+    key(0.78, { armR: UP(0.25), armL: UP(0.25), lean: -0.12, headPitch: 0.28 }),
+    key(1.0, { armR: UP(0.95), armL: UP(0.95), lean: -0.06, headPitch: 0.16 }),
+    key(1.22, { armR: UP(0.25), armL: UP(0.25), lean: -0.12, headPitch: 0.28 }),
+    key(1.55, { armR: UP(0.4, 0.1), armL: UP(0.4, -0.1), lean: -0.09, headPitch: 0.22, twist: 0.06 }),
+    key(1.95, { armR: arm(1.3, 0.3, 1.4), armL: arm(1.3, 0.3, 1.4), lean: -0.03, headPitch: 0.08 }),
     key(2.4, {}, 'out'),
   ],
 };

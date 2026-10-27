@@ -44,17 +44,19 @@ import { springVel } from './inertia';
 import type { MoData } from './mocap';
 import { createCombat, type Sfx } from './combat';
 import { WEAPON_IDS } from './combat-sim';
-import { createGunShop } from './gunshop';
+import type { GunShop } from './gunshop';
 import { ARMS, AVENUE_DOORS } from './avenue';
 import { DECK_Y, onDeck } from './waterfront';
 import { onEsplanade } from './boulevard';
 import { carStatsOf, kartStatsOf, ownsCar, takedown } from './tycoon';
-import { createGarageUI, loadCar } from './garage-ui';
+import type { GarageUI } from './garage-ui';
+import { loadCar } from './mycar';
 import { DEFAULT_CAR } from './mycar';
 import type { Garage } from './garage';
 import { createDrive } from './drive';
 import { createFly } from './fly';
-import { createHangarUI, loadPlane } from './hangar-ui';
+import type { HangarUI } from './hangar-ui';
+import { loadPlane } from './myplane';
 import { DECK_CAMERA, HANGAR_DOOR, HANGAR_SPOT, departuresWall, departuresY, type AircraftKind, type Pose } from './airfield';
 import { HUT_DOOR, circuitSurfaceAt as trackSurfaceAt } from './kartcircuit';
 import { KART_PARK } from './kartpark';
@@ -144,6 +146,25 @@ const JUMP = 3.9;
 const GRAVITY = 11.5;
 /** How long a hard landing shakes the camera */
 const LAND_SHAKE = 0.3;
+/**
+ * A menu whose module loads the first time it's opened (the gun store, the garage's and the hangar's: none in the
+ * boot): until then it's shut (`open` false, its other calls do nothing) and a call in `opens` loads it and then
+ * opens it. The menus are closures over object literals, so a method called on the stand-in is the real one's.
+ */
+function lazyMenu<T extends object>(opens: (keyof T & string)[], load: () => Promise<T>): T {
+  let real: T | null = null;
+  let loading: Promise<T> | null = null;
+  const get = () => (loading ??= load().then((m) => (real = m)));
+  return new Proxy({} as T, {
+    get(_, k) {
+      if (real) return (real as Record<PropertyKey, unknown>)[k];
+      if (k === 'open') return false;
+      if (typeof k === 'string' && opens.includes(k as keyof T & string)) return (...a: unknown[]) => void get().then((m) => (m as Record<string, (...x: unknown[]) => void>)[k](...a));
+      return () => {};
+    },
+  });
+}
+
 /** The gaze before its module is in: straight ahead */
 const STILL_GAZE = { yaw: 0, pitch: 0 };
 const SCALE = 0.85;
@@ -656,7 +677,7 @@ export function createWalk(d: WalkDeps) {
     },
   });
   // The Armoury's store and workbench at its counter: frees the mouse and pauses walking while it's open
-  const shop = createGunShop(root, {
+  const shop = lazyMenu<GunShop>(['show', 'take'], async () => (await import('./gunshop')).createGunShop(root, {
     lifetime: () => combat.lifetime,
     weapon: () => combat.weapon,
     geared: () => combat.geared,
@@ -675,12 +696,12 @@ export function createWalk(d: WalkDeps) {
       moments.release();
       canvas.focus({ preventScroll: true });
     },
-  });
+  }));
   combat.onLifetime(() => shop.refresh());
   // The garage menu: like the store it frees the mouse and pauses walking; the camera goes to the
   // turntable (from over the shoulder, so the first-person hands stay out of the shot)
   let fpBeforeGarage = false;
-  const garageUI = createGarageUI(root, {
+  const garageUI = lazyMenu<GarageUI>(['show'], async () => (await import('./garage-ui')).createGarageUI(root, {
     preview: (c) => d.garage.show(c),
     // Kept: if your car is out on the streets, it comes home
     keep(c) {
@@ -710,7 +731,7 @@ export function createWalk(d: WalkDeps) {
       if (fpBeforeGarage) setFirstPerson(true);
       canvas.focus({ preventScroll: true });
     },
-  });
+  }));
   // Your car: get in where it is, drive, get out anywhere
   const drive = createDrive({
     scene: d.scene,
@@ -776,7 +797,7 @@ export function createWalk(d: WalkDeps) {
   });
   // The hangar menu: like the garage's, it frees the mouse and pauses walking while the camera looks into the hangar
   let fpBeforeHangar = false;
-  const hangarUI = createHangarUI(root, {
+  const hangarUI = lazyMenu<HangarUI>(['show'], async () => (await import('./hangar-ui')).createHangarUI(root, {
     preview: (p) => fly.preview(p),
     keep: (p) => fly.recall(p),
     cancel: (saved) => fly.cancel(saved),
@@ -796,7 +817,7 @@ export function createWalk(d: WalkDeps) {
       if (fpBeforeHangar) setFirstPerson(true);
       canvas.focus({ preventScroll: true });
     },
-  });
+  }));
   /** Flying input from the gamepad */
   const padFly = { turn: 0, climb: 0, throttle: 0 };
 

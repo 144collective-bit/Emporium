@@ -160,7 +160,7 @@ export function buildGrit(scene: THREE.Scene, crowd: Idle[], opts: { low: boolea
   // The yards' trees (pits or patches of grass) and the people round the boombox
   for (const t of YARD_TREES) addTree(t.x, t.z, t.s, false);
   for (const bx of BOOMBOXES) {
-    for (const [x, z, ry] of bx.chairs) crowd.push({ x, z, ry, act: 'sit', y: S + 0.42 });
+    for (const [x, z, ry] of bx.chairs) crowd.push({ x, z, ry, act: 'lounge', y: S + 0.42 });
     for (const [x, z, ry] of bx.standing) crowd.push({ x, z, ry, act: 'chat' });
   }
 

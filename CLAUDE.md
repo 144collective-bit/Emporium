@@ -1368,7 +1368,12 @@ it and has been retired completely. Build only on what's here.
     demo, the benchmark (`?bench`, `bench.ts`), Drop 001's fitting room
     (`fitting.ts`, when its panel first opens: `loadFitting()` in index.ts)
     the world map (`worldmap.ts`, when it first opens: `loadMap()` in
-    travel-ui.ts; `placeName()` is places.ts's) and the kart park's game
+    travel-ui.ts; `placeName()` is places.ts's), the gun store, the
+    garage's and the hangar's menus (`gunshop.ts`, `garage-ui.ts`,
+    `hangar-ui.ts`: each loads the first time its door or counter opens
+    it, `lazyMenu()` in walk.ts; the saved car and aircraft are read by
+    `loadCar()` in mycar.ts and `loadPlane()` in myplane.ts, in the boot)
+    and the kart park's game
     (the hut's menu and the race, `kartgame.ts`: `loadKarts()` in walk.ts,
     when Degen comes near the park or asks at the hut; idle stand-ins until
     then; the City-view panel's records are `kart-records.ts`, at the boot). New features that aren't needed until they're used come the same
@@ -1795,7 +1800,50 @@ it and has been retired completely. Build only on what's here.
   and the hologram (`dancePose()`) play the same clips; the lab's Emotes
   program plays them in turn (emotes.ts is walk mode's chunk, `onfoot.ts`,
   not the boot's). No CMU take in the repository is a dance:
-  one from capture is a data step for the owner. The clips file's limits are 640 KB (test) and 660 KB (budget),
+  one from capture is a data step for the owner. Phase 6 (the crowd's acts
+  that suit the city) step 1 is built: a crowd row can carry a keyed
+  overlay (`ClipDef.over` in crowdclips.ts: the head's yaw and pitch, the
+  spine's lean, the arms where `arms` is set, laid on the capture's bones
+  at the bake, `overlay()`): the `wait` row (the second captured idle with
+  a look both ways, `kerbLook()` / `KERB_LOOK` in pedestrians.ts; a walker
+  at a kerb faces across and plays it from the moment they stopped) and
+  the `hurry` row (the captured walk with the chest forward, the head down
+  and the arms held in, `HURRY`; from `HURRY_RAIN`, `hurrying()`, every
+  walker's walk). The brisk crossing step stays the walk at `CROSS_PACE`
+  (no take in the repository is a brisk straight walk: a data step). Step
+  2 is built: the phone in the hand (`PHONE` in pedestrians.ts: the right
+  hand brought to a spot in the torso frame by `reachArm()`, the wrist
+  turned so the screen faces the eyes, the head down at it): the `phone`
+  row (the third captured idle with the hand and head keyed over it,
+  `arms: 'right'`, `head: true` (the pose's head in place of the take's),
+  a grip a hand, and a glance up once a loop, `phoneGlance()`) and
+  `phonewalk` (the captured walk, the head down less, the other arm as
+  captured, at the walk's stride); about one walker in seven (`onPhone()`)
+  walks reading and keeps reading at a kerb, an idle with `act: 'phone'`
+  stands reading (the plaza, the boulevard's overlooks, Uptown North's
+  square), each with `held: 'phone'` in the crowd's wardrobe. Step 3 is
+  built: the workers' rows (`acts.ts`, DOM-free, keyed; tested through
+  `tests/crowdclips.test.ts`): standing over the captured idles `serve`
+  (the market's traders, the carts' vendors: a hand-over once a loop),
+  `cook` (the Night Market's cooks), `fish` (Pier 7's fishers: a cast once
+  a loop) and `guard` (the club's bouncers, arms folded, a look each way);
+  seated over the sit pose on their own loops (`ClipDef.seconds`) `eat`
+  (the diners at every table: a bite every four seconds), `chess` (The
+  Trenches' chess tables), `lounge` (the boombox corners' chairs), `row`
+  and `pedal` (the park's boats). `IdleAct` (crowdclips.ts) is what an
+  idle person does, life.ts plays the row of that name (`clipOf()`), and
+  `SEATED` / `seated()` say which rows sit (their root dropped by the
+  seat); benches keep `sit`. Step 4 is built: the kids at play
+  (`play.ts`, DOM-free, tested in `tests/play.test.ts`): `PLAY_PEOPLE`
+  are park-style people (parklife.ts `ParkPerson`, with a `scale`: kids
+  are `KID`) life.ts moves with the park's: on every half-court two kids
+  run a loop round the inside (`loopOf()`, `LOOP_IN`, `KID_RUN`, the jog
+  row at their size) and one takes set shots at the hoop (`shoot` in
+  acts.ts, over the third idle), the cage's three runners and two
+  keepers, The Block's two on two (grown-ups), and a kid on every swing
+  seat (`swingsOf()`, the `swing` row, seated); the commons' rings on the
+  courts went, the playground's and skate spot's stay. A formula row's
+  loop eases towards its own start (`looped(f, seconds)`). The clips file's limits are 640 KB (test) and 660 KB (budget),
   raised for the takes on purpose:
   - **The data** is CMU's motion capture (free for commercial use; the
     acknowledgment is in the start menu's Options > Credits, named, never

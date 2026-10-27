@@ -10,6 +10,7 @@
  * people and spot. Anything a tick places or compares by position (walker
  * checks, the post office's paper) goes through `design()` too.
  */
+import type { IdleAct } from './crowdclips';
 import * as THREE from 'three';
 import type { SpotId } from '../../lib/city';
 import {
@@ -58,8 +59,8 @@ export interface Idle {
   ry: number;
   /** Standing height, or for `sit` the seat height */
   y?: number;
-  /** What they're doing: looking around (default), chatting, sitting, queueing */
-  act?: 'look' | 'chat' | 'sit' | 'queue';
+  /** What they're doing: looking around (default), chatting, sitting, queueing, reading their phone, or at work (crowdclips.ts `IdleAct`) */
+  act?: IdleAct;
   /** How big (a grown-up by default; kids at play are smaller) */
   scale?: number;
 }
