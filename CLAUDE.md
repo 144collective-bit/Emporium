@@ -1970,7 +1970,17 @@ it and has been retired completely. Build only on what's here.
   keepers, The Block's two on two (grown-ups), and a kid on every swing
   seat (`swingsOf()`, the `swing` row, seated); the commons' rings on the
   courts went, the playground's and skate spot's stay. A formula row's
-  loop eases towards its own start (`looped(f, seconds)`). The clips file's limits are 640 KB (test) and 660 KB (budget),
+  loop eases towards its own start (`looped(f, seconds)`). Phase 7 (the
+  Fight Club) is built (`tests/fighthuman.test.ts`): the fighters' legs
+  round the ring are the animator's once walk mode has the capture
+  (`FightDeps.motion`, fight-figure.ts: fed from the velocity over the
+  sim's ticks, facing the opponent, the guard's upper body over them
+  through `applyTo()`'s upper mask; the planted-feet walk until then); the
+  fight clips are held to the rubric each way round (the knees, elbows,
+  neck, pops, continuity, the feet on the canvas) and so are whole fights
+  (`clipFor()`, `createFightPoser()`: a cut between clips inertialized,
+  `SETTLE`), the fighters' legs to `RING`. The boxing capture was
+  measured and isn't used (its footwork a tenth of the bots' speed). The clips file's limits are 640 KB (test) and 660 KB (budget),
   raised for the takes on purpose:
   - **The data** is CMU's motion capture (free for commercial use; the
     acknowledgment is in the start menu's Options > Credits, named, never
@@ -3428,16 +3438,28 @@ it and has been retired completely. Build only on what's here.
   most `T.lockSnap`; bots are `BotTraits` (`botTraits()`: block, dodge,
   parry, telegraph (extra wind-up on heavy moves, a tell), kicks, finisher,
   backOff, pace), the gym's three in `FIGHT_BOTS.traits`); the animations are
-  `fight-anim.ts` (DOM-free, tested in `tests/fight-anim.test.ts`: every
-  clip is keyframed on the `Pose` rig, a move's clip is exactly its sim
-  frames long with the strike on the first active frame; `sampleClip()`,
-  `blendPose()`, `moveClip()`, `hurtClip()`; the hips' `turn` and `sway`
+  `fight-anim.ts` (DOM-free, tested in `tests/fight-anim.test.ts` and on
+  the rubric in `tests/fighthuman.test.ts`: every clip is keyframed on the
+  `Pose` rig, a move's clip is exactly its sim frames long with the strike
+  on the first active frame; `sampleClip()` follows a smooth curve through
+  the keys (`CURVES`: shape-preserving, nothing past a key; keys carry no
+  eases), `blendPose()`, `moveClip()`, `hurtClip()`, `clipFor()` (the clip
+  a fighter's state calls for), `createFightPoser()` (a cut from one clip
+  to the next carries over where the pose was and how fast it moved, eased
+  out over `SETTLE`'s frames, a move its own by its start-up); no bone
+  faster than a person's (a jab's elbow opens over the whole wind-up); the
+  figure's pose is `figurePose()` and its feet go onto the canvas,
+  `groundFighter()` (`fightground.ts`, DOM-free: a sole under `PLANT.lo`
+  onto it, a lifted foot eased lower, the hips down as far as a planted
+  foot needs; the head kept within the neck's turn, `NECK`); the hips' `turn` and `sway`
   go into every punch and kick, the reactions are keyed for a blow from the
   right and mirrored for one from the left (`hurtMirror()`, from the sim's
   `hurtBy`), the clips' head turn is over square hips (the figure takes
   the hips' turn back out); `root` { y, pitch, pivot } for
   the lying poses (the fall and the get-up pivot at the hips, `rootShift()`
-  in `fight-figure.ts` moves the group so); `fists: true` on an `Outfit`
+  in `fight-figure.ts` moves the group so); in the guard moving round the
+  ring the figure's legs are the motion capture's (the animator, as other
+  players'; the revamp's Phase 7); `fists: true` on an `Outfit`
   closes the hands); `?fight` in the address
   runs the sparring demo (`fight-demo.ts`: two bots on the hangout square,
   an overlay with health, stamina, the clip each plays and a clip picker).
@@ -3624,7 +3646,7 @@ it and has been retired completely. Build only on what's here.
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,
   in `tests/merch.test.ts`), the crowd's baked clips (`crowdclips.ts`) and Degen's skeleton, weights, head and hands
-  (`skeleton.ts`, `body.ts`), his walking (`locomotion.ts`), the motion capture and its animation (`bvh.ts`, `mocap-build.ts`, `mocap.ts`, `movesim.ts`, `inertia.ts`, `motionmatch.ts`, `animator.ts`), the rubric of human movement over every clip and program (`human.ts`, `tests/human.test.ts`), what his body does about what he touches (`contact.ts`), the game's moments (`moments.ts`), the guns in his hands (`gunfit.ts`, `stance.ts`), what he carries (`inventory.ts`, `inventory-save.ts`) and his clothes not clipping (`wardrobe.ts`, the trunk's weights in `skeleton.ts`, `tests/clothing.test.ts`) and his accessories where they're worn (`tests/accessories.test.ts`), the suit's tailoring on the desktop only (`tests/tailoring.test.ts`). Modules that touch the DOM or `kit.ts` (canvas
+  (`skeleton.ts`, `body.ts`), his walking (`locomotion.ts`), the motion capture and its animation (`bvh.ts`, `mocap-build.ts`, `mocap.ts`, `movesim.ts`, `inertia.ts`, `motionmatch.ts`, `animator.ts`), the rubric of human movement over every clip and program (`human.ts`, `tests/human.test.ts`) and over the fight clips, whole fights and the fighters' legs (`fightground.ts`, `tests/fighthuman.test.ts`), what his body does about what he touches (`contact.ts`), the game's moments (`moments.ts`), the guns in his hands (`gunfit.ts`, `stance.ts`), what he carries (`inventory.ts`, `inventory-save.ts`) and his clothes not clipping (`wardrobe.ts`, the trunk's weights in `skeleton.ts`, `tests/clothing.test.ts`) and his accessories where they're worn (`tests/accessories.test.ts`), the suit's tailoring on the desktop only (`tests/tailoring.test.ts`). Modules that touch the DOM or `kit.ts` (canvas
   textures) can't load in Node; keep data a test needs in the DOM-free
   files.
 - When you change a rule or move something in the city, run the tests and

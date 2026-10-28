@@ -128,6 +128,8 @@ export interface FightDeps {
   sfx(kind: import('./combat').Sfx, gain?: number): void;
   reduced: boolean;
   low: boolean;
+  /** The motion capture and its animator, once walk mode has them: the fighters' legs round the ring (fight-figure.ts) */
+  motion(): import('./remote').Motion | null;
 }
 export interface Fight {
   /** In the ring: the bell, fighting, or done and waiting for the card to close */

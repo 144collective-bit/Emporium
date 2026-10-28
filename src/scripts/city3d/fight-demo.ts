@@ -6,7 +6,9 @@
  * both fighters' health and stamina, the clip each is playing, and lets
  * you pause the bots and play any clip on the first fighter.
  *
- * The figures are drawn by fight-figure.ts (shared with fight.ts).
+ * The figures are drawn by fight-figure.ts (shared with fight.ts); the
+ * motion capture comes in after a moment (as in walk mode) and their legs
+ * round the ring go over to it.
  */
 import * as THREE from 'three';
 import { PLAYER, type Outfit } from './character';
@@ -15,6 +17,8 @@ import { CLIP_IDS, type ClipId } from './fight-anim';
 import { createFighterFigure, drawFighter, type FighterFigure } from './fight-figure';
 import { T, createFightSim, type FightEvent, type FightSim } from './fight-sim';
 import { fx, glowTex } from './kit';
+import { loadMocap } from './mocap-load';
+import type { Motion } from './remote';
 
 /** Where the sparring happens: the open north half of the hangout square, and the ring's radius */
 export const SPAR_SPOT = { x: 30, z: 49, r: 2.6 };
@@ -50,7 +54,10 @@ export function buildFightDemo(d: FightDemoDeps) {
     });
   }
 
-  const figures: (FighterFigure & { id: string })[] = sim.fighters.map((f, i) => ({ id: f.id, ...createFighterFigure(group, outfits[i], d.low, i * 37) }));
+  // (the capture's legs, once it's in: walk mode's chunks)
+  let motion: Motion | null = null;
+  void Promise.all([import('./animator'), loadMocap(), import('./onfoot')]).then(([anim, data, onFoot]) => (motion = { anim, data, onFoot }), () => {});
+  const figures: (FighterFigure & { id: string })[] = sim.fighters.map((f, i) => ({ id: f.id, ...createFighterFigure(group, outfits[i], d.low, i * 37, () => motion) }));
 
   // The ring on the ground: a neon circle, and the hit bursts
   const ring = new THREE.Mesh(new THREE.RingGeometry(spot.r - 0.06, spot.r, 64), new THREE.MeshBasicMaterial({ color: '#00eaff', transparent: true, opacity: 0.6, depthWrite: false }));
@@ -138,7 +145,7 @@ export function buildFightDemo(d: FightDemoDeps) {
     sim.bots = bots;
     for (const fg of figures) {
       fg.manual = null;
-      fg.clip = null;
+      fg.poser.reset();
     }
   });
   const onKey = (e: KeyboardEvent) => {
@@ -162,7 +169,7 @@ export function buildFightDemo(d: FightDemoDeps) {
     row.querySelector<HTMLElement>('.fight-demo-health span')!.style.transform = `scaleX(${f.health / T.health})`;
     row.querySelector<HTMLElement>('.fight-demo-stamina span')!.style.transform = `scaleX(${f.stamina / T.stamina})`;
     const name = row.querySelector<HTMLElement>('[data-clip-name]')!;
-    const label = `${fg.clip ?? 'guard'} ${Math.floor(fg.frame)}${f.chain > 1 ? ` · ${f.chain} hit chain` : ''}${f.empty ? ' · tired' : ''}`;
+    const label = `${fg.poser.clip ?? 'guard'} ${Math.floor(fg.poser.frame)}${f.chain > 1 ? ` · ${f.chain} hit chain` : ''}${f.empty ? ' · tired' : ''}`;
     if (name.textContent !== label) name.textContent = label;
   }
 

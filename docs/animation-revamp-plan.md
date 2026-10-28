@@ -971,7 +971,95 @@ phase only gives them the moves):
 - Each row from capture where a take fits, keyed where none does; no row
   threatening, none explicit (the content rules).
 
-### Phase 7: the Fight Club
+### Phase 7: the Fight Club (built, for the owner's sign-off)
+
+What it built (`tests/fighthuman.test.ts` holds all of it):
+
+- **The fighters' legs round the ring on the animator**
+  (`fight-figure.ts`): once walk mode has the capture (`motion`, the
+  `Motion` other players use; `FightDeps.motion`), each fighter has an
+  animator of its own, fed as remote.ts feeds other players' (the springs
+  following the velocity seen, over the sim's ticks so a frame that sees
+  none or two doesn't jolt it, facing the opponent so it picks the strafes
+  and the way back), blended in as it moves in the guard (`LEGS_IN`, out
+  over `LEGS_OUT` once both feet are down) through `applyTo()`'s upper
+  mask: the guard's upper body over the captured legs and hips, the chest
+  turned back to face the opponent, as the gun's hold over the player's.
+  Until the capture is in (and in the `?fight` demo, which now loads its
+  own) the planted-feet walk as before. Measured on bots (the rubric over
+  every stretch the legs show): the procedural walk it replaces failed
+  pops in 26 of 56 stretches (up to 88 rad/s), continuity in 30 (up to
+  4,900 rad/s²) and the feet on the ground in 22 (2.5 cm through); the
+  capture's legs (45 stretches over three minutes) fail none on the ground
+  or the knees, and pops, continuity and the slide in fewer than one
+  stretch in five, by a little (51 rad/s, 2,650 rad/s², 1.9 cm at worst;
+  the test holds them to `RING`). The rest is
+  the bots: they turn from a run's pace one way to the other in a tick
+  (the sim's walk is 3.2 tiles a second, a run), faster than anyone's feet
+  can follow; polish is Phase 8's.
+- **The clips on the rubric**: every clip each way round, as the figure
+  draws it, held to the knees, the elbows, the neck, the head where it's
+  measured, pops, continuity and the feet on the ground. What it found and
+  what changed:
+  - **A curve through the keys** (`CURVES` in fight-anim.ts): the
+    per-segment eases stopped every number at every key and snapped into
+    the next (a jolt at each); the sampler is a shape-preserving cubic now
+    (Fritsch and Butland's: nothing overshoots a key, a number eases to a
+    stop where it turns back or holds and carries its speed through a key
+    it passes; a loop's ends meet). The keys' eases went with it.
+  - **Re-keyed where a person couldn't**: the jab's elbow opened 2.3 rad in
+    three frames (77 rad/s; a person's is about 40 at most): it opens over
+    the whole wind-up now, the cock-back gone from the arm (the wrist still
+    cocks); the cross the same (64), the hook's wind-up a touch less
+    (59); the front kick's knee chambers a frame earlier and lower so the
+    shin's snap out has the frames it needs, and the foot is set down onto
+    the canvas, not dropped; the get-up's right leg folds under him and
+    his right hand pushes on the canvas, not through it, and its last
+    steps into the guard are gentler. The sim's timing is untouched: every
+    move's clip is its sim frames long, the strike on the first active
+    frame (fight-anim's tests).
+  - **The feet on the canvas** (`fightground.ts`, `groundFighter()`): the
+    keyed legs and hips left the guard's rear foot 4 to 7 cm over the
+    canvas and put a foot as much as 36 cm through it (the get-up), 13 cm
+    in the dodge and the body hit. After the clip is sampled, a sole under
+    `PLANT.lo` goes onto the canvas (the leg reached by `reachLeg()`, the
+    foot keeping the pitch the clip gave it); one higher comes down that
+    much lower, eased in and out (`soleGoal()`), so a kick keeps its shape
+    and nothing jumps as a foot lifts or lands, and past `PLANT.lift` it's
+    the clip's; the hips come down as far as a foot on the canvas needs
+    (to `REACH`, a little short of straight, so a knee is never solved
+    right at full stretch, where it flickered). With the root it's drawn
+    with, so the lying poses' feet are right too. About 26 µs a fighter a
+    frame.
+  - **The neck** (`figurePose()`, `NECK`): the head turns from the chest
+    freely to 57° and eases in to 75° at most.
+- **Whole fights**: a minute of two bots, each drawn as the view draws it,
+  held to the same rows (but the head's: a blow snaps it round faster than
+  a person turns, as it should). The old linear crossfade jolted at both
+  ends (47 rad/s); a change of clip is inertialized now
+  (`createFightPoser()`: where the pose was and how fast it moved, taken
+  as at the last frame shown, carried over and eased out by a cubic, over
+  `SETTLE`'s frames: as long as nothing then changes speed faster than
+  800 rad/s², into a move by its start-up at most so a strike cut into
+  from anything is its own by the frame it lands, into anything else up
+  to half a second). The clip a fighter's state calls for is
+  `clipFor()` (fight-anim.ts, DOM-free), so the tests play exactly what
+  the view does.
+- **The boxing capture, measured and not used** (the owner's call to
+  make, below): CMU's boxing takes (13_17, 13_18, 14_01-03, 15_13,
+  79_08, 80_10) are shadow-boxing with the guard up and the hips about
+  0.56 up, their footwork a slow shuffle (0.1 to 0.4 rig units a second)
+  where the bots move at up to 3.2 tiles a second, about ten times as
+  fast: warped to that it isn't a shuffle any more, so the legs round the
+  ring are the capture's walks, runs, strafes and backpedals, which do go
+  that fast. Their punches are continuous combinations without a clean
+  start or end to cut a move from, and the keyed clips now pass every row,
+  so none is blended under them. A `fight` pack of them stays possible
+  (the plan's pipeline: a pack fetched on first use) if the owner wants
+  the capture's guard bounce or punches tried in the lab.
+- Nothing in `fight-sim.ts` or `fight-moves.ts` changed.
+
+The plan as it was:
 
 - The fighters' legs round the ring on the animator (the guard's upper
   body over them, as the gun's is over the player's).
@@ -1010,7 +1098,7 @@ the owner allows `zenodo.org` for 100STYLE.
 | Sit down, sit, stand up | 13, 14, 79, 80, 86, 111 |
 | Lifting, carrying, setting down | 79, 80, 115, 143 |
 | Opening a door, a reach to a handle | 13, 14, 111 (to check) |
-| Boxing, a fighter's shuffle | 13, 14, 15 (boxing takes, to check) |
+| Boxing, a fighter's shuffle | 13, 14, 15, 79, 80 (measured in Phase 7: shadow-boxing, the footwork a tenth of the bots' speed; not used) |
 | A dance | 05, 55, 60, 61, 93, 94 (salsa pairs: one dancer cut out) |
 | Kids at play (adults at a smaller scale) | the jog and the run at scale; a ball game from 86 |
 
@@ -1025,6 +1113,8 @@ the owner allows `zenodo.org` for 100STYLE.
   the database, its stride, the scale rule).
 - `tests/mocap.test.ts` holds the packs and their sizes; `tests/baked.test.ts`
   the crowd's rows.
+- `tests/fighthuman.test.ts`: the fight clips, whole fights and the
+  fighters' legs round the ring on the rubric (Phase 7).
 - The existing animation tests stay green throughout (`animator`,
   `motionmatch`, `inertia`, `movesim`, `locomotion` until it's retired,
   `gunfit`, `vault`, `fight-anim`, `fight`, `skeleton`, `body`).
@@ -1041,8 +1131,9 @@ the owner allows `zenodo.org` for 100STYLE.
   bench in the City view too?
 - **Rides seen:** show Degen riding the metro, the taxi and the river bus
   (Phase 4), or keep the rides' cameras as they are?
-- **The Fight Club** (Phase 7): in scope now, or after the fight plan's
-  next phase (styles, PvP)?
+- **The boxing capture** (Phase 7): try CMU's boxing takes in the lab as a
+  `fight` pack (the guard's bounce, or punches under the keyed timing), or
+  leave the keyed clips as they are now that they pass the rubric?
 - **100STYLE:** allow `zenodo.org` so its locomotion styles can be checked
   and, if the licence holds, used (more walks and turns in one style, and
   a little variety for the crowd)?

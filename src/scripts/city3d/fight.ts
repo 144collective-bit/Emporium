@@ -230,8 +230,8 @@ export function createFight(d: FightDeps): Fight {
       bout: kind === 'bout' ? BOUT : null,
       arena: { x: RING.x, z: RING.z, r: RING.r },
     });
-    you = createFighterFigure(group, d.outfit(), d.low, 0);
-    them = createFighterFigure(group, crewOutfit(bot === 'hard' ? 2 : bot === 'medium' ? 1 : 0), d.low, 41);
+    you = createFighterFigure(group, d.outfit(), d.low, 0, d.motion);
+    them = createFighterFigure(group, crewOutfit(bot === 'hard' ? 2 : bot === 'medium' ? 1 : 0), d.low, 41, d.motion);
     active = true;
     done = false;
     stop = 0;
