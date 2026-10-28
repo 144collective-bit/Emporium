@@ -103,17 +103,21 @@ lands.
    - **The kart race's rules** (`kart-sim.ts`) load with the race: the
      cups the boot reads (the save, the hut's prompt, the panel's records)
      are `kart-cups.ts`, re-exported by kart-sim.ts.
-   - The fabric's shader comes in its own chunk in Phase 1; the suit's new
-     pieces and the fabric table are wardrobe data (a few KB) in the room
-     made here. Checked: the trainer's menu opens and a spar starts, the
+   - The suit's new pieces are wardrobe data (a few KB) in the room made
+     here. Checked: the trainer's menu opens and a spar starts, the
      hut's menu opens, every test passes.
-1. **The fabric kit.** The fabric table, the id in the uv, the grain
+**Cancelled** (the owner's call, 28 October 2026): the fabric texture
+work, Phases 1 and 2 below, is stopped. Every cloth stays one flat colour,
+and nothing of the fabric kit is in the code. The suit's tailoring
+(Phase 3) and the checks (Phase 4) still stand, waiting on the owner.
+
+1. **The fabric kit** (cancelled). The fabric table, the id in the uv, the grain
    shader on the single figures' material, one atlas of grain tiles, the
    fade with distance, the lab's switch. Every garment starts on a plain
    "cloth" grain, faint, to check it moves with the cloth, never swims or
    shimmers, keeps the ink outlines clean and costs next to nothing (the
    benchmark before and after, desktop and phone).
-2. **The fabrics.** A grain for each kind of cloth the wardrobe has:
+2. **The fabrics** (cancelled). A grain for each kind of cloth the wardrobe has:
    suiting (a fine twill), shirting (poplin), the tie (a fine silk weave),
    knit (the balaclava, the beanie, the cuffs' rib), fleece (the hoodie),
    tricot (the track top), nylon ripstop (the puffer, the fatigues), melton
