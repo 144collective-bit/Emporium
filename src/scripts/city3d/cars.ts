@@ -32,574 +32,180 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { fx, lit, mergeMeshes, moving, toon } from './kit';
 import { addLodSwitch } from './lod';
 
-import type { CarId } from './mycar';
-export type { CarId };
+import { CARS, type CarId, type CarSpec } from './carspec';
+import type { Degen } from './character';
+import type { CarState } from './drive-sim';
+export { CARS, PAINTS } from './carspec';
+export type { CarId, CarSpec };
 type V2 = [number, number];
-
-export interface CarSpec {
-  id: CarId;
-  /** What the garage calls it (made-up names, never a real make) */
-  name: string;
-  /** Length, width (tiles) */
-  L: number;
-  W: number;
-  /** Wheel radius and tyre width */
-  r: number;
-  tw: number;
-  /** Rear and front axle (x) */
-  axles: V2;
-  /** Height of the body's underside */
-  clr: number;
-  /** Top line of the lower body, front to rear (the front and rear faces drop from its ends) */
-  top: V2[];
-  /** The cabin's side outline: rear base, rear roof, front roof, front base */
-  cabin: [V2, V2, V2, V2];
-  /** Cabin width, as a share of W */
-  cabinW: number;
-  /** Side windows: x ranges along the cabin (each one a pane), and the lowest a pane goes */
-  panes: V2[];
-  sill?: number;
-  /** Rear window (vans and buses have none: a blank back) */
-  rearGlass?: boolean;
-  /** Height of the lights, and their shape */
-  lightY: number;
-  lamp?: 'round' | 'wide' | 'slim';
-  /** Door seams (x) and handles (x) along the body's sides */
-  seams?: number[];
-  handles?: number[];
-  /** Rim colour (chrome unless set) and spokes */
-  rim?: string;
-  spokes?: number;
-  /** Exhaust pipes at the back: their z offsets */
-  exhaust?: number[];
-  /** Extras drawn per model */
-  extra?: (p: Parts, s: CarSpec) => void;
-}
 
 /* ---------- Colours ---------- */
 
 const TYRE = '#17151f';
 const RIM = '#c9c4e6';
 const TRIM = '#2a2838';
-const GLASS = '#5cc8e8';
+export const GLASS = '#5cc8e8';
 const PLATE = '#f3f2f7';
 const CHROME = '#dcdaf0';
 const SEAM = '#1b1830';
 const HEAD = '#fff4c2';
 const TAIL = '#e8233a';
 const AMBER = '#ffad33';
-const BLACKOUT = '#1d1b2b';
+export const BLACKOUT = '#1d1b2b';
 
-/** Paint colours that suit each model (the traffic picks from these) */
-export const PAINTS: Record<CarId, string[]> = {
-  hatch: ['#e23b3b', '#ffd23f', '#00c2ff', '#1fbf6b', '#f3f2f7', '#ff8a3d'],
-  sedan: ['#f3f2f7', '#2b2a40', '#8000ff', '#00c2ff', '#e23b3b', '#9a96b8'],
-  coupe: ['#e219e5', '#e23b3b', '#ffd23f', '#00eaff', '#14121f'],
-  pickup: ['#ff8a3d', '#1f6b4a', '#e23b3b', '#f3f2f7', '#2a3b66'],
-  van: ['#f3f2f7', '#f3f2f7', '#ffd23f', '#00c2ff', '#9a96b8'],
-  bus: ['#e219e5', '#2aabee'],
-  muscle: ['#e23b3b', '#14121f', '#ff8a3d', '#8000ff'],
-  suv: ['#2a3b66', '#1f6b4a', '#14121f', '#f3f2f7'],
-  super: ['#00eaff', '#e219e5', '#ffd23f', '#f3f2f7'],
-  exec: ['#14121f', '#14121f', '#1c1d2e'],
-};
+/* ---------- Each model's own touches ---------- */
 
-/* ---------- Models ---------- */
-
-export const CARS: Record<CarId, CarSpec> = {
-  hatch: {
-    id: 'hatch',
-    name: 'City Hatch',
-    L: 2.2,
-    W: 0.98,
-    r: 0.19,
-    tw: 0.2,
-    axles: [-0.68, 0.7],
-    clr: 0.1,
-    top: [
-      [1.1, 0.44],
-      [1.0, 0.53],
-      [0.5, 0.57],
-      [-1.02, 0.6],
-      [-1.1, 0.5],
-    ],
-    cabin: [
-      [-1.03, 0.57],
-      [-0.9, 0.93],
-      [0.12, 0.95],
-      [0.55, 0.56],
-    ],
-    cabinW: 0.86,
-    panes: [
-      [-0.95, -0.36],
-      [-0.3, 0.5],
-    ],
-    rearGlass: true,
-    lightY: 0.44,
-    lamp: 'round',
-    seams: [-0.3, 0.52],
-    handles: [-0.18],
-    exhaust: [0.28],
-    extra(p, s) {
-      // Roof spoiler over the hatch, a rear wiper, roof bars
-      p.paint(box(0.16, 0.04, s.W * 0.8, -0.96, 0.95, 0));
-      p.detail(box(0.02, 0.02, 0.18, -0.985, 0.72, 0.05), TRIM);
-      for (const z of [-1, 1]) p.detail(box(0.75, 0.03, 0.03, -0.4, 0.98, z * s.W * 0.3), TRIM);
-    },
+const EXTRAS: Partial<Record<CarId, (p: Parts, s: CarSpec) => void>> = {
+  hatch(p, s) {
+    // Roof spoiler over the hatch, a rear wiper, roof bars
+    p.paint(box(0.16, 0.04, s.W * 0.8, -0.96, 0.95, 0));
+    p.detail(box(0.02, 0.02, 0.18, -0.985, 0.72, 0.05), TRIM);
+    for (const z of [-1, 1]) p.detail(box(0.75, 0.03, 0.03, -0.4, 0.98, z * s.W * 0.3), TRIM);
   },
-  sedan: {
-    id: 'sedan',
-    name: 'Cruiser',
-    L: 2.6,
-    W: 1.0,
-    r: 0.2,
-    tw: 0.2,
-    axles: [-0.82, 0.86],
-    clr: 0.1,
-    top: [
-      [1.3, 0.42],
-      [1.2, 0.52],
-      [0.55, 0.56],
-      [-0.85, 0.58],
-      [-1.25, 0.56],
-      [-1.3, 0.46],
-    ],
-    cabin: [
-      [-0.9, 0.57],
-      [-0.46, 0.89],
-      [0.2, 0.89],
-      [0.6, 0.55],
-    ],
-    cabinW: 0.86,
-    panes: [
-      [-0.85, -0.15],
-      [-0.09, 0.55],
-    ],
-    rearGlass: true,
-    lightY: 0.43,
-    lamp: 'wide',
-    seams: [-0.92, -0.12, 0.6],
-    handles: [-0.8, 0.0],
-    exhaust: [0.26, -0.26],
-    extra(p, s) {
-      // Chrome along the window line and the boot lid, a roof aerial, a boot lip
-      for (const z of [-1, 1]) p.detail(box(1.38, 0.022, 0.012, -0.15, 0.58, z * (s.W * 0.43 + 0.006)), CHROME);
-      p.detail(box(0.02, 0.03, s.W * 0.5, -1.31, 0.5, 0), CHROME);
-      p.paint(box(0.12, 0.03, s.W * 0.86, -1.22, 0.59, 0));
-      p.detail(box(0.012, 0.22, 0.012, -0.42, 0.98, 0.15), TRIM);
-    },
+  sedan(p, s) {
+    // Chrome along the window line and the boot lid, a roof aerial, a boot lip
+    for (const z of [-1, 1]) p.detail(box(1.38, 0.022, 0.012, -0.15, 0.58, z * (s.W * 0.43 + 0.006)), CHROME);
+    p.detail(box(0.02, 0.03, s.W * 0.5, -1.31, 0.5, 0), CHROME);
+    p.paint(box(0.12, 0.03, s.W * 0.86, -1.22, 0.59, 0));
+    p.detail(box(0.012, 0.22, 0.012, -0.42, 0.98, 0.15), TRIM);
   },
-  coupe: {
-    id: 'coupe',
-    name: 'Street GT',
-    L: 2.5,
-    W: 1.04,
-    r: 0.21,
-    tw: 0.24,
-    axles: [-0.8, 0.84],
-    clr: 0.07,
-    top: [
-      [1.25, 0.34],
-      [1.13, 0.48],
-      [0.4, 0.52],
-      [-1.0, 0.54],
-      [-1.25, 0.5],
-    ],
-    cabin: [
-      [-1.0, 0.53],
-      [-0.42, 0.79],
-      [0.0, 0.79],
-      [0.42, 0.51],
-    ],
-    cabinW: 0.82,
-    panes: [[-0.85, 0.36]],
-    rearGlass: true,
-    lightY: 0.35,
-    lamp: 'slim',
-    seams: [-0.5, 0.44],
-    handles: [-0.4],
-    rim: '#ffd23f',
-    spokes: 6,
-    exhaust: [0.3, 0.2, -0.2, -0.3],
-    extra(p, s) {
-      // Rear wing on two posts, with end plates
-      p.paint(box(0.22, 0.035, s.W * 0.9, -1.1, 0.68, 0));
-      for (const z of [-1, 1]) p.detail(box(0.24, 0.1, 0.02, -1.1, 0.66, z * s.W * 0.45), TRIM);
-      for (const z of [-0.3, 0.3]) p.detail(box(0.05, 0.15, 0.04, -1.08, 0.59, z), TRIM);
-      // Side intakes behind the doors, a bonnet scoop, a front splitter and a rear diffuser
-      for (const z of [-1, 1]) p.detail(box(0.3, 0.09, 0.02, -0.68, 0.36, z * (s.W / 2 + 0.006)), BLACKOUT);
-      p.paint(box(0.3, 0.06, 0.26, 0.72, 0.52, 0));
-      p.detail(box(0.02, 0.04, 0.2, 0.88, 0.53, 0), BLACKOUT);
-      p.detail(box(0.12, 0.025, s.W * 0.96, 1.22, 0.085, 0), BLACKOUT);
-      for (const z of [-0.3, -0.1, 0.1, 0.3]) p.detail(box(0.18, 0.06, 0.015, -1.18, 0.13, z * s.W * 0.9), BLACKOUT);
-      // Twin racing stripes, nose to tail over the cabin
-      for (const z of [-0.09, 0.09]) stripe(p, s, z, 0.09, PLATE);
-    },
+  coupe(p, s) {
+    // Rear wing on two posts, with end plates
+    p.paint(box(0.22, 0.035, s.W * 0.9, -1.1, 0.68, 0));
+    for (const z of [-1, 1]) p.detail(box(0.24, 0.1, 0.02, -1.1, 0.66, z * s.W * 0.45), TRIM);
+    for (const z of [-0.3, 0.3]) p.detail(box(0.05, 0.15, 0.04, -1.08, 0.59, z), TRIM);
+    // Side intakes behind the doors, a bonnet scoop, a front splitter and a rear diffuser
+    for (const z of [-1, 1]) p.detail(box(0.3, 0.09, 0.02, -0.68, 0.36, z * (s.W / 2 + 0.006)), BLACKOUT);
+    p.paint(box(0.3, 0.06, 0.26, 0.72, 0.52, 0));
+    p.detail(box(0.02, 0.04, 0.2, 0.88, 0.53, 0), BLACKOUT);
+    p.detail(box(0.12, 0.025, s.W * 0.96, 1.22, 0.085, 0), BLACKOUT);
+    for (const z of [-0.3, -0.1, 0.1, 0.3]) p.detail(box(0.18, 0.06, 0.015, -1.18, 0.13, z * s.W * 0.9), BLACKOUT);
+    // Twin racing stripes, nose to tail over the cabin
+    for (const z of [-0.09, 0.09]) stripe(p, s, z, 0.09, PLATE);
   },
-  pickup: {
-    id: 'pickup',
-    name: 'Hauler',
-    L: 2.95,
-    W: 1.06,
-    r: 0.26,
-    tw: 0.24,
-    axles: [-0.95, 0.95],
-    clr: 0.18,
-    top: [
-      [1.475, 0.62],
-      [1.4, 0.71],
-      [0.62, 0.75],
-      [-1.475, 0.75],
-    ],
-    cabin: [
-      [-0.24, 0.74],
-      [-0.2, 1.13],
-      [0.3, 1.13],
-      [0.66, 0.74],
-    ],
-    cabinW: 0.92,
-    panes: [[-0.16, 0.58]],
-    rearGlass: true,
-    lightY: 0.62,
-    lamp: 'wide',
-    seams: [-0.22, 0.64],
-    handles: [-0.1],
-    rim: '#3a3550',
-    spokes: 6,
-    exhaust: [-0.3],
-    extra(p, s) {
-      // The open bed: a dark liner inside raised rails, a toolbox across the front of it
-      p.detail(box(1.12, 0.012, s.W - 0.16, -0.86, 0.752, 0), '#3a3550');
-      for (const z of [-1, 1]) p.paint(box(1.18, 0.07, 0.07, -0.86, 0.785, z * (s.W / 2 - 0.035)));
-      p.paint(box(0.07, 0.07, s.W, -1.44, 0.785, 0));
-      p.detail(box(0.22, 0.16, s.W - 0.12, -0.42, 0.83, 0), CHROME);
-      for (const z of [-0.2, 0.2]) p.detail(box(0.04, 0.02, 0.1, -0.31, 0.9, z), TRIM);
-      // Push bar on the nose, fender flares over every wheel, mud flaps, a light bar on the cab
-      p.detail(box(0.08, 0.22, s.W * 0.74, 1.52, 0.42, 0), TRIM);
-      for (const x of [-0.18, 0.18]) p.detail(box(0.06, 0.3, 0.05, 1.5, 0.52, x * s.W), TRIM);
-      for (const ax of s.axles) for (const z of [-1, 1]) p.detail(flare(s, ax, z), TRIM);
-      for (const z of [-1, 1]) p.detail(box(0.02, 0.2, 0.2, s.axles[0] - s.r - 0.08, 0.16, z * (s.W / 2 - 0.1)), TRIM);
-      p.detail(box(0.08, 0.06, s.W * 0.7, 0.05, 1.17, 0), TRIM);
-      for (const z of [-0.27, -0.09, 0.09, 0.27]) p.detail(box(0.02, 0.045, 0.1, 0.1, 1.17, z * s.W), HEAD);
-    },
+  pickup(p, s) {
+    // The open bed: a dark liner inside raised rails, a toolbox across the front of it
+    p.detail(box(1.12, 0.012, s.W - 0.16, -0.86, 0.752, 0), '#3a3550');
+    for (const z of [-1, 1]) p.paint(box(1.18, 0.07, 0.07, -0.86, 0.785, z * (s.W / 2 - 0.035)));
+    p.paint(box(0.07, 0.07, s.W, -1.44, 0.785, 0));
+    p.detail(box(0.22, 0.16, s.W - 0.12, -0.42, 0.83, 0), CHROME);
+    for (const z of [-0.2, 0.2]) p.detail(box(0.04, 0.02, 0.1, -0.31, 0.9, z), TRIM);
+    // Push bar on the nose, fender flares over every wheel, mud flaps, a light bar on the cab
+    p.detail(box(0.08, 0.22, s.W * 0.74, 1.52, 0.42, 0), TRIM);
+    for (const x of [-0.18, 0.18]) p.detail(box(0.06, 0.3, 0.05, 1.5, 0.52, x * s.W), TRIM);
+    for (const ax of s.axles) for (const z of [-1, 1]) p.detail(flare(s, ax, z), TRIM);
+    for (const z of [-1, 1]) p.detail(box(0.02, 0.2, 0.2, s.axles[0] - s.r - 0.08, 0.16, z * (s.W / 2 - 0.1)), TRIM);
+    p.detail(box(0.08, 0.06, s.W * 0.7, 0.05, 1.17, 0), TRIM);
+    for (const z of [-0.27, -0.09, 0.09, 0.27]) p.detail(box(0.02, 0.045, 0.1, 0.1, 1.17, z * s.W), HEAD);
   },
-  van: {
-    id: 'van',
-    name: 'Box Van',
-    L: 2.75,
-    W: 1.06,
-    r: 0.23,
-    tw: 0.22,
-    axles: [-0.9, 0.92],
-    clr: 0.14,
-    top: [
-      [1.375, 0.5],
-      [1.3, 0.6],
-      [1.02, 0.66],
-      [-1.375, 0.66],
-    ],
-    cabin: [
-      [-1.375, 0.65],
-      [-1.375, 1.27],
-      [0.6, 1.27],
-      [1.04, 0.65],
-    ],
-    cabinW: 0.98,
-    panes: [[0.24, 0.84]],
-    sill: 0.78,
-    lightY: 0.5,
-    lamp: 'wide',
-    seams: [0.2, 0.98],
-    handles: [0.32, -0.88],
-    exhaust: [-0.32],
-    extra(p, s) {
-      // Sliding-door rail and its seams, a roof rack with a ladder, a cargo stripe, rear doors
-      for (const z of [-1, 1]) {
-        const zz = z * (s.W * 0.49 + 0.012);
-        p.detail(box(1.1, 0.025, 0.02, -0.45, 1.02, zz), TRIM);
-        for (const x of [-1.0, 0.1]) p.detail(box(0.012, 0.6, 0.012, x, 0.7, zz), SEAM);
-        p.detail(box(1.45, 0.09, 0.012, -0.575, 0.86, z * (s.W * 0.49 + 0.016)), '#ff2fb9');
-        p.detail(box(1.45, 0.04, 0.012, -0.575, 0.78, z * (s.W * 0.49 + 0.016)), '#00c2ff');
-      }
-      for (const x of [-1.0, -0.4, 0.2]) p.detail(box(0.05, 0.05, s.W * 0.9, x, 1.3, 0), TRIM);
-      for (const z of [-1, 1]) p.detail(box(1.3, 0.04, 0.04, -0.4, 1.33, z * s.W * 0.42), TRIM);
-      // The ladder on the rack
-      for (const z of [-0.12, 0.12]) p.detail(box(1.2, 0.025, 0.025, -0.4, 1.37, z), CHROME);
-      for (let k = 0; k < 6; k++) p.detail(box(0.02, 0.02, 0.24, -0.95 + k * 0.22, 1.37, 0), CHROME);
-      // Rear: a split in the doors, two handles, a step
-      p.detail(box(0.012, 0.55, 0.012, -s.L / 2 - 0.006, 0.95, 0), SEAM);
-      for (const z of [-0.06, 0.06]) p.detail(box(0.03, 0.03, 0.08, -s.L / 2 - 0.015, 0.95, z), CHROME);
-      p.detail(box(0.16, 0.05, s.W * 0.5, -s.L / 2 - 0.05, 0.16, 0), TRIM);
-    },
+  van(p, s) {
+    // Sliding-door rail and its seams, a roof rack with a ladder, a cargo stripe, rear doors
+    for (const z of [-1, 1]) {
+      const zz = z * (s.W * 0.49 + 0.012);
+      p.detail(box(1.1, 0.025, 0.02, -0.45, 1.02, zz), TRIM);
+      for (const x of [-1.0, 0.1]) p.detail(box(0.012, 0.6, 0.012, x, 0.7, zz), SEAM);
+      p.detail(box(1.45, 0.09, 0.012, -0.575, 0.86, z * (s.W * 0.49 + 0.016)), '#ff2fb9');
+      p.detail(box(1.45, 0.04, 0.012, -0.575, 0.78, z * (s.W * 0.49 + 0.016)), '#00c2ff');
+    }
+    for (const x of [-1.0, -0.4, 0.2]) p.detail(box(0.05, 0.05, s.W * 0.9, x, 1.3, 0), TRIM);
+    for (const z of [-1, 1]) p.detail(box(1.3, 0.04, 0.04, -0.4, 1.33, z * s.W * 0.42), TRIM);
+    // The ladder on the rack
+    for (const z of [-0.12, 0.12]) p.detail(box(1.2, 0.025, 0.025, -0.4, 1.37, z), CHROME);
+    for (let k = 0; k < 6; k++) p.detail(box(0.02, 0.02, 0.24, -0.95 + k * 0.22, 1.37, 0), CHROME);
+    // Rear: a split in the doors, two handles, a step
+    p.detail(box(0.012, 0.55, 0.012, -s.L / 2 - 0.006, 0.95, 0), SEAM);
+    for (const z of [-0.06, 0.06]) p.detail(box(0.03, 0.03, 0.08, -s.L / 2 - 0.015, 0.95, z), CHROME);
+    p.detail(box(0.16, 0.05, s.W * 0.5, -s.L / 2 - 0.05, 0.16, 0), TRIM);
   },
-  bus: {
-    id: 'bus',
-    name: 'City Bus',
-    L: 5.6,
-    W: 1.38,
-    r: 0.3,
-    tw: 0.26,
-    axles: [-1.75, 1.8],
-    clr: 0.16,
-    top: [
-      [2.8, 0.72],
-      [-2.8, 0.72],
-    ],
-    cabin: [
-      [-2.8, 0.71],
-      [-2.78, 1.66],
-      [2.72, 1.66],
-      [2.8, 0.71],
-    ],
-    cabinW: 0.99,
-    panes: [
-      [-2.6, -1.85],
-      [-1.75, -1.0],
-      [-0.9, -0.15],
-      [-0.05, 0.7],
-      [0.8, 1.55],
-      [1.65, 2.6],
-    ],
-    sill: 0.92,
-    lightY: 0.5,
-    lamp: 'wide',
-    rim: '#f3f2f7',
-    spokes: 0,
-    exhaust: [-0.5],
-    extra(p, s) {
-      // Destination sign over the windscreen, stripes along the sides
-      p.glow(box(0.02, 0.14, s.W * 0.6, s.L / 2 + 0.012, 1.5, 0));
-      for (const z of [-1, 1]) {
-        p.detail(box(s.L - 0.4, 0.06, 0.012, 0, 0.8, z * (s.W * 0.495 + 0.008)), '#f3f2f7');
-        p.detail(box(s.L - 0.4, 0.03, 0.012, 0, 0.74, z * (s.W * 0.495 + 0.008)), '#ffd23f');
-      }
-      // Two doors on the kerb side (+z): glass panels in dark frames
-      for (const x of [2.2, -0.2]) {
-        p.detail(box(0.62, 1.0, 0.014, x, 0.68, s.W / 2 + 0.01), BLACKOUT);
-        for (const dx of [-0.15, 0.15]) p.detail(box(0.25, 0.85, 0.012, x + dx, 0.7, s.W / 2 + 0.018), GLASS);
-      }
-      // Roof pods (air conditioning), a ladder at the back, mirrors on long arms
-      for (const x of [-1.3, 0.9]) {
-        p.paint(box(0.9, 0.14, s.W * 0.6, x, 1.73, 0));
-        p.detail(box(0.6, 0.02, s.W * 0.4, x, 1.81, 0), TRIM);
-      }
-      for (const z of [-1, 1]) {
-        p.detail(box(0.25, 0.03, 0.03, s.L / 2 + 0.1, 1.45, z * (s.W / 2 - 0.02)), TRIM);
-        p.detail(box(0.05, 0.22, 0.08, s.L / 2 + 0.22, 1.32, z * (s.W / 2 + 0.02)), TRIM);
-      }
-    },
+  bus(p, s) {
+    // Destination sign over the windscreen, stripes along the sides
+    p.glow(box(0.02, 0.14, s.W * 0.6, s.L / 2 + 0.012, 1.5, 0));
+    for (const z of [-1, 1]) {
+      p.detail(box(s.L - 0.4, 0.06, 0.012, 0, 0.8, z * (s.W * 0.495 + 0.008)), '#f3f2f7');
+      p.detail(box(s.L - 0.4, 0.03, 0.012, 0, 0.74, z * (s.W * 0.495 + 0.008)), '#ffd23f');
+    }
+    // Two doors on the kerb side (+z): glass panels in dark frames
+    for (const x of [2.2, -0.2]) {
+      p.detail(box(0.62, 1.0, 0.014, x, 0.68, s.W / 2 + 0.01), BLACKOUT);
+      for (const dx of [-0.15, 0.15]) p.detail(box(0.25, 0.85, 0.012, x + dx, 0.7, s.W / 2 + 0.018), GLASS);
+    }
+    // Roof pods (air conditioning), a ladder at the back, mirrors on long arms
+    for (const x of [-1.3, 0.9]) {
+      p.paint(box(0.9, 0.14, s.W * 0.6, x, 1.73, 0));
+      p.detail(box(0.6, 0.02, s.W * 0.4, x, 1.81, 0), TRIM);
+    }
+    for (const z of [-1, 1]) {
+      p.detail(box(0.25, 0.03, 0.03, s.L / 2 + 0.1, 1.45, z * (s.W / 2 - 0.02)), TRIM);
+      p.detail(box(0.05, 0.22, 0.08, s.L / 2 + 0.22, 1.32, z * (s.W / 2 + 0.02)), TRIM);
+    }
   },
-  muscle: {
-    id: 'muscle',
-    name: 'Street Thunder',
-    L: 2.75,
-    W: 1.08,
-    r: 0.22,
-    tw: 0.28,
-    axles: [-0.92, 0.9],
-    clr: 0.09,
-    top: [
-      [1.375, 0.42],
-      [1.26, 0.54],
-      [0.45, 0.58],
-      [-0.7, 0.62],
-      [-1.3, 0.62],
-      [-1.375, 0.52],
-    ],
-    // A fastback: the roof runs down in one long slope to the tail
-    cabin: [
-      [-1.28, 0.61],
-      [-0.5, 0.88],
-      [0.0, 0.89],
-      [0.45, 0.57],
-    ],
-    cabinW: 0.84,
-    panes: [
-      [-1.0, -0.35],
-      [-0.27, 0.36],
-    ],
-    rearGlass: true,
-    lightY: 0.4,
-    lamp: 'slim',
-    seams: [-0.4, 0.46],
-    handles: [-0.28],
-    rim: '#3a3550',
-    spokes: 5,
-    exhaust: [0.3, -0.3],
-    extra(p, s) {
-      // A hood scoop on the long bonnet, with a dark mouth facing forward
-      p.paint(box(0.36, 0.075, 0.3, 0.92, topAt(s, 0.92) + 0.02, 0));
-      p.detail(box(0.02, 0.05, 0.24, 1.105, topAt(s, 0.92) + 0.025, 0), BLACKOUT);
-      // Flared arches over the fat tyres, a lip on the boot, a wide black stripe nose to tail
-      for (const ax of s.axles) for (const z of [-1, 1]) p.detail(flare(s, ax, z), TRIM);
-      p.paint(box(0.1, 0.05, s.W * 0.8, -1.32, 0.64, 0));
-      stripe(p, s, 0, 0.2, BLACKOUT);
-      // Side pipes' heat shields under the doors
-      for (const z of [-1, 1]) p.detail(box(0.9, 0.05, 0.05, -0.05, s.clr + 0.03, z * (s.W / 2 + 0.03)), CHROME);
-    },
+  muscle(p, s) {
+    // A hood scoop on the long bonnet, with a dark mouth facing forward
+    p.paint(box(0.36, 0.075, 0.3, 0.92, topAt(s, 0.92) + 0.02, 0));
+    p.detail(box(0.02, 0.05, 0.24, 1.105, topAt(s, 0.92) + 0.025, 0), BLACKOUT);
+    // Flared arches over the fat tyres, a lip on the boot, a wide black stripe nose to tail
+    for (const ax of s.axles) for (const z of [-1, 1]) p.detail(flare(s, ax, z), TRIM);
+    p.paint(box(0.1, 0.05, s.W * 0.8, -1.32, 0.64, 0));
+    stripe(p, s, 0, 0.2, BLACKOUT);
+    // Side pipes' heat shields under the doors
+    for (const z of [-1, 1]) p.detail(box(0.9, 0.05, 0.05, -0.05, s.clr + 0.03, z * (s.W / 2 + 0.03)), CHROME);
   },
-  suv: {
-    id: 'suv',
-    name: 'Big Rover',
-    L: 2.8,
-    W: 1.12,
-    r: 0.28,
-    tw: 0.27,
-    axles: [-0.92, 0.92],
-    clr: 0.24,
-    top: [
-      [1.4, 0.66],
-      [1.33, 0.8],
-      [0.9, 0.84],
-      [-1.4, 0.84],
-    ],
-    cabin: [
-      [-1.38, 0.83],
-      [-1.34, 1.32],
-      [0.5, 1.32],
-      [0.92, 0.83],
-    ],
-    cabinW: 0.95,
-    panes: [
-      [-1.28, -0.5],
-      [-0.42, 0.22],
-      [0.3, 0.82],
-    ],
-    rearGlass: true,
-    lightY: 0.58,
-    lamp: 'round',
-    seams: [-0.46, 0.26, 0.98],
-    handles: [-0.34, 0.38],
-    rim: '#3a3550',
-    spokes: 6,
-    exhaust: [-0.34],
-    extra(p, s) {
-      const half = s.L / 2;
-      // Roof rails on short feet, and a light bar across the front of the roof
-      for (const z of [-1, 1]) {
-        const zz = z * s.W * 0.33;
-        p.detail(box(1.5, 0.035, 0.035, -0.45, 1.365, zz), TRIM);
-        for (const x of [-1.1, 0.2]) p.detail(box(0.06, 0.04, 0.045, x, 1.335, zz), TRIM);
-      }
-      p.detail(box(0.08, 0.07, s.W * 0.72, 0.42, 1.36, 0), TRIM);
-      for (let k = -2; k <= 2; k++) p.detail(box(0.02, 0.045, 0.1, 0.465, 1.36, k * 0.16), HEAD);
-      // A bull bar on the nose: two uprights, two rails, mounts to the bumper
-      for (const z of [-0.27, 0.27]) {
-        p.detail(box(0.05, 0.42, 0.05, half + 0.12, 0.5, z), TRIM);
-        p.detail(box(0.1, 0.04, 0.04, half + 0.06, 0.34, z), TRIM);
-      }
-      for (const y of [0.4, 0.66]) p.detail(box(0.05, 0.05, s.W * 0.74, half + 0.12, y, 0), TRIM);
-      // Running boards, mud flaps behind the back wheels
-      for (const z of [-1, 1]) {
-        p.detail(box(1.1, 0.04, 0.1, 0, s.clr - 0.03, z * (s.W / 2 + 0.03)), TRIM);
-        p.detail(box(0.02, 0.2, 0.2, s.axles[0] - s.r - 0.08, 0.2, z * (s.W / 2 - 0.1)), TRIM);
-      }
-      // The spare wheel on the back door, on a bracket, its rim facing out
-      p.detail(box(0.06, 0.3, 0.1, -half - 0.03, 0.95, -0.22), TRIM);
-      p.details.push(
-        wheelGeometry(s)
-          .rotateY(-Math.PI / 2)
-          .translate(-half - s.tw / 2 - 0.03, 0.98, -0.22)
-      );
-    },
+  suv(p, s) {
+    const half = s.L / 2;
+    // Roof rails on short feet, and a light bar across the front of the roof
+    for (const z of [-1, 1]) {
+      const zz = z * s.W * 0.33;
+      p.detail(box(1.5, 0.035, 0.035, -0.45, 1.365, zz), TRIM);
+      for (const x of [-1.1, 0.2]) p.detail(box(0.06, 0.04, 0.045, x, 1.335, zz), TRIM);
+    }
+    p.detail(box(0.08, 0.07, s.W * 0.72, 0.42, 1.36, 0), TRIM);
+    for (let k = -2; k <= 2; k++) p.detail(box(0.02, 0.045, 0.1, 0.465, 1.36, k * 0.16), HEAD);
+    // A bull bar on the nose: two uprights, two rails, mounts to the bumper
+    for (const z of [-0.27, 0.27]) {
+      p.detail(box(0.05, 0.42, 0.05, half + 0.12, 0.5, z), TRIM);
+      p.detail(box(0.1, 0.04, 0.04, half + 0.06, 0.34, z), TRIM);
+    }
+    for (const y of [0.4, 0.66]) p.detail(box(0.05, 0.05, s.W * 0.74, half + 0.12, y, 0), TRIM);
+    // Running boards, mud flaps behind the back wheels
+    for (const z of [-1, 1]) {
+      p.detail(box(1.1, 0.04, 0.1, 0, s.clr - 0.03, z * (s.W / 2 + 0.03)), TRIM);
+      p.detail(box(0.02, 0.2, 0.2, s.axles[0] - s.r - 0.08, 0.2, z * (s.W / 2 - 0.1)), TRIM);
+    }
+    // The spare wheel on the back door, on a bracket, its rim facing out
+    p.detail(box(0.06, 0.3, 0.1, -half - 0.03, 0.95, -0.22), TRIM);
+    p.details.push(
+      wheelGeometry(s)
+        .rotateY(-Math.PI / 2)
+        .translate(-half - s.tw / 2 - 0.03, 0.98, -0.22)
+    );
   },
-  super: {
-    id: 'super',
-    name: 'Hyper Comet',
-    L: 2.65,
-    W: 1.14,
-    r: 0.2,
-    tw: 0.28,
-    axles: [-0.85, 0.88],
-    clr: 0.08,
-    // A wedge: the nose low, the deck high over the engine
-    top: [
-      [1.325, 0.34],
-      [1.1, 0.45],
-      [0.2, 0.5],
-      [-0.85, 0.53],
-      [-1.325, 0.47],
-    ],
-    cabin: [
-      [-0.95, 0.52],
-      [-0.42, 0.75],
-      [0.02, 0.75],
-      [0.55, 0.48],
-    ],
-    cabinW: 0.8,
-    panes: [[-0.8, 0.42]],
-    rearGlass: true,
-    lightY: 0.27,
-    lamp: 'slim',
-    seams: [-0.6, 0.5],
-    rim: '#ffd23f',
-    spokes: 6,
-    exhaust: [0.34, 0.24, -0.24, -0.34],
-    extra(p, s) {
-      const half = s.L / 2;
-      // A tall rear wing on two posts, with end plates
-      p.paint(box(0.26, 0.035, s.W * 0.98, -1.12, 0.8, 0));
-      for (const z of [-1, 1]) p.detail(box(0.3, 0.14, 0.02, -1.12, 0.78, z * s.W * 0.49), TRIM);
-      for (const z of [-0.28, 0.28]) p.detail(box(0.05, 0.32, 0.04, -1.1, 0.63, z), TRIM);
-      // Louvres over the engine, side intakes behind the doors, scoops on the haunches
-      for (const x of [-0.78, -0.86, -0.94, -1.02]) p.detail(box(0.03, 0.012, 0.5, x, topAt(s, x) + 0.006, 0), BLACKOUT);
-      for (const z of [-1, 1]) {
-        p.detail(box(0.34, 0.14, 0.03, -0.72, 0.34, z * (s.W / 2 + 0.01)), BLACKOUT);
-        p.paint(box(0.3, 0.05, 0.14, -0.6, topAt(s, -0.6) + 0.01, z * 0.42));
-        p.detail(box(0.02, 0.035, 0.1, -0.44, topAt(s, -0.6) + 0.015, z * 0.42), BLACKOUT);
-      }
-      // A front splitter wider than the nose, canards, a rear diffuser
-      p.detail(box(0.16, 0.025, s.W + 0.08, half + 0.04, s.clr + 0.02, 0), BLACKOUT);
-      for (const z of [-1, 1]) p.detail(box(0.12, 0.015, 0.1, half - 0.05, 0.22, z * (s.W / 2 + 0.04)), BLACKOUT);
-      for (const z of [-0.3, -0.1, 0.1, 0.3]) p.detail(box(0.2, 0.08, 0.015, -half, 0.13, z * s.W * 0.9), BLACKOUT);
-    },
+  super(p, s) {
+    const half = s.L / 2;
+    // A tall rear wing on two posts, with end plates
+    p.paint(box(0.26, 0.035, s.W * 0.98, -1.12, 0.8, 0));
+    for (const z of [-1, 1]) p.detail(box(0.3, 0.14, 0.02, -1.12, 0.78, z * s.W * 0.49), TRIM);
+    for (const z of [-0.28, 0.28]) p.detail(box(0.05, 0.32, 0.04, -1.1, 0.63, z), TRIM);
+    // Louvres over the engine, side intakes behind the doors, scoops on the haunches
+    for (const x of [-0.78, -0.86, -0.94, -1.02]) p.detail(box(0.03, 0.012, 0.5, x, topAt(s, x) + 0.006, 0), BLACKOUT);
+    for (const z of [-1, 1]) {
+      p.detail(box(0.34, 0.14, 0.03, -0.72, 0.34, z * (s.W / 2 + 0.01)), BLACKOUT);
+      p.paint(box(0.3, 0.05, 0.14, -0.6, topAt(s, -0.6) + 0.01, z * 0.42));
+      p.detail(box(0.02, 0.035, 0.1, -0.44, topAt(s, -0.6) + 0.015, z * 0.42), BLACKOUT);
+    }
+    // A front splitter wider than the nose, canards, a rear diffuser
+    p.detail(box(0.16, 0.025, s.W + 0.08, half + 0.04, s.clr + 0.02, 0), BLACKOUT);
+    for (const z of [-1, 1]) p.detail(box(0.12, 0.015, 0.1, half - 0.05, 0.22, z * (s.W / 2 + 0.04)), BLACKOUT);
+    for (const z of [-0.3, -0.1, 0.1, 0.3]) p.detail(box(0.2, 0.08, 0.015, -half, 0.13, z * s.W * 0.9), BLACKOUT);
   },
-  // Uptown's (finance plan Phase 4): a long black executive saloon, traffic only (never in the garage)
-  exec: {
-    id: 'exec',
-    name: 'Midnight Exec',
-    L: 3.0,
-    W: 1.06,
-    r: 0.2,
-    tw: 0.2,
-    axles: [-0.98, 1.0],
-    clr: 0.1,
-    top: [
-      [1.5, 0.42],
-      [1.4, 0.53],
-      [0.72, 0.57],
-      [-1.0, 0.59],
-      [-1.45, 0.57],
-      [-1.5, 0.46],
-    ],
-    cabin: [
-      [-1.05, 0.58],
-      [-0.62, 0.9],
-      [0.32, 0.9],
-      [0.74, 0.56],
-    ],
-    cabinW: 0.86,
-    panes: [
-      [-1.0, -0.45],
-      [-0.38, 0.12],
-      [0.18, 0.68],
-    ],
-    rearGlass: true,
-    lightY: 0.44,
-    lamp: 'slim',
-    seams: [-1.06, -0.42, 0.15, 0.74],
-    handles: [-0.92, -0.3, 0.3],
-    exhaust: [0.3, -0.3],
-    extra(p, s) {
-      const half = s.L / 2;
-      // Chrome along the window line and the sills, a tall chrome grille, a little ornament on the bonnet
-      for (const z of [-1, 1]) {
-        p.detail(box(1.76, 0.022, 0.012, -0.15, 0.6, z * (s.W * 0.43 + 0.006)), CHROME);
-        p.detail(box(2.1, 0.03, 0.012, 0.05, s.clr + 0.12, z * (s.W / 2 + 0.006)), CHROME);
-      }
-      p.detail(box(0.02, 0.16, s.W * 0.42, half + 0.006, 0.4, 0), CHROME);
-      p.detail(box(0.06, 0.06, 0.02, half - 0.08, topAt(s, half - 0.08) + 0.03, 0), CHROME);
-    },
+  exec(p, s) {
+    const half = s.L / 2;
+    // Chrome along the window line and the sills, a tall chrome grille, a little ornament on the bonnet
+    for (const z of [-1, 1]) {
+      p.detail(box(1.76, 0.022, 0.012, -0.15, 0.6, z * (s.W * 0.43 + 0.006)), CHROME);
+      p.detail(box(2.1, 0.03, 0.012, 0.05, s.clr + 0.12, z * (s.W / 2 + 0.006)), CHROME);
+    }
+    p.detail(box(0.02, 0.16, s.W * 0.42, half + 0.006, 0.4, 0), CHROME);
+    p.detail(box(0.06, 0.06, 0.02, half - 0.08, topAt(s, half - 0.08) + 0.03, 0), CHROME);
   },
 };
 
@@ -613,7 +219,7 @@ function box(w: number, h: number, d: number, x: number, y: number, z: number) {
  * An outline in the side view (x, y), pushed out `depth` across the car, centred. `round`
  * rounds its long edges off (the outline stays the same size seen from the side).
  */
-function extrude(shape: THREE.Shape, depth: number, round = 0) {
+export function extrude(shape: THREE.Shape, depth: number, round = 0) {
   const core = depth - round * 2;
   const g = new THREE.ExtrudeGeometry(shape, {
     depth: core,
@@ -627,7 +233,7 @@ function extrude(shape: THREE.Shape, depth: number, round = 0) {
   return g.translate(0, 0, -core / 2);
 }
 /** The height of the lower body's top line at x */
-function topAt(s: CarSpec, x: number) {
+export function topAt(s: CarSpec, x: number) {
   const t = s.top;
   if (x >= t[0][0]) return t[0][1];
   for (let i = 1; i < t.length; i++) {
@@ -638,7 +244,7 @@ function topAt(s: CarSpec, x: number) {
   return t[t.length - 1][1];
 }
 /** A thin plate lying along a side-view polyline (on top of the body and cabin), at z across, `w` wide */
-function lay(p: Parts, pts: V2[], z: number, w: number, color: string, lift = 0.006) {
+export function lay(p: Parts, pts: V2[], z: number, w: number, color: string, lift = 0.006) {
   for (let i = 1; i < pts.length; i++) {
     const [ax, ay] = pts[i - 1];
     const [bx, by] = pts[i];
@@ -666,7 +272,7 @@ function flare(s: CarSpec, ax: number, side: number) {
 }
 
 /** The lower body: its top line, then underneath with an arch over each wheel */
-function bodyShape(s: CarSpec) {
+export function bodyShape(s: CarSpec) {
   const half = s.L / 2;
   const sh = new THREE.Shape();
   sh.moveTo(half, s.clr);
@@ -684,7 +290,7 @@ function bodyShape(s: CarSpec) {
 }
 
 /** Shrink a convex outline by d (offset every edge inwards, meet at the corners) */
-function inset(poly: V2[], d: number): V2[] {
+export function inset(poly: V2[], d: number): V2[] {
   const n = poly.length;
   // Winding sign, so "inwards" is the same side for every edge
   let area = 0;
@@ -710,7 +316,7 @@ function inset(poly: V2[], d: number): V2[] {
 }
 
 /** Keep the part of an outline where f(point) >= 0 (f linear) */
-function clip(poly: V2[], f: (p: V2) => number): V2[] {
+export function clip(poly: V2[], f: (p: V2) => number): V2[] {
   const out: V2[] = [];
   for (let i = 0; i < poly.length; i++) {
     const a = poly[i];
@@ -727,7 +333,7 @@ function clip(poly: V2[], f: (p: V2) => number): V2[] {
 }
 
 /** A thin pane along a side-view segment a-b (glass on a sloped face), pushed `lift` out from the cabin */
-function pane(a: V2, b: V2, width: number, centre: V2, ends: number, lift = 0.012) {
+export function pane(a: V2, b: V2, width: number, centre: V2, ends: number, lift = 0.012) {
   const dx = b[0] - a[0];
   const dy = b[1] - a[1];
   const len = Math.hypot(dx, dy);
@@ -762,7 +368,7 @@ export class Parts {
 }
 
 /** Same attributes everywhere (position, normal, uv, and colour where asked), indexed, so they merge */
-function merge(geos: THREE.BufferGeometry[], color: boolean) {
+export function merge(geos: THREE.BufferGeometry[], color: boolean) {
   if (!geos.length) return null;
   const clean = geos.map((g0) => {
     const g = g0.index ? g0.toNonIndexed() : g0;
@@ -838,8 +444,21 @@ const cache = new Map<string, CarGeometry>();
 
 export function carGeometry(id: CarId, { wheels = true } = {}): CarGeometry {
   const key = `${id}:${wheels}`;
-  const hit = cache.get(key);
-  if (hit) return hit;
+  let g = cache.get(key);
+  if (!g) cache.set(key, (g = build(id, wheels)));
+  return g;
+}
+
+/**
+ * The cars' fine detail (vehicle plan Phase 1: carfine.ts, its own chunk, fetched after the boot): what it lays on
+ * every model (`add`), and how it fits out your own car (`fit`: the inside, see-through glass, you at the wheel).
+ * carfine.ts sets it and builds every model in `cache` again with it, in place, so the traffic and the parked
+ * cars take it on as they are; your cars carry themselves on their group (`userData.car`) for it to find.
+ */
+export const FINE: { add?(p: Parts, s: CarSpec, wheels: boolean): void; fit?(car: Car): void } = {};
+export { cache };
+
+export function build(id: CarId, wheels: boolean): CarGeometry {
   const s = CARS[id];
   const p = new Parts();
   const half = s.L / 2;
@@ -847,7 +466,8 @@ export function carGeometry(id: CarId, { wheels = true } = {}): CarGeometry {
   const lit = s.id === 'bus';
   const addGlass = (g: THREE.BufferGeometry) => (lit ? p.glow(g) : p.detail(g, GLASS));
 
-  // Body and cabin, their long edges rounded off
+  // Body and cabin, their long edges rounded off (the first two paint pieces, always: carcabin.ts cuts them out of
+  // your own car by their size to hollow it)
   const bus = s.id === 'bus';
   p.paint(extrude(bodyShape(s), s.W, bus ? 0.05 : 0.04));
   const cabinRound = bus ? 0.05 : 0.055;
@@ -954,9 +574,10 @@ export function carGeometry(id: CarId, { wheels = true } = {}): CarGeometry {
       p.details.push(g.translate(x, y, z));
     }
   }
-  s.extra?.(p, s);
+  EXTRAS[s.id]?.(p, s);
+  FINE.add?.(p, s, wheels);
 
-  const out: CarGeometry = {
+  return {
     spec: s,
     paint: merge(p.paints, false)!,
     detail: merge(p.details, true)!,
@@ -976,8 +597,6 @@ export function carGeometry(id: CarId, { wheels = true } = {}): CarGeometry {
       [-half - 0.016, s.lightY - lh / 2 - 0.07, -lz],
     ],
   };
-  cache.set(key, out);
-  return out;
 }
 
 /** The materials the fleet shares: paint takes each car's own colour, detail its vertex colours */
@@ -1131,7 +750,7 @@ export function parkedCars(parent: THREE.Object3D, y: number, list: [CarId, numb
  * its own paint, wheels that can turn and steer, and lights. Built facing +x
  * with the origin on the ground under its middle, like the models.
  */
-export function createCar(id: CarId, paint: string) {
+export function createCar(id: CarId, paint: string, mine = false) {
   const g = carGeometry(id, { wheels: false });
   const s = g.spec;
   const { detail } = carMaterials();
@@ -1194,7 +813,7 @@ export function createCar(id: CarId, paint: string) {
   turnR.visible = turnL.visible = false;
   group.add(turnR, turnL);
   let roll = 0;
-  return {
+  const car = {
     group,
     spec: s,
     /** Roll the wheels by a distance travelled, and steer the front ones (radians) */
@@ -1220,5 +839,18 @@ export function createCar(id: CarId, paint: string) {
       for (const m of [headMat, tailMat, brakeMat, reverseMat, turnMat]) m.dispose();
     },
   };
+  // (your own: fitted out once the fine detail has come)
+  if (mine) (group.userData.car = car), FINE.fit?.(car);
+  return car;
 }
-export type Car = ReturnType<typeof createCar>;
+/**
+ * One car of your own; carfine.ts gives it its hooks when it fits it out (carcabin.ts, carride.ts): `seat` (sit a
+ * Degen at the wheel, or null to take him out), `ride` (a frame of driving: the springs, the wheel, the needles, the
+ * marks; `revs` 0..1, `top` the top speed, `y` the car's height; true when it leaned the body itself) and `eye` (the
+ * driver's-seat camera: where it is and what it looks at, turned by `yaw` and `pitch`)
+ */
+export type Car = ReturnType<typeof createCar> & {
+  seat?(degen: Degen | null): void;
+  ride?(s: CarState, dt: number, slip: number, accel: number, revs: number, top: number, y: number, ground: (x: number, z: number, y?: number) => number): boolean;
+  eye?(pos: THREE.Vector3, at: THREE.Vector3, yaw: number, pitch: number): void;
+};

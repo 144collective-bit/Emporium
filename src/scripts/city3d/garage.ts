@@ -165,7 +165,7 @@ export function buildGarage(scene: THREE.Scene, opts: { tick: (f: Tick) => void;
     if (key === showing) return;
     showing = key;
     car?.dispose();
-    car = createCar(c.model, paintHex(c.paint));
+    car = createCar(c.model, paintHex(c.paint), true);
     car.group.position.y = 0.07;
     spin.add(car.group);
   }

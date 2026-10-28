@@ -40,44 +40,17 @@
  * pivot); `placeRoot()` puts the figure's group where the IK assumed it.
  */
 import * as THREE from 'three';
-import { ANKLE_H, BALL_Z, HIP_Y, LEG_X, SHIN_GROUND, THIGH, newPose, step, type Limb, type Pose } from './skeleton';
+import { ANKLE_H, BALL_Z, HIP_Y, LEG_REACH, LEG_X, newPose, reachLeg, step, type Limb, type Pose } from './skeleton';
 
 /* ---------- The leg ---------- */
 
-/** Thigh, and shin to the ankle (the figure's own numbers, scale 1) */
-const L1 = THIGH;
-const L2 = -(SHIN_GROUND + ANKLE_H);
-/** How far the hip can be from the ankle: a touch short of straight */
-export const LEG_REACH = (L1 + L2) * 0.99;
 /** The heel behind the ankle; the ball of the foot (where the toes bend) ahead of it */
 const HEEL_Z = -0.06;
 /** How far apart the feet stand: each this far out from the middle */
 export const FOOT_X = LEG_X * 1.12;
 
-/**
- * Two-bone reach: swing and bend leg `l` (the rig's `s` side: -1 or 1) so
- * its ankle lands on `a`, in the hips' space from the hip joint, with the
- * knee forward. `side` is the pose's hip tilt (poseSkeleton takes it back
- * out of the leg). Out of reach, it points straight at it.
- */
-export function reachLeg(l: Limb, s: number, a: THREE.Vector3, side: number) {
-  const d = Math.min(Math.max(a.length(), Math.abs(L1 - L2) + 0.01), L1 + L2 - 1e-4);
-  const cosK = THREE.MathUtils.clamp((L1 * L1 + L2 * L2 - d * d) / (2 * L1 * L2), -1, 1);
-  const bend = Math.PI - Math.acos(cosK);
-  // Where the ankle is in the leg's own plane: down, and back by the bend
-  const c = (L1 + L2 * Math.cos(bend)) / d;
-  const sn = (L2 * Math.sin(bend)) / d;
-  const n = a.length() || 1;
-  const dx = a.x / n;
-  const dy = a.y / n;
-  const dz = a.z / n;
-  const z = Math.asin(THREE.MathUtils.clamp(dx / c, -1, 1));
-  const k = c * Math.cos(z);
-  l.fwd = Math.atan2(dz, -dy) + Math.atan2(sn, k);
-  l.out = s * (z + side);
-  l.bend = bend;
-  l.twist = 0;
-}
+// (the leg's two-bone reach is skeleton.ts's, beside the arm's; walking, the emotes and your car's seat use it)
+export { LEG_REACH, reachLeg };
 
 /* ---------- The gait ---------- */
 
