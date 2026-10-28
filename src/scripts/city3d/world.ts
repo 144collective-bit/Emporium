@@ -366,7 +366,7 @@ export const puddleMat = new THREE.MeshBasicMaterial({
 function highwayGaps(axis: 'ew' | 'ns', i: number): [number, number][] {
   const road = `${axis}${i}`;
   const gaps = PLAN.crossings
-    .filter((c) => c.streets.includes(road) && (c.streets.includes('highway') || c.streets.some((id) => id.startsWith('trench-') || id.startsWith('uptown-') || id.startsWith('station-') || id.startsWith('mall-'))))
+    .filter((c) => c.streets.includes(road) && (c.streets.includes('highway') || c.streets.some((id) => id.startsWith('trench-') || id.startsWith('uptown-') || id.startsWith('mall-'))))
     .flatMap((c): [number, number][] => {
       const v = axis === 'ew' ? c.at[0] : c.at[1];
       if (c.streets.includes('highway')) return [[v - HIGHWAY_HALF - 0.2, v + HIGHWAY_HALF + 0.2]];
@@ -786,7 +786,7 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
     const kind: LotKind =
       lots[blk.id] ??
       // (Uptown's lots paved round its towers; its open lots' earth is uptown3d.ts's, behind their hoardings)
-      (blk.ref === 'garage' || blk.id === 'station-park' || blk.id === 'mall-park' ? 'concrete' : blk.ref === 'station' || blk.ref === 'mall' || blk.ref === 'market' || blk.ref === 'units' || blk.ref === 'uptown' ? 'paving' : blk.use === 'park' ? 'grass' : blk.id.startsWith('dt-') ? 'paving' : 'grass');
+      (blk.ref === 'garage' || blk.id === 'mall-park' ? 'concrete' : blk.ref === 'mall' || blk.ref === 'market' || blk.ref === 'units' || blk.ref === 'uptown' ? 'paving' : blk.use === 'park' ? 'grass' : blk.id.startsWith('dt-') ? 'paving' : 'grass');
     if (isRect(slab) && !bigPoly(slab)) {
       const [x0, z0] = [Math.min(...slab.map((p) => p[0])), Math.min(...slab.map((p) => p[1]))];
       const [x1, z1] = [Math.max(...slab.map((p) => p[0])), Math.max(...slab.map((p) => p[1]))];

@@ -83,7 +83,6 @@ import { BX as LIBERTY_X, FACES, LIBERTY_CAMERA, LOW_Y, TO_MIDDLE, footbridgeWal
 import { JETTY, RIM, inLake, onJetty, onTerrace, terraceY } from './westlake';
 import { GATE, bridgeWall, bridgeY } from './stadium';
 import { skyDeckWall, skyDeckY, upOnDeck } from './skydeck';
-import { stationY } from './station';
 import { MALL_CAMERA, mallFloor, mallWall } from './mallinside';
 import { WORLD_BOUNDS, design } from './layout';
 import { WATER_Y, inChannel, inWater, shoreY } from './river';
@@ -625,7 +624,7 @@ export function createWalk(d: WalkDeps) {
     if (slab === 0.035 && inChannel(x, z)) return shoreY(x, z) + 0.035;
     // (the garage's turntable: its disc's top, where your car stands and you step on to get in)
     if (slab === SLAB && Math.hypot(x - DISC.x, z - DISC.z) < DISC.r) return SLAB + DISC.top;
-    const base = Math.max(slab, bridgeY(x, z, yNow) ?? 0, onJetty(x, z) ? SLAB + JETTY.y : 0, SLAB + (terraceY(x, z) ?? -SLAB), SLAB + (skyDeckY(x, z, yNow - SLAB) ?? -SLAB), stationY(x, z) ?? 0);
+    const base = Math.max(slab, bridgeY(x, z, yNow) ?? 0, onJetty(x, z) ? SLAB + JETTY.y : 0, SLAB + (terraceY(x, z) ?? -SLAB), SLAB + (skyDeckY(x, z, yNow - SLAB) ?? -SLAB));
     if (x < KART_PARK.x0 || x > KART_PARK.x1 || z < KART_PARK.z0 || z > KART_PARK.z1) return base;
     const t = trackSurfaceAt(x, z, yNow);
     // (and the spectators' grass banks round it, kartfacility.ts)
@@ -1730,8 +1729,10 @@ export function createWalk(d: WalkDeps) {
       pad.prev = b;
       return;
     }
-    // The garage: D-pad left / right picks the model, up / down the paint, A keeps it
+    // The garage: D-pad left / right picks the model, up / down the paint, the bumpers the tabs, A keeps it
     if (garageUI.open) {
+      if (edge(4)) garageUI.stepTab(-1);
+      if (edge(5)) garageUI.stepTab(1);
       if (edge(14)) garageUI.step(-1);
       if (edge(15)) garageUI.step(1);
       if (edge(12)) garageUI.stepPaint(-1);

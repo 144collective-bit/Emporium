@@ -24,12 +24,55 @@
  * If your car is out on the streets, Keep also calls it home. Nothing here
  * is real money and nothing is tied to the store or the token.
  *
- * Arrow keys or the D-pad pick a model (up / down on the pad: the paint),
- * Enter / A keeps it, Esc / B / F closes.
+ * The tabs (vehicle plan Phase 5): Model (the cards, the stats and the
+ * deal), Paint, and the free customisation, Wheels, Kit, Livery and Glow
+ * (`STYLE`: rows of choices from carlook.ts; every pick shows on the
+ * turntable, Keep saves it with the car as its `look`).
+ *
+ * Arrow keys or the D-pad pick a model (up / down on the pad: the paint; the
+ * bumpers: the tabs), Enter / A keeps it, Esc / B / F closes.
  */
 import { CAR_CATALOG, CAR_MODS, CAR_MOD_IDS, MOD_LEVELS, type CarModId } from './catalog';
 import { CARS } from './cars';
-import { CAR_KEY, CAR_PAINTS, CARGO, DRIVE, PLAYER_CARS, loadCar, type MyCar, type PaintId, type PlayerCar } from './mycar';
+import {
+  CAR_KEY,
+  CAR_MARKS,
+  CAR_PAINTS,
+  CARGO,
+  DIFFUSERS,
+  DRIVE,
+  GLOWS,
+  LIVERIES,
+  PLAYER_CARS,
+  RIMS,
+  RIM_COLOURS,
+  RIM_SIZES,
+  SKIRTS,
+  SPLITTERS,
+  SPOILERS,
+  loadCar,
+  type CarLook,
+  type MyCar,
+  type PaintId,
+  type PlayerCar,
+} from './mycar';
+import {
+  DIFFUSER_NAMES,
+  GLOW_HEX,
+  GLOW_NAMES,
+  LIVERY_NAMES,
+  MARK_NAMES,
+  NUMBERS,
+  RIM_COLOUR_NAMES,
+  RIM_HEX,
+  RIM_NAMES,
+  RIM_SIZE_NAMES,
+  SKIRT_NAMES,
+  SPLITTER_NAMES,
+  SPOILER_NAMES,
+  STOCK_PARTS,
+  sameLook,
+} from './carlook';
 import { buyCar, carModCost, carMods, carStatsOf, level, modCar, ownsCar } from './tycoon';
 import { COIN, D, LV, esc, fmt, repaint, whyNot, type GameDeps } from './ui';
 
@@ -58,6 +101,54 @@ const STATS: { key: 'speed' | 'accel' | 'grip'; label: string; mod: CarModId }[]
   { key: 'grip', label: 'Grip', mod: 'tyres' },
 ];
 
+/** The menu's tabs */
+const TABS = [
+  ['model', 'Model'],
+  ['paint', 'Paint'],
+  ['wheels', 'Wheels'],
+  ['kit', 'Kit'],
+  ['livery', 'Livery'],
+  ['glow', 'Glow'],
+] as const;
+type Tab = (typeof TABS)[number][0];
+
+/** A row of choices on a style tab: which part of the look, its label, the ids and their names, and swatches if they're colours */
+interface Row {
+  key: keyof CarLook;
+  label: string;
+  ids: readonly (string | number)[];
+  name(v: string | number): string;
+  swatch?(v: string | number, car: PlayerCar): string;
+}
+const row = <K extends keyof CarLook>(key: K, label: string, ids: readonly CarLook[K][], names: Record<string, string> | ((v: CarLook[K]) => string), swatch?: Row['swatch']): Row => ({
+  key,
+  label,
+  ids: ids as readonly (string | number)[],
+  name: (v) => (typeof names === 'function' ? names(v as CarLook[K]) : names[String(v)]),
+  swatch,
+});
+const paintName = (v: string | number) => CAR_PAINTS.find((p) => p.id === v)!.name;
+const STYLE: Record<Exclude<Tab, 'model' | 'paint'>, Row[]> = {
+  wheels: [
+    row('rim', 'Rims', RIMS, RIM_NAMES),
+    row('rimColour', 'Rim colour', RIM_COLOURS, RIM_COLOUR_NAMES, (v, car) => (v === 'stock' ? (CARS[car].rim ?? RIM_HEX.silver) : RIM_HEX[v as keyof typeof RIM_HEX])),
+    row('rimSize', 'Size', RIM_SIZES, RIM_SIZE_NAMES),
+  ],
+  kit: [
+    row('splitter', 'Splitter', SPLITTERS, SPLITTER_NAMES),
+    row('skirts', 'Side skirts', SKIRTS, SKIRT_NAMES),
+    row('diffuser', 'Diffuser', DIFFUSERS, DIFFUSER_NAMES),
+    row('spoiler', 'Spoiler', SPOILERS, SPOILER_NAMES),
+  ],
+  livery: [
+    row('livery', 'Livery', LIVERIES, LIVERY_NAMES),
+    row('accent', 'Its colour', CAR_PAINTS.map((p) => p.id), paintName, (v) => CAR_PAINTS.find((p) => p.id === v)!.hex),
+    row('number', 'Number', NUMBERS, (v) => (v ? String(v) : 'None')),
+    row('mark', 'Mark', CAR_MARKS, MARK_NAMES),
+  ],
+  glow: [row('glow', 'Underglow', GLOWS, GLOW_NAMES, (v) => (v === 'off' ? '#2a2838' : GLOW_HEX[v as keyof typeof GLOW_HEX]))],
+};
+
 export interface GarageDeps {
   /** Show a car on the turntable (each pick, and the saved car again on close) */
   preview(c: MyCar): void;
@@ -82,6 +173,16 @@ export function createGarageUI(root: HTMLElement, d: GarageDeps) {
   const dorrasEl = el.querySelector<HTMLElement>('[data-garage-dorras]')!;
   const statsEl = el.querySelector<HTMLElement>('[data-garage-stats]')!;
   const dealEl = el.querySelector<HTMLElement>('[data-garage-deal]')!;
+  const tabsEl = el.querySelector<HTMLElement>('[data-garage-tabs]')!;
+  const styleEl = el.querySelector<HTMLElement>('[data-garage-style]')!;
+  const paintHead = el.querySelector<HTMLElement>('.garage-paint-head')!;
+  /** What each tab shows (the name row and Keep show on all of them) */
+  const PANES: Record<'model' | 'paint' | 'style', HTMLElement[]> = {
+    model: [list, ...['[data-garage-kind]', '[data-garage-blurb]', '[data-garage-pitch]'].map((q) => el.querySelector<HTMLElement>(q)!), statsEl, dealEl],
+    paint: [paintHead, paints],
+    style: [styleEl],
+  };
+  let tab: Tab = 'model';
   let saved = loadCar();
   let pick: MyCar = { ...saved };
   let open = false;
@@ -100,6 +201,26 @@ export function createGarageUI(root: HTMLElement, d: GarageDeps) {
     b.addEventListener('click', () => select({ ...pick, model: id }));
     list.append(b);
     return b;
+  });
+  const tabBtns = TABS.map(([id, name]) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'garage-tab';
+    b.dataset.tab = id;
+    b.setAttribute('role', 'tab');
+    b.textContent = name;
+    b.addEventListener('click', () => setTab(id));
+    tabsEl.append(b);
+    return b;
+  });
+  // A style tab's choices are painted from the pick, so they're handled here
+  styleEl.addEventListener('click', (e) => {
+    const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-look]');
+    if (!b) return;
+    const key = b.dataset.look as keyof CarLook;
+    const raw = b.dataset.val!;
+    const value = key === 'number' ? Number(raw) : raw;
+    select({ ...pick, look: { ...pick.look, [key]: value } as CarLook });
   });
   for (const p of CAR_PAINTS) {
     const b = document.createElement('button');
@@ -128,7 +249,38 @@ export function createGarageUI(root: HTMLElement, d: GarageDeps) {
     } else if (b.dataset.garageUp) upgrade(b.dataset.garageUp as CarModId);
   });
 
-  const same = (a: MyCar, b: MyCar) => a.model === b.model && a.paint === b.paint;
+  const same = (a: MyCar, b: MyCar) => a.model === b.model && a.paint === b.paint && sameLook(a.look, b.look);
+
+  function setTab(t: Tab) {
+    tab = t;
+    paint();
+    tabBtns.find((b) => b.dataset.tab === t)?.focus({ preventScroll: true });
+  }
+  /** The style tab's rows, from the pick: chips, or swatches for colours */
+  function styleRows(t: Exclude<Tab, 'model' | 'paint'>) {
+    const car = pick.model;
+    return STYLE[t]
+      .map((r) => {
+        const now = pick.look[r.key];
+        // (a kit part the model has its own of: its stock choice is that one, and any other takes it off)
+        const own = (STOCK_PARTS[car] as string[]).includes(r.key);
+        const name = (v: string | number) => (own && v === 'stock' ? 'Its own' : r.name(v));
+        const opts = r.ids
+          .map((v) => {
+            const on = v === now;
+            const label = esc(name(v));
+            const sw = r.swatch?.(v, car);
+            return sw
+              ? `<button type="button" class="garage-paint" role="radio" aria-checked="${on}" aria-label="${label}" title="${label}" style="--paint:${sw}" data-look="${r.key}" data-val="${v}"></button>`
+              : `<button type="button" class="garage-chip" role="radio" aria-checked="${on}" data-look="${r.key}" data-val="${v}">${label}</button>`;
+          })
+          .join('');
+        const kind = r.swatch ? 'garage-paints garage-swatches' : 'garage-chips';
+        return `<p class="garage-paint-head">${esc(r.label)} <span>${esc(name(now))}</span></p><div class="${kind}" role="radiogroup" aria-label="${esc(r.label)}">${opts}</div>`;
+      })
+      .join('')
+      .concat(t === 'glow' ? '<p class="shop-note">It lights up after dark.</p>' : '');
+  }
   const fill = (n: number) => Math.max(0, Math.min(1, n)).toFixed(3);
 
   /** Bring the whole panel up to date with the pick and the save */
@@ -201,6 +353,16 @@ export function createGarageUI(root: HTMLElement, d: GarageDeps) {
       deal = `<section class="garage-tune" aria-label="Tune"><h4 class="garage-tune-head">Tune</h4><ul class="garage-mods">${rows}</ul></section>`;
     }
     repaint(dealEl, deal);
+
+    // The tabs: the one open lit, its panes shown
+    for (const b of tabBtns) {
+      const on = b.dataset.tab === tab;
+      b.setAttribute('aria-selected', String(on));
+      b.tabIndex = on ? 0 : -1;
+    }
+    const pane = tab === 'model' || tab === 'paint' ? tab : 'style';
+    for (const [k, els] of Object.entries(PANES)) for (const e of els) e.hidden = k !== pane;
+    if (pane === 'style') repaint(styleEl, styleRows(tab as Exclude<Tab, 'model' | 'paint'>));
 
     keepBtn.disabled = !owned;
     keepBtn.textContent = !owned ? 'Buy it first' : !same(pick, saved) ? 'Keep this one' : d.away() ? 'Bring my car home' : 'Your car · done';
@@ -275,6 +437,7 @@ export function createGarageUI(root: HTMLElement, d: GarageDeps) {
     pick = { ...saved };
     kept = false;
     asking = false;
+    tab = 'model';
     // Your car is out: show it on the turntable while you look
     if (d.away()) d.preview(saved);
     paint();
@@ -307,10 +470,20 @@ export function createGarageUI(root: HTMLElement, d: GarageDeps) {
     select({ ...pick, paint: CAR_PAINTS[(i + dir + CAR_PAINTS.length) % CAR_PAINTS.length].id as PaintId });
   }
 
+  /** The next tab, or the one before */
+  function stepTab(dir: number) {
+    const i = TABS.findIndex(([id]) => id === tab);
+    setTab(TABS[(i + dir + TABS.length) % TABS.length][0]);
+  }
+
   el.addEventListener('keydown', (e) => {
     const t = e.target as HTMLElement;
-    // The deal's buttons (Buy, Confirm, Upgrade) keep their own keys
-    if (t.closest('[data-garage-deal]')) return;
+    // The deal's buttons (Buy, Confirm, Upgrade) and the style tabs' choices keep their own keys
+    if (t.closest('[data-garage-deal]') || t.closest('[data-garage-style]')) return;
+    if (t.closest('[data-tab]')) {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') stepTab(e.key === 'ArrowRight' ? 1 : -1);
+      return;
+    }
     const inPaints = !!t.closest('[data-paint]');
     if (e.key === 'ArrowRight' || e.key === 'ArrowDown') inPaints ? stepPaint(1) : step(1);
     else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') inPaints ? stepPaint(-1) : step(-1);
@@ -330,6 +503,7 @@ export function createGarageUI(root: HTMLElement, d: GarageDeps) {
     close,
     step,
     stepPaint,
+    stepTab,
     keep,
   };
 }

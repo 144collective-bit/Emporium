@@ -141,3 +141,11 @@
   text-transform: uppercase;
   color: var(--p-cyan);
 }
+/* (no tabs: the garage's tabs row left out of its grid) */
+.hangar {
+  grid-template-areas:
+    "head"
+    "list"
+    "detail"
+    "foot";
+}

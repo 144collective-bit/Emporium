@@ -29,12 +29,10 @@ import { DECK_Y as BOARDWALK_Y } from './waterfront';
 import { createDistricts } from './districts';
 import { buildStadium } from './stadium3d';
 import { buildTower } from './tower3d';
-import { buildStationSpot } from './stationspot';
 import { buildMallSpots } from './mallspot';
 import { COURT_SPAWN, MALL_LAMPS, MALL_PEOPLE, MALL_TREES } from './mall';
 import { NORTH_LAMPS, NORTH_PEOPLE, NORTH_TREES } from './uptownnorth';
 import { INSIDE_SPAWN, MALL_INSIDE_PEOPLE, MALL_LIFT, UP as MALL_UP } from './mallinside';
-import { BOULEVARD_TREES as STATION_TREES, PLAZA_TREES as STATION_PLAZA_TREES, STATION_LAMPS, STATION_PEOPLE, STATION_RECTS, STATION_SPAWN } from './station';
 import { LIFT, TOWER_SPAWN } from './skydeck';
 import { STADIUM_LAMPS, STADIUM_RECTS, STADIUM_SPAWN } from './stadium';
 import { buildLandmarks, type Spot } from './landmarks';
@@ -292,8 +290,6 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   spots.push(buildStadium(scene, { low: tier === 'low' }).spot);
   // Uptown's spire as a place, Sector 7 Tower (finance plan Phase 6): its spot only (the tower is Uptown's, drawn as a site)
   spots.push(buildTower(scene).spot);
-  // ...and Sector 7 Central, the grand station west of the highway: its spot (the station is drawn in its own chunk)
-  spots.push(buildStationSpot(scene).spot);
   // ...and Palm Court and Starlight Mall north of downtown: their spots (they're drawn in their own chunk)
   spots.push(...buildMallSpots(scene));
   // ...and the metro's el where it crosses the open land south of the south row: no trees under it
@@ -328,12 +324,6 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // ...and the stadium's, north of the highway (stadium.ts): no trees on its block, its road and car park or under its footbridge
   for (const r of STADIUM_RECTS) keepTreesOff(r);
   for (const [x, z, ry, y] of STADIUM_LAMPS) addLamp(x, z, ry, y);
-  // ...and the grand station's (station.ts): its boulevard's trees, the forecourt's, its lamps, its people
-  for (const r of STATION_RECTS) keepTreesOff(r);
-  for (const [x, z] of STATION_TREES) addTree(x, z, 0.85, false, 0.02);
-  for (const [x, z] of STATION_PLAZA_TREES) addTree(x, z, 0.8, false);
-  for (const [x, z, ry, y] of STATION_LAMPS) addLamp(x, z, ry, y);
-  STATION_PEOPLE.forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push({ x: p.x, z: p.z, y: Math.max(SLAB, p.y), ry: p.ry, act: p.act }));
   // ...and Palm Court's and the mall's (mall.ts; the outskirts' trees keep off their land already)
   for (const [x, z, ry, y] of [...MALL_LAMPS, ...NORTH_LAMPS]) addLamp(x, z, ry, y);
   for (const [x, z, y] of [...MALL_TREES, ...NORTH_TREES]) addTree(x, z, undefined, false, SLAB + y);
@@ -649,12 +639,6 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       panelBody.querySelector('[data-mall-walkin]')?.addEventListener('click', () => {
         close();
         startWalking(INSIDE_SPAWN);
-      });
-    // Sector 7 Central's panel: Walk in starts walk mode on its forecourt, facing the doors
-    if (id === 'station')
-      panelBody.querySelector('[data-station-walkin]')?.addEventListener('click', () => {
-        close();
-        startWalking(STATION_SPAWN);
       });
     // The Block's panel: Walk in starts walk mode on its plaza by the metro's stairs
     if (id === 'trenches')
