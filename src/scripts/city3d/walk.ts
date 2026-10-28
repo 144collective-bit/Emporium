@@ -1700,8 +1700,10 @@ export function createWalk(d: WalkDeps) {
       pad.prev = b;
       return;
     }
-    // The garage: D-pad left / right picks the model, up / down the paint, A keeps it
+    // The garage: D-pad left / right picks the model, up / down the paint, the bumpers the tabs, A keeps it
     if (garageUI.open) {
+      if (edge(4)) garageUI.stepTab(-1);
+      if (edge(5)) garageUI.stepTab(1);
       if (edge(14)) garageUI.step(-1);
       if (edge(15)) garageUI.step(1);
       if (edge(12)) garageUI.stepPaint(-1);

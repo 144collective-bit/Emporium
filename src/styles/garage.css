@@ -8,9 +8,84 @@
   grid-template-columns: minmax(0, 1fr);
   grid-template-areas:
     "head"
+    "tabs"
     "list"
     "detail"
     "foot";
+}
+.garage [hidden] {
+  display: none;
+}
+/* The tabs (vehicle plan Phase 5): Model, Paint, Wheels, Kit, Livery, Glow; the open one underlined in the gradient */
+.garage-tabs {
+  grid-area: tabs;
+  display: flex;
+  gap: 2px;
+  margin: -4px 0 -2px;
+  border-bottom: 1px solid #ffffff1a;
+}
+.garage-tab {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 7px 2px 8px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  position: relative;
+}
+.garage-tab:hover {
+  color: var(--text-2);
+}
+.garage-tab[aria-selected="true"] {
+  color: #fff;
+}
+.garage-tab[aria-selected="true"]::after {
+  content: "";
+  position: absolute;
+  right: 4px;
+  bottom: -1px;
+  left: 4px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--pulse);
+}
+/* A style tab's rows: chips for parts, swatches for colours */
+.garage-style {
+  display: grid;
+  gap: 6px;
+}
+.garage-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.garage-chip {
+  padding: 5px 9px;
+  border: 1px solid #ffffff2e;
+  border-radius: 999px;
+  background: #ffffff0a;
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+.garage-chip:hover {
+  border-color: #ffffff60;
+}
+.garage-chip[aria-checked="true"] {
+  border-color: var(--p-cyan);
+  background: #00c2ff1f;
+  color: #fff;
+}
+.garage-swatches {
+  grid-template-columns: repeat(12, minmax(0, 1fr));
 }
 @media (min-width: 641px) {
   .garage {
@@ -325,6 +400,18 @@
   .garage-paints {
     grid-template-columns: repeat(6, 28px);
     gap: 6px 8px;
+  }
+  .garage-swatches {
+    grid-template-columns: repeat(9, 26px);
+    gap: 6px;
+  }
+  .garage-tab {
+    font-size: 8.5px;
+    letter-spacing: 0.04em;
+  }
+  .garage-chip {
+    padding: 4px 7px;
+    font-size: 9.5px;
   }
 }
 @media (max-width: 640px) and (max-height: 700px) {
