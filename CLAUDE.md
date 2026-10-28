@@ -1224,7 +1224,8 @@ it and has been retired completely. Build only on what's here.
   `SKID_FADE`; none under reduced motion; multiply blending isn't honoured
   in the post chain, so don't use it for decals), the `tyres()` screech in
   sound.ts, and the headlights' pool and brake wash as two glow points
-  dark by day. Phase 3 (people who notice) is built: `pedestrians.ts`
+  dark by day (the marks and the pools are `carride.ts`'s since the
+  vehicle plan's Phase 2, your car's once it's fitted out). Phase 3 (people who notice) is built: `pedestrians.ts`
   (DOM-free, tested in `tests/pedestrians.test.ts`): `crossingLinks()`
   (the walked blocks' corners across one street at a lit junction, never
   an avenue or a junction's middle), `walkLight()` / `redLeft()` (red for
@@ -1276,14 +1277,61 @@ it and has been retired completely. Build only on what's here.
   (lamp shape `lamp`) with bezels and indicators, a grille, door seams and
   handles (`seams`, `handles`), sills, exhausts, mirrors, bumpers, plates
   and fat lathe-turned tyres on spoked rims (`rim`, `spokes`), plus each
-  model's own touches in `extra()` (spoilers, stripes, flares, a light bar,
-  a ladder, roof pods). Keep `top` and `cabin` as the side outline: the
+  model's own touches in `EXTRAS` (spoilers, stripes, flares, a light bar,
+  a ladder, roof pods); the numbers are `carspec.ts`'s. Keep `top` and `cabin` as the side outline: the
   garage cards draw their silhouettes from them. A model is two
   geometries, `paint` (each car its own colour, `PAINTS`) and `detail`
   (vertex colours), plus the bus's lit windows, so the traffic in `life.ts`
   costs two draw calls a model. Parked cars use `parkedCars()`; give them a
   footprint in `solids.ts`. Keep a new model inside a 1.7-wide lane and in
   scale with Degen (a hatch's roof is about 0.95 tiles up).
+- **The vehicle upgrade** (the owner's call: more detail and more function
+  for every vehicle) is planned in `docs/vehicle-plan.md`: interiors and
+  sharper bodywork, doors and suspension that move, getting in and out,
+  the driver's eye view, handling with personality and drifting, free
+  customisation at the garage, three more cars, motorbikes, new traffic
+  (delivery trucks, police that never chase, bikes), then the karts, the
+  boat and the aircraft. Keep it up to date, one phase at a time with the
+  owner's sign-off. Phase 0 (measure and prepare) is built: the cars'
+  measurements are `carspec.ts` (DOM-free: `CarSpec`, `CARS`, `PAINTS`,
+  re-exported by cars.ts, which keeps each model's own touches in
+  `EXTRAS`), what's inside them `carinside.ts` (DOM-free, kept out of the
+  boot: `INTERIORS`, each model's seat, recline, eyes, shoulders, wheel,
+  dash, floor, pedals, rear seats and driver's door, for Degen seated at
+  `DRIVER_SCALE` (`SITTER`); `roofAt()`, `beltAt()`), tested in
+  `tests/carspec.test.ts` (his head under the roof, his eyes over the
+  window line and the dash, the wheel in reach and over his knees, the
+  door on the body's seams), and `?bench` has a driving view and a
+  traffic view (`drive`, `traffic`). Phase 1 (sharper cars, your car with
+  an inside) is built, all in a chunk fetched once the city is up
+  (`carfine.ts`, `carcabin.ts`, `carparts.ts`; index.ts's `idle()`): the
+  boot carries only cars.ts's hook (`FINE`, `cache`, `build()`, and
+  `createCar(..., mine)`, your cars on their group's `userData.car`), and
+  the chunk builds every model again with its detail and copies it into
+  the geometry the traffic and the parked cars hold (`add()`: dark wheel
+  wells, arch lips, a shoulder crease, shut lines, a fuel flap, side
+  repeaters, the diamond badge, windscreen highlights, brake discs and
+  calipers; desktops also sidewall rings, projectors and fog lamps), and
+  fits your car out (`fitOut()`: hollow where you see in, `hollowFrom()` /
+  `hollowTo()` in carinside.ts; its glass see-through in the FX layer; the
+  inside from `INTERIORS`; Degen at the wheel through `car.seat()`, which
+  drive.ts calls on getting in). Phase 2 (moving parts and the driver's
+  eye view) is built, in the same chunk: the springs' rules are
+  `suspension.ts` (DOM-free, tested in `tests/suspension.test.ts`: each
+  wheel on its own spring, `SPRINGS` per model, the body's heave, pitch
+  and roll from the ground under the wheels and the load of speeding up,
+  braking and turning, each wheel within its `travel`), and `carride.ts`
+  drives your fitted car through hooks drive.ts reads live from it
+  (`car.ride()`: the body, everything but the wheels in one group, on its
+  springs, the wheels up and down in their arches, the steering wheel
+  turning with his hands on it, the gauges' needles, the wipers in the
+  rain, the skid marks; `car.eye()`: the driver's-seat camera, V's third
+  view, his head folded away and no rain inside the cabin, the rain's
+  shader given a hole round it; `seat()` swings the driver's door, cut
+  out at its seams by `makeShell()` and `splitAt()`, open and shut, and
+  shows the lamps' pools); the kart keeps drive.ts's drawn-on lean. The
+  mirrors are painted stand-ins. Keep new car detail in that chunk: the
+  boot is near its budget (663.83 of 670 KB with the tailoring plan merged).
 - **Live settings** (the owner's call): the owner switches parts of the
   city from outside the code, in a private command center, through the
   backend's public config (`LIVE_URL`, public settings only).
@@ -2176,7 +2224,7 @@ it and has been retired completely. Build only on what's here.
     stride), at the ground's height there, so nothing slides walking,
     jogging, sprinting, turning, strafing or backing up (aiming), on
     kerbs, slopes and stairs; the tests hold a planted foot to under
-    4 mm. Two-bone leg IK (`reachLeg()`) puts each ankle where its foot
+    4 mm. Two-bone leg IK (`reachLeg()`, skeleton.ts's beside `reachArm()`) puts each ankle where its foot
     needs it; the foot keeps its own heading and pitch (`Limb.foot`,
     `footYaw`, `footRoll`, `toe`) and rolls heel, flat, then onto the ball
     with the toes flat; the hips (`Pose.sway`, `turn`, `bob`) come down
@@ -2930,8 +2978,8 @@ it and has been retired completely. Build only on what's here.
   - **Tuning:** `tune()` turns `DRIVE`'s 0-1 numbers into speeds. New handling goes in the sim first.
 - `drive.ts` is the view:
   - **Getting in:** "Get in" at your car, on the turntable (it drives off facing the avenue) or wherever it was left.
-  - **The car on screen:** it climbs kerbs smoothly, leans into turns and squats under gas or brakes. The wheels roll and steer.
-  - **Cameras:** a chase camera that swings in behind, where you can look around and it settles back; it's pulled in by buildings like the walk camera. V swaps to the roof camera.
+  - **The car on screen:** it climbs kerbs smoothly, leans into turns and squats under gas or brakes (your car fitted out on its springs, `suspension.ts` and `carride.ts`; the kart and an unfitted car on the drawn-on lean). The wheels roll and steer.
+  - **Cameras:** a chase camera that swings in behind, where you can look around and it settles back; it's pulled in by buildings like the walk camera. V steps to the roof camera and, in your car fitted out, the driver's seat (`car.eye()`; the near plane comes in for it and goes back on getting out).
   - **Readout:** speed in km/h and the gear (`data-drive-hud`).
   - **Sound:** a synthesised engine (`engine()` in `sound.ts`) plus bump and door sounds, all through the sound switch.
   - **Getting out:** "Get out" anywhere. Degen steps out of the left door, or wherever there's room, and the car stays parked and solid to walk round. Leaving walk mode parks it too.
@@ -3566,7 +3614,7 @@ it and has been retired completely. Build only on what's here.
   10's bigger world (`WORLD_EXT`): run both when anything reads the edge. The "Build site" Action runs them before the
   build: a failing test means no zip.
 - They cover the code that's free of the DOM and scene code: the street plan
-  (`layout.ts`, `streetplan.ts`), downtown (`downtown.ts`), the ring highway
+  (`layout.ts`, `streetplan.ts`), the cars' measurements, interiors and where your car is hollow (`carspec.ts`, `carinside.ts`), your car's springs (`suspension.ts`), downtown (`downtown.ts`), the ring highway
   (`highway.ts`), the traffic's routes and lights (`routes.ts`), collision data, doors, the gun counter, the garage
   and the spawn (`solids.ts`), the plots (`src/data/plots.ts`), your car
   (`mycar.ts`), the driving rules (`drive-sim.ts`), target practice

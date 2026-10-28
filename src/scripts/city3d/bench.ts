@@ -17,7 +17,7 @@
  */
 import * as THREE from 'three';
 import { mb, sceneMemory, type SceneMemory } from './perf';
-import { EXT, WIDEN } from './layout';
+import { CORE_ROADS, EXT, LANE, RING_HI, WIDEN } from './layout';
 
 type V3 = [number, number, number];
 export interface BenchView {
@@ -41,6 +41,9 @@ export const BENCH_VIEWS: BenchView[] = [
   { id: 'uptown', name: 'Uptown, its towers from the river', pos: [-60, 16, 92], target: [-120, 12, 30] },
   { id: 'outskirts', name: 'Where the edge was, looking back', pos: [-180, 14, -180], target: [30, 0, 30] },
   { id: 'edge', name: 'The far edge, looking back', pos: [EXT[0] + 20, 14, EXT[0] + 20], target: [30, 0, 30] },
+  // The vehicle plan's (Phase 0): where your car's detail and the traffic's show most
+  { id: 'drive', name: 'Driving, the east ring avenue', pos: [RING_HI + 1.5 * LANE, 1.9, 52], target: [RING_HI + 1.5 * LANE, 1.2, 30] },
+  { id: 'traffic', name: 'Traffic at a ring junction', pos: [RING_HI - 10, 9, CORE_ROADS[1] + 10], target: [RING_HI, 0, CORE_ROADS[1]] },
 ];
 /** The route, through these views in order and back home */
 const ROUTE = ['home', 'street', 'square', 'airport', 'karts', 'highway', 'outskirts', 'edge', 'home'];
