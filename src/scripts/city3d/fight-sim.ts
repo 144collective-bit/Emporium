@@ -36,8 +36,8 @@
  */
 // (the moves and the styles live in fight-moves.ts, so the screens and the save's rules read them without the
 // whole fight in the city's boot)
-import { MOVES, STYLES, type MoveId, type MoveSpec, type StyleId } from './fight-moves';
-export { MOVES, STYLES, type Limb, type MoveId, type MoveKind, type MoveSpec, type StyleId, type StyleSpec } from './fight-moves';
+import { MOVES, STYLES, strikeHeight, type MoveId, type MoveSpec, type StyleId } from './fight-moves';
+export { MOVES, STYLES, strikeHeight, type Limb, type MoveId, type MoveKind, type MoveSpec, type StyleId, type StyleSpec } from './fight-moves';
 
 export type Phase = 'startup' | 'active' | 'recovery';
 
@@ -411,7 +411,7 @@ export function createFightSim(setup: FightSetup) {
   function strikeAt(f: Fighter, m: MoveSpec): [number, number, number] {
     const [fx, fz] = forward(f.yaw);
     const r = m.reach * 0.85;
-    return [f.x + fx * r, m.kind === 'kick' ? (m.id === 'roundhouse' ? 0.95 : 0.7) : m.id === 'uppercut' ? 1.0 : 1.05, f.z + fz * r];
+    return [f.x + fx * r, strikeHeight(m), f.z + fz * r];
   }
 
   /** The active frames: does the move land on anyone? */

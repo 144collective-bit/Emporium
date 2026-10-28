@@ -8,6 +8,7 @@
  * public.
  */
 import type { WeaponId } from '../city3d/combat-sim';
+import { FREE_PLAY } from '../city3d/freeplay';
 
 /* ---------- Guest names ---------- */
 
@@ -55,6 +56,8 @@ export const SKINS: { id: SkinId; name: string; need: number }[] = [
   { id: 'ink', name: 'Black Ink', need: 2500 },
   { id: 'neon', name: 'Pulse Neon', need: 10000 },
 ];
+// Free play (freeplay.ts): every finish open from the start
+if (FREE_PLAY) for (const s of SKINS) s.need = 0;
 export const skinUnlocked = (id: SkinId, total: number) => total >= (SKINS.find((s) => s.id === id)?.need ?? Infinity);
 
 /* ---------- Wardrobe ---------- */

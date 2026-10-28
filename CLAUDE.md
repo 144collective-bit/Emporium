@@ -2787,8 +2787,8 @@ it and has been retired completely. Build only on what's here.
   `line()` for the Workshop and factories), the ledger (`book()`, called by
   every rule that moves Dorras) and loans (`borrow()`, `repay()`, a share
   of takings in `advance()`).
-  `cleanSave()` cleans anything loaded and upgrades older saves (now v10: The
-  Trenches' corner shops, `corners`);
+  `cleanSave()` cleans anything loaded and upgrades older saves (now v11: the
+  inventory, `inventory`; v10 brought The Trenches' corner shops, `corners`);
   keep that migration when the save changes. New economy rules go here
   first.
 - **The city's game (Phase 5)** sits on the same save: XP and levels
@@ -2811,7 +2811,7 @@ it and has been retired completely. Build only on what's here.
 - **Screens:** `tycoon-ui.ts` (save `degen-city-tycoon-v1`): the Dorras
   readout, your business card (`[data-biz]`, on the gun store's `.shop`
   panel: right side under the header on wide screens, the bottom sheet on
-  phones; the till on top, then the Stall / Units / Workshop / Car tabs), the
+  phones; the till on top, then the Stall / Units / Workshop / Car / Bag tabs; the Bag is the inventory's, read-only), the
   market hall, filled into the Emporium's panel (`[data-market]`, with its
   deliver-to / sell-from picker, your car included when it's parked outside),
   and the Workshop's (`[data-workshop]`), Signal tower's (`[data-contracts]`:
@@ -3148,7 +3148,7 @@ it and has been retired completely. Build only on what's here.
   Degen's style, origin on the ground under the middle, +x forward, wheels
   that steer and roll, a seated Degen driver via `seat()`). Only for the
   kart park: never real money, never tied to the store or the token.
-- **The save** (`tycoon.ts`, v10): `karts` { model, paint, owned, mods,
+- **The save** (`tycoon.ts`, v11): `karts` { model, paint, owned, mods,
   `records` (fastest lap and best run per course and class, `KartTime`),
   `boards` (the local leaderboards, `LEADERBOARD_SIZE` runs per key: your
   own runs for now, built so a server can hold everyone's later),
@@ -3242,10 +3242,106 @@ it and has been retired completely. Build only on what's here.
   header read "Karting · <course>". Under reduced motion the race still
   runs (it's the game) with no camera shake or sparks.
 
+## The inventory (3D walk mode)
+
+- The plan and its phases are `docs/inventory-plan.md` (the owner's call:
+  an inventory, switching weapons, then fists on the street); keep it up to
+  date, one phase at a time with the owner's sign-off. Phase 1 (the
+  inventory) and the controls after it (the owner's call: Tab opens a 4 x 4
+  grid with two weapon slots) and Phase 2 (fists on the street, below) are
+  built: what Degen carries is the save's
+  `inventory` (v11: two weapon slots, `guns`, either may be empty; the
+  thing in his hand, `held`, kept in step with the look by `setHeld()`; his
+  consumables, `items`; where each thing lies in the grid, `grid`), its
+  shape and cleaning in `inventory-save.ts` (the boot's; `GRID_SIZE` 16,
+  `GRID_COLS` 4) and its rules in `inventory.ts` (DOM-free, tested in
+  `tests/inventory.test.ts`, loaded with the hotbar and the gun store):
+  the hotbar's slots in his order (`slots()`: weapon 1, weapon 2, the
+  thing in his hand, the consumables he has; no fists slot: empty hands
+  are the fists; `pickSlot()` (the drawn weapon's key again puts it away),
+  `stepKey()` through the weapons and empty hands), the grid (`carried()`,
+  `layout()`: what was where stays there, the new in the first free
+  space; `moveCell()`, `equipCell()` (what was in the slot takes its
+  space), `unequip()`, `swapSlots()`), the loadout (`setLoadout()`,
+  `carryGun()`), the snack (`ITEM_CATALOG` in catalog.ts, 500 Dorras,
+  `ITEM_MAX` five; `buyItem()`, ledger `items`, not counted as a thing
+  bought; `useItem()` only in a spar, which comes with the fight plan's
+  street spars) and where it's sold (`SNACK_BARS`: the downtown diners'
+  doors and the Night Market's stalls, walk prompts `snack:<id>` that buy
+  one there and then).
+- On screen (`inventory-ui.ts`, a chunk of its own fetched when walking
+  starts, with the inventory's keys, the pad, the wheel and the snack
+  doors; styles `src/styles/inventory.css`): the hotbar (`[data-hotbar]`,
+  bottom-right on desktops with the slots' names; square slots over the
+  right-hand buttons on touch screens upright, the door prompt above them,
+  low between the stick and the buttons on their side; in `chrome`), **the
+  inventory** (`[data-inv]`: Tab, the walk tabs' Bag button
+  `[data-inv-open]` or the gamepad's View open and close it, Esc and × close
+  it; open, Degen stops, the mouse is freed and `.city.is-inv` hides the
+  HUD's buttons, the hotbar and the prompt; the two weapon slots over the
+  4 x 4 grid, dragged between with pointer events and a ghost, a tap
+  selecting with the actions and a gun's stat bars (`STATS` in gunart.ts)
+  in the bar under it, a double tap, double click or Enter the first; with
+  a mouse a tip on hover (`.inv-tip`) and a right-click's quick move;
+  what's dropped settles with a bounce (`is-landed`) and the panel rises
+  in, neither under reduced motion; arrows or the d-pad move round it; a card in
+  the middle on desktops, a sheet over the bottom on phones upright, the
+  weapons beside the grid on their side) and `bagHtml()` for the business
+  card's Bag tab (the same grid, read-only; the Armoury and the Night
+  Market as ways in from the City view). 1 / 2 draw a weapon (again puts
+  it away), 3-7 the rest, X, the touch Swap button, RB and the d-pad
+  step, and the wheel steps while the mouse is captured (free, it still
+  sets the camera's distance); first person is the gamepad's right stick
+  click. The thing in his hand puts the gun away and takes that out;
+  which is out isn't saved (walking starts with the thing in his hand
+  out).
+- The loadout is picked in the inventory or at the gun store's Loadout row
+  (gunshop.ts: tap a slot, then a gun, or "Leave it empty"; picking
+  gears him up with the first weapon, all full); the guns
+  not carried wait in the bag. Ammo stays free. Either gun is drawn
+  anywhere (`combat.draw()`: the first time it gears him up, full; with
+  empty hands G kicks, it holsters a gun that's out), and a swap goes only within the loadout (`kit` in combat-sim.ts,
+  `setKit()`: `null` any gun (an older browser), `[]` none, which holsters
+  him; online the `equip` message's `l` and the `kit` message (its gun `w`
+  optional, taken anywhere), `cleanKit()`, `PROTOCOL` 4). The guns'
+  silhouettes are `gunart.ts`.
+- **Fists on the street** (Phase 2): empty hands are the fists. The rules
+  are `brawl-sim.ts` (DOM-free, tested in `tests/brawl.test.ts`): one
+  fighter of the fight's rules (fight-sim.ts, the save's style) put where
+  Degen stands each tick, so it only times the moves (frames, chains, the
+  block, the dodge, stamina) and hands back what a move moves him (a
+  step in, the dodge's slide) for walk mode to move him by through its
+  collisions; a `strike` on a move's first active frame; the guard up
+  with any press and `BRAWL.guard` after, dropped by sprinting. The hits
+  are `melee()` in combat-sim.ts (the dummies in reach, arc and height,
+  `strikeHeight()` in fight-moves.ts, shared with the ring; the drones
+  fly out of a fist's reach; nothing with a gun out; online the `melee`
+  message, which the server checks the same way); a dummy down by hand
+  counts `fistDowns` too (`takedown(s, kind, hand)`; missions Bare hands
+  and Street fighter, badge Bare knuckles). The look is `brawl.ts` (walk
+  mode's chunk): `lay()` puts the fight's clip on his pose after the
+  walk, the upper body over the motion capture (`upperW`), a kick or the
+  dodge whole and standing (`rooted`). Controls: click punch, right-click
+  held block, G kick, Space dodges with the guard up and standing (jumps
+  otherwise), Shift sprints; touch (`.is-fists` on the root): Punch,
+  Block and Kick in Fire's, Reload's and Aim's places; gamepad X punch, Y
+  kick, LB held block, A dodge, the run on L3. A swing makes anyone near
+  step aside (`swing` in life.ts, a `bump`): the crowd is never a target.
+  The lab's Brawl program (`?anim&prog=brawl`) plays them.
+- **Free play** (a test switch, the owner's call: everything free to
+  check it all works): `freeplay.ts` (`FREE_PLAY`, Vite's `__FREE_PLAY__`
+  from `PUBLIC_FREE_PLAY=1` in `astro.config.mjs`) makes every price in
+  `catalog.ts` and `tycoon.ts` 0, every level 1, the guns' and finishes'
+  scores 0, the kart cups and the trainer's opponents open from level 1,
+  and `pay()` always pay. It's set only on the Vercel preview
+  project (emporium-preview); never set it in the "Build site" Action or
+  the Worker's build, and take it off the preview before anything goes
+  live from there. Unset, its branches fold away.
+
 ## Target practice (3D walk mode)
 
-- Solo shooting practice. Only the player's Degen carries a gun, picked up
-  at the gun store counter in the Armoury (`RACK` in `solids.ts`, the
+- Solo shooting practice. Only the player's Degen carries a gun: his
+  loadout (the inventory, above), picked at the gun store counter in the Armoury (`RACK` in `solids.ts`, the
   counter itself in `armoury()`) or at Trench Arms' hatch in The Trenches
   (`ARMS.counter` in `avenue.ts`, the same store). Targets are the cardboard dummies (`DUMMIES`) and the patrol
   drones; never make pedestrians, soldiers or other characters targets.
@@ -3323,19 +3419,19 @@ it and has been retired completely. Build only on what's here.
   `SOLIDS` except the dummies' own footprints (`SHOT_SOLIDS`), on plot
   buildings and on the ground. When dummies move, their footprints follow
   `DUMMIES` automatically.
-- Keys: click fires, right-click aims, R reloads, G holsters, X / 1-4 swap
-  guns, Q / E held peek round a corner (animation Phase 4), C crouches and
+- Keys: click fires, right-click aims, R reloads, G holsters (with empty hands it kicks: the fists, above), X
+  and 1-7 work the hotbar (the inventory, above), Q / E held peek round a corner (animation Phase 4), C crouches and
   slides when sprinting (Phase 5); F does what the
   prompt says (the owner's call: every door, counter and getting in or
   out, and F closes those menus); Shift sprints, Caps Lock (not R) toggles
   walking, the touch Sprint button locks the sprint. Where the mouse can't be captured
   (`noLock` in `walk.ts`), click fires and dragging looks. Only a real mouse
   fires from the canvas (taps send mouse events too).
-- Swapping (`swap()` in `combat.ts`, `sim.swap()`, the `swap` message): once
-  geared up, any unlocked gun, anywhere; each gun keeps its own ammo
+- Swapping (`swap()` / `draw()` in `combat.ts`, `sim.swap()`, the `swap` message): once
+  geared up, either gun in the loadout, anywhere; each gun keeps its own ammo
   (`stash`), a new one comes full, the counter refills all, and the new gun
   fires after `SWAP_TIME`. On touch the Swap button (`data-walk-swap`, gun's
-  `short` name in `data-swap-name`) sits above Fire; the desktop HUD shows the
+  `short` name in `data-swap-name`; it steps the hotbar) sits above Fire; the desktop HUD shows the
   gun's name (`data-gun`).
 - Touch: dragging the Fire button also looks (one thumb shoots and steers);
   keep its `touch-action: none` so the browser never cancels a held Fire. The
@@ -3421,7 +3517,7 @@ it and has been retired completely. Build only on what's here.
   stick, X / Y, LB held, A, Start quits), Esc or Quit ends it with the
   card, closing the card stands Degen up outside the ropes (`OUT`);
   `.city.is-fighting` hides the walk HUD and `data-fight` makes the header
-  read "Fighting · <opponent>". The save (`tycoon.ts`, v10) keeps `fight`
+  read "Fighting · <opponent>". The save (`tycoon.ts`, v11) keeps `fight`
   (style, owned styles, wins, losses, knock-outs, best chain, bouts, spars,
   each opponent's record), the ledger entry `fighting` and the counters
   `bouts` / `fightWins` / `kos` / `chains`. New gameplay goes in the sim
@@ -3566,7 +3662,7 @@ it and has been retired completely. Build only on what's here.
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,
   in `tests/merch.test.ts`), the crowd's baked clips (`crowdclips.ts`) and Degen's skeleton, weights, head and hands
-  (`skeleton.ts`, `body.ts`), his walking (`locomotion.ts`), the motion capture and its animation (`bvh.ts`, `mocap-build.ts`, `mocap.ts`, `movesim.ts`, `inertia.ts`, `motionmatch.ts`, `animator.ts`), the rubric of human movement over every clip and program (`human.ts`, `tests/human.test.ts`), what his body does about what he touches (`contact.ts`), the game's moments (`moments.ts`), the guns in his hands (`gunfit.ts`, `stance.ts`) and his clothes not clipping (`wardrobe.ts`, the trunk's weights in `skeleton.ts`, `tests/clothing.test.ts`) and his accessories where they're worn (`tests/accessories.test.ts`), the suit's tailoring on the desktop only (`tests/tailoring.test.ts`). Modules that touch the DOM or `kit.ts` (canvas
+  (`skeleton.ts`, `body.ts`), his walking (`locomotion.ts`), the motion capture and its animation (`bvh.ts`, `mocap-build.ts`, `mocap.ts`, `movesim.ts`, `inertia.ts`, `motionmatch.ts`, `animator.ts`), the rubric of human movement over every clip and program (`human.ts`, `tests/human.test.ts`), what his body does about what he touches (`contact.ts`), the game's moments (`moments.ts`), the guns in his hands (`gunfit.ts`, `stance.ts`), what he carries (`inventory.ts`, `inventory-save.ts`) and his clothes not clipping (`wardrobe.ts`, the trunk's weights in `skeleton.ts`, `tests/clothing.test.ts`) and his accessories where they're worn (`tests/accessories.test.ts`), the suit's tailoring on the desktop only (`tests/tailoring.test.ts`). Modules that touch the DOM or `kit.ts` (canvas
   textures) can't load in Node; keep data a test needs in the DOM-free
   files.
 - When you change a rule or move something in the city, run the tests and

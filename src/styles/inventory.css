@@ -1,0 +1,672 @@
+/* inventory: the hotbar in the walk HUD and the inventory (inventory-ui.ts, `data-hotbar` and `data-inv` in
+   CityMap.astro; the business card's Bag tab draws the same list). Desktops: the bar in the bottom-right
+   corner, each slot with its name. Touch screens: a row of square slots over the right-hand buttons,
+   upright; on their side, low between the stick and the buttons. */
+.hotbar {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  z-index: 4;
+  display: none;
+  gap: 5px;
+}
+.city[data-view="3d"][data-mode="walk"] .hotbar {
+  display: flex;
+}
+/* Not on foot, or a menu or card is open: out of the way */
+.city.is-driving .hotbar,
+.city.is-karting .hotbar,
+.city.is-fighting .hotbar,
+.city.is-riding .hotbar,
+.city.is-shopping .hotbar {
+  display: none;
+}
+.hb-slot {
+  position: relative;
+  display: grid;
+  grid-template-rows: 22px auto;
+  justify-items: center;
+  align-content: center;
+  gap: 2px;
+  width: 58px;
+  height: 54px;
+  padding: 5px 3px 4px;
+  border: 1px solid #ffffff2e;
+  border-radius: 10px;
+  background: #0b0a12d9;
+  color: #fff;
+  font-family: var(--font-mono);
+  cursor: pointer;
+}
+.hb-slot[aria-pressed="true"] {
+  border-color: #0000;
+  background:
+    var(--pulse-wash) padding-box,
+    linear-gradient(#14102a, #14102a) padding-box,
+    var(--pulse) border-box;
+  box-shadow: 0 0 18px -6px #00eaffaa;
+}
+.hb-slot.is-empty {
+  border-style: dashed;
+  color: var(--muted);
+}
+.hb-art {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 22px;
+}
+.hb-art svg {
+  width: 22px;
+  height: 22px;
+  color: #fff;
+}
+.hb-art .hb-gun {
+  width: 50px;
+  height: 17px;
+  fill: #c9c6d6;
+  stroke: #05050a;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+.hb-name {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+/* Ammo in the gun's magazine, or how many snacks */
+.hb-count {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 8.5px;
+  font-weight: 700;
+  color: var(--p-cyan);
+}
+.hotbar .hb-key {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  font-size: 8.5px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.hb-slot[aria-pressed="true"] .hb-key {
+  color: #fff;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .hb-slot {
+    transition: transform 0.15s var(--ease);
+  }
+  .hb-slot:active {
+    transform: scale(0.94);
+  }
+}
+/* Touch screens: square slots without names (the number and the art), over the right-hand buttons */
+@media (pointer: coarse) {
+  .hotbar {
+    right: 12px;
+    bottom: 262px;
+    gap: 4px;
+  }
+  .hb-slot {
+    grid-template-rows: 22px;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    touch-action: manipulation;
+  }
+  .hb-name {
+    display: none;
+  }
+  .hb-art .hb-gun {
+    width: 38px;
+    height: 13px;
+  }
+  .hb-count,
+  .hotbar .hb-key {
+    font-size: 8px;
+  }
+  /* (on foot the door prompt goes above it) */
+  .city[data-mode="walk"]:not(.is-driving):not(.is-fighting) .walk-prompt {
+    bottom: 318px;
+  }
+}
+/* Narrow phones: tighter slots */
+@media (pointer: coarse) and (max-width: 360px) {
+  .hb-slot {
+    width: 42px;
+    height: 42px;
+  }
+}
+/* Phones on their side: low, between the stick and the right-hand buttons */
+@media (pointer: coarse) and (max-height: 500px) {
+  .hotbar {
+    right: auto;
+    bottom: 10px;
+    left: calc(50% - 19px);
+    transform: translateX(-50%);
+  }
+  .city[data-mode="walk"]:not(.is-driving):not(.is-fighting) .walk-prompt {
+    bottom: 150px;
+  }
+}
+
+/* ---------- The inventory (Tab) and the business card's Bag tab ---------- */
+.inv {
+  position: absolute;
+  top: calc(50% + var(--head-h) / 2);
+  left: 50%;
+  z-index: 7;
+  display: grid;
+  gap: 8px;
+  width: min(440px, calc(100% - 24px));
+  max-height: calc(100% - var(--head-h) - 20px);
+  padding: 14px 16px 14px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid #0000;
+  border-radius: 14px;
+  background:
+    linear-gradient(#0b0a12f2, #0b0a12f2) padding-box,
+    var(--pulse) border-box;
+  box-shadow: 0 24px 60px -20px #000c, 0 0 40px -18px #8f3dff;
+  color: var(--text-2);
+  transform: translate(-50%, -50%);
+}
+.inv[hidden] {
+  display: none;
+}
+.inv-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.inv-keys {
+  margin: 0 0 0 auto;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.inv-keys kbd {
+  padding: 1px 6px;
+  border: 1px solid #ffffff40;
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  color: #fff;
+}
+.inv-label,
+.bag-head {
+  margin: 4px 0 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--p-cyan);
+}
+.inv-weapons {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.inv-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+.inv-slot,
+.inv-cell {
+  position: relative;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  justify-items: center;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  padding: 6px 4px 5px;
+  border: 1px solid #ffffff2e;
+  border-radius: 10px;
+  background: #0b0a12;
+  color: #fff;
+  font-family: var(--font-mono);
+  text-align: center;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+button.inv-slot,
+button.inv-cell {
+  cursor: grab;
+}
+.inv-cell {
+  aspect-ratio: 1;
+}
+.inv-slot {
+  min-height: 72px;
+}
+.inv-slot.is-empty,
+.inv-cell.is-empty {
+  border-style: dashed;
+  background: #ffffff05;
+}
+.inv-slot.is-empty .inv-name {
+  color: var(--muted);
+}
+.inv-art {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-height: 24px;
+}
+.inv-art svg {
+  width: 26px;
+  height: 26px;
+  color: #fff;
+}
+.inv-art .hb-gun {
+  width: 100%;
+  max-width: 84px;
+  height: 22px;
+  fill: #c9c6d6;
+  stroke: #05050a;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+.inv-name {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.inv-slot .inv-name {
+  font-size: 10px;
+}
+.inv-count {
+  position: absolute;
+  top: 3px;
+  right: 6px;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--p-cyan);
+}
+.inv-key {
+  position: absolute;
+  top: 3px;
+  left: 7px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.inv-badge {
+  position: absolute;
+  bottom: 3px;
+  right: 5px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #2bff8826;
+  font-size: 7.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #2bff88;
+}
+.inv-slot.is-sel,
+.inv-cell.is-sel {
+  border-color: #0000;
+  background:
+    var(--pulse-wash) padding-box,
+    linear-gradient(#14102a, #14102a) padding-box,
+    var(--pulse) border-box;
+  box-shadow: 0 0 18px -6px #00eaffaa;
+}
+.inv-slot.is-out .inv-key,
+.inv-slot.is-sel .inv-key {
+  color: #fff;
+}
+/* Dragging: the thing lifted fades, the space under the pointer lights, a ghost follows the pointer */
+.inv-slot.is-lifted,
+.inv-cell.is-lifted {
+  opacity: 0.4;
+}
+.inv-slot.is-over,
+.inv-cell.is-over {
+  border-color: #00eaff;
+  box-shadow: inset 0 0 0 1px #00eaff, 0 0 16px -4px #00eaffaa;
+}
+.inv-ghost {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 48px;
+  border: 1px solid #00eaff;
+  border-radius: 10px;
+  background: #0b0a12e6;
+  pointer-events: none;
+}
+.inv-ghost .inv-art svg {
+  width: 26px;
+  height: 26px;
+  color: #fff;
+}
+.inv-ghost .hb-gun {
+  width: 56px;
+  height: 20px;
+  fill: #c9c6d6;
+  stroke: #05050a;
+  stroke-width: 1.5;
+}
+/* What's selected and what can be done with it */
+.inv-info {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  min-height: 48px;
+  padding: 8px 10px;
+  border: 1px solid #ffffff1a;
+  border-radius: 10px;
+  background: #ffffff05;
+}
+.inv-about {
+  flex: 1 1 180px;
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.inv-about b {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1.05;
+  text-transform: uppercase;
+  color: #fff;
+}
+.inv-about small {
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--muted);
+}
+.inv-acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.inv-acts .chip-link {
+  cursor: pointer;
+}
+/* A gun's stat bars (damage, fire rate, range; its mods on) */
+.inv-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin: 4px 0 0;
+}
+.inv-stats > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.inv-stats dt {
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  letter-spacing: 0.08em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--muted);
+}
+.inv-stats dd {
+  height: 4px;
+  margin: 0;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #ffffff14;
+}
+.inv-stats i {
+  display: block;
+  width: calc(var(--v, 0) * 100%);
+  height: 100%;
+  border-radius: inherit;
+  background: var(--pulse);
+}
+/* A mouse hovering: a tip over the thing with what it is, its stats and its right-click */
+.inv-tip {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 50;
+  display: grid;
+  gap: 3px;
+  width: 220px;
+  padding: 9px 11px;
+  border: 1px solid #0000;
+  border-radius: 10px;
+  background:
+    linear-gradient(#0b0a12f5, #0b0a12f5) padding-box,
+    var(--pulse) border-box;
+  box-shadow: 0 12px 30px -12px #000c;
+  pointer-events: none;
+}
+.inv-tip b {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1.05;
+  text-transform: uppercase;
+  color: #fff;
+}
+.inv-tip small {
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--muted);
+}
+.inv-tip-hint {
+  margin-top: 3px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--p-cyan, #00eaff);
+}
+/* The panel rises in, and what's dropped settles with a small bounce */
+@media (prefers-reduced-motion: no-preference) {
+  .inv:not([hidden]) {
+    animation: inv-in 0.18s var(--ease) both;
+  }
+  .inv-slot.is-landed,
+  .inv-cell.is-landed {
+    animation: inv-land 0.32s var(--ease);
+  }
+  .inv-tip {
+    animation: inv-tip 0.12s ease-out both;
+  }
+}
+@keyframes inv-in {
+  from {
+    opacity: 0;
+    translate: 0 14px;
+  }
+}
+@keyframes inv-land {
+  0% {
+    scale: 0.88;
+  }
+  60% {
+    scale: 1.05;
+  }
+  100% {
+    scale: 1;
+  }
+}
+@keyframes inv-tip {
+  from {
+    opacity: 0;
+  }
+}
+/* The inventory open: the walk HUD's buttons, the hotbar and the door prompt step aside */
+.city.is-inv .hotbar,
+.city.is-inv .walk-prompt,
+.city.is-inv .walk-look,
+.city.is-inv .combat-cross,
+.city.is-inv .walk-fire,
+.city.is-inv .walk-aim,
+.city.is-inv .walk-reload,
+.city.is-inv .walk-swap,
+.city.is-inv .walk-stick,
+.city.is-inv .walk-run,
+.city.is-inv .walk-crouch,
+.city.is-inv .walk-jump,
+.city.is-inv .mission-tracker {
+  display: none;
+}
+.city.is-inv [data-inv-open] {
+  background:
+    var(--pulse-wash) padding-box,
+    linear-gradient(#14102a, #14102a) padding-box,
+    var(--pulse) border-box;
+}
+/* Phones upright: a bottom sheet over the touch buttons */
+@media (max-width: 640px) {
+  .inv {
+    top: auto;
+    bottom: 10px;
+    width: calc(100% - 20px);
+    max-height: calc(100% - var(--head-h) - 20px);
+    transform: translateX(-50%);
+  }
+}
+/* Phones on their side: the weapons beside the grid, so it fits the height */
+@media (max-height: 500px) {
+  .inv {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "head glabel"
+      "wlabel grid"
+      "weapons grid"
+      "info grid";
+    align-items: start;
+    width: min(640px, calc(100% - 24px));
+    padding: 10px 14px;
+  }
+  .inv-head {
+    grid-area: head;
+  }
+  .inv-label:first-of-type {
+    grid-area: wlabel;
+  }
+  .inv-label + .inv-weapons {
+    grid-area: weapons;
+  }
+  .inv .inv-label:nth-of-type(2) {
+    grid-area: glabel;
+  }
+  .inv .inv-grid {
+    grid-area: grid;
+    gap: 4px;
+  }
+  .inv-info {
+    grid-area: info;
+  }
+  .inv .inv-weapons {
+    grid-template-columns: 1fr;
+  }
+  .inv .inv-label:nth-of-type(2) {
+    align-self: end;
+  }
+  .inv .inv-stats {
+    display: none;
+  }
+  .inv-slot {
+    min-height: 50px;
+  }
+  .inv .inv-cell {
+    aspect-ratio: auto;
+    height: 52px;
+  }
+}
+/* Short phones upright (320 x 568): flatter cells, so the grid and the info fit without scrolling (the stat bars are the gun store's there) */
+@media (max-width: 640px) and (max-height: 640px) {
+  .inv .inv-stats {
+    display: none;
+  }
+  .inv {
+    gap: 6px;
+    padding: 10px 12px;
+  }
+  .inv-slot {
+    min-height: 54px;
+  }
+  .inv .inv-cell {
+    aspect-ratio: auto;
+    height: 48px;
+  }
+  .inv .inv-grid {
+    gap: 4px;
+  }
+}
+/* The business card's Bag: the same, as a picture */
+[data-biz] .bag-head {
+  margin-top: 10px;
+}
+[data-biz] .inv-weapons,
+[data-biz] .inv-grid {
+  margin-top: 6px;
+}
+[data-biz] .walk-pad {
+  margin: 8px 0 0;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.bag-ways {
+  margin-top: 6px;
+}
+.bag-ways .chip-link {
+  cursor: pointer;
+}
+/* Phones on their side: the Bag made the walk tabs four; tighter tabs and ammo boxes keep the title clear of them */
+@media (pointer: coarse) and (max-height: 500px) and (min-width: 641px) {
+  .city[data-mode="walk"] .walk-top {
+    gap: 4px;
+  }
+  .city[data-mode="walk"] .walk-top .walk-pop summary,
+  .city[data-mode="walk"] .walk-top .walk-map-tab {
+    padding: 8px 9px;
+  }
+  .city[data-mode="walk"] .city-head-stats {
+    gap: 4px;
+  }
+  .city[data-mode="walk"] .combat-ammo,
+  .city[data-mode="walk"] .combat-score {
+    padding: 4px 8px;
+  }
+}
+/* Touch screens have no Tab key: the × closes it */
+@media (pointer: coarse) {
+  .inv-keys {
+    display: none;
+  }
+}

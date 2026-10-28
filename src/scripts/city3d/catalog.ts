@@ -19,6 +19,7 @@ import type { PlayerCar } from './mycar';
 import type { KartId } from './mykart';
 import type { BotTraits } from './fight-sim';
 import type { MarkId, PatternId } from '../net/profile-data';
+import { FREE_PLAY } from './freeplay';
 
 /* ---------- XP, levels and titles ---------- */
 
@@ -111,7 +112,7 @@ export const MOD_LEVELS = 3;
 const MOD_COSTS = [1200, 3000, 6500];
 /** An item's price tier: how much dearer its mods are (free starters are tier 1) */
 export const tierOf = (price: number) => 1 + Math.min(3, price / 20000);
-export const modCost = (price: number, level: number) => (level < 1 || level > MOD_LEVELS ? null : Math.round((MOD_COSTS[level - 1] * tierOf(price)) / 50) * 50);
+export const modCost = (price: number, level: number) => (level < 1 || level > MOD_LEVELS ? null : FREE_PLAY ? 0 : Math.round((MOD_COSTS[level - 1] * tierOf(price)) / 50) * 50);
 
 /* ---------- Cars (the garage) ---------- */
 
@@ -328,11 +329,31 @@ export const markItem = (id: MarkId): string | null => (id === 'diamond' || id =
 export const patternItem = (id: PatternId): string | null => (id === 'plain' ? null : `pattern-${id}`);
 export const wardrobeEntry = (id: string) => WARDROBE_CATALOG.find((w) => w.id === id) ?? null;
 
+/* ---------- Consumables (the inventory, docs/inventory-plan.md) ---------- */
+
+/** Things Degen carries a few of and uses up: the snack first, more to follow */
+export type ItemId = 'snack';
+export interface ItemEntry {
+  name: string;
+  price: number;
+  level: number;
+  /** One line for the Bag */
+  blurb: string;
+  /** Where it's sold (the Bag says so) */
+  where: string;
+}
+export const ITEM_CATALOG: Record<ItemId, ItemEntry> = {
+  snack: { name: 'Snack', price: 500, level: 1, blurb: 'A bite to eat. Restores health in a spar.', where: 'the diners and the Night Market' },
+};
+export const ITEM_IDS = Object.keys(ITEM_CATALOG) as ItemId[];
+/** How many of each he can carry */
+export const ITEM_MAX = 5;
+
 /* ---------- Property ---------- */
 
 /** A district plot, bought with Dorras (the top of the property ladder) */
-export const PLOT_DORRAS = 120000;
-export const PLOT_LEVEL = 8;
+export const PLOT_DORRAS = FREE_PLAY ? 0 : 120000;
+export const PLOT_LEVEL = FREE_PLAY ? 1 : 8;
 /** Selling a plot back to the city pays this share of what it cost */
 export const PLOT_REFUND = 0.6;
 /** What each design costs to build on a plot (changing a design costs the difference, never less than 0) */
@@ -357,3 +378,17 @@ export const WORKSHOP_LEVEL_COSTS = [0, 5000, 15000];
 export const LEVEL_CAPACITY = [1, 1.5, 2];
 export const LEVEL_PACE = [1, 1.25, 1.5];
 export const LEVEL_SPEED = [1, 1.3, 1.6];
+
+/* ---------- Free play (freeplay.ts): every price 0, every level 1 ---------- */
+
+// (after the starters are worked out from the real prices: the rest still have to be bought, for nothing)
+if (FREE_PLAY) {
+  for (const c of [...Object.values(CAR_CATALOG), ...Object.values(KART_CATALOG), ...Object.values(GUN_CATALOG), ...WARDROBE_CATALOG, ...Object.values(ITEM_CATALOG)]) {
+    c.price = 0;
+    c.level = 1;
+  }
+  for (const k of Object.values(KART_CLASSES)) k.level = 1;
+  for (const b of Object.values(FIGHT_BOTS)) b.level = 1;
+  for (const k of Object.keys(BUILD_COSTS) as BuildingType[]) BUILD_COSTS[k] = 0;
+  for (const a of [UNIT_LEVEL_COSTS, LOT_LEVEL_COSTS, CORNER_LEVEL_COSTS, WORKSHOP_LEVEL_COSTS]) a.fill(0);
+}

@@ -85,6 +85,8 @@ const ROAD_Y = 0.035;
 
 /** The player in walk mode: cars stop rather than drive through them. `r` is how far they reach (more in a car). */
 export const walker = { x: 0, z: 0, on: false, r: 0 };
+/** A swing of his fists on the street (brawl.ts): anyone within `r` of (x, z) steps aside, for `t` seconds more */
+export const swing = { x: 0, z: 0, r: 0, t: 0 };
 /** Anything else in the road the traffic stops short of (a taxi pulled up or on its way: taxi.ts) */
 export const stoppers: { x: number; z: number; r: number; on: boolean }[] = [];
 /** Where the traffic and the people on the sidewalks are, so your car can bump them softly (drive.ts) */
@@ -740,6 +742,7 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
       walkerV = walker.on && dj < 2 ? dj / Math.max(dt, 1e-3) : 0;
       walkerX = walker.x;
       walkerZ = walker.z;
+      swing.t = Math.max(0, swing.t - dt);
     }
     people.forEach((p, i) => {
       // Late at night some have gone home; the benches' sitters go in out of the rain (city life plan, Phase 3)
@@ -754,6 +757,13 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
         const dz = p.z - walker.z;
         const dd = Math.hypot(dx, dz);
         if (dd < BUMP.r + walker.r && dd > 1e-3) p.bump = { x: dx / dd, z: dz / dd, t: BUMP.t };
+      }
+      // A swing of his fists near them: a step aside, away from him (never a hit: the crowd is never a target)
+      if (swing.t > 0 && !p.bump && p.kind !== 'park' && !(p.act && seated(clipOf(p.act, 'idle')))) {
+        const dx = p.x - walker.x;
+        const dz = p.z - walker.z;
+        const dd = Math.hypot(dx, dz);
+        if (Math.hypot(p.x - swing.x, p.z - swing.z) < swing.r && dd > 1e-3) p.bump = { x: dx / dd, z: dz / dd, t: BUMP.t };
       }
       if (p.bump && (p.bump.t -= dt) <= 0) p.bump = undefined;
       if (p.kind === 'walk' && looking) p.ry = Math.atan2(walker.x - p.x, walker.z - p.z);

@@ -43,7 +43,8 @@ import type { Over } from './vault';
 import { springVel } from './inertia';
 import type { MoData } from './mocap';
 import { createCombat, type Sfx } from './combat';
-import { WEAPON_IDS } from './combat-sim';
+import type { Hotbar } from './inventory-ui';
+import type { Held } from '../net/profile-data';
 import type { GunShop } from './gunshop';
 import { ARMS, AVENUE_DOORS } from './avenue';
 import { DECK_Y, onDeck } from './waterfront';
@@ -91,7 +92,8 @@ import type { Boat } from './boat';
 import { harbourY, onHarbour } from './harbour';
 import { PLAN, inPoly, type Pt } from './streetplan';
 import { SPOTS, pointOn, ROUTES } from './routes';
-import { bodies } from './life';
+import { bodies, swing } from './life';
+import type { StreetFists } from './brawl';
 import type { GameDeps } from './ui';
 import type { Mode } from '../net/protocol';
 import { live } from './live-client';
@@ -248,6 +250,8 @@ export interface WalkDeps {
   places(): { id: string; x: number; z: number; label: string }[];
   /** Open one of them (tycoon-ui.ts) */
   openPlace(id: string): void;
+  /** Put a thing in Degen's hand from the inventory (the look's `held`: profile-ui.ts wears it, the save follows) */
+  hold(held: Held): void;
   /** The economy, for the shops in walk mode (buying, mods) */
   game: GameDeps;
   /** The kart park in the north-east (its hut door opens the kart menu; races run on its track) */
@@ -568,6 +572,8 @@ export function createWalk(d: WalkDeps) {
       else if (n.id === 'car') (drive.active ? getOut() : getIn());
       else if (n.id === 'put') putDown();
       else if (n.id === 'bench' || n.id === 'stand') return;
+      // (a snack is bought there and then: the mouse stays captured)
+      else if (n.id.startsWith('place:snack:')) hotbar?.snack(n.id.slice(12));
       else if (n.id.startsWith('place:')) {
         if (document.pointerLockElement === canvas) document.exitPointerLock();
         d.openPlace(n.id.slice(6));
@@ -697,26 +703,36 @@ export function createWalk(d: WalkDeps) {
     sfx: d.sfx,
     game: d.game,
     // Each takedown counts for the city's game (XP, missions)
-    onTakedown(kind) {
-      takedown(d.game.save(), kind);
+    onTakedown(kind, hand) {
+      takedown(d.game.save(), kind, hand);
       d.game.commit();
     },
   });
+  /**
+   * A menu opened, a race or a fight begun, a vehicle taken: walking's keys let go, Degen stood still,
+   * the trigger and the sight down, and (`free`) the mouse freed
+   */
+  function still(free = true) {
+    keys.clear();
+    jumpHeld = false;
+    vel.set(0, 0);
+    setAim(false);
+    combat.trigger(false);
+    combat.trigger(false, true);
+    if (free && document.pointerLockElement === canvas) document.exitPointerLock();
+  }
   // The Armoury's store and workbench at its counter: frees the mouse and pauses walking while it's open
   const shop = lazyMenu<GunShop>(['show', 'take'], async () => (await import('./gunshop')).createGunShop(root, {
     lifetime: () => combat.lifetime,
     weapon: () => combat.weapon,
     geared: () => combat.geared,
     equip: (id) => combat.equip(id),
+    may: (id) => combat.canTake(id),
+    loadoutChanged: () => combat.setLoadout(),
     game: d.game,
     setMods: (id) => combat.setMods(id),
     onOpen() {
-      keys.clear();
-      jumpHeld = false;
-      setAim(false);
-      combat.trigger(false);
-      combat.trigger(false, true);
-      if (document.pointerLockElement === canvas) document.exitPointerLock();
+      still();
     },
     onClose: () => {
       moments.release();
@@ -724,6 +740,57 @@ export function createWalk(d: WalkDeps) {
     },
   }));
   combat.onLifetime(() => shop.refresh());
+  // The inventory's hotbar and the Bag tab (inventory-ui.ts, a chunk of its own fetched when walking starts): fists,
+  // his loadout, the thing in his hand, his snacks. A key pressed before it's in waits for it.
+  let hotbar: Hotbar | null = null;
+  let hotbarLoad: Promise<void> | null = null;
+  const loadHotbar = () =>
+    (hotbarLoad ??= import('./inventory-ui')
+      .then(({ createHotbar }) => {
+        hotbar = createHotbar(root, {
+          game: d.game,
+          combat,
+          touched: d.touched,
+          hold: d.hold,
+          // The inventory (Tab): the mouse freed for dragging, Degen stood still, as at a counter
+          opened() {
+            still();
+          },
+          closed: () => canvas.focus({ preventScroll: true }),
+        });
+      })
+      .catch(() => {
+        hotbarLoad = null;
+      }));
+  /** Pick a hotbar slot (0-6), or step through the fists and the guns */
+  const pickSlot = (n: number) => (hotbar ? hotbar.pick(n) : void loadHotbar().then(() => hotbar?.pick(n)));
+  /** Open or close the inventory (Tab, the Bag button, View on a gamepad) */
+  const toggleInv = () => (hotbar ? hotbar.toggle() : void loadHotbar().then(() => hotbar?.toggle()));
+  const stepSlot = (dir: 1 | -1) => (hotbar ? hotbar.step(dir) : void loadHotbar().then(() => hotbar?.step(dir)));
+  // Fists on the street (brawl.ts, docs/inventory-plan.md Phase 2, a chunk of its own fetched when walking starts):
+  // empty hands are his fists. Click punches, right-click (held) blocks, G kicks, Space with the guard up and standing
+  // dodges; on a gamepad X, Y, LB held and A; on touch Punch, Kick and Block in Fire's, Aim's and Reload's places
+  let fists: StreetFists | null = null;
+  let fistsMod: typeof import('./brawl') | null = null;
+  let fistsLoad: Promise<void> | null = null;
+  const loadFists = () =>
+    (fistsLoad ??= import('./brawl')
+      .then((m) => {
+        fistsMod = m;
+        fists = m.createStreetFists(d.game.save().fight.style);
+      })
+      .catch(() => {
+        fistsLoad = null;
+      }));
+  /** The guard's and the whole-body moves' share of his pose, the right mouse button and LB held (the block), the last "out of breath" */
+  let guardAmt = 0;
+  let wholeAmt = 0;
+  let mouseBlock = false;
+  let padBlock = false;
+  let tiredAt = -1e9;
+  let fistsShown = false;
+  /** His hands are empty and he's on his feet with nothing else on: the fists are his */
+  const fistsReady = () => !!fists && !!hotbar?.handsEmpty && !hotbar.open && !carrying && !drive.active && !fly.active && !karts.active && !boat?.active && !fighting() && !ride && !shop.open && !garageUI.open && !hangarUI.open && !kartUI.open && !fightUI.open;
   // The garage menu: like the store it frees the mouse and pauses walking; the camera goes to the
   // turntable (from over the shoulder, so the first-person hands stay out of the shot)
   let fpBeforeGarage = false;
@@ -741,13 +808,7 @@ export function createWalk(d: WalkDeps) {
     away: () => drive.away,
     game: d.game,
     onOpen() {
-      keys.clear();
-      jumpHeld = false;
-      vel.set(0, 0);
-      setAim(false);
-      combat.trigger(false);
-      combat.trigger(false, true);
-      if (document.pointerLockElement === canvas) document.exitPointerLock();
+      still();
       fpBeforeGarage = firstPerson;
       if (firstPerson) setFirstPerson(false);
       d.garage.spin(true);
@@ -828,13 +889,7 @@ export function createWalk(d: WalkDeps) {
     cancel: (saved) => fly.cancel(saved),
     away: () => fly.away,
     onOpen() {
-      keys.clear();
-      jumpHeld = false;
-      vel.set(0, 0);
-      setAim(false);
-      combat.trigger(false);
-      combat.trigger(false, true);
-      if (document.pointerLockElement === canvas) document.exitPointerLock();
+      still();
       fpBeforeHangar = firstPerson;
       if (firstPerson) setFirstPerson(false);
     },
@@ -897,15 +952,9 @@ export function createWalk(d: WalkDeps) {
     },
     preview: (k) => karts.preview(k),
     onOpen() {
-      keys.clear();
-      jumpHeld = false;
       pedals.gas = pedals.brake = false;
       kartBtns.drift = false;
-      vel.set(0, 0);
-      setAim(false);
-      combat.trigger(false);
-      combat.trigger(false, true);
-      if (document.pointerLockElement === canvas) document.exitPointerLock();
+      still();
     },
     onClose() {
       // The results card closed: out of the kart
@@ -935,15 +984,9 @@ export function createWalk(d: WalkDeps) {
     game: d.game,
     start: (setup) => startFight(setup),
     onOpen() {
-      keys.clear();
-      jumpHeld = false;
       pedals.gas = pedals.brake = false;
       fightBtns.block = false;
-      vel.set(0, 0);
-      setAim(false);
-      combat.trigger(false);
-      combat.trigger(false, true);
-      if (document.pointerLockElement === canvas) document.exitPointerLock();
+      still();
       void loadFight();
     },
     onClose() {
@@ -990,14 +1033,8 @@ export function createWalk(d: WalkDeps) {
     fightUI.close();
     if (drive.active) getOut();
     if (combat.armed) combat.toggleHolster();
-    keys.clear();
-    vel.set(0, 0);
-    jumpHeld = false;
     fightBtns.punch = fightBtns.kick = fightBtns.block = fightBtns.dodge = false;
-    setAim(false);
-    combat.trigger(false);
-    combat.trigger(false, true);
-    if (document.pointerLockElement === canvas) document.exitPointerLock();
+    still();
     hero.g.visible = hero.ring.visible = false;
     near = null;
     prompt.hidden = true;
@@ -1048,14 +1085,8 @@ export function createWalk(d: WalkDeps) {
     if (drive.active) getOut();
     drive.recallKart();
     if (combat.armed) combat.toggleHolster();
-    keys.clear();
-    vel.set(0, 0);
-    jumpHeld = false;
     kartBtns.drift = false;
-    setAim(false);
-    combat.trigger(false);
-    combat.trigger(false, true);
-    if (document.pointerLockElement === canvas) document.exitPointerLock();
+    still();
     hero.g.visible = hero.ring.visible = false;
     near = null;
     prompt.hidden = true;
@@ -1101,12 +1132,7 @@ export function createWalk(d: WalkDeps) {
     if (combat.armed) combat.toggleHolster();
     // (in by your car's passenger door, the moment's: he slides over to the wheel)
     if (!drive.enter(pos.x, pos.z, moments.mark?.kind === 'board' ? (moments.mark.side ?? 0) : 0)) return;
-    keys.clear();
-    vel.set(0, 0);
-    jumpHeld = false;
-    setAim(false);
-    combat.trigger(false);
-    combat.trigger(false, true);
+    still(false);
     hero.g.visible = hero.ring.visible = false;
     near = null;
     // (the vehicle has him: the moment that got him in is over, and a crate is put away)
@@ -1127,12 +1153,7 @@ export function createWalk(d: WalkDeps) {
     if (drive.active || karts.active) return;
     if (combat.armed) combat.toggleHolster();
     if (!fly.enter()) return;
-    keys.clear();
-    vel.set(0, 0);
-    jumpHeld = false;
-    setAim(false);
-    combat.trigger(false);
-    combat.trigger(false, true);
+    still(false);
     hero.g.visible = hero.ring.visible = false;
     near = null;
     moments.cancel();
@@ -1157,12 +1178,7 @@ export function createWalk(d: WalkDeps) {
         if (!active || drive.active || fly.active || karts.active || ride || fighting()) return;
         if (combat.armed) combat.toggleHolster();
         if (!b.enter()) return;
-        keys.clear();
-        vel.set(0, 0);
-        jumpHeld = false;
-        setAim(false);
-        combat.trigger(false);
-        combat.trigger(false, true);
+        still(false);
         hero.g.visible = hero.ring.visible = false;
         near = null;
         moments.cancel();
@@ -1235,8 +1251,13 @@ export function createWalk(d: WalkDeps) {
     d.touched();
   };
   const tryJump = () => {
-    jumpBuffer = 0.14;
     d.touched();
+    // (the guard up and standing, it's a dodge: moving, a jump as ever)
+    if (fistsReady() && fists!.brawl.up && grounded && vel.length() < fistsMod!.BRAWL.still) {
+      fightBtns.dodge = true;
+      return;
+    }
+    jumpBuffer = 0.14;
   };
   /** C, B or the touch Crouch button: a slide when sprinting, else into or out of a crouch */
   const crouchPress = () => {
@@ -1265,6 +1286,8 @@ export function createWalk(d: WalkDeps) {
     const c = e.code;
     // (a peek key let go anywhere is let go: it may have been held into a car or a menu)
     if (!down && (c === 'KeyQ' || c === 'KeyE')) keys.delete(c);
+    // The inventory open: its keys (Tab closes it; Esc too, index.ts), and walking keys wait
+    if (hotbar?.open) return hotbar.key(e, down);
     // While the store, the garage, the hangar, the kart hut's or the trainer's menu is open, F closes it and walking keys wait
     if (shop.open || garageUI.open || hangarUI.open || kartUI.open || fightUI.open) {
       if (down && !e.repeat && c === 'KeyF') (shop.open ? shop.close() : garageUI.open ? garageUI.close() : hangarUI.open ? hangarUI.close() : kartUI.open ? kartUI.close() : fightUI.close());
@@ -1338,19 +1361,25 @@ export function createWalk(d: WalkDeps) {
       return true;
     }
     if (down && c === 'KeyF' && near) act();
-    else if (down && !e.repeat && c === 'KeyV') setFirstPerson(!firstPerson);
+    // Tab: the inventory (on foot, not in the middle of a moment)
+    else if (c === 'Tab') {
+      if (down && !e.repeat && !moments.active) toggleInv();
+    } else if (down && !e.repeat && c === 'KeyV') setFirstPerson(!firstPerson);
     else if (down && !e.repeat && c === 'CapsLock') walkLock = !walkLock;
     else if (down && !e.repeat && c === 'KeyR') combat.reload();
-    else if (down && !e.repeat && c === 'KeyG') combat.toggleHolster();
-    else if (down && !e.repeat && c === 'KeyX') combat.swap(1);
+    else if (down && !e.repeat && c === 'KeyG') {
+      // (empty hands: G kicks; a gun is drawn with 1 or 2)
+      if (fistsReady()) fightBtns.kick = true;
+      else combat.toggleHolster();
+    } else if (down && !e.repeat && c === 'KeyX') stepSlot(1);
     else if (down && !e.repeat && c === 'KeyC') crouchPress();
     // Q / E held: peek left and right
     else if (c === 'KeyQ' || c === 'KeyE') {
       if (down) keys.add(c);
       else keys.delete(c);
     }
-    // 1-4 pick a gun (unless the emote panel has them)
-    else if (down && !e.repeat && /^Digit[1-7]$/.test(c) && !root.querySelector('[data-emotes][open]')) combat.swap(WEAPON_IDS[Number(c.slice(5)) - 1]);
+    // 1-7 pick a hotbar slot (unless the emote panel has them)
+    else if (down && !e.repeat && /^Digit[1-7]$/.test(c) && !root.querySelector('[data-emotes][open]')) pickSlot(Number(c.slice(5)) - 1);
     else if (c === 'Space') {
       if (down && !e.repeat) tryJump();
       jumpHeld = down;
@@ -1374,7 +1403,7 @@ export function createWalk(d: WalkDeps) {
     keys.clear();
     padLean = 0;
     jumpHeld = false;
-    mouseL = mouseR = false;
+    mouseL = mouseR = mouseBlock = padBlock = false;
     setAim(false);
     combat.trigger(false);
     combat.trigger(false, true);
@@ -1414,6 +1443,13 @@ export function createWalk(d: WalkDeps) {
   canvas.addEventListener('pointerdown', (e) => (lastPointer = e.pointerType), true);
   canvas.addEventListener('mousedown', (e) => {
     if (!active || lastPointer !== 'mouse' || fighting()) return;
+    // Empty hands: a click punches (once the mouse is captured), the right button held blocks
+    if (fistsReady()) {
+      if (e.button === 0 && (locked() || noLock)) fightBtns.punch = true;
+      if (e.button === 2) mouseBlock = true;
+      d.touched();
+      return;
+    }
     if (e.button === 2) aim = mouseR = true;
     if (e.button === 0 && (locked() || noLock)) {
       mouseL = true;
@@ -1421,6 +1457,7 @@ export function createWalk(d: WalkDeps) {
     }
   });
   window.addEventListener('mouseup', (e) => {
+    if (e.button === 2) mouseBlock = false;
     if (e.button === 2 && mouseR) aim = mouseR = false;
     if (e.button === 0 && mouseL) {
       mouseL = false;
@@ -1456,6 +1493,12 @@ export function createWalk(d: WalkDeps) {
     'wheel',
     (e) => {
       if (!active || drive.active || fly.active) return;
+      // With the mouse captured the wheel steps the hotbar (as a shooter's does); free, it sets the camera's distance
+      if (locked() && !boating() && !karts.active && !fighting()) {
+        if (e.deltaY) hotbar?.wheel(Math.sign(e.deltaY) as 1 | -1);
+        e.preventDefault();
+        return;
+      }
       zoom = THREE.MathUtils.clamp(zoom * (1 + Math.sign(e.deltaY) * 0.12), 0.8, 16);
       if (zoom < 1.2 && !firstPerson) setFirstPerson(true);
       else if (zoom >= 1.2 && firstPerson && e.deltaY > 0) setFirstPerson(false);
@@ -1598,8 +1641,9 @@ export function createWalk(d: WalkDeps) {
       combat.trigger(false, true);
     });
   $('[data-walk-reload]').addEventListener('click', () => combat.reload());
+  // (the hotbar's step: through the fists and the guns)
   $('[data-walk-swap]').addEventListener('click', () => {
-    combat.swap(1);
+    stepSlot(1);
     d.touched();
   });
   // Touch: Aim toggles the sight (one thumb can't hold Aim and Fire)
@@ -1613,8 +1657,9 @@ export function createWalk(d: WalkDeps) {
     d.touched();
   });
 
-  // Gamepad: left stick move, right stick look, A jump, LB / L3 run, Y enter, View first person,
-  // RT fire, LT aim, X reload, D-pad up holster, RB / D-pad left-right swap guns
+  // Gamepad: left stick move, right stick look, A jump, LB / L3 run, Y enter, View the inventory, R3 first person,
+  // RT fire, LT aim, X reload, D-pad up holster, RB / D-pad left-right step the hotbar (the weapons and empty hands);
+  // with empty hands X punches, Y kicks (nothing to do there), LB held blocks, A dodges standing with the guard up
   function pollPad(dt: number) {
     const gp = Array.from(navigator.getGamepads?.() ?? []).find((p) => p && p.connected);
     if (!gp) {
@@ -1639,6 +1684,13 @@ export function createWalk(d: WalkDeps) {
     if (rx || ry) look(rx * 2.8 * dt, ry * 2 * dt, 1);
     const b = gp.buttons.map((x) => x.pressed);
     const edge = (i: number) => b[i] && !pad.prev[i];
+    // The inventory: the D-pad moves round it, A does the selected thing, B or View closes
+    if (hotbar?.open) {
+      hotbar.pad(edge);
+      pad.x = pad.y = 0;
+      pad.prev = b;
+      return;
+    }
     // The store: D-pad picks, A takes, B (or Y again) closes
     if (shop.open) {
       if (edge(14) || edge(12)) shop.step(-1);
@@ -1755,17 +1807,30 @@ export function createWalk(d: WalkDeps) {
     if (!b[0] && pad.prev[0]) jumpHeld = false;
     // (aiming, LB and RB lean out instead: peeking)
     padLean = b[6] ? (b[5] ? 1 : 0) - (b[4] ? 1 : 0) : 0;
-    pad.run = !!((b[4] && !b[6]) || b[10]);
+    // (empty hands: LB held blocks, the run is the left stick pressed)
+    const fb = fistsReady();
+    padBlock = fb && !!b[4];
+    pad.run = !!((b[4] && !b[6] && !fb) || b[10]);
     aim = aim || !!b[6];
     if (!b[6] && pad.prev[6]) setAim(false);
-    if (edge(3)) act();
-    if (edge(8)) setFirstPerson(!firstPerson);
+    // (Y does what the prompt says; with empty hands and nothing to do, it kicks)
+    if (edge(3)) {
+      if (fistsReady() && !near) fightBtns.kick = true;
+      else act();
+    }
+    // View opens the inventory; the right stick pressed swaps first and third person
+    if (edge(8) && !moments.active) toggleInv();
+    if (edge(11)) setFirstPerson(!firstPerson);
     if (b[7] !== !!pad.prev[7]) combat.trigger(!!b[7]);
-    if (edge(2)) combat.reload();
+    // (X reloads; with empty hands it punches)
+    if (edge(2)) {
+      if (fistsReady()) fightBtns.punch = true;
+      else combat.reload();
+    }
     if (edge(12)) combat.toggleHolster();
-    // RB or D-pad right: next gun; D-pad left: previous
-    if ((edge(5) && !b[6]) || edge(15)) combat.swap(1);
-    if (edge(14)) combat.swap(-1);
+    // RB or D-pad right: the hotbar's next slot of the fists and the guns; D-pad left: the one before
+    if ((edge(5) && !b[6]) || edge(15)) stepSlot(1);
+    if (edge(14)) stepSlot(-1);
     if (pad.x || pad.y || b.some(Boolean)) d.touched();
     pad.prev = b;
   }
@@ -2105,11 +2170,25 @@ export function createWalk(d: WalkDeps) {
     if (Math.abs(peek) < 1e-4) peek = 0;
     // (sprinting stands him up out of a crouch)
     if (crouched && sprint && mag > 0.1 && !slide) crouched = false;
+    // Fists on the street (brawl.ts): the fight's moves timed for him, from the presses (the touch buttons, the
+    // mouse, G, the pad) gathered in fightBtns; anything else in his hands, or anything else on, and they stop
+    const fistsOn = fistsReady() && !moments.active && !over && !slide;
+    if (!fistsOn && fists && (fists.brawl.up || fists.brawl.move)) fists.brawl.cancel();
+    const fistStep = fistsOn
+      ? fists!.brawl.step(dt, pos.x, pos.z, face, { punch: fightBtns.punch, kick: fightBtns.kick, dodge: fightBtns.dodge, block: fightBtns.block || mouseBlock || padBlock, sprinting: sprint && mag > 0.1, dx: dirX, dz: dirZ })
+      : null;
+    if (!fighting()) fightBtns.punch = fightBtns.kick = fightBtns.dodge = false;
+    const guardUp = fistsOn && fists!.brawl.up;
+    const rooted = fistsOn && fists!.brawl.rooted;
+    if (fistsOn !== fistsShown) {
+      fistsShown = fistsOn;
+      root.classList.toggle('is-fists', fistsOn);
+    }
     // (up stairs a climb's pace: the stairs takes' walking, a brisk climb running; movesim.ts STAIRS)
     const climbing = mag > 0.1 && climbAhead(groundAt, pos.x, pos.z, pos.y, dirX, dirZ, SCALE);
     // (brushing something the step hitches: contact.ts)
     const hitch = contact && contactMod ? contactMod.CONTACT.hitch * contact.state.hitch : 0;
-    const top = Math.min(shooting ? AIMING : sprint ? SPRINT : walkLock ? WALK : RUN, crouched ? CROUCH.speed : Infinity, climbing ? (walkLock ? STAIRS.walk : STAIRS.run) : Infinity, carrying ? RUN * MOMENT.crate.slow : Infinity) * (1 - (1 - PEEK.slow) * Math.abs(peek)) * (1 - hitch);
+    const top = Math.min(shooting ? AIMING : sprint ? SPRINT : walkLock ? WALK : RUN, crouched ? CROUCH.speed : Infinity, climbing ? (walkLock ? STAIRS.walk : STAIRS.run) : Infinity, carrying ? RUN * MOMENT.crate.slow : Infinity, guardUp && fists!.brawl.blocking ? fistsMod!.BRAWL.blockSpeed : Infinity) * (1 - (1 - PEEK.slow) * Math.abs(peek)) * (1 - hitch);
 
     // Towards it on the springs (movesim.ts; hardly any control in the air), facing where he's
     // going, or where you look when aiming / in first person; a moment's approach walks him onto its mark
@@ -2123,10 +2202,11 @@ export function createWalk(d: WalkDeps) {
     // (sitting down he turns his back to the bench, where the camera would be: it comes round to his front-left,
     // a three-quarter view of him on the bench, and is yours again once he's seated)
     if (moments.active && moments.mark?.kind === 'bench' && (moments.phase === 'approach' || moments.phase === 'play')) yaw += wrap(benchYaw - yaw) * damp(4, dt);
-    const gx = mg ? mg.dx * mg.speed : dirX * top;
-    const gz = mg ? mg.dz * mg.speed : dirZ * top;
+    // (a kick or the dodge: he stands for it; the guard up, he faces where you look, as aiming)
+    const gx = mg ? mg.dx * mg.speed : rooted ? 0 : dirX * top;
+    const gz = mg ? mg.dz * mg.speed : rooted ? 0 : dirZ * top;
     const lookFace = yaw + Math.PI;
-    const faceGoal = mg ? (mg.face ?? undefined) : aim || firstPerson || shooting || peekWant ? lookFace : undefined;
+    const faceGoal = mg ? (mg.face ?? undefined) : aim || firstPerson || shooting || peekWant || guardUp ? lookFace : undefined;
     ms.vx = vel.x;
     ms.vz = vel.y;
     ms.face = face;
@@ -2189,6 +2269,31 @@ export function createWalk(d: WalkDeps) {
         crouched = true;
       }
     }
+    // What the fists' moves move him themselves (a strike's step in, a dodge's slide), through the same walls
+    if (fistStep && (fistStep.dx || fistStep.dz)) {
+      const nx = pos.x + fistStep.dx;
+      if (!blocked(nx, pos.z, pos.y)) pos.x = nx;
+      const nz = pos.z + fistStep.dz;
+      if (!blocked(pos.x, nz, pos.y)) pos.z = nz;
+    }
+    // ...and what they do: the whoosh of a swing (the crowd near it steps aside), a strike landing on a dummy or
+    // a drone in front of him (combat-sim `melee()`: its hit and takedown are combat.ts's to show), out of breath
+    if (fistStep)
+      for (const e of fistStep.events) {
+        if (e.kind === 'swing' || e.kind === 'dodge') {
+          d.sfx('whoosh', e.kind === 'swing' ? 0.5 : 0.35);
+          if (e.kind === 'swing') {
+            swing.x = pos.x + Math.sin(face) * 0.6;
+            swing.z = pos.z + Math.cos(face) * 0.6;
+            swing.r = fistsMod!.MOVES[e.move].reach + fistsMod!.BRAWL.crowd;
+            swing.t = 0.4;
+          }
+        } else if (e.kind === 'strike') combat.melee(e.move, pos.x, pos.y, pos.z, face);
+        else if (e.kind === 'tired' && performance.now() - tiredAt > 4000) {
+          tiredAt = performance.now();
+          d.game.toast('Out of breath: let him get it back for a moment.', 2200);
+        }
+      }
     const speed = vel.length();
 
     face = ms.face;
@@ -2275,6 +2380,11 @@ export function createWalk(d: WalkDeps) {
     }
     const dancing = !!emote && !!onFoot && !combat.armed && !onFoot.emoteUpper(emote.id);
     const emoting = !!emote && !combat.armed && !dancing;
+    // Fists: the fight's clip on him (brawl.ts), the guard, a punch and the block on the upper body over the walk,
+    // a kick and the dodge on all of him (the motion capture stepping aside for those, as for the dance)
+    guardAmt += ((guardUp ? 1 : 0) - guardAmt) * damp(guardUp ? 14 : 6, dt);
+    wholeAmt += ((rooted ? 1 : 0) - wholeAmt) * damp(rooted ? 22 : 10, dt);
+    if (fists) fists.lay(P, guardAmt, wholeAmt);
     // The slide's pose, blended in quickly and out a little slower (the motion capture steps aside for it)
     slideAmt += ((slide ? 1 : 0) - slideAmt) * damp(slide ? 18 : 9, dt);
     crouchAmt += ((crouched ? 1 : 0) - crouchAmt) * damp(10, dt);
@@ -2315,7 +2425,8 @@ export function createWalk(d: WalkDeps) {
     }
     recoil = Math.max(0, recoil - dt * 0.35);
     aimAmt += ((shooting ? 1 : 0) - aimAmt) * damp(14, dt);
-    if (hero.held) hero.held.visible = !combat.armed && !carrying;
+    if (hero.held) hero.held.visible = (hotbar ? hotbar.heldOut : !combat.armed) && !carrying;
+    hotbar?.update();
     // Both hands on the gun (after walking and jumping have posed the arms)
     const gunInHand = combat.geared && combat.poseGun(P, { aim: aimAmt, pitch, recoil, run: runAmt, dt });
     if (!gunInHand && aim && !carrying) Object.assign(P.arms[1], { fwd: 1.45, out: 0.05, bend: 0.15, twist: 0 });
@@ -2360,8 +2471,8 @@ export function createWalk(d: WalkDeps) {
     }
     let drawFace = face;
     // ...with a gun in his hands or an arm out aiming, only its legs and hips: his own pose over them
-    const mocapOn = !!animator && landHold <= 0 && !dancing && !slide && !over && !moments.posing;
-    upperW = THREE.MathUtils.clamp(upperW + (gunInHand || aim || carryAmt > 0.01 || emoting ? dt / 0.15 : -dt / 0.15), 0, 1);
+    const mocapOn = !!animator && landHold <= 0 && !dancing && !slide && !over && !moments.posing && wholeAmt < 0.5;
+    upperW = THREE.MathUtils.clamp(upperW + (gunInHand || aim || carryAmt > 0.01 || emoting || guardAmt > 0.05 ? dt / 0.15 : -dt / 0.15), 0, 1);
     if (animator && anim) {
       // (a fresh start after a jump in place: walking started, a fast travel, the end of a ride)
       if ((mocapW < 0.01 && mocapOn) || lastPos.distanceToSquared(pos) > 4) {
@@ -2502,7 +2613,8 @@ export function createWalk(d: WalkDeps) {
       bestD = 0;
     }
     if (!drive.active)
-      for (const p of d.places())
+      // (and the snack bars, the inventory chunk's)
+      for (const p of hotbar ? [...d.places(), ...hotbar.doors] : d.places())
         if (Math.hypot(p.x - pos.x, p.z - pos.z) < 1) {
           best = { id: `place:${p.id}`, label: p.label };
           bestD = 0;
@@ -2745,6 +2857,9 @@ export function createWalk(d: WalkDeps) {
       baseFov = camera.fov;
       fov = camera.fov;
       hero.g.visible = hero.ring.visible = true;
+      hotbar?.reset();
+      void loadHotbar();
+      void loadFists();
       root.dataset.mode = 'walk';
     },
     exit() {
@@ -2762,6 +2877,11 @@ export function createWalk(d: WalkDeps) {
         else fly.abandon(loadPlane());
       }
       hangarUI.close();
+      // (the fists down)
+      fists?.brawl.cancel();
+      mouseBlock = padBlock = fistsShown = false;
+      guardAmt = wholeAmt = 0;
+      root.classList.remove('is-fists');
       // On the water: the hire boat goes home
       boat?.abandon();
       // ...and a kart race is abandoned too
@@ -2786,6 +2906,7 @@ export function createWalk(d: WalkDeps) {
       setAim(false);
       shop.close();
       garageUI.close();
+      hotbar?.close();
       combat.exit();
       joy.id = -1;
       joy.x = joy.y = 0;
@@ -2800,7 +2921,7 @@ export function createWalk(d: WalkDeps) {
     },
     /** Esc: close the gun store, the garage, the kart or fight menu if one is open, or abandon a kart race or a fight (true if it did) */
     closeShop() {
-      return shop.close() || garageUI.close() || hangarUI.close() || kartUI.close() || abandonKart() || fightUI.close() || quitFight();
+      return !!hotbar?.close() || shop.close() || garageUI.close() || hangarUI.close() || kartUI.close() || abandonKart() || fightUI.close() || quitFight();
     },
     /** True if Esc was used to free the mouse (so it shouldn't also stop walking). */
     releaseMouse() {

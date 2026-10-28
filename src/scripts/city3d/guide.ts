@@ -90,7 +90,7 @@ export const GUIDE: GuideStep[] = [
   {
     id: 'practice',
     name: 'Target practice',
-    hint: "Gear up at the Armoury's counter, then knock down 3 dummies in the north-west park or patrol drones.",
+    hint: "Draw your rifle from the hotbar (2, or G; your loadout is picked at the Armoury's counter), then knock down 3 dummies in the north-west park or patrol drones.",
     at: RACK,
     go: { walk: facing(RACK, COUNTER) },
     met: (s) => s.counters.dummies + s.counters.drones >= 3,

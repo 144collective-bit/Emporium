@@ -4,10 +4,13 @@
  * player's input and turns its events into the rifle, the targets, effects,
  * sound and the HUD.
  *
- * - You start unarmed. The Armoury's store hands out the guns at its counter
- *   and refills ammo; G holsters and draws. The starters unlock with lifetime
- *   score; the rest are bought there with Dorras (the save, through `game`),
- *   and a gun you don't own can't be taken or swapped to.
+ * - You carry a loadout of two guns (the save's inventory, inventory.ts),
+ *   picked at the Armoury's counter or Trench Arms' hatch, which also refill
+ *   ammo. Either gun is drawn anywhere (`draw()`, the hotbar; G draws and
+ *   holsters), and a swap goes only between them. The starters unlock with
+ *   lifetime score; the rest are bought at the store with Dorras (the save,
+ *   through `game`), and a gun you don't own can't be taken, carried or
+ *   swapped to.
  * - The Armoury's mods on your guns (the save again) are handed to the rules
  *   (`sim.setMods`) whenever they're stale: on the first frame, after going
  *   online or offline, and when the workbench calls `setMods()`. The HUD's
@@ -27,12 +30,14 @@ import { FONT_DISPLAY, fx, glowTex, liveTex, mergeMeshes, moving, neon, PAL, sid
 import { type Tick } from './world';
 import { DRONES, DUMMIES, SWAP_TIME, WEAPONS, WEAPON_IDS, createSim, dronePose, weaponUnlocked, type SimEvent, type TargetKind, type WeaponId } from './combat-sim';
 import type { ClientMsg, MeRow, NetEvent } from '../net/protocol';
+import { MOVES, type MoveId } from './fight-moves';
 import { SKINS, buildGun, gunSpec, type Gun, type SkinId } from './guns';
 import { holdGun, newStance } from './stance';
 import { FIT, RELOAD_CUES } from './gunfit';
 import type { Outfit, Pose } from './character';
 import { createViewmodel, type ViewState } from './viewmodel';
 import { gunMods, ownsGun } from './tycoon';
+import { applyGunMods } from './catalog';
 import type { GameDeps } from './ui';
 
 export { DUMMIES };
@@ -62,8 +67,8 @@ export interface CombatDeps {
   sfx(kind: Sfx, gain?: number): void;
   /** The city's game: the save says which guns are bought and what mods they carry (made after walk mode; only read once walking) */
   game: GameDeps;
-  /** One of your takedowns (XP and counters for the city's game) */
-  onTakedown(kind: TargetKind): void;
+  /** One of your takedowns (XP and counters for the city's game); `hand`, with his fists (brawl.ts) */
+  onTakedown(kind: TargetKind, hand: boolean): void;
 }
 
 const ME = 'me';
@@ -284,15 +289,19 @@ export function createCombat(d: CombatDeps) {
   const W = () => sim.weaponOf(ME);
   /** May Degen have this gun: a starter his score unlocked, or a gun he bought at the Armoury */
   const owns = (id: WeaponId) => weaponUnlocked(id, (netProfile ?? profile).total) && ownsGun(d.game.save(), id);
-  /** The save's mods are handed to the sim lazily: the economy is made after walk mode */
+  /** The loadout he carries (the save's inventory): the guns he may have, gun 1 first */
+  const kit = () => d.game.save().inventory.guns.filter((id): id is WeaponId => !!id && owns(id));
+  /** The save's mods and loadout are handed to the sim lazily: the economy is made after walk mode */
   let modsFresh = false;
   const applyMods = () => {
     if (modsFresh) return;
     modsFresh = true;
     const save = d.game.save();
     for (const id of WEAPON_IDS) sim.setMods(ME, id, gunMods(save, id));
-    // The gun remembered from last time may have been bought on another save
-    if (!me.geared && !owns(me.weapon)) me.weapon = 'rifle';
+    const k = kit();
+    sim.setKit(ME, k);
+    // The gun remembered from last time may have been bought on another save, or put back in the bag
+    if (!me.geared && k.length && !k.includes(me.weapon)) me.weapon = k[0];
   };
 
   /** The mods on each of his guns, for the server's copy of the rules (they're in this browser's save) */
@@ -342,6 +351,9 @@ export function createCombat(d: CombatDeps) {
   let touchFire = false;
   /** Online: a trigger pull since the last controls message (a quick tap can fit between two) */
   let pulled = false;
+  /** The last thing his fists landed on (the server's hits and takedowns of it are by hand too), and whether it was a kick */
+  let lastMelee = { target: -1, at: 0, kick: false };
+  const byHand = (target: number, melee?: boolean) => !!melee || (lastMelee.target === target && performance.now() - lastMelee.at < 800);
   let aiming = false;
   let firstPerson = false;
   let kick = 0;
@@ -457,7 +469,7 @@ export function createCombat(d: CombatDeps) {
     const out = me.mag === 0 && me.reserve === 0;
     // Out: another gun with rounds left is a swap away
     const spare = out && guns().some((id) => id !== me.weapon && (me.stash[id]?.some((n) => n > 0) ?? true));
-    const hint = out ? (spare ? `Out of ammo: ${touchUi.matches ? 'tap Swap' : 'Q to swap'}` : 'Out of ammo: refill at the Armoury') : reloading ? 'Reloading' : low && me.reserve > 0 ? (touchUi.matches ? 'Tap reload' : 'R to reload') : '';
+    const hint = out ? (spare ? `Out of ammo: ${touchUi.matches ? 'tap Swap' : 'X to swap'}` : 'Out of ammo: refill at the Armoury') : reloading ? 'Reloading' : low && me.reserve > 0 ? (touchUi.matches ? 'Tap reload' : 'R to reload') : '';
     if (hint !== shown.hint) {
       hud.hint.textContent = hint;
       hud.hint.hidden = !hint;
@@ -527,8 +539,11 @@ export function createCombat(d: CombatDeps) {
   // Takedown and streak call-outs near the crosshair
   const pops: { el: HTMLElement; t: number }[] = [];
   const STREAKS = ['', '', 'Double', 'Triple', 'Quad', 'Rampage'];
-  /** The guns this player may carry (score-unlocked starters and bought guns), in store order */
-  const guns = () => WEAPON_IDS.filter(owns);
+  /** The guns he carries and swaps between: his weapon slots */
+  const guns = () => {
+    applyMods();
+    return me.kit ?? [];
+  };
   const popup = (big: string, label: string, kind = '') => {
     const el = document.createElement('div');
     el.className = `combat-pop ${kind}`;
@@ -635,7 +650,7 @@ export function createCombat(d: CombatDeps) {
         if (t.kind === 'dummy') burst(e.at, 5, ['#c99a5a', '#a87c44'], 1.6, 1.2, false, 0.6);
         if (e.player === ME) {
           hitT = 0.15;
-          d.sfx(t.kind === 'drone' ? 'hitMetal' : 'hit');
+          d.sfx(byHand(e.target, e.melee) ? (lastMelee.kick ? 'kick' : 'punch') : t.kind === 'drone' ? 'hitMetal' : 'hit');
           showNumber(e.at, e.damage, e.hp === 0);
           if (!net) addLifetime(10);
         }
@@ -656,7 +671,7 @@ export function createCombat(d: CombatDeps) {
             addLifetime(e.points);
             saveProfile();
           }
-          d.onTakedown(t.kind);
+          d.onTakedown(t.kind, byHand(e.target, e.melee));
           popup(`+${e.points}`, t.kind === 'drone' ? 'Drone down' : 'Takedown');
           if (e.streak >= 2) popup(STREAKS[Math.min(e.streak, 5)] || `x${e.streak}`, `x${e.streak} streak`, 'is-streak');
           paintSkins();
@@ -768,6 +783,39 @@ export function createCombat(d: CombatDeps) {
     }
   }
 
+  /**
+   * Draw a gun from his loadout, anywhere (the hotbar): gears him up with it if he isn't yet (full,
+   * as at the counter), swaps to it, and brings it out. False if it isn't one he carries.
+   */
+  function draw(id: WeaponId) {
+    applyMods();
+    if (!guns().includes(id) || !owns(id)) return false;
+    if (!me.geared) {
+      sim.equip(ME, id);
+      net?.send({ t: 'kit', l: guns(), w: id, m: netMods() });
+    } else {
+      if (me.weapon !== id) {
+        sim.swap(ME, id);
+        net?.send({ t: 'swap', w: id, m: netMods() });
+      }
+      if (!me.armed) {
+        sim.setArmed(ME, true);
+        net?.send({ t: 'arm', on: true });
+      }
+    }
+    hold();
+    profile.weapon = id;
+    saveProfile();
+    return true;
+  }
+  /** Put the gun away (the hotbar's fists or the thing in his hand) */
+  function holster() {
+    if (!me.armed) return;
+    sim.setArmed(ME, false);
+    net?.send({ t: 'arm', on: false });
+    hold();
+  }
+
   return {
     /** The third-person rifle's pivot: parent it to Degen's chest */
     gun: pivot,
@@ -831,15 +879,36 @@ export function createCombat(d: CombatDeps) {
       if (!owns(id)) return false;
       applyMods();
       sim.equip(ME, id);
-      net?.send({ t: 'equip', w: id, m: netMods() });
+      net?.send({ t: 'equip', w: id, m: netMods(), l: guns() });
       hold();
       profile.weapon = id;
       saveProfile();
       return true;
     },
-    /** The guns Degen can swap between (score-unlocked starters and bought guns) */
+    /** The guns Degen can swap between (his loadout) */
     get guns() {
       return guns();
+    },
+    /**
+     * The loadout changed in the save (the counter's Loadout row, a backup loaded): the rules read
+     * it again on the next frame (a gun in hand that's no longer carried is swapped for gun 1)
+     */
+    setLoadout() {
+      modsFresh = false;
+      applyMods();
+      // Online: the server hears the new weapon slots at once (a gun in hand no longer carried is put away there too)
+      if (me.geared) net?.send({ t: 'kit', l: guns(), m: netMods() });
+      hold();
+    },
+    draw,
+    holster,
+    /** A gun's ammo as he carries it: the one in hand, one swapped out, or full (a gun not drawn yet comes full) */
+    ammo(id: WeaponId): [number, number] {
+      if (me.geared && me.weapon === id) return [me.mag, me.reserve];
+      const st = me.stash[id];
+      if (me.geared && st) return [st[0], st[1]];
+      const w = applyGunMods(WEAPONS[id], gunMods(d.game.save(), id));
+      return [w.mag, w.reserve];
     },
     /**
      * Swap to another of his guns, anywhere once geared up: `to` is a gun, or a step
@@ -852,9 +921,8 @@ export function createCombat(d: CombatDeps) {
       if (typeof to === 'string') id = list.includes(to) ? to : undefined;
       else if (list.length > 1) id = list[(list.indexOf(me.weapon) + to + list.length) % list.length];
       if (!id || id === me.weapon) {
-        // Only one gun so far: say what unlocks the next starter, or where the rest are sold
-        const next = WEAPON_IDS.find((w) => !list.includes(w) && WEAPONS[w].need > 0);
-        if (typeof to !== 'string') popup(WEAPONS[me.weapon].short, next ? `${WEAPONS[next].need.toLocaleString('en')} score unlocks the ${WEAPONS[next].name}` : 'More guns are for sale at the Armoury');
+        // Only one gun carried: say where the second one is picked
+        if (typeof to !== 'string') popup(WEAPONS[me.weapon].short, 'Carry a second gun: pick it at the Armoury or Trench Arms');
         return false;
       }
       applyMods();
@@ -866,7 +934,18 @@ export function createCombat(d: CombatDeps) {
       return true;
     },
     toggleHolster() {
-      if (!me.geared) return;
+      applyMods();
+      // Not geared up yet: G draws from the loadout (the gun he carried last, or gun 1)
+      const k = guns();
+      if (!me.geared) {
+        if (k.length) draw(k.includes(me.weapon) ? me.weapon : k[0]);
+        return;
+      }
+      // (both weapon slots empty: nothing to draw)
+      if (!me.armed && !k.includes(me.weapon)) {
+        if (k.length) draw(k[0]);
+        return;
+      }
       sim.setArmed(ME, !me.armed);
       net?.send({ t: 'arm', on: me.armed });
       hold();
@@ -885,6 +964,18 @@ export function createCombat(d: CombatDeps) {
     reload() {
       sim.reload(ME);
       net?.send({ t: 'reload' });
+    },
+    /**
+     * Fists on the street (brawl.ts): a punch or a kick on its first active frame, by him at (x, y, z) facing
+     * `yaw`; it lands on the first dummy or drone in front of him (combat-sim `melee()`), online the server's
+     * call. Whether it landed (online: whether it should).
+     */
+    melee(move: MoveId, x: number, y: number, z: number, yaw: number) {
+      if (me.armed) return false;
+      const t = sim.melee(ME, x, y, z, yaw, move);
+      net?.send({ t: 'melee', m: move });
+      if (t) lastMelee = { target: t.id, at: performance.now(), kick: MOVES[move].kind === 'kick' };
+      return !!t;
     },
     /** Per frame while walking, before the camera moves (t is 0 under reduced motion). Returns the recoil to add to the camera pitch. */
     update(dt: number, t: number, aim: boolean) {

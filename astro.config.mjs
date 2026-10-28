@@ -9,7 +9,11 @@ export default defineConfig({
   site: 'https://degenemporium.com',
   integrations: [sitemap()],
   vite: {
-    define: { __CITY_BAKED__: JSON.stringify(JSON.stringify(BAKED)) },
+    define: {
+      __CITY_BAKED__: JSON.stringify(JSON.stringify(BAKED)),
+      // Free play (src/scripts/city3d/freeplay.ts): everything in the city's game costs nothing; a test build only
+      __FREE_PLAY__: JSON.stringify(process.env.PUBLIC_FREE_PLAY === '1'),
+    },
     build: {
       rollupOptions: {
         output: {

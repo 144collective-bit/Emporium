@@ -17,11 +17,18 @@
  * - Targets are the dummies and the drones only (the owner's call: nothing in
  *   the city attacks you; the rival crew that patrolled the south bank was
  *   retired). Fighting is the Fight Club's (fight-sim.ts).
+ * - Fists on the street (docs/inventory-plan.md Phase 2): `melee()` lands a
+ *   punch or a kick of the fight's moves (fight-moves.ts) on the first dummy
+ *   or drone in front of a player, inside the move's reach and arc and at its
+ *   height; its hits and takedowns are marked `melee` (the counters keep the
+ *   ones by hand apart).
  */
 import * as THREE from 'three';
 import { CORE_ROADS, NS_ROADS, design } from './layout';
 import { PRACTICE } from './downtown';
 import { applyGunMods, type GunMods } from './catalog';
+import { FREE_PLAY } from './freeplay';
+import { MOVES, strikeHeight, type MoveId } from './fight-moves';
 
 export const TICK = 1 / 60;
 
@@ -73,6 +80,8 @@ export const WEAPONS: Record<WeaponId, Weapon> = {
   burst: { ...BASE, id: 'burst', name: 'Tri-Tap', short: 'Tri-Tap', blurb: 'Carbine that fires tight three-round bursts. Precise at range.', need: 0, mag: 36, reserve: 144, rate: 14, auto: false, burst: 3, damage: 22, reload: 1.8, range: 85, spreadHip: 0.01, spreadAim: 0.002, bloom: 0.004, bloomMax: 0.03, kick: 0.01, zoom: 24 },
   lmg: { ...BASE, id: 'lmg', name: 'Belt Feeder', short: 'Belt', blurb: 'A hundred-round belt and a bipod. Spray and keep spraying.', need: 0, mag: 100, reserve: 200, rate: 11, damage: 20, reload: 3.6, range: 65, spreadHip: 0.03, spreadAim: 0.012, bloom: 0.003, bloomMax: 0.06, bloomDecay: 0.18, kick: 0.016, zoom: 16 },
 };
+// Free play (freeplay.ts): no gun waits on a score
+if (FREE_PLAY) for (const w of Object.values(WEAPONS)) w.need = 0;
 /** Store order, and each gun's number on the wire */
 export const WEAPON_IDS: WeaponId[] = ['rifle', 'smg', 'shotgun', 'dmr', 'revolver', 'burst', 'lmg'];
 export const weaponUnlocked = (id: unknown, total: number) => typeof id === 'string' && id in WEAPONS && total >= WEAPONS[id as WeaponId].need;
@@ -117,6 +126,12 @@ export const DRONES: { loop: number; phase: number }[] = [
 ];
 /** Drones stay down longer: the view shows them falling first */
 const DRONE = { hp: 75, down: 7.5, radius: 0.42, speed: 1.8 };
+/**
+ * Fists on the street (`melee()`): a strike's height is the fight's (fight-moves.ts `strikeHeight()`, for a
+ * figure at the ring's scale) times `scale` (the walker's); the fist's own size added to every reach (`body`);
+ * a target this close is hit whatever the angle; the height may miss a board by this much
+ */
+export const MELEE = { scale: 1, body: 0.12, close: 0.5, slack: 0.15 };
 
 /** Where a drone is at `time` (pure, so every client agrees) */
 export function dronePose(i: number, time: number, out: { x: number; y: number; z: number; heading: number }) {
@@ -181,14 +196,16 @@ export interface SimPlayer {
   burst: number;
   /** The Armoury's mods on each of this player's guns (none set: the stock gun) */
   mods: Partial<Record<WeaponId, GunMods>>;
+  /** The weapon slots (docs/inventory-plan.md): the guns they carry, the only ones a swap goes to (null: any, an old client) */
+  kit: WeaponId[] | null;
   input: SimInput;
 }
 
 export type SimEvent =
   /** One per pellet; `pellet` 0 is the one that makes the noise */
   | { type: 'shot'; player: string; weapon: WeaponId; pellet: number; from: THREE.Vector3; to: THREE.Vector3; target: number | null; dist: number }
-  | { type: 'hit'; player: string; target: number; damage: number; at: THREE.Vector3; hp: number }
-  | { type: 'takedown'; player: string; target: number; at: THREE.Vector3; points: number; streak: number }
+  | { type: 'hit'; player: string; target: number; damage: number; at: THREE.Vector3; hp: number; melee?: boolean }
+  | { type: 'takedown'; player: string; target: number; at: THREE.Vector3; points: number; streak: number; melee?: boolean }
   | { type: 'empty'; player: string }
   | { type: 'reload'; player: string; phase: 'start' | 'done' }
   | { type: 'armed'; player: string; on: boolean }
@@ -359,18 +376,57 @@ export function createSim(o: SimOptions) {
     return true;
   }
 
-  function damage(p: SimPlayer, t: SimTarget, amount: number, at: THREE.Vector3) {
+  function damage(p: SimPlayer, t: SimTarget, amount: number, at: THREE.Vector3, melee = false) {
     if (t.down > 0) return;
     t.hp = Math.max(0, t.hp - amount);
     p.score += POINTS.hit;
-    events.push({ type: 'hit', player: p.id, target: t.id, damage: amount, at: at.clone(), hp: t.hp });
+    events.push({ type: 'hit', player: p.id, target: t.id, damage: amount, at: at.clone(), hp: t.hp, ...(melee ? { melee } : {}) });
     if (t.hp > 0) return;
     const points = t.kind === 'drone' ? POINTS.drone : POINTS.dummy;
     p.score += points;
     p.streak = p.streakT > 0 ? p.streak + 1 : 1;
     p.streakT = STREAK_WINDOW;
     t.down = t.kind === 'drone' ? DRONE.down : DUMMY.down;
-    events.push({ type: 'takedown', player: p.id, target: t.id, at: at.clone(), points, streak: p.streak });
+    events.push({ type: 'takedown', player: p.id, target: t.id, at: at.clone(), points, streak: p.streak, ...(melee ? { melee } : {}) });
+  }
+
+  /**
+   * A punch or a kick (a move of fight-moves.ts) by a player standing at (x, y, z) facing `yaw`: the nearest
+   * dummy or drone it lands on, or null. A dummy is in reach when its middle is within the move's reach (and
+   * its own half-width) inside the move's arc, and the strike's height is on its board; a drone when it's
+   * that close to the strike point. Only the authority damages (a multiplayer browser asks the server).
+   */
+  function melee(p: SimPlayer, x: number, y: number, z: number, yaw: number, move: MoveId): SimTarget | null {
+    const m = MOVES[move];
+    if (!m || m.kind === 'dodge') return null;
+    const fx = Math.sin(yaw);
+    const fz = Math.cos(yaw);
+    const hy = y + strikeHeight(m) * MELEE.scale;
+    const sx = x + fx * m.reach * 0.85;
+    const sz = z + fz * m.reach * 0.85;
+    let best: SimTarget | null = null;
+    let bd = Infinity;
+    for (const t of targets) {
+      if (t.down > 0) continue;
+      let d: number;
+      if (t.kind === 'dummy') {
+        const dx = t.x - x;
+        const dz = t.z - z;
+        d = Math.hypot(dx, dz);
+        if (d > m.reach + DUMMY.hi.x + MELEE.body) continue;
+        if (d > MELEE.close && Math.abs(Math.atan2(Math.sin(Math.atan2(dx, dz) - yaw), Math.cos(Math.atan2(dx, dz) - yaw))) > m.arc) continue;
+        if (hy < t.y + DUMMY.lo.y - MELEE.slack || hy > t.y + DUMMY.hi.y + MELEE.slack) continue;
+      } else {
+        d = Math.hypot(t.x - sx, t.y - hy, t.z - sz);
+        if (d > DRONE.radius + MELEE.body) continue;
+      }
+      if (d < bd) {
+        bd = d;
+        best = t;
+      }
+    }
+    if (best && authority) damage(p, best, m.damage, tmp.set(best.kind === 'dummy' ? best.x : sx, best.kind === 'dummy' ? hy : best.y, best.kind === 'dummy' ? best.z : sz), true);
+    return best;
   }
 
   /** A target is back */
@@ -471,6 +527,7 @@ export function createSim(o: SimOptions) {
         held: false,
         burst: 0,
         mods: {},
+        kit: null,
         input: { fire: false, aim: false, assist: false, origin: new THREE.Vector3(), dir: new THREE.Vector3(0, 0, -1) },
       };
       players.set(id, p);
@@ -523,7 +580,7 @@ export function createSim(o: SimOptions) {
      */
     swap(id: string, weapon: WeaponId) {
       const p = player(id);
-      if (!p.geared || !(weapon in WEAPONS) || weapon === p.weapon) return false;
+      if (!p.geared || !(weapon in WEAPONS) || weapon === p.weapon || (p.kit && !p.kit.includes(weapon))) return false;
       p.stash[p.weapon] = [p.mag, p.reserve];
       const W = weaponFor(p, weapon);
       [p.mag, p.reserve] = p.stash[weapon] ?? [W.mag, W.reserve];
@@ -538,9 +595,41 @@ export function createSim(o: SimOptions) {
       setArmed(id, true);
       return true;
     },
+    /**
+     * The guns a player carries in their weapon slots: a swap goes only to these. Ammo
+     * kept for a gun put back in the bag is dropped (it comes back full), a gun in hand
+     * that's no longer carried is swapped for the first one carried, or put away when
+     * none is (empty hands).
+     */
+    setKit(id: string, guns: WeaponId[]) {
+      const p = player(id);
+      const kit = [...new Set(guns.filter((w) => w in WEAPONS))];
+      p.kit = kit;
+      for (const w of Object.keys(p.stash) as WeaponId[]) if (!kit.includes(w)) delete p.stash[w];
+      if (p.geared && !kit.length) setArmed(id, false);
+      else if (p.geared && !kit.includes(p.weapon)) {
+        const armed = p.armed;
+        // (as a swap, without the gun in hand going into the stash)
+        const W = weaponFor(p, kit[0]);
+        [p.mag, p.reserve] = p.stash[kit[0]] ?? [W.mag, W.reserve];
+        delete p.stash[kit[0]];
+        p.weapon = kit[0];
+        p.reload = 0;
+        p.cooldown = SWAP_TIME;
+        p.spread = 0;
+        p.burst = 0;
+        events.push({ type: 'swap', player: id, weapon: kit[0] });
+        setArmed(id, armed);
+      }
+    },
     setArmed,
     reload(id: string) {
       startReload(player(id));
+    },
+    /** A punch or a kick on the street (fists, docs/inventory-plan.md Phase 2): the target it lands on, or null */
+    melee(id: string, x: number, y: number, z: number, yaw: number, move: MoveId) {
+      const p = players.get(id);
+      return p && !p.armed ? melee(p, x, y, z, yaw, move) : null;
     },
     /** The latest input from a player; it holds until the next one */
     setInput(id: string, input: Partial<SimInput>) {
