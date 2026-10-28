@@ -122,22 +122,57 @@ Asked before planning (2026-10-28):
   data in the existing loops rather than new code in the boot. If the
   bodywork can't fit, raising the budget is the owner's call, on purpose.
 
-### Phase 1: your cars, sharper and with an inside
+### Phase 1: your cars, sharper and with an inside (built)
 
-- **Bodywork:** better outlines (rounder shoulders, wheel arches cut into
-  the body, not laid on it), panel gaps, vents, made-up badges, side
-  repeaters, wheels with brake discs and calipers, tyre sidewalls.
-  The traffic shares the same models, so it gets the sharper shells too;
-  the finest pieces are near only and phones leave them out.
-- **Glass you can see through** on your own car only: a tinted
-  transparent glass material, with the outline pass still drawing its
-  edges.
-- **The interior** (your car only): seats, door cards, dashboard, centre
-  console, steering wheel on its column, gauges, mirrors, a headliner;
-  Degen seated at the wheel (the kart's `seat()`, posed for a car), seen
-  through the glass.
-- **Done when:** every one of the eight cars has an interior and sharper
-  body, and the bench numbers stay in budget on a phone.
+- **It loads after the boot.** The boot was at its budget, so the whole
+  phase is a chunk of its own, `carfine.ts` (with `carcabin.ts` and
+  `carparts.ts`), fetched once the city is up (`idle()` in index.ts). The
+  boot carries only a hook in cars.ts: `FINE` (what the chunk adds to
+  every model, and how it fits out your car), `cache` and `build()` (the
+  chunk builds every model again with its detail and copies it into the
+  geometry the traffic and the parked cars already hold, so they take it
+  on as they are), and `createCar(id, paint, mine)` (your cars carry
+  themselves on their group, `userData.car`, for the chunk to find).
+  Until it comes the cars are as they were. The boot ends at 669.99 of
+  its 670 KB: the next phase needs the same care, or the owner's say to
+  raise it.
+- **Every model** (`add()` in carfine.ts, about 750 triangles a car, no new
+  draws): dark wheel wells (a liner round the inside of each arch and a
+  wall behind the tyre: you saw daylight through the arches), a lip round
+  each arch, a shoulder crease down the sides, the bonnet's and the boot
+  lid's shut lines, a line over the rear bumper, a fuel flap, side
+  repeaters, the city's diamond as a badge front and back, two highlights
+  up the windscreen, brake discs and calipers behind the spokes; on
+  desktops a ring on each tyre's sidewall, projectors in the headlamps and
+  fog lamps in the bumper (phones leave those out).
+- **Your car** (`fitOut()` in carcabin.ts: the garage's turntable car and
+  the one you drive, never the traffic or the taxi):
+  - **hollow** where you see in (`hollowFrom()` / `hollowTo()` in
+    carinside.ts: from the cabin's back where there's a rear window, else
+    from behind the seats, to the windscreen's foot): the model's paint less
+    its body and cabin solids, with the nose and the tail solid, the sides
+    as skins, the cabin's walls with the windows' band cut out, the roof
+    and pillars; the model's detail less what lay in the windows
+    (`triangles()`), the dark surrounds back as frames round the openings;
+  - **see-through glass**: the model's own panes, tinted and transparent
+    in the FX layer, so what's inside is inked through it (the windscreen's
+    highlights left off: over clear glass they read as bars);
+  - **inside** (from `INTERIORS`): seats (and a bench where there are rear
+    seats), door cards, the floor, wheel tubs, a headliner, the dash, a
+    binnacle with two gauges, the console and gear lever, pedals, the
+    steering wheel on its column; one mesh, the detail material;
+  - **you at the wheel**: `car.seat()` sits a Degen there, leant back with
+    the seat, his feet on the pedals (`reachLeg()`, moved to skeleton.ts
+    beside `reachArm()`), his hands at a quarter to three; drive.ts seats
+    him on getting in, as it does the kart's driver;
+  - **its wheels** turn with the discs and sidewall rings on; the calipers
+    sit on the body behind them (no draws of their own).
+  Two more draws for your car (the glass and the inside), the driver's own.
+- `tests/carspec.test.ts` holds the hollow round the seats, the dash and
+  the pedals too.
+- **Checked** in a throwaway viewer and in the city (walking up to the
+  garage's car, getting in, driving off): the traffic in every model, your
+  eight cars fitted out with Degen at the wheel.
 
 ### Phase 2: moving parts and the driver's eye view
 

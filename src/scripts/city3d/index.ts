@@ -1628,6 +1628,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   controls.target.copy(start.target);
   camera.lookAt(controls.target);
   flyTo(start.pos, start.target, 2.8);
+  // The cars' fine detail and your car's inside (vehicle plan Phase 1): its own chunk, once the city is up
+  idle(() => void import('./carfine').then((m) => m.fitCars(tier === 'low', compileFor, sky, scene)));
   loop();
 
   return {

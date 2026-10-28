@@ -359,6 +359,38 @@ export function torsoFrame(p: Pose, out: THREE.Matrix4) {
 
 /* ---------- Reaching (hands on a gun, on a wheel) ---------- */
 
+/** Thigh, and shin to the ankle (the figure's own numbers, scale 1) */
+const L1 = THIGH;
+const L2 = -(SHIN_GROUND + ANKLE_H);
+/** How far the hip can be from the ankle: a touch short of straight */
+export const LEG_REACH = (L1 + L2) * 0.99;
+
+/**
+ * Two-bone reach: swing and bend leg `l` (the rig's `s` side: -1 or 1) so
+ * its ankle lands on `a`, in the hips' space from the hip joint, with the
+ * knee forward. `side` is the pose's hip tilt (poseSkeleton takes it back
+ * out of the leg). Out of reach, it points straight at it.
+ */
+export function reachLeg(l: Limb, s: number, a: THREE.Vector3, side: number) {
+  const d = Math.min(Math.max(a.length(), Math.abs(L1 - L2) + 0.01), L1 + L2 - 1e-4);
+  const cosK = THREE.MathUtils.clamp((L1 * L1 + L2 * L2 - d * d) / (2 * L1 * L2), -1, 1);
+  const bend = Math.PI - Math.acos(cosK);
+  // Where the ankle is in the leg's own plane: down, and back by the bend
+  const c = (L1 + L2 * Math.cos(bend)) / d;
+  const sn = (L2 * Math.sin(bend)) / d;
+  const n = a.length() || 1;
+  const dx = a.x / n;
+  const dy = a.y / n;
+  const dz = a.z / n;
+  const z = Math.asin(THREE.MathUtils.clamp(dx / c, -1, 1));
+  const k = c * Math.cos(z);
+  l.fwd = Math.atan2(dz, -dy) + Math.atan2(sn, k);
+  l.out = s * (z + side);
+  l.bend = bend;
+  l.twist = 0;
+}
+
+
 const PALM_R = Math.hypot(PALM_Y, PALM_Z);
 const PALM_TILT = Math.atan2(PALM_Z, PALM_Y);
 /** Shoulders in the torso frame (arms[0] is the rig's -x arm, arms[1] the +x one) */

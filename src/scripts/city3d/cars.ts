@@ -33,6 +33,7 @@ import { fx, lit, mergeMeshes, moving, toon } from './kit';
 import { addLodSwitch } from './lod';
 
 import { CARS, type CarId, type CarSpec } from './carspec';
+import type { Degen } from './character';
 export { CARS, PAINTS } from './carspec';
 export type { CarId, CarSpec };
 type V2 = [number, number];
@@ -42,14 +43,14 @@ type V2 = [number, number];
 const TYRE = '#17151f';
 const RIM = '#c9c4e6';
 const TRIM = '#2a2838';
-const GLASS = '#5cc8e8';
+export const GLASS = '#5cc8e8';
 const PLATE = '#f3f2f7';
 const CHROME = '#dcdaf0';
 const SEAM = '#1b1830';
 const HEAD = '#fff4c2';
 const TAIL = '#e8233a';
 const AMBER = '#ffad33';
-const BLACKOUT = '#1d1b2b';
+export const BLACKOUT = '#1d1b2b';
 
 /* ---------- Each model's own touches ---------- */
 
@@ -217,7 +218,7 @@ function box(w: number, h: number, d: number, x: number, y: number, z: number) {
  * An outline in the side view (x, y), pushed out `depth` across the car, centred. `round`
  * rounds its long edges off (the outline stays the same size seen from the side).
  */
-function extrude(shape: THREE.Shape, depth: number, round = 0) {
+export function extrude(shape: THREE.Shape, depth: number, round = 0) {
   const core = depth - round * 2;
   const g = new THREE.ExtrudeGeometry(shape, {
     depth: core,
@@ -231,7 +232,7 @@ function extrude(shape: THREE.Shape, depth: number, round = 0) {
   return g.translate(0, 0, -core / 2);
 }
 /** The height of the lower body's top line at x */
-function topAt(s: CarSpec, x: number) {
+export function topAt(s: CarSpec, x: number) {
   const t = s.top;
   if (x >= t[0][0]) return t[0][1];
   for (let i = 1; i < t.length; i++) {
@@ -242,7 +243,7 @@ function topAt(s: CarSpec, x: number) {
   return t[t.length - 1][1];
 }
 /** A thin plate lying along a side-view polyline (on top of the body and cabin), at z across, `w` wide */
-function lay(p: Parts, pts: V2[], z: number, w: number, color: string, lift = 0.006) {
+export function lay(p: Parts, pts: V2[], z: number, w: number, color: string, lift = 0.006) {
   for (let i = 1; i < pts.length; i++) {
     const [ax, ay] = pts[i - 1];
     const [bx, by] = pts[i];
@@ -270,7 +271,7 @@ function flare(s: CarSpec, ax: number, side: number) {
 }
 
 /** The lower body: its top line, then underneath with an arch over each wheel */
-function bodyShape(s: CarSpec) {
+export function bodyShape(s: CarSpec) {
   const half = s.L / 2;
   const sh = new THREE.Shape();
   sh.moveTo(half, s.clr);
@@ -288,7 +289,7 @@ function bodyShape(s: CarSpec) {
 }
 
 /** Shrink a convex outline by d (offset every edge inwards, meet at the corners) */
-function inset(poly: V2[], d: number): V2[] {
+export function inset(poly: V2[], d: number): V2[] {
   const n = poly.length;
   // Winding sign, so "inwards" is the same side for every edge
   let area = 0;
@@ -314,7 +315,7 @@ function inset(poly: V2[], d: number): V2[] {
 }
 
 /** Keep the part of an outline where f(point) >= 0 (f linear) */
-function clip(poly: V2[], f: (p: V2) => number): V2[] {
+export function clip(poly: V2[], f: (p: V2) => number): V2[] {
   const out: V2[] = [];
   for (let i = 0; i < poly.length; i++) {
     const a = poly[i];
@@ -331,7 +332,7 @@ function clip(poly: V2[], f: (p: V2) => number): V2[] {
 }
 
 /** A thin pane along a side-view segment a-b (glass on a sloped face), pushed `lift` out from the cabin */
-function pane(a: V2, b: V2, width: number, centre: V2, ends: number, lift = 0.012) {
+export function pane(a: V2, b: V2, width: number, centre: V2, ends: number, lift = 0.012) {
   const dx = b[0] - a[0];
   const dy = b[1] - a[1];
   const len = Math.hypot(dx, dy);
@@ -366,7 +367,7 @@ export class Parts {
 }
 
 /** Same attributes everywhere (position, normal, uv, and colour where asked), indexed, so they merge */
-function merge(geos: THREE.BufferGeometry[], color: boolean) {
+export function merge(geos: THREE.BufferGeometry[], color: boolean) {
   if (!geos.length) return null;
   const clean = geos.map((g0) => {
     const g = g0.index ? g0.toNonIndexed() : g0;
@@ -442,8 +443,21 @@ const cache = new Map<string, CarGeometry>();
 
 export function carGeometry(id: CarId, { wheels = true } = {}): CarGeometry {
   const key = `${id}:${wheels}`;
-  const hit = cache.get(key);
-  if (hit) return hit;
+  let g = cache.get(key);
+  if (!g) cache.set(key, (g = build(id, wheels)));
+  return g;
+}
+
+/**
+ * The cars' fine detail (vehicle plan Phase 1: carfine.ts, its own chunk, fetched after the boot): what it lays on
+ * every model (`add`), and how it fits out your own car (`fit`: the inside, see-through glass, you at the wheel).
+ * carfine.ts sets it and builds every model in `cache` again with it, in place, so the traffic and the parked
+ * cars take it on as they are; your cars carry themselves on their group (`userData.car`) for it to find.
+ */
+export const FINE: { add?(p: Parts, s: CarSpec, wheels: boolean): void; fit?(car: Car): void } = {};
+export { cache };
+
+export function build(id: CarId, wheels: boolean): CarGeometry {
   const s = CARS[id];
   const p = new Parts();
   const half = s.L / 2;
@@ -451,7 +465,8 @@ export function carGeometry(id: CarId, { wheels = true } = {}): CarGeometry {
   const lit = s.id === 'bus';
   const addGlass = (g: THREE.BufferGeometry) => (lit ? p.glow(g) : p.detail(g, GLASS));
 
-  // Body and cabin, their long edges rounded off
+  // Body and cabin, their long edges rounded off (the first two paint pieces, always: carcabin.ts cuts them out of
+  // your own car by their size to hollow it)
   const bus = s.id === 'bus';
   p.paint(extrude(bodyShape(s), s.W, bus ? 0.05 : 0.04));
   const cabinRound = bus ? 0.05 : 0.055;
@@ -559,8 +574,9 @@ export function carGeometry(id: CarId, { wheels = true } = {}): CarGeometry {
     }
   }
   EXTRAS[s.id]?.(p, s);
+  FINE.add?.(p, s, wheels);
 
-  const out: CarGeometry = {
+  return {
     spec: s,
     paint: merge(p.paints, false)!,
     detail: merge(p.details, true)!,
@@ -580,8 +596,6 @@ export function carGeometry(id: CarId, { wheels = true } = {}): CarGeometry {
       [-half - 0.016, s.lightY - lh / 2 - 0.07, -lz],
     ],
   };
-  cache.set(key, out);
-  return out;
 }
 
 /** The materials the fleet shares: paint takes each car's own colour, detail its vertex colours */
@@ -735,7 +749,7 @@ export function parkedCars(parent: THREE.Object3D, y: number, list: [CarId, numb
  * its own paint, wheels that can turn and steer, and lights. Built facing +x
  * with the origin on the ground under its middle, like the models.
  */
-export function createCar(id: CarId, paint: string) {
+export function createCar(id: CarId, paint: string, mine = false) {
   const g = carGeometry(id, { wheels: false });
   const s = g.spec;
   const { detail } = carMaterials();
@@ -798,7 +812,7 @@ export function createCar(id: CarId, paint: string) {
   turnR.visible = turnL.visible = false;
   group.add(turnR, turnL);
   let roll = 0;
-  return {
+  const car = {
     group,
     spec: s,
     /** Roll the wheels by a distance travelled, and steer the front ones (radians) */
@@ -824,5 +838,9 @@ export function createCar(id: CarId, paint: string) {
       for (const m of [headMat, tailMat, brakeMat, reverseMat, turnMat]) m.dispose();
     },
   };
+  // (your own: fitted out once the fine detail has come)
+  if (mine) (group.userData.car = car), FINE.fit?.(car);
+  return car;
 }
-export type Car = ReturnType<typeof createCar>;
+/** One car of your own; carfine.ts gives it `seat` when it fits it out (sit a Degen at the wheel, or null to take him out) */
+export type Car = ReturnType<typeof createCar> & { seat?(degen: Degen | null): void };

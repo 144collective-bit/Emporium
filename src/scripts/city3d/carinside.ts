@@ -129,3 +129,12 @@ function interior(s: CarSpec): Interior {
 
 /** What's inside each model */
 export const INTERIORS = Object.fromEntries(Object.values(CARS).map((s) => [s.id, interior(s)])) as Record<CarId, Interior>;
+
+/**
+ * Where your own car is hollow (carcabin.ts cuts it open there): from the back of the cabin where there's a rear
+ * window, else from just behind the seats (a van's load space, a pickup's bed stay solid), to the windscreen's foot
+ */
+export function hollowFrom(s: CarSpec, n: Interior) {
+  return s.rearGlass ? s.cabin[0][0] : Math.max(s.cabin[0][0], n.hip[0] - 0.42);
+}
+export const hollowTo = (s: CarSpec) => s.cabin[3][0];

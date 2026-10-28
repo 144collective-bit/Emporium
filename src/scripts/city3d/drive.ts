@@ -297,6 +297,8 @@ export function createDrive(d: DriveDeps) {
       drive: (dist, steer) => taken.car.drive(dist, steer),
       dispose: () => taken.car.dispose(),
       lights: (brake, reverse, turn) => taken.car.lights(brake, reverse, turn),
+      // (you at the wheel once the car's been fitted out: carcabin.ts, after the boot)
+      seat: taken.car.seat,
       state: newCar(taken.x, taken.z, taken.yaw),
       tune: { top: 0, reverse: 0, accel: 0, brake: 0, grip: 0, L: spec.L, W: spec.W, wheelbase: 1 },
       holder,

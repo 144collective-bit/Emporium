@@ -6,7 +6,7 @@
 // the driver's door between two of the body's seams, wide enough to get in.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { INTERIORS, SITTER, beltAt, roofAt, type V3 } from '../src/scripts/city3d/carinside';
+import { INTERIORS, SITTER, beltAt, hollowFrom, hollowTo, roofAt, type V3 } from '../src/scripts/city3d/carinside';
 import { CARS } from '../src/scripts/city3d/carspec';
 
 const MODELS = Object.values(CARS);
@@ -89,5 +89,20 @@ test('the rear seats have knee room behind the driver and head room under the ro
     const crown = along([n.rear.x, n.hip[1], n.hip[2]], n.rear.recline, SITTER.crown);
     assert.ok(crown[1] < roofAt(s, crown[0]) - 0.02, `${s.id}: rear head room`);
     assert.ok(n.rear.x > s.cabin[0][0] + 0.1, `${s.id}: inside the cabin`);
+  }
+});
+
+test('your car is hollow where it has an inside: the seats, the dash and the pedals all inside the opening', () => {
+  for (const s of MODELS) {
+    if (s.id === 'bus' || s.id === 'exec') continue;
+    const n = INTERIORS[s.id];
+    const h0 = hollowFrom(s, n);
+    const h1 = hollowTo(s);
+    // The driver's seat back (leant back by the recline) and the rear bench's
+    const back = (x: number, r: number) => x - 0.1 - Math.sin(r) * 0.44 - 0.04;
+    assert.ok(back(n.hip[0], n.recline) > h0, `${s.id}: the driver's seat back is in the hollow`);
+    if (n.rear) assert.ok(back(n.rear.x, n.rear.recline) > h0 - 0.02, `${s.id}: the rear bench is in the hollow`);
+    assert.ok(n.pedals < h1 && n.wheel[0] < h1, `${s.id}: the pedals and the wheel are in front of the windscreen's foot`);
+    assert.ok(h1 - h0 > 0.6, `${s.id}: room for a seat and a dash`);
   }
 });
