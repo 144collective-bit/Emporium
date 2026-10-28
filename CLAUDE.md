@@ -1745,6 +1745,15 @@ it and has been retired completely. Build only on what's here.
     against the fingers' front. `tests/accessories.test.ts` holds the hats
     clear of the head at every level and the held things clear of the
     fingers. The lab takes `wear=` and `at=x,y,z`.
+- **Fabric looks and the suit's tailoring** (the owner's call, after the
+  clothing plan) are planned in `docs/tailoring-plan.md`: a subtle grain
+  in the cloth (no sheen), a shader on the single figures' material that
+  changes the colour only (the ink outlines and toon bands as they are),
+  fading with distance, desktops and phones; the suit's tailoring detail
+  (buttons, the breast welt, stitching, sleeve buttons, the vent, the
+  collar's roll, the tie's dimple) on desktop single figures only; the
+  crowds as they are. Phase 0 makes room in the boot's code first (it's
+  full). One phase at a time with the owner's sign-off; keep it up to date.
 - **The animation rebuild** (the owner's call, critical) is planned in
   `docs/animation-plan.md`: AAA movement (Spider-Man / Ratchet feel,
   neutral athletic) from motion capture, then turns, jumps, armed
