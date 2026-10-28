@@ -68,6 +68,9 @@ export const STOCK_PARTS: Record<PlayerCar, ('spoiler' | 'splitter' | 'diffuser'
   muscle: ['spoiler', 'skirts'],
   suv: ['skirts'],
   super: ['spoiler', 'splitter', 'diffuser'],
+  classic: [],
+  offroad: ['skirts'],
+  ev: [],
 };
 
 /** What the model's own build leaves out for this look (cars.ts `build()`'s `bare`): '' when nothing */

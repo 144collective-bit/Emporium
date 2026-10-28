@@ -11,14 +11,14 @@
  */
 import type { Feel } from './drive-sim';
 /** Every car model (cars.ts draws them; here so the shared, DOM-free code can name them) */
-export type CarId = 'hatch' | 'sedan' | 'coupe' | 'pickup' | 'van' | 'bus' | 'muscle' | 'suv' | 'super' | 'exec';
+export type CarId = 'hatch' | 'sedan' | 'coupe' | 'pickup' | 'van' | 'bus' | 'muscle' | 'suv' | 'super' | 'exec' | 'classic' | 'offroad' | 'ev';
 
 /** The cars a player can pick (the bus is for the city only): the five starters, then the ones the garage sells (catalog.ts) */
-export const PLAYER_CARS = ['hatch', 'sedan', 'coupe', 'pickup', 'van', 'muscle', 'suv', 'super'] as const satisfies readonly CarId[];
+export const PLAYER_CARS = ['hatch', 'sedan', 'coupe', 'pickup', 'van', 'muscle', 'suv', 'super', 'classic', 'offroad', 'ev'] as const satisfies readonly CarId[];
 export type PlayerCar = (typeof PLAYER_CARS)[number];
 
 /** What the garage says about each one, and how it drives (0..1, for the stat bars and the handling) */
-export const DRIVE: Record<PlayerCar, { kind: string; blurb: string; speed: number; accel: number; grip: number }> = {
+export const DRIVE: Record<PlayerCar, { kind: string; blurb: string; speed: number; accel: number; grip: number; electric?: true }> = {
   hatch: { kind: 'Compact', blurb: 'Small, quick off the line and easy to park anywhere in the city.', speed: 0.55, accel: 0.75, grip: 0.7 },
   sedan: { kind: 'Saloon', blurb: 'Smooth and steady: the comfy all-rounder for cruising the avenues.', speed: 0.7, accel: 0.6, grip: 0.65 },
   coupe: { kind: 'Sports', blurb: 'Low, loud and fast. Sticks to the road through every corner.', speed: 0.95, accel: 0.9, grip: 0.9 },
@@ -27,6 +27,10 @@ export const DRIVE: Record<PlayerCar, { kind: string; blurb: string; speed: numb
   muscle: { kind: 'Muscle', blurb: 'A big block up front and fat tyres at the back. Fast in a straight line, lively in the corners.', speed: 0.85, accel: 0.95, grip: 0.6 },
   suv: { kind: 'SUV', blurb: 'Tall and tough with a huge boot. Shrugs off kerbs, leans in the bends.', speed: 0.65, accel: 0.55, grip: 0.75 },
   super: { kind: 'Supercar', blurb: 'Low, wide and savage. The fastest thing on the city\'s streets, and it sticks like glue.', speed: 1, accel: 1, grip: 0.95 },
+  // Vehicle plan Phase 6: three more
+  classic: { kind: 'Classic', blurb: 'Chrome bumpers, tail fins and a soft ride. Floats down the boulevards in style.', speed: 0.66, accel: 0.5, grip: 0.55 },
+  offroad: { kind: 'Off-roader', blurb: 'Lifted, big tyres, roof lights and a snorkel. Takes kerbs and banks in its stride.', speed: 0.6, accel: 0.62, grip: 0.8 },
+  ev: { kind: 'Electric', blurb: 'Smooth and silent but for a whine. All its pick-up from the first touch of the pedal.', speed: 0.78, accel: 0.98, grip: 0.82, electric: true },
 };
 
 /**
@@ -44,10 +48,14 @@ export const FEEL: Record<PlayerCar, Feel> = {
   muscle: { mass: 1.2, loose: 0.85, rwd: true, steerRate: 3, lock: 0.6 },
   suv: { mass: 1.4, loose: 0.2, rwd: false, steerRate: 2.8, lock: 0.58 },
   super: { mass: 0.9, loose: 0.2, rwd: true, steerRate: 4.2, lock: 0.62 },
+  // The classic wallows and its tail wanders, the off-roader is heavy and sure, the electric hatch is planted and quick to turn
+  classic: { mass: 1.3, loose: 0.6, rwd: true, steerRate: 2.4, lock: 0.6 },
+  offroad: { mass: 1.6, loose: 0.15, rwd: false, steerRate: 2.6, lock: 0.64 },
+  ev: { mass: 1.05, loose: 0.1, rwd: false, steerRate: 4.4, lock: 0.64 },
 };
 
 /** How many goods each model carries in its boot or bed (more with the garage's roof rack) */
-export const CARGO: Record<PlayerCar, number> = { hatch: 16, sedan: 20, coupe: 8, pickup: 40, van: 80, muscle: 12, suv: 60, super: 6 };
+export const CARGO: Record<PlayerCar, number> = { hatch: 16, sedan: 20, coupe: 8, pickup: 40, van: 80, muscle: 12, suv: 60, super: 6, classic: 24, offroad: 44, ev: 14 };
 
 /** Paint colours on offer */
 export const CAR_PAINTS = [

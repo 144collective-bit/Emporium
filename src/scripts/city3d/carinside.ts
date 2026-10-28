@@ -73,6 +73,9 @@ const SEATS: Record<CarId, { x: number; y: number; recline: number; rear?: { x: 
   suv: { x: 0.3, y: 0.46, recline: 0.26, rear: { x: -0.36, recline: 0.2 } },
   super: { x: -0.14, y: 0.21, recline: 0.48 },
   exec: { x: 0.26, y: 0.27, recline: 0.3, rear: { x: -0.5, recline: 0.2 } },
+  classic: { x: 0.08, y: 0.28, recline: 0.28, rear: { x: -0.46, recline: 0.18 } },
+  offroad: { x: 0.27, y: 0.52, recline: 0.22, rear: { x: -0.4, recline: 0.18 } },
+  ev: { x: -0.04, y: 0.27, recline: 0.3, rear: { x: -0.66, recline: 0.24 } },
 };
 
 /** The roof's height over x: the cabin's top edge (rear glass, roof, windscreen) */
