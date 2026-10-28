@@ -51,9 +51,9 @@ export function brakes(s: CarSpec, low: boolean, caliper = true) {
   const out: THREE.BufferGeometry[] = [];
   const col = (g: THREE.BufferGeometry, hex: string) => void out.push(paintAll(g, hex));
   // (5.5 mm in front of the rim's dark face, behind the spokes: never flush)
-  col(new THREE.RingGeometry(r * 0.2, r * 0.5, 16).translate(0, 0, h - 0.0095), DISC);
+  col(new THREE.RingGeometry(r * 0.2, r * 0.5, 12).translate(0, 0, h - 0.0095), DISC);
   if (caliper) col(caliperGeometry(s), CALIPER);
-  if (!low) col(new THREE.RingGeometry(r * 0.74, r * 0.79, 20).translate(0, 0, h + 0.006), SIDEWALL);
+  if (!low) col(new THREE.RingGeometry(r * 0.74, r * 0.79, 14).translate(0, 0, h + 0.006), SIDEWALL);
   return out;
 }
 /** The caliper: a block over the disc's top, towards the back */

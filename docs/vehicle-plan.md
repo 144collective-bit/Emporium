@@ -136,8 +136,8 @@ Asked before planning (2026-10-28):
   Until it comes the cars are as they were. The boot ends at 669.99 of
   its 670 KB: the next phase needs the same care, or the owner's say to
   raise it.
-- **Every model** (`add()` in carfine.ts, about 750 triangles a car, no new
-  draws): dark wheel wells (a liner round the inside of each arch and a
+- **Every model** (`add()` in carfine.ts, about 710 triangles a car on
+  desktops and 520 on phones (a City Hatch was 2,670), no new draws): dark wheel wells (a liner round the inside of each arch and a
   wall behind the tyre: you saw daylight through the arches), a lip round
   each arch, a shoulder crease down the sides, the bonnet's and the boot
   lid's shut lines, a line over the rear bumper, a fuel flap, side
@@ -173,6 +173,23 @@ Asked before planning (2026-10-28):
 - **Checked** in a throwaway viewer and in the city (walking up to the
   garage's car, getting in, driving off): the traffic in every model, your
   eight cars fitted out with Degen at the wheel.
+- **Measured** (`?bench`, as Phase 0's baseline: medium tier, by day,
+  software graphics, so draws and triangles only):
+
+  | View | Draws (Phase 0) | Triangles (Phase 0) |
+  |---|---|---|
+  | drive | 257 (233) | 1.01 M (0.84 M) |
+  | traffic | 152 (118) | 0.40 M (0.33 M) |
+  | street | 420 (424) | 1.04 M (0.93 M) |
+  | home | 387 (386) | 0.93 M (0.89 M) |
+  | the route | 262 / 455 (245 / 468) | 0.80 M (0.72 M) |
+
+  Triangles are up about a fifth where cars are close (the finer
+  segments were trimmed after this run: a car's addition fell from about
+  780 triangles to 710). The draws move with the traffic and the crowd in
+  view between runs (views with no cars changed moved as much: the park
+  129 to 114, The Trenches 229 to 211); the detail adds none. Geometry
+  205 MB (203). Frame times wait for a real laptop and phone.
 
 ### Phase 2: moving parts and the driver's eye view
 

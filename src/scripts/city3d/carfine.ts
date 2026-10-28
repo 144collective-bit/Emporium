@@ -45,7 +45,7 @@ function add(p: Parts, s: CarSpec, wheels: boolean, low: boolean) {
   for (const ax of s.axles)
     for (const side of [-1, 1]) {
       const z = side * (s.W / 2 - deep / 2 - 0.01);
-      p.detail(inward(new THREE.CylinderGeometry(arch - 0.006, arch - 0.006, deep, 12, 1, true, Math.PI / 2, Math.PI).rotateX(Math.PI / 2).translate(ax, s.r, z)), WELL);
+      p.detail(inward(new THREE.CylinderGeometry(arch - 0.006, arch - 0.006, deep, 8, 1, true, Math.PI / 2, Math.PI).rotateX(Math.PI / 2).translate(ax, s.r, z)), WELL);
       p.detail(box(arch * 2 - 0.01, arch + s.r - s.clr, 0.01, ax, (s.clr + s.r + arch) / 2 - 0.004, side * (s.W / 2 - deep - 0.012)), WELL);
     }
 
@@ -88,7 +88,7 @@ function add(p: Parts, s: CarSpec, wheels: boolean, low: boolean) {
         lip.absarc(cx, s.r, arch + 0.022, Math.PI, 0, true);
         lip.lineTo(cx + arch, s.r);
         lip.absarc(cx, s.r, arch, 0, Math.PI, false);
-        const g = new THREE.ShapeGeometry(lip, 10);
+        const g = new THREE.ShapeGeometry(lip, 6);
         if (side < 0) g.rotateY(Math.PI);
         p.detail(g.translate(0, 0, side * (s.W / 2 + 0.006)), SEAM);
       }
@@ -112,8 +112,8 @@ function add(p: Parts, s: CarSpec, wheels: boolean, low: boolean) {
   const lz = s.W / 2 - Math.min(0.17, s.W * 0.16);
   if (!low) {
     for (const z of [lz, -lz]) {
-      p.detail(new THREE.CircleGeometry(0.026, 12).rotateY(Math.PI / 2).translate(half + 0.024, s.lightY, z + Math.sign(z) * 0.03), LENS);
-      if (!bus) p.detail(new THREE.CylinderGeometry(0.03, 0.03, 0.02, 10).rotateZ(Math.PI / 2).translate(half + 0.07, s.clr + 0.06, Math.sign(z) * s.W * 0.34), '#fff1c4');
+      p.detail(new THREE.CircleGeometry(0.026, 8).rotateY(Math.PI / 2).translate(half + 0.024, s.lightY, z + Math.sign(z) * 0.03), LENS);
+      if (!bus) p.detail(new THREE.CylinderGeometry(0.03, 0.03, 0.02, 8).rotateZ(Math.PI / 2).translate(half + 0.07, s.clr + 0.06, Math.sign(z) * s.W * 0.34), '#fff1c4');
     }
   }
 
