@@ -918,7 +918,8 @@ does any of these):
   life.ts plays the row of that name (`clipOf()`); the places' people
   lists carry the new acts (market.ts, streetlife.ts, nightmarket3d.ts,
   waterfront3d.ts, avenue3d.ts, commons.ts, grit3d.ts, plaza.ts,
-  boulevard.ts, streetlevel.ts, station.ts; parklife.ts's boat seats
+  boulevard.ts, streetlevel.ts, and the grand station's, retired since;
+  parklife.ts's boat seats
   `row` / `pedal`). Benches keep `sit` (walk.ts looks for it to leave a
   sitter's bench alone).
 - Measured: 464 frames more in the crowd texture (about 1 MB; the seated
