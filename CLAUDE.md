@@ -1661,6 +1661,90 @@ it and has been retired completely. Build only on what's here.
   character screen) and Phase 5 (the crowds and soldiers on the new body,
   skinned on the GPU from baked clips; fighters and other players stepping
   with planted feet) are built: every figure in the city is the one body.
+- **The clothes** (the owner's call: higher quality, no clipping) are
+  planned in `docs/clothing-plan.md`: layers that move together (an outer
+  garment weighted as what's under it, a gap held), the trousers as one
+  piece, the garments' shapes as DOM-free data with a clipping check in
+  the tests and a clipping view in the lab, then smoother shapes (bottoms
+  and shoes, the suit, the casual tops, the accessories) on a desktop
+  detail level, phones and crowds as they are. One phase at a time with
+  the owner's sign-off; keep it up to date. Phase 1 (no clipping),
+  Phase 2 (bottoms and shoes, smoother), Phase 3 (the suit, smoother),
+  Phase 4 (the casual tops, smoother) and Phase 5 (the accessories,
+  smoother) are built:
+  - The wardrobe is data: `wardrobe.ts` (DOM-free: the outfits,
+    `lookOutfit()`, the shapes and `items()`; `restSkin()` is a piece at
+    rest with its bones, what `createDegen()` and the crowd skin with);
+    character.ts adds only the soldiers' rifle (guns.ts draws it).
+  - The trunk is one weight field (`trunk()` in skeleton.ts): the torso,
+    the pelvis and the legs down to `LEG_FREE` are weighted by where a
+    point is, not what it's part of, so every layer over the hips bends as
+    one: the waist down to the hips partly the hips and some of the way
+    each leg, all of it under the hems (`HEM_Y`, a little under the
+    longest), the legs shared across the middle wider than any layer's
+    vertices are apart. Never give one layer weights of its own there.
+  - The trousers, joggers and fatigues are one piece each from the waist
+    to the cuff (`trousers()`: a seat, the crotch, both legs and the
+    knee), inside every top's hips with room to spare (`SEAT`); the tops
+    and the seat carry a ring every 2 cm through the hips (`fine()`, not
+    on the far crowd) so their faces bend with the field.
+  - Laid-on details (`onBody()`) shade smooth; the track stripes are flat
+    tape on the cloth (`stripe()`); the puffer's baffles are rounded
+    pillows (`quilt()`); the shades' chain lies on each top's collar and
+    chest (`chainOn()`, an item per top, `chain-<kind>`).
+  - `tests/clothing.test.ts` (with `tests/dress.ts`: dressed and posed on
+    the CPU as the GPU skins him) holds every outfit's trousers inside its
+    top and the top outside them, within 2 mm, through keyed poses, the
+    emotes, the fight's clips and the animator running, sprinting and
+    crouching; `CLOTHING_REPORT=1` prints the worst. Shells it checks are
+    pieces with `shell` (`top`, `bottom`). The lab's clipping view is
+    `?anim&clip` (the top, trousers and shoes in colours far apart).
+  - The desktop level (Phase 2): `Detail` 3, single figures on the high
+    and medium tiers (`figureDetail()` in character.ts, set from the tier
+    in index.ts; phones keep 2): more ring segments, and `curve()`
+    (sections every 2 cm on a smooth curve through a shape's own) on the
+    legs from the upper thigh down and the shoes. The tops' bodies keep the
+    phone's rings there (`TR()`) and the trousers take 28 (`LEGS`) until
+    Phases 3 and 4: finer tops met the crotch at a sprint. The test checks
+    both levels; the lab builds 3 (`detail=2` the phone's, `at` the height
+    the camera looks at).
+  - Trousers end in a break (`trousers()`'s `hem`: the cuff on a slant,
+    longer at the back, over a soft fold); the joggers gather into the
+    cuff. Shoes are lofts along their length (`shoe()`, `ShoeSec`), a
+    rounded toe box (`toe()`), on a sole worked out from the upper
+    (`sole()`); the crowd's take every other section, the far crowd's
+    every fourth (`up()`).
+  - The suit's jacket is its own sections (`JACKET`, curved on the
+    desktop at the full ring count; the varsity and fatigues grow from it),
+    its hem cut away at the front (`cutaway()`), its sleeves
+    `UPPER_J` / `FORE_J`. Its laid-on pieces are `crisp` (their outline
+    split as finely as the bend, their sides kept apart from their faces
+    when smoothed, so their edges ink solid): set it round new pieces that
+    need it rather than for everything (on the long thin ones, the zips and
+    the crease, it costs thousands of triangles).
+  - The casual tops (Phase 4): `smooth()` on the desktop (curved sections)
+    at `TOP_RINGS` 30, a count two more than a multiple of four so the
+    middle of the back falls between two ring points (one on it, or just
+    off it, sank into the trousers' seat at a sprint); the puffer's body
+    in two on the desktop, its hem at 22 (`SEAM`). Their shoulders are the
+    jacket's line and their sleeves the suit's lower head (`LOOSE_U`); the
+    hood down is a roll swept round the neck (`hoodDown`); zips and the
+    placket are `tape()` strips (bevelled sides, a few hundred triangles),
+    never outlines laid on.
+  - The accessories (Phase 5): every hat seated on the head the figure has
+    (`headRow()` / `inHead()` in body.ts): the cap and the beanie carried
+    out from the head's outline (`headShell()`), the other hats sized to it
+    (`fitTo()`), every band held just off it, brow and all (`snug()`), a
+    ring's sag added to every gap (`SAG`) so the crowd's clear it too; the
+    cap's brim from the crown's base (`brimSweep()`); the shades' arms back
+    along the head past the ear (`armPath()`), the chain hooked on them;
+    bags, boards, wings and the necklace on each top's own outline
+    (`TORSOS`, `OVER`, items `backpack-<kind>` and the rest; straps laid on
+    by `strapOver()`); the watch on the wrist riding the hand; a held
+    thing's handle in the fingers' hook (`HOOK`, `handle()`), the cup
+    against the fingers' front. `tests/accessories.test.ts` holds the hats
+    clear of the head at every level and the held things clear of the
+    fingers. The lab takes `wear=` and `at=x,y,z`.
 - **The animation rebuild** (the owner's call, critical) is planned in
   `docs/animation-plan.md`: AAA movement (Spider-Man / Ratchet feel,
   neutral athletic) from motion capture, then turns, jumps, armed
@@ -2009,7 +2093,7 @@ it and has been retired completely. Build only on what's here.
     legs, as in the city), strafing, aiming round and peeking programs (Q / E
     by hand), crouching and sprint-and-slide (C by hand), a walls floor and
     a Vault & climb program (Jump at a wall by hand), any kind of top
-    (`outfit`), the free camera placed with `orbit=yaw,pitch,dist`, jumps
+    (`outfit`; `clip`, the clothes' clipping view), the free camera placed with `orbit=yaw,pitch,dist`, jumps
     (programs and Space, walk.ts's jump and gravity), foot traces and
     readouts (the clip, its rate, the match, the blend left, the foot
     slide, the air); `rec`, `prog`, `gait`, `cam`, `floor`, `zoom`, `compare=0` in
@@ -2042,8 +2126,9 @@ it and has been retired completely. Build only on what's here.
     `holdGun()` sets it every frame).
   - `weigh()` weights every vertex by what it's part of (its old joint, or
     `region: 'shoe'`) and where it is at rest, passing smoothly across each
-    joint (shoulders take a collarbone share, the jacket's and hoodie's
-    hems go some of the way with the thighs); `bone` pins a piece to one
+    joint (shoulders take a collarbone share; the trunk by where a point
+    is alone, `trunk()`, so a top's hem and the trousers under it bend as
+    one); `bone` pins a piece to one
     bone unbent (bags, boards, wings on the chest); `skin` gives a piece
     its own weights per vertex (the fingers).
   - **The head and hands** are `body.ts` (DOM-free, tested): the balaclava
@@ -2093,19 +2178,21 @@ it and has been retired completely. Build only on what's here.
     cross-sections slope from the neck down to the shoulder (the
     trapezius, no padded shelf), the body stopping short of the arm's
     outside, and the sleeve's cap is a low rounded deltoid running down
-    into the arm, round over the outside of the shoulder (`SUIT`, `HOODIE`,
-    `UPPER_S`; the rest grow from them). Check new tops from the front and back running
+    into the arm, round over the outside of the shoulder (`JACKET`, `HOODIE`,
+    `UPPER_J`; the rest grow from them). Check new tops from the front and back running
     in the lab (`?anim&outfit=hoodie`, ...).
   - Shapes are built from cross-sections (`loft()`, superellipse rings) and
     flat details laid onto them (`onBody()` with `surface()`: lapels, the
-    shirt V, the tie, zips, pockets). Shoes are side profiles (`profile()`).
-  - The wardrobe is `items()`: each item (`head`, `cap`, `suit`, `hoodie`,
+    shirt V, the tie, pockets; zips and plackets are `tape()`). Shoes are
+    lofts along their length (`shoe()`).
+  - The wardrobe is `items()` in `wardrobe.ts`: each item (`head`, `cap`, `suit`, `hoodie`,
     `joggers`, `backpack`, `coffee`...) has a `when` rule on the `Outfit` and
     pieces on joints, each a fixed colour or an outfit colour (`shade`
     darkens or lightens it: lapels, ribbing). New clothes are new items.
-  - Three detail levels (`Detail`): 2 for single figures (`createDegen()`:
-    the player, other players, the fitting room, the hologram; about 13-15k
-    triangles), 1 for crowd people near the camera (the new head, fingers
+  - Four detail levels (`Detail`): 3 for single figures on desktops and 2
+    on phones (`createDegen()`: the player, other players, the fitting
+    room, the hologram; about 23-26k triangles at 3, 14-17k at 2;
+    `figureDetail()` sets which), 1 for crowd people near the camera (the new head, fingers
     and shoes at a crowd's detail, about 7-9k; the phones' `light` crowd
     leaves out the `detail` pieces), 0 for crowd people further away (`far`:
     plain boxes for rounded ones, the head coarser, block hands instead of
@@ -2587,7 +2674,7 @@ it and has been retired completely. Build only on what's here.
   vertex in the lens colour, dim by day so they never bloom out of control.
 - A new item needs a `Look` field with its palette and rules in
   `profile-data.ts` `cleanLook()` (the server checks it too), the mapping in
-  `lookOutfit()`, an item in `items()` in `character.ts` and an entry in `fitting.ts`
+  `lookOutfit()`, an item in `items()` in `wardrobe.ts` and an entry in `fitting.ts`
   `TABS`. One hat (`hat`), one bag (`bag`) and one thing in the hand
   (`held`) at a time; `cleanLook()` also upgrades looks saved in older
   formats, so keep its migration when fields change. Held items are put
@@ -3192,7 +3279,10 @@ it and has been retired completely. Build only on what's here.
   (DOM-free, seeded, 60 Hz, tested in `tests/fight.test.ts`: `MOVES` with
   start-up / active / recovery frames, reach and arc, the jab-cross-hook-
   uppercut chain and the kicks, block and the parry window, dodge, stamina,
-  stagger and knockdowns, `STYLES`, bots via `think()`, spars and bouts;
+  stagger and knockdowns, `STYLES` (the moves and styles are data in
+  `fight-moves.ts`, re-exported: the screens and the save read them there,
+  so the fight's rules load with the fight, not at the boot), bots via
+  `think()`, spars and bouts;
   a fighter faces along (sin yaw, cos yaw); a press is kept `T.buffer`
   frames so it fires when it can, a strike from just out of reach steps in
   (`T.stepIn`), the facing turns at `T.turn` and a move's lock-on snaps at
@@ -3395,7 +3485,7 @@ it and has been retired completely. Build only on what's here.
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,
   in `tests/merch.test.ts`), the crowd's baked clips (`crowdclips.ts`) and Degen's skeleton, weights, head and hands
-  (`skeleton.ts`, `body.ts`), his walking (`locomotion.ts`), the motion capture and its animation (`bvh.ts`, `mocap-build.ts`, `mocap.ts`, `movesim.ts`, `inertia.ts`, `motionmatch.ts`, `animator.ts`), the rubric of human movement over every clip and program (`human.ts`, `tests/human.test.ts`), what his body does about what he touches (`contact.ts`), the game's moments (`moments.ts`) and the guns in his hands (`gunfit.ts`, `stance.ts`). Modules that touch the DOM or `kit.ts` (canvas
+  (`skeleton.ts`, `body.ts`), his walking (`locomotion.ts`), the motion capture and its animation (`bvh.ts`, `mocap-build.ts`, `mocap.ts`, `movesim.ts`, `inertia.ts`, `motionmatch.ts`, `animator.ts`), the rubric of human movement over every clip and program (`human.ts`, `tests/human.test.ts`), what his body does about what he touches (`contact.ts`), the game's moments (`moments.ts`), the guns in his hands (`gunfit.ts`, `stance.ts`) and his clothes not clipping (`wardrobe.ts`, the trunk's weights in `skeleton.ts`, `tests/clothing.test.ts`) and his accessories where they're worn (`tests/accessories.test.ts`). Modules that touch the DOM or `kit.ts` (canvas
   textures) can't load in Node; keep data a test needs in the DOM-free
   files.
 - When you change a rule or move something in the city, run the tests and

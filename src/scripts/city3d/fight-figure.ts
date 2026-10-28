@@ -48,7 +48,7 @@ export interface FighterFigure {
 }
 
 export function createFighterFigure(parent: THREE.Object3D, outfit: Outfit, low: boolean, seed = 0): FighterFigure {
-  const degen = createDegen({ ...outfit, fists: true }, low ? 1 : 2);
+  const degen = createDegen({ ...outfit, fists: true }, low ? 1 : undefined);
   degen.g.scale.setScalar(FIGHTER_SCALE);
   parent.add(degen.g);
   return { degen, pose: newFightPose(), prev: newFightPose(), tmp: newFightPose(), clip: null, mirror: false, frame: 0, fade: 0, loco: createLocomotion(), walk: 0, last: null, manual: null, seed };

@@ -87,7 +87,7 @@ export function createBoat(d: BoatDeps) {
 
   /** Degen at the wheel: on the bench, knees bent, both hands on the wheel's sides (turned with it) */
   function seat() {
-    driver = createDegen(d.outfit(), 2);
+    driver = createDegen(d.outfit());
     const g = driver.g;
     g.rotation.set(0, Math.PI / 2, 0);
     g.scale.setScalar(SCALE);
