@@ -100,6 +100,20 @@ Asked before planning (2026-10-28):
   within reach and not cramped, his knees under it, his feet on the floor
   and the pedals behind the bumper, the door wide and tall enough with
   the seat in its doorway, the rear seats' knee and head room.
+- **The baseline** (2026-10-28, `?bench` by day at the medium tier,
+  1280 x 720, in a headless Chromium on software graphics: its frame
+  rates mean nothing, the draws and triangles are what to compare):
+
+  | View | Draws | Triangles |
+  |---|---|---|
+  | drive (the ring avenue, chase height) | 233 | 0.84 M |
+  | traffic (a ring junction) | 118 | 0.33 M |
+  | street (downtown, street level) | 424 | 0.93 M |
+  | home | 386 | 0.89 M |
+  | the route (average / worst draws) | 245 / 468 | 0.72 M |
+
+  Memory: geometry 203 MB, textures 210 MB. The frame times need a real
+  laptop and a phone (`?bench`, Copy results): the owner's to paste back.
 - **The boot's budget is the tight spot.** `main` stood at 669.8 of
   670 KB (gzipped) before this phase; `INTERIORS` in the boot would have
   pushed it over, so carinside.ts is kept out of it (only the tests read
