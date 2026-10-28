@@ -409,7 +409,7 @@ Asked before planning (2026-10-28):
   "Its own". The hangar keeps its own grid without tabs.
 - Boot cost: 0.7 KB (666.8 of 670 KB at the time; 661.6 once the grand station was retired), the ids and the cleaning.
 
-### Phase 6: three more cars
+### Phase 6: three more cars (built)
 
 - A **classic** (rounded old-school saloon or roadster, chrome bumpers),
   an **off-roader** (lifted, big tyres, roof lights, a snorkel) and an
@@ -418,6 +418,37 @@ Asked before planning (2026-10-28):
   from the start. Made-up names to be picked with the owner.
 - Bought with Dorras at a level, as the Street Thunder, Big Rover and
   Hyper Comet are (prices to confirm with the owner).
+
+**As built** (the names and prices are "Decided" below):
+
+- **Boulevardier** (`classic`): a long bonnet and boot round a rounded
+  cabin, round lamps, chrome bumpers under the plates with overriders, a
+  chrome spear between the arches, a bonnet ornament, tail fins with a
+  round lamp in each tip, chrome hubcaps (`spokes: 0` on chrome). Soft and
+  floaty springs; heavy, rear-drive, its tail loose, slow steering.
+- **Mud Buster** (`offroad`): lifted (clearance 0.3) on big tyres, boxy
+  with a short bonnet and an upright screen, a light bar of four round
+  lamps on the roof's front edge, a roof rack with a can strapped on, a
+  snorkel up the right wing, a steel bumper with a winch and bull bar
+  uprights clear of the lamps, flares over every wheel, mud flaps, rock
+  sliders (`p.has('skirts')`: the kit's skirts take their place, its
+  `STOCK_PARTS`), the spare on the tailgate. Long-travel springs; heavy,
+  front-drive, sure-footed, the grip bar high.
+- **Glow Pod** (`ev`): a one-box hatch with one long sweep of glass, the
+  grille closed over in the paint, a pale light strip across the nose and
+  a red light bar across the tail, a dark glass roof, the charging flap on
+  the left front wing, aero discs, no exhaust. Tight springs; planted,
+  quick to turn, the pick-up bar next to the supercar's. **Electric:**
+  `DRIVE.electric`, so drive.ts reads its gear from `motorOf()` (one gear,
+  D; the motor's revs climbing with the speed, tested) and asks the engine
+  sound for its `whine` (two soft tones an octave apart climbing high with
+  the speed, quieter than the engines).
+- Each has its own `CarSpec` (carspec.ts, with paints), seat
+  (carinside.ts `SEATS`: the interior tests hold all three), springs
+  (`SPRINGS`), feel (`FEEL`), cargo (`CARGO`: 24, 44, 14) and garage copy
+  (`DRIVE`, `CAR_CATALOG`), and takes every part of Phase 5's kit. They're
+  yours only: the traffic's `MIX` doesn't carry them.
+- Boot cost: 1.4 KB (663.0 of 670 KB), the three specs and their touches.
 
 ### Phase 7: motorbikes
 

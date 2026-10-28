@@ -31,13 +31,13 @@ import { createDegen, type Degen, type Outfit } from './character';
 import type { Sfx } from './combat';
 import { CARS, type Car } from './cars';
 import { INTERIORS } from './carinside';
-import { carLights, circles, gearOf, newCar, newSignal, reachOf, skidding, stepCar, tune, type CarState, type DriveInput, type DriveTune, type TurnSignal } from './drive-sim';
+import { carLights, circles, gearOf, motorOf, newCar, newSignal, reachOf, skidding, stepCar, tune, type CarState, type DriveInput, type DriveTune, type TurnSignal } from './drive-sim';
 import { blinkOn } from './traffic';
 import { DECK_WALLS, departuresSurface } from './airfield';
 import type { Garage } from './garage';
 import type { Kart } from './karts';
 import { bodies } from './life';
-import { FEEL, type MyCar, type PlayerCar } from './mycar';
+import { DRIVE, FEEL, type MyCar, type PlayerCar } from './mycar';
 import type { KartId } from './mykart';
 import type { Box } from './solids';
 
@@ -72,7 +72,8 @@ export interface DriveDeps {
   /** Is a spot free for Degen to stand on (getting out)? */
   free(x: number, z: number): boolean;
   sfx(kind: Sfx, gain?: number): void;
-  engine(revs: number): void;
+  /** The engine's note: revs 0..1 (negative: off), `whine` an electric motor's voice */
+  engine(revs: number, whine?: boolean): void;
   /** The tyres' screech while sliding, 0..1 (0 is silent) */
   tyres(level: number): void;
   bounds: Box;
@@ -491,10 +492,12 @@ export function createDrive(d: DriveDeps) {
       // Readout and engine: four gears up the speed range (drive-sim.ts gearOf), the revs dropping at each shift
       const kmh = Math.round(Math.abs(s.speed) * KMH);
       if (speedEl.textContent !== String(kmh)) speedEl.textContent = String(kmh);
-      const box = gearOf(s.speed, T.top, inp.throttle);
+      // (an electric car: one gear and a motor's whine, vehicle plan Phase 6)
+      const ev = !!DRIVE[v.model as PlayerCar]?.electric;
+      const box = ev ? motorOf(s.speed, T.top, inp.throttle) : gearOf(s.speed, T.top, inp.throttle);
       const gear = String(box.gear);
       if (gearEl.textContent !== gear) gearEl.textContent = gear;
-      d.engine(0.12 + box.revs * 0.72 + Math.max(0, inp.throttle) * 0.13);
+      d.engine(0.12 + box.revs * 0.72 + Math.max(0, inp.throttle) * 0.13, ev);
       // Your car fitted out rides its springs (and turns its wheel, its needles, lays its marks); else the body's drawn-on lean
       if (!v.car?.ride?.(s, dt, slip, accel, box.revs, T.top, v.y, d.groundAt)) {
         roll += (THREE.MathUtils.clamp(s.yawRate * s.speed * 0.012, -0.07, 0.07) - roll) * damp(6, dt);
