@@ -21,7 +21,6 @@ import { PIER_SPAWN } from './waterfront';
 import { MARKET_SPAWN } from './nightmarket';
 import { STADIUM_SPAWN } from './stadium';
 import { TOWER_SPAWN } from './skydeck';
-import { STATION_SPAWN } from './station';
 import { COURT_SPAWN, MALL_SPAWN } from './mall';
 
 export type PlaceKind = 'spot' | 'lot' | 'metro' | 'riverbus';
@@ -73,8 +72,6 @@ export const PLACES: Place[] = [
   { id: 'stadium', kind: 'spot', spot: 'stadium', at: STADIUM_SPAWN },
   // Uptown's Sector 7 Tower: on the plaza in front of its pavilion, facing it (the lift to the sky deck inside)
   { id: 'tower', kind: 'spot', spot: 'tower', at: TOWER_SPAWN },
-  // Sector 7 Central, the grand station: on its forecourt between the fountains, facing the hall's doors
-  { id: 'station', kind: 'spot', spot: 'station', at: STATION_SPAWN },
   // Palm Court and Starlight Mall, north of downtown: under the court's arch facing up its promenade, in front of the mall's porch
   { id: 'palmcourt', kind: 'spot', spot: 'palmcourt', at: COURT_SPAWN },
   { id: 'mall', kind: 'spot', spot: 'mall', at: MALL_SPAWN },

@@ -19,6 +19,7 @@ import { DurableObject } from 'cloudflare:workers';
 import * as THREE from 'three';
 import { POINTS, WEAPON_IDS, createSim, weaponUnlocked, type SimEvent, type WeaponId } from '../../src/scripts/city3d/combat-sim';
 import { RACK, rayBoxes } from '../../src/scripts/city3d/solids';
+import { MOVES, type MoveId } from '../../src/scripts/city3d/fight-moves';
 import { ARMS } from '../../src/scripts/city3d/avenue';
 import { EMOTES, PHRASES } from '../../src/scripts/net/profile-data';
 import {
@@ -31,6 +32,7 @@ import {
   SNAP_HZ,
   SPEEDS,
   WARP_GAP,
+  cleanKit,
   cleanMods,
   inWorld,
   modeOf,
@@ -57,6 +59,9 @@ const INPUT_STALE = 250;
 const IDLE_KICK = 90_000;
 /** Where a player may gear up: the gun stores' counters */
 const COUNTERS = [RACK, ARMS.counter];
+/** Fists: a punch or a kick of the fight's moves (not the dodge), and the shortest gap between two (ms: a jab's start-up and active frames) */
+const isStrike = (m: unknown): m is MoveId => typeof m === 'string' && m in MOVES && MOVES[m as MoveId].kind !== 'dodge';
+const MELEE_GAP = ((MOVES.jab.startup + MOVES.jab.active) * 1000) / 60;
 
 interface Player {
   id: number;
@@ -268,6 +273,9 @@ export class Room extends DurableObject<Env> {
         if (!COUNTERS.some((c) => Math.hypot(p.pos.x - c.x, p.pos.z - c.z) <= RACK_REACH) || !weaponUnlocked(m.w, p.me.total)) break;
         const changed = this.sim.players.get(id)?.weapon !== m.w;
         this.mods(id, m.m);
+        // The loadout is picked at the counter too (the gun taken is in it)
+        const kit = cleanKit(m.l);
+        if (kit && kit.includes(m.w) && kit.every((w) => weaponUnlocked(w, p.me.total))) this.sim.setKit(id, kit);
         this.sim.equip(id, m.w as WeaponId);
         if (changed)
           this.soon(p, 'weapon', 300, () => {
@@ -278,8 +286,31 @@ export class Room extends DurableObject<Env> {
           });
         break;
       }
+      case 'kit': {
+        // The weapon slots, changed anywhere (the inventory's grid), and maybe a gun drawn from them; the first draw
+        // (not geared up yet) gears up with it, full. Only guns this player's lifetime score has unlocked.
+        const kit = cleanKit(m.l);
+        const sp = this.sim.players.get(id);
+        if (!sp || !kit || !kit.every((w) => weaponUnlocked(w, p.me.total)) || (m.w && !kit.includes(m.w)) || !this.allow(p, 'swap', 150)) break;
+        this.mods(id, m.m);
+        this.sim.setKit(id, kit);
+        const changed = !!m.w && sp.weapon !== m.w;
+        if (m.w) {
+          if (!sp.geared) this.sim.equip(id, m.w);
+          else if (changed) this.sim.swap(id, m.w);
+          this.sim.setArmed(id, true);
+        }
+        if (changed)
+          this.soon(p, 'weapon', 300, () => {
+            const w = this.sim.players.get(id)?.weapon;
+            if (!w) return;
+            this.broadcast({ t: 'info', p: this.info(p) }, p.id);
+            p.profile.setWeapon(w).catch(() => {});
+          });
+        break;
+      }
       case 'swap':
-        // Anywhere, but only between guns this player's lifetime score has unlocked
+        // Anywhere, but only between guns this player's lifetime score has unlocked (and in their loadout: the sim checks)
         if (!weaponUnlocked(m.w, p.me.total) || !this.allow(p, 'swap', 150)) break;
         this.mods(id, m.m);
         if (this.sim.swap(id, m.w as WeaponId))
@@ -295,6 +326,12 @@ export class Room extends DurableObject<Env> {
         break;
       case 'reload':
         this.sim.reload(id);
+        break;
+      case 'melee':
+        // Fists on the street: a punch or a kick of the fight's moves, on foot, from where the server has them,
+        // no faster than the quickest move comes round (a jab's start-up and active frames)
+        if (!isStrike(m.m) || modeOf(p.flags) !== 'walk' || !this.allow(p, 'melee', MELEE_GAP)) break;
+        this.sim.melee(id, p.pos.x, p.pos.y, p.pos.z, p.face, m.m);
         break;
       case 'emote':
         if (EMOTES.some((e) => e.id === m.e) && this.allow(p, 'chat', 1200)) this.broadcast({ t: 'emote', id: p.id, e: m.e }, p.id);

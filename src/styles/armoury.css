@@ -1,12 +1,13 @@
 /* armoury: the city's game (see global.css for the shared panel styles)
    The Armoury's store and workbench (gunshop.ts, `data-shop` in CityMap.astro) on the gun
    store's `.shop` panel: a Dorras pill in the header, seven gun cards (the ones for sale
-   carry a level tag), the picked gun's details with its mods' bonus lit on the stat bars,
+   carry a level tag), the Loadout row of the two guns carried, the picked gun's details with its mods' bonus lit on the stat bars,
    an inline buy step, and the workbench's three mod rows under it. Phones scroll the cards
    sideways; the sheet itself scrolls when it's taller than the screen. */
 .shop.armoury {
   grid-template-areas:
     "head head"
+    "loadout loadout"
     "list detail"
     "bench bench"
     "foot foot";
@@ -80,6 +81,100 @@
   background: #fff;
   box-shadow: 0 0 8px #00eaff;
   transition: left 0.3s var(--ease), width 0.3s var(--ease);
+}
+/* The loadout (inventory.ts): the two guns he carries, each slot tapped and then filled from the cards */
+.shop-loadout {
+  grid-area: loadout;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  min-width: 0;
+}
+.shop-loadout-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--p-cyan);
+}
+.shop-slots {
+  display: flex;
+  gap: 6px;
+}
+.shop-slot {
+  display: grid;
+  grid-template-columns: auto 52px auto;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 5px 10px;
+  border: 1px solid #ffffff2e;
+  border-radius: 999px;
+  background: #0b0a12;
+  color: #fff;
+  font-family: var(--font-mono);
+  cursor: pointer;
+}
+.shop-slot small {
+  font-size: 8.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.shop-slot svg {
+  width: 52px;
+  height: 17px;
+  fill: #c9c6d6;
+  stroke: #05050a;
+  stroke-width: 1.5;
+}
+.shop-slot b {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.shop-slot.is-empty {
+  grid-template-columns: auto auto;
+  border-style: dashed;
+}
+.shop-slot.is-empty b {
+  color: var(--muted);
+}
+.shop-slot.is-on {
+  border-color: #0000;
+  background:
+    var(--pulse-wash) padding-box,
+    linear-gradient(#14102a, #14102a) padding-box,
+    var(--pulse) border-box;
+  box-shadow: 0 0 18px -6px #00eaffaa;
+}
+.shop-loadout-hint {
+  flex: 1 1 200px;
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--muted);
+}
+.shop-loadout-hint.is-on {
+  color: #fff;
+}
+.shop-loadout-hint .chip-link {
+  margin: 2px 0 0 4px;
+  padding: 0.35em 0.7em;
+  font-size: 9.5px;
+  cursor: pointer;
+}
+/* Picking for a slot: the guns that can go in it stand out; the ones carried are marked */
+.armoury .shop-card.is-choice {
+  border-color: #00eaff88;
+}
+.armoury .shop-card.is-carried small {
+  color: #2bff88;
 }
 /* Buying: an inline confirmation in place of the button */
 .shop-confirm {
@@ -225,6 +320,7 @@
   .shop.armoury {
     grid-template-areas:
       "head"
+      "loadout"
       "list"
       "detail"
       "bench"
@@ -284,6 +380,25 @@
   .bench-btn {
     margin-left: auto;
   }
+  .shop-loadout-label,
+  .shop-loadout-hint:not(.is-on) {
+    display: none;
+  }
+  .shop-slots {
+    flex: 1 1 auto;
+  }
+  .shop-slot {
+    flex: 1 1 0;
+    grid-template-columns: auto 44px minmax(0, auto);
+    padding: 4px 8px;
+  }
+  .shop-slot svg {
+    width: 44px;
+  }
+  .shop-slot b {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 }
 @media (max-width: 400px) {
   .armoury .shop-score-label {
@@ -297,7 +412,8 @@
 }
 /* Short screens (phones on their side): the workbench rows lose their blurbs */
 @media (max-height: 500px) {
-  .shop-pitch {
+  .shop-pitch,
+  .shop-loadout-hint:not(.is-on) {
     display: none;
   }
   .bench {

@@ -6,6 +6,7 @@
  */
 import type { ClassId } from './catalog';
 import type { Cond, CourseId } from './kartcircuit';
+import { FREE_PLAY } from './freeplay';
 
 export type CupId = 'rookie' | 'pro' | 'neon';
 /** One race of a cup: which way round, how many laps, in what conditions */
@@ -65,6 +66,8 @@ export const CUPS: Record<CupId, Cup> = {
     prizes: [10000, 6000, 3800, 2500, 1800, 1200, 900, 600],
   },
 };
+// (free play, freeplay.ts: every cup open)
+if (FREE_PLAY) for (const c of Object.values(CUPS)) c.level = 1;
 export const CUP_IDS = Object.keys(CUPS) as CupId[];
 export const cup = (id: string) => CUPS[id as CupId] ?? null;
 

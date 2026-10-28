@@ -29,6 +29,8 @@
  *   has the prices and curves; missions.ts the board).
  * - Phase 9 (The Trenches, save v10): four corner shops (`c0`-`c3`), bought
  *   with Dorras from level 5, a shop from the day they're bought.
+ * - The inventory (save v11, docs/inventory-plan.md): what Degen carries, its
+ *   rules in inventory.ts.
  */
 import { cleanDesign, type Design } from '../../data/plots';
 import { DOORS, GARAGE_SITE, LOT_SITE, STALL_SPOT, UNIT_SITE } from './solids';
@@ -40,6 +42,8 @@ import { STYLES, type StyleId } from './fight-moves';
 import { COURSE_IDS } from './kartcircuit';
 import { PLACE_IDS as MAP_PLACES } from './places';
 import { CORNER_SHOPS, type CornerId } from './projects';
+import { cleanInventory, emptyInventory, type Inventory } from './inventory-save';
+import { FREE_PLAY } from './freeplay';
 import {
   BOT_LEVELS,
   FIGHT_BOTS,
@@ -143,8 +147,8 @@ export const PRICE_LEVEL_IDS = Object.keys(PRICE_LEVELS) as PriceLevel[];
 /** Stall levels: how many kinds of goods, how many of each, how fast customers come, and the upgrade's cost */
 export const STALL_LEVELS = [
   { level: 1, slots: 3, capacity: 20, pace: 1, cost: 0 },
-  { level: 2, slots: 4, capacity: 40, pace: 1.25, cost: 2500 },
-  { level: 3, slots: 6, capacity: 80, pace: 1.6, cost: 10000 },
+  { level: 2, slots: 4, capacity: 40, pace: 1.25, cost: FREE_PLAY ? 0 : 2500 },
+  { level: 3, slots: 6, capacity: 80, pace: 1.6, cost: FREE_PLAY ? 0 : 10000 },
 ] as const;
 export const stallLevel = (level: number) => STALL_LEVELS[Math.max(0, Math.min(STALL_LEVELS.length - 1, level - 1))];
 
@@ -161,12 +165,12 @@ export const AWAY_AFTER = 2;
 /** The units on Makers' Row, north of the market square */
 export const UNIT_COUNT = 4;
 /** The 1st, 2nd, 3rd and 4th unit you buy */
-export const UNIT_PRICES = [2000, 4000, 8000, 14000];
+export const UNIT_PRICES = FREE_PLAY ? [0, 0, 0, 0] : [2000, 4000, 8000, 14000];
 /** What a unit can be built as, and what building it costs */
 export const UNIT_KINDS = {
-  garden: { name: 'Garden', cost: 500 },
-  shop: { name: 'Shop', cost: 900 },
-  warehouse: { name: 'Warehouse', cost: 700 },
+  garden: { name: 'Garden', cost: FREE_PLAY ? 0 : 500 },
+  shop: { name: 'Shop', cost: FREE_PLAY ? 0 : 900 },
+  warehouse: { name: 'Warehouse', cost: FREE_PLAY ? 0 : 700 },
 } as const;
 export type UnitKind = keyof typeof UNIT_KINDS;
 export const UNIT_KIND_IDS = Object.keys(UNIT_KINDS) as UnitKind[];
@@ -200,12 +204,12 @@ export const DELIVERY_BONUS = 0.1;
 /* Phase 4: the big lots, east of Makers' Row: Dorras only (never the PLS district plots) */
 export const LOT_COUNT = 3;
 /** The 1st, 2nd and 3rd big lot you buy */
-export const LOT_PRICES = [25000, 50000, 90000];
+export const LOT_PRICES = FREE_PLAY ? [0, 0, 0] : [25000, 50000, 90000];
 export const LOT_KINDS = {
-  superstore: { name: 'Superstore', cost: 8000 },
-  factory: { name: 'Factory', cost: 10000 },
-  depot: { name: 'Depot', cost: 6000 },
-  offices: { name: 'Offices', cost: 15000 },
+  superstore: { name: 'Superstore', cost: FREE_PLAY ? 0 : 8000 },
+  factory: { name: 'Factory', cost: FREE_PLAY ? 0 : 10000 },
+  depot: { name: 'Depot', cost: FREE_PLAY ? 0 : 6000 },
+  offices: { name: 'Offices', cost: FREE_PLAY ? 0 : 15000 },
 } as const;
 export type LotKind = keyof typeof LOT_KINDS;
 export const LOT_KIND_IDS = Object.keys(LOT_KINDS) as LotKind[];
@@ -221,8 +225,8 @@ export const HQ_BOOST = 1.2;
 /* Phase 9 (The Trenches, step 3): four corner shops, Dorras only, from level CORNER_LEVEL */
 export const CORNER_COUNT = 4;
 /** The 1st, 2nd, 3rd and 4th corner shop you buy */
-export const CORNER_PRICES = [20000, 30000, 45000, 60000];
-export const CORNER_LEVEL = 5;
+export const CORNER_PRICES = FREE_PLAY ? [0, 0, 0, 0] : [20000, 30000, 45000, 60000];
+export const CORNER_LEVEL = FREE_PLAY ? 1 : 5;
 /** A corner shop: always a shop (nothing to build), its shelves busier than Makers' Row's with The Trenches' foot traffic */
 export const CORNER = { slots: 4, capacity: 60, pace: 2 } as const;
 
@@ -282,6 +286,7 @@ export const ENTRIES = {
   fighting: { name: 'Fight purses', in: true },
   gear: { name: 'Guns', in: false },
   clothes: { name: 'Clothes', in: false },
+  items: { name: 'Snacks', in: false },
   staff: { name: 'Staff', in: false },
   couriers: { name: 'Couriers', in: false },
   repaid: { name: 'Loans repaid', in: false },
@@ -311,9 +316,10 @@ export interface Counters {
   sold: number;
   earned: number;
   contracts: number;
-  /** Knocked down */
+  /** Knocked down (shot or by hand), and the dummies knocked down by hand (fists on the street) */
   dummies: number;
   drones: number;
+  fistDowns: number;
   /** Tiles driven in your own car */
   driven: number;
   /** Cars, guns and clothes bought; units, lots and plots bought; buildings built; upgrades (mods and levels) */
@@ -335,7 +341,7 @@ export interface Counters {
   chains: number;
 }
 export type CounterId = keyof Counters;
-export const COUNTER_IDS: CounterId[] = ['sold', 'earned', 'contracts', 'dummies', 'drones', 'driven', 'bought', 'land', 'built', 'upgrades', 'missions', 'kartRaces', 'podiums', 'kartWins', 'cleanLaps', 'overtakes', 'bouts', 'fightWins', 'kos', 'chains'];
+export const COUNTER_IDS: CounterId[] = ['sold', 'earned', 'contracts', 'dummies', 'drones', 'fistDowns', 'driven', 'bought', 'land', 'built', 'upgrades', 'missions', 'kartRaces', 'podiums', 'kartWins', 'cleanLaps', 'overtakes', 'bouts', 'fightWins', 'kos', 'chains'];
 export const newCounters = (): Counters => Object.fromEntries(COUNTER_IDS.map((k) => [k, 0])) as unknown as Counters;
 /** A district plot you own, bought with Dorras */
 export interface OwnedPlot {
@@ -399,7 +405,7 @@ export const recordKey = (course: string, cls: string) => `${course}:${cls}`;
 export const emptyKarts = (): KartSave => ({ model: DEFAULT_KART.model, paint: DEFAULT_KART.paint, owned: [], mods: {}, records: {}, boards: {}, series: null, trophies: {}, challenge: null, parBeaten: [], old: {} });
 
 export interface TycoonSave {
-  v: 10;
+  v: 11;
   dorras: number;
   till: number;
   /** When it was last brought up to date (ms since 1970) */
@@ -447,13 +453,15 @@ export interface TycoonSave {
   backup: number;
   /** The places you've walked to (places.ts), where fast travel can take you */
   visited: string[];
+  /** What Degen carries (inventory.ts, save v11): his loadout of two guns, the thing in his hand, his consumables */
+  inventory: Inventory;
 }
 /** How many steps Getting started has (guide.ts's GUIDE) */
 export const GUIDE_STEPS = 7;
 
 export function newSave(now: number): TycoonSave {
   return {
-    v: 10,
+    v: 11,
     dorras: START_DORRAS,
     till: 0,
     at: now,
@@ -484,6 +492,7 @@ export function newSave(now: number): TycoonSave {
     guide: { step: 0, hidden: false },
     backup: 0,
     visited: [],
+    inventory: emptyInventory(),
   };
 }
 const emptyLot = (): Lot => ({ kind: null, stock: {}, slots: [], job: null });
@@ -556,7 +565,7 @@ export function cleanSave(raw: unknown, now: number): TycoonSave {
   }
   const mul = (p: PlaceId) => LEVEL_CAPACITY[(levels[p] ?? 1) - 1];
   const s: TycoonSave = {
-    v: 10,
+    v: 11,
     dorras: Math.floor(num(o.dorras, 0, 1e12, START_DORRAS)),
     till: Math.floor(num(o.till, 0, 1e12, 0)),
     at: num(o.at, 0, now, now),
@@ -599,8 +608,11 @@ export function cleanSave(raw: unknown, now: number): TycoonSave {
     guide: { step: 0, hidden: false },
     backup: 0,
     visited: [],
+    inventory: emptyInventory(),
   };
   cleanGame(s, o, now);
+  // (v11: a save from before the inventory carries the rifle and the first gun it bought)
+  s.inventory = cleanInventory(o.inventory, s);
   // Phase 3: staff only where there's a job for them; couriers and contracts checked against the rules
   const places = (v: unknown) => PLACE_IDS.find((p) => p === v);
   s.staff = [...new Set((Array.isArray(o.staff) ? o.staff : []).map(places).filter((p): p is PlaceId => !!p && !!roleAt(s, p)))];
@@ -1478,16 +1490,19 @@ export function count(s: TycoonSave, k: CounterId, n = 1) {
   if (!(n > 0)) return;
   s.counters[k] = (s.counters[k] ?? 0) + n;
 }
-/** Takedowns in target practice: counted, with their XP */
-export function takedown(s: TycoonSave, kind: 'dummy' | 'drone') {
+/** Takedowns in target practice: counted, with their XP; `hand`, with his fists (docs/inventory-plan.md Phase 2) */
+export function takedown(s: TycoonSave, kind: 'dummy' | 'drone', hand = false) {
   const k = kind === 'dummy' ? 'dummies' : 'drones';
   count(s, k, 1);
+  if (hand && kind === 'dummy') count(s, 'fistDowns', 1);
   return addXp(s, XP[kind]);
 }
 
 export type BuyResult = { ok: true; dorras: number } | { ok: false; why: 'money' | 'level' | 'owned' | 'max' | 'place' | 'stock' };
 /** Pay for something (a level is checked first, then the money) */
-function pay(s: TycoonSave, price: number, need: number, entry: Entry): BuyResult {
+export function pay(s: TycoonSave, price: number, need: number, entry: Entry): BuyResult {
+  // Free play (freeplay.ts): nothing costs anything and no level is needed
+  if (FREE_PLAY) return { ok: true, dorras: 0 };
   if (level(s) < need) return { ok: false, why: 'level' };
   if (s.dorras < price) return { ok: false, why: 'money' };
   s.dorras -= price;

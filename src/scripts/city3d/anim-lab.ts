@@ -45,6 +45,7 @@ import { NB } from './mocap';
 import { GAITS, newMove, startSlide, stepMove, stepSlide, type MoveState, type Slide, STAIRS, climbAhead } from './movesim';
 import { slidePose } from './poses';
 import { emotePose, emoteSeconds, emoteUpper, type EmoteId } from './emotes';
+import { NO_BRAWL, createStreetFists, type BrawlInput } from './brawl';
 import { overAhead, overAt, overPose, type Over } from './vault';
 import { CONTACT, applyContact, createContact } from './contact';
 import type { Box } from './solids';
@@ -58,7 +59,7 @@ import { createPost } from './post';
 const SCALE = 0.85;
 /** One tile in centimetres, for the readouts */
 const CM = 180;
-type Prog = 'manual' | 'runstop' | 'turnback' | 'weave' | 'circle' | 'startstop' | 'startback' | 'gaits' | 'idle' | 'jumps' | 'standjump' | 'hops' | 'strafe' | 'aimturn' | 'peek' | 'crouch' | 'slide' | 'over' | 'stairs' | 'contact' | 'emotes' | 'reel';
+type Prog = 'manual' | 'runstop' | 'turnback' | 'weave' | 'circle' | 'startstop' | 'startback' | 'gaits' | 'idle' | 'jumps' | 'standjump' | 'hops' | 'strafe' | 'aimturn' | 'peek' | 'crouch' | 'slide' | 'over' | 'stairs' | 'contact' | 'emotes' | 'brawl' | 'reel';
 type Gait = 'walk' | 'run' | 'sprint';
 type Cam = 'side' | 'front' | 'back' | 'over' | 'free';
 type Floor = 'flat' | 'kerbs' | 'stairs' | 'ledge' | 'walls' | 'contact';
@@ -155,6 +156,7 @@ const PROGS: [Prog, string][] = [
   ['stairs', 'Stairs'],
   ['contact', 'Contact'],
   ['emotes', 'Emotes'],
+  ['brawl', 'Brawl'],
   ['idle', 'Stand'],
   ['reel', 'Reel'],
   ['manual', 'By hand'],
@@ -171,6 +173,27 @@ function emoteAt(t: number): { id: EmoteId; t: number } | null {
     if (u < 0) return null;
   }
   return null;
+}
+/**
+ * The Brawl program (fists on the street, brawl.ts): standing, a jab, cross and hook chained, a front kick, then
+ * walking on, two punches over the walk, stopping, a dodge, and the block held, the guard dropping at the end
+ */
+const BRAWL_CYCLE = 14;
+const BRAWL_PRESSES: [number, 'punch' | 'kick' | 'dodge'][] = [
+  [1.0, 'punch'],
+  [1.35, 'punch'],
+  [1.75, 'punch'],
+  [3.0, 'kick'],
+  [5.2, 'punch'],
+  [5.7, 'punch'],
+  [7.8, 'dodge'],
+];
+function brawlOf(p: Prog, t: number, dt: number): BrawlInput {
+  if (p !== 'brawl') return NO_BRAWL;
+  const u = t % BRAWL_CYCLE;
+  const inp = { ...NO_BRAWL, block: u > 8.8 && u < 10 };
+  for (const [at, kind] of BRAWL_PRESSES) if (u >= at && u - dt < at) inp[kind] = true;
+  return inp;
 }
 /** The reel (the revamp's Phase 1): every program in turn, for a recording in one take; a program and how long it plays */
 const REEL: [Prog, number][] = [
@@ -193,6 +216,7 @@ const REEL: [Prog, number][] = [
   ['stairs', 12],
   ['contact', 20],
   ['emotes', EMOTE_CYCLE],
+  ['brawl', BRAWL_CYCLE],
   ['idle', 14],
 ];
 const REEL_LENGTH = REEL.reduce((n, [, s]) => n + s, 0);
@@ -268,6 +292,11 @@ function program(p: Prog, t: number, speed: number): [number, number] {
     // Up and down the stairs floor's flights at a walk (the stairs takes climbing)
     case 'stairs':
       return [0, GAITS.walk];
+    // Fists (brawl.ts): standing for the chain and the kick, a walk on with two punches over it, standing again
+    case 'brawl': {
+      const u = cycle(BRAWL_CYCLE);
+      return u > 4.5 && u < 7 ? [0, GAITS.walk] : [0, 0];
+    }
     // The contact floor: a walk along the side wall, a run through the gap, a sprint into the wall across, up to
     // it at a walk and a stand at it, a run back, a walk up to the rail and a stand facing it
     case 'contact': {
@@ -320,7 +349,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       <div class="anim-lab-row" data-toggles></div>
       <dl class="anim-lab-read" data-read></dl>
       <dl class="anim-lab-score" data-score></dl>
-      <p class="anim-lab-hint">By hand: W A S D, Shift sprints, Caps Lock walks, Space jumps, Q / E peek, C crouches (slides sprinting; armed and aiming, he faces +z). P pauses, . steps.</p>
+      <p class="anim-lab-hint">By hand: W A S D, Shift sprints, Caps Lock walks, Space jumps, Q / E peek, C crouches (slides sprinting; armed and aiming, he faces +z), J punches, K kicks, L (held) blocks. P pauses, . steps.</p>
     </div>`;
   root.append(ui);
   const canvas = ui.querySelector<HTMLCanvasElement>('canvas')!;
@@ -606,6 +635,11 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   /** An upper-body emote over the capture's legs (the upper mask), and the dance in place of the capture */
   let emoteAmt = 0;
   let danceAmt = 0;
+  /** Fists (brawl.ts): the guard's share of the upper body, a kick's or the dodge's of all of him; J punches, K kicks, L blocks by hand */
+  const fists = createStreetFists('street');
+  let guardAmt = 0;
+  let wholeAmt = 0;
+  let fistPress = { punch: false, kick: false };
   const walls = wallBoxes();
   // The contact layer (contact.ts) on the pose, from the contact floor's walls and rail
   const contact = createContact();
@@ -620,6 +654,8 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       else if (e.code === 'Period') (paused = true), (stepOnce = true);
       else if (e.code === 'CapsLock') walkLock = !walkLock;
       else if (e.code === 'KeyC' && !e.repeat) crouchPress = true;
+      else if (e.code === 'KeyJ' && !e.repeat) fistPress.punch = true;
+      else if (e.code === 'KeyK' && !e.repeat) fistPress.kick = true;
       else if (e.code === 'Escape') close();
       else if (e.code === 'Space' && !e.repeat) {
         jumpPress = true;
@@ -728,6 +764,12 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
         }
       }
     }
+    // Fists: the program's presses, or J / K / L by hand; a kick or the dodge stands him for it
+    const fin: BrawlInput = p === 'manual' ? { ...NO_BRAWL, ...fistPress, block: keys.has('KeyL'), sprinting: keys.has('ShiftLeft') || keys.has('ShiftRight') } : brawlOf(p, pt, dt);
+    fistPress = { punch: false, kick: false };
+    const fistStep = p === 'brawl' || p === 'manual' ? fists.brawl.step(dt, x, z, move.face, fin) : null;
+    if (!fistStep && (fists.brawl.up || fists.brawl.move)) fists.brawl.cancel();
+    if (fists.brawl.rooted) gx = gz = 0;
     // (aiming: facing where the program aims, or +z by hand with a gun up)
     const faceGoal = AIMS.includes(p) ? aimOf(p, pt) : p === 'manual' && gun && aimOn ? 0 : undefined;
     // Crouch and slide (walk.ts's way: C sprinting slides, else crouches or stands)
@@ -795,6 +837,11 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       x += move.vx * dt;
       z += move.vz * dt;
     }
+    // (what the fists' moves move him themselves: a strike's step in, the dodge's slide)
+    if (fistStep) {
+      x += fistStep.dx;
+      z += fistStep.dz;
+    }
     const j = p === 'manual' ? { press: jumpPress, hold: keys.has('Space') } : jumpOf(p, pt, dt);
     jumpHeld = j.hold;
     if (over) {
@@ -841,12 +888,18 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       emoteAmt = THREE.MathUtils.clamp(emoteAmt + (em && emoteUpper(em.id) ? dt / 0.15 : -dt / 0.15), 0, 1);
       danceAmt = THREE.MathUtils.clamp(danceAmt + (em && !emoteUpper(em.id) ? dt / 0.15 : -dt / 0.25), 0, 1);
       if (em) emotePose(hero.pose, em.id, em.t);
+      // Fists (brawl.ts), as walk.ts lays them: the guard, the punches and the block over the capture's walk (the
+      // upper mask), a kick and the dodge the whole body, keyed (the capture stepping aside)
+      guardAmt += ((fists.brawl.up ? 1 : 0) - guardAmt) * (1 - Math.exp(-(fists.brawl.up ? 14 : 6) * dt));
+      wholeAmt += ((fists.brawl.rooted ? 1 : 0) - wholeAmt) * (1 - Math.exp(-(fists.brawl.rooted ? 22 : 10) * dt));
+      fists.lay(hero.pose, guardAmt, wholeAmt);
       slidePose(hero.pose, slideAmt);
       const ov = over?.o ?? overLast;
       if (ov && overAmt > 0.01) overPose(hero.pose, ov, over ? Math.min(1, over.t / over.o.dur) : 1, overAmt, x, y, z, anim.face, SCALE);
       hero.update();
-      const capW = 1 - Math.max(slideAmt, overAmt, danceAmt * danceAmt * (3 - 2 * danceAmt));
-      const upW = emoteAmt * emoteAmt * (3 - 2 * emoteAmt);
+      const capW = 1 - Math.max(slideAmt, overAmt, danceAmt * danceAmt * (3 - 2 * danceAmt), wholeAmt * wholeAmt * (3 - 2 * wholeAmt));
+      const upA = Math.max(emoteAmt, guardAmt);
+      const upW = upA * upA * (3 - 2 * upA);
       applyTo(hero.rig, contacting ? contactRot : anim.rot, anim.hips, capW, upW);
       if (hero.held?.visible) addCarry(hero.rig, capW * (1 - upW));
       const gz = gaze.update({ dt, x, y: y + 1.1 * SCALE, z, face: anim.face, ahead: move.face, speed: v, interests: [] });
@@ -914,6 +967,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       ...(reel ? ([['Reel', `${reel.label} · ${reel.t.toFixed(1)} s (${(clock % REEL_LENGTH).toFixed(0)} of ${REEL_LENGTH} s)`]] as [string, string][]) : []),
       ...(compare ? ([['Beside', cam === 'back' ? 'new right · old left' : cam === 'free' ? 'the old walk is the other one' : 'new left · old right']] as [string, string][]) : []),
       ...((p0) => (p0 ? ([['Emote', `${p0.id} · ${p0.t.toFixed(1)} s${emoteUpper(p0.id) ? ' · upper body over the capture' : ' · the whole body, keyed'}`]] as [string, string][]) : []))((reel ? reel.prog : prog) === 'emotes' ? emoteAt(reel ? reel.t : clock) : null),
+      ...(fists.brawl.up ? ([['Fists', `${fists.brawl.clip().id} @ ${fists.brawl.clip().frame.toFixed(0)} · ${fists.brawl.rooted ? 'the whole body, keyed' : 'upper body over the capture'} · stamina ${(fists.brawl.stamina * 100).toFixed(0)}%`]] as [string, string][]) : []),
       ['Speed', `${v.toFixed(2)} tiles/s · ${(v * 1.8).toFixed(1)} m/s`],
       ['Clip', `${dbg.clip} @ ${dbg.frame.toFixed(1)}`],
       ['Rate', dbg.rate.toFixed(2)],

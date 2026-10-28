@@ -46,6 +46,9 @@ export const MOVES: Record<MoveId, MoveSpec> = {
   dodge: { id: 'dodge', name: 'Dodge', kind: 'dodge', limb: 'legL', startup: 4, active: 10, recovery: 8, reach: 0, arc: 0, damage: 0, stun: 0, knockback: 0, stamina: 16, lunge: 0, heavy: false, knockdown: false },
 };
 
+/** How high a move strikes over the fighter's feet (tiles): a front kick at the body, the roundhouse higher, the uppercut under the chin, a punch at the head */
+export const strikeHeight = (m: MoveSpec) => (m.kind === 'kick' ? (m.id === 'roundhouse' ? 0.95 : 0.7) : m.id === 'uppercut' ? 1.0 : 1.05);
+
 export type StyleId = 'brawler' | 'kickboxer' | 'street';
 
 /** The styles: which moves a fighter has (bought at the ring in Phase 3; the Brawler is everyone's) */
