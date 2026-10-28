@@ -2,7 +2,7 @@
 // the garage's mods (catalog.ts, tycoon.ts) making a car faster through tune().
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DRIFT, GEARS, RIVER_WALLS, riverWallsNear, SIGNAL_HOLD, SIGNAL_SPEED, carLights, circles, gearOf, newCar, newSignal, skidding, slipOf, stepCar, tune, type CarState, type DriveInput, type DriveTune, type DriveWorld } from '../src/scripts/city3d/drive-sim';
+import { DRIFT, GEARS, RIVER_WALLS, riverWallsNear, SIGNAL_HOLD, SIGNAL_SPEED, carLights, circles, gearOf, motorOf, newCar, newSignal, skidding, slipOf, stepCar, tune, type CarState, type DriveInput, type DriveTune, type DriveWorld } from '../src/scripts/city3d/drive-sim';
 import { BRIDGED_NS, EXT, NS_ROADS, RIVER, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
 import { topsAt } from '../src/scripts/city3d/river';
 import { CARGO, DRIVE, FEEL, PLAYER_CARS, type PlayerCar } from '../src/scripts/city3d/mycar';
@@ -244,6 +244,20 @@ test('the gearbox: N, R, then four gears up the speed range, the revs dropping a
   }
   assert.equal(shifts, GEARS.length);
   assert.equal(gearOf(T.top, T.top).gear, 4);
+});
+
+test('an electric car has one gear: N, R and D, its motor\'s revs climbing with the speed, never dropping', () => {
+  assert.equal(motorOf(0, 10).gear, 'N');
+  assert.equal(motorOf(0, 10, 0.5).gear, 'D');
+  assert.equal(motorOf(-1, 10).gear, 'R');
+  let last = -1;
+  for (let v = 0.3; v <= 10; v += 0.1) {
+    const m = motorOf(v, 10, 1);
+    assert.equal(m.gear, 'D');
+    assert.ok(m.revs >= last && m.revs <= 1, `${v}`);
+    last = m.revs;
+  }
+  assert.ok(Math.abs(motorOf(10, 10).revs - 1) < 1e-9);
 });
 
 test('skidding: a handbrake slide or a real sideways slip, never a clean drive', () => {

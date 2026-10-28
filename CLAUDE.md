@@ -1235,7 +1235,10 @@ it and has been retired completely. Build only on what's here.
   waits for it).
 - **Cars** are `src/scripts/city3d/cars.ts`: real-proportion cartoon models
   (City Hatch, Cruiser, Street GT coupe, Hauler pickup, Box Van, City Bus,
-  and Uptown's Midnight Exec, a long black saloon in the traffic only;
+  Street Thunder, Big Rover, Hyper Comet, the Boulevardier classic, the Mud
+  Buster off-roader and the Glow Pod electric hatch (the last three yours
+  only, not in the traffic), and Uptown's Midnight Exec, a long black
+  saloon in the traffic only;
   made-up names, never a real make or badge), each a bevelled extruded
   body and cabin with blacked-out window frames and glass, light clusters
   (lamp shape `lamp`) with bezels and indicators, a grille, door seams and
@@ -1304,14 +1307,21 @@ it and has been retired completely. Build only on what's here.
   side is the quick swap with a fade (`QUICK_FADE`), reduced motion the
   quick swap without; at home the turntable is stood on to get in
   (`isTurntable()`, `DISC`). Keep new car detail in that chunk: the
-  boot is under its budget (647.6 of 670 KB once Build mode went, the inventory plan's Phase 3 merged: Phase 3 brought carinside.ts into it, Phase 5 the look's ids). Phase 4 (handling with
+  boot is under its budget (649.0 of 670 KB with Build mode gone and the inventory plan's Phase 3 merged: Phase 3 brought carinside.ts into it, Phase 5 the look's ids, Phase 6 three specs). Phase 4 (handling with
   depth: each model's feel and drifting) is built, in the sim (drive-sim.ts, mycar.ts `FEEL`; see Driving your
   car below). Phase 5 (the garage's customisation, all free) is built: `CarLook` in mycar.ts (the ids,
   `cleanLook()`, carried by `cleanCar()`), carlook.ts (DOM-free, tested in `tests/carlook.test.ts`: names,
   colours, `kitFit()`, `doorPanel()`, `STOCK_PARTS` / `bareOf()`: a kit part over the model's own takes it off
   through `build(id, wheels, bare)`), drawn by carstyle.ts in the fine-detail chunk (`dress()` from `fitOut()`:
   rims, the kit on the body, the livery as one material on every painted piece with a `liveTex()` for the sides,
-  the underglow dark by day), the garage menu's tabs (Model, Paint, Wheels, Kit, Livery, Glow).
+  the underglow dark by day), the garage menu's tabs (Model, Paint, Wheels, Kit, Livery, Glow). Phase 6 (three
+  more cars) is built: the **Boulevardier** (`classic`: chrome bumpers and overriders, tail fins, chrome hubcaps; a
+  soft, wandering rear-drive feel), the **Mud Buster** (`offroad`: lifted on big tyres, roof lights and rack, a
+  snorkel, a steel bumper with a winch, rock sliders (the kit's skirts take their place), the spare on the
+  tailgate; heavy and sure) and the **Glow Pod** (`ev`: the grille closed over, light bars nose and tail, a glass
+  roof, aero discs, no exhaust; `DRIVE.electric`: one gear, `motorOf()` in drive-sim.ts, and the engine's
+  `whine` voice in sound.ts), each with its own spec, interior, springs, feel and cargo, bought at the garage
+  (`CAR_CATALOG`: 22,000 at level 5, 30,000 at 7, 40,000 at 8); yours only, never in the traffic's `MIX`.
 - **Live settings** (the owner's call): the owner switches parts of the
   city from outside the code, in a private command center, through the
   backend's public config (`LIVE_URL`, public settings only).
@@ -2937,8 +2947,9 @@ it and has been retired completely. Build only on what's here.
 - Your car (`mycar.ts`, DOM-free): `{ model, paint }`, cleaned by
   `cleanCar()`, saved in the browser as `degen-city-car-v1`. `DRIVE` holds
   each model's garage copy and its 0-1 speed / pick-up / grip (for the
-  handling), `CARGO` its boot. Eight models: the five starters are free,
-  the Street Thunder, Big Rover and Hyper Comet are bought with Dorras at
+  handling), `CARGO` its boot. Eleven models: the five starters are free,
+  the Street Thunder, Big Rover, Hyper Comet, Boulevardier, Mud Buster and
+  Glow Pod are bought with Dorras at
   the garage (`CAR_CATALOG`), and every car is tuned there (`CAR_MODS`:
   engine, turbo, tyres, roof rack, three levels each; `carStatsOf()` feeds
   the handling and the boot). Only for the city: never tied to the store or

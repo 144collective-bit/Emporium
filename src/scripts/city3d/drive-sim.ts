@@ -372,6 +372,16 @@ export function gearOf(speed: number, top: number, throttle = 0): { gear: 'R' | 
   return { gear: (g + 1) as 1 | 2 | 3 | 4, revs: Math.min(1, 0.25 + 0.75 * ((f - lo) / (hi - lo))) };
 }
 
+/**
+ * An electric car's one gear (vehicle plan Phase 6, the Glow Pod): 'R', 'N' as gearOf, else 'D'; its motor's revs
+ * climb smoothly with the speed, no shifts
+ */
+export function motorOf(speed: number, top: number, throttle = 0): { gear: 'R' | 'N' | 'D'; revs: number } {
+  if (speed < -0.2) return { gear: 'R', revs: Math.min(1, -speed / 3.5) };
+  if (Math.abs(speed) < 0.2 && Math.abs(throttle) < 0.05) return { gear: 'N', revs: 0 };
+  return { gear: 'D', revs: Math.min(1, Math.max(0, speed / top)) };
+}
+
 /** A tyre leaves a mark past this much sideways speed (tiles/s) */
 export const SKID_SLIP = 1.2;
 

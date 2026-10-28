@@ -246,7 +246,7 @@ export interface WalkDeps {
   /** The garage on the south bank (its turntable shows the car being picked) */
   garage: Garage;
   /** Your car's engine sound: revs 0..1, or negative for off */
-  engine(revs: number): void;
+  engine(revs: number, whine?: boolean): void;
   /** Your car's tyres sliding, 0..1 (sound.ts) */
   tyres(level: number): void;
   /** Your business's places on foot (your stall, your units): where to stand, and the prompt's label */

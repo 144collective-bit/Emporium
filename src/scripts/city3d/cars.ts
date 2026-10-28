@@ -201,6 +201,65 @@ const EXTRAS: Partial<Record<CarId, (p: Parts, s: CarSpec) => void>> = {
     for (const z of [-1, 1]) p.detail(box(0.12, 0.015, 0.1, half - 0.05, 0.22, z * (s.W / 2 + 0.04)), BLACKOUT);
     if (p.has('diffuser')) for (const z of [-0.3, -0.1, 0.1, 0.3]) p.detail(box(0.2, 0.08, 0.015, -half, 0.13, z * s.W * 0.9), BLACKOUT);
   },
+  // Vehicle plan Phase 6
+  classic(p, s) {
+    const half = s.L / 2;
+    // Chrome bumpers under the plates with overriders, a chrome spear down each side, a bonnet ornament
+    for (const end of [-1, 1]) {
+      p.detail(box(0.08, 0.05, s.W + 0.06, end * (half + 0.045), s.clr + 0.022, 0), CHROME);
+      for (const z of [-0.3, 0.3]) p.detail(box(0.05, 0.12, 0.05, end * (half + 0.07), s.clr + 0.07, z), CHROME);
+    }
+    // (between the arches)
+    const [ra, fa] = s.axles;
+    const arch = s.r + 0.1;
+    for (const z of [-1, 1]) p.detail(box(fa - ra - arch * 2, 0.02, 0.012, (ra + fa) / 2, 0.42, z * (s.W / 2 + 0.012)), CHROME);
+    p.detail(box(0.1, 0.035, 0.025, half - 0.12, topAt(s, half - 0.12) + 0.02, 0), CHROME);
+    // Tail fins over the rear wings, a round lamp in each tip
+    for (const z of [-1, 1]) {
+      const fin = new THREE.Shape([new THREE.Vector2(-half + 0.02, 0.57), new THREE.Vector2(-half + 0.55, 0.57), new THREE.Vector2(-half + 0.04, 0.75)]);
+      p.paint(new THREE.ExtrudeGeometry(fin, { depth: 0.05, bevelEnabled: false }).translate(0, 0, z * (s.W / 2 - 0.04) - 0.025));
+      p.detail(new THREE.CylinderGeometry(0.025, 0.025, 0.02, 10).rotateZ(Math.PI / 2).translate(-half + 0.02, 0.69, z * (s.W / 2 - 0.04)), TAIL);
+    }
+  },
+  offroad(p, s) {
+    const half = s.L / 2;
+    // A light bar on the roof's front edge, four round lamps; a roof rack with a can strapped on
+    p.detail(box(0.08, 0.06, s.W * 0.8, 0.3, 1.45, 0), TRIM);
+    for (const k of [-1.5, -0.5, 0.5, 1.5]) p.detail(new THREE.CylinderGeometry(0.035, 0.035, 0.03, 10).rotateZ(Math.PI / 2).translate(0.35, 1.45, k * 0.17), HEAD);
+    for (const z of [-1, 1]) p.detail(box(1.2, 0.03, 0.03, -0.42, 1.43, z * s.W * 0.38), TRIM);
+    for (const x of [-0.95, -0.42, 0.1]) p.detail(box(0.03, 0.03, s.W * 0.8, x, 1.43, 0), TRIM);
+    p.detail(box(0.22, 0.14, 0.12, -0.8, 1.52, 0.2), '#c43a2f');
+    // The snorkel up the right wing beside the bonnet, its intake facing forward
+    p.detail(new THREE.CylinderGeometry(0.03, 0.03, 0.62, 8).translate(0.95, 1.0, s.W / 2 + 0.04), TRIM);
+    p.detail(box(0.12, 0.07, 0.07, 0.99, 1.33, s.W / 2 + 0.04), TRIM);
+    // A steel bumper with a winch and two uprights, flares over every wheel, mud flaps
+    p.detail(box(0.1, 0.12, s.W + 0.04, half + 0.07, s.clr + 0.12, 0), TRIM);
+    p.detail(box(0.08, 0.08, 0.26, half + 0.15, s.clr + 0.12, 0), '#3e3a4c');
+    for (const z of [-0.22, 0.22]) p.detail(box(0.05, 0.36, 0.05, half + 0.1, s.clr + 0.32, z), TRIM);
+    p.detail(box(0.05, 0.05, s.W * 0.66, half + 0.1, s.clr + 0.48, 0), TRIM);
+    for (const ax of s.axles) for (const z of [-1, 1]) p.detail(flare(s, ax, z), TRIM);
+    for (const z of [-1, 1]) p.detail(box(0.02, 0.2, 0.2, s.axles[0] - s.r - 0.09, s.clr - 0.06, z * (s.W / 2 - 0.1)), TRIM);
+    // Rock sliders under the doors (the kit's skirts take their place)
+    if (p.has('skirts')) for (const z of [-1, 1]) p.detail(box(1.0, 0.05, 0.08, 0, s.clr - 0.02, z * (s.W / 2 + 0.02)), TRIM);
+    // The spare wheel on the tailgate
+    p.details.push(
+      wheelGeometry(s)
+        .rotateY(-Math.PI / 2)
+        .translate(-half - s.tw / 2 - 0.03, 0.62, 0)
+    );
+  },
+  ev(p, s) {
+    const half = s.L / 2;
+    // The grille closed over in the paint, a light strip across the nose and a light bar across the tail
+    p.paint(box(0.03, 0.17, s.W * 0.47, half + 0.012, 0.335, 0));
+    p.detail(box(0.02, 0.015, s.W * 0.38, half + 0.012, 0.43, 0), '#c8fbff');
+    p.detail(box(0.02, 0.02, s.W * 0.86, -half - 0.01, 0.48, 0), '#ff2b4a');
+    // A glass roof, and the charging flap on the left front wing
+    const [, rr, fr] = s.cabin;
+    lay(p, [[rr[0] + 0.08, rr[1] + 0.002], [fr[0] - 0.08, fr[1] - 0.002]], 0, s.W * s.cabinW * 0.7, '#24334a');
+    p.detail(box(0.07, 0.06, 0.008, 0.82, topAt(s, 0.82) - 0.09, -(s.W / 2 + 0.004)), TRIM);
+    p.detail(box(0.02, 0.02, 0.008, 0.82, topAt(s, 0.82) - 0.09, -(s.W / 2 + 0.009)), '#00eaff');
+  },
   exec(p, s) {
     const half = s.L / 2;
     // Chrome along the window line and the sills, a tall chrome grille, a little ornament on the bonnet

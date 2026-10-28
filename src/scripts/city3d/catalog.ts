@@ -141,6 +141,10 @@ export const CAR_CATALOG: Record<PlayerCar, CarEntry> = {
   muscle: { price: 18000, level: 4, pitch: 'Big block, loud pipes, built for the straights.' },
   suv: { price: 26000, level: 6, pitch: 'Tall, tough and roomy: hauls a lot and shrugs off kerbs.' },
   super: { price: 64000, level: 10, pitch: 'The fastest thing in the city. Nothing else comes close.' },
+  // Vehicle plan Phase 6 (docs/vehicle-plan.md, "Decided")
+  classic: { price: 22000, level: 5, pitch: 'A rolling piece of chrome. Turns heads on every avenue.' },
+  offroad: { price: 30000, level: 7, pitch: 'Built for the rough stuff, happy anywhere.' },
+  ev: { price: 40000, level: 8, pitch: 'Instant pick-up, no engine note: just a whine and a grin.' },
 };
 export const CAR_IDS = Object.keys(CAR_CATALOG) as PlayerCar[];
 export const STARTER_CARS = CAR_IDS.filter((id) => CAR_CATALOG[id].price === 0);

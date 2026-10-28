@@ -327,4 +327,4 @@ and the Property mogul mission. The districts stay as open land
 (`DISTRICTS` in layout.ts). The save is v12: a save that owned plots gets
 back everything they cost and what was built on them when it loads
 (`plotRefund()`, booked as "Plots refunded"), with a toast once. The boot
-came down about 14 KB (647.6 of 670 KB).
+came down about 14 KB (647.6 of 670 KB; 649.0 with main's three new cars).

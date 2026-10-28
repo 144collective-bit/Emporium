@@ -5,9 +5,10 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { CARGO, CAR_PAINTS, DEFAULT_CAR, DRIVE, PLAYER_CARS, STOCK_LOOK, cleanCar, paintHex } from '../src/scripts/city3d/mycar';
 import { CAR_CATALOG, STARTER_CARS } from '../src/scripts/city3d/catalog';
+import { CARS } from '../src/scripts/city3d/carspec';
 
-test('eight player cars, the bus left out, each with 0-1 handling, cargo and copy', () => {
-  assert.deepEqual([...PLAYER_CARS], ['hatch', 'sedan', 'coupe', 'pickup', 'van', 'muscle', 'suv', 'super']);
+test('eleven player cars, the bus left out, each with 0-1 handling, cargo and copy', () => {
+  assert.deepEqual([...PLAYER_CARS], ['hatch', 'sedan', 'coupe', 'pickup', 'van', 'muscle', 'suv', 'super', 'classic', 'offroad', 'ev']);
   for (const id of PLAYER_CARS) {
     const d = DRIVE[id];
     for (const k of ['speed', 'accel', 'grip'] as const) assert.ok(d[k] >= 0 && d[k] <= 1, `${id} ${k}`);
@@ -18,12 +19,31 @@ test('eight player cars, the bus left out, each with 0-1 handling, cargo and cop
 
 test('the five starters are free and come first; the three for sale cost Dorras and need a level', () => {
   assert.deepEqual(STARTER_CARS, ['hatch', 'sedan', 'coupe', 'pickup', 'van']);
-  for (const id of ['muscle', 'suv', 'super'] as const) {
+  for (const id of ['muscle', 'suv', 'super', 'classic', 'offroad', 'ev'] as const) {
     assert.ok(CAR_CATALOG[id].price > 0 && CAR_CATALOG[id].level > 1, id);
     assert.ok(CAR_CATALOG[id].pitch);
   }
   // Dearer cars are faster, so there's something to save for
   assert.ok(DRIVE.super.speed > DRIVE.muscle.speed && CAR_CATALOG.super.price > CAR_CATALOG.muscle.price);
+});
+
+test('the three more (vehicle plan Phase 6): the names, prices and levels the plan settled, and only the Glow Pod electric', () => {
+  assert.deepEqual(
+    (['classic', 'offroad', 'ev'] as const).map((id) => [CARS[id].name, CAR_CATALOG[id].price, CAR_CATALOG[id].level]),
+    [
+      ['Boulevardier', 22000, 5],
+      ['Mud Buster', 30000, 7],
+      ['Glow Pod', 40000, 8],
+    ]
+  );
+  assert.deepEqual(
+    PLAYER_CARS.filter((id) => DRIVE[id].electric),
+    ['ev']
+  );
+  // Instant pick-up: the quickest off the line but for the supercar
+  assert.ok(DRIVE.ev.accel >= Math.max(...PLAYER_CARS.filter((id) => id !== 'super' && id !== 'ev').map((id) => DRIVE[id].accel)));
+  // Every model a name of its own
+  assert.equal(new Set(PLAYER_CARS.map((id) => CARS[id].name)).size, PLAYER_CARS.length);
 });
 
 test('twelve paints, each its own id and colour', () => {

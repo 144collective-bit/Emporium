@@ -52,6 +52,10 @@ export const SPRINGS: Record<CarId, SpringTune> = {
   suv: T(1.3, 0.42, 0.11, 0.018, 0.008, 0.09),
   super: T(2.4, 0.65, 0.045, 0.007, 0.004, 0.06),
   exec: T(1.2, 0.55, 0.08, 0.015, 0.006),
+  // The classic soft and floaty, the off-roader long in travel, the electric hatch tight and low
+  classic: T(1.05, 0.38, 0.09, 0.019, 0.009, 0.09),
+  offroad: T(1.3, 0.45, 0.13, 0.016, 0.007, 0.09),
+  ev: T(1.9, 0.6, 0.06, 0.01, 0.006),
 };
 
 /** Where the wheels are under the body (cars.ts `wheelSpots()`'s order: each axle back to front, right then left) */

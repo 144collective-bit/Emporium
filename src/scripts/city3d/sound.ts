@@ -51,7 +51,7 @@ export function createSound() {
   const BOOM_BPM = 88;
   const CLUB_BPM = 124;
   let on = false;
-  let engine: { g: GainNode; lp: BiquadFilterNode; a: OscillatorNode; b: OscillatorNode } | null = null;
+  let engine: { g: GainNode; lp: BiquadFilterNode; a: OscillatorNode; b: OscillatorNode; whine: boolean } | null = null;
   /** Your car's tyres sliding (city life plan, Phase 2): a squeal and a hiss, by how hard they slide */
   let tyres: { g: GainNode; bp: BiquadFilterNode; sq: OscillatorNode; gSq: GainNode } | null = null;
   /** Your aircraft's engine: a buzz, a hiss and a whine, beaten by a throb (the prop's blades, the rotor's thump) */
@@ -749,9 +749,10 @@ export function createSound() {
     },
     /**
      * Your car's engine, a soft cartoon hum: `revs` 0..1 sets its pitch, a negative value
-     * switches it off. Made the first time it's needed; silent unless sound is on.
+     * switches it off; `whine` is an electric motor's voice instead (the Glow Pod: two soft tones an
+     * octave apart climbing high with the speed). Made the first time it's needed; silent unless sound is on.
      */
-    engine(revs: number) {
+    engine(revs: number, whine = false) {
       if (!ctx || !on) return;
       const t = ctx.currentTime;
       if (!engine) {
@@ -770,14 +771,20 @@ export function createSound() {
         lp.connect(g).connect(sfxBus);
         a.start();
         b.start();
-        engine = { g, lp, a, b };
+        engine = { g, lp, a, b, whine: false };
+      }
+      if (revs >= 0 && engine.whine !== whine) {
+        engine.whine = whine;
+        engine.a.type = whine ? 'sine' : 'sawtooth';
+        engine.b.type = whine ? 'triangle' : 'square';
       }
       const on2 = revs >= 0;
       const r = Math.max(0, Math.min(1, revs));
-      engine.a.frequency.setTargetAtTime(42 + r * 120, t, 0.08);
-      engine.b.frequency.setTargetAtTime(21 + r * 60, t, 0.08);
-      engine.lp.frequency.setTargetAtTime(380 + r * 1300, t, 0.1);
-      engine.g.gain.setTargetAtTime(on2 ? 0.05 + r * 0.06 : 0, t, on2 ? 0.15 : 0.25);
+      const w = engine.whine;
+      engine.a.frequency.setTargetAtTime(w ? 180 + r * 760 : 42 + r * 120, t, 0.08);
+      engine.b.frequency.setTargetAtTime(w ? 360 + r * 1520 : 21 + r * 60, t, 0.08);
+      engine.lp.frequency.setTargetAtTime(w ? 1800 + r * 2400 : 380 + r * 1300, t, 0.1);
+      engine.g.gain.setTargetAtTime(on2 ? (w ? 0.022 + r * 0.03 : 0.05 + r * 0.06) : 0, t, on2 ? 0.15 : 0.25);
     },
     /**
      * Your car's tyres sliding: `level` 0..1 how hard (0 or a negative value is silent). A hiss of
