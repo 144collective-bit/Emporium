@@ -9,6 +9,7 @@
  * Kept free of the DOM and of scene code, like the other shared data, so a
  * game server can check a car the same way later.
  */
+import type { Feel } from './drive-sim';
 /** Every car model (cars.ts draws them; here so the shared, DOM-free code can name them) */
 export type CarId = 'hatch' | 'sedan' | 'coupe' | 'pickup' | 'van' | 'bus' | 'muscle' | 'suv' | 'super' | 'exec';
 
@@ -26,6 +27,23 @@ export const DRIVE: Record<PlayerCar, { kind: string; blurb: string; speed: numb
   muscle: { kind: 'Muscle', blurb: 'A big block up front and fat tyres at the back. Fast in a straight line, lively in the corners.', speed: 0.85, accel: 0.95, grip: 0.6 },
   suv: { kind: 'SUV', blurb: 'Tall and tough with a huge boot. Shrugs off kerbs, leans in the bends.', speed: 0.65, accel: 0.55, grip: 0.75 },
   super: { kind: 'Supercar', blurb: 'Low, wide and savage. The fastest thing on the city\'s streets, and it sticks like glue.', speed: 1, accel: 1, grip: 0.95 },
+};
+
+/**
+ * Each model's feel on the road (vehicle plan Phase 4, drive-sim.ts `Feel`; the garage's three bars stay as they
+ * are): the hatch nimble, the saloon steady, the coupe darting, the pickup heavy with a tail that wanders, the van
+ * wallowing, the muscle car's tail stepping out under power, the SUV planted, the supercar gripping. The back
+ * wheels drive the coupe, the pickup, the muscle car and the supercar.
+ */
+export const FEEL: Record<PlayerCar, Feel> = {
+  hatch: { mass: 0.8, loose: 0.25, rwd: false, steerRate: 3.8, lock: 0.66 },
+  sedan: { mass: 1, loose: 0.3, rwd: false, steerRate: 3.2, lock: 0.62 },
+  coupe: { mass: 0.8, loose: 0.45, rwd: true, steerRate: 4.6, lock: 0.64 },
+  pickup: { mass: 1.4, loose: 0.5, rwd: true, steerRate: 2.6, lock: 0.58 },
+  van: { mass: 1.7, loose: 0.2, rwd: false, steerRate: 2.3, lock: 0.56 },
+  muscle: { mass: 1.2, loose: 0.85, rwd: true, steerRate: 3, lock: 0.6 },
+  suv: { mass: 1.4, loose: 0.2, rwd: false, steerRate: 2.8, lock: 0.58 },
+  super: { mass: 0.9, loose: 0.2, rwd: true, steerRate: 4.2, lock: 0.62 },
 };
 
 /** How many goods each model carries in its boot or bed (more with the garage's roof rack) */

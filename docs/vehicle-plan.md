@@ -310,19 +310,46 @@ Asked before planning (2026-10-28):
   changing from walk to drive (already in each snapshot row's flags) plays
   this move on their figure.
 
-### Phase 4: handling with depth
+### Phase 4: handling with depth (built)
 
-- **Personalities** (`DRIVE` grows from three numbers to a handful:
-  weight, body roll, suspension softness, rear-end looseness, steering
-  speed): the van wallows and leans, the coupe darts, the pickup bounces
-  over kerbs, the muscle car's tail steps out under power, the supercar
-  grips. The garage's stat bars stay simple.
-- **Drifting:** a held slide, from the handbrake or a power-on turn in the
-  rear-drive cars, that you keep going with counter-steer and throttle;
-  the skid marks and tyre screech follow it; the tyres mod helps hold it.
-- Still arcade: no stalls, no spins you can't get out of.
-- **Done when:** each car feels different in a blind test, and the tests
-  hold drifts that recover and nothing that spins for ever.
+- **Each model's feel** is `FEEL` in mycar.ts (drive-sim.ts `Feel`, put
+  on the tune by `tune(stats, size, feel)`; the garage's three bars stay
+  as they are): `mass` (how quickly the nose answers the wheel), `loose`
+  (how readily the tail steps out under power), `rwd` (the back wheels
+  drive: the coupe, the pickup, the muscle car and the supercar),
+  `steerRate` and `lock`. The hatch is nimble, the saloon steady, the
+  coupe darts, the pickup is heavy with a tail that wanders, the van
+  wallows, the muscle car's tail steps out under power, the SUV is
+  planted, the supercar grips. The springs carry the rest of it
+  (suspension.ts `SPRINGS`: the van and the SUV lean most, the pickup
+  bounces, zeta 0.34).
+- **Drifting** (`CarState.drift`, `DRIFT`): the handbrake at a roll, or
+  full power through a turn in a rear-drive car (as much as its tail is
+  loose: the muscle car about 30 degrees, the supercar hardly at all),
+  breaks the tail away; the grip drops (`DRIFT.grip`), the nose comes
+  round quicker (`turn`) and the slide costs some speed (`scrub`).
+  Throttle keeps it going while the tail is out, the wheel into the turn
+  holds the angle, counter-steer brings the nose back (about half a
+  second), lifting off and straightening gives the grip back. The slide
+  never goes past `DRIFT.most` (60 degrees) from the nose (`slipOf()`),
+  so nothing spins for ever. The skid marks and the screech follow it
+  (`skidding()`, as before). The handbrake slows it less than it did
+  (3.5 tiles/s², was 5.5), so a drift keeps its speed. The tyres mod helps
+  hold one: more grip, less of a runaway.
+- **Tested** (`tests/drive.test.ts`): no two models drive alike (0-50,
+  turn-in, the turning circle and the slide under power: every pair apart
+  by a tenth or more somewhere), the van slower to turn in and wider than
+  the coupe; full power steps the rear-drive cars' tails out as loose as
+  each is and the front-drive ones grip; a handbrake drift for every model
+  breaks away, holds with throttle and the wheel into the turn,
+  straightens with counter-steer within a second and recovers on lifting
+  off; the tyres mod makes it less of a runaway; and 40 seconds of random
+  inputs for every model never pass the slide's most and settle with the
+  wheel straight.
+- **Checked** in the city: away from the garage, a handbrake turn round
+  and round on the south bank avenue, skid marks in arcs, back to a
+  straight line on letting go. The blind test is the owner's.
+- The boot: 666.08 KB of 670.
 
 ### Phase 5: the garage's customisation (all free)
 

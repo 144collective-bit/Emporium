@@ -2,10 +2,11 @@
 // the garage's mods (catalog.ts, tycoon.ts) making a car faster through tune().
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { GEARS, RIVER_WALLS, riverWallsNear, SIGNAL_HOLD, SIGNAL_SPEED, carLights, circles, gearOf, newCar, newSignal, skidding, stepCar, tune, type CarState, type DriveInput, type DriveWorld } from '../src/scripts/city3d/drive-sim';
+import { DRIFT, GEARS, RIVER_WALLS, riverWallsNear, SIGNAL_HOLD, SIGNAL_SPEED, carLights, circles, gearOf, newCar, newSignal, skidding, slipOf, stepCar, tune, type CarState, type DriveInput, type DriveTune, type DriveWorld } from '../src/scripts/city3d/drive-sim';
 import { BRIDGED_NS, EXT, NS_ROADS, RIVER, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
 import { topsAt } from '../src/scripts/city3d/river';
-import { CARGO, DRIVE } from '../src/scripts/city3d/mycar';
+import { CARGO, DRIVE, FEEL, PLAYER_CARS, type PlayerCar } from '../src/scripts/city3d/mycar';
+import { CARS } from '../src/scripts/city3d/carspec';
 import { NO_CAR_MODS, carStats } from '../src/scripts/city3d/catalog';
 import { carStatsOf, cleanSave, modCar } from '../src/scripts/city3d/tycoon';
 import type { Box } from '../src/scripts/city3d/solids';
@@ -262,4 +263,116 @@ test('skidding: a handbrake slide or a real sideways slip, never a clean drive',
   slow.speed = 1;
   slow.vx = 1;
   assert.equal(skidding(slow, { throttle: 0, steer: 0, handbrake: true }), 0);
+});
+
+/* ---------- Handling with depth (vehicle plan Phase 4): each model's feel, drifting ---------- */
+
+const tuneOf = (id: PlayerCar, stats: { speed: number; accel: number; grip: number } = DRIVE[id]) => {
+  const s = CARS[id];
+  return tune(stats, { L: s.L, W: s.W, wheelbase: s.axles[1] - s.axles[0] }, FEEL[id]);
+};
+const rolling = (v: number) => {
+  const c = newCar(0, 0, 0);
+  c.speed = c.vx = v;
+  return c;
+};
+function drive(c: CarState, t: DriveTune, inp: DriveInput, seconds: number, each?: (c: CarState, time: number) => void) {
+  for (let time = 0; time < seconds; time += DT) {
+    stepCar(c, inp, t, DT, OPEN, HUGE);
+    each?.(c, time);
+  }
+}
+/** A model's numbers on the road: 0-50 km/h, turn-in (to 63% of its turn), the turning circle at 8, full power through a turn's slide */
+function fingerprint(id: PlayerCar) {
+  const t = tuneOf(id);
+  let t50 = 0;
+  drive(newCar(0, 0, 0), t, GAS, 10, (c, time) => void (!t50 && c.speed > 7.7 && (t50 = time)));
+  const settled = rolling(8);
+  drive(settled, t, { throttle: 0.3, steer: -1, handbrake: false }, 2);
+  let turnIn = 0;
+  drive(rolling(8), t, { throttle: 0.3, steer: -1, handbrake: false }, 2, (c, time) => void (!turnIn && c.yawRate > settled.yawRate * 0.63 && (turnIn = time)));
+  let power = 0;
+  drive(rolling(8), t, { throttle: 1, steer: -1, handbrake: false }, 2, (c) => void (power = Math.max(power, Math.abs(slipOf(c)))));
+  return [t50, turnIn, 8 / settled.yawRate, power];
+}
+
+test('every model has its own feel: no two drive alike', () => {
+  const prints = PLAYER_CARS.map((id) => [id, fingerprint(id)] as const);
+  for (const [i, [a, pa]] of prints.entries())
+    for (const [b, pb] of prints.slice(i + 1)) {
+      const most = Math.max(...pa.map((v, k) => Math.abs(v - pb[k]) / Math.max(Math.abs(v), Math.abs(pb[k]))));
+      assert.ok(most > 0.1, `${a} and ${b} differ by ${(most * 100).toFixed(0)}% at most`);
+    }
+  // The coupe darts, the van wallows: the van answers the wheel slowest and turns widest
+  const [, coupe] = prints.find(([id]) => id === 'coupe')!;
+  const [, van] = prints.find(([id]) => id === 'van')!;
+  assert.ok(van[1] > coupe[1] * 1.5 && van[2] > coupe[2] * 1.2);
+});
+
+test('full power through a turn steps the tail out of the rear-drive cars, as much as each is loose; the front-drive ones grip', () => {
+  const muscle = fingerprint('muscle')[3];
+  assert.ok(muscle > 0.4, `the muscle car's tail steps out (${muscle.toFixed(2)})`);
+  for (const id of PLAYER_CARS) {
+    const slide = fingerprint(id)[3];
+    if (!FEEL[id].rwd) assert.ok(slide < 0.2, `${id} grips (${slide.toFixed(2)})`);
+    else if (id !== 'muscle') assert.ok(slide < muscle, `${id} is less loose than the muscle car`);
+  }
+  // The supercar grips, rear drive or not
+  assert.ok(fingerprint('super')[3] < 0.2);
+});
+
+test('a handbrake drift: held with throttle and the wheel into the turn, counter-steer straightens it, lifting off recovers', () => {
+  for (const id of PLAYER_CARS) {
+    const t = tuneOf(id);
+    const c = rolling(10);
+    drive(c, t, { throttle: 0, steer: -1, handbrake: true }, 0.6);
+    assert.ok(Math.abs(slipOf(c)) > 0.4 && c.drift > 0.9, `${id}: the handbrake breaks it away (${slipOf(c).toFixed(2)})`);
+    assert.ok(c.speed > 5, `${id}: without losing all its speed`);
+    // Held: throttle on, the wheel a little into the turn
+    const held = structuredClone(c);
+    let least = Infinity;
+    drive(held, t, { throttle: 0.8, steer: -0.4, handbrake: false }, 1.5, (q) => void (least = Math.min(least, Math.abs(slipOf(q)))));
+    assert.ok(least > 0.2, `${id}: the slide holds (${least.toFixed(2)})`);
+    // Counter-steer brings the nose back round
+    let back = -1;
+    drive(structuredClone(c), t, { throttle: 0.5, steer: 1, handbrake: false }, 3, (q, time) => void (back < 0 && Math.abs(slipOf(q)) < 0.08 && (back = time)));
+    assert.ok(back >= 0 && back < 1, `${id}: counter-steer straightens it (${back.toFixed(2)} s)`);
+    // Lift off and straighten: the grip comes back
+    const off = structuredClone(c);
+    drive(off, t, { throttle: 0, steer: 0, handbrake: false }, 2);
+    assert.ok(Math.abs(slipOf(off)) < 0.05 && off.drift < 0.05, `${id}: lifting off recovers`);
+  }
+});
+
+test('the tyres mod helps hold a drift: less of a runaway', () => {
+  const runaway = (stats: { speed: number; accel: number; grip: number }) => {
+    const t = tuneOf('muscle', stats);
+    const c = rolling(10);
+    drive(c, t, { throttle: 0, steer: -1, handbrake: true }, 0.6);
+    let most = 0;
+    drive(c, t, { throttle: 1, steer: -0.8, handbrake: false }, 1.5, (q) => void (most = Math.max(most, Math.abs(slipOf(q)))));
+    return most;
+  };
+  const stock = runaway(DRIVE.muscle);
+  const tyres = runaway(carStats(DRIVE.muscle, CARGO.muscle, { ...NO_CAR_MODS, tyres: 3 }));
+  assert.ok(tyres < stock, `${tyres.toFixed(2)} vs ${stock.toFixed(2)}`);
+});
+
+test('nothing spins for ever: the slide never passes its most, and with the wheel straight every car settles', () => {
+  let seed = 7;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  for (const id of PLAYER_CARS) {
+    const t = tuneOf(id);
+    const c = rolling(12);
+    // (well away from the river's walls and the lake's, which stepCar always has)
+    c.z = -3000;
+    let inp: DriveInput = GAS;
+    for (let time = 0; time < 40; time += DT) {
+      if (rnd() < 0.03) inp = { throttle: rnd() * 2 - 0.6, steer: rnd() * 2 - 1, handbrake: rnd() < 0.3 };
+      stepCar(c, inp, t, DT, OPEN, HUGE);
+      assert.ok(Math.abs(slipOf(c)) <= DRIFT.most + 1e-6, `${id}: the slide held at its most`);
+    }
+    drive(c, t, { throttle: 0.3, steer: 0, handbrake: false }, 4);
+    assert.ok(Math.abs(slipOf(c)) < 0.05 && Math.abs(c.yawRate) < 0.05 && c.drift < 0.01, `${id}: settled (${slipOf(c).toFixed(3)}, ${c.yawRate.toFixed(3)})`);
+  }
 });

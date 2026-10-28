@@ -9,8 +9,18 @@
  * - Speed builds and tapers to the car's top speed (its model's number plus
  *   the garage's engine mods); brake, then reverse.
  * - Steering is a bicycle model: tighter at low speed, gentler when fast.
- * - Grip decides how quickly the car's slide follows its nose (the
- *   handbrake lets it go, for a cartoon drift).
+ * - Grip decides how quickly the car's slide follows its nose.
+ * - Each model has its own feel (vehicle plan Phase 4, `Feel`: mycar.ts
+ *   `FEEL`): its weight (how quickly it answers the wheel), how loose its
+ *   tail is, whether the back wheels drive it, its steering's speed and
+ *   lock.
+ * - **Drifting** (`CarState.drift`, 0..1): a held slide. The handbrake at a
+ *   roll starts one, and so does full power through a turn in a rear-drive
+ *   car (as much as its tail is loose); throttle keeps it going while the
+ *   tail is out, steering into the turn holds the angle and counter-steer
+ *   brings the nose back; lift off and straighten and the grip comes back.
+ *   Still arcade: the slide never goes past `DRIFT.most` from the nose,
+ *   and with the wheel straight every slide recovers.
  * - Collisions are soft and safe: the car is three circles along its length;
  *   it slides along walls and bumps off other cars and people, losing speed,
  *   never hurting anyone.
@@ -34,13 +44,42 @@ export interface DriveTune {
   L: number;
   W: number;
   wheelbase: number;
+  /** The model's feel (`Feel`) */
+  mass: number;
+  loose: number;
+  rwd: boolean;
+  steerRate: number;
+  lock: number;
 }
+
+/**
+ * A model's feel (vehicle plan Phase 4): `mass` (1 a saloon: heavier answers the wheel later), `loose` (0..1, how
+ * readily the tail steps out under power), `rwd` (the back wheels drive it: power can start a drift), `steerRate`
+ * (how fast the front wheels turn, rad/s) and `lock` (as far as they turn at a crawl, radians)
+ */
+export interface Feel {
+  mass: number;
+  loose: number;
+  rwd: boolean;
+  steerRate: number;
+  lock: number;
+}
+/** A feel in the middle (the kart's, and any car without its own) */
+export const NEUTRAL: Feel = { mass: 1, loose: 0.3, rwd: false, steerRate: 3.2, lock: 0.62 };
+
+/**
+ * Drifting: `min` the speed a drift needs (tiles/s); `power` the speed, throttle and wheel full power needs to
+ * break the tail away; `hold` the slide (radians) under which throttle no longer keeps one going; `grip` the share
+ * of the grip a full drift loses; `turn` how much quicker the nose comes round in one; `most` the most the slide
+ * can be from the nose; `scrub` the speed it costs; `into` / `out` how fast a drift builds and fades
+ */
+export const DRIFT = { min: 3, power: { speed: 5, throttle: 0.7, wheel: 0.5 }, hold: 0.12, grip: 0.82, turn: 0.45, most: 1.05, scrub: 0.25, into: 3, out: 1.2, brake: 6 };
 
 /**
  * A car's 0..1 handling (mycar.ts DRIVE, with the garage's mods on: carStatsOf in
  * tycoon.ts can go past 1 a little) and size, as numbers the sim uses
  */
-export function tune(d: { speed: number; accel: number; grip: number }, size: { L: number; W: number; wheelbase: number }): DriveTune {
+export function tune(d: { speed: number; accel: number; grip: number }, size: { L: number; W: number; wheelbase: number }, feel: Feel = NEUTRAL): DriveTune {
   return {
     top: 7 + d.speed * 9,
     reverse: 3.5,
@@ -48,6 +87,7 @@ export function tune(d: { speed: number; accel: number; grip: number }, size: { 
     brake: 13,
     grip: 3.5 + d.grip * 9,
     ...size,
+    ...feel,
   };
 }
 
@@ -64,6 +104,8 @@ export interface CarState {
   steer: number;
   /** How fast it's turning (radians/s), for the body's lean */
   yawRate: number;
+  /** How far into a drift (0 gripping, 1 a full slide) */
+  drift: number;
 }
 
 export interface DriveInput {
@@ -88,7 +130,14 @@ export interface DriveWorld {
  */
 export const reachOf = (c: { speed: number }) => 8 + Math.abs(c.speed) * 0.05;
 
-export const newCar = (x: number, z: number, yaw: number): CarState => ({ x, z, yaw, speed: 0, vx: 0, vz: 0, steer: 0, yawRate: 0 });
+export const newCar = (x: number, z: number, yaw: number): CarState => ({ x, z, yaw, speed: 0, vx: 0, vz: 0, steer: 0, yawRate: 0, drift: 0 });
+
+/** The slide: the angle from the nose to the way the car is moving (radians; positive, moving to the nose's right) */
+export function slipOf(c: CarState) {
+  const fwd = c.vx * Math.cos(c.yaw) - c.vz * Math.sin(c.yaw);
+  const side = c.vx * Math.sin(c.yaw) + c.vz * Math.cos(c.yaw);
+  return Math.hypot(fwd, side) < 0.5 ? 0 : Math.atan2(side, Math.abs(fwd));
+}
 
 /** How long each piece of the river's wall is along x (it follows the water's edges: river.ts) */
 export const WALL_STEP = 2;
@@ -156,21 +205,44 @@ export function stepCar(c: CarState, inp: DriveInput, t: DriveTune, dt: number, 
     if (c.speed > 0.3) c.speed = approach(c.speed, 0, t.brake * -th * dt);
     else c.speed = approach(c.speed, -t.reverse * -th, t.accel * 0.7 * -th * dt);
   } else c.speed = approach(c.speed, 0, (1.6 + Math.abs(c.speed) * 0.08) * dt);
-  if (inp.handbrake) c.speed = approach(c.speed, 0, 5.5 * dt);
+  if (inp.handbrake) c.speed = approach(c.speed, 0, 3.5 * dt);
 
-  // Steering: the wheels turn less the faster it goes
-  const max = 0.62 / (1 + Math.abs(c.speed) / 5);
-  c.steer = approach(c.steer, Math.max(-1, Math.min(1, inp.steer)) * max, 3.2 * dt);
-  c.yawRate = (-c.speed * Math.tan(c.steer)) / t.wheelbase * (inp.handbrake ? 1.35 : 1);
+  // Drifting: the handbrake at a roll, or full power through a turn in a rear-drive car, breaks the tail away;
+  // throttle keeps it going while it's out; otherwise the grip comes back
+  const wheel = Math.max(-1, Math.min(1, inp.steer));
+  const slip = slipOf(c);
+  const power = t.rwd && th > DRIFT.power.throttle && Math.abs(wheel) > DRIFT.power.wheel && c.speed > DRIFT.power.speed;
+  const held = c.drift > 0.2 && th > 0.25 && Math.abs(slip) > DRIFT.hold;
+  const want = c.speed < DRIFT.min ? 0 : inp.handbrake ? 1 : power ? Math.max(c.drift, t.loose) : held ? c.drift : 0;
+  c.drift = approach(c.drift, want, (want > c.drift ? (inp.handbrake ? DRIFT.brake : DRIFT.into) : DRIFT.out) * dt);
+  // (a slide costs speed)
+  c.speed -= c.speed * DRIFT.scrub * c.drift * Math.abs(Math.sin(slip)) * dt;
+
+  // Steering: as quick as the model's rack, the wheels turning less the faster it goes; the nose answers as quickly
+  // as its weight lets it, and comes round quicker in a drift
+  const max = t.lock / (1 + Math.abs(c.speed) / 5);
+  c.steer = approach(c.steer, wheel * max, t.steerRate * dt);
+  const yawTo = ((-c.speed * Math.tan(c.steer)) / t.wheelbase) * (1 + DRIFT.turn * c.drift);
+  c.yawRate += (yawTo - c.yawRate) * (1 - Math.exp((-14 / t.mass) * dt));
   c.yaw += c.yawRate * dt;
 
-  // The slide catches up with the nose; the handbrake lets it go
-  const grip = t.grip * (inp.handbrake ? 0.22 : 1);
+  // The slide catches up with the nose, slower in a drift
+  const grip = t.grip * (1 - DRIFT.grip * c.drift);
   const k = 1 - Math.exp(-grip * dt);
   const nfx = Math.cos(c.yaw);
   const nfz = -Math.sin(c.yaw);
   c.vx += (nfx * c.speed - c.vx) * k;
   c.vz += (nfz * c.speed - c.vz) * k;
+  // Never further round than `most` from the nose: the slide is held there, never a spin
+  const after = slipOf(c);
+  if (Math.abs(after) > DRIFT.most) {
+    const v = Math.hypot(c.vx, c.vz);
+    const a = Math.sign(after) * DRIFT.most;
+    const dir = Math.sign(c.vx * nfx + c.vz * nfz) || 1;
+    // (the nose's way, turned `a` to its right: right is (sin yaw, cos yaw))
+    c.vx = v * (dir * nfx * Math.cos(a) + Math.sin(c.yaw) * Math.sin(a));
+    c.vz = v * (dir * nfz * Math.cos(a) + Math.cos(c.yaw) * Math.sin(a));
+  }
   c.x += c.vx * dt;
   c.z += c.vz * dt;
 

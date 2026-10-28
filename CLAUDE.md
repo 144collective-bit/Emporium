@@ -1340,7 +1340,9 @@ it and has been retired completely. Build only on what's here.
   side is the quick swap with a fade (`QUICK_FADE`), reduced motion the
   quick swap without; at home the turntable is stood on to get in
   (`isTurntable()`, `DISC`). Keep new car detail in that chunk: the
-  boot is near its budget (665.56 of 670 KB: Phase 3 brought carinside.ts into it).
+  boot is near its budget (666.08 of 670 KB: Phase 3 brought carinside.ts into it). Phase 4 (handling with
+  depth: each model's feel and drifting) is built, in the sim (drive-sim.ts, mycar.ts `FEEL`; see Driving your
+  car below).
 - **Live settings** (the owner's call): the owner switches parts of the
   city from outside the code, in a private command center, through the
   backend's public config (`LIVE_URL`, public settings only).
@@ -2982,7 +2984,7 @@ it and has been retired completely. Build only on what's here.
 ## Driving your car (3D walk mode)
 
 - `drive-sim.ts` holds the rules, DOM-free like `combat-sim.ts`:
-  - **Handling:** arcade. Speed tapers to the model's top speed; brake, then reverse. Steering uses a bicycle model that eases off with speed. Grip sets how quickly the slide follows the nose; the handbrake lets it go.
+  - **Handling:** arcade. Speed tapers to the model's top speed; brake, then reverse. Steering uses a bicycle model that eases off with speed. Grip sets how quickly the slide follows the nose. Each model has its own feel (vehicle plan Phase 4: `FEEL` in mycar.ts, `Feel` in the sim: weight, how loose the tail is, rear drive, steering speed and lock). **Drifting** (`CarState.drift`, `DRIFT`): the handbrake at a roll, or full power through a turn in a rear-drive car, breaks the tail away; throttle keeps it going, counter-steer straightens it, lifting off brings the grip back, and the slide never passes `DRIFT.most` from the nose (`slipOf()`), so nothing spins for ever. Tested in `tests/drive.test.ts`.
   - **Collisions:** soft and safe. The car is three circles along its length. It slides along `SOLIDS` (minus the turntable), placed buildings and the river walls (`RIVER_WALLS`, open at the bridges). It bumps softly off traffic and people, never through them.
   - **Tuning:** `tune()` turns `DRIVE`'s 0-1 numbers into speeds. New handling goes in the sim first.
 - `drive.ts` is the view:

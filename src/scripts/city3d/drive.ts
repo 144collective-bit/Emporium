@@ -37,7 +37,7 @@ import { DECK_WALLS, departuresSurface } from './airfield';
 import type { Garage } from './garage';
 import type { Kart } from './karts';
 import { bodies } from './life';
-import type { MyCar, PlayerCar } from './mycar';
+import { FEEL, type MyCar, type PlayerCar } from './mycar';
 import type { KartId } from './mykart';
 import type { Box } from './solids';
 
@@ -148,7 +148,7 @@ export function createDrive(d: DriveDeps) {
   function tuneOf(v: Out): DriveTune {
     if (v.kind === 'car') {
       const s = CARS[v.model as PlayerCar];
-      return tune(d.stats(v.model as PlayerCar), { L: s.L, W: s.W, wheelbase: s.axles[1] - s.axles[0] });
+      return tune(d.stats(v.model as PlayerCar), { L: s.L, W: s.W, wheelbase: s.axles[1] - s.axles[0] }, FEEL[v.model as PlayerCar]);
     }
     // A kart: small, quick off the line, a little slower than a race pace on the open road
     const k = d.kart.stats(v.model as KartId);
@@ -183,7 +183,7 @@ export function createDrive(d: DriveDeps) {
       dispose: () => taken.kart.dispose(),
       seat: (deg) => taken.kart.seat(deg),
       state: newCar(taken.x, taken.z, taken.yaw),
-      tune: { top: 0, reverse: 0, accel: 0, brake: 0, grip: 0, L: 1.2, W: 0.95, wheelbase: 0.82 },
+      tune: {} as DriveTune,
       holder,
       y: d.groundAt(taken.x, taken.z),
       bank: 0,
@@ -215,7 +215,7 @@ export function createDrive(d: DriveDeps) {
       seat: (deg, from) => taken.car.seat?.(deg, from),
       car: taken.car,
       state: newCar(taken.x, taken.z, taken.yaw),
-      tune: { top: 0, reverse: 0, accel: 0, brake: 0, grip: 0, L: spec.L, W: spec.W, wheelbase: 1 },
+      tune: {} as DriveTune,
       holder,
       y: d.groundAt(taken.x, taken.z),
       bank: 0,
