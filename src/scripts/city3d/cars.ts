@@ -845,12 +845,14 @@ export function createCar(id: CarId, paint: string, mine = false) {
 }
 /**
  * One car of your own; carfine.ts gives it its hooks when it fits it out (carcabin.ts, carride.ts): `seat` (sit a
- * Degen at the wheel, or null to take him out), `ride` (a frame of driving: the springs, the wheel, the needles, the
+ * Degen at the wheel, or null to take him out; `from` 1: in by the passenger's door), `door` (open a front door, 0 the
+ * driver's, 1 the passenger's, and shut it after `hold` seconds), `ride` (a frame of driving: the springs, the wheel, the needles, the
  * marks; `revs` 0..1, `top` the top speed, `y` the car's height; true when it leaned the body itself) and `eye` (the
  * driver's-seat camera: where it is and what it looks at, turned by `yaw` and `pitch`)
  */
 export type Car = ReturnType<typeof createCar> & {
-  seat?(degen: Degen | null): void;
+  seat?(degen: Degen | null, from?: number): void;
+  door?(side: number, hold: number): void;
   ride?(s: CarState, dt: number, slip: number, accel: number, revs: number, top: number, y: number, ground: (x: number, z: number, y?: number) => number): boolean;
   eye?(pos: THREE.Vector3, at: THREE.Vector3, yaw: number, pitch: number): void;
 };

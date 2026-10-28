@@ -9,7 +9,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { MOMENT, type Phase, type Vehicle, alightMark, benchMark, boardMark, counterMark, crateMark, createMoment, doorMark, liftMark } from '../src/scripts/city3d/moments';
+import { MOMENT, type Phase, type Vehicle, alightMark, benchMark, boardMark, carMark, counterMark, crateMark, createMoment, doorMark, liftMark } from '../src/scripts/city3d/moments';
+import { INTERIORS } from '../src/scripts/city3d/carinside';
+import { CARS } from '../src/scripts/city3d/carspec';
 import { carriedAt, carryPose, crateAt, momentPose } from '../src/scripts/city3d/momentposes';
 import { HIP_HEIGHT, makeSkeleton, newPose, poseSkeleton } from '../src/scripts/city3d/skeleton';
 import { idlePose } from '../src/scripts/city3d/poses';
@@ -300,6 +302,69 @@ test('getting in: the hands land on the handle, the rim, the frame or the rails,
       }
       assert.ok(Math.hypot(last.x - out.x, last.z - out.z) < 0.02 && Math.abs(last.y) < 0.02, `${v}: ends standing where he gets out`);
       assert.equal(ao.phase, 'done');
+    }
+  }
+});
+
+test('your car: in by the door on his side, clear of its swing, the hand on its handle, the root onto that side\'s seat; blocked, the quick swap', () => {
+  const sk = makeSkeleton();
+  const seg = (px: number, pz: number, ax: number, az: number, bx: number, bz: number) => {
+    const vx = bx - ax;
+    const vz = bz - az;
+    const t = Math.max(0, Math.min(1, ((px - ax) * vx + (pz - az) * vz) / (vx * vx + vz * vz)));
+    return Math.hypot(px - ax - vx * t, pz - az - vz * t);
+  };
+  for (const s of Object.values(CARS)) {
+    const n0 = INTERIORS[s.id];
+    const door = n0.door;
+    if (!door) continue;
+    const n = { ...n0, door };
+    for (const yaw of [0, 1.3, -2.4]) {
+      const car = { x: 20, z: -6, yaw, W: s.W };
+      const fx = Math.cos(yaw);
+      const fz = -Math.sin(yaw);
+      const rx = Math.sin(yaw);
+      const rz = Math.cos(yaw);
+      const local = (u: number, v: number) => ({ x: car.x + fx * u + rx * v, z: car.z + fz * u + rz * v });
+      for (const side of [0, 1] as const) {
+        const sg = side ? 1 : -1;
+        const from = local(0.3, sg * 2);
+        const m = carMark(car, n, from.x, from.z, 0, SCALE)!;
+        assert.ok(m, `${s.id}: a mark`);
+        assert.equal(m.side, side, `${s.id}: the door on his side`);
+        // Clear of the door as it opens: its whole edge, from the hinge to its back edge swung out
+        const L = n.door.hinge - n.door.back;
+        const hinge = local(n.door.hinge, (sg * s.W) / 2);
+        const edge = local(n.door.hinge - L * Math.cos(n.door.open), sg * (s.W / 2 + L * Math.sin(n.door.open)));
+        assert.ok(seg(m.x, m.z, hinge.x, hinge.z, edge.x, edge.z) > 0.25, `${s.id} ${side}: clear of the door's swing`);
+        // The hand lands on the handle; the root reaches the seat as the car takes him
+        const mo = createMoment();
+        mo.scale = SCALE;
+        let taken = 0;
+        mo.start(m, () => taken++, m.x, m.z);
+        mo.update({ dt: DT, x: m.x, z: m.z, face: m.face, speed: 0 });
+        let best = Infinity;
+        let atTake: { x: number; z: number; y: number } | null = null;
+        while (mo.phase === 'play') {
+          mo.update({ dt: DT, x: m.x, z: m.z, face: m.face, speed: 0 });
+          if (taken) {
+            atTake ??= mo.root();
+            continue;
+          }
+          const r = mo.root() ?? { x: m.x, z: m.z, y: m.y };
+          const p = newPose();
+          idlePose(p, 0);
+          momentPose(p, mo, 1, r.x, r.y, r.z, m.face, SCALE, 0);
+          const h = boneAt(sk, p, m.hand ? 'handR' : 'handL', r.x, r.y, r.z, m.face);
+          best = Math.min(best, h.distanceTo(new THREE.Vector3(m.hands[0].x, m.hands[0].y, m.hands[0].z)));
+        }
+        assert.ok(best < 0.015, `${s.id} ${side} yaw ${yaw}: the hand on the handle (${(best * CM).toFixed(1)} cm)`);
+        const seat = local(n.hip[0], sg * Math.abs(n.hip[2]));
+        assert.ok(atTake && Math.hypot(atTake.x - seat.x, atTake.z - seat.z) < 0.1, `${s.id} ${side}: the root at the seat`);
+        assert.ok(atTake && Math.abs(atTake.y + HIP_HEIGHT * SCALE - n.hip[1]) < 0.01, `${s.id} ${side}: the hips at the seat's hip point`);
+        // That side's spot blocked: no mark (the quick swap)
+        assert.equal(carMark(car, n, from.x, from.z, 0, SCALE, () => true), null);
+      }
     }
   }
 });

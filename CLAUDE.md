@@ -1327,11 +1327,20 @@ it and has been retired completely. Build only on what's here.
   turning with his hands on it, the gauges' needles, the wipers in the
   rain, the skid marks; `car.eye()`: the driver's-seat camera, V's third
   view, his head folded away and no rain inside the cabin, the rain's
-  shader given a hole round it; `seat()` swings the driver's door, cut
-  out at its seams by `makeShell()` and `splitAt()`, open and shut, and
-  shows the lamps' pools); the kart keeps drive.ts's drawn-on lean. The
-  mirrors are painted stand-ins. Keep new car detail in that chunk: the
-  boot is near its budget (663.83 of 670 KB with the tailoring plan merged).
+  shader given a hole round it; `seat()` shows the lamps' pools); the kart keeps drive.ts's drawn-on lean. The
+  mirrors are painted stand-ins. Phase 3 (getting in and out) is built but for
+  other players seeing it (their vehicles aren't drawn yet: the
+  multiplayer plan's next step): both front doors are cut out
+  (`doors`) and swing through `car.door(side, hold)`; `carMark()` in
+  moments.ts (tested) stands him by the door on his side, clear of its
+  swing, the nearer hand on its handle (`INTERIORS[id].door.handle`), the
+  root onto that side's real seat; walk.ts opens the door as the hand
+  comes to it (`HAND_ON`), from the passenger's side he slides over
+  (`SLIDE`), drive.ts `exit()` opens the door he leaves by; a blocked
+  side is the quick swap with a fade (`QUICK_FADE`), reduced motion the
+  quick swap without; at home the turntable is stood on to get in
+  (`isTurntable()`, `DISC`). Keep new car detail in that chunk: the
+  boot is near its budget (665.56 of 670 KB: Phase 3 brought carinside.ts into it).
 - **Live settings** (the owner's call): the owner switches parts of the
   city from outside the code, in a private command center, through the
   backend's public config (`LIVE_URL`, public settings only).

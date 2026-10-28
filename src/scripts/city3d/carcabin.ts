@@ -110,8 +110,8 @@ interface Shell {
   glass: THREE.BufferGeometry;
   inside: Inside;
   wheel: THREE.BufferGeometry;
-  /** The driver's door, cut out at its seams: its pieces as they sit with the hinge at the origin */
-  door?: { paint: THREE.BufferGeometry; detail: THREE.BufferGeometry; glass: THREE.BufferGeometry; inside?: THREE.BufferGeometry };
+  /** The front doors (the driver's on the left, then the passenger's), cut out at their seams: their pieces as they sit with the hinge at the origin */
+  doors?: { paint: THREE.BufferGeometry; detail: THREE.BufferGeometry; glass: THREE.BufferGeometry; inside?: THREE.BufferGeometry }[];
 }
 const shells = new Map<CarId, Shell>();
 
@@ -203,22 +203,26 @@ function makeShell(s: CarSpec, low: boolean): Shell {
     const a = model.paint.attributes[k];
     rest.setAttribute(k, new THREE.BufferAttribute(a.array.slice(solids * a.itemSize), a.itemSize));
   }
-  // The driver's door (vehicle plan Phase 2, carride.ts swings it): the left side cut at its seams, everything
-  // from its sill up between them its own piece. `spans` are the left side's stretches: before the door, the
-  // door, after it
+  // The front doors (vehicle plan Phases 2 and 3, carride.ts swings them): each side cut at the door's seams,
+  // everything from its sill up between them its own piece (`doors[0]` the driver's, on the left; `doors[1]` the
+  // passenger's). `spans` are a side's stretches: before the door, the door, after it
   const D = n.door;
-  const doorPaints: THREE.BufferGeometry[] = [];
-  const doorDetails: THREE.BufferGeometry[] = [];
-  const doorGlass: THREE.BufferGeometry[] = [];
-  const onDoor = (p: THREE.Vector3) =>
-    !!D && p.x > D.back - 0.004 && p.x < D.hinge + 0.004 && p.y > D.y0 - 0.002 && p.z < -cw / 2 + 0.004 && !s.axles.some((ax) => Math.hypot(p.x - ax, p.y - s.r) < s.r + 0.08);
+  const SIDES = [-1, 1] as const;
+  const doors = SIDES.map(() => ({ paints: [] as THREE.BufferGeometry[], details: [] as THREE.BufferGeometry[], glass: [] as THREE.BufferGeometry[] }));
+  const onDoor = (p: THREE.Vector3, side: number) =>
+    !!D && p.x > D.back - 0.004 && p.x < D.hinge + 0.004 && p.y > D.y0 - 0.002 && p.z * side > cw / 2 - 0.004 && !s.axles.some((ax) => Math.hypot(p.x - ax, p.y - s.r) < s.r + 0.08);
   const spans: [number, number, boolean][] = D ? [[-9, D.back, false], [D.back, D.hinge, true], [D.hinge, 9, false]] : [[-9, 9, false]];
-  // (what lies along the left side cut at the door's seams first)
-  const leftSide = (p: THREE.Vector3) => !!D && p.z < -cw / 2 + 0.004 && p.y > D.y0 - 0.002;
-  const doorOf = (g: THREE.BufferGeometry, door: boolean) => triangles(g, (a, b, c) => (onDoor(a) && onDoor(b) && onDoor(c)) === door);
-  const restCut = D ? splitAt(rest, [D.back, D.hinge], leftSide) : rest;
-  const paints: THREE.BufferGeometry[] = [doorOf(restCut, false)];
-  if (D) doorPaints.push(doorOf(restCut, true));
+  // (what lies along the sides is cut at the doors' seams first)
+  const onSide = (p: THREE.Vector3) => !!D && Math.abs(p.z) > cw / 2 - 0.004 && p.y > D.y0 - 0.002;
+  /** Which door a triangle lies on (0 the driver's, 1 the passenger's), or -1 */
+  const which = (a: THREE.Vector3, b: THREE.Vector3, c: THREE.Vector3) => SIDES.findIndex((sd) => onDoor(a, sd) && onDoor(b, sd) && onDoor(c, sd));
+  const share = (g: THREE.BufferGeometry, into: (i: number) => THREE.BufferGeometry[]) => {
+    const cutG = D ? splitAt(g, [D.back, D.hinge], onSide) : g;
+    into(-1).push(triangles(cutG, (a, b, c) => which(a, b, c) < 0));
+    if (D) for (const i of [0, 1]) into(i).push(triangles(cutG, (a, b, c) => which(a, b, c) === i));
+  };
+  const paints: THREE.BufferGeometry[] = [];
+  share(rest, (i) => (i < 0 ? paints : doors[i].paints));
   const body = bodyPoly(s);
   const piece = (poly: V2[], depth: number, round: number, z = 0, to = paints) => {
     if (poly.length < 3 || Math.abs(area(poly)) < 1e-4) return;
@@ -233,16 +237,16 @@ function makeShell(s: CarSpec, low: boolean): Shell {
   piece(clip(body, ([x]) => h0 - x), s.W, 0.04);
   const between = clip(clip(body, ([x]) => x - h0), ([x]) => h1 - x);
   const SKIN = 0.1;
-  piece(between, SKIN, 0.04, s.W / 2 - SKIN / 2);
-  for (const [a, b, door] of spans) {
-    const z = -(s.W / 2 - SKIN / 2);
-    const part = cut(between, a, b);
-    if (!door) piece(part, SKIN, 0.04, z);
-    else {
-      piece(clip(part, ([, y]) => D!.y0 - y), SKIN, 0.04, z);
-      piece(clip(part, ([, y]) => y - D!.y0), SKIN, 0.04, z, doorPaints);
+  for (const [i, side] of SIDES.entries())
+    for (const [a, b, door] of spans) {
+      const z = side * (s.W / 2 - SKIN / 2);
+      const part = cut(between, a, b);
+      if (!door) piece(part, SKIN, 0.04, z);
+      else {
+        piece(clip(part, ([, y]) => D!.y0 - y), SKIN, 0.04, z);
+        piece(clip(part, ([, y]) => y - D!.y0), SKIN, 0.04, z, doors[i].paints);
+      }
     }
-  }
   // The cabin: solid behind the hollow (a van's load space), its walls round it, the roof over it
   piece(clip(s.cabin, ([x]) => h0 - x), cw, CABIN_ROUND);
   const x0s = Math.min(...s.panes.map(([a]) => a)) - 0.03;
@@ -265,13 +269,12 @@ function makeShell(s: CarSpec, low: boolean): Shell {
   };
   // (the door's under the roof's slab, which stays)
   const underRoof = ([x, y]: V2) => rr[1] + ((x - rr[0]) / (fr[0] - rr[0])) * (fr[1] - rr[1]) - ROOF - 0.004 - y;
-  if (wall.length >= 3) {
-    wallPiece(wall, band, cw / 2 - WALL, paints);
-    for (const [a, b, door] of spans) {
-      const part = cut(wall, a, b);
-      wallPiece(door ? clip(part, underRoof) : part, cut(band, a + (a > -9 ? E : 0), b - (b < 9 ? E : 0)), -cw / 2, door ? doorPaints : paints);
-    }
-  }
+  if (wall.length >= 3)
+    for (const [i, side] of SIDES.entries())
+      for (const [a, b, door] of spans) {
+        const part = cut(wall, a, b);
+        wallPiece(door ? clip(part, underRoof) : part, cut(band, a + (a > -9 ? E : 0), b - (b < 9 ? E : 0)), side > 0 ? cw / 2 - WALL : -cw / 2, door ? doors[i].paints : paints);
+      }
   piece([r0, fr, [fr[0], fr[1] - ROOF], [r0[0], r0[1] - ROOF]], cw, 0.02);
   // Pillars along the windscreen and the rear window, from the walls in to the glass's frame
   for (const side of [-1, 1]) {
@@ -301,19 +304,18 @@ function makeShell(s: CarSpec, low: boolean): Shell {
     if (!(inWindow(a) && inWindow(b) && inWindow(c))) return true;
     // (the colours are stored as 32-bit floats: near enough is the glass)
     const isGlass = Math.abs(colour.r - glassC.r) + Math.abs(colour.g - glassC.g) + Math.abs(colour.b - glassC.b) < 1e-4;
-    // (the left side's panes are drawn again below, cut at the door's seams)
-    if (isGlass && !(D && a.z < -cw / 2 + 0.01 && b.z < -cw / 2 + 0.01 && c.z < -cw / 2 + 0.01)) glassBits.push(new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute([a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z], 3)));
+    // (the side panes are drawn again below, cut at the doors' seams)
+    if (isGlass && !(D && Math.abs(a.z) > cw / 2 - 0.01 && Math.abs(b.z) > cw / 2 - 0.01 && Math.abs(c.z) > cw / 2 - 0.01)) glassBits.push(new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute([a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z], 3)));
     return false;
   });
-  const detailCut = D ? splitAt(detail, [D.back, D.hinge], leftSide) : detail;
-  const details: THREE.BufferGeometry[] = [doorOf(detailCut, false)];
-  if (D) doorDetails.push(doorOf(detailCut, true));
+  const details: THREE.BufferGeometry[] = [];
+  share(detail, (i) => (i < 0 ? details : doors[i].details));
   // The calipers, fixed to the body behind each wheel's spokes (a front one doesn't steer: behind the spokes
   // nobody sees it, and it costs no draw of its own)
   for (const [x, y, z] of wheelSpots(s)) details.push(paintAll(caliperGeometry(s).applyMatrix4(new THREE.Matrix4().makeRotationY(z < 0 ? Math.PI : 0).setPosition(x, y, z)), CALIPER));
   const dark = (g: THREE.BufferGeometry) => details.push(paintAll(g, BLACKOUT));
-  // The band round the side windows with the panes cut out of it (the left's cut at the door's seams, a pillar of
-  // its frame either side of each cut), and the left side's glass, cut there too
+  // The band round the side windows with the panes cut out of it (cut at the doors' seams, a pillar of their
+  // frames either side of each cut), and the side glass, cut there too
   const inner = inset(s.cabin, CABIN_ROUND + 0.035);
   const panes = s.panes.map(([x0, x1]) => {
     const poly = cut(inner, x0, x1);
@@ -329,19 +331,17 @@ function makeShell(s: CarSpec, low: boolean): Shell {
     }
     to.push(paintAll(new THREE.ExtrudeGeometry(sh, { depth: 0.012, bevelEnabled: false }).translate(0, 0, z - 0.006), BLACKOUT));
   };
-  bandPiece(-9, 9, cw / 2 + 0.006, details);
-  for (const [a, b, door] of spans) {
-    if (!D) bandPiece(a, b, -(cw / 2 + 0.006), details);
-    else {
-      bandPiece(a, b, -(cw / 2 + 0.006), door ? doorDetails : details);
+  for (const [i, side] of SIDES.entries())
+    for (const [a, b, door] of spans) {
+      bandPiece(a, b, side * (cw / 2 + 0.006), door ? doors[i].details : details);
+      if (!D) continue;
       for (const pane of panes) {
         const poly = cut(pane, a, b);
         if (poly.length < 3 || Math.abs(area(poly)) < 1e-4) continue;
-        const g = extrude(shape(poly), 0.012).translate(0, 0, -(cw / 2 + 0.014)).toNonIndexed();
-        (door ? doorGlass : glassBits).push(new THREE.BufferGeometry().setAttribute('position', g.attributes.position));
+        const g = extrude(shape(poly), 0.012).translate(0, 0, side * (cw / 2 + 0.014)).toNonIndexed();
+        (door ? doors[i].glass : glassBits).push(new THREE.BufferGeometry().setAttribute('position', g.attributes.position));
       }
     }
-  }
   // The windscreen's and the rear window's frames
   dark(framePane(fr, fb, cw - CABIN_ROUND * 2 + 0.02, cw - CABIN_ROUND * 2 - 0.06, mid, 0.03, 0.07, 0.012));
   if (s.rearGlass) dark(framePane(rb, rr, cw - CABIN_ROUND * 2 + 0.02, cw - CABIN_ROUND * 2 - 0.06, mid, 0.03, 0.07, 0.012));
@@ -352,20 +352,22 @@ function makeShell(s: CarSpec, low: boolean): Shell {
     return g;
   };
   const inside = insideOf(s, n, h0, h1);
-  // The door's pieces, about its hinge: at its front seam, on the outside of the skin
-  const hinge = (g: THREE.BufferGeometry) => g.translate(-D!.hinge, 0, s.W / 2);
+  // A door's pieces, about its hinge: at its front seam, on the outside of the skin
+  const hinge = (g: THREE.BufferGeometry, side: number) => g.translate(-D!.hinge, 0, (-side * s.W) / 2);
   return {
     paint: merge(paints, false)!,
     detail: merge(details, true)!,
     glass: glassOf(glassBits),
     inside,
     wheel: mergeGeometries([stripColour(wheelGeometry(s)), ...brakes(s, low, false).map(stripColour)].map(withColour))!,
-    door: D && {
-      paint: hinge(merge(doorPaints, false)!),
-      detail: hinge(merge(doorDetails, true)!),
-      glass: hinge(glassOf(doorGlass)),
-      inside: inside.door && hinge(inside.door),
-    },
+    doors:
+      D &&
+      doors.map((d, i) => ({
+        paint: hinge(merge(d.paints, false)!, SIDES[i]),
+        detail: hinge(merge(d.details, true)!, SIDES[i]),
+        glass: hinge(glassOf(d.glass), SIDES[i]),
+        inside: inside.doors[i] && hinge(inside.doors[i]!, SIDES[i]),
+      })),
   };
 }
 const cut = (poly: V2[], a: number, b: number) => clip(clip(poly, ([x]) => x - a), ([x]) => b - x);
@@ -385,8 +387,8 @@ const withColour = (g: THREE.BufferGeometry) => {
 /** What's inside, coloured per vertex: what stays put, and the pieces that move (carride.ts) */
 interface Inside {
   all: THREE.BufferGeometry;
-  /** The door card and its armrest (in the car's numbers; the shell moves them onto the door's hinge) */
-  door?: THREE.BufferGeometry;
+  /** Each front door's card and armrest (in the car's numbers; the shell moves them onto the door's hinge) */
+  doors: (THREE.BufferGeometry | undefined)[];
   /** The steering wheel's rim, hub and spokes about its middle, turning about x */
   steer: THREE.BufferGeometry;
   /** The gauges' faces and the strip of light along the dash (lit by night) */
@@ -402,7 +404,7 @@ export const GAUGE_TILT = 0.35;
 
 function insideOf(s: CarSpec, n: Interior, h0: number, h1: number): Inside {
   const parts: THREE.BufferGeometry[] = [];
-  const doorParts: THREE.BufferGeometry[] = [];
+  const doorParts: THREE.BufferGeometry[][] = [[], []];
   const dashParts: THREE.BufferGeometry[] = [];
   const add = (g: THREE.BufferGeometry, hex: string, to = parts) => void to.push(paintAll(g.index ? g.toNonIndexed() : g, hex));
   const box = (w: number, h: number, d: number, x: number, y: number, z: number, hex: string, rz = 0, to = parts) => add(new THREE.BoxGeometry(w, h, d).rotateZ(rz).translate(x, y, z), hex, to);
@@ -412,14 +414,14 @@ function insideOf(s: CarSpec, n: Interior, h0: number, h1: number): Inside {
   const floorY = n.floor;
   const D = n.door;
 
-  // The floor, the door cards (the skins' inner faces, their arches left open for the wheel tubs; the driver's cut at
-  // its door's seams), the headliner
+  // The floor, the door cards (the skins' inner faces, their arches left open for the wheel tubs; cut at the front
+  // doors' seams), the headliner
   box(h1 - h0, 0.02, inW, (h0 + h1) / 2, floorY - 0.01, 0, FLOOR);
   const belt = (x: number) => rb[1] + ((x - rb[0]) / (fb[0] - rb[0])) * (fb[1] - rb[1]);
   for (const side of [-1, 1]) {
     const card = clip(clip(clip(bodyPoly(s), ([x]) => x - h0), ([x]) => h1 - x), ([, y]) => y - floorY);
     const pieces: [V2[], THREE.BufferGeometry[]][] =
-      side < 0 && D ? [[clip(card, ([x]) => D.back - x), parts], [clip(clip(card, ([x]) => x - D.hinge), ([, y]) => y - floorY), parts], [clip(cut(card, D.back, D.hinge), ([, y]) => y - D.y0), doorParts]] : [[card, parts]];
+      D ? [[clip(card, ([x]) => D.back - x), parts], [clip(clip(card, ([x]) => x - D.hinge), ([, y]) => y - floorY), parts], [clip(cut(card, D.back, D.hinge), ([, y]) => y - D.y0), doorParts[side < 0 ? 0 : 1]]] : [[card, parts]];
     for (const [poly, to] of pieces) {
       if (poly.length < 3 || Math.abs(area(poly)) < 1e-4) continue;
       // (facing in: the right one drawn at -x and turned round)
@@ -429,7 +431,7 @@ function insideOf(s: CarSpec, n: Interior, h0: number, h1: number): Inside {
     }
     // An armrest along each door
     const ax = n.hip[0] + 0.05;
-    box(Math.min(0.5, h1 - h0 - 0.2), 0.03, 0.05, ax, n.hip[1] + 0.12, side * (s.W / 2 - 0.13), BOLSTER, 0, side < 0 && D && ax > D.back && ax < D.hinge ? doorParts : parts);
+    box(Math.min(0.5, h1 - h0 - 0.2), 0.03, 0.05, ax, n.hip[1] + 0.12, side * (s.W / 2 - 0.13), BOLSTER, 0, D && ax > D.back && ax < D.hinge ? doorParts[side < 0 ? 0 : 1] : parts);
   }
   const roofY = s.cabin[1][1] - 0.045;
   box(Math.max(0.2, s.cabin[2][0] - Math.max(h0, s.cabin[1][0]) - 0.04), 0.012, cw - 0.07, (s.cabin[2][0] + Math.max(h0, s.cabin[1][0])) / 2, roofY - 0.008, 0, HEADLINER);
@@ -508,7 +510,7 @@ function insideOf(s: CarSpec, n: Interior, h0: number, h1: number): Inside {
   const wiper = merged([paintAll(new THREE.BoxGeometry(0.012, 0.008, len).translate(0, 0, -len / 2), BLACKOUT), paintAll(new THREE.BoxGeometry(0.008, 0.018, len * 0.85).translate(0.004, 0.006, -len * 0.55), BLACKOUT)]);
   return {
     all: merged(parts),
-    door: doorParts.length ? merged(doorParts) : undefined,
+    doors: doorParts.map((d) => (d.length ? merged(d) : undefined)),
     steer: merged(steer),
     dash: merged(dashParts),
     needle: merged([paintAll(new THREE.BoxGeometry(0.004, 0.027, 0.005).translate(-0.004, 0.01, 0), NEEDLE)]),
@@ -537,8 +539,8 @@ export interface Moving {
   body: THREE.Group;
   /** The wheels' pivots (cars.ts `wheelSpots()`'s order) */
   wheels: THREE.Object3D[];
-  /** The driver's door about its hinge (rotation.y), if it has one */
-  door: THREE.Object3D | null;
+  /** The front doors about their hinges (rotation.y), the driver's then the passenger's, if it has them */
+  doors: THREE.Object3D[];
   /** The steering wheel (rotation.x), the gauges' needles (speed, revs; rotation.x), the wipers (rotation.y) */
   steer: THREE.Object3D;
   needles: THREE.Object3D[];
@@ -609,17 +611,19 @@ export function fitOut(car: Car, o: { low: boolean; ready(obj: THREE.Object3D): 
     body.add(p);
     return mesh(sh.inside.wiper, detail, p, false);
   });
-  // The driver's door on its hinge: the paint, what lies on it, its glass and its card
-  let door: THREE.Object3D | null = null;
-  if (sh.door && n.door && paint) {
-    door = new THREE.Object3D();
-    door.position.set(n.door.hinge, 0, -s.W / 2);
-    body.add(door);
-    mesh(sh.door.paint, paint, door);
-    mesh(sh.door.detail, detail, door);
-    glass(sh.door.glass, door);
-    if (sh.door.inside) mesh(sh.door.inside, detail, door);
-  }
+  // The front doors on their hinges: the paint, what lies on them, their glass and their cards
+  const doors: THREE.Object3D[] = [];
+  if (sh.doors && n.door && paint)
+    for (const [i, d] of sh.doors.entries()) {
+      const door = new THREE.Object3D();
+      door.position.set(n.door.hinge, 0, ((i ? 1 : -1) * s.W) / 2);
+      body.add(door);
+      mesh(d.paint, paint, door);
+      mesh(d.detail, detail, door);
+      glass(d.glass, door);
+      if (d.inside) mesh(d.inside, detail, door);
+      doors.push(door);
+    }
 
   // You at the wheel
   let driver: Degen | null = null;
@@ -664,8 +668,6 @@ export function fitOut(car: Car, o: { low: boolean; ready(obj: THREE.Object3D): 
     toTorso.compose(g.position, g.quaternion, g.scale).multiply(torsoFrame(p, toTorso.clone())).invert();
     hands(0);
   };
-  // (the door for the moment of getting in, Phase 3, and the lab)
-  car.group.userData.door = door;
-  rideOn(car, { body, wheels, door, steer, needles, wipers, hands, driver: () => driver });
+  rideOn(car, { body, wheels, doors, steer, needles, wipers, hands, driver: () => driver });
   o.ready(car.group);
 }

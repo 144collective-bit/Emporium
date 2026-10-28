@@ -15,8 +15,11 @@
  * - `eye()` for the driver's-seat camera: his eyes, turned as you look
  *   round, and no rain falling inside the cabin while you sit in it (the
  *   rain's shader is given a hole round it, `hole`).
- * - `seat()`, wrapped: the door swings open and shut as you get in or out
- *   (not under reduced motion), and the headlights' pool on the road ahead
+ * - `door()` (Phase 3): a front door swung open as the hand lands on its
+ *   handle getting in (walk.ts) or as you get out (drive.ts), and shut after;
+ *   `seat()`, wrapped: the door you came in by shuts after you, from the
+ *   passenger's side you slide over to the wheel (none of it under reduced
+ *   motion: the quick version), and the headlights' pool on the road ahead
  *   and the brake lights' red wash behind show while you're in (two glow
  *   points, dark by day through `lit`; the brake wash from `lights()`).
  */
@@ -33,6 +36,10 @@ const now = () => performance.now() / 1000;
 /** How far the steering wheel turns for the front wheels' turn, and how far his hands go round with it */
 const STEER_RATIO = 3;
 const HANDS_MOST = 1.3;
+/** A door opening or shutting (seconds); how soon after he's in it shuts behind him; sliding over from the passenger's seat */
+const DOOR_T = 0.35;
+const DOOR_SHUT = 0.3;
+const SLIDE = 0.5;
 /** The needles' sweep either side of straight up (radians) */
 const SWEEP = 2.3;
 /** A wipe there and back (seconds), from this much rain; how far round the wipers go */
@@ -205,32 +212,47 @@ export function rideOn(car: Car, m: Moving) {
     poolGeo.dispose();
   };
 
-  // The door: wide open as he sits (the moment of getting in has had his hand on it) and shut after him; open,
-  // held while he steps out, and shut behind him
-  let swing = -Infinity;
-  let getting = false;
-  const door = m.door;
-  const doorAt = (t: number) => (getting ? 1 - ease((t - 0.12) / 0.45) : ease(t / 0.3) - ease((t - 0.9) / 0.45));
-  if (door && n.door && !reduced) {
-    const open = n.door.open;
-    // (moved as it's drawn: a frame behind, which nobody sees, and it swings whether you're driving or not)
-    (door.children[0] as THREE.Mesh).onBeforeRender = () => {
-      const t = now() - swing;
-      door.rotation.y = t > 1.4 ? 0 : -open * doorAt(t);
-    };
-  }
+  // The front doors (Phase 3): each opened by `door()` (the moment's hand landing on its handle, getting out) and
+  // shut after `hold` seconds, easing over `DOOR_T`; moved as they're drawn (a frame behind, which nobody sees, and
+  // they swing whether you're driving or not). Under reduced motion they stay shut: the quick version
+  const states = m.doors.map(() => ({ k: 0, goal: 0, shutAt: Infinity, last: 0 }));
+  if (n.door && !reduced)
+    for (const [i, door] of m.doors.entries()) {
+      const open = (i ? 1 : -1) * n.door.open;
+      const st = states[i];
+      (door.children[0] as THREE.Mesh).onBeforeRender = () => {
+        const t = now();
+        const dt = Math.min(0.1, t - st.last);
+        st.last = t;
+        if (t >= st.shutAt) (st.goal = 0), (st.shutAt = Infinity);
+        st.k = st.goal > st.k ? Math.min(st.goal, st.k + dt / DOOR_T) : Math.max(st.goal, st.k - dt / DOOR_T);
+        door.rotation.y = open * ease(st.k);
+      };
+    }
+  car.door = (i, hold) => {
+    const st = states[i];
+    if (!st || reduced) return;
+    st.goal = 1;
+    st.shutAt = now() + hold;
+    st.last = now();
+  };
   // In the seat's view his head is folded away (the camera's inside it)
   const head = (on: boolean) => m.driver()?.rig.bones.head.scale.setScalar(on ? 1 : 1e-3);
+  /** In by the passenger's door: how far he's slid over to the wheel (1 there) */
+  let slid = 1;
   const seat = car.seat!;
-  car.seat = (degen) => {
+  car.seat = (degen, from = 0) => {
     head(true);
     seat(degen);
     pools.visible = !!degen;
-    getting = !!degen;
-    swing = now();
     turned = NaN;
     hole.w = 0;
     settle();
+    if (!degen) return;
+    // (the door he came in by shuts after him, if the moment had it open; from the passenger's seat he slides over)
+    const st = states[from];
+    if (st?.goal) st.shutAt = now() + DOOR_SHUT;
+    slid = from && !reduced ? 0 : 1;
   };
 
   car.ride = (st, dt, slip, accel, revs, top, y, groundAt) => {
@@ -249,6 +271,12 @@ export function rideOn(car: Car, m: Moving) {
     b.position.set(0, sp.h, 0).add(pivot).sub(P.copy(pivot).applyEuler(b.rotation));
     for (const [i, w] of m.wheels.entries()) w.position.y = rest[i] + sp.wheels[i];
 
+    // In by the passenger's door: across to the wheel
+    if (slid < 1) {
+      slid = Math.min(1, slid + dt / SLIDE);
+      const g = m.driver()?.g;
+      if (g) g.position.z = -n.hip[2] + 2 * n.hip[2] * ease(slid);
+    }
     // The wheel and his hands on it; the needles
     const turn = st.steer * STEER_RATIO;
     m.steer.rotation.x = turn;

@@ -264,23 +264,51 @@ Asked before planning (2026-10-28):
   dash's six, all near you. Geometry 195 MB (205). The boot 669.28 KB (663.83 with main's tailoring plan merged),
   the cars' chunk 10.7 KB (6.0).
 
-### Phase 3: getting in and out
+### Phase 3: getting in and out (built, but for other players seeing it)
 
-- The moves are already there (the animation revamp's `board` / `alight`
-  moments: the walk to the door, the hand on the handle, the duck in, a
-  foot out first). This phase makes the door swing open as the hand
-  lands and shut once he's in (and the reverse), reads the seat's height
-  and the handle from `INTERIORS` instead of `MOMENT.car`'s one size for
-  every car, and puts him on the real seat with his hands on the wheel.
-  Reviewed in the lab first.
-- Each model has its door's hinge, the step-in point and the seat
-  (Phase 0's `Interior`). If the driver's side is blocked (a wall, a
-  parked car), Degen uses the passenger door and slides across, or, if
-  both are blocked, the old instant swap with a quick fade.
-- Pressing Get in or Get out again skips to the end; under reduced motion
-  it's always the quick version.
-- Multiplayer: other players see the same move (a mode flag in
-  `protocol.ts`).
+- **Both front doors** are cut out now (`makeShell()`: each side at the
+  door's seams, `doors[0]` the driver's, `doors[1]` the passenger's) and
+  move through the car's `door(side, hold)` hook (carride.ts: open now,
+  shut after `hold` seconds, easing over `DOOR_T`).
+- **The mark** is `carMark()` in moments.ts (DOM-free, tested in
+  `tests/moments.test.ts` for every model, both sides and any heading):
+  by the door on the side he's on, standing by its back edge `car.out`
+  off the body (the test holds him clear of the door's whole swing),
+  facing into the doorway turned `car.turn` towards the front, the nearer
+  hand (`Mark.hand`) on the handle (`INTERIORS[id].door.handle`, where
+  cars.ts lays it, `topLine()` in carinside.ts), the root onto that side's
+  real seat with the hips at its hip point. walk.ts opens the door as the
+  hand comes to the handle (`HAND_ON` of the reach; it shuts again by
+  itself if he never gets in), the car takes him at the clip's `fireAt`,
+  and the door shuts after him (`DOOR_SHUT`). In by the passenger's door
+  he slides over to the wheel (`SLIDE`).
+- **Getting out** (drive.ts `exit()`): out of the driver's door if
+  there's room, else the passenger's (then the back or the front, no
+  door); that door opens, he steps out from that side's real seat
+  (`from`, `seat`), and it shuts behind him (`DOOR_HOLD`).
+- **Blocked:** if the spot by the door on his side can't be stood on, the
+  quick swap, the city fading out and in round it (`QUICK_FADE`, as fast
+  travel's). The planned "the other door if the driver's is blocked" became
+  "the door on the side he's on": walking round the car needs a path the
+  approach doesn't have, and from the blocked side the other door is a
+  walk round anyway.
+- **At home** the garage's turntable (solid to walk on) is stood on while
+  getting in (`isTurntable()` in walk.ts; the ground there is the disc's
+  top, `DISC`), so the moment plays there too; the turntable's car faces
+  the way it stands on it (`garage.yaw`).
+- **F again** skips to the end (moments.ts `skip()`, as before); under
+  reduced motion it's always the quick version, without the fade.
+- The boot carries carinside.ts now (walk.ts and drive.ts read
+  `INTERIORS`): 665.56 KB of 670.
+- **Reviewed** in the city (walking up to the turntable's car, the door
+  opening, the duck in, getting out) and in the tests; the animation lab
+  has no vehicles, so it wasn't the place for this one.
+- **Held back: other players seeing it.** Other players' vehicles aren't
+  drawn yet (a driving player shows as their Degen moving at the car's
+  speed): that's the multiplayer plan's next step ("What others see",
+  `docs/multiplayer-plan.md`). Once others' cars are drawn, the mode
+  changing from walk to drive (already in each snapshot row's flags) plays
+  this move on their figure.
 
 ### Phase 4: handling with depth
 

@@ -192,6 +192,13 @@ export function buildGarage(scene: THREE.Scene, opts: { tick: (f: Tick) => void;
     get hasCar() {
       return !!car;
     },
+    /** The turntable's car (its door opens as you get in at home), and which way it faces there */
+    get car() {
+      return car;
+    },
+    get yaw() {
+      return spin.rotation.y;
+    },
     /** Where the turntable is (getting in at home) */
     turntable: TT,
     /**

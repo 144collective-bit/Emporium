@@ -55,9 +55,10 @@ export interface Interior {
   rear?: { x: number; recline: number };
   /**
    * The driver's door (the bus has none you use): its hinge at the front seam, its back edge at the seam behind,
-   * its bottom and top (the window line's frame up to the roof), and how far it swings open (radians)
+   * its bottom and top (the window line's frame up to the roof), how far it swings open (radians) and its handle
+   * (x along the car, y over the ground: where cars.ts lays it on the side). The passenger's door is its mirror.
    */
-  door?: { hinge: number; back: number; y0: number; y1: number; open: number };
+  door?: { hinge: number; back: number; y0: number; y1: number; open: number; handle: [number, number] };
 }
 
 /** Each model's seat: the hip point's x and height, the recline, the rear seats, a raised cab floor (the bus's) (the rest is worked out from the body) */
@@ -81,6 +82,17 @@ export function roofAt(s: CarSpec, x: number) {
   if (x <= r0[0]) return lerp(b0, r0);
   if (x >= r1[0]) return lerp(r1, b1);
   return lerp(r0, r1);
+}
+/** The lower body's top line over x (cars.ts `topAt()`, which the boot's drawing has: kept here DOM-free) */
+export function topLine(s: CarSpec, x: number) {
+  const t = s.top;
+  if (x >= t[0][0]) return t[0][1];
+  for (let i = 1; i < t.length; i++) {
+    const [x0, y0] = t[i - 1];
+    const [x1, y1] = t[i];
+    if (x <= x0 && x >= x1) return y0 + ((y1 - y0) * (x - x0)) / (x1 - x0 || 1);
+  }
+  return t[t.length - 1][1];
 }
 /** The window line over x: where the cabin meets the body (or the sill) */
 export function beltAt(s: CarSpec, x: number) {
@@ -108,6 +120,9 @@ function interior(s: CarSpec): Interior {
   const wheel: V3 = [sh[0] + out * 0.92, sh[1] - out * 0.39, hip[2]];
   const wheelR = 0.095;
   const seams = s.seams ?? [];
+  const [back, hinge] = seams.slice(-2);
+  // (the handle cars.ts lays on the door, else one a little in from its back edge)
+  const hx = s.handles?.find((x) => x > back && x < hinge) ?? back + 0.12;
   return {
     hip,
     recline: seat.recline,
@@ -123,7 +138,7 @@ function interior(s: CarSpec): Interior {
     door:
       seat.door === false || seams.length < 2
         ? undefined
-        : { hinge: seams[seams.length - 1], back: seams[seams.length - 2], y0: s.clr + 0.04, y1: roofAt(s, seams[seams.length - 2]) - 0.03, open: 1.15 },
+        : { hinge, back, y0: s.clr + 0.04, y1: roofAt(s, back) - 0.03, open: 1.15, handle: [hx, topLine(s, hx) - 0.08] },
   };
 }
 
