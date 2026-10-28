@@ -71,8 +71,7 @@ export function createMissionsUI(root: HTMLElement, game: GameDeps, hooks: Missi
   function goalText(m: Mission, p?: { done: number; need: number; complete: boolean }) {
     const g = m.goal;
     if ('counter' in g) return `${fmt.format(p?.done ?? 0)} / ${fmt.format(g.n)} ${COUNTER_NAMES[g.counter]}`;
-    if ('partners' in g) return `${p?.done ?? 0} / ${g.partners} sparring partners`;
-    return `${p?.done ?? 0} / ${g.plots} district plot${g.plots > 1 ? 's' : ''} owned`;
+    return `${p?.done ?? 0} / ${g.partners} sparring partners`;
   }
   const reward = (m: { reward: number; xp: number }) => `<span class="market-price mission-reward">${D(m.reward)}<small class="mission-xp">+${fmt.format(m.xp)} XP</small></span>`;
 

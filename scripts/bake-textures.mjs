@@ -50,8 +50,7 @@ async function richSave() {
     await build({
       stdin: {
         contents: `
-          import { newSave, addXp, buyUnit, buildUnit, buyLot, buildLot, buyCorner, buyPlot, buildPlot, upgradePlace, UNIT_KIND_IDS, LOT_KIND_IDS, CORNER_PLACES } from './tycoon';
-          import { PLOT_IDS, BUILDINGS, cleanDesign } from '../../data/plots';
+          import { newSave, addXp, buyUnit, buildUnit, buyLot, buildLot, buyCorner, upgradePlace, UNIT_KIND_IDS, LOT_KIND_IDS, CORNER_PLACES } from './tycoon';
           export function make(now) {
             const s = newSave(now);
             s.dorras = 1e12;
@@ -59,7 +58,6 @@ async function richSave() {
             for (let i = 0; i < 4; i++) { buyUnit(s, i); buildUnit(s, i, UNIT_KIND_IDS[i % UNIT_KIND_IDS.length]); }
             for (let i = 0; i < 3; i++) { buyLot(s, i); buildLot(s, i, LOT_KIND_IDS[i % LOT_KIND_IDS.length]); }
             for (let i = 0; i < CORNER_PLACES.length; i++) buyCorner(s, i);
-            PLOT_IDS.slice(0, 10).forEach((id, i) => { buyPlot(s, id, now); buildPlot(s, id, cleanDesign({ type: BUILDINGS[i % BUILDINGS.length].type, rot: i % 4 })); });
             for (const p of ['stall', 'u0', 'u1', 'l0', 'c0', 'c1', 'workshop']) for (let k = 0; k < 2; k++) upgradePlace(s, p);
             return s;
           }`,

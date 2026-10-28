@@ -235,8 +235,8 @@ export interface WalkDeps {
   camera: THREE.PerspectiveCamera;
   canvas: HTMLCanvasElement;
   root: HTMLElement;
-  /** Footprints and heights of buildings visitors have placed */
-  plotSolids(): Box[];
+  /** Footprints and heights of what's built on your units and big lots */
+  placedSolids(): Box[];
   /** Open a landmark's panel in place */
   openSpot(id: SpotId): void;
   /** Called on any input, so the frame cap knows we're busy */
@@ -655,7 +655,7 @@ export function createWalk(d: WalkDeps) {
     if (inLake(x, z, RADIUS + RIM.w + 0.1) && !onJetty(x, z, RADIUS) && !onTerrace(x, z, RADIUS)) return true;
     if (SOLID_GRID.near(x, z, RADIUS, nearBoxes).some((b) => inBox(b, x, z, RADIUS) && !skip?.(b))) return true;
     if (drive.blocks(x, z, RADIUS) || fly.blocks(x, z, RADIUS)) return true;
-    return d.plotSolids().some((b) => inBox(b, x, z, RADIUS));
+    return d.placedSolids().some((b) => inBox(b, x, z, RADIUS));
   }
   /** Where he can't step at his own height (contact.ts asks, for a rail: an edge nothing solid explains) */
   const contactBlocked = (bx: number, bz: number) => blocked(bx, bz, pos.y);
@@ -670,7 +670,7 @@ export function createWalk(d: WalkDeps) {
     }
     // Only the boxes under the camera's line can be in its way (padded as the test below pads them)
     // (and Liberty Bridge's towers over their arches and its walkways' roofs, which you walk under: a bottom, b[5])
-    for (const b of [...CAMERA_GRID.alongRay(from, dir, t, 0.18, nearBoxes), ...d.plotSolids(), ...LIBERTY_CAMERA, ...DECK_CAMERA, ...MALL_CAMERA] as number[][]) {
+    for (const b of [...CAMERA_GRID.alongRay(from, dir, t, 0.18, nearBoxes), ...d.placedSolids(), ...LIBERTY_CAMERA, ...DECK_CAMERA, ...MALL_CAMERA] as number[][]) {
       if (b[4] < skipUnder) continue;
       const lo = [b[0] - 0.18, b[5] ?? 0, b[1] - 0.18];
       const hi = [b[2] + 0.18, b[4] + 0.15, b[3] + 0.18];
@@ -697,7 +697,7 @@ export function createWalk(d: WalkDeps) {
   }
 
   /** Distance along a ray to the first building or the ground (for shots). */
-  const rayWorld = (from: THREE.Vector3, dir: THREE.Vector3, max: number) => rayBoxes(from, dir, max, d.plotSolids());
+  const rayWorld = (from: THREE.Vector3, dir: THREE.Vector3, max: number) => rayBoxes(from, dir, max, d.placedSolids());
 
   const combat = createCombat({
     scene: d.scene,
@@ -864,7 +864,7 @@ export function createWalk(d: WalkDeps) {
     // The boxes within `reach` of where the car is (the collision grid's answer, then placed buildings)
     solids: (x, z, reach) => {
       const near = CAR_GRID.near(x, z, reach);
-      return d.plotSolids().length ? [...near, ...d.plotSolids()] : near;
+      return d.placedSolids().length ? [...near, ...d.placedSolids()] : near;
     },
     groundAt,
     cameraRoom,
@@ -884,7 +884,7 @@ export function createWalk(d: WalkDeps) {
     myPlane: loadPlane,
     solids: (x, z, reach) => {
       const near = CAR_GRID.near(x, z, reach);
-      return d.plotSolids().length ? [...near, ...d.plotSolids()] : near;
+      return d.placedSolids().length ? [...near, ...d.placedSolids()] : near;
     },
     groundAt,
     cameraRoom,
@@ -2535,7 +2535,7 @@ export function createWalk(d: WalkDeps) {
         if (contact && contactMod && contactRot && !moments.active && !carrying) {
           contactBoxes.length = 0;
           SOLID_GRID.near(pos.x, pos.z, 1.2, contactBoxes);
-          for (const b of d.plotSolids()) if (b[0] - 1.2 < pos.x && pos.x < b[2] + 1.2 && b[1] - 1.2 < pos.z && pos.z < b[3] + 1.2) contactBoxes.push(b);
+          for (const b of d.placedSolids()) if (b[0] - 1.2 < pos.x && pos.x < b[2] + 1.2 && b[1] - 1.2 < pos.z && pos.z < b[3] + 1.2) contactBoxes.push(b);
           contactPeople.length = 0;
           for (const p of bodies.people) if (p.act === undefined && Math.abs(p.x - pos.x) < 1.5 && Math.abs(p.z - pos.z) < 1.5) contactPeople.push(p);
           const st = contact.update({ dt, x: pos.x, y: pos.y, z: pos.z, face: drawFace, scale: SCALE, speed, moving: mag > 0.1, walls: contactBoxes, people: contactPeople, blocked: contactBlocked, hit: hitWall, hitSpeed });

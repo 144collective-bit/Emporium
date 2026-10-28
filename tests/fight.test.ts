@@ -345,7 +345,7 @@ import { FIGHT_BOTS, SPAR_HIT_CAP, XP } from '../src/scripts/city3d/catalog';
 
 test('the save (v9): the fight record cleans, a spar pays XP capped per hit, a bout pays its purse on a win, a quit bout is a loss', () => {
   const s = newSave(1000);
-  assert.equal(s.v, 11);
+  assert.equal(s.v, 12);
   assert.deepEqual(s.fight.styles, ['brawler']);
   assert.equal(s.fight.style, 'brawler');
   const d0 = s.dorras;
@@ -392,7 +392,7 @@ test('the save (v9): the fight record cleans, a spar pays XP capped per hit, a b
   assert.deepEqual(c.fight.bots, { medium: { beaten: 2, bestSeconds: null } });
   // An old save without a fight record comes up with an empty one
   const old = cleanSave({ v: 7, dorras: 5 }, 2000);
-  assert.equal(old.v, 11);
+  assert.equal(old.v, 12);
   assert.deepEqual(old.fight.styles, ['brawler']);
   assert.equal(old.fight.bouts, 0);
 });

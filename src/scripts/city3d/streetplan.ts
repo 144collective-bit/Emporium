@@ -13,8 +13,7 @@
  *
  * Coordinates are world units on the ground: [x, z].
  */
-import { DISTRICTS } from '../../data/plots';
-import { BLOCKS, BRIDGED_NS, BS, CORE_ROADS, EW_ROADS, EXT, EXTRA_LOTS, GARAGE, LANE, MARKET, MEDIAN, NS_ROADS, RIVER, RING_HI, SEATS, SHORT_NS, SOUTH_ROAD, UNITS, WALK_W, nsRuns, nsStreet, type Road } from './layout';
+import { BLOCKS, BRIDGED_NS, BS, CORE_ROADS, DISTRICTS, EW_ROADS, EXT, EXTRA_LOTS, GARAGE, LANE, MARKET, MEDIAN, NS_ROADS, RIVER, RING_HI, SEATS, SHORT_NS, SOUTH_ROAD, UNITS, WALK_W, nsRuns, nsStreet, type Road } from './layout';
 import { ALLEYS, BLOCKS_DT, DIAGONALS, LANES } from './downtown';
 import { BENDS, BEND_KERBS, OUTER_BLOCKS, OUTER_PARKS, OUTER_SQUARES, PADS } from './outer';
 import { AIRPORT_CROSSINGS, AIRPORT_STREETS, GA_CROSSINGS, GA_ROAD, GA_STREETS, ROAD } from './airfield';

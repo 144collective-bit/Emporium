@@ -264,7 +264,7 @@ export function createSky(scene: THREE.Scene, opts: { shadows: number; shadowRad
     fog.color.copy(tmpHor);
     (scene.background as THREE.Color).copy(tmpHor);
     // Thin haze by day so colours stay crisp; thicker at night and in rain
-    // and thinner when pulled far back (the Build overview takes in the whole map), so the edges don't drown
+    // and thinner when pulled far back (the benchmark's view from high takes in the whole map), so the edges don't drown
     const far = THREE.MathUtils.clamp(70 / Math.max(1, eye.distanceTo(focus)), 0.55, 1);
     fog.density = (0.0105 - day * 0.0068 + rainAmt * 0.0055 + dusk * 0.002) * far;
 

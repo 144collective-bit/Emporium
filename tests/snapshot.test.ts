@@ -12,7 +12,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { BIG_LOTS, CORE_ROADS, EW_ROADS, EXT, FOOTBRIDGE_X, GARAGE, MARKET, NS_ROADS, RIVER, SEATS, SOUTH_ROAD, SOUTH_ROW, UNITS } from '../src/scripts/city3d/layout';
 import { DOORS, GARAGE_SITE, LOT_SITE, MARKET_SITE, RACK, STALL_SPOT, UNIT_SITE, WALK_SPAWN } from '../src/scripts/city3d/solids';
-import { DISTRICTS } from '../src/data/plots';
+import { DISTRICTS } from '../src/scripts/city3d/layout';
 import { PLAN } from '../src/scripts/city3d/streetplan';
 import { ALLEYS, DIAGONALS, INFILL, LANES, PARKS, PRACTICE, SQUARE, WATER_TOWER } from '../src/scripts/city3d/downtown';
 import { OUTER_PARKS, OUTER_SQUARES, PADS, PARKWAY, SOUTHSIDE } from '../src/scripts/city3d/outer';

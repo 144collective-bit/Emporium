@@ -13,7 +13,6 @@
  * - XP comes from playing: sales, contracts, kart races, missions, takedowns.
  *   Nothing here is bought with real money or tied to the token.
  */
-import type { BuildingType } from '../../data/plots';
 import type { Weapon, WeaponId } from './combat-sim';
 import type { PlayerCar } from './mycar';
 import type { KartId } from './mykart';
@@ -65,7 +64,7 @@ export const XP = {
   sale: 1,
   /** Per contract delivered */
   contract: 40,
-  /** Per unit, lot or plot bought, and per building built */
+  /** Per unit or lot bought, and per building built */
   property: 60,
   /** Per upgrade bought (a mod, a building level) */
   upgrade: 25,
@@ -363,23 +362,6 @@ export const SNACK_HEAL = 0.35;
 
 /* ---------- Property ---------- */
 
-/** A district plot, bought with Dorras (the top of the property ladder) */
-export const PLOT_DORRAS = FREE_PLAY ? 0 : 120000;
-export const PLOT_LEVEL = FREE_PLAY ? 1 : 8;
-/** Selling a plot back to the city pays this share of what it cost */
-export const PLOT_REFUND = 0.6;
-/** What each design costs to build on a plot (changing a design costs the difference, never less than 0) */
-export const BUILD_COSTS: Record<BuildingType, number> = {
-  garden: 4000,
-  billboard: 6000,
-  house: 9000,
-  shop: 12000,
-  warehouse: 12000,
-  loft: 18000,
-  arcade: 24000,
-  tower: 36000,
-};
-
 /** Levels for the places you run: capacity, pace and speed go up; the cost of each level */
 export const PLACE_LEVELS = 3;
 export const UNIT_LEVEL_COSTS = [0, 1500, 4000];
@@ -401,6 +383,5 @@ if (FREE_PLAY) {
   }
   for (const k of Object.values(KART_CLASSES)) k.level = 1;
   for (const b of Object.values(FIGHT_BOTS)) b.level = 1;
-  for (const k of Object.keys(BUILD_COSTS) as BuildingType[]) BUILD_COSTS[k] = 0;
   for (const a of [UNIT_LEVEL_COSTS, LOT_LEVEL_COSTS, CORNER_LEVEL_COSTS, WORKSHOP_LEVEL_COSTS]) a.fill(0);
 }

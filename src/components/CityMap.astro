@@ -167,7 +167,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
 
   {/* View settings, only while the 3D city is up */}
 
-  {/* The mode header: which view you are in, the walk tabs while walking, and the City / Walk / Build switch.
+  {/* The mode header: which view you are in, the walk tabs while walking, and the City / Walk switch.
        Its title and subtitle are painted by head.ts. */}
   <header class="city-head" data-city-head>
     <a href="/" class="city-head-logo" aria-label="The Degen Emporium, home">
@@ -337,10 +337,6 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="13" cy="4" r="2" /><path d="M9 20l2-6 3 3v4M7 12l3-4 4 1 2 4M11 14l-2-2" /></svg>
         <span class="city-mode-label" data-walk-label>Walk</span>
       </button>
-      <button type="button" class="city-mode-btn" data-build-toggle aria-pressed="false" hidden>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><path d="M17.5 14v7M14 17.5h7" /></svg>
-        <span class="city-mode-label" data-build-label>Build</span>
-      </button>
     </div>
     {/* Settings and the menu (directory, PulseChain native, X, Telegram), and Connect wallet when there's a game server */}
     <div class="city-head-tools">
@@ -372,23 +368,6 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
           <span class="nav-account-label" data-account-label>Connect<span class="nav-account-more"> wallet</span></span>
         </button>
       )}
-      {/* Build mode: your plots (what you own, your Dorras, the next plot's price), painted by builder-ui.ts */}
-      <details class="head-pop builder-pop" data-builder-bar hidden>
-        <summary aria-label="Plots">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10l9-6 9 6v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z" /><path d="M9 21v-7h6v7" /></svg>
-          <span class="head-btn-text" data-plots-label>Plots</span>
-        </summary>
-        <div class="head-panel builder-wallet-panel">
-          <div class="pop-head">
-            <p class="pop-title">Your plots</p>
-            <button type="button" class="pop-close" data-pop-close aria-label="Close plots">
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
-            </button>
-          </div>
-          <div class="builder-wallet" data-plots-summary></div>
-          <p class="builder-hint">Pick a district plot to buy or build on it.<span class="hint-keys"> Arrow keys move between plots.</span> The estate agent in the Vault lists them too.</p>
-        </div>
-      </details>
       <details class="city-controls head-pop" data-controls>
         <summary aria-label="City settings">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" /></svg>
@@ -873,32 +852,16 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     </ul>
     <div class="wm-card" data-wm-card hidden></div>
   </section>
-  <aside class="city-panel builder-panel" data-plot-panel hidden role="dialog" aria-labelledby="plot-title">
-    <button type="button" class="city-panel-close" data-plot-close aria-label="Close plot">
-      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
-    </button>
-    <div class="city-panel-body" data-plot-body></div>
-    {/* Painted by builder-ui.ts */}
-    <p class="city-draft" data-plot-note>Plots are game property: Dorras only, never real money</p>
-  </aside>
   {/* Log in with a wallet and the basic profile (account-ui.ts) */}
-  <div class="builder-modal account-modal" data-account hidden>
-    <div class="builder-modal-card" role="dialog" aria-modal="true" aria-labelledby="account-title">
+  <div class="city-modal account-modal" data-account hidden>
+    <div class="city-modal-card" role="dialog" aria-modal="true" aria-labelledby="account-title">
       <button type="button" class="city-panel-close" data-account-close aria-label="Close">
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l10 10M12 2L2 12" /></svg>
       </button>
-      <div class="builder-modal-body" data-account-body></div>
+      <div class="city-modal-body" data-account-body></div>
     </div>
   </div>
-  <div class="builder-modal" data-buy-modal hidden>
-    <div class="builder-modal-card" role="dialog" aria-modal="true" aria-labelledby="buy-title">
-      <button type="button" class="city-panel-close" data-cancel data-buy-close aria-label="Close">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
-      </button>
-      <div class="builder-modal-body" data-buy-body></div>
-    </div>
-  </div>
-  <p class="builder-toast" data-toast role="status" aria-live="polite"></p>
+  <p class="city-toast" data-toast role="status" aria-live="polite"></p>
 
   {/* Your business (tycoon-ui.ts): the till, then Stall, Units, Workshop and Car tabs. Opens from the Dorras readout, or at your stall or a unit. */}
   <section class="shop stall-card" data-biz hidden aria-labelledby="biz-title">
@@ -913,7 +876,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     <div class="stall-body" data-biz-body></div>
     <p class="shop-foot">Dorras are earned in the city. They can't be cashed out.</p>
   </section>
-  <p class="builder-toast econ-toast" data-econ-toast role="status" aria-live="polite"></p>
+  <p class="city-toast econ-toast" data-econ-toast role="status" aria-live="polite"></p>
   {/* Level-ups and badges (missions-ui.ts): pops under the header, gone after a moment */}
   <div class="mission-pops" data-mission-pops aria-live="polite"></div>
 

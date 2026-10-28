@@ -10,7 +10,7 @@ import { PLAN, blockAt, cityPlan, distToStreet, gridPlan, inPoly, lanePaths, off
 import { BLOCKS, BRIDGED_NS, BS, CORE_ROADS, EW_ROADS, EXT, EXTRA_LOTS, NS_ROADS, RING_HI, RING_LO, SHORT_NS, SOUTH_ROAD, WALK_W, laneCentres } from '../src/scripts/city3d/layout';
 import { BLOCKS_DT, DIAGONALS } from '../src/scripts/city3d/downtown';
 import { BEND_KERBS, OUTER_BLOCKS } from '../src/scripts/city3d/outer';
-import { DISTRICTS } from '../src/data/plots';
+import { DISTRICTS } from '../src/scripts/city3d/layout';
 
 const near = (a: number, b: number, eps = 1e-6) => Math.abs(a - b) < eps;
 

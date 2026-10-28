@@ -24,15 +24,16 @@
  *   warehouse or the Workshop, unload anywhere that takes them. Delivering
  *   to a stall or shop yourself pays a small bonus.
  * - Phase 5 (the city's game): XP and levels, cars, guns and clothes bought
- *   and upgraded with Dorras, district plots as Dorras property, levels for
+ *   and upgraded with Dorras, levels for
  *   the places you run, missions and the counters behind them (catalog.ts
  *   has the prices and curves; missions.ts the board).
  * - Phase 9 (The Trenches, save v10): four corner shops (`c0`-`c3`), bought
  *   with Dorras from level 5, a shop from the day they're bought.
  * - The inventory (save v11, docs/inventory-plan.md): what Degen carries, its
  *   rules in inventory.ts.
+ * - Build mode retired (save v12, the owner's call): the district plots
+ *   left the game; a save that owned any gets back all it paid for them.
  */
-import { cleanDesign, type Design } from '../../data/plots';
 import { DOORS, GARAGE_SITE, LOT_SITE, STALL_SPOT, UNIT_SITE } from './solids';
 import type { WeaponId } from './combat-sim';
 import { CARGO as BASE_CARGO, DRIVE, PLAYER_CARS, type PaintId, type PlayerCar } from './mycar';
@@ -47,7 +48,6 @@ import { FREE_PLAY } from './freeplay';
 import {
   BOT_LEVELS,
   type BotLevel,
-  BUILD_COSTS,
   CAR_CATALOG,
   CAR_MOD_IDS,
   GUN_CATALOG,
@@ -70,9 +70,6 @@ import {
   NO_GUN_MODS,
   NO_KART_MODS,
   PLACE_LEVELS,
-  PLOT_DORRAS,
-  PLOT_LEVEL,
-  PLOT_REFUND,
   STARTER_CARS,
   STARTER_GUNS,
   STARTER_KARTS,
@@ -199,7 +196,7 @@ export const cargoCap = (model: string, s?: TycoonSave) => {
 /** Delivering to a stall or shop yourself: this share of the goods' market price, as a bonus */
 export const DELIVERY_BONUS = 0.1;
 
-/* Phase 4: the big lots, east of Makers' Row: Dorras only (never the PLS district plots) */
+/* Phase 4: the big lots, east of Makers' Row: Dorras only */
 export const LOT_COUNT = 3;
 /** The 1st, 2nd and 3rd big lot you buy */
 export const LOT_PRICES = FREE_PLAY ? [0, 0, 0] : [25000, 50000, 90000];
@@ -274,7 +271,7 @@ export const ENTRIES = {
   borrowed: { name: 'Loans', in: true },
   karting: { name: 'Kart prizes', in: true },
   missions: { name: 'Missions', in: true },
-  soldLand: { name: 'Plots sold', in: true },
+  soldLand: { name: 'Plots refunded', in: true },
   bought: { name: 'Stock bought', in: false },
   property: { name: 'Property and building', in: false },
   land: { name: 'District plots', in: false },
@@ -321,7 +318,7 @@ export interface Counters {
   fistDowns: number;
   /** Tiles driven in your own car */
   driven: number;
-  /** Cars, guns and clothes bought; units, lots and plots bought; buildings built; upgrades (mods and levels) */
+  /** Cars, guns and clothes bought; units and lots bought (district plots, until they were retired); buildings built; upgrades (mods and levels) */
   bought: number;
   land: number;
   built: number;
@@ -346,13 +343,6 @@ export interface Counters {
 export type CounterId = keyof Counters;
 export const COUNTER_IDS: CounterId[] = ['sold', 'earned', 'contracts', 'dummies', 'drones', 'fistDowns', 'driven', 'bought', 'land', 'built', 'upgrades', 'missions', 'kartRaces', 'podiums', 'kartWins', 'cleanLaps', 'overtakes', 'bouts', 'fightWins', 'kos', 'chains', 'streetSpars', 'partnersBeaten', 'streetChains'];
 export const newCounters = (): Counters => Object.fromEntries(COUNTER_IDS.map((k) => [k, 0])) as unknown as Counters;
-/** A district plot you own, bought with Dorras */
-export interface OwnedPlot {
-  design: Design | null;
-  /** What you've paid for it and what's built on it (what selling it refunds a share of) */
-  paid: number;
-  at: number;
-}
 /** A mission you've taken on: the counters as they stood when you did */
 export interface ActiveMission {
   id: string;
@@ -410,7 +400,7 @@ export const recordKey = (course: string, cls: string) => `${course}:${cls}`;
 export const emptyKarts = (): KartSave => ({ model: DEFAULT_KART.model, paint: DEFAULT_KART.paint, owned: [], mods: {}, records: {}, boards: {}, series: null, trophies: {}, challenge: null, parBeaten: [], old: {} });
 
 export interface TycoonSave {
-  v: 11;
+  v: 12;
   dorras: number;
   till: number;
   /** When it was last brought up to date (ms since 1970) */
@@ -441,8 +431,6 @@ export interface TycoonSave {
   armoury: { owned: WeaponId[]; mods: Partial<Record<WeaponId, GunMods>> };
   /** Premium wardrobe items (catalog.ts) you've bought */
   wardrobe: string[];
-  /** District plots you own, by plot id */
-  plots: Record<string, OwnedPlot>;
   /** The level of each place you run (1 where unset) */
   levels: Partial<Record<PlaceId, number>>;
   /** The kart park: your pick, the karts you've bought and their mods, your records and boards per course and class, a series on the go, trophies */
@@ -466,7 +454,7 @@ export const GUIDE_STEPS = 7;
 
 export function newSave(now: number): TycoonSave {
   return {
-    v: 11,
+    v: 12,
     dorras: START_DORRAS,
     till: 0,
     at: now,
@@ -487,7 +475,6 @@ export function newSave(now: number): TycoonSave {
     garage: { owned: [], mods: {} },
     armoury: { owned: [], mods: {} },
     wardrobe: [],
-    plots: {},
     levels: {},
     karts: emptyKarts(),
     fight: emptyFight(),
@@ -570,7 +557,7 @@ export function cleanSave(raw: unknown, now: number): TycoonSave {
   }
   const mul = (p: PlaceId) => LEVEL_CAPACITY[(levels[p] ?? 1) - 1];
   const s: TycoonSave = {
-    v: 11,
+    v: 12,
     dorras: Math.floor(num(o.dorras, 0, 1e12, START_DORRAS)),
     till: Math.floor(num(o.till, 0, 1e12, 0)),
     at: num(o.at, 0, now, now),
@@ -603,7 +590,6 @@ export function cleanSave(raw: unknown, now: number): TycoonSave {
     garage: { owned: [], mods: {} },
     armoury: { owned: [], mods: {} },
     wardrobe: [],
-    plots: {},
     levels,
     karts: emptyKarts(),
     fight: emptyFight(),
@@ -1403,9 +1389,8 @@ export function propertyValue(s: TycoonSave) {
   const lots = s.lots.filter(Boolean) as Lot[];
   v += LOT_PRICES.slice(0, lots.length).reduce((a, b) => a + b, 0) + lots.reduce((a, l) => a + (l.kind ? LOT_KINDS[l.kind].cost : 0), 0);
   v += CORNER_PRICES.slice(0, s.corners.filter(Boolean).length).reduce((a, b) => a + b, 0);
-  // Phase 5: the places' levels and your district plots
+  // Phase 5: the places' levels
   for (const p of PLACE_IDS) v += levelCosts(p).slice(1, placeLevel(s, p)).reduce((a, b) => a + b, 0);
-  for (const o of Object.values(s.plots)) v += o.paid;
   return v;
 }
 /** What you've paid for cars, guns, clothes and their mods */
@@ -1799,50 +1784,13 @@ export function buyWardrobe(s: TycoonSave, id: string): BuyResult {
   return r;
 }
 
-/* ---------- The estate agent (the Vault): district plots ---------- */
+/* ---------- The district plots, retired with Build mode (save v12) ---------- */
 
-export const ownsPlot = (s: TycoonSave, id: string) => id in s.plots;
-export const plotCount = (s: TycoonSave) => Object.keys(s.plots).length;
-/** What a plot costs you now: dearer with each one you already own */
-export const plotPrice = (s: TycoonSave) => Math.round(PLOT_DORRAS * (1 + plotCount(s) * 0.25));
-export function buyPlot(s: TycoonSave, id: string, now: number, valid: (id: string) => boolean = () => true): BuyResult {
-  if (!valid(id)) return { ok: false, why: 'place' };
-  if (ownsPlot(s, id)) return { ok: false, why: 'owned' };
-  const price = plotPrice(s);
-  const r = pay(s, price, PLOT_LEVEL, 'land');
-  if (!r.ok) return r;
-  s.plots[id] = { design: null, paid: price, at: now };
-  count(s, 'land', 1);
-  addXp(s, XP.property);
-  return r;
-}
-/** Build on a plot (or clear it with null): a dearer design costs the difference */
-export function buildPlot(s: TycoonSave, id: string, design: Design | null): BuyResult {
-  const o = s.plots[id];
-  if (!o) return { ok: false, why: 'place' };
-  const next = design ? cleanDesign(design) : null;
-  if (design && !next) return { ok: false, why: 'place' };
-  const was = o.design ? BUILD_COSTS[o.design.type] : 0;
-  const cost = Math.max(0, (next ? BUILD_COSTS[next.type] : 0) - was);
-  const r = pay(s, cost, 1, 'property');
-  if (!r.ok) return r;
-  if (next && (!o.design || o.design.type !== next.type)) {
-    count(s, 'built', 1);
-    addXp(s, XP.property);
-  }
-  o.design = next;
-  o.paid += cost;
-  return r;
-}
-/** Sell a plot back to the city for a share of what you paid */
-export function sellPlot(s: TycoonSave, id: string): BuyResult {
-  const o = s.plots[id];
-  if (!o) return { ok: false, why: 'place' };
-  const back = Math.round(o.paid * PLOT_REFUND);
-  delete s.plots[id];
-  s.dorras += back;
-  book(s, 'soldLand', back);
-  return { ok: true, dorras: back };
+/** What a save from before v12 paid for its district plots and what it built on them: given back when it loads */
+export function plotRefund(raw: unknown) {
+  let n = 0;
+  for (const [id, o] of Object.entries(obj(obj(raw).plots))) if (/^[NEWS]\d$/.test(id)) n += Math.round(num(obj(o).paid, 0, 1e9, 0));
+  return n;
 }
 
 /* ---------- Levels for the places you run ---------- */
@@ -1888,11 +1836,11 @@ function cleanGame(s: TycoonSave, o: Record<string, unknown>, now: number) {
     if (GUN_MOD_IDS.some((k) => mods[k] > 0) && (STARTER_GUNS.includes(id) || s.armoury.owned.includes(id))) s.armoury.mods[id] = mods;
   }
   s.wardrobe = [...new Set((Array.isArray(o.wardrobe) ? o.wardrobe : []).filter((id): id is string => typeof id === 'string' && WARDROBE_CATALOG.some((w) => w.id === id)))];
-  for (const [id, raw] of Object.entries(obj(o.plots))) {
-    if (!/^[NEWS]\d$/.test(id)) continue;
-    const r = obj(raw);
-    const design = r.design ? cleanDesign(r.design) : null;
-    s.plots[id] = { design, paid: Math.round(num(r.paid, 0, 1e9, PLOT_DORRAS)), at: num(r.at, 0, now, now) };
+  // (v12: Build mode retired; the district plots a save owned are refunded in full)
+  const refund = plotRefund(o);
+  if (refund) {
+    s.dorras += refund;
+    book(s, 'soldLand', refund);
   }
   // The kart park (v6)
   const kt = obj(o.karts);

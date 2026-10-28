@@ -4,7 +4,7 @@
  * counters (tycoon.ts) are the record missions and badges are checked against.
  *
  * - A mission is a target on one counter (sell 150 things, knock down 15
- *   drones, drive 300 tiles) or plots to own. Taking one remembers the
+ *   drones, drive 300 tiles) or partners to spar with. Taking one remembers the
  *   counters as they stood, so only what you do after counts. Up to three
  *   at once; claim the reward when it's done.
  * - Badges are lifetime milestones: earned the moment a counter crosses
@@ -12,10 +12,10 @@
  */
 import { levelFor } from './catalog';
 import { PARTNER_IDS } from './fight-moves';
-import { addXp, book, count, level, newCounters, plotCount, type ActiveMission, type CounterId, type Counters, type TycoonSave } from './tycoon';
+import { addXp, book, count, level, newCounters, type ActiveMission, type CounterId, type Counters, type TycoonSave } from './tycoon';
 
-/** A target on a counter (from when it's taken), plots to own, or sparring partners sparred with (each once, ever) */
-export type Goal = { counter: CounterId; n: number } | { plots: number } | { partners: number };
+/** A target on a counter (from when it's taken), or sparring partners sparred with (each once, ever) */
+export type Goal = { counter: CounterId; n: number } | { partners: number };
 export interface Mission {
   id: string;
   name: string;
@@ -46,7 +46,7 @@ export const MISSIONS: Mission[] = [
   { id: 'street-fighter', name: 'Heavy hands', blurb: 'Knock down 20 training dummies by hand.', level: 3, goal: counter('fistDowns', 20), reward: 1100, xp: 160 },
   { id: 'round-the-city', name: 'Round the city', blurb: `Spar with every sparring partner: by the Fight Club, on The Block's plaza and on Pier 7.`, level: 3, goal: { partners: PARTNER_IDS.length }, reward: 1500, xp: 200 },
   { id: 'dummy-run', name: 'Dummy run', blurb: 'Knock down 25 training dummies.', level: 3, goal: counter('dummies', 25), reward: 800, xp: 120 },
-  { id: 'landlord', name: 'Landlord', blurb: 'Buy 2 units, lots or plots.', level: 3, goal: counter('land', 2), reward: 800, xp: 100 },
+  { id: 'landlord', name: 'Landlord', blurb: 'Buy 2 units or lots.', level: 3, goal: counter('land', 2), reward: 800, xp: 100 },
   { id: 'podium', name: 'Podium', blurb: 'Finish a kart race in the top three.', level: 3, goal: counter('podiums', 1), reward: 1200, xp: 160 },
   { id: 'clean-sheet', name: 'Clean sheet', blurb: 'Drive 5 clean laps at the kart park: not a wheel in the run-off.', level: 3, goal: counter('cleanLaps', 5), reward: 900, xp: 140 },
   // Tier 3
@@ -59,7 +59,6 @@ export const MISSIONS: Mission[] = [
   { id: 'fleet', name: 'Fleet', blurb: 'Buy 3 things at the garage, the Armoury or Drop 001.', level: 8, goal: counter('bought', 3), reward: 3000, xp: 300 },
   { id: 'haulage', name: 'Haulage', blurb: 'Deliver 20 contracts.', level: 8, goal: counter('contracts', 20), reward: 6000, xp: 600 },
   { id: 'road-trip', name: 'Road trip', blurb: 'Drive 3,000 tiles.', level: 8, goal: counter('driven', 3000), reward: 3000, xp: 300 },
-  { id: 'property-mogul', name: 'Property mogul', blurb: 'Own a district plot (the estate agent is in the Vault).', level: 8, goal: { plots: 1 }, reward: 10000, xp: 1000 },
   { id: 'kart-hat-trick', name: 'Hat-trick', blurb: 'Win 3 kart races.', level: 8, goal: counter('kartWins', 3), reward: 5000, xp: 500 },
   { id: 'contender', name: 'Contender', blurb: 'Win 3 bouts at the Fight Club.', level: 8, goal: counter('fightWins', 3), reward: 4000, xp: 400 },
   // Tier 5
@@ -92,11 +91,8 @@ export function missionProgress(s: TycoonSave, a: ActiveMission): { done: number
     const done = Math.max(0, (s.counters[g.counter] ?? 0) - (a.from[g.counter] ?? 0));
     return { done: Math.min(done, g.n), need: g.n, complete: done >= g.n };
   }
-  if ('partners' in g) {
-    const n = Object.values(s.fight.partners).filter((p) => p && p.spars > 0).length;
-    return { done: Math.min(n, g.partners), need: g.partners, complete: n >= g.partners };
-  }
-  return { done: Math.min(plotCount(s), g.plots), need: g.plots, complete: plotCount(s) >= g.plots };
+  const n = Object.values(s.fight.partners).filter((p) => p && p.spars > 0).length;
+  return { done: Math.min(n, g.partners), need: g.partners, complete: n >= g.partners };
 }
 export type MissionResult = { ok: true; reward: number; xp: number; levels: number } | { ok: false; why: 'level' | 'max' | 'owned' | 'place' | 'progress' };
 export function acceptMission(s: TycoonSave, id: string, now: number): MissionResult {
@@ -163,8 +159,8 @@ export const BADGES: Badge[] = [
   b('overtakes-50', 'Overtaker', 'Passed 50 karts at the kart park.', 'overtakes', 50, 400),
   b('driven-1k', 'Round the block', 'Drove 1,000 tiles.', 'driven', 1000, 100),
   b('driven-10k', 'High mileage', 'Drove 10,000 tiles.', 'driven', 10000, 800),
-  b('land-3', 'Landowner', 'Bought 3 units, lots or plots.', 'land', 3, 200),
-  b('land-10', 'Developer', 'Bought 10 units, lots or plots.', 'land', 10, 1200),
+  b('land-3', 'Landowner', 'Bought 3 units or lots.', 'land', 3, 200),
+  b('land-10', 'Developer', 'Bought 10 units or lots.', 'land', 10, 1200),
   b('upgrades-10', 'Modder', 'Bought 10 upgrades.', 'upgrades', 10, 300),
   b('missions-10', 'Go-getter', 'Finished 10 missions.', 'missions', 10, 400),
   b('bouts-10', 'Prize fighter', 'Fought 10 bouts.', 'bouts', 10, 300),

@@ -3,7 +3,7 @@
    Imported after walk.css (Base.astro). */
 
 /* ---------- The economy (tycoon-ui.ts): Dorras, your stall, the market hall ----------
-   The Dorras readout sits in the header's tools in the 3D city (not in Build mode); it opens
+   The Dorras readout sits in the header's tools in the 3D city ; it opens
    your stall's card, built on the gun store's panel. */
 .dorras-pill {
   position: relative;
@@ -25,7 +25,7 @@
   white-space: nowrap;
   cursor: pointer;
 }
-.city[data-view="3d"]:not([data-mode="build"]) .dorras-pill {
+.city[data-view="3d"] .dorras-pill {
   display: inline-flex;
 }
 .dorras-pill svg {
