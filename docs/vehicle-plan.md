@@ -44,10 +44,10 @@ Asked before planning (2026-10-28):
   lights (life plan Phase 2).
 - `drive-sim.ts`: arcade handling from three 0-1 numbers (`DRIVE` in
   `mycar.ts`: speed, accel, grip), three circles for collisions, lights,
-  gears, skids. The body's lean and squat are drawn in `drive.ts` and
-  aren't in the sim.
+  gears, skids. Your car's body rides its springs (`suspension.ts`, Phase
+  2); the kart's lean and squat are drawn in `drive.ts`.
 - `drive.ts`: getting in and out is instant (Degen is hidden or shown),
-  chase and roof cameras (V).
+  chase and roof cameras and, in your car, the driver's seat (V).
 - `garage-ui.ts`: eight models, twelve paints, four mods (engine, turbo,
   tyres, roof rack).
 - The kart (`karts.ts`) seats Degen with `seat()`; the hire boat
@@ -191,22 +191,78 @@ Asked before planning (2026-10-28):
   129 to 114, The Trenches 229 to 211); the detail adds none. Geometry
   205 MB (203). Frame times wait for a real laptop and phone.
 
-### Phase 2: moving parts and the driver's eye view
+### Phase 2: moving parts and the driver's eye view (built)
 
-- **Suspension you can see:** each wheel on its own spring in the sim
-  (`drive-sim.ts`: travel, stiffness and damping per model, the body's
-  roll and pitch coming from the springs instead of a drawn-on lean),
-  wheels following kerbs and bumps up and down in their arches.
-- **Doors** as their own hinged pieces on your car (each model's door
-  seams become real cut lines), opened and shut by the view.
-- **The steering wheel turns** with the steering; the gauges' needles
-  follow the speed and the revs (`gearOf()`).
-- **The driver's eye camera:** V steps chase → roof → driver. From the
-  seat: Degen's hands on the wheel (`reachArm()`), the live dash, the
-  mirrors showing a cheap, low-resolution view behind (or a painted
-  stand-in on phones), looking round with the mouse or right stick.
-- **Done when:** the springs are tested in the sim and the inside view
-  reads well at night and in the rain.
+- **It loads after the boot too.** Everything is in the cars' fine-detail
+  chunk (`carride.ts` beside `carcabin.ts`; the springs' rules in
+  `suspension.ts`, DOM-free, so they stay out of the boot). drive.ts gives
+  up its own skid marks and lamps' pools to the chunk (your car's only;
+  they're carride.ts's now) and calls your car's hooks instead, read live
+  from the car (`car.ride`, `car.eye`: a car taken out before the chunk
+  came gets them as soon as it's fitted); the kart, and your car until
+  then, keep the drawn-on lean. The boot went from 669.99 to 669.28 KB.
+- **Suspension you can see** (`suspension.ts`, tested in
+  `tests/suspension.test.ts`; in its own module rather than drive-sim.ts
+  so the boot doesn't carry it): each wheel on its own spring, the body's
+  heave, pitch and roll pulled to the plane through the ground under the
+  four wheels and thrown by the load (speeding up lifts the nose, braking
+  dips it, a turn leans it out), each a damped spring at the model's `hz`
+  and `zeta` (`SPRINGS`: the vans, pickup, SUV and town car soft and
+  leaning most, the coupes tight, the supercar tightest), stepped in
+  pieces of a 120th of a second, within `most` and each wheel within its
+  `travel` of the body (a step bigger than that carries the body with
+  it). On the car (`ride()` in carride.ts): everything but the wheels is
+  one group, the body, pitching and rolling about the axles' height over
+  the wheels, which follow the ground under each up and down in their
+  arches (a step of more than 0.3 is a deck or a ramp the car's own
+  height already follows).
+- **The driver's door** (`makeShell()`): the left side cut at the door's
+  seams (`INTERIORS[id].door`), the skin from the sill up, the cabin's
+  wall under the roof, the window band (a pillar of the frame either side
+  of each cut, `E`) and the glass, and everything lying on it (handles,
+  the mirror, the crease, chrome lines and stripes, cut where they cross
+  a seam, `splitAt()`) its own piece about a hinge at its front seam;
+  opened and shut by `seat()` (wide open as he sits and shut after him,
+  open while he steps out and shut behind him; not under reduced motion).
+  It's on the group as `userData.door` for Phase 3.
+- **The steering wheel turns** with the steering (`STEER_RATIO`), his
+  hands going round on it (`hands()` in carcabin.ts, `reachArm()`) as far
+  as `HANDS_MOST`; a red mark at the rim's top shows it turning. **The
+  gauges**, lit by night (`dashMat()`: `lit`, under the bloom's
+  threshold), their needles the speed and the revs (`gearOf()`), with a
+  strip of light along the dash.
+- **The driver's eye camera:** V steps chase → roof → driver (the driver
+  only in your car fitted out), from his eyes (`eye()`; his head folded
+  away while you look from it), looking round with the mouse or the right
+  stick as the chase camera does, the near plane brought in for the dash
+  (`close` in drive.ts, put back on getting out).
+- **The mirrors are painted stand-ins** for everyone (the rear-view
+  mirror under the roof shows a sky over a road): a live view behind is a
+  second pass over the city, and the crowd's and the traffic's culling are
+  the main camera's, so it would show a city missing what's behind you.
+  A live mirror can come later if the owner wants it.
+- **At night and in the rain** (checked from the seat): the gauges and the
+  dash's strip glow; no rain falls inside the cabin (the rain's shader is
+  given a hole round it while you sit in it, `findRain()`); the **wipers**
+  sweep while it rains and park after the last wipe once it stops.
+- **Checked** in the viewer (the door open on every model, the lean in a
+  turn, the wheel and his hands) and in the city (getting in, the seat's
+  view by day, at night and in the rain, driving and turning).
+- **Measured** (`?bench`, as before):
+
+  | View | Draws (Phase 1) | Triangles (Phase 1) |
+  |---|---|---|
+  | drive | 247 (257) | 1.02 M (1.01 M) |
+  | traffic | 130 (152) | 0.42 M (0.40 M) |
+  | street | 416 (420) | 1.03 M (1.04 M) |
+  | home | 380 (387) | 0.90 M (0.93 M) |
+  | the route | 261 / 490 (262 / 455) | 0.80 M (0.80 M) |
+
+  As Phase 1's: the draws move with the traffic and the crowd in view;
+  the views only see your car parked, if at all. Driving it adds the
+  door's four draws and the wheel's, the needles', the wipers' and the
+  dash's six, all near you. Geometry 195 MB (205). The boot 669.28 KB,
+  the cars' chunk 10.7 KB (6.0).
 
 ### Phase 3: getting in and out
 

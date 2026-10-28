@@ -13,8 +13,13 @@
  *   the decks and the banking (`track()`, kartpark.ts trackSurfaceAt).
  * - Both can be out at once; you're in one at a time.
  * - Cameras (V): a chase camera that swings in behind the car (look around
- *   with the mouse, a drag or the right stick; it settles back behind) and a
- *   roof camera.
+ *   with the mouse, a drag or the right stick; it settles back behind), a
+ *   roof camera and, in your car once it's fitted out, the driver's seat
+ *   (carride.ts `eye()`; look round from it the same way).
+ * - Your car fitted out (carride.ts, the cars' fine-detail chunk) rides its
+ *   own springs, turns its steering wheel and needles, swings its door, lays
+ *   its skid marks and its lamps' pools (`ride()`); the kart, and your car
+ *   until then, lean on the drawn-on roll and pitch here.
  * - Traffic stops for you (`walker` in life.ts reaches further in a car);
  *   you bump softly off other cars and people, never through them.
  * - The handling comes from the model's numbers with the garage's mods on
@@ -24,11 +29,10 @@
 import * as THREE from 'three';
 import { createDegen, type Degen, type Outfit } from './character';
 import type { Sfx } from './combat';
-import { CARS } from './cars';
+import { CARS, type Car } from './cars';
 import { carLights, circles, gearOf, newCar, newSignal, reachOf, skidding, stepCar, tune, type CarState, type DriveInput, type DriveTune, type TurnSignal } from './drive-sim';
 import { blinkOn } from './traffic';
 import { DECK_WALLS, departuresSurface } from './airfield';
-import { fx, glowTex, lit } from './kit';
 import type { Garage } from './garage';
 import type { Kart } from './karts';
 import { bodies } from './life';
@@ -71,86 +75,6 @@ export interface DriveDeps {
   /** The tyres' screech while sliding, 0..1 (0 is silent) */
   tyres(level: number): void;
   bounds: Box;
-  /** prefers-reduced-motion: no skid marks */
-  reduced?: boolean;
-}
-
-/** How many skid-mark pieces the road keeps (the oldest is reused), and how long one takes to fade (seconds) */
-const SKID_N = 240;
-const SKID_FADE = 7;
-/** A fresh mark's opacity (dark rubber over the ground) and width */
-const SKID_ALPHA = 0.55;
-const SKID_W = 0.13;
-
-/**
- * Skid marks (city life plan, Phase 2): one fixed mesh of SKID_N quads laid under the rear wheels while
- * the tyres slide, each fading over SKID_FADE; the oldest is reused. Dark rubber with an alpha per vertex
- * (one small shader: a basic material can't fade per quad), a hair above the lane markings, in the FX
- * layer so no outline is drawn round them.
- */
-function createSkidMarks(scene: THREE.Scene) {
-  const pos = new Float32Array(SKID_N * 4 * 3);
-  const fade = new Float32Array(SKID_N * 4);
-  const idx = new Uint16Array(SKID_N * 6);
-  for (let i = 0; i < SKID_N; i++) idx.set([i * 4, i * 4 + 1, i * 4 + 2, i * 4, i * 4 + 2, i * 4 + 3], i * 6);
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3).setUsage(THREE.DynamicDrawUsage));
-  geo.setAttribute('fade', new THREE.BufferAttribute(fade, 1).setUsage(THREE.DynamicDrawUsage));
-  geo.setIndex(new THREE.BufferAttribute(idx, 1));
-  geo.setDrawRange(0, 0);
-  const mat = new THREE.ShaderMaterial({
-    transparent: true,
-    depthWrite: false,
-    side: THREE.DoubleSide,
-    uniforms: { alpha: { value: SKID_ALPHA } },
-    vertexShader: /* glsl */ `
-      attribute float fade; varying float vFade;
-      void main() { vFade = fade; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }
-    `,
-    fragmentShader: /* glsl */ `
-      uniform float alpha; varying float vFade;
-      void main() { gl_FragColor = vec4(0.02, 0.02, 0.03, alpha * vFade); }
-    `,
-  });
-  const mesh = new THREE.Mesh(geo, mat);
-  mesh.frustumCulled = false;
-  mesh.renderOrder = -1;
-  mesh.visible = false;
-  scene.add(fx(mesh));
-  const born = new Float32Array(SKID_N).fill(-Infinity);
-  let next = 0;
-  let used = 0;
-  return {
-    /** Lay one piece from (ax, az) to (bx, bz) at height y */
-    add(ax: number, az: number, bx: number, bz: number, y: number, t: number) {
-      const l = Math.hypot(bx - ax, bz - az) || 1;
-      const nx = (-(bz - az) / l) * SKID_W * 0.5;
-      const nz = ((bx - ax) / l) * SKID_W * 0.5;
-      const i = next;
-      next = (next + 1) % SKID_N;
-      used = Math.min(SKID_N, used + 1);
-      pos.set([ax + nx, y, az + nz, bx + nx, y, bz + nz, bx - nx, y, bz - nz, ax - nx, y, az - nz], i * 12);
-      fade.fill(1, i * 4, i * 4 + 4);
-      born[i] = t;
-      geo.attributes.position.needsUpdate = true;
-      geo.attributes.fade.needsUpdate = true;
-      geo.setDrawRange(0, used * 6);
-      mesh.visible = true;
-    },
-    /** Fade every piece by its age; the mesh hides once all have gone */
-    update(t: number) {
-      if (!mesh.visible) return;
-      let alive = 0;
-      for (let i = 0; i < used; i++) {
-        const age = t - born[i];
-        const k = age >= SKID_FADE ? 0 : 1 - age / SKID_FADE;
-        if (k > 0) alive++;
-        fade.fill(k, i * 4, i * 4 + 4);
-      }
-      geo.attributes.fade.needsUpdate = true;
-      if (!alive) mesh.visible = false;
-    },
-  };
 }
 
 const damp = (k: number, dt: number) => 1 - Math.exp(-k * dt);
@@ -173,6 +97,8 @@ export function createDrive(d: DriveDeps) {
     drive(dist: number, steer: number): void;
     dispose(): void;
     seat?(degen: Degen | null): void;
+    /** Your car, for its hooks once it's fitted out (carride.ts: `ride` says it leaned the body itself, `eye` is the seat's view) */
+    car?: Car;
     /** The car's lights (not the kart's) */
     lights?(brake: boolean, reverse: boolean, turn: 'L' | 'R' | null): void;
     state: CarState;
@@ -194,7 +120,9 @@ export function createDrive(d: DriveDeps) {
   let driver: Degen | null = null;
   /** Locked (a countdown): no throttle or steering, handbrake on */
   let frozen = false;
-  let roofCam = false;
+  /** The camera (V): 0 the chase camera, 1 the roof's, 2 the driver's seat (your car fitted out) */
+  let view = 0;
+  const near0 = camera.near;
   let camYaw = 0;
   let lookYaw = 0;
   let lookPitch = 0;
@@ -204,27 +132,10 @@ export function createDrive(d: DriveDeps) {
   let pitch = 0;
   let lastSpeed = 0;
   let fov = 60;
-  /** The lights' memory (the indicators' hold), the clock for the flash and the marks, the horn's last toot */
+  /** The lights' memory (the indicators' hold), the clock for the flash, the horn's last toot */
   const signal: TurnSignal = newSignal();
   let clock = 0;
   let lastHorn = -1;
-  /** The rear tyres' last mark, each (null between slides) */
-  const marks: ([number, number] | null)[] = [null, null];
-  const skids = d.reduced ? null : createSkidMarks(d.scene);
-  // The headlights' pool on the road ahead and the brake lights' red wash behind: two glow points,
-  // coloured per vertex, dark by day (the traffic's beams work the same way); only while driving the car
-  const poolPos = new Float32Array(6);
-  const poolCol = new Float32Array(6);
-  const poolGeo = new THREE.BufferGeometry();
-  poolGeo.setAttribute('position', new THREE.BufferAttribute(poolPos, 3).setUsage(THREE.DynamicDrawUsage));
-  poolGeo.setAttribute('color', new THREE.BufferAttribute(poolCol, 3).setUsage(THREE.DynamicDrawUsage));
-  const pools = new THREE.Points(poolGeo, lit(new THREE.PointsMaterial({ color: '#ffffff', vertexColors: true, map: glowTex, size: 1.9, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }), 0, 0.3));
-  pools.frustumCulled = false;
-  pools.visible = false;
-  d.scene.add(fx(pools));
-  const HEAD_POOL = new THREE.Color('#fff0c0');
-  const BRAKE_WASH = new THREE.Color('#ff2b2b').multiplyScalar(0.22);
-  const DARK = new THREE.Color(0, 0, 0);
   const camPos = new THREE.Vector3();
   const pivot = new THREE.Vector3();
   const dir = new THREE.Vector3();
@@ -298,7 +209,8 @@ export function createDrive(d: DriveDeps) {
       dispose: () => taken.car.dispose(),
       lights: (brake, reverse, turn) => taken.car.lights(brake, reverse, turn),
       // (you at the wheel once the car's been fitted out: carcabin.ts, after the boot)
-      seat: taken.car.seat,
+      seat: (deg) => taken.car.seat?.(deg),
+      car: taken.car,
       state: newCar(taken.x, taken.z, taken.yaw),
       tune: { top: 0, reverse: 0, accel: 0, brake: 0, grip: 0, L: spec.L, W: spec.W, wheelbase: 1 },
       holder,
@@ -428,8 +340,6 @@ export function createDrive(d: DriveDeps) {
       root.classList.toggle('in-car', v.kind === 'car');
       root.dataset.car = v.name;
       signal.side = null;
-      marks[0] = marks[1] = null;
-      pools.visible = v.kind === 'car';
       d.sfx('door');
       return true;
     },
@@ -450,7 +360,8 @@ export function createDrive(d: DriveDeps) {
       d.engine(-1);
       d.tyres(0);
       v.lights?.(false, false, null);
-      pools.visible = false;
+      camera.near = near0;
+      camera.updateProjectionMatrix();
       d.sfx('door');
       // Out of the left door if there's room, else the right, the back or the front
       const fx = Math.cos(s.yaw);
@@ -503,7 +414,7 @@ export function createDrive(d: DriveDeps) {
       d.kart.bringBack();
     },
     toggleView() {
-      roofCam = !roofCam;
+      view = (view + 1) % (out?.car?.eye ? 3 : 2);
       camReady = false;
     },
     /** Look around from the chase camera (it settles back behind the car) */
@@ -550,29 +461,9 @@ export function createDrive(d: DriveDeps) {
       // The lights (drive-sim.ts carLights): brake lights, reversing lights, the indicators flashing
       const lights = carLights(s, frozen ? { throttle: 0, steer: 0, handbrake: false } : inp, signal, dt);
       v.lights?.(lights.brake, lights.reverse, lights.turn && blinkOn(clock) ? lights.turn : null);
-      // The tyres: a screech while they slide, and marks under the rear wheels (one piece per 0.15 moved)
+      // The tyres: a screech while they slide (your car's marks under its rear wheels are carride.ts's)
       const slip = skidding(s, inp);
       d.tyres(slip > 0 ? Math.min(1, slip / 4) : 0);
-      if (v.kind === 'car') {
-        const rear = -T.wheelbase / 2;
-        const half = T.W / 2 - 0.1;
-        const fx0 = Math.cos(s.yaw);
-        const fz0 = -Math.sin(s.yaw);
-        for (let w = 0; w < 2; w++) {
-          const side = w ? half : -half;
-          const wx = s.x + fx0 * rear + Math.sin(s.yaw) * side;
-          const wz = s.z + fz0 * rear + Math.cos(s.yaw) * side;
-          if (slip > 0 && skids && Math.abs(s.speed) > 1) {
-            const last = marks[w];
-            if (!last) marks[w] = [wx, wz];
-            else if (Math.hypot(wx - last[0], wz - last[1]) > 0.15) {
-              skids.add(last[0], last[1], wx, wz, d.groundAt(wx, wz, v.y) + 0.046, clock);
-              marks[w] = [wx, wz];
-            }
-          } else marks[w] = null;
-        }
-      }
-      skids?.update(clock);
 
       // The body: up the kerbs smoothly (and the kart track's ramps, decks and banking), leans into turns and squats under gas or brakes
       const track = d.track(s.x, s.z, v.y);
@@ -580,12 +471,6 @@ export function createDrive(d: DriveDeps) {
       v.bank += (-Math.atan(track?.roll ?? 0) - v.bank) * damp(8, dt);
       const accel = (s.speed - lastSpeed) / Math.max(dt, 1e-3);
       lastSpeed = s.speed;
-      roll += (THREE.MathUtils.clamp(s.yawRate * s.speed * 0.012, -0.07, 0.07) - roll) * damp(6, dt);
-      pitch += (THREE.MathUtils.clamp(accel * 0.006, -0.05, 0.05) - pitch) * damp(6, dt);
-      v.drive(s.speed * dt, -s.steer);
-      place(v);
-      const y = v.y;
-
       // Readout and engine: four gears up the speed range (drive-sim.ts gearOf), the revs dropping at each shift
       const kmh = Math.round(Math.abs(s.speed) * KMH);
       if (speedEl.textContent !== String(kmh)) speedEl.textContent = String(kmh);
@@ -593,17 +478,14 @@ export function createDrive(d: DriveDeps) {
       const gear = String(box.gear);
       if (gearEl.textContent !== gear) gearEl.textContent = gear;
       d.engine(0.12 + box.revs * 0.72 + Math.max(0, inp.throttle) * 0.13);
-      // The headlights' pool ahead and the brake lights' wash behind (dark by day through `lit`)
-      if (pools.visible) {
-        const fxp = Math.cos(s.yaw);
-        const fzp = -Math.sin(s.yaw);
-        poolPos.set([s.x + fxp * (T.L / 2 + 1.5), y + 0.06, s.z + fzp * (T.L / 2 + 1.5), s.x - fxp * (T.L / 2 + 0.7), y + 0.06, s.z - fzp * (T.L / 2 + 0.7)]);
-        HEAD_POOL.toArray(poolCol, 0);
-        (lights.brake ? BRAKE_WASH : DARK).toArray(poolCol, 3);
-        poolGeo.attributes.position.needsUpdate = true;
-        poolGeo.attributes.color.needsUpdate = true;
+      // Your car fitted out rides its springs (and turns its wheel, its needles, lays its marks); else the body's drawn-on lean
+      if (!v.car?.ride?.(s, dt, slip, accel, box.revs, T.top, v.y, d.groundAt)) {
+        roll += (THREE.MathUtils.clamp(s.yawRate * s.speed * 0.012, -0.07, 0.07) - roll) * damp(6, dt);
+        pitch += (THREE.MathUtils.clamp(accel * 0.006, -0.05, 0.05) - pitch) * damp(6, dt);
       }
-
+      v.drive(s.speed * dt, -s.steer);
+      place(v);
+      const y = v.y;
       // Camera
       lookIdle += dt;
       if (lookIdle > 1.2) {
@@ -611,11 +493,14 @@ export function createDrive(d: DriveDeps) {
         lookPitch += (0 - lookPitch) * damp(2.5, dt);
       }
       // The chase camera follows the way the car is going (in reverse it stays behind the nose)
-      camYaw += wrap(s.yaw - camYaw) * damp(roofCam ? 20 : 3.2, dt);
+      camYaw += wrap(s.yaw - camYaw) * damp(view ? 20 : 3.2, dt);
       const yaw = camYaw + lookYaw;
       const fx = Math.cos(yaw);
       const fz = -Math.sin(yaw);
-      if (roofCam) {
+      if (view > 1 && v.car?.eye) {
+        v.car.eye(camPos, at, lookYaw, lookPitch);
+        camera.position.copy(camPos);
+      } else if (view) {
         camPos.set(s.x + fx * v.roofFwd, y + v.roof, s.z + fz * v.roofFwd);
         at.set(camPos.x + fx * 6, camPos.y - 0.35 + lookPitch * 4, camPos.z + fz * 6);
         camera.position.copy(camPos);
@@ -638,10 +523,13 @@ export function createDrive(d: DriveDeps) {
         shake = Math.max(0, shake - dt * 1.2);
       }
       camera.lookAt(at);
-      const wantFov = (roofCam ? 68 : 58) + Math.min(1, Math.abs(s.speed) / T.top) * 10;
+      const wantFov = (view ? 68 : 58) + Math.min(1, Math.abs(s.speed) / T.top) * 10;
       fov += (wantFov - fov) * damp(4, dt);
-      if (Math.abs(camera.fov - fov) > 0.05) {
+      // (the seat's view is close to the dash and the wheel: the near plane comes in for it)
+      const close = view > 1 ? 0.08 : near0;
+      if (Math.abs(camera.fov - fov) > 0.05 || camera.near !== close) {
         camera.fov = fov;
+        camera.near = close;
         camera.updateProjectionMatrix();
       }
       return moved;

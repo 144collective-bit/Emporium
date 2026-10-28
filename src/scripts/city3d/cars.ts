@@ -34,6 +34,7 @@ import { addLodSwitch } from './lod';
 
 import { CARS, type CarId, type CarSpec } from './carspec';
 import type { Degen } from './character';
+import type { CarState } from './drive-sim';
 export { CARS, PAINTS } from './carspec';
 export type { CarId, CarSpec };
 type V2 = [number, number];
@@ -842,5 +843,14 @@ export function createCar(id: CarId, paint: string, mine = false) {
   if (mine) (group.userData.car = car), FINE.fit?.(car);
   return car;
 }
-/** One car of your own; carfine.ts gives it `seat` when it fits it out (sit a Degen at the wheel, or null to take him out) */
-export type Car = ReturnType<typeof createCar> & { seat?(degen: Degen | null): void };
+/**
+ * One car of your own; carfine.ts gives it its hooks when it fits it out (carcabin.ts, carride.ts): `seat` (sit a
+ * Degen at the wheel, or null to take him out), `ride` (a frame of driving: the springs, the wheel, the needles, the
+ * marks; `revs` 0..1, `top` the top speed, `y` the car's height; true when it leaned the body itself) and `eye` (the
+ * driver's-seat camera: where it is and what it looks at, turned by `yaw` and `pitch`)
+ */
+export type Car = ReturnType<typeof createCar> & {
+  seat?(degen: Degen | null): void;
+  ride?(s: CarState, dt: number, slip: number, accel: number, revs: number, top: number, y: number, ground: (x: number, z: number, y?: number) => number): boolean;
+  eye?(pos: THREE.Vector3, at: THREE.Vector3, yaw: number, pitch: number): void;
+};
