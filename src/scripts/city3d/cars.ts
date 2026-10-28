@@ -58,7 +58,7 @@ export const BLACKOUT = '#1d1b2b';
 const EXTRAS: Partial<Record<CarId, (p: Parts, s: CarSpec) => void>> = {
   hatch(p, s) {
     // Roof spoiler over the hatch, a rear wiper, roof bars
-    p.paint(box(0.16, 0.04, s.W * 0.8, -0.96, 0.95, 0));
+    if (p.has('spoiler')) p.paint(box(0.16, 0.04, s.W * 0.8, -0.96, 0.95, 0));
     p.detail(box(0.02, 0.02, 0.18, -0.985, 0.72, 0.05), TRIM);
     for (const z of [-1, 1]) p.detail(box(0.75, 0.03, 0.03, -0.4, 0.98, z * s.W * 0.3), TRIM);
   },
@@ -66,20 +66,22 @@ const EXTRAS: Partial<Record<CarId, (p: Parts, s: CarSpec) => void>> = {
     // Chrome along the window line and the boot lid, a roof aerial, a boot lip
     for (const z of [-1, 1]) p.detail(box(1.38, 0.022, 0.012, -0.15, 0.58, z * (s.W * 0.43 + 0.006)), CHROME);
     p.detail(box(0.02, 0.03, s.W * 0.5, -1.31, 0.5, 0), CHROME);
-    p.paint(box(0.12, 0.03, s.W * 0.86, -1.22, 0.59, 0));
+    if (p.has('spoiler')) p.paint(box(0.12, 0.03, s.W * 0.86, -1.22, 0.59, 0));
     p.detail(box(0.012, 0.22, 0.012, -0.42, 0.98, 0.15), TRIM);
   },
   coupe(p, s) {
     // Rear wing on two posts, with end plates
-    p.paint(box(0.22, 0.035, s.W * 0.9, -1.1, 0.68, 0));
-    for (const z of [-1, 1]) p.detail(box(0.24, 0.1, 0.02, -1.1, 0.66, z * s.W * 0.45), TRIM);
-    for (const z of [-0.3, 0.3]) p.detail(box(0.05, 0.15, 0.04, -1.08, 0.59, z), TRIM);
+    if (p.has('spoiler')) {
+      p.paint(box(0.22, 0.035, s.W * 0.9, -1.1, 0.68, 0));
+      for (const z of [-1, 1]) p.detail(box(0.24, 0.1, 0.02, -1.1, 0.66, z * s.W * 0.45), TRIM);
+      for (const z of [-0.3, 0.3]) p.detail(box(0.05, 0.15, 0.04, -1.08, 0.59, z), TRIM);
+    }
     // Side intakes behind the doors, a bonnet scoop, a front splitter and a rear diffuser
     for (const z of [-1, 1]) p.detail(box(0.3, 0.09, 0.02, -0.68, 0.36, z * (s.W / 2 + 0.006)), BLACKOUT);
     p.paint(box(0.3, 0.06, 0.26, 0.72, 0.52, 0));
     p.detail(box(0.02, 0.04, 0.2, 0.88, 0.53, 0), BLACKOUT);
-    p.detail(box(0.12, 0.025, s.W * 0.96, 1.22, 0.085, 0), BLACKOUT);
-    for (const z of [-0.3, -0.1, 0.1, 0.3]) p.detail(box(0.18, 0.06, 0.015, -1.18, 0.13, z * s.W * 0.9), BLACKOUT);
+    if (p.has('splitter')) p.detail(box(0.12, 0.025, s.W * 0.96, 1.22, 0.085, 0), BLACKOUT);
+    if (p.has('diffuser')) for (const z of [-0.3, -0.1, 0.1, 0.3]) p.detail(box(0.18, 0.06, 0.015, -1.18, 0.13, z * s.W * 0.9), BLACKOUT);
     // Twin racing stripes, nose to tail over the cabin
     for (const z of [-0.09, 0.09]) stripe(p, s, z, 0.09, PLATE);
   },
@@ -145,10 +147,10 @@ const EXTRAS: Partial<Record<CarId, (p: Parts, s: CarSpec) => void>> = {
     p.detail(box(0.02, 0.05, 0.24, 1.105, topAt(s, 0.92) + 0.025, 0), BLACKOUT);
     // Flared arches over the fat tyres, a lip on the boot, a wide black stripe nose to tail
     for (const ax of s.axles) for (const z of [-1, 1]) p.detail(flare(s, ax, z), TRIM);
-    p.paint(box(0.1, 0.05, s.W * 0.8, -1.32, 0.64, 0));
+    if (p.has('spoiler')) p.paint(box(0.1, 0.05, s.W * 0.8, -1.32, 0.64, 0));
     stripe(p, s, 0, 0.2, BLACKOUT);
     // Side pipes' heat shields under the doors
-    for (const z of [-1, 1]) p.detail(box(0.9, 0.05, 0.05, -0.05, s.clr + 0.03, z * (s.W / 2 + 0.03)), CHROME);
+    if (p.has('skirts')) for (const z of [-1, 1]) p.detail(box(0.9, 0.05, 0.05, -0.05, s.clr + 0.03, z * (s.W / 2 + 0.03)), CHROME);
   },
   suv(p, s) {
     const half = s.L / 2;
@@ -168,7 +170,7 @@ const EXTRAS: Partial<Record<CarId, (p: Parts, s: CarSpec) => void>> = {
     for (const y of [0.4, 0.66]) p.detail(box(0.05, 0.05, s.W * 0.74, half + 0.12, y, 0), TRIM);
     // Running boards, mud flaps behind the back wheels
     for (const z of [-1, 1]) {
-      p.detail(box(1.1, 0.04, 0.1, 0, s.clr - 0.03, z * (s.W / 2 + 0.03)), TRIM);
+      if (p.has('skirts')) p.detail(box(1.1, 0.04, 0.1, 0, s.clr - 0.03, z * (s.W / 2 + 0.03)), TRIM);
       p.detail(box(0.02, 0.2, 0.2, s.axles[0] - s.r - 0.08, 0.2, z * (s.W / 2 - 0.1)), TRIM);
     }
     // The spare wheel on the back door, on a bracket, its rim facing out
@@ -182,9 +184,11 @@ const EXTRAS: Partial<Record<CarId, (p: Parts, s: CarSpec) => void>> = {
   super(p, s) {
     const half = s.L / 2;
     // A tall rear wing on two posts, with end plates
-    p.paint(box(0.26, 0.035, s.W * 0.98, -1.12, 0.8, 0));
-    for (const z of [-1, 1]) p.detail(box(0.3, 0.14, 0.02, -1.12, 0.78, z * s.W * 0.49), TRIM);
-    for (const z of [-0.28, 0.28]) p.detail(box(0.05, 0.32, 0.04, -1.1, 0.63, z), TRIM);
+    if (p.has('spoiler')) {
+      p.paint(box(0.26, 0.035, s.W * 0.98, -1.12, 0.8, 0));
+      for (const z of [-1, 1]) p.detail(box(0.3, 0.14, 0.02, -1.12, 0.78, z * s.W * 0.49), TRIM);
+      for (const z of [-0.28, 0.28]) p.detail(box(0.05, 0.32, 0.04, -1.1, 0.63, z), TRIM);
+    }
     // Louvres over the engine, side intakes behind the doors, scoops on the haunches
     for (const x of [-0.78, -0.86, -0.94, -1.02]) p.detail(box(0.03, 0.012, 0.5, x, topAt(s, x) + 0.006, 0), BLACKOUT);
     for (const z of [-1, 1]) {
@@ -193,9 +197,9 @@ const EXTRAS: Partial<Record<CarId, (p: Parts, s: CarSpec) => void>> = {
       p.detail(box(0.02, 0.035, 0.1, -0.44, topAt(s, -0.6) + 0.015, z * 0.42), BLACKOUT);
     }
     // A front splitter wider than the nose, canards, a rear diffuser
-    p.detail(box(0.16, 0.025, s.W + 0.08, half + 0.04, s.clr + 0.02, 0), BLACKOUT);
+    if (p.has('splitter')) p.detail(box(0.16, 0.025, s.W + 0.08, half + 0.04, s.clr + 0.02, 0), BLACKOUT);
     for (const z of [-1, 1]) p.detail(box(0.12, 0.015, 0.1, half - 0.05, 0.22, z * (s.W / 2 + 0.04)), BLACKOUT);
-    for (const z of [-0.3, -0.1, 0.1, 0.3]) p.detail(box(0.2, 0.08, 0.015, -half, 0.13, z * s.W * 0.9), BLACKOUT);
+    if (p.has('diffuser')) for (const z of [-0.3, -0.1, 0.1, 0.3]) p.detail(box(0.2, 0.08, 0.015, -half, 0.13, z * s.W * 0.9), BLACKOUT);
   },
   exec(p, s) {
     const half = s.L / 2;
@@ -348,6 +352,11 @@ export function pane(a: V2, b: V2, width: number, centre: V2, ends: number, lift
 }
 
 export class Parts {
+  /** The model's own parts left out (your car's kit takes their place: carlook.ts `bareOf()`) */
+  constructor(readonly bare = '') {}
+  has(part: string) {
+    return !this.bare.includes(part);
+  }
   readonly paints: THREE.BufferGeometry[] = [];
   readonly details: THREE.BufferGeometry[] = [];
   readonly glows: THREE.BufferGeometry[] = [];
@@ -458,9 +467,9 @@ export function carGeometry(id: CarId, { wheels = true } = {}): CarGeometry {
 export const FINE: { add?(p: Parts, s: CarSpec, wheels: boolean): void; fit?(car: Car): void } = {};
 export { cache };
 
-export function build(id: CarId, wheels: boolean): CarGeometry {
+export function build(id: CarId, wheels: boolean, bare = ''): CarGeometry {
   const s = CARS[id];
-  const p = new Parts();
+  const p = new Parts(bare);
   const half = s.L / 2;
   const cw = s.W * s.cabinW;
   const lit = s.id === 'bus';
@@ -750,7 +759,7 @@ export function parkedCars(parent: THREE.Object3D, y: number, list: [CarId, numb
  * its own paint, wheels that can turn and steer, and lights. Built facing +x
  * with the origin on the ground under its middle, like the models.
  */
-export function createCar(id: CarId, paint: string, mine = false) {
+export function createCar(id: CarId, paint: string, mine = false, look?: object) {
   const g = carGeometry(id, { wheels: false });
   const s = g.spec;
   const { detail } = carMaterials();
@@ -840,7 +849,8 @@ export function createCar(id: CarId, paint: string, mine = false) {
     },
   };
   // (your own: fitted out once the fine detail has come)
-  if (mine) (group.userData.car = car), FINE.fit?.(car);
+  // (and dressed as the garage left it: mycar.ts `CarLook`, carstyle.ts)
+  if (mine) (group.userData.car = car), (group.userData.look = look), FINE.fit?.(car);
   return car;
 }
 /**

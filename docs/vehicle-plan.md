@@ -351,7 +351,7 @@ Asked before planning (2026-10-28):
   straight line on letting go. The blind test is the owner's.
 - The boot: 666.08 KB of 670.
 
-### Phase 5: the garage's customisation (all free)
+### Phase 5: the garage's customisation (all free; built)
 
 - **Wheels:** a handful of rim styles and colours, tyre sizes within each
   model's arches.
@@ -365,6 +365,49 @@ Asked before planning (2026-10-28):
 - The garage menu gets tabs (Model, Paint, Wheels, Kit, Livery, Glow);
   every pick shows on the turntable; Keep saves it. The save's car gains
   a `look` (cleaned by `cleanCar()`).
+
+**As built:**
+
+- **The look** is `CarLook` in mycar.ts (the ids only, in the boot:
+  `RIMS`, `RIM_COLOURS`, `RIM_SIZES`, `SPLITTERS`, `SKIRTS`, `DIFFUSERS`,
+  `SPOILERS`, `LIVERIES`, `CAR_MARKS`, `GLOWS`, an accent paint and a
+  number 1-99), `STOCK_LOOK` the model as it comes; `cleanLook()` cleans a
+  saved one part by part (a car saved before Phase 5 comes back all
+  stock), `cleanCar()` carries it. One look for your car, whichever model.
+- **What each looks like and where it goes** is carlook.ts (DOM-free,
+  tested in `tests/carlook.test.ts`, out of the boot): the menu's names,
+  the rim and glow colours, `RIM_SIZE` (the rim's reach in the tyre: the
+  tyre's outside stays put, so a bigger rim is a lower profile),
+  `kitFit()` (each part from the model's numbers: the splitter under the
+  nose, the skirts between the arches and under the doors' bottom edge so
+  a door swings clear, the diffuser under the tail, the spoiler on the
+  boot's deck or, over a hatch or a tail door, at the roof's back edge),
+  `doorPanel()` (where the number goes). A kit part picked over one the
+  model has of its own (`STOCK_PARTS`: the hatch's roof spoiler, the
+  coupe's wing, splitter and diffuser, the muscle car's side pipes, the
+  SUV's running boards, the supercar's wing...) takes it off: cars.ts's
+  `build(id, wheels, bare)` leaves it out (`Parts.has()`), and your car's
+  shell is cut from that build (carcabin.ts, shells kept per model and
+  `bareOf()`).
+- **Drawn** by carstyle.ts in the cars' fine-detail chunk: `dress()` from
+  `fitOut()` with the look the car carries (`createCar(..., mine, look)`,
+  `userData.look`): the rims (`rimWheel()`: five spoke, mesh, dish,
+  turbine, split spoke), the kit on the body so it rides the springs
+  (`kitParts()`), the livery as one material on every painted piece (the
+  body, both doors, the kit: the pattern worked out in the shader from
+  where a point is on the car, a contrast roof, twin stripes over the
+  top, a stripe down the sides) with one small texture for the sides
+  (`liveTex()`, 512 x 256: the flames, the number in a roundel, the mark;
+  right side over left, each reading the right way), and the underglow (a
+  pool of light under it, tubes under the sills, `neon(c, 0, 1.3)`: dark
+  by day). The wheels and the kit are kept per look and shared; the
+  livery's materials and texture and the glow go with the car.
+- **The menu:** garage-ui.ts's tabs (`TABS`; the bumpers on a gamepad,
+  the arrows on the tabs); Model is the cards, stats and the deal, Paint
+  the paints, and the four style tabs rows of chips and swatches
+  (`STYLE`); the stock choice of a part the model has its own of reads
+  "Its own". The hangar keeps its own grid without tabs.
+- Boot cost: 0.7 KB (666.8 of 670 KB), the ids and the cleaning.
 
 ### Phase 6: three more cars
 

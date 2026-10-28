@@ -1340,9 +1340,14 @@ it and has been retired completely. Build only on what's here.
   side is the quick swap with a fade (`QUICK_FADE`), reduced motion the
   quick swap without; at home the turntable is stood on to get in
   (`isTurntable()`, `DISC`). Keep new car detail in that chunk: the
-  boot is near its budget (666.08 of 670 KB: Phase 3 brought carinside.ts into it). Phase 4 (handling with
+  boot is near its budget (666.8 of 670 KB: Phase 3 brought carinside.ts into it, Phase 5 the look's ids). Phase 4 (handling with
   depth: each model's feel and drifting) is built, in the sim (drive-sim.ts, mycar.ts `FEEL`; see Driving your
-  car below).
+  car below). Phase 5 (the garage's customisation, all free) is built: `CarLook` in mycar.ts (the ids,
+  `cleanLook()`, carried by `cleanCar()`), carlook.ts (DOM-free, tested in `tests/carlook.test.ts`: names,
+  colours, `kitFit()`, `doorPanel()`, `STOCK_PARTS` / `bareOf()`: a kit part over the model's own takes it off
+  through `build(id, wheels, bare)`), drawn by carstyle.ts in the fine-detail chunk (`dress()` from `fitOut()`:
+  rims, the kit on the body, the livery as one material on every painted piece with a `liveTex()` for the sides,
+  the underglow dark by day), the garage menu's tabs (Model, Paint, Wheels, Kit, Livery, Glow).
 - **Live settings** (the owner's call): the owner switches parts of the
   city from outside the code, in a private command center, through the
   backend's public config (`LIVE_URL`, public settings only).
@@ -2960,7 +2965,8 @@ it and has been retired completely. Build only on what's here.
   `data-garage` in `CityMap.astro`, built on the gun store's `.shop`
   panel): five models (`PLAYER_CARS`: the bus is city-only) with card
   silhouettes drawn from each model's outline at one scale, three stat bars
-  and twelve paints. Each pick shows on the turntable; Keep saves it,
+  and twelve paints; tabs (`data-garage-tabs`: Model, Paint, Wheels, Kit,
+  Livery, Glow) for the free customisation (vehicle plan Phase 5, above). Each pick shows on the turntable; Keep saves it,
   closing without keeping puts the saved car back. While it's open the
   camera eases to the turntable (`frameShowroom()` in `walk.ts`, over the
   shoulder so the first-person hands stay out of shot) and the picture
@@ -3553,7 +3559,7 @@ it and has been retired completely. Build only on what's here.
   10's bigger world (`WORLD_EXT`): run both when anything reads the edge. The "Build site" Action runs them before the
   build: a failing test means no zip.
 - They cover the code that's free of the DOM and scene code: the street plan
-  (`layout.ts`, `streetplan.ts`), the cars' measurements, interiors and where your car is hollow (`carspec.ts`, `carinside.ts`), your car's springs (`suspension.ts`), downtown (`downtown.ts`), the ring highway
+  (`layout.ts`, `streetplan.ts`), the cars' measurements, interiors and where your car is hollow (`carspec.ts`, `carinside.ts`), your car's springs (`suspension.ts`), the garage's customisation (`carlook.ts`, the look in `mycar.ts`), downtown (`downtown.ts`), the ring highway
   (`highway.ts`), the traffic's routes and lights (`routes.ts`), collision data, doors, the gun counter, the garage
   and the spawn (`solids.ts`), the plots (`src/data/plots.ts`), your car
   (`mycar.ts`), the driving rules (`drive-sim.ts`), target practice

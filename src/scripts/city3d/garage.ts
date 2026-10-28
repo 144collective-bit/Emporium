@@ -161,11 +161,11 @@ export function buildGarage(scene: THREE.Scene, opts: { tick: (f: Tick) => void;
   let car: Car | null = null;
   let showing = '';
   function show(c: MyCar) {
-    const key = `${c.model}:${c.paint}`;
+    const key = `${c.model}:${c.paint}:${JSON.stringify(c.look)}`;
     if (key === showing) return;
     showing = key;
     car?.dispose();
-    car = createCar(c.model, paintHex(c.paint), true);
+    car = createCar(c.model, paintHex(c.paint), true, c.look);
     car.group.position.y = 0.07;
     spin.add(car.group);
   }

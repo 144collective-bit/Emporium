@@ -27,13 +27,16 @@
  */
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { BLACKOUT, GLASS, bodyShape, carGeometry, carMaterials, clip, extrude, inset, merge, wheelGeometry, wheelSpots, type Car } from './cars';
+import { BLACKOUT, GLASS, bodyShape, build, carGeometry, carMaterials, clip, extrude, inset, merge, wheelGeometry, wheelSpots, type Car } from './cars';
 import { DRIVER_SCALE, INTERIORS, hollowFrom, hollowTo, type Interior } from './carinside';
-import type { CarId, CarSpec } from './carspec';
+import type { CarSpec } from './carspec';
 import { CALIPER, brakes, caliperGeometry, inward, paintAll } from './carparts';
 import type { Degen } from './character';
 import { fx, lit, toon } from './kit';
 import { rideOn } from './carride';
+import { bareOf, STOCK_PARTS } from './carlook';
+import { cleanLook, type PlayerCar } from './mycar';
+import { dress } from './carstyle';
 import { ANKLE_H, HIP_HEIGHT, reachArm, reachLeg, torsoFrame } from './skeleton';
 
 type V2 = [number, number];
@@ -113,7 +116,8 @@ interface Shell {
   /** The front doors (the driver's on the left, then the passenger's), cut out at their seams: their pieces as they sit with the hinge at the origin */
   doors?: { paint: THREE.BufferGeometry; detail: THREE.BufferGeometry; glass: THREE.BufferGeometry; inside?: THREE.BufferGeometry }[];
 }
-const shells = new Map<CarId, Shell>();
+/** (by model, and the model's own parts left out for your kit: carlook.ts `bareOf()`) */
+const shells = new Map<string, Shell>();
 
 /** The geometry's triangles with their colour: kept, or not */
 function triangles(g: THREE.BufferGeometry, keep: (a: THREE.Vector3, b: THREE.Vector3, c: THREE.Vector3, colour: THREE.Color) => boolean) {
@@ -187,14 +191,14 @@ function splitAt(g: THREE.BufferGeometry, cuts: number[], on: (p: THREE.Vector3)
   return r;
 }
 
-function makeShell(s: CarSpec, low: boolean): Shell {
+function makeShell(s: CarSpec, low: boolean, bare: string): Shell {
   const n = INTERIORS[s.id];
   const cw = s.W * s.cabinW;
   const [rb, rr, fr, fb] = s.cabin;
   const h0 = hollowFrom(s, n);
   const h1 = hollowTo(s);
   const mid: V2 = [(rb[0] + fb[0] + rr[0] + fr[0]) / 4, (rb[1] + fb[1] + rr[1] + fr[1]) / 4];
-  const model = carGeometry(s.id, { wheels: false });
+  const model = bare ? build(s.id, false, bare) : carGeometry(s.id, { wheels: false });
 
   // The paint: the model's own, less its first two pieces (the body's and the cabin's solids)
   const solids = extrude(bodyShape(s), s.W, 0.04).attributes.position.count + extrude(shape(s.cabin), cw, CABIN_ROUND).attributes.position.count;
@@ -557,8 +561,11 @@ export function fitOut(car: Car, o: { low: boolean; ready(obj: THREE.Object3D): 
   car.group.userData.fitted = true;
   const s = car.spec;
   const n = INTERIORS[s.id];
-  let sh = shells.get(s.id);
-  if (!sh) shells.set(s.id, (sh = makeShell(s, o.low)));
+  const look = cleanLook(car.group.userData.look);
+  const bare = s.id in STOCK_PARTS ? bareOf(s.id as PlayerCar, look) : '';
+  const key = `${s.id}|${bare}`;
+  let sh = shells.get(key);
+  if (!sh) shells.set(key, (sh = makeShell(s, o.low, bare)));
   const model = carGeometry(s.id, { wheels: false });
   const { detail } = carMaterials();
   // The body on its springs: everything but the wheels in a group of its own, the wheels with their discs and the
@@ -669,5 +676,7 @@ export function fitOut(car: Car, o: { low: boolean; ready(obj: THREE.Object3D): 
     hands(0);
   };
   rideOn(car, { body, wheels, doors, steer, needles, wipers, hands, driver: () => driver });
+  // Dressed as the garage left it (vehicle plan Phase 5)
+  if (paint && s.id in STOCK_PARTS) dress(car, look, { body, wheels, doors, paint, low: o.low });
   o.ready(car.group);
 }

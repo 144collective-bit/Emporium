@@ -66,18 +66,75 @@ export const CAR_PAINTS = [
 ] as const;
 export type PaintId = (typeof CAR_PAINTS)[number]['id'];
 
+/*
+ * The garage's customisation (vehicle plan Phase 5, all free): what's on offer, as ids (carlook.ts names them and
+ * says how each looks; carstyle.ts draws them). `stock` is the model as it comes.
+ */
+export const RIMS = ['stock', 'five', 'mesh', 'dish', 'turbine', 'split'] as const;
+export const RIM_COLOURS = ['stock', 'silver', 'gunmetal', 'black', 'white', 'gold', 'bronze', 'cyan', 'magenta'] as const;
+export const RIM_SIZES = ['stock', 'big', 'huge'] as const;
+export const SPLITTERS = ['stock', 'lip', 'race'] as const;
+export const SKIRTS = ['stock', 'on'] as const;
+export const DIFFUSERS = ['stock', 'fins'] as const;
+export const SPOILERS = ['stock', 'none', 'lip', 'duck', 'wing'] as const;
+export const LIVERIES = ['none', 'twotone', 'stripes', 'side', 'flames'] as const;
+/** The city's made-up marks (profile-data.ts `MARKS`), on the doors */
+export const CAR_MARKS = ['none', 'diamond', 'seven', 'bolt', 'star', 'heart', 'wave', 'eye', 'mask'] as const;
+export const GLOWS = ['off', 'cyan', 'magenta', 'violet', 'pink', 'blue'] as const;
+type Of<L extends readonly string[]> = L[number];
+export interface CarLook {
+  rim: Of<typeof RIMS>;
+  rimColour: Of<typeof RIM_COLOURS>;
+  rimSize: Of<typeof RIM_SIZES>;
+  splitter: Of<typeof SPLITTERS>;
+  skirts: Of<typeof SKIRTS>;
+  diffuser: Of<typeof DIFFUSERS>;
+  spoiler: Of<typeof SPOILERS>;
+  livery: Of<typeof LIVERIES>;
+  /** The livery's second colour */
+  accent: PaintId;
+  /** A racing number on the doors (0: none) */
+  number: number;
+  mark: Of<typeof CAR_MARKS>;
+  glow: Of<typeof GLOWS>;
+}
+export const STOCK_LOOK: CarLook = { rim: 'stock', rimColour: 'stock', rimSize: 'stock', splitter: 'stock', skirts: 'stock', diffuser: 'stock', spoiler: 'stock', livery: 'none', accent: 'white', number: 0, mark: 'none', glow: 'off' };
+
 export interface MyCar {
   model: PlayerCar;
   paint: PaintId;
+  look: CarLook;
 }
-export const DEFAULT_CAR: MyCar = { model: 'hatch', paint: 'cyan' };
+export const DEFAULT_CAR: MyCar = { model: 'hatch', paint: 'cyan', look: STOCK_LOOK };
+
+const one = <L extends readonly string[]>(list: L, v: unknown, d: L[number]): L[number] => list.find((x) => x === v) ?? d;
+/** A saved car's look, made safe: anything unknown is the stock part (a car saved before Phase 5 is all stock) */
+export function cleanLook(v: unknown): CarLook {
+  const o = (v && typeof v === 'object' ? v : {}) as Record<string, unknown>;
+  const n = Math.round(Number(o.number));
+  const S = STOCK_LOOK;
+  return {
+    rim: one(RIMS, o.rim, S.rim),
+    rimColour: one(RIM_COLOURS, o.rimColour, S.rimColour),
+    rimSize: one(RIM_SIZES, o.rimSize, S.rimSize),
+    splitter: one(SPLITTERS, o.splitter, S.splitter),
+    skirts: one(SKIRTS, o.skirts, S.skirts),
+    diffuser: one(DIFFUSERS, o.diffuser, S.diffuser),
+    spoiler: one(SPOILERS, o.spoiler, S.spoiler),
+    livery: one(LIVERIES, o.livery, S.livery),
+    accent: CAR_PAINTS.find((p) => p.id === o.accent)?.id ?? S.accent,
+    number: n >= 1 && n <= 99 ? n : 0,
+    mark: one(CAR_MARKS, o.mark, S.mark),
+    glow: one(GLOWS, o.glow, S.glow),
+  };
+}
 
 /** A saved or sent car, made safe: unknown models or paints fall back to the default */
 export function cleanCar(v: unknown): MyCar {
   const o = (v && typeof v === 'object' ? v : {}) as Record<string, unknown>;
   const model = PLAYER_CARS.find((m) => m === o.model) ?? DEFAULT_CAR.model;
   const paint = CAR_PAINTS.find((p) => p.id === o.paint)?.id ?? DEFAULT_CAR.paint;
-  return { model, paint };
+  return { model, paint, look: cleanLook(o.look) };
 }
 
 export const paintHex = (id: PaintId) => CAR_PAINTS.find((p) => p.id === id)!.hex;

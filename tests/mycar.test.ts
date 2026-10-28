@@ -3,7 +3,7 @@
 // (or a server, later) made safe.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { CARGO, CAR_PAINTS, DEFAULT_CAR, DRIVE, PLAYER_CARS, cleanCar, paintHex } from '../src/scripts/city3d/mycar';
+import { CARGO, CAR_PAINTS, DEFAULT_CAR, DRIVE, PLAYER_CARS, STOCK_LOOK, cleanCar, paintHex } from '../src/scripts/city3d/mycar';
 import { CAR_CATALOG, STARTER_CARS } from '../src/scripts/city3d/catalog';
 
 test('eight player cars, the bus left out, each with 0-1 handling, cargo and copy', () => {
@@ -35,10 +35,11 @@ test('twelve paints, each its own id and colour', () => {
 });
 
 test('cleanCar keeps good cars and falls back for anything else', () => {
-  assert.deepEqual(cleanCar({ model: 'coupe', paint: 'pink' }), { model: 'coupe', paint: 'pink' });
-  assert.deepEqual(cleanCar({ model: 'bus', paint: 'pink' }), { model: DEFAULT_CAR.model, paint: 'pink' });
-  assert.deepEqual(cleanCar({ model: 'van', paint: '#ff0000' }), { model: 'van', paint: DEFAULT_CAR.paint });
+  const look = STOCK_LOOK;
+  assert.deepEqual(cleanCar({ model: 'coupe', paint: 'pink' }), { model: 'coupe', paint: 'pink', look });
+  assert.deepEqual(cleanCar({ model: 'bus', paint: 'pink' }), { model: DEFAULT_CAR.model, paint: 'pink', look });
+  assert.deepEqual(cleanCar({ model: 'van', paint: '#ff0000' }), { model: 'van', paint: DEFAULT_CAR.paint, look });
   for (const junk of [null, undefined, 'hatch', 7, [], { model: { x: 1 } }]) assert.deepEqual(cleanCar(junk), DEFAULT_CAR);
-  // Only the two fields come back
-  assert.deepEqual(Object.keys(cleanCar({ model: 'van', paint: 'red', price: 5 })).sort(), ['model', 'paint']);
+  // Only the three fields come back (the look: tests/carlook.test.ts)
+  assert.deepEqual(Object.keys(cleanCar({ model: 'van', paint: 'red', price: 5 })).sort(), ['look', 'model', 'paint']);
 });
