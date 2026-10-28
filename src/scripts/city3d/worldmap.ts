@@ -26,7 +26,6 @@ import { ESPLANADE_DECKS } from './boulevard';
 import { HIGHRISES } from './highrise';
 import { HIGHWAY_BOX } from './highway';
 import { STADIUM_AREA } from './stadium';
-import { HALL as ST_HALL, SHED as ST_SHED, TRACKS as ST_TRACKS } from './station';
 import { ANCHORS as MALL_ANCHORS, CINEMA as MALL_CINEMA, HALL as MALL_HALL, MSCP as MALL_MSCP, SHOPS as MALL_SHOPS } from './mall';
 
 export interface WorldMapDeps {
@@ -185,18 +184,6 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
     }
     // Palm Court's shops and cinema, Starlight Mall and its anchors, the multi-storey (mall.ts)
     for (const r of [MALL_CINEMA.rect, MALL_HALL.rect, MALL_MSCP.rect, ...MALL_ANCHORS.map((a) => a.rect), ...MALL_SHOPS.map((s) => s.rect)]) rect([...r], C.tower);
-    // Sector 7 Central, the grand station (station.ts): the hall and the shed, the tracks on west to the world's edge
-    rect([ST_HALL.x0, ST_HALL.z0, ST_HALL.x1, ST_HALL.z1], C.tower);
-    rect([ST_SHED.x0, ST_SHED.z0, ST_SHED.x1, ST_SHED.z1], C.tower);
-    ctx.strokeStyle = C.road;
-    ctx.lineWidth = Math.max(1, 0.8 * view.s);
-    for (const t of ST_TRACKS) {
-      poly([
-        [EXT[0], t],
-        [ST_SHED.x0, t],
-      ]);
-      ctx.stroke();
-    }
     ctx.fillStyle = C.park;
     // Westlake Park (westlake.ts): its lawns, the lake and its paths
     for (const b of WESTLAKE_BLOCKS) {
