@@ -9,7 +9,7 @@
 .city-head .level-pop {
   display: none;
 }
-.city[data-view="3d"]:not([data-mode="build"]) .city-head .level-pop {
+.city[data-view="3d"] .city-head .level-pop {
   display: block;
 }
 .city-head .level-pop > summary {

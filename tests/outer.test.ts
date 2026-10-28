@@ -1,5 +1,5 @@
 // The outer districts (outer.ts): the Parkway and the Southside Loop bend gently and
-// meet their avenues square; every plot and lot keeps its pad (same place, same price)
+// meet their avenues square; every district and lot keeps its pad (same place)
 // on a landscaped block clear of the streets; the squares, parks, lawns, kerbs and the
 // promenade stay where they belong.
 import { test } from 'node:test';
@@ -23,9 +23,7 @@ import {
   type Pt,
   type Rect,
 } from '../src/scripts/city3d/outer';
-import { DISTRICTS } from '../src/data/plots';
-import { PLOT_DORRAS } from '../src/scripts/city3d/catalog';
-import { EW_ROADS, LANE, NS_ROADS, RIVER, RING_HI, SOUTH_ROAD, nsRuns } from '../src/scripts/city3d/layout';
+import { DISTRICTS, EW_ROADS, LANE, NS_ROADS, RIVER, RING_HI, SOUTH_ROAD, nsRuns } from '../src/scripts/city3d/layout';
 import { distToStreet, type Street } from '../src/scripts/city3d/streetplan';
 
 const street = (b: (typeof BENDS)[number]): Street => ({ id: b.id, kind: 'street', pts: b.pts, half: LANE, lanes: 1 });
@@ -70,13 +68,20 @@ test('the bends: gentle, convex curves that meet their avenues square at both en
   assert.ok(south.pts.every((p) => p[1] >= SOUTH_ROAD - 1e-9));
 });
 
-test('every plot and lot keeps its pad, on exactly one landscaped block, clear of every street', () => {
-  // The plots haven't moved and cost the same
+test('sixteen districts round the core: North 1-5, West 1-3, East 1-3, South 1-5 across the river', () => {
+  assert.equal(DISTRICTS.length, 16);
+  assert.equal(new Set(DISTRICTS.map((d) => d.id)).size, 16);
+  for (const p of ['N', 'W', 'E', 'S']) assert.ok(DISTRICTS.some((d) => d.id.startsWith(p)));
+  for (const d of DISTRICTS.filter((d) => d.id.startsWith('S'))) assert.ok(d.oz > RIVER[1]);
+  for (const d of DISTRICTS.filter((d) => !d.id.startsWith('S'))) assert.ok(d.oz + 9 < RIVER[0]);
+});
+
+test('every district and lot keeps its pad, on exactly one landscaped block, clear of every street', () => {
+  // The districts haven't moved (Build mode's plots, retired: the land stays)
   assert.deepEqual(
     DISTRICTS.find((d) => d.id === 'N1'),
     { id: 'N1', name: 'North 1', ox: -18, oz: -18 }
   );
-  assert.equal(PLOT_DORRAS, 120_000);
   for (const p of PADS) assert.equal(OUTER_BLOCKS.filter((b) => b.pads.includes(p.id)).length, 1, `${p.id} is on one block`);
   const bends = BENDS.map(street);
   for (const b of OUTER_BLOCKS) {

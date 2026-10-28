@@ -1,6 +1,5 @@
 /*
- * Sector 7 game server (Cloudflare Worker). Plot sales for PLS were
- * retired: the city's plots are game property now (src/scripts/city3d/tycoon.ts).
+ * Sector 7 game server (Cloudflare Worker).
  *
  * - GET /health: a quick "ok".
  * - GET /play (WebSocket): the Lobby picks a city with room (16 players each,

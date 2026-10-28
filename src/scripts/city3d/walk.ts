@@ -75,7 +75,7 @@ import type { KartPark, KartRace, KartUI } from './kart-types';
 import { CUPS } from './kart-cups';
 import type { KartInput } from './kart-sim';
 import { abandonSeries, seriesNext } from './tycoon';
-import { CAMERA_GRID, DOORS, GARAGE_SITE, RACK, SOLIDS, SOLID_GRID, SOLID_GRIDS, TURNTABLE_BOX, WALK_SPAWN, rayBoxes, type Box } from './solids';
+import { CAMERA_GRID, DOORS, GARAGE_SITE, RACK, SOLIDS, SOLID_GRID, SOLID_GRIDS, TURNTABLE_BOX, WALK_SPAWN, addSolids, rayBoxes, type Box } from './solids';
 import { BoxGrid } from './boxgrid';
 import { count } from './tycoon';
 import { SLAB, type Tick } from './world';
@@ -92,14 +92,16 @@ import { harbourY, onHarbour } from './harbour';
 import { PLAN, inPoly, type Pt } from './streetplan';
 import { SPOTS, pointOn, ROUTES } from './routes';
 import { bodies, swing } from './life';
-import type { StreetFists } from './brawl';
+import type { Partners, StreetFists } from './brawl';
+import type { PartnerId } from './fight-moves';
+import type { FightStart } from './fight-types';
 import type { GameDeps } from './ui';
 import type { Mode } from '../net/protocol';
 import { live } from './live-client';
 import type { FeatureId } from './live';
 
 /** What a prompt can open: a landmark's door, or one of walk mode's own places and vehicles */
-type Near = SpotId | 'gear' | 'garage' | 'hangar' | 'car' | 'plane' | 'boat' | 'karts' | 'trainer' | 'bench' | 'stand' | 'put' | `place:${string}`;
+type Near = SpotId | 'gear' | 'garage' | 'hangar' | 'car' | 'plane' | 'boat' | 'karts' | 'trainer' | 'bench' | 'stand' | 'put' | `place:${string}` | `spar:${PartnerId}`;
 /** The prompts the owner can close (live settings, live.ts) and the feature that closes each */
 const GATED: Partial<Record<Near, FeatureId>> = { gear: 'guns', garage: 'drive', hangar: 'fly', karts: 'karts', trainer: 'fight', boat: 'boat' };
 /** Prompts that say their own label (the rest say "Enter ...") */
@@ -152,12 +154,14 @@ const LAND_SHAKE = 0.3;
  * trainer's: none in the boot): until then it's shut (`open` false, its other calls do nothing) and a call in `opens` loads it and then
  * opens it. The menus are closures over object literals, so a method called on the stand-in is the real one's.
  */
-function lazyMenu<T extends object>(opens: (keyof T & string)[], load: () => Promise<T>): T {
+function lazyMenu<T extends object>(opens: (keyof T & string)[], load: () => Promise<T>): T & { loaded(): Promise<T> } {
   let real: T | null = null;
   let loading: Promise<T> | null = null;
   const get = () => (loading ??= load().then((m) => (real = m)));
-  return new Proxy({} as T, {
+  return new Proxy({} as T & { loaded(): Promise<T> }, {
     get(_, k) {
+      // (fetch it without opening it: a street spar wants the fight's HUD with no menu first)
+      if (k === 'loaded') return get;
       if (real) return (real as Record<PropertyKey, unknown>)[k];
       if (k === 'open') return false;
       if (typeof k === 'string' && opens.includes(k as keyof T & string)) return (...a: unknown[]) => void get().then((m) => (m as Record<string, (...x: unknown[]) => void>)[k](...a));
@@ -231,8 +235,8 @@ export interface WalkDeps {
   camera: THREE.PerspectiveCamera;
   canvas: HTMLCanvasElement;
   root: HTMLElement;
-  /** Footprints and heights of buildings visitors have placed */
-  plotSolids(): Box[];
+  /** Footprints and heights of what's built on your units and big lots */
+  placedSolids(): Box[];
   /** Open a landmark's panel in place */
   openSpot(id: SpotId): void;
   /** Called on any input, so the frame cap knows we're busy */
@@ -469,6 +473,8 @@ export function createWalk(d: WalkDeps) {
     const door = (at: { x: number; z: number }) => doorMark(at, pos.x, pos.z, y, (bx, bz) => blocked(bx, bz, pos.y));
     if (n.id === 'gear') return n.label === ARMS.name ? counterMark({ x: ARMS.counter.x, z: ARMS.street }, y + ARMS.hatch.y, y, pos.x, pos.z) : counterMark(RACK_TOP, y + RACK_TOP_H, y, pos.x, pos.z);
     if (n.id === 'trainer') return counterMark(TRAINER_TOP, y + TRAINER_TOP_H, y, pos.x, pos.z);
+    // (a sparring partner: the spar starts at once)
+    if (n.id.startsWith('spar:')) return null;
     if (n.id === 'garage') return door(GARAGE_SITE.door);
     if (n.id === 'hangar') return door(HANGAR_DOOR);
     if (n.id === 'karts') return door(HUT_DOOR);
@@ -556,7 +562,7 @@ export function createWalk(d: WalkDeps) {
     }
     if (!near) return;
     // Closed for now by the owner (live settings): getting into things, never out of them
-    const f = near.id === 'car' ? (drive.active ? null : 'drive') : near.id === 'plane' ? (fly.active ? null : 'fly') : near.id === 'boat' ? (boating() ? null : 'boat') : GATED[near.id];
+    const f = near.id === 'car' ? (drive.active ? null : 'drive') : near.id === 'plane' ? (fly.active ? null : 'fly') : near.id === 'boat' ? (boating() ? null : 'boat') : near.id.startsWith('spar:') ? 'fight' : GATED[near.id];
     const shut = f && live.closed(f);
     if (shut) return d.game.toast(shut, 3000);
     const n = near;
@@ -568,6 +574,7 @@ export function createWalk(d: WalkDeps) {
       else if (n.id === 'boat') (boating() ? leaveBoat() : takeBoat());
       else if (n.id === 'karts') void loadKarts().then(() => kartUI.show());
       else if (n.id === 'trainer') fightUI.show();
+      else if (n.id.startsWith('spar:')) startFight({ kind: 'street', partner: n.id.slice(5) as PartnerId });
       else if (n.id === 'car') (drive.active ? getOut() : getIn());
       else if (n.id === 'put') putDown();
       else if (n.id === 'bench' || n.id === 'stand') return;
@@ -648,7 +655,7 @@ export function createWalk(d: WalkDeps) {
     if (inLake(x, z, RADIUS + RIM.w + 0.1) && !onJetty(x, z, RADIUS) && !onTerrace(x, z, RADIUS)) return true;
     if (SOLID_GRID.near(x, z, RADIUS, nearBoxes).some((b) => inBox(b, x, z, RADIUS) && !skip?.(b))) return true;
     if (drive.blocks(x, z, RADIUS) || fly.blocks(x, z, RADIUS)) return true;
-    return d.plotSolids().some((b) => inBox(b, x, z, RADIUS));
+    return d.placedSolids().some((b) => inBox(b, x, z, RADIUS));
   }
   /** Where he can't step at his own height (contact.ts asks, for a rail: an edge nothing solid explains) */
   const contactBlocked = (bx: number, bz: number) => blocked(bx, bz, pos.y);
@@ -663,7 +670,7 @@ export function createWalk(d: WalkDeps) {
     }
     // Only the boxes under the camera's line can be in its way (padded as the test below pads them)
     // (and Liberty Bridge's towers over their arches and its walkways' roofs, which you walk under: a bottom, b[5])
-    for (const b of [...CAMERA_GRID.alongRay(from, dir, t, 0.18, nearBoxes), ...d.plotSolids(), ...LIBERTY_CAMERA, ...DECK_CAMERA, ...MALL_CAMERA] as number[][]) {
+    for (const b of [...CAMERA_GRID.alongRay(from, dir, t, 0.18, nearBoxes), ...d.placedSolids(), ...LIBERTY_CAMERA, ...DECK_CAMERA, ...MALL_CAMERA] as number[][]) {
       if (b[4] < skipUnder) continue;
       const lo = [b[0] - 0.18, b[5] ?? 0, b[1] - 0.18];
       const hi = [b[2] + 0.18, b[4] + 0.15, b[3] + 0.18];
@@ -690,7 +697,7 @@ export function createWalk(d: WalkDeps) {
   }
 
   /** Distance along a ray to the first building or the ground (for shots). */
-  const rayWorld = (from: THREE.Vector3, dir: THREE.Vector3, max: number) => rayBoxes(from, dir, max, d.plotSolids());
+  const rayWorld = (from: THREE.Vector3, dir: THREE.Vector3, max: number) => rayBoxes(from, dir, max, d.placedSolids());
 
   const combat = createCombat({
     scene: d.scene,
@@ -770,6 +777,9 @@ export function createWalk(d: WalkDeps) {
   // empty hands are his fists. Click punches, right-click (held) blocks, G kicks, Space with the guard up and standing
   // dodges; on a gamepad X, Y, LB held and A; on touch Punch, Kick and Block in Fire's, Aim's and Reload's places
   let fists: StreetFists | null = null;
+  let partners: Partners | null = null;
+  /** The partner a street spar is with (they're hidden while the fight draws its own) */
+  let sparWith: PartnerId | null = null;
   let fistsMod: typeof import('./brawl') | null = null;
   let fistsLoad: Promise<void> | null = null;
   const loadFists = () =>
@@ -777,6 +787,10 @@ export function createWalk(d: WalkDeps) {
       .then((m) => {
         fistsMod = m;
         fists = m.createStreetFists(d.game.save().fight.style);
+        // The sparring partners waiting on the street (Phase 3): drawn near him, solid where they stand
+        partners = m.createPartners(d.scene, d.low, (x, z) => groundAt(x, z));
+        // (solid where they stand: into the grids now, not the city's SOLIDS, whose lawn walks were routed at the load)
+        addSolids(m.PARTNER_SOLIDS);
       })
       .catch(() => {
         fistsLoad = null;
@@ -850,7 +864,7 @@ export function createWalk(d: WalkDeps) {
     // The boxes within `reach` of where the car is (the collision grid's answer, then placed buildings)
     solids: (x, z, reach) => {
       const near = CAR_GRID.near(x, z, reach);
-      return d.plotSolids().length ? [...near, ...d.plotSolids()] : near;
+      return d.placedSolids().length ? [...near, ...d.placedSolids()] : near;
     },
     groundAt,
     cameraRoom,
@@ -870,7 +884,7 @@ export function createWalk(d: WalkDeps) {
     myPlane: loadPlane,
     solids: (x, z, reach) => {
       const near = CAR_GRID.near(x, z, reach);
-      return d.plotSolids().length ? [...near, ...d.plotSolids()] : near;
+      return d.placedSolids().length ? [...near, ...d.placedSolids()] : near;
     },
     groundAt,
     cameraRoom,
@@ -982,6 +996,7 @@ export function createWalk(d: WalkDeps) {
   const fightUI = lazyMenu<FightUI>(['show'], async () => (await import('./fight-ui')).createFightUI(root, {
     game: d.game,
     start: (setup) => startFight(setup),
+    snack: () => void fight?.snack(),
     onOpen() {
       pedals.gas = pedals.brake = false;
       fightBtns.block = false;
@@ -1008,6 +1023,7 @@ export function createWalk(d: WalkDeps) {
         club: d.fightClub,
         ui: fightUI,
         game: d.game,
+        groundAt: (x, z) => groundAt(x, z, pos.y),
         outfit: () => outfit,
         sfx: d.sfx,
         reduced: d.reduced,
@@ -1022,22 +1038,33 @@ export function createWalk(d: WalkDeps) {
   /** The buttons while fighting: Block held, Punch / Kick / Dodge pressed (edges) */
   const fightBtns = { punch: false, kick: false, block: false, dodge: false };
   const padFight = { x: 0, y: 0, block: false };
-  function startFight(setup: { kind: 'spar' | 'bout'; bot: import('./catalog').BotLevel }) {
+  let fightUIReady = false;
+  function startFight(setup: FightStart) {
     if (fighting()) return;
-    // (still loading: it starts as soon as it's here)
-    if (!fight) {
-      void loadFight().then(() => startFight(setup));
+    // (still loading, the fight and its HUD: it starts as soon as they're here)
+    if (!fight || !fightUIReady) {
+      void Promise.all([loadFight(), fightUI.loaded()]).then(() => {
+        fightUIReady = true;
+        startFight(setup);
+      });
       return;
     }
     fightUI.close();
     if (drive.active) getOut();
     if (combat.armed) combat.toggleHolster();
+    // (the fists' guard down: the fight has its own; walk mode's frame doesn't run while it's on)
+    fists?.brawl.cancel();
+    fistsShown = false;
+    guardAmt = wholeAmt = 0;
+    mouseBlock = padBlock = false;
+    root.classList.remove('is-fists');
     fightBtns.punch = fightBtns.kick = fightBtns.block = fightBtns.dodge = false;
     still();
     hero.g.visible = hero.ring.visible = false;
     near = null;
     prompt.hidden = true;
     fightDone = false;
+    sparWith = setup.kind === 'street' ? setup.partner : null;
     fight.start(setup);
     canvas.focus({ preventScroll: true });
     d.touched();
@@ -1047,6 +1074,7 @@ export function createWalk(d: WalkDeps) {
     if (!fight?.active) return;
     const out = fight.exit();
     fightDone = false;
+    sparWith = null;
     pos.set(out.x, groundAt(out.x, out.z), out.z);
     vel.set(0, 0);
     vy = 0;
@@ -1298,6 +1326,7 @@ export function createWalk(d: WalkDeps) {
         if (down && !e.repeat) fightBtns.dodge = true;
       } else if (c === 'ShiftLeft' || c === 'ShiftRight') fightBtns.block = down;
       else if (down && !e.repeat && c === 'KeyG') fightBtns.kick = true;
+      else if (down && !e.repeat && c === 'KeyE') fight?.snack();
       else if (MOVE.includes(c)) {
         if (down) keys.add(c);
         else keys.delete(c);
@@ -1743,6 +1772,8 @@ export function createWalk(d: WalkDeps) {
       if (edge(2)) fightBtns.punch = true;
       if (edge(3)) fightBtns.kick = true;
       if (edge(0)) fightBtns.dodge = true;
+      // (the d-pad's up: a snack, in a spar)
+      if (edge(12)) fight?.snack();
       if (edge(9)) quitFight();
       if (pad.x || pad.y || b.some(Boolean)) d.touched();
       pad.prev = b;
@@ -2107,6 +2138,7 @@ export function createWalk(d: WalkDeps) {
     kartUI.update(dt);
     fightUI.update(dt);
     if (ride) return rideFrame(dt, t);
+    partners?.update(dt, pos.x, pos.z, sparWith);
     if (fighting()) return fightFrame(dt, t);
     if (karts.active) return kartFrame(dt, t);
     if (!kartLoad && nearKarts(pos.x, pos.z)) void loadKarts();
@@ -2173,6 +2205,9 @@ export function createWalk(d: WalkDeps) {
     if (crouched && sprint && mag > 0.1 && !slide) crouched = false;
     // Fists on the street (brawl.ts): the fight's moves timed for him, from the presses (the touch buttons, the
     // mouse, G, the pad) gathered in fightBtns; anything else in his hands, or anything else on, and they stop
+    // (a style bought or picked at the trainer: the fists in it from his next move)
+    const style = d.game.save().fight.style;
+    if (fists && fistsMod && !fists.brawl.move && fists.style !== style) fists = fistsMod.createStreetFists(style);
     const fistsOn = fistsReady() && !moments.active && !over && !slide;
     if (!fistsOn && fists && (fists.brawl.up || fists.brawl.move)) fists.brawl.cancel();
     const fistStep = fistsOn
@@ -2289,7 +2324,14 @@ export function createWalk(d: WalkDeps) {
             swing.r = fistsMod!.MOVES[e.move].reach + fistsMod!.BRAWL.crowd;
             swing.t = 0.4;
           }
-        } else if (e.kind === 'strike') combat.melee(e.move, pos.x, pos.y, pos.z, face);
+        } else if (e.kind === 'strike') {
+          // (three landing close together on a dummy: a street chain, for the mission)
+          if (fists!.brawl.landed(combat.melee(e.move, pos.x, pos.y, pos.z, face))) {
+            count(d.game.save(), 'streetChains', 1);
+            d.game.commit();
+            d.game.toast('Chain of three!', 1500);
+          }
+        }
         else if (e.kind === 'tired' && performance.now() - tiredAt > 4000) {
           tiredAt = performance.now();
           d.game.toast('Out of breath: let him get it back for a moment.', 2200);
@@ -2493,7 +2535,7 @@ export function createWalk(d: WalkDeps) {
         if (contact && contactMod && contactRot && !moments.active && !carrying) {
           contactBoxes.length = 0;
           SOLID_GRID.near(pos.x, pos.z, 1.2, contactBoxes);
-          for (const b of d.plotSolids()) if (b[0] - 1.2 < pos.x && pos.x < b[2] + 1.2 && b[1] - 1.2 < pos.z && pos.z < b[3] + 1.2) contactBoxes.push(b);
+          for (const b of d.placedSolids()) if (b[0] - 1.2 < pos.x && pos.x < b[2] + 1.2 && b[1] - 1.2 < pos.z && pos.z < b[3] + 1.2) contactBoxes.push(b);
           contactPeople.length = 0;
           for (const p of bodies.people) if (p.act === undefined && Math.abs(p.x - pos.x) < 1.5 && Math.abs(p.z - pos.z) < 1.5) contactPeople.push(p);
           const st = contact.update({ dt, x: pos.x, y: pos.y, z: pos.z, face: drawFace, scale: SCALE, speed, moving: mag > 0.1, walls: contactBoxes, people: contactPeople, blocked: contactBlocked, hit: hitWall, hitSpeed });
@@ -2613,6 +2655,12 @@ export function createWalk(d: WalkDeps) {
       best = { id: 'trainer', label: 'Trainer' };
       bestD = 0;
     }
+    // A sparring partner waiting on the street (brawlsite.ts)
+    const sp = drive.active ? null : partners?.near(pos.x, pos.z);
+    if (sp) {
+      best = { id: `spar:${sp.id}`, label: `Spar · ${sp.name}` };
+      bestD = 0;
+    }
     if (!drive.active)
       // (and the snack bars, the inventory chunk's)
       for (const p of hotbar ? [...d.places(), ...hotbar.doors] : d.places())
@@ -2652,7 +2700,7 @@ export function createWalk(d: WalkDeps) {
     if (best?.id !== near?.id || best?.label !== near?.label) {
       near = best;
       prompt.hidden = !near;
-      if (near) prompt.querySelector('[data-walk-label]')!.textContent = OWN_LABEL.has(near.id) || near.id.startsWith('place:') ? near.label : `Enter ${near.label}`;
+      if (near) prompt.querySelector('[data-walk-label]')!.textContent = OWN_LABEL.has(near.id) || near.id.startsWith('place:') || near.id.startsWith('spar:') ? near.label : `Enter ${near.label}`;
     }
   }
 
@@ -2880,6 +2928,7 @@ export function createWalk(d: WalkDeps) {
       hangarUI.close();
       // (the fists down)
       fists?.brawl.cancel();
+      partners?.hide();
       mouseBlock = padBlock = fistsShown = false;
       guardAmt = wholeAmt = 0;
       root.classList.remove('is-fists');

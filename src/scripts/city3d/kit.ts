@@ -377,7 +377,7 @@ export function canvasTex(w: number, h: number, draw: Draw): THREE.CanvasTexture
 
 /**
  * A canvas texture that's never made at build time: drawn from the save, the look or the visitor's own
- * things (plots, units, the car), or drawn into afterwards (the LED wall). Painted here every time.
+ * things (units, lots, the car), or drawn into afterwards (the LED wall). Painted here every time.
  */
 export function liveTex(w: number, h: number, draw: Draw): THREE.CanvasTexture {
   if (NO_DOM) return canvasTex(w, h, draw);
@@ -596,7 +596,7 @@ interface FacadeOpts {
   bands?: string | null;
   /** Leave the bottom N rows as a lit shopfront */
   shopRows?: number;
-  /** Drawn from the save (a plot's, a lot's): never made at build time (liveTex()) */
+  /** Drawn from the save (a lot's): never made at build time (liveTex()) */
   live?: boolean;
 }
 
@@ -842,7 +842,7 @@ export class Batch {
  * Merge the meshes Batches built (`userData.batched`) that share a parent, a
  * material, a layer and shadow flags: a landmark made from several Batches
  * ends up with one mesh per material, not one per Batch. Only for parts of
- * the city that are never rebuilt (the units, lots and plots rebuild theirs).
+ * the city that are never rebuilt (the units and lots rebuild theirs).
  */
 export function consolidate(parents: THREE.Object3D[]) {
   for (const parent of parents) {

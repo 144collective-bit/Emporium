@@ -708,6 +708,22 @@
   padding: 6px 12px;
   pointer-events: auto;
 }
+/* Snack beside Quit (a spar or a street spar, with one in the bag) */
+.fight-acts {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin: 0;
+}
+.fight-snack {
+  padding: 6px 10px;
+  border-color: #00eaff66;
+  color: var(--p-cyan);
+  pointer-events: auto;
+}
+.fight-snack b {
+  color: #fff;
+}
 /* The centre stack: the bell's text over the count while someone's down. One block in the middle
    of the screen so the two never land on each other, sized to clear the HUD above and the touch
    buttons and the door prompt below on a phone. */
@@ -1267,7 +1283,8 @@
     padding: 1px 6px;
     font-size: 8px;
   }
-  .fight-quit {
+  .fight-quit,
+  .fight-snack {
     padding: 5px 8px;
     font-size: 8.5px;
   }

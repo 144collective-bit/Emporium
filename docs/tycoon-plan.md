@@ -25,10 +25,10 @@ plan the owner agreed, and where each phase stands. Keep it up to date.
    warehouse.
 3. **Big lots** (the owner's call in Phase 4): three Dorras-only lots east of
    Makers' Row, for a superstore, a factory, a depot or your offices.
-4. **District plots** (Phase 5, the owner's call): the 16 district plots are
-   the top of the property ladder, bought with Dorras at the Vault's estate
-   agent and built on in Build mode. Sales for PLS were retired: nothing in
-   the city costs real money.
+4. **District plots** (Phase 5, the owner's call; retired with Build mode,
+   below): the 16 district plots were the top of the property ladder, bought
+   with Dorras at the Vault's estate agent and built on in Build mode.
+   Nothing in the city costs real money.
 
 ## Supply chain (from phase 2)
 
@@ -220,7 +220,7 @@ before the next one starts.
   and stock, three levels each (`GUN_MODS`, `applyGunMods`).
 - **Drop 001** sells the premium wardrobe (`WARDROBE_CATALOG`): new fits,
   hats, bags, things to hold, a watch and two colour packs.
-- **The estate agent** (in the Vault): the sixteen district plots at
+- **The estate agent** (in the Vault; its plots retired with Build mode, below): the sixteen district plots at
   `PLOT_DORRAS`, dearer with each one you own, level `PLOT_LEVEL` to buy;
   building on one costs `BUILD_COSTS` per design (the difference when
   changing); selling back pays `PLOT_REFUND`. Build mode's Plots button
@@ -316,3 +316,15 @@ day it's bought (4 shelves of 60, busier than a unit's shop), levels 1-3
 (10,000 and 25,000), clerks, couriers, car deliveries with the bonus, sold
 at the Vault's estate agent and on the business card's Units tab. The save
 is v10 (`corners`; older saves own none).
+
+## Build mode retired (the owner's call; save v12)
+
+Build mode was taken out completely: the Build switch, the Plots button
+and panel, the eight designs and their buildings, buying, building on and
+selling district plots (`buyPlot()`, `buildPlot()`, `sellPlot()`,
+`PLOT_DORRAS`, `BUILD_COSTS`, `PLOT_REFUND`), the estate agent's plot list
+and the Property mogul mission. The districts stay as open land
+(`DISTRICTS` in layout.ts). The save is v12: a save that owned plots gets
+back everything they cost and what was built on them when it loads
+(`plotRefund()`, booked as "Plots refunded"), with a toast once. The boot
+came down about 14 KB (647.6 of 670 KB; 649.0 with main's three new cars).

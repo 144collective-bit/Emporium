@@ -2,10 +2,8 @@
  * The Online / Offline switch in the mode header (only when the site is built
  * with a game server, PUBLIC_GAME_SERVER). One choice for the whole city:
  *
- * - Online: walking joins the shared city (multiplayer.ts) and Build mode
- *   sells real plots through the visitor's wallet (land.ts).
- * - Offline: solo walking, and Build mode is the labelled demo with play
- *   money (store.ts). Nothing talks to the game server.
+ * - Online: walking joins the shared city (multiplayer.ts).
+ * - Offline: solo walking. Nothing talks to the game server.
  *
  * The choice is remembered in this browser (degen-city-online-v1).
  */
@@ -52,7 +50,7 @@ export function createOnlineSwitch(root: HTMLElement) {
     const s = on ? (status && status.state !== 'off' ? status.state : 'ready') : 'off';
     dot.dataset.state = s;
     el.title = !on
-      ? 'Offline: solo walking, and Build mode is a demo with play money'
+      ? 'Offline: solo walking'
       : s === 'online' && status
         ? `Online: in ${status.room} with ${status.players} ${status.players === 1 ? 'Degen' : 'Degens'}`
         : s === 'connecting' || s === 'retrying'
@@ -61,7 +59,7 @@ export function createOnlineSwitch(root: HTMLElement) {
             ? 'Online: every city is full right now'
             : s === 'error'
               ? 'Online: the game server can\'t be reached'
-              : 'Online: walking joins other players, and Build mode sells real plots';
+              : 'Online: walking joins other players';
   }
 
   function set(next: boolean) {
@@ -74,7 +72,7 @@ export function createOnlineSwitch(root: HTMLElement) {
     }
     paint();
     listeners.forEach((f) => f(on));
-    toast(on ? 'Online: walk to join other players. Build mode sells real plots.' : 'Offline: solo walking. Build mode is a demo with play money.');
+    toast(on ? 'Online: walk to join other players.' : 'Offline: solo walking.');
   }
 
   for (const b of btns)

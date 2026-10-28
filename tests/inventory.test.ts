@@ -5,7 +5,7 @@
 // free play off everywhere but a test build.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { GUN_CATALOG, ITEM_CATALOG, ITEM_MAX, PLOT_DORRAS } from '../src/scripts/city3d/catalog';
+import { GUN_CATALOG, ITEM_CATALOG, ITEM_MAX } from '../src/scripts/city3d/catalog';
 import { addXp, buyGun, buyWardrobe, cleanSave, newSave, pay } from '../src/scripts/city3d/tycoon';
 import {
   GRID_SIZE,
@@ -50,7 +50,7 @@ test('a new save carries the rifle in weapon slot 1 and nothing else', () => {
 
 test('a v10 save carries on into v11 with the rifle and the first gun it bought, catalog order', () => {
   const old = cleanSave({ v: 10, dorras: 5, armoury: { owned: ['lmg', 'revolver'] } }, NOW);
-  assert.equal(old.v, 11);
+  assert.equal(old.v, 12);
   assert.deepEqual(old.inventory.guns, ['rifle', 'revolver']);
   assert.equal(old.inventory.held, null);
   // Nothing bought: the rifle alone
@@ -284,7 +284,7 @@ test('weapon slots on the wire: two known guns at most, never one twice, none fo
 test('free play is off in the tests, the server and the live build: the real prices and levels hold', () => {
   assert.equal(FREE_PLAY, false);
   assert.ok(GUN_CATALOG.lmg.price > 0 && GUN_CATALOG.lmg.level > 1);
-  assert.ok(PLOT_DORRAS > 0 && ITEM_CATALOG.snack.price > 0 && WEAPONS.dmr.need > 0);
+  assert.ok(ITEM_CATALOG.snack.price > 0 && WEAPONS.dmr.need > 0);
   const s = newSave(NOW);
   s.dorras = 0;
   assert.equal(pay(s, 100, 1, 'gear').ok, false);

@@ -1016,12 +1016,6 @@
   .walk-online summary {
     padding: 9px 11px;
   }
-  .builder-catalog {
-    grid-template-columns: 1fr;
-  }
-  .builder-panel {
-    max-height: 56%;
-  }
   .city-pin-sub {
     font-size: 8.5px;
   }
@@ -2105,7 +2099,7 @@
   display: block;
 }
 
-/* Keeps a name like a plot id on one line */
+/* Keeps a short name on one line */
 .nowrap {
   white-space: nowrap;
 }

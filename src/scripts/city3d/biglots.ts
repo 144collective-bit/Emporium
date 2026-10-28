@@ -1,6 +1,6 @@
 /*
  * The big lots (BIG_LOTS in layout.ts), east of Makers' Row: the business
- * game's top tier, bought with Dorras (never the PLS district plots). Drawn
+ * game's top tier, bought with Dorras. Drawn
  * from your save, like Makers' Row: a FOR SALE board on a lot you don't own,
  * cones and a YOUR LOT board on one you haven't built on, then:
  *

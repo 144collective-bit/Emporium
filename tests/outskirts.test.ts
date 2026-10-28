@@ -1,11 +1,11 @@
 // The edge as data (growth plan Phases 5 and 6): the outskirts' trees are seeded tile by tile at a density per area, so
 // a bigger world has more trees, never thinner ones, and the same trees where the world already was; woods stand on
-// the land well away from the city; the camera's pan and the Build overview come from the city, not the edge, and it
+// the land well away from the city; the camera's pan comes from the city, not the edge, and it
 // sees as far as the skyline past the edge. Runs at today's size and at Phase 10's (npm run test:wide).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { BELT, BELT_FREE, OPEN_FREE, WOODS, WOODS_OFF, freeLand, inWoods, outskirtsTrees, treeSpot } from '../src/scripts/city3d/outskirts';
-import { BUILT_UP, CAMERA_FAR, PAN_BOUNDS, PAN_MARGIN, SKYLINE, SKY_RADIUS, overviewFrame } from '../src/scripts/city3d/bounds';
+import { BUILT_UP, CAMERA_FAR, PAN_BOUNDS, PAN_MARGIN, SKYLINE, SKY_RADIUS } from '../src/scripts/city3d/bounds';
 import { EXT, NS_ROADS, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
 import { MALL_AREA } from '../src/scripts/city3d/mall';
 import { HIGHWAY_BOX } from '../src/scripts/city3d/highway';
@@ -122,7 +122,7 @@ test('the camera sees the skyline ring past the edge from town, in front of the 
     assert.ok(Math.hypot(mid + dx * reach - 30, mid + dz * reach - 30) <= SKY_RADIUS);
 });
 
-test('City view pans round the built-up area, never past the world, and the Build overview frames the plots', () => {
+test('City view pans round the built-up area, never past the world', () => {
   for (const k of [0, 1, 2, 3] as const) {
     // Inside the world, 10 in from where you can walk
     assert.ok(k < 2 ? PAN_BOUNDS[k] >= WORLD_BOUNDS[k] + 10 - 1e-9 : PAN_BOUNDS[k] <= WORLD_BOUNDS[k] - 10 + 1e-9);
@@ -133,9 +133,4 @@ test('City view pans round the built-up area, never past the world, and the Buil
   // where the kart park moved past the ring highway, and the east and south, where the airport stands on the edge:
   // there it can reach the edge's margin)
   assert.ok(PAN_BOUNDS[0] > WORLD_BOUNDS[0] + 10);
-  // The Build overview: the plots' middle (the south row moved with the river's widening, river plan step 1)
-  const f = overviewFrame();
-  assert.deepEqual(f.target, [20, 56.5]);
-  // ...standing further back for the plots spread across the wider river
-  assert.ok(Math.abs(f.scale - 168.5 / 123.5) < 1e-9);
 });

@@ -159,7 +159,7 @@ brawlsite.ts      the sparring partners' spots (DOM-free, tested)
    melee targets with takedowns, the crowd stepping aside, the sounds,
    the lab's Brawl program and the rubric's rows. The missions and
    badges for dummies by hand.
-3. **Sparring partners and styles.** `brawlsite.ts` and its spots, the
+3. **Sparring partners and styles** (built; as built below). `brawlsite.ts` and its spots, the
    "Spar" prompt, street spars with health and the snack's Use, the
    fight record counting them, their missions and badges; the fight
    plan's Phase 3 styles sold at the trainer and shown on the street.
@@ -329,6 +329,76 @@ brawlsite.ts      the sparring partners' spots (DOM-free, tested)
   motion capture, which the fists only lay their upper body on, so the
   street clips are held in `tests/brawl.test.ts` instead (the legs left
   to the walk, a kick taking them, every move ending on the guard).
+
+## Phase 3, as built
+
+- **The partners** are `brawlsite.ts` (DOM-free, tested in
+  `tests/brawlsite.test.ts`): `PARTNERS`, three made-up fighters waiting in
+  the guard, easy to hard, one in each style: **Big Duke** (Brawler) on
+  the lawn behind the Fight Club (the pocket park east of it is all trees
+  and benches), **Tash** (Kickboxer) on The Block's plaza between its
+  chatting groups and its gantry, **Old Sal** (Street) on Pier 7's head
+  between the fishers and the binoculars. Each has a spot, a facing, a
+  ring (`r`), a bot (skill, style, traits) and a crew look. A spar puts
+  you `GAP` in front of them, facing them (`startOf()`), in a ring round
+  the point between you (`arenaOf()`). The test holds every ring clear of
+  everything solid, on ground you walk on (a slab or a deck), and clear of
+  the lawns' walks, beds and furniture, the pocket parks and squares,
+  every bench and the people standing about. Their ids and names are in
+  `fight-moves.ts` (`PARTNER_IDS`, `PARTNER_NAMES`), so the save, the
+  missions and the records read them without the partners' data in the
+  boot.
+- **On the street** (`brawl.ts`, walk mode's chunk): `createPartners()`
+  draws them near Degen only (45 tiles), each a fighter of its own sim with
+  no input so the ring's guard idles, turning to face him within 6 tiles;
+  one being sparred with is hidden. Their footprints (`PARTNER_SOLIDS`)
+  join the grids through `addSolids()` when the chunk loads (not the
+  city's `SOLIDS`: the lawns' walks are routed round those at the load).
+  The prompt is "Spar · Big Duke" (walk.ts, `spar:<id>`), gated by the
+  live settings' `fight`.
+- **A street spar** is the ring's fight (`fight.ts`, kind `street`): the
+  partner's ring and ground (walk mode's `groundAt()`, the pier's deck
+  too), the HUD's "Street spar", the camera kept a little past the ring,
+  the gym's lights left alone. A knock-out ends it a moment later (the
+  fall plays): you win if it was theirs. A quit is a loss. No Dorras: XP
+  as a spar, `XP.streetWin` more for a win. You stand up where you started.
+  The fight's HUD and card load with it (`lazyMenu()`'s `loaded()`).
+- **The snack** (`SNACK_HEAL`, 35% of full health): the HUD's Snack button
+  (`data-fight-snack`, with the count, in a spar or a street spar while
+  there's one in the bag), E, or the d-pad's up; never in a bout.
+- **The save** (still v11, the fields added cleaned): `fight.partners` (each
+  partner's spars and wins); counters `streetSpars`, `partnersBeaten` (each
+  partner once) and `streetChains` (three strikes landing on a dummy by
+  hand within `BRAWL.chain` ticks of each other, `landed()` in
+  brawl-sim.ts, counted once a chain). The fight's rules on the save moved
+  out of tycoon.ts into `fightsave.ts` (`finishFight()`, `buyStyle()`,
+  `pickStyle()`, `ownsStyle()`), so they load with the fight and the
+  trainer's menu, not in the boot.
+- **Styles** (the fight plan's Phase 3): `STYLE_CATALOG` in catalog.ts
+  (Kickboxer 15,000 at level 4, Street 30,000 at level 7; free play makes
+  them free), sold at the trainer's Styles tab (Buy, then a confirm; picked
+  straight away; "Fight in it" for one you own), the ledger's `fightclub`.
+  The Kickboxer's kicks hit 25% harder in a fight (`kick` on the style,
+  `damageOf()` in fight-moves.ts). The style you fight in goes into the ring,
+  the street spars and the fists on the street (made again when it
+  changes). On the street a dummy takes a move's own damage (the server
+  knows no style).
+- **Missions and badges** (`missions.ts`): Sparring partner (a street
+  spar, level 1), One, two, three (a street chain, level 1), Round the city
+  (every partner sparred, level 3: a goal of its own, `{ partners }`,
+  counted from the record, so spars before it was taken count); badge
+  **Street Fighter** (every partner beaten). The old mission
+  `street-fighter` (twenty dummies by hand) kept its id under the name
+  Heavy hands.
+- **The record**: the trainer's Spar tab names the partners and where they
+  wait; the Record tab has an "On the street" list. The City-view panel's
+  record stays the gym's.
+- **A fix on the way**: the hotbar's hide rules never won against the rule
+  that shows it, so it showed while driving, karting, fighting, riding and
+  in menus; they're as specific now.
+- **Not done** (the fight plan's Phase 3 items left for later): each
+  style's own guard idle, taunt and gloves or wraps, and the fight record
+  on the Profile tab.
 
 ## Open questions (small; the owner can answer as they come)
 

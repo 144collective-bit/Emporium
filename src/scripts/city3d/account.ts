@@ -5,10 +5,8 @@
  * (degen-city-account-v1). While logged in:
  * - going online opens the wallet's own player profile instead of this
  *   browser's guest one (net/client.ts sends the token),
- * - the builder can change buildings on the wallet's plots without asking
- *   to sign again (land.ts),
  * - the profile card (account-ui.ts) shows the basic profile: name, rank,
- *   score, wallet and plots owned.
+ *   score and wallet.
  */
 import type { AccountMe } from '../net/auth';
 import type { OwnProfile } from '../net/protocol';
@@ -59,7 +57,7 @@ export function createAccount(server: string) {
   const authed = () => ({ Authorization: `Bearer ${saved?.token}` });
   const expired = (e: unknown) => (e as { status?: number }).status === 401;
 
-  /** Sign in with a wallet that's already sharing `address` (the builder's connected wallet) */
+  /** Sign in with a wallet that's already sharing `address` */
   async function loginWith(w: WalletInfo, address: string) {
     const { nonce, message } = await api<{ nonce: string; message: string }>('/auth/nonce', { method: 'POST', body: JSON.stringify({ address }) });
     let signature: string;
@@ -113,11 +111,6 @@ export function createAccount(server: string) {
         throw new Error(walletError(e));
       }
       await loginWith(w, address);
-    },
-    loginWith,
-    /** A token for this wallet: the saved one, or a new login */
-    async tokenFor(w: WalletInfo, address: string) {
-      return saved?.address === address ? saved.token : loginWith(w, address);
     },
     /** The server turned the token down: forget it */
     expired() {

@@ -2,13 +2,12 @@
  * What the camera works out from the city rather than the world's edge
  * (docs/growth-plan.md Phase 5; DOM-free, tested in tests/outskirts.test.ts):
  * the built-up area (the town, the airport, the kart park), how far City
- * view may pan round it, and the districts' plots the Build overview frames.
+ * view may pan round it.
  * A bigger world doesn't stretch them; more city does. And how far the camera
  * sees: the skyline ring past the world's edge stays on the horizon from town,
  * however far out the edge is (Phase 6).
  */
-import { DISTRICTS } from '../../data/plots';
-import { BS, CITY_EXT, EXT, WORLD_BOUNDS } from './layout';
+import { CITY_EXT, EXT, WORLD_BOUNDS } from './layout';
 import { SITE } from './airfield';
 import { KART_PARK } from './kartpark';
 import type { Rect } from './downtown';
@@ -27,22 +26,6 @@ export const PAN_BOUNDS: Rect = [
   Math.min(BUILT_UP[2] + PAN_MARGIN, WORLD_BOUNDS[2] - 10),
   Math.min(BUILT_UP[3] + PAN_MARGIN, WORLD_BOUNDS[3] - 10),
 ];
-
-/** Every district plot, as one box */
-export const PLOTS_BOX: Rect = union(DISTRICTS.map((d): Rect => [d.ox, d.oz, d.ox + BS, d.oz + BS]));
-/** How wide that box was before the river's widening (river plan step 1): the Build overview's distance was set for it */
-const PLOTS_SPAN = 123.5;
-
-/**
- * The Build overview: where it looks (a little north-west of the plots'
- * middle, since it looks from the south-east) and how far back it stands
- * (1 for the plots as they were before the river's widening; further back
- * since, the south row being 45 further south)
- */
-export function overviewFrame() {
-  const span = Math.max(PLOTS_BOX[2] - PLOTS_BOX[0], PLOTS_BOX[3] - PLOTS_BOX[1]);
-  return { target: [(PLOTS_BOX[0] + PLOTS_BOX[2]) / 2 - 10, (PLOTS_BOX[1] + PLOTS_BOX[3]) / 2 - 9.75] as [number, number], scale: span / PLOTS_SPAN };
-}
 
 /** The skyline ring (world.ts `buildSkyline()`): its towers stand `gap` to `gap` + `depth` past the world's edge */
 export const SKYLINE = { gap: 18, depth: 40 };

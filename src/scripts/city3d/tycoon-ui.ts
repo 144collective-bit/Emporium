@@ -51,6 +51,7 @@ import {
   canMake,
   cargoCap,
   cleanSave,
+  plotRefund,
   clearSlot,
   collect,
   good,
@@ -137,15 +138,12 @@ import {
   shipFeeFrom,
   worth,
   type LotKind,
-  buyPlot,
   capOf,
   capacityMul,
   gearValue,
   level,
   placeLevel,
   placeLevelCost,
-  plotPrice,
-  sellPlot,
   upgradePlace,
   CORNER,
   CORNER_LEVEL,
@@ -155,8 +153,7 @@ import {
 } from './tycoon';
 import { CORNER_SHOPS } from './projects';
 import { DOORS, LOT_SITE, STALL_SPOT, UNIT_SITE } from './solids';
-import { BUILDINGS, DISTRICTS, PLOT_IDS } from '../../data/plots';
-import { PLACE_LEVELS, PLOT_LEVEL, PLOT_REFUND } from './catalog';
+import { PLACE_LEVELS } from './catalog';
 import { LV, whyNot } from './ui';
 import type { Sfx } from './combat';
 import type { WeaponId } from './combat-sim';
@@ -236,10 +233,6 @@ export interface TycoonHooks {
   stock(s: TycoonSave): void;
   /** The card opened (walk mode frees the mouse) */
   opened(): void;
-  /** The estate agent: fly to a plot in Build mode */
-  showPlot(id: string): void;
-  /** The plots you own changed (bought, built on or sold at the Vault): the builder redraws them */
-  plotsChanged(): void;
   /** The sound switch (purchases, upgrades, missions claimed, level-ups) */
   sfx(kind: Sfx, gain?: number): void;
   /** Getting started's way in from the City view: open a building's panel or start walking there */
@@ -290,14 +283,17 @@ function repaint(el: HTMLElement, html: string) {
   morphChildren(el, tmp);
 }
 
-function loadSave(now: number): { save: TycoonSave; fresh: boolean } {
+function loadSave(now: number): { save: TycoonSave; fresh: boolean; refund: number } {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) return { save: cleanSave(JSON.parse(raw), now), fresh: false };
+    if (raw) {
+      const o = JSON.parse(raw);
+      return { save: cleanSave(o, now), fresh: false, refund: plotRefund(o) };
+    }
   } catch {
     /* a broken save starts over */
   }
-  return { save: cleanSave(null, now), fresh: true };
+  return { save: cleanSave(null, now), fresh: true, refund: 0 };
 }
 
 export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
@@ -307,7 +303,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
   const cardBody = card.querySelector<HTMLElement>('[data-biz-body]')!;
   const tabsEl = card.querySelector<HTMLElement>('[data-biz-tabs]')!;
   const toastEl = root.querySelector<HTMLElement>('[data-econ-toast]')!;
-  const { save, fresh } = loadSave(Date.now());
+  const { save, fresh, refund } = loadSave(Date.now());
   /** The building panel the economy is showing in, if any */
   let panel: { id: PanelId; el: HTMLElement } | null = null;
   let note = '';
@@ -791,7 +787,6 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
         ${save.loan ? `<li><span>Owed</span><b>-${fmt.format(save.loan.owed)}</b></li>` : ''}
         <li class="is-total"><span>You're worth</span><b>${D(worth(save, now))}</b></li>
       </ul>
-      <p class="biz-label">Estate agent · district plots</p>${estateView()}
       <p class="biz-label">Estate agent · The Trenches' corner shops</p>${cornersView()}
       <p class="biz-label">Loans</p>${loan}
       <div class="biz-ledger"><div><p class="biz-label">In, all time</p><ul>${rows(true)}</ul></div><div><p class="biz-label">Out, all time</p><ul>${rows(false)}</ul></div></div>
@@ -871,29 +866,6 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
       return;
     }
     location.reload();
-  }
-
-  /* ---------- The estate agent (in the Vault): the sixteen district plots ---------- */
-  /** The plot a Buy or Sell button is waiting on a yes for */
-  let plotAsk: { id: string; sell: boolean } | null = null;
-  function estateView() {
-    const lv = level(save);
-    const price = plotPrice(save);
-    const mine = PLOT_IDS.filter((id) => id in save.plots);
-    const rows = DISTRICTS.map((d) => {
-      const o = save.plots[d.id];
-      const def = o?.design ? BUILDINGS.find((b) => b.type === o.design!.type) : null;
-      const ask = plotAsk?.id === d.id ? plotAsk : null;
-      const acts = ask
-        ? `<span class="market-btns"><small class="biz-ask">${ask.sell ? `Sell it back for ${fmt.format(Math.round(o!.paid * PLOT_REFUND))}?` : `Buy it for ${fmt.format(price)}?`}</small><button type="button" data-plot-yes="${d.id}">Yes</button><button type="button" data-plot-no="${d.id}">No</button></span>`
-        : o
-          ? `<span class="market-btns"><button type="button" data-show-plot="${d.id}">Build</button><button type="button" data-sell-plot="${d.id}">Sell back</button></span>`
-          : `<span class="market-btns"><button type="button" data-buy-plot="${d.id}" ${lv >= PLOT_LEVEL && save.dorras >= price ? '' : 'disabled'}>Buy</button></span>`;
-      return `<li class="market-row"><div class="market-top"><b>Plot ${esc(d.id)}</b><span class="stall-qty">${esc(d.name)}</span><span class="market-price">${o ? `<span class="tag tag-mine">Yours</span>` : D(price)}</span></div>
-        <div class="market-acts"><small>${o ? (def ? `${esc(def.name)} · paid ${fmt.format(o.paid)}` : 'Nothing built yet · pick a design in Build mode') : lv < PLOT_LEVEL ? `Needs level ${PLOT_LEVEL} (you're ${lv})` : 'One large plot: all nine squares of the district'}</small>${acts}</div></li>`;
-    }).join('');
-    return `<p class="stall-empty">${mine.length ? `You own ${mine.length} of the 16 district plots.` : 'The city\'s sixteen district plots, the top of the property ladder.'} Each plot you own makes the next a little dearer; selling one back pays ${Math.round(PLOT_REFUND * 100)}% of what you paid for it and its building. Build on yours in Build mode. ${LV(PLOT_LEVEL)} to buy.</p>
-      <ul class="market-list biz-estate">${rows}</ul>`;
   }
 
   /** The corner shops at the estate agent: buy one, or go to yours */
@@ -994,19 +966,6 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
       const r = upgradePlace(save, p);
       note = r.ok ? `${placeName(p)} is now level ${placeLevel(save, p)}.` : whyNot(r.why);
       h.sfx(r.ok ? 'upgrade' : 'denied');
-    } else if (ds.buyPlot) plotAsk = { id: ds.buyPlot, sell: false };
-    else if (ds.sellPlot) plotAsk = { id: ds.sellPlot, sell: true };
-    else if (ds.plotNo) plotAsk = null;
-    else if (ds.plotYes && plotAsk) {
-      const { id, sell } = plotAsk;
-      plotAsk = null;
-      const r = sell ? sellPlot(save, id) : buyPlot(save, id, now, (x) => PLOT_IDS.includes(x));
-      note = r.ok ? (sell ? `Plot ${id} sold back for ${fmt.format(r.dorras)} Dorras.` : `Plot ${id} is yours. Build on it in Build mode.`) : whyNot(r.why, PLOT_LEVEL);
-      h.sfx(r.ok ? 'buy' : 'denied');
-    } else if (ds.showPlot) {
-      closeCard();
-      h.showPlot(ds.showPlot);
-      return;
     } else if (ds.unit) unitSel = Number(ds.unit);
     else if (ds.openCorner) {
       openCard(CORNER_IDS[Number(ds.openCorner)]);
@@ -1221,14 +1180,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
       lastShown = shown;
       h.stock(save);
     }
-    const plots = JSON.stringify(save.plots);
-    if (plots !== lastPlots) {
-      lastPlots = plots;
-      h.plotsChanged();
-    }
   }
-  // (as they are now: the builder draws them itself when it starts)
-  let lastPlots = JSON.stringify(save.plots);
   function awayNote(s: Sales) {
     const n = (m: Partial<Record<GoodId, number>>) => Object.values(m).reduce<number>((a, b) => a + (b ?? 0), 0);
     const parts = [
@@ -1257,6 +1209,8 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
   }
   tick();
   if (fresh) toast(`You have ${fmt.format(START_DORRAS)} Dorras and a market stall. Stock it at the Emporium's market hall.`, 7000);
+  // (once: Build mode was retired, and what the save's district plots cost came back)
+  else if (refund) toast(`Build mode has closed: the ${fmt.format(refund)} Dorras your district plots cost are back in your balance.`, 9000);
   window.setInterval(tick, 1000);
   document.addEventListener('visibilitychange', () => !document.hidden && tick());
 

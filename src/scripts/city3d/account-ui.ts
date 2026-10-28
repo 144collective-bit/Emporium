@@ -99,7 +99,7 @@ export function createAccountUI(root: HTMLElement, account: Account, d: AccountH
     const chain = CHAINS[me.chain];
     body.innerHTML = `${head('Logged in', `<span class="account-name">${esc(p.name)}</span>`)}
       <span class="mp-rank" data-rank="${esc(rank.id)}">${esc(rank.name)}</span>
-      <dl class="plot-facts account-facts">
+      <dl class="city-facts account-facts">
         <div><dt>Lifetime score</dt><dd>${fmt.format(p.total)}</dd></div>
         <div><dt>Wallet</dt><dd><span class="account-addr">${esc(shortAddr(me.address))}</span>${chain ? `<small>${esc(chain.name)}</small>` : ''}</dd></div>
       </dl>

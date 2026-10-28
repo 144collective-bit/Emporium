@@ -2,8 +2,7 @@
  * Logging in with a wallet, shared by the site and the game server: the
  * PulseChain networks a wallet can be on, the shape of the server's account
  * API and the message a wallet signs. No DOM or scene code (the server
- * bundles this). Plot sales for PLS were retired: district plots are bought
- * with Dorras in the city's own game (tycoon.ts).
+ * bundles this).
  */
 import type { OwnProfile } from './protocol';
 
