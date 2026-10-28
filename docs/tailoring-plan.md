@@ -92,6 +92,21 @@ lands.
    boot (it isn't needed to draw the first frame), and anything the boot
    carries only for single figures on the desktop moves out with it.
    Nothing on screen changes.
+
+   **Built** (28 October 2026): the boot's code 669.8 → 662.5 KB of its
+   670, 7.3 KB of room, from two things the boot carried but never used
+   until you went to them:
+   - **The trainer's menu** (`fight-ui.ts`: the Fight Club's menu, HUD,
+     pops and bout card) loads the first time the trainer opens it, as the
+     gun store's and the garage's menus do (`lazyMenu()` in walk.ts); the
+     City-view panel's record is `fight-records.ts`, in the boot on its own.
+   - **The kart race's rules** (`kart-sim.ts`) load with the race: the
+     cups the boot reads (the save, the hut's prompt, the panel's records)
+     are `kart-cups.ts`, re-exported by kart-sim.ts.
+   - The fabric's shader comes in its own chunk in Phase 1; the suit's new
+     pieces and the fabric table are wardrobe data (a few KB) in the room
+     made here. Checked: the trainer's menu opens and a spar starts, the
+     hut's menu opens, every test passes.
 1. **The fabric kit.** The fabric table, the id in the uv, the grain
    shader on the single figures' material, one atlas of grain tiles, the
    fade with distance, the lab's switch. Every garment starts on a plain

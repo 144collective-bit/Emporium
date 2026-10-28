@@ -1358,7 +1358,9 @@ it and has been retired completely. Build only on what's here.
     strings, arrays, objects): anything with references packs and unpacks.
   - Features load when they're used, each its own chunk (`import()`):
     the fight (`fight.ts` and the figures' clips, when the trainer's menu
-    first opens: `loadFight()` in `walk.ts`), the animator with the motion
+    first opens: `loadFight()` in `walk.ts`; the menu itself, `fight-ui.ts`,
+    the first time the trainer opens it, `lazyMenu()`; the City-view panel's
+    record is `fight-records.ts`, at the boot), the animator with the motion
     capture and the on-foot extras (`onfoot.ts`: the emotes, the gaze, the
     vault and the moments' keyed poses, `momentposes.ts`, one chunk
     fetched when walking starts; until it's in an emote is skipped, the
@@ -1376,7 +1378,9 @@ it and has been retired completely. Build only on what's here.
     and the kart park's game
     (the hut's menu and the race, `kartgame.ts`: `loadKarts()` in walk.ts,
     when Degen comes near the park or asks at the hut; idle stand-ins until
-    then; the City-view panel's records are `kart-records.ts`, at the boot). New features that aren't needed until they're used come the same
+    then; the City-view panel's records are `kart-records.ts`, at the boot,
+    and the cups the boot reads are `kart-cups.ts`, so the race's rules,
+    `kart-sim.ts`, come with the race). New features that aren't needed until they're used come the same
     way. three.js is a chunk of its own (`manualChunks` in
     `astro.config.mjs`), so a deploy that doesn't change it leaves it
     cached.
@@ -1752,8 +1756,9 @@ it and has been retired completely. Build only on what's here.
   fading with distance, desktops and phones; the suit's tailoring detail
   (buttons, the breast welt, stitching, sleeve buttons, the vent, the
   collar's roll, the tie's dimple) on desktop single figures only; the
-  crowds as they are. Phase 0 makes room in the boot's code first (it's
-  full). One phase at a time with the owner's sign-off; keep it up to date.
+  crowds as they are. Phase 0 (room in the boot's code: the trainer's menu
+  and the kart race's rules load when used) is built. One phase at a time
+  with the owner's sign-off; keep it up to date.
 - **The animation rebuild** (the owner's call, critical) is planned in
   `docs/animation-plan.md`: AAA movement (Spider-Man / Ratchet feel,
   neutral athletic) from motion capture, then turns, jumps, armed
