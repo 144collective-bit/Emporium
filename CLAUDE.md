@@ -1151,6 +1151,14 @@ it and has been retired completely. Build only on what's here.
   costs two draw calls a model. Parked cars use `parkedCars()`; give them a
   footprint in `solids.ts`. Keep a new model inside a 1.7-wide lane and in
   scale with Degen (a hatch's roof is about 0.95 tiles up).
+- **The vehicle upgrade** (the owner's call: more detail and more function
+  for every vehicle) is planned in `docs/vehicle-plan.md`: interiors and
+  sharper bodywork, doors and suspension that move, getting in and out,
+  the driver's eye view, handling with personality and drifting, free
+  customisation at the garage, three more cars, motorbikes, new traffic
+  (delivery trucks, police that never chase, bikes), then the karts, the
+  boat and the aircraft. Keep it up to date, one phase at a time with the
+  owner's sign-off. None of it is built yet.
 - **Live settings** (the owner's call): the owner switches parts of the
   city from outside the code, in a private command center, through the
   backend's public config (`LIVE_URL`, public settings only).
