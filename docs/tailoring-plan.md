@@ -135,6 +135,46 @@ and nothing of the fabric kit is in the code. The suit's tailoring
    with its dimple. Desktop single figures only; the clipping test holds
    it through the poses and the animator, and the cost is measured against
    the plan's desktop budget.
+
+   **Built** (28 October 2026): `tailoring()` and `sleeveButtons()` in
+   wardrobe.ts, on the suit at detail 3 only (`tailor` in `items()`); the
+   phones' and the crowds' suit is the same pieces as before (the test,
+   `tests/tailoring.test.ts`).
+   - **Buttons:** two horn buttons (`HORN`, `buttonAt()`: a lathed disc,
+     its rim raised round a dished face) down the front, the top at the
+     waist, each with four holes and the thread's cross; the buttonholes'
+     ends showing either side of them (`slit()`). Four smaller ones up the
+     back of each cuff, on the outside of each arm, kissing.
+   - **The breast pocket's welt** on a slant over the pocket square's
+     foot; a **jet** along the top of each flap; the **lapel's buttonhole**
+     on the left lapel on a slant towards the notch (where a merch pin
+     goes, as a pin goes through one).
+   - **Pick stitching** (`stitches()`, `inset()`) just in from the lapels'
+     free edges, round the notch and along the collar's edge, and round
+     the flaps: flat stitches a shade lighter, given the cloth's own
+     normals so the ink leaves them alone (with their own flat normals
+     every stitch was inked round).
+   - **The back vent**: the right back lapping over the left from the hem,
+     its top stitched on a slant into the centre back seam, which runs up
+     to the collar.
+   - **The collar's roll**: a band rolled round the back of the neck from
+     beside one lapel's top to the other, its foot inside the jacket, a
+     little higher at the sides, in the lapels' shade; the shirt collar
+     shows a centimetre above it at the back.
+   - **The shirt collar's stand**: the phones' open wall as its inside,
+     the band's outside over it and a rolled top edge (out from the wall:
+     inwards, it met the balaclava's knit bunching at the collar and inked
+     ragged).
+   - **The tie's knot** rounded (its face domed over a finer split, its
+     outline left where it was so it stays joined to its sides) and the
+     **dimple** pinched in under it.
+   - **Cost**, triangles (single figure on a desktop / on a phone / near
+     crowd / far crowd): the suit with the shades 31.3k → 35.0k / 15.0k →
+     15.0k / 8.3k → 8.3k / 3.1k → 3.1k. Draw calls as they were (3 a
+     figure). The boot's code 662.5 → 664.4 KB of its 670.
+   - **Checked:** the lab close up (the chest, the back of the neck, the
+     cuffs, the vent) in a grey suit and the default dark one; every test,
+     the wide world's too; the built site boots and walks with no errors.
 4. **Checked everywhere.** The five widths in the character screen and the
    fitting room, the lab, the city on the phone tier and on desktop, by day
    and at night; the costs and the boot's code recorded here.

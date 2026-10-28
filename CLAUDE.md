@@ -1756,7 +1756,16 @@ it and has been retired completely. Build only on what's here.
   crowds as they are. The fabric looks (a grain in the cloth) were
   cancelled by the owner: every cloth stays one flat colour. Phase 0 (room
   in the boot's code: the trainer's menu and the kart race's rules load
-  when used) is built. One phase at a time with the owner's sign-off; keep
+  when used) and Phase 3 (the suit's tailoring) are built: `tailoring()`
+  and `sleeveButtons()` in wardrobe.ts, only at detail 3 (`tailor` in
+  `items()`): horn buttons (`HORN`, `buttonAt()`) with holes and thread and
+  their buttonholes (`slit()`), four on each cuff, the breast welt, the
+  flaps' jets, the lapel's buttonhole, pick stitching (`stitches()`: flat,
+  with the cloth's own normals so the ink leaves them alone; `inset()`),
+  the back vent and seam, the collar rolled round the back of the neck, the
+  shirt collar's stand (thickened outward, clear of the neck's knit) and
+  the tie's knot rounded over its dimple; `tests/tailoring.test.ts` holds
+  it to the desktop. One phase at a time with the owner's sign-off; keep
   it up to date.
 - **The animation rebuild** (the owner's call, critical) is planned in
   `docs/animation-plan.md`: AAA movement (Spider-Man / Ratchet feel,
@@ -3498,7 +3507,7 @@ it and has been retired completely. Build only on what's here.
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,
   in `tests/merch.test.ts`), the crowd's baked clips (`crowdclips.ts`) and Degen's skeleton, weights, head and hands
-  (`skeleton.ts`, `body.ts`), his walking (`locomotion.ts`), the motion capture and its animation (`bvh.ts`, `mocap-build.ts`, `mocap.ts`, `movesim.ts`, `inertia.ts`, `motionmatch.ts`, `animator.ts`), the rubric of human movement over every clip and program (`human.ts`, `tests/human.test.ts`), what his body does about what he touches (`contact.ts`), the game's moments (`moments.ts`), the guns in his hands (`gunfit.ts`, `stance.ts`) and his clothes not clipping (`wardrobe.ts`, the trunk's weights in `skeleton.ts`, `tests/clothing.test.ts`) and his accessories where they're worn (`tests/accessories.test.ts`). Modules that touch the DOM or `kit.ts` (canvas
+  (`skeleton.ts`, `body.ts`), his walking (`locomotion.ts`), the motion capture and its animation (`bvh.ts`, `mocap-build.ts`, `mocap.ts`, `movesim.ts`, `inertia.ts`, `motionmatch.ts`, `animator.ts`), the rubric of human movement over every clip and program (`human.ts`, `tests/human.test.ts`), what his body does about what he touches (`contact.ts`), the game's moments (`moments.ts`), the guns in his hands (`gunfit.ts`, `stance.ts`) and his clothes not clipping (`wardrobe.ts`, the trunk's weights in `skeleton.ts`, `tests/clothing.test.ts`) and his accessories where they're worn (`tests/accessories.test.ts`), the suit's tailoring on the desktop only (`tests/tailoring.test.ts`). Modules that touch the DOM or `kit.ts` (canvas
   textures) can't load in Node; keep data a test needs in the DOM-free
   files.
 - When you change a rule or move something in the city, run the tests and

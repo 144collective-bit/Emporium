@@ -723,6 +723,320 @@ const GOLD = '#e2b04a';
 
 const itemsCache: Partial<Record<string, Item[]>> = {};
 
+/* ----- The suit's tailoring (docs/tailoring-plan.md Phase 3): single figures on the desktop ----- */
+
+/** The suit's buttons: horn, their holes and thread darker */
+export const HORN = '#3d302a';
+const HOLE = '#151013';
+type Surf = (x: number, y: number) => number;
+/**
+ * A button `r` across, lying at `at` with its face out along `out`: a lathed disc, its rim raised round a
+ * dished middle; with `holes`, four holes and the thread's cross over them (the coat's)
+ */
+function buttonAt(r: number, at: THREE.Vector3, out: THREE.Vector3, seg: number, holes: boolean) {
+  const h = r * 0.42;
+  const face = h * 0.66;
+  const prof = [
+    [0, 0],
+    [r, 0],
+    [r * 1.02, h * 0.55],
+    [r * 0.84, h],
+    [r * 0.62, h * 0.74],
+    [0, face],
+  ].map(([x, y]) => new THREE.Vector2(x, y));
+  // (lathed round y, then turned so its face looks along +z)
+  const body = new THREE.LatheGeometry(prof, seg).rotateX(Math.PI / 2);
+  const top: THREE.BufferGeometry[] = [];
+  if (holes) {
+    for (const [x, y] of [[1, 1], [-1, 1], [-1, -1], [1, -1]]) top.push(new THREE.CircleGeometry(r * 0.14, 6).translate(x * r * 0.27, y * r * 0.27, face + 0.0002));
+    for (const t of [1, -1]) top.push(new THREE.PlaneGeometry(r * 0.9, r * 0.11).rotateZ((t * Math.PI) / 4).translate(0, 0, face + 0.0004));
+  }
+  const turn = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), out.clone().normalize());
+  const place = (g: THREE.BufferGeometry) => g.applyQuaternion(turn).translate(at.x, at.y, at.z);
+  return { body: place(plain(body)), holes: holes ? place(mergeGeometries(top.map(plain))!) : null };
+}
+/**
+ * Stitches: short flat dashes `lift` off a surface along a line of points (`side` -1: on its back, read from
+ * behind), every `gap`, each `len` long and `w` wide; flush with the cloth's own shading, so no ink round them
+ */
+function stitches(line: [number, number][], surf: Surf, lift: number, len: number, gap: number, w = 0.0008, side = 1) {
+  const pos: number[] = [];
+  const nrm: number[] = [];
+  let at = gap / 2;
+  for (let i = 0; i < line.length - 1; i++) {
+    const [x0, y0] = line[i];
+    const [x1, y1] = line[i + 1];
+    const L = Math.hypot(x1 - x0, y1 - y0);
+    const [tx, ty] = [(x1 - x0) / L, (y1 - y0) / L];
+    const [nx, ny] = [(-ty * w) / 2, (tx * w) / 2];
+    const [hx, hy] = [(tx * len) / 2, (ty * len) / 2];
+    for (; at < L; at += gap) {
+      const [cx, cy] = [x0 + tx * at, y0 + ty * at];
+      const P = [
+        [cx - hx - nx, cy - hy - ny],
+        [cx + hx - nx, cy + hy - ny],
+        [cx + hx + nx, cy + hy + ny],
+        [cx - hx + nx, cy - hy + ny],
+      ].map(([x, y]) => [x, y, surf(x, y) + side * lift]);
+      // (shaded as the cloth under them: their own flat normals inked every stitch round)
+      const e = 0.001;
+      const [gx, gy] = [(surf(cx + e, cy) - surf(cx - e, cy)) / (2 * e), (surf(cx, cy + e) - surf(cx, cy - e)) / (2 * e)];
+      const n = new THREE.Vector3(-gx * side, -gy * side, side).normalize();
+      for (const k of side > 0 ? [0, 1, 2, 0, 2, 3] : [0, 2, 1, 0, 3, 2]) {
+        pos.push(...P[k]);
+        nrm.push(n.x, n.y, n.z);
+      }
+    }
+    at -= L;
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(nrm, 3));
+  return g;
+}
+/** A line moved `d` in towards a point (the middle of the piece it edges), each corner along its edges' normals */
+function inset(line: [number, number][], d: number, [mx, my]: [number, number]): [number, number][] {
+  const normal = (a: [number, number], b: [number, number]) => {
+    const l = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    const [nx, ny] = [-(b[1] - a[1]) / l, (b[0] - a[0]) / l];
+    const s = (mx - (a[0] + b[0]) / 2) * nx + (my - (a[1] + b[1]) / 2) * ny < 0 ? -1 : 1;
+    return [s * nx, s * ny];
+  };
+  return line.map((p, i) => {
+    const ns = [i > 0 ? normal(line[i - 1], p) : null, i < line.length - 1 ? normal(p, line[i + 1]) : null].filter((n): n is number[] => !!n);
+    const sx = ns.reduce((s, n) => s + n[0], 0);
+    const sy = ns.reduce((s, n) => s + n[1], 0);
+    const l = Math.hypot(sx, sy);
+    const k = d / Math.max(0.5, (sx / l) * ns[0][0] + (sy / l) * ns[0][1]);
+    return [p[0] + (sx / l) * k, p[1] + (sy / l) * k];
+  });
+}
+/** A slit (a buttonhole) from (x0, y0) to (x1, y1), `w` wide, its ends rounded */
+function slit(x0: number, y0: number, x1: number, y1: number, w: number): [number, number][] {
+  const a = Math.atan2(y1 - y0, x1 - x0);
+  const end = (x: number, y: number, from: number) => Array.from({ length: 4 }, (_, k): [number, number] => [x + (w / 2) * Math.cos(from + (k / 3) * Math.PI), y + (w / 2) * Math.sin(from + (k / 3) * Math.PI)]);
+  return [...end(x1, y1, a - Math.PI / 2), ...end(x0, y0, a + Math.PI / 2)];
+}
+
+/**
+ * The jacket's tailoring on its torso (`JK` its sections, `SN` their squareness, `front` its front, `lapelPts` the
+ * right lapel's outline, `knot` the tie's knot as the phones have it): two horn buttons with their buttonholes, the
+ * breast pocket's welt, the jetting over the flaps, the lapel's buttonhole, pick stitching round the lapels and the
+ * flaps, the back vent and seam, the collar rolled round the back of the neck, the shirt collar's stand, and the
+ * tie's knot rounded over its dimple. Built while `crisp` is on, so the laid-on pieces' edges ink solid.
+ */
+function tailoring(JK: Sec[], SN: number, front: Surf, lapelPts: [number, number][], knot: THREE.BufferGeometry) {
+  const back = surface(JK, SN, -1);
+  const v3 = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
+  // Two buttons down the front (the top at the waist), through buttonholes in the left front whose ends show
+  // either side of them
+  const buttons = [0.15, 0.078].map((y) => buttonAt(0.0085, v3(0, y, front(0, y) + 0.0012), v3(0, 0, 1), 18, true));
+  const holes = [0.15, 0.078].map((y) => onBody(slit(-0.012, y, 0.019, y, 0.0028), 0.0008, front, 0.0004));
+  // The breast pocket's welt, on a slant over the pocket square's foot (the square stands in it)
+  const welt = onBody(
+    [
+      [0.079, 0.261],
+      [0.123, 0.266],
+      [0.123, 0.278],
+      [0.079, 0.273],
+    ],
+    0.004,
+    front,
+    0.003
+  );
+  // A jet along the top of each flap (the flap tucked in under it)
+  const jets = [-1, 1].map((s) =>
+    onBody(
+      [
+        [s * 0.04, 0.0505],
+        [s * 0.114, 0.0505],
+        [s * 0.114, 0.0565],
+        [s * 0.04, 0.0565],
+      ].map(([x, y]) => [x, y] as [number, number]),
+      0.0035,
+      front,
+      0.0045
+    )
+  );
+  // The buttonhole in the left lapel (a pin goes through it), on a slant up towards the notch
+  const lapelHole = onBody(slit(0.083, 0.293, 0.096, 0.304, 0.0021), 0.0008, front, 0.0122);
+  // Pick stitching just in from the lapels' free edges (up from the roll, round the notch and along the collar's
+  // edge) and round the flaps' sides and foot
+  const edge = lapelPts.slice(2).concat([lapelPts[0]]);
+  const middle: [number, number] = [-0.08, 0.29];
+  const lapelLine = inset(edge, 0.0036, middle);
+  const pick = [lapelLine, mirror(lapelLine)].map((l) => stitches(l, front, 0.0124, 0.0014, 0.0042));
+  const flapPick = [-1, 1].map((s) =>
+    stitches(
+      [
+        [s * 0.045, 0.05],
+        [s * 0.045, 0.0335],
+        [s * 0.109, 0.0335],
+        [s * 0.109, 0.05],
+      ],
+      front,
+      0.0064,
+      0.0014,
+      0.0042
+    )
+  );
+  // The back vent from the hem: the right back lapping over the left, its top stitched on a slant into the
+  // centre back seam, which runs on up to the collar
+  const vent = onBody(
+    [
+      [-0.0005, -0.0832],
+      [0.013, -0.0832],
+      [0.013, -0.012],
+      [-0.0005, 0.0],
+    ],
+    0.0025,
+    back,
+    0.0008,
+    -1
+  );
+  const seam = [
+    stitches(
+      [
+        [0, 0.001],
+        [0, 0.398],
+      ],
+      back,
+      0.0004,
+      0.006,
+      0.006,
+      0.0011,
+      -1
+    ),
+    stitches(
+      [
+        [0.013, -0.012],
+        [-0.0005, 0.0],
+      ],
+      back,
+      0.0034,
+      0.0014,
+      0.0042,
+      0.0008,
+      -1
+    ),
+  ];
+  // The collar rolled round the back of the neck: a band standing on the jacket's neck (its foot inside the
+  // jacket), rising a little at the sides, its top edge rolled over, from beside one lapel's top round the back to
+  // the other, its ends lower
+  const neck = secAt(JK, 0.42);
+  const ring: Sec = [0, neck[1] * 1.09, neck[2] * 1.09, neck[3]];
+  const N = 44;
+  const a0 = Math.PI / 2 + 1.25;
+  const a1 = Math.PI * 2.5 - 1.25;
+  const rows: number[][][] = [];
+  for (let i = 0; i <= N; i++) {
+    const a = a0 + ((a1 - a0) * i) / N;
+    const [x, , z] = ringAt(ring, a, SN);
+    const [dx, dz] = [x, z - ring[3]!];
+    const l = Math.hypot(dx, dz);
+    const [ox, oz] = [dx / l, dz / l];
+    const side = Math.abs(Math.cos(a));
+    // (the ends easing down to the lapels' tops)
+    const end = Math.min(1, Math.min(i, N - i) / 8);
+    const yb = 0.398 + 0.013 * side;
+    const yt = yb + (0.025 - 0.012 * side + 0.002 * side) * (0.25 + 0.75 * end);
+    rows.push(
+      [
+        [0, yb],
+        [0, yt - 0.002],
+        [0.0022, yt + 0.0006],
+        [0.0052, yt - 0.0012],
+        [0.0066, yb],
+      ].map(([o, y]) => [x + ox * o, y, z + oz * o])
+    );
+  }
+  const pos: number[] = [];
+  const idx: number[] = [];
+  const M = rows[0].length;
+  rows.forEach((r) => r.forEach((p) => pos.push(...p)));
+  for (let i = 0; i < N; i++)
+    for (let k = 0; k < M - 1; k++) {
+      const a = i * M + k;
+      idx.push(a, a + M, a + 1, a + 1, a + M, a + M + 1);
+    }
+  // (its ends closed)
+  for (const [i, s] of [[0, 1], [N, -1]])
+    for (let k = 1; k < M - 1; k++) idx.push(...(s > 0 ? [i * M, i * M + k + 1, i * M + k] : [i * M, i * M + k, i * M + k + 1]));
+  const collar = new THREE.BufferGeometry();
+  collar.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  collar.setIndex(idx);
+  collar.computeVertexNormals();
+  // The shirt collar's stand: the phones' open wall as its inside, the band's outside over it and a rolled top
+  // edge between (out from the wall, not in: the neck's knit bunches just inside it)
+  const stand = new THREE.LatheGeometry(
+    [
+      [0.0618, -0.017],
+      [0.0578, 0.0168],
+      [0.0569, 0.0186],
+      [0.056, 0.017],
+      [0.06, -0.017],
+    ].map(([x, y]) => new THREE.Vector2(x, y)),
+    36
+  ).translate(0, 0.414, -0.004);
+  // The tie's knot rounded (its face domed over a finer split), the dimple pinched in under it
+  const was = bend;
+  bend = 0.004;
+  const round = onBody(roundRect(0.032, 0.026, 3, 24, 0.3, 0.385), 0.01, front, 0.006);
+  bend = was;
+  const p = round.attributes.position as THREE.BufferAttribute;
+  for (let i = 0; i < p.count; i++) {
+    const [x, y, z] = [p.getX(i), p.getY(i), p.getZ(i)];
+    if (z - front(x, y) < 0.006 + 0.008) continue;
+    // (nothing at its outline, a superellipse narrower under, so its face stays joined to its sides)
+    const v = (y - 0.385) / 0.013;
+    const u = Math.max(0, 1 - Math.abs(x / (0.016 * (1 - 0.3 * Math.max(0, -v)))) ** 3 - Math.abs(v) ** 3);
+    p.setZ(i, z + 0.0034 * Math.sqrt(u));
+  }
+  round.computeVertexNormals();
+  knot.dispose();
+  const dimple = onBody(
+    [
+      [0, 0.3722],
+      [0.0024, 0.3665],
+      [0.0013, 0.3585],
+      [0, 0.3555],
+      [-0.0013, 0.3585],
+      [-0.0024, 0.3665],
+    ],
+    0.0004,
+    front,
+    0.0142
+  );
+  return {
+    /** In the jacket's cloth, a shade lighter: the welt, the jets, the vent, the lapel's buttonhole (darker than the lapel) */
+    cloth: [welt, ...jets, vent, lapelHole],
+    /** In the lapels' shade: the collar round the back */
+    collar,
+    /** A shade darker: the buttonholes and the back seam */
+    dark: [...holes, ...seam],
+    /** Lighter than the lapels: the pick stitching */
+    pick: [...pick, ...flapPick],
+    horn: buttons.map((b) => b.body),
+    thread: buttons.map((b) => b.holes!),
+    stand,
+    knot: round,
+    dimple,
+  };
+}
+/** Four buttons up the back of a sleeve's cuff (`FJ` the forearm's sections, `s` its side: -1 left), kissing */
+function sleeveButtons(FJ: Sec[], s: number) {
+  // (on the outside, turned a little to the back)
+  const a = s > 0 ? -0.5 : Math.PI + 0.5;
+  return mergeGeometries(
+    [-0.18, -0.1705, -0.161, -0.1515].map((y) => {
+      const sec = secAt(FJ, y);
+      const [x, , z] = ringAt(sec, a, 2);
+      const out = new THREE.Vector3(Math.cos(a) / sec[1], 0, Math.sin(a) / sec[2]).normalize();
+      return buttonAt(0.0042, new THREE.Vector3(x, y, z).addScaledVector(out, 0.0005), out, 10, false).body;
+    })
+  )!;
+}
+
 /**
  * The wardrobe at a detail level. `hero` is the skinned body's (createDegen):
  * the brand-art head on the longer neck, hands with fingers, the shoes on
@@ -1249,6 +1563,9 @@ export function items(q: Detail, hero = false): Item[] {
     suitFront,
     0.008
   );
+  // The suit's tailoring (docs/tailoring-plan.md Phase 3): single figures on the desktop only, the phones' and
+  // the crowds' suit as it was
+  const tailor = q === 3 ? tailoring(JK, SN, suitFront, lapelPts, tieKnot) : null;
   crisp = false;
 
   const HOODIE: Sec[] = [
@@ -1517,6 +1834,7 @@ export function items(q: Detail, hero = false): Item[] {
   ];
   const suitUpper = loft(SU, R(14));
   const suitFore = loft(q === 3 ? curve(FORE_J, 0.015) : FORE_J, R(14));
+  const sleeveBtns = q === 3 ? [-1, 1].map((s) => sleeveButtons(curve(FORE_J, 0.015), s)) : null;
   const shirtCuff = loft(
     [
       [-0.202, 0.031, 0.033, 0.001],
@@ -2233,10 +2551,20 @@ export function items(q: Detail, hero = false): Item[] {
       when: suit,
       pieces: [
         P('torso', jacket, 'top', TOP),
-        P('torso', one([...lapels, ...flaps]), 'top', { shade: 1.45 }),
-        P('torso', one([shirtFront, collarBand, ...collars, pocketSquare]), SHIRT),
-        P('torso', button, BLACK, { detail: true }),
-        P('torso', one([tieKnot, tieBlade]), 'tie'),
+        P('torso', one([...lapels, ...flaps, ...(tailor ? [tailor.collar] : [])]), 'top', { shade: 1.45 }),
+        P('torso', one([shirtFront, tailor?.stand ?? collarBand, ...collars, pocketSquare]), SHIRT),
+        ...(tailor && sleeveBtns
+          ? [
+              P('torso', one(tailor.cloth), 'top', { shade: 1.2 }),
+              P('torso', one(tailor.dark), 'top', { shade: 0.55 }),
+              P('torso', one(tailor.pick), 'top', { shade: 2.1 }),
+              P('torso', one(tailor.horn), HORN),
+              P('torso', one(tailor.thread), HOLE),
+              P('torso', tailor.dimple, 'tie', { shade: 0.62 }),
+              ...both('fore', sleeveBtns, HORN),
+            ]
+          : [P('torso', button, BLACK, { detail: true })]),
+        P('torso', one([tailor?.knot ?? tieKnot, tieBlade]), 'tie'),
         ...both('arm', suitUpper, 'top'),
         ...both('fore', suitFore, 'top'),
         ...both('fore', shirtCuff, SHIRT, { detail: true }),
