@@ -1331,7 +1331,7 @@ it and has been retired completely. Build only on what's here.
   out at its seams by `makeShell()` and `splitAt()`, open and shut, and
   shows the lamps' pools); the kart keeps drive.ts's drawn-on lean. The
   mirrors are painted stand-ins. Keep new car detail in that chunk: the
-  boot is at its budget (669.28 of 670 KB).
+  boot is near its budget (663.83 of 670 KB with the tailoring plan merged).
 - **Live settings** (the owner's call): the owner switches parts of the
   city from outside the code, in a private command center, through the
   backend's public config (`LIVE_URL`, public settings only).

@@ -261,7 +261,7 @@ Asked before planning (2026-10-28):
   As Phase 1's: the draws move with the traffic and the crowd in view;
   the views only see your car parked, if at all. Driving it adds the
   door's four draws and the wheel's, the needles', the wipers' and the
-  dash's six, all near you. Geometry 195 MB (205). The boot 669.28 KB,
+  dash's six, all near you. Geometry 195 MB (205). The boot 669.28 KB (663.83 with main's tailoring plan merged),
   the cars' chunk 10.7 KB (6.0).
 
 ### Phase 3: getting in and out
