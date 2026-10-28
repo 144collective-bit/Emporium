@@ -1,8 +1,7 @@
 /*
- * The city's mode header: says which view you're in (City view, Walk mode,
- * Build mode; "Sector 7" while the city loads or where it can't run) with a
- * line on what you can do there, and keeps the City / Walk / Build switch in
- * step. It watches the city root
+ * The city's mode header: says which view you're in (City view, Walk mode;
+ * "Sector 7" while the city loads or where it can't run) with a line on what
+ * you can do there, and keeps the City / Walk switch in step. It watches the city root
  * (data-view, data-mode, data-kart, data-plane, data-boat, data-fight, is-fp, is-online, is-driving, is-flying) so every mode change updates it.
  */
 const COPY = {
@@ -16,10 +15,6 @@ const COPY = {
     title: 'Walk mode',
     sub: (root: HTMLElement) => `${root.classList.contains('is-fp') ? 'First person' : 'Third person'}${root.classList.contains('is-online') ? ' · online' : ''}`,
   },
-  build: {
-    title: 'Build mode',
-    sub: () => (narrow() ? 'Buy a plot · build on it' : 'Buy a district plot with Dorras · build on it'),
-  },
 } as const;
 
 const touch = () => matchMedia('(pointer: coarse)').matches;
@@ -32,7 +27,7 @@ export function createCityHead(root: HTMLElement) {
   const city = head.querySelector<HTMLButtonElement>('[data-mode-city]')!;
 
   function paint() {
-    const mode = root.dataset.view !== '3d' ? 'still' : ((root.dataset.mode as 'explore' | 'walk' | 'build') ?? 'explore');
+    const mode = root.dataset.view !== '3d' ? 'still' : ((root.dataset.mode as 'explore' | 'walk') ?? 'explore');
     const c = COPY[mode] ?? COPY.explore;
     head.dataset.mode = mode;
     // In your car: "Driving" and which car (drive.ts sets is-driving and data-car)

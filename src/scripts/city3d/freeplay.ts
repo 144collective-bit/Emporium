@@ -2,7 +2,7 @@
  * Free play: a test switch (the owner's call, while the inventory is built)
  * that makes everything in the city's game free. Every price is 0 Dorras and
  * every level and score requirement is gone: guns and their mods, cars,
- * karts and their classes, clothes, snacks, plots, units, lots, corner shops
+ * karts and their classes, clothes, snacks, units, lots, corner shops
  * and the places' upgrades, the rifle finishes. Things still have to be
  * bought (for nothing) to be owned, so every buy flow can be checked.
  *

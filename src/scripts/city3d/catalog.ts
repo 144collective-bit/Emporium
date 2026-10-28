@@ -13,12 +13,12 @@
  * - XP comes from playing: sales, contracts, kart races, missions, takedowns.
  *   Nothing here is bought with real money or tied to the token.
  */
-import type { BuildingType } from '../../data/plots';
 import type { Weapon, WeaponId } from './combat-sim';
 import type { PlayerCar } from './mycar';
 import type { BikeId } from './mybike';
 import type { KartId } from './mykart';
 import type { BotTraits } from './fight-sim';
+import type { StyleId } from './fight-moves';
 import type { MarkId, PatternId } from '../net/profile-data';
 import { FREE_PLAY } from './freeplay';
 
@@ -65,7 +65,7 @@ export const XP = {
   sale: 1,
   /** Per contract delivered */
   contract: 40,
-  /** Per unit, lot or plot bought, and per building built */
+  /** Per unit or lot bought, and per building built */
   property: 60,
   /** Per upgrade bought (a mod, a building level) */
   upgrade: 25,
@@ -89,6 +89,8 @@ export const XP = {
   boutLoss: 60,
   fightKo: 50,
   chain: 30,
+  /** A street spar won (beating a sparring partner) */
+  streetWin: 80,
 } as const;
 
 /* ---------- The Fight Club's opponents (docs/fight-plan.md) ---------- */
@@ -105,6 +107,13 @@ export const FIGHT_BOTS: Record<BotLevel, { name: string; blurb: string; skill: 
 };
 /** XP for taking part is capped per spar so hits can't be farmed */
 export const SPAR_HIT_CAP = 30;
+
+/** The fight styles the trainer sells (docs/fight-plan.md Phase 3): Dorras and a level; the Brawler is everyone's */
+export const STYLE_CATALOG: Record<StyleId, { price: number; level: number }> = {
+  brawler: { price: 0, level: 1 },
+  kickboxer: { price: 15_000, level: 4 },
+  street: { price: 30_000, level: 7 },
+};
 
 /* ---------- Mods (upgrades): three levels each ---------- */
 
@@ -366,25 +375,10 @@ export const ITEM_CATALOG: Record<ItemId, ItemEntry> = {
 export const ITEM_IDS = Object.keys(ITEM_CATALOG) as ItemId[];
 /** How many of each he can carry */
 export const ITEM_MAX = 5;
+/** What a snack gives back in a spar: a share of full health */
+export const SNACK_HEAL = 0.35;
 
 /* ---------- Property ---------- */
-
-/** A district plot, bought with Dorras (the top of the property ladder) */
-export const PLOT_DORRAS = FREE_PLAY ? 0 : 120000;
-export const PLOT_LEVEL = FREE_PLAY ? 1 : 8;
-/** Selling a plot back to the city pays this share of what it cost */
-export const PLOT_REFUND = 0.6;
-/** What each design costs to build on a plot (changing a design costs the difference, never less than 0) */
-export const BUILD_COSTS: Record<BuildingType, number> = {
-  garden: 4000,
-  billboard: 6000,
-  house: 9000,
-  shop: 12000,
-  warehouse: 12000,
-  loft: 18000,
-  arcade: 24000,
-  tower: 36000,
-};
 
 /** Levels for the places you run: capacity, pace and speed go up; the cost of each level */
 export const PLACE_LEVELS = 3;
@@ -401,12 +395,11 @@ export const LEVEL_SPEED = [1, 1.3, 1.6];
 
 // (after the starters are worked out from the real prices: the rest still have to be bought, for nothing)
 if (FREE_PLAY) {
-  for (const c of [...Object.values(CAR_CATALOG), ...Object.values(BIKE_CATALOG), ...Object.values(KART_CATALOG), ...Object.values(GUN_CATALOG), ...WARDROBE_CATALOG, ...Object.values(ITEM_CATALOG)]) {
+  for (const c of [...Object.values(CAR_CATALOG), ...Object.values(BIKE_CATALOG), ...Object.values(KART_CATALOG), ...Object.values(GUN_CATALOG), ...WARDROBE_CATALOG, ...Object.values(ITEM_CATALOG), ...Object.values(STYLE_CATALOG)]) {
     c.price = 0;
     c.level = 1;
   }
   for (const k of Object.values(KART_CLASSES)) k.level = 1;
   for (const b of Object.values(FIGHT_BOTS)) b.level = 1;
-  for (const k of Object.keys(BUILD_COSTS) as BuildingType[]) BUILD_COSTS[k] = 0;
   for (const a of [UNIT_LEVEL_COSTS, LOT_LEVEL_COSTS, CORNER_LEVEL_COSTS, WORKSHOP_LEVEL_COSTS]) a.fill(0);
 }

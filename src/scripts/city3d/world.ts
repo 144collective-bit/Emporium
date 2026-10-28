@@ -6,17 +6,16 @@
  * The street plan is layout.ts and streetplan.ts (`PLAN`): downtown (0-60)
  * crossed by two cross streets each way and three diagonals, its blocks cut
  * into lots, triangles, pocket parks and the hangout square (downtown.ts);
- * ring avenues (two lanes each way and a median) round it, and the plot
- * districts (see plots.ts) beyond to the north, west and east. The river runs
+ * ring avenues (two lanes each way and a median) round it, and the outer
+ * districts (outer.ts) beyond to the north, west and east. The river runs
  * south of the north-bank avenue; across its four bridges the south bank
  * avenue carries the south row of districts. Every block has a sidewalk, and
  * both banks a lamp-lit promenade.
  */
 import * as THREE from 'three';
-import { DISTRICTS } from '../../data/plots';
 import { Batch, canvasTex, facadeMat, flickerTogether, fx, glowMat, glowTex, lit, neon, PAL, rand, rng, sidesBox, siteMat, toon } from './kit';
 import { TOWER_ZEBRA, ZEBRA as COURT_ZEBRA } from './mall';
-import { BLOCKS, BRIDGED_NS, BS, CENTER_XZ, CORE_ROADS, DOWNTOWN, EW_ROADS, EXT, LANE, MEDIAN, NS_ROADS, RING_HI, RIVER, SEATS, SHORT_NS, SOUTH_ROAD, WALK_W, type Road } from './layout';
+import { BLOCKS, BRIDGED_NS, BS, CENTER_XZ, CORE_ROADS, DISTRICTS, DOWNTOWN, EW_ROADS, EXT, LANE, MEDIAN, NS_ROADS, RING_HI, RIVER, SEATS, SHORT_NS, SOUTH_ROAD, WALK_W, type Road } from './layout';
 import { PLAN, offsetLine, pointAt, riverBridges, streetLength, type Pt, type Street } from './streetplan';
 import { HIGHWAY, HIGHWAY_HALF } from './highway';
 import { DIAGONALS, DIAGONAL_LAMPS } from './downtown';
@@ -37,7 +36,7 @@ import { atGangway } from './riverbus';
 import { HALF as HARBOUR_HALF, HARBOUR_STREET, HX, Z0 as HZ0, Z1 as HZ1 } from './harbour';
 
 export { BLOCKS, BS, CORE_ROADS, EW_ROADS, EXT, NS_ROADS, RIVER, SOUTH_ROAD, WALK_W, type Road };
-/** District blocks around the core: one large plot each (src/data/plots.ts). */
+/** District blocks around the core: one pad each (layout.ts DISTRICTS). */
 export { DISTRICTS };
 export const SLAB = 0.15;
 /** How far the grass carries on past the world's edge, under the skyline ring */

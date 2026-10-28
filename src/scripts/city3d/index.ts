@@ -43,18 +43,15 @@ import { createWalk } from './walk';
 import { buildGarage } from './garage';
 import { buildAirport } from './airport';
 import { AIRPORT_END, BRANCH, LINE_X } from './metro';
-import { CAMERA_FAR, PAN_BOUNDS, overviewFrame } from './bounds';
+import { CAMERA_FAR, PAN_BOUNDS } from './bounds';
 import { loadCar } from './mycar';
 import { loadBike } from './mybike';
 import { createProfileUI } from './profile-ui';
 import { createCharScreen } from './charscreen';
 import { createSky, type TimeMode, type WeatherMode } from './sky';
 import { createSound } from './sound';
-import { createPlots, type Plot } from './plots';
-import { createPlotStore } from './store';
 import type { Account } from './account';
 import type { AccountHooks, AccountUI } from './account-ui';
-import { createBuilderUI } from './builder-ui';
 import type { Fitting } from './fitting';
 import { createCityHead } from './head';
 import { buildMarket } from './market';
@@ -239,7 +236,6 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const garage = buildGarage(scene, { tick, reduced, car: loadCar(), bike: loadBike() });
   // The airport on the world's south edge, outside the ring highway, and the aircraft flying its timetable
   const airport = buildAirport(scene, crowd, tick, { reduced, low: tier === 'low' });
-  const plots = createPlots(scene, { degen, tick, reduced });
   // The market square (your stall and the traders'): before the lamps and the crowd are made
   const market = buildMarket(scene, crowd);
   // Makers' Row: your units, drawn from your save once the economy starts (further down)
@@ -672,21 +668,6 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     lastFocus?.focus({ preventScroll: true });
   }
   panelClose.addEventListener('click', close);
-  /* ---------- Build mode ---------- */
-  function plotAtPointer(x: number, y: number) {
-    const r = renderer.domElement.getBoundingClientRect();
-    ndc.set(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
-    raycaster.setFromCamera(ndc, camera);
-    return plots.pick(raycaster.ray);
-  }
-  function plotView(p: Plot) {
-    const portrait = camera.aspect < 1;
-    // Large plots carry buildings three times the size: stand well back
-    const k = 2.3;
-    const dir = new THREE.Vector3(0.95, 0.85, 1.25).normalize();
-    const target = new THREE.Vector3(p.cx, portrait ? -0.4 * k : 1.6 * k, p.cz);
-    return { pos: new THREE.Vector3(p.cx, 1.6 * k, p.cz).addScaledVector(dir, (portrait ? 17 : 13) * k), target };
-  }
   // The economy is made after walk mode (it needs Degen's position); the shops only use it once it exists
   const game: GameDeps = {
     save: () => tycoon!.save,
@@ -694,7 +675,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     toast: (text, ms) => tycoon!.toast(text, ms),
     sfx: (kind, gain) => sound.sfx(kind, gain),
   };
-  // A game server adds the Online / Offline switch (multiplayer); plots are the city's own game either way.
+  // A game server adds the Online / Offline switch (multiplayer).
   // Without one (the live site, multiplayer paused) none of the net code is loaded or even bundled:
   // the flag is fixed at build time, so these imports fall out of the production bundle
   const server = import.meta.env.PUBLIC_GAME_SERVER as string | undefined;
@@ -772,11 +753,11 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     camera,
     canvas,
     root,
-    // Placed buildings, and what's built on your units
-    plotSolids: () => {
+    // What's built on your units and big lots
+    placedSolids: () => {
       const u = units.solids();
       const l = bigLots.solids();
-      return u.length || l.length ? [...plots.solids(), ...u, ...l] : plots.solids();
+      return l.length ? (u.length ? [...u, ...l] : l) : u;
     },
     openSpot: (id) => open(id),
     touched: () => touched(),
@@ -861,42 +842,10 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       // One card at a time: the stall's card and a building's panel
       close();
     },
-    showPlot(id) {
-      close();
-      builder.setBuild(true);
-      builder.select(id);
-    },
-    plotsChanged: () => builder?.refresh(),
     sfx: (kind, gain) => sound.sfx(kind, gain),
     guideGo: (g) => ('open' in g.go ? open(g.go.open) : startWalking(g.go.walk)),
     openSpot: (id) => open(id),
     mayCarry: (id) => walk.combat.canTake(id),
-  });
-  // Build mode: the plots, over the economy's save
-  const builder = createBuilderUI(root, {
-    store: createPlotStore(game),
-    plots,
-    focus(p) {
-      const v = plotView(p);
-      flyTo(v.pos, v.target, 1.2);
-    },
-    overview() {
-      // Every district, the south row across the river included
-      // (framed from the plots themselves: growth plan Phase 5)
-      const frame = overviewFrame();
-      const k = (camera.aspect < 1 ? 1.5 : 1.62) * frame.scale;
-      const target = new THREE.Vector3(frame.target[0], 0, frame.target[1]);
-      flyTo(target.clone().add(new THREE.Vector3(34, 50, 44).multiplyScalar(k)), target, 1.6);
-    },
-    onMode(on) {
-      if (on && walking) stopWalking(false);
-      close();
-      setHover(null);
-      canvas.style.cursor = '';
-      dirty = true;
-      if (on) root.classList.add('has-moved');
-    },
-    sfx: (kind) => sound.sfx(kind),
   });
 
   // The Profile panel (wardrobe, finish, rank) works offline; multiplayer only when the site has a game server
@@ -967,7 +916,6 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     // (unless the owner has closed it for now: live settings)
     const shut = live.closed('walk');
     if (shut) return tycoon?.toast(shut, 3500);
-    if (builder.active) builder.setBuild(false);
     close();
     setHover(null);
     beforeWalk = { pos: camera.position.clone(), target: controls.target.clone() };
@@ -1005,11 +953,10 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   }
   walkBtn.addEventListener('click', () => startWalking());
   walkBtn.hidden = false;
-  // The mode header's City button: back to the city view from walking or building
+  // The mode header's City button: back to the city view from walking
   const head = createCityHead(root);
   head.city.addEventListener('click', () => {
     if (walking) stopWalking();
-    if (builder.active) builder.setBuild(false);
   });
   head.city.hidden = false;
   root.querySelector('[data-walk-exit]')?.addEventListener('click', () => stopWalking());
@@ -1029,7 +976,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     if (root.dataset.view !== '3d') return;
     if (accountUI?.isOpen) return;
     // The world map: M opens it walking (no panel or menu open) or in City view, M or Esc closes it
-    if (travel.key(e, walking ? !active && walk.onFoot && !root.querySelector('.shop:not([hidden]), [data-char]:not([hidden])') : !builder.active)) return;
+    if (travel.key(e, walking ? !active && walk.onFoot && !root.querySelector('.shop:not([hidden]), [data-char]:not([hidden])') : true)) return;
     if (walking) {
       if (e.key === 'Escape') {
         if (taxis.skip() || metroUI!.skip() || metroUI!.close() || riverBusUI?.skip() || riverBusUI?.close() || walk.closeShop() || walk.releaseMouse() || closePop()) return;
@@ -1039,7 +986,6 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       return;
     }
     if (e.key === 'Escape' && closePop()) return;
-    if (builder.key(e)) return;
     if (e.key === 'Escape') close();
   });
   document.addEventListener('keyup', (e) => walking && walk.onKey(e, false));
@@ -1056,10 +1002,6 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y);
     down = null;
     if (moved > 6 || walking) return;
-    if (builder.active) {
-      builder.select(plotAtPointer(e.clientX, e.clientY)?.id ?? null);
-      return;
-    }
     const s = pickAt(e.clientX, e.clientY);
     if (s) open(s.id);
     else if (active) close();
@@ -1070,20 +1012,10 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     hoverQueued = true;
     requestAnimationFrame(() => {
       hoverQueued = false;
-      if (builder.active) {
-        const p = plotAtPointer(e.clientX, e.clientY);
-        plots.setHover(p?.id ?? null);
-        canvas.style.cursor = p ? 'pointer' : '';
-        dirty = true;
-        return;
-      }
       setHover(walking ? null : pickAt(e.clientX, e.clientY));
     });
   });
-  canvas.addEventListener('pointerleave', () => {
-    setHover(null);
-    plots.setHover(null);
-  });
+  canvas.addEventListener('pointerleave', () => setHover(null));
   controls.addEventListener('change', () => (dirty = true));
   controls.addEventListener('start', () => root.classList.add('has-moved'));
 
@@ -1275,7 +1207,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   measurePins();
   new ResizeObserver(measurePins).observe(host);
   // The city's own buttons and cards: a label under one folds to a dot, so the
-  // Walk / Build pills never sit on top of a building's name. Re-read a few
+  // City / Walk switch never sits on top of a building's name. Re-read a few
   // times a second (they open, close and move with the layout)
   // The header, its open drop-downs (settings, menu), the welcome card, the guide and the kart, flight, drive and fight HUDs
   const chrome = [...root.querySelectorAll<HTMLElement>('.city-head, .head-panel, .city-banner, .city-card, .city-guide, .kart-hud, .fly-hud, .drive-hud, .fight-demo, [data-fight-hud], .wm-compass, .hotbar')];

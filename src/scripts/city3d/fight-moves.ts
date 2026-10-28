@@ -47,11 +47,14 @@ export const MOVES: Record<MoveId, MoveSpec> = {
 };
 
 /** How high a move strikes over the fighter's feet (tiles): a front kick at the body, the roundhouse higher, the uppercut under the chin, a punch at the head */
+/** What a move hits for in a style (the Kickboxer's kicks hit harder) */
+export const damageOf = (m: MoveSpec, style: StyleId) => (m.kind === 'kick' ? Math.round(m.damage * STYLES[style].kick) : m.damage);
+
 export const strikeHeight = (m: MoveSpec) => (m.kind === 'kick' ? (m.id === 'roundhouse' ? 0.95 : 0.7) : m.id === 'uppercut' ? 1.0 : 1.05);
 
 export type StyleId = 'brawler' | 'kickboxer' | 'street';
 
-/** The styles: which moves a fighter has (bought at the ring in Phase 3; the Brawler is everyone's) */
+/** The styles: which moves a fighter has (bought at the trainer, catalog.ts STYLE_CATALOG; the Brawler is everyone's) */
 export interface StyleSpec {
   id: StyleId;
   name: string;
@@ -60,9 +63,16 @@ export interface StyleSpec {
   parry: boolean;
   /** How far a dodge steps */
   dodge: number;
+  /** What its kicks' damage is multiplied by (the Kickboxer's hit harder) */
+  kick: number;
 }
 export const STYLES: Record<StyleId, StyleSpec> = {
-  brawler: { id: 'brawler', name: 'Brawler', moves: ['jab', 'cross', 'hook', 'frontKick', 'dodge'], parry: false, dodge: 1.2 },
-  kickboxer: { id: 'kickboxer', name: 'Kickboxer', moves: ['jab', 'cross', 'hook', 'frontKick', 'roundhouse', 'dodge'], parry: false, dodge: 1.2 },
-  street: { id: 'street', name: 'Street', moves: ['jab', 'cross', 'hook', 'uppercut', 'frontKick', 'roundhouse', 'dodge'], parry: true, dodge: 1.6 },
+  brawler: { id: 'brawler', name: 'Brawler', moves: ['jab', 'cross', 'hook', 'frontKick', 'dodge'], parry: false, dodge: 1.2, kick: 1 },
+  kickboxer: { id: 'kickboxer', name: 'Kickboxer', moves: ['jab', 'cross', 'hook', 'frontKick', 'roundhouse', 'dodge'], parry: false, dodge: 1.2, kick: 1.25 },
+  street: { id: 'street', name: 'Street', moves: ['jab', 'cross', 'hook', 'uppercut', 'frontKick', 'roundhouse', 'dodge'], parry: true, dodge: 1.6, kick: 1 },
 };
+
+/** The sparring partners on the street (brawlsite.ts holds where they stand and how they fight): their ids and names, here so the save, the missions and the records read them without the partners' data in the boot */
+export const PARTNER_IDS = ['duke', 'tash', 'sal'] as const;
+export type PartnerId = (typeof PARTNER_IDS)[number];
+export const PARTNER_NAMES: Record<PartnerId, string> = { duke: 'Big Duke', tash: 'Tash', sal: 'Old Sal' };

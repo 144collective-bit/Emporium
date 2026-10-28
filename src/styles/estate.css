@@ -1,57 +1,9 @@
-/* The estate agent (the Vault's panel, tycoon-ui.ts) and Build mode's plots (builder-ui.ts): the city's game, Dorras only */
-
-/* The Plots button's drop-down in the mode header */
-.plots-facts {
-  display: grid;
-  gap: 6px;
-  margin: 0 0 10px;
-  padding: 0;
-  list-style: none;
-}
-.plots-facts li {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  font-size: 12.5px;
-  color: var(--text-2);
-}
-.plots-facts b {
-  font-family: var(--font-display);
-  font-size: 15px;
-  letter-spacing: 0.02em;
-  color: var(--text);
-  text-align: right;
-}
-.plots-facts b small {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--muted);
-}
-.plots-facts .dorra {
-  margin-right: 3px;
-  vertical-align: -2px;
-  color: var(--p-cyan);
-}
-
-/* The design cards show what building costs */
-.builder-card-cost {
-  float: right;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-style: normal;
-  letter-spacing: 0.08em;
-  color: var(--p-cyan);
-}
+/* The estate agent (the Vault's panel, tycoon-ui.ts): the city's game, Dorras only */
 
 /* The estate agent's list in the Vault */
 .biz-estate .market-top .tag {
   padding: 0.25em 0.6em;
   font-size: 9.5px;
-}
-.biz-estate .market-btns [data-buy-plot],
-.biz-estate .market-btns [data-plot-yes] {
-  border-color: #ff6ad5;
-  color: #ff6ad5;
 }
 .biz-ask {
   align-self: center;

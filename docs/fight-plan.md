@@ -199,7 +199,14 @@ Phase 1 is built (`fight-sim.ts`, `fight-anim.ts`, `fight-demo.ts` on
 built: the Fight Club on the south bank (`fightsite.ts`, `fightclub.ts`),
 the trainer's menu, HUD and bout card (`fight-ui.ts`), the fight itself
 (`fight.ts`, `fight-figure.ts`), the save (v8) and `finishFight()`.
-Styles and the record's missions and badges are Phase 3 (the goons were dropped).
+Phase 3 is built with the inventory plan's Phase 3 (docs/inventory-plan.md,
+"Phase 3, as built"): the Kickboxer and Street styles sold at the trainer
+(`STYLE_CATALOG`, `buyStyle()` / `pickStyle()` in `fightsave.ts`, which
+`finishFight()` moved to as well), the Kickboxer's kicks 25% harder
+(`damageOf()`), the sparring partners on the street with their street
+spars, their missions and the Street Fighter badge. Left for later: each
+style's own guard idle, taunt and gloves or wraps, and the record on the
+Profile tab (the goons were dropped).
 
 1. **The sim and the clips.** `fight-sim.ts` with the Brawler's moves,
    block, dodge, stamina, knockdowns, bots, bouts; `fight-anim.ts` with

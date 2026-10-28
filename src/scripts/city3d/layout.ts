@@ -1,7 +1,7 @@
 /*
  * The city's street plan, in world units (1 = one map tile, about 1.8 m:
- * Degen is about one tile tall). Shared by the 3D city, the builder's
- * plots and the game server, so keep it free of the DOM and of scene code.
+ * Degen is about one tile tall). Shared by the 3D city and the game
+ * server, so keep it free of the DOM and of scene code.
  *
  * Streets are sized for real cars: lanes 1.7 wide (a car is about 1 wide
  * and 2.5 long), with a 0.8 sidewalk along every block.
@@ -87,13 +87,28 @@ export const SOUTH_ROAD = RIVER[1] + 2.3 + AVENUE_GAP / 2 - WALK_W; // 92
 /** Where the south row of districts starts */
 export const SOUTH_ROW = SOUTH_ROAD + AVENUE_GAP / 2; // 96.5
 
+/**
+ * The districts round the core, one 9 x 9 pad each on its landscaped block
+ * (x, z of the pad's corner; outer.ts PADS). North, west and east frame the
+ * core; the south row sits across the river on the south bank avenue. They
+ * were Build mode's plots until it was retired (the owner's call); the land
+ * stays where it was.
+ */
+const COLUMNS = [OUTER_LO, ...BLOCKS, OUTER_HI];
+export const DISTRICTS: { id: string; name: string; ox: number; oz: number }[] = [
+  ...COLUMNS.map((ox, i) => ({ id: `N${i + 1}`, name: `North ${i + 1}`, ox, oz: OUTER_LO })),
+  ...BLOCKS.map((oz, i) => ({ id: `W${i + 1}`, name: `West ${i + 1}`, ox: OUTER_LO, oz })),
+  ...BLOCKS.map((oz, i) => ({ id: `E${i + 1}`, name: `East ${i + 1}`, ox: OUTER_HI, oz })),
+  ...COLUMNS.map((ox, i) => ({ id: `S${i + 1}`, name: `South ${i + 1}`, ox, oz: SOUTH_ROW })),
+];
+
 /** The garage's lot on the south bank, east of the south row (S5), facing the south bank avenue */
 export const GARAGE = { ox: OUTER_HI + BS + 4, oz: SOUTH_ROW }; // 82-91 x 96.5-105.5
 /** The market square, east of the East districts, facing the north bank avenue (across the river from the garage) */
 export const MARKET = { ox: OUTER_HI + BS + 4, oz: BLOCKS[2] }; // 82-91 x 48.25-57.25
 /** Makers' Row: four units of your own, north of the market square across the street */
 export const UNITS = { ox: OUTER_HI + BS + 4, oz: BLOCKS[1] }; // 82-91 x 25.5-34.5
-/** The big lots (Phase 4, bought with Dorras, never the PLS district plots): three 9 x 9 lots east of Makers' Row and the market */
+/** The big lots (Phase 4, bought with Dorras): three 9 x 9 lots east of Makers' Row and the market */
 export const BIG_LOTS = [0, 1, 2].map((k) => ({ ox: UNITS.ox + BS + 5, oz: BLOCKS[k] })); // 96-105
 /** Lots outside the core and the districts (raised and paved like a block, with a sidewalk round) */
 export const EXTRA_LOTS = [GARAGE, MARKET, UNITS, ...BIG_LOTS];

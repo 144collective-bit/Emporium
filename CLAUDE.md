@@ -55,8 +55,8 @@ it and has been retired completely. Build only on what's here.
   streets as centre lines with a kind and width, crossings, block outlines
   and their slabs (`outset()`, `onSlab()`), plazas; `PLAN` is `cityPlan()`,
   tested in `tests/streetplan.test.ts`). Phases 2 (downtown) and 3 (the
-  outer districts) are built; Phase 4 is polish. Prices of plots and lots
-  don't change in the redesign.
+  outer districts) are built; Phase 4 is polish. Prices of lots don't
+  change in the redesign.
 - **Downtown** is `downtown.ts` (DOM-free; the 3D city, the plan,
   collisions and the server read it), drawn by `infill.ts`:
   - 0-60 on both axes inside the ring, cut in thirds by the cross streets at
@@ -117,9 +117,11 @@ it and has been retired completely. Build only on what's here.
     sidewalk on the outside (`BEND_KERBS` / `KERB_RUNS`, drawn as one
     kerb). Keep them convex: the blocks are clipped by their segments.
   - Between the ring and the bends, the arterials cut the land into 16
-    landscaped blocks (`OUTER_BLOCKS`). The plots and the Dorras lots keep
-    their 9 x 9 pads where they were (`PADS`, drawn with a paved rim), so
-    owners' buildings and prices don't change; the lawns round them carry
+    landscaped blocks (`OUTER_BLOCKS`). The districts (`DISTRICTS` in
+    layout.ts, Build mode's plots until it was retired: open pads now) and
+    the Dorras lots keep their 9 x 9 pads where they were (`PADS`, drawn
+    with a paved rim), so owners' buildings and prices don't change; the
+    lawns round them carry
     trees (`LAWN_TREES`, half on phones).
   - Four small squares (`OUTER_SQUARES`, `SQUARE_LAYOUTS`): North Square
     (fountain, kiosk), West Green (a plinth with the Emporium diamond
@@ -134,7 +136,7 @@ it and has been retired completely. Build only on what's here.
   - **The lawns dressed** (the polish pass, the owner's call: "add detail to
     low grade parts") are `outerdress.ts` (DOM-free, tested in
     `tests/outerdress.test.ts`; `dressing()`, given a test for what's solid):
-    a paved walk from each plot's pad, each square's ways in and each pocket
+    a paved walk from each district's pad, each square's ways in and each pocket
     park out to its block's sidewalk the shortest clear way (`PATH_W`), round
     flower beds with a stone kerb in the blocks' corners and either side of
     each walk's mouth, benches either side of a walk's middle facing it with a
@@ -200,7 +202,7 @@ it and has been retired completely. Build only on what's here.
   crosses them (`highwayGaps()`), and the outskirts' trees keep off it and
   its slips (`treeSpot()`).
 - **The street plan** is `src/scripts/city3d/layout.ts` (DOM-free; the 3D
-  city, the plots and the server all read it). 1 tile is about
+  city and the server read it). 1 tile is about
   1.8 m and Degen is about one tile tall. Roads are sized for real-proportion
   cars: lanes 1.7 wide, a 0.8 sidewalk round every block and district.
   Downtown's cross streets (`CORE_ROADS`, at 17 and 43) and the diagonals
@@ -225,7 +227,7 @@ it and has been retired completely. Build only on what's here.
   - `CITY_EXT` (-80 to 140 + `SOUTH_SHIFT`) is the town past the Parkway (with the airport and the kart park it's `BUILT_UP`); the outskirts' tree belt fills a band round the town (outside the bends) and a lighter sprinkle covers the rest, seeded tile by tile at a density per area (`outskirtsTrees()` in `outskirts.ts`: `BELT_FREE` / `OPEN_FREE` are the land a tree could stand on in the world before Phase 6, so a bigger world gets more trees, never thinner ones, and a tile's trees are the same whatever the world's size; trees keep off land in `keepTreesOff()`). Pine woods stand in patches on the land well away from the city (`WOODS`, `inWoods()`: a smooth seeded noise, only past `WOODS.clear` from `WOODS_OFF` (the town and the kart park with the airport's old land in one box, and the airport's parts), so none on the land the world had before Phase 6), their trees bigger than the town's.
   - The skyline ring stands just past `EXT` (`SKYLINE` in `bounds.ts`: `gap` to `gap` + `depth` past it), kept out of the haze (`fog = false`) so it reads as a far metropolis; as many towers as the ring had for its length before Phase 6 (`SKYLINE_REACH`), each from its own seeded numbers, on grass that carries on `SKIRT` (80) past the edge (the grass is a plane per tile).
   - The sky dome and stars travel with the camera at `SKY_RADIUS` (`bounds.ts`: far enough that the skyline's far side stands in front of it seen from downtown, about 720 today, never under 400), inside its far plane (`CAMERA_FAR`, 40 further), so everything in the world stays in front of the sky and the skyline stays on the horizon however far out the edge is.
-  - City view pans round the built-up area (`bounds.ts`: `BUILT_UP` is the town, the airport and the kart park; `PAN_BOUNDS` reaches `PAN_MARGIN` (160) past it, never closer than 10 to where you can walk: today that's the whole world), and the Build overview frames the plots (`overviewFrame()`).
+  - City view pans round the built-up area (`bounds.ts`: `BUILT_UP` is the town, the airport and the kart park; `PAN_BOUNDS` reaches `PAN_MARGIN` (160) past it, never closer than 10 to where you can walk: today that's the whole world).
   - **The edge is data** (growth plan Phase 5): `EXT` is set in one place, and a test run can set another (`WORLD_EXT=x0,x1`, `npm run test:wide` at Phase 10's -680 to 720); both must pass. Nothing that exists reads the edge: the airport's `SITE` is fixed numbers, the river walls and their bridge gaps come from the street plan (`riverCrossings()` in `streetplan.ts`), flying turns back at whatever bounds it's given. Anything new written against the edge must work at both sizes.
   - **Growing the city** (many more buildings, then a bigger world) is planned in `docs/growth-plan.md`. Part A (Phases 0-4) makes size cheap: the measuring kit and a snapshot test that nothing moves, tiles and a collision grid, near and far building forms, building as you go, building kits. Part B (Phases 5-10) grows the world: the edge as data (the airport's site frozen, trees per tile), `EXT` out to about 880 across, roads to reach it (a ring highway, more bridges, traffic spent near you), getting about (a world map, waypoints, and the owner's pick of metro, taxis or fast travel), districts one at a time, then optionally about 1,400 across. Phases 0 (the measuring kit), 1 (tiles, the collision grid, the city's fixed geometry merged per tile, crowds and traffic culled for the shadow map), 2 (near and far forms: details near only, far forms for the places and the cars) 3 (building as you go: sites built round the home view at the boot and the rest after it, near forms let go past a budget), 4 (building kits: kits, recipes for blocks, a test district behind `?district=test`), 5 (the edge as data: `EXT` in one place, tests at both sizes) 6 (the edge moves out: `EXT` -420 to 460, the woods, the far plane and sky dome from the edge) 7 (roads to reach it: the ring highway, its bridges and slip lanes, routes generated from the street plan, traffic and boats spent near you) and 8 (getting about: the world map, waypoints, Bring my car, taxis, fast travel, the metro, sound by district) are built, and Phase 9's first district, **The Trenches**, is built, and the second, **Westlake Park**, is under way (below); follow the rest one phase at a time with the owner's sign-off, and never add buildings in bulk outside the tiles (`tileBatch()`) or outside sites (`site()`).
   - **Solid and fast first** (the owner's call): fixes and performance are planned in `docs/performance-plan.md` (where the time goes, what each phase measured, what's next); keep it up to date. Fix phase 1 (phones: the city builds behind the start menu and in spare frames, the outline pre-pass only as far as outlines reach, big textures at half size on phones), fix phase 2 (bugs and broken flows at every width), the trim, fix phase 3 (the code clean-up, the type check in the build) performance phase 2 (data baked at build time, the 2D map held back, features loaded when used, a service worker, the phones' lighter glow, budgets in the build) performance phase 3 (the crowd in a few meshes, shaders compiled once for the right target; far-district impostors measured and left until the districts grow) and performance phase 4, the foundations (sites built off the main thread, textures made at build time, and districts loaded as you approach, built with Westlake Park) are built. On phones only, a softer neon glow and simpler far districts are allowed; desktop stays as it is.
@@ -1305,7 +1307,7 @@ it and has been retired completely. Build only on what's here.
   side is the quick swap with a fade (`QUICK_FADE`), reduced motion the
   quick swap without; at home the turntable is stood on to get in
   (`isTurntable()`, `DISC`). Keep new car detail in that chunk: the
-  boot is near its budget (665.4 of 670 KB: Phase 3 brought carinside.ts into it, Phase 5 the look's ids, Phase 6 three specs, Phase 7 the bikes' numbers and rules; the grand station's retirement freed 5 KB). Phase 4 (handling with
+  boot is under its budget (651.3 of 670 KB with Build mode gone and the inventory plan's Phase 3 merged: Phase 3 brought carinside.ts into it, Phase 5 the look's ids, Phase 6 three specs, Phase 7 the bikes' numbers and rules). Phase 4 (handling with
   depth: each model's feel and drifting) is built, in the sim (drive-sim.ts, mycar.ts `FEEL`; see Driving your
   car below). Phase 5 (the garage's customisation, all free) is built: `CarLook` in mycar.ts (the ids,
   `cleanLook()`, carried by `cleanCar()`), carlook.ts (DOM-free, tested in `tests/carlook.test.ts`: names,
@@ -1336,7 +1338,7 @@ it and has been retired completely. Build only on what's here.
     message, eta }); anything unknown or wrong is left out, so no config,
     a broken one or a backend that's down is the city as it is in the code.
     `LIVE_PLACES` (every spot with a pin: keep it in step with `PLACES`, the
-    test checks) and `LIVE_FEATURES` (walk, build, drive, fly, karts,
+    test checks) and `LIVE_FEATURES` (walk, drive, fly, karts,
     fight, guns, taxi, metro, travel) are what can be switched; the command
     center reads these lists from here, so a new place or feature is added
     once, here.
@@ -1452,7 +1454,7 @@ it and has been retired completely. Build only on what's here.
     them (up to 8 s, then they come in as they arrive). The bake waits for
     the web fonts; if it can't run it warns and the site paints them as
     before. A texture drawn from the save or changed while the city runs
-    (units, lots, plots, corner shops, the garage's car, karts, guns, the
+    (units, lots, corner shops, the garage's car, karts, guns, the
     first-person hands, the stage, the LED wall, a sign with `live: true`
     in `neonSign()` / `facade()`) uses `liveTex()`: always painted, never
     baked. A drawing that changes means a new bake (every build makes
@@ -1507,7 +1509,7 @@ it and has been retired completely. Build only on what's here.
   (`tiled()`, `tiledSlab()`: the lot as its top, the sidewalk a `ring()`
   laid on it), and long things go in stretches.
   `consolidate()` merges each landmark's Batch meshes per material after the
-  city is built (not for the units, lots and plots, which rebuild theirs).
+  city is built (not for the units and lots, which rebuild theirs).
   Everything else fixed (the Batches built straight onto the scene, and the
   airport's and kart park's) is merged **per tile** by `tileBatch()`
   (`tilebatch.ts`, growth plan Phase 1): each material's triangles split by
@@ -1667,7 +1669,7 @@ it and has been retired completely. Build only on what's here.
   The Trenches round The Block,
   where the edge was before Phase 6, the far edge (from `EXT`)) measured for a few
   seconds each, once every site is built (it builds faster while it
-  waits), then a 48 s camera route through them (all but the Build overview). Results (fps,
+  waits), then a 48 s camera route through them (all but the view from high over every district). Results (fps,
   average / 95th-percentile / slowest frame, CPU ms, draws and triangles,
   the shadow map's, memory, boot) go in a card on the page, the console and
   `window.__bench`; the card's **Copy results** button copies them with the
@@ -2381,17 +2383,15 @@ it and has been retired completely. Build only on what's here.
   `CityMap.astro`, copy in `head.ts`), slim dark glass. The site bar
   (`Nav.astro`) is left out there (`<Base nav={false}>`) and stays on the
   other pages. Left to right: the logo (home link), the mode title and
-  subtitle (City view, Walk mode, Build mode), then on the
-  right (walk tabs, ammo and score while walking), the City / Walk / Build
+  subtitle (City view, Walk mode), then on the
+  right (walk tabs, ammo and score while walking), the City / Walk
   switch (the current mode lit with a glow and a gradient underline, the
-  others dimmed), and the tools: in Build mode a Plots button
-  (`[data-builder-bar]`, painted by `builder-ui.ts`: what you own, your
-  Dorras and the next plot's price), a ⚙ Settings button (time, weather, sound, reset
+  other dimmed), and the tools: a ⚙ Settings button (time, weather, sound, reset
   view; 3D only, not while walking; never open by default) and a
   ☰ Menu (the city's places, 3D only (`.dir-places`); then under "More" the
   Emporium comic page and the merch store (`.dir-links`); then PulseChain
   native, X and Telegram; not while walking). Left of them, in the 3D city
-  (not in Build mode, and not while walking on phones), the Dorras readout
+  (not while walking on phones), the Dorras readout
   (`[data-dorras]`, painted by `tycoon-ui.ts`, a green dot when the stall's
   till has takings); it opens your business card. Beside it the level pill
   (`[data-level]`, `missions-ui.ts`: level, XP bar, title). Their cards drop down under them (`.head-panel`, one open at a
@@ -2752,7 +2752,7 @@ it and has been retired completely. Build only on what's here.
 - **Dorras** are the city's money: earned by playing, never bought and
   never cashed out. Never give them a real-money value, call them an
   investment, or tie them to the token or the Shopify store. Nothing in the
-  city costs real money (plot sales for PLS were retired).
+  city costs real money.
 - **Rules:** `tycoon.ts`, DOM-free and tested (`tests/tycoon.test.ts`):
   goods (`GOODS`, made-up city goods, nothing about the token; raw goods
   last, since a good's place in the list sets its price rhythm), the market
@@ -2771,15 +2771,16 @@ it and has been retired completely. Build only on what's here.
   `line()` for the Workshop and factories), the ledger (`book()`, called by
   every rule that moves Dorras) and loans (`borrow()`, `repay()`, a share
   of takings in `advance()`).
-  `cleanSave()` cleans anything loaded and upgrades older saves (now v11: the
-  inventory, `inventory`; v10 brought The Trenches' corner shops, `corners`);
+  `cleanSave()` cleans anything loaded and upgrades older saves (now v12:
+  Build mode retired, the district plots a save owned refunded in full,
+  `plotRefund()`, with a toast once; v11 brought the inventory, `inventory`;
+  v10 The Trenches' corner shops, `corners`);
   keep that migration when the save changes. New economy rules go here
   first.
 - **The city's game (Phase 5)** sits on the same save: XP and levels
   (`xp`, `level()`, `addXp()`), owned cars, guns and clothes with their mods
   (`buyCar()` / `modCar()` / `carStatsOf()`, `buyGun()` / `modGun()`,
-  `buyWardrobe()`), district plots (`buyPlot()` / `buildPlot()` /
-  `sellPlot()`), levels for the places you run (`upgradePlace()`,
+  `buyWardrobe()`), levels for the places you run (`upgradePlace()`,
   `capOf()`, `capacityMul()`), missions, badges and the
   `counters` everything watches (`count()`, `takedown()`). Prices, the
   level each thing needs, the XP curve and what each mod does are
@@ -2821,7 +2822,7 @@ it and has been retired completely. Build only on what's here.
   from it), each drawn from the save (to let, empty, garden, shop,
   warehouse) and rebuilt only when what it shows changes. Their footprints
   are `unitSolids()` (per kind, `UNIT_SHAPES`), fed to walking and driving
-  with the plots' (`plotSolids` in `index.ts`). Signs use `occlude()`.
+  with the big lots' (`placedSolids` in `index.ts`). Signs use `occlude()`.
 - In walk mode, standing at your stall or a unit's door (`places()` in
   `tycoon-ui.ts`, the walk deps `places` / `openPlace`) shows a prompt (F or
   a tap) that opens the card on that place, and standing at a stall or shop
@@ -2837,10 +2838,6 @@ it and has been retired completely. Build only on what's here.
   rebuilt only when what they show changes; offices stay well under the
   Emporium's height. Units, lots and the Workshop have levels 1-3 (the
   business card's Upgrade row); `units.ts` and `biglots.ts` show the level.
-- **The district plots** (Phase 5, the owner's call) are Dorras property
-  too: bought at the Vault's estate agent (`[data-bank]`, the list in
-  `bankView()`) or from a plot's panel in Build mode. Ownership lives in
-  the tycoon save (`plots`), behind `createPlotStore()` in `store.ts`.
 - **Loans and the ledger** are game mechanics with Dorras only: a flat fee,
   no interest rates, savings returns or APY-style wording anywhere.
 - **Missions, levels and badges** (Phase 5): the rules are `missions.ts`
@@ -2918,7 +2915,8 @@ it and has been retired completely. Build only on what's here.
 - Collision footprints (`SOLIDS`) and door spots (`DOORS`), both in
   `solids.ts` with the walk-mode start (`WALK_SPAWN`), mirror
   `landmarks.ts`. When a landmark moves or changes size, update both.
-  Placed buildings block via `plots.solids()`; parks stay walkable.
+  What's built on your units and big lots blocks via `placedSolids()`;
+  parks stay walkable.
 - Checks go through the collision grid (`boxgrid.ts`, `BoxGrid`: boxes in
   cells of `CELL`, a query gives every box touching an area in the list's
   order): `SOLID_GRID` for walking, `CAMERA_GRID` for the walk camera,
@@ -3146,7 +3144,7 @@ it and has been retired completely. Build only on what's here.
   Degen's style, origin on the ground under the middle, +x forward, wheels
   that steer and roll, a seated Degen driver via `seat()`). Only for the
   kart park: never real money, never tied to the store or the token.
-- **The save** (`tycoon.ts`, v11): `karts` { model, paint, owned, mods,
+- **The save** (`tycoon.ts`, v12): `karts` { model, paint, owned, mods,
   `records` (fastest lap and best run per course and class, `KartTime`),
   `boards` (the local leaderboards, `LEADERBOARD_SIZE` runs per key: your
   own runs for now, built so a server can hold everyone's later),
@@ -3246,8 +3244,8 @@ it and has been retired completely. Build only on what's here.
   an inventory, switching weapons, then fists on the street); keep it up to
   date, one phase at a time with the owner's sign-off. Phase 1 (the
   inventory) and the controls after it (the owner's call: Tab opens a 4 x 4
-  grid with two weapon slots) and Phase 2 (fists on the street, below) are
-  built: what Degen carries is the save's
+  grid with two weapon slots), Phase 2 (fists on the street, below) and
+  Phase 3 (sparring partners and styles, below) are built: what Degen carries is the save's
   `inventory` (v11: two weapon slots, `guns`, either may be empty; the
   thing in his hand, `held`, kept in step with the look by `setHeld()`; his
   consumables, `items`; where each thing lies in the grid, `grid`), its
@@ -3326,6 +3324,30 @@ it and has been retired completely. Build only on what's here.
   kick, LB held block, A dodge, the run on L3. A swing makes anyone near
   step aside (`swing` in life.ts, a `bump`): the crowd is never a target.
   The lab's Brawl program (`?anim&prog=brawl`) plays them.
+- **Sparring partners and styles** (Phase 3, with the fight plan's Phase
+  3): `brawlsite.ts` (DOM-free, tested in `tests/brawlsite.test.ts`):
+  `PARTNERS`, three made-up fighters waiting in the guard, one in each
+  style, easy to hard: Big Duke on the lawn behind the Fight Club, Tash on
+  The Block's plaza, Old Sal on Pier 7's head; a spar puts you `GAP` in
+  front of them (`startOf()`) in a ring round the point between you
+  (`arenaOf()`), each ring held clear of everything solid, the lawns' walks,
+  beds and furniture, the pocket parks and squares, the benches and the
+  people about, on a slab or a deck; their ids and names are
+  fight-moves.ts's (`PARTNER_IDS`, `PARTNER_NAMES`), so the boot carries no
+  more of them. `createPartners()` (brawl.ts) draws them near Degen idling
+  in the guard, facing him as he comes up; their footprints
+  (`PARTNER_SOLIDS`) join the grids through `addSolids()` when the chunk
+  loads (never the city's `SOLIDS`: the lawns' walks are routed round
+  those at the load). The prompt "Spar · <name>" (`spar:<id>`, gated by
+  the live settings' `fight`) starts a street spar: fight.ts's kind
+  `street`, the partner's ring and ground, a knock-out ends it (yours a
+  loss, theirs a win), a quit is a loss, no Dorras, XP as a spar and
+  `XP.streetWin` for a win, `fight.partners` on the save. The snack
+  (`SNACK_HEAL`) is eaten from the fight HUD's Snack button, E or the
+  d-pad's up, in a spar or a street spar. Counters `streetSpars`,
+  `partnersBeaten`, `streetChains` (brawl-sim.ts `landed()`); missions
+  Sparring partner, One, two, three and Round the city (goal `{ partners }`,
+  counted from the record), badge Street Fighter (every partner beaten).
 - **Free play** (a test switch, the owner's call: everything free to
   check it all works): `freeplay.ts` (`FREE_PLAY`, Vite's `__FREE_PLAY__`
   from `PUBLIC_FREE_PLAY=1` in `astro.config.mjs`) makes every price in
@@ -3414,8 +3436,8 @@ it and has been retired completely. Build only on what's here.
   Keep the red dot on the line of sight: scale the whole holder, never only
   its position.
 - Hits are hitscan from the camera centre. Bullets stop on everything in
-  `SOLIDS` except the dummies' own footprints (`SHOT_SOLIDS`), on plot
-  buildings and on the ground. When dummies move, their footprints follow
+  `SOLIDS` except the dummies' own footprints (`SHOT_SOLIDS`), on what's
+  built on your units and lots, and on the ground. When dummies move, their footprints follow
   `DUMMIES` automatically.
 - Keys: click fires, right-click aims, R reloads, G holsters (with empty hands it kicks: the fists, above), X
   and 1-7 work the hotbar (the inventory, above), Q / E held peek round a corner (animation Phase 4), C crouches and
@@ -3493,7 +3515,10 @@ it and has been retired completely. Build only on what's here.
   `data-fight-result`, the Punch / Kick / Block / Dodge touch buttons
   `data-fight-punch` / `-kick` / `-block` / `-dodge` and Quit
   `data-fight-quit` in `CityMap.astro`, styles in `fight.css`) is the
-  trainer's menu (Spar, Bout, Record, Styles (coming)), the HUD (health,
+  trainer's menu (Spar, Bout, Record, Styles: the Kickboxer and Street
+  styles sold there, `STYLE_CATALOG` in catalog.ts, `buyStyle()` /
+  `pickStyle()` in `fightsave.ts`; the Kickboxer's kicks hit harder,
+  `damageOf()` in fight-moves.ts), the HUD (health,
   stamina, round and clock, score pips, chain, the knockdown count), the
   bell text, pops and the bout card. `fight.ts` (`createFight()`) runs a
   fight: your Degen with fists against one of `FIGHT_BOTS` (`catalog.ts`:
@@ -3505,7 +3530,9 @@ it and has been retired completely. Build only on what's here.
   (`.fight-ghost`), the sounds
   (`whoosh`, `punch`, `kick`, `fightBlock`, `parry`, `thud`, `fightKo`,
   `bell`, `count` in `sound.ts`), the over-the-shoulder camera kept inside
-  the ropes, and it pays through `finishFight()` + `commit()` (a spar: XP
+  the ropes, and it pays through `finishFight()` (`fightsave.ts`, DOM-free: the
+  fight's rules on the save, out of tycoon.ts so they load with the fight)
+  + `commit()` (a spar: XP
   with a capped bonus per hit; a bout of three 90 s rounds, first to two:
   the purse on a win, XP either way, a quit is a loss; knock-outs and
   chains of three add XP). `walk.ts` wires it: the counter's prompt opens
@@ -3515,9 +3542,10 @@ it and has been retired completely. Build only on what's here.
   stick, X / Y, LB held, A, Start quits), Esc or Quit ends it with the
   card, closing the card stands Degen up outside the ropes (`OUT`);
   `.city.is-fighting` hides the walk HUD and `data-fight` makes the header
-  read "Fighting · <opponent>". The save (`tycoon.ts`, v11) keeps `fight`
+  read "Fighting · <opponent>". The save (`tycoon.ts`, v12) keeps `fight`
   (style, owned styles, wins, losses, knock-outs, best chain, bouts, spars,
-  each opponent's record), the ledger entry `fighting` and the counters
+  each opponent's record, each sparring partner's), the ledger entries
+  `fighting` (in) and `fightclub` (styles, out) and the counters
   `bouts` / `fightWins` / `kos` / `chains`. New gameplay goes in the sim
   first; looks in the clips and the view.
 - **Nothing in the city attacks you** (the owner's call): the rival crew
@@ -3526,37 +3554,28 @@ it and has been retired completely. Build only on what's here.
   the dummies and the drones only, and there is no player health outside
   the Fight Club's ring. Don't bring the crew back without the owner.
 
-## City builder (3D build mode)
+## Build mode (retired, the owner's call)
 
-- Each district around the core is **one large plot** (its 3 x 3 squares
-  merged into one): North 1-5, West 1-3, East 1-3, and the South row (S1-5)
-  across the river. The south bank has its own east-west road
-  (`SOUTH_ROAD`, so roads are split into `NS_ROADS` / `EW_ROADS` in
-  `world.ts`), a lamp-lit riverside walk, traffic over the east avenue's
-  bridge and the highway's (river plan step 1) and
-  pedestrians round the south row (`DISTRICTS`, `BUILDINGS`, `cleanDesign()` in
-  `src/data/plots.ts`, DOM-free). Plot grid, overlay and building
-  generators are in `plots.ts`, the interface in `builder-ui.ts`. The core
-  landmarks are not for sale.
-- **Plots cost Dorras** (the owner's call, Phase 5): `PLOT_DORRAS` in
-  `catalog.ts`, dearer with each plot you own, from level `PLOT_LEVEL`;
-  designs cost `BUILD_COSTS`; selling back pays `PLOT_REFUND`. The rules
-  are `buyPlot()` / `buildPlot()` / `sellPlot()` in `tycoon.ts`, behind
-  `createPlotStore()` (`store.ts`) for `builder-ui.ts`. There is no wallet
-  in Build mode and no live or demo mode any more: one game, in this
-  browser's save. Sales for PLS were retired; don't bring them back without
-  the owner.
-- The eight designs (`GEN` in `plots.ts`) are drawn at the large plot's own
-  scale (8.2 x 8.2 tiles, front facing +z before the owner's turn), each with
-  its site dressed around it from the shared helpers (paving, `tree`, `pine`,
-  `lamp`, `bench`, `planter`, `fence`, `bollards`, `lightString`). People-scale:
-  doors ~1.2-1.7 tall, floors ~0.95-1.0. Each design pushes its walk-mode
-  footprints to `ctx.solids` (turned with the building; parks stay walkable).
-  Tower and loft floors are capped in `BUILDINGS` so nothing outgrows the
-  Emporium (its roof is ~12.5 tiles up; an 8-floor tower's mast tops out at
-  ~11.9). Keep it that way when adding designs.
-- Visitors can't type text onto buildings: sign texts come from the fixed
-  `SIGNS` list, so nothing unexpected (or confidential) appears in public.
+- Build mode is gone: no Build switch, Plots button or plot panel, no
+  buying, building or selling district plots, no designs, no Build
+  overview. The City / Walk switch is the mode header's whole switch, and
+  `data-mode` is `explore` or `walk`. Don't bring it back without the owner.
+- The sixteen districts round the core (North 1-5, West 1-3, East 1-3, the
+  South row S1-5 across the river) stay as land: `DISTRICTS` in layout.ts,
+  each an open 9 x 9 pad on its landscaped block (`PADS` in outer.ts,
+  their walks in outerdress.ts), in the street plan as blocks of use
+  `district`. The south bank has its own east-west road (`SOUTH_ROAD`, so
+  roads are split into `NS_ROADS` / `EW_ROADS`), a lamp-lit riverside walk,
+  traffic over the east avenue's bridge and the highway's, and pedestrians
+  round the south row.
+- A save that owned plots (v11 and older) gets back everything they cost
+  and what was built on them when it loads (`plotRefund()` in tycoon.ts,
+  the ledger's "Plots refunded"), and a toast says so once.
+- Visitors still can't type text onto buildings: sign texts come from
+  fixed lists, so nothing unexpected (or confidential) appears in public.
+
+## Logging in with a wallet
+
 - **Logging in with a wallet** (`wallet.ts`, `account.ts`, `account-ui.ts`;
   the server's `accounts.ts`, the sign-in message in `src/scripts/net/auth.ts`)
   is part of multiplayer (being tested on workers.dev only): a player profile that follows the
@@ -3616,7 +3635,7 @@ it and has been retired completely. Build only on what's here.
   both open the profile card (`[data-account]`). The account and card are
   made with the page (`CityMap.astro`), not with the 3D city, so they work
   before 3D has loaded; `bootCity()` gets them and fills
-  in their `hooks` (Online switch, rename, Build mode). The card shows:
+  in their `hooks` (Online switch, rename). The card shows:
   player name, rank, lifetime score, the wallet (short) and network, and the
   with New name and Log out. Only the visitor sees their own address; other
   players only see the player name. Logging in needs the city Online.
@@ -3628,10 +3647,10 @@ it and has been retired completely. Build only on what's here.
   mode header, remembered as `degen-city-online-v1`, online by default) is
   one choice for the whole city. Online: walking joins the shared city
   (`multiplayer.ts` connects only while walking). Offline: solo walking, and
-  nothing calls the game server. Build mode is the same game either way. Go online / Leave in the Online pill flip the same switch. Its
+  nothing calls the game server. Go online / Leave in the Online pill flip the same switch. Its
   dot: grey off, cyan ready, yellow joining, green in a city, red full or
   unreachable. It reads "On / Off" up to 900px wide; up to 420px only the
-  current side shows (a tap flips it) and City / Walk / Build are icons, so
+  current side shows (a tap flips it) and City / Walk are icons, so
   the mode header keeps the title.
 - PvP will only ever happen across the river (south bank), in the Fight
   Club's ring; the city north of the bridges stays a safe hangout.
@@ -3649,7 +3668,7 @@ it and has been retired completely. Build only on what's here.
 - They cover the code that's free of the DOM and scene code: the street plan
   (`layout.ts`, `streetplan.ts`), the cars' measurements, interiors and where your car is hollow (`carspec.ts`, `carinside.ts`), your car's springs (`suspension.ts`), the garage's customisation (`carlook.ts`, the look in `mycar.ts`), your motorbikes (`mybike.ts`, `bike-sim.ts`, their place in the save and `bikeMark()`, in `tests/bike.test.ts`), downtown (`downtown.ts`), the ring highway
   (`highway.ts`), the traffic's routes and lights (`routes.ts`), collision data, doors, the gun counter, the garage
-  and the spawn (`solids.ts`), the plots (`src/data/plots.ts`), your car
+  and the spawn (`solids.ts`), your car
   (`mycar.ts`), the driving rules (`drive-sim.ts`), target practice
   (`combat-sim.ts`), the multiplayer protocol's checks (`protocol.ts`), the economy (`tycoon.ts`, the market square in
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
@@ -3660,7 +3679,7 @@ it and has been retired completely. Build only on what's here.
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,
   in `tests/merch.test.ts`), the crowd's baked clips (`crowdclips.ts`) and Degen's skeleton, weights, head and hands
-  (`skeleton.ts`, `body.ts`), his walking (`locomotion.ts`), the motion capture and its animation (`bvh.ts`, `mocap-build.ts`, `mocap.ts`, `movesim.ts`, `inertia.ts`, `motionmatch.ts`, `animator.ts`), the rubric of human movement over every clip and program (`human.ts`, `tests/human.test.ts`), what his body does about what he touches (`contact.ts`), the game's moments (`moments.ts`), the guns in his hands (`gunfit.ts`, `stance.ts`), what he carries (`inventory.ts`, `inventory-save.ts`) and his clothes not clipping (`wardrobe.ts`, the trunk's weights in `skeleton.ts`, `tests/clothing.test.ts`) and his accessories where they're worn (`tests/accessories.test.ts`), the suit's tailoring on the desktop only (`tests/tailoring.test.ts`). Modules that touch the DOM or `kit.ts` (canvas
+  (`skeleton.ts`, `body.ts`), his walking (`locomotion.ts`), the motion capture and its animation (`bvh.ts`, `mocap-build.ts`, `mocap.ts`, `movesim.ts`, `inertia.ts`, `motionmatch.ts`, `animator.ts`), the rubric of human movement over every clip and program (`human.ts`, `tests/human.test.ts`), what his body does about what he touches (`contact.ts`), the game's moments (`moments.ts`), the guns in his hands (`gunfit.ts`, `stance.ts`), what he carries (`inventory.ts`, `inventory-save.ts`), fists on the street, the sparring partners and the styles (`brawl-sim.ts`, `brawlsite.ts`, `fightsave.ts`) and his clothes not clipping (`wardrobe.ts`, the trunk's weights in `skeleton.ts`, `tests/clothing.test.ts`) and his accessories where they're worn (`tests/accessories.test.ts`), the suit's tailoring on the desktop only (`tests/tailoring.test.ts`). Modules that touch the DOM or `kit.ts` (canvas
   textures) can't load in Node; keep data a test needs in the DOM-free
   files.
 - When you change a rule or move something in the city, run the tests and
@@ -3699,9 +3718,10 @@ it and has been retired completely. Build only on what's here.
 
 - All copy is draft until the owner says otherwise; keep the draft note.
 - No prices, stats, APYs, audits, partnerships or testimonials unless the
-  owner supplies them as facts. Dorras prices in the game (plots, cars,
-  guns, clothes) are game numbers, not real prices. No financial advice:
-  plots are city land for building on, never pitched as an investment.
+  owner supplies them as facts. Dorras prices in the game (units, lots,
+  cars, guns, clothes) are game numbers, not real prices. No financial
+  advice: units, lots and shops are places to run in the game, never
+  pitched as an investment.
 - PulseChain is a real project: say "PulseChain native", never imply an
   official partnership or endorsement.
 - Only link to destinations the owner has confirmed (currently X, Telegram

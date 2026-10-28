@@ -18,8 +18,7 @@
  *
  * Coordinates are world units on the ground: [x, z].
  */
-import { DISTRICTS } from '../../data/plots';
-import { BIG_LOTS, BS, EW_ROADS, GARAGE, LANE, MARKET, NS_ROADS, RIVER, RING_HI, SOUTH_ROAD, SOUTH_SHIFT as D, UNITS, WALK_W, nsRuns, type Road } from './layout';
+import { BIG_LOTS, BS, DISTRICTS, EW_ROADS, GARAGE, LANE, MARKET, NS_ROADS, RIVER, RING_HI, SOUTH_ROAD, SOUTH_SHIFT as D, UNITS, WALK_W, nsRuns, type Road } from './layout';
 import { LIBERTY_RECTS } from './liberty';
 import { HARBOUR_RECT } from './harbour';
 import { FIGHT_CLUB } from './fightsite';
