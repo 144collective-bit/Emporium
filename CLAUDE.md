@@ -1238,7 +1238,8 @@ it and has been retired completely. Build only on what's here.
   Street Thunder, Big Rover, Hyper Comet, the Boulevardier classic, the Mud
   Buster off-roader and the Glow Pod electric hatch (the last three yours
   only, not in the traffic), and Uptown's Midnight Exec, a long black
-  saloon in the traffic only;
+  saloon, the Patrol car, the Box Runner truck and the Heavy Haul rig with
+  its trailer (`TRAILER`, `trailerGeometry()`), in the traffic only;
   made-up names, never a real make or badge), each a bevelled extruded
   body and cabin with blacked-out window frames and glass, light clusters
   (lamp shape `lamp`) with bezels and indicators, a grille, door seams and
@@ -1307,7 +1308,7 @@ it and has been retired completely. Build only on what's here.
   side is the quick swap with a fade (`QUICK_FADE`), reduced motion the
   quick swap without; at home the turntable is stood on to get in
   (`isTurntable()`, `DISC`). Keep new car detail in that chunk: the
-  boot is under its budget (651.3 of 670 KB with Build mode gone and the inventory plan's Phase 3 merged: Phase 3 brought carinside.ts into it, Phase 5 the look's ids, Phase 6 three specs, Phase 7 the bikes' numbers and rules). Phase 4 (handling with
+  boot is under its budget (657.3 of 670 KB with Build mode gone and the inventory plan's Phase 3 merged: Phase 3 brought carinside.ts into it, Phase 5 the look's ids, Phase 6 three specs, Phase 7 the bikes' numbers and rules, Phase 8 the traffic's models, rules and riders). Phase 4 (handling with
   depth: each model's feel and drifting) is built, in the sim (drive-sim.ts, mycar.ts `FEEL`; see Driving your
   car below). Phase 5 (the garage's customisation, all free) is built: `CarLook` in mycar.ts (the ids,
   `cleanLook()`, carried by `cleanCar()`), carlook.ts (DOM-free, tested in `tests/carlook.test.ts`: names,
@@ -1328,7 +1329,19 @@ it and has been retired completely. Build only on what's here.
   tailgate; heavy and sure) and the **Glow Pod** (`ev`: the grille closed over, light bars nose and tail, a glass
   roof, aero discs, no exhaust; `DRIVE.electric`: one gear, `motorOf()` in drive-sim.ts, and the engine's
   `whine` voice in sound.ts), each with its own spec, interior, springs, feel and cargo, bought at the garage
-  (`CAR_CATALOG`: 22,000 at level 5, 30,000 at 7, 40,000 at 8); yours only, never in the traffic's `MIX`.
+  (`CAR_CATALOG`: 22,000 at level 5, 30,000 at 7, 40,000 at 8); yours only, never in the traffic's `MIX`. Phase 8
+  (the traffic) is built: the rules are `fleet.ts` (DOM-free, tested in `tests/fleet.test.ts`): delivery trucks
+  (carspec.ts `truck`, the Box Runner with its cargo `box`, and `rig`, the Heavy Haul tractor with its trailer
+  following it along the route, `rigAlong()`) pull in at loading bays (`BAYS` on the avenues between the bus
+  stops, the buses' `busStep()` with `BAY_DWELL`) with their hazards on; patrol cars (`police`: midnight blue,
+  SECTOR 7 PATROL by the city's shield on white door panels (life.ts `liveryTex()`, fixed copy), a light bar
+  flashing blue and magenta now and then, `barLit()`) drive like the rest and never chase, stop or sound a horn
+  at you; bikes and scooters (Phase 7's models, `BIKE_MIX`, bikes.ts `bikeGeometry()` once its chunk is in,
+  `addTrafficBikes()`) carry one of the crowd (life.ts `riders`, the rows `scoot` / `ride` / `tuck` from acts.ts
+  `ridePose()`, your own rider's pose too) and lean a little into turns (`trafficLean()`); every traffic car
+  shows its driver and seats behind the glass (carfine.ts `crew()`, `carGeometry(id, { crew: true })`, the
+  traffic's only). Desktop four trucks (three on medium), three patrol cars, six bikes; phones two, two, three
+  (`TIERS`).
 - **Live settings** (the owner's call): the owner switches parts of the
   city from outside the code, in a private command center, through the
   backend's public config (`LIVE_URL`, public settings only).
@@ -3666,7 +3679,7 @@ it and has been retired completely. Build only on what's here.
   10's bigger world (`WORLD_EXT`): run both when anything reads the edge. The "Build site" Action runs them before the
   build: a failing test means no zip.
 - They cover the code that's free of the DOM and scene code: the street plan
-  (`layout.ts`, `streetplan.ts`), the cars' measurements, interiors and where your car is hollow (`carspec.ts`, `carinside.ts`), your car's springs (`suspension.ts`), the garage's customisation (`carlook.ts`, the look in `mycar.ts`), your motorbikes (`mybike.ts`, `bike-sim.ts`, their place in the save and `bikeMark()`, in `tests/bike.test.ts`), downtown (`downtown.ts`), the ring highway
+  (`layout.ts`, `streetplan.ts`), the cars' measurements, interiors and where your car is hollow (`carspec.ts`, `carinside.ts`), your car's springs (`suspension.ts`), the garage's customisation (`carlook.ts`, the look in `mycar.ts`), your motorbikes (`mybike.ts`, `bike-sim.ts`, their place in the save and `bikeMark()`, in `tests/bike.test.ts`), the traffic's trucks, patrol cars and bikes (`fleet.ts`), downtown (`downtown.ts`), the ring highway
   (`highway.ts`), the traffic's routes and lights (`routes.ts`), collision data, doors, the gun counter, the garage
   and the spawn (`solids.ts`), your car
   (`mycar.ts`), the driving rules (`drive-sim.ts`), target practice

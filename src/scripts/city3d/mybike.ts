@@ -48,6 +48,12 @@ export const BIKES: Record<BikeId, BikeSpec> = {
   sportbike: { id: 'sportbike', name: 'Neon Blade', L: 1.85, W: 0.44, r: 0.23, tw: 0.13, axles: [-0.66, 0.64], seat: [-0.22, 0.6], bars: [0.22, 0.66, 0.18], pegs: [-0.2, 0.3, 0.14], tuck: 0.55 },
 };
 
+/** The steering head (x, y): where the fork turns (the bars about it), the drawing's and the rider's pose's */
+export function steeringHead(id: BikeId): [number, number] {
+  const s = BIKES[id];
+  return id === 'scooter' ? [0.3, 0.5] : [s.axles[1] - 0.16, s.bars[1] - 0.04];
+}
+
 /** What the garage says about each, and how it rides (0..1, the stat bars and the handling) */
 export const BIKE_DRIVE: Record<BikeId, { kind: string; blurb: string; speed: number; accel: number; grip: number }> = {
   scooter: { kind: 'Scooter', blurb: 'Nippy and easy: slips through the traffic, parks anywhere, a top box for the shopping.', speed: 0.42, accel: 0.62, grip: 0.62 },

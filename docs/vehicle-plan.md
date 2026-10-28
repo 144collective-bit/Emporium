@@ -508,7 +508,7 @@ Asked before planning (2026-10-28):
 - Other players don't see your bike yet (as with the cars: the
   multiplayer plan's next step). Boot cost: 2.4 KB (665.4 of 670 KB).
 
-### Phase 8: the traffic
+### Phase 8: the traffic (built)
 
 - **Seats and a driver shape** behind the glass of every traffic car, in
   the same two draws (vertex colours, near only).
@@ -521,6 +521,68 @@ Asked before planning (2026-10-28):
 - **Bikes and scooters** in the traffic, from Phase 7's models, ridden by
   the crowd's figures.
 - Every new type is measured on the bench; phones get fewer of them.
+
+**As built:**
+
+- **Three new models**, the traffic's only (never yours, never parked):
+  carspec.ts's `police` (**Patrol**: the Cruiser's body in midnight blue,
+  `livery` so no seams or handles are drawn on its sides), `truck` (**Box
+  Runner**: a tall cab, the cargo box behind it as the spec's `box`, drawn
+  in the paint and in its far form too) and `rig` (**Heavy Haul**: a
+  sleeper cab on a long bonnet, its deck and fifth wheel behind,
+  `FIFTH_WHEEL`), each with its seat, springs and paints; the windscreen of
+  the box truck, the rig and the bus starts well up the cab's front
+  (`screen`, `screenFoot()`). Their touches are cars.ts `EXTRAS`: the
+  patrol car's light bar (dark lenses, `BAR`), push bar, spotlight and
+  aerials; the box truck's rails, a band in the city's colours with the
+  diamond, marker lights, side guards, fuel tank, the roller shutter, wind
+  deflector and visor; the rig's chrome grille, visor, air horns, cab
+  lights, exhaust stacks, fuel tanks and steps. **The trailer** is
+  `TRAILER` (5.2 long) and `trailerGeometry()`: a box in the rig's colours
+  on an underframe, two axles under mudguards, landing legs, doors with
+  locking bars over the under-ride guard and its lamps; its far form
+  joins the far cars' mesh (`FarModel`).
+- **The rules** are `fleet.ts` (DOM-free, tested in
+  `tests/fleet.test.ts`): the **loading bays** (`BAYS`, 42 of them: along
+  the avenues in town each way, one between each two bus stops, clear of
+  the junction ahead (`BAY_AHEAD`) and of a rig's whole length behind
+  (`BAY_BEHIND`), never where a rig and a standing bus would overlap,
+  never on a bridge), taken with the buses' rules (`routeStops()`,
+  `pullIn()`, `busStep()` with `BAY_DWELL`, 10 to 18 s); the **rig along
+  its route** (`rigAlong()`, `RIG_LEN`: the tractor ahead, the kingpin on
+  its fifth wheel, the trailer's axles behind, so it swings round a corner
+  behind the tractor; the tests hold the cab clear of the trailer to 75
+  degrees); the **light bar** (`barLit()`, `BAR_FLASH`: 8 s in every 42,
+  blue and magenta in turn, each car at its own time); the **bikes**
+  (`BIKE_MIX`, `BIKE_PAINTS`, `trafficLean()`: into a turn, at most
+  `TRAFFIC_LEAN`, 0.16, so the upright rider never looks wrong on it).
+- **The traffic** (life.ts): after the buses, the trucks (box truck and
+  rig in turn), the patrol cars, then the cars' mix; each kind a fleet of
+  its own (`addFleet()`: paint and detail, the bus's windows, the patrol
+  cars' livery panels, `liveryTex()`: SECTOR 7 PATROL by the city's shield
+  over white doors, fixed copy; the trailers placed from their rigs). A
+  truck at its bay stands with its **hazards** on (both sides'
+  indicators); a patrol car never sounds its horn at you; its lit lenses
+  are two more instances each in the tail mesh. **The bikes** join once
+  bikes.ts is in (`addTrafficBikes()`, from index.ts: `bikeGeometry()`,
+  every part merged straight, the paint and the detail as the cars'),
+  drawn at the crowd's size (`BIKE_K`), no far form (a speck that far);
+  each one's **rider** is one of the crowd (`riders`, kind `ride` in
+  `buildPeople()`): his root under the seat, the row for his bike
+  (crowdclips.ts `scoot`, `ride`, `tuck`, from acts.ts `ridePose()`, which
+  your own bike's rider now shares), its `u` his left foot coming down as
+  it stops.
+- **The crew** (carfine.ts `crew()`, the fine-detail chunk): through each
+  side window the driver's head, shoulders and chest (drawn forward into
+  the front door's window where the B pillar would hide him) and the
+  headrests behind; through the windscreen and the rear glass his head
+  and shoulders and the seats; the patrol car has two up. Flat shapes just
+  over the glass in the car's detail: `carGeometry(id, { crew: true })`,
+  the traffic's only.
+- **How many** (`TIERS` in index.ts): desktop (high and medium) four
+  trucks (three on medium), three patrol cars and six bikes; phones two,
+  two and three.
+- **Measured** (`?bench`, the medium tier by day, against the baseline before it: 121 draws at the traffic view, 223 on average over the route): the numbers after follow. Boot cost: 6 KB (657.3 of 670 KB).
 
 ### Phase 9: karts, boats and aircraft
 

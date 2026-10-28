@@ -27,7 +27,9 @@
  * Nothing threatening, nothing explicit (the content rules).
  */
 import * as THREE from 'three';
-import { reachArm, type Pose } from './skeleton';
+import { ANKLE_H, HIP_HEIGHT, reachArm, reachLeg, torsoFrame, type Pose } from './skeleton';
+import { BIKES, steeringHead, type BikeId } from './mybike';
+import { DRIVER_SCALE } from './carinside';
 import { set, sitPose } from './poses';
 
 /** Keys [second, value] eased smoothly from one to the next, held at either end */
@@ -291,4 +293,60 @@ export function swingPose(p: Pose, t: number) {
   p.lean = SWING.lean - SWING.rock * s;
   p.headPitch = 0.08 + 0.1 * s;
   p.headYaw = 0;
+}
+
+/* ---------- On a motorbike (vehicle plan Phases 7 and 8) ---------- */
+
+/** Where a rider's root goes on a bike (bike space: his hips on the seat), at the riders' size (`DRIVER_SCALE`) */
+export function riderRoot(id: BikeId): [number, number] {
+  const [sx, sy] = BIKES[id].seat;
+  return [sx, sy - HIP_HEIGHT * DRIVER_SCALE + 0.01];
+}
+const RM = new THREE.Matrix4();
+const RC = new THREE.Matrix4();
+const RQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
+const RP = new THREE.Vector3();
+const RS = new THREE.Vector3();
+const RUP = new THREE.Vector3(0, 1, 0);
+const RH = new THREE.Vector3();
+/**
+ * Astride a bike (your own, bikes.ts, and the traffic's riders, the crowd's `scoot` / `ride` / `tuck` rows): his hips
+ * on the seat, leant forward by its `tuck` with his head back up, his feet on the pegs (or the floorboard), the left
+ * coming `foot` of the way down to the ground (0 riding, 1 stopped), his hands on the grips turned `steer` (radians)
+ * with the bars about the steering head. Worked out in bike space for the figure sat at `riderRoot()`, facing +x
+ */
+export function ridePose(p: Pose, id: BikeId, foot: number, steer = 0) {
+  const s = BIKES[id];
+  const S = DRIVER_SCALE;
+  const [sx, sy] = s.seat;
+  const [bx, by, bh] = s.bars;
+  p.bob = p.twist = p.side = p.sway = p.turn = 0;
+  p.lean = s.tuck;
+  p.headYaw = 0;
+  // (his head back up from the tuck, eyes on the road)
+  p.headPitch = -s.tuck * 0.6;
+  // His feet (the hips' space, his own size: x across with his right at -x, y up, z ahead)
+  for (const [i, l] of p.legs.entries()) {
+    const side = i === 0 ? -1 : 1;
+    const down = i === 1 ? foot : 0;
+    const out = s.pegs[2] + down * 0.14;
+    const y = s.pegs[1] * (1 - down) + 0.04 * down;
+    RP.set((side * out) / S, (y + ANKLE_H * S - sy) / S, (s.pegs[0] + down * 0.08 - sx) / S);
+    reachLeg(l, side, RP, 0);
+    l.foot = down * 0.1;
+  }
+  // His hands on the grips, turned with the bars
+  const [rx, ry] = riderRoot(id);
+  RC.compose(RP.set(rx, ry, 0), RQ, RS.setScalar(S)).multiply(torsoFrame(p, RM)).invert();
+  const [hx, hy] = steeringHead(id);
+  RH.set(hx, hy, 0);
+  for (const i of [0, 1] as const) {
+    tmp
+      .set(bx, by, i === 0 ? bh - 0.05 : -(bh - 0.05))
+      .sub(RH)
+      .applyAxisAngle(RUP, steer)
+      .add(RH)
+      .applyMatrix4(RC);
+    reachArm(p, i, tmp);
+  }
 }

@@ -48,7 +48,22 @@ export interface CarSpec {
   spokes?: number;
   /** Exhaust pipes at the back: their z offsets */
   exhaust?: number[];
+  /** A cargo box on the body behind the cab (the box truck's): from x0 to x1, up to y, the body's full width */
+  box?: [number, number, number];
+  /** How far up the cab's front (a share, from its foot) the windscreen's glass starts: below it, painted */
+  screen?: number;
+  /** The sides carry a livery panel over the doors (the patrol car's, life.ts): no seams or handles drawn on them */
+  livery?: true;
 }
+
+/**
+ * The big rig's trailer (vehicle plan Phase 8): a box on two axles at the back, hitched by its kingpin over the
+ * tractor's rear axle; life.ts draws it as its own vehicle following the tractor along the route. Trailer space as
+ * the cars': +x the front, the origin on the ground under its middle
+ */
+export const TRAILER = { L: 5.2, W: 1.22, r: 0.27, tw: 0.24, axles: [-2.05, -1.5] as V2, floor: 0.74, h: 2.12, pin: 2.35 };
+/** Where the trailer's kingpin sits on the tractor (x, over its rear axle; clear of the cab however far the trailer swings) */
+export const FIFTH_WHEEL = -1.0;
 
 /** Paint colours that suit each model (the traffic picks from these) */
 export const PAINTS: Record<CarId, string[]> = {
@@ -62,6 +77,9 @@ export const PAINTS: Record<CarId, string[]> = {
   suv: ['#2a3b66', '#1f6b4a', '#14121f', '#f3f2f7'],
   super: ['#00eaff', '#e219e5', '#ffd23f', '#f3f2f7'],
   exec: ['#14121f', '#14121f', '#1c1d2e'],
+  police: ['#141a3a'],
+  truck: ['#f3f2f7', '#f3f2f7', '#ffd23f', '#e23b3b', '#2a3b66'],
+  rig: ['#e23b3b', '#2a3b66', '#f3f2f7', '#1f6b4a', '#ff8a3d', '#14121f'],
   classic: ['#7fd6c2', '#e23b3b', '#f3f2f7', '#ff6ad5'],
   offroad: ['#5b6b3a', '#ff8a3d', '#f3f2f7', '#2a3b66'],
   ev: ['#f3f2f7', '#00c2ff', '#8000ff', '#1fbf6b'],
@@ -268,6 +286,7 @@ export const CARS: Record<CarId, CarSpec> = {
     rim: '#f3f2f7',
     spokes: 0,
     exhaust: [-0.5],
+    screen: 0.15,
   },
   muscle: {
     id: 'muscle',
@@ -523,5 +542,114 @@ export const CARS: Record<CarId, CarSpec> = {
     handles: [-0.2],
     rim: '#dfe3f0',
     spokes: 0,
+  },
+  // Vehicle plan Phase 8: the traffic's own (never yours)
+  // The patrol car: the Cruiser's body in midnight blue, a livery panel over its doors and a light bar (cars.ts EXTRAS, life.ts)
+  police: {
+    id: 'police',
+    name: 'Patrol',
+    L: 2.6,
+    W: 1.0,
+    r: 0.2,
+    tw: 0.2,
+    axles: [-0.82, 0.86],
+    clr: 0.1,
+    top: [
+      [1.3, 0.42],
+      [1.2, 0.52],
+      [0.55, 0.56],
+      [-0.85, 0.58],
+      [-1.25, 0.56],
+      [-1.3, 0.46],
+    ],
+    cabin: [
+      [-0.9, 0.57],
+      [-0.46, 0.89],
+      [0.2, 0.89],
+      [0.6, 0.55],
+    ],
+    cabinW: 0.86,
+    panes: [
+      [-0.85, -0.15],
+      [-0.09, 0.55],
+    ],
+    rearGlass: true,
+    lightY: 0.43,
+    lamp: 'wide',
+    seams: [-0.92, -0.12, 0.6],
+    rim: '#3a3550',
+    exhaust: [0.26],
+    livery: true,
+  },
+  // A box truck: a tall cab up front, the cargo box behind it (`box`), a roller shutter at the back
+  truck: {
+    id: 'truck',
+    name: 'Box Runner',
+    L: 3.9,
+    W: 1.2,
+    r: 0.27,
+    tw: 0.24,
+    axles: [-1.1, 1.25],
+    clr: 0.18,
+    top: [
+      [1.95, 0.6],
+      [1.88, 0.74],
+      [1.4, 0.8],
+      [-1.95, 0.8],
+    ],
+    cabin: [
+      [0.82, 0.79],
+      [0.82, 1.66],
+      [1.56, 1.64],
+      [1.84, 0.79],
+    ],
+    cabinW: 0.96,
+    panes: [[0.96, 1.62]],
+    sill: 1.0,
+    lightY: 0.56,
+    lamp: 'wide',
+    seams: [0.9, 1.68],
+    handles: [1.02],
+    rim: '#f3f2f7',
+    spokes: 0,
+    exhaust: [0.4],
+    box: [-1.95, 0.76, 1.92],
+    screen: 0.25,
+  },
+  // A big rig's tractor: a tall sleeper cab, a long bonnet, the fifth wheel behind (its trailer: `TRAILER`, life.ts)
+  rig: {
+    id: 'rig',
+    name: 'Heavy Haul',
+    L: 3.0,
+    W: 1.24,
+    r: 0.3,
+    tw: 0.26,
+    axles: [-0.9, 0.95],
+    clr: 0.2,
+    top: [
+      [1.5, 0.66],
+      [1.44, 0.82],
+      [1.0, 0.9],
+      [0.62, 0.92],
+      [-0.3, 0.92],
+      [-0.34, 0.7],
+      [-1.5, 0.7],
+    ],
+    cabin: [
+      [-0.3, 0.91],
+      [-0.3, 2.0],
+      [0.38, 2.0],
+      [0.66, 0.91],
+    ],
+    cabinW: 0.94,
+    panes: [[-0.16, 0.58]],
+    sill: 1.12,
+    lightY: 0.62,
+    lamp: 'round',
+    seams: [-0.02, 0.62],
+    handles: [0.1],
+    rim: '#dcdaf0',
+    spokes: 0,
+    screen: 0.2,
   },
 };
