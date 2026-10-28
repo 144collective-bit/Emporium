@@ -29,10 +29,17 @@
  * (`STYLE`: rows of choices from carlook.ts; every pick shows on the
  * turntable, Keep saves it with the car as its `look`).
  *
+ * Bikes (vehicle plan Phase 7): the Model tab's Cars / Bikes switch shows
+ * your motorbikes instead (`kind`), bought and tuned the same way (the save's
+ * garage holds both; the roof rack is a top box), painted on the Paint tab,
+ * shown on their stand by the turntable; the four style tabs are the cars'.
+ * Keep saves the car and the bike you've picked (each only if it's yours).
+ *
  * Arrow keys or the D-pad pick a model (up / down on the pad: the paint; the
  * bumpers: the tabs), Enter / A keeps it, Esc / B / F closes.
  */
-import { CAR_CATALOG, CAR_MODS, CAR_MOD_IDS, MOD_LEVELS, type CarModId } from './catalog';
+import { CAR_CATALOG, CAR_MODS, CAR_MOD_IDS, MOD_LEVELS, garageEntry, type CarModId, type GarageId } from './catalog';
+import { BIKES, BIKE_CARGO, BIKE_DRIVE, BIKE_KEY, PLAYER_BIKES, loadBike, type BikeId, type MyBike } from './mybike';
 import { CARS } from './cars';
 import {
   CAR_KEY,
@@ -84,6 +91,25 @@ function saveCar(c: MyCar) {
   }
 }
 
+function saveBike(b: MyBike) {
+  try {
+    localStorage.setItem(BIKE_KEY, JSON.stringify(b));
+  } catch {
+    /* fine: the bike just won't stick */
+  }
+}
+
+/** A bike side-on at the cars' scale: its wheels, and its line from the tail over the seat to the bars */
+function bikeArt(id: BikeId) {
+  const s = BIKES[id];
+  const k = 32;
+  const pt = (x: number, y: number) => `${(55 + x * k).toFixed(1)},${(44 - y * k).toFixed(1)}`;
+  const [ra, fa] = s.axles;
+  const body = [pt(-s.L / 2 + 0.05, s.seat[1] - 0.04), pt(s.seat[0] + 0.25, s.seat[1] + 0.06), pt(s.bars[0] + 0.1, s.bars[1]), pt(fa, s.r), pt(fa - s.r, s.r * 1.6), pt(ra + s.r, s.r * 1.6), pt(ra, s.r)];
+  const wheels = [ra, fa].map((x) => `<circle class="wheel" cx="${(55 + x * k).toFixed(1)}" cy="${(44 - s.r * k).toFixed(1)}" r="${(s.r * k).toFixed(1)}"/>`).join('');
+  return `<svg viewBox="0 0 110 46" aria-hidden="true"><path d="M${body.join('L')}Z"/>${wheels}</svg>`;
+}
+
 /** A side-on silhouette from the model's own outline, all at one scale so sizes compare (110 x 46) */
 function art(id: PlayerCar) {
   const s = CARS[id];
@@ -93,6 +119,9 @@ function art(id: PlayerCar) {
   const wheels = s.axles.map((x) => `<circle class="wheel" cx="${(55 + x * k).toFixed(1)}" cy="${(44 - s.r * k).toFixed(1)}" r="${(s.r * k).toFixed(1)}"/>`).join('');
   return `<svg viewBox="0 0 110 46" aria-hidden="true"><path d="M${s.cabin.map(pt).join('L')}Z"/><path d="M${body.map(pt).join('L')}Z"/>${wheels}</svg>`;
 }
+
+/** A bike's fourth mod: the roof rack's place, a top box */
+const TOP_BOX = { name: 'Top box', blurb: 'Carries a quarter more goods each level.' };
 
 /** The three stat bars, and the mod that raises each */
 const STATS: { key: 'speed' | 'accel' | 'grip'; label: string; mod: CarModId }[] = [
@@ -158,6 +187,11 @@ export interface GarageDeps {
   cancel(saved: MyCar): void;
   /** Is your car out on the streets? */
   away(): boolean;
+  /** Your motorbike on its stand, as the car on the turntable: each pick shown, kept, put back; is it out? */
+  previewBike(b: MyBike): void;
+  keepBike(b: MyBike): void;
+  cancelBike(saved: MyBike): void;
+  bikeAway(): boolean;
   /** The economy: the save the rules change, commit(), a toast and the sounds */
   game: GameDeps;
   /** Opening frees the mouse and turns the camera to the turntable; closing hands control back */
@@ -177,14 +211,38 @@ export function createGarageUI(root: HTMLElement, d: GarageDeps) {
   const styleEl = el.querySelector<HTMLElement>('[data-garage-style]')!;
   const paintHead = el.querySelector<HTMLElement>('.garage-paint-head')!;
   /** What each tab shows (the name row and Keep show on all of them) */
+  // Cars or bikes (vehicle plan Phase 7): the switch over the cards
+  const kindsEl = document.createElement('div');
+  kindsEl.className = 'garage-kinds';
+  kindsEl.setAttribute('role', 'radiogroup');
+  kindsEl.setAttribute('aria-label', 'Cars or bikes');
+  const kindBtns = (['car', 'bike'] as const).map((k) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'garage-chip';
+    b.dataset.kind = k;
+    b.setAttribute('role', 'radio');
+    b.textContent = k === 'car' ? 'Cars' : 'Bikes';
+    b.addEventListener('click', () => setKind(k));
+    kindsEl.append(b);
+    return b;
+  });
+  list.before(kindsEl);
   const PANES: Record<'model' | 'paint' | 'style', HTMLElement[]> = {
-    model: [list, ...['[data-garage-kind]', '[data-garage-blurb]', '[data-garage-pitch]'].map((q) => el.querySelector<HTMLElement>(q)!), statsEl, dealEl],
+    model: [kindsEl, list, ...['[data-garage-kind]', '[data-garage-blurb]', '[data-garage-pitch]'].map((q) => el.querySelector<HTMLElement>(q)!), statsEl, dealEl],
     paint: [paintHead, paints],
     style: [styleEl],
   };
   let tab: Tab = 'model';
   let saved = loadCar();
   let pick: MyCar = { ...saved };
+  /** Showing the cars or the bikes; your bike as saved and as picked */
+  let kind: 'car' | 'bike' = 'car';
+  let bsaved = loadBike();
+  let bpick: MyBike = { ...bsaved };
+  /** What's picked, of the kind showing */
+  const cur = (): GarageId => (kind === 'car' ? pick.model : bpick.model);
+  const nameOf = (id: GarageId) => (id in BIKES ? BIKES[id as BikeId].name : CARS[id as PlayerCar].name);
   let open = false;
   /** The Buy button was pressed: Confirm / Cancel are showing */
   let asking = false;
@@ -199,6 +257,19 @@ export function createGarageUI(root: HTMLElement, d: GarageDeps) {
     b.innerHTML = `${art(id)}<b></b><small></small>`;
     b.querySelector('b')!.textContent = CARS[id].name;
     b.addEventListener('click', () => select({ ...pick, model: id }));
+    list.append(b);
+    return b;
+  });
+  const bikeCards = PLAYER_BIKES.map((id) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'shop-card garage-card';
+    b.dataset.bike = id;
+    b.setAttribute('role', 'option');
+    b.innerHTML = `${bikeArt(id)}<b></b><small></small>`;
+    b.querySelector('b')!.textContent = BIKES[id].name;
+    b.addEventListener('click', () => selectBike({ ...bpick, model: id }));
+    b.hidden = true;
     list.append(b);
     return b;
   });
@@ -231,7 +302,7 @@ export function createGarageUI(root: HTMLElement, d: GarageDeps) {
     b.setAttribute('aria-label', p.name);
     b.title = p.name;
     b.style.setProperty('--paint', p.hex);
-    b.addEventListener('click', () => select({ ...pick, paint: p.id }));
+    b.addEventListener('click', () => (kind === 'car' ? select({ ...pick, paint: p.id }) : selectBike({ ...bpick, paint: p.id })));
     paints.append(b);
   }
   el.querySelector('[data-garage-close]')!.addEventListener('click', () => close());
@@ -250,6 +321,15 @@ export function createGarageUI(root: HTMLElement, d: GarageDeps) {
   });
 
   const same = (a: MyCar, b: MyCar) => a.model === b.model && a.paint === b.paint && sameLook(a.look, b.look);
+  const sameBike = (a: MyBike, b: MyBike) => a.model === b.model && a.paint === b.paint;
+
+  function setKind(k: 'car' | 'bike') {
+    if (k === kind) return;
+    kind = k;
+    asking = false;
+    paint();
+    list.querySelector<HTMLButtonElement>(k === 'car' ? `[data-car="${pick.model}"]` : `[data-bike="${bpick.model}"]`)?.focus({ preventScroll: true });
+  }
 
   function setTab(t: Tab) {
     tab = t;
@@ -287,12 +367,28 @@ export function createGarageUI(root: HTMLElement, d: GarageDeps) {
   function paint() {
     const save = d.game.save();
     const lv = level(save);
-    const id = pick.model;
-    const spec = CARS[id];
-    const entry = CAR_CATALOG[id];
+    const id = cur();
+    const bike = kind === 'bike';
+    const name = nameOf(id);
+    const entry = garageEntry(id);
     const owned = ownsCar(save, id);
     const mods = carMods(save, id);
     const st = carStatsOf(save, id);
+    const paintId = bike ? bpick.paint : pick.paint;
+    for (const b of kindBtns) b.setAttribute('aria-checked', String(b.dataset.kind === kind));
+    for (const b of cards) b.hidden = bike;
+    for (const b of bikeCards) {
+      b.hidden = !bike;
+      const bid = b.dataset.bike as BikeId;
+      const mine = ownsCar(save, bid);
+      const c = garageEntry(bid);
+      const locked = !mine && lv < c.level;
+      b.setAttribute('aria-selected', String(bid === id));
+      b.classList.toggle('is-locked', locked);
+      b.classList.toggle('is-owned', mine);
+      const price = `<span class="garage-price">${COIN}${fmt.format(c.price)}</span>`;
+      repaint(b.querySelector('small')!, bid === bsaved.model ? 'Your bike' : mine ? 'Yours' : locked ? `${LV(c.level)}${price}` : `<span class="garage-sale-tag">For sale</span>${price}`);
+    }
 
     repaint(dorrasEl, D(save.dorras));
     for (const b of cards) {
@@ -309,17 +405,18 @@ export function createGarageUI(root: HTMLElement, d: GarageDeps) {
       repaint(b.querySelector('small')!, state);
     }
     for (const b of paints.querySelectorAll<HTMLButtonElement>('[data-paint]')) {
-      const on = b.dataset.paint === pick.paint;
+      const on = b.dataset.paint === paintId;
       b.setAttribute('aria-checked', String(on));
       b.tabIndex = on ? 0 : -1;
     }
 
-    const dr = DRIVE[id];
-    el.querySelector('[data-garage-name]')!.textContent = spec.name;
-    el.querySelector('[data-garage-kind]')!.textContent = `${dr.kind} · carries ${st.cargo} goods${mods.rack ? ` (${CARGO[id]} + ${st.cargo - CARGO[id]} on the rack)` : ''}`;
+    const dr = bike ? BIKE_DRIVE[id as BikeId] : DRIVE[id as PlayerCar];
+    const cargo = bike ? BIKE_CARGO[id as BikeId] : CARGO[id as PlayerCar];
+    el.querySelector('[data-garage-name]')!.textContent = name;
+    el.querySelector('[data-garage-kind]')!.textContent = `${dr.kind} · carries ${st.cargo} goods${mods.rack ? ` (${cargo} + ${st.cargo - cargo} ${bike ? 'in the top box' : 'on the rack'})` : ''}`;
     el.querySelector('[data-garage-blurb]')!.textContent = dr.blurb;
     el.querySelector('[data-garage-pitch]')!.textContent = entry.pitch;
-    el.querySelector('[data-garage-paint-name]')!.textContent = CAR_PAINTS.find((p) => p.id === pick.paint)!.name;
+    el.querySelector('[data-garage-paint-name]')!.textContent = CAR_PAINTS.find((p) => p.id === paintId)!.name;
     // Stat bars: the model's number, and a bright segment on top for the mods fitted
     repaint(
       statsEl,
@@ -334,13 +431,14 @@ export function createGarageUI(root: HTMLElement, d: GarageDeps) {
     // The deal: Buy (then Confirm / Cancel) for a car on sale, the Tune section for one you own
     let deal: string;
     if (!owned && asking) {
-      deal = `<div class="garage-sale is-asking"><p class="garage-ask">Buy the ${esc(spec.name)} for ${fmt.format(entry.price)} Dorras?</p><div class="garage-confirm"><button type="button" class="shop-take" data-garage-confirm>Confirm</button><button type="button" class="garage-cancel" data-garage-cancel>Cancel</button></div></div>`;
+      deal = `<div class="garage-sale is-asking"><p class="garage-ask">Buy the ${esc(name)} for ${fmt.format(entry.price)} Dorras?</p><div class="garage-confirm"><button type="button" class="shop-take" data-garage-confirm>Confirm</button><button type="button" class="garage-cancel" data-garage-cancel>Cancel</button></div></div>`;
     } else if (!owned) {
       const note = lv < entry.level ? `Needs level ${entry.level} (you're level ${lv}).` : save.dorras < entry.price ? `You're ${fmt.format(entry.price - save.dorras)} Dorras short.` : '';
       deal = `<div class="garage-sale"><button type="button" class="shop-take garage-buy" data-garage-buy>Buy · ${D(entry.price)} Dorras</button>${note ? `<p class="shop-note">${note}</p>` : ''}</div>`;
     } else {
       const rows = CAR_MOD_IDS.map((m) => {
-        const info = CAR_MODS[m];
+        // (a bike's roof rack is a top box)
+        const info = bike && m === 'rack' ? TOP_BOX : CAR_MODS[m];
         const lvl = mods[m];
         const cost = carModCost(id, m, mods);
         const pips = Array.from({ length: MOD_LEVELS }, (_, i) => `<i${i < lvl ? ' class="on"' : ''}></i>`).join('');
@@ -362,10 +460,13 @@ export function createGarageUI(root: HTMLElement, d: GarageDeps) {
     }
     const pane = tab === 'model' || tab === 'paint' ? tab : 'style';
     for (const [k, els] of Object.entries(PANES)) for (const e of els) e.hidden = k !== pane;
-    if (pane === 'style') repaint(styleEl, styleRows(tab as Exclude<Tab, 'model' | 'paint'>));
+    if (pane === 'style') repaint(styleEl, bike ? '<p class="shop-note">Wheels, kits, liveries and glow are for the cars.</p>' : styleRows(tab as Exclude<Tab, 'model' | 'paint'>));
 
     keepBtn.disabled = !owned;
-    keepBtn.textContent = !owned ? 'Buy it first' : !same(pick, saved) ? 'Keep this one' : d.away() ? 'Bring my car home' : 'Your car · done';
+    const changed = bike ? !sameBike(bpick, bsaved) : !same(pick, saved);
+    const away = bike ? d.bikeAway() : d.away();
+    const what = bike ? 'bike' : 'car';
+    keepBtn.textContent = !owned ? 'Buy it first' : changed ? 'Keep this one' : away ? `Bring my ${what} home` : `Your ${what} · done`;
   }
 
   function select(c: MyCar) {
@@ -374,12 +475,18 @@ export function createGarageUI(root: HTMLElement, d: GarageDeps) {
     d.preview(pick);
     paint();
   }
+  function selectBike(b: MyBike) {
+    if (b.model !== bpick.model) asking = false;
+    bpick = b;
+    d.previewBike(bpick);
+    paint();
+  }
 
   /* ---------- Buying and tuning (the rules in tycoon.ts decide) ---------- */
 
   function askBuy() {
     const save = d.game.save();
-    const entry = CAR_CATALOG[pick.model];
+    const entry = garageEntry(cur());
     // No point asking when the rules will say no: say why instead
     if (level(save) < entry.level || save.dorras < entry.price) return buy();
     asking = true;
@@ -388,26 +495,26 @@ export function createGarageUI(root: HTMLElement, d: GarageDeps) {
   }
   function buy() {
     asking = false;
-    const id = pick.model;
+    const id = cur();
     const r = buyCar(d.game.save(), id);
     if (r.ok) {
       d.game.commit();
       d.game.sfx('buy');
-      d.game.toast(`The ${CARS[id].name} is yours. Keep it to take it out.`);
+      d.game.toast(`The ${nameOf(id)} is yours. Keep it to take it out.`);
     } else {
       d.game.sfx('denied');
-      d.game.toast(whyNot(r.why, CAR_CATALOG[id].level));
+      d.game.toast(whyNot(r.why, garageEntry(id).level));
     }
     paint();
     if (r.ok) keepBtn.focus({ preventScroll: true });
   }
   function upgrade(mod: CarModId) {
-    const id = pick.model;
+    const id = cur();
     const r = modCar(d.game.save(), id, mod);
     if (r.ok) {
       d.game.commit();
       d.game.sfx('upgrade');
-      d.game.toast(`${CAR_MODS[mod].name} level ${carMods(d.game.save(), id)[mod]} fitted to the ${CARS[id].name}.`);
+      d.game.toast(`${(kind === 'bike' && mod === 'rack' ? TOP_BOX : CAR_MODS[mod]).name} level ${carMods(d.game.save(), id)[mod]} fitted to the ${nameOf(id)}.`);
     } else {
       d.game.sfx('denied');
       d.game.toast(whyNot(r.why));
@@ -417,16 +524,23 @@ export function createGarageUI(root: HTMLElement, d: GarageDeps) {
 
   let kept = false;
   function keep() {
-    if (!ownsCar(d.game.save(), pick.model)) {
+    const save = d.game.save();
+    if (!ownsCar(save, cur())) {
       d.game.sfx('denied');
-      d.game.toast(`Buy the ${CARS[pick.model].name} first.`);
+      d.game.toast(`Buy the ${nameOf(cur())} first.`);
       return;
     }
-    if (!same(pick, saved) || d.away()) {
+    // The car and the bike picked, each if it's yours (the one showing calls yours home if it's out)
+    if (ownsCar(save, pick.model) && (!same(pick, saved) || (kind === 'car' && d.away()))) {
       saved = { ...pick };
       saveCar(saved);
       d.keep(saved);
-    }
+    } else d.cancel(saved);
+    if (ownsCar(save, bpick.model) && (!sameBike(bpick, bsaved) || (kind === 'bike' && d.bikeAway()))) {
+      bsaved = { ...bpick };
+      saveBike(bsaved);
+      d.keepBike(bsaved);
+    } else d.cancelBike(bsaved);
     kept = true;
     close();
   }
@@ -435,11 +549,15 @@ export function createGarageUI(root: HTMLElement, d: GarageDeps) {
     open = true;
     saved = loadCar();
     pick = { ...saved };
+    bsaved = loadBike();
+    bpick = { ...bsaved };
+    kind = 'car';
     kept = false;
     asking = false;
     tab = 'model';
-    // Your car is out: show it on the turntable while you look
+    // Your car (or bike) is out: show it on the turntable (its stand) while you look
     if (d.away()) d.preview(saved);
+    if (d.bikeAway()) d.previewBike(bsaved);
     paint();
     el.hidden = false;
     el.scrollTop = 0;
@@ -455,17 +573,31 @@ export function createGarageUI(root: HTMLElement, d: GarageDeps) {
     clearInterval(ticker);
     el.hidden = true;
     root.classList.remove('is-shopping', 'is-garage');
-    if (!kept) d.cancel(saved);
+    if (!kept) {
+      d.cancel(saved);
+      d.cancelBike(bsaved);
+    }
     d.onClose();
     return true;
   }
   /** Step through the models, or the paints */
   function step(dir: number) {
+    if (kind === 'bike') {
+      const i = PLAYER_BIKES.indexOf(bpick.model);
+      selectBike({ ...bpick, model: PLAYER_BIKES[(i + dir + PLAYER_BIKES.length) % PLAYER_BIKES.length] });
+      list.querySelector<HTMLButtonElement>(`[data-bike="${bpick.model}"]`)?.focus({ preventScroll: true });
+      return;
+    }
     const i = PLAYER_CARS.indexOf(pick.model);
     select({ ...pick, model: PLAYER_CARS[(i + dir + PLAYER_CARS.length) % PLAYER_CARS.length] });
     list.querySelector<HTMLButtonElement>(`[data-car="${pick.model}"]`)?.focus({ preventScroll: true });
   }
   function stepPaint(dir: number) {
+    if (kind === 'bike') {
+      const i = CAR_PAINTS.findIndex((p) => p.id === bpick.paint);
+      selectBike({ ...bpick, paint: CAR_PAINTS[(i + dir + CAR_PAINTS.length) % CAR_PAINTS.length].id as PaintId });
+      return;
+    }
     const i = CAR_PAINTS.findIndex((p) => p.id === pick.paint);
     select({ ...pick, paint: CAR_PAINTS[(i + dir + CAR_PAINTS.length) % CAR_PAINTS.length].id as PaintId });
   }
@@ -487,7 +619,7 @@ export function createGarageUI(root: HTMLElement, d: GarageDeps) {
     const inPaints = !!t.closest('[data-paint]');
     if (e.key === 'ArrowRight' || e.key === 'ArrowDown') inPaints ? stepPaint(1) : step(1);
     else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') inPaints ? stepPaint(-1) : step(-1);
-    else if (e.key === 'Enter' && t.closest('[data-car]')) keep();
+    else if (e.key === 'Enter' && t.closest('[data-car], [data-bike]')) keep();
     else return;
     if (inPaints) paints.querySelector<HTMLButtonElement>(`[data-paint="${pick.paint}"]`)?.focus({ preventScroll: true });
     e.preventDefault();

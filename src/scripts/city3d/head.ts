@@ -39,7 +39,8 @@ export function createCityHead(root: HTMLElement) {
     const fighting = mode === 'walk' && !!root.dataset.fight;
     // On the water: "Boating" and the boat (boat.ts sets data-boat, over is-driving)
     const boating = mode === 'walk' && !!root.dataset.boat;
-    const t = fighting ? 'Fighting' : karting ? 'Karting' : flying ? 'Flying' : boating ? 'Boating' : driving ? 'Driving' : c.title;
+    // (on your motorbike: "Riding", drive.ts sets on-bike)
+    const t = fighting ? 'Fighting' : karting ? 'Karting' : flying ? 'Flying' : boating ? 'Boating' : driving ? (root.classList.contains('on-bike') ? 'Riding' : 'Driving') : c.title;
     if (title.textContent !== t) title.textContent = t;
     const online = root.classList.contains('is-online') ? ' · online' : '';
     const s = fighting ? root.dataset.fight! : karting ? root.dataset.kart! : flying ? `${root.dataset.plane ?? 'Your aircraft'}${online}` : boating ? `${root.dataset.boat}${online}` : driving ? `${root.dataset.car ?? 'Your car'}${online}` : c.sub(root);

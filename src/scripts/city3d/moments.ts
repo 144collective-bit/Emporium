@@ -45,12 +45,14 @@ export const MOMENT = {
   /** The sit-down and the stand-up; the seat's place back from his stand spot */
   bench: { down: 0.85, up: 0.7, back: 0.08 },
   /** Getting in: how far short of the vehicle's side he stands, the clip's length by vehicle, the share of it at which the vehicle takes him (the hero hidden, the ride's own figure in the seat), and getting out */
-  board: { stand: 0.42, t: { car: 0.75, kart: 0.8, plane: 0.85, boat: 0.9 }, fireAt: { car: 0.72, kart: 0.8, plane: 0.85, boat: 0.75 }, out: 0.7 },
+  board: { stand: 0.42, t: { car: 0.75, kart: 0.8, plane: 0.85, boat: 0.9, bike: 0.8 }, fireAt: { car: 0.72, kart: 0.8, plane: 0.85, boat: 0.75, bike: 0.78 }, out: 0.7 },
   /** The car's handle height and the seat's over the ground; the kart's pod and seat; the aircraft's door frame (two hands) and sill; the boat's rails and its deck under the quay */
   car: { handle: 0.5, seat: 0.32, lean: 0.4, bob: -0.18, out: 0.42, behind: 0.04, turn: 0.45 },
   kart: { pod: 0.36, seat: 0.26, lean: 0.6, bob: -0.16 },
   plane: { frame: [0.78, 1.0] as [number, number], sill: 0.45, lean: 0.3, bob: -0.08 },
   boat: { rail: 0.72, railSide: 0.34, deck: -1.2, lean: 0.35, bob: -0.1 },
+  /** The motorbike (vehicle plan Phase 7): how far off its side he stands, the seat's height (the scooter's; each bike's own is mybike.ts's), the lean in */
+  bike: { out: 0.36, seat: 0.5, lean: 0.25, bob: -0.08 },
   /** The lift: inside the door, facing out, a beat before the fade */
   lift: { inside: 0.35, t: 0.3, fireAt: 0.5 },
   /** A crate: its size, how far short of it he stands, the lift and the set-down, where he carries it (out in front at the hips) */
@@ -60,7 +62,7 @@ export const MOMENT = {
 };
 
 export type MomentKind = 'door' | 'counter' | 'bench' | 'board' | 'alight' | 'lift' | 'pick' | 'put';
-export type Vehicle = 'car' | 'kart' | 'plane' | 'boat';
+export type Vehicle = 'car' | 'kart' | 'plane' | 'boat' | 'bike';
 export type Phase = 'approach' | 'play' | 'hold' | 'back' | 'done';
 
 export interface Mark {
@@ -212,6 +214,41 @@ export function carMark(car: { x: number; z: number; yaw: number; W: number }, n
     seat: { x: seat.x, z: seat.z, y: y + n.hip[1] - 0.03 * scale },
     fireAt: MOMENT.board.fireAt.car,
     t: MOMENT.board.t.car,
+  };
+}
+
+/**
+ * Getting on your motorbike (vehicle plan Phase 7): beside it on the side he's on, by the seat, `bike.out` off its
+ * middle, facing across it turned towards the front, both hands to the grips (`bars`), the clip taking his root up
+ * onto the seat as his leg swings over
+ */
+export function bikeMark(bike: { x: number; z: number; yaw: number }, s: { W: number; seat: [number, number]; bars: [number, number, number] }, fx: number, fz: number, y: number, blocked?: (x: number, z: number) => boolean): Mark {
+  const fwx = Math.cos(bike.yaw);
+  const fwz = -Math.sin(bike.yaw);
+  const rx = Math.sin(bike.yaw);
+  const rz = Math.cos(bike.yaw);
+  const sg = (fx - bike.x) * rx + (fz - bike.z) * rz >= 0 ? 1 : -1;
+  const at = (u: number, v: number) => ({ x: bike.x + fwx * u + rx * v, z: bike.z + fwz * u + rz * v });
+  let stand = at(s.seat[0] + 0.1, sg * (s.W / 2 + MOMENT.bike.out));
+  if (blocked?.(stand.x, stand.z)) stand = { x: fx, z: fz };
+  const face = Math.atan2(-sg * rx + 0.6 * fwx, -sg * rz + 0.6 * fwz);
+  const [bx, by, bh] = s.bars;
+  // (his right is (-cos face, sin face): arms[0] to the grip on his right)
+  const grips = [at(bx, bh), at(bx, -bh)];
+  const right = (g: { x: number; z: number }) => (g.x - stand.x) * -Math.cos(face) + (g.z - stand.z) * Math.sin(face);
+  if (right(grips[0]) < right(grips[1])) grips.reverse();
+  const seat = at(s.seat[0], 0);
+  return {
+    kind: 'board',
+    vehicle: 'bike',
+    x: stand.x,
+    z: stand.z,
+    y,
+    face,
+    hands: grips.map((g) => ({ x: g.x, y: y + by, z: g.z })),
+    seat: { x: seat.x, z: seat.z, y: y + s.seat[1] },
+    fireAt: MOMENT.board.fireAt.bike,
+    t: MOMENT.board.t.bike,
   };
 }
 

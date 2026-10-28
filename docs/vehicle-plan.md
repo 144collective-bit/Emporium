@@ -450,7 +450,7 @@ Asked before planning (2026-10-28):
   yours only: the traffic's `MIX` doesn't carry them.
 - Boot cost: 1.4 KB (663.0 of 670 KB), the three specs and their touches.
 
-### Phase 7: motorbikes
+### Phase 7: motorbikes (built)
 
 - Three for you: a **scooter** (free), a **street bike** and a **sport
   bike** (Dorras and levels), tuned at the garage like the cars (engine,
@@ -462,6 +462,51 @@ Asked before planning (2026-10-28):
   (as Phase 3).
 - Chase and helmet-eye cameras; the drive HUD and touch layout as the
   car's.
+
+**As built** (the names and prices are "Decided" below):
+
+- **The bikes** are `mybike.ts` (DOM-free, the boot's: `PLAYER_BIKES`
+  `scooter` / `streetbike` / `sportbike`, `BIKES` (each one's length,
+  width, wheels, seat, grips, pegs and how far the rider tucks),
+  `BIKE_DRIVE`, `BIKE_CARGO` (5, 4, 2: less than any car), `MyBike` saved as
+  `degen-city-bike-v1` (in `BACKUP_KEYS`), `cleanBike()`), priced in
+  catalog.ts (`BIKE_CATALOG`: the Hop Scoot free, the Alley Cat 9,000 at
+  level 3, the Neon Blade 36,000 at level 8; `GarageId` is a car or a
+  bike, `garageEntry()`). The save's garage holds both (`garage.owned` /
+  `mods`, cleaned in `cleanSave()`), so `buyCar()`, `modCar()` and
+  `carStatsOf()` take a bike too; the roof rack is a top box.
+- **The rules** are `bike-sim.ts` (DOM-free, tested in
+  `tests/bike.test.ts`): the cars' `stepCar()` tuned as a bike
+  (`tuneBike()`: narrow, light and rear-driven (`BIKE_FEEL`), its own
+  speed range: the scooter slower than any car, the sport bike level with
+  the supercar), the lean (`leanTarget()` / `stepLean()`: into a turn by
+  the pull of it against gravity, `G`, within each bike's `LEAN.most`, so
+  it never falls) and the foot down as it stops (`footDown()`, `REST`).
+- **Drawn** by `bikes.ts`, a chunk fetched once the city is up (index.ts
+  hands `createBike` to the garage, `setBikeMaker()`): the three models
+  (the scooter's body, floorboard, leg shield, stem and top box; the
+  street bike's frame, engine, tank, bench, round lamp and exhaust; the
+  sport bike's fairing, screen, twin lamps, tail hump and clip-ons), the
+  fixed parts merged, the fork steering about its head, both wheels
+  showing both faces, and the rider: hips on the seat, leant by the
+  bike's `tuck`, hands on the grips (`reachArm()`, turned with the bars),
+  feet on the pegs (`reachLeg()`), the left foot coming down as it stops.
+- **Your bike** waits on its side stand on the garage's forecourt
+  (garage.ts `BIKE_SPOT`, `showBike()`, `takeOutBike()`); drive.ts rides it
+  as a third vehicle beside the car and the kart (`kind: 'bike'`): the
+  whole bike leans (its group's roll from `stepLean()`), you with it; the
+  cameras are the chase camera and your helmet's (V: his eyes, leaning
+  with the bike, the view tipping with it); the horn too; the header reads
+  "Riding · <bike>" (`on-bike`). Getting on and off are moments
+  (`bikeMark()` in moments.ts: beside it on his side, both hands to the
+  grips, his leg swung over the seat, `STEP.bike`; off from its seat);
+  walk mode's prompts read "Get on" and "Get off".
+- **The garage menu** has a Cars / Bikes switch over the cards
+  (`.garage-kinds`): the bikes bought, tuned and painted as the cars are,
+  each pick on the stand; the style tabs say they're for the cars. Keep
+  saves the car and the bike picked, each if it's yours.
+- Other players don't see your bike yet (as with the cars: the
+  multiplayer plan's next step). Boot cost: 2.4 KB (665.4 of 670 KB).
 
 ### Phase 8: the traffic
 

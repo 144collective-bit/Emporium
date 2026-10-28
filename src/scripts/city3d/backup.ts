@@ -22,6 +22,7 @@ export const TYCOON_KEY = 'degen-city-tycoon-v1';
 export const BACKUP_KEYS = [
   TYCOON_KEY,
   'degen-city-car-v1',
+  'degen-city-bike-v1',
   'degen-city-plane-v1',
   'degen-city-look-v1',
   'degen-city-combat-v1',

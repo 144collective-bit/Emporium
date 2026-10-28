@@ -15,6 +15,7 @@
  */
 import type { Weapon, WeaponId } from './combat-sim';
 import type { PlayerCar } from './mycar';
+import type { BikeId } from './mybike';
 import type { KartId } from './mykart';
 import type { BotTraits } from './fight-sim';
 import type { StyleId } from './fight-moves';
@@ -148,6 +149,19 @@ export const CAR_CATALOG: Record<PlayerCar, CarEntry> = {
 };
 export const CAR_IDS = Object.keys(CAR_CATALOG) as PlayerCar[];
 export const STARTER_CARS = CAR_IDS.filter((id) => CAR_CATALOG[id].price === 0);
+
+/** Your motorbikes (vehicle plan Phase 7, "Decided"): the scooter free, the others for Dorras at a level; tuned like the cars (the roof rack is a top box) */
+export const BIKE_CATALOG: Record<BikeId, CarEntry> = {
+  scooter: { price: 0, level: 1, pitch: 'Yours from day one.' },
+  streetbike: { price: 9000, level: 3, pitch: 'Light and punchy: the city on two wheels.' },
+  sportbike: { price: 36000, level: 8, pitch: 'Tuck in and hold on.' },
+};
+export const BIKE_IDS = Object.keys(BIKE_CATALOG) as BikeId[];
+export const STARTER_BIKES = BIKE_IDS.filter((id) => BIKE_CATALOG[id].price === 0);
+/** Everything the garage keeps: the cars and the bikes (the save's garage holds both) */
+export type GarageId = PlayerCar | BikeId;
+export const isBike = (id: GarageId): id is BikeId => (BIKE_IDS as string[]).includes(id);
+export const garageEntry = (id: GarageId) => (isBike(id) ? BIKE_CATALOG[id] : CAR_CATALOG[id]);
 
 export type CarModId = 'engine' | 'turbo' | 'tyres' | 'rack';
 export interface CarMods {
@@ -381,7 +395,7 @@ export const LEVEL_SPEED = [1, 1.3, 1.6];
 
 // (after the starters are worked out from the real prices: the rest still have to be bought, for nothing)
 if (FREE_PLAY) {
-  for (const c of [...Object.values(CAR_CATALOG), ...Object.values(KART_CATALOG), ...Object.values(GUN_CATALOG), ...WARDROBE_CATALOG, ...Object.values(ITEM_CATALOG), ...Object.values(STYLE_CATALOG)]) {
+  for (const c of [...Object.values(CAR_CATALOG), ...Object.values(BIKE_CATALOG), ...Object.values(KART_CATALOG), ...Object.values(GUN_CATALOG), ...WARDROBE_CATALOG, ...Object.values(ITEM_CATALOG), ...Object.values(STYLE_CATALOG)]) {
     c.price = 0;
     c.level = 1;
   }
