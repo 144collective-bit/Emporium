@@ -17,17 +17,30 @@
  * - A spar ends when you quit; a bout ends on the sim's `bout` event. Both
  *   pay through tycoon.ts finishFight() + commit() and show the card;
  *   closing the card hands control back (walk.ts leaves the ring).
+ * - A street spar (docs/inventory-plan.md Phase 3) is the same fight against
+ *   one of the partners (brawlsite.ts) where they wait: you start in front
+ *   of them, the sim's ring is theirs (`arenaOf()`), both stand on the
+ *   ground there (walk mode's, a pier's deck too), and a knock-out ends it
+ *   (a moment after, so the fall plays): you win if it's theirs. A quit is a
+ *   loss. No Dorras; XP as a spar, more for a win. You stand up where you
+ *   started it. The gym's lights stay as they are.
+ * - The snack (inventory.ts `useItem()`, the HUD's Snack button or E) gives
+ *   back `SNACK_HEAL` of your health in a spar or a street spar, never in a
+ *   bout.
  * - Sounds go through sfx() (silent until the visitor turns sound on).
  */
 import * as THREE from 'three';
 import { crewOutfit } from './crew';
-import { BOT_LEVELS, FIGHT_BOTS, type BotLevel } from './catalog';
+import { BOT_LEVELS, FIGHT_BOTS, SNACK_HEAL, type BotLevel } from './catalog';
+import { PARTNERS, afterOf, arenaOf, partner, startOf, type PartnerId } from './brawlsite';
+import type { StyleId } from './fight-moves';
+import { useItem } from './inventory';
 import { createFighterFigure, disposeFigure, drawFighter, type FighterFigure } from './fight-figure';
 import { T, createFightSim, forward, yawTo, type FightEvent, type FightSim, type Fighter, type FighterInput } from './fight-sim';
-import type { Fight, FightDeps, FightHud, FightInput, FightKind, FightResultView } from './fight-types';
+import type { Fight, FightDeps, FightHud, FightInput, FightKind, FightResultView, FightStart } from './fight-types';
 import { CORNERS, OUT, RING, RING_HALF } from './fightsite';
 import { fx, glowTex } from './kit';
-import { finishFight } from './tycoon';
+import { finishFight } from './fightsave';
 
 const damp = (k: number, dt: number) => 1 - Math.exp(-k * dt);
 const BOUT = { rounds: 3, seconds: 90 };
@@ -42,6 +55,14 @@ export function createFight(d: FightDeps): Fight {
   let sim: FightSim | null = null;
   let kind: FightKind = 'spar';
   let bot: BotLevel = 'easy';
+  /** A street spar's partner, the opponent's name and style, the ring the sim keeps both in */
+  let partnerId: PartnerId | null = null;
+  let oppName = '';
+  let oppStyle: StyleId = 'brawler';
+  let arena = { x: RING.x, z: RING.z, r: RING.r };
+  /** A street spar's knock-out: when the card comes up, and whether it was theirs */
+  let endAt = -1;
+  let endWon = false;
   let you: FighterFigure | null = null;
   let them: FighterFigure | null = null;
   let active = false;
@@ -215,36 +236,62 @@ export function createFight(d: FightDeps): Fight {
   const youF = () => fighter(YOU);
   const themF = () => fighter(THEM);
 
-  function start(setup: { kind: FightKind; bot: BotLevel }) {
+  function start(setup: FightStart) {
     if (active) clear();
     const save = d.game.save();
     kind = setup.kind;
-    bot = BOT_LEVELS.includes(setup.bot) ? setup.bot : 'easy';
-    const B = FIGHT_BOTS[bot];
+    let me: { x: number; z: number; yaw: number };
+    let them_: { x: number; z: number; yaw: number; skill: number; traits: object };
+    let look: number;
+    let ground = 0;
+    if (setup.kind === 'street') {
+      const P = partner(setup.partner) ?? PARTNERS[0];
+      partnerId = P.id;
+      oppName = P.name;
+      oppStyle = P.style;
+      bot = 'easy';
+      me = startOf(P);
+      them_ = { x: P.x, z: P.z, yaw: P.yaw, skill: P.skill, traits: P.traits };
+      arena = arenaOf(P);
+      look = P.look;
+      ground = d.groundAt(arena.x, arena.z);
+    } else {
+      bot = BOT_LEVELS.includes(setup.bot) ? setup.bot : 'easy';
+      const B = FIGHT_BOTS[bot];
+      partnerId = null;
+      oppName = B.name;
+      oppStyle = B.style;
+      me = CORNERS[0];
+      them_ = { ...CORNERS[1], skill: B.skill, traits: B.traits };
+      arena = { x: RING.x, z: RING.z, r: RING.r };
+      look = bot === 'hard' ? 2 : bot === 'medium' ? 1 : 0;
+    }
     sim = createFightSim({
       seed: (Date.now() % 1_000_000) + 7,
       fighters: [
-        { id: YOU, name: 'You', style: save.fight.style, x: CORNERS[0].x, z: CORNERS[0].z, yaw: CORNERS[0].yaw },
-        { id: THEM, name: B.name, style: B.style, x: CORNERS[1].x, z: CORNERS[1].z, yaw: CORNERS[1].yaw, bot: { skill: B.skill, ...B.traits } },
+        { id: YOU, name: 'You', style: save.fight.style, x: me.x, z: me.z, yaw: me.yaw },
+        { id: THEM, name: oppName, style: oppStyle, x: them_.x, z: them_.z, yaw: them_.yaw, bot: { skill: them_.skill, ...them_.traits } },
       ],
       bout: kind === 'bout' ? BOUT : null,
-      arena: { x: RING.x, z: RING.z, r: RING.r },
+      arena,
     });
     you = createFighterFigure(group, d.outfit(), d.low, 0);
-    them = createFighterFigure(group, crewOutfit(bot === 'hard' ? 2 : bot === 'medium' ? 1 : 0), d.low, 41);
+    them = createFighterFigure(group, crewOutfit(look), d.low, 41);
+    you.y = them.y = ground;
     active = true;
     done = false;
     stop = 0;
     shake = 0;
     elapsed = 0;
+    endAt = -1;
     camReady = false;
-    intro = kind === 'spar' ? 1.2 : 0;
+    intro = kind === 'bout' ? 0 : 1.2;
     root.classList.add('is-fighting');
-    root.dataset.fight = B.name;
+    root.dataset.fight = oppName;
     dmgLayer.hidden = false;
     d.ui.showHud(true);
-    d.club.setLive(true);
-    if (kind === 'spar') showCount('FIGHT', 0.9);
+    if (kind !== 'street') d.club.setLive(true);
+    if (kind !== 'bout') showCount('FIGHT', 0.9);
     // Draw both in their corners at once
     for (const f of sim.fighters) drawFighter(f.id === YOU ? you : them, f, 0, 0);
   }
@@ -282,15 +329,15 @@ export function createFight(d: FightDeps): Fight {
     done = true;
     const a = youF()!;
     const b = themF()!;
-    const won: boolean | null = kind === 'bout' ? (quit ? false : sim.winner === YOU) : null;
+    const won: boolean | null = kind === 'bout' ? (quit ? false : sim.winner === YOU) : kind === 'street' ? !quit && endWon : null;
     const save = d.game.save();
-    const result = finishFight(save, { kind, bot, won, hits: a.hits, kos: a.kos, bestChain: a.bestChain, seconds: elapsed, quit });
+    const result = finishFight(save, { kind, bot, partner: partnerId ?? undefined, won, hits: a.hits, kos: a.kos, bestChain: a.bestChain, seconds: elapsed, quit });
     d.game.commit();
     if (result.levels > 0) d.sfx('levelup');
     const view: FightResultView = {
       kind,
-      opponent: FIGHT_BOTS[bot].name,
-      bot,
+      opponent: oppName,
+      style: oppStyle,
       won,
       quit,
       rounds: [a.rounds, b.rounds],
@@ -361,6 +408,11 @@ export function createFight(d: FightDeps): Fight {
             shake = Math.max(shake, e.ko ? 0.42 : 0.28);
           }
           if (e.ko) showCount('K.O.', 1.6);
+          // (a street spar ends on a knock-out, once the fall has played)
+          if (e.ko && kind === 'street' && endAt < 0) {
+            endAt = elapsed + 1.3;
+            endWon = e.who === THEM;
+          }
           else d.ui.pop(e.who === YOU ? 'Knocked down' : 'Knockdown!', e.who === YOU ? 'bad' : 'good');
           break;
         case 'getup':
@@ -371,7 +423,7 @@ export function createFight(d: FightDeps): Fight {
           break;
         case 'round':
           d.sfx('bell', 0.8);
-          d.ui.pop(e.winner === YOU ? 'Round to you' : e.winner === THEM ? `Round to ${FIGHT_BOTS[bot].name}` : 'Round even', e.winner === YOU ? 'good' : e.winner === THEM ? 'bad' : 'plain');
+          d.ui.pop(e.winner === YOU ? 'Round to you' : e.winner === THEM ? `Round to ${oppName}` : 'Round even', e.winner === YOU ? 'good' : e.winner === THEM ? 'bad' : 'plain');
           break;
         case 'bout':
           finish(false);
@@ -390,7 +442,7 @@ export function createFight(d: FightDeps): Fight {
     const h: FightHud = {
       kind,
       you: 'You',
-      opponent: FIGHT_BOTS[bot].name,
+      opponent: oppName,
       health: a.health / T.health,
       stamina: a.stamina / T.stamina,
       oppHealth: b.health / T.health,
@@ -404,6 +456,8 @@ export function createFight(d: FightDeps): Fight {
       count: down ? Math.ceil((a.down > 0 ? a.down : b.down) * T.tick) : 0,
       down,
       score: [a.rounds, b.rounds],
+      snacks: d.game.save().inventory.items.snack ?? 0,
+      canSnack: kind !== 'bout',
     };
     d.ui.paintHud(h);
   }
@@ -422,11 +476,24 @@ export function createFight(d: FightDeps): Fight {
     const rz = -fx_;
     const back = 2.3 + Math.min(0.9, Math.hypot(b.x - a.x, b.z - a.z) * 0.2);
     const want = new THREE.Vector3(a.x - fx_ * back + rx * 0.6, 1.5, a.z - fz * back + rz * 0.6);
-    // Inside the ropes, so they never cross the picture
-    const lim = RING_HALF - 0.3;
-    want.x = THREE.MathUtils.clamp(want.x, RING.x - lim, RING.x + lim);
-    want.z = THREE.MathUtils.clamp(want.z, RING.z - lim, RING.z + lim);
-    const at = new THREE.Vector3(mx, 0.85, mz);
+    if (kind === 'street') {
+      // A little past the street spar's ring, which is clear of everything round it
+      const lim = arena.r + 0.6;
+      const ox = want.x - arena.x;
+      const oz = want.z - arena.z;
+      const o = Math.hypot(ox, oz);
+      if (o > lim) {
+        want.x = arena.x + (ox / o) * lim;
+        want.z = arena.z + (oz / o) * lim;
+      }
+      want.y += you?.y ?? 0;
+    } else {
+      // Inside the ropes, so they never cross the picture
+      const lim = RING_HALF - 0.3;
+      want.x = THREE.MathUtils.clamp(want.x, RING.x - lim, RING.x + lim);
+      want.z = THREE.MathUtils.clamp(want.z, RING.z - lim, RING.z + lim);
+    }
+    const at = new THREE.Vector3(mx, 0.85 + (you?.y ?? 0), mz);
     if (!camReady || d.reduced) {
       camPos.copy(want);
       camAt.copy(at);
@@ -463,6 +530,7 @@ export function createFight(d: FightDeps): Fight {
         countT -= dt;
         if (countT <= 0) d.ui.count('');
       }
+      if (endAt >= 0 && !done && elapsed >= endAt) finish(false);
       // The sim: your input in your facing's frame (the lock-on faces the opponent)
       let simDt = dt;
       if (stop > 0) {
@@ -520,19 +588,41 @@ export function createFight(d: FightDeps): Fight {
       paintHud();
     },
     exit() {
-      // Leaving mid-fight (walk mode ending): a bout in progress is forfeited, a spar just ends
+      // Leaving mid-fight (walk mode ending): a bout or a street spar in progress is lost, a spar just ends
       if (sim && !done) {
         const a = youF()!;
         const save = d.game.save();
-        finishFight(save, { kind, bot, won: kind === 'bout' ? false : null, hits: a.hits, kos: a.kos, bestChain: a.bestChain, seconds: elapsed, quit: true });
+        finishFight(save, { kind, bot, partner: partnerId ?? undefined, won: kind === 'spar' ? null : false, hits: a.hits, kos: a.kos, bestChain: a.bestChain, seconds: elapsed, quit: true });
         d.game.commit();
       }
+      const P = kind === 'street' && partnerId ? partner(partnerId) : null;
       clear();
-      return { ...OUT };
+      return P ? afterOf(P) : { ...OUT };
     },
     quit() {
       if (!sim || done) return;
       finish(true);
+    },
+    snack() {
+      if (!sim || done) return false;
+      if (kind === 'bout') {
+        d.ui.pop('No snacks in a bout', 'bad');
+        return false;
+      }
+      const a = youF()!;
+      if (a.health >= T.health) {
+        d.ui.pop('Full health');
+        return false;
+      }
+      if (!useItem(d.game.save(), 'snack', true).ok) {
+        d.ui.pop('No snacks: the diners and the Night Market sell them', 'bad');
+        return false;
+      }
+      a.health = Math.min(T.health, a.health + SNACK_HEAL * T.health);
+      d.game.commit();
+      d.sfx('buy', 0.6);
+      d.ui.pop(`Snack · +${Math.round(SNACK_HEAL * 100)} health`, 'good');
+      return true;
     },
     idle() {},
   };

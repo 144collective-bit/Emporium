@@ -71,6 +71,7 @@ export function createMissionsUI(root: HTMLElement, game: GameDeps, hooks: Missi
   function goalText(m: Mission, p?: { done: number; need: number; complete: boolean }) {
     const g = m.goal;
     if ('counter' in g) return `${fmt.format(p?.done ?? 0)} / ${fmt.format(g.n)} ${COUNTER_NAMES[g.counter]}`;
+    if ('partners' in g) return `${p?.done ?? 0} / ${g.partners} sparring partners`;
     return `${p?.done ?? 0} / ${g.plots} district plot${g.plots > 1 ? 's' : ''} owned`;
   }
   const reward = (m: { reward: number; xp: number }) => `<span class="market-price mission-reward">${D(m.reward)}<small class="mission-xp">+${fmt.format(m.xp)} XP</small></span>`;
@@ -247,7 +248,7 @@ export function createMissionsUI(root: HTMLElement, game: GameDeps, hooks: Missi
         .map((a) => {
           const m = mission(a.id)!;
           const p = missionProgress(s, a);
-          return `<li class="${p.complete ? 'is-done' : ''}"><span class="mt-top"><b>${esc(m.name)}</b><small>${p.complete ? 'Claim at the Signal tower' : 'counter' in m.goal || 'plots' in m.goal ? `${fmt.format(p.done)} / ${fmt.format(p.need)}` : 'Race'}</small></span><i class="stall-bar" style="--v:${p.need ? p.done / p.need : 0}"></i></li>`;
+          return `<li class="${p.complete ? 'is-done' : ''}"><span class="mt-top"><b>${esc(m.name)}</b><small>${p.complete ? 'Claim at the Signal tower' : `${fmt.format(p.done)} / ${fmt.format(p.need)}`}</small></span><i class="stall-bar" style="--v:${p.need ? p.done / p.need : 0}"></i></li>`;
         })
         .join('')
     );

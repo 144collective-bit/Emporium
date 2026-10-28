@@ -36,8 +36,8 @@
  */
 // (the moves and the styles live in fight-moves.ts, so the screens and the save's rules read them without the
 // whole fight in the city's boot)
-import { MOVES, STYLES, strikeHeight, type MoveId, type MoveSpec, type StyleId } from './fight-moves';
-export { MOVES, STYLES, strikeHeight, type Limb, type MoveId, type MoveKind, type MoveSpec, type StyleId, type StyleSpec } from './fight-moves';
+import { MOVES, STYLES, damageOf, strikeHeight, type MoveId, type MoveSpec, type StyleId } from './fight-moves';
+export { MOVES, STYLES, damageOf, strikeHeight, type Limb, type MoveId, type MoveKind, type MoveSpec, type StyleId, type StyleSpec } from './fight-moves';
 
 export type Phase = 'startup' | 'active' | 'recovery';
 
@@ -449,7 +449,7 @@ export function createFightSim(setup: FightSetup) {
           events.push({ kind: 'stagger', who: f.id });
           return;
         }
-        o.health = Math.max(0, o.health - m.damage * T.blockCut);
+        o.health = Math.max(0, o.health - damageOf(m, f.style) * T.blockCut);
         o.vx += fx * m.knockback * 2;
         o.vz += fz * m.knockback * 2;
         f.extraRecovery = T.blockedRecovery;
@@ -460,7 +460,8 @@ export function createFightSim(setup: FightSetup) {
       }
       // A clean hit
       const staggered = o.hurt === 'stagger' && o.stun > 0 && !o.parried;
-      o.health = Math.max(0, o.health - m.damage);
+      const damage = damageOf(m, f.style);
+      o.health = Math.max(0, o.health - damage);
       o.taken++;
       o.sinceHit = 0;
       o.blocking = false;
@@ -472,7 +473,7 @@ export function createFightSim(setup: FightSetup) {
       f.hits++;
       f.chain++;
       if (f.chain > f.bestChain) f.bestChain = f.chain;
-      events.push({ kind: 'hit', who: f.id, target: o.id, move: m.id, damage: m.damage, heavy: m.heavy, x: px, y: py, z: pz });
+      events.push({ kind: 'hit', who: f.id, target: o.id, move: m.id, damage, heavy: m.heavy, x: px, y: py, z: pz });
       if (f.chain >= 2) events.push({ kind: 'chain', who: f.id, n: f.chain });
       if (o.health <= 0) fall(o, f, true);
       else if (m.knockdown || staggered) fall(o, f, false);

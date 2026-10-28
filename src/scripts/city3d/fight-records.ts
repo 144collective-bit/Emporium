@@ -4,7 +4,7 @@
  * (docs/tailoring-plan.md Phase 0).
  */
 import { BOT_LEVELS, FIGHT_BOTS, type BotLevel } from './catalog';
-import type { StyleId } from './fight-moves';
+import type { PartnerId, StyleId } from './fight-moves';
 import type { TycoonSave } from './tycoon';
 import { esc, fmt } from './ui';
 
@@ -23,8 +23,10 @@ export interface FightSave {
   bouts: number;
   spars: number;
   bots: Partial<Record<BotLevel, { beaten: number; bestSeconds: number | null }>>;
+  /** The sparring partners on the street (brawlsite.ts) */
+  partners: Partial<Record<PartnerId, { spars: number; beaten: number }>>;
 }
-const EMPTY_FIGHT: FightSave = { style: 'brawler', styles: ['brawler'], wins: 0, losses: 0, kos: 0, bestChain: 0, bouts: 0, spars: 0, bots: {} };
+const EMPTY_FIGHT: FightSave = { style: 'brawler', styles: ['brawler'], wins: 0, losses: 0, kos: 0, bestChain: 0, bouts: 0, spars: 0, bots: {}, partners: {} };
 export const fightOf = (s: TycoonSave): FightSave => (s as TycoonSave & { fight?: FightSave }).fight ?? EMPTY_FIGHT;
 
 /** "1:30" from seconds (rounded up, so a bout's clock starts on the full round) */

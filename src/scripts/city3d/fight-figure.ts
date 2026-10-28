@@ -45,13 +45,15 @@ export interface FighterFigure {
   manual: { id: ClipId; frame: number } | null;
   /** The guard loop's own phase so two figures don't bounce in step */
   seed: number;
+  /** The ground it fights on (0 in the ring; a street spar's, a pier's deck) */
+  y: number;
 }
 
 export function createFighterFigure(parent: THREE.Object3D, outfit: Outfit, low: boolean, seed = 0): FighterFigure {
   const degen = createDegen({ ...outfit, fists: true }, low ? 1 : undefined);
   degen.g.scale.setScalar(FIGHTER_SCALE);
   parent.add(degen.g);
-  return { degen, pose: newFightPose(), prev: newFightPose(), tmp: newFightPose(), clip: null, mirror: false, frame: 0, fade: 0, loco: createLocomotion(), walk: 0, last: null, manual: null, seed };
+  return { degen, pose: newFightPose(), prev: newFightPose(), tmp: newFightPose(), clip: null, mirror: false, frame: 0, fade: 0, loco: createLocomotion(), walk: 0, last: null, manual: null, seed, y: 0 };
 }
 export function disposeFigure(fg: FighterFigure) {
   fg.degen.g.removeFromParent();
@@ -171,6 +173,6 @@ export function drawFighter(fg: FighterFigure, f: Fighter, dt: number, ticks: nu
   deg.update();
   // The group turns about its origin (the feet); move it so the pitch turns about the root's pivot instead
   const { dy, dz } = rootShift(fg.pose.root);
-  deg.g.position.set(f.x + Math.sin(f.yaw) * dz * FIGHTER_SCALE, dy * FIGHTER_SCALE, f.z + Math.cos(f.yaw) * dz * FIGHTER_SCALE);
+  deg.g.position.set(f.x + Math.sin(f.yaw) * dz * FIGHTER_SCALE, fg.y + dy * FIGHTER_SCALE, f.z + Math.cos(f.yaw) * dz * FIGHTER_SCALE);
   deg.g.rotation.set(fg.pose.root.pitch, f.yaw, 0, 'YXZ');
 }

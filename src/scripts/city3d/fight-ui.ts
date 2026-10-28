@@ -16,8 +16,13 @@
  *   them (beaten n times, your best time), and Fight.
  *   Record: wins, losses, knock-outs, best chain, bouts, spars, and each
  *   opponent's line.
- *   Styles: the three styles from `STYLES` with their moves by name. The
- *   Brawler is yours; the others say "Coming soon" (Phase 3 sells them).
+ *   Styles: the three styles from `STYLES` with their moves by name, the
+ *   price and level from `STYLE_CATALOG` (docs/fight-plan.md Phase 3): the
+ *   Brawler is everyone's; the others are bought (Buy, then a confirm) and
+ *   picked straight away; a style you own is picked with "Fight in it".
+ *   The style you fight in goes into the ring and onto the street.
+ *   The Spar tab names the sparring partners waiting on the street, and the
+ *   Record tab carries each partner's line (brawlsite.ts).
  * - The HUD (`data-fight-hud`): the two health bars facing each other
  *   under the header with the names (yours left, the opponent's right,
  *   filling from the right), your stamina under yours (red when you're
@@ -39,11 +44,13 @@
  * the one picked, Esc / B / F closes (walk.ts calls close()). Prizes are
  * Dorras and XP only: never real money, nothing to do with the token.
  */
-import { BOT_LEVELS, FIGHT_BOTS, SPAR_HIT_CAP, XP, type BotLevel } from './catalog';
+import { BOT_LEVELS, FIGHT_BOTS, SPAR_HIT_CAP, STYLE_CATALOG, XP, type BotLevel } from './catalog';
+import { PARTNERS } from './brawlsite';
 import { MOVES, STYLES, type StyleId } from './fight-moves';
 import { level, type TycoonSave } from './tycoon';
-import { botLine, botsHtml, clock, countsHtml, fightOf, times } from './fight-records';
-import { D, LV, esc, fmt, repaint } from './ui';
+import { buyStyle, pickStyle } from './fightsave';
+import { botLine, botsHtml, clock, countsHtml, fightOf, times, type FightSave } from './fight-records';
+import { D, LV, esc, fmt, repaint, whyNot } from './ui';
 import type { FightHud, FightResultView, FightUI, FightUIDeps } from './fight-types';
 
 /** A bout, as the trainer describes it (fight.ts sets the sim up to match) */
@@ -59,6 +66,19 @@ const LOW_HEALTH = 0.25;
 const PIPS = 5;
 
 const STYLE_IDS = Object.keys(STYLES) as StyleId[];
+/** One line on each style's card */
+const PITCH: Record<StyleId, string> = {
+  brawler: "Everyone's from day one: the jab, the cross, the hook and the front kick.",
+  kickboxer: 'The roundhouse, and every kick hits harder.',
+  street: 'The uppercut, the parry, and a dodge that steps further.',
+};
+/** Each sparring partner's line on the Record tab: sparred and beaten */
+const partnersHtml = (f: FightSave) =>
+  PARTNERS.map((p) => {
+    const r = f.partners?.[p.id];
+    const line = !r || r.spars <= 0 ? '<span class="race-none">Not sparred yet</span>' : `Sparred ${times(r.spars)}${r.beaten > 0 ? ` · beaten ${times(r.beaten)}` : ''}`;
+    return `  <div class="fight-record-bot"><dt>${esc(p.name)}</dt><dd>${line}</dd></div>`;
+  }).join('\n');
 
 /** The difficulty row: five pips, the bot's skill lit */
 const pips = (skill: number) => {
@@ -95,6 +115,8 @@ export function createFightUI(root: HTMLElement, d: FightUIDeps): FightUI {
   const result = root.querySelector<HTMLElement>('[data-fight-result]')!;
   const resultTitle = result.querySelector<HTMLElement>('[data-fight-result-title]')!;
   const resultBody = result.querySelector<HTMLElement>('[data-fight-result-body]')!;
+  const snackBtn = hud.querySelector<HTMLButtonElement>('[data-fight-snack]')!;
+  const snackN = snackBtn.querySelector<HTMLElement>('[data-fight-snack-n]')!;
   const doneBtn = result.querySelector<HTMLButtonElement>('[data-fight-result-ok]')!;
 
   let menuOpen = false;
@@ -105,6 +127,8 @@ export function createFightUI(root: HTMLElement, d: FightUIDeps): FightUI {
   /** What the HUD showed last, so only changes touch the DOM */
   let pipsFor = 0;
   let chainShown = 0;
+  /** The style whose Buy is waiting for its confirm */
+  let confirming: StyleId | null = null;
 
   /* ---------- The menu ---------- */
 
@@ -123,7 +147,8 @@ export function createFightUI(root: HTMLElement, d: FightUIDeps): FightUI {
   <div class="fight-sect-head"><b class="race-name">Spar</b><span class="race-cps">a partner · no clock · no prize</span></div>
   <div class="fight-cards" role="list">${cards}</div>
 </section>
-<p class="race-note">A spar never ends: fight until you've had enough. Quit from the ring.${f.spars > 0 ? ` You've sparred ${times(f.spars)}.` : ''}</p>`;
+<p class="race-note">A spar never ends: fight until you've had enough. Quit from the ring.${f.spars > 0 ? ` You've sparred ${times(f.spars)}.` : ''}</p>
+<p class="race-note">Out on the street, sparring partners wait for a round with health: ${PARTNERS.map((p) => `${esc(p.name)} on ${esc(p.where)}`).join(', ')}. Walk up and spar; a knock-out ends it.</p>`;
   }
 
   function boutTab(s: TycoonSave) {
@@ -159,27 +184,74 @@ ${countsHtml(f)}
 <dl class="race-meta fight-records fight-records-bots">
 ${botsHtml(f)}
 </dl>
-<p class="race-note">Styles and moves bought here come in a later phase.</p>`;
+<h4 class="fight-sub">On the street</h4>
+<dl class="race-meta fight-records fight-records-bots">
+${partnersHtml(f)}
+</dl>`;
   }
 
   function stylesTab(s: TycoonSave) {
     const f = fightOf(s);
+    const lv = level(s);
     const cards = STYLE_IDS.map((id) => {
       const st = STYLES[id];
+      const c = STYLE_CATALOG[id];
       const yours = f.style === id;
       const owned = yours || f.styles.includes(id);
+      const locked = !owned && lv < c.level;
       const moves = st.moves.map((m) => `<li>${esc(MOVES[m].name)}</li>`).join('') + (st.parry ? '<li>Parry</li>' : '');
-      const state = yours ? 'Your style' : owned ? 'Yours' : 'Coming soon';
-      return `<div class="fight-card fight-style${yours ? ' is-picked' : ''}${owned ? '' : ' is-soon'}" role="listitem">
-  <div class="fight-card-head"><b class="race-name">${esc(st.name)}</b><span class="fight-state">${state}</span></div>
+      const act = yours
+        ? '<span class="fight-state">Your style</span>'
+        : owned
+          ? `<button type="button" class="fight-go" data-fight-style-pick="${id}"><span>Fight in it</span></button>`
+          : confirming === id
+            ? `<button type="button" class="fight-go" data-fight-style-buy="${id}" data-confirm="1"><span>Buy for ${fmt.format(c.price)}</span></button><button type="button" class="fight-go is-plain" data-fight-style-cancel><span>Cancel</span></button>`
+            : `<button type="button" class="fight-go" data-fight-style-buy="${id}"${locked ? ' aria-disabled="true"' : ''}><span>${locked ? `Lv ${c.level}` : `Buy · ${fmt.format(c.price)}`}</span></button>`;
+      return `<div class="fight-card fight-style${yours ? ' is-picked' : ''}${locked ? ' is-locked' : ''}" role="listitem">
+  <div class="fight-card-head"><b class="race-name">${esc(st.name)}</b>${owned || c.price === 0 ? '' : LV(c.level)}${owned ? '' : `<span class="fight-prize">${D(c.price)}</span>`}</div>
+  <p class="race-blurb">${esc(PITCH[id])}</p>
   <ul class="fight-moves" aria-label="Moves">${moves}</ul>
+  <div class="fight-card-act">${act}</div>
 </div>`;
     }).join('');
     return `<section class="fight-sect" aria-label="Styles">
   <div class="fight-sect-head"><b class="race-name">Styles</b><span class="race-cps">a complete fighter each</span></div>
   <div class="fight-cards" role="list">${cards}</div>
 </section>
-<p class="race-note">The Brawler is everyone's. The Kickboxer and Street styles, with the roundhouse, the uppercut and the parry, come to the trainer in a later phase.</p>`;
+<p class="race-note">The style you fight in goes into the ring and onto the street. Styles are Dorras earned in the city: nothing here is real money.</p>`;
+  }
+  function onStyleBuy(id: StyleId, confirmed: boolean) {
+    const s = d.game.save();
+    const c = STYLE_CATALOG[id];
+    if (level(s) < c.level) {
+      d.game.sfx('denied');
+      d.game.toast(`The ${STYLES[id].name} style needs level ${c.level}.`);
+      return;
+    }
+    if (!confirmed) {
+      confirming = id;
+      paint();
+      body.querySelector<HTMLButtonElement>(`[data-fight-style-buy="${id}"]`)?.focus({ preventScroll: true });
+      return;
+    }
+    confirming = null;
+    const r = buyStyle(s, id);
+    if (!r.ok) {
+      d.game.sfx('denied');
+      d.game.toast(whyNot(r.why, c.level));
+      paint();
+      return;
+    }
+    d.game.commit();
+    d.game.sfx('buy');
+    d.game.toast(`The ${STYLES[id].name} style is yours. You fight in it now.`);
+    paint();
+  }
+  function onStylePick(id: StyleId) {
+    if (!pickStyle(d.game.save(), id)) return;
+    d.game.commit();
+    d.game.toast(`You fight ${STYLES[id].name} now.`);
+    paint();
   }
 
   function paint() {
@@ -193,6 +265,7 @@ ${botsHtml(f)}
   function setTab(t: Tab) {
     if (tab === t) return;
     tab = t;
+    confirming = null;
     paint();
     body.scrollTop = 0;
     focusFirst();
@@ -227,6 +300,7 @@ ${botsHtml(f)}
     resultOpen = false;
     result.hidden = true;
     tab = 'spar';
+    confirming = null;
     paint();
     el.hidden = false;
     el.scrollTop = 0;
@@ -273,6 +347,12 @@ ${botsHtml(f)}
     if (!b || b.disabled) return;
     if (b.dataset.fightSpar) startSpar(b.dataset.fightSpar as BotLevel);
     else if (b.dataset.fightBout) startBout(b.dataset.fightBout as BotLevel);
+    else if (b.dataset.fightStyleBuy) onStyleBuy(b.dataset.fightStyleBuy as StyleId, !!b.dataset.confirm);
+    else if (b.dataset.fightStylePick) onStylePick(b.dataset.fightStylePick as StyleId);
+    else if ('fightStyleCancel' in b.dataset) {
+      confirming = null;
+      paint();
+    }
   });
   const arrows = (e: KeyboardEvent) => {
     if (e.key === 'ArrowDown' || e.key === 'ArrowRight') step(1);
@@ -360,15 +440,19 @@ ${botsHtml(f)}
     bar(oppHealthEl, h.oppHealth);
     ghost(ghosts.you, ghostYouEl, h.health);
     ghost(ghosts.opp, ghostOppEl, h.oppHealth);
-    const spar = h.kind === 'spar';
+    const spar = h.kind !== 'bout';
     hud.classList.toggle('is-spar', spar);
+    // The snack, in a spar or a street spar, while there's one in the bag
+    const snack = h.canSnack && h.snacks > 0;
+    showIf(snackBtn, snack);
+    if (snack) set(snackN, String(h.snacks));
     hud.classList.toggle('is-empty', h.empty);
     hud.classList.toggle('is-low', h.health < LOW_HEALTH);
     hud.classList.toggle('is-rest', h.phase === 'rest');
     hud.classList.toggle('is-over', h.phase === 'over');
     showIf(blockingEl, h.blocking);
     // The round and the clock (a spar has neither), the rounds won
-    if (spar) set(roundEl, 'Spar');
+    if (spar) set(roundEl, h.kind === 'street' ? 'Street spar' : 'Spar');
     else {
       set(roundEl, `Round ${Math.max(1, Math.min(h.round, h.rounds))}/${h.rounds}`);
       set(clockEl, clock(h.clock));
@@ -411,11 +495,12 @@ ${botsHtml(f)}
     const res = r.result;
     const bout = r.kind === 'bout';
     resultTitle.textContent = r.won === true ? 'You win' : r.won === false ? 'You lose' : r.kind === 'spar' ? 'Spar over' : 'Quit';
+    const label = bout ? 'Bout' : r.kind === 'street' ? 'Street spar' : 'Spar';
     result.classList.toggle('is-won', r.won === true);
     result.classList.toggle('is-lost', r.won === false);
     const tags = [
       r.kos > 0 ? '<span class="race-tag is-best">Knock-out</span>' : '',
-      r.quit && bout ? '<span class="race-tag is-over">Quit · counts as a loss</span>' : r.quit ? '<span class="race-tag is-over">Quit</span>' : '',
+      r.quit && r.kind !== 'spar' ? '<span class="race-tag is-over">Quit · counts as a loss</span>' : r.quit ? '<span class="race-tag is-over">Quit</span>' : '',
       r.bestChain >= 3 ? `<span class="race-tag">${r.bestChain} hit chain</span>` : '',
     ].join('');
     const paid =
@@ -425,7 +510,7 @@ ${botsHtml(f)}
   <div><dt>XP</dt><dd>+${fmt.format(res.xp)}</dd></div>
 </dl>`
         : '<p class="shop-note">Nothing paid: a spar is practice, and a quit pays nothing.</p>';
-    resultBody.innerHTML = `<p class="race-result-name">${bout ? 'Bout' : 'Spar'} · ${esc(r.opponent)} · ${esc(STYLES[FIGHT_BOTS[r.bot].style].name)}</p>
+    resultBody.innerHTML = `<p class="race-result-name">${label} · ${esc(r.opponent)} · ${esc(STYLES[r.style].name)}</p>
 ${bout ? `<p class="fight-result-rounds" aria-label="Rounds won, you and ${esc(r.opponent)}"><b>${r.rounds[0]}</b><span>–</span><b>${r.rounds[1]}</b></p>` : `<p class="fight-result-time">${clock(r.seconds)}</p>`}
 <p class="race-result-tags">${tags}</p>
 <dl class="race-meta race-result-meta fight-result-meta">
@@ -450,6 +535,7 @@ ${paid}${res.levels > 0 ? `<p class="race-levelup">Level up! You're now ${LV(lev
   result.querySelector('[data-fight-result-close]')!.addEventListener('click', () => close());
   doneBtn.addEventListener('click', () => close());
   hud.querySelector('[data-fight-quit]')!.addEventListener('click', () => d.quit());
+  snackBtn.addEventListener('click', () => d.snack());
 
   return {
     get open() {

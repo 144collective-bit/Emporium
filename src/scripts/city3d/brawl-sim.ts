@@ -18,6 +18,9 @@
  *   (the owner's call: Shift still sprints).
  * - Punches, the block and the guard are the upper body's (over the walk:
  *   `upper`); kicks and the dodge take him whole, standing (`rooted`).
+ * - A street chain (Phase 3's mission): walk mode says whether each strike
+ *   landed (`landed()`); three landing each within `BRAWL.chain` ticks of
+ *   the last is a chain, counted once however long it runs; a miss ends it.
  */
 import { createFightSim, MOVES, NO_INPUT, T, type FighterInput, type MoveId, type StyleId } from './fight-sim';
 import type { ClipId } from './fight-anim';
@@ -31,6 +34,8 @@ export const BRAWL = {
   blockSpeed: 0.78,
   /** A swing makes anyone within this much of his reach step aside (tiles) */
   crowd: 0.5,
+  /** Ticks between two strikes landing for them to be one chain */
+  chain: 40,
 };
 
 export interface BrawlInput {
@@ -60,6 +65,8 @@ export function createBrawl(style: StyleId, seed = 7) {
   let struckFor = -1;
   let ticks = 0;
   let acc = 0;
+  let chainN = 0;
+  let lastHit = -1e9;
 
   function cancel() {
     f.move = null;
@@ -145,6 +152,16 @@ export function createBrawl(style: StyleId, seed = 7) {
         }
       }
       return { events, dx, dz };
+    },
+    /** A strike just landed on something, or missed: true when it makes a chain of three (once a chain) */
+    landed(hit: boolean) {
+      if (!hit) {
+        chainN = 0;
+        return false;
+      }
+      chainN = ticks - lastHit <= BRAWL.chain ? chainN + 1 : 1;
+      lastHit = ticks;
+      return chainN === 3;
     },
     /** Hands no longer empty (a gun drawn, a thing held out, a vehicle, a menu): everything stops, the guard down */
     cancel,

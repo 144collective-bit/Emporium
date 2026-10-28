@@ -38,7 +38,7 @@ import type { WeaponId } from './combat-sim';
 import { CARGO as BASE_CARGO, DRIVE, PLAYER_CARS, type PaintId, type PlayerCar } from './mycar';
 import { DEFAULT_KART, KART_SPECS, PLAYER_KARTS, cleanKart, type KartId } from './mykart';
 import { CUPS, type CupId } from './kart-cups';
-import { STYLES, type StyleId } from './fight-moves';
+import { PARTNER_IDS, STYLES, type PartnerId, type StyleId } from './fight-moves';
 import { COURSE_IDS } from './kartcircuit';
 import { PLACE_IDS as MAP_PLACES } from './places';
 import { CORNER_SHOPS, type CornerId } from './projects';
@@ -46,8 +46,6 @@ import { cleanInventory, emptyInventory, type Inventory } from './inventory-save
 import { FREE_PLAY } from './freeplay';
 import {
   BOT_LEVELS,
-  FIGHT_BOTS,
-  SPAR_HIT_CAP,
   type BotLevel,
   BUILD_COSTS,
   CAR_CATALOG,
@@ -284,6 +282,7 @@ export const ENTRIES = {
   vehicles: { name: 'Cars', in: false },
   karts: { name: 'Karts', in: false },
   fighting: { name: 'Fight purses', in: true },
+  fightclub: { name: 'Fight styles', in: false },
   gear: { name: 'Guns', in: false },
   clothes: { name: 'Clothes', in: false },
   items: { name: 'Snacks', in: false },
@@ -339,9 +338,13 @@ export interface Counters {
   fightWins: number;
   kos: number;
   chains: number;
+  /** On the street: spars with the partners, partners beaten (each once), chains of three on a dummy by hand */
+  streetSpars: number;
+  partnersBeaten: number;
+  streetChains: number;
 }
 export type CounterId = keyof Counters;
-export const COUNTER_IDS: CounterId[] = ['sold', 'earned', 'contracts', 'dummies', 'drones', 'fistDowns', 'driven', 'bought', 'land', 'built', 'upgrades', 'missions', 'kartRaces', 'podiums', 'kartWins', 'cleanLaps', 'overtakes', 'bouts', 'fightWins', 'kos', 'chains'];
+export const COUNTER_IDS: CounterId[] = ['sold', 'earned', 'contracts', 'dummies', 'drones', 'fistDowns', 'driven', 'bought', 'land', 'built', 'upgrades', 'missions', 'kartRaces', 'podiums', 'kartWins', 'cleanLaps', 'overtakes', 'bouts', 'fightWins', 'kos', 'chains', 'streetSpars', 'partnersBeaten', 'streetChains'];
 export const newCounters = (): Counters => Object.fromEntries(COUNTER_IDS.map((k) => [k, 0])) as unknown as Counters;
 /** A district plot you own, bought with Dorras */
 export interface OwnedPlot {
@@ -399,8 +402,10 @@ export interface FightSave {
   bouts: number;
   spars: number;
   bots: Partial<Record<BotLevel, { beaten: number; bestSeconds: number | null }>>;
+  /** The sparring partners on the street (brawlsite.ts): spars with each, and how often beaten */
+  partners: Partial<Record<PartnerId, { spars: number; beaten: number }>>;
 }
-export const emptyFight = (): FightSave => ({ style: 'brawler', styles: ['brawler'], wins: 0, losses: 0, kos: 0, bestChain: 0, bouts: 0, spars: 0, bots: {} });
+export const emptyFight = (): FightSave => ({ style: 'brawler', styles: ['brawler'], wins: 0, losses: 0, kos: 0, bestChain: 0, bouts: 0, spars: 0, bots: {}, partners: {} });
 export const recordKey = (course: string, cls: string) => `${course}:${cls}`;
 export const emptyKarts = (): KartSave => ({ model: DEFAULT_KART.model, paint: DEFAULT_KART.paint, owned: [], mods: {}, records: {}, boards: {}, series: null, trophies: {}, challenge: null, parBeaten: [], old: {} });
 
@@ -1581,65 +1586,6 @@ export function pickKart(s: TycoonSave, model: KartId, paint: PaintId) {
   s.karts.paint = k.paint;
   return true;
 }
-/** What a fight paid (the bout card shows it) */
-export interface FightResult {
-  prize: number;
-  xp: number;
-  levels: number;
-  won: boolean | null;
-}
-/**
- * A fight is over (fight.ts): a spar (XP for taking part and a little per hit, capped) or a bout
- * (a purse by opponent for a win, XP either way), knock-outs and chains counted, the record kept.
- * A quit bout is a loss; a quit spar still counts its hits.
- */
-export function finishFight(s: TycoonSave, r: { kind: 'spar' | 'bout'; bot: BotLevel; won: boolean | null; hits: number; kos: number; bestChain: number; seconds: number; quit?: boolean }): FightResult {
-  const bot = FIGHT_BOTS[r.bot] ?? FIGHT_BOTS.easy;
-  const hits = Math.max(0, Math.round(r.hits));
-  const kos = Math.max(0, Math.round(r.kos));
-  const chain = Math.max(0, Math.round(r.bestChain));
-  let xp = 0;
-  let prize = 0;
-  const F = s.fight;
-  if (r.kind === 'spar') {
-    F.spars++;
-    xp += XP.spar + Math.min(SPAR_HIT_CAP, hits * XP.sparHit);
-  } else {
-    F.bouts++;
-    count(s, 'bouts', 1);
-    if (r.won) {
-      F.wins++;
-      count(s, 'fightWins', 1);
-      xp += XP.boutWin;
-      prize = bot.prize;
-      const b = F.bots[r.bot] ?? { beaten: 0, bestSeconds: null };
-      b.beaten++;
-      const secs = Math.round(r.seconds * 100) / 100;
-      if (secs > 0 && (b.bestSeconds === null || secs < b.bestSeconds)) b.bestSeconds = secs;
-      F.bots[r.bot] = b;
-    } else {
-      F.losses++;
-      xp += r.quit ? 0 : XP.boutLoss;
-    }
-  }
-  F.kos += kos;
-  if (kos) {
-    count(s, 'kos', kos);
-    xp += XP.fightKo * kos;
-  }
-  if (chain > F.bestChain) F.bestChain = chain;
-  if (chain >= 3) {
-    count(s, 'chains', 1);
-    xp += XP.chain;
-  }
-  if (prize > 0) {
-    s.dorras += prize;
-    book(s, 'fighting', prize);
-  }
-  const levels = addXp(s, xp);
-  return { prize, xp, levels, won: r.kind === 'bout' ? !!r.won : null };
-}
-
 export interface KartResult {
   place: number;
   prize: number;
@@ -2020,6 +1966,12 @@ function cleanGame(s: TycoonSave, o: Record<string, unknown>, now: number) {
     const beaten = Math.round(num(r.beaten, 0, 1e9, 0));
     const best = num(r.bestSeconds, 0, 36000, 0);
     if (beaten > 0 || best > 0) s.fight.bots[b] = { beaten, bestSeconds: best > 0 ? Math.round(best * 100) / 100 : null };
+  }
+  for (const id of PARTNER_IDS) {
+    const r = obj(obj(ft.partners)[id]);
+    const spars = Math.round(num(r.spars, 0, 1e9, 0));
+    const beaten = Math.min(spars, Math.round(num(r.beaten, 0, 1e9, 0)));
+    if (spars > 0) s.fight.partners[id] = { spars, beaten };
   }
   const m = obj(o.missions);
   const slug = (v: unknown): v is string => typeof v === 'string' && /^[a-z0-9-]{1,40}$/.test(v);

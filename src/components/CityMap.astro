@@ -701,7 +701,8 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
         (data-fight-stamina) left, the round (data-fight-round), the clock (data-fight-clock) and the rounds won
         (data-fight-pips-you, data-fight-pips-them) in the middle, the opponent's name (data-fight-opponent) and health
         (data-fight-opp-health) right, the chain pill (data-fight-chain) and the Blocking tag (data-fight-blocking) under
-        your bars and Quit (data-fight-quit) top right. The centre stack: the bell's big text (data-fight-count: Round 1,
+        your bars and Quit (data-fight-quit) top right, with Snack (data-fight-snack, its count data-fight-snack-n) beside it in
+        a spar or a street spar while there's one in the bag. The centre stack: the bell's big text (data-fight-count: Round 1,
         FIGHT, K.O.) over the knockdown count (data-fight-knockdown: data-fight-count-n, data-fight-count-who).
         data-fight-pops: short lines under the HUD. data-fight-result: the bout card; data-fight-result-title,
         data-fight-result-body (painted), data-fight-result-ok (Done) and data-fight-result-close.
@@ -745,7 +746,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       <div class="fight-side fight-them">
         <p class="fight-name" data-fight-opponent>Opponent</p>
         <div class="fight-bar fight-health is-rev" role="img" aria-label="The opponent's health"><b class="fight-ghost" data-fight-opp-health-ghost></b><i data-fight-opp-health></i></div>
-        <button type="button" class="race-quit fight-quit" data-fight-quit>Quit</button>
+        <p class="fight-acts"><button type="button" class="race-quit fight-snack" data-fight-snack hidden aria-label="Eat a snack: some health back">Snack <b data-fight-snack-n>0</b></button><button type="button" class="race-quit fight-quit" data-fight-quit>Quit</button></p>
       </div>
     </div>
     <div class="fight-pops" data-fight-pops aria-live="polite"></div>
@@ -761,7 +762,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
         <button type="button" class="shop-take" data-fight-result-ok>Done</button>
       </div>
     </section>
-    <p class="walk-hint fight-hint"><kbd>Click</kbd> punch · <kbd>Right-click</kbd> kick · <kbd>Shift</kbd> block · <kbd>Space</kbd> dodge · <kbd>Esc</kbd> quit</p>
+    <p class="walk-hint fight-hint"><kbd>Click</kbd> punch · <kbd>Right-click</kbd> kick · <kbd>Shift</kbd> block · <kbd>Space</kbd> dodge · <kbd>E</kbd> snack (a spar) · <kbd>Esc</kbd> quit</p>
     <button type="button" class="fight-btn fight-punch" data-fight-punch aria-label="Punch">Punch</button>
     <button type="button" class="fight-btn fight-kick" data-fight-kick aria-label="Kick">Kick</button>
     <button type="button" class="fight-btn fight-block" data-fight-block aria-label="Block (hold)">Block</button>

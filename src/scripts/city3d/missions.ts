@@ -11,9 +11,11 @@
  *   the line, each with XP. No prizes, no real rewards: Dorras and XP only.
  */
 import { levelFor } from './catalog';
+import { PARTNER_IDS } from './fight-moves';
 import { addXp, book, count, level, newCounters, plotCount, type ActiveMission, type CounterId, type Counters, type TycoonSave } from './tycoon';
 
-export type Goal = { counter: CounterId; n: number } | { plots: number };
+/** A target on a counter (from when it's taken), plots to own, or sparring partners sparred with (each once, ever) */
+export type Goal = { counter: CounterId; n: number } | { plots: number } | { partners: number };
 export interface Mission {
   id: string;
   name: string;
@@ -33,13 +35,16 @@ export const MISSIONS: Mission[] = [
   { id: 'drone-patrol', name: 'Drone patrol', blurb: 'Knock down 3 patrol drones.', level: 1, goal: counter('drones', 3), reward: 400, xp: 80 },
   { id: 'paper-run', name: 'Paper run', blurb: 'Deliver 1 contract from the Signal tower.', level: 1, goal: counter('contracts', 1), reward: 400, xp: 80 },
   { id: 'joyride', name: 'Joyride', blurb: 'Drive 300 tiles in your own car.', level: 1, goal: counter('driven', 300), reward: 300, xp: 60 },
+  { id: 'sparring-partner', name: 'Sparring partner', blurb: 'Spar with a partner on the street: Big Duke waits on the lawn behind the Fight Club.', level: 1, goal: counter('streetSpars', 1), reward: 400, xp: 80 },
+  { id: 'one-two-three', name: 'One, two, three', blurb: 'Land a chain of three on a training dummy by hand.', level: 1, goal: counter('streetChains', 1), reward: 300, xp: 60 },
   { id: 'bare-hands', name: 'Bare hands', blurb: 'Knock down 3 training dummies with your fists (empty hands, then click).', level: 1, goal: counter('fistDowns', 3), reward: 400, xp: 80 },
   { id: 'first-lap', name: 'First lap', blurb: 'Finish a race at the kart park, north-east past the Parkway.', level: 1, goal: counter('kartRaces', 1), reward: 500, xp: 100 },
   // Tier 2
   { id: 'shopkeeper', name: 'Shopkeeper', blurb: 'Sell 150 things.', level: 3, goal: counter('sold', 150), reward: 900, xp: 150 },
   { id: 'courier-king', name: 'Courier king', blurb: 'Deliver 5 contracts.', level: 3, goal: counter('contracts', 5), reward: 1200, xp: 180 },
   { id: 'drone-hunter', name: 'Drone hunter', blurb: 'Knock down 15 drones.', level: 3, goal: counter('drones', 15), reward: 1000, xp: 150 },
-  { id: 'street-fighter', name: 'Street fighter', blurb: 'Knock down 20 training dummies by hand.', level: 3, goal: counter('fistDowns', 20), reward: 1100, xp: 160 },
+  { id: 'street-fighter', name: 'Heavy hands', blurb: 'Knock down 20 training dummies by hand.', level: 3, goal: counter('fistDowns', 20), reward: 1100, xp: 160 },
+  { id: 'round-the-city', name: 'Round the city', blurb: `Spar with every sparring partner: by the Fight Club, on The Block's plaza and on Pier 7.`, level: 3, goal: { partners: PARTNER_IDS.length }, reward: 1500, xp: 200 },
   { id: 'dummy-run', name: 'Dummy run', blurb: 'Knock down 25 training dummies.', level: 3, goal: counter('dummies', 25), reward: 800, xp: 120 },
   { id: 'landlord', name: 'Landlord', blurb: 'Buy 2 units, lots or plots.', level: 3, goal: counter('land', 2), reward: 800, xp: 100 },
   { id: 'podium', name: 'Podium', blurb: 'Finish a kart race in the top three.', level: 3, goal: counter('podiums', 1), reward: 1200, xp: 160 },
@@ -86,6 +91,10 @@ export function missionProgress(s: TycoonSave, a: ActiveMission): { done: number
   if ('counter' in g) {
     const done = Math.max(0, (s.counters[g.counter] ?? 0) - (a.from[g.counter] ?? 0));
     return { done: Math.min(done, g.n), need: g.n, complete: done >= g.n };
+  }
+  if ('partners' in g) {
+    const n = Object.values(s.fight.partners).filter((p) => p && p.spars > 0).length;
+    return { done: Math.min(n, g.partners), need: g.partners, complete: n >= g.partners };
   }
   return { done: Math.min(plotCount(s), g.plots), need: g.plots, complete: plotCount(s) >= g.plots };
 }
@@ -146,6 +155,7 @@ export const BADGES: Badge[] = [
   b('drones-100', 'Air defence', 'Knocked down 100 drones.', 'drones', 100, 800),
   b('dummies-50', 'Range day', 'Knocked down 50 dummies.', 'dummies', 50, 150),
   b('fists-25', 'Bare knuckles', 'Knocked down 25 dummies by hand.', 'fistDowns', 25, 300),
+  b('partners-all', 'Street Fighter', 'Beat every sparring partner on the street.', 'partnersBeaten', PARTNER_IDS.length, 600),
   b('karts-1', 'Karter', 'Finished a kart race.', 'kartRaces', 1, 100),
   b('karts-25', 'Track regular', 'Finished 25 kart races.', 'kartRaces', 25, 800),
   b('podiums-10', 'Podium regular', 'Ten podiums at the kart park.', 'podiums', 10, 500),
@@ -201,5 +211,8 @@ export const COUNTER_NAMES: Record<CounterId, string> = {
   fightWins: 'bouts won',
   kos: 'knock-outs',
   chains: 'chains of three',
+  streetSpars: 'street spars',
+  partnersBeaten: 'sparring partners beaten',
+  streetChains: 'chains of three on a dummy',
 };
 export type { Counters };

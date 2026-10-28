@@ -13,12 +13,8 @@
 .city[data-view="3d"][data-mode="walk"] .hotbar {
   display: flex;
 }
-/* Not on foot, or a menu or card is open: out of the way */
-.city.is-driving .hotbar,
-.city.is-karting .hotbar,
-.city.is-fighting .hotbar,
-.city.is-riding .hotbar,
-.city.is-shopping .hotbar {
+/* Not on foot, or a menu or card is open: out of the way (as specific as the rule that shows it, and more) */
+.city[data-view="3d"][data-mode="walk"]:is(.is-driving, .is-karting, .is-fighting, .is-riding, .is-shopping) .hotbar {
   display: none;
 }
 .hb-slot {

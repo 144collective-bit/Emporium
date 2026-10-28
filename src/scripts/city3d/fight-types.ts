@@ -10,7 +10,9 @@ import type * as THREE from 'three';
 import type { BotLevel } from './catalog';
 import type { BoutPhase } from './fight-sim';
 import type { Spot } from './landmarks';
-import type { FightResult } from './tycoon';
+import type { PartnerId } from './brawlsite';
+import type { StyleId } from './fight-moves';
+import type { FightResult } from './fightsave';
 import type { GameDeps } from './ui';
 
 /* ---------- The gym (fightclub.ts) ---------- */
@@ -26,7 +28,10 @@ export interface FightClub {
 
 /* ---------- The menu, the HUD and the bout card (fight-ui.ts) ---------- */
 
-export type FightKind = 'spar' | 'bout';
+/** A spar or a bout in the ring, or a street spar with one of the partners on the street (brawlsite.ts) */
+export type FightKind = 'spar' | 'bout' | 'street';
+/** How a fight starts: against one of the gym's bots, or (a street spar) a partner */
+export type FightStart = { kind: 'spar' | 'bout'; bot: BotLevel } | { kind: 'street'; partner: PartnerId };
 
 export interface FightHud {
   kind: FightKind;
@@ -51,12 +56,16 @@ export interface FightHud {
   down: 'you' | 'them' | null;
   /** Rounds won so far in a bout */
   score: [number, number];
+  /** Snacks in the bag, and whether one can be eaten here (a spar or a street spar, not a bout) */
+  snacks: number;
+  canSnack: boolean;
 }
 
 export interface FightResultView {
   kind: FightKind;
   opponent: string;
-  bot: BotLevel;
+  /** The opponent's style */
+  style: StyleId;
   /** Won, lost, or neither (a spar, or a quit) */
   won: boolean | null;
   quit: boolean;
@@ -68,14 +77,16 @@ export interface FightResultView {
   kos: number;
   knockdowns: number;
   seconds: number;
-  /** What it paid (tycoon.ts finishFight) */
+  /** What it paid (fightsave.ts finishFight) */
   result: FightResult;
 }
 
 export interface FightUIDeps {
   game: GameDeps;
   /** Start a spar or a bout against a bot (fight.ts); the menu closes first */
-  start(setup: { kind: FightKind; bot: BotLevel }): void;
+  start(setup: FightStart): void;
+  /** Eat a snack (the HUD's Snack button) */
+  snack(): void;
   /** Opening the menu or the card frees the mouse and stops the walker; closing hands control back */
   onOpen(): void;
   onClose(): void;
@@ -85,7 +96,7 @@ export interface FightUIDeps {
 export interface FightUI {
   /** The trainer's menu or the bout card is showing */
   readonly open: boolean;
-  /** The trainer's menu: Spar (a partner at three levels), Bout (three rounds against a named opponent), Record; Styles says "coming soon" until Phase 3 */
+  /** The trainer's menu: Spar (a partner at three levels), Bout (three rounds against a named opponent), Record, Styles (bought and picked) */
   show(): void;
   /** Close whatever's open (true if something was) */
   close(): boolean;
@@ -123,6 +134,8 @@ export interface FightDeps {
   club: FightClub;
   ui: FightUI;
   game: GameDeps;
+  /** The ground under a point (walk.ts): a street spar's fighters stand on it */
+  groundAt(x: number, z: number): number;
   /** The player's look (walk.ts setLook keeps it fresh): what your fighter wears */
   outfit(): import('./character').Outfit;
   sfx(kind: import('./combat').Sfx, gain?: number): void;
@@ -134,13 +147,15 @@ export interface Fight {
   readonly active: boolean;
   /** The sim while a fight is on */
   readonly sim: import('./fight-sim').FightSim | null;
-  /** Build the fight from the save (your fighter in your style with fists, the bot in its), put both in their corners, ring the bell */
-  start(setup: { kind: FightKind; bot: BotLevel }): void;
+  /** Build the fight from the save (your fighter in your style with fists, the bot in its), put both in their corners (or the partner's spot), ring the bell */
+  start(setup: FightStart): void;
+  /** Eat a snack: some health back in a spar or a street spar (false, with a reason shown, when there's none or it's a bout) */
+  snack(): boolean;
   /** One frame in the ring: step the sim with your input, draw both fighters, the camera, the HUD, the sounds */
   update(dt: number, inp: FightInput): void;
   /** Quit from the HUD or Esc: a spar ends and shows its card; a bout in progress is forfeited (a loss) and shows its card */
   quit(): void;
-  /** Leave the ring (after the card, or walk mode ending; an unfinished bout is forfeited quietly): where Degen stands, facing which way */
+  /** Leave the ring or the street spar (after the card, or walk mode ending; an unfinished bout or street spar is a loss, quietly): where Degen stands, facing which way */
   exit(): { x: number; z: number; yaw: number };
   /** Every frame while not fighting (the sign and the ring lights idle) */
   idle(dt: number): void;

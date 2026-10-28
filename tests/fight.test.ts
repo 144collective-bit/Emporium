@@ -339,7 +339,8 @@ test('the clock takes whole ticks and carries the rest; big frames are capped', 
 });
 
 /* ---------- The save: the Fight Club's record and what a fight pays (tycoon.ts) ---------- */
-import { cleanSave, finishFight, newSave } from '../src/scripts/city3d/tycoon';
+import { cleanSave, newSave } from '../src/scripts/city3d/tycoon';
+import { finishFight } from '../src/scripts/city3d/fightsave';
 import { FIGHT_BOTS, SPAR_HIT_CAP, XP } from '../src/scripts/city3d/catalog';
 
 test('the save (v9): the fight record cleans, a spar pays XP capped per hit, a bout pays its purse on a win, a quit bout is a loss', () => {

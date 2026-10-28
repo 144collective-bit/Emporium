@@ -18,6 +18,7 @@ import type { Weapon, WeaponId } from './combat-sim';
 import type { PlayerCar } from './mycar';
 import type { KartId } from './mykart';
 import type { BotTraits } from './fight-sim';
+import type { StyleId } from './fight-moves';
 import type { MarkId, PatternId } from '../net/profile-data';
 import { FREE_PLAY } from './freeplay';
 
@@ -88,6 +89,8 @@ export const XP = {
   boutLoss: 60,
   fightKo: 50,
   chain: 30,
+  /** A street spar won (beating a sparring partner) */
+  streetWin: 80,
 } as const;
 
 /* ---------- The Fight Club's opponents (docs/fight-plan.md) ---------- */
@@ -104,6 +107,13 @@ export const FIGHT_BOTS: Record<BotLevel, { name: string; blurb: string; skill: 
 };
 /** XP for taking part is capped per spar so hits can't be farmed */
 export const SPAR_HIT_CAP = 30;
+
+/** The fight styles the trainer sells (docs/fight-plan.md Phase 3): Dorras and a level; the Brawler is everyone's */
+export const STYLE_CATALOG: Record<StyleId, { price: number; level: number }> = {
+  brawler: { price: 0, level: 1 },
+  kickboxer: { price: 15_000, level: 4 },
+  street: { price: 30_000, level: 7 },
+};
 
 /* ---------- Mods (upgrades): three levels each ---------- */
 
@@ -348,6 +358,8 @@ export const ITEM_CATALOG: Record<ItemId, ItemEntry> = {
 export const ITEM_IDS = Object.keys(ITEM_CATALOG) as ItemId[];
 /** How many of each he can carry */
 export const ITEM_MAX = 5;
+/** What a snack gives back in a spar: a share of full health */
+export const SNACK_HEAL = 0.35;
 
 /* ---------- Property ---------- */
 
@@ -383,7 +395,7 @@ export const LEVEL_SPEED = [1, 1.3, 1.6];
 
 // (after the starters are worked out from the real prices: the rest still have to be bought, for nothing)
 if (FREE_PLAY) {
-  for (const c of [...Object.values(CAR_CATALOG), ...Object.values(KART_CATALOG), ...Object.values(GUN_CATALOG), ...WARDROBE_CATALOG, ...Object.values(ITEM_CATALOG)]) {
+  for (const c of [...Object.values(CAR_CATALOG), ...Object.values(KART_CATALOG), ...Object.values(GUN_CATALOG), ...WARDROBE_CATALOG, ...Object.values(ITEM_CATALOG), ...Object.values(STYLE_CATALOG)]) {
     c.price = 0;
     c.level = 1;
   }

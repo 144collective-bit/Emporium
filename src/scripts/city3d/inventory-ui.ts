@@ -165,7 +165,7 @@ export function bagHtml(save: TycoonSave, o: { may(id: WeaponId): boolean; ways?
 function useOne(game: GameDeps, id: ItemId) {
   const r = useItem(game.save(), id, false);
   if (r.ok) game.commit();
-  else game.toast(r.why === 'stock' ? `No ${ITEM_CATALOG[id].name.toLowerCase()}s left. ${ITEM_CATALOG[id].where}.` : `Save it for a spar: a ${ITEM_CATALOG[id].name.toLowerCase()} restores health in a fight (coming soon).`, 4200);
+  else game.toast(r.why === 'stock' ? `No ${ITEM_CATALOG[id].name.toLowerCase()}s left. ${ITEM_CATALOG[id].where}.` : `Save it for a spar: a ${ITEM_CATALOG[id].name.toLowerCase()} restores health in a fight (the Snack button, or E). Spar at the Fight Club, or with a partner on the street.`, 4200);
 }
 
 /** A snack at a diner's door or a Night Market stall: one into the bag, if there's room and the Dorras */

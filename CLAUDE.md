@@ -1340,7 +1340,7 @@ it and has been retired completely. Build only on what's here.
   side is the quick swap with a fade (`QUICK_FADE`), reduced motion the
   quick swap without; at home the turntable is stood on to get in
   (`isTurntable()`, `DISC`). Keep new car detail in that chunk: the
-  boot is near its budget (666.08 of 670 KB: Phase 3 brought carinside.ts into it). Phase 4 (handling with
+  boot is near its budget (669.9 of 670 KB with the inventory plan's Phase 3 merged; Phase 3 brought carinside.ts into it). Phase 4 (handling with
   depth: each model's feel and drifting) is built, in the sim (drive-sim.ts, mycar.ts `FEEL`; see Driving your
   car below).
 - **Live settings** (the owner's call): the owner switches parts of the
@@ -3248,8 +3248,8 @@ it and has been retired completely. Build only on what's here.
   an inventory, switching weapons, then fists on the street); keep it up to
   date, one phase at a time with the owner's sign-off. Phase 1 (the
   inventory) and the controls after it (the owner's call: Tab opens a 4 x 4
-  grid with two weapon slots) and Phase 2 (fists on the street, below) are
-  built: what Degen carries is the save's
+  grid with two weapon slots), Phase 2 (fists on the street, below) and
+  Phase 3 (sparring partners and styles, below) are built: what Degen carries is the save's
   `inventory` (v11: two weapon slots, `guns`, either may be empty; the
   thing in his hand, `held`, kept in step with the look by `setHeld()`; his
   consumables, `items`; where each thing lies in the grid, `grid`), its
@@ -3328,6 +3328,30 @@ it and has been retired completely. Build only on what's here.
   kick, LB held block, A dodge, the run on L3. A swing makes anyone near
   step aside (`swing` in life.ts, a `bump`): the crowd is never a target.
   The lab's Brawl program (`?anim&prog=brawl`) plays them.
+- **Sparring partners and styles** (Phase 3, with the fight plan's Phase
+  3): `brawlsite.ts` (DOM-free, tested in `tests/brawlsite.test.ts`):
+  `PARTNERS`, three made-up fighters waiting in the guard, one in each
+  style, easy to hard: Big Duke on the lawn behind the Fight Club, Tash on
+  The Block's plaza, Old Sal on Pier 7's head; a spar puts you `GAP` in
+  front of them (`startOf()`) in a ring round the point between you
+  (`arenaOf()`), each ring held clear of everything solid, the lawns' walks,
+  beds and furniture, the pocket parks and squares, the benches and the
+  people about, on a slab or a deck; their ids and names are
+  fight-moves.ts's (`PARTNER_IDS`, `PARTNER_NAMES`), so the boot carries no
+  more of them. `createPartners()` (brawl.ts) draws them near Degen idling
+  in the guard, facing him as he comes up; their footprints
+  (`PARTNER_SOLIDS`) join the grids through `addSolids()` when the chunk
+  loads (never the city's `SOLIDS`: the lawns' walks are routed round
+  those at the load). The prompt "Spar · <name>" (`spar:<id>`, gated by
+  the live settings' `fight`) starts a street spar: fight.ts's kind
+  `street`, the partner's ring and ground, a knock-out ends it (yours a
+  loss, theirs a win), a quit is a loss, no Dorras, XP as a spar and
+  `XP.streetWin` for a win, `fight.partners` on the save. The snack
+  (`SNACK_HEAL`) is eaten from the fight HUD's Snack button, E or the
+  d-pad's up, in a spar or a street spar. Counters `streetSpars`,
+  `partnersBeaten`, `streetChains` (brawl-sim.ts `landed()`); missions
+  Sparring partner, One, two, three and Round the city (goal `{ partners }`,
+  counted from the record), badge Street Fighter (every partner beaten).
 - **Free play** (a test switch, the owner's call: everything free to
   check it all works): `freeplay.ts` (`FREE_PLAY`, Vite's `__FREE_PLAY__`
   from `PUBLIC_FREE_PLAY=1` in `astro.config.mjs`) makes every price in
@@ -3495,7 +3519,10 @@ it and has been retired completely. Build only on what's here.
   `data-fight-result`, the Punch / Kick / Block / Dodge touch buttons
   `data-fight-punch` / `-kick` / `-block` / `-dodge` and Quit
   `data-fight-quit` in `CityMap.astro`, styles in `fight.css`) is the
-  trainer's menu (Spar, Bout, Record, Styles (coming)), the HUD (health,
+  trainer's menu (Spar, Bout, Record, Styles: the Kickboxer and Street
+  styles sold there, `STYLE_CATALOG` in catalog.ts, `buyStyle()` /
+  `pickStyle()` in `fightsave.ts`; the Kickboxer's kicks hit harder,
+  `damageOf()` in fight-moves.ts), the HUD (health,
   stamina, round and clock, score pips, chain, the knockdown count), the
   bell text, pops and the bout card. `fight.ts` (`createFight()`) runs a
   fight: your Degen with fists against one of `FIGHT_BOTS` (`catalog.ts`:
@@ -3507,7 +3534,9 @@ it and has been retired completely. Build only on what's here.
   (`.fight-ghost`), the sounds
   (`whoosh`, `punch`, `kick`, `fightBlock`, `parry`, `thud`, `fightKo`,
   `bell`, `count` in `sound.ts`), the over-the-shoulder camera kept inside
-  the ropes, and it pays through `finishFight()` + `commit()` (a spar: XP
+  the ropes, and it pays through `finishFight()` (`fightsave.ts`, DOM-free: the
+  fight's rules on the save, out of tycoon.ts so they load with the fight)
+  + `commit()` (a spar: XP
   with a capped bonus per hit; a bout of three 90 s rounds, first to two:
   the purse on a win, XP either way, a quit is a loss; knock-outs and
   chains of three add XP). `walk.ts` wires it: the counter's prompt opens
@@ -3519,7 +3548,8 @@ it and has been retired completely. Build only on what's here.
   `.city.is-fighting` hides the walk HUD and `data-fight` makes the header
   read "Fighting · <opponent>". The save (`tycoon.ts`, v11) keeps `fight`
   (style, owned styles, wins, losses, knock-outs, best chain, bouts, spars,
-  each opponent's record), the ledger entry `fighting` and the counters
+  each opponent's record, each sparring partner's), the ledger entries
+  `fighting` (in) and `fightclub` (styles, out) and the counters
   `bouts` / `fightWins` / `kos` / `chains`. New gameplay goes in the sim
   first; looks in the clips and the view.
 - **Nothing in the city attacks you** (the owner's call): the rival crew
@@ -3662,7 +3692,7 @@ it and has been retired completely. Build only on what's here.
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,
   in `tests/merch.test.ts`), the crowd's baked clips (`crowdclips.ts`) and Degen's skeleton, weights, head and hands
-  (`skeleton.ts`, `body.ts`), his walking (`locomotion.ts`), the motion capture and its animation (`bvh.ts`, `mocap-build.ts`, `mocap.ts`, `movesim.ts`, `inertia.ts`, `motionmatch.ts`, `animator.ts`), the rubric of human movement over every clip and program (`human.ts`, `tests/human.test.ts`), what his body does about what he touches (`contact.ts`), the game's moments (`moments.ts`), the guns in his hands (`gunfit.ts`, `stance.ts`), what he carries (`inventory.ts`, `inventory-save.ts`) and his clothes not clipping (`wardrobe.ts`, the trunk's weights in `skeleton.ts`, `tests/clothing.test.ts`) and his accessories where they're worn (`tests/accessories.test.ts`), the suit's tailoring on the desktop only (`tests/tailoring.test.ts`). Modules that touch the DOM or `kit.ts` (canvas
+  (`skeleton.ts`, `body.ts`), his walking (`locomotion.ts`), the motion capture and its animation (`bvh.ts`, `mocap-build.ts`, `mocap.ts`, `movesim.ts`, `inertia.ts`, `motionmatch.ts`, `animator.ts`), the rubric of human movement over every clip and program (`human.ts`, `tests/human.test.ts`), what his body does about what he touches (`contact.ts`), the game's moments (`moments.ts`), the guns in his hands (`gunfit.ts`, `stance.ts`), what he carries (`inventory.ts`, `inventory-save.ts`), fists on the street, the sparring partners and the styles (`brawl-sim.ts`, `brawlsite.ts`, `fightsave.ts`) and his clothes not clipping (`wardrobe.ts`, the trunk's weights in `skeleton.ts`, `tests/clothing.test.ts`) and his accessories where they're worn (`tests/accessories.test.ts`), the suit's tailoring on the desktop only (`tests/tailoring.test.ts`). Modules that touch the DOM or `kit.ts` (canvas
   textures) can't load in Node; keep data a test needs in the DOM-free
   files.
 - When you change a rule or move something in the city, run the tests and
