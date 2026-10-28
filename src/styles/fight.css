@@ -1090,6 +1090,76 @@
   }
 }
 
+/* ---------- Fists on the street (brawl.ts, docs/inventory-plan.md Phase 2): empty hands ---------- */
+.fists-hint {
+  display: none;
+}
+@media (pointer: fine) {
+  .city.is-fists .walk-hint.fists-hint {
+    display: block;
+  }
+  .city.is-fists .walk-hint:not(.fists-hint):not(.fight-hint):not(.drive-hint):not(.kart-hint):not(.boat-hint):not(.fly-hint) {
+    display: none;
+  }
+}
+/* Touch: Punch in Fire's spot, Block in Reload's, Kick in Aim's (Jump stays: standing with the guard up, it dodges) */
+@media (pointer: coarse) {
+  .city.is-fists .fight-punch,
+  .city.is-fists .fight-kick,
+  .city.is-fists .fight-block {
+    position: absolute;
+    z-index: 4;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 1px solid #0000;
+    border-radius: 50%;
+    background:
+      linear-gradient(#0b0a12e0, #0b0a12e0) padding-box,
+      var(--pulse) border-box;
+    color: #fff;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    touch-action: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  .city.is-fists .fight-punch {
+    right: 104px;
+    bottom: 34px;
+    width: 76px;
+    height: 76px;
+    font-size: 11px;
+    box-shadow: 0 0 24px -6px #ff2fb9;
+  }
+  .city.is-fists .fight-block {
+    right: 116px;
+    bottom: 122px;
+    width: 52px;
+    height: 52px;
+  }
+  .city.is-fists .fight-kick {
+    right: 30px;
+    bottom: 194px;
+    width: 56px;
+    height: 56px;
+    font-size: 10px;
+    box-shadow: 0 0 24px -6px #00eaff;
+  }
+}
+@media (pointer: coarse) and (max-width: 360px) {
+  .city.is-fists .fight-punch {
+    right: 96px;
+  }
+  .city.is-fists .fight-block {
+    right: 108px;
+  }
+}
+
 /* ---------- Phones upright: the menu is the shop's bottom sheet ---------- */
 @media (max-width: 640px) {
   .fight-menu {

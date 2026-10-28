@@ -105,6 +105,11 @@ export type ClientMsg =
   | { t: 'swap'; w: WeaponId; m?: Partial<Record<WeaponId, GunMods>> }
   | { t: 'arm'; on: boolean }
   | { t: 'reload' }
+  /**
+   * A punch or a kick with empty hands on the street (docs/inventory-plan.md Phase 2): the move, on its first active
+   * frame; the server lands it from where it has you (`melee()` in combat-sim.ts), on foot and unarmed only
+   */
+  | { t: 'melee'; m: string }
   | { t: 'emote'; e: EmoteId }
   /** A fixed phrase, by its index in PHRASES */
   | { t: 'say'; i: number }

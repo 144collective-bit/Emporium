@@ -215,25 +215,25 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
             <dt><kbd>Mouse</kbd></dt><dd>Look around</dd>
             <dt><kbd>Shift</kbd></dt><dd>Sprint (hold)</dd>
             <dt><kbd>Caps&nbsp;Lock</kbd></dt><dd>Walk (toggle)</dd>
-            <dt><kbd>Space</kbd></dt><dd>Jump (hold for higher); going at a low wall or barrier, over it</dd>
-            <dt><kbd>Right&nbsp;click</kbd></dt><dd>Aim (red dot sight)</dd>
+            <dt><kbd>Space</kbd></dt><dd>Jump (hold for higher); going at a low wall or barrier, over it; fists up and standing, dodge</dd>
+            <dt><kbd>Right&nbsp;click</kbd></dt><dd>Aim (red dot sight); empty hands, block (hold)</dd>
             <dt><kbd>Q</kbd> <kbd>E</kbd></dt><dd>Peek left / right round a corner (hold)</dd>
             <dt><kbd>C</kbd></dt><dd>Crouch (toggle); while sprinting, slide</dd>
             <dt><kbd>V</kbd></dt><dd>First / third person</dd>
             <dt><kbd>Scroll</kbd></dt><dd>Next / previous slot (mouse captured), camera distance (mouse free)</dd>
             <dt><kbd>F</kbd></dt><dd>Enter a door, open the gun store, the garage, the kart hut or the trainer, get in / out of your car</dd>
-            <dt><kbd>Click</kbd></dt><dd>Fire (with a gun out)</dd>
+            <dt><kbd>Click</kbd></dt><dd>Fire (with a gun out); empty hands, punch (again quickly: combos)</dd>
             <dt><kbd>R</kbd></dt><dd>Reload</dd>
             <dt><kbd>Tab</kbd></dt><dd>Inventory: drag guns into weapon slots 1 and 2</dd>
             <dt><kbd>1</kbd> <kbd>2</kbd></dt><dd>Draw weapon 1 or 2 (again: put it away, fists)</dd>
             <dt><kbd>3</kbd>–<kbd>7</kbd></dt><dd>What's in your hand, snacks</dd>
             <dt><kbd>X</kbd></dt><dd>Next of your weapons and empty hands</dd>
-            <dt><kbd>G</kbd></dt><dd>Holster / draw</dd>
+            <dt><kbd>G</kbd></dt><dd>Holster (with a gun out); empty hands, kick</dd>
             <dt><kbd>T</kbd></dt><dd>Emotes and phrases (online)</dd>
             <dt><kbd>Esc</kbd></dt><dd>Free the mouse, then stop</dd>
           </dl>
           <p class="walk-pad">Driving: <kbd>W</kbd> / <kbd>S</kbd> gas and brake (hold to reverse), <kbd>A</kbd> / <kbd>D</kbd> steer, <kbd>Space</kbd> handbrake, <kbd>V</kbd> chase or roof camera. Your car waits on the turntable at the garage on the south bank. Gamepad: RT gas, LT brake, A handbrake, Y get out. Touch: the stick steers, with Gas and Brake buttons.</p>
-          <p class="walk-pad">You carry two weapons, drawn anywhere with 1 and 2; change them anywhere in the inventory (Tab), refill them at the gun store counter inside the Armoury or Trench Arms' hatch. Gamepads work too: left stick moves, right stick looks, A jumps, B crouches (slides when sprinting), LB sprints, LT aims (holding it, LB and RB peek left and right), RT fires, X reloads, RB and the D-pad step through the hotbar, View opens the inventory, the right stick pressed swaps first and third person. On a touch screen, Crouch is over the stick (it slides you when sprinting), drag the Fire button to aim while you shoot; aiming by a corner leans you out round it. Your look and rifle finish are in Profile.</p>
+          <p class="walk-pad">You carry two weapons, drawn anywhere with 1 and 2; change them anywhere in the inventory (Tab), refill them at the gun store counter inside the Armoury or Trench Arms' hatch. Gamepads work too: left stick moves, right stick looks, A jumps, B crouches (slides when sprinting), LB sprints, LT aims (holding it, LB and RB peek left and right), RT fires, X reloads, RB and the D-pad step through the hotbar; with empty hands X punches, Y kicks, LB blocks, A dodges and the left stick pressed sprints; View opens the inventory, the right stick pressed swaps first and third person. On a touch screen, Crouch is over the stick (it slides you when sprinting), with empty hands Punch, Kick and Block take the gun's buttons (Jump dodges with your fists up, standing), drag the Fire button to aim while you shoot; aiming by a corner leans you out round it. Your look and rifle finish are in Profile.</p>
         </div>
       </details>
       <details class="walk-pop walk-profile" data-pop data-profile>
@@ -767,6 +767,8 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     <button type="button" class="fight-btn fight-block" data-fight-block aria-label="Block (hold)">Block</button>
     <button type="button" class="fight-btn fight-dodge" data-fight-dodge aria-label="Dodge">Dodge</button>
     <p class="walk-hint"><kbd>WASD</kbd> move · <kbd>Shift</kbd> sprint · <kbd>Space</kbd> jump · <kbd>V</kbd> camera · <kbd>Esc</kbd> stop</p>
+    {/* Fists on the street (brawl.ts): empty hands, the keys instead (.city.is-fists); on touch the fight's Punch, Kick and Block above take Fire's, Aim's and Reload's places */}
+    <p class="walk-hint fists-hint"><kbd>WASD</kbd> move · <kbd>Click</kbd> punch · <kbd>Right-click</kbd> block · <kbd>G</kbd> kick · <kbd>Space</kbd> dodge (guard up, standing) · <kbd>1</kbd><kbd>2</kbd> draw</p>
     {/* Driving your car (drive.ts): speed readout, key hint, touch pedals (the stick steers) */}
     <p class="walk-hint drive-hint"><kbd>W</kbd><kbd>S</kbd> gas / brake · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>Space</kbd> handbrake · <kbd>H</kbd> horn · <kbd>V</kbd> camera · <kbd>F</kbd> get out</p>
     <div class="drive-hud" data-drive-hud hidden aria-hidden="true">

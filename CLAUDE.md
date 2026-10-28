@@ -3237,7 +3237,8 @@ it and has been retired completely. Build only on what's here.
   an inventory, switching weapons, then fists on the street); keep it up to
   date, one phase at a time with the owner's sign-off. Phase 1 (the
   inventory) and the controls after it (the owner's call: Tab opens a 4 x 4
-  grid with two weapon slots) are built: what Degen carries is the save's
+  grid with two weapon slots) and Phase 2 (fists on the street, below) are
+  built: what Degen carries is the save's
   `inventory` (v11: two weapon slots, `guns`, either may be empty; the
   thing in his hand, `held`, kept in step with the look by `setHeld()`; his
   consumables, `items`; where each thing lies in the grid, `grid`), its
@@ -3287,12 +3288,35 @@ it and has been retired completely. Build only on what's here.
   (gunshop.ts: tap a slot, then a gun, or "Leave it empty"; picking
   gears him up with the first weapon, all full); the guns
   not carried wait in the bag. Ammo stays free. Either gun is drawn
-  anywhere (`combat.draw()`: the first time it gears him up, full; G draws
-  too), and a swap goes only within the loadout (`kit` in combat-sim.ts,
+  anywhere (`combat.draw()`: the first time it gears him up, full; with
+  empty hands G kicks, it holsters a gun that's out), and a swap goes only within the loadout (`kit` in combat-sim.ts,
   `setKit()`: `null` any gun (an older browser), `[]` none, which holsters
   him; online the `equip` message's `l` and the `kit` message (its gun `w`
   optional, taken anywhere), `cleanKit()`, `PROTOCOL` 4). The guns'
   silhouettes are `gunart.ts`.
+- **Fists on the street** (Phase 2): empty hands are the fists. The rules
+  are `brawl-sim.ts` (DOM-free, tested in `tests/brawl.test.ts`): one
+  fighter of the fight's rules (fight-sim.ts, the save's style) put where
+  Degen stands each tick, so it only times the moves (frames, chains, the
+  block, the dodge, stamina) and hands back what a move moves him (a
+  step in, the dodge's slide) for walk mode to move him by through its
+  collisions; a `strike` on a move's first active frame; the guard up
+  with any press and `BRAWL.guard` after, dropped by sprinting. The hits
+  are `melee()` in combat-sim.ts (the dummies in reach, arc and height,
+  `strikeHeight()` in fight-moves.ts, shared with the ring; the drones
+  fly out of a fist's reach; nothing with a gun out; online the `melee`
+  message, which the server checks the same way); a dummy down by hand
+  counts `fistDowns` too (`takedown(s, kind, hand)`; missions Bare hands
+  and Street fighter, badge Bare knuckles). The look is `brawl.ts` (walk
+  mode's chunk): `lay()` puts the fight's clip on his pose after the
+  walk, the upper body over the motion capture (`upperW`), a kick or the
+  dodge whole and standing (`rooted`). Controls: click punch, right-click
+  held block, G kick, Space dodges with the guard up and standing (jumps
+  otherwise), Shift sprints; touch (`.is-fists` on the root): Punch,
+  Block and Kick in Fire's, Reload's and Aim's places; gamepad X punch, Y
+  kick, LB held block, A dodge, the run on L3. A swing makes anyone near
+  step aside (`swing` in life.ts, a `bump`): the crowd is never a target.
+  The lab's Brawl program (`?anim&prog=brawl`) plays them.
 - **Free play** (a test switch, the owner's call: everything free to
   check it all works): `freeplay.ts` (`FREE_PLAY`, Vite's `__FREE_PLAY__`
   from `PUBLIC_FREE_PLAY=1` in `astro.config.mjs`) makes every price in
@@ -3384,7 +3408,7 @@ it and has been retired completely. Build only on what's here.
   `SOLIDS` except the dummies' own footprints (`SHOT_SOLIDS`), on plot
   buildings and on the ground. When dummies move, their footprints follow
   `DUMMIES` automatically.
-- Keys: click fires, right-click aims, R reloads, G holsters and draws, X
+- Keys: click fires, right-click aims, R reloads, G holsters (with empty hands it kicks: the fists, above), X
   and 1-7 work the hotbar (the inventory, above), Q / E held peek round a corner (animation Phase 4), C crouches and
   slides when sprinting (Phase 5); F does what the
   prompt says (the owner's call: every door, counter and getting in or

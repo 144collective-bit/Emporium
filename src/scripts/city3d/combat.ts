@@ -30,6 +30,7 @@ import { FONT_DISPLAY, fx, glowTex, liveTex, mergeMeshes, moving, neon, PAL, sid
 import { type Tick } from './world';
 import { DRONES, DUMMIES, SWAP_TIME, WEAPONS, WEAPON_IDS, createSim, dronePose, weaponUnlocked, type SimEvent, type TargetKind, type WeaponId } from './combat-sim';
 import type { ClientMsg, MeRow, NetEvent } from '../net/protocol';
+import { MOVES, type MoveId } from './fight-moves';
 import { SKINS, buildGun, gunSpec, type Gun, type SkinId } from './guns';
 import { holdGun, newStance } from './stance';
 import { FIT, RELOAD_CUES } from './gunfit';
@@ -66,8 +67,8 @@ export interface CombatDeps {
   sfx(kind: Sfx, gain?: number): void;
   /** The city's game: the save says which guns are bought and what mods they carry (made after walk mode; only read once walking) */
   game: GameDeps;
-  /** One of your takedowns (XP and counters for the city's game) */
-  onTakedown(kind: TargetKind): void;
+  /** One of your takedowns (XP and counters for the city's game); `hand`, with his fists (brawl.ts) */
+  onTakedown(kind: TargetKind, hand: boolean): void;
 }
 
 const ME = 'me';
@@ -350,6 +351,9 @@ export function createCombat(d: CombatDeps) {
   let touchFire = false;
   /** Online: a trigger pull since the last controls message (a quick tap can fit between two) */
   let pulled = false;
+  /** The last thing his fists landed on (the server's hits and takedowns of it are by hand too), and whether it was a kick */
+  let lastMelee = { target: -1, at: 0, kick: false };
+  const byHand = (target: number, melee?: boolean) => !!melee || (lastMelee.target === target && performance.now() - lastMelee.at < 800);
   let aiming = false;
   let firstPerson = false;
   let kick = 0;
@@ -646,7 +650,7 @@ export function createCombat(d: CombatDeps) {
         if (t.kind === 'dummy') burst(e.at, 5, ['#c99a5a', '#a87c44'], 1.6, 1.2, false, 0.6);
         if (e.player === ME) {
           hitT = 0.15;
-          d.sfx(t.kind === 'drone' ? 'hitMetal' : 'hit');
+          d.sfx(byHand(e.target, e.melee) ? (lastMelee.kick ? 'kick' : 'punch') : t.kind === 'drone' ? 'hitMetal' : 'hit');
           showNumber(e.at, e.damage, e.hp === 0);
           if (!net) addLifetime(10);
         }
@@ -667,7 +671,7 @@ export function createCombat(d: CombatDeps) {
             addLifetime(e.points);
             saveProfile();
           }
-          d.onTakedown(t.kind);
+          d.onTakedown(t.kind, byHand(e.target, e.melee));
           popup(`+${e.points}`, t.kind === 'drone' ? 'Drone down' : 'Takedown');
           if (e.streak >= 2) popup(STREAKS[Math.min(e.streak, 5)] || `x${e.streak}`, `x${e.streak} streak`, 'is-streak');
           paintSkins();
@@ -960,6 +964,18 @@ export function createCombat(d: CombatDeps) {
     reload() {
       sim.reload(ME);
       net?.send({ t: 'reload' });
+    },
+    /**
+     * Fists on the street (brawl.ts): a punch or a kick on its first active frame, by him at (x, y, z) facing
+     * `yaw`; it lands on the first dummy or drone in front of him (combat-sim `melee()`), online the server's
+     * call. Whether it landed (online: whether it should).
+     */
+    melee(move: MoveId, x: number, y: number, z: number, yaw: number) {
+      if (me.armed) return false;
+      const t = sim.melee(ME, x, y, z, yaw, move);
+      net?.send({ t: 'melee', m: move });
+      if (t) lastMelee = { target: t.id, at: performance.now(), kick: MOVES[move].kind === 'kick' };
+      return !!t;
     },
     /** Per frame while walking, before the camera moves (t is 0 under reduced motion). Returns the recoil to add to the camera pitch. */
     update(dt: number, t: number, aim: boolean) {

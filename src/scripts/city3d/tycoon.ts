@@ -316,9 +316,10 @@ export interface Counters {
   sold: number;
   earned: number;
   contracts: number;
-  /** Knocked down */
+  /** Knocked down (shot or by hand), and the dummies knocked down by hand (fists on the street) */
   dummies: number;
   drones: number;
+  fistDowns: number;
   /** Tiles driven in your own car */
   driven: number;
   /** Cars, guns and clothes bought; units, lots and plots bought; buildings built; upgrades (mods and levels) */
@@ -340,7 +341,7 @@ export interface Counters {
   chains: number;
 }
 export type CounterId = keyof Counters;
-export const COUNTER_IDS: CounterId[] = ['sold', 'earned', 'contracts', 'dummies', 'drones', 'driven', 'bought', 'land', 'built', 'upgrades', 'missions', 'kartRaces', 'podiums', 'kartWins', 'cleanLaps', 'overtakes', 'bouts', 'fightWins', 'kos', 'chains'];
+export const COUNTER_IDS: CounterId[] = ['sold', 'earned', 'contracts', 'dummies', 'drones', 'fistDowns', 'driven', 'bought', 'land', 'built', 'upgrades', 'missions', 'kartRaces', 'podiums', 'kartWins', 'cleanLaps', 'overtakes', 'bouts', 'fightWins', 'kos', 'chains'];
 export const newCounters = (): Counters => Object.fromEntries(COUNTER_IDS.map((k) => [k, 0])) as unknown as Counters;
 /** A district plot you own, bought with Dorras */
 export interface OwnedPlot {
@@ -1489,10 +1490,11 @@ export function count(s: TycoonSave, k: CounterId, n = 1) {
   if (!(n > 0)) return;
   s.counters[k] = (s.counters[k] ?? 0) + n;
 }
-/** Takedowns in target practice: counted, with their XP */
-export function takedown(s: TycoonSave, kind: 'dummy' | 'drone') {
+/** Takedowns in target practice: counted, with their XP; `hand`, with his fists (docs/inventory-plan.md Phase 2) */
+export function takedown(s: TycoonSave, kind: 'dummy' | 'drone', hand = false) {
   const k = kind === 'dummy' ? 'dummies' : 'drones';
   count(s, k, 1);
+  if (hand && kind === 'dummy') count(s, 'fistDowns', 1);
   return addXp(s, XP[kind]);
 }
 

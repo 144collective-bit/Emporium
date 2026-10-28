@@ -638,6 +638,10 @@ export function createHotbar(root: HTMLElement, d: HotbarDeps) {
     get heldOut() {
       return !d.combat.armed && hand === 'held';
     },
+    /** Nothing in his hands (no gun drawn, nothing held out): his fists (brawl.ts) */
+    get handsEmpty() {
+      return !d.combat.armed && (hand === 'hands' || !save().inventory.held);
+    },
     /** Walking starts with the thing in his hand out, as before the inventory */
     reset() {
       hand = 'held';

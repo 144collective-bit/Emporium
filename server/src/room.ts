@@ -19,6 +19,7 @@ import { DurableObject } from 'cloudflare:workers';
 import * as THREE from 'three';
 import { POINTS, WEAPON_IDS, createSim, weaponUnlocked, type SimEvent, type WeaponId } from '../../src/scripts/city3d/combat-sim';
 import { RACK, rayBoxes } from '../../src/scripts/city3d/solids';
+import { MOVES, type MoveId } from '../../src/scripts/city3d/fight-moves';
 import { ARMS } from '../../src/scripts/city3d/avenue';
 import { EMOTES, PHRASES } from '../../src/scripts/net/profile-data';
 import {
@@ -58,6 +59,9 @@ const INPUT_STALE = 250;
 const IDLE_KICK = 90_000;
 /** Where a player may gear up: the gun stores' counters */
 const COUNTERS = [RACK, ARMS.counter];
+/** Fists: a punch or a kick of the fight's moves (not the dodge), and the shortest gap between two (ms: a jab's start-up and active frames) */
+const isStrike = (m: unknown): m is MoveId => typeof m === 'string' && m in MOVES && MOVES[m as MoveId].kind !== 'dodge';
+const MELEE_GAP = ((MOVES.jab.startup + MOVES.jab.active) * 1000) / 60;
 
 interface Player {
   id: number;
@@ -322,6 +326,12 @@ export class Room extends DurableObject<Env> {
         break;
       case 'reload':
         this.sim.reload(id);
+        break;
+      case 'melee':
+        // Fists on the street: a punch or a kick of the fight's moves, on foot, from where the server has them,
+        // no faster than the quickest move comes round (a jab's start-up and active frames)
+        if (!isStrike(m.m) || modeOf(p.flags) !== 'walk' || !this.allow(p, 'melee', MELEE_GAP)) break;
+        this.sim.melee(id, p.pos.x, p.pos.y, p.pos.z, p.face, m.m);
         break;
       case 'emote':
         if (EMOTES.some((e) => e.id === m.e) && this.allow(p, 'chat', 1200)) this.broadcast({ t: 'emote', id: p.id, e: m.e }, p.id);

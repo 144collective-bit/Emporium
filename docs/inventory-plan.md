@@ -154,7 +154,7 @@ brawlsite.ts      the sparring partners' spots (DOM-free, tested)
    picked, the fists slot holstering the gun (the guard comes in Phase
    2). Checked at 320, 375, 768, 1024 and 1440 wide, upright and on
    their side; the protocol bumped and tested on workers.dev.
-2. **Fists on the street.** `brawl.ts`: the guard up with empty hands, the
+2. **Fists on the street** (built; as built below). `brawl.ts`: the guard up with empty hands, the
    moves over the walk, the controls above, the dummies and drones as
    melee targets with takedowns, the crowd stepping aside, the sounds,
    the lab's Brawl program and the rubric's rows. The missions and
@@ -274,6 +274,61 @@ brawlsite.ts      the sparring partners' spots (DOM-free, tested)
   and finishes' scores 0, the kart cups and the trainer's opponents open from level 1, and `pay()` always pays. The "Build site" Action
   and the Worker's build leave it unset, so the live site folds it away;
   take it off the preview before anything goes live from there.
+
+## Phase 2, as built
+
+- **The rules** are `brawl-sim.ts` (DOM-free, tested in
+  `tests/brawl.test.ts`): one fighter of the fight's rules
+  (`createFightSim()`) in the save's style, put where Degen stands and
+  facing his way every tick, so the sim only times the moves (their
+  frames, the chains, the press buffer, the block, the dodge and
+  stamina); what a move moves him itself (a strike's step in, the
+  dodge's slide) comes back as `dx, dz` and walk mode moves him by it
+  through its collisions. A move fires a `strike` on its first active
+  frame, once. The guard comes up with any press or the block and stays
+  `BRAWL.guard` (4 s) after the last, then drops; sprinting drops it and
+  throws nothing. Blocking, he walks no faster than `BRAWL.blockSpeed`.
+  Out of stamina: "Out of breath", nothing thrown until some is back.
+- **The hits** are `combat-sim.ts`'s `melee(id, x, y, z, yaw, move)`: a
+  dummy within the move's reach (and its board's half-width and `MELEE`'s
+  slack), inside its arc unless very close, at the strike's height
+  (`strikeHeight()` in `fight-moves.ts`, shared with the ring); the
+  move's damage, the takedown marked `melee`. Nothing with a gun in his
+  hands. The patrol drones fly out of a fist's reach from the street (the
+  test holds it): they stay the guns' targets. Online the browser sends
+  `{ t: 'melee', m }` and the server runs the same test from where it has
+  him (`room.ts`, at most one a `MELEE_GAP`); no protocol bump, an older
+  server ignores it.
+- **The look** is `brawl.ts` (walk mode's chunk with the hotbar, fetched
+  when walking starts): `lay(P, upper, whole)` puts the fight's clip
+  (fight-anim.ts) on his pose after the walk has posed him. Punches, the
+  block and the guard are the upper body (the arms, the lean, the
+  spine's twist with the clip's hip turn, the head, the fists closed)
+  over the motion-captured walk through the upper mask (`upperW`); a kick
+  or the dodge takes him whole, standing (`rooted`: the motion capture
+  steps aside, he doesn't walk). With the guard up he faces where the
+  camera looks.
+- **Controls** as decided: click punch, right-click held block, G kick
+  (empty hands; armed, G holsters as before), Space dodges with the guard
+  up and standing (otherwise it jumps), Shift sprints. Touch (`.is-fists`
+  on the city's root while his hands are empty): Punch, Block and Kick in
+  Fire's, Reload's and Aim's places, Jump dodging as Space does. Gamepad:
+  X punch, Y kick (when no prompt is near), LB held block, A dodge; the
+  run moved to L3 while the fists are up. The desktop key hint
+  (`.fists-hint`) and the Controls panel list them.
+- **The crowd** steps aside from a swing (`swing` in `life.ts`: anyone
+  within the reach and `BRAWL.crowd` takes a `bump` away from him); never
+  a target. **Sounds**: the fight's whoosh on every swing, `punch` /
+  `kick` on a hit.
+- **Rewards**: a dummy knocked down by hand counts `fistDowns` (as well as
+  `dummies`): missions Bare hands (level 1, three) and Street fighter
+  (level 3, twenty), badge Bare knuckles (twenty-five).
+- **The lab**: the Brawl program (`?anim&prog=brawl`, in the Reel): a
+  jab-cross-hook, a kick, punches walking, a dodge and the block; J / K /
+  L by hand; the readout's Fists row. The rubric's rows run over the
+  motion capture, which the fists only lay their upper body on, so the
+  street clips are held in `tests/brawl.test.ts` instead (the legs left
+  to the walk, a kick taking them, every move ending on the guard).
 
 ## Open questions (small; the owner can answer as they come)
 
