@@ -407,7 +407,7 @@ Asked before planning (2026-10-28):
   the paints, and the four style tabs rows of chips and swatches
   (`STYLE`); the stock choice of a part the model has its own of reads
   "Its own". The hangar keeps its own grid without tabs.
-- Boot cost: 0.7 KB (666.8 of 670 KB), the ids and the cleaning.
+- Boot cost: 0.7 KB (666.8 of 670 KB at the time; 661.6 once the grand station was retired), the ids and the cleaning.
 
 ### Phase 6: three more cars
 
