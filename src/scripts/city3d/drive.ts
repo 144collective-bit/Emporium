@@ -30,6 +30,7 @@ import * as THREE from 'three';
 import { createDegen, type Degen, type Outfit } from './character';
 import type { Sfx } from './combat';
 import { CARS, type Car } from './cars';
+import { INTERIORS } from './carinside';
 import { carLights, circles, gearOf, newCar, newSignal, reachOf, skidding, stepCar, tune, type CarState, type DriveInput, type DriveTune, type TurnSignal } from './drive-sim';
 import { blinkOn } from './traffic';
 import { DECK_WALLS, departuresSurface } from './airfield';
@@ -79,6 +80,8 @@ export interface DriveDeps {
 
 const damp = (k: number, dt: number) => 1 - Math.exp(-k * dt);
 const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
+/** How long the door stays open as you get out, before it shuts behind you (seconds) */
+const DOOR_HOLD = 0.9;
 /** Tiles per second to km/h (a tile is about 1.8 m) */
 const KMH = 1.8 * 3.6;
 
@@ -96,7 +99,7 @@ export function createDrive(d: DriveDeps) {
     group: THREE.Group;
     drive(dist: number, steer: number): void;
     dispose(): void;
-    seat?(degen: Degen | null): void;
+    seat?(degen: Degen | null, from?: number): void;
     /** Your car, for its hooks once it's fitted out (carride.ts: `ride` says it leaned the body itself, `eye` is the seat's view) */
     car?: Car;
     /** The car's lights (not the kart's) */
@@ -209,7 +212,7 @@ export function createDrive(d: DriveDeps) {
       dispose: () => taken.car.dispose(),
       lights: (brake, reverse, turn) => taken.car.lights(brake, reverse, turn),
       // (you at the wheel once the car's been fitted out: carcabin.ts, after the boot)
-      seat: (deg) => taken.car.seat?.(deg),
+      seat: (deg, from) => taken.car.seat?.(deg, from),
       car: taken.car,
       state: newCar(taken.x, taken.z, taken.yaw),
       tune: { top: 0, reverse: 0, accel: 0, brake: 0, grip: 0, L: spec.L, W: spec.W, wheelbase: 1 },
@@ -297,24 +300,30 @@ export function createDrive(d: DriveDeps) {
      * The nearest vehicle you could get into (the turntable's car and the pits' kart count), for getting in
      * (moments.ts): its body's middle, heading and size
      */
-    doorOf(x: number, z: number): { kind: 'car' | 'kart'; x: number; z: number; yaw: number; W: number; L: number } | null {
+    doorOf(x: number, z: number): { kind: 'car' | 'kart'; x: number; z: number; yaw: number; W: number; L: number; model?: PlayerCar } | null {
       const n = nearest(x, z);
       if (!n) return null;
       if (n.kind === 'car') {
-        if (car) return { kind: 'car', x: car.state.x, z: car.state.z, yaw: car.state.yaw, W: car.tune.W, L: car.tune.L };
-        const spec = CARS[d.myCar().model];
-        return { kind: 'car', x: d.garage.turntable.x, z: d.garage.turntable.z, yaw: Math.PI / 2, W: spec.W, L: spec.L };
+        if (car) return { kind: 'car', x: car.state.x, z: car.state.z, yaw: car.state.yaw, W: car.tune.W, L: car.tune.L, model: car.model as PlayerCar };
+        const model = d.myCar().model;
+        // (on the turntable: the way it faces there)
+        return { kind: 'car', x: d.garage.turntable.x, z: d.garage.turntable.z, yaw: d.garage.yaw, W: CARS[model].W, L: CARS[model].L, model };
       }
       if (kart) return { kind: 'kart', x: kart.state.x, z: kart.state.z, yaw: kart.state.yaw, W: kart.tune.W, L: kart.tune.L };
       const home = d.kart.home();
       return home ? { kind: 'kart', x: home.x, z: home.z, yaw: home.yaw, W: 0.95, L: 1.2 } : null;
     },
+    /** Open your car's front door nearest a point (0 the driver's, 1 the passenger's), shut again after `hold` seconds: the hand on its handle (vehicle plan Phase 3) */
+    swing(x: number, z: number, side: number, hold: number) {
+      if (nearest(x, z)?.kind !== 'car') return;
+      (car ? car.car : d.garage.car)?.door?.(side, hold);
+    },
     /** Does a parked vehicle block this spot (walking)? */
     blocks(x: number, z: number, pad: number) {
       return parkedCircles().some((c) => Math.hypot(c.x - x, c.z - z) < c.r + pad);
     },
-    /** Get into the nearest vehicle (from the turntable, the pits, or wherever it's parked) */
-    enter(x: number, z: number) {
+    /** Get into the nearest vehicle (from the turntable, the pits, or wherever it's parked); `from` 1: by your car's passenger door */
+    enter(x: number, z: number, from = 0) {
       if (out) return false;
       const n = nearest(x, z);
       if (!n) return false;
@@ -327,7 +336,7 @@ export function createDrive(d: DriveDeps) {
       v.tune = tuneOf(v);
       if (v.seat) {
         driver ??= createDegen(d.outfit());
-        v.seat(driver);
+        v.seat(driver, from);
       }
       camYaw = v.state.yaw;
       lookYaw = lookPitch = 0;
@@ -376,8 +385,16 @@ export function createDrive(d: DriveDeps) {
         [s.x - fx * end, s.z - fz * end],
         [s.x + fx * end, s.z + fz * end],
       ];
-      const [x, z] = spots.find(([px, pz]) => d.free(px, pz)) ?? spots[0];
-      // (`from`: its seat, for the step out, moments.ts)
+      const i = Math.max(0, spots.findIndex(([px, pz]) => d.free(px, pz)));
+      const [x, z] = spots[i];
+      // Your car: out of a front door (it swings open and shut behind him) from that side's seat; `from` is where the
+      // step out starts (moments.ts), `seat` the hips' height there
+      const n = v.kind === 'car' ? INTERIORS[v.model as PlayerCar] : null;
+      if (n?.door && i < 2) {
+        v.car?.door?.(i, DOOR_HOLD);
+        const off = (i ? 1 : -1) * Math.abs(n.hip[2]);
+        return { x, z, yaw: s.yaw + Math.PI / 2, kind: v.kind, from: { x: s.x + fx * n.hip[0] + rx * off, z: s.z + fz * n.hip[0] + rz * off }, seat: n.hip[1] };
+      }
       return { x, z, yaw: s.yaw + Math.PI / 2, kind: v.kind, from: { x: s.x, z: s.z } };
     },
     /**

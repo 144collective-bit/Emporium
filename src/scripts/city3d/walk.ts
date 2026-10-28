@@ -65,7 +65,8 @@ import { bankY } from './kartfacility';
 import type { RaceStart } from './kart-types';
 import type { Cond } from './kartcircuit';
 import { COUNTER, TRAINER } from './fightsite';
-import { MOMENT, type Mark, type Moment, type Vehicle, alightMark, benchMark, boardMark, counterMark, crateMark, createMoment, doorMark, liftMark } from './moments';
+import { MOMENT, type Mark, type Moment, type Vehicle, alightMark, benchMark, boardMark, carMark, counterMark, crateMark, createMoment, doorMark, liftMark } from './moments';
+import { INTERIORS } from './carinside';
 import { CARS } from './cars';
 import { toon } from './kit';
 import { BENCHES } from './pedestrians';
@@ -169,6 +170,10 @@ function lazyMenu<T extends object>(opens: (keyof T & string)[], load: () => Pro
 /** The gaze before its module is in: straight ahead */
 const STILL_GAZE = { yaw: 0, pitch: 0 };
 const SCALE = 0.85;
+/** Getting into your car: how far through the reach to the handle the door starts to open (of the clip up to the car taking him) */
+const HAND_ON = 0.35;
+/** The quick swap's fade out (ms), as fast travel's */
+const QUICK_FADE = 260;
 /** How far you can go: the world's edge */
 const BOUNDS = WORLD_BOUNDS;
 /** Downtown's blocks, the districts and the extra lots (garage, market...) with their sidewalks: the raised ground (with bounding boxes for a quick test first) */
@@ -178,6 +183,10 @@ const slabs = PLAN.slabs.map(slabOf);
 export function addSlabs(polys: Pt[][]) {
   slabs.push(...polys.map(slabOf));
 }
+/** The garage's turntable in a grid's copy (the grids hold their own copies of the boxes: matched by numbers) */
+const isTurntable = (b: Box) => b[0] === TURNTABLE_BOX[0] && b[1] === TURNTABLE_BOX[1] && b[2] === TURNTABLE_BOX[2] && b[3] === TURNTABLE_BOX[3];
+/** The turntable's disc: stood on while getting into your car at home, its top over the forecourt */
+const DISC = { ...GARAGE_SITE.turntable, top: 0.07 };
 /** What your own car bumps into: everything solid but the turntable it starts on */
 const CAR_SOLIDS = SOLIDS.filter((b) => b !== TURNTABLE_BOX);
 /** What a car or an aircraft bumps into, in the collision grid (boxgrid.ts) */
@@ -429,6 +438,8 @@ export function createWalk(d: WalkDeps) {
   const joy = { x: 0, y: 0, id: -1 };
   const pad = { x: 0, y: 0, run: false, prev: [] as boolean[] };
   let near: { id: Near; label: string } | null = null;
+  /** The getting-in moment whose door has been swung open (once each) */
+  let swungFor: Mark | null = null;
   /**
    * The game's moments (moments.ts, the revamp's Phase 4): a door's push, a lean on a counter, a sit on a bench,
    * played between the prompt's press and what it opens; walk.ts walks him onto the mark, then its keyed pose
@@ -453,8 +464,8 @@ export function createWalk(d: WalkDeps) {
       if (room > best) (best = room), (benchYaw = y);
     }
   }
-  /** What a prompt is a moment at: its mark, or null to open at once */
-  const markFor = (n: { id: Near; label: string }) => {
+  /** What a prompt is a moment at: its mark, null to open at once, or 'quick' for the swap with a fade (your car's side blocked) */
+  const markFor = (n: { id: Near; label: string }): Mark | null | 'quick' => {
     const y = groundAt(pos.x, pos.z, pos.y);
     const door = (at: { x: number; z: number }) => doorMark(at, pos.x, pos.z, y, (bx, bz) => blocked(bx, bz, pos.y));
     if (n.id === 'gear') return n.label === ARMS.name ? counterMark({ x: ARMS.counter.x, z: ARMS.street }, y + ARMS.hatch.y, y, pos.x, pos.z) : counterMark(RACK_TOP, y + RACK_TOP_H, y, pos.x, pos.z);
@@ -465,7 +476,14 @@ export function createWalk(d: WalkDeps) {
     // Getting in (step 2): the car's or the kart's side nearest him, the aircraft's door, the hire boat's ladder
     if (n.id === 'car') {
       const v = drive.doorOf(pos.x, pos.z);
-      return v ? sideMark(v.kind, v, MOMENT[v.kind].seat) : null;
+      if (!v) return null;
+      // Your car (vehicle plan Phase 3): by the door on his side, onto its real seat; that side blocked, the quick
+      // swap; under reduced motion always the quick version, no fade
+      const inside = v.kind === 'car' && v.model ? INTERIORS[v.model] : null;
+      if (!inside?.door) return sideMark(v.kind, v, MOMENT[v.kind].seat);
+      if (d.reduced) return null;
+      // (at home the turntable is stood on to get in: carMark's spot is by the door, on the disc)
+      return carMark(v, { hip: inside.hip, door: inside.door }, pos.x, pos.z, y, SCALE, (bx, bz) => blocked(bx, bz, pos.y, isTurntable)) ?? 'quick';
     }
     if (n.id === 'plane') {
       if (fly.active) return null;
@@ -563,7 +581,14 @@ export function createWalk(d: WalkDeps) {
     };
     // (on foot and not in the middle of something: the moment first, then what it opens as the hand lands)
     const mk = !drive.active && !over && !slide && !emote && !carrying ? markFor(n) : null;
-    if (mk) {
+    if (mk === 'quick') {
+      // (the city fades out and in round the swap, as fast travel's does)
+      root.classList.add('is-fading');
+      setTimeout(() => {
+        open();
+        requestAnimationFrame(() => root.classList.remove('is-fading'));
+      }, QUICK_FADE);
+    } else if (mk) {
       contact?.reset();
       pickBenchYaw(mk);
       moments.start(mk, open, pos.x, pos.z);
@@ -591,6 +616,8 @@ export function createWalk(d: WalkDeps) {
     const mall = mallFloor(x, z, yNow);
     if (mall !== null) return mall;
     if (slab === 0.035 && inChannel(x, z)) return shoreY(x, z) + 0.035;
+    // (the garage's turntable: its disc's top, where your car stands and you step on to get in)
+    if (slab === SLAB && Math.hypot(x - DISC.x, z - DISC.z) < DISC.r) return SLAB + DISC.top;
     const base = Math.max(slab, bridgeY(x, z, yNow) ?? 0, onJetty(x, z) ? SLAB + JETTY.y : 0, SLAB + (terraceY(x, z) ?? -SLAB), SLAB + (skyDeckY(x, z, yNow - SLAB) ?? -SLAB), stationY(x, z) ?? 0);
     if (x < KART_PARK.x0 || x > KART_PARK.x1 || z < KART_PARK.z0 || z > KART_PARK.z1) return base;
     const t = trackSurfaceAt(x, z, yNow);
@@ -1103,7 +1130,8 @@ export function createWalk(d: WalkDeps) {
   let driven = 0;
   function getIn() {
     if (combat.armed) combat.toggleHolster();
-    if (!drive.enter(pos.x, pos.z)) return;
+    // (in by your car's passenger door, the moment's: he slides over to the wheel)
+    if (!drive.enter(pos.x, pos.z, moments.mark?.kind === 'board' ? (moments.mark.side ?? 0) : 0)) return;
     still(false);
     hero.g.visible = hero.ring.visible = false;
     near = null;
@@ -1116,7 +1144,9 @@ export function createWalk(d: WalkDeps) {
     const out = drive.exit();
     if (!out) return;
     standAt(out);
-    alight(out.kind, out.from, out, MOMENT[out.kind].seat);
+    // (your car: from its real seat, the hips at its hip point; under reduced motion just out, the quick version)
+    if (out.seat !== undefined && d.reduced) return;
+    alight(out.kind, out.from, out, out.seat !== undefined ? out.seat - 0.03 * SCALE : MOMENT[out.kind].seat);
   }
   /** Into your aircraft (the gun is holstered) */
   function board() {
@@ -2163,6 +2193,12 @@ export function createWalk(d: WalkDeps) {
     // Towards it on the springs (movesim.ts; hardly any control in the air), facing where he's
     // going, or where you look when aiming / in first person; a moment's approach walks him onto its mark
     const mg = moments.update({ dt, x: pos.x, z: pos.z, face, speed: vel.length() });
+    // Getting into your car: its door swings open as the hand comes to the handle (and shuts again if he never gets in)
+    const bm = moments.mark;
+    if (bm?.kind === 'board' && bm.side !== undefined && bm !== swungFor && moments.phase === 'play' && moments.u >= (bm.fireAt ?? 1) * HAND_ON) {
+      swungFor = bm;
+      drive.swing(pos.x, pos.z, bm.side, 2.5);
+    }
     // (sitting down he turns his back to the bench, where the camera would be: it comes round to his front-left,
     // a three-quarter view of him on the bench, and is yours again once he's seated)
     if (moments.active && moments.mark?.kind === 'bench' && (moments.phase === 'approach' || moments.phase === 'play')) yaw += wrap(benchYaw - yaw) * damp(4, dt);
@@ -2216,12 +2252,14 @@ export function createWalk(d: WalkDeps) {
       }
       vel.set(ms.vx, ms.vz);
       const v0 = vel.length();
-      const stuck = blocked(pos.x, pos.z, pos.y);
+      // (getting into your car at home, the approach steps onto the turntable)
+      const skip = moments.active && moments.mark?.kind === 'board' && moments.mark.side !== undefined ? isTurntable : undefined;
+      const stuck = blocked(pos.x, pos.z, pos.y, skip);
       const nx = pos.x + vel.x * dt;
-      if (stuck || !blocked(nx, pos.z, pos.y)) pos.x = nx;
+      if (stuck || !blocked(nx, pos.z, pos.y, skip)) pos.x = nx;
       else vel.x = 0;
       const nz = pos.z + vel.y * dt;
-      if (stuck || !blocked(pos.x, nz, pos.y)) pos.z = nz;
+      if (stuck || !blocked(pos.x, nz, pos.y, skip)) pos.z = nz;
       else vel.y = 0;
       hitWall = !slide && grounded && (vel.x !== ms.vx || vel.y !== ms.vz);
       hitSpeed = hitWall ? v0 : 0;

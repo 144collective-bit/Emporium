@@ -47,7 +47,7 @@ export const MOMENT = {
   /** Getting in: how far short of the vehicle's side he stands, the clip's length by vehicle, the share of it at which the vehicle takes him (the hero hidden, the ride's own figure in the seat), and getting out */
   board: { stand: 0.42, t: { car: 0.75, kart: 0.8, plane: 0.85, boat: 0.9 }, fireAt: { car: 0.72, kart: 0.8, plane: 0.85, boat: 0.75 }, out: 0.7 },
   /** The car's handle height and the seat's over the ground; the kart's pod and seat; the aircraft's door frame (two hands) and sill; the boat's rails and its deck under the quay */
-  car: { handle: 0.5, seat: 0.32, lean: 0.4, bob: -0.18 },
+  car: { handle: 0.5, seat: 0.32, lean: 0.4, bob: -0.18, out: 0.42, behind: 0.04, turn: 0.45 },
   kart: { pod: 0.36, seat: 0.26, lean: 0.6, bob: -0.16 },
   plane: { frame: [0.78, 1.0] as [number, number], sill: 0.45, lean: 0.3, bob: -0.08 },
   boat: { rail: 0.72, railSide: 0.34, deck: -1.2, lean: 0.35, bob: -0.1 },
@@ -74,8 +74,11 @@ export interface Mark {
   hands: { x: number; y: number; z: number }[];
   /** A bench: its seat (world: where his root goes, the seat's height); a vehicle: where its seat takes him (board) or gives him back (alight); a crate: where it stands */
   seat?: { x: number; z: number; y: number };
-  /** Getting in or out: which vehicle */
+  /** Getting in or out: which vehicle; your car's door (0 the driver's, 1 the passenger's) */
   vehicle?: Vehicle;
+  side?: 0 | 1;
+  /** One hand on the thing: which (0 his right, the default; 1 his left) */
+  hand?: 0 | 1;
   /** The share of the clip at which `open` runs (a door's panel, the vehicle taking him, the lift's fade, the crate in hand) */
   fireAt?: number;
   /** The clip's length (seconds), where it isn't the kind's own */
@@ -165,6 +168,51 @@ export function boardMark(vehicle: Vehicle, door: { x: number; z: number }, seat
   else if (vehicle === 'plane') hands.push({ x: px + rx * 0.2, y: y + MOMENT.plane.frame[0], z: pz + rz * 0.2 }, { x: px - rx * 0.2, y: y + MOMENT.plane.frame[1], z: pz - rz * 0.2 });
   else hands.push({ x: door.x + rx * MOMENT.boat.railSide, y: y + MOMENT.boat.rail, z: door.z + rz * MOMENT.boat.railSide }, { x: door.x - rx * MOMENT.boat.railSide, y: y + MOMENT.boat.rail, z: door.z - rz * MOMENT.boat.railSide });
   return { kind: 'board', vehicle, x, z, y, face, hands, seat, fireAt: MOMENT.board.fireAt[vehicle], t: MOMENT.board.t[vehicle] };
+}
+
+/** What carMark() reads of a car's inside (carinside.ts `Interior`): the driver's hip point, the door's edges and handle */
+export interface Doorway {
+  hip: [number, number, number];
+  door: { back: number; hinge: number; handle: [number, number] };
+}
+
+/**
+ * Getting into your car (vehicle plan Phase 3): by the door on the side he's on, the driver's on its left (`side`
+ * 0) or the passenger's (1: the seat across, and he slides over to the wheel once in). He stands by the door's back
+ * edge, `car.out` off the body (clear of the door as it swings open), facing into the doorway turned `car.turn`
+ * towards the front, the nearer hand to the handle; the clip takes his root to that side's seat (the hips at the
+ * seat's hip point). Null when that spot can't be stood on: the quick swap instead.
+ */
+export function carMark(car: { x: number; z: number; yaw: number; W: number }, n: Doorway, fx: number, fz: number, y: number, scale: number, blocked?: (x: number, z: number) => boolean): Mark | null {
+  const fwx = Math.cos(car.yaw);
+  const fwz = -Math.sin(car.yaw);
+  const rx = Math.sin(car.yaw);
+  const rz = Math.cos(car.yaw);
+  const side = (fx - car.x) * rx + (fz - car.z) * rz >= 0 ? 1 : 0;
+  const sg = side ? 1 : -1;
+  const at = (u: number, v: number) => ({ x: car.x + fwx * u + rx * v, z: car.z + fwz * u + rz * v });
+  const stand = at(n.door.back - MOMENT.car.behind, sg * (car.W / 2 + MOMENT.car.out));
+  if (blocked?.(stand.x, stand.z)) return null;
+  const face = Math.atan2(-sg * rx + MOMENT.car.turn * fwx, -sg * rz + MOMENT.car.turn * fwz);
+  const [hx, hy] = n.door.handle;
+  const handle = at(hx, sg * (car.W / 2 + MOMENT.palm));
+  // (his right is (-cos face, sin face): the hand on the handle's side of him)
+  const hand = (handle.x - stand.x) * -Math.cos(face) + (handle.z - stand.z) * Math.sin(face) >= 0 ? 0 : 1;
+  const seat = at(n.hip[0], sg * Math.abs(n.hip[2]));
+  return {
+    kind: 'board',
+    vehicle: 'car',
+    x: stand.x,
+    z: stand.z,
+    y,
+    face,
+    hands: [{ x: handle.x, y: y + hy, z: handle.z }],
+    hand,
+    side,
+    seat: { x: seat.x, z: seat.z, y: y + n.hip[1] - 0.03 * scale },
+    fireAt: MOMENT.board.fireAt.car,
+    t: MOMENT.board.t.car,
+  };
 }
 
 /** Getting out: from the vehicle's `seat` (world) to where he stands, `at`, facing `face`; plays at once (no approach) */

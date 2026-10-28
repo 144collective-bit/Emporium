@@ -78,6 +78,9 @@ test('the driver\'s door is between two seams, wide and tall enough to get in by
     assert.ok(hip > d.back && hip < d.hinge, `${s.id}: the seat is in the doorway`);
     assert.ok(d.y1 - d.y0 > 0.4 && d.y1 <= roofAt(s, d.back), `${s.id}: tall enough, under the roof`);
     assert.ok(d.open > 0.5 && d.open < Math.PI / 2, `${s.id}: swings open, not round onto the wing`);
+    const [hx, hy] = d.handle;
+    assert.ok(hx > d.back && hx < d.hinge, `${s.id}: the handle is on the door`);
+    assert.ok(hy > d.y0 + 0.15 && hy < beltAt(s, hx), `${s.id}: the handle is under the window line, at a hand's height`);
   }
 });
 
