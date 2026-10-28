@@ -95,7 +95,7 @@ import { MARKET_SPAWN } from './nightmarket';
 import { BLOCK_SPAWN } from './projects';
 import { AVENUE_SPAWNS } from './avenue';
 import { buildFightClub } from './fightclub';
-import { fightRecordHtml } from './fight-ui';
+import { fightRecordHtml } from './fight-records';
 import { kartRecordsHtml } from './kart-records';
 import { destAt } from './tycoon';
 import { guideAt } from './guide';

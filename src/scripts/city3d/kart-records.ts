@@ -3,7 +3,7 @@
  * (index.ts, at the boot) and the hut's menu (kart-ui.ts, loaded with the
  * race) both use them.
  */
-import { CUPS, CUP_IDS } from './kart-sim';
+import { CUPS, CUP_IDS } from './kart-cups';
 import { COURSES, COURSE_IDS, type CourseId } from './kartcircuit';
 import { PLAYER_KARTS } from './mykart';
 import { ownsKart, recordKey, type TycoonSave } from './tycoon';
