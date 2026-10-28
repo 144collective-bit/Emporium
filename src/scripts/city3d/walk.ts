@@ -64,15 +64,14 @@ import { KART_PARK } from './kartpark';
 import { bankY } from './kartfacility';
 import type { RaceStart } from './kart-types';
 import type { Cond } from './kartcircuit';
-import { createFightUI } from './fight-ui';
 import { COUNTER, TRAINER } from './fightsite';
 import { MOMENT, type Mark, type Moment, type Vehicle, alightMark, benchMark, boardMark, counterMark, crateMark, createMoment, doorMark, liftMark } from './moments';
 import { CARS } from './cars';
 import { toon } from './kit';
 import { BENCHES } from './pedestrians';
-import type { Fight, FightClub, FightInput } from './fight-types';
+import type { Fight, FightClub, FightInput, FightUI } from './fight-types';
 import type { KartPark, KartRace, KartUI } from './kart-types';
-import { CUPS } from './kart-sim';
+import { CUPS } from './kart-cups';
 import type { KartInput } from './kart-sim';
 import { abandonSeries, seriesNext } from './tycoon';
 import { CAMERA_GRID, DOORS, GARAGE_SITE, RACK, SOLIDS, SOLID_GRID, SOLID_GRIDS, TURNTABLE_BOX, WALK_SPAWN, rayBoxes, type Box } from './solids';
@@ -148,8 +147,8 @@ const GRAVITY = 11.5;
 /** How long a hard landing shakes the camera */
 const LAND_SHAKE = 0.3;
 /**
- * A menu whose module loads the first time it's opened (the gun store, the garage's and the hangar's: none in the
- * boot): until then it's shut (`open` false, its other calls do nothing) and a call in `opens` loads it and then
+ * A menu whose module loads the first time it's opened (the gun store, the garage's, the hangar's and the
+ * trainer's: none in the boot): until then it's shut (`open` false, its other calls do nothing) and a call in `opens` loads it and then
  * opens it. The menus are closures over object literals, so a method called on the stand-in is the real one's.
  */
 function lazyMenu<T extends object>(opens: (keyof T & string)[], load: () => Promise<T>): T {
@@ -929,7 +928,8 @@ export function createWalk(d: WalkDeps) {
   });
   /* ---------- The Fight Club: the trainer's menu, the fight in its ring (fight-ui.ts, fight.ts) ---------- */
 
-  const fightUI = createFightUI(root, {
+  // (the menu loads the first time the trainer opens it: not in the boot)
+  const fightUI = lazyMenu<FightUI>(['show'], async () => (await import('./fight-ui')).createFightUI(root, {
     game: d.game,
     start: (setup) => startFight(setup),
     onOpen() {
@@ -945,7 +945,7 @@ export function createWalk(d: WalkDeps) {
       canvas.focus({ preventScroll: true });
     },
     quit: () => quitFight(),
-  });
+  }));
   /** The fight itself (fight.ts and the figures' clips) comes in its own chunk, when the trainer's menu first opens */
   let fight: Fight | null = null;
   let fightLoad: Promise<Fight> | null = null;

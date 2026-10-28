@@ -1,0 +1,370 @@
+# Degen's clothes: no clipping, smoother shapes
+
+The owner's call (27 October 2026): the clothes need to be higher quality,
+and there is clipping. This is the plan and its phases; build it one
+phase at a time with the owner's sign-off, and keep this file up to date
+as each one lands. It follows on from `docs/character-plan.md` (the
+skinned body, the bones, the wardrobe rebuilt on them), which stays the
+record of how the body was built.
+
+## What the owner asked for
+
+- **No clipping:** nothing worn shows through what's over it, in any pose
+  the game plays (standing, walking, running, sprinting, crouching,
+  sliding, jumping, the emotes, the moments, seated in the kart, the car
+  or the boat, fighting, armed).
+- **Higher quality means smoother shapes** (the owner's pick from: smoother
+  shapes, tailoring detail, fabric looks, dark outfits readable): rounder
+  silhouettes with no faceting, better proportions and fit (the shoulders,
+  the waist's taper, how trousers sit on the shoe). Tailoring detail,
+  fabric looks and the dark outfits' readability are not part of this
+  plan; they can be a later plan if the owner asks.
+- **Budget: more on desktop only** (the owner's pick). A single figure on
+  desktop may take about twice today's triangles; phones keep today's
+  level; the crowds are unchanged. Draw calls stay where they are (3-5 a
+  figure).
+- **Every piece** (the owner picked all four, in this order): bottoms and
+  shoes, the suit, the casual tops (hoodie, track, varsity, puffer), the
+  accessories (the cap and hats, the shades and their chain, bags, the
+  watch, things in the hand).
+- Still Degen: ink outlines, flat cartoon shading, the brand-art look.
+  Nobody loses a piece they own or what they're wearing (`cleanLook()`
+  and the save don't change).
+
+## Where it stands (measured, 27 October 2026)
+
+Rendered in the animation lab (`?anim`) with the top and the trousers in
+contrasting colours, every outfit, standing, crouching, sprinting and
+waving.
+
+- **The clothes are the body.** There's no body under them: the jacket's
+  loft (`SUIT` in `items()`, character.ts) is the torso, the trousers'
+  tubes are the legs. Each garment is a closed shell built from
+  cross-sections (`loft()`), with flat details laid on it (`onBody()`,
+  `surface()`: lapels, pockets, zips, stripes).
+- **The trousers come through the hem** on the suit, the hoodie and the
+  track top: standing, waving, running and worst of all crouching, where
+  the blue shows in jagged patches round the hips. Why:
+  - The top's hem and the trousers' tops are weighted differently
+    (`weigh()` in skeleton.ts). Below the waist the jacket is about 35%
+    `spine1`, 15% `hips` and over each thigh up to 50% the leg; the
+    trousers' top is 50% `hips` and 50% the leg, and none of it the spine.
+    When he leans (a crouch, a sprint, the hips' sway) the two layers move
+    apart and the inner one comes out.
+  - Each leg is three closed shells (`pelvis`, `trouserThigh` /
+    `joggerThigh`, `trouserShin` / `joggerShin`) overlapping at the hip
+    and the knee, so their ends cross each other as the joints bend.
+- **Laid-on details lift off:** the track top's sleeve stripes stand off
+  the shoulders as separate plates when the arms come forward (seen from
+  the front, crouching); the lapels streak where the chest bends.
+- **The shades' chain** hangs in a long loop from the head bone, so it
+  swings out in front of the chest when he bends forward.
+- **The puffer's edge** is a sawtooth (its baffles) all down the sides.
+- **Faceting:** the single figure's rings are 16-22 segments (`R()` at
+  detail 2), so silhouettes are polygonal close up (the character screen,
+  the fitting room); the shoes are boxy, the shoulders blocky in the suit.
+- Today a single figure is about 13-15k triangles at detail 2, the same on
+  phones and desktop (one level for every single figure).
+- `character.ts` imports `kit.ts` (canvas textures), so nothing in it can
+  load in the Node tests; the garments' shapes have no tests today.
+
+## How it's built
+
+- **Layers.** Every garment has a layer (the trousers under the shirt,
+  the shirt under the jacket, the jacket under the bags and the chain). An
+  outer layer, where it covers an inner one, is weighted the same as the
+  inner one under it, so they move together, and stays a fixed gap
+  outside it. (As built: over the trunk every layer is weighted by where
+  it is alone, one field, `trunk()` in skeleton.ts.)
+- **The garments' shapes as data** in a DOM-free module (as built,
+  `wardrobe.ts`: the outfits, the shapes and `items()` moved out of
+  character.ts whole), so the tests can dress, pose and check the figure.
+- **A clipping check** (`tests/clothing.test.ts`): the skinned figure's
+  vertices posed on the CPU through the poses the game plays (the rubric's
+  programs, the crouch, the slide, the emotes, the seats, the fight's
+  guard), and every inner layer's vertex held inside the layer over it.
+- **The lab's clipping view** (`?anim&clip`): the outfit's layers in
+  contrasting colours, so a clip shows at a glance.
+- **A desktop detail level** for single figures (more ring segments,
+  smoother curves, finer laid-on details), picked by the quality tier;
+  phones build today's.
+
+## Phases
+
+1. **The kit and the clipping fixes.**
+   - `garments.ts`, the clipping check and the lab's clipping view (above).
+   - The trousers and joggers as one continuous skinned piece (waistband,
+     seat, crotch and both legs down to the shoe) in place of the three
+     overlapping shells a leg.
+   - The tops' hems weighted as the trousers under them; the gap held.
+   - The laid-on details (stripes, lapels, pockets, zips) weighted from
+     the surface they lie on, so they bend with it.
+   - The chain hung from the neck and chest so it lies on him; the
+     puffer's edge smooth (its baffles kept as lines across it).
+   - Every outfit checked in the lab and in the city: nothing comes
+     through, nothing else moves.
+
+   **Built** (27 October 2026):
+   - `wardrobe.ts` (DOM-free): the outfits, `lookOutfit()`, the shapes
+     and `items()`, out of character.ts (which keeps the materials, the
+     figure, the crowd, and the soldiers' rifle, as guns.ts can't load in
+     Node); `restSkin()` is a piece at rest with its bones, what the
+     figure and the crowd are skinned with and what the test poses.
+   - **The trunk's weights** (`trunk()` in skeleton.ts): the torso, the
+     pelvis and the legs down to `LEG_FREE` (0.17 under the hips) are
+     weighted by where a point is, whatever it's part of. From 0.12 over
+     the hips to 0.08 under, the waist goes partly with the hips and half
+     with the legs; under the hems (from `HEM_Y`, a hair under the
+     longest) all of it the legs'. The share is the same all the way
+     across the body (a share that changed across it bent each layer by
+     where its own vertices happened to be), and the legs share it across
+     the middle over 10 cm (wider than any layer's vertices are apart),
+     each leg's own under the hems. What the test found on the way, worst
+     depth through the top: the old weights, 4.9 cm; one field, 2 cm;
+     trousers in one piece, 2 cm (the jacket's sparse rings); rings every
+     2 cm, 1 cm; the gentler ramp and the wider split, under 2 mm.
+   - **Trousers in one piece** (`trousers()`): the trousers, the joggers
+     and the fatigues each a seat from the waist to the crotch (`SEAT`,
+     inside every top's hips with 5 mm or more to spare), the crotch
+     where the legs' inner halves meet, and both legs to the cuff through
+     a knee of close sections; every point the legs share one vertex. The
+     tops and the seat carry a ring every 2 cm through the hips (`fine()`;
+     not on the far crowd).
+   - **The details:** laid-on pieces (`onBody()`: lapels, pockets, the
+     shirt, zips) shade smooth (they looked crumpled, a flat triangle at a
+     time); the track's stripes are flat tape lying on the sleeves and
+     legs (`stripe()`), ending short of the cuff; the puffer's baffles are
+     rounded pillows from seam to seam (`quilt()`, four sections a baffle:
+     two made the sawtooth); the shades' chain runs from the ears past the
+     jaw over the collar onto the chest of whatever top he wears, clear
+     of the lapels, tie, zip and snaps (`chainOn()`, an item a top).
+   - **The check:** `tests/clothing.test.ts` with `tests/dress.ts` (the
+     figure dressed and posed on the CPU the way the GPU skins it): every
+     outfit through 40 keyed poses (walk and run cycles, sitting, the
+     slide, a deep crouch, high knee, lunge, kick, side step, twist, side
+     bend), the emotes, every fight clip and the animator walking,
+     running, sprinting, stopping and crouching; the trousers stay inside
+     the top (coming out under the hem is only the trousers showing) and
+     the top outside them, within 2 mm (2.8 mm at full size).
+     `CLOTHING_REPORT=1` prints the worst and where it was at rest.
+   - **The lab:** `?anim&clip` dresses him in colours far apart.
+   - **Cost**, triangles a figure, before and after (single figure / near
+     crowd / far crowd): suit 14.6k → 15.5k / 7.9k → 8.5k / 3.0k → 3.2k;
+     hoodie 12.9k → 13.7k / 8.2k → 8.9k / 3.1k → 3.2k; track 15.0k →
+     15.4k / 9.1k → 9.2k / 4.1k → 3.7k; varsity 13.2k → 14.1k; puffer
+     14.5k → 16.5k (its rounded baffles; no crowd wears one). Draw calls
+     unchanged. The boot's code grew 1.5 KB gzipped (669.8 of its 670).
+   - **Left for later phases:** a speck of the jacket can show at the top
+     of the shirt's V with an arm raised high (Phase 3 rebuilds the
+     collar); the test holds the trousers and the top, not yet the sleeves
+     over the hands or the collar round the neck.
+2. **Bottoms and shoes, smoother.** The desktop level first (it's what the
+   rest builds on). Trousers and joggers: rounder sections, the seat and
+   the knee, the break over the shoe, the joggers' cuff gathered. Shoes:
+   the dress shoe and the sneaker re-profiled (a rounded toe box, the
+   heel, the sole's curve), the boots.
+
+   **Built** (27 October 2026):
+   - **The desktop level** (`Detail` 3 in wardrobe.ts): single figures on
+     the high and medium tiers (`figureDetail()` in character.ts, set by
+     index.ts from the tier; phones keep 2). Rings half as many again
+     (`R()`), laid-on details bent over 2 cm, and `curve()`: sections
+     every 2 cm (1.5 cm on a shoe) on a smooth Catmull-Rom curve through a
+     shape's own, so a silhouette bends instead of breaking at each
+     section. The lab builds it by default (`detail=2` for the phone's;
+     `at` sets the height the camera looks at, 0.08 for the shoes).
+   - **Trousers and joggers:** the legs curved from the upper thigh down
+     (the rows under the crotch stay as they are: the top's hem swings
+     over them); the break, the cuff cut on a slant (`trousers()`'s `hem`:
+     longer at the back, over the heel) over a soft fold just above the
+     shoe; the crease laid on the leg as it's built; the joggers gathered
+     at the cuff (a fuller shin pulled into the ribbing), their stripes on
+     the same sections.
+   - **Shoes:** each a loft along its length (`shoe()`, `ShoeSec`: a
+     section's half-width, bottom and top), in place of the extruded side
+     profiles: the heel and collar, the instep, a rounded toe box
+     (`toe()`: an ellipse's share of the last section, rising a little),
+     on a sole worked out from the upper (`sole()`: wider, from the ground
+     to over the upper's edge, past heel and toe; the dress shoe's lifted
+     in front of its heel block). The sneaker's laces and stripe lie on
+     its top and side. The boots the same way, taller.
+   - **What the test found:** finer tops over the hips met the trousers'
+     crotch at a sprint (the extra vertices of the hem fell between the
+     trousers' own), so on the desktop the tops' bodies keep the phone's
+     ring count until Phases 3 and 4 smooth them (`TR()`) and the trousers
+     take 28 (`LEGS`); every outfit holds within 2 mm at both levels.
+   - **Cost**, triangles a figure, before and after (single figure on a
+     phone / on a desktop / near crowd / far crowd): suit 15.5k → 14.8k /
+     25.8k / 8.5k → 8.2k / 3.2k → 3.3k; hoodie 13.7k → 13.9k / 22.8k /
+     8.9k → 8.6k / 3.2k → 3.4k; track 15.4k → 15.6k / 23.6k / 9.2k → 8.9k /
+     3.7k → 3.9k; varsity 14.1k → 14.2k / 23.8k; puffer 16.5k → 16.7k /
+     25.5k (the crowd's shoes take every other section, the far crowd's
+     every fourth). Draw calls unchanged.
+   - **The boot's code:** the new shapes cost 0.4 KB gzipped; the fight's
+     rules came out of the boot (the moves and styles moved to
+     `fight-moves.ts`, which the screens and the save read; fight-sim.ts
+     loads with the fight), 4.3 KB, so it's 665.9 of its 670 (669.8
+     before).
+3. **The suit, smoother.** The jacket's shoulders, chest and waist taper,
+   the hem's curve, the sleeves' taper to the cuff, the lapels and collar
+   lying flat on a smooth chest, the shirt and tie.
+
+   **Built** (28 October 2026):
+   - **The jacket** has sections of its own (`JACKET`; the varsity and
+     the fatigues still grow from `SUIT` until Phase 4): the chest fuller,
+     the waist taken in (12.4 across the half at the waist, 16.1 at the
+     chest), the shoulder line carried out and up to the sleeve's head so
+     the two meet in one line. On the desktop a section every 2 cm on the
+     curve through them and the full ring count (the suit passed the test
+     with it; the casual tops keep the phone's, `TR()`).
+   - **The hem** is cut away at the front (`cutaway()`): the two fronts
+     round off from its middle, the hem rising 3 cm there and easing to
+     nothing towards the sides and up the front.
+   - **The sleeves:** the head a touch lower than the casual tops'
+     deltoid (`UPPER_J`), so it runs on from the shoulder line; the
+     forearm tapering to the cuff (`FORE_J`); both curved on the desktop.
+   - **The lapels, collar, shirt and tie** lie on the jacket as it's built
+     (the curved sections), and their edges ink as solid lines: their
+     outline is split as finely as the bend splits their face, so the top
+     and the sides share every point (split only on the top, the two came
+     apart and the ink drew the gaps as dashes along the lapels), and their
+     sides are kept apart from their faces when they're smoothed (`crisp`,
+     the suit's pieces only for now). The shirt's collar points sit under
+     the lapels (they came through them as a jagged white streak), the tie
+     stands a little further off the shirt, its knot a rounded trapezoid.
+   - **Left as it is:** a faint dash on the tie's far edge seen dead on
+     (only lifting it well off the shirt cures it); the sleeve head still
+     reads as a soft rise over the shoulder, as the natural athletic
+     shoulders are meant to.
+   - **Cost**, triangles (single figure on a desktop / on a phone / near
+     crowd / far crowd): suit 25.8k → 28.3k / 14.8k → 14.7k / 8.2k → 8.3k /
+     3.3k → 3.3k; every other outfit unchanged. The boot's code 665.9 →
+     666.4 KB of its 670.
+4. **The casual tops, smoother.** The hoodie (the hood's shape round the
+   neck, the pouch), the track top, the varsity, the puffer, and the
+   soldier's fatigues.
+
+   **Built** (28 October 2026):
+   - **The bodies on the desktop:** a section every 2 cm on the curve
+     through their own (`smooth()`), and 30 rings (`TOP_RINGS`). The ring
+     count is the test's: a ring point at the middle of the back, or just
+     off it, sank into the trousers' seat at a sprint (1.6 cm at 28, 7 mm
+     at 33); with a count two more than a multiple of four (22, the
+     phone's, and 30) the middle falls between two points, 6 degrees off,
+     and every top holds within 2 mm. The puffer's fuller hem needs the
+     phone's 22 even so: on the desktop its body is two pieces joined in
+     the second baffle's pinch (`SEAM`), the hem at 22, the rest at 30.
+   - **Shoulders:** every casual top carries the jacket's shoulder line
+     (the hoodie's sections, and so the track top's and the puffer's; the
+     varsity and the fatigues now grow from `JACKET`), and their sleeves
+     the suit's lower head (`LOOSE_U`, curved on the desktop, the track's
+     stripes on the same sections).
+   - **The hoodie:** the hood down is a roll swept round the neck
+     (`hoodDown`: thickest and riding highest at the back where it
+     bunches, tapering to the front where the drawstrings come out), not a
+     ring; the pouch is `crisp`.
+   - **Zips and the placket** are strips laid down the body (`tape()`: a
+     row every bend, a smooth face, bevelled sides kept apart from it), in
+     place of outlines laid on (`onBody()`); a crisp outline cost about
+     7,000 triangles a zip, the strip a few hundred, and its bevelled
+     sides ink alike (upright, the near side inked in dashes and the far
+     one not at all).
+   - **The puffer's baffles** are six sections each on the desktop
+     (`quilt()`), rounder.
+   - **The soldier's vest** is a little fuller: the fatigues, grown from
+     the jacket's fuller chest, came through it.
+   - **Cost**, triangles (single figure on a desktop / on a phone / near
+     crowd / far crowd): hoodie 22.8k → 25.9k / 13.9k → 14.1k / 8.6k →
+     8.7k / 3.4k → 3.4k; track 23.6k → 24.3k / 15.6k → 13.7k / 8.9k → 9.0k /
+     3.9k → 3.9k; varsity 23.8k → 24.4k / 14.2k → 13.7k / 8.7k → 8.8k /
+     3.5k → 3.6k; puffer 25.5k → 26.2k / 16.7k → 14.9k / 9.6k → 9.7k /
+     4.0k → 4.1k (the strips cost less than the zips they replaced). The
+     boot's code 666.4 → 666.8 KB of its 670.
+   - **Left as it is:** a few faint dots along the placket's edges close
+     up; the puffer's pinches still catch the light in jagged bands, as
+     quilting does.
+5. **The accessories, smoother.** The cap and every hat seated on the
+   head, the shades, the chain and the necklace, the bags on the back, the
+   watch, the things in the hand.
+
+   **Built** (28 October 2026):
+   - **Every hat seated on the head** the figure has (the hero's,
+     `headRow()` / `inHead()` in body.ts; the crowd wears it too). The
+     cap and the beanie are shells carried out from the head's own outline
+     along its normals (`headShell()`: 3 mm at the band, a little more over
+     the crown, a section every 5 mm on the desktop); the bucket, cowboy
+     and top hat keep their own shapes, sized so their bands sit 4 mm off
+     the head (`fitTo()`); and every band is held exactly off the head,
+     its brow and all (`snug()`), its own band piece snug with it so it
+     stays round the crown. Gaps take in how far a hat's ring cuts inside
+     its outline between its points (`SAG`), so a crowd's coarser hats
+     clear the head too. Before, the cap's crown stood 3.4 cm over the
+     head and its band 1-2 cm off it, the head came through the reversed
+     cap at the brow, and the bucket's brim through the shades.
+   - **The cap's brim** grows from the crown's base (`brimSweep()`: its
+     inner edge just inside the crown, out to a rounded edge, curving down
+     at the sides and pitched down in front more towards its edge), so its
+     back corners no longer stick out of the crown's sides. Reversed, the
+     crown stays seated and only the brim, the seams and the patch turn.
+   - **The crown** is a gold band resting on the head where it's wide
+     enough (`ringStrip()`: a wall with a rim and an inside, so it reads
+     solid from above), its points round its top.
+   - **The shades:** the frames bevelled on the desktop; the arms are rods
+     from the hinges back along the side of the head, outside the ear's
+     root and down behind it (`armPath()`), not boxes through the ears; the
+     chain hooks onto them (`armHook()`) and is round on the desktop.
+   - **What's worn over a top** is each top's own (`TORSOS`, `OVER`:
+     `necklace-`, `backpack-`, `crossbody-`, `board-`, `duffel-` and
+     `wings-<kind>`): a strap is a smooth line laid `lift` off that top's
+     surface (`strapOver()`: straight out from its middle front or back, up
+     over the shoulder, round the side), the puffer's and the hoodie's
+     straps further out (past the high collar, past the hood's roll). The
+     backpack's straps no longer poke out of the shoulders as spikes, and
+     on the puffer the straps, the crossbody's and the duffel's no longer
+     sink out of sight. The necklace eases out from under the collar onto
+     the chest (`tuck`).
+   - **The duffel** is a round bag with rounded ends, piping round them
+     and its handle along the top; the backpack and bags round-cornered
+     finer on the desktop.
+   - **The headphones'** cups are turned, domed with rounded edges, with
+     cushions on the desktop.
+   - **The watch** is on the wrist itself, just under the cuff, riding the
+     hand (`bone`), its band's edges rounded and its face's bezel turned;
+     before, it was a bangle over the cuff, wider than the wrist.
+   - **The things in the hand:** a handle's bar lies in the fingers' hook
+     (`HOOK`, `handle()`: the briefcase's and the boombox's, their posts
+     down past the hand's sides, the thing hanging under it); the cup sits
+     against the front of the curled fingers and the thumb with none
+     through it (before, the fingers were 1.8 cm inside it), its straw
+     leaning away from them.
+   - **The test** is `tests/accessories.test.ts`: every hat at every
+     detail level clear of the head (rays round the head at every height
+     under it) with its band within 1.8 cm, and the cup and its sleeve
+     without a finger through them, the briefcase under the hand with its
+     handle touching the fingers.
+   - **The lab** takes `wear=` (accessories: `wear=beanie,backpack:#3a7,
+     watch`, `cap:` takes the cap off) and `at=x,y,z` (the free camera on
+     a hand or a hat).
+   - **Cost**, triangles (single figure on a desktop / on a phone / near
+     crowd / far crowd): the suit with the cap and shades 28.3k → 31.3k /
+     14.7k → 15.0k / 8.3k → 8.3k / 3.3k → 3.1k; with a backpack (the
+     hoodie) 26.8k → 31.7k / 14.9k → 15.3k / 9.4k → 9.5k / 3.5k → 3.3k; a
+     duffel 26.8k → 31.7k / 14.7k → 15.3k / 9.1k → 9.3k / 3.7k → 3.5k; the
+     briefcase 28.8k → 32.3k / 15.1k → 15.5k / 8.7k → 8.7k / 3.4k → 3.2k.
+     Draw calls as they were. The boot's code 666.8 → 669.8 KB of its 670.
+   - **Left as it is:** the cup is held at the fingers' front, not wrapped
+     round (a hanging hand's fingers curl across a thing whose axis runs
+     forward; wrapping a cup needs the wrist cocked, the animation's); the
+     helmet stands off the head as a helmet does.
+
+Each phase is checked at the five widths in the character screen and the
+fitting room, in the lab, and in the city on the phone tier (nothing
+changes there but the clipping fixes) and on desktop. The tests and the
+budget pass at every phase.
+
+## Not in this plan
+
+- Tailoring detail, fabric looks and the dark outfits' readability (the
+  owner didn't pick them this time).
+- New clothes, new marks or prints, the crowd's detail levels and the
+  animation.

@@ -388,6 +388,7 @@ if (FREE_PLAY) {
     c.level = 1;
   }
   for (const k of Object.values(KART_CLASSES)) k.level = 1;
+  for (const b of Object.values(FIGHT_BOTS)) b.level = 1;
   for (const k of Object.keys(BUILD_COSTS) as BuildingType[]) BUILD_COSTS[k] = 0;
   for (const a of [UNIT_LEVEL_COSTS, LOT_LEVEL_COSTS, CORNER_LEVEL_COSTS, WORKSHOP_LEVEL_COSTS]) a.fill(0);
 }

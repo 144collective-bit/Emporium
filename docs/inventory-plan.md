@@ -271,7 +271,7 @@ brawlsite.ts      the sparring partners' spots (DOM-free, tested)
 - **Free play** (`freeplay.ts`, `FREE_PLAY`): built with
   `PUBLIC_FREE_PLAY=1` (set only on the Vercel preview project), every
   price in `catalog.ts` and `tycoon.ts` is 0, every level 1, the guns'
-  and finishes' scores 0 and `pay()` always pays. The "Build site" Action
+  and finishes' scores 0, the kart cups and the trainer's opponents open from level 1, and `pay()` always pays. The "Build site" Action
   and the Worker's build leave it unset, so the live site folds it away;
   take it off the preview before anything goes live from there.
 

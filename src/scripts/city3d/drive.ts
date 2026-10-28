@@ -412,7 +412,7 @@ export function createDrive(d: DriveDeps) {
       // Mods may have been bought since it was parked
       v.tune = tuneOf(v);
       if (v.seat) {
-        driver ??= createDegen(d.outfit(), 2);
+        driver ??= createDegen(d.outfit());
         v.seat(driver);
       }
       camYaw = v.state.yaw;

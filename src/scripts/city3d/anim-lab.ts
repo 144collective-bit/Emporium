@@ -29,7 +29,10 @@
  *   program in turn (REEL), for a recording in one take.
  * - The address can set it all up for recordings: `prog` (`reel` for the
  *   reel), `gait`, `cam`, `floor`, `speed`, `gun`, `aim=0`, `pitch`,
- *   `outfit`, `held`, `orbit`, `compare=0`, `traces=0`, `score=0`.
+ *   `outfit`, `held`, `orbit`, `compare=0`, `traces=0`, `score=0`,
+ *   `at`, `clip`, the clipping view (the top, trousers and shoes in colours far
+ *   apart: docs/clothing-plan.md), and `detail=2`, the clothes as a phone
+ *   builds them (the desktop's, 3, by default).
  */
 import * as THREE from 'three';
 import { PLAYER, SOLDIER, createDegen, type Degen } from './character';
@@ -330,6 +333,10 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   let speed = Number(q.get('speed')) || 1;
   // (recordings: closer in, and the cheaper drawing)
   const near = Number(q.get('zoom')) || 1;
+  // (`at`: the height the camera looks at, the hips by default; 0.08 for the shoes)
+  // (`at=y`, or `at=x,y,z` beside him: the free camera on a hand or a hat, docs/clothing-plan.md Phase 5)
+  const at3 = (q.get('at') ?? '').split(',').map(Number);
+  const [lookX, lookY, lookZ] = at3.length === 3 && at3.every(Number.isFinite) ? at3 : [0, q.has('at') ? Number(q.get('at')) : 0.62, 0];
   if (q.has('low')) d = { ...d, low: true };
   // (`rec`: recordings draw a frame only when asked, with the outlines but none of the costly finish)
   const rec = q.has('rec');
@@ -503,9 +510,20 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   // (`held=coffee|boombox|phone|briefcase`: something in his right hand)
   const kind = (['suit', 'hoodie', 'track', 'varsity', 'puffer', 'soldier'] as const).find((k) => k === q.get('outfit'));
   const held = (['coffee', 'boombox', 'phone', 'briefcase'] as const).find((h) => h === q.get('held'));
-  const outfit = { ...(kind === 'soldier' ? SOLDIER : kind ? { ...PLAYER, kind } : PLAYER), held };
-  const hero: Degen = createDegen(outfit);
-  const old: Degen = createDegen(outfit);
+  // (`clip`: the clipping view, docs/clothing-plan.md: the top, the trousers and the shoes in colours far apart, so a
+  // layer coming through another shows at a glance)
+  const clip = q.has('clip') ? { top: '#d0463e', bottom: '#3f73c8', shoes: '#ece9e0', tie: '#f2c230' } : {};
+  // (`wear=beanie,backpack:#3a7,watch`: accessories, docs/clothing-plan.md Phase 5: a colour key takes a colour or
+  // a default, a flag is on; `cap:` takes the cap off)
+  const wear: Record<string, string | boolean | undefined> = {};
+  for (const w of (q.get('wear') ?? '').split(',').filter(Boolean)) {
+    const [k, v] = w.split(':');
+    wear[k] = v === '' ? undefined : v ?? (['crown', 'halo', 'hood', 'chain', 'necklace', 'watch', 'capBack'].includes(k) ? true : '#4f7fd0');
+  }
+  const outfit = { ...(kind === 'soldier' ? SOLDIER : kind ? { ...PLAYER, kind } : PLAYER), held, ...(wear as {}), ...clip };
+  const detail = q.get('detail') === '2' ? 2 : 3;
+  const hero: Degen = createDegen(outfit, detail);
+  const old: Degen = createDegen(outfit, detail);
   scene.add(hero.g, old.g);
   const loco = createLocomotion();
 
@@ -872,7 +890,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   const target = (out: THREE.Vector3) => {
     const [dx, dz] = compare ? beside() : [0, 0];
     const clear = cam === 'side' && innerWidth > 600 ? 1.3 / near : 0;
-    return out.set(x + dx / 2, y + 0.62, z + dz / 2 + clear);
+    return out.set(x + dx / 2 + lookX, y + lookY, z + dz / 2 + clear + lookZ);
   };
   const want = new THREE.Vector3();
   // (the camera keeps exactly with them: eased after a runner, it trails and the picture slides off the figures)

@@ -97,12 +97,12 @@ import { MARKET_SPAWN } from './nightmarket';
 import { BLOCK_SPAWN } from './projects';
 import { AVENUE_SPAWNS } from './avenue';
 import { buildFightClub } from './fightclub';
-import { fightRecordHtml } from './fight-ui';
+import { fightRecordHtml } from './fight-records';
 import { kartRecordsHtml } from './kart-records';
 import { destAt } from './tycoon';
 import { guideAt } from './guide';
 import { CARS, initFarCars } from './cars';
-import { CROWD_VIEW } from './character';
+import { CROWD_VIEW, figureDetail } from './character';
 import type { GameDeps } from './ui';
 import type { Bench } from './bench';
 import { mb, sceneMemory } from './perf';
@@ -145,6 +145,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const tier = (root.dataset.tier as Tier) || pickTier();
   const Q = TIERS[tier];
+  // (single figures: the desktop's finer clothes, docs/clothing-plan.md; phones as they were)
+  figureDetail(tier === 'low' ? 2 : 3);
   const progress = (k: number) => bar.style.setProperty('--p', String(k));
   // ?anim: the animation lab on its own, over the page (no city behind it)
   if (new URLSearchParams(location.search).has('anim')) {
