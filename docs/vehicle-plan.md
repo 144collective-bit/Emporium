@@ -76,13 +76,37 @@ Asked before planning (2026-10-28):
 
 ## Phases
 
-### Phase 0: measure and prepare
+### Phase 0: measure and prepare (built)
 
-- Add a driving view and a busy-traffic view to `?bench`; record draws,
-  triangles, memory and frame times on desktop and a phone as the baseline.
-- Split `CarSpec` into what the outside needs and what the inside needs
-  (an `Interior` per model: seats, dash, wheel position, the driver's
-  seat point), so the later phases add data, not special cases.
+- `?bench` has a driving view (`drive`: a chase camera's height in the
+  east ring avenue's outer lane) and a busy-traffic view (`traffic`: the
+  ring's junction with the south cross street). The route is unchanged,
+  so its numbers still compare with earlier runs.
+- The cars' measurements are `carspec.ts` (DOM-free: `CarSpec`, `CARS`,
+  `PAINTS`; cars.ts re-exports them and keeps each model's own touches,
+  the code that draws them, in `EXTRAS`). The split moved text only:
+  every car is drawn exactly as before.
+- What's inside is `carinside.ts` (DOM-free): `INTERIORS`, for every
+  model (the bus and the Midnight Exec too, for the traffic's drivers in
+  Phase 8): the hip point and recline, the eyes and shoulders, the
+  steering wheel (centre, radius, tilt), the dash, the floor and pedals,
+  the rear seats (none in the coupe, the muscle car, the supercar, the
+  pickup's and the van's cabs) and the driver's door between the body's
+  two front seams. Worked out for Degen seated at walk mode's size
+  (`SITTER`, from skeleton.ts). `roofAt()` / `beltAt()` read the body's
+  roof line and window line.
+- `tests/carspec.test.ts` holds it to the body: his head under the roof,
+  his eyes over the window line and the dash, both hands on the wheel
+  within reach and not cramped, his knees under it, his feet on the floor
+  and the pedals behind the bumper, the door wide and tall enough with
+  the seat in its doorway, the rear seats' knee and head room.
+- **The boot's budget is the tight spot.** `main` stood at 669.8 of
+  670 KB (gzipped) before this phase; `INTERIORS` in the boot would have
+  pushed it over, so carinside.ts is kept out of it (only the tests read
+  it so far). Phase 1 draws the interior as its own chunk, loaded when
+  your car is first taken out, and keeps the bodywork's new detail as
+  data in the existing loops rather than new code in the boot. If the
+  bodywork can't fit, raising the budget is the owner's call, on purpose.
 
 ### Phase 1: your cars, sharper and with an inside
 
@@ -120,9 +144,13 @@ Asked before planning (2026-10-28):
 
 ### Phase 3: getting in and out
 
-- A new state in Degen's animator: walk up to the driver's door, open it,
-  step in and sit, pull it shut; getting out is the same in reverse. Built
-  and reviewed in the lab first.
+- The moves are already there (the animation revamp's `board` / `alight`
+  moments: the walk to the door, the hand on the handle, the duck in, a
+  foot out first). This phase makes the door swing open as the hand
+  lands and shut once he's in (and the reverse), reads the seat's height
+  and the handle from `INTERIORS` instead of `MOMENT.car`'s one size for
+  every car, and puts him on the real seat with his hands on the wheel.
+  Reviewed in the lab first.
 - Each model has its door's hinge, the step-in point and the seat
   (Phase 0's `Interior`). If the driver's side is blocked (a wall, a
   parked car), Degen uses the passenger door and slides across, or, if
@@ -209,12 +237,23 @@ Asked before planning (2026-10-28):
   the controls, landing gear that folds away properly, for your own and
   the airport's.
 
-## Open questions for the owner
+## Decided (the owner left these to Claude, 2026-10-28)
 
-1. The new cars' and bikes' prices and levels, and their names.
-2. Phase 1 changes the shared models, so the traffic gets the sharper
-   shells straight away. Is that wanted then, or held back to Phase 8?
-3. The police livery: colours and the made-up markings.
-4. How many bikes and police cars in the traffic (they cost draws).
-5. Should the order change, e.g. handling (Phase 4) before getting in and
-   out (Phase 3)?
+1. **Names, prices and levels** (made up; none is a real make or model):
+   the classic **Boulevardier** (22,000, level 5), the off-roader **Mud
+   Buster** (30,000, level 7), the electric hatch **Glow Pod** (40,000,
+   level 8); the scooter **Hop Scoot** (free), the street bike **Alley
+   Cat** (9,000, level 3), the sport bike **Neon Blade** (36,000, level
+   8). They sit between the garage's prices today (18,000 to 64,000).
+2. **The traffic gets the sharper shells in Phase 1**, the finest pieces
+   near only: one set of models, and the bench sees the real cost at once.
+3. **The police livery:** midnight blue with white doors, SECTOR 7 PATROL
+   along the sides and a made-up shield (the city's own mark), a light
+   bar flashing blue and magenta now and then; no siren chases.
+4. **How many:** on desktop three police cars and six bikes in the
+   traffic, on phones two and three.
+5. **The order stays.** Getting in and out (Phase 3) turned out smaller
+   than planned: the animation revamp's moments (`moments.ts`: `board` /
+   `alight`) already walk Degen to the door, reach for the handle and
+   duck him in; Phase 3 makes the door swing with it and seats him on
+   the real interior.

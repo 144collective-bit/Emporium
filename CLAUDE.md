@@ -1291,7 +1291,17 @@ it and has been retired completely. Build only on what's here.
   customisation at the garage, three more cars, motorbikes, new traffic
   (delivery trucks, police that never chase, bikes), then the karts, the
   boat and the aircraft. Keep it up to date, one phase at a time with the
-  owner's sign-off. None of it is built yet.
+  owner's sign-off. Phase 0 (measure and prepare) is built: the cars'
+  measurements are `carspec.ts` (DOM-free: `CarSpec`, `CARS`, `PAINTS`,
+  re-exported by cars.ts, which keeps each model's own touches in
+  `EXTRAS`), what's inside them `carinside.ts` (DOM-free, kept out of the
+  boot: `INTERIORS`, each model's seat, recline, eyes, shoulders, wheel,
+  dash, floor, pedals, rear seats and driver's door, for Degen seated at
+  `DRIVER_SCALE` (`SITTER`); `roofAt()`, `beltAt()`), tested in
+  `tests/carspec.test.ts` (his head under the roof, his eyes over the
+  window line and the dash, the wheel in reach and over his knees, the
+  door on the body's seams), and `?bench` has a driving view and a
+  traffic view (`drive`, `traffic`).
 - **Live settings** (the owner's call): the owner switches parts of the
   city from outside the code, in a private command center, through the
   backend's public config (`LIVE_URL`, public settings only).
@@ -3480,7 +3490,7 @@ it and has been retired completely. Build only on what's here.
   10's bigger world (`WORLD_EXT`): run both when anything reads the edge. The "Build site" Action runs them before the
   build: a failing test means no zip.
 - They cover the code that's free of the DOM and scene code: the street plan
-  (`layout.ts`, `streetplan.ts`), downtown (`downtown.ts`), the ring highway
+  (`layout.ts`, `streetplan.ts`), the cars' measurements and interiors (`carspec.ts`, `carinside.ts`), downtown (`downtown.ts`), the ring highway
   (`highway.ts`), the traffic's routes and lights (`routes.ts`), collision data, doors, the gun counter, the garage
   and the spawn (`solids.ts`), the plots (`src/data/plots.ts`), your car
   (`mycar.ts`), the driving rules (`drive-sim.ts`), target practice
