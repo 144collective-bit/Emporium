@@ -132,6 +132,8 @@ const STEP: Record<Vehicle, { fwd: number; bend: number; out: number }> = {
   kart: { fwd: 1.1, bend: 1.5, out: 0.3 },
   plane: { fwd: 1.25, bend: 1.6, out: 0.15 },
   boat: { fwd: -0.3, bend: 0.5, out: 0.1 },
+  // (the bike: the leg swung high and wide over the seat)
+  bike: { fwd: 0.7, bend: 1.4, out: 0.9 },
 };
 
 /**

@@ -45,6 +45,7 @@ import { buildAirport } from './airport';
 import { AIRPORT_END, BRANCH, LINE_X } from './metro';
 import { CAMERA_FAR, PAN_BOUNDS, overviewFrame } from './bounds';
 import { loadCar } from './mycar';
+import { loadBike } from './mybike';
 import { createProfileUI } from './profile-ui';
 import { createCharScreen } from './charscreen';
 import { createSky, type TimeMode, type WeatherMode } from './sky';
@@ -235,7 +236,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // The outer districts: squares, pocket parks, lawns, the promenade
   buildNeighbourhoods(scene, crowd, tick, { low: tier === 'low', reduced });
   // The garage on the south bank, your saved car on its turntable
-  const garage = buildGarage(scene, { tick, reduced, car: loadCar() });
+  const garage = buildGarage(scene, { tick, reduced, car: loadCar(), bike: loadBike() });
   // The airport on the world's south edge, outside the ring highway, and the aircraft flying its timetable
   const airport = buildAirport(scene, crowd, tick, { reduced, low: tier === 'low' });
   const plots = createPlots(scene, { degen, tick, reduced });
@@ -1626,6 +1627,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   flyTo(start.pos, start.target, 2.8);
   // The cars' fine detail and your car's inside (vehicle plan Phase 1): its own chunk, once the city is up
   idle(() => void import('./carfine').then((m) => m.fitCars(tier === 'low', compileFor, sky, scene)));
+  // Your motorbikes' drawing (vehicle plan Phase 7): the garage's stand shows yours once it's come
+  idle(() => void import('./bikes').then((m) => garage.setBikeMaker(m.createBike)));
   loop();
 
   return {

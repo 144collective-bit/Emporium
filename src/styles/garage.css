@@ -9,6 +9,7 @@
   grid-template-areas:
     "head"
     "tabs"
+    "kinds"
     "list"
     "detail"
     "foot";
@@ -55,6 +56,16 @@
   border-radius: 2px;
   background: var(--pulse);
 }
+/* Cars or bikes (vehicle plan Phase 7), over the cards */
+.garage-kinds {
+  grid-area: kinds;
+  display: flex;
+  gap: 5px;
+}
+.garage-kinds .garage-chip {
+  flex: 1 1 0;
+}
+
 /* A style tab's rows: chips for parts, swatches for colours */
 .garage-style {
   display: grid;

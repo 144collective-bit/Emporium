@@ -36,6 +36,7 @@ import { cleanDesign, type Design } from '../../data/plots';
 import { DOORS, GARAGE_SITE, LOT_SITE, STALL_SPOT, UNIT_SITE } from './solids';
 import type { WeaponId } from './combat-sim';
 import { CARGO as BASE_CARGO, DRIVE, PLAYER_CARS, type PaintId, type PlayerCar } from './mycar';
+import { BIKE_CARGO, BIKE_DRIVE } from './mybike';
 import { DEFAULT_KART, KART_SPECS, PLAYER_KARTS, cleanKart, type KartId } from './mykart';
 import { CUPS, type CupId } from './kart-cups';
 import { STYLES, type StyleId } from './fight-moves';
@@ -76,6 +77,11 @@ import {
   PLOT_LEVEL,
   PLOT_REFUND,
   STARTER_CARS,
+  STARTER_BIKES,
+  BIKE_IDS,
+  garageEntry,
+  isBike,
+  type GarageId,
   STARTER_GUNS,
   STARTER_KARTS,
   UNIT_LEVEL_COSTS,
@@ -432,7 +438,8 @@ export interface TycoonSave {
   stats: { earned: number; sold: number; made: number; grown: number; bonus: number; wages: number; contracts: number };
   /* Phase 5: the city's game */
   xp: number;
-  garage: { owned: PlayerCar[]; mods: Partial<Record<PlayerCar, CarMods>> };
+  /** The cars and (vehicle plan Phase 7) the motorbikes you've bought, and their mods */
+  garage: { owned: GarageId[]; mods: Partial<Record<GarageId, CarMods>> };
   armoury: { owned: WeaponId[]; mods: Partial<Record<WeaponId, GunMods>> };
   /** Premium wardrobe items (catalog.ts) you've bought */
   wardrobe: string[];
@@ -1406,7 +1413,7 @@ export function propertyValue(s: TycoonSave) {
 /** What you've paid for cars, guns, clothes and their mods */
 export function gearValue(s: TycoonSave) {
   let v = 0;
-  for (const id of s.garage.owned) v += CAR_CATALOG[id]?.price ?? 0;
+  for (const id of s.garage.owned) v += garageEntry(id)?.price ?? 0;
   for (const id of s.karts.owned) v += KART_CATALOG[id]?.price ?? 0;
   for (const id of PLAYER_KARTS) {
     const m = s.karts.mods[id];
@@ -1510,11 +1517,12 @@ export function pay(s: TycoonSave, price: number, need: number, entry: Entry): B
   return { ok: true, dorras: price };
 }
 
-/* ---------- The garage: cars and their mods ---------- */
+/* ---------- The garage: cars, motorbikes (vehicle plan Phase 7) and their mods ---------- */
 
-export const ownsCar = (s: TycoonSave, id: PlayerCar) => STARTER_CARS.includes(id) || s.garage.owned.includes(id);
-export function buyCar(s: TycoonSave, id: PlayerCar): BuyResult {
-  const c = CAR_CATALOG[id];
+const starter = (id: GarageId) => (isBike(id) ? STARTER_BIKES.includes(id) : STARTER_CARS.includes(id));
+export const ownsCar = (s: TycoonSave, id: GarageId) => starter(id) || s.garage.owned.includes(id);
+export function buyCar(s: TycoonSave, id: GarageId): BuyResult {
+  const c = garageEntry(id);
   if (!c) return { ok: false, why: 'place' };
   if (ownsCar(s, id)) return { ok: false, why: 'owned' };
   const r = pay(s, c.price, c.level, 'vehicles');
@@ -1523,10 +1531,10 @@ export function buyCar(s: TycoonSave, id: PlayerCar): BuyResult {
   count(s, 'bought', 1);
   return r;
 }
-export const carMods = (s: TycoonSave, id: PlayerCar): CarMods => ({ ...NO_CAR_MODS, ...(s.garage.mods[id] ?? {}) });
+export const carMods = (s: TycoonSave, id: GarageId): CarMods => ({ ...NO_CAR_MODS, ...(s.garage.mods[id] ?? {}) });
 /** What the next level of a mod costs (null at the top) */
-export const carModCost = (id: PlayerCar, mod: CarModId, mods: CarMods) => modCost(CAR_CATALOG[id].price, mods[mod] + 1);
-export function modCar(s: TycoonSave, id: PlayerCar, mod: CarModId): BuyResult {
+export const carModCost = (id: GarageId, mod: CarModId, mods: CarMods) => modCost(garageEntry(id).price, mods[mod] + 1);
+export function modCar(s: TycoonSave, id: GarageId, mod: CarModId): BuyResult {
   if (!ownsCar(s, id) || !CAR_MOD_IDS.includes(mod)) return { ok: false, why: 'place' };
   const mods = carMods(s, id);
   const cost = carModCost(id, mod, mods);
@@ -1539,8 +1547,8 @@ export function modCar(s: TycoonSave, id: PlayerCar, mod: CarModId): BuyResult {
   addXp(s, XP.upgrade);
   return r;
 }
-/** A car's handling and cargo with its mods on */
-export const carStatsOf = (s: TycoonSave, id: PlayerCar) => carStats(DRIVE[id], CARGO[id] ?? CARGO.hatch, carMods(s, id));
+/** A car's (or a bike's) handling and cargo with its mods on */
+export const carStatsOf = (s: TycoonSave, id: GarageId) => (isBike(id) ? carStats(BIKE_DRIVE[id], BIKE_CARGO[id], carMods(s, id)) : carStats(DRIVE[id], CARGO[id] ?? CARGO.hatch, carMods(s, id)));
 
 /* ---------- The kart park: karts, their mods, and the races' prizes ---------- */
 
@@ -1924,13 +1932,14 @@ export function upgradePlace(s: TycoonSave, p: PlaceId): BuyResult {
 
 function cleanGame(s: TycoonSave, o: Record<string, unknown>, now: number) {
   const g = obj(o.garage);
-  s.garage.owned = (Array.isArray(g.owned) ? g.owned : []).filter((id): id is PlayerCar => PLAYER_CARS.includes(id as PlayerCar) && !STARTER_CARS.includes(id as PlayerCar));
+  const ids: GarageId[] = [...PLAYER_CARS, ...BIKE_IDS];
+  s.garage.owned = (Array.isArray(g.owned) ? g.owned : []).filter((id): id is GarageId => ids.includes(id as GarageId) && !starter(id as GarageId));
   s.garage.owned = [...new Set(s.garage.owned)];
-  for (const id of PLAYER_CARS) {
+  for (const id of ids) {
     const m = obj(obj(g.mods)[id]);
     const mods = { ...NO_CAR_MODS };
     for (const k of CAR_MOD_IDS) mods[k] = Math.round(num(m[k], 0, MOD_LEVELS, 0));
-    if (CAR_MOD_IDS.some((k) => mods[k] > 0) && (STARTER_CARS.includes(id) || s.garage.owned.includes(id))) s.garage.mods[id] = mods;
+    if (CAR_MOD_IDS.some((k) => mods[k] > 0) && (starter(id) || s.garage.owned.includes(id))) s.garage.mods[id] = mods;
   }
   const a = obj(o.armoury);
   const gunIds = Object.keys(GUN_CATALOG) as WeaponId[];

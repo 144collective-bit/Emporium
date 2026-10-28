@@ -53,6 +53,7 @@ import { carStatsOf, kartStatsOf, ownsCar, takedown } from './tycoon';
 import type { GarageUI } from './garage-ui';
 import { loadCar } from './mycar';
 import { DEFAULT_CAR } from './mycar';
+import { BIKES, DEFAULT_BIKE, loadBike } from './mybike';
 import type { Garage } from './garage';
 import { createDrive } from './drive';
 import { createFly } from './fly';
@@ -65,7 +66,7 @@ import { bankY } from './kartfacility';
 import type { RaceStart } from './kart-types';
 import type { Cond } from './kartcircuit';
 import { COUNTER, TRAINER } from './fightsite';
-import { MOMENT, type Mark, type Moment, type Vehicle, alightMark, benchMark, boardMark, carMark, counterMark, crateMark, createMoment, doorMark, liftMark } from './moments';
+import { MOMENT, type Mark, type Moment, type Vehicle, alightMark, benchMark, bikeMark, boardMark, carMark, counterMark, crateMark, createMoment, doorMark, liftMark } from './moments';
 import { INTERIORS } from './carinside';
 import { CARS } from './cars';
 import { toon } from './kit';
@@ -476,6 +477,8 @@ export function createWalk(d: WalkDeps) {
     if (n.id === 'car') {
       const v = drive.doorOf(pos.x, pos.z);
       if (!v) return null;
+      // Your motorbike (vehicle plan Phase 7): beside it on his side, both hands to the grips, a leg over the seat
+      if (v.kind === 'bike' && v.bike) return bikeMark(v, BIKES[v.bike], pos.x, pos.z, y, (bx, bz) => blocked(bx, bz, pos.y));
       // Your car (vehicle plan Phase 3): by the door on his side, onto its real seat; that side blocked, the quick
       // swap; under reduced motion always the quick version, no fade
       const inside = v.kind === 'car' && v.model ? INTERIORS[v.model] : null;
@@ -805,6 +808,17 @@ export function createWalk(d: WalkDeps) {
       else d.garage.show(saved);
     },
     away: () => drive.away,
+    // Your motorbike on its stand, as the car on the turntable (vehicle plan Phase 7)
+    previewBike: (b) => d.garage.showBike(b),
+    keepBike(b) {
+      drive.recallBike();
+      d.garage.showBike(b);
+    },
+    cancelBike(saved) {
+      if (drive.bikeAway) d.garage.clearBike();
+      else d.garage.showBike(saved);
+    },
+    bikeAway: () => drive.bikeAway,
     game: d.game,
     onOpen() {
       still();
@@ -830,6 +844,11 @@ export function createWalk(d: WalkDeps) {
       return ownsCar(d.game.save(), c.model) ? c : { ...DEFAULT_CAR };
     },
     stats: (model) => carStatsOf(d.game.save(), model),
+    // Your motorbike (vehicle plan Phase 7), as your car: only one the save owns
+    myBike: () => {
+      const b = loadBike();
+      return ownsCar(d.game.save(), b.model) ? b : { ...DEFAULT_BIKE };
+    },
     // Your kart, out of the pits and back (kart.ts keeps the show kart); its handling with its mods
     kart: {
       home: () => karts.home(),
@@ -1953,7 +1972,7 @@ export function createWalk(d: WalkDeps) {
     combat.update(dt, t, false);
     combat.view(dt, t, { firstPerson: false, aim: false, move: 0, phase: 0, run: 0, air: 0 });
     // The prompt: Get out
-    const want = { id: 'car' as const, label: 'Get out' };
+    const want = { id: 'car' as const, label: root.classList.contains('on-bike') ? 'Get off' : 'Get out' };
     if (near?.id !== want.id) {
       near = want;
       prompt.hidden = false;
@@ -2634,7 +2653,7 @@ export function createWalk(d: WalkDeps) {
     const carD = garageUI.open ? Infinity : drive.nearCar(pos.x, pos.z);
     const planeD = hangarUI.open ? Infinity : fly.near(pos.x, pos.z);
     if (Math.min(carD, planeD) < 0.75) {
-      best = carD <= planeD ? { id: 'car', label: 'Get in' } : { id: 'plane', label: `Fly the ${fly.name}` };
+      best = carD <= planeD ? { id: 'car', label: drive.nearKind(pos.x, pos.z) === 'bike' ? 'Get on' : 'Get in' } : { id: 'plane', label: `Fly the ${fly.name}` };
       bestD = 0;
     }
     for (const door of ALL_DOORS) {

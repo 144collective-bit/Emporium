@@ -15,11 +15,20 @@ import { SLAB as S, addLamp, type Tick } from './world';
 import { GARAGE } from './layout';
 import { createCar, type Car } from './cars';
 import { paintHex, type MyCar } from './mycar';
+import type { MyBike } from './mybike';
+import type { Bike } from './bikes';
+import { REST as BIKE_REST } from './bike-sim';
+
+/**
+ * Your motorbikes' drawing (vehicle plan Phase 7): bikes.ts, a chunk fetched once the city is up; index.ts hands its
+ * `createBike` here (`setBikeMaker()`), and the stand shows your bike from then on
+ */
+export const BIKE_3D: { create?: (id: MyBike['model'], paint: string) => Bike } = {};
 
 /** The turntable's resting turn: three-quarters on to the avenue */
 const REST = -0.65;
 
-export function buildGarage(scene: THREE.Scene, opts: { tick: (f: Tick) => void; reduced: boolean; car: MyCar }) {
+export function buildGarage(scene: THREE.Scene, opts: { tick: (f: Tick) => void; reduced: boolean; car: MyCar; bike: MyBike }) {
   const { ox, oz } = GARAGE;
   const [x0, z0, x1, z1, H] = GARAGE_SITE.building;
   const W = x1 - x0;
@@ -177,6 +186,35 @@ export function buildGarage(scene: THREE.Scene, opts: { tick: (f: Tick) => void;
     spin.rotation.y += dt * 0.45;
   });
 
+  // Your motorbike on its side stand on the forecourt, between the bay and the office door, facing the avenue
+  const BIKE_SPOT = { x: ox + 5.9, z: oz + 1.7, yaw: Math.PI / 2 };
+  const stand = new THREE.Group();
+  stand.position.set(BIKE_SPOT.x, S, BIKE_SPOT.z);
+  stand.rotation.y = BIKE_SPOT.yaw;
+  stand.userData.keep = true;
+  g.add(stand);
+  let bike: Bike | null = null;
+  let bikeShowing = '';
+  let bikeWant: MyBike | null = opts.bike;
+  function showBike(b: MyBike) {
+    bikeWant = b;
+    if (!BIKE_3D.create) return;
+    const key = `${b.model}:${b.paint}`;
+    if (key === bikeShowing) return;
+    bikeShowing = key;
+    bike?.dispose();
+    bike = BIKE_3D.create(b.model, paintHex(b.paint));
+    // (resting on its side stand, a touch over to its left)
+    bike.group.rotation.x = BIKE_REST.lean;
+    stand.add(bike.group);
+  }
+  function clearBike() {
+    bike?.dispose();
+    bike = null;
+    bikeShowing = '';
+    bikeWant = null;
+  }
+
   /** Empty the turntable (your car is out on the streets) */
   function clear() {
     car?.dispose();
@@ -201,6 +239,26 @@ export function buildGarage(scene: THREE.Scene, opts: { tick: (f: Tick) => void;
     },
     /** Where the turntable is (getting in at home) */
     turntable: TT,
+    /** Your motorbike's stand: the drawing comes (bikes.ts), what's on it, and taking it out (vehicle plan Phase 7) */
+    setBikeMaker(create: NonNullable<typeof BIKE_3D.create>) {
+      BIKE_3D.create = create;
+      if (bikeWant) showBike(bikeWant);
+    },
+    showBike,
+    clearBike,
+    get hasBike() {
+      return !!bike;
+    },
+    bikeSpot: BIKE_SPOT,
+    takeOutBike() {
+      if (!bike) return null;
+      const out = bike;
+      bike = null;
+      bikeShowing = '';
+      bikeWant = null;
+      scene.add(out.group);
+      return { bike: out, x: BIKE_SPOT.x, z: BIKE_SPOT.z, yaw: BIKE_SPOT.yaw };
+    },
     /**
      * Drive it off: the turntable's car moves into the city (facing the avenue) and is the
      * caller's to look after from now on. The turntable stays empty until a car comes home.

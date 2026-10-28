@@ -11,7 +11,11 @@
  *   call: it can be taken out and driven anywhere too, with Degen seated in
  *   it). It goes back to the pits when a race starts. On the track it rides
  *   the decks and the banking (`track()`, kartpark.ts trackSurfaceAt).
- * - Both can be out at once; you're in one at a time.
+ * - Your motorbike (vehicle plan Phase 7) waits on its stand at the garage;
+ *   it rides on the cars' rules tuned as a bike (bike-sim.ts), leaning into
+ *   the turns (the whole bike, you with it) and resting on your left foot as
+ *   it stops. Its cameras: the chase camera and your helmet's (V).
+ * - All three can be out at once; you're in one at a time.
  * - Cameras (V): a chase camera that swings in behind the car (look around
  *   with the mouse, a drag or the right stick; it settles back behind), a
  *   roof camera and, in your car once it's fitted out, the driver's seat
@@ -36,6 +40,9 @@ import { blinkOn } from './traffic';
 import { DECK_WALLS, departuresSurface } from './airfield';
 import type { Garage } from './garage';
 import type { Kart } from './karts';
+import type { Bike } from './bikes';
+import { BIKES, type BikeId, type MyBike } from './mybike';
+import { REST, footDown, stepLean, tuneBike } from './bike-sim';
 import { bodies } from './life';
 import { DRIVE, FEEL, type MyCar, type PlayerCar } from './mycar';
 import type { KartId } from './mykart';
@@ -48,8 +55,10 @@ export interface DriveDeps {
   garage: Garage;
   /** Your saved car (model and paint) */
   myCar(): MyCar;
-  /** A model's 0..1 handling with its mods on (carStatsOf in tycoon.ts) */
-  stats(model: PlayerCar): { speed: number; accel: number; grip: number };
+  /** A model's 0..1 handling with its mods on (carStatsOf in tycoon.ts: a car's or a bike's) */
+  stats(model: PlayerCar | BikeId): { speed: number; accel: number; grip: number };
+  /** Your saved motorbike (vehicle plan Phase 7) */
+  myBike(): MyBike;
   /** Your kart in the pits (kart.ts): where it stands when it's home, taking it out, and bringing it back; its handling */
   kart: {
     home(): { x: number; z: number; yaw: number } | null;
@@ -92,11 +101,15 @@ export function createDrive(d: DriveDeps) {
   const speedEl = hud.querySelector<HTMLElement>('[data-drive-speed]')!;
   const gearEl = hud.querySelector<HTMLElement>('[data-drive-gear]')!;
 
-  /** A vehicle out in the city: the car (off the turntable) or the kart (out of the pits) */
+  /** A vehicle out in the city: the car (off the turntable), the kart (out of the pits) or the bike (off its stand) */
   interface Out {
-    kind: 'car' | 'kart';
+    kind: 'car' | 'kart' | 'bike';
     name: string;
-    model: PlayerCar | KartId;
+    model: PlayerCar | KartId | BikeId;
+    /** Your bike, for its rider's pose and the helmet's eye */
+    bike?: Bike;
+    /** How far over it leans (the bike's: positive to its right) */
+    lean?: number;
     group: THREE.Group;
     drive(dist: number, steer: number): void;
     dispose(): void;
@@ -117,6 +130,7 @@ export function createDrive(d: DriveDeps) {
   }
   let car: Out | null = null;
   let kart: Out | null = null;
+  let bike: Out | null = null;
   /** The one being driven */
   let out: Out | null = null;
   const active = () => !!out;
@@ -151,20 +165,55 @@ export function createDrive(d: DriveDeps) {
       const s = CARS[v.model as PlayerCar];
       return tune(d.stats(v.model as PlayerCar), { L: s.L, W: s.W, wheelbase: s.axles[1] - s.axles[0] }, FEEL[v.model as PlayerCar]);
     }
+    if (v.kind === 'bike') return tuneBike(d.stats(v.model as BikeId), v.model as BikeId);
     // A kart: small, quick off the line, a little slower than a race pace on the open road
     const k = d.kart.stats(v.model as KartId);
     return tune({ speed: k.speed * 0.8, accel: k.accel, grip: k.grip }, { L: 1.2, W: 0.95, wheelbase: 0.82 });
   }
 
   /** The parked vehicles' footprints as circles (for walking round them) */
-  const parkedCircles = () => [car, kart].flatMap((v) => (v && v !== out ? circles(v.state, v.tune) : []));
-  const outs = () => [car, kart].filter((v): v is Out => !!v);
+  const parkedCircles = () => [car, kart, bike].flatMap((v) => (v && v !== out ? circles(v.state, v.tune) : []));
+  const outs = () => [car, kart, bike].filter((v): v is Out => !!v);
 
   function place(v: Out) {
     const s = v.state;
     v.holder.position.set(s.x, v.y, s.z);
     v.holder.rotation.y = s.yaw;
-    v.group.rotation.set((v === out ? roll : 0) + v.bank, 0, v === out ? pitch : 0);
+    // (a parked bike rests on its side stand, a touch over to its left)
+    v.group.rotation.set((v === out ? roll : v.kind === 'bike' ? REST.lean : 0) + v.bank, 0, v === out ? pitch : 0);
+  }
+
+  /** Your motorbike off its stand at the garage (vehicle plan Phase 7) */
+  function takeBike(): Out | null {
+    const taken = d.garage.takeOutBike();
+    if (!taken) return null;
+    const model = d.myBike().model;
+    const holder = new THREE.Group();
+    d.scene.add(holder);
+    holder.add(taken.bike.group);
+    taken.bike.group.position.set(0, 0, 0);
+    const spec = BIKES[model];
+    const v: Out = {
+      kind: 'bike',
+      name: spec.name,
+      model,
+      bike: taken.bike,
+      lean: REST.lean,
+      group: taken.bike.group,
+      drive: (dist, steer) => taken.bike.drive(dist, steer),
+      dispose: () => taken.bike.dispose(),
+      seat: (deg) => taken.bike.seat(deg),
+      state: newCar(taken.x, taken.z, taken.yaw),
+      tune: {} as DriveTune,
+      holder,
+      y: d.groundAt(taken.x, taken.z),
+      bank: 0,
+      roof: taken.bike.eye.y,
+      roofFwd: taken.bike.eye.x,
+    };
+    v.tune = tuneOf(v);
+    place(v);
+    return v;
   }
 
   /** The kart out of the pits, standing where it was shown */
@@ -228,15 +277,16 @@ export function createDrive(d: DriveDeps) {
     return v;
   }
   /** How far a point is from a vehicle you could get into: parked ones, the turntable's car, the pits' kart */
-  function nearest(x: number, z: number): { d: number; kind: 'car' | 'kart' } | null {
-    let best: { d: number; kind: 'car' | 'kart' } | null = null;
-    const offer = (dist: number, kind: 'car' | 'kart') => {
+  function nearest(x: number, z: number): { d: number; kind: 'car' | 'kart' | 'bike' } | null {
+    let best: { d: number; kind: 'car' | 'kart' | 'bike' } | null = null;
+    const offer = (dist: number, kind: 'car' | 'kart' | 'bike') => {
       if (!best || dist < best.d) best = { d: dist, kind };
     };
     for (const v of outs()) if (v !== out) offer(Math.min(...circles(v.state, v.tune).map((c) => Math.hypot(c.x - x, c.z - z) - c.r)), v.kind);
     if (!car && d.garage.hasCar) offer(Math.hypot(d.garage.turntable.x - x, d.garage.turntable.z - z) - d.garage.turntable.r, 'car');
     const home = kart ? null : d.kart.home();
     if (home) offer(Math.hypot(home.x - x, home.z - z) - 0.9, 'kart');
+    if (!bike && d.garage.hasBike) offer(Math.hypot(d.garage.bikeSpot.x - x, d.garage.bikeSpot.z - z) - 0.5, 'bike');
     return best;
   }
 
@@ -283,6 +333,10 @@ export function createDrive(d: DriveDeps) {
     get kartAway() {
       return !!kart;
     },
+    /** Is your motorbike off its stand? */
+    get bikeAway() {
+      return !!bike;
+    },
     get model() {
       return (car?.model as PlayerCar | undefined) ?? d.myCar().model;
     },
@@ -301,9 +355,15 @@ export function createDrive(d: DriveDeps) {
      * The nearest vehicle you could get into (the turntable's car and the pits' kart count), for getting in
      * (moments.ts): its body's middle, heading and size
      */
-    doorOf(x: number, z: number): { kind: 'car' | 'kart'; x: number; z: number; yaw: number; W: number; L: number; model?: PlayerCar } | null {
+    doorOf(x: number, z: number): { kind: 'car' | 'kart' | 'bike'; x: number; z: number; yaw: number; W: number; L: number; model?: PlayerCar; bike?: BikeId } | null {
       const n = nearest(x, z);
       if (!n) return null;
+      if (n.kind === 'bike') {
+        if (bike) return { kind: 'bike', x: bike.state.x, z: bike.state.z, yaw: bike.state.yaw, W: bike.tune.W, L: bike.tune.L, bike: bike.model as BikeId };
+        const id = d.myBike().model;
+        const sp = d.garage.bikeSpot;
+        return { kind: 'bike', x: sp.x, z: sp.z, yaw: sp.yaw, W: BIKES[id].W, L: BIKES[id].L, bike: id };
+      }
       if (n.kind === 'car') {
         if (car) return { kind: 'car', x: car.state.x, z: car.state.z, yaw: car.state.yaw, W: car.tune.W, L: car.tune.L, model: car.model as PlayerCar };
         const model = d.myCar().model;
@@ -330,6 +390,7 @@ export function createDrive(d: DriveDeps) {
       if (!n) return false;
       let v: Out | null;
       if (n.kind === 'car') v = car ?? (car = takeCar());
+      else if (n.kind === 'bike') v = bike ?? (bike = takeBike());
       else v = kart ?? (kart = takeKart());
       if (!v) return false;
       out = v;
@@ -348,6 +409,7 @@ export function createDrive(d: DriveDeps) {
       hud.hidden = false;
       root.classList.add('is-driving');
       root.classList.toggle('in-car', v.kind === 'car');
+      root.classList.toggle('on-bike', v.kind === 'bike');
       root.dataset.car = v.name;
       signal.side = null;
       d.sfx('door');
@@ -365,7 +427,7 @@ export function createDrive(d: DriveDeps) {
       v.seat?.(null);
       place(v);
       hud.hidden = true;
-      root.classList.remove('is-driving', 'in-car');
+      root.classList.remove('is-driving', 'in-car', 'on-bike');
       delete root.dataset.car;
       d.engine(-1);
       d.tyres(0);
@@ -396,6 +458,13 @@ export function createDrive(d: DriveDeps) {
         const off = (i ? 1 : -1) * Math.abs(n.hip[2]);
         return { x, z, yaw: s.yaw + Math.PI / 2, kind: v.kind, from: { x: s.x + fx * n.hip[0] + rx * off, z: s.z + fz * n.hip[0] + rz * off }, seat: n.hip[1] };
       }
+      // Off the bike: from its seat, his hips at its height
+      if (v.kind === 'bike') {
+        const b = BIKES[v.model as BikeId];
+        v.lean = REST.lean;
+        place(v);
+        return { x, z, yaw: s.yaw + Math.PI / 2, kind: v.kind, from: { x: s.x + fx * b.seat[0], z: s.z + fz * b.seat[0] }, seat: b.seat[1] };
+      }
       return { x, z, yaw: s.yaw + Math.PI / 2, kind: v.kind, from: { x: s.x, z: s.z } };
     },
     /**
@@ -422,6 +491,14 @@ export function createDrive(d: DriveDeps) {
       car.holder.removeFromParent();
       car = null;
     },
+    /** Send your bike home to its stand (the garage kept another): it leaves the streets */
+    recallBike() {
+      if (!bike || out === bike) return;
+      bike.seat?.(null);
+      bike.dispose();
+      bike.holder.removeFromParent();
+      bike = null;
+    },
     /** The kart goes back to the pits (a race is starting, or the hut sends it home) */
     recallKart() {
       if (!kart || out === kart) return;
@@ -441,9 +518,9 @@ export function createDrive(d: DriveDeps) {
       lookPitch = THREE.MathUtils.clamp(lookPitch + dy, -0.25, 0.7);
       lookIdle = 0;
     },
-    /** The horn (H, the Horn button, the gamepad's stick press): your car's only, a toot at most twice a second */
+    /** The horn (H, the Horn button, the gamepad's stick press): your car's and your bike's, a toot at most twice a second */
     horn() {
-      if (!out || out.kind !== 'car' || clock - lastHorn < 0.5) return;
+      if (!out || out.kind === 'kart' || clock - lastHorn < 0.5) return;
       lastHorn = clock;
       d.sfx('horn');
     },
@@ -498,8 +575,14 @@ export function createDrive(d: DriveDeps) {
       const gear = String(box.gear);
       if (gearEl.textContent !== gear) gearEl.textContent = gear;
       d.engine(0.12 + box.revs * 0.72 + Math.max(0, inp.throttle) * 0.13, ev);
-      // Your car fitted out rides its springs (and turns its wheel, its needles, lays its marks); else the body's drawn-on lean
-      if (!v.car?.ride?.(s, dt, slip, accel, box.revs, T.top, v.y, d.groundAt)) {
+      // Your bike leans into its turns, onto your left foot as it stops (bike-sim.ts), you with it;
+      // your car fitted out rides its springs (and turns its wheel, its needles, lays its marks); else the body's drawn-on lean
+      if (v.bike) {
+        v.lean = stepLean(v.lean ?? 0, s, v.model as BikeId, dt);
+        roll = v.lean;
+        pitch += (THREE.MathUtils.clamp(accel * 0.004, -0.04, 0.04) - pitch) * damp(6, dt);
+        v.bike.pose(-s.steer, footDown(s));
+      } else if (!v.car?.ride?.(s, dt, slip, accel, box.revs, T.top, v.y, d.groundAt)) {
         roll += (THREE.MathUtils.clamp(s.yawRate * s.speed * 0.012, -0.07, 0.07) - roll) * damp(6, dt);
         pitch += (THREE.MathUtils.clamp(accel * 0.006, -0.05, 0.05) - pitch) * damp(6, dt);
       }
@@ -519,6 +602,12 @@ export function createDrive(d: DriveDeps) {
       const fz = -Math.sin(yaw);
       if (view > 1 && v.car?.eye) {
         v.car.eye(camPos, at, lookYaw, lookPitch);
+        camera.position.copy(camPos);
+      } else if (view && v.bike) {
+        // Your helmet: his eyes, leaning with the bike, looking up the road
+        camPos.copy(v.bike.eye);
+        v.group.localToWorld(camPos);
+        at.set(camPos.x + fx * 6, camPos.y - 0.3 + lookPitch * 4, camPos.z + fz * 6);
         camera.position.copy(camPos);
       } else if (view) {
         camPos.set(s.x + fx * v.roofFwd, y + v.roof, s.z + fz * v.roofFwd);
@@ -543,6 +632,8 @@ export function createDrive(d: DriveDeps) {
         shake = Math.max(0, shake - dt * 1.2);
       }
       camera.lookAt(at);
+      // (the helmet's view tips with the lean)
+      if (view && v.bike) camera.rotateZ(-roll * 0.6);
       const wantFov = (view ? 68 : 58) + Math.min(1, Math.abs(s.speed) / T.top) * 10;
       fov += (wantFov - fov) * damp(4, dt);
       // (the seat's view is close to the dash and the wheel: the near plane comes in for it)

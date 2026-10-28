@@ -1305,14 +1305,21 @@ it and has been retired completely. Build only on what's here.
   side is the quick swap with a fade (`QUICK_FADE`), reduced motion the
   quick swap without; at home the turntable is stood on to get in
   (`isTurntable()`, `DISC`). Keep new car detail in that chunk: the
-  boot is near its budget (663.0 of 670 KB: Phase 3 brought carinside.ts into it, Phase 5 the look's ids, Phase 6 three specs; the grand station's retirement freed 5 KB). Phase 4 (handling with
+  boot is near its budget (665.4 of 670 KB: Phase 3 brought carinside.ts into it, Phase 5 the look's ids, Phase 6 three specs, Phase 7 the bikes' numbers and rules; the grand station's retirement freed 5 KB). Phase 4 (handling with
   depth: each model's feel and drifting) is built, in the sim (drive-sim.ts, mycar.ts `FEEL`; see Driving your
   car below). Phase 5 (the garage's customisation, all free) is built: `CarLook` in mycar.ts (the ids,
   `cleanLook()`, carried by `cleanCar()`), carlook.ts (DOM-free, tested in `tests/carlook.test.ts`: names,
   colours, `kitFit()`, `doorPanel()`, `STOCK_PARTS` / `bareOf()`: a kit part over the model's own takes it off
   through `build(id, wheels, bare)`), drawn by carstyle.ts in the fine-detail chunk (`dress()` from `fitOut()`:
   rims, the kit on the body, the livery as one material on every painted piece with a `liveTex()` for the sides,
-  the underglow dark by day), the garage menu's tabs (Model, Paint, Wheels, Kit, Livery, Glow). Phase 6 (three
+  the underglow dark by day), the garage menu's tabs (Model, Paint, Wheels, Kit, Livery, Glow). Phase 7
+  (motorbikes) is built: `mybike.ts` (the Hop Scoot scooter free, the Alley Cat and the Neon Blade for Dorras;
+  `BIKES`, `MyBike` saved as `degen-city-bike-v1`), `bike-sim.ts` (DOM-free, tested in `tests/bike.test.ts`: the
+  cars' rules tuned as a bike, the lean into turns by speed within its most, the foot down as it stops), drawn by
+  `bikes.ts` (a chunk fetched after the boot; the rider astride, hands on the grips, feet on the pegs); bought
+  and tuned at the garage (the Cars / Bikes switch; the save's garage holds both, `GarageId`; the roof rack is a
+  top box), waiting on its stand on the forecourt, ridden by drive.ts as a third vehicle (see Riding your
+  motorbike below). Phase 6 (three
   more cars) is built: the **Boulevardier** (`classic`: chrome bumpers and overriders, tail fins, chrome hubcaps; a
   soft, wandering rear-drive feel), the **Mud Buster** (`offroad`: lifted on big tyres, roof lights and rack, a
   snorkel, a steel bumper with a winch, rock sliders (the kit's skirts take their place), the spare on the
@@ -2994,6 +3001,18 @@ it and has been retired completely. Build only on what's here.
   card, the list rows and tags) are shared by the kart and fight menus in
   `src/styles/cards.css`, still under their `.race-*` class names.
 
+## Riding your motorbike (3D walk mode)
+
+- Your bike (vehicle plan Phase 7, `docs/vehicle-plan.md`) waits on its side stand on the garage's forecourt
+  (garage.ts `BIKE_SPOT`, between the bay line and the office door, facing the avenue); "Get on" there or wherever
+  you left it. Getting on is a moment (`bikeMark()`: beside it, hands to the grips, a leg over the seat); "Get off"
+  anywhere leaves it on its stand, solid to walk round.
+- drive.ts rides it as a third vehicle (`kind: 'bike'`, the car's HUD, touch layout and keys; `on-bike` on the
+  root, the header "Riding · <bike>"): bike-sim.ts's lean tips the whole bike and you with it, your left foot comes
+  down as it stops, V swaps the chase camera for your helmet's (tipping with the lean), H sounds the horn.
+- Bought, tuned (engine, turbo, tyres, a top box) and painted at the garage on the Cars / Bikes switch; the kit,
+  livery and glow tabs are the cars'. Only for the city: never real money, never tied to the store or the token.
+
 ## Boating (3D walk mode)
 
 - The hire boat (river plan step 4c, the owner's pick): moored along the quay east of Downtown's landing (`HIRE` in `riverbus.ts`, its ladder a gap in the railing through `atGangway()`, a BOAT HIRE board); "Take a boat" at the top of the ladder (`boat` in walk.ts's prompts, closed by the live settings' `boat`).
@@ -3628,7 +3647,7 @@ it and has been retired completely. Build only on what's here.
   10's bigger world (`WORLD_EXT`): run both when anything reads the edge. The "Build site" Action runs them before the
   build: a failing test means no zip.
 - They cover the code that's free of the DOM and scene code: the street plan
-  (`layout.ts`, `streetplan.ts`), the cars' measurements, interiors and where your car is hollow (`carspec.ts`, `carinside.ts`), your car's springs (`suspension.ts`), the garage's customisation (`carlook.ts`, the look in `mycar.ts`), downtown (`downtown.ts`), the ring highway
+  (`layout.ts`, `streetplan.ts`), the cars' measurements, interiors and where your car is hollow (`carspec.ts`, `carinside.ts`), your car's springs (`suspension.ts`), the garage's customisation (`carlook.ts`, the look in `mycar.ts`), your motorbikes (`mybike.ts`, `bike-sim.ts`, their place in the save and `bikeMark()`, in `tests/bike.test.ts`), downtown (`downtown.ts`), the ring highway
   (`highway.ts`), the traffic's routes and lights (`routes.ts`), collision data, doors, the gun counter, the garage
   and the spawn (`solids.ts`), the plots (`src/data/plots.ts`), your car
   (`mycar.ts`), the driving rules (`drive-sim.ts`), target practice
