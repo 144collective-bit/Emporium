@@ -582,7 +582,24 @@ Asked before planning (2026-10-28):
 - **How many** (`TIERS` in index.ts): desktop (high and medium) four
   trucks (three on medium), three patrol cars and six bikes; phones two,
   two and three.
-- **Measured** (`?bench`, the medium tier by day, against the baseline before it: 121 draws at the traffic view, 223 on average over the route): the numbers after follow. Boot cost: 6 KB (657.3 of 670 KB).
+- **Measured** (`?bench`, the medium tier by day, headless on software graphics: the draws are what to compare;
+  two runs after, the second with the riders all in hoodies, one kind of the crowd's meshes for them):
+
+  | View | Draws before | After (two runs) |
+  |---|---|---|
+  | traffic (a ring junction) | 121 | 148, 148 |
+  | highway junction | 164 | 197, 186 |
+  | drive (the ring avenue) | 242 | 264, 267 |
+  | street (downtown) | 410 | 427, 437 |
+  | home | 379 | 391, 412 |
+  | the route (average / worst) | 223 / 470 | 267 / 598, 278 / 498 |
+
+  About 25 to 45 draws more where the traffic is: the new fleets (two draws each, three for the patrol cars with
+  their livery; up to 15 with every kind in view) and the riders bringing the crowd's meshes into views with no one
+  else on foot. The numbers move from run to run with where the traffic happens to be (the airport's view, with no
+  new traffic of its own, went from 114 to 145 between runs), so a real laptop's and a phone's `?bench` are the
+  owner's to paste back. Triangles about 0.1 M more; geometry memory 206 to 212 MB. Boot cost: 6 KB (657.3 of
+  670 KB).
 
 ### Phase 9: karts, boats and aircraft
 
