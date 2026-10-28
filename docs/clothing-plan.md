@@ -243,6 +243,46 @@ waving.
 4. **The casual tops, smoother.** The hoodie (the hood's shape round the
    neck, the pouch), the track top, the varsity, the puffer, and the
    soldier's fatigues.
+
+   **Built** (28 October 2026):
+   - **The bodies on the desktop:** a section every 2 cm on the curve
+     through their own (`smooth()`), and 30 rings (`TOP_RINGS`). The ring
+     count is the test's: a ring point at the middle of the back, or just
+     off it, sank into the trousers' seat at a sprint (1.6 cm at 28, 7 mm
+     at 33); with a count two more than a multiple of four (22, the
+     phone's, and 30) the middle falls between two points, 6 degrees off,
+     and every top holds within 2 mm. The puffer's fuller hem needs the
+     phone's 22 even so: on the desktop its body is two pieces joined in
+     the second baffle's pinch (`SEAM`), the hem at 22, the rest at 30.
+   - **Shoulders:** every casual top carries the jacket's shoulder line
+     (the hoodie's sections, and so the track top's and the puffer's; the
+     varsity and the fatigues now grow from `JACKET`), and their sleeves
+     the suit's lower head (`LOOSE_U`, curved on the desktop, the track's
+     stripes on the same sections).
+   - **The hoodie:** the hood down is a roll swept round the neck
+     (`hoodDown`: thickest and riding highest at the back where it
+     bunches, tapering to the front where the drawstrings come out), not a
+     ring; the pouch is `crisp`.
+   - **Zips and the placket** are strips laid down the body (`tape()`: a
+     row every bend, a smooth face, bevelled sides kept apart from it), in
+     place of outlines laid on (`onBody()`); a crisp outline cost about
+     7,000 triangles a zip, the strip a few hundred, and its bevelled
+     sides ink alike (upright, the near side inked in dashes and the far
+     one not at all).
+   - **The puffer's baffles** are six sections each on the desktop
+     (`quilt()`), rounder.
+   - **The soldier's vest** is a little fuller: the fatigues, grown from
+     the jacket's fuller chest, came through it.
+   - **Cost**, triangles (single figure on a desktop / on a phone / near
+     crowd / far crowd): hoodie 22.8k → 25.9k / 13.9k → 14.1k / 8.6k →
+     8.7k / 3.4k → 3.4k; track 23.6k → 24.3k / 15.6k → 13.7k / 8.9k → 9.0k /
+     3.9k → 3.9k; varsity 23.8k → 24.4k / 14.2k → 13.7k / 8.7k → 8.8k /
+     3.5k → 3.6k; puffer 25.5k → 26.2k / 16.7k → 14.9k / 9.6k → 9.7k /
+     4.0k → 4.1k (the strips cost less than the zips they replaced). The
+     boot's code 666.4 → 666.8 KB of its 670.
+   - **Left as it is:** a few faint dots along the placket's edges close
+     up; the puffer's pinches still catch the light in jagged bands, as
+     quilting does.
 5. **The accessories, smoother.** The cap and every hat seated on the
    head, the shades, the chain and the necklace, the bags on the back, the
    watch, the things in the hand.

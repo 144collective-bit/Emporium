@@ -1669,8 +1669,8 @@ it and has been retired completely. Build only on what's here.
   and shoes, the suit, the casual tops, the accessories) on a desktop
   detail level, phones and crowds as they are. One phase at a time with
   the owner's sign-off; keep it up to date. Phase 1 (no clipping),
-  Phase 2 (bottoms and shoes, smoother) and Phase 3 (the suit, smoother)
-  are built:
+  Phase 2 (bottoms and shoes, smoother), Phase 3 (the suit, smoother) and
+  Phase 4 (the casual tops, smoother) are built:
   - The wardrobe is data: `wardrobe.ts` (DOM-free: the outfits,
     `lookOutfit()`, the shapes and `items()`; `restSkin()` is a piece at
     rest with its bones, what `createDegen()` and the crowd skin with);
@@ -1714,13 +1714,22 @@ it and has been retired completely. Build only on what's here.
     (`sole()`); the crowd's take every other section, the far crowd's
     every fourth (`up()`).
   - The suit's jacket is its own sections (`JACKET`, curved on the
-    desktop at the full ring count; the varsity and fatigues still grow
-    from `SUIT`), its hem cut away at the front (`cutaway()`), its sleeves
+    desktop at the full ring count; the varsity and fatigues grow from it),
+    its hem cut away at the front (`cutaway()`), its sleeves
     `UPPER_J` / `FORE_J`. Its laid-on pieces are `crisp` (their outline
     split as finely as the bend, their sides kept apart from their faces
     when smoothed, so their edges ink solid): set it round new pieces that
     need it rather than for everything (on the long thin ones, the zips and
     the crease, it costs thousands of triangles).
+  - The casual tops (Phase 4): `smooth()` on the desktop (curved sections)
+    at `TOP_RINGS` 30, a count two more than a multiple of four so the
+    middle of the back falls between two ring points (one on it, or just
+    off it, sank into the trousers' seat at a sprint); the puffer's body
+    in two on the desktop, its hem at 22 (`SEAM`). Their shoulders are the
+    jacket's line and their sleeves the suit's lower head (`LOOSE_U`); the
+    hood down is a roll swept round the neck (`hoodDown`); zips and the
+    placket are `tape()` strips (bevelled sides, a few hundred triangles),
+    never outlines laid on.
 - **The animation rebuild** (the owner's call, critical) is planned in
   `docs/animation-plan.md`: AAA movement (Spider-Man / Ratchet feel,
   neutral athletic) from motion capture, then turns, jumps, armed
@@ -2154,12 +2163,13 @@ it and has been retired completely. Build only on what's here.
     cross-sections slope from the neck down to the shoulder (the
     trapezius, no padded shelf), the body stopping short of the arm's
     outside, and the sleeve's cap is a low rounded deltoid running down
-    into the arm, round over the outside of the shoulder (`SUIT`, `HOODIE`,
-    `UPPER_S`; the rest grow from them). Check new tops from the front and back running
+    into the arm, round over the outside of the shoulder (`JACKET`, `HOODIE`,
+    `UPPER_J`; the rest grow from them). Check new tops from the front and back running
     in the lab (`?anim&outfit=hoodie`, ...).
   - Shapes are built from cross-sections (`loft()`, superellipse rings) and
     flat details laid onto them (`onBody()` with `surface()`: lapels, the
-    shirt V, the tie, zips, pockets). Shoes are side profiles (`profile()`).
+    shirt V, the tie, pockets; zips and plackets are `tape()`). Shoes are
+    lofts along their length (`shoe()`).
   - The wardrobe is `items()` in `wardrobe.ts`: each item (`head`, `cap`, `suit`, `hoodie`,
     `joggers`, `backpack`, `coffee`...) has a `when` rule on the `Outfit` and
     pieces on joints, each a fixed colour or an outfit colour (`shade`
