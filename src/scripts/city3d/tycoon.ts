@@ -35,7 +35,7 @@ import { DOORS, GARAGE_SITE, LOT_SITE, STALL_SPOT, UNIT_SITE } from './solids';
 import type { WeaponId } from './combat-sim';
 import { CARGO as BASE_CARGO, DRIVE, PLAYER_CARS, type PaintId, type PlayerCar } from './mycar';
 import { DEFAULT_KART, KART_SPECS, PLAYER_KARTS, cleanKart, type KartId } from './mykart';
-import { CUPS, type CupId } from './kart-sim';
+import { CUPS, type CupId } from './kart-cups';
 import { STYLES, type StyleId } from './fight-moves';
 import { COURSE_IDS } from './kartcircuit';
 import { PLACE_IDS as MAP_PLACES } from './places';
