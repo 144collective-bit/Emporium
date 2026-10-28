@@ -1668,8 +1668,9 @@ it and has been retired completely. Build only on what's here.
   the tests and a clipping view in the lab, then smoother shapes (bottoms
   and shoes, the suit, the casual tops, the accessories) on a desktop
   detail level, phones and crowds as they are. One phase at a time with
-  the owner's sign-off; keep it up to date. Phase 1 (no clipping) and
-  Phase 2 (bottoms and shoes, smoother) are built:
+  the owner's sign-off; keep it up to date. Phase 1 (no clipping),
+  Phase 2 (bottoms and shoes, smoother) and Phase 3 (the suit, smoother)
+  are built:
   - The wardrobe is data: `wardrobe.ts` (DOM-free: the outfits,
     `lookOutfit()`, the shapes and `items()`; `restSkin()` is a piece at
     rest with its bones, what `createDegen()` and the crowd skin with);
@@ -1712,6 +1713,14 @@ it and has been retired completely. Build only on what's here.
     rounded toe box (`toe()`), on a sole worked out from the upper
     (`sole()`); the crowd's take every other section, the far crowd's
     every fourth (`up()`).
+  - The suit's jacket is its own sections (`JACKET`, curved on the
+    desktop at the full ring count; the varsity and fatigues still grow
+    from `SUIT`), its hem cut away at the front (`cutaway()`), its sleeves
+    `UPPER_J` / `FORE_J`. Its laid-on pieces are `crisp` (their outline
+    split as finely as the bend, their sides kept apart from their faces
+    when smoothed, so their edges ink solid): set it round new pieces that
+    need it rather than for everything (on the long thin ones, the zips and
+    the crease, it costs thousands of triangles).
 - **The animation rebuild** (the owner's call, critical) is planned in
   `docs/animation-plan.md`: AAA movement (Spider-Man / Ratchet feel,
   neutral athletic) from motion capture, then turns, jumps, armed

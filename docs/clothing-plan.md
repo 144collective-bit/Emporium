@@ -208,6 +208,38 @@ waving.
 3. **The suit, smoother.** The jacket's shoulders, chest and waist taper,
    the hem's curve, the sleeves' taper to the cuff, the lapels and collar
    lying flat on a smooth chest, the shirt and tie.
+
+   **Built** (28 October 2026):
+   - **The jacket** has sections of its own (`JACKET`; the varsity and
+     the fatigues still grow from `SUIT` until Phase 4): the chest fuller,
+     the waist taken in (12.4 across the half at the waist, 16.1 at the
+     chest), the shoulder line carried out and up to the sleeve's head so
+     the two meet in one line. On the desktop a section every 2 cm on the
+     curve through them and the full ring count (the suit passed the test
+     with it; the casual tops keep the phone's, `TR()`).
+   - **The hem** is cut away at the front (`cutaway()`): the two fronts
+     round off from its middle, the hem rising 3 cm there and easing to
+     nothing towards the sides and up the front.
+   - **The sleeves:** the head a touch lower than the casual tops'
+     deltoid (`UPPER_J`), so it runs on from the shoulder line; the
+     forearm tapering to the cuff (`FORE_J`); both curved on the desktop.
+   - **The lapels, collar, shirt and tie** lie on the jacket as it's built
+     (the curved sections), and their edges ink as solid lines: their
+     outline is split as finely as the bend splits their face, so the top
+     and the sides share every point (split only on the top, the two came
+     apart and the ink drew the gaps as dashes along the lapels), and their
+     sides are kept apart from their faces when they're smoothed (`crisp`,
+     the suit's pieces only for now). The shirt's collar points sit under
+     the lapels (they came through them as a jagged white streak), the tie
+     stands a little further off the shirt, its knot a rounded trapezoid.
+   - **Left as it is:** a faint dash on the tie's far edge seen dead on
+     (only lifting it well off the shirt cures it); the sleeve head still
+     reads as a soft rise over the shoulder, as the natural athletic
+     shoulders are meant to.
+   - **Cost**, triangles (single figure on a desktop / on a phone / near
+     crowd / far crowd): suit 25.8k → 28.3k / 14.8k → 14.7k / 8.2k → 8.3k /
+     3.3k → 3.3k; every other outfit unchanged. The boot's code 665.9 →
+     666.4 KB of its 670.
 4. **The casual tops, smoother.** The hoodie (the hood's shape round the
    neck, the pouch), the track top, the varsity, the puffer, and the
    soldier's fatigues.

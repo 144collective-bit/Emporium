@@ -201,11 +201,26 @@ function surface(secs: Sec[], n = 2, side = 1) {
 
 /** How finely flat pieces are split to follow a curved body: single figures only (a crowd's are lifted a touch instead) */
 let bend = 0;
+/**
+ * The suit's laid-on pieces (lapels, shirt, collar, tie, flaps): their outline split as finely as the bend
+ * splits their face, and their sides kept apart from it, so their edges ink as solid lines (docs/clothing-plan.md
+ * Phase 3); the rest as they were until their phases
+ */
+let crisp = false;
+/** A closed outline with points added along each edge, none longer than `step` */
+const dense = (p: [number, number][], step: number) =>
+  p.flatMap(([x, y], i) => {
+    const [x1, y1] = p[(i + 1) % p.length];
+    const n = Math.max(1, Math.ceil(Math.hypot(x1 - x, y1 - y) / step));
+    return Array.from({ length: n }, (_, k): [number, number] => [x + ((x1 - x) * k) / n, y + ((y1 - y) * k) / n]);
+  });
 /** A flat shape (x, y) with a little thickness, lying on a surface `lift` above it */
 function onBody(pts: [number, number][] | THREE.Shape, depth: number, surf: (x: number, y: number) => number, lift: number, side = 1) {
-  const shape = Array.isArray(pts) ? new THREE.Shape(pts.map(([x, y]) => new THREE.Vector2(x, y))) : pts;
+  // (crisp: its outline split as finely as the bend splits its face, so the top and the sides share every point
+  // along the edge: split only on the top, the two came apart where it bent, and the ink drew the gaps as dashes)
+  const shape = Array.isArray(pts) ? new THREE.Shape((bend && crisp ? dense(pts, bend) : pts).map(([x, y]) => new THREE.Vector2(x, y))) : pts;
   const flatG = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false, curveSegments: 6 });
-  const g = bend ? tessellate(flatG, bend) : flatG;
+  const g = bend ? tessellate(flatG, bend, crisp) : flatG;
   if (!bend) lift += 0.003;
   const p = g.attributes.position as THREE.BufferAttribute;
   for (let i = 0; i < p.count; i++) {
@@ -272,19 +287,20 @@ const onBack = (surf: (x: number, y: number) => number, cx: number, cy: number, 
 const onSleeve = (surf: (z: number, y: number) => number, cy: number, lift: number): Place => (u, v) => [surf(-u, cy + v) + lift, cy + v, -u];
 
 /** Split a geometry's triangles across their longest edges until none is longer than `max` (so a flat piece can bend over a body) */
-function tessellate(g: THREE.BufferGeometry, max: number) {
+function tessellate(g: THREE.BufferGeometry, max: number, sides = false) {
   const src = (g.index ? g.toNonIndexed() : g).attributes.position.array as ArrayLike<number>;
-  const out: number[] = [];
+  type P = number[];
+  const tris: P[][] = [];
   const v = (i: number) => [src[i], src[i + 1], src[i + 2]];
-  const mid = (a: number[], b: number[]) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2];
-  const len = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
-  const split = (a: number[], b: number[], c: number[]): void => {
+  const mid = (a: P, b: P) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2];
+  const len = (a: P, b: P) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+  const split = (a: P, b: P, c: P): void => {
     const ab = len(a, b);
     const bc = len(b, c);
     const ca = len(c, a);
     const top = Math.max(ab, bc, ca);
     if (top <= max) {
-      out.push(...a, ...b, ...c);
+      tris.push([a, b, c]);
       return;
     }
     if (top === ab) {
@@ -304,8 +320,16 @@ function tessellate(g: THREE.BufferGeometry, max: number) {
   for (let i = 0; i < src.length; i += 9) split(v(i), v(i + 3), v(i + 6));
   g.dispose();
   const t = new THREE.BufferGeometry();
-  t.setAttribute('position', new THREE.Float32BufferAttribute(out, 3));
-  t.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array((out.length / 3) * 2), 2));
+  t.setAttribute('position', new THREE.Float32BufferAttribute(tris.flat(2), 3));
+  // (`sides`: u 1 on the sides, 0 on the faces, so smoothing never merges a side into a face: a soft edge inks in dashes)
+  const n = new THREE.Vector3();
+  const tri = new THREE.Triangle();
+  const uv = tris.flatMap(([a, b, c]) => {
+    tri.set(n.fromArray(a).clone(), n.fromArray(b).clone(), n.fromArray(c).clone()).getNormal(n);
+    const u = sides && Math.abs(n.z) < 0.5 ? 1 : 0;
+    return [u, 0, u, 0, u, 0];
+  });
+  t.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
   return t;
 }
 /** Turn a non-indexed geometry's faces inside out (after mirroring it front to back) */
@@ -401,6 +425,21 @@ function curve(secs: Sec[], step: number): Sec[] {
       return [y + ((y1 - y) * k) / n, v.x, v.y, v.z];
     });
   });
+}
+
+/**
+ * A jacket's hem cut away at the front: the two fronts round off from its middle, so the hem rises `lift` there,
+ * easing to nothing towards the sides and over `span` up the front (every point keeps its order up the body)
+ */
+function cutaway(g: THREE.BufferGeometry, hem: number, lift: number, span = 0.07) {
+  const p = g.attributes.position as THREE.BufferAttribute;
+  for (let i = 0; i < p.count; i++) {
+    const y = p.getY(i);
+    if (y > hem + span || p.getZ(i) <= 0) continue;
+    p.setY(i, y + lift * Math.exp(-((p.getX(i) / 0.06) ** 2)) * (1 - (y - hem) / span));
+  }
+  g.computeVertexNormals();
+  return g;
 }
 
 /** A shoe's section along its length: u forward from the ankle, its half-width, and its bottom and top */
@@ -846,7 +885,27 @@ export function items(q: Detail, hero = false): Item[] {
     [0.42, 0.058, 0.054, -0.006],
   ];
   const SN = 2.6;
-  const suitFront = surface(SUIT, SN);
+  // The suit's jacket (docs/clothing-plan.md Phase 3): the chest fuller, the waist taken in, the shoulder line
+  // carried out and up to the sleeve's head so the two meet in one line (the deltoid no longer a bump over it);
+  // on the desktop a section every 2 cm on a smooth curve through these. The varsity and the fatigues still grow
+  // from SUIT until their own phase.
+  const JACKET: Sec[] = [
+    [-0.085, 0.142, 0.094, 0],
+    [-0.02, 0.137, 0.091, 0],
+    [0.04, 0.128, 0.087, 0.001],
+    [0.1, 0.124, 0.087, 0.003],
+    [0.16, 0.133, 0.093, 0.006],
+    [0.22, 0.151, 0.101, 0.008],
+    [0.29, 0.161, 0.101, 0.005],
+    [0.33, 0.157, 0.094, 0.002],
+    [0.355, 0.147, 0.087, 0],
+    [0.373, 0.129, 0.079, -0.003],
+    [0.39, 0.105, 0.07, -0.005],
+    [0.405, 0.082, 0.062, -0.006],
+    [0.42, 0.058, 0.054, -0.006],
+  ];
+  const JK = q === 3 ? curve(JACKET, 0.02) : JACKET;
+  const suitFront = surface(JK, SN);
   const lapelPts: [number, number][] = [
     [-0.062, 0.41],
     [-0.002, 0.198],
@@ -856,7 +915,8 @@ export function items(q: Detail, hero = false): Item[] {
     [-0.128, 0.326],
     [-0.12, 0.372],
   ];
-  const jacket = loft(hips(SUIT), TR(22), SN);
+  const jacket = cutaway(loft(hips(JK), R(22), SN), -0.085, 0.03);
+  crisp = true;
   const lapels = [onBody(lapelPts, 0.009, suitFront, 0.003), onBody(mirror(lapelPts), 0.009, suitFront, 0.003)];
   const flaps = [-1, 1].map((s) =>
     onBody(
@@ -887,7 +947,8 @@ export function items(q: Detail, hero = false): Item[] {
     [-0.01, 0.396],
     [-0.046, 0.382],
   ];
-  const collars = [onBody(collarPts, 0.004, suitFront, 0.008), onBody(mirror(collarPts), 0.004, suitFront, 0.008)];
+  // (under the lapels where they meet, so its points never come through them)
+  const collars = [onBody(collarPts, 0.004, suitFront, 0.002), onBody(mirror(collarPts), 0.004, suitFront, 0.002)];
   const pocketSquare = onBody(
     [
       [0.084, 0.272],
@@ -901,17 +962,14 @@ export function items(q: Detail, hero = false): Item[] {
     0.002
   );
   const button = new THREE.CylinderGeometry(0.008, 0.008, 0.005, R(10)).rotateX(Math.PI / 2).translate(0, 0.15, suitFront(0, 0.15) + 0.003);
+  // (the knot a rounded trapezoid, narrower under)
   const tieKnot = onBody(
-    [
-      [-0.016, 0.398],
-      [0.016, 0.398],
-      [0.011, 0.372],
-      [-0.011, 0.372],
-    ],
+    roundRect(0.032, 0.026, 3, R(16), 0.3, 0.385),
     0.01,
     suitFront,
-    0.004
+    0.006
   );
+  // (well off the shirt, so its edges ink as one line)
   const tieBlade = onBody(
     [
       [-0.01, 0.374],
@@ -922,8 +980,9 @@ export function items(q: Detail, hero = false): Item[] {
     ],
     0.006,
     suitFront,
-    0.005
+    0.008
   );
+  crisp = false;
 
   const HOODIE: Sec[] = [
     [-0.085, 0.148, 0.1, 0],
@@ -1190,8 +1249,20 @@ export function items(q: Detail, hero = false): Item[] {
     [-0.185, 0.036, 0.038, 0],
     [-0.192, 0.034, 0.036, 0],
   ];
-  const suitUpper = loft(UPPER_S, R(14));
-  const suitFore = loft(FORE_S, R(14));
+  // The suit's sleeves: on the desktop curved (a section every 1.5 cm), the forearm tapering to the cuff
+  // (its head a touch lower than the casual tops' deltoid, so it runs on from the jacket's shoulder line)
+  const UPPER_J: Sec[] = [[0.013, 0.014, 0.02, 0], [0.009, 0.034, 0.04, 0], ...UPPER_S.slice(2)];
+  const SU = q === 3 ? curve(UPPER_J, 0.015) : UPPER_J;
+  const FORE_J: Sec[] = [
+    [0.03, 0.02, 0.022, 0],
+    [0.015, 0.04, 0.042, 0],
+    [-0.04, 0.043, 0.045, 0.002],
+    [-0.12, 0.0385, 0.0405, 0],
+    [-0.175, 0.0352, 0.0372, 0],
+    [-0.192, 0.0335, 0.0355, 0],
+  ];
+  const suitUpper = loft(SU, R(14));
+  const suitFore = loft(q === 3 ? curve(FORE_J, 0.015) : FORE_J, R(14));
   const shirtCuff = loft(
     [
       [-0.202, 0.031, 0.033, 0.001],
@@ -1649,7 +1720,7 @@ export function items(q: Detail, hero = false): Item[] {
   // Per top: its front and back, the chest spot (the wearer's left), and its sleeve (marks go on the left one, +x)
   const TOPS: { is: (o: Outfit) => boolean; front: (x: number, y: number) => number; back: (x: number, y: number) => number; chest: [number, number, number?, number?] | null; sleeve: Sec[] }[] = [
     // (the suit's is a pin on its left lapel: smaller, lifted over the lapel)
-    { is: suit, front: suitFront, back: surface(SUIT, SN, -1), chest: [0.096, 0.296, 0.038, 0.017], sleeve: UPPER_S },
+    { is: suit, front: suitFront, back: surface(JK, SN, -1), chest: [0.096, 0.296, 0.038, 0.017], sleeve: SU },
     { is: hoodie, front: hoodieFront, back: BACK, chest: [0.075, 0.28], sleeve: grow(UPPER_S, 1.14) },
     { is: track, front: trackFront, back: surface(TRACK, HN2, -1), chest: [0.075, 0.28], sleeve: grow(UPPER_S, 1.14) },
     // (the varsity's chest mark goes on its badge)
