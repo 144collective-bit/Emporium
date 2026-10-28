@@ -1006,10 +1006,16 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
 
   // Everyone is the shared Degen body in a city outfit: suits and hoodies, bags, headphones; a phone in the hand
   // of those reading one (the revamp's Phase 6: an idle whose act is 'phone', and one walker in seven)
+  // (the riders all in hoodies: one kind of the crowd's meshes for them, not two, wherever they ride)
+  const hoodie = () => {
+    let o = cityOutfit(rand);
+    while (o.kind !== 'hoodie') o = cityOutfit(rand);
+    return o;
+  };
   const phoneOf = (p: Person) => (p.kind === 'idle' ? p.act === 'phone' : p.kind === 'walk' && onPhone(p.phase / 6));
   const people3d = createCrowd(
     scene,
-    people.map((p) => ({ ...cityOutfit(rand), ...(phoneOf(p) ? { held: 'phone' as const } : {}) })),
+    people.map((p) => ({ ...(p.kind === 'ride' ? hoodie() : cityOutfit(rand)), ...(phoneOf(p) ? { held: 'phone' as const } : {}) })),
     { light: opts.light }
   );
   /** Start a walker over a crossing: from where they stand to the other block's lane corner */
