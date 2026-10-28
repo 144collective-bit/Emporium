@@ -31,27 +31,32 @@
  */
 import * as THREE from 'three';
 import type { SpotId } from '../../lib/city';
-import { PLAYER, createDegen, emotePose, type Outfit } from './character';
-import { LAND_CROUCH, LAND_ROLL, copyLeg, copyPose, createLocomotion, placeRoot, type Root } from './locomotion';
+import { PLAYER, createDegen, type Outfit } from './character';
+import { LAND_CROUCH, LAND_ROLL, copyPose, createLocomotion, placeRoot, type Root } from './locomotion';
 import type { Animator } from './animator';
+import type { Contact } from './contact';
 import { loadMocap } from './mocap-load';
-import { GAITS, newMove, startSlide, stepMove, stepSlide, type Slide } from './movesim';
+import type { Interest } from './gaze';
+import { GAITS, STAIRS, climbAhead, newMove, startSlide, stepMove, stepSlide, type Slide } from './movesim';
 import { slidePose } from './poses';
-import { OVER, isLow, overAhead, overAt, overPose, type Over } from './vault';
+import type { Over } from './vault';
 import { springVel } from './inertia';
+import type { MoData } from './mocap';
 import { createCombat, type Sfx } from './combat';
 import { WEAPON_IDS } from './combat-sim';
-import { createGunShop } from './gunshop';
+import type { GunShop } from './gunshop';
 import { ARMS, AVENUE_DOORS } from './avenue';
 import { DECK_Y, onDeck } from './waterfront';
 import { onEsplanade } from './boulevard';
 import { carStatsOf, kartStatsOf, ownsCar, takedown } from './tycoon';
-import { createGarageUI, loadCar } from './garage-ui';
+import type { GarageUI } from './garage-ui';
+import { loadCar } from './mycar';
 import { DEFAULT_CAR } from './mycar';
 import type { Garage } from './garage';
 import { createDrive } from './drive';
 import { createFly } from './fly';
-import { createHangarUI, loadPlane } from './hangar-ui';
+import type { HangarUI } from './hangar-ui';
+import { loadPlane } from './myplane';
 import { DECK_CAMERA, HANGAR_DOOR, HANGAR_SPOT, departuresWall, departuresY, type AircraftKind, type Pose } from './airfield';
 import { HUT_DOOR, circuitSurfaceAt as trackSurfaceAt } from './kartcircuit';
 import { KART_PARK } from './kartpark';
@@ -59,7 +64,11 @@ import { bankY } from './kartfacility';
 import type { RaceStart } from './kart-types';
 import type { Cond } from './kartcircuit';
 import { createFightUI } from './fight-ui';
-import { TRAINER } from './fightsite';
+import { COUNTER, TRAINER } from './fightsite';
+import { MOMENT, type Mark, type Moment, type Vehicle, alightMark, benchMark, boardMark, counterMark, crateMark, createMoment, doorMark, liftMark } from './moments';
+import { CARS } from './cars';
+import { toon } from './kit';
+import { BENCHES } from './pedestrians';
 import type { Fight, FightClub, FightInput } from './fight-types';
 import type { KartPark, KartRace, KartUI } from './kart-types';
 import { CUPS } from './kart-sim';
@@ -74,7 +83,8 @@ import { JETTY, RIM, inLake, onJetty, onTerrace, terraceY } from './westlake';
 import { GATE, bridgeWall, bridgeY } from './stadium';
 import { skyDeckWall, skyDeckY, upOnDeck } from './skydeck';
 import { stationY } from './station';
-import { WORLD_BOUNDS } from './layout';
+import { MALL_CAMERA, mallFloor, mallWall } from './mallinside';
+import { WORLD_BOUNDS, design } from './layout';
 import { WATER_Y, inChannel, inWater, shoreY } from './river';
 import { HIRE } from './riverbus';
 import type { Boat } from './boat';
@@ -88,13 +98,19 @@ import { live } from './live-client';
 import type { FeatureId } from './live';
 
 /** What a prompt can open: a landmark's door, or one of walk mode's own places and vehicles */
-type Near = SpotId | 'gear' | 'garage' | 'hangar' | 'car' | 'plane' | 'boat' | 'karts' | 'trainer' | `place:${string}`;
+type Near = SpotId | 'gear' | 'garage' | 'hangar' | 'car' | 'plane' | 'boat' | 'karts' | 'trainer' | 'bench' | 'stand' | 'put' | `place:${string}`;
 /** The prompts the owner can close (live settings, live.ts) and the feature that closes each */
 const GATED: Partial<Record<Near, FeatureId>> = { gear: 'guns', garage: 'drive', hangar: 'fly', karts: 'karts', trainer: 'fight', boat: 'boat' };
 /** Prompts that say their own label (the rest say "Enter ...") */
 /** The landmarks' doors and Trench Avenue's (their prompts open their panels) */
 const ALL_DOORS = [...DOORS, ...AVENUE_DOORS, { id: 'stadium' as const, ...GATE.spot }];
-const OWN_LABEL = new Set<string>(['gear', 'garage', 'hangar', 'car', 'plane', 'boat', 'karts', 'trainer']);
+const OWN_LABEL = new Set<string>(['gear', 'garage', 'hangar', 'car', 'plane', 'boat', 'karts', 'trainer', 'bench', 'stand', 'put']);
+/** The Armoury's counter top (its drawing grid: the counter's box, a little in from its front edge) and height over the slab */
+const RACK_TOP = (([x, z]) => ({ x, z }))(design(24.7, 27.4));
+const RACK_TOP_H = 0.6;
+/** The trainer's counter top (its near edge, a little in) and height */
+const TRAINER_TOP = { x: TRAINER.x, z: COUNTER.z1 - 0.1 };
+const TRAINER_TOP_H = 0.56;
 /** The hangar menu's shot: from the doors, looking in at your aircraft */
 const HANGAR_VIEW = { eye: new THREE.Vector3(HANGAR_SPOT.x - 6.5, 3.4, HANGAR_SPOT.z + 12.5), at: new THREE.Vector3(HANGAR_SPOT.x, 1.2, HANGAR_SPOT.z) };
 
@@ -104,6 +120,8 @@ const RADIUS = 0.22;
 /** His speeds (movesim.ts): a walk (Caps Lock), the run he goes at, the sprint (Shift), and walking while he aims */
 const { walk: WALK, run: RUN, sprint: SPRINT } = GAITS;
 const AIMING = 1.4;
+/** Carrying a crate: how near its destination (the car's boot, the place) counts as there */
+const PUT_R = 1.8;
 /**
  * Crouched (animation Phase 5: C toggles, B on a gamepad, the touch Crouch
  * button; crouching while sprinting slides): how fast he goes, and how far
@@ -128,6 +146,27 @@ const JUMP = 3.9;
 const GRAVITY = 11.5;
 /** How long a hard landing shakes the camera */
 const LAND_SHAKE = 0.3;
+/**
+ * A menu whose module loads the first time it's opened (the gun store, the garage's and the hangar's: none in the
+ * boot): until then it's shut (`open` false, its other calls do nothing) and a call in `opens` loads it and then
+ * opens it. The menus are closures over object literals, so a method called on the stand-in is the real one's.
+ */
+function lazyMenu<T extends object>(opens: (keyof T & string)[], load: () => Promise<T>): T {
+  let real: T | null = null;
+  let loading: Promise<T> | null = null;
+  const get = () => (loading ??= load().then((m) => (real = m)));
+  return new Proxy({} as T, {
+    get(_, k) {
+      if (real) return (real as Record<PropertyKey, unknown>)[k];
+      if (k === 'open') return false;
+      if (typeof k === 'string' && opens.includes(k as keyof T & string)) return (...a: unknown[]) => void get().then((m) => (m as Record<string, (...x: unknown[]) => void>)[k](...a));
+      return () => {};
+    },
+  });
+}
+
+/** The gaze before its module is in: straight ahead */
+const STILL_GAZE = { yaw: 0, pitch: 0 };
 const SCALE = 0.85;
 /** How far you can go: the world's edge */
 const BOUNDS = WORLD_BOUNDS;
@@ -231,16 +270,52 @@ export function createWalk(d: WalkDeps) {
   hero.g.scale.setScalar(SCALE);
   hero.g.visible = hero.ring.visible = false;
   d.scene.add(hero.g, hero.ring);
+  /**
+   * Carrying (moments.ts, the revamp's Phase 4 step 2): a crate of goods picked up at one of your places and
+   * carried to your car's boot (or the other way), for the business card's Load / Unload; `done` moves the goods
+   * once it's set down where it's going
+   */
+  let carrying: { dir: 'load' | 'unload'; to: { x: number; z: number }; stage: 'pick' | 'carry' | 'put'; done: () => void } | null = null;
+  /** The crate is in his hands (between the pick's lift and the put's set-down) */
+  let crateUp = false;
+  let carryAmt = 0;
+  const crate = new THREE.Mesh(new THREE.BoxGeometry(MOMENT.crate.w, MOMENT.crate.h, MOMENT.crate.d), toon('#b9874a'));
+  crate.visible = false;
+  d.scene.add(crate);
+  /** The crate put away (walk mode ending, a ride, a vehicle): nothing moved */
+  const dropCrate = () => {
+    carrying = null;
+    crateUp = false;
+    crate.visible = false;
+  };
   /** His feet and body on the move (locomotion.ts): planted feet, gaits, landings, the idle */
   const loco = createLocomotion();
   /** ...and the motion capture over it on foot (animator.ts), once its clips are in; how much of it shows */
   let animator: Animator | null = null;
   /** ...its code (its own chunk, fetched with the clips the first time he walks) */
   let anim: typeof import('./animator') | null = null;
+  /** The emotes, the gaze and the vault (onfoot.ts), loaded with the animator: until then none of them plays */
+  let onFoot: typeof import('./onfoot') | null = null;
+  /** ...and the clips it plays (other players' animators play the same: `motion`) */
+  let mocapData: MoData | null = null;
   let animLoading = false;
   let mocapW = 0;
   /** How much of his upper body is his own pose over the motion capture's legs (the gun's hold, an arm out aiming) */
   let upperW = 0;
+  /**
+   * Contact (contact.ts, the revamp's Phase 3): what his body does about what he touches (a hand on a wall, the
+   * shoulder's give brushing past, a stagger into one at a sprint, a squeeze, a lean on a rail), a layer on the
+   * motion capture's pose; its code comes with the animator's. Phones leave out the hands and the lean.
+   */
+  let contactMod: typeof import('./contact') | null = null;
+  let contact: Contact | null = null;
+  let contactRot: Float32Array | null = null;
+  const contactBoxes: Box[] = [];
+  const contactPeople: { x: number; z: number }[] = [];
+  /** This frame his move was stopped by something, and how fast he was going into it */
+  let hitWall = false;
+  let hitSpeed = 0;
+  let staggering = false;
   /** The peek: how far he's leaning (-1 his left to 1 his right), eased; the gamepad's lean, the touch corner's, and when it was looked for */
   let peek = 0;
   let padLean = 0;
@@ -271,6 +346,10 @@ export function createWalk(d: WalkDeps) {
   /** Seconds since the camera last turned (a while standing still, he looks round by himself) */
   let camStill = 0;
   let lookAround = 0;
+  let gazePitch = 0;
+  // The gaze (gaze.ts): what his head is drawn to, on top of the pose
+  let gaze: ReturnType<typeof import('./gaze').createGaze> | null = null;
+  const interests: Interest[] = [];
   let lastYaw = 0;
   let headYaw = 0;
   let headPitch = 0;
@@ -347,24 +426,143 @@ export function createWalk(d: WalkDeps) {
   const joy = { x: 0, y: 0, id: -1 };
   const pad = { x: 0, y: 0, run: false, prev: [] as boolean[] };
   let near: { id: Near; label: string } | null = null;
+  /**
+   * The game's moments (moments.ts, the revamp's Phase 4): a door's push, a lean on a counter, a sit on a bench,
+   * played between the prompt's press and what it opens; walk.ts walks him onto the mark, then its keyed pose
+   * takes over from the motion capture (`momentAmt`), the root shifted onto a seat (`momentDy`)
+   */
+  const moments: Moment = createMoment();
+  moments.scale = SCALE;
+  let momentAmt = 0;
+  let momentDy = 0;
+  /** Sitting down, where the camera goes: a three-quarter view from whichever side of him has the room */
+  let benchYaw = 0;
+  const benchEye = new THREE.Vector3();
+  const benchDir = new THREE.Vector3();
+  function pickBenchYaw(mk: { face: number; y: number; seat?: { x: number; z: number } }) {
+    if (!mk.seat) return;
+    let best = -1;
+    for (const side of [1, -1]) {
+      const y = mk.face + Math.PI + side;
+      benchEye.set(mk.seat.x, mk.y + 0.7, mk.seat.z);
+      benchDir.set(Math.sin(y) * Math.cos(0.35), Math.sin(0.35), Math.cos(y) * Math.cos(0.35));
+      const room = cameraRoom(benchEye, benchDir, zoom, 0.35, 0.9);
+      if (room > best) (best = room), (benchYaw = y);
+    }
+  }
+  /** What a prompt is a moment at: its mark, or null to open at once */
+  const markFor = (n: { id: Near; label: string }) => {
+    const y = groundAt(pos.x, pos.z, pos.y);
+    const door = (at: { x: number; z: number }) => doorMark(at, pos.x, pos.z, y, (bx, bz) => blocked(bx, bz, pos.y));
+    if (n.id === 'gear') return n.label === ARMS.name ? counterMark({ x: ARMS.counter.x, z: ARMS.street }, y + ARMS.hatch.y, y, pos.x, pos.z) : counterMark(RACK_TOP, y + RACK_TOP_H, y, pos.x, pos.z);
+    if (n.id === 'trainer') return counterMark(TRAINER_TOP, y + TRAINER_TOP_H, y, pos.x, pos.z);
+    if (n.id === 'garage') return door(GARAGE_SITE.door);
+    if (n.id === 'hangar') return door(HANGAR_DOOR);
+    if (n.id === 'karts') return door(HUT_DOOR);
+    // Getting in (step 2): the car's or the kart's side nearest him, the aircraft's door, the hire boat's ladder
+    if (n.id === 'car') {
+      const v = drive.doorOf(pos.x, pos.z);
+      return v ? sideMark(v.kind, v, MOMENT[v.kind].seat) : null;
+    }
+    if (n.id === 'plane') {
+      if (fly.active) return null;
+      const p = fly.doorOf();
+      return sideMark('plane', { x: p.x, z: p.z, yaw: p.yaw, W: p.side * 2 }, MOMENT.plane.sill, p.u);
+    }
+    if (n.id === 'boat') return boating() ? null : boardMark('boat', HIRE.door, { x: HIRE.x, z: HIRE.z, y: y + MOMENT.boat.deck }, pos.x, pos.z, y, (bx, bz) => blocked(bx, bz, pos.y));
+    if (n.id === 'bench') {
+      const b = nearestBench();
+      return b ? benchMark(b, groundAt(b.x, b.z, pos.y)) : null;
+    }
+    if (n.id.startsWith('place:')) {
+      const id = n.id.slice(6);
+      if (!(id.startsWith('lift:') || id.startsWith('metro:'))) return null;
+      const pl = d.places().find((q) => q.id === id);
+      if (!pl) return null;
+      // (a lift: walked into, turned to face out, then the fade; a station's door is pushed)
+      return id.startsWith('lift:') ? liftMark(pl, pos.x, pos.z, y) : door(pl);
+    }
+    const dr = ALL_DOORS.find((q) => q.id === n.id);
+    return dr ? door(dr) : null;
+  };
+  /** Getting into a vehicle (moments.ts): the mark at the side of its body nearest him, the seat `seatY` up in its middle (`along` its length) */
+  const sideMark = (v: Vehicle, b: { x: number; z: number; yaw: number; W: number }, seatY: number, along = 0): Mark => {
+    const y = groundAt(pos.x, pos.z, pos.y);
+    const fx = Math.cos(b.yaw);
+    const fz = -Math.sin(b.yaw);
+    const rx = Math.sin(b.yaw);
+    const rz = Math.cos(b.yaw);
+    const cx = b.x + fx * along;
+    const cz = b.z + fz * along;
+    const side = (pos.x - cx) * rx + (pos.z - cz) * rz >= 0 ? 1 : -1;
+    return boardMark(v, { x: cx + rx * side * (b.W / 2), z: cz + rz * side * (b.W / 2) }, { x: cx, z: cz, y: y + seatY }, pos.x, pos.z, y, (bx, bz) => blocked(bx, bz, pos.y));
+  };
+  /** Out of a vehicle (moments.ts): from its seat (`from`, `seatY` up) to where he stands, the vehicle giving him back as he steps down */
+  const alight = (v: Vehicle, from: { x: number; z: number }, out: { x: number; z: number }, seatY: number) => {
+    const y = groundAt(out.x, out.z, pos.y);
+    moments.start(alightMark(v, { x: from.x, z: from.z, y: y + seatY }, out, y, face), undefined, out.x, out.z);
+  };
+  /** Carrying: the crate set down (where it's going, the goods move; anywhere else, nothing does) */
+  const putDown = () => {
+    if (!carrying || carrying.stage !== 'carry' || moments.active) return;
+    const c = carrying;
+    const here = Math.hypot(c.to.x - pos.x, c.to.z - pos.z) < PUT_R;
+    const at = here ? c.to : { x: pos.x + Math.sin(face) * 0.6, z: pos.z + Math.cos(face) * 0.6 };
+    if (!here) c.done = () => d.game.toast('Put down. Nothing moved.', 2500);
+    c.stage = 'put';
+    contact?.reset();
+    moments.start(crateMark('put', at, pos.x, pos.z, groundAt(at.x, at.z, pos.y), (bx, bz) => blocked(bx, bz, pos.y)), () => (crateUp = false), pos.x, pos.z);
+  };
+  /** The nearest bench nobody's sitting on, within reach */
+  const nearestBench = () => {
+    let best: { x: number; z: number; ry: number } | null = null;
+    let bd = 0.95;
+    for (const b of BENCHES) {
+      const dd = Math.hypot(b.x - pos.x, b.z - pos.z);
+      if (dd >= bd) continue;
+      if (bodies.people.some((q) => q.act === 'sit' && Math.hypot(q.x - b.x, q.z - b.z) < 0.45)) continue;
+      best = b;
+      bd = dd;
+    }
+    return best;
+  };
+  const seated = () => moments.active && moments.mark?.kind === 'bench' && moments.phase !== 'approach';
   const act = () => {
+    // A moment under way: F again cuts the approach or a door short; seated, it stands him up
+    if (moments.active) {
+      if (moments.phase === 'hold' && moments.mark?.kind === 'bench') moments.release();
+      else moments.skip();
+      return;
+    }
     if (!near) return;
     // Closed for now by the owner (live settings): getting into things, never out of them
     const f = near.id === 'car' ? (drive.active ? null : 'drive') : near.id === 'plane' ? (fly.active ? null : 'fly') : near.id === 'boat' ? (boating() ? null : 'boat') : GATED[near.id];
     const shut = f && live.closed(f);
     if (shut) return d.game.toast(shut, 3000);
-    if (near.id === 'gear') shop.show(near.label === ARMS.name ? ARMS.name : 'Armoury');
-    else if (near.id === 'garage') garageUI.show();
-    else if (near.id === 'hangar') hangarUI.show();
-    else if (near.id === 'plane') (fly.active ? leavePlane() : board());
-    else if (near.id === 'boat') (boating() ? leaveBoat() : takeBoat());
-    else if (near.id === 'karts') void loadKarts().then(() => kartUI.show());
-    else if (near.id === 'trainer') fightUI.show();
-    else if (near.id === 'car') (drive.active ? getOut() : getIn());
-    else if (near.id.startsWith('place:')) {
-      if (document.pointerLockElement === canvas) document.exitPointerLock();
-      d.openPlace(near.id.slice(6));
-    } else openSpot(near.id as SpotId);
+    const n = near;
+    const open = () => {
+      if (n.id === 'gear') shop.show(n.label === ARMS.name ? ARMS.name : 'Armoury');
+      else if (n.id === 'garage') garageUI.show();
+      else if (n.id === 'hangar') hangarUI.show();
+      else if (n.id === 'plane') (fly.active ? leavePlane() : board());
+      else if (n.id === 'boat') (boating() ? leaveBoat() : takeBoat());
+      else if (n.id === 'karts') void loadKarts().then(() => kartUI.show());
+      else if (n.id === 'trainer') fightUI.show();
+      else if (n.id === 'car') (drive.active ? getOut() : getIn());
+      else if (n.id === 'put') putDown();
+      else if (n.id === 'bench' || n.id === 'stand') return;
+      else if (n.id.startsWith('place:')) {
+        if (document.pointerLockElement === canvas) document.exitPointerLock();
+        d.openPlace(n.id.slice(6));
+      } else openSpot(n.id as SpotId);
+    };
+    // (on foot and not in the middle of something: the moment first, then what it opens as the hand lands)
+    const mk = !drive.active && !over && !slide && !emote && !carrying ? markFor(n) : null;
+    if (mk) {
+      contact?.reset();
+      pickBenchYaw(mk);
+      moments.start(mk, open, pos.x, pos.z);
+    } else open();
   };
 
   /**
@@ -384,6 +582,9 @@ export function createWalk(d: WalkDeps) {
     // (Liberty Bridge's decks, when `yNow` is up there)
     const fb = footbridgeY(x, z, yNow, 0, leavesOpen());
     if (fb !== null) return Math.max(slab, fb);
+    // (inside Starlight Mall: its two floors and the escalators between them, by `yNow`; mallinside.ts)
+    const mall = mallFloor(x, z, yNow);
+    if (mall !== null) return mall;
     if (slab === 0.035 && inChannel(x, z)) return shoreY(x, z) + 0.035;
     const base = Math.max(slab, bridgeY(x, z, yNow) ?? 0, onJetty(x, z) ? SLAB + JETTY.y : 0, SLAB + (terraceY(x, z) ?? -SLAB), SLAB + (skyDeckY(x, z, yNow - SLAB) ?? -SLAB), stationY(x, z) ?? 0);
     if (x < KART_PARK.x0 || x > KART_PARK.x1 || z < KART_PARK.z0 || z > KART_PARK.z1) return base;
@@ -408,6 +609,8 @@ export function createWalk(d: WalkDeps) {
     if (bridgeWall(x, z, y, RADIUS)) return true;
     // Sector 7 Tower's sky deck (skydeck.ts): up there only its rail, the lift house and the viewers stop you
     if (upOnDeck(x, z, y - SLAB)) return skyDeckWall(x, z, RADIUS);
+    // Inside Starlight Mall (mallinside.ts): the upper floor's edges and what stands on your floor
+    if (mallWall(x, z, y, RADIUS)) return true;
     // (the river is a wall at its edges, wherever they curve (river.ts), but at the bridges, on The Trenches' boardwalk and pier and on Uptown's esplanade: their railings are the decks' edges)
     if (inWater(x, z, -0.3) && !onBridge(x, z) && !onDeck(x, z, RADIUS) && !onEsplanade(x, z, RADIUS)) return true;
     // Westlake Park's lake (westlake.ts): you stop on the lawn at its stone rim, but out along the jetty (its edges stop you)
@@ -416,9 +619,11 @@ export function createWalk(d: WalkDeps) {
     if (drive.blocks(x, z, RADIUS) || fly.blocks(x, z, RADIUS)) return true;
     return d.plotSolids().some((b) => inBox(b, x, z, RADIUS));
   }
+  /** Where he can't step at his own height (contact.ts asks, for a rail: an edge nothing solid explains) */
+  const contactBlocked = (bx: number, bz: number) => blocked(bx, bz, pos.y);
 
   /** How far the camera can sit from the pivot along `dir` before something's in the way. */
-  function cameraRoom(from: THREE.Vector3, dir: THREE.Vector3, want: number, min = 0.35) {
+  function cameraRoom(from: THREE.Vector3, dir: THREE.Vector3, want: number, min = 0.35, skipUnder = 0.5) {
     let t = want;
     // Ground (and kerb) below
     if (dir.y < 0) {
@@ -427,8 +632,8 @@ export function createWalk(d: WalkDeps) {
     }
     // Only the boxes under the camera's line can be in its way (padded as the test below pads them)
     // (and Liberty Bridge's towers over their arches and its walkways' roofs, which you walk under: a bottom, b[5])
-    for (const b of [...CAMERA_GRID.alongRay(from, dir, t, 0.18, nearBoxes), ...d.plotSolids(), ...LIBERTY_CAMERA, ...DECK_CAMERA] as number[][]) {
-      if (b[4] < 0.5) continue;
+    for (const b of [...CAMERA_GRID.alongRay(from, dir, t, 0.18, nearBoxes), ...d.plotSolids(), ...LIBERTY_CAMERA, ...DECK_CAMERA, ...MALL_CAMERA] as number[][]) {
+      if (b[4] < skipUnder) continue;
       const lo = [b[0] - 0.18, b[5] ?? 0, b[1] - 0.18];
       const hi = [b[2] + 0.18, b[4] + 0.15, b[3] + 0.18];
       const o = [from.x, from.y, from.z];
@@ -472,7 +677,7 @@ export function createWalk(d: WalkDeps) {
     },
   });
   // The Armoury's store and workbench at its counter: frees the mouse and pauses walking while it's open
-  const shop = createGunShop(root, {
+  const shop = lazyMenu<GunShop>(['show', 'take'], async () => (await import('./gunshop')).createGunShop(root, {
     lifetime: () => combat.lifetime,
     weapon: () => combat.weapon,
     geared: () => combat.geared,
@@ -487,13 +692,16 @@ export function createWalk(d: WalkDeps) {
       combat.trigger(false, true);
       if (document.pointerLockElement === canvas) document.exitPointerLock();
     },
-    onClose: () => canvas.focus({ preventScroll: true }),
-  });
+    onClose: () => {
+      moments.release();
+      canvas.focus({ preventScroll: true });
+    },
+  }));
   combat.onLifetime(() => shop.refresh());
   // The garage menu: like the store it frees the mouse and pauses walking; the camera goes to the
   // turntable (from over the shoulder, so the first-person hands stay out of the shot)
   let fpBeforeGarage = false;
-  const garageUI = createGarageUI(root, {
+  const garageUI = lazyMenu<GarageUI>(['show'], async () => (await import('./garage-ui')).createGarageUI(root, {
     preview: (c) => d.garage.show(c),
     // Kept: if your car is out on the streets, it comes home
     keep(c) {
@@ -523,7 +731,7 @@ export function createWalk(d: WalkDeps) {
       if (fpBeforeGarage) setFirstPerson(true);
       canvas.focus({ preventScroll: true });
     },
-  });
+  }));
   // Your car: get in where it is, drive, get out anywhere
   const drive = createDrive({
     scene: d.scene,
@@ -589,7 +797,7 @@ export function createWalk(d: WalkDeps) {
   });
   // The hangar menu: like the garage's, it frees the mouse and pauses walking while the camera looks into the hangar
   let fpBeforeHangar = false;
-  const hangarUI = createHangarUI(root, {
+  const hangarUI = lazyMenu<HangarUI>(['show'], async () => (await import('./hangar-ui')).createHangarUI(root, {
     preview: (p) => fly.preview(p),
     keep: (p) => fly.recall(p),
     cancel: (saved) => fly.cancel(saved),
@@ -609,7 +817,7 @@ export function createWalk(d: WalkDeps) {
       if (fpBeforeHangar) setFirstPerson(true);
       canvas.focus({ preventScroll: true });
     },
-  });
+  }));
   /** Flying input from the gamepad */
   const padFly = { turn: 0, climb: 0, throttle: 0 };
 
@@ -713,6 +921,7 @@ export function createWalk(d: WalkDeps) {
       void loadFight();
     },
     onClose() {
+      moments.release();
       // The bout card closed: out of the ring
       if (fighting() && (fightDone || fightOver())) leaveFight();
       canvas.focus({ preventScroll: true });
@@ -873,11 +1082,16 @@ export function createWalk(d: WalkDeps) {
     combat.trigger(false, true);
     hero.g.visible = hero.ring.visible = false;
     near = null;
+    // (the vehicle has him: the moment that got him in is over, and a crate is put away)
+    moments.cancel();
+    dropCrate();
     d.touched();
   }
   function getOut() {
     const out = drive.exit();
-    if (out) standAt(out);
+    if (!out) return;
+    standAt(out);
+    alight(out.kind, out.from, out, MOMENT[out.kind].seat);
   }
   /** Into your aircraft (the gun is holstered) */
   function board() {
@@ -892,6 +1106,8 @@ export function createWalk(d: WalkDeps) {
     combat.trigger(false, true);
     hero.g.visible = hero.ring.visible = false;
     near = null;
+    moments.cancel();
+    dropCrate();
     d.touched();
   }
   /** Out of it: only on the ground and stopped */
@@ -902,6 +1118,7 @@ export function createWalk(d: WalkDeps) {
       return;
     }
     standAt(out);
+    alight('plane', out.from, out, MOMENT.plane.sill);
   }
   /** Down the ladder into the hire boat (the gun is holstered) */
   function takeBoat() {
@@ -919,6 +1136,8 @@ export function createWalk(d: WalkDeps) {
         combat.trigger(false, true);
         hero.g.visible = hero.ring.visible = false;
         near = null;
+        moments.cancel();
+        dropCrate();
         d.touched();
       })
       .catch(() => d.game.toast('The boat hire is closed for a moment: try again', 2500));
@@ -931,6 +1150,7 @@ export function createWalk(d: WalkDeps) {
       return;
     }
     standAt(out);
+    alight('boat', out.from, out, MOMENT.boat.deck);
   }
   /** Degen steps out of a vehicle, looking the way it faces */
   function standAt(out: { x: number; z: number; yaw: number }) {
@@ -1531,13 +1751,14 @@ export function createWalk(d: WalkDeps) {
   function tryOver(dir: number) {
     const g0 = groundAt(pos.x, pos.z, pos.y + 0.3);
     const ahead = SOLID_GRID.near(pos.x + Math.sin(dir) * 1.1, pos.z + Math.cos(dir) * 1.1, 1.5, []);
-    const o = overAhead(pos.x, pos.z, dir, g0, ahead, RADIUS);
+    if (!onFoot) return null;
+    const o = onFoot.overAhead(pos.x, pos.z, dir, g0, ahead, RADIUS);
     if (!o) return null;
     const g1 = groundAt(o.x1, o.z1, g0 + 0.3);
-    if (Math.abs(g1 - g0) > OVER.drop || blocked(o.x1, o.z1, g1)) return null;
+    if (Math.abs(g1 - g0) > onFoot.OVER.drop || blocked(o.x1, o.z1, g1)) return null;
     for (let k = 1; k < 10; k++) {
-      const at = overAt(o, k / 10, g0, g1);
-      if (blocked(at.x, at.z, at.y, (b) => isLow(b) && b[4] <= o.top + 0.02)) return null;
+      const at = onFoot.overAt(o, k / 10, g0, g1);
+      if (blocked(at.x, at.z, at.y, (b) => onFoot!.isLow(b) && b[4] <= o.top + 0.02)) return null;
     }
     return { o, t: 0, g0, g1, v: speedNow };
   }
@@ -1820,6 +2041,11 @@ export function createWalk(d: WalkDeps) {
       iz = -pad.y;
       sprint ||= Math.hypot(pad.x, pad.y) > 0.95;
     }
+    // (a moment under way: the keys wait; seated, pushing the stick stands him up)
+    if (moments.active) {
+      if (moments.phase === 'hold' && moments.mark?.kind === 'bench' && Math.hypot(ix, iz) > 0.3) moments.release();
+      ix = iz = 0;
+    }
     const mag = Math.min(1, Math.hypot(ix, iz));
     const n = Math.hypot(ix, iz) || 1;
     const fx = -Math.sin(yaw);
@@ -1850,22 +2076,32 @@ export function createWalk(d: WalkDeps) {
     if (Math.abs(peek) < 1e-4) peek = 0;
     // (sprinting stands him up out of a crouch)
     if (crouched && sprint && mag > 0.1 && !slide) crouched = false;
-    const top = Math.min(shooting ? AIMING : sprint ? SPRINT : walkLock ? WALK : RUN, crouched ? CROUCH.speed : Infinity) * (1 - (1 - PEEK.slow) * Math.abs(peek));
+    // (up stairs a climb's pace: the stairs takes' walking, a brisk climb running; movesim.ts STAIRS)
+    const climbing = mag > 0.1 && climbAhead(groundAt, pos.x, pos.z, pos.y, dirX, dirZ, SCALE);
+    // (brushing something the step hitches: contact.ts)
+    const hitch = contact && contactMod ? contactMod.CONTACT.hitch * contact.state.hitch : 0;
+    const top = Math.min(shooting ? AIMING : sprint ? SPRINT : walkLock ? WALK : RUN, crouched ? CROUCH.speed : Infinity, climbing ? (walkLock ? STAIRS.walk : STAIRS.run) : Infinity, carrying ? RUN * MOMENT.crate.slow : Infinity) * (1 - (1 - PEEK.slow) * Math.abs(peek)) * (1 - hitch);
 
     // Towards it on the springs (movesim.ts; hardly any control in the air), facing where he's
-    // going, or where you look when aiming / in first person
-    const gx = dirX * top;
-    const gz = dirZ * top;
+    // going, or where you look when aiming / in first person; a moment's approach walks him onto its mark
+    const mg = moments.update({ dt, x: pos.x, z: pos.z, face, speed: vel.length() });
+    // (sitting down he turns his back to the bench, where the camera would be: it comes round to his front-left,
+    // a three-quarter view of him on the bench, and is yours again once he's seated)
+    if (moments.active && moments.mark?.kind === 'bench' && (moments.phase === 'approach' || moments.phase === 'play')) yaw += wrap(benchYaw - yaw) * damp(4, dt);
+    const gx = mg ? mg.dx * mg.speed : dirX * top;
+    const gz = mg ? mg.dz * mg.speed : dirZ * top;
     const lookFace = yaw + Math.PI;
-    const faceGoal = aim || firstPerson || shooting || peekWant ? lookFace : undefined;
+    const faceGoal = mg ? (mg.face ?? undefined) : aim || firstPerson || shooting || peekWant ? lookFace : undefined;
     ms.vx = vel.x;
     ms.vz = vel.y;
     ms.face = face;
+    hitWall = false;
+    hitSpeed = 0;
     if (over) {
       // Over something low: along the way over, his feet over its top (vault.ts), the springs carried along
       over.t += dt;
       const u = Math.min(1, over.t / over.o.dur);
-      const at = overAt(over.o, u, over.g0, over.g1);
+      const at = onFoot!.overAt(over.o, u, over.g0, over.g1);
       vel.set((at.x - pos.x) / dt, (at.z - pos.z) / dt);
       pos.set(at.x, at.y, at.z);
       ms.vx = vel.x;
@@ -1888,8 +2124,19 @@ export function createWalk(d: WalkDeps) {
           slide = null;
           crouched = Math.hypot(gx, gz) < 0.01;
         }
-      } else stepMove(ms, gx, gz, grounded, dt, faceGoal);
+      } else {
+        // (a stagger (contact.ts): thrown back from the wall over its time, the stick waiting)
+        const stag = contact?.state.stagger;
+        stepMove(ms, stag ? 0 : gx, stag ? 0 : gz, grounded, dt, faceGoal);
+        if (stag && contactMod) {
+          const k = contactMod.CONTACT.stagger;
+          const v = (k.back / k.t) * (Math.PI / 2) * Math.sin(Math.PI * stag.t);
+          ms.vx = stag.hand.nx * v;
+          ms.vz = stag.hand.nz * v;
+        }
+      }
       vel.set(ms.vx, ms.vz);
+      const v0 = vel.length();
       const stuck = blocked(pos.x, pos.z, pos.y);
       const nx = pos.x + vel.x * dt;
       if (stuck || !blocked(nx, pos.z, pos.y)) pos.x = nx;
@@ -1897,6 +2144,8 @@ export function createWalk(d: WalkDeps) {
       const nz = pos.z + vel.y * dt;
       if (stuck || !blocked(pos.x, nz, pos.y)) pos.z = nz;
       else vel.y = 0;
+      hitWall = !slide && grounded && (vel.x !== ms.vx || vel.y !== ms.vz);
+      hitSpeed = hitWall ? v0 : 0;
       // (a slide into something stops there, crouched)
       if (slide && (vel.x !== ms.vx || vel.y !== ms.vz)) {
         slide = null;
@@ -1906,6 +2155,17 @@ export function createWalk(d: WalkDeps) {
     const speed = vel.length();
 
     face = ms.face;
+    // Seated (moments.ts): the root on the seat, down to it
+    {
+      const rs = moments.root();
+      if (rs) {
+        pos.x = rs.x;
+        pos.z = rs.z;
+        vel.set(0, 0);
+        ms.vx = ms.vz = 0;
+        momentDy = rs.y - pos.y;
+      } else momentDy = 0;
+    }
 
     // Jumping: buffered presses, a little coyote time, release early for a short hop
     coyote = grounded ? 0.12 : coyote - dt;
@@ -1971,19 +2231,13 @@ export function createWalk(d: WalkDeps) {
     speedNow = speed;
     if (emote) {
       emote.t += dt;
-      if (emote.t > 3 || speed > 0.6) emote = null;
-      else if (!combat.armed) {
-        emotePose(P, emote.id, emote.t);
-        // Every emote but the dance keeps his feet where they're planted
-        if (emote.id !== 'dance') {
-          for (let i = 0; i < 2; i++) copyLeg(loco.pose.legs[i], P.legs[i]);
-          P.bob = loco.pose.bob;
-          P.side = loco.pose.side;
-          P.sway = loco.pose.sway;
-          P.turn = loco.pose.turn;
-        } else for (const l of P.legs) l.foot = undefined;
-      }
+      if (!onFoot || onFoot.emoteOver(emote.id, emote.t) || speed > 0.6) emote = null;
+      // (emotes.ts: the wave, the cheer and the salute take only his upper body, over the captured legs and hips
+      // through the upper mask below; the dance takes everything, the motion capture stepping aside)
+      else if (!combat.armed) onFoot.emotePose(P, emote.id, emote.t);
     }
+    const dancing = !!emote && !!onFoot && !combat.armed && !onFoot.emoteUpper(emote.id);
+    const emoting = !!emote && !combat.armed && !dancing;
     // The slide's pose, blended in quickly and out a little slower (the motion capture steps aside for it)
     slideAmt += ((slide ? 1 : 0) - slideAmt) * damp(slide ? 18 : 9, dt);
     crouchAmt += ((crouched ? 1 : 0) - crouchAmt) * damp(10, dt);
@@ -1992,7 +2246,30 @@ export function createWalk(d: WalkDeps) {
     // ...and going over something low, its keyed pose with the hands planted on its top (blended out from its end)
     overAmt += ((over ? 1 : 0) - overAmt) * damp(over ? 30 : 8, dt);
     const ov = over?.o ?? overLast;
-    if (ov && overAmt > 0.01) overPose(P, ov, over ? Math.min(1, over.t / over.o.dur) : 1, overAmt, pos.x, pos.y, pos.z, face, SCALE);
+    if (ov && onFoot && overAmt > 0.01) onFoot.overPose(P, ov, over ? Math.min(1, over.t / over.o.dur) : 1, overAmt, pos.x, pos.y, pos.z, face, SCALE);
+    // ...and a moment's keyed pose (the door push, the lean on the counter, the sit), the motion capture stepping aside
+    momentAmt += ((moments.posing ? 1 : 0) - momentAmt) * damp(moments.posing ? 12 : 8, dt);
+    if (momentAmt > 0.01 && onFoot) onFoot.momentPose(P, moments, momentAmt, pos.x, pos.y + momentDy, pos.z, face, SCALE, t);
+    // ...and a crate in both hands on the walk between a pick and a put (the hold has the arms, as a gun does)
+    carryAmt += ((carrying && crateUp && !moments.posing ? 1 : 0) - carryAmt) * damp(10, dt);
+    if (carryAmt > 0.01 && onFoot) onFoot.carryPose(P, carryAmt, pos.x, pos.y, pos.z, face, SCALE);
+    // The crate itself: on the ground at the mark, in his hands, or on its way between
+    if (carrying) {
+      const mk = moments.mark;
+      const inMoment = moments.active && (mk?.kind === 'pick' || mk?.kind === 'put');
+      const c = !onFoot ? null : inMoment ? onFoot.crateAt(moments, pos.x, pos.y, pos.z, face, SCALE) : crateUp ? onFoot.carriedAt(pos.x, pos.y, pos.z, face, SCALE) : null;
+      crate.visible = !!c;
+      if (c) {
+        crate.position.set(c.x, c.y, c.z);
+        crate.rotation.y = inMoment ? mk!.face : face;
+      }
+      if (carrying.stage === 'pick' && crateUp) carrying.stage = 'carry';
+      else if (carrying.stage === 'put' && !moments.active) {
+        const done = carrying.done;
+        dropCrate();
+        done();
+      }
+    }
     // Recoil kicks the view up a touch; the rifle rides the shoulder
     const kick = combat.update(dt, t, aimNow);
     if (kick) {
@@ -2001,31 +2278,44 @@ export function createWalk(d: WalkDeps) {
     }
     recoil = Math.max(0, recoil - dt * 0.35);
     aimAmt += ((shooting ? 1 : 0) - aimAmt) * damp(14, dt);
-    if (hero.held) hero.held.visible = !combat.armed;
+    if (hero.held) hero.held.visible = !combat.armed && !carrying;
     // Both hands on the gun (after walking and jumping have posed the arms)
     const gunInHand = combat.geared && combat.poseGun(P, { aim: aimAmt, pitch, recoil, run: runAmt, dt });
-    if (!gunInHand && aim) Object.assign(P.arms[1], { fwd: 1.45, out: 0.05, bend: 0.15, twist: 0 });
+    if (!gunInHand && aim && !carrying) Object.assign(P.arms[1], { fwd: 1.45, out: 0.05, bend: 0.15, twist: 0 });
     // The head follows the camera: turns towards where you look, tilts up and down
     const lookYaw = THREE.MathUtils.clamp(wrap(lookFace - face), -0.9, 0.9);
     headYaw += ((speed < 0.25 || aim ? lookYaw : 0) - headYaw) * damp(8, dt);
     headPitch += (THREE.MathUtils.clamp((0.35 - pitch) * 0.6, -0.45, 0.55) - headPitch) * damp(8, dt);
-    // Standing a while with the camera still, he looks round by himself
+    // The gaze: his head drawn to people passing, cars going by and the way he's about to turn, and a
+    // look round by himself standing (gaze.ts); the camera's own look wins over it standing or aiming
     camStill = Math.abs(wrap(yaw - lastYaw)) > 0.002 ? 0 : camStill + dt;
     lastYaw = yaw;
-    lookAround += ((camStill > 3 && !combat.armed ? loco.look : 0) - lookAround) * damp(2, dt);
+    interests.length = 0;
+    for (const p of bodies.people) if (Math.abs(p.x - pos.x) < 8 && Math.abs(p.z - pos.z) < 8) interests.push({ x: p.x, z: p.z, y: pos.y + 1.1 * SCALE, kind: 'person', moving: p.act === undefined, id: `p${p.x.toFixed(1)},${p.z.toFixed(1)}` });
+    for (const c of bodies.cars) if (Math.abs(c.x - pos.x) < 8 && Math.abs(c.z - pos.z) < 8) interests.push({ x: c.x, z: c.z, y: pos.y + 0.6, kind: 'car', weight: 0.7, moving: true, id: `c${c.model}${Math.round(c.x)},${Math.round(c.z)}` });
+    const gaz = gaze ? gaze.update({ dt, x: pos.x, y: pos.y + 1.1 * SCALE, z: pos.z, face: animator ? animator.face : face, ahead: face, speed, interests }) : STILL_GAZE;
+    const gazeW = combat.armed || aim ? 0 : speed < 0.25 ? 1 - Math.min(1, Math.abs(lookYaw) / 0.35) : 1;
+    lookAround += (gaz.yaw * gazeW - lookAround) * damp(10, dt);
+    gazePitch += (gaz.pitch * gazeW - gazePitch) * damp(10, dt);
     // (on top of the locomotion's own: the head kept steady while the body turns and leans under it;
     // with his cheek on a rifle's stock the head is the gun's)
     const free = gunInHand ? 1 - combat.cheek : 1;
     P.headYaw += (headYaw + lookAround) * free;
-    P.headPitch += headPitch * free;
+    P.headPitch += (headPitch + gazePitch) * free;
     hero.update();
     // On foot, unarmed and not showing off, the motion capture: blended in and out over a moment
     if (!animator && !animLoading) {
       animLoading = true;
-      Promise.all([import('./animator'), loadMocap()]).then(
-        ([m, data]) => {
+      Promise.all([import('./animator'), import('./contact'), loadMocap(), import('./onfoot')]).then(
+        ([m, cm, data, of]) => {
           anim = m;
+          onFoot = of;
+          gaze ??= of.createGaze(11);
+          mocapData = data;
           animator = m.createAnimator(data);
+          contactMod = cm;
+          contact = cm.createContact({ hands: !d.low });
+          contactRot = new Float32Array(animator.rot.length);
         },
         // (it can be tried again: the procedural walk carries on meanwhile)
         () => (animLoading = false),
@@ -2033,11 +2323,14 @@ export function createWalk(d: WalkDeps) {
     }
     let drawFace = face;
     // ...with a gun in his hands or an arm out aiming, only its legs and hips: his own pose over them
-    const mocapOn = !!animator && landHold <= 0 && !emote && !slide && !over;
-    upperW = THREE.MathUtils.clamp(upperW + (gunInHand || aim ? dt / 0.15 : -dt / 0.15), 0, 1);
+    const mocapOn = !!animator && landHold <= 0 && !dancing && !slide && !over && !moments.posing;
+    upperW = THREE.MathUtils.clamp(upperW + (gunInHand || aim || carryAmt > 0.01 || emoting ? dt / 0.15 : -dt / 0.15), 0, 1);
     if (animator && anim) {
       // (a fresh start after a jump in place: walking started, a fast travel, the end of a ride)
-      if ((mocapW < 0.01 && mocapOn) || lastPos.distanceToSquared(pos) > 4) animator.reset();
+      if ((mocapW < 0.01 && mocapOn) || lastPos.distanceToSquared(pos) > 4) {
+        animator.reset();
+        contact?.reset();
+      }
       // (over a quarter second back in, less going out so a slide or an emote still answers at once: quicker, the two poses swapped with a jolt)
       mocapW = THREE.MathUtils.clamp(mocapW + (mocapOn ? dt / 0.25 : -dt / 0.15), 0, 1);
       if (mocapW > 0) {
@@ -2046,8 +2339,29 @@ export function createWalk(d: WalkDeps) {
         animator.update({ dt, x: pos.x, y: pos.y, z: pos.z, move: ms, gx, gz, scale: SCALE, ground: groundAt, feet: groundAt, sprint: runAmt, grounded, vy: grounded ? fall : vy, jump: JUMP, gravity: GRAVITY, faceGoal, crouch: crouchAmt });
         // (shown facing the way the motion capture turns him; his own upper body turned back to the springs' facing)
         drawFace = face + wrap(animator.face - face) * mocapW;
-        anim.applyTo(hero.rig, animator.rot, animator.hips, w, u, face - drawFace);
-        anim.addLook(hero.rig, headYaw + lookAround, headPitch * 0.5, w * (1 - u));
+        // Contact (contact.ts): on the pose before the figure takes it, not with a gun in his hands (the hold has the arms)
+        let rot: Float32Array = animator.rot;
+        if (contact && contactMod && contactRot && !moments.active && !carrying) {
+          contactBoxes.length = 0;
+          SOLID_GRID.near(pos.x, pos.z, 1.2, contactBoxes);
+          for (const b of d.plotSolids()) if (b[0] - 1.2 < pos.x && pos.x < b[2] + 1.2 && b[1] - 1.2 < pos.z && pos.z < b[3] + 1.2) contactBoxes.push(b);
+          contactPeople.length = 0;
+          for (const p of bodies.people) if (p.act === undefined && Math.abs(p.x - pos.x) < 1.5 && Math.abs(p.z - pos.z) < 1.5) contactPeople.push(p);
+          const st = contact.update({ dt, x: pos.x, y: pos.y, z: pos.z, face: drawFace, scale: SCALE, speed, moving: mag > 0.1, walls: contactBoxes, people: contactPeople, blocked: contactBlocked, hit: hitWall, hitSpeed });
+          if (u < 0.5 && (st.hand || st.lean || st.stagger || st.give.w > 1e-3 || st.squeeze.w > 1e-3)) {
+            contactRot.set(animator.rot);
+            contactMod.applyContact(contactRot, animator.hips, st, pos.x, pos.y, pos.z, drawFace, SCALE);
+            rot = contactRot;
+          }
+          // (a small shake as a stagger starts)
+          if (st.stagger && !staggering && !d.reduced && !firstPerson) {
+            shakeT = LAND_SHAKE;
+            shakeK = 0.018;
+          }
+          staggering = !!st.stagger;
+        }
+        anim.applyTo(hero.rig, rot, animator.hips, w, u, face - drawFace);
+        anim.addLook(hero.rig, headYaw + lookAround, headPitch * 0.5 + gazePitch, w * (1 - u));
         // (anything in his hand held out in front of it, clear of his leg)
         if (hero.held?.visible) anim.addCarry(hero.rig, w * (1 - u));
       }
@@ -2058,7 +2372,7 @@ export function createWalk(d: WalkDeps) {
     // The peek: the upper body out over the hips towards where you look, the head kept level (less so with his cheek on a stock)
     if (peek && anim) anim.addLean(hero.rig, peek * PEEK.lean, wrap(lookFace - drawFace), PEEK.level * (1 - 0.6 * (gunInHand ? combat.cheek : 0)));
     lastPos.copy(pos);
-    placeRoot(hero.g, pos.x, pos.y, pos.z, animator ? drawFace : face, SCALE, animator ? root0 : loco.root);
+    placeRoot(hero.g, pos.x, pos.y + momentDy, pos.z, animator ? drawFace : face, SCALE, animator ? root0 : loco.root);
     hero.ring.position.set(pos.x, ground + 0.02, pos.z);
     (hero.ring.material as THREE.MeshBasicMaterial).opacity = 0.55 * (1 - air * 0.6);
 
@@ -2069,7 +2383,7 @@ export function createWalk(d: WalkDeps) {
     // (a peek takes it out with him: further over his right shoulder, or across to his left; never into a wall beside him)
     let lateral = firstPerson ? peek * PEEK.eye : shoulder + peek * (peek > 0 ? PEEK.cam : 2 * shoulder + PEEK.cam);
     // (lower crouched, lower still sliding)
-    const eyeY = pos.y + ((firstPerson ? 1.2 : 1.0) - crouchAmt * CROUCH.cam - slideAmt * CROUCH.slideCam) * SCALE + 0.05;
+    const eyeY = pos.y + momentDy + ((firstPerson ? 1.2 : 1.0) - crouchAmt * CROUCH.cam - slideAmt * CROUCH.slideCam) * SCALE + 0.05;
     if (Math.abs(lateral) > 0.01) {
       const sgn = Math.sign(lateral);
       headAt.set(pos.x, eyeY, pos.z);
@@ -2090,7 +2404,8 @@ export function createWalk(d: WalkDeps) {
     const camPitch = firstPerson ? pitch : Math.max(pitch, -0.12);
     offset.set(Math.sin(yaw) * Math.cos(camPitch), Math.sin(camPitch), Math.cos(yaw) * Math.cos(camPitch));
     const want = firstPerson ? 0 : zoom * (aimNow ? 0.62 : 1);
-    const room = firstPerson ? 0 : cameraRoom(pivot, offset, want);
+    // (seated, a bench's back or anything else that low doesn't pull the camera in onto him)
+    const room = firstPerson ? 0 : cameraRoom(pivot, offset, want, 0.35, seated() ? 0.9 : 0.5);
     camDist = room < camDist ? room : camDist + (room - camDist) * damp(4, dt);
     camera.position.copy(pivot).addScaledVector(offset, camDist);
     if (shakeT > 0) {
@@ -2106,7 +2421,8 @@ export function createWalk(d: WalkDeps) {
     camera.lookAt(lookAt);
     // (leaning out in first person, the view tilts with his head a little)
     if (firstPerson && peek && !d.reduced) camera.rotateZ(-peek * PEEK.roll);
-    hero.g.visible = !firstPerson && camDist > 0.6;
+    // (seated, the bench and what's round it may keep the camera close: he still shows)
+    hero.g.visible = !firstPerson && camDist > (seated() ? 0.3 : 0.6);
     frameShowroom(dt);
     hero.ring.visible = !firstPerson;
     combat.view(dt, t, { firstPerson, aim: aimNow, move: stride, phase, run: runAmt, air });
@@ -2178,6 +2494,11 @@ export function createWalk(d: WalkDeps) {
         best = { id: door.id, label: root.querySelector(`[data-pin="${door.id}"] .city-pin-title`)?.textContent ?? door.id };
       }
     }
+    // A free bench to sit on (moments.ts); seated, standing up
+    if (seated()) best = { id: 'stand', label: 'Stand up' };
+    else if (!best && !drive.active && nearestBench()) best = { id: 'bench', label: 'Sit' };
+    // Carrying a crate: set it down (where it's going, or anywhere)
+    if (carrying) best = carrying.stage === 'carry' ? { id: 'put', label: Math.hypot(carrying.to.x - pos.x, carrying.to.z - pos.z) < PUT_R ? (carrying.dir === 'load' ? 'Load the car' : 'Unload here') : 'Put it down' } : null;
     if (best?.id !== near?.id || best?.label !== near?.label) {
       near = best;
       prompt.hidden = !near;
@@ -2235,6 +2556,11 @@ export function createWalk(d: WalkDeps) {
       keys.clear();
       jumpHeld = false;
       setAim(false);
+      if (r) {
+        // (the ride has him: the moment that got him in is over, and a crate is put away)
+        moments.cancel();
+        dropCrate();
+      }
       if (r && locked()) document.exitPointerLock();
       root.classList.toggle('is-riding', !!r);
       if (!r) hero.g.visible = hero.ring.visible = !firstPerson;
@@ -2265,6 +2591,9 @@ export function createWalk(d: WalkDeps) {
       vy = 0;
       grounded = true;
       over = slide = null;
+      moments.cancel();
+      dropCrate();
+      momentAmt = momentDy = 0;
       yaw = at.yaw;
       face = yaw + Math.PI;
       pitch = firstPerson ? -0.05 : 0.35;
@@ -2279,7 +2608,34 @@ export function createWalk(d: WalkDeps) {
     /** Your car, if it's out of the garage: where it is, its model, and whether you're in it */
     get car() {
       const st = drive.carState;
-      return st ? { x: st.x, z: st.z, model: drive.model, driving: drive.inCar, speed: st.speed } : null;
+      return st ? { x: st.x, z: st.z, yaw: st.yaw, model: drive.model, driving: drive.inCar, speed: st.speed } : null;
+    },
+    /** A taxi at the kerb (taxi.ts): walk him up to its door and in (moments.ts), then `go` (the ride) */
+    boardAt(v: { x: number; z: number; yaw: number; W: number }, go: () => void) {
+      if (!active || drive.active || fly.active || boating() || karts.active || fighting() || ride || moments.active || over || slide || emote || carrying) return false;
+      contact?.reset();
+      moments.start(sideMark('car', v, MOMENT.car.seat), go, pos.x, pos.z);
+      return true;
+    },
+    /**
+     * Carry a crate of goods (the business card's Load / Unload, moments.ts): from one of your places (`at`) to
+     * your car's boot, or the other way; `done` moves the goods once it's set down there. False if he can't now.
+     */
+    carry(dir: 'load' | 'unload', at: { x: number; z: number }, done: () => void) {
+      const c = drive.carState;
+      if (!c || !active || drive.active || fly.active || boating() || karts.active || fighting() || ride || moments.active || over || slide || emote || carrying) return false;
+      if (combat.armed) combat.toggleHolster();
+      const fx = Math.cos(c.yaw);
+      const fz = -Math.sin(c.yaw);
+      const back = CARS[drive.model].L / 2 + 0.35;
+      const boot = { x: c.x - fx * back, z: c.z - fz * back };
+      let from = dir === 'load' ? at : boot;
+      // (standing on the spot already: the crate just ahead of him)
+      if (Math.hypot(from.x - pos.x, from.z - pos.z) < 0.6) from = { x: pos.x + Math.sin(face) * 0.6, z: pos.z + Math.cos(face) * 0.6 };
+      carrying = { dir, to: dir === 'load' ? boot : at, stage: 'pick', done };
+      contact?.reset();
+      moments.start(crateMark('pick', from, pos.x, pos.z, groundAt(from.x, from.z, pos.y), (bx, bz) => blocked(bx, bz, pos.y)), () => (crateUp = true), pos.x, pos.z);
+      return true;
     },
     onKey,
     update,
@@ -2302,6 +2658,10 @@ export function createWalk(d: WalkDeps) {
     },
     playEmote(id: string) {
       emote = { id, t: 0 };
+    },
+    /** The motion capture and its animator module, once they're in (remote.ts: other players move on it too) */
+    get motion() {
+      return anim && mocapData && onFoot ? { anim, data: mocapData, onFoot } : null;
     },
     /** What other players need to see of us, for the game server */
     netState() {
@@ -2327,6 +2687,9 @@ export function createWalk(d: WalkDeps) {
       crouched = false;
       slide = null;
       over = null;
+      moments.cancel();
+      dropCrate();
+      momentAmt = momentDy = 0;
       // ?spawn=x,z[,yaw] in the address: start walking somewhere else (for checking a place on real devices)
       const at = new URLSearchParams(location.search).get('spawn')?.split(',').map(Number);
       if (at && at.length >= 2 && at.every(Number.isFinite)) {
@@ -2377,6 +2740,9 @@ export function createWalk(d: WalkDeps) {
       }
       fightUI.close();
       active = false;
+      moments.cancel();
+      dropCrate();
+      momentAmt = momentDy = 0;
       root.classList.remove('is-fp');
       keys.clear();
       jumpHeld = mouseL = mouseR = false;

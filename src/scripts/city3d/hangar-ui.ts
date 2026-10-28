@@ -15,23 +15,13 @@
  * paint), Enter / A keeps it, Esc / B / F closes.
  */
 import { TUNES } from './flight-sim';
-import { DEFAULT_PLANE, FLY, PLANE_PAINTS, PLAYER_AIRCRAFT, cleanPlane, type MyPlane, type PlaneId } from './myplane';
+import { FLY, PLANE_KEY, PLANE_PAINTS, PLAYER_AIRCRAFT, loadPlane, type MyPlane, type PlaneId } from './myplane';
 import type { PaintId } from './mycar';
 import { repaint } from './ui';
 
-const KEY = 'degen-city-plane-v1';
-
-/** Your saved aircraft (or the default) */
-export function loadPlane(): MyPlane {
-  try {
-    return cleanPlane(JSON.parse(localStorage.getItem(KEY) ?? 'null'));
-  } catch {
-    return { ...DEFAULT_PLANE };
-  }
-}
 function savePlane(p: MyPlane) {
   try {
-    localStorage.setItem(KEY, JSON.stringify(p));
+    localStorage.setItem(PLANE_KEY, JSON.stringify(p));
   } catch {
     /* fine: the pick just won't stick */
   }

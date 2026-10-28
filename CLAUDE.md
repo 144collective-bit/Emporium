@@ -125,12 +125,32 @@ it and has been retired completely. Build only on what's here.
     (fountain, kiosk), West Green (a plinth with the Emporium diamond
     turning in neon), East Square (a bandstand) and South Square (a clock
     tower, kiosk); benches, corner planters, lamps, light bollards at the
-    ways in, uplights round the centrepiece and a few people.
+    ways in, uplights round the centrepiece and a few people; paler stone
+    inlays (a ring round the centrepiece, bands out to the edges), flower
+    troughs along the sides (`troughs`, solid), café tables by the kiosk
+    (`cafe`) and string lights round the edge on corner poles (`poles`, the
+    lights in the FX layer so the ink doesn't draw them as black ropes).
     Footprints are `SQUARE_SOLIDS`. Four pocket parks (`OUTER_PARKS`).
+  - **The lawns dressed** (the polish pass, the owner's call: "add detail to
+    low grade parts") are `outerdress.ts` (DOM-free, tested in
+    `tests/outerdress.test.ts`; `dressing()`, given a test for what's solid):
+    a paved walk from each plot's pad, each square's ways in and each pocket
+    park out to its block's sidewalk the shortest clear way (`PATH_W`), round
+    flower beds with a stone kerb in the blocks' corners and either side of
+    each walk's mouth, benches either side of a walk's middle facing it with a
+    bin (`BENCH_OUT`), a picnic table on each block's biggest clearing, and
+    `LAWN_TREES` kept off them all (`trees`). Nothing of it is solid. Drawn
+    by `outerdress3d.ts` (`buildOuterDress()`, a site a block, in the worker
+    too; `DRESS`, worked out once with `SOLID_GRID`, also gives
+    neighbourhoods.ts its lawn trees), shrubs at the feet of every third lawn
+    tree (every sixth on phones).
   - The waterfront promenade (`PROMENADE`) along both banks: railings at
     the water (open at the bridges), trees in planters and benches between
-    the lamps, and viewing decks over the water (`JETTIES`). It's at
-    ground level, not a slab: nothing on it is solid.
+    the lamps, and viewing decks over the water (`JETTIES`); a pale stone
+    coping along the water's edge, flowers round the planters' trunks, a bin
+    by each bench, life rings on posts by the railing and a telescope on
+    each deck (near only). It's at ground level, not a slab: nothing on it
+    is solid.
   - `inTown()` keeps the outskirts' trees out of all this. Tested in
     `tests/outer.test.ts`.
 - **Traffic** follows `routes.ts` (DOM-free), generated from the street
@@ -741,7 +761,7 @@ it and has been retired completely. Build only on what's here.
   spire about 40 tiles since the redesign, the rest 14 to 32; the Sky Wheel
   about 22; the Emporium
   stays the tallest downtown and the most detailed, and "under the
-  Emporium" holds everywhere else); the flying traffic and your own
+  Emporium" holds everywhere else but Uptown North, below); the flying traffic and your own
   aircraft clear them. The strips' courts and their players are retired
   with it. Phases 1 (the land and the streets), 2 (the towers), 3 (the
   plaza), 4 (the waterfront boulevard), 5 (the redesign, the owner's call:
@@ -1004,6 +1024,28 @@ it and has been retired completely. Build only on what's here.
     mouths, piles; the overlooks; the marina and its yachts; the median a
     run a site; each terrace a site, its name from one small atlas). The
     valets' bays came in Phase 5 (the kerbside, above).
+- **Uptown North** (the owner's call: Palm Court moved across the east ring
+  avenue and "more large skyscrapers that match Uptown's" on its old land;
+  scenery only) is `uptownnorth.ts` (DOM-free, tested in
+  `tests/uptownnorth.test.ts`): the block between Westlake Park's east
+  sidewalk and the north avenue (ns0), from the highway's slip lanes to the
+  Parkway (`NORTH_RECT`, `NORTH_BLOCK`, id `uptown-north`, ref `uptown` in
+  the street plan: paved), two columns of lots (`WEST_COL`, `EAST_COL`)
+  either side of a service way (`SERVICE_WAY`), the park's two east gates
+  carried through to the avenue (`GATE_WALKS`) and the square at its heart
+  (`NORTH_SQUARE`: a round pool with a twisting steel sculpture, `POOL`,
+  trees in grates, `SQUARE_TREES` / `NORTH_TREES`, benches facing it,
+  `SQUARE_BENCHES`, lamps, `NORTH_LAMPS`, people, `NORTH_PEOPLE`), where
+  the zebra over the avenue to the mall's forecourt lands (`TOWER_ZEBRA` in
+  mall.ts); `NORTH_SOLIDS` (in `SOLIDS`: the pool). Its seven towers are
+  highrise.ts's (`un-*` in `HIGHRISES`, block `uptown-north`, 22 to 31, a
+  twin, round, slab and deco mix on masonry bases; the west column's lobbies
+  on the park, the east column's on the avenue; `TOWER_BLOCKS` is every
+  block towers stand on), drawn with Uptown's in its chunk (it loads from
+  well out anyway); streetlevel.ts gives their sides on the square and the
+  gates' walks dining (`NORTH_OPEN`) and the north avenue luxe. The square
+  and the walks' granite are `uptownnorth3d.ts` (`registerNorth()`, from
+  uptown3d.ts). The flying traffic clears them (the highrise test).
 - **Sector 7 Central, the grand station** (the owner's call): a terminus
   west of the ring highway on the park's avenue (ew0), planned in
   `docs/station-plan.md` in four steps, each with the owner's sign-off
@@ -1046,6 +1088,97 @@ it and has been retired completely. Build only on what's here.
     `data-panel-tpl="station"` with Walk in to `STATION_SPAWN`, `PLACES`
     and `LIVE_PLACES` entries). The far cars' mesh grows when a district's
     parked cars fill it (`initFarCars()`).
+- **Palm Court and Starlight Mall** (the owner's call): a shopping plaza and
+  a mall on the land between the Parkway and the ring highway's north side,
+  the mall east of Uptown North and Palm Court across the east ring avenue
+  from it, planned in `docs/mall-plan.md` in steps, each with
+  the owner's sign-off (1 both from outside, built; 2 the mall's walk-in
+  interior, built; 3 maybe shops run with Dorras); keep it up to date. A
+  modern mall (the redesign, the owner's call; it was retro neon 80s):
+  white and light-grey cladding, glass curtain walls in black steel, timber
+  slats and soffits, stone paving, warm white light, inside and out;
+  made-up names only, no prices on any sign; under the Emporium (`TALLEST`).
+  - The two small north-south streets stop at the Parkway (`SHORT_NS`,
+    `nsRuns()` in layout.ts: streetplan.ts ends each at its crossing, their
+    junctions on the highway's north side and their slips went; world.ts,
+    outer.ts's kerbs and the outskirts' trees honour it).
+  - `mall.ts` (DOM-free, tested in `tests/mall.test.ts`): Palm Court
+    (`COURT`, block `palm-court`, east of the mall across the east ring
+    avenue (ns3; moved there from the park's side, the owner's call, its old
+    land Uptown North's, below), as wide as it was (`COURT_W`): the promenade
+    `PROM`, two rows of shops facing across it, `SHOPS` from `SHOP_NAMES`, each its `style` (`ShopStyle`: glass, render,
+    clad, timber), a third two storeys,
+    the west row open to the zebra over the avenue to the mall's forecourt
+    `ZEBRA`, the east row across from it to the open land `EAST_GAP`
+    (`TOWER_ZEBRA` crosses the north avenue from Uptown North's square to
+    the forecourt's other end; both avenues' medians break at their zebras,
+    `highwayGaps()`), festoon lights across the promenade (in the FX layer),
+    Paradise Cinema across the north end `CINEMA`, the
+    `FOUNTAIN`, `BENCHES`, the trees' planters `COURT_TREES`, the PALM COURT
+    `ARCH`); Starlight Mall
+    (`MALL_BLOCK`, block `mall`: the `HALL`, its `PORCH`, the `ANCHORS`
+    Maxwell's (light) and Bright & Co. (dark), the totem `PYLON`, the bus
+    `SHELTER`, the forecourt's `PLANTERS` and `PAY_STATIONS`); the
+    two-way loop off the north avenue (`LOOP`, `MALL_STREETS` /
+    `MALL_CROSSINGS`: traffic drives it) round the car parks (`PARK_BLOCK`,
+    block `mall-park`: `CAR_PARK`, `BAYS` in groups of four with planted
+    `ISLANDS` between (a stone kerb, a paved walk down the middle,
+    `ISLAND_WALK`, with light bollards, beds with hedges, flowering shrubs and
+    grasses, four trees each from `islandTrees()`, a lamp by the walk; EV
+    chargers with their bays painted green on every other one, a trolley
+    shelter on the rest), `PARKED`, the zebra to the porch `LOOP_ZEBRA`, the taxi rank
+    `RANK_CABS`, the multi-storey `MSCP` and its cars `MSCP_CARS`);
+    `MALL_SOLIDS` (in `SOLIDS`), `MALL_LAMPS`, `MALL_TREES` (placed at the
+    boot with the town's, on the planters and islands), `MALL_PEOPLE`, `COURT_SPAWN`,
+    `MALL_SPAWN`, `MALL_AREA` (Uptown North's block to Palm Court: the outskirts' trees keep off, `treeSpot()`).
+  - `mall3d.ts` draws them, a district loaded as you approach
+    (`LAZY_DISTRICTS` id `mall`): sites (the shops by style, lit windows,
+    signs, canopies with LED edges, rooftop plant; festoon lights across the
+    promenade; the cinema, dark-clad with a glazed lobby, a canopy and
+    poster lightboxes for made-up films (uptownsites.ts `FILMS`); the water
+    feature, benches, planters, the gateway; the anchors with their fronts,
+    side signs and loading docks; the hall's curtain wall, its glass vault
+    on black ribs; the porch's feature wall, canopy and open doors; the
+    totem, the shelter, the forecourt; the loop, its zebras, the bays,
+    islands and trolley shelters, the TAXI board, the multi-storey behind
+    perforated screens), one sign atlas (`mall-signs`), and on the main thread the parked cars and cabs. The
+    places are `mallspot.ts` (spots `palmcourt` and `mall`: pins, directory
+    entries, panels `data-panel-tpl="palmcourt"` / `"mall"` with Walk in,
+    `PLACES` and `LIVE_PLACES` entries); the world map draws their
+    footprints. The shared paint, the surfaces laid on in world units
+    (`worldUV`: `CURTAIN`, `CLAD`, `CLAD_DARK`, `RENDER`, `TIMBER`, `PAVING`,
+    `FLOOR`, `PERF`; `face()`, `flat()`), the sign atlases (`signAtlas()`,
+    32 cells, a `light` set in charcoal on white) and the helpers are
+    `mallkit.ts`.
+  - **Inside the mall** (step 2, built) is `mallinside.ts` (DOM-free,
+    tested in `tests/mallinside.test.ts`): the hall is hollow (`WALLS`, the
+    doors open behind the porch, `DOOR`, with `BOLLARDS` across them: a
+    walker gets through, no car does); two floors (`UP` apart; `UPPER`: the
+    galleries and the terrace across the north end) round the atrium
+    (`VOID`) under the vault; sixteen units, four a side on each floor
+    (`UNITS`, made-up `UNIT_NAMES`); two escalators side by side up to the
+    terrace (`ESCALATORS`, `escalatorY()`); the food court on the terrace
+    (`FOOD_STALLS`, `TABLES`); the fountain, benches, trees and columns;
+    two kiosks in the atrium (`KIOSKS`); the glass lift by the east gallery
+    (`LIFT_SHAFT`, `MALL_LIFT`: walk prompts "Lift · Upper floor" / "Lift ·
+    Ground floor", `mall-lift:up` / `:down`, a fade through `rideTo()` in
+    index.ts, closed with the place);
+    downstairs under the terrace the kiddie rides, the information desk and
+    the photo booth (`GROUND_THINGS`), the anchors' doors; the directory
+    boards in the lobby. Walking: `mallFloor()` (the floor by Degen's
+    height) in walk.ts's `groundAt()`, `mallWall()` (the upper floor's
+    edges, an escalator's side, what stands on his floor, `LEVEL_SOLIDS`)
+    in `blocked()`, `MALL_CAMERA` (the roof and the upper floor's slabs)
+    for the walk camera; `MALL_INSIDE_SOLIDS` (in `SOLIDS`),
+    `MALL_INSIDE_PEOPLE`, `INSIDE_SPAWN` (the panel's Walk in). Drawn by
+    `mallinside3d.ts` (`registerInside()`, from mall3d.ts's `register()`;
+    near only, no shadows: the hall's shell casts none, so the day comes
+    in as through the skylight): pale stone floors, white slabs with warm
+    LED edges and timber soffits with slots of light, white and black-steel
+    shopfronts, glass balustrades, the escalators (their steps run on the
+    main thread's tick, still under reduced motion), the timber food court,
+    the kiosks, the glass lift, a ring of light over the fountain, one sign
+    atlas (`mall-signs-in`).
 - **Districts loaded as you approach** (performance phase 4, item 10):
   a district's drawing is a module of its own (`LAZY_DISTRICTS` in
   `districts.ts`: an id, its land and `load()`, a dynamic import), a chunk
@@ -1233,12 +1366,22 @@ it and has been retired completely. Build only on what's here.
     strings, arrays, objects): anything with references packs and unpacks.
   - Features load when they're used, each its own chunk (`import()`):
     the fight (`fight.ts` and the figures' clips, when the trainer's menu
-    first opens: `loadFight()` in `walk.ts`), the stage of the fitting room
+    first opens: `loadFight()` in `walk.ts`), the animator with the motion
+    capture and the on-foot extras (`onfoot.ts`: the emotes, the gaze, the
+    vault and the moments' keyed poses, `momentposes.ts`, one chunk
+    fetched when walking starts; until it's in an emote is skipped, the
+    gaze still, nothing vaulted and a moment plays no pose; the hologram
+    fetches the emotes on its own after the boot), the stage of the fitting room
     and the character screen (`stage.ts`), SMAA (`post.ts`), the fight
     demo, the benchmark (`?bench`, `bench.ts`), Drop 001's fitting room
     (`fitting.ts`, when its panel first opens: `loadFitting()` in index.ts)
     the world map (`worldmap.ts`, when it first opens: `loadMap()` in
-    travel-ui.ts; `placeName()` is places.ts's) and the kart park's game
+    travel-ui.ts; `placeName()` is places.ts's), the gun store, the
+    garage's and the hangar's menus (`gunshop.ts`, `garage-ui.ts`,
+    `hangar-ui.ts`: each loads the first time its door or counter opens
+    it, `lazyMenu()` in walk.ts; the saved car and aircraft are read by
+    `loadCar()` in mycar.ts and `loadPlane()` in myplane.ts, in the boot)
+    and the kart park's game
     (the hut's menu and the race, `kartgame.ts`: `loadKarts()` in walk.ts,
     when Degen comes near the park or asks at the hut; idle stand-ins until
     then; the City-view panel's records are `kart-records.ts`, at the boot). New features that aren't needed until they're used come the same
@@ -1526,6 +1669,90 @@ it and has been retired completely. Build only on what's here.
   character screen) and Phase 5 (the crowds and soldiers on the new body,
   skinned on the GPU from baked clips; fighters and other players stepping
   with planted feet) are built: every figure in the city is the one body.
+- **The clothes** (the owner's call: higher quality, no clipping) are
+  planned in `docs/clothing-plan.md`: layers that move together (an outer
+  garment weighted as what's under it, a gap held), the trousers as one
+  piece, the garments' shapes as DOM-free data with a clipping check in
+  the tests and a clipping view in the lab, then smoother shapes (bottoms
+  and shoes, the suit, the casual tops, the accessories) on a desktop
+  detail level, phones and crowds as they are. One phase at a time with
+  the owner's sign-off; keep it up to date. Phase 1 (no clipping),
+  Phase 2 (bottoms and shoes, smoother), Phase 3 (the suit, smoother),
+  Phase 4 (the casual tops, smoother) and Phase 5 (the accessories,
+  smoother) are built:
+  - The wardrobe is data: `wardrobe.ts` (DOM-free: the outfits,
+    `lookOutfit()`, the shapes and `items()`; `restSkin()` is a piece at
+    rest with its bones, what `createDegen()` and the crowd skin with);
+    character.ts adds only the soldiers' rifle (guns.ts draws it).
+  - The trunk is one weight field (`trunk()` in skeleton.ts): the torso,
+    the pelvis and the legs down to `LEG_FREE` are weighted by where a
+    point is, not what it's part of, so every layer over the hips bends as
+    one: the waist down to the hips partly the hips and some of the way
+    each leg, all of it under the hems (`HEM_Y`, a little under the
+    longest), the legs shared across the middle wider than any layer's
+    vertices are apart. Never give one layer weights of its own there.
+  - The trousers, joggers and fatigues are one piece each from the waist
+    to the cuff (`trousers()`: a seat, the crotch, both legs and the
+    knee), inside every top's hips with room to spare (`SEAT`); the tops
+    and the seat carry a ring every 2 cm through the hips (`fine()`, not
+    on the far crowd) so their faces bend with the field.
+  - Laid-on details (`onBody()`) shade smooth; the track stripes are flat
+    tape on the cloth (`stripe()`); the puffer's baffles are rounded
+    pillows (`quilt()`); the shades' chain lies on each top's collar and
+    chest (`chainOn()`, an item per top, `chain-<kind>`).
+  - `tests/clothing.test.ts` (with `tests/dress.ts`: dressed and posed on
+    the CPU as the GPU skins him) holds every outfit's trousers inside its
+    top and the top outside them, within 2 mm, through keyed poses, the
+    emotes, the fight's clips and the animator running, sprinting and
+    crouching; `CLOTHING_REPORT=1` prints the worst. Shells it checks are
+    pieces with `shell` (`top`, `bottom`). The lab's clipping view is
+    `?anim&clip` (the top, trousers and shoes in colours far apart).
+  - The desktop level (Phase 2): `Detail` 3, single figures on the high
+    and medium tiers (`figureDetail()` in character.ts, set from the tier
+    in index.ts; phones keep 2): more ring segments, and `curve()`
+    (sections every 2 cm on a smooth curve through a shape's own) on the
+    legs from the upper thigh down and the shoes. The tops' bodies keep the
+    phone's rings there (`TR()`) and the trousers take 28 (`LEGS`) until
+    Phases 3 and 4: finer tops met the crotch at a sprint. The test checks
+    both levels; the lab builds 3 (`detail=2` the phone's, `at` the height
+    the camera looks at).
+  - Trousers end in a break (`trousers()`'s `hem`: the cuff on a slant,
+    longer at the back, over a soft fold); the joggers gather into the
+    cuff. Shoes are lofts along their length (`shoe()`, `ShoeSec`), a
+    rounded toe box (`toe()`), on a sole worked out from the upper
+    (`sole()`); the crowd's take every other section, the far crowd's
+    every fourth (`up()`).
+  - The suit's jacket is its own sections (`JACKET`, curved on the
+    desktop at the full ring count; the varsity and fatigues grow from it),
+    its hem cut away at the front (`cutaway()`), its sleeves
+    `UPPER_J` / `FORE_J`. Its laid-on pieces are `crisp` (their outline
+    split as finely as the bend, their sides kept apart from their faces
+    when smoothed, so their edges ink solid): set it round new pieces that
+    need it rather than for everything (on the long thin ones, the zips and
+    the crease, it costs thousands of triangles).
+  - The casual tops (Phase 4): `smooth()` on the desktop (curved sections)
+    at `TOP_RINGS` 30, a count two more than a multiple of four so the
+    middle of the back falls between two ring points (one on it, or just
+    off it, sank into the trousers' seat at a sprint); the puffer's body
+    in two on the desktop, its hem at 22 (`SEAM`). Their shoulders are the
+    jacket's line and their sleeves the suit's lower head (`LOOSE_U`); the
+    hood down is a roll swept round the neck (`hoodDown`); zips and the
+    placket are `tape()` strips (bevelled sides, a few hundred triangles),
+    never outlines laid on.
+  - The accessories (Phase 5): every hat seated on the head the figure has
+    (`headRow()` / `inHead()` in body.ts): the cap and the beanie carried
+    out from the head's outline (`headShell()`), the other hats sized to it
+    (`fitTo()`), every band held just off it, brow and all (`snug()`), a
+    ring's sag added to every gap (`SAG`) so the crowd's clear it too; the
+    cap's brim from the crown's base (`brimSweep()`); the shades' arms back
+    along the head past the ear (`armPath()`), the chain hooked on them;
+    bags, boards, wings and the necklace on each top's own outline
+    (`TORSOS`, `OVER`, items `backpack-<kind>` and the rest; straps laid on
+    by `strapOver()`); the watch on the wrist riding the hand; a held
+    thing's handle in the fingers' hook (`HOOK`, `handle()`), the cup
+    against the fingers' front. `tests/accessories.test.ts` holds the hats
+    clear of the head at every level and the held things clear of the
+    fingers. The lab takes `wear=` and `at=x,y,z`.
 - **The animation rebuild** (the owner's call, critical) is planned in
   `docs/animation-plan.md`: AAA movement (Spider-Man / Ratchet feel,
   neutral athletic) from motion capture, then turns, jumps, armed
@@ -1536,10 +1763,183 @@ it and has been retired completely. Build only on what's here.
   (turning, terrain and transitions), Phase 3 (jumps, falls and landings),
   Phase 4 (armed movement and peeking), Phase 5 (crouch, slide, vault and
   climb) and Phase 8 (the rifle shouldered, below under
-  Target practice) are built, for the player on foot:
+  Target practice) are built, for the player on foot. **The revamp**
+  (the owner's call, 2026-10: every character's movements made to suit
+  the game and realistically human) is planned in
+  `docs/animation-revamp-plan.md`: a measured rubric (`tests/human.test.ts`),
+  the player finished on foot (idle life, the gaze, walks, stairs),
+  contact, the game's moments (doors, counters, getting in and out,
+  benches, rides seen, carrying), everyone on the same captured motion
+  (other players, the crowd's rows, the emotes), the crowd's acts, the
+  Fight Club and polish; one phase at a time with the owner's sign-off;
+  keep it up to date. Phase 1 is built: the rubric is `human.ts`
+  (DOM-free: `BANDS`, `createRubric()` over a figure's frames,
+  `clipRows()` over a clip; `tests/human.test.ts` holds every clip and
+  the animator's programs to it, rows that fail today `HELD_BACK` with
+  their phase), the lab's Scorecard and Reel, the clips' format 2 with
+  tags, marks and packs (below), a `mocap` budget row. Phase 2 (the player finished on foot) is built: the idles are three stretches of subject 137 waiting
+  (`idle-wait`, `-2`, `-3`: real weight shifts, a hand to the head, a look
+  round; the looped quiet seconds of 143 went; read a standing take's
+  lean before using it: one was bent double), played through to the end
+  (`STAND.margin`), the take's own wander carried into the hips (`WANDER`),
+  the next take the least recently played (`standNext()`, cut into near
+  its start: `LATE` in motionmatch.ts), a slower blend between them
+  (`STAND_BLEND`), the stance's lift of the hips eased (`STANCE.upEase`)
+  and kept while a foot shifts; breathing (`BREATH`); the gaze (`gaze.ts`,
+  DOM-free, tested: people and cars nearby, a look round standing, the
+  head leading a turn; `walk.ts` lays it on, the lab's Gaze toggle); the
+  walk is 143's (1.4 m/s) with 132's fast walk for starts (`walk-fast`);
+  starts and pivots through `MATCH.after`, `starting` (`LOCK.downStart`)
+  and the head's slower blend (`HEAD_BLEND`, `Inertia.slow`);
+  the matching normalised over frames on the move (`MOVING`) and a clip's end dearer (`ENDING`); stairs up from capture (122's climb, `stairs-up`: the pipeline tracks a stairs take's floor through its planted feet, `stairFloor()`, `stairs: true` in takes.json, format 3's `floor` / `contact`; the animator searches its climbing frames only while climbing, `climbAhead()` and `STAIRS` in movesim.ts, which walk mode also uses to slow a climb; the lab's Stairs program; down is the walks with the lock). The rubric reads the capture's standing takes as
+  standing (`clipRows(..., standing)`, `Frame.side`); `HELD_BACK` is two
+  rows. Phase 3 (contact) is built: `contact.ts` (DOM-free, tested in
+  `tests/contact.test.ts`) is a layer on the animator's pose from what's
+  near him (`ContactInput`: the collision grid's boxes within
+  `CONTACT.reach`, the crowd's people, where he can't step, a move stopped
+  this frame and how fast), laid on by `applyContact()` after
+  `animator.update()` and before `applyTo()` in walk.ts (not with a gun in
+  his hands): brushing a wall or a person the shoulder gives and the step
+  hitches (`give`, `hitch`: 30% off his top speed for a moment; the crowd's
+  person steps aside and back, `bump` / `BUMP` in life.ts); stopped at a
+  wall a hand goes onto it at shoulder height, walking slowly along one it
+  trails along it at hip height (`reachArmBones()`, the arm's two-bone IK;
+  a hand on stays put until it's let go; the test holds it within 1.5 cm);
+  standing a while at an edge nothing solid explains (a quay, a railing)
+  he leans on the rail with both hands; into a wall at a sprint he
+  staggers (`stagger`: the chest back, a hand up, carried back on the
+  springs, a small camera shake); a gap narrower than `squeeze` turns the
+  shoulders. Phones (`createContact({ hands: false })`) leave out the
+  hands and the lean. The lab's Contact program and floor show it all.
+  Phase 4 (the game's moments) step 1 is built: `moments.ts` (DOM-free,
+  tested in `tests/moments.test.ts`): a `Mark` (`doorMark()`,
+  `counterMark()`, `benchMark()`: where he stands, his facing, the hands'
+  targets or the seat), `createMoment()` with the phases approach → play
+  → (hold → back) → done (`update()` gives walk.ts the approach's goal:
+  the walk's own last steps onto the mark, or `timeout`; `skip()` on F
+  again; `release()` when the menu closes or to stand up; `cancel()`),
+  and `momentPose()` (in `momentposes.ts`, walk mode's on-foot chunk),
+  keyed on the `Pose` rig as the vault's (the hands
+  on the thing by `reachArm()`, within 1.5 cm in the test). Doors (every
+  landmark's, Trench Avenue's, the stadium's gate, the garage, hangar and
+  kart hut, the lifts and stations): a push, the panel opening as the
+  hand lands; counters (the gun stores', the trainer's): a lean with both
+  hands on the top while the menu is open; benches: "Sit" at a free bench
+  (`BENCHES`, no crowd sitter on it), the root down onto the seat
+  (`momentDy`), "Stand up". walk.ts's `markFor()` / `act()` start them;
+  the keys wait while one is on, the motion capture steps aside for the
+  keyed pose (`momentAmt`), the contact layer too. Step 2 is built:
+  **getting in and out** (`boardMark()` / `alightMark()`, `Vehicle`: car,
+  kart, plane, boat; walk.ts's `sideMark()` from `drive.doorOf()` /
+  `fly.doorOf()` / `HIRE.door`: he comes at the vehicle's side nearest
+  him, the hands land (the car's handle, the kart's pod rim, the
+  aircraft's door frame, the boat's rails), a leg lifts over and the body
+  folds onto the seat, the root going to it, and the vehicle takes him at
+  `board.fireAt` (`enter()` as before; the moment dropped); out plays at
+  once from the seat (`from` on each `exit()`) to the step-out spot; the
+  taxi through `TaxiDeps.approach` → `walk.boardAt()`), **the lifts**
+  (`liftMark()`: walked in through the door and turned to face out, then
+  the fade), and **carrying** (`crateMark()` `pick` / `put`, `crateAt()`,
+  `carriedAt()`, `carryPose()`: the business card's Load / Unload on foot
+  with the car parked by the place go through `TycoonHooks.carry` →
+  `walk.carry()`: a crate squatted to and lifted at the place, carried in
+  both hands (the upper-body mask, a run capped at `crate.slow`), set
+  down at the car's boot (`PUT_R`, "Load the car") or the place ("Unload
+  here"), when `done` moves the goods; "Put it down" elsewhere moves
+  nothing; a vehicle, a ride, a fast travel or walk mode ending puts it
+  away). The rides seen (the metro's, taxi's and river bus's seated
+  figure) are held back, in the plan. Phase 5 (everyone on the same
+  motion) is built; step 1: **the crowd on the capture**: six takes in
+  their own pack (`pack: "crowd"` in takes.json → `clips-crowd.bin`, 56 KB,
+  `CROWD_PACK` in mocap-load.ts; the core pack untouched), fetched at the
+  boot and swapped into every crowd's rows as it comes in
+  (`setCrowdCapture()` in crowdclips.ts, `refreshCrowdTexture()` in
+  crowdskin.ts; the rows' layout is fixed whatever the capture holds, the
+  recorded walk and the formula idle stand in until then): `walk` /
+  `walk2` (two cycles of 143's walk) and `jog` (his run) resampled to
+  their rows with the hips in place, `idle` / `idle2` / `idle3` (three
+  stretches of 137 waiting, each looped with its tail crossfaded into its
+  head, `captureRow()`, at its own length, `secondsOf()`); `march` is the
+  recorded walk still and `look`, `chat`, `sit`, `picnic`, `salute` the
+  formulas (no such takes). Every person has their own walk and idle
+  (`walkFor()` / `idleFor()` by a number of theirs, life.ts), the strides
+  are live (`STRIDE`, `strideOf()`), and the scale rule is tested at the
+  city's scales (`tests/crowdclips.test.ts`). A budget row (`mocapCrowd`)
+  holds the pack under 80 KB. Step 2 is built: **other players on the
+  animator** (`remote.ts`): once walking has the capture and the animator
+  module (walk.ts's `motion`, through the multiplayer's `Walker`), each
+  player within `ANIM_FAR` of the camera gets an animator of their own fed
+  from where they're drawn (their own springs following the velocity seen
+  between frames and the facing sent; every frame within `ANIM_NEAR`,
+  at `FAR_DT` beyond; a jump between frames starts it afresh), blended in
+  as the player's (`mocapW`), the gun hold over its legs and hips
+  (`upperW`, `applyTo(..., upper, yaw)`), the look through `addLook()`,
+  the emotes and the air on the planted-feet walk as before; tested as a
+  fed remote in `tests/animator.test.ts`. Step 3 is built: **the emotes
+  re-keyed** (`emotes.ts`, DOM-free, tested in `tests/emotes.test.ts`):
+  the wave, the cheer, the salute and the dance as keyed clips on the
+  `Pose` rig (keys in seconds with eases, `EMOTE_CLIPS`, `emotePose(p, id,
+  t, amt, base)`, `emoteSeconds()` / `emoteOver()`, `emoteUpper()`). The
+  wave, the cheer and the salute own only the upper body (the arms, the
+  spine's lean and twist, the head): in walk mode and on other players
+  they play over the animator's captured legs and hips through the gun's
+  upper mask (`upperW`), so an emote never jolts him off his feet; the
+  dance owns the whole body (the capture steps aside, `mocapW`), its feet
+  keyed as planted spots (`feet`) the legs reach through `reachLeg()` so
+  they stay put, flat and headed his way while the hips bounce and sway
+  on a 120 bpm step-touch (a lifted foot eases off and onto its spot), two
+  bars long (`DANCE_SECONDS`). The stage (`stage.ts`, over its idle: `base`)
+  and the hologram (`dancePose()`) play the same clips; the lab's Emotes
+  program plays them in turn (emotes.ts is walk mode's chunk, `onfoot.ts`,
+  not the boot's). No CMU take in the repository is a dance:
+  one from capture is a data step for the owner. Phase 6 (the crowd's acts
+  that suit the city) step 1 is built: a crowd row can carry a keyed
+  overlay (`ClipDef.over` in crowdclips.ts: the head's yaw and pitch, the
+  spine's lean, the arms where `arms` is set, laid on the capture's bones
+  at the bake, `overlay()`): the `wait` row (the second captured idle with
+  a look both ways, `kerbLook()` / `KERB_LOOK` in pedestrians.ts; a walker
+  at a kerb faces across and plays it from the moment they stopped) and
+  the `hurry` row (the captured walk with the chest forward, the head down
+  and the arms held in, `HURRY`; from `HURRY_RAIN`, `hurrying()`, every
+  walker's walk). The brisk crossing step stays the walk at `CROSS_PACE`
+  (no take in the repository is a brisk straight walk: a data step). Step
+  2 is built: the phone in the hand (`PHONE` in pedestrians.ts: the right
+  hand brought to a spot in the torso frame by `reachArm()`, the wrist
+  turned so the screen faces the eyes, the head down at it): the `phone`
+  row (the third captured idle with the hand and head keyed over it,
+  `arms: 'right'`, `head: true` (the pose's head in place of the take's),
+  a grip a hand, and a glance up once a loop, `phoneGlance()`) and
+  `phonewalk` (the captured walk, the head down less, the other arm as
+  captured, at the walk's stride); about one walker in seven (`onPhone()`)
+  walks reading and keeps reading at a kerb, an idle with `act: 'phone'`
+  stands reading (the plaza, the boulevard's overlooks, Uptown North's
+  square), each with `held: 'phone'` in the crowd's wardrobe. Step 3 is
+  built: the workers' rows (`acts.ts`, DOM-free, keyed; tested through
+  `tests/crowdclips.test.ts`): standing over the captured idles `serve`
+  (the market's traders, the carts' vendors: a hand-over once a loop),
+  `cook` (the Night Market's cooks), `fish` (Pier 7's fishers: a cast once
+  a loop) and `guard` (the club's bouncers, arms folded, a look each way);
+  seated over the sit pose on their own loops (`ClipDef.seconds`) `eat`
+  (the diners at every table: a bite every four seconds), `chess` (The
+  Trenches' chess tables), `lounge` (the boombox corners' chairs), `row`
+  and `pedal` (the park's boats). `IdleAct` (crowdclips.ts) is what an
+  idle person does, life.ts plays the row of that name (`clipOf()`), and
+  `SEATED` / `seated()` say which rows sit (their root dropped by the
+  seat); benches keep `sit`. Step 4 is built: the kids at play
+  (`play.ts`, DOM-free, tested in `tests/play.test.ts`): `PLAY_PEOPLE`
+  are park-style people (parklife.ts `ParkPerson`, with a `scale`: kids
+  are `KID`) life.ts moves with the park's: on every half-court two kids
+  run a loop round the inside (`loopOf()`, `LOOP_IN`, `KID_RUN`, the jog
+  row at their size) and one takes set shots at the hoop (`shoot` in
+  acts.ts, over the third idle), the cage's three runners and two
+  keepers, The Block's two on two (grown-ups), and a kid on every swing
+  seat (`swingsOf()`, the `swing` row, seated); the commons' rings on the
+  courts went, the playground's and skate spot's stay. A formula row's
+  loop eases towards its own start (`looped(f, seconds)`). The clips file's limits are 640 KB (test) and 660 KB (budget),
+  raised for the takes on purpose:
   - **The data** is CMU's motion capture (free for commercial use; the
     acknowledgment is in the start menu's Options > Credits, named, never
-    linked): mostly subject 143's and 127's takes, in `assets/mocap/cmu/`
+    linked): mostly subject 143's and 127's takes (137's idles, 132's fast walk, 122's climb, 136's crouched walks, 141's strafes), in `assets/mocap/cmu/`
     (BVH, untouched), listed in `assets/mocap/takes.json` (a `loop` makes a seamless cycle,
     `loopClip()`, `cycle` its length where it's longer than a step; `fps` where the file's frame rate is wrong: subject 143's
     are 60, not the 120 cgspeed wrote, so he walked and ran at double speed
@@ -1551,8 +1951,17 @@ it and has been retired completely. Build only on what's here.
     sits on the wrist: aimed at it, every hand stood out 80° from its
     forearm) and calmed (`HANDS`), one-frame glitches put back between their
     neighbours (`SPIKE`) and the toes smoothed (`TOES`), the floor from the
-    ankles, the root smoothed from the hips) into `src/data/mocap/clips.bin`
-    (`mocap.ts`: 22 body bones at `MOCAP_FPS` 30, turns in 16 bits;
+    ankles, the root smoothed from the hips, the knees straightened where
+    the capture bent them back (`straightenKnees()`)) into
+    `src/data/mocap/clips.bin` (`mocap.ts`: 22 body bones at `MOCAP_FPS`
+    30, turns in 16 bits, each frame's as the difference from the frame
+    before in varints (format 2, the revamp's Phase 1: 495 KB where plain
+    numbers made 703); each take's `tags` (`stand`, `crouch` and
+    `jumps-only` are what the searches read through `tagged()`:
+    `STAND.tag`, `CROUCH.tag`, `JUMPS_ONLY`; the rest say what it is for
+    the rubric), `marks` (a hand's meeting with a thing, for the moments)
+    and `pack` (`CORE_PACK` fetched when walking starts, another pack on
+    first use, `loadMocap(pack)`; `npm run mocap` writes one file a pack);
     `mirrorClip()`, `posed()`, `contacts()`); `tests/mocap.test.ts` holds
     the file to exactly what the pipeline makes. It's fetched when walking
     starts (`mocap-load.ts`, a hashed asset), with the animator's own
@@ -1684,13 +2093,15 @@ it and has been retired completely. Build only on what's here.
     after it's looked at, so a slow frame can't lose it.
   - **The lab** is `?anim` (`anim-lab.ts`, styles `animlab.css`): the new
     animation beside the old on an open floor, scripted moves or W A S D,
+    the Reel (every program in turn, `prog=reel`) and the Scorecard (the
+    rubric's rows over the last eight seconds, red where one fails),
     slow motion, cameras (over his right shoulder too), floors (flat,
     kerbs, stairs, a ledge), any gun in his hands (`gun`, `aim`, `pitch`;
     markers at the butt and his shoulder's pocket; on the motion capture's
     legs, as in the city), strafing, aiming round and peeking programs (Q / E
     by hand), crouching and sprint-and-slide (C by hand), a walls floor and
     a Vault & climb program (Jump at a wall by hand), any kind of top
-    (`outfit`), the free camera placed with `orbit=yaw,pitch,dist`, jumps
+    (`outfit`; `clip`, the clothes' clipping view), the free camera placed with `orbit=yaw,pitch,dist`, jumps
     (programs and Space, walk.ts's jump and gravity), foot traces and
     readouts (the clip, its rate, the match, the blend left, the foot
     slide, the air); `rec`, `prog`, `gait`, `cam`, `floor`, `zoom`, `compare=0` in
@@ -1723,8 +2134,9 @@ it and has been retired completely. Build only on what's here.
     `holdGun()` sets it every frame).
   - `weigh()` weights every vertex by what it's part of (its old joint, or
     `region: 'shoe'`) and where it is at rest, passing smoothly across each
-    joint (shoulders take a collarbone share, the jacket's and hoodie's
-    hems go some of the way with the thighs); `bone` pins a piece to one
+    joint (shoulders take a collarbone share; the trunk by where a point
+    is alone, `trunk()`, so a top's hem and the trousers under it bend as
+    one); `bone` pins a piece to one
     bone unbent (bags, boards, wings on the chest); `skin` gives a piece
     its own weights per vertex (the fingers).
   - **The head and hands** are `body.ts` (DOM-free, tested): the balaclava
@@ -1774,19 +2186,21 @@ it and has been retired completely. Build only on what's here.
     cross-sections slope from the neck down to the shoulder (the
     trapezius, no padded shelf), the body stopping short of the arm's
     outside, and the sleeve's cap is a low rounded deltoid running down
-    into the arm, round over the outside of the shoulder (`SUIT`, `HOODIE`,
-    `UPPER_S`; the rest grow from them). Check new tops from the front and back running
+    into the arm, round over the outside of the shoulder (`JACKET`, `HOODIE`,
+    `UPPER_J`; the rest grow from them). Check new tops from the front and back running
     in the lab (`?anim&outfit=hoodie`, ...).
   - Shapes are built from cross-sections (`loft()`, superellipse rings) and
     flat details laid onto them (`onBody()` with `surface()`: lapels, the
-    shirt V, the tie, zips, pockets). Shoes are side profiles (`profile()`).
-  - The wardrobe is `items()`: each item (`head`, `cap`, `suit`, `hoodie`,
+    shirt V, the tie, pockets; zips and plackets are `tape()`). Shoes are
+    lofts along their length (`shoe()`).
+  - The wardrobe is `items()` in `wardrobe.ts`: each item (`head`, `cap`, `suit`, `hoodie`,
     `joggers`, `backpack`, `coffee`...) has a `when` rule on the `Outfit` and
     pieces on joints, each a fixed colour or an outfit colour (`shade`
     darkens or lightens it: lapels, ribbing). New clothes are new items.
-  - Three detail levels (`Detail`): 2 for single figures (`createDegen()`:
-    the player, other players, the fitting room, the hologram; about 13-15k
-    triangles), 1 for crowd people near the camera (the new head, fingers
+  - Four detail levels (`Detail`): 3 for single figures on desktops and 2
+    on phones (`createDegen()`: the player, other players, the fitting
+    room, the hologram; about 23-26k triangles at 3, 14-17k at 2;
+    `figureDetail()` sets which), 1 for crowd people near the camera (the new head, fingers
     and shoes at a crowd's detail, about 7-9k; the phones' `light` crowd
     leaves out the `detail` pieces), 0 for crowd people further away (`far`:
     plain boxes for rounded ones, the head coarser, block hands instead of
@@ -2268,7 +2682,7 @@ it and has been retired completely. Build only on what's here.
   vertex in the lens colour, dim by day so they never bloom out of control.
 - A new item needs a `Look` field with its palette and rules in
   `profile-data.ts` `cleanLook()` (the server checks it too), the mapping in
-  `lookOutfit()`, an item in `items()` in `character.ts` and an entry in `fitting.ts`
+  `lookOutfit()`, an item in `items()` in `wardrobe.ts` and an entry in `fitting.ts`
   `TABS`. One hat (`hat`), one bag (`bag`) and one thing in the hand
   (`held`) at a time; `cleanLook()` also upgrades looks saved in older
   formats, so keep its migration when fields change. Held items are put
@@ -2873,7 +3287,10 @@ it and has been retired completely. Build only on what's here.
   (DOM-free, seeded, 60 Hz, tested in `tests/fight.test.ts`: `MOVES` with
   start-up / active / recovery frames, reach and arc, the jab-cross-hook-
   uppercut chain and the kicks, block and the parry window, dodge, stamina,
-  stagger and knockdowns, `STYLES`, bots via `think()`, spars and bouts;
+  stagger and knockdowns, `STYLES` (the moves and styles are data in
+  `fight-moves.ts`, re-exported: the screens and the save read them there,
+  so the fight's rules load with the fight, not at the boot), bots via
+  `think()`, spars and bouts;
   a fighter faces along (sin yaw, cos yaw); a press is kept `T.buffer`
   frames so it fires when it can, a strike from just out of reach steps in
   (`T.stepIn`), the facing turns at `T.turn` and a move's lock-on snaps at
@@ -3071,12 +3488,12 @@ it and has been retired completely. Build only on what's here.
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`), Harbour Bridge (`harbour.ts`),
-  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), the river's shape (`river.ts`), the river's life, the river bus and boating (`riverlife.ts`, `riverbus.ts`, `riverroute.ts`, `boat-sim.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`, `boulevard.ts`, `boulevarddress.ts`, `kerbside.ts`, `skydeck.ts`, `skyline.ts`, `uptownlife.ts`, `streetlevel.ts`, `uptownsites.ts`, `streetlife.ts`, `wheel.ts`, the town car in `cars.ts`), the kart park's facility (`kartfacility.ts`), the grand station (`station.ts`),
+  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), the river's shape (`river.ts`), the river's life, the river bus and boating (`riverlife.ts`, `riverbus.ts`, `riverroute.ts`, `boat-sim.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`, `boulevard.ts`, `boulevarddress.ts`, `kerbside.ts`, `skydeck.ts`, `skyline.ts`, `uptownlife.ts`, `streetlevel.ts`, `uptownsites.ts`, `streetlife.ts`, `wheel.ts`, Uptown North in `uptownnorth.ts`, the town car in `cars.ts`), the kart park's facility (`kartfacility.ts`), the grand station (`station.ts`), Palm Court and the mall (`mall.ts`, `mallinside.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,
   in `tests/merch.test.ts`), the crowd's baked clips (`crowdclips.ts`) and Degen's skeleton, weights, head and hands
-  (`skeleton.ts`, `body.ts`), his walking (`locomotion.ts`), the motion capture and its animation (`bvh.ts`, `mocap-build.ts`, `mocap.ts`, `movesim.ts`, `inertia.ts`, `motionmatch.ts`, `animator.ts`) and the guns in his hands (`gunfit.ts`, `stance.ts`). Modules that touch the DOM or `kit.ts` (canvas
+  (`skeleton.ts`, `body.ts`), his walking (`locomotion.ts`), the motion capture and its animation (`bvh.ts`, `mocap-build.ts`, `mocap.ts`, `movesim.ts`, `inertia.ts`, `motionmatch.ts`, `animator.ts`), the rubric of human movement over every clip and program (`human.ts`, `tests/human.test.ts`), what his body does about what he touches (`contact.ts`), the game's moments (`moments.ts`), the guns in his hands (`gunfit.ts`, `stance.ts`) and his clothes not clipping (`wardrobe.ts`, the trunk's weights in `skeleton.ts`, `tests/clothing.test.ts`) and his accessories where they're worn (`tests/accessories.test.ts`). Modules that touch the DOM or `kit.ts` (canvas
   textures) can't load in Node; keep data a test needs in the DOM-free
   files.
 - When you change a rule or move something in the city, run the tests and

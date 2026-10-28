@@ -379,6 +379,22 @@ export function createDrive(d: DriveDeps) {
     nearKind(x: number, z: number) {
       return nearest(x, z)?.kind ?? null;
     },
+    /**
+     * The nearest vehicle you could get into (the turntable's car and the pits' kart count), for getting in
+     * (moments.ts): its body's middle, heading and size
+     */
+    doorOf(x: number, z: number): { kind: 'car' | 'kart'; x: number; z: number; yaw: number; W: number; L: number } | null {
+      const n = nearest(x, z);
+      if (!n) return null;
+      if (n.kind === 'car') {
+        if (car) return { kind: 'car', x: car.state.x, z: car.state.z, yaw: car.state.yaw, W: car.tune.W, L: car.tune.L };
+        const spec = CARS[d.myCar().model];
+        return { kind: 'car', x: d.garage.turntable.x, z: d.garage.turntable.z, yaw: Math.PI / 2, W: spec.W, L: spec.L };
+      }
+      if (kart) return { kind: 'kart', x: kart.state.x, z: kart.state.z, yaw: kart.state.yaw, W: kart.tune.W, L: kart.tune.L };
+      const home = d.kart.home();
+      return home ? { kind: 'kart', x: home.x, z: home.z, yaw: home.yaw, W: 0.95, L: 1.2 } : null;
+    },
     /** Does a parked vehicle block this spot (walking)? */
     blocks(x: number, z: number, pad: number) {
       return parkedCircles().some((c) => Math.hypot(c.x - x, c.z - z) < c.r + pad);
@@ -396,7 +412,7 @@ export function createDrive(d: DriveDeps) {
       // Mods may have been bought since it was parked
       v.tune = tuneOf(v);
       if (v.seat) {
-        driver ??= createDegen(d.outfit(), 2);
+        driver ??= createDegen(d.outfit());
         v.seat(driver);
       }
       camYaw = v.state.yaw;
@@ -448,7 +464,8 @@ export function createDrive(d: DriveDeps) {
         [s.x + fx * end, s.z + fz * end],
       ];
       const [x, z] = spots.find(([px, pz]) => d.free(px, pz)) ?? spots[0];
-      return { x, z, yaw: s.yaw + Math.PI / 2 };
+      // (`from`: its seat, for the step out, moments.ts)
+      return { x, z, yaw: s.yaw + Math.PI / 2, kind: v.kind, from: { x: s.x, z: s.z } };
     },
     /**
      * Bring the car to x, z facing yaw (the world map's Bring my car, growth plan Phase 8): off the turntable if

@@ -651,3 +651,31 @@ All six steps, one commit each, in one PR:
 Checks: `npm test` and `npm run test:wide` (634 passing), the type check,
 the build and the budget (boot 644 of 670 KB), browser shots by day and
 night of each step.
+
+## Uptown North (the owner's call, built)
+
+"More large sky scrapers that match Uptown's" on Palm Court's old land
+(Palm Court moved across the east ring avenue: docs/mall-plan.md), the
+owner's picks: about Uptown's height, 16 to 32, above the Emporium as
+Uptown's are; scenery only.
+
+- **The land** (`uptownnorth.ts`): the block between Westlake Park's east
+  sidewalk and the north avenue, from the highway's slip lanes to the
+  Parkway (`NORTH_RECT`, block `uptown-north`, paved as Uptown's). Two
+  columns of lots either side of a service way down its middle; the park's
+  two east gates carried straight through to the avenue as walks
+  (`GATE_WALKS`); a square at its heart (`NORTH_SQUARE`) with a round pool
+  and a twisting steel sculpture (`POOL`), trees in grates, benches facing
+  the pool, lamps and people at lunch, where the zebra over the avenue to
+  the mall's forecourt lands.
+- **The towers** (`un-*` in `HIGHRISES`): seven, of Uptown's designs on
+  masonry bases: a gold twin (28) and a silver drum (25) at the north end,
+  a black slab with a grand lobby (31) and a stone deco tower (30) either
+  side of the square, a blue slab (26), a gold drum (25) and a silver twin
+  with shops at its foot (22) to the south. The west column's lobbies face
+  the park, the east column's the avenue; their ground floors on the
+  square and the gates' walks are dining (café tables out front), on the
+  avenue luxe (streetlevel.ts). They're drawn with Uptown's towers in its
+  chunk, lit at night by the same office lights and warning lights.
+- **Flying:** the flying traffic stays well over them (the highrise test
+  covers every tower).

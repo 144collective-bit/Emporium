@@ -12,6 +12,10 @@
  *   stops and looks until you've passed, then carries on (`noticing()`).
  * - The rain hurries them (`hurry()`); late at night fewer are out
  *   (`outAtNight()`).
+ * - The revamp's Phase 6: the look both ways at a kerb (`kerbLook()`),
+ *   the hurry's shape in the rain (`HURRY`, `hurrying()`) and the phone
+ *   in the hand (`PHONE`, `onPhone()`, `phoneGlance()`), each a rule the
+ *   crowd's rows are keyed from (crowdclips.ts).
  * - `BENCHES`: every bench on the map with the way its sitter faces, the
  *   seat `SEAT_H` above the ground there.
  */
@@ -20,6 +24,7 @@ import { distToStreet, pointAt, streetLength, type Street } from './streetplan';
 import { PARKS, SQUARE } from './downtown';
 import { OUTER_PARKS, SQUARE_LAYOUTS } from './outer';
 import { THE_BLOCK } from './projects';
+import { keyed } from './acts';
 
 /** A way across a street for walkers: from block `a`'s corner `from` to block `b`'s corner `to` */
 export interface Link {
@@ -125,6 +130,57 @@ export function noticing(state: { hold: number }, dist: number, r: number, on: b
 
 /** The walkers' pace in the rain (0 dry to 1 pouring): up to 40% quicker */
 export const hurry = (rain: number) => 1 + 0.4 * Math.max(0, Math.min(1, rain));
+/**
+ * The hurry (the revamp's Phase 6): from this much rain the walkers play the `hurry` row (crowdclips.ts: their walk
+ * with the head down, the shoulders in and the arms tucked, `HURRY`), not their stroll
+ */
+export const HURRY_RAIN = 0.5;
+export const hurrying = (rain: number) => rain >= HURRY_RAIN;
+/** The hurry's shape over the walk: the chest forward (`lean`), the head down (a negative `headPitch`: positive is up), the arms held in (both the same), the hands closed */
+export const HURRY = { lean: 0.14, headPitch: -0.3, arm: { fwd: 0.4, out: -0.02, bend: 1.55 }, grip: 0.7 };
+
+/**
+ * Waiting at a kerb (the revamp's Phase 6): a look both ways, the head's yaw (radians, positive to the left) `w`
+ * seconds into the wait: to the left (the traffic's side first), across to the right, a glance back left, then
+ * ahead; then still (the `wait` row loops on the captured idle, so the look comes round again with the row).
+ */
+export const KERB_LOOK: [number, number][] = [
+  [0, 0],
+  [0.25, 0],
+  [0.8, 0.95],
+  [1.35, 0.95],
+  [2.1, -0.95],
+  [2.6, -0.95],
+  [3.1, 0.45],
+  [3.45, 0.45],
+  [3.9, 0],
+];
+export const kerbLook = (w: number) => keyed(KERB_LOOK, w);
+
+/**
+ * On the phone (the revamp's Phase 6): about one walker in seven (`onPhone()`, by the number that picks their
+ * walk and idle) walks reading a phone, and an idle whose `act` is 'phone' stands reading one (crowdclips.ts's
+ * `phonewalk` and `phone` rows, keyed over the captured walk and the third idle). `PHONE`: the right hand
+ * brought to `at` in the torso frame (reachArm()), the `wrist` turned so the screen faces the eyes, the head
+ * down at it (`headPitch`; `walkPitch` on the move: less, to see the way), the hand closed on it (`grip`); the
+ * other arm stays the capture's. The person's outfit carries the phone (`held: 'phone'`).
+ */
+export const PHONE = { share: 0.14, at: [0.05, 0.26, 0.2] as const, wrist: { roll: -0.3, bend: -0.3 }, headPitch: -0.72, walkPitch: -0.5, grip: 0.62 };
+/** Is this walker (their number, 0 to 1) on their phone? (hashed off the number, so it's independent of which walk and idle it picks) */
+export const onPhone = (seed: number) => (seed * 7.3 + 0.41) % 1 < PHONE.share;
+/**
+ * Standing reading, a glance up and round once a loop: 0 is the head down at the phone, 1 up and ahead (turned
+ * `PHONE_GLANCE_YAW` to the left), `w` seconds into the `phone` row, down again well inside its loop (3.7 s)
+ */
+export const PHONE_GLANCE: [number, number][] = [
+  [0, 0],
+  [2.0, 0],
+  [2.45, 1],
+  [2.95, 1],
+  [3.45, 0],
+];
+export const PHONE_GLANCE_YAW = 0.35;
+export const phoneGlance = (w: number) => keyed(PHONE_GLANCE, w);
 
 /** Is the nth walker out at this hour? Late at night (1 to 5) every other one has gone home. */
 export const outAtNight = (n: number, hour: number) => !(hour >= 1 && hour < 5 && n % 2 === 1);

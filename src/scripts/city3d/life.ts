@@ -22,10 +22,11 @@ import { TRENCH_WALKS } from './projects';
 import { UPTOWN_PEOPLE, UPTOWN_WALKS } from './uptownlife';
 import { inTrenches } from './trenches';
 import { CROWD_VIEW, HIP_HEIGHT, cityOutfit, createCrowd } from './character';
-import { CLIP_SECONDS, JOG_STRIDE, WALK_STRIDE } from './crowdclips';
+import { type CrowdClip, idleFor, secondsOf, strideOf, walkFor, seated, type IdleAct } from './crowdclips';
 import { PARK_PEOPLE, moment, type Moment, type ParkPerson } from './parklife';
+import { PLAY_PEOPLE } from './play';
 import { blinkOn, bodyMotion, braking, hornDue, indicating, newBody, newHorn, pullAway, reactionOf, resetBody, turnsOf, type Body, type Horn, type Mover, type Turn } from './traffic';
-import { CROSS_PACE, crossingLinks, hurry, noticing, outAtNight, takesCrossing, walkLight, type Link } from './pedestrians';
+import { CROSS_PACE, crossingLinks, hurry, hurrying, noticing, onPhone, outAtNight, takesCrossing, walkLight, type Link } from './pedestrians';
 import { busStep, newBus, pullIn, routeStops, type Bus, type RouteStop } from './transit';
 import { MOORED, cruise, hornDue as boatHornDue, newBoatHorn, wakeOf } from './boats';
 import { VENTS, VENT_N, puff, ventsNear, ventsOn } from './dusk';
@@ -588,7 +589,13 @@ interface Person {
   seed: number;
   /** Noticing you: how long they keep looking */
   notice: { hold: number };
+  /** Brushed by you (the revamp's Phase 3): a step aside, out and back over `BUMP.t` */
+  bump?: { x: number; z: number; t: number };
 }
+/** The row an idle person's act plays (a queue stands in their own idle) */
+const clipOf = (act: IdleAct, idle: CrowdClip): CrowdClip => (act === 'queue' ? idle : act);
+/** The bump: within `r` (plus the walker's reach) of you going by, they step `out` aside and back over `t` seconds */
+const BUMP = { r: 0.42, out: 0.14, t: 0.45 };
 
 /** Sidewalk lanes round the outside of a block: two each way, each at its own distance from the lot and its own pace */
 const WALK_LANES: { inset: number; dir: 1 | -1; speed: number }[] = [
@@ -699,14 +706,17 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
   const idlers = opts.light ? crowd.filter((c) => !busy(c) || every++ % 2 === 0) : crowd;
   for (const c of idlers) people.push({ kind: 'idle', seg: 0, inset: 0, u: 0, dir: 1, speed: 0, phase: rand() * 6, x: c.x, z: c.z, y: c.y, act: c.act, scale: c.scale, ry: c.ry, face: c.ry, walked: 0, crossed: 0, seed: rand(), notice: { hold: 0 } });
   // Westlake Park's walkers, joggers, dog walkers, picnics, players and boaters (phones: half of them, the trim)
-  // ...and Uptown's joggers on the esplanade and cyclists in the bike lanes (uptownlife.ts), the same way
-  for (const pp of [...PARK_PEOPLE, ...UPTOWN_PEOPLE]) if (!(opts.light && pp.trim)) people.push({ kind: 'park', park: pp, m: moment(), seg: 0, inset: 0, u: 0, dir: 1, speed: 0, phase: rand() * 6, x: 0, z: 0, ry: 0, face: NaN, walked: 0, crossed: 0, seed: rand(), notice: { hold: 0 } });
+  // ...and Uptown's joggers on the esplanade and cyclists in the bike lanes (uptownlife.ts), and the kids at play
+  // on The Trenches' courts and swings (play.ts, at their own size), the same way
+  for (const pp of [...PARK_PEOPLE, ...UPTOWN_PEOPLE, ...PLAY_PEOPLE]) if (!(opts.light && pp.trim)) people.push({ kind: 'park', park: pp, m: moment(), seg: 0, inset: 0, u: 0, dir: 1, speed: 0, phase: rand() * 6, x: 0, z: 0, ry: 0, face: NaN, walked: 0, crossed: 0, seed: rand(), notice: { hold: 0 } });
   bodies.people = people;
 
-  // Everyone is the shared Degen body in a city outfit: suits and hoodies, bags, headphones
+  // Everyone is the shared Degen body in a city outfit: suits and hoodies, bags, headphones; a phone in the hand
+  // of those reading one (the revamp's Phase 6: an idle whose act is 'phone', and one walker in seven)
+  const phoneOf = (p: Person) => (p.kind === 'idle' ? p.act === 'phone' : p.kind === 'walk' && onPhone(p.phase / 6));
   const people3d = createCrowd(
     scene,
-    people.map(() => cityOutfit(rand)),
+    people.map((p) => ({ ...cityOutfit(rand), ...(phoneOf(p) ? { held: 'phone' as const } : {}) })),
     { light: opts.light }
   );
   /** Start a walker over a crossing: from where they stand to the other block's lane corner */
@@ -719,15 +729,33 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
     p.wait = undefined;
     return true;
   };
+  // (how fast you're going: from where you were; a jump is a fast travel, not a run)
+  let walkerX = 0;
+  let walkerZ = 0;
+  let walkerV = 0;
   tick(({ t, dt, rain, hour }) => {
     const pace = hurry(rain);
+    {
+      const dj = Math.hypot(walker.x - walkerX, walker.z - walkerZ);
+      walkerV = walker.on && dj < 2 ? dj / Math.max(dt, 1e-3) : 0;
+      walkerX = walker.x;
+      walkerZ = walker.z;
+    }
     people.forEach((p, i) => {
       // Late at night some have gone home; the benches' sitters go in out of the rain (city life plan, Phase 3)
       if (p.kind === 'walk' && !outAtNight(i, hour)) return;
-      if (p.act === 'sit' && rain > 0.6) return;
+      if (p.act && seated(clipOf(p.act, 'idle')) && rain > 0.6) return;
       // You, close by: a walker stops and watches you pass (not in the middle of the road)
       const looking = p.kind === 'walk' && !p.cross && noticing(p.notice, Math.hypot(walker.x - p.x, walker.z - p.z), walker.r, walker.on, dt);
       let standing = looking;
+      // Brushed by you going past: a step aside and back (the look is noticing()'s)
+      if (p.kind !== 'park' && !(p.act && seated(clipOf(p.act, 'idle'))) && walker.on && walkerV > 0.5 && !p.bump) {
+        const dx = p.x - walker.x;
+        const dz = p.z - walker.z;
+        const dd = Math.hypot(dx, dz);
+        if (dd < BUMP.r + walker.r && dd > 1e-3) p.bump = { x: dx / dd, z: dz / dd, t: BUMP.t };
+      }
+      if (p.bump && (p.bump.t -= dt) <= 0) p.bump = undefined;
       if (p.kind === 'walk' && looking) p.ry = Math.atan2(walker.x - p.x, walker.z - p.z);
       else if (p.kind === 'walk' && p.cross) {
         // Over the crossing, a little quicker than their stroll
@@ -751,7 +779,11 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
         // At the kerb until the cars have red with time to get over; a long wait and they carry on round
         if (walkLight(p.wait.link, t, p.speed * pace)) startCrossing(p, p.wait.link);
         else if (t - p.wait.since > 25) p.wait = undefined;
-        else standing = true;
+        else {
+          // (facing across, the `wait` row below: a look both ways)
+          standing = true;
+          p.ry = Math.atan2(p.wait.link.to[0] - p.x, p.wait.link.to[1] - p.z);
+        }
       } else if (p.kind === 'walk') {
         const lp = p.loop!;
         const was = p.seg;
@@ -790,23 +822,41 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
         p.ry = m.ry;
         p.walked += m.speed * dt;
       }
-      // Each plays a baked clip (crowdclips.ts): the walk at its stride, so their feet stay put on the pavement;
-      // the rest from where their own offset puts them in it
-      const loop = t / CLIP_SECONDS + p.phase / 6;
+      // Each plays a baked clip (crowdclips.ts): their own walk at its stride, so their feet stay put on the
+      // pavement; their own idle; the rest from where their own offset puts them in it
+      const seed = p.phase / 6;
+      // (in the rain everyone hurries: the walk with the head down and the arms in, the revamp's Phase 6; one in
+      // seven walks reading their phone, and keeps reading at a kerb instead of looking both ways)
+      const phone = p.kind === 'walk' && onPhone(seed);
+      const walkClip: CrowdClip = hurrying(rain) ? 'hurry' : phone ? 'phonewalk' : walkFor(seed);
+      const idleClip = idleFor(seed);
+      const playAt = (c: CrowdClip) => t / secondsOf(c) + seed;
       // Turn corners over a few frames instead of snapping
       if (Number.isNaN(p.face)) p.face = p.ry;
       const turn = Math.atan2(Math.sin(p.ry - p.face), Math.cos(p.ry - p.face));
       p.face += turn * Math.min(1, dt * 9);
-      const y = p.act === 'sit' ? (p.y ?? SLAB) - SEAT_DROP : (p.y ?? SLAB);
+      const y = p.act && seated(clipOf(p.act, 'idle')) ? (p.y ?? SLAB) - SEAT_DROP : (p.y ?? SLAB);
+      const bk = p.bump ? BUMP.out * Math.sin(Math.PI * (1 - p.bump.t / BUMP.t)) : 0;
+      const bx = p.x + (p.bump?.x ?? 0) * bk;
+      const bz = p.z + (p.bump?.z ?? 0) * bk;
       if (p.kind === 'park') {
         const m = p.m!;
         const c = m.clip;
-        const py = c === 'sit' || c === 'picnic' ? m.y - SEAT_DROP : m.y;
-        const u = c === 'walk' ? p.walked / (WALK_STRIDE * PERSON_SCALE) + p.phase / 6 : c === 'jog' ? p.walked / (JOG_STRIDE * PERSON_SCALE) + p.phase / 6 : loop;
-        people3d.set(i, p.x, py, p.z, p.face, PERSON_SCALE, c, u);
-      } else if (p.kind === 'walk' && standing) people3d.set(i, p.x, y, p.z, p.face, PERSON_SCALE, looking ? 'idle' : 'look', loop);
-      else if (p.kind === 'walk') people3d.set(i, p.x, y, p.z, p.face, PERSON_SCALE, 'walk', p.walked / (WALK_STRIDE * PERSON_SCALE) + p.phase / 6);
-      else people3d.set(i, p.x, y, p.z, p.face, p.scale ?? PERSON_SCALE, p.act === 'sit' ? 'sit' : p.act === 'chat' ? 'chat' : p.act === 'queue' ? 'idle' : 'look', loop);
+        const sc = p.park!.scale ?? PERSON_SCALE;
+        const py = seated(c) ? m.y - (HIP_HEIGHT - 0.03) * sc : m.y;
+        const clip = c === 'walk' ? walkClip : c === 'idle' ? idleClip : c;
+        const u = c === 'walk' || c === 'jog' ? p.walked / (strideOf(clip) * sc) + seed : playAt(clip);
+        people3d.set(i, p.x, py, p.z, p.face, sc, clip, u);
+      } else if (p.kind === 'walk' && standing) {
+        // Stopped: watching you go by, or at a kerb (the `wait` row from the moment they stopped: a look both ways)
+        const c: CrowdClip = looking ? idleClip : p.wait ? (phone ? 'phone' : 'wait') : 'look';
+        people3d.set(i, bx, y, bz, p.face, PERSON_SCALE, c, c === 'wait' ? (t - p.wait!.since) / secondsOf('wait') : playAt(c));
+      }
+      else if (p.kind === 'walk') people3d.set(i, bx, y, bz, p.face, PERSON_SCALE, walkClip, p.walked / (strideOf(walkClip) * PERSON_SCALE) + seed);
+      else {
+        const clip = clipOf(p.act ?? 'look', idleClip);
+        people3d.set(i, bx, y, bz, p.face, p.scale ?? PERSON_SCALE, clip, playAt(clip));
+      }
     });
     people3d.commit();
   });

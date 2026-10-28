@@ -14,7 +14,7 @@
  * Coordinates are world units on the ground: [x, z].
  */
 import { DISTRICTS } from '../../data/plots';
-import { BLOCKS, BRIDGED_NS, BS, CORE_ROADS, EW_ROADS, EXT, EXTRA_LOTS, GARAGE, LANE, MARKET, MEDIAN, NS_ROADS, RIVER, RING_HI, SEATS, SOUTH_ROAD, UNITS, WALK_W, nsStreet, type Road } from './layout';
+import { BLOCKS, BRIDGED_NS, BS, CORE_ROADS, EW_ROADS, EXT, EXTRA_LOTS, GARAGE, LANE, MARKET, MEDIAN, NS_ROADS, RIVER, RING_HI, SEATS, SHORT_NS, SOUTH_ROAD, UNITS, WALK_W, nsRuns, nsStreet, type Road } from './layout';
 import { ALLEYS, BLOCKS_DT, DIAGONALS, LANES } from './downtown';
 import { BENDS, BEND_KERBS, OUTER_BLOCKS, OUTER_PARKS, OUTER_SQUARES, PADS } from './outer';
 import { AIRPORT_CROSSINGS, AIRPORT_STREETS, GA_CROSSINGS, GA_ROAD, GA_STREETS, ROAD } from './airfield';
@@ -23,9 +23,11 @@ import { HIGHWAY, HIGHWAY_HALF, insideHighway, outerLane, slipCurve } from './hi
 import { TRENCH_BLOCKS, TRENCH_CROSSINGS, TRENCH_STREETS } from './trenches';
 import { WESTLAKE_BLOCKS } from './westlake';
 import { UPTOWN_BLOCKS, UPTOWN_CROSSINGS, UPTOWN_LANES, UPTOWN_STREETS } from './uptown';
+import { NORTH_BLOCK } from './uptownnorth';
 import { BLOCK as STADIUM_BLOCK, STADIUM_CROSSINGS, STADIUM_STREETS } from './stadium';
 import { KART_CROSSINGS, KART_STREETS } from './kartpark';
 import { CAR_PARK as STATION_PARK, PLAZA as STATION_PLAZA, STATION_BLOCK, STATION_CROSSINGS, STATION_STREETS } from './station';
+import { COURT, MALL_BLOCK, MALL_CROSSINGS, MALL_STREETS, PARK_BLOCK } from './mall';
 
 export type Pt = [number, number];
 
@@ -260,14 +262,17 @@ const kindOf = (r: Road): StreetKind => (r.lanes === 2 ? 'avenue' : 'street');
 
 /**
  * The straight streets of layout.ts, every one edge to edge; but the north-south roads with no bridge (river plan
- * step 1) stop at the bank avenues, a street each side of the river (`nsStreet()`)
+ * step 1) stop at the bank avenues, a street each side of the river (`nsStreet()`), and the short ones start at the
+ * Parkway (`SHORT_NS`: the mall's land past it, docs/mall-plan.md)
  */
 function gridStreets(): Street[] {
   const [e0, e1] = EXT;
+  const parkway = BENDS.find((b) => b.id === 'parkway')!.pts;
   return [
     ...NS_ROADS.flatMap((r, i): Street[] => {
       const s = (id: string, z0: number, z1: number): Street => ({ id, kind: kindOf(r), pts: [[r.c, z0], [r.c, z1]], half: r.half, lanes: r.lanes });
-      return BRIDGED_NS.includes(i) ? [s(`ns${i}`, e0, e1)] : [s(`ns${i}`, e0, RING_HI), s(`ns${i}s`, SOUTH_ROAD, e1)];
+      const top = i in SHORT_NS ? Math.min(...crossingsOf(parkway, 0, r.c).map((p) => p[1])) : e0;
+      return BRIDGED_NS.includes(i) ? [s(`ns${i}`, top, e1)] : [s(`ns${i}`, top, RING_HI), s(`ns${i}s`, SOUTH_ROAD, e1)];
     }),
     ...EW_ROADS.map((r, i): Street => ({ id: `ew${i}`, kind: kindOf(r), pts: [[e0, r.c], [e1, r.c]], half: r.half, lanes: r.lanes })),
   ];
@@ -372,12 +377,17 @@ export function cityPlan(): StreetPlan {
   for (const t of STATION_STREETS) streets.push({ id: t.id, kind: 'street', pts: t.pts, half: t.half, lanes: 1, ...(t.oneway ? { oneway: t.oneway } : {}) });
   for (const c of KART_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: false });
   for (const c of STATION_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: false });
+  // The mall's two-way loop off the north avenue past the Parkway (mall.ts, docs/mall-plan.md)
+  for (const t of MALL_STREETS) streets.push({ id: t.id, kind: 'street', pts: t.pts, half: t.half, lanes: 1 });
+  for (const c of MALL_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: false });
   // The ring highway (highway.ts): a lit junction wherever it meets a straight arterial, and on the town
   // side of each, slip lanes for the right turns on and off it (and on the outside too where an arterial past
   // it carries traffic: the north road to the stadium, `OUTER_SLIPS`)
   streets.push({ id: 'highway', kind: 'highway', pts: HIGHWAY, half: HIGHWAY_HALF, lanes: 2, loop: true });
   const meets: { id: string; at: Pt; road: Road; street: string; along: 0 | 1 }[] = [];
-  NS_ROADS.forEach((r, i) => crossingsOf(HIGHWAY, 0, r.c).forEach((at, k) => meets.push({ id: `highway-ns${i}-${k}`, at, road: r, street: nsStreet(i, at[1]), along: 1 })));
+  NS_ROADS.forEach((r, i) =>
+    crossingsOf(HIGHWAY, 0, r.c).forEach((at, k) => nsRuns(i, at[1]) && meets.push({ id: `highway-ns${i}-${k}`, at, road: r, street: nsStreet(i, at[1]), along: 1 }))
+  );
   EW_ROADS.forEach((r, i) => crossingsOf(HIGHWAY, 1, r.c).forEach((at, k) => meets.push({ id: `highway-ew${i}-${k}`, at, road: r, street: `ew${i}`, along: 0 })));
   for (const m of meets) {
     crossings.push({ id: m.id, at: m.at, streets: [m.street, 'highway'], lights: true });
@@ -452,12 +462,22 @@ export function cityPlan(): StreetPlan {
     ...WESTLAKE_BLOCKS.map((b): Block => ({ id: b.id, poly: b.poly, use: 'park', ref: 'westlake', walk: WALK_W })),
     // Uptown's blocks (uptown.ts) south of it, the plaza's among them
     ...UPTOWN_BLOCKS.map((b): Block => ({ id: b.id, poly: b.poly, use: b.use === 'plaza' ? 'plaza' : b.use === 'park' || b.use === 'island' ? 'park' : 'plain', ref: 'uptown', walk: WALK_W })),
+    // ...and Uptown North's on Palm Court's old land between the park and the north avenue (uptownnorth.ts)
+    { id: NORTH_BLOCK.id, poly: NORTH_BLOCK.poly, use: 'plain', ref: 'uptown', walk: WALK_W },
     // The stadium's block north of the highway (stadium.ts, the north side's stage 1)
     { id: 'stadium', poly: square(STADIUM_BLOCK[0], STADIUM_BLOCK[1], STADIUM_BLOCK[2] - STADIUM_BLOCK[0], STADIUM_BLOCK[3] - STADIUM_BLOCK[1]), use: 'plain', ref: 'stadium', walk: WALK_W },
     // The grand station's block, its forecourt's plaza and its car park, west of the highway (station.ts)
     { id: 'station', poly: square(STATION_BLOCK[0], STATION_BLOCK[1], STATION_BLOCK[2] - STATION_BLOCK[0], STATION_BLOCK[3] - STATION_BLOCK[1]), use: 'plain', ref: 'station', walk: WALK_W },
     { id: 'station-plaza', poly: square(STATION_PLAZA[0], STATION_PLAZA[1], STATION_PLAZA[2] - STATION_PLAZA[0], STATION_PLAZA[3] - STATION_PLAZA[1]), use: 'plaza', ref: 'station', walk: WALK_W },
     { id: 'station-park', poly: square(STATION_PARK[0], STATION_PARK[1], STATION_PARK[2] - STATION_PARK[0], STATION_PARK[3] - STATION_PARK[1]), use: 'lot', ref: 'station', walk: WALK_W },
+    // The mall's block and its car parks inside the loop, north of downtown past the Parkway, and Palm Court across the east ring avenue (mall.ts)
+    ...(
+      [
+        ['palm-court', COURT, 'plaza'],
+        ['mall', MALL_BLOCK, 'plain'],
+        ['mall-park', PARK_BLOCK, 'lot'],
+      ] as const
+    ).map(([id, r, use]): Block => ({ id, poly: square(r[0], r[1], r[2] - r[0], r[3] - r[1]), use, ref: 'mall', walk: WALK_W })),
     // The bends' outer sidewalks (their own outline is the sidewalk)
     ...BEND_KERBS.map((poly, i): Block => ({ id: `kerb-${i}`, poly, use: 'plain', walk: 0 })),
   ];

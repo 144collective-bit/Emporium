@@ -34,10 +34,10 @@
  * the figure.
  */
 import * as THREE from 'three';
-import { FOOT_BONES, MB, MOCAP_BONES, MOCAP_FPS, NB, type MoData, PARENT, type Posed, REST, TOE_BONES, newPosed, posed } from './mocap';
+import { FOOT_BONES, MB, MOCAP_BONES, MOCAP_FPS, NB, type MoData, PARENT, type Posed, REST, TOE_BONES, newPosed, posed, rootAt, tagged } from './mocap';
 import { angVel, createInertia, decay, expQ, logQ, rate as springRate, wrap } from './inertia';
 import { buildDatabase, cost, type Database, AHEAD, FEATURES, search, setTrajectory } from './motionmatch';
-import { ahead, type MoveState } from './movesim';
+import { ahead, type MoveState, STAIRS, climbAhead } from './movesim';
 import { ANKLE_H, SHIN_GROUND, THIGH, type Skeleton } from './skeleton';
 
 export interface AnimInput {
@@ -89,29 +89,34 @@ export const RATE = { min: 0.8, max: 1.15, sprint: 0.25 };
  * the rate is even. A swinging foot lifts `knee` more over its height off
  * the ground for each time faster than the clip (at most `kneeMost` times)
  */
-export const WARP = { cadence: 0.3, reach: 0.3, reachMost: 1.2, speeding: [2, 6], drop: 0.3, stance: 2.2, air: 0.3, ease: 0.025, reachEase: 0.12, window: 15, walking: 0.93, knee: 0.8, kneeMost: 1 };
-/** Searching: how often, how much better a frame must be to take over, and how sharp a change of the stick searches at once */
-export const MATCH = { every: 0.1, margin: 0.02, sharp: 1.2 };
+export const WARP = { cadence: 0.3, reach: 0.3, reachMost: 1.2, speeding: [2, 6], drop: 0.3, stance: 2.2, air: 0.3, ease: 0.04, reachEase: 0.12, window: 15, walking: 0.93, knee: 0.8, kneeMost: 1 };
+/** Searching: how often, how much better a frame must be to take over, how sharp a change of the stick searches at once, and for how long after it every frame is searched (a poor first match at a pivot is replaced at once, not a tenth of a second later) */
+export const MATCH = { every: 0.1, margin: 0.02, sharp: 1.2, after: 0.15 };
 /**
  * Standing: once he's been still `after` seconds (going under `speed` tiles
  * a second, nothing asked), only the standing clips are searched, so he
  * settles into the idles (`clips`: calm loops of subject 143 standing; the
  * old long idle turned round and round, so he cut back to its first second
  * every 0.8 s with a snap of the head) instead of the quiet frames before a
- * take sets off (whose trajectory knows a run is coming); settled in one, a
- * frame must be `margin` better to take over, and the next is one of the
- * others, so its weight shifts play out and the idles take turns.
+ * take sets off (whose trajectory knows a run is coming); settled in one, it
+ * plays through (`margin`: nothing takes over until it ends, so its weight
+ * shifts and gestures play out), and the next is one of the others, so the
+ * idles take turns.
  * Not while the springs turn him further than `turn` radians from the way
  * he's shown facing (aiming round: the turns on the spot are searched)
  */
-export const STAND = { after: 0.35, speed: 0.08, clips: ['idle', 'idle-2', 'idle-3'], margin: 0.6, turn: 0.35 };
+export const STAND = { after: 0.35, speed: 0.08, tag: 'stand', margin: 1e9, turn: 0.35 };
 /**
  * A locked foot lets go once the clip's foot is this far away (rig
  * numbers), or when holding it would bring the hips down more than `drop`;
  * it catches up with this half-life; a free foot clears the ground `look`
- * seconds ahead of it
+ * seconds ahead of it; the hips come down for a leg that can't reach with
+ * the half-life `down` (`downStart` speeding up hard: at a start the body
+ * pulls away from the planted foot faster than the take's does, and a slow
+ * answer let the foot slide 2 cm; at a pivot a quick one jerked the knee)
+ * and back up with `up`; a free foot clears the ground `look` seconds ahead along his way
  */
-export const LOCK = { release: 0.2, drop: 0.06, catchUp: 0.08, look: 0.12 };
+export const LOCK = { release: 0.2, drop: 0.06, catchUp: 0.08, look: 0.12, down: 0.04, downStart: 0.015, up: 0.09 };
 /** The lean into a bend (radians per tile a second², and at most), and the sprint's lean forward and extra swing */
 export const LAYERS = { bank: 0.025, bankMax: 0.12, sprintLean: 0.09, sprintSwing: 0.55 };
 /** The hips' lift with the feet: how much a free foot counts beside a held one, and the most (world numbers) */
@@ -126,8 +131,11 @@ const LEG_REACH = (THIGH + Math.abs(SHIN_GROUND + ANKLE_H)) * 0.998;
 export const FACE = { slow: 0.22, fast: 0.07, at: 3, most: 0.9 };
 /** How far the ball of a foot may sink under the ground (rig numbers: its joint sits about at the sole) */
 const BALL_UNDER = 0.012;
-/** The inertialization's half-life */
+/** The inertialization's half-life; between two standing takes a longer one (a change of stance, not a flinch) */
 const BLEND = 0.09;
+export const STAND_BLEND = 0.3;
+/** The head and neck blend this many times longer at a cut (a 60° head turn from a standing take into a set-off whipped the head at 10 rad/s; a person's glance is under 6) */
+export const HEAD_BLEND = 2.5;
 /**
  * The legs' hand-over: when he leaves the ground the leg IK's hold on the
  * feet comes off at once; what the legs showed the frame before eases into
@@ -151,13 +159,13 @@ const LEG_BONES = [MB.legL, MB.shinL, MB.footL, MB.legR, MB.shinR, MB.footR];
 export const AIR = { kerb: 0.3, margin: 0.75, drop: 0.3, after: 0.18, lead: 4, settle: 0.3, crouch: 4.5, hard: 9.5, squash: 0.16, bow: 1.6, arms: 0.7, armsAfter: 0.15, armsIn: 0.6 };
 /**
  * Crouching (Phase 5): past `at` of the way into a crouch, moving, only the
- * crouched walks are searched (`clips`), and standing up, never them;
+ * crouched walks are searched (the takes tagged `tag`), and standing up, never them;
  * standing still crouched, the idle plays with the crouch laid over it: the
  * hips `drop` lower (the legs' IK bends the knees, the feet stay put), the
  * spine leant `lean` forward and the head back up, eased in and out over
  * `ease` (a half-life) as the clip changes
  */
-export const CROUCH = { clips: ['crouch-walk', 'crouch-walk-2', 'crouch-back'], at: 0.5, drop: 0.16, lean: 0.42, ease: 0.1 };
+export const CROUCH = { tag: 'crouch', at: 0.5, drop: 0.16, lean: 0.42, ease: 0.1 };
 /**
  * Standing up straight (the owner's call: the idle's actor stood with his
  * knees bent 20-30°, leaning back, his head tilted): standing still, the
@@ -167,9 +175,20 @@ export const CROUCH = { clips: ['crouch-walk', 'crouch-walk-2', 'crouch-back'], 
  * one); the spine comes `upright` of the way to over the hips, the head
  * `level` of the way to level, the arms in `arms` radians to hang by his
  * sides and the elbows `elbows` of the way straight (the idles' actor holds
- * a runner's arms, bent 30-40°); eased in and out over `ease` (a half-life)
+ * a runner's arms, bent 30-40°); eased in over `ease` (a half-life) and out
+ * over `out` (quickly: a start's lean is the take's own)
  */
-export const STANCE = { most: 0.045, reach: 0.999, soft: 0.997, upright: 0.75, level: 0.75, arms: 0.07, elbows: 0.45, ease: 0.2 };
+export const STANCE = { most: 0.045, reach: 0.999, soft: 0.997, upright: 0.75, level: 0.75, arms: 0.07, elbows: 0.45, ease: 0.2, out: 0.05, upEase: 0.12 };
+/**
+ * Breathing (the revamp's Phase 2): standing still the ribcage tilts back
+ * and up a touch and settles, `rate` breaths a second (wandering `wander`
+ * of it, so no two breaths are quite alike), `spine` radians at the upper
+ * spine and `chest` at the chest, the neck and head taking it back out so
+ * the head stays level; laid on as far into standing straight as he is
+ */
+export const BREATH = { rate: 0.24, wander: 0.15, spine: 0.012, chest: 0.014 };
+/** The standing takes' wander (the weight shifts) eased in and out with this half-life */
+export const WANDER = { ease: 0.25 };
 /** The game's jump and gravity, when the input doesn't say (walk.ts's) */
 const JUMP = 3.9;
 const GRAVITY = 11.5;
@@ -289,20 +308,60 @@ function reachNeed(at: THREE.Vector3, hip: THREE.Vector3, scale: number) {
 export function createAnimator(data: MoData) {
   const db: Database = buildDatabase(data);
   const inertia = createInertia(NB, BLEND);
+  inertia.slow[MB.neck] = inertia.slow[MB.head] = HEAD_BLEND;
   const rot = new Float32Array(NB * 4);
   const hips = new THREE.Vector3();
   const P = newPosed();
   const q = new Float32Array(FEATURES);
-  const standing = Uint8Array.from(db.clips, (c) => (STAND.clips.includes(c.name.replace('~', '')) ? 1 : 0));
+  const standing = Uint8Array.from(db.clips, (c) => (tagged(c, STAND.tag) ? 1 : 0));
   /** Settled in a standing clip, the next is looked for among the others (each idle's own loop, then another: no one idle over and over) */
-  const standElse = db.clips.map((_, i) => (standing[i] ? standing.map((v, j) => (j === i ? 0 : v)) : standing));
-  const crouching = Uint8Array.from(db.clips, (c) => (CROUCH.clips.includes(c.name.replace('~', '')) ? 1 : 0));
-  const upright = crouching.map((v) => 1 - v);
+  // (at a standing take's end, another take: not itself and not its mirror, so the idles take turns)
+  const takeOf = (c: { name: string }) => c.name.replace(/~$/, '');
+  const takes = [...new Set(db.clips.map(takeOf))];
+  const takeIdx = db.clips.map((c) => takes.indexOf(takeOf(c)));
+  /** When each take was last cut to (a count of cuts), for the standing takes' turns */
+  const takeStamp = new Float64Array(takes.length);
+  let cuts = 0;
+  /**
+   * The standing clips to search next: not the one playing (nor its mirror), and of the rest the take least
+   * recently played (so the idles take turns and every one's weight shifts come round); coming to a stand from
+   * anything else, all of them (the nearest pose)
+   */
+  function standNext(): Uint8Array {
+    if (!standing[clip]) return standing;
+    let best = Infinity;
+    for (let j = 0; j < db.clips.length; j++) if (standing[j] && takeIdx[j] !== takeIdx[clip]) best = Math.min(best, takeStamp[takeIdx[j]]);
+    return standing.map((v, j) => (v && takeIdx[j] !== takeIdx[clip] && takeStamp[takeIdx[j]] === best ? 1 : 0));
+  }
+  const crouching = Uint8Array.from(db.clips, (c) => (tagged(c, CROUCH.tag) ? 1 : 0));
+  const stairs = Uint8Array.from(db.clips, (c) => (tagged(c, STAIRS.tag) ? 1 : 0));
+  const upright = crouching.map((v, i) => (v || stairs[i] ? 0 : 1));
+  /**
+   * Climbing stairs (STAIRS): only the stairs takes' climbing frames are searched (where the take's floor
+   * rises over the next `STAIRS.look` frames, or rose over the last few: its approach on the level is the
+   * walks' to do), and nothing else
+   */
+  let climbing = false;
+  const climbFrames = new Uint8Array(db.count);
+  db.clips.forEach((c, ci) => {
+    if (!stairs[ci] || !c.floor) return;
+    for (let f = 0; f < c.frames; f++) {
+      const g = db.start[ci] + f;
+      const soon = c.floor[Math.min(c.frames - 1, f + STAIRS.look)] - c.floor[f];
+      const lately = c.floor[f] - c.floor[Math.max(0, f - STAIRS.back)];
+      climbFrames[g] = db.open[g] && (soon > STAIRS.step || lately > STAIRS.step) ? 1 : 0;
+    }
+  });
   /** Crouched (past CROUCH.at), and how much of the crouch is laid over a clip that isn't one */
   let crouched = false;
   let crouchW = 0;
   /** How far into standing up straight he is (STANCE, eased) */
   let tallW = 0;
+  /** How far the stance has the hips up (eased: a foot let go of changes what the legs allow at once) */
+  let stanceUp = 0;
+  /** The breath's phase (turns), and its rate's wander */
+  let breathT = 0;
+  let breathK = 1;
   let still = 0;
   let clip = 0;
   let t = 0;
@@ -310,6 +369,21 @@ export function createAnimator(data: MoData) {
   let started = false;
   let lastGx = 0;
   let lastGz = 0;
+  /** How long a sharp change of the stick still has every frame searched */
+  let sharpLeft = 0;
+  /** How hard he's speeding up along his way (0 to 1: a start) */
+  let starting = 0;
+  /**
+   * Standing still, a take's own root motion (the actor's pelvis wandering
+   * over his planted feet: a weight shift) carried into the hips, from
+   * where the take's root was when it took over (`WANDER`): the sim moves
+   * the figure, so it would be lost; eased in standing and out moving
+   */
+  const wander = new THREE.Vector3();
+  let wanderX0 = 0;
+  let wanderZ0 = 0;
+  let wanderYaw0 = 0;
+  let wanderW = 0;
   let bank = 0;
   /** How far into the sprint's layers he is (eased) */
   let sprintW = 0;
@@ -497,6 +571,12 @@ export function createAnimator(data: MoData) {
       const best = searchFor(true, 0, crouched ? crouching : upright);
       clip = db.clipOf[best];
       t = db.frameOf[best];
+      {
+        const r = rootAt(db.clips[clip], Math.round(t));
+        wanderX0 = r.x;
+        wanderZ0 = r.z;
+        wanderYaw0 = r.yaw;
+      }
       started = true;
       inertia.reset();
     }
@@ -525,6 +605,7 @@ export function createAnimator(data: MoData) {
     const yaw0 = yawAt(clip, t);
     let force = false;
     if (inAir) {
+      starting = 0;
       rate = 1;
       warp += (1 - warp) * (1 - Math.exp((-Math.LN2 * dt) / WARP.reachEase));
       faster += (1 - faster) * (1 - Math.exp((-Math.LN2 * dt) / WARP.reachEase));
@@ -554,6 +635,7 @@ export function createAnimator(data: MoData) {
       const clipSpeeding = ((db.speed[ci0 + Math.min(db.clips[clip].frames - 1, cf0 + 3)] - db.speed[ci0 + Math.max(0, cf0 - 3)]) * MOCAP_FPS) / 6;
       const speeding = Math.max(clipSpeeding, simSpeed > 0.25 ? (m.ax * m.vx + m.az * m.vz) / (Math.hypot(m.vx, m.vz) * inp.scale) : 0);
       const steady = 1 - THREE.MathUtils.smoothstep(speeding, WARP.speeding[0], WARP.speeding[1]);
+      starting = 1 - steady;
       // (and only into a sprint: at a run the time alone makes up the difference)
       const reach = ratio > 1 ? 1 + (Math.min(WARP.reachMost, ratio ** WARP.reach) - 1) * steady * inp.sprint : 1;
       const onGround = Math.min(ratio / reach, WARP.stance);
@@ -598,19 +680,28 @@ export function createAnimator(data: MoData) {
     if (stand && !standing[clip]) searchIn = 0;
     // (crouching or standing up on the move: over to the other kind of walk at once)
     crouched = (inp.crouch ?? 0) > CROUCH.at;
-    const wrongKind = !stand && !inAir && (crouched ? !crouching[clip] : crouching[clip] === 1);
+    {
+      const dx = Math.abs(m.vx) + Math.abs(m.vz) > 0.05 ? m.vx : Math.sin(face);
+      const dz = Math.abs(m.vx) + Math.abs(m.vz) > 0.05 ? m.vz : Math.cos(face);
+      climbing = !inAir && !crouched && simSpeed * inp.scale < STAIRS.fast && Math.hypot(inp.gx, inp.gz) > 0.1 && climbAhead(inp.ground, inp.x, inp.z, inp.y, dx, dz, inp.scale);
+    }
+    // (climbing, a stairs take's frames past its climb are the wrong kind too: played on into its standing tail
+    // while he climbed, the held feet stretched the legs until they snapped)
+    const wrongKind = !stand && !inAir && (crouched ? !crouching[clip] : climbing ? !climbFrames[at(clip, t)] : crouching[clip] === 1 || stairs[clip] === 1);
     if (wrongKind) searchIn = 0;
     searchIn -= dt;
     const sharp = Math.hypot(inp.gx - lastGx, inp.gz - lastGz) > MATCH.sharp;
     lastGx = inp.gx;
     lastGz = inp.gz;
-    if (!inAir && (force || searchIn <= 0 || sharp)) {
+    if (sharp) sharpLeft = MATCH.after;
+    sharpLeft = Math.max(0, sharpLeft - dt);
+    if (!inAir && (force || searchIn <= 0 || sharp || sharpLeft > 0)) {
       searchIn = MATCH.every;
       const cur = at(clip, t);
-      const best = searchFor(false, cur, stand ? standElse[clip] : crouched ? crouching : upright);
+      const best = climbing && !stand ? searchFor(false, cur, undefined, climbFrames) : searchFor(false, cur, stand ? standNext() : crouched ? crouching : upright);
       const curCost = db.open[cur] && !force ? cost(db, q, cur) : Infinity;
       const near = db.clipOf[best] === clip && Math.abs(db.frameOf[best] - t) < 3;
-      const better = wrongKind || (settle > 0 ? lastCost < curCost * AIR.margin : lastCost + (stand && standing[clip] ? STAND.margin : MATCH.margin) < curCost || (stand && !standing[clip]));
+      const better = wrongKind || (settle > 0 ? lastCost < curCost * AIR.margin : lastCost + (stand && standing[clip] ? STAND.margin : climbing && stairs[clip] ? STAIRS.margin : MATCH.margin) < curCost || (stand && !standing[clip]));
       if (best >= 0 && !near && (force || better)) cut(best);
     }
 
@@ -618,6 +709,18 @@ export function createAnimator(data: MoData) {
     sample(clip, t, rot, hips);
     inertia.step(dt);
     inertia.apply(rot, hips);
+    // The standing take's wander (WANDER), in his frame: the take's root since it took over, turned by the take's heading then
+    wanderW += ((stand && standing[clip] ? 1 : 0) - wanderW) * (1 - Math.exp((-Math.LN2 * dt) / WANDER.ease));
+    if (wanderW > 1e-3) {
+      const r = rootAt(db.clips[clip], Math.min(db.clips[clip].frames - 1, Math.max(0, Math.round(t))));
+      const cw = Math.cos(-wanderYaw0);
+      const sw = Math.sin(-wanderYaw0);
+      const dx = r.x - wanderX0;
+      const dz = r.z - wanderZ0;
+      wander.set((dx * cw + dz * sw) * wanderW, 0, (-dx * sw + dz * cw) * wanderW);
+      hips.x += wander.x;
+      hips.z += wander.z;
+    } else wander.set(0, 0, 0);
 
     // The flight's own rise comes out: the game does the jump
     {
@@ -802,7 +905,8 @@ export function createAnimator(data: MoData) {
     }
     // (down when a leg needs it, back up gently)
     const dropWant = Math.max(0, need) / inp.scale;
-    [drop, dropV] = decay(drop - dropWant, dropV, dropWant > drop ? 0.04 : 0.09, dt);
+    // (down quickly, at once when a leg is pulled at a start, back up gently)
+    [drop, dropV] = decay(drop - dropWant, dropV, dropWant > drop ? THREE.MathUtils.lerp(LOCK.down, LOCK.downStart, starting) : LOCK.up, dt);
     drop += dropWant;
     drop = Math.max(0, drop);
     if (drop + Math.max(0, squash) > 1e-5) {
@@ -810,18 +914,24 @@ export function createAnimator(data: MoData) {
       posed(rot, 0, hips.x, hips.y, hips.z, P);
     }
     // Standing still: up straight (STANCE)
-    tallW += ((stand && !crouched && !inAir && squash < 1e-3 && feet[0].locked && feet[1].locked ? 1 : 0) - tallW) * (1 - Math.exp((-Math.LN2 * dt) / STANCE.ease));
+    // (in over STANCE.ease; out quickly at a start, so its lean is the take's own, not held upright; a foot
+    // lifted in a standing take (the actor shuffling) keeps the stance: easing it out that quickly popped every bone)
+    const tall = stand && !crouched && !inAir && squash < 1e-3;
+    tallW += ((tall ? 1 : 0) - tallW) * (1 - Math.exp((-Math.LN2 * dt) / (tall || stand ? STANCE.ease : STANCE.out)));
     if (tallW > 1e-3) {
       // (the hips up as far as the held legs let them: neither leg past `reach`)
       const reach = (LEG_REACH / 0.998) * STANCE.reach * inp.scale;
       let up = STANCE.most * inp.scale;
       for (let i = 0; i < 2; i++) {
         world(P.pos[LEGS[i][0]], inp, hipW);
-        const at = feet[i].at;
+        // (a held foot where it's held; one let go of where the take has it)
+        const at = feet[i].locked ? feet[i].at : feet[i].ball;
         const h2 = reach * reach - (at.x - hipW.x) ** 2 - (at.z - hipW.z) ** 2;
         up = Math.min(up, h2 > 0 ? Math.sqrt(h2) - (hipW.y - at.y) : 0);
       }
-      hips.y += (Math.max(0, up) * tallW) / inp.scale;
+      // (eased: when a foot is let go of, what the legs allow jumps, and the hips jumping with it snapped the other knee)
+      stanceUp += (Math.max(0, up) - stanceUp) * (1 - Math.exp((-Math.LN2 * dt) / STANCE.upEase));
+      hips.y += (stanceUp * tallW) / inp.scale;
       // (the spine over the hips, then the head level: each turned about his own axes, in the world)
       posed(rot, 0, hips.x, hips.y, hips.z, P);
       const n = P.pos[MB.neck];
@@ -835,6 +945,23 @@ export function createAnimator(data: MoData) {
       turnWorld(MB.armL, 0, STANCE.arms * tallW);
       turnWorld(MB.armR, 0, -STANCE.arms * tallW);
       for (const b of [MB.foreL, MB.foreR]) ql.fromArray(rot, b * 4).slerp(qi.identity(), STANCE.elbows * tallW).toArray(rot, b * 4);
+      posed(rot, 0, hips.x, hips.y, hips.z, P);
+    }
+    // Breathing (BREATH): the ribcage tilting back and up and settling, the head kept level
+    if (tallW > 1e-3) {
+      breathT += dt * BREATH.rate * breathK;
+      if (breathT >= 1) {
+        breathT -= 1;
+        // (the next breath a little quicker or slower: a seeded wander, the same every time)
+        breathK = 1 + BREATH.wander * Math.sin(breathT * 97 + jumps * 1.7);
+      }
+      // (in quicker than out, as a breath goes)
+      const u = breathT < 0.4 ? breathT / 0.4 : 1 - (breathT - 0.4) / 0.6;
+      const k = (0.5 - 0.5 * Math.cos(u * Math.PI)) * tallW;
+      turnWorld(MB.spine2, -BREATH.spine * k, 0);
+      turnWorld(MB.chest, -BREATH.chest * k, 0);
+      turnWorld(MB.neck, (BREATH.spine + BREATH.chest) * 0.5 * k, 0);
+      turnWorld(MB.head, (BREATH.spine + BREATH.chest) * 0.5 * k, 0);
       posed(rot, 0, hips.x, hips.y, hips.z, P);
     }
     const softAt = SOFT + (STANCE.soft - SOFT) * tallW;
@@ -882,17 +1009,29 @@ export function createAnimator(data: MoData) {
   /** Over to frame `g`, what was showing inertialized away (each side moving as fast as it plays: this clip at its rate, the next at `next`) */
   function cut(g: number, next = rate) {
     sample(clip, t, srcRot, srcHips, srcAv, srcHv);
-    // (the flight's rise is the game's: both sides without it)
+    // (the flight's rise is the game's: both sides without it; the standing take's wander was showing)
     srcHips.y -= db.bump[at(clip, t)];
+    srcHips.x += wander.x;
+    srcHips.z += wander.z;
     for (const v of srcAv) v.multiplyScalar(rate);
     srcHv.multiplyScalar(rate);
+    const wasStanding = standing[clip] === 1;
     clip = db.clipOf[g];
     t = db.frameOf[g];
+    takeStamp[takeIdx[clip]] = ++cuts;
+    {
+      const r = rootAt(db.clips[clip], Math.round(t));
+      wanderX0 = r.x;
+      wanderZ0 = r.z;
+      wanderYaw0 = r.yaw;
+    }
     sample(clip, t, dstRot, dstHips, dstAv, dstHv);
     dstHips.y -= db.bump[g];
     for (const v of dstAv) v.multiplyScalar(next);
     dstHv.multiplyScalar(next);
     inertia.jump(srcRot, srcAv, srcHips, srcHv, dstRot, dstAv, dstHips, dstHv);
+    // (from one standing take to another: a slow change of stance)
+    inertia.halflife = standing[clip] && wasStanding ? STAND_BLEND : BLEND;
     jumps++;
   }
   /** Into the air: a jump from the take-off that carries on best from here; a fall from a flight's top */
@@ -950,10 +1089,14 @@ export function createAnimator(data: MoData) {
       }
       drop = dropV = bank = bankV = lift = liftV = squash = squashV = 0;
       tallW = 0;
+      stanceUp = 0;
+      breathT = 0;
+      breathK = 1;
       legShown = legAirWas = false;
       for (const v of [...legOff, ...legOffV]) v.set(0, 0, 0);
       warp = faster = turnLately = airK = 1;
-      sprintW = crouchW = 0;
+      sprintW = crouchW = wanderW = 0;
+      wander.set(0, 0, 0);
       inAir = false;
       flight = -1;
       settle = held = airT = 0;
@@ -961,7 +1104,7 @@ export function createAnimator(data: MoData) {
     },
     /** What it's doing, for the lab */
     get debug() {
-      return { clip: db.clips[clip].name, frame: t, rate, warp, cost: lastCost, blend: inertia.left, jumps, drop, lift, bank, air: inAir, crouch: crouchW, squash, arms: AIR.arms * THREE.MathUtils.smoothstep(held, AIR.armsAfter, AIR.armsAfter + AIR.armsIn) };
+      return { clip: db.clips[clip].name, frame: t, rate, warp, cost: lastCost, blend: inertia.left, jumps, drop, lift, bank, air: inAir, crouch: crouchW, squash, tall: tallW, up: stanceUp, climbing, arms: AIR.arms * THREE.MathUtils.smoothstep(held, AIR.armsAfter, AIR.armsAfter + AIR.armsIn) };
     },
   };
 }

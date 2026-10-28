@@ -4,8 +4,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { DRESSING, DRESS_SIZE, FRONTAGES, GALLERIAS, GALLERY, SCULPTURES, SHOP_NAMES, STREET_PEOPLE, STREETLEVEL_SOLIDS, UNIT, characterOf } from '../src/scripts/city3d/streetlevel';
-import { HIGHRISES } from '../src/scripts/city3d/highrise';
-import { LAYBYS, UPTOWN_BLOCKS, UPTOWN_LANES, laybyRect } from '../src/scripts/city3d/uptown';
+import { HIGHRISES, TOWER_BLOCKS } from '../src/scripts/city3d/highrise';
+import { LAYBYS, UPTOWN_LANES, laybyRect } from '../src/scripts/city3d/uptown';
 import { PLAN, distToStreet } from '../src/scripts/city3d/streetplan';
 import { SOLIDS } from '../src/scripts/city3d/solids';
 
@@ -56,7 +56,7 @@ test("the sidewalk's dressing stands in the margins: on its block, off every str
   for (const d of DRESSING) {
     const [across, along] = DRESS_SIZE[d.kind];
     const r = Math.max(across, along);
-    const blk = UPTOWN_BLOCKS.find((b) => inPoly(b.poly, [d.x, d.z]));
+    const blk = TOWER_BLOCKS.find((b) => inPoly(b.poly, [d.x, d.z]));
     assert.ok(blk, `${d.kind} at ${d.x.toFixed(1)}, ${d.z.toFixed(1)} on a block`);
     for (const s of PLAN.streets) assert.ok(distToStreet(s, [d.x, d.z]) > s.half + 0.8 + Math.min(across, along) - 0.05, `${d.kind} at ${d.x.toFixed(1)}, ${d.z.toFixed(1)} on ${s.id}`);
     for (const l of LAYBYS) assert.ok(!inRect([d.x, d.z], laybyRect(l), r * 0.5), `${d.kind} in ${l.id}`);
@@ -75,7 +75,7 @@ test('the grand lobbies: a doorman at each, a sculpture beside most; the galleri
   assert.ok(grand.length >= 3);
   assert.ok(SCULPTURES.length >= 2);
   assert.ok(STREET_PEOPLE.filter((p) => p.act === 'look').length >= grand.length);
-  assert.ok(STREET_PEOPLE.filter((p) => p.act === 'sit').length > 10, 'diners');
+  assert.ok(STREET_PEOPLE.filter((p) => p.act === 'eat').length > 10, 'diners eating');
   assert.equal(GALLERIAS.length, UPTOWN_LANES.length);
   for (const g of GALLERIAS) for (const [x] of g.columns) assert.ok(x - g.rect[0] < 0.3 || g.rect[2] - x < 0.3, 'columns at the lane\'s edges');
   assert.ok(GALLERY.y > 3.5, 'over a walker');

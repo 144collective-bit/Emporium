@@ -51,8 +51,10 @@ const spots: Record<SpotId, Spot> = {
   stadium: { title: 'Sector 7 Stadium', sub: 'Events · coming soon' },
   tower: { title: 'Sector 7 Tower', sub: 'Sky deck' },
   station: { title: 'Sector 7 Central', sub: 'Grand station' },
+  palmcourt: { title: 'Palm Court', sub: 'Shopping plaza' },
+  mall: { title: 'Starlight Mall', sub: 'Shopping mall' },
 };
-const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'harbour', 'trenches', 'club', 'bar', 'arms', 'pier', 'nightmarket', 'stadium', 'tower', 'station'];
+const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'harbour', 'trenches', 'club', 'bar', 'arms', 'pier', 'nightmarket', 'stadium', 'tower', 'station', 'palmcourt', 'mall'];
 const ext = { target: '_blank', rel: 'noopener noreferrer' };
 
 // The commit this was built from (set by the Worker's build in server/wrangler.jsonc)
@@ -1047,6 +1049,20 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     <h2 id="city-panel-title" class="city-panel-title">Sector 7 Central</h2>
     <p class="city-panel-text">The city's grand station, out past the ring highway at the end of the tree-lined avenue. A glass hall under one sweeping roof, with the departures board, the ticket hall, a café and kiosks, and beyond it the long train shed on its steel arches: ten platforms, their tracks running west out of the city. Fountains, the taxi rank and the bus bays on the forecourt out front. The trains come later: coming soon.</p>
     <button type="button" class="chip-link kart-walkin" data-station-walkin>Walk in</button>
+  </template>
+
+  <template data-panel-tpl="palmcourt">
+    <p class="kicker"><span class="kicker-num">20</span> North of downtown</p>
+    <h2 id="city-panel-title" class="city-panel-title">Palm Court</h2>
+    <p class="city-panel-text">An open-air shopping street by Westlake Park. Two rows of shops in glass, white render, cladding and timber face each other down a stone-paved promenade lined with trees: coffee, fashion, books, homeware, a bakery, sneakers, a grill and more, with festoon lights strung overhead. Paradise Cinema closes the north end, a water feature sits in the middle, and the park's east gates open straight onto it. Across the avenue is Starlight Mall. The shops open later: coming soon.</p>
+    <button type="button" class="chip-link kart-walkin" data-palmcourt-walkin>Walk in</button>
+  </template>
+
+  <template data-panel-tpl="mall">
+    <p class="kicker"><span class="kicker-num">21</span> North of downtown</p>
+    <h2 id="city-panel-title" class="city-panel-title">Starlight Mall</h2>
+    <p class="city-panel-text">The city's shopping mall, between the north and east avenues past the Parkway. A glass and white-clad hall under a glass vault, with two department stores at its ends, Maxwell's and Bright & Co., and its totem by the road. Inside, two floors of shops round an atrium with a fountain under a ring of light, escalators and a glass lift up to the food court, kiosks, kiddie rides and a photo booth. Out front there's the loop road, the car park with its taxi rank and bus stop, and a multi-storey car park. The shops open later: coming soon.</p>
+    <button type="button" class="chip-link kart-walkin" data-mall-walkin>Walk in</button>
   </template>
 
   <div class="city-hud" data-city-hud>

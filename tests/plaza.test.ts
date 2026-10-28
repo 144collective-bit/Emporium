@@ -144,7 +144,7 @@ test('people at lunch: plenty, none in anything solid, those sitting on a chair 
   assert.ok(PLAZA_PEOPLE.length >= 30, `${PLAZA_PEOPLE.length} people`);
   for (const p of PLAZA_PEOPLE) {
     assert.ok(!solidAt([p.x, p.z], 0.15), `someone in something solid at ${p.x}, ${p.z}`);
-    if (p.act !== 'sit') continue;
+    if (p.act !== 'sit' && p.act !== 'eat') continue;
     const chair = [...TABLES, ...TERRACE_TABLES].some(([x, z]) => Math.abs(p.x - x) < 1e-6 && Math.abs(Math.abs(p.z - z) - CHAIR) < 1e-6);
     const bench = BENCHES.some((b) => Math.hypot(p.x - b.at[0], p.z - b.at[1]) < 0.5);
     assert.ok(chair || bench, `sitting on nothing at ${p.x}, ${p.z}`);

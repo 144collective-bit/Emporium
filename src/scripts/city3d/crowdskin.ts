@@ -29,6 +29,13 @@ export function crowdTexture() {
   }
   return crowdBones.value;
 }
+/** The crowd pack came in (crowdclips.ts `setCrowdCapture()`): the rows baked again, swapped into the texture every crowd reads */
+export function refreshCrowdTexture() {
+  const t = crowdBones.value;
+  if (!t) return;
+  t.image.data = bakeCrowdClips();
+  t.needsUpdate = true;
+}
 
 /**
  * The wardrobe's width in texels: a row is a person, its first texels their colours (rgb, by

@@ -160,13 +160,13 @@ export interface LifePerson {
   x: number;
   z: number;
   ry: number;
-  act: 'look' | 'chat';
+  act: 'serve' | 'chat';
 }
-/** Each cart's vendor behind it facing out, and a customer at one end or both facing it */
+/** Each cart's vendor behind it facing out, serving, and a customer at one end or both facing it */
 export const STREETLIFE_PEOPLE: LifePerson[] = CARTS.flatMap((c, i) => {
   const at = (along: number, out: number): Pt => [c.x + c.u[0] * along + c.n[0] * (out - CART.out), c.z + c.u[1] * along + c.n[1] * (out - CART.out)];
   const ends = i % 2 === 0 ? [-1, 1] : [1];
-  const people: LifePerson[] = [{ x: at(0, CART.vendor)[0], z: at(0, CART.vendor)[1], ry: c.ry, act: 'look' }];
+  const people: LifePerson[] = [{ x: at(0, CART.vendor)[0], z: at(0, CART.vendor)[1], ry: c.ry, act: 'serve' }];
   for (const s of ends) {
     const [x, z] = at(s * CART.side, CART.out);
     people.push({ x, z, ry: Math.atan2(-s * c.u[0], -s * c.u[1]), act: 'chat' });

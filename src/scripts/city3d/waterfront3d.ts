@@ -513,7 +513,7 @@ function drawPier(b: Batch, crowd: Idle[], low: boolean) {
   });
   // People fishing off the rail, their rods out over the water
   for (const f of FISHERS) {
-    crowd.push({ x: f.x, z: f.z, y: T, ry: f.yaw, act: 'look' });
+    crowd.push({ x: f.x, z: f.z, y: T, ry: f.yaw, act: 'fish' });
     const dir = V(Math.sin(f.yaw), 0, Math.cos(f.yaw));
     const a = V(f.x, T + 0.75, f.z).addScaledVector(dir, 0.25);
     const c = a.clone().addScaledVector(dir, 1.6).add(V(0, 0.9, 0));

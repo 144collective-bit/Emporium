@@ -40,7 +40,7 @@
  * Dorras and XP only: never real money, nothing to do with the token.
  */
 import { BOT_LEVELS, FIGHT_BOTS, SPAR_HIT_CAP, XP, type BotLevel } from './catalog';
-import { MOVES, STYLES, type StyleId } from './fight-sim';
+import { MOVES, STYLES, type StyleId } from './fight-moves';
 import { level, type TycoonSave } from './tycoon';
 import { D, LV, esc, fmt, repaint } from './ui';
 import type { FightHud, FightResultView, FightUI, FightUIDeps } from './fight-types';

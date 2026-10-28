@@ -342,14 +342,7 @@ export function buildTheBlock(scene: THREE.Scene, crowd: Idle[], opts: { tick: (
   b.build(group);
 
   /* ----- Its people ----- */
-  // On the court: a game of two on two, someone on the benches waiting
-  for (const [dx, dz, ry] of [
-    [-1.4, -1.8, 0.4],
-    [1.2, -2.6, -0.3],
-    [-0.8, 2.4, Math.PI - 0.2],
-    [1.6, 1.4, Math.PI + 0.5],
-  ])
-    crowd.push({ x: cx + dx, z: cz + dz, ry, act: 'look' });
+  // (the game of two on two on the court is play.ts's: they move); someone on the benches waiting
   B.benches.forEach(([x, z, ry], i) => {
     if (low && i % 2) return;
     crowd.push({ x, z, y: SEAT, ry, act: 'sit' });

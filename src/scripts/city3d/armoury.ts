@@ -20,7 +20,7 @@ import {
 } from './kit';
 import { rifleGeometry } from './guns';
 import { SOLDIER, createCrowd, type Outfit } from './character';
-import { CLIP_SECONDS, MARCH_STRIDE } from './crowdclips';
+import { secondsOf, strideOf } from './crowdclips';
 import { walker } from './life';
 import { SLAB as S } from './world';
 import { design } from './layout';
@@ -780,7 +780,7 @@ export function armoury(scene: THREE.Scene, ctx: LandmarkCtx) {
         const s = t * 0.38 - i * 1.05;
         const p = along(s);
         // The march played at its stride, so their boots stay put on the yard
-        crowd.set(i, p.x, S, p.z, p.yaw, 0.85, 'march', s / (MARCH_STRIDE * 0.85));
+        crowd.set(i, p.x, S, p.z, p.yaw, 0.85, 'march', s / (strideOf('march') * 0.85));
       }
       guards.forEach(([x, z], k) => {
         const [wx, wz] = design(x, z);
@@ -789,7 +789,7 @@ export function armoury(scene: THREE.Scene, ctx: LandmarkCtx) {
         crowd.set(squad + k, x, S, z, 0, 0.85, 'salute', salute[k]);
       });
       // The clerk: at ease behind the counter, now and then looking round
-      crowd.set(squad + guards.length, 24.7, S, 26.99, 0, 0.85, 'look', t / CLIP_SECONDS + 0.3);
+      crowd.set(squad + guards.length, 24.7, S, 26.99, 0, 0.85, 'look', t / secondsOf('look') + 0.3);
       crowd.commit();
     });
   }

@@ -130,9 +130,9 @@ export function buildMarket(scene: THREE.Scene, crowd: Idle[]) {
     const sign = rowPlane(1.3, 0.32, i, STALLS);
     if (f < 0) sign.rotateY(Math.PI);
     boards.push(sign.translate(t.x, S + 1.86, back + f * 0.08));
-    // A trader behind every other stall's counter; shoppers browsing
+    // A trader behind every other stall's counter, serving; shoppers browsing
     if (!mine) {
-      crowd.push({ x: t.x + 0.2, z: back + f * 0.55, ry: f > 0 ? 0 : Math.PI, act: 'look' });
+      crowd.push({ x: t.x + 0.2, z: back + f * 0.55, ry: f > 0 ? 0 : Math.PI, act: 'serve' });
       if (i % 2 === 0) crowd.push({ x: t.x - 0.3, z: front + f * 0.55, ry: f > 0 ? Math.PI : 0, act: 'look' });
     }
   });

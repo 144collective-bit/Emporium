@@ -87,7 +87,7 @@ export function createBoat(d: BoatDeps) {
 
   /** Degen at the wheel: on the bench, knees bent, both hands on the wheel's sides (turned with it) */
   function seat() {
-    driver = createDegen(d.outfit(), 2);
+    driver = createDegen(d.outfit());
     const g = driver.g;
     g.rotation.set(0, Math.PI / 2, 0);
     g.scale.setScalar(SCALE);
@@ -223,7 +223,8 @@ export function createBoat(d: BoatDeps) {
       d.sfx('door');
       // (a heading, 0 east: facing the water from the bank he's on)
       const north = (at.stop?.bank ?? HIRE.bank) === 'north';
-      return { x: at.at.x, z: at.at.z, yaw: north ? -Math.PI / 2 : Math.PI / 2 };
+      // (`from`: where it lies, for the climb up, moments.ts)
+      return { x: at.at.x, z: at.at.z, yaw: north ? -Math.PI / 2 : Math.PI / 2, from: { x: s.x, z: s.z } };
     },
     /** Walk mode ended on the water: the boat goes home */
     abandon() {

@@ -405,12 +405,12 @@ export const COMMONS_SOLIDS: Footprint[] = [
   }),
 ];
 
-/** Who's out on the lawns: kids at play, neighbours at the grills and the chess tables, someone at the washing (x, z, facing, what they're doing, how big) */
+/** Who's out on the lawns: kids by the playground and the skate spot, neighbours at the grills and the chess tables, someone at the washing (x, z, facing, what they're doing, how big); the kids playing on the courts and the swings are play.ts's */
 export interface CommonsPerson {
   x: number;
   z: number;
   ry: number;
-  act: 'look' | 'chat' | 'sit';
+  act: 'look' | 'chat' | 'sit' | 'chess';
   /** Seat height over the slab, for sitters */
   seat?: number;
   kid?: boolean;
@@ -429,14 +429,14 @@ export function commonsPeople(low: boolean): CommonsPerson[] {
         out.push({ x, z, ry: face(x, z, cx, cz), act, kid });
       }
     };
+    // (the kids on the courts, in the cage and on the swings are play.ts's: they move)
     if (a.kind === 'playground') ring(low ? 2 : 4, 2.2, true, 'look');
-    else if (a.kind === 'halfcourt' || a.kind === 'soccer') ring(low ? 2 : a.kind === 'soccer' ? 6 : 3, a.kind === 'soccer' ? 3 : 2, true, 'look');
     else if (a.kind === 'skate') ring(low ? 1 : 3, 2.4, true, 'look');
     else if (a.kind === 'garden') {
       // Two at each grill, chatting
       for (const [gx, gz] of gardenGrills(a).slice(0, low ? 1 : 2)) out.push({ x: gx + 0.8, z: gz, ry: -Math.PI / 2, act: 'chat' }, { x: gx, z: gz + 0.8 * (gz < cz ? 1 : -1), ry: gz < cz ? Math.PI : 0, act: 'chat' });
     } else if (a.kind === 'chess') {
-      for (const s of [-1, 1].slice(0, low ? 1 : 2) as number[]) out.push({ x: cx - 1.2 + s * 0.55, z: cz, ry: s < 0 ? Math.PI / 2 : -Math.PI / 2, act: 'sit', seat: 0.42 });
+      for (const s of [-1, 1].slice(0, low ? 1 : 2) as number[]) out.push({ x: cx - 1.2 + s * 0.55, z: cz, ry: s < 0 ? Math.PI / 2 : -Math.PI / 2, act: 'chess', seat: 0.42 });
     } else if (a.kind === 'washing' && r() < 0.6) out.push({ x: cx, z: cz, ry: a.turned ? Math.PI / 2 : 0, act: 'look' });
   }
   // Under the pavilion and by the rec centre's doors

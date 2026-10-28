@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { PLAN, distToStreet } from '../src/scripts/city3d/streetplan';
 import { JUNCTIONS, lightState } from '../src/scripts/city3d/routes';
 import { TRENCH_WALKS } from '../src/scripts/city3d/projects';
-import { BENCHES, CROSS_PACE, LINK_MAX, NOTICE, NOTICE_HOLD, crossingLinks, hurry, noticing, outAtNight, redLeft, takesCrossing, walkLight } from '../src/scripts/city3d/pedestrians';
+import { BENCHES, CROSS_PACE, HURRY, HURRY_RAIN, KERB_LOOK, LINK_MAX, NOTICE, NOTICE_HOLD, PHONE, PHONE_GLANCE, crossingLinks, hurry, hurrying, kerbLook, noticing, onPhone, outAtNight, phoneGlance, redLeft, takesCrossing, walkLight } from '../src/scripts/city3d/pedestrians';
 
 /** The blocks the walkers go round (life.ts: downtown's, the south row's, The Trenches' nearest The Block) */
 const walked = PLAN.blocks.filter((b) => b.id.startsWith('dt-') || (b.use === 'district' && b.ref!.startsWith('S')) || TRENCH_WALKS.includes(b.id));
@@ -118,3 +118,65 @@ test('the benches: plenty, each a real spot with a facing', () => {
   const spots = new Set(BENCHES.map((b) => `${b.x.toFixed(2)},${b.z.toFixed(2)}`));
   assert.equal(spots.size, BENCHES.length);
 });
+
+test('waiting at a kerb: a look to the left, across to the right, a glance back, then ahead, all smoothly', () => {
+  assert.equal(kerbLook(0), 0);
+  assert.equal(kerbLook(-1), 0);
+  let left = 0;
+  let right = 0;
+  let last = kerbLook(0);
+  let tLeft = Infinity;
+  let tRight = Infinity;
+  for (let f = 1; f <= 6 * 60; f++) {
+    const w = f / 60;
+    const y = kerbLook(w);
+    assert.ok(Math.abs(y - last) < 0.07, `a jump at ${w}: ${last} -> ${y}`);
+    last = y;
+    if (y > 0.9) (left++, (tLeft = Math.min(tLeft, w)));
+    if (y < -0.9) (right++, (tRight = Math.min(tRight, w)));
+  }
+  assert.ok(left > 20 && right > 20, `held each side: ${left} ${right} frames`);
+  assert.ok(tLeft < tRight, 'the traffic\'s side first');
+  assert.ok(Math.abs(kerbLook(4)) < 1e-9 && Math.abs(kerbLook(5.2)) < 1e-9, 'ahead again well inside the wait row\'s loop');
+  assert.equal(KERB_LOOK[KERB_LOOK.length - 1][1], 0);
+  // The hurry: from half rain, the walk with the head down and the arms in
+  assert.equal(hurrying(0), false);
+  assert.equal(hurrying(HURRY_RAIN - 0.01), false);
+  assert.equal(hurrying(HURRY_RAIN), true);
+  assert.equal(hurrying(1), true);
+  assert.ok(HURRY.headPitch < -0.1 && HURRY.lean > 0.05 && HURRY.arm.bend > 1.2 && HURRY.grip > 0.5);
+});
+
+test('on the phone: about one walker in seven, independent of their walk; reading, a glance up once a loop, smoothly', () => {
+  let n = 0;
+  let firstHalf = 0;
+  for (let i = 0; i < 2000; i++) {
+    const seed = i / 2000;
+    if (!onPhone(seed)) continue;
+    n++;
+    if (seed < 0.5) firstHalf++;
+  }
+  assert.ok(Math.abs(n / 2000 - PHONE.share) < 0.02, `${n} of 2000 on their phones`);
+  assert.ok(firstHalf > n * 0.4 && firstHalf < n * 0.6, `spread over both walks: ${firstHalf} of ${n} in the first half`);
+  assert.ok(PHONE.share > 0.08 && PHONE.share < 0.25);
+  // The phone in front of the chest, under the shoulders; the head down at it, less on the move
+  const [x, y, z] = PHONE.at;
+  assert.ok(z > 0.12 && z < 0.3 && y > 0.15 && y < 0.36 && Math.abs(x) < 0.1);
+  assert.ok(PHONE.headPitch < -0.5 && PHONE.walkPitch < -0.3 && PHONE.walkPitch > PHONE.headPitch && PHONE.grip > 0.5);
+  // The glance: down at the start, up and held for a moment, down again before the row loops (3.7 s)
+  assert.equal(phoneGlance(0), 0);
+  let up = 0;
+  let last = phoneGlance(0);
+  for (let f = 1; f <= 4 * 60; f++) {
+    const w = f / 60;
+    const g = phoneGlance(w);
+    assert.ok(g >= 0 && g <= 1);
+    assert.ok(Math.abs(g - last) < 0.07, `a jump at ${w}: ${last} -> ${g}`);
+    last = g;
+    if (g > 0.9) up++;
+  }
+  assert.ok(up > 20 && up < 90, `up for ${up} frames`);
+  assert.ok(phoneGlance(3.5) < 1e-9 && phoneGlance(3.7) < 1e-9, 'down again inside the loop');
+  assert.equal(PHONE_GLANCE[PHONE_GLANCE.length - 1][1], 0);
+});
+

@@ -25,7 +25,7 @@ import {
 } from '../src/scripts/city3d/outer';
 import { DISTRICTS } from '../src/data/plots';
 import { PLOT_DORRAS } from '../src/scripts/city3d/catalog';
-import { EW_ROADS, LANE, NS_ROADS, RIVER, RING_HI, SOUTH_ROAD } from '../src/scripts/city3d/layout';
+import { EW_ROADS, LANE, NS_ROADS, RIVER, RING_HI, SOUTH_ROAD, nsRuns } from '../src/scripts/city3d/layout';
 import { distToStreet, type Street } from '../src/scripts/city3d/streetplan';
 
 const street = (b: (typeof BENDS)[number]): Street => ({ id: b.id, kind: 'street', pts: b.pts, half: LANE, lanes: 1 });
@@ -139,7 +139,7 @@ test("the bends' outer sidewalks: outside the town, off every straight road", ()
   assert.ok(BEND_KERBS.length > 100);
   for (const k of BEND_KERBS)
     for (const [x, z] of k) {
-      for (const r of NS_ROADS) assert.ok(Math.abs(x - r.c) >= r.half - 1e-6, 'a kerb on a road');
+      NS_ROADS.forEach((r, i) => assert.ok(Math.abs(x - r.c) >= r.half - 1e-6 || !nsRuns(i, z), 'a kerb on a road'));
       for (const r of EW_ROADS) assert.ok(Math.abs(z - r.c) >= r.half - 1e-6, 'a kerb on a road');
     }
 });

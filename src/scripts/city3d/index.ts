@@ -8,8 +8,13 @@ import * as THREE from 'three';
 import { WIDEN } from './layout';
 import { MapControls } from 'three/addons/controls/MapControls.js';
 import { BAKING_TEXTURES, PICK, builtTexturesDone, consolidate, loadBuiltTextures, loadImage, loadTex, updateLights, updateWind } from './kit';
+import { CROWD_PACK, loadMocap } from './mocap-load';
+import type { MoData } from './mocap';
+import { setCrowdCapture } from './crowdclips';
+import { refreshCrowdTexture } from './crowdskin';
 import { SWAY, windStrength } from './dusk';
 import { buildBusStops } from './transit3d';
+import { buildOuterDress } from './outerdress3d';
 import type { LifeSfx } from './life';
 import { createPost } from './post';
 import { CENTER, SLAB, addLamp, addTree, buildGround, buildLamps, buildSkyline, buildTrees, placed as everyPlaced, puddleMat, keepTreesOff, scatterOutskirts, waterMat, type Env, type Tick } from './world';
@@ -25,6 +30,10 @@ import { createDistricts } from './districts';
 import { buildStadium } from './stadium3d';
 import { buildTower } from './tower3d';
 import { buildStationSpot } from './stationspot';
+import { buildMallSpots } from './mallspot';
+import { COURT_SPAWN, MALL_LAMPS, MALL_PEOPLE, MALL_TREES } from './mall';
+import { NORTH_LAMPS, NORTH_PEOPLE, NORTH_TREES } from './uptownnorth';
+import { INSIDE_SPAWN, MALL_INSIDE_PEOPLE, MALL_LIFT, UP as MALL_UP } from './mallinside';
 import { BOULEVARD_TREES as STATION_TREES, PLAZA_TREES as STATION_PLAZA_TREES, STATION_LAMPS, STATION_PEOPLE, STATION_RECTS, STATION_SPAWN } from './station';
 import { LIFT, TOWER_SPAWN } from './skydeck';
 import { STADIUM_LAMPS, STADIUM_RECTS, STADIUM_SPAWN } from './stadium';
@@ -37,7 +46,7 @@ import { buildGarage } from './garage';
 import { buildAirport } from './airport';
 import { AIRPORT_END, BRANCH, LINE_X } from './metro';
 import { CAMERA_FAR, PAN_BOUNDS, overviewFrame } from './bounds';
-import { loadCar } from './garage-ui';
+import { loadCar } from './mycar';
 import { createProfileUI } from './profile-ui';
 import { createCharScreen } from './charscreen';
 import { createSky, type TimeMode, type WeatherMode } from './sky';
@@ -91,7 +100,7 @@ import { kartRecordsHtml } from './kart-records';
 import { destAt } from './tycoon';
 import { guideAt } from './guide';
 import { CARS, initFarCars } from './cars';
-import { CROWD_VIEW } from './character';
+import { CROWD_VIEW, figureDetail } from './character';
 import type { GameDeps } from './ui';
 import type { Bench } from './bench';
 import { mb, sceneMemory } from './perf';
@@ -134,6 +143,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const tier = (root.dataset.tier as Tier) || pickTier();
   const Q = TIERS[tier];
+  // (single figures: the desktop's finer clothes, docs/clothing-plan.md; phones as they were)
+  figureDetail(tier === 'low' ? 2 : 3);
   const progress = (k: number) => bar.style.setProperty('--p', String(k));
   // ?anim: the animation lab on its own, over the page (no city behind it)
   if (new URLSearchParams(location.search).has('anim')) {
@@ -170,6 +181,30 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // Textures made at build time (kit.ts): the atlases made as the modules loaded start downloading now,
   // the rest once the builders below have asked for theirs; the boot waits for them before it's ready
   void loadBuiltTextures(renderer);
+  // The crowd's captured moves (crowdclips.ts, the animation revamp's Phase 5): a small pack, swapped into
+  // every crowd's rows as it comes in (the recorded walk and the formula idle stand in until then)
+  // (it usually lands while the boot is still building: it's applied once the city draws, below)
+  let crowdPack: MoData | null = null;
+  let crowdPackOn = false;
+  const applyCrowdPack = () => {
+    if (!crowdPack || crowdPackOn) return;
+    crowdPackOn = true;
+    setCrowdCapture(crowdPack);
+    refreshCrowdTexture();
+  };
+  if (!BAKING_TEXTURES)
+    loadMocap(CROWD_PACK).then(
+      (d) => {
+        crowdPack = d;
+        if (crowdPackLate) {
+          applyCrowdPack();
+          crowdPackLate();
+        }
+      },
+      () => {},
+    );
+  /** Set once the city draws: a pack arriving after that asks for a frame itself */
+  let crowdPackLate: (() => void) | null = null;
 
   // Fonts and art for the signs
   // (the build's own run for the textures never paints with stand-in fonts: scripts/bake-textures.mjs)
@@ -257,6 +292,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   spots.push(buildTower(scene).spot);
   // ...and Sector 7 Central, the grand station west of the highway: its spot (the station is drawn in its own chunk)
   spots.push(buildStationSpot(scene).spot);
+  // ...and Palm Court and Starlight Mall north of downtown: their spots (they're drawn in their own chunk)
+  spots.push(...buildMallSpots(scene));
   // ...and the metro's el where it crosses the open land south of the south row: no trees under it
   keepTreesOff([-10, 125 + WIDEN, 56, 135 + WIDEN]);
   // (and its Airport branch, bending east off the avenue over the open land to the airport: docs/airport-plan.md Phase 3)
@@ -295,6 +332,10 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   for (const [x, z] of STATION_PLAZA_TREES) addTree(x, z, 0.8, false);
   for (const [x, z, ry, y] of STATION_LAMPS) addLamp(x, z, ry, y);
   STATION_PEOPLE.forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push({ x: p.x, z: p.z, y: Math.max(SLAB, p.y), ry: p.ry, act: p.act }));
+  // ...and Palm Court's and the mall's (mall.ts; the outskirts' trees keep off their land already)
+  for (const [x, z, ry, y] of [...MALL_LAMPS, ...NORTH_LAMPS]) addLamp(x, z, ry, y);
+  for (const [x, z, y] of [...MALL_TREES, ...NORTH_TREES]) addTree(x, z, undefined, false, SLAB + y);
+  [...MALL_PEOPLE, ...MALL_INSIDE_PEOPLE, ...NORTH_PEOPLE].forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push({ x: p.x, z: p.z, y: SLAB + p.y, ry: p.ry, act: p.act }));
   progress(0.55);
   await waited(nextFrame());
   // (phones keep half of them: the trim)
@@ -303,6 +344,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   buildTrees(tier === 'low');
   buildLamps(scene, tier === 'low', tick, reduced);
   buildBusStops(tier === 'low');
+  buildOuterDress(tier === 'low');
   progress(0.7);
   await waited(nextFrame());
   // (the horns and the bus doors play through the sound, made with the controls below; one before then is dropped)
@@ -430,6 +472,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // (on a very slow connection the boot goes on without them: they appear as they come in)
   await waited(Promise.race([loadBuiltTextures(renderer), new Promise((r) => setTimeout(r, 8000))]));
   builtTexturesDone();
+  // The crowd's captured moves, if they're in (else as they come)
+  applyCrowdPack();
+  crowdPackLate = () => (dirty = true);
   progress(1);
 
   /* ---------- Fly-to ---------- */
@@ -592,6 +637,17 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         close();
         startWalking(TOWER_SPAWN);
       });
+    // Palm Court's and the mall's panels: Walk in under the court's arch, or inside the mall's lobby
+    if (id === 'palmcourt')
+      panelBody.querySelector('[data-palmcourt-walkin]')?.addEventListener('click', () => {
+        close();
+        startWalking(COURT_SPAWN);
+      });
+    if (id === 'mall')
+      panelBody.querySelector('[data-mall-walkin]')?.addEventListener('click', () => {
+        close();
+        startWalking(INSIDE_SPAWN);
+      });
     // Sector 7 Central's panel: Walk in starts walk mode on its forecourt, facing the doors
     if (id === 'station')
       panelBody.querySelector('[data-station-walkin]')?.addEventListener('click', () => {
@@ -700,11 +756,13 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     const up = walk.position.y > (LIBERTY_LOW + LIBERTY_HIGH) / 2;
     return LIBERTY_LIFTS.map((l, i) => (up ? { id: `liberty:down:${i}`, ...l.high, label: 'Lift · Deck' } : { id: `liberty:up:${i}`, ...l.low, label: 'Lift · High walkway' }));
   };
+  // Starlight Mall's glass lift (mallinside.ts): a door on the ground floor and one on the east gallery
+  const mallDoors = () => (walk.position.y > SLAB + MALL_UP / 2 ? [{ id: 'mall-lift:down', ...MALL_LIFT.high, label: 'Lift · Ground floor' }] : [{ id: 'mall-lift:up', ...MALL_LIFT.low, label: 'Lift · Upper floor' }]);
   let lifting = false;
   /** Up or down in Sector 7 Tower's lift */
   const ride = (up: boolean) => rideTo(up ? LIFT.up : LIFT.down, 'tower', 'Sector 7 Tower', up ? 'Sector 7 Tower · Sky deck' : 'Sector 7 Tower · Lobby');
   /** Up or down in a lift: a fade, then you step out at the other end (unless the owner has closed the place for now) */
-  function rideTo(to: { x: number; z: number; y: number; yaw: number }, place: 'tower' | 'liberty', name: string, arrived: string) {
+  function rideTo(to: { x: number; z: number; y: number; yaw: number }, place: 'tower' | 'liberty' | 'mall', name: string, arrived: string) {
     const gate = live.place(place);
     if (!gate.open) return tycoon?.toast(closedLine(name, gate), 3500);
     if (lifting) return;
@@ -743,9 +801,13 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     engine: (revs) => sound.engine(revs),
     tyres: (level) => sound.tyres(level),
     // Your business's places, and the metro's station doors
-    places: () => [...(tycoon?.places() ?? []), ...(metroUI?.doors ?? []), ...RIVER_BUS_DOORS, ...LIFT_DOORS, ...libertyDoors()],
+    places: () => [...(tycoon?.places() ?? []), ...(metroUI?.doors ?? []), ...RIVER_BUS_DOORS, ...LIFT_DOORS, ...libertyDoors(), ...mallDoors()],
     openPlace: (id) => {
       if (id === 'lift:up' || id === 'lift:down') return ride(id === 'lift:up');
+      if (id === 'mall-lift:up' || id === 'mall-lift:down') {
+        const up = id === 'mall-lift:up';
+        return rideTo(up ? MALL_LIFT.up : MALL_LIFT.down, 'mall', 'Starlight Mall', up ? 'Starlight Mall · Upper floor' : 'Starlight Mall · Ground floor');
+      }
       if (id.startsWith('liberty:')) {
         const [, way, i] = id.split(':');
         const l = LIBERTY_LIFTS[Number(i)];
@@ -795,6 +857,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       return c ? { ...c, name: CARS[c.model as keyof typeof CARS]?.name ?? 'Your car' } : null;
     },
     openMarket: () => open('emporium'),
+    carry: (dir, at, done) => walking && walk.carry(dir, at, done),
     stock: (s) => {
       market.show(s.stall.slots, s.stall.level);
       units.show(s);
@@ -1072,6 +1135,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       works.want(p.at.x, p.at.z, 70);
       walk.placeAt(p.at);
     },
+    approach: (at, go) => walk.boardAt(at, go),
     want: (x, z, r) => works.want(x, z, r),
     name: (p) => placeName(root, p).name,
     toast: (text) => game.toast(text),
@@ -1184,7 +1248,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   if (statsEl) {
     // For the headless checks (scratch scripts): the scene, renderer and camera on the page; opening a place, building what waits round a spot,
     // and walking in somewhere without a click through the city
-    (window as unknown as { __city?: unknown }).__city = { scene, renderer, camera, controls, traffic: bodies, view: CROWD_VIEW, open, startWalking, walk, sky, works };
+    (window as unknown as { __city?: unknown }).__city = { scene, renderer, camera, controls, traffic: bodies, view: CROWD_VIEW, open, startWalking, walk, sky, works, mp };
     statsEl.className = 'city-stats';
     statsEl.setAttribute('aria-hidden', 'true');
     host.append(statsEl);

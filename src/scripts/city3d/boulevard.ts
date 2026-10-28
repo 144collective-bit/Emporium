@@ -114,7 +114,7 @@ export const ROOF_TERRACES: RoofTerrace[] = RIVER_ROW.flatMap((t) => {
 
 /* ---------- People ---------- */
 
-export type BoulevardAct = 'sit' | 'chat' | 'look';
+export type BoulevardAct = 'sit' | 'eat' | 'chat' | 'look' | 'phone';
 export interface BoulevardPerson {
   x: number;
   z: number;
@@ -132,15 +132,15 @@ export const BOULEVARD_PEOPLE: BoulevardPerson[] = (() => {
   const add = (x: number, z: number, y: number, ry: number, act: BoulevardAct, roof = false) => out.push({ x, z, y, ry, act, ...(roof ? { roof: true as const } : {}) });
   // (every other bench, looking out over the water: ry 0 faces +z, the river)
   BENCH_XS.forEach((x, i) => i % 2 === 0 && add(x + (i % 4 ? 0.3 : -0.3), BENCH_Z, DECK_Y + SEAT, 0, 'sit'));
-  // At each overlook's rail, and a pair chatting on the pontoon
-  for (const o of OVERLOOKS) for (const d of [-1.4, 1.1]) add(o.x + d, o.rect[3] - 0.55, DECK_Y, 0, 'look');
+  // At each overlook's rail (one looking out, one on their phone), and a pair chatting on the pontoon
+  for (const o of OVERLOOKS) for (const d of [-1.4, 1.1]) add(o.x + d, o.rect[3] - 0.55, DECK_Y, 0, d < 0 ? 'look' : 'phone');
   for (const s of [-1, 1]) add((PONTOON[0] + PONTOON[2]) / 2 + s * 0.45, (PONTOON[1] + PONTOON[3]) / 2, DECK_Y, (-s * Math.PI) / 2, 'chat');
   // Dining on the terraces (two tables in three), facing each other across the table
   for (const t of ROOF_TERRACES)
     t.tables.forEach(([x, z], i) => {
       if (i % 3 === 2) return;
-      add(x - CHAIR_OFF, z, TERRACE_Y + SEAT, Math.PI / 2, 'sit', true);
-      add(x + CHAIR_OFF, z, TERRACE_Y + SEAT, -Math.PI / 2, 'sit', true);
+      add(x - CHAIR_OFF, z, TERRACE_Y + SEAT, Math.PI / 2, 'eat', true);
+      add(x + CHAIR_OFF, z, TERRACE_Y + SEAT, -Math.PI / 2, 'eat', true);
     });
   return out;
 })();

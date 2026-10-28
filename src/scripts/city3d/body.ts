@@ -83,6 +83,22 @@ export function headFront(x: number, y: number) {
   return zc + front * w + features(x, y) * frontness(w);
 }
 
+/** The head's row at height y: its half-width, front, back, middle (z) and roundness (what the hats sit on) */
+export function headRow(y: number) {
+  const [, hw, front, back, zc, n] = rowAt(y);
+  return { hw, front, back, zc, n };
+}
+
+/** Whether a point is inside the head, its features and all (the hats are seated on it: docs/clothing-plan.md Phase 5) */
+export function inHead(x: number, y: number, z: number) {
+  if (y < HEAD_BOTTOM || y > HEAD_TOP) return false;
+  const [, hw, , back, zc, n] = rowAt(y);
+  const ax = Math.abs(x);
+  if (ax >= hw) return false;
+  if (z >= zc) return z < headFront(x, y);
+  return zc - z < back * (1 - (ax / hw) ** n) ** (1 / n);
+}
+
 /** The heights the head's rings sit at: close together over the face, wider on the neck and crown */
 function rings(q: number) {
   const ys: number[] = [-0.085, -0.06, -0.035, -0.015, -0.004];

@@ -251,7 +251,7 @@ export function makeSkeleton(): Skeleton {
 }
 
 /** How the spine shares the lean, twist and the hips' counter-tilt (spine1, spine2, chest) */
-const SPINE_SHARE = [0.3, 0.35, 0.35];
+export const SPINE_SHARE = [0.3, 0.35, 0.35];
 /** How much of the head's turn the neck takes */
 export const NECK_SHARE = 0.35;
 /** An arm raised past this (radians from hanging down) starts lifting its collarbone, by this much of the extra */
@@ -455,47 +455,74 @@ const norm = (list: Influence): Influence => {
   return kept.map(([n, w]) => [n, w / sum]);
 };
 
+/** A little under every top's hem (the puffer's and the varsity's, the longest, end at 0.52) the legs start taking over the trunk's weights */
+export const HEM_Y = HIP_Y - 0.105;
+/** ...and from here down everything is the legs' (docs/clothing-plan.md) */
+export const LEG_FREE = HIP_Y - 0.17;
+
+/**
+ * The trunk's weights, from the neck down to the tops of the thighs: one
+ * field over the body by where a point is, whatever it's part of, so every
+ * layer there (the shirt, a jacket over it, the trousers under its hem)
+ * moves as one and none comes through another. Up the spine the waist, the
+ * middle of the back, the chest; below the waist partly the hips and over
+ * each thigh some of the way the leg, all of it under the hems.
+ */
+function trunk(x: number, y: number): Influence {
+  const ax = Math.abs(x);
+  const S: Side = x < 0 ? 'L' : 'R';
+  const [s1, , ch] = REST.spine;
+  const a = step(s1 + SPINE[0] - 0.05, s1 + SPINE[0] + 0.05, y);
+  const b = step(ch - 0.05, ch + 0.05, y);
+  const low = step(s1 + 0.12, s1 - 0.08, y);
+  // Under the hems the legs take over. All the way across: a share that changed across the body
+  // would bend each layer by where its own vertices happen to be, and one would come through another
+  const under = step(HEM_Y, LEG_FREE, y);
+  const thigh = low * (0.5 + 0.5 * under);
+  const hip = 0.3 * low * (1 - under);
+  // Which leg: shared across the middle, wider than the space between any layer's vertices so every
+  // layer bends the same between them, and under the hems each leg's own (as from LEG_FREE down)
+  const r = step(-0.05, 0.05, x) * (1 - under) + step(-0.005, 0.005, x) * under;
+  // The shoulders: a share for the collarbone, and at the very edge one for the arm
+  const top = step(REST.shoulderY - 0.09, REST.shoulderY - 0.02, y);
+  const clav = 0.6 * step(0.085, 0.145, ax) * top;
+  const arm = 0.35 * step(0.14, 0.175, ax) * top;
+  const body = 1 - clav - arm;
+  return norm([
+    ['legL', thigh * (1 - r)],
+    ['legR', thigh * r],
+    ['hips', hip * (1 - thigh) * body],
+    ['spine1', (1 - a) * (1 - hip) * (1 - thigh) * body],
+    ['spine2', a * (1 - b) * body],
+    ['chest', a * b * body],
+    [`clav${S}`, clav],
+    [`arm${S}`, arm],
+  ]);
+}
+
 /**
  * The bones a point of the body moves with, by what it's part of (`region`)
  * and where it is at rest (x, y, z in the figure's space). Across each joint
- * the weight passes smoothly from one bone to the next.
+ * the weight passes smoothly from one bone to the next; over the trunk
+ * (`trunk()`) by where it is alone.
  */
 export function weigh(region: Region, x: number, y: number, z: number): Influence {
   const S: Side = x < 0 ? 'L' : 'R';
-  const ax = Math.abs(x);
-  const [s1, , ch] = REST.spine;
   switch (region) {
-    case 'torso': {
-      // Up the spine: the waist, the middle of the back, the chest; the hem below the waist partly
-      // stays with the hips, and over each thigh goes some of the way with the leg
-      const a = step(s1 + SPINE[0] - 0.05, s1 + SPINE[0] + 0.05, y);
-      const b = step(ch - 0.05, ch + 0.05, y);
-      const low = step(s1 + 0.02, s1 - 0.07, y);
-      const hip = 0.3 * low;
-      const thigh = 0.5 * low * step(0.0, 0.07, ax);
-      // The shoulders: a share for the collarbone, and at the very edge one for the arm
-      const top = step(REST.shoulderY - 0.09, REST.shoulderY - 0.02, y);
-      const clav = 0.6 * step(0.085, 0.145, ax) * top;
-      const arm = 0.35 * step(0.14, 0.175, ax) * top;
-      const body = 1 - clav - arm;
+    case 'torso':
+      return trunk(x, y);
+    case 'pelvis':
+    case 'legL':
+    case 'legR':
+    case 'shinL':
+    case 'shinR': {
+      if (y > LEG_FREE) return trunk(x, y);
+      // (the trousers are one piece on the pelvis: each leg by its side)
+      const s = region === 'pelvis' ? S : region.endsWith('L') ? 'L' : 'R';
+      const shin = step(THIGH - 0.03, THIGH + 0.03, HIP_Y - y);
       return norm([
-        [`leg${S}`, thigh],
-        ['hips', hip * (1 - thigh) * body],
-        ['spine1', (1 - a) * (1 - hip) * (1 - thigh) * body],
-        ['spine2', a * (1 - b) * body],
-        ['chest', a * b * body],
-        [`clav${S}`, clav],
-        [`arm${S}`, arm],
-      ]);
-    }
-    case 'pelvis': {
-      // The top tucks under the jacket with the waist; the bottom splits into the legs
-      const up = step(s1 + 0.04, s1 + 0.12, y);
-      const leg = step(s1, s1 - 0.08, y) * step(0.01, 0.06, ax);
-      return norm([
-        ['hips', (1 - up) * (1 - leg)],
-        ['spine1', up],
-        [`leg${S}`, (1 - up) * leg],
+        [`leg${s}`, 1 - shin],
+        [`shin${s}`, shin],
       ]);
     }
     case 'armL':
@@ -524,20 +551,6 @@ export function weigh(region: Region, x: number, y: number, z: number): Influenc
       return norm([
         [`hand${s}`, 1 - fore],
         [`fore${s}`, fore],
-      ]);
-    }
-    case 'legL':
-    case 'legR':
-    case 'shinL':
-    case 'shinR': {
-      const s = region.endsWith('L') ? 'L' : 'R';
-      const d = HIP_Y - y;
-      const hips = 0.5 * step(0.03, -0.04, d);
-      const shin = step(THIGH - 0.03, THIGH + 0.03, d);
-      return norm([
-        ['hips', hips],
-        [`leg${s}`, 1 - hips - shin],
-        [`shin${s}`, shin],
       ]);
     }
     case 'shoe': {

@@ -172,6 +172,12 @@ export function createFly(d: FlyDeps) {
     get canLeave() {
       return canLeave(craft.state);
     },
+    /** Your aircraft's door for getting in (moments.ts): where it stands, its heading, the door along it and the body's side there */
+    doorOf() {
+      const s = craft.state;
+      const [u, side] = DOOR[craft.id];
+      return { x: s.x, z: s.z, yaw: s.yaw, u, side: side - 0.45 };
+    },
     /** How far a point is from your aircraft's door (for the Get in prompt) */
     near(x: number, z: number) {
       if (flying) return Infinity;
@@ -259,7 +265,8 @@ export function createFly(d: FlyDeps) {
         [s.x + fx * end, s.z + fz * end],
       ];
       const [x, z] = spots.find(([px, pz]) => d.free(px, pz)) ?? spots[0];
-      return { x, z, yaw: s.yaw + Math.PI / 2 };
+      // (`from`: the seat behind the door, for the step down, moments.ts)
+      return { x, z, yaw: s.yaw + Math.PI / 2, from: { x: s.x + fx * u, z: s.z + fz * u } };
     },
     /** Leaving walk mode in the air: you're set down by the hangar and the aircraft goes home */
     abandon(p: MyPlane) {

@@ -28,6 +28,10 @@
  *   strips (`partStrips()`), for walking, the camera, bullets and flying.
  */
 import { PLAZA_BLOCK, UPTOWN_BLOCKS, type Pt, type Rect } from './uptown';
+import { EAST_COL, NORTH_BLOCK, NORTH_BLOCK_ID, WEST_COL } from './uptownnorth';
+
+/** Every block towers stand on: Uptown's, and Uptown North's (uptownnorth.ts) */
+export const TOWER_BLOCKS: { id: string; poly: Pt[]; rect: Rect }[] = [...UPTOWN_BLOCKS, NORTH_BLOCK];
 
 export type Skin = 'blue' | 'gold' | 'black' | 'silver' | 'stone';
 export type Shape = 'box' | 'drum' | 'oct' | 'prism';
@@ -341,6 +345,15 @@ export const HIGHRISES: Highrise[] = [
   design('m4a', 'uptown-m4', 'twin', [-52.2, 20.5, -44.2, 39.5], 19, 'black', 'e', { base: [6, 'granite'] }),
   design('s3a', 'uptown-s3', 'round', [-71, 46.3, -62.5, 58.5], 18, 'gold', 's', { back: 'n', depth: 6 }),
   design('s4a', 'uptown-s4', 'slab', [-53, 46.3, -44.2, 59], 17, 'blue', 's', { back: 'n', depth: 5.6 }),
+  // Uptown North (uptownnorth.ts, the owner's call): Palm Court's old land, two columns either side of a service way,
+  // the west column's lobbies on the park and the east column's on the avenue, the tallest by the square in the middle
+  design('un-a1', NORTH_BLOCK_ID, 'twin', [WEST_COL[0], -154.4, WEST_COL[1], -132.6], 28, 'gold', 'w', { base: [8, 'limestone'] }),
+  design('un-a2', NORTH_BLOCK_ID, 'round', [EAST_COL[0], -152, EAST_COL[1], -134], 25, 'silver', 'e', { base: [9, 'granite'] }),
+  design('un-c1', NORTH_BLOCK_ID, 'slab', [WEST_COL[0], -107.5, WEST_COL[1], -83], 31, 'black', 'w', { base: [12, 'granite'], lobby: 'grand' }),
+  design('un-c2', NORTH_BLOCK_ID, 'deco', [EAST_COL[0], -106, EAST_COL[1], -84], 30, 'stone', 'e', { base: [10, 'limestone'], lobby: 'grand' }),
+  design('un-d1', NORTH_BLOCK_ID, 'slab', [WEST_COL[0], -73.5, WEST_COL[1], -50], 26, 'blue', 'w', { base: [8, 'brick'], lobby: 'atrium' }),
+  design('un-d2', NORTH_BLOCK_ID, 'round', [EAST_COL[0], -73.5, EAST_COL[1], -61], 25, 'gold', 'e', { base: [7, 'brick'] }),
+  design('un-d3', NORTH_BLOCK_ID, 'twin', [EAST_COL[0], -58.5, EAST_COL[1], -43.2], 22, 'silver', 'e', { base: [7, 'limestone'], lobby: 'retail' }),
 ];
 
 /**

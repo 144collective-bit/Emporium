@@ -109,8 +109,9 @@ test('what\'s solid is off every street; the loop and the slip lanes are in the 
 test('its people on their floors, clear of what\'s solid; the trees and lamps off the streets', () => {
   for (const p of STATION_PEOPLE) {
     const floor = stationY(p.x, p.z) ?? 0;
-    assert.ok(p.act === 'sit' ? p.y > floor : Math.abs(p.y - floor) < 1e-6, `someone at ${p.x}, ${p.z} off their floor`);
-    if (p.act !== 'sit') assert.ok(!STATION_SOLIDS.some((b) => inBox(b, p.x, p.z, 0.2)), `someone at ${p.x}, ${p.z} in something`);
+    const sitting = p.act === 'sit' || p.act === 'eat';
+    assert.ok(sitting ? p.y > floor : Math.abs(p.y - floor) < 1e-6, `someone at ${p.x}, ${p.z} off their floor`);
+    if (!sitting) assert.ok(!STATION_SOLIDS.some((b) => inBox(b, p.x, p.z, 0.2)), `someone at ${p.x}, ${p.z} in something`);
   }
   for (const [x, z] of [...BOULEVARD_TREES, ...STATION_LAMPS.map(([x, z]): [number, number] => [x, z])])
     for (const s of roads) assert.ok(distToStreet(s, [x, z]) > s.half + 0.3, `a tree or lamp at ${x}, ${z} on ${s.id}`);
