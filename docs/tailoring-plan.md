@@ -179,6 +179,33 @@ and nothing of the fabric kit is in the code. The suit's tailoring
    fitting room, the lab, the city on the phone tier and on desktop, by day
    and at night; the costs and the boot's code recorded here.
 
+   **Built** (28 October 2026), checked on the built site (`npm run
+   preview`), nothing changed in the code:
+   - **The fitting room and the character screen** at 320, 375, 768, 1024
+     and 1440 wide (the phones as touch devices, so on the phone tier):
+     Drop 001's panel opens with its stage, walking, the Profile tab's
+     "See your Degen" opens the character screen, Full and Face, under the
+     studio and the night light. No sideways scroll at any width, no page
+     errors. The desktop widths (768 up) show the tailored suit, the phones
+     the suit as it was.
+   - **The city** walking downtown on the desktop and phone tiers, by day
+     and at night: no page errors; nothing on the suit glows or blooms at
+     night (the buttons and stitching are plain paint); the figure's draw
+     calls as they were.
+   - **The lab** close up (Phase 3): the chest, the back of the neck, the
+     cuffs and the vent, in a grey suit and the default dark one.
+   - **Costs**, triangles a figure (single figure on a desktop / on a
+     phone / near crowd / far crowd): the suit with the cap and shades
+     31.3k → 35.0k / 15.0k / 8.3k / 3.1k; the casual tops unchanged (the
+     hoodie 28.8k / 14.4k / 8.7k / 3.2k). Draw calls 3 a figure. The boot's
+     code 669.8 KB before the plan, 664.4 KB of its 670 after it.
+   - **Left as it is:** the dashed ink down one edge of the tie's blade
+     (there before the plan); on the default suit, nearly black, the
+     tailoring reads only close up.
+
+The plan is done: Phases 0, 3 and 4 are built; Phases 1 and 2 (the fabric
+looks) were cancelled by the owner.
+
 ## Not in this plan
 
 - Sheen (satin, gloss, a material's own light): the owner picked the grain

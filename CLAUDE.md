@@ -1756,7 +1756,8 @@ it and has been retired completely. Build only on what's here.
   crowds as they are. The fabric looks (a grain in the cloth) were
   cancelled by the owner: every cloth stays one flat colour. Phase 0 (room
   in the boot's code: the trainer's menu and the kart race's rules load
-  when used) and Phase 3 (the suit's tailoring) are built: `tailoring()`
+  when used), Phase 3 (the suit's tailoring) and Phase 4 (checked at every
+  width, on both tiers, by day and at night) are built, and the plan is done: `tailoring()`
   and `sleeveButtons()` in wardrobe.ts, only at detail 3 (`tailor` in
   `items()`): horn buttons (`HORN`, `buttonAt()`) with holes and thread and
   their buttonholes (`slit()`), four on each cuff, the breast welt, the
@@ -1765,8 +1766,7 @@ it and has been retired completely. Build only on what's here.
   the back vent and seam, the collar rolled round the back of the neck, the
   shirt collar's stand (thickened outward, clear of the neck's knit) and
   the tie's knot rounded over its dimple; `tests/tailoring.test.ts` holds
-  it to the desktop. One phase at a time with the owner's sign-off; keep
-  it up to date.
+  it to the desktop.
 - **The animation rebuild** (the owner's call, critical) is planned in
   `docs/animation-plan.md`: AAA movement (Spider-Man / Ratchet feel,
   neutral athletic) from motion capture, then turns, jumps, armed
