@@ -174,7 +174,7 @@ function boardPose(p: Pose, mark: Mark, m: Moment, k: number, a: number, x: numb
   }
   if (!mark.hands.length || hw < 0.001) return;
   frame(p, x, y, z, face, scale);
-  if (mark.hands.length === 1) reachTo(p, 0, mark.hands[0].x, mark.hands[0].y, mark.hands[0].z, hw);
+  if (mark.hands.length === 1) reachTo(p, mark.hand ?? 0, mark.hands[0].x, mark.hands[0].y, mark.hands[0].z, hw);
   else for (const i of [0, 1] as const) reachTo(p, i, mark.hands[i].x, mark.hands[i].y, mark.hands[i].z, hw);
 }
 
