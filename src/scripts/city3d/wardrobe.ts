@@ -10,7 +10,7 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { Look, MarkId, MarkSlot, PatternId } from '../net/profile-data';
-import { EYE_Y as HERO_EYE_Y, handParts, headFront, headGeometry } from './body';
+import { EYE_Y as HERO_EYE_Y, HEAD_TOP as HERO_HEAD_TOP, handParts, headFront, headGeometry, headRow, inHead } from './body';
 import { HEAD_Y, HIP_Y, LEG_X, THIGH, WRIST_Y, WRIST_Z, weigh, type BoneName, type Influence, type Joint, type Region } from './skeleton';
 
 /* ---------- Outfits ---------- */
@@ -407,18 +407,98 @@ function roundRect(w: number, h: number, n = 4, pts = 24, squeeze = 0, cy = 0) {
 const tube = (pts: [number, number, number][], r: number, seg: number, rad = 5) =>
   new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts.map(([x, y, z]) => new THREE.Vector3(x, y, z))), seg, r, rad);
 
+/** A point round a superellipse section at angle `a` (0 is +x, PI/2 the front) */
+const ringAt = ([y, hw, hd, z = 0]: Sec, a: number, n: number): [number, number, number] => {
+  const e = 2 / n;
+  const c = Math.cos(a);
+  const s = Math.sin(a);
+  return [Math.sign(c) * Math.abs(c) ** e * hw, y, z + Math.sign(s) * Math.abs(s) ** e * hd];
+};
+/** A loft's sides only, its ends left open (for a lid of its own that shades flat) */
+function openLoft(secs: Sec[], seg: number, n: number) {
+  const g = loft(secs, seg, n);
+  g.setIndex(Array.from(g.index!.array).slice(0, (secs.length - 1) * seg * 6));
+  g.computeVertexNormals();
+  return g;
+}
+/** A strip between two rings (`flip` faces it inwards): a hat band's wall, its rim, a crown's inside; to a point, a flat lid */
+function ringStrip(a: Sec, b: Sec, seg: number, n: number, flip = false) {
+  const pos: number[] = [];
+  const idx: number[] = [];
+  for (const sec of [a, b]) for (let k = 0; k < seg; k++) pos.push(...ringAt(sec, (k / seg) * Math.PI * 2, n));
+  for (let k = 0; k < seg; k++) {
+    const k1 = (k + 1) % seg;
+    if (flip) idx.push(k, k1, seg + k, k1, seg + k1, seg + k);
+    else idx.push(k, seg + k, k1, k1, seg + k, seg + k1);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  return g;
+}
+/**
+ * A brim swept along `seg` steps from its inner edge to its outer one (`at(t)`: both, t 0 to 1, in x and z):
+ * a flat top and underside `thick` apart and a rounded outer edge, the inner edge hidden in the crown;
+ * `y(x, z, u)` is the top's height, u 0 at the inner edge to 1 at the outer
+ */
+function brimSweep(at: (t: number) => { inner: [number, number]; outer: [number, number] }, y: (x: number, z: number, u: number) => number, thick: number, seg: number, across: number, round: number) {
+  const pos: number[] = [];
+  const idx: number[] = [];
+  let ring = 0;
+  for (let i = 0; i <= seg; i++) {
+    const { inner, outer } = at(i / seg);
+    const ox = outer[0] - inner[0];
+    const oz = outer[1] - inner[1];
+    const ol = Math.hypot(ox, oz) || 1;
+    const pt = (u: number, dv: number, bulge = 0): void => {
+      const x = inner[0] + ox * u + (ox / ol) * bulge;
+      const z = inner[1] + oz * u + (oz / ol) * bulge;
+      pos.push(x, y(x, z, Math.min(1, u)) + dv, z);
+    };
+    // round the section: the top in to out, round the edge, the underside back in, up the inner edge
+    for (let j = 0; j <= across; j++) pt(j / across, 0);
+    for (let j = 1; j < round; j++) {
+      const f = (j / round) * Math.PI;
+      pt(1, -thick / 2 + (thick / 2) * Math.cos(f), (thick / 2) * Math.sin(f));
+    }
+    for (let j = across; j >= 0; j--) pt(j / across, -thick);
+    ring = across * 2 + round + 1;
+  }
+  for (let i = 0; i < seg; i++)
+    for (let k = 0; k < ring; k++) {
+      const a = i * ring + k;
+      const b = i * ring + ((k + 1) % ring);
+      idx.push(a, a + ring, b, b, a + ring, b + ring);
+    }
+  // (the two ends, thin: fans from their first point)
+  for (const [i, f] of [[0, true], [seg, false]] as const)
+    for (let k = 1; k < ring - 1; k++) {
+      const a = i * ring;
+      if (f) idx.push(a, a + k, a + k + 1);
+      else idx.push(a, a + k + 1, a + k);
+    }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  return g;
+}
+
 /** A seam line over a loft's surface at angle `a` (0 is +x, PI/2 the front) */
-function meridian(secs: Sec[], n: number, a: number, from: number, r: number, lift = 1.012) {
+function meridian(secs: Sec[], n: number, a: number, from: number, r: number, lift = 1.012, step = 0) {
   const e = 2 / n;
   const c = Math.cos(a);
   const s = Math.sin(a);
   const pts = sorted(secs)
     .filter(([y]) => y >= from)
     .map(([y, hw, hd, z = 0]): [number, number, number] => [Math.sign(c) * Math.abs(c) ** e * hw * lift, y, z + Math.sign(s) * Math.abs(s) ** e * hd * lift]);
-  return tube(pts, r, pts.length * 3, 4);
+  // (`step`: a segment every so far along it, where its sections are close: a cap's on the desktop)
+  const segs = step ? Math.max(12, Math.round(new THREE.CatmullRomCurve3(pts.map(([x, y, z]) => new THREE.Vector3(x, y, z))).getLength() / step)) : pts.length * 3;
+  return tube(pts, r, segs, 4);
 }
 
-const rbox = (w: number, h: number, d: number, r: number, x = 0, y = 0, z = 0) => new RoundedBoxGeometry(w, h, d, 2, r).translate(x, y, z);
+const rbox = (w: number, h: number, d: number, r: number, x = 0, y = 0, z = 0, segs = 2) => new RoundedBoxGeometry(w, h, d, segs, r).translate(x, y, z);
 const flat = (pts: [number, number][], z: number, depth: number) => {
   const g = new THREE.ExtrudeGeometry(new THREE.Shape(pts.map(([x, y]) => new THREE.Vector2(x, y))), { depth, bevelEnabled: false });
   g.translate(0, 0, z);
@@ -668,8 +748,11 @@ export function items(q: Detail, hero = false): Item[] {
   const LEGS = q === 3 ? 28 : R(20);
   /** People far from the camera: plain boxes for rounded ones, shoes without rounded edges */
   const far = q === 0;
-  const rb = (w: number, h: number, d: number, r: number, x = 0, y = 0, z = 0) => (far ? new THREE.BoxGeometry(w, h, d).translate(x, y, z) : rbox(w, h, d, r, x, y, z));
+  // (on the desktop, rounder corners: docs/clothing-plan.md Phase 5)
+  const rb = (w: number, h: number, d: number, r: number, x = 0, y = 0, z = 0) => (far ? new THREE.BoxGeometry(w, h, d).translate(x, y, z) : rbox(w, h, d, r, x, y, z, q === 3 ? 3 : 2));
   const P = (joint: Joint, geo: THREE.BufferGeometry, color: string | ColorKey, extra: Partial<Piece> = {}): Piece => ({ joint, geo, color, ...extra });
+  /** Several geometries as one piece */
+  const one = (geos: THREE.BufferGeometry[]) => (geos.length === 1 ? geos[0] : mergeGeometries(geos.map(plain))!);
   /** The same piece on both sides (one geometry, or one per side for things that sit on the outside) */
   const both = (
     kind: 'arm' | 'fore' | 'leg' | 'shin' | 'wrist' | 'hand',
@@ -723,7 +806,10 @@ export function items(q: Detail, hero = false): Item[] {
   const EYE_Y = HERO_EYE_Y;
   const skull = hero ? headGeometry(R(30), q) : loft(HEAD, R(20), HN);
   const nose = new THREE.SphereGeometry(0.016, R(10), R(8)).scale(0.75, 1.25, 0.9).translate(0, 0.094, face(0, 0.094) - 0.009);
-  const ears = [-1, 1].map((s) => new THREE.SphereGeometry(0.022, R(10), R(8)).scale(0.45, 1, 0.75).translate(s * (hero ? 0.081 : 0.086), 0.125, hero ? -0.004 : 0.004));
+  const EAR_Y = 0.125;
+  // (how far out from the head's side the ear's root stands, where the shades' arms go over it)
+  const EAR_OUT = 0.004;
+  const ears = [-1, 1].map((s) => new THREE.SphereGeometry(0.022, R(10), R(8)).scale(0.45, 1, 0.75).translate(s * (hero ? 0.081 : 0.086), EAR_Y, hero ? -0.004 : 0.004));
   // The skinned head: the balaclava bunched round the neck under the jaw, and the knit edge round the eye opening
   const neckFold = new THREE.TorusGeometry(0.048, 0.0055, 5, R(20)).rotateX(Math.PI / 2).scale(1, 1, 1.05).translate(0, -0.002, -0.008);
   const eyeRim = (() => {
@@ -749,21 +835,14 @@ export function items(q: Detail, hero = false): Item[] {
   };
   const lensZ = face(0, EYE_Y) + 0.012;
   const atEye = (g: THREE.BufferGeometry, s: number, dz: number) => g.rotateY(s * 0.24).translate(s * 0.043, EYE_Y, lensZ + dz - Math.abs(s) * 0.004);
+  // (on the desktop the frames' edges bevelled round, docs/clothing-plan.md Phase 5; the arms come with the hats' head, below)
+  const BEVEL = q === 3 ? { bevelEnabled: true, bevelThickness: 0.0014, bevelSize: 0.0012, bevelSegments: 1 } : { bevelEnabled: false };
   const frames = [
-    ...[-1, 1].map((s) =>
-      atEye(
-        new THREE.ExtrudeGeometry(frameShape(), {
-          depth: 0.011,
-          bevelEnabled: false,
-          curveSegments: 4,
-        }),
-        s,
-        0
-      )
-    ),
-    new THREE.BoxGeometry(0.018, 0.009, 0.01).translate(0, EYE_Y + 0.008, lensZ + 0.006),
-    ...[-1, 1].map((s) => new THREE.BoxGeometry(0.008, 0.009, 0.115).rotateY(s * 0.08).translate(s * 0.088, EYE_Y + 0.01, 0.04)),
+    ...[-1, 1].map((s) => atEye(new THREE.ExtrudeGeometry(frameShape(), { depth: q === 3 ? 0.0082 : 0.011, curveSegments: 4, ...BEVEL }).translate(0, 0, q === 3 ? 0.0014 : 0), s, 0)),
+    q === 3 ? rbox(0.018, 0.009, 0.01, 0.003, 0, EYE_Y + 0.008, lensZ + 0.006) : new THREE.BoxGeometry(0.018, 0.009, 0.01).translate(0, EYE_Y + 0.008, lensZ + 0.006),
   ];
+  /** The frames' outer top corner, where each arm is hinged (s: the side) */
+  const hinge = (s: number) => new THREE.Vector3(s * 0.039, 0.013, 0.0055).applyAxisAngle(new THREE.Vector3(0, 1, 0), s * 0.24).add(new THREE.Vector3(s * 0.043, EYE_Y, lensZ - 0.004));
   const lenses = [-1, 1].map((s) =>
     atEye(
       new THREE.ExtrudeGeometry(lensShape(), {
@@ -777,112 +856,267 @@ export function items(q: Detail, hero = false): Item[] {
   );
 
   /* ----- Hats ----- */
-  const CAP: Sec[] = [
-    [0.168, 0.095, 0.105, -0.004],
-    [0.198, 0.094, 0.103, -0.005],
-    [0.228, 0.083, 0.091, -0.007],
-    [0.25, 0.06, 0.066, -0.008],
-    [0.262, 0.03, 0.033, -0.008],
-    [0.266, 0.004, 0.004, -0.008],
-  ];
-  const capFront = surface(CAP);
-  const brim = (() => {
-    const s = new THREE.Shape();
-    const n = R(20);
-    for (let k = 0; k <= n; k++) {
-      const a = (k / n) * Math.PI;
-      const x = Math.cos(a) * 0.1;
-      const z = Math.sin(a) * 0.18;
-      if (k === 0) s.moveTo(x, z);
-      else s.lineTo(x, z);
+  // Every hat seated on the head the figure has, the hero's (body.ts) or the crowd's (docs/clothing-plan.md
+  // Phase 5): a crown carried out from the head's own outline, a band fitted to it, a brim rooted in the crown
+  const HN_HAT = 2.3;
+  const HEAD_HI = hero ? HERO_HEAD_TOP : HEAD[HEAD.length - 1][0];
+  /** The head at height y: its half-width, and where its front and back are */
+  const headAt = (y: number) => {
+    if (hero) {
+      const r = headRow(y);
+      return { hw: r.hw, zf: r.zc + r.front, zb: r.zc - r.back };
     }
-    s.closePath();
-    const g = new THREE.ExtrudeGeometry(s, {
-      depth: 0.008,
-      bevelEnabled: true,
-      bevelThickness: 0.003,
-      bevelSize: 0.003,
-      bevelSegments: 1,
-      curveSegments: 4,
-    });
-    g.rotateX(Math.PI / 2);
-    // Curved down at the sides, pitched down at the front
+    const [, hw, hd, z = 0] = secAt(HEAD, y);
+    return { hw, zf: z + hd, zb: z - hd };
+  };
+  const insideHead = (x: number, y: number, z: number) => {
+    if (hero) return inHead(x, y, z);
+    if (y < HEAD[0][0] || y > HEAD_HI) return false;
+    const [, hw, hd, zc = 0] = secAt(HEAD, y);
+    return Math.abs(x / hw) ** HN + Math.abs((z - zc) / hd) ** HN < 1;
+  };
+  /** How far the head's surface is from its middle at height y, along (dx, dz) */
+  const headR = (y: number, dx: number, dz: number) => {
+    const { zf, zb } = headAt(y);
+    const zc = (zf + zb) / 2;
+    if (!insideHead(0, y, zc)) return 0;
+    let lo = 0;
+    let hi = 0.2;
+    for (let k = 0; k < 22; k++) {
+      const m = (lo + hi) / 2;
+      if (insideHead(dx * m, y, zc + dz * m)) lo = m;
+      else hi = m;
+    }
+    return lo;
+  };
+  /** How far a hat's ring of R(20) cuts inside its own outline between its points: added to every gap, so a crowd's coarser hats clear the head too */
+  const SAG = 0.095 * (1 - Math.cos(Math.PI / R(20)));
+  /** Rows a hat's crown is drawn in: a section every 5 mm on the desktop, fewer on phones and crowds */
+  const HAT_STEP = [0.026, 0.016, 0.013, 0.005][q];
+  /**
+   * A crown on the head: the head's outline, across and front to back, carried out `gap(y)` along its normals
+   * from y0 up over the top (or to y1), as sections
+   */
+  const headShell = (y0: number, gap: (y: number) => number, y1 = Infinity): Sec[] => {
+    const ys: number[] = [];
+    for (let y = y0 - 0.012; y < HEAD_HI - 1e-4; y += 0.002) ys.push(y);
+    ys.push(HEAD_HI);
+    const out = (r: (y: number) => number) => {
+      const pts = ys.map((y) => [r(y), y]);
+      return pts.map(([x, y], i) => {
+        const p0 = pts[Math.max(0, i - 1)];
+        const p1 = pts[Math.min(pts.length - 1, i + 1)];
+        const nx = p1[1] - p0[1];
+        const ny = -(p1[0] - p0[0]);
+        const l = Math.hypot(nx, ny) || 1;
+        const g = gap(y) + SAG;
+        return [x + (nx / l) * g, y + (ny / l) * g];
+      });
+    };
+    const across = out((y) => headAt(y).hw);
+    const front = out((y) => headAt(y).zf);
+    const back = out((y) => -headAt(y).zb);
+    const at = (c: number[][], y: number) => {
+      if (y <= c[0][1]) return c[0][0];
+      for (let i = 1; i < c.length; i++) if (c[i][1] >= y) return c[i - 1][0] + ((c[i][0] - c[i - 1][0]) * (y - c[i - 1][1])) / (c[i][1] - c[i - 1][1] || 1);
+      return c[c.length - 1][0];
+    };
+    const top = Math.min(across[across.length - 1][1], front[front.length - 1][1], back[back.length - 1][1]);
+    const end = Math.min(y1, top);
+    const rows = Math.max(3, Math.round((end - y0) / HAT_STEP));
+    const secs: Sec[] = [];
+    for (let i = 0; i <= rows; i++) {
+      // (closer together at the band, round the brow, and over the dome, where the outline turns)
+      const f = y1 < top ? i / rows : (1 - Math.cos((i / rows) * Math.PI)) / 2;
+      const y = y0 + (end - y0) * f;
+      const zf = at(front, y);
+      const zb = -at(back, y);
+      secs.push([y, Math.max(0.002, at(across, y)), Math.max(0.002, (zf - zb) / 2), (zf + zb) / 2]);
+    }
+    return secs;
+  };
+  /** A hat's own design in sections, sized so its lowest section sits `gap` off the head all round */
+  const fitTo = (secs: Sec[], gap: number): Sec[] => {
+    const [y0, hw0, hd0, z0 = 0] = sorted(secs)[0];
+    const { hw, zf, zb } = headAt(y0);
+    const kx = (hw + gap + SAG) / hw0;
+    const kz = ((zf - zb) / 2 + gap + SAG) / hd0;
+    const dz = (zf + zb) / 2 - z0;
+    return secs.map(([y, w, d, z = 0]) => [y, w * kx, d * kz, z0 + dz + (z - z0) * kz]);
+  };
+  /**
+   * The hat's lowest band held exactly `gap(y)` off the head (its brow and all) along each vertex's own way out
+   * from the head's middle, up to y1, eased back into the hat's own shape over `fade`
+   */
+  const snug = (g: THREE.BufferGeometry, y1: number, gap: (y: number) => number, fade = 0.014) => {
     const p = g.attributes.position as THREE.BufferAttribute;
-    for (let i = 0; i < p.count; i++) p.setY(i, p.getY(i) - p.getX(i) ** 2 * 2.0);
+    for (let i = 0; i < p.count; i++) {
+      const y = p.getY(i);
+      if (y > y1 + fade) continue;
+      const { zf, zb } = headAt(y);
+      const zc = (zf + zb) / 2;
+      const dx = p.getX(i);
+      const dz = p.getZ(i) - zc;
+      const r = Math.hypot(dx, dz);
+      if (r < 0.01) continue;
+      const h = headR(y, dx / r, dz / r);
+      if (!h) continue;
+      const want = h + gap(y) + SAG;
+      const f = THREE.MathUtils.smoothstep(y, y1, y1 + fade);
+      const rr = want + (r - want) * f;
+      p.setXYZ(i, (dx / r) * rr, y, zc + (dz / r) * rr);
+    }
     g.computeVertexNormals();
-    return g.rotateX(0.07).translate(0, 0.177, -0.006);
+    return g;
+  };
+  /** Where a seated hat's front is at height y, `gap` off the head */
+  const frontAt = (y: number, gap: number) => {
+    const { zf, zb } = headAt(y);
+    return (zf + zb) / 2 + headR(y, 0, 1) + gap + SAG;
+  };
+
+  // The shades' arms: from the hinges straight back, then along the side of the head, over the ear's root and
+  // down behind it
+  const ARM_GAP = 0.0045;
+  /** How far out the head's side is at height y and depth z */
+  const sideAt = (y: number, z: number) => {
+    const { hw, zf, zb } = headAt(y);
+    const zc = (zf + zb) / 2;
+    const d = z > zc ? zf - zc : zc - zb;
+    const n = hero ? headRow(y).n : HN;
+    return hw * Math.max(0, 1 - Math.min(1, Math.abs((z - zc) / d)) ** n) ** (1 / n);
+  };
+  const armPath = (s: number): [number, number, number][] => {
+    const h = hinge(s);
+    const along = (y: number, z: number, out = 0): [number, number, number] => [s * Math.max(sideAt(y, z) + ARM_GAP + out, 0), y, z];
+    // (level with the hinges, out past the ear's root, so from the front they keep behind the frames)
+    const y = h.y + 0.001;
+    return [
+      [h.x, h.y, h.z - 0.002],
+      [s * Math.max(Math.abs(h.x) + 0.002, sideAt(h.y, h.z - 0.03) + ARM_GAP), y, h.z - 0.03],
+      along(y, 0.035),
+      along(y, 0.012, EAR_OUT * 0.5),
+      along(y, -0.004, EAR_OUT),
+      along(y - 0.012, -0.02),
+      along(y - 0.026, -0.026),
+    ];
+  };
+  const ARMS = [-1, 1].map((s) => armPath(s));
+  frames.push(...ARMS.map((pts) => tube(pts, q === 3 ? 0.0032 : 0.0038, q === 3 ? R(16) : R(8), q === 3 ? 6 : 4)));
+  /** Where the chain hooks onto each arm (s: the side): under it, by the ear */
+  const armHook = (s: number): [number, number, number] => {
+    const [x, y, z] = ARMS[s < 0 ? 0 : 1][3];
+    return [x + s * 0.003, y - 0.004, z];
+  };
+
+  // The cap: six panels close over the crown, rising a touch higher than the head, the brim from the band
+  const CAP_GAP = (y: number) => 0.003 + 0.011 * THREE.MathUtils.smoothstep(y, 0.176, HEAD_HI);
+  const CAP_Y = 0.166;
+  const CAP = headShell(CAP_Y, CAP_GAP);
+  const CAP_TOP = CAP[CAP.length - 1][0];
+  const capFront = surface(CAP, HN_HAT);
+  const brim = (() => {
+    const [, hw, hd, z0 = 0] = secAt(CAP, CAP_Y + 0.004);
+    const e = 2 / HN_HAT;
+    const at = (t: number) => {
+      const a = t * Math.PI;
+      const c = Math.cos(a);
+      const s = Math.sin(a);
+      // (the inner edge just inside the crown; the outer reaching out in front, back to the band at the sides)
+      const x = Math.sign(c) * Math.abs(c) ** e * (hw - 0.004);
+      const z = z0 + Math.abs(s) ** e * (hd - 0.004);
+      return {
+        inner: [x, z] as [number, number],
+        outer: [x * (1 + 0.1 * s) + Math.sign(c) * 0.004 * (1 - s), z + 0.004 + 0.084 * s ** 1.4] as [number, number],
+      };
+    };
+    const front = z0 + hd;
+    // Curved down at the sides and pitched down in front, more towards its edge
+    const y = (x: number, z: number, u: number) => CAP_Y + 0.012 - (x * x * 1.9 + Math.max(0, z - front + 0.01) * 0.13) * u;
+    return brimSweep(at, y, 0.007, R(20), [1, 1, 2, 3][q], [2, 2, 3, 4][q]);
   })();
+  const capCrown = snug(loft(CAP, R(20), HN_HAT), CAP_Y + 0.004, CAP_GAP);
   const capParts = (flip: boolean) => {
-    const turn = (g: THREE.BufferGeometry) => (flip ? g.rotateY(Math.PI) : g);
+    // (worn back to front: the crown stays seated as it is, and the brim, seams and patch turn round its middle)
+    const zc = secAt(CAP, CAP_Y)[3] ?? 0;
+    const turn = (g: THREE.BufferGeometry) => (flip ? g.translate(0, 0, -zc).rotateY(Math.PI).translate(0, 0, zc) : g);
     return {
-      crown: [loft(CAP, R(20)), brim.clone(), new THREE.SphereGeometry(0.011, R(8), R(6)).translate(0, 0.267, -0.008)].map(turn),
+      crown: [capCrown.clone(), turn(brim.clone()), new THREE.SphereGeometry(0.011, R(8), R(6)).translate(0, CAP_TOP + 0.001, CAP[CAP.length - 1][3] ?? 0)],
       // Six panels: seams over the crown, darker than the cap
-      seams: [Math.PI / 6, (Math.PI * 5) / 6, (Math.PI * 7) / 6, (Math.PI * 11) / 6, (Math.PI * 3) / 2].map((a) => turn(meridian(CAP, 2, a, 0.18, 0.0022))),
-      patch: turn(new THREE.PlaneGeometry(0.044, 0.03).rotateX(-0.5).translate(0, 0.214, capFront(0, 0.214) + 0.004)),
+      seams: [Math.PI / 6, (Math.PI * 5) / 6, (Math.PI * 7) / 6, (Math.PI * 11) / 6, (Math.PI * 3) / 2].map((a) => meridian(CAP, HN_HAT, a + (flip ? Math.PI : 0), CAP_Y + 0.02, 0.0022, 1.012, q === 3 ? 0.006 : 0)),
+      patch: turn(new THREE.PlaneGeometry(0.044, 0.03).rotateX(-0.5).translate(0, 0.21, capFront(0, 0.21) + 0.004)),
       // (single figures) the mark printed on the patch, a touch in front of it
-      logo: turn(new THREE.PlaneGeometry(0.027, 0.027).rotateX(-0.5).translate(0, 0.214 + 0.0016, capFront(0, 0.214) + 0.004 + 0.003)),
+      logo: turn(new THREE.PlaneGeometry(0.027, 0.027).rotateX(-0.5).translate(0, 0.21 + 0.0016, capFront(0, 0.21) + 0.004 + 0.003)),
     };
   };
   const cap = capParts(false);
   const capBack = capParts(true);
-  const BEANIE: Sec[] = [
-    [0.19, 0.094, 0.103, -0.005],
-    [0.215, 0.087, 0.096, -0.006],
-    [0.245, 0.068, 0.075, -0.007],
-    [0.266, 0.038, 0.042, -0.008],
-    [0.273, 0.004, 0.004, -0.008],
-  ];
-  const beanie = [loft(BEANIE, R(20)), new THREE.SphereGeometry(0.022, R(10), R(8)).translate(0, 0.285, -0.008)];
-  // The turned-up cuff, a shade darker
-  const beanieCuff = loft(
+  // The beanie: knit close over the head, its cuff turned up a shade darker, a pompom on top
+  const BEANIE_GAP = (y: number) => 0.004 + 0.007 * THREE.MathUtils.smoothstep(y, 0.19, HEAD_HI);
+  const BEANIE = headShell(0.19, BEANIE_GAP);
+  const BEANIE_TOP = BEANIE[BEANIE.length - 1];
+  const beanie = [loft(BEANIE, R(20), HN_HAT), new THREE.SphereGeometry(0.022, R(10), R(8)).translate(0, BEANIE_TOP[0] + 0.016, BEANIE_TOP[3] ?? 0)];
+  const CUFF = 0.009;
+  const beanieCuff = snug(loft(headShell(0.158, () => CUFF, 0.198), R(20), HN_HAT), 0.2, () => CUFF, 0.001);
+  const cuffFront = frontAt(0.178, CUFF);
+  const beaniePatch = new THREE.PlaneGeometry(0.042, 0.026).translate(0, 0.178, cuffFront + 0.0025);
+  const beanieLogo = new THREE.PlaneGeometry(0.023, 0.023).translate(0, 0.178, cuffFront + 0.0055);
+  // The bucket hat: a crown with straight sides on a band fitted to the head, the brim sloping down clear of the shades
+  const BUCKET = fitTo(
     [
-      [0.158, 0.097, 0.107, -0.004],
-      [0.198, 0.098, 0.108, -0.004],
+      [0.164, 0.097, 0.107, -0.004],
+      [0.235, 0.085, 0.094, -0.006],
+      [0.245, 0.06, 0.066, -0.006],
+      [0.248, 0.001, 0.001, -0.006],
     ],
-    R(20)
+    0.004
   );
-  const beaniePatch = new THREE.PlaneGeometry(0.042, 0.026).translate(0, 0.178, 0.107);
-  const beanieLogo = new THREE.PlaneGeometry(0.023, 0.023).translate(0, 0.178, 0.11);
+  /** A crown's sections with rows added round its band, so the band (seated on the head as the crown is) stays outside it */
+  const banded = (secs: Sec[], ys: number[]): Sec[] => sorted([...secs, ...ys.map((y) => secAt(secs, y))]);
+  const bucketCrown = q === 3 ? curve(BUCKET, 0.008) : banded(BUCKET, [0.172, 0.182, 0.194]);
+  const BUCKET_BAND = (y: number): Sec => {
+    const [, hw, hd, z] = secAt(BUCKET, y);
+    return [y, hw + 0.0018, hd + 0.0018, z];
+  };
   const bucket = [
-    loft(
-      [
-        [0.158, 0.097, 0.107, -0.004],
-        [0.235, 0.085, 0.094, -0.006],
-        [0.245, 0.06, 0.066, -0.006],
-        [0.248, 0.001, 0.001, -0.006],
-      ],
-      R(20)
-    ),
+    snug(loft(bucketCrown, R(20), HN_HAT), 0.168, () => 0.004),
     new THREE.LatheGeometry(
       [
-        [0.098, 0.17],
-        [0.16, 0.134],
-        [0.16, 0.126],
-        [0.098, 0.16],
+        [0.09, 0.181],
+        [0.16, 0.159],
+        [0.16, 0.151],
+        [0.09, 0.172],
       ].map(([x, y]) => new THREE.Vector2(x, y)),
       R(24)
     )
       .scale(1, 1, 1.07)
-      .translate(0, 0, -0.005),
+      .translate(0, 0, BUCKET[0][3] ?? 0),
   ];
-  const bucketBand = loft(
-    [
-      [0.165, 0.099, 0.109, -0.004],
-      [0.185, 0.097, 0.107, -0.004],
-    ],
-    R(20)
-  );
+  // (snug where the crown is, so it stays round the crown all the way)
+  const bucketBand = snug(loft([BUCKET_BAND(0.17), BUCKET_BAND(0.19)], R(20), HN_HAT), 0.168, () => 0.0058);
+  // The crown: a gold band resting on the head where it's wide enough, five points round its top
+  const CROWN_Y = 0.2;
+  const crownBase = (() => {
+    const { hw, zf, zb } = headAt(CROWN_Y);
+    return [CROWN_Y, hw + 0.0045 + SAG, (zf - zb) / 2 + 0.0045 + SAG, (zf + zb) / 2] as Sec;
+  })();
+  const CROWN_H = 0.05;
+  const crownTop: Sec = [CROWN_Y + CROWN_H, crownBase[1] * 1.06, crownBase[2] * 1.06, crownBase[3]];
+  const crownIn = (sec: Sec): Sec => [sec[0], sec[1] - 0.004, sec[2] - 0.004, sec[3]];
+  const CS = R(24);
   const crown = [
-    new THREE.CylinderGeometry(0.074, 0.068, 0.05, R(18), 1, true).translate(0, 0.225, -0.006),
-    new THREE.CylinderGeometry(0.068, 0.068, 0.006, R(18)).translate(0, 0.203, -0.006),
+    ringStrip(crownBase, crownTop, CS, HN_HAT),
+    ringStrip(crownIn(crownBase), crownIn(crownTop), CS, HN_HAT, true),
+    ringStrip(crownTop, crownIn(crownTop), CS, HN_HAT),
     ...[0, 1, 2, 3, 4].flatMap((k) => {
-      const a = (k / 5) * Math.PI * 2;
-      const x = Math.sin(a) * 0.07;
-      const z = Math.cos(a) * 0.07 - 0.006;
-      return [new THREE.ConeGeometry(0.022, 0.05, R(6)).translate(x, 0.272, z), new THREE.SphereGeometry(0.013, R(8), R(6)).translate(x, 0.3, z)];
+      const [x, , z] = ringAt([0, crownTop[1] - 0.002, crownTop[2] - 0.002, crownTop[3]], Math.PI / 2 + (k / 5) * Math.PI * 2, HN_HAT);
+      const y = crownTop[0];
+      return [new THREE.ConeGeometry(0.02, 0.048, R(8)).translate(x, y + 0.024, z), new THREE.SphereGeometry(0.012, R(8), R(6)).translate(x, y + 0.051, z)];
     }),
   ];
-  const crownGem = new THREE.SphereGeometry(0.013, R(8), R(6)).scale(1, 1.2, 0.6).translate(0, 0.225, 0.07);
+  const crownGem = new THREE.SphereGeometry(0.013, R(8), R(6))
+    .scale(1, 1.2, 0.6)
+    .translate(0, CROWN_Y + 0.024, crownBase[3]! + crownBase[2] * 1.03 + 0.004);
   const hoodUp = new THREE.SphereGeometry(0.112, R(18), R(12), Math.PI / 2 + 1.0, Math.PI * 2 - 2.0, 0, Math.PI * 0.74).scale(1, 1.16, 1.12).translate(0, 0.12, -0.012);
   const HELMET: Sec[] = [
     [0.152, 0.101, 0.112, -0.004],
@@ -1125,69 +1359,34 @@ export function items(q: Detail, hero = false): Item[] {
   const collarFat = new THREE.CylinderGeometry(0.06, 0.066, 0.04, R(16), 1, true).translate(0, 0.415, -0.004);
 
   /* ----- Neck and back: necklace, headphones, backpack, crossbody, board ----- */
-  const necklace = tube(
-    [
-      [-0.058, 0.415, -0.01],
-      [-0.06, 0.38, suitFront(-0.06, 0.38) + 0.01],
-      [-0.03, 0.31, suitFront(-0.03, 0.31) + 0.012],
-      [0, 0.29, suitFront(0, 0.29) + 0.014],
-      [0.03, 0.31, suitFront(0.03, 0.31) + 0.012],
-      [0.06, 0.38, suitFront(0.06, 0.38) + 0.01],
-      [0.058, 0.415, -0.01],
-    ],
-    0.007,
-    R(24),
-    5
-  );
-
-  const pendant = new THREE.OctahedronGeometry(0.024).scale(0.9, 1.25, 0.5).translate(0, 0.265, suitFront(0, 0.265) + 0.018);
   const headphones = [
     new THREE.TorusGeometry(0.07, 0.012, R(6), R(16), Math.PI * 1.1)
       .rotateX(Math.PI / 2)
       .rotateY(Math.PI * 0.45)
       .translate(0, 0.43, -0.01),
-    ...[-1, 1].map((s) => new THREE.CylinderGeometry(0.03, 0.03, 0.024, R(12)).rotateZ(Math.PI / 2).translate(s * 0.074, 0.425, 0.03)),
-  ];
-  const BACK = surface(HK, HN2, -1);
-  const backpack = [
-    rb(0.21, 0.25, 0.09, 0.03, 0, 0.24, BACK(0, 0.24) - 0.04),
-    rb(0.15, 0.08, 0.03, 0.012, 0, 0.17, BACK(0, 0.17) - 0.09),
+    // (each cup turned round its axis, out from the neck: a domed back, rounded edges; docs/clothing-plan.md Phase 5)
     ...[-1, 1].map((s) =>
-      tube(
-        [
-          [s * 0.08, 0.36, BACK(s * 0.08, 0.36) - 0.01],
-          [s * 0.085, 0.395, 0],
-          [s * 0.085, 0.36, hoodieFront(s * 0.085, 0.36) + 0.005],
-          [s * 0.09, 0.22, hoodieFront(s * 0.09, 0.22) + 0.005],
-          [s * 0.1, 0.12, hoodieFront(s * 0.1, 0.12)],
-        ],
-        0.009,
-        R(12),
-        4
+      new THREE.LatheGeometry(
+        (
+          [
+            [0, -0.009],
+            [0.029, -0.009],
+            [0.031, -0.004],
+            [0.0305, 0.0045],
+            [0.026, 0.0095],
+            [0.017, 0.0125],
+            [0, 0.013],
+          ] as const
+        ).map(([r, y]) => new THREE.Vector2(r, y)),
+        R(12)
       )
+        .rotateZ(-s * (Math.PI / 2))
+        .translate(s * 0.077, 0.425, 0.03)
     ),
   ];
-  const crossbody = [
-    rb(0.12, 0.09, 0.045, 0.016, 0.105, 0.03, hoodieFront(0.105, 0.03) + 0.022),
-    tube(
-      [
-        [0.1, 0.07, hoodieFront(0.1, 0.07) + 0.01],
-        [0.0, 0.2, hoodieFront(0, 0.2) + 0.008],
-        [-0.12, 0.36, hoodieFront(-0.12, 0.36) + 0.006],
-        [-0.13, 0.4, 0],
-        [-0.1, 0.33, BACK(-0.1, 0.33) - 0.006],
-        [0.06, 0.12, BACK(0.06, 0.12) - 0.008],
-      ],
-      0.008,
-      R(24),
-      4
-    ),
-  ];
-  const deck = new THREE.CapsuleGeometry(0.08, 0.4, 4, R(12)).scale(1, 1, 0.13).translate(0, 0.2, BACK(0, 0.2) - 0.04);
-  const trucks = [0.42, 0.0].map((y) => new THREE.BoxGeometry(0.13, 0.018, 0.018).translate(0, y, BACK(0, 0.2) - 0.064));
-  const wheels = [0.42, 0.0].flatMap((y) =>
-    [-0.065, 0.065].map((x) => new THREE.CylinderGeometry(0.02, 0.02, 0.022, R(10)).rotateZ(Math.PI / 2).translate(x, y, BACK(0, 0.2) - 0.078))
-  );
+  // The cushions on the cups' insides, against the neck
+  const cushions = q === 3 ? [-1, 1].map((s) => new THREE.TorusGeometry(0.021, 0.0065, 6, R(12)).rotateY(Math.PI / 2).translate(s * 0.0655, 0.425, 0.03)) : [];
+  const BACK = surface(HK, HN2, -1);
 
   /* ----- Hips and legs: trousers in one piece (in the hips' numbers: the knee is 0.29 down, the shin's 0 there) ----- */
   // The seat: the hips from the waist (under every top) to the crotch, inside every top's hips with room to spare
@@ -1463,15 +1662,36 @@ export function items(q: Detail, hero = false): Item[] {
   /* ----- Held things ----- */
   // In the hand's own space (the socket in the palm; the palm is the right hand's -x side, facing his thigh,
   // the thumb +z): the cup forward of the palm, in the fingers' curl (on the palm side it sank into his leg)
-  const CUP: [number, number, number] = [-0.006, -0.042, 0.044];
-  const cup = new THREE.CylinderGeometry(0.034, 0.027, 0.11, R(14)).translate(...CUP);
+  // Held things sit in the hand as it closes to hold (docs/clothing-plan.md Phase 5): the cup against the front of
+  // the curled fingers and the thumb, none through it; a handle's bar in the fingers' hook (`HOOK`), the thing
+  // hanging under it
+  const CUP: [number, number, number] = [-0.021, -0.08, 0.06];
+  const HOOK: [number, number] = [-0.02, -0.026];
+  /** A carry handle through the hook, its posts down past the hand's sides to `y` (z0 to z1 along the hand) */
+  const handle = (y: number, z0: number, z1: number, r: number) =>
+    tube(
+      [
+        [HOOK[0], y + 0.002, z0],
+        [HOOK[0], HOOK[1] - 0.008, z0 + 0.004],
+        [HOOK[0], HOOK[1], z0 + 0.022],
+        [HOOK[0], HOOK[1], z1 - 0.022],
+        [HOOK[0], HOOK[1] - 0.008, z1 - 0.004],
+        [HOOK[0], y + 0.002, z1],
+      ],
+      r,
+      R(16),
+      q === 3 ? 8 : 5
+    );
+  const cup = new THREE.CylinderGeometry(0.034, 0.027, 0.11, R(14), q === 3 ? 4 : 1).translate(...CUP);
   const cupSleeve = new THREE.CylinderGeometry(0.0335, 0.0305, 0.04, R(14)).translate(CUP[0], CUP[1] - 0.005, CUP[2]);
   const cupTop = [
     new THREE.SphereGeometry(0.035, R(12), R(6), 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.45, 1).translate(CUP[0], CUP[1] + 0.055, CUP[2]),
-    new THREE.CylinderGeometry(0.004, 0.004, 0.07, 6).rotateZ(0.2).translate(CUP[0] + 0.006, CUP[1] + 0.09, CUP[2]),
+    // (the straw leaning forward, away from his fingers)
+    new THREE.CylinderGeometry(0.004, 0.004, 0.064, q === 3 ? 8 : 6).translate(0, 0.032, 0).rotateX(0.42).translate(CUP[0], CUP[1] + 0.06, CUP[2] + 0.004),
   ];
-  const boombox = [rb(0.085, 0.15, 0.27, 0.018, 0, -0.11, 0.03), new THREE.TorusGeometry(0.06, 0.009, 6, R(12), Math.PI).rotateY(Math.PI / 2).translate(0, -0.035, 0.03)];
-  const speakers = [-0.045, 0.045].flatMap((x) => [-0.045, 0.105].map((z) => new THREE.CylinderGeometry(0.046, 0.046, 0.012, R(16)).rotateZ(Math.PI / 2).translate(x, -0.115, z)));
+  const BOOM: [number, number, number] = [HOOK[0], -0.141, 0.005];
+  const boombox = [rb(0.085, 0.15, 0.27, 0.018, ...BOOM), handle(BOOM[1] + 0.075, BOOM[2] - 0.05, BOOM[2] + 0.05, 0.0085)];
+  const speakers = [-0.045, 0.045].flatMap((x) => [-0.075, 0.075].map((z) => new THREE.CylinderGeometry(0.046, 0.046, 0.012, R(16)).rotateZ(Math.PI / 2).translate(BOOM[0] + x, BOOM[1] - 0.005, BOOM[2] + z)));
 
   /* ----- The premium wardrobe (Drop 001, catalog.ts) ----- */
   /** The varsity's sleeves and ribbing stripe: a fixed cream, a shade under white */
@@ -1590,14 +1810,14 @@ export function items(q: Detail, hero = false): Item[] {
     const lift = (x: number) => Math.max(over + 0.004, 0.006 + 0.01 * Math.max(0, 1 - Math.abs(x) / 0.035));
     const on = (x: number, y: number): [number, number, number] => [x, y - HEAD_Y, front(x, y) + lift(x)];
     const side = (s: number): [number, number, number][] => [
-      [s * 0.094, EYE_Y + 0.006, 0.03],
+      armHook(s),
       [s * 0.1, 0.06, 0.035],
       [s * 0.085, -0.01, 0.03],
       on(s * 0.072, 0.405),
       on(s * 0.055, 0.375),
       on(s * 0.03, 0.35),
     ];
-    return tube([...side(-1), on(0, 0.34), ...side(1).reverse()], 0.0035, R(40), 4);
+    return tube([...side(-1), on(0, 0.34), ...side(1).reverse()], 0.0035, R(40), q === 3 ? 6 : 4);
   };
   const collarFront = surface(PUFFER_COLLAR, 2.2);
   const CHAINS: [OutfitKind, THREE.BufferGeometry][] = [
@@ -1609,16 +1829,230 @@ export function items(q: Detail, hero = false): Item[] {
     ['puffer', chainOn((x, y) => Math.max(pufferFront(x, y), y >= 0.395 ? collarFront(x, y) : 0))],
   ];
 
-  // Cowboy hat: a wide brim curled up at the sides, a crown with a crease down the middle, a band with a buckle
-  const COWBOY: Sec[] = [
-    [0.165, 0.1, 0.11, -0.004],
-    [0.2, 0.098, 0.108, -0.005],
-    [0.25, 0.088, 0.1, -0.006],
-    [0.29, 0.072, 0.088, -0.007],
-    [0.31, 0.05, 0.07, -0.007],
-    [0.32, 0.004, 0.01, -0.007],
+  /* ----- What's worn over a top (docs/clothing-plan.md Phase 5): each on that top's own outline ----- */
+  // Per top: its sections and roundness (its collar's too), how far its laid-on pieces stand on the front, and
+  // how far out from the neck its shoulder straps go over (the puffer's high collar pushes them out)
+  const TORSOS: { kind: OutfitKind; shells: [Sec[], number][]; over: number; strapX: number }[] = [
+    { kind: 'suit', shells: [[JK, SN]], over: 0.012, strapX: 0.085 },
+    { kind: 'hoodie', shells: [[HK, HN2]], over: 0, strapX: 0.118 },
+    { kind: 'track', shells: [[TK, HN2]], over: 0.002, strapX: 0.085 },
+    { kind: 'varsity', shells: [[VK, SN]], over: 0.003, strapX: 0.085 },
+    { kind: 'puffer', shells: [[[...PUFFER_S, ...PUFFER_BODY.slice(-2)], HN2], [PUFFER_COLLAR, 2.2]], over: 0, strapX: 0.124 },
   ];
-  const cowboyCrown = loft(COWBOY, R(20), 2.4);
+  /** A top's outline as tests: inside it, its middle (z) at a height, and the top of its shoulder at x */
+  const torsoOf = (t: (typeof TORSOS)[number]) => {
+    const [main, n] = t.shells[0];
+    const lo = sorted(main)[0][0];
+    const inside = (x: number, y: number, z: number) =>
+      t.shells.some(([secs, k]) => {
+        const ss = sorted(secs);
+        if (y < ss[0][0] || y > ss[ss.length - 1][0]) return false;
+        const [, hw, hd, zc = 0] = secAt(ss, y);
+        return Math.abs(x / hw) ** k + Math.abs((z - zc) / hd) ** k < 1;
+      });
+    const mid = (y: number) => secAt(main, Math.max(lo, y))[3] ?? 0;
+    const topAt = (x: number) => {
+      for (let y = 0.5; y > 0.2; y -= 0.002) if (inside(x, y, mid(y))) return y;
+      return 0.2;
+    };
+    return { inside, mid, topAt, front: surface(main, n), back: surface(main, n, -1) };
+  };
+  /**
+   * A strap laid over a top: a smooth line through rough points (only their side, front or back, and their height
+   * matter), each of its points put `lift` off the top's surface: straight out from its middle front or back, up
+   * over the shoulder, round the side past its edge (`over`: more on the front, where the top's laid-on pieces are)
+   */
+  // (`tuck`: its ends left where they're put, under a collar, the line easing out onto the surface from them, and
+  // every point laid straight out onto the front, never up over the shoulder)
+  const strapOver = (t: (typeof TORSOS)[number], pts: [number, number, number][], r: number, extra = 0, tuck = false) => {
+    const o = torsoOf(t);
+    const rough = new THREE.CatmullRomCurve3(pts.map(([x, y, z]) => new THREE.Vector3(x, y, z)));
+    const len = rough.getLength();
+    const n = Math.max(24, Math.round(len / 0.012));
+    const laid = rough.getSpacedPoints(n).map((p, i) => {
+      const keep = p.clone();
+      const w = tuck ? THREE.MathUtils.smoothstep(Math.min(i, n - i) / n, 0.02, 0.2) : 1;
+      const zc = o.mid(p.y);
+      const top = o.topAt(p.x);
+      // (from inside: a little under the shoulder's top near it, else level, through the point)
+      const c = new THREE.Vector3(p.x, tuck ? p.y : Math.min(p.y, top - 0.05), zc);
+      if (!o.inside(c.x, c.y, c.z)) c.set(0, p.y, zc);
+      const d = p.clone().sub(c);
+      if (d.lengthSq() < 1e-8) d.set(0, 0, 1);
+      d.normalize();
+      let lo = 0;
+      let hi = 0.4;
+      for (let k = 0; k < 22; k++) {
+        const m = (lo + hi) / 2;
+        if (o.inside(c.x + d.x * m, c.y + d.y * m, c.z + d.z * m)) lo = m;
+        else hi = m;
+      }
+      const lift = r + 0.002 + (d.z > 0.5 ? t.over + extra : 0);
+      return keep.lerp(c.addScaledVector(d, lo + lift), w);
+    });
+    // (phones and crowds: about as many segments as the straps had before they were laid on, docs/clothing-plan.md Phase 5)
+    return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(laid), q === 3 ? n : R(Math.max(16, Math.round(len / 0.04))), r, q === 3 ? 6 : 4);
+  };
+  const F = 0.3;
+  const B = -0.3;
+  // Per top, its items: the necklace and its pendant (the puffer's high collar covers it), the backpack and its
+  // straps, the crossbody bag, the skateboard, the duffel and its strap, the wings
+  const OVER = TORSOS.flatMap((t): Item[] => {
+    const o = torsoOf(t);
+    const top = (x: number) => o.topAt(x) + 0.05;
+    const sx = t.strapX;
+    // The necklace: round the neck under the collar and down onto the chest
+    const necklace = [
+      strapOver(
+        t,
+        [
+          [-0.058, 0.415, -0.01],
+          ...([
+            [-0.06, 0.38],
+            [-0.03, 0.31],
+            [0, 0.29],
+            [0.03, 0.31],
+            [0.06, 0.38],
+          ] as const).map(([x, y]): [number, number, number] => [x, y, o.front(x, y) + t.over + 0.01]),
+          [0.058, 0.415, -0.01],
+        ],
+        0.007,
+        0.002,
+        true
+      ),
+    ];
+    const pendant = new THREE.OctahedronGeometry(0.024).scale(0.9, 1.25, 0.5).translate(0, 0.265, o.front(0, 0.265) + t.over + 0.018);
+    const BK = o.back;
+    const backpack = [
+      rb(0.21, 0.25, 0.09, 0.03, 0, 0.24, BK(0, 0.24) - 0.04),
+      rb(0.15, 0.08, 0.03, 0.012, 0, 0.17, BK(0, 0.17) - 0.09),
+      ...[-1, 1].map((s) =>
+        strapOver(t, [
+          [s * 0.075, 0.33, B],
+          [s * sx, top(s * sx), o.mid(0.36)],
+          [s * sx, 0.33, F],
+          [s * 0.09, 0.22, F],
+          [s * 0.105, 0.13, F],
+        ], 0.009)
+      ),
+    ];
+    const cx = Math.max(0.12, sx);
+    const crossbody = [
+      rb(0.12, 0.09, 0.045, 0.016, 0.105, 0.03, o.front(0.105, 0.03) + 0.022),
+      strapOver(t, [
+        [0.1, 0.07, F],
+        [0.0, 0.2, F],
+        [-cx, 0.34, F],
+        [-cx, top(-cx), o.mid(0.36)],
+        [-0.1, 0.33, B],
+        [0.06, 0.12, B],
+        [0.15, 0.05, 0],
+      ], 0.008),
+    ];
+    const deckZ = BK(0, 0.2) - 0.04;
+    const deck = new THREE.CapsuleGeometry(0.08, 0.4, q === 3 ? 6 : 4, R(12)).scale(1, 1, 0.13).translate(0, 0.2, deckZ);
+    const trucks = [0.42, 0.0].map((y) => new THREE.BoxGeometry(0.13, 0.018, 0.018).translate(0, y, deckZ - 0.024));
+    const wheels = [0.42, 0.0].flatMap((y) => [-0.065, 0.065].map((x) => new THREE.CylinderGeometry(0.02, 0.02, 0.022, R(10)).rotateZ(Math.PI / 2).translate(x, y, deckZ - 0.038)));
+    // The duffel: a long round bag slung across the back from the right shoulder to the left hip, its ends piped,
+    // a handle along the top and a strap over the chest
+    const duffelZ = BK(0, 0.2) - 0.07;
+    const slung = (g: THREE.BufferGeometry) => g.rotateZ(-0.75).translate(0, 0.2, duffelZ);
+    const L = 0.18;
+    const DR = 0.074;
+    const duffelBody = slung(
+      loft(
+        // (its ends rounded: a quarter round in rows)
+        [0, 1, 2, 3].flatMap((k): Sec[] => {
+          const a = (k / 3) * (Math.PI / 2);
+          const y = L - 0.012 + Math.sin(a) * 0.018;
+          const r = DR - 0.016 + Math.cos(a) * 0.016;
+          return [
+            [-y, r, r, 0],
+            [y, r, r, 0],
+          ];
+        }),
+        R(16)
+      )
+    );
+    const duffelEnds = [-1, 1].map((e) => slung(new THREE.TorusGeometry(DR - 0.006, 0.0045, q === 3 ? 6 : 4, R(16)).rotateX(Math.PI / 2).translate(0, e * (L - 0.004), 0)));
+    const duffelHandle = slung(tube([[0, -0.07, -DR + 0.004], [0, -0.055, -DR - 0.026], [0, 0.055, -DR - 0.026], [0, 0.07, -DR + 0.004]], 0.007, R(12), q === 3 ? 8 : 5));
+    const dx = Math.max(0.11, sx);
+    const duffelStrap = strapOver(t, [
+      [0.11, 0.33, B],
+      [dx, top(dx), o.mid(0.36)],
+      [0.09, 0.36, F],
+      [-0.02, 0.2, F],
+      [-0.12, 0.06, F],
+      [-0.15, 0.03, 0],
+      [-0.12, 0.05, B],
+    ], 0.011);
+    // Wings: two flat wing shapes on the back, swept back, their outlines traced in neon
+    const wingPts: [number, number][] = [
+      [0.015, 0.34],
+      [0.09, 0.44],
+      [0.2, 0.49],
+      [0.3, 0.47],
+      [0.36, 0.4],
+      [0.33, 0.33],
+      [0.36, 0.26],
+      [0.31, 0.2],
+      [0.32, 0.12],
+      [0.24, 0.1],
+      [0.19, 0.15],
+      [0.12, 0.08],
+      [0.06, 0.14],
+      [0.015, 0.1],
+    ];
+    const wingZ = BK(0, 0.25) - 0.02;
+    const wings = [-1, 1].map((s) => {
+      const pts = s > 0 ? wingPts : mirror(wingPts);
+      const plane = flat(pts, -0.003, 0.006)
+        .rotateY(s * 0.45)
+        .translate(0, 0, wingZ);
+      const loop = pts.map(([x, y]): [number, number, number] => [x, y, 0]);
+      loop.push(loop[0]);
+      const edge = tube(loop, 0.0045, R(70), 4)
+        .rotateY(s * 0.45)
+        .translate(0, 0, wingZ);
+      return { plane, edge };
+    });
+    const is = (o: Outfit) => o.kind === t.kind;
+    const k = t.kind;
+    return [
+      ...(k === 'puffer' ? [] : [{ id: `necklace-${k}`, when: (o: Outfit) => !!o.necklace && is(o), pieces: [P('torso', one(necklace), GOLD), P('torso', pendant, '#9ff8ff')] }]),
+      { id: `backpack-${k}`, when: (o) => !!o.backpack && is(o), pieces: [P('torso', one(backpack), 'backpack', CHEST)] },
+      { id: `crossbody-${k}`, when: (o) => !!o.crossbody && is(o), pieces: [P('torso', one(crossbody), 'crossbody')] },
+      {
+        id: `board-${k}`,
+        when: (o) => !!o.board && is(o),
+        pieces: [P('torso', deck, 'board', CHEST), P('torso', one(trucks), '#8b889c', { detail: true, ...CHEST }), P('torso', one(wheels), WHITE, { detail: true, ...CHEST })],
+      },
+      {
+        id: `duffel-${k}`,
+        when: (o) => !!o.duffel && is(o),
+        pieces: [P('torso', one([duffelBody, duffelHandle]), 'duffel', CHEST), P('torso', one(duffelEnds), 'duffel', { shade: 0.6, ...CHEST }), P('torso', duffelStrap, 'duffel', { shade: 0.6 })],
+      },
+      {
+        id: `wings-${k}`,
+        when: (o) => !!o.wings && is(o),
+        pieces: [P('torso', one(wings.map((v) => v.plane)), 'wings', CHEST), P('torso', one(wings.map((v) => v.edge)), 'lens', { mat: 'neon', ...CHEST })],
+      },
+    ];
+  });
+
+  // Cowboy hat: a wide brim curled up at the sides, a crown with a crease down the middle, a band with a buckle
+  const COWBOY = fitTo(
+    [
+      [0.165, 0.1, 0.11, -0.004],
+      [0.2, 0.098, 0.108, -0.005],
+      [0.25, 0.088, 0.1, -0.006],
+      [0.29, 0.072, 0.088, -0.007],
+      [0.31, 0.05, 0.07, -0.007],
+      [0.32, 0.004, 0.01, -0.007],
+    ],
+    0.004
+  );
+  const cowboyCrown = snug(loft(q === 3 ? curve(COWBOY, 0.008) : banded(COWBOY, [0.175, 0.188]), R(20), 2.4), 0.168, () => 0.004, 0.02);
   {
     const p = cowboyCrown.attributes.position as THREE.BufferAttribute;
     for (let i = 0; i < p.count; i++) {
@@ -1629,8 +2063,8 @@ export function items(q: Detail, hero = false): Item[] {
     }
     cowboyCrown.computeVertexNormals();
   }
-  /** A flat brim that curls up at the sides (and dips a touch front and back) */
-  const curledBrim = (r: number, curl: number, y: number) => {
+  /** A flat brim that curls up at the sides (and dips a touch front and back), round the band on its middle */
+  const curledBrim = (r: number, curl: number, y: number, z: number) => {
     const g = new THREE.CylinderGeometry(r, r, 0.008, R(28)).scale(1, 1, 1.08);
     const p = g.attributes.position as THREE.BufferAttribute;
     for (let i = 0; i < p.count; i++) {
@@ -1639,90 +2073,36 @@ export function items(q: Detail, hero = false): Item[] {
       p.setY(i, p.getY(i) + x * x * curl - z * z * curl * 0.15);
     }
     g.computeVertexNormals();
-    return g.translate(0, y, -0.005);
+    return g.translate(0, y, z);
   };
-  const cowboyBrim = curledBrim(0.19, 1.6, 0.172);
-  const cowboyBand = loft(
-    [
-      [0.186, 0.103, 0.113, -0.004],
-      [0.208, 0.1, 0.11, -0.0045],
-    ],
-    R(20),
-    2.4
-  );
-  const buckle = new THREE.BoxGeometry(0.02, 0.016, 0.006).translate(0, 0.197, 0.106);
+  const cowboyBrim = curledBrim(0.19, 1.6, 0.172, COWBOY[0][3] ?? 0);
+  const BAND = (secs: Sec[], y: number, out = 0.0025): Sec => {
+    const [, hw, hd, z] = secAt(secs, y);
+    return [y, hw + out, hd + out, z];
+  };
+  const cowboyBand = snug(loft([BAND(COWBOY, 0.18), BAND(COWBOY, 0.202)], R(20), 2.4), 0.168, () => 0.0065, 0.02);
+  const buckle = new THREE.BoxGeometry(0.02, 0.016, 0.006).translate(0, 0.191, (BAND(COWBOY, 0.191)[3] ?? 0) + BAND(COWBOY, 0.191)[2] + 0.002);
 
-  // Top hat: a tall cylinder on a curled brim, a band round the base
-  const tophat = [new THREE.CylinderGeometry(0.09, 0.092, 0.175, R(22)).scale(1, 1, 1.08).translate(0, 0.253, -0.006), curledBrim(0.14, 1.1, 0.17)];
-  const tophatBand = new THREE.CylinderGeometry(0.0935, 0.0945, 0.026, R(22)).scale(1, 1, 1.08).translate(0, 0.193, -0.006);
+  // Top hat: a tall crown, wider a touch at the top, on a band fitted to the head, a ribbon round its base
+  const TOPHAT = fitTo(
+    [
+      [0.166, 0.092, 0.0994, -0.006],
+      [0.3, 0.091, 0.098, -0.006],
+      [0.34, 0.094, 0.101, -0.006],
+    ],
+    0.004
+  );
+  const TS = R(22);
+  const tophatTop = TOPHAT[TOPHAT.length - 1];
+  const tophat = [
+    snug(openLoft(q === 3 ? curve(TOPHAT, 0.01) : banded(TOPHAT, [0.174, 0.186, 0.2]), TS, HN_HAT), 0.168, () => 0.004, 0.02),
+    ringStrip(tophatTop, [tophatTop[0], 1e-4, 1e-4, tophatTop[3]], TS, HN_HAT),
+    curledBrim(0.14, 1.1, 0.17, TOPHAT[0][3] ?? 0),
+  ];
+  const tophatBand = snug(loft([BAND(TOPHAT, 0.18, 0.002), BAND(TOPHAT, 0.206, 0.002)], TS, HN_HAT), 0.168, () => 0.006, 0.02);
 
   // Halo: a thin ring floating above the head, tilted a touch (neon, in the lens colour)
   const halo = new THREE.TorusGeometry(0.072, 0.008, R(8), R(28)).rotateX(Math.PI / 2 - 0.12).translate(0, 0.305, -0.006);
-
-  // Duffel: a long bag slung across the back from the right shoulder to the left hip, with a strap over the chest
-  const duffelZ = BACK(0, 0.2) - 0.07;
-  const slung = (g: THREE.BufferGeometry) => g.rotateZ(-0.75).translate(0, 0.2, duffelZ);
-  const duffelBody = slung(new THREE.CylinderGeometry(0.072, 0.072, 0.36, R(16)));
-  const duffelEnds = [-0.18, 0.18].map((y) => slung(new THREE.CylinderGeometry(0.076, 0.076, 0.02, R(16)).translate(0, y, 0)));
-  const duffelHandle = slung(
-    tube(
-      [
-        [0, -0.06, -0.07],
-        [0, -0.05, -0.1],
-        [0, 0.05, -0.1],
-        [0, 0.06, -0.07],
-      ],
-      0.007,
-      R(12),
-      5
-    )
-  );
-  const duffelStrap = tube(
-    [
-      [0.11, 0.33, BACK(0.11, 0.33) - 0.03],
-      [0.11, 0.41, 0],
-      [0.09, 0.36, hoodieFront(0.09, 0.36) + 0.008],
-      [-0.02, 0.2, hoodieFront(-0.02, 0.2) + 0.008],
-      [-0.12, 0.06, hoodieFront(-0.12, 0.06) + 0.006],
-      [-0.14, 0.03, 0],
-      [-0.12, 0.05, BACK(-0.12, 0.05) - 0.03],
-    ],
-    0.011,
-    R(30),
-    5
-  );
-
-  // Wings: two flat wing shapes on the back, swept back, their outlines traced in neon
-  const wingPts: [number, number][] = [
-    [0.015, 0.34],
-    [0.09, 0.44],
-    [0.2, 0.49],
-    [0.3, 0.47],
-    [0.36, 0.4],
-    [0.33, 0.33],
-    [0.36, 0.26],
-    [0.31, 0.2],
-    [0.32, 0.12],
-    [0.24, 0.1],
-    [0.19, 0.15],
-    [0.12, 0.08],
-    [0.06, 0.14],
-    [0.015, 0.1],
-  ];
-  const wingZ = BACK(0, 0.25) - 0.02;
-  const wing = (s: number) => {
-    const pts = s > 0 ? wingPts : mirror(wingPts);
-    const plane = flat(pts, -0.003, 0.006)
-      .rotateY(s * 0.45)
-      .translate(0, 0, wingZ);
-    const loop = pts.map(([x, y]): [number, number, number] => [x, y, 0]);
-    loop.push(loop[0]);
-    const edge = tube(loop, 0.0045, R(70), 4)
-      .rotateY(s * 0.45)
-      .translate(0, 0, wingZ);
-    return { plane, edge };
-  };
-  const wings = [-1, 1].map(wing);
 
   // The phone: a slim slab in the hand, tilted up so he can see the screen (the screen glows)
   const phoneBody = rb(0.046, 0.09, 0.008, 0.004)
@@ -1733,33 +2113,38 @@ export function items(q: Detail, hero = false): Item[] {
     .rotateX(-0.35)
     .translate(-0.004, -0.045, 0.046);
   // The briefcase: a boxy leather case hanging from the right hand by its handle, gold clasps on top
-  const briefcaseBody = rb(0.05, 0.17, 0.24, 0.01, 0.024, -0.152, 0.03);
-  const briefcaseHandle = tube(
-    [
-      [0.024, -0.066, -0.01],
-      [0.024, -0.02, 0.0],
-      [0.024, -0.006, 0.03],
-      [0.024, -0.02, 0.06],
-      [0.024, -0.066, 0.07],
-    ],
-    0.0065,
-    R(12),
-    5
-  );
-  const clasps = [-0.05, 0.11].map((z) => new THREE.BoxGeometry(0.016, 0.014, 0.022).translate(0.046, -0.07, z));
+  const CASE: [number, number, number] = [HOOK[0], -0.152, 0.005];
+  const briefcaseBody = rb(0.05, 0.17, 0.24, 0.01, ...CASE);
+  const briefcaseHandle = handle(CASE[1] + 0.085, CASE[2] - 0.042, CASE[2] + 0.048, 0.0065);
+  const clasps = [-0.08, 0.08].map((z) => new THREE.BoxGeometry(0.016, 0.014, 0.022).translate(CASE[0] + 0.022, CASE[1] + 0.082, CASE[2] + z));
 
-  // The gold watch on the left wrist: a band over the cuff, the face on the outside of the arm
+  // The gold watch on the left wrist: on the wrist itself, just under the cuff, riding the hand (its band's edges
+  // rounded, the face's bezel turned; docs/clothing-plan.md Phase 5), the face on the outside of the arm
+  const WATCH: [number, number] = [WRIST_Y + 0.0365, WRIST_Z - 0.002];
+  const WR = 0.0278;
   const watchBand = loft(
-    [
-      [-0.207, 0.0375, 0.0395, 0.001],
-      [-0.195, 0.0375, 0.0395, 0.001],
-    ],
+    [-0.005, -0.0038, 0.0038, 0.005].map((y, i): Sec => [WATCH[0] + y, WR - (i % 3 ? 0 : 0.0012), WR - (i % 3 ? 0 : 0.0012), WATCH[1]]),
     R(14)
   );
-  const watchFace = new THREE.CylinderGeometry(0.015, 0.015, 0.008, R(12)).rotateZ(Math.PI / 2).translate(-0.04, -0.201, 0.001);
-  const watchDial = new THREE.CylinderGeometry(0.011, 0.011, 0.002, R(12)).rotateZ(Math.PI / 2).translate(-0.0445, -0.201, 0.001);
+  const watchFace = new THREE.LatheGeometry(
+    (
+      [
+        [0, -0.004],
+        [0.012, -0.004],
+        [0.0125, 0.0012],
+        [0.0108, 0.0034],
+        [0.0088, 0.0036],
+        [0, 0.0036],
+      ] as const
+    ).map(([r, y]) => new THREE.Vector2(r, y)),
+    R(12)
+  )
+    .rotateZ(Math.PI / 2)
+    .translate(-WR - 0.0015, WATCH[0], WATCH[1]);
+  const watchDial = new THREE.CylinderGeometry(0.0086, 0.0086, 0.0016, R(12))
+    .rotateZ(Math.PI / 2)
+    .translate(-WR - 0.0047, WATCH[0], WATCH[1]);
 
-  const one = (geos: THREE.BufferGeometry[]) => (geos.length === 1 ? geos[0] : mergeGeometries(geos.map(plain))!);
 
   /* ----- The merch (single figures): the top's mark on the chest, big on the front or back, or on the sleeve; the sneakers' marks ----- */
   // Per top: its front and back, the chest spot (the wearer's left), and its sleeve (marks go on the left one, +x)
@@ -1953,32 +2338,14 @@ export function items(q: Detail, hero = false): Item[] {
       when: (o) => casual(o) && !(hero && o.shoeMark),
       pieces: both('shin', one(swoop), 'shoes', { shade: 0.6, detail: true, ...SHOE }),
     },
-    // (the puffer's high collar covers the necklace and headphones)
-    {
-      id: 'necklace',
-      when: (o) => !!o.necklace && !puffer(o),
-      pieces: [P('torso', necklace, GOLD), P('torso', pendant, '#9ff8ff')],
-    },
+    // (the puffer's high collar covers the headphones, and the necklace, below)
     {
       id: 'headphones',
       when: (o) => !!o.headphones && !puffer(o),
-      pieces: [P('torso', one(headphones), 'headphones', { detail: true })],
+      pieces: [P('torso', one(headphones), 'headphones', { detail: true }), ...(cushions.length ? [P('torso', one(cushions), 'headphones', { shade: 0.45, detail: true })] : [])],
     },
-    {
-      id: 'backpack',
-      when: (o) => !!o.backpack,
-      pieces: [P('torso', one(backpack), 'backpack', CHEST)],
-    },
-    {
-      id: 'crossbody',
-      when: (o) => !!o.crossbody,
-      pieces: [P('torso', one(crossbody), 'crossbody')],
-    },
-    {
-      id: 'board',
-      when: (o) => !!o.board,
-      pieces: [P('torso', deck, 'board', CHEST), P('torso', one(trucks), '#8b889c', { detail: true, ...CHEST }), P('torso', one(wheels), WHITE, { detail: true, ...CHEST })],
-    },
+    // (the necklace, bags, boards and wings on the top he's wearing: each top its own)
+    ...OVER,
     {
       id: 'coffee',
       held: true,
@@ -2038,19 +2405,9 @@ export function items(q: Detail, hero = false): Item[] {
       pieces: [P('head', halo, 'lens', { mat: 'neon' })],
     },
     {
-      id: 'duffel',
-      when: (o) => !!o.duffel,
-      pieces: [P('torso', one([duffelBody, duffelHandle]), 'duffel', CHEST), P('torso', one(duffelEnds), 'duffel', { shade: 0.6, ...CHEST }), P('torso', duffelStrap, 'duffel', { shade: 0.6 })],
-    },
-    {
-      id: 'wings',
-      when: (o) => !!o.wings,
-      pieces: [P('torso', one(wings.map((w) => w.plane)), 'wings', CHEST), P('torso', one(wings.map((w) => w.edge)), 'lens', { mat: 'neon', ...CHEST })],
-    },
-    {
       id: 'watch',
       when: (o) => !!o.watch && q > 0,
-      pieces: [P('foreL', one([watchBand, watchFace]), GOLD, { detail: true }), P('foreL', watchDial, '#1a1a2a', { detail: true })],
+      pieces: [P('foreL', one([watchBand, watchFace]), GOLD, { detail: true, bone: 'handL' }), P('foreL', watchDial, '#1a1a2a', { detail: true, bone: 'handL' })],
     },
     {
       id: 'phone',

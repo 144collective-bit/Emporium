@@ -1669,8 +1669,9 @@ it and has been retired completely. Build only on what's here.
   and shoes, the suit, the casual tops, the accessories) on a desktop
   detail level, phones and crowds as they are. One phase at a time with
   the owner's sign-off; keep it up to date. Phase 1 (no clipping),
-  Phase 2 (bottoms and shoes, smoother), Phase 3 (the suit, smoother) and
-  Phase 4 (the casual tops, smoother) are built:
+  Phase 2 (bottoms and shoes, smoother), Phase 3 (the suit, smoother),
+  Phase 4 (the casual tops, smoother) and Phase 5 (the accessories,
+  smoother) are built:
   - The wardrobe is data: `wardrobe.ts` (DOM-free: the outfits,
     `lookOutfit()`, the shapes and `items()`; `restSkin()` is a piece at
     rest with its bones, what `createDegen()` and the crowd skin with);
@@ -1730,6 +1731,20 @@ it and has been retired completely. Build only on what's here.
     hood down is a roll swept round the neck (`hoodDown`); zips and the
     placket are `tape()` strips (bevelled sides, a few hundred triangles),
     never outlines laid on.
+  - The accessories (Phase 5): every hat seated on the head the figure has
+    (`headRow()` / `inHead()` in body.ts): the cap and the beanie carried
+    out from the head's outline (`headShell()`), the other hats sized to it
+    (`fitTo()`), every band held just off it, brow and all (`snug()`), a
+    ring's sag added to every gap (`SAG`) so the crowd's clear it too; the
+    cap's brim from the crown's base (`brimSweep()`); the shades' arms back
+    along the head past the ear (`armPath()`), the chain hooked on them;
+    bags, boards, wings and the necklace on each top's own outline
+    (`TORSOS`, `OVER`, items `backpack-<kind>` and the rest; straps laid on
+    by `strapOver()`); the watch on the wrist riding the hand; a held
+    thing's handle in the fingers' hook (`HOOK`, `handle()`), the cup
+    against the fingers' front. `tests/accessories.test.ts` holds the hats
+    clear of the head at every level and the held things clear of the
+    fingers. The lab takes `wear=` and `at=x,y,z`.
 - **The animation rebuild** (the owner's call, critical) is planned in
   `docs/animation-plan.md`: AAA movement (Spider-Man / Ratchet feel,
   neutral athletic) from motion capture, then turns, jumps, armed
@@ -3470,7 +3485,7 @@ it and has been retired completely. Build only on what's here.
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,
   in `tests/merch.test.ts`), the crowd's baked clips (`crowdclips.ts`) and Degen's skeleton, weights, head and hands
-  (`skeleton.ts`, `body.ts`), his walking (`locomotion.ts`), the motion capture and its animation (`bvh.ts`, `mocap-build.ts`, `mocap.ts`, `movesim.ts`, `inertia.ts`, `motionmatch.ts`, `animator.ts`), the rubric of human movement over every clip and program (`human.ts`, `tests/human.test.ts`), what his body does about what he touches (`contact.ts`), the game's moments (`moments.ts`), the guns in his hands (`gunfit.ts`, `stance.ts`) and his clothes not clipping (`wardrobe.ts`, the trunk's weights in `skeleton.ts`, `tests/clothing.test.ts`). Modules that touch the DOM or `kit.ts` (canvas
+  (`skeleton.ts`, `body.ts`), his walking (`locomotion.ts`), the motion capture and its animation (`bvh.ts`, `mocap-build.ts`, `mocap.ts`, `movesim.ts`, `inertia.ts`, `motionmatch.ts`, `animator.ts`), the rubric of human movement over every clip and program (`human.ts`, `tests/human.test.ts`), what his body does about what he touches (`contact.ts`), the game's moments (`moments.ts`), the guns in his hands (`gunfit.ts`, `stance.ts`) and his clothes not clipping (`wardrobe.ts`, the trunk's weights in `skeleton.ts`, `tests/clothing.test.ts`) and his accessories where they're worn (`tests/accessories.test.ts`). Modules that touch the DOM or `kit.ts` (canvas
   textures) can't load in Node; keep data a test needs in the DOM-free
   files.
 - When you change a rule or move something in the city, run the tests and

@@ -287,6 +287,76 @@ waving.
    head, the shades, the chain and the necklace, the bags on the back, the
    watch, the things in the hand.
 
+   **Built** (28 October 2026):
+   - **Every hat seated on the head** the figure has (the hero's,
+     `headRow()` / `inHead()` in body.ts; the crowd wears it too). The
+     cap and the beanie are shells carried out from the head's own outline
+     along its normals (`headShell()`: 3 mm at the band, a little more over
+     the crown, a section every 5 mm on the desktop); the bucket, cowboy
+     and top hat keep their own shapes, sized so their bands sit 4 mm off
+     the head (`fitTo()`); and every band is held exactly off the head,
+     its brow and all (`snug()`), its own band piece snug with it so it
+     stays round the crown. Gaps take in how far a hat's ring cuts inside
+     its outline between its points (`SAG`), so a crowd's coarser hats
+     clear the head too. Before, the cap's crown stood 3.4 cm over the
+     head and its band 1-2 cm off it, the head came through the reversed
+     cap at the brow, and the bucket's brim through the shades.
+   - **The cap's brim** grows from the crown's base (`brimSweep()`: its
+     inner edge just inside the crown, out to a rounded edge, curving down
+     at the sides and pitched down in front more towards its edge), so its
+     back corners no longer stick out of the crown's sides. Reversed, the
+     crown stays seated and only the brim, the seams and the patch turn.
+   - **The crown** is a gold band resting on the head where it's wide
+     enough (`ringStrip()`: a wall with a rim and an inside, so it reads
+     solid from above), its points round its top.
+   - **The shades:** the frames bevelled on the desktop; the arms are rods
+     from the hinges back along the side of the head, outside the ear's
+     root and down behind it (`armPath()`), not boxes through the ears; the
+     chain hooks onto them (`armHook()`) and is round on the desktop.
+   - **What's worn over a top** is each top's own (`TORSOS`, `OVER`:
+     `necklace-`, `backpack-`, `crossbody-`, `board-`, `duffel-` and
+     `wings-<kind>`): a strap is a smooth line laid `lift` off that top's
+     surface (`strapOver()`: straight out from its middle front or back, up
+     over the shoulder, round the side), the puffer's and the hoodie's
+     straps further out (past the high collar, past the hood's roll). The
+     backpack's straps no longer poke out of the shoulders as spikes, and
+     on the puffer the straps, the crossbody's and the duffel's no longer
+     sink out of sight. The necklace eases out from under the collar onto
+     the chest (`tuck`).
+   - **The duffel** is a round bag with rounded ends, piping round them
+     and its handle along the top; the backpack and bags round-cornered
+     finer on the desktop.
+   - **The headphones'** cups are turned, domed with rounded edges, with
+     cushions on the desktop.
+   - **The watch** is on the wrist itself, just under the cuff, riding the
+     hand (`bone`), its band's edges rounded and its face's bezel turned;
+     before, it was a bangle over the cuff, wider than the wrist.
+   - **The things in the hand:** a handle's bar lies in the fingers' hook
+     (`HOOK`, `handle()`: the briefcase's and the boombox's, their posts
+     down past the hand's sides, the thing hanging under it); the cup sits
+     against the front of the curled fingers and the thumb with none
+     through it (before, the fingers were 1.8 cm inside it), its straw
+     leaning away from them.
+   - **The test** is `tests/accessories.test.ts`: every hat at every
+     detail level clear of the head (rays round the head at every height
+     under it) with its band within 1.8 cm, and the cup and its sleeve
+     without a finger through them, the briefcase under the hand with its
+     handle touching the fingers.
+   - **The lab** takes `wear=` (accessories: `wear=beanie,backpack:#3a7,
+     watch`, `cap:` takes the cap off) and `at=x,y,z` (the free camera on
+     a hand or a hat).
+   - **Cost**, triangles (single figure on a desktop / on a phone / near
+     crowd / far crowd): the suit with the cap and shades 28.3k → 31.3k /
+     14.7k → 15.0k / 8.3k → 8.3k / 3.3k → 3.1k; with a backpack (the
+     hoodie) 26.8k → 31.7k / 14.9k → 15.3k / 9.4k → 9.5k / 3.5k → 3.3k; a
+     duffel 26.8k → 31.7k / 14.7k → 15.3k / 9.1k → 9.3k / 3.7k → 3.5k; the
+     briefcase 28.8k → 32.3k / 15.1k → 15.5k / 8.7k → 8.7k / 3.4k → 3.2k.
+     Draw calls as they were. The boot's code 666.8 → 669.8 KB of its 670.
+   - **Left as it is:** the cup is held at the fingers' front, not wrapped
+     round (a hanging hand's fingers curl across a thing whose axis runs
+     forward; wrapping a cup needs the wrist cocked, the animation's); the
+     helmet stands off the head as a helmet does.
+
 Each phase is checked at the five widths in the character screen and the
 fitting room, in the lab, and in the city on the phone tier (nothing
 changes there but the clipping fixes) and on desktop. The tests and the
