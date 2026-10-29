@@ -39,7 +39,7 @@ import { STADIUM_LAMPS, STADIUM_RECTS, STADIUM_SPAWN } from './stadium';
 import { buildLandmarks, type Spot } from './landmarks';
 import { buildInfill } from './infill';
 import { buildNeighbourhoods } from './neighbourhoods';
-import { bodies, buildLife, walker } from './life';
+import { addTrafficBikes, bodies, buildLife, walker } from './life';
 import { createWalk } from './walk';
 import { buildGarage } from './garage';
 import { buildAirport } from './airport';
@@ -117,9 +117,9 @@ import { closedLine } from './live';
 type Tier = 'high' | 'medium' | 'low';
 
 const TIERS = {
-  high: { dpr: 2, shadows: 2048, msaa: 4, bloomScale: 0.5, cars: 38, buses: 3, walkers: 100, trees: 250, skyline: 70, rain: 6000, clouds: 12, far: 120, nearBudget: 96 },
-  medium: { dpr: 1.5, shadows: 768, msaa: 0, bloomScale: 0.5, cars: 27, buses: 2, walkers: 62, trees: 150, skyline: 50, rain: 3500, clouds: 9, far: 110, nearBudget: 64 },
-  low: { dpr: 1.25, shadows: 0, msaa: 0, bloomScale: 0.3, cars: 16, buses: 2, walkers: 15, trees: 90, skyline: 26, rain: 1200, clouds: 4, far: 90, nearBudget: 32 },
+  high: { dpr: 2, shadows: 2048, msaa: 4, bloomScale: 0.5, cars: 38, buses: 3, trucks: 4, police: 3, bikes: 6, walkers: 100, trees: 250, skyline: 70, rain: 6000, clouds: 12, far: 120, nearBudget: 96 },
+  medium: { dpr: 1.5, shadows: 768, msaa: 0, bloomScale: 0.5, cars: 27, buses: 2, trucks: 3, police: 3, bikes: 6, walkers: 62, trees: 150, skyline: 50, rain: 3500, clouds: 9, far: 110, nearBudget: 64 },
+  low: { dpr: 1.25, shadows: 0, msaa: 0, bloomScale: 0.3, cars: 16, buses: 2, trucks: 2, police: 2, bikes: 3, walkers: 15, trees: 90, skyline: 26, rain: 1200, clouds: 4, far: 90, nearBudget: 32 },
 };
 
 function pickTier(): Tier {
@@ -341,7 +341,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   await waited(nextFrame());
   // (the horns and the bus doors play through the sound, made with the controls below; one before then is dropped)
   let lifeSfx: ((kind: LifeSfx, gain: number) => void) | null = null;
-  buildLife(scene, { cars: Q.cars, buses: Q.buses, walkers: Q.walkers, light: tier === 'low', far: Q.far, sfx: (k, g) => lifeSfx?.(k, g) }, crowd, tick);
+  buildLife(scene, { cars: Q.cars, buses: Q.buses, trucks: Q.trucks, police: Q.police, bikes: Q.bikes, walkers: Q.walkers, light: tier === 'low', far: Q.far, sfx: (k, g) => lifeSfx?.(k, g) }, crowd, tick);
   // (the medium tier's smaller shadow maps a touch softer: shadows.ts)
   const sky = createSky(scene, { shadows: Q.shadows, shadowRadius: tier === 'medium' ? 1.6 : 1, rainDrops: Q.rain, clouds: Q.clouds, storms: !reduced });
   progress(0.85);
@@ -1563,7 +1563,13 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // The cars' fine detail and your car's inside (vehicle plan Phase 1): its own chunk, once the city is up
   idle(() => void import('./carfine').then((m) => m.fitCars(tier === 'low', compileFor, sky, scene)));
   // Your motorbikes' drawing (vehicle plan Phase 7): the garage's stand shows yours once it's come
-  idle(() => void import('./bikes').then((m) => garage.setBikeMaker(m.createBike)));
+  idle(() =>
+    void import('./bikes').then((m) => {
+      garage.setBikeMaker(m.createBike);
+      // (and the traffic's bikes and scooters join the road: vehicle plan Phase 8)
+      addTrafficBikes(m.bikeGeometry);
+    })
+  );
   loop();
 
   return {

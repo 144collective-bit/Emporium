@@ -296,7 +296,7 @@ export function createDrive(d: DriveDeps) {
     soft.length = 0;
     for (const v of bodies.cars) {
       if (Math.abs(v.x - s.x) > 8 || Math.abs(v.z - s.z) > 8) continue;
-      const w = CARS[v.model].W * 0.5;
+      const w = v.w * 0.5;
       const reach = v.len / 2 - w;
       const fx = Math.cos(v.yaw);
       const fz = -Math.sin(v.yaw);

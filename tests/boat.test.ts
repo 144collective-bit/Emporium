@@ -123,3 +123,18 @@ test('stepping off: alongside a landing or at the mooring, and stopped', () => {
   }
   assert.equal(leaveAt(newBoat({ x: -10, z: 101, yaw: 0 })), null, 'not in mid-river');
 });
+
+test('the bow throws spray only going fast, most at full speed; the wake grows with speed, its arms at the Kelvin angle', async () => {
+  const { KELVIN, SPRAY, TUNE: T, sprayOf, wakeShape } = await import('../src/scripts/city3d/boat-sim');
+  assert.equal(sprayOf(0), 0);
+  assert.ok(sprayOf(T.top * SPRAY.from) < 1e-9);
+  assert.equal(sprayOf(T.top), 1);
+  assert.ok(sprayOf(T.top * 0.8) > 0 && sprayOf(T.top * 0.8) < 1);
+  assert.ok(sprayOf(-T.top) === 1, 'astern too (by its speed)');
+  assert.equal(wakeShape(0.1).opacity, 0, 'no wake at a crawl');
+  const slow = wakeShape(T.top * 0.3);
+  const fast = wakeShape(T.top);
+  assert.ok(fast.len > slow.len && fast.arms > slow.arms && fast.opacity > slow.opacity);
+  assert.ok(Math.abs(KELVIN * (180 / Math.PI) - 19.47) < 0.01);
+  assert.equal(fast.spread, KELVIN);
+});

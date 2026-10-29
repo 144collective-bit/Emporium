@@ -35,7 +35,7 @@
 import * as THREE from 'three';
 import { BONES, NECK_SHARE, SPINE_SHARE, makeSkeleton, newPose, poseSkeleton, reachArm, type Limb, type Pose, type Skeleton } from './skeleton';
 import { HURRY, PHONE, PHONE_GLANCE_YAW, kerbLook, phoneGlance } from './pedestrians';
-import { CHESS, CHESS_SECONDS, COOK, EAT, EAT_SECONDS, FISH, GUARD, LOUNGE_SECONDS, PEDAL, PEDAL_SECONDS, ROW, ROW_SECONDS, SERVE, SHOOT, SWING, SWING_SECONDS, chessPose, cookOver, eatPose, fishOver, guardOver, loungePose, pedalPose, rowPose, serveOver, shootOver, swingPose } from './acts';
+import { ridePose, CHESS, CHESS_SECONDS, COOK, EAT, EAT_SECONDS, FISH, GUARD, LOUNGE_SECONDS, PEDAL, PEDAL_SECONDS, ROW, ROW_SECONDS, SERVE, SHOOT, SWING, SWING_SECONDS, chessPose, cookOver, eatPose, fishOver, guardOver, loungePose, pedalPose, rowPose, serveOver, shootOver, swingPose } from './acts';
 import { copyPose, createLocomotion } from './locomotion';
 import { attentionPose, chatPose, idlePose, lookPose, picnicPose, set, sitPose } from './poses';
 import { baked as atBuild } from './baked';
@@ -68,6 +68,9 @@ export type CrowdClip =
   | 'pedal'
   | 'shoot'
   | 'swing'
+  | 'scoot'
+  | 'ride'
+  | 'tuck'
   | 'salute';
 /** What an idle person in the city is doing (life.ts picks their row from it; 'queue' is their own idle) */
 export type IdleAct = 'look' | 'chat' | 'sit' | 'queue' | 'phone' | 'serve' | 'cook' | 'fish' | 'guard' | 'eat' | 'chess' | 'lounge';
@@ -305,6 +308,11 @@ export const CLIP_DEFS: Record<CrowdClip, ClipDef> = {
   pedal: { frames: 18, loop: true, grip: PEDAL.grip, sample: looped(pedalPose, PEDAL_SECONDS), seconds: PEDAL_SECONDS },
   // A kid on a swing (step 4)
   swing: { frames: 26, loop: true, grip: SWING.grip, sample: looped(swingPose, SWING_SECONDS), seconds: SWING_SECONDS },
+  // Riding in the traffic (vehicle plan Phase 8): astride a scooter, a street bike, a sport bike (acts.ts `ridePose()`),
+  // the left foot coming down (0 riding, 1 stopped)
+  scoot: { frames: 5, loop: false, grip: 0.8, sample: (u, p) => ridePose(p, 'scooter', u) },
+  ride: { frames: 5, loop: false, grip: 0.8, sample: (u, p) => ridePose(p, 'streetbike', u) },
+  tuck: { frames: 5, loop: false, grip: 0.8, sample: (u, p) => ridePose(p, 'sportbike', u) },
   // Attention (0) to the free hand at the brow (1), the rifle in the left hand
   salute: { frames: 9, loop: false, grip: RIFLE, sample: (u, p) => attentionPose(p, u, 'left') },
 };

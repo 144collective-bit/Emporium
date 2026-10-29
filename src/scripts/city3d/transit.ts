@@ -147,9 +147,10 @@ export const newBus = (): Bus => ({ at: -1, dwell: 0, left: -1 });
 /**
  * One frame of a bus's stops: `p` is its front along the route, `v` its
  * speed. Returns how fast it may go (Infinity: no stop ahead) and what the
- * doors did this frame.
+ * doors did this frame. A delivery truck takes its loading bays the same way,
+ * standing longer (fleet.ts `BAY_DWELL`).
  */
-export function busStep(b: Bus, p: number, v: number, len: number, stops: readonly RouteStop[], dt: number, seed: number): { cap: number; doors: 'open' | 'shut' | null } {
+export function busStep(b: Bus, p: number, v: number, len: number, stops: readonly RouteStop[], dt: number, seed: number, dwell: readonly [number, number] = DWELL): { cap: number; doors: 'open' | 'shut' | null } {
   if (!stops.length) return { cap: Infinity, doors: null };
   if (b.at >= 0) {
     b.dwell -= dt;
@@ -173,7 +174,7 @@ export function busStep(b: Bus, p: number, v: number, len: number, stops: readon
   if (next < 0 || ahead > APPROACH) return { cap: Infinity, doors: null };
   if (ahead < 0.5 && v < 0.05) {
     b.at = next;
-    b.dwell = DWELL[0] + (DWELL[1] - DWELL[0]) * seed;
+    b.dwell = dwell[0] + (dwell[1] - dwell[0]) * seed;
     return { cap: 0, doors: 'open' };
   }
   return { cap: Math.max(0, (ahead - 0.3) * 1.3), doors: null };
