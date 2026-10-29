@@ -1202,6 +1202,17 @@ it and has been retired completely. Build only on what's here.
   quay (`EL_STATION`), the line north over the river on the arch along
   `EL_X` and east along the north bank avenue into Uptown (the metro,
   above). Made-up names only.
+- **Sunridge** (the owner's call, planned, nothing built yet): a middle-class
+  suburb of about 120 Southwest stucco tract houses on the north-east land
+  inside the ring highway (curving loops and cul-de-sacs, block-walled back
+  yards with pools, a park, a school, a community pool and clubhouse),
+  planned in `docs/suburb-plan.md` in phases, each with the owner's sign-off;
+  keep it up to date. Made-up names only, under the Emporium.
+- **The raised highway** (the owner's call, planned, nothing built yet): the
+  ring highway rebuilt on a concrete viaduct with real exits (diamond
+  interchanges, numbered, made-up names on the gantries) and traffic that
+  uses its ramps, planned in `docs/highway-plan.md` in phases, each with the
+  owner's sign-off; keep it up to date.
 - **Sector 7 Central, the grand station, was retired** (the owner's call:
   the metro is the city's rail): no mainline station, trains or tracks west
   of the ring highway; the land there is open again. Don't bring it back
