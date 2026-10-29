@@ -26,6 +26,7 @@ import { ESTATES, gardenPalmsOf, inGateway, toWorld } from './estates';
 import { onMansion } from './mansions';
 import { HOTEL_PALMS, inHotelDrive, onSite } from './crestsites';
 import { underSpur } from './metro';
+import { onLand } from './crestland';
 
 type Pt = [number, number];
 
@@ -141,6 +142,7 @@ const CELL = 10;
 const HILL_PALMS = PALMS.filter((p) => p.z < HILLS.foot.z);
 const plantable = (x: number, z: number, m: number) =>
   !onMansion(x, z, m * 0.5) &&
+  !onLand(x, z, m * 0.5) &&
   !onSite(x, z, m * 0.5) &&
   z < HILLS.foot.z - 2 && x > TERRAIN_RECT[0] + 4 && !nearHillRoad(x, z, BED.shoulder + m) && HILL_PALMS.every((p) => Math.hypot(p.x - x, p.z - z) > 2.5) && slopeAt(x, z) < 0.9;
 

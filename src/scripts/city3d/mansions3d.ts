@@ -30,9 +30,13 @@ const TERRACOTTA = toon('#c97b56');
 const STEEL = toon('#1e1d22');
 const WOOD = toon('#5a3a26');
 const GLASS_RAIL = toon('#a9dcef');
-const HEDGE = toon('#2f6a3a');
 const LOUNGER = toon('#f1ede2');
 const LAMP = neon('#ffe2a8', 0.2, 1.3);
+const GUTTER = toon('#2d2c33');
+const SHUTTER = toon('#4f7a5a');
+const FRONT_DOOR = toon('#1d2a4a');
+const GOLD = toon('#c9a54a');
+const LED = neon('#fff0d0', 0.15, 1.4);
 
 /** The frame: local +x along its front, +y up from the pad, +z out to the road (a turn, never a mirror) */
 function frameOf(m: Mansion) {
@@ -54,7 +58,7 @@ export function registerMansions(low: boolean, scene: THREE.Scene | null) {
       const add = (g: THREE.BufferGeometry, mat: THREE.Material) => b.add(g.applyMatrix4(M), mat);
       const box = (u0: number, y0: number, v0: number, u1: number, y1: number, v1: number, mat: THREE.Material) =>
         add(new THREE.BoxGeometry(Math.abs(u1 - u0), y1 - y0, Math.abs(v1 - v0)).translate((u0 + u1) / 2, (y0 + y1) / 2, (v0 + v1) / 2), mat);
-      const pane = (u: number, v: number, n: [number, number], w: number, y: number, h: number, mat: THREE.Material = WINDOW, arch = false, rep = 0) => {
+      const pane = (u: number, v: number, n: [number, number], w: number, y: number, h: number, mat: THREE.Material = WINDOW, arch = false, rep = 0, off = 0.012) => {
         let g: THREE.BufferGeometry;
         if (arch) {
           const s = new THREE.Shape();
@@ -73,7 +77,7 @@ export function registerMansions(low: boolean, scene: THREE.Scene | null) {
           }
           g.translate(0, y + h / 2, 0);
         }
-        add(g.rotateY(Math.atan2(n[0], n[1])).translate(u + n[0] * 0.012, 0, v + n[1] * 0.012), mat);
+        add(g.rotateY(Math.atan2(n[0], n[1])).translate(u + n[0] * off, 0, v + n[1] * off), mat);
       };
       /** The ground's height in the frame, over the pad */
       const ground = (u: number, v: number) => heightAt(...toWorld(m, u, v)) - m.y;
@@ -113,12 +117,40 @@ export function registerMansions(low: boolean, scene: THREE.Scene | null) {
           const u = m.du + s * (WALL.gate + 0.3);
           box(u - 0.3, -0.2, -0.3, u + 0.3, 2.2, -0.9, STONE);
           add(new THREE.SphereGeometry(0.13, 8, 6).translate(u, 2.45, -0.6), BULB);
-          b.detail(() => box(m.du + s * (WALL.gate - 0.05) - 0.03, 0.1, -1, m.du + s * (WALL.gate - 0.05) + 0.03, 1.7, -2.4, STEEL));
+          // (its gates, swung open: rails, bars and spear tops)
+          b.detail(() => {
+            const gu = m.du + s * (WALL.gate - 0.05);
+            for (const y of [0.15, 1.5]) box(gu - 0.025, y, -1, gu + 0.025, y + 0.05, -2.4, STEEL);
+            if (!low) for (let k = 0; k <= 9; k++) box(gu - 0.015, 0.15, -1 - (k * 1.4) / 9 - 0.015, gu + 0.015, 1.62 + (k % 2) * 0.08, -1 - (k * 1.4) / 9 + 0.015, STEEL);
+          });
         }
 
       /* ---------- The house ---------- */
       const wall = kind === 'villa' ? OCHRE : kind === 'summit' ? STONE : WHITE;
       const roof = kind === 'summit' ? SLATE : TILE;
+      /** A window and, near, its surround or sill, its glazing bars, a summit's shutters */
+      const win = (u: number, v: number, n: [number, number], w: number, y: number, h: number, arch: boolean, front: boolean) => {
+        pane(u, v, n, w, y, h, WINDOW, arch, 0, 0.035);
+        b.detail(() => {
+          const along: [number, number] = [n[1], -n[0]];
+          const on = (a0: number, a1: number, o0: number, o1: number, y0: number, y1: number, mat: THREE.Material) => {
+            const [p0, p1] = [
+              [u + along[0] * a0 + n[0] * o0, v + along[1] * a0 + n[1] * o0],
+              [u + along[0] * a1 + n[0] * o1, v + along[1] * a1 + n[1] * o1],
+            ];
+            box(Math.min(p0[0], p1[0]), y0, Math.min(p0[1], p1[1]), Math.max(p0[0], p1[0]), y1, Math.max(p0[1], p1[1]), mat);
+          };
+          if (!arch) on(-w / 2 - 0.07, w / 2 + 0.07, 0, 0.03, y - 0.07, y + h + 0.07, kind === 'summit' ? STONE_SHADE : WOOD);
+          else on(-0.06, 0.06, 0, 0.045, y + h - 0.02, y + h + 0.14, STONE_SHADE);
+          on(-w / 2 - 0.1, w / 2 + 0.1, 0, 0.1, y - 0.12, y - 0.04, STONE_SHADE);
+          if (low) return;
+          const top = arch ? h - w / 2 : h;
+          const [nu, nv] = kind === 'summit' ? [2, 2] : [1, 1];
+          for (let k = 1; k <= nu; k++) on(-w / 2 + (k * w) / (nu + 1) - 0.015, -w / 2 + (k * w) / (nu + 1) + 0.015, 0.035, 0.05, y, y + top, kind === 'summit' ? WHITE : WOOD);
+          for (let k = 1; k <= nv; k++) on(-w / 2, w / 2, 0.035, 0.05, y + (k * top) / (nv + 1) - 0.015, y + (k * top) / (nv + 1) + 0.015, kind === 'summit' ? WHITE : WOOD);
+          if (front && (kind === 'summit' || kind === 'villa')) for (const s of [-1, 1]) on(s * (w / 2 + 0.06), s * (w / 2 + 0.38), 0, 0.06, y, y + h, kind === 'summit' ? STEEL : SHUTTER);
+        });
+      };
       for (const p of m.parts) {
         const top = STOREY.ground + (p.floors - 1) * STOREY.upper;
         const w = p.u1 - p.u0;
@@ -127,35 +159,69 @@ export function registerMansions(low: boolean, scene: THREE.Scene | null) {
           continue;
         }
         box(p.u0, 0, p.v0, p.u1, top, p.v1, wall);
+        box(p.u0 - 0.04, 0, p.v0 + 0.04, p.u1 + 0.04, 0.3, p.v1 - 0.04, STONE_SHADE);
         const n = Math.max(1, Math.floor(w / 1.8));
+        const isMain = p === m.parts[0];
         for (let f = 0; f < p.floors; f++) {
           const y = f === 0 ? 0.5 : STOREY.ground + (f - 1) * STOREY.upper + 0.4;
           for (let i = 0; i < n; i++) {
             const u = p.u0 + ((i + 0.5) * w) / n;
-            if (f === 0 && p === m.parts[0] && Math.abs(u - (p.u0 + p.u1) / 2) < w / n / 2) continue;
+            if (f === 0 && isMain && Math.abs(u - (p.u0 + p.u1) / 2) < w / n / 2) continue;
             const arch = kind !== 'summit' && f === 0;
-            pane(u, p.v0, [0, 1], 0.85, y, arch ? 1.3 : 1.1, WINDOW, arch);
-            pane(u, p.v1, [0, -1], 0.85, y, arch ? 1.3 : 1.1, WINDOW, arch);
+            win(u, p.v0, [0, 1], 0.85, y, arch ? 1.3 : 1.1, arch, true);
+            win(u, p.v1, [0, -1], 0.85, y, arch ? 1.3 : 1.1, arch, false);
           }
-          for (const s of [-1, 1]) pane(s < 0 ? p.u0 : p.u1, (p.v0 + p.v1) / 2, [s, 0], 0.85, y, 1.1);
+          for (const s of [-1, 1]) win(s < 0 ? p.u0 : p.u1, (p.v0 + p.v1) / 2, [s, 0], 0.85, y, 1.1, false, false);
+        }
+        // (the garden doors on the main block's back)
+        if (isMain) {
+          const cu = (p.u0 + p.u1) / 2;
+          pane(cu, p.v1, [0, -1], 1.5, 0.06, 1.85, WINDOW, false, 0, 0.035);
+          b.detail(() => {
+            box(cu - 0.83, 0, p.v1 - 0.03, cu + 0.83, 1.98, p.v1, kind === 'summit' ? WHITE : WOOD);
+            box(cu - 0.025, 0.06, p.v1 - 0.05, cu + 0.025, 1.91, p.v1 - 0.035, kind === 'summit' ? WHITE : WOOD);
+          });
         }
         if (p.flat) {
           // (the summit's tower: a flat roof and a glass lantern)
           box(p.u0 - 0.1, top, p.v0 + 0.1, p.u1 + 0.1, top + 0.35, p.v1 - 0.1, STONE_SHADE);
           box(p.u0 + 0.5, top + 0.35, p.v0 - 0.5, p.u1 - 0.5, top + 1.3, p.v1 + 0.5, GLASS_RAIL);
           box(p.u0 + 0.4, top + 1.3, p.v0 - 0.4, p.u1 - 0.4, top + 1.42, p.v1 + 0.4, STONE_SHADE);
+          b.detail(() => {
+            for (const [a, c] of [[p.u0 + 0.5, p.v0 - 0.5], [p.u1 - 0.5, p.v0 - 0.5], [p.u0 + 0.5, p.v1 + 0.5], [p.u1 - 0.5, p.v1 + 0.5]]) box(a - 0.05, top + 0.35, c - 0.05, a + 0.05, top + 1.3, c + 0.05, STEEL);
+            add(new THREE.SphereGeometry(0.12, 8, 6).translate((p.u0 + p.u1) / 2, top + 0.85, (p.v0 + p.v1) / 2), LAMP);
+          });
         } else {
           const [r, soffit] = hip(p.u0, p.v0, p.u1, p.v1, top, 1.3, 0.4);
           add(r, roof);
           add(soffit, WOOD);
+          b.detail(() => {
+            for (const v of [p.v0 + 0.38, p.v1 - 0.38]) box(p.u0 - 0.4, top - 0.08, v - 0.05, p.u1 + 0.4, top + 0.02, v + 0.05, GUTTER);
+          });
+          // (a chimney on the main block, rendered, or stone at the summit)
+          if (isMain) {
+            const cu = p.u0 + 1.1;
+            box(cu - 0.32, top, p.v1 + 1.5, cu + 0.32, top + 1.75, p.v1 + 0.86, kind === 'summit' ? STONE_SHADE : wall);
+            box(cu - 0.38, top + 1.75, p.v1 + 1.56, cu + 0.38, top + 1.87, p.v1 + 0.8, kind === 'summit' ? SLATE : TILE);
+          }
         }
       }
-      // The front door, on the main block's front
+      // The front door, on the main block's front; a step before it; a villa's balcony over it
       const main = m.parts[0];
       const fu = (main.u0 + main.u1) / 2;
       if (kind !== 'glass') {
         box(fu - 0.85, 0, main.v0, fu + 0.85, 2.05, main.v0 + 0.08, STONE_SHADE);
-        pane(fu, main.v0 + 0.08, [0, 1], 1.2, 0.05, 1.85, WOOD, kind !== 'summit');
+        pane(fu, main.v0 + 0.08, [0, 1], 1.2, 0.05, 1.85, kind === 'summit' ? FRONT_DOOR : WOOD, kind !== 'summit');
+        b.detail(() => {
+          box(fu - 0.95, 0, main.v0 + 0.08, fu + 0.95, 0.1, main.v0 + 0.55, STONE);
+          box(fu + 0.36, 0.95, main.v0 + 0.1, fu + 0.42, 1.06, main.v0 + 0.15, GOLD);
+          if (kind === 'villa' || kind === 'compound') {
+            const y = STOREY.ground + 0.25;
+            box(fu - 1.1, y - 0.1, main.v0, fu + 1.1, y, main.v0 + 0.6, STONE);
+            box(fu - 1.1, y + 0.72, main.v0 + 0.5, fu + 1.1, y + 0.8, main.v0 + 0.6, STONE);
+            if (!low) for (let u = fu - 1.0; u <= fu + 1.01; u += 0.16) box(u - 0.035, y, main.v0 + 0.52, u + 0.035, y + 0.72, main.v0 + 0.58, STONE);
+          }
+        });
       }
       b.detail(() => {
         for (const s of [-1, 1]) add(new THREE.SphereGeometry(0.08, 6, 4).translate(fu + s * 1.05, 1.7, main.v0 + (kind === 'glass' ? 0.2 : 0.14)), LAMP);
@@ -167,12 +233,7 @@ export function registerMansions(low: boolean, scene: THREE.Scene | null) {
         const lo = Math.min(ground(-W / 2 + 1, v1), ground(W / 2 - 1, v1), ground(0, v1), top) - 0.6;
         box(-W / 2 + 1, lo, v0, W / 2 - 1, top, v1, STONE_SHADE);
         add(new THREE.PlaneGeometry(W - 2.2, Math.abs(v1 - v0) - 0.2).rotateX(-Math.PI / 2).translate(0, top + 0.006, (v0 + v1) / 2), TERRACOTTA);
-        b.detail(() => {
-          for (const u of [-W / 2 + 2, 0, W / 2 - 2]) {
-            box(u - 0.25, top, v1 + 0.45, u + 0.25, top + 0.4, v1 + 0.95, TERRACOTTA);
-            add(new THREE.IcosahedronGeometry(0.32, 1).translate(u, top + 0.7, v1 + 0.7), HEDGE);
-          }
-        });
+        // (planted as a vineyard: crestgardens3d.ts)
       });
 
       /* ---------- The pool ---------- */
@@ -203,6 +264,16 @@ export function registerMansions(low: boolean, scene: THREE.Scene | null) {
         for (const s of [-1, 1]) box(s < 0 ? p.u0 - 0.4 : p.u1 + 0.2, g0 + 0.25, p.v0 + 0.6, s < 0 ? p.u0 - 0.2 : p.u1 + 0.4, top - 0.2, back, WHITE);
         pane((p.u0 + p.u1) / 2, p.v0 + 0.6, [0, 1], p.u1 - p.u0 + 0.4, g0 + 0.25, top - g0 - 0.45, CURTAIN, false, 3.2);
         pane((p.u0 + p.u1) / 2, back, [0, -1], p.u1 - p.u0 + 0.4, g0 + 0.25, top - g0 - 0.45, CURTAIN, false, 3.2);
+        b.detail(() => {
+          // (the glass bands' mullions; a strip of light under the cantilever's soffit)
+          for (let u = p.u0 - 0.2; u <= p.u1 + 0.21; u += (p.u1 - p.u0 + 0.4) / Math.max(3, Math.round((p.u1 - p.u0) / 1.2)))
+            for (const [v, n] of [
+              [p.v0 + 0.6, 1],
+              [back, -1],
+            ] as [number, number][])
+              box(u - 0.03, g0 + 0.25, v, u + 0.03, top - 0.2, v + n * 0.04, STEEL);
+          box(p.u0 - 0.35, g0 - 0.02, p.v0 + 0.5, p.u1 + 0.35, g0 + 0.005, p.v0 + 0.56, LED);
+        });
         // (the legs under its far end, down to the slope)
         for (const u of [p.u0 + 0.3, p.u1 - 0.3]) {
           const lo = ground(u, back + 0.4) - 0.3;

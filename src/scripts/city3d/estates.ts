@@ -11,7 +11,8 @@
  *   `GATE`), the drive in to a paved forecourt with a fountain (`FOUNTAIN`) and sometimes a car (`ESTATE_CARS`), the
  *   house (`House`: its main block, a wing on some, a villa's tower) in its style (`EstateStyle`: Spanish Colonial,
  *   a Mediterranean villa, Tudor, Georgian, white modern), the garden behind with its pool (`pool`), two date palms
- *   either side of the forecourt (landscape.ts `PALMS`).
+ *   either side of the forecourt (landscape.ts `PALMS`), a garage in the wing with its apron off the forecourt
+ *   (`motorCourt()`; the palms and the gardeners keep off it). Its garden is crestgardens.ts's.
  * - `ESTATE_SOLIDS` (in `SOLIDS`): the houses, hedges, piers, fountains, pools and cars.
  *
  * Every top under the Emporium (`TALLEST`). No real homes or people. Fixed world numbers north of the river.
@@ -134,7 +135,8 @@ function lots(): Estate[] {
         const gd = D + g0 - 0.6;
         const pd = Math.min(2.2, Math.max(1.2, gd - 1.6));
         const pl = Math.min(5.4, mw - 0.6);
-        const pv0 = g0 - Math.max(0.8, (gd - pd) / 2);
+        // (a deep lot's near the house, its garden past it: crestgardens.ts)
+        const pv0 = g0 - (gd > 6 ? 1 : Math.max(0.8, (gd - pd) / 2));
         out.push({
           id: `estate-${out.length}`,
           block: id,
@@ -198,12 +200,25 @@ export function hedgesOf(e: Estate): [number, number, number, number][] {
 export const piersOf = (e: Estate): Pt[] => [-1, 1].map((s): Pt => [e.hc + s * (GATE.half + GATE.pier), -HEDGE.front - HEDGE.thick / 2]);
 /** The fountain's middle in its frame */
 export const fountainOf = (e: Estate): Pt => [e.hc, (e.court[0] + e.court[1]) / 2];
-/** The forecourt's date palms in its frame: either side of it where there's room, clear of the house */
+/** Which side of the main block its wing is (along u), or 0 */
+export const wingSide = (e: Estate) => (e.house.wing ? Math.sign(e.house.wing.u0 + e.house.wing.u1 - 2 * e.hc) : 0);
+/** The apron before the wing's garage, off the forecourt (`APRON` deep from the wing's front)  */
+export const APRON = 1.9;
+/** The apron before the wing's garage (u0, v0, u1, v1: the forecourt carried across to the wing's far side, `APRON` out from its front), or null */
+export function motorCourt(e: Estate): [number, number, number, number] | null {
+  const w = e.house.wing;
+  if (!w) return null;
+  const s = wingSide(e);
+  return s > 0 ? [e.hc + COURT_HALF, w.v0, w.u1, w.v0 + APRON] : [w.u0, w.v0, e.hc - COURT_HALF, w.v0 + APRON];
+}
+/** Inside a frame rect (u0, v0, u1, v1), padded `m` */
+export const inFrame = (r: readonly number[] | null, u: number, v: number, m = 0) => !!r && u > r[0] - m && u < r[2] + m && v > r[1] - m && v < r[3] + m;
+/** The forecourt's date palms in its frame: either side of it where there's room, clear of the house and the motor court */
 export const gardenPalmsOf = (e: Estate): Pt[] =>
   [-1, 1]
     .map((s): Pt => [Math.max(-e.W / 2 + 1.3, Math.min(e.W / 2 - 1.3, e.hc + s * (COURT_HALF + 1.1))), -HEDGE.front - HEDGE.thick - 1.6])
-    // (where there's room beside the forecourt)
-    .filter(([u]) => Math.abs(u - e.hc) > COURT_HALF + 0.6);
+    // (where there's room beside the forecourt, not in front of the garage)
+    .filter(([u, v]) => Math.abs(u - e.hc) > COURT_HALF + 0.6 && !inFrame(motorCourt(e), u, v, 0.5));
 
 /* ---------- The cars on the forecourts ---------- */
 
