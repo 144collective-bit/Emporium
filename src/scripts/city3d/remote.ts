@@ -24,7 +24,7 @@
  * as a jump, not a slide across the city.
  */
 import * as THREE from 'three';
-import { createDegen, lookOutfit, type Degen } from './character';
+import { HOLDING, RELAXED, createDegen, lookOutfit, type Degen } from './character';
 import { copyPose, createLocomotion, placeRoot, type Locomotion, type Root } from './locomotion';
 import type { Animator } from './animator';
 import type { MoData } from './mocap';
@@ -386,6 +386,11 @@ export function createRemotes(scene: THREE.Scene, camera: THREE.PerspectiveCamer
         const look = THREE.MathUtils.clamp((0.35 - pitch) * 0.6, -0.45, 0.55);
         P.headPitch = THREE.MathUtils.lerp(P.headPitch, look, free);
         P.headYaw *= 1 - free;
+        // (their hands as the playing take closes them, as the player's)
+        if (r.anim && r.mocapW > 0 && !P.grip) {
+          const g = RELAXED + (r.anim.grip - RELAXED) * r.mocapW;
+          P.grip = [g, r.fig.held?.visible ? Math.max(g, HOLDING) : g];
+        }
         r.fig.update();
         // ...with a gun in hand the animator gives only the legs and hips: their own upper body over them, as the player's
         r.upperW = THREE.MathUtils.clamp(r.upperW + (holding || (r.emote && !dancing) ? dt / 0.15 : -dt / 0.15), 0, 1);

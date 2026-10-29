@@ -1042,7 +1042,7 @@ What it built (and how it differs from the plan):
   clips now pass the rubric; a capture pass is a data step for later, with
   the owner.
 
-### Phase 8: polish and feel
+### Phase 8: polish and feel (built, for the owner's sign-off)
 
 - Follow-through: the head and neck a few frames behind the chest in
   turns, the hands relaxed per clip (a grip per take in `takes.json`), the
@@ -1052,6 +1052,60 @@ What it built (and how it differs from the plan):
 - Phones: the step-down order measured on a real phone; what's left out on
   the low tier written here.
 - `locomotion.ts` retired once nothing uses it (`reachLeg()` lives on).
+
+What it built (and how it differs from the plan):
+
+- **The hands per take:** every take in `takes.json` says its `grip` (how far
+  the hands close: 0.25 standing, 0.3 walking, the strafes and the stairs,
+  0.4 crouched, 0.5 in the jumps, 0.55 running), carried in the clips file
+  (format 4: a byte a clip, `MoClip.grip`, kept through the mirror and the
+  loops). The animator eases to the playing take's (`GRIP`: a half-life of
+  0.12 s, `base` 0.3, the figure's relaxed hand, where a take doesn't say;
+  `animator.grip`), and walk mode, other players and the lab give it to the
+  figure as `Pose.grip` unless something's in the hands (a gun's hold, the
+  fists; the right hand holds anything carried as before). The lab's
+  readout shows it (Hands).
+- **Follow-through** (`follow.ts`, DOM-free, `tests/follow.test.ts`): the
+  chest's way in the world (`chestYaw()` in animator.ts, the hips up through
+  the spine, plus the way he's drawn) followed by a lagging copy (`FOLLOW`:
+  a half-life of 0.06 s), the head and neck turned back towards it by 0.6
+  of the gap, at most 0.22 (`addLook()`): a turn at 3 rad/s trails the head
+  about 0.16 rad, four or five frames; caught up within a quarter second
+  of stopping; nothing standing; a jump taken at once. The step's shoulder
+  swing is steadied a little at the head the same way. Not with a gun in
+  his hands (the hold has the head), not in first person. The gaze still
+  leads planned turns (Phase 2); the follow-through is the carry-on on top.
+- **The camera reviewed:** the third-person dip on a landing fires on the
+  touchdown frame, as the animator's squash starts, and the dip on a hard
+  stop follows the springs' deceleration (the stop's weight in the capture
+  arrives with the match, about 0.1 s later, and the dip's spring peaks
+  after it): both kept. What didn't fit: in first person the eye's step bob
+  ran on the procedural walk's phase, out of step with the capture's feet,
+  and a landing didn't dip it at all. Now, on the capture, the eye rides
+  the hips' rise and fall, high-passed (`hipMean`: each step's bob and a
+  landing's squash, not the crouch, which lowers the eye itself), `FP_BOB`
+  0.7 of it; the procedural bob only while the capture isn't in. Off under
+  reduced motion.
+- **Phones, as built:** single figures at detail 2 (the desktop's 3: finer
+  clothes and tailoring); the contact layer without the hands and the lean
+  (`createContact({ hands: false })`); the crowd near within 8 tiles, not
+  12, without its small details, every other idle person in The Trenches
+  and downtown left out, 15 walkers; the quality step-down (pixels, then
+  shadows, then bloom; never the outlines) leaves the animation alone. The
+  measurement on a real phone is still the owner's: `?bench` on a phone
+  before this merges.
+- **`locomotion.ts` stays:** the player's upper body under a gun's hold is
+  still its pose (walk.ts copies it, then `holdGun()`), as are other
+  players' and the fighters' before the capture's in, the crowd's `march`
+  row is baked from it, and the lab compares against it. Retiring it needs
+  the gun's upper body from capture (an armed walk take) and a captured
+  march: data steps. Its `reachLeg()` re-export is no longer used by the
+  emotes (they take it from skeleton.ts).
+- **Held back:** the collarbones from capture. CMU's shoulder joint sits at
+  the neck in this conversion (Phase 1's finding: aligned to it the
+  collarbones shrugged 37°), so the actor's shoulder motion can't be read
+  apart from the neck's; the collarbones stay level with the fixed shrug
+  taken out.
 
 ## The data: candidates from CMU
 
