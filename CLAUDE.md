@@ -289,26 +289,32 @@ it and has been retired completely. Build only on what's here.
     street to Uptown station, `UP_END`; `branch` straight
     on from the switch down the avenue's median, then (since the airport's
     Phase 3 step 2) a bend east (`BRANCH`) over the airport's old land and
-    the highway to Airport Station by Airport Drive, `AIRPORT_END`; runs on
-    the branch and out to Uptown go faster, `TRAIN.express`, `speedOf()`); a place
+    the highway to Airport Station by Airport Drive, `AIRPORT_END`; and
+    `crest` (Crestmont's Phase 9): off the main line just south of Kart Park
+    station (`CREST_S`), east between Kart Road and the highway, round
+    outside the highway's north-east corner and south to Crestmont station
+    past Alder Way (`CREST`, `CREST_END`; nothing grows under it,
+    `SPUR_CLEAR`), facing north, so its runs but Kart Park's turn round
+    there; runs on the branch, the spur and out to Uptown go faster, `TRAIN.express`, `speedOf()`); a place
     on them is a track and a distance (`pointOn()`, `along()`, `sideOf()`);
     pillars wherever the ground is clear (`PILLARS`: an avenue's median
     clear of its junctions, or open land off every road; over the river
     only on Harbour Bridge's median, where they're steel posts from its
     deck, river plan step 2);
-    six stations (`STATIONS`: Kart Park, Downtown, South Bank, The
-    Trenches, Airport, Uptown; each a track and distance, a platform on the
+    seven stations (`STATIONS`: Kart Park, Downtown, South Bank, The
+    Trenches, Airport, Uptown, Crestmont; each a track and distance, a platform on the
     track's left (`PLATFORM_SIDE`; Uptown's on its right, `side`,
     `sideAt()`), a stair tower with its door at street level and the way
     out of it, `face`; Uptown's on the plaza's café terrace), `METRO_SOLIDS`
     (in `SOLIDS`: pillars, portal legs, towers), the train
     (`TRAIN`, two cars) on a timetable from the clock (`trainAt()`, `LEGS`:
-    down to South Bank, out through The Trenches to Uptown and back, out to
+    from Crestmont to Kart Park, down to South Bank, out through The Trenches to Uptown and back, out to
     the Airport and back, up again; `ROUND_TRIP`), runs as pieces of track (`runsBetween()`,
     `placeOn()`, `carAt()`: each car on the track where it is, round the
     bend), rides straight between stations (`rideAt()`, turning round at
-    South Bank between the west and the Airport; at most about 51 s, Uptown
-    to the Airport)
+    South Bank between the west and the Airport, at Kart Park from
+    Crestmont; at most about 51 s, Uptown to the Airport, but Crestmont's,
+    up to about 70 s from The Trenches)
     and back on the timetable after (`timetableAt()`). Drawn by `metro3d.ts`
     (the deck in short straight pieces between its pillars, portals and
     hangers, rails, parapets
@@ -1137,7 +1143,9 @@ it and has been retired completely. Build only on what's here.
   (`POOL` in estates3d.ts); its sound (ambience.ts `crest`, `CREST_HUM`:
   sprinklers by day, crickets at night, birds and the owl as the park's);
   drawn by `crestlife3d.ts` (the dogs' shape is `dogs3d.ts`, the park's
-  too). Made-up names only.
+  too). Phase 9 (getting there) is built: its places on the world map,
+  taxis and fast travel (from Phase 7), and the metro's Crestmont spur and
+  station (`crest` in metro.ts, above under the metro). Made-up names only.
 - **Sector 7 Central, the grand station, was retired** (the owner's call:
   the metro is the city's rail): no mainline station, trains or tracks west
   of the ring highway; the land there is open again. Don't bring it back
@@ -1397,7 +1405,7 @@ it and has been retired completely. Build only on what's here.
   side is the quick swap with a fade (`QUICK_FADE`), reduced motion the
   quick swap without; at home the turntable is stood on to get in
   (`isTurntable()`, `DISC`). Keep new car detail in that chunk: the
-  boot is under its budget (660.4 of 670 KB with Build mode gone and the inventory plan's Phase 3 merged, and the multiplayer's vehicle ids: Phase 3 brought carinside.ts into it, Phase 5 the look's ids, Phase 6 three specs, Phase 7 the bikes' numbers and rules, Phase 8 the traffic's models, rules and riders, Phase 9 the aircraft's moving parts; Crestmont's Phases 2-6 came in at about the same size, its Phase 2 having packed the routes tighter; 663.3 with its Phase 7's landmarks, 666.0 with its Phase 8's life). Phase 4 (handling with
+  boot is under its budget (660.4 of 670 KB with Build mode gone and the inventory plan's Phase 3 merged, and the multiplayer's vehicle ids: Phase 3 brought carinside.ts into it, Phase 5 the look's ids, Phase 6 three specs, Phase 7 the bikes' numbers and rules, Phase 8 the traffic's models, rules and riders, Phase 9 the aircraft's moving parts; Crestmont's Phases 2-6 came in at about the same size, its Phase 2 having packed the routes tighter; 663.3 with its Phase 7's landmarks, 666.0 with its Phase 8's life, 666.3 with its Phase 9's metro spur). Phase 4 (handling with
   depth: each model's feel and drifting) is built, in the sim (drive-sim.ts, mycar.ts `FEEL`; see Driving your
   car below). Phase 5 (the garage's customisation, all free) is built: `CarLook` in mycar.ts (the ids,
   `cleanLook()`, carried by `cleanCar()`), carlook.ts (DOM-free, tested in `tests/carlook.test.ts`: names,

@@ -9,7 +9,7 @@
  * reduced motion the ride is a cut.
  */
 import * as THREE from 'three';
-import { DECK_Y, STATIONS, carAt, pointOn, rideAt, sideOf, stationAt, timetableAt, type Run, type Station } from './metro';
+import { DECK_Y, STATIONS, carAt, pointOn, rideAt, sideOf, stationAt, timetableAt, type Run, type Station, type TrackId } from './metro';
 import { PLATFORM_Y, type buildMetro } from './metro3d';
 import type { Ride } from './walk';
 
@@ -69,7 +69,7 @@ export function createMetroUI(root: HTMLElement, d: MetroDeps) {
   const cam = new THREE.Vector3();
   const look = new THREE.Vector3();
   /** Alongside the train at its height, on the side away from the platforms, a little behind it, looking ahead */
-  function view(tr: { run: Run; d: number; track: 'main' | 'branch'; s: number }, dt: number, snap = false) {
+  function view(tr: { run: Run; d: number; track: TrackId; s: number }, dt: number, snap = false) {
     const c = carAt(tr, 0);
     const n = sideOf(pointOn(tr.track, tr.s).dir, 1);
     const want = new THREE.Vector3(c.at[0] + n[0] * 9 - c.dir[0] * 6, DECK_Y + 2.6, c.at[1] + n[1] * 9 - c.dir[1] * 6);

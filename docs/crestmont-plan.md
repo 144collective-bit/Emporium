@@ -394,7 +394,25 @@ directory entry, a panel with Walk in, `PLACES` and `LIVE_PLACES` entries):
 - Sound (`ambience.ts`): a quiet hum, birds and sprinklers by day,
   crickets and an owl at night, fountains on the Drive.
 
-### Phase 9: getting there
+### Phase 9: getting there (built)
+
+**What's built:**
+
+- The town's places came with Phase 7 step 2: on the world map, taxis (to streets that join the network) and fast
+  travel.
+- The metro's **Crestmont spur** (`metro.ts`, track `crest`, `CREST`, `CREST_S`, `CREST_END`; tested in
+  `tests/metro.test.ts`): off the main line just south of Kart Park station, a tight bend east into the corridor
+  between Kart Road and the ring highway's north side, east past the kart park, round outside the highway's
+  north-east corner on a bend about its own centre, south down the strip between the highway and Alder Way (off the
+  hills' land), and a tight bend east over Alder Way to **Crestmont station** on the block kept for it (crest-0-0),
+  its platform north of the track and its stair tower on the block's lawn. Pillars on open land, nothing on the
+  highway, the kart park or the hills; no palm or outskirts tree under it (`SPUR_CLEAR`, `underSpur()`). It leaves the
+  main line facing north, so a run from it to anywhere but Kart Park turns round there (`runsBetween()`), at the
+  express's speed on the spur; the timetable runs out to Crestmont and back from Kart Park (`LEGS`, 12). The longest
+  ride is now The Trenches to Crestmont, about 70 s (Skip ride). The station is a place like the others
+  (`metro-crestmont`), drawn by metro3d.ts with the rest of the line.
+
+**As planned:**
 
 - The town's places on the world map, taxis and fast travel.
 - The metro (the owner's call): the line on from Kart Park station east

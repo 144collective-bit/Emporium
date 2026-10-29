@@ -40,6 +40,7 @@ import {
   ROUND_TRIP,
   STATIONS,
   SWITCH_S,
+  CREST_S,
   TRACKS,
   TRAIN,
   archY,
@@ -189,12 +190,13 @@ export function buildMetro(scene: THREE.Scene, tick: (f: Tick) => void, opts: { 
   /** Is a distance along the main line between the arch's feet (its deck hung from it) */
   const [archS0, archS1] = [PORTALS[0].s, PORTALS[1].s];
   const onArch = (id: TrackId, s: number) => id === 'main' && s > archS0 && s < archS1;
-  /** Where the branch meets the main line: no parapet across the other's deck there */
-  const atSwitch = (id: TrackId, s: number, side: number) => (id === 'main' ? s > SWITCH_S - 1 && s < SWITCH_S + 9 && side === -1 : s < 9 && side === 1);
+  /** Where a spur (the Airport's branch, Crestmont's) meets the main line: no parapet across the other's deck there */
+  const atSwitch = (id: TrackId, s: number, side: number) =>
+    id === 'main' ? [SWITCH_S, CREST_S].some((j) => s > j - 1 && s < j + 9) && side === -1 : s < 9 && side === 1;
   for (const t of Object.values(TRACKS)) {
     // The deck in spans between its pillars, portals and hangers (each a tile's worth or less), with the rails on it
     const ps = [...PILLARS, ...PORTALS].filter((p) => p.track === t.id).map((p) => p.s).concat(t.id === 'main' ? HANGERS : []).sort((x, y) => x - y);
-    const cuts = [0, ...ps.slice(t.id === 'branch' ? 0 : 1, -1), t.len].flatMap((c, i, all) => {
+    const cuts = [0, ...ps.slice(t.id === 'main' ? 1 : 0, -1), t.len].flatMap((c, i, all) => {
       // (a long span with nothing under it is cut in pieces no longer than a tile's worth)
       if (!i) return [c];
       const n = Math.ceil((c - all[i - 1]) / 12);

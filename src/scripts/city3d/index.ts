@@ -46,7 +46,7 @@ import { addTrafficBikes, bodies, buildLife, walker } from './life';
 import { createWalk } from './walk';
 import { buildGarage } from './garage';
 import { buildAirport } from './airport';
-import { AIRPORT_END, BRANCH, LINE_X } from './metro';
+import { AIRPORT_END, BRANCH, LINE_X, SPUR_CLEAR } from './metro';
 import { CAMERA_FAR, PAN_BOUNDS } from './bounds';
 import { loadCar } from './mycar';
 import { loadBike } from './mybike';
@@ -298,6 +298,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   keepTreesOff([-10, 125 + WIDEN, 56, 135 + WIDEN]);
   // (and its Airport branch, bending east off the avenue over the open land to the airport: docs/airport-plan.md Phase 3)
   keepTreesOff([LINE_X - 6, BRANCH.south - 4, AIRPORT_END + 6, BRANCH.z + 6]);
+  // (and Crestmont's spur, round outside the highway's north-east corner: docs/crestmont-plan.md Phase 9)
+  for (const r of SPUR_CLEAR) keepTreesOff(r);
   // Westlake Park (growth plan Phase 9b): its land is the street plan's; its trees and lamps stand with the town's
   // (from its data: phones leave out every other tree of its lawns' clumps, the trim); the rest of it is a chunk
   // of its own, loaded as you approach (districts.ts)

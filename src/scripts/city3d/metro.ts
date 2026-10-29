@@ -23,6 +23,9 @@
  *   stand. Where the line runs over a street with no median, portal frames
  *   (`PORTALS`: a leg each side, on the blocks' edges), and over the river to
  *   Uptown the arch (`ARCH`), its deck hung from it (`HANGERS`).
+ * - **Crestmont's spur** (`crest`, docs/crestmont-plan.md Phase 9): from just
+ *   south of Kart Park east round the highway's north-east corner and south
+ *   to Crestmont station by the Flats (`CREST`).
  * - **The train** shuttles on a timetable from the clock (`trainAt()`, the
  *   same for everyone): Kart Park, Downtown, South Bank, The Trenches,
  *   Uptown, back through The Trenches to South Bank, out to the Airport,
@@ -40,7 +43,7 @@ import { AVENUE_Z, NS_X } from './trenches';
 import type { Box } from './solids';
 
 export type Pt = [number, number];
-export type TrackId = 'main' | 'branch';
+export type TrackId = 'main' | 'branch' | 'crest';
 
 /** The east ring avenue the line runs down (x) */
 export const LINE_X = NS_ROADS[NS_ROADS.length - 1].c;
@@ -79,6 +82,16 @@ export const UP_END = 46;
  */
 export const BRANCH = { south: 256, r: 20, z: 276 };
 export const AIRPORT_END = 324;
+/**
+ * Crestmont's spur (docs/crestmont-plan.md Phase 9, the owner's call): off the main line just south of Kart Park
+ * station (`CREST.z`), a tight bend east (`CREST.r`) into the corridor between Kart Road and the ring highway's north
+ * side (`CREST.corridor`), east past the kart park, round outside the highway's north-east corner on a bend about its
+ * own centre (`CREST.cx`, `CREST.cz`), south down the strip between the highway and Alder Way (`CREST.x`), and a tight
+ * bend east over Alder Way into the block kept for it (crest-0-0) to Crestmont station, the line's end at `CREST_END`
+ * (x). It leaves the main line facing north: a run from it to anywhere but Kart Park turns round there.
+ */
+export const CREST = { z: -189.5, r: 10, corridor: -179.5, cx: 205, cz: -100, x: 284.5, south: -46.5, station: -36.5 };
+export const CREST_END = 320;
 
 export interface Track {
   id: TrackId;
@@ -106,9 +119,22 @@ const arc = (cx: number, cz: number, r: number, a0: number, a1: number): Pt[] =>
 export const TRACKS: Record<TrackId, Track> = {
   main: track('main', [[LINE_X, NORTH_END], [LINE_X, SWITCH_Z], ...BEND, [WEST_END, AVENUE_Z], ...arc(WEST_END, AVENUE_Z - UP_R, UP_R, Math.PI / 2, Math.PI), [UP_X, UP_END]]),
   branch: track('branch', [[LINE_X, SWITCH_Z], [LINE_X, BRANCH.south], ...arc(LINE_X + BRANCH.r, BRANCH.south, BRANCH.r, Math.PI, Math.PI / 2), [AIRPORT_END, BRANCH.z]]),
+  crest: track('crest', [
+    [LINE_X, CREST.z],
+    ...arc(LINE_X + CREST.r, CREST.z, CREST.r, Math.PI, Math.PI / 2),
+    [CREST.cx, CREST.corridor],
+    ...arc(CREST.cx, CREST.cz, CREST.x - CREST.cx, -Math.PI / 2, 0),
+    [CREST.x, CREST.south],
+    ...arc(CREST.x + CREST.r, CREST.south, CREST.r, Math.PI, Math.PI / 2),
+    [CREST_END, CREST.station],
+  ]),
 };
 /** The switch: how far along the main line the branch leaves it (the branch starts there, at its 0) */
 export const SWITCH_S = SWITCH_Z - NORTH_END;
+/** Where Crestmont's spur leaves the main line (its 0) */
+export const CREST_S = CREST.z - NORTH_END;
+/** How far along the main line each spur leaves it */
+const JUNCTION: Record<Exclude<TrackId, 'main'>, number> = { branch: SWITCH_S, crest: CREST_S };
 
 /**
  * A point on a track `s` along it, and the way the track runs there (unit).
@@ -117,7 +143,7 @@ export const SWITCH_S = SWITCH_Z - NORTH_END;
  * line north of the switch.
  */
 export function pointOn(id: TrackId, s: number): { at: Pt; dir: Pt } {
-  if (id === 'branch' && s < 0) return pointOn('main', SWITCH_S + s);
+  if (id !== 'main' && s < 0) return pointOn('main', JUNCTION[id] + s);
   const t = TRACKS[id];
   let i = 1;
   while (i < t.pts.length - 1 && t.cum[i] < s) i++;
@@ -160,6 +186,8 @@ export interface Station {
 /** A stair tower 2.4 by 2.5 beside the east avenue, its west face at x 69.6, centred on z; its door facing west */
 /** The Airport's station's middle along its track (east of Airport Drive) */
 const AIRPORT_STATION_X = 312;
+/** Crestmont station's middle along its track (past Alder Way) */
+const CREST_STATION_X = 312;
 const eastTower = (z: number): Pick<Station, 'tower' | 'door' | 'face'> => ({ tower: [69.6, z - 1.25, 72, z + 1.25], door: { x: 69.2, z }, face: [-1, 0] });
 /** Uptown station's middle (z, over the pair's street at `UP_X`) */
 const UPTOWN_Z = 52.5;
@@ -178,6 +206,9 @@ export const STATIONS: Station[] = [
   // (over the one-way pair's northbound street by the plaza's café terrace: its platform east of the track, over the
   // street's sidewalk, its tower on the terrace north of the café's kiosk, the door facing the cross street)
   { id: 'uptown', name: 'Uptown', track: 'main', s: along('main', [UP_X, UPTOWN_Z]), tower: [UP_X + 2.85, UPTOWN_Z - 4.9, UP_X + 5.25, UPTOWN_Z - 2.4], door: { x: UP_X + 4.05, z: UPTOWN_Z - 5.3 }, face: [0, -1], side: 1 },
+  // (on the block kept for it past Alder Way: its platform north of the track (running east), its tower north of that,
+  // the door facing north onto the block's lawn)
+  { id: 'crestmont', name: 'Crestmont', track: 'crest', s: along('crest', [CREST_STATION_X, CREST.station]), tower: [CREST_STATION_X - 1.25, CREST.station - 5.6, CREST_STATION_X + 1.25, CREST.station - 3.2], door: { x: CREST_STATION_X, z: CREST.station - 6 }, face: [0, -1] },
 ];
 const station = (id: string) => STATIONS.find((s) => s.id === id)!;
 /** Where a station's platform is: its middle and the way its track runs there */
@@ -257,6 +288,18 @@ export const PILLARS: { track: TrackId; s: number; at: Pt }[] = (Object.values(T
   });
 });
 
+/** The land under Crestmont's spur where nothing grows (the outskirts' trees, the Flats' palms): a box every few tiles along it, past the main line */
+export const SPUR_CLEAR: [number, number, number, number][] = (() => {
+  const out: [number, number, number, number][] = [];
+  for (let s = 12; s <= TRACKS.crest.len; s += 5) {
+    const [x, z] = pointOn('crest', s).at;
+    out.push([x - 4, z - 4, x + 4, z + 4]);
+  }
+  return out;
+})();
+/** Under Crestmont's spur (`SPUR_CLEAR`) */
+export const underSpur = (x: number, z: number) => SPUR_CLEAR.some((r) => x > r[0] && x < r[2] && z > r[1] && z < r[3]);
+
 /** What's solid: the pillars, the portals' legs (the arch's feet among them) and the stair towers (the deck is overhead) */
 export const METRO_SOLIDS: Box[] = [
   ...PILLARS.map(({ at: [x, z] }): Box => [x - PILLAR_HALF, z - PILLAR_HALF, x + PILLAR_HALF, z + PILLAR_HALF, DECK_Y]),
@@ -301,7 +344,7 @@ export function runAt(dist: number, t: number, v = TRAIN.speed) {
 const WEST_S = along('main', [TRENCH_X, AVENUE_Z]) + 1;
 /** How fast a run goes: the express out on the Airport's branch and out to Uptown */
 export const speedOf = (run: { pieces: { track: TrackId; s0: number; s1: number }[] }) =>
-  run.pieces.some((p) => p.track === 'branch' || (p.track === 'main' && Math.max(p.s0, p.s1) > WEST_S)) ? TRAIN.express : TRAIN.speed;
+  run.pieces.some((p) => p.track !== 'main' || Math.max(p.s0, p.s1) > WEST_S) ? TRAIN.express : TRAIN.speed;
 
 /** A piece of a run: along one track from one distance to another */
 export interface Piece {
@@ -330,6 +373,12 @@ export function runsBetween(a: string, b: string): Run[] {
   const A = station(a);
   const B = station(b);
   if (A.track === B.track) return [runOf(a, b, [{ track: A.track, s0: A.s, s1: B.s }])];
+  // Crestmont's spur leaves the main line facing north, past Kart Park: straight to and from there, turning round there for the rest
+  if (A.track === 'crest' || B.track === 'crest') {
+    if (a === 'kart') return [runOf(a, b, [{ track: 'main', s0: A.s, s1: CREST_S }, { track: 'crest', s0: 0, s1: B.s }])];
+    if (b === 'kart') return [runOf(a, b, [{ track: 'crest', s0: A.s, s1: 0 }, { track: 'main', s0: CREST_S, s1: B.s }])];
+    return [...runsBetween(a, 'kart'), ...runsBetween('kart', b)];
+  }
   if (A.track === 'main' && northOfSwitch(A)) return [runOf(a, b, [{ track: 'main', s0: A.s, s1: SWITCH_S }, { track: 'branch', s0: 0, s1: B.s }])];
   if (B.track === 'main' && northOfSwitch(B)) return [runOf(a, b, [{ track: 'branch', s0: A.s, s1: 0 }, { track: 'main', s0: SWITCH_S, s1: B.s }])];
   return [...runsBetween(a, 'southbank'), ...runsBetween('southbank', b)];
@@ -349,8 +398,8 @@ export function placeOn(run: Run, d: number): { track: TrackId; s: number; dir: 
   return { track: p.track, s: p.s0, dir: p.s1 >= p.s0 ? 1 : -1 };
 }
 
-/** The timetable's stops: down to South Bank, out through The Trenches to Uptown and back, out to the Airport and back, and up again */
-const STOPS = ['kart', 'downtown', 'southbank', 'trenches', 'uptown', 'trenches', 'southbank', 'airport', 'southbank', 'downtown'];
+/** The timetable's stops: from Crestmont to Kart Park, down to South Bank, out through The Trenches to Uptown and back, out to the Airport and back, and up again */
+const STOPS = ['crestmont', 'kart', 'downtown', 'southbank', 'trenches', 'uptown', 'trenches', 'southbank', 'airport', 'southbank', 'downtown', 'kart'];
 export const LEGS = STOPS.map((from, i) => {
   const run = runsBetween(from, STOPS[(i + 1) % STOPS.length])[0];
   return { run, time: runAt(run.len, 0, speedOf(run)).total };
