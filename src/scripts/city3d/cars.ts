@@ -32,7 +32,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { fx, lit, mergeMeshes, moving, toon } from './kit';
 import { addLodSwitch } from './lod';
 
-import { CARS, type CarId, type CarSpec } from './carspec';
+import { CARS, FIFTH_WHEEL, TRAILER, type CarId, type CarSpec } from './carspec';
 import type { Degen } from './character';
 import type { CarState } from './drive-sim';
 export { CARS, PAINTS } from './carspec';
@@ -270,7 +270,79 @@ const EXTRAS: Partial<Record<CarId, (p: Parts, s: CarSpec) => void>> = {
     p.detail(box(0.02, 0.16, s.W * 0.42, half + 0.006, 0.4, 0), CHROME);
     p.detail(box(0.06, 0.06, 0.02, half - 0.08, topAt(s, half - 0.08) + 0.03, 0), CHROME);
   },
+  // Vehicle plan Phase 8: the traffic's own
+  police(p, s) {
+    const half = s.L / 2;
+    const cw = s.W * s.cabinW;
+    const [, rr, , fb] = s.cabin;
+    // The light bar across the roof: a dark base, a blue lens on the left and a magenta on the right (dark until
+    // life.ts lights them: `BAR`), a chrome divider between
+    const bx = BAR.x;
+    p.detail(box(0.17, 0.035, cw * 0.84, bx, rr[1] + 0.017, 0), TRIM);
+    for (const [z, c] of [[-1, '#26306a'], [1, '#5c1f62']] as const) p.detail(box(BAR.w, BAR.h, BAR.d, bx, BAR.y, z * BAR.z), c);
+    p.detail(box(0.1, 0.05, 0.03, bx, BAR.y, 0), CHROME);
+    // A push bar on the nose, a spotlight by the windscreen on the driver's side, two aerials on the boot
+    for (const z of [-0.26, 0.26]) p.detail(box(0.05, 0.3, 0.05, half + 0.09, 0.36, z), TRIM);
+    p.detail(box(0.05, 0.05, s.W * 0.6, half + 0.09, 0.47, 0), TRIM);
+    p.detail(box(0.05, 0.04, 0.04, half + 0.05, 0.26, 0.24), TRIM);
+    p.detail(box(0.05, 0.04, 0.04, half + 0.05, 0.26, -0.24), TRIM);
+    p.detail(new THREE.CylinderGeometry(0.035, 0.035, 0.07, 10).rotateZ(Math.PI / 2).translate(fb[0] - 0.08, fb[1] + 0.16, -(cw / 2 + 0.05)), CHROME);
+    for (const z of [-0.2, 0.2]) p.detail(box(0.012, 0.3, 0.012, -1.1, 0.72, z), TRIM);
+  },
+  truck(p, s) {
+    const half = s.L / 2;
+    const [x0, x1, y1] = s.box!;
+    const y0 = topAt(s, x0);
+    // The box's rails top and bottom, a band along each side with a made-up mark (the city's diamond), marker lights
+    for (const z of [-1, 1]) {
+      const zz = z * (s.W / 2 + 0.012);
+      p.detail(box(x1 - x0 + 0.02, 0.04, 0.02, (x0 + x1) / 2, y1 - 0.02, zz), TRIM);
+      p.detail(box(x1 - x0 + 0.02, 0.06, 0.02, (x0 + x1) / 2, y0 + 0.03, zz), TRIM);
+      p.detail(box(x1 - x0 - 0.3, 0.12, 0.012, (x0 + x1) / 2, y0 + 0.36, z * (s.W / 2 + 0.008)), '#ff2fb9');
+      p.detail(box(x1 - x0 - 0.3, 0.05, 0.012, (x0 + x1) / 2, y0 + 0.25, z * (s.W / 2 + 0.008)), '#00c2ff');
+      p.detail(new THREE.BoxGeometry(0.012, 0.22, 0.22).rotateX(Math.PI / 4).translate(0, (y0 + y1) / 2 + 0.12, 0).rotateY(Math.PI / 2).translate(-0.6, 0, z * (s.W / 2 + 0.01)), '#00c2ff');
+      for (const x of [x0 + 0.1, (x0 + x1) / 2, x1 - 0.1]) p.detail(box(0.05, 0.03, 0.012, x, y0 + 0.1, z * (s.W / 2 + 0.024)), AMBER);
+      // The side guard between the wheels and the fuel tank under the cab
+      p.detail(box(s.axles[1] - s.axles[0] - s.r * 2 - 0.4, 0.04, 0.02, (s.axles[0] + s.axles[1]) / 2 - 0.1, s.clr + 0.02, z * (s.W / 2 - 0.02)), TRIM);
+    }
+    p.detail(new THREE.CylinderGeometry(0.11, 0.11, 0.5, 12).rotateZ(Math.PI / 2).translate(0.5, s.clr + 0.05, -(s.W / 2 - 0.05)), CHROME);
+    // The roller shutter at the back: its frame, its slats, a handle; a step under it, mud flaps
+    p.detail(box(0.02, y1 - y0 - 0.08, s.W - 0.08, -half - 0.008, (y0 + y1) / 2, 0), TRIM);
+    p.detail(box(0.02, y1 - y0 - 0.16, s.W - 0.2, -half - 0.016, (y0 + y1) / 2 - 0.02, 0), '#d8d6e4');
+    for (let k = 1; k < 9; k++) p.detail(box(0.012, 0.012, s.W - 0.2, -half - 0.028, y0 + 0.06 + ((y1 - y0 - 0.16) * k) / 9, 0), SEAM);
+    p.detail(box(0.03, 0.03, 0.16, -half - 0.04, y0 + 0.2, 0), CHROME);
+    p.detail(box(0.18, 0.04, s.W * 0.6, -half - 0.06, s.clr + 0.06, 0), TRIM);
+    for (const z of [-1, 1]) p.detail(box(0.02, 0.22, 0.22, s.axles[0] - s.r - 0.1, s.clr + 0.02, z * (s.W / 2 - 0.12)), TRIM);
+    // A wind deflector on the cab's roof, a sun visor over the windscreen, amber cab lights
+    const [, rr, fr] = s.cabin;
+    p.paint(new THREE.ExtrudeGeometry(new THREE.Shape([new THREE.Vector2(rr[0] + 0.05, rr[1]), new THREE.Vector2(fr[0] - 0.05, fr[1]), new THREE.Vector2(rr[0] + 0.12, y1 + 0.02)]), { depth: s.W * 0.86, bevelEnabled: false }).translate(0, 0, -s.W * 0.43));
+    p.detail(box(0.14, 0.03, s.W * 0.9, fr[0] + 0.05, fr[1] - 0.04, 0), TRIM);
+    for (const z of [-0.3, 0, 0.3]) p.detail(box(0.03, 0.025, 0.06, fr[0] + 0.1, fr[1] - 0.02, z), AMBER);
+  },
+  rig(p, s) {
+    const half = s.L / 2;
+    const [rb, rr, fr] = s.cabin;
+    // A big chrome grille on the long nose, a sun visor, air horns and amber cab lights on the roof
+    p.detail(box(0.03, 0.42, s.W * 0.5, half + 0.012, 0.6, 0), CHROME);
+    for (let k = 0; k < 5; k++) p.detail(box(0.035, 0.015, s.W * 0.46, half + 0.016, 0.42 + k * 0.08, 0), TRIM);
+    p.detail(box(0.16, 0.03, s.W * 0.92, fr[0] + 0.06, fr[1] - 0.03, 0), TRIM);
+    for (const z of [-0.3, -0.15, 0, 0.15, 0.3]) p.detail(box(0.03, 0.025, 0.06, fr[0] + 0.12, fr[1] - 0.01, z), AMBER);
+    for (const z of [-0.18, 0.18]) p.detail(new THREE.CylinderGeometry(0.025, 0.04, 0.22, 8).rotateZ(Math.PI / 2).translate(0.05, rr[1] + 0.05, z), CHROME);
+    // Two exhaust stacks up the back of the cab, fuel tanks and steps under the doors
+    for (const z of [-1, 1]) {
+      p.detail(new THREE.CylinderGeometry(0.04, 0.04, 1.4, 10).translate(rb[0] - 0.06, 1.42, z * (s.W / 2 - 0.08)), CHROME);
+      p.detail(new THREE.CylinderGeometry(0.11, 0.11, 0.4, 12).rotateZ(Math.PI / 2).translate(0.26, s.clr + 0.12, z * (s.W / 2 + 0.01)), '#9a96b8');
+      for (const y of [0.32, 0.56]) p.detail(box(0.24, 0.03, 0.12, 0.62, y, z * (s.W / 2 + 0.03)), TRIM);
+    }
+    // The fifth wheel on the deck over the rear axle, the deck's plate, mudguards over the rear wheels
+    p.detail(new THREE.CylinderGeometry(0.3, 0.3, 0.06, 14).translate(FIFTH_WHEEL, topAt(s, FIFTH_WHEEL) + 0.03, 0), '#3e3a4c');
+    p.detail(box(1.1, 0.012, s.W - 0.1, -0.92, topAt(s, -0.92) + 0.006, 0), '#3a3550');
+    for (const z of [-1, 1]) p.detail(box(s.r * 2.6, 0.04, 0.3, s.axles[0], topAt(s, s.axles[0]) + 0.02, z * (s.W / 2 - 0.15)), TRIM);
+  },
 };
+
+/** The patrol car's light bar's two lenses (cars.ts draws them dark, life.ts lays the lit ones over them, a touch bigger) */
+export const BAR = { x: -0.13, w: 0.12, h: 0.045, d: 0.3, y: 0.95, z: 0.19 };
 
 /* ---------- Building ---------- */
 
@@ -510,10 +582,11 @@ export interface CarGeometry {
 
 const cache = new Map<string, CarGeometry>();
 
-export function carGeometry(id: CarId, { wheels = true } = {}): CarGeometry {
-  const key = `${id}:${wheels}`;
+/** A model's geometry; `crew` puts a driver (and a seat or two) behind its glass: the traffic's (vehicle plan Phase 8) */
+export function carGeometry(id: CarId, { wheels = true, crew = false } = {}): CarGeometry {
+  const key = `${id}:${wheels}:${crew}`;
   let g = cache.get(key);
-  if (!g) cache.set(key, (g = build(id, wheels)));
+  if (!g) cache.set(key, (g = build(id, wheels, '', crew)));
   return g;
 }
 
@@ -523,10 +596,10 @@ export function carGeometry(id: CarId, { wheels = true } = {}): CarGeometry {
  * carfine.ts sets it and builds every model in `cache` again with it, in place, so the traffic and the parked
  * cars take it on as they are; your cars carry themselves on their group (`userData.car`) for it to find.
  */
-export const FINE: { add?(p: Parts, s: CarSpec, wheels: boolean): void; fit?(car: Car): void } = {};
+export const FINE: { add?(p: Parts, s: CarSpec, wheels: boolean, crew: boolean): void; fit?(car: Car): void } = {};
 export { cache };
 
-export function build(id: CarId, wheels: boolean, bare = ''): CarGeometry {
+export function build(id: CarId, wheels: boolean, bare = '', crew = false): CarGeometry {
   const s = CARS[id];
   const p = new Parts(bare);
   const half = s.L / 2;
@@ -564,7 +637,7 @@ export function build(id: CarId, wheels: boolean, bare = ''): CarGeometry {
     for (const side of [-1, 1]) sideFace(poly, side, 0.014, null);
   }
   const mid: V2 = [(rb[0] + fb[0] + rr[0] + fr[0]) / 4, (rb[1] + fb[1] + rr[1] + fr[1]) / 4];
-  const screenFrom: V2 = s.sill !== undefined && lit ? [fb[0] + (fr[0] - fb[0]) * 0.15, fb[1] + (fr[1] - fb[1]) * 0.15] : fb;
+  const screenFrom = screenFoot(s);
   p.detail(pane(fr, screenFrom, cw - cabinRound * 2 + 0.02, mid, 0.03), BLACKOUT);
   // The glass sits a little proud of its surround: level with it, the two flicker against each other
   addGlass(pane(fr, screenFrom, cw - cabinRound * 2 - 0.06, mid, 0.07, 0.02));
@@ -610,15 +683,20 @@ export function build(id: CarId, wheels: boolean, bare = ''): CarGeometry {
     p.detail(box(0.02, 0.03, lw * 0.4, -half - 0.009, s.lightY + 0.01, z - Math.sign(z) * lw * 0.25), AMBER);
   }
 
-  // Door seams and handles down the sides, a dark sill between the wheels
+  // The cargo box behind the cab (the box truck's)
+  if (s.box) {
+    const [x0, x1, y1] = s.box;
+    p.paint(extrude(new THREE.Shape([new THREE.Vector2(x0, topAt(s, x0) - 0.01), new THREE.Vector2(x1, topAt(s, x1) - 0.01), new THREE.Vector2(x1, y1), new THREE.Vector2(x0, y1)]), s.W, 0.03));
+  }
+  // Door seams and handles down the sides (a livery panel covers them on the patrol car), a dark sill between the wheels
   for (const side of [-1, 1]) {
     const z = side * (s.W / 2 + 0.002);
-    for (const x of s.seams ?? []) {
+    for (const x of s.livery ? [] : (s.seams ?? [])) {
       const top = topAt(s, x) - 0.03;
       const bottom = s.clr + 0.04;
       if (top - bottom > 0.05) p.detail(box(0.012, top - bottom, 0.012, x, (top + bottom) / 2, z), SEAM);
     }
-    for (const x of s.handles ?? []) p.detail(box(0.08, 0.022, 0.016, x, topAt(s, x) - 0.08, z + side * 0.004), CHROME);
+    for (const x of s.livery ? [] : (s.handles ?? [])) p.detail(box(0.08, 0.022, 0.016, x, topAt(s, x) - 0.08, z + side * 0.004), CHROME);
     const [ra, fa] = s.axles;
     const span = fa - ra - (s.r + 0.08) * 2;
     if (span > 0.1 && !bus) p.detail(box(span, 0.05, 0.02, (ra + fa) / 2, s.clr + 0.025, side * (s.W / 2 + 0.004)), BLACKOUT);
@@ -643,7 +721,7 @@ export function build(id: CarId, wheels: boolean, bare = ''): CarGeometry {
     }
   }
   EXTRAS[s.id]?.(p, s);
-  FINE.add?.(p, s, wheels);
+  FINE.add?.(p, s, wheels, crew);
 
   return {
     spec: s,
@@ -665,6 +743,109 @@ export function build(id: CarId, wheels: boolean, bare = ''): CarGeometry {
       [-half - 0.016, s.lightY - lh / 2 - 0.07, -lz],
     ],
   };
+}
+
+/**
+ * The big rig's trailer (vehicle plan Phase 8, `TRAILER`): a box in the rig's paint on an underframe, two axles at
+ * the back under mudguards, landing legs at the front, doors with locking bars at the back over the under-ride
+ * guard, the lamps on the guard, a band along each side. Built as the cars are; `tail` and `turn` as theirs (the
+ * rear lamps only: its front is under the tractor)
+ */
+export interface TrailerGeometry {
+  paint: THREE.BufferGeometry;
+  detail: THREE.BufferGeometry;
+  tail: [number, number, number][];
+  turn: [number, number, number][];
+}
+let trailerGeo: TrailerGeometry | null = null;
+export function trailerGeometry(): TrailerGeometry {
+  if (trailerGeo) return trailerGeo;
+  const t = TRAILER;
+  const half = t.L / 2;
+  const p = new Parts();
+  const rect = (x0: number, y0: number, x1: number, y1: number) => new THREE.Shape([new THREE.Vector2(x0, y0), new THREE.Vector2(x1, y0), new THREE.Vector2(x1, y1), new THREE.Vector2(x0, y1)]);
+  p.paint(extrude(rect(-half, t.floor, half, t.h), t.W, 0.035));
+  // The underframe, the kingpin's plate, the landing legs
+  p.detail(box(t.L - 0.2, 0.1, t.W * 0.72, 0, t.floor - 0.05, 0), TRIM);
+  p.detail(box(0.5, 0.03, t.W * 0.6, t.pin, t.floor - 0.1, 0), '#3e3a4c');
+  for (const z of [-1, 1]) {
+    p.detail(box(0.07, t.floor - 0.08, 0.07, half - 1.1, (t.floor - 0.08) / 2 + 0.04, z * t.W * 0.34), TRIM);
+    p.detail(box(0.16, 0.03, 0.12, half - 1.1, 0.03, z * t.W * 0.34), TRIM);
+  }
+  // The axles' bogie, the wheels, mudguards over them
+  const [a0, a1] = t.axles;
+  p.detail(box(a1 - a0 + 0.4, 0.14, t.W * 0.6, (a0 + a1) / 2, t.r + 0.16, 0), TRIM);
+  const w = wheelGeometry({ r: t.r, tw: t.tw, rim: '#dcdaf0', spokes: 0 } as CarSpec);
+  for (const ax of t.axles)
+    for (const z of [-1, 1]) {
+      const g = w.clone();
+      if (z < 0) g.rotateY(Math.PI);
+      p.details.push(g.translate(ax, t.r, z * (t.W / 2 - t.tw / 2 + 0.02)));
+    }
+  for (const z of [-1, 1]) p.detail(box(a1 - a0 + t.r * 2 + 0.16, 0.03, t.tw + 0.08, (a0 + a1) / 2, t.r * 2 + 0.06, z * (t.W / 2 - t.tw / 2 + 0.02)), TRIM);
+  // The sides: a band in the city's colours, amber markers along the bottom rail, a rail top and bottom
+  for (const z of [-1, 1]) {
+    const zz = z * (t.W / 2 + 0.008);
+    p.detail(box(t.L - 0.4, 0.14, 0.012, 0, t.floor + 0.5, zz), '#ff2fb9');
+    p.detail(box(t.L - 0.4, 0.06, 0.012, 0, t.floor + 0.38, zz), '#00c2ff');
+    p.detail(box(t.L + 0.01, 0.05, 0.02, 0, t.floor + 0.02, z * (t.W / 2 + 0.012)), TRIM);
+    p.detail(box(t.L + 0.01, 0.04, 0.02, 0, t.h - 0.02, z * (t.W / 2 + 0.012)), TRIM);
+    for (let k = 0; k < 5; k++) p.detail(box(0.05, 0.03, 0.012, -half + 0.3 + (k * (t.L - 0.6)) / 4, t.floor + 0.08, z * (t.W / 2 + 0.028)), AMBER);
+    // A side guard between the legs and the bogie
+    p.detail(box(half - 1.2 - (a1 + t.r + 0.1), 0.04, 0.02, (half - 1.2 + a1 + t.r + 0.1) / 2, 0.38, z * (t.W / 2 - 0.02)), TRIM);
+  }
+  // The doors: a frame, the split, hinges and four locking bars with their handles
+  p.detail(box(0.02, t.h - t.floor - 0.06, t.W - 0.04, -half - 0.01, (t.floor + t.h) / 2, 0), TRIM);
+  p.detail(box(0.02, t.h - t.floor - 0.14, t.W - 0.16, -half - 0.02, (t.floor + t.h) / 2, 0), '#d8d6e4');
+  p.detail(box(0.012, t.h - t.floor - 0.14, 0.014, -half - 0.032, (t.floor + t.h) / 2, 0), SEAM);
+  for (const z of [-0.42, -0.14, 0.14, 0.42]) {
+    p.detail(box(0.02, t.h - t.floor - 0.2, 0.02, -half - 0.04, (t.floor + t.h) / 2, z * t.W), CHROME);
+    p.detail(box(0.03, 0.02, 0.08, -half - 0.05, t.floor + 0.5, z * t.W + 0.03), CHROME);
+  }
+  for (const z of [-1, 1]) for (const y of [t.floor + 0.25, t.h - 0.25]) p.detail(box(0.03, 0.06, 0.06, -half - 0.04, y, z * (t.W / 2 - 0.06)), TRIM);
+  // The under-ride guard, its lamps and the plate
+  p.detail(box(0.06, 0.1, t.W - 0.1, -half - 0.03, 0.42, 0), TRIM);
+  for (const z of [-0.3, 0.3]) p.detail(box(0.05, t.floor - 0.42, 0.05, -half + 0.04, (t.floor + 0.42) / 2, z), TRIM);
+  for (const z of [-1, 1]) {
+    p.detail(box(0.02, 0.07, 0.17, -half - 0.065, 0.42, z * (t.W / 2 - 0.16)), TAIL);
+    p.detail(box(0.02, 0.05, 0.08, -half - 0.065, 0.42, z * (t.W / 2 - 0.32)), AMBER);
+  }
+  p.detail(box(0.02, 0.08, 0.26, -half - 0.065, 0.42, 0), PLATE);
+  trailerGeo = {
+    paint: merge(p.paints, false)!,
+    detail: merge(p.details, true)!,
+    tail: [
+      [-half - 0.075, 0.42, t.W / 2 - 0.16],
+      [-half - 0.075, 0.42, -(t.W / 2 - 0.16)],
+    ],
+    turn: [
+      [-half - 0.08, 0.42, t.W / 2 - 0.32],
+      [-half - 0.08, 0.42, -(t.W / 2 - 0.32)],
+    ],
+  };
+  return trailerGeo;
+}
+/** The trailer far away: its box and four block wheels */
+function farTrailerGeometry() {
+  const t = TRAILER;
+  const col = (g: THREE.BufferGeometry, hex: string) => {
+    const c = new THREE.Color(hex);
+    const n = g.attributes.position.count;
+    g.setAttribute('color', new THREE.Float32BufferAttribute(Array.from({ length: n * 3 }, (_, i) => (i % 3 === 0 ? c.r : i % 3 === 1 ? c.g : c.b)), 3));
+    return g.index ? g.toNonIndexed() : g;
+  };
+  const parts = [col(new THREE.BoxGeometry(t.L, t.h - t.floor, t.W).translate(0, (t.h + t.floor) / 2, 0), '#ffffff')];
+  for (const ax of t.axles) for (const side of [-1, 1]) parts.push(col(new THREE.BoxGeometry(t.r * 2, t.r * 2, t.tw).translate(ax, t.r, side * (t.W / 2 - t.tw / 2 + 0.02)), TYRE));
+  parts.push(col(new THREE.BoxGeometry(t.L - 0.2, t.floor - 0.1, t.W * 0.7).translate(0, (t.floor + 0.1) / 2 + 0.05, 0), TRIM));
+  for (const g of parts) g.deleteAttribute('uv');
+  return mergeGeometries(parts)!;
+}
+
+/** Where the windscreen's glass starts (the bus's, the box truck's and the rig's well up the cab's front; the rest from its foot) */
+export function screenFoot(s: CarSpec): V2 {
+  const [, , fr, fb] = s.cabin;
+  const k = s.screen ?? 0;
+  return [fb[0] + (fr[0] - fb[0]) * k, fb[1] + (fr[1] - fb[1]) * k];
 }
 
 /** The materials the fleet shares: paint takes each car's own colour, detail its vertex colours */
@@ -705,6 +886,10 @@ export function farCarGeometry(id: CarId) {
     return g.index ? g.toNonIndexed() : g;
   };
   const parts = [paint(flat(body, s.W), '#ffffff'), paint(flat(new THREE.Shape(s.cabin.map(([x, y]) => new THREE.Vector2(x, y))), s.W * s.cabinW), s.id === 'bus' ? '#ffffff' : '#46506e')];
+  if (s.box) {
+    const [x0, x1, y1] = s.box;
+    parts.push(paint(flat(new THREE.Shape([new THREE.Vector2(x0, topAt(s, x0) - 0.01), new THREE.Vector2(x1, topAt(s, x1) - 0.01), new THREE.Vector2(x1, y1), new THREE.Vector2(x0, y1)]), s.W), '#ffffff'));
+  }
   for (const ax of s.axles) for (const side of [-1, 1]) parts.push(paint(new THREE.BoxGeometry(s.r * 2, s.r * 2, s.tw).translate(ax, s.r, side * (s.W / 2 - s.tw / 2 + 0.02)), TYRE));
   for (const g of parts) g.deleteAttribute('uv');
   const g = mergeGeometries(parts)!;
@@ -723,8 +908,10 @@ export function farCarMaterial() {
  * the shadow box). Each car takes an instance of its model's far form, in
  * its own paint, shown while it's far away.
  */
+/** What has a far form: every model, and the rig's trailer */
+export type FarModel = CarId | 'trailer';
 export interface FarCars {
-  add(model: CarId, paint: THREE.ColorRepresentation, at?: THREE.Matrix4): number;
+  add(model: FarModel, paint: THREE.ColorRepresentation, at?: THREE.Matrix4): number;
   place(id: number, at: THREE.Matrix4): void;
   show(id: number, on: boolean): void;
 }
@@ -734,8 +921,8 @@ let farCars: FarCars | null = null;
 let parkedFar = false;
 export function initFarCars(scene: THREE.Scene, max = 400, parkedAlwaysFar = false) {
   parkedFar = parkedAlwaysFar;
-  const models = Object.keys(CARS) as CarId[];
-  const geos = models.map(farCarGeometry);
+  const models: FarModel[] = [...(Object.keys(CARS) as CarId[]), 'trailer'];
+  const geos = models.map((m) => (m === 'trailer' ? farTrailerGeometry() : farCarGeometry(m)));
   const bm = new THREE.BatchedMesh(max, geos.reduce((n, g) => n + g.attributes.position.count, 0), 0, farCarMaterial());
   const ids = new Map(models.map((m, i) => [m, bm.addGeometry(geos[i])]));
   bm.sortObjects = false;

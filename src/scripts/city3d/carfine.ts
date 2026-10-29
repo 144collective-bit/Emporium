@@ -15,7 +15,8 @@
  *   inside, and you at the wheel.
  */
 import * as THREE from 'three';
-import { FINE, build, cache, lay, pane, topAt, wheelSpots, type Car, type Parts } from './cars';
+import { FINE, build, cache, clip, inset, lay, pane, screenFoot, topAt, wheelSpots, type Car, type Parts } from './cars';
+import { INTERIORS, type V3 } from './carinside';
 import type { CarSpec } from './carspec';
 import { fitOut } from './carcabin';
 import { brakes, inward } from './carparts';
@@ -31,8 +32,106 @@ const STREAK = '#c9f2ff';
 const LENS = '#f6f9ff';
 const FUEL = '#26232f';
 
+/* ---------- The traffic's crew (vehicle plan Phase 8) ---------- */
+
+/** A figure and a seat behind the glass: darker than the glass, the seat's headrest a little lighter than the figure */
+const FIGURE = '#24485e';
+const REST = '#33657c';
+/** Who rides in the traffic: the driver, a passenger in the patrol car */
+const PASSENGER = new Set(['police']);
+
+/** A point `up` along a seated back leant back by `recline`, `fwd` ahead of it (carinside.ts's) */
+const alongBack = (hip: V3, recline: number, up: number, fwd = 0): V2 => [hip[0] - Math.sin(recline) * up + Math.cos(recline) * fwd, hip[1] + Math.cos(recline) * up + Math.sin(recline) * fwd];
+/** An ellipse as a polygon */
+const oval = (c: V2, rx: number, ry: number, n = 12): V2[] => Array.from({ length: n }, (_, i) => [c[0] + Math.cos((i / n) * Math.PI * 2) * rx, c[1] + Math.sin((i / n) * Math.PI * 2) * ry]);
+/** `poly` cut to what's inside the convex outline `conv` */
+function within(poly: V2[], conv: V2[]) {
+  let area = 0;
+  for (let i = 0; i < conv.length; i++) area += conv[i][0] * conv[(i + 1) % conv.length][1] - conv[(i + 1) % conv.length][0] * conv[i][1];
+  const sg = Math.sign(area) || 1;
+  let out = poly;
+  for (let i = 0; i < conv.length && out.length >= 3; i++) {
+    const [ax, ay] = conv[i];
+    const [bx, by] = conv[(i + 1) % conv.length];
+    out = clip(out, ([x, y]) => sg * ((bx - ax) * (y - ay) - (by - ay) * (x - ax)));
+  }
+  return out.length >= 3 ? out : [];
+}
+
+/**
+ * The traffic's crew: the driver behind every window you'd see him through (each side pane, the windscreen, the rear
+ * glass), the seats' headrests behind him and in the back. Flat shapes laid just over the glass in the car's detail
+ * (no draw of their own), the traffic's only: your cars and the parked ones are built without
+ */
+function crew(p: Parts, s: CarSpec) {
+  const n = INTERIORS[s.id];
+  if (!n) return;
+  const bus = s.id === 'bus';
+  const cw = s.W * s.cabinW;
+  const round = bus ? 0.05 : 0.055;
+  const [rb, rr, fr] = s.cabin;
+  const mid: V2 = [(s.cabin[0][0] + s.cabin[3][0] + rr[0] + fr[0]) / 4, (s.cabin[0][1] + s.cabin[3][1] + rr[1] + fr[1]) / 4];
+  const head = alongBack(n.hip, n.recline, 0.47);
+  const shoulder = alongBack(n.hip, n.recline, 0.31);
+  const rest = alongBack(n.hip, n.recline, 0.47, -0.12);
+  const rearRest = n.rear ? alongBack([n.rear.x, n.hip[1], 0], n.rear.recline, 0.47, -0.1) : null;
+  const twoUp = PASSENGER.has(s.id);
+  // Side on: his head, his shoulders and chest, the headrest behind him (and the rear seats'). Where his head would
+  // be behind the pillar (a saloon's B pillar), he's drawn a little forward, in the front door's window
+  const front = s.panes.reduce((a, b) => (b[1] > a[1] ? b : a));
+  const dx = Math.max(0, front[0] + 0.09 - head[0]);
+  const fwd = (q: V2): V2 => [q[0] + dx, q[1]];
+  const torso: V2[] = [alongBack(n.hip, n.recline, 0.12, -0.09), alongBack(n.hip, n.recline, 0.12, 0.08), alongBack(n.hip, n.recline, 0.33, 0.07), alongBack(n.hip, n.recline, 0.36, 0.0), alongBack(n.hip, n.recline, 0.33, -0.09)].map(fwd);
+  const sideShapes: [V2[], string][] = [[oval(fwd(rest), 0.05, 0.065), REST], ...(rearRest ? [[oval(rearRest, 0.05, 0.065), REST] as [V2[], string]] : []), [torso, FIGURE], [oval(fwd(head), 0.07, 0.085), FIGURE]];
+  if (!bus) {
+    const inner = inset(s.cabin, round + 0.035);
+    for (const [x0, x1] of s.panes) {
+      let pane0 = clip(clip(inner, ([x]) => x - x0), ([x]) => x1 - x);
+      if (s.sill !== undefined) pane0 = clip(pane0, ([, y]) => y - s.sill!);
+      if (pane0.length < 3) continue;
+      // (each later shape a hair further out, so none is flush with the one under it)
+      sideShapes.forEach(([shape, col], k) => {
+        const cut = within(shape, pane0);
+        if (!cut.length) return;
+        for (const side of [-1, 1]) {
+          const g = new THREE.ShapeGeometry(new THREE.Shape(cut.map(([x, y]) => new THREE.Vector2(side * x, y))));
+          if (side < 0) g.rotateY(Math.PI);
+          p.detail(g.translate(0, 0, side * (cw / 2 + 0.026 + k * 0.006)), col);
+        }
+      });
+    }
+  }
+  // Through the windscreen and the rear glass: the parts of him and the seats between the glass's foot and its top
+  const through = (a: V2, b: V2, z: number, w: number, y0: number, y1: number, col: string, lift: number) => {
+    const lo = Math.max(Math.min(a[1], b[1]) + 0.03, y0);
+    const hi = Math.min(Math.max(a[1], b[1]) - 0.03, y1);
+    if (hi - lo < 0.03) return;
+    const at = (y: number): V2 => {
+      const t = (y - a[1]) / (b[1] - a[1]);
+      return [a[0] + (b[0] - a[0]) * t, y];
+    };
+    p.detail(pane(at(hi), at(lo), w, mid, 0, lift).translate(0, 0, z), col);
+  };
+  const foot = screenFoot(s);
+  const z = n.hip[2];
+  // (the headrests first, then him, each a little further out: the streaks on the glass are further out still)
+  through(fr, foot, -z, 0.13, rest[1] - 0.065, rest[1] + 0.065, REST, 0.027);
+  through(fr, foot, z, 0.3, foot[1], shoulder[1] + 0.03, FIGURE, 0.029);
+  through(fr, foot, z, 0.14, head[1] - 0.085, head[1] + 0.085, FIGURE, 0.031);
+  if (twoUp) {
+    through(fr, foot, -z, 0.3, foot[1], shoulder[1] + 0.03, FIGURE, 0.029);
+    through(fr, foot, -z, 0.14, head[1] - 0.085, head[1] + 0.085, FIGURE, 0.031);
+  }
+  if (s.rearGlass) {
+    for (const zz of rearRest ? [z, -z] : [-z]) through(rb, rr, zz, 0.13, (rearRest ?? rest)[1] - 0.065, (rearRest ?? rest)[1] + 0.065, REST, 0.027);
+    through(rb, rr, z, 0.14, head[1] - 0.085, head[1] + 0.085, FIGURE, 0.029);
+    if (twoUp) through(rb, rr, -z, 0.14, head[1] - 0.085, head[1] + 0.085, FIGURE, 0.029);
+  }
+}
+
 /** What every model takes on (the traffic's and the parked cars' too) */
-function add(p: Parts, s: CarSpec, wheels: boolean, low: boolean) {
+function add(p: Parts, s: CarSpec, wheels: boolean, low: boolean, withCrew = false) {
+  if (withCrew) crew(p, s);
   const half = s.L / 2;
   const [rb, , fr, fb] = s.cabin;
   const cw = s.W * s.cabinW;
@@ -60,7 +159,8 @@ function add(p: Parts, s: CarSpec, wheels: boolean, low: boolean) {
     }
     // The boot lid's, behind the rear window (a saloon's), or the tailgate's across the back over the bumper
     const tx0 = rb[0] - 0.05;
-    if (tx0 + half > 0.25) {
+    // (none behind an upright cab: the truck's box, the rig's deck)
+    if (tx0 + half > 0.25 && rb[0] !== s.cabin[1][0]) {
       const pts: V2[] = [[tx0, topAt(s, tx0)], ...s.top.filter(([x]) => x < tx0 && x > -half + 0.04), [-half + 0.05, topAt(s, -half + 0.05)]];
       for (const side of [-1, 1]) lay(p, pts, side * (s.W / 2 - 0.075), 0.012, SEAM, 0.004);
       p.detail(box(0.012, 0.012, s.W - 0.15, tx0, topAt(s, tx0) + 0.004, 0), SEAM);
@@ -106,7 +206,7 @@ function add(p: Parts, s: CarSpec, wheels: boolean, low: boolean) {
   // Highlights on the glass: two pale bars up the windscreen
   const [, rr] = s.cabin;
   const mid: V2 = [(rb[0] + fb[0] + rr[0] + fr[0]) / 4, (rb[1] + fb[1] + rr[1] + fr[1]) / 4];
-  if (!bus) for (const [z, w] of [[cw * 0.16, 0.07], [cw * 0.29, 0.03]] as const) p.detail(pane(fr, fb, w, mid, 0.1, 0.035).translate(0, 0, z), STREAK);
+  if (!bus) for (const [z, w] of [[cw * 0.16, 0.07], [cw * 0.29, 0.03]] as const) p.detail(pane(fr, screenFoot(s), w, mid, 0.1, 0.035).translate(0, 0, z), STREAK);
 
   // The headlamps' projectors and fog lamps low in the front bumper (desktops)
   const lz = s.W / 2 - Math.min(0.17, s.W * 0.16);
@@ -130,10 +230,11 @@ const spin = (x: number, y: number, z: number) => new THREE.Matrix4().makeRotati
  */
 export function fitCars(low: boolean, compile: (o: THREE.Object3D) => unknown, sky: { invalidateShadows(): void }, scene: THREE.Object3D) {
   const o = { low, ready: (obj: THREE.Object3D) => void compile(obj) };
-  FINE.add = (p, s, wheels) => add(p, s, wheels, low);
+  FINE.add = (p, s, wheels, withCrew) => add(p, s, wheels, low, withCrew);
   FINE.fit = (car) => fitOut(car, o);
   for (const [key, g] of cache) {
-    const n = build(g.spec.id, key.endsWith('true'));
+    const [, wheels, withCrew] = key.split(':');
+    const n = build(g.spec.id, wheels === 'true', '', withCrew === 'true');
     for (const k of ['paint', 'detail', 'glow'] as const) {
       // (disposed first: the renderer lets the old buffers go, then uploads the new ones on the next draw)
       g[k]?.dispose();

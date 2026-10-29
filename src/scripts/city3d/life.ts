@@ -4,7 +4,9 @@
  * Vehicles and people are instanced, so a crowd costs a handful of draw calls.
  */
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { FONT_DISPLAY, PAL, canvasTex, fx, glowTex, lit, mergeMeshes, moving, neon, rand, toon } from './kit';
+import type { BikeGeometry } from './bikes';
 import { CENTER, SLAB, type Tick } from './world';
 
 import { PLAN, distToStreet, outset, pointAt, streetLength } from './streetplan';
@@ -15,7 +17,11 @@ import { departuresRoadY, departuresSlope } from './airfield';
 import { WATER_Y } from './river';
 import { DECK_Y as BOARDWALK_Y, STROLL, boatZ } from './waterfront';
 import { JUNCTIONS, ROUTES, SPOTS, lightState, phaseOf, pointOn, rightOf, type Junction, type Phase, type Pt, type Route } from './routes';
-import { CARS, PAINTS, carGeometry, carMaterials, theFarCars, type CarId } from './cars';
+import { BAR, CARS, PAINTS, carGeometry, carMaterials, theFarCars, trailerGeometry, type CarId } from './cars';
+import { BIKES, type BikeId } from './mybike';
+import { DRIVER_SCALE } from './carinside';
+import { riderRoot } from './acts';
+import { BAYS, BAY_DWELL, BIKE_MIX, BIKE_PAINTS, PIN_TO_MIDDLE, RIG_LEN, barLit, rigAlong, trafficLean } from './fleet';
 import { isNear, tileKey, tileOf } from './tiles';
 import type { Idle } from './landmarks';
 import { TRENCH_WALKS } from './projects';
@@ -35,6 +41,10 @@ export interface LifeOpts {
   cars: number;
   buses: number;
   walkers: number;
+  /** Vehicle plan Phase 8: delivery trucks (box trucks and big rigs in turn), patrol cars, bikes and scooters */
+  trucks?: number;
+  police?: number;
+  bikes?: number;
   /** Leave the characters' small details out (phones) */
   light?: boolean;
   /** How far from the camera a car is drawn in full (beyond, its far form: growth plan Phase 2) */
@@ -56,7 +66,11 @@ interface Vehicle {
   v: number;
   vmax: number;
   len: number;
-  model: CarId;
+  /** Its width (your car bumps off it) */
+  w: number;
+  /** A car's model (the box truck and the rig's tractor too), or a bike's; its fleet (`fleetKey()`) */
+  model: CarId | BikeId;
+  bike: boolean;
   slot: number;
   /** Where it is this frame (for following, for your own car to bump into), and which way it faces */
   x: number;
@@ -77,8 +91,23 @@ interface Vehicle {
   /** Its brake lights, and which way it's indicating (what the lights showed this frame) */
   brake: boolean;
   turn: 'L' | 'R' | null;
-  /** A bus: its stops (transit.ts) */
+  /** A bus's stops (transit.ts), or a delivery truck's loading bays (fleet.ts): which, and where it is in them */
   bus: Bus | null;
+  stops: 'bus' | 'bay' | null;
+  /** Hazard lights on (a truck standing at its bay) */
+  hazard: boolean;
+  /** Where it's drawn this frame (the rig's tractor ahead of its middle) */
+  dx: number;
+  dz: number;
+  dyaw: number;
+  /** The big rig's trailer: its placing this frame, where it's drawn, its far form */
+  trailer: { matrix: THREE.Matrix4; x: number; z: number; yaw: number; far: number; seg: [number, number, number] } | null;
+  /** A patrol car: its light bar's first instance in the tail mesh (-1: not a patrol car) */
+  bar: number;
+  /** A bike: how far it leans, the way it faced last frame, its rider (`riders`) */
+  lean: number;
+  last: number;
+  rider: number;
 }
 
 const ROAD_Y = 0.035;
@@ -91,7 +120,7 @@ export const swing = { x: 0, z: 0, r: 0, t: 0 };
 export const stoppers: { x: number; z: number; r: number; on: boolean }[] = [];
 /** Where the traffic and the people on the sidewalks are, so your car can bump them softly (drive.ts) */
 export const bodies = {
-  cars: [] as { x: number; z: number; yaw: number; len: number; model: CarId }[],
+  cars: [] as { x: number; z: number; yaw: number; len: number; w: number; model: string }[],
   /** (`act`: what an idle person is doing, 'sit' on a bench: walk.ts leaves their bench alone) */
   people: [] as { x: number; z: number; act?: string }[],
   /** The traffic's boats in the lanes (your hire boat bumps softly off them, boat.ts) */
@@ -133,8 +162,97 @@ function spotsNear(x: number, z: number, r: number) {
   return out;
 }
 
-/** The traffic's mix of cars, repeated (buses come first, as many as the quality tier allows) */
+/** The traffic's mix of cars, repeated (buses come first, as many as the quality tier allows, then the trucks and the patrol cars) */
 const MIX: CarId[] = ['hatch', 'sedan', 'van', 'hatch', 'pickup', 'sedan', 'coupe', 'hatch', 'sedan', 'van', 'pickup', 'exec'];
+/** The delivery trucks, in turn */
+const TRUCKS: CarId[] = ['truck', 'rig'];
+
+/**
+ * The traffic's riders (vehicle plan Phase 8): where each bike's rider sits this frame, for the crowd to draw them
+ * (`buildPeople()`, kind 'ride'); off until their bike is on the road and near
+ */
+interface Rider {
+  x: number;
+  y: number;
+  z: number;
+  ry: number;
+  scale: number;
+  clip: CrowdClip;
+  u: number;
+  on: boolean;
+}
+const riders: Rider[] = [];
+/** The riders' row by their bike (crowdclips.ts) */
+const RIDE_CLIP: Record<BikeId, CrowdClip> = { scooter: 'scoot', streetbike: 'ride', sportbike: 'tuck' };
+/** The traffic's bikes are drawn at the crowd's size (their riders are), yours at the drivers' */
+const BIKE_K = 0.66 / DRIVER_SCALE;
+/**
+ * The bikes join the traffic once their drawing is in (bikes.ts, a chunk fetched after the boot: index.ts hands
+ * `bikeGeometry` over); until then there are none on the road
+ */
+let joinBikes: ((make: (id: BikeId) => BikeGeometry) => void) | null = null;
+export function addTrafficBikes(make: (id: BikeId) => BikeGeometry) {
+  joinBikes?.(make);
+  joinBikes = null;
+}
+
+/** The patrol cars' livery over their doors: SECTOR 7 PATROL by the city's own shield (fixed copy), both sides */
+function liveryGeometry() {
+  const s = CARS.police;
+  const x0 = -0.46;
+  const x1 = 0.55;
+  const y0 = 0.18;
+  const y1 = 0.52;
+  const one = () => new THREE.PlaneGeometry(x1 - x0, y1 - y0).translate((x0 + x1) / 2, (y0 + y1) / 2, 0);
+  const right = one().translate(0, 0, s.W / 2 + 0.016);
+  const left = one().rotateY(Math.PI).translate(0, 0, -(s.W / 2 + 0.016));
+  return mergeGeometries([right, left])!;
+}
+function liveryTex() {
+  return canvasTex(512, 172, (c, w, h) => {
+    c.fillStyle = '#f3f2f7';
+    c.fillRect(0, 0, w, h);
+    // The shield: a pointed shield in navy, the city's diamond in it
+    const sx = 78;
+    c.fillStyle = '#141a3a';
+    c.beginPath();
+    c.moveTo(sx - 52, 26);
+    c.lineTo(sx + 52, 26);
+    c.lineTo(sx + 52, 92);
+    c.quadraticCurveTo(sx + 50, 132, sx, 152);
+    c.quadraticCurveTo(sx - 50, 132, sx - 52, 92);
+    c.closePath();
+    c.fill();
+    c.fillStyle = '#e219e5';
+    c.beginPath();
+    c.moveTo(sx, 46);
+    c.lineTo(sx + 28, 84);
+    c.lineTo(sx, 122);
+    c.lineTo(sx - 28, 84);
+    c.closePath();
+    c.fill();
+    c.fillStyle = '#00c2ff';
+    c.beginPath();
+    c.moveTo(sx, 62);
+    c.lineTo(sx + 15, 84);
+    c.lineTo(sx, 106);
+    c.lineTo(sx - 15, 84);
+    c.closePath();
+    c.fill();
+    // SECTOR 7 over PATROL
+    c.fillStyle = '#141a3a';
+    c.textAlign = 'left';
+    c.textBaseline = 'alphabetic';
+    c.font = `900 72px ${FONT_DISPLAY}`;
+    c.fillText('SECTOR 7', 156, 92);
+    c.font = `800 46px ${FONT_DISPLAY}`;
+    c.fillStyle = '#2a3b66';
+    c.fillText('P A T R O L', 158, 142);
+    // A cyan line along the bottom
+    c.fillStyle = '#00c2ff';
+    c.fillRect(0, h - 10, w, 10);
+  });
+}
 
 function lightBox(w: number, h: number, d: number) {
   return new THREE.BoxGeometry(w, h, d);
@@ -142,8 +260,11 @@ function lightBox(w: number, h: number, d: number) {
 
 function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => void) {
   const vehicles: Vehicle[] = [];
-  const counts = new Map<CarId, number>();
-  const total = opts.cars + opts.buses;
+  const counts = new Map<string, number>();
+  const nTrucks = opts.trucks ?? 0;
+  const nPolice = opts.police ?? 0;
+  const nBikes = opts.bikes ?? 0;
+  const total = opts.cars + opts.buses + nTrucks + nPolice;
   /** Where each route turns (traffic.ts), for the indicators */
   const turnsBy = new Map<Route, Turn[]>();
   const turnsFor = (r: Route) => {
@@ -151,29 +272,34 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
     if (!t) turnsBy.set(r, (t = turnsOf(r.pts, r.cum)));
     return t;
   };
-  /** The bus stops along each route (transit.ts), worked out the first time a bus takes it */
+  /** The bus stops along each route (transit.ts), and the loading bays (fleet.ts), worked out the first time a bus or a truck takes it */
   const stopsBy = new Map<Route, RouteStop[]>();
-  const stopsFor = (r: Route) => {
-    let t = stopsBy.get(r);
-    if (!t) stopsBy.set(r, (t = routeStops(r)));
+  const baysBy = new Map<Route, RouteStop[]>();
+  const stopsOf = (v: Vehicle) => {
+    const by = v.stops === 'bay' ? baysBy : stopsBy;
+    let t = by.get(v.route);
+    if (!t) by.set(v.route, (t = routeStops(v.route, v.stops === 'bay' ? BAYS : undefined)));
     return t;
   };
-  // Every car starts somewhere round the home view, a little apart
-  const start = spotsNear(CENTER.x, CENTER.z, POOL_R);
-  for (let i = 0; i < total; i++) {
-    const model: CarId = i < opts.buses ? 'bus' : MIX[(i - opts.buses) % MIX.length];
-    const spot = start[Math.floor(((i * 7919) % 1000) / 1000 * start.length)] ?? SPOTS[i % SPOTS.length];
-    const route = ROUTES[spot.r];
-    const slot = counts.get(model) ?? 0;
-    counts.set(model, slot + 1);
-    vehicles.push({
-      route,
+  /** Which fleet a vehicle is drawn in */
+  const fleetKey = (v: { model: string; bike: boolean }) => (v.bike ? `bike:${v.model}` : v.model);
+  let nBars = 0;
+  const newVehicle = (i: number, model: CarId | BikeId, bike: boolean, spot: (typeof SPOTS)[number]): Vehicle => {
+    const key = bike ? `bike:${model}` : model;
+    const slot = counts.get(key) ?? 0;
+    counts.set(key, slot + 1);
+    const seed = (i * 0.7548776662) % 1;
+    const truck = model === 'truck' || model === 'rig';
+    return {
+      route: ROUTES[spot.r],
       p: spot.p,
       seg: 0,
       v: 0,
-      vmax: model === 'bus' ? 3.2 : model === 'van' || model === 'pickup' ? 3.8 + rand() * 1.5 : 4.2 + rand() * 2,
-      len: CARS[model].L,
+      vmax: model === 'bus' ? 3.2 : truck ? 3.2 + rand() * 0.8 : model === 'van' || model === 'pickup' ? 3.8 + rand() * 1.5 : 4.2 + rand() * 2,
+      len: bike ? BIKES[model as BikeId].L * BIKE_K : model === 'rig' ? RIG_LEN : CARS[model as CarId].L,
+      w: bike ? BIKES[model as BikeId].W * BIKE_K : CARS[model as CarId].W,
       model,
+      bike,
       slot,
       x: 0,
       z: 0,
@@ -185,12 +311,30 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
       far: -1,
       mover: { v: 0, held: 0, react: reactionOf(i) },
       body: newBody(0, 0),
-      horn: newHorn(((i * 0.7548776662) % 1)),
-      seed: (i * 0.7548776662) % 1,
+      horn: newHorn(seed),
+      seed,
       brake: false,
       turn: null,
-      bus: model === 'bus' ? newBus() : null,
-    });
+      bus: model === 'bus' || truck ? newBus() : null,
+      stops: model === 'bus' ? 'bus' : truck ? 'bay' : null,
+      hazard: false,
+      dx: 0,
+      dz: 0,
+      dyaw: 0,
+      trailer: model === 'rig' ? { matrix: new THREE.Matrix4(), x: 0, z: 0, yaw: 0, far: -1, seg: [0, 0, 0] } : null,
+      bar: model === 'police' ? nBars++ : -1,
+      lean: 0,
+      last: NaN,
+      rider: -1,
+    };
+  };
+  // Every car starts somewhere round the home view, a little apart
+  const start = spotsNear(CENTER.x, CENTER.z, POOL_R);
+  for (let i = 0; i < total; i++) {
+    const k = i - opts.buses;
+    const model: CarId = i < opts.buses ? 'bus' : k < nTrucks ? TRUCKS[k % TRUCKS.length] : k < nTrucks + nPolice ? 'police' : MIX[(k - nTrucks - nPolice) % MIX.length];
+    const spot = start[Math.floor(((i * 7919) % 1000) / 1000 * start.length)] ?? SPOTS[i % SPOTS.length];
+    vehicles.push(newVehicle(i, model, false, spot));
   }
   /** Put a car back on the road near x, z: out of sight, clear of the others; it keeps its speed */
   const respawn = (v: Vehicle, x: number, z: number) => {
@@ -203,15 +347,23 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
       // In sight only far off, past what the camera's looking at (where it's a speck in its far form)
       const fromEye = Math.hypot(s.x - CROWD_VIEW.eye.x, s.z - CROWD_VIEW.eye.z);
       if (CROWD_VIEW.frustum.intersectsSphere(carBall) && (fromEye < POOL_SEEN || fromEye < Math.hypot(x - CROWD_VIEW.eye.x, z - CROWD_VIEW.eye.z) + 20)) continue;
-      if (vehicles.some((o) => o !== v && Math.hypot(o.x - s.x, o.z - s.z) < 9)) continue;
+      if (vehicles.some((o) => o !== v && Math.hypot(o.x - s.x, o.z - s.z) < 9 + o.len / 2)) continue;
       v.route = ROUTES[s.r];
       v.p = s.p;
       v.seg = 0;
       if (v.bus) Object.assign(v.bus, newBus());
       place(v);
       resetBody(v.body, v.v, v.yaw);
-      return;
+      v.last = NaN;
+      return true;
     }
+    return false;
+  };
+  /** A point `q` along a vehicle's route (round the loop), pulled in to the kerb as its stop or bay asks */
+  const along = (v: Vehicle, q: number, seg: number, k: number) => {
+    const len = v.route.len;
+    const o = pointOn(v.route, ((q % len) + len) % len, seg);
+    return { x: o.at[0] - o.dir[1] * k, z: o.at[1] + o.dir[0] * k, dx: o.dir[0], dz: o.dir[1], seg: o.seg };
   };
   const place = (v: Vehicle) => {
     const o = pointOn(v.route, v.p, v.seg);
@@ -219,13 +371,31 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
     [v.x, v.z] = o.at;
     [v.fx, v.fz] = o.dir;
     v.yaw = Math.atan2(-v.fz, v.fx);
-    // A bus in the inner lane pulls in to the kerb for its stop and back out after (transit.ts)
-    if (v.bus) {
-      const k = pullIn(v.p + v.len / 2, v.route.len, stopsFor(v.route));
-      if (k) {
-        v.x -= v.fz * k;
-        v.z += v.fx * k;
-      }
+    // A bus in the inner lane pulls in to the kerb for its stop and back out after (transit.ts), and a truck for its bay
+    const pull = (q: number) => (v.bus ? pullIn(q, v.route.len, stopsOf(v)) : 0);
+    const k = pull(v.p + v.len / 2);
+    v.x -= v.fz * k;
+    v.z += v.fx * k;
+    v.dx = v.x;
+    v.dz = v.z;
+    v.dyaw = v.yaw;
+    // The big rig: the tractor ahead of the middle, the trailer from its axles to the kingpin on the fifth wheel
+    const tr = v.trailer;
+    if (tr) {
+      const a = rigAlong(v.p);
+      const t = along(v, a.tractor, tr.seg[0], pull(a.tractor + CARS.rig.L / 2));
+      const pin = along(v, a.pin, tr.seg[1], pull(a.pin));
+      const ax = along(v, a.axles, tr.seg[2], pull(a.axles));
+      tr.seg = [t.seg, pin.seg, ax.seg];
+      v.dx = t.x;
+      v.dz = t.z;
+      v.dyaw = Math.atan2(-t.dz, t.dx);
+      const ux = pin.x - ax.x;
+      const uz = pin.z - ax.z;
+      const ul = Math.hypot(ux, uz) || 1;
+      tr.x = pin.x - (ux / ul) * PIN_TO_MIDDLE;
+      tr.z = pin.z - (uz / ul) * PIN_TO_MIDDLE;
+      tr.yaw = Math.atan2(-uz / ul, ux / ul);
     }
   };
   vehicles.forEach(place);
@@ -245,10 +415,16 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
     back: Vehicle[];
     view: number;
     shadow: number;
+    /** Each one's placing and its paint (by its slot in the fleet) */
+    pick(v: Vehicle): THREE.Matrix4;
+    paints: THREE.Color[];
   }
-  const fleets = new Map<CarId, Fleet>();
-  const newFleet = (meshes: THREE.InstancedMesh[]): Fleet => {
-    const f: Fleet = { meshes, front: [], back: [], view: 0, shadow: 0 };
+  const fleets = new Map<string, Fleet>();
+  const farDist = opts.far ?? Infinity;
+  const moving: THREE.InstancedMesh[] = [];
+  /** A fleet of `n`: the paint (each its own colour from `hexes`) and the details, and whatever else it carries */
+  const addFleet = (key: string, n: number, hexes: string[], meshes: THREE.InstancedMesh[], pick = (v: Vehicle) => v.matrix) => {
+    const f: Fleet = { meshes, front: [], back: [], view: 0, shadow: 0, pick, paints: Array.from({ length: n }, (_, i) => new THREE.Color(hexes[(i * 5 + 2) % hexes.length])) };
     for (const m of meshes) {
       m.castShadow = true;
       m.frustumCulled = false;
@@ -257,34 +433,43 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
       m.onBeforeRender = () => void (m.count = f.view);
       scene.add(m);
     }
-    m0(meshes).setColorAt(0, new THREE.Color());
-    m0(meshes).instanceColor!.setUsage(THREE.DynamicDrawUsage);
+    meshes[0].setColorAt(0, new THREE.Color());
+    meshes[0].instanceColor!.setUsage(THREE.DynamicDrawUsage);
+    fleets.set(key, f);
+    moving.push(...meshes);
     return f;
   };
-  const m0 = (list: THREE.InstancedMesh[]) => list[0];
-  const farDist = opts.far ?? Infinity;
-  const moving: THREE.InstancedMesh[] = [];
-  /** Each car's own paint (by its slot in its model's fleet) */
-  const paintOf = new Map<CarId, THREE.Color[]>();
+  const pair = (paint: THREE.BufferGeometry, detail: THREE.BufferGeometry, n: number) => [new THREE.InstancedMesh(paint, mats.paint, n), new THREE.InstancedMesh(detail, mats.detail, n)];
+  // (the patrol cars' livery panels ride with their fleet: one draw for all of them)
+  const livery = toon('#ffffff', { map: liveryTex(), name: 'car-livery' });
   for (const [model, n] of counts) {
-    const g = carGeometry(model);
-    const list = [new THREE.InstancedMesh(g.paint, mats.paint, n), new THREE.InstancedMesh(g.detail, mats.detail, n)];
+    const g = carGeometry(model as CarId, { crew: true });
+    const list = pair(g.paint, g.detail, n);
     if (g.glow) list.push(new THREE.InstancedMesh(g.glow, busGlow, n));
-    const paints = PAINTS[model];
-    paintOf.set(model, Array.from({ length: n }, (_, i) => new THREE.Color(paints[(i * 5 + 2) % paints.length])));
-    fleets.set(model, newFleet(list));
-    moving.push(...list);
+    if (model === 'police') list.push(new THREE.InstancedMesh(liveryGeometry(), livery, n));
+    addFleet(model, n, PAINTS[model as CarId], list);
   }
-  // Each car's far form, in its own paint, in the city's one mesh of far cars (one draw for all of them)
+  // The big rigs' trailers, each placed where its rig's is this frame
+  const nRigs = counts.get('rig') ?? 0;
+  if (nRigs) {
+    const tg = trailerGeometry();
+    addFleet('trailer', nRigs, ['#f3f2f7', '#f3f2f7', '#9a96b8', '#ffd23f'], pair(tg.paint, tg.detail, nRigs), (v) => v.trailer!.matrix);
+  }
+  // Each car's far form, in its own paint, in the city's one mesh of far cars (one draw for all of them; the trailer its own)
   const farCars = theFarCars();
-  for (const v of vehicles) v.far = farCars.add(v.model, paintOf.get(v.model)![v.slot]);
-  const nVeh = vehicles.length;
+  for (const v of vehicles) {
+    v.far = farCars.add(v.model as CarId, fleets.get(fleetKey(v))!.paints[v.slot]);
+    if (v.trailer) v.trailer.far = farCars.add('trailer', fleets.get('trailer')!.paints[v.slot]);
+  }
+  const nVeh = vehicles.length + nBikes;
   // Headlights: faint by day, on at dusk. The tail mesh carries each car's two brake lights (red, brighter
   // while it brakes) and four indicators (amber, flashing before a turn; folded to nothing otherwise), the
   // colour per instance over a white material: one draw for all of them (city life plan, Phase 1)
+  const ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
   const head = new THREE.InstancedMesh(lightBox(0.03, 0.08, 0.17), neon('#fff6c8', 0.12, 3), nVeh * 2);
   const PER_CAR = 6;
-  const tail = new THREE.InstancedMesh(lightBox(0.03, 0.07, 0.15), neon('#ffffff', 0.8, 3), nVeh * PER_CAR);
+  // (and after them the patrol cars' light bars, two lenses each)
+  const tail = new THREE.InstancedMesh(lightBox(0.03, 0.07, 0.15), neon('#ffffff', 0.8, 3), nVeh * PER_CAR + nBars * 2);
   for (const m of [head, tail]) {
     m.frustumCulled = false;
     m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -292,17 +477,48 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
   }
   tail.setColorAt(0, new THREE.Color());
   tail.instanceColor!.setUsage(THREE.DynamicDrawUsage);
+  // (folded away until there's a vehicle for them: the bikes' wait for the bikes)
+  for (const m of [head, tail]) for (let i = 0; i < m.count; i++) m.setMatrixAt(i, ZERO);
   const TAIL_DIM = new THREE.Color('#ff2b2b').multiplyScalar(0.55);
   const TAIL_BRAKE = new THREE.Color('#ff2b2b').multiplyScalar(1.3);
   const AMBER = new THREE.Color('#ffb020').multiplyScalar(1.2);
   const NONE = new THREE.Matrix4().makeScale(0, 0, 0);
+  const BIKE_SCALE = new THREE.Vector3(BIKE_K, BIKE_K, BIKE_K);
   // (an indicator lens: 0.04 tall, 0.1 wide, bigger than an ink outline)
   const LENS = new THREE.Vector3(1, 0.57, 0.67);
+  // The patrol cars' light bars: a lens lit over each dark one, a touch bigger (cars.ts `BAR`)
+  const BAR_SCALE = new THREE.Vector3((BAR.w + 0.012) / 0.03, (BAR.h + 0.01) / 0.07, (BAR.d + 0.012) / 0.15);
+  const BAR_COL = [new THREE.Color('#3d6bff').multiplyScalar(1.5), new THREE.Color('#e219e5').multiplyScalar(1.4)];
   scene.add(fx(head), fx(tail));
+
+  // The bikes, once their drawing is in (`addTrafficBikes()`): each a vehicle like the cars, its rider one of the crowd
+  const bikeGeos = new Map<string, BikeGeometry>();
+  for (let i = 0; i < nBikes; i++) riders.push({ x: 0, y: 0, z: 0, ry: 0, scale: 0.66, clip: 'ride', u: 0, on: false });
+  joinBikes = (make) => {
+    const fresh: Vehicle[] = [];
+    for (let i = 0; i < nBikes; i++) {
+      const v = newVehicle(total + i, BIKE_MIX[i % BIKE_MIX.length], true, SPOTS[(i * 977) % SPOTS.length]);
+      v.rider = i;
+      fresh.push(v);
+    }
+    for (const [key, n] of counts) {
+      if (!key.startsWith('bike:')) continue;
+      const g = make(key.slice(5) as BikeId);
+      bikeGeos.set(key, g);
+      addFleet(key, n, BIKE_PAINTS, pair(g.paint, g.detail, n));
+    }
+    // Onto the road near what you're looking at, out of sight
+    for (const v of fresh) {
+      vehicles.push(v);
+      if (!respawn(v, CROWD_VIEW.focus.x, CROWD_VIEW.focus.z)) place(v);
+      resetBody(v.body, 0, v.yaw);
+    }
+  };
 
 
   // Headlight beams on the road
-  const beamPos = new Float32Array(nVeh * 3);
+  // (the bikes' wait under the ground until there are bikes)
+  const beamPos = new Float32Array(nVeh * 3).map((_, i) => (i % 3 === 1 ? -50 : 0));
   const beamGeo = new THREE.BufferGeometry();
   beamGeo.setAttribute('position', new THREE.BufferAttribute(beamPos, 3));
   const beamMat = lit(new THREE.PointsMaterial({ color: '#fff0c0', map: glowTex, size: 1.6, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }), 0, 0.28);
@@ -440,12 +656,16 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
       target = Math.min(target, byYou);
       for (const w of stoppers) if (w.on) target = Math.min(target, shortOf(v, w));
       // Held up by you: a toot after a while (quieter the further off)
-      if (hornDue(v.horn, byYou < 0.1 && v.v < 0.1, dt, v.seed) && opts.sfx) opts.sfx('horn', Math.max(0, 1 - offEye(v) / 45) * 0.9);
-      // A bus stops at its stops (transit.ts): slowing in, standing with its doors open (the traffic behind waits), pulling away
+      // (never a patrol car: they never bother you)
+      if (v.model !== 'police' && hornDue(v.horn, byYou < 0.1 && v.v < 0.1, dt, v.seed) && opts.sfx) opts.sfx('horn', Math.max(0, 1 - offEye(v) / 45) * 0.9);
+      // A bus stops at its stops (transit.ts): slowing in, standing with its doors open (the traffic behind waits), pulling away;
+      // a delivery truck at its loading bays (fleet.ts), standing longer with its hazards on
       if (v.bus) {
-        const bs = busStep(v.bus, v.p + v.len / 2, v.v, v.route.len, stopsFor(v.route), dt, v.seed);
+        const bay = v.stops === 'bay';
+        const bs = busStep(v.bus, v.p + v.len / 2, v.v, v.route.len, stopsOf(v), dt, v.seed, bay ? BAY_DWELL : undefined);
         target = Math.min(target, bs.cap);
-        if (bs.doors && opts.sfx) opts.sfx('doors', Math.max(0, 1 - offEye(v) / 40) * 0.8);
+        v.hazard = bay && v.bus.at >= 0;
+        if (bs.doors && opts.sfx && !bay) opts.sfx('doors', Math.max(0, 1 - offEye(v) / 40) * 0.8);
       }
       // Stopped, it waits its own reaction time before moving off (a queue peels from the front)
       v.mover.v = v.v;
@@ -479,64 +699,131 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
     for (const f of fleets.values()) f.front.length = f.back.length = 0;
     let hi = 0;
     let ti = 0;
+    const lamp = (mesh: THREE.InstancedMesh, i: number, at: THREE.Matrix4, p: readonly number[] | null, col?: THREE.Color, scale?: THREE.Vector3) => {
+      mesh.setMatrixAt(i, p ? L.multiplyMatrices(at, scale ? T.compose(T0.set(p[0], p[1], p[2]), Q0, scale) : T.makeTranslation(p[0], p[1], p[2])) : NONE);
+      if (col) mesh.setColorAt(i, col);
+    };
     vehicles.forEach((v, idx) => {
       place(v);
       // The body nods under braking and leans out of a turn (traffic.ts), on top of its heading
-      bodyMotion(v.body, v.v, v.yaw, dt);
+      bodyMotion(v.body, v.v, v.dyaw, dt);
       // (over Harbour Bridge's hump: up it, its nose along the deck's slope; harbour.ts)
       // (and up and down the airport's departures deck: its ramps climb along x; airfield.ts)
-      const hb = onHarbour(v.x, v.z) ? deckY(v.z) : departuresRoadY(v.x, v.z);
-      const climb = onHarbour(v.x, v.z) ? Math.atan(-Math.sin(v.yaw) * deckSlope(v.z)) : Math.atan(Math.cos(v.yaw) * departuresSlope(v.x, v.z));
-      q.setFromAxisAngle(up, v.yaw).multiply(q2.setFromEuler(lean.set(v.body.roll, 0, v.body.pitch + climb)));
-      M.makeRotationFromQuaternion(q).setPosition(v.x, ROAD_Y + hb, v.z);
+      const rise = (x: number, z: number, yaw: number) => (onHarbour(x, z) ? Math.atan(-Math.sin(yaw) * deckSlope(z)) : Math.atan(Math.cos(yaw) * departuresSlope(x, z)));
+      const hb = onHarbour(v.dx, v.dz) ? deckY(v.dz) : departuresRoadY(v.dx, v.dz);
+      const climb = rise(v.dx, v.dz, v.dyaw);
+      if (v.bike) {
+        // A bike leans into its turns, a little (fleet.ts), and is drawn at its rider's size
+        const rate = Number.isNaN(v.last) ? 0 : Math.atan2(Math.sin(v.dyaw - v.last), Math.cos(v.dyaw - v.last)) / Math.max(dt, 1e-3);
+        v.last = v.dyaw;
+        v.lean += (trafficLean(v.v, rate) - v.lean) * (1 - Math.exp(-6 * Math.min(dt, 0.25)));
+        q.setFromAxisAngle(up, v.dyaw).multiply(q2.setFromEuler(lean.set(v.lean, 0, climb)));
+        M.compose(T0.set(v.dx, ROAD_Y + hb, v.dz), q, BIKE_SCALE);
+      } else {
+        q.setFromAxisAngle(up, v.dyaw).multiply(q2.setFromEuler(lean.set(v.body.roll, 0, v.body.pitch + climb)));
+        M.makeRotationFromQuaternion(q).setPosition(v.dx, ROAD_Y + hb, v.dz);
+      }
       v.matrix.copy(M);
+      // The rig's trailer behind it, along its own heading (no nod or lean: it follows the tractor)
+      const tr = v.trailer;
+      if (tr) {
+        const th = onHarbour(tr.x, tr.z) ? deckY(tr.z) : departuresRoadY(tr.x, tr.z);
+        q.setFromAxisAngle(up, tr.yaw).multiply(q2.setFromEuler(lean.set(0, 0, rise(tr.x, tr.z, tr.yaw))));
+        tr.matrix.makeRotationFromQuaternion(q).setPosition(tr.x, ROAD_Y + th, tr.z);
+      }
       v.near = !CROWD_VIEW.on || isNear(Math.hypot(v.x - CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, v.z - CROWD_VIEW.eye.z), farDist, v.near);
-      farCars.show(v.far, !v.near);
-      const f = fleets.get(v.model)!;
-      if (!v.near) farCars.place(v.far, M);
-      else if (!CROWD_VIEW.on) f.front.push(v);
-      else {
+      // (a bike far off isn't drawn at all: it has no far form, it's a speck)
+      if (v.far >= 0) {
+        farCars.show(v.far, !v.near);
+        if (!v.near) farCars.place(v.far, M);
+      }
+      if (tr) {
+        farCars.show(tr.far, !v.near);
+        if (!v.near) farCars.place(tr.far, tr.matrix);
+      }
+      const key = fleetKey(v);
+      const f = fleets.get(key)!;
+      const tf = tr ? fleets.get('trailer')! : null;
+      let drawn = false;
+      if (v.near && !CROWD_VIEW.on) {
+        f.front.push(v);
+        tf?.front.push(v);
+        drawn = true;
+      } else if (v.near) {
         carBall.center.set(v.x, 0.6, v.z);
         carBall.radius = v.len / 2 + 0.6;
         const shadow = !CROWD_VIEW.shadowOn || CROWD_VIEW.shadow.intersectsSphere(carBall);
-        if (shadow) f.front.push(v);
-        else if (CROWD_VIEW.frustum.intersectsSphere(carBall)) f.back.push(v);
+        if (shadow) {
+          f.front.push(v);
+          tf?.front.push(v);
+          drawn = true;
+        } else if (CROWD_VIEW.frustum.intersectsSphere(carBall)) {
+          f.back.push(v);
+          tf?.back.push(v);
+          drawn = true;
+        }
       }
-      const g = carGeometry(v.model);
+      // Its rider, sat on its seat (the crowd draws them: buildPeople)
+      if (v.rider >= 0) {
+        const r = riders[v.rider];
+        r.on = drawn;
+        if (drawn) {
+          const id = v.model as BikeId;
+          const [sx, sy] = BIKES[id].seat;
+          const [, ry] = riderRoot(id);
+          T0.set(sx, sy, 0).applyMatrix4(M);
+          r.x = T0.x;
+          r.y = T0.y - (sy - ry) * BIKE_K;
+          r.z = T0.z;
+          r.ry = Math.atan2(Math.cos(v.dyaw), -Math.sin(v.dyaw));
+          r.scale = DRIVER_SCALE * BIKE_K;
+          r.clip = RIDE_CLIP[id];
+          const k = Math.min(1, Math.abs(v.v) / 1.2);
+          r.u = 1 - k * k * (3 - 2 * k);
+        }
+      }
+      // Its lamps: two head and two tail (a bike one of each), on the trailer's tail for a rig
+      const bg = v.bike ? bikeGeos.get(key)! : null;
+      const g = bg ? null : carGeometry(v.model as CarId, { crew: true });
+      const tg = tr ? trailerGeometry() : null;
+      const back = tr ? tr.matrix : M;
       for (let k = 0; k < 2; k++) {
-        head.setMatrixAt(hi, L.multiplyMatrices(M, T.makeTranslation(...g.head[k])));
-        hi++;
-        tail.setMatrixAt(ti, L.multiplyMatrices(M, T.makeTranslation(...g.tail[k])));
-        tail.setColorAt(ti, v.brake ? TAIL_BRAKE : TAIL_DIM);
-        ti++;
+        lamp(head, hi++, M, bg ? (k ? null : bg.head) : g!.head[k]);
+        lamp(tail, ti++, back, bg ? (k ? null : bg.tail) : (tg ?? g!).tail[k], v.brake ? TAIL_BRAKE : TAIL_DIM);
       }
-      // The indicators: the turning side's two lenses (right is +z, the car's left -z) while the flash is on
-      const on = v.turn && blinkOn(t, v.seed);
+      // The indicators: the turning side's two lenses (right is +z, the car's left -z) while the flash is on; both
+      // sides (the hazards) on a truck standing at its bay
+      const on = (v.turn || v.hazard) && blinkOn(t, v.seed);
       for (let k = 0; k < 4; k++) {
         const side = k % 2 === 0 ? 'R' : 'L';
-        if (on && side === v.turn) {
-          tail.setMatrixAt(ti, L.multiplyMatrices(M, T.compose(T0.set(...g.turn[k]), Q0, LENS)));
-          tail.setColorAt(ti, AMBER);
-        } else tail.setMatrixAt(ti, NONE);
+        if (on && !bg && (v.hazard || side === v.turn)) lamp(tail, ti, k < 2 ? M : back, k < 2 ? g!.turn[k] : (tg ? tg.turn[k - 2] : g!.turn[k]), AMBER, LENS);
+        else tail.setMatrixAt(ti, NONE);
         ti++;
+      }
+      // A patrol car's light bar, now and then (fleet.ts)
+      if (v.bar >= 0) {
+        const lit = barLit(t, v.seed);
+        for (const k of [0, 1] as const) {
+          const i = nVeh * PER_CAR + v.bar * 2 + k;
+          if (lit === k + 1) lamp(tail, i, M, [BAR.x, BAR.y, (k ? 1 : -1) * BAR.z], BAR_COL[k], BAR_SCALE);
+          else tail.setMatrixAt(i, NONE);
+        }
       }
       beamPos.set([v.x + v.fx * (v.len / 2 + 1.4), 0.06, v.z + v.fz * (v.len / 2 + 1.4)], idx * 3);
     });
-    for (const [model, f] of fleets) {
-      const paints = paintOf.get(model)!;
-      {
-        let k = 0;
-        for (const v of [...f.front, ...f.back]) {
-          for (const m of f.meshes) m.setMatrixAt(k, v.matrix);
-          f.meshes[0].setColorAt(k, paints[v.slot]);
-          k++;
-        }
-        f.shadow = f.front.length;
-        f.view = k;
-        f.meshes[0].instanceColor!.needsUpdate = true;
-        // (no draw call at all for a fleet with nobody in it)
-        for (const m of f.meshes) m.visible = k > 0;
+    for (const f of fleets.values()) {
+      let k = 0;
+      for (const v of [...f.front, ...f.back]) {
+        const at = f.pick(v);
+        for (const m of f.meshes) m.setMatrixAt(k, at);
+        f.meshes[0].setColorAt(k, f.paints[v.slot]);
+        k++;
       }
+      f.shadow = f.front.length;
+      f.view = k;
+      f.meshes[0].instanceColor!.needsUpdate = true;
+      // (no draw call at all for a fleet with nobody in it)
+      for (const m of f.meshes) m.visible = k > 0;
     }
     for (const m of moving) m.instanceMatrix.needsUpdate = true;
     tail.instanceColor!.needsUpdate = true;
@@ -558,7 +845,9 @@ interface Loop {
   exits: Map<number, Link[]>;
 }
 interface Person {
-  kind: 'walk' | 'idle' | 'park';
+  kind: 'walk' | 'idle' | 'park' | 'ride';
+  /** A rider in the traffic: their bike's (`riders`) */
+  ride?: number;
   /** Westlake Park's people (parklife.ts): where they are is a function of the time */
   park?: ParkPerson;
   m?: Moment;
@@ -711,14 +1000,22 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
   // ...and Uptown's joggers on the esplanade and cyclists in the bike lanes (uptownlife.ts), and the kids at play
   // on The Trenches' courts and swings (play.ts, at their own size), the same way
   for (const pp of [...PARK_PEOPLE, ...UPTOWN_PEOPLE, ...PLAY_PEOPLE]) if (!(opts.light && pp.trim)) people.push({ kind: 'park', park: pp, m: moment(), seg: 0, inset: 0, u: 0, dir: 1, speed: 0, phase: rand() * 6, x: 0, z: 0, ry: 0, face: NaN, walked: 0, crossed: 0, seed: rand(), notice: { hold: 0 } });
+  // The traffic's riders (vehicle plan Phase 8): sat on their bikes wherever the traffic puts them (buildTraffic)
+  riders.forEach((_, k) => people.push({ kind: 'ride', ride: k, seg: 0, inset: 0, u: 0, dir: 1, speed: 0, phase: 0, x: -1e5, z: -1e5, ry: 0, face: 0, walked: 0, crossed: 0, seed: rand(), notice: { hold: 0 } }));
   bodies.people = people;
 
   // Everyone is the shared Degen body in a city outfit: suits and hoodies, bags, headphones; a phone in the hand
   // of those reading one (the revamp's Phase 6: an idle whose act is 'phone', and one walker in seven)
+  // (the riders all in hoodies: one kind of the crowd's meshes for them, not two, wherever they ride)
+  const hoodie = () => {
+    let o = cityOutfit(rand);
+    while (o.kind !== 'hoodie') o = cityOutfit(rand);
+    return o;
+  };
   const phoneOf = (p: Person) => (p.kind === 'idle' ? p.act === 'phone' : p.kind === 'walk' && onPhone(p.phase / 6));
   const people3d = createCrowd(
     scene,
-    people.map((p) => ({ ...cityOutfit(rand), ...(phoneOf(p) ? { held: 'phone' as const } : {}) })),
+    people.map((p) => ({ ...(p.kind === 'ride' ? hoodie() : cityOutfit(rand)), ...(phoneOf(p) ? { held: 'phone' as const } : {}) })),
     { light: opts.light }
   );
   /** Start a walker over a crossing: from where they stand to the other block's lane corner */
@@ -745,6 +1042,15 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
       swing.t = Math.max(0, swing.t - dt);
     }
     people.forEach((p, i) => {
+      // On a bike in the traffic: wherever it is (off while it isn't drawn)
+      if (p.kind === 'ride') {
+        const r = riders[p.ride!];
+        // (nowhere while off: your car never bumps a rider who isn't there)
+        p.x = r.on ? r.x : -1e5;
+        p.z = r.on ? r.z : -1e5;
+        if (r.on) people3d.set(i, r.x, r.y, r.z, r.ry, r.scale, r.clip, r.u);
+        return;
+      }
       // Late at night some have gone home; the benches' sitters go in out of the rain (city life plan, Phase 3)
       if (p.kind === 'walk' && !outAtNight(i, hour)) return;
       if (p.act && seated(clipOf(p.act, 'idle')) && rain > 0.6) return;

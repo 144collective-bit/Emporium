@@ -17,11 +17,11 @@
  */
 import * as THREE from 'three';
 import { HIP_HEIGHT, createDegen, reachArm, torsoFrame, type Degen, type Outfit } from './character';
-import { BOAT, HIRE_VIEW, TUNE, WATER_SOLIDS, aheadOf, leaveAt, moversAt, newBoat, speedOf, stepBoat, type BoatInput, type Circle } from './boat-sim';
+import { BOAT, HIRE_VIEW, TUNE, WATER_SOLIDS, aheadOf, leaveAt, moversAt, newBoat, speedOf, sprayOf, stepBoat, wakeShape, type BoatInput, type Circle } from './boat-sim';
 import { HIRE } from './riverbus';
 import { WATER_Y } from './river';
 import { hireBoat } from './riverlife3d';
-import { fx, glowMat } from './kit';
+import { fx, glowMat, glowTex } from './kit';
 import type { Sfx } from './combat';
 
 export interface BoatDeps {
@@ -57,11 +57,34 @@ export function createBoat(d: BoatDeps) {
   const boat = model.group;
   boat.visible = false;
   d.scene.add(boat);
-  // The wake: a soft streak of foam behind it, longer and brighter with speed (the FX layer, like the lane boats')
+  // The wake: a soft streak of foam straight behind it and two arms spreading at the Kelvin angle, longer and
+  // brighter with speed (boat-sim.ts `wakeShape()`; the FX layer, like the lane boats'); they lie flat on the water
+  // in the boat's own frame, so they're kept level as it pitches (`wakeRoot`)
   const wakeMat = glowMat('#dff4ff', 0);
-  const wake = fx(new THREE.Mesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), wakeMat));
-  wake.position.y = 0.04;
-  boat.add(wake);
+  const flatQuad = () => new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2).translate(-0.5, 0, 0);
+  const wake = fx(new THREE.Mesh(flatQuad(), wakeMat));
+  const arms = [1, -1].map((side) => {
+    const arm = fx(new THREE.Mesh(flatQuad(), wakeMat));
+    arm.userData.side = side;
+    return arm;
+  });
+  const wakeRoot = new THREE.Group();
+  wakeRoot.add(wake, ...arms);
+  wakeRoot.visible = false;
+  d.scene.add(wakeRoot);
+  // The spray off the bow: droplets thrown out and up either side, falling back to the water (none under reduced
+  // motion); in the boat's frame, as many as `SPRAY_N`
+  const SPRAY_N = 48;
+  const sprayPos = new Float32Array(SPRAY_N * 3);
+  const sprayVel = new Float32Array(SPRAY_N * 3);
+  const sprayLife = new Float32Array(SPRAY_N);
+  const sprayGeo = new THREE.BufferGeometry();
+  sprayGeo.setAttribute('position', new THREE.BufferAttribute(sprayPos, 3));
+  const sprayMat = new THREE.PointsMaterial({ color: '#eef8ff', map: glowTex, size: 0.32, transparent: true, opacity: 0, depthWrite: false, fog: false });
+  const spray = fx(new THREE.Points(sprayGeo, sprayMat));
+  spray.frustumCulled = false;
+  boat.add(spray);
+  let sprayNext = 0;
 
   let s = newBoat();
   let active = false;
@@ -85,7 +108,7 @@ export function createBoat(d: BoatDeps) {
   const chest = new THREE.Matrix4();
   const grip = new THREE.Vector3();
 
-  /** Degen at the wheel: on the bench, knees bent, both hands on the wheel's sides (turned with it) */
+  /** Degen at the wheel: on the bench, knees bent, both hands on the wheel's sides (turned with it, the wheel too) */
   function seat() {
     driver = createDegen(d.outfit());
     const g = driver.g;
@@ -123,6 +146,9 @@ export function createBoat(d: BoatDeps) {
     }
     driver.update();
   }
+  /** The wheel turned with the rudder: about its own tilted axis, as far as the hands on it go */
+  const helmAxis = new THREE.Vector3(Math.cos(0.5), Math.sin(0.5), 0);
+  const turnHelm = () => model.helm.quaternion.setFromAxisAngle(helmAxis, steerNow * 0.8);
   const gas = root.querySelector<HTMLElement>('[data-drive-gas]');
   const brake = root.querySelector<HTMLElement>('[data-drive-brake]');
   /** The car's pedals read Ahead and Astern on the water */
@@ -150,6 +176,7 @@ export function createBoat(d: BoatDeps) {
     setHud(false);
     d.engine(-1);
     boat.visible = false;
+    wakeRoot.visible = false;
     HIRE_VIEW.out = false;
     if (driver) {
       driver.g.removeFromParent();
@@ -164,11 +191,48 @@ export function createBoat(d: BoatDeps) {
     const swell = d.reduced ? 0 : Math.sin(clock * 1.6) * 0.03;
     boat.position.set(s.x, WATER_Y + 0.02 + swell + Math.max(0, ahead) * 0.012, s.z);
     boat.rotation.set(-s.r * 0.12 + (d.reduced ? 0 : Math.sin(clock * 1.1) * 0.015), s.yaw, Math.min(0.11, Math.max(-0.03, (ahead / TUNE.top) * 0.11)), 'YXZ');
+    const w = wakeShape(speedOf(s));
     const k = Math.min(1, speedOf(s) / TUNE.top);
-    wake.visible = k > 0.08;
-    wake.scale.set(1.5 + k * 5, 1, 0.8 + k * 1.2);
-    wake.position.x = -BOAT.len / 2 - (1.5 + k * 5) / 2 + 0.2;
-    wakeMat.opacity = 0.45 * k;
+    // (level on the water at the boat's stern, turned with it)
+    wakeRoot.position.set(s.x, WATER_Y + 0.04, s.z);
+    wakeRoot.rotation.set(0, s.yaw, 0);
+    wakeRoot.visible = w.opacity > 0;
+    wake.scale.set(w.len, 1, 0.8 + k * 1.2);
+    wake.position.x = -BOAT.len / 2 + 0.2;
+    for (const arm of arms) {
+      const side = arm.userData.side as number;
+      arm.scale.set(w.arms, 1, 0.35 + k * 0.4);
+      arm.rotation.y = -side * w.spread;
+      arm.position.set(BOAT.len * 0.2, 0, side * BOAT.beam * 0.45);
+    }
+    wakeMat.opacity = w.opacity;
+  }
+  /** The spray off the bow: new droplets by how hard it's going, each flung out, up and back, falling to the water */
+  function stepSpray(dt: number) {
+    const amt = d.reduced ? 0 : sprayOf(speedOf(s));
+    sprayMat.opacity = 0.75 * Math.min(1, amt * 2);
+    sprayNext += amt * dt * 90;
+    for (let i = 0; i < SPRAY_N; i++) {
+      if (sprayLife[i] <= 0 && sprayNext >= 1) {
+        sprayNext -= 1;
+        const side = i % 2 ? 1 : -1;
+        sprayPos.set([BOAT.len / 2 - 0.55 + Math.random() * 0.3, 0.1, side * BOAT.beam * 0.42], i * 3);
+        sprayVel.set([-1.5 - Math.random() * 2, 1.4 + Math.random() * 1.2 * amt, side * (1.2 + Math.random() * 1.4)], i * 3);
+        sprayLife[i] = 0.5 + Math.random() * 0.35;
+      }
+      if (sprayLife[i] > 0) {
+        sprayLife[i] -= dt;
+        sprayVel[i * 3 + 1] -= 9.8 / 1.8 * dt;
+        for (let c = 0; c < 3; c++) sprayPos[i * 3 + c] += sprayVel[i * 3 + c] * dt;
+        // (back under the water, it's gone)
+        if (sprayPos[i * 3 + 1] < -0.05 || sprayLife[i] <= 0) {
+          sprayLife[i] = 0;
+          sprayPos[i * 3 + 1] = -5;
+        }
+      } else sprayPos[i * 3 + 1] = -5;
+    }
+    sprayNext = Math.min(sprayNext, 4);
+    sprayGeo.attributes.position.needsUpdate = true;
   }
 
   /** The other boats about as circles: the lane boats (two each, the length of them) and everything else on the water */
@@ -256,7 +320,9 @@ export function createBoat(d: BoatDeps) {
       }
       steerNow += (inp.steer - steerNow) * damp(8, dt);
       place();
+      turnHelm();
       poseDriver();
+      stepSpray(Math.min(dt, 0.1));
 
       // The readout: speed, and whether it's going ahead, astern or idling
       const kmh = String(Math.round(speedOf(s) * KMH));

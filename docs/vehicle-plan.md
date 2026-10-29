@@ -508,7 +508,7 @@ Asked before planning (2026-10-28):
 - Other players don't see your bike yet (as with the cars: the
   multiplayer plan's next step). Boot cost: 2.4 KB (665.4 of 670 KB).
 
-### Phase 8: the traffic
+### Phase 8: the traffic (built)
 
 - **Seats and a driver shape** behind the glass of every traffic car, in
   the same two draws (vertex colours, near only).
@@ -522,7 +522,86 @@ Asked before planning (2026-10-28):
   the crowd's figures.
 - Every new type is measured on the bench; phones get fewer of them.
 
-### Phase 9: karts, boats and aircraft
+**As built:**
+
+- **Three new models**, the traffic's only (never yours, never parked):
+  carspec.ts's `police` (**Patrol**: the Cruiser's body in midnight blue,
+  `livery` so no seams or handles are drawn on its sides), `truck` (**Box
+  Runner**: a tall cab, the cargo box behind it as the spec's `box`, drawn
+  in the paint and in its far form too) and `rig` (**Heavy Haul**: a
+  sleeper cab on a long bonnet, its deck and fifth wheel behind,
+  `FIFTH_WHEEL`), each with its seat, springs and paints; the windscreen of
+  the box truck, the rig and the bus starts well up the cab's front
+  (`screen`, `screenFoot()`). Their touches are cars.ts `EXTRAS`: the
+  patrol car's light bar (dark lenses, `BAR`), push bar, spotlight and
+  aerials; the box truck's rails, a band in the city's colours with the
+  diamond, marker lights, side guards, fuel tank, the roller shutter, wind
+  deflector and visor; the rig's chrome grille, visor, air horns, cab
+  lights, exhaust stacks, fuel tanks and steps. **The trailer** is
+  `TRAILER` (5.2 long) and `trailerGeometry()`: a box in the rig's colours
+  on an underframe, two axles under mudguards, landing legs, doors with
+  locking bars over the under-ride guard and its lamps; its far form
+  joins the far cars' mesh (`FarModel`).
+- **The rules** are `fleet.ts` (DOM-free, tested in
+  `tests/fleet.test.ts`): the **loading bays** (`BAYS`, 42 of them: along
+  the avenues in town each way, one between each two bus stops, clear of
+  the junction ahead (`BAY_AHEAD`) and of a rig's whole length behind
+  (`BAY_BEHIND`), never where a rig and a standing bus would overlap,
+  never on a bridge), taken with the buses' rules (`routeStops()`,
+  `pullIn()`, `busStep()` with `BAY_DWELL`, 10 to 18 s); the **rig along
+  its route** (`rigAlong()`, `RIG_LEN`: the tractor ahead, the kingpin on
+  its fifth wheel, the trailer's axles behind, so it swings round a corner
+  behind the tractor; the tests hold the cab clear of the trailer to 75
+  degrees); the **light bar** (`barLit()`, `BAR_FLASH`: 8 s in every 42,
+  blue and magenta in turn, each car at its own time); the **bikes**
+  (`BIKE_MIX`, `BIKE_PAINTS`, `trafficLean()`: into a turn, at most
+  `TRAFFIC_LEAN`, 0.16, so the upright rider never looks wrong on it).
+- **The traffic** (life.ts): after the buses, the trucks (box truck and
+  rig in turn), the patrol cars, then the cars' mix; each kind a fleet of
+  its own (`addFleet()`: paint and detail, the bus's windows, the patrol
+  cars' livery panels, `liveryTex()`: SECTOR 7 PATROL by the city's shield
+  over white doors, fixed copy; the trailers placed from their rigs). A
+  truck at its bay stands with its **hazards** on (both sides'
+  indicators); a patrol car never sounds its horn at you; its lit lenses
+  are two more instances each in the tail mesh. **The bikes** join once
+  bikes.ts is in (`addTrafficBikes()`, from index.ts: `bikeGeometry()`,
+  every part merged straight, the paint and the detail as the cars'),
+  drawn at the crowd's size (`BIKE_K`), no far form (a speck that far);
+  each one's **rider** is one of the crowd (`riders`, kind `ride` in
+  `buildPeople()`): his root under the seat, the row for his bike
+  (crowdclips.ts `scoot`, `ride`, `tuck`, from acts.ts `ridePose()`, which
+  your own bike's rider now shares), its `u` his left foot coming down as
+  it stops.
+- **The crew** (carfine.ts `crew()`, the fine-detail chunk): through each
+  side window the driver's head, shoulders and chest (drawn forward into
+  the front door's window where the B pillar would hide him) and the
+  headrests behind; through the windscreen and the rear glass his head
+  and shoulders and the seats; the patrol car has two up. Flat shapes just
+  over the glass in the car's detail: `carGeometry(id, { crew: true })`,
+  the traffic's only.
+- **How many** (`TIERS` in index.ts): desktop (high and medium) four
+  trucks (three on medium), three patrol cars and six bikes; phones two,
+  two and three.
+- **Measured** (`?bench`, the medium tier by day, headless on software graphics: the draws are what to compare;
+  two runs after, the second with the riders all in hoodies, one kind of the crowd's meshes for them):
+
+  | View | Draws before | After (two runs) |
+  |---|---|---|
+  | traffic (a ring junction) | 121 | 148, 148 |
+  | highway junction | 164 | 197, 186 |
+  | drive (the ring avenue) | 242 | 264, 267 |
+  | street (downtown) | 410 | 427, 437 |
+  | home | 379 | 391, 412 |
+  | the route (average / worst) | 223 / 470 | 267 / 598, 278 / 498 |
+
+  About 25 to 45 draws more where the traffic is: the new fleets (two draws each, three for the patrol cars with
+  their livery; up to 15 with every kind in view) and the riders bringing the crowd's meshes into views with no one
+  else on foot. The numbers move from run to run with where the traffic happens to be (the airport's view, with no
+  new traffic of its own, went from 114 to 145 between runs), so a real laptop's and a phone's `?bench` are the
+  owner's to paste back. Triangles about 0.1 M more; geometry memory 206 to 212 MB. Boot cost: 6 KB (657.3 of
+  670 KB).
+
+### Phase 9: karts, boats and aircraft (built)
 
 - **Karts:** a better chassis (tube frame, side pods, the engine and
   exhaust behind the seat, a fuller nose), real tyre treads and rims, the
@@ -532,6 +611,73 @@ Asked before planning (2026-10-28):
 - **Aircraft:** better shapes, ailerons, flaps and rudder that move with
   the controls, landing gear that folds away properly, for your own and
   the airport's.
+
+**As built:**
+
+- **The karts** (karts.ts, the kart race's chunk; the numbers are
+  `kartframe.ts`, DOM-free, tested in `tests/kartframe.test.ts`):
+  `KART_SHAPES` gives each model its wheels, floor, seat, side pods, engine
+  and nose. Each kart has:
+  - a bent tube frame (`bend()`) with nerf bars, a rear bumper, the rear
+    axle on its bearings and stub axles at the front;
+  - rounded side pods and a nose (`profile()`);
+  - a finned engine with its carburettor or air filter, a chain guard and
+    sprocket, and the exhaust bent round to a silencer;
+  - pedals under the nose, the steering column and a bolstered seat;
+  - tyres with shallow staggered tread blocks on six-spoke rims
+    (`kartWheel()`);
+  - a three-spoke wheel tilted back towards the driver (`WHEEL_TILT`).
+
+  The driver is posed by `kartPose()`: seated low with his knees up, each
+  foot on its pedal through `reachLeg()` (measured from the leg's own hip
+  joint), his hands on the wheel's grips through `reachArm()` as it turns.
+  The test holds his hands and feet within 1.5 cm. The motorbike rider's
+  feet are reached the same way now (acts.ts `ridePose()`, `tests/bike.test.ts`).
+- **The hire boat** (riverlife3d.ts `hireBoat()`, the river's chunk):
+  - The hull has V sections with flare and a sweeping sheer (`hullAt()`,
+    `hull()`): a navy bottom, white topsides, a cyan boot stripe and a
+    liner inside.
+  - The deck has a teak sole and gunwale caps, and a foredeck with a
+    non-skid pad, a bow rail, cleats and red and green side lights.
+  - The console has a windscreen, a compass and a throttle lever. There's
+    a bench with a backrest, a rounded outboard with its leg, cavitation
+    plate and prop, and a flag.
+  - The helm is a group of its own that boat.ts turns with the rudder
+    (`turnHelm()`).
+  - Spray comes off the bow from `SPRAY.from` of top speed (`sprayOf()`,
+    a few dozen points, none under reduced motion). The wake is a streak
+    with two arms at the Kelvin angle (`KELVIN`, `wakeShape()`: longer,
+    wider and stronger with speed). Both are in boat-sim.ts and tested in
+    `tests/boat.test.ts`.
+- **The aircraft**: the moving parts' rules are `airframe.ts` (DOM-free,
+  tested in `tests/airframe.test.ts`), and aircraft.ts draws them:
+  - **Control surfaces:** the wings, tailplanes and fins are data
+    (`PANELS`, laid by `place()`). Each surface (`SURFACES`) is cut out of
+    its panel's trailing edge (`notched()`) and hinged along the cut
+    (`frames()`, `surfaceMatrix()`). That's ailerons, two flaps a side on
+    the airliner and one on the small jet and the prop plane, elevators
+    and the rudder.
+  - **What moves them** (`stepAirframe()`): your own aircraft's surfaces
+    follow the stick (fly.ts passes it on the pose). The airport's follow
+    how their timetabled poses roll, pitch and turn (`targetsOf()`), with
+    the elevator held a little up through a banked turn and the rudder
+    steering on the ground. The flaps come down with the gear in the air,
+    part down rolling and up when parked, and slide back as they drop.
+  - **The gear** (`LEGS`): a strut with its torque link, axle and wheels,
+    hung from a pivot. On the ground it's down; it folds over `GEAR_TIME`
+    (`legMatrix()`): the nose leg aft into the nose, the mains inward into
+    a new belly fairing (`FAIRINGS`). It's hidden once it's up. The test
+    holds every folded wheel inside the body or the fairing, the struts
+    inside them or the wing, and the down wheels on the ground. The prop
+    plane keeps its fixed spatted gear; the helicopter its skids.
+  - **Better shapes:** the belly fairing, flap-track fairings under the
+    airliner's wing, antennas and the tail cone's exhaust.
+  - **Draw calls:** a fleet's surfaces are one instanced box (coloured per
+    surface: the panel's, or the livery for the rudder; `paint()` repaints
+    it), and its legs one instanced mesh per kind of leg (nose, mains).
+    That's two or three draws more for a jet's fleet, one more for the prop
+    plane's. Boot cost: 2.6 KB (659.9 of 670 KB): aircraft.ts and
+    airframe.ts are in the boot with the airport.
 
 ## Decided (the owner left these to Claude, 2026-10-28)
 

@@ -195,3 +195,44 @@ test('getting on: he stands beside it on his side, faces it, both hands on the g
   }
   assert.ok(MOMENT.board.t.bike > 0 && MOMENT.board.fireAt.bike > 0);
 });
+
+test('the rider sits astride: hands on the grips, feet on the pegs (the left on the ground as it stops), within 1.5 cm', async () => {
+  const THREE = await import('three');
+  const { ridePose, riderRoot } = await import('../src/scripts/city3d/acts');
+  const { DRIVER_SCALE } = await import('../src/scripts/city3d/carinside');
+  const { steeringHead } = await import('../src/scripts/city3d/mybike');
+  const { ANKLE_H, makeSkeleton, newPose, poseSkeleton } = await import('../src/scripts/city3d/skeleton');
+  const sk = makeSkeleton();
+  const at = (p: ReturnType<typeof newPose>, id: keyof typeof BIKES, name: 'handL' | 'handR' | 'footL' | 'footR') => {
+    poseSkeleton(sk, p);
+    sk.root.position.set(...riderRoot(id), 0);
+    sk.root.rotation.set(0, Math.PI / 2, 0);
+    sk.root.scale.setScalar(DRIVER_SCALE);
+    sk.root.updateMatrixWorld(true);
+    return sk.bones[name].getWorldPosition(new THREE.Vector3());
+  };
+  for (const id of Object.keys(BIKES) as (keyof typeof BIKES)[]) {
+    const s = BIKES[id];
+    const [hx, hy] = steeringHead(id);
+    // (the bars turn half the steer, drive.ts: up to about 0.15 in a corner at speed)
+    for (const steer of [0, 0.15]) {
+      const p = newPose();
+      ridePose(p, id, 0, steer);
+      for (const [name, side] of [['handL', 1], ['handR', -1]] as const) {
+        const g = new THREE.Vector3(s.bars[0], s.bars[1], side * (s.bars[2] - 0.05)).sub(new THREE.Vector3(hx, hy, 0)).applyAxisAngle(new THREE.Vector3(0, 1, 0), steer).add(new THREE.Vector3(hx, hy, 0));
+        const d = at(p, id, name).distanceTo(g);
+        assert.ok(d < 0.015, `${id} steer ${steer}: ${name} on its grip (${(d * 180).toFixed(1)} cm)`);
+      }
+      for (const [name, side] of [['footL', 1], ['footR', -1]] as const) {
+        const d = at(p, id, name).distanceTo(new THREE.Vector3(s.pegs[0], s.pegs[1] + ANKLE_H * DRIVER_SCALE, side * s.pegs[2]));
+        assert.ok(d < 0.015, `${id}: ${name} on its peg (${(d * 180).toFixed(1)} cm)`);
+      }
+    }
+    // Stopped: his left foot (the rig's +x, the bike's -z) down beside the seat, on the ground (on the sport bike's
+    // tall seat a toe's length short of it in the bike's own space: the bike leans onto that side, REST)
+    const p = newPose();
+    ridePose(p, id, 1);
+    const f = at(p, id, 'footR');
+    assert.ok(f.y - (0.04 + ANKLE_H * DRIVER_SCALE) < 0.07 && f.z < -s.pegs[2], `${id}: the left foot down (${f.y.toFixed(3)}, ${f.z.toFixed(3)})`);
+  }
+});

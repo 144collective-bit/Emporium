@@ -101,9 +101,10 @@ export function createFly(d: FlyDeps) {
     pose(c, 0, 0);
     return c;
   }
-  const pose = (c: Craft, t: number, dt: number) => {
+  const pose = (c: Craft, t: number, dt: number, stick?: { turn: number; climb: number }) => {
     const s = c.state;
-    c.fleet.set(0, { x: s.x, y: s.y, z: s.z, yaw: s.yaw, pitch: s.pitch, roll: s.roll, v: s.speed, ground: s.ground, gear: s.gear, power: s.spool });
+    // (flying, the stick moves the control surfaces straight: airframe.ts)
+    c.fleet.set(0, { x: s.x, y: s.y, z: s.z, yaw: s.yaw, pitch: s.pitch, roll: s.roll, v: s.speed, ground: s.ground, gear: s.gear, power: s.spool, stick });
     c.fleet.update(t, dt);
   };
 
@@ -311,7 +312,7 @@ export function createFly(d: FlyDeps) {
         d.sfx('bump', Math.min(1, hit / 8));
         shake = Math.min(0.3, hit * 0.03);
       }
-      pose(craft, clock, dt);
+      pose(craft, clock, dt, { turn: inp.turn, climb: inp.climb });
 
       // Readout: speed, height over the ground, the lever (or the rotor), and what it's doing
       const ground = d.groundAt(s.x, s.z);

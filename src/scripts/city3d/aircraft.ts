@@ -12,9 +12,12 @@
  * on the ground under the middle (wheels or skids at y = 0). Each model is
  * a few parts by role: `body` (vertex colours, the shared toon paint),
  * `accent` (one colour per aircraft: tail, cowls, stripes), `neon` (nav
- * lights), `strobe` (the blinking beacon), `gear` (folds away in flight),
- * `decal` (the DEGEN AIR titles) and spinners (propeller, rotors, each with
- * a blur disc for when it's turning fast). `createFleet()` makes one
+ * lights), `strobe` (the blinking beacon), `decal` (the DEGEN AIR titles)
+ * and spinners (propeller, rotors, each with a blur disc for when it's
+ * turning fast). The moving parts are airframe.ts's (vehicle plan Phase 9):
+ * the control surfaces cut out of the wings, tailplanes and fin (`frames`,
+ * one instanced box each) and the gear's legs, folding into the body
+ * (`legs`, an instanced mesh per kind of leg). `createFleet()` makes one
  * instanced mesh per part for several of a kind, so a fleet costs a handful
  * of draw calls whatever its size.
  */
@@ -22,6 +25,30 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { FONT_DISPLAY, canvasTex, fx, glowTex, neon, paintMat, sharedFor, toon } from './kit';
 import type { AircraftKind, Pose } from './airfield';
+import {
+  BIZ_BODY,
+  BIZ_H,
+  FAIRINGS,
+  JET_BODY,
+  JET_H,
+  LEGS,
+  PANELS,
+  PROP_H,
+  deflection,
+  frames,
+  legLength,
+  legMatrix,
+  newAirframe,
+  notched,
+  place,
+  stepAirframe,
+  surfaceMatrix,
+  type Airframe,
+  type Frame,
+  type FrameKind,
+  type Leg,
+  type PanelId,
+} from './airframe';
 
 /** Every model: the airport's three kinds, the freighter (an airliner in cargo trim) and the players' small jet (Phase 2) */
 export type ModelKind = AircraftKind | 'bizjet' | 'freighter';
@@ -40,6 +67,9 @@ export interface AircraftModel {
   kind: ModelKind;
   parts: { role: Role; geo: THREE.BufferGeometry }[];
   spinners: Spinner[];
+  /** The control surfaces, and the gear's legs by kind (each kind's geometry hangs from its pivot at the origin) */
+  frames: Frame[];
+  legs: { geo: THREE.BufferGeometry; legs: Leg[] }[];
   /** Nose to tail, wingtip to wingtip, and its blob shadow's size */
   length: number;
   span: number;
@@ -130,10 +160,46 @@ class Parts {
     const b = blades.attributes.color ? clean(blades, false, true) : tint(blades, INK);
     this.spinners.push({ blades: b.translate(pivot.x, pivot.y, pivot.z), blur: clean(blur).translate(pivot.x, pivot.y, pivot.z), pivot, axis, rate });
   }
+  /** A panel from airframe.ts, its surfaces cut out of its trailing edge */
+  panel(role: Role, c: THREE.Color | undefined, kind: FrameKind, id: PanelId, side: 1 | -1) {
+    const p = PANELS[kind]![id];
+    this.slab(role, c, notched(kind, id), p.thick, (u, v, t) => place(p, side, u, v, t));
+  }
   model(kind: ModelKind, length: number, span: number): AircraftModel {
     const parts = [...this.lists].map(([role, geos]) => ({ role, geo: mergeGeometries(geos, false)! }));
-    return { kind, parts, spinners: this.spinners, length, span };
+    // The gear's legs, one geometry for each kind of leg (the mains are alike)
+    const legs = new Map<string, { geo: THREE.BufferGeometry; legs: Leg[] }>();
+    for (const l of LEGS[kind] ?? []) {
+      const key = [l.r, l.w, l.twin, legLength(l), l.strut].join(':');
+      if (!legs.has(key)) legs.set(key, { geo: legGeometry(l), legs: [] });
+      legs.get(key)!.legs.push(l);
+    }
+    return { kind, parts, spinners: this.spinners, frames: frames(kind), legs: [...legs.values()], length, span };
   }
+}
+
+/** A leg hanging from the origin: the oleo strut, its torque link, the axle and the wheels on it */
+function legGeometry(l: Leg) {
+  const L = legLength(l);
+  const g: THREE.BufferGeometry[] = [];
+  const add = (geo: THREE.BufferGeometry, c: THREE.Color) => g.push(tint(geo, c));
+  add(new THREE.CylinderGeometry(l.strut, l.strut, L * 0.6, 10).translate(0, -L * 0.3, 0), METAL);
+  add(new THREE.CylinderGeometry(l.strut * 0.7, l.strut * 0.7, L * 0.45, 10).translate(0, -L * 0.75, 0), C('#c9c4e6'));
+  add(new THREE.BoxGeometry(l.strut * 2.4, L * 0.22, l.strut * 0.6).translate(l.strut * 1.4, -L * 0.62, 0), INK);
+  const zs = l.twin ? [-l.twin, l.twin] : [0];
+  if (l.twin) add(new THREE.CylinderGeometry(l.strut * 0.6, l.strut * 0.6, l.twin * 2, 8).rotateX(Math.PI / 2).translate(0, -L, 0), METAL);
+  for (const z of zs) {
+    add(new THREE.CylinderGeometry(l.r, l.r, l.w, 16).rotateX(Math.PI / 2).translate(0, -L, z), TYRE);
+    const side = l.twin ? Math.sign(z) : 1;
+    add(new THREE.CylinderGeometry(l.r * 0.55, l.r * 0.55, 0.02, 12).rotateX(Math.PI / 2).translate(0, -L, z + side * (l.w / 2 + 0.006)), METAL);
+    if (!l.twin) add(new THREE.CylinderGeometry(l.r * 0.55, l.r * 0.55, 0.02, 12).rotateX(Math.PI / 2).translate(0, -L, z - (l.w / 2 + 0.006)), METAL);
+  }
+  return mergeGeometries(g, false)!;
+}
+/** The belly fairing at the wing's root, where the mains fold */
+function fairing(P: Parts, kind: FrameKind) {
+  const f = FAIRINGS[kind]!;
+  P.add('body', new THREE.SphereGeometry(1, 28, 14).scale(...f.half).translate(...f.at), BELLY);
 }
 
 /**
@@ -209,22 +275,10 @@ function navLights(P: Parts, tipX: number, tipY: number, tipZ: number, tail: [nu
 
 function airliner(freight = false): AircraftModel {
   const P = new Parts();
-  const H = 2.75;
+  const kind: FrameKind = freight ? 'freighter' : 'jet';
+  const H = JET_H;
   const R = 1.3;
-  const st: [number, number, number, number?][] = [
-    [10.1, 0.04, H - 0.35],
-    [9.85, 0.5, H - 0.3],
-    [9.35, 0.86, H - 0.18],
-    [8.6, 1.12, H - 0.08],
-    [7.6, 1.26, H - 0.02],
-    [6.6, R, H],
-    [-4.6, R, H],
-    [-6.2, 1.16, H + 0.18],
-    [-7.8, 0.88, H + 0.48],
-    [-9.2, 0.5, H + 0.82],
-    [-10.1, 0.12, H + 1.02],
-    [-10.25, 0.02, H + 1.05],
-  ];
+  const st = JET_BODY;
   // Fuselage: white, a grey belly, the PulseChain stripe along each side
   P.add(
     'body',
@@ -261,18 +315,15 @@ function airliner(freight = false): AircraftModel {
   // Wings: swept, tapered, a little dihedral, winglets in the accent colour
   const wing = (side: 1 | -1) => {
     const dih = 0.08;
-    P.slab(
-      'body',
-      GREY,
-      [
-        [2.3, 0.9],
-        [-2.9, 0.9],
-        [-4.2, 9],
-        [-2.5, 9],
-      ],
-      0.26,
-      (u, v, t) => [u, H - 0.95 + t + (v - 0.9) * dih, side * v]
-    );
+    P.panel('body', GREY, kind, 'wing', side);
+    // The flaps' track fairings under the wing, between and outboard of the flaps
+    const W = PANELS[kind]!.wing;
+    for (const f of [0.315, 0.68]) {
+      const [te, tip] = [W.outline[1], W.outline[2]];
+      const [u, v] = [te[0] + (tip[0] - te[0]) * f, te[1] + (tip[1] - te[1]) * f];
+      const [, y, z] = place(W, side, u, v, -W.thick / 2 - 0.1);
+      P.tubeX('body', GREY, u - 0.7, u + 1.4, 0.05, 0.13, y, z, 10);
+    }
     P.slab(
       'accent',
       undefined,
@@ -299,19 +350,8 @@ function airliner(freight = false): AircraftModel {
   wing(-1);
 
   // Tail: fin in the accent colour with the Emporium's diamond, tailplanes
-  P.slab(
-    'accent',
-    undefined,
-    [
-      [-6.4, 0],
-      [-9.8, 0],
-      [-10.6, 4.6],
-      [-9.3, 4.6],
-    ],
-    0.28,
-    (u, v, t) => [u, H + 0.9 + v, t]
-  );
-  for (const s of [1, -1]) {
+  P.panel('accent', undefined, kind, 'fin', 1);
+  for (const s of [1, -1] as const) {
     const d = [
       [-8.9, 2.1],
       [-8.45, 2.75],
@@ -326,31 +366,14 @@ function airliner(freight = false): AircraftModel {
       0.04,
       (u, v, t) => [u, H + 0.9 + v, s * (0.19 + t)]
     );
-    P.slab(
-      'body',
-      GREY,
-      [
-        [-7.6, 0.3],
-        [-9.7, 0.3],
-        [-10.3, 3.7],
-        [-9.3, 3.7],
-      ],
-      0.18,
-      (u, v, t) => [u, H + 0.75 + t + v * 0.05, s * v]
-    );
+    P.panel('body', GREY, kind, 'tail', s);
   }
-
-  // Landing gear: a nose leg and two main legs, twin wheels each
-  const leg = (x: number, z: number, r: number, top: number) => {
-    P.add('gear', new THREE.CylinderGeometry(0.09, 0.09, top - r).translate(x, r + (top - r) / 2, z), METAL);
-    for (const dz of [-0.24, 0.24]) {
-      P.add('gear', new THREE.CylinderGeometry(r, r, 0.2, 14).rotateX(Math.PI / 2).translate(x, r, z + dz), TYRE);
-      P.add('gear', new THREE.CylinderGeometry(r * 0.5, r * 0.5, 0.22, 10).rotateX(Math.PI / 2).translate(x, r, z + dz), METAL);
-    }
-  };
-  leg(7.7, 0, 0.32, H - 0.9);
-  leg(-0.7, 2.1, 0.44, H - 1.0);
-  leg(-0.7, -2.1, 0.44, H - 1.0);
+  // The belly fairing the mains fold into (the gear's legs are airframe.ts's), an antenna or two
+  fairing(P, kind);
+  P.box('body', INK, 3.2, H + R + 0.12, 0, 0.5, 0.22, 0.05, 0, 0.5, 0);
+  P.box('body', INK, 1.4, H - R - 0.1, 0, 0.35, 0.18, 0.04, 0, -0.5, 0);
+  // (the tail cone's exhaust)
+  P.tubeX('body', INK, -10.32, -10.2, 0.05, 0.08, H + 1.05, 0, 10);
 
   navLights(P, -3.4, H - 0.95 + 8.1 * 0.08 + 0.1, 9.05, [-10.3, H + 1.05, 0]);
   const red = sharedFor(neon('#ff2b2b', 0.6, 2.4))!.color;
@@ -367,14 +390,14 @@ function airliner(freight = false): AircraftModel {
     g.translate(p.x, p.y, p.z);
     P.add('decal', g);
   }
-  return P.model(freight ? 'freighter' : 'jet', 20.4, 18.6);
+  return P.model(kind, 20.4, 18.6);
 }
 
 /* ---------- The prop plane ---------- */
 
 function propPlane(): AircraftModel {
   const P = new Parts();
-  const H = 1.15;
+  const H = PROP_H;
   const st: [number, number, number, number?][] = [
     [2.55, 0.18, H],
     [2.4, 0.46, H],
@@ -407,26 +430,15 @@ function propPlane(): AircraftModel {
   for (const x of [0.75, 0.05]) for (const a of [0.05, 0.45]) onBody(P, 'body', GLASS, st, x, a, 0.5, 0.34);
   // High wing on struts, tips in the accent colour
   const WY = H + 0.68;
-  P.box('body', WHITE, 0.25, WY, 0, 1.25, 0.14, 7.2);
-  for (const s of [1, -1]) {
+  for (const s of [1, -1] as const) {
+    P.panel('body', WHITE, 'prop', 'wing', s);
     P.box('accent', undefined, 0.25, WY, s * 3.45, 1.27, 0.16, 0.3);
     const strut = new THREE.CylinderGeometry(0.04, 0.04, 1.75).rotateX(s * 0.95).translate(0.25, H + 0.05, s * 0.95);
     P.add('body', strut, METAL);
   }
-  // Tail
-  P.slab(
-    'accent',
-    undefined,
-    [
-      [-1.9, 0],
-      [-2.75, 0],
-      [-2.95, 1.05],
-      [-2.5, 1.05],
-    ],
-    0.1,
-    (u, v, t) => [u, H + 0.3 + v, t]
-  );
-  P.box('body', WHITE, -2.35, H + 0.3, 0, 0.6, 0.08, 2.4);
+  // Tail: the fin and tailplane, their rudder and elevators cut out (airframe.ts)
+  P.panel('accent', undefined, 'prop', 'fin', 1);
+  for (const s of [1, -1] as const) P.panel('body', WHITE, 'prop', 'tail', s);
   // Fixed gear with spats
   const wheel = (x: number, z: number) => {
     P.add('body', new THREE.CylinderGeometry(0.22, 0.22, 0.14, 12).rotateX(Math.PI / 2).translate(x, 0.22, z), TYRE);
@@ -520,19 +532,8 @@ function helicopter(): AircraftModel {
 
 function bizjet(): AircraftModel {
   const P = new Parts();
-  const H = 1.35;
-  const st: [number, number, number, number?][] = [
-    [4.4, 0.03, H - 0.22],
-    [4.2, 0.26, H - 0.17],
-    [3.8, 0.46, H - 0.09],
-    [3.2, 0.6, H - 0.02],
-    [2.5, 0.65, H],
-    [-1.6, 0.65, H],
-    [-2.6, 0.55, H + 0.1],
-    [-3.5, 0.37, H + 0.26],
-    [-4.2, 0.13, H + 0.4],
-    [-4.32, 0.02, H + 0.42],
-  ];
+  const H = BIZ_H;
+  const st = BIZ_BODY;
   P.add(
     'body',
     loft(st, () => WHITE, { seg: 20 })
@@ -567,18 +568,7 @@ function bizjet(): AircraftModel {
   // Low swept wings with winglets in the accent colour
   for (const side of [1, -1] as const) {
     const dih = 0.07;
-    P.slab(
-      'body',
-      GREY,
-      [
-        [1, 0.5],
-        [-0.9, 0.5],
-        [-2.05, 4.05],
-        [-1.4, 4.05],
-      ],
-      0.16,
-      (u, v, t) => [u, H - 0.42 + t + (v - 0.5) * dih, side * v]
-    );
+    P.panel('body', GREY, 'bizjet', 'wing', side);
     P.slab(
       'accent',
       undefined,
@@ -602,19 +592,8 @@ function bizjet(): AircraftModel {
   }
   // T-tail: the fin in the accent colour with the Emporium's diamond, the tailplane on top
   const FIN = 2.05;
-  P.slab(
-    'accent',
-    undefined,
-    [
-      [-2.85, 0],
-      [-4.15, 0],
-      [-4.75, FIN],
-      [-4.1, FIN],
-    ],
-    0.14,
-    (u, v, t) => [u, H + 0.3 + v, t]
-  );
-  for (const s of [1, -1]) {
+  P.panel('accent', undefined, 'bizjet', 'fin', 1);
+  for (const s of [1, -1] as const) {
     const d = [
       [-3.85, 0.7],
       [-3.6, 1.05],
@@ -629,28 +608,10 @@ function bizjet(): AircraftModel {
       0.03,
       (u, v, t) => [u, H + 0.3 + v, s * (0.1 + t)]
     );
-    P.slab(
-      'body',
-      WHITE,
-      [
-        [-3.95, 0.05],
-        [-4.6, 0.05],
-        [-4.95, 1.75],
-        [-4.55, 1.75],
-      ],
-      0.1,
-      (u, v, t) => [u, H + 0.3 + FIN + t, s * v]
-    );
+    P.panel('body', WHITE, 'bizjet', 'tail', s);
   }
-  // Gear: a nose leg and two mains, folding away in flight
-  const leg = (x: number, z: number, r: number, top: number) => {
-    P.add('gear', new THREE.CylinderGeometry(0.06, 0.06, top - r).translate(x, r + (top - r) / 2, z), METAL);
-    P.add('gear', new THREE.CylinderGeometry(r, r, 0.16, 12).rotateX(Math.PI / 2).translate(x, r, z), TYRE);
-    P.add('gear', new THREE.CylinderGeometry(r * 0.5, r * 0.5, 0.18, 10).rotateX(Math.PI / 2).translate(x, r, z), METAL);
-  };
-  leg(3.05, 0, 0.17, H - 0.45);
-  leg(-0.6, 1.05, 0.24, H - 0.45);
-  leg(-0.6, -1.05, 0.24, H - 0.45);
+  // The belly fairing the mains fold into (the legs are airframe.ts's)
+  fairing(P, 'bizjet');
   navLights(P, -1.75, H - 0.42 + 3.55 * 0.07 + 0.08, 4.1, [-4.95, H + 0.3 + FIN + 0.12, 0]);
   const red = sharedFor(neon('#ff2b2b', 0.6, 2.4))!.color;
   P.add('strobe', new THREE.SphereGeometry(0.09, 8, 6).translate(0.2, H + 0.67, 0), red);
@@ -717,10 +678,14 @@ export function poseMatrix(p: Pose, out = new THREE.Matrix4()) {
   return out.compose(V.set(p.x, p.y, p.z), Q.setFromEuler(E), ONE);
 }
 
+/** A pose for a fleet: your own aircraft also passes the stick, which moves its surfaces straight */
+export type FleetPose = Pose & { stick?: { turn: number; climb: number } };
+
 /**
  * Several aircraft of one kind, each part one instanced mesh: `set(i, pose)`
- * each frame, then `update(t, dt)` turns the props and rotors, folds the
- * gear, blinks the beacons and moves the blob shadows.
+ * each frame, then `update(t, dt)` turns the props and rotors, moves the
+ * control surfaces, folds the gear, blinks the beacons and moves the blob
+ * shadows.
  */
 export function createFleet(kind: ModelKind, liveries: string[]) {
   const model = aircraftModel(kind);
@@ -728,8 +693,8 @@ export function createFleet(kind: ModelKind, liveries: string[]) {
   const n = liveries.length;
   const group = new THREE.Group();
   group.name = `fleet-${kind}`;
-  const inst = (geo: THREE.BufferGeometry, mat: THREE.Material, cast = true) => {
-    const im = new THREE.InstancedMesh(geo, mat, n);
+  const inst = (geo: THREE.BufferGeometry, mat: THREE.Material, cast = true, count = n) => {
+    const im = new THREE.InstancedMesh(geo, mat, count);
     im.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     // Culled as a fleet: its bounds are worked out again each frame from where they are
     im.frustumCulled = true;
@@ -748,16 +713,30 @@ export function createFleet(kind: ModelKind, liveries: string[]) {
   const spins = model.spinners.map((s) => ({ s, blades: inst(s.blades, m.body), blur: fx(inst(s.blur, m.blur, false)), angle: new Array<number>(n).fill(0) }));
   // A soft shadow on the ground, for where the city's shadow map doesn't reach (and while flying low)
   const shadow = fx(inst(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), m.shadow, false));
-  const poses: Pose[] = new Array(n);
+  const poses: FleetPose[] = new Array(n);
+  // The control surfaces, all of them one instanced box (coloured per surface: the panel's, or the livery for the rudder)
+  const F = model.frames;
+  const surf = F.length ? inst(tint(new THREE.BoxGeometry(1, 1, 1).translate(0.5, 0, 0), new THREE.Color(1, 1, 1)), m.body, true, n * F.length) : null;
+  const paintOf = (f: Frame, i: number) => (f.paint === 'accent' ? new THREE.Color(liveries[i]) : f.paint === 'grey' ? GREY : WHITE);
+  if (surf) for (let i = 0; i < n; i++) F.forEach((f, j) => surf.setColorAt(i * F.length + j, paintOf(f, i)));
+  // The gear's legs: an instanced mesh for each kind of leg
+  const legs = model.legs.map((k) => ({ ...k, im: inst(k.geo, m.gear, true, n * k.legs.length) }));
+  const frame: Airframe[] = Array.from({ length: n }, () => newAirframe());
+  const L = new THREE.Matrix4();
 
   return {
     group,
     model,
-    set(i: number, p: Pose) {
+    set(i: number, p: FleetPose) {
       poses[i] = p;
     },
     /** Repaint one aircraft's livery colour (your own, picked at the hangar) */
     paint(i: number, hex: string) {
+      liveries[i] = hex;
+      if (surf) {
+        F.forEach((f, j) => f.paint === 'accent' && surf.setColorAt(i * F.length + j, paintOf(f, i)));
+        surf.instanceColor!.needsUpdate = true;
+      }
       if (!accent) return;
       accent.setColorAt(i, new THREE.Color(hex));
       accent.instanceColor!.needsUpdate = true;
@@ -770,10 +749,13 @@ export function createFleet(kind: ModelKind, liveries: string[]) {
         // Hidden parts shrink to nothing where the aircraft is (not at the world's origin, which would stretch the bounds)
         HIDE.copy(M).scale(NONE);
         for (const { role, im } of parts) {
-          if (role === 'gear' && !p.gear) im.setMatrixAt(i, HIDE);
-          else if (role === 'strobe' && (t * 1.1 + i * 0.37) % 1 > 0.12) im.setMatrixAt(i, HIDE);
+          if (role === 'strobe' && (t * 1.1 + i * 0.37) % 1 > 0.12) im.setMatrixAt(i, HIDE);
           else im.setMatrixAt(i, M);
         }
+        // The surfaces after the controls, the gear coming up or going down (hidden once it's away)
+        const a = stepAirframe(frame[i], p, dt);
+        if (surf) F.forEach((f, j) => surf.setMatrixAt(i * F.length + j, L.multiplyMatrices(M, surfaceMatrix(f, deflection(f, a), T))));
+        for (const k of legs) k.legs.forEach((l, j) => k.im.setMatrixAt(i * k.legs.length + j, a.gear < 0.02 ? HIDE : L.multiplyMatrices(M, legMatrix(l, a.gear, T))));
         for (const sp of spins) {
           sp.angle[i] = (sp.angle[i] + sp.s.rate * Math.PI * 2 * p.power * dt) % (Math.PI * 2);
           const { pivot, axis } = sp.s;
@@ -792,7 +774,7 @@ export function createFleet(kind: ModelKind, liveries: string[]) {
           T.compose(V.set(p.x, 0.04, p.z), Q.setFromAxisAngle(UP, p.yaw), SIZE.set(Math.max(1e-4, model.length * k * 1.05), 1, Math.max(1e-4, model.span * 0.55 * k)))
         );
       }
-      for (const im of [...parts.map((x) => x.im), ...spins.flatMap((sp) => [sp.blades, sp.blur]), shadow]) {
+      for (const im of [...parts.map((x) => x.im), ...spins.flatMap((sp) => [sp.blades, sp.blur]), ...legs.map((k) => k.im), ...(surf ? [surf] : []), shadow]) {
         im.instanceMatrix.needsUpdate = true;
         im.computeBoundingSphere();
       }

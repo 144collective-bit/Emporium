@@ -280,3 +280,24 @@ export function leaveAt(s: BoatState): { stop: Stop | null; at: { x: number; z: 
   }
   return null;
 }
+
+/* ---------- Spray and wake (vehicle plan Phase 9: boat.ts draws them) ---------- */
+
+/** The bow throws spray from `from` of its top speed, the most at full speed */
+export const SPRAY = { from: 0.45 };
+/** How much spray the bow throws at `speed` (tiles/s): 0 to 1 */
+export function sprayOf(speed: number) {
+  const k = (Math.abs(speed) / TUNE.top - SPRAY.from) / (1 - SPRAY.from);
+  return Math.max(0, Math.min(1, k));
+}
+/**
+ * The wake at `speed`: a foam streak straight back from the stern (`len` long) and two arms spreading at the
+ * Kelvin angle (about 19.5 degrees either side of the way it came: `spread`), their length and brightness by the
+ * speed; nothing at a crawl
+ */
+export const KELVIN = Math.asin(1 / 3);
+export function wakeShape(speed: number) {
+  const k = Math.min(1, Math.abs(speed) / TUNE.top);
+  if (k < 0.08) return { len: 0, arms: 0, spread: KELVIN, opacity: 0 };
+  return { len: 1.5 + k * 5, arms: 1 + k * 6, spread: KELVIN, opacity: 0.45 * k };
+}

@@ -56,6 +56,10 @@ export const SPRINGS: Record<CarId, SpringTune> = {
   classic: T(1.05, 0.38, 0.09, 0.019, 0.009, 0.09),
   offroad: T(1.3, 0.45, 0.13, 0.016, 0.007, 0.09),
   ev: T(1.9, 0.6, 0.06, 0.01, 0.006),
+  // The traffic's own (never fitted: here so every model has its springs)
+  police: T(1.5, 0.5, 0.07, 0.014, 0.007),
+  truck: T(1.0, 0.4, 0.09, 0.018, 0.006, 0.09),
+  rig: T(0.95, 0.4, 0.09, 0.016, 0.006, 0.09),
 };
 
 /** Where the wheels are under the body (cars.ts `wheelSpots()`'s order: each axle back to front, right then left) */
