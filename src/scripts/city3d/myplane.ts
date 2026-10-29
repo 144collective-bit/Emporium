@@ -6,11 +6,8 @@
  *
  * Kept free of the DOM and of scene code, like the other shared data.
  */
-import { CAR_PAINTS, type PaintId } from './mycar';
-
-/** The aircraft a player can fly: a high-wing prop plane, a small jet and a helicopter */
-export const PLAYER_AIRCRAFT = ['prop', 'bizjet', 'heli'] as const;
-export type PlaneId = (typeof PLAYER_AIRCRAFT)[number];
+import { CAR_PAINTS, PLAYER_AIRCRAFT, readSaved, type PaintId, type PlaneId } from './vehicleids';
+export { PLAYER_AIRCRAFT, type PlaneId };
 
 /** What the hangar says about each one (made-up names, never a real maker) */
 export const FLY: Record<PlaneId, { name: string; kind: string; blurb: string }> = {
@@ -41,7 +38,7 @@ export const PLANE_KEY = 'degen-city-plane-v1';
 /** Your saved aircraft (or the default); hangar-ui.ts saves it */
 export function loadPlane(): MyPlane {
   try {
-    return cleanPlane(JSON.parse(localStorage.getItem(PLANE_KEY) ?? 'null'));
+    return cleanPlane(readSaved(PLANE_KEY));
   } catch {
     return { ...DEFAULT_PLANE };
   }

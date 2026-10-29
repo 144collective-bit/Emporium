@@ -275,8 +275,8 @@ export function createFight(d: FightDeps): Fight {
       bout: kind === 'bout' ? BOUT : null,
       arena,
     });
-    you = createFighterFigure(group, d.outfit(), d.low, 0);
-    them = createFighterFigure(group, crewOutfit(look), d.low, 41);
+    you = createFighterFigure(group, d.outfit(), d.low, 0, d.motion);
+    them = createFighterFigure(group, crewOutfit(look), d.low, 41, d.motion);
     you.y = them.y = ground;
     active = true;
     done = false;

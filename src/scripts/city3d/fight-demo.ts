@@ -6,7 +6,9 @@
  * both fighters' health and stamina, the clip each is playing, and lets
  * you pause the bots and play any clip on the first fighter.
  *
- * The figures are drawn by fight-figure.ts (shared with fight.ts).
+ * The figures are drawn by fight-figure.ts (shared with fight.ts); the
+ * motion capture is fetched as walk mode fetches it, so their footwork round
+ * the ring moves on the animator as in the Fight Club.
  */
 import * as THREE from 'three';
 import { PLAYER, type Outfit } from './character';
@@ -15,6 +17,8 @@ import { CLIP_IDS, type ClipId } from './fight-anim';
 import { createFighterFigure, drawFighter, type FighterFigure } from './fight-figure';
 import { T, createFightSim, type FightEvent, type FightSim } from './fight-sim';
 import { fx, glowTex } from './kit';
+import { loadMocap } from './mocap-load';
+import type { Motion } from './remote';
 
 /** Where the sparring happens: the open north half of the hangout square, and the ring's radius */
 export const SPAR_SPOT = { x: 30, z: 49, r: 2.6 };
@@ -50,7 +54,9 @@ export function buildFightDemo(d: FightDemoDeps) {
     });
   }
 
-  const figures: (FighterFigure & { id: string })[] = sim.fighters.map((f, i) => ({ id: f.id, ...createFighterFigure(group, outfits[i], d.low, i * 37) }));
+  let motion: Motion | null = null;
+  void Promise.all([import('./animator'), loadMocap(), import('./onfoot')]).then(([anim, data, onFoot]) => (motion = { anim, data, onFoot }));
+  const figures: (FighterFigure & { id: string })[] = sim.fighters.map((f, i) => ({ id: f.id, ...createFighterFigure(group, outfits[i], d.low, i * 37, () => motion) }));
 
   // The ring on the ground: a neon circle, and the hit bursts
   const ring = new THREE.Mesh(new THREE.RingGeometry(spot.r - 0.06, spot.r, 64), new THREE.MeshBasicMaterial({ color: '#00eaff', transparent: true, opacity: 0.6, depthWrite: false }));

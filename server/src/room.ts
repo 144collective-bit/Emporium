@@ -34,6 +34,8 @@ import {
   WARP_GAP,
   cleanKit,
   cleanMods,
+  cleanVehicle,
+  sameVehicle,
   inWorld,
   modeOf,
   moveOk,
@@ -46,6 +48,7 @@ import {
   type ServerMsg,
   type SnapRow,
   type TargetRow,
+  type Vehicle,
 } from '../../src/scripts/net/protocol';
 import type { Env } from './index';
 import type { Profile } from './profile';
@@ -87,6 +90,8 @@ interface Player {
   fixAt: number;
   /** When their last jump (FLAG.warp) was taken */
   warpAt: number;
+  /** What they're in (their car, bike, kart, aircraft or the hire boat), for everyone else to draw */
+  veh: Vehicle | null;
 }
 
 const send = (ws: WebSocket, msg: ServerMsg) => {
@@ -146,7 +151,7 @@ export class Room extends DurableObject<Env> {
 
   private info(p: Player): PlayerInfo {
     const weapon = this.sim.players.get(String(p.id))?.weapon ?? p.me.weapon;
-    return { id: p.id, name: p.me.name, look: p.me.look, skin: p.me.skin, rank: p.me.rank, weapon };
+    return { id: p.id, name: p.me.name, look: p.me.look, skin: p.me.skin, rank: p.me.rank, weapon, veh: p.veh };
   }
 
   private async join(ws: WebSocket, msg: Extract<ClientMsg, { t: 'hello' }>): Promise<Player | null> {
@@ -191,6 +196,7 @@ export class Room extends DurableObject<Env> {
       msgWindow: now,
       fixAt: 0,
       warpAt: 0,
+      veh: null,
     };
     this.players.set(id, p);
     // They carry the gun they picked last time once they gear up again
@@ -342,6 +348,16 @@ export class Room extends DurableObject<Env> {
       case 'look':
         this.soon(p, 'look', 400, () => this.changed(p, p.profile.setLook(m.look) as Promise<OwnProfile>));
         break;
+      case 'veh': {
+        // Getting in or out: everyone else draws them in it (the latest of a burst, a few a second at most)
+        const v = cleanVehicle(m.v);
+        this.soon(p, 'veh', 250, () => {
+          if (sameVehicle(v, p.veh)) return;
+          p.veh = v;
+          this.broadcast({ t: 'info', p: this.info(p) }, p.id);
+        });
+        break;
+      }
       case 'skin':
         this.soon(p, 'skin', 400, () => this.changed(p, p.profile.setSkin(m.skin) as Promise<OwnProfile>));
         break;

@@ -260,6 +260,15 @@ const SHRUG = 0.35;
 /** The feet ease this much of the way to level (the rest of the tip stays with the shin), and no further than this */
 const FOOT_LEVEL = 0.55;
 const FOOT_MAX = 0.5;
+/**
+ * A foot the pose doesn't place (`foot` unset): it eases towards level, and
+ * if it still tips forward onto its toes, the toes bend back.
+ */
+export function looseFoot(l: Limb): { foot: number; toe: number } {
+  const tip = l.fwd - l.bend;
+  const foot = THREE.MathUtils.clamp(tip * FOOT_LEVEL, -FOOT_MAX, FOOT_MAX);
+  return { foot, toe: -Math.min(0.6, Math.max(0, foot - tip)) * 0.9 };
+}
 
 const qa = new THREE.Quaternion();
 const qc = new THREE.Quaternion();
@@ -316,12 +325,9 @@ export function poseSkeleton(sk: Skeleton, p: Pose, grip: [number, number] = [0.
       b[`toe${S}`].rotation.set(l.toe ?? 0, 0, 0);
       continue;
     }
-    // The foot eases towards level; if it still tips forward onto its toes, the toes bend back
-    const tip = l.fwd - l.bend;
-    const foot = THREE.MathUtils.clamp(tip * FOOT_LEVEL, -FOOT_MAX, FOOT_MAX);
+    const { foot, toe } = looseFoot(l);
     b[`foot${S}`].rotation.set(foot, 0, 0, 'YXZ');
-    const toesDown = foot - tip;
-    b[`toe${S}`].rotation.set(-Math.min(0.6, Math.max(0, toesDown)) * 0.9, 0, 0);
+    b[`toe${S}`].rotation.set(toe, 0, 0);
   }
 }
 

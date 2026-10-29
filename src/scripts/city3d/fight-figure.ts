@@ -9,8 +9,15 @@
  *   `hurtFrame`. In a move: the move's clip at the sim's own `frame`, so
  *   the strike lands on the frame the rules say. Blocking: `block` (its
  *   hold loops). Else the `guard` loop; moving round the ring, its legs
- *   are the planted-feet walk (locomotion.ts), so the feet step, not slide.
+ *   and hips are the animator's on the motion capture (animator.ts, the
+ *   animation revamp's Phase 7: the guard's upper body over them, as a
+ *   gun's is over the player's), or the planted-feet walk (locomotion.ts)
+ *   until walk mode has the capture, so the feet step, not slide.
  * - A change of clip crossfades over a few frames (`blendPose`).
+ * - The feet stay planted on the canvas (fightfeet.ts): each clip's legs
+ *   reach down to them, so the hips turn and drop over them, the rear foot
+ *   turning on its ball into a cross; the sim's lunges and knock backs move
+ *   the fighter and the feet step after it (`createFootwork()`).
  * - `root` (the lying pose's lift, back-rotation and the height it turns
  *   about, `rootShift()`) goes on the figure's group with the sim's x, z and
  *   yaw: the group is moved so the pitch turns about `(0, pivot, 0)` in the
@@ -22,6 +29,10 @@ import { createDegen, type Degen, type Limb, type Outfit } from './character';
 import { createLocomotion, type Locomotion } from './locomotion';
 import { CLIPS, blendPose, hurtClip, hurtMirror, moveClip, newFightPose, rootShift, sampleClip, type ClipId, type FightPose } from './fight-anim';
 import { T, type Fighter } from './fight-sim';
+import { createFootwork, plantLegs, plantWeight, type Footwork } from './fightfeet';
+import type { Animator } from './animator';
+import { newMove, stepMove, type MoveState } from './movesim';
+import type { Motion } from './remote';
 
 /** Figures stand at the walker's scale */
 export const FIGHTER_SCALE = 0.85;
@@ -47,13 +58,40 @@ export interface FighterFigure {
   seed: number;
   /** The ground it fights on (0 in the ring; a street spar's, a pier's deck) */
   y: number;
+  /** The feet on the canvas (fightfeet.ts), and how far each leg is planted (eased) */
+  feet: Footwork;
+  plant: [number, number];
+  /** The motion capture and its animator module, once walk mode has them; this fighter's animator and its springs */
+  motion: () => Motion | null;
+  anim: Animator | null;
+  move: MoveState;
 }
 
-export function createFighterFigure(parent: THREE.Object3D, outfit: Outfit, low: boolean, seed = 0): FighterFigure {
+export function createFighterFigure(parent: THREE.Object3D, outfit: Outfit, low: boolean, seed = 0, motion: () => Motion | null = () => null): FighterFigure {
   const degen = createDegen({ ...outfit, fists: true }, low ? 1 : undefined);
   degen.g.scale.setScalar(FIGHTER_SCALE);
   parent.add(degen.g);
-  return { degen, pose: newFightPose(), prev: newFightPose(), tmp: newFightPose(), clip: null, mirror: false, frame: 0, fade: 0, loco: createLocomotion(), walk: 0, last: null, manual: null, seed, y: 0 };
+  return {
+    degen,
+    pose: newFightPose(),
+    prev: newFightPose(),
+    tmp: newFightPose(),
+    clip: null,
+    mirror: false,
+    frame: 0,
+    fade: 0,
+    loco: createLocomotion(),
+    walk: 0,
+    last: null,
+    manual: null,
+    seed,
+    y: 0,
+    feet: createFootwork(),
+    plant: [1, 1],
+    motion,
+    anim: null,
+    move: newMove(0),
+  };
 }
 export function disposeFigure(fg: FighterFigure) {
   fg.degen.g.removeFromParent();
@@ -110,6 +148,12 @@ export function pickClip(f: Fighter, fg: FighterFigure, ticks: number): { id: Cl
   return { id: 'guard', frame: fg.seed + ticks };
 }
 
+/** How fast a leg may come onto the canvas or off it beyond what its clip says (a share a frame): a kick cut short by a blow comes down over a few frames */
+const PLANT_RATE = 0.4;
+const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
+const smooth = (x: number) => x * x * (3 - 2 * x);
+const ball = new THREE.Vector3();
+
 /** Pose and place the figure from the fighter's state; `dt` 0 holds the frame */
 export function drawFighter(fg: FighterFigure, f: Fighter, dt: number, ticks: number, overrideClip?: { id: ClipId; frame: number; mirror?: boolean }) {
   const { id, frame, mirror } = overrideClip ?? pickClip(f, fg, ticks);
@@ -125,20 +169,57 @@ export function drawFighter(fg: FighterFigure, f: Fighter, dt: number, ticks: nu
   }
   fg.frame = frame;
   sampleClip(id, frame, fg.pose, { mirror });
-  // Moving round the ring: the planted-feet walk under the guard (square to the opponent, as when armed),
-  // so the feet step instead of sliding; it fades in over the guard's stance and back out when they stop
+  // Moving round the ring: the motion capture's legs under the guard (or the planted-feet walk until it's in),
+  // facing the opponent, so the feet step instead of sliding; they fade in over the guard's stance and back out
   const vx = fg.last && dt > 0 ? (f.x - fg.last.x) / dt : 0;
   const vz = fg.last && dt > 0 ? (f.z - fg.last.z) / dt : 0;
   if (dt > 0) fg.last = { x: f.x, z: f.z };
-  if (dt > 0) fg.loco.update({ dt, t: ticks / 60, x: f.x, y: 0, z: f.z, vx, vz, face: f.yaw, grounded: true, vy: 0, scale: FIGHTER_SCALE, ground: () => 0, armed: true });
-  const walking = id === 'guard' && (f.moving > 0.05 || fg.loco.stepping);
+  const mo = fg.motion();
+  if (mo && !fg.anim) {
+    fg.anim = mo.anim.createAnimator(mo.data);
+    fg.move = newMove(f.yaw);
+  }
+  const anim = mo ? fg.anim : null;
+  const walking = id === 'guard' && (f.moving > 0.05 || (!anim && fg.loco.stepping));
+  const w0 = fg.walk;
   if (dt > 0) fg.walk += ((walking ? 1 : 0) - fg.walk) * Math.min(1, dt * 10);
+  if (!walking && fg.walk < 0.01) fg.walk = 0;
+  if (anim) {
+    if (dt > 0 && fg.walk > 0) {
+      // (taking off again from the stance: the springs start where it stands)
+      if (w0 === 0) {
+        anim.reset();
+        fg.move = newMove(f.yaw);
+      }
+      stepMove(fg.move, vx, vz, true, dt, f.yaw);
+      anim.update({ dt, x: f.x, y: fg.y, z: f.z, move: fg.move, gx: vx, gz: vz, scale: FIGHTER_SCALE, ground: () => fg.y, sprint: 0, grounded: true, vy: 0, faceGoal: f.yaw });
+    }
+  } else if (dt > 0) fg.loco.update({ dt, t: ticks / 60, x: f.x, y: 0, z: f.z, vx, vz, face: f.yaw, grounded: true, vy: 0, scale: FIGHTER_SCALE, ground: () => 0, armed: true });
   if (fg.fade > 0) {
     fg.fade -= dt * 60;
     const k = 1 - Math.max(0, fg.fade) / FADE;
     blendPose(fg.prev, fg.pose, k, fg.tmp);
     copyPose(fg.tmp, fg.pose);
   }
+  // The feet on the canvas: while the walk has the legs they're wherever it put them; else they keep their place and
+  // step after the fighter as the sim moves it, and the clip's legs reach down to them
+  const root = { x: f.x, z: f.z, yaw: f.yaw, scale: FIGHTER_SCALE };
+  const want = [plantWeight(id, 0, frame), plantWeight(id, 1, frame)];
+  for (let i = 0; i < 2; i++) {
+    const p = Math.max(0, want[i] - fg.walk);
+    fg.plant[i] = dt > 0 ? fg.plant[i] + THREE.MathUtils.clamp(p - fg.plant[i], -PLANT_RATE * dt * 60, PLANT_RATE * dt * 60) : p;
+  }
+  const balls = fg.feet.update(dt, root, fg.plant);
+  // (while the walk has them, the feet are where it put them: they step on from there)
+  if (fg.walk > 0.02) {
+    const bones = fg.degen.rig.bones;
+    for (const i of [0, 1] as const) {
+      bones[i === 0 ? 'toeL' : 'toeR'].getWorldPosition(ball);
+      fg.feet.place(i, ball.x, ball.z);
+    }
+  }
+  plantLegs(fg.pose, id, frame, { mirror: !!mirror, balls, w: fg.plant });
+
   const deg = fg.degen;
   deg.pose.bob = fg.pose.bob;
   deg.pose.lean = fg.pose.lean;
@@ -149,30 +230,39 @@ export function drawFighter(fg: FighterFigure, f: Fighter, dt: number, ticks: nu
   // The clips' head turn is against the shoulders over square hips: the hips' own turn is taken back out
   deg.pose.headYaw = fg.pose.headYaw - fg.pose.turn;
   deg.pose.headPitch = fg.pose.headPitch;
+  const lw = anim ? 0 : fg.walk;
   for (let i = 0; i < 2; i++) {
     copyLimb(deg.pose.arms[i], fg.pose.arms[i]);
     copyLimb(deg.pose.legs[i], fg.pose.legs[i]);
-    // The walk's legs, weighed in (its feet's own turn once it has the legs)
-    const w = fg.walk;
+    // (the planted feet's own turn on the canvas)
     const l = deg.pose.legs[i];
+    const c = fg.pose.legs[i];
+    Object.assign(l, { foot: c.foot, footYaw: c.footYaw, footRoll: c.footRoll, toe: c.toe });
+    // Without the motion capture: the planted-feet walk's legs, weighed in (its feet's own turn once it has the legs)
     const s = fg.loco.pose.legs[i];
-    l.foot = l.footYaw = l.footRoll = l.toe = undefined;
-    if (w > 0.01) {
-      l.fwd += (s.fwd - l.fwd) * w;
-      l.out += (s.out - l.out) * w;
-      l.bend += (s.bend - l.bend) * w;
-      if (w > 0.5) Object.assign(l, { foot: s.foot, footYaw: s.footYaw, footRoll: s.footRoll, toe: s.toe });
+    if (lw > 0.01) {
+      l.fwd += (s.fwd - l.fwd) * lw;
+      l.out += (s.out - l.out) * lw;
+      l.bend += (s.bend - l.bend) * lw;
+      if (lw > 0.5) Object.assign(l, { foot: s.foot, footYaw: s.footYaw, footRoll: s.footRoll, toe: s.toe });
     }
   }
-  if (fg.walk > 0.01) {
-    deg.pose.bob += (fg.loco.pose.bob - deg.pose.bob) * fg.walk;
-    deg.pose.sway = (deg.pose.sway ?? 0) + ((fg.loco.pose.sway ?? 0) - (deg.pose.sway ?? 0)) * fg.walk;
+  if (lw > 0.01) {
+    deg.pose.bob += (fg.loco.pose.bob - deg.pose.bob) * lw;
+    deg.pose.sway = (deg.pose.sway ?? 0) + ((fg.loco.pose.sway ?? 0) - (deg.pose.sway ?? 0)) * lw;
     // (the walk's legs are worked out on its own hips: square them to it as it takes over)
-    deg.pose.turn = (deg.pose.turn ?? 0) + ((fg.loco.pose.turn ?? 0) - (deg.pose.turn ?? 0)) * fg.walk;
+    deg.pose.turn = (deg.pose.turn ?? 0) + ((fg.loco.pose.turn ?? 0) - (deg.pose.turn ?? 0)) * lw;
   }
   deg.update();
+  // ...the motion capture's legs and hips under the guard's upper body (the chest kept turned to the opponent)
+  let yaw = f.yaw;
+  if (mo && anim && fg.walk > 0) {
+    const w = smooth(fg.walk);
+    mo.anim.applyTo(deg.rig, anim.rot, anim.hips, w, 1, f.yaw - anim.face);
+    yaw = f.yaw + wrap(anim.face - f.yaw) * w;
+  }
   // The group turns about its origin (the feet); move it so the pitch turns about the root's pivot instead
   const { dy, dz } = rootShift(fg.pose.root);
   deg.g.position.set(f.x + Math.sin(f.yaw) * dz * FIGHTER_SCALE, fg.y + dy * FIGHTER_SCALE, f.z + Math.cos(f.yaw) * dz * FIGHTER_SCALE);
-  deg.g.rotation.set(fg.pose.root.pitch, f.yaw, 0, 'YXZ');
+  deg.g.rotation.set(fg.pose.root.pitch, yaw, 0, 'YXZ');
 }

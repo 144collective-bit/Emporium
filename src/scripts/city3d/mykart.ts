@@ -9,10 +9,8 @@
  * Kept free of the DOM and of scene code (karts.ts draws them), like the
  * other shared data.
  */
-import { CAR_PAINTS, type PaintId } from './mycar';
-
-export const PLAYER_KARTS = ['rocket', 'bigwheel', 'zip', 'tank'] as const;
-export type KartId = (typeof PLAYER_KARTS)[number];
+import { CAR_PAINTS, PLAYER_KARTS, type KartId, type PaintId } from './vehicleids';
+export { PLAYER_KARTS, type KartId };
 
 /** What the hut says about each one, and how it drives (0..1: the stat bars and the handling) */
 export const KART_SPECS: Record<KartId, { name: string; kind: string; blurb: string; speed: number; accel: number; handling: number; weight: number }> = {
