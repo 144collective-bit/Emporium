@@ -304,7 +304,7 @@ people by the pools are Phase 8's.
   Gates with columns and lamps, hedged walls, parked supercars. Each on a
   pad (`PADS`), its solids from its parts, every one under the Emporium.
 
-### Phase 7: the landmarks (step 1, the scenery: built; step 2, each a place: next)
+### Phase 7: the landmarks (built: step 1, the scenery; step 2, each a place)
 
 **What's built (step 1):**
 
@@ -331,7 +331,14 @@ people by the pools are Phase 8's.
   in the banks where they rise past it, concrete dams on the sides where they fall away, a valve tower, an iron fence
   round it (solid: nobody walks in); the water is the city's own shader, on the main thread.
 
-**Next (step 2):** each a place: spot, pin, directory entry, a panel with Walk in, `PLACES` and `LIVE_PLACES` entries.
+**Step 2 (built), each a place:** spots `hotel`, `civichall`, `golfclub`, `overlook` and `reservoir` (`crestspots.ts`,
+`buildCrestSpots()` at the boot: plain boxes on the `PICK` layer and a hover ring at each one's ground, the drawing
+still Crestmont's chunk), their pins over the hotel's tower, the dome, the clubhouse, the overlook and the valve
+tower, directory entries, panels (`data-panel-tpl`, numbered 21-25, "Crestmont") with **Walk in** to where you
+arrive at each (`SITE_SPAWNS` in crestsites.ts), `PLACES` and `LIVE_PLACES` entries. A taxi only aims for streets
+that join the network (routes.ts `project()`: the hills' cul-de-sacs join none), so one to the overlook stops on
+Ridge Road, the nearest street it can reach; the travel test allows the hills' places 20 s more, as it
+does the airport 12. Nothing to do inside any of them yet: coming soon.
 
 **As planned:**
 

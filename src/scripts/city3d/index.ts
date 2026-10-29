@@ -31,6 +31,8 @@ import { createDistricts } from './districts';
 import { buildStadium } from './stadium3d';
 import { buildTower } from './tower3d';
 import { buildMallSpots } from './mallspot';
+import { buildCrestSpots } from './crestspots';
+import { SITE_SPAWNS } from './crestsites';
 import { COURT_SPAWN, MALL_LAMPS, MALL_PEOPLE, MALL_TREES } from './mall';
 import { NORTH_LAMPS, NORTH_PEOPLE, NORTH_TREES } from './uptownnorth';
 import { INSIDE_SPAWN, MALL_INSIDE_PEOPLE, MALL_LIFT, UP as MALL_UP } from './mallinside';
@@ -290,6 +292,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   spots.push(buildTower(scene).spot);
   // ...and Palm Court and Starlight Mall north of downtown: their spots (they're drawn in their own chunk)
   spots.push(...buildMallSpots(scene));
+  spots.push(...buildCrestSpots(scene));
   // ...and the metro's el where it crosses the open land south of the south row: no trees under it
   keepTreesOff([-10, 125 + WIDEN, 56, 135 + WIDEN]);
   // (and its Airport branch, bending east off the avenue over the open land to the airport: docs/airport-plan.md Phase 3)
@@ -640,6 +643,14 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         close();
         startWalking(INSIDE_SPAWN);
       });
+    // Crestmont's landmarks (crestsites.ts): Walk in where you arrive at each, facing it
+    if (id === 'hotel' || id === 'civichall' || id === 'golfclub' || id === 'overlook' || id === 'reservoir') {
+      const at = SITE_SPAWNS[id];
+      panelBody.querySelector('[data-crest-walkin]')?.addEventListener('click', () => {
+        close();
+        startWalking(at);
+      });
+    }
     // The Block's panel: Walk in starts walk mode on its plaza by the metro's stairs
     if (id === 'trenches')
       panelBody.querySelector('[data-block-walkin]')?.addEventListener('click', () => {

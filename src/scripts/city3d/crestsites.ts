@@ -212,6 +212,22 @@ export const FENCE: Rect = (() => {
   return [water[0] - (dams.w ? dam : 0.6), water[1] - (dams.n ? dam : 0.6), water[2] + (dams.e ? dam : 0.6), water[3] + (dams.s ? dam : 0.6)];
 })();
 
+/* ---------- Where you arrive at each (places.ts): standing, facing it (a yaw faces (-sin, -cos)) ---------- */
+
+const facing = (dx: number, dz: number) => Math.atan2(-dx, -dz);
+export const SITE_SPAWNS = {
+  /** In the hotel's drive off the boulevard, facing its door under the porte-cochère */
+  hotel: { x: HOTEL.block[0] + 0.6, z: (HOTEL.porte[1] + HOTEL.porte[3]) / 2, yaw: facing(1, 0) },
+  /** At the foot of the civic hall's park by Foothill Road, facing up the walk */
+  civichall: { x: AXIS, z: CIVIC.pad[3] - 1, yaw: facing(0, -1) },
+  /** In front of the clubhouse's terrace, facing it */
+  golfclub: { x: (CLUB.house[0] + CLUB.house[2]) / 2, z: CLUB.terrace[3] + 2.2, yaw: facing(0, -1) },
+  /** On the overlook, facing out over the view */
+  overlook: { x: (OVERLOOK.rect[0] + OVERLOOK.rect[2]) / 2 - OVERLOOK.look[0] * 2, z: (OVERLOOK.rect[1] + OVERLOOK.rect[3]) / 2 - OVERLOOK.look[1] * 2, yaw: facing(OVERLOOK.look[0], OVERLOOK.look[1]) },
+  /** Outside the reservoir's fence on its west bank, facing the water */
+  reservoir: { x: FENCE[0] - 1.4, z: (FENCE[1] + FENCE[3]) / 2, yaw: facing(1, 0) },
+};
+
 /* ---------- The ground held level, what's solid, where the planting keeps off ---------- */
 
 export const SITE_LEVELS = [

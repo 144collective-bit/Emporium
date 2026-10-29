@@ -619,6 +619,8 @@ export const SPOTS: { r: number; p: number; x: number; z: number }[] = ROUTES.fl
 function project(p: Pt) {
   let best = { w: -1, along: 0, d: Infinity };
   WAYS.forEach((way, w) => {
+    // (not a street that joins no other: nothing drives there, Crestmont's cul-de-sacs)
+    if (!way.stations.some((t) => t.j)) return;
     const along = alongOf(way.s, p);
     const q = between(way, along, along, 1)[0];
     const d = Math.hypot(q[0] - p[0], q[1] - p[1]);

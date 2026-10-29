@@ -52,8 +52,13 @@ const spots: Record<SpotId, Spot> = {
   tower: { title: 'Sector 7 Tower', sub: 'Sky deck' },
   palmcourt: { title: 'Palm Court', sub: 'Shopping plaza' },
   mall: { title: 'Starlight Mall', sub: 'Shopping mall' },
+  hotel: { title: 'The Coralline', sub: 'Grand hotel' },
+  civichall: { title: 'Civic Hall', sub: 'Crestmont' },
+  golfclub: { title: 'Crestmont Hills Club', sub: 'Country club' },
+  overlook: { title: 'The Overlook', sub: 'The view' },
+  reservoir: { title: 'The Reservoir', sub: 'In the hills' },
 };
-const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'harbour', 'trenches', 'club', 'bar', 'arms', 'pier', 'nightmarket', 'stadium', 'tower', 'palmcourt', 'mall'];
+const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'harbour', 'trenches', 'club', 'bar', 'arms', 'pier', 'nightmarket', 'stadium', 'tower', 'palmcourt', 'mall', 'hotel', 'civichall', 'golfclub', 'overlook', 'reservoir'];
 const ext = { target: '_blank', rel: 'noopener noreferrer' };
 
 // The commit this was built from (set by the Worker's build in server/wrangler.jsonc)
@@ -1052,6 +1057,41 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     <h2 id="city-panel-title" class="city-panel-title">Starlight Mall</h2>
     <p class="city-panel-text">The city's shopping mall, between the north and east avenues past the Parkway. A glass and white-clad hall under a glass vault, with two department stores at its ends, Maxwell's and Bright & Co., and its totem by the road. Inside, two floors of shops round an atrium with a fountain under a ring of light, escalators and a glass lift up to the food court, kiosks, kiddie rides and a photo booth. Out front there's the loop road, the car park with its taxi rank and bus stop, and a multi-storey car park. The shops open later: coming soon.</p>
     <button type="button" class="chip-link kart-walkin" data-mall-walkin>Walk in</button>
+  </template>
+
+  <template data-panel-tpl="hotel">
+    <p class="kicker"><span class="kicker-num">21</span> Crestmont</p>
+    <h2 id="city-panel-title" class="city-panel-title">The Coralline</h2>
+    <p class="city-panel-text">Crestmont's grand hotel, off the boulevard on the Flats: four pink storeys round a tower with its name in script on the roof, a porte-cochère over the door, a drive round a fountain under date palms, and a pool garden behind with striped cabanas. Rooms and the pool open later: coming soon.</p>
+    <button type="button" class="chip-link kart-walkin" data-crest-walkin>Walk in</button>
+  </template>
+
+  <template data-panel-tpl="civichall">
+    <p class="kicker"><span class="kicker-num">22</span> Crestmont</p>
+    <h2 id="city-panel-title" class="city-panel-title">Civic Hall</h2>
+    <p class="city-panel-text">At the head of Crestmont Boulevard, where the hills begin: a white hall behind a colonnade, its tower under a blue tiled dome, and a park in front with two fountains and a walk up the boulevard's line. Inside: coming soon.</p>
+    <button type="button" class="chip-link kart-walkin" data-crest-walkin>Walk in</button>
+  </template>
+
+  <template data-panel-tpl="golfclub">
+    <p class="kicker"><span class="kicker-num">23</span> Crestmont</p>
+    <h2 id="city-panel-title" class="city-panel-title">Crestmont Hills Club</h2>
+    <p class="city-panel-text">The country club on the lower slopes west of Canyon Drive. A clubhouse under red tiles with a terrace and the carts by its shed, and six holes up the hillside and back: tees, fairways, bunkers and greens with their flags. Golf comes later: coming soon.</p>
+    <button type="button" class="chip-link kart-walkin" data-crest-walkin>Walk in</button>
+  </template>
+
+  <template data-panel-tpl="overlook">
+    <p class="kicker"><span class="kicker-num">24</span> Crestmont</p>
+    <h2 id="city-panel-title" class="city-panel-title">The Overlook</h2>
+    <p class="city-panel-text">A little paved park high on the ridge off Vista Lane, about 50 m up, behind a stone balustrade, with benches and coin viewers looking out over the hills, the river and the city.</p>
+    <button type="button" class="chip-link kart-walkin" data-crest-walkin>Walk in</button>
+  </template>
+
+  <template data-panel-tpl="reservoir">
+    <p class="kicker"><span class="kicker-num">25</span> Crestmont</p>
+    <h2 id="city-panel-title" class="city-panel-title">The Reservoir</h2>
+    <p class="city-panel-text">Still water in a bowl of the hills east of the ridge, held in by its banks and a concrete dam, with a valve tower out in it and a fence all round. Look, don't swim.</p>
+    <button type="button" class="chip-link kart-walkin" data-crest-walkin>Walk in</button>
   </template>
 
   <div class="city-hud" data-city-hud>

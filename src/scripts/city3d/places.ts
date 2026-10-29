@@ -22,6 +22,7 @@ import { MARKET_SPAWN } from './nightmarket';
 import { STADIUM_SPAWN } from './stadium';
 import { TOWER_SPAWN } from './skydeck';
 import { COURT_SPAWN, MALL_SPAWN } from './mall';
+import { SITE_SPAWNS } from './crestsites';
 
 export type PlaceKind = 'spot' | 'lot' | 'metro' | 'riverbus';
 export interface Place {
@@ -75,6 +76,8 @@ export const PLACES: Place[] = [
   // Palm Court and Starlight Mall, north of downtown: under the court's arch facing up its promenade, in front of the mall's porch
   { id: 'palmcourt', kind: 'spot', spot: 'palmcourt', at: COURT_SPAWN },
   { id: 'mall', kind: 'spot', spot: 'mall', at: MALL_SPAWN },
+  // Crestmont's landmarks (crestsites.ts): where you arrive at each, facing it
+  ...(['hotel', 'civichall', 'golfclub', 'overlook', 'reservoir'] as const).map((id): Place => ({ id, kind: 'spot', spot: id, at: SITE_SPAWNS[id] })),
   // The garage's forecourt, facing its office door; the market square, at your stall
   // (its office door faces north, onto the forecourt)
   { id: 'garage', kind: 'lot', name: 'Garage', at: { x: GARAGE_SITE.door.x - 1, z: GARAGE_SITE.door.z - 1.8, yaw: Math.atan2(-1, -1.8) } },

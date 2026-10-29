@@ -2,6 +2,7 @@
 // there counts it as visited (for fast travel, kept in the save); and a taxi can drive from any place to any
 // other along the streets, to the kerb nearest it, in about a minute at most.
 import { test } from 'node:test';
+import { HILL_ROADS } from '../src/scripts/city3d/crestmont';
 import assert from 'node:assert/strict';
 import { PLACES, PLACE_IDS, SEEN_R, seen } from '../src/scripts/city3d/places';
 import { SOLIDS } from '../src/scripts/city3d/solids';
@@ -57,12 +58,16 @@ test('a taxi drives from any place to any other along the streets, to the kerb n
       }
       // It ends at the road nearest the place (a lane's width or so from it)
       const end = r!.pts[r!.pts.length - 1];
-      const nearest = Math.min(...roads.filter((s) => s.kind !== 'slip').map((s) => distToStreet(s, [b.at.x, b.at.z])));
+      // (of the streets a taxi can reach: not the hills' cul-de-sacs, which join no other street)
+      const nearest = Math.min(...roads.filter((s) => s.kind !== 'slip' && !HILL_ROADS.some((r) => r.id === s.id && r.deadEnd)).map((s) => distToStreet(s, [b.at.x, b.at.z])));
       assert.ok(Math.hypot(end[0] - b.at.x, end[1] - b.at.z) < nearest + 4, `${a.id} to ${b.id} stops ${Math.hypot(end[0] - b.at.x, end[1] - b.at.z).toFixed(1)} away`);
       // (the longest in town, from The Trenches to Westlake Park's stadium, is about 59 s since the river was widened;
       // to or from the airport, out on the world's south edge since docs/airport-plan.md Phase 3, the longest is the
       // stadium to the airport's metro station by the terminal, corner to corner of the city, about 72 s)
-      const airport = [a.id, b.id].some((id) => id === 'airport' || id === 'metro-airport');
-      assert.ok(r!.len / TAXI_SPEED < (airport ? 74 : 62), `${a.id} to ${b.id}: ${r!.len.toFixed(0)}`);
+      // (and to or from Crestmont's hills, the overlook up Vista Lane and the reservoir out past the ring highway's
+      // north-east corner, from the stadium about 81 s; between the world's two far corners, the airport and the hills,
+      // about 80 s)
+      const extra = (id: string) => (id === 'airport' || id === 'metro-airport' ? 12 : id === 'overlook' || id === 'reservoir' ? 20 : 0);
+      assert.ok(r!.len / TAXI_SPEED < Math.min(84, 62 + extra(a.id) + extra(b.id)), `${a.id} to ${b.id}: ${r!.len.toFixed(0)}`);
     }
 });

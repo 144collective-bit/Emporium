@@ -1119,8 +1119,13 @@ it and has been retired completely. Build only on what's here.
   (`CLUB`, `HOLES`), the overlook on Vista Lane (`OVERLOOK`) and the
   reservoir with its dams and fence (`RESERVOIR`, `FENCE`); their ground
   `SITE_LEVELS` (in terrain.ts's `LEVELS`), `SITE_SOLIDS` (in `SOLIDS`),
-  `onSite()`; drawn by `crestsites3d.ts`. Next, each a place. Made-up names
-  only.
+  `onSite()`; drawn by `crestsites3d.ts`. Step 2 (each a place) is built:
+  spots `hotel`, `civichall`, `golfclub`, `overlook`, `reservoir`
+  (`crestspots.ts`: pick boxes and rings at the boot, the drawing in the
+  chunk), pins, directory entries, panels with Walk in (`data-crest-walkin`
+  to `SITE_SPAWNS`), `PLACES` and `LIVE_PLACES` entries; a taxi aims only
+  for streets that join the network (`project()` in routes.ts). Made-up
+  names only.
 - **Sector 7 Central, the grand station, was retired** (the owner's call:
   the metro is the city's rail): no mainline station, trains or tracks west
   of the ring highway; the land there is open again. Don't bring it back
@@ -1380,7 +1385,7 @@ it and has been retired completely. Build only on what's here.
   side is the quick swap with a fade (`QUICK_FADE`), reduced motion the
   quick swap without; at home the turntable is stood on to get in
   (`isTurntable()`, `DISC`). Keep new car detail in that chunk: the
-  boot is under its budget (660.4 of 670 KB with Build mode gone and the inventory plan's Phase 3 merged, and the multiplayer's vehicle ids: Phase 3 brought carinside.ts into it, Phase 5 the look's ids, Phase 6 three specs, Phase 7 the bikes' numbers and rules, Phase 8 the traffic's models, rules and riders, Phase 9 the aircraft's moving parts; Crestmont's Phases 2-6 came in at about the same size, its Phase 2 having packed the routes tighter; 662.6 with its Phase 7's landmarks). Phase 4 (handling with
+  boot is under its budget (660.4 of 670 KB with Build mode gone and the inventory plan's Phase 3 merged, and the multiplayer's vehicle ids: Phase 3 brought carinside.ts into it, Phase 5 the look's ids, Phase 6 three specs, Phase 7 the bikes' numbers and rules, Phase 8 the traffic's models, rules and riders, Phase 9 the aircraft's moving parts; Crestmont's Phases 2-6 came in at about the same size, its Phase 2 having packed the routes tighter; 663.3 with its Phase 7's landmarks). Phase 4 (handling with
   depth: each model's feel and drifting) is built, in the sim (drive-sim.ts, mycar.ts `FEEL`; see Driving your
   car below). Phase 5 (the garage's customisation, all free) is built: `CarLook` in mycar.ts (the ids,
   `cleanLook()`, carried by `cleanCar()`), carlook.ts (DOM-free, tested in `tests/carlook.test.ts`: names,
