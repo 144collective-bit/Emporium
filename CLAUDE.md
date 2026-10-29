@@ -1150,7 +1150,20 @@ it and has been retired completely. Build only on what's here.
   `crest-hills`); it draws lighter than downtown and Uptown, so no far forms
   for its houses; phones draw every other palm, the estates' fountains,
   chimneys and gate globes near only and the pools as plain water
-  (`poolOf()` in estates3d.ts). Made-up names only.
+  (`poolOf()` in estates3d.ts). The polish pass (the owner's call: detail, correct
+  building features, luxury gardens, the land round them) is built: the houses'
+  style details in estates3d.ts and mansions3d.ts (window surrounds and glazing
+  bars, garden doors, garages with their aprons, `motorCourt()` in estates.ts,
+  a Tudor's gabled bay and a Spanish house's or villa's loggia, `extrasOf()`);
+  the gardens are `crestgardens.ts` (DOM-free, the chunk's only, tested in
+  `tests/crestgardens.test.ts`: each garden laid by a `Planner` on a half-tile
+  grid round the house, paving, palms, cars and people; pool houses, spas,
+  pergolas, fire pits, gazebos, parterres, statues, topiary, the lawns mown in
+  stripes; the hotel's, the civic hall's and the club's, `SITE_GARDENS`), drawn by
+  `crestgardens3d.ts`, their solids (`GARDEN_SOLIDS`) joining the grids through
+  `addSolids()` when the chunk loads; the land round them is `crestland.ts`
+  (vineyards, olive groves, meadows, the mansions' cypress avenues and drive
+  piers, `onLand()` keeping the oaks and scrub off). Made-up names only.
 - **Sector 7 Central, the grand station, was retired** (the owner's call:
   the metro is the city's rail): no mainline station, trains or tracks west
   of the ring highway; the land there is open again. Don't bring it back

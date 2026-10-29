@@ -20,6 +20,10 @@ import { registerEstates } from './estates3d';
 import { registerMansions } from './mansions3d';
 import { registerSites } from './crestsites3d';
 import { registerLife } from './crestlife3d';
+import { registerGardens, registerLand } from './crestgardens3d';
+import { LAND_SOLIDS } from './crestland';
+import { GARDEN_SOLIDS } from './crestgardens';
+import { addSolids } from './solids';
 import { CREST_CROSSINGS, FLATS_STREETS, FOOTHILL_Z, HILL_ROADS, type Rect } from './crestmont';
 
 export const SELF = import.meta.url;
@@ -114,6 +118,11 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   registerSites(low, scene);
   // Its life: the dogs on their leads, the gardeners' wheelbarrows (Phase 8: crestlife3d.ts)
   registerLife(scene, tick, low);
+  // The gardens round the estates and the mansions (the polish pass: crestgardens3d.ts); on the main thread, what of
+  // them is solid joins the grids
+  registerGardens(low);
+  registerLand(low);
+  if (scene) addSolids([...GARDEN_SOLIDS, ...LAND_SOLIDS]);
   const asphalt = toon('#26243f');
   const kerbTop = toon('#5a5290');
   const grass = toon('#3f7a4a');

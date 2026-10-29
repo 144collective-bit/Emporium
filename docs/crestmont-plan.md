@@ -454,3 +454,59 @@ directory entry, a panel with Walk in, `PLACES` and `LIVE_PLACES` entries):
   and after; phones lighter (half the palms, simpler estates far, no pool
   glow); far forms for the estates and hotel if the district's draws need
   them.
+
+### The polish pass (built, the owner's call: "upgrade them with detail and correct building features... design the surrounding land appropriately... an assortment of luxury garden features suitable for the upper class")
+
+**The houses** (estates3d.ts, mansions3d.ts; details near only, phones leaving out the finest):
+
+- Every window in a surround (or a sill and keystone over an arch) with its style's glazing bars: a Georgian's six
+  panes and black shutters, a Tudor's leaded lights, a casement's cross, a modern's none; a Spanish house's iron
+  grilles over its ground floor's front windows; a villa's green shutters and quoins up its corners.
+- Garden doors on every main block's back; a garage in every wing (panelled doors, a lamp over them) with its apron
+  off the forecourt (`motorCourt()`, `APRON` in estates.ts: the palms and the gardeners keep off it); a plinth round
+  every house; gutters along the eaves; a Spanish house's rafter tails; chimney pots.
+- By style: a Georgian's dormers on its front slope, its fanlight, the string course; a Tudor's gabled bay out from its
+  front (`extrasOf()` in crestgardens.ts, `BAY_OUT`) with its own timbers and the upper storey framed and braced all
+  round; a Spanish house's and a villa's arcaded loggia along its back (`LOGGIA`, `loggiaPiers()`) under a lean-to of
+  tiles; a villa's balcony over its door; a modern's mullions, its door's steel frame, a roof terrace on a two-storey
+  wing; a stone step at every door.
+- The hedges' clipped tops; the gates' rails, bars and spear tops; the piers' plinths.
+- The mansions: window surrounds and bars, the summit's shutters, garden doors, a chimney, a villa's and a compound's
+  balcony, the glass mansion's mullions and the light under its cantilever, the compounds' gates in bars.
+
+**The gardens** (crestgardens.ts, DOM-free, Crestmont's chunk only, tested in tests/crestgardens.test.ts; drawn by
+crestgardens3d.ts, a site a garden; what's solid, `GARDEN_SOLIDS`, joins the grids through `addSolids()` when the
+chunk comes in, never the boot's `SOLIDS`): each garden laid by a planner on a half-tile grid (`Planner`) round the
+house, the paving, the hedges, the palms, the cars, the gardeners and their barrows, the sunbathers' loungers:
+
+- Round every pool: a spa spilling into its corner, umbrellas over the loungers, lamps at the deck's corners.
+- A pool house in the wider lawn beside the pool (in the house's own walls and roof, a porch on two columns), an
+  outdoor kitchen by it or against the back hedge.
+- Each style's own in the other lawn: a Spanish house's pergola hung with bougainvillea over a dining table, a villa's
+  with vines and cypresses, a Tudor's rose border, bird bath and bench, a Georgian's statue between clipped cones, a
+  modern's sunken fire pit with its seats (or grasses and boulders).
+- The deep lots' formal gardens past the pool (the pool moved up nearer the house for it): a gazebo (a Spanish house's
+  tiled fountain, a modern's reflecting pool and bronze knot), parterres of box (a Spanish house's citrus grove), a
+  gravel walk, benches.
+- The front: borders inside the front hedge (a Tudor's roses), a pair at the door (urns, cypresses, lemons, planters
+  of grass, cones), lamps by the gate, stepping stones down the side yard, shrubs along the wing.
+- The lawns (`lawn`): what's left of the grass, mown in stripes.
+- The mansions' pads: a lawn mown in two greens, olive trees, pergolas, fire pits, pool houses, statues and cypresses
+  at the summit, borders inside a compound's walls, a pair at the door; a villa's terraces planted as a vineyard.
+- The landmarks (`SITE_GARDENS`): the grand hotel's terrace between its back and the pool deck (a tiled fountain
+  between two parterres, gravel walks), cones at the deck's corners, umbrellas between the loungers, a border before
+  the cabanas; the civic hall's park lined with clipped hedges, urns at the fountains and two flagpoles flying the
+  city's own made-up flag; the country club's putting green beside the clubhouse, a border along its back, cones at
+  the terrace's ends and two flags before it.
+
+**The land round them** (crestland.ts, DOM-free, the chunk's, tested in tests/crestland.test.ts): vineyards on the
+gentler slopes low on the hills (`VINEYARDS`, rows along the contours), olive groves higher up (`GROVES`), wildflower
+meadows (`MEADOWS`), each found by a search over the hills clear of the roads, the pads, the landmarks, the golf
+course and the spur (`clear()`); the hills' oaks and scrub keep off them (`onLand()`); and up every mansion's drive an
+avenue of cypresses (`DRIVE_TREES`) behind a pair of stone piers with lanterns (`DRIVE_PIERS`, solid, `LAND_SOLIDS`,
+clear of the joggers' lanes).
+
+**Measured** (the `?fps` readout, headless: counts only): over the Flats on the desktop about 160 draws and 0.64M
+triangles, in the hills 135 and 0.43M; the phone over the Flats 120 and 0.25M: no heavier than Phase 11 measured (the
+counts swing by about a fifth from run to run). The boot is 666.8 of 670 KB: the gardens and the land are the chunk's.
+

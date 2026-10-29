@@ -20,7 +20,7 @@
 import { HILL_ROADS, type HillRoad } from './crestmont';
 import { heightAt } from './terrain';
 import { BOUTIQUES, FOUNTAINS, KERBS, SLAB_Y, TABLES, TABLE_R, VALET_STANDS, VIA, doorOf, outOf } from './coral';
-import { COURT_HALF, ESTATES, toWorld } from './estates';
+import { COURT_HALF, ESTATES, gardenPalmsOf, inFrame, motorCourt, toWorld, wingSide } from './estates';
 import { MANSIONS, toWorld as mansionAt } from './mansions';
 import { CIVIC, CLUB, HOTEL, OVERLOOK } from './crestsites';
 import type { Idle } from './landmarks';
@@ -151,17 +151,23 @@ const CHAIR_Y = 0.45;
 /** The gardeners: in the front garden beside the forecourt of every third estate, facing the house; their wheelbarrows beside them */
 export const GARDENERS: { x: number; z: number; ry: number; barrow: Pt; barrowRy: number }[] = ESTATES.flatMap((e, i) => {
   if (i % 3 !== 1) return [];
-  const v = (e.court[0] + e.court[1]) / 2;
-  const s = e.hc + COURT_HALF + 1.8 < e.W - 1.2 ? 1 : -1;
+  // (on the lawn beside the forecourt, the side away from the wing if there's room, clear of its palms and the garage's
+  // apron; or nearer the front hedge)
+  const within = (px: number, pz: number) => px > e.rect[0] + 0.8 && px < e.rect[2] - 0.8 && pz > e.rect[1] + 0.8 && pz < e.rect[3] - 0.8;
+  const palms = gardenPalmsOf(e);
+  const clear = (u: number, w: number) => within(...toWorld(e, u, w)) && !inFrame(motorCourt(e), u, w, 0.4) && palms.every(([pu, pv]) => Math.hypot(pu - u, pv - w) > 0.75);
+  const away = wingSide(e) > 0 ? -1 : 1;
+  const mid = (e.court[0] + e.court[1]) / 2;
+  const spot = ([away, -away] as const)
+    .flatMap((s) => [mid, e.court[0] - 0.95].map((v) => [s, v] as const))
+    .find(([s, v]) => clear(e.hc + s * (COURT_HALF + 1.8), v) && clear(e.hc + s * (COURT_HALF + 2.65), v + 0.2));
+  if (!spot) return [];
+  const [s, v] = spot;
   const u = e.hc + s * (COURT_HALF + 1.8);
-  if (u < 1.2 || u > e.W - 1.2) return [];
   const [x, z] = toWorld(e, u, v);
   const [hx, hz] = toWorld(e, u, v - 1);
   const [bx, bz] = toWorld(e, u + s * 0.85, v + 0.2);
   const [ax, az] = toWorld(e, u + s * 0.85, v + 1);
-  // (both well inside its own lot)
-  const within = (px: number, pz: number) => px > e.rect[0] + 0.8 && px < e.rect[2] - 0.8 && pz > e.rect[1] + 0.8 && pz < e.rect[3] - 0.8;
-  if (!within(x, z) || !within(bx, bz)) return [];
   return [{ x, z, ry: facing(hx - x, hz - z), barrow: [bx, bz], barrowRy: Math.atan2(-(az - bz), ax - bx) }];
 });
 
