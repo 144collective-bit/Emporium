@@ -488,3 +488,60 @@ two maps instead of one; outside it, none.
   boot's download is 629.7 KB gzipped, 36 KB under where it stood before
   the airport moved; nothing the traffic does changed by more than a
   millimetre.
+
+## Phones, sharper and smoother (the owner's call; the mobile pass)
+
+The owner: "it does look a little blurred ... I want to improve the mobile
+experience. Better quality and higher fps." There was no FXAA: phones had
+no anti-aliasing pass at all. The blur was the pixels: every touch screen
+was the low tier, drawn at 1.25 pixels a point on 2-3x screens (and 1 once
+frames were slow), stretched up by the browser. The owner's picks: recent
+iPhones, Android flagships and mid-range Android; hold 60fps as sharp as
+the phone can; split the phone tier, sharpen after the stretch, a cheaper
+post chain, no idle 30fps cap; weak phones may give up people and cars,
+bloom and some detail distance.
+
+- **Strong and weak phones** (`phone.ts`, `phoneClass()`): iPhones on iOS
+  17 or later (the A12 on; Safari 26 froze the OS in its user agent, so
+  Safari's own version counts too), every iPad, Android phones whose GPU
+  names a flagship (Adreno 640-699 and 730 on, Mali-G77, G78 and G710 on,
+  Immortalis, Xclipse) with 4 GB or more. `PHONES`: strong 1.25-2.25
+  pixels a point (starting at 1.75), 22 cars, 24 walkers, the detail to
+  90; weak 1-1.5 (starting at 1.25), 12 cars, 10 walkers, the detail to
+  75, no bloom.
+- **Dynamic resolution** (`createResolution()`): windows of 30 frames; a
+  quarter of them over 1.25 x the 60fps budget steps the pixel ratio down
+  0.125, three calm windows in a row step it up, at least 1.2 s apart (each
+  change resizes the targets). A slow frame whose own work took more than
+  0.6 of the budget (the city's logic, building, before the draw) isn't
+  counted: fewer pixels wouldn't help it. A level that failed is tried
+  again after 4 s, then 8, 16 ... up to a minute, so it settles just under
+  what the GPU can do and rechecks now and then (a phone warming up steps
+  down, cooling off steps back up).
+- **60fps always**: the idle 30fps cap is gone (and the `touched()` hook
+  that lifted it, through walk.ts and the inventory).
+- **The short chain** (`post.ts` `lite`, phones only): the bloom's blur
+  without its blend over the frame (`BloomOnly`), then one pass to the
+  screen (`FinishShader`): a contrast-adaptive sharpen (after AMD's CAS,
+  harder the further the picture is stretched, `sharpness()`), the ink,
+  the glow added, Neutral tone mapping and sRGB. Three full-screen passes
+  (ink, the bloom's blend, output) become one. The glow is picked out
+  before the ink rather than after (a tube's own outline no longer dims
+  its halo): on phones only, within the softer glow they're allowed.
+
+### What it measured
+
+Headless Chromium as an iPhone (390 x 844 at 3x, software GL: the frame
+rates aren't a phone's; the picture is):
+
+- At the same 1.25 pixels, the short chain's sharpening is visibly crisper
+  than before (windows, the Emporium's floor tiles, sign lettering); a
+  strong phone at 2 is much sharper again.
+- Software GL runs at 2-4fps, and dynamic resolution stepped a strong
+  phone from 1.75 down to 1.38 and a weak one from 1.25 to 1.13, as it
+  should on a GPU that can't keep up.
+- The boot's code: 679.1 KB of 680 (2 KB for the phone rules and the
+  finishing pass).
+- Next: real phones' `?bench` and `?fps` numbers, strong and weak, to tune
+  `PHONES` and `RES`.
+

@@ -121,6 +121,7 @@ import { tilesInView, type Plane } from './tiles';
 import { farForm, farLods, updateLods } from './lod';
 import { live } from './live-client';
 import { closedLine } from './live';
+import { PHONES, createResolution, phoneClass, sharpness, type PhoneClass, type Resolution } from './phone';
 
 type Tier = 'high' | 'medium' | 'low';
 
@@ -149,7 +150,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const bar = loader.querySelector<HTMLElement>('[data-loader-bar]')!;
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const tier = (root.dataset.tier as Tier) || pickTier();
-  const Q = TIERS[tier];
+  const Q = { ...TIERS[tier] };
   // (single figures: the desktop's finer clothes, docs/clothing-plan.md; phones as they were)
   figureDetail(tier === 'low' ? 2 : 3);
   const progress = (k: number) => bar.style.setProperty('--p', String(k));
@@ -178,6 +179,31 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   loader.hidden = false;
   progress(0.05);
 
+  // Phones, strong or weak (phone.ts; ?phone=strong or weak in the address to try one): what each draws over the low
+  // tier, and its pixels from a range dynamic resolution moves in (below)
+  let phone: PhoneClass | null = null;
+  let res: Resolution | null = null;
+  /** ?px held the pixels (the step-down leaves them too) */
+  let heldPx = false;
+  if (tier === 'low') {
+    const gl = renderer.getContext();
+    const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+    const nav = navigator as Navigator & { deviceMemory?: number };
+    const asked = new URLSearchParams(location.search).get('phone');
+    phone = asked === 'strong' || asked === 'weak' ? asked : phoneClass({ ua: navigator.userAgent, touch: navigator.maxTouchPoints, memory: nav.deviceMemory, cores: navigator.hardwareConcurrency, gpu: String(gl.getParameter(dbg ? dbg.UNMASKED_RENDERER_WEBGL : gl.RENDERER) ?? '') });
+    const P = PHONES[phone];
+    Object.assign(Q, { cars: P.cars, walkers: P.walkers, bikes: P.bikes, far: P.far });
+    const top = Math.min(devicePixelRatio, P.dpr.max);
+    res = createResolution({ min: Math.min(top, P.dpr.min), start: Math.min(top, P.dpr.start), max: top });
+    Q.dpr = res.scale;
+    // (?px=1.5 holds the pixels there, dynamic resolution off: for comparing on a real phone)
+    const px = Number(new URLSearchParams(location.search).get('px'));
+    if (px > 0) {
+      res = null;
+      heldPx = true;
+      Q.dpr = px;
+    }
+  }
   renderer.setPixelRatio(Math.min(devicePixelRatio, Q.dpr));
   renderer.toneMapping = THREE.NeutralToneMapping;
   renderer.toneMappingExposure = 1;
@@ -405,7 +431,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     return { pos: CENTER.clone().add(new THREE.Vector3(27, 31, 34).multiplyScalar(k)), target: CENTER.clone().add(new THREE.Vector3(0, 3.4, 1)) };
   };
 
-  const post = createPost(renderer, scene, camera, { msaa: Q.msaa, bloomScale: Q.bloomScale, smaa: devicePixelRatio < 1.5 && tier !== 'low', bloomMips: tier === 'low' ? 3 : 5, shadows: sky });
+  const post = createPost(renderer, scene, camera, { msaa: Q.msaa, bloomScale: Q.bloomScale, smaa: devicePixelRatio < 1.5 && tier !== 'low', bloomMips: tier === 'low' ? 3 : 5, shadows: sky, lite: tier === 'low' ? { sharpen: sharpness } : undefined });
+  // (weak phones draw no bloom: the neon is still lit, without its halo)
+  if (phone === 'weak') post.bloom.enabled = false;
   /**
    * Shaders compiled for where the city really draws: the post chain's target (linear colour), not the
    * screen. Compiled for the screen, each material gets a program no frame uses, and the real one is
@@ -820,7 +848,6 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       return l.length ? (u.length ? [...u, ...l] : l) : u;
     },
     openSpot: (id) => open(id),
-    touched: () => touched(),
     tick,
     // The sound engine is made further down; shots only happen once it exists
     sfx: (kind, gain) => sound.sfx(kind, gain),
@@ -1188,9 +1215,6 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const env: Env = { t: 0, dt: 0, night: 1, rain: 0, day: 0, hour: 12 };
   let running = true;
   let frames = 0;
-  // Phones run the city at a steady 30fps while nobody is touching it, and at
-  // full rate during a drag, a pinch or a fly-in, so moving still feels smooth
-  const idleFps = tier === 'low' ? 30 : 0;
   let lastT = 0;
   // Exactly one loop. A hidden tab holds back the frame that was already asked
   // for; without cancelling it, coming back would start a second loop beside it
@@ -1246,11 +1270,6 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // Nothing to draw while the city is scrolled out of view
   let onScreen = true;
   new IntersectionObserver(([e]) => (onScreen = e.isIntersecting)).observe(host);
-  let lastInput = -10;
-  const touched = () => (lastInput = timer.getElapsed());
-  canvas.addEventListener('pointerdown', touched);
-  canvas.addEventListener('pointermove', touched);
-  canvas.addEventListener('wheel', touched, { passive: true });
   // Too slow? Step quality down in stages, checking again after each
   let windowFrames = 0;
   let windowSlow = 0;
@@ -1321,9 +1340,6 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     const t = timer.getElapsed();
     // The benchmark starts once the start menu has gone, the city is showing and every site is built (growth plan Phase 3)
     if (bench && !bench.active && !bench.done && !walking && !root.classList.contains('has-start') && !works.stats().waiting && !districts.pending()) bench.begin(t);
-    const busy = !!flight || walking || t - lastInput < 1 || !!bench?.active;
-    // (a phone resting at 30fps: the frames in between draw nothing, so they build what's waiting)
-    if (idleFps && !busy && t - lastT < 1 / idleFps - 0.004) return spare(6);
     const dt = Math.min(t - lastT, 0.1);
     lastT = t;
 
@@ -1491,7 +1507,17 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         renderer.info.reset();
         post.shadowStat.calls = post.shadowStat.tris = 0;
       }
+      // (the city's own work this frame, before the GPU is asked to draw it: dynamic resolution tells a slow GPU from a busy CPU)
+      const logic = (performance.now() - cpuStart) / 1000;
       post.render();
+      // Phones: dynamic resolution (phone.ts), as sharp as holds 60fps (not behind the start menu, nor while the benchmark holds quality)
+      if (res && !covered && t > 4 && !bench?.active) {
+        const next = res.frame(dt, logic, t);
+        if (next !== null) {
+          renderer.setPixelRatio(next);
+          resize();
+        }
+      }
       dirty = false;
       if (!bootAt.first) {
         bootAt.first = performance.now();
@@ -1530,7 +1556,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           `boot ${(b.total / 1000).toFixed(1)} s · build ${(b.build / 1000).toFixed(1)} (work ${(b.work / 1000).toFixed(2)}, tiles ${(b.tiles / 1000).toFixed(2)}) · shaders ${(b.shaders / 1000).toFixed(1)}`,
           (({ built, waiting, atBoot, bootMs, laterMs, slowest, offMain }) => `sites ${built} built: ${atBoot} at boot (${Math.round(bootMs)} ms), the rest after (${Math.round(laterMs)} ms here, ${offMain} of them off the main thread; slowest ${Math.round(slowest.ms)} ms: ${slowest.id}) · ${waiting} waiting · districts loaded: ${districts.loaded().join(', ') || 'none'}`)(works.stats()),
           (({ released, held, budget, rebuilt }) => `near forms ${mb(held)} held of ${mb(budget)} · ${released} tiles let go · ${rebuilt} built again`)(works.stats()),
-          `${tier} · px ${renderer.getPixelRatio().toFixed(2)}${lost.length ? ` · lowered: ${lost.join(', ')}` : ''}`,
+          `${tier}${phone ? ` (${phone} phone)` : ''} · px ${renderer.getPixelRatio().toFixed(2)}${lost.length ? ` · lowered: ${lost.join(', ')}` : ''}`,
           // Where Degen stands while walking (for placing things: ?spawn=x,z puts him back there)
           ...(walking ? [`at ${walk.position.x.toFixed(1)}, ${walk.position.z.toFixed(1)}`] : []),
         ].join('\n');
@@ -1542,8 +1568,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     // Quality is held where it is while the benchmark runs
     if (t > 4 && !bench?.active) {
       windowFrames++;
-      // "Slow" is relative to the rate we're aiming for (30fps on phones when idle)
-      const budget = idleFps && !busy ? 1 / idleFps : 1 / 60;
+      const budget = 1 / 60;
       if (dt > budget * 1.7) windowSlow++;
       if (windowFrames === 90) {
         if (windowSlow > 45 && canDegrade()) {
@@ -1561,15 +1586,20 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     }
   }
 
-  // Too slow: fewer pixels, then no shadows, then no bloom. The ink outlines always stay.
+  // Too slow: fewer pixels, then no shadows, then no bloom. The ink outlines always stay. On phones the pixels are
+  // dynamic resolution's (above): the rest steps down only once it's as low as it goes
   const fullPixels = renderer.getPixelRatio();
   const lowered = { pixels: false, shadows: false, bloom: false };
   let fastWindows = 0;
   // A stage put back and then lost again stays off (no see-sawing)
   const settled = new Set<keyof typeof lowered>();
-  const canDegrade = () => !lowered.pixels || !lowered.shadows || !lowered.bloom;
+  const ownPixels = !res && !heldPx;
+  const canDegrade = () => (ownPixels && !lowered.pixels) || !lowered.shadows || !lowered.bloom;
+  // (weak phones never draw bloom)
+  const bloomOn = () => phone !== 'weak' && !lowered.bloom;
   function degrade() {
-    if (!lowered.pixels) {
+    if (res && !res.atMin()) return;
+    if (ownPixels && !lowered.pixels) {
       lowered.pixels = true;
       renderer.setPixelRatio(Math.max(1, fullPixels - 0.5));
       resize();
@@ -1580,7 +1610,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         if ((o as THREE.DirectionalLight).isDirectionalLight) (o as THREE.DirectionalLight).castShadow = false;
       });
     } else lowered.bloom = true;
-    post.bloom.enabled = !lowered.bloom;
+    post.bloom.enabled = bloomOn();
   }
   // Fast again for a while: bloom, then pixels, come back. Shadows don't
   // (turning them back on recompiles every material, a visible hitch).
@@ -1588,7 +1618,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     if (lowered.bloom && !settled.has('bloom')) {
       lowered.bloom = false;
       settled.add('bloom');
-      post.bloom.enabled = true;
+      post.bloom.enabled = bloomOn();
     } else if (lowered.pixels && !settled.has('pixels')) {
       lowered.pixels = false;
       settled.add('pixels');

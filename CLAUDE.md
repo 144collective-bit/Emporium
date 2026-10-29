@@ -1613,11 +1613,29 @@ it and has been retired completely. Build only on what's here.
   once a second (`builtShows()`). Sound is always off until the visitor
   turns it on.
 - Keep phones light: `src/scripts/city3d/index.ts` picks a quality tier
-  (fewer cars and people, no shadows, smaller bloom on phones), runs phones
-  at 30fps while nobody is touching the city, and steps quality down
-  (pixels, then shadows, then bloom; never the ink outlines) if frames are
-  slow. When frames stay fast again, bloom and then pixels come back (once
-  each; shadows stay off, re-enabling them recompiles every material).
+  (fewer cars and people, no shadows, smaller bloom on phones) and steps
+  quality down (pixels, then shadows, then bloom; never the ink outlines)
+  if frames are slow. When frames stay fast again, bloom and then pixels
+  come back (once each; shadows stay off, re-enabling them recompiles
+  every material).
+- **Phones, sharper and smoother** (the mobile pass, the owner's call:
+  "better quality and higher fps"; `docs/performance-plan.md`): the low
+  tier is split by `phoneClass()` in `phone.ts` (DOM-free, tested in
+  `tests/phone.test.ts`): strong phones (iPhones on iOS 17 or later,
+  iPads, Android flagships by their GPU's name) and weak ones, each with
+  its own `PHONES` entry over `TIERS.low` (pixel ratios, cars, walkers,
+  bikes, `far`; weak phones draw no bloom). Phones run at 60fps (the idle
+  30fps cap is gone) under **dynamic resolution** (`createResolution()`:
+  the pixel ratio a step up while frames hold 60fps, a step down when the
+  GPU can't, never for a frame the CPU was slow in, a level that failed
+  tried again after a wait that doubles); the step-down above waits until
+  it's at its lowest. Phones draw the post chain short (`lite` in
+  `post.ts`): the bloom's blur on its own (`BloomOnly`), then one pass
+  (`FinishShader`) that sharpens (contrast-adaptive, `sharpness()` from
+  how far the screen stretches the picture), inks, adds the glow and tone
+  maps. Desktop's chain is as it was (the ink's GLSL is shared,
+  `INK_EDGE`). `?phone=strong` / `weak` tries a class, `?px=1.5` holds
+  the pixel ratio (both with `?fps`, whose last line shows them).
   The trim (the owner's call, phones only; `docs/performance-plan.md`):
   trees are lighter near (a dodecahedron canopy, four-sided trunks, open
   five-sided cones) and two crossed flat cards far (`crossedCards()` in
@@ -1626,7 +1644,8 @@ it and has been retired completely. Build only on what's here.
   are four-sided and open-ended; parked cars are always their far form
   (`initFarCars()`'s `parkedAlwaysFar`); every other idle person in The
   Trenches and downtown (the square, the market, the landmarks) is left
-  out (`buildPeople()` in `life.ts`) and there are 15 walkers (`TIERS`).
+  out (`buildPeople()` in `life.ts`) and there are 10 walkers on a weak
+  phone, 24 on a strong one (`PHONES` in `phone.ts`).
   Phones also draw the big canvas textures (512 x 512 pixels or more: the
   atlases, the long signs) at half size, a quarter of the memory
   (`canvasTex()` in `kit.ts`; a draw function works in the numbers it
@@ -1846,8 +1865,8 @@ it and has been retired completely. Build only on what's here.
     (`tileBatch()`); the others wait and `works.step()` builds them a
     share of the time since the last frame (15%, 2-3 ms at 60fps, up to
     10 ms on a slow phone: its CPU is free while the GPU draws), and the
-    frames that draw nothing build too (`spare()` in `index.ts`: a phone
-    resting at 30fps, a fast screen's in-between frames). The start menu
+    frames that draw nothing build too (`spare()` in `index.ts`: a fast
+    screen's in-between frames). The start menu
     covers the city completely, so behind it the city is drawn only once
     a second and each frame builds for 24 ms. Nearest first: in the City
     view nearest what it looks at (`look`, `CROWD_VIEW.focus`), walking

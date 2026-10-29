@@ -199,7 +199,6 @@ export interface HotbarCombat {
 export interface HotbarDeps {
   game: GameDeps;
   combat: HotbarCombat;
-  touched(): void;
   /** Put a thing in his hand (the look's `held`, which the save follows) */
   hold(held: Held): void;
   /** The inventory opened (free the mouse, stand him still) and closed */
@@ -263,7 +262,6 @@ export function createHotbar(root: HTMLElement, d: HotbarDeps) {
   function pickAt(x: Slot | undefined) {
     const a = pickSlot(x);
     if (!a || !x) return false;
-    d.touched();
     const at = current();
     switch (a.do) {
       case 'draw':
@@ -362,7 +360,6 @@ export function createHotbar(root: HTMLElement, d: HotbarDeps) {
   function act(id: string, i: number | null = sel) {
     const t = at(i);
     if (!t || i === null) return;
-    d.touched();
     if (id === 'slot0' || id === 'slot1') {
       const k = id === 'slot0' ? 0 : 1;
       if (done(equipCell(save(), i, k, may))) landed(-1 - k);

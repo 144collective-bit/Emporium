@@ -247,8 +247,6 @@ export interface WalkDeps {
   placedSolids(): Box[];
   /** Open a landmark's panel in place */
   openSpot(id: SpotId): void;
-  /** Called on any input, so the frame cap knows we're busy */
-  touched(): void;
   tick(f: Tick): void;
   sfx(kind: Sfx, gain?: number): void;
   /** The garage on the south bank (its turntable shows the car being picked) */
@@ -778,7 +776,6 @@ export function createWalk(d: WalkDeps) {
         hotbar = createHotbar(root, {
           game: d.game,
           combat,
-          touched: d.touched,
           hold: d.hold,
           // The inventory (Tab): the mouse freed for dragging, Degen stood still, as at a counter
           opened() {
@@ -1106,7 +1103,6 @@ export function createWalk(d: WalkDeps) {
     sparWith = setup.kind === 'street' ? setup.partner : null;
     fight.start(setup);
     canvas.focus({ preventScroll: true });
-    d.touched();
   }
   /** Out of the ring: Degen stands up outside the ropes */
   function leaveFight() {
@@ -1130,7 +1126,6 @@ export function createWalk(d: WalkDeps) {
     pedals.gas = pedals.brake = false;
     fightBtns.punch = fightBtns.kick = fightBtns.block = fightBtns.dodge = false;
     near = null;
-    d.touched();
   }
   /** Quit a fight (a bout is forfeited): the card comes up; true if there was one */
   function quitFight() {
@@ -1158,7 +1153,6 @@ export function createWalk(d: WalkDeps) {
     prompt.hidden = true;
     karts.start(setup);
     canvas.focus({ preventScroll: true });
-    d.touched();
   }
   /** Out of the kart: Degen stands up by the hut */
   function leaveKart() {
@@ -1180,7 +1174,6 @@ export function createWalk(d: WalkDeps) {
     pedals.gas = pedals.brake = false;
     kartBtns.drift = false;
     near = null;
-    d.touched();
   }
   /** Abandon a race (no prize); true if there was one */
   function abandonKart() {
@@ -1204,7 +1197,6 @@ export function createWalk(d: WalkDeps) {
     // (the vehicle has him: the moment that got him in is over, and a crate is put away)
     moments.cancel();
     dropCrate();
-    d.touched();
   }
   function getOut() {
     const out = drive.exit();
@@ -1224,7 +1216,6 @@ export function createWalk(d: WalkDeps) {
     near = null;
     moments.cancel();
     dropCrate();
-    d.touched();
   }
   /** Out of it: only on the ground and stopped */
   function leavePlane() {
@@ -1249,7 +1240,6 @@ export function createWalk(d: WalkDeps) {
         near = null;
         moments.cancel();
         dropCrate();
-        d.touched();
       })
       .catch(() => d.game.toast('The boat hire is closed for a moment: try again', 2500));
   }
@@ -1278,7 +1268,6 @@ export function createWalk(d: WalkDeps) {
     keys.clear();
     pedals.gas = pedals.brake = false;
     near = null;
-    d.touched();
   }
   /** How far the camera has swung over to the showroom (0..1), and which (the garage's turntable or the hangar) */
   let showroom = 0;
@@ -1295,17 +1284,14 @@ export function createWalk(d: WalkDeps) {
   const look = (dx: number, dy: number, k: number) => {
     if (boat?.active) {
       boat.look(dx * k * settings.sens, dy * k * settings.sens * (settings.invert ? -1 : 1));
-      d.touched();
       return;
     }
     if (fly.active) {
       fly.look(dx * k * settings.sens, dy * k * settings.sens * (settings.invert ? -1 : 1));
-      d.touched();
       return;
     }
     if (drive.active) {
       drive.look(dx * k * settings.sens, dy * k * settings.sens * (settings.invert ? -1 : 1));
-      d.touched();
       return;
     }
     // Finer control down the sight
@@ -1314,10 +1300,8 @@ export function createWalk(d: WalkDeps) {
     const limit = firstPerson ? 1.35 : 1.3;
     const low = firstPerson ? -1.35 : -0.55;
     pitch = THREE.MathUtils.clamp(pitch + dy * k * settings.sens * (settings.invert ? -1 : 1), low, limit);
-    d.touched();
   };
   const tryJump = () => {
-    d.touched();
     // (the guard up and standing, it's a dodge: moving, a jump as ever)
     if (fistsReady() && fists!.brawl.up && grounded && vel.length() < fistsMod!.BRAWL.still) {
       fightBtns.dodge = true;
@@ -1327,7 +1311,6 @@ export function createWalk(d: WalkDeps) {
   };
   /** C, B or the touch Crouch button: a slide when sprinting, else into or out of a crouch */
   const crouchPress = () => {
-    d.touched();
     if (slide) return;
     const fast = grounded ? startSlide(ms) : null;
     if (fast) slide = fast;
@@ -1370,7 +1353,6 @@ export function createWalk(d: WalkDeps) {
         if (down) keys.add(c);
         else keys.delete(c);
       } else return false;
-      d.touched();
       e.preventDefault();
       return true;
     }
@@ -1383,7 +1365,6 @@ export function createWalk(d: WalkDeps) {
         if (down) keys.add(c);
         else keys.delete(c);
       } else return false;
-      d.touched();
       e.preventDefault();
       return true;
     }
@@ -1396,7 +1377,6 @@ export function createWalk(d: WalkDeps) {
         if (down) keys.add(c);
         else keys.delete(c);
       } else return false;
-      d.touched();
       e.preventDefault();
       return true;
     }
@@ -1409,7 +1389,6 @@ export function createWalk(d: WalkDeps) {
         if (down) keys.add(c);
         else keys.delete(c);
       } else return false;
-      d.touched();
       e.preventDefault();
       return true;
     }
@@ -1423,7 +1402,6 @@ export function createWalk(d: WalkDeps) {
         if (down) keys.add(c);
         else keys.delete(c);
       } else return false;
-      d.touched();
       e.preventDefault();
       return true;
     }
@@ -1454,7 +1432,6 @@ export function createWalk(d: WalkDeps) {
       if (down) keys.add(c);
       else keys.delete(c);
     } else return false;
-    d.touched();
     e.preventDefault();
     return true;
   }
@@ -1514,7 +1491,6 @@ export function createWalk(d: WalkDeps) {
     if (fistsReady()) {
       if (e.button === 0 && (locked() || noLock)) fightBtns.punch = true;
       if (e.button === 2) mouseBlock = true;
-      d.touched();
       return;
     }
     if (e.button === 2) aim = mouseR = true;
@@ -1569,7 +1545,6 @@ export function createWalk(d: WalkDeps) {
       zoom = THREE.MathUtils.clamp(zoom * (1 + Math.sign(e.deltaY) * 0.12), 0.8, 16);
       if (zoom < 1.2 && !firstPerson) setFirstPerson(true);
       else if (zoom >= 1.2 && firstPerson && e.deltaY > 0) setFirstPerson(false);
-      d.touched();
       e.preventDefault();
     },
     { passive: false }
@@ -1585,7 +1560,6 @@ export function createWalk(d: WalkDeps) {
     joy.x = x;
     joy.y = y;
     knob.style.transform = `translate(${x * r.width * 0.27}px, ${y * r.width * 0.27}px)`;
-    d.touched();
   };
   stick.addEventListener('pointerdown', (e) => {
     joy.id = e.pointerId;
@@ -1628,7 +1602,6 @@ export function createWalk(d: WalkDeps) {
         /* still pressed, just not captured */
       }
       pedals[key] = true;
-      d.touched();
     });
     for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) b.addEventListener(ev, () => (pedals[key] = false));
   }
@@ -1636,7 +1609,6 @@ export function createWalk(d: WalkDeps) {
   $('[data-drive-horn]').addEventListener('pointerdown', () => {
     if (boat?.active) boat.horn();
     else drive.horn();
-    d.touched();
   });
   // Touch while karting: Drift held, Item tapped (the stick steers, the pedals pedal)
   const driftBtn = root.querySelector<HTMLButtonElement>('[data-kart-drift]');
@@ -1648,22 +1620,18 @@ export function createWalk(d: WalkDeps) {
         /* still pressed */
       }
       kartBtns.drift = true;
-      d.touched();
     });
     for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) driftBtn.addEventListener(ev, () => (kartBtns.drift = false));
   }
   // Touch while fighting: Punch, Kick and Dodge tapped, Block held, Quit
   root.querySelector('[data-fight-punch]')?.addEventListener('click', () => {
     fightBtns.punch = true;
-    d.touched();
   });
   root.querySelector('[data-fight-kick]')?.addEventListener('click', () => {
     fightBtns.kick = true;
-    d.touched();
   });
   root.querySelector('[data-fight-dodge]')?.addEventListener('click', () => {
     fightBtns.dodge = true;
-    d.touched();
   });
   const blockBtn = root.querySelector<HTMLButtonElement>('[data-fight-block]');
   if (blockBtn) {
@@ -1671,7 +1639,6 @@ export function createWalk(d: WalkDeps) {
       e.preventDefault();
       blockBtn.setPointerCapture?.(e.pointerId);
       fightBtns.block = true;
-      d.touched();
     });
     for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) blockBtn.addEventListener(ev, () => (fightBtns.block = false));
   }
@@ -1693,7 +1660,6 @@ export function createWalk(d: WalkDeps) {
     fireBtn.setPointerCapture(e.pointerId);
     fireAt = { id: e.pointerId, x: e.clientX, y: e.clientY };
     combat.trigger(true, true);
-    d.touched();
   });
   fireBtn.addEventListener('pointermove', (e) => {
     if (!fireAt || e.pointerId !== fireAt.id) return;
@@ -1711,7 +1677,6 @@ export function createWalk(d: WalkDeps) {
   // (the hotbar's step: through the fists and the guns)
   $('[data-walk-swap]').addEventListener('click', () => {
     stepSlot(1);
-    d.touched();
   });
   // Touch: Aim toggles the sight (one thumb can't hold Aim and Fire)
   const aimBtn = $<HTMLButtonElement>('[data-walk-aim]');
@@ -1721,7 +1686,6 @@ export function createWalk(d: WalkDeps) {
   };
   aimBtn.addEventListener('click', () => {
     setAim(!aim);
-    d.touched();
   });
 
   // Gamepad: left stick move, right stick look, A jump, LB / L3 run, Y enter, View the inventory, R3 first person,
@@ -1814,7 +1778,6 @@ export function createWalk(d: WalkDeps) {
       // (the d-pad's up: a snack, in a spar)
       if (edge(12)) fight?.snack();
       if (edge(9)) quitFight();
-      if (pad.x || pad.y || b.some(Boolean)) d.touched();
       pad.prev = b;
       return;
     }
@@ -1825,7 +1788,6 @@ export function createWalk(d: WalkDeps) {
       if (edge(3)) act();
       if (edge(8)) boat.toggleView();
       if (edge(10)) boat.horn();
-      if (pad.x || padDrive.throttle || b.some(Boolean)) d.touched();
       pad.prev = b;
       return;
     }
@@ -1836,7 +1798,6 @@ export function createWalk(d: WalkDeps) {
       padFly.throttle = (gp.buttons[7]?.value ?? 0) - (gp.buttons[6]?.value ?? 0);
       if (edge(3)) act();
       if (edge(8)) fly.toggleView();
-      if (pad.x || pad.y || padFly.throttle || b.some(Boolean)) d.touched();
       pad.prev = b;
       return;
     }
@@ -1856,7 +1817,6 @@ export function createWalk(d: WalkDeps) {
       padKart.throttle = (gp.buttons[7]?.value ?? 0) - (gp.buttons[6]?.value ?? 0);
       padKart.drift = !!b[0];
       if (edge(3)) abandonKart();
-      if (pad.x || padKart.throttle || b.some(Boolean)) d.touched();
       pad.prev = b;
       return;
     }
@@ -1868,7 +1828,6 @@ export function createWalk(d: WalkDeps) {
       if (edge(3)) act();
       if (edge(8)) drive.toggleView();
       if (edge(10)) drive.horn();
-      if (pad.x || padDrive.throttle || b.some(Boolean)) d.touched();
       pad.prev = b;
       return;
     }
@@ -1902,7 +1861,6 @@ export function createWalk(d: WalkDeps) {
     // RB or D-pad right: the hotbar's next slot of the fists and the guns; D-pad left: the one before
     if ((edge(5) && !b[6]) || edge(15)) stepSlot(1);
     if (edge(14)) stepSlot(-1);
-    if (pad.x || pad.y || b.some(Boolean)) d.touched();
     pad.prev = b;
   }
 
@@ -2860,7 +2818,6 @@ export function createWalk(d: WalkDeps) {
       keys.clear();
       near = null;
       prompt.hidden = true;
-      d.touched();
       return true;
     },
     /** Your car, if it's out of the garage: where it is, its model, and whether you're in it */
