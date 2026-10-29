@@ -16,7 +16,7 @@ const inside = (r: Rect, x: number, z: number, m = 0) => x > r[0] - m && x < r[2
 
 test('the pads: on the hills, held level, off the roads and each other, a drive up from the road', () => {
   assert.ok(MANSIONS.length >= 8);
-  assert.equal(LEVELS, MANSION_LEVELS);
+  for (const l of MANSION_LEVELS) assert.ok(LEVELS.includes(l));
   const kinds = new Set(MANSIONS.map((m) => m.kind));
   for (const k of ['glass', 'villa', 'compound', 'summit']) assert.ok(kinds.has(k as never), `no ${k}`);
   assert.equal(MANSIONS.filter((m) => m.kind === 'summit').length, 1);

@@ -12,6 +12,7 @@
 import { HILLS, TERRAIN_RECT, natural, smooth, swell, type Rect } from './hills';
 import { BED, HILL_ROADS } from './crestmont';
 import { MANSION_LEVELS } from './mansions';
+import { SITE_LEVELS } from './crestsites';
 
 export { HILLS, TERRAIN_RECT, swell, type Rect };
 
@@ -21,8 +22,8 @@ export interface Level {
   y: number;
   ease: number;
 }
-/** The hills' mansions' pads (mansions.ts, Phase 6) */
-export const LEVELS: Level[] = MANSION_LEVELS;
+/** The hills' mansions' pads (mansions.ts, Phase 6) and the landmarks' ground (crestsites.ts, Phase 7) */
+export const LEVELS: Level[] = [...MANSION_LEVELS, ...SITE_LEVELS];
 
 /** How far a level's hold reaches at a point: 1 inside its rectangle, easing to 0 over `ease` round it */
 function hold(l: Level, x: number, z: number) {

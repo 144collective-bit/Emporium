@@ -17,6 +17,7 @@ import { registerLandscape } from './landscape3d';
 import { registerCoral } from './coral3d';
 import { registerEstates } from './estates3d';
 import { registerMansions } from './mansions3d';
+import { registerSites } from './crestsites3d';
 import { CREST_CROSSINGS, FLATS_STREETS, FOOTHILL_Z, HILL_ROADS, type Rect } from './crestmont';
 
 export const SELF = import.meta.url;
@@ -107,6 +108,8 @@ export function register({ low, scene }: { low: boolean; scene: THREE.Scene | nu
   registerEstates(low, scene);
   // The hills' mansions (Phase 6: mansions3d.ts)
   registerMansions(low, scene);
+  // The landmarks: the grand hotel, the civic hall, the country club, the overlook, the reservoir (Phase 7: crestsites3d.ts)
+  registerSites(low, scene);
   const asphalt = toon('#26243f');
   const kerbTop = toon('#5a5290');
   const grass = toon('#3f7a4a');

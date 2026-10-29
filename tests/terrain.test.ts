@@ -15,13 +15,14 @@ import { KART_PARK } from '../src/scripts/city3d/kartpark';
 import { HIGHWAY, HIGHWAY_HALF } from '../src/scripts/city3d/highway';
 import { AIRSIDE, FLIGHTS, PERIOD, poseAt } from '../src/scripts/city3d/airfield';
 import { MANSION_SOLIDS } from '../src/scripts/city3d/mansions';
+import { SITE_SOLIDS } from '../src/scripts/city3d/crestsites';
 
 const TILE_M = 1.8;
 const grid = (step: number, f: (x: number, z: number) => void) => {
   for (let x = TERRAIN_RECT[0] - 4; x <= TERRAIN_RECT[2] + 4; x += step) for (let z = TERRAIN_RECT[1] - 4; z <= TERRAIN_RECT[3] + 4; z += step) f(x, z);
 };
 
-test('flat everywhere but the hills: 0 outside their land, and under every street, block, solid (but the mansions) and place', () => {
+test('flat everywhere but the hills: 0 outside their land, and under every street, block, solid (but the mansions and landmarks) and place', () => {
   for (const [x, z] of [
     [0, 0],
     [-300, -300],
@@ -58,8 +59,8 @@ test('flat everywhere but the hills: 0 outside their land, and under every stree
     [KART_PARK.x1, KART_PARK.z1],
   ])
     assert.equal(heightAt(x, z), 0);
-  // (but the hills' mansions, which stand on their pads up there: tests/mansions.test.ts)
-  for (const b of SOLIDS.filter((b) => !MANSION_SOLIDS.includes(b))) for (const [x, z] of [[b[0], b[1]], [b[2], b[1]], [b[0], b[3]], [b[2], b[3]]]) assert.equal(heightAt(x, z), 0, `a solid at ${x}, ${z} is on the hills`);
+  // (but the hills' mansions and landmarks, which stand on their ground up there: tests/mansions.test.ts, tests/crestsites.test.ts)
+  for (const b of SOLIDS.filter((b) => !MANSION_SOLIDS.includes(b) && !SITE_SOLIDS.includes(b))) for (const [x, z] of [[b[0], b[1]], [b[2], b[1]], [b[0], b[3]], [b[2], b[3]]]) assert.equal(heightAt(x, z), 0, `a solid at ${x}, ${z} is on the hills`);
   for (const p of PLACES) assert.equal(heightAt(p.at.x, p.at.z), 0, `${p.id} is on the hills`);
 });
 

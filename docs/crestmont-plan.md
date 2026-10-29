@@ -304,7 +304,36 @@ people by the pools are Phase 8's.
   Gates with columns and lamps, hedged walls, parked supercars. Each on a
   pad (`PADS`), its solids from its parts, every one under the Emporium.
 
-### Phase 7: the landmarks
+### Phase 7: the landmarks (step 1, the scenery: built; step 2, each a place: next)
+
+**What's built (step 1):**
+
+- `crestsites.ts` (DOM-free, tested in `tests/crestsites.test.ts`); their ground held level in terrain.ts's `LEVELS`
+  (`SITE_LEVELS`, the mansions' rules: off every road's bed, never a quarry), `SITE_SOLIDS` (in `SOLIDS`), `onSite()`
+  (the hills' planting keeps off). Drawn by `crestsites3d.ts` (`registerSites()`, from crestmont3d.ts).
+- **The grand hotel**, THE CORALLINE (made up), on the block kept for it (crest-2-0, `HOTEL`): four pink storeys over a
+  white ground floor with white cornices and balconies, a deeper pink tower of five, its name in script on a board on
+  the roof facing the boulevard, a porte-cochère lit along its edge, the drive in from the boulevard round an island
+  with a fountain and date palms, the pool garden behind with striped cabanas and loungers, fan palms
+  (`HOTEL_PALMS`).
+- **The civic hall** at the boulevard's head north of Foothill Road (`CIVIC`, at the Flats' level): white on a stone
+  plinth, a colonnade of eight columns, a tower with a drum and a blue tiled dome under a gold finial; the park in front
+  with the walk up the boulevard's line, two fountains and benches.
+- **The country club** (`CLUB`, Crestmont Hills Club, made up) on the lower slopes west of Canyon Drive: the clubhouse
+  under red tiles by Foothill Road with its terrace and tables, the cart shed and three carts; six holes up the strip
+  and back (`HOLES`): tee boxes with markers, fairways, fringes and greens with their flags, two bunkers a green, all
+  laid on the ground as it is.
+- **The overlook** (`OVERLOOK`): the plan put it at the ridge's end, but the ground falls too steeply there for a level
+  park within the cut rule; it's on the ridge's spur, Vista Lane, about 50 m up, the ground falling away past it: paving,
+  a stone balustrade (a retaining wall where the hills rise), benches, three coin viewers, two lamps, a path from the
+  lane. No hillside sign.
+- **The reservoir** (`RESERVOIR`) in a bowl of the hills east of the ridge: the water held at `y` over a basin, its edge
+  in the banks where they rise past it, concrete dams on the sides where they fall away, a valve tower, an iron fence
+  round it (solid: nobody walks in); the water is the city's own shader, on the main thread.
+
+**Next (step 2):** each a place: spot, pin, directory entry, a panel with Walk in, `PLACES` and `LIVE_PLACES` entries.
+
+**As planned:**
 
 The owner's picks, scenery first, then each a place (spot, pin,
 directory entry, a panel with Walk in, `PLACES` and `LIVE_PLACES` entries):

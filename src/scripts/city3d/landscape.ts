@@ -24,6 +24,7 @@ import { rng } from './recipes';
 import { onDrive } from './coral';
 import { ESTATES, gardenPalmsOf, inGateway, toWorld } from './estates';
 import { onMansion } from './mansions';
+import { HOTEL_PALMS, inHotelDrive, onSite } from './crestsites';
 
 type Pt = [number, number];
 
@@ -69,11 +70,13 @@ function palms(): Palm[] {
       // (the last street's east side is the last row of blocks; its west side every street's)
       for (let z = FOOTHILL_Z + 7; z < BANK.c - 5; z += 8) {
         const px = x + side * off;
-        if (!offJunction(z, 4) || !offLamps(px, z, 1.8) || px > FLATS_EAST - 0.5 || inBay(px, z, 0.5) || onDrive(px, z, 0.4) || inGateway(px, z, 0.6)) continue;
+        if (!offJunction(z, 4) || !offLamps(px, z, 1.8) || px > FLATS_EAST - 0.5 || inBay(px, z, 0.5) || onDrive(px, z, 0.4) || inGateway(px, z, 0.6) || inHotelDrive(px, z, 0.6)) continue;
         fan(px, z);
       }
     }
   });
+  // The grand hotel's (Phase 7)
+  for (const p of HOTEL_PALMS) (p.kind === 'fan' ? fan : date)(p.x, p.z);
   // The estates (Phase 5): a date palm either side of each forecourt
   for (const e of ESTATES) for (const [u, v] of gardenPalmsOf(e)) date(...toWorld(e, u, v));
   // Foothill Road: date palms along its south side, every 14 between the streets
@@ -86,7 +89,7 @@ function palms(): Palm[] {
   for (let d = 30; d < ridge.cum[ridge.cum.length - 1] - 12; d += 34) {
     const { p, n } = frameAt(ridge, d);
     const [x, z] = [p[0] - n[0] * (ridge.half + 1.4), p[1] - n[1] * (ridge.half + 1.4)];
-    if (!nearHillRoad(x, z, 0.9) && !onMansion(x, z, 0.5)) out.push({ x, z, y: roadY(ridge, d), kind: 'fan', h: 7 + r() * 2, turn: r() * Math.PI * 2, bend: Math.floor(r() * 3) as 0 | 1 | 2, s: 0.9 + r() * 0.2 });
+    if (!nearHillRoad(x, z, 0.9) && !onMansion(x, z, 0.5) && !onSite(x, z, 0.5)) out.push({ x, z, y: roadY(ridge, d), kind: 'fan', h: 7 + r() * 2, turn: r() * Math.PI * 2, bend: Math.floor(r() * 3) as 0 | 1 | 2, s: 0.9 + r() * 0.2 });
   }
   const end = ridge.pts[ridge.pts.length - 1];
   for (const [dx, dz] of [
@@ -136,6 +139,7 @@ const CELL = 10;
 const HILL_PALMS = PALMS.filter((p) => p.z < HILLS.foot.z);
 const plantable = (x: number, z: number, m: number) =>
   !onMansion(x, z, m * 0.5) &&
+  !onSite(x, z, m * 0.5) &&
   z < HILLS.foot.z - 2 && x > TERRAIN_RECT[0] + 4 && !nearHillRoad(x, z, BED.shoulder + m) && HILL_PALMS.every((p) => Math.hypot(p.x - x, p.z - z) > 2.5) && slopeAt(x, z) < 0.9;
 
 export interface Plant {
@@ -246,7 +250,7 @@ export const WALLS: Edge[] = (() => {
         if (HILL_ROADS.some((o) => o !== r && o.pts.some((q) => Math.hypot(q[0] - a[0], q[1] - a[1]) < o.half + 3 || Math.hypot(q[0] - b[0], q[1] - b[1]) < o.half + 3))) continue;
         if (a[1] > HILLS.foot.z - 4 || b[1] > HILLS.foot.z - 4) continue;
         // (nor across a mansion's drive, nor along a pad at a lane's end: mansions.ts)
-        if (onMansion(...a) || onMansion(...b)) continue;
+        if (onMansion(...a) || onMansion(...b) || onSite(...a) || onSite(...b)) continue;
         const base = { road: r.id, a, b, ya: roadY(r, d), yb: roadY(r, d + EDGE_AT.step), side: side as 1 | -1 };
         if (there - y > EDGE_AT.cut) {
           const h = Math.min(1.8, 0.35 + (there - y) * 0.35);
