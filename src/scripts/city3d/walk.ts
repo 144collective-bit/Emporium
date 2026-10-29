@@ -29,6 +29,7 @@
  *   camera looks into the hangar while you pick); get in your aircraft and
  *   fly (fly.ts), land anywhere and get out.
  */
+import { SUN_DOORS } from './sunplaces';
 import * as THREE from 'three';
 import type { SpotId } from '../../lib/city';
 import { HOLDING, PLAYER, RELAXED, createDegen, type Outfit } from './character';
@@ -111,7 +112,7 @@ type Near = SpotId | 'gear' | 'garage' | 'hangar' | 'car' | 'plane' | 'boat' | '
 const GATED: Partial<Record<Near, FeatureId>> = { gear: 'guns', garage: 'drive', hangar: 'fly', karts: 'karts', trainer: 'fight', boat: 'boat' };
 /** Prompts that say their own label (the rest say "Enter ...") */
 /** The landmarks' doors and Trench Avenue's (their prompts open their panels) */
-const ALL_DOORS = [...DOORS, ...AVENUE_DOORS, { id: 'stadium' as const, ...GATE.spot }, { id: 'harbourmaster' as const, ...HARBOUR_MASTER.door }];
+const ALL_DOORS = [...DOORS, ...AVENUE_DOORS, { id: 'stadium' as const, ...GATE.spot }, { id: 'harbourmaster' as const, ...HARBOUR_MASTER.door }, ...SUN_DOORS];
 const OWN_LABEL = new Set<string>(['gear', 'garage', 'hangar', 'car', 'plane', 'boat', 'karts', 'trainer', 'bench', 'stand', 'put']);
 /** The Armoury's counter top (its drawing grid: the counter's box, a little in from its front edge) and height over the slab */
 const RACK_TOP = (([x, z]) => ({ x, z }))(design(24.7, 27.4));

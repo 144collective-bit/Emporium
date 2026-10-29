@@ -1257,7 +1257,16 @@ it and has been retired completely. Build only on what's here.
   ground, patio, ramada, grill, pool, extras, the gates), `WALLS` (block walls
   between and behind the lots, one to a line, none on the perimeter wall's,
   the returns with gates), `YARD_SOLIDS` (joined when the chunk loads); drawn
-  by `sunyards3d.ts`.
+  by `sunyards3d.ts`. Phase 4 (the amenities and places) is built:
+  `sunplaces.ts` (DOM-free, the boot's: the club's, park's and school's land, the
+  clubhouse and the school's buildings, `SUNPLACE_SOLIDS` in `SOLIDS`, the front
+  doors `SUN_DOORS`, `SUN_SPAWNS`) and `sunamenities.ts` (DOM-free, the chunk's,
+  tested in `tests/sunamenities.test.ts`: the pool yard, courts, car park, the park's
+  walk, playground and ramada, the school's covered walks, field, playground, bus bay
+  and bus, `AMENITY_SOLIDS` joined when the chunk loads); spots `sunclub`,
+  `sunpark`, `sunschool` (pins, directory entries, panels with Walk in,
+  `data-sun-walkin`, `PLACES` and `LIVE_PLACES` entries); drawn by
+  `sunamenities3d.ts`.
 - **The raised highway** (the owner's call, planned, nothing built yet): the
   ring highway rebuilt on a concrete viaduct with real exits (diamond
   interchanges, numbered, made-up names on the gantries) and traffic that

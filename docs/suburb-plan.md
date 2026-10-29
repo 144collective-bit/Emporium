@@ -157,9 +157,31 @@ These are my recommendations, made so the plan is complete; any can change.
    a yard and the walls a site a tile; the trees, walls, pools and ground at
    every distance, the small plants and the back yards' things near only,
    fewer on phones (half the small plants, no furniture, trampolines or swings).
-4. **The amenities and places:** the park, the school, the community
-   centre; spots, pins, directory entries, panels, `PLACES` and
-   `LIVE_PLACES`.
+4. **The amenities and places** (built): `sunplaces.ts` (DOM-free, the boot's:
+   each place's land on the amenities' block south of Mesa Drive, `CLUB_LAND`,
+   `PARK_LAND`, `SCHOOL_LAND`; the clubhouse and the school's two wings and hall,
+   `CLUBHOUSE`, `SCHOOL`, solid in `SOLIDS`, `SUNPLACE_SOLIDS`; the front doors,
+   `SUN_DOORS`, whose walk prompts open the panels; where you arrive, `SUN_SPAWNS`,
+   on the loop's inner sidewalk facing each) and `sunamenities.ts` (DOM-free, the
+   chunk's, tested in `tests/sunamenities.test.ts`). **Sunridge Club** (spot
+   `sunclub`): the clubhouse with its portico, glass front and tile roof; the pool
+   yard behind it in a black iron fence (the lap pool with its lanes, the splash pool
+   under a shade sail, umbrellas, loungers, the lifeguard's chair); two pickleball
+   courts in a windscreened fence; the car park with its drive off the loop and three
+   cars; SUNRIDGE CLUB on a low wall. **Sunridge Park** (spot `sunpark`): the lawn, a
+   walk round it and its way in, the playground on red rubber (two towers, a bridge, a
+   slide, swings) under two shade sails, the ramada with its picnic tables, shade
+   trees, benches, a drinking fountain. **Sunridge Elementary** (spot `sunschool`):
+   stucco wings under flat roofs with parapets and air conditioners, classroom
+   windows in surrounds (about half lit at night), the hall with its clerestory, blue
+   covered walks round the courtyard, the main door under a canopy, the field with its
+   lines and goals, the playground under a sail, the bus bay with the yellow bus, the
+   flagpole (a made-up flag in Sector 7's colours), SUNRIDGE ELEMENTARY on a low wall.
+   Each a place: pin, directory entry, panel with Walk in (`data-sun-walkin`),
+   `PLACES` and `LIVE_PLACES` entries. Drawn by `sunamenities3d.ts` (a site each); the
+   cars and the bus through `parkedCars()`, `AMENITY_SOLIDS` (the fences, the
+   ramada's posts, the play towers, the goals, the cars) joined when the chunk loads.
+   The houses' tile roofs are shared (`roofOf()`, `ROOF_MATS` in sunhouses3d.ts).
 5. **Life, night and sound:** the people, kids and dogs, the residents'
    cars, the school bus, the bus stops; porch lights and pools at night;
    `ambience.ts` `suburb` (sprinklers, a lawnmower now and then, crickets).

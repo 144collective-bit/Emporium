@@ -51,6 +51,9 @@ export const LIVE_PLACES = [
   { id: 'overlook', name: 'The Overlook' },
   { id: 'reservoir', name: 'The Reservoir' },
   { id: 'harbourmaster', name: "Harbour Master's office" },
+  { id: 'sunclub', name: 'Sunridge Club' },
+  { id: 'sunpark', name: 'Sunridge Park' },
+  { id: 'sunschool', name: 'Sunridge Elementary' },
 ] as const satisfies readonly { id: string; name: string }[];
 export type LivePlaceId = (typeof LIVE_PLACES)[number]['id'];
 

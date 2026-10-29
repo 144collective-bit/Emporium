@@ -16,25 +16,25 @@
  * the footprint set back until the lot is wide enough (a pie-shaped lot round a turning circle widens as it goes back),
  * with a back yard behind (`BACK_MIN`). Everything under the Emporium.
  */
-import { LOTS, type Lot } from "./sunridgelots";
-import type { Pt } from "./sunridge";
-import { rng } from "./recipes";
+import { LOTS, type Lot } from './sunridgelots';
+import type { Pt } from './sunridge';
+import { rng } from './recipes';
 
-export type Plan = "ranch" | "ell" | "two" | "porch";
-export type Elevation = "arch" | "stone" | "tower";
-export const PLANS: Plan[] = ["ranch", "ell", "two", "porch"];
+export type Plan = 'ranch' | 'ell' | 'two' | 'porch';
+export type Elevation = 'arch' | 'stone' | 'tower';
+export const PLANS: Plan[] = ['ranch', 'ell', 'two', 'porch'];
 
 /** Render and trim, by scheme (made to read in the city's flat shading; no white so bright it blooms) */
 export const SCHEMES = [
-  { name: "sand", wall: "#d6bf96", trim: "#ece0c6" },
-  { name: "adobe", wall: "#c4946c", trim: "#e6cfae" },
-  { name: "cream", wall: "#e4d6b8", trim: "#f2e8d2" },
-  { name: "sage", wall: "#b5b79d", trim: "#e2dec8" },
-  { name: "peach", wall: "#d9ae8e", trim: "#efdcc6" },
-  { name: "taupe", wall: "#b29f88", trim: "#ded1bd" },
+  { name: 'sand', wall: '#d6bf96', trim: '#ece0c6' },
+  { name: 'adobe', wall: '#c4946c', trim: '#e6cfae' },
+  { name: 'cream', wall: '#e4d6b8', trim: '#f2e8d2' },
+  { name: 'sage', wall: '#b5b79d', trim: '#e2dec8' },
+  { name: 'peach', wall: '#d9ae8e', trim: '#efdcc6' },
+  { name: 'taupe', wall: '#b29f88', trim: '#ded1bd' },
 ] as const;
 /** The roofs' concrete tile */
-export const ROOFS = ["terracotta", "brown", "slate"] as const;
+export const ROOFS = ['terracotta', 'brown', 'slate'] as const;
 
 /** A storey's height, the floor over the lot, the garage's walls */
 export const STOREY = 1.6;
@@ -56,7 +56,7 @@ export const BACK_MIN = 2.0;
 
 /** A box of a house in its lot's frame: across (u0..u1), in from the street (v0 front, v1 back), its walls' top over the lot */
 export interface Part {
-  kind: "main" | "garage" | "tower" | "wing";
+  kind: 'main' | 'garage' | 'tower' | 'wing';
   u0: number;
   u1: number;
   v0: number;
@@ -92,11 +92,7 @@ export interface House {
 }
 
 /** A point of a house's frame in the world */
-export const toWorld = (
-  h: Pick<House, "o" | "u" | "v">,
-  u: number,
-  v: number,
-): Pt => [h.o[0] + h.u[0] * u + h.v[0] * v, h.o[1] + h.u[1] * u + h.v[1] * v];
+export const toWorld = (h: Pick<House, 'o' | 'u' | 'v'>, u: number, v: number): Pt => [h.o[0] + h.u[0] * u + h.v[0] * v, h.o[1] + h.u[1] * u + h.v[1] * v];
 
 /** The lot's frame, and its corners in it */
 export function frameOf(l: Lot) {
@@ -106,10 +102,7 @@ export function frameOf(l: Lot) {
   // (the lot's inside is left of its front's way: lots.ts)
   const v: Pt = [u[1], -u[0]];
   const o: Pt = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
-  const local = (p: Pt): Pt => [
-    (p[0] - o[0]) * u[0] + (p[1] - o[1]) * u[1],
-    (p[0] - o[0]) * v[0] + (p[1] - o[1]) * v[1],
-  ];
+  const local = (p: Pt): Pt => [(p[0] - o[0]) * u[0] + (p[1] - o[1]) * u[1], (p[0] - o[0]) * v[0] + (p[1] - o[1]) * v[1]];
   // front left, front right, back left, back right
   return {
     o,
@@ -140,24 +133,11 @@ export function depthAt(f: ReturnType<typeof frameOf>, u: number) {
  * A plan's footprint in a lot: as wide as the lot allows (side yards `SIDE_MIN`), set back until it is that wide all
  * the way back, with a back yard of `BACK_MIN` or more; null if it won't fit
  */
-function lay(
-  plan: Plan,
-  elevation: Elevation,
-  mirror: boolean,
-  f: ReturnType<typeof frameOf>,
-): Omit<
-  House,
-  "id" | "lot" | "scheme" | "roof" | "o" | "u" | "v" | "solar" | "chimney"
-> | null {
-  const two = plan === "two" || plan === "porch";
-  const forward =
-    plan === "ranch" ? 0.7 : plan === "ell" ? 2.0 : two ? 1.3 : 0.7;
+function lay(plan: Plan, elevation: Elevation, mirror: boolean, f: ReturnType<typeof frameOf>): Omit<House, 'id' | 'lot' | 'scheme' | 'roof' | 'o' | 'u' | 'v' | 'solar' | 'chimney'> | null {
+  const two = plan === 'two' || plan === 'porch';
+  const forward = plan === 'ranch' ? 0.7 : plan === 'ell' ? 2.0 : two ? 1.3 : 0.7;
   // (shallower where the lot is: a smaller house rather than none)
-  for (const depth of two
-    ? [5.2, 4.7]
-    : plan === "ell"
-      ? [5.6, 5.0]
-      : [6.0, 5.4, 4.8, 4.4])
+  for (const depth of two ? [5.2, 4.7] : plan === 'ell' ? [5.6, 5.0] : [6.0, 5.4, 4.8, 4.4])
     // (the garage's front at DRIVE in from the street, or further back where the lot's too narrow there)
     for (let g = DRIVE; g < DRIVE + 4; g += 0.25) {
       const vf = g + forward;
@@ -183,10 +163,10 @@ function lay(
       const top1 = FLOOR + STOREY;
       const top = two ? FLOOR + STOREY * 2 : top1;
       const parts: Part[] = [];
-      if (plan === "ell") {
+      if (plan === 'ell') {
         // The garage wing forward, the house behind and across, an entry court between
         parts.push({
-          kind: "garage",
+          kind: 'garage',
           u0: gu0,
           u1: gu1,
           v0: g,
@@ -194,10 +174,10 @@ function lay(
           top: GARAGE_H + FLOOR,
           storeys: 1,
         });
-        parts.push({ kind: "main", u0, u1, v0: vf, v1: vb, top, storeys: 1 });
+        parts.push({ kind: 'main', u0, u1, v0: vf, v1: vb, top, storeys: 1 });
       } else {
         parts.push({
-          kind: "garage",
+          kind: 'garage',
           u0: gu0,
           u1: gu1,
           v0: g,
@@ -206,7 +186,7 @@ function lay(
           storeys: 1,
         });
         parts.push({
-          kind: "main",
+          kind: 'main',
           u0,
           u1,
           v0: vf,
@@ -217,13 +197,12 @@ function lay(
       }
       // The rooms' side: where the door is (in the main's front, off the garage)
       const [ru0, ru1] = s < 0 ? [gu1, u1] : [u0, gu0];
-      const du =
-        (ru0 + ru1) / 2 + (s < 0 ? -0.3 : 0.3) * Math.min(1, (ru1 - ru0) / 3);
-      if (elevation === "tower") {
+      const du = (ru0 + ru1) / 2 + (s < 0 ? -0.3 : 0.3) * Math.min(1, (ru1 - ru0) / 3);
+      if (elevation === 'tower') {
         // A taller entry tower round the door, stepped forward of the rooms
         const tw = Math.min(1.5, ru1 - ru0 - 0.4);
         parts.push({
-          kind: "tower",
+          kind: 'tower',
           u0: du - tw / 2,
           u1: du + tw / 2,
           v0: vf - 0.45,
@@ -233,11 +212,11 @@ function lay(
         });
       }
       // A bedroom wing stepped forward on the far side of a ranch, past the door
-      if (plan === "ranch" && ru1 - ru0 > 2.6) {
+      if (plan === 'ranch' && ru1 - ru0 > 2.6) {
         const [wu0, wu1] = s < 0 ? [ru1 - 1.6, ru1] : [ru0, ru0 + 1.6];
         if (Math.abs((wu0 + wu1) / 2 - du) > 1)
           parts.push({
-            kind: "wing",
+            kind: 'wing',
             u0: wu0,
             u1: wu1,
             v0: vf - 0.5,
@@ -246,11 +225,8 @@ function lay(
             storeys: 1,
           });
       }
-      const dv = elevation === "tower" ? vf - 0.45 : vf;
-      const porch: [number, number, number] | undefined =
-        plan === "porch"
-          ? [ru0 + 0.1, ru1 - 0.05, Math.min(1.1, vf - g - 0.15)]
-          : undefined;
+      const dv = elevation === 'tower' ? vf - 0.45 : vf;
+      const porch: [number, number, number] | undefined = plan === 'porch' ? [ru0 + 0.1, ru1 - 0.05, Math.min(1.1, vf - g - 0.15)] : undefined;
       const gdu = (gu0 + gu1) / 2;
       return {
         plan,
@@ -259,17 +235,9 @@ function lay(
         parts,
         door: { u: du, v: dv },
         garageDoor: { u: gdu, v: g },
-        drive: [
-          gdu - doorW(gu1 - gu0) / 2 - 0.25,
-          gdu + doorW(gu1 - gu0) / 2 + 0.25,
-        ],
+        drive: [gdu - doorW(gu1 - gu0) / 2 - 0.25, gdu + doorW(gu1 - gu0) / 2 + 0.25],
         // (from the door straight out, then along to the driveway)
-        walk: [
-          Math.min(du, gdu) - 0.35,
-          Math.max(du, gdu) + 0.35,
-          dv - 1.1,
-          dv,
-        ],
+        walk: [Math.min(du, gdu) - 0.35, Math.max(du, gdu) + 0.35, dv - 1.1, dv],
         porch,
       };
     }
@@ -279,32 +247,21 @@ function lay(
 function build(): House[] {
   const out: House[] = [];
   const rand = rng(8821);
-  let prev = { scheme: -1, roof: -1, plan: "" as string, prev2: "" as string };
+  let prev = { scheme: -1, roof: -1, plan: '' as string, prev2: '' as string };
   for (const l of LOTS) {
     const f = frameOf(l);
     // Neighbours along the same street differ: the scheme and the roof never the same as next door's, the plan not two in a row
     let scheme = Math.floor(rand() * SCHEMES.length);
-    if (scheme === prev.scheme)
-      scheme =
-        (scheme + 1 + Math.floor(rand() * (SCHEMES.length - 1))) %
-        SCHEMES.length;
+    if (scheme === prev.scheme) scheme = (scheme + 1 + Math.floor(rand() * (SCHEMES.length - 1))) % SCHEMES.length;
     let roof = Math.floor(rand() * ROOFS.length);
     if (roof === prev.roof && rand() < 0.7) roof = (roof + 1) % ROOFS.length;
-    const want: Plan[] = rand() < 0.3 ? ["two", "porch"] : ["ranch", "ell"];
+    const want: Plan[] = rand() < 0.3 ? ['two', 'porch'] : ['ranch', 'ell'];
     if (rand() < 0.5) want.reverse();
-    const order = [
-      ...want.filter((p) => p !== prev.plan),
-      ...want.filter((p) => p === prev.plan),
-      ...PLANS.filter((p) => !want.includes(p)),
-    ];
-    const elevation = (["arch", "stone", "tower"] as const)[
-      Math.floor(rand() * 3)
-    ];
+    const order = [...want.filter((p) => p !== prev.plan), ...want.filter((p) => p === prev.plan), ...PLANS.filter((p) => !want.includes(p))];
+    const elevation = (['arch', 'stone', 'tower'] as const)[Math.floor(rand() * 3)];
     const mirror = rand() < 0.5;
     let laid: ReturnType<typeof lay> = null;
-    for (const p of order)
-      for (const m of [mirror, !mirror])
-        laid ??= lay(p, elevation, m, f) ?? lay(p, "arch", m, f);
+    for (const p of order) for (const m of [mirror, !mirror]) laid ??= lay(p, elevation, m, f) ?? lay(p, 'arch', m, f);
     const solar = rand() < 0.28;
     const chimney = rand() < 0.18;
     if (!laid) continue;
@@ -327,10 +284,8 @@ function build(): House[] {
 export const HOUSES: House[] = build();
 
 /** The highest a house reaches: its tallest part's walls and its roof over them */
-export const roofRise = (p: Part) =>
-  (PITCH * Math.min(p.u1 - p.u0, p.v1 - p.v0)) / 2 + PITCH * EAVE;
-export const houseTop = (h: House) =>
-  Math.max(...h.parts.map((p) => p.top + roofRise(p))) + 0.15;
+export const roofRise = (p: Part) => (PITCH * Math.min(p.u1 - p.u0, p.v1 - p.v0)) / 2 + PITCH * EAVE;
+export const houseTop = (h: House) => Math.max(...h.parts.map((p) => p.top + roofRise(p))) + 0.15;
 
 type Box = [number, number, number, number, number];
 /** A box of a house's frame as world boxes: one where it's square to the axes, cells no bigger than `STRIP` where it's turned */
@@ -347,13 +302,8 @@ export function partBoxes(h: House, u0: number, u1: number, v0: number, v1: numb
   // Turned: cells no bigger than STRIP, so the boxes round them stay close to the walls
   const out: Box[] = [];
   const [nu, nv] = [Math.max(1, Math.ceil((u1 - u0) / STRIP)), Math.max(1, Math.ceil((v1 - v0) / STRIP))];
-  for (let i = 0; i < nu; i++)
-    for (let j = 0; j < nv; j++) out.push(box(u0 + ((u1 - u0) * i) / nu, u0 + ((u1 - u0) * (i + 1)) / nu, v0 + ((v1 - v0) * j) / nv, v0 + ((v1 - v0) * (j + 1)) / nv));
+  for (let i = 0; i < nu; i++) for (let j = 0; j < nv; j++) out.push(box(u0 + ((u1 - u0) * i) / nu, u0 + ((u1 - u0) * (i + 1)) / nu, v0 + ((v1 - v0) * j) / nv, v0 + ((v1 - v0) * (j + 1)) / nv));
   return out;
 }
 /** What of the houses is solid: their walls (and the towers, the wings), to their roofs (the lots' ground is world.ts SLAB, 0.15, under them) */
-export const HOUSE_SOLIDS: Box[] = HOUSES.flatMap((h) =>
-  h.parts.flatMap((p) =>
-    partBoxes(h, p.u0, p.u1, p.v0, p.v1, 0.15 + p.top + roofRise(p)),
-  ),
-);
+export const HOUSE_SOLIDS: Box[] = HOUSES.flatMap((h) => h.parts.flatMap((p) => partBoxes(h, p.u0, p.u1, p.v0, p.v1, 0.15 + p.top + roofRise(p))));

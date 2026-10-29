@@ -14,6 +14,7 @@ import { Batch, canvasTex, lit, neon, siteMat, toon } from './kit';
 import { site } from './tilework';
 import { registerHouses } from './sunhouses3d';
 import { registerYards } from './sunyards3d';
+import { registerAmenities } from './sunamenities3d';
 import { COURT } from './mall';
 import { EW_ROADS, MEDIAN, WALK_W } from './layout';
 import { along, dashes, pieces, ribbon, unit } from './roads3d';
@@ -83,6 +84,8 @@ export function register({ low, scene }: { low: boolean; scene: THREE.Scene | nu
   registerHouses(low, scene);
   // The yards and their walls (Phase 3: sunyards3d.ts)
   registerYards(low, scene);
+  // The club, the park and the school (Phase 4: sunamenities3d.ts)
+  registerAmenities(low, scene);
   const crossings = SUN_CROSSINGS.map((c) => c.at);
   const nearCrossing = (x: number, z: number, r: number) => crossings.some((c) => Math.hypot(c[0] - x, c[1] - z) < r);
 

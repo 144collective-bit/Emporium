@@ -58,8 +58,11 @@ const spots: Record<SpotId, Spot> = {
   overlook: { title: 'The Overlook', sub: 'The view' },
   reservoir: { title: 'The Reservoir', sub: 'In the hills' },
   harbourmaster: { title: 'Harbour Master', sub: 'Southbank Docks' },
+  sunclub: { title: 'Sunridge Club', sub: 'Pool & clubhouse' },
+  sunpark: { title: 'Sunridge Park', sub: 'Playground' },
+  sunschool: { title: 'Sunridge Elementary', sub: 'School' },
 };
-const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'harbour', 'trenches', 'club', 'bar', 'arms', 'pier', 'nightmarket', 'stadium', 'tower', 'palmcourt', 'mall', 'hotel', 'civichall', 'golfclub', 'overlook', 'reservoir', 'harbourmaster'];
+const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'harbour', 'trenches', 'club', 'bar', 'arms', 'pier', 'nightmarket', 'stadium', 'tower', 'palmcourt', 'mall', 'hotel', 'civichall', 'golfclub', 'overlook', 'reservoir', 'harbourmaster', 'sunclub', 'sunpark', 'sunschool'];
 const ext = { target: '_blank', rel: 'noopener noreferrer' };
 
 // The commit this was built from (set by the Worker's build in server/wrangler.jsonc)
@@ -1100,6 +1103,27 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     <h2 id="city-panel-title" class="city-panel-title">Harbour Master</h2>
     <p class="city-panel-text">The office on the quay by the basin's mouth, its clock tower over the river and the lighthouse across from it. Behind it the port: the container ship under three tall cranes, the stacks, SHED 3, the dry dock and the tugs, and the warehouses down Quay Road. Inside: coming soon.</p>
     <button type="button" class="chip-link kart-walkin" data-docks-walkin>Walk in</button>
+  </template>
+
+  <template data-panel-tpl="sunclub">
+    <p class="kicker"><span class="kicker-num">27</span> Sunridge</p>
+    <h2 id="city-panel-title" class="city-panel-title">Sunridge Club</h2>
+    <p class="city-panel-text">The neighbourhood's clubhouse by the main entrance, its lap pool and splash pool behind a black iron fence, umbrellas and loungers on the deck, and two pickleball courts beside. Memberships: coming soon.</p>
+    <button type="button" class="chip-link kart-walkin" data-sun-walkin>Walk in</button>
+  </template>
+
+  <template data-panel-tpl="sunpark">
+    <p class="kicker"><span class="kicker-num">28</span> Sunridge</p>
+    <h2 id="city-panel-title" class="city-panel-title">Sunridge Park</h2>
+    <p class="city-panel-text">A green in the middle of the suburb: a playground under shade sails, a ramada with picnic tables, a field for a kickabout and a walk all the way round.</p>
+    <button type="button" class="chip-link kart-walkin" data-sun-walkin>Walk in</button>
+  </template>
+
+  <template data-panel-tpl="sunschool">
+    <p class="kicker"><span class="kicker-num">29</span> Sunridge</p>
+    <h2 id="city-panel-title" class="city-panel-title">Sunridge Elementary</h2>
+    <p class="city-panel-text">The suburb's school: low stucco classroom wings round a covered walk, the multipurpose room, a field with its goals, the playground, and the yellow bus out front. Classes: coming soon.</p>
+    <button type="button" class="chip-link kart-walkin" data-sun-walkin>Walk in</button>
   </template>
 
   <div class="city-hud" data-city-hud>

@@ -22,6 +22,7 @@ import { CENTER, SLAB, addLamp, addPool, addTree, buildGround, buildLamps, build
 import { PARK_LAMPS, PARK_TREES, WESTLAKE_RECT } from './westlake';
 import { CREST_LAMPS } from './crestmont';
 import { SUN_LAMPS } from './sunridge';
+import { CLUBHOUSE, CLUB_LAND, PARK_LAND, SCHOOL, SCHOOL_LAND, SUN_SPAWNS } from './sunplaces';
 import { DOCK_LAMPS } from './docks';
 import { GARDEN_LAMPS, GARDEN_PEOPLE } from './gardens';
 import { LAMPS as PLAZA_LAMPS, PLAZA_PEOPLE, TERRACE_LAMPS, TERRACE_TREES, TREES as PLAZA_TREES } from './plaza';
@@ -304,6 +305,13 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     const [tx, tz] = [(H.tower[0] + H.tower[2]) / 2, (H.tower[1] + H.tower[3]) / 2];
     // (it faces the river: the fly-in comes from the north, the port behind it)
     spots.push({ ...pickSpot(scene, 'harbourmaster', SLAB, [{ rect: H.rect, h: H.h }, { rect: H.tower, h: H.towerH }], H.rect, H.mast + 1.2, [tx, tz]), faces: 'n' });
+  }
+  // ...and Sunridge's club, park and school (docs/suburb-plan.md Phase 4): their spots (drawn in Sunridge's chunk)
+  {
+    const mid = (r: readonly number[]): [number, number] => [(r[0] + r[2]) / 2, (r[1] + r[3]) / 2];
+    spots.push(pickSpot(scene, 'sunclub', SLAB, [{ rect: CLUBHOUSE.rect, h: CLUBHOUSE.h + 1.2 }], CLUB_LAND, CLUBHOUSE.h + 3.6, mid(CLUBHOUSE.rect)));
+    spots.push(pickSpot(scene, 'sunpark', SLAB, [{ rect: PARK_LAND, h: 1 }], PARK_LAND, 4.2));
+    spots.push(pickSpot(scene, 'sunschool', SLAB, [...SCHOOL.wings.map((rect) => ({ rect, h: SCHOOL.h + 0.3 })), { rect: SCHOOL.hall.rect, h: SCHOOL.hall.h + 0.3 }], SCHOOL_LAND, SCHOOL.hall.h + 2.8, mid(SCHOOL.hall.rect)));
   }
   // ...and the metro's el where it crosses the open land south of the south row: no trees under it
   keepTreesOff([-10, 125 + WIDEN, 56, 135 + WIDEN]);
@@ -671,6 +679,14 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     if (id === 'hotel' || id === 'civichall' || id === 'golfclub' || id === 'overlook' || id === 'reservoir') {
       const at = SITE_SPAWNS[id];
       panelBody.querySelector('[data-crest-walkin]')?.addEventListener('click', () => {
+        close();
+        startWalking(at);
+      });
+    }
+    // Sunridge's club, park and school: Walk in on the loop's sidewalk in front of each
+    if (id === 'sunclub' || id === 'sunpark' || id === 'sunschool') {
+      const at = SUN_SPAWNS[id];
+      panelBody.querySelector('[data-sun-walkin]')?.addEventListener('click', () => {
         close();
         startWalking(at);
       });
