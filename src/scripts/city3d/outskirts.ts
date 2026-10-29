@@ -23,6 +23,7 @@ import { HIGHWAY_HALF, fromHighway } from './highway';
 import { PLAN } from './streetplan';
 import type { Rect } from './downtown';
 import { BED, CREST_RECT, FOOTHILL_Z, nearHillRoad } from './crestmont';
+import { naturalAt } from './terrain';
 
 const PARKWAY_TOP = Math.min(...PARKWAY.map((p) => p[1]));
 const SOUTHSIDE_BOTTOM = Math.max(...SOUTHSIDE.map((p) => p[1]));
@@ -55,6 +56,8 @@ export function treeSpot(x: number, z: number, clear: readonly Rect[] = [], high
   // Crestmont (crestmont.ts): not on the Flats (their own planting comes in Phase 3) nor on a hill road and its bed
   if (x > CREST_RECT[0] && x < CREST_RECT[2] && z > FOOTHILL_Z - LANE - 2 && z < CREST_RECT[3]) return false;
   if (nearHillRoad(x, z, BED.shoulder + 1.5)) return false;
+  // ...nor on the hills themselves: they carry their own oaks and scrub (Phase 3, landscape.ts)
+  if (naturalAt(x, z) > 0.4) return false;
   // The kart park, Kart Road and the car park (kartfacility.ts)
   if (KART_RECTS.some((r) => x > r[0] - 3 && x < r[2] + 3 && z > r[1] - 3 && z < r[3] + 3)) return false;
   // Clear of the town (inside the bends, the river and its banks) and of the bends themselves

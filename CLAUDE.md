@@ -1073,7 +1073,14 @@ it and has been retired completely. Build only on what's here.
   the hills' own shape is hills.ts's `natural()`); `CREST_STREETS` /
   `CREST_CROSSINGS` in the street plan, `CREST_LAMPS` at the boot, drawn by
   `crestmont3d.ts` (`LAZY_DISTRICTS` id `crestmont`); traffic and taxis
-  ride the slopes (`riseAlong()`). Made-up names only.
+  ride the slopes (`riseAlong()`). Phase 3 (palm trees and the landscape)
+  is built: `landscape.ts` (DOM-free, tested in `tests/landscape.test.ts`):
+  `PALMS` (fan and date palms down the boulevard's median, along the Flats'
+  streets, Foothill Road, up Ridge Road; `PALM_TALLEST`), `JACARANDAS`,
+  the hills' `OAKS` and `SCRUB`, and `WALLS` (retaining walls where a hill
+  road is cut in, guard rails where it's built up); drawn by
+  `landscape3d.ts` (crowns sway, `SWAY`); nothing of it solid; the
+  outskirts' trees keep off the hills. Made-up names only.
 - **Sector 7 Central, the grand station, was retired** (the owner's call:
   the metro is the city's rail): no mainline station, trains or tracks west
   of the ring highway; the land there is open again. Don't bring it back

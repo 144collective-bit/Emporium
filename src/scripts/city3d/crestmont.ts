@@ -209,22 +209,33 @@ export function roadY(r: HillRoad, d: number) {
   return r.y[i - 1] + (r.y[i] - r.y[i - 1]) * f;
 }
 
-/** The box round each hill road (a quick test first) */
-const ROAD_BOXES = HILL_ROADS.map((r): Rect => [Math.min(...r.pts.map((p) => p[0])), Math.min(...r.pts.map((p) => p[1])), Math.max(...r.pts.map((p) => p[0])), Math.max(...r.pts.map((p) => p[1]))]);
-/** Whether a point is on a hill road or within `m` of its asphalt (the outskirts' trees keep off) */
+/** The hill roads' pieces in a grid of cells `NEAR_CELL` across (a point asks only its own cell's) */
+const NEAR_CELL = 8;
+/** The widest anyone asks round a road (`nearHillRoad()`'s `m` past its half) */
+const NEAR_MOST = 6;
+const NEAR = new Map<number, [number, number, number, number, number][]>();
+for (const r of HILL_ROADS)
+  for (let i = 1; i < r.pts.length; i++) {
+    const [a, b] = [r.pts[i - 1], r.pts[i]];
+    const reach = r.half + NEAR_MOST;
+    for (let cx = Math.floor((Math.min(a[0], b[0]) - reach) / NEAR_CELL); cx <= Math.floor((Math.max(a[0], b[0]) + reach) / NEAR_CELL); cx++)
+      for (let cz = Math.floor((Math.min(a[1], b[1]) - reach) / NEAR_CELL); cz <= Math.floor((Math.max(a[1], b[1]) + reach) / NEAR_CELL); cz++) {
+        const k = cx * 100003 + cz;
+        if (!NEAR.has(k)) NEAR.set(k, []);
+        NEAR.get(k)!.push([a[0], a[1], b[0], b[1], r.half]);
+      }
+  }
+/** Whether a point is on a hill road or within `m` (at most `NEAR_MOST`) of its asphalt (the outskirts' trees keep off) */
 export function nearHillRoad(x: number, z: number, m = 0) {
-  return HILL_ROADS.some((r, k) => {
-    const b = ROAD_BOXES[k];
-    const reach = r.half + m;
-    if (x < b[0] - reach || x > b[2] + reach || z < b[1] - reach || z > b[3] + reach) return false;
-    for (let i = 1; i < r.pts.length; i++) {
-      const [a, c] = [r.pts[i - 1], r.pts[i]];
-      const [vx, vz] = [c[0] - a[0], c[1] - a[1]];
-      const t = Math.max(0, Math.min(1, ((x - a[0]) * vx + (z - a[1]) * vz) / (vx * vx + vz * vz || 1)));
-      if (Math.hypot(x - a[0] - vx * t, z - a[1] - vz * t) < reach) return true;
-    }
-    return false;
-  });
+  const list = NEAR.get(Math.floor(x / NEAR_CELL) * 100003 + Math.floor(z / NEAR_CELL));
+  if (!list) return false;
+  const mm = Math.min(m, NEAR_MOST);
+  for (const [ax, az, bx, bz, half] of list) {
+    const [vx, vz] = [bx - ax, bz - az];
+    const t = Math.max(0, Math.min(1, ((x - ax) * vx + (z - az) * vz) / (vx * vx + vz * vz || 1)));
+    if (Math.hypot(x - ax - vx * t, z - az - vz * t) < half + mm) return true;
+  }
+  return false;
 }
 
 /* ---------- The street plan's share ---------- */

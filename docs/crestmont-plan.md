@@ -164,7 +164,29 @@ smaller than before the phase (644.3 of 670 KB).
 **Left for later:** stop signs up the hills and the Flats' kerbside dressing (Phase 3 on), the City view's camera
 low across the slopes.
 
-### Phase 3: palm trees and the landscape
+### Phase 3: palm trees and the landscape (built)
+
+**What's built:** `landscape.ts` (DOM-free, tested in `tests/landscape.test.ts`), drawn by `landscape3d.ts` from
+crestmont3d.ts's `register()`, a site a tile:
+- **Palms** (`PALMS`, 79): tall fan palms (a bending trunk, a skirt of dead fronds, a small crown) down
+  Crestmont Boulevard's median and along the Flats' streets on the lots' street edges, clear of the lamps and the
+  junctions; canary date palms (a thick trunk, the crown's knob, long arching fronds) along Foothill Road and at the
+  overlook; fan palms up Ridge Road's left verge. Their crowns sway in the wind; all under the Emporium over their
+  own ground (`PALM_TALLEST`).
+- **Jacarandas** in bloom (`JACARANDAS`, purple) along downtown's east-west roads through the Flats.
+- **The hills' planting**: live oaks in the canyons and low slopes (`OAKS`, about 600), chaparral scrub in clumps
+  up every slope (`SCRUB`, about 3,700; half on phones, near only there), seeded a cell at a time, off the hill
+  roads and their beds. The outskirts' trees and the pine woods keep off the hills now (outskirts.ts `treeSpot()`).
+- **The hill roads' edges** (`WALLS`): sandstone retaining walls with a pale cap along the bed's edge where the road
+  is cut in (as high as the cut, eased from piece to piece along the road's grade), white post-and-rail guards
+  where it stands out on fill.
+- Nothing of it is solid. Working it out takes about 120 ms in Node when the district loads (the hill roads and
+  the oaks in grids: `nearHillRoad()` is indexed now); a phone might take a few times that: bake it if it shows.
+
+**Left for later:** hedges, lawns and garden palms on the estates come with them (Phases 5 and 6); the palms'
+far forms on phones (they're drawn in full at every distance today).
+
+**As planned:**
 
 - Palm trees, new to the city: tall fan palms (the thin ones down the
   avenues), date palms (the fat crowns by the hotel and the estates) and
