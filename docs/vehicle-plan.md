@@ -601,7 +601,7 @@ Asked before planning (2026-10-28):
   owner's to paste back. Triangles about 0.1 M more; geometry memory 206 to 212 MB. Boot cost: 6 KB (657.3 of
   670 KB).
 
-### Phase 9: karts, boats and aircraft
+### Phase 9: karts, boats and aircraft (built)
 
 - **Karts:** a better chassis (tube frame, side pods, the engine and
   exhaust behind the seat, a fuller nose), real tyre treads and rims, the
@@ -611,6 +611,73 @@ Asked before planning (2026-10-28):
 - **Aircraft:** better shapes, ailerons, flaps and rudder that move with
   the controls, landing gear that folds away properly, for your own and
   the airport's.
+
+**As built:**
+
+- **The karts** (karts.ts, the kart race's chunk; the numbers are
+  `kartframe.ts`, DOM-free, tested in `tests/kartframe.test.ts`):
+  `KART_SHAPES` gives each model its wheels, floor, seat, side pods, engine
+  and nose. Each kart has:
+  - a bent tube frame (`bend()`) with nerf bars, a rear bumper, the rear
+    axle on its bearings and stub axles at the front;
+  - rounded side pods and a nose (`profile()`);
+  - a finned engine with its carburettor or air filter, a chain guard and
+    sprocket, and the exhaust bent round to a silencer;
+  - pedals under the nose, the steering column and a bolstered seat;
+  - tyres with shallow staggered tread blocks on six-spoke rims
+    (`kartWheel()`);
+  - a three-spoke wheel tilted back towards the driver (`WHEEL_TILT`).
+
+  The driver is posed by `kartPose()`: seated low with his knees up, each
+  foot on its pedal through `reachLeg()` (measured from the leg's own hip
+  joint), his hands on the wheel's grips through `reachArm()` as it turns.
+  The test holds his hands and feet within 1.5 cm. The motorbike rider's
+  feet are reached the same way now (acts.ts `ridePose()`, `tests/bike.test.ts`).
+- **The hire boat** (riverlife3d.ts `hireBoat()`, the river's chunk):
+  - The hull has V sections with flare and a sweeping sheer (`hullAt()`,
+    `hull()`): a navy bottom, white topsides, a cyan boot stripe and a
+    liner inside.
+  - The deck has a teak sole and gunwale caps, and a foredeck with a
+    non-skid pad, a bow rail, cleats and red and green side lights.
+  - The console has a windscreen, a compass and a throttle lever. There's
+    a bench with a backrest, a rounded outboard with its leg, cavitation
+    plate and prop, and a flag.
+  - The helm is a group of its own that boat.ts turns with the rudder
+    (`turnHelm()`).
+  - Spray comes off the bow from `SPRAY.from` of top speed (`sprayOf()`,
+    a few dozen points, none under reduced motion). The wake is a streak
+    with two arms at the Kelvin angle (`KELVIN`, `wakeShape()`: longer,
+    wider and stronger with speed). Both are in boat-sim.ts and tested in
+    `tests/boat.test.ts`.
+- **The aircraft**: the moving parts' rules are `airframe.ts` (DOM-free,
+  tested in `tests/airframe.test.ts`), and aircraft.ts draws them:
+  - **Control surfaces:** the wings, tailplanes and fins are data
+    (`PANELS`, laid by `place()`). Each surface (`SURFACES`) is cut out of
+    its panel's trailing edge (`notched()`) and hinged along the cut
+    (`frames()`, `surfaceMatrix()`). That's ailerons, two flaps a side on
+    the airliner and one on the small jet and the prop plane, elevators
+    and the rudder.
+  - **What moves them** (`stepAirframe()`): your own aircraft's surfaces
+    follow the stick (fly.ts passes it on the pose). The airport's follow
+    how their timetabled poses roll, pitch and turn (`targetsOf()`), with
+    the elevator held a little up through a banked turn and the rudder
+    steering on the ground. The flaps come down with the gear in the air,
+    part down rolling and up when parked, and slide back as they drop.
+  - **The gear** (`LEGS`): a strut with its torque link, axle and wheels,
+    hung from a pivot. On the ground it's down; it folds over `GEAR_TIME`
+    (`legMatrix()`): the nose leg aft into the nose, the mains inward into
+    a new belly fairing (`FAIRINGS`). It's hidden once it's up. The test
+    holds every folded wheel inside the body or the fairing, the struts
+    inside them or the wing, and the down wheels on the ground. The prop
+    plane keeps its fixed spatted gear; the helicopter its skids.
+  - **Better shapes:** the belly fairing, flap-track fairings under the
+    airliner's wing, antennas and the tail cone's exhaust.
+  - **Draw calls:** a fleet's surfaces are one instanced box (coloured per
+    surface: the panel's, or the livery for the rudder; `paint()` repaints
+    it), and its legs one instanced mesh per kind of leg (nose, mains).
+    That's two or three draws more for a jet's fleet, one more for the prop
+    plane's. Boot cost: 2.6 KB (659.9 of 670 KB): aircraft.ts and
+    airframe.ts are in the boot with the airport.
 
 ## Decided (the owner left these to Claude, 2026-10-28)
 

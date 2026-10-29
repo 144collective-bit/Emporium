@@ -1308,7 +1308,7 @@ it and has been retired completely. Build only on what's here.
   side is the quick swap with a fade (`QUICK_FADE`), reduced motion the
   quick swap without; at home the turntable is stood on to get in
   (`isTurntable()`, `DISC`). Keep new car detail in that chunk: the
-  boot is under its budget (657.3 of 670 KB with Build mode gone and the inventory plan's Phase 3 merged: Phase 3 brought carinside.ts into it, Phase 5 the look's ids, Phase 6 three specs, Phase 7 the bikes' numbers and rules, Phase 8 the traffic's models, rules and riders). Phase 4 (handling with
+  boot is under its budget (659.9 of 670 KB with Build mode gone and the inventory plan's Phase 3 merged: Phase 3 brought carinside.ts into it, Phase 5 the look's ids, Phase 6 three specs, Phase 7 the bikes' numbers and rules, Phase 8 the traffic's models, rules and riders, Phase 9 the aircraft's moving parts). Phase 4 (handling with
   depth: each model's feel and drifting) is built, in the sim (drive-sim.ts, mycar.ts `FEEL`; see Driving your
   car below). Phase 5 (the garage's customisation, all free) is built: `CarLook` in mycar.ts (the ids,
   `cleanLook()`, carried by `cleanCar()`), carlook.ts (DOM-free, tested in `tests/carlook.test.ts`: names,
@@ -1341,7 +1341,17 @@ it and has been retired completely. Build only on what's here.
   `ridePose()`, your own rider's pose too) and lean a little into turns (`trafficLean()`); every traffic car
   shows its driver and seats behind the glass (carfine.ts `crew()`, `carGeometry(id, { crew: true })`, the
   traffic's only). Desktop four trucks (three on medium), three patrol cars, six bikes; phones two, two, three
-  (`TIERS`).
+  (`TIERS`). Phase 9 (karts, the hire boat and aircraft) is built: the karts' numbers and their driver are
+  `kartframe.ts` (DOM-free, tested in `tests/kartframe.test.ts`: `KART_SHAPES`, `kartPose()`: his feet on the
+  pedals through `reachLeg()` from the leg's own hip joint, his hands on the wheel's grips), drawn by karts.ts (a
+  bent tube frame, side pods, a finned engine and its exhaust, treaded tyres on spoked rims); the hire boat
+  (`hireBoat()`: a V hull, a foredeck, the console, the helm turning with the rudder) throws spray and a wake at
+  the Kelvin angle (boat-sim.ts `sprayOf()`, `wakeShape()`); the aircraft's moving parts are `airframe.ts`
+  (DOM-free, tested in `tests/airframe.test.ts`: `PANELS`, the control surfaces cut out of their trailing edges
+  (`SURFACES`, `notched()`, `frames()`, `surfaceMatrix()`), moved by `stepAirframe()` (your own from the stick,
+  the airport's from how their poses turn; the flaps with the gear), and the gear's `LEGS` folding into the body
+  and its belly fairing (`FAIRINGS`, `legMatrix()`, `GEAR_TIME`)), one instanced mesh for a fleet's surfaces and
+  one per kind of leg in aircraft.ts's `createFleet()`.
 - **Live settings** (the owner's call): the owner switches parts of the
   city from outside the code, in a private command center, through the
   backend's public config (`LIVE_URL`, public settings only).
@@ -3687,7 +3697,7 @@ it and has been retired completely. Build only on what's here.
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`), Harbour Bridge (`harbour.ts`),
-  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), the river's shape (`river.ts`), the river's life, the river bus and boating (`riverlife.ts`, `riverbus.ts`, `riverroute.ts`, `boat-sim.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`, `boulevard.ts`, `boulevarddress.ts`, `kerbside.ts`, `skydeck.ts`, `skyline.ts`, `uptownlife.ts`, `streetlevel.ts`, `uptownsites.ts`, `streetlife.ts`, `wheel.ts`, Uptown North in `uptownnorth.ts`, the town car in `cars.ts`), the kart park's facility (`kartfacility.ts`), Palm Court and the mall (`mall.ts`, `mallinside.ts`),
+  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), the river's shape (`river.ts`), the river's life, the river bus and boating (`riverlife.ts`, `riverbus.ts`, `riverroute.ts`, `boat-sim.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`, `boulevard.ts`, `boulevarddress.ts`, `kerbside.ts`, `skydeck.ts`, `skyline.ts`, `uptownlife.ts`, `streetlevel.ts`, `uptownsites.ts`, `streetlife.ts`, `wheel.ts`, Uptown North in `uptownnorth.ts`, the town car in `cars.ts`), the kart park's facility (`kartfacility.ts`), the karts' frames and their driver (`kartframe.ts`), the aircraft's control surfaces and gear (`airframe.ts`), Palm Court and the mall (`mall.ts`, `mallinside.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,
