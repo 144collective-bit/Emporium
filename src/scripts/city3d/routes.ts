@@ -279,11 +279,14 @@ function legsOf(cycle: { from: State; turn: Turn }[], r: () => number): Leg[] {
   // Start just after a turn, so no leg runs over the seam
   const k0 = cycle.findIndex((_, k) => cycle[(k - 1 + cycle.length) % cycle.length].turn !== 'straight');
   const moves = [...cycle.slice(k0), ...cycle.slice(0, k0)];
-  const legs: (Leg & { first: State; last: State; lastIx: number; inSlip: boolean })[] = [];
+  const legs: (Leg & { first: State; last: State; lastIx: number; inSlip: boolean; states: State[] })[] = [];
   moves.forEach((m, k) => {
     const prev = legs.at(-1);
-    if (prev && moves[k - 1].turn === 'straight') [prev.last, prev.lastIx] = [m.from, k];
-    else legs.push({ pts: [], off: 0, turn: 'straight', slip: false, first: m.from, last: m.from, lastIx: k, inSlip: false });
+    if (prev && moves[k - 1].turn === 'straight') {
+      [prev.last, prev.lastIx] = [m.from, k];
+      prev.states.push(m.from);
+    }
+    else legs.push({ pts: [], off: 0, turn: 'straight', slip: false, first: m.from, last: m.from, lastIx: k, inSlip: false, states: [m.from] });
   });
   for (const l of legs) {
     l.turn = moves[l.lastIx].turn;
@@ -294,7 +297,11 @@ function legsOf(cycle: { from: State; turn: Turn }[], r: () => number): Leg[] {
   legs.forEach((l, k) => (legs[(k + 1) % legs.length].inSlip = l.slip));
   for (const l of legs) {
     const way = WAYS[l.first.w];
-    l.pts = between(way, way.stations[l.first.i].along, way.stations[next(l.last)!].along, l.first.d);
+    // (stretch by stretch where it runs round a loop as far as where it set off, or past it: Sunridge's loop, driven both ways)
+    const round = way.s.loop && l.states.slice(1).some((s) => s.i === l.first.i);
+    l.pts = round
+      ? l.states.flatMap((s, k) => between(way, way.stations[s.i].along, way.stations[next(s)!].along, s.d).slice(k ? 1 : 0))
+      : between(way, way.stations[l.first.i].along, way.stations[next(l.last)!].along, l.first.d);
     // An avenue's lane: the outer one into a right turn or out of a slip lane, the inner one into a left turn
     l.off = way.s.lanes === 2 ? (l.turn === 'right' || l.inSlip ? OUT : l.turn === 'left' ? IN : r() < 0.5 ? IN : OUT) : ST + (way.s.median ?? 0) / 2;
     if (way.s.oneway) l.off = 0;
@@ -480,7 +487,11 @@ function loopOf(legs: Leg[]): Pt[] {
     const f = (d - cum[i - 1]) / (cum[i] - cum[i - 1] || 1);
     return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * f, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * f];
   };
-  const [a, b] = [half, total - half];
+  // (not on a corner of the line: a run more than once round a loop, the circle's, can put its halfway on one)
+  let a = half;
+  const v = cum.findIndex((c) => Math.abs(c - half) < 0.05);
+  if (v > 0 && v < cum.length - 1) a = (cum[v] + cum[v + 1]) / 2;
+  const b = total - lens[k] + a;
   const out: Pt[] = [at(a)];
   for (let i = 0; i < pts.length; i++) if (cum[i] > a + 1e-6 && cum[i] < b - 1e-6) out.push(pts[i]);
   out.push([...out[0]]);

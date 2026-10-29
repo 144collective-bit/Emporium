@@ -92,7 +92,8 @@ test('between them the routes drive every street that goes anywhere, each way (a
   /** Either lane of an avenue that way: the other lane is LANE across */
   const drivenSide = (q: Pt, u: Pt) => [-1, 1].some((k) => driven([q[0] - u[1] * 1.7 * k, q[1] + u[0] * 1.7 * k], u));
   let checked = 0;
-  for (const s of roads.filter((s) => s.kind !== 'slip'))
+  // (Sunridge's cul-de-sacs go nowhere: no traffic down them, as Crestmont's spurs)
+  for (const s of roads.filter((s) => s.kind !== 'slip' && !s.id.startsWith('sun-court')))
     for (const lane of lanePaths(s)) {
       const pts = lane.dir === 1 ? lane.pts : [...lane.pts].reverse();
       const street = { ...s, pts };

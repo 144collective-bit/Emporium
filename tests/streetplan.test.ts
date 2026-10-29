@@ -1,6 +1,7 @@
 // The street plan as data (streetplan.ts): the straight grid of layout.ts, the
 // city as built (downtown's diagonals, blocks, alleys and squares on top), and
 // the geometry helpers they're made with.
+import { SUN_BLOCKS, SUN_CROSSINGS } from '../src/scripts/city3d/sunridge';
 import { TRENCH_BLOCKS } from '../src/scripts/city3d/trenches';
 import { WESTLAKE_BLOCKS } from '../src/scripts/city3d/westlake';
 import { UPTOWN_BLOCKS } from '../src/scripts/city3d/uptown';
@@ -77,13 +78,13 @@ test('the city as built: the grid\'s roads, three diagonals from the ring\'s cor
   // Lights where downtown's cross streets meet, where the highway meets an arterial, along Trench Avenue (trenches.ts) and
   // at every junction in Uptown (uptown.ts) but round its circle (its traffic gives way), Crestmont's and the Docks' at
   // the avenues, and nowhere else
-  for (const c of p.crossings) assert.equal(c.lights, (CORE_ROADS.includes(c.at[0]) && CORE_ROADS.includes(c.at[1])) || c.streets.includes('highway') || c.streets.includes('trench-ave') || (c.streets.some((id) => id.startsWith('uptown-')) && !c.streets.includes('uptown-circle')) || CREST_CROSSINGS.some((k) => k.id === c.id && k.lights) || DOCK_CROSSINGS.some((k) => k.id === c.id && k.lights));
+  for (const c of p.crossings) assert.equal(c.lights, (CORE_ROADS.includes(c.at[0]) && CORE_ROADS.includes(c.at[1])) || c.streets.includes('highway') || c.streets.includes('trench-ave') || (c.streets.some((id) => id.startsWith('uptown-')) && !c.streets.includes('uptown-circle')) || CREST_CROSSINGS.some((k) => k.id === c.id && k.lights) || DOCK_CROSSINGS.some((k) => k.id === c.id && k.lights) || SUN_CROSSINGS.some((k) => k.id === c.id && k.lights));
 });
 
 test('the city\'s blocks: downtown\'s outlines, every district and lot, off the asphalt, the landmarks on theirs', () => {
   const p = cityPlan();
   // (and the stadium's, north of the highway)
-  assert.equal(p.blocks.length, BLOCKS_DT.length + OUTER_BLOCKS.length + BEND_KERBS.length + TRENCH_BLOCKS.length + WESTLAKE_BLOCKS.length + UPTOWN_BLOCKS.length + CREST_BLOCKS.length + DOCK_BLOCKS.length + 1 + 1 + 3);
+  assert.equal(p.blocks.length, BLOCKS_DT.length + OUTER_BLOCKS.length + BEND_KERBS.length + TRENCH_BLOCKS.length + WESTLAKE_BLOCKS.length + UPTOWN_BLOCKS.length + CREST_BLOCKS.length + DOCK_BLOCKS.length + SUN_BLOCKS.length + 1 + 1 + 3);
   // (Uptown North's block too, on Palm Court's old land)
   // (the stadium's, Uptown North's, and the mall's three: Palm Court, the mall, its car park)
   // Every plot and every lot sits on an outer block
@@ -96,7 +97,8 @@ test('the city\'s blocks: downtown\'s outlines, every district and lot, off the 
     assert.ok(polyArea(b.poly) > 0, `${b.id} runs counter-clockwise`);
     // Every corner, with its sidewalk round it, stays off every road's asphalt (Uptown's circle's island: off its
     // carriageway, which its streets join at its middle)
-    for (const s of roads) if (b.id !== 'uptown-circle' || s.id === 'uptown-circle') for (const q of b.poly) assert.ok(distToStreet(s, q) >= s.half + b.walk - 1e-6, `${b.id} corner ${q} on ${s.id}`);
+    // (and Sunridge's entrances end on its loop's middle: a block across the loop, north of that, is off them)
+    for (const s of roads) if (b.id !== 'uptown-circle' || s.id === 'uptown-circle') for (const q of b.poly) if (!(b.ref === 'sunridge' && s.id.startsWith('sun-entry') && q[1] < s.pts[1][1])) assert.ok(distToStreet(s, q) >= s.half + b.walk - 1e-6, `${b.id} corner ${q} on ${s.id}`);
   }
   // Every landmark has its block
   const places = p.blocks.flatMap((b) => b.places ?? []);
