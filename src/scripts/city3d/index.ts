@@ -18,7 +18,7 @@ import { buildBusStops } from './transit3d';
 import { buildOuterDress } from './outerdress3d';
 import type { LifeSfx } from './life';
 import { createPost } from './post';
-import { CENTER, SLAB, addLamp, addTree, buildGround, buildLamps, buildSkyline, buildTrees, placed as everyPlaced, puddleMat, keepTreesOff, scatterOutskirts, waterMat, type Env, type Tick } from './world';
+import { CENTER, SLAB, addLamp, addPool, addTree, buildGround, buildLamps, buildSkyline, buildTrees, placed as everyPlaced, puddleMat, keepTreesOff, scatterOutskirts, waterMat, type Env, type Tick } from './world';
 import { PARK_LAMPS, PARK_TREES, WESTLAKE_RECT } from './westlake';
 import { CREST_LAMPS } from './crestmont';
 import { DOCK_LAMPS } from './docks';
@@ -33,7 +33,8 @@ import { createDistricts } from './districts';
 import { buildStadium } from './stadium3d';
 import { buildTower } from './tower3d';
 import { buildMallSpots } from './mallspot';
-import { buildCrestSpots } from './crestspots';
+import { buildCrestSpots, spot as pickSpot } from './crestspots';
+import { HARBOUR_MASTER, HM_SPAWN, MASTS as PORT_MASTS } from './docksport';
 import { SITE_SPAWNS } from './crestsites';
 import { COURT_SPAWN, MALL_LAMPS, MALL_PEOPLE, MALL_TREES } from './mall';
 import { NORTH_LAMPS, NORTH_PEOPLE, NORTH_TREES } from './uptownnorth';
@@ -296,6 +297,13 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // ...and Palm Court and Starlight Mall north of downtown: their spots (they're drawn in their own chunk)
   spots.push(...buildMallSpots(scene));
   spots.push(...buildCrestSpots(scene));
+  // ...and Southbank Docks' Harbour Master (docs/docks-plan.md Phase 3): its spot (the office is a site in the docks' chunk)
+  {
+    const H = HARBOUR_MASTER;
+    const [tx, tz] = [(H.tower[0] + H.tower[2]) / 2, (H.tower[1] + H.tower[3]) / 2];
+    // (it faces the river: the fly-in comes from the north, the port behind it)
+    spots.push({ ...pickSpot(scene, 'harbourmaster', SLAB, [{ rect: H.rect, h: H.h }, { rect: H.tower, h: H.towerH }], H.rect, H.mast + 1.2, [tx, tz]), faces: 'n' });
+  }
   // ...and the metro's el where it crosses the open land south of the south row: no trees under it
   keepTreesOff([-10, 125 + WIDEN, 56, 135 + WIDEN]);
   // (and its Airport branch, bending east off the avenue over the open land to the airport: docs/airport-plan.md Phase 3)
@@ -315,6 +323,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   for (const [x, z, ry, y] of CREST_LAMPS) addLamp(x, z, ry, y);
   // The Docks' (docks.ts): sodium, along their sidewalks (world.ts)
   for (const [x, z, ry, y] of DOCK_LAMPS) addLamp(x, z, ry, y);
+  // ...and its floodlight masts' pools (docksport.ts; the masts are the chunk's)
+  for (const [x, z] of PORT_MASTS) addPool(x, z, 12, SLAB, true);
   // ...and its people standing about (crestlife.ts, Phase 8: valets, doormen, diners, sunbathers, gardeners; phones: half)
   CREST_IDLE.forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push(p));
   // ...its formal garden's lanterns and people (gardens.ts, the north side's stage 3)
@@ -663,6 +673,12 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         startWalking(at);
       });
     }
+    // The Harbour Master's panel (Southbank Docks): Walk in on the sidewalk, facing its door
+    if (id === 'harbourmaster')
+      panelBody.querySelector('[data-docks-walkin]')?.addEventListener('click', () => {
+        close();
+        startWalking(HM_SPAWN);
+      });
     // The Block's panel: Walk in starts walk mode on its plaza by the metro's stairs
     if (id === 'trenches')
       panelBody.querySelector('[data-block-walkin]')?.addEventListener('click', () => {

@@ -69,9 +69,10 @@ test('a taxi drives from any place to any other along the streets, to the kerb n
       // about 80 s)
       // (and Southbank Docks' metro station out on the docks' east quay past the highway's west side, docs/docks-plan.md
       // Phase 2: from Crestmont's grand hotel across the whole city about 67 s)
-      const extra = (id: string) => (id === 'airport' || id === 'metro-airport' || id === 'metro-docks' ? 12 : id === 'overlook' || id === 'reservoir' ? 20 : 0);
+      const docks = (id: string) => id === 'metro-docks' || id === 'harbourmaster';
+      const extra = (id: string) => (id === 'airport' || id === 'metro-airport' || docks(id) ? 12 : id === 'overlook' || id === 'reservoir' ? 20 : 0);
       // (from the docks out west to Crestmont's hills in the far north-east, right across the world: about 90 s)
-      const most = a.id === 'metro-docks' || b.id === 'metro-docks' ? 96 : 84;
+      const most = docks(a.id) || docks(b.id) ? 96 : 84;
       assert.ok(r!.len / TAXI_SPEED < Math.min(most, 62 + extra(a.id) + extra(b.id)), `${a.id} to ${b.id}: ${r!.len.toFixed(0)}`);
     }
 });
