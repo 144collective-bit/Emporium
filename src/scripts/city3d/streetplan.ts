@@ -26,7 +26,7 @@ import { NORTH_BLOCK } from './uptownnorth';
 import { BLOCK as STADIUM_BLOCK, STADIUM_CROSSINGS, STADIUM_STREETS } from './stadium';
 import { KART_CROSSINGS, KART_STREETS } from './kartpark';
 import { COURT, MALL_BLOCK, MALL_CROSSINGS, MALL_STREETS, PARK_BLOCK } from './mall';
-import { CREST_BLOCKS, CREST_CROSSINGS, CREST_STREETS } from './crestmont';
+import { CREST_BLOCKS, CREST_CROSSINGS, CREST_STREETS, crestPoly } from './crestmont';
 
 export type Pt = [number, number];
 
@@ -479,7 +479,7 @@ export function cityPlan(): StreetPlan {
       ] as const
     ).map(([id, r, use]): Block => ({ id, poly: square(r[0], r[1], r[2] - r[0], r[3] - r[1]), use, ref: 'mall', walk: WALK_W })),
     // Crestmont's Flats (crestmont.ts)
-    ...CREST_BLOCKS.map((b): Block => ({ id: b.id, poly: square(b.rect[0], b.rect[1], b.rect[2] - b.rect[0], b.rect[3] - b.rect[1]), use: 'plain', ref: 'crestmont', walk: WALK_W })),
+    ...CREST_BLOCKS.map((b): Block => ({ id: b.id, poly: crestPoly(b.id), use: 'plain', ref: 'crestmont', walk: WALK_W })),
     // The bends' outer sidewalks (their own outline is the sidewalk)
     ...BEND_KERBS.map((poly, i): Block => ({ id: `kerb-${i}`, poly, use: 'plain', walk: 0 })),
   ];

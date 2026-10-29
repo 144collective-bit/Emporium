@@ -317,6 +317,54 @@ export const CREST_BLOCKS: { id: string; rect: Rect }[] = (() => {
   return out;
 })();
 
+/* ---------- Coral Drive's bays (Phase 4: the shopping street, coral.ts) ---------- */
+
+export type BayKind = 'valet' | 'parking';
+/** A bay off Coral Drive's kerb, cut into a block (the sidewalk runs round behind it): its block, the side it opens off, from and to (z) */
+export interface Bay {
+  id: string;
+  kind: BayKind;
+  block: string;
+  side: 'e' | 'w';
+  from: number;
+  to: number;
+}
+/** How far a bay reaches in from the kerb */
+export const BAY_DEPTH = 2.2;
+/** The valets' bays outside the boutiques, and parking (coral.ts) */
+export const CORAL_BAYS: Bay[] = [
+  { id: 'valet-w1', kind: 'valet', block: 'crest-0-1', side: 'e', from: 6.9, to: 13.3 },
+  { id: 'park-w2', kind: 'parking', block: 'crest-0-2', side: 'e', from: 33.3, to: 39.7 },
+  { id: 'park-e1', kind: 'parking', block: 'crest-1-1', side: 'w', from: 6.9, to: 13.3 },
+  { id: 'valet-e2', kind: 'valet', block: 'crest-1-2', side: 'w', from: 25, to: 34.9 },
+];
+const blockRect = (id: string) => CREST_BLOCKS.find((b) => b.id === id)!.rect;
+/** A bay's asphalt: from the street's edge (the block's edge past its sidewalk) in by `BAY_DEPTH` */
+export function bayRect(b: Bay): Rect {
+  const r = blockRect(b.block);
+  const kerb = b.side === 'e' ? r[2] + WALK_W : r[0] - WALK_W;
+  const back = b.side === 'e' ? kerb - BAY_DEPTH : kerb + BAY_DEPTH;
+  return [Math.min(kerb, back), b.from, Math.max(kerb, back), b.to];
+}
+/** A block's outline (wound as the street plan's squares: down its west side, back up its east), its bays cut in: a sidewalk wider than the bay, so the sidewalk wraps round its ends */
+export function crestPoly(id: string): Pt[] {
+  const [x0, z0, x1, z1] = blockRect(id);
+  const bays = CORAL_BAYS.filter((b) => b.block === id);
+  const out: Pt[] = [[x0, z0]];
+  const [w, d] = [WALK_W, BAY_DEPTH];
+  for (const b of bays.filter((q) => q.side === 'w').sort((p, q) => p.from - q.from)) out.push([x0, b.from - w], [x0 + d, b.from - w], [x0 + d, b.to + w], [x0, b.to + w]);
+  out.push([x0, z1], [x1, z1]);
+  for (const b of bays.filter((q) => q.side === 'e').sort((p, q) => q.to - p.to)) out.push([x1, b.to + w], [x1 - d, b.to + w], [x1 - d, b.from - w], [x1, b.from - w]);
+  out.push([x1, z0]);
+  return out;
+}
+/** In one of Coral Drive's bays (padded `m`) */
+export const inBay = (x: number, z: number, m = 0) =>
+  CORAL_BAYS.some((b) => {
+    const [a, c, e, d] = bayRect(b);
+    return x > a - m && x < e + m && z > c - m && z < d + m;
+  });
+
 /** Where Crestmont's streets and blocks are (the outskirts' trees keep off; the drawing's land) */
 export const CREST_RECT: Rect = [FLATS_X[0] - 6, -380, FLATS_EAST + 2, BANK.c + BANK.half];
 
@@ -333,7 +381,12 @@ export const CREST_LAMPS: [number, number, number, number][] = (() => {
     const h = flatsHalf(i);
     for (let z = FOOTHILL_Z + 6; z < BANK.c - 5; z += 13) {
       if (crossZ.some((c) => Math.abs(c - z) < 6)) continue;
-      out.push([x - h - 0.45, z, 0, SLAB_Y], [x + h + 0.45, z, Math.PI, SLAB_Y]);
+      // (none along Coral Drive's bays: the sidewalk runs round behind them)
+      for (const [lx, ry] of [
+        [x - h - 0.45, 0],
+        [x + h + 0.45, Math.PI],
+      ] as Pt[])
+        if (!inBay(lx, z, 0.6)) out.push([lx, z, ry, SLAB_Y]);
     }
   });
   for (let x = FLATS_X[0] + 7; x < FLATS_X[FLATS_X.length - 1] - 5; x += 13) {

@@ -200,7 +200,35 @@ far forms on phones (they're drawn in full at every distance today).
   roads are cut, the outskirts' trees and the woods kept off the town
   (`keepTreesOff()`).
 
-### Phase 4: the Drive, the shopping street
+### Phase 4: the Drive, the shopping street (built)
+
+**What's built:**
+
+- `coral.ts` (DOM-free, tested in `tests/coral.test.ts`): **the boutiques** (`BOUTIQUES`), nine along both sides of
+  Coral Drive between the avenue and the second cross street (blocks `DRIVE_BLOCKS`, paved now), facing it, their
+  shopfronts `FRONT` back from the lot's edge, 4.6 to 7.4 wide, two or three storeys (`STOREY`, every top under
+  `TALLEST` 7), each in white stone, glass in bronze or white render (`Style`) with a black or gold awning or none;
+  two of them cafés, one a side (CAFÉ ROSA, THE PEARL ROOM), their tables out on the strip (`TABLES`); planters by
+  every door (`PLANTERS`); names made up (`NAMES`). **Via Coral** (`VIA`): a cobbled walk-only lane through the west
+  block of the second row from Coral Drive back to a piazza open to Alder Way, under a stone arch with its name both
+  ways (`ARCH`), a small fountain in the lane and a two-tier one in the piazza (`FOUNTAINS`), two shops facing across
+  it (`LANE_SHOPS`), the corner boutiques' sides on it in windows. `CORAL_SOLIDS` (in `SOLIDS`) and `onDrive()` (the
+  palms and jacarandas keep off).
+- **The kerbside:** `CORAL_BAYS` in crestmont.ts: bays off Coral Drive's kerb cut into the blocks (`crestPoly()`: the
+  lot notched a sidewalk wider than the bay, so the sidewalk wraps round it), two for the valets with their stands
+  (`VALET_STANDS`) and two for parking; supercars, Midnight Execs and coupes waiting, parked the kerb's way
+  (`CORAL_CARS`, `parkedCars()`); no lamp or palm in them (`inBay()`).
+- Drawn by `coral3d.ts` (`registerCoral()`, from crestmont3d.ts): a site a boutique (plinth, pilasters, the shop
+  windows in bronze with the mall's lit displays, a bronze door, the fascia and its name from one sign atlas,
+  `coral-signs`, the awning, cornices, the upper floors' windows or the curtain wall in bronze fins, the parapet, flags
+  near only), the via (its cobbles, `coral-cobble`, kerbs, the arch, lanterns, the fountains), a site a bay (its
+  asphalt, lines, the valets' stands under umbrellas), and the cars on the main thread.
+
+**Left for later:** the kits and recipes the plan named (the boutique, the arcade) weren't needed for nine shops: the
+Drive is laid by its own data, as Uptown's street level is; people on the Drive (shoppers, valets, diners) come with
+Phase 8's life; the cafés are scenery, not places.
+
+**As planned:**
 
 - Low, polished boutiques (two or three storeys): white stone, glass,
   bronze, black-and-gold awnings, a short arcade with fountains and cobbles,

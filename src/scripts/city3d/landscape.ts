@@ -17,10 +17,11 @@
  * under the Emporium (`PALM_TALLEST`).
  */
 import { EW_ROADS, LANE, WALK_W } from './layout';
-import { BED, BOULEVARD, CREST_LAMPS, FLATS_X, FLATS_EAST, FOOTHILL_Z, HILL_ROADS, flatsHalf, nearHillRoad, roadY, type HillRoad } from './crestmont';
+import { BED, BOULEVARD, CREST_LAMPS, FLATS_X, FLATS_EAST, FOOTHILL_Z, HILL_ROADS, flatsHalf, inBay, nearHillRoad, roadY, type HillRoad } from './crestmont';
 import { HILLS, TERRAIN_RECT } from './hills';
 import { heightAt, naturalAt, slopeAt } from './terrain';
 import { rng } from './recipes';
+import { onDrive } from './coral';
 
 type Pt = [number, number];
 
@@ -66,7 +67,7 @@ function palms(): Palm[] {
       // (the last street's east side is the last row of blocks; its west side every street's)
       for (let z = FOOTHILL_Z + 7; z < BANK.c - 5; z += 8) {
         const px = x + side * off;
-        if (!offJunction(z, 4) || !offLamps(px, z, 1.8) || px > FLATS_EAST - 0.5) continue;
+        if (!offJunction(z, 4) || !offLamps(px, z, 1.8) || px > FLATS_EAST - 0.5 || inBay(px, z, 0.5) || onDrive(px, z, 0.4)) continue;
         fan(px, z);
       }
     }
@@ -118,7 +119,7 @@ export const JACARANDAS: { x: number; z: number; s: number }[] = (() => {
       if (c.z === BANK.c && side > 0) continue;
       const z = c.z + side * (c.half + WALK_W + 0.8);
       for (let x = FLATS_X[0] + 6; x < FLATS_EAST - 3; x += 11)
-        if (FLATS_X.every((s, i) => Math.abs(x - s) > flatsHalf(i) + WALK_W + 2.5)) out.push({ x, z, s: 0.95 + r() * 0.3 });
+        if (FLATS_X.every((s, i) => Math.abs(x - s) > flatsHalf(i) + WALK_W + 2.5) && !onDrive(x, z, 1.6)) out.push({ x, z, s: 0.95 + r() * 0.3 });
     }
   return out;
 })();

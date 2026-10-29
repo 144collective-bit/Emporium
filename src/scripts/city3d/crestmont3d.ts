@@ -14,6 +14,7 @@ import { EW_ROADS, MEDIAN } from './layout';
 import { SLAB } from './world';
 import { heightAt } from './terrain';
 import { registerLandscape } from './landscape3d';
+import { registerCoral } from './coral3d';
 import { CREST_CROSSINGS, FLATS_STREETS, FOOTHILL_Z, HILL_ROADS, type Rect } from './crestmont';
 
 export const SELF = import.meta.url;
@@ -95,9 +96,11 @@ function dashes(list: THREE.Matrix4[], pts: Pt[], off: number, gap: number, l: n
   }
 }
 
-export function register({ low }: { low: boolean; scene: THREE.Scene | null }) {
+export function register({ low, scene }: { low: boolean; scene: THREE.Scene | null }) {
   // The palms, jacarandas, oaks and scrub, the hill roads' walls and rails (Phase 3: landscape3d.ts)
   registerLandscape(low);
+  // The Drive: the boutiques, Via Coral, the bays and their cars (Phase 4: coral3d.ts)
+  registerCoral(low, scene);
   const asphalt = toon('#26243f');
   const kerbTop = toon('#5a5290');
   const grass = toon('#3f7a4a');
