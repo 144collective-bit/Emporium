@@ -39,6 +39,10 @@ export const BENCH_VIEWS: BenchView[] = [
   { id: 'trenches', name: 'The Trenches, round The Block', pos: [-60, 30, 120 + WIDEN], target: [-100, 0, 175 + WIDEN] },
   { id: 'park', name: 'Westlake Park, over the lake', pos: [-48, 24, -12], target: [-100, 0, -62] },
   { id: 'uptown', name: 'Uptown, its towers from the river', pos: [-60, 16, 92], target: [-120, 12, 30] },
+  // Crestmont's (docs/crestmont-plan.md Phase 11): the Drive at street level, the Flats from over them, the hills
+  { id: 'crest-drive', name: 'Crestmont, Coral Drive', pos: [331, 2.2, 58], target: [331, 1.6, 10] },
+  { id: 'crest-flats', name: 'Crestmont, over the Flats', pos: [362, 30, 80], target: [380, 0, -10] },
+  { id: 'crest-hills', name: 'Crestmont, the hills', pos: [420, 34, -50], target: [400, 16, -240] },
   { id: 'outskirts', name: 'Where the edge was, looking back', pos: [-180, 14, -180], target: [30, 0, 30] },
   { id: 'edge', name: 'The far edge, looking back', pos: [EXT[0] + 20, 14, EXT[0] + 20], target: [30, 0, 30] },
   // The vehicle plan's (Phase 0): where your car's detail and the traffic's show most

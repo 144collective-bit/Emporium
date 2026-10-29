@@ -1145,7 +1145,12 @@ it and has been retired completely. Build only on what's here.
   drawn by `crestlife3d.ts` (the dogs' shape is `dogs3d.ts`, the park's
   too). Phase 9 (getting there) is built: its places on the world map,
   taxis and fast travel (from Phase 7), and the metro's Crestmont spur and
-  station (`crest` in metro.ts, above under the metro). Made-up names only.
+  station (`crest` in metro.ts, above under the metro). Phase 11 (polish and
+  performance) is built: three `?bench` views (`crest-drive`, `crest-flats`,
+  `crest-hills`); it draws lighter than downtown and Uptown, so no far forms
+  for its houses; phones draw every other palm, the estates' fountains,
+  chimneys and gate globes near only and the pools as plain water
+  (`poolOf()` in estates3d.ts). Made-up names only.
 - **Sector 7 Central, the grand station, was retired** (the owner's call:
   the metro is the city's rail): no mainline station, trains or tracks west
   of the ring highway; the land there is open again. Don't bring it back

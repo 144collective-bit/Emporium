@@ -145,6 +145,12 @@ body.is-walking .nav {
   text-transform: uppercase;
   color: var(--muted);
 }
+/* (the narrowest phones: the panel's draft line wraps rather than running past its edge) */
+@media (max-width: 360px) {
+  .city-draft {
+    white-space: normal;
+  }
+}
 .city-dir summary {
   display: flex;
   align-items: center;

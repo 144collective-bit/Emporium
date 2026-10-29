@@ -426,7 +426,29 @@ directory entry, a panel with Walk in, `PLACES` and `LIVE_PLACES` entries):
   at it for your cars and bike, a place on the business card. Planned
   separately with `docs/tycoon-plan.md` if the owner wants it.
 
-### Phase 11: polish and performance
+### Phase 11: polish and performance (built)
+
+**What was measured and done:**
+
+- `?bench` has three Crestmont views (bench.ts `BENCH_VIEWS`: `crest-drive` at street level on Coral Drive,
+  `crest-flats` over the Flats, `crest-hills` from the foot of Ridge Road).
+- Draws and triangles from the `?fps` readout (headless, so counts only, not frame rates): Crestmont is lighter than
+  the districts the city already runs. Desktop (medium tier): about 210 draws and 0.8-1.0M triangles on the Drive and
+  over the Flats, 142 draws and 0.5M in the hills, against downtown's 514 and 2.0M and Uptown's 218 and 1.3M. Phones:
+  110-130 draws and about 0.3M, against downtown's 259 and 0.41M. So **no far forms** for the estates or the hotel:
+  the plan only wanted them if the draws needed them.
+- Phones lighter (the low tier only, in the chunk): every other palm (landscape3d.ts, about 16k triangles), the
+  estates' fountains, chimneys and gate globes near only (estates3d.ts, about 370 triangles an estate off the far
+  form), and the pools plain water instead of glowing (`poolOf()` in estates3d.ts: one material fewer). The
+  headless counts swing by about a fifth from run to run with the traffic and crowds, too much to show these.
+- Every width (320, 375, 768, 1024, 1440): every Crestmont panel on screen, no sideways scroll; at 320 the shared
+  panel's draft line ran past its edge (every panel's, not only Crestmont's) and now wraps (city.css).
+- The boot: Crestmont's data in it is about 33 KB minified (crestmont.ts, mansions.ts, crestsites.ts, coral.ts,
+  crestlife.ts, estates.ts, terrain.ts, crestspots.ts, hills.ts; landscape.ts is the chunk's). All of it is what the
+  boot needs (the ground's height, what's solid, the pads' levels, the people, the places); baking it at build time
+  wouldn't shrink it (the code that makes it stays as the fallback). It stays: 666.3 of 670 KB.
+
+**As planned:**
 
 - Every width (320 to 1440), both tiers, day and night; the bench before
   and after; phones lighter (half the palms, simpler estates far, no pool

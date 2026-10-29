@@ -113,7 +113,8 @@ function byTile(low: boolean) {
     if (!t) tiles.set(key, (t = { palms: [], jacarandas: [], oaks: [], scrub: [], edges: [] }));
     return t;
   };
-  for (const p of PALMS) at(p.x, p.z).palms.push(p);
+  // (phones: every other palm, Phase 11)
+  PALMS.forEach((p, i) => (!low || i % 2 === 0) && at(p.x, p.z).palms.push(p));
   for (const j of JACARANDAS) at(j.x, j.z).jacarandas.push(j);
   for (const o of OAKS) at(o.x, o.z).oaks.push(o);
   SCRUB.forEach((p, i) => (!low || i % 2 === 0) && at(p.x, p.z).scrub.push(p));

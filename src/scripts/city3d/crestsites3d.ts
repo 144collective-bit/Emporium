@@ -14,7 +14,7 @@ import { site } from './tilework';
 import { waterMat } from './world';
 import { heightAt } from './terrain';
 import { CIVIC, CLUB, FAIRWAY, FENCE, FRINGE, GREEN_R, BUNKER_R, HOLES, HOTEL, HOTEL_NAME, OVERLOOK, RESERVOIR, SLAB_Y, TEE, bunkersOf, flagOf, type Hole } from './crestsites';
-import { POOL, WINDOW, hip } from './estates3d';
+import { WINDOW, hip, poolOf } from './estates3d';
 import { BULB, LED, PAVING, SPRAY, WATER, flat } from './mallkit';
 
 type Rect = [number, number, number, number];
@@ -179,7 +179,7 @@ export function registerSites(low: boolean, scene: THREE.Scene | null) {
     const p = new Batch();
     flat(p, H.drive[0], H.drive[1], H.drive[2], H.drive[3], y0 + 0.012, PAVING, 8);
     flat(p, H.deck[0], H.deck[1], H.deck[2], H.deck[3], y0 + 0.012, PAVING, 8);
-    flat(p, H.pool[0], H.pool[1], H.pool[2], H.pool[3], y0 + 0.02, POOL, 8);
+    flat(p, H.pool[0], H.pool[1], H.pool[2], H.pool[3], y0 + 0.02, poolOf(low), 8);
     p.build(into, { cast: false, receive: true });
   });
 
