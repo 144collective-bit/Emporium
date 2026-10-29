@@ -57,8 +57,9 @@ const spots: Record<SpotId, Spot> = {
   golfclub: { title: 'Crestmont Hills Club', sub: 'Country club' },
   overlook: { title: 'The Overlook', sub: 'The view' },
   reservoir: { title: 'The Reservoir', sub: 'In the hills' },
+  harbourmaster: { title: 'Harbour Master', sub: 'Southbank Docks' },
 };
-const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'harbour', 'trenches', 'club', 'bar', 'arms', 'pier', 'nightmarket', 'stadium', 'tower', 'palmcourt', 'mall', 'hotel', 'civichall', 'golfclub', 'overlook', 'reservoir'];
+const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'harbour', 'trenches', 'club', 'bar', 'arms', 'pier', 'nightmarket', 'stadium', 'tower', 'palmcourt', 'mall', 'hotel', 'civichall', 'golfclub', 'overlook', 'reservoir', 'harbourmaster'];
 const ext = { target: '_blank', rel: 'noopener noreferrer' };
 
 // The commit this was built from (set by the Worker's build in server/wrangler.jsonc)
@@ -1092,6 +1093,13 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     <h2 id="city-panel-title" class="city-panel-title">The Reservoir</h2>
     <p class="city-panel-text">Still water in a bowl of the hills east of the ridge, held in by its banks and a concrete dam, with a valve tower out in it and a fence all round. Look, don't swim.</p>
     <button type="button" class="chip-link kart-walkin" data-crest-walkin>Walk in</button>
+  </template>
+
+  <template data-panel-tpl="harbourmaster">
+    <p class="kicker"><span class="kicker-num">26</span> Southbank Docks</p>
+    <h2 id="city-panel-title" class="city-panel-title">Harbour Master</h2>
+    <p class="city-panel-text">The office on the quay by the basin's mouth, its clock tower over the river and the lighthouse across from it. Behind it the port: the container ship under three tall cranes, the stacks, SHED 3, the dry dock and the tugs, and the warehouses down Quay Road. Inside: coming soon.</p>
+    <button type="button" class="chip-link kart-walkin" data-docks-walkin>Walk in</button>
   </template>
 
   <div class="city-hud" data-city-hud>

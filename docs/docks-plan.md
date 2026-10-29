@@ -193,15 +193,76 @@ What was built, in metro.ts (DOM-free, tested in `tests/metro.test.ts`):
   median broken round the pillars with no tree under the el. Both world
   sizes pass. The boot grew 0.2 KB (664.6 to 664.8 of 670).
 
-### Phase 3: the port
+### Phase 3: the port (built)
 
-- The container terminal, the old docks, the landmarks and the Harbour
-  Master's office as a place (above), from data in `docks.ts`
-  (`CRANES`, `STACKS`, `SHEDS`, `DRY_DOCK`, `LIGHTHOUSE`, `MASTS`,
-  `DOCKS_SOLIDS` in `SOLIDS`), drawn as sites in the docks' chunk (one sign
-  atlas of fixed made-up copy; containers instanced or batched by tile;
-  far forms for the cranes and the ships), near-only details, phones
-  leaving out the finest.
+What was built: the data in `docksport.ts` (DOM-free, tested in
+`tests/docksport.test.ts`), the dry dock in `docks.ts` (the boot's: world.ts
+cuts it into the east quay), the drawing in `docksport3d.ts` (sites in the
+docks' chunk, registered from docks3d.ts), the Harbour Master's spot at the
+boot (index.ts, crestspots.ts's `spot()`).
+
+- **The container terminal** (the west quay): three ship-to-shore cranes on
+  rails along the basin's west wall (`CRANES`, `CRANE`, `SEA_RAIL` /
+  `LAND_RAIL`): red and white, legs on bogies, portal beams, the girders and
+  booms with a cyan neon line under them, the A-frame's apex at 24.5, stays,
+  the machinery house on the back reach, the trolley, the cab, the spreader
+  on its ropes (the middle crane's holding a box over the ship); the north
+  crane's boom raised (its tip about 32.3, `craneTop()`); red warning
+  lights. **ORCA STAR** (`SHIP`, made up) at the berth under them: its hull
+  in pieces no longer than 14, five rows of boxes in four bays on deck
+  (`SHIP_STACKS`), the bridge, the funnel in its line's colour, its name at
+  the bow and the stern, its lines to the quay's bollards. **The stacks**
+  (`STACKS`, `STACK_BLOCKS`): 40-foot boxes (`BOX`) in made-up lines'
+  colours (`LINES`: ORCA LINE, SUNFISH, KESTREL, TIDEWAY, NEON PELICAN,
+  GULLWING and two plain), one to four high, seeded, in two columns of
+  blocks with the gate's lanes through the middle; near, ribs down their
+  sides, the doors' bars and every third with its line's name. **The gate**
+  (`GATE`, `GATE_Z` in docks.ts) off West Road: a gantry with SOUTHBANK
+  DOCKS lit both ways, the booth between the lanes with its barriers, a
+  centre line to the apron (West Road's lamp in its mouth went). Two
+  straddle carriers parked between the cranes (`STRADDLES`) and the reach
+  stacker north of them.
+- **The old docks** (the east quay): SHED 3 (`SHED`: clad, a gable roof,
+  big doors, its name on its front and gable), the old rails set in the
+  quay along its east side, **the dry dock** (`DRY_DOCK`, `DOCK_FLOOR`,
+  `CAISSON` in docks.ts: a pit off the basin's east wall, drained, its
+  steel caisson in the wall's line; `HOLES` with the open water, so walking
+  and driving stop at it; its railing, shores and steps) with **SEA MULE**
+  (`COASTER`) on its keel blocks, and the tug berth along the basin's east
+  wall (`TUGS`: BRUISER, NUDGE and the PILOT boat).
+- **The yards** (south of Quay Road): five brick warehouses numbered 4 to
+  8 along Quay Road (`WAREHOUSES`: the city's wall atlas, a stone base and
+  band, the number on a board, loading docks with roll-up doors behind),
+  the fuel farm (`FUEL`: three tanks with stairs in a bund) and the truck
+  park (`TRUCKS`: the traffic's Heavy Haul tractors parked through
+  `parkedCars()` on the main thread, their chassis and boxes in a site).
+- **Landmarks:** the **Harbour Master**'s office on the quay by the
+  basin's mouth (`HARBOUR_MASTER`: tan brick, a clock tower with a copper
+  pyramid, a mast with a flag; a place: spot `harbourmaster`, its pin over
+  the tower, directory entry, panel `data-panel-tpl="harbourmaster"` with
+  Walk in to `HM_SPAWN`, its door's prompt in walk.ts, `PLACES` and
+  `LIVE_PLACES` entries), the **lighthouse** across the mouth from it
+  (`LIGHTHOUSE`: red and white bands, the gallery, a lit lantern, a red
+  dome), and five floodlight masts (`MASTS`, their sodium pools at the boot).
+- **Heights:** the cranes alone over the Emporium (22 to 36, the test),
+  every flight well over them (4 clear, as highrise.ts's towers);
+  everything else under it (`PORT_TALLEST`, the funnel at 10.6 and the
+  lighthouse's mast at 11.4 the highest).
+- **Solids** (`PORT_SOLIDS` in `SOLIDS`): the cranes' legs, every stack
+  to its top, the gate's booth and posts, the carriers, the shed, the
+  warehouses, the tanks and the bund's walls, the rigs, the Harbour
+  Master's office and tower, the lighthouse, the masts. The tests hold them
+  on the quays, off every street, out of the water and the dry dock, off
+  the el, its pillars, the station's tower and door; the boxes inside
+  their footprints; the ship, the tugs and the coaster clear of each other
+  and the walls.
+- **The boot** grew to 672.0 KB, over its 670: the budget went to 680 on
+  purpose (the owner's go), noted in scripts/budget.mjs.
+- The world map draws the dry dock and the ship (worldmap.ts); `?bench` has a
+  view over the port (`docks`).
+- Left out: the slipway (the dry dock does its work). Far forms are the
+  sites' own (walls, hulls, boxes and the cranes' members at every
+  distance, details near only).
 
 ### Phase 4: the docks' life and sound
 

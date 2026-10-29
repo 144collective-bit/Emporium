@@ -47,6 +47,8 @@ export const HALF = LANE;
  */
 export const EL_STATION = -258;
 export const EL_X = -272;
+/** The container terminal's gate off West Road (its middle, z; docksport.ts) */
+export const GATE_Z = 168;
 
 /** The basin (x0, z0, x1, z1): its water between quay walls */
 export const BASIN: Rect = [-345, 148, -275, QUAY_Z - HALF - WALK_W];
@@ -56,6 +58,15 @@ export const CHANNEL: Rect = [-316, RIVER[1], -302, BASIN[1]];
 export const DOCK_BRIDGE: Rect = [CHANNEL[0], RIVER[1], CHANNEL[2], AVENUE_KERB + WALK_W];
 /** The water open to the sky: the basin and the mouth south of the bridge */
 export const OPEN_WATER: Rect[] = [BASIN, [CHANNEL[0], DOCK_BRIDGE[3], CHANNEL[2], CHANNEL[3]]];
+/**
+ * The dry dock (Phase 3): a pit off the basin's east wall into the east quay, drained, a ship on its blocks; its floor
+ * at `DOCK_FLOOR`, its caisson (the gate, `CAISSON` thick) standing in the basin's wall line across its west end
+ */
+export const DRY_DOCK: Rect = [BASIN[2], 185.5, -256, 194.5];
+export const CAISSON = 1.2;
+export const DOCK_FLOOR = -3.6;
+/** Every hole in the quays: the open water and the dry dock */
+export const HOLES: Rect[] = [...OPEN_WATER, DRY_DOCK];
 
 /** The docks' land (the trees keep off; the drawing's district) */
 export const DOCKS_RECT: Rect = [WEST_X - HALF - 4, RIVER[1], DOCK_X + HALF + 4, YARD_Z + HALF + 4];
@@ -64,13 +75,13 @@ export const inDocks = (x: number, z: number, m = 0) => x > DOCKS_RECT[0] - m &&
 export const DOCKS_QUAY: [number, number] = [DOCKS_RECT[0] - 4, DOCKS_RECT[2]];
 
 const inRect = (r: Rect, x: number, z: number, m: number) => x > r[0] - m && x < r[2] + m && z > r[1] - m && z < r[3] + m;
-/** Is x, z in the basin's water open to the sky (`m` further in from its edges; negative reaches out past them) */
-export const inBasin = (x: number, z: number, m = 0) => OPEN_WATER.some((r) => inRect(r, x, z, -m));
+/** Is x, z in the basin's water open to the sky or the dry dock (`m` further in from its edges; negative reaches out past them) */
+export const inBasin = (x: number, z: number, m = 0) => HOLES.some((r) => inRect(r, x, z, -m));
 /** Is x, z on the avenue's bridge over the mouth */
 export const onDockBridge = (x: number, z: number) => inRect(DOCK_BRIDGE, x, z, 0);
 
-/** What a car stops at (drive-sim.ts): the open water, a wall each (x0, z0, x1, z1, height) */
-export const BASIN_WALLS: [number, number, number, number, number][] = OPEN_WATER.map((r) => [r[0], r[1], r[2], r[3], 2]);
+/** What a car stops at (drive-sim.ts): the open water and the dry dock, a wall each (x0, z0, x1, z1, height) */
+export const BASIN_WALLS: [number, number, number, number, number][] = HOLES.map((r) => [r[0], r[1], r[2], r[3], 2]);
 
 /* ---------- The streets ---------- */
 
@@ -158,13 +169,17 @@ export const DOCK_BLOCKS: DockBlock[] = [
     ],
     walk: W,
   },
-  // The east quay: the mirror of it, to Dock Road
+  // The east quay: the mirror of it, to Dock Road, round the dry dock cut into it from the basin
   {
     id: 'docks-east',
     poly: [
       [CHANNEL[2] + W, N],
       [CHANNEL[2] + W, BASIN[1] - W],
       [BASIN[2] + W, BASIN[1] - W],
+      [BASIN[2] + W, DRY_DOCK[1] - W],
+      [DRY_DOCK[2] + W, DRY_DOCK[1] - W],
+      [DRY_DOCK[2] + W, DRY_DOCK[3] + W],
+      [BASIN[2] + W, DRY_DOCK[3] + W],
       [BASIN[2] + W, QN],
       [X1, QN],
       [X1, N],
@@ -188,11 +203,12 @@ export const DOCK_LAMPS: [number, number, number, number][] = (() => {
   const out: [number, number, number, number][] = [];
   const IN = HALF + 0.45;
   const clear = (v: number, cuts: number[], m = 6) => cuts.every((c) => Math.abs(v - c) > m);
-  // Dock Road's west sidewalk and West Road's east one, clear of the crossings
+  // Dock Road's west sidewalk and West Road's east one, clear of the crossings (and West Road's of the terminal's
+  // gate, docksport.ts)
   for (let z = N + 6; z < S - 3; z += 12)
     if (clear(z, [QUAY_Z])) {
       out.push([DOCK_X - IN, z, 0, SLAB_Y]);
-      out.push([WEST_X + IN, z, Math.PI, SLAB_Y]);
+      if (clear(z, [GATE_Z], 7)) out.push([WEST_X + IN, z, Math.PI, SLAB_Y]);
     }
   // Quay Road's south sidewalk (the north one is the basin's quay, kept clear for the berth) and Yard Road's north one
   for (let x = X0 + 6; x < X1 - 3; x += 14) {
