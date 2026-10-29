@@ -14,6 +14,14 @@
  * only the legs and hips). Near players run it every frame, further ones at
  * `FAR_DT`, and past `ANIM_FAR` (or in the air, or emoting) the planted-feet
  * walk (locomotion.ts) carries on as before.
+ *
+ * In a vehicle (docs/multiplayer-plan.md, "What others see": their mode in
+ * the snapshot's flags and what they're in, `PlayerInfo.veh`) they're drawn
+ * in it (remoteveh.ts): their car, bike, kart, aircraft or the hire boat;
+ * riding a taxi, the metro or the river bus they're out of sight (the ride
+ * carries them). A jump between two snapshots (fast travel, the end of a ride
+ * or a race: further than the way they're moving goes, `jumped()`) is drawn
+ * as a jump, not a slide across the city.
  */
 import * as THREE from 'three';
 import { createDegen, lookOutfit, type Degen } from './character';
@@ -26,7 +34,8 @@ import { buildGun, gunSpec, type Gun } from './guns';
 import { holdGun, newStance, type Stance } from './stance';
 import { WEAPONS } from './combat-sim';
 import { EMOTES, PHRASES, RANKS } from '../net/profile-data';
-import { FLAG, INTERP_DELAY, type PlayerInfo, type SnapRow } from '../net/protocol';
+import { FLAG, INTERP_DELAY, jumped as leapt, modeOf, sameVehicle, type PlayerInfo, type SnapRow } from '../net/protocol';
+import { remoteVehicle, type RemoteVehicle } from './remoteveh';
 
 /** Same size as the walker */
 const SCALE = 0.85;
@@ -88,6 +97,8 @@ interface Remote {
   bubble: HTMLElement;
   bubbleT: number;
   muted: boolean;
+  /** What they're in, drawn (null on foot) */
+  veh: RemoteVehicle | null;
 }
 
 const lerpAngle = (a: number, b: number, k: number) => a + Math.atan2(Math.sin(b - a), Math.cos(b - a)) * k;
@@ -134,6 +145,28 @@ export function createRemotes(scene: THREE.Scene, camera: THREE.PerspectiveCamer
 
   const head = new THREE.Vector3();
   const scr = new THREE.Vector3();
+  /** Out of their vehicle: it goes, and their Degen stands in the city again */
+  function unride(r: Pick<Remote, 'veh' | 'fig' | 'last' | 'anim'>) {
+    if (!r.veh) return;
+    r.veh.dispose();
+    r.veh = null;
+    if (!r.fig.g.parent) scene.add(r.fig.g);
+    r.last = null;
+    r.anim?.reset();
+  }
+  /** The name tag over their head (hidden far away or behind the camera) */
+  function placeTag(r: Remote, x: number, y: number, z: number, dist: number, dt: number, w: number, h: number) {
+    r.bubbleT -= dt;
+    if (r.bubbleT <= 0) r.bubble.hidden = true;
+    head.set(x, y + 1.3 * SCALE, z);
+    scr.copy(head).project(camera);
+    const show = dist < TAG_RANGE && scr.z < 1 && Math.abs(scr.x) < 1.1 && Math.abs(scr.y) < 1.1;
+    r.tag.hidden = !show;
+    if (show) {
+      r.tag.style.transform = `translate(${((scr.x * 0.5 + 0.5) * w).toFixed(1)}px, ${((-scr.y * 0.5 + 0.5) * h).toFixed(1)}px) translate(-50%, -100%)`;
+      r.tag.style.opacity = String(THREE.MathUtils.clamp((TAG_RANGE - dist) / 8, 0, 1));
+    }
+  }
 
   return {
     get count() {
@@ -172,6 +205,7 @@ export function createRemotes(scene: THREE.Scene, camera: THREE.PerspectiveCamer
         bubble: tag.querySelector('em')!,
         bubbleT: 0,
         muted: false,
+        veh: null,
       };
       players.set(info.id, r);
       paintTag(r);
@@ -179,6 +213,7 @@ export function createRemotes(scene: THREE.Scene, camera: THREE.PerspectiveCamer
     remove(id: number) {
       const r = players.get(id);
       if (!r) return;
+      unride(r);
       r.gun.dispose();
       dropFigure(r);
       r.tag.remove();
@@ -193,6 +228,7 @@ export function createRemotes(scene: THREE.Scene, camera: THREE.PerspectiveCamer
       const r = players.get(info.id);
       if (!r) return this.add(info);
       if (JSON.stringify(info.look) !== JSON.stringify(r.info.look)) {
+        unride(r);
         r.gun.dispose();
         dropFigure(r);
         Object.assign(r, figure(info));
@@ -266,7 +302,9 @@ export function createRemotes(scene: THREE.Scene, camera: THREE.PerspectiveCamer
             break;
           }
         }
-        const k = b.t > a.t ? THREE.MathUtils.clamp((at - a.t) / (b.t - a.t), 0, 1) : 1;
+        let k = b.t > a.t ? THREE.MathUtils.clamp((at - a.t) / (b.t - a.t), 0, 1) : 1;
+        // (a jump between the two is drawn as one: where they were, then where they are)
+        if (a !== b && leapt(a, b, b.t - a.t, b.flags)) k = k < 1 ? 0 : 1;
         const x = a.x + (b.x - a.x) * k;
         const y = a.y + (b.y - a.y) * k;
         const z = a.z + (b.z - a.z) * k;
@@ -275,6 +313,23 @@ export function createRemotes(scene: THREE.Scene, camera: THREE.PerspectiveCamer
         const speed = a.speed + (b.speed - a.speed) * k;
         const flags = k < 0.5 ? a.flags : b.flags;
         const armed = (flags & FLAG.armed) !== 0;
+        const mode = modeOf(flags);
+        head.set(x, y, z);
+        const camDist = head.distanceTo(camera.position);
+
+        // In a vehicle: drawn in it (their Degen seated in the open ones); riding a taxi, the metro or the river bus: out of sight
+        const want = (mode === 'drive' || mode === 'kart' || mode === 'fly') && r.info.veh ? r.info.veh : null;
+        if (r.veh && !sameVehicle(r.veh.tag, want)) unride(r);
+        if (want && !r.veh) r.veh = remoteVehicle(scene, want, r.fig);
+        if (r.veh || mode === 'ride') {
+          r.pivot.visible = false;
+          r.emote = null;
+          r.fig.g.visible = !!r.veh?.carries && r.veh.ready;
+          r.veh?.place({ x, y, z, face, speed, flags, dt, t });
+          if (mode === 'ride') r.tag.hidden = true;
+          else placeTag(r, x, y + (r.veh?.tag.k === 'plane' ? 1.2 : 0.2), z, camDist, dt, w, h);
+          continue;
+        }
 
         // Pose: their walk or run with planted feet (locomotion.ts, from how they're moving as drawn), the gun, an emote
         const P = r.fig.pose;
@@ -345,17 +400,7 @@ export function createRemotes(scene: THREE.Scene, camera: THREE.PerspectiveCamer
           placeRoot(r.fig.g, x, y, z, face + wrap(r.anim.face - face) * w, SCALE, r.root0);
         } else placeRoot(r.fig.g, x, y, z, face, SCALE, r.loco.root);
 
-        // Name tag over the head (hidden far away or behind the camera)
-        r.bubbleT -= dt;
-        if (r.bubbleT <= 0) r.bubble.hidden = true;
-        head.set(x, y + 1.3 * SCALE, z);
-        scr.copy(head).project(camera);
-        const show = dist < TAG_RANGE && scr.z < 1 && Math.abs(scr.x) < 1.1 && Math.abs(scr.y) < 1.1;
-        r.tag.hidden = !show;
-        if (show) {
-          r.tag.style.transform = `translate(${((scr.x * 0.5 + 0.5) * w).toFixed(1)}px, ${((-scr.y * 0.5 + 0.5) * h).toFixed(1)}px) translate(-50%, -100%)`;
-          r.tag.style.opacity = String(THREE.MathUtils.clamp((TAG_RANGE - dist) / 8, 0, 1));
-        }
+        placeTag(r, x, y, z, dist, dt, w, h);
       }
     },
   };

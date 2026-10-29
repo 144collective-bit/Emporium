@@ -1296,9 +1296,8 @@ it and has been retired completely. Build only on what's here.
   rain, the skid marks; `car.eye()`: the driver's-seat camera, V's third
   view, his head folded away and no rain inside the cabin, the rain's
   shader given a hole round it; `seat()` shows the lamps' pools); the kart keeps drive.ts's drawn-on lean. The
-  mirrors are painted stand-ins. Phase 3 (getting in and out) is built but for
-  other players seeing it (their vehicles aren't drawn yet: the
-  multiplayer plan's next step): both front doors are cut out
+  mirrors are painted stand-ins. Phase 3 (getting in and out) is built (other players see you in
+  your vehicle, remoteveh.ts, but not the move into it yet): both front doors are cut out
   (`doors`) and swing through `car.door(side, hold)`; `carMark()` in
   moments.ts (tested) stands him by the door on his side, clear of its
   swing, the nearer hand on its handle (`INTERIORS[id].door.handle`), the
@@ -3623,6 +3622,21 @@ it and has been retired completely. Build only on what's here.
   foot. Gearing up works at either gun store's counter (the Armoury's
   `RACK`, Trench Arms' `ARMS.counter`), and `equip` / `swap` carry the
   mods on your guns (`cleanMods()`: the save is the browser's).
+- **What others see** (the plan's "Testing on workers.dev" step 2): other
+  players in their vehicles. What you're in goes to the room as a `veh`
+  message (protocol.ts `Vehicle`: kind, model, paint; `cleanVehicle()` on
+  the server, the ids from `vehicleids.ts`, DOM-free; `PlayerInfo.veh`;
+  `PROTOCOL` 5), and in a vehicle the controls carry its place and heading
+  (`walk.netState()`, `vehFace()` / `faceYaw()`, an aircraft's height and
+  `FLAG.gear`). `remoteveh.ts` draws it from their snapshots: the car
+  steering and braking, the bike leaning with its rider, the kart with its
+  driver, the aircraft pitching and banking (airframe.ts's surfaces and
+  gear), the hire boat with its driver at the wheel (boat.ts
+  `seatAtHelm()` / `helmPose()`); out of sight on a ride. A jump between
+  snapshots (`jumped()`) is drawn as a jump. Check it on a local Worker:
+  build with `PUBLIC_GAME_SERVER=http://localhost:8787`, run `wrangler dev`
+  in `server/` with `ALLOWED_ORIGINS` set to it (and without the config's
+  `build` step).
 - The plan and decisions are in `docs/multiplayer-plan.md`; keep it up to
   date. Phase 1 (hangout, player profiles, shared target practice) is built;
   leaderboards and south-bank PvP come next.

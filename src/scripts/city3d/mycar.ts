@@ -10,12 +10,9 @@
  * game server can check a car the same way later.
  */
 import type { Feel } from './drive-sim';
-/** Every car model (cars.ts draws them; here so the shared, DOM-free code can name them) */
-export type CarId = 'hatch' | 'sedan' | 'coupe' | 'pickup' | 'van' | 'bus' | 'muscle' | 'suv' | 'super' | 'exec' | 'classic' | 'offroad' | 'ev' | 'police' | 'truck' | 'rig';
+import { CAR_PAINTS, PLAYER_CARS, readSaved, type CarId, type PaintId, type PlayerCar } from './vehicleids';
+export { CAR_PAINTS, PLAYER_CARS, type CarId, type PaintId, type PlayerCar };
 
-/** The cars a player can pick (the bus is for the city only): the five starters, then the ones the garage sells (catalog.ts) */
-export const PLAYER_CARS = ['hatch', 'sedan', 'coupe', 'pickup', 'van', 'muscle', 'suv', 'super', 'classic', 'offroad', 'ev'] as const satisfies readonly CarId[];
-export type PlayerCar = (typeof PLAYER_CARS)[number];
 
 /** What the garage says about each one, and how it drives (0..1, for the stat bars and the handling) */
 export const DRIVE: Record<PlayerCar, { kind: string; blurb: string; speed: number; accel: number; grip: number; electric?: true }> = {
@@ -57,22 +54,6 @@ export const FEEL: Record<PlayerCar, Feel> = {
 /** How many goods each model carries in its boot or bed (more with the garage's roof rack) */
 export const CARGO: Record<PlayerCar, number> = { hatch: 16, sedan: 20, coupe: 8, pickup: 40, van: 80, muscle: 12, suv: 60, super: 6, classic: 24, offroad: 44, ev: 14 };
 
-/** Paint colours on offer */
-export const CAR_PAINTS = [
-  { id: 'red', name: 'Rocket red', hex: '#e23b3b' },
-  { id: 'orange', name: 'Sunset orange', hex: '#ff8a3d' },
-  { id: 'yellow', name: 'Taxi yellow', hex: '#ffd23f' },
-  { id: 'green', name: 'Mint green', hex: '#1fbf6b' },
-  { id: 'cyan', name: 'Electric cyan', hex: '#00c2ff' },
-  { id: 'navy', name: 'Night blue', hex: '#2a3b66' },
-  { id: 'violet', name: 'Ultra violet', hex: '#8000ff' },
-  { id: 'magenta', name: 'Neon magenta', hex: '#e219e5' },
-  { id: 'pink', name: 'Bubblegum', hex: '#ff6ad5' },
-  { id: 'white', name: 'Pearl white', hex: '#f3f2f7' },
-  { id: 'silver', name: 'Silver', hex: '#9a96b8' },
-  { id: 'black', name: 'Midnight', hex: '#14121f' },
-] as const;
-export type PaintId = (typeof CAR_PAINTS)[number]['id'];
 
 /*
  * The garage's customisation (vehicle plan Phase 5, all free): what's on offer, as ids (carlook.ts names them and
@@ -152,7 +133,7 @@ export const CAR_KEY = 'degen-city-car-v1';
 /** Your saved car (or the default); garage-ui.ts saves it */
 export function loadCar(): MyCar {
   try {
-    return cleanCar(JSON.parse(localStorage.getItem(CAR_KEY) ?? 'null'));
+    return cleanCar(readSaved(CAR_KEY));
   } catch {
     return { ...DEFAULT_CAR };
   }

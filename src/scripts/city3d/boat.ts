@@ -48,6 +48,54 @@ const KMH = 1.8 * 3.6;
 const SCALE = 0.85;
 const NAME = 'Hire boat';
 
+type HireModel = ReturnType<typeof hireBoat>;
+/** Sit a Degen at the hire boat's wheel (in the boat's group, on the bench, facing the bow); other players' too (remote.ts) */
+export function seatAtHelm(driver: Degen, model: HireModel) {
+  const g = driver.g;
+  g.rotation.set(0, Math.PI / 2, 0);
+  g.scale.setScalar(SCALE);
+  g.position.set(model.seat.x, model.seat.y - HIP_HEIGHT * SCALE + 0.02, 0);
+  if (driver.held) driver.held.visible = false;
+  model.group.add(g);
+}
+const M = new THREE.Matrix4();
+const INV = new THREE.Matrix4();
+const CHEST = new THREE.Matrix4();
+const GRIP = new THREE.Vector3();
+const HELM_AXIS = new THREE.Vector3(Math.cos(0.5), Math.sin(0.5), 0);
+/**
+ * The driver at the helm: on the bench, knees bent, both hands on the wheel's sides turned with the rudder (`steer`
+ * -1..1, the wheel too), his head with the turn and `look` (radians)
+ */
+export function helmPose(driver: Degen, model: HireModel, steer: number, look = 0) {
+  const p = driver.pose;
+  p.bob = 0;
+  p.lean = 0.12;
+  p.twist = 0;
+  p.side = -steer * 0.08;
+  p.headYaw = -steer * 0.25 + look;
+  p.headPitch = 0.04;
+  for (const l of p.legs) {
+    l.fwd = 1.45;
+    l.out = 0.12;
+    l.bend = 1.3;
+    l.twist = 0;
+  }
+  const g = driver.g;
+  CHEST.compose(g.position, g.quaternion, g.scale);
+  CHEST.multiply(torsoFrame(p, M));
+  INV.copy(CHEST).invert();
+  // The wheel's sides (it stands tilted on the console's face, turned with the rudder)
+  for (const i of [0, 1] as const) {
+    const a = (i === 0 ? 1 : -1) * (Math.PI / 2) - steer * 0.8;
+    GRIP.set(model.wheel.x - Math.sin(0.5) * Math.sin(a) * 0.11, model.wheel.y + Math.cos(0.5) * Math.sin(a) * 0.11, Math.cos(a) * 0.11);
+    GRIP.applyMatrix4(INV);
+    reachArm(p, i, GRIP);
+  }
+  driver.update();
+  model.helm.quaternion.setFromAxisAngle(HELM_AXIS, steer * 0.8);
+}
+
 export function createBoat(d: BoatDeps) {
   const { camera, root } = d;
   const hud = root.querySelector<HTMLElement>('[data-drive-hud]')!;
@@ -103,52 +151,15 @@ export function createBoat(d: BoatDeps) {
   const dir = new THREE.Vector3();
   const at = new THREE.Vector3();
   const goal = new THREE.Vector3();
-  const M = new THREE.Matrix4();
-  const inv = new THREE.Matrix4();
-  const chest = new THREE.Matrix4();
-  const grip = new THREE.Vector3();
 
   /** Degen at the wheel: on the bench, knees bent, both hands on the wheel's sides (turned with it, the wheel too) */
   function seat() {
     driver = createDegen(d.outfit());
-    const g = driver.g;
-    g.rotation.set(0, Math.PI / 2, 0);
-    g.scale.setScalar(SCALE);
-    g.position.set(model.seat.x, model.seat.y - HIP_HEIGHT * SCALE + 0.02, 0);
-    if (driver.held) driver.held.visible = false;
-    boat.add(g);
+    seatAtHelm(driver, model);
   }
-  function poseDriver() {
-    if (!driver) return;
-    const p = driver.pose;
-    p.bob = 0;
-    p.lean = 0.12;
-    p.twist = 0;
-    p.side = -steerNow * 0.08;
-    p.headYaw = -steerNow * 0.25 + lookYaw * 0.3;
-    p.headPitch = 0.04;
-    for (const l of p.legs) {
-      l.fwd = 1.45;
-      l.out = 0.12;
-      l.bend = 1.3;
-      l.twist = 0;
-    }
-    const g = driver.g;
-    chest.compose(g.position, g.quaternion, g.scale);
-    chest.multiply(torsoFrame(p, M));
-    inv.copy(chest).invert();
-    // The wheel's sides (it stands tilted on the console's face, turned with the rudder)
-    for (const i of [0, 1] as const) {
-      const a = (i === 0 ? 1 : -1) * (Math.PI / 2) - steerNow * 0.8;
-      grip.set(model.wheel.x - Math.sin(0.5) * Math.sin(a) * 0.11, model.wheel.y + Math.cos(0.5) * Math.sin(a) * 0.11, Math.cos(a) * 0.11);
-      grip.applyMatrix4(inv);
-      reachArm(p, i, grip);
-    }
-    driver.update();
-  }
-  /** The wheel turned with the rudder: about its own tilted axis, as far as the hands on it go */
-  const helmAxis = new THREE.Vector3(Math.cos(0.5), Math.sin(0.5), 0);
-  const turnHelm = () => model.helm.quaternion.setFromAxisAngle(helmAxis, steerNow * 0.8);
+  const poseDriver = () => driver && helmPose(driver, model, steerNow, lookYaw * 0.3);
+  /** The wheel turned with the rudder (helmPose() turns it too, with a driver aboard) */
+  const turnHelm = () => model.helm.quaternion.setFromAxisAngle(HELM_AXIS, steerNow * 0.8);
   const gas = root.querySelector<HTMLElement>('[data-drive-gas]');
   const brake = root.querySelector<HTMLElement>('[data-drive-brake]');
   /** The car's pedals read Ahead and Astern on the water */
