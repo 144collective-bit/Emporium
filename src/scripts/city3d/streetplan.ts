@@ -27,6 +27,7 @@ import { BLOCK as STADIUM_BLOCK, STADIUM_CROSSINGS, STADIUM_STREETS } from './st
 import { KART_CROSSINGS, KART_STREETS } from './kartpark';
 import { COURT, MALL_BLOCK, MALL_CROSSINGS, MALL_STREETS, PARK_BLOCK } from './mall';
 import { CREST_BLOCKS, CREST_CROSSINGS, CREST_STREETS, crestPoly } from './crestmont';
+import { SUN_BLOCKS, SUN_CROSSINGS, SUN_STREETS } from './sunridge';
 import { DOCK_BLOCKS, DOCK_CROSSINGS, DOCK_STREETS } from './docks';
 
 export type Pt = [number, number];
@@ -384,6 +385,10 @@ export function cityPlan(): StreetPlan {
   // highway, Foothill Road, and the hill roads up from it
   for (const t of CREST_STREETS) streets.push({ id: t.id, kind: 'street', pts: t.pts, half: t.half, lanes: 1, ...(t.median ? { median: t.median } : {}) });
   for (const c of CREST_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: c.lights });
+  // Sunridge (sunridge.ts, docs/suburb-plan.md Phase 1): the loop in from the north ring avenue, Mesa Drive across it,
+  // the cul-de-sacs off that
+  for (const t of SUN_STREETS) streets.push({ id: t.id, kind: 'street', pts: t.pts, half: t.half, lanes: 1, ...(t.median ? { median: t.median } : {}), ...(t.loop ? { loop: true } : {}) });
+  for (const c of SUN_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: c.lights });
   // The Docks (docks.ts, docs/docks-plan.md Phase 1): the ring off the south bank avenue west of the highway, Quay Road across it
   for (const t of DOCK_STREETS) streets.push({ id: t.id, kind: 'street', pts: t.pts, half: t.half, lanes: 1 });
   for (const c of DOCK_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: c.lights });
@@ -488,6 +493,8 @@ export function cityPlan(): StreetPlan {
     ).map(([id, r, use]): Block => ({ id, poly: square(r[0], r[1], r[2] - r[0], r[3] - r[1]), use, ref: 'mall', walk: WALK_W })),
     // Crestmont's Flats (crestmont.ts)
     ...CREST_BLOCKS.map((b): Block => ({ id: b.id, poly: crestPoly(b.id), use: 'plain', ref: 'crestmont', walk: WALK_W })),
+    // Sunridge's blocks (sunridge.ts): every piece of land its streets leave
+    ...SUN_BLOCKS.map((b): Block => ({ id: b.id, poly: b.poly, use: 'plain', ref: 'sunridge', walk: WALK_W })),
     // The Docks' quays and yards round the basin (docks.ts)
     ...DOCK_BLOCKS.map((b): Block => ({ id: b.id, poly: b.poly, use: 'plain', ref: 'docks', walk: b.walk })),
     // The bends' outer sidewalks (their own outline is the sidewalk)

@@ -7,6 +7,7 @@
  * Like the landmarks they're written on the landmarks' drawing grid and moved
  * onto today's streets with `designBox()` (layout.ts).
  */
+import { SUN_SOLIDS } from './sunridge';
 import type { SpotId } from '../../lib/city';
 import { DUMMIES } from './combat-sim';
 import { BIG_LOTS, BS, GARAGE, MARKET, UNITS, design, designBox } from './layout';
@@ -284,7 +285,7 @@ export const FIGHTCLUB_SITE: Box[] = [
 
 /** The outer squares' centrepieces, planters and kiosks (outer.ts); the pocket parks and lawns stay walkable */
 /** ...and the kart park's fence, hut, garages and stand (kartcircuit.ts), the airport's buildings, masts and parked vehicles (airfield.ts), the Fight Club (fightsite.ts), Liberty Bridge, the metro and The Trenches' towers, rows and The Block (projects.ts) */
-export const SOLIDS: Box[] = [...DRAWN.map(designBox), ...DOWNTOWN_SOLIDS, ...SQUARE_SOLIDS, ...GARAGE_SOLIDS, ...MARKET_SOLIDS, ...DUMMY_SOLIDS, ...KART_SOLIDS, ...AIRPORT_SOLIDS, ...FIGHTCLUB_SITE, ...LIBERTY_SOLIDS, ...HARBOUR_SOLIDS, ...METRO_SOLIDS, ...PROJECT_SOLIDS, ...COMMONS_SOLIDS, ...GRIT_SOLIDS, ...STREETWALL_SOLIDS, ...AVENUE_SOLIDS, ...RIVERSIDE_SOLIDS, ...WATERFRONT_SOLIDS, ...NIGHT_MARKET_SOLIDS, ...WESTLAKE_SOLIDS, ...STADIUM_SOLIDS, ...FACILITY_SOLIDS, ...GARDEN_SOLIDS, ...PLAZA_SOLIDS, ...HIGHRISE_SOLIDS, ...KERBSIDE_SOLIDS, ...STREETLEVEL_SOLIDS, ...UPTOWN_SITE_SOLIDS, ...STREETLIFE_SOLIDS, ...WHEEL_SOLIDS, ...MALL_SOLIDS, ...MALL_INSIDE_SOLIDS, ...NORTH_SOLIDS, ...SKYDECK_SOLIDS, ...CORAL_SOLIDS, ...ESTATE_SOLIDS, ...MANSION_SOLIDS, ...SITE_SOLIDS];
+export const SOLIDS: Box[] = [...DRAWN.map(designBox), ...DOWNTOWN_SOLIDS, ...SQUARE_SOLIDS, ...GARAGE_SOLIDS, ...MARKET_SOLIDS, ...DUMMY_SOLIDS, ...KART_SOLIDS, ...AIRPORT_SOLIDS, ...FIGHTCLUB_SITE, ...LIBERTY_SOLIDS, ...HARBOUR_SOLIDS, ...METRO_SOLIDS, ...PROJECT_SOLIDS, ...COMMONS_SOLIDS, ...GRIT_SOLIDS, ...STREETWALL_SOLIDS, ...AVENUE_SOLIDS, ...RIVERSIDE_SOLIDS, ...WATERFRONT_SOLIDS, ...NIGHT_MARKET_SOLIDS, ...WESTLAKE_SOLIDS, ...STADIUM_SOLIDS, ...FACILITY_SOLIDS, ...GARDEN_SOLIDS, ...PLAZA_SOLIDS, ...HIGHRISE_SOLIDS, ...KERBSIDE_SOLIDS, ...STREETLEVEL_SOLIDS, ...UPTOWN_SITE_SOLIDS, ...STREETLIFE_SOLIDS, ...WHEEL_SOLIDS, ...MALL_SOLIDS, ...MALL_INSIDE_SOLIDS, ...NORTH_SOLIDS, ...SKYDECK_SOLIDS, ...CORAL_SOLIDS, ...ESTATE_SOLIDS, ...MANSION_SOLIDS, ...SITE_SOLIDS, ...SUN_SOLIDS];
 /** What bullets stop on: everything solid except the dummies' footprints (they test their own shape) */
 export const SHOT_SOLIDS = SOLIDS.filter((b) => !DUMMY_SOLIDS.includes(b));
 

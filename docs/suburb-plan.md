@@ -84,12 +84,36 @@ These are my recommendations, made so the plan is complete; any can change.
 
 ## Phases
 
-1. **The land and the streets:** `sunridge.ts` (DOM-free, tested): the
-   boundary, the collector, the loops and cul-de-sacs as plan streets and
-   crossings, the blocks (`ref: 'sunridge'`), the lots on them, the
-   entrances and the perimeter wall; drawn by `sunridge3d.ts` (asphalt,
-   kerbs, sidewalks, lamps, the monument walls); traffic, taxis, the world
-   map; the outskirts' trees kept off.
+1. **The land and the streets** (built): `sunridge.ts` (DOM-free, tested in
+   `tests/sunridge.test.ts`): the land (`LAND`, x 106 to 255, z -150 to the
+   north ring avenue's sidewalk, its south-west corner cut along the
+   Parkway's bend, its north-east corner rounded round the highway's bend,
+   20 clear of the highway's centre line for the ramps), **Sunridge
+   Parkway** (`PARKWAY_LOOP`, a soft loop a lot's depth in from the edge, in
+   the plan as a two-way `loop` street), its two entrances off the avenue
+   (`ENTRIES`: the main one at x 150 with a planted median and lights, the
+   other, Desert Bloom Way, at x 228), **Mesa Drive** across the loop
+   (`MESA`) and three cul-de-sacs north off it (`COURTS`: Saguaro, Ocotillo
+   and Palo Verde Courts, each ending in a turning circle, `BULB`; no
+   traffic, as Crestmont's spurs); the amenities' land kept south of Mesa
+   Drive (`ZONES`: club, park, school); the footpath from Palm Court's way
+   out east (`PATH`). The blocks (`SUN_BLOCKS`, ref `sunridge`) are worked
+   out from the streets (`faces()`: the streets and the land's edge as a
+   graph, each face's outline the kerb lines round it and round the turning
+   circles), each with its runs (a street's kerb, where lots face; the
+   land's edge, where the wall stands). The lots are `sunridgelots.ts` (the
+   chunk's): 110 of them, 6.6 wide (about 12 m) and 13 deep (23 m), pie
+   shaped round the turning circles. The block wall round the land
+   (`WALL_RUNS`, `WALL`) and the monument walls at the entrances
+   (`MONUMENTS`) are solid (`SUN_SOLIDS` in `SOLIDS`); lamps along every
+   sidewalk (`SUN_LAMPS`, at the boot). Drawn by `sunridge3d.ts`
+   (`LAZY_DISTRICTS` id `sunridge`): the asphalt, a dashed centre line on the
+   loop and Mesa Drive, stop bars, the median, the turning circles, zebras at
+   the main entrance's lights, the wall (stucco, a cap, pilasters near
+   only), the monuments (stone base, stepped stucco, SUNRIDGE in bronze,
+   uplights) and the footpath. The road helpers Crestmont's streets used are
+   shared in `roads3d.ts`. The outskirts' trees keep off (`inSunridge()`);
+   the north ring avenue's median breaks at both entrances.
 2. **The houses:** the `tract` kit and its recipe, a house to a lot (plans,
    elevations, colours), garages and driveways, their solids; far forms.
 3. **The yards:** front yards (desert or green), the block walls, the back

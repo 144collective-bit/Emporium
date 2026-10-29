@@ -28,6 +28,7 @@ import { EXT, RIVER } from './layout';
 import { MALL_AREA } from './mall';
 import { CREST_RECT } from './crestmont';
 import { DOCKS_RECT } from './docks';
+import { SUNRIDGE_RECT } from './sunridge';
 
 /** How much further out than its land Uptown loads (its towers stand over the whole town) */
 const UPTOWN_REACH = 240;
@@ -60,6 +61,8 @@ export const LAZY_DISTRICTS: LazyDistrict[] = [
   { id: 'crestmont', rect: CREST_RECT, load: () => import('./crestmont3d') },
   // The Docks, the port west of The Trenches past the highway (docks.ts, docs/docks-plan.md): its streets and quays (docks3d.ts)
   { id: 'docks', rect: DOCKS_RECT, load: () => import('./docks3d') },
+  // Sunridge, the suburb north-east inside the highway (sunridge.ts, docs/suburb-plan.md): its streets and walls (sunridge3d.ts)
+  { id: 'sunridge', rect: SUNRIDGE_RECT, load: () => import('./sunridge3d') },
 ];
 
 
