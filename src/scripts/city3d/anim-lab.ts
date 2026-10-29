@@ -35,8 +35,9 @@
  *   builds them (the desktop's, 3, by default).
  */
 import * as THREE from 'three';
-import { PLAYER, SOLDIER, createDegen, type Degen } from './character';
-import { addCarry, addLean, addLook, applyTo, createAnimator, type Animator } from './animator';
+import { HOLDING, PLAYER, SOLDIER, createDegen, type Degen } from './character';
+import { addCarry, addLean, addLook, applyTo, chestYaw, createAnimator, type Animator } from './animator';
+import { createFollow } from './follow';
 import { createRubric, type Row } from './human';
 import { createGaze } from './gaze';
 import { copyPose, createLocomotion, placeRoot } from './locomotion';
@@ -607,6 +608,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   const move: MoveState = newMove(0);
   // The scorecard (human.ts): the rubric's rows over the last eight seconds
   const rubric = createRubric(SCALE, { seconds: 8 });
+  const headFollow = createFollow();
   let x = 0;
   let z = 0;
   let clock = 0;
@@ -896,6 +898,8 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       slidePose(hero.pose, slideAmt);
       const ov = over?.o ?? overLast;
       if (ov && overAmt > 0.01) overPose(hero.pose, ov, over ? Math.min(1, over.t / over.o.dur) : 1, overAmt, x, y, z, anim.face, SCALE);
+      // (the hands as the playing take closes them, as walk.ts has it)
+      if (!hero.pose.grip) hero.pose.grip = [anim.grip, hero.held?.visible ? Math.max(anim.grip, HOLDING) : anim.grip];
       hero.update();
       const capW = 1 - Math.max(slideAmt, overAmt, danceAmt * danceAmt * (3 - 2 * danceAmt), wholeAmt * wholeAmt * (3 - 2 * wholeAmt));
       const upA = Math.max(emoteAmt, guardAmt);
@@ -904,6 +908,8 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       if (hero.held?.visible) addCarry(hero.rig, capW * (1 - upW));
       const gz = gaze.update({ dt, x, y: y + 1.1 * SCALE, z, face: anim.face, ahead: move.face, speed: v, interests: [] });
       if (gazeOn) addLook(hero.rig, gz.yaw, gz.pitch, capW * (1 - upW));
+      // (the head's follow-through in turns, follow.ts, as walk.ts has it)
+      addLook(hero.rig, headFollow.update(dt, anim.face + chestYaw(hero.rig)), 0, capW * (1 - upW));
     }
     hero.g.position.set(x, y, z);
     hero.g.rotation.set(0, anim.face, 0);
@@ -971,6 +977,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       ['Speed', `${v.toFixed(2)} tiles/s · ${(v * 1.8).toFixed(1)} m/s`],
       ['Clip', `${dbg.clip} @ ${dbg.frame.toFixed(1)}`],
       ['Rate', dbg.rate.toFixed(2)],
+      ['Hands', `${(dbg.grip * 100).toFixed(0)}% closed`],
       ['Match cost', dbg.cost.toFixed(2)],
       ['Blend left', `${((dbg.blend * 180) / Math.PI).toFixed(0)}°`],
       ['Jumps', `${(jumpTimes.length / 2).toFixed(1)} a second`],

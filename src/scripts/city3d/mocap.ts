@@ -99,6 +99,12 @@ export interface MoClip {
   /** Every bone's turn (x, y, z, w) in its parent's frame (the hips' in the root's), a frame at a time */
   rot: Float32Array;
   /**
+   * How far the hands close through the take (0 open, 1 a fist; the
+   * capture has no fingers): loosely curled running, hanging open standing
+   * (the revamp's Phase 8; `GRIP` in animator.ts where a take doesn't say)
+   */
+  grip?: number;
+  /**
    * A stairs take (the revamp's Phase 2): the take's floor under the hips, a frame at a time, from where it
    * started (rig numbers; the hips are kept relative to it, so the clip reads as level ground), and which
    * feet the pipeline found planted (bit 0 the left, bit 1 the right: `contacts()` reads it instead of looking)
@@ -117,8 +123,8 @@ export interface MoData {
 /* ---------- The file ---------- */
 
 const MAGIC = 0x434d3753; // "S7MC"
-/** Version 2 (the revamp's Phase 1): tags, marks and packs, the numbers delta-coded; 3 (Phase 2): a stairs take's floor and contacts */
-const VERSION = 3;
+/** Version 2 (the revamp's Phase 1): tags, marks and packs, the numbers delta-coded; 3 (Phase 2): a stairs take's floor and contacts; 4 (Phase 8): a take's grip */
+const VERSION = 4;
 /** The hips' place is kept to 1/8192 of a rig unit (±4) */
 const HIPS_Q = 8192;
 const ROT_Q = 32767;
@@ -256,6 +262,8 @@ export function encodeMocap(d: MoData): Uint8Array {
       w.u32(m.frame);
       for (const x of m.at) w.f32(x);
     }
+    // (the grip in a byte: 255 where the take doesn't say)
+    w.u8(c.grip === undefined ? 255 : Math.round(Math.min(1, Math.max(0, c.grip)) * 254));
     w.u32(c.frames);
     for (let f = 0; f < c.frames; f++) for (let k = 0; k < 3; k++) w.f32(c.root[f * 3 + k]);
     // (a stairs take: its floor and its contacts)
@@ -288,6 +296,7 @@ export function decodeMocap(buf: ArrayBuffer | Uint8Array): MoData {
     for (let i = r.byte(); i > 0; i--) tags.push(r.str());
     const marks: Mark[] = [];
     for (let i = r.byte(); i > 0; i--) marks.push({ name: r.str(), frame: r.u32(), at: [r.f32(), r.f32(), r.f32()] });
+    const g = r.byte();
     const frames = r.u32();
     const root = new Float32Array(frames * 3);
     const hips = new Float32Array(frames * 3);
@@ -316,7 +325,7 @@ export function decodeMocap(buf: ArrayBuffer | Uint8Array): MoData {
         for (let k = 0; k < 4; k++) rot[q + k] /= l;
       }
     }
-    clips.push({ name, tags, marks, pack, frames, root, hips, rot, ...(floor ? { floor } : {}), ...(contact ? { contact } : {}) });
+    clips.push({ name, tags, marks, pack, frames, root, hips, rot, ...(floor ? { floor } : {}), ...(contact ? { contact } : {}), ...(g < 255 ? { grip: g / 254 } : {}) });
   }
   return { fps, clips };
 }
@@ -348,7 +357,7 @@ export function mirrorClip(c: MoClip): MoClip {
   }
   // (the floor is the floor; the contacts swap sides)
   const contact = c.contact ? c.contact.map((b) => ((b & 1) << 1) | ((b >> 1) & 1)) : undefined;
-  return { name: `${c.name}~`, tags: c.tags, marks: c.marks.map((m) => ({ ...m, at: [-m.at[0], m.at[1], m.at[2]] })), pack: c.pack, frames: c.frames, root, hips, rot, ...(c.floor ? { floor: c.floor } : {}), ...(contact ? { contact } : {}), mirrored: !c.mirrored };
+  return { name: `${c.name}~`, tags: c.tags, marks: c.marks.map((m) => ({ ...m, at: [-m.at[0], m.at[1], m.at[2]] })), pack: c.pack, frames: c.frames, root, hips, rot, ...(c.floor ? { floor: c.floor } : {}), ...(contact ? { contact } : {}), mirrored: !c.mirrored, ...(c.grip !== undefined ? { grip: c.grip } : {}) };
 }
 
 /* ---------- Posing a frame ---------- */

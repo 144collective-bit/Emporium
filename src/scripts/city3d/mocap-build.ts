@@ -58,6 +58,8 @@ export interface Take {
    * `contact`); a flat take's floor is one height, found low among the ankles
    */
   stairs?: boolean;
+  /** How far the hands close through it (0 open, 1 a fist; mocap.ts `MoClip.grip`): the capture has no fingers (the revamp's Phase 8) */
+  grip?: number;
 }
 
 /**
@@ -273,6 +275,7 @@ export function retarget(b: Bvh, take: Take): MoClip {
   calmToes(locals, n);
   straightenKnees(locals, hips, n);
   const clip: MoClip = { name: take.name, tags: take.tags ?? [], marks: (take.marks ?? []).map((m) => ({ name: m.name, frame: Math.round(m.at * MOCAP_FPS), at: [m.x, m.y, m.z] })), pack: take.pack ?? CORE_PACK, frames: n, root, hips, rot: locals };
+  if (take.grip !== undefined) clip.grip = take.grip;
   if (take.stairs) {
     clip.floor = Float32Array.from(floorAt, (y) => (y - floorAt[0]) * k);
     clip.contact = contact;
@@ -476,7 +479,7 @@ export function loopClip(c: MoClip, times: number, cycle: [number, number] = [0.
       ramp.multiply(q).normalize().toArray(rot, (k * NB + n) * 4);
     }
   }
-  return { name: c.name, tags: c.tags, marks: [], pack: c.pack, frames, root, hips, rot };
+  return { name: c.name, tags: c.tags, marks: [], pack: c.pack, frames, root, hips, rot, ...(c.grip !== undefined ? { grip: c.grip } : {}) };
 }
 
 /** Every take, read by `read(file)` */
