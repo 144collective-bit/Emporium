@@ -92,7 +92,11 @@ test('Stadium Road and the car park loop: in the street plan off the north road,
   assert.ok(Math.abs(BZ1 + WALK_W - (ROAD.z - ROAD.half)) < 1e-9);
   // The north road's outer corners get slip lanes at the highway (the stadium's traffic)
   // (the north bank avenue's past the highway, Crestmont's, has none over the river's promenade: three)
-  for (const id of OUTER_SLIPS) assert.ok(PLAN.streets.filter((s) => s.kind === 'slip' && s.id.startsWith(`slip-${id}-`)).length === (id === 'highway-ew3-0' ? 3 : 4));
+  // (an entry naming one turn alone, the Docks', is that one slip: docks.ts)
+  for (const id of OUTER_SLIPS) {
+    const n = PLAN.streets.filter((s) => s.kind === 'slip' && (s.id === `slip-${id}` || s.id.startsWith(`slip-${id}-`))).length;
+    assert.ok(n === (PLAN.streets.some((s) => s.id === `slip-${id}`) ? 1 : id === 'highway-ew3-0' ? 3 : 4), id);
+  }
   // The car park: inside the loop, its bays inside it, most taken
   const [x0, z0, x1, z1] = CAR_PARK;
   assert.ok(x0 > LOOP.x0 + LOOP.half && x1 < LOOP.x1 - LOOP.half && z0 > LOOP.z1 + LOOP.half && z1 < ROAD.z - ROAD.half);

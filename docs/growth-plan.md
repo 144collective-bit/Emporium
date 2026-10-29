@@ -1297,10 +1297,11 @@ example:
 - **9a Docklands**, along the river east and west of town: warehouses,
   cranes (still), container stacks, a ferry pier with its own boat, and a
   waterfront market.
-- **9c The Docks** (the owner's call; planned): a working port on the
+- **9c The Docks** (the owner's call; under way): a working port on the
   south bank west of The Trenches past the ring highway, scenery first,
   the metro running on through it and over the river on the red arch moved
-  there from The Trenches. The plan and its phases are `docs/docks-plan.md`.
+  there from The Trenches. The plan and its phases are `docs/docks-plan.md`;
+  Phase 1 (the land, the streets and the quays) is built.
 - **9b An industrial east:** factories, rail yards, depots and
   chimneys (steam, not smoke, on the phone tier). It's a home for the
   economy's bigger lots: more `BIG_LOTS`, at prices the owner sets.

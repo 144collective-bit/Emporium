@@ -73,53 +73,125 @@ only, nothing threatening.
 
 ## The phases
 
-### Phase 1: the land, the streets and the quays
+### Phase 1: the land, the streets and the quays (built)
 
-- `docks.ts` (DOM-free, tested in `tests/docks.test.ts`): `DOCKS_RECT` /
-  `inDocks()`; the docks' streets in the street plan (`DOCK_STREETS`,
-  `DOCK_CROSSINGS`, `DOCK_BLOCKS`, joined in `cityPlan()`): the south bank
-  avenue carried on as the docks' main road with traffic, a lit junction
-  where it meets the highway's west side (slip lanes on its outer corners,
-  as the stadium's and the airport's: `OUTER_SLIPS`), Dock Road down the
-  middle, the gate road to the terminal; the basin (`BASIN`: its outline,
-  mouth and quay walls; river.ts's `inWater()`, `edgesAt()` and the
-  channel grow it, so walking, driving, the boats and the world map read
-  it); the quay line along the frontage (`BANKS` split); the woods and the
-  outskirts' trees kept off (`WOODS_OFF`, `keepTreesOff()`).
-- Drawn as a district loaded as you approach (`LAZY_DISTRICTS` id `docks`,
-  `docks3d.ts`): the streets, the quay walls, the basin's water (the
-  river's `waterMat`), the paving and cobbles, lamps; the world map draws
-  its blocks and the basin.
-- Tests: the streets join the plan and carry traffic, nothing on a road,
-  the basin open to the river and clear of the boat lanes, the snapshot
-  unchanged (nothing that exists moves), both world sizes.
+What was built, in `docks.ts` (DOM-free, tested in `tests/docks.test.ts`),
+in today's world numbers (no `SOUTH_SHIFT` / `WIDEN` to add), the docks
+x -400 to -244, z 131 to 290 (`DOCKS_RECT`, `inDocks()`), 20 short of the
+world's west edge today:
 
-### Phase 2: the metro via the docks, the red arch moved
+- **The streets** (`DOCK_STREETS`, `DOCK_CROSSINGS`, joined in
+  `cityPlan()`; one lane each way, `HALF`): the south bank avenue carries
+  traffic on west of the highway now (the junction's south-west corner got
+  a slip lane: `OUTER_SLIPS` takes a single turn, `highway-ew4-1-0`; its
+  north-west corner is the river); the docks' ring off it, `docks-ring`
+  (Dock Road south at `DOCK_X` -248, Yard Road west at `YARD_Z` 286, West
+  Road north at `WEST_X` -396 back to the avenue, both its ends lit
+  junctions), and Quay Road across it (`QUAY_Z` 202.5) along the basin's
+  south side. Traffic drives them all (routes.ts), the avenue's median and
+  lines break at the junctions (world.ts `highwayGaps()`).
+- **The basin** (`BASIN`, x -345 to -275, z 148 to 200) and its mouth
+  (`CHANNEL`, x -316 to -302) open to the river at the quay line; the avenue
+  and its promenade cross the mouth on a flat bridge at the street's
+  height (`DOCK_BRIDGE`: a concrete deck under the asphalt, railings both
+  sides). The water is at the river's height (`WATER_Y`) between stone
+  quay walls all round (world.ts `basinWater()`, `basinWalls()`, at the
+  boot, the grass cut round it: `minusRects()`); the river's own quay wall
+  is open across the mouth (`riverBanks()`). Not part of river.ts's
+  `inWater()` (the river's tests and the boats read that): walking stops at
+  its edge (`inBasin()` in walk.ts's `blocked()`), cars at `BASIN_WALLS`
+  (drive-sim.ts, near the docks). The south boat lane passes the mouth
+  about 10 out in the river.
+- **The frontage** is a straight quay: river.ts's south bank wandering
+  stretch west of the highway now ends at `DOCKS_QUAY[0]` (x -404) and
+  wanders on west of it.
+- **The blocks** (`DOCK_BLOCKS`, ref `docks` in the plan): the west quay
+  (round the basin's west side and the mouth's, to West Road: the container
+  terminal in Phase 3), the east quay (its mirror, to Dock Road: the old
+  docks), the basin's south quay and the bridge's sidewalk (strips all
+  sidewalk, `walk` 0), the yards south of Quay Road. Grey sidewalks over worn
+  concrete, as The Trenches' (world.ts; the big blocks a piece a tile, their
+  walls facing out round the notch: `tiledSlab()` reads which way an outline
+  runs from its area now).
+- **Lamps** (`DOCK_LAMPS`, placed at the boot in index.ts): sodium
+  (world.ts `buildLamps()`), along the sidewalks, none on the basin's south
+  quay (kept clear for a berth).
+- **Drawn as you approach** (`LAZY_DISTRICTS` id `docks`, `docks3d.ts`):
+  the streets (asphalt, a dashed yellow centre line, zebras on every arm of
+  the avenue's lit junctions), the bridge's railings, a pale stone coping
+  along the water's edge and, near only, mooring bollards every 8 and iron
+  ladders down the walls every 24 (none on phones). The world map draws the
+  basin.
+- **The trees** keep off the docks (outskirts.ts `treeSpot()`, `inDocks()`;
+  the woods with them, through the same check: not `WOODS_OFF`, whose 120
+  of clearance would have thinned the woods west of the highway).
+- **Tests:** the docks inside the world and off the highway and The
+  Trenches; the streets in the plan with traffic on every one; the blocks on
+  no street, over no water, none over another, their edges at the water's;
+  the basin open to the river under the bridge, the frontage straight, the
+  boats' lane well out; the walls over the open water and nothing solid in
+  it; the lamps on sidewalks; no trees. Both world sizes pass; the
+  snapshot gained the new streets and the slip lane (nothing that existed
+  moved). The boot grew 2 KB (662.6 to 664.6 of 670).
 
-- metro.ts: the main track runs on west along Trench Avenue's median past
-  West Street, over row W and the highway's west side on a span (as the
-  Kart Park line crosses its north side), into the docks to **Docks
-  station** (a platform, a stair tower, the M roundel, a totem; a place:
-  `STATIONS`, `PLACES`); a bend north; over the river on the red arch
-  (`ARCH` moved: its ribs springing from the docks' quay and the north
-  bank, its crown kept as it is, nothing in the water, clear of the boat
-  lanes and the tall ship's line); a bend east onto the north bank
-  avenue's median; over the highway's junction on a span; along Uptown's
-  waterfront avenue's median (the planted median, `MEDIAN_RUNS`, broken
-  round the pillars); a bend north at x -150 onto Uptown's portals as they
-  are, to Uptown station, unchanged.
-- What goes: the bend into the cross street at x -150 (`WEST_END`,
-  `UP_R`), the portals on The Trenches' side and the arch there (the cross
-  street stays a street). The Trenches' station stays where it is.
-- The timetable grows (`LEGS`, `ROUND_TRIP`): out through The Trenches and
-  the Docks to Uptown and back; the run past The Trenches is the express
-  (`speedOf()`); the longest ride (`rideAt()`'s cap) is measured and
-  written here.
-- Tests (`tests/metro.test.ts`): every pillar clear of every road and
-  sidewalk, the spans over the highway high enough, the arch clear of the
-  water's lanes and the tall ship, every station's door on a sidewalk, the
-  rides and the timetable; the world map's metro line; the el's rumble
-  where it now runs (`rumbleAt()`).
+### Phase 2: the metro via the docks, the red arch moved (built)
+
+What was built, in metro.ts (DOM-free, tested in `tests/metro.test.ts`):
+
+- **The route west of The Trenches:** the main track carries on west along
+  Trench Avenue's line (z 175) past West Street, over row W and the
+  highway's west side (no pillar on the highway: a span of about 9.5), over
+  Dock Road and onto the docks' east quay to **Southbank Docks station**
+  (`docks` in `STATIONS`, named `DOCKS_NAME`; its middle `EL_STATION`
+  x -258, its platform south of the track, its stair tower on the quay with
+  its door facing north; a `PLACES` entry, `metro-docks`, through
+  places.ts); round a bend north (`WEST_R` 8, `WEST_END`) onto the docks'
+  line (`EL_X` x -272, docks.ts); over the south bank avenue and the river
+  on **the red arch** (`ARCH` moved: its south feet on the east quay at the
+  avenue's sidewalk, z 142, its north feet on the north bank's promenade,
+  z 70.3, its crown 16 over the ground as before, nothing in the water, clear
+  of the basin's mouth and the boats' lanes; its hangers every 4); round a
+  bend east (`NORTH_R` 5.5) onto the north bank avenue's median (`RING_HI`);
+  east along it, over the highway's junction on a span, into Uptown; round a
+  bend north (`UP_R` 6, was 8) into the one-way pair's northbound street and
+  up it on the portal frames to Uptown station, unchanged.
+- **What went:** the bend into the cross street at x -150 in The Trenches,
+  the portal frames there and the arch over the river at x -150 (the cross
+  street stays a street, The Trenches' station where it was).
+- **The pillars** follow from the street plan as before (`PILLARS`): the
+  avenues' medians clear of their junctions, open land, the docks' quay,
+  never under the arch; the spans between are at most 18 (the highway's
+  are about 9.5). Through the docks the el is dark steel like The Trenches'
+  (metro3d.ts `grim()`: flanged columns on plinths, plate girders).
+- **Uptown's waterfront avenue:** the el runs over the bank avenue's
+  planted median from the highway to the bend at x -156: the hedge is
+  broken round each pillar and no columnar tree stands under the deck
+  (boulevarddress.ts `MEDIAN_RUNS`, `MEDIAN_TREES`, `UNDER_EL`); the
+  esplanade's keep-out for the old arch's north feet is gone
+  (boulevard.ts), so its trees, benches and lamps carry on there.
+- **Trees** keep off the line west of The Trenches and the arch's land
+  (index.ts `keepTreesOff()`; row W's trees along the highway skip the el,
+  streetwall3d.ts); the docks' lamps keep off the arch's feet (docks.ts
+  `DOCK_LAMPS`).
+- **The timetable** (`LEGS`, 14 with Crestmont's spur, merged from
+  docs/crestmont-plan.md Phase 9): from Crestmont to Kart Park, down to
+  South Bank, out through The Trenches and the Docks to Uptown and back,
+  out to the Airport and back, up again; `ROUND_TRIP` about 392 s. The run west of The Trenches is the
+  express (`speedOf()`, unchanged at 24: a faster express hardly helps,
+  the runs are mostly speeding up and slowing down). The longest ride,
+  Uptown to the Airport turning round at South Bank, is about 60.7 s
+  (`rideAt()`; it was about 50.8), and out to Crestmont, Uptown's is about
+  75.4 s (from The Trenches it was about 70).
+- **Tests:** the main line's length from its straights and bends, smooth
+  all the way, over nothing taller than 4.5; every pillar in a median clear
+  of the junctions or on open ground, the spans at most 18; the stations'
+  platforms between junctions and their towers off every road and solid;
+  the portals' legs off the streets and their sidewalks; the arch's feet
+  off the water and the basin's mouth, the boats' lanes under it, the tall
+  ship east of it, every flight well over its crown; Southbank Docks'
+  station on the east quay and the deck never over the basin; the Uptown
+  median broken round the pillars with no tree under the el. Both world
+  sizes pass. The boot grew 0.2 KB (664.6 to 664.8 of 670).
 
 ### Phase 3: the port
 
@@ -140,13 +212,22 @@ only, nothing threatening.
   everyone, still under reduced motion. The sound (`docks` in
   ambience.ts).
 
+## The owner's answers
+
+- **The name:** **Southbank Docks** (`DOCKS_NAME` in docks.ts): the
+  district, its signs and gantry, and its metro station in Phase 2 (named
+  in full, Southbank Docks, so it reads apart from the South Bank station by
+  the south row).
+- **The cranes:** tall, as real ones (the owner's call: "yes tall cranes").
+  The ship-to-shore gantry cranes (and only they) may rise over the
+  Emporium, as Uptown's towers do, to about real height (25 to 35 tiles to
+  the top of a raised boom), each kept well under every flight's path over
+  them and clear of the prop plane's river loop (the tests in Phase 3, as
+  highrise.ts's are). Everything else in the docks stays under the
+  Emporium (the sheds, warehouses, lighthouse, floodlight masts).
+
 ## Open questions for the owner
 
-- **The name:** "The Docks", "Sector 7 Docks", "West Docks", or another
-  made-up name?
-- **The cranes' height:** real container cranes stand 25 to 40 tiles; the
-  rule outside Uptown is "under the Emporium" (12.5). Allow the cranes (and
-  only the cranes) over it, as Uptown's towers are, or keep them low?
 - **The el along Uptown's waterfront:** the line comes back east along the
   north bank avenue's median through Uptown, past the Sky Wheel, its
   planted median broken round the pillars. Is that the look you want, or

@@ -597,7 +597,11 @@ The owner's picks are decision 8. One PR, built in this order:
    river on a steel arch with nothing in the water (the boats keep their
    lanes; the tall ship anchors east of it), and up the one-way pair's
    northbound street to **Uptown station** by the plaza's café terrace and
-   the axis. Rides and the timetable take it in; the world map, the sound
+   the axis. (Rerouted by the docks plan's Phase 2, `docs/docks-plan.md`: the line
+   now runs on west past The Trenches to Southbank Docks, crosses the river
+   on the arch there and comes back east along the north bank avenue's
+   median into Uptown, round a bend north into the same street; the arch at
+   x -150 and its portals went.) Rides and the timetable take it in; the world map, the sound
    and the places pick it up.
 
 ## Phase 7 as built

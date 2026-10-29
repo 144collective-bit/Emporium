@@ -11,7 +11,8 @@
  * bridge) and pulls back from it on the stretches in `BANKS`: a sandy cove
  * on the south bank below the south row, grass banks east of the town's
  * promenades, and past the ring highway it wanders freely, each bank on its
- * own. It never reaches past the band. Since step 2 the water lies
+ * own (but the Docks' frontage, a straight quay: docks.ts `DOCKS_QUAY`).
+ * It never reaches past the band. Since step 2 the water lies
  * `WATER_Y` below the streets: quay walls drop to it, and the banks it pulls
  * back from slope down to it (`topsAt()`, `shoreY()`). Everything that reads
  * the water reads these edges (`edgesAt()`): the water and its banks (world.ts),
@@ -19,6 +20,7 @@
  * (`boatZ()` in waterfront.ts), the trees, the world map, the sound.
  */
 import { EXT, RIVER, RIVER_W } from './layout';
+import { DOCKS_QUAY } from './docks';
 
 export type Bank = 'north' | 'south';
 
@@ -54,9 +56,10 @@ export const BANKS: Stretch[] = [
   // East of the town's promenades to the highway: grass banks, both sides
   { bank: 'north', x0: 132, x1: HW_EAST - HW_CLEAR, ease: 18, min: 1.5, max: 8, phase: 2.3 },
   { bank: 'south', x0: 132, x1: HW_EAST - HW_CLEAR, ease: 18, min: 1.5, max: 8, phase: 4.1 },
-  // Past the highway, out of town both ways: wandering freely
+  // Past the highway, out of town both ways: wandering freely (but along the Docks' frontage west of the highway, a
+  // straight quay: docks.ts)
   { bank: 'north', x0: EXT[0] - PAST, x1: HW_WEST - HW_CLEAR, ease: 22, min: 1, max: 9, phase: 1.7 },
-  { bank: 'south', x0: EXT[0] - PAST, x1: HW_WEST - HW_CLEAR, ease: 22, min: 1, max: 9, phase: 5.2 },
+  { bank: 'south', x0: EXT[0] - PAST, x1: DOCKS_QUAY[0], ease: 22, min: 1, max: 9, phase: 5.2 },
   { bank: 'north', x0: HW_EAST + HW_CLEAR, x1: EXT[1] + PAST, ease: 22, min: 1, max: 9, phase: 3.4 },
   { bank: 'south', x0: HW_EAST + HW_CLEAR, x1: EXT[1] + PAST, ease: 22, min: 1, max: 9, phase: 0.2 },
 ];

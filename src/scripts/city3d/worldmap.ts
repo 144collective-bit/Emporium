@@ -12,6 +12,7 @@
  */
 import { EXT } from './layout';
 import { edgeSamples } from './river';
+import { BASIN, CHANNEL } from './docks';
 import { PLAN, type Pt } from './streetplan';
 import { PLACES, placeName, type Place } from './places';
 import { PATHS, WESTLAKE_BLOCKS, lakeLine } from './westlake';
@@ -208,6 +209,8 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
       poly(p.poly);
       ctx.fill();
     }
+    // The Docks' basin and its mouth from the river (docks.ts; the avenue's bridge drawn over it with the roads)
+    for (const r of [CHANNEL, BASIN]) rect(r, C.river);
     // The Trenches' boardwalk and Pier 7 out over the water, and Uptown's esplanade, its overlooks and marina (boulevard.ts)
     for (const d of DECKS) rect(d, C.boardwalk);
     for (const d of ESPLANADE_DECKS) rect(d, C.slab);

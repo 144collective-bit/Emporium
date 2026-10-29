@@ -3,6 +3,7 @@
 // banks east of town, free past the highway), smooth, never too narrow.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { DOCKS_QUAY } from '../src/scripts/city3d/docks';
 import { BANKS, MIN_WIDTH, SLOPE, WATER_Y, edgeSamples, edgesAt, inChannel, inWater, laneAt, pullAt, shoreY, stretchAt, topsAt } from '../src/scripts/city3d/river';
 import { EXT, RIVER, RIVER_W, WIDEN } from '../src/scripts/city3d/layout';
 import { JETTIES, PROMENADE } from '../src/scripts/city3d/outer';
@@ -65,7 +66,10 @@ test('and natural elsewhere: the cove a beach, grass banks east of town, wanderi
   };
   for (const bank of ['north', 'south'] as const) {
     assert.ok(mean(bank, 150, 245) > 3, `east of town, the ${bank} bank`);
-    assert.ok(mean(bank, EXT[0] + 10, -260) > 3 && mean(bank, 310, EXT[1] - 10) > 3, `out of town, the ${bank} bank`);
+    // (west of the highway the south bank's frontage is the Docks' straight quay, docks.ts: it wanders on west of them,
+    // off the world's edge as the stretch runs)
+    const west = bank === 'south' ? [DOCKS_QUAY[0] - 120, DOCKS_QUAY[0] - 25] : [EXT[0] + 10, -260];
+    assert.ok(mean(bank, west[0], west[1]) > 3 && mean(bank, 310, EXT[1] - 10) > 3, `out of town, the ${bank} bank`);
   }
   // Every stretch eases in and out (no bank is pulled back at its ends)
   for (const b of BANKS) for (const x of [b.x0, b.x1]) assert.ok(pullAt(b.bank, x) < 1e-9);

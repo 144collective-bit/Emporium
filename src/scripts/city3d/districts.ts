@@ -27,6 +27,7 @@ import { SITE } from './airfield';
 import { EXT, RIVER } from './layout';
 import { MALL_AREA } from './mall';
 import { CREST_RECT } from './crestmont';
+import { DOCKS_RECT } from './docks';
 
 /** How much further out than its land Uptown loads (its towers stand over the whole town) */
 const UPTOWN_REACH = 240;
@@ -57,6 +58,8 @@ export const LAZY_DISTRICTS: LazyDistrict[] = [
   { id: 'mall', rect: MALL_AREA, load: () => import('./mall3d') },
   // Crestmont, the north-east town (crestmont.ts, docs/crestmont-plan.md): its streets in the Flats and up the hills (crestmont3d.ts)
   { id: 'crestmont', rect: CREST_RECT, load: () => import('./crestmont3d') },
+  // The Docks, the port west of The Trenches past the highway (docks.ts, docs/docks-plan.md): its streets and quays (docks3d.ts)
+  { id: 'docks', rect: DOCKS_RECT, load: () => import('./docks3d') },
 ];
 
 

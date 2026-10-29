@@ -5,7 +5,8 @@
  * and the page says the city needs 3D graphics.
  */
 import * as THREE from 'three';
-import { WIDEN } from './layout';
+import { RING_HI, WIDEN } from './layout';
+import { AVENUE_Z } from './trenches';
 import { MapControls } from 'three/addons/controls/MapControls.js';
 import { BAKING_TEXTURES, PICK, builtTexturesDone, consolidate, loadBuiltTextures, loadImage, loadTex, updateLights, updateWind } from './kit';
 import { CROWD_PACK, loadMocap } from './mocap-load';
@@ -20,6 +21,7 @@ import { createPost } from './post';
 import { CENTER, SLAB, addLamp, addTree, buildGround, buildLamps, buildSkyline, buildTrees, placed as everyPlaced, puddleMat, keepTreesOff, scatterOutskirts, waterMat, type Env, type Tick } from './world';
 import { PARK_LAMPS, PARK_TREES, WESTLAKE_RECT } from './westlake';
 import { CREST_LAMPS } from './crestmont';
+import { DOCK_LAMPS } from './docks';
 import { GARDEN_LAMPS, GARDEN_PEOPLE } from './gardens';
 import { LAMPS as PLAZA_LAMPS, PLAZA_PEOPLE, TERRACE_LAMPS, TERRACE_TREES, TREES as PLAZA_TREES } from './plaza';
 import { BOULEVARD_PEOPLE, EDGE_LAMPS, LAND_TREES, WATER_TREES } from './boulevard';
@@ -46,7 +48,7 @@ import { addTrafficBikes, bodies, buildLife, walker } from './life';
 import { createWalk } from './walk';
 import { buildGarage } from './garage';
 import { buildAirport } from './airport';
-import { AIRPORT_END, BRANCH, LINE_X, SPUR_CLEAR } from './metro';
+import { AIRPORT_END, ARCH, BRANCH, LINE_X, NORTH_R, SPUR_CLEAR, WEST_END, WEST_R } from './metro';
 import { CAMERA_FAR, PAN_BOUNDS } from './bounds';
 import { loadCar } from './mycar';
 import { loadBike } from './mybike';
@@ -298,6 +300,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   keepTreesOff([-10, 125 + WIDEN, 56, 135 + WIDEN]);
   // (and its Airport branch, bending east off the avenue over the open land to the airport: docs/airport-plan.md Phase 3)
   keepTreesOff([LINE_X - 6, BRANCH.south - 4, AIRPORT_END + 6, BRANCH.z + 6]);
+  // (and its run west past The Trenches over the highway to Southbank Docks and north over the river: docs/docks-plan.md Phase 2)
+  keepTreesOff([WEST_END - WEST_R - 6, AVENUE_Z - 6, -186, AVENUE_Z + 6]);
+  keepTreesOff([ARCH.x - 6, RING_HI - 2, ARCH.x + NORTH_R + 4, AVENUE_Z]);
   // (and Crestmont's spur, round outside the highway's north-east corner: docs/crestmont-plan.md Phase 9)
   for (const r of SPUR_CLEAR) keepTreesOff(r);
   // Westlake Park (growth plan Phase 9b): its land is the street plan's; its trees and lamps stand with the town's
@@ -308,6 +313,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   for (const [x, z, ry] of PARK_LAMPS) addLamp(x, z, ry);
   // Crestmont's (crestmont.ts): along the Flats' sidewalks and up the hill roads at their beds' height
   for (const [x, z, ry, y] of CREST_LAMPS) addLamp(x, z, ry, y);
+  // The Docks' (docks.ts): sodium, along their sidewalks (world.ts)
+  for (const [x, z, ry, y] of DOCK_LAMPS) addLamp(x, z, ry, y);
   // ...and its people standing about (crestlife.ts, Phase 8: valets, doormen, diners, sunbathers, gardeners; phones: half)
   CREST_IDLE.forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push(p));
   // ...its formal garden's lanterns and people (gardens.ts, the north side's stage 3)

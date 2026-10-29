@@ -33,7 +33,6 @@ import { HIGHRISES, PODIUM } from './highrise';
 import { DECK_Y } from './waterfront';
 import { atGangway } from './riverbus';
 import { WHEEL_RECT } from './wheel';
-import { ARCH } from './metro';
 
 /** The bank avenue the esplanade runs along */
 const BANK = ROWS_Z[ROWS_Z.length - 1];
@@ -68,9 +67,7 @@ export const clearOfMouths = (x: number, m: number) =>
 /** ...and by the avenue, never where people come over from the junctions and the axis's zebra */
 const clearOfCrossings = (x: number, m: number) => [...crossingsOn(BANK), AXIS_X].every((c) => Math.abs(x - c) > STREET_HALF + m);
 /** ...and the observation wheel's along the water's edge (wheel.ts): the walk passes it on the avenue's side */
-const clearOfWheel = (x: number, m: number) => (x < WHEEL_RECT[0] - m || x > WHEEL_RECT[2] + m) && clearOfArch(x, m);
-/** ...and the metro's arch's north feet (metro.ts), either side of its line */
-const clearOfArch = (x: number, m: number) => Math.abs(x - ARCH.x) > ARCH.half + 0.6 + m;
+const clearOfWheel = (x: number, m: number) => x < WHEEL_RECT[0] - m || x > WHEEL_RECT[2] + m;
 
 /** Lamps at the water's edge, their arms reaching in over the walk (x, z, ry), and two at each overlook's outer corners */
 export const EDGE_LAMPS: [number, number, number][] = [];
@@ -79,7 +76,7 @@ for (const o of OVERLOOKS) for (const s of [-1, 1]) EDGE_LAMPS.push([o.x + s * (
 /** The double row of trees in planters: every 6 along the avenue's side, every 12 along the water's (between the lamps) */
 export const PLANTER_R = 0.45;
 export const LAND_TREES: Pt[] = [];
-for (let x = X0 + 2; x < X1 - 1; x += 6) if (clearOfCrossings(x, 1.5) && clearOfArch(x, 0.5)) LAND_TREES.push([x, Z0 + 0.95]);
+for (let x = X0 + 2; x < X1 - 1; x += 6) if (clearOfCrossings(x, 1.5)) LAND_TREES.push([x, Z0 + 0.95]);
 export const WATER_TREES: Pt[] = [];
 for (let x = X0 + 8; x < X1 - 1; x += 12) if (clearOfMouths(x, 1.4) && clearOfWheel(x, 0.5)) WATER_TREES.push([x, Z1 - 1.55]);
 /** Benches facing the water between the trees and the lamps (the drawing's; their sitters are here) */
