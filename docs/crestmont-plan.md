@@ -272,7 +272,31 @@ the pools) and the pools lit at night are Phase 8's.
   back. A house kit with styles and a recipe laying them on the blocks
   (`layBlock()`), the details near only.
 
-### Phase 6: the hills' mansions
+### Phase 6: the hills' mansions (built)
+
+**What's built:**
+
+- `mansions.ts` (DOM-free, tested in `tests/mansions.test.ts`): eight mansions on pads held level beside Ridge Road
+  and Canyon Drive and at Summit Lane's end (`MANSIONS`; `MANSION_LEVELS` are terrain.ts's `LEVELS`, eased over
+  `PAD_EASE`). Each pad is kept off every road's asphalt and shoulder (the beds don't move), off the others, off the
+  overlook at the ridge's end and the lower slopes (the country club's, Phase 7), at the road's height give or take
+  `RISE`, cut or built up at most `CUT` (so its banks stay walkable: the terrain test's no-steps rule), with a straight
+  drive up from the road. Kinds (`MansionKind`): **glass** (a cantilevered modern: the upper floor reaching past the pad
+  over the slope on steel legs, an infinity pool along the back), **villa** (ochre and red tile, a wing, tiled
+  terraces stepping down behind), **compound** (white and tile behind a stone wall with a gate, a guest house) and
+  **summit** (Summit Lane runs on into it: pale stone and slate, a walled court, a tower with a glass lantern). Cars on
+  the forecourts (`MANSION_CARS`), `MANSION_SOLIDS` (in `SOLIDS`, their tops at the pad's height and the building's),
+  `onMansion()` (the hills' oaks, scrub, palms and road walls keep off).
+- Drawn by `mansions3d.ts` (`registerMansions()`, from crestmont3d.ts): a site a mansion: the drive following the
+  ground, the pad's edges (stone retaining walls where the hills rise past it, a glass balustrade on a stone kerb
+  where they fall away), the walls and gate, the house by kind, the pool and loungers; the cars on the main thread.
+
+**Left for later:** the plan hoped for more; the hills are steep enough that few spots beside the roads take a pad
+without a cut over `CUT`, and Vista Lane's end has none (its compound is on Canyon Drive instead). More would want
+pads stepped in two levels with a retaining wall between, or more lanes. The pools and windows lit at night and
+people by the pools are Phase 8's.
+
+**As planned:**
 
 - Estates on the terraces from Phase 1: cantilevered glass moderns over
   the slope with infinity pools lit at night, villas with tiled terraces

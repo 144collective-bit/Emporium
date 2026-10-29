@@ -42,7 +42,7 @@ const LOUNGER = toon('#f1ede2');
 const DARK = toon('#2a2a30');
 const LAMP = neon('#ffe2a8', 0.2, 1.3);
 /** Windows: dark glass by day, warm light at night */
-const WINDOW = siteMat('estate-window', lit(toon('#3b4c60', { emissive: '#ffd59a' }), 0, 0.85));
+export const WINDOW = siteMat('estate-window', lit(toon('#3b4c60', { emissive: '#ffd59a' }), 0, 0.85));
 
 /** A house's walls, its trims and its roof, by style */
 const WALL: Record<EstateStyle, THREE.Material> = { spanish: RENDER_WHITE, villa: OCHRE, tudor: CREAM, georgian: BRICK, modern: RENDER_WHITE };
@@ -51,7 +51,7 @@ const ROOF: Record<EstateStyle, THREE.Material> = { spanish: TILE, villa: TILE, 
 type V3 = [number, number, number];
 
 /** Triangles, each turned to face away from `mid` (a convex roof's middle) */
-function tris(list: V3[][], mid: V3) {
+export function tris(list: V3[][], mid: V3) {
   const pos: number[] = [];
   const a = new THREE.Vector3();
   const b = new THREE.Vector3();
@@ -70,7 +70,7 @@ function tris(list: V3[][], mid: V3) {
   return g;
 }
 /** A hipped roof over u0..u1, v0..v1 (v1 < v0) at y, `h` high, overhanging `o` (h with no ridge: a pyramid) */
-function hip(u0: number, v0: number, u1: number, v1: number, y: number, h: number, o: number) {
+export function hip(u0: number, v0: number, u1: number, v1: number, y: number, h: number, o: number) {
   const [x0, x1, z0, z1] = [u0 - o, u1 + o, v1 - o, v0 + o];
   const [cx, cz] = [(x0 + x1) / 2, (z0 + z1) / 2];
   const [w, d] = [x1 - x0, z1 - z0];

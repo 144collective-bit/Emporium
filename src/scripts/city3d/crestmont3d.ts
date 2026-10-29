@@ -16,6 +16,7 @@ import { heightAt } from './terrain';
 import { registerLandscape } from './landscape3d';
 import { registerCoral } from './coral3d';
 import { registerEstates } from './estates3d';
+import { registerMansions } from './mansions3d';
 import { CREST_CROSSINGS, FLATS_STREETS, FOOTHILL_Z, HILL_ROADS, type Rect } from './crestmont';
 
 export const SELF = import.meta.url;
@@ -104,6 +105,8 @@ export function register({ low, scene }: { low: boolean; scene: THREE.Scene | nu
   registerCoral(low, scene);
   // The Flats' estates (Phase 5: estates3d.ts)
   registerEstates(low, scene);
+  // The hills' mansions (Phase 6: mansions3d.ts)
+  registerMansions(low, scene);
   const asphalt = toon('#26243f');
   const kerbTop = toon('#5a5290');
   const grass = toon('#3f7a4a');
