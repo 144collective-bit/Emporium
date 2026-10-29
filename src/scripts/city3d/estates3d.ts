@@ -43,6 +43,8 @@ const DARK = toon('#2a2a30');
 const LAMP = neon('#ffe2a8', 0.2, 1.3);
 /** Windows: dark glass by day, warm light at night */
 export const WINDOW = siteMat('estate-window', lit(toon('#3b4c60', { emissive: '#ffd59a' }), 0, 0.85));
+/** A pool's water: lit from under at night, a soft glowing turquoise (Phase 8; under the bloom's threshold) */
+export const POOL = siteMat('crest-pool', lit(toon('#56b6d6', { emissive: '#2fd2ff' }), 0, 0.6));
 
 /** A house's walls, its trims and its roof, by style */
 const WALL: Record<EstateStyle, THREE.Material> = { spanish: RENDER_WHITE, villa: OCHRE, tudor: CREAM, georgian: BRICK, modern: RENDER_WHITE };
@@ -323,7 +325,7 @@ export function registerEstates(low: boolean, scene: THREE.Scene | null) {
       pave(rectToWorld(e, e.hc - GATE.half, 0, e.hc + GATE.half, e.court[0]), 0.008, PAVING);
       pave(rectToWorld(e, e.hc - COURT_HALF, e.court[0], e.hc + COURT_HALF, e.court[1]), 0.008, PAVING);
       pave(rectToWorld(e, pu0 - 1.2, pv0 + 0.7, pu1 + 1.2, pv1 - 0.7), 0.006, PAVING);
-      pave(rectToWorld(e, pu0, pv0, pu1, pv1), 0.014, WATER);
+      pave(rectToWorld(e, pu0, pv0, pu1, pv1), 0.014, POOL);
       if (!low) pave(rectToWorld(e, pu0 + 0.2, pv1 + 0.3, pu1 - 0.2, pv1 + 0.36), 0.016, DARK);
       p.build(into, { cast: false, receive: true });
     });

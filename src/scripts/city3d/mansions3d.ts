@@ -17,8 +17,8 @@ import { site } from './tilework';
 import { parkedCars, type CarId } from './cars';
 import { heightAt } from './terrain';
 import { MANSIONS, MANSION_CARS, STOREY, WALL, outOf, originOf, rectToWorld, toWorld, wallsOf, type MPart, type Mansion } from './mansions';
-import { WINDOW, hip } from './estates3d';
-import { CURTAIN, PAVING, WATER, BULB, flat } from './mallkit';
+import { POOL, WINDOW, hip } from './estates3d';
+import { CURTAIN, PAVING, BULB, flat } from './mallkit';
 
 const WHITE = toon('#f4f1ea');
 const OCHRE = toon('#e6c493');
@@ -249,7 +249,7 @@ export function registerMansions(low: boolean, scene: THREE.Scene | null) {
       const [cu0, cv0, cu1, cv1] = m.court;
       pave(rectToWorld(m, Math.max(-W / 2 + 1, cu0), Math.min(-1, cv0), Math.min(W / 2 - 1, cu1), cv1), 0.02, PAVING);
       pave(rectToWorld(m, pu0 - 1, pv0 + 1.8, pu1 + 1, pv1 - (kind === 'glass' ? 0.4 : 0.8)), 0.014, PAVING);
-      pave(rectToWorld(m, pu0, pv0, pu1, pv1), 0.024, WATER);
+      pave(rectToWorld(m, pu0, pv0, pu1, pv1), 0.024, POOL);
       q.build(into, { cast: false, receive: true });
       void low;
     });

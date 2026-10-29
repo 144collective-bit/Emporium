@@ -19,6 +19,7 @@ import * as THREE from 'three';
 import { Batch, FONT_DISPLAY, canvasTex, lit, neon, paintMat, siteMat, toon } from './kit';
 import { SLAB, type Tick } from './world';
 import { site } from './tilework';
+import { dogGeometry, leadEnds } from './dogs3d';
 import { CROWD_VIEW } from './character';
 import { BOATHOUSE, JETTY, WESTLAKE_RECT } from './westlake';
 import { BOATS, BOAT_Y, DOGS, HULL, PARK_PEOPLE, PICNICS, moment } from './parklife';
@@ -305,17 +306,7 @@ export function registerParkLife(scene: THREE.Scene, tick: (f: Tick) => void, lo
   // The dogs: coat coloured per dog (white here), dark nose and collar
   const dogsShown = DOGS.filter((d) => !(low && PARK_PEOPLE[d.walker].trim));
   const dogs = inst(
-    shape((b) => {
-      const C = WHITE;
-      b.add(new THREE.CapsuleGeometry(0.085, 0.26, 3, 8).rotateZ(Math.PI / 2).translate(0, 0.29, 0), C);
-      b.add(new THREE.SphereGeometry(0.085, 8, 6).translate(0.23, 0.39, 0), C);
-      b.box(0.28, 0.33, -0.04, 0.1, 0.07, 0.08, C);
-      b.box(0.375, 0.36, -0.018, 0.025, 0.035, 0.036, toon('#16121f'));
-      for (const s of [-1, 1]) b.box(0.18, 0.43, s * 0.06 - 0.02, 0.05, 0.08, 0.04, toon('#5b4636'));
-      for (const [lx, lz] of [[0.14, 0.05], [0.14, -0.05], [-0.14, 0.05], [-0.14, -0.05]]) b.box(lx - 0.022, 0, lz - 0.022, 0.044, 0.25, 0.044, C);
-      b.add(new THREE.CylinderGeometry(0.015, 0.02, 0.18, 4).rotateZ(-0.9).translate(-0.24, 0.38, 0), C);
-      b.add(new THREE.TorusGeometry(0.06, 0.015, 4, 8).rotateY(Math.PI / 2).translate(0.17, 0.36, 0), toon('#d93a4a'));
-    }),
+    dogGeometry(),
     dogsShown.length,
     vc
   );
@@ -375,10 +366,9 @@ export function registerParkLife(scene: THREE.Scene, tick: (f: Tick) => void, lo
       e.set(0, dp.ry - Math.PI / 2, Math.sin(ph) * 0.06, 'YXZ');
       m4.compose(v.set(dp.x, SLAB + Math.abs(Math.sin(ph)) * 0.025, dp.z), q.setFromEuler(e), sv.setScalar(d.size));
       dogs.setMatrixAt(k, m4);
-      // The lead: from the walker's hand (on their right, at the hip) to the collar
+      // The lead: from the walker's hand to the collar
       PARK_PEOPLE[d.walker].at(t, wm);
-      const [fx, fz] = [Math.sin(wm.ry), Math.cos(wm.ry)];
-      leadPos.set([wm.x - fz * 0.2 + fx * 0.1, SLAB + 0.42, wm.z + fx * 0.2 + fz * 0.1, dp.x + Math.sin(dp.ry) * 0.17 * d.size, SLAB + 0.36 * d.size, dp.z + Math.cos(dp.ry) * 0.17 * d.size], k * 6);
+      leadEnds(leadPos, k, wm, dp, d.size, SLAB, SLAB);
     });
     for (const mesh of [rowHull, rowInside, swanMesh, oars, dogs]) mesh.instanceMatrix.needsUpdate = true;
     leadGeo.attributes.position.needsUpdate = true;

@@ -356,7 +356,34 @@ directory entry, a panel with Walk in, `PLACES` and `LIVE_PLACES` entries):
   benches, viewers; no sign on the hillside, the owner's call).
 - **The reservoir** in a canyon (still water, the city's water shader).
 
-### Phase 8: its life, night and sound
+### Phase 8: its life, night and sound (built)
+
+**What's built:**
+
+- `crestlife.ts` (DOM-free, tested in `tests/crestlife.test.ts`): joggers up and down Ridge Road and dog walkers on
+  Canyon Drive (`LANES`: out along a hill road's left shoulder and back along its right, `SHOULDER`, at the ground's
+  height, clear of the traffic's lanes, the lamps and the walls; everyone in a lane at its pace and evenly spread),
+  the park's kind of crowd person (`CREST_PEOPLE`, life.ts), their dogs on leads (`CREST_DOGS`); standing about
+  (`CREST_IDLE`, phones half): the valets by their stands, doormen at every other boutique and two under the hotel's
+  porte-cochère, diners at the cafés' tables, people by the piazza's fountain, sunbathers on the loungers (every other
+  estate's, every mansion's, the hotel's), friends by the hotel's pool, two on the overlook, a group on the
+  clubhouse's terrace, a pair on the civic hall's walk, and the gardeners in every third estate's front garden
+  (`GARDENERS`, a wheelbarrow beside each). The Drive's blocks join the town's walks (life.ts), two shoppers in three
+  carrying a shopping bag (wardrobe.ts item `shopping`, the crowd's only: never the player's `Look`).
+- The traffic: Crestmont's own (`opts.crest`: 6, 5, 3 by tier), its tour bus in cream (`TOUR_PAINT`) and coupes,
+  Midnight Execs and Hyper Comets (`CREST_MIX`), started on routes that keep to its streets at least half the way
+  round and put back on them (`CREST_RECT`) when they wander off, out of sight; never spent round the camera. No
+  convertible: no such model exists yet (the vehicle plan's to add).
+- Night: the Flats' palms uplit (landscape3d.ts: their trunks washed warm, a flush fixture at their feet; the hills'
+  aren't), the pools glowing (`POOL` in estates3d.ts, the estates', mansions' and hotel's); the Drive's windows and
+  signs and the estates' windows were lit already.
+- Sound (`ambience.ts` `crest`, `CREST_HUM`; sound.ts): a quiet hum without the arcade's beat, little wind, birds by
+  day and the owl at night as the park's, the sprinklers' hiss by day and crickets at night (both quiet in the rain),
+  the Drive's and the civic hall's fountains (`fountain`).
+- Drawn by `crestlife3d.ts` (from crestmont3d.ts's `register()`): the dogs and their leads on the main thread with
+  the tick (the dog's shape shared with the park, `dogs3d.ts`), the barrows as sites.
+
+**As planned:**
 
 - People: shoppers with bags on the Drive, valets and doormen, joggers and
   dog walkers on the hill roads, gardeners, people by the pools (acts from

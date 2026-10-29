@@ -56,8 +56,9 @@ export interface Outfit {
   necklace?: boolean;
   /** Gold watch on the left wrist (premium) */
   watch?: boolean;
-  /** In the right hand: an iced coffee, a boombox, a phone or a briefcase (empty-handed by default) */
-  held?: 'coffee' | 'boombox' | 'phone' | 'briefcase';
+  /** In the right hand: an iced coffee, a boombox, a phone or a briefcase (empty-handed by default); the crowd's
+   * shoppers on Crestmont's Drive carry a shopping bag (never the player's: `Look` has none) */
+  held?: 'coffee' | 'boombox' | 'phone' | 'briefcase' | 'shopping';
   /** Which hand carries a rifle (soldiers) */
   rifle?: 'left' | 'right';
   /** Both hands closed into fists (fighting; the open hands are left off) */
@@ -2435,6 +2436,11 @@ export function items(q: Detail, hero = false): Item[] {
   const briefcaseBody = rb(0.05, 0.17, 0.24, 0.01, ...CASE);
   const briefcaseHandle = handle(CASE[1] + 0.085, CASE[2] - 0.042, CASE[2] + 0.048, 0.0065);
   const clasps = [-0.08, 0.08].map((z) => new THREE.BoxGeometry(0.016, 0.014, 0.022).translate(CASE[0] + 0.022, CASE[1] + 0.082, CASE[2] + z));
+  // A shopping bag (the crowd's, on Crestmont's Drive): a stiff paper bag hanging by its cord, a band round its top
+  const BAG: [number, number, number] = [HOOK[0], -0.172, 0.005];
+  const bagBody = rb(0.07, 0.19, 0.2, 0.005, ...BAG);
+  const bagBand = new THREE.BoxGeometry(0.074, 0.03, 0.204).translate(BAG[0], BAG[1] + 0.07, BAG[2]);
+  const bagCord = handle(BAG[1] + 0.095, BAG[2] - 0.05, BAG[2] + 0.06, 0.004);
 
   // The gold watch on the left wrist: on the wrist itself, just under the cuff, riding the hand (its band's edges
   // rounded, the face's bezel turned; docs/clothing-plan.md Phase 5), the face on the outside of the arm
@@ -2748,6 +2754,12 @@ export function items(q: Detail, hero = false): Item[] {
       held: true,
       when: (o) => o.held === 'briefcase',
       pieces: [P('handR', briefcaseBody, '#4a2e1a'), P('handR', briefcaseHandle, '#2b1a10'), P('handR', one(clasps), GOLD, { detail: true })],
+    },
+    {
+      id: 'shopping',
+      held: true,
+      when: (o) => o.held === 'shopping',
+      pieces: [P('handR', bagBody, '#f0e9dc'), P('handR', bagCord, '#1b1830'), P('handR', bagBand, GOLD, { detail: true })],
     },
     ...(hero ? merch : []),
   ];

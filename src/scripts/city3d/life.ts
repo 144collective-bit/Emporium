@@ -27,6 +27,9 @@ import { isNear, tileKey, tileOf } from './tiles';
 import type { Idle } from './landmarks';
 import { TRENCH_WALKS } from './projects';
 import { UPTOWN_PEOPLE, UPTOWN_WALKS } from './uptownlife';
+import { CREST_MIX, CREST_PEOPLE, TOUR_PAINT } from './crestlife';
+import { CREST_RECT } from './crestmont';
+import { DRIVE_BLOCKS } from './coral';
 import { inTrenches } from './trenches';
 import { CROWD_VIEW, HIP_HEIGHT, cityOutfit, createCrowd } from './character';
 import { type CrowdClip, idleFor, secondsOf, strideOf, walkFor, seated, type IdleAct } from './crowdclips';
@@ -46,6 +49,8 @@ export interface LifeOpts {
   trucks?: number;
   police?: number;
   bikes?: number;
+  /** Crestmont's own cars, its tour bus first (crestlife.ts) */
+  crest?: number;
   /** Leave the characters' small details out (phones) */
   light?: boolean;
   /** How far from the camera a car is drawn in full (beyond, its far form: growth plan Phase 2) */
@@ -61,6 +66,8 @@ export type LifeSfx = 'horn' | 'doors' | 'boatHorn';
 
 interface Vehicle {
   route: Route;
+  /** One of Crestmont's own (crestlife.ts): put back on its streets, never spent round the camera */
+  home?: boolean;
   /** Distance along the route, and the segment it's on */
   p: number;
   seg: number;
@@ -163,6 +170,13 @@ function spotsNear(x: number, z: number, r: number) {
   return out;
 }
 
+/** Crestmont's streets (crestmont.ts), padded `m` */
+const inHome = (x: number, z: number, m = 0) => x > CREST_RECT[0] - m && x < CREST_RECT[2] + m && z > CREST_RECT[1] - m && z < CREST_RECT[3] + m;
+/** Where Crestmont's own cars are put: on its streets, on routes that keep to them at least half the way round */
+const HOME_SPOTS = (() => {
+  const share = ROUTES.map((r) => r.pts.filter(([x, z]) => inHome(x, z)).length / Math.max(1, r.pts.length));
+  return SPOTS.filter((s) => inHome(s.x, s.z) && share[s.r] >= 0.5);
+})();
 /** The traffic's mix of cars, repeated (buses come first, as many as the quality tier allows, then the trucks and the patrol cars) */
 const MIX: CarId[] = ['hatch', 'sedan', 'van', 'hatch', 'pickup', 'sedan', 'coupe', 'hatch', 'sedan', 'van', 'pickup', 'exec'];
 /** The delivery trucks, in turn */
@@ -265,6 +279,7 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
   const nTrucks = opts.trucks ?? 0;
   const nPolice = opts.police ?? 0;
   const nBikes = opts.bikes ?? 0;
+  const nCrest = opts.crest ?? 0;
   const total = opts.cars + opts.buses + nTrucks + nPolice;
   /** Where each route turns (traffic.ts), for the indicators */
   const turnsBy = new Map<Route, Turn[]>();
@@ -337,9 +352,15 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
     const spot = start[Math.floor(((i * 7919) % 1000) / 1000 * start.length)] ?? SPOTS[i % SPOTS.length];
     vehicles.push(newVehicle(i, model, false, spot));
   }
+  // Crestmont's own (docs/crestmont-plan.md Phase 8): its tour bus and its coupes, town cars and supercars, on the
+  // routes that keep mostly to its streets
+  for (let k = 0; k < nCrest && HOME_SPOTS.length; k++) {
+    const v = newVehicle(total + k, k === 0 ? 'bus' : CREST_MIX[(k - 1) % CREST_MIX.length], false, HOME_SPOTS[Math.floor(((k * 7919) % 1000) / 1000 * HOME_SPOTS.length)]);
+    v.home = true;
+    vehicles.push(v);
+  }
   /** Put a car back on the road near x, z: out of sight, clear of the others; it keeps its speed */
-  const respawn = (v: Vehicle, x: number, z: number) => {
-    const near = spotsNear(x, z, POOL_R);
+  const respawn = (v: Vehicle, x: number, z: number, near = spotsNear(x, z, POOL_R)) => {
     for (let tries = 0; tries < 16 && near.length; tries++) {
       const s = near[Math.floor(rand() * near.length)];
       if (Math.hypot(s.x - x, s.z - z) < 40) continue;
@@ -456,6 +477,8 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
     const tg = trailerGeometry();
     addFleet('trailer', nRigs, ['#f3f2f7', '#f3f2f7', '#9a96b8', '#ffd23f'], pair(tg.paint, tg.detail, nRigs), (v) => v.trailer!.matrix);
   }
+  // (the tour bus in its own livery)
+  for (const v of vehicles) if (v.home && v.model === 'bus') fleets.get('bus')!.paints[v.slot].set(TOUR_PAINT);
   // Each car's far form, in its own paint, in the city's one mesh of far cars (one draw for all of them; the trailer its own)
   const farCars = theFarCars();
   for (const v of vehicles) {
@@ -686,6 +709,15 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
     if (CROWD_VIEW.on) {
       const f = CROWD_VIEW.focus;
       for (const v of vehicles) {
+        // (Crestmont's own: back on its streets once it's wandered off them, out of sight)
+        if (v.home) {
+          if (inHome(v.x, v.z, 20)) continue;
+          carBall.center.set(v.x, 0.6, v.z);
+          carBall.radius = v.len / 2 + 1;
+          if (Math.hypot(v.x - CROWD_VIEW.eye.x, v.z - CROWD_VIEW.eye.z) < POOL_FAR && CROWD_VIEW.frustum.intersectsSphere(carBall)) continue;
+          respawn(v, f.x, f.z, HOME_SPOTS);
+          continue;
+        }
         const d = Math.hypot(v.x - f.x, v.z - f.z);
         if (d < POOL_R) continue;
         carBall.center.set(v.x, (onHills(v.x, v.z) ? heightAt(v.x, v.z) : 0) + 0.6, v.z);
@@ -918,6 +950,10 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
   walks.push(...PLAN.blocks.filter((b) => UPTOWN_WALKS.includes(b.id)).map((b) => ({ poly: b.poly })));
   // ...and up and down the waterfront's boardwalk
   walks.push({ poly: STROLL, y: BOARDWALK_Y });
+  // ...and round Crestmont's Drive (docs/crestmont-plan.md Phase 8), its shoppers carrying their bags
+  const drive = walks.length;
+  walks.push(...PLAN.blocks.filter((b) => (DRIVE_BLOCKS as readonly string[]).includes(b.id)).map((b) => ({ poly: b.poly })));
+  const shopper = (p: Person) => p.kind === 'walk' && p.loop!.block >= drive && (p.phase * 7) % 3 < 2;
   const walkers = Math.round((opts.walkers * walks.length) / town);
   const blocks = walks.map((w) => w.poly);
   // The crossings between the blocks (pedestrians.ts): at the lit junctions, over one street (not from the bridge's walkway)
@@ -1003,7 +1039,7 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
   // Westlake Park's walkers, joggers, dog walkers, picnics, players and boaters (phones: half of them, the trim)
   // ...and Uptown's joggers on the esplanade and cyclists in the bike lanes (uptownlife.ts), and the kids at play
   // on The Trenches' courts and swings (play.ts, at their own size), the same way
-  for (const pp of [...PARK_PEOPLE, ...UPTOWN_PEOPLE, ...PLAY_PEOPLE]) if (!(opts.light && pp.trim)) people.push({ kind: 'park', park: pp, m: moment(), seg: 0, inset: 0, u: 0, dir: 1, speed: 0, phase: rand() * 6, x: 0, z: 0, ry: 0, face: NaN, walked: 0, crossed: 0, seed: rand(), notice: { hold: 0 } });
+  for (const pp of [...PARK_PEOPLE, ...UPTOWN_PEOPLE, ...PLAY_PEOPLE, ...CREST_PEOPLE]) if (!(opts.light && pp.trim)) people.push({ kind: 'park', park: pp, m: moment(), seg: 0, inset: 0, u: 0, dir: 1, speed: 0, phase: rand() * 6, x: 0, z: 0, ry: 0, face: NaN, walked: 0, crossed: 0, seed: rand(), notice: { hold: 0 } });
   // The traffic's riders (vehicle plan Phase 8): sat on their bikes wherever the traffic puts them (buildTraffic)
   riders.forEach((_, k) => people.push({ kind: 'ride', ride: k, seg: 0, inset: 0, u: 0, dir: 1, speed: 0, phase: 0, x: -1e5, z: -1e5, ry: 0, face: 0, walked: 0, crossed: 0, seed: rand(), notice: { hold: 0 } }));
   bodies.people = people;
@@ -1019,7 +1055,7 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
   const phoneOf = (p: Person) => (p.kind === 'idle' ? p.act === 'phone' : p.kind === 'walk' && onPhone(p.phase / 6));
   const people3d = createCrowd(
     scene,
-    people.map((p) => ({ ...(p.kind === 'ride' ? hoodie() : cityOutfit(rand)), ...(phoneOf(p) ? { held: 'phone' as const } : {}) })),
+    people.map((p) => ({ ...(p.kind === 'ride' ? hoodie() : cityOutfit(rand)), ...(phoneOf(p) ? { held: 'phone' as const } : shopper(p) ? { held: 'shopping' as const } : {}) })),
     { light: opts.light }
   );
   /** Start a walker over a crossing: from where they stand to the other block's lane corner */

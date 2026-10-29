@@ -7,7 +7,7 @@
  * scrub, fewer fronds to a crown and the rails' posts.
  */
 import * as THREE from 'three';
-import { Batch, toon } from './kit';
+import { Batch, lit, neon, siteMat, toon } from './kit';
 import { site } from './tilework';
 import { TILE } from './tiles';
 import { SWAY } from './dusk';
@@ -132,10 +132,15 @@ export function registerLandscape(low: boolean) {
   const bush = new THREE.DodecahedronGeometry(0.42, 0);
   const stick = new THREE.CylinderGeometry(0.06, 0.09, 1, low ? 4 : 5, 1, true).translate(0, 0.5, 0);
   const block = new THREE.BoxGeometry(1, 1, 1);
+  const fixture = new THREE.CylinderGeometry(0.09, 0.11, 0.05, 8).translate(0, 0.025, 0);
 
   const paint = {
     fanTrunk: toon('#8f7458'),
     dateTrunk: toon('#7a5c3c'),
+    // (the Flats' palms uplit at night, Phase 8: the trunks washed warm from a fixture at their feet; under the bloom)
+    fanLit: siteMat('crest-palm-fan', lit(toon('#8f7458', { emissive: '#ffc88a' }), 0, 0.42)),
+    dateLit: siteMat('crest-palm-date', lit(toon('#7a5c3c', { emissive: '#ffc88a' }), 0, 0.38)),
+    fixture: neon('#ffd9a0', 0.5, 1.3),
     skirt: toon('#a3845a'),
     frond: [toon('#3d9a4c'), toon('#4aa95a')],
     dateFrond: toon('#3a8f45'),
@@ -160,27 +165,36 @@ export function registerLandscape(low: boolean) {
       // The palms: trunks, the fan palms' skirts, the crowns at the tops of their bends
       const palms = rec.palms;
       const trunks: THREE.Matrix4[][] = BENDS.map(() => []);
+      const litTrunks: THREE.Matrix4[][] = BENDS.map(() => []);
       const dates: THREE.Matrix4[] = [];
+      const litDates: THREE.Matrix4[] = [];
+      const fixtures: THREE.Matrix4[] = [];
       const skirts: THREE.Matrix4[] = [];
       const crowns: THREE.Matrix4[][] = [[], []];
       const dateCrowns: THREE.Matrix4[] = [];
       const knobs: THREE.Matrix4[] = [];
       for (const [k, p] of palms.entries()) {
+        // (the Flats' palms, on the town's level ground, are uplit; the hills' aren't)
+        const up = p.y < 1;
+        if (up) fixtures.push(m(p.x + 0.42 * p.s, p.y + 0.012, p.z, 0, p.s));
         if (p.kind === 'fan') {
-          trunks[p.bend].push(m(p.x, p.y - 0.05, p.z, p.turn, p.s, p.h + 0.05, p.s));
+          (up ? litTrunks : trunks)[p.bend].push(m(p.x, p.y - 0.05, p.z, p.turn, p.s, p.h + 0.05, p.s));
           // (the top of its bend, turned its way: +x turned by `turn` about y)
           const lean = BENDS[p.bend] * p.s;
           const [tx, tz] = [p.x + Math.cos(p.turn) * lean, p.z - Math.sin(p.turn) * lean];
           skirts.push(m(tx, p.y + p.h, tz, p.turn, p.s, 1.25 * p.s, p.s));
           crowns[k % 2].push(m(tx, p.y + p.h, tz, p.turn, p.s));
         } else {
-          dates.push(m(p.x, p.y - 0.05, p.z, p.turn, p.s, p.h + 0.05, p.s));
+          (up ? litDates : dates).push(m(p.x, p.y - 0.05, p.z, p.turn, p.s, p.h + 0.05, p.s));
           knobs.push(m(p.x, p.y + p.h + 0.1, p.z, p.turn, p.s));
           dateCrowns.push(m(p.x, p.y + p.h + 0.25, p.z, p.turn, p.s));
         }
       }
       fanTrunks.forEach((g, k) => b.instances(g, paint.fanTrunk, trunks[k]));
+      fanTrunks.forEach((g, k) => b.instances(g, paint.fanLit, litTrunks[k]));
       b.instances(dateTrunk, paint.dateTrunk, dates);
+      b.instances(dateTrunk, paint.dateLit, litDates);
+      b.detail(() => b.instances(fixture, paint.fixture, fixtures));
       b.instances(skirt, paint.skirt, skirts);
       crowns.forEach((list, k) => b.instances(fanCrown, paint.frond[k], list, low ? 0 : SWAY));
       b.instances(knob, paint.knob, knobs);
