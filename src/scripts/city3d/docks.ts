@@ -1,6 +1,6 @@
 /*
- * The Docks (growth plan Phase 9c, docs/docks-plan.md; the owner's call: a working port on the south bank west of
- * The Trenches, past the ring highway). Phase 1: the land, the streets and the quays. DOM-free: the street plan
+ * Southbank Docks (the owner's name; growth plan Phase 9c, docs/docks-plan.md; the owner's call: a working port on
+ * the south bank west of The Trenches, past the ring highway). Phase 1: the land, the streets and the quays. DOM-free: the street plan
  * (streetplan.ts `cityPlan()`), the river (river.ts: the frontage a straight quay), walking (walk.ts `inBasin()`),
  * driving (drive-sim.ts `BASIN_WALLS`), the trees (outskirts.ts), the world map and the drawing (world.ts at the boot:
  * the basin's water and its walls, the blocks; docks3d.ts as you approach: the streets and the quays' dressing) read it.
@@ -24,6 +24,9 @@ import { EW_ROADS, LANE, RIVER, SOUTH_ROAD, WALK_W } from './layout';
 
 type Pt = [number, number];
 export type Rect = [number, number, number, number];
+
+/** The district's name (the owner's): its signs, its place and its metro station */
+export const DOCKS_NAME = 'Southbank Docks';
 
 /** The south bank avenue (the docks' main road) */
 const AVENUE = EW_ROADS.find((r) => r.c === SOUTH_ROAD)!;

@@ -180,13 +180,22 @@ world's west edge today:
   everyone, still under reduced motion. The sound (`docks` in
   ambience.ts).
 
+## The owner's answers
+
+- **The name:** **Southbank Docks** (`DOCKS_NAME` in docks.ts): the
+  district, its signs and gantry, and its metro station in Phase 2 (named
+  in full, Southbank Docks, so it reads apart from the South Bank station by
+  the south row).
+- **The cranes:** tall, as real ones (the owner's call: "yes tall cranes").
+  The ship-to-shore gantry cranes (and only they) may rise over the
+  Emporium, as Uptown's towers do, to about real height (25 to 35 tiles to
+  the top of a raised boom), each kept well under every flight's path over
+  them and clear of the prop plane's river loop (the tests in Phase 3, as
+  highrise.ts's are). Everything else in the docks stays under the
+  Emporium (the sheds, warehouses, lighthouse, floodlight masts).
+
 ## Open questions for the owner
 
-- **The name:** "The Docks", "Sector 7 Docks", "West Docks", or another
-  made-up name?
-- **The cranes' height:** real container cranes stand 25 to 40 tiles; the
-  rule outside Uptown is "under the Emporium" (12.5). Allow the cranes (and
-  only the cranes) over it, as Uptown's towers are, or keep them low?
 - **The el along Uptown's waterfront:** the line comes back east along the
   north bank avenue's median through Uptown, past the Sky Wheel, its
   planted median broken round the pillars. Is that the look you want, or

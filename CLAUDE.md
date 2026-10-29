@@ -763,7 +763,8 @@ it and has been retired completely. Build only on what's here.
   spire about 40 tiles since the redesign, the rest 14 to 32; the Sky Wheel
   about 22; the Emporium
   stays the tallest downtown and the most detailed, and "under the
-  Emporium" holds everywhere else but Uptown North, below); the flying traffic and your own
+  Emporium" holds everywhere else but Uptown North, below, and Southbank
+  Docks' cranes); the flying traffic and your own
   aircraft clear them. The strips' courts and their players are retired
   with it. Phases 1 (the land and the streets), 2 (the towers), 3 (the
   plaza), 4 (the waterfront boulevard), 5 (the redesign, the owner's call:
@@ -1121,9 +1122,12 @@ it and has been retired completely. Build only on what's here.
   `SITE_LEVELS` (in terrain.ts's `LEVELS`), `SITE_SOLIDS` (in `SOLIDS`),
   `onSite()`; drawn by `crestsites3d.ts`. Next, each a place. Made-up names
   only.
-- **The Docks** (growth plan Phase 9c, the owner's call: a working port on
-  the south bank west of The Trenches past the ring highway, scenery first,
-  the metro to run on through it over the red arch moved there), planned in
+- **Southbank Docks** (the owner's name, `DOCKS_NAME`; growth plan Phase
+  9c, the owner's call: a working port on the south bank west of The
+  Trenches past the ring highway, scenery first, the metro to run on through
+  it over the red arch moved there; its ship-to-shore cranes tall, the
+  owner's call, over the Emporium at about real height, clear of what flies:
+  nothing else there over it), planned in
   `docs/docks-plan.md` in four phases, each with the owner's sign-off; keep
   it up to date. Phase 1 (the land, the streets and the quays) is built:
   `docks.ts` (DOM-free, tested in `tests/docks.test.ts`; today's world
