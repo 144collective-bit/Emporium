@@ -17,6 +17,8 @@ import {
   DOCK_LAMPS,
   DOCK_STREETS,
   OPEN_WATER,
+  HOLES,
+  DRY_DOCK,
   inBasin,
   inDocks,
   onDockBridge,
@@ -118,18 +120,20 @@ test('the basin opens onto the river under the avenue, the frontage a straight q
   for (let x = CHANNEL[0]; x <= CHANNEL[2]; x += 1) assert.ok(laneAt(BOAT_LANES[2], x) < RIVER[1] - 6 && edgesAt(x)[1] === RIVER[1]);
 });
 
-test('walking and driving stop at the water; nothing solid in it', () => {
-  // The walls cover the open water exactly
+test('walking and driving stop at the water and the dry dock; nothing solid in them', () => {
+  // The walls cover the open water and the dry dock (Phase 3) exactly
   assert.deepEqual(
     BASIN_WALLS.map((w) => w.slice(0, 4)),
-    OPEN_WATER.map((r) => [...r])
+    HOLES.map((r) => [...r])
   );
+  assert.ok(OPEN_WATER.every((r) => HOLES.includes(r)) && HOLES.includes(DRY_DOCK));
+  assert.ok(inBasin((DRY_DOCK[0] + DRY_DOCK[2]) / 2, (DRY_DOCK[1] + DRY_DOCK[3]) / 2, 1));
   for (const [x, z] of [
     [(BASIN[0] + BASIN[2]) / 2, (BASIN[1] + BASIN[3]) / 2],
     [(CHANNEL[0] + CHANNEL[2]) / 2, (DOCK_BRIDGE[3] + CHANNEL[3]) / 2],
   ])
     assert.ok(inBasin(x, z, 1));
-  for (const b of SOLIDS) for (const r of OPEN_WATER) assert.ok(b[2] <= r[0] || b[0] >= r[2] || b[3] <= r[1] || b[1] >= r[3], `a solid in the basin: ${b}`);
+  for (const b of SOLIDS) for (const r of HOLES) assert.ok(b[2] <= r[0] || b[0] >= r[2] || b[3] <= r[1] || b[1] >= r[3], `a solid in the basin: ${b}`);
 });
 
 test('lamps stand on the sidewalks, off the streets; no trees on the docks', () => {

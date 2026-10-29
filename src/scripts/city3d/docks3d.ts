@@ -13,7 +13,8 @@ import { offsetLine, type Pt } from './streetplan';
 import { EW_ROADS, MEDIAN, SOUTH_ROAD } from './layout';
 import { SLAB } from './world';
 import { WATER_Y } from './river';
-import { AVENUE_KERB, BASIN, CHANNEL, DOCK_BRIDGE, DOCK_CROSSINGS, DOCK_STREETS, HALF, type Rect } from './docks';
+import { AVENUE_KERB, BASIN, CAISSON, CHANNEL, DOCK_BRIDGE, DOCK_CROSSINGS, DOCK_STREETS, DRY_DOCK, HALF, type Rect } from './docks';
+import { register as registerPort } from './docksport3d';
 
 export const SELF = import.meta.url;
 
@@ -53,7 +54,7 @@ function cut(a: Pt, b: Pt): [Pt, Pt][] {
 }
 const boxOf = ([a, b]: [Pt, Pt], pad: number): Rect => [Math.min(a[0], b[0]) - pad, Math.min(a[1], b[1]) - pad, Math.max(a[0], b[0]) + pad, Math.max(a[1], b[1]) + pad];
 
-export function register({ low }: { low: boolean; scene: THREE.Scene | null }) {
+export function register({ low, scene }: { low: boolean; scene: THREE.Scene | null }) {
   const asphalt = toon('#2a2838');
   const yellow = neon('#f5d76e', 0.9, 1.1);
   const zebra = toon('#e8e4f8');
@@ -135,14 +136,21 @@ export function register({ low }: { low: boolean; scene: THREE.Scene | null }) {
   // The edges along the water (x0, z0, x1, z1: a line), with the way out to the water from each
   const [bx0, bz0, bx1, bz1] = BASIN;
   const [cx0, , cx1] = CHANNEL;
-  const edges: { a: Pt; b: Pt; out: Pt }[] = [
+  // (the east wall broken by the dry dock's caisson; the dry dock's own edges take the coping, its railing is the port's)
+  const [, ddz0, ddx1, ddz1] = DRY_DOCK;
+  const pitX = bx1 + CAISSON;
+  const edges: { a: Pt; b: Pt; out: Pt; pit?: true }[] = [
     { a: [cx0, dz1], b: [cx0, bz0], out: [1, 0] },
     { a: [cx1, dz1], b: [cx1, bz0], out: [-1, 0] },
     { a: [bx0, bz0], b: [cx0, bz0], out: [0, 1] },
     { a: [cx1, bz0], b: [bx1, bz0], out: [0, 1] },
     { a: [bx0, bz0], b: [bx0, bz1], out: [1, 0] },
-    { a: [bx1, bz0], b: [bx1, bz1], out: [-1, 0] },
+    { a: [bx1, bz0], b: [bx1, ddz0], out: [-1, 0] },
+    { a: [bx1, ddz1], b: [bx1, bz1], out: [-1, 0] },
     { a: [bx0, bz1], b: [bx1, bz1], out: [0, -1] },
+    { a: [pitX, ddz0], b: [ddx1, ddz0], out: [0, 1], pit: true },
+    { a: [pitX, ddz1], b: [ddx1, ddz1], out: [0, -1], pit: true },
+    { a: [ddx1, ddz0], b: [ddx1, ddz1], out: [-1, 0], pit: true },
   ];
   const COPE = 0.35;
   edges.forEach((e, i) =>
@@ -154,7 +162,8 @@ export function register({ low }: { low: boolean; scene: THREE.Scene | null }) {
         const [x0, x1] = [Math.min(a[0], c[0]) - (e.out[0] > 0 ? COPE : 0), Math.max(a[0], c[0]) + (e.out[0] < 0 ? COPE : 0)];
         const [z0, z1] = [Math.min(a[1], c[1]) - (e.out[1] > 0 ? COPE : 0), Math.max(a[1], c[1]) + (e.out[1] < 0 ? COPE : 0)];
         b.box(x0, SLAB + 0.002, z0, Math.max(x1 - x0, COPE), 0.008, Math.max(z1 - z0, COPE), coping);
-        b.detail(() => {
+        if (!e.pit)
+          b.detail(() => {
           const len = Math.hypot(c[0] - a[0], c[1] - a[1]);
           const [ux, uz] = [(c[0] - a[0]) / len, (c[1] - a[1]) / len];
           // Mooring bollards every 8 along the edge, a little back from it
@@ -178,4 +187,7 @@ export function register({ low }: { low: boolean; scene: THREE.Scene | null }) {
       })
     )
   );
+
+  /* ---------- The port (Phase 3): docksport3d.ts ---------- */
+  registerPort({ low, scene });
 }

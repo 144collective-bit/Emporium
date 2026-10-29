@@ -12,7 +12,8 @@ import { CIVIC, CLUB, HOTEL, OVERLOOK, RESERVOIR, SLAB_Y } from './crestsites';
 import type { Rect } from './crestmont';
 import type { SpotId } from '../../lib/city';
 
-function spot(scene: THREE.Scene, id: SpotId, y: number, boxes: { rect: Rect; h: number }[], land: Rect, pinH: number, pinAt?: [number, number]): Spot {
+/** A place drawn elsewhere (a chunk's sites): its pick boxes on the `PICK` layer, its hover ring and its pin (Southbank Docks' too) */
+export function spot(scene: THREE.Scene, id: SpotId, y: number, boxes: { rect: Rect; h: number }[], land: Rect, pinH: number, pinAt?: [number, number]): Spot {
   const group = new THREE.Group();
   group.name = id;
   const hidden = new THREE.MeshBasicMaterial({ visible: false });

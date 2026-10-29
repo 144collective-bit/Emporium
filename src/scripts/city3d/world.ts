@@ -29,7 +29,7 @@ import { SKYLINE } from './bounds';
 import { keyRect } from './tileplan';
 import { site } from './tilework';
 import { lampKind } from './trenches';
-import { BASIN, CHANNEL, DOCK_BRIDGE, inDocks, type Rect } from './docks';
+import { BASIN, CAISSON, CHANNEL, DOCK_BRIDGE, DOCK_FLOOR, DRY_DOCK, inDocks, type Rect } from './docks';
 import { AXIS_X, AXIS_ZEBRAS, LANE_HALF } from './uptown';
 import { BRIDGE_PIERS, PIER_HALF, WATERFRONT_RECT } from './waterfront';
 import { BRIDGE_RECT } from './stadium';
@@ -726,8 +726,9 @@ function basinWater() {
 
 /**
  * The Docks' quay walls (docks.ts): from the quays' edge down into the water all round the basin and its mouth,
- * facing the water, in pieces no longer than a tile's share; and under the avenue over the mouth, the bridge's
- * concrete deck (its asphalt, the promenade and its sidewalk on top are the street's and the plan's)
+ * facing the water, in pieces no longer than a tile's share; under the avenue over the mouth, the bridge's
+ * concrete deck (its asphalt, the promenade and its sidewalk on top are the street's and the plan's); and the dry
+ * dock off the basin's east wall (Phase 3): its walls down to its floor, the floor, and its caisson in the wall's line
  */
 function basinWalls(b: Batch) {
   const wall = toon('#57537a');
@@ -749,8 +750,30 @@ function basinWalls(b: Batch) {
   run(bx0, bz0, cx0, bz0, [0, 0, 1]);
   run(cx1, bz0, bx1, bz0, [0, 0, 1]);
   run(bx0, bz0, bx0, bz1, [1, 0, 0]);
-  run(bx1, bz0, bx1, bz1, [-1, 0, 0]);
+  // (the east wall broken where the dry dock's caisson stands in its line)
+  const [ddx0, ddz0, ddx1, ddz1] = DRY_DOCK;
+  run(bx1, bz0, bx1, ddz0, [-1, 0, 0]);
+  run(bx1, ddz1, bx1, bz1, [-1, 0, 0]);
   run(bx0, bz1, bx1, bz1, [0, 0, -1]);
+  // The dry dock: its walls from the quay down to its floor, facing in; the floor; the caisson across its west end
+  // (steel, its top level with the quay, its face to the basin down into the water)
+  const pit = (ax: number, az: number, bx: number, bz: number, face: [number, number, number]) => {
+    const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, bz - az) / PIECE));
+    for (let i = 0; i < n; i++) {
+      const [p, q] = [i / n, (i + 1) / n];
+      const [x0, z0, x1, z1] = [ax + (bx - ax) * p, az + (bz - az) * p, ax + (bx - ax) * q, az + (bz - az) * q];
+      b.add(quad3([[x0, 0, z0], [x1, 0, z1], [x1, DOCK_FLOOR, z1], [x0, DOCK_FLOOR, z0]], face), wall);
+    }
+  };
+  const cx = ddx0 + CAISSON;
+  pit(cx, ddz0, ddx1, ddz0, [0, 0, 1]);
+  pit(cx, ddz1, ddx1, ddz1, [0, 0, -1]);
+  pit(ddx1, ddz0, ddx1, ddz1, [-1, 0, 0]);
+  for (let x = cx; x < ddx1 - 1e-6; x += PIECE) {
+    const x1 = Math.min(ddx1, x + PIECE);
+    b.add(quad3([[x, DOCK_FLOOR, ddz0], [x, DOCK_FLOOR, ddz1], [x1, DOCK_FLOOR, ddz1], [x1, DOCK_FLOOR, ddz0]], [0, 1, 0]), deck);
+  }
+  b.box(ddx0, Math.min(UNDER, DOCK_FLOOR), ddz0 + 0.004, CAISSON, SLAB + 0.02 - Math.min(UNDER, DOCK_FLOOR), ddz1 - ddz0 - 0.008, toon('#3a4150'));
   // (the deck's sides a hair inside the walls it spans between)
   const [dx0, dz0, dx1, dz1] = DOCK_BRIDGE;
   b.box(dx0 + 0.01, -0.7, dz0 + 0.01, dx1 - dx0 - 0.02, 0.7 - 0.006, dz1 - dz0 - 0.02, deck);
@@ -778,7 +801,7 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
     ])
       if (c > a)
         // (nor over the Docks' basin and its mouth, their water down under the quays: docks.ts)
-        for (const [px0, pz0, px1, pz1] of minusRects([x0, a, x1, c], [BASIN, CHANNEL])) {
+        for (const [px0, pz0, px1, pz1] of minusRects([x0, a, x1, c], [BASIN, CHANNEL, DRY_DOCK])) {
           const hill = hillsPlane(px0, pz0, px1, pz1);
           b.add(hill ?? new THREE.PlaneGeometry(px1 - px0, pz1 - pz0).rotateX(-Math.PI / 2).translate((px0 + px1) / 2, 0, (pz0 + pz1) / 2), grass);
           // (painted over the grass's colour once the Batch has given it one: the shared paint's colour is per vertex)

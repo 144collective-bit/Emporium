@@ -29,10 +29,12 @@ const BUDGETS = {
    * Bridge is; and from 666 for step 4, the owner's picks: more boats (the lane boats doubled, the police launch, the
    * river's life loaded as you approach) and the river bus's stops as places (their gangways' prompts, the railings
    * and the promenades' lamps, trees and benches opening round them, the stops on the world map), 2 KB: the boats,
-   * the landings, the bus's loop, its timetable and its rides are their own chunks'); and from 670 for Sunridge
-   * (docs/suburb-plan.md, the owner's call: "raise the limit when needed, we want quality"): its streets, blocks, wall
-   * and lamps in the street plan and the traffic's routes round its loop (about 8 KB, less the 5 KB the baked data's
-   * makers gave back when they folded out of the browser's code)
+   * the landings, the bus's loop, its timetable and its rides are their own chunks'; and from 670 for Southbank
+   * Docks' port, docs/docks-plan.md Phase 3, the owner's go: what the boot must know of it, 3 KB (the cranes',
+   * stacks', sheds' and yards' solids, the Harbour Master as a place, the dry dock cut into the quay at the boot);
+   * its drawing is the docks' chunk); and Sunridge (docs/suburb-plan.md, the owner's call: "raise the limit when
+   * needed, we want quality"): its streets, blocks, wall and lamps in the street plan and the traffic's routes round its
+   * loop (about 8 KB, less the 5 KB the baked data's makers gave back when they folded out of the browser's code)
    */
   bootJs: 680,
   /** Any one piece loaded later (a feature, when it's used) */
